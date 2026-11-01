@@ -29,4 +29,4 @@ Lib/profile.py	420	427	Profile.runctx	runctx(self, cmd, globals, locals)	todo
 Lib/profile.py	430	436	Profile.runcall	runcall(self, func, /, *args, **kw)	todo		
 Lib/profile.py	479	488	Profile.calibrate	calibrate(self, m, verbose=0)	todo		
 Lib/profile.py	490	550	Profile._calibrate_inner	_calibrate_inner(self, m, verbose)	todo		
-Lib/profile.py	554	611	main	main()	todo		
+Lib/profile.py	554	611	main	main()	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

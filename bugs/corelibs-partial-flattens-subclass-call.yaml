@@ -1,0 +1,61 @@
+id: corelibs-partial-flattens-subclass-call
+title: "functools.partial flattens a partial subclass, so the subclass's __call__ never runs"
+priority: P3
+kind: logic-error
+module: corelibs
+files: [Modules/_functoolsmodule.c, Lib/functools.py]
+functions: ["partial_new", "_partial_new"]
+summary: |
+  partial(p, x) merges p's stored function and arguments when p is an instance of partial. The test
+  is isinstance, so it also matches a subclass that overrides __call__: partial(Sub(f, 1), 2)() calls
+  f(1, 2) and never reaches Sub.__call__. The twins also disagree on a related case: C does not
+  flatten a partial that has an instance __dict__, Python does, so partial(p, 2).func is p in C and
+  f in the pure-Python module.
+likelihood: |
+  Low. It needs a partial subclass with its own __call__, wrapped again by partial. The result is
+  silent, though: the override, which might log, check or transform, is skipped.
+maybe_intended: |
+  Flattening is a deliberate optimisation (python/cpython#52078). Lib/test/test_functools.py:647-648
+  says "partial subclasses are not optimized for nested calls" and disables test_nested_optimization
+  for the subclass test class, so the suite does not pin this down, and that comment no longer
+  matches what the code does for a wrapped subclass. A maintainer would likely accept the override
+  case as a bug, and treat the twin difference on __dict__ as harmless.
+reproducer: |
+  from functools import partial
+  def target(*args):
+      return ('target', args)
+  class Sub(partial):
+      def __call__(self, *args, **kwargs):
+          return ('override', self.args + args)
+  outer = partial(Sub(target, 1), 2)
+  direct = Sub(target, 1)(2)
+  wrapped = outer()
+  print('direct:', direct, 'wrapped:', wrapped, 'outer.func:', outer.func)
+  if direct[0] == 'override' and wrapped[0] == 'target' and outer.func is target:
+      print('REPRODUCED corelibs-partial-flattens-subclass-call')
+expected: |
+  partial(obj, 2)() behaves like obj(2), as the docs' equivalent code does: ('override', (1, 2)).
+observed: |
+  python3 3.14.7: Sub(target, 1)(2) runs the override, partial(Sub(target, 1), 2)() runs target, and
+  outer.func is target. REPRODUCED, and the pure-Python twin does the same.
+  main (python.exe 3.16.0a1+dev): same, REPRODUCED.
+promised_by: |
+  Doc/library/functools.rst:347-356: "which when called will behave like *func* called with the
+  positional arguments *args*", with an equivalent closure that calls func, so the object's __call__.
+cause: |
+  Modules/_functoolsmodule.c:215 `PyObject_TypeCheck(func, state->partial_type)`, with the merge at
+  :219-230 and no test of tp_call. Lib/functools.py:329 `isinstance(func, base_cls)`. The same line is in
+  main at :208.
+possible_fix: |
+  Flatten only when the wrapped object uses the default call: in C test
+  `Py_TYPE(func)->tp_call == partial_call`; in Python test `type(func).__call__ is partial.__call__`.
+duplicates:
+  issues:
+    - {number: 52078, state: closed, relation: "the optimisation itself, 'Flatten nested functools.partial'", reason: "not this bug"}
+    - {number: 159157, state: open, relation: "search hit on partial, free-threaded scaling", reason: "unrelated"}
+    - {number: 77600, state: closed, relation: "search hit, 'Add functools.partialclass'", reason: "unrelated"}
+  queries: ["functools partial subclass __call__", "partial subclass",
+            "bugforge README: no match for functools.partial"]
+lean:
+  property: PyLean.CoreLibs.Functools.PartialCallsWrappedObject
+  theorem: PyLean.CoreLibs.Functools.partialCallsWrappedObject_refuted

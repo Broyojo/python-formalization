@@ -52,4 +52,4 @@ Lib/shutil.py	1497	1540	get_terminal_size	get_terminal_size(fallback=(80, 24))	t
 Lib/shutil.py	1546	1548	_access_check	_access_check(fn, mode)	todo		
 Lib/shutil.py	1551	1558	_win_path_needs_curdir	_win_path_needs_curdir(cmd, mode)	todo		
 Lib/shutil.py	1561	1641	which	which(cmd, mode=os.F_OK | os.X_OK, path=None)	todo		
-Lib/shutil.py	1643	1653	__getattr__	__getattr__(name)	todo		
+Lib/shutil.py	1643	1653	__getattr__	__getattr__(name)	todo		candidates:calstat-calendar-module-getattr

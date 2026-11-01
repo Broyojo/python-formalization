@@ -1,2 +1,2 @@
 file	line	endline	name	signature	status	entry	note
-Lib/asyncio/__init__.py	51	74	__getattr__	__getattr__(name: str)	todo		
+Lib/asyncio/__init__.py	51	74	__getattr__	__getattr__(name: str)	todo		candidates:calstat-calendar-module-getattr

@@ -6,10 +6,10 @@ Lib/enum.py	46	55	_is_dunder	_is_dunder(name)	todo
 Lib/enum.py	57	66	_is_sunder	_is_sunder(name)	todo		
 Lib/enum.py	68	75	_is_internal_class	_is_internal_class(cls_name, obj)	todo		
 Lib/enum.py	77	88	_is_private	_is_private(cls_name, name)	todo		
-Lib/enum.py	90	97	_is_single_bit	_is_single_bit(num)	todo		
+Lib/enum.py	90	97	_is_single_bit	_is_single_bit(num)	modelled	corelibs-enum-auto-values	
 Lib/enum.py	99	112	_make_class_unpicklable	_make_class_unpicklable(obj)	todo		
-Lib/enum.py	114	124	_iter_bits_lsb	_iter_bits_lsb(num)	todo		
-Lib/enum.py	126	127	show_flag_values	show_flag_values(value)	todo		
+Lib/enum.py	114	124	_iter_bits_lsb	_iter_bits_lsb(num)	modelled	corelibs-enum-len-iter	
+Lib/enum.py	126	127	show_flag_values	show_flag_values(value)	modelled	corelibs-enum-len-iter	
 Lib/enum.py	129	152	bin	bin(num, max_bits=None)	todo		
 Lib/enum.py	155	156	_not_given.__repr__	__repr__(self)	todo		
 Lib/enum.py	160	161	_auto_null.__repr__	__repr__(self)	todo		
@@ -48,15 +48,15 @@ Lib/enum.py	971	995	EnumType._find_data_type_	_find_data_type_(mcls, class_name,
 Lib/enum.py	998	1040	EnumType._find_new_	_find_new_(mcls, classdict, member_type, first_enum)	todo		
 Lib/enum.py	1042	1087	EnumType._add_member_	_add_member_(cls, name, member)	todo		
 Lib/enum.py	1090	1101	EnumType.__signature__	__signature__(cls)	todo		
-Lib/enum.py	1147	1206	Enum.__new__	__new__(cls, value)	todo		
+Lib/enum.py	1147	1206	Enum.__new__	__new__(cls, value)	modelled	corelibs-enum-strict-named	
 Lib/enum.py	1208	1209	Enum._add_alias_	_add_alias_(self, name)	todo		
 Lib/enum.py	1211	1234	Enum._add_value_alias_	_add_value_alias_(self, value)	todo		
-Lib/enum.py	1237	1255	Enum._generate_next_value_	_generate_next_value_(name, start, count, last_values)	todo		
+Lib/enum.py	1237	1255	Enum._generate_next_value_	_generate_next_value_(name, start, count, last_values)	modelled	corelibs-enum-auto-values	
 Lib/enum.py	1258	1259	Enum._missing_	_missing_(cls, value)	todo		
 Lib/enum.py	1261	1263	Enum.__repr__	__repr__(self)	todo		
 Lib/enum.py	1265	1266	Enum.__str__	__str__(self)	todo		
 Lib/enum.py	1268	1295	Enum.__dir__	__dir__(self)	todo		
-Lib/enum.py	1297	1298	Enum.__format__	__format__(self, format_spec)	todo		
+Lib/enum.py	1297	1298	Enum.__format__	__format__(self, format_spec)	todo		candidates:coll-userstring-format-spec
 Lib/enum.py	1300	1301	Enum.__hash__	__hash__(self)	todo		
 Lib/enum.py	1303	1304	Enum.__reduce_ex__	__reduce_ex__(self, proto)	todo		
 Lib/enum.py	1306	1307	Enum.__deepcopy__	__deepcopy__(self, memo)	todo		
@@ -67,22 +67,22 @@ Lib/enum.py	1348	1367	StrEnum.__new__	__new__(cls, *values)	todo
 Lib/enum.py	1370	1374	StrEnum._generate_next_value_	_generate_next_value_(name, start, count, last_values)	todo		
 Lib/enum.py	1377	1379	pickle_by_global_name	pickle_by_global_name(self, proto)	todo		
 Lib/enum.py	1382	1384	pickle_by_enum_name	pickle_by_enum_name(self, proto)	todo		
-Lib/enum.py	1409	1425	Flag._generate_next_value_	_generate_next_value_(name, start, count, last_values)	todo		
-Lib/enum.py	1428	1433	Flag._iter_member_by_value_	_iter_member_by_value_(cls, value)	todo		
-Lib/enum.py	1438	1445	Flag._iter_member_by_def_	_iter_member_by_def_(cls, value)	todo		
-Lib/enum.py	1448	1538	Flag._missing_	_missing_(cls, value)	todo		
-Lib/enum.py	1540	1548	Flag.__contains__	__contains__(self, other)	todo		
-Lib/enum.py	1550	1554	Flag.__iter__	__iter__(self)	todo		
-Lib/enum.py	1556	1557	Flag.__len__	__len__(self)	todo		
-Lib/enum.py	1559	1565	Flag.__repr__	__repr__(self)	todo		
-Lib/enum.py	1567	1572	Flag.__str__	__str__(self)	todo		
+Lib/enum.py	1409	1425	Flag._generate_next_value_	_generate_next_value_(name, start, count, last_values)	modelled	corelibs-enum-auto-values	
+Lib/enum.py	1428	1433	Flag._iter_member_by_value_	_iter_member_by_value_(cls, value)	modelled	corelibs-enum-len-iter	
+Lib/enum.py	1438	1445	Flag._iter_member_by_def_	_iter_member_by_def_(cls, value)	modelled	corelibs-enum-len-iter	
+Lib/enum.py	1448	1538	Flag._missing_	_missing_(cls, value)	modelled	corelibs-enum-conform,corelibs-enum-strict-named	
+Lib/enum.py	1540	1548	Flag.__contains__	__contains__(self, other)	modelled	corelibs-enum-flag-contains	
+Lib/enum.py	1550	1554	Flag.__iter__	__iter__(self)	modelled	corelibs-enum-len-iter	
+Lib/enum.py	1556	1557	Flag.__len__	__len__(self)	modelled	corelibs-enum-len-iter	
+Lib/enum.py	1559	1565	Flag.__repr__	__repr__(self)	modelled	corelibs-enum-flag-repr	
+Lib/enum.py	1567	1572	Flag.__str__	__str__(self)	modelled	corelibs-enum-flag-repr	
 Lib/enum.py	1574	1575	Flag.__bool__	__bool__(self)	todo		
-Lib/enum.py	1577	1582	Flag._get_value	_get_value(self, flag)	todo		
-Lib/enum.py	1584	1593	Flag.__or__	__or__(self, other)	todo		
-Lib/enum.py	1595	1604	Flag.__and__	__and__(self, other)	todo		
-Lib/enum.py	1606	1615	Flag.__xor__	__xor__(self, other)	todo		
+Lib/enum.py	1577	1582	Flag._get_value	_get_value(self, flag)	modelled	corelibs-enum-flag-ops-commute	
+Lib/enum.py	1584	1593	Flag.__or__	__or__(self, other)	modelled	corelibs-enum-flag-ops-commute	
+Lib/enum.py	1595	1604	Flag.__and__	__and__(self, other)	modelled	corelibs-enum-flag-ops-commute	
+Lib/enum.py	1606	1615	Flag.__xor__	__xor__(self, other)	modelled	corelibs-enum-flag-ops-commute	
 Lib/enum.py	1617	1626	Flag.__invert__	__invert__(self)	todo		
-Lib/enum.py	1639	1643	_high_bit	_high_bit(value)	todo		
+Lib/enum.py	1639	1643	_high_bit	_high_bit(value)	modelled	corelibs-enum-auto-values	
 Lib/enum.py	1645	1658	unique	unique(enumeration)	todo		
 Lib/enum.py	1660	1666	_dataclass_repr	_dataclass_repr(self)	todo		
 Lib/enum.py	1668	1675	global_enum_repr	global_enum_repr(self)	todo		

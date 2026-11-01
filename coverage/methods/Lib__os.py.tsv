@@ -48,7 +48,7 @@ Lib/os.py	1046	1048	_wrap_close.__init__	__init__(self, stream, proc)	todo
 Lib/os.py	1049	1057	_wrap_close.close	close(self)	todo		
 Lib/os.py	1058	1059	_wrap_close.__enter__	__enter__(self)	todo		
 Lib/os.py	1060	1061	_wrap_close.__exit__	__exit__(self, *args)	todo		
-Lib/os.py	1062	1063	_wrap_close.__getattr__	__getattr__(self, name)	todo		
+Lib/os.py	1062	1063	_wrap_close.__getattr__	__getattr__(self, name)	todo		candidates:calstat-calendar-module-getattr
 Lib/os.py	1064	1065	_wrap_close.__iter__	__iter__(self)	todo		
 Lib/os.py	1070	1076	fdopen	fdopen(fd, mode='r', buffering=-1, encoding=None, *args, **kwargs)	todo		
 Lib/os.py	1081	1114	_fspath	_fspath(path)	todo		

@@ -1,0 +1,65 @@
+id: corelibs-userstring-unwrap-siblings
+title: "UserString.partition, split, strip and the pad methods reject UserString arguments that count, find and replace accept"
+priority: P4
+kind: sibling-mismatch
+module: corelibs
+files: [Lib/collections/__init__.py]
+functions: ["UserString.partition", "UserString.rpartition", "UserString.split", "UserString.rsplit",
+            "UserString.strip", "UserString.lstrip", "UserString.rstrip", "UserString.center",
+            "UserString.ljust", "UserString.rjust"]
+summary: |
+  count, find, index, rfind, rindex, replace, removeprefix, removesuffix and __contains__ start with
+  `if isinstance(sub, UserString): sub = sub.data`. partition, rpartition, split, rsplit, strip, lstrip,
+  rstrip, center, ljust and rjust do not, so an equal UserString argument is a TypeError.
+  startswith and endswith had the same gap and were fixed on main by gh-159868, whose report gives this
+  same inconsistency as the reason; the fix touched those two only. It is not in 3.14.
+likelihood: |
+  Low-medium. Code using UserString tends to pass UserString around, and the error is immediate.
+maybe_intended: |
+  No for the methods above: gh-159868 was accepted on this reasoning. Not for join: passing UserString
+  items to `join` is the same shape, but a change to UserString.join was rejected in gh-122524, so it
+  is left out of the proposal.
+reproducer: |
+  from collections import UserString as U
+  u = U('a b')
+  sep = U(' ')
+  ok = [u.count(sep), u.find(sep), str(u.replace(sep, U('-'))), str(u.removeprefix(U('a')))]
+  print(ok)
+  failed = []
+  for name, args in [('partition', (sep,)), ('rpartition', (sep,)), ('split', (sep,)), ('rsplit', (sep,)),
+                     ('strip', (U('a'),)), ('lstrip', (U('a'),)), ('rstrip', (U('b'),)),
+                     ('center', (5, U('x'))), ('ljust', (5, U('x'))), ('rjust', (5, U('x')))]:
+      try:
+          getattr(u, name)(*args)
+      except TypeError as e:
+          failed.append(name)
+          print(name, e)
+  if len(failed) == 10 and ok == [1, 1, 'a-b', ' b']:
+      print('REPRODUCED corelibs-userstring-unwrap-siblings')
+expected: |
+  The same results as with the equal str arguments.
+observed: |
+  python3 3.14.7: all ten raise TypeError, e.g. "must be str, not UserString", "strip arg must be None or
+  str", "The fill character must be a unicode character, not UserString"; startswith and endswith too.
+  REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the ten still raise TypeError; startswith and endswith
+  accept UserString. REPRODUCED.
+promised_by: |
+  No sentence; the sibling methods and gh-159868. Doc/library/collections.rst:1403: "Class that simulates a
+  string object."
+cause: |
+  Lib/collections/__init__.py:1555-1556, :1578-1579, :1584-1588, :1550-1551, :1581-1582, :1596-1597,
+  :1460-1461, :1544-1545, :1575-1576 pass the argument on unchanged. Compare :1463-1466.
+possible_fix: |
+  The same two lines as in gh-159868, in each method; for `center`, `ljust`, `rjust` on `*args`.
+duplicates:
+  issues:
+    - {number: 159868, state: closed, relation: "same defect for startswith and endswith, fixed on main by GH-159869", reason: "the other methods were not touched"}
+    - {number: 122524, state: closed, relation: "'Instances of UserString cannot be used with str.join', not planned; UserString.join change rejected there", reason: "join only, left out here"}
+    - {number: 60601, state: closed, relation: "'UserString doesn't combine nicely with strings', str.join and the like", reason: "about str's methods, closed by its reporter"}
+  queries: ["UserString startswith", "UserString partition UserString", "UserString methods accept UserString",
+            "UserString split UserString separator", "UserString join UserString", "UserString strip UserString",
+            "bugforge README: no UserString entries"]
+lean:
+  property: PyLean.CoreLibs.Coll.UserStringUnwrapSiblings
+  theorem: PyLean.CoreLibs.Coll.userStringUnwrapSiblings_refuted

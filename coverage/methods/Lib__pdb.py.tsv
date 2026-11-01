@@ -187,4 +187,4 @@ Lib/pdb.py	3529	3530	test	test()	todo
 Lib/pdb.py	3533	3535	help	help()	todo		
 Lib/pdb.py	3552	3563	exit_with_permission_help_text	exit_with_permission_help_text()	todo		
 Lib/pdb.py	3566	3625	parse_args	parse_args()	todo		
-Lib/pdb.py	3627	3676	main	main()	todo		
+Lib/pdb.py	3627	3676	main	main()	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

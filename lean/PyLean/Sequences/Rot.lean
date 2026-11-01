@@ -9,22 +9,26 @@ namespace PyLean.Sequences
 
 open PyLean
 
+set_option linter.unusedSectionVars false
+
+variable {α : Type} [Inhabited α]
+
 /-- Rotate left by `k` items (`k <= len`). -/
-def rotL (k : Nat) (l : List Int) : List Int := l.drop k ++ l.take k
+def rotL (k : Nat) (l : List α) : List α := l.drop k ++ l.take k
 
 /-- Rotate left by `k` modulo the length, for any int `k`; a right rotation
 by `n` is `rotLi (-n)`. -/
-def rotLi (k : Int) (l : List Int) : List Int := rotL (k % (l.length : Int)).toNat l
+def rotLi (k : Int) (l : List α) : List α := rotL (k % (l.length : Int)).toNat l
 
-theorem length_rotL (k : Nat) (l : List Int) : (rotL k l).length = l.length := by
+theorem length_rotL (k : Nat) (l : List α) : (rotL k l).length = l.length := by
   unfold rotL; simp only [List.length_append, List.length_drop, List.length_take]; omega
 
-theorem rotL_zero (l : List Int) : rotL 0 l = l := by simp [rotL]
+theorem rotL_zero (l : List α) : rotL 0 l = l := by simp [rotL]
 
-theorem rotL_len (l : List Int) : rotL l.length l = l := by
+theorem rotL_len (l : List α) : rotL l.length l = l := by
   simp [rotL, List.drop_length, List.take_length]
 
-theorem rotL_rotL_le (a b : Nat) (l : List Int) (h : a + b ≤ l.length) :
+theorem rotL_rotL_le (a b : Nat) (l : List α) (h : a + b ≤ l.length) :
     rotL a (rotL b l) = rotL (a + b) l := by
   unfold rotL
   have hb : a ≤ (l.drop b).length := by simp only [List.length_drop]; omega
@@ -33,7 +37,7 @@ theorem rotL_rotL_le (a b : Nat) (l : List Int) (h : a + b ≤ l.length) :
   congr 1
   rw [Nat.add_comm a b, List.take_add]
 
-theorem rotL_rotL_ge (a b : Nat) (l : List Int) (ha : a ≤ l.length) (hb : b ≤ l.length)
+theorem rotL_rotL_ge (a b : Nat) (l : List α) (ha : a ≤ l.length) (hb : b ≤ l.length)
     (h : l.length ≤ a + b) : rotL a (rotL b l) = rotL (a + b - l.length) l := by
   have h1 : (a + b - l.length) + (l.length - b) ≤ (rotL b l).length := by rw [length_rotL]; omega
   calc rotL a (rotL b l) = rotL (a + b - l.length) (rotL (l.length - b) (rotL b l)) := by
@@ -41,20 +45,20 @@ theorem rotL_rotL_ge (a b : Nat) (l : List Int) (ha : a ≤ l.length) (hb : b �
     _ = rotL (a + b - l.length) l := by
         rw [rotL_rotL_le (l.length - b) b l (by omega), show l.length - b + b = l.length by omega, rotL_len]
 
-theorem toNat_emod_lt (k : Int) (l : List Int) (h : l ≠ []) : (k % (l.length : Int)).toNat < l.length := by
+theorem toNat_emod_lt (k : Int) (l : List α) (h : l ≠ []) : (k % (l.length : Int)).toNat < l.length := by
   have hl : 0 < (l.length : Int) := by have := List.length_pos_iff.mpr h; omega
   have h1 := Int.emod_lt_of_pos k hl
   have h0 := Int.emod_nonneg k (show (l.length : Int) ≠ 0 by omega)
   omega
 
-theorem length_rotLi (k : Int) (l : List Int) : (rotLi k l).length = l.length := length_rotL _ _
+theorem length_rotLi (k : Int) (l : List α) : (rotLi k l).length = l.length := length_rotL _ _
 
 /-- `x % len = y` from `x = y + len * q` and `0 <= y < len`. -/
 theorem emod_char (x y len q : Int) (hy0 : 0 ≤ y) (hy1 : y < len) (hx : x = y + len * q) :
     x % len = y := by
   rw [hx, Int.add_mul_emod_self_left, Int.emod_eq_of_lt hy0 hy1]
 
-theorem rotLi_rotLi (a b : Int) (l : List Int) : rotLi a (rotLi b l) = rotLi (a + b) l := by
+theorem rotLi_rotLi (a b : Int) (l : List α) : rotLi a (rotLi b l) = rotLi (a + b) l := by
   by_cases hl : l = []
   · subst hl; simp [rotLi, rotL]
   unfold rotLi
@@ -76,13 +80,13 @@ theorem rotLi_rotLi (a b : Int) (l : List Int) : rotLi a (rotLi b l) = rotLi (a 
     rw [hab, this]
     congr 1; omega
 
-theorem rotLi_zero (l : List Int) : rotLi 0 l = l := by simp [rotLi, rotL_zero]
+theorem rotLi_zero (l : List α) : rotLi 0 l = l := by simp [rotLi, rotL_zero]
 
-theorem rotLi_nat (k : Nat) (l : List Int) (h : k < l.length) : rotLi k l = rotL k l := by
+theorem rotLi_nat (k : Nat) (l : List α) (h : k < l.length) : rotLi k l = rotL k l := by
   unfold rotLi
   rw [Int.emod_eq_of_lt (by omega) (by omega)]; rfl
 
-theorem rotLi_add_mul (k q : Int) (l : List Int) : rotLi (k + (l.length : Int) * q) l = rotLi k l := by
+theorem rotLi_add_mul (k q : Int) (l : List α) : rotLi (k + (l.length : Int) * q) l = rotLi k l := by
   unfold rotLi; rw [Int.add_mul_emod_self_left]
 
 /-! ### The block loops -/
@@ -92,7 +96,7 @@ theorem rotLi_add_mul (k q : Int) (l : List Int) : rotLi (k + (l.length : Int) *
 def RotInv (li ri : Int) (len : Nat) : Prop :=
   0 ≤ li ∧ li < 64 ∧ 0 ≤ ri ∧ ri < 64 ∧ (li + (len : Int) - 1) % 64 = ri
 
-theorem rotRight_spec : ∀ (fuel : Nat) (li ri n : Int) (items : List Int),
+theorem rotRight_spec : ∀ (fuel : Nat) (li ri n : Int) (items : List α),
     RotInv li ri items.length → 0 ≤ n → n ≤ items.length → n < fuel →
     ∃ li' ri', Deque.rotRight fuel li ri items n = .ok (li', ri', rotL (items.length - n.toNat) items) ∧
       RotInv li' ri' items.length
@@ -129,7 +133,7 @@ theorem rotRight_spec : ∀ (fuel : Nat) (li ri n : Int) (items : List Int),
       subst this
       exact ⟨li, ri, by simp [rotL_len], hinv⟩
 
-theorem rotLeft_spec : ∀ (fuel : Nat) (li ri n : Int) (items : List Int),
+theorem rotLeft_spec : ∀ (fuel : Nat) (li ri n : Int) (items : List α),
     RotInv li ri items.length → n ≤ 0 → -n ≤ items.length → -n < fuel →
     ∃ li' ri', Deque.rotLeft fuel li ri items n = .ok (li', ri', rotL (-n).toNat items) ∧
       RotInv li' ri' items.length
@@ -204,7 +208,7 @@ theorem rotNorm_spec (len n : Int) (hlen : 2 ≤ len) :
 /-- `_deque_rotate`: for every deque with the layout invariant and every
 `Py_ssize_t` `n`, the result keeps the layout, `maxlen` and the length, and
 its items are the items rotated right by `n` (left by `-n`) modulo the length. -/
-theorem rotateC_spec (d : Deque) (n : Int) (h : d.Layout) :
+theorem rotateC_spec (d : Deque α) (n : Int) (h : d.Layout) :
     ∃ d', d.rotateC n = .ok d' ∧ d'.Layout ∧ d'.items = rotLi (-n) d.items ∧ d'.maxlen = d.maxlen := by
   unfold Deque.rotateC
   by_cases hsmall : d.size ≤ 1

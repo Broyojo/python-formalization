@@ -1,0 +1,80 @@
+id: corelibs-userdict-missing-pop-setdefault
+title: "UserDict subclasses with __missing__: pop(k, default) raises KeyError, setdefault stores nothing, items() contains absent keys"
+priority: P3
+kind: sibling-mismatch
+module: corelibs
+files: [Lib/collections/__init__.py, Lib/_collections_abc.py]
+functions: ["UserDict.__getitem__", "MutableMapping.pop", "MutableMapping.setdefault", "ItemsView.__contains__"]
+summary: |
+  UserDict.__getitem__ calls __missing__, and the inherited MutableMapping methods use `self[key]`
+  and treat KeyError as "absent". With __missing__ defined there is no KeyError, so for a key that is
+  not present:
+  - pop(k, default) gets the __missing__ value, then `del self[key]` raises KeyError: the default is
+    ignored. A dict subclass with __missing__ returns the default.
+  - setdefault(k, v) returns the __missing__ value and stores nothing. A dict subclass stores v and
+    returns it.
+  - (k, m) in d.items() is True for the __missing__ value m, while `k in d` is False and the
+    item is not listed by iteration. A dict subclass says False.
+  UserDict.get and __contains__ were fixed for exactly this reason (gh-83445), and the comment above
+  them says they exist "to work like dict does when __missing__ is present".
+likelihood: |
+  Medium-low. `__missing__` on a UserDict subclass is the documented hook, and pop with a default is
+  common on such a class. It fails loudly (KeyError) for pop and silently for setdefault.
+maybe_intended: |
+  No: the comment at :1162 states the goal and gh-83445 fixed the sibling. It is a gap left by that fix.
+  ChainMap has a __missing__ hook as well: its pop does not consult it, but setdefault and
+  (k, v) in items() act as above.
+reproducer: |
+  from collections import UserDict
+  class U(UserDict):
+      def __missing__(self, key):
+          return 'missing'
+  class D(dict):
+      def __missing__(self, key):
+          return 'missing'
+  def pop(cls):
+      try:
+          return cls().pop('x', 'default')
+      except KeyError as e:
+          return 'KeyError'
+  def sd(cls):
+      d = cls()
+      return d.setdefault('x', 'value'), dict(d)
+  r = [(pop(c), sd(c), ('x', 'missing') in c().items()) for c in (U, D)]
+  print(r)
+  if r[0] == ('KeyError', ('missing', {}), True) and r[1] == ('default', ('value', {'x': 'value'}), False):
+      print('REPRODUCED corelibs-userdict-missing-pop-setdefault')
+expected: |
+  The same three results as the dict subclass: 'default', ('value', {'x': 'value'}), False.
+observed: |
+  python3 3.14.7: U gives KeyError, ('missing', {}), True; D gives 'default', ('value', {'x': 'value'}),
+  False. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Lib/collections/__init__.py:1162-1163: "Modify __contains__ and get() to work like dict does when
+  __missing__ is present." Doc/library/collections.rst:1337: "Class that simulates a dictionary."
+  Lib/_collections_abc.py:930-932, pop: "If key is not found, d is returned if given".
+cause: |
+  Lib/_collections_abc.py:934-942 `pop` reads `self[key]` in the try and deletes in the else, and
+  :987-990 `setdefault` and :874-877 `ItemsView.__contains__` rely on the KeyError of `self[key]`.
+  Lib/collections/__init__.py:1149-1150 answers through __missing__ instead.
+possible_fix: |
+  In UserDict, next to get and __contains__, with the same `key in self` test:
+      def pop(self, key, *args): return self.data.pop(key, *args)
+      def setdefault(self, key, default=None):
+          if key in self:
+              return self[key]
+          self[key] = default
+          return default
+  items() needs an ItemsView.__contains__ that tests `key in self._mapping` first, or a UserDict
+  override of items(); the first changes defaultdict-like mappings, so the override is safer.
+duplicates:
+  issues:
+    - {number: 83445, state: closed, relation: "same family: 'Fix UserDict.get to account for __missing__' fixed get only", reason: "pop, setdefault and items() not covered"}
+    - {number: 83448, state: closed, relation: "same discussion, dict's __missing__ documentation", reason: "documentation"}
+  queries: ["UserDict __missing__ pop", "UserDict __missing__", "MutableMapping pop __missing__",
+            "UserDict setdefault", "UserDict pop default KeyError", "UserDict setdefault __missing__",
+            "bugforge README: UserDict only in an unrelated plistlib entry"]
+lean:
+  property: PyLean.CoreLibs.Coll.UserDictMissingLikeDict
+  theorem: PyLean.CoreLibs.Coll.userDictMissingLikeDict_refuted

@@ -1,0 +1,52 @@
+id: bytesobj-bytearray-init-uninitialized
+title: "A failed bytearray.__init__ on a list leaves uninitialized heap memory in the object"
+priority: P3
+kind: duplicate-already-fixed
+module: bytesobj
+files: [Objects/bytearrayobject.c]
+functions: ["bytearray___init___impl"]
+summary: |
+  The exact-list and exact-tuple fast path of bytearray.__init__ resizes the object to len(items) and
+  then converts the items one at a time. A value outside range(256) returns -1 with the object still at
+  full size, and every byte from the bad item on is what the allocator returned. bytearray(items)
+  discards the object, but a direct b.__init__(items) or a subclass __init__ that catches the
+  ValueError keeps it, so `class B(bytearray): ...; B([7, 7, 300, 8])` shows heap contents:
+  B(b'\x07\x07Y0') in one run.
+  Lean: InitInitialised is refuted; the model marks bytes nobody wrote, and the other construction
+  paths are proven not to produce any.
+likelihood: |
+  Low: a subclass has to catch the error and keep using the object. The effect is an information leak
+  of heap memory, not a crash.
+maybe_intended: |
+  No. main fixes it (gh-160179: "The object is now empty after the failed call").
+reproducer: |
+  class B(bytearray):
+      def __init__(self, x):
+          try:
+              super().__init__(x)
+          except ValueError:
+              pass
+  b = B([7, 7, 300] + [8] * 61)
+  print('len after failed init:', len(b))
+  print('first bytes:', bytes(b[:8]))
+  if len(b) == 64:
+      print('REPRODUCED bytesobj-bytearray-init-uninitialized')
+expected: |
+  An object with no uninitialized bytes: empty, or holding only the items converted before the error.
+observed: |
+  python3 3.14.7: len 64 with garbage after the first two bytes. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): len 0. NOT REPRODUCED: fixed by gh-160179.
+promised_by: |
+  Invariant: Python code must not be able to read uninitialized memory.
+cause: |
+  Objects/bytearrayobject.c:1010-1030 (3.14.7): PyByteArray_Resize at :1010 then `return -1` at :1028
+  with no resize back. The neighbouring non-int branch at :1019 does resize to 0.
+possible_fix: |
+  Already done upstream: resize to 0 before returning at :1028. Nothing to file.
+duplicates:
+  issues:
+    - {number: 160179, state: closed, relation: "same bug; fixed by gh-160180, backported to 3.14 by gh-160204 on 2026-10-22, after 3.14.7"}
+  queries: ["bytearray __init__ uninitialized", "gh-160179", "bytearray init", "NEWS entry on main"]
+lean:
+  property: PyLean.BytesObj.Bytes.InitInitialised
+  theorem: PyLean.BytesObj.Bytes.initInitialised_refuted

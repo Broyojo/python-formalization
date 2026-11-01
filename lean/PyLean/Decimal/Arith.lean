@@ -34,12 +34,14 @@ inductive Rounding where
 
 inductive Signal where
   | clamped | invalidOperation | divisionByZero | inexact | rounded | subnormal | overflow | underflow
+  | floatOperation
   deriving Repr, DecidableEq, Inhabited
 
 def Signal.name : Signal → String
   | .clamped => "Clamped" | .invalidOperation => "InvalidOperation"
   | .divisionByZero => "DivisionByZero" | .inexact => "Inexact" | .rounded => "Rounded"
   | .subnormal => "Subnormal" | .overflow => "Overflow" | .underflow => "Underflow"
+  | .floatOperation => "FloatOperation"
 
 /-- A `Context` (only the fields the modelled operations read). Type
 invariant (enforced by `Context.__init__`/`_set_integer_check`,
@@ -122,7 +124,7 @@ def fixNan (c : Ctx) (neg sig : Bool) (p : Nat) : Dec :=
   let maxLen := c.prec - (if c.clamp then 1 else 0)
   if numDigits p > maxLen ∧ p ≠ 0 then .nan neg sig (p % 10 ^ maxLen) else .nan neg sig p
 
-/-- `Overflow.handle`, _pydecimal.py:281-295. -/
+/-- `Overflow.handle`, _pydecimal.py:281-294. -/
 def overflowResult (c : Ctx) (neg : Bool) : Dec :=
   let maxv := Dec.fin neg (10 ^ c.prec - 1) (c.emax - c.prec + 1)
   match c.rounding with
@@ -510,7 +512,7 @@ def pyHash : Dec → Py (Option Int)
     intLimit (numDigits co)      -- int(self._int)
     return some (hashFinite neg co e)
 
-/-- `_decimal`'s `_dec_hash`, _decimal.c:4895-5008: the same formula computed
+/-- `_decimal`'s `_dec_hash`, _decimal.c:4896-5008: the same formula computed
 with libmpdec (`mpd_qpowmod` with the literal `inv10_p = 2075258708292324556`,
 `mpd_qmul`, `mpd_qrem` under an extended max context), so no string
 conversion is involved. (`inv10_p` is `tenInv`: `tenInv_eq` below.) -/
@@ -573,7 +575,7 @@ def pyFromInt (n : Int) : Py Dec := do
   strLimit n.natAbs
   return .fin (n < 0) n.natAbs 0
 
-/-- `_decimal.Decimal(int)`, `dec_from_long` (_decimal.c:2361-2404),
+/-- `_decimal.Decimal(int)`, `dec_from_long` (_decimal.c:2361-2402),
 importing the digits with `mpd_qimport_u32`. -/
 def cFromInt (n : Int) : Py Dec := .ok (.fin (n < 0) n.natAbs 0)
 

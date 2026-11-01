@@ -142,7 +142,7 @@ def pyParse (s : List Char) : Py Dec :=
 
 /-! ## The C twin -/
 
-/-- `numeric_as_ascii(u, strip_ws=1, ignore_underscores=1)`, _decimal.c:2144-2195.
+/-- `numeric_as_ascii(u, strip_ws=1, ignore_underscores=1)`, _decimal.c:2144-2196.
 An invalid character makes the whole result the empty string. -/
 def numericAsAscii (s : List Char) : List Char :=
   let rec go (acc : List Char) : List Char → Option (List Char)
@@ -302,7 +302,7 @@ def mpdSetString (s0 : List Char) : MpdParse :=
   let (neg, s) := expSign s0
   mpdBody neg s
 
-/-- `PyDecType_FromUnicodeExactWS` (_decimal.c:2276-2293 and 2224-2250), with
+/-- `PyDecType_FromUnicodeExactWS` (_decimal.c:2276-2290 and 2224-2250), with
 the default context (InvalidOperation trapped). -/
 def cParse (s : List Char) : Py Dec :=
   match mpdSetString (numericAsAscii s) with

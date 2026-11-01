@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Lib/webbrowser.py	24	37	register	register(name, klass, instance=None, *, preferred=False)	todo		
+Lib/webbrowser.py	24	37	register	register(name, klass, instance=None, *, preferred=False)	todo		candidates:calstat-statistics-kernels-centred
 Lib/webbrowser.py	40	68	get	get(using=None)	todo		
 Lib/webbrowser.py	75	95	open	open(url, new=0, autoraise=True)	todo		
 Lib/webbrowser.py	98	103	open_new	open_new(url)	todo		
@@ -23,4 +23,4 @@ Lib/webbrowser.py	618	619	MacOSXOSAScript.__init__	__init__(self, name='default'
 Lib/webbrowser.py	621	666	MacOSXOSAScript.open	open(self, url, new=0, autoraise=True)	todo		
 Lib/webbrowser.py	678	731	IOSBrowser.open	open(self, url, new=0, autoraise=True)	todo		
 Lib/webbrowser.py	734	751	parse_args	parse_args(arg_list: list[str] | None)	todo		
-Lib/webbrowser.py	754	759	main	main(arg_list: list[str] | None=None)	todo		
+Lib/webbrowser.py	754	759	main	main(arg_list: list[str] | None=None)	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

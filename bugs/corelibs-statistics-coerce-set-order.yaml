@@ -1,0 +1,68 @@
+id: corelibs-statistics-coerce-set-order
+title: "statistics._sum folds _coerce over a set, so the result depends on the addresses of the types"
+priority: P4
+kind: nondeterminism
+module: corelibs
+files: [Lib/statistics.py]
+functions: ["_coerce", "_sum", "_ss", "mean"]
+summary: |
+  `T = reduce(_coerce, types, int)` iterates a set of type objects, whose order follows their hashes,
+  that is their addresses. _coerce is neither commutative nor associative once user subclasses are
+  involved, so the same call on equal data can differ between runs. For two sibling int subclasses the
+  result type flips. For two sibling Fraction subclasses and float (or a float subclass), mean either
+  returns a float or raises TypeError.
+likelihood: |
+  Low. It takes two unrelated numeric subclasses in one data set. When it happens it is hard to
+  debug, since it changes from run to run.
+maybe_intended: |
+  Partly. "Coercion rules are currently an implementation detail" (statistics.py:1568), so the exact
+  type may be free; a function that sometimes raises on the same input is still not a rule. On the
+  built-in numeric types the order does not matter: that narrowed statement is proven
+  (`CoerceBuiltinOrder`).
+reproducer: |
+  import statistics
+  from fractions import Fraction
+  types, outcomes = set(), set()
+  keep = []
+  for i in range(3000):
+      # New classes each time; the padding varies their addresses, hence the order of the set.
+      A = type('A', (int,), {})
+      keep.append([type('Z', (), {}) for _ in range(i % 5)])
+      B = type('B', (int,), {})
+      P = type('P', (Fraction,), {})
+      keep.append([type('Z', (), {}) for _ in range(i % 7)])
+      Q = type('Q', (Fraction,), {})
+      R = type('R', (float,), {})
+      types.add(type(statistics.mean([A(1), B(3)])).__name__)
+      try:
+          outcomes.add(type(statistics.mean([P(1), Q(2), R(1.5)])).__name__)
+      except TypeError:
+          outcomes.add('TypeError')
+      if i % 11 == 0:
+          keep.clear()
+  print(sorted(types), sorted(outcomes))
+  if types == {'A', 'B'} and outcomes == {'TypeError', 'R'}:
+      print('REPRODUCED corelibs-statistics-coerce-set-order')
+expected: |
+  One outcome for one input.
+observed: |
+  python3 3.14.7: ['A', 'B'] ['R', 'TypeError']. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Invariant: equal data in the same order should give the same result. The source's "Coerce types T
+  and S to a common type, or raise TypeError" (statistics.py:1566).
+cause: |
+  Lib/statistics.py:1507 and :1554 reduce over the set built at :1487 and :1525. At :1585-1586 two
+  unrelated int subclasses resolve to whichever comes second; at :1588-1591 a Fraction subclass and
+  float give float, while two sibling Fraction subclasses fall through to the TypeError at :1594.
+possible_fix: |
+  Keep the types in first-seen order (a dict instead of a set), which makes the result
+  deterministic for a given data order.
+duplicates:
+  issues:
+    - {number: 64680, state: closed, relation: "same area: 'Clarify type coercion rules in statistics module' (2014), which introduced the rules", reason: "different bug"}
+  queries: ["statistics _coerce", "statistics coerce set order", "statistics subclass result type nondeterministic",
+            "bugforge README: no entry on _coerce"]
+lean:
+  property: PyLean.CoreLibs.CalStat.CoerceOrderIndependent
+  theorem: PyLean.CoreLibs.CalStat.coerceOrderIndependent_refuted
