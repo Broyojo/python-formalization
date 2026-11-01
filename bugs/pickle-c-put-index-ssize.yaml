@@ -1,0 +1,46 @@
+id: pickle-c-put-index-ssize
+title: "_pickle: PUT with an index of 2**63 or more raises OverflowError; the pickle.py memo is a dict"
+priority: P4
+kind: twin-mismatch
+module: pickle
+files: [Modules/_pickle.c, Lib/pickle.py]
+functions: [load_put, load_get]
+summary: |
+  `load_put` converts the text index with PyLong_AsSsize_t, so `b'Np9223372036854775808\n.'` raises
+  OverflowError in C and returns None in Python. GET with such an index raises OverflowError in C and
+  UnpicklingError in Python.
+likelihood: |
+  Hand-made pickles only.
+maybe_intended: |
+  Yes. Serhiy Storchaka in the duplicate: "Indices larger than sys.maxsize just are not supported in
+  the C implementation. I do not think this is a bug." Recorded so the decoder property's exclusions
+  are on record, not for filing.
+reproducer: |
+  import pickle
+  data = b'Np9223372036854775808\n.'
+  def r(f, s):
+      try: return ('ok', f(s))
+      except Exception as e: return (type(e).__name__, str(e))
+  c, p = r(pickle.loads, data), r(pickle._loads, data)
+  print('C', c, 'Python', p)
+  if c[0] == 'OverflowError' and p == ('ok', None):
+      print('REPRODUCED pickle-c-put-index-ssize')
+expected: |
+  Not a defect per the maintainers.
+observed: |
+  python3 3.14.7: C OverflowError, Python None. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): REPRODUCED, same behaviour.
+promised_by: |
+  Twin relation only.
+cause: |
+  Modules/_pickle.c:6580-6590. Lib/pickle.py:1746-1751.
+possible_fix: |
+  None proposed.
+duplicates:
+  issues:
+    - {number: 144410, state: closed, relation: duplicate, reason: "closed, not a bug"}
+  queries: ["pickle PUT", "pickle memo index"]
+  bugforge: "no pickle entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Pickle.PutTwins
+  theorem: PyLean.Pickle.putTwins_refuted

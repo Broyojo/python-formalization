@@ -16,7 +16,7 @@ Modules/_lzmamodule.c	391	396	free_filter_chain	free_filter_chain(lzma_filter fi
 Modules/_lzmamodule.c	399	429	parse_filter_chain_spec	parse_filter_chain_spec(_lzma_state *state, lzma_filter filters[], PyObject *filterspecs)	todo		
 Modules/_lzmamodule.c	438	453	spec_add_field	spec_add_field(PyObject *spec, const char *key, unsigned long long value)	todo		
 Modules/_lzmamodule.c	456	519	build_filter_spec	build_filter_spec(const lzma_filter *f)	todo		
-Modules/_lzmamodule.c	554	598	compress	compress(Compressor *c, uint8_t *data, size_t len, lzma_action action)	todo		
+Modules/_lzmamodule.c	554	598	compress	compress(Compressor *c, uint8_t *data, size_t len, lzma_action action)	todo		candidates:itertools-simple-doc-agree
 Modules/_lzmamodule.c	615	629	_lzma_LZMACompressor_compress_impl	_lzma_LZMACompressor_compress_impl(Compressor *self, Py_buffer *data) /*[clinic end generated code: output=31f615136963e00f input=64019eac7f2cc8d0]*/	todo		
 Modules/_lzmamodule.c	642	656	_lzma_LZMACompressor_flush_impl	_lzma_LZMACompressor_flush_impl(Compressor *self) /*[clinic end generated code: output=fec21f3e22504f50 input=6b369303f67ad0a8]*/	todo		
 Modules/_lzmamodule.c	659	680	Compressor_init_xz	Compressor_init_xz(_lzma_state *state, lzma_stream *lzs, int check, uint32_t preset, PyObject *filterspecs)	todo		

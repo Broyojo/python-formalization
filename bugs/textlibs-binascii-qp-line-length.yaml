@@ -1,0 +1,48 @@
+id: textlibs-binascii-qp-line-length
+title: "binascii.b2a_qp writes lines longer than its own MAXLINESIZE of 76 before a line ending"
+priority: P3
+kind: spec-violation
+module: textlibs
+files: [Modules/binascii.c]
+functions: ["binascii_b2a_qp_impl"]
+summary: |
+  `binascii.b2a_qp(b'a' * 75 + b' \n')` returns a 78-character line, and `b'a' * 74 + b' \n'` a
+  77-character one, although MAXLINESIZE is 76 and the encoder inserts soft line breaks to respect
+  it. The soft-break test is skipped when the next byte is a newline, so the space is written raw
+  at column 76 at most. The line-end branch then rewrites that trailing space as `=20`, adding two
+  characters after the length was checked.
+likelihood: |
+  Moderate for mail: text with a line of 74 or 75 characters followed by trailing whitespace.
+  quopri.encodestring calls b2a_qp when binascii is available, so this reaches quopri users. Most
+  mail agents tolerate slightly long lines, so the effect is non-conformance, not data loss:
+  decoding still returns the original bytes.
+maybe_intended: |
+  No sign of it. The code is careful about MAXLINESIZE everywhere else, and bugforge reports the
+  same class of defect for the pure-Python fallback in quopri. RFC 2045 section 6.7 rule 5 says
+  encoded lines must be no more than 76 characters long.
+reproducer: |
+  import binascii
+  out = binascii.b2a_qp(b'a' * 75 + b' \n')
+  longest = max(len(line) for line in out.split(b'\n'))
+  print(out, longest)
+  if longest > 76:
+      print('REPRODUCED textlibs-binascii-qp-line-length')
+expected: |
+  No output line longer than 76 characters, as RFC 2045 requires.
+observed: |
+  python3 3.14.7: longest line 78. REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): longest line 78. REPRODUCED.
+promised_by: |
+  RFC 2045 section 6.7 rule 5, and `#define MAXLINESIZE 76` at Modules/binascii.c:958.
+cause: |
+  Modules/binascii.c:1223-1231 skips the soft break when databuf[in+1] is '\n'; :1207-1213 then
+  turns the trailing space or tab into `=20` or `=09` without looking at linelen. The first pass,
+  :1126-1134, adds the same two bytes, so the buffer is sized correctly: this is not an overflow.
+possible_fix: |
+  When a space or tab comes right before a line end and linelen + 3 would pass MAXLINESIZE, emit a
+  soft line break before writing it.
+duplicates: |
+  No report of the C encoder found. Bugforge quopri-20261003-074352-c3 reports the pure-Python
+  fallback in quopri (not filed), which is a different code path; a combined report could cover
+  both. Queries: gh api search/issues q='repo:python/cpython b2a_qp line length quoted-printable 76'
+lean: lean/PyLean/TextLibs/BinasciiProps2.lean (QpLineLimit, qpLineLimit_refuted)

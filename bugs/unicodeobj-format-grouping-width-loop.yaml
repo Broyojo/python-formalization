@@ -1,0 +1,56 @@
+id: unicodeobj-format-grouping-width-loop
+title: "format(1, '0<huge>,') spins in an uninterruptible loop proportional to the width before it can raise MemoryError"
+priority: P4
+kind: hang
+module: formatter_unicode
+files: [Objects/unicodeobject.c, Python/formatter_unicode.c]
+functions: ["_PyUnicode_InsertThousandsGrouping", "calc_number_widths"]
+summary: |
+  With zero padding and a thousands separator, calc_number_widths asks
+  _PyUnicode_InsertThousandsGrouping for the padded size before anything is allocated. That
+  function has no arithmetic shortcut: it walks group by group until `min_width` is used up, so
+  it runs width/4 iterations with no signal check. format(1, '0' + '9' * 18 + ',') would need
+  about 2.5e17 iterations; without the comma the same width raises MemoryError at once. The time
+  is lost before the allocation that was going to fail anyway, and Ctrl-C has no effect.
+likelihood: |
+  Low. It needs an attacker- or user-controlled format spec with a very large width, zero
+  padding and ','. Services that format with user-supplied specs are the exposure.
+maybe_intended: |
+  Not designed, but an unusual input. A maintainer may treat a user-controlled format spec as
+  already unsafe, since width alone can request a large allocation.
+reproducer: |
+  import subprocess, sys
+  width = 10 ** 15
+  fast = subprocess.run([sys.executable, "-c",
+      "try:\n    format(1, '0%d')\nexcept MemoryError:\n    print('MemoryError')" % width],
+      capture_output=True, text=True, timeout=30)
+  try:
+      subprocess.run([sys.executable, "-c", "format(1, '0%d,')" % width],
+                     capture_output=True, text=True, timeout=5)
+      spun = False
+  except subprocess.TimeoutExpired:
+      spun = True
+  print("without comma:", fast.stdout.strip(), "| with comma still running after 5s:", spun)
+  if "MemoryError" in fast.stdout and spun:
+      print("REPRODUCED unicodeobj-format-grouping-width-loop")
+expected: |
+  MemoryError or OverflowError straight away, as without the comma.
+observed: |
+  The call with ',' runs on, using one core, for the width/4 iterations.
+tested: "REPRODUCED on python3 3.14.7 and on main (3.16.0a1+dev) by scripts/check_bugs.py"
+promised_by: |
+  Invariant: no hang. calc_number_widths and the format with no separator handle the same width at once.
+cause: |
+  Objects/unicodeobject.c:9852-9879, the `while` loop of _PyUnicode_InsertThousandsGrouping, called
+  with writer == NULL from Python/formatter_unicode.c:617-620 with n_min_width near the width.
+possible_fix: |
+  Check the padded size against PY_SSIZE_T_MAX, or compute the count in closed form when `grouping`
+  repeats, before entering the loop.
+lean: |
+  Refuted by groupLoopLinear_refuted (lean/PyLean/UnicodeObj/FormatProps.lean): the loop makes more
+  rounds than there are digits, because the count follows min_width.
+duplicates:
+  issues: []
+  queries: ["format width comma hang", "thousands separator width slow", "InsertThousandsGrouping",
+            "format huge width MemoryError", "format zero padding comma"]
+  bugforge: "no match in vendor/bugforge-results/README.md"

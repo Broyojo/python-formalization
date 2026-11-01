@@ -1,0 +1,97 @@
+id: itertools-product-repeat-zero-skips-iterables
+title: "itertools.product with repeat=0 ignores its positional arguments: non-iterables are accepted and raising iterables are never read"
+priority: P4
+kind: doc-mismatch
+module: itertools
+files: [Modules/itertoolsmodule.c, Doc/library/itertools.rst]
+functions: ["product_new"]
+summary: |
+  product_new sets nargs = 0 when repeat == 0, so the loop that turns each argument into a
+  tuple never runs. product(5, repeat=0) succeeds and yields one empty tuple, and
+  product(raising_generator(), repeat=0) never starts the generator. For every other repeat, and
+  in the documented equivalent (`pools = [tuple(pool) for pool in iterables] * repeat`), all
+  arguments are read first, so the same call raises TypeError.
+  The tuples agree whenever the arguments can be read: both sides give [()] for repeat=0. Only
+  the error, and the side effect of consuming the arguments, differ.
+  Lean: C and doc agree when repeat=0 is not combined with unreadable arguments
+  (itertools-product-doc-agree-iterable, proven); itertools-product-doc-agree is refuted by
+  args = [5], repeat = 0.
+likelihood: |
+  Very low. It needs repeat=0 together with a bad argument; repeat computed at run time is the
+  only realistic way to get there, and then a programming error goes unreported for that one case.
+maybe_intended: |
+  Probably a side effect, not a decision about errors. The branch is old: the form
+  `nargs = (repeat == 0) ? 0 : PyTuple_GET_SIZE(args);` is quoted in python/cpython#67553 (2015),
+  so it predates the overflow check that now shares its `if`. It is needed for memory safety as
+  the code stands: `pools` has npools slots and the argument loop stores nargs items into it, so
+  nargs must be 0 when npools is 0. Skipping the arguments follows from that. No test in
+  Lib/test/test_itertools.py uses a literal repeat=0, so nothing pins the behaviour either way.
+  A maintainer may reasonably close this as harmless, since "roughly equivalent" does not promise
+  error behaviour for this corner. Doing nothing would be an acceptable outcome.
+reproducer: |
+  import itertools
+  def doc_product(*iterables, repeat=1):
+      if repeat < 0:
+          raise ValueError('repeat argument cannot be negative')
+      pools = [tuple(pool) for pool in iterables] * repeat
+      result = [[]]
+      for pool in pools:
+          result = [x+[y] for x in result for y in pool]
+      for prod in result:
+          yield tuple(prod)
+  c = list(itertools.product(5, repeat=0))
+  try:
+      doc = list(doc_product(5, repeat=0))
+  except TypeError as e:
+      doc = 'TypeError'
+  started = []
+  def gen():
+      started.append(1)
+      yield 1
+  list(itertools.product(gen(), repeat=0))
+  print('C:', c, 'doc:', doc, 'generator started:', bool(started))
+  print('product(5, repeat=1) raises:', end=' ')
+  try:
+      itertools.product(5, repeat=1)
+      print('nothing')
+      bad = True
+  except TypeError as e:
+      print(e)
+      bad = False
+  if c == [()] and doc == 'TypeError' and not started and not bad:
+      print('REPRODUCED itertools-product-repeat-zero-skips-iterables')
+expected: |
+  TypeError for product(5, repeat=0), as for every other repeat and in the doc equivalent.
+observed: |
+  python3 3.14.7 (Linux build pod): product(5, repeat=0) gives [()], the doc equivalent raises
+  TypeError, and a generator passed with repeat=0 is never started. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Doc/library/itertools.rst:596-612 ("Roughly equivalent to", weak: the phrase covers the result
+  more than the errors).
+cause: |
+  Modules/itertoolsmodule.c:2100-2101: `if (repeat == 0) { nargs = 0; }`; the argument loop at
+  :2119-2126 runs up to nargs and stores into pools, which has npools (here 0) slots.
+possible_fix: |
+  Keep nargs = 0 for the loop that fills pools, and when repeat == 0 first run PySequence_Tuple on
+  each argument and discard the result, so errors and consumption match every other repeat.
+  nargs itself must not simply be left non-zero: the loop would then write past pools. Leaving
+  the code alone and accepting the difference is also reasonable.
+duplicates:
+  issues:
+    - {number: 67553, state: closed, relation: "integer overflow in product; quotes the repeat == 0 branch", reason: "different bug, about npools overflow; shows the branch predates that fix"}
+    - {number: 100603, state: closed, relation: "product() gives [()]", reason: "the nullary product is intended; says nothing about unread arguments"}
+    - {number: 139880, state: closed, relation: "product((), repeat=1) vs product(repeat=1)", reason: "different question, about empty pools"}
+  queries: ["product repeat 0",
+            "product repeat=0",
+            "itertools product repeat zero",
+            "itertools product repeat TypeError",
+            "itertools product not iterable",
+            "itertools product repeat ignored",
+            "itertools.product repeat",
+            "(all of the above: word searches, with and without --include-prs, titles filtered on product/repeat/itertools and read)",
+            "issues 67553, 100603, 139880 read in full",
+            "bugforge README: no itertools entries (more_itertools only)"]
+lean:
+  property: PyLean.Itertools.ProductObjAgree
+  theorem: PyLean.Itertools.productObjAgree_refuted

@@ -2,11 +2,12 @@
 # Kubernetes cluster: never let this fail over to a paid cloud. CPU only, so it
 # takes no GPUs, and it leaves 32 CPUs on the node for other jobs.
 #
-# All state lives in /dev/shm. The node's disk is shared with every other job
-# there and is nearly full, so builds must not write to it. /dev/shm counts
-# against this pod's memory, and everything in it is a disposable cache.
-#   sky launch -c pylean sky/builder.yaml -i 120 --down -y
+# All state under ~/pylean is a disposable cache. The disk is shared with every
+# other job on the node, so the watchdog stops builds if free space runs low.
+#   sky launch -c pylean sky/builder.yaml -i 5 --down -y -d
 name: pylean-builder
+
+workdir: .
 
 resources:
   infra: k8s/a100
@@ -17,7 +18,7 @@ resources:
 setup: |
   set -euo pipefail
   SUDO=$(command -v sudo || true)
-  S=/dev/shm/pylean
+  S=$HOME/pylean
   mkdir -p $S/pf $S/elan $S/tmp
   ln -sfn $S/pf $HOME/pf
   ln -sfn $S/elan $HOME/.elan
@@ -56,9 +57,11 @@ setup: |
   # Remote commands get these tools on PATH.
   cat > $HOME/pf/env.sh <<'ENV'
   export PATH=$HOME/pf/py314/bin:$HOME/.elan/bin:$PATH
-  export TMPDIR=/dev/shm/pylean/tmp
+  export TMPDIR=$HOME/pylean/tmp
   ENV
   sed -i 's/^  //' $HOME/pf/env.sh
 
+# Keeps the pod alive while Lean runs; see the comment in the script.
 run: |
   echo builder ready
+  bash sky/watchdog.sh

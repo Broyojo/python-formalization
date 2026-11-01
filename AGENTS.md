@@ -53,6 +53,12 @@ it. `python3` on the pod is 3.14.7 and the `vendor/` paths below work there too.
 Reading files, git and `gh` stay local. Scratch `.lean` files must live inside
 your worktree to be synced (not under `lean/PyLean/`, and do not commit them).
 
+The pod is shared by many agents. Kill your own stray processes by PID, never
+with `pkill -f` or a pattern, which can hit another agent's work. A watchdog kills
+any Lean process above 64 GB of resident memory. If `lake build` fails, an
+`Audit.lean` run still reports results from the old build, so always chain them
+with `&&` and confirm the build passed before trusting the audit.
+
 The pod is pinned to our own Kubernetes cluster. Never launch compute on a paid
 cloud, and never touch the other clusters in `sky status`.
 
