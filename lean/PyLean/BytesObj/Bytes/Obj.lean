@@ -96,8 +96,8 @@ def Obj.typeName : Obj → String
   | .tuple _ => "tuple"
   | .dict _ => "dict"
   | .iter _ => "generator"
-  | .index _ => "Idx"
-  | .dunder _ => "Dun"
+  | .index _ => "BIdx"
+  | .dunder _ => "BDun"
   | .plain => "object"
 
 /-- `PyObject_CheckBuffer` / the contents of the buffer (`PyBUF_SIMPLE`). -/
