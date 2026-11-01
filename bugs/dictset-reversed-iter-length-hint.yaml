@@ -43,8 +43,9 @@ reproducer: |
 expected: |
   RuntimeError: dictionary keys changed during iteration, as the forward iterator does.
 observed: |
-  python3 3.14.7: __length_hint__() -> 18446744073709551615, list(r) -> OverflowError.
-  main: RuntimeError: dictionary keys changed during iteration. NOT REPRODUCED, as expected.
+  python3 3.14.7: __length_hint__() -> 18446744073709551615, list(r) -> OverflowError. REPRODUCED.
+  main (3.16.0a1+dev, ef1fce0): RuntimeError: dictionary keys changed during iteration.
+  NOT REPRODUCED by check_bugs.py, as expected: gh-158254 fixed it.
 promised_by: |
   Internal consistency with dictiter_iternextkey_lock_held (:5278-5283), and __length_hint__ being
   a non-negative estimate.

@@ -49,8 +49,8 @@ expected: |
   absent.
 observed: |
   python3 3.14.7: `d.get(S('x'), 'default')` -> 'default', then SIGSEGV in setdefault, exit -11.
-  main: same, exit -11, observed on the build pod with the first version of this reproducer.
-  The check_bugs.py run of this exact text is in the report, not here, if the pod was down.
+  REPRODUCED.
+  main (3.16.0a1+dev, ef1fce0): identical. REPRODUCED by check_bugs.py.
 promised_by: |
   Doc/library/stdtypes.rst, dict.setdefault: "If key is in the dictionary, return its value.
   If not, insert key with a value of default and return default." Invariant: no crash.

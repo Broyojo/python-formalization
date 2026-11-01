@@ -53,11 +53,10 @@ expected: |
   od.popitem() raises KeyError or returns an item, and iterating od ends after finitely many
   items, whatever state the dict and list are in.
 observed: |
-  python3 3.14.7: od.popitem() and od.pop('b') exit -11; od.pop('b', 7) returns 7.
-  list(od) after two dict.popitem(od): never returned; a watchdog found it spinning inside
-  list() with the list growing.
-  main: the segfaults reproduce (exit -11). The hang was seen on 3.14.7 only when the pod went
-  down; see check_bugs.py results in the report.
+  python3 3.14.7: od.popitem() and od.pop('b') exit -11; od.pop('b', 7) returns 7. After two
+  dict.popitem(od), list(od) never returned: a watchdog found it inside list() with the list
+  growing, and islice(od, 100) yields 100 items from an OrderedDict with 3 nodes. REPRODUCED.
+  main (3.16.0a1+dev, ef1fce0): identical. REPRODUCED by check_bugs.py.
 promised_by: |
   Invariant: no crash, no hang. Objects/odictobject.c:3-4: "necessarily explicitly equivalent to
   the pure Python OrderedDict", where the same calls raise KeyError and never loop.

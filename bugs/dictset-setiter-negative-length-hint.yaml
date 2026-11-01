@@ -40,8 +40,9 @@ expected: |
   __length_hint__() is never negative. Raising RuntimeError on the unexpected element, as dict's
   iterators do, would also be acceptable.
 observed: |
-  python3 3.14.7: 3 -1, then ValueError: __length_hint__() should return >= 0.
-  main: 3 -1, then ValueError: set_iterator.__length_hint__() must return a non-negative int.
+  python3 3.14.7: 3 -1, then ValueError: __length_hint__() should return >= 0. REPRODUCED.
+  main (3.16.0a1+dev, ef1fce0): 3 -1, then ValueError: set_iterator.__length_hint__() must
+  return a non-negative int. REPRODUCED by check_bugs.py.
 promised_by: |
   Invariant: PEP 424 requires __length_hint__ to return an int >= 0, and PyObject_LengthHint
   enforces it. Internal consistency with dictiter_iternextkey_lock_held.

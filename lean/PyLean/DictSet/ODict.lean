@@ -146,7 +146,11 @@ def odictClearNode (node : Option (Node K)) (key : K) (hash : Int) : OM K V Unit
 /-- `_PyODict_SetItem_KnownHash_LockHeld` (:1638-1654). -/
 def odictSetItemKnownHash (key : K) (value : V) (hash : Int) : OM K V Unit := do
   onDict (dictSetItemKnownHash P key value hash)
-  odictAddNewNode P key hash
+  M.tryCatch (odictAddNewNode P key hash) fun e => do
+    -- Revert setting the value on the dict (:1646-1650). `_PyErr_ChainExceptions1` keeps an
+    -- exception raised by the revert, with `e` as its context, so that one propagates.
+    onDict (dictDelItemKnownHash P key hash)
+    M.throw e
 
 /-- `PyODict_SetItem_LockHeld` (:1657-1666), `PyODict_SetItem` (:1668-1676). -/
 def odictSetItem (key : K) (value : V) : OM K V Unit := do
