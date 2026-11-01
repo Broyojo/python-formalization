@@ -550,8 +550,8 @@ def charsetPrefix : (fuel : Nat) → List Node → Nat → Option (List SetItem)
       | _ => none
 
 /-- `_compile_info`, `Lib/re/_compiler.py:525-585`. -/
-def compileInfo (gw : List (Option (Nat × Nat))) (p : List Node) (flags : Nat) : List Nat :=
-  let (lo, hi0) := getwidth gw p
+def compileInfoW (w : Nat × Nat) (p : List Node) (flags : Nat) : List Nat :=
+  let (lo, hi0) := w
   let hi := if hi0 > MAXCODE then MAXCODE else hi0
   if lo = 0 then [OP_INFO, 4, 0, lo, hi]
   else
@@ -577,6 +577,9 @@ def compileInfo (gw : List (Option (Nat × Nat))) (p : List Node) (flags : Nat) 
     let (loWord, _) := if lo < MAXCODE then (lo, 0) else (MAXCODE, 0)
     let body := [mask, loWord, hi] ++ tailWords
     OP_INFO :: (body.length + 1) :: body
+
+def compileInfo (gw : List (Option (Nat × Nat))) (p : List Node) (flags : Nat) : List Nat :=
+  compileInfoW (getwidth gw p) p flags
 
 /-- `_code`, `Lib/re/_compiler.py:590-603`. -/
 def codeOf (p : Parsed) (flags : Nat) : Py (List Nat) := do

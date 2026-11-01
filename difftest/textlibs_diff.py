@@ -926,6 +926,8 @@ class CsvArea:
 # ---- re --------------------------------------------------------------------
 
 import re
+import _sre
+import json
 from re import _parser as sre_parse
 
 
@@ -981,6 +983,16 @@ def re_src(c):
     if c["text"]:
         return "".join(map(chr, c["pat"]))
     return bytes(c["pat"])
+
+
+def _sre_parse(pat):
+    from re import _parser
+    return _parser.parse(pat, 0)
+
+
+def _sre_code(p):
+    from re import _compiler
+    return _compiler._code(p, 0)
 
 
 @area("re", 8)
@@ -1099,6 +1111,8 @@ class ReArea:
         if not text:
             pat = pat.replace("é", "\xe9")
         c = {"mod": "textlibs", "fn": "re.parse", "pat": [ord(x) for x in pat], "text": text, "flags": flags}
+        if os.environ.get("RE_EXEC") == "1" or r.random() < 0.5:
+            return cls.gen_exec(r)
         if r.random() < 0.45:
             c["fn"] = "re.code"
             # charsets, case folding and literal prefixes
@@ -1116,7 +1130,287 @@ class ReArea:
         return c
 
     @classmethod
+    def gen_validate(cls, r):
+        pat = cls.compile_pat(r) if r.random() < 0.7 else cls.gen_pat(r)
+        try:
+            p = _sre_parse(pat)
+            code = _sre_code(p)
+            groups = p.state.groups - 1
+        except Exception:
+            code, groups = [1], 0
+        code = list(code)
+        for _ in range(r.choice([0, 1, 1, 2, 3])):
+            i = r.randrange(len(code))
+            code[i] = r.choice([0, 1, 2, 3, 4, 5, 8, 13, 14, 15, 16, 17, 18, 19, 23, 24, 27, 28, 29, code[i] + 1, code[i] - 1 if code[i] else 0,
+                                len(code), 2**32 - 1])
+        if r.random() < 0.1:
+            code = code[:r.randrange(len(code) + 1)]
+        # A skip below these bounds makes the validator itself read outside the array, which is
+        # undefined behaviour, not an outcome to compare. The model reports it as a separate case.
+        if any((w in (13, 31, 35, 39) and code[i + 1:i + 2] and code[i + 1] < 2) or (w == 14 and code[i + 1:i + 2] and code[i + 1] < 5)
+               for i, w in enumerate(code)):
+            code = [1]
+        return {"mod": "textlibs", "fn": "re.validate", "text": True, "pat": [], "flags": 0, "code": code,
+                "groups": r.choice([groups, groups, groups, 0, groups + 1, -1])}
+
+    @classmethod
+    def run_validate(cls, c):
+        rd, wr = os.pipe()
+        pid = os.fork()
+        if pid == 0:
+            os.close(rd)
+            try:
+                _sre.compile(None, 0, c["code"], c["groups"], {}, ())
+                out = {"ok": True}
+            except Exception as e:
+                out = {"exc": type(e).__name__, "msg": str(e)}
+            os.write(wr, json.dumps(out).encode())
+            os._exit(0)
+        os.close(wr)
+        buf = b""
+        while True:
+            chunk = os.read(rd, 4096)
+            if not chunk:
+                break
+            buf += chunk
+        os.close(rd)
+        _, status = os.waitpid(pid, 0)
+        if os.WIFSIGNALED(status) or not buf:
+            return {"exc": "SegmentationFault", "msg": ""}
+        return json.loads(buf)
+
+    @classmethod
+    def gen_scanner(cls, r):
+        pool = ["a", "b+", "[a-c]", r"\\w+", r"\\d", r"\\s", "é", "(?i)a", "(?x) a b", "(a)", "(a)(b)", "x|y", "", "a*", r"(a)\\1", "(?i:b)", "."]
+        n = r.choice([0, 1, 2, 3])
+        phrases = [r.choice(pool).replace("\\\\", "\\") for _ in range(n)]
+        flags = r.choice([0, 0, 2, 8, 16, 256, 32])
+        s = "".join(r.choice("abcxyAB é1 ٣") for _ in range(r.choice([0, 1, 2, 3, 5, 8])))
+        return {"mod": "textlibs", "fn": "re.scanner", "text": True, "pat": [], "phrases": [[ord(x) for x in ph] for ph in phrases],
+                "flags": flags, "s": [ord(x) for x in s]}
+
+    @classmethod
+    def run_scanner(cls, c):
+        phrases = ["".join(map(chr, ph)) for ph in c["phrases"]]
+        lex = [(ph, None if i % 3 == 2 else i) for i, ph in enumerate(phrases)]
+
+        def body():
+            r, rest = re.Scanner(lex, c["flags"]).scan("".join(map(chr, c["s"])))
+            return [r, [ord(x) for x in rest]]
+
+        return common.py_result(body)
+
+    @classmethod
+    def gen_exec(cls, r):
+        k = r.random()
+        if k < 0.04:
+            return cls.gen_validate(r)
+        if k < 0.08:
+            return cls.gen_scanner(r)
+        if k < 0.10:
+            s = "".join(r.choice("ab.*()[]{}?+-|^$\\&~# \t\n\r\x0b\x0c/é_%") for _ in range(r.choice([0, 1, 3, 8])))
+            return {"mod": "textlibs", "fn": "re.escape", "text": True, "pat": [], "flags": 0, "s": [ord(x) for x in s]}
+        if k < 0.12:
+            f = r.choice(["sub", "subn", "split"])
+            c = {"mod": "textlibs", "fn": "re.args", "text": True, "pat": [], "flags": 0, "f": f,
+                 "args": [r.choice([0, 1, 2]) for _ in range(r.choice([0, 0, 1, 1, 2, 3, 4]))]}
+            if r.random() < 0.3:
+                c["kw1"] = r.choice([0, 1, 2])
+            if r.random() < 0.3:
+                c["kw2"] = r.choice([0, 2])
+            return c
+        for _ in range(50):
+            pat = cls.compile_pat(r) if r.random() < 0.8 else cls.gen_pat(r)
+            flags = r.choice([0, 0, 0, 2, 2, 8, 16, 256, 2 | 256, 2 | 8])
+            if r.random() < 0.2:
+                pat = r.choice(["(a)|b", "(a)|(b)", "(a|b)*", "(a|(b))+", "((a)|b)*c", "(a*)*", "(a*)+", "(?:(a)|b)*", "(a)?b",
+                                "(a)*?b", "(?P<x>a)(?P=x)", "(a)\\1", "(a*)\\1", "(?:(a)|(b))+\\1", "(a)(?(1)b|c)",
+                                "(?:(a)|b)(?(1)c|d)", "(?=(a))a", "(?!(a))b", "(?<=(a))b", "(?>a+)a", "a*+a", "(?>(a)|b)+",
+                                "(?:a|ab)+?c", "(a|ab)(c|bcd)", "\\bfoo\\b", "(?m)^a$", "a$", "^", "$", "\\Z", "", "(?:)", "()",
+                                "()*", "(a|)*", "(|a)+", "(?:a?)*", "(?:a?)*?b", "(?:(a)?)*", "(a?)+?b", "(?i)aB", "[a-c]+", "a{2,3}",
+                                "(ab){2}", "(a){0}", "(a){0}b", "a{0}", "(?:a|b){2,}?", "(?:ab)*+a", "(a)++", "(a|b)*+b"])
+            try:
+                re.compile(pat, flags)
+                break
+            except Exception:
+                continue
+        else:
+            pat, flags = "a", 0
+        chars = [ch for ch in pat if ch not in "()[]{}?*+|^$.\\-:=!<>"] or ["a"]
+        alpha = (chars + ["a", "b", "c", "\n", " ", "A", "é"]) if r.random() < 0.8 else ["a", "b"]
+        subj = "".join(r.choice(alpha) for _ in range(r.choice([0, 1, 2, 3, 4, 5, 6, 8])))
+        mode = r.choice(["match", "fullmatch", "search", "search", "findall", "finditer", "scanmatch", "split", "sub", "expand",
+                         "groups", "matchop", "matchop", "prepr", "peq"])
+        n = len(subj)
+        text = True
+        if r.random() < 0.15 and all(ord(x) < 128 for x in pat) and flags & 32 == 0:
+            try:
+                re.compile(pat.encode(), flags & ~256)
+                text, flags = False, flags & ~256
+            except Exception:
+                pass
+        if not text:
+            subj = "".join(ch for ch in subj if ord(ch) < 256)
+        c = {"mod": "textlibs", "fn": "re.exec", "pat": [ord(x) for x in pat], "text": text, "flags": flags, "mode": mode,
+             "s": [ord(x) for x in subj], "pos": 0, "endpos": 2**63 - 1, "count": 0,
+             "stext": text if (r.random() < 0.96 or any(ord(x) > 255 for x in subj)) else not text}
+        if mode == "matchop":
+            c["op"] = r.choice(["group", "group", "getitem", "start", "end", "span", "regs", "repr"])
+            pool = [0, 1, 2, 3, -1, 10**30, -10**30, [120], [97], [121], {}]
+            c["gs"] = [r.choice(pool) for _ in range(r.choice([0, 1, 1, 1, 2, 3]))]
+            if c["op"] not in ("group",) and not c["gs"]:
+                c["gs"] = [0]
+        if mode == "peq":
+            q = r.choice([pat, pat, pat + "a", ""])
+            c["pat2"] = [ord(x) for x in q]
+            c["flags2"] = r.choice([flags, flags, flags ^ 2])
+        if r.random() < 0.25:
+            c["pos"] = r.choice([0, 1, 2, n, n + 1, -1, -(2**62)])
+            c["endpos"] = r.choice([0, 1, 2, n, n + 1, -1, 2**62, n - 1])
+        if mode in ("split", "sub"):
+            c["count"] = r.choice([0, 0, 0, 1, 2, -1])
+        if mode in ("sub", "expand"):
+            c["repl"] = [ord(x) for x in r.choice(["", "x", "\\g<0>", "[\\g<0>]", "\\1", "\\g<1>", "a\\1b", "\\n", "\\\\", "\\2"])]
+        return c
+
+    @classmethod
+    def run_exec(cls, c):
+        src, flags, mode = re_src(c), c["flags"], c["mode"]
+        s = "".join(map(chr, c["s"]))
+        if not c["stext"]:
+            s = bytes(c["s"])
+        pos, endpos = c["pos"], c["endpos"]
+
+        def unval(x):
+            return x if isinstance(x, list) else None
+
+        def enc_m(m):
+            if m is None:
+                return None
+            spans = []
+            for g in range(m.re.groups + 1):
+                sp = m.span(g)
+                spans.append(None if sp == (-1, -1) else list(sp))
+            return {"spans": spans, "lastindex": m.lastindex}
+
+        def val(x):
+            if x is None:
+                return None
+            return list(x) if isinstance(x, bytes) else [ord(ch) for ch in x]
+
+        def item(x):
+            return [val(y) for y in x] if isinstance(x, tuple) else val(x)
+
+        def body():
+            p = re.compile(src, flags)
+            if mode == "prepr":
+                return [ord(ch) for ch in repr(p)]
+            if mode == "peq":
+                q = re.compile(type(src)().join([]) if False else (("".join(map(chr, c["pat2"])) if c["text"] else bytes(c["pat2"]))), c["flags2"])
+                return [p == q, hash(p) == hash(q)]
+            if mode in ("match", "fullmatch", "search"):
+                return enc_m(getattr(p, mode)(s, pos, endpos))
+            if mode == "findall":
+                return [item(x) for x in p.findall(s, pos, endpos)]
+            if mode == "finditer":
+                return [enc_m(m) for m in p.finditer(s, pos, endpos)]
+            if mode == "scanmatch":
+                sc = p.scanner(s, pos, endpos)
+                return [enc_m(m) for m in iter(sc.match, None)]
+            if mode == "split":
+                return [val(x) for x in p.split(s, c["count"])]
+            repl = "".join(map(chr, c.get("repl", [])))
+            if not c["text"]:
+                repl = bytes(c.get("repl", []))
+            if mode == "sub":
+                r, n = p.subn(repl, s, c["count"])
+                return [val(r), n]
+            m = p.search(s, pos, endpos)
+            if m is None:
+                return None
+            if mode == "matchop":
+                gs = [("".join(map(chr, g)) if isinstance(g, list) else ([] if isinstance(g, dict) else g)) for g in c["gs"]]
+                op = c["op"]
+                if op == "group":
+                    x = m.group(*gs)
+                    return [val(y) for y in x] if isinstance(x, tuple) else val(x)
+                if op == "getitem":
+                    return val(m[gs[0]])
+                if op == "start":
+                    return m.start(gs[0])
+                if op == "end":
+                    return m.end(gs[0])
+                if op == "span":
+                    return list(m.span(gs[0]))
+                if op == "regs":
+                    return [list(x) for x in m.regs]
+                return [ord(ch) for ch in repr(m)]
+            if mode == "expand":
+                return val(m.expand(repl))
+            return {"groups": [val(x) for x in m.groups()],
+                    "gd": [[[ord(ch) for ch in k], val(v)] for k, v in m.groupdict().items()],
+                    "lastgroup": None if m.lastgroup is None else [ord(ch) for ch in m.lastgroup]}
+
+        return common.py_result(body)
+
+    @classmethod
+    def run_args(cls, c):
+        first = "maxsplit" if c["f"] == "split" else "count"
+        kw = {}
+        if "kw1" in c:
+            kw[first] = c["kw1"]
+        if "kw2" in c:
+            kw["flags"] = c["kw2"]
+        seen = []
+
+        class P:
+            pass
+
+        def body():
+            import warnings
+            real = re._compile
+
+            class Rec:
+                def sub(self, repl, string, count):
+                    seen.append(count)
+
+                def subn(self, repl, string, count):
+                    seen.append(count)
+
+                def split(self, string, maxsplit):
+                    seen.append(maxsplit)
+
+            def fake(pattern, flags):
+                seen.append(int(flags))
+                return Rec()
+
+            re._compile = fake
+            try:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    if c["f"] == "split":
+                        re.split("a", "b", *c["args"], **kw)
+                    else:
+                        getattr(re, c["f"])("a", "b", "c", *c["args"], **kw)
+            finally:
+                re._compile = real
+            return [seen[1], seen[0]]
+
+        return common.py_result(body)
+
+    @classmethod
     def run(cls, c):
+        if c["fn"] == "re.exec":
+            return cls.run_exec(c)
+        if c["fn"] == "re.validate":
+            return cls.run_validate(c)
+        if c["fn"] == "re.scanner":
+            return cls.run_scanner(c)
+        if c["fn"] == "re.args":
+            return cls.run_args(c)
+        if c["fn"] == "re.escape":
+            s = "".join(map(chr, c["s"]))
+            return {"ok": [ord(x) for x in re.escape(s)]}
         src = re_src(c)
 
         def body():
