@@ -18,7 +18,9 @@ summary: |
 likelihood: |
   Low. It needs C code that keeps using a writer after a write failed, which the documentation
   allows ("leave the writer unchanged"), and input with a non-ASCII character before the bad byte.
-  Nothing in the standard library was found to do it. An extension that falls back to another
+  The standard library does not: its five WriteUTF8 call sites in Objects, Python and Modules
+  (structseq.c:285 and 311, Python-ast.c:5889, ast_unparse.c:40, _datetimemodule.c:2007) all give
+  up on failure, and none of them calls DecodeUTF8Stateful. An extension that falls back to another
   write after a failed WriteUTF8 would hit it.
 maybe_intended: |
   No. The documentation promises the writer is unchanged on error, and the upstream issue treats
@@ -50,14 +52,16 @@ observed: |
   missing from a dict holding 'a', and has isascii() False.
 tested: "REPRODUCED on python3 3.14.7. NOT reproduced on main (3.16.0a1+dev), which returns 'a'."
 promised_by: |
-  Doc/c-api/unicode.rst:1819-1830: "On error, set an exception, leave the writer unchanged, and
-  return -1." Invariant: _PyUnicode_CheckConsistency requires the canonical kind.
+  Doc/c-api/unicode.rst:1828 for WriteUTF8 and 1924 for DecodeUTF8Stateful: "On error, set an
+  exception, leave the writer unchanged, and return -1." Invariant: _PyUnicode_CheckConsistency
+  requires the canonical kind.
 cause: |
   Objects/unicodeobject.c:14163-14165 and 14185-14190 restore only `pos`; 5536 and the widening in
   unicode_decode_utf8_impl have changed the buffer by then; 14210-14239 and 807-835 keep its kind.
 possible_fix: |
-  PR gh-158442 adds _PyUnicodeWriter.recheck_maxchar, set on the failure path, so that Finish
-  narrows. A backport to 3.14 would close it there.
+  PR gh-158442 adds _PyUnicodeWriter.recheck_maxchar. On main the failure path sets it when maxchar
+  grew (Objects/unicodeobject.c:5461-5466), and Finish then scans the characters and narrows
+  (Objects/unicode_writer.c:583). A backport to 3.14 would close it there.
 lean: |
   Refuted by writerAlwaysCanonical_refuted and writerFailureUnobservable_refuted
   (lean/PyLean/UnicodeObj/ObjectWriterProps.lean); the narrowed writerFinishCanonical_proven and
