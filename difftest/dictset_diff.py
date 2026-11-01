@@ -325,7 +325,8 @@ def dict_op(rng, n):
     return None
 
 
-def upd_arg(rng, n):
+def upd_arg(rng, n, hooks=True):
+    """`hooks`: the callbacks may act on the receiver, which `dict(arg)` does not expose."""
     k = lambda: rng.randrange(n)
     o = rng.random()
     if o < 0.35:
@@ -347,11 +348,12 @@ def upd_arg(rng, n):
         ks = [k() for _ in range(rng.randint(0, 6))]
         pairs = [[x, k()] for x in ks if rng.random() < 0.9]
         if rng.random() < 0.3 and ks:
-            return ["mr", ks, pairs, rng.choice(ks), rng.choice([0, 1, 2]), rng.random() < 0.15]
+            act = rng.choice([0, 1, 2]) if hooks else 0
+            return ["mr", ks, pairs, rng.choice(ks), act, rng.random() < 0.15]
         return ["m", ks, pairs]
     if o < 0.97:
         items = [["p", k(), k()] for _ in range(rng.randint(0, 6))]
-        return ["pr", items, rng.randint(0, 6), rng.choice([1, 2]), rng.random() < 0.2]
+        return ["pr", items, rng.randint(0, 6), rng.choice([1, 2]) if hooks else 0, rng.random() < 0.2]
     if o < 0.98:
         return ["hr"]
     return ["n"]
@@ -383,7 +385,7 @@ def dict_op2(rng, n, specs):
         return ["fromkeys", 0, src, k()]
     if o < 0.93:
         return ["fromitems", 0, [[k(), k()] for _ in range(rng.randint(0, 14))]]
-    return ["dict", 0, upd_arg(rng, n)]
+    return ["dict", 0, upd_arg(rng, n, False)]
 
 
 def set_arg(rng, n):
