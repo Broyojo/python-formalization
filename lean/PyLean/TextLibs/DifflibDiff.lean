@@ -1,0 +1,85 @@
+import PyLean.DiffCore
+import PyLean.TextLibs.DifflibModel
+
+/-! `difflib.*` difftest cases; see `difftest/textlibs_diff.py`. -/
+
+namespace PyLean.TextLibs.Difflib
+
+open Lean PyLean PyLean.Diff
+
+def nats (j : Json) : Except String (List Nat) := do
+  (← j.getArr?).toList.mapM Json.getNat?
+
+def tagS : Tag → String
+  | .replace => "replace" | .delete => "delete" | .insert => "insert" | .equal => "equal"
+
+def opJ (o : Op) : Json :=
+  Json.arr #[toJson (tagS o.1), toJson o.2.1, toJson o.2.2.1, toJson o.2.2.2.1, toJson o.2.2.2.2]
+
+def tJ (t : T) : Json := Json.arr #[toJson t.1, toJson t.2.1, toJson t.2.2]
+
+def excJ (e : PyExc) : Json := Json.arr #[toJson "exc", encPy (fun (_ : Unit) => Json.null) (.error e)]
+
+/-- Run a list of method calls; a raising call is reported and the rest are still run. -/
+def step (s : SM) (c : Json) : Except String (SM × Json) := do
+  let op ← getStr c "op"
+  match op with
+  | "blocks" =>
+    match getBlocks s with
+    | .ok (s, r) => return (s, Json.arr (r.map tJ).toArray)
+    | .error e => return (s, excJ e)
+  | "opcodes" =>
+    match getOpcodes s with
+    | .ok (s, r) => return (s, Json.arr (r.map opJ).toArray)
+    | .error e => return (s, excJ e)
+  | "grouped" =>
+    match getGrouped s (← getNat c "n") with
+    | .ok (s, r) => return (s, Json.arr (r.map fun g => Json.arr (g.map opJ).toArray).toArray)
+    | .error e => return (s, excJ e)
+  | "ratio" =>
+    match ratioPair s with
+    | .ok (s, m, l) => return (s, Json.arr #[toJson m, toJson l])
+    | .error e => return (s, excJ e)
+  | "quick" =>
+    let (s, m, l) := quickPair s
+    return (s, Json.arr #[toJson m, toJson l])
+  | "real" =>
+    let (m, l) := realQuickPair s
+    return (s, Json.arr #[toJson m, toJson l])
+  | "longest" =>
+    match findLongest s (← getNat c "alo") (← getNat c "ahi") (← getNat c "blo") (← getNat c "bhi") with
+    | .ok r => return (s, tJ r)
+    | .error e => return (s, excJ e)
+  | "seq1" => return (setSeq1 s (← nats (← field c "x")) (← getBool c "same"), Json.null)
+  | "seq2" =>
+    match setSeq2 s (← nats (← field c "x")) (← getBool c "same") with
+    | (s, .ok ()) => return (s, Json.null)
+    | (s, .error e) => return (s, excJ e)
+  | "seqs" =>
+    match setSeqs s (← nats (← field c "x")) (← nats (← field c "y")) (← getBool c "same") (← getBool c "same2") with
+    | (s, .ok ()) => return (s, Json.null)
+    | (s, .error e) => return (s, excJ e)
+  | _ => throw s!"unknown op {op}"
+
+def run (fn : String) (j : Json) : Except String Json := do
+  match fn with
+  | "difflib.seq" =>
+    let junk ← nats (← field j "junk")
+    let boom ← nats (← field j "boom")
+    let hasJunk ← getBool j "hasjunk"
+    let f : Nat → Py Bool := fun x =>
+      if boom.contains x then .error (.valueError "boom") else .ok (junk.contains x)
+    let isjunk := if hasJunk then some f else none
+    match make isjunk (← nats (← field j "a")) (← nats (← field j "b")) (← getBool j "auto") with
+    | .error e => return encPy (fun (x : Json) => x) (.error e)
+    | .ok s =>
+      let mut s := s
+      let mut out : Array Json := #[]
+      for c in (← (← field j "ops").getArr?) do
+        let (s', r) ← step s c
+        s := s'
+        out := out.push r
+      return encPy (fun (x : Json) => x) (.ok (Json.arr out))
+  | _ => throw s!"unknown fn {fn}"
+
+end PyLean.TextLibs.Difflib

@@ -1,17 +1,17 @@
 file	line	endline	name	signature	status	entry	note
 Lib/difflib.py	39	42	_calculate_ratio	_calculate_ratio(matches, length)	todo		
-Lib/difflib.py	120	182	SequenceMatcher.__init__	__init__(self, isjunk=None, a='', b='', autojunk=True)	todo		
-Lib/difflib.py	184	194	SequenceMatcher.set_seqs	set_seqs(self, a, b)	todo		
-Lib/difflib.py	196	220	SequenceMatcher.set_seq1	set_seq1(self, a)	todo		
-Lib/difflib.py	222	248	SequenceMatcher.set_seq2	set_seq2(self, b)	todo		
-Lib/difflib.py	266	303	SequenceMatcher.__chain_b	__chain_b(self)	todo		
-Lib/difflib.py	305	419	SequenceMatcher.find_longest_match	find_longest_match(self, alo=0, ahi=None, blo=0, bhi=None)	todo		
-Lib/difflib.py	421	490	SequenceMatcher.get_matching_blocks	get_matching_blocks(self)	todo		
-Lib/difflib.py	492	545	SequenceMatcher.get_opcodes	get_opcodes(self)	todo		
-Lib/difflib.py	547	595	SequenceMatcher.get_grouped_opcodes	get_grouped_opcodes(self, n=3)	todo		
-Lib/difflib.py	597	620	SequenceMatcher.ratio	ratio(self)	todo		
-Lib/difflib.py	622	649	SequenceMatcher.quick_ratio	quick_ratio(self)	todo		
-Lib/difflib.py	651	661	SequenceMatcher.real_quick_ratio	real_quick_ratio(self)	todo		
+Lib/difflib.py	120	182	SequenceMatcher.__init__	__init__(self, isjunk=None, a='', b='', autojunk=True)	modelled	textlibs-difflib-set-seqs	
+Lib/difflib.py	184	194	SequenceMatcher.set_seqs	set_seqs(self, a, b)	modelled	textlibs-difflib-set-seqs	
+Lib/difflib.py	196	220	SequenceMatcher.set_seq1	set_seq1(self, a)	modelled	textlibs-difflib-set-seqs	
+Lib/difflib.py	222	248	SequenceMatcher.set_seq2	set_seq2(self, b)	modelled	textlibs-difflib-set-seqs	
+Lib/difflib.py	266	303	SequenceMatcher.__chain_b	__chain_b(self)	modelled	textlibs-difflib-find-longest,textlibs-difflib-blocks	
+Lib/difflib.py	305	419	SequenceMatcher.find_longest_match	find_longest_match(self, alo=0, ahi=None, blo=0, bhi=None)	modelled	textlibs-difflib-find-longest,textlibs-difflib-blocks	
+Lib/difflib.py	421	490	SequenceMatcher.get_matching_blocks	get_matching_blocks(self)	modelled	textlibs-difflib-blocks	
+Lib/difflib.py	492	545	SequenceMatcher.get_opcodes	get_opcodes(self)	modelled	textlibs-difflib-opcodes,textlibs-difflib-grouped-cache	
+Lib/difflib.py	547	595	SequenceMatcher.get_grouped_opcodes	get_grouped_opcodes(self, n=3)	modelled	textlibs-difflib-grouped,textlibs-difflib-grouped-cache	
+Lib/difflib.py	597	620	SequenceMatcher.ratio	ratio(self)	modelled	textlibs-difflib-ratio-bound	
+Lib/difflib.py	622	649	SequenceMatcher.quick_ratio	quick_ratio(self)	modelled	textlibs-difflib-quick-bound	
+Lib/difflib.py	651	661	SequenceMatcher.real_quick_ratio	real_quick_ratio(self)	modelled	textlibs-difflib-ratio-bound	
 Lib/difflib.py	666	712	get_close_matches	get_close_matches(word, possibilities, n=3, cutoff=0.6)	todo		
 Lib/difflib.py	715	720	_keep_original_ws	_keep_original_ws(s, tag_s)	todo		
 Lib/difflib.py	810	831	Differ.__init__	__init__(self, linejunk=None, charjunk=None)	todo		

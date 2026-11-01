@@ -2743,6 +2743,100 @@ class HtmlArea:
         return common.py_result(body)
 
 
+@area("difflib", 5)
+class DifflibArea:
+    @staticmethod
+    def seq(r):
+        k = r.random()
+        if k < 0.1:
+            # long enough for the popular test
+            n = r.choice([199, 200, 201, 250, 300, 400])
+            return [r.choice([1, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9, r.randrange(300)]) for _ in range(n)]
+        m = r.choice([2, 3, 4, 8])
+        return [r.randrange(m) for _ in range(r.randint(0, 14))]
+
+    @classmethod
+    def gen(cls, r):
+        a, b = cls.seq(r), cls.seq(r)
+        if r.random() < 0.3:
+            b = list(a)
+            for _ in range(r.randint(0, 3)):
+                if b:
+                    b[r.randrange(len(b))] = r.randrange(9)
+        ops = []
+        for _ in range(r.randint(1, 6)):
+            k = r.random()
+            if k < 0.2:
+                ops.append({"op": "opcodes"})
+            elif k < 0.35:
+                ops.append({"op": "blocks"})
+            elif k < 0.6:
+                ops.append({"op": "grouped", "n": r.choice([0, 1, 2, 3, 3, 5])})
+            elif k < 0.67:
+                ops.append({"op": r.choice(["ratio", "quick", "real"])})
+            elif k < 0.87:
+                la, lb = len(a), len(b)
+                x = sorted([r.randint(0, la), r.randint(0, la)])
+                y = sorted([r.randint(0, lb), r.randint(0, lb)])
+                if r.random() < 0.1:
+                    x[1] += r.choice([1, 5])
+                if r.random() < 0.1:
+                    y[1] += r.choice([1, 5])
+                ops.append({"op": "longest", "alo": x[0], "ahi": x[1], "blo": y[0], "bhi": y[1]})
+            elif k < 0.93:
+                ops.append({"op": "seqs", "x": cls.seq(r), "y": cls.seq(r), "same": r.random() < 0.3, "same2": r.random() < 0.3})
+            else:
+                w = r.choice(["seq1", "seq2"])
+                ops.append({"op": w, "x": cls.seq(r), "same": r.random() < 0.3})
+        return {"mod": "textlibs", "fn": "difflib.seq", "a": a, "b": b, "auto": r.random() < 0.6, "hasjunk": r.random() < 0.3,
+                "junk": [r.randrange(9) for _ in range(r.randint(0, 2))], "boom": [r.randrange(9)] if r.random() < 0.1 else [], "ops": ops}
+
+    @classmethod
+    def run(cls, c):
+        import difflib
+
+        def junk(x):
+            if x in c["boom"]:
+                raise ValueError("boom")
+            return x in c["junk"]
+
+        def op(s, o):
+            k = o["op"]
+            if k == "blocks":
+                return [list(t) for t in s.get_matching_blocks()]
+            if k == "opcodes":
+                return [list(t) for t in s.get_opcodes()]
+            if k == "grouped":
+                return [[list(t) for t in g] for g in s.get_grouped_opcodes(o["n"])]
+            if k in ("ratio", "quick", "real"):
+                f = {"ratio": s.ratio, "quick": s.quick_ratio, "real": s.real_quick_ratio}[k]()
+                length = len(s.a) + len(s.b)
+                if length == 0:
+                    return [0, 0] if f == 1.0 else ["bad", f]
+                m = round(f * length / 2)
+                return [m, length] if 2.0 * m / length == f else ["bad", f]
+            if k == "longest":
+                return list(s.find_longest_match(o["alo"], o["ahi"], o["blo"], o["bhi"]))
+            if k == "seqs":
+                s.set_seqs(s.a if o["same"] else list(o["x"]), s.b if o["same2"] else list(o["y"]))
+                return None
+            f = s.set_seq1 if k == "seq1" else s.set_seq2
+            cur = s.a if k == "seq1" else s.b
+            f(cur if o["same"] else list(o["x"]))
+            return None
+
+        def body():
+            s = difflib.SequenceMatcher(junk if c["hasjunk"] else None, list(c["a"]), list(c["b"]), c["auto"])
+            out = []
+            for o in c["ops"]:
+                try:
+                    out.append(op(s, o))
+                except Exception as e:
+                    out.append(["exc", {"exc": type(e).__name__, "msg": str(e)}])
+            return out
+        return common.py_result(body)
+
+
 only = os.environ.get("TEXTLIBS_ONLY")
 names = [n for n in AREAS if not only or n in only.split(",")]
 weights = [AREAS[n][1] for n in names]

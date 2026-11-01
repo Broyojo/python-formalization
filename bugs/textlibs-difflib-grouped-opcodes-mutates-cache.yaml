@@ -1,0 +1,54 @@
+id: textlibs-difflib-grouped-opcodes-mutates-cache
+title: "SequenceMatcher.get_grouped_opcodes overwrites the cached opcodes, so later calls give wrong results"
+priority: P3
+kind: wrong-result
+module: textlibs
+files: [Lib/difflib.py]
+functions: ["SequenceMatcher.get_grouped_opcodes", "SequenceMatcher.get_opcodes"]
+summary: |
+  `get_grouped_opcodes` does `codes = self.get_opcodes()`, which is the cached list, and then assigns to
+  `codes[0]` and `codes[-1]` to trim the context. After that, `get_opcodes()` on the same matcher no
+  longer starts at 0 or ends at the end of the sequences, and a second `get_grouped_opcodes` with a larger
+  `n` gives less context than a fresh matcher does. With a = "abcdefghx" and b = "abcdefghy" as lists,
+  `get_opcodes()` is `[('equal', 0, 8, 0, 8), ('replace', 8, 9, 8, 9)]` before a call of
+  `get_grouped_opcodes(1)` and `[('equal', 7, 8, 7, 8), ('replace', 8, 9, 8, 9)]` after it.
+likelihood: |
+  Moderate. It takes one matcher used for both calls. unified_diff and context_diff make a new matcher
+  each time, so they are safe. Code that shows grouped hunks and then goes over the full opcodes of the
+  same matcher gets a wrong answer and no error.
+maybe_intended: |
+  No. The cached list is meant to be the result of get_opcodes, whose docstring says the first tuple has
+  i1 == j1 == 0. A caller of get_opcodes may also change the returned list, but here the library does it.
+reproducer: |
+  import difflib
+  a = list('abcdefgh') + ['x']
+  b = list('abcdefgh') + ['y']
+  s = difflib.SequenceMatcher(None, a, b)
+  before = list(s.get_opcodes())
+  list(s.get_grouped_opcodes(1))
+  after = s.get_opcodes()
+  again = list(s.get_grouped_opcodes(3))
+  fresh = list(difflib.SequenceMatcher(None, a, b).get_grouped_opcodes(3))
+  print(before, after)
+  print(again, fresh)
+  if before[0] == ('equal', 0, 8, 0, 8) and after[0] == ('equal', 7, 8, 7, 8) and again != fresh:
+      print('REPRODUCED textlibs-difflib-grouped-opcodes-mutates-cache')
+expected: |
+  get_opcodes returns the same list after get_grouped_opcodes, and a second get_grouped_opcodes(3) gives
+  the same groups as a fresh matcher.
+observed: |
+  python3 3.14.7: opcodes start at 7 after the call, and get_grouped_opcodes(3) gives one line of context, not three. REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED.
+promised_by: |
+  Lib/difflib.py:495-497: "The first tuple has i1 == j1 == 0, and remaining tuples have i1 == the i2 from
+  the tuple preceding it".
+cause: |
+  Lib/difflib.py:572 takes the list that :524 stored in self.opcodes, and :578 and :581 assign into it.
+possible_fix: |
+  `codes = list(self.get_opcodes())` at Lib/difflib.py:572.
+duplicates: |
+  None found. Bugforge has four difflib entries, none on this. #54194 (closed) was about get_matching_blocks
+  and a different caching problem. Queries: gh search issues --repo python/cpython get_grouped_opcodes;
+  SequenceMatcher; "grouped opcodes"; get_opcodes; "difflib opcodes mutate"; "difflib cached";
+  "difflib get_grouped_opcodes modifies"; "SequenceMatcher opcodes cache"; gh issue view 140761, 54194, 56593.
+lean: lean/PyLean/TextLibs/DifflibProps.lean (GroupedKeepsOpcodes)

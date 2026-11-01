@@ -10,6 +10,8 @@ import PyLean.TextLibs.ShlexProps
 import PyLean.TextLibs.TextwrapProps
 import PyLean.TextLibs.QuopriProps
 import PyLean.TextLibs.HtmlProps
+import PyLean.TextLibs.DifflibQuick
+import PyLean.TextLibs.DifflibLongest
 import PyLean.TextLibs.CsvSniffProps
 
 /-!
@@ -38,6 +40,7 @@ open PyLean.TextLibs.Textwrap
 open PyLean.TextLibs.Shlex
 open PyLean.TextLibs.Quopri
 open PyLean.TextLibs.Html
+open PyLean.TextLibs.Difflib
 
 /-- The integer routines `IntCodesRoundTrip` drives through `runPack` and `runUnpack`. -/
 def structIntFns : List String :=
@@ -1206,7 +1209,42 @@ def entries : List Entry := [
   { id := "textlibs-html-named-longest", pyFile := "Lib/html/__init__.py", pyFns := ["_replace_charref"]
     statement := "A named reference is the whole name, else the longest proper prefix of two or more characters in the table, else unchanged."
     source := "comment at Lib/html/__init__.py:110", status := .proven
-    prop := ``NamedLongest, thm := some ``namedLongest_proven }
+    prop := ``NamedLongest, thm := some ``namedLongest_proven },
+  { id := "textlibs-difflib-find-longest", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.find_longest_match", "SequenceMatcher.__chain_b"]
+    statement := "With no junk and nothing popular, the result is a longest match in the box, the earliest in a of those, the earliest in b of those, for every box in range."
+    source := "docstring of find_longest_match", status := .proven
+    prop := ``FindLongestDoc, thm := some ``findLongestDoc_proven },
+  { id := "textlibs-difflib-blocks", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.get_matching_blocks", "SequenceMatcher.find_longest_match", "SequenceMatcher.__chain_b"]
+    statement := "The blocks are real matches, in order in both sequences, do not touch, and end with the sentinel, for any isjunk."
+    source := "docstring of get_matching_blocks", status := .proven
+    prop := ``BlocksLaw, thm := some ``blocksLaw_proven },
+  { id := "textlibs-difflib-opcodes", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.get_opcodes"]
+    statement := "The opcodes run from 0 to the ends of both sequences with no gap, and each tag means what it says, for any isjunk."
+    source := "docstring of get_opcodes", status := .proven
+    prop := ``OpcodesLaw, thm := some ``opcodesLaw_proven },
+  { id := "textlibs-difflib-grouped", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.get_grouped_opcodes"]
+    statement := "On a new matcher, every change is in a group, in order, and no equal in a group exceeds 2n."
+    source := "docstring of get_grouped_opcodes", status := .proven
+    prop := ``GroupedLaw, thm := some ``groupedLaw_proven },
+  { id := "textlibs-difflib-grouped-cache", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.get_grouped_opcodes", "SequenceMatcher.get_opcodes"]
+    statement := "get_grouped_opcodes does not change what get_opcodes returns."
+    source := "docstring of get_opcodes", status := .refuted
+    prop := ``GroupedKeepsOpcodes, thm := some ``groupedKeepsOpcodes_refuted
+    bug := some "textlibs-difflib-grouped-opcodes-mutates-cache" },
+  { id := "textlibs-difflib-ratio-bound", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.ratio", "SequenceMatcher.real_quick_ratio"]
+    statement := "The matches of ratio number at most the shorter length, which real_quick_ratio uses."
+    source := "docstring of real_quick_ratio", status := .proven
+    prop := ``RatioBound, thm := some ``ratioBound_proven
+    notes := "Counts of matches, not the float, which the difftest compares." },
+  { id := "textlibs-difflib-quick-bound", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.quick_ratio"]
+    statement := "The matches of quick_ratio are at least those of ratio."
+    source := "docstring of quick_ratio", status := .proven
+    prop := ``QuickBound, thm := some ``quickBound_proven
+    notes := "Counts of matches, not the float, which the difftest compares." },
+  { id := "textlibs-difflib-set-seqs", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.__init__", "SequenceMatcher.set_seqs", "SequenceMatcher.set_seq1", "SequenceMatcher.set_seq2"]
+    statement := "set_seqs with new objects leaves what __init__ would on those sequences, or raises what it would."
+    source := "the implementation disagreeing with itself", status := .proven
+    prop := ``SetSeqsFresh, thm := some ``setSeqsFresh_proven }
 ]
 
 end PyLean.TextLibs
