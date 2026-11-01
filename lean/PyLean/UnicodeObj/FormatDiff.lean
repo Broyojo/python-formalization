@@ -6,6 +6,7 @@ import PyLean.UnicodeObj.FormatPercent
 import PyLean.UnicodeObj.FormatStr
 import PyLean.UnicodeObj.ObjectWriter
 import PyLean.UnicodeObj.ObjectFromFormat
+import PyLean.UnicodeObj.ObjectIter
 
 /-! Difftest handler for the formatting slice (`fn` names start with `fmt_`). -/
 
@@ -138,11 +139,43 @@ def getVArg (j : Json) : Except String VArg := do
   | "inst" => return .inst (← getTName (← field j "n"))
   | o => throw s!"bad arg {o}"
 
+def getISimple (j : Json) : Except String ISimple := do
+  match ← getStr j "op" with
+  | "next" => return .next
+  | "setstate" => return .setstate (← getG (← field j "o"))
+  | o => throw s!"bad simple op {o}"
+
+def getIOp (j : Json) : Except String IOp := do
+  match ← getStr j "op" with
+  | "next" => return .next
+  | "len" => return .len
+  | "setstate" => return .setstate (← getG (← field j "o"))
+  | "reduce" =>
+    let pre ← (← (← field j "pre").getArr?).toList.mapM getISimple
+    match ← getStr j "r" with
+    | "orig" => return .reduce pre (.found 0)
+    | "alt" => return .reduce pre (.found 1)
+    | "missing" => return .reduce pre .missing
+    | "raise" => return .reduce pre (.raises (.valueError "hook"))
+    | o => throw s!"bad lookup {o}"
+  | o => throw s!"bad op {o}"
+
 def kindJson : Kind → Json
   | .ascii => Json.arr #[toJson (1 : Nat), toJson true]
   | .ucs1 => Json.arr #[toJson (1 : Nat), toJson false]
   | .ucs2 => Json.arr #[toJson (2 : Nat), toJson false]
   | .ucs4 => Json.arr #[toJson (4 : Nat), toJson false]
+
+def encIOut : IOut → Json
+  | .item none => Json.null
+  | .item (some (s, k)) => Json.arr #[toJson s, kindJson k]
+  | .len n => toJson n
+  | .unit r => encPy (fun (_ : Unit) => Json.null) r
+  | .reduced r =>
+    encPy (fun (x : IterReduced) => Json.arr #[toJson x.1, toJson x.2.1,
+      match x.2.2 with
+      | some i => toJson i
+      | none => Json.null]) r
 
 def encOptStr : Option Str → Json
   | some s => toJson s
@@ -203,6 +236,13 @@ def run (fn : String) (j : Json) : Except String Json := do
         toJson (consumedOut r)]
       Json.arr #[Json.arr (trace.map step).toArray, toJson text, kindJson kind])
       (writerCreate (← getInt j "n"))
+  | "fmt_iter" =>
+    let ops ← (← (← field j "ops").getArr?).toList.mapM getIOp
+    let it0 := unicodeIter (← getSeq j "s") (← (← field j "exact").getBool?)
+    let (_, out) := runIOps it0 ops
+    let name := if it0.asciiType then "str_ascii_iterator" else "str_iterator"
+    return encPy (fun (x : Json) => x)
+      (.ok (Json.arr #[toJson name, Json.arr (out.map encIOut).toArray]))
   | "fmt_fromformat" =>
     let args ← (← (← field j "args").getArr?).toList.mapM getVArg
     return encPy (fun (r : Str × Kind) => Json.arr #[toJson r.1, kindJson r.2])

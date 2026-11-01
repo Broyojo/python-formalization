@@ -830,6 +830,98 @@ def run_fmt_writerformat(c):
     r = api.PyUnicodeWriter_Finish(w)
     return [{"ok": None} if "ok" in res else res, cps_of(r), kind_of(r)]
 
+# ==== str iterators (fn name fmt_iter) ====
+
+IT_STRS = ["", "a", "ab", "abc", "abcdef", "\xe9", "a\xe9", "\xe9\xff", "€", "a€b", "\U0001f600", "a\U0001f600",
+           "\ud800", "\x00", "a\x00b"]
+IT_STATES = [0, 1, 2, 3, 5, 100, -1, -5, 2 ** 63 - 1, -2 ** 63, 2 ** 63, -2 ** 63 - 1, 2 ** 70]
+
+
+def it_state(rng):
+    r = rng.random()
+    if r < 0.7:
+        return {"t": "int", "v": hex_of(rng.choice(IT_STATES))}
+    if r < 0.85:
+        return {"t": "bool", "v": rng.random() < 0.5}
+    return sf_obj(rng, 1)
+
+
+def it_simple(rng):
+    return {"op": "next"} if rng.random() < 0.8 else {
+        "op": "setstate", "o": {"t": "int", "v": hex_of(rng.choice([0, 1, 2, 100, -1]))}}
+
+
+def it_op(rng):
+    r = rng.random()
+    if r < 0.45:
+        return {"op": "next"}
+    if r < 0.6:
+        return {"op": "len"}
+    if r < 0.75:
+        return {"op": "setstate", "o": it_state(rng)}
+    return {"op": "reduce", "pre": [it_simple(rng) for _ in range(rng.choice([0, 0, 1, 2, 8]))],
+            "r": rng.choice(["orig", "orig", "alt", "missing", "raise"])}
+
+
+@gen("format", 4)
+def gen_fmt_iter(rng):
+    return {"mod": "unicodeobj", "fn": "fmt_iter", "s": cps_of(rng.choice(IT_STRS)), "exact": rng.random() < 0.8,
+            "ops": [it_op(rng) for _ in range(rng.randint(0, 9))]}
+
+
+class ItSub(str):
+    pass
+
+
+def it_step(it, op):
+    if op["op"] == "next":
+        next(it, None)
+    else:
+        try:
+            it.__setstate__(sf_dec(op["o"]))
+        except Exception:
+            pass
+
+
+def it_reduce(it, op):
+    """__reduce__ from a frame whose builtins run the script when `iter` is looked up."""
+    alt = lambda *a: None
+
+    class Builtins(dict):
+        def __getitem__(self, key):
+            for s in op["pre"]:
+                it_step(it, s)
+            if op["r"] == "raise":
+                raise ValueError("hook")
+            if op["r"] == "missing":
+                raise KeyError(key)
+            return iter if op["r"] == "orig" else alt
+
+    glob = {"__builtins__": Builtins(), "it": it}
+    exec("r = it.__reduce__()", glob)
+    r = glob["r"]
+    label = 0 if r[0] is iter else 1 if r[0] is alt else -1
+    return [label, cps_of(r[1][0]), r[2] if len(r) > 2 else None]
+
+
+def it_run(it, op):
+    k = op["op"]
+    if k == "next":
+        x = next(it, None)
+        return None if x is None else [cps_of(x), kind_of(x)]
+    if k == "len":
+        return it.__length_hint__()
+    if k == "setstate":
+        return common.py_result(lambda: (it.__setstate__(sf_dec(op["o"])), None)[1])
+    return common.py_result(lambda: it_reduce(it, op))
+
+
+@run("fmt_iter")
+def run_fmt_iter(c):
+    s = str_of(c["s"])
+    it = iter(s if c["exact"] else ItSub(s))
+    return [type(it).__name__, [it_run(it, op) for op in c["ops"]]]
+
 # ==== end str.format ====
 
 

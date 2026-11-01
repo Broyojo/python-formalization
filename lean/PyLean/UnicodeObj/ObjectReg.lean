@@ -3,6 +3,7 @@ import PyLean.UnicodeObj.ObjectKinds
 import PyLean.UnicodeObj.ObjectWriterProps
 import PyLean.UnicodeObj.ObjectFromFormatTwin
 import PyLean.UnicodeObj.ObjectFromFormatWriter
+import PyLean.UnicodeObj.ObjectIterProps
 
 /-! Registry entries of the object slice. -/
 
@@ -11,6 +12,31 @@ namespace PyLean.UnicodeObj
 open PyLean.Registry
 
 def objectEntries : List Entry := [
+  { id := "unicodeobj-iter-drains", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicodeiter_next", "unicode_ascii_iter_next", "unicode_char", "unicode_iter"]
+    statement := "list(iter(s)) is the characters of s, each a one-character string of the canonical kind, for both iterator types and for a subclass of str, and the iterator ends."
+    source := "invariant: iteration over a str; Doc/library/stdtypes.rst"
+    status := .proven, prop := ``IterDrains, thm := some ``iterDrains_proven },
+  { id := "unicodeobj-iter-ascii-twin", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicode_ascii_iter_next"]
+    statement := "The ASCII iterator and the general one give the same item and the same state on ASCII strings, at every state."
+    source := "implementation against itself: fast path against general path"
+    status := .proven, prop := ``AsciiIterTwin, thm := some ``asciiIterTwin_proven },
+  { id := "unicodeobj-iter-hint-exact", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicodeiter_len"]
+    statement := "__length_hint__ is the number of items still to come, after any script of next and __setstate__, including past the end."
+    source := "invariant: the length hint of a str iterator is exact"
+    status := .proven, prop := ``IterHintExact, thm := some ``iterHintExact_proven },
+  { id := "unicodeobj-iter-setstate", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicodeiter_setstate"]
+    statement := "__setstate__ moves to where s[v:] starts, for every Py_ssize_t, leaves an exhausted iterator exhausted, and raises OverflowError or TypeError otherwise, for an exhausted iterator too."
+    source := "invariant: the clamp at unicodeobject.c:16421-16426"
+    status := .proven, prop := ``IterSetstateSpec, thm := some ``iterSetstateSpec_proven },
+  { id := "unicodeobj-iter-reduce-round-trip", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicodeiter_reduce"]
+    statement := "Rebuilding from __reduce__ gives the items the iterator has left after the lookup of iter, whatever that lookup does to the iterator, and a failed lookup raises."
+    source := "invariant: pickle round trip; issue 101765, reading the iterator after the lookup"
+    status := .proven, prop := ``IterReduceRoundTrip, thm := some ``iterReduceRoundTrip_proven },
   { id := "unicodeobj-fromformat-no-negative-copy", pyFile := "Objects/unicodeobject.c"
     pyFns := []
     statement := "No format and no arguments of the right types reach a copy with a negative count."

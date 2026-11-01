@@ -53,7 +53,7 @@ Objects/unicodeobject.c	1850	1888	unicode_resize	unicode_resize(PyObject **p_uni
 Objects/unicodeobject.c	1891	1905	PyUnicode_Resize	PyUnicode_Resize(PyObject **p_unicode, Py_ssize_t length)	todo		
 Objects/unicodeobject.c	1913	1957	unicode_write_cstr	unicode_write_cstr(PyObject *unicode, Py_ssize_t index, const char *str, Py_ssize_t len)	todo		
 Objects/unicodeobject.c	1960	1964	get_latin1_char	get_latin1_char(Py_UCS1 ch)	todo		
-Objects/unicodeobject.c	1967	1990	unicode_char	unicode_char(Py_UCS4 ch)	todo		
+Objects/unicodeobject.c	1967	1990	unicode_char	unicode_char(Py_UCS4 ch)	modelled	unicodeobj-iter-drains	unicodeChar; both branches give the canonical kind
 Objects/unicodeobject.c	1994	2045	unicode_write_widechar	unicode_write_widechar(int kind, void *data, const wchar_t *u, Py_ssize_t size, Py_ssize_t num_surrogates)	todo		
 Objects/unicodeobject.c	2049	2104	PyUnicode_FromWideChar	PyUnicode_FromWideChar(const wchar_t *u, Py_ssize_t size)	todo		
 Objects/unicodeobject.c	2108	2154	PyUnicodeWriter_WriteWideChar	PyUnicodeWriter_WriteWideChar(PyUnicodeWriter *pub_writer, const wchar_t *str, Py_ssize_t size)	modelled	unicodeobj-writer-text,unicodeobj-writer-paths-agree	writeWide, for a four-byte wchar_t; the first character out of range raises
@@ -377,12 +377,12 @@ Objects/unicodeobject.c	16204	16213	PyUnicode_InternFromString	PyUnicode_InternF
 Objects/unicodeobject.c	16217	16302	_PyUnicode_ClearInterned	_PyUnicode_ClearInterned(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter start-up or shutdown of the unicode state
 Objects/unicodeobject.c	16314	16320	unicodeiter_dealloc	unicodeiter_dealloc(PyObject *op)	excluded		no-behaviour: memory management with no Python-visible effect
 Objects/unicodeobject.c	16323	16328	unicodeiter_traverse	unicodeiter_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: memory management with no Python-visible effect
-Objects/unicodeobject.c	16331	16353	unicodeiter_next	unicodeiter_next(PyObject *op)	todo		
-Objects/unicodeobject.c	16356	16376	unicode_ascii_iter_next	unicode_ascii_iter_next(PyObject *op)	todo		
-Objects/unicodeobject.c	16379	16386	unicodeiter_len	unicodeiter_len(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
-Objects/unicodeobject.c	16391	16410	unicodeiter_reduce	unicodeiter_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
-Objects/unicodeobject.c	16415	16429	unicodeiter_setstate	unicodeiter_setstate(PyObject *op, PyObject *state)	todo		
-Objects/unicodeobject.c	16487	16507	unicode_iter	unicode_iter(PyObject *seq)	todo		
+Objects/unicodeobject.c	16331	16353	unicodeiter_next	unicodeiter_next(PyObject *op)	modelled	unicodeobj-iter-drains	unicodeiterNext
+Objects/unicodeobject.c	16356	16376	unicode_ascii_iter_next	unicode_ascii_iter_next(PyObject *op)	modelled	unicodeobj-iter-drains,unicodeobj-iter-ascii-twin	unicodeAsciiIterNext
+Objects/unicodeobject.c	16379	16386	unicodeiter_len	unicodeiter_len(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	unicodeobj-iter-hint-exact	unicodeiterLen
+Objects/unicodeobject.c	16391	16410	unicodeiter_reduce	unicodeiter_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	unicodeobj-iter-reduce-round-trip	unicodeiterReduce, with the lookup as a function that can change the iterator
+Objects/unicodeobject.c	16415	16429	unicodeiter_setstate	unicodeiter_setstate(PyObject *op, PyObject *state)	modelled	unicodeobj-iter-setstate	unicodeiterSetstate, with longAsSsize
+Objects/unicodeobject.c	16487	16507	unicode_iter	unicode_iter(PyObject *seq)	modelled	unicodeobj-iter-drains	unicodeIter; the BadInternalCall is not reachable from tp_iter
 Objects/unicodeobject.c	16510	16523	encode_wstr_utf8	encode_wstr_utf8(wchar_t *wstr, char **str, const char *name)	todo		
 Objects/unicodeobject.c	16527	16570	config_get_codec_name	config_get_codec_name(wchar_t **config_encoding)	excluded		internal-bootstrap: interpreter start-up or shutdown of the unicode state
 Objects/unicodeobject.c	16574	16583	init_stdio_encoding	init_stdio_encoding(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter start-up or shutdown of the unicode state
