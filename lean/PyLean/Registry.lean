@@ -14,7 +14,8 @@ inductive Status where
   /-- A counterexample exists; `thm : ¬ prop`. A refutation must also have a
   plain-Python reproducer under `bugs/`. -/
   | refuted
-  /-- Stated but neither proven nor refuted yet. The audit fails on these. -/
+  /-- Stated but neither proven nor refuted yet. The audit counts these, and they
+  do not count towards coverage. -/
   | open
   deriving Repr, DecidableEq, Inhabited
 
