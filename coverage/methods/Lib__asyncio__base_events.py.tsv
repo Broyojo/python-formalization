@@ -97,7 +97,7 @@ Lib/asyncio/base_events.py	1717	1731	BaseEventLoop.connect_write_pipe	connect_wr
 Lib/asyncio/base_events.py	1733	1744	BaseEventLoop._log_subprocess	_log_subprocess(self, msg, stdin, stdout, stderr)	todo		
 Lib/asyncio/base_events.py	1746	1780	BaseEventLoop.subprocess_shell	subprocess_shell(self, protocol_factory, cmd, *, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=False, shell=True, bufsize=0, encoding=None, errors=None, text=None, **kwargs)	todo		
 Lib/asyncio/base_events.py	1782	1814	BaseEventLoop.subprocess_exec	subprocess_exec(self, protocol_factory, program, *args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=False, shell=False, bufsize=0, encoding=None, errors=None, text=None, **kwargs)	todo		
-Lib/asyncio/base_events.py	1816	1819	BaseEventLoop.get_exception_handler	get_exception_handler(self)	todo		
+Lib/asyncio/base_events.py	1816	1819	BaseEventLoop.get_exception_handler	get_exception_handler(self)	todo		candidates:bytecode-unwind-to-handler
 Lib/asyncio/base_events.py	1821	1836	BaseEventLoop.set_exception_handler	set_exception_handler(self, handler)	todo		
 Lib/asyncio/base_events.py	1838	1886	BaseEventLoop.default_exception_handler	default_exception_handler(self, context)	todo		
 Lib/asyncio/base_events.py	1888	1960	BaseEventLoop.call_exception_handler	call_exception_handler(self, context)	todo		
