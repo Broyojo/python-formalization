@@ -86,6 +86,7 @@ possible_fix: |
 duplicates:
   issues:
     - {number: 92888, state: closed, relation: "same class; its fix left this arm out"}
+    - {number: 60198, state: open, relation: "older report, components IO and Unicode, with a release-view patch; looks like a different path (only its metadata and start were read), a human should confirm"}
     - {number: 142664, state: closed, relation: "same class, memoryview.__hash__; different function"}
     - {number: 143195, state: closed, relation: "same class, hex; different function"}
   queries: ["memoryview released __index__", "memoryview use after free", "memoryview crash segfault release",

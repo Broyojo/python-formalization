@@ -71,6 +71,7 @@ possible_fix: |
 duplicates:
   issues:
     - {number: 92888, state: closed, relation: "same class; assignment only"}
+    - {number: 60198, state: open, relation: "older report, components IO and Unicode, with a release-view patch; looks like a different path (only its metadata and start were read), a human should confirm"}
     - {number: 142664, state: closed, relation: "same class, __hash__; its fix is the model for this one"}
     - {number: 143195, state: closed, relation: "same class, hex"}
   queries: ["memoryview comparison __buffer__ release", "memoryview richcompare use after free",
