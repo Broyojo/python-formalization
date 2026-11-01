@@ -1,10 +1,10 @@
 file	line	endline	name	signature	status	entry	note
 Lib/copy.py	62	100	copy	copy(x)	modelled	corelibs-copy-pickle-reduce,corelibs-copy-shallow	
-Lib/copy.py	110	163	deepcopy	deepcopy(x, memo=None, _nil=[])	todo		withdrawn: only a self-loop or an ok-implies-frame theorem; identity or a one-element copy would pass, and the dict body has no theorem
-Lib/copy.py	172	178	_deepcopy_list	_deepcopy_list(x, memo, deepcopy=deepcopy)	todo		withdrawn: only a self-loop or an ok-implies-frame theorem; identity or a one-element copy would pass, and the dict body has no theorem
-Lib/copy.py	181	195	_deepcopy_tuple	_deepcopy_tuple(x, memo, deepcopy=deepcopy)	todo		withdrawn: only a self-loop or an ok-implies-frame theorem; identity or a one-element copy would pass, and the dict body has no theorem
-Lib/copy.py	198	203	_deepcopy_dict	_deepcopy_dict(x, memo, deepcopy=deepcopy)	todo		withdrawn: only a self-loop or an ok-implies-frame theorem; identity or a one-element copy would pass, and the dict body has no theorem
+Lib/copy.py	110	163	deepcopy	deepcopy(x, memo=None, _nil=[])	modelled	corelibs-copy-list-exact,corelibs-copy-dict-exact,corelibs-copy-aliasing,corelibs-copy-reconstruct-memo-first	
+Lib/copy.py	172	178	_deepcopy_list	_deepcopy_list(x, memo, deepcopy=deepcopy)	modelled	corelibs-copy-list-exact,corelibs-copy-order,corelibs-copy-aliasing	
+Lib/copy.py	181	195	_deepcopy_tuple	_deepcopy_tuple(x, memo, deepcopy=deepcopy)	modelled	corelibs-copy-tuple-exact	
+Lib/copy.py	198	203	_deepcopy_dict	_deepcopy_dict(x, memo, deepcopy=deepcopy)	modelled	corelibs-copy-dict-exact,corelibs-copy-order	
 Lib/copy.py	206	207	_deepcopy_method	_deepcopy_method(x, memo)	modelled	corelibs-copy-keeps-source,corelibs-copy-method-replace	
 Lib/copy.py	212	226	_keep_alive	_keep_alive(x, memo)	excluded		no-behaviour: lifetime helper; it appends x to a list in the memo so that ids stay valid, and the copy does not depend on it
-Lib/copy.py	228	271	_reconstruct	_reconstruct(x, memo, func, args, state=None, listiter=None, dictiter=None, *, deepcopy=deepcopy)	todo		withdrawn: only a self-loop or an ok-implies-frame theorem; identity or a one-element copy would pass, and the dict body has no theorem
+Lib/copy.py	228	271	_reconstruct	_reconstruct(x, memo, func, args, state=None, listiter=None, dictiter=None, *, deepcopy=deepcopy)	modelled	corelibs-copy-order,corelibs-copy-reconstruct-deep,corelibs-copy-reconstruct-memo-first,corelibs-copy-recon-rest	
 Lib/copy.py	276	286	replace	replace(obj, /, **changes)	modelled	corelibs-copy-method-replace	

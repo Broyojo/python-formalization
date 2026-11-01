@@ -324,11 +324,13 @@ def getCells (j : Json) : Except String (List Cell) := do
       pure (.inst ps)
     | "method" => pure (.method 0 (← getNat c "self"))
     | "cls" => pure (.cls 0)
+    | "meta" => pure (.metaCls 0)
     | _ =>
+      let tag ← getStr c "tag"
       let mk (k : String) : Except String (Option (Option PyExc)) := do
         match ← getStr c k with
         | "ok" => pure (some none)
-        | "raise" => pure (some (some (valueErr k)))
+        | "raise" => pure (some (some (valueErr (k ++ tag))))
         | _ => pure none
       let reduce ← match ← getStr c "rv" with
         | "absent" => pure none
@@ -340,6 +342,7 @@ partial def render (h : Heap) (seen : List Nat) (x : Nat) : List Nat × Json :=
   match h.get x with
   | .atom n => (seen, toJson [toJson "atom", toJson n])
   | .cls _ => (seen, toJson [toJson "cls"])
+  | .metaCls _ => (seen, toJson [toJson "meta"])
   | .hooked _ _ _ => (seen, toJson [toJson "hooked"])
   | c =>
     match seen.idxOf? x with
@@ -570,7 +573,10 @@ def run (fn : String) (j : Json) : Except String Json := do
     pure (encPy toJson (compareDigest (← getDigest (← field j "a")) (← getDigest (← field j "b"))))
   | "deepcopy" =>
     let cells ← getCells j
-    let h : Heap := ⟨cells, []⟩
+    let memo ← (← getArr j "memo").mapM fun p => do
+      pure (← (← p.getArrVal? 0).getNat?, ← (← p.getArrVal? 1).getNat?)
+    -- a later entry of the Python `memo` overwrites an earlier one, and `lookup` reads the front of the list
+    let h : Heap := ⟨cells, memo.reverse⟩
     let x ← getNat j "root"
     let fuel := 12 * cells.length + 16
     if ← getBool j "shallow" then
