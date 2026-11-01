@@ -1,0 +1,49 @@
+id: textlibs-textwrap-indent-hang
+title: "DUPLICATE of #158979: textwrap.wrap never returns when an indent is wider than width"
+priority: P2
+kind: hang
+module: textlibs
+files: [Lib/textwrap.py]
+functions: ["TextWrapper._wrap_chunks", "TextWrapper._handle_long_word"]
+summary: |
+  `textwrap.wrap(' ', width=1, initial_indent='xxx')` never returns. With an indent wider than width,
+  `_handle_long_word` takes one character each pass, and when that uses up the chunk it leaves `''` on
+  the stack. On the first line nothing removes it, and every pass after that takes zero characters.
+  With `drop_whitespace=False` and a wide `subsequent_indent`, `lines` also grows until memory runs out.
+likelihood: |
+  Low to moderate. It takes an indent wider than width, which happens when a narrow width is computed
+  from a terminal size and the indent is fixed. Text that starts with whitespace is then enough.
+maybe_intended: |
+  No. The comment at Lib/textwrap.py:205-206 says this case is meant to make progress.
+reproducer: |
+  import signal, textwrap
+
+  class Hang(Exception):
+      pass
+
+  def alarm(*a):
+      raise Hang
+
+  signal.signal(signal.SIGALRM, alarm)
+  signal.alarm(3)
+  try:
+      print(textwrap.wrap(' ', width=1, initial_indent='xxx'))
+  except Hang:
+      print('REPRODUCED textlibs-textwrap-indent-hang')
+expected: |
+  A result, as the width < 1 guard in _handle_long_word intends.
+observed: |
+  python3 3.14.7: no result within 3 seconds. REPRODUCED.
+  main 3.16.0a1+dev: no result within 3 seconds. REPRODUCED.
+promised_by: |
+  The comment at Lib/textwrap.py:205-206: "make sure at least one character is stripped off on every
+  pass".
+cause: |
+  Lib/textwrap.py:223-224 leaves `chunk[end:]` on the stack even when it is empty. Lib/textwrap.py:284
+  drops it only once a line exists, and Lib/textwrap.py:291 fits it only when width is at least 0.
+possible_fix: |
+  In _handle_long_word, pop the chunk when `chunk[end:]` is empty. Linked PRs on #158979 do this.
+duplicates: |
+  DUPLICATE of #158979 (open, with linked PRs gh-158988 and gh-160559). #160558 (closed) reports the
+  same hang. Do not file. Queries: gh search issues --repo python/cpython textwrap; gh issue view 158979.
+lean: lean/PyLean/TextLibs/TextwrapProps.lean (WrapTerminates; WrapSucceeds is the narrowed version)

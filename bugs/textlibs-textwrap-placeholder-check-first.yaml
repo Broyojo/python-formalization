@@ -1,0 +1,37 @@
+id: textlibs-textwrap-placeholder-check-first
+title: "DUPLICATE of #160043: textwrap.shorten raises for text that fits, when the placeholder does not"
+priority: P4
+kind: wrong-exception
+module: textlibs
+files: [Lib/textwrap.py]
+functions: ["TextWrapper._wrap_chunks", "shorten"]
+summary: |
+  `textwrap.shorten('ab', width=4)` raises `ValueError: placeholder too large for max width`, though
+  the text fits and the placeholder is not needed. The check at the top of `_wrap_chunks` runs before
+  the text is looked at.
+likelihood: |
+  Low. It needs a width below the length of the placeholder.
+maybe_intended: |
+  Possibly: a configuration that can fail on some text is rejected on all of it.
+reproducer: |
+  import textwrap
+  try:
+      print(textwrap.shorten('ab', width=4))
+  except ValueError as e:
+      print(e)
+      if str(e) == 'placeholder too large for max width':
+          print('REPRODUCED textlibs-textwrap-placeholder-check-first')
+expected: |
+  'ab'.
+observed: |
+  python3 3.14.7: ValueError. REPRODUCED.
+  main 3.16.0a1+dev: ValueError. REPRODUCED.
+promised_by: |
+  Docstring of shorten, Lib/textwrap.py:398-411: "If it then fits in the *width*, it is returned as is."
+cause: |
+  Lib/textwrap.py:254-260 checks the placeholder before any text.
+possible_fix: |
+  Raise only when the placeholder is about to be used.
+duplicates: |
+  DUPLICATE of #160043 (open). Do not file. Queries: gh search issues --repo python/cpython textwrap.
+lean: lean/PyLean/TextLibs/TextwrapProps.lean (FittingTextPasses)

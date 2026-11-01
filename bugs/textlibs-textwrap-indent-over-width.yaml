@@ -1,0 +1,38 @@
+id: textlibs-textwrap-indent-over-width
+title: "DUPLICATE of bugforge textwrap-c1: lines exceed width when an indent leaves no room"
+priority: P4
+kind: doc-bug
+module: textlibs
+files: [Lib/textwrap.py, Doc/library/textwrap.rst]
+functions: ["TextWrapper._wrap_chunks"]
+summary: |
+  `textwrap.wrap('a', width=1, initial_indent=' ')` returns `[' a']`, of length 2. An indent as long as
+  width or longer leaves no room, and the code still places one character per line, so the docstring
+  of `wrap` ("lines of no more than 'self.width' columns") is not met.
+likelihood: |
+  Low, and the alternative is losing text or raising.
+maybe_intended: |
+  Yes in the code: the comment at Lib/textwrap.py:205-206 asks for progress in this case. Only the
+  documentation could change.
+reproducer: |
+  import textwrap
+  out = textwrap.wrap('a', width=1, initial_indent=' ')
+  print(out)
+  if out == [' a'] and len(out[0]) > 1:
+      print('REPRODUCED textlibs-textwrap-indent-over-width')
+expected: |
+  Lines of at most width, or a note in the docs.
+observed: |
+  python3 3.14.7: [' a']. REPRODUCED.
+  main 3.16.0a1+dev: [' a']. REPRODUCED.
+promised_by: |
+  Lib/textwrap.py:348-357, the docstring of TextWrapper.wrap: "so it fits in lines of no more than
+  'self.width' columns".
+cause: |
+  Lib/textwrap.py:207-208 sets space_left to 1 when width is below 1.
+possible_fix: |
+  State in the docs that an indent of at least width leaves one character per line.
+duplicates: |
+  DUPLICATE of bugforge textwrap-c1 and textwrap-c3 (doc-bug, not filed). Do not report separately.
+  Queries: gh search issues --repo python/cpython textwrap.
+lean: lean/PyLean/TextLibs/TextwrapProps.lean (WrapWidthLaw; WrapWidthNarrow is the narrowed version)
