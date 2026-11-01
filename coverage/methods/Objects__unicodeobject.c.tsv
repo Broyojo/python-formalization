@@ -75,14 +75,14 @@ Objects/unicodeobject.c	2556	2597	unicode_askind	unicode_askind(int skind, void 
 Objects/unicodeobject.c	2600	2645	as_ucs4	as_ucs4(PyObject *string, Py_UCS4 *target, Py_ssize_t targetsize, int copy_null)	todo		
 Objects/unicodeobject.c	2648	2656	PyUnicode_AsUCS4	PyUnicode_AsUCS4(PyObject *string, Py_UCS4 *target, Py_ssize_t targetsize, int copy_null)	todo		
 Objects/unicodeobject.c	2659	2662	PyUnicode_AsUCS4Copy	PyUnicode_AsUCS4Copy(PyObject *string)	todo		
-Objects/unicodeobject.c	2671	2712	unicode_fromformat_write_str	unicode_fromformat_write_str(_PyUnicodeWriter *writer, PyObject *str, Py_ssize_t width, Py_ssize_t precision, int flags)	todo		
-Objects/unicodeobject.c	2715	2753	unicode_fromformat_write_utf8	unicode_fromformat_write_utf8(_PyUnicodeWriter *writer, const char *str, Py_ssize_t width, Py_ssize_t precision, int flags)	todo		
-Objects/unicodeobject.c	2756	2782	unicode_fromformat_write_wcstr	unicode_fromformat_write_wcstr(_PyUnicodeWriter *writer, const wchar_t *str, Py_ssize_t width, Py_ssize_t precision, int flags)	todo		
-Objects/unicodeobject.c	2791	3203	unicode_fromformat_arg	unicode_fromformat_arg(_PyUnicodeWriter *writer, const char *f, va_list *vargs)	todo		
-Objects/unicodeobject.c	3206	3257	unicode_from_format	unicode_from_format(_PyUnicodeWriter *writer, const char *format, va_list vargs)	todo		
-Objects/unicodeobject.c	3260	3270	PyUnicode_FromFormatV	PyUnicode_FromFormatV(const char *format, va_list vargs)	todo		
-Objects/unicodeobject.c	3273	3282	PyUnicode_FromFormat	PyUnicode_FromFormat(const char *format, ...)	todo		
-Objects/unicodeobject.c	3285	3299	PyUnicodeWriter_Format	PyUnicodeWriter_Format(PyUnicodeWriter *writer, const char *format, ...)	todo		
+Objects/unicodeobject.c	2671	2712	unicode_fromformat_write_str	unicode_fromformat_write_str(_PyUnicodeWriter *writer, PyObject *str, Py_ssize_t width, Py_ssize_t precision, int flags)	modelled	unicodeobj-fromformat-write-str-negative-copy	fmtWriteStr; a negative length is the marker negCopy, since the C copies with it
+Objects/unicodeobject.c	2715	2753	unicode_fromformat_write_utf8	unicode_fromformat_write_utf8(_PyUnicodeWriter *writer, const char *str, Py_ssize_t width, Py_ssize_t precision, int flags)	modelled	unicodeobj-fromformat-canonical	fmtWriteUtf8, with both the width and no-width paths
+Objects/unicodeobject.c	2756	2782	unicode_fromformat_write_wcstr	unicode_fromformat_write_wcstr(_PyUnicodeWriter *writer, const wchar_t *str, Py_ssize_t width, Py_ssize_t precision, int flags)	modelled	unicodeobj-fromformat-canonical	fmtWriteWcstr, for a four-byte wchar_t
+Objects/unicodeobject.c	2791	3203	unicode_fromformat_arg	unicode_fromformat_arg(_PyUnicodeWriter *writer, const char *f, va_list *vargs)	modelled	unicodeobj-fromformat-canonical	fromFormatArg with parseSpec, ffBad, fromFormatSwitch; %p as glibc prints it; overallocate is not modelled
+Objects/unicodeobject.c	3206	3257	unicode_from_format	unicode_from_format(_PyUnicodeWriter *writer, const char *format, va_list vargs)	modelled	unicodeobj-writer-format-appends	unicodeFromFormat and fromFormatLoop
+Objects/unicodeobject.c	3260	3270	PyUnicode_FromFormatV	PyUnicode_FromFormatV(const char *format, va_list vargs)	modelled	unicodeobj-fromformat-canonical	pyUnicodeFromFormat
+Objects/unicodeobject.c	3273	3282	PyUnicode_FromFormat	PyUnicode_FromFormat(const char *format, ...)	modelled	unicodeobj-fromformat-canonical	pyUnicodeFromFormat
+Objects/unicodeobject.c	3285	3299	PyUnicodeWriter_Format	PyUnicodeWriter_Format(PyUnicodeWriter *writer, const char *format, ...)	modelled	unicodeobj-writer-format-appends	writerFormat: the put back of pos; that it leaves maxchar is the refuted entry
 Objects/unicodeobject.c	3302	3322	unicode_get_widechar_size	unicode_get_widechar_size(PyObject *unicode)	todo		
 Objects/unicodeobject.c	3325	3367	unicode_copy_as_widechar	unicode_copy_as_widechar(PyObject *unicode, wchar_t *w, Py_ssize_t size)	todo		
 Objects/unicodeobject.c	3380	3419	PyUnicode_AsWideChar	PyUnicode_AsWideChar(PyObject *unicode, wchar_t *w, Py_ssize_t size)	todo		
@@ -335,7 +335,7 @@ Objects/unicodeobject.c	14151	14167	PyUnicodeWriter_WriteUTF8	PyUnicodeWriter_Wr
 Objects/unicodeobject.c	14171	14192	PyUnicodeWriter_DecodeUTF8Stateful	PyUnicodeWriter_DecodeUTF8Stateful(PyUnicodeWriter *writer, const char *string, Py_ssize_t length, const char *errors, Py_ssize_t *consumed)	todo		
 Objects/unicodeobject.c	14196	14207	_PyUnicodeWriter_WriteLatin1String	_PyUnicodeWriter_WriteLatin1String(_PyUnicodeWriter *writer, const char *str, Py_ssize_t len)	todo		
 Objects/unicodeobject.c	14210	14239	_PyUnicodeWriter_Finish	_PyUnicodeWriter_Finish(_PyUnicodeWriter *writer)	todo		
-Objects/unicodeobject.c	14243	14249	PyUnicodeWriter_Finish	PyUnicodeWriter_Finish(PyUnicodeWriter *writer)	modelled	unicodeobj-writer-finish-canonical	UWriter.finish; the readonly branch of _PyUnicodeWriter_Finish cannot be reached from this API
+Objects/unicodeobject.c	14243	14249	PyUnicodeWriter_Finish	PyUnicodeWriter_Finish(PyUnicodeWriter *writer)	modelled	unicodeobj-writer-finish-canonical	UWriter.finish; the readonly branch of _PyUnicodeWriter_Finish is reached after PyUnicodeWriter_Format, and returns the same text and kind
 Objects/unicodeobject.c	14253	14256	_PyUnicodeWriter_Dealloc	_PyUnicodeWriter_Dealloc(_PyUnicodeWriter *writer)	excluded		no-behaviour: releases the buffer
 Objects/unicodeobject.c	14284	14299	unicode___format___impl	unicode___format___impl(PyObject *self, PyObject *format_spec) /*[clinic end generated code: output=45fceaca6d2ba4c8 input=5e135645d167a214]*/	todo		
 Objects/unicodeobject.c	14308	14334	unicode_sizeof_impl	unicode_sizeof_impl(PyObject *self) /*[clinic end generated code: output=6dbc2f5a408b6d4f input=6dd011c108e33fb0]*/	todo		

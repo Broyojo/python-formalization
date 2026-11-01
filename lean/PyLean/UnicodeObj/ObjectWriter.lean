@@ -10,8 +10,10 @@ leaves the buffer as wide as the write made it. The growth arithmetic of
 `_PyUnicodeWriter_PrepareInternal` (overallocation, `min_length`) decides only how much memory is
 held, not what `Finish` returns, so it is not modelled, and allocation failure is not modelled.
 
-The private `readonly` mode is never entered through this API, since `PyUnicodeWriter_Create` sets
-`overallocate`. `wchar_t` is taken to be four bytes, as on the platforms tested; a two-byte `wchar_t`
+`PyUnicodeWriter_Create` sets `overallocate`, so none of these operations enters the `readonly` mode
+on its own; `PyUnicodeWriter_Format` can, by clearing `overallocate` on its last chunk (see
+`ObjectFromFormat.lean`). That mode keeps a reference to a string instead of copying it, with the
+same text and capacity, so this state does not tell them apart. `wchar_t` is taken to be four bytes, as on the platforms tested; a two-byte `wchar_t`
 would add the surrogate pairing of `find_maxchar_surrogates`.
 -/
 
