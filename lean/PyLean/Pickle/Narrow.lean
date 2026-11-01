@@ -114,8 +114,10 @@ theorem longLineTwinsPrecise_proven : LongLineTwinsPrecise := by
 `8 * (2**31 - 1) - 1`. -/
 def long4Exp : Nat := 17179869175
 
-/-- `-(2**long4Exp)`, the int of the refuted `SaveLongTwinsAgree`. -/
-def long4Edge : Int := -((2 : Int) ^ long4Exp)
+/-- `-(2**long4Exp)`, the int of the refuted `SaveLongTwinsAgree`. Noncomputable
+because a compiled closed term would run when the module initializes, and the
+power panics every program that links it (`pydiff`). Only statements use it. -/
+noncomputable def long4Edge : Int := -((2 : Int) ^ long4Exp)
 
 theorem k_le_log (K b l : Nat) (hK : K + 1 = 17179869176) (h : b ≥ 8 * 2147483647) (h2 : b = l + 1) :
     K ≤ l := by omega
