@@ -1,5 +1,5 @@
 import PyLean.DiffCore
-import PyLean.TextLibs.BinasciiModel
+import PyLean.TextLibs.BinasciiRest
 
 /-! `binascii.*` and `base64.*` difftest cases; see `difftest/textlibs_diff.py`. -/
 
@@ -43,6 +43,46 @@ def run (fn : String) (j : Json) : Except String Json := do
     return r (b32decode b32hexalphabet (← decData j "d") (← getBool j "casefold") none)
   | "base64.b16encode" => return toJsonOk (b16encode (← bytesOf j "d"))
   | "base64.b16decode" => return r (b16decode (← decData j "d") (← getBool j "casefold"))
+  | "binascii.a2b_uu" => return r (a2bUu (← decData j "d"))
+  | "binascii.b2a_uu" => return r (b2aUu (← bytesOf j "d") (← getBool j "backtick"))
+  | "binascii.crc_hqx" => return toJsonOk [crcHqx (← bytesOf j "d") (← getInt j "crc")]
+  | "binascii.a2b_qp" => return r (a2bQp (← decData j "d") (← getBool j "header"))
+  | "binascii.b2a_qp" =>
+    return toJsonOk (b2aQp (← bytesOf j "d") ⟨← getBool j "quotetabs", ← getBool j "istext", ← getBool j "header"⟩)
+  | "binascii.qp_bound" =>
+    let d ← bytesOf j "d"
+    let o : QpOpts := ⟨← getBool j "quotetabs", ← getBool j "istext", ← getBool j "header"⟩
+    return Json.mkObj [("ok", toJson (decide
+      ((b2aQp d o).length ≤ b2aQpSize o (qpCrlf d) (d.length + 1) none d 0)))]
+  | "base64.a85encode" =>
+    return toJsonOk (a85encode (← bytesOf j "d") (← getBool j "foldspaces") (← getInt j "wrapcol")
+      (← getBool j "pad") (← getBool j "adobe"))
+  | "base64.a85decode" =>
+    return r (a85decode (← decData j "d") (← getBool j "foldspaces") (← getBool j "adobe")
+      (← bytesOf j "ignore"))
+  | "base64.b85encode" => return toJsonOk (b85encode (← bytesOf j "d") (← getBool j "pad"))
+  | "base64.b85decode" => return r (b85decode (← decData j "d"))
+  | "base64.z85encode" => return toJsonOk (z85encode (← bytesOf j "d"))
+  | "base64.z85decode" => return r (z85decode (← decData j "d"))
+  | "base64.encodebytes" => return toJsonOk (encodebytes (← bytesOf j "d"))
+  | "base64.decodebytes" => return r (decodebytes (← bytesOf j "d"))
+  | "base64.encode" =>
+    let d ← bytesOf j "d"
+    return toJsonOk (encodeStream (d.length + 1) d)
+  | "base64.decode" =>
+    let d ← bytesOf j "d"
+    return r (decodeStream (splitLines (d.length + 1) d))
+  | "base64.standard_b64encode" => return r (standardB64encode (← bytesOf j "d"))
+  | "base64.standard_b64decode" => return r (standardB64decode (← decData j "d"))
+  | "base64.input_check" =>
+    let tc : TypeCheck ← match ← getStr j "kind" with
+      | "none" => pure (.notBuffer (← getStr j "cls"))
+      | _ => pure (.view (← getStr j "format") (← getNat j "ndim") (← getStr j "cls"))
+    return encPy (fun _ => Json.null) (inputTypeCheck tc)
+  | "base64.main_select" =>
+    let flags ← (← (← field j "flags").getArr?).toList.mapM Json.getStr?
+    let cs := flags.map (fun f => (f.toList.getD 1 '?'))
+    return Json.mkObj [("ok", toJson ((mainSelect cs (some true)).map (fun b => if b then "encode" else "decode")))]
   | _ => throw s!"unknown fn {fn}"
 where
   toJsonOk (l : List Nat) : Json := Json.mkObj [("ok", toJson l)]

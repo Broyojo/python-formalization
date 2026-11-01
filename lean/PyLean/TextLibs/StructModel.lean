@@ -273,14 +273,17 @@ structure SObj where
 def asciiChars (b : List Nat) : List Char := b.map Char.ofNat
 
 /-- `prepare_s`, `Modules/_struct.c:1621-1773`. `sizeof(formatcode) = 32`. -/
-def prepareS (format : List Nat) : Py SObj := do
-  if 0 ∈ format then throw (structErr "embedded null character")
-  let (t, fmt) := whichtable (asciiChars format)
-  let tbl := t.table
-  let st ← pass1 tbl (fmt.length + 1) fmt {}
-  if st.ncodes + 1 > maxN / 32 then throw (.named "MemoryError" "")
-  let (codes, size) := pass2 tbl (fmt.length + 1) fmt ([], 0)
-  pure ⟨codes, size, st.len, format⟩
+def prepareS (format : List Nat) : Py SObj :=
+  if 0 ∈ format then .error (structErr "embedded null character")
+  else
+    let (t, fmt) := whichtable (asciiChars format)
+    match pass1 t.table (fmt.length + 1) fmt {} with
+    | .error e => .error e
+    | .ok st =>
+      if st.ncodes + 1 > maxN / 32 then .error (.named "MemoryError" "")
+      else
+        let (codes, size) := pass2 t.table (fmt.length + 1) fmt ([], 0)
+        .ok ⟨codes, size, st.len, format⟩
 
 /-- The argument of `Struct()` and of the module functions. -/
 inductive FmtArg where
@@ -858,12 +861,34 @@ def structPackInto (s : SObj) (buffer : List Nat) (offset0 : Int) (args : List S
 /-- `s_sizeof`, `Modules/_struct.c:2417-2427` (`_PyObject_SIZE` is 56). -/
 def sSizeof (s : SObj) : Nat := 56 + 32 + 32 * s.codes.length
 
-/-- `s_repr`, `Modules/_struct.c:2429-2442`, for formats without quotes or backslashes. -/
+/-- `repr` of one character of an accepted format: the only non-printable ones are the
+`Py_ISSPACE` characters, and a quote or backslash is never accepted. -/
+def reprChar (c : Nat) : String :=
+  if c = 10 then "\\n" else if c = 13 then "\\r" else if c = 9 then "\\t"
+  else if c = 11 then "\\x0b" else if c = 12 then "\\x0c"
+  else String.singleton (Char.ofNat c)
+
+/-- `s_repr`, `Modules/_struct.c:2429-2442`: `"%s(%R)"` of the type name and the format. -/
 def sRepr (s : SObj) : String :=
-  "Struct('" ++ String.ofList (asciiChars s.format) ++ "')"
+  "Struct('" ++ String.join (s.format.map reprChar) ++ "')"
 
 /-- `Struct.format`, `s_get_format`, `Modules/_struct.c:2398-2405`. -/
 def sGetFormat (s : SObj) : List Nat := s.format
+
+/-- `s_new`, `Modules/_struct.c:1775-1793`: a `Struct` before `__init__` has no codes. -/
+def sNew : Option SObj := none
+
+/-- `ENSURE_STRUCT_IS_READY`, `Modules/_struct.c:1914-1921`. -/
+def ensureReady (s : Option SObj) : Py SObj :=
+  match s with
+  | some s => .ok s
+  | none => .error (.named "RuntimeError" "Struct object is not initialized")
+
+/-- `s_get_size`, `Modules/_struct.c:2407-2412`: `s_new` stores -1, and this getter is
+the one accessor without `ENSURE_STRUCT_IS_READY`. -/
+def sGetSize : Option SObj → Int
+  | some s => s.sSize
+  | none => -1
 
 /-- `calcsize_impl`, `Modules/_struct.c:2578-2583`. -/
 def calcsize (f : FmtArg) : Py Nat := do return (← cacheStruct f).sSize
