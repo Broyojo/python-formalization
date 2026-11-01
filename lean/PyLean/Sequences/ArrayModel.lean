@@ -751,6 +751,7 @@ def arrFromUnicode (a : Arr) (ustr : List Nat) : Py Arr := do
       return { a' with items := memcpy a'.items old (ustr.map (fun (c : Nat) => (c : Int))) }
     return a
   else
+    if old + ustr.length > ssizeMax / 4 then throw memoryError
     let a' ← arrResize a (old + ustr.length)
     -- `PyUnicode_AsUCS4(ustr, ob_item + old_size, ustr_length, 0)` refuses a NULL
     -- target with `PyErr_BadInternalCall`; the impl ignores the failure, so the
@@ -765,6 +766,13 @@ def arrFromUnicode (a : Arr) (ustr : List Nat) : Py Arr := do
 def swap32 (u : Int) : Int :=
   (u % 256) * 16777216 + ((u / 256) % 256) * 65536 + ((u / 65536) % 256) * 256 + (u / 16777216) % 256
 
+/-- The byte order mark test of `PyUnicode_DecodeUTF32Stateful`: the units after the
+mark, and whether the data has the opposite byte order. -/
+def bomSplit : List Int → List Int × Bool
+  | 65279 :: rest => (rest, false)
+  | 4294836224 :: rest => (rest, true)
+  | us => (us, false)
+
 /-- `PyUnicode_DecodeUTF32Stateful` with `byteorder == 0` and strict errors
 (Objects/unicodeobject.c), the native-order decoding of `a.tounicode()`, on the
 items as native 32-bit units. A leading U+FEFF is a byte order mark: it is
@@ -772,10 +780,7 @@ skipped, and its swapped form selects the opposite byte order for what follows.
 Surrogates and values above U+10FFFF are errors. The message of
 `UnicodeDecodeError` is not modelled. -/
 def decodeUTF32Native (us : List Int) : Py (List Nat) :=
-  let (body, big) := match us with
-    | 65279 :: rest => (rest, false)
-    | 4294836224 :: rest => (rest, true)
-    | us => (us, false)
+  let (body, big) := bomSplit us
   let cps := if big then body.map swap32 else body
   if cps.any (fun x => x > 1114111 ∨ (55296 ≤ x ∧ x ≤ 57343)) then
     .error (.named "UnicodeDecodeError" "~utf-32")
