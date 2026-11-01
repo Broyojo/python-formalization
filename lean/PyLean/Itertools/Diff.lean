@@ -4,6 +4,9 @@ import PyLean.Itertools.Combinatorics
 import PyLean.Itertools.CountRepeat
 import PyLean.Itertools.GroupbyTee
 import PyLean.Itertools.GroupbyRaising
+import PyLean.Itertools.TeeReentry
+import PyLean.Itertools.PairwiseReentry
+import PyLean.Itertools.CountFloat
 
 /-!
 Differential-testing handler for `itertools` cases (`"mod": "itertools"`).
@@ -120,6 +123,74 @@ def encNext : NextRes Int → Json
   | .stop => Json.null
   | .exc e => Json.arr #[toJson "exc", toJson e.className, toJson e.message]
 
+def encGb : GbRes Int → Json
+  | .val v => toJson v
+  | .stop => Json.null
+  | .exc e => Json.arr #[toJson "exc", toJson e.className, toJson e.message]
+  | .crash => toJson "CRASH"
+
+def encPairRes : NextRes (Int × Int) → Json
+  | .val (a, b) => Json.arr #[toJson a, toJson b]
+  | .stop => Json.null
+  | .exc e => Json.arr #[toJson "exc", toJson e.className, toJson e.message]
+
+/-- A value for `count`: an int, `true`/`false`, `{"f": bits}`, `"bad"` for a
+`Raising` object, `"str"` for a non-number. -/
+def decVal (v : Json) : Except String (CVal PyNum) :=
+  match v with
+  | .str "bad" => .ok (.num .raising)
+  | .str "str" => .ok (.nonNum .str)
+  | .bool b => .ok (.intSub (if b then 1 else 0) (.bool b))
+  | .obj _ => do return .num (.float (Binary64.F64.ofBits (← (← v.getObjVal? "f").getNat?)))
+  | v => do return .int (← v.getInt?)
+
+def getOptVal (j : Json) (k : String) : Except String (Option (CVal PyNum)) :=
+  match j.getObjVal? k with
+  | .ok v => some <$> decVal v
+  | .error _ => .ok none
+
+def encVal : CVal PyNum → Json
+  | .int i => toJson i
+  | .intSub _ (.bool b) => Json.bool b
+  | .num (.float x) => if x.isNaN then toJson "nan" else Json.mkObj [("f", toJson x.bits)]
+  | .num .raising => toJson "bad"
+  | _ => toJson "?"
+
+def encValRes : OpRes (CVal PyNum) → Json
+  | .val v => encVal v
+  | .str s => toJson s
+  | .stop => Json.null
+  | .exc e => Json.arr #[toJson "exc", toJson e.className, toJson e.message]
+
+def decGbOp (v : Json) : Except String (GbOp Int) :=
+  match v with
+  | .str "o" => pure .outer
+  | .arr a => do return GbOp.direct (← (a.getD 1 Json.null).getInt?)
+  | v => GbOp.group <$> v.getNat?
+
+def decTeeOp (v : Json) : Except String TeeOp := do
+  let a ← v.getArr?
+  match ← (a.getD 0 Json.null).getStr? with
+  | "n" => TeeOp.next <$> (a.getD 1 Json.null).getNat?
+  | "t" => return TeeOp.tee (← (a.getD 1 Json.null).getNat?) (← (a.getD 2 Json.null).getNat?)
+  | "c" => TeeOp.copy <$> (a.getD 1 Json.null).getNat?
+  | "k" => TeeOp.ctor <$> (a.getD 1 Json.null).getNat?
+  | o => throw s!"unknown tee op {o}"
+
+def getHooks {β : Type} (dec : Json → Except String β) (j : Json) : Except String (List (List β)) :=
+  match j.getObjVal? "hooks" with
+  | .error _ => .ok []
+  | .ok v => do
+    (← v.getArr?).toList.mapM (fun h => do (← h.getArr?).toList.mapM dec)
+
+/-- The keys the difftest compares with `__eq__`: interned, so equal values are
+the same object, and distinct objects are unequal; `eqr` raises on 3. -/
+def keyEqFor (kname : String) : KeyEq Int :=
+  if kname == "eqr" then
+    ⟨fun a b => a == b, fun a b => if a = 3 ∨ b = 3 then .error (boom "eq") else .ok false⟩
+  else if kname == "eqh" then ⟨fun a b => a == b, fun _ _ => .ok false⟩
+  else decEq Int
+
 def getOps (j : Json) : Except String (List Op) := do
   (← (← field j "ops").getArr?).toList.mapM (fun v => do
     match ← v.getStr? with
@@ -140,7 +211,7 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "islice_arity" =>
     let nargs ← getNat j "nargs"
     let kw ← getBool j "kw"
-    return encPy (fun _ => Json.null) (cIsliceArity nargs kw)
+    return encPy (fun _ => Json.null) (cIsliceArity nargs kw ((getBool j "sub").toOption == some true))
   | "batched" =>
     let o ← getObj j "obj"
     let n ← getInt j "n"
@@ -154,6 +225,8 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "chain" =>
     let ls ← getObjs j "objs"
     if (getBool j "kw").toOption == some true then
+      if (getBool j "sub").toOption == some true then
+        return ok (encRun toJson (cChainSubKw ls))
       return encPy (fun _ => Json.null) (cChainNew ls true)
     return ok (encRun toJson (if isC then cChain ls else docChain ls))
   | "chain_from" =>
@@ -216,7 +289,7 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "permutations" =>
     let o ← getObj j "obj"
     if (getBool j "badr").toOption == some true then
-      return encPy (fun _ => Json.null) (cPermutationsBadR o)
+      return ok (encRun encInts (cPermutations o none true))
     let r ← getOptInt j "r"
     return ok (encRun encInts (if isC then cPermutations o r else docPermutations o r))
   | "sizeof" =>
@@ -229,13 +302,15 @@ def run (fn : String) (j : Json) : Except String Json := do
     | "permutations" => return enc ((cPermSizeof basic) <$> cPermutationsNew o (← getOptInt j "r"))
     | _ => return enc ((cProductSizeof basic) <$> cProductNew (← getObjs j "objs") (← getOptInt j "r"))
   | "count" =>
-    let start ← getOptInt j "start"
-    let step ← getOptInt j "step"
+    let start ← getOptVal j "start"
+    let step ← getOptVal j "step"
     let ops ← getOps j
-    if isC then return ok (Json.arr ((cCount start step ops).map encOpRes).toArray)
-    else return ok (encInts (docCountValues start step (ops.filter (· == .next)).length))
-  | "count_check" =>
-    return encPy (fun _ => Json.null) (cCountCheck (← getBool j "a") (← getBool j "b"))
+    if isC then
+      let ty := if (getBool j "sub").toOption == some true then "SubCount" else "count"
+      return ok (Json.arr ((cCount numOps start step ops ty).map encValRes).toArray)
+    else
+      let r := docCountRun numOps (step.getD (.int 1)) (ops.filter (· == .next)).length (start.getD (.int 0))
+      return ok (encRun encVal r)
   | "repeat" =>
     let elem ← getInt j "elem"
     let times ← getOptInt j "times"
@@ -249,31 +324,44 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "groupby" =>
     let o ← getObj j "obj"
     let kname ← getStr j "key"
-    let ops ← (← (← field j "ops").getArr?).toList.mapM (fun v => match v with
-      | .str "o" => pure (GbOp.outer : GbOp Int)
-      | .arr a => do return GbOp.direct (← (a.getD 1 Json.null).getInt?)
-      | v => GbOp.group <$> v.getNat?)
+    let ops ← (← (← field j "ops").getArr?).toList.mapM decGbOp
     if isC then
-      return encPy (fun rs => Json.arr (rs.map (fun r => match r with
-        | .inl a => encNext a
-        | .inr b => encNext b)).toArray) (cGroupbyR (← keyFnPy kname) o ops)
+      let hooks ← getHooks decGbOp j
+      let key ← if kname == "eqr" || kname == "eqh" then pure (fun x => .ok x) else keyFnPy kname
+      let r := cGroupbyR (keyEqFor kname) key o hooks ops
+      return encPy (fun (rs, crashed) =>
+        if crashed then toJson "CRASH"
+        else Json.arr (rs.map (fun r => match r with
+          | .inl a => encGb a
+          | .inr b => encGb b)).toArray) r
     else
       return encPy (fun rs => Json.arr (rs.map (fun r => match r with
         | .inl a => encOptInt a
         | .inr b => encOptInt b)).toArray) (docGroupby (← keyFnI kname) o ops)
-  | "tee" =>
+  | "tee" | "tee_wrap" =>
     let o ← getObj j "obj"
+    let ops ← (← (← field j "ops").getArr?).toList.mapM decTeeOp
+    let hooks ← getHooks decTeeOp j
+    let enc := fun (r : List (NextRes Int) × Nat) =>
+      Json.arr #[Json.arr (r.1.map encNext).toArray, toJson r.2]
+    if fn == "tee_wrap" then return encPy enc (cTeeWrap o hooks ops)
     let n ← getInt j "n"
-    let ops ← (← (← field j "ops").getArr?).toList.mapM (fun v => do
-      let a ← v.getArr?
-      match ← (a.getD 0 Json.null).getStr? with
-      | "n" => TeeOp.next <$> (a.getD 1 Json.null).getNat?
-      | "t" => return TeeOp.tee (← (a.getD 1 Json.null).getNat?) (← (a.getD 2 Json.null).getNat?)
-      | "c" => TeeOp.copy <$> (a.getD 1 Json.null).getNat?
-      | "k" => TeeOp.ctor <$> (a.getD 1 Json.null).getNat?
-      | o => throw s!"unknown tee op {o}")
-    return encPy (fun (rs, pulled) => Json.arr #[Json.arr (rs.map encNext).toArray, toJson pulled])
-      (if isC then cTee o n ops else docTee o n ops)
+    return encPy enc (if isC then cTeeR o n hooks ops else docTee o n ops)
+  | "pairwise_r" =>
+    let o ← getObj j "obj"
+    let hooks ← (← (← field j "hooks").getArr?).toList.mapM (·.getNat?)
+    let n ← getNat j "calls"
+    return encPy (fun rs => Json.arr (rs.map encPairRes).toArray) (cPairwiseR o hooks n)
+  | "teeweak" =>
+    let refs ← (← (← field j "refs").getArr?).toList.mapM (fun v => match v with
+      | .str "b" => pure WRef.basic
+      | v => WRef.cb <$> v.getNat?)
+    let bad ← (← (← field j "raising").getArr?).toList.mapM (·.getNat?)
+    let cb := fun (i : Nat) => if i ∈ bad then (.error (boom "cb") : Py Unit) else .ok ()
+    let t : TeeObj Unit := ⟨some (), refs.foldl (fun acc w => wrInsert w acc) []⟩
+    return ok (Json.arr ((teeDealloc cb t).map (fun ev => match ev with
+      | .called i => Json.arr #[toJson "called", toJson i]
+      | .unraisable i e => Json.arr #[toJson "unraisable", toJson i, toJson e.className, toJson e.message])).toArray)
   | "teedata" =>
     let k ← getNat j "len"
     let next := match (getStr j "next").toOption with

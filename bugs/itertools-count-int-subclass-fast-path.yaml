@@ -1,0 +1,53 @@
+id: itertools-count-int-subclass-fast-path
+title: "itertools.count's fast path drops int subclasses: count(True) gives 1 where count(True, 2) gives True, and __add__ of a subclass is not called"
+priority: P4
+kind: doc-mismatch
+module: itertools
+files: [Modules/itertoolsmodule.c]
+functions: ["itertools_count_impl", "count_next"]
+summary: |
+  fast_mode tests PyLong_Check, which accepts subclasses, and keeps only the C integer. So
+  next(count(True)) is the int 1 and repr(count(True)) is count(1), while the doc code yields True,
+  and so does the slow path: next(count(True, 2)) is True and repr is count(True, 2). A subclass of
+  int with its own __add__ is likewise ignored on the fast path, as start or as a step equal to 1.
+  Lean: itertools-count-doc-agree-total-add is refuted by count(True) with an add that cannot
+  fail; with no int subclass, count and the doc generator agree (itertools-count-doc-agree-closed).
+likelihood: |
+  Very low. bool is the only subclass anyone is likely to pass, and values then compare equal.
+maybe_intended: |
+  Likely accepted: the fast path is deliberate, and 1 == True. It is a fast path and a slow path
+  disagreeing, so it is on record, but a maintainer may well call it harmless. PyLong_CheckExact in
+  the fast_mode test would remove it at no real cost.
+reproducer: |
+  import itertools
+  class I(int):
+      def __add__(self, other):
+          return I(int(self) + 2)
+  fast = next(itertools.count(True))
+  slow = next(itertools.count(True, 2))
+  sub = list(itertools.islice(itertools.count(I(0)), 3))
+  print(repr(fast), repr(slow), repr(itertools.count(True)), repr(itertools.count(True, 2)), sub)
+  if fast is not True and slow is True and sub == [0, 1, 2]:
+      print('REPRODUCED itertools-count-int-subclass-fast-path')
+expected: |
+  True from next(count(True)), as from the doc code and from count(True, 2); and the subclass's
+  __add__ used, giving 0, 2, 4.
+observed: |
+  python3 3.14.7 (Linux build pod): 1 True count(1) count(True, 2) [0, 1, 2]. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Doc/library/itertools.rst:320-326, and the agreement of fast and slow paths.
+cause: |
+  Modules/itertoolsmodule.c:3544-3545 uses PyLong_Check, not PyLong_CheckExact; :3551 and :3574 keep
+  the value; :3582-3583 drops long_cnt; :3657 returns PyLong_FromSsize_t.
+possible_fix: |
+  Use PyLong_CheckExact at :3544-3545. Slower for subclasses, unchanged for ints.
+duplicates:
+  issues: []
+  queries: ["itertools count bool", "itertools count True", "itertools count subclass", "itertools count int subclass",
+            "itertools count __add__", "count fast_mode",
+            "(all of the above: word searches, with and without --include-prs, titles filtered on count and read)",
+            "bugforge README: no itertools entries (more_itertools only)"]
+lean:
+  property: PyLean.Itertools.CountDocAgreeTotalAdd
+  theorem: PyLean.Itertools.countDocAgreeTotalAdd_refuted
