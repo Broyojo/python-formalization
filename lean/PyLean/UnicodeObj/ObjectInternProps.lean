@@ -688,4 +688,262 @@ theorem internFromStringSpec_proven : InternFromStringSpec := by
           exact oc)
       rw [← hr]
 
+theorem staticIndex_some {t : Str} : ∀ {l : List Str} {k : Nat}, staticIndex t l = some k →
+    k < l.length ∧ l.getD k [] = t := by
+  intro l
+  induction l with
+  | nil => intro k h; simp [staticIndex] at h
+  | cons x r ih =>
+    intro k h
+    simp only [staticIndex] at h
+    split at h
+    · next e =>
+      simp only [Option.some.injEq] at h
+      subst h
+      simp [e]
+    · cases hq : staticIndex t r with
+      | none => simp [hq] at h
+      | some j =>
+        simp only [hq, Option.map_some, Option.some.injEq] at h
+        subst h
+        obtain ⟨a, b⟩ := ih hq
+        exact ⟨by simpa using a, by simpa using b⟩
+
+theorem staticIndex_at : ∀ {l : List Str} {k : Nat}, l.Nodup → k < l.length →
+    staticIndex (l.getD k []) l = some k := by
+  intro l
+  induction l with
+  | nil => intro k _ h; simp at h
+  | cons x r ih =>
+    intro k hn h
+    obtain ⟨hx, hr⟩ := List.nodup_cons.1 hn
+    cases k with
+    | zero => simp [staticIndex]
+    | succ j =>
+      have hj : j < r.length := by simpa using h
+      have e : (x :: r).getD (j + 1) [] = r.getD j [] := by simp
+      have hm : r.getD j [] ∈ r := by
+        have : r.getD j [] = r[j] := by simp [List.getD, hj]
+        rw [this]
+        exact List.getElem_mem hj
+      have hne : x ≠ r.getD j [] := fun q => hx (q ▸ hm)
+      rw [e]
+      simp only [staticIndex, if_neg hne, ih hr hj, Option.map_some]
+
+/-- The tables when a program starts satisfy `WOK`, for any list of statically allocated strings
+with no repeats, none of them empty or a `LATIN1` singleton, which have their own objects. -/
+def StartWorldOK : Prop :=
+  ∀ statics : List Str, statics.Nodup → (∀ t ∈ statics, t ≠ [] ∧ latin1Of t = none) →
+    WOK (startWorld statics)
+
+theorem index_back (i : Nat) (h1 : ¬i < 256) (h2 : ¬i = 256) : i - 257 + 257 = i := by omega
+
+theorem index_past (i n : Nat) (h : 257 + n ≤ i) : ¬i < 256 ∧ ¬i = 256 ∧ ¬i - 257 < n := by omega
+
+theorem index_shift (k n : Nat) (h : k < n) :
+    ¬k + 257 < 256 ∧ ¬k + 257 = 256 ∧ k + 257 - 257 < n ∧ k + 257 - 257 = k := by omega
+
+theorem startObj_cases (statics : List Str) (i : ObjId) :
+    (startObj statics i).state = .none ∨ (startObj statics i).state = .static := by
+  unfold startObj staticObj
+  repeat' split
+  all_goals simp
+
+theorem startWorldOK_proven : StartWorldOK := by
+  intro statics hn hs
+  have hdict : ∀ t, (startWorld statics).dict t = none := fun _ => rfl
+  have hobj : ∀ i, (startWorld statics).objs i = startObj statics i := fun _ => rfl
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, rfl, ?_⟩
+  · intro t i h
+    rw [hdict] at h
+    simp at h
+  · intro i hi
+    rw [hobj] at hi
+    rcases startObj_cases statics i with e | e <;> rcases hi with x | x <;> rw [e] at x <;> simp at x
+  · intro t i h
+    rw [hdict] at h
+    simp at h
+  · intro t i h
+    rw [hdict] at h
+    simp at h
+  · intro t i h
+    rw [hobj]
+    show _ ∧ _
+    have hc : (if t.isEmpty then some 256 else (staticIndex t statics).map (· + 257)) = some i := h
+    split at hc
+    · next he =>
+      simp only [Option.some.injEq] at hc
+      subst hc
+      have e : t = [] := List.isEmpty_iff.1 he
+      subst e
+      simp [startObj, staticObj]
+    · cases hq : staticIndex t statics with
+      | none => simp [hq] at hc
+      | some k =>
+        simp only [hq, Option.map_some, Option.some.injEq] at hc
+        subst hc
+        obtain ⟨a, b⟩ := staticIndex_some hq
+        obtain ⟨h1, h2, h3, e⟩ := index_shift k statics.length a
+        simp only [startObj, staticObj, if_neg h1, if_neg h2, e, if_pos a, b]
+        simp
+  · intro c hc
+    have : (startWorld statics).latin1 c = c := rfl
+    rw [this, hobj]
+    simp [startObj, staticObj, hc]
+  · intro i hi
+    rw [hobj] at hi ⊢
+    by_cases h1 : i < 256
+    · left
+      refine ⟨i, ?_, rfl⟩
+      simp only [startObj, staticObj, if_pos h1]
+      exact latin1Of_single h1
+    · by_cases h2 : i = 256
+      · subst h2
+        right
+        exact ⟨by simp [startObj, staticObj, latin1Of], by simp [startObj, staticObj, startWorld]⟩
+      · by_cases h3 : i - 257 < statics.length
+        · right
+          have hm : statics.getD (i - 257) [] ∈ statics := by
+            have : statics.getD (i - 257) [] = statics[i - 257] := by simp [List.getD, h3]
+            rw [this]
+            exact List.getElem_mem h3
+          obtain ⟨a, b⟩ := hs _ hm
+          have htext : (startObj statics i).text = statics.getD (i - 257) [] := by
+            simp [startObj, staticObj, h1, h2, h3]
+          rw [htext]
+          refine ⟨b, ?_⟩
+          have hq : (startWorld statics).cache (statics.getD (i - 257) []) =
+              (staticIndex (statics.getD (i - 257) []) statics).map (· + 257) := by
+            show (if (statics.getD (i - 257) []).isEmpty then some 256 else _) = _
+            rw [if_neg]
+            intro he
+            exact a (List.isEmpty_iff.1 he)
+          rw [hq, staticIndex_at hn h3]
+          simp only [Option.map_some]
+          rw [index_back i h1 h2]
+        · simp [startObj, h1, h2, h3] at hi
+  · intro i hi
+    have hi' : 257 + statics.length ≤ i := hi
+    rw [hobj]
+    obtain ⟨h1, h2, h3⟩ := index_past i statics.length hi'
+    simp [startObj, h1, h2, h3]
+
+/-- A world and its handles: the tables fit, and each handle is an object that exists. -/
+def KGood (W : IWorld) (hs : List ObjId) : Prop :=
+  WOK W ∧ 0 < W.next ∧ ∀ h ∈ hs, h < W.next
+
+theorem KGood.get {W : IWorld} {hs : List ObjId} (g : KGood W hs) (h : Nat) :
+    hs.getD h 0 < W.next := by
+  by_cases hl : h < hs.length
+  · have e : hs.getD h 0 = hs[h] := by simp [List.getD, hl]
+    rw [e]
+    exact g.2.2 _ (List.getElem_mem hl)
+  · have e : hs.getD h 0 = 0 := by simp [List.getD, hl]
+    rw [e]
+    exact g.2.1
+
+theorem intern_lt {W : IWorld} (h : WOK W) {s : ObjId} (imm : Bool) (hlt : s < W.next) :
+    (internCommon W s imm).2 < W.next := by
+  by_cases hk : (W.objs s).isStr = false ∨ (W.objs s).exact = false
+  · rw [intern_skip hk]
+    exact hlt
+  · have hs : (W.objs s).isStr = true := by
+      cases e : (W.objs s).isStr with
+      | true => rfl
+      | false => exact absurd (.inl e) hk
+    have he : (W.objs s).exact = true := by
+      cases e : (W.objs s).exact with
+      | true => rfl
+      | false => exact absurd (.inr e) hk
+    have o := intern_out h imm hlt hs he
+    have := lt_next o.ok o.interned
+    rwa [intern_next] at this
+
+theorem good_extend {W V : IWorld} {hs : List ObjId} {r : ObjId} (g : KGood W hs) (ok : WOK V)
+    (hn : W.next ≤ V.next) (hr : r < V.next) : KGood V (hs ++ [r]) := by
+  refine ⟨ok, Nat.lt_of_lt_of_le g.2.1 hn, ?_⟩
+  intro h hm
+  rcases List.mem_append.1 hm with hm | hm
+  · exact Nat.lt_of_lt_of_le (g.2.2 h hm) hn
+  · rw [List.mem_singleton.1 hm]
+    exact hr
+
+theorem newStr_next (W : IWorld) (t : Str) : W.next ≤ (newStr W t).1.next := by
+  unfold newStr
+  cases latin1Of t with
+  | some c => exact Nat.le_refl _
+  | none =>
+    dsimp only
+    split
+    · exact Nat.le_refl _
+    · exact Nat.le_succ _
+
+theorem good_step {W : IWorld} {hs : List ObjId} (g : KGood W hs) (op : KOp) :
+    KGood (applyKOp W hs op).1 (applyKOp W hs op).2.1 := by
+  have hok := g.1
+  cases op with
+  | newStr t =>
+    have n := newStr_out hok t
+    exact good_extend g n.ok (newStr_next W t) n.lt
+  | newSub t =>
+    exact good_extend g (hok.alloc _ rfl) (Nat.le_succ _) (Nat.lt_succ_self _)
+  | newOther =>
+    exact good_extend g (hok.alloc _ rfl) (Nat.le_succ _) (Nat.lt_succ_self _)
+  | mortal h =>
+    have hs' := internSpec_proven W (hs.getD h 0) false hok (g.get h)
+    have hl := intern_lt hok false (g.get h)
+    have hx := intern_next W (hs.getD h 0) false
+    show KGood (internCommon W (hs.getD h 0) false).1 (hs ++ [(internCommon W (hs.getD h 0) false).2])
+    exact good_extend g hs'.1 (Nat.le_of_eq hx.symm) (by rw [hx]; exact hl)
+  | immortal h =>
+    have hs' := internSpec_proven W (hs.getD h 0) true hok (g.get h)
+    have hl := intern_lt hok true (g.get h)
+    have hx := intern_next W (hs.getD h 0) true
+    show KGood (internCommon W (hs.getD h 0) true).1 (hs ++ [(internCommon W (hs.getD h 0) true).2])
+    exact good_extend g hs'.1 (Nat.le_of_eq hx.symm) (by rw [hx]; exact hl)
+  | fromString b =>
+    simp only [applyKOp, internFromString]
+    cases hd : utf8Decode b .strict with
+    | error e => exact g
+    | ok t =>
+      simp only
+      have n := newStr_out hok t
+      have hnx := newStr_next W t
+      generalize newStr W t = q at n hnx ⊢
+      obtain ⟨W1, s⟩ := q
+      simp only at n hnx ⊢
+      have hs' := internSpec_proven W1 s false n.ok n.lt
+      have hl := intern_lt n.ok false n.lt
+      have hx := intern_next W1 s false
+      exact good_extend g hs'.1 (by
+        show W.next ≤ (internCommon W1 s false).1.next
+        rw [hx]
+        exact hnx) (by
+        show (internCommon W1 s false).2 < (internCommon W1 s false).1.next
+        rw [hx]
+        exact hl)
+
+/-- The invariant is reached and kept: from the start of a program, through any script of new
+objects and interning calls, the tables satisfy `WOK`. So the hypothesis of `InternCanonical`,
+`InternSpec` and the others is a fact about every state these operations can produce. -/
+def ScriptsKeepWOK : Prop :=
+  ∀ (statics : List Str) (ops : List KOp), statics.Nodup →
+    (∀ t ∈ statics, t ≠ [] ∧ latin1Of t = none) →
+    WOK (runKOps (startWorld statics) [] ops).1
+
+theorem run_good : ∀ (ops : List KOp) (W : IWorld) (hs : List ObjId), KGood W hs →
+    WOK (runKOps W hs ops).1 := by
+  intro ops
+  induction ops with
+  | nil => intro W hs g; exact g.1
+  | cons op t ih =>
+    intro W hs g
+    exact ih _ _ (good_step g op)
+
+theorem scriptsKeepWOK_proven : ScriptsKeepWOK := by
+  intro statics ops hn hs
+  refine run_good ops _ _ ⟨startWorldOK_proven statics hn hs, ?_, by simp⟩
+  show 0 < 257 + statics.length
+  omega
+
 end PyLean.UnicodeObj
