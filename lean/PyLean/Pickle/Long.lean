@@ -124,14 +124,9 @@ def scanDigits : Bool → Bytes → List Nat × Bool × Bytes
 
 def digitsVal (ds : List Nat) : Nat := ds.foldl (fun a d => 10 * a + d) 0
 
-/-- `PyLong_FromString(s, pend, 10)` where `s` is the C string (the bytes before
-the first NUL). -/
-def pyLongFromString (s : Bytes) : PLRes :=
-  let s1 := skipSpace s
-  let (neg, s2) := match s1 with
-    | 0x2b :: r => (false, r)
-    | 0x2d :: r => (true, r)
-    | r => (false, r)
+/-- `long_from_string_base` (`Objects/longobject.c:2880-2970`) on the text
+after the sign, then the sign. -/
+def lfsBase (neg : Bool) (s2 : Bytes) : PLRes :=
   match s2 with
   | 0x5f :: _ => .syntax
   | _ =>
@@ -143,6 +138,15 @@ def pyLongFromString (s : Bytes) : PLRes :=
     else
       let v : Int := digitsVal ds
       .ok (if neg then -v else v)
+
+/-- `PyLong_FromString(s, pend, 10)` (`Objects/longobject.c:2973-3077`) where
+`s` is the C string (the bytes before the first NUL): leading whitespace, an
+optional sign, then `long_from_string_base`. -/
+def pyLongFromString (s : Bytes) : PLRes :=
+  match skipSpace s with
+  | 0x2b :: r => lfsBase false r
+  | 0x2d :: r => lfsBase true r
+  | r => lfsBase false r
 
 def invalidLiteral (b : Bytes) : PyExc :=
   .valueError s!"invalid literal for int() with base 10: {(bytesRepr (b.take 200)).take 200}"
