@@ -1955,10 +1955,160 @@ def fam_float(g):
         g.probe(e)
 
 
+def fam_funcattrs(g):
+    """The attributes of a function keep the objects assigned to them: subclasses of str, tuple and
+    dict stay themselves, __kwdefaults__ is read at each call, and a key of the same hash can run
+    __eq__ from inside the call. That __eq__ raises or returns True, because a False lets the
+    probe sequence meet the same entry again, which depends on the hash seed."""
+    r = g.rng
+    cls(g, "S", ["str"], None)
+    cls(g, "T", ["tuple"], None)
+    cls(g, "D", ["dict"], None)
+    fail = r.choice(["ok", "raise"])
+    eqb = [["log", "K.__eq__"]]
+    if fail == "raise":
+        eqb.append(["raise", call(name("ValueError"), lit("k"))])
+    eqb.append(["ret", lit(True)])
+    cls(g, "K", (), [g.method("__hash__", "K.__hash__", ["s"], [["ret", call(name("hash"), lit("k"))]]),
+                     g.method("__eq__", "K.__eq__", ["s", "o"], eqb)])
+    params = {"pos": ["a", "b"], "posonly": 0, "kwonly": ["k", "m"], "varargs": None, "varkw": None,
+              "defaults": [lit(5)] if r.random() < 0.5 else [],
+              "kwdefaults": [["m", lit(8)]] if r.random() < 0.5 else []}
+    g.main.append(["def", "f", "f", params,
+                   g.code([["ret", ["tuple", [name(x) for x in ["a", "b", "k", "m"]]]]])])
+    F = name("f")
+
+    def shows():
+        for a in ["__name__", "__qualname__", "__doc__", "__module__", "__defaults__",
+                  "__kwdefaults__", "__type_params__"]:
+            g.probe(attr(F, a))
+
+    g.main.append(["assign", "sn", call(name("S"), lit("sn"))])
+    g.main.append(["assign", "tp", call(name("T"), ["tuple", [lit(1), lit(2)]])])
+    for a, good, bad in [("__name__", name("sn"), lit(1)), ("__qualname__", name("sn"), NONE),
+                         ("__defaults__", name("tp"), ["list", []]),
+                         ("__type_params__", name("tp"), ["list", []]),
+                         ("__doc__", name("sn"), None), ("__module__", name("tp"), None)]:
+        if bad is not None:
+            g.probes(["setattr", F, a, bad])
+        g.probes(["setattr", F, a, good])
+        g.probe(["is", attr(F, a), good])
+        g.probe(call(name("type"), attr(F, a)))
+        if r.random() < 0.5:
+            g.probes(["delattr", F, a])
+            g.probe(attr(F, a))
+    shows()
+    d = r.choice([["dict", [[lit("k"), lit(1)]]], ["dict", []],
+                  call(name("D"), ["dict", [[lit("k"), lit(2)]]]),
+                  ["dict", [[lit(1), lit(2)], [lit("k"), lit(3)]]],
+                  ["dict", [[call(name("K")), lit(4)]]],
+                  ["dict", [[call(name("K")), lit(4)]]] if fail == "raise" else
+                  ["dict", [[call(name("K")), lit(4)], [lit("k"), lit(5)]]]])
+    g.main.append(["assign", "d", d])
+    g.probes(["setattr", F, "__kwdefaults__", name("d")])
+    g.probe(["is", attr(F, "__kwdefaults__"), name("d")])
+    g.probe(["is", attr(F, "__kwdefaults__"), attr(F, "__kwdefaults__")])
+    g.probe(call(F, lit(1), lit(2)))
+    g.probe(call(F, lit(1), lit(2), kw=[("k", lit(0)), ("m", lit(0))]))
+    g.probe(call(F, lit(1), lit(2), kw=[("m", lit(0))]))
+    g.probe(call(F, lit(1), lit(2), lit(3), lit(4)))
+    g.probe(call(F))
+    g.probes(["setitem", name("d"), lit("m"), lit(7)])
+    g.probe(call(F, lit(1), lit(2), kw=[("k", lit(0))]))
+    g.probes(["delitem", name("d"), lit("m")] if r.random() < 0.5 else
+             ["setattr", F, "__kwdefaults__", r.choice([NONE, lit(1), ["list", []]])])
+    g.probe(call(F, lit(1), lit(2), kw=[("k", lit(0))]))
+    if r.random() < 0.5:
+        g.probes(["delattr", F, "__kwdefaults__"])
+        g.probe(attr(F, "__kwdefaults__"))
+        g.probe(call(F, lit(1), lit(2)))
+    g.probes(["setattr", F, "__defaults__", ["tuple", []]])
+    g.probe(attr(F, "__defaults__"))
+    g.probes(["setattr", F, "__defaults__", NONE])
+    g.probe(attr(F, "__defaults__"))
+    g.probes(["delattr", F, "__type_params__"])
+    g.probes(["setattr", F, "__name__", ["list", []]])
+    g.probes(["delattr", F, "__name__"])
+    g.probes(["delattr", F, "__qualname__"])
+    g.probe(call(name("repr"), F))
+    shows()
+
+
+def fam_methods(g):
+    """Bound methods, builtin methods and method-wrappers: equality, the hash that must agree with
+    it, rebinding, __reduce__, and the failure paths through __func__."""
+    r = g.rng
+    fail = r.choice(["ok", "ok", "hash", "eq"])
+    body = []
+    if fail == "hash":
+        body.append(g.method("__hash__", "C.__hash__", ["s"],
+                             [["log", "C.__hash__"], ["raise", call(name("ValueError"), lit("h"))]]))
+    elif fail == "eq":
+        body.append(g.method("__eq__", "C.__eq__", ["s", "o"],
+                             [["log", "C.__eq__"], ["raise", call(name("KeyError"), lit("e"))]]))
+        body.append(["assign", "__hash__", NONE] if r.random() < 0.5 else
+                    g.method("__hash__", "C.__hash__", ["s"], [["ret", lit(7)]]))
+    else:
+        body.append(g.method("__eq__", "C.__eq__", ["s", "o"], [["log", "C.__eq__"], ["ret", lit(r.choice([True, False, 1, 0]))]]))
+        body.append(g.method("__hash__", "C.__hash__", ["s"], [["ret", lit(7)]]))
+    body.append(g.method("__call__", "C.__call__", ["s", "x"], [["log", "C.__call__"], ["ret", name("x")]]))
+    cls(g, "C", (), body)
+    cls(g, "A", (), [g.method("m", "A.m", ["s"], [["ret", lit(1)]]),
+                     g.method("n", "A.n", ["s"], [["ret", lit(2)]])])
+    g.main.append(["assign", "a", call(name("A"))])
+    g.main.append(["assign", "b", call(name("A"))])
+    g.main.append(["assign", "c", call(name("C"))])
+    g.main.append(["assign", "d", call(name("C"))])
+    mt = call(name("type"), attr(name("a"), "m"))
+    g.main.append(["assign", "MT", mt])
+    pairs = [(attr(name("a"), "m"), attr(name("a"), "m")), (attr(name("a"), "m"), attr(name("b"), "m")),
+             (attr(name("a"), "m"), attr(name("a"), "n")),
+             (call(name("MT"), name("c"), name("a")), call(name("MT"), name("c"), name("a"))),
+             (call(name("MT"), name("c"), name("a")), call(name("MT"), name("d"), name("a"))),
+             (call(name("MT"), name("c"), name("a")), call(name("MT"), name("d"), name("b"))),
+             (attr(name("a"), "__str__"), attr(name("a"), "__str__")),
+             (attr(name("a"), "__str__"), attr(name("b"), "__str__")),
+             (attr(name("a"), "__str__"), attr(name("a"), "__repr__")),
+             (attr(name("a"), "__sizeof__"), attr(name("a"), "__sizeof__")),
+             (attr(name("a"), "__sizeof__"), attr(name("b"), "__sizeof__")),
+             (attr(name("a"), "__sizeof__"), attr(name("a"), "__dir__")),
+             (name("len"), name("len")), (name("len"), name("abs")),
+             (attr(lit("x"), "format"), attr(lit("x"), "format")),
+             (attr(name("a"), "m"), attr(name("a"), "__str__")),
+             (attr(name("a"), "m"), lit(1)), (name("len"), lit(1)), (attr(name("a"), "__str__"), lit(1))]
+    for x, y in pairs:
+        g.probe(["cmp", "==", x, y])
+        g.probe(["cmp", "!=", x, y])
+        g.probe(["cmp", r.choice(["<", "<=", ">", ">="]), x, y])
+        g.probe(["cmp", "==", call(name("hash"), x), call(name("hash"), y)])
+    for e in [attr(name("a"), "m"), attr(name("a"), "__str__"), attr(name("a"), "__sizeof__"), name("len"),
+              attr(lit("x"), "format"), attr(name("object"), "__str__"), attr(name("str"), "format"),
+              attr(name("object"), "__sizeof__"), attr(name("type"), "__dict__"),
+              ["sub", attr(name("A"), "__dict__"), lit("__dict__")],
+              ["sub", attr(name("A"), "__dict__"), lit("__weakref__")],
+              attr(name("dict"), "fromkeys"), ["sub", attr(name("dict"), "__dict__"), lit("fromkeys")],
+              call(name("MT"), name("c"), name("a")), call(name("MT"), name("len"), name("a"))]:
+        g.probe(call(attr(e, "__reduce__")))
+    for meth in [attr(name("a"), "m"), call(name("MT"), name("c"), name("a"))]:
+        g.probe(["is", call(attr(meth, "__get__"), name("b")), meth] if False else
+                call(attr(meth, "__get__"), name("b")))
+        g.probe(call(attr(meth, "__get__"), NONE, name("A")))
+    g.probe(attr(call(name("MT"), name("c"), name("a")), "__doc__"))
+    g.probe(attr(attr(name("a"), "m"), "__name__"))
+    g.probe(attr(attr(name("a"), "m"), "__qualname__"))
+    g.probe(attr(attr(name("a"), "m"), "nope"))
+    g.probe(call(name("MT"), lit(1), name("a")))
+    g.probe(call(name("MT"), name("c"), NONE))
+    g.probe(call(name("MT"), name("c")))
+    g.probe(call(name("MT"), name("c"), name("a"), name("a")))
+    g.probe(call(name("MT"), name("c"), kw=[("x", lit(1))]))
+
+
 FAMILIES = [fam_calls, fam_property, fam_super, fam_mro, fam_class_stmt, fam_class_assign,
             fam_wrappers, fam_abstract, fam_type_attrs, fam_slot_updates, fam_descriptors,
             fam_iter_seq, fam_numbers, fam_list_extend, fam_repr, fam_descr_proto,
-            fam_dict_update, fam_dict_lookup, fam_reduce, fam_attrs, fam_float]
+            fam_dict_update, fam_dict_lookup, fam_reduce, fam_attrs, fam_float, fam_methods,
+            fam_funcattrs]
 
 
 def gen_case(rng):

@@ -358,6 +358,19 @@ def tupleHash (rt : Rt) (xs : List Val) : M Int := do
   let acc : Nat := if acc == 2 ^ 64 - 1 then 1546275796 else acc
   pure (if acc ≥ 2 ^ 63 then (acc : Int) - 2 ^ 64 else (acc : Int))
 
+/-- `PyObject_GenericHash`: a hash of the address. Values without identity in the model share one,
+so that `a.is b` implies equal hashes. -/
+def genericHash : Val → Int
+  | .obj a => a
+  | _ => 0
+
+/-- The tail of `method_hash`, `meth_hash` and `wrapper_hash`: `x ^ y` on `Py_hash_t`, with `-1`
+kept for errors. -/
+def hashMix (x y : Int) : Int :=
+  let r : Nat := (x % 2 ^ 64).toNat ^^^ (y % 2 ^ 64).toNat
+  let s : Int := if r ≥ 2 ^ 63 then (r : Int) - 2 ^ 64 else r
+  if s == -1 then -2 else s
+
 /-- Call the `tp_hash` function `f`. -/
 def callHash (rt : Rt) (f : SlotFn) (v : Val) : M Int := do
   let w ← getW
@@ -366,19 +379,26 @@ def callHash (rt : Rt) (f : SlotFn) (v : Val) : M Int := do
   | .generic => slotTpHash rt v
   | .c .int | .c .bool => pure (longHash ((intOf w v).getD 0))
   | .c .none => pure 0xfca86420
-  | .c .object | .c .type | .c .function | .c .property | .c .methodWrapper | .c .builtinFn =>
+  | .c .object | .c .type | .c .function | .c .property =>
     pure (match v with
       | .obj a => (a : Int)
       | _ => 0)
   | .c .method =>
-    -- `method_hash`, `Objects/classobject.c:266`: the hash of `__func__` can raise. The value
-    -- mixes in an address, which the model does not reproduce.
+    -- `method_hash`, `Objects/classobject.c:266`: the hash of `__func__` can raise.
     match payloadOf w v with
-    | some (.bound func _) =>
-      let _ ← rt.hash func
-      pure (match v with
-        | .obj a => (a : Int)
-        | _ => 0)
+    | some (.bound func s) =>
+      let y ← rt.hash func
+      pure (hashMix (genericHash s) y)
+    | _ => gap%
+  | .c .builtinFn =>
+    -- `meth_hash`, `Objects/methodobject.c:343`. `ml_meth` is the builtin itself.
+    match payloadOf w v with
+    | some (.builtin b s) => pure (hashMix (genericHash (s.getD .none)) (strHash (toString (repr b))))
+    | _ => gap%
+  | .c .methodWrapper =>
+    -- `wrapper_hash`, `Objects/descrobject.c:1346`.
+    match payloadOf w v with
+    | some (.methodWrapper d s) => pure (hashMix (genericHash s) (genericHash d))
     | _ => gap%
   | .c .mappingproxy =>
     -- `mappingproxy_hash`, `Objects/descrobject.c:1204`.
@@ -568,7 +588,8 @@ def builtinConv : Builtin → String × MethConv
   | .proxyCall "get" => ("get", .fast)
   | .proxyCall n => (n, .noargs)
   | .getnewargs => ("__getnewargs__", .noargs)
-  | .reduceName _ => ("__reduce__", .noargs)
+  | .reduceName _ | .reduceBound | .reduceCFunction | .reduceWrapper | .reduceDescr =>
+    ("__reduce__", .noargs)
   | .iterLengthHint => ("__length_hint__", .noargs)
   | _ => ("", .keywords)
 

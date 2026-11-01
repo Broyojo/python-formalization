@@ -192,6 +192,10 @@ and `**kwargs` names, in that order, as `co_varnames` does. -/
 structure FuncData where
   name : String := ""
   qualname : String := ""
+  /-- `func_name` and `func_qualname` once assigned: a `str` subclass stays what it is. `name` and
+  `qualname` are their contents, for the messages of `initialize_locals`. -/
+  nameObj : Option Val := none
+  qualnameObj : Option Val := none
   module : Val := .none
   doc : Val := .none
   argcount : Nat := 0
@@ -201,11 +205,10 @@ structure FuncData where
   hasVarargs : Bool := false
   hasVarkw : Bool := false
   defaults : List Val := []
-  kwdefaults : NameDict := []
-  /-- `func_defaults` and `func_kwdefaults` are not NULL (an empty tuple or dict differs from
-  NULL for `__defaults__` and `__kwdefaults__`). -/
-  defaultsSet : Bool := false
-  kwdefaultsSet : Bool := false
+  /-- `func_defaults` and `func_kwdefaults`, the objects themselves; `none` is NULL, which an
+  empty tuple or dict is not. `defaults` holds the items of the tuple. -/
+  defaultsObj : Option Val := none
+  kwdefaultsObj : Option Val := none
   /-- The code object, opaque here; `Rt.exec` interprets it. -/
   code : Nat := 0
   /-- `__class__` cell for zero-argument `super()`. -/
@@ -238,6 +241,9 @@ inductive Builtin where
   | dictKeysMethod | iterLengthHint
   /-- `__getnewargs__` of `int`, `str`, `tuple`, and a `__reduce__` that gives a fixed name. -/
   | getnewargs | reduceName (s : String)
+  /-- `method.__reduce__`, `builtin_function_or_method.__reduce__`, `method-wrapper.__reduce__`,
+  and the `__reduce__` of the five descriptor types. -/
+  | reduceBound | reduceCFunction | reduceWrapper | reduceDescr
   /-- A method of `float`, by name. -/
   | floatMethod (name : String)
   /-- `mappingproxy_keys` and its like: the method of that name on the mapping. -/

@@ -108,24 +108,43 @@ def fillDefaults (f : FuncData) (argc : Nat) (n : Nat) (b : Bound) : Except Stri
       .ok { b with slots := slots }
   else .ok b
 
+/-- `PyDict_GetItemRef(func_kwdefaults, name)`: a `str` key in a dict that can hold anything, so
+a key of the same hash runs its `__eq__`. -/
+def kwdefaultLookup (rt : Rt) (d : Val) (name : Name) : M (Option Val) := do
+  match d with
+  | .obj a =>
+    match ← dictProbe rt a (.str name) (strHash name) iterFuel 0 with
+    | some i =>
+      let w ← getW
+      pure (((dictEntries w a)[i]?).map (·.2))
+    | none => pure none
+  | _ => gap%
+
+/-- The loop of `Python/ceval.c:1886-1909`, over the keyword-only parameters. -/
+def fillKwLoop (rt : Rt) (f : FuncData) : List Nat → List (Option Val) → M (List (Option Val))
+  | [], s => pure s
+  | i :: is, s => do
+    if (s.getD i none).isSome then return ← fillKwLoop rt f is s
+    match f.kwdefaultsObj with
+    | none => fillKwLoop rt f is s
+    | some d =>
+      match ← kwdefaultLookup rt d (f.varnames.getD i "") with
+      | some v => fillKwLoop rt f is (s.set i (some v))
+      | none => fillKwLoop rt f is s
+
 /-- Fill keyword-only defaults, `Python/ceval.c:1886-1909`. -/
-def fillKwdefaults (f : FuncData) (b : Bound) : Except String Bound :=
+def fillKwdefaults (rt : Rt) (f : FuncData) (b : Bound) : M Bound := do
   if f.kwonly > 0 then
     let idx := (List.range f.kwonly).map (· + f.argcount)
-    let slots := idx.foldl (fun s i =>
-      if (s.getD i none).isSome then s
-      else match NameDict.get? f.kwdefaults (f.varnames.getD i "") with
-        | some d => s.set i (some d)
-        | none => s) b.slots
-    let b' := { b with slots := slots }
+    let slots ← fillKwLoop rt f idx b.slots
     if idx.any fun i => (slots.getD i none).isNone then
-      .error (missingArguments f slots none)
-    else .ok b'
-  else .ok b
+      typeErr (missingArguments f slots none)
+    pure { b with slots := slots }
+  else pure b
 
-/-- `initialize_locals`, `Python/ceval.c:1681`. The error string is the `TypeError`
-message. Keyword names are strings, so the `keywords must be strings` branch is outside
-this signature; a "Did you mean" suggestion (`_Py_CalculateSuggestions`) is not
+/-- `initialize_locals`, `Python/ceval.c:1681`, up to the keyword-only defaults. The error string
+is the `TypeError` message. Keyword names are strings, so the `keywords must be strings` branch
+is outside this signature; a "Did you mean" suggestion (`_Py_CalculateSuggestions`) is not
 modelled. -/
 def bindArgs (f : FuncData) (args : List Val) (kw : Kw) : Except String Bound :=
   let total := f.argcount + f.kwonly
@@ -139,9 +158,7 @@ def bindArgs (f : FuncData) (args : List Val) (kw : Kw) : Except String Bound :=
     if args.length > f.argcount && !f.hasVarargs then
       .error (tooManyPositional f args.length b1.slots)
     else
-      match fillDefaults f args.length n b1 with
-      | .error e => .error e
-      | .ok b2 => fillKwdefaults f b2
+      fillDefaults f args.length n b1
 
 /-- The locals handed to the code object. -/
 def boundLocals (f : FuncData) (b : Bound) (kwv : Option Val) : NameDict :=
@@ -159,6 +176,7 @@ def functionCall (rt : Rt) (self : Val) (f : FuncData) (args : List Val) (kw : K
   match bindArgs f args kw with
   | .error m => typeErr m
   | .ok b =>
+    let b ← fillKwdefaults rt f b
     let kwv ←
       if f.hasVarkw then
         some <$> alloc B.dict (.dict (b.kwdict.map fun (k, v) => (Val.str k, v)))
@@ -972,6 +990,57 @@ def checkBuiltinArgs (b : Builtin) (self : Option Val) (args : List Val) (kw : K
     unless args.length == 1 do
       typeErr s!"{fs} takes exactly one argument ({args.length} given)"
 
+/-- `(getattr, (obj, name))`, the tuple `Py_BuildValue("N(OO)", ...)` makes in the `__reduce__` of
+methods and descriptors. -/
+def reduceToGetattr (obj name : Val) : M Val := do
+  let g ← alloc B.builtinFn (.builtin .getattr none)
+  pure (.tuple [g, .tuple [obj, name]])
+
+/-- `method___reduce___impl`, `Objects/classobject.c:90`. -/
+def methodReduce (rt : Rt) (self : Val) : M Val := do
+  let w ← getW
+  match payloadOf w self with
+  | some (.bound func s) =>
+    let name ← rt.getAttr func "__name__"
+    reduceToGetattr s name
+  | _ => gap%
+
+/-- `meth_reduce`, `Objects/methodobject.c:192`. -/
+def methReduce (self : Val) : M Val := do
+  let w ← getW
+  match payloadOf w self with
+  | some (.builtin b s) =>
+    match builtinName b, s with
+    | some n, none => pure (.str n)
+    | some n, some x => reduceToGetattr x (.str n)
+    | none, _ => gap%
+  | _ => gap%
+
+/-- `wrapper_reduce`, `Objects/descrobject.c:1369`. -/
+def wrapperReduce (self : Val) : M Val := do
+  let w ← getW
+  match payloadOf w self with
+  | some (.methodWrapper d s) =>
+    match payloadOf w d with
+    | some (.wrapperDescr _ p _) => reduceToGetattr s (.str p.name)
+    | _ => gap%
+  | _ => gap%
+
+/-- `d_type` and `d_name` of a descriptor. -/
+def descrInfo (w : World) (d : Val) : Option (Addr × Name) :=
+  match payloadOf w d with
+  | some (.wrapperDescr o p _) => some (o, p.name)
+  | some (.methodDescr o nm _) | some (.classmethodDescr o nm _) => some (o, nm)
+  | some (.memberDescr o nm _) | some (.getsetDescr o nm _) => some (o, nm)
+  | _ => none
+
+/-- `descr_reduce`, `Objects/descrobject.c:630`. -/
+def descrReduce (self : Val) : M Val := do
+  let w ← getW
+  match descrInfo w self with
+  | some (o, nm) => reduceToGetattr (.obj o) (.str nm)
+  | none => gap%
+
 /-- Call a `Builtin`. `self` is `m_self`; methods receive their instance there. -/
 def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (kw : Kw)
     (owner : Option Addr := none) : M Val := do
@@ -1272,6 +1341,10 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
     | _, _, _, some xs => pure (.tuple [.tuple xs])
     | _, _, _, _ => gap%
   | .reduceName s => pure (.str s)
+  | .reduceBound => methodReduce rt selfV
+  | .reduceCFunction => methReduce selfV
+  | .reduceWrapper => wrapperReduce selfV
+  | .reduceDescr => descrReduce selfV
   | .listAppend =>
     match args, selfV with
     | [x], .obj a =>
@@ -1508,16 +1581,13 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
   if owner == B.function then
     match payloadOf w obj with
     | some (.func f) =>
-      if n == "__name__" then return .str f.name
-      if n == "__qualname__" then return .str f.qualname
+      if n == "__name__" then return f.nameObj.getD (.str f.name)
+      if n == "__qualname__" then return f.qualnameObj.getD (.str f.qualname)
       if n == "__module__" then return f.module
       if n == "__doc__" then return f.doc
       if n == "__defaults__" then
-        return if f.defaultsSet then .tuple f.defaults else .none
-      if n == "__kwdefaults__" then
-        return ← if f.kwdefaultsSet then
-            alloc B.dict (.dict (f.kwdefaults.map fun (k, v) => (Val.str k, v)))
-          else pure .none
+        return f.defaultsObj.getD .none
+      if n == "__kwdefaults__" then return f.kwdefaultsObj.getD .none
       if n == "__dict__" then return ← genericGetDict obj
       if n == "__annotate__" then return f.annotate.getD .none
       if n == "__annotations__" then
@@ -1581,12 +1651,7 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
   if owner == B.wrapperDescr || owner == B.methodDescr || owner == B.memberDescr ||
       owner == B.getsetDescr || owner == B.classmethodDescr then
     -- `d_type`, `d_name`, and `calculate_qualname`, `Objects/descrobject.c:593`.
-    let info : Option (Addr × Name) := match payloadOf w obj with
-      | some (.wrapperDescr o p _) => some (o, p.name)
-      | some (.methodDescr o nm _) | some (.classmethodDescr o nm _) => some (o, nm)
-      | some (.memberDescr o nm _) | some (.getsetDescr o nm _) => some (o, nm)
-      | _ => none
-    match info with
+    match descrInfo w obj with
     | some (o, nm) =>
       if n == "__objclass__" then return .obj o
       if n == "__name__" then return .str nm
@@ -1735,36 +1800,31 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
         match value with
         | some v =>
           match strOf w v with
-          | some s => return ← setF { f with name := s }
+          | some s => return ← setF { f with name := s, nameObj := some v }
           | none => typeErr "__name__ must be set to a string object"
         | none => typeErr "__name__ must be set to a string object"
       if n == "__qualname__" then
         match value with
         | some v =>
           match strOf w v with
-          | some s => return ← setF { f with qualname := s }
+          | some s => return ← setF { f with qualname := s, qualnameObj := some v }
           | none => typeErr "__qualname__ must be set to a string object"
         | none => typeErr "__qualname__ must be set to a string object"
       if n == "__module__" then return ← setF { f with module := value.getD .none }
       if n == "__doc__" then return ← setF { f with doc := value.getD .none }
       if n == "__defaults__" then
         match value with
-        | none | some .none => return ← setF { f with defaults := [], defaultsSet := false }
+        | none | some .none => return ← setF { f with defaults := [], defaultsObj := none }
         | some v =>
           match tupleOf w v with
-          | some xs => return ← setF { f with defaults := xs, defaultsSet := true }
+          | some xs => return ← setF { f with defaults := xs, defaultsObj := some v }
           | none => typeErr "__defaults__ must be set to a tuple object"
       if n == "__kwdefaults__" then
         match value with
-        | none | some .none => return ← setF { f with kwdefaults := [], kwdefaultsSet := false }
+        | none | some .none => return ← setF { f with kwdefaultsObj := none }
         | some v =>
           match dictOf w v with
-          | some es =>
-            let d := es.filterMap fun (k, x) =>
-              match k with
-              | .str n => some (n, x)
-              | _ => none
-            return ← setF { f with kwdefaults := d, kwdefaultsSet := true }
+          | some _ => return ← setF { f with kwdefaultsObj := some v }
           | none => typeErr "__kwdefaults__ must be set to a dict object"
       if n == "__annotate__" then
         -- `function___annotate___set_impl`, `Objects/funcobject.c:948`.

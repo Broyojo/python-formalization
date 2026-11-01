@@ -94,6 +94,12 @@ def methodOf (tn n : String) : Builtin :=
   -- `ellipsis_reduce` and `notimplemented_reduce`, `Objects/sliceobject.c`, `Objects/object.c`.
   | "ellipsis", "__reduce__" => .reduceName "Ellipsis"
   | "NotImplementedType", "__reduce__" => .reduceName "NotImplemented"
+  | "method", "__reduce__" => .reduceBound
+  | "builtin_function_or_method", "__reduce__" => .reduceCFunction
+  | "method-wrapper", "__reduce__" => .reduceWrapper
+  | "wrapper_descriptor", "__reduce__" | "method_descriptor", "__reduce__"
+  | "classmethod_descriptor", "__reduce__" | "member_descriptor", "__reduce__"
+  | "getset_descriptor", "__reduce__" => .reduceDescr
   | "iterator", "__length_hint__" | "list_iterator", "__length_hint__"
   | "tuple_iterator", "__length_hint__" | "str_ascii_iterator", "__length_hint__"
   | "str_iterator", "__length_hint__"
