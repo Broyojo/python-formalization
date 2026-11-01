@@ -313,7 +313,7 @@ every member is an `Exception`. -/
 def deriveCls (h : Heap) (excs : List ExcId) : Cls :=
   if excs.all (fun e => h.isInst e "Exception") then clsEG else clsBEG
 
-/-- `exceptiongroup_subset`, Objects/exceptions.c:1155-1231: a new group of `excs` with the
+/-- `exceptiongroup_subset`, Objects/exceptions.c:1155-1234: a new group of `excs` with the
 metadata of `orig`; `none` for an empty `excs`. The class comes from `derive`. -/
 def subset (h : Heap) (orig : ExcId) (excs : List ExcId) : Heap × Option ExcId :=
   if excs.isEmpty then (h, none)
@@ -324,8 +324,8 @@ def subset (h : Heap) (orig : ExcId) (excs : List ExcId) : Heap × Option ExcId 
         children := some excs }
     (h, some e)
 
-/-- `exceptiongroup_split_recursive`, Objects/exceptions.c:1326-1435. `cs` is the matcher. The fold
-is the `for` loop over `eg->excs`, :1379-1411; the result is `(match, rest)`. -/
+/-- `exceptiongroup_split_recursive`, Objects/exceptions.c:1326-1434. `cs` is the matcher. The fold
+is the `for` loop over `eg->excs`, :1378-1411; the result is `(match, rest)`. -/
 def splitRec (cs : List String) : Nat → Heap → ExcId → Heap × Option ExcId × Option ExcId
   | 0, h, _ => (h, none, none)
   | fuel + 1, h, exc =>
@@ -343,7 +343,7 @@ def splitRec (cs : List String) : Nat → Heap → ExcId → Heap × Option ExcI
         let (h, r) := subset h exc rs
         (h, m, r)
 
-/-- `BaseExceptionGroup.split`, Objects/exceptions.c:1444-1474, with a tuple of classes. -/
+/-- `BaseExceptionGroup.split`, Objects/exceptions.c:1444-1469, with a tuple of classes. -/
 def split (cs : List String) (h : Heap) (e : ExcId) : Heap × Option ExcId × Option ExcId :=
   splitRec cs (2 * h.length + 2) h e
 

@@ -25,6 +25,17 @@ def iskeyword (s : String) : Bool := kwlist.contains s
 /-- `issoftkeyword`, Lib/keyword.py:63. -/
 def issoftkeyword (s : String) : Bool := softkwlist.contains s
 
+/-- `kwlist` and `softkwlist` are sorted, duplicate-free and disjoint, so no name is both a keyword
+and a soft keyword, and `iskeyword`, `issoftkeyword` decide membership. -/
+def KeywordLists : Prop :=
+  kwlist.Nodup ∧ softkwlist.Nodup ∧ (∀ s ∈ softkwlist, s ∉ kwlist) ∧
+    (∀ s, iskeyword s = true ↔ s ∈ kwlist) ∧ (∀ s, issoftkeyword s = true ↔ s ∈ softkwlist)
+
+theorem keywordLists_proven : KeywordLists := by
+  refine ⟨by decide, by decide, by decide, ?_, ?_⟩
+  · intro s; simp [iskeyword]
+  · intro s; simp [issoftkeyword]
+
 def runCase (j : Json) : Except String Json := do
   let s ← getStr j "s"
   return Json.mkObj [("ok", Json.arr #[jBool (iskeyword s), jBool (issoftkeyword s),

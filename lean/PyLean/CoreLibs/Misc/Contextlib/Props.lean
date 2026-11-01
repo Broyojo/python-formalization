@@ -45,16 +45,42 @@ theorem subclassHookNone_proven : SubclassHookNone := by
 /-! ### `ContextDecorator` -/
 
 /-- A `ContextDecorator` "enables context managers to work as decorators": `_recreate_cm` returns
-`self`, and calling the decorated function is the function's body inside `with self._recreate_cm():`.
-When creating the context manager fails, the function does not run. -/
+`self`, and the decorated function behaves as its body in `with self._recreate_cm():`. Its value comes
+back after `__exit__`; an exception comes back when `__exit__` is false and gives `None` when it is
+true; `__exit__` failing replaces the result; and when `__enter__` or creating the manager fails, the
+function does not run. -/
 def DecoratorIsWith : Prop :=
-  ∀ (σ V R C : Type) (c : C) (toCM : C → CM σ V) (func : St σ → St σ × Res R) (s : St σ) (e : ExcId),
+  ∀ (σ V R C : Type) (c : C) (toCM : C → CM σ V) (func : St σ → St σ × Res R)
+    (s s1 s2 s3 : St σ) (v : V) (r : R) (e e2 : ExcId),
+    let rec_ : St σ → St σ × Res C := fun s => (s, .ok (ContextDecorator.recreateCm c))
     ContextDecorator.recreateCm c = c ∧
-    ContextDecorator.call (fun s => (s, .ok (ContextDecorator.recreateCm c))) toCM func s =
-      withStmt (toCM c) (fun _ s => func s) s ∧
-    ContextDecorator.call (C := C) (fun s => (s, .error e)) toCM func s = (s, .error e)
+    (ContextDecorator.call (C := C) (R := R) (fun s => (s, .error e)) toCM func s = (s, .error e)) ∧
+    ((toCM c).enter s = (s1, .error e) →
+      ContextDecorator.call rec_ toCM func s = (s1, .error e)) ∧
+    ((toCM c).enter s = (s1, .ok v) → func s1 = (s2, .ok r) → ∀ b, (toCM c).exit s2 none = (s3, .ok b) →
+      ContextDecorator.call rec_ toCM func s = (s3, .ok (some r))) ∧
+    ((toCM c).enter s = (s1, .ok v) → func s1 = (s2, .error e) →
+      (toCM c).exit s2 (some e) = (s3, .ok false) →
+      ContextDecorator.call rec_ toCM func s = (s3, .error e)) ∧
+    ((toCM c).enter s = (s1, .ok v) → func s1 = (s2, .error e) →
+      (toCM c).exit s2 (some e) = (s3, .ok true) →
+      ContextDecorator.call rec_ toCM func s = (s3, .ok none)) ∧
+    ((toCM c).enter s = (s1, .ok v) → func s1 = (s2, .error e) →
+      (toCM c).exit s2 (some e) = (s3, .error e2) →
+      ContextDecorator.call rec_ toCM func s = (s3, .error e2))
 
-theorem decoratorIsWith_proven : DecoratorIsWith := fun _ _ _ _ _ _ _ _ _ => ⟨rfl, rfl, rfl⟩
+theorem decoratorIsWith_proven : DecoratorIsWith := by
+  intro σ V R C c toCM func s s1 s2 s3 v r e e2 rec_
+  refine ⟨rfl, rfl, ?_, ?_, ?_, ?_, ?_⟩
+  · intro h; simp [ContextDecorator.call, rec_, ContextDecorator.recreateCm, withStmt, h]
+  · intro h1 h2 b h3
+    cases b <;> simp [ContextDecorator.call, rec_, ContextDecorator.recreateCm, withStmt, h1, h2, h3]
+  · intro h1 h2 h3
+    simp [ContextDecorator.call, rec_, ContextDecorator.recreateCm, withStmt, h1, h2, h3]
+  · intro h1 h2 h3
+    simp [ContextDecorator.call, rec_, ContextDecorator.recreateCm, withStmt, h1, h2, h3]
+  · intro h1 h2 h3
+    simp [ContextDecorator.call, rec_, ContextDecorator.recreateCm, withStmt, h1, h2, h3]
 
 /-! ### `@contextmanager` -/
 

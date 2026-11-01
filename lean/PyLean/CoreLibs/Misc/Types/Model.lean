@@ -66,7 +66,7 @@ def resolveBases (ops : Ops O NS R) (bases : List O) : Py (Option (List O)) :=
   | .ok (_, false) => .ok none
   | .ok (new, true) => .ok (some new)
 
-/-- The `for` loop of `update_bases`, Python/bltinmodule.c:34-86: `newBases` is `new_bases` once a
+/-- The `for` loop of `update_bases`, Python/bltinmodule.c:35-86: `newBases` is `new_bases` once a
 replacement has been made. -/
 def updateLoop (ops : Ops O NS R) (bases : List O) :
     List O → List O → Option (List O) → Py (Option (List O))
@@ -85,7 +85,7 @@ def updateLoop (ops : Ops O NS R) (bases : List O) :
           let start := new.getD before
           updateLoop ops bases rest (before ++ [base]) (some (start ++ nb))
 
-/-- `update_bases`, Python/bltinmodule.c:28-96. -/
+/-- `update_bases`, Python/bltinmodule.c:29-98. -/
 def updateBases (ops : Ops O NS R) (bases : List O) : Py (Option (List O)) :=
   updateLoop ops bases bases [] none
 

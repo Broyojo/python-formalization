@@ -75,14 +75,14 @@ theorem exitLoop_nested (c : Calls σ F O A) (frameExc : Option ExcId) (fixFuel 
           cases r with
           | ok b =>
             cases b with
-            | true => exact ih x' none true false ⟨fun _ => by simp, fun h => by cases h⟩
+            | true => exact ih x' none true false ⟨fun _ => (by simp), fun h => (by cases h)⟩
             | false => exact ih x' exc sup pend hinv
           | error n =>
             simp only
             cases hf : fixExceptionContext frameExc exc fixFuel x'.1.h n with
             | none => simp
             | some h =>
-              exact ih _ (some n) sup true ⟨fun h => by cases h, fun _ => rfl⟩
+              exact ih _ (some n) sup true ⟨fun h => (by cases h), fun _ => rfl⟩
 
 /-- `ExitStack.__exit__` "behaves as though we were actually nesting multiple with statements": for
 every stack, every behaviour of the callbacks and every exception passed in, the exception that
@@ -99,7 +99,7 @@ def ExitMatchesNested : Prop :=
 
 theorem exitMatchesNested_proven : ExitMatchesNested := by
   intro σ F O A c fuel fixFuel x exc frameExc
-  have hinv : FlagInv exc exc false false := ⟨fun _ => by simp, fun h => by cases h⟩
+  have hinv : FlagInv exc exc false false := ⟨fun _ => (by simp), fun h => (by cases h)⟩
   have h := exitLoop_nested c frameExc fixFuel exc fuel x exc false false hinv
   cases hn : nested c frameExc fixFuel fuel x exc with
   | error e =>
@@ -116,11 +116,11 @@ theorem exitMatchesNested_proven : ExitMatchesNested := by
     | true =>
       cases o with
       | none => simpa using h3 rfl
-      | some e => simp [outcome]
+      | some e => simp [outcome, raiseKeepingContext]
     | false =>
       have ho := h2 rfl
       simp only [Bool.false_eq_true, if_false]
-      refine ⟨?_, rfl⟩
+      refine ⟨?_, trivial⟩
       cases sup with
       | true =>
         cases exc with
@@ -226,6 +226,75 @@ theorem exitStackTerminates_refuted : ¬ExitStackTerminates := by
   | succ f =>
     have hf := fix_cycle fixFuel 0 (.inl rfl)
     simp [exit, exitLoop, Cb.call, cycleCalls, hf, bind, Except.bind]
+
+/-- Following `__context__` from `e` reaches `None` within `n` steps. -/
+def chainEnds (h : Heap) : Nat → ExcId → Bool
+  | 0, _ => false
+  | n + 1, e =>
+    match (h.get e).context with
+    | none => true
+    | some c => chainEnds h n c
+
+/-- No `__context__` chain of the heap is a cycle. -/
+def Acyclic (h : Heap) : Prop := ∀ e, ∃ n, chainEnds h n e = true
+
+/-- `__exit__` does not create a `__context__` cycle, as the interpreter's own chaining does not
+(Python/errors.c:203-208). Refuted: `_fix_exception_context` sets `new_exc.__context__ = old_exc`
+without looking for `new_exc` in the chain of `old_exc`. Here `F` is received and handled, `A` was
+raised while `B` was being handled, a first callback raises `A`, and a second re-raises `B`. Nested
+`with` statements give `B -> A`, `ExitStack` gives `B -> A -> B`. -/
+def ExitKeepsContextAcyclic : Prop :=
+  ∀ (σ F O A : Type) (c : Calls σ F O A) (fuel fixFuel : Nat) (x x' : Xs σ F O A)
+    (exc frameExc : Option ExcId) (r : Res Bool),
+    (∀ (cb : Cb F O A) (y : Xs σ F O A) (d : Option ExcId), (cb.call c y d).1.1.h = y.1.h) →
+    Acyclic x.1.h → exit c fuel fixFuel x exc frameExc = .ok (x', r) → Acyclic x'.1.h
+
+/-- `F`, `B` with context `F`, `A` with context `B`. -/
+def fbaHeap : Heap :=
+  [{ cls := clsExc }, { cls := clsExc, context := some 0 }, { cls := clsExc, context := some 1 }]
+
+/-- Callback 0 raises `A`, callback 1 raises `B`. -/
+def fbaCalls : Calls Unit Nat Unit Unit where
+  raw := fun f x _ => (x, .error (if f = 0 then 2 else 1))
+  bound := fun f _ x _ => (x, .error (if f = 0 then 2 else 1))
+  wrapped := fun f _ x => (x, .error (if f = 0 then 2 else 1))
+
+theorem chainEnds_set (e : ExcId) : ∀ (n : Nat), e = 1 ∨ e = 2 →
+    chainEnds
+      [{ cls := clsExc }, { cls := clsExc, context := some 2 }, { cls := clsExc, context := some 1 }]
+      n e = false := by
+  intro n
+  induction n generalizing e with
+  | zero => intro _; rfl
+  | succ f ih =>
+    intro he
+    rcases he with rfl | rfl
+    · exact ih 2 (.inr rfl)
+    · exact ih 1 (.inl rfl)
+
+theorem exitKeepsContextAcyclic_refuted : ¬ExitKeepsContextAcyclic := by
+  intro h
+  have hacy : Acyclic fbaHeap := by
+    intro e
+    refine ⟨4, ?_⟩
+    match e with
+    | 0 => rfl
+    | 1 => rfl
+    | 2 => rfl
+    | _ + 3 => rfl
+  have hrun : exit fbaCalls 3 5 ({ h := fbaHeap, g := () }, [(true, .raw 0), (true, .raw 1)])
+      (some 0) (some 0) =
+      .ok (({ h := [{ cls := clsExc }, { cls := clsExc, context := some 2 },
+        { cls := clsExc, context := some 1 }], g := () }, []), .error 1) := by
+    rfl
+  have := h Unit Nat Unit Unit fbaCalls 3 5 _ _ (some 0) (some 0) _
+    (by
+      intro cb y d
+      cases cb <;> rfl)
+    hacy hrun
+  obtain ⟨n, hn⟩ := this 1
+  rw [chainEnds_set 1 n (.inl rfl)] at hn
+  cases hn
 
 /-! ### Registering callbacks -/
 

@@ -253,10 +253,10 @@ def PySQ.qsize (q : PySQ α) : Nat := q.queue.length
 
 /-! ### `_queue.SimpleQueue`, the C twin -/
 
-/-- `_queue_SimpleQueue_put_impl`, Modules/_queuemodule.c:306-325. -/
+/-- `_queue_SimpleQueue_put_impl`, Modules/_queuemodule.c:307-325. -/
 def cPut (q : List α) (item : α) : List α := q ++ [item]
 
-/-- `_queue_SimpleQueue_get_impl`, Modules/_queuemodule.c:380-458: the timeout is looked at only
+/-- `_queue_SimpleQueue_get_impl`, Modules/_queuemodule.c:381-458: the timeout is looked at only
 when `block` is true (:389). -/
 def cGet (q : List α) (block : Bool := true) (timeout : Option Int := none) : List α × Py α :=
   let check : Py Unit :=
