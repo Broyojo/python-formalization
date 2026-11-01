@@ -22,6 +22,7 @@ import ast
 import copy
 import io
 import json
+import os
 import random
 import re
 import struct
@@ -506,7 +507,7 @@ def gen_text(rng):
         return gen_source(rng)
     if r < 0.9:
         return mutate(rng.choice(CORPUS), rng)
-    if r < 0.995:
+    if r < 0.999:
         path = rng.choice(LIBFILES)
         lines = path.read_text(encoding="utf-8", errors="replace").splitlines(True)
         i = rng.randrange(len(lines))
@@ -568,7 +569,7 @@ def run_python_lex(c):
     try:
         for t in _tokenize.TokenizerIter(io.StringIO(text).readline, extra_tokens=c["extra"]):
             toks.append([t[0], [ord(x) for x in t[1]], t[2][0], t[2][1], t[3][0], t[3][1],
-                         [ord(x) for x in t[4]]])
+                         [len(t[4]), sum(map(ord, t[4]))]])
     except SyntaxError as e:
         tx = "None" if e.text is None else "[" + ",".join(str(ord(x)) for x in e.text) + "]"
         err = f"{type(e).__name__}|{e.msg}|{e.lineno}|{e.offset}|{tx}"
@@ -675,6 +676,28 @@ def mutate_tree(t, rng):
     return t
 
 
+CRASHES = 0
+
+
+def survives(tree, mode):
+    """Compile a mutated tree in a forked child, since a malformed tree can kill the process."""
+    global CRASHES
+    pid = os.fork()
+    if pid == 0:
+        try:
+            compile(tree, "x", mode, flags=ast.PyCF_OPTIMIZED_AST)
+        except BaseException:
+            pass
+        os._exit(0)
+    _, status = os.waitpid(pid, 0)
+    if os.WIFSIGNALED(status):
+        CRASHES += 1
+        if CRASHES <= 8:
+            print("CRASH", os.WTERMSIG(status), ast.dump(tree)[:600], file=sys.stderr)
+        return False
+    return True
+
+
 def gen_case_check(rng):
     got = src_case(rng)
     if got is None:
@@ -687,6 +710,8 @@ def gen_case_check(rng):
             tree = enc(t2)
             json.dumps(tree)
         except Exception:
+            return None
+        if not survives(t2, mode):
             return None
         try:
             compile(t2, "x", mode, flags=ast.PyCF_OPTIMIZED_AST)

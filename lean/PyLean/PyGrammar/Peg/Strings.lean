@@ -210,8 +210,7 @@ def decodeBytesEscape (buf : Array Nat) : Nat → Nat → List Nat → Option Na
       if s + 1 < buf.size && d1 < 16 && d2 < 16 then
         decodeBytesEscape buf f (s + 2) ((d1 <<< 4 + d2) :: acc) inv
       else
-        let s' := if s < buf.size && d1 < 16 then s + 1 else s
-        .error { cls := "ValueError", msg := s!"invalid \\x escape at position {s' - 2}" }
+        .error { cls := "ValueError", msg := s!"invalid \\x escape at position {s - 2}" }
     else
       let inv' := if inv.isNone then some (s - 1) else inv
       decodeBytesEscape buf f s (c :: 92 :: acc) inv'

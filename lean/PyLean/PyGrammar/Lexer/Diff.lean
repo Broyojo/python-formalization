@@ -12,8 +12,10 @@ def optI : Option Int → String
   | none => "None"
 
 def encTok (t : TokInfo) : Json :=
+  -- The line is sent as length and sum: it repeats for every token of a line, and in full it
+  -- makes the difftest's output quadratic in the size of a multi-line token.
   Json.arr #[toJson t.type, toJson t.str, toJson t.lineno, toJson t.col, toJson t.endLineno,
-             toJson t.endCol, toJson t.line]
+             toJson t.endCol, toJson [t.line.length, t.line.foldl (· + ·) 0]]
 
 /-- `{"ok": [tokens, error-or-null]}`: errors end the stream without hiding earlier tokens. -/
 def encStream (r : List TokInfo × Option PyError) : Json :=
