@@ -91,6 +91,6 @@ Lib/enum.py	1700	1708	global_str	global_str(self)	todo
 Lib/enum.py	1710	1723	global_enum	global_enum(cls, update_str=False)	todo		
 Lib/enum.py	1725	1918	_simple_enum	_simple_enum(etype=Enum, *, boundary=None, use_args=None)	excluded		internal-bootstrap: builds the stdlib's own enums without EnumType, for import speed
 Lib/enum.py	1935	1936	verify.__init__	__init__(self, *checks)	todo		
-Lib/enum.py	1937	2015	verify.__call__	__call__(self, enumeration)	modelled	corelibs-enum-verify,corelibs-enum-continuous,corelibs-enum-unique-aliases	
+Lib/enum.py	1937	2015	verify.__call__	__call__(self, enumeration)	todo		withdrawn: the Flag branch of CONTINUOUS has no theorem
 Lib/enum.py	2017	2137	_test_simple_enum	_test_simple_enum(checked_enum, simple_enum)	excluded		test-support: compares a hand-written enum with a _simple_enum one in the test suite
 Lib/enum.py	2139	2167	_old_convert_	_old_convert_(etype, name, module, filter, source=None, *, boundary=None)	todo		
