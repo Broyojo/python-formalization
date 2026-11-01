@@ -1,6 +1,6 @@
 file	line	endline	name	signature	status	entry	note
 Lib/multiprocessing/reduction.py	38	41	ForkingPickler.__init__	__init__(self, *args)	todo		
-Lib/multiprocessing/reduction.py	44	46	ForkingPickler.register	register(cls, type, reduce)	todo		
+Lib/multiprocessing/reduction.py	44	46	ForkingPickler.register	register(cls, type, reduce)	todo		candidates:calstat-statistics-kernels-centred
 Lib/multiprocessing/reduction.py	49	52	ForkingPickler.dumps	dumps(cls, obj, protocol=None)	todo		candidates:pickle-dumps-twins,pickle-dumps-twins-batch-ok,pickle-dumps-twins-batch-ok-long,pickle-dumps-twins-narrow
 Lib/multiprocessing/reduction.py	58	60	dump	dump(obj, file, protocol=None)	todo		
 Lib/multiprocessing/reduction.py	71	81	duplicate	duplicate(handle, target_process=None, inheritable=False, *, source_process=None)	todo		

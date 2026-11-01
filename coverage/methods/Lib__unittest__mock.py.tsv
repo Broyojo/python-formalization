@@ -19,7 +19,7 @@ Lib/unittest/mock.py	316	317	_SentinelObject.__init__	__init__(self, name)	todo
 Lib/unittest/mock.py	319	320	_SentinelObject.__repr__	__repr__(self)	todo		
 Lib/unittest/mock.py	322	323	_SentinelObject.__reduce__	__reduce__(self)	todo		
 Lib/unittest/mock.py	328	329	_Sentinel.__init__	__init__(self)	todo		
-Lib/unittest/mock.py	331	335	_Sentinel.__getattr__	__getattr__(self, name)	todo		
+Lib/unittest/mock.py	331	335	_Sentinel.__getattr__	__getattr__(self, name)	todo		candidates:calstat-calendar-module-getattr
 Lib/unittest/mock.py	337	338	_Sentinel.__reduce__	__reduce__(self)	todo		
 Lib/unittest/mock.py	355	370	_delegating_property	_delegating_property(name)	todo		
 Lib/unittest/mock.py	376	388	_CallList.__contains__	__contains__(self, value)	todo		
@@ -41,7 +41,7 @@ Lib/unittest/mock.py	616	625	NonCallableMock.__get_side_effect	__get_side_effect
 Lib/unittest/mock.py	627	633	NonCallableMock.__set_side_effect	__set_side_effect(self, value)	todo		
 Lib/unittest/mock.py	638	667	NonCallableMock.reset_mock	reset_mock(self, visited=None, *, return_value: bool=False, side_effect: bool=False)	todo		
 Lib/unittest/mock.py	670	689	NonCallableMock.configure_mock	configure_mock(self, /, **kwargs)	todo		
-Lib/unittest/mock.py	692	737	NonCallableMock.__getattr__	__getattr__(self, name)	todo		
+Lib/unittest/mock.py	692	737	NonCallableMock.__getattr__	__getattr__(self, name)	todo		candidates:calstat-calendar-module-getattr
 Lib/unittest/mock.py	740	765	NonCallableMock._extract_mock_name	_extract_mock_name(self)	todo		
 Lib/unittest/mock.py	767	785	NonCallableMock.__repr__	__repr__(self)	todo		
 Lib/unittest/mock.py	788	803	NonCallableMock.__dir__	__dir__(self)	todo		
@@ -130,7 +130,7 @@ Lib/unittest/mock.py	2579	2608	_Call.__new__	__new__(cls, value=(), name='', par
 Lib/unittest/mock.py	2611	2615	_Call.__init__	__init__(self, value=(), name=None, parent=None, two=False, from_kall=True)	todo		
 Lib/unittest/mock.py	2618	2668	_Call.__eq__	__eq__(self, other)	todo		
 Lib/unittest/mock.py	2674	2679	_Call.__call__	__call__(self, /, *args, **kwargs)	todo		
-Lib/unittest/mock.py	2682	2686	_Call.__getattr__	__getattr__(self, attr)	todo		
+Lib/unittest/mock.py	2682	2686	_Call.__getattr__	__getattr__(self, attr)	todo		candidates:calstat-calendar-module-getattr
 Lib/unittest/mock.py	2689	2692	_Call.__getattribute__	__getattribute__(self, attr)	todo		
 Lib/unittest/mock.py	2695	2701	_Call._get_call_arguments	_get_call_arguments(self)	todo		
 Lib/unittest/mock.py	2704	2705	_Call.args	args(self)	todo		

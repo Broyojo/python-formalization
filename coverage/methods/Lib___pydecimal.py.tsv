@@ -128,7 +128,7 @@ Lib/_pydecimal.py	3671	3707	Decimal.shift	shift(self, other, context=None)	todo
 Lib/_pydecimal.py	3710	3711	Decimal.__reduce__	__reduce__(self)	todo		
 Lib/_pydecimal.py	3713	3716	Decimal.__copy__	__copy__(self)	todo		
 Lib/_pydecimal.py	3718	3721	Decimal.__deepcopy__	__deepcopy__(self, memo)	todo		
-Lib/_pydecimal.py	3725	3809	Decimal.__format__	__format__(self, specifier, context=None, _localeconv=None)	todo		
+Lib/_pydecimal.py	3725	3809	Decimal.__format__	__format__(self, specifier, context=None, _localeconv=None)	todo		candidates:coll-userstring-format-spec
 Lib/_pydecimal.py	3811	3825	_dec_from_triple	_dec_from_triple(sign, coefficient, exponent, special=False)	todo		
 Lib/_pydecimal.py	3841	3842	_ContextManager.__init__	__init__(self, new_context)	todo		
 Lib/_pydecimal.py	3843	3846	_ContextManager.__enter__	__enter__(self)	todo		
