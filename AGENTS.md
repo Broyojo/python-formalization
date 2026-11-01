@@ -5,6 +5,29 @@ CPython maintainer would agree with, every property proven or refuted, and
 bug records a maintainer would want to read. Fewer, better findings beat many
 weak ones.
 
+## Compute: nothing heavy on this machine
+
+Do not run `lake`, `lean`, difftests, reproducers or any other CPU- or
+memory-heavy command locally. Run them on the build pod through the wrapper,
+from inside your worktree:
+
+```
+/Users/broyojo/code/projects/python-formalization/scripts/r lake build      # from lean/
+/Users/broyojo/code/projects/python-formalization/scripts/r lake env lean Audit.lean
+/Users/broyojo/code/projects/python-formalization/scripts/r python3 difftest/foo_diff.py --cases 50000
+/Users/broyojo/code/projects/python-formalization/scripts/r python3 scripts/check_bugs.py \
+    --python /Users/broyojo/code/projects/python-formalization/vendor/cpython-main/python.exe
+```
+
+The wrapper syncs your worktree to the pod and runs the command there, so edit
+files locally as usual; do not edit on the pod, because the next sync overwrites
+it. `python3` on the pod is 3.14.7 and the `vendor/` paths below work there too.
+Reading files, git and `gh` stay local. Scratch `.lean` files must live inside
+your worktree to be synced (not under `lean/PyLean/`, and do not commit them).
+
+The pod is pinned to our own Kubernetes cluster. Never launch compute on a paid
+cloud, and never touch the other clusters in `sky status`.
+
 ## Layout (one directory per module; touch only your own)
 
 ```
@@ -96,8 +119,8 @@ validation done in the wrong order. Look there first.
   main interpreter and record the result.
 - Never weaken a statement to get a proof. If it is false, refute it.
 - Forbidden: `sorry`, `admit`, `native_decide`, `bv_decide`, `ofReduceBool`,
-  new axioms, `implemented_by`, `@[extern]`. Run `scripts/audit.sh`-style checks:
-  `cd lean && lake build && lake env lean Audit.lean`.
+  new axioms, `implemented_by`, `@[extern]`. Check with `lake build` and
+  `lake env lean Audit.lean` from `lean/`, through `scripts/r`.
 - If a proof is intractable after serious effort, leave the entry `.open`
   with a note on what is missing, rather than weakening it.
 

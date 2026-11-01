@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Run a command on the build cluster instead of this machine. Syncs the current
+# git worktree to the pod, then runs the command there from the same relative
+# directory. The pod holds only caches; this checkout stays the source of truth.
+#   scripts/r lake build          (from lean/)
+#   scripts/r python3 difftest/ipaddress_diff.py --cases 50000
+set -euo pipefail
+cluster=${PYLEAN_CLUSTER:-pylean}
+root=$(git rev-parse --show-toplevel)
+rel=$(git rev-parse --show-prefix)
+name=$(basename "$root")
+base=python-formalization
+
+ssh -q "$cluster" "mkdir -p pf/wt/$name"
+rsync -az --delete --exclude .git --exclude .claude --exclude vendor --exclude .lake \
+    --exclude __pycache__ "$root/" "$cluster:pf/wt/$name/"
+
+cmd=$(printf '%q ' "$@")
+# A new worktree starts from the main checkout's build cache, so it only
+# rebuilds what it changed.
+exec ssh -q "$cluster" "source pf/env.sh
+if [ ! -d pf/wt/$name/lean/.lake ] && [ -d pf/wt/$base/lean/.lake ]; then
+    cp -a pf/wt/$base/lean/.lake pf/wt/$name/lean/.lake
+fi
+cd pf/wt/$name/$rel && $cmd"

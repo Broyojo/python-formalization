@@ -1,0 +1,54 @@
+# Build host for Lean proofs and differential tests. Pinned to our own
+# Kubernetes cluster: never let this fail over to a paid cloud. CPU only, so it
+# takes no GPUs, and it leaves 32 CPUs on the node for other jobs.
+#   sky launch -c pylean sky/builder.yaml -i 120 --down -y
+name: pylean-builder
+
+resources:
+  infra: k8s/a100
+  cpus: 64
+  memory: 512
+  disk_size: 200
+
+setup: |
+  set -euo pipefail
+  SUDO=$(command -v sudo || true)
+  $SUDO apt-get update -qq
+  $SUDO apt-get install -y -qq build-essential git curl rsync zstd pkg-config \
+    libssl-dev zlib1g-dev libbz2-dev liblzma-dev libffi-dev libsqlite3-dev libreadline-dev
+
+  # Lean, at the toolchain the project pins.
+  curl -sSfL https://elan.lean-lang.org/elan-init.sh -o /tmp/elan-init.sh
+  sh /tmp/elan-init.sh -y --default-toolchain leanprover/lean4:v4.35.0
+  export PATH=$HOME/.elan/bin:$PATH
+  lean --version
+
+  # The two interpreters the project tests against, built from source so the
+  # stdlib includes test.support, which some difftests import.
+  V=$HOME/pf/vendor
+  mkdir -p $V
+  [ -d $V/cpython-3.14 ] || git clone -q --depth 1 --branch v3.14.7 https://github.com/python/cpython.git $V/cpython-3.14
+  if [ ! -x $HOME/pf/py314/bin/python3 ]; then
+    (cd $V/cpython-3.14 && ./configure --quiet --prefix=$HOME/pf/py314 && make -j32 -s >build.log 2>&1 && make -s install >>build.log 2>&1)
+  fi
+  if [ ! -x $V/cpython-main/python ]; then
+    mkdir -p $V/cpython-main
+    (cd $V/cpython-main && git init -q && git fetch -q --depth 1 https://github.com/python/cpython.git ef1fce0a69a19360643fb82ea3545ede21495c73 && git checkout -q FETCH_HEAD && ./configure --quiet && make -j32 -s >build.log 2>&1)
+  fi
+  ln -sf python $V/cpython-main/python.exe
+  $HOME/pf/py314/bin/python3 -c "import sys, _datetime, _decimal, _bisect, _heapq, _pickle, _json, _ctypes, test.support; print(sys.version)"
+  $V/cpython-main/python -c "import sys, _datetime, _decimal, _bisect, _heapq, _pickle, _json; print(sys.version)"
+
+  # AGENTS.md and the bug records use the Mac's absolute paths; make them valid here.
+  ROOT=/Users/broyojo/code/projects/python-formalization
+  $SUDO mkdir -p $ROOT
+  $SUDO ln -sfn $V $ROOT/vendor
+
+  # Remote commands get these tools on PATH.
+  cat > $HOME/pf/env.sh <<'ENV'
+  export PATH=$HOME/pf/py314/bin:$HOME/.elan/bin:$PATH
+  ENV
+  sed -i 's/^  //' $HOME/pf/env.sh
+
+run: |
+  echo builder ready

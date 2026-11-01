@@ -26,11 +26,13 @@ AGENTS.md                        playbook for modelling a new module
 
 ## Running
 
+Everything heavy runs on a SkyPilot pod on our own Kubernetes cluster, never locally:
+
 ```sh
-cd lean && lake build && cd ..
-python3 difftest/ipaddress_diff.py --cases 50000   # model vs CPython
-python3 scripts/check_bugs.py                      # every bug still reproduces
-scripts/audit.sh                                   # everything, fails on any open property
+sky launch -c pylean sky/builder.yaml -i 120 --down -y   # once; the pod only holds caches
+scripts/r python3 difftest/ipaddress_diff.py --cases 50000   # model vs CPython
+scripts/r python3 scripts/check_bugs.py                      # every bug still reproduces
+scripts/r scripts/audit.sh                                   # everything, fails on any open property
 ```
 
 ## Status
