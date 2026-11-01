@@ -1,0 +1,48 @@
+id: unicodeobj-text-dedent-isspace-blank-lines
+title: "python -c does not dedent when a blank line holds \\r or \\f, unlike the textwrap.dedent it is documented to match"
+priority: P4
+kind: twin-mismatch
+module: unicodeobject
+files: [Objects/unicodeobject.c, Lib/textwrap.py, Modules/main.c]
+functions: ["_PyUnicode_Dedent", "search_longest_common_leading_whitespace", "textwrap.dedent"]
+summary: |
+  `textwrap.dedent` treats a line as blank when `line.isspace()`. `_PyUnicode_Dedent`, whose
+  comment says its behaviour "is expected to be an exact match of textwrap.dedent", treats only
+  ' ' and '\t' as whitespace. A line holding '\r', '\f', '\v' or a non-ASCII space is therefore
+  blank for textwrap, but for the C code it is a line with no indent, which ends the search with
+  a margin of 0. So `python -c` on an indented command with CRLF line endings and an empty line
+  in it fails with IndentationError, although the same text dedents under textwrap.
+likelihood: |
+  Occasional: `python -c "$(cat script_with_crlf.py)"` or a command pasted from a CRLF file, when
+  the code is indented and has a blank line. Form feeds are much rarer.
+maybe_intended: |
+  Possibly in part: the C code works on UTF-8 bytes and is deliberately simple. But the comment
+  claims an exact match, and CRLF input is the realistic case.
+reproducer: |
+  import subprocess, sys, textwrap
+  code = "  x = 1\r\n\r\n  print(x)\r\n"
+  r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+  exec(compile(textwrap.dedent(code), "<dedented>", "exec"), {})
+  print("python -c:", r.returncode, r.stderr.strip().splitlines()[-1:])
+  if r.returncode != 0 and "IndentationError" in r.stderr:
+      print("REPRODUCED unicodeobj-text-dedent-isspace-blank-lines")
+expected: |
+  `python -c` runs the code, as it does for the same text with LF line endings.
+observed: |
+  IndentationError: unexpected indent. textwrap.dedent on the same text gives code that runs.
+tested: "REPRODUCED on python3 3.14.7 and on main (3.16.0a1+dev) by scripts/check_bugs.py"
+promised_by: |
+  Comment at Objects/unicodeobject.c:14425-14428; Lib/textwrap.py:436 and :444 use str.isspace.
+cause: |
+  Objects/unicodeobject.c:14368 and :14371: any byte other than ' ' and '\t' at the start of a
+  line makes the search return 0, before it knows whether the line is blank.
+possible_fix: |
+  Treat a line as blank when it holds only the ASCII whitespace of Py_ISSPACE, or correct the
+  comment. Non-ASCII spaces would need decoding, so matching textwrap exactly is more work.
+lean: |
+  Refuted by dedentMatchesTextwrap_refuted (lean/PyLean/UnicodeObj/TextProps2.lean) on
+  "  a\n\x0c\n". textwrap.dedent is modelled in TextDedent.lean and difftested against Lib/textwrap.py.
+duplicates:
+  issues: []
+  queries: ["_PyUnicode_Dedent", "dedent form feed", "dedent run_command"]
+  bugforge: "no match in vendor/bugforge-results/README.md"

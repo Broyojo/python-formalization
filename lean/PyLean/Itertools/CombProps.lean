@@ -11,6 +11,8 @@ namespace PyLean.Itertools
 
 open PyLean
 
+variable {α : Type} [Inhabited α]
+
 /-- Same items, and both or neither end with an exception (messages differ
 between C and the doc code, which raises bare or Python-level errors). -/
 def runAgree {α : Type} (a b : Run α) : Prop := a.1 = b.1 ∧ a.2.isSome = b.2.isSome
@@ -37,7 +39,7 @@ theorem combFill_eq : ∀ (j k : Nat) (idx : List Nat), cCombFill j k idx = docC
   | _, 0, _ => rfl
   | j, k + 1, idx => by simp only [cCombFill, docCombFill, combFill_eq (j + 1) k]
 
-theorem combLoop_eq (pool : List Int) (r : Nat) (hr : r ≤ pool.length) :
+theorem combLoop_eq (pool : List α) (r : Nat) (hr : r ≤ pool.length) :
     ∀ (fuel : Nat) (idx : List Nat),
       drain cCombinationsNext fuel
           { pool := pool, indices := idx, r := r, started := true, stopped := false } =
@@ -101,7 +103,7 @@ theorem docCwrScan_lt (n : Nat) (idx : List Nat) : ∀ k i, docCwrScan n idx k =
     · simp at h; omega
     · have := docCwrScan_lt n idx k i h; omega
 
-theorem cwrLoop_eq (pool : List Int) (r : Nat) :
+theorem cwrLoop_eq (pool : List α) (r : Nat) :
     ∀ (fuel : Nat) (idx : List Nat), idx.length = r →
       drain cCwrNext fuel
           { pool := pool, indices := idx, r := r, started := true, stopped := false } =
@@ -195,7 +197,7 @@ theorem docPermLoop_length (n : Nat) : ∀ (i : Nat) (idx : List Nat) (cyc : Lis
       subst h
       simp [hl]
 
-theorem permOuter_eq (pool : List Int) (r : Nat) (hr : r ≤ pool.length) :
+theorem permOuter_eq (pool : List α) (r : Nat) (hr : r ≤ pool.length) :
     ∀ (fuel : Nat) (idx : List Nat) (cyc : List Int), idx.length = pool.length → cyc.length = r →
       drain cPermutationsNext fuel
           { pool := pool, indices := idx, cycles := cyc, r := r, started := true, stopped := false } =
@@ -249,54 +251,57 @@ theorem listRepeatCheck_ok {r : Int} (h0 : 0 ≤ r) (h : memNewOk r = true) : li
 /-- The three `r`-taking combinatoric iterators agree with their doc
 equivalents (C gets one more unit of fuel for its first `next()`);
 `permutations` is checked both with `r` and with `r=None`. -/
-def combAgree (pool : List Int) (r : Int) (fuel : Nat) : Prop :=
-  runAgree (cCombinationsF (fuel + 1) pool r) (docCombinationsF fuel pool r) ∧
-  runAgree (cCwrF (fuel + 1) pool r) (docCwrF fuel pool r) ∧
-  runAgree (cPermutationsF (fuel + 1) pool (some r)) (docPermutationsF fuel pool (some r)) ∧
-  runAgree (cPermutationsF (fuel + 1) pool none) (docPermutationsF fuel pool none)
+def combAgree (o : Obj α) (r : Int) (fuel : Nat) : Prop :=
+  runAgree (cCombinationsF (fuel + 1) o r) (docCombinationsF fuel o r) ∧
+  runAgree (cCwrF (fuel + 1) o r) (docCwrF fuel o r) ∧
+  runAgree (cPermutationsF (fuel + 1) o (some r)) (docPermutationsF fuel o (some r)) ∧
+  runAgree (cPermutationsF (fuel + 1) o none) (docPermutationsF fuel o none)
 
-/-- Broad: every int `r`. The pool is a tuple in memory (`tupleNewOk`, type invariant). -/
+/-- Broad: every int `r`, over any element type and any input object. The
+pool is a tuple in memory (`tupleNewOk`, type invariant). -/
 def CombDocAgree : Prop :=
-  ∀ (pool : List Int) (r : Int) (fuel : Nat), tupleNewOk pool.length = true → combAgree pool r fuel
+  ∀ (α : Type) [Inhabited α] (o : Obj α) (r : Int) (fuel : Nat), tupleNewOk o.len = true →
+    combAgree o r fuel
 
 theorem combDocAgree_refuted : ¬CombDocAgree := by
   intro h
-  have := (h [1, 2, 3] (-1) 3 (by decide)).1
+  have := (h Int (.iter [1, 2, 3] none) (-1) 3 (by decide)).1
   revert this
   decide
 
 /-- Narrowed to `r >= 0`. -/
 def CombDocAgreeNonneg : Prop :=
-  ∀ (pool : List Int) (r : Int) (fuel : Nat), tupleNewOk pool.length = true → 0 ≤ r →
-    combAgree pool r fuel
+  ∀ (α : Type) [Inhabited α] (o : Obj α) (r : Int) (fuel : Nat), tupleNewOk o.len = true → 0 ≤ r →
+    combAgree o r fuel
 
 theorem combDocAgreeNonneg_refuted : ¬CombDocAgreeNonneg := by
   intro h
-  have := (h [1, 2, 3] (2 ^ 63) 3 (by decide) (by decide)).1
+  have := (h Int (.iter [1, 2, 3] none) (2 ^ 63) 3 (by decide) (by decide)).1
   revert this
   decide
 
 /-- Narrowed to `0 <= r <= sys.maxsize`. -/
 def CombDocAgreeSsize : Prop :=
-  ∀ (pool : List Int) (r : Int) (fuel : Nat), tupleNewOk pool.length = true → 0 ≤ r → r ≤ ssizeMax →
-    combAgree pool r fuel
+  ∀ (α : Type) [Inhabited α] (o : Obj α) (r : Int) (fuel : Nat), tupleNewOk o.len = true → 0 ≤ r →
+    r ≤ ssizeMax → combAgree o r fuel
 
 theorem combDocAgreeSsize_refuted : ¬CombDocAgreeSsize := by
   intro h
-  have := (h [1, 2, 3] (2 ^ 63 - 1) 3 (by decide) (by decide) (by decide)).1
+  have := (h Int (.iter [1, 2, 3] none) (2 ^ 63 - 1) 3 (by decide) (by decide) (by decide)).1
   revert this
   decide
 
 /-- Narrowed to `r` whose index array and result tuple can be allocated. -/
 def CombDocAgreeAlloc : Prop :=
-  ∀ (pool : List Int) (r : Int) (fuel : Nat), tupleNewOk pool.length = true → 0 ≤ r →
-    memNewOk r = true → tupleNewOk r = true → combAgree pool r fuel
+  ∀ (α : Type) [Inhabited α] (o : Obj α) (r : Int) (fuel : Nat), tupleNewOk o.len = true → 0 ≤ r →
+    memNewOk r = true → tupleNewOk r = true → combAgree o r fuel
 
 theorem runAgree_of_eq {α : Type} {a b : Run α} (h : a = b) : runAgree a b := by
   subst h; exact ⟨rfl, rfl⟩
 
-theorem combDocAgreeAlloc_proven : CombDocAgreeAlloc := by
-  intro pool r fuel hp h0 hm ht
+theorem combAlloc_list (pool : List α) (r : Int) (fuel : Nat) (hp : tupleNewOk pool.length = true)
+    (h0 : 0 ≤ r) (hm : memNewOk r = true) (ht : tupleNewOk r = true) :
+    combAgree (.iter pool none) r fuel := by
   have hle := memNewOk_le hm
   have hmin : ssizeMin ≤ r := by rw [ssizeMin_eq]; omega
   have hpn : memNewOk (pool.length : Int) = true := memNewOk_of_tuple hp (by omega)
@@ -304,7 +309,7 @@ theorem combDocAgreeAlloc_proven : CombDocAgreeAlloc := by
   refine ⟨?_, ?_, ?_, ?_⟩
   · -- combinations
     apply runAgree_of_eq
-    simp only [cCombinationsF, cCombinationsNew, asSsize_ok hmin hle, docCombinationsF]
+    simp only [cCombinationsF, cCombinationsNew, asSsize_ok hmin hle, docCombinationsF, tupleOf]
     simp only [bind, Except.bind, show ¬ r < 0 by omega, ↓reduceIte, hm, Bool.not_true,
       Bool.false_eq_true, pure, Except.pure]
     by_cases hrn' : r > pool.length
@@ -316,7 +321,7 @@ theorem combDocAgreeAlloc_proven : CombDocAgreeAlloc := by
       rw [this]; rfl
   · -- combinations_with_replacement
     apply runAgree_of_eq
-    simp only [cCwrF, cCwrNew, asSsize_ok hmin hle, docCwrF]
+    simp only [cCwrF, cCwrNew, asSsize_ok hmin hle, docCwrF, tupleOf]
     simp only [bind, Except.bind, show ¬ r < 0 by omega, ↓reduceIte, hm, Bool.not_true,
       Bool.false_eq_true, pure, Except.pure]
     by_cases hz : pool.length = 0 ∧ r ≠ 0
@@ -332,7 +337,7 @@ theorem combDocAgreeAlloc_proven : CombDocAgreeAlloc := by
       rw [this]; rfl
   · -- permutations(pool, r)
     apply runAgree_of_eq
-    simp only [cPermutationsF, cPermutationsNew, asSsize_ok hmin hle, docPermutationsF, Option.getD]
+    simp only [cPermutationsF, cPermutationsNew, asSsize_ok hmin hle, docPermutationsF, Option.getD, tupleOf]
     simp only [bind, Except.bind, show ¬ r < 0 by omega, ↓reduceIte, hm, hpn, Bool.not_true,
       Bool.or_false, Bool.false_eq_true, pure, Except.pure]
     by_cases hrn' : r > pool.length
@@ -346,7 +351,7 @@ theorem combDocAgreeAlloc_proven : CombDocAgreeAlloc := by
       simp [pySliceTo, h0, Run.cons]
   · -- permutations(pool)
     apply runAgree_of_eq
-    simp only [cPermutationsF, cPermutationsNew, docPermutationsF, Option.getD]
+    simp only [cPermutationsF, cPermutationsNew, docPermutationsF, Option.getD, tupleOf]
     simp only [bind, Except.bind, show ¬ (pool.length : Int) < 0 by omega, ↓reduceIte, hpn,
       Bool.not_true, Bool.or_false, Bool.false_eq_true, pure, Except.pure, Int.lt_irrefl, decide_false,
       drain, cPermutationsNext, Bool.not_false, Int.toNat_natCast, hp]
@@ -354,5 +359,25 @@ theorem combDocAgreeAlloc_proven : CombDocAgreeAlloc := by
       ((List.range pool.length).map (fun (i : Nat) => (pool.length : Int) - (i : Int))) (by simp) (by simp)
     rw [this]
     simp [pySliceTo, Run.cons]
+
+/-- When building the pool fails, both sides raise it. -/
+theorem combAlloc_bad (o : Obj α) (e : PyExc) (he : tupleOf o = .error e) (r : Int) (fuel : Nat)
+    (h0 : 0 ≤ r) (hm : memNewOk r = true) : combAgree o r fuel := by
+  have hle := memNewOk_le hm
+  have hmin : ssizeMin ≤ r := by rw [ssizeMin_eq]; omega
+  refine ⟨?_, ?_, ?_, ?_⟩ <;> apply runAgree_of_eq
+  · simp [cCombinationsF, cCombinationsNew, asSsize_ok hmin hle, docCombinationsF, he, bind, Except.bind]
+  · simp [cCwrF, cCwrNew, asSsize_ok hmin hle, docCwrF, he, bind, Except.bind]
+  · simp [cPermutationsF, cPermutationsNew, docPermutationsF, he, bind, Except.bind]
+  · simp [cPermutationsF, cPermutationsNew, docPermutationsF, he, bind, Except.bind]
+
+theorem combDocAgreeAlloc_proven : CombDocAgreeAlloc := by
+  intro α _ o r fuel hp h0 hm ht
+  cases o with
+  | notIterable ty => exact combAlloc_bad _ _ rfl r fuel h0 hm
+  | iter l e =>
+    cases e with
+    | some e => exact combAlloc_bad _ e rfl r fuel h0 hm
+    | none => exact combAlloc_list l r fuel hp h0 hm ht
 
 end PyLean.Itertools
