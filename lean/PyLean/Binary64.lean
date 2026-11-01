@@ -1,4 +1,9 @@
 import PyLean.Registry
+import PyLean.Binary64.Model
+import PyLean.Binary64.Bigint
+import PyLean.Binary64.Float
+import PyLean.Binary64.Strtod
+import PyLean.Binary64.Dtoa
 import PyLean.Binary64.Diff
 
 /-!

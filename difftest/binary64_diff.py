@@ -257,4 +257,338 @@ def ratio_float(n, d):
         return math.inf if n > 0 else -math.inf
 
 
-common.main(gen_case, run_python, default_cases=50000)
+# ---------------------------------------------------------------------------
+# float object layer
+# ---------------------------------------------------------------------------
+
+sys.set_int_max_str_digits(0)
+
+
+def enc_obj(rng, ints=True):
+    k = rng.random()
+    if not ints or k < 0.6:
+        return {"f": edge_float(rng)}
+    if k < 0.97:
+        return {"i": edge_int(rng)}
+    return {"o": "str"}
+
+
+def py_obj(o):
+    if "f" in o:
+        return of_bits(o["f"])
+    if "i" in o:
+        return o["i"]
+    return "text"
+
+
+def enc_any(r):
+    if r is NotImplemented:
+        return "NotImplemented"
+    if isinstance(r, float):
+        return enc(r)
+    if isinstance(r, tuple):
+        return [enc_any(i) for i in r]
+    if isinstance(r, complex):
+        return "complex"
+    return r
+
+
+BIN_NAMES = {"f_add": "add", "f_sub": "sub", "f_mul": "mul", "f_div": "truediv", "f_rem": "mod",
+             "f_floordiv": "floordiv", "f_divmod": "divmod", "f_pow": "pow"}
+
+
+def bin_call(fn, v, w):
+    name = BIN_NAMES[fn]
+    if isinstance(v, float):
+        return getattr(float, f"__{name}__")(v, w)
+    if isinstance(w, float):
+        return getattr(float, f"__r{name}__")(w, v)
+    return NotImplemented
+
+
+HEXCH = "0123456789abcdefABCDEF"
+SPACE = [" ", "\t", "\n", "\r", "\x0b", "\x0c", ""]
+
+
+def hex_string(rng):
+    k = rng.random()
+    if k < 0.3:
+        s = of_bits(edge_bits(rng)).hex()
+    elif k < 0.5:
+        # around the rounding boundary: more digits than a double holds
+        n = rng.randrange(1, 20)
+        s = "0x" + "".join(rng.choice(["0", "8", "f", "1", rng.choice(HEXCH)]) for _ in range(n))
+        s += "." + "".join(rng.choice(["0", "8", "f", "1", rng.choice(HEXCH)])
+                           for _ in range(rng.randrange(0, 20)))
+        s += "p" + str(rng.choice([0, 1, -1, 1023, 1024, -1022, -1074, -1075, -1076, 2000, -2000,
+                                   971, 970, 972, rng.randrange(-1200, 1200)]))
+    elif k < 0.75:
+        mant = rng.choice(["1", "1.8", "1.fffffffffffff8", "1.fffffffffffff7", "1.fffffffffffff80001",
+                           "0.8", "0.0", "0", ".8", "8.", "10000000000000080", "1000000000000008",
+                           "1.00000000000008", "1.00000000000018", "1.000000000000080000001",
+                           "0.00000000000000000000001", "ffffffffffffffff", "f" * 40, "1" * 30,
+                           "00000000000000000000000000000001", "1." + "0" * 60 + "1"])
+        s = rng.choice(["", "0x", "0X"]) + mant
+        s += rng.choice(["", "p", "P"]) + rng.choice(["0", "+1", "-1", "1023", "1024", "-1022", "-1074",
+                                                     "-1075", "-1076", "-1073", "+2000", "-2000",
+                                                     "99999999999999999999", "-99999999999999999999",
+                                                     "9223372036854775807", "-9223372036854775808",
+                                                     "4611686018427387904", "-4611686018427387905",
+                                                     "4611686018427387903", "-4611686018427387904"])
+    else:
+        s = rng.choice(["inf", "-inf", "+INF", "infinity", "Infinity", "-iNfInItY", "nan", "-nan",
+                        "+NaN", "NAN", "in", "na", "infin", "", " ", "-", "+", "0x", "0x.", ".",
+                        "p1", "0xp1", "1p", "1p+", "1p-", "1e5", "0x1p", "x1", "1.2.3", "--1", "+-1",
+                        "1_0", "1 2", "0xg", "1\x00", "\x001", "1\x00 ", "١", "\xa01", "1\xa0"])
+    if rng.random() < 0.3:
+        s = ("-" if rng.random() < 0.5 else "+") + s
+    if rng.random() < 0.3:
+        s = rng.choice(SPACE) + s + rng.choice(SPACE)
+    if rng.random() < 0.08:
+        i = rng.randrange(0, len(s) + 1)
+        s = s[:i] + rng.choice(["x", "p", ".", "_", "0", "-", "\x00", " ", "é"]) + s[i:]
+    return s
+
+
+def decimal_string(rng):
+    k = rng.random()
+    if k < 0.2:
+        return repr(of_bits(edge_bits(rng)))
+    if k < 0.45:
+        # an exact halfway point between two doubles, or just off it
+        x = abs(of_bits(edge_bits(rng) & 0x7fffffffffffffff))
+        if x != x or math.isinf(x) or x == sys.float_info.max:
+            x = 1.0
+        q = (fractions.Fraction(x) + fractions.Fraction(math.nextafter(x, math.inf))) / 2
+        e = 0
+        d = q.denominator
+        while d > 1:
+            d >>= 1
+            e += 1
+        n = q.numerator * 5 ** e
+        s = str(n)
+        p = rng.random()
+        if p < 0.4:
+            s = s + "0" * rng.randrange(0, 5)
+            e += len(s) - len(str(n))
+        elif p < 0.6:
+            s = s + "0" * rng.randrange(1, 30) + "1"
+            e += len(s) - len(str(n))
+        elif p < 0.8:
+            s = str(n - 1) + "9" * rng.randrange(1, 30)
+            e += len(s) - len(str(n))
+        cut = rng.randrange(0, len(s) + 1)
+        if rng.random() < 0.5:
+            return f"{s[:cut] or '0'}.{s[cut:]}e{-e + len(s) - cut}"
+        return f"{s}e{-e}"
+    if k < 0.7:
+        nd = rng.choice([1, 2, 8, 9, 10, 15, 16, 17, 18, 19, 22, 39, 40, 41, 42, 60, 100, 800])
+        digs = "".join(rng.choice("0123456789") for _ in range(nd))
+        e = rng.choice([0, 1, -1, 22, 23, 37, -22, -23, 308, 309, -308, -323, -324, -325, -340, 300,
+                        -300, -256, -240, 400, -400, rng.randrange(-350, 350)])
+        cut = rng.randrange(0, nd + 1)
+        return digs[:cut] + rng.choice([".", ""]) + digs[cut:] + rng.choice(["e", "E"]) + str(e)
+    if k < 0.85:
+        return rng.choice(["1e23", "9007199254740993", "8.41e21", "2.2250738585072012e-308",
+                           "2.2250738585072011e-308", "1.7976931348623157e308",
+                           "1.7976931348623158e308", "1.7976931348623159e308", "4.9e-324",
+                           "2.4703282292062328e-324", "2.4703282292062327e-324", "1e400",
+                           "-1e400", "1e-400", "-1e-400", "0e400", "0.0e-400", "00000.000", ".0",
+                           "0.", ".", "e5", "1e", "1e+", "1e-", "1.e5", ".5e5", "+.5", "-.5e-5",
+                           "1e99999999999999", "1e-99999999999999", "0e99999999999999",
+                           "1e1100000000", "1e1100000001", "1e4294967296", "1e4294967297",
+                           "1e-4294967297", "1e0000000000000000000000000000001"])
+    return rng.choice(["inf", "-inf", "+INF", "infinity", "Infinity", "nan", "-nan", "+NaN", "in",
+                       "infinit", "infinityx", "nanx", "1_000", "1__0", "_1", "1_", "1_.5", "1._5",
+                       "1.5_5", "1e1_0", "1_e5", "1e_5", "١٢٣", "1٢", "１２", "\xa01\xa0", " 1",
+                       "1\x00", "\x001", "1\x00_", "é", "1é", "  1  ", "\t1\n", " ", "", "\x0b1",
+                       "1 2", "0x10", "١_٢", "1_٢", "\x1f1", "\x851", "1\x7f", "١\x7f"])
+
+
+def run_float(c):
+    fn = c["fn"]
+    if fn in BIN_NAMES:
+        v, w = py_obj(c["v"]), py_obj(c["w"])
+        r = common.py_result(lambda: enc_any(bin_call(fn, v, w)))
+        if r.get("msg") == "complex exponentiation":  # complex_pow took over
+            return {"ok": "complex"}
+        return r
+    x = of_bits(c["x"]) if "x" in c else None
+    if fn == "f_cmp":
+        w = py_obj(c["w"])
+        return {"ok": enc_any(getattr(float, f"__{c['op']}__")(x, w))}
+    if fn == "f_hash":
+        return {"ok": None if x != x else hash(x)}
+    if fn == "f_is_integer":
+        return {"ok": x.is_integer()}
+    if fn == "f_trunc":
+        return common.py_result(lambda: math.trunc(x))
+    if fn == "f_floor":
+        return common.py_result(lambda: math.floor(x))
+    if fn == "f_ceil":
+        return common.py_result(lambda: math.ceil(x))
+    if fn == "f_round0":
+        return common.py_result(lambda: round(x))
+    if fn == "f_round":
+        return common.py_result(lambda: enc(round(x, c["n"])))
+    if fn == "f_hex":
+        return {"ok": x.hex()}
+    if fn == "f_fromhex":
+        s = bytes(c["b"]).decode("utf-8")
+        return common.py_result(lambda: enc(float.fromhex(s)))
+    if fn == "f_ratio":
+        return common.py_result(lambda: list(x.as_integer_ratio()))
+    if fn in ("pack2", "pack4", "pack8"):
+        code = {"pack2": "e", "pack4": "f", "pack8": "d"}[fn]
+        e = "<" if c["le"] else ">"
+        return common.py_result(lambda: list(struct.pack(e + code, x)))
+    if fn in ("unpack2", "unpack4", "unpack8"):
+        code = {"unpack2": "e", "unpack4": "f", "unpack8": "d"}[fn]
+        e = "<" if c["le"] else ">"
+        r = struct.unpack(e + code, bytes(c["b"]))[0]
+        return {"ok": to_bits(r)}
+    if fn == "repr":
+        return {"ok": repr(x)}
+    if fn == "fmt":
+        code = chr(c["code"])
+        if c["z"]:
+            return {"ok": format(x, f"z.{c['p']}{code}")}
+        if c["dot0"]:
+            return {"ok": format(x, f".{c['p']}")}
+        return {"ok": ("%" + ("+" if c["sign"] else "") + ("#" if c["alt"] else "")
+                       + f".{c['p']}{code}") % x}
+    if fn == "parse":
+        a = "".join(map(chr, c["cps"])) if "cps" in c else bytes(c["bytes"])
+        return common.py_result(lambda: enc(float(a)))
+    if fn == "getformat":
+        return common.py_result(lambda: float.__getformat__(c["t"]))
+    if fn == "asdouble":
+        o = py_obj(c["v"])
+        return common.py_result(lambda: enc(math.nextafter(o, o)))
+    if fn == "info":
+        i = sys.float_info
+        return {"ok": [to_bits(i.max), i.max_exp, i.max_10_exp, to_bits(i.min), i.min_exp,
+                       i.min_10_exp, i.dig, i.mant_dig, to_bits(i.epsilon), i.radix, i.rounds]}
+    raise ValueError(fn)
+
+
+FLOAT_BIN = list(BIN_NAMES)
+
+
+def int_for_compare(rng, x):
+    """Ints close to the float x, so that the 48-bit and 1024-bit branches get hit."""
+    v = of_bits(x)
+    if v != v or math.isinf(v):
+        return edge_int(rng)
+    t = int(v)
+    k = rng.random()
+    if k < 0.4:
+        return t + rng.choice([0, 0, 1, -1, 2, -2])
+    if k < 0.6:
+        return t * 2 + rng.choice([0, 1])
+    if k < 0.8:
+        return (1 if v >= 0 else -1) * (2 ** rng.choice([47, 48, 49, 52, 53, 54, 1023, 1024, 1025])
+                                        + rng.choice([0, 1, -1]))
+    return edge_int(rng)
+
+
+def gen_float_case(rng):
+    k = rng.random()
+    m = {"mod": "binary64"}
+    if k < 0.2:
+        fn = rng.choice(FLOAT_BIN)
+        v, w = enc_obj(rng), enc_obj(rng)
+        if "f" not in v and "f" not in w:
+            v = {"f": edge_float(rng)}
+        return {**m, "fn": fn, "v": v, "w": w}
+    if k < 0.3:
+        x = edge_float(rng)
+        return {**m, "fn": "f_cmp", "x": x, "w": {"i": int_for_compare(rng, x)} if rng.random() < .8
+                else enc_obj(rng), "op": rng.choice(["lt", "le", "eq", "ne", "gt", "ge"])}
+    if k < 0.38:
+        return {**m, "fn": rng.choice(["f_hash", "f_is_integer", "f_trunc", "f_floor", "f_ceil",
+                                       "f_round0", "f_hex", "f_ratio", "repr"]), "x": edge_float(rng)}
+    if k < 0.46:
+        x = edge_float(rng)
+        n = rng.choice([0, 1, 2, -1, 5, 15, 16, 17, 22, 300, 308, 323, 324, -308, -309, -300,
+                        2 ** 63, -2 ** 63, 2 ** 70, -2 ** 70, rng.randrange(-330, 330)])
+        return {**m, "fn": "f_round", "x": x, "n": n}
+    if k < 0.56:
+        return {**m, "fn": "f_fromhex", "b": list(hex_string(rng).encode("utf-8"))}
+    if k < 0.62:
+        fn = rng.choice(["pack2", "pack4", "pack8"])
+        x = edge_float(rng)
+        if rng.random() < 0.5:
+            # values at the edge of the narrower formats
+            p = 11 if fn == "pack2" else 24
+            e = rng.choice([-25, -24, -15, -14, 15, 16] if fn == "pack2" else
+                           [-150, -149, -127, -126, 127, 128])
+            v = (1 << p) + rng.choice([0, 1, 2, -1, -2, 3, (1 << p) - 1, rng.randrange(0, 1 << p)])
+            x = to_bits(math.ldexp(v, e - p) + rng.choice([0.0, 2.0 ** (e - 40), -2.0 ** (e - 40)]))
+        return {**m, "fn": fn, "x": x, "le": rng.random() < .5}
+    if k < 0.66:
+        n = rng.choice([2, 4, 8])
+        b = [rng.getrandbits(8) for _ in range(n)]
+        if rng.random() < 0.4:  # force an all-ones exponent for NaNs and infinities
+            b[0] |= {2: 0x7c, 4: 0x7f, 8: 0x7f}[n]
+            if n > 2:
+                b[1] |= {4: 0x80, 8: 0xf0}[n]
+        le = rng.random() < .5
+        if le:
+            b.reverse()
+        return {**m, "fn": f"unpack{n}", "b": b, "le": le}
+    if k < 0.8:
+        code = rng.choice([101, 69, 102, 70, 103, 71])
+        p = rng.choice([0, 1, 2, 3, 5, 6, 12, 14, 15, 16, 17, 18, 20, 30, 100, 350, 1100,
+                        rng.randrange(0, 40)])
+        q = rng.random()
+        if rng.random() < 0.5:
+            x = edge_float(rng)
+        else:
+            x = to_bits(rng.choice([1, -1]) * round(rng.random() * 10 ** rng.randrange(-5, 25),
+                                                    rng.randrange(0, 5)))
+        flags = {"sign": False, "dot0": False, "alt": False, "z": False}
+        if q < 0.15:
+            flags["alt"] = True
+        elif q < 0.3:
+            flags["sign"] = True
+        elif q < 0.4:
+            flags["z"] = True
+            code = 102
+        elif q < 0.5:
+            flags["dot0"] = True
+            code = 103
+            p = max(p, 1)
+        return {**m, "fn": "fmt", "x": x, "code": code, "p": p, **flags}
+    if k < 0.97:
+        s = decimal_string(rng)
+        q = rng.random()
+        if q < 0.1:
+            s = rng.choice(["-", "+"]) + s
+        elif q < 0.2:
+            s = rng.choice(SPACE) + s + rng.choice(SPACE)
+        elif q < 0.25:
+            i = rng.randrange(0, len(s) + 1)
+            s = s[:i] + rng.choice(["x", ".", "_", "0", "-", "e", "\x00", " ", "é"]) + s[i:]
+        if rng.random() < 0.1:
+            return {**m, "fn": "parse", "bytes": list(s.encode("utf-8"))}
+        return {**m, "fn": "parse", "cps": [ord(ch) for ch in s]}
+    if k < 0.98:
+        return {**m, "fn": "getformat", "t": rng.choice(["double", "float", "x", ""])}
+    if k < 0.99:
+        return {**m, "fn": "info"}
+    return {**m, "fn": "asdouble", "v": enc_obj(rng)}
+
+
+LOW_LEVEL = set(UNARY + BINARY + ["fma", "ldexp", "ofInt", "ratio"])
+
+
+def gen_all(rng):
+    return gen_case(rng) if rng.random() < 0.3 else gen_float_case(rng)
+
+
+def run_all(c):
+    return run_python(c) if c["fn"] in LOW_LEVEL else run_float(c)
+
+
+common.main(gen_all, run_all, default_cases=50000)
