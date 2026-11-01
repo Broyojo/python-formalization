@@ -23,13 +23,13 @@ likelihood: |
   truncated JSON). It is visible to code and tests that report or check e.pos/e.colno or the
   message, and to anyone comparing results with and without the accelerator.
 maybe_intended: |
-  Partly. The messages have differed since the C scanner was added (the C code would have to
-  format a repr), and Lib/test/test_json only checks that 'escape' appears in the message
-  (test_decode.py:118-121), so the message difference is probably tolerated. The position
-  difference looks accidental: C reports the start of the bad escape, Python the bad character,
-  and for every other error the twins agree to the character (test_fail.py checks pos, lineno and
-  colno for both twins; gh-152052 fixed a similar C/Python divergence in the same function).
-  Which of the two positions is preferable is a judgement call.
+  The position difference is not: the sibling case was reported as a bug and fixed in 2026.
+  gh-154936 (pure-Python decoder reported one character past an invalid control character, C at
+  the character) was merged as gh-154941 by Serhiy Storchaka and backported, and gh-152052 fixed
+  another scanstring divergence. Invalid escapes were not touched by either; which of the two
+  positions is right is a small judgement call. The message difference has existed since the C
+  scanner was added and gh-154941 left it alone (it tests pos, lineno and colno, not the message;
+  test_decode.py:118-121 only looks for 'escape'), so it is probably tolerated.
 reproducer: |
   import json
   from test.support.import_helper import import_fresh_module
@@ -79,11 +79,12 @@ reproduces:
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
 duplicates:
   issues:
-    - {number: 152052, state: closed, relation: related (another C/Python scanstring error divergence, "Invalid \\uXXXX escape" vs "Unterminated string"; fixed), reason: completed}
-  queries: ["json escape position", "json Invalid escape", "Invalid control character json", "json control character",
-            "scanstring", "json decoder error message", "JSONDecodeError colno", "json invalid escape",
-            "Invalid escape json", "control character json decode", "py_scanstring", "c_scanstring",
-            "json C accelerator pure python difference", "gh issue view 152052",
+    - {number: 154936, state: closed, relation: "related, the same defect for control characters (position only), fixed by PR 154941; does not cover invalid escapes", reason: completed}
+    - {number: 152052, state: closed, relation: "related (another C/Python scanstring error divergence, Invalid uXXXX escape vs Unterminated string), fixed by PR 152053", reason: completed}
+    - {number: 125660, state: closed, relation: "related (pure-Python decoder accepted invalid unicode escapes); a different defect", reason: completed}
+    - {number: 121479, state: open, relation: "unrelated (feature request for verbose JSONDecodeError messages)", reason: open}
+  queries: ["json invalid escape position", "json Invalid escape", "json control character message", "json decoder error message C Python", "JSONDecodeError pos", "JSONDecodeError colno", "scanstring error", "json parity pure python accelerator", "raw_decode negative", "raw_decode idx", "json negative index", "py_make_scanner", "json idx cannot be negative", "json surrogate pair roundtrip", "json lone surrogates", "json dumps loads surrogate", "json ensure_ascii surrogate",
+            "gh issue view 154936", "gh pr view 154941", "gh issue view 152052", "gh issue view 125660",
             "bugforge-results/README.md: json entries (4: 158729-158732, none related)"]
 lean:
   property: PyLean.JsonMod.LoadsTwinsPos

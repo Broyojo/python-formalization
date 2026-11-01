@@ -53,9 +53,9 @@ reproduces:
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
 duplicates:
   issues:
-    - {number: 94527, state: open, relation: duplicate ("Possibly Wrong json encoding and decoding of surrogated pairs", same repro), reason: open}
-  queries: ["json surrogate pair", "json lone surrogates", "json dumps surrogate", "json roundtrip",
-            "json ensure_ascii surrogate", "scanstring", "py_scanstring", "gh issue view 94527"]
+    - {number: 94527, state: open, relation: "duplicate (Possibly Wrong json encoding and decoding of surrogated pairs, same repro)", reason: open}
+  queries: ["json invalid escape position", "json Invalid escape", "json control character message", "json decoder error message C Python", "JSONDecodeError pos", "JSONDecodeError colno", "scanstring error", "json parity pure python accelerator", "raw_decode negative", "raw_decode idx", "json negative index", "py_make_scanner", "json idx cannot be negative", "json surrogate pair roundtrip", "json lone surrogates", "json dumps loads surrogate", "json ensure_ascii surrogate",
+            "gh issue view 94527", "bugforge-results/README.md: json entries (4, none related)"]
 lean:
   property: PyLean.JsonMod.RoundTripStr
   theorem: PyLean.JsonMod.roundTripStr_refuted
