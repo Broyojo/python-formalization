@@ -1,17 +1,17 @@
 file	line	endline	name	signature	status	entry	note
 Modules/_randommodule.c	102	107	get_random_state	get_random_state(PyObject *module)	excluded		internal-bootstrap: fetches the per-module state struct; no Python-visible behaviour of its own
-Modules/_randommodule.c	135	166	genrand_uint32	genrand_uint32(RandomObject *self)	todo		
-Modules/_randommodule.c	188	193	_random_Random_random_impl	_random_Random_random_impl(RandomObject *self) /*[clinic end generated code: output=117ff99ee53d755c input=26492e52d26e8b7b]*/	todo		
-Modules/_randommodule.c	197	214	init_genrand	init_genrand(RandomObject *self, uint32_t s)	todo		
-Modules/_randommodule.c	220	244	init_by_array	init_by_array(RandomObject *self, uint32_t init_key[], size_t key_length)	todo		
-Modules/_randommodule.c	252	261	random_seed_urandom	random_seed_urandom(RandomObject *self)	todo		
-Modules/_randommodule.c	264	291	random_seed_time_pid	random_seed_time_pid(RandomObject *self)	todo		
-Modules/_randommodule.c	294	379	random_seed	random_seed(RandomObject *self, PyObject *arg)	todo		
-Modules/_randommodule.c	396	403	_random_Random_seed_impl	_random_Random_seed_impl(RandomObject *self, PyObject *n) /*[clinic end generated code: output=0fad1e16ba883681 input=46d01d2ba938c7b1]*/	todo		
-Modules/_randommodule.c	415	440	_random_Random_getstate_impl	_random_Random_getstate_impl(RandomObject *self) /*[clinic end generated code: output=bf6cef0c092c7180 input=b6621f31eb639694]*/	todo		
-Modules/_randommodule.c	455	493	_random_Random_setstate_impl	_random_Random_setstate_impl(RandomObject *self, PyObject *state) /*[clinic end generated code: output=babfc2c2eac6b027 input=358e898ec07469b7]*/	todo		
-Modules/_randommodule.c	507	550	_random_Random_getrandbits_impl	_random_Random_getrandbits_impl(RandomObject *self, uint64_t k) /*[clinic end generated code: output=c30ef8435f3433cf input=64226ac13bb4d2a3]*/	todo		
-Modules/_randommodule.c	562	566	random_init_impl	random_init_impl(RandomObject *self, PyObject *seed) /*[clinic end generated code: output=260734a3739c394f input=e516bf32e8a05e28]*/	todo		
+Modules/_randommodule.c	135	166	genrand_uint32	genrand_uint32(RandomObject *self)	modelled	rand-genrand-in-bounds,rand-genrand-twist-recurrence,rand-new-instance-produces-randomness	
+Modules/_randommodule.c	188	193	_random_Random_random_impl	_random_Random_random_impl(RandomObject *self) /*[clinic end generated code: output=117ff99ee53d755c input=26492e52d26e8b7b]*/	modelled	rand-random-exact-rational,rand-random-valid-generator	
+Modules/_randommodule.c	197	214	init_genrand	init_genrand(RandomObject *self, uint32_t s)	modelled	rand-init-genrand-recurrence	
+Modules/_randommodule.c	220	244	init_by_array	init_by_array(RandomObject *self, uint32_t init_key[], size_t key_length)	modelled	rand-init-by-array-complete	
+Modules/_randommodule.c	252	261	random_seed_urandom	random_seed_urandom(RandomObject *self)	modelled	rand-seed-none	
+Modules/_randommodule.c	264	291	random_seed_time_pid	random_seed_time_pid(RandomObject *self)	modelled	rand-seed-none,rand-seed-time-words	
+Modules/_randommodule.c	294	379	random_seed	random_seed(RandomObject *self, PyObject *arg)	modelled	rand-seed-arg-kinds,rand-seed-independent-of-state,rand-seed-key-words,rand-seed-none	
+Modules/_randommodule.c	396	403	_random_Random_seed_impl	_random_Random_seed_impl(RandomObject *self, PyObject *n) /*[clinic end generated code: output=0fad1e16ba883681 input=46d01d2ba938c7b1]*/	modelled	rand-seed-independent-of-state	
+Modules/_randommodule.c	415	440	_random_Random_getstate_impl	_random_Random_getstate_impl(RandomObject *self) /*[clinic end generated code: output=bf6cef0c092c7180 input=b6621f31eb639694]*/	modelled	rand-c-state-round-trip	
+Modules/_randommodule.c	455	493	_random_Random_setstate_impl	_random_Random_setstate_impl(RandomObject *self, PyObject *state) /*[clinic end generated code: output=babfc2c2eac6b027 input=358e898ec07469b7]*/	modelled	rand-c-setstate-validates,rand-c-state-round-trip	
+Modules/_randommodule.c	507	550	_random_Random_getrandbits_impl	_random_Random_getrandbits_impl(RandomObject *self, uint64_t k) /*[clinic end generated code: output=c30ef8435f3433cf input=64226ac13bb4d2a3]*/	modelled	rand-getrandbits-arg-errors,rand-getrandbits-bound,rand-getrandbits-recursive,rand-getrandbits-words,rand-random-valid-generator	
+Modules/_randommodule.c	562	566	random_init_impl	random_init_impl(RandomObject *self, PyObject *seed) /*[clinic end generated code: output=260734a3739c394f input=e516bf32e8a05e28]*/	modelled	rand-new-instance-produces-randomness,rand-seed-independent-of-state	
 Modules/_randommodule.c	602	633	_random_exec	_random_exec(PyObject *module)	excluded		internal-bootstrap: creates the type and caches int.__abs__ at import; the type is modelled through its methods
 Modules/_randommodule.c	643	647	_random_traverse	_random_traverse(PyObject *module, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal of the cached type
 Modules/_randommodule.c	650	655	_random_clear	_random_clear(PyObject *module)	excluded		no-behaviour: GC clear, releases two references at module teardown
