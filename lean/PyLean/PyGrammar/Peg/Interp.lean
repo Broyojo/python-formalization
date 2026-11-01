@@ -326,7 +326,7 @@ def computeParserFlags (cf : Nat) : Nat :=
     ||| (if cf &&& 0x1000 != 0 then 0x0040 else 0)
     ||| (if cf &&& 0x4000 != 0 then 0x0100 else 0)
 
-/-- `_PyPegen_Parser_New`, `Parser/pegen.c:806-865`, with `PyPARSE_*` flags. -/
+/-- `_PyPegen_Parser_New`, `Parser/pegen.c:807-865`, with `PyPARSE_*` flags. -/
 def parserNew (tok : TokState) (start : StartRule) (flags featureVersion : Nat) (cfg : Cfg) : PS :=
   { tok := { tok with typeComments := flags &&& 0x0040 != 0 }, startRule := start, cfg,
     flagBarry := flags &&& 0x0020 != 0, flagDontImplyDedent := flags &&& 0x0002 != 0,

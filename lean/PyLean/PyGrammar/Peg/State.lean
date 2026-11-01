@@ -163,7 +163,7 @@ def raiseError0 (cls msg : String) : PM Unit := do
     return
   raiseAtToken cls ((p.knownErrToken).getD (p.tokenAt (p.fill - 1))) msg
 
-/-- The `switch (p->tok->done)` of `_Pypegen_tokenizer_error`, `Parser/pegen_errors.c:30-79`. -/
+/-- The `switch (p->tok->done)` of `_Pypegen_tokenizer_error`, `Parser/pegen_errors.c:33-79`. -/
 def tokenizerErrorSwitch (s : TokState) : PM Unit :=
   let known (cls msg : String) (col : Int) : PM Unit :=
     raiseErrorKnownLocation cls s.lineno (if col ≥ 0 then col else 0) s.lineno (-1) msg
@@ -223,7 +223,8 @@ def getTokSkippingIgnores : Nat → TokState → List (Int × List Nat) →
       getTokSkippingIgnores f s (ig ++ [(s.lineno, ((tokBytes s t).take len))])
     else (s, ty, t, ig)
 
-/-- `_PyPegen_fill_token` up to the end of `initialize_token`, `Parser/pegen.c:182-220`: the state
+/-- `_PyPegen_fill_token`, `Parser/pegen.c:245-293`, up to the end of `initialize_token`,
+`Parser/pegen.c:182-220`: the state
 with the new token and its memo slot, and the type the tokenizer returned. -/
 def pushToken (p : PS) : PS × Nat :=
   let (s, ty, t, ig) := getTokSkippingIgnores (p.tok.src.size + 2) p.tok p.typeIgnores
@@ -245,7 +246,7 @@ def pushToken (p : PS) : PS × Nat :=
       colOffset := t.colOffset, endLineno := t.endLineno, endColOffset := t.endColOffset }
   ({ p with tokens := p.tokens.push token, memo := p.memo.push [] }, ty)
 
-/-- `_PyPegen_fill_token`, `Parser/pegen.c:182-220`. -/
+/-- `_PyPegen_fill_token`, `Parser/pegen.c:245-293`, with the tail of `initialize_token`. -/
 def fillToken : PM Int := do
   let r := pushToken (← get)
   set r.1
@@ -299,7 +300,7 @@ def tokenizeFullSource : PM Unit := do
 def isSyntaxErrorClass (c : String) : Bool :=
   c == "SyntaxError" || c == "IndentationError" || c == "TabError"
 
-/-- `_Pypegen_set_syntax_error` past its first checks, `Parser/pegen_errors.c:380-406`. `p` is
+/-- `_Pypegen_set_syntax_error` past its first checks, `Parser/pegen_errors.c:383-406`. `p` is
 the state on entry. -/
 def setSyntaxErrorTail (p : PS) (lastToken : Token) : PM Unit :=
   if lastToken.type == TokKind.ERRORTOKEN.num && p.tok.done == E_EOF then
@@ -332,7 +333,7 @@ def ensureToken : PM Bool := fun p =>
     if r.1 < 0 then (false, { r.2 with errorIndicator := true }) else (true, r.2)
   else (true, p)
 
-/-- The lookup of `_PyPegen_is_memoized`, `Parser/pegen.c:362-378`. -/
+/-- The lookup of `_PyPegen_is_memoized`, `Parser/pegen.c:359-380`. -/
 def memoLookup (ty : Nat) : PM (Option Ast) := fun p =>
   match (p.memo.getD p.mark []).find? (fun m => m.1 == ty) with
   | some (_, node, mark) => (some node, { p with mark := mark })
