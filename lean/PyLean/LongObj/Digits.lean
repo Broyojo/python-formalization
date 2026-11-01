@@ -59,8 +59,9 @@ theorem chk32_ok {x : Nat} (h : x < 2 ^ 32) : chk32 x = .ok x := if_pos h
 theorem chk64_ok {x : Nat} (h : x < 2 ^ 64) : chk64 x = .ok x := if_pos h
 theorem chkS64_ok {x : Int} (h : -(2 ^ 63 : Int) ≤ x ∧ x < 2 ^ 63) : chkS64 x = .ok x := if_pos h
 
-theorem bind_ok {α β : Type} (a : α) (f : α → Py β) : (Except.ok a >>= f) = f a := rfl
-theorem pure_ok {α : Type} (a : α) : (pure a : Py α) = .ok a := rfl
+/-! `bind_ok` and `pure_ok` are not `rfl` theorems, for the reason given at `val_nil`. -/
+theorem bind_ok {α β : Type} (a : α) (f : α → Py β) : (Except.ok a >>= f) = f a := Eq.trans rfl rfl
+theorem pure_ok {α : Type} (a : α) : (pure a : Py α) = .ok a := Eq.trans rfl rfl
 
 theorem shr30 (x : Nat) : x >>> 30 = x / 2 ^ 30 := by simp [Nat.shiftRight_eq_div_pow]
 theorem and30 (x : Nat) : x &&& MASK = x % 2 ^ 30 := Nat.and_two_pow_sub_one_eq_mod x 30
