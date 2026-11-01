@@ -1,0 +1,51 @@
+id: pickle-c-nul-in-text-args
+title: "_pickle: INT, LONG, GET and PUT stop at an embedded NUL and ignore the rest of the line"
+priority: P4
+kind: twin-mismatch
+module: pickle
+files: [Modules/_pickle.c, Objects/longobject.c, Lib/pickle.py]
+functions: [load_int, load_long, load_get, load_put, PyLong_FromString]
+summary: |
+  The text opcodes pass the line to strtol / PyLong_FromString, which treat NUL as the end of the
+  string, so `b'I12\x00junk\n.'` is 12 and `b'L5\x00junkL\n.'` is 5 in C. `pickle._loads` calls
+  `int(bytes)`, which rejects embedded NUL. GET and PUT behave the same way.
+likelihood: |
+  Only hand-made or corrupted pickles, and it accepts garbage rather than misreading a valid stream.
+maybe_intended: |
+  No: Victor Stinner called it not desired and Serhiy Storchaka "a known issue" in the duplicate.
+  An open PR exists (gh-157728).
+reproducer: |
+  import pickle
+  def r(f, s):
+      try: return ('ok', f(s))
+      except Exception as e: return (type(e).__name__, str(e))
+  results = []
+  for s in (b'I12\x00junk\n.', b'L5\x00junkL\n.', b'Np0\x00x\ng0\n.'):
+      c, p = r(pickle.loads, s), r(pickle._loads, s)
+      print(s, 'C', c, 'Python', p)
+      results.append(c[0] == 'ok' and p[0] == 'ValueError')
+  if all(results):
+      print('REPRODUCED pickle-c-nul-in-text-args')
+expected: |
+  ValueError from both twins, as `int()` raises.
+observed: |
+  python3 3.14.7: each stream loads in C, ValueError in Python. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): REPRODUCED, same behaviour.
+promised_by: |
+  Twin relation; `int(bytes)` behaviour.
+cause: |
+  Modules/_pickle.c:5412 (strtol, with `*endptr != '\0'` accepted at :5414), :5568, :6400, :6580
+  (PyLong_FromString on the line). Objects/longobject.c:3084-3101 `_PyLong_FromBytes` has the length
+  check these callers lack.
+possible_fix: |
+  gh-157728: use `_PyLong_FromBytes`, or compare `strlen` with the line length.
+duplicates:
+  issues:
+    - {number: 126996, state: open, relation: duplicate, reason: "open, PR gh-157728 open"}
+  queries: ["pickle strtol", "pickle null byte", "pickle NUL", "pickle null character", "pickle embedded null",
+            "author:Legoclones pickle"]
+  bugforge: "no pickle entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Pickle.IntLineTwinsNoBoolSpelling
+  theorem: PyLean.Pickle.intLineTwinsNoBoolSpelling_refuted
+  also: [PyLean.Pickle.LongLineTwins, PyLean.Pickle.longLineTwins_refuted]
