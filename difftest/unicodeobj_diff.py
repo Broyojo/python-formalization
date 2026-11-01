@@ -46,6 +46,80 @@ def cps_of(s):
 
 # ==== object slice (fn names obj_*) ====
 
+OBJ_ALPH = [0, 65, 97, 127, 128, 233, 255, 256, 0x20ac, 0xd800, 0xffff, 0x10000, 0x1f600, 0x10ffff]
+
+
+def obj_str(rng, maxlen=7):
+    pool = rng.sample(OBJ_ALPH, rng.choice([1, 2, 3, len(OBJ_ALPH)]))
+    return [rng.choice(pool) for _ in range(rng.randint(0, maxlen))]
+
+
+def kind_of(s):
+    import ctypes
+    f = ctypes.pythonapi.PyUnicode_KIND
+    f.restype = ctypes.c_int
+    f.argtypes = [ctypes.py_object]
+    return [f(s), s.isascii()]
+
+
+@gen("object", 3)
+def gen_obj_concat(rng):
+    return {"mod": "unicodeobj", "fn": "obj_concat", "l": obj_str(rng), "r": obj_str(rng)}
+
+
+@gen("object", 3)
+def gen_obj_slice(rng):
+    s = obj_str(rng, 12)
+    start, stop = rng.randint(-14, 14), rng.randint(-14, 14)
+    step = rng.choice([-3, -2, -1, 2, 3, 5])
+    sub = s[start:stop:step]
+    if not sub:
+        return None
+    return {"mod": "unicodeobj", "fn": "obj_slice", "s": s, "sub": sub, "start": start,
+            "stop": stop, "step": step}
+
+
+@gen("object", 2)
+def gen_obj_repeat(rng):
+    n = rng.choice([-1, 0, 1, 2, 3, 7])
+    s = obj_str(rng)
+    if rng.random() < 0.1 and s:
+        n = sys.maxsize
+    return {"mod": "unicodeobj", "fn": "obj_repeat", "s": s, "n": n}
+
+
+@gen("object", 3)
+def gen_obj_compare(rng):
+    a = obj_str(rng)
+    b = list(a) if rng.random() < 0.3 else obj_str(rng)
+    if b and rng.random() < 0.5:
+        b[rng.randrange(len(b))] = rng.choice(OBJ_ALPH)
+    return {"mod": "unicodeobj", "fn": "obj_compare", "a": a, "b": b}
+
+
+@run("obj_concat")
+def run_obj_concat(c):
+    r = s_of(c["l"]) + s_of(c["r"])
+    return [cps_of(r), kind_of(r)]
+
+
+@run("obj_slice")
+def run_obj_slice(c):
+    r = s_of(c["s"])[c["start"]:c["stop"]:c["step"]]
+    assert cps_of(r) == c["sub"]
+    return kind_of(r)
+
+
+@run("obj_repeat")
+def run_obj_repeat(c):
+    return cps_of(s_of(c["s"]) * c["n"])
+
+
+@run("obj_compare")
+def run_obj_compare(c):
+    a, b = s_of(c["a"]), s_of(c["b"])
+    return (a > b) - (a < b)
+
 # ==== end object slice ====
 
 
