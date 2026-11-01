@@ -3981,7 +3981,235 @@ def enumdc_out(x, F):
     return ["plain", x]
 
 
+enumdc_OBJ = [object(), object(), object()]
+enumdc_WORDS = ["A", "B", "C", "D", "name", "AB", "a", "Zed"]
+
+
+def enumdc_gatom(rng):
+    r = rng.randrange(0, 8)
+    if r <= 3:
+        return ["int", rng.choice([0, 1, 1, 2, 2, 3, 5, -1, 10, 2**63])]
+    if r == 4:
+        return ["str", rng.choice(["x", "y", "", "1"])]
+    if r == 5:
+        return ["obj", rng.randrange(0, 3)]
+    return ["list", rng.randrange(0, 3)]
+
+
+def enumdc_gval(rng, mode):
+    """A class body value: `mode` 0 has auto and tuples of ints, so that `sorted` is exact; 1 has any tuple."""
+    r = rng.randrange(0, 14)
+    if r <= 4:
+        return enumdc_gatom(rng)
+    if r <= 7:
+        if mode == 1:
+            return enumdc_gatom(rng)
+        return ["auto", rng.choice([None, None, None, 7, 1])]
+    if r == 8:
+        if mode == 0:
+            return ["tup", [["int", rng.randrange(0, 4)] for _ in range(rng.randrange(0, 3))]]
+        return ["tup", [enumdc_gatom(rng) for _ in range(rng.randrange(0, 3))]]
+    if r == 9:
+        if mode == 1:
+            return ["tup", [enumdc_gatom(rng) for _ in range(rng.randrange(0, 3))]]
+        return ["tup", [["auto", None]] + [rng.choice([["auto", None], ["auto", 4], ["int", 1], ["str", "s"]])
+                                           for _ in range(rng.randrange(0, 3))]]
+    if r == 10:
+        v = enumdc_gval(rng, mode)
+        while v[0] in ("member", "nonmember"):
+            v = enumdc_gval(rng, mode)
+        return ["member", v]
+    if r == 11:
+        return ["nonmember", enumdc_gatom(rng)]
+    if r == 12:
+        return ["descr", rng.randrange(0, 2)]
+    return ["inner", rng.randrange(0, 2)]
+
+
+def enumdc_gorder(rng, keys):
+    l = list(keys)
+    rng.shuffle(l)
+    l = l[:rng.randrange(0, len(l) + 2)] + rng.choice([[], [], ["Q"]])
+    if rng.random() < .5:
+        return ["str", rng.choice([" ", ",", ", "]).join(l)]
+    return ["names", l]
+
+
+def enumdc_gbody(rng, kind):
+    mode = rng.randrange(0, 2)
+    body = []
+    keys = ["A", "B", "C", "D"]
+    if rng.random() < .1:
+        body.append(["_generate_next_value_",
+                     ["gen", rng.choice([["enum"], ["flag"], ["const", ["int", 7]],
+                                         ["raises", "ValueError", "boom"]] if kind == "flag" else
+                                        [["enum"], ["flag"], ["strEnum"], ["const", ["int", 7]],
+                                         ["const", ["str", "k"]], ["raises", "ValueError", "boom"]])]])
+    if rng.random() < .08:
+        body.append(["_ignore_", rng.choice([["str", "A B"], ["str", "C,D"], ["names", ["B"]], ["names", []],
+                                             ["int", 1]])])
+    for _ in range(rng.randrange(0, 6)):
+        k = rng.randrange(0, 40)
+        if k < 28:
+            key = rng.choice(keys)
+        else:
+            key = rng.choice(["name", "mro", "", "_C__x", "_C__x__", "_foo_", "_repr_x_", "__foo__", "_repr_y_",
+                              "_ignore_", "_generate_next_value_", "X"])
+        if kind == "flag":
+            if key == "_generate_next_value_" or key == "_ignore_":
+                v = ["names", ["B"]] if key == "_ignore_" else ["gen", ["flag"]]
+            elif rng.random() < .3:
+                v = ["auto", None]
+            else:
+                v = ["int", rng.choice([0, 1, 2, 3, 4, 5, 6, 8])]
+        elif kind == "strEnum":
+            r = rng.randrange(0, 7)
+            if key == "_generate_next_value_" or key == "_ignore_":
+                v = ["names", ["B"]] if key == "_ignore_" else ["gen", ["strEnum"]]
+            elif r <= 2:
+                v = ["str", rng.choice(["x", "y", "", "x"])]
+            elif r == 3:
+                v = ["auto", None]
+            elif r == 4:
+                v = enumdc_gatom(rng)
+            else:
+                v = ["tup", [rng.choice([["str", "a"], ["int", 1]]) for _ in range(rng.randrange(0, 6))]]
+        elif key == "_generate_next_value_":
+            v = ["gen", ["enum"]]
+        elif key == "_ignore_":
+            v = ["names", ["D"]]
+        else:
+            v = enumdc_gval(rng, mode)
+        if key == "name" and v[0] == "nonmember" and v[1][0] == "list":
+            v = ["nonmember", ["int", 1]]
+        body.append([key, v])
+    if rng.random() < .25:
+        names = [b[0] for b in body if b[0] in keys]
+        k = "_order_" if rng.random() < .8 else "__order__"
+        body.append([k, enumdc_gorder(rng, names)])
+    return body
+
+
+def enumdc_gop(rng, kind, body):
+    names = [b[0] for b in body] + ["A", "B", "Q"]
+    r = rng.randrange(0, 15)
+    if kind == "flag" and r in (1, 2, 3, 4, 7):
+        r = 0
+    if r == 0:
+        return ["summary"]
+    if r <= 2:
+        a = rng.choice([b[1] for b in body if b[1][0] in ("int", "str", "obj", "list")] or [["int", 1]])
+        more = [] if rng.random() < .8 else [enumdc_gatom(rng) for _ in range(rng.randrange(1, 3))]
+        miss = rng.choice([["none"], ["none"], ["member", rng.choice(names)], ["other"],
+                           ["raises", "KeyError", "m"], ["raises", "ValueError", "m"]])
+        return ["call", rng.choice([a, enumdc_gatom(rng)]), more, miss]
+    if r == 3:
+        return ["contains", rng.choice([b[1] for b in body if b[1][0] in ("int", "str", "obj", "list", "tup")
+                                        and all(x[0] != "auto" for x in (b[1][1] if b[1][0] == "tup" else []))]
+                                       or [["int", 1]])]
+    if r == 4:
+        return ["contains", enumdc_gatom(rng)]
+    if r == 5:
+        return ["callself", rng.choice(names)]
+    if r == 6:
+        return ["getitem", rng.choice(names)]
+    if r == 7:
+        return ["iter"]
+    if r == 8:
+        return ["setattr", rng.choice(names)]
+    if r == 9:
+        return ["delattr", rng.choice(names + ["_repr_x_", "X"])]
+    if r == 10:
+        return ["alias", rng.choice(names), rng.choice(names + ["W", "P"])]
+    if r == 11:
+        return ["valias", rng.choice(names), enumdc_gatom(rng)]
+    if r == 12:
+        return ["valias_call", rng.choice(names), enumdc_gatom(rng)]
+    return ["unique"]
+
+
+def enumdc_gclass(rng):
+    kind = rng.choice(["plain", "plain", "plain", "plain", "flag", "strEnum"])
+    body = enumdc_gbody(rng, kind)
+    return {"fn": "enumdc.ec_class", "kind": kind, "body": body, "op": enumdc_gop(rng, kind, body)}
+
+
+def enumdc_gverify(rng):
+    kind = rng.choice(["plain", "flag"])
+    body = []
+    for key in rng.sample(["A", "B", "C", "D", "E", "F"], rng.randrange(0, 6)):
+        if rng.random() < .25:
+            v = ["auto", None]
+        elif kind == "flag":
+            v = ["int", rng.choice([1, 2, 3, 4, 5, 6, 7, 8, 12, 16])]
+        else:
+            v = ["int", rng.choice([-2, -1, 0, 1, 2, 3, 4, 5, 6])]
+        body.append([key, v])
+    return {"fn": "enumdc.ec_class", "kind": kind, "body": body,
+            "op": ["verify", rng.choice(["unique", "continuous", "named"])]}
+
+
+def enumdc_gupdate(rng):
+    items = []
+    for _ in range(rng.randrange(0, 4)):
+        items.append([rng.choice(["A", "B", "AB", "CD", "_x_", "_order_", "ABC"]),
+                      rng.choice([["int", 1], ["auto", None], ["auto", 3], ["descr", 0], ["str", "s"],
+                                  ["nonmember", ["int", 2]]])])
+    more = [[rng.choice(["E", "F"]), rng.choice([["int", 2], ["auto", None]])]
+            for _ in range(rng.randrange(0, 2))]
+    mapping = rng.random() < .7
+    if mapping:
+        items = [[k, v] for k, v in dict((k, v) for k, v in items).items()]
+    return {"fn": "enumdc.ec_update", "cls": rng.choice(["C", None]), "gen": rng.random() < .5, "members": items,
+            "more": more, "mapping": mapping}
+
+
+def enumdc_gcreate(rng):
+    kind = rng.choice(["plain", "plain", "flag", "strEnum"])
+    words = rng.sample(enumdc_WORDS, rng.randrange(0, 5))
+    if rng.random() < .15:
+        words = words + words[:1]
+    r = rng.randrange(0, 3)
+    if r == 0:
+        names = ["text", rng.choice([" ", ",", ", ", "  "]).join(words)]
+    elif r == 1:
+        names = ["seq", words]
+    else:
+        names = ["pairs", [[w, ["int", rng.randrange(0, 4)] if kind != "strEnum" else ["str", "v"]] for w in words]]
+    return {"fn": "enumdc.ec_create", "kind": kind, "start": rng.choice([1, 1, 0, 5]), "names": names}
+
+
+def enumdc_gflag(rng):
+    mixin = rng.random() < .5
+    op = rng.choice(["or", "and", "xor", "in", "invert", "bool", "class_in", "class_in"])
+    other = rng.choice([["same", rng.randrange(0, 8)], ["same", rng.randrange(0, 8)],
+                        ["mixin", rng.randrange(-9, 20)], ["other", 0], ["none", 0]])
+    if op == "class_in":
+        other = rng.choice([["same", rng.randrange(-20, 40)], ["same", rng.randrange(-20, 40)], ["other", 0]])
+    if mixin and other[0] == "none":
+        other = ["other", 0]
+    return {"fn": "enumdc.ec_flag", "members": rng.choice(enumdc_DEFS),
+            "boundary": rng.choice(["strict", "conform", "eject", "keep"]), "mixin": mixin, "op": op,
+            "v": rng.randrange(0, 8), "self_none": not mixin and rng.random() < .1, "other": other}
+
+
 def enumdc_gen(rng):
+    r0 = rng.randrange(0, 25)
+    if r0 <= 8:
+        return enumdc_gclass(rng)
+    if r0 == 9:
+        return enumdc_gverify(rng)
+    if r0 == 10:
+        return enumdc_gupdate(rng)
+    if r0 == 11:
+        return enumdc_gcreate(rng)
+    if r0 == 12:
+        return {"fn": "enumdc.ec_scan",
+                "bases": [rng.choice(["absent", "prop", "descr", "plain"]) for _ in range(rng.randrange(0, 5))]}
+    if r0 == 13:
+        return {"fn": "enumdc.ec_progress"}
+    if r0 <= 17:
+        return enumdc_gflag(rng)
     r = rng.randrange(0, 12)
     if r <= 5:
         v = rng.randrange(-12, 20)
@@ -4045,8 +4273,266 @@ def enumdc_hash(case):
     return {"ok": "add"}
 
 
+class enumdc_Descr:
+    def __init__(self, i):
+        self.i = i
+
+    def __get__(self, obj, owner=None):
+        return self
+
+
+def enumdc_dec(v, cls="C"):
+    k = v[0]
+    if k == "int" or k == "str":
+        return v[1]
+    if k == "obj":
+        return enumdc_OBJ[v[1]]
+    if k == "list":
+        return [v[1]]
+    if k == "auto":
+        return enumdc_enum.auto() if v[1] is None else enumdc_enum.auto(v[1])
+    if k == "tup":
+        return tuple(enumdc_dec(x, cls) for x in v[1])
+    if k == "member":
+        return enumdc_enum.member(enumdc_dec(v[1], cls))
+    if k == "nonmember":
+        return enumdc_enum.nonmember(enumdc_dec(v[1], cls))
+    if k == "descr":
+        return enumdc_Descr(v[1])
+    if k == "inner":
+        return type("Inner", (), {"__qualname__": str(cls) + ".Inner", "i": v[1]})
+    if k == "names":
+        return list(v[1])
+    if k == "gen":
+        g = v[1]
+        if g[0] == "enum":
+            return enumdc_enum.Enum._generate_next_value_
+        if g[0] == "flag":
+            return enumdc_enum.Flag._generate_next_value_
+        if g[0] == "strEnum":
+            return enumdc_enum.StrEnum._generate_next_value_
+        if g[0] == "const":
+            return lambda *a: enumdc_dec(g[1])
+
+        def raiser(*a):
+            raise {"ValueError": ValueError}[g[1]](g[2])
+        return raiser
+    raise ValueError(k)
+
+
+def enumdc_enc(x):
+    if isinstance(x, bool):
+        raise ValueError(x)
+    if isinstance(x, int):
+        return ["int", x]
+    if isinstance(x, str):
+        return ["str", x]
+    if isinstance(x, tuple):
+        return ["tup", [enumdc_enc(i) for i in x]]
+    if isinstance(x, list):
+        if x and all(isinstance(i, int) for i in x):
+            return ["list", x[0]]
+        return ["names", list(x)]
+    if isinstance(x, enumdc_Descr):
+        return ["descr", x.i]
+    if isinstance(x, (enumdc_enum.nonmember, enumdc_enum.member)):
+        return None
+    if isinstance(x, enumdc_enum.auto):
+        return ["auto"]
+    if isinstance(x, type) and hasattr(x, "i"):
+        return ["inner", x.i]
+    if x in enumdc_OBJ:
+        return ["obj", enumdc_OBJ.index(x)]
+    if callable(x) or isinstance(x, staticmethod):
+        return ["gen"]
+    raise ValueError(x)
+
+
+def enumdc_summary(C):
+    flag = issubclass(C, enumdc_enum.Flag)
+    return [list(C._member_names_),
+            [[n, m._name_, enumdc_enc(m._value_)] for n, m in C._member_map_.items()],
+            [[enumdc_enc(k), m._name_] for k, m in C._value2member_map_.items()],
+            [enumdc_enc(v) for v in C._hashable_values_], [enumdc_enc(v) for v in C._unhashable_values_],
+            [[k if isinstance(k, str) else "?", [enumdc_enc(x) for x in l]]
+             for k, l in C._unhashable_values_map_.items()],
+            [C._flag_mask_, C._singles_mask_, C._all_bits_] if flag else None]
+
+
+enumdc_BASE = {"plain": enumdc_enum.Enum, "flag": enumdc_enum.Flag, "strEnum": enumdc_enum.StrEnum}
+
+
+def enumdc_build(case):
+    base = enumdc_BASE[case["kind"]]
+    op = case["op"]
+    ns = enumdc_enum.EnumType.__prepare__("C", (base,))
+    if op[0] == "call":
+        miss = op[3]
+
+        def _missing_(cls, value):
+            if miss[0] == "none":
+                return None
+            if miss[0] == "other":
+                return 42
+            if miss[0] == "member":
+                return cls[miss[1]]
+            raise {"KeyError": KeyError, "ValueError": ValueError}[miss[1]](miss[2])
+        ns["_missing_"] = classmethod(_missing_)
+    for k, v in case["body"]:
+        ns[k] = enumdc_dec(v)
+    return enumdc_enum.EnumType("C", (base,), ns)
+
+
+def enumdc_class(case):
+    op = case["op"]
+    k = op[0]
+
+    def go():
+        C = enumdc_build(case)
+        if k == "summary":
+            return enumdc_summary(C)
+        if k == "call":
+            if op[2] and not C._member_map_:
+                return "functional"
+            return C(enumdc_dec(op[1]), *[enumdc_dec(x) for x in op[2]])._name_
+        if k == "callself":
+            return C(C[op[1]])._name_
+        if k == "contains":
+            return enumdc_dec(op[1]) in C
+        if k == "getitem":
+            return C[op[1]]._name_
+        if k == "iter":
+            return [[m._name_ for m in C], [m._name_ for m in reversed(C)], len(C)]
+        if k == "setattr":
+            setattr(C, op[1], 1)
+            return None
+        if k == "delattr":
+            delattr(C, op[1])
+            return None
+        if k == "alias":
+            C[op[1]]._add_alias_(op[2])
+            return enumdc_summary(C)
+        if k == "valias":
+            C[op[1]]._add_value_alias_(enumdc_dec(op[2]))
+            return enumdc_summary(C)
+        if k == "valias_call":
+            C[op[1]]._add_value_alias_(enumdc_dec(op[2]))
+            return C(enumdc_dec(op[2]))._name_
+        if k == "unique":
+            enumdc_enum.unique(C)
+            return None
+        check = {"unique": enumdc_enum.UNIQUE, "continuous": enumdc_enum.CONTINUOUS,
+                 "named": enumdc_enum.NAMED_FLAGS}[op[1]]
+        enumdc_enum.verify(check)(C)
+        return None
+    return py_result(go)
+
+
+def enumdc_update(case):
+    def go():
+        d = enumdc_enum.EnumDict(case["cls"])
+        if case["gen"]:
+            d._generate_next_value = enumdc_enum.Enum._generate_next_value_
+        items = [(k, enumdc_dec(v, case["cls"])) for k, v in case["members"]]
+        more = {k: enumdc_dec(v, case["cls"]) for k, v in case["more"]}
+        d.update(dict(items) if case["mapping"] else items, **more)
+        return [[[k, enumdc_enc(v)] for k, v in d.items()], d.member_names,
+                [enumdc_enc(v) for v in d._last_values]]
+    return py_result(go)
+
+
+def enumdc_create(case):
+    def go():
+        base = enumdc_BASE[case["kind"]]
+        kind, v = case["names"]
+        names = [(k, enumdc_dec(x)) for k, x in v] if kind == "pairs" else v
+        return enumdc_summary(base("C", names, start=case["start"]))
+    return py_result(go)
+
+
+def enumdc_scan(case):
+    def go():
+        mix = []
+        for b in case["bases"]:
+            ns = {"prop": {"P": enumdc_enum.property(lambda s: 1)}, "descr": {"P": enumdc_Descr(0)}, "plain": {"P": 5},
+                  "absent": {}}[b]
+            mix.append(type("M", (), ns))
+        bases = tuple(mix) + (enumdc_enum.Enum,)
+        ns = enumdc_enum.EnumType.__prepare__("E", bases)
+        ns["A"] = 1
+        E = enumdc_enum.EnumType("E", bases, ns)
+        E.A._add_alias_("P")
+        d = E.__dict__["P"]
+        if isinstance(d, enumdc_enum.property):
+            return [True, d._attr_type, E.__mro__[1:].index(d._cls_type)]
+        return [False]
+    return py_result(go)
+
+
+def enumdc_new_in_progress():
+    class E(enumdc_enum.Enum):
+        def __new__(cls, v):
+            return super().__new__(cls, v)
+        A = 1
+    return E.A._name_
+
+
+def enumdc_flag(case):
+    base = enumdc_enum.IntFlag if case["mixin"] else enumdc_enum.Flag
+    members = [tuple(m) for m in case["members"]]
+    F = base("F", members + [("NONE", None)] if case["self_none"] or case["other"][0] == "none" else members,
+             boundary=enumdc_BOUND[case["boundary"]])
+    op = case["op"]
+    okind, ov = case["other"]
+
+    def go():
+        if op == "class_in":
+            return (ov if okind != "other" else "x") in F
+        self = F.NONE if case["self_none"] else F(case["v"])
+        if not isinstance(self, F):
+            return "skip"
+        if op in ("or", "and", "xor", "in"):
+            if okind == "other":
+                other = "x"
+            elif okind == "mixin":
+                other = ov
+            elif okind == "none":
+                other = F.NONE
+            else:
+                other = F(ov)
+                if not isinstance(other, F):
+                    return "skip"
+            if op == "in":
+                if case["self_none"]:
+                    return "skip"
+                return F.__contains__(self, other)
+            r = {"or": F.__or__, "and": F.__and__, "xor": F.__xor__}[op](self, other)
+            if r is NotImplemented:
+                return "NotImplemented"
+            return enumdc_out(r, F)
+        if op == "invert":
+            a = ~self
+            return [enumdc_out(a, F), (~self) is a]
+        if case["self_none"]:
+            return "skip"
+        return bool(self)
+    return py_result(go)
+
+
 def enumdc_run(case):
     fn = case["fn"].split(".")[1]
+    if fn == "ec_class":
+        return enumdc_class(case)
+    if fn == "ec_update":
+        return enumdc_update(case)
+    if fn == "ec_create":
+        return enumdc_create(case)
+    if fn == "ec_scan":
+        return enumdc_scan(case)
+    if fn == "ec_progress":
+        return py_result(enumdc_new_in_progress)
+    if fn == "ec_flag":
+        return enumdc_flag(case)
     if fn.startswith("flag_"):
         F = enumdc_cls(case)
         v, w = case["v"], case.get("w", 0)

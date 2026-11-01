@@ -1,5 +1,5 @@
 import PyLean.DiffCore
-import PyLean.CoreLibs.EnumDC.Model
+import PyLean.CoreLibs.EnumDC.EnumClass
 
 /-! Differential-testing handler for `corelibs` cases with `"fn": "enumdc.<name>"`.
 The dispatcher in `CoreLibs/Diff.lean` strips the `enumdc.` prefix. -/
@@ -43,6 +43,279 @@ def getFields (j : Json) : Except String (List FieldSpec) := do
   (← getArr j "fields").mapM fun f => do
     pure { name := ← getStr f "name", hasDefault := ← getBool f "default", init := ← getBool f "init",
            kwOnly := ← getBool f "kw" }
+
+/-! ### Enum classes -/
+
+def decAtom (j : Json) : Except String Atom := do
+  let k ← (← j.getArrVal? 0).getStr?
+  let v ← j.getArrVal? 1
+  match k with
+  | "int" => pure (.int (← v.getInt?))
+  | "str" => pure (.str (← v.getStr?))
+  | "obj" => pure (.obj (← v.getNat?))
+  | "list" => pure (.list (← v.getNat?))
+  | "auto" =>
+    match v with
+    | .null => pure (.auto none)
+    | _ => pure (.auto (some (← v.getInt?)))
+  | _ => throw "atom"
+
+def decGen (j : Json) : Except String Gen := do
+  match ← (← j.getArrVal? 0).getStr? with
+  | "enum" => pure .enum
+  | "strEnum" => pure .strEnum
+  | "flag" => pure .flag
+  | "const" => pure (.const (← decAtom (← j.getArrVal? 1)))
+  | "raises" => pure (.raises (.named (← (← j.getArrVal? 1).getStr?) (← (← j.getArrVal? 2).getStr?)))
+  | _ => throw "gen"
+
+def decName (j : Json) : Except String Name := do pure (← j.getStr?).toList
+
+def decEV : Nat → Json → Except String EV
+  | 0, _ => throw "too deep"
+  | f + 1, j => do
+    let k ← (← j.getArrVal? 0).getStr?
+    let v ← j.getArrVal? 1
+    match k with
+    | "tup" => pure (.tup (← (← v.getArr?).toList.mapM decAtom))
+    | "member" => pure (.member (← decEV f v))
+    | "nonmember" => pure (.nonmember (← decEV f v))
+    | "descr" => pure (.descr (← v.getNat?))
+    | "inner" => pure (.inner (← v.getNat?))
+    | "names" => pure (.names (← (← v.getArr?).toList.mapM decName))
+    | "gen" => pure (.gen (← decGen v))
+    | _ => pure (.atom (← decAtom j))
+
+def decItems (l : List Json) : Except String (List (Name × EV)) :=
+  l.mapM fun p => do pure (← decName (← p.getArrVal? 0), ← decEV 4 (← p.getArrVal? 1))
+
+def encAtom : Atom → Json
+  | .int n => toJson [toJson "int", toJson n]
+  | .str s => toJson [toJson "str", toJson s]
+  | .obj i => toJson [toJson "obj", toJson i]
+  | .list i => toJson [toJson "list", toJson i]
+  | .auto _ => toJson [toJson "auto"]
+
+def nameJ (n : Name) : Json := toJson (String.ofList n)
+
+def encEV : EV → Json
+  | .atom a => encAtom a
+  | .tup l => toJson [toJson "tup", toJson (l.map encAtom)]
+  | .descr i => toJson [toJson "descr", toJson i]
+  | .inner i => toJson [toJson "inner", toJson i]
+  | .names l => toJson [toJson "names", toJson (l.map nameJ)]
+  | .gen _ => toJson [toJson "gen"]
+  | _ => Json.null
+
+def summaryJ (c : EClass) : Json :=
+  toJson [toJson (c.memberNames.map nameJ),
+    toJson (c.memberMap.map fun p => toJson [nameJ p.1, nameJ p.2, (c.valueOf p.2).elim Json.null encEV]),
+    toJson (c.value2member.map fun p => toJson [encEV p.1, nameJ p.2]),
+    toJson (c.hashableValues.map encEV), toJson (c.unhashableValues.map encEV),
+    toJson (c.unhashableMap.map fun p => toJson [nameJ p.1, toJson (p.2.map encEV)]),
+    if c.kind == .flag then toJson [c.flagMask, c.singlesMask, c.allBits] else Json.null]
+
+def decKind (s : String) : EKind :=
+  match s with
+  | "flag" => .flag
+  | "strEnum" => .strEnum
+  | _ => .plain
+
+def firstGen : EKind → Gen
+  | .plain => .enum
+  | .flag => .flag
+  | .strEnum => .strEnum
+
+def decMissing (c : EClass) (j : Json) : Except String MissingRet := do
+  match ← (← j.getArrVal? 0).getStr? with
+  | "none" => pure .none
+  | "other" => pure .other
+  | "raises" =>
+    let cls ← (← j.getArrVal? 1).getStr?
+    let m ← (← j.getArrVal? 2).getStr?
+    pure (.raises (.named cls (if cls == "KeyError" then s!"'{m}'" else m)))
+  | _ =>
+    match c.memberMap.lookup (← decName (← j.getArrVal? 1)) with
+    | some m => pure (.member m)
+    | none => pure (.raises (.keyError "~name"))
+
+def unitJ : Py Unit → Json := encPy (fun _ => Json.null)
+
+def bodyDict (cls : Name) (k : EKind) (body : List (Name × EV)) : Py EnumDict :=
+  match enumPrepare cls (firstGen k) with
+  | .error e => .error e
+  | .ok d =>
+    match d.setAll body with
+    | (_, some e) => .error e
+    | (d', none) => .ok d'
+
+/-- The attributes of the class that are not members. -/
+def plainAttrs (d : EnumDict) (c : EClass) : List Name :=
+  (d.items.map Prod.fst).filter (fun n => (c.memberMap.lookup n).isNone && !d.ignore.contains n &&
+    n != "_order_".toList && n != "_ignore_".toList)
+
+/-- `member.name`: a `name` in the class body that is not a member shadows `Enum.name`. -/
+def nameAttr (d : EnumDict) (c : EClass) : Name → Name :=
+  match d.items.lookup "name".toList with
+  | some v =>
+    if (c.memberMap.lookup "name".toList).isSome || d.ignore.contains "name".toList then id else
+    match v with
+    | .atom (.str s) => fun _ => s.toList
+    | _ => fun _ => "?".toList
+  | none => id
+
+def classOp (d : EnumDict) (c : EClass) (op : Json) : Except String Json := do
+  let k ← (← op.getArrVal? 0).getStr?
+  let memberName := nameAttr d c
+  match k with
+  | "summary" => pure (okJ (summaryJ c))
+  | "call" =>
+    let a ← decAtom (← op.getArrVal? 1)
+    let more ← (← (← op.getArrVal? 2).getArr?).toList.mapM decAtom
+    let miss ← decMissing c (← op.getArrVal? 3)
+    match enumCall c none a more miss with
+    | some r => pure (encPy nameJ r)
+    | none => pure (okJ "functional")
+  | "callself" =>
+    let n ← decName (← op.getArrVal? 1)
+    pure (encPy nameJ (match c.getItem n with
+      | .error e => .error e
+      | .ok m => enumNew c (some m) (.atom (.int 0)) false .none))
+  | "contains" => pure (okJ (toJson (enumContains c false (← decEV 4 (← op.getArrVal? 1)))))
+  | "getitem" => pure (encPy nameJ (c.getItem (← decName (← op.getArrVal? 1))))
+  | "iter" => pure (okJ (toJson [toJson (c.iter.map nameJ), toJson (c.reversed.map nameJ), toJson c.len]))
+  | "setattr" => pure (unitJ (c.setAttr (← decName (← op.getArrVal? 1))))
+  | "delattr" => pure (unitJ (c.delAttr (plainAttrs d c) (← decName (← op.getArrVal? 1))))
+  | "alias" =>
+    let self ← decName (← op.getArrVal? 1)
+    let n ← decName (← op.getArrVal? 2)
+    pure (encPy summaryJ (match c.getItem self with
+      | .error e => .error e
+      | .ok m => c.addAlias m n))
+  | "valias" =>
+    let self ← decName (← op.getArrVal? 1)
+    let v ← decEV 4 (← op.getArrVal? 2)
+    pure (encPy summaryJ (match c.getItem self with
+      | .error e => .error e
+      | .ok m => c.addValueAlias memberName m v))
+  | "valias_call" =>
+    let self ← decName (← op.getArrVal? 1)
+    let v ← decEV 4 (← op.getArrVal? 2)
+    pure (encPy nameJ (match c.getItem self with
+      | .error e => .error e
+      | .ok m =>
+        match c.addValueAlias memberName m v with
+        | .error e => .error e
+        | .ok c' => enumNew c' none v false .none))
+  | "unique" => pure (unitJ (c.unique memberName))
+  | "verify" =>
+    match ← (← op.getArrVal? 1).getStr? with
+    | "unique" => pure (unitJ (c.verifyUnique memberName))
+    | "continuous" => pure (unitJ c.verifyContinuous)
+    | _ => pure (unitJ c.verifyNamed)
+  | _ => throw "class op"
+
+def runClass (j : Json) : Except String Json := do
+  let kind := decKind (← getStr j "kind")
+  let body ← decItems (← getArr j "body")
+  match bodyDict "C".toList kind body with
+  | .error e => pure (unitJ (.error e))
+  | .ok d =>
+    match enumTypeNew kind d with
+    | .error e => pure (unitJ (.error e))
+    | .ok c => classOp d c (← field j "op")
+
+def dictJ (d : EnumDict) : Json :=
+  toJson [toJson (d.items.map fun p => toJson [nameJ p.1, encEV p.2]), toJson (d.memberNames.map nameJ),
+    toJson (d.lastValues.map encEV)]
+
+def runUpdate (j : Json) : Except String Json := do
+  let cls ← match ← field j "cls" with
+    | .null => pure none
+    | v => pure (some (← decName v))
+  let gen ← getBool j "gen"
+  let d : EnumDict := { clsName := cls, gen := if gen then .enum else .absent }
+  let items ← decItems (← getArr j "members")
+  let more ← decItems (← getArr j "more")
+  let arg := if ← getBool j "mapping" then UpdateArg.mapping items else .pairs items
+  pure (encPy dictJ (d.update arg more))
+
+def runCreate (j : Json) : Except String Json := do
+  let kind := decKind (← getStr j "kind")
+  let start ← getInt j "start"
+  let n ← field j "names"
+  let v ← n.getArrVal? 1
+  let names ← match ← (← n.getArrVal? 0).getStr? with
+    | "text" => pure (Names.text (← v.getStr?).toList)
+    | "seq" => pure (.seq (← (← v.getArr?).toList.mapM decName))
+    | _ => pure (.pairs (← decItems (← v.getArr?).toList))
+  pure (encPy summaryJ (enumCreate kind (firstGen kind) "C".toList start names))
+
+def decBase (j : Json) : Except String BaseAttr := do
+  match ← j.getStr? with
+  | "prop" => pure .prop
+  | "descr" => pure .descr
+  | "plain" => pure .plain
+  | _ => pure .absent
+
+def bitOp : String → Nat → Nat → Nat
+  | "or", a, b => a ||| b
+  | "and", a, b => a &&& b
+  | _, a, b => a ^^^ b
+
+/-- A `Flag` operator on `F(v)`, with an object `other`; `self_none` takes the member whose value is `None`. -/
+def runFlag (j : Json) : Except String Json := do
+  let c ← getCls j
+  let mixin ← getBool j "mixin"
+  let op ← getStr j "op"
+  let o ← field j "other"
+  let kindO ← (← o.getArrVal? 0).getStr?
+  let vO ← o.getArrVal? 1
+  let selfNone ← getBool j "self_none"
+  let v ← getInt j "v"
+  let withSelf (f : Option Nat → Except String Json) : Except String Json := do
+    if selfNone then f none else
+    match c.call v with
+    | .error e => pure (encPy outJ (.error e))
+    | .ok (.plain _) => pure (okJ "skip")
+    | .ok (.flag a _) => f (some a)
+  let withOther (f : FlagArg → Except String Json) : Except String Json := do
+    match kindO with
+    | "other" => f .other
+    | "mixin" => f (.mixin (← vO.getInt?))
+    | "none" => f (.same none)
+    | _ =>
+      match c.call (← vO.getInt?) with
+      | .error e => pure (encPy outJ (.error e))
+      | .ok (.plain _) => pure (okJ "skip")
+      | .ok (.flag b _) => f (.same (some b))
+  match op with
+  | "or" | "and" | "xor" =>
+    withSelf fun s => withOther fun other =>
+      match flagBin c mixin (bitOp op) s other with
+      | none => pure (okJ "NotImplemented")
+      | some r => pure (encPy outJ r)
+  | "in" =>
+    withSelf fun s => withOther fun other =>
+      match s with
+      | none => pure (okJ "skip")
+      | some a => pure (encPy (fun (b : Bool) => toJson b) (flagIn a other))
+  | "invert" =>
+    withSelf fun s =>
+      pure (encPy (fun (p : FlagVal × Option FlagVal) => toJson [outJ p.1,
+        match flagInvert c p.2 s with
+        | .ok (q, _) => toJson (q == p.1)
+        | .error _ => Json.null]) (flagInvert c none s))
+  | "bool" =>
+    withSelf fun s =>
+      match s with
+      | none => pure (okJ "skip")
+      | some a => pure (okJ (toJson (flagBool a)))
+  | "class_in" =>
+    match kindO with
+    | "other" => pure (okJ (toJson (c.classContains none)))
+    | _ => pure (okJ (toJson (c.classContains (some (← vO.getInt?)))))
+  | _ => throw "flag op"
 
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
@@ -97,6 +370,15 @@ def run (fn : String) (j : Json) : Except String Json := do
       pure (encPy (fun (r : List (String × Int)) =>
         toJson ((r.map Prod.fst).mergeSort (fun a b => decide (a ≤ b))))
         (replaceArgs fs (fun _ => 1) changes))
+  | "ec_class" => runClass j
+  | "ec_update" => runUpdate j
+  | "ec_create" => runCreate j
+  | "ec_scan" => do
+    let s := scanBases 0 {} (← (← getArr j "bases").mapM decBase)
+    pure (okJ (if s.found then toJson [toJson true, toJson s.attrType, toJson s.clsIndex] else toJson [false]))
+  | "ec_progress" =>
+    pure (encPy (fun (n : Name) => toJson (String.ofList n)) (enumNew {} none (.atom (.int 1)) true .none))
+  | "ec_flag" => runFlag j
   | _ => throw s!"unknown fn enumdc.{fn}"
 
 def handler : Handler := fun fn j => some (run fn j)
