@@ -54,20 +54,18 @@ unicodeobject.c:14824-14838: `buf + 2`, with `buf[0] = '-'` when negative. -/
 def dropMarker (sign : Bool) (buf : Seq) : Seq :=
   if sign then 45 :: (buf.drop 3) else buf.drop 2
 
-/-- `_PyUnicode_FormatLong(val, alt, prec, type)`, unicodeobject.c:14762-14884. -/
-def unicodeFormatLong (val : Int) (alt : Bool) (prec : Int) (type : Nat) : Py Seq := do
-  if prec > intMax - 3 then throw (.overflowError "precision too large")
+/-- The text manipulation of `_PyUnicode_FormatLong`, unicodeobject.c:14816-14876,
+on `result = PyNumber_ToBase(val, base)`. -/
+def formatLongText (result : Seq) (alt : Bool) (prec : Int) (type : Nat) : Seq :=
   let isBased := type = 111 ∨ type = 120 ∨ type = 88
   let numnon₀ : Int := if isBased then 2 else 0
-  let result ← numberToBase val (if type = 111 then 8 else if isBased then 16 else 10)
-  if (result.length : Int) > intMax then
-    throw (.valueError "string too large in _PyUnicode_FormatLong")
   let sign := result.headD 0 = 45
   let numnon₁ := numnon₀ + (if sign then 1 else 0)
   let numdigits : Int := (result.length : Int) - numnon₁
   -- Get rid of base marker unless F_ALT
-  let (buf, numnondigits) :=
-    if !alt ∧ isBased then (dropMarker sign result, numnon₁ - 2) else (result, numnon₁)
+  let stripped := !alt ∧ isBased
+  let buf := if stripped then dropMarker sign result else result
+  let numnondigits := if stripped then numnon₁ - 2 else numnon₁
   -- Fill with leading zeroes to meet minimum width
   let buf :=
     if prec > numdigits then
@@ -75,8 +73,19 @@ def unicodeFormatLong (val : Int) (alt : Bool) (prec : Int) (type : Nat) : Py Se
         buf.drop numnondigits.toNat
     else buf
   -- Fix up case for hex conversions
-  let buf := if type = 88 then buf.map (fun c => if 97 ≤ c ∧ c ≤ 120 then c - 32 else c) else buf
-  return buf
+  if type = 88 then buf.map (fun c => if 97 ≤ c ∧ c ≤ 120 then c - 32 else c) else buf
+
+/-- The base of a conversion, unicodeobject.c:14780-14797. -/
+def longBase (type : Nat) : Nat :=
+  if type = 111 then 8 else if type = 120 ∨ type = 88 then 16 else 10
+
+/-- `_PyUnicode_FormatLong(val, alt, prec, type)`, unicodeobject.c:14762-14884. -/
+def unicodeFormatLong (val : Int) (alt : Bool) (prec : Int) (type : Nat) : Py Seq := do
+  if prec > intMax - 3 then throw (.overflowError "precision too large")
+  let result ← numberToBase val (longBase type)
+  if (result.length : Int) > intMax then
+    throw (.valueError "string too large in _PyUnicode_FormatLong")
+  return formatLongText result alt prec type
 
 /-- `formatlong`, bytesobject.c:469-496. -/
 def formatLong (v : Obj) (fl : Fl) (prec : Int) (type : Nat) : Py Seq :=
