@@ -4,12 +4,12 @@ Objects/odictobject.c	562	595	_odict_resize	_odict_resize(PyODictObject *od)	tod
 Objects/odictobject.c	599	616	_odict_get_index	_odict_get_index(PyODictObject *od, PyObject *key, Py_hash_t hash)	todo		
 Objects/odictobject.c	620	632	_odict_find_node_hash	_odict_find_node_hash(PyODictObject *od, PyObject *key, Py_hash_t hash)	modelled	odict-no-stale-node	
 Objects/odictobject.c	635	651	_odict_find_node	_odict_find_node(PyODictObject *od, PyObject *key)	modelled	odict-iter-bounded	
-Objects/odictobject.c	654	665	_odict_add_head	_odict_add_head(PyODictObject *od, _ODictNode *node)	modelled	odict-list-ends	
-Objects/odictobject.c	668	679	_odict_add_tail	_odict_add_tail(PyODictObject *od, _ODictNode *node)	modelled	odict-list-ends	
+Objects/odictobject.c	654	665	_odict_add_head	_odict_add_head(PyODictObject *od, _ODictNode *node)	todo		withdrawn: theorem is rfl on a thin definition
+Objects/odictobject.c	668	679	_odict_add_tail	_odict_add_tail(PyODictObject *od, _ODictNode *node)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/odictobject.c	683	717	_odict_add_new_node	_odict_add_new_node(PyODictObject *od, PyObject *key, Py_hash_t hash)	todo		
-Objects/odictobject.c	728	744	_odict_remove_node	_odict_remove_node(PyODictObject *od, _ODictNode *node)	modelled	odict-remove-node	
+Objects/odictobject.c	728	744	_odict_remove_node	_odict_remove_node(PyODictObject *od, _ODictNode *node)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/odictobject.c	763	793	_odict_clear_node	_odict_clear_node(PyODictObject *od, _ODictNode *node, PyObject *key, Py_hash_t hash)	todo		
-Objects/odictobject.c	796	814	_odict_clear_nodes	_odict_clear_nodes(PyODictObject *od)	modelled	odict-clear-nodes	
+Objects/odictobject.c	796	814	_odict_clear_nodes	_odict_clear_nodes(PyODictObject *od)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/odictobject.c	820	864	_odict_keys_equal	_odict_keys_equal(PyODictObject *a, PyODictObject *b)	todo		
 Objects/odictobject.c	874	880	odict_mp_ass_sub	odict_mp_ass_sub(PyObject *od, PyObject *v, PyObject *w)	todo		
 Objects/odictobject.c	898	922	odict_or	odict_or(PyObject *left, PyObject *right)	todo		
@@ -23,7 +23,7 @@ Objects/odictobject.c	1130	1138	OrderedDict_pop_impl	OrderedDict_pop_impl(PyODic
 Objects/odictobject.c	1156	1180	OrderedDict_popitem_impl	OrderedDict_popitem_impl(PyODictObject *self, int last) /*[clinic end generated code: output=98e7d986690d49eb input=ebf1cc91579c9e54]*/	modelled	odict-no-stale-node	
 Objects/odictobject.c	1224	1230	OrderedDict_clear_impl	OrderedDict_clear_impl(PyODictObject *self) /*[clinic end generated code: output=a1a76d1322f556c5 input=08b12322e74c535c]*/	todo		
 Objects/odictobject.c	1243	1305	OrderedDict_copy_impl	OrderedDict_copy_impl(PyObject *od) /*[clinic end generated code: output=9cdbe7394aecc576 input=e329951ae617ed48]*/	todo		
-Objects/odictobject.c	1320	1324	odict_reversed	odict_reversed(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	odict-iter-start	
+Objects/odictobject.c	1320	1324	odict_reversed	odict_reversed(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		withdrawn: theorem is rfl on a thin definition
 Objects/odictobject.c	1342	1375	OrderedDict_move_to_end_impl	OrderedDict_move_to_end_impl(PyODictObject *self, PyObject *key, int last) /*[clinic end generated code: output=fafa4c5cc9b92f20 input=09f8bc7053c0f6d4]*/	todo		
 Objects/odictobject.c	1426	1436	odict_dealloc	odict_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, runs when no reference remains
 Objects/odictobject.c	1441	1468	odict_repr	odict_repr(PyObject *op)	todo		
@@ -31,9 +31,9 @@ Objects/odictobject.c	1478	1488	odict_traverse	odict_traverse(PyObject *op, visi
 Objects/odictobject.c	1493	1501	odict_tp_clear	odict_tp_clear(PyObject *op)	excluded		no-behaviour: GC traversal or GC clear hook, no effect on the object's Python-level behaviour
 Objects/odictobject.c	1506	1537	odict_richcompare_lock_held	odict_richcompare_lock_held(PyObject *v, PyObject *w, int op)	todo		
 Objects/odictobject.c	1540	1547	odict_richcompare	odict_richcompare(PyObject *v, PyObject *w, int op)	todo		
-Objects/odictobject.c	1552	1555	odict_iter	odict_iter(PyObject *op)	modelled	odict-iter-start	
+Objects/odictobject.c	1552	1555	odict_iter	odict_iter(PyObject *op)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/odictobject.c	1560	1581	odict_init	odict_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
-Objects/odictobject.c	1633	1636	PyODict_New	PyODict_New(void)	modelled	odict-new-empty	
+Objects/odictobject.c	1633	1636	PyODict_New	PyODict_New(void)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/odictobject.c	1639	1654	_PyODict_SetItem_KnownHash_LockHeld	_PyODict_SetItem_KnownHash_LockHeld(PyObject *od, PyObject *key, PyObject *value, Py_hash_t hash)	todo		
 Objects/odictobject.c	1658	1666	PyODict_SetItem_LockHeld	PyODict_SetItem_LockHeld(PyObject *od, PyObject *key, PyObject *value)	todo		
 Objects/odictobject.c	1669	1676	PyODict_SetItem	PyODict_SetItem(PyObject *od, PyObject *key, PyObject *value)	todo		
@@ -46,15 +46,15 @@ Objects/odictobject.c	1796	1807	odictiter_nextkey	odictiter_nextkey(odictiterobj
 Objects/odictobject.c	1810	1867	odictiter_iternext_lock_held	odictiter_iternext_lock_held(PyObject *op)	modelled	odict-iter-bounded	
 Objects/odictobject.c	1870	1877	odictiter_iternext	odictiter_iternext(PyObject *op)	todo		
 Objects/odictobject.c	1885	1902	odictiter_reduce	odictiter_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
-Objects/odictobject.c	1943	1973	odictiter_new	odictiter_new(PyODictObject *od, int kind)	modelled	odict-iter-start	
-Objects/odictobject.c	1978	1986	odictkeys_iter	odictkeys_iter(PyObject *op)	modelled	odict-iter-start	
-Objects/odictobject.c	1989	1997	odictkeys_reversed	odictkeys_reversed(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	odict-iter-start	
+Objects/odictobject.c	1943	1973	odictiter_new	odictiter_new(PyODictObject *od, int kind)	todo		withdrawn: theorem is rfl on a thin definition
+Objects/odictobject.c	1978	1986	odictkeys_iter	odictkeys_iter(PyObject *op)	todo		withdrawn: theorem is rfl on a thin definition
+Objects/odictobject.c	1989	1997	odictkeys_reversed	odictkeys_reversed(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		withdrawn: theorem is rfl on a thin definition
 Objects/odictobject.c	2039	2042	odictkeys_new	odictkeys_new(PyObject *od, PyObject *Py_UNUSED(ignored))	todo		
-Objects/odictobject.c	2047	2055	odictitems_iter	odictitems_iter(PyObject *op)	modelled	odict-iter-start	
-Objects/odictobject.c	2058	2066	odictitems_reversed	odictitems_reversed(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	odict-iter-start	
+Objects/odictobject.c	2047	2055	odictitems_iter	odictitems_iter(PyObject *op)	todo		withdrawn: theorem is rfl on a thin definition
+Objects/odictobject.c	2058	2066	odictitems_reversed	odictitems_reversed(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		withdrawn: theorem is rfl on a thin definition
 Objects/odictobject.c	2108	2111	odictitems_new	odictitems_new(PyObject *od, PyObject *Py_UNUSED(ignored))	todo		
-Objects/odictobject.c	2116	2124	odictvalues_iter	odictvalues_iter(PyObject *op)	modelled	odict-iter-start	
-Objects/odictobject.c	2127	2135	odictvalues_reversed	odictvalues_reversed(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	odict-iter-start	
+Objects/odictobject.c	2116	2124	odictvalues_iter	odictvalues_iter(PyObject *op)	todo		withdrawn: theorem is rfl on a thin definition
+Objects/odictobject.c	2127	2135	odictvalues_reversed	odictvalues_reversed(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		withdrawn: theorem is rfl on a thin definition
 Objects/odictobject.c	2177	2180	odictvalues_new	odictvalues_new(PyObject *od, PyObject *Py_UNUSED(ignored))	todo		
 Objects/odictobject.c	2227	2286	mutablemapping_add_pairs	mutablemapping_add_pairs(PyObject *self, PyObject *pairs)	todo		
 Objects/odictobject.c	2289	2349	mutablemapping_update_arg	mutablemapping_update_arg(PyObject *self, PyObject *arg)	todo		
