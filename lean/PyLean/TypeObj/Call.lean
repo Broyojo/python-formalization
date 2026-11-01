@@ -1,4 +1,4 @@
-import PyLean.TypeObj.TypeNew
+import PyLean.TypeObj.Reduce
 
 /-!
 Calling: function argument binding (`initialize_locals`, `Python/ceval.c:1681`), `tp_new`
@@ -1181,6 +1181,20 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
           pure (.int (if n - i ≥ 0 then n - i else 0))
       | _ => gap%
     | _ => gap%
+  | .objectGetstate => objectGetstateDefault rt selfV false
+  | .objectReduce => commonReduce rt selfV 0
+  | .objectReduceEx =>
+    match args with
+    | [p] => objectReduceEx rt selfV (← longAsInt rt p)
+    | _ => gap%
+  | .getnewargs =>
+    -- `long_getnewargs`, `unicode_getnewargs`, `tuple_getnewargs`: a tuple of the plain value.
+    match selfV, intOf w selfV, strOf w selfV, tupleOf w selfV with
+    | _, some i, _, _ => pure (.tuple [.int i])
+    | _, _, some t, _ => pure (.tuple [.str t])
+    | _, _, _, some xs => pure (.tuple [.tuple xs])
+    | _, _, _, _ => gap%
+  | .reduceName s => pure (.str s)
   | .listAppend =>
     match args, selfV with
     | [x], .obj a =>
@@ -1210,15 +1224,6 @@ def typeGetDoc (rt : Rt) (t : Addr) : M Val := do
 /-- `_PyType_Name`: the part after the last dot. -/
 def typeShortName (w : World) (t : Addr) : String := typeQualname w t
 
-/-- The `__dict__` getter of an instance, `subtype_dict`, `Objects/typeobject.c:3742`,
-via `PyObject_GenericGetDict`, `Objects/dictobject.c:7607`. -/
-def genericGetDict (obj : Val) : M Val := do
-  let w ← getW
-  if hasDictPtr w obj then
-    let d ← ensureDict obj
-    pure (.obj d)
-  else attrErr "This object has no __dict__"
-
 /-- `_PyObject_SetDict`, `Objects/typeobject.c:3765`. -/
 def objectSetDict (obj : Val) (value : Option Val) : M Unit := do
   let w ← getW
@@ -1232,6 +1237,136 @@ def objectSetDict (obj : Val) (value : Option Val) : M Unit := do
     | some _, .obj d, .obj a => modObj a fun o => { o with dict := some d }
     | _, _, _ =>
       typeErr s!"__dict__ must be set to a dictionary, not a '{trunc 200 (typeName w v)}'"
+
+/-- `descr_get`: a value found in a class dict is bound with no object. -/
+def bindToType (rt : Rt) (r : Val) (t : Addr) : M Val := do
+  let w ← getW
+  match slotOf w (typeOf w r) .tp_descr_get with
+  | some g => callDescrGet rt g r none (some (.obj t))
+  | none => pure r
+
+/-- `type_get_annotate`, `Objects/typeobject.c:1990`: `__annotate__`, then `__annotate_func__`.
+With neither, reading stores `None` under `__annotate_func__`, which the class dict then shows. -/
+def typeGetAnnotate (rt : Rt) (t : Addr) : M Val := do
+  let w ← getW
+  let d := tdata w t
+  if !d.heap then attrErr s!"type object '{tpName w t}' has no attribute '__annotate__'"
+  let found := match NameDict.get? d.dict "__annotate__" with
+    | some a => some a
+    | none => NameDict.get? d.dict "__annotate_func__"
+  match found with
+  | some a => bindToType rt a t
+  | none =>
+    modType t fun d => { d with dict := NameDict.set d.dict "__annotate_func__" .none }
+    pure .none
+
+/-- `type_get_annotations`, `Objects/typeobject.c:2069`: `__annotations__`, then
+`__annotations_cache__`, then a call of `__annotate__` whose result is cached. -/
+def typeGetAnnotations (rt : Rt) (t : Addr) : M Val := do
+  let w ← getW
+  let d := tdata w t
+  if !d.heap then attrErr s!"type object '{tpName w t}' has no attribute '__annotations__'"
+  let found := match NameDict.get? d.dict "__annotations__" with
+    | some a => some a
+    | none => NameDict.get? d.dict "__annotations_cache__"
+  match found with
+  | some a => bindToType rt a t
+  | none =>
+    let annotate ← rt.getAttr (.obj t) "__annotate__"
+    let w ← getW
+    let ann ← if excCallableCheck w annotate then do
+        let r ← rt.call annotate [.int 1] []
+        let w ← getW
+        if (dictOf w r).isNone then
+          typeErr s!"__annotate__ returned non-dict of type '{trunc 100 (typeName w r)}'"
+        pure r
+      else alloc B.dict (.dict [])
+    modType t fun d => { d with dict := NameDict.set d.dict "__annotations_cache__" ann }
+    pure ann
+
+/-- `type_set_annotate`, `Objects/typeobject.c:2030`. -/
+def typeSetAnnotate (t : Addr) (value : Option Val) : M Unit := do
+  let w ← getW
+  match value with
+  | none => typeErr "cannot delete __annotate__ attribute"
+  | some v =>
+    if (tdata w t).immutable then
+      typeErr s!"cannot set '__annotate__' attribute of immutable type '{tpName w t}'"
+    if !v.is .none && !excCallableCheck w v then
+      typeErr "__annotate__ must be callable or None"
+    modType t fun d =>
+      let nd := NameDict.set d.dict "__annotate_func__" v
+      { d with dict := if v.is .none then nd else NameDict.erase nd "__annotations_cache__" }
+
+/-- `type_set_annotations`, `Objects/typeobject.c:2139`. -/
+def typeSetAnnotations (t : Addr) (value : Option Val) : M Unit := do
+  let w ← getW
+  let d := tdata w t
+  if d.immutable then
+    typeErr s!"cannot set '__annotations__' attribute of immutable type '{tpName w t}'"
+  let key := if NameDict.contains d.dict "__annotations__" then "__annotations__"
+    else "__annotations_cache__"
+  match value with
+  | some v =>
+    modType t fun d =>
+      let nd := NameDict.set d.dict key v
+      { d with dict := if key == "__annotations__" then NameDict.erase nd "__annotations_cache__" else nd }
+  | none =>
+    if !NameDict.contains d.dict key then attrErr "__annotations__"
+    modType t fun d =>
+      { d with dict := NameDict.erase (NameDict.erase d.dict key) "__annotations_cache__" }
+  modType t fun d =>
+    { d with dict := NameDict.erase (NameDict.erase d.dict "__annotate_func__") "__annotate__" }
+
+/-- `function___annotations___get_impl`, `Objects/funcobject.c:981`, with
+`func_get_annotation_dict`, `:556`. The result is kept on the function. -/
+def funcGetAnnotations (rt : Rt) (fn : Addr) (f : FuncData) : M Val := do
+  let w ← getW
+  let store (d : Val) (g : FuncData) : M Val := do
+    modObj fn fun o => { o with body := .func { g with annotations := some d } }
+    pure d
+  match f.annotations, f.annotate with
+  | some d, _ => pure d
+  | none, some a =>
+    if excCallableCheck w a then
+      let r ← rt.call a [.int 1] []
+      let w ← getW
+      if (dictOf w r).isNone then
+        typeErr s!"__annotate__ returned non-dict of type '{trunc 100 (typeName w r)}'"
+      match payloadOf w (.obj fn) with
+      | some (.func g) => store r g
+      | _ => gap%
+    else
+      let d ← alloc B.dict (.dict [])
+      store d f
+  | none, none =>
+    let d ← alloc B.dict (.dict [])
+    store d f
+
+/-- `descriptor_get_wrapped_attribute`, `Objects/funcobject.c:1424`: the descriptor's own
+`__dict__`, else the wrapped callable's attribute, which is then cached there. -/
+def wrappedAttrGet (rt : Rt) (wrapped obj : Val) (n : Name) : M Val := do
+  let dv ← genericGetDict obj
+  let w ← getW
+  match dv with
+  | .obj d =>
+    match dictLookup (dictEntries w d) (.str n) with
+    | some r => pure r
+    | none =>
+      let r ← rt.getAttr wrapped n
+      dictSetAt rt d (.str n) r
+      pure r
+  | _ => gap%
+
+/-- `descriptor_set_wrapped_attribute`, `Objects/funcobject.c:1454`. -/
+def wrappedAttrSet (rt : Rt) (obj : Val) (n : Name) (value : Option Val) (tn : String) : M Unit := do
+  let dv ← genericGetDict obj
+  match value, dv with
+  | none, .obj _ =>
+    catchMatch B.KeyError (callAssSubscript rt (.c .dict) dv (.str n) none)
+      (attrErr s!"'{trunc 200 tn}' object has no attribute '{n}'")
+  | some v, .obj d => dictSetAt rt d (.str n) v
+  | _, _ => gap%
 
 /-- Getter of the `PyGetSetDef`/`PyMemberDef` named `n` on static type `owner`. -/
 def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
@@ -1277,6 +1412,12 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
     if n == "__itemsize__" then return .int d.itemsize
     if n == "__dictoffset__" then return .int d.dictoffset
     if n == "__weakrefoffset__" then return .int d.weaklistoffset
+    if n == "__annotate__" then return ← typeGetAnnotate rt tA
+    if n == "__annotations__" then return ← typeGetAnnotations rt tA
+    if n == "__type_params__" then
+      -- `type_get_type_params`, `Objects/typeobject.c:2211`.
+      if tA == B.type then return .tuple []
+      return (NameDict.get? d.dict "__type_params__").getD (.tuple [])
     gap%
   if owner == B.function then
     match payloadOf w obj with
@@ -1292,6 +1433,12 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
             alloc B.dict (.dict (f.kwdefaults.map fun (k, v) => (Val.str k, v)))
           else pure .none
       if n == "__dict__" then return ← genericGetDict obj
+      if n == "__annotate__" then return f.annotate.getD .none
+      if n == "__annotations__" then
+        match obj with
+        | .obj fn => return ← funcGetAnnotations rt fn f
+        | _ => gap%
+      if n == "__type_params__" then return f.typeParams.getD (.tuple [])
       gap%
     | _ => gap%
   if owner == B.method then
@@ -1310,6 +1457,8 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
     if n == "__isabstractmethod__" then
       return .bool (← isAbstract rt inner)
     if n == "__dict__" then return ← genericGetDict obj
+    if n == "__annotations__" || n == "__annotate__" then
+      return ← wrappedAttrGet rt inner obj n
     gap%
   if owner == B.property then
     match propertyFields w obj with
@@ -1358,6 +1507,53 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
       if n == "__qualname__" then return .str s!"{typeQualname w o}.{nm}"
       gap%
     | none => gap%
+  if owner == B.builtinFn then
+    match payloadOf w obj with
+    | some (.builtin b self) =>
+      match builtinName b with
+      | none => gap%
+      | some nm =>
+        if n == "__name__" then return .str nm
+        -- `m_self` of a function of `builtins` is that module, which the model does not have.
+        if n == "__self__" then
+          match self with
+          | some s => return s
+          | none => gap%
+        if n == "__module__" then
+          return match self with
+            | some _ => .none
+            | none => .str "builtins"
+        if n == "__qualname__" then
+          -- `meth_get__qualname__`, `Objects/methodobject.c:231`.
+          match self with
+          | none => return .str nm
+          | some s =>
+            let ty : Val := if typeCheck w s then s else .obj (typeOf w s)
+            let q ← rt.getAttr ty "__qualname__"
+            let w ← getW
+            match strOf w q with
+            | some t => return .str s!"{t}.{nm}"
+            | none => typeErr "<method>.__class__.__qualname__ is not a unicode object"
+        gap%
+    | _ => gap%
+  if owner == B.methodWrapper then
+    -- `wrapper_objclass`, `wrapper_name`, `wrapper_qualname`, `Objects/descrobject.c:1387-1422`.
+    match payloadOf w obj with
+    | some (.methodWrapper d s) =>
+      match payloadOf w d with
+      | some (.wrapperDescr o p _) =>
+        if n == "__self__" then return s
+        if n == "__name__" then return .str p.name
+        if n == "__objclass__" then return .obj o
+        if n == "__qualname__" then return .str s!"{typeQualname w o}.{p.name}"
+        gap%
+      | _ => gap%
+    | _ => gap%
+  if owner == B.dictKeys && n == "mapping" then
+    -- `dictview_mapping`, `Objects/dictobject.c:6015`.
+    match payloadOf w obj with
+    | some (.seqIter (some d) _) => return ← alloc B.mappingproxy (.proxy d)
+    | _ => gap%
   gap%
 where
   /-- `_PyObject_IsAbstract`, `Objects/object.c:1235`. -/
@@ -1422,6 +1618,18 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
           attrErr "__abstractmethods__"
         return ← modType tA fun d =>
           { d with dict := NameDict.erase d.dict "__abstractmethods__", isAbstract := false }
+    if n == "__annotate__" then return ← typeSetAnnotate tA value
+    if n == "__annotations__" then return ← typeSetAnnotations tA value
+    if n == "__type_params__" then
+      -- `type_set_type_params`, `Objects/typeobject.c:2226`.
+      checkSetSpecial tA value "__type_params__"
+      return ← modType tA fun d =>
+        { d with dict := NameDict.set d.dict "__type_params__" (value.getD .none) }
+    gap%
+  if owner == B.classmethod || owner == B.staticmethod then
+    if n == "__annotations__" || n == "__annotate__" then
+      let tn := if owner == B.classmethod then "classmethod" else "staticmethod"
+      return ← wrappedAttrSet rt obj n value tn
     gap%
   if owner == B.function then
     match payloadOf w obj, obj with
@@ -1462,6 +1670,32 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
               | _ => none
             return ← setF { f with kwdefaults := d, kwdefaultsSet := true }
           | none => typeErr "__kwdefaults__ must be set to a dict object"
+      if n == "__annotate__" then
+        -- `function___annotate___set_impl`, `Objects/funcobject.c:948`.
+        match value with
+        | none => typeErr "__annotate__ cannot be deleted"
+        | some v =>
+          if v.is .none then return ← setF { f with annotate := some v }
+          if excCallableCheck w v then
+            return ← setF { f with annotate := some v, annotations := none }
+          typeErr "__annotate__ must be callable or None"
+      if n == "__annotations__" then
+        -- `function___annotations___set_impl`, `Objects/funcobject.c:1002`.
+        let v := match value with
+          | some x => if x.is .none then none else some x
+          | none => none
+        match v with
+        | some x =>
+          if (dictOf w x).isNone then typeErr "__annotations__ must be set to a dict object"
+        | none => pure ()
+        return ← setF { f with annotations := v, annotate := none }
+      if n == "__type_params__" then
+        -- `function___type_params___set_impl`, `Objects/funcobject.c:1047`.
+        match value with
+        | some x =>
+          if (tupleOf w x).isNone then typeErr "__type_params__ must be set to a tuple"
+          return ← setF { f with typeParams := some x }
+        | none => typeErr "__type_params__ must be set to a tuple"
       gap%
     | _, _ => gap%
   if isSubtype w owner B.BaseException then return ← excGetsetSet rt owner n obj value

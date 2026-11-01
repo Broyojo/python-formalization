@@ -1653,10 +1653,182 @@ def fam_dict_lookup(g):
         g.probe(["cmp", "==", call(name("hash"), tv(t)), lit(["bigint", str(hash(t))])])
 
 
+def fam_reduce(g):
+    """object.__getstate__, __reduce__ and __reduce_ex__, with copyreg: the validation of
+    __getnewargs_ex__ and __slotnames__, slots, and overrides that raise or lie."""
+    r = g.rng
+    body = [g.method("m", "A.m", ["s"], [["ret", lit(1)]])]
+    slots = r.choice([None, None, ["tuple", []], ["tuple", [lit("a"), lit("b")]], lit("a"),
+                      ["list", [lit("a"), lit("__dict__")]], ["tuple", [lit("__p"), lit("__q__")]]])
+    if slots is not None:
+        body.append(["assign", "__slots__", slots])
+    ng = r.choice(["none", "none", "good", "kw", "notuple", "len3", "firstbad", "secondbad", "raise"])
+    if ng != "none":
+        ret = {"good": ["tuple", [["tuple", [lit(1)]], ["dict", []]]],
+               "kw": ["tuple", [["tuple", [lit(1)]], ["dict", [[lit("k"), lit(2)]]]]],
+               "notuple": lit(5), "len3": ["tuple", [lit(1), lit(2), lit(3)]],
+               "firstbad": ["tuple", [lit(1), ["dict", []]]],
+               "secondbad": ["tuple", [["tuple", []], lit(1)]], "raise": NONE}[ng]
+        b = [["log", "__getnewargs_ex__"]]
+        b.append(["raise", call(name("ValueError"), lit("g"))] if ng == "raise" else ["ret", ret])
+        body.append(g.method("__getnewargs_ex__", "A.__getnewargs_ex__", ["s"], b))
+    na = r.choice(["none", "none", "good", "bad"])
+    if na != "none":
+        body.append(simple_method(g, "__getnewargs__", "A.__getnewargs__", ["s"],
+                                  ["tuple", [lit(2)]] if na == "good" else lit(3)))
+    gs = r.choice(["none", "none", "none", "value", "falsy", "raise", "deleted"])
+    if gs in ("value", "falsy"):
+        body.append(simple_method(g, "__getstate__", "A.__getstate__", ["s"],
+                                  lit("st") if gs == "value" else lit(0)))
+    elif gs == "raise":
+        body.append(g.method("__getstate__", "A.__getstate__", ["s"],
+                             [["raise", call(name(r.choice(["ValueError", "AttributeError"])), lit("s"))]]))
+    rd = r.choice(["none", "none", "none", "override", "raise"])
+    if rd == "override":
+        body.append(simple_method(g, "__reduce__", "A.__reduce__", ["s"], lit("rd")))
+    elif rd == "raise":
+        body.append(g.method("__reduce__", "A.__reduce__", ["s"],
+                             [["raise", call(name("ValueError"), lit("r"))]]))
+    sn = r.choice(["none", "none", "none", "none", "list", "nonev", "bad", "nonstr"])
+    if sn != "none":
+        body.append(["assign", "__slotnames__",
+                     {"list": ["list", [lit("a"), lit("zz")]], "nonev": NONE, "bad": lit(1),
+                      "nonstr": ["list", [lit(1)]]}[sn]])
+    base = r.choice([[], [], ["int"], ["str"], ["list"], ["tuple"]])
+    if slots is not None and slots != ["tuple", []] and base in (["int"], ["tuple"]):
+        slots = None
+        body = [b for b in body if not (b[0] == "assign" and b[1] == "__slots__")]
+    g.main.append(["expr", lit(0)])
+    cls(g, "A", base, body)
+    g.main.append(["assign", "a", call(name("A"))])
+    g.probes(["setattr", name("a"), "a", lit(1)])
+    g.probes(["setattr", name("a"), "x", lit(2)])
+    for p in (0, 1, 2, 3, -1):
+        g.probe(call(attr(name("a"), "__reduce_ex__"), lit(p)))
+    g.probe(call(attr(name("a"), "__reduce__")))
+    g.probe(call(attr(name("a"), "__getstate__")))
+    g.probe(call(attr(name("object"), "__getstate__"), name("a")))
+    g.probe(call(attr(name("object"), "__reduce_ex__"), name("a"), lit(2)))
+    g.probe(call(attr(name("object"), "__reduce__"), name("a")))
+    g.probe(call(attr(name("a"), "__reduce_ex__"), lit("s")))
+    g.probe(call(attr(name("a"), "__reduce_ex__"), lit(["bigint", str(2**40)])))
+    g.probe(["in", lit("__slotnames__"), attr(name("A"), "__dict__")])
+    g.probe(["sub", attr(name("A"), "__dict__"), lit("__slotnames__")])
+    for v in [lit(1), lit("s"), lit(True), ["tuple", [lit(1)]], ["list", [lit(1)]], NONE,
+              name("NotImplemented"), name("Ellipsis"), lit(["bigint", str(2**64)])]:
+        g.probe(call(attr(v, "__reduce_ex__"), lit(2)))
+        g.probe(call(attr(v, "__reduce_ex__"), lit(0)))
+        g.probe(call(attr(v, "__getstate__")))
+    g.probe(call(attr(name("int"), "__getnewargs__"), lit(5)))
+    g.probe(call(attr(lit("s"), "__getnewargs__")))
+    g.probe(call(attr(["tuple", [lit(1)]], "__getnewargs__")))
+    # A getter that changes __slotnames__ while it is walked.
+    cls(g, "G", (), [["assign", "__slots__", ["tuple", [lit("p"), lit("q")]]],
+                     g.method("__getattribute__", "G.__getattribute__", ["s", "n"],
+                              [["if", ["cmp", "==", name("n"), lit("p")],
+                                [["expr", call(attr(attr(name("G"), "__slotnames__"), "append"), lit("z"))]],
+                                []],
+                               ["ret", call(attr(name("object"), "__getattribute__"), name("s"), name("n"))]])])
+    g.main.append(["assign", "gg", call(name("G"))])
+    g.probes(["setattr", name("G"), "__slotnames__", ["list", [lit("p"), lit("q")]]])
+    g.probe(call(attr(name("object"), "__getstate__"), name("gg")))
+
+
+def fam_attrs(g):
+    """The attributes of functions, classes and C callables: the annotation getters write to what
+    they read from, and a callable __annotate__ can return anything or raise."""
+    r = g.rng
+    ret = r.choice([["dict", [[lit("x"), lit(1)]]], ["dict", []], lit(5), NONE])
+    ann = [["log", "annotate"]]
+    if r.random() < 0.25:
+        ann.append(["raise", call(name("ValueError"), lit("a"))])
+    ann.append(["ret", ret])
+    g.main.append(["def", "annf", "annf", {"pos": ["fmt"], "posonly": 0, "kwonly": [], "varargs": None,
+                                           "varkw": None, "defaults": [], "kwdefaults": []}, g.code(ann)])
+    g.main.append(["def", "f", "f", {"pos": ["a"], "posonly": 0, "kwonly": [], "varargs": None,
+                                     "varkw": None, "defaults": [], "kwdefaults": []},
+                   g.code([["ret", name("a")]])])
+    cls(g, "A", (), [g.method("m", "A.m", ["s"], [["ret", lit(1)]])])
+    if r.random() < 0.5:
+        cls(g, "B", ["A"], None)
+    else:
+        cls(g, "B", ["A"], [["assign", "__annotations__", ["dict", [[lit("y"), lit(2)]]]]])
+    keys = ["__annotate_func__", "__annotations_cache__", "__annotations__", "__annotate__"]
+
+    def show():
+        for k in keys:
+            g.probe(["in", lit(k), attr(name("B"), "__dict__")])
+
+    show()
+    g.probe(attr(name("B"), "__annotate__"))
+    show()
+    g.probe(attr(name("B"), "__annotations__"))
+    show()
+    g.probes(["setattr", name("B"), "__annotate__", r.choice([name("annf"), NONE, lit(1)])])
+    show()
+    g.probe(attr(name("B"), "__annotations__"))
+    g.probe(attr(name("B"), "__annotations__"))
+    show()
+    g.probes(["setattr", name("B"), "__annotations__", ["dict", [[lit("z"), lit(3)]]]])
+    show()
+    g.probe(attr(name("B"), "__annotations__"))
+    g.probes(["delattr", name("B"), "__annotations__"])
+    show()
+    g.probes(["delattr", name("B"), "__annotations__"])
+    g.probes(["delattr", name("B"), "__annotate__"])
+    g.probes(["setattr", name("int"), "__annotate__", NONE])
+    g.probes(["setattr", name("int"), "__annotations__", ["dict", []]])
+    g.probes(["setattr", name("B"), "__type_params__", ["tuple", [lit(1)]]])
+    g.probes(["setattr", name("int"), "__type_params__", ["tuple", []]])
+    for e in [attr(name("B"), "__type_params__"), attr(name("A"), "__type_params__"),
+              attr(name("type"), "__type_params__"), attr(name("int"), "__type_params__"),
+              attr(name("int"), "__annotate__"), attr(name("int"), "__annotations__"),
+              attr(call(name("A")), "__annotations__"), attr(name("f"), "__annotate__"),
+              attr(name("f"), "__annotations__"), attr(name("f"), "__type_params__")]:
+        g.probe(e)
+    g.probes(["setattr", name("f"), "__annotate__", r.choice([name("annf"), NONE, lit(1)])])
+    g.probe(attr(name("f"), "__annotations__"))
+    g.probe(attr(name("f"), "__annotations__"))
+    g.probes(["setattr", name("f"), "__annotations__", r.choice([NONE, lit(1), ["dict", [[lit("q"), lit(1)]]]])])
+    g.probe(attr(name("f"), "__annotate__"))
+    g.probe(attr(name("f"), "__annotations__"))
+    g.probes(["delattr", name("f"), "__annotations__"])
+    g.probe(attr(name("f"), "__annotations__"))
+    g.probes(["delattr", name("f"), "__annotate__"])
+    g.probes(["setattr", name("f"), "__type_params__", r.choice([["tuple", [lit(1)]], lit(1)])])
+    g.probes(["delattr", name("f"), "__type_params__"])
+    g.probe(attr(name("f"), "__type_params__"))
+    # classmethod and staticmethod keep these in their own __dict__.
+    for w in ["classmethod", "staticmethod"]:
+        g.main.append(["assign", "c", call(name(w), name("f"))])
+        g.probe(attr(name("c"), "__annotations__"))
+        g.probe(attr(name("c"), "__dict__"))
+        g.probe(attr(name("c"), "__annotate__"))
+        g.probes(["setattr", name("c"), "__annotate__", lit(7)])
+        g.probe(attr(name("c"), "__annotate__"))
+        g.probes(["delattr", name("c"), "__annotations__"])
+        g.probes(["delattr", name("c"), "__annotations__"])
+        g.probe(attr(name("c"), "__annotations__"))
+        g.main.append(["assign", "c", call(name(w), lit(1))])
+        g.probe(attr(name("c"), "__annotations__"))
+    # C callables.
+    for v in [attr(["list", []], "append"), attr(name("A"), "__call__"), attr(lit(1), "__add__"),
+              attr(name("dict"), "keys")]:
+        for n in ["__name__", "__qualname__", "__objclass__", "__module__"]:
+            g.probe(attr(v, n))
+    for n in ["__name__", "__qualname__", "__module__"]:
+        g.probe(attr(name("len"), n))
+    g.probe(attr(attr(["list", []], "append"), "__self__"))
+    g.probe(attr(attr(lit(1), "__add__"), "__self__"))
+    g.probe(call(attr(["dict", [[lit(1), lit(2)]]], "keys")))
+    g.probe(attr(call(attr(["dict", [[lit(1), lit(2)]]], "keys")), "mapping"))
+    g.probe(call(name("repr"), attr(call(attr(["dict", [[lit(1), lit(2)]]], "keys")), "mapping")))
+
+
 FAMILIES = [fam_calls, fam_property, fam_super, fam_mro, fam_class_stmt, fam_class_assign,
             fam_wrappers, fam_abstract, fam_type_attrs, fam_slot_updates, fam_descriptors,
             fam_iter_seq, fam_numbers, fam_list_extend, fam_repr, fam_descr_proto,
-            fam_dict_update, fam_dict_lookup]
+            fam_dict_update, fam_dict_lookup, fam_reduce, fam_attrs]
 
 
 def gen_case(rng):

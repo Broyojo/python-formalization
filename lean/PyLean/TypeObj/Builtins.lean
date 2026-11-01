@@ -83,6 +83,10 @@ def methodOf (tn n : String) : Builtin :=
   | "list", "__getitem__" | "dict", "__getitem__" => .dunderGetitem
   | "dict", "__contains__" => .dunderContains
   | "dict", "keys" => .dictKeysMethod
+  | "int", "__getnewargs__" | "str", "__getnewargs__" | "tuple", "__getnewargs__" => .getnewargs
+  -- `ellipsis_reduce` and `notimplemented_reduce`, `Objects/sliceobject.c`, `Objects/object.c`.
+  | "ellipsis", "__reduce__" => .reduceName "Ellipsis"
+  | "NotImplementedType", "__reduce__" => .reduceName "NotImplemented"
   | "iterator", "__length_hint__" | "list_iterator", "__length_hint__"
   | "tuple_iterator", "__length_hint__" | "str_ascii_iterator", "__length_hint__"
   | "dict_keyiterator", "__length_hint__" => .iterLengthHint

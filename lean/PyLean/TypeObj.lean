@@ -6,6 +6,7 @@ import PyLean.TypeObj.PropsType2
 import PyLean.TypeObj.ExcProps
 import PyLean.TypeObj.PropsList
 import PyLean.TypeObj.PropsDict
+import PyLean.TypeObj.PropsReduce
 
 /-!
 The data model: `Objects/typeobject.c`, `Objects/object.c`, `Objects/abstract.c`,
@@ -852,6 +853,18 @@ def entries : List Entry := [
     "A key object already in the dict is found without running Python code when no earlier entry shares its hash."
     "dictobject.c:1107"
     ``DictProbeFindsIdentical ``dictProbeFindsIdentical_proven,
+  p "typeobj-reduce-newargs-validated" ty ["_PyObject_GetNewArguments"]
+    "Whatever __getnewargs_ex__ returned, only a pair of a tuple and a dict is accepted, and nothing else happens."
+    "typeobject.c:7538-7574"
+    ``NewargsExValidated ``newargsExValidated_proven,
+  p "typeobj-slotnames-typed" ty ["_PyType_GetSlotNames"]
+    "For every class and Rt, a value _PyType_GetSlotNames returns is None or a list."
+    "invariant: typeobject.c:7381"
+    ``SlotNamesWellTyped ``slotNamesWellTyped_proven,
+  p "typeobj-getstate-guard" ty ["object_getstate_default"]
+    "If the slot loop of object_getstate_default completes, __slotnames__ has its original size, for every getter."
+    "typeobject.c:7440"
+    ``GetstateSlotsGuard ``getstateSlotsGuard_proven,
   p "typeobj-super-skips" ty ["_super_lookup_descr", "do_super_lookup", "super_getattro"]
     "super looks strictly after __thisclass__ in the MRO of the object's type."
     "docs: super"

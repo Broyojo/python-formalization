@@ -210,6 +210,10 @@ structure FuncData where
   code : Nat := 0
   /-- `__class__` cell for zero-argument `super()`. -/
   classCell : Option Addr := none
+  /-- `func_annotate`, `func_annotations` and `func_typeparams`; `none` is NULL. -/
+  annotate : Option Val := none
+  annotations : Option Val := none
+  typeParams : Option Val := none
   deriving Repr, Inhabited
 
 /-- C-implemented callables: entries of `PyMethodDef` tables and of `builtins`. -/
@@ -232,6 +236,8 @@ inductive Builtin where
   | tupleCount | tupleIndex | listAppend | strFormat | dunderGetitem | dunderContains
   /-- `dict.keys`, and the `__length_hint__` of the C iterators. -/
   | dictKeysMethod | iterLengthHint
+  /-- `__getnewargs__` of `int`, `str`, `tuple`, and a `__reduce__` that gives a fixed name. -/
+  | getnewargs | reduceName (s : String)
   /-- `str.__format__`, and `int.__format__` with `float.__format__`.
   `object.__format__` is `objectFormat`. -/
   | strDunderFormat | numDunderFormat

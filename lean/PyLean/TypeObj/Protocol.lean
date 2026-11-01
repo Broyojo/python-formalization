@@ -541,6 +541,8 @@ def builtinConv : Builtin → String × MethConv
   | .dunderGetitem => ("__getitem__", .o)
   | .dunderContains => ("__contains__", .o)
   | .dictKeysMethod => ("keys", .noargs)
+  | .getnewargs => ("__getnewargs__", .noargs)
+  | .reduceName _ => ("__reduce__", .noargs)
   | .iterLengthHint => ("__length_hint__", .noargs)
   | _ => ("", .keywords)
 
