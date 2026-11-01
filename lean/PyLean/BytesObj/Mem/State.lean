@@ -327,6 +327,11 @@ def copyBase (shape0 itemsize : Int) (dptr : Int) (dstr : Int) (dsub : Option (L
 /-- Tail of a suboffset array: `dsuboffsets ? dsuboffsets+1 : NULL`. -/
 def subTail (s : Option (List Int)) : Option (List Int) := s.map (·.drop 1)
 
+/-- The loop of `copy_rec`, :392-400: `k` sub-arrays, both pointers advancing. -/
+def copyLoop (dstep sstep : Int) (body : Int → Int → Mem → Mem) : Nat → Int → Int → Mem → Mem
+  | 0, _, _, dm => dm
+  | k + 1, dptr, sptr, dm => copyLoop dstep sstep body k (dptr + dstep) (sptr + sstep) (body dptr sptr dm)
+
 /-- `copy_rec`, :374-401, on the shape, stride and suboffset arrays from the current
 dimension on. `ndim` is `shape.length`. -/
 def copyRec (itemsize : Int) (useMem : Bool) (sm : Mem) :
@@ -335,15 +340,11 @@ def copyRec (itemsize : Int) (useMem : Bool) (sm : Mem) :
   | [n], dptr, dst, dsub, sptr, sst, ssub, dm =>
     copyBase n itemsize dptr (dst.getD 0 0) dsub sptr (sst.getD 0 0) ssub useMem sm dm
   | n :: shape@(_ :: _), dptr, dst, dsub, sptr, sst, ssub, dm =>
-    let rec go : Nat → Int → Int → Mem → Mem
-      | 0, _, _, dm => dm
-      | k + 1, dptr', sptr', dm =>
-        let xd := adjustPtr dm dptr' dsub 0
-        let xs := adjustPtr sm sptr' ssub 0
-        go k (dptr' + dst.getD 0 0) (sptr' + sst.getD 0 0)
-          (copyRec itemsize useMem sm shape xd (dst.drop 1) (subTail dsub) xs (sst.drop 1)
-            (subTail ssub) dm)
-    go n.toNat dptr sptr dm
+    copyLoop (dst.getD 0 0) (sst.getD 0 0)
+      (fun dptr' sptr' dm =>
+        copyRec itemsize useMem sm shape (adjustPtr dm dptr' dsub 0) (dst.drop 1) (subTail dsub)
+          (adjustPtr sm sptr' ssub 0) (sst.drop 1) (subTail ssub) dm)
+      n.toNat dptr sptr dm
 
 /-- `copy_buffer`, :437-464, into `dm`. -/
 def copyBuffer (sm dm : Mem) (dest src : Buf) : Py Mem := do
@@ -462,6 +463,14 @@ def cmpBase (m : Mem) (fmt : Char) (unp : Option (Unpacker × Unpacker))
     if !equal then return false
     cmpBase m fmt unp ps qs psub qsub n (p + ps) (q + qs)
 
+/-- The loop of `cmp_rec`, :3084-3093: `equal <= 0` stops the walk. -/
+def cmpLoop (pstep qstep : Int) (body : Int → Int → Py Bool) : Nat → Int → Int → Py Bool
+  | 0, _, _ => .ok true
+  | k + 1, p, q => do
+    let equal ← body p q
+    if !equal then return false
+    cmpLoop pstep qstep body k (p + pstep) (q + qstep)
+
 /-- `cmp_rec`, :3062-3096, on the arrays from the current dimension on. -/
 def cmpRec (m : Mem) (fmt : Char) (unp : Option (Unpacker × Unpacker)) :
     List Int → List Int → Option (List Int) → List Int → Option (List Int) → Int → Int → Py Bool
@@ -469,14 +478,11 @@ def cmpRec (m : Mem) (fmt : Char) (unp : Option (Unpacker × Unpacker)) :
   | [n], pst, psub, qst, qsub, p, q =>
     cmpBase m fmt unp (pst.getD 0 0) (qst.getD 0 0) psub qsub n.toNat p q
   | n :: shape@(_ :: _), pst, psub, qst, qsub, p, q =>
-    let rec go : Nat → Int → Int → Py Bool
-      | 0, _, _ => .ok true
-      | k + 1, p', q' => do
-        let equal ← cmpRec m fmt unp shape (pst.drop 1) (subTail psub) (qst.drop 1) (subTail qsub)
-          (adjustPtr m p' psub 0) (adjustPtr m q' qsub 0)
-        if !equal then return false
-        go k (p' + pst.getD 0 0) (q' + qst.getD 0 0)
-    go n.toNat p q
+    cmpLoop (pst.getD 0 0) (qst.getD 0 0)
+      (fun p' q' =>
+        cmpRec m fmt unp shape (pst.drop 1) (subTail psub) (qst.drop 1) (subTail qsub)
+          (adjustPtr m p' psub 0) (adjustPtr m q' qsub 0))
+      n.toNat p q
 
 /-! ## `tolist` -/
 
@@ -495,20 +501,16 @@ def tolistBase {α : Type} (m : Mem) (f : Int → Py α) (stride : Int) (subs : 
     let r ← tolistBase m f stride subs n (ptr + stride)
     return x :: r
 
-/-- `tolist_rec`, :2194-2226, on the arrays from the current dimension on. -/
+/-- `tolist_rec`, :2194-2226, on the arrays from the current dimension on. The loop at
+:2213-2223 is the loop of `tolist_base` with a recursive call as the item. -/
 def tolistRec (m : Mem) (f : Int → Py Item) :
     List Int → List Int → Option (List Int) → Int → Py Tree
   | [], _, _, _ => .ok (.node [])
   | [n], st, subs, ptr =>
     .node <$> ((·.map Tree.leaf) <$> tolistBase m f (st.getD 0 0) subs n.toNat ptr)
   | n :: shape@(_ :: _), st, subs, ptr =>
-    let rec go : Nat → Int → Py (List Tree)
-      | 0, _ => .ok []
-      | k + 1, p => do
-        let x ← tolistRec m f shape (st.drop 1) (subTail subs) (adjustPtr m p subs 0)
-        let r ← go k (p + st.getD 0 0)
-        return x :: r
-    .node <$> go n.toNat ptr
+    .node <$> tolistBase m
+      (fun p => tolistRec m f shape (st.drop 1) (subTail subs) p) (st.getD 0 0) subs n.toNat ptr
 
 /-! ## `_Py_strhex_with_sep` (Python/pystrhex.c) -/
 
