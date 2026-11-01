@@ -71,15 +71,18 @@ def Dec.toPyObj : Dec → PyObj
 /-- `str(d)` in `_pydecimal`. -/
 def pyStr (d : Dec) (caps : Bool := true) : Py (List Char) := pyStrObj d.toPyObj caps
 
+/-- `isinstance(value[0], int) and value[0] in (0, 1)`, _pydecimal.py:555-560. -/
+def pySign (s : PyVal) : Py Bool :=
+  match s.asInt? with
+  | some 0 => pure false
+  | some 1 => pure true
+  | _ => throw (.valueError "Invalid sign.  The first value in the tuple should be an integer; either 0 for a positive number or 1 for a negative number.")
+
 /-- `_pydecimal.Decimal(value)` for a tuple `value = (s, digits, e)`,
 _pydecimal.py:547-591 (the length check at :549 is the shape of the
 argument here). `digits = none` is an object that is not iterable. -/
 def pyFromTuple (s : PyVal) (digits : Option (List PyVal)) (e : PyVal) : Py PyObj := do
-  -- isinstance(value[0], int) and value[0] in (0, 1)
-  let sign ← match s.asInt? with
-    | some 0 => pure false
-    | some 1 => pure true
-    | _ => throw (.valueError "Invalid sign.  The first value in the tuple should be an integer; either 0 for a positive number or 1 for a negative number.")
+  let sign ← pySign s
   if e = .str "F" then
     -- infinity: value[1] is ignored
     return ⟨sign, ['0'], .inf⟩
@@ -103,6 +106,15 @@ def pyFromTuple (s : PyVal) (digits : Option (List PyVal)) (e : PyVal) : Py PyOb
     | some x => return ⟨sign, if kept = [] then ['0'] else joined, .num x⟩
     | none => throw (.valueError "The third value in the tuple must be an integer, or one of the strings 'F', 'n', 'N'.")
 
+/-- One coefficient digit in `dectuple_as_str` (_decimal.c:2741-2756). -/
+def cDigit (d : PyVal) : Py Nat :=
+  match d.asInt? with
+  | none => .error (.valueError "coefficient must be a tuple of digits")
+  | some v =>
+    if v < -(2 ^ 63) ∨ v ≥ 2 ^ 63 then .error (.overflowError "~Python int too large to convert to C long")
+    else if v < 0 ∨ v > 9 then .error (.valueError "coefficient must be a tuple of digits")
+    else .ok v.toNat
+
 /-- `_decimal.Decimal(value)` for a tuple: `dectuple_as_str`
 (_decimal.c:2652-2799) builds a numeric string which
 `PyDecType_FromCStringExact` (:2222-2250) converts under the max context. -/
@@ -125,12 +137,7 @@ def cFromTuple (s : PyVal) (digits : Option (List PyVal)) (e : PyVal) : Py Dec :
         else pure none
   -- coefficient: a tuple or a list of digits
   let some ds := digits | throw (.valueError "coefficient must be a tuple of digits")
-  let vals ← ds.mapM (fun d => match d.asInt? with
-    | none => Except.error (PyExc.valueError "coefficient must be a tuple of digits")
-    | some v =>
-      if v < -(2 ^ 63) ∨ v ≥ 2 ^ 63 then .error (.overflowError "~Python int too large to convert to C long")
-      else if v < 0 ∨ v > 9 then .error (.valueError "coefficient must be a tuple of digits")
-      else .ok v.toNat)
+  let vals ← ds.mapM cDigit
   let str := vals.map (fun v => Char.ofNat (48 + v))
   let p := digitsValue str
   let sigDigits := numDigits p

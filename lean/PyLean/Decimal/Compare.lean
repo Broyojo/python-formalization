@@ -173,4 +173,13 @@ theorem compareTotal_eq_zero (a b : Dec) : compareTotal a b = 0 ↔ a = b := by
     have := compareTotal_antisymm a a
     omega
 
+/-- `compare_total` is antisymmetric and returns 0 exactly for identical
+representations (sign, coefficient, exponent, NaN kind and payload), as the
+docs promise a total ordering of all abstract representations. -/
+def CompareTotalOrder : Prop :=
+  ∀ a b : Dec, compareTotal b a = -compareTotal a b ∧ (compareTotal a b = 0 ↔ a = b)
+
+theorem compareTotalOrder_proven : CompareTotalOrder :=
+  fun a b => ⟨compareTotal_antisymm a b, compareTotal_eq_zero a b⟩
+
 end PyLean.Decimal

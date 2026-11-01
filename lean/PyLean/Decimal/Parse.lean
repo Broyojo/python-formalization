@@ -109,18 +109,18 @@ def pyParse (s : List Char) : Py Dec :=
   match pyMatch ((strip s).filter (· ≠ '_')) with
   | none => .error invalidOp
   | some (.num neg intpart frac ex) => do
-    -- exp = int(m.group('exp') or '0')   (:502)
+    -- exp = int(m.group('exp') or '0')   (:503)
     let e : Int ← match ex with
       | none => pure 0
       | some (eneg, ds) => do
         intLimit ds.length
         pure (if eneg then -(digitsValue ds : Int) else digitsValue ds)
-    -- self._int = str(int(intpart+fracpart))   (:503)
+    -- self._int = str(int(intpart+fracpart))   (:504)
     intLimit (intpart ++ frac).length
     return .fin neg (digitsValue (intpart ++ frac)) (e - frac.length)
   | some (.inf neg) => .ok (.inf neg)
   | some (.nan neg sig d) => do
-    -- self._int = str(int(diag or '0')).lstrip('0')   (:510)
+    -- self._int = str(int(diag or '0')).lstrip('0')   (:511)
     intLimit (if d = [] then 1 else d.length)
     return .nan neg sig (digitsValue d)
 
