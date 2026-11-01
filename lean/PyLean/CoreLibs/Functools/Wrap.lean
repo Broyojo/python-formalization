@@ -170,7 +170,7 @@ inductive LruAttr (τ : Type) where
   deriving Repr, DecidableEq
 
 /-- The `__dict__` of a cached function before `update_wrapper`. The Python wrapper is a function that was given
-`cache_info` and `cache_clear` at Lib/functools.py:703-704; the C one has them as methods of its type, which are not in the
+`cache_info` and `cache_clear` at Lib/functools.py:712-713; the C one has them as methods of its type, which are not in the
 `__dict__`. Both get `cache_parameters` at :587 and :595. -/
 def lruDict {τ : Type} (py : Bool) (id : Nat) (m : Option Int) (t : τ) : Attrs (LruAttr τ) :=
   (if py then [("cache_info", .info id), ("cache_clear", .clear id)] else []) ++ [("cache_parameters", .params m t)]

@@ -283,6 +283,8 @@ def parseMKind (j : Json) : Except String (MKind Int) := do
     pure (.custom get sel (.base id))
   | _ => parseMKindI j
 
+def unitJ' : Py Unit → Json := encPy (fun _ => Json.null)
+
 def run (fn : String) (j : Json) : Except String Json := do
   let c := (j.getObjVal? "twin").toOption.bind (·.getStr?.toOption) == some "c"
   let newP : PartialNew Int := if c then partialNewC else partialNewPy
@@ -340,6 +342,40 @@ def run (fn : String) (j : Json) : Except String Json := do
     let w0 : Wrapper String := { dict := [], descr := wrapperAssignments }
     pure (encPy (fun (r : Wrapper String) => toJson [toJson (r.get "__name__"), toJson (r.dict.lookup "__name__")])
       (updateWrapper w0 wrapped "self" wrapperAssignments wrapperUpdates))
+  | "key_hash" => pure (unitJ' keyHash)
+  | "key_isinstance" => pure (encPy (fun (b : Bool) => toJson b) (keyIsinstance (!c)))
+  | "partial_duck" =>
+    let args ← (← getArr j "args").mapM parsePArg
+    let pargs ← (← getArr j "pargs").mapM parsePArg
+    let r : Py (Fn Int) := if c then partialNewC none (.base 9) args []
+      else duckNewPy none (.base 1) pargs [] (phCount pargs) args []
+    pure (encPy (fun x => match x with
+      | .pobj _ _ f a _ _ => toJson [toJson (match f with
+          | .base i => (i : Int)
+          | _ => -1), toJson (a.map fun p => match p with
+          | .ph => toJson "PH"
+          | .val v => toJson v)]
+      | _ => Json.null) r)
+  | "repr_mut" =>
+    let vals ← getIntList j "vals"
+    let mutAt ← getOptInt j "mut"
+    let kw : List (String × Int) := vals.map (fun v => (s!"k{v}", v))
+    let E : ReprEnv Int := ⟨fun v => .ok (toString v)⟩
+    let m : Int → Bool := fun v => some v == mutAt
+    let r : Py String := if c then partialReprFullC E m ("zz", 0) "functools.partial" (.ok "f") [] kw
+      else partialReprFullPy E m (.ok "functools") (.ok "partial") (.ok "f") [] kw
+    pure (encPy toJson r)
+  | "repr_read" =>
+    let bad ← getStr j "bad"
+    let fail : String → Py String := fun k => if k == bad then .error (.valueError "read") else .ok k
+    let E : ReprEnv Int := ⟨fun v => .ok (toString v)⟩
+    pure (encPy toJson (partialReprFullPy E (fun _ => false) (fail "__module__") (fail "__qualname__") (.ok "f") [] []))
+  | "pm_new_fail" =>
+    let which ← getStr j "which"
+    let t : MTarget Int := { kind := .obj .notCallable, abstract := .ok none,
+                             getFail := if which == "get" then some (.valueError "get") else none,
+                             reprFail := if which == "repr" then some (.valueError "repr") else none }
+    pure (encPy (fun _ => toJson "pm") (partialmethodNew (.target t) [] []))
   | "reduce_wrapper" =>
     let names ← getStrList j "names"
     let warnE ← getBool j "werror"
@@ -437,8 +473,20 @@ def run (fn : String) (j : Json) : Except String Json := do
         let args : StArgs Int ← match ← getStr st "argkind" with
           | "tuple" => pure (.tuple raw)
           | "sub" =>
-            if ← getBool st "iterbad" then pure (.sub raw (.error (.valueError "iter")))
-            else pure (.sub raw (.ok (← (← getArr st "iter").mapM parsePArg)))
+            let it : Py (List (PArg Int)) ← if ← getBool st "iterbad" then pure (.error (.valueError "iter"))
+              else pure (.ok (← (← getArr st "iter").mapM parsePArg))
+            let it2 : Py (List (PArg Int)) ← match (← field st "iter2") with
+              | .null => pure it
+              | v => pure (.ok (← (← v.getArr?).toList.mapM parsePArg))
+            let t0 := TupSub.iterates raw it
+            let truth : Py Bool ← match ← getStr st "truth" with
+              | "no" => pure (.ok false)
+              | "raise" => pure (.error (.valueError "truth"))
+              | _ => pure t0.truth
+            let len : Py Nat ← match ← getStr st "lenv" with
+              | "raise" => pure (.error (.valueError "len"))
+              | _ => pure t0.len
+            pure (.sub { t0 with truth, len, iter2 := it2 })
           | _ => pure .other
         let kwv ← parseKwV (← field st "kwitems")
         let kw : StKw Int ← match ← getStr st "kw" with
@@ -496,7 +544,7 @@ def run (fn : String) (j : Json) : Except String Json := do
       | _ => pure (.ok none)
     let pargs ← (← getArr j "args").mapM parsePArg
     let pkw ← parseKwV (← field j "kw")
-    let t : MTarget Int := ⟨← parseMKind j, ab⟩
+    let t : MTarget Int := { kind := ← parseMKind j, abstract := ab }
     let nest ← (← getArr j "nest").mapM parsePArg
     let obj := if ← getBool j "instance" then some (501 : Int) else none
     let more ← getIntList j "more"
@@ -508,7 +556,7 @@ def run (fn : String) (j : Json) : Except String Json := do
       callGot got more morekw
     pure (encPy calledJ r)
   | "pm_new" =>
-    let t : MTarget Int := ⟨.obj .notCallable, .ok none⟩
+    let t : MTarget Int := { kind := .obj .notCallable, abstract := .ok none }
     let args ← (← getArr j "args").mapM parsePArg
     pure (encPy (fun _ => Json.null) (partialmethodNew (.target t) args []))
   | "unwrap" =>

@@ -339,9 +339,17 @@ def CmpToKeySign : Prop :=
       | .lt => decide (r < 0) | .le => decide (r ≤ 0) | .eq => decide (r = 0)
       | .ne => decide (r ≠ 0) | .gt => decide (r > 0) | .ge => decide (r ≥ 0)), fun b => .ok b, id⟩
     keyComparePy K mycmp .lt (some x) (.key (some y)) = .ok (decide (r < 0)) ∧
+    keyComparePy K mycmp .le (some x) (.key (some y)) = .ok (decide (r ≤ 0)) ∧
+    keyComparePy K mycmp .eq (some x) (.key (some y)) = .ok (decide (r = 0)) ∧
     keyComparePy K mycmp .ne (some x) (.key (some y)) = .ok (decide (r ≠ 0)) ∧
-    keyCompareC K mycmp .ge (some x) (.key (some y)) = .ok (decide (r ≥ 0)) ∧
-    keyCompareC K mycmp .ne (some x) (.key (some y)) = .ok (decide (r ≠ 0))
+    keyComparePy K mycmp .gt (some x) (.key (some y)) = .ok (decide (r > 0)) ∧
+    keyComparePy K mycmp .ge (some x) (.key (some y)) = .ok (decide (r ≥ 0)) ∧
+    keyCompareC K mycmp .lt (some x) (.key (some y)) = .ok (decide (r < 0)) ∧
+    keyCompareC K mycmp .le (some x) (.key (some y)) = .ok (decide (r ≤ 0)) ∧
+    keyCompareC K mycmp .eq (some x) (.key (some y)) = .ok (decide (r = 0)) ∧
+    keyCompareC K mycmp .ne (some x) (.key (some y)) = .ok (decide (r ≠ 0)) ∧
+    keyCompareC K mycmp .gt (some x) (.key (some y)) = .ok (decide (r > 0)) ∧
+    keyCompareC K mycmp .ge (some x) (.key (some y)) = .ok (decide (r ≥ 0))
 
 theorem cmpToKeySign_proven : CmpToKeySign := by
   intro α mycmp x y r h K
@@ -373,14 +381,70 @@ theorem cmpToKeyTwinsOnNe_refuted : ¬CmpToKeyTwinsOnNe := by
     (fun _ _ => .ok 0) 1 2
   simp [keyCompareC, keyComparePy, bind, Except.bind, pure, Except.pure] at this
 
-/-- Construction takes one argument, positional or `obj=`, and refuses anything else, in both twins. -/
+/-- Construction takes one argument, positional or `obj=`, and every other argument list is a `TypeError`, in both twins. -/
 def KeyNewOneArgument : Prop :=
-  ∀ (α : Type) (a b : α),
-    keyNew [a] [] = .ok a ∧ keyNew [] [("obj", a)] = .ok a ∧
-    (keyNew ([] : List α) []).raises "TypeError" ∧ (keyNew [a, b] []).raises "TypeError" ∧
-    (keyNew [a] [("obj", b)]).raises "TypeError"
+  ∀ (α : Type) (pos : List α) (kw : List (String × α)) (a : α),
+    (keyNew pos kw = .ok a ↔ (pos = [a] ∧ kw = []) ∨ (pos = [] ∧ kw = [("obj", a)])) ∧
+    ((∀ b, keyNew pos kw ≠ .ok b) → (keyNew pos kw).raises "TypeError")
 
-theorem keyNewOneArgument_proven : KeyNewOneArgument :=
-  fun _ _ _ => ⟨rfl, rfl, ⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩, ⟨_, rfl, rfl⟩⟩
+theorem keyNewOneArgument_proven : KeyNewOneArgument := by
+  intro α pos kw a
+  have shape : ∀ r, keyNew pos kw = .ok r ∨ keyNew pos kw = .error (.typeError "~K() takes exactly one argument 'obj'") ∨ True := by
+    intro _; exact .inr (.inr trivial)
+  refine ⟨?_, ?_⟩
+  · constructor
+    · intro h
+      match pos, kw with
+      | [b], [] =>
+        simp only [keyNew, Except.ok.injEq] at h
+        subst h
+        exact .inl ⟨rfl, rfl⟩
+      | [], [("obj", b)] =>
+        simp only [keyNew, Except.ok.injEq] at h
+        subst h
+        exact .inr ⟨rfl, rfl⟩
+      | [], [] => simp [keyNew] at h
+      | [], [(k, v)] =>
+        by_cases hk : k = "obj"
+        · subst hk
+          simp only [keyNew, Except.ok.injEq] at h
+          subst h
+          exact .inr ⟨rfl, rfl⟩
+        · simp [keyNew, hk] at h
+      | [], _ :: _ :: _ => simp [keyNew] at h
+      | _ :: _ :: _, _ => simp [keyNew] at h
+      | [_], _ :: _ => simp [keyNew] at h
+    · rintro (⟨rfl, rfl⟩ | ⟨rfl, rfl⟩) <;> rfl
+  · intro h
+    match pos, kw with
+    | [b], [] => exact absurd rfl (h b)
+    | [], [] => exact ⟨_, rfl, rfl⟩
+    | [], [(k, v)] =>
+      by_cases hk : k = "obj"
+      · subst hk
+        exact absurd rfl (h v)
+      · exact ⟨.typeError "~K() takes exactly one argument 'obj'", by simp [keyNew, hk], rfl⟩
+    | [], _ :: _ :: _ => exact ⟨.typeError "~K() takes exactly one argument 'obj'", by simp [keyNew], rfl⟩
+    | _ :: _ :: _, _ => exact ⟨.typeError "~K() takes exactly one argument 'obj'", by simp [keyNew], rfl⟩
+    | [_], _ :: _ => exact ⟨.typeError "~K() takes exactly one argument 'obj'", by simp [keyNew], rfl⟩
+
+/-- A key object is unhashable in both twins, by `__hash__ = None` and by `PyType_Ready`. An `other.obj` that raises anything
+but `AttributeError` propagates from the Python class, and C never reads it: it refuses the type. -/
+def KeyHashAndRead : Prop :=
+  ∀ (α ρ τ : Type) (K : KeyOps ρ τ) (mycmp : α → α → Py ρ) (op : CmpOp) (x : α) (e : PyExc),
+    keyHash.raises "TypeError" ∧ keyComparePy K mycmp op (some x) (.raises e) = .error e ∧
+    (keyCompareC K mycmp op (some x) (.raises e)).raises "TypeError"
+
+theorem keyHashAndRead_proven : KeyHashAndRead := by
+  intro α ρ τ K mycmp op x e
+  exact ⟨⟨_, rfl, rfl⟩, rfl, ⟨_, rfl, rfl⟩⟩
+
+/-- `K` is a class in both twins, as in `isinstance(k, K)`. False: in C it is a callable `KeyWrapper` object. -/
+def KeyIsClass : Prop := ∀ py : Bool, keyIsinstance py = .ok true
+
+theorem keyIsClass_refuted : ¬KeyIsClass := by
+  intro h
+  have := h false
+  simp [keyIsinstance] at this
 
 end PyLean.CoreLibs.Functools

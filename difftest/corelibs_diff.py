@@ -1997,7 +1997,23 @@ def functools_gen(rng):
         return functools_dispatch_case(rng)
     if r == 25:
         return functools_register_case(rng)
-    k = rng.randrange(0, 13)
+    k = rng.randrange(0, 19)
+    if k == 13:
+        return {"fn": "functools.key_hash", "twin": twin_pick(rng)}
+    if k == 14:
+        return {"fn": "functools.key_isinstance", "twin": twin_pick(rng)}
+    if k == 15:
+        return {"fn": "functools.partial_duck", "twin": twin_pick(rng),
+                "pargs": [rng.randrange(0, 5) for _ in range(rng.randrange(0, 3))],
+                "args": [rng.randrange(5, 9) for _ in range(rng.randrange(0, 3))]}
+    if k == 16:
+        vals = rng.sample([1, 2, 3, 4], rng.randrange(0, 4))
+        return {"fn": "functools.repr_mut", "twin": twin_pick(rng), "vals": vals,
+                "mut": rng.choice(vals + [None])}
+    if k == 17:
+        return {"fn": "functools.repr_read", "bad": rng.choice(["__module__", "__qualname__"])}
+    if k == 18:
+        return {"fn": "functools.pm_new_fail", "which": rng.choice(["get", "repr", "none"])}
     if k == 9:
         return {"fn": "functools.make_key_meta", "n": rng.randrange(1, 3), "typed": rng.random() < .3,
                 "bad": rng.random() < .5}
@@ -2045,6 +2061,23 @@ def functools_wrapper_spec(rng):
             "setfail": rng.choice([None, None, None, "a", "__wrapped__"])}
 
 
+def twin_pick(rng):
+    return rng.choice(["c", "py"])
+
+
+def functools_hashres(f):
+    r = py_result(f)
+    if "exc" in r:
+        r["msg"] = "~unhashable type"
+    return r
+
+
+def functools_id(i):
+    def f():
+        return i
+    return f
+
+
 def functools_setstate_case(rng, twin):
     shape = rng.choice(["four"] * 8 + ["nottuple", "size"])
     state = {"shape": shape, "n": rng.choice([0, 3, 5])}
@@ -2053,8 +2086,12 @@ def functools_setstate_case(rng, twin):
     argkind = rng.choice(["tuple", "tuple", "tuple", "sub", "sub", "other"])
     state.update({"callable": rng.random() < .9, "raw": raw, "iter": it, "argkind": argkind,
                   "iterbad": rng.random() < .1, "kw": rng.choice(["none", "dict", "sub", "subbad", "other"]),
+                  "iter2": None, "truth": rng.choice(["std", "std", "std", "no", "raise"]),
+                  "lenv": rng.choice(["std", "std", "std", "raise"]),
                   "kwitems": rng.choice([[], [["a", 1]]]), "ns": rng.choice(["none", "dict", "other"]),
                   "nsitems": rng.choice([[], [["x", 1]]])})
+    if argkind == "sub" and rng.random() < .3 and twin == "py":
+        state["iter2"] = [("PH" if rng.random() < .3 else 20 + i) for i in range(rng.randrange(2, 4))]
     if argkind != "sub":
         state["iter"] = raw
     ph_raw = sum(1 for a in raw[:-1] if a == "PH")
@@ -2064,7 +2101,7 @@ def functools_setstate_case(rng, twin):
     # the finding corelibs-partial-setstate-phcount, reproduced in its own process, not in this one. The
     # tuple must not hold one element either, where the fast path takes over.
     more = [rng.randrange(0, 9) for _ in range(rng.randrange(0, 4))]
-    safe = argkind != "sub" or (twin == "py" and pyok) or \
+    safe = argkind != "sub" or (twin == "py" and pyok and state["iter2"] is None and state["truth"] == "std") or \
         (twin == "c" and len(state["iter"]) >= 2 and
          (ph_it == ph_raw or (ph_it < ph_raw and len(more) <= ph_raw)))
     return {"fn": "functools.setstate", "twin": twin, "state": state, "more": more, "call": safe}
@@ -2200,6 +2237,104 @@ def functools_run(case):
         it = functools_iter(case)
         args = (f, it) if case["initial"] is None else (f, it, case["initial"])
         return py_result(lambda: m.reduce(*args))
+    if fn == "key_hash":
+        K = m.cmp_to_key(lambda a, b: 0)
+        return py_result(lambda: hash(K(1))) if False else functools_hashres(lambda: hash(K(1)))
+    if fn == "key_isinstance":
+        K = m.cmp_to_key(lambda a, b: 0)
+
+        def go():
+            return isinstance(K(1), K)
+        r = py_result(go)
+        if "exc" in r:
+            r["msg"] = "~isinstance() arg 2 must be a type"
+        return r
+    if fn == "partial_duck":
+        P = m.partial
+        inner = functools_id(1)
+        pa = tuple(case["pargs"])
+
+        class Fake:
+            func = staticmethod(inner)
+            args = pa
+            keywords = {}
+            _phcount = 0
+            _merger = None
+            __class__ = property(lambda s: P)
+
+            def __call__(self):
+                return 0
+        fake = Fake()
+
+        def go():
+            p = P(fake, *case["args"])
+            return [1 if p.func is inner else 9 if p.func is fake else -1, list(p.args)]
+        return py_result(go)
+    if fn == "repr_mut":
+        P = m.partial
+        hold = []
+
+        class V:
+            def __init__(self, v):
+                self.v = v
+
+            def __repr__(self):
+                if self.v == case["mut"] and hold:
+                    hold[0].keywords["zz"] = 0
+                    hold.clear()
+                return str(self.v)
+
+        class F:
+            def __repr__(self):
+                return "f"
+
+            def __call__(self):
+                return 0
+        p = P(F(), **{"k%d" % v: V(v) for v in case["vals"]})
+        hold.append(p)
+        return py_result(lambda: repr(p))
+    if fn == "repr_read":
+        bad = case["bad"]
+
+        class Meta(type):
+            def __getattribute__(cls, name):
+                if name == bad:
+                    raise ValueError("read")
+                if name in ("__module__", "__qualname__"):
+                    return name
+                return super().__getattribute__(name)
+
+        class S(functools_P.partial, metaclass=Meta):
+            pass
+
+        class F:
+            def __repr__(self):
+                return "f"
+
+            def __call__(self):
+                return 0
+        return py_result(lambda: repr(S(F())))
+    if fn == "pm_new_fail":
+        w = case["which"]
+
+        class Obj:
+            def __getattr__(self, n):
+                if n == "__get__" and w == "get":
+                    raise ValueError("get")
+                raise AttributeError(n)
+
+            def __repr__(self):
+                if w == "repr":
+                    raise ValueError("repr")
+                return "obj"
+
+        def go():
+            functools_P.partialmethod(Obj())
+            return "pm"
+        r = py_result(go)
+        if r.get("exc") == "TypeError":
+            r["msg"] = "~the first argument must be a callable or a descriptor"
+        return r
     if fn == "make_key_meta":
         class M(type):
             def __eq__(self, o):
@@ -2684,12 +2819,26 @@ def functools_setstate(case, m):
             a = conv(st["raw"])
         elif ak == "sub":
             it, itbad = conv(st["iter"]), st["iterbad"]
+            it2 = conv(st["iter2"]) if st["iter2"] is not None else None
+            truth, lenv = st["truth"], st["lenv"]
+            calls = []
 
             class T(tuple):
                 def __iter__(self):
-                    if itbad:
+                    if itbad and not calls:
                         raise ValueError("iter")
-                    return iter(it)
+                    calls.append(1)
+                    return iter(it2 if it2 is not None and len(calls) > 1 else it)
+
+                def __bool__(self):
+                    if truth == "raise":
+                        raise ValueError("truth")
+                    return False if truth == "no" else tuple.__len__(self) != 0
+
+                def __len__(self):
+                    if lenv == "raise":
+                        raise ValueError("len")
+                    return tuple.__len__(self)
             a = T(conv(st["raw"]))
         else:
             a = list(conv(st["raw"]))

@@ -147,6 +147,8 @@ inductive KeyOther (α : Type) where
   | key (obj : Option α)
   /-- Another object with an `obj` attribute. -/
   | duck (obj : α)
+  /-- An object whose `obj` is a property that raises this, not `AttributeError`. -/
+  | raises (e : PyExc)
   /-- An object without `obj`. -/
   | plain
   deriving Repr, DecidableEq
@@ -163,6 +165,7 @@ def keyComparePy {α ρ τ : Type} (K : KeyOps ρ τ) (mycmp : α → α → Py 
     | none => throw noObjAttr
   let b ← match other with
     | .key (some b) | .duck b => pure b
+    | .raises e => throw e
     | .key none | .plain => throw noObjAttr
   let r ← mycmp a b
   match op with
@@ -176,7 +179,7 @@ def keyComparePy {α ρ τ : Type} (K : KeyOps ρ τ) (mycmp : α → α → Py 
 def keyCompareC {α ρ τ : Type} (K : KeyOps ρ τ) (mycmp : α → α → Py ρ) (op : CmpOp)
     (x : Option α) (other : KeyOther α) : Py τ :=
   match other with
-  | .duck _ | .plain => .error (.typeError "other argument must be K instance")
+  | .duck _ | .raises _ | .plain => .error (.typeError "other argument must be K instance")
   | .key y =>
     match x, y with
     | some a, some b => do
@@ -191,5 +194,14 @@ def keyNew {α : Type} (pos : List α) (kw : List (String × α)) : Py α :=
   | [a], [] => .ok a
   | [], [("obj", a)] => .ok a
   | _, _ => .error (.typeError "~K() takes exactly one argument 'obj'")
+
+/-- `hash(K(x))`: `__hash__ = None` at Lib/functools.py:222, and in C a type with `tp_richcompare` and no `tp_hash`, which
+`PyType_Ready` gives `__hash__ = None`. -/
+def keyHash : Py Unit := .error (.typeError "~unhashable type")
+
+/-- `isinstance(k, K)`, for the result `K` of `cmp_to_key`: a class in Python, and in C a callable instance of
+`functools.KeyWrapper`, which is no class at all. -/
+def keyIsinstance (py : Bool) : Py Bool :=
+  if py then .ok true else .error (.typeError "~isinstance() arg 2 must be a type")
 
 end PyLean.CoreLibs.Functools
