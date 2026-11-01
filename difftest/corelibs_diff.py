@@ -1666,6 +1666,13 @@ def functools_iter(case):
         yield from case["xs"]
         if case["itfail"]:
             raise ValueError("it")
+    if case.get("iterraise") and not case["noniter"]:
+        exc = {"TypeError": TypeError, "ValueError": ValueError}[case["iterraise"]]
+
+        class Raises:
+            def __iter__(self):
+                raise exc("mine")
+        return Raises()
     return 5 if case["noniter"] else gen()
 
 
@@ -1885,6 +1892,7 @@ def functools_gen(rng):
         xs = [rng.randrange(-3, 6) for _ in range(rng.randrange(0, 5))]
         return {"fn": "functools.reduce", "twin": twin, "xs": xs,
                 "noniter": rng.random() < .1, "itfail": rng.random() < .2,
+                "iterraise": rng.choice([None, None, None, None, "TypeError", "ValueError"]),
                 "initial": rng.choice([None, 0, 7]), "kind": rng.choice(["add", "sub"]),
                 "bad": rng.choice([None, None, 2])}
     if r == 1:
@@ -1989,7 +1997,17 @@ def functools_gen(rng):
         return functools_dispatch_case(rng)
     if r == 25:
         return functools_register_case(rng)
-    k = rng.randrange(0, 9)
+    k = rng.randrange(0, 13)
+    if k == 9:
+        return {"fn": "functools.make_key_meta", "n": rng.randrange(1, 3), "typed": rng.random() < .3,
+                "bad": rng.random() < .5}
+    if k == 10:
+        return {"fn": "functools.lru_stacked", "twin": rng.choice(["c", "py"]), "m1": rng.randrange(0, 9),
+                "m2": rng.randrange(0, 9), "t1": rng.random() < .5, "t2": rng.random() < .5}
+    if k == 11:
+        return {"fn": "functools.wraps_ph", "which": rng.choice(["wrapped", "assigned", "updated", "none"])}
+    if k == 12:
+        return {"fn": "functools.update_wrapper_fn", "attr": rng.choice(["a", "b"]), "entry": rng.choice(["x", "y"])}
     if k == 0:
         names = ["a", "b", "c"]
         return {"fn": "functools.update_wrapper", "viawraps": rng.random() < .3,
@@ -2002,8 +2020,9 @@ def functools_gen(rng):
                 "updated": rng.choice([["__dict__"], ["__dict__"], [], ["missing"]])}
     if k == 1:
         return {"fn": "functools.cached_get", "name": rng.choice(["p", "p", None]),
-                "func": rng.choice(["ok", "mutate", "raise"]),
-                "dict": rng.choice(["rw", "rw", "rw", "none", "class", "frozen"]),
+                "func": rng.choice(["ok", "mutate", "raise", "writeraise"]),
+                "dict": rng.choice(["rw", "rw", "rw", "none", "class", "frozen", "dictraises", "getfails",
+                                    "setfails"]),
                 "items": rng.choice([[], [["p", 1]], [["q", 1]]])}
     if k == 2:
         return {"fn": "functools.cached_init",
@@ -2181,6 +2200,55 @@ def functools_run(case):
         it = functools_iter(case)
         args = (f, it) if case["initial"] is None else (f, it, case["initial"])
         return py_result(lambda: m.reduce(*args))
+    if fn == "make_key_meta":
+        class M(type):
+            def __eq__(self, o):
+                return self is o
+
+        class K(metaclass=M if case["bad"] else type):
+            __hash__ = object.__hash__
+
+        def go():
+            functools_P._make_key(tuple(K() for _ in range(case["n"])), {}, case["typed"])
+            return "key"
+        r = py_result(go)
+        if "exc" in r:
+            r["msg"] = "~unhashable type"
+        return r
+    if fn == "lru_stacked":
+        mod = functools_C if case["twin"] == "c" else functools_P
+        inner = mod.lru_cache(maxsize=case["m1"], typed=case["t1"])(lambda x: x)
+        outer = mod.lru_cache(maxsize=case["m2"], typed=case["t2"])(inner)
+        p = outer.cache_parameters()
+        return {"ok": [[p["maxsize"], p["typed"]],
+                       1 if outer.cache_info is inner.cache_info or "cache_info" in outer.__dict__ else 2]}
+    if fn == "wraps_ph":
+        w = case["which"]
+        ph = functools_P.Placeholder
+        kw = {"assigned": (), "updated": ()}
+        target = "x"
+        if w == "wrapped":
+            target = ph
+        elif w != "none":
+            kw[w] = ph
+
+        def go():
+            functools_P.wraps(target, **kw)
+            return "partial"
+        return py_result(go)
+    if fn == "update_wrapper_fn":
+        attr, entry = case["attr"], case["entry"]
+
+        class Wd:
+            __name__ = property(lambda self: attr)
+
+        o = Wd()
+        o.__dict__["__name__"] = entry
+
+        def w():
+            pass
+        functools_P.update_wrapper(w, o)
+        return {"ok": [w.__name__, w.__dict__.get("__name__")]}
     if fn == "reduce_wrapper":
         vals = {"function": lambda a, b: 1, "sequence": [1, 2], "initial": 0}
         kw = {k: vals[k] for k in case["names"]}
@@ -2888,12 +2956,36 @@ def functools_cached(case):
         pass
     name, mode, dk, items = case["name"], case["func"], case["dict"], case["items"]
 
+    class Custom:
+        __slots__ = ("store",)
+
+        def __init__(self, store):
+            self.store = store
+
+        @property
+        def __dict__(self):
+            if dk == "dictraises":
+                raise ValueError("dict")
+            return self.store
+
+    class GetFails(dict):
+        def get(self, *a):
+            raise ValueError("get")
+
+    class SetFails(dict):
+        def __setitem__(self, k, v):
+            raise ValueError("set")
+
     def func(self):
+        d = self.__dict__
         if mode == "raise":
             raise ValueError("f")
+        if mode == "writeraise":
+            dict.__setitem__(d, "extra", 3)
+            raise ValueError("f")
         if mode == "mutate":
-            self.__dict__["extra"] = 3
-            self.__dict__[name or "p"] = 9
+            dict.__setitem__(d, "extra", 3)
+            dict.__setitem__(d, name or "p", 9)
         return 5
     cp = functools_P.cached_property(func)
     cp.attrname = name
@@ -2903,21 +2995,32 @@ def functools_cached(case):
         inst = type("S", (), {"__slots__": ()})()
     elif dk == "frozen":
         inst = functools_frozen(dict(items))
+    elif dk == "dictraises":
+        inst = Custom({})
+    elif dk == "getfails":
+        inst = Custom(GetFails(items))
+    elif dk == "setfails":
+        inst = Custom(SetFails(items))
     else:
         inst = Plain()
         inst.__dict__.update(items)
+
+    def state():
+        if dk in ("class", "none", "dictraises"):
+            return None
+        return sorted([k, x] for k, x in inst.__dict__.items())
 
     def go():
         v = cp.__get__(inst, Plain)
         if v is cp:
             return "self"
-        return [v, sorted([k, x] for k, x in inst.__dict__.items())]
+        return [v, state()]
     r = py_result(go)
     if "exc" in r and "No '__dict__'" in r["msg"]:
         r["msg"] = "~No '__dict__' attribute on instance"
     if "exc" in r and "does not support item assignment" in r["msg"]:
         r["msg"] = "~The '__dict__' attribute does not support item assignment"
-    return r
+    return {"ok": {"r": r, "d": state()}}
 
 
 class functools_FrozenDict(dict):

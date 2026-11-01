@@ -1,0 +1,50 @@
+id: corelibs-make-key-metaclass
+title: "The pure Python lru_cache raises TypeError on an instance of a class with an unhashable metaclass, and C does not"
+priority: P4
+kind: twin-mismatch
+module: corelibs
+files: [Lib/functools.py]
+functions: ["_make_key"]
+summary: |
+  _make_key tests `type(key[0]) in fasttypes`, a set, which hashes the type. A class whose metaclass defines __eq__ and
+  so has __hash__ = None cannot be hashed, so an instance of it, itself hashable, as the only argument of an untyped
+  cache is a TypeError. The C twin tests the exact type with Py_IS_TYPE and gets on.
+likelihood: |
+  Very low: it needs that metaclass and the pure Python twin.
+maybe_intended: |
+  Not intended, but not worth a report by itself; `is` tests on the two types would avoid it.
+reproducer: |
+  from test.support import import_helper
+  py = import_helper.import_fresh_module('functools', blocked=['_functools'])
+  c = import_helper.import_fresh_module('functools', fresh=['_functools'])
+  class M(type):
+      def __eq__(self, o):
+          return self is o
+  class K(metaclass=M):
+      __hash__ = object.__hash__
+  def attempt(m):
+      f = m.lru_cache(maxsize=None)(lambda x: 1)
+      try:
+          return f(K())
+      except TypeError:
+          return 'TypeError'
+  a, b = attempt(c), attempt(py)
+  print(a, b)
+  if a == 1 and b == 'TypeError':
+      print('REPRODUCED corelibs-make-key-metaclass')
+expected: |
+  1 from both twins.
+observed: |
+  python3 3.14.7: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Nothing explicit: the C twin.
+cause: |
+  Lib/functools.py:549 uses set membership on the type; Modules/_functoolsmodule.c:1140-1199 uses exact type checks.
+possible_fix: |
+  Compare the type with str and int by identity.
+duplicates:
+  issues: []
+  queries: ["gh search issues _make_key metaclass unhashable lru_cache", "bugforge README: no match for _make_key"]
+lean:
+  property: PyLean.CoreLibs.Functools.MakeKeyHashesType
+  theorem: PyLean.CoreLibs.Functools.makeKeyHashesType_refuted

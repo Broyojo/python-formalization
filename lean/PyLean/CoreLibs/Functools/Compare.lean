@@ -84,11 +84,11 @@ def derived {α ρ : Type} (P : OrdPrims α ρ) (s : Shape) (a b : α) : Py (Ret
 
 /-- A class as `total_ordering` reads and writes it. `attr o` is the identity of `getattr(cls, op, None)`,
 found through the MRO, so an inherited comparison counts; `objectAttr o` is `getattr(object, op, None)`.
-`setAttr` is `setattr(cls, opname, opfunc)`, which a metaclass may refuse. -/
+`setAttr` is `setattr(cls, opname, opfunc)`, which a metaclass may refuse; `opfunc` is known by its `Shape`. -/
 structure OrdClass where
   attr : OrdOp → Py (Option Nat)
   objectAttr : OrdOp → Option Nat
-  setAttr : OrdOp → Py Unit
+  setAttr : OrdOp → Shape → Py Unit
 
 /-- `{op for op in _convert if getattr(cls, op, None) is not getattr(object, op, None)}`,
 Lib/functools.py:191. -/
@@ -108,18 +108,19 @@ def maxRoot (roots : List OrdOp) : Option OrdOp :=
   else none
 
 /-- `for opname, opfunc in _convert[root]: if opname not in roots: setattr(...)`,
-Lib/functools.py:195-198: the methods added, stopping at the first refused `setattr`. -/
-def addMissing (c : OrdClass) (roots : List OrdOp) : List (OrdOp × Shape) → Py (List OrdOp)
+Lib/functools.py:195-198: the methods added, each with its function, stopping at the first refused `setattr`.
+`opfunc.__name__ = opname` at :197 writes to the shared function; a generated method has the name of its slot. -/
+def addMissing (c : OrdClass) (roots : List OrdOp) : List (OrdOp × Shape) → Py (List (OrdOp × Shape))
   | [] => .ok []
-  | (o, _) :: rest =>
+  | (o, s) :: rest =>
     if o ∈ roots then addMissing c roots rest
     else do
-      c.setAttr o
+      c.setAttr o s
       let more ← addMissing c roots rest
-      pure (o :: more)
+      pure ((o, s) :: more)
 
 /-- `total_ordering(cls)`, Lib/functools.py:188-199: the root and the methods added. -/
-def totalOrdering (c : OrdClass) : Py (OrdOp × List OrdOp) := do
+def totalOrdering (c : OrdClass) : Py (OrdOp × List (OrdOp × Shape)) := do
   let roots ← rootsOf c ordOps
   match maxRoot roots with
   | none => throw (.valueError "must define at least one ordering operation: < > <= >=")

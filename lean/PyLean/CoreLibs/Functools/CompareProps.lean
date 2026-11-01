@@ -180,24 +180,24 @@ theorem rootsOf_mem (c : OrdClass) : ∀ (os roots : List OrdOp), rootsOf c os =
 /-- `total_ordering(cls)`: a comparison that differs from `object`'s counts as a root, inherited or not
 (the note in the docs); with none it raises `ValueError`; the root is the greatest name; and when every
 `setattr` succeeds, every comparison ends up defined, with exactly the missing ones added. A refused
-`setattr` escapes. -/
+`setattr` escapes, in `TotalOrderingExact`. -/
 def TotalOrderingFills : Prop :=
   (∀ c : OrdClass, (∀ o, c.attr o = .ok (c.objectAttr o)) →
     totalOrdering c = .error (.valueError "must define at least one ordering operation: < > <= >=")) ∧
-  (∀ (c : OrdClass) (root : OrdOp) (added : List OrdOp), totalOrdering c = .ok (root, added) →
+  (∀ (c : OrdClass) (root : OrdOp) (added : List (OrdOp × Shape)), totalOrdering c = .ok (root, added) →
     (∃ a, c.attr root = .ok a ∧ a ≠ c.objectAttr root) ∧
-    ∀ o, o ∈ added → ∀ a, c.attr o = .ok a → a = c.objectAttr o) ∧
-  (∀ c : OrdClass, (∀ o, c.setAttr o = .ok ()) → (∃ o a, c.attr o = .ok a ∧ a ≠ c.objectAttr o) →
+    ∀ o, o ∈ added.map Prod.fst → ∀ a, c.attr o = .ok a → a = c.objectAttr o) ∧
+  (∀ c : OrdClass, (∀ o s, c.setAttr o s = .ok ()) → (∃ o a, c.attr o = .ok a ∧ a ≠ c.objectAttr o) →
     (∀ o, ∃ a, c.attr o = .ok a) →
     ∃ root added, totalOrdering c = .ok (root, added) ∧
-      ∀ o, (∃ a, c.attr o = .ok a ∧ a ≠ c.objectAttr o) ∨ o ∈ added)
+      ∀ o, (∃ a, c.attr o = .ok a ∧ a ≠ c.objectAttr o) ∨ o ∈ added.map Prod.fst)
 
 theorem convert_covers (r : OrdOp) : ∀ o : OrdOp, o = r ∨ o ∈ (convert r).map Prod.fst := by
   intro o
   cases r <;> cases o <;> simp [convert]
 
-theorem addMissing_ok (c : OrdClass) (roots : List OrdOp) (hs : ∀ o, c.setAttr o = .ok ()) :
-    ∀ l : List (OrdOp × Shape), addMissing c roots l = .ok ((l.map Prod.fst).filter (· ∉ roots))
+theorem addMissing_ok (c : OrdClass) (roots : List OrdOp) (hs : ∀ o s, c.setAttr o s = .ok ()) :
+    ∀ l : List (OrdOp × Shape), addMissing c roots l = .ok (l.filter (fun p => decide (p.1 ∉ roots)))
   | [] => rfl
   | (o, s) :: rest => by
     have ih := addMissing_ok c roots hs rest
@@ -206,8 +206,8 @@ theorem addMissing_ok (c : OrdClass) (roots : List OrdOp) (hs : ∀ o, c.setAttr
     · simp [addMissing, h, ih, hs, bind, Except.bind, pure, Except.pure]
 
 theorem addMissing_mem (c : OrdClass) (roots : List OrdOp) :
-    ∀ (l : List (OrdOp × Shape)) (added : List OrdOp), addMissing c roots l = .ok added →
-    ∀ o ∈ added, o ∉ roots
+    ∀ (l : List (OrdOp × Shape)) (added : List (OrdOp × Shape)), addMissing c roots l = .ok added →
+    ∀ o ∈ added.map Prod.fst, o ∉ roots
   | [], added, h, o, ho => by
     simp only [addMissing, Except.ok.injEq] at h
     subst h
@@ -219,7 +219,7 @@ theorem addMissing_mem (c : OrdClass) (roots : List OrdOp) :
       exact addMissing_mem c roots rest added h o ho
     · rw [if_neg hx] at h
       simp only [bind, Except.bind] at h
-      cases hs : c.setAttr x with
+      cases hs : c.setAttr x s with
       | error e => simp [hs] at h
       | ok u =>
         simp only [hs] at h
@@ -228,6 +228,7 @@ theorem addMissing_mem (c : OrdClass) (roots : List OrdOp) :
         | ok more =>
           simp only [hm, pure, Except.pure, Except.ok.injEq] at h
           subst h
+          simp only [List.map_cons] at ho
           rcases List.mem_cons.mp ho with rfl | ho
           · exact hx
           · exact addMissing_mem c roots rest more hm o ho
@@ -296,7 +297,7 @@ theorem totalOrderingFills_proven : TotalOrderingFills := by
         · exact absurd hin h4
     obtain ⟨r, hm⟩ := hsome
     have hrm := (maxRoot_is_max roots r hm).1
-    refine ⟨r, ((convert r).map Prod.fst).filter (· ∉ roots), ?_, ?_⟩
+    refine ⟨r, (convert r).filter (fun p => decide (p.1 ∉ roots)), ?_, ?_⟩
     · simp only [totalOrdering, hr, hm, addMissing_ok c roots hs, bind, Except.bind, pure,
         Except.pure]
       first | rfl | skip
@@ -306,7 +307,8 @@ theorem totalOrderingFills_proven : TotalOrderingFills := by
     · right
       rcases convert_covers r o with rfl | h
       · exact absurd hrm ho
-      · exact List.mem_filter.mpr ⟨h, by simpa using ho⟩
+      · obtain ⟨p, hp, rfl⟩ := List.mem_map.1 h
+        exact List.mem_map.2 ⟨p, List.mem_filter.2 ⟨hp, by simpa using ho⟩, rfl⟩
 
 /-! ### `cmp_to_key` -/
 

@@ -61,9 +61,33 @@ theorem reduceTwins_proven : ReduceTwins := by
     subst h
     simp only [reduceC, reduceCLoop, reduceCLoop_some, reduceLoop_fold]
 
+/-- `reduce` with an `iter()` that raises: Python passes on what `__iter__` raised. C does too, for anything that is not a
+`TypeError`. -/
+def ReduceIterRaises : Prop :=
+  ∀ (α : Type) (f : α → α → Py α) (e : PyExc) (t : Bool) (i : Option α),
+    reducePy f (.iterRaises e t) i = .error e ∧ (t = false → reduceC f (.iterRaises e t) i = .error e)
+
+theorem reduceIterRaises_proven : ReduceIterRaises := by
+  intro α f e t i
+  refine ⟨rfl, ?_⟩
+  intro h
+  subst h
+  rfl
+
+/-- `reduce` in C raises what `__iter__` raises. False: a `TypeError`, a subclass too, is replaced by "reduce() arg 2 must
+support iteration", so an error inside a user's `__iter__` is reported as a wrong argument. -/
+def ReduceCKeepsIterError : Prop :=
+  ∀ (α : Type) (f : α → α → Py α) (e : PyExc) (t : Bool) (i : Option α), reduceC f (.iterRaises e t) i = .error e
+
+theorem reduceCKeepsIterError_refuted : ¬ReduceCKeepsIterError := by
+  intro h
+  have := h Nat (fun a _ => .ok a) (.typeError "mine") true none
+  simp [reduceC] at this
+
 /-- `_make_key` and `lru_cache_make_key` build the same key, for every positional and keyword
-arguments, `typed` or not, including the single fast argument. The key is what decides hits, so
-this is the twin's agreement on cache identity. -/
+arguments, `typed` or not, including the single fast argument, as long as hashing the type of the argument does not
+raise, for which see `MakeKeyHashesType`. The key is what decides hits, so this is the twin's agreement on cache
+identity. -/
 def MakeKeyTwins : Prop :=
   ∀ (α : Type) (O : MkKeyOps α) (args : List α) (kwds : List (String × α)) (typed : Bool),
     makeKeyPy O args kwds typed = makeKeyC O args kwds typed
@@ -88,5 +112,37 @@ theorem makeKeyTwins_proven : MakeKeyTwins := by
       | [] => simp [makeKeyPy, makeKeyC]
       | [a] => simp [makeKeyPy, makeKeyC]
       | a :: b :: rest => simp [makeKeyPy, makeKeyC]
+
+/-- The whole of `_make_key` agrees with C. False: `type(key[0]) in fasttypes` hashes the type, so an instance of a class
+whose metaclass defines `__eq__` without `__hash__` is a `TypeError` in Python, as the only argument of an untyped cache,
+where C tests the exact type and gets on. -/
+def MakeKeyHashesType : Prop :=
+  ∀ (α : Type) (O : MkKeyOps α) (h : α → Py Unit) (args : List α) (kwds : List (String × α)) (t : Bool),
+    makeKeyPyFull O h (.ok t) args kwds = .ok (makeKeyC O args kwds t)
+
+theorem makeKeyHashesType_refuted : ¬MakeKeyHashesType := by
+  intro h
+  have := h Nat ⟨fun _ => false, fun _ => 0⟩ (fun _ => .error (.typeError "unhashable")) [1] [] false
+  simp [makeKeyPyFull] at this
+
+/-- The narrowed statement: with a type that hashes, the full `_make_key` is the key of C; and a truth test on `typed` that
+raises comes out on the call in Python, where C has done it when the cache was made. -/
+def MakeKeyFullTwins : Prop :=
+  ∀ (α : Type) (O : MkKeyOps α) (h : α → Py Unit) (args : List α) (kwds : List (String × α)) (t : Bool) (e : PyExc),
+    (∀ a, h a = .ok ()) → makeKeyPyFull O h (.ok t) args kwds = .ok (makeKeyC O args kwds t) ∧
+    makeKeyPyFull O h (.error e) args kwds = .error e
+
+theorem makeKeyFullTwins_proven : MakeKeyFullTwins := by
+  intro α O h args kwds t e hh
+  refine ⟨?_, rfl⟩
+  rw [← makeKeyTwins_proven α O args kwds t]
+  cases t with
+  | true => rfl
+  | false =>
+    match args, kwds with
+    | [], _ => rfl
+    | [a], [] => simp [makeKeyPyFull, hh]
+    | [_], _ :: _ => rfl
+    | _ :: _ :: _, _ => rfl
 
 end PyLean.CoreLibs.Functools
