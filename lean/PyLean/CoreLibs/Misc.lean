@@ -225,21 +225,12 @@ def numbersEntries : List Entry := [
     source := "docstrings of Integral, Rational.__float__"
     status := .proven, prop := ``Numbers.IntegralRationalAgree, thm := some ``Numbers.integralRationalAgree_proven },
   { id := "misc-numbers-abstract-stubs", pyFile := "Lib/numbers.py"
-    pyFns := ["Complex.__complex__", "Complex.real", "Complex.imag", "Complex.__add__", "Complex.__radd__",
-              "Complex.__neg__", "Complex.__pos__", "Complex.__mul__", "Complex.__rmul__",
-              "Complex.__truediv__", "Complex.__rtruediv__", "Complex.__pow__", "Complex.__rpow__",
-              "Complex.__abs__", "Complex.conjugate", "Complex.__eq__", "Real.__float__", "Real.__trunc__",
-              "Real.__floor__", "Real.__ceil__", "Real.__round__", "Real.__floordiv__",
-              "Real.__rfloordiv__", "Real.__mod__", "Real.__rmod__", "Real.__lt__", "Real.__le__",
-              "Rational.numerator", "Rational.denominator", "Integral.__int__", "Integral.__pow__",
-              "Integral.__lshift__", "Integral.__rlshift__", "Integral.__rshift__",
-              "Integral.__rrshift__", "Integral.__and__", "Integral.__rand__", "Integral.__xor__",
-              "Integral.__rxor__", "Integral.__or__", "Integral.__ror__", "Integral.__invert__"]
+    pyFns := []
     statement := "Every abstract method raises NotImplementedError for every argument, except Complex.__complex__, which returns None."
     source := "bodies of the abstract methods"
     status := .proven, prop := ``Numbers.AbstractStubs, thm := some ``Numbers.abstractStubs_proven },
   { id := "misc-numbers-mixin-over-stub", pyFile := "Lib/numbers.py"
-    pyFns := ["Complex.__neg__", "Complex.__sub__", "Complex.__rsub__"]
+    pyFns := ["Complex.__sub__", "Complex.__rsub__"]
     statement := "A mixin over a primitive that is still abstract raises NotImplementedError; it cannot return a wrong number."
     source := "invariant"
     status := .proven, prop := ``Numbers.MixinOverStub, thm := some ``Numbers.mixinOverStub_proven }

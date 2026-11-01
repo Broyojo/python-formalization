@@ -1,0 +1,46 @@
+id: corelibs-lru-cache-noncallable
+title: "lru_cache(1)(5) raises TypeError with the C wrapper and is accepted by the Python wrapper"
+priority: P4
+kind: twin-mismatch
+module: corelibs
+files: [Lib/functools.py, Modules/_functoolsmodule.c]
+functions: ["lru_cache_new", "_lru_cache_wrapper"]
+summary: |
+  lru_cache_new checks PyCallable_Check on the user function when the wrapper is built. The pure-Python wrapper
+  takes any object, and fails only when called. So the same decoration raises at definition time in one twin
+  and at the first call in the other.
+likelihood: |
+  Negligible: an error either way, only its moment differs.
+maybe_intended: |
+  Harmless. Recorded so the twin difference is on file; not worth a report.
+reproducer: |
+  import functools
+  from test.support import import_helper
+  py = import_helper.import_fresh_module('functools', blocked=['_functools'])
+  def go(m):
+      try:
+          m.lru_cache(maxsize=1)(5)
+          return 'accepted'
+      except TypeError as e:
+          return 'TypeError'
+  c, p = go(functools), go(py)
+  print('C:', c, 'Python:', p)
+  if c == 'TypeError' and p == 'accepted':
+      print('REPRODUCED corelibs-lru-cache-noncallable')
+expected: |
+  The same outcome in both twins.
+observed: |
+  python3 3.14.7: C: TypeError, Python: accepted. REPRODUCED. main (3.16.0a1+dev): NOT REPRODUCED: the pure-Python wrapper rejects a non-callable there too.
+promised_by: |
+  Nothing.
+cause: |
+  Modules/_functoolsmodule.c:1541-1545.
+possible_fix: |
+  None needed.
+duplicates:
+  issues: []
+  related: ["#66380 lrucache should reject maxsize as a function"]
+  queries: ["gh search issues lru_cache callable check", "bugforge README: no match for lru_cache"]
+lean:
+  property: PyLean.CoreLibs.Functools.LruAcceptsSameFunctions
+  theorem: PyLean.CoreLibs.Functools.lruAcceptsSameFunctions_refuted

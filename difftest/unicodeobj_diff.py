@@ -124,6 +124,178 @@ def run_obj_compare(c):
 # ==== end object slice ====
 
 
+# ==== error handler callbacks (fn names codec_cb_*) ====
+
+CB_BYTES = [0, 0x41, 0x7f, 0x80, 0xff, 0x5c, 0x78, 0x75, 0xed, 0xd8, 0xdc, 0xc2, 0xe2, 0x2b, 0x2d, 0xfe]
+CB_REPS = ["", "x", "xyz", "\xe9", "\u20ac", "\U0001f600", "\ud800"]
+CB_POS = [0, 1, 2, 3, 4, 8, -1, -2, -3, 99, -99, 2 ** 63 - 1, 2 ** 63, -2 ** 63, -2 ** 63 - 1, 2 ** 64]
+CB_CODECS = ["utf-8", "utf-16", "utf-32", "ascii", "unicode_escape", "raw_unicode_escape", "utf-7", "charmap"]
+CB_TABLE = [cp for cp in (97, 98, 0xfffe, 0x20ac, 0x1f600)]
+
+
+def cb_bytes(rng):
+    b = [rng.choice(CB_BYTES) for _ in range(rng.randint(0, 8))]
+    # most cases should reach the handler, so most inputs carry something undecodable
+    return b + [rng.choice([0xff, 0xed, 0x5c, 0xfe])] if rng.random() < 0.7 else b
+
+
+def cb_pos(rng):
+    """A position: mostly `end + small`, which makes progress, so the decoder gets to finish."""
+    if rng.random() < 0.72:
+        return rng.choice([0, 0, 0, 0, 1, 1, 2, -1]), True
+    return rng.choice(CB_POS), False
+
+
+def gen_dec_step(rng):
+    r = rng.random()
+    if r < 0.08:
+        return {"t": "raise"}
+    if r < 0.16:
+        return {"t": "bad", "form": rng.randint(0, 3)}
+    o = rng.random()
+    if o < 0.84:
+        obj = {"k": "keep"}
+    elif o < 0.94:
+        obj = {"k": "set", "b": cb_bytes(rng)}
+    elif o < 0.97:
+        obj = {"k": "wrong"}
+    else:
+        obj = {"k": "del"}
+    pos, rel = cb_pos(rng)
+    return {"t": "ret", "rep": cps_of(rng.choice(CB_REPS)), "pos": pos, "rel": rel, "obj": obj}
+
+
+@gen("codec", 8)
+def gen_codec_cb_decode(rng):
+    c = {"mod": "unicodeobj", "fn": "codec_cb_decode", "codec": rng.choice(CB_CODECS), "b": cb_bytes(rng),
+         "final": rng.random() < 0.7, "bo": rng.choice([-1, 0, 1]), "table": CB_TABLE,
+         "script": [gen_dec_step(rng) for _ in range(rng.randint(1, 6))]}
+    if rng.random() < 0.03:
+        c["missing"] = True
+    return c
+
+
+BAD_RETURNS = ["x", ("x",), (b"x", 1), ("x", 1, 2)]
+
+
+def dec_handler(script):
+    items = list(script)
+
+    def handler(e):
+        if not items:
+            raise RuntimeError("done")
+        r = items.pop(0)
+        if r["t"] == "raise":
+            raise ValueError("boom")
+        if r["t"] == "bad":
+            return BAD_RETURNS[r["form"]]
+        obj = r["obj"]
+        if obj["k"] == "set":
+            e.object = bytes(obj["b"])
+        elif obj["k"] == "wrong":
+            e.object = "text"
+        elif obj["k"] == "del":
+            del e.object
+        return s_of(r["rep"]), r["pos"] + e.end if r["rel"] else r["pos"]
+    return handler
+
+
+@run("codec_cb_decode")
+def run_codec_cb_decode(c):
+    import codecs
+    import warnings
+    codecs.register_error("uo_cb", dec_handler(c["script"]))
+    errors = "uo_nonesuch" if c.get("missing") else "uo_cb"
+    b, final, name = bytes(c["b"]), c["final"], c["codec"]
+    if name == "ascii":
+        return cps_of(codecs.ascii_decode(b, errors)[0])
+    if name == "charmap":
+        return cps_of(codecs.charmap_decode(b, errors, s_of(c["table"]))[0])
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        if name == "utf-8":
+            s, n = codecs.utf_8_decode(b, errors, final)
+        elif name in ("utf-16", "utf-32"):
+            width = 2 if name == "utf-16" else 4
+            s, n = getattr(codecs, WIDE_DEC[width, c["bo"]])(b, errors, final)
+        elif name == "unicode_escape":
+            s, n = codecs.unicode_escape_decode(b, errors, final)
+        elif name == "raw_unicode_escape":
+            s, n = codecs.raw_unicode_escape_decode(b, errors, final)
+        else:
+            s, n = codecs.utf_7_decode(b, errors, final)
+    return cps_of(s) if final else [cps_of(s), n]
+
+
+CB_CHARS = [0x41, 0x7a, 0x80, 0xe9, 0xff, 0x100, 0x20ac, 0xd800, 0xdbff, 0xdc80, 0xdcff, 0xdfff, 0x1f600]
+CB_ENC_REPS = ["", "?", "xy", "\xe9", "\u20ac", "\ud800"]
+CB_ENC_BYTES = [b"", b"x", b"xy", b"xyz", b"wxyz", b"\xff"]
+CB_ENC_CODECS = ["ascii", "latin-1", "utf-8", "utf-16", "utf-32", "charmap"]
+
+
+def gen_enc_step(rng):
+    r = rng.random()
+    if r < 0.07:
+        return {"t": "raise"}
+    if r < 0.13:
+        return {"t": "bad", "form": rng.randint(0, 2)}
+    if r < 0.18:
+        return {"t": "badrep", "pos": rng.choice([0, 1, 2 ** 64])}
+    pos, rel = cb_pos(rng)
+    if rng.random() < 0.65:
+        return {"t": "str", "rep": cps_of(rng.choice(CB_ENC_REPS)), "pos": pos, "rel": rel}
+    return {"t": "bytes", "rep": list(rng.choice(CB_ENC_BYTES)), "pos": pos, "rel": rel}
+
+
+@gen("codec", 8)
+def gen_codec_cb_encode(rng):
+    s = [rng.choice(CB_CHARS) for _ in range(rng.randint(0, 6))]
+    if rng.random() < 0.7:
+        s.insert(rng.randint(0, len(s)), rng.choice([0xd800, 0xdc80, 0xdfff]))
+    c = {"mod": "unicodeobj", "fn": "codec_cb_encode", "codec": rng.choice(CB_ENC_CODECS), "s": s,
+         "bo": rng.choice([-1, 0, 1]), "map": {"k": "build", "table": [0x41, 0x7a, 0xe9, 0x20ac]},
+         "script": [gen_enc_step(rng) for _ in range(rng.randint(1, 6))]}
+    if rng.random() < 0.03:
+        c["missing"] = True
+    return c
+
+
+ENC_BAD = ["x", ("x",), ("x", 1, 2)]
+
+
+def enc_handler(script):
+    items = list(script)
+
+    def handler(e):
+        if not items:
+            raise RuntimeError("done")
+        r = items.pop(0)
+        if r["t"] == "raise":
+            raise ValueError("boom")
+        if r["t"] == "bad":
+            return ENC_BAD[r["form"]]
+        if r["t"] == "badrep":
+            return 1, r["pos"]
+        w = s_of(r["rep"]) if r["t"] == "str" else bytes(r["rep"])
+        return w, r["pos"] + e.end if r["rel"] else r["pos"]
+    return handler
+
+
+@run("codec_cb_encode")
+def run_codec_cb_encode(c):
+    import codecs
+    codecs.register_error("uo_cb", enc_handler(c["script"]))
+    errors = "uo_nonesuch" if c.get("missing") else "uo_cb"
+    s, name = s_of(c["s"]), c["codec"]
+    if name == "charmap":
+        return list(codecs.charmap_encode(s, errors, codecs.charmap_build(s_of(c["map"]["table"])))[0])
+    if name in ("utf-16", "utf-32"):
+        name += {-1: "-le", 0: "", 1: "-be"}[c["bo"]]
+    return list(s.encode(name, errors))
+
+# ==== end error handler callbacks ====
+
+
 # ==== codec slice (fn names codec_*) ====
 
 U8_BYTES = [0, 0x41, 0x7f, 0x80, 0x8f, 0x90, 0x9f, 0xa0, 0xbf, 0xc0, 0xc1, 0xc2, 0xdf, 0xe0, 0xe1, 0xec,

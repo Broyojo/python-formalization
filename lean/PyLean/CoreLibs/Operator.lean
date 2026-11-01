@@ -11,11 +11,7 @@ open PyLean.Registry
 def entries : List Entry := [
   { id := "corelibs-operator-binary-dispatch"
     pyFile := "Lib/operator.py"
-    pyFns := ["add", "sub", "mul", "matmul", "floordiv", "truediv", "mod", "lshift", "rshift", "and_",
-      "xor", "or_", "pow", "_operator_add_impl", "_operator_sub_impl", "_operator_mul_impl",
-      "_operator_matmul_impl", "_operator_floordiv_impl", "_operator_truediv_impl",
-      "_operator_mod_impl", "_operator_lshift_impl", "_operator_rshift_impl",
-      "_operator_and__impl", "_operator_xor_impl", "_operator_or__impl", "_operator_pow_impl"]
+    pyFns := ["sub", "matmul", "floordiv", "truediv", "mod", "lshift", "rshift", "and_", "xor", "or_", "_operator_sub_impl", "_operator_matmul_impl", "_operator_floordiv_impl", "_operator_truediv_impl", "_operator_mod_impl", "_operator_lshift_impl", "_operator_rshift_impl", "_operator_and__impl", "_operator_xor_impl", "_operator_or__impl"]
     statement := "Binary operators: subclass-first reflected method, left method, right method, then TypeError naming the operator and both types."
     source := "data model"
     status := .proven
@@ -23,12 +19,7 @@ def entries : List Entry := [
     thm := some ``binaryDispatch_proven },
   { id := "corelibs-operator-inplace-fallback"
     pyFile := "Lib/operator.py"
-    pyFns := ["iadd", "isub", "imul", "imatmul", "ifloordiv", "itruediv", "imod", "ilshift", "irshift",
-      "iand", "ixor", "ior", "ipow", "_operator_iadd_impl", "_operator_isub_impl",
-      "_operator_imul_impl", "_operator_imatmul_impl", "_operator_ifloordiv_impl",
-      "_operator_itruediv_impl", "_operator_imod_impl", "_operator_ilshift_impl",
-      "_operator_irshift_impl", "_operator_iand_impl", "_operator_ixor_impl",
-      "_operator_ior_impl", "_operator_ipow_impl"]
+    pyFns := ["isub", "imatmul", "ifloordiv", "itruediv", "imod", "ilshift", "irshift", "iand", "ixor", "ior", "_operator_isub_impl", "_operator_imatmul_impl", "_operator_ifloordiv_impl", "_operator_itruediv_impl", "_operator_imod_impl", "_operator_ilshift_impl", "_operator_irshift_impl", "_operator_iand_impl", "_operator_ixor_impl", "_operator_ior_impl"]
     statement := "In-place operators: __iop__ first, and its NotImplemented falls back to the binary operator."
     source := "language reference on augmented assignment"
     status := .proven
@@ -36,8 +27,7 @@ def entries : List Entry := [
     thm := some ``inplaceFallback_proven },
   { id := "corelibs-operator-compare-default"
     pyFile := "Lib/operator.py"
-    pyFns := ["lt", "le", "eq", "ne", "gt", "ge", "_operator_lt_impl", "_operator_le_impl",
-      "_operator_eq_impl", "_operator_ne_impl", "_operator_gt_impl", "_operator_ge_impl"]
+    pyFns := []
     statement := "Comparisons: with no answer, == and != are identity and the orderings raise TypeError."
     source := "data model on rich comparison"
     status := .proven
@@ -45,10 +35,7 @@ def entries : List Entry := [
     thm := some ``compareDefault_proven },
   { id := "corelibs-operator-unary-truth"
     pyFile := "Lib/operator.py"
-    pyFns := ["abs", "neg", "pos", "inv", "not_", "truth", "is_", "is_not", "is_none", "is_not_none",
-      "_operator_neg", "_operator_pos", "_operator_abs", "_operator_inv", "_operator_invert",
-      "_operator_not__impl", "_operator_truth_impl", "_operator_is__impl",
-      "_operator_is_not_impl", "_operator_is_none", "_operator_is_not_none"]
+    pyFns := []
     statement := "A missing unary method raises TypeError; not_ negates truth."
     source := "operator docs"
     status := .proven
@@ -56,7 +43,7 @@ def entries : List Entry := [
     thm := some ``unaryAndTruth_proven },
   { id := "corelibs-operator-index-twins"
     pyFile := "Lib/operator.py"
-    pyFns := ["index", "_operator_index"]
+    pyFns := []
     statement := "operator.index agrees between the twins on a valid __index__."
     source := "twin"
     status := .proven
@@ -99,9 +86,7 @@ def entries : List Entry := [
     notes := "Outside the range C raises OverflowError, and C accepts an __index__ default; both come from the C signature. Not filed." },
   { id := "corelibs-operator-itemgetter-fast-path"
     pyFile := "Lib/operator.py"
-    pyFns := ["itemgetter.__init__", "itemgetter.__call__", "itemgetter.__repr__",
-      "itemgetter.__reduce__", "itemgetter_new", "itemgetter_call", "itemgetter_vectorcall",
-      "itemgetter_call_impl", "itemgetter_repr", "itemgetter_reduce"]
+    pyFns := ["itemgetter_call_impl"]
     statement := "The tuple fast path gives what obj[i] gives for every int index; repr agrees between the twins."
     source := "fast path against slow path"
     status := .proven
@@ -109,10 +94,7 @@ def entries : List Entry := [
     thm := some ``itemgetterFastPath_proven },
   { id := "corelibs-operator-attrgetter-chain"
     pyFile := "Lib/operator.py"
-    pyFns := ["attrgetter.__init__", "attrgetter.__call__", "attrgetter.__repr__",
-      "attrgetter.__reduce__", "attrgetter_new", "attrgetter_call", "attrgetter_vectorcall",
-      "attrgetter_call_impl", "dotted_getattr", "dotjoinattr", "attrgetter_args",
-      "attrgetter_repr", "attrgetter_reduce"]
+    pyFns := ["dotted_getattr"]
     statement := "Dotted lookups compose, and a non-str name is rejected."
     source := "operator docs"
     status := .proven
@@ -120,10 +102,7 @@ def entries : List Entry := [
     thm := some ``attrgetterChain_proven },
   { id := "corelibs-operator-methodcaller-vectorcall"
     pyFile := "Lib/operator.py"
-    pyFns := ["methodcaller.__init__", "methodcaller.__call__", "methodcaller.__repr__",
-      "methodcaller.__reduce__", "methodcaller_vectorcall",
-      "_methodcaller_initialize_vectorcall", "methodcaller_new", "methodcaller_call",
-      "methodcaller_repr", "methodcaller_reduce"]
+    pyFns := ["methodcaller_vectorcall", "_methodcaller_initialize_vectorcall"]
     statement := "The vectorcall path of methodcaller calls the same method with the same arguments, and its buffer is not overrun."
     source := "fast path against slow path"
     status := .proven
@@ -139,7 +118,7 @@ def entries : List Entry := [
     thm := some ``compareDigestCorrect_proven },
   { id := "corelibs-operator-deepcopy-memo"
     pyFile := "Lib/copy.py"
-    pyFns := ["deepcopy", "_deepcopy_list", "_deepcopy_tuple", "_deepcopy_dict"]
+    pyFns := []
     statement := "deepcopy keeps atoms, answers from the memo, keeps a tuple of atoms, and copies a cycle to a cycle."
     source := "copy docs"
     status := .proven
@@ -147,7 +126,7 @@ def entries : List Entry := [
     thm := some ``deepcopyMemo_proven },
   { id := "corelibs-operator-copy-routes"
     pyFile := "Lib/copy.py"
-    pyFns := ["copy", "_reconstruct", "replace"]
+    pyFns := []
     statement := "copy handles atomic types, containers, classes, __copy__, and __reduce__ results of two to five items; replace rejects a type without __replace__."
     source := "copy docs"
     status := .proven
@@ -155,7 +134,7 @@ def entries : List Entry := [
     thm := some ``copyRoutes_proven },
   { id := "corelibs-operator-copy-pickle-reduce"
     pyFile := "Lib/copy.py"
-    pyFns := ["_reconstruct", "copy", "deepcopy"]
+    pyFns := []
     statement := "copy accepts every __reduce__ result pickle accepts."
     source := "copy docs: classes can use the same interfaces"
     status := .refuted
@@ -164,7 +143,7 @@ def entries : List Entry := [
     bug := some "corelibs-copy-reduce-six-tuple" },
   { id := "corelibs-operator-deep-method"
     pyFile := "Lib/copy.py"
-    pyFns := ["_deepcopy_method"]
+    pyFns := []
     statement := "A bound method's deep copy shares the function and copies __self__."
     source := "copy docs"
     status := .proven
@@ -172,9 +151,7 @@ def entries : List Entry := [
     thm := some ``deepMethodSharesFunc_proven },
   { id := "corelibs-operator-subscript-call"
     pyFile := "Lib/operator.py"
-    pyFns := ["contains", "getitem", "setitem", "delitem", "call", "_operator_contains_impl",
-      "_operator_getitem_impl", "_operator_setitem_impl", "_operator_delitem_impl",
-      "_operator_call"]
+    pyFns := []
     statement := "contains takes the container first, the subscript functions are the subscript operations, and call applies its first argument to the rest."
     source := "docstrings"
     status := .proven
@@ -182,8 +159,7 @@ def entries : List Entry := [
     thm := some ``subscriptAndCall_proven },
   { id := "corelibs-operator-update-abstract"
     pyFile := "Lib/abc.py"
-    pyFns := ["update_abstractmethods", "abstractmethod", "abstractclassmethod.__init__",
-      "abstractstaticmethod.__init__"]
+    pyFns := []
     statement := "update_abstractmethods lists only names still abstract from a base and new abstract names; the decorators set the flag."
     source := "docstring"
     status := .proven
@@ -191,8 +167,7 @@ def entries : List Entry := [
     thm := some ``updateAbstractSound_proven },
   { id := "corelibs-operator-abc-subclass-check"
     pyFile := "Lib/abc.py"
-    pyFns := ["ABCMeta.__new__", "ABCMeta.register", "ABCMeta.__instancecheck__",
-      "ABCMeta.__subclasscheck__"]
+    pyFns := []
     statement := "__subclasshook__ decides when it answers, the MRO and the registry give subclasses, and register of an existing subclass changes nothing."
     source := "PEP 3119; abc docs"
     status := .proven

@@ -1,4 +1,5 @@
 import PyLean.Registry
+import PyLean.BytesObj.Mem.Fallible
 import PyLean.BytesObj.Mem.Contig
 
 /-! Registry entries for memoryview (Objects/memoryobject.c). -/
@@ -10,6 +11,30 @@ open PyLean.Registry
 def memFile : String := "Objects/memoryobject.c"
 
 def entries : List Entry := [
+  { id := "bytesobj-memoryview-pylong-failures", pyFile := "Objects/memoryobject.c", pyFns := ["pylong_as_ld", "pylong_as_lu", "pylong_as_lld", "pylong_as_llu", "pylong_as_zd", "pylong_as_zu"]
+    statement := "Each pylong_as_* uses its own C conversion on the result of _PyNumber_Index, and for every __index__ that raises or returns a non-int it passes that failure up after the callback ran; an object with no __index__ raises TypeError without any callback."
+    source := "memoryobject.c:1672-1760; Objects/abstract.c:1402-1440", status := .proven
+    prop := ``PylongFailures, thm := some ``pylongFailures_proven },
+  { id := "bytesobj-memoryview-fix-error-int", pyFile := "Objects/memoryobject.c", pyFns := ["fix_error_int", "type_error_int", "value_error_int"]
+    statement := "fix_error_int turns TypeError into the invalid-type message and ValueError and OverflowError into the invalid-value message naming the format, and lets every other exception through unchanged."
+    source := "memoryobject.c:1650-1665", status := .proven
+    prop := ``FixErrorInt, thm := some ``fixErrorInt_proven },
+  { id := "bytesobj-memoryview-pack-failures", pyFile := "Objects/memoryobject.c", pyFns := ["pack_single"]
+    statement := "For every integer and float format, when the item's __index__ or __float__ raises or returns the wrong type, pack_single writes nothing and raises what fix_error_int makes of it; for format ? a failing __bool__ keeps its original exception."
+    source := "memoryobject.c:1874-2026, the comment at :1988", status := .proven
+    prop := ``PackFailures, thm := some ``packFailures_proven },
+  { id := "bytesobj-memoryview-key-failures", pyFile := "Objects/memoryobject.c", pyFns := ["memory_subscript", "memory_ass_sub"]
+    statement := "A failing __index__ in m[k] or m[k] = v, on a live view that is not 0-dimensional, raises that failure, and the assignment writes nothing."
+    source := "memoryobject.c:2606-2609, :2684-2687", status := .proven
+    prop := ``KeyFailures, thm := some ``keyFailures_proven },
+  { id := "bytesobj-memoryview-tuple-failures", pyFile := "Objects/memoryobject.c", pyFns := ["ptr_from_tuple"]
+    statement := "ptr_from_tuple rejects a tuple longer than ndim before any __index__ runs, and passes up a raising __index__."
+    source := "memoryobject.c:2423-2448", status := .proven
+    prop := ``TupleFailures, thm := some ``tupleFailures_proven },
+  { id := "bytesobj-memoryview-buffer-failures", pyFile := "Objects/memoryobject.c", pyFns := ["memoryview_impl", "PyMemoryView_FromObject", "PyMemoryView_FromObjectAndFlags", "memoryview__from_flags_impl"]
+    statement := "A __buffer__ that raises or returns a non-memoryview makes memoryview(x), memoryview._from_flags(x, flags) and PyObject_GetBuffer raise that failure, after its callback ran, leaving the byte store alone."
+    source := "memoryobject.c:801-825; Objects/typeobject.c:10718-10719", status := .proven
+    prop := ``BufferFailures, thm := some ``bufferFailures_proven },
   { id := "bytesobj-memoryview-format-native", pyFile := memFile
     pyFns := ["get_native_fmtchar", "get_native_fmtstr", "memoryview_cast_impl"]
     statement := "For every string, get_native_fmtchar accepts it exactly when get_native_fmtstr does, the two name the same character, and its size is the size of that code in struct's native table."

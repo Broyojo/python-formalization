@@ -1,0 +1,46 @@
+id: corelibs-singledispatchmethod-callable-no-get
+title: "singledispatchmethod accepts a callable without __get__ and fails with AttributeError on the first call"
+priority: P4
+kind: wrong-exception
+module: corelibs
+files: [Lib/functools.py]
+functions: ["singledispatchmethod.__init__", "_singledispatchmethod_get.__call__"]
+summary: |
+  __init__ accepts any callable. The call at Lib/functools.py:1069 does `.__get__(self._obj, self._cls)` with no
+  fallback, so an implementation with no __get__, a builtin or an instance with __call__, raises AttributeError
+  on the first call. partialmethod treats the same object as an instance method.
+likelihood: |
+  Low: methods are functions. Registering a callable object is the case that reaches it.
+maybe_intended: |
+  No: it was reported and fixed on main as #140873.
+reproducer: |
+  import functools
+  class C:
+      def __call__(self, *a):
+          return a
+  s = functools.singledispatchmethod(C())
+  class A:
+      m = s
+  try:
+      r = A().m(1)
+  except AttributeError as e:
+      r = 'AttributeError'
+  print(r)
+  if r == 'AttributeError':
+      print('REPRODUCED corelibs-singledispatchmethod-callable-no-get')
+expected: |
+  The implementation runs.
+observed: |
+  python3 3.14.7: AttributeError. REPRODUCED. main (3.16.0a1+dev): NOT REPRODUCED, fixed by #140873: the reproducer prints (1,).
+promised_by: |
+  The check at Lib/functools.py:1002 accepts it.
+cause: |
+  Lib/functools.py:1069.
+possible_fix: |
+  The change on main, Lib/functools.py:1113 there: test for `__get__` first.
+duplicates:
+  issues: ["#140873"]
+  queries: ["gh search issues singledispatchmethod callable descriptor", "gh issue view 140873"]
+lean:
+  property: PyLean.CoreLibs.Functools.SdmCallableUsable
+  theorem: PyLean.CoreLibs.Functools.sdmCallableUsable_refuted

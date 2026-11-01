@@ -50,7 +50,7 @@ def CmpSpecialCases : Prop :=
   ∀ (st : St) (v i : Nat),
     (baseInaccessible st v = true →
       (memoryRichEqual v (.view v) st).1 = .ok (some true) ∧
-      (∀ b r, (memoryRichEqual v (.exporter b r) st).1 = .ok (some false))) ∧
+      (∀ b r, (memoryRichEqual v (.exporter (.val b) r) st).1 = .ok (some false))) ∧
     (baseInaccessible st v = false → baseInaccessible st i = true →
       (memoryRichEqual v (.view i) st).1 = .ok (some (i == v))) ∧
     (baseInaccessible st v = false → ∀ n,
