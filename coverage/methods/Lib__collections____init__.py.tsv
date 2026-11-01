@@ -32,7 +32,7 @@ Lib/collections/__init__.py	619	622	Counter.__missing__	__missing__(self, key)	m
 Lib/collections/__init__.py	624	626	Counter.total	total(self)	modelled	coll-counter-total	
 Lib/collections/__init__.py	628	645	Counter.most_common	most_common(self, n=None)	modelled	coll-counter-most-common-prefix,coll-counter-most-common-sorted	
 Lib/collections/__init__.py	647	666	Counter.elements	elements(self)	modelled	coll-counter-elements	
-Lib/collections/__init__.py	671	680	Counter.fromkeys	fromkeys(cls, iterable, v=None)	modelled	coll-counter-fromkeys	
+Lib/collections/__init__.py	671	680	Counter.fromkeys	fromkeys(cls, iterable, v=None)	todo		withdrawn: constant raise, rfl
 Lib/collections/__init__.py	682	714	Counter.update	update(self, iterable=None, /, **kwds)	modelled	coll-counter-subtract,coll-counter-update-adds,coll-counter-update-fast-slow	
 Lib/collections/__init__.py	716	741	Counter.subtract	subtract(self, iterable=None, /, **kwds)	modelled	coll-counter-subtract	
 Lib/collections/__init__.py	743	745	Counter.copy	copy(self)	modelled	coll-counter-copy-reduce	

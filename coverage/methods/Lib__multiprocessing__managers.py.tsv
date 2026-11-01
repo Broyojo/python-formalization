@@ -5,7 +5,7 @@ Lib/multiprocessing/managers.py	69	70	Token.__init__	__init__(self, typeid, addr
 Lib/multiprocessing/managers.py	72	73	Token.__getstate__	__getstate__(self)	todo		
 Lib/multiprocessing/managers.py	75	76	Token.__setstate__	__setstate__(self, state)	todo		
 Lib/multiprocessing/managers.py	78	80	Token.__repr__	__repr__(self)	todo		
-Lib/multiprocessing/managers.py	86	97	dispatch	dispatch(c, id, methodname, args=(), kwds={})	todo		
+Lib/multiprocessing/managers.py	86	97	dispatch	dispatch(c, id, methodname, args=(), kwds={})	todo		candidates:corelibs-functools-abc-invalidates,corelibs-functools-dispatch-error,corelibs-functools-dispatch-idempotent,corelibs-functools-register-dispatch
 Lib/multiprocessing/managers.py	99	112	convert_to_error	convert_to_error(kind, result)	todo		
 Lib/multiprocessing/managers.py	115	116	RemoteError.__str__	__str__(self)	todo		
 Lib/multiprocessing/managers.py	122	131	all_methods	all_methods(obj)	todo		

@@ -1,0 +1,54 @@
+id: corelibs-singledispatch-register-stopiteration
+title: "@f.register on a function whose __annotate__ yields nothing raises a bare StopIteration"
+priority: P4
+kind: wrong-exception
+module: corelibs
+files: [Lib/functools.py]
+functions: ["singledispatch.register"]
+summary: |
+  register checks that `__annotate__` exists and then runs `next(iter(get_type_hints(func, ...).items()))` with
+  no default. A callable whose annotations are empty passes the check, and StopIteration escapes, instead of
+  the "Use either @register(some_class)" TypeError the unannotated case gets. Inside a generator or a
+  comprehension over decorators that StopIteration is the worst kind of exception to leak.
+likelihood: |
+  Low: an ordinary unannotated function has __annotate__ None and gets the TypeError. It takes a function with
+  an __annotate__ that returns no entries, which metaprogramming can produce, as can `from __future__`-free
+  wrappers copying __annotate__ from an unannotated source.
+maybe_intended: |
+  No, an oversight, and a one-line fix.
+reproducer: |
+  import functools
+  @functools.singledispatch
+  def f(x):
+      return 'default'
+  def g(x):
+      return 'g'
+  g.__annotate__ = lambda format: {}
+  try:
+      f.register(g)
+      r = 'no error'
+  except StopIteration:
+      r = 'StopIteration'
+  except TypeError as e:
+      r = 'TypeError'
+  print(r)
+  if r == 'StopIteration':
+      print('REPRODUCED corelibs-singledispatch-register-stopiteration')
+expected: |
+  TypeError, as for a function with no annotations.
+observed: |
+  python3 3.14.7: StopIteration. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  No internal exception leaking; the TypeError branch just above covers the same user error.
+cause: |
+  Lib/functools.py:950.
+possible_fix: |
+  `next(iter(...), None)` and the TypeError at :940-944.
+duplicates:
+  issues: []
+  related: ["#84644"]
+  queries: ["gh search issues singledispatch register annotation first argument",
+            "bugforge README: no match for singledispatch"]
+lean:
+  property: PyLean.CoreLibs.Functools.RegisterNoStopIteration
+  theorem: PyLean.CoreLibs.Functools.registerNoStopIteration_refuted

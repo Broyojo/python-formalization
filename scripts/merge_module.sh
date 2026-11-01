@@ -8,7 +8,7 @@ branch=$1 mod=$2 key=$3
 base=$(git merge-base HEAD "$branch")
 
 outside=$(git diff --name-only "$base" "$branch" | grep -vE \
-  "^(lean/PyLean/$mod\.lean|lean/PyLean/$mod/.*|difftest/${key}(_[a-z0-9_]+)?\.py|bugs/${key}-[^/]*\.yaml|coverage/registry\.tsv|coverage/methods/[^/]*\.tsv|coverage/review/[^/]*\.tsv)$" || true)
+  "^(\.gitignore|lean/PyLean/$mod\.lean|lean/PyLean/$mod/.*|difftest/${key}(_[a-z0-9_]+)?\.py|bugs/${key}-[^/]*\.yaml|coverage/registry\.tsv|coverage/methods/[^/]*\.tsv|coverage/review/[^/]*\.tsv)$" || true)
 if [ -n "$outside" ]; then
     echo "FAIL $branch touches files outside its module:"
     echo "FAIL path: $outside"

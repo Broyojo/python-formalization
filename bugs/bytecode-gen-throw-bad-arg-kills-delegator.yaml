@@ -1,0 +1,63 @@
+id: bytecode-gen-throw-bad-arg-kills-delegator
+title: "throw() with an invalid argument leaves a plain generator alone but kills a delegating one: the arguments are validated only at the end of the yield-from chain"
+priority: P4
+kind: validation-order
+module: bytecode
+files: [Objects/genobject.c]
+functions: ["_gen_throw", "gen_throw"]
+summary: |
+  _gen_throw validates tb and typ only at throw_here (:541-584). With a `yield from` in progress
+  (:471-539) the arguments are passed down first, so the check runs in the innermost generator. It
+  returns NULL with a TypeError and no effect there, and the delegating generator then treats this
+  as a failure of the sub-iterator: :535-537 throws the TypeError into its own frame at the `yield
+  from`. So g.throw(42) leaves a suspended plain generator suspended, but ends a delegating one
+  while its sub-generator stays suspended. A foreign sub-iterator with a `throw` method is handed
+  the bad arguments outright.
+likelihood: |
+  Low: throw() with a non-exception is a programming error and raises TypeError either way.
+maybe_intended: |
+  Plausibly tolerated: a TypeError that a body can catch at `yield from` is at least consistent with
+  "failures of the sub-iterator appear at the yield from". Recorded for completeness; it would only be
+  worth a line in a combined report, not an issue of its own.
+reproducer: |
+  def sub():
+      yield 1
+      yield 2
+  def outer(s):
+      yield from s
+  def plain():
+      yield 1
+      yield 2
+  p = plain(); next(p)
+  try:
+      p.throw(42)
+  except TypeError as e:
+      print("plain:", e, "suspended", p.gi_suspended)
+  s = sub(); g = outer(s); next(g)
+  try:
+      g.throw(42)
+  except TypeError as e:
+      print("delegating:", e, "suspended", g.gi_suspended, "sub suspended", s.gi_suspended)
+  if p.gi_suspended and not g.gi_suspended and s.gi_suspended:
+      print('REPRODUCED bytecode-gen-throw-bad-arg-kills-delegator')
+expected: |
+  The same outcome with and without delegation: TypeError, generator unchanged.
+observed: |
+  python3 3.14.7: plain stays suspended; delegating generator closed, sub-generator suspended.
+  REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Method versus equivalent method: the same call on the two shapes of generator.
+cause: |
+  Objects/genobject.c:541-584 run after the delegation at :471-539.
+possible_fix: |
+  Validate typ and tb at the top of gen_throw, once, before any delegation.
+duplicates:
+  issues:
+    - {number: 73070, state: open, relation: "unrelated umbrella issue that matches the search", reason: ""}
+  bugforge: "no generator entries in vendor/bugforge-results/README.md"
+  queries: ["generator throw TypeError yield from", "throw non exception yield from generator"]
+lean:
+  property: PyLean.Bytecode.GenObj.GenThrowBadArgNoEffect
+  theorem: PyLean.Bytecode.GenObj.genThrowBadArgNoEffect_refuted
+  also: [PyLean.Bytecode.GenObj.GenThrowBadArgUndelegated, PyLean.Bytecode.GenObj.genThrowBadArgUndelegated_proven]

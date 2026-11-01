@@ -1,6 +1,6 @@
 file	line	endline	name	signature	status	entry	note
-Objects/cellobject.c	11	22	PyCell_New	PyCell_New(PyObject *obj)	todo		
-Objects/cellobject.c	37	53	cell_new	cell_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	todo		
+Objects/cellobject.c	11	22	PyCell_New	PyCell_New(PyObject *obj)	modelled	bytecode-cell-new	
+Objects/cellobject.c	37	53	cell_new	cell_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	modelled	bytecode-cell-new	
 Objects/cellobject.c	56	63	PyCell_Get	PyCell_Get(PyObject *op)	todo		
 Objects/cellobject.c	66	74	PyCell_Set	PyCell_Set(PyObject *op, PyObject *value)	todo		
 Objects/cellobject.c	77	83	cell_dealloc	cell_dealloc(PyObject *self)	todo		

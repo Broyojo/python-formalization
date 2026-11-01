@@ -1,0 +1,89 @@
+id: dictset-odict-stale-fast-nodes
+title: "After dict.popitem(od), od.popitem() and od.pop(k) segfault, and iterating od never ends"
+priority: P3
+kind: null-dereference
+module: dictset
+files: [Objects/odictobject.c]
+functions: ["_odict_get_index_raw", "_odict_find_node", "_odict_popkey_hash", "OrderedDict_popitem_impl", "OrderedDict_pop_impl", "odictiter_nextkey_lock_held"]
+summary: |
+  od_fast_nodes mirrors dk_entries by index, and _odict_get_index_raw answers a failed lookup
+  with dk_nentries, "index of new entry". dict.popitem(od) shrinks dk_nentries, so that index
+  now names the slot of the node for the key just popped. A lookup for a missing key therefore
+  returns a stale node instead of none, with two results from plain Python:
+
+  1. od.popitem() or od.pop(k) find a node, clear it, find nothing in the dict, and run
+     Py_NewRef(failobj) with failobj == NULL: SIGSEGV.
+  2. With two keys popped, a lookup for either returns the same node. Iterating od then steps
+     from that node to its successor for ever: list(od) does not terminate and grows a list
+     until memory runs out, and repr(od) does the same through PyDict_Copy.
+likelihood: |
+  Low. It takes an explicit dict.popitem(od) on an OrderedDict, which bypasses the class. A subclass
+  calling super().popitem() is not affected: that reaches OrderedDict's own method (tested).
+maybe_intended: |
+  Partly, and a maintainer may well decline this. Bypassing OrderedDict through dict's methods is
+  known to desynchronise it. On gh-68914 (dict.__setitem__ on an OrderedDict) the closing comment
+  says some holes probably remain and that the answer should likely be to document "don't do that".
+  gh-154835, on inconsistent state from a stateful __eq__, was closed as not planned.
+  Against that, gh-154817 is open with a PR for the same NULL dereference, so the crash has a route
+  to a fix regardless of this trigger. The hang is the part with no such route, and on the
+  precedent above "don't do that" is a fair answer to it.
+reproducer: |
+  import itertools, resource, subprocess, sys
+  from collections import OrderedDict
+  crash = r"""
+  import resource
+  resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+  from collections import OrderedDict
+  od = OrderedDict(a=1, b=2)
+  dict.popitem(od)
+  print('before', flush=True)
+  od.popitem()
+  print('after', flush=True)
+  """
+  r = subprocess.run([sys.executable, '-I', '-c', crash], capture_output=True, text=True)
+  print('popitem returncode', r.returncode)
+  # Never call list(od) here: it would not return. islice bounds the walk.
+  od = OrderedDict(a=1, b=2, c=3)
+  dict.popitem(od)
+  dict.popitem(od)
+  walked = list(itertools.islice(od, 100))
+  print('len', len(od), 'walked', len(walked), walked[:4])
+  if r.returncode == -11 and 'after' not in r.stdout and len(od) == 1 and len(walked) == 100:
+      print('REPRODUCED dictset-odict-stale-fast-nodes')
+expected: |
+  od.popitem() raises KeyError or returns an item, and iterating od ends after finitely many
+  items, whatever state the dict and list are in.
+observed: |
+  python3 3.14.7: od.popitem() and od.pop('b') exit -11; od.pop('b', 7) returns 7. After two
+  dict.popitem(od), list(od) never returned: a watchdog found it inside list() with the list
+  growing, and islice(od, 100) yields 100 items from an OrderedDict with 3 nodes. REPRODUCED.
+  main (3.16.0a1+dev, ef1fce0): identical. REPRODUCED by check_bugs.py.
+promised_by: |
+  Invariant: no crash, no hang. Objects/odictobject.c:3-4: "necessarily explicitly equivalent to
+  the pure Python OrderedDict", where the same calls raise KeyError and never loop.
+cause: |
+  Objects/odictobject.c:549-551 returns keys->dk_nentries for DKIX_EMPTY; it was correct as "index
+  of new entry" only while nothing but odict code shrinks dk_nentries, and dict_popitem_impl does
+  (Objects/dictobject.c:4675). _odict_find_node_hash (:631) and _odict_find_node (:650) trust
+  od_fast_nodes[index] without checking that the node's key is the key looked up.
+  :1096-1099 `if (_PyDict_Pop_KnownHash(...) == 0) value = Py_NewRef(failobj);` with failobj NULL
+  from OrderedDict_popitem_impl (:1171) or OrderedDict_pop_impl with no default.
+  :1767-1785 advances from whichever node that lookup returned.
+possible_fix: |
+  Crash: test failobj at :1098 and raise KeyError, which is what open PR gh-154818 does.
+  Hang: _odict_find_node* could return NULL when ix == DKIX_EMPTY instead of consulting
+  od_fast_nodes; _odict_add_new_node, the one caller that wants the "new entry" index, can keep
+  using _odict_get_index directly. That also closes the stale-node path behind the crash.
+duplicates:
+  issues:
+    - {number: 154817, state: open, relation: "SAME CRASH LINE, different trigger (stateful __eq__). PR gh-154818 would fix the segfault here too, not the hang"}
+    - {number: 154835, state: closed, relation: "not planned: desynchronisation from a stateful __eq__"}
+    - {number: 68914, state: closed, relation: "precedent AGAINST: closing comment suggests documenting 'don't do that' for dict.__setitem__ on an OrderedDict"}
+  queries: ["OrderedDict segfault", "OrderedDict crash", "OrderedDict dict.popitem",
+            "OrderedDict infinite loop", "bugforge README: no OrderedDict entry"]
+  note: |
+    The list(od) hang through a stale fast node was not found in any of these. File it, if at
+    all, as a comment-sized addition to gh-154817, not as a new issue about the crash.
+lean:
+  property: PyLean.DictSet.OdictNoStaleNode
+  theorem: PyLean.DictSet.odictNoStaleNode_refuted

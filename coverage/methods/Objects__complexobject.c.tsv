@@ -20,12 +20,12 @@ Objects/complexobject.c	400	408	complex_subtype_from_c_complex	complex_subtype_f
 Objects/complexobject.c	411	421	PyComplex_FromCComplex	PyComplex_FromCComplex(Py_complex cval)	excluded		no-behaviour: boxes a Py_complex in a new object; the value passes through unchanged
 Objects/complexobject.c	424	430	complex_subtype_from_doubles	complex_subtype_from_doubles(PyTypeObject *type, double real, double imag)	excluded		no-behaviour: boxes two doubles in a new object; the value passes through unchanged
 Objects/complexobject.c	433	439	PyComplex_FromDoubles	PyComplex_FromDoubles(double real, double imag)	excluded		no-behaviour: boxes two doubles in a new object; the value passes through unchanged
-Objects/complexobject.c	444	462	PyComplex_RealAsDouble	PyComplex_RealAsDouble(PyObject *op)	todo		
-Objects/complexobject.c	465	486	PyComplex_ImagAsDouble	PyComplex_ImagAsDouble(PyObject *op)	todo		
-Objects/complexobject.c	489	519	try_complex_special_method	try_complex_special_method(PyObject *op)	todo		
-Objects/complexobject.c	522	555	PyComplex_AsCComplex	PyComplex_AsCComplex(PyObject *op)	todo		
+Objects/complexobject.c	444	462	PyComplex_RealAsDouble	PyComplex_RealAsDouble(PyObject *op)	modelled	complex-accessors-agree	
+Objects/complexobject.c	465	486	PyComplex_ImagAsDouble	PyComplex_ImagAsDouble(PyObject *op)	modelled	complex-accessors-agree	
+Objects/complexobject.c	489	519	try_complex_special_method	try_complex_special_method(PyObject *op)	modelled	complex-try-special-outcomes	
+Objects/complexobject.c	522	555	PyComplex_AsCComplex	PyComplex_AsCComplex(PyObject *op)	modelled	complex-accessors-agree,complex-from-number-matches-constructor	
 Objects/complexobject.c	558	612	complex_repr	complex_repr(PyObject *op)	modelled	complex-repr	
-Objects/complexobject.c	615	635	complex_hash	complex_hash(PyObject *op)	todo		mirrored in Complex.lean and not settled; needs the range of float_hash
+Objects/complexobject.c	615	635	complex_hash	complex_hash(PyObject *op)	modelled	complex-hash-composition	mirrored in Complex.lean and not settled; needs the range of float_hash
 Objects/complexobject.c	645	656	real_to_double	real_to_double(PyObject **pobj, double *dbl)	modelled	complex-real-operand	
 Objects/complexobject.c	659	663	real_to_complex	real_to_complex(PyObject **pobj, Py_complex *pc)	modelled	complex-real-operand	
 Objects/complexobject.c	724	757	complex_pow	complex_pow(PyObject *v, PyObject *w, PyObject *z)	modelled	complex-pow-special	
@@ -36,10 +36,10 @@ Objects/complexobject.c	793	797	complex_bool	complex_bool(PyObject *op)	modelled
 Objects/complexobject.c	800	853	complex_richcompare	complex_richcompare(PyObject *v, PyObject *w, int op)	modelled	complex-compare	
 Objects/complexobject.c	862	868	complex_conjugate_impl	complex_conjugate_impl(PyComplexObject *self) /*[clinic end generated code: output=5059ef162edfc68e input=5fea33e9747ec2c4]*/	modelled	complex-parts	
 Objects/complexobject.c	876	881	complex___getnewargs___impl	complex___getnewargs___impl(PyComplexObject *self) /*[clinic end generated code: output=689b8206e8728934 input=539543e0a50533d7]*/	modelled	complex-parts	
-Objects/complexobject.c	894	909	complex___format___impl	complex___format___impl(PyComplexObject *self, PyObject *format_spec) /*[clinic end generated code: output=bfcb60df24cafea0 input=014ef5488acbe1d5]*/	todo		delegates to _PyComplex_FormatAdvancedWriter in Python/formatter_unicode.c
+Objects/complexobject.c	894	909	complex___format___impl	complex___format___impl(PyComplexObject *self, PyObject *format_spec) /*[clinic end generated code: output=bfcb60df24cafea0 input=014ef5488acbe1d5]*/	modelled	complex-repr-structure	delegates to _PyComplex_FormatAdvancedWriter in Python/formatter_unicode.c
 Objects/complexobject.c	918	927	complex___complex___impl	complex___complex___impl(PyComplexObject *self) /*[clinic end generated code: output=e6b35ba3d275dc9c input=3589ada9d27db854]*/	modelled	complex-parts	
 Objects/complexobject.c	931	1051	complex_from_string_inner	complex_from_string_inner(const char *s, Py_ssize_t len, void *type)	modelled	complex-blank-string	
 Objects/complexobject.c	1054	1081	complex_subtype_from_string	complex_subtype_from_string(PyTypeObject *type, PyObject *v)	modelled	complex-blank-string	
-Objects/complexobject.c	1094	1152	actual_complex_new	actual_complex_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	todo		
-Objects/complexobject.c	1169	1297	complex_new_impl	complex_new_impl(PyTypeObject *type, PyObject *r, PyObject *i) /*[clinic end generated code: output=b6c7dd577b537dc1 input=ff4268dc540958a4]*/	todo		
-Objects/complexobject.c	1310	1326	complex_from_number_impl	complex_from_number_impl(PyTypeObject *type, PyObject *number) /*[clinic end generated code: output=7248bb593e1871e1 input=3f8bdd3a2bc3facd]*/	todo		
+Objects/complexobject.c	1094	1152	actual_complex_new	actual_complex_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	modelled	complex-from-number-matches-constructor,complex-getnewargs-round-trip,complex-new-dispatch,complex-one-arg-matches-two-arg,complex-one-arg-matches-two-arg-narrow	
+Objects/complexobject.c	1169	1297	complex_new_impl	complex_new_impl(PyTypeObject *type, PyObject *r, PyObject *i) /*[clinic end generated code: output=b6c7dd577b537dc1 input=ff4268dc540958a4]*/	modelled	complex-getnewargs-round-trip,complex-new-checks-imag-before-converting,complex-new-checks-real-first,complex-one-arg-matches-two-arg,complex-one-arg-matches-two-arg-narrow	
+Objects/complexobject.c	1310	1326	complex_from_number_impl	complex_from_number_impl(PyTypeObject *type, PyObject *number) /*[clinic end generated code: output=7248bb593e1871e1 input=3f8bdd3a2bc3facd]*/	modelled	complex-from-number-matches-constructor	

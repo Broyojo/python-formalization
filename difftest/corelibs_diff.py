@@ -1642,6 +1642,8 @@ def collabc_mmap(case):
 # ====== BEGIN AREA functools (Lib/functools.py, Modules/_functoolsmodule.c) ======
 # Everything for this area stays between these two markers; prefix top-level names with functools_.
 import abc as functools_abc  # noqa: E402
+import operator as functools_operator  # noqa: E402
+import warnings as functools_warnings  # noqa: E402
 from test.support import import_helper as functools_ih  # noqa: E402
 
 functools_C = functools_ih.import_fresh_module("functools", fresh=["_functools"])
@@ -1650,6 +1652,13 @@ functools_P = functools_ih.import_fresh_module("functools", blocked=["_functools
 
 def functools_mod(case):
     return functools_C if case.get("twin") == "c" else functools_P
+
+
+def functools_tilde(r, needle):
+    """A message that embeds an object or a CPython-generated signature is a wildcard."""
+    if "exc" in r and needle in r["msg"]:
+        r["msg"] = "~" + r["msg"]
+    return r
 
 
 def functools_iter(case):
@@ -1686,6 +1695,21 @@ def functools_build(m, s):
     return p
 
 
+def functools_fid_safe(f, m):
+    if isinstance(f, m.partial):
+        o = getattr(type(f), "_o", None)
+        return {"partial": o}
+    return f()[0]
+
+
+def functools_obj(m, p, more, morekw):
+    PH = m.Placeholder
+    return {"func": functools_fid_safe(p.func, m),
+            "args": ["PH" if a is PH else a for a in p.args],
+            "kw": [[k, v] for k, v in p.keywords.items()],
+            "call": py_result(lambda: p(*more, **dict(morekw)))}
+
+
 def functools_run_partial(case):
     m = functools_mod(case)
 
@@ -1693,19 +1717,20 @@ def functools_run_partial(case):
         p = functools_build(m, case["spec"])
         if not isinstance(p, m.partial):
             return "notpartial"
-        PH = m.Placeholder
-        return {"func": functools_fid_safe(p.func, m),
-                "args": ["PH" if a is PH else a for a in p.args],
-                "kw": [[k, v] for k, v in p.keywords.items()],
-                "call": py_result(lambda: p(*case["more"], **dict(case["morekw"])))}
+        return functools_obj(m, p, case["more"], case["morekw"])
     return py_result(go)
 
 
-def functools_fid_safe(f, m):
-    if isinstance(f, m.partial):
-        o = getattr(type(f), "_o", None)
-        return {"partial": o}
-    return f()[0]
+def functools_run_reduce(case):
+    m = functools_mod(case)
+
+    def go():
+        p = functools_build(m, case["spec"])
+        cls, ctor, state = p.__reduce__()
+        q = cls(*ctor)
+        q.__setstate__(state)
+        return functools_obj(m, q, case["more"], [])
+    return py_result(go)
 
 
 def functools_spec(rng, depth):
@@ -1718,6 +1743,15 @@ def functools_spec(rng, depth):
         kw[0][1] = "PH"
     return {"kind": "partial", "func": functools_spec(rng, depth - 1), "args": args, "kw": kw,
             "override": rng.choice([None, None, None, None, 77]), "dict": rng.random() < .15}
+
+
+def functools_pspec(rng):
+    spec = functools_spec(rng, 3)
+    if spec["kind"] == "base":
+        spec = {"kind": "partial", "func": spec, "args": [], "kw": [], "override": None,
+                "dict": False}
+    spec["override"] = None
+    return spec
 
 
 functools_V = [(0, 0), (1, 0), (2, 0), (1, 1), (1, 2), (2, 2), (3, 0)]  # (value, type)
@@ -1734,8 +1768,12 @@ def functools_lru_call(rng):
     return {"args": args, "kw": kw}
 
 
+class functools_hookmeta(functools_abc.ABCMeta):
+    pass
+
+
 def functools_worlds(rng):
-    """A random hierarchy: returns real classes, with virtual registrations applied later."""
+    """A random hierarchy: real classes, with virtual registrations applied later."""
     classes = [object]
     n = rng.randrange(2, 7)
     for i in range(1, n):
@@ -1750,27 +1788,98 @@ def functools_worlds(rng):
         except TypeError:
             continue
         classes.append(c)
+    if rng.random() < .25 and len(classes) > 2:
+        victim = rng.choice(classes[1:])
+
+        def hook(cls, sub, v=victim):
+            if sub is v:
+                raise ValueError("hook")
+            return NotImplemented
+        classes.append(functools_abc.ABCMeta("H", (), {"__subclasshook__": classmethod(hook)}))
     return classes
+
+
+def functools_issub(a, b):
+    try:
+        return issubclass(a, b)
+    except ValueError:
+        return True
+
+
+def functools_vreg(abc_cls, c):
+    try:
+        abc_cls.register(c)
+    except (ValueError, RuntimeError):
+        pass
 
 
 def functools_world_json(classes):
     idx = {c: i for i, c in enumerate(classes)}
+
     def members(cs):
         return [idx[c] for c in cs if c in idx]
-    return {"n": len(classes),
-            "bases": [members(c.__bases__) for c in classes],
-            "mro": [members(c.__mro__) for c in classes],
+    issub, bad = [], []
+    for i, c in enumerate(classes):
+        row = []
+        for j, b in enumerate(classes):
+            try:
+                if issubclass(c, b):
+                    row.append(j)
+            except ValueError:
+                bad.append([i, j])
+        issub.append(row)
+    pseudo_alias, pseudo_type = len(classes), len(classes) + 1
+    return {"n": len(classes), "bad": bad,
+            "bases": [members(c.__bases__) for c in classes] + [[], []],
+            "mro": [members(c.__mro__) for c in classes] + [[], []],
             "subclasses": [members(c.__subclasses__()) if c is not object else []
-                           for c in classes],
-            "issub": [[j for j, b in enumerate(classes) if issubclass(c, b)] for c in classes],
+                           for c in classes] + [[], []],
+            "issub": issub + [[], []], "alias": [pseudo_alias], "notype": [pseudo_type],
             "abc": [i for i, c in enumerate(classes) if hasattr(c, "__abstractmethods__")]}
 
 
 functools_HIER = {}
+functools_ALIAS = list[int]
+functools_NOTYPE = object()
+functools_STEP = [["ret", 1], ["ret", 2], ["raise"]]
+
+
+def functools_script(rng, n, calls):
+    """`calls` is how many inner calls one script may make. The first may be the key itself, for
+    re-entrancy, and a later one only a higher key, so that the recursion stays shallow."""
+    out = []
+    for _ in range(n):
+        s = []
+        if calls:
+            k = len(out)
+            for i in range(rng.randrange(0, calls + 1)):
+                if i == 0:
+                    s.append(["call", rng.randrange(k, n)])
+                elif k + 1 < n:
+                    s.append(["call", rng.randrange(k + 1, n)])
+        else:
+            if rng.random() < .1:
+                s.append(["clear"])
+        s.append(rng.choice([["ret", rng.randrange(0, 9)], ["ret", rng.randrange(0, 9)], ["raise"]]))
+        out.append(s)
+    return out
+
+
+functools_SOURCES = [
+    ("def g(x: int): pass", [["x", {"cls": 1}]]),
+    ("def g(x: int | str): pass", [["x", {"union": [1, 2]}]]),
+    ("def g(x: list[int]): pass", [["x", "other"]]),
+    ("def g(x: 'Undefined'): pass", [["x", "fw"]]),
+    ("def g(x: int | list[int]): pass", [["x", {"union": [1, None]}]]),
+    ("def g(x) -> int: pass", [["return", {"cls": 1}]]),
+    ("def g(x, y: str): pass", [["y", {"cls": 2}]]),
+    ("def g(*, y: str): pass", [["y", {"cls": 2}]]),
+    ("def g(x): pass", None),
+]
 
 
 def functools_gen(rng):
-    r = rng.randrange(0, 15)
+    r = rng.randrange(0, 27)
     twin = rng.choice(["c", "py"])
     if r == 0:
         xs = [rng.randrange(-3, 6) for _ in range(rng.randrange(0, 5))]
@@ -1779,56 +1888,92 @@ def functools_gen(rng):
                 "initial": rng.choice([None, 0, 7]), "kind": rng.choice(["add", "sub"]),
                 "bad": rng.choice([None, None, 2])}
     if r == 1:
-        ops = ["__lt__", "__le__", "__gt__", "__ge__"]
-        return {"fn": "functools.total_ordering", "roots": rng.sample(ops, rng.randrange(0, 3)),
-                "op": rng.choice(ops), "a": rng.randrange(0, 3), "b": rng.randrange(0, 3),
-                "foreign": rng.random() < .2}
+        return {"fn": "functools.reduce_wrapper", "werror": rng.random() < .3,
+                "names": rng.sample(["function", "sequence", "initial"], rng.randrange(0, 4))}
     if r == 2:
+        ops = ["__lt__", "__le__", "__gt__", "__ge__"]
+        roots = rng.sample(ops, rng.randrange(0, 3))
+        return {"fn": "functools.total_ordering", "roots": roots, "inherit": rng.random() < .3,
+                "op": rng.choice(ops), "foreign": rng.random() < .15, "rootbad": rng.random() < .08,
+                "res": rng.choice([0, 1, 2, 9]), "eq": rng.choice([0, 1, 3, 9]),
+                "ne": rng.choice([0, 1, 4]),
+                "setfail": rng.choice([None, None, None, rng.choice(ops)])}
+    if r == 3:
         return {"fn": "functools.cmp_key", "twin": twin, "x": rng.randrange(0, 4),
-                "other": rng.choice([0, 1, 2, 3, None]),
+                "other": rng.randrange(0, 4), "otherkind": rng.choice(["key", "key", "key", "duck", "plain"]),
                 "op": rng.choice(["lt", "le", "eq", "ne", "gt", "ge"]),
-                "bad": rng.choice([None, None, 1])}
-    if r in (3, 4, 5):
-        spec = functools_spec(rng, 3)
-        if spec["kind"] == "base":
-            spec = {"kind": "partial", "func": spec, "args": [], "kw": [], "override": None,
-                    "dict": False}
-        spec["override"] = None
-        return {"fn": "functools.partial", "twin": twin, "spec": spec,
+                "bad": rng.choice([None, None, 1]), "res": rng.choice(["int", "int", "obj", "boom"])}
+    if r == 4:
+        pos = [1] * rng.randrange(0, 3)
+        return {"fn": "functools.key_new", "twin": twin, "pos": pos,
+                "kw": rng.choice([[], [], [["obj", 2]], [["x", 2]]])}
+    if r in (5, 6, 7):
+        return {"fn": "functools.partial", "twin": twin, "spec": functools_pspec(rng),
                 "more": [rng.randrange(0, 9) for _ in range(rng.randrange(0, 4))],
                 "morekw": [["b", 9]] if rng.random() < .3 else []}
-    if r == 6:
+    if r == 8:
+        return {"fn": "functools.partial_reduce", "twin": twin, "spec": functools_pspec(rng),
+                "more": [rng.randrange(0, 9) for _ in range(rng.randrange(0, 4))]}
+    if r == 9:
+        return {"fn": "functools.descr_get", "twin": twin, "spec": functools_pspec(rng),
+                "obj": rng.choice([None, 3]),
+                "more": [rng.randrange(0, 5) for _ in range(rng.randrange(0, 3))]}
+    if r in (10, 11):
+        return functools_setstate_case(rng, twin)
+    if r == 12:
         n = rng.randrange(0, 4)
-        args = [("PH" if rng.random() < .3 else 1) for _ in range(n)]
-        kw = rng.choice(["none", "dict", "bad"])
-        ns = rng.choice(["none", "dict", "bad"])
-        return {"fn": "functools.setstate", "twin": twin, "isTuple": rng.random() < .9,
-                "size": rng.choice([4, 4, 4, 4, 3]), "callable": rng.random() < .9,
-                "argsTuple": rng.random() < .9, "args": args, "kwNone": kw == "none",
-                "kwDict": kw == "dict", "nsNone": ns == "none", "nsDict": ns == "dict"}
-    if r == 7:
+        return {"fn": "functools.partial_repr", "twin": twin, "funcbad": rng.random() < .2,
+                "args": [rng.choice(["PH", 1, 2, -1, -2]) for _ in range(n - 1)] + [1] * (n > 0),
+                "kw": rng.choice([[], [["a", 1]], [["a", 1], ["b", -1]], [["c", -2]]])}
+    if r == 13:
+        return {"fn": "functools.placeholder", "twin": twin, "name": rng.choice(["X", "Sub"]),
+                "nargs": rng.choice([0, 0, 1])}
+    if r in (14, 15):
+        n = rng.randrange(0, 3)
+        args = [("PH" if i < n - 1 and rng.random() < .5 else 7) for i in range(n)]
+        if rng.random() < .05 and args:
+            args[-1] = "PH"
+        k = rng.randrange(0, 3)
+        nest = [("PH" if i < k - 1 and rng.random() < .5 else 8) for i in range(k)]
+        return {"fn": "functools.pm_get", "twin": twin,
+                "kind": rng.choice(["fn", "fn", "classm", "staticm", "obj", "partial", "custom"]),
+                "id": rng.randrange(1, 4), "args": args, "nest": nest,
+                "kw": rng.choice([[], [["a", 1]]]), "morekw": rng.choice([[], [["b", 2]]]),
+                "abstract": rng.choice(["none", "none", "true", "raise"]),
+                "instance": rng.random() < .6,
+                "get": rng.choice(["new", "self", "raise"]), "self": rng.choice(["none", "attr", "raise"]),
+                "more": [rng.randrange(0, 5) for _ in range(rng.randrange(0, 4))]}
+    if r == 16:
+        def u(d):
+            k = rng.choice(["leaf", "leaf", "part", "pm", "method", "bad"]) if d else "leaf"
+            if k == "leaf":
+                return {"k": "leaf", "id": rng.randrange(1, 4)}
+            if k == "bad":
+                return {"k": "bad"}
+            return {"k": k, "f": u(d - 1)}
+        return {"fn": "functools.unwrap", "obj": u(5)}
+    if r == 17:
         return {"fn": "functools.make_key", "typed": False, **functools_lru_call(rng)}
-    if r in (8, 9):
-        ops = ["clear" if rng.random() < .07 else functools_lru_call(rng)
-               for _ in range(rng.randrange(0, 12))]
-        return {"fn": "functools.lru", "twin": twin, "ops": ops, "typed": rng.random() < .3,
-                "maxsize": rng.choice([None, 0, 1, 2, 3]), "bad": rng.choice([None, None, 2])}
-    if r == 10:
+    if r in (18, 19, 20):
+        return functools_lru_case(rng, twin)
+    if r == 21:
         k = rng.choice(["int", "int", "none", "callable", "other"])
-        return {"fn": "functools.lru_mode", "twin": twin, "kind": k, "typedbool": rng.random() < .7,
-                "n": rng.choice([-2**70, -1, 0, 1, 5, 2**63 - 1])}
-    if r == 11:
+        usable = k == "callable" or rng.random() < .85
+        return {"fn": "functools.lru_dec", "twin": twin, "kind": k, "typedbool": rng.random() < .7,
+                "n": rng.choice([-2**70, -1, 0, 1, 5, 2**63 - 1]), "callable": usable,
+                "fail": usable and rng.random() < .1, "viacache": rng.random() < .15}
+    if r == 22:
         seqs = [rng.sample(range(5), rng.randrange(0, 4)) for _ in range(rng.randrange(0, 4))]
         return {"fn": "functools.c3_merge", "seqs": seqs}
-    if r == 12:
+    if r == 23:
         classes = functools_worlds(rng)
         key = len(functools_HIER)
         for c in classes[1:]:
             if rng.random() < .3:
                 targets = [t for t in classes[1:] if isinstance(t, functools_abc.ABCMeta)
-                           and not issubclass(t, c)]
+                           and t.__name__ != "H" and not functools_issub(t, c)]
                 if targets:
-                    rng.choice(targets).register(c)
+                    functools_vreg(rng.choice(targets), c)
         functools_HIER[key] = classes
         i = rng.randrange(len(classes))
         types = rng.sample(range(len(classes)), rng.randrange(0, len(classes) + 1))
@@ -1836,48 +1981,111 @@ def functools_gen(rng):
         if which == "find_impl" and 0 not in types:
             types.append(0)
         w = functools_world_json(classes)
+        if rng.random() < .3 and which != "c3_mro":
+            types.append(len(classes) + rng.randrange(0, 2))
         extra = {"abcs": [t for t in types if t in w["abc"]]} if which == "c3_mro" else {}
         return {"fn": "functools." + which, "key": key, "cls": i, "types": types, **w, **extra}
-    if r == 13:
+    if r == 24:
         return functools_dispatch_case(rng)
-    k = rng.randrange(0, 11)
-    if k == 4:
-        n = rng.randrange(0, 3)
-        return {"fn": "functools.pm_call", "bound": rng.random() < .5,
-                "args": [("PH" if i < n - 1 and rng.random() < .5 else 7) for i in range(n)],
-                "obj": 1, "more": [rng.randrange(0, 5) for _ in range(rng.randrange(0, 3))]}
-    if k == 5:
-        return {"fn": "functools.descr_get", "twin": twin, "obj": rng.choice([None, 3]),
-                "more": [rng.randrange(0, 5) for _ in range(rng.randrange(0, 3))]}
-    if k == 6:
-        return {"fn": "functools.sdm_getattr",
-                "name": rng.choice(["__name__", "__qualname__", "__isabstractmethod__",
-                                    "__annotations__", "__type_params__", "foo", "__dict2__"])}
-    if k == 7:
-        return {"fn": "functools.sdm_init", "callable": rng.random() < .5,
-                "hasget": rng.random() < .5}
-    if k == 8:
-        return {"fn": "functools.sd_noarg"}
-    if k == 9:
-        return {"fn": "functools.reduce_warns",
-                "names": rng.sample(["function", "sequence", "initial"], rng.randrange(0, 3))}
-    if k == 10:
-        return {"fn": rng.choice(["functools.key_sig", "functools.lru_misc", "functools.unwrap"]),
-                "q": "functools_mod", "depth": 2}
+    if r == 25:
+        return functools_register_case(rng)
+    k = rng.randrange(0, 9)
     if k == 0:
-        return {"fn": "functools.update_wrapper",
-                "wrapper": [["__name__", 1]], "wrapped": rng.sample([["__name__", 2], ["__doc__", 3],
-                                                                     ["__module__", 4]], 2),
-                "wrapperd": [["x", 1], ["y", 2]], "wrappedd": rng.sample([["y", 5], ["z", 6]], 1),
-                "assigned": rng.sample(["__name__", "__doc__", "__module__", "__qualname__"], 3)}
+        names = ["a", "b", "c"]
+        return {"fn": "functools.update_wrapper", "viawraps": rng.random() < .3,
+                "wrapper": functools_wrapper_spec(rng),
+                "wrapped": {"attrs": [[k2, 10 + i] for i, k2 in enumerate(rng.sample(names, 2))],
+                            "bad": rng.choice([None, None, None, "b"]),
+                            "dictkind": rng.choice(["dict", "dict", "dict", "none", "bad"]),
+                            "dict": rng.sample([["y", 5], ["z", 6], ["a", 7], ["__wrapped__", 8]], 2)},
+                "assigned": rng.sample(names, rng.randrange(0, 4)),
+                "updated": rng.choice([["__dict__"], ["__dict__"], [], ["missing"]])}
     if k == 1:
-        return {"fn": "functools.cached_get",
-                "name": rng.choice(["p", None]), "fail": rng.random() < .2,
-                "dict": rng.choice([None, [], [["p", 1]], [["q", 1]]]), "frozen": rng.random() < .2}
+        return {"fn": "functools.cached_get", "name": rng.choice(["p", "p", None]),
+                "func": rng.choice(["ok", "mutate", "raise"]),
+                "dict": rng.choice(["rw", "rw", "rw", "none", "class", "frozen"]),
+                "items": rng.choice([[], [["p", 1]], [["q", 1]]])}
     if k == 2:
+        return {"fn": "functools.cached_init",
+                "tbl": [["__doc__", rng.choice(["d", None, "RAISE"])],
+                        ["__module__", rng.choice(["m", None, "RAISE"])]]}
+    if k == 3:
         return {"fn": "functools.set_name", "attr": rng.choice([None, "a", "b"]), "name": "a"}
-    return {"fn": "functools.sdm_repr", "q": rng.choice([None, "A.f"]), "n": rng.choice([None, "f"]),
-            "o": rng.choice([None, "5"])}
+    if k in (4, 5):
+        return functools_sdm_case(rng)
+    if k == 6:
+        return {"fn": "functools.sd_noarg", "tbl": [["__name__", rng.choice(["f", None, "RAISE"])]]}
+    if k == 7:
+        return {"fn": "functools.key_sig"}
+    return {"fn": "functools.lru_misc", "q": "functools_mod"}
+
+
+def functools_wrapper_spec(rng):
+    hasdict = rng.random() < .85
+    return {"dict": [["a", 1], ["y", 2]][:rng.randrange(0, 3)] if hasdict else [], "hasdict": hasdict,
+            "setfail": rng.choice([None, None, None, "a", "__wrapped__"])}
+
+
+def functools_setstate_case(rng, twin):
+    shape = rng.choice(["four"] * 8 + ["nottuple", "size"])
+    state = {"shape": shape, "n": rng.choice([0, 3, 5])}
+    raw = [("PH" if rng.random() < .35 else i) for i in range(rng.randrange(0, 4))]
+    it = [("PH" if rng.random() < .3 else 10 + i) for i in range(rng.randrange(2, 5))]
+    argkind = rng.choice(["tuple", "tuple", "tuple", "sub", "sub", "other"])
+    state.update({"callable": rng.random() < .9, "raw": raw, "iter": it, "argkind": argkind,
+                  "iterbad": rng.random() < .1, "kw": rng.choice(["none", "dict", "sub", "subbad", "other"]),
+                  "kwitems": rng.choice([[], [["a", 1]]]), "ns": rng.choice(["none", "dict", "other"]),
+                  "nsitems": rng.choice([[], [["x", 1]]])})
+    if argkind != "sub":
+        state["iter"] = raw
+    ph_raw = sum(1 for a in raw[:-1] if a == "PH")
+    ph_it = sum(1 for a in state["iter"] if a == "PH")
+    pyok = sum(1 for a in state["iter"] if a == "PH") == 0 or argkind != "sub"
+    # a call of a C partial whose count is below the slots of its tuple reads out of bounds: the finding
+    # corelibs-partial-setstate-phcount, reproduced in its own process. A trailing placeholder in the stored
+    # tuple needs care too, and the tuple must not hold one element, where the fast path takes over.
+    safe = argkind != "sub" or (twin == "c" and ph_it <= ph_raw and len(state["iter"]) >= 2) or \
+        (twin == "py" and pyok)
+    more = [rng.randrange(0, 9) for _ in range(rng.randrange(0, 4))]
+    return {"fn": "functools.setstate", "twin": twin, "state": state, "more": more, "call": safe}
+
+
+def functools_lru_case(rng, twin):
+    maxsize = rng.choice([None, 0, 1, 2, 3, 4])
+    n = rng.randrange(2, 5)
+    ops = ["clear" if rng.random() < .05 else rng.randrange(n) for _ in range(rng.randrange(0, 14))]
+    stage = {k: rng.choice([None, None, None, "hash", "getk", "getk", "recheckk", "insertk", "insertk"])
+             for k in range(n)}
+    pick = lambda name: [k for k in range(n) if stage[k] == name]
+    return {"fn": "functools.lru", "twin": twin, "maxsize": maxsize, "ops": ops,
+            "scripta": functools_script(rng, n, 1 if maxsize in (0, 1) else 2),
+            "scriptb": functools_script(rng, n, 0),
+            "hash": pick("hash"), "getk": pick("getk"), "recheckk": pick("recheckk"),
+            "insertk": pick("insertk")}
+
+
+def functools_register_case(rng):
+    k = rng.randrange(0, 4)
+    if k == 0:
+        return {"fn": "functools.register", "withfunc": rng.random() < .5,
+                "first": {"k": "val", "v": rng.choice([{"cls": 1}, {"union": [1, 2]}, {"union": [1, None]},
+                                                       "other"])}}
+    src, hints = rng.choice(functools_SOURCES)
+    return {"fn": "functools.register", "withfunc": rng.random() < .1,
+            "first": {"k": "func", "hints": hints, "src": src}}
+
+
+def functools_sdm_case(rng):
+    tbl = [["__qualname__", rng.choice(["A.f", None, "RAISE"])],
+           ["__name__", rng.choice(["f", None, None, "RAISE"])],
+           ["__module__", rng.choice(["m", None, "RAISE"])],
+           ["__doc__", rng.choice(["d", None])]]
+    return {"fn": "functools.sdm", "tbl": tbl, "callable": rng.random() < .8, "hasget": rng.random() < .6,
+            "absbad": rng.random() < .2, "kind": rng.choice(["fn", "classm", "staticm", "obj", "partial"]),
+            "id": rng.randrange(1, 4), "obj": rng.choice([None, 501, -1]),
+            "what": rng.choice(["repr", "getrepr", "getattr", "call", "call", "abstract", "wrapped"]),
+            "name": rng.choice(["__name__", "__qualname__", "__annotations__", "foo", "__wrapped2__"]),
+            "more": rng.choice([[], [1], [1, 2]]), "register": rng.random() < .5}
 
 
 def functools_dispatch_case(rng):
@@ -1888,7 +2096,6 @@ def functools_dispatch_case(rng):
         return 1000
     d = m.singledispatch(f)
     worlds, ops, out = [], [], []
-    impls = {}
 
     def snap():
         worlds.append(functools_world_json(classes))
@@ -1912,9 +2119,9 @@ def functools_dispatch_case(rng):
                 ops.append({"op": "reg", "c": c, "impl": impl, "w": w, "token": tok})
         elif a == 1:
             targets = [t for t in classes[1:] if isinstance(t, functools_abc.ABCMeta)
-                       and not issubclass(t, classes[c])]
+                       and t.__name__ != "H" and not functools_issub(t, classes[c])]
             if targets and classes[c] is not object:
-                rng.choice(targets).register(classes[c])
+                functools_vreg(rng.choice(targets), classes[c])
                 w = snap()
         else:
             cls = classes[rng.randrange(0, len(classes))]
@@ -1926,7 +2133,38 @@ def functools_dispatch_case(rng):
                 msg = str(e)
                 out.append({"exc": "RuntimeError",
                             "msg": "~Ambiguous dispatch" if msg.startswith("Ambiguous") else msg})
+            except ValueError as e:
+                out.append({"exc": "ValueError", "msg": str(e)})
     return {"fn": "functools.dispatch", "worlds": worlds, "ops": ops, "expect": out}
+
+
+class functools_reader:
+    """An object whose attribute reads follow a table: a value, `None` for AttributeError, or RAISE."""
+
+    def __init__(self, tbl, callable_=True):
+        object.__setattr__(self, "_tbl", dict(tbl))
+
+    def __getattribute__(self, k):
+        t = object.__getattribute__(self, "_tbl")
+        if k in t:
+            v = t[k]
+            if v == "RAISE":
+                raise ValueError("read")
+            if v is None:
+                raise AttributeError(k)
+            return v
+        if k in ("__class__", "__call__", "__get__", "__wrapped__"):
+            return object.__getattribute__(self, k)
+        raise AttributeError(k)
+
+
+def functools_reader_cls(callable_, hasget):
+    body = {}
+    if callable_:
+        body["__call__"] = lambda self, *a: 0
+    if hasget:
+        body["__get__"] = lambda self, o, t=None: self
+    return type("R", (functools_reader,), body)
 
 
 def functools_run(case):
@@ -1942,25 +2180,48 @@ def functools_run(case):
         it = functools_iter(case)
         args = (f, it) if case["initial"] is None else (f, it, case["initial"])
         return py_result(lambda: m.reduce(*args))
+    if fn == "reduce_wrapper":
+        vals = {"function": lambda a, b: 1, "sequence": [1, 2], "initial": 0}
+        kw = {k: vals[k] for k in case["names"]}
+        kw2 = dict(kw)
+        if "initial" in kw2 and "function" in kw2 and "sequence" in kw2:
+            kw2["sequence"] = [1]
+        with functools_warnings.catch_warnings(record=True) as w:
+            functools_warnings.simplefilter("error" if case["werror"] else "always")
+            r = py_result(lambda: functools_P.reduce(**kw2))
+        if r.get("exc") == "TypeError":
+            r["msg"] = "~reduce() missing"
+        if r.get("exc") == "DeprecationWarning":
+            r["msg"] = "~reduce"
+        warned = "function" in kw or "sequence" in kw
+        return {"ok": [r, warned]}
     if fn == "total_ordering":
         return functools_total(case)
     if fn == "cmp_key":
-        bad = case["bad"]
-
-        def cmp(a, b):
-            if a == bad:
-                raise ValueError("cmp")
-            return a - b
-        K = m.cmp_to_key(cmp)
-        x = K(case["x"])
-        o = K(case["other"]) if case["other"] is not None else 5
-        import operator
-        op = getattr(operator, case["op"])
-        return py_result(lambda: op(x, o))
+        return functools_cmp(case, m)
+    if fn == "key_new":
+        K = m.cmp_to_key(lambda a, b: 0)
+        r = py_result(lambda: K(*case["pos"], **dict(case["kw"])).obj)
+        return functools_tilde(functools_tilde(functools_tilde(r, "argument"), "keyword"), "missing")
     if fn == "partial":
         return functools_run_partial(case)
+    if fn == "partial_reduce":
+        return functools_run_reduce(case)
+    if fn == "descr_get":
+        def go():
+            q = functools_build(m, case["spec"])
+            return q.__get__(case["obj"], int)(*case["more"])
+        return functools_tilde(py_result(go), "object is not callable")
     if fn == "setstate":
         return functools_setstate(case, m)
+    if fn == "partial_repr":
+        return functools_repr(case, m)
+    if fn == "placeholder":
+        return functools_placeholder(case, m)
+    if fn == "pm_get":
+        return functools_pm(case, m)
+    if fn == "unwrap":
+        return functools_unwrap(case)
     if fn == "make_key":
         args = tuple(functools_val(p) for p in case["args"])
         kw = {k: functools_val(v) for k, v in case["kw"]}
@@ -1968,12 +2229,12 @@ def functools_run(case):
         return {"ok": k if isinstance(k, int) else ("tuple" if not isinstance(k, str) else int(k))}
     if fn == "lru":
         return functools_lru(case, m)
-    if fn == "lru_mode":
-        return functools_lru_mode(case, m)
+    if fn == "lru_dec":
+        return functools_lru_dec(case, m)
     if fn == "c3_merge":
         return py_result(lambda: functools_P._c3_merge([list(s) for s in case["seqs"]]))
     if fn in ("c3_mro", "compose_mro", "find_impl"):
-        cs = functools_HIER[case["key"]]
+        cs = list(functools_HIER[case["key"]]) + [functools_ALIAS, functools_NOTYPE]
         idx = {c: i for i, c in enumerate(cs)}
         cls = cs[case["cls"]]
         if fn == "c3_mro":
@@ -1983,19 +2244,25 @@ def functools_run(case):
             return py_result(lambda: [idx[c] for c in functools_P._compose_mro(
                 cls, [cs[a] for a in case["types"]])])
         reg = {cs[t]: t + 1000 for t in case["types"]}
-        return py_result(lambda: functools_P._find_impl(cls, reg))
+        return functools_tilde(py_result(lambda: functools_P._find_impl(cls, reg)), "Ambiguous dispatch")
     if fn == "dispatch":
         return {"ok": case["expect"]}
+    if fn == "register":
+        return functools_register(case)
+    if fn == "sd_noarg":
+        tbl = dict(case["tbl"])
+
+        def go():
+            cls = functools_reader_cls(True, False)
+            return functools_P.singledispatch(cls(tbl))()
+        return functools_tilde(py_result(go), "\0")
     if fn == "update_wrapper":
-        wrapper = functools_attrobj(dict(case["wrapper"]), case["wrapperd"])
-        wrapped = functools_attrobj(dict(case["wrapped"]), case["wrappedd"])
-        r = functools_P.update_wrapper(wrapper, wrapped, tuple(case["assigned"]))
-        attrs = dict(r.attrs)
-        attrs["__wrapped__"] = 7 if attrs["__wrapped__"] is wrapped else -1
-        return {"ok": [sorted([k, v] for k, v in attrs.items()),
-                       sorted([k, v] for k, v in r.d.items())]}
+        return functools_update_wrapper(case)
     if fn == "cached_get":
         return functools_cached(case)
+    if fn == "cached_init":
+        return py_result(lambda: (functools_P.cached_property(functools_reader(case["tbl"]))).attrname) \
+            if True else None
     if fn == "set_name":
         cp = functools_P.cached_property(lambda s: 1)
         cp.attrname = case["attr"]
@@ -2003,47 +2270,9 @@ def functools_run(case):
         def go():
             cp.__set_name__(object, case["name"])
             return cp.attrname
-        return py_result(go)
-    if fn == "sdm_repr":
+        return functools_tilde(py_result(go), "Cannot assign the same")
+    if fn == "sdm":
         return functools_sdm(case)
-    if fn == "pm_call":
-        return functools_pm(case)
-    if fn == "descr_get":
-        q = m.partial(lambda *a: list(a))
-        obj = case["obj"]
-        return {"ok": q.__get__(obj, int)(*case["more"])}
-    if fn == "sdm_getattr":
-        def f():
-            return 0
-        g = functools_P.singledispatchmethod(f).__get__(None, int)
-        n = case["name"]
-        try:
-            g.__getattr__(n)
-            return {"ok": True}
-        except AttributeError as e:
-            return {"ok": str(e) != ""}
-    if fn == "sdm_init":
-        cls = type("X", (), {**({"__call__": lambda s: 0} if case["callable"] else {}),
-                             **({"__get__": lambda s, o, t=None: s} if case["hasget"] else {})})
-        return py_result(lambda: (functools_P.singledispatchmethod(cls()), None)[1])
-    if fn == "sd_noarg":
-        def f2(*a):
-            return 0
-        f2.__name__ = "f"
-        return py_result(functools_P.singledispatch(f2))
-    if fn == "reduce_warns":
-        import warnings
-        kw = {k: {"function": max, "sequence": [1], "initial": 0}[k] for k in case["names"]}
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            try:
-                if "function" in kw or "sequence" in kw:
-                    functools_P.reduce(**kw)
-                else:
-                    functools_P.reduce(max, [1], **kw)
-            except TypeError:
-                pass
-        return {"ok": any(x.category is DeprecationWarning for x in w)}
     if fn == "key_sig":
         return {"ok": functools_C.cmp_to_key(max).__text_signature__}
     if fn == "lru_misc":
@@ -2052,156 +2281,642 @@ def functools_run(case):
         assert copy.copy(wr) is wr and copy.deepcopy(wr) is wr
         assert wr.__get__(None, int) is wr and type(wr.__get__(1, int)).__name__ == "method"
         return {"ok": [wr.__reduce__()]}
-    if fn == "unwrap":
-        f = functools_mod
-        q = functools_P.partial(functools_P.partial(f))
-        assert functools_P._unwrap_partial(q) is f
-        assert functools_P._unwrap_partialmethod(functools_P.partialmethod(q)) is f
-        return {"ok": True}
     raise ValueError(fn)
 
 
-def functools_pm(case):
-    P = functools_P.Placeholder
-    args = [P if a == "PH" else a for a in case["args"]]
-
-    def target(*a):
-        return [1, list(a), []]
-    if case["bound"]:
-        class A:
-            h = functools_P.partialmethod(target, *args)
-    else:
-        class Plain:
-            def __call__(self, *a):
-                return [1, list(a), []]
-
-        class A:
-            h = functools_P.partialmethod(Plain(), *args)
-    obj = A()
-    r = py_result(lambda: obj.h(*case["more"]))
-    if "ok" in r:
-        r["ok"][1][0] = 1
-    return r
+def functools_norm(v, cls=None, obj=None):
+    if isinstance(v, bool):
+        return 101 if v else 100
+    if isinstance(v, functools_R):
+        return v.v
+    return v
 
 
-class functools_attrobj:
-    """An object whose attribute reads and writes are visible as a dict, and whose `__dict__`
-    is a separate dict, so `update_wrapper` can be observed."""
+class functools_R:
+    """A comparison result that is not a bool."""
 
-    def __init__(self, attrs, d):
-        object.__setattr__(self, "attrs", dict(attrs))
-        object.__setattr__(self, "d", dict(d))
+    def __init__(self, v):
+        self.v = v
 
-    def __getattribute__(self, k):
-        if k == "__dict__":
-            return object.__getattribute__(self, "d")
-        if k in ("attrs", "d"):
-            return object.__getattribute__(self, k)
-        a = object.__getattribute__(self, "attrs")
-        if k in a:
-            return a[k]
-        raise AttributeError(k)
-
-    def __setattr__(self, k, v):
-        object.__getattribute__(self, "attrs")[k] = v
+    def __bool__(self):
+        if self.v == 9:
+            raise ValueError("bool")
+        return self.v != 0
 
 
 def functools_total(case):
-    root_ops = {"__lt__": "<", "__le__": "<=", "__gt__": ">", "__ge__": ">="}
-    foreign = case["foreign"]
-    body = {"__eq__": lambda s, o: s.v == o.v, "__hash__": None,
-            "__init__": lambda s, v: setattr(s, "v", v)}
+    foreign, rootbad = case["foreign"], case["rootbad"]
+    res, eqv, nev = case["res"], case["eq"], case["ne"]
+
+    def root(s, o):
+        if rootbad:
+            raise ValueError("root")
+        return NotImplemented if foreign else functools_R(res)
+    body = {"__eq__": lambda s, o: functools_R(eqv), "__ne__": lambda s, o: functools_R(nev),
+            "__hash__": None}
     for r in case["roots"]:
-        body[r] = eval(f"lambda s, o: NotImplemented if {foreign} else s.v {root_ops[r]} o.v")
+        body[r] = root
+    setfail = case["setfail"]
+
+    class Meta(type):
+        def __setattr__(cls, k, v):
+            if k == setfail:
+                raise ValueError("set")
+            super().__setattr__(k, v)
+    if case["inherit"]:
+        base = Meta("B", (), body)
+        cls = Meta("T", (base,), {})
+    else:
+        cls = Meta("T", (), body)
 
     def go():
-        c = functools_P.total_ordering(type("T", (), body))
-        v = getattr(c, case["op"])(c(case["a"]), c(case["b"]))
-        return "NotImplemented" if v is NotImplemented else {"val": v}
+        c = functools_P.total_ordering(cls)
+        v = getattr(c, case["op"])(c(), c())
+        return "NotImplemented" if v is NotImplemented else {"val": functools_norm(v)}
+    r = py_result(go)
+    return r
+
+
+class functools_cmpres(int):
+    pass
+
+
+def functools_cmp(case, m):
+    bad, kind = case["bad"], case["res"]
+
+    class Res:
+        def __init__(self, v):
+            self.v = v
+
+        def __lt__(self, o):
+            return self.w("lt", self.v < o)
+
+        def __le__(self, o):
+            return self.w("le", self.v <= o)
+
+        def __eq__(self, o):
+            return self.w("eq", self.v == o)
+
+        def __ne__(self, o):
+            return self.w("ne", self.v != o)
+
+        def __gt__(self, o):
+            return self.w("gt", self.v > o)
+
+        def __ge__(self, o):
+            return self.w("ge", self.v >= o)
+
+        def w(self, op, b):
+            if kind == "boom":
+                raise ValueError("cmp0")
+            if op == "ne":
+                return 7
+            return 1 if b else 0
+
+    def cmp(a, b):
+        if a == bad:
+            raise ValueError("cmp")
+        return a - b if kind == "int" else Res(a - b)
+    K = m.cmp_to_key(cmp)
+    x = K(case["x"])
+
+    class Duck:
+        obj = case["other"]
+    ok = case["otherkind"]
+    o = K(case["other"]) if ok == "key" else (Duck() if ok == "duck" else 5)
+    op = getattr(functools_operator, case["op"])
+
+    def go():
+        v = op(x, o)
+        if isinstance(v, bool):
+            return 101 if v else 100
+        return v
+    r = py_result(go)
+    if r.get("exc") == "AttributeError":
+        r["msg"] = "~object has no attribute 'obj'"
+    return r
+
+
+def functools_repr(case, m):
+    PH = m.Placeholder
+
+    class V:
+        def __init__(self, v):
+            self.v = v
+
+        def __repr__(self):
+            if self.v == -1:
+                raise ValueError("arg")
+            return str(self.v)
+
+    class F:
+        def __call__(self):
+            return 0
+
+        def __repr__(self):
+            if case["funcbad"]:
+                raise ValueError("func")
+            return "F"
+    p = m.partial(F())
+    conv = lambda a: PH if a == "PH" else (p if a == -2 else V(a))
+    args = tuple(conv(a) for a in case["args"])
+    kw = {k: conv(v) for k, v in case["kw"]}
+    p.__setstate__((p.func, args, kw, None))
+    return py_result(lambda: repr(p))
+
+
+def functools_ph_new(m, a, nargs):
+    r = py_result(lambda: m._PlaceholderType(*[1] * nargs) is a)
+    if "exc" in r and "positional argument" in r["msg"]:
+        r["msg"] = "~takes 1 positional argument"
+    return r
+
+
+def functools_placeholder(case, m):
+    a = m._PlaceholderType()
+    b = m.Placeholder
+
+    def sub():
+        type(m._PlaceholderType)(case["name"], (m._PlaceholderType,), {})
+    return {"ok": [a is b, repr(a), a.__reduce__(), py_result(sub),
+                   functools_ph_new(m, a, case["nargs"])]}
+
+
+class functools_targets:
+    pass
+
+
+def functools_pm(case, m):
+    P = m.Placeholder
+    args = [P if a == "PH" else a for a in case["args"]]
+    nest = [P if a == "PH" else a for a in case["nest"]]
+    i = case["id"]
+    holder = {}
+
+    def norm(a):
+        if isinstance(a, holder["A"]):
+            return 501
+        if a is holder["A"]:
+            return 502
+        return a
+
+    def target(*a, **k):
+        return [i, [norm(x) for x in a], [[x, y] for x, y in k.items()]]
+    kind = case["kind"]
+    ab = case["abstract"]
+
+    class Abs:
+        """A plain callable with the `__isabstractmethod__` the case asks for."""
+
+        def __call__(self, *a, **k):
+            return target(*a, **k)
+
+        @property
+        def __isabstractmethod__(self):
+            if ab == "raise":
+                raise ValueError("abs")
+            if ab == "true":
+                return True
+            raise AttributeError("__isabstractmethod__")
+
+    class Func(Abs):
+        def __get__(self, obj, cls=None):
+            if obj is None:
+                return self
+            return functools_operator_bound(self, obj)
+
+    def wrapf(x):
+        return x
+
+    def bound(f, o):
+        class Mt(Abs):
+            __self__ = o
+
+            def __call__(self, *a, **k):
+                return f(o, *a, **k)
+        return Mt()
+    functools_operator_bound = bound
+    if kind == "fn":
+        func = Func()
+    elif kind == "classm":
+        class Cm(Abs):
+            __call__ = None
+
+            def __get__(self, obj, cls=None):
+                return bound(target, cls)
+        func = Cm()
+        if True:
+            del_call = None
+    elif kind == "staticm":
+        class Sm(Abs):
+            def __get__(self, obj, cls=None):
+                return target
+        func = Sm()
+    elif kind == "obj":
+        func = Abs()
+    elif kind == "partial":
+        class Pa(Abs):
+            def __get__(self, obj, cls=None):
+                return self if obj is None else bound(target, obj)
+        func = Pa()
+    else:
+        ge, se = case["get"], case["self"]
+
+        class Cu(Abs):
+            def __get__(self, obj, cls=None):
+                if ge == "raise":
+                    raise ValueError("get")
+                if ge == "self":
+                    return self
+
+                class New:
+                    def __call__(self2, *a, **k):
+                        return [i + 100, [norm(x) for x in a], [[x, y] for x, y in k.items()]]
+
+                    @property
+                    def __self__(self2):
+                        if se == "raise":
+                            raise ValueError("self")
+                        if se == "attr":
+                            return 700
+                        raise AttributeError("__self__")
+                return New()
+        func = Cu()
+
+    def go():
+        pm = m.partialmethod(func, *args, **dict(case["kw"]))
+        if nest:
+            pm = m.partialmethod(pm, *nest)
+
+        class A:
+            h = pm
+        holder["A"] = A
+        got = pm.__get__(A() if case["instance"] else None, A)
+        return got(*case["more"], **dict(case["morekw"]))
+    r = py_result(go)
+    if "exc" in r and "cls_or_self" in r["msg"]:
+        r["msg"] = "~_method() missing 1 required positional argument: 'cls_or_self'"
+    if "exc" in r and "object is not callable" in r["msg"]:
+        r["msg"] = "~object is not callable"
+    if "exc" in r and "must be a callable" in r["msg"]:
+        r["msg"] = "~the first argument must be a callable or a descriptor"
+    return r
+
+
+def functools_unwrap(case):
+    P = functools_P
+
+    def mk(u):
+        k = u["k"]
+        if k == "leaf":
+            def f():
+                return u["id"]
+            return f
+        if k == "bad":
+            class Bad:
+                @property
+                def __partialmethod__(self):
+                    raise ValueError("read")
+            return Bad()
+        inner = mk(u["f"])
+        if k == "part":
+            o = object.__new__(P.partial)
+            o.func = inner
+            return o
+        if k == "pm":
+            o = object.__new__(P.partialmethod)
+            o.func = inner
+            return o
+
+        class Met:
+            pass
+        o = Met()
+        o.__partialmethod__ = inner
+        return o
+
+    def go():
+        r = P._unwrap_partialmethod(mk(case["obj"]))
+        return r() if type(r).__name__ == "function" else "method"
     return py_result(go)
 
 
 def functools_setstate(case, m):
     PH = m.Placeholder
-    args = [PH if a == "PH" else a for a in case["args"]]
-    fn = (lambda: 0) if case["callable"] else 5
-    a = tuple(args) if case["argsTuple"] else args
-    kw = None if case["kwNone"] else ({} if case["kwDict"] else 5)
-    ns = None if case["nsNone"] else ({} if case["nsDict"] else 5)
-    st = (fn, a, kw, ns)
-    if case["size"] != 4:
-        st = st[:case["size"]]
-    if not case["isTuple"]:
-        st = list(st)
+    st = case["state"]
+    conv = lambda l: tuple(PH if a == "PH" else a for a in l)
+    if st["shape"] == "nottuple":
+        state = [1]
+    elif st["shape"] == "size":
+        state = (1,) * st["n"]
+    else:
+        fn = (lambda *a, **k: [1, list(a), [[x, y] for x, y in k.items()]]) if st["callable"] else 5
+        ak = st["argkind"]
+        if ak == "tuple":
+            a = conv(st["raw"])
+        elif ak == "sub":
+            it, itbad = conv(st["iter"]), st["iterbad"]
+
+            class T(tuple):
+                def __iter__(self):
+                    if itbad:
+                        raise ValueError("iter")
+                    return iter(it)
+            a = T(conv(st["raw"]))
+        else:
+            a = list(conv(st["raw"]))
+        ki = dict(st["kwitems"])
+        kk = st["kw"]
+        if kk == "none":
+            kw = None
+        elif kk == "dict":
+            kw = ki
+        elif kk == "sub":
+            class D(dict):
+                pass
+            kw = D(ki)
+        elif kk == "subbad":
+            class D2(dict):
+                def keys(self):
+                    raise ValueError("conv")
+
+                def __iter__(self):
+                    raise ValueError("conv")
+            kw = D2(ki)
+        else:
+            kw = 5
+        ns = None if st["ns"] == "none" else (dict(st["nsitems"]) if st["ns"] == "dict" else 5)
+        state = (fn, a, kw, ns)
     p = m.partial(lambda: 0)
 
     def go():
-        p.__setstate__(st)
-        return sum(1 for x in p.args if x is PH)
+        p.__setstate__(state)
+        _, _, rs = p.__reduce__()
+        red = [["PH" if a is PH else a for a in rs[1]],
+               [[k, v] for k, v in rs[2].items()] if rs[2] is not None else None,
+               [[k, v] for k, v in rs[3].items()] if rs[3] is not None else None]
+        if case["call"]:
+            return [red, py_result(lambda: p(*case["more"]))]
+        return [red, None]
     return py_result(go)
 
 
-def functools_lru(case, m):
-    bad = case["bad"]
+class functools_key:
+    """A key whose hash is shared, so every lookup compares; `__eq__` raises when poisoned."""
+    poison = None   # set of keys armed now, with the remaining compares
 
-    def f(*a, **k):
-        v = sum(int(x) for x in a) + sum(int(x) for x in k.values())
-        if v == bad:
-            raise ValueError("f")
-        return v
-    w = m.lru_cache(maxsize=case["maxsize"], typed=case["typed"])(f)
+    def __init__(self, n, stage):
+        self.n, self.stage = n, stage
+        self.count = None
+
+    def __hash__(self):
+        if self.stage == "hash":
+            raise TypeError("unhashable")
+        return 0
+
+    def __eq__(self, other):
+        for k in (self, other):
+            if k.count is not None:
+                k.count -= 1
+                if k.count <= 0:
+                    k.count = None
+                    raise ValueError("eq")
+        return self.n == other.n
+
+
+def functools_lru(case, m):
+    maxsize = case["maxsize"]
+    box = {}
+    current = []
+
+    def run(steps):
+        for s in steps:
+            if s[0] == "ret":
+                return s[1]
+            if s[0] == "raise":
+                raise ValueError("f")
+            if s[0] == "clear":
+                box["w"].cache_clear()
+            if s[0] == "call":
+                try:
+                    call(s[1])
+                except Exception:
+                    pass
+        return 0
+
+    def f(key):
+        if key.stage == "get":
+            key.count = None
+        mi = box["w"].cache_info().misses
+        steps = case["scripta"][key.n] if mi % 2 == 1 else case["scriptb"][key.n]
+        r = run(steps)
+        size = box["w"].cache_info().currsize
+        if key.stage == "recheck":
+            key.count = 1
+        elif key.stage == "insert" and maxsize is not None and size + 1 < maxsize + 0:
+            key.count = size + 1
+        return r
+
+    def stage(n):
+        for name, l in (("hash", "hash"), ("get", "getk"), ("recheck", "recheckk"), ("insert", "insertk")):
+            if n in case[l]:
+                return name
+        return None
+
+    def call(n):
+        st = stage(n)
+        if maxsize is None and st in ("recheck", "insert"):
+            st = None
+        if maxsize == 0:
+            st = None
+        key = functools_key(n, st)
+        if st == "get":
+            key.count = 1
+        try:
+            return box["w"](key)
+        finally:
+            key.count = None
+    box["w"] = w = m.lru_cache(maxsize=maxsize)(f)
     out = []
     for op in case["ops"]:
         if op == "clear":
             w.cache_clear()
             continue
-        args = [functools_val(p) for p in op["args"]]
-        kw = {k: functools_val(v) for k, v in op["kw"]}
-        out.append(py_result(lambda: w(*args, **kw)))
+        r = py_result(lambda: call(op))
+        if r.get("exc") == "TypeError":
+            r["msg"] = "~unhashable"
+        if r.get("exc") == "KeyError":
+            r["msg"] = "~key"
+        out.append(r)
     i = w.cache_info()
     return {"ok": [out, [i.hits, i.misses, i.maxsize, i.currsize]]}
 
 
-def functools_lru_mode(case, m):
+def functools_lru_dec(case, m):
     k = case["kind"]
-    arg = {"int": case["n"], "none": None, "callable": (lambda: 0), "other": 1.5}[k]
-    typed = False if case["typedbool"] else 1
+    fail = case["fail"]
+
+    class F:
+        def __call__(self):
+            return 0
+
+        @property
+        def __module__(self):
+            raise ValueError("read")
+    user = (F() if fail else (lambda: 0)) if case["callable"] else 5
+    arg = {"int": case["n"], "none": None, "callable": user, "other": 1.5}[k]
+    typed = case["typedbool"]
+    if k == "callable":
+        typed = False if case["typedbool"] else 1
 
     def go():
-        w = m.lru_cache(arg, typed)
-        if k != "callable":
-            w = w(lambda: 0)
-        i = w.cache_info()
-        return ("infinite" if i.maxsize is None else "uncached" if i.maxsize == 0
-                else int(i.maxsize))
-    return py_result(go)
+        if case["viacache"]:
+            w = m.cache(user)
+        else:
+            w = m.lru_cache(arg, typed)
+            if k != "callable":
+                w = w(user)
+        p = w.cache_parameters()
+        i = p["maxsize"]
+        mode = "infinite" if i is None else "uncached" if i == 0 else int(i)
+        return [mode, i, p["typed"]]
+    return functools_tilde(py_result(go), "\0")
+
+
+def functools_register(case):
+    d = functools_P.singledispatch(lambda x: 1000)
+    first = case["first"]
+    table = {1: int, 2: str}
+    funcarg = (lambda x: 7) if case["withfunc"] else None
+
+    def val(v):
+        if v == "other":
+            return 5
+        if "cls" in v:
+            return table[v["cls"]]
+        args = [table[a] if a is not None else list[int] for a in v["union"]]
+        return args[0] | args[1]
+
+    def go():
+        if first["k"] == "val":
+            r = d.register(val(first["v"]), funcarg)
+        else:
+            ns = {}
+            exec(first["src"], ns)
+            r = d.register(ns["g"], funcarg)
+        keys = sorted({object: 0, int: 1, str: 2}[k] for k in d.registry)
+        kind = "decorator" if getattr(r, "__name__", "") == "<lambda>" and funcarg is None \
+            and first["k"] == "val" else "func"
+        return [kind, keys]
+    r = py_result(go)
+    if "exc" in r and r["exc"] == "TypeError":
+        msg = r["msg"]
+        if "Use either" in msg:
+            r["msg"] = "~Invalid first argument to `register()`: Use either `@register(some_class)`"
+        elif "is not a class or union type" in msg:
+            r["msg"] = "~Invalid first argument to `register()`. is not a class or union type."
+        elif "not all arguments" in msg:
+            r["msg"] = "~Invalid annotation: not all arguments are classes."
+        elif "unresolved forward" in msg:
+            r["msg"] = "~Invalid annotation: is an unresolved forward reference."
+        elif "is not a class" in msg:
+            r["msg"] = "~Invalid annotation: is not a class."
+    return r
+
+
+def functools_update_wrapper(case):
+    wr, wd = case["wrapper"], case["wrapped"]
+    setfail = wr["setfail"]
+
+    class Base:
+        __slots__ = ()
+
+        def __setattr__(self, k, v):
+            if k == setfail:
+                raise ValueError("set")
+            object.__setattr__(self, k, v)
+
+    class WithDict(Base):
+        pass
+
+    class Slots(Base):
+        __slots__ = ("a", "b", "c", "y", "__wrapped__")
+
+    if wr["hasdict"]:
+        wrapper = WithDict()
+        for k, v in wr["dict"]:
+            wrapper.__dict__[k] = v
+    else:
+        wrapper = Slots()
+    attrs, bad, dk, dd = dict(wd["attrs"]), wd["bad"], wd["dictkind"], dict(wd["dict"])
+
+    class W:
+        def __getattribute__(self, k):
+            if k == bad:
+                raise ValueError("read")
+            if k in attrs:
+                return attrs[k]
+            if k == "__dict__":
+                if dk == "bad":
+                    raise ValueError("dict")
+                if dk == "none":
+                    raise AttributeError(k)
+                return dd
+            if k == "__class__":
+                return W
+            raise AttributeError(k)
+    wrapped = W()
+
+    def go():
+        if case["viawraps"]:
+            r = functools_P.wraps(wrapped, tuple(case["assigned"]), tuple(case["updated"]))(wrapper)
+        else:
+            r = functools_P.update_wrapper(wrapper, wrapped, tuple(case["assigned"]), tuple(case["updated"]))
+        fix = lambda v: 7 if v is wrapped else v
+        if wr["hasdict"]:
+            return [sorted([k, fix(v)] for k, v in r.__dict__.items()), []]
+        slots = [[n, fix(getattr(r, n))] for n in Slots.__slots__ if hasattr(r, n)]
+        return [[], sorted(slots)]
+    res = py_result(go)
+    if res.get("exc") == "AttributeError":
+        res["msg"] = "~object has no attribute"
+    return res
 
 
 def functools_cached(case):
     class Plain:
         pass
+    name, mode, dk, items = case["name"], case["func"], case["dict"], case["items"]
 
     def func(self):
-        if case["fail"]:
+        if mode == "raise":
             raise ValueError("f")
+        if mode == "mutate":
+            self.__dict__["extra"] = 3
+            self.__dict__[name or "p"] = 9
         return 5
     cp = functools_P.cached_property(func)
-    cp.attrname = case["name"]
-    d = case["dict"]
-    if d is None:
+    cp.attrname = name
+    if dk == "class":
+        inst = None
+    elif dk == "none":
         inst = type("S", (), {"__slots__": ()})()
+    elif dk == "frozen":
+        inst = functools_frozen(dict(items))
     else:
         inst = Plain()
-        if case["frozen"]:
-            inst = functools_frozen(dict(d))
-        else:
-            inst.__dict__.update(d)
+        inst.__dict__.update(items)
 
     def go():
-        v = cp.__get__(inst, type(inst))
-        dd = inst.__dict__
-        return [v, [[k, x] for k, x in dd.items()]]
-    return py_result(go)
+        v = cp.__get__(inst, Plain)
+        if v is cp:
+            return "self"
+        return [v, sorted([k, x] for k, x in inst.__dict__.items())]
+    r = py_result(go)
+    if "exc" in r and "No '__dict__'" in r["msg"]:
+        r["msg"] = "~No '__dict__' attribute on instance"
+    if "exc" in r and "does not support item assignment" in r["msg"]:
+        r["msg"] = "~The '__dict__' attribute does not support item assignment"
+    return r
 
 
 class functools_FrozenDict(dict):
@@ -2227,23 +2942,79 @@ functools_frozen_store = {}
 
 
 def functools_sdm(case):
-    q, n, o = case["q"], case["n"], case["o"]
-
-    class F:
-        def __call__(self):
-            return 0
-    f = F()
-    if q is not None:
-        f.__qualname__ = q
-    if n is not None:
-        f.__name__ = n
-    s = functools_P.singledispatchmethod(f)
+    i = case["id"]
+    tbl = dict(case["tbl"])
+    if case["absbad"]:
+        tbl["__isabstractmethod__"] = "RAISE"
+    cls = functools_reader_cls(case["callable"], case["hasget"])
+    f = cls(tbl)
+    what = case["what"]
+    obj = case["obj"]
 
     class Obj:
         def __repr__(self):
-            return o
-    g = s.__get__(Obj() if o is not None else None, Obj)
-    return {"ok": [repr(s), repr(g)]}
+            if obj == -1:
+                raise ValueError("objrepr")
+            return str(obj)
+
+    class A:
+        pass
+    inst = None if obj is None else Obj()
+
+    def norm(a):
+        if a is inst:
+            return obj
+        if a is A:
+            return 502
+        return a
+
+    def target(*a, **k):
+        return [i, [norm(x) for x in a], []]
+    kind = case["kind"]
+    if kind == "fn":
+        impl = target
+    elif kind == "classm":
+        impl = classmethod(target)
+    elif kind == "staticm":
+        impl = staticmethod(target)
+    elif kind == "obj":
+        class C:
+            def __call__(self, *a, **k):
+                return target(*a, **k)
+        impl = C()
+    else:
+        impl = functools_P.partial(target)
+
+    def go():
+        s = functools_P.singledispatchmethod(f)
+        # `impl` is what `object` dispatches to in the model too
+        s.dispatcher.registry  # read only
+        base = None
+        s.dispatcher.register(object, impl)
+        if what == "repr":
+            return repr(s)
+        if what == "abstract":
+            return s.__isabstractmethod__ is not False and bool(s.__isabstractmethod__)
+        g = s.__get__(inst, A)
+        if what == "getrepr":
+            return repr(g)
+        if what == "getattr":
+            try:
+                v = g.__getattr__(case["name"])
+            except AttributeError:
+                return None
+            return v
+        if what == "wrapped":
+            return g.__wrapped__ is f
+        if case["register"]:
+            g.register(int, impl)
+        return g(*case["more"])
+    r = py_result(go)
+    if "exc" in r and "is not callable or a descriptor" in r["msg"]:
+        r["msg"] = "~is not callable or a descriptor"
+    if "exc" in r and "has no attribute '__get__'" in r["msg"]:
+        r["msg"] = "~object has no attribute '__get__'"
+    return r
 # ====== END AREA functools ======
 
 # ====== BEGIN AREA operator (Lib/operator.py, Modules/_operator.c, Lib/copy.py, Lib/abc.py) ======

@@ -6,14 +6,24 @@ in source order. Line numbers refer to that file unless stated otherwise.
 
 `Obj` is the Python object an operation receives. The constructors `index`, `floatLike`,
 `boolLike` and `exporter` run Python code (`__index__`, `__float__`, `__bool__`,
-`__buffer__`), which is what makes the `CHECK_RELEASED_AGAIN` macros necessary (gh-92888);
-`rel = some i` is a callback that does `m.release()` on view `i`, ignoring `BufferError`.
+`__buffer__`), which is what makes the `CHECK_RELEASED_AGAIN` macros necessary (gh-92888).
+Such a callback first does `m.release()` on view `i` when `rel = some i`, ignoring
+`BufferError`, and then ends as `Ret` says: it returns a value, raises, or returns an
+object of the wrong type, which the C caller reports.
 -/
 
 namespace PyLean.BytesObj.Mem
 
 open PyLean
 open PyLean.RangeSlice (Slice sliceUnpack adjustIndices wrap)
+
+/-- How a Python-level callback ends. -/
+inductive Ret (α : Type) where
+  | val (a : α)
+  | raises (e : PyExc)
+  /-- It returned an object of this type, not the one the C caller needs. -/
+  | wrong (typeName : String)
+  deriving Repr, DecidableEq, Inhabited
 
 /-- A Python object as an argument. -/
 inductive Obj where
@@ -28,13 +38,13 @@ inductive Obj where
   /-- A memoryview. -/
   | view (i : Nat)
   /-- A buffer exporter already laid out in the store. -/
-  | exporter (b : Buf) (rel : Option Nat)
+  | exporter (b : Ret Buf) (rel : Option Nat)
   /-- An object with `__index__`. -/
-  | index (n : Int) (rel : Option Nat)
+  | index (n : Ret Int) (rel : Option Nat)
   /-- An object with `__float__`. -/
-  | floatLike (bits : Nat) (rel : Option Nat)
+  | floatLike (bits : Ret Nat) (rel : Option Nat)
   /-- An object with `__bool__`. -/
-  | boolLike (b : Bool) (rel : Option Nat)
+  | boolLike (b : Ret Bool) (rel : Option Nat)
   deriving Repr, DecidableEq, Inhabited
 
 def Obj.typeName : Obj → String
@@ -130,6 +140,22 @@ def memoryExit (i : Nat) : M Unit := memoryviewRelease i
 def fire : Option Nat → M Unit
   | none => pure ()
   | some i => fun st => if getExports st i = 0 then memoryRelease i st else (.ok (), st)
+
+/-- The end of a callback. `wrong` is the error text the C caller gives for a result of
+the wrong type. -/
+def Ret.get {α : Type} (wrong : String → PyExc) : Ret α → M α
+  | .val a => pure a
+  | .raises e => throw e
+  | .wrong t => throw (wrong t)
+
+theorem Ret.get_state {α : Type} (w : String → PyExc) (r : Ret α) (st : St) : (r.get w st).2 = st := by
+  cases r <;> rfl
+
+theorem Ret.get_val {α : Type} (w : String → PyExc) (a : α) (st : St) :
+    (Ret.val a).get w st = (.ok a, st) := rfl
+
+/-- `__buffer__` returned something other than a memoryview, typeobject.c:10718-10719. -/
+def bufferWrong (_ : String) : PyExc := .typeError "__buffer__ returned non-memoryview object"
 
 /-! ## Registering views -/
 
@@ -250,9 +276,10 @@ def getBufferFull (o : Obj) : M Buf :=
   match o with
   | .view i => memoryGetbuf i bufFullRO
   | .bytes b => bytesBuf b
-  | .exporter b rel => do
+  | .exporter r rel => do
     fire rel
     -- `__buffer__` of the wrapper class returns `memoryview(exporter)`
+    let b ← r.get bufferWrong
     if b.ndim > 64 then
       throw (.valueError "memoryview: number of dimensions must not exceed 64")
     return b
@@ -284,9 +311,9 @@ def memoryViewFromObjectAndFlags (v : Obj) (flags : Nat) : M Nat :=
   | .bytes b => do
     let e ← bytesBuf b
     viewOfExporter e flags
-  | .exporter b rel => do
+  | .exporter r rel => do
     fire rel
-    viewOfExporter b flags
+    viewOfExporter (← r.get bufferWrong) flags
   | o => throw (.typeError s!"memoryview: a bytes-like object is required, not '{o.typeName}'")
 
 /-- `PyMemoryView_FromObject`, :853-857. -/
@@ -508,11 +535,14 @@ def fixErrorInt (fmt : List Char) : PyExc → PyExc
   | .overflowError _ | .valueError _ => valueErrorInt fmt
   | e => e
 
-/-- `_PyNumber_Index(item)`, running `__index__`. -/
+/-- `__index__` returned a non-int, Objects/abstract.c:1423-1425. -/
+def indexWrong (t : String) : PyExc := .typeError s!"__index__ returned non-int (type {t})"
+
+/-- `_PyNumber_Index(item)`, Objects/abstract.c:1402-1440, running `__index__`. -/
 def numberIndex : Obj → M Int
   | .int n => pure n
   | .bool b => pure (if b then 1 else 0)
-  | .index n rel => do fire rel; return n
+  | .index r rel => do fire rel; r.get indexWrong
   | o => throw (.typeError s!"'{o.typeName}' object cannot be interpreted as an integer")
 
 /-- `PyLong_AsLong`. -/
@@ -539,14 +569,20 @@ def pylongAsZd (item : Obj) : M Int := do M.lift (longAsSsize (← numberIndex i
 /-- `pylong_as_zu`, :1747-1760. -/
 def pylongAsZu (item : Obj) : M Int := do M.lift (asUnsignedLong (← numberIndex item))
 
+/-- `__float__` returned a non-float, Objects/floatobject.c:294-296. -/
+def floatWrong (t : String) : PyExc := .typeError s!"Flt.__float__ returned non-float (type {t})"
+
 /-- `PyFloat_AsDouble`, Objects/floatobject.c: `__float__`, then `__index__`. -/
 def floatAsDouble : Obj → M Nat
   | .float b => pure b
-  | .floatLike b rel => do fire rel; return b
+  | .floatLike r rel => do fire rel; r.get floatWrong
   | .int n => M.lift (longAsDouble n)
   | .bool b => M.lift (longAsDouble (if b then 1 else 0))
-  | .index n rel => do fire rel; M.lift (longAsDouble n)
+  | .index r rel => do fire rel; M.lift (longAsDouble (← r.get indexWrong))
   | o => throw (.typeError s!"must be real number, not {o.typeName}")
+
+/-- `__bool__` returned a non-bool, Objects/typeobject.c:10235-10238. -/
+def boolWrong (t : String) : PyExc := .typeError s!"__bool__ should return bool, returned {t}"
 
 /-- `PyObject_IsTrue`. -/
 def isTrue : Obj → M Bool
@@ -557,7 +593,7 @@ def isTrue : Obj → M Bool
   | .str s => pure (!s.isEmpty)
   | .none => pure false
   | .list n => pure (n != 0)
-  | .boolLike b rel => do fire rel; return b
+  | .boolLike r rel => do fire rel; r.get boolWrong
   | .view i => do
     -- `memory_length` via `sq_length`/`mp_length`
     let st ← M.get

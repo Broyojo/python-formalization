@@ -58,7 +58,7 @@ def counterEntries : List Entry := [
     statement := "a <= b and b <= a exactly when a == b; < and > are converses, as are <= and >=."
     source := "invariant"
     status := .proven, prop := ``ComparisonsAreOrder, thm := some ``comparisonsAreOrder_proven },
-  { id := "coll-counter-fromkeys", pyFile := file, pyFns := ["Counter.fromkeys"]
+  { id := "coll-counter-fromkeys", pyFile := file, pyFns := []
     statement := "Counter.fromkeys raises NotImplementedError for every input."
     source := "Doc/library/collections.rst, Counter.fromkeys; Lib/collections/__init__.py:670-680"
     status := .proven, prop := ``FromkeysUndefined, thm := some ``fromkeysUndefined_proven },

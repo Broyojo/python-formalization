@@ -209,7 +209,7 @@ def excNumberIndex (rt : Rt) (item : Val) : M Int := do
       match intOf w r with
       | some i => pure i
       | none => typeErr s!"__index__ returned non-int (type {trunc 200 (typeName w r)})"
-    | some _ => unmodelled
+    | some _ => gap%
 
 /-- `PyNumber_AsSsize_t(item, PyExc_ValueError)`, `Objects/abstract.c:1458`. -/
 def excAsSsizeValueError (rt : Rt) (item : Val) : M Int := do
@@ -401,7 +401,7 @@ def baseExceptionAddNote (rt : Rt) (self note : Val) : M Val := do
   | .obj a =>
     modObj a fun o => { o with body := .list (((listOf w l).getD []) ++ [note]) }
     pure .none
-  | _ => unmodelled
+  | _ => gap%
 
 /-- `_PyException_AddNote`, `Objects/exceptions.c:4574`. -/
 def pyExceptionAddNote (rt : Rt) (exc note : Val) : M Unit := do
@@ -465,7 +465,7 @@ def excDictSet (obj : Val) (value : Option Val) : M Unit := do
     | some _, .obj d => modObj a fun o => { o with dict := some d }
     | _, _ =>
       typeErr s!"__dict__ must be set to a dictionary, not a '{trunc 200 (typeName w v)}'"
-  | _, _ => unmodelled
+  | _, _ => gap%
 
 /-! ### The thin C API of `BaseException`, `Objects/exceptions.c:518-603` -/
 

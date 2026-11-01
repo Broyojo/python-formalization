@@ -29,6 +29,9 @@ def rtOf (exec : Rt → Nat → Val → NameDict → M Val) : Nat → Rt
       iterNext := fun _ => raise .fuel
       listItems := fun _ => raise .fuel
       getItem := fun _ _ => raise .fuel
+      size := fun _ => raise .fuel
+      contains := fun _ _ => raise .fuel
+      numberOr := fun _ _ => raise .fuel
       getsetGet := fun _ _ _ => raise .fuel
       getsetSet := fun _ _ _ _ => raise .fuel
       tpNew := fun _ _ _ _ => raise .fuel
@@ -48,6 +51,9 @@ def rtOf (exec : Rt → Nat → Val → NameDict → M Val) : Nat → Rt
       iterNext := fun v => pyIterNext (rtOf exec n) v
       listItems := fun v => pySequenceList (rtOf exec n) v
       getItem := fun o k => pyGetItem (rtOf exec n) o k
+      size := fun o => pyObjectSize (rtOf exec n) o
+      contains := fun o k => pySequenceContains (rtOf exec n) o k
+      numberOr := fun a b => binaryOp (rtOf exec n) a b .nb_or "|"
       getsetGet := fun o m v => getsetGetImpl (rtOf exec n) o m v
       getsetSet := fun o m v x => getsetSetImpl (rtOf exec n) o m v x
       tpNew := fun f t a k => callTpNew (rtOf exec n) f t a k

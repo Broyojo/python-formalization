@@ -1,5 +1,8 @@
 import PyLean.UnicodeObj.CodecUtf8
 import PyLean.UnicodeObj.CodecWide
+import PyLean.UnicodeObj.CodecAscii
+import PyLean.UnicodeObj.CodecEscapeProps
+import PyLean.UnicodeObj.CodecDispatch
 
 /-!
 The UTF-8 encoder's error paths, codecs.h:300-395, and properties of the UTF-8 codec.

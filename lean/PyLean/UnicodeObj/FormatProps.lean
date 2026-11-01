@@ -15,14 +15,15 @@ by `float` and `complex`, as it is by `int` and `str`. A NUL at the end of a spe
 only be the type field, since a fill character is followed by an alignment. -/
 def FormatNulRejected : Prop :=
   ∀ spec : Str, spec.getLast? = some 0 →
-    (∃ e, formatFloatAdvanced spec = .error e) ∧ (∃ e, formatComplexAdvanced spec = .error e)
+    (∃ e, formatFloatDispatch spec = .error e) ∧ (∃ e, formatComplexDispatch spec = .error e)
 
 /-- `format(1.5, '\x00')` succeeds: the explicit NUL is taken for the `'\0'` that
 stands for "no presentation type". -/
 theorem formatNulRejected_refuted : ¬ FormatNulRejected := by
   intro h
   obtain ⟨⟨e, he⟩, -⟩ := h [0] rfl
-  have : formatFloatAdvanced [0] = .ok () := by decide
+  have : formatFloatDispatch [0] = .ok (some { fillChar := 32, align := 62, type := 0 }) := by
+    decide
   rw [this] at he
   cases he
 

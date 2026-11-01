@@ -112,8 +112,15 @@ inductive EncRep where
   | str (s : Str)
   deriving Repr, DecidableEq
 
+/-- The decimal digits of `n`, written in front of `acc`. -/
+def decChars : Nat → Nat → List Nat → List Nat
+  | 0, _, acc => acc
+  | fuel + 1, n, acc =>
+    let a := (48 + n % 10) :: acc
+    if n / 10 = 0 then a else decChars fuel (n / 10) a
+
 /-- `&#NNN;`, `PyCodec_XMLCharRefReplaceErrors`, Python/codecs.c:903-950. -/
-def xmlRef (c : Nat) : List Nat := [38, 35] ++ (Nat.toDigits 10 c).map Char.toNat ++ [59]
+def xmlRef (c : Nat) : List Nat := [38, 35] ++ decChars (c + 1) c [] ++ [59]
 
 /-- The bytes of one surrogate, `_PyCodec_SurrogatePassUnicodeEncodeError`. -/
 def surrogatePassBytes (code : EncCode) (ch : Nat) : List Nat :=

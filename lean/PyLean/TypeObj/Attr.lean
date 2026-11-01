@@ -111,14 +111,14 @@ def ensureDict (v : Val) : M Addr := do
     | .obj d, .obj a =>
       modObj a (fun o => { o with dict := some d })
       pure d
-    | _, _ => unmodelled
+    | _, _ => gap%
 
 /-- Materialise a pending exception as an object (what `PyErr_GetRaisedException` does). -/
 def excObject (e : PyErr) : M Val :=
   match e with
   | .exc _ _ (some v) => pure v
   | .exc cls msg none => alloc cls (.exc { args := [.str msg] })
-  | .fuel => raise .fuel
+  | e => raise e
 
 /-- The members of an exception object. -/
 def excMembers (w : World) (v : Val) : NameDict :=
@@ -151,7 +151,7 @@ def setAttributeErrorContext {α : Type} (v : Val) (n : Name) (e : PyErr) : M α
     attachContext x v n
     raise (match e with
       | .exc c m _ => .exc c m (some x)
-      | .fuel => .fuel)
+      | e => e)
   else raise e
 
 /-! ## `tp_descr_get` -/
@@ -298,7 +298,7 @@ def propertyDescrGet (rt : Rt) (self : Val) (obj : Option Val) : M Val := do
   | some o =>
     let w ← getW
     match propertyFields w self with
-    | none => unmodelled
+    | none => gap%
     | some (fget, _, _, _, pname, _) =>
       match fget with
       | .none =>
@@ -316,7 +316,7 @@ def propertyDescrGet (rt : Rt) (self : Val) (obj : Option Val) : M Val := do
 def propertyDescrSet (rt : Rt) (self obj : Val) (value : Option Val) : M Unit := do
   let w ← getW
   match propertyFields w self with
-  | none => unmodelled
+  | none => gap%
   | some (fget, fset, fdel, _, pname, _) =>
     let func := match value with
       | none => fdel
@@ -384,11 +384,11 @@ def superDescrGet (rt : Rt) (self : Val) (obj : Option Val) : M Val := do
         rt.call (.obj (typeOf w self)) [(ty.map Val.obj).getD .none, o] []
       else
         match ty with
-        | none => unmodelled
+        | none => gap%
         | some t =>
           let objType ← supercheck rt t o
           alloc B.super (.super (some t) (some o) (some objType))
-  | _ => unmodelled
+  | _ => gap%
 
 /-- `slot_tp_descr_get`, `Objects/typeobject.c:10524`. -/
 def slotTpDescrGet (rt : Rt) (self : Val) (obj ty : Option Val) : M Val := do
@@ -415,8 +415,8 @@ def callDescrGet (rt : Rt) (f : SlotFn) (d : Val) (obj ty : Option Val) : M Val 
     | .wrapperDescr, some (.wrapperDescr o base _) => wrapperdescrGet d o base.name obj
     | .memberDescr, some (.memberDescr o n _) => memberGet rt d o n obj
     | .getsetDescr, some (.getsetDescr o n _) => getsetDescrGet rt d o n obj
-    | _, _ => unmodelled
-  | _ => unmodelled
+    | _, _ => gap%
+  | _ => gap%
 
 /-- `f(res, self, Py_TYPE(self))` when `res` has `tp_descr_get`, else `res`. -/
 def bindDescr (rt : Rt) (res self : Val) : M Val := do
@@ -462,7 +462,7 @@ def callUnbound (rt : Rt) (l : Looked) (args : List Val) : M Val :=
   match l with
   | .unbound f => rt.call f args []
   | .bound f => rt.call f (args.drop 1) []
-  | .missing => unmodelled
+  | .missing => gap%
 
 /-- `vectorcall_method`, `Objects/typeobject.c:3016`. -/
 def vectorcallMethod (rt : Rt) (name : Name) (args : List Val) : M Val := do
@@ -482,7 +482,7 @@ def callMethod (rt : Rt) (self : Val) (attr : Name) (args : List Val) (kw : Kw) 
   match l with
   | .unbound f => rt.call f (self :: args) kw
   | .bound f => rt.call f args kw
-  | .missing => unmodelled
+  | .missing => gap%
 
 /-- The result of `maybe_call_special_*`: the attribute was `None` when
 `attr_is_none != NULL`, or the call result, or missing. -/
@@ -563,7 +563,7 @@ def genericGetAttrSup (rt : Rt) (obj : Val) (n : Name) (suppress : Bool) : M (Op
 def genericGetAttr (rt : Rt) (obj : Val) (n : Name) : M Val := do
   match ← genericGetAttrSup rt obj n false with
   | some v => pure v
-  | none => unmodelled
+  | none => gap%
 
 /-- `_Py_type_getattro_impl`, `Objects/typeobject.c:6103`. `suppress` is
 `suppress_missing_attribute != NULL`. -/
@@ -599,7 +599,7 @@ def typeGetattroImpl (rt : Rt) (ty : Val) (n : Name) (suppress : Bool) : M (Opti
 def typeGetattro (rt : Rt) (ty : Val) (n : Name) : M Val := do
   match ← typeGetattroImpl rt ty n false with
   | some v => pure v
-  | none => unmodelled
+  | none => gap%
 
 /-- `_super_lookup_descr`, `Objects/typeobject.c:11840`: search the MRO of `objType`
 strictly after `suType`. -/
@@ -641,7 +641,7 @@ def superGetattro (rt : Rt) (self : Val) (n : Name) : M Val := do
     match payloadOf w self with
     | some (.super (some ty) o ot) => doSuperLookup rt self ty o ot n
     | some (.super none _ _) => genericGetAttr rt self n
-    | _ => unmodelled
+    | _ => gap%
 
 /-- `method_getattro`, `Objects/classobject.c:140`. -/
 def methodGetattro (rt : Rt) (obj : Val) (n : Name) : M Val := do
@@ -651,7 +651,7 @@ def methodGetattro (rt : Rt) (obj : Val) (n : Name) : M Val := do
   | none =>
     match payloadOf w obj with
     | some (.bound f _) => rt.getAttr f n
-    | _ => unmodelled
+    | _ => gap%
 
 /-- `call_attribute`, `Objects/typeobject.c:10365`. -/
 def callAttribute (rt : Rt) (self attr : Val) (n : Name) : M Val := do
@@ -693,7 +693,7 @@ def slotTpGetattrHook (rt : Rt) (self : Val) (n : Name) : M Val := do
       match getattribute with
       | some ga =>
         catchMatch B.AttributeError (callAttribute rt self ga n) (callAttribute rt self getattr n)
-      | none => unmodelled
+      | none => gap%
 
 /-- Call the `tp_getattro` function `f`. -/
 def callGetattro (rt : Rt) (f : SlotFn) (v : Val) (n : Name) : M Val :=
@@ -703,7 +703,7 @@ def callGetattro (rt : Rt) (f : SlotFn) (v : Val) (n : Name) : M Val :=
   | .c .type => typeGetattro rt v n
   | .c .super => superGetattro rt v n
   | .c .method => methodGetattro rt v n
-  | _ => unmodelled
+  | _ => gap%
 
 /-- `PyObject_GetAttr`, `Objects/object.c:1290`. Name type checks are made by callers:
 `n` is a `str` here. -/
@@ -786,7 +786,7 @@ def memberSet (rt : Rt) (owner : Addr) (name : Name) (readonly : Bool) (obj : Va
         match slotValue w obj name with
         | some _ => modObj a fun o => { o with slotVals := NameDict.erase o.slotVals name }
         | none => attrErr name
-    | _ => unmodelled
+    | _ => gap%
   else rt.getsetSet owner name obj value
 
 /-- `getset_set`, `Objects/descrobject.c:243`. -/
@@ -807,8 +807,8 @@ def callDescrSet (rt : Rt) (f : SlotFn) (d obj : Val) (value : Option Val) : M U
     match c, payloadOf w d with
     | .memberDescr, some (.memberDescr o n ro) => memberSet rt o n ro obj value
     | .getsetDescr, some (.getsetDescr o n cs) => getsetDescrSet rt o n cs obj value
-    | _, _ => unmodelled
-  | _ => unmodelled
+    | _, _ => gap%
+  | _ => gap%
 
 /-- `_PyObject_GenericSetAttrWithDict`, `Objects/object.c:1938`, with `dict == NULL`. -/
 def genericSetAttr (rt : Rt) (obj : Val) (n : Name) (value : Option Val) : M Unit := do
@@ -903,7 +903,7 @@ def callSetattro (rt : Rt) (f : SlotFn) (v : Val) (n : Name) (value : Option Val
   | .generic => slotTpSetattro rt v n value
   | .c .object => genericSetAttr rt v n value
   | .c .type => typeSetattro rt v n value
-  | _ => unmodelled
+  | _ => gap%
 
 /-- The message at `Objects/object.c:1480`. -/
 def roAttrMsg (tp what n : String) : String :=

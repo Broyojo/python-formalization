@@ -1,7 +1,7 @@
 import PyLean.All
 
 /-!
-Registry audit, run with `lake env lean Audit.lean`. Fails unless every entry
+Registry audit, run with `lake env lean Audit.lean`. Fails on a duplicate id, and unless every entry
 marked proven or refuted has a theorem whose type is exactly the registered
 property (or its negation) and which uses only the standard axioms. Open
 entries are counted, not fatal; only settled entries count towards coverage. A `sorry`
@@ -19,6 +19,9 @@ def allowedAxioms : List Name := [``propext, ``Classical.choice, ``Quot.sound]
   let mut proven : Nat := 0
   let mut refuted : Nat := 0
   let mut openCount : Nat := 0
+  let ids := allEntries.map (·.id)
+  for i in ids.eraseDups do
+    if ids.count i > 1 then failures := failures.push s!"{i}: duplicate registry id"
   for e in allEntries do
     if e.status == .open then
       openCount := openCount + 1
