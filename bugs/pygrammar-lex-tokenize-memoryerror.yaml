@@ -13,6 +13,8 @@ summary: |
   comes, last_expr_end is recomputed as strlen(tok->start) over the new line; last_expr_size -
   last_expr_end is then negative, and set_ftstring_expr passes it to PyUnicode_DecodeUTF8
   (lexer.c:212-216). The string tokenizer is unaffected, since its buffer is the whole file.
+  When the stale size is positive but cuts a multi-byte character, the same path raises
+  UnicodeDecodeError instead, from the strict decode.
 likelihood: |
   Low to medium: needs a debug or t-string field whose `!` conversion is followed by a newline
   before the closing brace, with a longer tail on the next line. Formatters and linters built on

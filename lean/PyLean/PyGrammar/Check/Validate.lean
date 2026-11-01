@@ -24,6 +24,9 @@ abbrev V := Py Unit
 /-- `PyErr_SetString(PyExc_TypeError, m); return 0;` -/
 @[inline] def terr (m : String) : V := .error (.typeError m)
 
+/-- Not a Python exception: the C code dereferences `NULL` here and the process dies. -/
+def nullDeref : V := .error (.named "<NULL dereference>" "")
+
 /-- `a && b` over validators. -/
 @[inline] def V.and (a : V) (b : Unit → V) : V :=
   match a with
@@ -328,6 +331,7 @@ mutual
     | 0, _, _ => .error .modelFuel
     | f + 1, p, starOk =>
       match p with
+      | .null => nullDeref
       | .node c fs l =>
         (validatePositions l).and fun _ =>
         match c, fs with
@@ -422,6 +426,7 @@ mutual
   def validateHandlers : Nat → List Ast → Bool → V
     | 0, _, _ => .error .modelFuel
     | _ + 1, [], _ => ok1
+    | _ + 1, .null :: _, _ => nullDeref
     | f + 1, .node _ [ty, _, body] l :: rest, positions =>
       (if positions then validatePositions l else ok1).and fun _ =>
       (if isNull ty then ok1 else validateExpr f ty .Load).and fun _ =>

@@ -136,8 +136,14 @@ def setFtstringExpr : M Bool := do
     set { s with err := some { cls := "MemoryError", msg := "" } }
     return true
   let out := if scan bytes false 0 then strip (bytes.length + 1) bytes false 0 else bytes
-  set { s with metadata := some (utf8Decode out) }
-  return false
+  -- `PyUnicode_DecodeUTF8(..., NULL)` is strict: a stale size can cut a character in two.
+  match firstBadUtf8 (out.length + 1) out 0 with
+  | some (i, b, why) =>
+    set { s with err := some (utf8Error i b why) }
+    return true
+  | none =>
+    set { s with metadata := some (utf8Decode out) }
+    return false
 
 /-- `_PyLexer_update_ftstring_expr`, `Parser/lexer/lexer.c:227-279`, without the case
 `cur == 0`, which is in `underflow`. Allocation cannot fail in the model. -/

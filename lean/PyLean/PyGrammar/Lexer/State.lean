@@ -279,6 +279,32 @@ def utf8Enc (c : Nat) : List Nat :=
 /-- UTF-8 encode a list of code points. -/
 def utf8Encode (cs : List Nat) : List Nat := cs.flatMap utf8Enc
 
+/-- The first ill-formed UTF-8 sequence of `s` at offset `i`, as `PyUnicode_FromStringAndSize`
+reports it: offset, byte and reason. -/
+def firstBadUtf8 : Nat → List Nat → Nat → Option (Nat × Nat × String)
+  | 0, _, _ => none
+  | _, [], _ => none
+  | f + 1, b :: r, i =>
+    let need : Option Nat :=
+      if b < 0x80 then some 0
+      else if 0xC2 ≤ b && b < 0xE0 then some 1
+      else if 0xE0 ≤ b && b < 0xF0 then some 2
+      else if 0xF0 ≤ b && b < 0xF5 then some 3
+      else none
+    match need with
+    | none => some (i, b, "invalid start byte")
+    | some n =>
+      let cs := r.take n
+      if !(cs.all fun c => 0x80 ≤ c && c < 0xC0) then
+        some (i, b, "invalid continuation byte")
+      else if cs.length < n then some (i, b, "unexpected end of data")
+      else firstBadUtf8 f (r.drop n) (i + n + 1)
+
+/-- `str(UnicodeDecodeError)` of `PyUnicode_DecodeUTF8(s, n, NULL)`. -/
+def utf8Error (i b : Nat) (why : String) : PyError :=
+  { cls := "UnicodeDecodeError",
+    msg := s!"'utf-8' codec can't decode byte 0x{String.ofList (Nat.toDigits 16 b)} in position {i}: {why}" }
+
 /-- `%04X`. -/
 def hex4 (c : Nat) : String :=
   let s := String.ofList (Nat.toDigits 16 c |>.map Char.toUpper)

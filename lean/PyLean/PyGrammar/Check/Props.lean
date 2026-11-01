@@ -30,6 +30,14 @@ def badHandler : Ast :=
 theorem tryHandlersTwin_refuted : ¬ TryHandlersTwin := fun h =>
   absurd (h badHandler) (by decide +kernel)
 
+/-- `_PyAST_Validate` exists to stop malformed trees before they reach C code that trusts them:
+on no tree does it dereference `NULL`. `obj2ast_excepthandler` and `obj2ast_pattern` turn `None`
+into `NULL`, so a list element `None` reaches `VALIDATE_POSITIONS`. -/
+def ValidateNoNullDeref : Prop := ∀ m : Ast, validate m ≠ nullDeref
+
+theorem validateNoNullDeref_refuted : ¬ ValidateNoNullDeref := fun h =>
+  h (tryTree .Try .null) (by decide +kernel)
+
 /-- Every `Name` a validated tree holds went through `validate_name`: no tree `_PyAST_Validate`
 accepts has a `Name` called `None`, `True` or `False`, which `codegen_nameop` asserts. -/
 def validAccepts (m : Ast) : Bool := (validate m).toBool

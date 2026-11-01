@@ -658,7 +658,7 @@ def mutate_tree(t, rng):
                     setattr(n, f, [])
                 elif z < 0.6 and v:
                     v.pop()
-                elif z < 0.8 and v:
+                elif z < 0.8 and v and isinstance(v[0], (ast.expr, ast.stmt)):
                     v[rng.randrange(len(v))] = None
                 elif v and isinstance(v[0], ast.expr):
                     v.append(mk_expr(rng))
