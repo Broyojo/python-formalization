@@ -1,126 +1,126 @@
 file	line	endline	name	signature	status	entry	note
-Modules/itertoolsmodule.c	43	48	get_module_state	get_module_state(PyObject *mod)	todo		
-Modules/itertoolsmodule.c	51	56	get_module_state_by_cls	get_module_state_by_cls(PyTypeObject *cls)	todo		
-Modules/itertoolsmodule.c	61	66	find_state_by_type	find_state_by_type(PyTypeObject *tp)	todo		
-Modules/itertoolsmodule.c	137	167	batched_new_impl	batched_new_impl(PyTypeObject *type, PyObject *iterable, Py_ssize_t n, int strict) /*[clinic end generated code: output=c6de11b061529d3e input=7814b47e222f5467]*/	todo		
-Modules/itertoolsmodule.c	170	178	batched_dealloc	batched_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	181	187	batched_traverse	batched_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	190	249	batched_next	batched_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	296	319	pairwise_new_impl	pairwise_new_impl(PyTypeObject *type, PyObject *iterable) /*[clinic end generated code: output=9f0267062d384456 input=6e7c3cddb431a8d6]*/	todo		
-Modules/itertoolsmodule.c	322	332	pairwise_dealloc	pairwise_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	335	343	pairwise_traverse	pairwise_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	346	402	pairwise_next	pairwise_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	458	477	itertools_groupby_impl	itertools_groupby_impl(PyTypeObject *type, PyObject *it, PyObject *keyfunc) /*[clinic end generated code: output=cbb1ae3a90fd4141 input=6b3d123e87ff65a1]*/	todo		
-Modules/itertoolsmodule.c	480	492	groupby_dealloc	groupby_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	495	505	groupby_traverse	groupby_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	507	531	Py_LOCAL_INLINE	Py_LOCAL_INLINE(int) groupby_step(groupbyobject *gbo)	todo		
-Modules/itertoolsmodule.c	534	579	groupby_next	groupby_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	621	626	itertools__grouper_impl	itertools__grouper_impl(PyTypeObject *type, PyObject *parent, PyObject *tgtkey) /*[clinic end generated code: output=462efb1cdebb5914 input=afe05eb477118f12]*/	todo		
-Modules/itertoolsmodule.c	629	641	_grouper_create	_grouper_create(groupbyobject *parent, PyObject *tgtkey)	todo		
-Modules/itertoolsmodule.c	644	653	_grouper_dealloc	_grouper_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	656	663	_grouper_traverse	_grouper_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	666	700	_grouper_next	_grouper_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	756	770	teedataobject_newinternal	teedataobject_newinternal(itertools_state *state, PyObject *it)	todo		
-Modules/itertoolsmodule.c	773	782	teedataobject_jumplink	teedataobject_jumplink(itertools_state *state, teedataobject *tdo)	todo		
-Modules/itertoolsmodule.c	785	809	teedataobject_getitem_lock_held	teedataobject_getitem_lock_held(teedataobject *tdo, int i)	todo		
-Modules/itertoolsmodule.c	812	819	teedataobject_getitem	teedataobject_getitem(teedataobject *tdo, int i)	todo		
-Modules/itertoolsmodule.c	822	833	teedataobject_traverse	teedataobject_traverse(PyObject *op, visitproc visit, void * arg)	todo		
-Modules/itertoolsmodule.c	836	848	teedataobject_safe_decref	teedataobject_safe_decref(PyObject *obj)	todo		
-Modules/itertoolsmodule.c	851	866	teedataobject_clear	teedataobject_clear(PyObject *op)	todo		
-Modules/itertoolsmodule.c	869	876	teedataobject_dealloc	teedataobject_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	889	930	itertools_teedataobject_impl	itertools_teedataobject_impl(PyTypeObject *type, PyObject *it, PyObject *values, PyObject *next) /*[clinic end generated code: output=3343ceb07e08df5e input=be60f2fabd2b72ba]*/	todo		
-Modules/itertoolsmodule.c	953	1017	tee_next	tee_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	1020	1026	tee_traverse	tee_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	1029	1043	tee_copy_impl	tee_copy_impl(teeobject *to)	todo		
-Modules/itertoolsmodule.c	1046	1050	tee_copy	tee_copy(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
-Modules/itertoolsmodule.c	1055	1086	tee_fromiterable	tee_fromiterable(itertools_state *state, PyObject *iterable)	todo		
-Modules/itertoolsmodule.c	1097	1102	itertools__tee_impl	itertools__tee_impl(PyTypeObject *type, PyObject *iterable) /*[clinic end generated code: output=b02d3fd26c810c3f input=adc0779d2afe37a2]*/	todo		
-Modules/itertoolsmodule.c	1105	1112	tee_clear	tee_clear(PyObject *op)	todo		
-Modules/itertoolsmodule.c	1115	1122	tee_dealloc	tee_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	1165	1204	itertools_tee_impl	itertools_tee_impl(PyObject *module, PyObject *iterable, Py_ssize_t n) /*[clinic end generated code: output=1c64519cd859c2f0 input=c99a1472c425d66d]*/	todo		
-Modules/itertoolsmodule.c	1227	1257	itertools_cycle_impl	itertools_cycle_impl(PyTypeObject *type, PyObject *iterable) /*[clinic end generated code: output=f60e5ec17a45b35c input=9d1d84bcf66e908b]*/	todo		
-Modules/itertoolsmodule.c	1260	1269	cycle_dealloc	cycle_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	1272	1279	cycle_traverse	cycle_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	1282	1317	cycle_next	cycle_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	1363	1385	itertools_dropwhile_impl	itertools_dropwhile_impl(PyTypeObject *type, PyObject *func, PyObject *seq) /*[clinic end generated code: output=92f9d0d89af149e4 input=d39737147c9f0a26]*/	todo		
-Modules/itertoolsmodule.c	1388	1397	dropwhile_dealloc	dropwhile_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	1400	1407	dropwhile_traverse	dropwhile_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	1410	1441	dropwhile_next	dropwhile_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	1485	1507	itertools_takewhile_impl	itertools_takewhile_impl(PyTypeObject *type, PyObject *func, PyObject *seq) /*[clinic end generated code: output=bb179ea7864e2ef6 input=ba5255f7519aa119]*/	todo		
-Modules/itertoolsmodule.c	1510	1519	takewhile_dealloc	takewhile_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	1522	1529	takewhile_traverse	takewhile_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	1532	1559	takewhile_next	takewhile_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	1596	1680	islice_new	islice_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Modules/itertoolsmodule.c	1683	1691	islice_dealloc	islice_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	1694	1700	islice_traverse	islice_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	1703	1740	islice_next	islice_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	1794	1815	itertools_starmap_impl	itertools_starmap_impl(PyTypeObject *type, PyObject *func, PyObject *seq) /*[clinic end generated code: output=79eeb81d452c6e8d input=844766df6a0d4dad]*/	todo		
-Modules/itertoolsmodule.c	1818	1827	starmap_dealloc	starmap_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	1830	1837	starmap_traverse	starmap_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	1840	1860	starmap_next	starmap_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	1894	1907	chain_new_internal	chain_new_internal(PyTypeObject *type, PyObject *source)	todo		
-Modules/itertoolsmodule.c	1910	1925	chain_new	chain_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Modules/itertoolsmodule.c	1936	1946	itertools_chain_from_iterable_impl	itertools_chain_from_iterable_impl(PyTypeObject *type, PyObject *arg) /*[clinic end generated code: output=3d7ea7d46b9e43f5 input=72c39e3a2ca3be85]*/	todo		
-Modules/itertoolsmodule.c	1949	1958	chain_dealloc	chain_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	1961	1968	chain_traverse	chain_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	1971	2007	chain_next_lock_held	chain_next_lock_held(PyObject *op)	todo		
-Modules/itertoolsmodule.c	2010	2017	chain_next	chain_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	2073	2153	product_new	product_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Modules/itertoolsmodule.c	2156	2166	product_dealloc	product_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	2169	2175	product_sizeof	product_sizeof(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
-Modules/itertoolsmodule.c	2180	2187	product_traverse	product_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	2190	2274	product_next_lock_held	product_next_lock_held(PyObject *op)	todo		
-Modules/itertoolsmodule.c	2277	2284	product_next	product_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	2352	2398	itertools_combinations_impl	itertools_combinations_impl(PyTypeObject *type, PyObject *iterable, Py_ssize_t r) /*[clinic end generated code: output=87a689b39c40039c input=06bede09e3da20f8]*/	todo		
-Modules/itertoolsmodule.c	2401	2411	combinations_dealloc	combinations_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	2414	2420	combinations_sizeof	combinations_sizeof(PyObject *op, PyObject *Py_UNUSED(args))	todo		
-Modules/itertoolsmodule.c	2423	2430	combinations_traverse	combinations_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	2433	2516	combinations_next_lock_held	combinations_next_lock_held(PyObject *op)	todo		
-Modules/itertoolsmodule.c	2519	2526	combinations_next	combinations_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	2605	2652	itertools_combinations_with_replacement_impl	itertools_combinations_with_replacement_impl(PyTypeObject *type, PyObject *iterable, Py_ssize_t r) /*[clinic end generated code: output=48b26856d4e659ca input=1dc58e82a0878fdc]*/	todo		
-Modules/itertoolsmodule.c	2655	2665	cwr_dealloc	cwr_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	2668	2674	cwr_sizeof	cwr_sizeof(PyObject *op, PyObject *Py_UNUSED(args))	todo		
-Modules/itertoolsmodule.c	2677	2684	cwr_traverse	cwr_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	2687	2764	cwr_next_lock_held	cwr_next_lock_held(PyObject *op)	todo		
-Modules/itertoolsmodule.c	2767	2774	cwr_next	cwr_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	2854	2919	itertools_permutations_impl	itertools_permutations_impl(PyTypeObject *type, PyObject *iterable, PyObject *robj) /*[clinic end generated code: output=296a72fa76d620ea input=57d0170a4ac0ec7a]*/	todo		
-Modules/itertoolsmodule.c	2922	2933	permutations_dealloc	permutations_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	2936	2943	permutations_sizeof	permutations_sizeof(PyObject *op, PyObject *Py_UNUSED(args))	todo		
-Modules/itertoolsmodule.c	2946	2953	permutations_traverse	permutations_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	2956	3044	permutations_next_lock_held	permutations_next_lock_held(PyObject *op)	todo		
-Modules/itertoolsmodule.c	3047	3054	permutations_next	permutations_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	3107	3134	itertools_accumulate_impl	itertools_accumulate_impl(PyTypeObject *type, PyObject *iterable, PyObject *binop, PyObject *initial) /*[clinic end generated code: output=66da2650627128f8 input=c4ce20ac59bf7ffd]*/	todo		
-Modules/itertoolsmodule.c	3137	3148	accumulate_dealloc	accumulate_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	3151	3160	accumulate_traverse	accumulate_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	3163	3193	accumulate_next_lock_held	accumulate_next_lock_held(PyObject *op)	todo		
-Modules/itertoolsmodule.c	3196	3203	accumulate_next	accumulate_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	3255	3280	itertools_compress_impl	itertools_compress_impl(PyTypeObject *type, PyObject *seq1, PyObject *seq2) /*[clinic end generated code: output=7e67157212ed09e0 input=32ca4347dbc46749]*/	todo		
-Modules/itertoolsmodule.c	3283	3292	compress_dealloc	compress_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	3295	3302	compress_traverse	compress_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	3305	3339	compress_next	compress_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	3384	3405	itertools_filterfalse_impl	itertools_filterfalse_impl(PyTypeObject *type, PyObject *func, PyObject *seq) /*[clinic end generated code: output=55f87eab9fc0484e input=2d684a2c66f99cde]*/	todo		
-Modules/itertoolsmodule.c	3408	3417	filterfalse_dealloc	filterfalse_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	3420	3427	filterfalse_traverse	filterfalse_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	3430	3462	filterfalse_next	filterfalse_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	3529	3604	itertools_count_impl	itertools_count_impl(PyTypeObject *type, PyObject *long_cnt, PyObject *long_step) /*[clinic end generated code: output=09a9250aebd00b1c input=d7a85eec18bfcd94]*/	todo		
-Modules/itertoolsmodule.c	3607	3616	count_dealloc	count_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	3619	3626	count_traverse	count_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	3629	3648	count_nextlong	count_nextlong(countobject *lz)	todo		
-Modules/itertoolsmodule.c	3651	3678	count_next	count_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	3681	3705	count_repr	count_repr(PyObject *op)	todo		
-Modules/itertoolsmodule.c	3740	3763	repeat_new	repeat_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Modules/itertoolsmodule.c	3766	3774	repeat_dealloc	repeat_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	3777	3783	repeat_traverse	repeat_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	3786	3798	repeat_next	repeat_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	3801	3811	repeat_repr	repeat_repr(PyObject *op)	todo		
-Modules/itertoolsmodule.c	3814	3822	repeat_len	repeat_len(PyObject *op, PyObject *Py_UNUSED(args))	todo		
-Modules/itertoolsmodule.c	3873	3938	zip_longest_new	zip_longest_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Modules/itertoolsmodule.c	3941	3951	zip_longest_dealloc	zip_longest_dealloc(PyObject *op)	todo		
-Modules/itertoolsmodule.c	3954	3962	zip_longest_traverse	zip_longest_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	3965	4034	zip_longest_next_lock_held	zip_longest_next_lock_held(PyObject *op)	todo		
-Modules/itertoolsmodule.c	4037	4044	zip_longest_next	zip_longest_next(PyObject *op)	todo		
-Modules/itertoolsmodule.c	4114	4140	itertoolsmodule_traverse	itertoolsmodule_traverse(PyObject *mod, visitproc visit, void *arg)	todo		
-Modules/itertoolsmodule.c	4143	4169	itertoolsmodule_clear	itertoolsmodule_clear(PyObject *mod)	todo		
-Modules/itertoolsmodule.c	4172	4175	itertoolsmodule_free	itertoolsmodule_free(void *mod)	todo		
-Modules/itertoolsmodule.c	4189	4217	itertoolsmodule_exec	itertoolsmodule_exec(PyObject *mod)	todo		
-Modules/itertoolsmodule.c	4245	4248	PyInit_itertools	PyInit_itertools(void)	todo		
+Modules/itertoolsmodule.c	43	48	get_module_state	get_module_state(PyObject *mod)	excluded		internal-bootstrap: looks up the per-interpreter module state holding the type objects; no argument-dependent behaviour
+Modules/itertoolsmodule.c	51	56	get_module_state_by_cls	get_module_state_by_cls(PyTypeObject *cls)	excluded		internal-bootstrap: looks up the per-interpreter module state holding the type objects; no argument-dependent behaviour
+Modules/itertoolsmodule.c	61	66	find_state_by_type	find_state_by_type(PyTypeObject *tp)	excluded		internal-bootstrap: looks up the per-interpreter module state holding the type objects; no argument-dependent behaviour
+Modules/itertoolsmodule.c	137	167	batched_new_impl	batched_new_impl(PyTypeObject *type, PyObject *iterable, Py_ssize_t n, int strict) /*[clinic end generated code: output=c6de11b061529d3e input=7814b47e222f5467]*/	modelled	itertools-batched-doc-agree,itertools-batched-doc-agree-alloc	
+Modules/itertoolsmodule.c	170	178	batched_dealloc	batched_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	181	187	batched_traverse	batched_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	190	249	batched_next	batched_next(PyObject *op)	modelled	itertools-batched-doc-agree,itertools-batched-doc-agree-alloc	
+Modules/itertoolsmodule.c	296	319	pairwise_new_impl	pairwise_new_impl(PyTypeObject *type, PyObject *iterable) /*[clinic end generated code: output=9f0267062d384456 input=6e7c3cddb431a8d6]*/	modelled	itertools-constructor-errors	
+Modules/itertoolsmodule.c	322	332	pairwise_dealloc	pairwise_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	335	343	pairwise_traverse	pairwise_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	346	402	pairwise_next	pairwise_next(PyObject *op)	modelled	itertools-simple-doc-agree	
+Modules/itertoolsmodule.c	458	477	itertools_groupby_impl	itertools_groupby_impl(PyTypeObject *type, PyObject *it, PyObject *keyfunc) /*[clinic end generated code: output=cbb1ae3a90fd4141 input=6b3d123e87ff65a1]*/	modelled	itertools-groupby-ctor-error,itertools-groupby-doc-agree	
+Modules/itertoolsmodule.c	480	492	groupby_dealloc	groupby_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	495	505	groupby_traverse	groupby_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	507	531	Py_LOCAL_INLINE	Py_LOCAL_INLINE(int) groupby_step(groupbyobject *gbo)	modelled	itertools-groupby-doc-agree,itertools-groupby-failed-step	
+Modules/itertoolsmodule.c	534	579	groupby_next	groupby_next(PyObject *op)	modelled	itertools-groupby-doc-agree	
+Modules/itertoolsmodule.c	621	626	itertools__grouper_impl	itertools__grouper_impl(PyTypeObject *type, PyObject *parent, PyObject *tgtkey) /*[clinic end generated code: output=462efb1cdebb5914 input=afe05eb477118f12]*/	modelled	itertools-grouper-direct	
+Modules/itertoolsmodule.c	629	641	_grouper_create	_grouper_create(groupbyobject *parent, PyObject *tgtkey)	modelled	itertools-groupby-doc-agree,itertools-grouper-direct	
+Modules/itertoolsmodule.c	644	653	_grouper_dealloc	_grouper_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	656	663	_grouper_traverse	_grouper_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	666	700	_grouper_next	_grouper_next(PyObject *op)	modelled	itertools-groupby-doc-agree	
+Modules/itertoolsmodule.c	756	770	teedataobject_newinternal	teedataobject_newinternal(itertools_state *state, PyObject *it)	modelled	itertools-tee-doc-agree	
+Modules/itertoolsmodule.c	773	782	teedataobject_jumplink	teedataobject_jumplink(itertools_state *state, teedataobject *tdo)	modelled	itertools-tee-doc-agree	
+Modules/itertoolsmodule.c	785	809	teedataobject_getitem_lock_held	teedataobject_getitem_lock_held(teedataobject *tdo, int i)	modelled	itertools-tee-doc-agree	
+Modules/itertoolsmodule.c	812	819	teedataobject_getitem	teedataobject_getitem(teedataobject *tdo, int i)	modelled	itertools-tee-doc-agree	
+Modules/itertoolsmodule.c	822	833	teedataobject_traverse	teedataobject_traverse(PyObject *op, visitproc visit, void * arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	836	848	teedataobject_safe_decref	teedataobject_safe_decref(PyObject *obj)	excluded		no-behaviour: iterative reference release of a block chain during teardown (avoids deep recursion); no result
+Modules/itertoolsmodule.c	851	866	teedataobject_clear	teedataobject_clear(PyObject *op)	excluded		no-behaviour: tp_clear for the cycle collector, drops references; called only on teardown
+Modules/itertoolsmodule.c	869	876	teedataobject_dealloc	teedataobject_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	889	930	itertools_teedataobject_impl	itertools_teedataobject_impl(PyTypeObject *type, PyObject *it, PyObject *values, PyObject *next) /*[clinic end generated code: output=3343ceb07e08df5e input=be60f2fabd2b72ba]*/	modelled	itertools-teedataobject-args	
+Modules/itertoolsmodule.c	953	1017	tee_next	tee_next(PyObject *op)	modelled	itertools-tee-doc-agree	
+Modules/itertoolsmodule.c	1020	1026	tee_traverse	tee_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	1029	1043	tee_copy_impl	tee_copy_impl(teeobject *to)	modelled	itertools-tee-doc-agree	
+Modules/itertoolsmodule.c	1046	1050	tee_copy	tee_copy(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	itertools-tee-doc-agree	
+Modules/itertoolsmodule.c	1055	1086	tee_fromiterable	tee_fromiterable(itertools_state *state, PyObject *iterable)	modelled	itertools-tee-doc-agree	
+Modules/itertoolsmodule.c	1097	1102	itertools__tee_impl	itertools__tee_impl(PyTypeObject *type, PyObject *iterable) /*[clinic end generated code: output=b02d3fd26c810c3f input=adc0779d2afe37a2]*/	modelled	itertools-tee-doc-agree	
+Modules/itertoolsmodule.c	1105	1112	tee_clear	tee_clear(PyObject *op)	excluded		no-behaviour: tp_clear for the cycle collector, drops references; called only on teardown
+Modules/itertoolsmodule.c	1115	1122	tee_dealloc	tee_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	1165	1204	itertools_tee_impl	itertools_tee_impl(PyObject *module, PyObject *iterable, Py_ssize_t n) /*[clinic end generated code: output=1c64519cd859c2f0 input=c99a1472c425d66d]*/	modelled	itertools-tee-doc-agree	
+Modules/itertoolsmodule.c	1227	1257	itertools_cycle_impl	itertools_cycle_impl(PyTypeObject *type, PyObject *iterable) /*[clinic end generated code: output=f60e5ec17a45b35c input=9d1d84bcf66e908b]*/	modelled	itertools-constructor-errors	
+Modules/itertoolsmodule.c	1260	1269	cycle_dealloc	cycle_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	1272	1279	cycle_traverse	cycle_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	1282	1317	cycle_next	cycle_next(PyObject *op)	modelled	itertools-simple-doc-agree	
+Modules/itertoolsmodule.c	1363	1385	itertools_dropwhile_impl	itertools_dropwhile_impl(PyTypeObject *type, PyObject *func, PyObject *seq) /*[clinic end generated code: output=92f9d0d89af149e4 input=d39737147c9f0a26]*/	modelled	itertools-constructor-errors	
+Modules/itertoolsmodule.c	1388	1397	dropwhile_dealloc	dropwhile_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	1400	1407	dropwhile_traverse	dropwhile_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	1410	1441	dropwhile_next	dropwhile_next(PyObject *op)	modelled	itertools-simple-doc-agree	
+Modules/itertoolsmodule.c	1485	1507	itertools_takewhile_impl	itertools_takewhile_impl(PyTypeObject *type, PyObject *func, PyObject *seq) /*[clinic end generated code: output=bb179ea7864e2ef6 input=ba5255f7519aa119]*/	modelled	itertools-constructor-errors	
+Modules/itertoolsmodule.c	1510	1519	takewhile_dealloc	takewhile_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	1522	1529	takewhile_traverse	takewhile_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	1532	1559	takewhile_next	takewhile_next(PyObject *op)	modelled	itertools-simple-doc-agree	
+Modules/itertoolsmodule.c	1596	1680	islice_new	islice_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	itertools-islice-doc-agree,itertools-islice-doc-agree-nowrap,itertools-islice-doc-agree-ssize,itertools-islice-step-message	
+Modules/itertoolsmodule.c	1683	1691	islice_dealloc	islice_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	1694	1700	islice_traverse	islice_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	1703	1740	islice_next	islice_next(PyObject *op)	modelled	itertools-islice-consumes-max-start-stop,itertools-islice-doc-agree,itertools-islice-doc-agree-nowrap,itertools-islice-doc-agree-ssize	
+Modules/itertoolsmodule.c	1794	1815	itertools_starmap_impl	itertools_starmap_impl(PyTypeObject *type, PyObject *func, PyObject *seq) /*[clinic end generated code: output=79eeb81d452c6e8d input=844766df6a0d4dad]*/	modelled	itertools-constructor-errors	
+Modules/itertoolsmodule.c	1818	1827	starmap_dealloc	starmap_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	1830	1837	starmap_traverse	starmap_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	1840	1860	starmap_next	starmap_next(PyObject *op)	modelled	itertools-simple-doc-agree	
+Modules/itertoolsmodule.c	1894	1907	chain_new_internal	chain_new_internal(PyTypeObject *type, PyObject *source)	modelled	itertools-constructor-errors	
+Modules/itertoolsmodule.c	1910	1925	chain_new	chain_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	itertools-constructor-errors	
+Modules/itertoolsmodule.c	1936	1946	itertools_chain_from_iterable_impl	itertools_chain_from_iterable_impl(PyTypeObject *type, PyObject *arg) /*[clinic end generated code: output=3d7ea7d46b9e43f5 input=72c39e3a2ca3be85]*/	modelled	itertools-constructor-errors	
+Modules/itertoolsmodule.c	1949	1958	chain_dealloc	chain_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	1961	1968	chain_traverse	chain_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	1971	2007	chain_next_lock_held	chain_next_lock_held(PyObject *op)	modelled	itertools-simple-doc-agree	
+Modules/itertoolsmodule.c	2010	2017	chain_next	chain_next(PyObject *op)	modelled	itertools-simple-doc-agree	
+Modules/itertoolsmodule.c	2073	2153	product_new	product_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	itertools-product-doc-agree,itertools-product-spec	
+Modules/itertoolsmodule.c	2156	2166	product_dealloc	product_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	2169	2175	product_sizeof	product_sizeof(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	itertools-sizeof	
+Modules/itertoolsmodule.c	2180	2187	product_traverse	product_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	2190	2274	product_next_lock_held	product_next_lock_held(PyObject *op)	modelled	itertools-product-doc-agree,itertools-product-doc-agree-iterable,itertools-product-spec	
+Modules/itertoolsmodule.c	2277	2284	product_next	product_next(PyObject *op)	modelled	itertools-product-doc-agree,itertools-product-spec	
+Modules/itertoolsmodule.c	2352	2398	itertools_combinations_impl	itertools_combinations_impl(PyTypeObject *type, PyObject *iterable, Py_ssize_t r) /*[clinic end generated code: output=87a689b39c40039c input=06bede09e3da20f8]*/	modelled	itertools-combinatorics-doc-agree-ssize	
+Modules/itertoolsmodule.c	2401	2411	combinations_dealloc	combinations_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	2414	2420	combinations_sizeof	combinations_sizeof(PyObject *op, PyObject *Py_UNUSED(args))	modelled	itertools-sizeof	
+Modules/itertoolsmodule.c	2423	2430	combinations_traverse	combinations_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	2433	2516	combinations_next_lock_held	combinations_next_lock_held(PyObject *op)	modelled	itertools-combinations-spec,itertools-combinatorics-doc-agree,itertools-combinatorics-doc-agree-alloc,itertools-combinatorics-doc-agree-nonneg,itertools-combinatorics-doc-agree-ssize	
+Modules/itertoolsmodule.c	2519	2526	combinations_next	combinations_next(PyObject *op)	modelled	itertools-combinations-spec,itertools-combinatorics-doc-agree-alloc	
+Modules/itertoolsmodule.c	2605	2652	itertools_combinations_with_replacement_impl	itertools_combinations_with_replacement_impl(PyTypeObject *type, PyObject *iterable, Py_ssize_t r) /*[clinic end generated code: output=48b26856d4e659ca input=1dc58e82a0878fdc]*/	modelled	itertools-combinatorics-doc-agree-ssize	
+Modules/itertoolsmodule.c	2655	2665	cwr_dealloc	cwr_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	2668	2674	cwr_sizeof	cwr_sizeof(PyObject *op, PyObject *Py_UNUSED(args))	modelled	itertools-sizeof	
+Modules/itertoolsmodule.c	2677	2684	cwr_traverse	cwr_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	2687	2764	cwr_next_lock_held	cwr_next_lock_held(PyObject *op)	modelled	itertools-combinatorics-doc-agree,itertools-combinatorics-doc-agree-alloc,itertools-combinatorics-doc-agree-nonneg,itertools-combinatorics-doc-agree-ssize,itertools-cwr-spec	
+Modules/itertoolsmodule.c	2767	2774	cwr_next	cwr_next(PyObject *op)	modelled	itertools-combinatorics-doc-agree-alloc,itertools-cwr-spec	
+Modules/itertoolsmodule.c	2854	2919	itertools_permutations_impl	itertools_permutations_impl(PyTypeObject *type, PyObject *iterable, PyObject *robj) /*[clinic end generated code: output=296a72fa76d620ea input=57d0170a4ac0ec7a]*/	modelled	itertools-combinatorics-doc-agree-ssize	
+Modules/itertoolsmodule.c	2922	2933	permutations_dealloc	permutations_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	2936	2943	permutations_sizeof	permutations_sizeof(PyObject *op, PyObject *Py_UNUSED(args))	modelled	itertools-sizeof	
+Modules/itertoolsmodule.c	2946	2953	permutations_traverse	permutations_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	2956	3044	permutations_next_lock_held	permutations_next_lock_held(PyObject *op)	modelled	itertools-combinatorics-doc-agree,itertools-combinatorics-doc-agree-alloc,itertools-combinatorics-doc-agree-nonneg,itertools-combinatorics-doc-agree-ssize,itertools-permutations-spec	
+Modules/itertoolsmodule.c	3047	3054	permutations_next	permutations_next(PyObject *op)	modelled	itertools-combinatorics-doc-agree-alloc,itertools-permutations-spec	
+Modules/itertoolsmodule.c	3107	3134	itertools_accumulate_impl	itertools_accumulate_impl(PyTypeObject *type, PyObject *iterable, PyObject *binop, PyObject *initial) /*[clinic end generated code: output=66da2650627128f8 input=c4ce20ac59bf7ffd]*/	modelled	itertools-constructor-errors	
+Modules/itertoolsmodule.c	3137	3148	accumulate_dealloc	accumulate_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	3151	3160	accumulate_traverse	accumulate_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	3163	3193	accumulate_next_lock_held	accumulate_next_lock_held(PyObject *op)	modelled	itertools-simple-doc-agree	
+Modules/itertoolsmodule.c	3196	3203	accumulate_next	accumulate_next(PyObject *op)	modelled	itertools-simple-doc-agree	
+Modules/itertoolsmodule.c	3255	3280	itertools_compress_impl	itertools_compress_impl(PyTypeObject *type, PyObject *seq1, PyObject *seq2) /*[clinic end generated code: output=7e67157212ed09e0 input=32ca4347dbc46749]*/	modelled	itertools-constructor-errors	
+Modules/itertoolsmodule.c	3283	3292	compress_dealloc	compress_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	3295	3302	compress_traverse	compress_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	3305	3339	compress_next	compress_next(PyObject *op)	modelled	itertools-simple-doc-agree	
+Modules/itertoolsmodule.c	3384	3405	itertools_filterfalse_impl	itertools_filterfalse_impl(PyTypeObject *type, PyObject *func, PyObject *seq) /*[clinic end generated code: output=55f87eab9fc0484e input=2d684a2c66f99cde]*/	modelled	itertools-constructor-errors	
+Modules/itertoolsmodule.c	3408	3417	filterfalse_dealloc	filterfalse_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	3420	3427	filterfalse_traverse	filterfalse_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	3430	3462	filterfalse_next	filterfalse_next(PyObject *op)	modelled	itertools-simple-doc-agree	
+Modules/itertoolsmodule.c	3529	3604	itertools_count_impl	itertools_count_impl(PyTypeObject *type, PyObject *long_cnt, PyObject *long_step) /*[clinic end generated code: output=09a9250aebd00b1c input=d7a85eec18bfcd94]*/	modelled	itertools-count-fast-slow	
+Modules/itertoolsmodule.c	3607	3616	count_dealloc	count_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	3619	3626	count_traverse	count_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	3629	3648	count_nextlong	count_nextlong(countobject *lz)	modelled	itertools-count-fast-slow	
+Modules/itertoolsmodule.c	3651	3678	count_next	count_next(PyObject *op)	modelled	itertools-count-doc-agree,itertools-count-fast-slow	
+Modules/itertoolsmodule.c	3681	3705	count_repr	count_repr(PyObject *op)	modelled	itertools-count-fast-slow	
+Modules/itertoolsmodule.c	3740	3763	repeat_new	repeat_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	itertools-repeat-consistent,itertools-repeat-doc-agree,itertools-repeat-doc-agree-ssize	
+Modules/itertoolsmodule.c	3766	3774	repeat_dealloc	repeat_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	3777	3783	repeat_traverse	repeat_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	3786	3798	repeat_next	repeat_next(PyObject *op)	modelled	itertools-repeat-consistent,itertools-repeat-doc-agree,itertools-repeat-doc-agree-ssize	
+Modules/itertoolsmodule.c	3801	3811	repeat_repr	repeat_repr(PyObject *op)	modelled	itertools-repeat-consistent	
+Modules/itertoolsmodule.c	3814	3822	repeat_len	repeat_len(PyObject *op, PyObject *Py_UNUSED(args))	modelled	itertools-repeat-consistent	
+Modules/itertoolsmodule.c	3873	3938	zip_longest_new	zip_longest_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	itertools-constructor-errors	
+Modules/itertoolsmodule.c	3941	3951	zip_longest_dealloc	zip_longest_dealloc(PyObject *op)	excluded		no-behaviour: deallocation, drops references and frees memory; no return value
+Modules/itertoolsmodule.c	3954	3962	zip_longest_traverse	zip_longest_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	3965	4034	zip_longest_next_lock_held	zip_longest_next_lock_held(PyObject *op)	modelled	itertools-simple-doc-agree	
+Modules/itertoolsmodule.c	4037	4044	zip_longest_next	zip_longest_next(PyObject *op)	modelled	itertools-simple-doc-agree	
+Modules/itertoolsmodule.c	4114	4140	itertoolsmodule_traverse	itertoolsmodule_traverse(PyObject *mod, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal (Py_VISIT of object members); only tp_traverse for the cycle collector, no Python-visible result of its own
+Modules/itertoolsmodule.c	4143	4169	itertoolsmodule_clear	itertoolsmodule_clear(PyObject *mod)	excluded		no-behaviour: GC support for the module state structure; no Python-visible result
+Modules/itertoolsmodule.c	4172	4175	itertoolsmodule_free	itertoolsmodule_free(void *mod)	excluded		no-behaviour: GC support for the module state structure; no Python-visible result
+Modules/itertoolsmodule.c	4189	4217	itertoolsmodule_exec	itertoolsmodule_exec(PyObject *mod)	excluded		internal-bootstrap: module initialisation, creates the 22 heap types from their specs and adds them to the module
+Modules/itertoolsmodule.c	4245	4248	PyInit_itertools	PyInit_itertools(void)	excluded		internal-bootstrap: returns the module definition for multi-phase init

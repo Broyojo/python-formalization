@@ -1,0 +1,54 @@
+id: pickle-py-oversize-struct-error
+title: "pickle.py: bytes over 4 GiB at protocol 3 raise a bare struct.error where C explains the limit with OverflowError"
+priority: P4
+kind: twin-mismatch
+module: pickle
+files: [Lib/pickle.py, Modules/_pickle.c]
+functions: [_save_bytes_no_memo, save_str, _save_bytes_data, write_unicode_binary]
+summary: |
+  At protocol 3 a `bytes` object of 2**32 bytes or more cannot be encoded: BINBYTES has a 4-byte
+  length and BINBYTES8 needs protocol 4. The C pickler raises OverflowError "serializing a bytes
+  object larger than 4 GiB requires pickle protocol 4 or higher". `pickle._dumps` falls through to
+  `pack("<I", n)` and leaks `struct.error: 'I' format requires 0 <= number <= 4294967295`, which
+  names neither the problem nor the fix. The same holds for `str` at protocols 1-3 (BINUNICODE), and
+  for memo indices of 2**32 or more (C PicklingError, Python struct.error).
+likelihood: |
+  Low. Only the pure-Python pickler, and only with objects over 4 GiB at an old protocol.
+maybe_intended: |
+  Unlikely to be deliberate, but maintainers have said C and Python details may differ on error
+  paths (python/cpython#128853). A two-line fix to match C would probably be accepted.
+reproducer: |
+  import pickle
+  b = bytes(2**32)   # calloc'd: no memory is touched, neither twin reads the data
+  def r(f):
+      try: f(b, 3); return ('ok', '')
+      except Exception as e: return (type(e).__name__, str(e))
+  c, p = r(pickle.dumps), r(pickle._dumps)
+  print('C     :', c)
+  print('Python:', p)
+  if c[0] == 'OverflowError' and p[0] == 'error':
+      print('REPRODUCED pickle-py-oversize-struct-error')
+expected: |
+  OverflowError with the C message from both twins.
+observed: |
+  python3 3.14.7: C OverflowError with the 4 GiB message; Python struct.error. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): REPRODUCED, same behaviour.
+promised_by: |
+  Twin relation only. Doc/library/pickle.rst says protocol 4 "adds support for very large objects".
+cause: |
+  Lib/pickle.py:851-854: `n > 0xffffffff and self.proto >= 4` is false at protocol 3, so the next
+  branch runs `pack("<I", n)`; likewise :926-929 for str. Modules/_pickle.c:2540-2545 and :2848-2854
+  raise OverflowError explicitly.
+possible_fix: |
+  Add the same check to `_save_bytes_no_memo` and `save_str`.
+duplicates:
+  issues:
+    - {number: 57057, state: closed, relation: related (signed vs unsigned 32-bit lengths), reason: "fixed long ago, different defect"}
+    - {number: 55773, state: closed, relation: related (64-bit readiness), reason: "added the C messages"}
+  queries: ["larger than 4 GiB requires pickle protocol 4", "pickle struct.error", "pickle 4GiB",
+            "pickle large bytes protocol 3", "pickle.py struct.error", "pickle GiB", "pickle huge bytes",
+            "pickle bytes larger", "BINBYTES", "BINUNICODE"]
+  bugforge: "no pickle entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Pickle.DumpsTwinsAgreeBatchOkLong
+  theorem: PyLean.Pickle.dumpsTwinsAgreeBatchOkLong_refuted

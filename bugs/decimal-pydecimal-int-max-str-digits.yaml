@@ -1,0 +1,107 @@
+id: decimal-pydecimal-int-max-str-digits
+title: "_pydecimal raises ValueError (int string-conversion limit) for decimals with more than 4300 digits: constructor, hash, floor/ceil/round, as_integer_ratio, +, -, *"
+priority: P4
+kind: known-limitation
+module: decimal
+files: [Lib/_pydecimal.py]
+functions: ["Decimal.__new__", "Decimal.__hash__", "Decimal.__floor__", "Decimal.__ceil__", "Decimal.__round__",
+            "Decimal.as_integer_ratio", "Decimal.__add__", "Decimal.__mul__", "Decimal._rescale", "Decimal._fix",
+            "_WorkRep.__init__", "_normalize"]
+summary: |
+  The pure-Python decimal keeps the coefficient as a digit string `_int` and converts it with
+  int()/str() in many places. Since the int<->str conversion limit (default 4300 digits) these
+  conversions raise ValueError("Exceeds the limit (4300 digits) for integer string conversion")
+  for any coefficient (or intermediate) longer than 4300 digits, although decimal is an
+  arbitrary-precision type and the C implementation handles all of these:
+    _pydecimal.Decimal('1' * 4301)                      -> ValueError   (_decimal: works)
+    _pydecimal.Decimal(10 ** 4300)                      -> ValueError   (_decimal: works)
+    hash(_pydecimal.Decimal((0, (1,) * 4301, 0)))       -> ValueError
+    math.floor(_pydecimal.Decimal('1E+4300'))           -> ValueError   (int() of the same works)
+    _pydecimal.Decimal((0, (1,) * 4301, 0)).as_integer_ratio() -> ValueError
+    _pydecimal.Decimal(5) == 10 ** 4300                 -> ValueError   (a comparison raising)
+    x = _pydecimal.Decimal('1' * 2200); x * x          -> ValueError at the default precision 28:
+        __mul__ formats the exact 4400-digit product with str() before rounding it to 28 digits.
+  str(d) of such a value works, so Decimal(str(d)) does not round-trip.
+likelihood: |
+  Very low in CPython. The decimal module uses _decimal whenever it is built; _pydecimal is reached
+  only by importing it directly or on a build without _decimal, and then only past 4300 digits.
+  Other Python implementations that ship _pydecimal are more exposed.
+maybe_intended: |
+  Yes, this is a deliberate decision. python/cpython#96589 (Mark Dickinson, 2022) reported the
+  int <-> Decimal half of this and was closed as not planned. Gregory P. Smith: "_pydecimal is not
+  used by CPython users and exists solely as a reference implementation useful for prototyping or
+  for use on other non-CPython implementations so we decided not to worry about it." The test
+  suite works around it: PyUsabilityTest raises the limit to 7000 in setUp
+  (Lib/test/test_decimal.py:2605-2612). Do not file this. It stays on record because it
+  explains why the _pydecimal properties here need a limit disjunct or a digit bound.
+  What this record adds to #96589 is only the extent: the string constructor, hash(), floor, ceil,
+  round, as_integer_ratio, comparison with a big int, and +, - and *. The last is the one facet
+  not implied by a large input: two 2200-digit operands, each under the limit, fail at the default
+  precision of 28 because __mul__ formats the exact product before rounding it. That is the same
+  root cause and, in my view, falls under the same decision.
+reproducer: |
+  import math
+  import _pydecimal as P, _decimal as C
+  def kind(f):
+      try:
+          f()
+          return 'ok'
+      except Exception as e:
+          return type(e).__name__
+  checks = {
+      "Decimal('1'*4301)": lambda M: M.Decimal('1' * 4301),
+      "Decimal(10**4300)": lambda M: M.Decimal(10 ** 4300),
+      "hash(Decimal((0,(1,)*4301,0)))": lambda M: hash(M.Decimal((0, (1,) * 4301, 0))),
+      "math.floor(Decimal('1E+4300'))": lambda M: math.floor(M.Decimal('1E+4300')),
+      "Decimal('1'*2200)**2 via *": lambda M: M.Decimal('1' * 2200) * M.Decimal('1' * 2200),
+      "Decimal(5) == 10**4300": lambda M: M.Decimal(5) == 10 ** 4300,
+  }
+  bad = 0
+  for name, f in checks.items():
+      p, c = kind(lambda: f(P)), kind(lambda: f(C))
+      print(f'{name:36s} _pydecimal: {p:10s} _decimal: {c}')
+      bad += (p == 'ValueError' and c == 'ok')
+  if bad == len(checks):
+      print('REPRODUCED decimal-pydecimal-int-max-str-digits')
+expected: |
+  The same results as _decimal (the values are exactly representable; the products are rounded
+  to the context precision), and no ValueError from internal conversions.
+promised_by: |
+  Doc/library/decimal.rst:63-65: "the decimal module has a user alterable precision (defaulting to
+  28 places) which can be as large as needed for a given problem". Decimal(value) takes any int or
+  numeric string; the __floor__ and __ceil__ docstrings (_pydecimal.py:1846, :1861); hashing of
+  numeric types (Built-in Types); agreement between the twins.
+cause: |
+  Lib/_pydecimal.py: :504 `self._int = str(int(intpart+fracpart))` (and :503 for the exponent,
+  :511 for NaN payloads); :530 `self._int = str(abs(value))`; :918 `int(self._int)` in __hash__;
+  :954 in as_integer_ratio; :1843, :1858, :1873 `int(self._rescale(0, ...))` after _rescale pads
+  the coefficient with zeros; :5610 `self.int = int(value._int)` in _WorkRep (used by +, -, *);
+  :5640 `len(str(tmp.int))` in _normalize; :545 `str(value.int)`; :1271
+  `str(op1.int * op2.int)` in __mul__; :2607 and :1669 `str(int(coeff)+1)` when rounding up.
+  On main the same lines exist (constructor at :596).
+possible_fix: |
+  None proposed, given #96589. That thread also rules out the obvious one: the limit is
+  process-wide, so _pydecimal cannot safely lift it around its own conversions. It notes that a
+  context-local limit could allow this, but calls even that unsatisfactory. A narrower change,
+  useful only if the multiplication facet were ever wanted, is to round the int product before
+  converting it to a string.
+tested:
+  python3 (3.14.7, Linux, bundled libmpdec 2.5.1): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev, bundled libmpdec 2.5.1): REPRODUCED
+duplicates:
+  issues:
+    - {number: 96589, state: closed, relation: duplicate (same root cause; int <-> Decimal part), reason: not_planned (won't fix, decided on the merits by core developers)}
+  related:
+    - {number: 95778, state: closed, relation: introduced the limit (CVE-2020-10735)}
+    - {number: 118164, state: closed, relation: _decimal missing and huge ints; different symptom (str(int) hang through _pylong)}
+    - {number: 139957, state: closed, relation: not related (cost of int(Decimal) in the C twin)}
+  queries: ["_pydecimal int_max_str_digits", "decimal int_max_str_digits",
+            "Decimal Exceeds the limit integer string conversion", "_pydecimal ValueError large",
+            "_pydecimal digits limit", "decimal integer string conversion"]
+  bugforge: "no decimal entries in vendor/bugforge-results/README.md"
+lean:
+  property: [PyLean.Decimal.ParsePyAcceptsC, PyLean.Decimal.StrRoundTripPy, PyLean.Decimal.HashTwinsAgree,
+             PyLean.Decimal.IntConversionsPy, PyLean.Decimal.MulNoValueErrorPy]
+  theorem: [PyLean.Decimal.parsePyAcceptsC_refuted, PyLean.Decimal.strRoundTripPy_refuted,
+            PyLean.Decimal.hashTwinsAgree_refuted, PyLean.Decimal.intConversionsPy_refuted,
+            PyLean.Decimal.mulNoValueErrorPy_refuted]

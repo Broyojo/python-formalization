@@ -1,0 +1,61 @@
+id: json-roundtrip-surrogate-pair
+title: "json: loads(dumps(s)) != s when s contains a high surrogate followed by a low surrogate (ensure_ascii=True)"
+priority: P4
+kind: round-trip
+module: json
+files: [Lib/json/encoder.py, Modules/_json.c, Lib/json/decoder.py]
+functions: ["py_encode_basestring_ascii", "C ascii_escape_unicode", "py_scanstring", "C scanstring_unicode"]
+summary: |
+  With the default ensure_ascii=True, json.dumps escapes every non-ASCII code point separately,
+  so the two-code-point str '𝄞' becomes '"\\ud834\\udd1e"', and json.loads joins an
+  escaped high surrogate followed by an escaped low surrogate into one character:
+  json.loads(json.dumps('𝄞')) == '\U0001d11e'. Both encoders and both decoders behave
+  the same. The Lean model proves that this is the only way a str fails to round-trip:
+  loads(dumps(t)) == t for every str t with ensure_ascii=False, and with ensure_ascii=True
+  whenever t has no high surrogate immediately followed by a low surrogate, for strings alone
+  and inside any JSON-representable value (json-roundtrip).
+likelihood: |
+  Very low: needs a str holding a surrogate pair as two code points (from surrogatepass /
+  surrogateescape decoding or explicit escapes).
+maybe_intended: |
+  Probably: JSON (RFC 8259 section 7) has no way to write two separate surrogates that a reader
+  will not join, and lone surrogates are not valid Unicode text. This is the known open report
+  gh-94527, which has no maintainer response.
+reproducer: |
+  import json
+  from test.support.import_helper import import_fresh_module
+  pyjson = import_fresh_module('json', blocked=['_json'])
+  s = '𝄞'
+  c = json.loads(json.dumps(s))
+  p = pyjson.loads(pyjson.dumps(s))
+  print('dumps:', json.dumps(s), pyjson.dumps(s))
+  print('C:', ascii(c), 'Python:', ascii(p))
+  print('ensure_ascii=False:', ascii(json.loads(json.dumps(s, ensure_ascii=False))))
+  if c == p == '\U0001d11e' and json.loads(json.dumps(s, ensure_ascii=False)) == s:
+      print('REPRODUCED json-roundtrip-surrogate-pair')
+expected: |
+  json.loads(json.dumps(s)) == s.
+observed: |
+  python3 3.14.7 and main: '\U0001d11e' from both twins; with ensure_ascii=False the round trip
+  holds.
+promised_by: |
+  Round-trip expectation for JSON-representable values (json docs: "dumps ... loads"); not
+  explicitly promised for surrogate code points.
+cause: |
+  Lib/json/encoder.py:49-68 and Modules/_json.c:113-147 escape each surrogate code point as its
+  own \uXXXX; Lib/json/decoder.py:118-124 and Modules/_json.c:500-526 join an escaped high
+  surrogate with a following escaped low surrogate.
+possible_fix: |
+  None needed beyond documentation; an encoder that wanted to preserve such strings would have to
+  emit them raw (as ensure_ascii=False does).
+reproduces:
+  python3 (3.14.7): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 94527, state: open, relation: "duplicate (Possibly Wrong json encoding and decoding of surrogated pairs, same repro)", reason: open}
+  queries: ["json invalid escape position", "json Invalid escape", "json control character message", "json decoder error message C Python", "JSONDecodeError pos", "JSONDecodeError colno", "scanstring error", "json parity pure python accelerator", "raw_decode negative", "raw_decode idx", "json negative index", "py_make_scanner", "json idx cannot be negative", "json surrogate pair roundtrip", "json lone surrogates", "json dumps loads surrogate", "json ensure_ascii surrogate",
+            "gh issue view 94527", "bugforge-results/README.md: json entries (4, none related)"]
+lean:
+  property: PyLean.JsonMod.RoundTripStr
+  theorem: PyLean.JsonMod.roundTripStr_refuted
