@@ -1,0 +1,58 @@
+id: datetime-time-subminute-offset
+title: "datetime.time comparison and hash mishandle sub-minute UTC offsets (3.14.7; fixed on main)"
+priority: P4
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py, Modules/_datetimemodule.c]
+functions: ["time._cmp", "time.__hash__", "C time_richcompare", "C time_hash"]
+summary: |
+  time comparison still assumes whole-minute offsets. Python floors the offset to minutes, so
+  time(12, 0, 30, tzinfo=timezone(timedelta(seconds=30))) != time(12, tzinfo=utc) although they
+  are the same instant, and hash() of a time with a seconds offset raises
+  AssertionError('whole minute'). C compares seconds but drops the offsets' microseconds, so
+  time(0, tzinfo=+1us) == time(0, tzinfo=+2us) with different hashes.
+likelihood: |
+  Sub-minute offsets are rare (historic local mean time) and need an aware time, itself rare.
+maybe_intended: |
+  No; already reported and fixed on main.
+reproducer: |
+  import datetime, _pydatetime
+  def t(m, sec, tzsec=None, tzus=None):
+      tz = m.timezone(m.timedelta(seconds=tzsec or 0, microseconds=tzus or 0)) if (tzsec or tzus) else m.timezone.utc
+      return m.time(12 if tzus is None else 0, 0, sec, tzinfo=tz)
+  c_eq = t(datetime, 30, 30) == t(datetime, 0)
+  p_eq = t(_pydatetime, 30, 30) == t(_pydatetime, 0)
+  try:
+      hash(t(_pydatetime, 0, 30))
+      assertion = False
+  except AssertionError as e:
+      assertion = str(e) == 'whole minute'
+  a, b = t(datetime, 0, tzus=1), t(datetime, 0, tzus=2)
+  print('C ==', c_eq, 'Python ==', p_eq, 'assertion', assertion, 'C +1us == +2us', a == b, hash(a) == hash(b))
+  if c_eq and not p_eq and assertion and a == b and hash(a) != hash(b):
+      print('REPRODUCED datetime-time-subminute-offset')
+expected: |
+  Both twins compare wall time minus the complete offset, and hash() returns a value that
+  agrees with ==.
+promised_by: |
+  datetime docs: "If both comparands are aware and have different tzinfo attributes, the
+  comparands are first adjusted by subtracting their UTC offsets."; __hash__ contract.
+cause: |
+  Lib/_pydatetime.py:1538-1540 (`myhhmm = self._hour * 60 + self._minute - myoff//timedelta(minutes=1)`),
+  :1559-1563 (`assert not m % timedelta(minutes=1), "whole minute"`);
+  Modules/_datetimemodule.c:4951-4962 (offset seconds only).
+possible_fix: |
+  Fixed on main by the change for gh-99772.
+reproduces:
+  python3 (3.14.7): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): not reproduced (fixed)
+duplicates:
+  issues:
+    - {number: 99772, state: see gh, relation: "duplicate; canonical report", reason: fixed by PR 155024}
+    - {number: 155023, state: closed, relation: duplicate of 99772, reason: duplicate}
+  queries: ["whole minute", "datetime.time hash AssertionError", "time comparison utcoffset seconds",
+            "sub-minute offset", "PR: whole minute", "PR: sub-minute offset",
+            "gh api repos/python/cpython/issues/155023/timeline"]
+lean:
+  property: PyLean.Datetime.TimeCompareTwins
+  theorem: PyLean.Datetime.timeCompareTwins_refuted

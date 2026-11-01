@@ -1,0 +1,66 @@
+id: datetime-pydatetime-astimezone-unchecked-offset
+title: "_pydatetime datetime.astimezone() does not validate tzinfo.utcoffset() and calls it before the identity shortcut"
+priority: P4
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py]
+functions: ["datetime.astimezone"]
+summary: |
+  `datetime.astimezone` in _pydatetime calls `mytz.utcoffset(self)` directly, so the result
+  skips `_check_utc_offset`, and it does so before the `tz is mytz` shortcut. C uses
+  `call_utcoffset`, after the identity check. With a tzinfo whose utcoffset returns
+  timedelta(days=1), _pydatetime converts and C raises ValueError. With a tzinfo whose utcoffset
+  raises, d.astimezone(d.tzinfo) raises in _pydatetime and returns d in C.
+likelihood: |
+  Needs a broken tzinfo subclass, and _pydatetime only runs where _datetime is unavailable.
+maybe_intended: |
+  The out-of-range case looks like an oversight: `self.utcoffset()` validates the same value
+  elsewhere in the class. A maintainer would likely accept a two-line fix, but not treat this
+  as important.
+reproducer: |
+  import datetime, _pydatetime
+  def run(m):
+      class Big(m.tzinfo):
+          def utcoffset(self, dt): return m.timedelta(1)
+          def dst(self, dt): return None
+      class Boom(m.tzinfo):
+          def utcoffset(self, dt): raise KeyError('boom')
+          def dst(self, dt): return None
+      out = []
+      try:
+          out.append(m.datetime(2020, 1, 2, 12, tzinfo=Big()).astimezone(m.timezone.utc).isoformat())
+      except ValueError:
+          out.append('ValueError')
+      d = m.datetime(2020, 1, 2, 12, tzinfo=Boom())
+      try:
+          out.append(d.astimezone(d.tzinfo) is d)
+      except KeyError:
+          out.append('KeyError')
+      return out
+  c, p = run(datetime), run(_pydatetime)
+  print(c, p)
+  if c == ['ValueError', True] and p == ['2020-01-01T12:00:00+00:00', 'KeyError']:
+      print('REPRODUCED datetime-pydatetime-astimezone-unchecked-offset')
+expected: |
+  _pydatetime raises ValueError in the first case and returns d in the second, as C does.
+promised_by: |
+  tzinfo.utcoffset docs ("must be strictly between -timedelta(hours=24) and
+  timedelta(hours=24)"); datetime.astimezone docs ("If self.tzinfo is tz, self.astimezone(tz)
+  is equal to self: no adjustment of date or time data is performed.").
+cause: |
+  Lib/_pydatetime.py:2094-2104: `myoffset = mytz.utcoffset(self)` at :2099, unchecked, ahead of
+  `if tz is mytz` at :2104. Modules/_datetimemodule.c:6747 compares the tzinfo objects first,
+  then uses call_utcoffset.
+possible_fix: |
+  Move the `tz is mytz` test ahead of the offset call and use `self.utcoffset()`.
+reproduces:
+  python3 (3.14.7): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["astimezone utcoffset", "astimezone tzinfo utcoffset out of range", "_pydatetime astimezone",
+            "PR: astimezone utcoffset", "PR: _pydatetime astimezone",
+            "bugforge-results/README.md: astimezone entries (none)"]
+lean:
+  property: PyLean.Datetime.AstimezoneTwins
+  theorem: PyLean.Datetime.astimezoneTwins_refuted
