@@ -1,0 +1,80 @@
+id: decimal-c-context-ignores-default-capitals
+title: "_decimal's Context() and IEEEContext() ignore DefaultContext.capitals and always use 1"
+priority: P4
+kind: wrong-result
+module: decimal
+files: [Modules/_decimal/_decimal.c]
+functions: ["context_new", "ieee_context"]
+summary: |
+  A field not given to Context() is documented to come from DefaultContext. In _decimal every field
+  does except capitals, which context_new sets to 1 after copying the template:
+    decimal.DefaultContext.capitals = 0
+    decimal.Context().capitals        -> 1   (_pydecimal: 0)
+    decimal.IEEEContext(128).capitals -> 1   (_pydecimal: 0)
+    decimal.DefaultContext.clamp = 1
+    decimal.Context().clamp           -> 1   (the same pattern, working)
+  _decimal disagrees with itself as well: a new thread's context does take capitals from the
+  template, because that path uses context_copy, so with capitals = 0 on the template a thread
+  prints 1E+3 as 1e+3 while Context() in the same thread prints 1E+3.
+likelihood: |
+  Very low. It takes setting DefaultContext.capitals = 0, which few programs do, and the effect is
+  the case of one letter in printed exponents. Worth recording with the flags finding, because it is
+  the same few lines of context_new.
+maybe_intended: |
+  Possibly a leftover rather than a decision. capitals is not part of mpd_context_t, so the struct
+  assignment cannot carry it and the line after it sets a fixed value, which is right for the very
+  first context built before the template exists. A maintainer could reasonably close this alone.
+reproducer: |
+  import threading
+  import _decimal as C, _pydecimal as P
+  def caps(M):
+      D = M.DefaultContext
+      old = D.capitals
+      seen = {}
+      try:
+          D.capitals = 0
+          seen['Context()'] = M.Context().capitals
+          seen['IEEEContext(128)'] = M.IEEEContext(128).capitals
+          t = threading.Thread(target=lambda: seen.__setitem__('new thread', M.getcontext().capitals))
+          t.start()
+          t.join()
+      finally:
+          D.capitals = old
+      return seen
+  c, p = caps(C), caps(P)
+  print('_decimal  ', c)
+  print('_pydecimal', p)
+  if c == {'Context()': 1, 'IEEEContext(128)': 1, 'new thread': 0} and set(p.values()) == {0}:
+      print('REPRODUCED decimal-c-context-ignores-default-capitals')
+expected: |
+  capitals 0 from Context() and IEEEContext(), as in _pydecimal and as _decimal's own new-thread
+  context does.
+promised_by: |
+  Doc/library/decimal.rst:1117-1118: "If a field is not specified or is None, the default values
+  are copied from the DefaultContext." :1094-1096: "Changing a field (such a precision) has the
+  effect of changing the default for new contexts created by the Context constructor." Twin
+  agreement: Lib/_pydecimal.py:3883 `self.capitals = capitals if capitals is not None else dc.capitals`.
+cause: |
+  Modules/_decimal/_decimal.c:1430 `CtxCaps(self) = 1;` in context_new, whether or not a template was
+  copied at :1421. context_copy keeps the source's value (:1623). Same on main at :1476.
+possible_fix: |
+  Set capitals from the template when there is one, next to the copy at :1421, and use 1 only in the
+  branch that takes dflt_ctx.
+tested:
+  python3 (3.14.7, Linux, bundled libmpdec 2.5.1): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev, bundled libmpdec 2.5.1): REPRODUCED
+duplicates:
+  issues: []
+  related: [141148, 123284, 155051]
+  queries: ["decimal Context flags DefaultContext", "_decimal context_new status template",
+            "decimal DefaultContext capitals", "decimal Context capitals default",
+            "decimal Context constructor flags not cleared", "DefaultContext flags new context",
+            "decimal localcontext None", "decimal context_new", "gh-146011 decimal",
+            "decimal SignalDict context dealloc",
+            "decimal flags cleared Context constructor documentation",
+            "Context flags inherited DefaultContext _decimal"]
+  bugforge: "no decimal entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Decimal.ContextNewCopiesCapitalsC
+  theorem: PyLean.Decimal.contextNewCopiesCapitalsC_refuted
+  narrowed: PyLean.Decimal.ContextNewCleanTemplate
