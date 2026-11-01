@@ -1,5 +1,5 @@
 import PyLean.DiffCore
-import PyLean.LongObj.Methods
+import PyLean.LongObj.Conv2
 
 /-! Differential-testing handler for `longobj` cases (`"mod": "longobj"`). -/
 
@@ -57,6 +57,20 @@ def run (fn : String) (j : Json) : Except String Json := do
     | none => throw "negative exponent has no integer model"
   | "powmod" =>
     encResult toJson (longPowMod (← getInt j "a") (← getInt j "b") (← getInt j "c"))
+  | "as_longlong" => encResult toJson (asLongLong (← getLong j "a"))
+  | "as_ulonglong" => encResult toJson (asUnsignedLongLong (← getLong j "a"))
+  | "void_ptr" => encResult toJson (asVoidPtr (← getLong j "a"))
+  | "native" =>
+    let a ← getInt j "a"
+    let n ← getNat j "n"
+    let r := asNativeRes (Long.ofInt a) n (← getBool j "ub")
+    return encPy id (.ok (Json.arr #[toJson r, toJson (a % 2 ^ (8 * n)).toNat]))
+  | "fixed" =>
+    let a ← getInt j "a"
+    let n ← getNat j "n"
+    let ub ← getBool j "ub"
+    let name := if ub then s!"C uint{8 * n}_t" else s!"C int{8 * n}_t"
+    encResult (fun _ => toJson a) (toFixed (Long.ofInt a) n ub name)
   | "from_c" =>
     let a ← getInt j "a"
     return encPy encLong (.ok (if 0 ≤ a then fromCUInt a.toNat else fromCInt a))

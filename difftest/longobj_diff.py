@@ -32,6 +32,18 @@ API.PyLong_FromLongLong.restype = ctypes.py_object
 API.PyLong_FromLongLong.argtypes = [ctypes.c_longlong]
 API.PyLong_FromUnsignedLongLong.restype = ctypes.py_object
 API.PyLong_FromUnsignedLongLong.argtypes = [ctypes.c_ulonglong]
+for _name, _res in [("PyLong_AsLongLong", ctypes.c_longlong),
+                    ("PyLong_AsUnsignedLongLong", ctypes.c_ulonglong),
+                    ("PyLong_AsVoidPtr", ctypes.c_void_p)]:
+    getattr(API, _name).restype = _res
+    getattr(API, _name).argtypes = [ctypes.py_object]
+API.PyLong_AsNativeBytes.restype = ctypes.c_ssize_t
+API.PyLong_AsNativeBytes.argtypes = [ctypes.py_object, ctypes.c_void_p, ctypes.c_ssize_t, ctypes.c_int]
+FIXED = {(4, False): ("PyLong_AsInt32", ctypes.c_int32), (8, False): ("PyLong_AsInt64", ctypes.c_int64),
+         (4, True): ("PyLong_AsUInt32", ctypes.c_uint32), (8, True): ("PyLong_AsUInt64", ctypes.c_uint64)}
+for (_n, _u), (_name, _ct) in FIXED.items():
+    getattr(API, _name).restype = ctypes.c_int
+    getattr(API, _name).argtypes = [ctypes.py_object, ctypes.POINTER(_ct)]
 API.PyLong_GetSign.restype = ctypes.c_int
 API.PyLong_GetSign.argtypes = [ctypes.py_object, ctypes.POINTER(ctypes.c_int)]
 
@@ -95,7 +107,8 @@ def gen_case(rng):
     fn = rng.choice(["add", "sub", "mul", "mul", "square", "divmod", "divmod", "floordiv", "mod",
                      "rshift", "lshift", "and", "or", "xor", "invert", "neg", "abs", "bool",
                      "pow", "powmod", "lopsided", "balanced", "balanced", "bigsquare", "knuth", "bigdiv",
-                     "as_long_overflow", "as_long", "sizeof", "ratio", "int_info",
+                     "as_long_overflow", "as_long", "sizeof", "ratio", "int_info", "as_longlong",
+                     "as_ulonglong", "void_ptr", "native", "native", "fixed",
                      "as_int", "as_ssize", "as_ulong", "as_size_t", "as_mask", "from_c", "get_sign",
                      "bit_length", "bit_count", "hash", "bool_repr", "bool_invert", "bool_op"])
     c = {"mod": "longobj", "fn": fn}
@@ -104,7 +117,20 @@ def gen_case(rng):
     elif fn in ("square", "invert", "neg", "abs", "bool", "get_sign", "bit_length", "bit_count",
                 "hash", "sizeof", "ratio"):
         c["a"] = edge_int(rng)
-    elif fn in ("as_long_overflow", "as_long", "as_int", "as_ssize", "as_ulong", "as_size_t", "as_mask"):
+    elif fn == "native":
+        n = rng.choice([1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 16, 17])
+        c["n"], c["ub"] = n, rng.random() < 0.5
+        k = 8 * n + rng.choice([-2, -1, 0, 1, 2])
+        v = (1 << k) + rng.choice([-1, 0, 0, 1])
+        c["a"] = rng.choice([v, -v, edge_int(rng, ("small", "digits")), 1 << (8 * n - 1), -(1 << (8 * n - 1))])
+    elif fn == "fixed":
+        n, u = rng.choice([4, 8]), rng.random() < 0.5
+        c["n"], c["ub"] = n, u
+        k = 8 * n + rng.choice([-2, -1, 0, 1])
+        v = (1 << k) + rng.choice([-1, 0, 1])
+        c["a"] = rng.choice([v, -v, edge_int(rng, ("small", "digits"))])
+    elif fn in ("as_long_overflow", "as_long", "as_int", "as_ssize", "as_ulong", "as_size_t", "as_mask",
+                "as_longlong", "as_ulonglong", "void_ptr"):
         base = rng.choice([0, 1, B - 1, B, 1 << 31, (1 << 31) - 1, P63, P63 - 1, P64, P64 - 1, 1 << 90])
         v = base + rng.randrange(-2, 3)
         c["a"] = rng.choice([v, -v, edge_int(rng)])
@@ -224,6 +250,22 @@ def run_python(c):
             x, y = API.PyLong_AsUnsignedLongMask(a), API.PyLong_AsUnsignedLongLongMask(a)
             assert x == y
             return x
+        if fn == "as_longlong":
+            return API.PyLong_AsLongLong(a)
+        if fn == "as_ulonglong":
+            return API.PyLong_AsUnsignedLongLong(a)
+        if fn == "void_ptr":
+            return API.PyLong_AsVoidPtr(a) or 0
+        if fn == "native":
+            n = c["n"]
+            buf = (ctypes.c_ubyte * n)()
+            r = API.PyLong_AsNativeBytes(a, buf, n, 1 | (4 if c["ub"] else 0))
+            return [r, int.from_bytes(bytes(buf), "little")]
+        if fn == "fixed":
+            name, ct = FIXED[(c["n"], c["ub"])]
+            out = ct(0)
+            getattr(API, name)(a, ctypes.byref(out))
+            return out.value
         if fn == "from_c":
             return API.PyLong_FromUnsignedLongLong(a) if a >= 0 else API.PyLong_FromLongLong(a)
         if fn == "get_sign":
