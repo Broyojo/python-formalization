@@ -24,7 +24,7 @@ Lib/zipfile/__init__.py	705	711	_gen_crc	_gen_crc(crc)	todo
 Lib/zipfile/__init__.py	721	756	_ZipDecrypter	_ZipDecrypter(pwd)	todo		
 Lib/zipfile/__init__.py	761	762	LZMACompressor.__init__	__init__(self)	todo		
 Lib/zipfile/__init__.py	764	769	LZMACompressor._init	_init(self)	todo		
-Lib/zipfile/__init__.py	771	774	LZMACompressor.compress	compress(self, data)	todo		
+Lib/zipfile/__init__.py	771	774	LZMACompressor.compress	compress(self, data)	todo		candidates:itertools-simple-doc-agree
 Lib/zipfile/__init__.py	776	779	LZMACompressor.flush	flush(self)	todo		
 Lib/zipfile/__init__.py	784	787	LZMADecompressor.__init__	__init__(self)	todo		
 Lib/zipfile/__init__.py	789	807	LZMADecompressor.decompress	decompress(self, data)	todo		

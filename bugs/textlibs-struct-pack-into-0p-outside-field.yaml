@@ -1,0 +1,41 @@
+id: textlibs-struct-pack-into-0p-outside-field
+title: "struct: pack_into with a zero-sized '0p' field writes a byte outside the packed region"
+priority: P3
+kind: memory-write-out-of-bounds
+module: textlibs
+files: [Modules/_struct.c]
+functions: ["s_pack_internal", "s_pack_into", "pack_into"]
+summary: |
+  `*res = n` runs for a `p` field even when `code->size == 0`, so `0p` writes its count byte at
+  the first byte after the field. `struct.pack_into('0p', b, 0, b'')` on bytearray(b'\xaa\xaa')
+  gives 00aa although calcsize is 0, and a zero-length memoryview slice has the byte behind it
+  overwritten, outside the buffer the caller passed.
+likelihood: |
+  Very low: `0p` is a degenerate format, though the write does cross the exported buffer.
+maybe_intended: |
+  No. Main no longer writes the byte. The earlier report's closure was not a ruling on the
+  merits: the maintainer closed the batch for flooding the tracker ("Please stop flooding our
+  issue tracker and instead compile a gist"), per issue comment 5975238560 on #158748.
+reproducer: |
+  import struct
+  base = bytearray(b'\xaa\xaa')
+  struct.pack_into('0p', memoryview(base)[:0], 0, b'')
+  print(base.hex())
+  if base == bytearray(b'\x00\xaa'):
+      print('REPRODUCED textlibs-struct-pack-into-0p-outside-field')
+expected: |
+  `aaaa`: a zero-sized field changes nothing.
+observed: |
+  python3 3.14.7: 00aa. REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): aaaa. NOT reproduced (fixed).
+promised_by: |
+  invariant: pack_into writes only calcsize(format) bytes at offset.
+cause: |
+  Modules/_struct.c:2224-2234: the size-0 case clamps n but still executes `*res = ...`.
+possible_fix: |
+  Skip the count byte when code->size == 0.
+duplicates: |
+  Duplicate of bugforge struct-20261003-182950-c2, filed as python/cpython#158762 (closed
+  not-planned for flooding, not on the merits). Main no longer has it.
+  Queries: gh api search/issues q='repo:python/cpython struct pack_into 0p'
+lean: lean/PyLean/TextLibs/StructProps.lean (PackIntoStaysInside, packIntoStaysInside_refuted)

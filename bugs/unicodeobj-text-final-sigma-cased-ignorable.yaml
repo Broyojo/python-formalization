@@ -1,0 +1,47 @@
+id: unicodeobj-text-final-sigma-cased-ignorable
+title: "str.lower() picks the wrong sigma next to characters that are both cased and case-ignorable"
+priority: P5
+kind: doc-mismatch
+module: unicodeobject
+files: [Objects/unicodeobject.c]
+functions: ["handle_capital_sigma", "lower_ucs4"]
+summary: |
+  The comment on handle_capital_sigma gives the Final_Sigma rule of the Unicode Standard as
+  \p{cased}\p{case-ignorable}*U+03A3!(\p{case-ignorable}*\p{cased}). The code skips every
+  case-ignorable character before it tests for cased, so a character with both properties is
+  never seen as cased. 267 code points have both, such as U+02B0 MODIFIER LETTER SMALL H and
+  U+0345. 'ʰΣ'.lower() gives a medial sigma where the rule gives a final one, and
+  'AΣʰ'.lower() gives a final sigma where the rule gives a medial one.
+likelihood: |
+  Very rare: Greek capital sigma next to a modifier letter or U+0345 in text that goes through
+  lower(). Polytonic Greek does use U+0345, but mostly after lowercase letters.
+maybe_intended: |
+  Quite possibly tolerated. From memory, unverified, ICU also tests case-ignorable first. A
+  maintainer may prefer to change the comment. Report only together with other findings.
+reproducer: |
+  a = 'ʰΣ'.lower()
+  b = 'AΣʰ'.lower()
+  print(ascii(a), ascii(b))
+  if a == 'ʰσ' and b == 'aςʰ':
+      print('REPRODUCED unicodeobj-text-final-sigma-cased-ignorable')
+expected: |
+  'ʰς' and 'aσʰ', by the regular expression in the comment.
+observed: |
+  'ʰσ' and 'aςʰ'.
+tested: "REPRODUCED on python3 3.14.7 and on main (3.16.0a1+dev) by scripts/check_bugs.py"
+promised_by: |
+  Comment at Objects/unicodeobject.c:10047-10051; The Unicode Standard, Table 3-17 (Final_Sigma).
+cause: |
+  Objects/unicodeobject.c:10053-10057 and :10060-10064 stop only at a character that is not
+  case-ignorable, and :10058 and :10065 test cased only on that character.
+possible_fix: |
+  Stop the scans at the first character that is cased or not case-ignorable, or reword the
+  comment to say that case-ignorable takes precedence.
+lean: |
+  Refuted by finalSigmaRegex_refuted; finalSigmaNoOverlap_proven shows the code implements the rule
+  exactly when no nearby character has both properties (lean/PyLean/UnicodeObj/TextProps.lean).
+duplicates:
+  issues:
+    - {number: 56945, state: closed, relation: related, reason: "full case mappings; not this rule"}
+  queries: ["final sigma", "sigma lower", "handle_capital_sigma", "case-ignorable sigma"]
+  bugforge: "no match in vendor/bugforge-results/README.md"
