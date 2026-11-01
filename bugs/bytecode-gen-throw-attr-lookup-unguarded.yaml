@@ -61,6 +61,7 @@ observed: |
   as the caller of _throw. Debug build: _Py_NegativeRefcount on a freed object at
   Objects/frameobject.c:90. REPRODUCED.
   main (python.exe 3.16.0a1+dev ef1fce0): ValueError: generator already executing. NOT REPRODUCED.
+  3.14 branch tip on 2026-11-01 (gh api contents, ref=3.14): this code is unchanged from 3.14.7.
 promised_by: |
   Undisputed invariant: no crash from pure Python. The comment and code at :496-510 and :523-531
   rely on the frame being alive.

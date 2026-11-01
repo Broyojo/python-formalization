@@ -61,6 +61,7 @@ observed: |
   REPRODUCED.
   main (python.exe 3.16.0a1+dev ef1fce0): RuntimeError: cannot reuse already awaited
   aclose()/athrow(). NOT REPRODUCED.
+  3.14 branch tip on 2026-11-01 (gh api contents, ref=3.14): this code is unchanged from 3.14.7.
 promised_by: |
   The error message itself, and the sibling paths at :1819-1821 and :2269-2272.
 cause: |

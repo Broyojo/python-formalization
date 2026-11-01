@@ -53,6 +53,7 @@ observed: |
   python3 3.14.7: TypeError: athrow expected at least 1 argument, got 0; ag_running True; aclose():
   RuntimeError: aclose(): asynchronous generator is already running. REPRODUCED.
   main (python.exe 3.16.0a1+dev ef1fce0): the TypeError comes from a.athrow() itself. NOT REPRODUCED.
+  3.14 branch tip on 2026-11-01 (gh api contents, ref=3.14): this code is unchanged from 3.14.7.
 promised_by: |
   Invariant: ag_running_async is true only while an awaitable is running the generator, and the
   docs say an exception raised by athrow() propagates; nothing says the generator is left unusable.
