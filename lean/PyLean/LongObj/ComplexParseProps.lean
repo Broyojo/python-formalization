@@ -7,8 +7,7 @@ The float conversion is the abstract `sd : Strtod R`. `StrtodSpec` lists all tha
 is assumed of it. Those are facts about any `strtod`, not about the input: it
 consumes only what is there, and it never reads past a character that cannot
 occur in a number, so what follows such a character cannot change its result.
-`Dbl.asciiStrtod` runs in the difftest, where 100% agreement with CPython supports
-these two facts for it.
+`Dbl.asciiStrtod`, which the difftest runs, satisfies both: `Dbl.asciiStrtod_spec`.
 -/
 
 namespace PyLean.LongObj.Cplx

@@ -187,7 +187,7 @@ instance : CDouble Dbl where
 
 /-! ## `strtod` -/
 
-private def isDigit (c : Nat) : Bool := 48 ≤ c && c ≤ 57
+def isDigit (c : Nat) : Bool := 48 ≤ c && c ≤ 57
 
 /-- Leading digits of `s`, with the count. Structural on `s`, so no fuel. -/
 def scanDigits : List Nat → Nat → Nat → Nat × Nat
@@ -207,7 +207,7 @@ def decToDbl (neg : Bool) (digits : Nat) (e : Int) : Dbl :=
   else if e ≥ 0 then roundQ neg (digits * 10 ^ e.toNat) 1
   else roundQ neg digits (10 ^ (-e).toNat)
 
-private def lower (c : Nat) : Nat := if 65 ≤ c && c ≤ 90 then c + 32 else c
+def lower (c : Nat) : Nat := if 65 ≤ c && c ≤ 90 then c + 32 else c
 
 /-- `case_insensitive_match`, `Python/pystrtod.c:13-20`. -/
 def ciPrefix : List Nat → List Nat → Bool
@@ -215,56 +215,66 @@ def ciPrefix : List Nat → List Nat → Bool
   | [], _ :: _ => false
   | c :: s, w :: ws => lower c == w && ciPrefix s ws
 
-private def lit (s : String) : List Nat := s.toList.map Char.toNat
+def wInf : List Nat := [105, 110, 102]
+def wInity : List Nat := [105, 110, 105, 116, 121]
+def wNan : List Nat := [110, 97, 110]
+
+/-- `_Py_parse_inf_or_nan` past the sign. -/
+def infNanBody (negate : Bool) (s : List Nat) (off : Nat) (p : Nat) : Dbl × Nat :=
+  if ciPrefix s wInf then
+    let n := if ciPrefix (s.drop 3) wInity then 8 else 3
+    (infOf negate, off + n)
+  else if ciPrefix s wNan then
+    ((if negate then ⟨qnan.bits + signBit⟩ else qnan), off + 3)
+  else (⟨p⟩, 0)
 
 /-- `_Py_parse_inf_or_nan`, `Python/pystrtod.c:28-58`. -/
-def parseInfNan (p : List Nat) : Dbl × Nat :=
-  let (negate, s, off) : Bool × List Nat × Nat :=
-    match p with
-    | 45 :: t => (true, t, 1)
-    | 43 :: t => (false, t, 1)
-    | _ => (false, p, 0)
-  if ciPrefix s (lit "inf") then
-    let n := if ciPrefix (s.drop 3) (lit "inity") then 8 else 3
-    (infOf negate, off + n)
-  else if ciPrefix s (lit "nan") then
-    ((if negate then ⟨qnan.bits + signBit⟩ else qnan), off + 3)
-  else (⟨0⟩, 0)
+def parseInfNan : List Nat → Dbl × Nat
+  | 45 :: t => infNanBody true t 1 0
+  | 43 :: t => infNanBody false t 1 0
+  | p => infNanBody false p 0 0
+
+/-- The fraction of `_Py_dg_strtod`: its digits, their count, and whether a point
+was there. -/
+def dgFrac : List Nat → Nat × Nat × Bool
+  | 46 :: t => let r := scanDigits t 0 0; (r.1, r.2, true)
+  | _ => (0, 0, false)
+
+/-- The exponent of `_Py_dg_strtod`, past its sign. A missing digit means no exponent. -/
+def dgExpDigits (esign : Bool) (t : List Nat) (sl : Nat) : Int × Nat :=
+  let r := scanDigits t 0 0
+  if r.2 == 0 then (0, 0)
+  else ((if esign then -(min r.1 2000000000 : Int) else (min r.1 2000000000 : Int)),
+        1 + sl + r.2)
+
+/-- The exponent of `_Py_dg_strtod`: its value and the characters it took. -/
+def dgExp : List Nat → Int × Nat
+  | c :: t =>
+    if c == 101 || c == 69 then
+      match t with
+      | 45 :: u => dgExpDigits true u 1
+      | 43 :: u => dgExpDigits false u 1
+      | _ => dgExpDigits false t 0
+    else (0, 0)
+  | [] => (0, 0)
+
+/-- `_Py_dg_strtod` past the sign. -/
+def dgMant (negS : Bool) (s : List Nat) (off₀ : Nat) : Dbl × Nat :=
+  let ip := scanDigits s 0 0
+  let fr := dgFrac (s.drop ip.2)
+  if ip.2 + fr.2.1 == 0 then (⟨0⟩, 0) else
+  let dl := if fr.2.2 then 1 + fr.2.1 else 0
+  let ex := dgExp (s.drop (ip.2 + dl))
+  let digits := ip.1 * 10 ^ fr.2.1 + fr.1
+  (decToDbl negS digits (ex.1 - (fr.2.1 : Int)), off₀ + ip.2 + dl + ex.2)
 
 /-- `_Py_dg_strtod`, `Python/dtoa.c:1386`, through the end of parsing, with the
 conversion done exactly. Returns the value and the characters consumed; `0`
 means `se == s00`. -/
-def dgStrtod (p : List Nat) : Dbl × Nat :=
-  let (negS, s, off₀) : Bool × List Nat × Nat :=
-    match p with
-    | 45 :: t => (true, t, 1)
-    | 43 :: t => (false, t, 1)
-    | _ => (false, p, 0)
-  let (ip, ni) := scanDigits s 0 0
-  let rest := s.drop ni
-  let (fp, nf, hasDot) : Nat × Nat × Bool :=
-    match rest with
-    | 46 :: t => let (f, n) := scanDigits t 0 0; (f, n, true)
-    | _ => (0, 0, false)
-  if ni + nf == 0 then (⟨0⟩, 0) else
-  let consumed := off₀ + ni + (if hasDot then 1 + nf else 0)
-  let afterMant := s.drop (ni + (if hasDot then 1 + nf else 0))
-  let (e, expLen) : Int × Nat :=
-    match afterMant with
-    | c :: t =>
-      if c == 101 || c == 69 then
-        let (esign, t', sl) : Bool × List Nat × Nat :=
-          match t with
-          | 45 :: u => (true, u, 1)
-          | 43 :: u => (false, u, 1)
-          | _ => (false, t, 0)
-        let (v, n) := scanDigits t' 0 0
-        if n == 0 then (0, 0)
-        else ((if esign then -(min v 2000000000 : Int) else (min v 2000000000 : Int)), 1 + sl + n)
-      else (0, 0)
-    | [] => (0, 0)
-  let digits := ip * 10 ^ nf + fp
-  (decToDbl negS digits (e - (nf : Int)), consumed + expLen)
+def dgStrtod : List Nat → Dbl × Nat
+  | 45 :: t => dgMant true t 1
+  | 43 :: t => dgMant false t 1
+  | p => dgMant false p 0
 
 /-- `_PyOS_ascii_strtod`, `Python/pystrtod.c:93-113`. -/
 def asciiStrtod (p : List Nat) : Dbl × Nat :=

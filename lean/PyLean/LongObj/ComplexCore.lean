@@ -256,7 +256,9 @@ def rc_quot (a : R) (b : Cx R) (errno : Errno) : Cx R × Errno :=
 /-- The libm functions the file calls. A call returns its value and `some e`
 when it writes `errno`; `none` leaves `errno` alone, because a successful libm
 call never clears it. Which values and which writes occur depends on the libm,
-so a property that needs either says so in a hypothesis. -/
+so a property that needs either says so in a hypothesis. `cos` and `sin` are the two
+calls of lines 333-334; a compiler may merge them into one `sincos`, which is why
+the libm is a parameter and not `cos` as a fixed function. -/
 structure Libm (R : Type) where
   hypot : R → R → R × Option Errno
   pow : R → R → R × Option Errno

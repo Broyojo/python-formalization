@@ -50,9 +50,9 @@ theorem complexAbsIgnoresStaleErrno_refuted : ¬ ComplexAbsIgnoresStaleErrno := 
   revert this
   decide +kernel
 
-/-- A NaN path is the only one where the incoming `errno` survives: the narrowed
-statement. With `errno` clear on entry, as `complex_abs` should ensure, the
-result does not raise on a value with a NaN and no infinity. -/
+/-- The narrowing of `ComplexAbsIgnoresStaleErrno`. The NaN branch is the only one that
+keeps the incoming `errno`, so anything but a stale `ERANGE` is harmless there: the
+result on a value with a NaN part and no infinite part is NaN, and nothing is raised. -/
 def ComplexAbsCleanErrno : Prop :=
   ∀ (L : Libm Dbl) (z : Cx Dbl) (e : Errno), e ≠ Errno.erange →
     (isnan z.real = true ∨ isnan z.imag = true) →

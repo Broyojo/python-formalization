@@ -22,6 +22,11 @@ import _testcapi
 LIBM = ctypes.CDLL("libm.so.6")
 LIBM.hypot.restype = ctypes.c_double
 LIBM.hypot.argtypes = [ctypes.c_double, ctypes.c_double]
+for _name, _args in (("atan2", 2), ("log", 1)):
+    getattr(LIBM, _name).restype = ctypes.c_double
+    getattr(LIBM, _name).argtypes = [ctypes.c_double] * _args
+LIBM.sincos.restype = None
+LIBM.sincos.argtypes = [ctypes.c_double, ctypes.POINTER(ctypes.c_double), ctypes.POINTER(ctypes.c_double)]
 
 NAN = float("nan")
 NEG_NAN = struct.unpack("<d", struct.pack("<Q", 0xFFF8000000000000))[0]
@@ -294,6 +299,30 @@ def hypot_bits(z):
     return bits(LIBM.hypot(z.real, z.imag))
 
 
+def sincos_field(a, b):
+    """`sincos` at the phase of `_Py_c_pow`, which is what the compiled source calls:
+    GCC merges the `cos` and `sin` of lines 333-334."""
+    at = LIBM.atan2(a.imag, a.real)
+    phase = at * b.real
+    if b.imag != 0.0:
+        phase += b.imag * LIBM.log(LIBM.hypot(a.real, a.imag))
+    s, c = ctypes.c_double(), ctypes.c_double()
+    LIBM.sincos(phase, ctypes.byref(s), ctypes.byref(c))
+    return [bits(phase), bits(c.value), bits(s.value)]
+
+
+def spec_cx(spec):
+    """The complex value of a number spec, or None when it has none."""
+    v = spec["val"]
+    if v["k"] == "c":
+        return complex(unbits(v["re"]), unbits(v["im"]))
+    if v["k"] == "f":
+        return complex(unbits(v["x"]), 0.0)
+    if v["k"] == "i" and abs(v["n"]) < 2**1024 - 2**970:
+        return complex(float(v["n"]), 0.0)
+    return None
+
+
 def gen_case(rng):
     fn = rng.choice([
         "cx_add", "cx_sub", "cx_mul", "cx_div", "cx_pow", "cx_pow", "cx_powi", "cx_neg", "cx_pos",
@@ -311,25 +340,32 @@ def gen_case(rng):
         v, w = o(), o()
         if v["val"]["k"] != "c" and w["val"]["k"] != "c":
             return None
+        if fn == "cx_div" and rng.random() < 0.25:  # every operand shape over a zero
+            v = s_complex(rand_cx(rng))
+            w = rng.choice([s_complex(complex(rng.choice([0.0, -0.0]), rng.choice([0.0, -0.0]))),
+                            s_float(rng.choice([0.0, -0.0])), s_int(0), s_bool(False)])
+            if rng.random() < 0.5:
+                v, w = rng.choice([s_float(rand_double(rng)), s_int(rand_int(rng))]), \
+                    s_complex(complex(rng.choice([0.0, -0.0]), rng.choice([0.0, -0.0])))
         return base(fn, v=v, w=w)
     if fn in ("cx_pow", "cx_powi"):
         a = rand_cx(rng)
         if fn == "cx_powi":
-            return base("cx_pow", v=s_complex(a), w=rng.choice([
+            w = rng.choice([
                 s_int(rng.randint(-101, 101)), s_float(float(rng.randint(-101, 101))),
-                s_complex(complex(rng.randint(-101, 101), rng.choice([0.0, -0.0])))]),
-                z=s_none(), hy=hypot_bits(a))
+                s_complex(complex(rng.randint(-101, 101), rng.choice([0.0, -0.0])))])
+            return base("cx_pow", v=s_complex(a), w=w, z=s_none(), hy=hypot_bits(a),
+                        sc=sincos_field(a, spec_cx(w)))
         v = rng.choice([s_complex(a), s_complex(a), s_float(a.real), s_int(rand_int(rng))])
         b = rand_cx(rng)
         w = rng.choice([s_complex(b), s_complex(b), s_float(b.real), s_int(rand_int(rng)), s_str("x"), s_none()])
         z = s_none() if rng.random() < 0.85 else rng.choice([s_int(3), s_float(1.0), s_complex(1j)])
         if v["val"]["k"] != "c" and w["val"]["k"] != "c":
             return None
-        va = v["val"]
-        h = {"c": lambda: complex(unbits(va["re"]), unbits(va["im"])),
-             "f": lambda: complex(unbits(va["x"]), 0.0),
-             "i": lambda: complex(va["n"] if abs(va["n"]) < 2**1024 - 2**970 else 0, 0.0)}[va["k"]]()
-        return base("cx_pow", v=v, w=w, z=z, hy=hypot_bits(h))
+        h, bv = spec_cx(v), spec_cx(w)
+        if h is None or bv is None:
+            return base("cx_pow", v=v, w=w, z=z, hy=0)
+        return base("cx_pow", v=v, w=w, z=z, hy=hypot_bits(h), sc=sincos_field(h, bv))
     if fn == "cx_pos" or fn == "cx_dcomplex":
         return base(fn, o=rng.choice([s_complex(rand_cx(rng)), sub_of(rng, "complex", plain=True)]))
     if fn == "cx_abs":
@@ -379,11 +415,13 @@ def gen_case(rng):
         return base(fn, z=cx_spec(z), hy=hypot_bits(z))
     if fn in ("cx_parse", "cx_parse_float"):
         s = rand_complex_str(rng)
+        if rng.random() < 0.5:  # a plain float string: accepted by both parsers
+            s = rng.choice(WS) + rng.choice(FLOATS) + rng.choice(WS)
         return base(fn, s=[ord(c) for c in s], repr=repr(s), db=uni_db(s))
     a, b = rand_cx(rng), rand_cx(rng)
     if fn == "cx_c_pow" and rng.random() < 0.5:
         b = complex(rng.randint(-5, 5), 0.0)
-    return base(fn, a=cx_spec(a), b=cx_spec(b), hy=hypot_bits(a))
+    return base(fn, a=cx_spec(a), b=cx_spec(b), hy=hypot_bits(a), sc=sincos_field(a, b))
 
 
 def get_cx(c, key):

@@ -239,8 +239,6 @@ def RealToDouble : Prop :=
     (∀ x, real_to_double o = .ok (some x) → real_to_complex o = .ok (some ⟨x, CDouble.zero⟩)) ∧
     (∀ c, o.val = .cplx c → TO_COMPLEX o = .ok (some c))
 
-instance {R : Type} : Inhabited (Val R) := ⟨.none⟩
-
 theorem realToDouble_proven : RealToDouble := by
   intro R _ o
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩

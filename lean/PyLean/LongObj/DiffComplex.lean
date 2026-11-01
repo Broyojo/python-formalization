@@ -4,8 +4,12 @@ import PyLean.LongObj.ComplexObj
 
 /-!
 Differential-testing handler for `Objects/complexobject.c`, run on `Dbl`, exact
-binary64. libm is Lean's own `Float` functions, which call the same C library;
-`hypot` has no `Float` counterpart, so the case carries its value.
+binary64. libm is Lean's own `Float` functions, which call the same C library,
+with two exceptions the case carries as values. `hypot` has no `Float` counterpart.
+And the compiled `_Py_c_pow` calls `sincos`, because GCC merges the `cos` and `sin`
+of lines 333-334, and glibc's `sincos` can differ from `cos` by one unit in the last
+place; `Float.cos` calls `cos`. The case gives `sincos` at the phase the source
+computes, so a model that computed another phase would still disagree.
 
 Doubles cross JSON as their bit patterns, so signed zeros and infinities survive.
 A result that is a NaN encodes as `"nan"`, because its sign and payload depend on
@@ -91,14 +95,22 @@ def ofF (x : Float) : Dbl := ⟨x.toBits.toNat⟩
 /-- glibc: `cos` and `sin` of an infinity set `EDOM`. The `ERANGE` that `pow`,
 `exp` and `hypot` set is not written here because `_Py_ADJUST_ERANGE2` runs right
 after and overrides it from the result, and none of them can follow the `EDOM`. -/
-def libm (hy : Dbl) : Libm Dbl where
+def libm (hy : Dbl) (sc : Option (Dbl × Dbl × Dbl)) : Libm Dbl where
   hypot := fun _ _ => (hy, none)
   pow := fun x y => (ofF (Float.pow (toF x) (toF y)), none)
   atan2 := fun y x => (ofF (Float.atan2 (toF y) (toF x)), none)
   exp := fun x => (ofF (Float.exp (toF x)), none)
   log := fun x => (ofF (Float.log (toF x)), none)
-  cos := fun x => (ofF (Float.cos (toF x)), if x.isInf then some .edom else none)
-  sin := fun x => (ofF (Float.sin (toF x)), if x.isInf then some .edom else none)
+  cos := fun x =>
+    (match sc with
+     | some (ph, c, _) => if ph.bits == x.bits then c else ofF (Float.cos (toF x))
+     | none => ofF (Float.cos (toF x)),
+     if x.isInf then some .edom else none)
+  sin := fun x =>
+    (match sc with
+     | some (ph, _, si) => if ph.bits == x.bits then si else ofF (Float.sin (toF x))
+     | none => ofF (Float.sin (toF x)),
+     if x.isInf then some .edom else none)
 
 def errnoNum : Errno → Nat
   | .ok => 0
@@ -158,6 +170,14 @@ def getHy (j : Json) : Except String Dbl :=
   | .ok v => getDbl v
   | .error _ => pure ⟨0⟩
 
+/-- The `sincos` oracle, `[phase, cos, sin]`, when the case has one. -/
+def getSc (j : Json) : Except String (Option (Dbl × Dbl × Dbl)) :=
+  match j.getObjVal? "sc" with
+  | .ok v => do
+    let a ← v.getArr?
+    return some (← getDbl (a.getD 0 .null), ← getDbl (a.getD 1 .null), ← getDbl (a.getD 2 .null))
+  | .error _ => pure none
+
 def hashDbl (ptr : Int) (x : Dbl) : Int := if x.isNaN then ptr else Dbl.hashFinite x
 
 /-- `complex.__format__`, past the empty-spec test: a one-character spec, the only
@@ -165,8 +185,6 @@ kind the generator sends, is an unknown presentation type. -/
 def advanced (_ : Cx Dbl) (spec : List Nat) : Py String :=
   let c := Char.ofNat (spec.getD 0 0)
   .error (.valueError s!"Unknown format code '{c}' for object of type 'complex'")
-
-def encLog (j : Json) : Json := Json.mkObj [("r", j), ("log", toJson ([] : List Json))]
 
 def run (fn : String) (j : Json) : Except String Json := do
   let E ← getEnv j
@@ -181,7 +199,7 @@ def run (fn : String) (j : Json) : Except String Json := do
       | _ => complex_div v w
     return encPy encBin r
   | "cx_pow" =>
-    let L := libm (← getHy j)
+    let L := libm (← getHy j) (← getSc j)
     return encPy encBin (complex_pow L (← fieldObj j "v") (← fieldObj j "w") (← fieldObj j "z"))
   | "cx_neg" => return encPy encCx (.ok (complex_neg (← fieldCx j "z")))
   | "cx_pos" =>
@@ -191,7 +209,7 @@ def run (fn : String) (j : Json) : Except String Json := do
     let o ← fieldObj j "o"
     return encPy encMade (.ok (complex___complex___impl o (cvalOf o)))
   | "cx_abs" =>
-    let L := libm (← getHy j)
+    let L := libm (← getHy j) none
     let e := decErrno (← getNat j "errno")
     return encPy encDbl (complex_abs L (← fieldCx j "z") e)
   | "cx_bool" => return encPy toJson (.ok (complex_bool (← fieldCx j "z")))
@@ -220,8 +238,7 @@ def run (fn : String) (j : Json) : Except String Json := do
     let kw ← kw.toList.mapM fun p => do
       let a ← p.getArr?
       return ((← (a.getD 0 .null).getStr?), (← decObj 4 (a.getD 1 .null)))
-    return Json.mkObj [("ok", (encM encMade
-      (actual_complex_new E (← getType j) args kw)).getObjValD "ok")]
+    return encM encMade (actual_complex_new E (← getType j) args kw)
   | "cx_from_number" =>
     return encM encMade (complex_from_number_impl E (← getType j) (← fieldObj j "o"))
   | "cx_real_as" => return encM encDbl (PyComplex_RealAsDouble E (← fieldObj j "o"))
@@ -242,7 +259,7 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "cx_c_sum" | "cx_c_diff" | "cx_c_prod" | "cx_c_quot" | "cx_c_pow" =>
     let a ← fieldCx j "a"
     let b ← fieldCx j "b"
-    let L := libm (← getHy j)
+    let L := libm (← getHy j) (← getSc j)
     let r : Cx Dbl × Errno := match fn with
       | "cx_c_sum" => (c_sum a b, .ok)
       | "cx_c_diff" => (c_diff a b, .ok)
@@ -252,13 +269,9 @@ def run (fn : String) (j : Json) : Except String Json := do
     return encPy (fun p => Json.arr #[encCx p.1, toJson (errnoNum p.2)]) (.ok r)
   | "cx_c_neg" => return encPy encCx (.ok (c_neg (← fieldCx j "z")))
   | "cx_c_abs" =>
-    let L := libm (← getHy j)
+    let L := libm (← getHy j) none
     let r := c_abs L (← fieldCx j "z") .ok
     return encPy (fun p => Json.arr #[encDbl p.1, toJson (errnoNum p.2)]) (.ok r)
-  | "cx_c_powi" =>
-    -- `complex_pow` on an integral exponent, kept separate so the report shows it
-    let L := libm (← getHy j)
-    return encPy encCx (complex_pow_core L (← fieldCx j "a") (← fieldCx j "b"))
   | _ => throw s!"unknown fn {fn}"
 
 end DiffComplex
