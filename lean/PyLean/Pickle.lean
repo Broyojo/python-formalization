@@ -4,6 +4,7 @@ import PyLean.Pickle.SaveLongProps
 import PyLean.Pickle.LongLineProps
 import PyLean.Pickle.IntNarrow
 import PyLean.Pickle.EncProps
+import PyLean.Pickle.EncFrame
 import PyLean.Pickle.DecProps
 
 /-!
@@ -98,6 +99,12 @@ def entries : List Entry := [
     prop := ``DumpsTwinsAgreeBatchOkLong, thm := some ``dumpsTwinsAgreeBatchOkLong_refuted
     bug := some "pickle-py-oversize-struct-error"
     notes := "bytes(2**32) at protocol 3: OverflowError in C, struct.error in Python." },
+  { id := "pickle-dumps-twins-narrow", pyFile := "Modules/_pickle.c"
+    pyFns := ["dumps", "_dumps"]
+    statement := "For every plain value without the batch shapes, whose ints pass C's LONG4 size check, and every protocol within C long, pickle.dumps and pickle._dumps both raise, or both return the same bytes: memoization, framing at protocol 4+, opcode choice and the reduce paths for bytes, bytearray, set and frozenset included."
+    source := "invariant: C accelerator vs pure-Python twin", status := .proven
+    prop := ``DumpsTwinsNarrow, thm := some ``dumpsTwinsNarrow_proven
+    notes := "Each hypothesis is one refutation above. Exception classes may differ when both raise (pickle-py-oversize-struct-error). Values are acyclic by construction; object identity is arbitrary, so sharing is covered." },
   { id := "pickle-loads-twins-exact", pyFile := "Modules/_pickle.c"
     pyFns := ["loads", "_loads"]
     statement := "On every data-only stream, pickle.loads and pickle._loads raise the same exception class."

@@ -71,6 +71,29 @@ def batchLen (n i : Nat) : Nat := min batchSize (n - (i - i % batchSize))
 def globModuleOut (proto : Nat) (g : Glob) : String :=
   if proto < 3 ∧ g.module = "builtins" then "__builtin__" else g.module
 
+/-- Write `d` when `c` holds. -/
+def optWr (c : Prop) [Decidable c] (d : Bytes) : EncM Unit := if c then wr d else pure ()
+
+/-- `if bin: EMPTY else: MARK + opcode` at the start of `save_list`/`save_dict`. -/
+def pyEmptyOp (proto : Nat) (empty op : UInt8) : EncM Unit :=
+  if proto ≥ 1 then wr [empty] else wr [oMARK, op]
+
+/-- One item of `_batch_appends` or `_batch_setitems`: `item` saves it. -/
+def pyBatchStep (proto n i : Nat) (item : EncM Unit) (one many : UInt8) : EncM Unit :=
+  if proto = 0 then do
+    item
+    wr [one]
+  else do
+    optWr (i % batchSize = 0 ∧ batchLen n i ≠ 1) [oMARK]
+    item
+    optWr ((i + 1) % batchSize = 0 ∨ i + 1 = n) [if batchLen n i ≠ 1 then many else one]
+
+/-- One item of the `ADDITEMS` batches, in either pickler. -/
+def addStep (n i : Nat) (item : EncM Unit) : EncM Unit := do
+  optWr (i % batchSize = 0) [oMARK]
+  item
+  optWr ((i + 1) % batchSize = 0 ∨ i + 1 = n) [oADDITEMS]
+
 /-! ## Python `_Pickler` -/
 
 /-- `_Pickler.put` (`Lib/pickle.py:525-534`). -/
@@ -105,18 +128,23 @@ def pyStrEscape (s : List Nat) : List Nat :=
     else if c = 0x1a then [0x5c, 0x75, 0x30, 0x30, 0x31, 0x61]
     else [c]
 
+/-- The binary branch of `save_str`, on the UTF-8 data. -/
+def pyStrData (proto : Nat) (data : Bytes) : EncM Unit :=
+  let n := data.length
+  if n ≤ 0xff ∧ proto ≥ 4 then wr (oSHORT_BINUNICODE :: leBytes n 1 ++ data)
+  else if n > 0xffffffff ∧ proto ≥ 4 then emit (.large (oBINUNICODE8 :: leBytes n 8) data)
+  else if n ≥ frameSizeTarget then
+    (liftPy (packU32 n) >>= fun x => emit (.large (oBINUNICODE :: x) data))
+  else (liftPy (packU32 n) >>= fun x => wr (oBINUNICODE :: x ++ data))
+
+/-- `save_str` before the memo (`Lib/pickle.py:920-940`). -/
+def pyStrBody (proto : Nat) (s : List Nat) : EncM Unit :=
+  if proto ≥ 1 then pyStrData proto (utf8Enc s)
+  else wr (oUNICODE :: rueEncode (pyStrEscape s) ++ [nl])
+
 /-- `save_str` (`Lib/pickle.py:920-941`). -/
 def pySaveStr (proto : Nat) (o : Oid) (s : List Nat) : EncM Unit := do
-  if proto ≥ 1 then
-    let encoded := utf8Enc s
-    let n := encoded.length
-    if n ≤ 0xff ∧ proto ≥ 4 then wr (oSHORT_BINUNICODE :: leBytes n 1 ++ encoded)
-    else if n > 0xffffffff ∧ proto ≥ 4 then emit (.large (oBINUNICODE8 :: leBytes n 8) encoded)
-    else if n ≥ frameSizeTarget then
-      emit (.large (oBINUNICODE :: (← liftPy (packU32 n))) encoded)
-    else wr (oBINUNICODE :: (← liftPy (packU32 n)) ++ encoded)
-  else
-    wr (oUNICODE :: rueEncode (pyStrEscape s) ++ [nl])
+  pyStrBody proto s
   pyMemoize proto o
 
 /-- `_save_bytes_no_memo` (`Lib/pickle.py:844-856`), protocol >= 3. -/
@@ -124,8 +152,9 @@ def pySaveBytesData (proto : Nat) (b : Bytes) : EncM Unit := do
   let n := b.length
   if n ≤ 0xff then wr (oSHORT_BINBYTES :: leBytes n 1 ++ b)
   else if n > 0xffffffff ∧ proto ≥ 4 then emit (.large (oBINBYTES8 :: leBytes n 8) b)
-  else if n ≥ frameSizeTarget then emit (.large (oBINBYTES :: (← liftPy (packU32 n))) b)
-  else wr (oBINBYTES :: (← liftPy (packU32 n)) ++ b)
+  else if n ≥ frameSizeTarget then
+    (liftPy (packU32 n) >>= fun x => emit (.large (oBINBYTES :: x) b))
+  else (liftPy (packU32 n) >>= fun x => wr (oBINBYTES :: x ++ b))
 
 /-- `_save_bytearray_no_memo` (`Lib/pickle.py:870-878`), protocol 5. -/
 def pySaveBytearrayData (b : Bytes) : EncM Unit := do
@@ -141,6 +170,16 @@ def pySaveStrObj (proto : Nat) (o : Oid) (s : List Nat) : EncM Unit := do
   | some i => wr (← liftPy (pyGet proto i))
   | none => pySaveStr proto o s
 
+/-- What `save_global` writes before the memo. -/
+def pyGlobalRef (proto : Nat) (g : Glob) : EncM Unit :=
+  if proto ≥ 4 then do
+    pySaveStrObj proto (.tmp (.glob g) 0) ((ascii g.module).map (·.toNat))
+    pySaveStrObj proto (.tmp (.glob g) 1) ((ascii g.name).map (·.toNat))
+    wr [oSTACK_GLOBAL]
+  else do
+    wr (oGLOBAL :: ascii (globModuleOut proto g) ++ [nl])
+    wr (ascii g.name ++ [nl])
+
 /-- `save(func)` for one of the globals: `save_type` (types) or
 `__reduce_ex__` returning the name (`codecs.encode`), then `save_global`
 (`Lib/pickle.py:1148-1201`). -/
@@ -149,13 +188,7 @@ def pySaveGlobal (proto : Nat) (g : Glob) : EncM Unit := do
   match ← memoLookup (.glob g) with
   | some i => wr (← liftPy (pyGet proto i))
   | none =>
-    if proto ≥ 4 then
-      pySaveStrObj proto (.tmp (.glob g) 0) ((ascii g.module).map (·.toNat))
-      pySaveStrObj proto (.tmp (.glob g) 1) ((ascii g.name).map (·.toNat))
-      wr [oSTACK_GLOBAL]
-    else
-      wr (oGLOBAL :: ascii (globModuleOut proto g) ++ [nl])
-      wr (ascii g.name ++ [nl])
+    pyGlobalRef proto g
     pyMemoize proto (.glob g)
 
 /-- `save_tuple` (`Lib/pickle.py:943-1000`) for a tuple with `n` elements,
@@ -232,7 +265,7 @@ def pySaveBytearrayObj (proto : Nat) (o : Oid) (b : Bytes) : EncM Unit := do
 
 /-- `save_list` header and memo (`Lib/pickle.py:1002-1010`), then the items. -/
 def pyListWith (proto : Nat) (o : Oid) (items : EncM Unit) : EncM Unit := do
-  if proto ≥ 1 then wr [oEMPTY_LIST] else wr [oMARK, oLIST]
+  pyEmptyOp proto oEMPTY_LIST oLIST
   pyMemoize proto o
   items
 
@@ -261,7 +294,7 @@ def pySave (proto : Nat) : PV → EncM Unit
     | some i => wr (← liftPy (pyGet proto i))
     | none =>
       -- save_dict, Lib/pickle.py:1051-1058
-      if proto ≥ 1 then wr [oEMPTY_DICT] else wr [oMARK, oDICT]
+      pyEmptyOp proto oEMPTY_DICT oDICT
       pyMemoize proto o
       pySetitems proto kvs.length 0 kvs
   | .set o xs => do
@@ -308,30 +341,14 @@ def pySaveElems (proto : Nat) : List PV → EncM Unit
 def pyAppends (proto : Nat) (n i : Nat) : List PV → EncM Unit
   | [] => pure ()
   | x :: xs => do
-    if proto = 0 then
-      pySave proto x
-      wr [oAPPEND]
-    else
-      let bl := batchLen n i
-      if i % batchSize = 0 ∧ bl ≠ 1 then wr [oMARK]
-      pySave proto x
-      if (i + 1) % batchSize = 0 ∨ i + 1 = n then wr [if bl ≠ 1 then oAPPENDS else oAPPEND]
+    pyBatchStep proto n i (pySave proto x) oAPPEND oAPPENDS
     pyAppends proto n (i + 1) xs
 
 /-- `_batch_setitems` (`Lib/pickle.py:1062-1097`) from pair `i` of `n`. -/
 def pySetitems (proto : Nat) (n i : Nat) : List (PV × PV) → EncM Unit
   | [] => pure ()
   | (k, v) :: kvs => do
-    if proto = 0 then
-      pySave proto k
-      pySave proto v
-      wr [oSETITEM]
-    else
-      let bl := batchLen n i
-      if i % batchSize = 0 ∧ bl ≠ 1 then wr [oMARK]
-      pySave proto k
-      pySave proto v
-      if (i + 1) % batchSize = 0 ∨ i + 1 = n then wr [if bl ≠ 1 then oSETITEMS else oSETITEM]
+    pyBatchStep proto n i (do pySave proto k; pySave proto v) oSETITEM oSETITEMS
     pySetitems proto n (i + 1) kvs
 
 /-- The `ADDITEMS` batches of `save_set` (`Lib/pickle.py:1108-1117`): every
@@ -339,9 +356,7 @@ batch, even of one item, is `MARK ... ADDITEMS`. -/
 def pyAdditems (proto : Nat) (n i : Nat) : List PV → EncM Unit
   | [] => pure ()
   | x :: xs => do
-    if i % batchSize = 0 then wr [oMARK]
-    pySave proto x
-    if (i + 1) % batchSize = 0 ∨ i + 1 = n then wr [oADDITEMS]
+    addStep n i (pySave proto x)
     pyAdditems proto n (i + 1) xs
 end
 
@@ -383,36 +398,38 @@ def cWriteBytes (hdr data : Bytes) : EncM Unit :=
   if data.length ≥ frameSizeTarget then emit (.large hdr data)
   else do wr hdr; wr data
 
-/-- `save_unicode` (`Modules/_pickle.c:2865-2900`, `write_unicode_binary` at
-:2808-2862). -/
-def cSaveStr (proto : Nat) (o : Oid) (s : List Nat) : EncM Unit := do
-  if proto ≥ 1 then
-    let data := utf8Enc s
-    let size := data.length
-    let hdr ←
-      if size ≤ 0xff ∧ proto ≥ 4 then pure (oSHORT_BINUNICODE :: leBytes size 1)
-      else if size ≤ 0xffffffff then pure (oBINUNICODE :: leBytes size 4)
-      else if proto ≥ 4 then pure (oBINUNICODE8 :: leBytes size 8)
-      else throw (.overflowError
-        "serializing a string larger than 4 GiB requires pickle protocol 4 or higher")
-    cWriteBytes hdr data
-  else
+/-- `write_unicode_binary` (`Modules/_pickle.c:2808-2862`) on the UTF-8 data. -/
+def cStrData (proto : Nat) (data : Bytes) : EncM Unit := do
+  let hdr ←
+    if data.length ≤ 0xff ∧ proto ≥ 4 then pure (oSHORT_BINUNICODE :: leBytes data.length 1)
+    else if data.length ≤ 0xffffffff then pure (oBINUNICODE :: leBytes data.length 4)
+    else if proto ≥ 4 then pure (oBINUNICODE8 :: leBytes data.length 8)
+    else throw (.overflowError
+      "serializing a string larger than 4 GiB requires pickle protocol 4 or higher")
+  cWriteBytes hdr data
+
+/-- `save_unicode` before the memo. -/
+def cStrBody (proto : Nat) (s : List Nat) : EncM Unit :=
+  if proto ≥ 1 then cStrData proto (utf8Enc s)
+  else do
     wr [oUNICODE]
     wr (cRawUnicodeEscape s)
     wr [nl]
+
+/-- `save_unicode` (`Modules/_pickle.c:2865-2900`). -/
+def cSaveStr (proto : Nat) (o : Oid) (s : List Nat) : EncM Unit := do
+  cStrBody proto s
   cMemoPut proto o
 
 /-- `_save_bytes_data` (`Modules/_pickle.c:2511-2556`), protocol >= 3. -/
-def cSaveBytesData (proto : Nat) (o : Oid) (b : Bytes) : EncM Unit := do
-  let size := b.length
+def cSaveBytesData (proto : Nat) (b : Bytes) : EncM Unit := do
   let hdr ←
-    if size ≤ 0xff then pure (oSHORT_BINBYTES :: leBytes size 1)
-    else if size ≤ 0xffffffff then pure (oBINBYTES :: leBytes size 4)
-    else if proto ≥ 4 then pure (oBINBYTES8 :: leBytes size 8)
+    if b.length ≤ 0xff then pure (oSHORT_BINBYTES :: leBytes b.length 1)
+    else if b.length ≤ 0xffffffff then pure (oBINBYTES :: leBytes b.length 4)
+    else if proto ≥ 4 then pure (oBINBYTES8 :: leBytes b.length 8)
     else throw (.overflowError
       "serializing a bytes object larger than 4 GiB requires pickle protocol 4 or higher")
   cWriteBytes hdr b
-  cMemoPut proto o
 
 /-- C `save()` on a `str` (`Modules/_pickle.c:4512-4560`). -/
 def cSaveStrObj (proto : Nat) (o : Oid) (s : List Nat) : EncM Unit := do
@@ -421,6 +438,19 @@ def cSaveStrObj (proto : Nat) (o : Oid) (s : List Nat) : EncM Unit := do
   | some i => wr (← liftPy (cGet proto i))
   | none => cSaveStr proto o s
 
+/-- What `save_global` writes before the memo. -/
+def cGlobalRef (proto : Nat) (g : Glob) : EncM Unit :=
+  if proto ≥ 4 then do
+    cSaveStrObj proto (.tmp (.glob g) 0) ((ascii g.module).map (·.toNat))
+    cSaveStrObj proto (.tmp (.glob g) 1) ((ascii g.name).map (·.toNat))
+    wr [oSTACK_GLOBAL]
+  else do
+    wr [oGLOBAL]
+    wr (ascii (globModuleOut proto g))
+    wr [nl]
+    wr (ascii g.name)
+    wr [nl]
+
 /-- C `save()` on a global: `save_type` / reduce to a name, then
 `save_global` (`Modules/_pickle.c:3835-4054`). -/
 def cSaveGlobal (proto : Nat) (g : Glob) : EncM Unit := do
@@ -428,17 +458,17 @@ def cSaveGlobal (proto : Nat) (g : Glob) : EncM Unit := do
   match ← memoLookup (.glob g) with
   | some i => wr (← liftPy (cGet proto i))
   | none =>
-    if proto ≥ 4 then
-      cSaveStrObj proto (.tmp (.glob g) 0) ((ascii g.module).map (·.toNat))
-      cSaveStrObj proto (.tmp (.glob g) 1) ((ascii g.name).map (·.toNat))
-      wr [oSTACK_GLOBAL]
-    else
-      wr [oGLOBAL]
-      wr (ascii (globModuleOut proto g))
-      wr [nl]
-      wr (ascii g.name)
-      wr [nl]
+    cGlobalRef proto g
     cMemoPut proto (.glob g)
+
+/-- Write `POP` `n` times, one `_Pickler_Write` each. -/
+def cPops : Nat → EncM Unit
+  | 0 => pure ()
+  | n + 1 => do wr [oPOP]; cPops n
+
+/-- Drop what a recursive tuple pushed: `POP_MARK`, or `POP`s at protocol 0. -/
+def cPopMark (proto n : Nat) : EncM Unit :=
+  if proto ≠ 0 then wr [oPOP_MARK] else cPops (n + 1)
 
 /-- `save_tuple` (`Modules/_pickle.c:2931-3029`). -/
 def cTupleWith (proto : Nat) (o : Oid) (n : Nat) (elems : EncM Unit) : EncM Unit := do
@@ -448,7 +478,7 @@ def cTupleWith (proto : Nat) (o : Oid) (n : Nat) (elems : EncM Unit) : EncM Unit
     elems
     match ← memoLookup o with
     | some i =>
-      for _ in List.range n do wr [oPOP]
+      cPops n
       wr (← liftPy (cGet proto i))
     | none =>
       wr [if n = 1 then oTUPLE1 else if n = 2 then oTUPLE2 else oTUPLE3]
@@ -458,8 +488,7 @@ def cTupleWith (proto : Nat) (o : Oid) (n : Nat) (elems : EncM Unit) : EncM Unit
     elems
     match ← memoLookup o with
     | some i =>
-      if proto ≠ 0 then wr [oPOP_MARK]
-      else for _ in List.range (n + 1) do wr [oPOP]
+      cPopMark proto n
       wr (← liftPy (cGet proto i))
     | none =>
       wr [oTUPLE]
@@ -495,7 +524,9 @@ def cSaveBytesObj (proto : Nat) (o : Oid) (b : Bytes) : EncM Unit := do
         (cTupleObj proto (.tmp o 0) 2 do
           cSaveStrObj proto (latin1StrOid o b) (b.map (·.toNat))
           cSaveStrObj proto .latin1 ((ascii "latin1").map (·.toNat)))
-    else cSaveBytesData proto o b
+    else
+      cSaveBytesData proto b
+      cMemoPut proto o
 
 /-- `save_bytearray` (`Modules/_pickle.c:2635-2669`, `_save_bytearray_data`
 at :2608-2633). -/
@@ -512,10 +543,29 @@ def cSaveBytearrayObj (proto : Nat) (o : Oid) (b : Bytes) : EncM Unit := do
       cWriteBytes (oBYTEARRAY8 :: leBytes b.length 8) b
       cMemoPut proto o
 
+def cEmptyOp (proto : Nat) (empty op : UInt8) : EncM Unit :=
+  if proto ≠ 0 then wr [empty] else wr [oMARK, op]
+
+/-- One item of `batch_list`/`batch_dict` at protocol 0 and of
+`batch_list_exact`/`batch_dict_exact_impl`, unrolled: a one-item container
+writes the single-item opcode, otherwise a batch of any size is `MARK ...
+many`. -/
+def cBatchStep (proto n i : Nat) (item : EncM Unit) (one many : UInt8) : EncM Unit :=
+  if proto = 0 then do
+    item
+    wr [one]
+  else if n = 1 then do
+    item
+    wr [one]
+  else do
+    optWr (i % batchSize = 0) [oMARK]
+    item
+    optWr ((i + 1) % batchSize = 0 ∨ i + 1 = n) [many]
+
 /-- `save_list` header and memo (`Modules/_pickle.c:3233-3262`); the items
 only when the list is non-empty. -/
 def cListWith (proto : Nat) (o : Oid) (n : Nat) (items : EncM Unit) : EncM Unit := do
-  if proto ≠ 0 then wr [oEMPTY_LIST] else wr [oMARK, oLIST]
+  cEmptyOp proto oEMPTY_LIST oLIST
   cMemoPut proto o
   if n ≠ 0 then items
 
@@ -544,7 +594,7 @@ def cSave (proto : Nat) : PV → EncM Unit
     | some i => wr (← liftPy (cGet proto i))
     | none =>
       -- save_dict, Modules/_pickle.c:3538-3602
-      if proto ≠ 0 then wr [oEMPTY_DICT] else wr [oMARK, oDICT]
+      cEmptyOp proto oEMPTY_DICT oDICT
       cMemoPut proto o
       if kvs.length ≠ 0 then cSetitems proto kvs.length 0 kvs
   | .set o xs => do
@@ -594,16 +644,7 @@ otherwise `do { MARK, up to 1000 items, APPENDS } while (total < size)`. -/
 def cAppends (proto : Nat) (n i : Nat) : List PV → EncM Unit
   | [] => pure ()
   | x :: xs => do
-    if proto = 0 then
-      cSave proto x
-      wr [oAPPEND]
-    else if n = 1 then
-      cSave proto x
-      wr [oAPPEND]
-    else
-      if i % batchSize = 0 then wr [oMARK]
-      cSave proto x
-      if (i + 1) % batchSize = 0 ∨ i + 1 = n then wr [oAPPENDS]
+    cBatchStep proto n i (cSave proto x) oAPPEND oAPPENDS
     cAppends proto n (i + 1) xs
 
 /-- `batch_dict` for protocol 0 (`Modules/_pickle.c:3318-3350`) and
@@ -613,19 +654,7 @@ so a size that is a multiple of 1000 ends with an empty `MARK SETITEMS`. -/
 def cSetitems (proto : Nat) (n i : Nat) : List (PV × PV) → EncM Unit
   | [] => if proto ≠ 0 ∧ n ≠ 1 ∧ n % batchSize = 0 then wr [oMARK, oSETITEMS] else pure ()
   | (k, v) :: kvs => do
-    if proto = 0 then
-      cSave proto k
-      cSave proto v
-      wr [oSETITEM]
-    else if n = 1 then
-      cSave proto k
-      cSave proto v
-      wr [oSETITEM]
-    else
-      if i % batchSize = 0 then wr [oMARK]
-      cSave proto k
-      cSave proto v
-      if (i + 1) % batchSize = 0 ∨ i + 1 = n then wr [oSETITEMS]
+    cBatchStep proto n i (do cSave proto k; cSave proto v) oSETITEM oSETITEMS
     cSetitems proto n (i + 1) kvs
 
 /-- The batch loop of `save_set` (`Modules/_pickle.c:3640-3676`):
@@ -633,9 +662,7 @@ def cSetitems (proto : Nat) (n i : Nat) : List (PV × PV) → EncM Unit
 def cAdditems (proto : Nat) (n i : Nat) : List PV → EncM Unit
   | [] => if n % batchSize = 0 then wr [oMARK, oADDITEMS] else pure ()
   | x :: xs => do
-    if i % batchSize = 0 then wr [oMARK]
-    cSave proto x
-    if (i + 1) % batchSize = 0 ∨ i + 1 = n then wr [oADDITEMS]
+    addStep n i (cSave proto x)
     cAdditems proto n (i + 1) xs
 end
 

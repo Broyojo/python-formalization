@@ -73,8 +73,8 @@ def DumpsTwinsAgreeBatchOkLong : Prop :=
   ∀ (x : PV) (protocol : Int), longMin ≤ protocol → protocol ≤ longMax →
     BatchOk (effProto protocol) x → cDumps x protocol = pyDumps x protocol
 
-theorem cSaveBytesData_big (o : Oid) (b : Bytes) (hb : b.length = 2 ^ 32) :
-    cSaveBytesData 3 o b = throw (.overflowError
+theorem cSaveBytesData_big (b : Bytes) (hb : b.length = 2 ^ 32) :
+    cSaveBytesData 3 b = throw (.overflowError
       "serializing a bytes object larger than 4 GiB requires pickle protocol 4 or higher") := by
   unfold cSaveBytesData
   simp only [hb]
@@ -92,7 +92,7 @@ theorem cDumps_big_bytes (b : Bytes) (hb : b.length = 2 ^ 32) :
   have hp : cProtocol 3 = .ok 3 := rfl
   have hbody : cBody 3 (.bytes (.u 0) b) {} = .error (.overflowError
       "serializing a bytes object larger than 4 GiB requires pickle protocol 4 or higher") := by
-    simp only [cBody, cSave, cSaveBytesObj, cSaveBytesData_big _ b hb]
+    simp only [cBody, cSave, cSaveBytesObj, cSaveBytesData_big b hb]
     rfl
   unfold cDumps
   simp only [hp, bind, Except.bind, StateT.run, hbody]

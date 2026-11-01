@@ -24,7 +24,7 @@ theorem py_step (i : Nat) (hi : i < 1000) (xs : List PV) (st : EncSt) :
       pyAppends 2 1001 (i + 1) xs { st with ev := itemEv i ++ st.ev } := by
   have hbl := batchLen_first i hi
   have h3 : ¬ (i + 1 = 1001) := by omega
-  simp only [pyAppends, hbl, batchSize, itemEv, pySave]
+  simp only [pyAppends, pyBatchStep, optWr, hbl, batchSize, itemEv, pySave]
   by_cases h1 : i % 1000 = 0 <;> by_cases h2 : (i + 1) % 1000 = 0 <;>
     simp only [h1, h2, h3, or_false, reduceCtorEq, if_true, if_false, ne_eq, not_false_eq_true, and_true,
       Nat.reduceEqDiff] <;> rfl
@@ -33,7 +33,7 @@ theorem c_step (i : Nat) (hi : i < 1000) (xs : List PV) (st : EncSt) :
     cAppends 2 1001 i (.none :: xs) st =
       cAppends 2 1001 (i + 1) xs { st with ev := itemEv i ++ st.ev } := by
   have h3 : ¬ (i + 1 = 1001) := by omega
-  simp only [cAppends, batchSize, itemEv, cSave]
+  simp only [cAppends, cBatchStep, optWr, batchSize, itemEv, cSave]
   by_cases h1 : i % 1000 = 0 <;> by_cases h2 : (i + 1) % 1000 = 0 <;>
     simp only [h1, h2, h3, or_false, reduceCtorEq, if_true, if_false, Nat.reduceEqDiff] <;> rfl
 
