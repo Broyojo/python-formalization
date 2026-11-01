@@ -13,109 +13,329 @@ open PyLean
 
 /-! ## count -/
 
-/-- What `count(start, step)` should answer: after `k` calls of `next()` the
-current value is `V = start + k*step`; `repr` shows `V`, and `step` unless it
-is the int 1. -/
-def countSpec (step : Int) : Int → List Op → List (OpRes Int)
-  | _, [] => []
-  | v, .next :: ops => .val v :: countSpec step (v + step) ops
-  | v, .repr :: ops =>
-    .str (if step = 1 then s!"count({v})" else s!"count({v}, {step})") :: countSpec step v ops
-  | v, .hint :: ops => .exc (.typeError "~no __length_hint__") :: countSpec step v ops
+variable {ν : Type}
 
-/-- The state invariant: fast mode holds `V` in `cnt` (only with step 1),
-slow mode holds it in `long_cnt` with `cnt == PY_SSIZE_T_MAX`. -/
-def CountInv (s : CountState) (v step : Int) : Prop :=
+/-- What `count(start, step)` should answer, for every kind of number: `next()`
+adds first, so a failed add raises in place of `v` and changes nothing; `repr`
+shows the current value, and the step unless it is an int equal to 1. -/
+def countSpec (N : NumOps ν) (ty : String) (step : CVal ν) : CVal ν → List Op → List (OpRes (CVal ν))
+  | _, [] => []
+  | v, .next :: ops =>
+    match pyAdd N v step with
+    | .error e => .exc e :: countSpec N ty step v ops
+    | .ok u => .val v :: countSpec N ty step u ops
+  | v, .repr :: ops =>
+    reprRes (cCountRepr N ty { cnt := ssizeMax, longCnt := some v, longStep := step }) ::
+      countSpec N ty step v ops
+  | v, .hint :: ops => .exc (.typeError "~no __length_hint__") :: countSpec N ty step v ops
+
+/-- The state invariant: fast mode holds `V` in `cnt` (only with the exact int 1 as
+step), slow mode holds it in `long_cnt` with `cnt == PY_SSIZE_T_MAX`. -/
+def CountInv (s : CountState ν) (v step : CVal ν) : Prop :=
   s.longStep = step ∧
-  ((s.longCnt = none ∧ s.cnt = v ∧ step = 1 ∧ v ≤ ssizeMax) ∨ (s.longCnt = some v ∧ s.cnt = ssizeMax))
+  ((∃ i : Int, s.longCnt = none ∧ s.cnt = i ∧ v = .int i ∧ step = .int 1 ∧ i ≤ ssizeMax) ∨
+    (s.longCnt = some v ∧ s.cnt = ssizeMax))
 
 theorem asLongOrMinus1_eq_one (x : Int) : asLongOrMinus1 x = 1 ↔ x = 1 := by
   simp only [asLongOrMinus1, ssizeMin_eq, ssizeMax_eq]
   split <;> omega
 
-theorem countOps_spec (step : Int) : ∀ (ops : List Op) (s : CountState) (v : Int), CountInv s v step →
-    cCountOps s ops = countSpec step v ops
+theorem stepIsOne_one : stepIsOne (.int 1 : CVal ν) = true := by
+  simp [stepIsOne, CVal.isLong, CVal.longVal, asLongOrMinus1, ssizeMin_eq, ssizeMax_eq]
+
+theorem countOps_spec (N : NumOps ν) (ty : String) (step : CVal ν) : ∀ (ops : List Op) (s : CountState ν)
+    (v : CVal ν), CountInv s v step → cCountOps N ty s ops = countSpec N ty step v ops
   | [], _, _, _ => rfl
   | .next :: ops, s, v, ⟨hst, h⟩ => by
     simp only [cCountOps, countSpec, cCountNext]
-    rcases h with ⟨h1, h2, h3, h4⟩ | ⟨h1, h2⟩
-    · by_cases hv : v = ssizeMax
-      · simp only [h2, hv, ↓reduceIte, h1, Option.getD]
-        rw [countOps_spec step ops _ (ssizeMax + step) ⟨by simp [hst], Or.inr ⟨by simp [hst], by simp⟩⟩]
-      · simp only [h2, hv, ↓reduceIte]
-        rw [countOps_spec step ops _ (v + step) ⟨by simp [hst], Or.inl ⟨by simp [h1], by simp [h2, h3], h3,
-          by rw [h3]; omega⟩⟩]
-    · simp only [h2, ↓reduceIte, h1, Option.getD]
-      rw [countOps_spec step ops _ (v + step) ⟨by simp [hst], Or.inr ⟨by simp [hst], by simp⟩⟩]
+    rcases h with ⟨i, h1, h2, rfl, rfl, h4⟩ | ⟨h1, h2⟩
+    · by_cases hv : i = ssizeMax
+      · subst hv
+        simp only [h2, ↓reduceIte, h1, Option.getD, hst, pyAdd]
+        rw [countOps_spec N ty _ ops _ (.int (ssizeMax + 1)) ⟨rfl, Or.inr ⟨rfl, rfl⟩⟩]
+      · simp only [h2, hv, ↓reduceIte, pyAdd]
+        rw [countOps_spec N ty _ ops { s with cnt := i + 1 } (.int (i + 1))
+          ⟨hst, Or.inl ⟨i + 1, h1, rfl, rfl, rfl, by omega⟩⟩]
+    · simp only [h2, ↓reduceIte, h1, Option.getD, hst]
+      cases ha : pyAdd N v step with
+      | error e =>
+        simp only
+        rw [countOps_spec N ty step ops s v ⟨hst, Or.inr ⟨h1, h2⟩⟩]
+      | ok u =>
+        simp only
+        rw [countOps_spec N ty step ops { cnt := ssizeMax, longCnt := some u, longStep := step } u
+          ⟨rfl, Or.inr ⟨rfl, rfl⟩⟩]
   | .repr :: ops, s, v, ⟨hst, h⟩ => by
-    simp only [cCountOps, countSpec, cCountRepr]
-    rw [countOps_spec step ops s v ⟨hst, h⟩]
-    rcases h with ⟨h1, h2, h3, h4⟩ | ⟨h1, h2⟩
-    · simp [h1, h2, h3]
-    · simp only [h1, hst]
-      by_cases h1' : step = 1
-      · simp [h1', asLongOrMinus1, ssizeMin_eq, ssizeMax_eq]
-      · have : ¬ asLongOrMinus1 step = 1 := fun h => h1' ((asLongOrMinus1_eq_one step).1 h)
-        simp [h1', this]
+    simp only [cCountOps, countSpec]
+    rw [countOps_spec N ty step ops s v ⟨hst, h⟩]
+    rcases h with ⟨i, h1, h2, rfl, rfl, h4⟩ | ⟨h1, h2⟩
+    · simp [cCountRepr, h1, h2, stepIsOne_one, pyRepr] <;> rfl
+    · simp [cCountRepr, h1, hst]
   | .hint :: ops, s, v, hinv => by
     simp only [cCountOps, countSpec]
-    rw [countOps_spec step ops s v hinv]
+    rw [countOps_spec N ty step ops s v hinv]
 
-theorem countNew_inv (start step : Option Int) :
-    CountInv (cCountNew start step) (start.getD 0) (step.getD 1) := by
+/-- An argument that is not an int subclass. -/
+def NoIntSub (a : Option (CVal ν)) : Prop := ∀ i x, a ≠ some (.intSub i x)
+
+theorem countNew_inv (start step : Option (CVal ν)) (hs : NoIntSub start) (ht : NoIntSub step)
+    (h1 : argBad start = false) (h2 : argBad step = false) :
+    ∃ s, cCountNew start step = .ok s ∧ CountInv s (start.getD (.int 0)) (step.getD (.int 1)) := by
+  have hone : asLongOrMinus1 1 = 1 := by simp [asLongOrMinus1, ssizeMin_eq, ssizeMax_eq]
   have hmax : (0 : Int) ≤ ssizeMax := by decide
-  have h11 : asLongOrMinus1 1 = 1 := by simp [asLongOrMinus1, ssizeMin_eq, ssizeMax_eq]
-  by_cases h1 : asLongOrMinus1 (step.getD 1) = 1
-  · have h1' := (asLongOrMinus1_eq_one _).1 h1
-    cases start with
-    | none => simp [cCountNew, h1, CountInv, h1', hmax, h11]
-    | some s =>
-      cases hs : asSsize s with
-      | error e => simp [cCountNew, hs, CountInv]
+  have hslow : ∀ (lc : CVal ν), CountInv { cnt := ssizeMax, longCnt := some lc, longStep := step.getD (.int 1) }
+      lc (step.getD (.int 1)) := fun lc => ⟨rfl, Or.inr ⟨rfl, rfl⟩⟩
+  cases start with
+  | none =>
+    cases step with
+    | none =>
+      exact ⟨_, by simp [cCountNew, argBad, argLong, CVal.longVal, hone] <;> rfl,
+        ⟨rfl, Or.inl ⟨0, rfl, rfl, rfl, rfl, hmax⟩⟩⟩
+    | some t =>
+      cases t with
+      | int j =>
+        by_cases hj : j = 1
+        · subst hj
+          exact ⟨_, by simp [cCountNew, argBad, argLong, CVal.isNumber, CVal.isLong, CVal.longVal, hone] <;> rfl,
+            ⟨rfl, Or.inl ⟨0, rfl, rfl, rfl, rfl, hmax⟩⟩⟩
+        · have hne : asLongOrMinus1 j ≠ 1 := fun h => hj ((asLongOrMinus1_eq_one j).1 h)
+          exact ⟨_, by simp [cCountNew, argBad, argLong, CVal.isNumber, CVal.isLong, CVal.longVal, hne] <;> rfl,
+            hslow _⟩
+      | intSub i x => exact absurd rfl (ht i x)
+      | num x =>
+        exact ⟨_, by simp [cCountNew, argBad, argLong, CVal.isNumber, CVal.isLong, CVal.longVal, hone] <;> rfl,
+          hslow _⟩
+      | nonNum x => simp [argBad, CVal.isNumber] at h2
+  | some a =>
+    cases a with
+    | int i =>
+      cases hi : asSsize i with
+      | error e =>
+        exact ⟨_, by
+          cases step with
+          | none => simp [cCountNew, argBad, argLong, CVal.isNumber, CVal.isLong, CVal.longVal, hi] <;> rfl
+          | some t =>
+            cases t <;> simp_all [cCountNew, argBad, argLong, CVal.isNumber, CVal.isLong, CVal.longVal, hi] <;> rfl,
+          hslow _⟩
       | ok v =>
-        have hv : v = s ∧ s ≤ ssizeMax := by
-          simp only [asSsize] at hs; split at hs <;> simp_all
-        simp [cCountNew, hs, h1, CountInv, h1', hv.1, hv.2, h11]
-  · cases start with
-    | none => simp [cCountNew, h1, CountInv]
-    | some s =>
-      cases hs : asSsize s with
-      | error e => simp [cCountNew, hs, CountInv]
-      | ok v =>
-        have hv : v = s ∧ s ≤ ssizeMax := by
-          simp only [asSsize] at hs; split at hs <;> simp_all
-        simp [cCountNew, hs, h1, CountInv]
+        have hv : v = i ∧ i ≤ ssizeMax := by
+          simp only [asSsize] at hi; split at hi <;> simp_all
+        obtain ⟨rfl, hle⟩ := hv
+        cases step with
+        | none =>
+          exact ⟨_, by simp [cCountNew, argBad, argLong, CVal.isNumber, CVal.isLong, CVal.longVal, hi, hone] <;> rfl,
+            ⟨rfl, Or.inl ⟨v, rfl, rfl, rfl, rfl, hle⟩⟩⟩
+        | some t =>
+          cases t with
+          | int j =>
+            by_cases hj : j = 1
+            · subst hj
+              exact ⟨_, by simp [cCountNew, argBad, argLong, CVal.isNumber, CVal.isLong, CVal.longVal, hi, hone] <;> rfl,
+                ⟨rfl, Or.inl ⟨v, rfl, rfl, rfl, rfl, hle⟩⟩⟩
+            · have hne : asLongOrMinus1 j ≠ 1 := fun h => hj ((asLongOrMinus1_eq_one j).1 h)
+              exact ⟨_, by simp [cCountNew, argBad, argLong, CVal.isNumber, CVal.isLong, CVal.longVal, hi, hne] <;> rfl,
+                hslow _⟩
+          | intSub i x => exact absurd rfl (ht i x)
+          | num x =>
+            exact ⟨_, by simp [cCountNew, argBad, argLong, CVal.isNumber, CVal.isLong, CVal.longVal] <;> rfl,
+              hslow _⟩
+          | nonNum x => simp [argBad, CVal.isNumber] at h2
+    | intSub i x => exact absurd rfl (hs i x)
+    | num x =>
+      have hf : argLong (some (CVal.num x)) = false := rfl
+      exact ⟨_, by
+        simp only [cCountNew, h1, h2, Bool.or_self, Bool.false_eq_true, if_false, hf, Bool.false_and]
+        rfl, hslow _⟩
+    | nonNum x => simp [argBad, CVal.isNumber] at h1
+
+/-- For all number types, every start and step that are numbers but not int
+subclasses, and every sequence of `next()`/`repr()` calls, `count` answers as the
+spec: the C-long fast path and the object slow path, and the switch at
+`sys.maxsize`, are invisible, including a failed add and a failed `repr`. The
+hypothesis on int subclasses is real: see `CountDocAgreeTotalAdd`. -/
+def CountConsistent : Prop :=
+  ∀ (ν : Type) (N : NumOps ν) (ty : String) (start step : Option (CVal ν)) (ops : List Op),
+    NoIntSub start → NoIntSub step → argBad start = false → argBad step = false →
+    cCount N start step ops ty = countSpec N ty (step.getD (.int 1)) (start.getD (.int 0)) ops
+
+theorem countConsistent_proven : CountConsistent := by
+  intro ν N ty start step ops h1 h2 h3 h4
+  obtain ⟨s, hs, hinv⟩ := countNew_inv start step h1 h2 h3 h4
+  simp only [cCount, hs]
+  exact countOps_spec N ty _ ops s _ hinv
 
 /-- For every int `start` and `step` and every sequence of `next()`/`repr()`
-calls, `count` answers as the spec: the C-long fast path and the PyLong slow
-path (and the switch at `sys.maxsize`) are invisible. -/
+calls, `count` gives `start + k*step` and its `repr` is `count(V)` or
+`count(V, step)`: the fast path and the slow path are invisible, for ints with no
+hypothesis at all. -/
+def intSpec (ty : String) (step : Int) : Int → List Op → List (OpRes (CVal ν))
+  | _, [] => []
+  | v, .next :: ops => .val (.int v) :: intSpec ty step (v + step) ops
+  | v, .repr :: ops =>
+    .str (if step = 1 then s!"{ty}({v})" else s!"{ty}({v}, {step})") :: intSpec ty step v ops
+  | v, .hint :: ops => .exc (.typeError "~no __length_hint__") :: intSpec ty step v ops
+
+theorem countSpec_int (N : NumOps ν) (ty : String) (step : Int) : ∀ (ops : List Op) (v : Int),
+    countSpec N ty (.int step) (.int v) ops = intSpec ty step v ops
+  | [], _ => rfl
+  | .next :: ops, v => by
+    simp only [countSpec, intSpec, pyAdd]
+    rw [countSpec_int N ty step ops]
+  | .repr :: ops, v => by
+    simp only [countSpec, intSpec]
+    rw [countSpec_int N ty step ops]
+    by_cases h : step = 1
+    · subst h
+      simp [cCountRepr, stepIsOne_one, pyRepr, reprRes] <;> rfl
+    · have hne : ¬ asLongOrMinus1 step = 1 := fun h' => h ((asLongOrMinus1_eq_one step).1 h')
+      simp [cCountRepr, stepIsOne, CVal.isLong, CVal.longVal, hne, pyRepr, reprRes, h] <;> rfl
+  | .hint :: ops, v => by
+    simp only [countSpec, intSpec]
+    rw [countSpec_int N ty step ops]
+
 def CountFastSlowConsistent : Prop :=
-  ∀ (start step : Option Int) (ops : List Op),
-    cCount start step ops = countSpec (step.getD 1) (start.getD 0) ops
+  ∀ (ν : Type) (N : NumOps ν) (ty : String) (start step : Option Int) (ops : List Op),
+    cCount N (start.map .int) (step.map .int) ops ty = intSpec ty (step.getD 1) (start.getD 0) ops
 
 theorem countFastSlowConsistent_proven : CountFastSlowConsistent := by
-  intro start step ops
-  exact countOps_spec _ ops _ _ (countNew_inv start step)
+  intro ν N ty start step ops
+  have h := countConsistent_proven ν N ty (start.map .int) (step.map .int) ops
+    (by cases start <;> simp [NoIntSub]) (by cases step <;> simp [NoIntSub])
+    (by cases start <;> simp [argBad, CVal.isNumber]) (by cases step <;> simp [argBad, CVal.isNumber])
+  rw [h]
+  have e1 : (step.map (CVal.int (ν := ν))).getD (.int 1) = .int (step.getD 1) := by cases step <;> rfl
+  have e2 : (start.map (CVal.int (ν := ν))).getD (.int 0) = .int (start.getD 0) := by cases start <;> rfl
+  rw [e1, e2, countSpec_int]
 
-theorem countSpec_values (step : Int) : ∀ (k : Nat) (v : Int),
-    countSpec step v (List.replicate k .next) = ((List.range k).map (fun (i : Nat) => v + i * step)).map .val
-  | 0, _ => rfl
-  | k + 1, v => by
-    simp only [List.replicate_succ, countSpec, countSpec_values step k (v + step), List.range_succ_eq_map,
-      List.map_cons, List.map_map]
-    congr 1
-    · simp
-    · apply List.map_congr_left; intro i _; simp [Function.comp]; rw [Int.add_mul, Int.one_mul]; omega
+/-- `count(a, b)` raises exactly for non-numbers (:3538-3542), and the fast path is
+taken exactly when both are ints, the start fits a `Py_ssize_t` and the step is 1
+(:3544-3585). Otherwise `cnt` is `PY_SSIZE_T_MAX`, as the asserts at :3587-3590
+say. For every number type. -/
+def CountNewModes : Prop :=
+  ∀ (ν : Type) (a b : Option (CVal ν)),
+    ((argBad a || argBad b) = true → cCountNew a b = .error (.typeError "a number is required")) ∧
+    ∀ s, cCountNew a b = .ok s →
+      (s.longCnt = none ∨ s.cnt = ssizeMax) ∧
+      (s.longCnt = none ↔ (argLong a = true ∧ argLong b = true ∧
+        (∀ x, a = some x → InSsize x.longVal) ∧ asLongOrMinus1 (b.getD (.int 1)).longVal = 1))
 
-/-- `count`'s values are the doc generator's `start, start+step, ...`. -/
-def CountDocAgree : Prop :=
-  ∀ (start step : Option Int) (k : Nat),
-    cCount start step (List.replicate k .next) = (docCountValues start step k).map .val
+theorem asSsize_of_not_in (x : Int) (h : ¬ InSsize x) : ∃ e, asSsize x = .error e := by
+  simp only [InSsize] at h
+  simp only [asSsize, h, if_false]
+  exact ⟨_, rfl⟩
 
-theorem countDocAgree_proven : CountDocAgree := by
-  intro start step k
-  rw [countFastSlowConsistent_proven, countSpec_values]
-  simp [docCountValues]
+theorem countNewModes_proven : CountNewModes := by
+  intro ν a b
+  refine ⟨fun h => by simp [cCountNew, h], ?_⟩
+  intro s h
+  simp only [cCountNew] at h
+  by_cases hbad : (argBad a || argBad b) = true
+  · simp [hbad] at h
+  · simp only [hbad, Bool.false_eq_true, if_false] at h
+    cases hsa : argLong a && argLong b with
+    | false =>
+      -- not both ints: slow
+      have hnot : ¬ (argLong a = true ∧ argLong b = true) := by
+        intro ⟨p, q⟩
+        simp [p, q] at hsa
+      have hs : s.longCnt ≠ none ∧ s.cnt = ssizeMax := by
+        cases a with
+        | none => simp [hsa] at h; simp [← h]
+        | some x => simp [hsa] at h; simp [← h]
+      exact ⟨Or.inr hs.2, ⟨fun e => absurd e hs.1, fun ⟨p, q, _⟩ => absurd ⟨p, q⟩ hnot⟩⟩
+    | true =>
+      have hab : argLong a = true ∧ argLong b = true := by simpa using hsa
+      cases a with
+      | none =>
+        by_cases ho : asLongOrMinus1 (b.getD (.int 1)).longVal = 1
+        · simp [hsa, ho] at h
+          simp [← h, hab.2, ho, show argLong (none : Option (CVal ν)) = true from rfl]
+        · simp [hsa, ho] at h
+          simp [← h, ho]
+      | some x =>
+        by_cases hx : InSsize x.longVal
+        · have hok : asSsize x.longVal = .ok x.longVal := by
+            simp only [InSsize] at hx
+            simp only [asSsize, hx, if_true]
+            simp
+          by_cases ho : asLongOrMinus1 (b.getD (.int 1)).longVal = 1
+          · simp [hsa, hok, ho] at h
+            simp [← h, hab.1, hab.2, ho, hx]
+          · simp [hsa, hok, ho] at h
+            simp [← h, ho]
+        · obtain ⟨e, he⟩ := asSsize_of_not_in _ hx
+          simp [hsa, he] at h
+          simp [← h, hx]
+
+/-- The items and end seen by `k` calls of `next()`, stopping at an exception. -/
+def opVals {β : Type} : List (OpRes β) → Run β
+  | [] => ([], none)
+  | .val v :: l => let r := opVals l; (v :: r.1, r.2)
+  | .exc e :: _ => ([], some e)
+  | _ :: l => opVals l
+
+/-- Broad: `count` gives the doc generator's values and end, for all numbers. -/
+def CountDocAgreeAll : Prop :=
+  ∀ (ν : Type) (N : NumOps ν) (start step : CVal ν) (k : Nat),
+    start.isNumber = true → step.isNumber = true →
+    opVals (cCount N (some start) (some step) (List.replicate k .next)) = docCountRun N step k start
+
+/-- A set of values that adding the step never leaves and never fails on: for
+example all floats with a float step. -/
+def AddClosed (N : NumOps ν) (step : CVal ν) (P : CVal ν → Prop) : Prop :=
+  ∀ a, P a → ∃ b, pyAdd N a step = .ok b ∧ P b
+
+/-- Narrowed to adds that cannot fail. The doc generator and C then differ only
+through int subclasses: `count(True)` gives the int 1 where the doc gives `True`. -/
+def CountDocAgreeTotalAdd : Prop :=
+  ∀ (ν : Type) (N : NumOps ν) (start step : CVal ν) (P : CVal ν → Prop) (k : Nat),
+    start.isNumber = true → step.isNumber = true → AddClosed N step P → P start →
+    opVals (cCount N (some start) (some step) (List.replicate k .next)) = docCountRun N step k start
+
+/-- With no int subclass either, for every number type: `count` gives the doc
+generator's values, for every `k`. Hypotheses, both documented or type-level: adding
+the step never fails on the values reached (`CountFailedAddRaisesFirst` says what
+happens otherwise), and neither argument is an int subclass. -/
+def CountDocAgreeClosed : Prop :=
+  ∀ (ν : Type) (N : NumOps ν) (start step : CVal ν) (P : CVal ν → Prop) (k : Nat),
+    start.isNumber = true → step.isNumber = true →
+    NoIntSub (some start) → NoIntSub (some step) → AddClosed N step P → P start →
+    opVals (cCount N (some start) (some step) (List.replicate k .next)) = docCountRun N step k start
+
+theorem countSpec_closed (N : NumOps ν) (ty : String) (step : CVal ν) (P : CVal ν → Prop)
+    (hc : AddClosed N step P) : ∀ (k : Nat) (v : CVal ν), P v →
+    opVals (countSpec N ty step v (List.replicate k .next)) = docCountRun N step k v
+  | 0, _, _ => rfl
+  | 1, v, hv => by
+    obtain ⟨u, hu, _⟩ := hc v hv
+    simp [List.replicate, countSpec, hu, opVals, docCountRun]
+  | k + 2, v, hv => by
+    obtain ⟨u, hu, hp⟩ := hc v hv
+    have := countSpec_closed N ty step P hc (k + 1) u hp
+    rw [List.replicate_succ]
+    simp only [countSpec, hu, opVals, docCountRun, this]
+
+theorem countDocAgreeClosed_proven : CountDocAgreeClosed := by
+  intro ν N start step P k h1 h2 h3 h4 hc hp
+  have hb1 : argBad (some start) = false := by simp [argBad, h1]
+  have hb2 : argBad (some step) = false := by simp [argBad, h2]
+  have h := countConsistent_proven ν N "count" (some start) (some step) (List.replicate k .next) h3 h4 hb1 hb2
+  simp only [Option.getD_some] at h
+  rw [h]
+  exact countSpec_closed N "count" step P hc k start hp
+
+/-- For every number type and state in slow mode, when adding the step to the
+current value `v` fails: `next()` raises that exception, not returning `v`, and
+leaves the state as it was, so `v` is still there for `repr` and the next attempt
+(:3643-3647). -/
+def CountFailedAddRaisesFirst : Prop :=
+  ∀ (ν : Type) (N : NumOps ν) (s : CountState ν) (v : CVal ν) (e : PyExc),
+    s.cnt = ssizeMax → s.longCnt = some v → pyAdd N v s.longStep = .error e →
+    cCountNext N s = (.exc e, s)
+
+theorem countFailedAddRaisesFirst_proven : CountFailedAddRaisesFirst := by
+  intro ν N s v e h1 h2 h3
+  simp [cCountNext, h1, h2, h3]
 
 /-! ## repeat -/
 

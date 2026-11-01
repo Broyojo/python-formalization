@@ -1,0 +1,58 @@
+id: unicodeobj-codec-unicode-escape-octal-chunks
+title: "The unicode_escape incremental decoder splits an octal escape at a chunk boundary and gives a different string"
+priority: P3
+kind: wrong-result
+module: unicodeobject
+files: [Objects/unicodeobject.c]
+functions: ["_PyUnicode_DecodeUnicodeEscapeInternal2", "_PyUnicode_DecodeUnicodeEscapeStateful"]
+summary: |
+  With final=False the unicode_escape decoder holds back an escape that may not be complete:
+  the \x, \u, \U and \N branches `goto incomplete`, and the caller is told how much was consumed.
+  The octal branch has no such path. It reads up to three digits and takes whatever is there, so
+  a chunk that ends inside an octal escape decodes it short and consumes it. The next chunk
+  then starts with the digits that belonged to the escape. Feeding b'\\10' and then b'7' to the
+  incremental decoder gives '\x087', while decoding b'\\107' at once gives 'G'. The result depends
+  on where the input was cut. Seven other stateful decoders tested the same way do not do this.
+likelihood: |
+  Low but real: any incremental use of unicode_escape on input with octal escapes, such as
+  codecs.iterdecode, or text files opened with encoding='unicode_escape', when a read
+  boundary falls inside an escape. The result is silently wrong text with no error.
+maybe_intended: |
+  No. The stateful support exists so that a split escape decodes the same way, and every
+  other escape form is handled.
+reproducer: |
+  import codecs
+  whole = b'\\107'.decode('unicode_escape')
+  dec = codecs.getincrementaldecoder('unicode_escape')()
+  split = dec.decode(b'\\10') + dec.decode(b'7', final=True)
+  print(ascii(whole), ascii(split))
+  dec = codecs.getincrementaldecoder('unicode_escape')()
+  hexsplit = dec.decode(b'\\x4') + dec.decode(b'1', final=True)
+  print('hex control:', ascii(hexsplit))
+  if whole == 'G' and split == '\x087' and hexsplit == 'A':
+      print('REPRODUCED unicodeobj-codec-unicode-escape-octal-chunks')
+expected: |
+  'G' however the input is split, as for the hex escape in the control.
+observed: |
+  '\x087': two characters.
+promised_by: |
+  The contract of incremental decoding (Doc/library/codecs.rst: "can be used to decode an input
+  in multiple steps"), and the same decoder's handling of \x, \u, \U and \N.
+cause: |
+  Objects/unicodeobject.c:6724, the `case '0'..'7'` branch of _PyUnicode_DecodeUnicodeEscapeInternal2:
+  `if (s < end && '0' <= *s && *s <= '7')` treats the end of the chunk as the end of the escape,
+  even when `consumed` is set.
+possible_fix: |
+  With `consumed` set, when the input ends before three octal digits have been read, go to
+  `incomplete` so the escape is retried with the next chunk.
+lean: |
+  Refuted by unicodeEscapeChunks_refuted (lean/PyLean/UnicodeObj/CodecEscapeProps.lean).
+tested: "REPRODUCED on python3 3.14.7 and on main (3.16.0a1+dev) by scripts/check_bugs.py"
+duplicates:
+  issues:
+    - {number: 64331, state: open, relation: related, reason: "'Many incremental codecs don't handle fragmented data' is about the bytes-to-bytes codecs and does not mention octal escapes"}
+    - {number: 160309, state: open, relation: unrelated, reason: "StreamReader.read dropping an incomplete character at end of stream"}
+  queries: ["unicode_escape incremental decoder", "unicode_escape octal", "unicodeescape stateful",
+            "unicode_escape_decode final", "IncrementalDecoder unicode_escape chunk",
+            "raw_unicode_escape incremental"]
+  bugforge: "no match in vendor/bugforge-results/README.md"

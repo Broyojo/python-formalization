@@ -80,7 +80,7 @@ Objects/longobject.c	3522	3540	long_compare	long_compare(PyLongObject *a, PyLong
 Objects/longobject.c	3543	3552	long_richcompare	long_richcompare(PyObject *self, PyObject *other, int op)	modelled	listsort-long-compare	
 Objects/longobject.c	3555	3568	_PyLong_ExactDealloc	_PyLong_ExactDealloc(PyObject *self)	todo		
 Objects/longobject.c	3571	3588	long_dealloc	long_dealloc(PyObject *self)	todo		
-Objects/longobject.c	3591	3644	long_hash	long_hash(PyObject *obj)	todo		
+Objects/longobject.c	3591	3644	long_hash	long_hash(PyObject *obj)	modelled	typeobj-long-hash	
 Objects/longobject.c	3650	3679	x_add	x_add(PyLongObject *a, PyLongObject *b)	todo		
 Objects/longobject.c	3684	3735	x_sub	x_sub(PyLongObject *a, PyLongObject *b)	todo		
 Objects/longobject.c	3738	3768	long_add	long_add(PyLongObject *a, PyLongObject *b)	todo		

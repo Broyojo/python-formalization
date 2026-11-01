@@ -146,9 +146,11 @@ structure ChainState (α : Type) where
 /-- `chain_new_internal` (:1894-1907). -/
 def chainNewInternal (source : Src (Obj α)) : ChainState α := { source := some source, active := none }
 
-/-- `chain_new` (:1910-1925): no keywords; the source is an iterator over `args`. -/
-def cChainNew (args : List (Obj α)) (hasKw : Bool) : Py (ChainState α) :=
-  if hasKw then .error (.typeError "chain() takes no keyword arguments")
+/-- `chain_new` (:1910-1925): the source is an iterator over `args`. Keywords are
+rejected only for `chain` itself and subclasses that inherit its `tp_init`
+(:1916); `customInit` is a subclass defining `__init__`, which sees them. -/
+def cChainNew (args : List (Obj α)) (hasKw : Bool) (customInit : Bool := false) : Py (ChainState α) :=
+  if hasKw && !customInit then .error (.typeError "chain() takes no keyword arguments")
   else .ok (chainNewInternal ⟨args, none⟩)
 
 /-- `itertools_chain_from_iterable_impl` (:1936-1946). -/
@@ -196,6 +198,9 @@ def cChainRun (r : Py (ChainState α)) (fuel : Nat) : Run α :=
   | .ok s => drain cChainNext fuel s
 
 def cChain (args : List (Obj α)) : Run α := cChainRun (cChainNew args false) (chainLen args + 2)
+
+/-- A subclass defining `__init__`, called with keywords. -/
+def cChainSubKw (args : List (Obj α)) : Run α := cChainRun (cChainNew args true true) (chainLen args + 2)
 
 /-- `for iterable in iterables: yield from iterable`, with `iterables` ending
 as `serr`. -/
@@ -346,7 +351,7 @@ def docCycle (iterable : Obj α) (k : Nat) : Run α :=
       | some e => (first, some e)
       | none => Run.ok (first ++ docCycleSaved l (k - first.length) [])
 
-/-! ## dropwhile, takewhile, filterfalse (:1340-1578, :3362-3482) -/
+/-! ## dropwhile, takewhile, filterfalse (:1340-1579, :3362-3482) -/
 
 /-- The constructors share one shape: `PyObject_GetIter(seq)`, then the flag
 (`itertools_dropwhile_impl`, :1363-1385; `itertools_takewhile_impl`,
@@ -549,7 +554,7 @@ def docStarmap (func : List α → Py β) (iterable : Obj (Obj α)) : Run β :=
   | .error e => Run.err e
   | .ok ⟨l, err⟩ => docStarmapLoop func err l
 
-/-! ## zip_longest (:3859-4079; rst:768-788) -/
+/-! ## zip_longest (:3859-4076; rst:768-788) -/
 
 structure ZipLongestState (α : Type) where
   its : List (Option (Src α))

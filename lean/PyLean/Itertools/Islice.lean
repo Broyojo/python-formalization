@@ -108,14 +108,16 @@ def cIsliceNext (s : IsliceState α) : Step (IsliceState α) α :=
           .yield item { it := some ⟨rest, err⟩, next := next, stop := s.stop, step := s.step, cnt := cnt }
 
 /-- `PyArg_UnpackTuple(args, "islice", 2, 4, ...)` (:1610) and the keyword
-check (:1606-1608), before `cIsliceArgs`; `nargs` counts the iterable too. -/
-def cIsliceArity (nargs : Nat) (hasKw : Bool) : Py Unit :=
-  if hasKw then .error (.typeError "islice() takes no keyword arguments")
+check (:1606-1608), before `cIsliceArgs`; `nargs` counts the iterable too.
+Keywords are rejected only for `islice` itself and subclasses that inherit its
+`tp_init`; `customInit` is a subclass defining `__init__`. -/
+def cIsliceArity (nargs : Nat) (hasKw : Bool) (customInit : Bool := false) : Py Unit :=
+  if hasKw && !customInit then .error (.typeError "islice() takes no keyword arguments")
   else if nargs < 2 then .error (.typeError s!"islice expected at least 2 arguments, got {nargs}")
   else if nargs > 4 then .error (.typeError s!"islice expected at most 4 arguments, got {nargs}")
   else .ok ()
 
-/-- The body of `islice_new` after unpacking (:1612-1679): the arguments are
+/-- The body of `islice_new` after unpacking (:1613-1679): the arguments are
 checked first, then `PyObject_GetIter(seq)`. -/
 def cIsliceNew (seq : Obj α) (args : List (Option Int)) : Py (IsliceState α) :=
   match cIsliceArgs args with
@@ -137,7 +139,7 @@ def cIslice (seq : Obj α) (args : List (Option Int)) : Run α × Int :=
 
 /-! ### Doc equivalent -/
 
-/-- `slice(*args)` then the defaults and the check of rst:483-487: `(start,
+/-- `slice(*args)` then the defaults and the check of rst:484-489: `(start,
 stop, step)` with `stop = none` for `None`. The doc raises a bare
 `ValueError`. -/
 def docIsliceArgs (args : List (Option Int)) : Py (Int × Option Int × Int) :=
@@ -157,7 +159,7 @@ def pastBound : Option Int → Int → Bool
   | some m, i => decide (m ≤ i)
   | none, _ => false
 
-/-- The `for i, element in zip(indices, iterable)` loop (rst:489-493):
+/-- The `for i, element in zip(indices, iterable)` loop (rst:491-496):
 `indices` is `range(bound)` (`some bound`) or `count()` (`none`); `zip` pulls
 the index first, so an exhausted `range` stops without touching the input.
 Returns the yielded items, the number of input items consumed, and the

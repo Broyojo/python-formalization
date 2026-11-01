@@ -31,7 +31,7 @@ Python/ceval.c	1101	1106	_PyObjectArray_Free	_PyObjectArray_Free(PyObject **arra
 Python/ceval.c	1148	1376	_PyEval_EvalFrameDefault	_PyEval_EvalFrameDefault(PyThreadState *tstate, _PyInterpreterFrame *frame, int throwflag)	todo		
 Python/ceval.c	1389	1449	format_missing	format_missing(PyThreadState *tstate, const char *kind, PyCodeObject *co, PyObject *names, PyObject *qualname)	todo		
 Python/ceval.c	1452	1488	missing_arguments	missing_arguments(PyThreadState *tstate, PyCodeObject *co, Py_ssize_t missing, Py_ssize_t defcount, _PyStackRef *localsplus, PyObject *qualname)	todo		
-Python/ceval.c	1491	1546	too_many_positional	too_many_positional(PyThreadState *tstate, PyCodeObject *co, Py_ssize_t given, PyObject *defaults, _PyStackRef *localsplus, PyObject *qualname)	todo		
+Python/ceval.c	1491	1546	too_many_positional	too_many_positional(PyThreadState *tstate, PyCodeObject *co, Py_ssize_t given, PyObject *defaults, _PyStackRef *localsplus, PyObject *qualname)	modelled	typeobj-too-many-positional-bound	
 Python/ceval.c	1549	1610	positional_only_passed_as_keyword	positional_only_passed_as_keyword(PyThreadState *tstate, PyCodeObject *co, Py_ssize_t kwcount, PyObject* kwnames, PyObject *qualname)	todo		
 Python/ceval.c	1614	1617	scan_back_to_entry_start	scan_back_to_entry_start(unsigned char *p) {	todo		
 Python/ceval.c	1620	1625	skip_to_next_entry	skip_to_next_entry(unsigned char *p, unsigned char *end) {	todo		

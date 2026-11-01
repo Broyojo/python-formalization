@@ -1,6 +1,5 @@
 import PyLean.Itertools.ProductSpec
 import PyLean.Itertools.Islice
-import PyLean.Itertools.CountRepeat
 
 /-!
 `__sizeof__` of the combinatoric iterators reports the object plus exactly the
@@ -184,26 +183,30 @@ theorem sizeofReportsArrays_proven : SizeofReportsArrays := by
     rw [cProductSizeof, productNew_lengths args rep? s h]
 
 /-- The checks around the constructors' bodies, for all inputs: `islice`
-accepts exactly 2 to 4 positional arguments and no keywords; `count` accepts
-exactly numbers; a non-int `r` to `permutations` is rejected, but only after
+accepts exactly 2 to 4 positional arguments, and keywords only in a subclass
+defining `__init__`; a non-int `r` to `permutations` is rejected, but only after
 the iterable was read, so an error from the iterable wins. -/
 def ArgChecks : Prop :=
-  (∀ (n : Nat) (kw : Bool), cIsliceArity n kw = .ok () ↔ (kw = false ∧ 2 ≤ n ∧ n ≤ 4)) ∧
-  (∀ a b : Bool, cCountCheck a b = .ok () ↔ (a = true ∧ b = true)) ∧
-  (∀ (α : Type) (o : Obj α), (∃ e, tupleOf o = .error e ∧ cPermutationsBadR o = .error e) ∨
-    (∃ l, tupleOf o = .ok l ∧ cPermutationsBadR o = .error (.typeError "Expected int as r")))
+  (∀ (n : Nat) (kw customInit : Bool), cIsliceArity n kw customInit = .ok () ↔
+    ((kw = false ∨ customInit = true) ∧ 2 ≤ n ∧ n ≤ 4)) ∧
+  (∀ (α : Type) [Inhabited α] (o : Obj α) (r : Option Int) (fuel : Nat),
+    (∃ e, tupleOf o = .error e ∧ cPermutationsF fuel o r true = Run.err e) ∨
+    (∃ l, tupleOf o = .ok l ∧
+      cPermutationsF fuel o r true = Run.err (.typeError "Expected int as r")))
 
 theorem argChecks_proven : ArgChecks := by
-  refine ⟨?_, ?_, ?_⟩
-  · intro n kw
+  refine ⟨?_, ?_⟩
+  · intro n kw customInit
     simp only [cIsliceArity]
-    cases kw <;> simp only [Bool.true_eq_false, Bool.false_eq_true, if_true, if_false] <;>
+    cases kw <;> cases customInit <;> simp only [Bool.true_and, Bool.false_and, Bool.not_true,
+      Bool.not_false, Bool.false_eq_true, if_true, if_false] <;>
       (try split) <;> (try split) <;> simp_all <;> omega
-  · intro a b
-    cases a <;> cases b <;> simp [cCountCheck]
-  · intro α o
+  · intro α _ o r fuel
     cases h : tupleOf o with
-    | error e => exact Or.inl ⟨e, rfl, by simp [cPermutationsBadR, h]⟩
-    | ok l => exact Or.inr ⟨l, rfl, by simp [cPermutationsBadR, h]⟩
+    | error e => exact Or.inl ⟨e, rfl, by simp [cPermutationsF, cPermutationsNew, h, bind, Except.bind]⟩
+    | ok l =>
+      exact Or.inr ⟨l, rfl, by
+        simp [cPermutationsF, cPermutationsNew, h, bind, Except.bind, throw, throwThe,
+          MonadExceptOf.throw]⟩
 
 end PyLean.Itertools
