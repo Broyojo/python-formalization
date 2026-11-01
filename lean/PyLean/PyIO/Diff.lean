@@ -2,6 +2,9 @@ import PyLean.DiffCore
 import PyLean.PyIO.BytesIO
 import PyLean.PyIO.StringC
 import PyLean.PyIO.StringPy
+import PyLean.PyIO.DiffText
+import PyLean.PyIO.DiffBuffered
+import PyLean.PyIO.DiffFile
 
 /-! Differential-testing handler for `pyio` cases (`"mod": "pyio"`).
 
@@ -94,6 +97,15 @@ def run (fn : String) (j : Json) : Except String Json := do
     return encPy toJson (.ok (dTrunc (dMulNat (dDiv (← getNat j "a") (← getNat j "b")) (← getNat j "c"))) : Py Nat)
   | other => throw s!"unknown fn {other}"
 
-def handler : Handler := fun fn j => some (run fn j)
+def handler : Handler := fun fn j =>
+  match runText fn j with
+  | some r => some r
+  | none =>
+    match runBuffered fn j with
+    | some r => some r
+    | none =>
+      match runFile fn j with
+      | some r => some r
+      | none => some (run fn j)
 
 end PyLean.PyIO
