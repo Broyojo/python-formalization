@@ -1,6 +1,6 @@
 file	line	endline	name	signature	status	entry	note
-Objects/stringlib/codecs.h	22	252	Py_LOCAL_INLINE	Py_LOCAL_INLINE(Py_UCS4) STRINGLIB(utf8_decode)(const char **inptr, const char *end, STRINGLIB_CHAR *dest, Py_ssize_t *outpos)	modelled	unicodeobj-codec-utf8-rejects-forbidden	
-Objects/stringlib/codecs.h	260	470	Py_LOCAL_INLINE	Py_LOCAL_INLINE(char *) STRINGLIB(utf8_encoder)(_PyBytesWriter *writer, PyObject *unicode, const STRINGLIB_CHAR *data, Py_ssize_t size, _Py_error_handler error_handler, const char *errors)	modelled	unicodeobj-codec-utf8-round-trip	
-Objects/stringlib/codecs.h	500	612	Py_LOCAL_INLINE	Py_LOCAL_INLINE(Py_UCS4) STRINGLIB(utf16_decode)(const unsigned char **inptr, const unsigned char *e, STRINGLIB_CHAR *dest, Py_ssize_t *outpos, int native_ordering)	modelled	unicodeobj-codec-utf16-round-trip	
-Objects/stringlib/codecs.h	620	740	Py_LOCAL_INLINE	Py_LOCAL_INLINE(Py_ssize_t) STRINGLIB(utf16_encode)(const STRINGLIB_CHAR *in, Py_ssize_t len, unsigned short **outptr, int native_ordering)	modelled	unicodeobj-codec-utf16-round-trip	
-Objects/stringlib/codecs.h	757	828	Py_LOCAL_INLINE	Py_LOCAL_INLINE(Py_ssize_t) STRINGLIB(utf32_encode)(const STRINGLIB_CHAR *in, Py_ssize_t len, uint32_t **outptr, int native_ordering)	modelled	unicodeobj-codec-utf32-round-trip	
+Objects/stringlib/codecs.h	22	252	Py_LOCAL_INLINE	Py_LOCAL_INLINE(Py_UCS4) STRINGLIB(utf8_decode)(const char **inptr, const char *end, STRINGLIB_CHAR *dest, Py_ssize_t *outpos)	todo		
+Objects/stringlib/codecs.h	260	470	Py_LOCAL_INLINE	Py_LOCAL_INLINE(char *) STRINGLIB(utf8_encoder)(_PyBytesWriter *writer, PyObject *unicode, const STRINGLIB_CHAR *data, Py_ssize_t size, _Py_error_handler error_handler, const char *errors)	todo		
+Objects/stringlib/codecs.h	500	612	Py_LOCAL_INLINE	Py_LOCAL_INLINE(Py_UCS4) STRINGLIB(utf16_decode)(const unsigned char **inptr, const unsigned char *e, STRINGLIB_CHAR *dest, Py_ssize_t *outpos, int native_ordering)	todo		
+Objects/stringlib/codecs.h	620	740	Py_LOCAL_INLINE	Py_LOCAL_INLINE(Py_ssize_t) STRINGLIB(utf16_encode)(const STRINGLIB_CHAR *in, Py_ssize_t len, unsigned short **outptr, int native_ordering)	todo		
+Objects/stringlib/codecs.h	757	828	Py_LOCAL_INLINE	Py_LOCAL_INLINE(Py_ssize_t) STRINGLIB(utf32_encode)(const STRINGLIB_CHAR *in, Py_ssize_t len, uint32_t **outptr, int native_ordering)	todo		
