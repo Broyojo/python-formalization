@@ -129,15 +129,23 @@ theorem intRepr_view {n : Int} {t : PStr} (h : intRepr n = .ok t) :
 /-- What `loads` makes of the text of an int. -/
 def decInt (dcfg : DCfg) (n : Int) : JVal :=
   match intRepr n with
-  | .ok t => if dcfg.intHook then .hook .int t else .int n
+  | .ok t =>
+    match parseInt dcfg t with
+    | .ok j => j
+    | .error _ => .null
   | .error _ => .null
 
-theorem parseInt_repr (dcfg : DCfg) {n : Int} {t : PStr} (h : intRepr n = .ok t) :
-    parseInt dcfg t = .ok (decInt dcfg n) := by
+/-- Callbacks that leave the JSON structure alone: objects come back as their
+items (no `object_hook`, and `object_pairs_hook` absent or keeping the pairs),
+`parse_int` does not raise, and the other callbacks are Python callables. -/
+structure DCfg.Rec (dcfg : DCfg) : Prop where
+  fin : ∀ acc, cFinish dcfg acc = .ok (.obj acc)
+  int : ∀ h, dcfg.parseIntFn = some h → ∀ t, ∃ j, h t = .ok j
+  flt : ∀ t, dcfg.parseFloat t ≠ fuelOut
+  con : ∀ t, dcfg.parseConstant t ≠ fuelOut
+
+theorem pyInt_repr {n : Int} {t : PStr} (h : intRepr n = .ok t) : pyIntOfText t = .ok n := by
   obtain ⟨ds, hd, rfl, hl⟩ := intRepr_view h
-  simp only [decInt, h, parseInt]
-  split
-  · rfl
   · have hint : pyIntOfText (if n < 0 then 45 :: ds else ds) = .ok n := by
       by_cases hn : n < 0
       · simp only [hn, ↓reduceIte, pyIntOfText]
@@ -164,7 +172,16 @@ theorem parseInt_repr (dcfg : DCfg) {n : Int} {t : PStr} (h : intRepr n = .ok t)
         simp only [this, ↓reduceIte, hd.val]
         congr 1
         omega
-    rw [hint]
+    exact hint
+
+theorem parseInt_repr (dcfg : DCfg) (hR : dcfg.Rec) {n : Int} {t : PStr} (h : intRepr n = .ok t) :
+    parseInt dcfg t = .ok (decInt dcfg n) := by
+  simp only [decInt, h]
+  cases hi : dcfg.parseIntFn with
+  | some f =>
+    obtain ⟨j, hj⟩ := hR.int f hi t
+    simp [parseInt, hi, hj]
+  | none => simp [parseInt, hi, pyInt_repr h]
 
 theorem numberRe_repr {n : Int} {t rest : PStr} (h : intRepr n = .ok t) (hr : Delim rest) :
     numberRe (t ++ rest) = some (t, [], []) := by
@@ -180,7 +197,7 @@ theorem numberRe_repr {n : Int} {t rest : PStr} (h : intRepr n = .ok t) (hr : De
     · rw [e] at h'; simp at h'; omega
 
 /-- `_match_number_unicode` on the text of an int. -/
-theorem matchNumber_repr (dcfg : DCfg) (s : PStr) (p : Nat) {n : Int} {t rest : PStr}
+theorem matchNumber_repr (dcfg : DCfg) (hR : dcfg.Rec) (s : PStr) (p : Nat) {n : Int} {t rest : PStr}
     (h : intRepr n = .ok t) (hs : s.drop p = t ++ rest) (hr : Delim rest) (hp : p < s.length) :
     cMatchNumber dcfg s p = .ok (decInt dcfg n, p + t.length) := by
   have hre := numberRe_repr h hr
@@ -191,6 +208,6 @@ theorem matchNumber_repr (dcfg : DCfg) (s : PStr) (p : Nat) {n : Int} {t rest : 
     simp only [Option.some.injEq, Prod.mk.injEq] at h1
     obtain ⟨rfl, rfl, rfl⟩ := h1
     rw [h2]
-    simp [parseInt_repr dcfg h, Except.map]
+    simp [parseInt_repr dcfg hR h, Except.map]
 
 end PyLean.JsonMod
