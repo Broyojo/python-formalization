@@ -28,6 +28,16 @@ REVIEW = ROOT / "coverage" / "review"
 FIELDS = ["file", "line", "endline", "name", "signature", "status", "entry", "note"]
 EXCLUSION_REASONS = ("no-behaviour:", "deprecated:", "internal-bootstrap:", "platform:",
                      "vendored:", "test-support:", "generated:", "trivial:")
+# Set by scripts/repin.py on a row whose body changed in 3.15. Prefill skips it, since
+# the registry entry still describes the old body. Remove the note once the model
+# mirrors the new one.
+CHANGED = "changed-in-3.15:"
+GONE = ROOT / "coverage" / "gone-in-3.15.txt"
+
+
+def read_gone():
+    """Bug and entry ids that describe 3.14.7 behaviour 3.15.2 no longer has."""
+    return set(GONE.read_text().split()) if GONE.exists() else set()
 
 
 def read_registry():
@@ -167,7 +177,8 @@ def prefill(by_file, registry, hollow):
                 unmatched[fn] += 1
     for rows in by_file.values():
         for row in rows:
-            if row["status"] != "todo" or (row["file"], row["line"]) in hollow:
+            if (row["status"] != "todo" or (row["file"], row["line"]) in hollow
+                    or row["note"].startswith(CHANGED)):
                 continue
             if settled[id(row)]:
                 row["status"] = "modelled"
@@ -187,6 +198,8 @@ def main():
     args = ap.parse_args()
 
     registry = read_registry()
+    for entry in read_gone():
+        registry.pop(entry, None)
     by_file = {p: read_rows(p) for p in sorted(METHODS.glob("*.tsv"))}
     reviewed, hollow = read_reviews()
     if args.prefill:
@@ -222,7 +235,8 @@ def main():
     print(f"{100 * grand['modelled'] / max(in_scope, 1):.1f}% of in-scope rows modelled, "
           f"{100 * grand['faithful'] / max(in_scope, 1):.1f}% reviewed faithful; "
           f"{len(set(registry) - claimed)} registry entries cover no row; "
-          f"{len(hollow)} rows withdrawn by review")
+          f"{len(hollow)} rows withdrawn by review; "
+          f"{sum(r['note'].startswith(CHANGED) for rows in by_file.values() for r in rows)} rows changed in 3.15")
     sys.exit(1 if problems or (args.strict and grand["todo"]) else 0)
 
 

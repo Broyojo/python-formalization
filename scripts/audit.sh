@@ -21,7 +21,11 @@ logs=$(mktemp -d)
 ls difftest/*_diff.py | xargs -P 8 -I{} sh -c \
     'n=$(basename {}); python3 {} --cases '"$cases"' > '"$logs"'/$n.log 2>&1; echo "$? $n $(tail -1 '"$logs"'/$n.log | cut -c1-60)"' \
     | sort -k2 | tee "$logs/status"
-failed=$(awk '$1 != 0 { printf " %s", $2 }' "$logs/status")
+# A module still moving to 3.15.2 is listed in coverage/difftest-migrating.txt, one
+# script per line with no blank lines. Its failures show above but do not fail the
+# audit. The owner removes the line once the difftest passes on 3.15.2.
+touch coverage/difftest-migrating.txt
+failed=$(awk '$1 != 0 { print $2 }' "$logs/status" | grep -vxFf coverage/difftest-migrating.txt | tr '\n' ' ' || true)
 python3 scripts/check_bugs.py || failed="$failed check_bugs"
 if [ -n "$failed" ]; then
     echo "FAIL audit:$failed"

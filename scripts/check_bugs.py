@@ -3,6 +3,8 @@
 Each reproducer must print `REPRODUCED <id>` when the bug is present. Usage:
   python3 scripts/check_bugs.py [--python /path/to/python] [bug-id ...]
 Exits non-zero if a bug no longer reproduces (fixed upstream, or a broken reproducer).
+Records listed in coverage/gone-in-3.15.txt are skipped unless named: they are 3.14.7
+behaviour that 3.15.2 does not have.
 """
 
 import argparse
@@ -32,9 +34,14 @@ def main():
     version = subprocess.run([args.python, "-c", "import sys; print(sys.version.split()[0])"],
                              capture_output=True, text=True, check=True).stdout.strip()
     failures = 0
+    gone_file = ROOT / "coverage" / "gone-in-3.15.txt"
+    gone = set(gone_file.read_text().split()) if gone_file.exists() else set()
     for path in sorted((ROOT / "bugs").glob("*.yaml")):
         bug_id = path.stem
         if args.ids and bug_id not in args.ids:
+            continue
+        if bug_id in gone and not args.ids:
+            print(f"{'GONE':15s} {bug_id}")
             continue
         r = subprocess.run([args.python, "-I", "-c", load_reproducer(path)],
                            capture_output=True, text=True, timeout=120)

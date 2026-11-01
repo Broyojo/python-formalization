@@ -37,16 +37,16 @@ setup: |
   # stdlib includes test.support, which some difftests import.
   V=$HOME/pf/vendor
   mkdir -p $V
-  [ -d $V/cpython-3.14 ] || git clone -q --depth 1 --branch v3.14.7 https://github.com/python/cpython.git $V/cpython-3.14
-  if [ ! -x $HOME/pf/py314/bin/python3 ]; then
-    (cd $V/cpython-3.14 && ./configure --quiet --prefix=$HOME/pf/py314 && make -j32 -s >build.log 2>&1 && make -s install >>build.log 2>&1)
+  [ -d $V/cpython-3.15 ] || git clone -q --depth 1 --branch v3.15.2 https://github.com/python/cpython.git $V/cpython-3.15
+  if [ ! -x $HOME/pf/py315/bin/python3 ]; then
+    (cd $V/cpython-3.15 && ./configure --quiet --prefix=$HOME/pf/py315 && make -j32 -s >build.log 2>&1 && make -s install >>build.log 2>&1)
   fi
   if ! $V/cpython-main/python -c "import _decimal" 2>/dev/null; then
     mkdir -p $V/cpython-main
     (cd $V/cpython-main && git init -q && git fetch -q --depth 1 https://github.com/python/cpython.git ef1fce0a69a19360643fb82ea3545ede21495c73 && git checkout -q FETCH_HEAD && ./configure --quiet && make -j32 -s >build.log 2>&1)
   fi
   ln -sf python $V/cpython-main/python.exe
-  $HOME/pf/py314/bin/python3 -c "import sys, _datetime, _decimal, _bisect, _heapq, _pickle, _json, _ctypes, test.support; print(sys.version)"
+  $HOME/pf/py315/bin/python3 -c "import sys, _datetime, _decimal, _bisect, _heapq, _pickle, _json, _ctypes, test.support; print(sys.version)"
   $V/cpython-main/python -c "import sys, _datetime, _decimal, _bisect, _heapq, _pickle, _json; print(sys.version)"
 
   # AGENTS.md and the bug records use the Mac's absolute paths; make them valid here.
@@ -56,7 +56,7 @@ setup: |
 
   # Remote commands get these tools on PATH.
   cat > $HOME/pf/env.sh <<'ENV'
-  export PATH=$HOME/pf/py314/bin:$HOME/.elan/bin:$PATH
+  export PATH=$HOME/pf/py315/bin:$HOME/.elan/bin:$PATH
   export TMPDIR=$HOME/pylean/tmp
   ENV
   sed -i 's/^  //' $HOME/pf/env.sh

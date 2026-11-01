@@ -5,6 +5,9 @@ opcode and grammar rule in the pinned CPython source gets one row, with status
 modelled, excluded (with a reason) or todo. Re-running keeps the status, entry
 and note of rows that still exist. Sources are parsed, never run.
 
+This is for re-running on the pinned source. It carries a row's status by line
+number, so moving to another CPython version goes through scripts/repin.py.
+
 Usage: python3 scripts/list_python_functions.py <cpython-source-root>
 """
 
@@ -66,6 +69,8 @@ def python_rows(path, rel):
 C_DEF = re.compile(r"^(?:[A-Za-z_][\w ]*[ *]+)?\*?([A-Za-z_]\w*)\s*\(")
 # Return-type macros: the function's name follows, on this line or the next.
 C_WRAPPER = re.compile(r"^(?:static\s+)?(?:Py_LOCAL_INLINE|Py_LOCAL|PyAPI_FUNC|PyMODINIT_FUNC)\([^)]*\)\s*")
+# Modules/_sre/sre_lib.h names its functions through a macro: SRE(match)(...).
+SRE_NAME = re.compile(r"^SRE\((\w+)\)")
 
 
 def c_rows(path):
@@ -73,7 +78,7 @@ def c_rows(path):
     rows = []
     i = 0
     while i < len(lines):
-        line = lines[i]
+        line = SRE_NAME.sub(r"sre_\1", lines[i])
         wrapper = C_WRAPPER.match(line)
         if wrapper:
             rest = line[wrapper.end():]
@@ -121,7 +126,7 @@ def opcode_rows(path):
     return rows
 
 
-GRAMMAR_RULE = re.compile(r"^([a-z_]\w*)(?:\[[^\]]*\])?(?: \(memo\))?:")
+GRAMMAR_RULE = re.compile(r"^([a-z_]\w*)(?:\[[^\]]*\])?(?:\s*\(memo\))?:")
 
 
 def grammar_rows(path):
@@ -138,21 +143,15 @@ def manifest_path(rel):
     return ROOT / "coverage" / "methods" / (rel.replace("/", "__") + ".tsv")
 
 
-def main():
-    src = Path(sys.argv[1]).resolve()
-    commit = subprocess.run(["git", "-C", str(src), "rev-parse", "HEAD"], capture_output=True,
-                            text=True, check=True).stdout.strip()
-    (ROOT / "coverage").mkdir(exist_ok=True)
-    (ROOT / "coverage" / "methods").mkdir(exist_ok=True)
-    (ROOT / "coverage" / "SOURCE_COMMIT").write_text(commit + "\n")
-
+def list_sources(src):
+    """(path, rel, lister, exclusion patterns) for every source file in the inventory."""
     sources = []
     for path in sorted((src / "Lib").rglob("*.py")):
         rel = path.relative_to(src).as_posix()
         if not SKIP_DIRS & set(rel.split("/")[1:-1]) and not path.name.startswith("test_"):
             sources.append((path, rel, python_rows, LIB_EXCLUDED))
     for pattern in ("Objects/*.c", "Objects/stringlib/*.h", "Modules/*.c", "Modules/*/*.c",
-                    "Python/*.c", "Parser/*.c", "Parser/*/*.c"):
+                    "Modules/_sre/sre_lib.h", "Python/*.c", "Parser/*.c", "Parser/*/*.c"):
         for path in sorted(src.glob(pattern)):
             rel = path.relative_to(src).as_posix()
             if rel == "Python/bytecodes.c":
@@ -161,7 +160,18 @@ def main():
                 sources.append((path, rel, lambda p, r=None: c_rows(p), C_EXCLUDED))
     sources.append((src / "Grammar/python.gram", "Grammar/python.gram",
                     lambda p, r=None: grammar_rows(p), []))
+    return sources
 
+
+def main():
+    src = Path(sys.argv[1]).resolve()
+    commit = subprocess.run(["git", "-C", str(src), "rev-parse", "HEAD"], capture_output=True,
+                            text=True, check=True).stdout.strip()
+    (ROOT / "coverage").mkdir(exist_ok=True)
+    (ROOT / "coverage" / "methods").mkdir(exist_ok=True)
+    (ROOT / "coverage" / "SOURCE_COMMIT").write_text(commit + "\n")
+
+    sources = list_sources(src)
     totals = Counter()
     for path, rel, lister, patterns in sources:
         try:
