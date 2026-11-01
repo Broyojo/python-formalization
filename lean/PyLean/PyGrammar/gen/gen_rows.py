@@ -42,11 +42,18 @@ ROWS = {
     "Lib___ast_unparse.py": ("astUnparse", "pygrammar-unparse-roundtrip"),
     "Python__ast_unparse.c": ("astUnparseC", "pygrammar-unparse-c-roundtrip"),
     "Lib__tokenize.py": ("tokenizePy", None),
+    "Lib__ast.py": ("astPy", None),
     "Python__ast.c": ("astC", "pygrammar-check-try-twin"),
     "Python__ast_preprocess.c": ("preprocess", "pygrammar-check-syntax-only-identity"),
 }
 
 OVERRIDE = {
+    ("Lib__ast.py", "increment_lineno"): "pygrammar-ast-increment-lineno",
+    ("Lib__ast.py", "_splitlines_no_ff"): "pygrammar-ast-splitlines",
+    ("Lib__ast.py", "_pad_whitespace"): "pygrammar-ast-pad-whitespace",
+    ("Lib__ast.py", "get_docstring"): "pygrammar-ast-docstring-twins",
+    ("Lib__ast.py", "literal_eval"): "pygrammar-ast-literal-eval",
+    ("Lib__ast.py", "unparse"): "pygrammar-unparse-roundtrip",
     ("Lib__tokenize.py", "_get_normal_name"): "pygrammar-lex-normal-name-twin",
     ("Lib__tokenize.py", "detect_encoding"): "pygrammar-lex-cookie-twin",
     ("Lib__tokenize.py", "Untokenizer.__init__"): "pygrammar-lex-untokenize-lossless",

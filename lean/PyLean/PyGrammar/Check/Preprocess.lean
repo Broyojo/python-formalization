@@ -321,9 +321,11 @@ def preVisit (c : Ctor) (l : Option Loc) : FM Unit :=
   | .Continue, some loc => beforeLoopExit loc "continue"
   | _, _ => pure ()
 
-/-- The keys of `MatchMapping`, `CALL_SEQ(fold_const_match_patterns, ...)`. -/
+/-- The patterns' values: `CALL(fold_const_match_patterns, ...)` for `MatchValue` and
+`CALL_SEQ(fold_const_match_patterns, ...)` for the keys of `MatchMapping`. -/
 def mappingKeys (st : PState) (f : Nat) (c : Ctor) (fs : List Ast) : List Ast :=
   match c, fs with
+  | .MatchValue, [v] => [foldMatchValue st (f + 1) v]
   | .MatchMapping, [.seq keys, ps, rest] =>
     [.seq (keys.map (foldMatchValue st (f + 1))), ps, rest]
   | _, _ => fs
@@ -348,15 +350,12 @@ mutual
     | 0, e => fun s => (e, { s with fuelOut := true })
     | f + 1, e =>
       match e with
-      | .node .MatchValue [v] l => fun s =>
-        (.node .MatchValue [foldMatchValue s (f + 1) v] l, s)
       | .node c fs l => fun s =>
-        let (_, s1) := preVisit c l s
-        let (fs', s2) := runSteps f (visits c) fs s1
-        (postFold s2 c (mappingKeys s2 f c fs') l, s2)
+        let r := runSteps f (visits c) fs (preVisit c l s).2
+        (postFold r.2 c (mappingKeys r.2 f c r.1) l, r.2)
       | .seq xs => fun s =>
-        let (ys, s1) := foldList f xs s
-        (.seq ys, s1)
+        let r := foldList f xs s
+        (.seq r.1, r.2)
       | a => fun s => (a, s)
 
   /-- `CALL_SEQ`: elements in order, `NULL` skipped. -/
@@ -364,24 +363,24 @@ mutual
     | 0, xs => fun s => (xs, s)
     | _ + 1, [] => fun s => ([], s)
     | f + 1, x :: xs => fun s =>
-      let (x', s1) := fold f x s
-      let (xs', s2) := foldList f xs s1
-      (x' :: xs', s2)
+      let r1 := fold f x s
+      let r2 := foldList f xs r1.2
+      (r1.1 :: r2.1, r2.2)
 
-  /-- `astfold_body`, `Python/ast_preprocess.c:465-492`. -/
+  /-- `astfold_body`, `Python/ast_preprocess.c`. -/
   def foldBody : Nat → List Ast → FM (List Ast)
     | 0, xs => fun s => (xs, s)
     | f + 1, stmts => fun st =>
       let doc := (getDocString stmts).isSome
-      let (stmts, doc) :=
-        if doc && decide (st.optimize ≥ 2) then (removeDocstring stmts, false) else (stmts, doc)
-      let (stmts, s1) := foldList f stmts st
-      if !doc && (getDocString stmts).isSome then
-        match stmts with
+      let strip := doc && decide (st.optimize ≥ 2)
+      let doc' := if strip then false else doc
+      let r := foldList f (if strip then removeDocstring stmts else stmts) st
+      if !doc' && (getDocString r.1).isSome then
+        match r.1 with
         | .node .Expr [v] l :: rest =>
-          (.node .Expr [.node .JoinedStr [.seq [v]] l] l :: rest, s1)
-        | _ => (stmts, s1)
-      else (stmts, s1)
+          (.node .Expr [.node .JoinedStr [.seq [v]] l] l :: rest, r.2)
+        | _ => r
+      else r
 
   /-- Run a `visits` row over the fields. -/
   def runSteps : Nat → List Step → List Ast → FM (List Ast)
@@ -390,19 +389,19 @@ mutual
     | f + 1, s :: rest, fs => fun st =>
       match s with
       | .fld i =>
-        let (v, s1) := fold f (fs.getD i .null) st
-        runSteps f rest (fs.set i v) s1
+        let r := fold f (fs.getD i .null) st
+        runSteps f rest (fs.set i r.1) r.2
       | .body i =>
         match fs.getD i .null with
         | .seq xs =>
-          let (b, s1) := foldBody f xs st
-          runSteps f rest (fs.set i (.seq b)) s1
+          let r := foldBody f xs st
+          runSteps f rest (fs.set i (.seq r.1)) r.2
         | _ => runSteps f rest fs st
       | .ann i =>
         if st.futureAnnotations then runSteps f rest fs st
         else
-          let (v, s1) := fold f (fs.getD i .null) st
-          runSteps f rest (fs.set i v) s1
+          let r := fold f (fs.getD i .null) st
+          runSteps f rest (fs.set i r.1) r.2
       | .push a b c => runSteps f rest fs { st with cf := (a, b, c) :: st.cf }
       | .pop => runSteps f rest fs { st with cf := st.cf.drop 1 }
 end

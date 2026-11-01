@@ -212,18 +212,19 @@ theorem translateRemovesCr_proven : TranslateRemovesCr := by
   simp only at this ⊢
   split <;> simp_all
 
+/-- Type and string of each token: what the guarantee of `untokenize` covers. -/
+def tokKey (l : List TokInfo) : List (Nat × List Nat) := l.map fun t => (t.type, t.str)
+
 /-- `untokenize` on the tokens of a valid source gives text that tokenizes to the same types and
 strings. -/
 def untokenizeRoundTrips (text : List Nat) : Bool :=
   match parseStr {} (utf8Encode text) .file with
   | .error _ => true
   | .ok _ =>
-    let ts := (tokenizeText text true).1
+    let ts : List TokInfo := (tokenizeText text true).1
     match untokenize ts with
     | none => false
-    | some out =>
-      let key (l : List TokInfo) := l.map fun t => (t.type, t.str)
-      key (tokenizeText out true).1 == key ts
+    | some out => tokKey (tokenizeText out true).1 == tokKey ts
 
 /-- The docstring of `untokenize`: "The result is guaranteed to tokenize back to match the
 input so that the conversion is lossless and round-trips are assured. The guarantee applies

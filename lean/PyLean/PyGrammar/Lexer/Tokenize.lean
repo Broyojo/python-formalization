@@ -259,14 +259,17 @@ on every name without a NUL. -/
 def NormalNameTwin : Prop :=
   ∀ s : List Nat, 0 ∉ s → cGetNormalName s = pyGetNormalName s
 
+theorem takeWhile_ne_zero (s : List Nat) (h : 0 ∉ s) : s.takeWhile (· != 0) = s := by
+  induction s with
+  | nil => rfl
+  | cons x xs ih =>
+    have hx : x ≠ 0 := fun e => h (by simp [e])
+    have hr : 0 ∉ xs := fun m => h (List.mem_cons_of_mem _ m)
+    simp [List.takeWhile_cons, hx, ih hr]
+
 theorem normalNameTwin_proven : NormalNameTwin := by
   intro s h
-  have : s.takeWhile (· != 0) = s := by
-    apply List.takeWhile_eq_self_iff.mpr
-    intro x hx
-    have : x ≠ 0 := fun e => h (e ▸ hx)
-    simpa using this
-  simp [cGetNormalName, pyGetNormalName, this]
+  simp [cGetNormalName, pyGetNormalName, takeWhile_ne_zero s h]
 
 /-- `detect_encoding` and the C tokenizer read the same cookie from the same bytes. -/
 def CookieTwin : Prop := ∀ s : List Nat, cCookie s = pyCookie s

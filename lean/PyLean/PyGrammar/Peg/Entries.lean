@@ -102,8 +102,8 @@ def entries : List Entry := [
   { id := "pygrammar-peg-make-arguments"
     pyFile := "Parser/action_helpers.c"
     pyFns := Rows.peg_make_arguments
-    statement := "For all inputs, _PyPegen_make_arguments yields no more positional defaults " ++
-      "than positional parameters, so validate_arguments accepts what the parser builds."
+    statement := "With at most one of the two slash forms given, _PyPegen_make_arguments yields no " ++
+      "more positional defaults than positional parameters, so validate_arguments accepts them."
     source := "invariant"
     status := .proven
     prop := ``MakeArgumentsDefaultsFit

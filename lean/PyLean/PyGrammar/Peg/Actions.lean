@@ -83,30 +83,37 @@ def getDefaults (s : Ast) : Ast := .seq ((seqOf s).map fun p => recField p 1)
 /-- `_PyPegen_join_sequences` -/
 def joinSeq (a b : Ast) : Ast := .seq (seqOf a ++ seqOf b)
 
-/-- `_PyPegen_make_arguments` with `_make_posonlyargs`, `_make_posargs`,
-`_make_posdefaults` and `_make_kwargs`, `Parser/action_helpers.c`. The `assert(0)` branch
-of `_make_posargs` is kept. -/
+/-- `x == NULL` -/
+@[inline] def isNullA : Ast → Bool
+  | .null => true
+  | _ => false
+
+/-- `_make_posonlyargs` -/
+def posonlyOf (slashNo slashWith : Ast) : Ast :=
+  if !isNullA slashNo then slashNo
+  else if !isNullA slashWith then joinSeq (recField slashWith 0) (getNames (recField slashWith 1))
+  else .seq []
+
+/-- `_make_posargs`. Its `assert(0)` branch is kept. -/
+def posargsOf (plain namesDef : Ast) : Ast :=
+  if !isNullA namesDef then
+    if !isNullA plain then joinSeq plain (getNames namesDef) else getNames namesDef
+  else if !isNullA plain then plain
+  else .seq []
+
+/-- `_make_posdefaults` -/
+def posdefaultsOf (slashWith namesDef : Ast) : Ast :=
+  if !isNullA slashWith && !isNullA namesDef then
+    joinSeq (getDefaults (recField slashWith 1)) (getDefaults namesDef)
+  else if isNullA slashWith && !isNullA namesDef then getDefaults namesDef
+  else if !isNullA slashWith && isNullA namesDef then getDefaults (recField slashWith 1)
+  else .seq []
+
+/-- `_PyPegen_make_arguments`, with `_make_kwargs` inline. -/
 def makeArguments (slashNo slashWith plain namesDef starEtc : Ast) : Ast :=
-  let posonly :=
-    match slashNo, slashWith with
-    | .null, .null => .seq []
-    | .null, s => joinSeq (recField s 0) (getNames (recField s 1))
-    | a, _ => a
-  let posargs :=
-    match namesDef, plain with
-    | .null, .null => .seq []
-    | .null, a => a
-    | n, .null => getNames n
-    | n, a => joinSeq a (getNames n)
-  let posdefaults :=
-    match slashWith, namesDef with
-    | .null, .null => .seq []
-    | .null, n => getDefaults n
-    | s, .null => getDefaults (recField s 1)
-    | s, n => joinSeq (getDefaults (recField s 1)) (getDefaults n)
   let kwonly := recField starEtc 1
-  mkAst .arguments_ [posonly, posargs, recField starEtc 0, getNames kwonly, getDefaults kwonly,
-    recField starEtc 2, posdefaults]
+  mkAst .arguments_ [posonlyOf slashNo slashWith, posargsOf plain namesDef, recField starEtc 0,
+    getNames kwonly, getDefaults kwonly, recField starEtc 2, posdefaultsOf slashWith namesDef]
 
 /-- `_PyPegen_new_type_comment` on a token. -/
 def typeCommentOf (t : Ast) : Ast :=
@@ -374,23 +381,24 @@ def foldConsts : List Ast → List Nat → Ast → List Nat × Ast × List Ast
   | e :: rest, acc, last =>
     if isConstant e then foldConsts rest (acc ++ constStr e) e else (acc, last, e :: rest)
 
+/-- `i + 1 < n && asdl_seq_GET(flattened, i + 1)->kind == Constant_kind` -/
+def nextIsConstant : List Ast → Bool
+  | n :: _ => isConstant n
+  | [] => false
+
 /-- The folding loop of `_build_concatenated_str`. `f` is fuel, the list's length. -/
 def foldLoop : Nat → List Ast → List Ast
-  | 0, _ | _, [] => []
+  | 0, _ => []
+  | _ + 1, [] => []
   | f + 1, e :: rest =>
-    if isConstant e then
-      let hasNext := match rest with
-        | n :: _ => isConstant n
-        | [] => false
-      if hasNext then
-        let (s, last, tail) := foldConsts rest (constStr e) e
-        let l1 := locOf e
-        let l2 := locOf last
-        let c := mkAt .Constant [.const (.str s), constKind e]
-          ⟨l1.lineno, l1.colOffset, l2.endLineno, l2.endColOffset⟩
-        if s.isEmpty then foldLoop f tail else c :: foldLoop f tail
-      else if isEmptyStrConst e then foldLoop f rest
-      else e :: foldLoop f rest
+    if isConstant e && nextIsConstant rest then
+      let r := foldConsts rest (constStr e) e
+      let l1 := locOf e
+      let l2 := locOf r.2.1
+      let c := mkAt .Constant [.const (.str r.1), constKind e]
+        ⟨l1.lineno, l1.colOffset, l2.endLineno, l2.endColOffset⟩
+      if r.1.isEmpty then foldLoop f r.2.2 else c :: foldLoop f r.2.2
+    else if isEmptyStrConst e then foldLoop f rest
     else e :: foldLoop f rest
 
 /-- `_build_concatenated_str`, `Parser/action_helpers.c`. -/

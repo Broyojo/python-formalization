@@ -232,7 +232,7 @@ theorem foldMatchValue_quiet (st : PState) (h : Quiet st) (f : Nat) (e : Ast) :
   cases f with
   | zero => rfl
   | succ f =>
-    rw [foldMatchValue]
+    rw [foldMatchValue.eq_def]
     simp [h.1]
 
 theorem foldBinop_quiet (st : PState) (h : Quiet st) (e : Ast) : foldBinop st e = e := by
@@ -267,39 +267,38 @@ def FoldId (f : Nat) : Prop :=
 `PyCF_ONLY_AST`, `astfold_*` leaves every tree as it found it. -/
 def SyntaxOnlyIdentity : Prop := ∀ f, FoldId f
 
+theorem cfWarn_quiet (k : String) (l : Loc) (st : PState) (h : Quiet st) :
+    Quiet (cfWarn k l st).2 := h
+
 theorem preVisit_quiet (c : Ctor) (l : Option Loc) (st : PState) (h : Quiet st) :
     Quiet (preVisit c l st).2 := by
   unfold preVisit
   split
   · unfold beforeReturn
-    dsimp only
     split
     · split
-      · exact h
+      · exact cfWarn_quiet _ _ _ h
       · exact h
     · exact h
   · unfold beforeLoopExit
-    dsimp only
     split
     · split
-      · exact h
+      · exact cfWarn_quiet _ _ _ h
       · exact h
     · exact h
   · unfold beforeLoopExit
-    dsimp only
     split
     · split
-      · exact h
+      · exact cfWarn_quiet _ _ _ h
       · exact h
     · exact h
   · exact h
 
 theorem mappingKeys_quiet (st : PState) (h : Quiet st) (f : Nat) (c : Ctor) (fs : List Ast) :
     mappingKeys st f c fs = fs := by
+  have hf : foldMatchValue st (f + 1) = id := funext (foldMatchValue_quiet st h _)
   unfold mappingKeys
-  split
-  · simp [foldMatchValue_quiet st h]
-  · rfl
+  split <;> simp [hf]
 
 theorem postFold_quiet (st : PState) (h : Quiet st) (c : Ctor) (fs : List Ast) (l : Option Loc) :
     postFold st c fs l = .node c fs l := by
@@ -309,12 +308,12 @@ theorem postFold_quiet (st : PState) (h : Quiet st) (c : Ctor) (fs : List Ast) (
   · simp [h.1]
   · rfl
 
-theorem removeDoc_guard (st : PState) (h : Quiet st) (b : Bool) :
-    (b && decide (st.optimize ≥ 2)) = false := by
-  have : ¬ st.optimize ≥ 2 := by
-    have := h.2
-    omega
-  simp [this]
+theorem fold_node_eq (f : Nat) (c : Ctor) (fs : List Ast) (l : Option Loc) (st : PState) :
+    fold (f + 1) (.node c fs l) st =
+      (postFold (runSteps f (visits c) fs (preVisit c l st).2).2 c
+        (mappingKeys (runSteps f (visits c) fs (preVisit c l st).2).2 f c
+          (runSteps f (visits c) fs (preVisit c l st).2).1) l,
+       (runSteps f (visits c) fs (preVisit c l st).2).2) := rfl
 
 theorem syntaxOnlyIdentity_proven : SyntaxOnlyIdentity := by
   intro f
@@ -335,83 +334,47 @@ theorem syntaxOnlyIdentity_proven : SyntaxOnlyIdentity := by
     · intro e st h
       cases e with
       | node c fs l =>
-        by_cases hm : ∃ v, c = .MatchValue ∧ fs = [v]
-        · obtain ⟨v, rfl, rfl⟩ := hm
-          have : fold (f + 1) (.node .MatchValue [v] l) st =
-              (.node .MatchValue [foldMatchValue st (f + 1) v] l, st) := rfl
-          rw [this]
-          simp [foldMatchValue_quiet st h, h]
-        · have heq : fold (f + 1) (.node c fs l) st =
-              (let (_, s1) := preVisit c l st
-               let (fs', s2) := runSteps f (visits c) fs s1
-               (postFold s2 c (mappingKeys s2 f c fs') l, s2)) := by
-            rw [fold]
-            split
-            · rename_i v l' he
-              exact absurd ⟨v, (Ast.node.inj he).1, (Ast.node.inj he).2.1⟩ hm
-            · rename_i c' fs' l' he
-              simp only [Ast.node.injEq] at he
-              obtain ⟨rfl, rfl, rfl⟩ := he
-              rfl
-            · simp at *
-            · simp at *
-          rw [heq]
-          have hp := preVisit_quiet c l st h
-          generalize preVisit c l st = r1 at hp ⊢
-          obtain ⟨_, s1⟩ := r1
-          have ⟨hr, hq⟩ := hS (visits c) fs s1 hp
-          generalize hrs : runSteps f (visits c) fs s1 = r2 at hr hq ⊢
-          obtain ⟨fs', s2⟩ := r2
-          simp only at hr hq ⊢
-          subst hr
-          rw [mappingKeys_quiet s2 hq, postFold_quiet s2 hq]
-          exact ⟨rfl, hq⟩
+        rw [fold_node_eq]
+        obtain ⟨h1, h2⟩ := hS (visits c) fs _ (preVisit_quiet c l st h)
+        generalize runSteps f (visits c) fs (preVisit c l st).2 = r at h1 h2 ⊢
+        simp only [mappingKeys_quiet _ h2, h1, postFold_quiet _ h2]
+        exact ⟨trivial, h2⟩
       | seq xs =>
-        have heq : fold (f + 1) (.seq xs) st =
-            (let (ys, s1) := foldList f xs st; (.seq ys, s1)) := by
-          rw [fold]
-        rw [heq]
-        have ⟨h1, h2⟩ := hL xs st h
-        generalize foldList f xs st = r at h1 h2 ⊢
-        obtain ⟨ys, s1⟩ := r
-        simp only at h1 h2 ⊢
-        subst h1
+        obtain ⟨h1, h2⟩ := hL xs st h
+        have e : fold (f + 1) (.seq xs) st = (.seq (foldList f xs st).1, (foldList f xs st).2) := rfl
+        rw [e, h1]
         exact ⟨rfl, h2⟩
-      | _ =>
-        rw [fold]
-        exact ⟨rfl, h⟩
+      | null => exact ⟨rfl, h⟩
+      | ident _ => exact ⟨rfl, h⟩
+      | str _ => exact ⟨rfl, h⟩
+      | int _ => exact ⟨rfl, h⟩
+      | const _ => exact ⟨rfl, h⟩
+      | tok _ => exact ⟨rfl, h⟩
     · intro xs st h
       cases xs with
       | nil => exact ⟨rfl, h⟩
       | cons x xs =>
-        have heq : foldList (f + 1) (x :: xs) st =
-            (let (x', s1) := fold f x st
-             let (xs', s2) := foldList f xs s1
-             (x' :: xs', s2)) := by
-          rw [foldList]
-        rw [heq]
-        have ⟨h1, h2⟩ := hF x st h
-        generalize fold f x st = r at h1 h2 ⊢
-        obtain ⟨x', s1⟩ := r
-        simp only at h1 h2 ⊢
-        subst h1
-        have ⟨h3, h4⟩ := hL xs s1 h2
-        generalize foldList f xs s1 = r at h3 h4 ⊢
-        obtain ⟨xs', s2⟩ := r
-        simp only at h3 h4 ⊢
-        subst h3
+        obtain ⟨h1, h2⟩ := hF x st h
+        obtain ⟨h3, h4⟩ := hL xs _ h2
+        have e : foldList (f + 1) (x :: xs) st =
+            ((fold f x st).1 :: (foldList f xs (fold f x st).2).1,
+             (foldList f xs (fold f x st).2).2) := rfl
+        rw [e, h1, h3]
         exact ⟨rfl, h4⟩
     · intro xs st h
-      rw [foldBody]
-      dsimp only
-      rw [removeDoc_guard st h]
-      simp only [Bool.false_eq_true, if_false]
-      have ⟨h1, h2⟩ := hL xs st h
-      generalize foldList f xs st = r at h1 h2 ⊢
-      obtain ⟨ys, s1⟩ := r
-      simp only at h1 h2 ⊢
-      subst h1
-      cases hd : (getDocString ys).isSome <;> simp [hd, h2]
+      have hn : ¬ st.optimize ≥ 2 := by
+        have := h.2
+        omega
+      have e : foldBody (f + 1) xs st = foldList f xs st := by
+        rw [foldBody]
+        dsimp only
+        have hs : ((getDocString xs).isSome && decide (st.optimize ≥ 2)) = false := by simp [hn]
+        simp only [hs, Bool.false_eq_true, if_false]
+        obtain ⟨h1, _⟩ := hL xs st h
+        rw [h1]
+        cases hd : (getDocString xs).isSome <;> simp
+      rw [e]
+      exact hL xs st h
     · intro ss fs st h
       cases ss with
       | nil => exact ⟨rfl, h⟩
@@ -419,40 +382,29 @@ theorem syntaxOnlyIdentity_proven : SyntaxOnlyIdentity := by
         rw [runSteps]
         cases s with
         | fld i =>
+          obtain ⟨h1, h2⟩ := hF (fs.getD i .null) st h
           dsimp only
-          have ⟨h1, h2⟩ := hF (fs.getD i .null) st h
-          generalize fold f (fs.getD i .null) st = r at h1 h2 ⊢
-          obtain ⟨v, s1⟩ := r
-          simp only at h1 h2 ⊢
-          subst h1
-          rw [set_getD_self]
-          exact hS rest fs s1 h2
+          rw [h1, set_getD_self]
+          exact hS rest fs _ h2
         | body i =>
           dsimp only
           split
           · rename_i xs he
-            have ⟨h1, h2⟩ := hB xs st h
-            generalize foldBody f xs st = r at h1 h2 ⊢
-            obtain ⟨b, s1⟩ := r
-            simp only at h1 h2 ⊢
-            subst h1
-            have hset : fs.set i (.seq b) = fs := by
+            obtain ⟨h1, h2⟩ := hB xs st h
+            rw [h1]
+            have hset : fs.set i (.seq xs) = fs := by
               rw [← he]
               exact set_getD_self fs i
             rw [hset]
-            exact hS rest fs s1 h2
+            exact hS rest fs _ h2
           · exact hS rest fs st h
         | ann i =>
           dsimp only
           split
           · exact hS rest fs st h
-          · have ⟨h1, h2⟩ := hF (fs.getD i .null) st h
-            generalize fold f (fs.getD i .null) st = r at h1 h2 ⊢
-            obtain ⟨v, s1⟩ := r
-            simp only at h1 h2 ⊢
-            subst h1
-            rw [set_getD_self]
-            exact hS rest fs s1 h2
+          · obtain ⟨h1, h2⟩ := hF (fs.getD i .null) st h
+            rw [h1, set_getD_self]
+            exact hS rest fs _ h2
         | push a b c => exact hS rest fs _ (quiet_push st h _)
         | pop => exact hS rest fs _ (quiet_pop st h)
 

@@ -2,6 +2,21 @@
 
 namespace PyLean.PyGrammar.Rows
 
+def ast_docstring_twins : List String := [
+  "get_docstring"]
+
+def ast_increment_lineno : List String := [
+  "increment_lineno"]
+
+def ast_literal_eval : List String := [
+  "literal_eval"]
+
+def ast_pad_whitespace : List String := [
+  "_pad_whitespace"]
+
+def ast_splitlines : List String := [
+  "_splitlines_no_ff"]
+
 def check_docstring_body : List String := [
   "stmt_seq_remove_item", "remove_docstring"]
 
@@ -170,6 +185,6 @@ def unparse_roundtrip : List String := [
   "Unparser.visit_BoolOp", "Unparser.visit_Attribute", "Unparser.visit_Call", "Unparser.visit_Subscript", "Unparser.visit_Starred", "Unparser.visit_Ellipsis",
   "Unparser.visit_Slice", "Unparser.visit_Match", "Unparser.visit_arg", "Unparser.visit_arguments", "Unparser.visit_keyword", "Unparser.visit_Lambda",
   "Unparser.visit_alias", "Unparser.visit_withitem", "Unparser.visit_match_case", "Unparser.visit_MatchValue", "Unparser.visit_MatchSingleton", "Unparser.visit_MatchSequence",
-  "Unparser.visit_MatchStar", "Unparser.visit_MatchMapping", "Unparser.visit_MatchClass", "Unparser.visit_MatchAs", "Unparser.visit_MatchOr"]
+  "Unparser.visit_MatchStar", "Unparser.visit_MatchMapping", "Unparser.visit_MatchClass", "Unparser.visit_MatchAs", "Unparser.visit_MatchOr", "unparse"]
 
 end PyLean.PyGrammar.Rows

@@ -650,11 +650,11 @@ def gen_case_check(rng):
         mode = {ast.Module: "exec"}.get(type(t), "exec")
         t2 = mutate_tree(copy.deepcopy(t), rng) if rng.random() < 0.9 else t
         try:
-            enc = enc(t2)
-            json.dumps(enc)
+            tree = enc(t2)
+            json.dumps(tree)
         except Exception:
             return None
-        return {"mod": "pygrammar", "fn": "check.validate", "tree": enc, "pytree": None,
+        return {"mod": "pygrammar", "fn": "check.validate", "tree": tree, "pytree": None,
                 "_t": t2, "_mode": mode}
     o = rng.choice([-1, 0, 1, 2])
     return {"mod": "pygrammar", "fn": "check.preprocess", "tree": enc(t), "optimize": o,
@@ -715,10 +715,10 @@ def gen_case_unparse(rng):
     tc = rng.random() < 0.1
     try:
         t = ast.parse(s, mode=mode, type_comments=tc)
-        enc = enc(t)
+        tree = enc(t)
     except (SyntaxError, ValueError, RecursionError):
         return None
-    return {"mod": "pygrammar", "fn": "unparse.py", "tree": enc, "_t": t}
+    return {"mod": "pygrammar", "fn": "unparse.py", "tree": tree, "_t": t}
 
 
 def c_case(rng, s):

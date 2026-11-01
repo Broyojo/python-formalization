@@ -49,53 +49,38 @@ def MemoReturnsStored : Prop :=
 
 /-! ### `arguments` -/
 
+theorem seqOf_getNames (s : Ast) : (seqOf (getNames s)).length = (seqOf s).length := by
+  simp [getNames, seqOf]
+
+theorem seqOf_getDefaults (s : Ast) : (seqOf (getDefaults s)).length = (seqOf s).length := by
+  simp [getDefaults, seqOf]
+
+theorem seqOf_join (a b : Ast) :
+    (seqOf (joinSeq a b)).length = (seqOf a).length + (seqOf b).length := by
+  simp [joinSeq, seqOf]
+
 /-- `_PyAST_arguments` as `_PyPegen_make_arguments` calls it never has more positional
-defaults than positional parameters, which is `validate_arguments`'s first check: the
-parser cannot produce what the validator refuses. Names and defaults come from the same
-`NameDefaultPair` lists. -/
+defaults than positional parameters, which is `validate_arguments`'s check: the parser cannot
+build what the validator refuses. Precondition, from the grammar's calls: at most one of
+`slash_without_default` and `slash_with_default` is given. -/
 def MakeArgumentsDefaultsFit : Prop :=
-  ∀ (a b c d e : Ast),
-    match makeArguments a b c d e with
-    | .node .arguments_ [posonly, args, _, _, _, _, defaults] _ =>
-      (seqOf defaults).length ≤ (seqOf posonly).length + (seqOf args).length
-    | _ => False
+  ∀ (a b c d : Ast), (isNullA a = true ∨ isNullA b = true) →
+    (seqOf (posdefaultsOf b d)).length ≤
+      (seqOf (posonlyOf a b)).length + (seqOf (posargsOf c d)).length
+
+theorem seqOf_seq (xs : List Ast) : seqOf (.seq xs) = xs := rfl
 
 theorem makeArgumentsDefaultsFit_proven : MakeArgumentsDefaultsFit := by
-  intro a b c d e
-  simp only [makeArguments, mkAst, Ctor.fields, normFields]
-  cases a <;> cases b <;> cases d <;> simp [getNames, getDefaults, joinSeq, seqOf] <;>
-    (try split) <;> (try split) <;> simp_all <;> omega
+  intro a b c d h
+  unfold posdefaultsOf posonlyOf posargsOf
+  cases ha : isNullA a <;> cases hb : isNullA b <;> cases hc : isNullA c <;>
+    cases hd : isNullA d <;>
+    simp [ha, hb, hc, hd, seqOf_getNames, seqOf_getDefaults, seqOf_join, seqOf_seq] <;>
+    first
+    | omega
+    | (simp [ha, hb] at h)
 
 /-! ### String concatenation -/
-
-/-- A `Constant` of an empty `str`. -/
-def isEmptyConst (e : Ast) : Bool := isEmptyStrConst e
-
-/-- `foldConsts` stops at the first thing that is not a constant. -/
-theorem foldConsts_tail (xs : List Ast) (acc : List Nat) (last : Ast) :
-    match (foldConsts xs acc last).2.2 with
-    | [] => True
-    | e :: _ => isConstant e = false := by
-  induction xs generalizing acc last with
-  | nil => simp [foldConsts]
-  | cons x xs ih =>
-    unfold foldConsts
-    split
-    · exact ih _ _
-    · rename_i h
-      simpa using h
-
-/-- Pairs of neighbours in a list. -/
-def noAdjacentConstants : List Ast → Bool
-  | a :: b :: rest => !(isConstant a && isConstant b) && noAdjacentConstants (b :: rest)
-  | _ => true
-
-/-- `_build_concatenated_str`'s comment: "if the current elem and the following are
-constants, fold them and all consequent constants". What comes out has no two neighbouring
-constants, so `f'a' 'b'` is one `Constant`, not two, and each constant is non-empty. -/
-def ConcatNormalForm : Prop :=
-  ∀ (f : Nat) (xs : List Ast), xs.length < f →
-    (foldLoop f xs).all (fun e => !isEmptyStrConst e) = true
 
 theorem foldConsts_len (xs : List Ast) (acc : List Nat) (last : Ast) :
     (foldConsts xs acc last).2.2.length ≤ xs.length := by
@@ -109,11 +94,17 @@ theorem foldConsts_len (xs : List Ast) (acc : List Nat) (last : Ast) :
       omega
     · simp
 
-theorem isEmptyStrConst_mkAt (s : List Nat) (k : Ast) (l : Loc) (h : s ≠ []) :
+/-- `_build_concatenated_str`: "Drop all empty contanst strings". What the folding loop
+returns holds no constant empty string, for any input list. -/
+def ConcatNormalForm : Prop :=
+  ∀ (f : Nat) (xs : List Ast), xs.length < f →
+    (foldLoop f xs).all (fun e => !isEmptyStrConst e) = true
+
+theorem isEmptyStrConst_mkAt (s : List Nat) (k : Ast) (l : Loc) (h : s.isEmpty = false) :
     isEmptyStrConst (mkAt .Constant [.const (.str s), k] l) = false := by
   cases s with
-  | nil => exact absurd rfl h
-  | cons x xs => simp [mkAt, mkAst, Ctor.fields, normFields, locArgs, isEmptyStrConst]
+  | nil => simp at h
+  | cons x xs => rfl
 
 theorem concatNormalForm_proven : ConcatNormalForm := by
   intro f
@@ -125,36 +116,22 @@ theorem concatNormalForm_proven : ConcatNormalForm := by
     | nil => simp [foldLoop]
     | cons e rest =>
       simp only [List.length_cons] at h
-      unfold foldLoop
+      have hlen := foldConsts_len rest (constStr e) e
+      rw [foldLoop]
       split
+      · dsimp only
+        split
+        · exact ih _ (by omega)
+        · rename_i hs
+          simp only [List.all_cons, Bool.and_eq_true]
+          refine ⟨?_, ih _ (by omega)⟩
+          have hs' : (foldConsts rest (constStr e) e).1.isEmpty = false := by simpa using hs
+          simp [isEmptyStrConst_mkAt _ _ _ hs']
       · split
-        · dsimp only
-          generalize hf : foldConsts rest (constStr e) e = r
-          obtain ⟨s, last, tail⟩ := r
-          have hl : tail.length ≤ rest.length := by
-            have := foldConsts_len rest (constStr e) e
-            rw [hf] at this
-            simpa using this
-          simp only
-          split
-          · exact ih _ (by omega)
-          · rename_i hs
-            have hne : s ≠ [] := by simpa using hs
-            simp only [List.all_cons, Bool.and_eq_true]
-            refine ⟨?_, ih _ (by omega)⟩
-            simp [isEmptyStrConst_mkAt _ _ _ hne]
-        · split
-          · exact ih _ (by omega)
-          · rename_i hemp
-            simp only [List.all_cons, Bool.and_eq_true]
-            exact ⟨by simpa using hemp, ih _ (by omega)⟩
-      · rename_i hc
-        simp only [List.all_cons, Bool.and_eq_true]
-        refine ⟨?_, ih _ (by omega)⟩
-        have : isEmptyStrConst e = false := by
-          cases e <;> simp_all [isEmptyStrConst, isConstant]
-          split <;> simp_all
-        simp [this]
+        · exact ih _ (by omega)
+        · rename_i hemp
+          simp only [List.all_cons, Bool.and_eq_true]
+          exact ⟨by simpa using hemp, ih _ (by omega)⟩
 
 /-! ### Identifiers -/
 
