@@ -1,3 +1,3 @@
 file	line	endline	name	signature	status	entry	note
-Python/pymath.c	10	14	_Py_get_387controlword	unsigned short _Py_get_387controlword(void) {	todo		
-Python/pymath.c	16	18	_Py_set_387controlword	void _Py_set_387controlword(unsigned short cw) {	todo		
+Python/pymath.c	10	14	_Py_get_387controlword	unsigned short _Py_get_387controlword(void) {	excluded		platform: reads the x87 control word; only built for x87 math, not on x86-64 or AArch64
+Python/pymath.c	16	18	_Py_set_387controlword	void _Py_set_387controlword(unsigned short cw) {	excluded		platform: sets the x87 control word; only built for x87 math

@@ -1,6 +1,6 @@
 file	line	endline	name	signature	status	entry	note
 Lib/unittest/runner.py	18	19	_WritelnDecorator.__init__	__init__(self, stream)	todo		
-Lib/unittest/runner.py	21	24	_WritelnDecorator.__getattr__	__getattr__(self, attr)	todo		
+Lib/unittest/runner.py	21	24	_WritelnDecorator.__getattr__	__getattr__(self, attr)	todo		candidates:calstat-calendar-module-getattr
 Lib/unittest/runner.py	26	29	_WritelnDecorator.writeln	writeln(self, arg=None)	todo		
 Lib/unittest/runner.py	40	50	TextTestResult.__init__	__init__(self, stream, descriptions, verbosity, *, durations=None)	todo		
 Lib/unittest/runner.py	52	57	TextTestResult.getDescription	getDescription(self, test)	todo		

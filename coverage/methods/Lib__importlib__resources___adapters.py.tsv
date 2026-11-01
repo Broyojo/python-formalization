@@ -1,6 +1,6 @@
 file	line	endline	name	signature	status	entry	note
 Lib/importlib/resources/_adapters.py	12	14	SpecLoaderAdapter.__init__	__init__(self, spec, adapter=lambda spec: spec.loader)	todo		
-Lib/importlib/resources/_adapters.py	16	17	SpecLoaderAdapter.__getattr__	__getattr__(self, name)	todo		
+Lib/importlib/resources/_adapters.py	16	17	SpecLoaderAdapter.__getattr__	__getattr__(self, name)	todo		candidates:calstat-calendar-module-getattr
 Lib/importlib/resources/_adapters.py	25	26	TraversableResourcesLoader.__init__	__init__(self, spec)	todo		
 Lib/importlib/resources/_adapters.py	28	29	TraversableResourcesLoader.get_resource_reader	get_resource_reader(self, name)	todo		
 Lib/importlib/resources/_adapters.py	32	37	_io_wrapper	_io_wrapper(file, mode='r', *args, **kwargs)	todo		
@@ -26,6 +26,6 @@ Lib/importlib/resources/_adapters.py	138	139	CompatibilityFiles.OrphanPath.open	
 Lib/importlib/resources/_adapters.py	141	142	CompatibilityFiles.__init__	__init__(self, spec)	todo		
 Lib/importlib/resources/_adapters.py	145	147	CompatibilityFiles._reader	_reader(self)	todo		
 Lib/importlib/resources/_adapters.py	149	154	CompatibilityFiles._native	_native(self)	todo		
-Lib/importlib/resources/_adapters.py	156	157	CompatibilityFiles.__getattr__	__getattr__(self, attr)	todo		
+Lib/importlib/resources/_adapters.py	156	157	CompatibilityFiles.__getattr__	__getattr__(self, attr)	todo		candidates:calstat-calendar-module-getattr
 Lib/importlib/resources/_adapters.py	159	160	CompatibilityFiles.files	files(self)	todo		
 Lib/importlib/resources/_adapters.py	163	168	wrap_spec	wrap_spec(package)	todo		

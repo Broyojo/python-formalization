@@ -1,0 +1,55 @@
+id: bytesobj-bytearray-extend-buffer-shrink
+title: "bytearray.extend(x) keeps a stale size when x.__buffer__ shrinks the bytearray, exposing uninitialized memory"
+priority: P3
+kind: duplicate-already-fixed
+module: bytesobj
+files: [Objects/bytearrayobject.c]
+functions: ["bytearray_extend_impl", "bytearray_setslice", "bytearray_setslice_linear"]
+summary: |
+  bytearray.extend computes `Py_SIZE(self)` for both ends of the slice and calls
+  bytearray_setslice(self, size, size, x). That function calls PyObject_GetBuffer(x), which since
+  PEP 688 can run Python (__buffer__). If that code shrinks self, `lo` is now past the end; the clamps
+  after the call cover `lo < 0`, `hi < lo` and `hi > size` but not `lo > size`, so
+  bytearray_setslice_linear runs with hi < lo and grows the object to lo + len(x), leaving the bytes
+  between the new end and lo as the allocator left them. Its `assert(avail >= 0)` shows this was never
+  expected. By my reading of 3.14.7 the writes stay inside the new allocation, so the effect is a read of
+  stale heap bytes; gh-153578 describes it as an out-of-bounds write and a debug-build abort.
+  Lean: ExtendInitialised is refuted; SetsliceSpec (the splice is data[:lo] + bytes + data[hi:] for every
+  valid range) is proven, so a range with lo > size is the only way in.
+likelihood: |
+  Low: it needs a __buffer__ with a side effect on the object being extended. Reads of stale heap
+  bytes follow if it happens.
+maybe_intended: |
+  No. main and the 3.14 branch clamp `lo` (`else if (lo > Py_SIZE(self)) lo = Py_SIZE(self);`,
+  Objects/bytearrayobject.c:724 on main).
+reproducer: |
+  class Evil:
+      def __buffer__(self, flags):
+          b.clear()
+          return memoryview(b'xyz')
+  b = bytearray(b'a' * 64)
+  b.extend(Evil())
+  print(len(b), bytes(b)[-3:])
+  if len(b) == 67:
+      print('REPRODUCED bytesobj-bytearray-extend-buffer-shrink')
+expected: |
+  bytearray(b'xyz'): the object was empty when the buffer was read. main gives that.
+observed: |
+  python3 3.14.7: length 67, 64 stale bytes followed by b'xyz'. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): length 3. NOT REPRODUCED: fixed on main.
+promised_by: |
+  Invariant: Python code must not be able to read uninitialized memory; Doc/library/stdtypes.rst,
+  s.extend(t) appends the contents of t.
+cause: |
+  Objects/bytearrayobject.c:2149 (3.14.7) reads the size before :661 PyObject_GetBuffer; the clamps at
+  :671-676 do not bound lo by the new size; :554 `avail = hi - lo` then goes negative.
+possible_fix: |
+  Already done upstream: clamp `lo` after PyObject_GetBuffer. Nothing to file.
+duplicates:
+  issues:
+    - {number: 153578, state: closed, relation: "same bug; fixed by gh-153579, backported to 3.14 by gh-156008 on 2026-08-18, after 3.14.7"}
+  queries: ["bytearray extend __buffer__", "bytearray setslice __buffer__", "bytearray extend",
+            "bugforge README: two bytearray entries, neither about extend"]
+lean:
+  property: PyLean.BytesObj.Bytes.ExtendInitialised
+  theorem: PyLean.BytesObj.Bytes.extendInitialised_refuted

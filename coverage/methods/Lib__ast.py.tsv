@@ -21,4 +21,4 @@ Lib/ast.py	587	588	ExtSlice.__new__	__new__(cls, dims=(), **kwargs)	todo
 Lib/ast.py	595	597	_dims_getter	_dims_getter(self)	todo		
 Lib/ast.py	599	600	_dims_setter	_dims_setter(self, value)	todo		
 Lib/ast.py	617	624	unparse	unparse(ast_obj)	modelled	pygrammar-unparse-roundtrip	
-Lib/ast.py	627	677	main	main(args=None)	todo		
+Lib/ast.py	627	677	main	main(args=None)	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

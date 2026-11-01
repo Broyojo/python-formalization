@@ -29,7 +29,7 @@ Lib/tarfile.py	625	635	_StreamProxy.getcomptype	getcomptype(self)	todo
 Lib/tarfile.py	637	638	_StreamProxy.close	close(self)	todo		
 Lib/tarfile.py	650	673	_FileInFile.__init__	__init__(self, fileobj, offset, size, name, blockinfo=None)	todo		
 Lib/tarfile.py	675	676	_FileInFile.flush	flush(self)	todo		
-Lib/tarfile.py	679	680	_FileInFile.mode	mode(self)	todo		
+Lib/tarfile.py	679	680	_FileInFile.mode	mode(self)	todo		candidates:calstat-statistics-mode-spec
 Lib/tarfile.py	682	683	_FileInFile.readable	readable(self)	todo		
 Lib/tarfile.py	685	686	_FileInFile.writable	writable(self)	todo		
 Lib/tarfile.py	688	689	_FileInFile.seekable	seekable(self)	todo		
@@ -139,4 +139,4 @@ Lib/tarfile.py	3058	3062	TarFile._dbg	_dbg(self, level, msg)	todo
 Lib/tarfile.py	3064	3066	TarFile.__enter__	__enter__(self)	todo		
 Lib/tarfile.py	3068	3076	TarFile.__exit__	__exit__(self, type, value, traceback)	todo		
 Lib/tarfile.py	3082	3098	is_tarfile	is_tarfile(name)	todo		
-Lib/tarfile.py	3103	3199	main	main()	todo		
+Lib/tarfile.py	3103	3199	main	main()	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

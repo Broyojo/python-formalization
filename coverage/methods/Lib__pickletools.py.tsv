@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Lib/pickletools.py	193	208	ArgumentDescriptor.__init__	__init__(self, name, n, reader, doc)	todo		
+Lib/pickletools.py	193	208	ArgumentDescriptor.__init__	__init__(self, name, n, reader, doc)	excluded		no-behaviour: asserts and field stores on a static table built at import
 Lib/pickletools.py	212	222	read_uint1	read_uint1(f)	todo		
 Lib/pickletools.py	231	243	read_uint2	read_uint2(f)	todo		
 Lib/pickletools.py	252	264	read_int4	read_int4(f)	todo		
@@ -24,12 +24,12 @@ Lib/pickletools.py	813	820	read_floatnl	read_floatnl(f)	todo
 Lib/pickletools.py	835	848	read_float8	read_float8(f)	todo		
 Lib/pickletools.py	873	892	read_long1	read_long1(f)	todo		
 Lib/pickletools.py	905	926	read_long4	read_long4(f)	todo		
-Lib/pickletools.py	961	972	StackObject.__init__	__init__(self, name, obtype, doc)	todo		
+Lib/pickletools.py	961	972	StackObject.__init__	__init__(self, name, obtype, doc)	excluded		no-behaviour: asserts and field stores on a static table built at import
 Lib/pickletools.py	974	975	StackObject.__repr__	__repr__(self)	todo		
-Lib/pickletools.py	1124	1150	OpcodeInfo.__init__	__init__(self, name, code, arg, stack_before, stack_after, proto, doc)	todo		
-Lib/pickletools.py	2224	2260	assure_pickle_consistency	assure_pickle_consistency(verbose=False)	todo		
+Lib/pickletools.py	1124	1150	OpcodeInfo.__init__	__init__(self, name, code, arg, stack_before, stack_after, proto, doc)	excluded		no-behaviour: asserts and field stores on a static table built at import
+Lib/pickletools.py	2224	2260	assure_pickle_consistency	assure_pickle_consistency(verbose=False)	excluded		test-support: consistency check called by no code; deleted at import, :2263
 Lib/pickletools.py	2268	2298	_genops	_genops(data, yield_end_pos=False)	todo		
 Lib/pickletools.py	2300	2323	genops	genops(pickle)	todo		
 Lib/pickletools.py	2328	2390	optimize	optimize(p)	todo		
 Lib/pickletools.py	2395	2546	dis	dis(pickle, out=None, memo=None, indentlevel=4, annotate=0)	todo		
-Lib/pickletools.py	2550	2551	_Example.__init__	__init__(self, value)	todo		
+Lib/pickletools.py	2550	2551	_Example.__init__	__init__(self, value)	excluded		test-support: helper of the module doctests

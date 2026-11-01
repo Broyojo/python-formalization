@@ -1,0 +1,50 @@
+id: datetime-strftime-bare-colon
+title: "strftime: a %: not followed by z differs between the C and Python implementations"
+priority: P4
+kind: twin-mismatch
+module: datetime
+files: [Lib/_pydatetime.py, Modules/_datetimemodule.c]
+functions: ["_wrap_strftime", "C wrap_strftime"]
+summary: |
+  `%:z` is the only directive with a colon, and the two format scanners treat a `%:` that
+  does not start it differently. At the end of the format Python drops it and C copies it:
+  date(2020, 1, 1).strftime('abc%:') is 'abc' in _pydatetime and 'abc%:' in C. Before another
+  directive Python consumes the next character as part of the unknown directive and C rescans
+  it, so '%:%Z' keeps the %Z in C and loses it in Python.
+likelihood: |
+  Needs a malformed format string. Nothing documents `%:` alone, so the behaviour only
+  matters to someone running both implementations on a mistyped format.
+maybe_intended: |
+  The behaviour of an unknown directive is platform-defined, so a maintainer may well call
+  neither output wrong. It is still the Python and C twins disagreeing on the same input,
+  on the same platform. A one-line note in a wider strftime issue is the most this deserves.
+reproducer: |
+  import datetime, _pydatetime
+  c = datetime.date(2020, 1, 1).strftime('abc%:')
+  p = _pydatetime.date(2020, 1, 1).strftime('abc%:')
+  c2 = datetime.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc).strftime('%:%Z')
+  p2 = _pydatetime.datetime(2020, 1, 1, tzinfo=_pydatetime.timezone.utc).strftime('%:%Z')
+  print(repr(c), repr(p), repr(c2), repr(p2))
+  if c != p and c2 != p2:
+      print('REPRODUCED datetime-strftime-bare-colon')
+expected: |
+  The same result from both implementations.
+promised_by: |
+  Nothing explicit; _pydatetime is meant to be equivalent to _datetime (PEP 399).
+cause: |
+  Lib/_pydatetime.py:248-263: `elif ch == ':'` takes the next character unconditionally and has
+  no else branch for `if i < n`. Modules/_datetimemodule.c:1930: the branch is
+  `ch == ':' && i < flen && format[i] == 'z'`, anything else falls through and is copied with
+  only the `%:` consumed.
+possible_fix: |
+  In _wrap_strftime test `i < n and format[i] == 'z'` as C does, and otherwise push '%' and ':'.
+reproduces:
+  python3 (3.14.7): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["strftime %:z", "strftime trailing colon", "PR: strftime %:z", "PR: strftime trailing colon",
+            "bugforge-results/README.md: strftime entries (none related)"]
+lean:
+  property: PyLean.Datetime.StrftimeTwins
+  theorem: PyLean.Datetime.strftimeTwins_refuted
