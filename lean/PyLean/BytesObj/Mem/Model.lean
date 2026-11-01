@@ -323,16 +323,19 @@ def memoryViewFromBuffer (info : Buf) (isNull : Bool) : M Nat := do
   M.modify fun st => st.setMb k { st.mb k with master := { info with obj := none } }
   mbufAddView k none
 
-/-- `memory_from_contiguous_copy`, :888-946. The new bytes object goes to the end of the
-store; `mbuf_copy_format` (:860-874) makes its format that of `src`. -/
-def memoryFromContiguousCopy (src : Buf) (order : Char) : M Nat := do
-  let st ← M.get
-  let base : Int := st.mem.length
+/-- The first part of `memory_from_contiguous_copy`, :900-912: a new bytes object at the
+end of the store, its managed buffer, and `mbuf_copy_format` (:860-874). -/
+def contigBytes (src : Buf) : M Nat := do
   let e ← bytesBuf (List.replicate src.len.toNat 0)
   let k ← managedBufferFromObject e bufFullRO
   M.modify fun st =>
     let b := st.mb k
     st.setMb k { b with master := { b.master with format := src.format } }
+  return k
+
+/-- The second part of `memory_from_contiguous_copy`, :914-945: the view, its strides in
+the requested order, and the copy. -/
+def contigFill (k : Nat) (src : Buf) (order : Char) : M Nat := do
   let i ← mbufAddIncompleteView k none src.ndim
   let shape := src.shape.getD []
   let strides :=
@@ -346,8 +349,12 @@ def memoryFromContiguousCopy (src : Buf) (order : Char) : M Nat := do
   let st ← M.get
   let dm ← M.lift (copyBuffer st.mem st.mem dest src)
   M.modify fun st => { st with mem := dm }
-  let _ := base
   return i
+
+/-- `memory_from_contiguous_copy`, :888-946. -/
+def memoryFromContiguousCopy (src : Buf) (order : Char) : M Nat := do
+  let k ← contigBytes src
+  contigFill k src order
 
 /-- `PyMemoryView_GetContiguous`, :965-1001. `writable` is `buffertype == PyBUF_WRITE`. -/
 def memoryViewGetContiguous (obj : Obj) (writable : Bool) (order : Char) : M Nat := do
@@ -676,16 +683,19 @@ def memoryviewTolist (self : Nat) : M Tree := do
   else
     M.lift (tolistRec st.mem f (view.shape.getD []) (view.strides.getD []) view.suboffsets view.buf)
 
+/-- The `order` argument of `memoryview_tobytes_impl`, :2288-2300. -/
+def parseOrder : Option (List Char) → Py Char
+  | Option.none => .ok 'C'
+  | some ['F'] => .ok 'F'
+  | some ['A'] => .ok 'A'
+  | some ['C'] => .ok 'C'
+  | some _ => .error (.valueError "order must be 'C', 'F' or 'A'")
+
 /-- `memoryview_tobytes_impl`, :2278-2312. `order`: `none` is `order=None`, or the
 argument's text. -/
 def memoryviewTobytes (self : Nat) (order : Option (List Char)) : M (List Nat) := do
   checkReleased self
-  let ord ← match order with
-    | Option.none => pure 'C'
-    | some ['F'] => pure 'F'
-    | some ['A'] => pure 'A'
-    | some ['C'] => pure 'C'
-    | some _ => throw (.valueError "order must be 'C', 'F' or 'A'")
+  let ord ← M.lift (parseOrder order)
   let st ← M.get
   let src := (st.mv self).view
   M.lift (pyBufferToContiguous st.mem src src.len ord)

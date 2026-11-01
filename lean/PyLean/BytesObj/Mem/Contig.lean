@@ -207,7 +207,8 @@ strides and no suboffsets, holding the source's items in row-major order. `tolis
 tolist(output)`, as the comment at :950-953 says. `m` is the store including the new bytes.
 Hypotheses: the type invariants of a buffer. -/
 def FromContigCopy : Prop :=
-  ∀ (st : St) (src : Buf) (sh strs : List Int), src.shape = some sh → src.strides = some strs →
+  ∀ (st : St) (src : Buf) (sh strs : List Int) (f : List Char), src.shape = some sh →
+    src.strides = some strs → src.format = some f →
     sh ≠ [] → sh.length = src.ndim → (∀ x ∈ sh, 0 ≤ x) → 0 < src.itemsize →
     src.len = prod sh * src.itemsize →
     let base : Int := st.mem.length
@@ -218,5 +219,238 @@ def FromContigCopy : Prop :=
     r.1 = .ok i ∧ v.buf = base ∧ v.shape = some sh ∧ v.format = src.format ∧
       v.strides = some (cStrides src.itemsize sh) ∧ v.suboffsets = none ∧
       rdBytes r.2.mem base src.len.toNat = flatBytes m src.itemsize sh strs src.suboffsets src.buf
+
+theorem simple_full (e : Buf) (h : e.suboffsets = none) : simpleGetbuffer e bufFullRO = .ok e := by
+  have h1 : req bufFullRO bufWritable = false := by decide
+  have h2 : req bufFullRO bufFormat = true := by decide
+  have h3 : req bufFullRO bufND = true := by decide
+  have h4 : req bufFullRO bufStrides = true := by decide
+  have h5 : req bufFullRO bufIndirect = true := by decide
+  simp only [simpleGetbuffer, h1, h2, h3, h4, h5, Bool.false_and, Bool.false_eq_true, ↓reduceIte]
+
+/-- What `contigBytes` leaves. -/
+structure Bytes (st s : St) (src : Buf) (k : Nat) : Prop where
+  mem : s.mem = st.mem ++ List.replicate src.len.toNat 0
+  mvs : s.mvs = st.mvs
+  valid : k < s.mbufs.length
+  buf : (s.mb k).master.buf = st.mem.length
+  len : (s.mb k).master.len = src.len.toNat
+  format : (s.mb k).master.format = src.format
+  obj : (s.mb k).master.obj = some (.exp 1000000)
+
+/-- The buffer of the new bytes object. -/
+def zeroBuf (st : St) (src : Buf) : Buf :=
+  { obj := some (.exp 1000000), buf := st.mem.length,
+    len := (List.replicate src.len.toNat 0).length, itemsize := 1, readonly := true, ndim := 1,
+    format := some ['B'], shape := some [(List.replicate src.len.toNat 0).length],
+    strides := some [1] }
+
+theorem contigBytes_spec (st : St) (src : Buf) :
+    (contigBytes src st).1 = .ok st.mbufs.length ∧
+    Bytes st (contigBytes src st).2 src st.mbufs.length := by
+  obtain ⟨e, he⟩ : ∃ e : Buf, e = zeroBuf st src := ⟨_, rfl⟩
+  obtain ⟨s0, hs0⟩ : ∃ s : St, s = { st with mem := st.mem ++ List.replicate src.len.toNat 0 } := ⟨_, rfl⟩
+  have hse : e.suboffsets = none := by rw [he]; rfl
+  have hk : s0.mbufs.length = st.mbufs.length := by rw [hs0]
+  have hb : bytesBuf (List.replicate src.len.toNat 0) st = (.ok e, s0) := by rw [he, hs0]; rfl
+  obtain ⟨s2, hs2⟩ : ∃ s2, s2 = let s1 : St := { s0 with mbufs := s0.mbufs ++ [{}] }
+      s1.setMb s0.mbufs.length { s1.mb s0.mbufs.length with master := e } := ⟨_, rfl⟩
+  have hmb2 : s2.mb s0.mbufs.length = { master := e } := by rw [hs2]; exact fresh_mb s0 e
+  have hm : managedBufferFromObject e bufFullRO s0 = (.ok s0.mbufs.length, s2) := by
+    simp only [managedBufferFromObject, M.bind_app, mbufAlloc, M.lift, simple_full e hse, M.modify,
+      M.pure_app]
+    rw [hs2]
+  have hlen2 : s0.mbufs.length < s2.mbufs.length := by rw [hs2]; simp [St.setMb]
+  have hc : contigBytes src st = (.ok s0.mbufs.length, s2.setMb s0.mbufs.length
+      { s2.mb s0.mbufs.length with
+        master := { (s2.mb s0.mbufs.length).master with format := src.format } }) := by
+    simp only [contigBytes, M.bind_app, hb, hm, M.modify, M.pure_app]
+  have hm3 := St.mb_setMb s2 s0.mbufs.length { s2.mb s0.mbufs.length with
+    master := { (s2.mb s0.mbufs.length).master with format := src.format } } hlen2
+  rw [hmb2] at hm3
+  rw [hc, hk] at *
+  have hmem : s2.mem = st.mem ++ List.replicate src.len.toNat 0 := by rw [hs2, hs0]; rfl
+  have hmvs : s2.mvs = st.mvs := by rw [hs2, hs0]; rfl
+  refine ⟨rfl, hmem, hmvs, by simpa [St.setMb] using hlen2, ?_, ?_, ?_, ?_⟩
+  all_goals simp only [hmb2]
+  all_goals rw [hm3]
+  all_goals rw [he]
+  all_goals try rfl
+  all_goals simp [zeroBuf]
+
+theorem fromContigCopy_proven : FromContigCopy := by
+  intro st src sh strs f hsh hst hf hne hn hnn hit hlen
+  dsimp only
+  have ⟨h1, hB⟩ := contigBytes_spec st src
+  simp only [memoryFromContiguousCopy, M.bind_app]
+  rcases hrr : contigBytes src st with ⟨r, s⟩
+  rw [hrr] at h1 hB
+  simp only at h1 hB
+  subst h1
+  simp only
+  have ⟨ha, hA⟩ := mbufAddIncompleteView_added st.mbufs.length (s.mb st.mbufs.length).master src.ndim s
+  have e0 : mbufAddIncompleteView st.mbufs.length none src.ndim s =
+      mbufAddIncompleteView st.mbufs.length (some (s.mb st.mbufs.length).master) src.ndim s := rfl
+  unfold contigFill
+  simp only [M.bind_app, e0]
+  rcases hr2 : mbufAddIncompleteView st.mbufs.length (some (s.mb st.mbufs.length).master) src.ndim s with
+    ⟨r2, s3⟩
+  rw [hr2] at ha hA
+  simp only at ha hA
+  subst ha
+  have hmvs : s.mvs.length = st.mvs.length := by rw [hB.mvs]
+  have hx : (s3.mv st.mvs.length).view =
+      initSharedValues { ndim := src.ndim } (s.mb st.mbufs.length).master := by
+    have := hA.new
+    rw [hmvs] at this
+    rw [this]
+  have hmem3 : s3.mem = st.mem ++ List.replicate src.len.toNat 0 := by rw [hA.mem, hB.mem]
+  have hlenN : (0 : Int) ≤ src.len := by
+    rw [hlen]
+    exact Int.mul_nonneg (prod_nonneg _ hnn) (by omega)
+  obtain ⟨dest, hdest⟩ : ∃ d : Buf, d =
+      { (s3.mv st.mvs.length).view with
+        itemsize := src.itemsize, shape := some sh, strides := some (cStrides src.itemsize sh),
+        suboffsets := none } := ⟨_, rfl⟩
+  have hd : dest =
+      { obj := some (.exp 1000000), buf := st.mem.length, len := src.len,
+        itemsize := src.itemsize, readonly := (s.mb st.mbufs.length).master.readonly, ndim := src.ndim,
+        format := some f, shape := some sh, strides := some (cStrides src.itemsize sh),
+        suboffsets := none } := by
+    rw [hdest, hx]
+    simp [initSharedValues, hB.buf, hB.len, hB.format, hB.obj, hf, Int.toNat_of_nonneg hlenN]
+  have hequiv := equiv_self src dest sh hsh hn (by rw [hd, hsh]) (by rw [hd]) (by rw [hd, hf]) (by rw [hd])
+  have hdn : dest.ndim = src.ndim := by rw [hd]
+  have hn3 : st.mvs.length < s3.mvs.length := by rw [hA.len]; omega
+  have hl := flatBytes_length (st.mem ++ List.replicate src.len.toNat 0) src.itemsize (by omega) sh strs
+    src.suboffsets src.buf hne hnn
+  have hc := copyRec_spec src.itemsize (by omega) (!lastDimIsContiguous dest src)
+    (st.mem ++ List.replicate src.len.toNat 0) sh hne hnn st.mem.length src.buf strs src.suboffsets
+    (st.mem ++ List.replicate src.len.toNat 0) (lastOK_of src dest sh strs hst hn)
+  have hcopy : copyBuffer (st.mem ++ List.replicate src.len.toNat 0) (st.mem ++ List.replicate src.len.toNat 0)
+      dest src = .ok (wrBytes (st.mem ++ List.replicate src.len.toNat 0) st.mem.length
+        (flatBytes (st.mem ++ List.replicate src.len.toNat 0) src.itemsize sh strs src.suboffsets src.buf)) := by
+    simp only [copyBuffer, bind, Except.bind, hequiv, pure, Except.pure]
+    rw [show dest.shape.getD [] = sh by rw [hd]; rfl,
+      show dest.strides.getD [] = cStrides src.itemsize sh by rw [hd]; rfl,
+      show dest.suboffsets = none by rw [hd],
+      show dest.buf = st.mem.length by rw [hd],
+      show dest.itemsize = src.itemsize by rw [hd], hst]
+    simp only [Option.getD_some]
+    rw [hc]
+  simp only [hmvs, hsh, Option.getD_some, true_or, ↓reduceIte, M.get, M.modify, M.lift, ← hdest,
+    St.mem_setMv, hmem3, hcopy, M.pure_app]
+  have hbound : ((st.mem.length : Int) + (flatBytes (st.mem ++ List.replicate src.len.toNat 0) src.itemsize sh
+      strs src.suboffsets src.buf).length) ≤ (st.mem ++ List.replicate src.len.toNat 0).length := by
+    simp only [List.length_append, List.length_replicate]
+    omega
+  have hrd := rdBytes_wrBytes (st.mem ++ List.replicate src.len.toNat 0) st.mem.length _ (by omega) hbound
+  have hmv : ({ s3.setMv st.mvs.length { s3.mv st.mvs.length with view := dest, flags := initFlags dest } with
+      mem := wrBytes (st.mem ++ List.replicate src.len.toNat 0) st.mem.length
+        (flatBytes (st.mem ++ List.replicate src.len.toNat 0) src.itemsize sh strs src.suboffsets src.buf) } : St).mv
+        st.mvs.length = { s3.mv st.mvs.length with view := dest, flags := initFlags dest } :=
+    St.mv_setMv s3 _ _ hn3
+  refine ⟨trivial, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [hmv, hd]
+  · rw [hmv, hd]
+  · rw [hmv, hd, hf]
+  · rw [hmv, hd]
+  · rw [hmv, hd]
+  · have e : src.len.toNat = (flatBytes (st.mem ++ List.replicate src.len.toNat 0) src.itemsize sh strs
+        src.suboffsets src.buf).length := by omega
+    exact (congrArg (rdBytes _ _) e).trans hrd
+
+/-- `PyMemoryView_FromBuffer` on a `Py_buffer` that has only `buf`, `len` and `itemsize`, the case
+its comment singles out ("init_shape_strides() must be able to reconstruct missing values",
+:764-768): a 1-D view of `len / itemsize` items with stride `itemsize`, format `B`, and no
+exporter (`mbuf_add_view`, `init_shape_strides`, `init_shared_values`). Hypothesis: `ndim == 1`,
+the only way to pass a NULL shape. -/
+def FromBufferReconstructs : Prop :=
+  ∀ (st : St) (info : Buf), info.ndim = 1 → info.shape = none → info.strides = none →
+    info.format = none → info.suboffsets = none →
+    let r := memoryViewFromBuffer info false st
+    let i := st.mvs.length
+    let v := (r.2.mv i).view
+    r.1 = .ok i ∧ v.obj = none ∧ v.buf = info.buf ∧ v.len = info.len ∧
+      v.shape = some [Int.tdiv info.len info.itemsize] ∧ v.strides = some [info.itemsize] ∧
+      v.format = some ['B']
+
+theorem fromBufferReconstructs_proven : FromBufferReconstructs := by
+  intro st info h1 hsh hst hfm hsb
+  obtain ⟨b, hb⟩ : ∃ b : Buf, b = { info with obj := none } := ⟨_, rfl⟩
+  obtain ⟨st2, hst2⟩ : ∃ s2, s2 = let st1 : St := { st with mbufs := st.mbufs ++ [{}] }
+      st1.setMb st.mbufs.length { st1.mb st.mbufs.length with master := b } := ⟨_, rfl⟩
+  have hmb : st2.mb st.mbufs.length = { master := b } := by
+    rw [hst2]
+    exact fresh_mb st b
+  have e : memoryViewFromBuffer info false st = mbufAddView st.mbufs.length (some b) st2 := by
+    have : memoryViewFromBuffer info false st = mbufAddView st.mbufs.length none st2 := by
+      rw [hst2, hb]
+      rfl
+    rw [this, mbufAddView_none, hmb]
+  have ⟨h2, hA⟩ := mbufAddView_added st.mbufs.length b st2 (by rw [hb]; show info.ndim ≤ 64; omega)
+  have hmv : st2.mvs.length = st.mvs.length := by rw [hst2]; rfl
+  rw [hmv] at h2
+  have hnew : ((mbufAddView st.mbufs.length (some b) st2).2.mv st.mvs.length).view = viewCopy b := by
+    have := hA.new
+    rw [hmv] at this
+    rw [this]
+  dsimp only
+  rw [e, hnew]
+  have hvc : viewCopy b =
+      { obj := none, buf := info.buf, len := info.len, itemsize := info.itemsize,
+        readonly := info.readonly, ndim := 1, format := some ['B'],
+        shape := some [Int.tdiv info.len info.itemsize], strides := some [info.itemsize],
+        suboffsets := none } := by
+    rw [hb]
+    simp [viewCopy, initShapeStrides, initSharedValues, initSuboffsets, h1, hsh, hst, hfm, hsb]
+  rw [hvc]
+  exact ⟨h2, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+/-- The `order` argument of `tobytes` (:2286-2300): `None` and `'C'` are the same, and anything
+but `'C'`, `'F'`, `'A'` raises `ValueError`. Hypothesis: a live view. -/
+def TobytesOrderArg : Prop :=
+  ∀ (st : St) (self : Nat) (o : List Char), baseInaccessible st self = false →
+    memoryviewTobytes self (some ['C']) st = memoryviewTobytes self none st ∧
+    (o ≠ ['C'] → o ≠ ['F'] → o ≠ ['A'] →
+      memoryviewTobytes self (some o) st = (.error (.valueError "order must be 'C', 'F' or 'A'"), st))
+
+theorem tobytesOrderArg_proven : TobytesOrderArg := by
+  intro st self o hl
+  have hc := checkReleased_ok st self hl
+  refine ⟨by simp only [memoryviewTobytes, M.bind_app, hc, M.lift, parseOrder], fun h1 h2 h3 => ?_⟩
+  have hp : parseOrder (some o) = .error (.valueError "order must be 'C', 'F' or 'A'") := by
+    unfold parseOrder
+    split
+    all_goals first
+      | rfl
+      | (simp_all; done)
+  simp only [memoryviewTobytes, M.bind_app, hc, M.lift, hp]
+
+/-! ## Stated, not settled -/
+
+/-- See the registry entry `bytesobj-memoryview-float32-round-trip`. -/
+def Float32RoundTrip : Prop :=
+  ∀ x : Nat, x < 2 ^ 32 → ¬ (x / 2 ^ 23 % 256 = 255 ∧ x % 2 ^ 23 ≠ 0) → narrow32 (widen32 x) = x
+
+/-- See the registry entry `bytesobj-memoryview-float16-round-trip`. -/
+def Float16RoundTrip : Prop :=
+  ∀ x : Nat, x < 2 ^ 16 → ¬ (x / 2 ^ 10 % 32 = 31 ∧ x % 2 ^ 10 ≠ 0) → pack2 (unpack2 x) = .ok x
+
+/-- See the registry entry `bytesobj-memoryview-tobytes-contig-nd`. -/
+def TobytesContigND : Prop :=
+  ∀ (m : Mem) (v : Buf) (sh st : List Int), v.shape = some sh → v.strides = some st → sh ≠ [] →
+    sh.length = v.ndim → (∀ x ∈ sh, 0 ≤ x) → 0 < v.itemsize → v.len = prod sh * v.itemsize →
+    v.suboffsets = none → pyBufferIsContiguous v 'C' = true →
+    rdBytes m v.buf v.len.toNat = flatBytes m v.itemsize sh st none v.buf
+
+/-- See the registry entry `bytesobj-memoryview-tobytes-fortran`. -/
+def TobytesFortran2D : Prop :=
+  ∀ (m : Mem) (v : Buf) (a b : Nat) (s t : Int), v.shape = some [(a : Int), (b : Int)] →
+    v.strides = some [s, t] → v.ndim = 2 → 0 < v.itemsize → v.len = (a : Int) * b * v.itemsize →
+    v.suboffsets = none →
+    bufferToContiguous m v 'F' = .ok ((List.range b).flatMap fun (j : Nat) =>
+      (List.range a).flatMap fun (i : Nat) =>
+        rdBytes m (v.buf + s * (i : Int) + t * (j : Int)) v.itemsize.toNat)
 
 end PyLean.BytesObj.Mem

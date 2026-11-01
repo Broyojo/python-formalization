@@ -1,5 +1,5 @@
 import PyLean.Registry
-import PyLean.BytesObj.Mem.Rest
+import PyLean.BytesObj.Mem.Contig
 
 /-! Registry entries for memoryview (Objects/memoryobject.c). -/
 
@@ -240,7 +240,67 @@ def entries : List Entry := [
     pyFns := ["PyMemoryView_FromMemory", "PyMemoryView_FromBuffer"]
     statement := "PyMemoryView_FromMemory gives a byte view with no exporter, read-only or writable as asked, C-contiguous; PyMemoryView_FromBuffer refuses a NULL buf."
     source := "memoryobject.c:737-794; Doc/c-api/memoryview.rst", status := .proven
-    prop := ``FromMemorySpec, thm := some ``fromMemorySpec_proven }
+    prop := ``FromMemorySpec, thm := some ``fromMemorySpec_proven },
+  { id := "bytesobj-memoryview-cmp-bad-format", pyFile := memFile
+    pyFns := ["fix_struct_error_int", "memory_richcompare", "struct_get_unpacker"]
+    statement := "A format struct rejects compares unequal with no exception, when the shapes are equivalent."
+    source := "memoryobject.c:2925 ('StructError: invalid or unknown format -> not equal')", status := .proven
+    prop := ``CmpBadFormat, thm := some ``cmpBadFormat_proven },
+  { id := "bytesobj-memoryview-tuple-item", pyFile := memFile
+    pyFns := ["ptr_from_tuple", "memory_item_multi", "memory_subscript", "is_multiindex", "lookup_dimension"]
+    statement := "m[i, j, ...] with one in-range index per dimension is m.tolist()[i][j]..., for every view of a native format, any number of dimensions, any strides and suboffsets."
+    source := "memoryobject.c:2573-2578; Doc/library/stdtypes.rst memoryview", status := .proven
+    prop := ``TupleItem, thm := some ``tupleItem_proven },
+  { id := "bytesobj-memoryview-copy-single", pyFile := memFile
+    pyFns := ["copy_single", "copy_base", "equiv_structure", "equiv_format", "equiv_shape", "last_dim_is_contiguous",
+      "memory_ass_sub"]
+    statement := "After copy_single, each item of the destination holds what the corresponding item of the source held before the copy, in either branch of copy_base, also when the views overlap."
+    source := "memoryobject.c:341-370; Doc/library/stdtypes.rst (memoryview slice assignment)", status := .proven
+    prop := ``CopySingleSpec, thm := some ``copySingleSpec_proven },
+  { id := "bytesobj-memoryview-get-contiguous", pyFile := memFile
+    pyFns := ["PyMemoryView_GetContiguous", "PyMemoryView_FromObject"]
+    statement := "PyMemoryView_GetContiguous refuses a write request on a read-only view and on a non-contiguous view with BufferError, and returns a view on the same memory when it is already contiguous in the requested order."
+    source := "memoryobject.c:948-964 (comment)", status := .proven
+    prop := ``GetContiguousRules, thm := some ``getContiguousRules_proven },
+  { id := "bytesobj-memoryview-contig-copy", pyFile := memFile
+    pyFns := ["memory_from_contiguous_copy", "mbuf_copy_format", "mbuf_add_incomplete_view", "copy_buffer", "copy_rec"]
+    statement := "memory_from_contiguous_copy in order C gives a new view over a new bytes object with the source's shape and format, C strides, no suboffsets, holding the source's items in row-major order."
+    source := "memoryobject.c:948-964: 'tolist(input) == tolist(output)'", status := .proven
+    prop := ``FromContigCopy, thm := some ``fromContigCopy_proven },
+  { id := "bytesobj-memoryview-from-buffer", pyFile := memFile
+    pyFns := ["PyMemoryView_FromBuffer", "init_shape_strides", "init_shared_values", "mbuf_add_view"]
+    statement := "PyMemoryView_FromBuffer on a Py_buffer with only buf, len and itemsize reconstructs a 1-D view of len / itemsize items, stride itemsize, format B, no exporter."
+    source := "memoryobject.c:764-768", status := .proven
+    prop := ``FromBufferReconstructs, thm := some ``fromBufferReconstructs_proven },
+  { id := "bytesobj-memoryview-tobytes-order", pyFile := memFile
+    pyFns := ["memoryview_tobytes_impl"]
+    statement := "tobytes(None) is tobytes('C'), and any order but C, F, A raises ValueError('order must be 'C', 'F' or 'A')."
+    source := "memoryview.tobytes docstring, memoryobject.c:2263-2276", status := .proven
+    prop := ``TobytesOrderArg, thm := some ``tobytesOrderArg_proven },
+  { id := "bytesobj-memoryview-float32-round-trip", pyFile := memFile
+    pyFns := ["pack_single", "unpack_single"]
+    statement := "Storing a double read from a float item stores the same float: narrow32 (widen32 x) = x for every non-NaN 32-bit pattern."
+    source := "invariant; IEEE 754", status := .open
+    prop := ``Float32RoundTrip
+    notes := "narrow32 and widen32 agree with hardware on the difftest. A proof needs reasoning about log2 and the rounding of exact values; no Mathlib here." },
+  { id := "bytesobj-memoryview-float16-round-trip", pyFile := memFile
+    pyFns := ["pack_single", "unpack_single"]
+    statement := "pack2 (unpack2 x) = .ok x for every non-NaN 16-bit pattern."
+    source := "invariant; IEEE 754", status := .open
+    prop := ``Float16RoundTrip
+    notes := "Same as the 32-bit case. 65536 patterns, but `decide` cannot run through the log2 and pow here within limits." },
+  { id := "bytesobj-memoryview-tobytes-contig-nd", pyFile := memFile
+    pyFns := ["PyBuffer_ToContiguous"]
+    statement := "For a C-contiguous view with no suboffsets and any number of dimensions, the memcpy branch of PyBuffer_ToContiguous gives the same bytes as the row-major walk."
+    source := "Fast path against general path", status := .open
+    prop := ``TobytesContigND
+    notes := "Proven for ndim == 1 (Tobytes1D). Needs cLoop, which walks from the last dimension, related to the first-dimension recursion of addrs." },
+  { id := "bytesobj-memoryview-tobytes-fortran", pyFile := memFile
+    pyFns := ["buffer_to_contiguous", "init_fortran_strides_from_shape"]
+    statement := "tobytes('F') of a 2-D view lists the items column by column."
+    source := "Doc/library/stdtypes.rst memoryview.tobytes", status := .open
+    prop := ``TobytesFortran2D
+    notes := "copy_rec into Fortran strides interleaves the writes, so the concatenation argument of TobytesC does not apply; agreement with CPython is on the difftest." }
 ]
 
 end PyLean.BytesObj.Mem

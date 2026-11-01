@@ -79,7 +79,8 @@ theorem hashIsTobytes_proven : HashIsTobytes := by
       simp [pyBufferToContiguous, hc]
     have ht2 : memoryviewTobytes self none st =
         (.ok (rdBytes st.mem (st.mv self).view.buf (st.mv self).view.len.toNat), st) := by
-      simp only [memoryviewTobytes, M.bind_app, checkReleased_ok _ _ hL.live, M.pure_app, M.get, M.lift, hp]
+      simp only [memoryviewTobytes, M.bind_app, checkReleased_ok _ _ hL.live, M.pure_app, M.get, M.lift, hp,
+        parseOrder]
     have heq := ht2.symm.trans ht
     simp only [Prod.mk.injEq, Except.ok.injEq, and_true] at heq
     refine ⟨by rw [heq], fun s' hs => ?_⟩

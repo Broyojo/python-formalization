@@ -131,7 +131,8 @@ def HexIsTobytes : Prop :=
 theorem hexIsTobytes_proven : HexIsTobytes := by
   intro st self sep bps b hl hflags h0 ht
   have htb : pyBufferToContiguous st.mem (st.mv self).view (st.mv self).view.len 'C' = .ok b := by
-    simp only [memoryviewTobytes, M.bind_app, checkReleased_ok _ _ hl, M.pure_app, M.get, M.lift] at ht
+    simp only [memoryviewTobytes, M.bind_app, checkReleased_ok _ _ hl, M.pure_app, M.get, M.lift,
+      parseOrder] at ht
     generalize pyBufferToContiguous st.mem (st.mv self).view (st.mv self).view.len 'C' = r at ht
     cases r <;> simp_all
   by_cases hC : (st.mv self).flags.isC = true

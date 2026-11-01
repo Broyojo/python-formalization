@@ -169,7 +169,7 @@ theorem tobytes1D_proven : Tobytes1D := by
       rw [← ht]
       congr 1
   have hc := checkReleased_ok st self hL.live
-  simp only [memoryviewTobytes, M.bind_app, hc, M.pure_app, M.get, M.lift, hmain]
+  simp only [memoryviewTobytes, M.bind_app, hc, M.pure_app, M.get, M.lift, hmain, parseOrder]
 
 /-- `m.toreadonly()` is a new read-only view of the same buffer and shape; `m` is unchanged
 and the new view counts on the managed buffer. Hypotheses: a live, unrestricted 1-D view. -/

@@ -345,7 +345,7 @@ def _gen_op(rng, specs):
                    + ["del", "len", "toreadonly", "release", "enter", "exit", "repr", "drop"]
                    + ["cmp"] * 4 + ["hash"] * 3 + ["count"] * 2 + ["index"] * 3 + ["iter"] * 2 + ["next"] * 4
                    + ["attr"] * 5 + ["view"] * 2 + ["fromflags", "buffer", "buffer", "toc", "iscontig", "contig",
-                                                     "resize", "frommem", "frombuffer"])
+                                                     "resize", "frommem", "frombuffer", "restricted"])
     if k == "get":
         return [k, h, _gen_key(rng)]
     if k == "set":
@@ -395,6 +395,9 @@ def _gen_op(rng, specs):
     if k == "frommem":
         ids = [i for i, s in enumerate(specs) if s["kind"] == "bytearray" and s["len"] > 0]
         return [k, rng.choice(ids), rng.random() < 0.5] if ids else ["len", h]
+    if k == "restricted":
+        ids = [i for i, s in enumerate(specs) if s["kind"] in ("bytes", "bytearray")]
+        return [k, rng.choice(ids)] if ids else ["len", h]
     if k == "frombuffer":
         e = rng.randrange(n_exp)
         return [k, e, 284 if specs[e]["kind"] == "nd" else rng.choice([b for b in _BUF_FLAGS if not b & 1])]
@@ -658,6 +661,8 @@ class _Script:
             rel.argtypes = [_ct.POINTER(_PyBuffer)]
             rel(_ct.byref(info))
             return res
+        if name == "restricted":
+            return {"ok": _run_restricted(self.exps[op[1]])}
         if name == "next":
             if not self.iters:
                 return skip
@@ -794,6 +799,31 @@ class _Script:
         if name == "iscontig":
             return py(lambda: {"bool": bool(_tb.is_contiguous(m, op[2]))})
         raise KeyError(name)
+
+
+def _run_restricted(ex):
+    """What `__release_buffer__` of a subclass of a C exporter can do with its view, which
+    is restricted when no Python `__buffer__` made it (Objects/typeobject.c:10820-10833)."""
+    out = []
+
+    def probe(f):
+        def run():
+            f()
+            return True
+        out.append(common.py_result(run))
+
+    class R(bytearray):
+        def __release_buffer__(self, view):
+            probe(lambda: view.cast("B"))
+            probe(view.toreadonly)
+            probe(lambda: memoryview(view))
+            probe(lambda: view[:])
+            probe(lambda: view.__buffer__(0))
+            out.append(common.py_result(lambda: len(view)))
+
+    m = memoryview(R(bytes(ex)))
+    m.release()
+    return out
 
 
 def run_mem(case):
