@@ -1,4 +1,4 @@
-import PyLean.UnicodeObj.TextTable
+import PyLean.UnicodeObj.CodecHandlers
 
 /-!
 UTF-8: `STRINGLIB(utf8_decode)` and `STRINGLIB(utf8_encoder)`,
@@ -6,9 +6,8 @@ Objects/stringlib/codecs.h:22-252 and :260-470, driven by `unicode_decode_utf8_i
 Objects/unicodeobject.c:5306-5425.
 
 The four instantiations of `utf8_decode` differ in `STRINGLIB_MAX_CHAR`, and the
-out-of-range return only widens the writer, so one model covers them. The error
-handlers are the seven of Python/codecs.c, selected by name, and `namereplace` and
-`xmlcharrefreplace` raise for decoding as they do in CPython.
+out-of-range return only widens the writer, so one model covers them. Byte fields use
+`/`, `%`, `*` and `+`, where C uses `>>`, `&`, `<<` and `|` on the same disjoint bits.
 -/
 
 namespace PyLean.UnicodeObj
@@ -31,7 +30,7 @@ inductive U8 where
 /-- The two-byte branch, codecs.h:97-125, with a byte available. -/
 def step2 (ch ch2 : Nat) : U8 :=
   if !isCont ch2 then .err 2
-  else .char ((ch <<< 6) + ch2 - ((0xC0 <<< 6) + 0x80)) 2
+  else .char (ch * 64 + ch2 - (0xC0 * 64 + 0x80)) 2
 
 /-- The three-byte branch for a full sequence, codecs.h:142-175. -/
 def step3 (ch ch2 ch3 : Nat) : U8 :=
@@ -39,7 +38,7 @@ def step3 (ch ch2 ch3 : Nat) : U8 :=
   else if ch == 0xE0 && decide (ch2 < 0xA0) then .err 2
   else if ch != 0xE0 && ch == 0xED && decide (ch2 ≥ 0xA0) then .err 2
   else if !isCont ch3 then .err 3
-  else .char ((ch <<< 12) + (ch2 <<< 6) + ch3 - ((0xE0 <<< 12) + (0x80 <<< 6) + 0x80)) 3
+  else .char (ch * 4096 + ch2 * 64 + ch3 - (0xE0 * 4096 + 0x80 * 64 + 0x80)) 3
 
 /-- The four-byte branch for a full sequence, codecs.h:197-232. -/
 def step4 (ch ch2 ch3 ch4 : Nat) : U8 :=
@@ -48,8 +47,8 @@ def step4 (ch ch2 ch3 ch4 : Nat) : U8 :=
   else if ch != 0xF0 && ch == 0xF4 && decide (ch2 ≥ 0x90) then .err 2
   else if !isCont ch3 then .err 3
   else if !isCont ch4 then .err 4
-  else .char ((ch <<< 18) + (ch2 <<< 12) + (ch3 <<< 6) + ch4 -
-    ((0xF0 <<< 18) + (0x80 <<< 12) + (0x80 <<< 6) + 0x80)) 4
+  else .char (ch * 262144 + ch2 * 4096 + ch3 * 64 + ch4 -
+    (0xF0 * 262144 + 0x80 * 4096 + 0x80 * 64 + 0x80)) 4
 
 /-- One round of `utf8_decode` at the head of the input. -/
 def utf8Step : List Nat → U8
@@ -81,24 +80,6 @@ def utf8Step : List Nat → U8
       | ch2 :: ch3 :: ch4 :: _ => step4 ch ch2 ch3 ch4
     else .err 1
 
-/-- An error handler, as `_Py_GetErrorHandler` classifies it. -/
-inductive ErrHandler where
-  | strict | ignore | replace | surrogateescape | backslashreplace | surrogatepass
-  | xmlcharrefreplace | namereplace
-  deriving Repr, DecidableEq
-
-/-- `UnicodeDecodeError.__str__`, Objects/exceptions.c. -/
-def decodeError (encoding : String) (input : Bytes) (start stop : Nat) (reason : String) : PyExc :=
-  if stop = start + 1 then
-    .named "UnicodeDecodeError"
-      s!"'{encoding}' codec can't decode byte 0x{toLeanString (hexDigits 2 (input.getD start 0))} in position {start}: {reason}"
-  else
-    .named "UnicodeDecodeError"
-      s!"'{encoding}' codec can't decode bytes in position {start}-{stop - 1}: {reason}"
-
-/-- `PyCodec_BackslashReplaceErrors` on a decode error: `\xHH` per byte. -/
-def backslashBytes (bytes : List Nat) : Str := bytes.flatMap fun b => [92, 120] ++ hexDigits 2 b
-
 /-- The `switch (ch)` and the error handling of `unicode_decode_utf8_impl`,
 unicodeobject.c:5325-5417. `input` is the whole buffer, `pos` the offset of `rest`,
 `consumed` is true for `final=False`. Returns the text and the bytes consumed. -/
@@ -115,19 +96,11 @@ def utf8DecodeLoop (input : Bytes) (h : ErrHandler) (consumed : Bool) :
       | .ignore => go []
       | .replace => go [0xfffd]
       | .surrogateescape => go (bad.map (· + 0xdc00))
-      | .backslashreplace => go (backslashBytes bad)
-      | .surrogatepass =>
-        -- PyCodec_SurrogatePassErrors: three bytes of a surrogate, Python/codecs.c
-        match rest with
-        | a :: b :: c :: _ =>
-          if a &&& 0xf0 == 0xe0 && b &&& 0xc0 == 0x80 && c &&& 0xc0 == 0x80 then
-            let ch := ((a &&& 0x0f) <<< 12) + ((b &&& 0x3f) <<< 6) + (c &&& 0x3f)
-            if 0xD800 ≤ ch ∧ ch ≤ 0xDFFF then
-              utf8DecodeLoop input h consumed fuel (pos + 3) (rest.drop 3) (out ++ [ch])
-            else .error (decodeError "utf-8" input pos stopAt reason)
-          else .error (decodeError "utf-8" input pos stopAt reason)
-        | _ => .error (decodeError "utf-8" input pos stopAt reason)
-      | _ => .error (decodeError "utf-8" input pos stopAt reason)
+      | _ =>
+        match decodeHandlerCall h "utf-8" .utf8 input pos stopAt reason with
+        | .error e => .error e
+        | .ok (rep, newpos) =>
+          utf8DecodeLoop input h consumed fuel newpos (input.drop newpos) (out ++ rep)
     match utf8Step rest with
     | .char c n =>
       utf8DecodeLoop input h consumed fuel (pos + n) (rest.drop n) (out ++ [c])
@@ -180,14 +153,8 @@ def utf8Wf : Nat → List Nat → Bool
 /-- The encoder's bytes for one character, codecs.h:286-345. -/
 def utf8EncodeChar (ch : Nat) : List Nat :=
   if ch < 0x80 then [ch]
-  else if ch < 0x0800 then [0xc0 ||| (ch >>> 6), 0x80 ||| (ch &&& 0x3f)]
-  else if ch < 0x10000 then
-    [0xe0 ||| (ch >>> 12), 0x80 ||| ((ch >>> 6) &&& 0x3f), 0x80 ||| (ch &&& 0x3f)]
-  else
-    [0xf0 ||| (ch >>> 18), 0x80 ||| ((ch >>> 12) &&& 0x3f), 0x80 ||| ((ch >>> 6) &&& 0x3f),
-     0x80 ||| (ch &&& 0x3f)]
-
-/-- `Py_UNICODE_IS_SURROGATE`. -/
-def isSurrogate (c : Nat) : Bool := decide (0xD800 ≤ c) && decide (c ≤ 0xDFFF)
+  else if ch < 0x0800 then [0xc0 + ch / 64, 0x80 + ch % 64]
+  else if ch < 0x10000 then [0xe0 + ch / 4096, 0x80 + ch / 64 % 64, 0x80 + ch % 64]
+  else [0xf0 + ch / 262144, 0x80 + ch / 4096 % 64, 0x80 + ch / 64 % 64, 0x80 + ch % 64]
 
 end PyLean.UnicodeObj
