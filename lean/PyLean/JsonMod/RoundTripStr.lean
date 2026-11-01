@@ -185,4 +185,164 @@ theorem loopA (s : PStr) (strict : Bool) (b : Int) : ∀ (n : Nat) (t : PStr) (f
           ih t' f (e + 12) _ rest hlen hf' hok' hd, mergeSurr_notHigh c t' hnh]
         exact ok_congr (by simp) (by simp only [List.length_append, uEsc_length]; omega)
 
+/-- The ways one `ensure_ascii=False` escape starts. -/
+inductive EscNForm (c : Nat) : Prop where
+  | plain (h : escN c = [c]) (ht : isTerm c = false)
+  | short (x y : Nat) (h : escN c = [92, x]) (hx : x ≠ 117) (hb : backslash x = some y) (hy : y = c)
+  | u (h : escN c = uEsc c) (hn : c < 32)
+
+theorem escN_form (c : Nat) : EscNForm c := by
+  by_cases h92 : c = 92
+  · subst h92; exact .short 92 92 (by decide) (by decide) (by decide) rfl
+  by_cases h34 : c = 34
+  · subst h34; exact .short 34 34 (by decide) (by decide) (by decide) rfl
+  by_cases h8 : c = 8
+  · subst h8; exact .short 98 8 (by decide) (by decide) (by decide) rfl
+  by_cases h12 : c = 12
+  · subst h12; exact .short 102 12 (by decide) (by decide) (by decide) rfl
+  by_cases h10 : c = 10
+  · subst h10; exact .short 110 10 (by decide) (by decide) (by decide) rfl
+  by_cases h13 : c = 13
+  · subst h13; exact .short 114 13 (by decide) (by decide) (by decide) rfl
+  by_cases h9 : c = 9
+  · subst h9; exact .short 116 9 (by decide) (by decide) (by decide) rfl
+  by_cases h32 : c < 32
+  · exact .u (by simp [escN, escDct, h92, h34, h8, h12, h10, h13, h9, h32]) h32
+  · refine .plain (by simp [escN, h92, h34, h32]) ?_
+    simp [isTerm, h92, h34, h32]
+
+/-- `ensure_ascii=False`: `py_scanstring` reads the escaped text back exactly. -/
+theorem loopN (s : PStr) (strict : Bool) (b : Int) : ∀ (t : PStr) (f e : Nat) (a rest : PStr),
+    t.length + 1 ≤ f → s.drop e = t.flatMap escN ++ 34 :: rest →
+    pyScanLoop s strict b f e a = .ok (a ++ t, ((e + (t.flatMap escN).length + 1 : Nat) : Int)) := by
+  intro t
+  induction t with
+  | nil =>
+    intro f e a rest hf hs
+    obtain ⟨f, rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by simp at hf; omega⟩
+    simp only [List.flatMap_nil, List.nil_append] at hs
+    have h0 : s[e]? = some 34 := by
+      have := congrArg (fun l => l[0]?) hs; simpa [List.getElem?_drop] using this
+    have hft : findTerm (s.drop e) = some 0 := by rw [hs]; simp [findTerm, isTerm]
+    simp [pyScanLoop, hft, List.getD_eq_getElem?_getD, h0]
+  | cons c t' ih =>
+    intro f e a rest hf hs
+    obtain ⟨f, rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by simp at hf; omega⟩
+    have hf' : t'.length + 1 ≤ f := by simpa using hf
+    simp only [List.flatMap_cons, List.append_assoc] at hs ⊢
+    cases escN_form c with
+    | plain h ht =>
+      rw [h] at hs ⊢
+      have h0 : s[e]? = some c := by
+        have := congrArg (fun l => l[0]?) hs; simpa [List.getElem?_drop] using this
+      have hd : s.drop (e + 1) = t'.flatMap escN ++ 34 :: rest := by
+        rw [← List.drop_drop, hs]; simp
+      rw [pyScanLoop_absorb s strict b f e c a h0 ht, ih (f + 1) (e + 1) _ rest (by omega) hd]
+      exact ok_congr (by simp) (by simp only [List.singleton_append, List.length_cons]; omega)
+    | short x y h hx hb hy =>
+      subst hy
+      rw [h] at hs ⊢
+      have hs' : s.drop e = [92, x] ++ (t'.flatMap escN ++ 34 :: rest) := by rw [hs]
+      have hd : s.drop (e + 2) = t'.flatMap escN ++ 34 :: rest := by
+        rw [← List.drop_drop, hs]; simp
+      rw [loop_short s strict b f e x y a _ hs' hx hb, ih f (e + 2) _ rest hf' hd]
+      exact ok_congr (by simp) (by simp only [List.length_append, List.length_cons, List.length_nil]; omega)
+    | u h hn =>
+      rw [h] at hs ⊢
+      have hd := drop_six hs
+      have hnh : isHigh c = false := by simp [isHigh]; omega
+      rw [loop_u s strict b f e c a _ hs (by omega) (Or.inl hnh), ih f (e + 6) _ rest hf' hd]
+      exact ok_congr (by simp) (by simp only [List.length_append, uEsc_length]; omega)
+
+theorem escA_ne (c : Nat) (hc : c ≤ 0x10FFFF) : 1 ≤ (escA c).length := by
+  cases escA_form c hc with
+  | plain h _ _ => simp [h]
+  | short x y h => simp [h]
+  | u h _ => rw [h, uEsc_length]; omega
+  | pair n m h => rw [h]; simp [uEsc_length]
+
+theorem escN_ne (c : Nat) : 1 ≤ (escN c).length := by
+  cases escN_form c with
+  | plain h _ => simp [h]
+  | short x y h => simp [h]
+  | u h _ => rw [h, uEsc_length]; omega
+
+theorem flatMap_ge (esc : Nat → PStr) (t : PStr) (h : ∀ c ∈ t, 1 ≤ (esc c).length) :
+    t.length ≤ (t.flatMap esc).length := by
+  induction t with
+  | nil => simp
+  | cons c t ih =>
+    simp only [List.flatMap_cons, List.length_append, List.length_cons]
+    have h1 := h c (by simp)
+    have h2 := ih (fun d hd => h d (by simp [hd]))
+    omega
+
+/-- What `loads` makes of a string written by `dumps`. -/
+def decS (ascii : Bool) (t : PStr) : PStr := if ascii then mergeSurr t else t
+
+theorem cps_of_strOk {t : PStr} (h : strOk t = true) : ∀ c ∈ t, c ≤ 0x10FFFF := by
+  intro c hc
+  have := List.all_eq_true.mp h c hc
+  simpa [cpOk] using this
+
+theorem pyEncA (t : PStr) : pyEncodeBasestringAscii t = 34 :: t.flatMap escA ++ [34] := rfl
+theorem pyEncN (t : PStr) : pyEncodeBasestring t = 34 :: t.flatMap escN ++ [34] := rfl
+
+/-- `py_scanstring` on a string written by `py_encode_basestring(_ascii)`. -/
+theorem scan_enc_py (cfg : ECfg) (s : PStr) (t rest : PStr) (p : Nat) (strict : Bool)
+    (hok : strOk t = true) (hs : s.drop p = pyStrEnc cfg t ++ rest) :
+    pyScanstring s ((p + 1 : Nat) : Int) strict =
+      .ok (decS cfg.ensureAscii t, ((p + (pyStrEnc cfg t).length : Nat) : Int)) := by
+  have hl : p + (pyStrEnc cfg t).length ≤ s.length := by
+    have h1 := congrArg List.length hs
+    simp only [List.length_drop, List.length_append] at h1
+    have h2 : 1 ≤ (pyStrEnc cfg t).length := by
+      unfold pyStrEnc; split <;> simp [pyEncA, pyEncN]
+    omega
+  unfold pyScanstring
+  have hc1 : clampPos s ((p + 1 : Nat) : Int) = p + 1 := by
+    apply clampPos_nat
+    have h2 : 1 ≤ (pyStrEnc cfg t).length := by
+      unfold pyStrEnc; split <;> simp [pyEncA, pyEncN]
+    omega
+  rw [hc1]
+  by_cases ha : cfg.ensureAscii = true
+  · have he : pyStrEnc cfg t = 34 :: t.flatMap escA ++ [34] := by simp [pyStrEnc, ha, pyEncA]
+    rw [he] at hs hl ⊢
+    have hd : s.drop (p + 1) = t.flatMap escA ++ 34 :: rest := by
+      rw [← List.drop_drop, hs]; simp
+    have hge := flatMap_ge escA t (fun c hc => escA_ne c (cps_of_strOk hok c hc))
+    simp only [List.cons_append, List.length_cons, List.length_append, List.length_nil] at hl ⊢
+    rw [loopA s strict _ t.length t _ (p + 1) [] rest (by omega) (by omega) (cps_of_strOk hok) hd]
+    exact ok_congr (by simp [decS, ha]) (by omega)
+  · have he : pyStrEnc cfg t = 34 :: t.flatMap escN ++ [34] := by simp [pyStrEnc, ha, pyEncN]
+    rw [he] at hs hl ⊢
+    have hd : s.drop (p + 1) = t.flatMap escN ++ 34 :: rest := by
+      rw [← List.drop_drop, hs]; simp
+    have hge := flatMap_ge escN t (fun c _ => escN_ne c)
+    simp only [List.cons_append, List.length_cons, List.length_append, List.length_nil] at hl ⊢
+    rw [loopN s strict _ t _ (p + 1) [] rest (by omega) hd]
+    exact ok_congr (by simp [decS, ha]) (by omega)
+
+/-- `scanstring_unicode` on a string written by `encoder_encode_string`. -/
+theorem scan_enc_c (cfg : ECfg) (s : PStr) (t rest : PStr) (p : Nat) (strict : Bool)
+    (hok : strOk t = true) (hs : s.drop p = cStrEnc cfg t ++ rest) :
+    cScanstring s (p + 1) strict = .ok (decS cfg.ensureAscii t, p + (cStrEnc cfg t).length) := by
+  have heq := strEnc_twins cfg t hok
+  rw [← heq] at hs ⊢
+  have hpy := scan_enc_py cfg s t rest p strict hok hs
+  have h1 : 1 ≤ (pyStrEnc cfg t).length := by
+    unfold pyStrEnc; split <;> simp [pyEncA, pyEncN]
+  have hl : p + 1 ≤ s.length := by
+    have h2 := congrArg List.length hs
+    simp only [List.length_drop, List.length_append] at h2
+    omega
+  rcases scanstring_rel s strict (p + 1) (by omega) hl with ⟨v, k, _, h3, h4⟩ | ⟨pe, ce, h3, _, _⟩
+  · rw [hpy] at h3
+    simp only [Except.ok.injEq, Prod.mk.injEq] at h3
+    obtain ⟨rfl, h5⟩ := h3
+    have : k = p + (pyStrEnc cfg t).length := by omega
+    rw [h4, this]
+  · rw [hpy] at h3; cases h3
+
 end PyLean.JsonMod
