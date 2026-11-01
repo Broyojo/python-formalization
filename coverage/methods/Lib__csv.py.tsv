@@ -12,7 +12,7 @@ Lib/csv.py	216	222	DictWriter._dict_to_list	_dict_to_list(self, rowdict)	modelle
 Lib/csv.py	224	225	DictWriter.writerow	writerow(self, rowdict)	modelled	textlibs-csv-dictwriter-extra,textlibs-csv-dictwriter-row	
 Lib/csv.py	227	228	DictWriter.writerows	writerows(self, rowdicts)	modelled	textlibs-csv-dictwriter-writerows	
 Lib/csv.py	238	240	Sniffer.__init__	__init__(self)	todo		
-Lib/csv.py	243	275	Sniffer.sniff	sniff(self, sample, delimiters=None)	todo		
-Lib/csv.py	278	360	Sniffer._guess_quote_and_delimiter	_guess_quote_and_delimiter(self, data, delimiters)	todo		
-Lib/csv.py	363	463	Sniffer._guess_delimiter	_guess_delimiter(self, data, delimiters)	todo		
+Lib/csv.py	243	275	Sniffer.sniff	sniff(self, sample, delimiters=None)	modelled	textlibs-csv-sniff-usable,textlibs-csv-sniff-respects-delimiters	
+Lib/csv.py	278	360	Sniffer._guess_quote_and_delimiter	_guess_quote_and_delimiter(self, data, delimiters)	modelled	textlibs-csv-sniff-respects-delimiters	
+Lib/csv.py	363	463	Sniffer._guess_delimiter	_guess_delimiter(self, data, delimiters)	modelled	textlibs-csv-sniff-usable,textlibs-csv-sniff-respects-delimiters	
 Lib/csv.py	466	527	Sniffer.has_header	has_header(self, sample)	todo		

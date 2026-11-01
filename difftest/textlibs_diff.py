@@ -1286,8 +1286,25 @@ class CsvArea:
         pool = cls.TEXT if numeric else cls.TEXT + "\xe9€"
         return "".join(r.choice(pool) for _ in range(r.choice([0, 0, 1, 1, 2, 3, 5, 8])))
 
+    SNIFF = ['a', 'b', '1', ',', ';', '\t', ' ', '"', "'", '\n', '\n', '\r\n', '\r', '|', ':', 'x y', '""', '1.5', ',"', '",', ';"',
+             '";', "'\n", "\n'", '\n"', '"\n', ', "', '\xe9', "''", '\\', ', ']
+
+    @classmethod
+    def gen_sniff(cls, r):
+        if r.random() < 0.3:
+            # rows with a common shape, over more than one chunk
+            row = "".join(r.choice(cls.SNIFF) for _ in range(r.randint(1, 8))).replace("\n", "").replace("\r", "")
+            alt = "".join(r.choice(cls.SNIFF) for _ in range(r.randint(1, 8))).replace("\n", "").replace("\r", "")
+            s = "\n".join(r.choice([row, row, row, alt]) for _ in range(r.choice([2, 3, 9, 10, 11, 12, 25])))
+        else:
+            s = "".join(r.choice(cls.SNIFF) for _ in range(r.randint(0, 16)))
+        return {"mod": "textlibs", "fn": "csv.sniff", "s": cps(s),
+                "delims": r.choice([None, None, None, cps(",;"), cps(","), cps("\t"), cps("abc"), cps(":|"), cps('"'), []])}
+
     @classmethod
     def gen(cls, r):
+        if os.environ.get("CSV_SNIFF") == "1" or r.random() < 0.1:
+            return cls.gen_sniff(r)
         fn = r.choice(["dialect", "dialect", "reader", "reader", "reader", "reader", "script", "script", "script", "writer",
                        "writer", "writer", "roundtrip", "roundtrip", "field_size_limit", "registry", "get_dialect", "unpack",
                        "dictreader", "dictwriter", "dictwriterows", "writeheader", "extrasaction", "classvalidate"])
@@ -1483,6 +1500,13 @@ class CsvArea:
         fn = c["fn"].split(".")[1]
         if fn in ("reader", "writer"):
             return in_child(lambda: cls.run_io(c, fn))
+        if fn == "sniff":
+            def sniff_body():
+                ds = c["delims"]
+                d = csv.Sniffer().sniff(txt(c["s"]), None if ds is None else txt(ds))
+                return {"d": cps(d.delimiter), "q": cps(d.quotechar), "dq": bool(d.doublequote),
+                        "skip": bool(d.skipinitialspace)}
+            return common.py_result(sniff_body)
 
         def body():
             ctx = CsvCtx()
@@ -1798,6 +1822,8 @@ class ReArea:
         if not text:
             pat = pat.replace("é", "\xe9")
         c = {"mod": "textlibs", "fn": "re.parse", "pat": [ord(x) for x in pat], "text": text, "flags": flags}
+        if os.environ.get("RE_SEM") == "1" or r.random() < 0.1:
+            return cls.gen_sem(r)
         if os.environ.get("RE_EXEC") == "1" or r.random() < 0.5:
             return cls.gen_exec(r)
         if r.random() < 0.45:
@@ -1815,6 +1841,74 @@ class ReArea:
                  "\\g<1", "\\g<1a>", "\\8", "\\12", "\\n", "\\\\", "\\q", "\\_", "\\.", "\\g<" + "9" * 5000 + ">",
                  "\\g<2147483647>", "\\g<99>"]) for _ in range(r.choice([0, 1, 2, 3])))]
         return c
+
+    SEM_ATOMS = ["a", "b", "c", "a", "b", "A", "s", "k", ".", "[ab]", "[^a]", "[a-c]", "\\w", "\\W", "\\d", "\\s", "\\b",
+                 "\\B", "^", "$", "\\A", "\\Z", ""]
+
+    @classmethod
+    def gen_tree(cls, r, d, st):
+        """A pattern as text. st is [groups opened, groups closed]: a conditional or a backreference
+        names a closed group, since one that tests its own open group is a recorded refutation."""
+        c = r.random()
+        if d <= 0 or c < 0.3:
+            return r.choice(cls.SEM_ATOMS)
+        if c < 0.45:
+            return cls.gen_tree(r, d - 1, st) + cls.gen_tree(r, d - 1, st)
+        if c < 0.58:
+            return "(?:" + cls.gen_tree(r, d - 1, st) + "|" + cls.gen_tree(r, d - 1, st) + ")"
+        if c < 0.73:
+            st[0] += 1
+            g = st[0]
+            inner = cls.gen_tree(r, d - 1, st)
+            st[1].append(g)
+            return "(" + inner + ")"
+        if c < 0.88:
+            q = r.choice(["*", "+", "?", "{2}", "{1,2}", "{0,2}", "{2,3}", "{2,}"]) + r.choice(["", "", "?", "+"])
+            return "(?:" + cls.gen_tree(r, d - 1, st) + ")" + q
+        if c < 0.91:
+            return "(?>" + cls.gen_tree(r, d - 1, st) + ")"
+        if c < 0.94:
+            return r.choice(["(?=", "(?!"]) + cls.gen_tree(r, d - 1, st) + ")"
+        if c < 0.96:
+            st[0] += 2
+            st[1].extend([st[0] - 1])
+            st[1].append(st[0])
+            body = r.choice(["(a)()", "(.)()", "(a)()b", "(a|b)()", "(?:(a)|b)()"])
+            return r.choice(["(?<=", "(?<!"]) + body + ")"
+        if st[1]:
+            g = r.choice(st[1])
+            if r.random() < 0.5:
+                return "\\%d" % g
+            return "(?(%d)%s|%s)" % (g, cls.gen_tree(r, d - 1, st), cls.gen_tree(r, d - 1, st))
+        return "b"
+
+    @classmethod
+    def gen_sem(cls, r):
+        flags = r.choice([0, 0, 0, 2, 2, 8, 16, 256, 2 | 256, 2 | 16])
+        while True:
+            pat = cls.gen_tree(r, r.choice([2, 3, 3, 4]), [0, []])
+            try:
+                re.compile(pat, flags)
+                break
+            except Exception:
+                continue
+        alpha = "aabbcAskK _\n\xe9\xc9\u017f\u212a"
+        subj = "".join(r.choice(alpha) for _ in range(r.randint(0, 6)))
+        return {"mod": "textlibs", "fn": "re.sem", "pat": [ord(x) for x in pat], "flags": flags,
+                "s": [ord(x) for x in subj], "full": r.random() < 0.4}
+
+    @classmethod
+    def run_sem(cls, c):
+        pat = "".join(map(chr, c["pat"]))
+        subj = "".join(map(chr, c["s"]))
+
+        def body():
+            m = (re.fullmatch if c["full"] else re.match)(pat, subj, c["flags"])
+            if m is None:
+                return None
+            gs = [None if m.span(i) == (-1, -1) else list(m.span(i)) for i in range(1, m.re.groups + 1)]
+            return {"stop": m.end(), "groups": gs, "last": m.lastindex}
+        return common.py_result(body)
 
     @classmethod
     def gen_validate(cls, r):
@@ -1926,8 +2020,8 @@ class ReArea:
         chars = [ch for ch in pat if ch not in "()[]{}?*+|^$.\\-:=!<>"] or ["a"]
         alpha = (chars + ["a", "b", "c", "\n", " ", "A", "é"]) if r.random() < 0.8 else ["a", "b"]
         subj = "".join(r.choice(alpha) for _ in range(r.choice([0, 1, 2, 3, 4, 5, 6, 8])))
-        mode = r.choice(["match", "fullmatch", "search", "search", "findall", "finditer", "scanmatch", "split", "sub", "expand",
-                         "groups", "matchop", "matchop", "prepr", "peq"])
+        mode = r.choice(["match", "fullmatch", "search", "search", "findall", "finditer", "scanmatch", "split", "sub", "subcall",
+                         "subcall", "expand", "groups", "matchop", "matchop", "prepr", "peq"])
         n = len(subj)
         text = True
         if r.random() < 0.15 and all(ord(x) < 128 for x in pat) and flags & 32 == 0:
@@ -1954,8 +2048,11 @@ class ReArea:
         if r.random() < 0.25:
             c["pos"] = r.choice([0, 1, 2, n, n + 1, -1, -(2**62)])
             c["endpos"] = r.choice([0, 1, 2, n, n + 1, -1, 2**62, n - 1])
-        if mode in ("split", "sub"):
+        if mode in ("split", "sub", "subcall"):
             c["count"] = r.choice([0, 0, 0, 1, 2, -1])
+        if mode == "subcall":
+            c["script"] = [r.choice([[97], [], [120, 121], None, None, {"other": "int"}, {"other": "float"}, {"raise": "boom"}])
+                           for _ in range(r.randint(0, 6))]
         if mode in ("sub", "expand"):
             c["repl"] = [ord(x) for x in r.choice(["", "x", "\\g<0>", "[\\g<0>]", "\\1", "\\g<1>", "a\\1b", "\\n", "\\\\", "\\2"])]
         return c
@@ -2011,6 +2108,22 @@ class ReArea:
                 repl = bytes(c.get("repl", []))
             if mode == "sub":
                 r, n = p.subn(repl, s, c["count"])
+                return [val(r), n]
+            if mode == "subcall":
+                calls = [0]
+
+                def f(m):
+                    i = calls[0]
+                    calls[0] += 1
+                    x = c["script"][i] if i < len(c["script"]) else []
+                    if isinstance(x, dict) and "raise" in x:
+                        raise ValueError(x["raise"])
+                    if isinstance(x, dict):
+                        return {"int": 5, "float": 1.5}[x["other"]]
+                    if x is None:
+                        return None
+                    return bytes(x) if isinstance(s, (bytes, bytearray)) else "".join(map(chr, x))
+                r, n = p.subn(f, s, c["count"])
                 return [val(r), n]
             m = p.search(s, pos, endpos)
             if m is None:
@@ -2087,6 +2200,8 @@ class ReArea:
 
     @classmethod
     def run(cls, c):
+        if c["fn"] == "re.sem":
+            return cls.run_sem(c)
         if c["fn"] == "re.exec":
             return cls.run_exec(c)
         if c["fn"] == "re.validate":

@@ -1,9 +1,11 @@
 import PyLean.Registry
 import PyLean.TextLibs.Diff
 import PyLean.TextLibs.StructFail
-import PyLean.TextLibs.BinasciiProps5
+import PyLean.TextLibs.BinasciiProps7
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
+import PyLean.TextLibs.ReApiProps
+import PyLean.TextLibs.CsvSniffProps
 
 /-!
 Text and binary formats, CPython 3.14.7. `Modules/_struct.c` is modelled in
@@ -398,6 +400,183 @@ def entries : List Entry := [
     source := "docs: a85encode, a85decode", status := .open
     prop := ``A85WrapRoundTrip
     notes := "Needs a85Loop shown to skip the newlines, and the framing shown to survive chunksOf." },
+  { id := "textlibs-base64-b32-round-trip", pyFile := "Lib/base64.py"
+    pyFns := ["_b32encode", "_b32decode", "b32encode", "b32decode", "b32hexencode", "b32hexdecode"]
+    statement := "b32decode(b32encode(d)) == d and b32hexdecode(b32hexencode(d)) == d, for every length, so through all four padding lengths."
+    source := "docs: b32encode, b32decode", status := .proven
+    prop := ``B32RoundTrip, thm := some ``b32RoundTrip_proven },
+  { id := "textlibs-base64-b32-option-law", pyFile := "Lib/base64.py", pyFns := ["_b32decode", "b32decode"]
+    statement := "casefold and map01 only rewrite the input before decoding, map01 first, whether or not the result then decodes."
+    source := "docs: b32decode", status := .proven
+    prop := ``B32OptionLaw, thm := some ``b32OptionLaw_proven },
+  { id := "textlibs-base64-encodebytes-round-trip", pyFile := "Lib/base64.py", pyFns := ["encodebytes", "decodebytes"]
+    statement := "decodebytes(encodebytes(d)) == d."
+    source := "docs: decodebytes", status := .proven
+    prop := ``DecodebytesRoundTrip, thm := some ``decodebytesRoundTrip_proven },
+  { id := "textlibs-base64-encodebytes-line-length", pyFile := "Lib/base64.py", pyFns := ["encodebytes"]
+    statement := "Past 57 bytes, encodebytes starts with exactly 76 characters and a newline, the encoding of the first 57 bytes."
+    source := "docs: encodebytes (a newline after every 76 bytes of output)", status := .proven
+    prop := ``EncodebytesLineLength, thm := some ``encodebytesLineLength_proven },
+  { id := "textlibs-base64-encode-file-law", pyFile := "Lib/base64.py", pyFns := ["encode"]
+    statement := "encode over a file with short reads and scripted failures writes a prefix of encodebytes(data), all of it unless the failure is one the file raised."
+    source := "docs: encode", status := .proven
+    prop := ``EncodeFileLaw, thm := some ``encodeFileLaw_proven
+    notes := "Hypothesis: read returns nothing only at end of file; textlibs-base64-encode-empty-read has the other case." },
+  { id := "textlibs-base64-encode-file-agrees", pyFile := "Lib/base64.py", pyFns := ["encode"]
+    statement := "With no failing call, encode writes exactly encodebytes(data), however short the reads."
+    source := "twin: encode and encodebytes", status := .proven
+    prop := ``EncodeFileAgrees, thm := some ``encodeFileAgrees_proven },
+  { id := "textlibs-base64-encode-empty-read", pyFile := "Lib/base64.py", pyFns := ["encode"]
+    statement := "A read returning nothing before end of file ends encode with no error and nothing written."
+    source := "Lib/base64.py:541 reads until an empty result", status := .proven
+    prop := ``EncodeEmptyReadStops, thm := some ``encodeEmptyReadStops_proven },
+  { id := "textlibs-base64-decode-file-round-trip", pyFile := "Lib/base64.py", pyFns := ["decode"]
+    statement := "decode over the lines readline finds in encodebytes(d) writes d."
+    source := "docs: decode", status := .proven
+    prop := ``DecodeFileRoundTrip, thm := some ``decodeFileRoundTrip_proven },
+  { id := "textlibs-base64-decode-file-stops", pyFile := "Lib/base64.py", pyFns := ["decode"]
+    statement := "A failing readline or a line that does not decode ends decode at once, with nothing more written."
+    source := "invariant: failures pass through", status := .proven
+    prop := ``DecodeFileStops, thm := some ``decodeFileStops_proven },
+  { id := "textlibs-base64-decode-agrees-decodebytes", pyFile := "Lib/base64.py", pyFns := ["decode"]
+    statement := "decode accepts every input decodebytes accepts."
+    source := "twin: decode and decodebytes", status := .refuted
+    prop := ``DecodeAgreesDecodebytes, thm := some ``decodeAgreesDecodebytes_refuted
+    bug := some "textlibs-base64-decode-per-line"
+    notes := "b'YW\\nJj\\n': a group split across two lines." },
+  { id := "textlibs-re-possessive-is-atomic", pyFile := "Modules/_sre/sre_lib.h", pyFns := []
+    statement := "x{m,n}+ is equivalent to (?>x{m,n})."
+    source := "docs: re, x{m,n}+", status := .refuted
+    prop := ``PossessiveIsAtomic, thm := some ``possessiveIsAtomic_refuted
+    bug := some "textlibs-re-possessive-min-count-not-atomic"
+    notes := "(?:a+){2}+ on 'aa'. No function credited: sre_lib.h is one function row family, and this runs part of it." },
+  { id := "textlibs-re-possessive-star-is-atomic", pyFile := "Modules/_sre/sre_lib.h", pyFns := []
+    statement := "x*+, x++ and x?+ are equivalent to (?>x*), (?>x+) and (?>x?)."
+    source := "docs: re, x*+", status := .open
+    prop := ``PossessiveStarIsAtomic
+    notes := "The two forms run different engine code. Needs textlibs-re-sem-agrees-no-self-test, or a direct simulation of possMore against MAX_UNTIL under an atomic group." },
+  { id := "textlibs-re-sem-agrees-documented", pyFile := "Modules/_sre/sre_lib.h", pyFns := []
+    statement := "re.match and re.fullmatch give what the declarative backtracking semantics gives, with possessive repeats as documented."
+    source := "the module's documented backtracking behaviour", status := .refuted
+    prop := ``SemAgreesDocumented, thm := some ``semAgreesDocumented_refuted
+    bug := some "textlibs-re-possessive-min-count-not-atomic"
+    notes := "Same counterexample as textlibs-re-possessive-is-atomic, through the semantics." },
+  { id := "textlibs-re-sem-agrees-per-iteration", pyFile := "Modules/_sre/sre_lib.h", pyFns := []
+    statement := "The same, with each of the first m iterations of a possessive repeat atomic, as re runs them."
+    source := "the module's documented backtracking behaviour", status := .refuted
+    prop := ``SemAgreesPerIteration, thm := some ``semAgreesPerIteration_refuted
+    bug := some "textlibs-re-conditional-stale-end-mark"
+    notes := "(()(?:(?(1)b))??) on 'b' with fullmatch." },
+  { id := "textlibs-re-sem-agrees-no-self-test", pyFile := "Modules/_sre/sre_lib.h", pyFns := []
+    statement := "With no conditional testing an open group, re gives what the semantics gives: the same end, group spans and lastindex."
+    source := "the module's documented backtracking behaviour", status := .open
+    prop := ``SemAgreesNoSelfTest
+    notes := "Difftest 150000/150000 (re.sem, seeds 71-73). Needs a simulation of the compiled code against semSeq, with an invariant relating SSt to SemSt that survives LASTMARK_RESTORE and MARK_POP." },
+  { id := "textlibs-re-endpos-before-pos", pyFile := "Modules/_sre/sre.c", pyFns := []
+    statement := "Pattern.match finds no match when endpos is less than pos."
+    source := "docs: Pattern.search, endpos", status := .refuted
+    prop := ``EndposBeforePos, thm := some ``endposBeforePos_refuted
+    bug := some "textlibs-re-match-endpos-before-pos"
+    notes := "Duplicate of #160316, fixed upstream on 2026-10-31." },
+  { id := "textlibs-re-endpos-before-pos-search", pyFile := "Modules/_sre/sre_lib.h", pyFns := ["SRE(search)"]
+    statement := "Pattern.search finds no match when endpos is less than pos, for every compiled pattern."
+    source := "docs: Pattern.search, endpos", status := .proven
+    prop := ``EndposBeforePosSearch, thm := some ``endposBeforePosSearch_proven },
+  { id := "textlibs-re-backref-matches-literal", pyFile := "Modules/_sre/sre_lib.h", pyFns := []
+    statement := "Under IGNORECASE, (x)\\1 matches wherever x followed by x as literals matches."
+    source := "twin: backreference and literal", status := .refuted
+    prop := ``BackrefMatchesLiteral, thm := some ``backrefMatchesLiteral_refuted
+    bug := some "textlibs-re-backref-extra-cases"
+    notes := "Duplicate of #156513 (open)." },
+  { id := "textlibs-re-bitmap-law", pyFile := "Lib/re/_compiler.py", pyFns := ["_mk_bitmap"]
+    statement := "Bit i of the words _mk_bitmap makes, read as SRE(charset) reads CHARSET, is bit i of the charmap."
+    source := "the engine reads back what the compiler packs", status := .proven
+    prop := ``BitmapLaw, thm := some ``bitmapLaw_proven },
+  { id := "textlibs-re-bytes-to-codes-law", pyFile := "Lib/re/_compiler.py", pyFns := ["_bytes_to_codes"]
+    statement := "Byte i of the words _bytes_to_codes makes, read as SRE(charset) reads the block map of BIGCHARSET, is byte i."
+    source := "the engine reads back what the compiler packs", status := .proven
+    prop := ``BytesToCodesLaw, thm := some ``bytesToCodesLaw_proven },
+  { id := "textlibs-re-overlap-table-law", pyFile := "Lib/re/_compiler.py", pyFns := ["_generate_overlap_table"]
+    statement := "Entry i of the overlap table is the length of the longest proper border of prefix[:i+1], for every prefix."
+    source := "the KMP failure function the search relies on", status := .proven
+    prop := ``OverlapTableLaw, thm := some ``overlapTableLaw_proven },
+  { id := "textlibs-re-simple-width", pyFile := "Lib/re/_compiler.py", pyFns := ["_simple"]
+    statement := "A pattern _simple accepts has width exactly 1."
+    source := "REPEAT_ONE steps back one character at a time", status := .proven
+    prop := ``SimpleWidth, thm := some ``simpleWidth_proven },
+  { id := "textlibs-re-search-prefix-law", pyFile := "Modules/_sre/sre_lib.h", pyFns := []
+    statement := "The KMP scan of SRE(search) finds what trying each start finds: the same match in the same state, or nothing, for every prefix of two or more characters and every text."
+    source := "an optimization preserves the search it replaces", status := .proven
+    prop := ``SearchPrefixLaw, thm := some ``searchPrefixLaw_proven
+    notes := "Assumes the INFO block's shape (textlibs-re-compiled-prefix-block shows _compile_info writes it) and that SRE(match) never sets must_advance, which it only reads." },
+  { id := "textlibs-re-compiled-prefix-block", pyFile := "Lib/re/_compiler.py", pyFns := ["_compile_info"]
+    statement := "With a literal prefix of two or more characters, _compile_info writes the prefix and then its overlap table where SRE(search) reads them."
+    source := "the engine reads back what the compiler writes", status := .proven
+    prop := ``CompiledPrefixBlock, thm := some ``compiledPrefixBlock_proven },
+  { id := "textlibs-re-literal-prefix-sound", pyFile := "Lib/re/_compiler.py", pyFns := ["_get_literal_prefix", "_get_iscased"]
+    statement := "The declarative semantics matches only where the text starts with the literal prefix, through nested groups and flag changes."
+    source := "an optimization preserves the search it replaces", status := .proven
+    prop := ``LiteralPrefixSound, thm := some ``literalPrefixSound_proven
+    notes := "Excludes IGNORECASE|LOCALE, where _compile_info writes no prefix." },
+  { id := "textlibs-re-charset-preserved", pyFile := "Lib/re/_compiler.py", pyFns := ["_optimize_charset", "_compile_charset"]
+    statement := "SRE(charset) on the compiled set answers what the unoptimized set says, for every set and character, through the literal, range, bitmap and BIGCHARSET forms and the [\\s\\S] shortcuts."
+    source := "an optimization preserves the set it replaces", status := .proven
+    prop := ``CharsetPreserved, thm := some ``charsetPreserved_proven
+    notes := "Without IGNORECASE; textlibs-re-charset-preserved-ignorecase has the other case. NEGATE first is the parser's invariant." },
+  { id := "textlibs-re-charset-preserved-ignorecase", pyFile := "Lib/re/_compiler.py", pyFns := []
+    statement := "The same under IGNORECASE, with the character lower-cased when the set is cased."
+    source := "an optimization preserves the set it replaces", status := .open
+    prop := ``CharsetPreservedIgnorecase
+    notes := "Difftest agrees (re.sem), and categories in cased sets agree on all code points. Needs the fix-table steps of literalPass and rangeMark proved like the case-free ones." },
+  { id := "textlibs-re-findall-is-finditer", pyFile := "Modules/_sre/sre.c"
+    pyFns := ["_sre_SRE_Pattern_findall_impl", "state_getslice", "pattern_new_match", "_sre_SRE_Pattern_finditer_impl", "_sre_SRE_Scanner_search_impl"]
+    statement := "findall is finditer with each match read as the whole match, the group, or the tuple of groups, with '' for a group that did not take part. For every pattern."
+    source := "twin: findall and finditer", status := .proven
+    prop := ``FindallIsFinditer, thm := some ``findallIsFinditer_proven },
+  { id := "textlibs-re-split-is-finditer", pyFile := "Modules/_sre/sre.c", pyFns := ["_sre_SRE_Pattern_split_impl"]
+    statement := "split cuts at the spans finditer finds and keeps the groups, including for patterns that match the empty string."
+    source := "twin: split and finditer", status := .proven
+    prop := ``SplitIsFinditer, thm := some ``splitIsFinditer_proven
+    notes := "maxsplit 0; a positive maxsplit stops the same loop early." },
+  { id := "textlibs-re-sub-is-finditer", pyFile := "Modules/_sre/sre.c", pyFns := ["pattern_subx", "expand_template"]
+    statement := "sub with a string repl rebuilds the subject from what finditer finds, with a literal or an expanded template at each match; a template that fails fails the call."
+    source := "twin: sub and finditer", status := .proven
+    prop := ``SubIsFinditer, thm := some ``subIsFinditer_proven
+    notes := "count 0. textlibs-re-sub-call-is-finditer has the callable path." },
+  { id := "textlibs-re-sub-call-is-finditer", pyFile := "Modules/_sre/sre.c", pyFns := ["pattern_subx", "_sre_SRE_Pattern_sub_impl", "_sre_SRE_Pattern_subn_impl"]
+    statement := "A callable repl is called once per match in order, for any callable: a call that raises ends sub with that exception and no later call runs, and a result of the wrong type surfaces only at the join."
+    source := "docs: re.sub with a function", status := .proven
+    prop := ``SubCallIsFinditer, thm := some ``subCallIsFinditer_proven },
+  { id := "textlibs-re-group-index-range", pyFile := "Modules/_sre/sre.c", pyFns := ["match_getindex"]
+    statement := "An integer group index is valid exactly when it is in range, however large; the failure is IndexError."
+    source := "docs: Match.group", status := .proven
+    prop := ``GroupIndexRange, thm := some ``groupIndexRange_proven },
+  { id := "textlibs-re-match-methods-agree", pyFile := "Modules/_sre/sre.c"
+    pyFns := ["match_getslice", "match_getslice_by_index", "match_group", "_sre_SRE_Match_start_impl", "_sre_SRE_Match_end_impl", "_sre_SRE_Match_span_impl", "match_regs", "_sre_SRE_Match_groups_impl"]
+    statement := "span, start, end, regs, group and groups say the same thing about a group and fail the same way, for every index object."
+    source := "twin: the Match methods", status := .proven
+    prop := ``MatchMethodsAgree, thm := some ``matchMethodsAgree_proven },
+  { id := "textlibs-re-groupdict-agrees", pyFile := "Modules/_sre/sre.c", pyFns := ["_sre_SRE_Match_groupdict_impl"]
+    statement := "groupdict()[name] is group(name)."
+    source := "docs: Match.groupdict", status := .proven
+    prop := ``GroupdictAgrees, thm := some ``groupdictAgrees_proven },
+  { id := "textlibs-re-scanner-agrees-compile", pyFile := "Lib/re/__init__.py", pyFns := ["Scanner.__init__", "Scanner.scan"]
+    statement := "What a phrase matches under re.compile is a token of re.Scanner."
+    source := "twin: Scanner and compile", status := .refuted
+    prop := ``ScannerAgreesCompile, thm := some ``scannerAgreesCompile_refuted
+    bug := some "textlibs-re-scanner-drops-flags"
+    notes := "\\w+ on 'é'. The counterexample runs Scanner.__init__ and the first step of Scanner.scan." },
+  { id := "textlibs-csv-sniff-usable", pyFile := "Lib/csv.py", pyFns := ["Sniffer.sniff", "Sniffer._guess_delimiter"]
+    statement := "What sniff returns has a delimiter different from its quotechar, so that reader accepts it."
+    source := "docs: Sniffer.sniff returns a Dialect subclass", status := .refuted
+    prop := ``SniffUsable, thm := some ``sniffUsable_refuted
+    bug := some "textlibs-csv-sniffer-unusable-dialect"
+    notes := "sniff('\\\"'). Fixed on main by a rewrite of Sniffer." },
+  { id := "textlibs-csv-sniff-respects-delimiters", pyFile := "Lib/csv.py"
+    pyFns := ["Sniffer.sniff", "Sniffer._guess_quote_and_delimiter", "Sniffer._guess_delimiter"]
+    statement := "sniff(sample, delimiters) returns a delimiter from delimiters, through both guessers and the preferred fallback."
+    source := "docs: Sniffer.sniff", status := .proven
+    prop := ``SniffRespectsDelimiters, thm := some ``sniffRespectsDelimiters_proven },
   { id := "textlibs-csv-round-trip", pyFile := "Modules/_csv.c"
     pyFns := ["join_reset", "join_append_data", "join_append", "join_append_lineterminator", "csv_writerow_lock_held",
       "csv_writerow", "parse_add_char", "parse_process_char"]

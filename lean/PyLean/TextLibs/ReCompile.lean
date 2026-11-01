@@ -182,10 +182,13 @@ def anyRange (p : Nat → Bool) : (n i : Nat) → Bool
   | n + 1, i => p i || anyRange p n (i + 1)
 
 /-- `charmap += b'\0' * 0xff00`. -/
-def widen (st : OSt) : OSt := { st with cm := st.cm ++ Array.replicate 0xff00 false }
+def widenBy : Nat := 0xff00
 
-/-- The `while True` for a literal, with its `except IndexError`, `:293-320`. -/
-def doLiteral (f : Option CaseFns) (st0 : OSt) (av0 : Nat) : OSt :=
+def widen (st : OSt) : OSt := { st with cm := st.cm ++ Array.replicate widenBy false }
+
+/-- The `while True` for a literal, with its `except IndexError`, `:293-320`. `wd` is `widen`: a
+parameter here, so that proofs need not build the padding. -/
+def doLiteralW (wd : OSt → OSt) (f : Option CaseFns) (st0 : OSt) (av0 : Nat) : OSt :=
   let (st, av, err) := literalPass f st0 av0
   if !err then st
   else
@@ -195,12 +198,14 @@ def doLiteral (f : Option CaseFns) (st0 : OSt) (av0 : Nat) : OSt :=
         | none => st.cased
       { st with cased, tail := st.tail ++ [.lit av] }
     if st.cm.size == 256 then
-      let (st, av, err) := literalPass f (widen st) av
+      let (st, av, err) := literalPass f (wd st) av
       if !err then st else finish st av
     else finish st av
 
+def doLiteral : Option CaseFns → OSt → Nat → OSt := doLiteralW widen
+
 /-- The same for a range. -/
-def doRange (f : Option CaseFns) (st0 : OSt) (lo hi : Nat) : OSt :=
+def doRangeW (wd : OSt → OSt) (f : Option CaseFns) (st0 : OSt) (lo hi : Nat) : OSt :=
   let n := hi + 1 - lo
   let attempt (st : OSt) : OSt × Bool :=
     let (cm, err) := rangeMark f n lo st.cm
@@ -218,9 +223,11 @@ def doRange (f : Option CaseFns) (st0 : OSt) (lo hi : Nat) : OSt :=
   let (st, err) := attempt st0
   if !err then st
   else if st.cm.size == 256 then
-    let (st, err) := attempt (widen st)
+    let (st, err) := attempt (wd st)
     if !err then st else finish st
   else finish st
+
+def doRange : Option CaseFns → OSt → Nat → Nat → OSt := doRangeW widen
 
 /-- `charmap.find(v, q)`, or `none` for `-1`. -/
 def cmFind (cm : Array Bool) (v : Bool) : (fuel q : Nat) → Option Nat
@@ -326,11 +333,17 @@ def compileCharset (charset : List CItem) (flags : Nat) : List Nat :=
 
 /-! ### `_compile`, `Lib/re/_compiler.py:39-219` -/
 
-/-- `_simple`, `Lib/re/_compiler.py:412-419`. -/
-def simple : List Node → Bool
-  | [.literal _] | [.notLiteral _] | [.any] | [.in_ _] => true
-  | [.subpattern none _ _ p] => simple p
-  | _ => false
+mutual
+  /-- `_simple`, `Lib/re/_compiler.py:412-419`. -/
+  def simple : List Node → Bool
+    | [n] => simpleNode n
+    | _ => false
+
+  def simpleNode : Node → Bool
+    | .literal _ | .notLiteral _ | .any | .in_ _ => true
+    | .subpattern none _ _ p => simple p
+    | _ => false
+end
 
 /-- The `op in LITERAL_CODES` branch, `Lib/re/_compiler.py:59-86`. `isNot` is `NOT_LITERAL`. -/
 def compLiteral (flags : Nat) (isNot : Bool) (av : Nat) : List Nat :=
@@ -383,6 +396,22 @@ def atCode (flags : Nat) (a : AtCode) : Nat :=
   | .end_ => if multi then 6 else 5
   | .endString => 7
 
+/-- The `op in ASSERT_CODES` branch, `Lib/re/_compiler.py:150-164`, given the compiled body. The
+look-behind checks come first, as in the source; the body is a pure value, so nothing runs early. -/
+def assertWrap (gw : List (Option (Nat × Nat))) (op : Nat) (d : Int) (p : List Node)
+    (body : Py (List Nat)) : Py (List Nat) := do
+  let back ←
+    if d ≥ 0 then pure 0
+    else
+      let (lo, hi) := getwidth gw p
+      if lo > MAXCODE then
+        (Except.error (.named "PatternError" "looks too much behind") : Py Nat)
+      else if lo ≠ hi then
+        Except.error (.named "PatternError" "look-behind requires fixed-width pattern")
+      else pure lo
+  let c ← body
+  return [op, c.length + 3, back] ++ c ++ [OP_SUCCESS]
+
 mutual
   def compNode (gw : List (Option (Nat × Nat))) (flags : Nat) : Node → Py (List Nat)
     | .literal c => .ok (compLiteral flags false c)
@@ -411,8 +440,8 @@ mutual
       let c ← compList gw flags p
       return [OP_ATOMIC_GROUP, c.length + 2] ++ c ++ [OP_SUCCESS]
     | .failure => .ok [OP_FAILURE]
-    | .assert_ d p => compAssert gw flags OP_ASSERT d p
-    | .assertNot d p => compAssert gw flags OP_ASSERT_NOT d p
+    | .assert_ d p => assertWrap gw OP_ASSERT d p (compList gw flags p)
+    | .assertNot d p => assertWrap gw OP_ASSERT_NOT d p (compList gw flags p)
     | .at_ a => .ok [OP_AT, atCode flags a]
     | .branch alts => do
       let frags ← compAlts gw flags alts
@@ -428,25 +457,12 @@ mutual
     | .grouprefExists g yes no => do
       let y ← compList gw flags yes
       match no with
-      | some (n :: ns) =>
-        let c ← compList gw flags (n :: ns)
-        return [OP_GROUPREF_EXISTS, g - 1, y.length + 3 + 1 - 0] ++ y ++ [OP_JUMP, c.length + 1] ++ c
-      | _ => return [OP_GROUPREF_EXISTS, g - 1, y.length + 2] ++ y
-
-  /-- The `op in ASSERT_CODES` branch, `Lib/re/_compiler.py:150-164`. -/
-  def compAssert (gw : List (Option (Nat × Nat))) (flags op : Nat) (d : Int) (p : List Node) :
-      Py (List Nat) := do
-    let back ←
-      if d ≥ 0 then pure 0
-      else
-        let (lo, hi) := getwidth gw p
-        if lo > MAXCODE then
-          (Except.error (.named "PatternError" "looks too much behind") : Py Nat)
-        else if lo ≠ hi then
-          Except.error (.named "PatternError" "look-behind requires fixed-width pattern")
-        else pure lo
-    let c ← compList gw flags p
-    return [op, c.length + 3, back] ++ c ++ [OP_SUCCESS]
+      | some l =>
+        if l.isEmpty then return [OP_GROUPREF_EXISTS, g - 1, y.length + 2] ++ y
+        else
+          let c ← compList gw flags l
+          return [OP_GROUPREF_EXISTS, g - 1, y.length + 3 + 1 - 0] ++ y ++ [OP_JUMP, c.length + 1] ++ c
+      | none => return [OP_GROUPREF_EXISTS, g - 1, y.length + 2] ++ y
 
   def compList (gw : List (Option (Nat × Nat))) (flags : Nat) : List Node → Py (List Nat)
     | [] => .ok []

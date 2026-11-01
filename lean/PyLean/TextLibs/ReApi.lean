@@ -374,6 +374,15 @@ inductive FindItem where
 def stateReset (st : SSt) : SSt :=
   { st with lastmark := -1, lastindex := -1, repeat_ := none, reps := #[] }
 
+/-- The `switch (self->groups)` of `findall`, `Modules/_sre/sre.c:952-977`. -/
+def findItem (p : Pat) (s : List Nat) (st : SSt) : Py FindItem :=
+  if p.groups == 0 then pure (FindItem.one (.str (slice s st.start st.ptr)))
+  else if p.groups == 1 then do
+    pure (FindItem.one (← stateGetslice st s 1 true))
+  else do
+    let vs ← (List.range p.groups).mapM (fun i => stateGetslice st s (i + 1) true)
+    pure (FindItem.tuple vs)
+
 /-- The loop of `findall`, `Modules/_sre/sre.c:931-987`. -/
 def findallLoop (p : Pat) (e : Env) (s : List Nat) : (fuel : Nat) → SSt → Py (List FindItem)
   | 0, _ => .error .modelFuel
@@ -385,13 +394,7 @@ def findallLoop (p : Pat) (e : Env) (s : List Nat) : (fuel : Nat) → SSt → Py
       | none => .error .modelFuel
       | some (false, _) => .ok []
       | some (true, st) => do
-        let item ←
-          if p.groups == 0 then pure (FindItem.one (.str (slice s st.start st.ptr)))
-          else if p.groups == 1 then do
-            pure (FindItem.one (← stateGetslice st s 1 true))
-          else do
-            let vs ← (List.range p.groups).mapM (fun i => stateGetslice st s (i + 1) true)
-            pure (FindItem.tuple vs)
+        let item ← findItem p s st
         let rest ← findallLoop p e s fuel
           { st with mustAdvance := st.ptr == st.start, start := st.ptr }
         return item :: rest
@@ -485,6 +488,12 @@ inductive Filter where
   | template (items : List TItem)
   deriving Repr, DecidableEq, Inhabited
 
+/-- The `if (filter_type != LITERAL)` of `pattern_subx`, `Modules/_sre/sre.c:1322-1352`. -/
+def subItem (p : Pat) (s : List Nat) (f : Filter) (st : SSt) : Py (List Nat) :=
+  match f with
+  | .literal l => pure l
+  | .template t => do expandTemplate t s (← newMatch p st)
+
 /-- The loop of `pattern_subx`, `Modules/_sre/sre.c:1300-1366`: output, `i` and `n`. -/
 def subLoop (p : Pat) (e : Env) (s : List Nat) (f : Filter) (count : Int) :
     (fuel : Nat) → (i : Nat) → (n : Int) → SSt → Py (List Nat × Nat × Int)
@@ -500,9 +509,7 @@ def subLoop (p : Pat) (e : Env) (s : List Nat) (f : Filter) (count : Int) :
         let b := st.start
         let en := st.ptr
         let pre := if i < b then slice s i b else []
-        let item ← match f with
-          | .literal l => pure l
-          | .template t => do expandTemplate t s (← newMatch p st)
+        let item ← subItem p s f st
         let (rest, i2, n2) ← subLoop p e s f count fuel en (n + 1)
           { st with mustAdvance := st.ptr == st.start, start := st.ptr }
         return (pre ++ item ++ rest, i2, n2)
@@ -521,6 +528,59 @@ def subx (p : Pat) (repl s : List Nat) (count : Int) (isbytes : Bool := !p.istex
   let e := envOf p s s.length false
   let (out, i, n) ← subLoop p e s f count (2 * s.length + 4) 0 0 (initState p 0)
   return (out ++ (if i < s.length then slice s i s.length else []), n)
+
+/-- What a callable `repl` returns: an object of the subject's kind, `None`, or another object. The
+call itself can raise, and it can call back into `re`, which shares no state with this loop. -/
+inductive CallRet where
+  | text (l : List Nat)
+  | none_
+  | other (cls : String)
+  deriving Repr, DecidableEq, Inhabited
+
+/-- The loop of `pattern_subx` for a callable, `Modules/_sre/sre.c:1300-1366`. `f k m` is the `k`th
+call. The result is the list that is joined at the end, so a wrong type surfaces only after every
+call has run. -/
+def subCallLoop (p : Pat) (e : Env) (s : List Nat) (f : Nat → MatchR → Py CallRet) (count : Int) :
+    (fuel : Nat) → (i : Nat) → (n : Int) → (k : Nat) → SSt → Py (List CallRet × Nat × Int)
+  | 0, _, _, _, _ => .error .modelFuel
+  | fuel + 1, i, n, k, st =>
+    if count ≠ 0 ∧ n ≥ count then .ok ([], i, n)
+    else
+      let st := stateReset { st with ptr := st.start }
+      match sreSearch e st with
+      | none => .error .modelFuel
+      | some (false, _) => .ok ([], i, n)
+      | some (true, st) => do
+        let b := st.start
+        let en := st.ptr
+        let pre : List CallRet := if i < b then [.text (slice s i b)] else []
+        let m ← newMatch p st
+        let r ← f k m
+        let item : List CallRet := match r with
+          | .none_ => []
+          | x => [x]
+        let (rest, i2, n2) ← subCallLoop p e s f count fuel en (n + 1) (k + 1)
+          { st with mustAdvance := st.ptr == st.start, start := st.ptr }
+        return (pre ++ item ++ rest, i2, n2)
+
+/-- `PyUnicode_Join` and `PyBytes_Join` on the list. -/
+def joinItems (isbytes : Bool) : List CallRet → Nat → Py (List Nat)
+  | [], _ => .ok []
+  | .text l :: r, k => do return l ++ (← joinItems isbytes r (k + 1))
+  | .none_ :: r, k => joinItems isbytes r (k + 1)
+  | .other cls :: _, k =>
+    .error (.typeError (if isbytes then s!"sequence item {k}: expected a bytes-like object, {cls} found"
+      else s!"sequence item {k}: expected str instance, {cls} found"))
+
+/-- `pattern_subx`, `Modules/_sre/sre.c:1223-1416`, for a callable `repl`. -/
+def subCall (p : Pat) (f : Nat → MatchR → Py CallRet) (s : List Nat) (count : Int) (isbytes : Bool) :
+    Py (List Nat × Int) := do
+  checkSubject p isbytes
+  let e := envOf p s s.length false
+  let (items, i, n) ← subCallLoop p e s f count (2 * s.length + 4) 0 0 0 (initState p 0)
+  let out ← joinItems isbytes
+    (items ++ (if i < s.length then [.text (slice s i s.length)] else [])) 0
+  return (out, n)
 
 /-! ### Match objects -/
 

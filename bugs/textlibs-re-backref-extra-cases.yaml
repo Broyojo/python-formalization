@@ -1,0 +1,38 @@
+id: textlibs-re-backref-extra-cases
+title: "DUPLICATE of #156513: an IGNORECASE backreference ignores the characters a literal matches"
+priority: P3
+kind: twin-disagreement
+module: textlibs
+files: [Modules/_sre/sre_lib.h]
+functions: ["SRE(match)"]
+summary: |
+  `re.fullmatch(r'(s)s', 'sſ', re.I)` matches and `re.fullmatch(r'(s)\1', 'sſ', re.I)` does
+  not. All 56 pairs of `_casefix._EXTRA_CASES` differ this way, in both orders: 112 ordered pairs.
+likelihood: |
+  Low. It needs a backreference under IGNORECASE and a character from the case-fix table.
+maybe_intended: |
+  No, per the open issue.
+reproducer: |
+  import re
+  a = re.fullmatch(r'(s)s', 'sſ', re.I)
+  b = re.fullmatch(r'(s)\1', 'sſ', re.I)
+  print(a, b)
+  if a is not None and b is None:
+      print('REPRODUCED textlibs-re-backref-extra-cases')
+expected: |
+  Both match.
+observed: |
+  python3 3.14.7: <re.Match span=(0, 2)>, None. REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED.
+promised_by: |
+  Doc/library/re.rst on IGNORECASE and on backreferences.
+cause: |
+  Modules/_sre/sre_lib.h GROUPREF_UNI_IGNORE compares sre_lower_unicode of both characters, and a
+  literal is expanded at compile time from Lib/re/_casefix.py.
+possible_fix: |
+  See #156513.
+duplicates: |
+  DUPLICATE of #156513 (open). Do not file. Queries: gh search issues --repo python/cpython
+  "GROUPREF_UNI_IGNORE"; "_EXTRA_CASES"; "backreference IGNORECASE"; "re backreference case
+  insensitive"; "re.IGNORECASE unicode backreference"; gh issue view 156513.
+lean: lean/PyLean/TextLibs/ReEngineProps.lean (BackrefMatchesLiteral)
