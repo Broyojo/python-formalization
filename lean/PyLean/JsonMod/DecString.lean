@@ -128,6 +128,13 @@ theorem cFind_drop (strict : Bool) : ∀ (t : PStr) (j : Nat),
 theorem getD_drop (s : PStr) (e k : Nat) : (s.drop e).getD k 0 = s.getD (e + k) 0 := by
   simp [List.getD_eq_getElem?_getD]
 
+theorem decodeU_ok {s : PStr} {p v : Nat} (h : hex4 s (p + 1) = some v) : decodeUXXXX s p = .ok v := by
+  simp [decodeUXXXX, h]
+
+theorem decodeU_bad {s : PStr} {p : Nat} (h : hex4 s (p + 1) = none) :
+    decodeUXXXX s p = .error (.jde "Invalid \\uXXXX escape" (p : Int)) := by
+  simp [decodeUXXXX, h]
+
 theorem hex4_le {s : PStr} {p v : Nat} (h : hex4 s p = some v) : p + 4 ≤ s.length := by
   unfold hex4 at h
   split at h
@@ -138,7 +145,7 @@ theorem hex4_le {s : PStr} {p v : Nat} (h : hex4 s p = some v) : p + 4 ≤ s.len
   · cases h
 
 /-- The C loop's result depends on the writer's contents only. -/
-theorem cScanLoop_none (s : PStr) (strict : Bool) (b g e : Nat) :
+theorem cScanLoop_none (s : PStr) (strict : Bool) (b : Int) (g e : Nat) :
     cScanLoop s strict b g e none = cScanLoop s strict b g e (some []) := by
   cases g with
   | zero => rfl
@@ -154,7 +161,7 @@ theorem cScanLoop_none (s : PStr) (strict : Bool) (b g e : Nat) :
       · simp only [hc, false_and, ↓reduceIte]
 
 /-- The C loop restarted later in the same chunk. -/
-theorem cScanLoop_skip (s : PStr) (strict : Bool) (b g e j : Nat) (a : PStr)
+theorem cScanLoop_skip (s : PStr) (strict : Bool) (b : Int) (g e j : Nat) (a : PStr)
     (h : ∀ i < j, (s.drop e).getD i 0 ≠ 34 ∧ (s.drop e).getD i 0 ≠ 92 ∧
       ¬((s.drop e).getD i 0 ≤ 31 ∧ strict = true)) :
     cScanLoop s strict b (g + 1) e (some a) =
@@ -194,7 +201,7 @@ theorem getElem?_of_lt (s : PStr) {i : Nat} (h : i < s.length) : s[i]? = some (s
 
 /-- C after reading `\u` at `p` (backslash) and `p+1` (`u`) when the four
 hex digits are missing or invalid: the error at `p + 1`. -/
-theorem c_bad_u (s : PStr) (strict : Bool) (b g p : Nat) (a : PStr)
+theorem c_bad_u (s : PStr) (strict : Bool) (b : Int) (g p : Nat) (a : PStr)
     (h92 : s[p]? = some 92) (h117 : s[p + 1]? = some 117) (hx : hex4 s (p + 2) = none) :
     cScanLoop s strict b (g + 1) p (some a) = .error (.jde "Invalid \\uXXXX escape" ((p + 1 : Nat) : Int)) := by
   have hlt : p + 1 < s.length := (List.getElem?_eq_some_iff.mp h117).1
@@ -212,7 +219,7 @@ theorem c_bad_u (s : PStr) (strict : Bool) (b g p : Nat) (a : PStr)
   · simp only [hend, ↓reduceIte, hx, ne_eq, not_true_eq_false, e2]
 
 /-- C after reading a valid `\uXXXX` at `p` that ends the input. -/
-theorem c_last_u (s : PStr) (strict : Bool) (b g p u : Nat) (a : PStr)
+theorem c_last_u (s : PStr) (strict : Bool) (b : Int) (g p u : Nat) (a : PStr)
     (h92 : s[p]? = some 92) (h117 : s[p + 1]? = some 117) (hx : hex4 s (p + 2) = some u)
     (hend : p + 6 = s.length) :
     cScanLoop s strict b (g + 2) p (some a) = .error (.jde "Unterminated string starting at" b) := by
@@ -240,8 +247,8 @@ theorem py_last_u (s : PStr) (strict : Bool) (b : Int) (f p u : Nat) (a : PStr)
     simp [findTerm, (List.getElem?_eq_some_iff.mp h92).2, isTerm]
   simp only [pyScanLoop, hft, Nat.add_zero, List.getD_eq_getElem?_getD, h92, Option.getD_some]
   simp only [Nat.reduceEqDiff, ↓reduceIte, ne_eq, not_true_eq_false, h117, not_false_eq_true]
-  have h2 : p + 1 + 1 = p + 2 := by omega
-  simp only [h2, hx]
+  have h2 : decodeUXXXX s (p + 1) = .ok u := decodeU_ok hx
+  simp only [h2]
   have hd : (s.drop (p + 1 + 5)).take 2 = [] := by
     rw [List.drop_eq_nil_of_le (by omega)]; rfl
   simp only [hd, reduceCtorEq, and_false, ↓reduceIte]
@@ -267,7 +274,7 @@ theorem pyScanLoop_end (s : PStr) (strict : Bool) (b : Int) (f : Nat) (a : PStr)
   simp [pyScanLoop, findTerm]
 
 /-- The main string lemma: the Python loop against the C loop, both with enough fuel. -/
-theorem scanLoop_rel (s : PStr) (strict : Bool) (b : Nat) :
+theorem scanLoop_rel (s : PStr) (strict : Bool) (b : Int) :
     ∀ (f g e : Nat) (a : PStr), s.length + 1 - e ≤ f → s.length + 1 - e ≤ g → e ≤ s.length →
     ResRel s (pyScanLoop s strict (b : Int) f e a) (cScanLoop s strict b g e (some a)) := by
   intro f
@@ -311,7 +318,7 @@ theorem scanLoop_rel (s : PStr) (strict : Bool) (b : Nat) :
           · simp [cScanLoop, hcf0, List.getD_eq_getElem?_getD, hs0]
         · -- backslash
           subst hq
-          simp only [pyScanLoop, cScanLoop, hft, hcf0, List.getD_eq_getElem?_getD, hs0, Option.getD_some,
+          simp only [pyScanLoop, decodeUXXXX, cScanLoop, hft, hcf0, List.getD_eq_getElem?_getD, hs0, Option.getD_some,
             Nat.add_zero, List.take_zero, List.append_nil, Nat.reduceEqDiff, ↓reduceIte, ne_eq,
             not_true_eq_false, not_false_eq_true, reduceCtorEq, and_false]
           cases hesc : s[e + k + 1]? with
@@ -329,7 +336,9 @@ theorem scanLoop_rel (s : PStr) (strict : Bool) (b : Nat) :
             have q3 : e + k + 1 + 1 + 4 - 5 = e + k + 1 := by omega
             have q4 : e + k + 1 + 1 - 1 = e + k + 1 := by omega
             have q5 : e + k + 1 + 1 + 4 + 1 = e + k + 1 + 5 + 1 := by omega
-            simp only [q1, q2, q3, q4, q5]
+            have q6 : e + k + 1 + 1 + 4 + 2 = e + k + 1 + 5 + 2 := by omega
+            have q7 : e + k + 1 + 5 + 1 + 1 = e + k + 1 + 5 + 2 := rfl
+            simp only [q1, q2, q3, q4, q5, q6, q7]
             by_cases hu : esc = 117
             · subst hu
               simp only [not_true_eq_false, ↓reduceIte]

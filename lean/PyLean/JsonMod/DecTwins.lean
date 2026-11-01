@@ -91,18 +91,17 @@ theorem ErrRel.stopConv {s : PStr} {pe ce : DErr} (h : ErrRel s pe ce) :
 
 theorem ResRel.fuel {α : Type} {s : PStr} : ResRel (α := α) s fuelOut fuelOut := ResRel.err_eq _
 
-/-- `scanstring` at a non-negative position `e >= 1`. -/
-theorem scanstring_rel (s : PStr) (strict : Bool) (e : Nat) (h1 : 1 ≤ e) (h2 : e ≤ s.length) :
+/-- `scanstring` at a position in range. -/
+theorem scanstring_rel (s : PStr) (strict : Bool) (e : Nat) (h2 : e ≤ s.length) :
     ResRel s (pyScanstring s (e : Int) strict) (cScanstring s e strict) := by
   unfold pyScanstring cScanstring
-  have hb : ((e : Int) - 1) = ((e - 1 : Nat) : Int) := by omega
   have hn : ¬ s.length < e := by omega
-  simp only [hb, clampPos_nat h2, hn, ↓reduceIte, cScanLoop_none]
+  simp only [clampPos_nat h2, hn, ↓reduceIte, cScanLoop_none]
   exact scanLoop_rel s strict (e - 1) (s.length + 1) (s.length + 1) e [] (by omega) (by omega) h2
 
 /-- `JVal` of an object: `object_pairs_hook(pairs)` or `dict(pairs)`. -/
 def accOf (cfg : DCfg) (pairs : List (PStr × JVal)) : List (PStr × JVal) :=
-  if cfg.pairsHook then pairs else dictOf pairs
+  if cfg.pairsHook.isSome then pairs else dictOf pairs
 
 theorem dictOf_append (ps : List (PStr × JVal)) (k : PStr) (v : JVal) :
     dictOf (ps ++ [(k, v)]) = dictSet k v (dictOf ps) := by
@@ -113,8 +112,10 @@ theorem cAddPair_accOf (cfg : DCfg) (pairs : List (PStr × JVal)) (k : PStr) (v 
   unfold cAddPair accOf
   split <;> simp [dictOf_append]
 
-theorem pyMkObj_accOf (cfg : DCfg) (pairs : List (PStr × JVal)) : pyMkObj cfg pairs = .obj (accOf cfg pairs) := by
-  unfold pyMkObj accOf; split <;> rfl
+theorem pyMkObj_accOf (cfg : DCfg) (pairs : List (PStr × JVal)) :
+    pyMkObj cfg pairs = cFinish cfg (accOf cfg pairs) := by
+  unfold pyMkObj cFinish accOf
+  cases cfg.pairsHook <;> rfl
 
 theorem cArrAfter_close {s : PStr} {e : Nat} {i : Int} (h : cArrAfter s e = .close i) :
     ∃ m : Nat, i = m ∧ m ≤ s.length := by
@@ -181,6 +182,13 @@ theorem litAt_le {s : PStr} {idx : Nat} {lit : String} (h : litAt s idx lit = tr
 
 theorem ResRel.ok {α : Type} {s : PStr} (v : α) (k : Nat) (hk : k ≤ s.length) :
     ResRel s (.ok (v, (k : Int))) (.ok (v, k)) := Or.inl ⟨v, k, hk, rfl, rfl⟩
+
+/-- A callback's result ending at `k`. -/
+theorem ResRel.map {α : Type} {s : PStr} (r : DR α) (k : Nat) (hk : k ≤ s.length) :
+    ResRel s (r.map (·, (k : Int))) (r.map (·, k)) := by
+  cases r with
+  | ok v => exact ResRel.ok v k hk
+  | error e => exact ResRel.err_eq e
 
 /-- Propagating an error from a nested call. -/
 theorem ResRel.bind {α β : Type} {s : PStr} {py : DR (α × Int)} {c : DR (α × Nat)}
@@ -283,7 +291,7 @@ theorem sim (cfg : DCfg) (s : PStr) : ∀ n : Nat,
         · subst h34
           simp only [↓reduceIte]
           rw [show (idx : Int) + 1 = ((idx + 1 : Nat) : Int) by omega]
-          rcases scanstring_rel s cfg.strict (idx + 1) (by omega) (by omega) with
+          rcases scanstring_rel s cfg.strict (idx + 1) (by omega) with
             ⟨v, k, hk, h1, h2⟩ | ⟨pe, ce, h1, h2, he⟩
           · rw [h1, h2]; exact ResRel.ok _ k hk
           · rw [h1, h2]; exact Or.inr ⟨pe, ce, rfl, rfl, he⟩
@@ -322,7 +330,8 @@ theorem sim (cfg : DCfg) (s : PStr) : ∀ n : Nat,
               by_cases h125 : d = 125
               · subst h125
                 simp only [↓reduceIte, ne_eq, not_true_eq_false, pyMkObj_accOf, accOf_nil]
-                exact ResRel.ok _ (w + 1) (by omega)
+                rw [show (w : Int) + 1 = ((w + 1 : Nat) : Int) by omega]
+                exact ResRel.map _ (w + 1) (by omega)
               · simp only [h125, ↓reduceIte, ne_eq, not_false_eq_true]
                 by_cases hd34 : d = 34
                 · subst hd34
@@ -384,15 +393,21 @@ theorem sim (cfg : DCfg) (s : PStr) : ∀ n : Nat,
           simp only []
           by_cases hN : c = 78 ∧ litAt s idx "NaN" = true
           · simp only [hN, and_self, ↓reduceIte, cConst]
-            exact ResRel.ok (s := s) _ (idx + 3) (litAt_le' hN.2 3 (by decide) (by decide))
+            rw [show (idx : Int) + 3 = ((idx + 3 : Nat) : Int) by omega,
+              show (cs "NaN").length = 3 by decide]
+            exact ResRel.map _ (idx + 3) (litAt_le' hN.2 3 (by decide) (by decide))
           simp only [hN, ↓reduceIte]
           by_cases hI : c = 73 ∧ litAt s idx "Infinity" = true
           · simp only [hI, and_self, ↓reduceIte, cConst]
-            exact ResRel.ok (s := s) _ (idx + 8) (litAt_le' hI.2 8 (by decide) (by decide))
+            rw [show (idx : Int) + 8 = ((idx + 8 : Nat) : Int) by omega,
+              show (cs "Infinity").length = 8 by decide]
+            exact ResRel.map _ (idx + 8) (litAt_le' hI.2 8 (by decide) (by decide))
           simp only [hI, ↓reduceIte]
           by_cases hM : c = 45 ∧ litAt s idx "-Infinity" = true
           · simp only [hM, and_self, ↓reduceIte, cConst]
-            exact ResRel.ok (s := s) _ (idx + 9) (litAt_le' hM.2 9 (by decide) (by decide))
+            rw [show (idx : Int) + 9 = ((idx + 9 : Nat) : Int) by omega,
+              show (cs "-Infinity").length = 9 by decide]
+            exact ResRel.map _ (idx + 9) (litAt_le' hM.2 9 (by decide) (by decide))
           simp only [hM, ↓reduceIte, h2]
           exact ResRel.err_eq _
         · rw [h1]
@@ -420,11 +435,9 @@ theorem sim (cfg : DCfg) (s : PStr) : ∀ n : Nat,
           simp only [List.length_drop] at hL
           by_cases hfl : fr ≠ [] ∨ ex ≠ []
           · simp only [hfl, ↓reduceIte]
-            exact ResRel.ok _ _ (by omega)
+            exact ResRel.map _ _ (by omega)
           · simp only [hfl, ↓reduceIte]
-            cases hp : parseInt cfg i with
-            | error e => exact ResRel.err_eq _
-            | ok v => exact ResRel.ok _ _ (by omega)
+            exact ResRel.map _ _ (by omega)
     · -- array loop
       simp only [pyArrLoop, cArrLoop]
       rcases ihS e with ⟨v, k, hk, h1, h2⟩ | ⟨pe, ce, h1, h2, he⟩
@@ -447,7 +460,7 @@ theorem sim (cfg : DCfg) (s : PStr) : ∀ n : Nat,
       have hql : q < s.length := (List.getElem?_eq_some_iff.mp hq).1
       simp only [pyObjLoop, cObjBody]
       rw [show (q : Int) + 1 = ((q + 1 : Nat) : Int) by omega]
-      rcases scanstring_rel s cfg.strict (q + 1) (by omega) (by omega) with
+      rcases scanstring_rel s cfg.strict (q + 1) (by omega) with
         ⟨key, k, hk, h1, h2⟩ | ⟨pe, ce, h1, h2, he⟩
       · rw [h1, h2]
         simp only []
@@ -464,7 +477,7 @@ theorem sim (cfg : DCfg) (s : PStr) : ∀ n : Nat,
             | close i =>
               obtain ⟨m, rfl, hm⟩ := cObjAfter_close ha
               simp only [Int.toNat_natCast, pyMkObj_accOf, cAddPair_accOf]
-              exact ResRel.ok _ m hm
+              exact ResRel.map _ m hm
             | err x => exact ResRel.err_eq x
             | next i =>
               obtain ⟨m, rfl⟩ := cObjAfter_next ha
