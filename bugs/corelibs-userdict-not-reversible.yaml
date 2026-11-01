@@ -1,0 +1,48 @@
+id: corelibs-userdict-not-reversible
+title: "reversed(UserDict(...)) raises TypeError although dict is reversible"
+priority: P4
+kind: sibling-mismatch
+module: corelibs
+files: [Lib/collections/__init__.py, Lib/_collections_abc.py]
+functions: ["UserDict"]
+summary: |
+  dict gained __reversed__ in 3.8, and OrderedDict has one. UserDict inherits `__reversed__ = None` from
+  Mapping, so reversed(UserDict(a=1)) is a TypeError although the wrapped dict can do it. The
+  same applies to `reversed(u.keys())`, `.values()` and `.items()`, which work on dict.
+likelihood: |
+  Low: nobody has reported it. Code written against dict and handed a UserDict fails loudly.
+maybe_intended: |
+  Possibly: Mapping.__reversed__ = None is deliberate (gh-70051) because a general mapping has no order.
+  That reason does not apply to UserDict, which is a dict underneath, and the popitem change on main
+  (gh-147957) shows upstream wants UserDict to track dict. A maintainer could call this a feature
+  request. It belongs with that change, not as a bug of its own.
+reproducer: |
+  from collections import UserDict
+  d = {'a': 1, 'b': 2}
+  print(list(reversed(d)))
+  try:
+      print(list(reversed(UserDict(d))))
+  except TypeError as e:
+      print(type(e).__name__, e)
+      print('REPRODUCED corelibs-userdict-not-reversible')
+expected: |
+  ['b', 'a'] from both.
+observed: |
+  python3 3.14.7: TypeError "'UserDict' object is not reversible". REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Doc/library/stdtypes.rst:5556: "Dictionaries and dictionary views are reversible."
+  Doc/library/collections.rst:1337: "Class that simulates a dictionary."
+cause: |
+  Lib/_collections_abc.py:824 `__reversed__ = None`, not overridden in Lib/collections/__init__.py:1133.
+possible_fix: |
+  In UserDict: `def __reversed__(self): return reversed(self.data)`. Views would need more.
+duplicates:
+  issues:
+    - {number: 70051, state: closed, relation: "origin of Mapping.__reversed__ = None", reason: "about Mapping, predates reversible dict"}
+    - {number: 147957, state: closed, relation: "same goal for popitem", reason: "different method"}
+  queries: ["UserDict reversed", "UserDict __reversed__", "UserDict reversed TypeError", "UserDict not reversible",
+            "Mapping __reversed__ None", "bugforge README: UserDict only in an unrelated plistlib entry"]
+lean:
+  property: PyLean.CoreLibs.Coll.UserDictReversible
+  theorem: PyLean.CoreLibs.Coll.userDictReversible_refuted

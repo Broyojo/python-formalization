@@ -1,0 +1,99 @@
+id: corelibs-namedtuple-nfkc-field-names
+title: "namedtuple validates field names as raw strings but compiles them after NFKC normalisation"
+priority: P3
+kind: missing-validation
+module: corelibs
+files: [Lib/collections/__init__.py]
+functions: ["namedtuple"]
+summary: |
+  namedtuple checks field names as plain strings (isidentifier, iskeyword, `seen`), then builds
+  `__new__` by eval'ing source text, where the compiler NFKC-normalises every identifier. So a
+  name that is not NFKC-stable means one thing to the checks and another to the compiler:
+  - namedtuple('T', ['ﬁ', 'fi']) (U+FB01 LATIN SMALL LIGATURE FI) passes the duplicate check,
+    then raises SyntaxError "duplicate argument 'fi'" from inside eval. rename=True does not help,
+    although it exists so that bad names never raise.
+  - namedtuple('T', ['\U0001d40d\U0001d428\U0001d427\U0001d41e']) (mathematical bold "None") raises
+    ValueError "identifier field can't represent 'None' constant", also with rename=True.
+  - With a single field 'ﬁ' the class is created, but it is inconsistent: `_fields` is ('ﬁ',) while
+    `__new__` takes `fi`. T(**p._asdict()), the round trip in the class docstring, raises TypeError,
+    and `p.ﬁ` written in source raises AttributeError, because source normalises to `p.fi` and the
+    descriptor is stored under the raw name.
+likelihood: |
+  Low. It needs compatibility characters in field names, usually from generated field names
+  (column headers, JSON keys). The rename=True case is the realistic one, since rename exists for
+  untrusted names: a CSV with headers 'ﬁle' and 'file' crashes with a SyntaxError.
+maybe_intended: |
+  No sign of it. typing.NamedTuple's class syntax normalises at parse time and has neither problem.
+  A maintainer could still answer that such names are an edge case, and that getattr/setattr do not
+  normalise either (documented in Doc/reference/lexical_analysis.rst:535 only for source). The
+  SyntaxError with rename=True is the part hardest to defend.
+reproducer: |
+  from collections import namedtuple
+  bad = []
+  try:
+      namedtuple('T', ['ﬁ', 'fi'], rename=True)
+  except SyntaxError as e:
+      bad.append(('rename', type(e).__name__, str(e)))
+  try:
+      namedtuple('T', ['\U0001d40d\U0001d428\U0001d427\U0001d41e'], rename=True)
+  except ValueError as e:
+      bad.append(('none', type(e).__name__, str(e)))
+  T = namedtuple('T', ['ﬁ'])
+  p = T(1)
+  print(T._fields, T.__new__.__code__.co_varnames, p._asdict())
+  try:
+      T(**p._asdict())
+  except TypeError as e:
+      bad.append(('asdict', type(e).__name__, str(e)))
+  try:
+      eval('p.ﬁ')
+  except AttributeError as e:
+      bad.append(('attr', type(e).__name__, str(e)))
+  for b in bad:
+      print(b)
+  if [b[0] for b in bad] == ['rename', 'none', 'asdict', 'attr']:
+      print('REPRODUCED corelibs-namedtuple-nfkc-field-names')
+expected: |
+  Either the names are normalised before validation (the first call gives _0/_1 style renames and
+  `_fields` matches the parameters) or they are refused with the documented ValueError, and
+  rename=True never raises for a list of strings.
+observed: |
+  python3 3.14.7: SyntaxError "duplicate argument 'fi' in function definition (<string>, line 1)";
+  ValueError "identifier field can't represent 'None' constant"; TypeError "T.__new__() got an
+  unexpected keyword argument 'ﬁ'"; AttributeError "'T' object has no attribute 'fi'". REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same, the SyntaxError now says "duplicate
+  parameter". REPRODUCED.
+promised_by: |
+  Doc/library/collections.rst:879-880: "If rename is true, invalid fieldnames are automatically replaced
+  with positional names." Lib/collections/__init__.py:375-379, class docstring: `Point(**d)  # convert
+  from a dictionary`. Doc/reference/lexical_analysis.rst:535: "All names are converted into the
+  normalization form NFKC while parsing."
+cause: |
+  Lib/collections/__init__.py:392-419 compare the raw strings; :446-447 `eval(code, namespace)` compiles
+  `lambda _cls, {arg_list}: ...`, normalising each parameter; :497-513 store `_fields`, `__match_args__`
+  and the descriptors under the raw names, and :478 `_asdict` uses `self._fields`.
+possible_fix: |
+  Normalise first, right after line 389, only for non-ASCII names so the common path stays cheap:
+  `field_names = [unicodedata.normalize('NFKC', n) if not n.isascii() else n for n in field_names]`.
+  Then the existing checks see what the compiler sees, and rename handles the duplicates. The same
+  for typename is not needed: it is never compiled. The cost is a lazy unicodedata import. A smaller fix
+  that only refuses such names: compare `__new__.__code__.co_varnames[1:]` with `field_names` after
+  line 447 and raise ValueError, or treat the name as invalid in the rename loop.
+  typing.NamedTuple('T', [('ﬁ', int), ('fi', int)]) and dataclasses.make_dataclass('T', ['ﬁ', 'fi'])
+  raise the same SyntaxError; those would need their own one-line checks.
+duplicates:
+  issues:
+    - {number: 90713, state: open, relation: "same root: 'Unicode-mangled names refer inconsistently to constants', about source code", reason: "language-level, does not mention namedtuple"}
+  queries: ["namedtuple NFKC", "namedtuple normalization identifier", "namedtuple unicode field names",
+            "namedtuple SyntaxError duplicate argument", "namedtuple non-ascii field",
+            "namedtuple unicode identifier normalization", "namedtuple ligature",
+            "namedtuple _asdict non-ascii", "namedtuple None constant identifier field",
+            "identifier field can't represent", "collections.namedtuple rename",
+            "identifier normalization field names", "ligature identifier getattr",
+            "NFKC identifier setattr normalized", "dataclass NFKC field", "make_dataclass normalization",
+            "make_dataclass unicode", "NamedTuple normalize field name",
+            "bugforge README: no namedtuple entries"]
+lean:
+  property: PyLean.CoreLibs.Coll.NamedtupleRenameTotal
+  theorem: PyLean.CoreLibs.Coll.namedtupleRenameTotal_refuted
+  also: [PyLean.CoreLibs.Coll.namedtupleAsdictRoundTrip_refuted, PyLean.CoreLibs.Coll.namedtupleSourceAttribute_refuted]
