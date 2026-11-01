@@ -1,0 +1,73 @@
+id: corelibs-generator-close-drops-return-value
+title: "collections.abc.Generator.close discards the value that builtin generator.close() returns"
+priority: P4
+kind: twin-mismatch
+module: corelibs
+files: [Lib/_collections_abc.py, Objects/genobject.c]
+functions: ["Generator.close", "Coroutine.close"]
+summary: |
+  Since 3.13 (gh-104770) generator.close() returns the value of a generator that catches
+  GeneratorExit and returns. The mixin Generator.close was not updated: it catches StopIteration
+  and falls off the end, so a Generator subclass delegating send and throw to a real generator
+  returns None from close(), where the wrapped generator returned a value. Coroutine.close has the
+  same shape.
+likelihood: |
+  Low. It needs a hand-written Generator subclass, a generator that returns from its GeneratorExit
+  handler, and a caller that uses close()'s result, a feature that is only two releases old.
+maybe_intended: |
+  Probably oversight rather than a decision: PR gh-104771 for gh-104770 touched
+  Objects/genobject.c, Doc/reference/expressions.rst, Lib/test/test_generators.py and a NEWS entry,
+  and the issue does not mention the ABC. A maintainer could still say the mixin only promises
+  "Raise GeneratorExit inside generator", which it does.
+reproducer: |
+  from collections.abc import Generator
+  def g():
+      try:
+          yield 1
+      except GeneratorExit:
+          return 7
+  class Wrapped(Generator):
+      def __init__(self):
+          self.g = g()
+      def send(self, value):
+          return self.g.send(value)
+      def throw(self, *args):
+          return self.g.throw(*args)
+  b = g()
+  next(b)
+  builtin = b.close()
+  m = Wrapped()
+  next(m)
+  mixin = m.close()
+  print('builtin close:', builtin, 'mixin close:', mixin)
+  if builtin == 7 and mixin is None:
+      print('REPRODUCED corelibs-generator-close-drops-return-value')
+expected: |
+  Wrapped().close() returns 7, as the generator it wraps does.
+observed: |
+  python3 3.14.7: builtin close returns 7, the mixin returns None. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): same. REPRODUCED. Its Lib/_collections_abc.py has the same close.
+promised_by: |
+  Doc/reference/expressions.rst:849-850: "If the generator function catches the exception and
+  returns a value, this value is returned from close()." That sentence is about generators; the
+  mixin's own docstring promises less. Doc/library/collections.abc.rst:252-257 describes Generator
+  as the ABC for classes implementing the PEP 342 protocol, send, throw and close.
+cause: |
+  Lib/_collections_abc.py:385-390 `except (GeneratorExit, StopIteration): pass`, and the same
+  at :179-184 for Coroutine.close. Objects/genobject.c:387 gen_close returns the StopIteration value.
+possible_fix: |
+  try:
+      self.throw(GeneratorExit)
+  except StopIteration as e:
+      return e.value
+  except GeneratorExit:
+      return None
+  else:
+      raise RuntimeError("generator ignored GeneratorExit")
+duplicates:
+  issues:
+    - {number: 104770, state: closed, relation: "the feature that created the mismatch; it does not touch the ABC", reason: "different change"}
+  queries: ["collections.abc Generator close", "bugforge README: no match for Generator or close"]
+lean:
+  property: PyLean.CoreLibs.CollAbc.CloseReturnsSameValue
+  theorem: PyLean.CoreLibs.CollAbc.closeReturnsSameValue_refuted

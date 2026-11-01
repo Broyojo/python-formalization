@@ -1,60 +1,60 @@
 file	line	endline	name	signature	status	entry	note
-Lib/weakref.py	46	66	WeakMethod.__new__	__new__(cls, meth, callback=None)	todo		
-Lib/weakref.py	68	73	WeakMethod.__call__	__call__(self)	todo		
-Lib/weakref.py	75	80	WeakMethod.__eq__	__eq__(self, other)	todo		
-Lib/weakref.py	82	87	WeakMethod.__ne__	__ne__(self, other)	todo		
-Lib/weakref.py	104	113	WeakValueDictionary.__init__	__init__(self, other=(), /, **kw)	todo		
-Lib/weakref.py	115	120	WeakValueDictionary.__getitem__	__getitem__(self, key)	todo		
-Lib/weakref.py	122	123	WeakValueDictionary.__delitem__	__delitem__(self, key)	todo		
-Lib/weakref.py	125	126	WeakValueDictionary.__len__	__len__(self)	todo		
-Lib/weakref.py	128	133	WeakValueDictionary.__contains__	__contains__(self, key)	todo		
-Lib/weakref.py	135	136	WeakValueDictionary.__repr__	__repr__(self)	todo		
-Lib/weakref.py	138	139	WeakValueDictionary.__setitem__	__setitem__(self, key, value)	todo		
-Lib/weakref.py	141	147	WeakValueDictionary.copy	copy(self)	todo		
-Lib/weakref.py	151	158	WeakValueDictionary.__deepcopy__	__deepcopy__(self, memo)	todo		
-Lib/weakref.py	160	171	WeakValueDictionary.get	get(self, key, default=None)	todo		
-Lib/weakref.py	173	177	WeakValueDictionary.items	items(self)	todo		
-Lib/weakref.py	179	182	WeakValueDictionary.keys	keys(self)	todo		
-Lib/weakref.py	186	196	WeakValueDictionary.itervaluerefs	itervaluerefs(self)	todo		
-Lib/weakref.py	198	202	WeakValueDictionary.values	values(self)	todo		
-Lib/weakref.py	204	209	WeakValueDictionary.popitem	popitem(self)	todo		
-Lib/weakref.py	211	222	WeakValueDictionary.pop	pop(self, key, *args)	todo		
-Lib/weakref.py	224	233	WeakValueDictionary.setdefault	setdefault(self, key, default=None)	todo		
-Lib/weakref.py	235	243	WeakValueDictionary.update	update(self, other=None, /, **kwargs)	todo		
-Lib/weakref.py	245	255	WeakValueDictionary.valuerefs	valuerefs(self)	todo		
-Lib/weakref.py	257	259	WeakValueDictionary.__ior__	__ior__(self, other)	todo		
-Lib/weakref.py	261	266	WeakValueDictionary.__or__	__or__(self, other)	todo		
-Lib/weakref.py	268	274	WeakValueDictionary.__ror__	__ror__(self, other)	todo		
-Lib/weakref.py	289	292	KeyedRef.__new__	__new__(type, ob, callback, key)	todo		
-Lib/weakref.py	294	295	KeyedRef.__init__	__init__(self, ob, callback, key)	todo		
-Lib/weakref.py	309	320	WeakKeyDictionary.__init__	__init__(self, dict=None)	todo		
-Lib/weakref.py	322	323	WeakKeyDictionary.__delitem__	__delitem__(self, key)	todo		
-Lib/weakref.py	325	326	WeakKeyDictionary.__getitem__	__getitem__(self, key)	todo		
-Lib/weakref.py	328	329	WeakKeyDictionary.__len__	__len__(self)	todo		
-Lib/weakref.py	331	332	WeakKeyDictionary.__repr__	__repr__(self)	todo		
-Lib/weakref.py	334	335	WeakKeyDictionary.__setitem__	__setitem__(self, key, value)	todo		
-Lib/weakref.py	337	343	WeakKeyDictionary.copy	copy(self)	todo		
-Lib/weakref.py	347	354	WeakKeyDictionary.__deepcopy__	__deepcopy__(self, memo)	todo		
-Lib/weakref.py	356	357	WeakKeyDictionary.get	get(self, key, default=None)	todo		
-Lib/weakref.py	359	364	WeakKeyDictionary.__contains__	__contains__(self, key)	todo		
-Lib/weakref.py	366	370	WeakKeyDictionary.items	items(self)	todo		
-Lib/weakref.py	372	376	WeakKeyDictionary.keys	keys(self)	todo		
-Lib/weakref.py	380	383	WeakKeyDictionary.values	values(self)	todo		
-Lib/weakref.py	385	395	WeakKeyDictionary.keyrefs	keyrefs(self)	todo		
-Lib/weakref.py	397	402	WeakKeyDictionary.popitem	popitem(self)	todo		
-Lib/weakref.py	404	405	WeakKeyDictionary.pop	pop(self, key, *args)	todo		
-Lib/weakref.py	407	408	WeakKeyDictionary.setdefault	setdefault(self, key, default=None)	todo		
-Lib/weakref.py	410	418	WeakKeyDictionary.update	update(self, dict=None, /, **kwargs)	todo		
-Lib/weakref.py	420	422	WeakKeyDictionary.__ior__	__ior__(self, other)	todo		
-Lib/weakref.py	424	429	WeakKeyDictionary.__or__	__or__(self, other)	todo		
-Lib/weakref.py	431	437	WeakKeyDictionary.__ror__	__ror__(self, other)	todo		
-Lib/weakref.py	468	483	finalize.__init__	__init__(self, obj, func, /, *args, **kwargs)	todo		
-Lib/weakref.py	485	490	finalize.__call__	__call__(self, _=None)	todo		
-Lib/weakref.py	492	498	finalize.detach	detach(self)	todo		
-Lib/weakref.py	500	506	finalize.peek	peek(self)	todo		
-Lib/weakref.py	509	511	finalize.alive	alive(self)	todo		
-Lib/weakref.py	514	517	finalize.atexit	atexit(self)	todo		
-Lib/weakref.py	520	523	finalize.atexit	atexit(self, value)	todo		
-Lib/weakref.py	525	532	finalize.__repr__	__repr__(self)	todo		
-Lib/weakref.py	535	539	finalize._select_for_exit	_select_for_exit(cls)	todo		
-Lib/weakref.py	542	574	finalize._exitfunc	_exitfunc(cls)	todo		
+Lib/weakref.py	46	66	WeakMethod.__new__	__new__(cls, meth, callback=None)	modelled	misc-weakmethod-basics,misc-weakmethod-callback-once	
+Lib/weakref.py	68	73	WeakMethod.__call__	__call__(self)	modelled	misc-weakmethod-basics	
+Lib/weakref.py	75	80	WeakMethod.__eq__	__eq__(self, other)	modelled	misc-weakmethod-basics	
+Lib/weakref.py	82	87	WeakMethod.__ne__	__ne__(self, other)	modelled	misc-weakmethod-basics	
+Lib/weakref.py	104	113	WeakValueDictionary.__init__	__init__(self, other=(), /, **kw)	modelled	misc-wvd-death,misc-wvd-init	
+Lib/weakref.py	115	120	WeakValueDictionary.__getitem__	__getitem__(self, key)	modelled	misc-wvd-reads	
+Lib/weakref.py	122	123	WeakValueDictionary.__delitem__	__delitem__(self, key)	modelled	misc-wvd-writes	
+Lib/weakref.py	125	126	WeakValueDictionary.__len__	__len__(self)	modelled	misc-wvd-reads	
+Lib/weakref.py	128	133	WeakValueDictionary.__contains__	__contains__(self, key)	modelled	misc-wvd-reads	
+Lib/weakref.py	135	136	WeakValueDictionary.__repr__	__repr__(self)	modelled	misc-wvd-reads	
+Lib/weakref.py	138	139	WeakValueDictionary.__setitem__	__setitem__(self, key, value)	modelled	misc-wvd-writes	
+Lib/weakref.py	141	147	WeakValueDictionary.copy	copy(self)	modelled	misc-wvd-copy	
+Lib/weakref.py	151	158	WeakValueDictionary.__deepcopy__	__deepcopy__(self, memo)	modelled	misc-wvd-copy	
+Lib/weakref.py	160	171	WeakValueDictionary.get	get(self, key, default=None)	modelled	misc-wvd-reads	
+Lib/weakref.py	173	177	WeakValueDictionary.items	items(self)	modelled	misc-wvd-reads	
+Lib/weakref.py	179	182	WeakValueDictionary.keys	keys(self)	modelled	misc-wvd-reads	
+Lib/weakref.py	186	196	WeakValueDictionary.itervaluerefs	itervaluerefs(self)	modelled	misc-wvd-reads	
+Lib/weakref.py	198	202	WeakValueDictionary.values	values(self)	modelled	misc-wvd-reads	
+Lib/weakref.py	204	209	WeakValueDictionary.popitem	popitem(self)	modelled	misc-wvd-popitem	
+Lib/weakref.py	211	222	WeakValueDictionary.pop	pop(self, key, *args)	modelled	misc-wvd-pop-setdefault	
+Lib/weakref.py	224	233	WeakValueDictionary.setdefault	setdefault(self, key, default=None)	modelled	misc-wvd-pop-setdefault	
+Lib/weakref.py	235	243	WeakValueDictionary.update	update(self, other=None, /, **kwargs)	modelled	misc-wvd-update	
+Lib/weakref.py	245	255	WeakValueDictionary.valuerefs	valuerefs(self)	modelled	misc-wvd-reads	
+Lib/weakref.py	257	259	WeakValueDictionary.__ior__	__ior__(self, other)	modelled	misc-wvd-or	
+Lib/weakref.py	261	266	WeakValueDictionary.__or__	__or__(self, other)	modelled	misc-wvd-or	
+Lib/weakref.py	268	274	WeakValueDictionary.__ror__	__ror__(self, other)	modelled	misc-wvd-or	
+Lib/weakref.py	289	292	KeyedRef.__new__	__new__(type, ob, callback, key)	modelled	misc-wvd-death,misc-wvd-init	
+Lib/weakref.py	294	295	KeyedRef.__init__	__init__(self, ob, callback, key)	modelled	misc-wvd-death,misc-wvd-init	
+Lib/weakref.py	309	320	WeakKeyDictionary.__init__	__init__(self, dict=None)	modelled	misc-wkd-death,misc-wkd-init	
+Lib/weakref.py	322	323	WeakKeyDictionary.__delitem__	__delitem__(self, key)	modelled	misc-wkd-non-weak,misc-wkd-pop-setdefault	
+Lib/weakref.py	325	326	WeakKeyDictionary.__getitem__	__getitem__(self, key)	modelled	misc-wkd-non-weak,misc-wkd-reads	
+Lib/weakref.py	328	329	WeakKeyDictionary.__len__	__len__(self)	modelled	misc-wkd-reads	
+Lib/weakref.py	331	332	WeakKeyDictionary.__repr__	__repr__(self)	modelled	misc-wkd-reads	
+Lib/weakref.py	334	335	WeakKeyDictionary.__setitem__	__setitem__(self, key, value)	modelled	misc-wkd-non-weak,misc-wkd-writes	
+Lib/weakref.py	337	343	WeakKeyDictionary.copy	copy(self)	modelled	misc-wkd-copy	
+Lib/weakref.py	347	354	WeakKeyDictionary.__deepcopy__	__deepcopy__(self, memo)	modelled	misc-wkd-copy	
+Lib/weakref.py	356	357	WeakKeyDictionary.get	get(self, key, default=None)	modelled	misc-wkd-non-weak,misc-wkd-reads	
+Lib/weakref.py	359	364	WeakKeyDictionary.__contains__	__contains__(self, key)	modelled	misc-wkd-non-weak,misc-wkd-reads	
+Lib/weakref.py	366	370	WeakKeyDictionary.items	items(self)	modelled	misc-wkd-reads	
+Lib/weakref.py	372	376	WeakKeyDictionary.keys	keys(self)	modelled	misc-wkd-reads	
+Lib/weakref.py	380	383	WeakKeyDictionary.values	values(self)	modelled	misc-wkd-reads	
+Lib/weakref.py	385	395	WeakKeyDictionary.keyrefs	keyrefs(self)	modelled	misc-wkd-reads	
+Lib/weakref.py	397	402	WeakKeyDictionary.popitem	popitem(self)	modelled	misc-wkd-popitem	
+Lib/weakref.py	404	405	WeakKeyDictionary.pop	pop(self, key, *args)	modelled	misc-wkd-non-weak,misc-wkd-pop-setdefault	
+Lib/weakref.py	407	408	WeakKeyDictionary.setdefault	setdefault(self, key, default=None)	modelled	misc-wkd-non-weak,misc-wkd-pop-setdefault	
+Lib/weakref.py	410	418	WeakKeyDictionary.update	update(self, dict=None, /, **kwargs)	modelled	misc-wkd-init,misc-wkd-or	
+Lib/weakref.py	420	422	WeakKeyDictionary.__ior__	__ior__(self, other)	modelled	misc-wkd-or	
+Lib/weakref.py	424	429	WeakKeyDictionary.__or__	__or__(self, other)	modelled	misc-wkd-or	
+Lib/weakref.py	431	437	WeakKeyDictionary.__ror__	__ror__(self, other)	modelled	misc-wkd-or	
+Lib/weakref.py	468	483	finalize.__init__	__init__(self, obj, func, /, *args, **kwargs)	modelled	misc-finalize-init	
+Lib/weakref.py	485	490	finalize.__call__	__call__(self, _=None)	modelled	misc-finalize-once	
+Lib/weakref.py	492	498	finalize.detach	detach(self)	modelled	misc-finalize-once	
+Lib/weakref.py	500	506	finalize.peek	peek(self)	modelled	misc-finalize-once	
+Lib/weakref.py	509	511	finalize.alive	alive(self)	modelled	misc-finalize-once	
+Lib/weakref.py	514	517	finalize.atexit	atexit(self)	modelled	misc-finalize-once	
+Lib/weakref.py	520	523	finalize.atexit	atexit(self, value)	modelled	misc-finalize-once	
+Lib/weakref.py	525	532	finalize.__repr__	__repr__(self)	modelled	misc-finalize-init	
+Lib/weakref.py	535	539	finalize._select_for_exit	_select_for_exit(cls)	modelled	misc-finalize-select	
+Lib/weakref.py	542	574	finalize._exitfunc	_exitfunc(cls)	modelled	misc-finalize-exitfunc	

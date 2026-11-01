@@ -1,0 +1,54 @@
+id: corelibs-random-setstate-gauss-next
+title: "A rejected Random.setstate still replaces gauss_next"
+priority: P4
+kind: partial-state-change
+module: corelibs
+files: [Lib/random.py]
+functions: ["Random.setstate"]
+summary: |
+  Random.setstate unpacks `version, internalstate, self.gauss_next = state` before the C setstate
+  validates internalstate. If the C call raises, the Mersenne Twister state is unchanged (that was
+  made atomic in bpo-29960), but gauss_next already holds the value from the rejected state, and
+  the next gauss() returns it. After `r.setstate((3, 'bad', 1.25))` raises TypeError,
+  r.gauss(0, 1) returns 1.25.
+likelihood: |
+  Low. It needs a corrupted state tuple that is caught and then ignored, followed by gauss() with
+  a stale value. The effect is one wrong variate.
+maybe_intended: |
+  Not intended, but small enough that a maintainer may not care. The fix is two lines.
+reproducer: |
+  import random
+  r = random.Random(1)
+  r.getstate()
+  try:
+      r.setstate((3, 'bad', 1.25))
+      raised = False
+  except TypeError:
+      raised = True
+  print(raised, r.gauss_next)
+  if raised and r.gauss_next == 1.25 and r.gauss(0.0, 1.0) == 1.25:
+      print('REPRODUCED corelibs-random-setstate-gauss-next')
+expected: |
+  The object is unchanged after the exception, as the C part promises.
+observed: |
+  python3 3.14.7: setstate((3, 'bad', 1.25)) raises TypeError, gauss_next is then 1.25 and gauss(0.0,
+  1.0) returns 1.25. REPRODUCED.
+  main (python.exe 3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
+promised_by: |
+  bpo-29960 (python/cpython#74146), which made the C setstate atomic because a failed setstate
+  corrupted the generator.
+cause: |
+  Lib/random.py:184 and :187 unpack into self.gauss_next; the checks are in
+  Modules/_randommodule.c:463-487, called afterwards at :185 and :196.
+possible_fix: |
+  Unpack into a local and assign self.gauss_next after super().setstate(internalstate) returns.
+duplicates:
+  issues:
+    - {number: 74146, state: closed, relation: "same concern for the C state", reason: "fixed the C part only"}
+    - {number: 84526, state: closed, relation: "mentions gauss_next", reason: "not a duplicate"}
+  queries: ["random setstate", "gauss_next", "random setstate gauss_next", "Random.setstate partial state",
+            "setstate atomic gauss", "bugforge README: no entry for this"]
+lean:
+  property: PyLean.CoreLibs.Rand.SetstateAtomic
+  theorem: PyLean.CoreLibs.Rand.setstateAtomic_refuted
+  also_proven: "PyLean.CoreLibs.Rand.SetstateFailureKeepsCore: the generator state itself is untouched by a failed setstate"
