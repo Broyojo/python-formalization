@@ -7,6 +7,7 @@ import PyLean.DictSet.Mutation
 import PyLean.DictSet.Merge
 import PyLean.DictSet.Split
 import PyLean.DictSet.SetProps
+import PyLean.DictSet.SetRefine
 import PyLean.DictSet.Findings
 
 /-!
@@ -247,11 +248,37 @@ def entries : List Entry := [
     prop := ``CKeyWrappers, thm := some ``cKeyWrappers_proven
     notes := "One model, withCKey, stands for all of them: their bodies differ only in which key operation they call. PyDict_SetItemString also interns the key, which has no effect on the dict's contents." },
   { id := "set-table-refines", pyFile := "Objects/setobject.c",
-    pyFns := ["set_lookkey", "set_add_entry", "set_discard_entry", "set_contains_entry"]
-    statement := "For every key type keeping the hash/eq contract, after any program of add and discard from an empty set, membership agrees with a list without duplicates."
-    source := "language: set semantics", status := .open
-    prop := ``SetTableRefines
-    notes := "Not proved. Needs the Chain invariant restated over set_lookkey's nested linear-probe loops, the freeslot logic of set_add_entry_takeref, and set_table_resize. The behaviour is checked by the difftest, including exact slot order." },
+    pyFns := ["set_lookkey", "set_add_entry_takeref", "set_table_resize", "set_contains_entry",
+      "set_discard_entry", "set_add_key", "set_contains_key", "set_discard_key"]
+    statement := "From an empty set, a run of add and discard either stops with MemoryError, when a table is refused, or leaves a well-formed table that holds what the abstract list holds, up to order, and `in` answers as the list does."
+    source := "language: set semantics", status := .proven
+    prop := ``SetTableRefines, thm := some ``setTableRefines_proven
+    notes := "The statement admits MemoryError because the model mirrors the refusal of PyMem_NEW at setobject.c:343: a long enough run can reach it." },
+  { id := "set-pop", pyFile := "Objects/setobject.c", pyFns := ["set_pop_impl"]
+    statement := "s.pop() raises KeyError on an empty set; otherwise exactly one entry leaves and the table stays well formed, wherever the finger stood."
+    source := "set.pop docstring; setobject.c:719-743", status := .proven
+    prop := ``SetPopSpec, thm := some ``setPopSpec_proven },
+  { id := "set-clear", pyFile := "Objects/setobject.c", pyFns := ["set_clear_internal", "set_empty_to_minsize"]
+    statement := "Clearing keeps the table well formed and empties it."
+    source := "set.clear docstring; setobject.c:445-504", status := .proven
+    prop := ``SetClearSpec, thm := some ``setClearSpec_proven },
+  { id := "set-iter-order", pyFile := "Objects/setobject.c", pyFns := ["set_next"]
+    statement := "An iterator over a set that does not change yields its keys, in table order, each once."
+    source := "setobject.c:519-541, 901-942", status := .proven
+    prop := ``SetIterOrder, thm := some ``setIterOrder_proven },
+  { id := "set-probe-failure", pyFile := "Objects/setobject.c", pyFns := ["set_lookkey", "set_add_entry_takeref"]
+    statement := "For every key protocol: an __eq__ that raises ends the probe with that exception, in the state it left; and when it changed the table, the lookup restarts on any answer and the add restarts on an answer of no."
+    source := "setobject.c:112-120, 171-178", status := .proven
+    prop := ``SetProbeFailure, thm := some ``setProbeFailure_proven },
+  { id := "set-add-trusts-yes", pyFile := "Objects/setobject.c", pyFns := []
+    statement := "set_add_entry and set_lookkey differ on an __eq__ that answers yes and changes the table: the lookup restarts, the add stops and treats the key as present."
+    source := "setobject.c:118-121 against 173-178", status := .proven
+    prop := ``SetAddTrustsYes, thm := some ``setAddTrustsYes_proven
+    notes := "A difference between two bodies, on record. It needs an __eq__ that lies about its own effect, and nothing goes wrong in memory." },
+  { id := "set-hash-failure", pyFile := "Objects/setobject.c", pyFns := ["set_add_key", "set_contains_key", "set_discard_key"]
+    statement := "For every key protocol, a hash that raises is reported through set_unhashable_type and the set is unchanged."
+    source := "setobject.c:412-443", status := .proven
+    prop := ``SetHashFailure, thm := some ``setHashFailure_proven },
   { id := "odict-twins-agree", pyFile := "Objects/odictobject.c",
     pyFns := ["_odict_get_index", "_odict_resize", "_odict_add_new_node", "_odict_remove_node"]
     statement := "For keys keeping the contract, the C and pure-Python OrderedDict hold the same keys in the same order after any program of __setitem__, __delitem__ and move_to_end."
