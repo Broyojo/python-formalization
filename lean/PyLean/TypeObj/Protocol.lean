@@ -123,6 +123,16 @@ def dictRichcompare (rt : Rt) (a b : List (Val × Val)) (op : CmpOp) : M Val := 
     pure (.bool (if op == .eq then eq else !eq))
   else pure .notImpl
 
+/-- `pp->mapping` of a `mappingproxy`. The proxy of a class has no dict object in this model, so
+`tp_dict` is read out as one at each use, which is when C reads it. -/
+def proxyMapping (self : Val) : M Val := do
+  let w ← getW
+  match payloadOf w self with
+  | some (.proxy m) => pure m
+  | some (.typeDictProxy t) =>
+    alloc B.dict (.dict ((tdata w t).dict.map fun (k, v) => (Val.str k, v)))
+  | _ => gap%
+
 /-- A `tp_richcompare` that never reaches back into `object_richcompare` with `Py_NE`. -/
 def callRichcompareEq (rt : Rt) (f : SlotFn) (a b : Val) (op : CmpOp) : M Val := do
   let w ← getW
@@ -140,6 +150,10 @@ def callRichcompareEq (rt : Rt) (f : SlotFn) (a b : Val) (op : CmpOp) : M Val :=
     | some x, some y => listRichcompare rt x y op
     | _, _ => pure .notImpl
   | .c .method => methodRichcompare rt a b op
+  | .c .mappingproxy =>
+    -- `mappingproxy_richcompare`, `Objects/descrobject.c:1233`.
+    let m ← proxyMapping a
+    rt.richCompare m b op
   | .c .dict =>
     match dictOf w a, dictOf w b with
     | some x, some y => dictRichcompare rt x y op
@@ -260,10 +274,24 @@ def callHash (rt : Rt) (f : SlotFn) (v : Val) : M Int := do
   | .generic => slotTpHash rt v
   | .c .int | .c .bool => pure (longHash ((intOf w v).getD 0))
   | .c .none => pure 0xfca86420
-  | .c .object | .c .type | .c .function | .c .property | .c .method =>
+  | .c .object | .c .type | .c .function | .c .property | .c .methodWrapper | .c .builtinFn =>
     pure (match v with
       | .obj a => (a : Int)
       | _ => 0)
+  | .c .method =>
+    -- `method_hash`, `Objects/classobject.c:266`: the hash of `__func__` can raise. The value
+    -- mixes in an address, which the model does not reproduce.
+    match payloadOf w v with
+    | some (.bound func _) =>
+      let _ ← rt.hash func
+      pure (match v with
+        | .obj a => (a : Int)
+        | _ => 0)
+    | _ => gap%
+  | .c .mappingproxy =>
+    -- `mappingproxy_hash`, `Objects/descrobject.c:1204`.
+    let m ← proxyMapping v
+    rt.hash m
   | .c .str => pure 0
   | .c .tuple =>
     for x in ((tupleOf w v).getD []) do
@@ -388,6 +416,68 @@ def dictReprLoop (rt : Rt) (v : Val) : Nat → Nat → List String → M (List S
       let vr ← rt.repr x
       dictReprLoop rt v fuel (i + 1) ((kr ++ ": " ++ vr) :: acc)
 
+/-- The calling convention of a builtin: `METH_NOARGS`, `METH_O`, `METH_FASTCALL` without
+keywords, or keywords accepted. -/
+inductive MethConv where
+  | noargs | o | fast | keywords
+
+/-- `ml_name` and `ml_flags` of a `Builtin`. -/
+def builtinConv : Builtin → String × MethConv
+  | .objectInitSubclass => ("__init_subclass__", .noargs)
+  | .objectSubclasshook => ("__subclasshook__", .o)
+  | .objectFormat => ("__format__", .o)
+  | .strDunderFormat => ("__format__", .o)
+  | .numDunderFormat => ("__format__", .o)
+  | .objectDir => ("__dir__", .noargs)
+  | .objectSizeof => ("__sizeof__", .noargs)
+  | .objectGetstate => ("__getstate__", .noargs)
+  | .objectReduce => ("__reduce__", .noargs)
+  | .objectReduceEx => ("__reduce_ex__", .o)
+  | .classGetitem => ("__class_getitem__", .o)
+  | .typeMro => ("mro", .noargs)
+  | .typeSubclasses => ("__subclasses__", .noargs)
+  | .typeInstancecheck => ("__instancecheck__", .o)
+  | .typeSubclasscheck => ("__subclasscheck__", .o)
+  | .typeDir => ("__dir__", .noargs)
+  | .typeSizeof => ("__sizeof__", .noargs)
+  | .isinstance => ("isinstance", .fast)
+  | .issubclass => ("issubclass", .fast)
+  | .getattr => ("getattr", .fast)
+  | .setattr => ("setattr", .fast)
+  | .delattr => ("delattr", .fast)
+  | .hasattr => ("hasattr", .fast)
+  | .len => ("len", .o)
+  | .iter => ("iter", .fast)
+  | .next => ("next", .fast)
+  | .repr => ("repr", .o)
+  | .hash => ("hash", .o)
+  | .callable => ("callable", .o)
+  | .dir => ("dir", .fast)
+  | .abs => ("abs", .o)
+  | .divmod => ("divmod", .fast)
+  | .format => ("format", .fast)
+  | .propertyGetter => ("getter", .o)
+  | .propertySetter => ("setter", .o)
+  | .propertyDeleter => ("deleter", .o)
+  | .listAppend => ("append", .o)
+  | .dunderGetitem => ("__getitem__", .o)
+  | .dunderContains => ("__contains__", .o)
+  | .dictKeysMethod => ("keys", .noargs)
+  | .iterLengthHint => ("__length_hint__", .noargs)
+  | _ => ("", .keywords)
+
+/-- `ml_name` of a builtin, when the model knows it. -/
+def builtinName (b : Builtin) : Option String :=
+  match b with
+  | .stub n | .excMethod n => (n.splitOn ".").getLast?
+  | _ =>
+    let n := (builtinConv b).1
+    if n == "" then none else some n
+
+/-- `descr_repr`, `Objects/descrobject.c:42`, with the format of its callers there. -/
+def descrRepr (w : World) (kind : String) (o : Addr) (n : Name) : String :=
+  s!"<{kind} '{n}' of '{tpName w o}' objects>"
+
 /-- Call the `tp_repr` function `f`. -/
 def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
   let w ← getW
@@ -426,6 +516,96 @@ def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
     withRepr v "{...}" do
       let rs ← dictReprLoop rt v iterFuel 0 []
       pure (.str ("{" ++ ", ".intercalate rs ++ "}"))
+  | .c .wrapperDescr =>
+    match payloadOf w v with
+    | some (.wrapperDescr o p _) => pure (.str (descrRepr w "slot wrapper" o p.name))
+    | _ => gap%
+  | .c .methodDescr | .c .classmethodDescr =>
+    match payloadOf w v with
+    | some (.methodDescr o n _) | some (.classmethodDescr o n _) =>
+      pure (.str (descrRepr w "method" o n))
+    | _ => gap%
+  | .c .memberDescr =>
+    match payloadOf w v with
+    | some (.memberDescr o n _) => pure (.str (descrRepr w "member" o n))
+    | _ => gap%
+  | .c .getsetDescr =>
+    match payloadOf w v with
+    | some (.getsetDescr o n _) => pure (.str (descrRepr w "attribute" o n))
+    | _ => gap%
+  | .c .function =>
+    -- `func_repr`, `Objects/funcobject.c:1249`.
+    match payloadOf w v with
+    | some (.func fd) => pure (.str s!"<function {fd.qualname} at 0x0>")
+    | _ => gap%
+  | .c .method =>
+    -- `method_repr`, `Objects/classobject.c:238`: `__qualname__`, then `__name__`, and `?`
+    -- when neither is a str. Either lookup can raise.
+    match payloadOf w v with
+    | some (.bound func self) =>
+      let q ← rt.getOptionalAttr func "__qualname__"
+      let n ← match q with
+        | some _ => pure q
+        | none => rt.getOptionalAttr func "__name__"
+      let w ← getW
+      let text := match n with
+        | some x => (strOf w x).getD "?"
+        | none => "?"
+      let r ← rt.repr self
+      pure (.str s!"<bound method {text} of {r}>")
+    | _ => gap%
+  | .c .builtinFn =>
+    -- `meth_repr`, `Objects/methodobject.c:303`.
+    match payloadOf w v with
+    | some (.builtin b self) =>
+      match builtinName b, self with
+      | some n, none => pure (.str s!"<built-in function {n}>")
+      | some n, some s =>
+        pure (.str s!"<built-in method {n} of {typeName w s} object at 0x0>")
+      | none, _ => gap%
+    | _ => gap%
+  | .c .methodWrapper =>
+    -- `wrapper_repr`, `Objects/descrobject.c:1359`.
+    match payloadOf w v with
+    | some (.methodWrapper d s) =>
+      match payloadOf w d with
+      | some (.wrapperDescr _ p _) =>
+        pure (.str s!"<method-wrapper '{p.name}' of {typeName w s} object at 0x0>")
+      | _ => gap%
+    | _ => gap%
+  | .c .classmethod =>
+    -- `cm_repr`, `Objects/funcobject.c:1652`.
+    match payloadOf w v with
+    | some (.classmethod f) => pure (.str s!"<classmethod({← rt.repr f})>")
+    | _ => gap%
+  | .c .staticmethod =>
+    -- `sm_repr`, `Objects/funcobject.c:1902`.
+    match payloadOf w v with
+    | some (.staticmethod f) => pure (.str s!"<staticmethod({← rt.repr f})>")
+    | _ => gap%
+  | .c .super =>
+    -- `super_repr`, `Objects/typeobject.c:11820`, which tolerates a NULL type.
+    match payloadOf w v with
+    | some (.super ty _ ot) =>
+      let t := match ty with
+        | some a => tpName w a
+        | none => "NULL"
+      match ot with
+      | some o => pure (.str s!"<super: <class '{t}'>, <{tpName w o} object>>")
+      | none => pure (.str s!"<super: <class '{t}'>, NULL>")
+    | _ => gap%
+  | .c .mappingproxy =>
+    -- `mappingproxy_repr`, `Objects/descrobject.c:1218`.
+    let m ← proxyMapping v
+    pure (.str s!"mappingproxy({← rt.repr m})")
+  | .c .dictKeys =>
+    -- `dictview_repr`, `Objects/dictobject.c`: the guard, then the keys as a list.
+    withRepr v "..." do
+      match payloadOf w v with
+      | some (.seqIter (some d) _) =>
+        let l ← alloc B.list (.list ((dictOf w d).getD [] |>.map (·.1)))
+        pure (.str s!"dict_keys({← rt.repr l})")
+      | _ => gap%
   | .c e => if isExcFamily e then excCallRepr rt e v else gap%
   | _ => gap%
 
@@ -453,6 +633,10 @@ def callStr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
       | some r => callRepr rt r v
       | none => pure (.str (objectRepr w v))
     | .str => pure (.str ((strOf w v).getD ""))
+    | .mappingproxy =>
+      -- `mappingproxy_str`, `Objects/descrobject.c:1211`.
+      let m ← proxyMapping v
+      pure (.str (← rt.str m))
     | _ => gap%
   | _ => gap%
 
@@ -545,8 +729,13 @@ def callLen (rt : Rt) (f : SlotFn) (v : Val) : M Int := do
   | .c .list => pure (((listOf w v).getD []).length : Nat)
   | .c .dict => pure (((dictOf w v).getD []).length : Nat)
   | .c .mappingproxy =>
+    -- `mappingproxy_len`, `Objects/descrobject.c:1045`.
+    let m ← proxyMapping v
+    rt.size m
+  | .c .dictKeys =>
+    -- `dictview_len`, `Objects/dictobject.c`.
     match payloadOf w v with
-    | some (.typeDictProxy t) => pure ((tdata w t).dict.length : Nat)
+    | some (.seqIter (some d) _) => pure (((dictOf w d).getD []).length : Nat)
     | _ => gap%
   | _ => gap%
 
@@ -861,6 +1050,13 @@ def callNbBinary (rt : Rt) (s : Slot) (f : SlotFn) (a b : Val) : M Val := do
   | .generic =>
     let op := nbOpOfSlot s
     slot1Bin rt s op.dunder op.rdunder a b []
+  | .c .mappingproxy =>
+    -- `mappingproxy_or`, `Objects/descrobject.c:1065`: both sides are unwrapped.
+    let unwrap (x : Val) : M Val := do
+      if isSubtype w (typeOf w x) B.mappingproxy then proxyMapping x else pure x
+    let l ← unwrap a
+    let r ← unwrap b
+    rt.numberOr l r
   | .c .int =>
     match intOf w a, intOf w b with
     | some x, some y => longBinary s x y
@@ -1147,6 +1343,10 @@ where
       let merged ← dictUpdateArg rt ((dictOf w a).getD []) b
       modObj addr fun o => { o with body := .dict merged }
       pure a
+    | .c .mappingproxy, _ =>
+      -- `mappingproxy_ior`, `Objects/descrobject.c:1077`.
+      let w ← getW
+      typeErr s!"'|=' is not supported by {typeName w a}; use '|' instead"
     | .c .list, .obj _ =>
       -- `update_one_slot` puts `list_inplace_concat` in `nb_inplace_add` of a list subclass:
       -- `__iadd__` has the same wrapper for `nb_inplace_add` and `sq_inplace_concat`.
@@ -1433,14 +1633,9 @@ def callMpSubscript (rt : Rt) (f : SlotFn) (o key : Val) : M Val := do
       let x ← alloc B.KeyError (.exc { args := [key] })
       raise (.exc B.KeyError "" (some x))
   | .c .mappingproxy =>
-    match payloadOf w o, key with
-    | some (.typeDictProxy t), .str n =>
-      match NameDict.get? (tdata w t).dict n with
-      | some v => pure v
-      | none =>
-        let x ← alloc B.KeyError (.exc { args := [key] })
-        raise (.exc B.KeyError "" (some x))
-    | _, _ => gap%
+    -- `mappingproxy_getitem`, `Objects/descrobject.c:1052`.
+    let m ← proxyMapping o
+    rt.getItem m key
   | _ => gap%
 
 /-- `PySequence_GetItem`, `Objects/abstract.c:1832`. -/
@@ -1478,7 +1673,7 @@ def pyGetItem (rt : Rt) (o key : Val) : M Val := do
     | none =>
       match asType w o with
       | some oa =>
-        if oa == B.type then gap% else
+        if oa == B.type then alloc B.genericAlias .plain else
         let meth ← rt.getOptionalAttr o "__class_getitem__"
         match meth with
         | some m =>
@@ -1605,6 +1800,10 @@ def callIter (rt : Rt) (f : SlotFn) (o : Val) : M Val := do
     | _ => gap%
   | .c .tuple => alloc B.tupleIter (.seqIter (some o) 0)
   | .c .str => alloc B.strIter (.seqIter (some o) 0)
+  | .c .mappingproxy =>
+    -- `mappingproxy_getiter`, `Objects/descrobject.c:1197`.
+    let m ← proxyMapping o
+    rt.getIter m
   | .c .seqIter | .c .listIter | .c .tupleIter | .c .strIter => pure o
   | _ => gap%
 
@@ -1814,6 +2013,19 @@ def callContains (rt : Rt) (f : SlotFn) (seq ob : Val) : M Bool := do
     dictHashKey rt ob
     let w ← getW
     pure (dictLookup ((dictOf w seq).getD []) ob).isSome
+  | .c .mappingproxy =>
+    -- `mappingproxy_contains`, `Objects/descrobject.c:1089`: `PyDict_Contains` on an exact
+    -- dict is the `sq_contains` of that dict.
+    let m ← proxyMapping seq
+    rt.contains m ob
+  | .c .dictKeys =>
+    -- `dictkeys_contains`, `Objects/dictobject.c`: the dict's own table, never an override.
+    match payloadOf w seq with
+    | some (.seqIter (some d) _) =>
+      dictHashKey rt ob
+      let w ← getW
+      pure (dictLookup ((dictOf w d).getD []) ob).isSome
+    | _ => gap%
   | .c .str =>
     match strOf w ob with
     | some t => pure (strContains ((strOf w seq).getD "").toList t.toList)

@@ -63,7 +63,7 @@ VALUES = [
 def protocols(v):
     """The language-level operations on a value, as expressions."""
     two = ["bin", "+", v, v]
-    return [call(name("len"), v), call(name("iter"), v), call(name("hash"), v),
+    return [call(name("len"), v), call(name("iter"), v), call(name("_hash"), v),
             call(name("repr"), v), call(name("str"), v), call(name("bool"), v),
             call(name("int"), v), call(name("float"), v), call(name("format"), v),
             call(name("dir"), v), call(name("isinstance"), lit(1), v),
@@ -109,7 +109,8 @@ def build_cases():
             out.append(case_for(e))
         setup = [["assign", "o", v]]
         for n in names_of(v):
-            if n in ("__class_getitem__",):
+            # Addresses and sizes differ from run to run or by platform.
+            if n in ("__class_getitem__", "__hash__", "__sizeof__"):
                 continue
             out.append(case_for(attr(v, n)))
             for a in ARGS:

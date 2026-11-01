@@ -317,6 +317,8 @@ inductive Payload where
   | seqIter (seq : Option Val) (index : Int)
   /-- `C.__dict__`: a `mappingproxy` over the `tp_dict` of `ty`. -/
   | typeDictProxy (ty : Addr)
+  /-- `mappingproxyobject`, `Objects/descrobject.c:1040`, over any mapping. -/
+  | proxy (mapping : Val)
   | mappingproxy (mapping : Val)
   | cell (v : Option Val)
   | exc (e : ExcData)
@@ -721,6 +723,12 @@ structure Rt where
   listItems (v : Val) : M (List Val)
   /-- `PyObject_GetItem(o, k)`. -/
   getItem (o k : Val) : M Val
+  /-- `PyObject_Size(o)`. -/
+  size (o : Val) : M Int
+  /-- `PySequence_Contains(o, k)`. -/
+  contains (o k : Val) : M Bool
+  /-- `PyNumber_Or(a, b)`. -/
+  numberOr (a b : Val) : M Val
   /-- The getter of the `PyGetSetDef` (or C member) `n` of the static type `owner`. -/
   getsetGet (owner : Addr) (n : Name) (obj : Val) : M Val
   /-- The setter of the same; `none` deletes. -/

@@ -416,11 +416,14 @@ def superInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   noKeywords "super" kw
   let w ← getW
   match args.length with
-  | 0 => runtimeErr "super(): no current frame"
+  -- `super_init_without_args` reads the caller's frame, which the `Rt` does not carry.
+  | 0 => gap%
   | 1 | 2 =>
     let arg0 := args.headD .none
     match asType w arg0 with
-    | none => typeErr s!"super() argument 1 must be a type, not {trunc 200 (typeName w arg0)}"
+    | none =>
+      -- `PyArg_ParseTuple(args, "|O!O:super", &PyType_Type, ...)`, `:12157`.
+      typeErr s!"super() argument 1 must be type, not {argTypeName w arg0}"
     | some ty =>
       let obj := match args with
         | [_, o] => if o.is .none then none else some o
@@ -431,7 +434,24 @@ def superInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
       match self with
       | .obj a => modObj a fun o => { o with body := .super (some ty) obj objType }
       | _ => gap%
-  | n => typeErr s!"super() expected at most 2 arguments, got {n}"
+  | n => typeErr s!"super() takes at most 2 arguments ({n} given)"
+
+/-- `super_vectorcall`, `Objects/typeobject.c:12237`: `super(...)` on exact `super` skips
+`tp_new` and `tp_init`, with messages of its own. -/
+def superVectorcall (rt : Rt) (args : List Val) (kw : Kw) : M Val := do
+  unless kw.isEmpty do typeErr "super() takes no keyword arguments"
+  if args.length > 2 then typeErr s!"super() expected at most 2 arguments, got {args.length}"
+  let w ← getW
+  let su ← alloc B.super (freshBody w B.super)
+  match args with
+  | [] => gap%
+  | arg0 :: _ =>
+    match asType w arg0 with
+    | none =>
+      typeErr s!"super() argument 1 must be a type, not {trunc 200 (typeName w arg0)}"
+    | some _ =>
+      superInit rt su args []
+      pure su
 
 /-- `slot_tp_new`, `Objects/typeobject.c:10587`. -/
 def slotTpNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
@@ -457,6 +477,28 @@ def callTpNew (rt : Rt) (f : SlotFn) (t : Addr) (args : List Val) (kw : Kw) : M 
       boxValue t B.float r
   | .c .str => strNew rt t args kw
   | .c .tuple => tupleNew rt t args kw
+  | .c .method =>
+    -- `method_new_impl`, `Objects/classobject.c:180`.
+    noKeywords "method" kw
+    unpackTuple "method" 2 2 args.length
+    match args with
+    | [func, inst] =>
+      if !excCallableCheck w func then typeErr "first argument must be callable"
+      if inst.is .none then typeErr "instance must not be None"
+      alloc B.method (.bound func inst)
+    | _ => gap%
+  | .c .mappingproxy =>
+    -- `mappingproxy_new_impl`, `Objects/descrobject.c:1263`, and the check at `:1240`.
+    let m ← match args, kw with
+      | [x], [] | [], [("mapping", x)] => pure x
+      | _, _ =>
+        if args.length + kw.length > 1 then
+          typeErr s!"mappingproxy() takes at most 1 argument ({args.length + kw.length} given)"
+        else typeErr "mappingproxy() missing required argument 'mapping' (pos 1)"
+    if (slotOf w (typeOf w m) .mp_subscript).isNone || isSubtype w (typeOf w m) B.list ||
+        isSubtype w (typeOf w m) B.tuple then
+      typeErr s!"mappingproxy() argument must be a mapping, not {typeName w m}"
+    alloc B.mappingproxy (.proxy m)
   | .c .list | .c .dict | .c .property | .c .classmethod | .c .staticmethod | .c .super =>
     alloc t (freshBody w t)
   | .c .none =>
@@ -661,6 +703,10 @@ def wrapperApply (rt : Rt) (p : SlotDef) (f : SlotFn) (self : Val) (args : List 
         if s.group == .number then
           match f, wr with
           | .generic, .binary => vectorcallMethod rt p.name [self, other]
+          -- `nb_inplace_or` of `dict` and of `mappingproxy`.
+          | .c .dict, .binary | .c .mappingproxy, .binary =>
+            if p.name == "__ior__" then binaryIop1.callInplace rt f p.name self other
+            else callNbBinary rt s f self other
           | _, _ => callNbBinary rt s f self other
         else gap%
     | .binaryR =>
@@ -861,56 +907,6 @@ def typeMroImpl (rt : Rt) (self : Val) : M Val := do
     alloc B.list (.list (m.map Val.obj))
   | _ => gap%
 
-/-- The calling convention of a builtin: `METH_NOARGS`, `METH_O`, `METH_FASTCALL` without
-keywords, or keywords accepted. -/
-inductive MethConv where
-  | noargs | o | fast | keywords
-
-/-- `ml_name` and `ml_flags` of a `Builtin`. -/
-def builtinConv : Builtin → String × MethConv
-  | .objectInitSubclass => ("__init_subclass__", .noargs)
-  | .objectSubclasshook => ("__subclasshook__", .o)
-  | .objectFormat => ("__format__", .o)
-  | .strDunderFormat => ("__format__", .o)
-  | .numDunderFormat => ("__format__", .o)
-  | .objectDir => ("__dir__", .noargs)
-  | .objectSizeof => ("__sizeof__", .noargs)
-  | .objectGetstate => ("__getstate__", .noargs)
-  | .objectReduce => ("__reduce__", .noargs)
-  | .objectReduceEx => ("__reduce_ex__", .o)
-  | .classGetitem => ("__class_getitem__", .o)
-  | .typeMro => ("mro", .noargs)
-  | .typeSubclasses => ("__subclasses__", .noargs)
-  | .typeInstancecheck => ("__instancecheck__", .o)
-  | .typeSubclasscheck => ("__subclasscheck__", .o)
-  | .typeDir => ("__dir__", .noargs)
-  | .typeSizeof => ("__sizeof__", .noargs)
-  | .isinstance => ("isinstance", .fast)
-  | .issubclass => ("issubclass", .fast)
-  | .getattr => ("getattr", .fast)
-  | .setattr => ("setattr", .fast)
-  | .delattr => ("delattr", .fast)
-  | .hasattr => ("hasattr", .fast)
-  | .len => ("len", .o)
-  | .iter => ("iter", .fast)
-  | .next => ("next", .fast)
-  | .repr => ("repr", .o)
-  | .hash => ("hash", .o)
-  | .callable => ("callable", .o)
-  | .dir => ("dir", .fast)
-  | .abs => ("abs", .o)
-  | .divmod => ("divmod", .fast)
-  | .format => ("format", .fast)
-  | .propertyGetter => ("getter", .o)
-  | .propertySetter => ("setter", .o)
-  | .propertyDeleter => ("deleter", .o)
-  | .listAppend => ("append", .o)
-  | .dunderGetitem => ("__getitem__", .o)
-  | .dunderContains => ("__contains__", .o)
-  | .dictKeysMethod => ("keys", .noargs)
-  | .iterLengthHint => ("__length_hint__", .noargs)
-  | _ => ("", .keywords)
-
 /-- `_PyObject_FunctionStr` of a builtin, `Objects/object.c:959`, via `meth_get__qualname__`,
 `Objects/methodobject.c:231`. -/
 def builtinFuncStr (w : World) (name : String) (self : Option Val) : String :=
@@ -1006,7 +1002,10 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
   | .typeMro => typeMroImpl rt selfV
   | .typeSubclasses =>
     match selfV with
-    | .obj t => alloc B.list (.list ((tdata w t).subclasses.map Val.obj))
+    | .obj t =>
+      -- The subclasses of a static type depend on what the interpreter has imported.
+      if !(tdata w t).heap then gap% else
+      alloc B.list (.list ((tdata w t).subclasses.map Val.obj))
     | _ => gap%
   | .typePrepare => alloc B.dict (.dict [])
   | .objectSizeof =>
@@ -1202,6 +1201,9 @@ def typeGetDoc (rt : Rt) (t : Addr) : M Val := do
   match NameDict.get? (tdata w t).dict "__doc__" with
   | none => pure .none
   | some r =>
+    -- `type_get_doc`, `Objects/typeobject.c`: a static type answers from `tp_doc`. The model has
+    -- that text only where it is also the dict entry, not where the entry is a descriptor.
+    if !(tdata w t).heap && (slotOf w (typeOf w r) .tp_descr_get).isSome then gap% else
     match slotOf w (typeOf w r) .tp_descr_get with
     | some g => callDescrGet rt g r none (some (.obj t))
     | none => pure r
@@ -1499,7 +1501,9 @@ def callTpCall (rt : Rt) (s : SlotFn) (f : Val) (args : List Val) (kw : Kw) : M 
   | .generic => slotTpCall rt f args kw
   | .c .type =>
     match f with
-    | .obj t => typeCall rt t args kw
+    | .obj t =>
+      -- `tp_vectorcall` is not inherited, so only exact `super` goes this way.
+      if t == B.super then superVectorcall rt args kw else typeCall rt t args kw
     | _ => gap%
   | .c .function =>
     match payloadOf w f with

@@ -113,10 +113,7 @@ def canon (w : World) : Nat → Val → String
         | some (.boxed x) => s!"<{tn} {canon w fuel x}>"
         | some (.func f) => s!"<function {f.qualname}>"
         | some (.bound f s) => s!"<method {canon w fuel f} of {canon w fuel s}>"
-        | some (.builtin b _) =>
-          match b with
-          | .stub n => s!"<builtin {n}>"
-          | _ => "<builtin>"
+        | some (.builtin _ _) => "<builtin>"
         | some (.exc e) =>
           s!"<{tn} " ++ "(" ++ ", ".intercalate (e.args.map (canon w fuel)) ++ ")>"
         | _ => let _ := a; s!"<{tn}>"
