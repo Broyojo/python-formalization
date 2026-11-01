@@ -1,0 +1,55 @@
+id: pickle-tools-dis-mark-indexerror
+title: "pickletools.dis: IndexError instead of ValueError when an opcode that does not expect a mark consumes one"
+priority: P4
+kind: internal-error
+module: pickle
+files: [Lib/pickletools.py]
+functions: [dis]
+summary: |
+  `dis` tracks marks twice, on the emulated `stack` and in `markstack`. An opcode such as TUPLE1 or DUP
+  has no mark in `stack_before`, so it can delete a mark from `stack` while its `markstack` entry stays.
+  The next opcode that does expect a mark passes the `if markstack` test and runs
+  `while stack[-1] is not markobject`, which walks off the end of the list.
+  `pickletools.dis(b'(\x85t.')` raises IndexError "list index out of range".
+likelihood: |
+  Low. Only malformed streams reach it: both unpicklers reject them. The stream is rejected either way,
+  so this is the wrong exception class and no check is lost.
+maybe_intended: |
+  Not as such, but it is cosmetic. Maintainers do not treat pickletools as a validator (#127045), and
+  Serhiy Storchaka noted in #123309 that `dis` has few tests of its corner cases. Report only together
+  with the related pickletools finding, or drop it.
+reproducer: |
+  import io, pickle, pickletools
+  data = b'(\x85t.'
+  def r(f):
+      try:
+          return ('ok', f())
+      except Exception as e:
+          return (type(e).__name__, str(e))
+  d = r(lambda: pickletools.dis(data, out=io.StringIO()))
+  c, p = r(lambda: pickle.loads(data)), r(lambda: pickle._loads(data))
+  print('dis', d, 'C', c, 'Python', p)
+  if d == ('IndexError', 'list index out of range') and c[0] != 'ok' and p[0] != 'ok':
+      print('REPRODUCED pickle-tools-dis-mark-indexerror')
+expected: |
+  ValueError, as for every other sanity check `dis` makes.
+observed: |
+  python3 3.14.7: REPRODUCED.
+  main (python.exe 3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  The docstring of `dis`, Lib/pickletools.py:2420-2431, lists the sanity checks; every check it makes
+  raises ValueError (:2530, :2534, :2546). No explicit promise on the exception class.
+cause: |
+  Lib/pickletools.py:2461-2463 consider a mark only when `stack_before` has one or for POP, and :2536-2537
+  delete `numtopop` items without looking at them. :2475 then assumes `stack` still holds a mark.
+possible_fix: |
+  Before :2537, set `errormsg` when `markobject in stack[-numtopop:]`, or guard the loop at :2475 with
+  `if markobject not in stack`.
+duplicates:
+  issues:
+    - {number: 123309, state: closed, relation: related, reason: "another dis sanity check, on memo redefinition"}
+  queries: ["pickletools", "pickletools dis IndexError", "pickletools.dis IndexError list index out of range"]
+  bugforge: "no pickletools entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Pickle.DisNoIndexError
+  theorem: PyLean.Pickle.disNoIndexError_refuted

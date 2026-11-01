@@ -9,6 +9,7 @@ import PyLean.Pickle.OpenProps
 import PyLean.Pickle.EncProps
 import PyLean.Pickle.EncFrame
 import PyLean.Pickle.DecProps
+import PyLean.Pickle.ToolsGen
 
 /-!
 `Lib/pickle.py` vs `Modules/_pickle.c`, CPython 3.14.7, on plain data: None,
@@ -99,21 +100,21 @@ def entries : List Entry := [
     prop := ``LongLineTwinsPrecise, thm := some ``longLineTwinsPrecise_proven
     notes := "The hypothesis is exactly the refuted case. Includes the 4300-digit limit, whitespace and underscores." },
   { id := "pickle-dumps-twins", pyFile := "Modules/_pickle.c"
-    pyFns := ["dumps", "_dumps"]
+    pyFns := ["_pickle_dumps_impl", "_dumps"]
     statement := "For every plain value and protocol argument, pickle.dumps and pickle._dumps produce the same bytes or the same exception."
     source := "invariant: C accelerator vs pure-Python twin", status := .refuted
     prop := ``DumpsTwinsAgree, thm := some ``dumpsTwinsAgree_refuted
     bug := some "pickle-c-batch-encoding"
     notes := "A list of 1001 items ends MARK item APPENDS in C and item APPEND in Python. Fixed on main." },
   { id := "pickle-dumps-twins-batch-ok", pyFile := "Modules/_pickle.c"
-    pyFns := ["dumps", "_dumps"]
+    pyFns := ["_pickle_dumps_impl", "_dumps"]
     statement := "The same, for values without the batch shapes where the twins differ."
     source := "invariant: C accelerator vs pure-Python twin", status := .refuted
     prop := ``DumpsTwinsAgreeBatchOk, thm := some ``dumpsTwinsAgreeBatchOk_refuted
     bug := some "pickle-protocol-long-overflow"
     notes := "protocol=-2**63-1 is OverflowError in C and the highest protocol in Python." },
   { id := "pickle-dumps-twins-batch-ok-long", pyFile := "Modules/_pickle.c"
-    pyFns := ["dumps", "_dumps"]
+    pyFns := ["_pickle_dumps_impl", "_dumps"]
     statement := "The same, also for protocol arguments within C long."
     source := "invariant: C accelerator vs pure-Python twin", status := .refuted
     prop := ``DumpsTwinsAgreeBatchOkLong, thm := some ``dumpsTwinsAgreeBatchOkLong_refuted
@@ -138,26 +139,26 @@ def entries : List Entry := [
     prop := ``DumpsTwinsNarrow, thm := some ``dumpsTwinsNarrow_proven
     notes := "Each hypothesis is one refutation above. Exception classes may differ when both raise: on record in pickle-dumps-twins-batch-ok-long, exact equality is the open pickle-dumps-twins-exact-sized. Values are acyclic by construction; object identity is arbitrary, so sharing is covered. save_reduce and save_global are mirrored for the five globals only, so they are not claimed here." },
   { id := "pickle-dumps-twins-exact-sized", pyFile := "Modules/_pickle.c"
-    pyFns := ["dumps", "_dumps"]
+    pyFns := ["_pickle_dumps_impl", "_dumps"]
     statement := "With no str or bytes payload over 4 GiB below protocol 4, and fewer than 2**32 memoized objects, pickle.dumps and pickle._dumps produce the same bytes or the same exception, class and message."
     source := "invariant: C accelerator vs pure-Python twin", status := .open
     prop := ``DumpsTwinsExactSized
     notes := "Open: EncSim's Out relation forgets the exception. Needs the simulation redone with equal exceptions and SizeOk threaded through every lemma. The only exceptions left are the repr digit limit, which is equal in both twins." },
   { id := "pickle-roundtrip", pyFile := "Lib/pickle.py"
-    pyFns := ["_dumps", "_loads", "dump", "load"]
+    pyFns := ["_dumps", "_loads", "_pickle_dumps_impl", "_pickle_loads_impl"]
     statement := "For every well-formed plain value (hashable distinct keys and set elements, consistent ids, valid code points), every protocol 0-5 and every pairing of the two picklers and two unpicklers, loads(dumps(x, p)) is x with structure and type preserved, whenever dumps returns."
     source := "Doc/library/pickle.rst; invariant", status := .open
     prop := ``RoundTrip
     notes := "Open: needs a compiler-correctness proof over the memo, the heap (lists are memoized before their items are appended) and frames. Difftest evidence only; the integer and text-line cases are proven separately." },
   { id := "pickle-loads-twins-exact", pyFile := "Modules/_pickle.c"
-    pyFns := ["loads", "_loads"]
+    pyFns := ["_pickle_loads_impl", "_loads"]
     statement := "On every data-only stream, pickle.loads and pickle._loads raise the same exception class."
     source := "invariant: C accelerator vs pure-Python twin", status := .refuted
     prop := ``LoadsTwinsExact, thm := some ``loadsTwinsExact_refuted
     bug := some "pickle-py-unpickler-raw-exceptions"
     notes := "POP on an empty stack: UnpicklingError in C, IndexError in Python. Allowed by the docs." },
   { id := "pickle-loads-twins-accept", pyFile := "Modules/_pickle.c"
-    pyFns := ["loads", "_loads"]
+    pyFns := ["_pickle_loads_impl", "_loads"]
     statement := "pickle.loads and pickle._loads accept the same data-only streams and return equal objects."
     source := "invariant: C accelerator vs pure-Python twin", status := .refuted
     prop := ``LoadsTwinsAccept, thm := some ``loadsTwinsAccept_refuted
@@ -176,7 +177,119 @@ def entries : List Entry := [
     source := "invariant: C accelerator vs pure-Python twin", status := .refuted
     prop := ``PutTwins, thm := some ``putTwins_refuted
     bug := some "pickle-c-put-index-ssize"
-    notes := "Index 2**63: OverflowError in C. Maintainers: not a bug (python/cpython#144410)." }
+    notes := "Index 2**63: OverflowError in C. Maintainers: not a bug (python/cpython#144410)." },
+  { id := "pickletools-read-uint-exact", pyFile := "Lib/pickletools.py"
+    pyFns := ["read_uint1", "read_uint2", "read_uint4", "read_uint8"]
+    statement := "At any position of any stream, read_uint1, 2, 4 and 8 return the integer struct.pack wrote and advance by its size, and raise ValueError on fewer bytes."
+    source := "docstrings of the readers, Lib/pickletools.py:212-306", status := .proven
+    prop := ``ReadUintExact, thm := some ``readUintExact_proven },
+  { id := "pickletools-read-int4-roundtrip", pyFile := "Lib/pickletools.py"
+    pyFns := ["read_int4"]
+    statement := "read_int4 returns every int the pickler's struct.pack('<i') wrote, at any position of any stream."
+    source := "docstring of read_int4, Lib/pickletools.py:252-264", status := .proven
+    prop := ``ReadInt4Roundtrip, thm := some ``readInt4Roundtrip_proven },
+  { id := "pickletools-read-counted-roundtrip", pyFile := "Lib/pickletools.py"
+    pyFns := ["read_bytes1", "read_string1", "read_bytes4", "read_bytes8", "read_bytearray8"]
+    statement := "read_bytes1, read_string1, read_bytes4, read_bytes8 and read_bytearray8 return the payload after its count and stop right after it, for every payload the count field can hold, at any position of any stream."
+    source := "pickle stream format, Lib/pickletools.py:409-591", status := .proven
+    prop := ``ReadCountedRoundtrip, thm := some ``readCountedRoundtrip_proven },
+  { id := "pickletools-read-string4-roundtrip", pyFile := "Lib/pickletools.py"
+    pyFns := ["read_string4"]
+    statement := "read_string4 returns the latin-1 text of every payload under 2**31 bytes, the range of its signed count."
+    source := "pickle stream format, Lib/pickletools.py:438-458", status := .proven
+    prop := ``ReadString4Roundtrip, thm := some ``readString4Roundtrip_proven },
+  { id := "pickletools-read-long-roundtrip", pyFile := "Lib/pickletools.py"
+    pyFns := ["read_long1", "read_long4"]
+    statement := "read_long1 and read_long4 read back encode_long(x) for every int x whose encoding fits their count field."
+    source := "LONG1 and LONG4 format, Lib/pickletools.py:873-926", status := .proven
+    prop := ``ReadLongRoundtrip, thm := some ``readLongRoundtrip_proven },
+  { id := "pickletools-read-unicode-roundtrip", pyFile := "Lib/pickletools.py"
+    pyFns := ["read_unicodestring1", "read_unicodestring4", "read_unicodestring8"]
+    statement := "read_unicodestring1, 4 and 8 return the utf-8/surrogatepass decoding of the payload, for every decodable payload their count can hold, at any position of any stream."
+    source := "pickle stream format, Lib/pickletools.py:629-735", status := .proven
+    prop := ``ReadUnicodeRoundtrip, thm := some ``readUnicodeRoundtrip_proven },
+  { id := "pickletools-read-float8-exact", pyFile := "Lib/pickletools.py"
+    pyFns := ["read_float8"]
+    statement := "read_float8 consumes exactly the eight bytes of a BINFLOAT, and raises ValueError on fewer."
+    source := "docstring of read_float8, Lib/pickletools.py:835-848", status := .proven
+    prop := ``ReadFloat8Exact, thm := some ``readFloat8Exact_proven
+    notes := "The value of the bytes as a float is struct.unpack's: compared bit for bit by the difftest." },
+  { id := "pickletools-read-unicodenl", pyFile := "Lib/pickletools.py"
+    pyFns := ["read_unicodestringnl"]
+    statement := "read_unicodestringnl is raw-unicode-escape on the line, as in load_unicode, and raises ValueError when the newline is missing."
+    source := "twin: pickletools vs pickle", status := .proven
+    prop := ``ReadUnicodeNl, thm := some ``readUnicodeNl_proven },
+  { id := "pickletools-decimal-short-twin", pyFile := "Lib/pickletools.py"
+    pyFns := ["read_decimalnl_short"]
+    statement := "On every complete line, read_decimalnl_short and the unpickler's load_int accept the same lines and return the same int or bool, although only one of them keeps the newline for int()."
+    source := "twin: pickletools vs pickle", status := .proven
+    prop := ``DecimalShortTwin, thm := some ``decimalShortTwin_proven },
+  { id := "pickletools-decimal-long-twin", pyFile := "Lib/pickletools.py"
+    pyFns := ["read_decimalnl_long"]
+    statement := "On every complete line, read_decimalnl_long and the unpickler's load_long return the same int or raise the same exception, message included."
+    source := "twin: pickletools vs pickle", status := .proven
+    prop := ``DecimalLongTwin, thm := some ``decimalLongTwin_proven },
+  { id := "pickletools-read-stringnl-plain", pyFile := "Lib/pickletools.py"
+    pyFns := ["read_stringnl"]
+    statement := "read_stringnl on a line quoted with either quote and without backslashes returns the text between the quotes, at any position of any stream."
+    source := "docstring of read_stringnl, Lib/pickletools.py:315-340", status := .proven
+    prop := ``ReadStringnlPlain, thm := some ``readStringnlPlain_proven
+    notes := "Lines with escapes go through the same escape decoder as load_string and are difftested. A lone quote is accepted here and rejected by load_string; maintainers hold pickletools may be more lenient (python/cpython#127045)." },
+  { id := "pickletools-noescape-verbatim", pyFile := "Lib/pickletools.py"
+    pyFns := ["read_stringnl_noescape"]
+    statement := "read_stringnl_noescape returns every decodable line as load_global and load_persid read it, untouched."
+    source := "stringnl_noescape descriptor, Lib/pickletools.py:375-384; twin", status := .refuted
+    prop := ``NoescapeVerbatim, thm := some ``noescapeVerbatim_refuted
+    bug := some "pickle-tools-noescape-decodes-escapes"
+    notes := "A line ending in a backslash raises ValueError, and valid protocol 0 persistent ids reach it." },
+  { id := "pickletools-noescape-no-backslash", pyFile := "Lib/pickletools.py"
+    pyFns := ["read_stringnl_noescape", "read_stringnl_noescape_pair", "read_stringnl"]
+    statement := "On every line without a backslash, read_stringnl_noescape returns the UTF-8 decoding of the line or raises UnicodeDecodeError, and read_stringnl_noescape_pair joins two such lines with a space."
+    source := "stringnl_noescape descriptor; twin", status := .proven
+    prop := ``NoescapeNoBackslash, thm := some ``noescapeNoBackslash_proven
+    notes := "The hypothesis is exactly the refuted case." },
+  { id := "pickletools-genops-fuel", pyFile := "Lib/pickletools.py"
+    pyFns := ["_genops", "genops"]
+    statement := "_genops ends on every byte string, with or without tell: len(data) + 1 rounds suffice and more change nothing. A FLOAT opcode ends the model's run with its Excluded marker."
+    source := "invariant: no hang", status := .proven
+    prop := ``GenopsFuelEnough, thm := some ``genopsFuelEnough_proven
+    notes := "Rests on every reader moving forward and staying inside the data. read_floatnl needs float() of text, so the model stops there where CPython continues: nothing is claimed past a FLOAT opcode until the binary64 model lands." },
+  { id := "pickletools-genops-wellformed", pyFile := "Lib/pickletools.py"
+    pyFns := ["_genops", "genops"]
+    statement := "On every byte string the model of genops accepts, the opcodes start at 0, are contiguous, move forward, stay inside the data, and STOP is the last and only STOP."
+    source := "invariant; docstring of genops, Lib/pickletools.py:2300-2323", status := .proven
+    prop := ``GenopsWellFormed, thm := some ``genopsWellFormed_proven
+    notes := "Streams with a FLOAT opcode are outside: the model stops there with Excluded, see pickletools-genops-fuel." },
+  { id := "pickletools-dis-no-indexerror", pyFile := "Lib/pickletools.py"
+    pyFns := ["dis"]
+    statement := "dis reports bad streams with ValueError: it never raises IndexError."
+    source := "docstring of dis, Lib/pickletools.py:2420-2431", status := .refuted
+    prop := ``DisNoIndexError, thm := some ``disNoIndexError_refuted
+    bug := some "pickle-tools-dis-mark-indexerror"
+    notes := "b'(\\x85t.': TUPLE1 consumes the mark, then TUPLE walks off the emulated stack. Only malformed streams, which both unpicklers reject. Separately, repr(arg) stops dis on ints past the 4300-digit limit, on valid pickles: a deliberate limit, not recorded as a bug." },
+  { id := "pickletools-dis-follows-genops", pyFile := "Lib/pickletools.py"
+    pyFns := ["dis", "_genops", "genops"]
+    statement := "When dis raises nothing, genops accepts the stream and the last line printed is the maximum protocol over its opcodes."
+    source := "docstring of dis, Lib/pickletools.py:2396-2432", status := .proven
+    prop := ``DisFollowsGenops, thm := some ``disFollowsGenops_proven
+    notes := "The text of each line, the indentation and the annotations are difftested exactly." },
+  { id := "pickletools-dis-stack-repr", pyFile := "Lib/pickletools.py"
+    pyFns := ["StackObject.__repr__"]
+    statement := "The 'stack not empty after STOP' error names what is left, bottom first, in list repr with each StackObject shown by name."
+    source := "Lib/pickletools.py:974-975, :2545-2546", status := .proven
+    prop := ``DisStackRepr, thm := some ``disStackRepr_proven },
+  { id := "pickletools-optimize-raw-copy", pyFile := "Lib/pickletools.py"
+    pyFns := ["optimize", "_genops"]
+    statement := "optimize returns a stream without memo or frame opcodes, of protocol below 4, unchanged up to its STOP, at any opcode size."
+    source := "docstring of optimize, Lib/pickletools.py:2328-2329", status := .proven
+    prop := ``OptimizeRawCopy, thm := some ``optimizeRawCopy_proven
+    notes := "Covers only the copying path, by hypothesis. Removing PUTs, renumbering and reframing are difftested exactly and stated in the open pickle-optimize-sound." },
+  { id := "pickle-optimize-sound", pyFile := "Lib/pickletools.py"
+    pyFns := ["optimize"]
+    statement := "On a stream an unpickler accepts, that unpickler returns an equal object from optimize(stream)."
+    source := "docstring of optimize; invariant", status := .open
+    prop := ``OptimizeSound
+    notes := "Open: needs a simulation between the decoder on the input and on the output, relating memo indices through newids. Fuzz evidence: 29941 real pickles, recursive ones included, no difference in either unpickler; idempotent; never grew." }
 ]
 
 end PyLean.Pickle
