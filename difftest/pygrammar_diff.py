@@ -488,6 +488,7 @@ LEX_EDGE = ["", "\n", "\r", "\r\n", "\n\n", " ", "\t", "\f", "\\", "\\\n", "\\\r
         "f'''{x #c\n=}'''", "ub''", "bf''", "ft''", "tb''", "ur''", "BR''", "Rb''", "rF''", "fR''", "Tr''",
         "    a\n", "\ta\n", "\f\ta\n", "\\\n    a\n", "   \\\n a\n", "a\\\n", "a\\", "x = 1 \\\n  + 2\n",
         "def f():\n\tpass\n        pass\n"]
+LEX_EDGE.append("def f(a):pass\nf\"{f lambda a=(:'\u00e0'\n)}\"")
 LEX_EDGE.append("(" * 201 + ")" * 201)
 LEX_EDGE.append("".join(" " * i + "if x:\n" for i in range(102)))
 LEX_EDGE.append("f'{" * 151)

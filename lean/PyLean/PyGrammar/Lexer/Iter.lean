@@ -85,6 +85,27 @@ def charCountLine (data : Array Nat) : Nat → Int → Int → Int
       else if ch &&& 0xf0 == 0xe0 then 3 else 4
     1 + charCountLine data f (col + step) stop
 
+/-- The first ill-formed UTF-8 sequence of `s` at offset `i`, as `PyUnicode_FromStringAndSize`
+reports it: offset, byte and reason. -/
+def firstBadUtf8 : Nat → List Nat → Nat → Option (Nat × Nat × String)
+  | 0, _, _ => none
+  | _, [], _ => none
+  | f + 1, b :: r, i =>
+    let need : Option Nat :=
+      if b < 0x80 then some 0
+      else if 0xC2 ≤ b && b < 0xE0 then some 1
+      else if 0xE0 ≤ b && b < 0xF0 then some 2
+      else if 0xF0 ≤ b && b < 0xF5 then some 3
+      else none
+    match need with
+    | none => some (i, b, "invalid start byte")
+    | some n =>
+      let cs := r.take n
+      if !(cs.all fun c => 0x80 ≤ c && c < 0xC0) then
+        some (i, b, "invalid continuation byte")
+      else if cs.length < n then some (i, b, "unexpected end of data")
+      else firstBadUtf8 f (r.drop n) (i + n + 1)
+
 /-- `tokenizeriter_next`, `Python/Python-tokenize.c:242-349`. -/
 def iterNext (it : IterState) : IterState × IterOut :=
   let (s, type, t) := tokenizerGet it.tok
@@ -93,10 +114,18 @@ def iterNext (it : IterState) : IterState × IterOut :=
     (it, .raise (s.err.getD (tokenizerErrorIter s)))
   else if it.done then (it, .stop)
   else
-    let str : List Nat :=
+    let raw : List Nat :=
       match t.start, t.end_ with
-      | some a, some b => utf8Decode (s.slice a b)
+      | some a, some b => s.slice a b
       | _, _ => []
+    -- `PyUnicode_FromStringAndSize(token.start, token.end - token.start)` is strict
+    match firstBadUtf8 (raw.length + 1) raw 0 with
+    | some (i, b, why) =>
+      let hex := String.ofList (Nat.toDigits 16 b)
+      (it, .raise { cls := "UnicodeDecodeError",
+                    msg := s!"'utf-8' codec can't decode byte 0x{hex} in position {i}: {why}" })
+    | none =>
+    let str : List Nat := utf8Decode raw
     let isTrailing := type == TokKind.ENDMARKER.num
       || (type == TokKind.DEDENT.num && s.done == E_EOF)
     let lineStart := if isStringLit type then s.multiLineStart else s.lineStart
