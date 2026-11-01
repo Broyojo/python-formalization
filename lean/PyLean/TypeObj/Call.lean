@@ -500,11 +500,18 @@ def callTpNew (rt : Rt) (f : SlotFn) (t : Addr) (args : List Val) (kw : Kw) : M 
   | .c .float =>
     noKeywords "float" kw
     unpackTuple "float" 0 1 args.length
-    match args with
-    | [] => boxValue t B.float (.float 0)
-    | x :: _ =>
-      let r ← pyNumberFloat rt x
-      boxValue t B.float r
+    -- `float_new_impl`, `Objects/floatobject.c:1575`: only exact `float` calls for the string
+    -- path directly, and a subclass copies the value (`float_subtype_new`).
+    let r ← match args with
+      | [] => mkFloat (PyLean.Binary64.F64.zero false)
+      | x :: _ =>
+        if typeOf w x == B.str then floatFromString rt x else pyNumberFloat rt x
+    if t == B.float then pure r
+    else
+      let w ← getW
+      match floatOf w r with
+      | some v => alloc t (.boxed (.float v.bits))
+      | none => gap%
   | .c .str => strNew rt t args kw
   | .c .tuple => tupleNew rt t args kw
   | .c .method =>
@@ -685,10 +692,7 @@ def wrapUnary (rt : Rt) (p : SlotDef) (f : SlotFn) (self : Val) : M Val := do
   | .tp_iter => callIter rt f self
   | .nb_negative | .nb_positive | .nb_absolute | .nb_invert | .nb_int | .nb_index =>
     callUnaryNb rt p.slot p.name f self
-  | .nb_float =>
-    match f with
-    | .generic => vectorcallMethod rt "__float__" [self]
-    | _ => gap%
+  | .nb_float => callUnaryNb rt p.slot p.name f self
   | .am_await | .am_aiter | .am_anext => gap%
   | _ => gap%
 
@@ -1021,6 +1025,45 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
     | _ => gap%
   | .objectDir => objectDirImpl rt selfV
   | .typeDir => typeDirImpl rt selfV
+  | .floatMethod "fromhex" =>
+    -- `float_fromhex`, `Objects/floatobject.c`: a subclass is called with the result.
+    match args with
+    | [a] =>
+      match strOf w a with
+      -- `PyUnicode_AsUTF8AndSize` on a non-str: `PyErr_BadArgument`.
+      | none => typeErr "bad argument type for built-in operation"
+      | some s =>
+        let x ← pyToM (PyLean.Binary64.float_fromhex (s.toList.map (·.toNat)))
+        let r ← mkFloat x
+        if selfV.is (.obj B.float) then pure r else rt.call selfV [r] []
+    | _ => gap%
+  | .floatMethod n =>
+    match floatOf w selfV with
+    | none => gap%
+    | some x =>
+      match n with
+      | "is_integer" => pure (.bool (PyLean.Binary64.float_is_integer x))
+      | "__trunc__" => .int <$> pyToM (PyLean.Binary64.float_trunc x)
+      | "__floor__" => .int <$> pyToM (PyLean.Binary64.float_floor x)
+      | "__ceil__" => .int <$> pyToM (PyLean.Binary64.float_ceil x)
+      | "conjugate" => if typeOf w selfV == B.float then pure selfV else mkFloat x
+      | "__getnewargs__" =>
+        let v ← mkFloat x
+        pure (.tuple [v])
+      | "hex" => pure (.str (PyLean.Binary64.float_hex x))
+      | "as_integer_ratio" =>
+        let (a, b) ← pyToM (PyLean.Binary64.float_as_integer_ratio x)
+        pure (.tuple [.int a, .int b])
+      | "__round__" =>
+        -- `float___round___impl`, `Objects/floatobject.c`.
+        unpackTuple "__round__" 0 1 args.length
+        match args with
+        | [] | [.none] => .int <$> pyToM (PyLean.Binary64.float_round_int x)
+        | d :: _ =>
+          let nd ← numberAsSsize rt d none
+          let r ← pyToM (PyLean.Binary64.float_round_ndigits x nd)
+          mkFloat r
+      | _ => gap%
   | .proxyCall n =>
     -- `mappingproxy_keys` and the others, `Objects/descrobject.c:1112-1165`.
     let m ← proxyMapping selfV
@@ -1592,6 +1635,15 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
         gap%
       | _ => gap%
     | _ => gap%
+  if owner == B.float then
+    -- `float_getreal` and `float_getimag`, `Objects/floatobject.c`.
+    match floatOf w obj with
+    | some x =>
+      if n == "real" then
+        return ← if typeOf w obj == B.float then pure obj else mkFloat x
+      if n == "imag" then return ← mkFloat (PyLean.Binary64.F64.zero false)
+      gap%
+    | none => gap%
   if owner == B.dictKeys && n == "mapping" then
     -- `dictview_mapping`, `Objects/dictobject.c:6015`.
     match payloadOf w obj with

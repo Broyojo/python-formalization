@@ -13,6 +13,7 @@ Each statement's tree format is parsed in lean/PyLean/TypeObj/Diff.lean.
 """
 
 import re
+import struct
 import sys
 import types
 import warnings
@@ -35,6 +36,8 @@ def lit_src(v):
             return "NotImplemented"
         if v[0] == "ellipsis":
             return "Ellipsis"
+        if v[0] == "float":
+            return repr(struct.unpack("<d", int(v[1]).to_bytes(8, "little"))[0])
         return v[1]
     return repr(v)
 
@@ -179,7 +182,7 @@ def canon(v, depth=12):
     if tv is str:
         return repr(v)
     if tv is float:
-        return "<float>"
+        return float.__repr__(v)
     if tv is tuple:
         return "(" + ", ".join(canon(x, d) for x in v) + ")"
     # Everything below reads C fields directly: the probes must not run user __getattribute__.
@@ -192,6 +195,8 @@ def canon(v, depth=12):
     if issubclass(tv, dict):
         body = "{" + ", ".join(canon(k, d) + ": " + canon(x, d) for k, x in dict.items(v)) + "}"
         return body if tv is dict else f"<{tn} {body}>"
+    if issubclass(tv, float):
+        return f"<{tn} {float.__repr__(v)}>"
     if issubclass(tv, int):
         return f"<{tn} {int.__repr__(v)}>"
     if issubclass(tv, str):
@@ -1825,10 +1830,135 @@ def fam_attrs(g):
     g.probe(call(name("repr"), attr(call(attr(["dict", [[lit(1), lit(2)]]], "keys")), "mapping")))
 
 
+def fl(x):
+    """A float literal, by its bits. NaN and the infinities have none in the source text."""
+    return lit(["float", str(int.from_bytes(struct.pack("<d", x), "little"))])
+
+
+def fam_float(g):
+    """float against CPython's real values: arithmetic, exact comparison with ints, hashes, repr,
+    identity in containers, and __float__ on its failure paths."""
+    r = g.rng
+    edge = [0.0, -0.0, 1.0, -1.0, 0.5, 1.5, 0.1, 2.5, -2.5, 1e308, 5e-324, 2.0**53, 2.0**53 + 2,
+            1e22, 123.456]
+    ints = [0, 1, -1, 2, True, 7, 2**53, 2**53 + 1, 2**64, -2**64, 10**308]
+
+    def iv(n):
+        return lit(n) if isinstance(n, bool) or abs(n) < 2**31 else lit(["bigint", str(n)])
+
+    g.main.append(["assign", "nan", call(name("float"), lit("nan"))])
+    g.main.append(["assign", "inf", call(name("float"), lit("inf"))])
+    g.main.append(["assign", "ninf", call(name("float"), lit("-inf"))])
+    vals = [fl(x) for x in edge] + [name("nan"), name("inf"), name("ninf")]
+    nums = vals + [iv(n) for n in ints]
+    for _ in range(r.randrange(14, 26)):
+        a, b = r.choice(nums), r.choice(nums)
+        g.probe(["bin", r.choice(["+", "-", "*", "/", "//", "%"]), a, b])
+        g.probe(["cmp", r.choice(CMP), a, b])
+        g.probe(call(name("divmod"), a, b))
+    for x in r.sample(edge, 6):
+        g.probe(["un", "-", fl(x)])
+        g.probe(["un", "+", fl(x)])
+        g.probe(call(name("abs"), fl(x)))
+        g.probe(call(name("bool"), fl(x)))
+        g.probe(call(name("repr"), fl(x)))
+        g.probe(call(name("str"), fl(x)))
+        g.probe(call(name("int"), fl(x)))
+        g.probe(call(name("float"), fl(x)))
+        g.probe(["cmp", "==", call(name("hash"), fl(x)), lit(["bigint", str(hash(x))])])
+        g.probe(call(attr(fl(x), "__float__")))
+        g.probe(call(attr(fl(x), "__int__")))
+        g.probe(call(attr(fl(x), "__repr__")))
+    for n in ints:
+        g.probe(call(name("float"), iv(n)))
+        g.probe(["bin", "/", iv(n), lit(3)])
+        g.probe(["bin", "/", lit(1), iv(n)])
+        g.probe(["bin", "/", iv(n), iv(n)])
+        g.probe(call(attr(iv(n), "__float__")))
+    for e in [["bin", "/", lit(0), lit(-1)], ["bin", "/", lit(["bigint", str(10**400)]), lit(1)],
+              ["bin", "/", lit(1), lit(["bigint", str(10**400)])],
+              ["bin", "/", lit(-1), lit(["bigint", str(10**400)])],
+              call(name("float"), lit(["bigint", str(10**400)])),
+              ["bin", "+", fl(1.0), lit(["bigint", str(10**400)])]]:
+        g.probe(e)
+    # pow, where the true value is a double, so the C library has only one answer to give.
+    for base, exps in [(2.0, [-3, -1, 0, 1, 2, 10, 1023, 1024, -1074, -1075]), (0.5, [-2, 2, 3]),
+                       (1.5, [0, 1, 2, 3]), (-2.0, [2, 3, -1]), (1.0, [5, -5, 0.5]),
+                       (0.0, [0, 1, -1, 2.0]), (-0.0, [1, 3, -1, 2])]:
+        for e in exps:
+            g.probe(["bin", "**", fl(base), fl(float(e)) if isinstance(e, float) else lit(e)])
+    for e in [["bin", "**", name("inf"), lit(2)], ["bin", "**", name("nan"), lit(0)],
+              ["bin", "**", name("nan"), lit(1)], ["bin", "**", lit(2), lit(-1)],
+              ["bin", "**", lit(-2), lit(-3)], ["bin", "**", lit(0), lit(-1)],
+              call(name("pow"), fl(2.0), lit(2), lit(3)), call(name("pow"), lit(2), fl(2.0))]:
+        g.probe(e)
+    for t in ["1.5", " 2.5 ", "1e3", "-0.0", "nan", "-inf", "1_000.5", "", "x", "1e400", "0X10", "١"]:
+        g.probe(call(name("float"), lit(t)))
+    for x in r.sample(edge, 4) + [float("nan"), float("inf")]:
+        v = fl(x) if x == x and abs(x) != float("inf") else call(name("float"), lit(repr(x)))
+        for n in ["is_integer", "__trunc__", "__floor__", "__ceil__", "conjugate", "__getnewargs__",
+                  "as_integer_ratio", "__round__"]:
+            g.probe(call(attr(v, n)))
+        # Compared with the real text: printed, it would look like an address to the runner.
+        g.probe(["cmp", "==", call(attr(v, "hex")), lit(x.hex())])
+        g.probe(attr(v, "real"))
+        g.probe(attr(v, "imag"))
+        g.probe(call(attr(v, "__round__"), lit(1)))
+        g.probe(call(attr(v, "__round__"), lit(-1)))
+        g.probe(call(attr(v, "__round__"), NONE))
+    for t in ["0x1p0", "0x1.8p1", "-0x0p0", "inf", "nan", "x", ""]:
+        g.probe(call(attr(name("float"), "fromhex"), lit(t)))
+    g.probe(call(attr(name("float"), "fromhex"), lit(1)))
+    # Identity: a NaN object equals itself only through the shortcut.
+    for e in [["cmp", "==", name("nan"), name("nan")], ["cmp", "!=", name("nan"), name("nan")],
+              ["is", name("nan"), name("nan")],
+              ["cmp", "==", ["list", [name("nan")]], ["list", [name("nan")]]],
+              ["cmp", "==", ["tuple", [name("nan")]], ["tuple", [name("nan")]]],
+              ["cmp", "==", ["list", [call(name("float"), lit("nan"))]],
+               ["list", [call(name("float"), lit("nan"))]]],
+              ["in", name("nan"), ["list", [name("nan")]]],
+              ["in", call(name("float"), lit("nan")), ["list", [name("nan")]]],
+              ["in", name("nan"), ["dict", [[name("nan"), lit(1)]]]],
+              ["in", call(name("float"), lit("nan")), ["dict", [[name("nan"), lit(1)]]]],
+              ["sub", ["dict", [[name("nan"), lit(1)]]], name("nan")],
+              ["is", call(name("float"), name("inf")), name("inf")],
+              ["is", ["un", "+", name("inf")], name("inf")],
+              ["is", ["un", "-", name("inf")], name("inf")],
+              ["dict", [[fl(1.0), lit("a")], [lit(1), lit("b")]]],
+              ["dict", [[lit(1), lit("a")], [fl(1.0), lit("b")], [lit(True), lit("c")]]],
+              ["in", fl(0.0), ["dict", [[fl(-0.0), lit(1)]]]],
+              ["sub", ["dict", [[lit(2), lit("i")]]], fl(2.0)],
+              ["in", fl(2.5), ["list", [fl(2.5)]]]]:
+        g.probe(e)
+    # __float__ and __index__ on their failure paths, and a subclass.
+    cls(g, "F", ["float"], [g.method("__repr__", "F.__repr__", ["s"], [["ret", lit("F!")]])])
+    ret = r.choice([fl(2.5), call(name("F"), fl(2.5)), lit(1), lit("s"), NONE])
+    b = [["log", "C.__float__"]]
+    if r.random() < 0.2:
+        b.append(["raise", call(name("ValueError"), lit("c"))])
+    b.append(["ret", ret])
+    cls(g, "C", (), [g.method("__float__", "C.__float__", ["s"], b)])
+    cls(g, "D", (), [g.method("__index__", "D.__index__", ["s"], [["log", "D.__index__"], ["ret", lit(3)]])])
+    for e in [call(name("float"), call(name("C"))), call(name("float"), call(name("D"))),
+              call(name("F"), call(name("C"))), call(name("F"), lit("1.5")), call(name("F")),
+              call(name("F"), fl(1.5)), call(name("repr"), call(name("F"), fl(1.5))),
+              call(name("str"), call(name("F"), fl(1.5))),
+              ["bin", "+", call(name("F"), fl(1.5)), lit(1)], ["bin", "+", lit(1), call(name("F"), fl(1.5))],
+              ["un", "+", call(name("F"), fl(1.5))], ["un", "-", call(name("F"), fl(1.5))],
+              ["cmp", "==", call(name("F"), fl(1.5)), fl(1.5)],
+              call(attr(call(name("F"), fl(1.5)), "__float__")),
+              call(name("float"), call(name("F"), fl(1.5))), call(name("float"), NONE),
+              call(name("float"), ["list", []]), call(name("float"), lit("a"), lit("b")),
+              call(name("float"), kw=[("x", lit(1))]), call(name("int"), name("nan")),
+              call(name("int"), name("inf")), ["bin", "*", ["list", [lit(1)]], fl(2.0)],
+              ["sub", ["list", [lit(1)]], fl(0.0)]]:
+        g.probe(e)
+
+
 FAMILIES = [fam_calls, fam_property, fam_super, fam_mro, fam_class_stmt, fam_class_assign,
             fam_wrappers, fam_abstract, fam_type_attrs, fam_slot_updates, fam_descriptors,
             fam_iter_seq, fam_numbers, fam_list_extend, fam_repr, fam_descr_proto,
-            fam_dict_update, fam_dict_lookup, fam_reduce, fam_attrs]
+            fam_dict_update, fam_dict_lookup, fam_reduce, fam_attrs, fam_float]
 
 
 def gen_case(rng):
