@@ -25,8 +25,9 @@ open PyLean.Registry
 
 def entries : List Entry := [
   { id := "sequences-deque-ends-evict", pyFile := "Modules/_collectionsmodule.c"
-    pyFns := ["deque_append_lock_held", "deque_appendleft_lock_held", "deque_extend_impl",
-      "deque_extendleft_impl", "deque_pop_impl", "deque_popleft_impl"]
+    pyFns := ["deque_append_lock_held", "deque_append_impl", "deque_appendleft_lock_held",
+      "deque_appendleft_impl", "deque_extend_impl", "deque_extendleft_impl", "deque_pop_impl",
+      "deque_popleft_impl"]
     statement := "For every deque satisfying the block-layout invariant and any items: append/extend/+=/extend(d) keep the last maxlen items of items + xs, appendleft/extendleft keep the first maxlen of reversed(xs) + items, pop/popleft remove the last/first item or raise IndexError when empty; the invariant and maxlen are preserved."
     source := "Doc/library/collections.rst:475-481 (bounded deques discard from the opposite end), :488-565", status := .proven
     prop := ``DequeEndsEvict, thm := some ``dequeEndsEvict_proven },
@@ -42,8 +43,9 @@ def entries : List Entry := [
     prop := ``RotateLoop, thm := some ``rotateLoop_proven
     notes := "Covers the C normalisation with truncating %, both chunked block loops (m = min(n, rightindex+1, leftindex) etc.), and the block allocation/free bookkeeping." },
   { id := "sequences-subscript-agree", pyFile := "Modules/_collectionsmodule.c"
-    pyFns := ["deque_item_lock_held", "deque_ass_item_lock_held", "deque_del_item", "list_subscript",
-      "list_ass_item_lock_held", "array_subscr", "array_ass_subscr"]
+    pyFns := ["deque_item_lock_held", "deque_item", "deque_ass_item_lock_held", "deque_ass_item",
+      "deque_del_item", "valid_index", "list_subscript", "list_ass_item_lock_held", "array_subscr",
+      "array_ass_subscr"]
     statement := "For every int i (any size): l[i], l[i] = v, del l[i], a[i], del a[i], d[i], d[i] = v and del d[i] add len to a negative index and act on exactly item i when it is in range, raise IndexError otherwise (messages per type), and the deque's left/right block walks reach item i."
     source := "invariant: sequence indexing; Doc/library/stdtypes.rst:1237-1242", status := .proven
     prop := ``SubscriptAgree, thm := some ``subscriptAgree_proven },
@@ -54,7 +56,7 @@ def entries : List Entry := [
     prop := ``IndexAgree, thm := some ``indexAgree_proven
     notes := "array.index does not clip a negative stop at 0, which is harmless; the deque's whole-block skip loop is covered." },
   { id := "sequences-insert-agree", pyFile := "Objects/listobject.c"
-    pyFns := ["list_insert_impl", "ins1", "array_array_insert_impl", "deque_insert_impl"]
+    pyFns := ["list_insert_impl", "ins1", "ins", "array_array_insert_impl", "deque_insert_impl"]
     statement := "For every list l, int i and x: array.insert (x fits the typecode) and deque.insert (deque not full) give list.insert's result for every i; a full bounded deque raises IndexError('deque already at its maximum size')."
     source := "Doc/library/collections.rst:539-544; invariant: same method, three types", status := .proven
     prop := ``InsertAgree, thm := some ``insertAgree_proven },
@@ -95,20 +97,21 @@ def entries : List Entry := [
     source := "Doc/library/array.rst (arrays behave like lists)", status := .proven
     prop := ``ArraySliceAssignAgreeNonempty, thm := some ``arraySliceAssignAgreeNonempty_proven },
   { id := "sequences-array-range-check", pyFile := "Modules/arraymodule.c"
-    pyFns := ["b_setitem", "BB_setitem", "h_setitem", "i_setitem", "q_setitem", "ins1", "array_new"]
+    pyFns := ["b_setitem", "BB_setitem", "h_setitem", "i_setitem", "q_setitem", "ins1", "ins",
+      "array_array_append_impl", "array_new"]
     statement := "For typecodes b, B, h, i, q and every int v: append, insert (index in Py_ssize_t), a[j] = v (valid j) and array(tc, xs) store exactly v when it fits the C type's range and raise OverflowError (array unchanged) otherwise."
     source := "Doc/library/array.rst (value ranges of the typecodes); invariant: no silent truncation", status := .proven
     prop := ``ArrayRangeCheck, thm := some ``arrayRangeCheck_proven
     notes := "'b' rejects 128..32767 with 'signed char is greater than maximum' but larger values with the 'signed short integer' message of PyArg_Parse('h'); class is OverflowError throughout." },
   { id := "sequences-deque-irepeat", pyFile := "Modules/_collectionsmodule.c"
-    pyFns := ["deque_inplace_repeat_lock_held", "deque_repeat"]
+    pyFns := ["deque_inplace_repeat_lock_held", "deque_inplace_repeat", "deque_repeat"]
     statement := "For every deque and every int n in Py_ssize_t whose repeated result list(d)*n, cut to the last maxlen items, has at most sys.maxsize items (always for bounded deques), d *= n succeeds with exactly those items."
     source := "Doc/library/collections.rst:475-478, 599-600", status := .refuted
     prop := ``DequeIRepeat, thm := some ``dequeIRepeat_refuted
     bug := some "sequences-deque-imul-maxlen-memoryerror"
     notes := "deque([1, 2], maxlen=3) *= 2**62 raises MemoryError: the overflow guard precedes the maxlen reduction (the one-item fast path applies maxlen first)." },
   { id := "sequences-deque-irepeat-checked", pyFile := "Modules/_collectionsmodule.c"
-    pyFns := ["deque_inplace_repeat_lock_held"]
+    pyFns := ["deque_inplace_repeat_lock_held", "deque_inplace_repeat", "deque_repeat"]
     statement := "For every deque with at most one item, or with len(d) * n <= sys.maxsize, d *= n (n in Py_ssize_t) holds the last maxlen items of list(d) * n, keeping the invariant and maxlen."
     source := "Doc/library/collections.rst:475-478, 599-600", status := .proven
     prop := ``DequeIRepeatChecked, thm := some ``dequeIRepeatChecked_proven
@@ -119,7 +122,7 @@ def entries : List Entry := [
     source := "Doc/library/stdtypes.rst:1263-1275 note (2)", status := .proven
     prop := ``ListRepeat, thm := some ``listRepeat_proven },
   { id := "sequences-deque-copy-concat", pyFile := "Modules/_collectionsmodule.c"
-    pyFns := ["deque_copy_impl", "deque_concat_lock_held"]
+    pyFns := ["deque_copy_impl", "deque_concat_lock_held", "deque_concat"]
     statement := "For every deque d and deque other: d.copy() has the same items and maxlen; d + other holds the last d.maxlen items of list(d) + list(other) with d's maxlen; results keep the invariant."
     source := "Doc/library/collections.rst:503-507, 599-600", status := .proven
     prop := ``DequeCopyConcat, thm := some ``dequeCopyConcat_proven },
