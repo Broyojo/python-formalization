@@ -5,12 +5,13 @@ julia-in-lean models Julia Base. Coverage is the headline number and bugs are a
 by-product of it. `coverage/methods/` lists every function, opcode and grammar
 rule; `python3 scripts/check_coverage.py` reports how many are modelled.
 
-A file you own is finished when every row for it is modelled or excluded with
-a reason. Work breadth first: mirror every function in the file, difftest them,
-give each at least one property, and settle what is cheap. Do not spend your
-effort on a few deep proofs while the rest of the file has no model. A hard
-property stays `.open` in the registry with a note; do not drop it, and do not
-weaken it.
+The number that matters is rows that pass review, not rows marked `modelled`.
+An earlier version of this brief asked for breadth first and at least one
+property per function. Agents did that, and independent review then found fewer
+than half of the rows it checked held up (21% in `functools.py`). Do not repeat
+that: a file is finished when its rows would survive review. Prefer fewer, deeper
+properties over many thin ones. A hard property stays `.open` in the registry with
+a note; do not drop it, and do not weaken it.
 
 Bug reports stay held to a high bar: fewer, better findings beat many weak ones.
 
@@ -32,21 +33,30 @@ Bug reports stay held to a high bar: fewer, better findings beat many weak ones.
 - Every model is later reviewed against `coverage/REVIEW_PROMPT.md`. Hollow
   entries get withdrawn, so mirror the body rather than specifying its result,
   and check every source citation against the file instead of from memory.
-- The first review found a quarter of `modelled` claims hollow, in the same places
-  every time, so check these before you claim a row:
+- Review keeps finding the same failures, so check these before you claim a row:
   - Failure paths are part of the body. Mirror what happens when a callback,
     `__eq__`, `__index__` or iterator raises, not only the success path.
   - Re-entrancy guards too: "already running" checks, re-checks after calling
     Python code. These are where CPython's real memory-safety bugs live.
   - Non-int inputs. `count(2.5, 0.5)` is documented; an int-only model of it is
     hollow. Use `lean/PyLean/Binary64/` for floats.
+  - Model iterators and callbacks as fallible: `Py`-valued, able to raise and
+    re-enter. A model over plain lists cannot express these paths at all.
   - A row needs a theorem that unfolds that function's body. Listing a name in
-    `pyFns`, or an alias restated as a conjunct, is not coverage. A refutation
+    `pyFns`, or an alias restated as a conjunct, is not coverage. If the theorem
+    would still hold for any function, or discards the mirror through a
+    `bind_ok`-style step, it does not count. Nor does `rfl` on a one-line
+    definition, a hard-coded constant, or a single-example instance. A refutation
     covers only the functions its counterexample runs.
+  - Do not force `Bool` where Python returns an arbitrary object, do not use `=`
+    on value structures to claim object identity, and do not merge a twin
+    difference into one model (duck typing in Python, an exact type check in C).
 - GC traversal rows are `no-behaviour:` by policy, as a stated scope limit: we have
-  no heap model, though `gc.get_referents()` can observe them. This covers
-  `tp_traverse` only. `tp_clear` and `tp_dealloc` that run weakref callbacks or
-  finalizers are Python-visible, so they are not `no-behaviour:`.
+  no heap model, though `gc.get_referents()` can observe them. `tp_clear` and
+  `tp_dealloc` that only drop references are excluded the same way, because we
+  have no finalization model, even though dropping the last reference can run
+  `__del__` or close a file. Explicit effects are not excluded: a call such as
+  `PyObject_ClearWeakRefs`, or a finalizer the function invokes itself.
 
 ## Compute: nothing heavy on this machine
 

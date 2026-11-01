@@ -25,14 +25,14 @@ Modules/_pickle.c	866	916	_PyMemoTable_ResizeTable	_PyMemoTable_ResizeTable(PyMe
 Modules/_pickle.c	920	926	PyMemoTable_Get	PyMemoTable_Get(PyMemoTable *self, PyObject *key)	excluded		no-behaviour: pointer-keyed hash table whose visible behaviour is a map, modelled as EncSt.memo in lean/PyLean/Pickle/Enc.lean
 Modules/_pickle.c	930	961	PyMemoTable_Set	PyMemoTable_Set(PyMemoTable *self, PyObject *key, Py_ssize_t value)	excluded		no-behaviour: pointer-keyed hash table whose visible behaviour is a map, modelled as EncSt.memo in lean/PyLean/Pickle/Enc.lean
 Modules/_pickle.c	970	979	_Pickler_ClearBuffer	_Pickler_ClearBuffer(PicklerObject *self)	excluded		no-behaviour: allocation only; the sole visible outcome is MemoryError on allocator failure
-Modules/_pickle.c	982	994	_write_size64	_write_size64(char *out, size_t value)	todo		
-Modules/_pickle.c	997	1016	_Pickler_CommitFrame	_Pickler_CommitFrame(PicklerObject *self)	todo		
+Modules/_pickle.c	982	994	_write_size64	_write_size64(char *out, size_t value)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	997	1016	_Pickler_CommitFrame	_Pickler_CommitFrame(PicklerObject *self)	modelled	pickle-dumps-twins-narrow	
 Modules/_pickle.c	1019	1033	_Pickler_GetString	_Pickler_GetString(PicklerObject *self)	todo		
 Modules/_pickle.c	1036	1050	_Pickler_FlushToFile	_Pickler_FlushToFile(PicklerObject *self)	todo		
-Modules/_pickle.c	1053	1082	_Pickler_OpcodeBoundary	_Pickler_OpcodeBoundary(PicklerObject *self)	todo		
-Modules/_pickle.c	1085	1132	_Pickler_Write	_Pickler_Write(PicklerObject *self, const char *s, Py_ssize_t data_len)	todo		
+Modules/_pickle.c	1053	1082	_Pickler_OpcodeBoundary	_Pickler_OpcodeBoundary(PicklerObject *self)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	1085	1132	_Pickler_Write	_Pickler_Write(PicklerObject *self, const char *s, Py_ssize_t data_len)	modelled	pickle-dumps-twins-narrow	
 Modules/_pickle.c	1135	1181	_Pickler_New	_Pickler_New(PickleState *st)	excluded		no-behaviour: allocation only; the sole visible outcome is MemoryError on allocator failure
-Modules/_pickle.c	1184	1208	_Pickler_SetProtocol	_Pickler_SetProtocol(PicklerObject *self, PyObject *protocol, int fix_imports)	todo		
+Modules/_pickle.c	1184	1208	_Pickler_SetProtocol	_Pickler_SetProtocol(PicklerObject *self, PyObject *protocol, int fix_imports)	modelled	pickle-dumps-twins-narrow	
 Modules/_pickle.c	1213	1226	_Pickler_SetOutputStream	_Pickler_SetOutputStream(PicklerObject *self, PyObject *file)	todo		
 Modules/_pickle.c	1229	1242	_Pickler_SetBufferCallback	_Pickler_SetBufferCallback(PicklerObject *self, PyObject *buffer_callback)	todo		
 Modules/_pickle.c	1247	1259	_Unpickler_SetStringInput	_Unpickler_SetStringInput(UnpicklerObject *self, PyObject *input)	todo		
@@ -54,8 +54,8 @@ Modules/_pickle.c	1696	1751	_Unpickler_New	_Unpickler_New(PyObject *module)	excl
 Modules/_pickle.c	1756	1784	_Unpickler_SetInputStream	_Unpickler_SetInputStream(UnpicklerObject *self, PyObject *file)	todo		
 Modules/_pickle.c	1789	1805	_Unpickler_SetInputEncoding	_Unpickler_SetInputEncoding(UnpicklerObject *self, const char *encoding, const char *errors)	todo		
 Modules/_pickle.c	1810	1822	_Unpickler_SetBuffers	_Unpickler_SetBuffers(UnpicklerObject *self, PyObject *buffers)	todo		
-Modules/_pickle.c	1826	1869	memo_get	memo_get(PickleState *st, PicklerObject *self, PyObject *key)	todo		
-Modules/_pickle.c	1874	1924	memo_put	memo_put(PickleState *st, PicklerObject *self, PyObject *obj)	todo		
+Modules/_pickle.c	1826	1869	memo_get	memo_get(PickleState *st, PicklerObject *self, PyObject *key)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	1874	1924	memo_put	memo_put(PickleState *st, PicklerObject *self, PyObject *obj)	modelled	pickle-dumps-twins-narrow	
 Modules/_pickle.c	1927	1930	get_dotted_path	get_dotted_path(PyObject *name)	todo		
 Modules/_pickle.c	1933	1947	check_dotted_path	check_dotted_path(PickleState *st, PyObject *obj, PyObject *dotted_path)	todo		
 Modules/_pickle.c	1950	1972	getattribute	getattribute(PyObject *obj, PyObject *names, int raises)	todo		
@@ -63,31 +63,31 @@ Modules/_pickle.c	1975	1996	_checkmodule	_checkmodule(PyObject *module_name, PyO
 Modules/_pickle.c	1999	2135	whichmodule	whichmodule(PickleState *st, PyObject *global, PyObject *global_name, PyObject *dotted_path)	todo		
 Modules/_pickle.c	2146	2180	fast_save_enter	fast_save_enter(PicklerObject *self, PyObject *obj)	todo		
 Modules/_pickle.c	2183	2196	fast_save_leave	fast_save_leave(PicklerObject *self, PyObject *obj)	todo		
-Modules/_pickle.c	2199	2206	save_none	save_none(PicklerObject *self, PyObject *obj)	todo		
-Modules/_pickle.c	2209	2227	save_bool	save_bool(PicklerObject *self, PyObject *obj)	todo		
+Modules/_pickle.c	2199	2206	save_none	save_none(PicklerObject *self, PyObject *obj)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	2209	2227	save_bool	save_bool(PicklerObject *self, PyObject *obj)	modelled	pickle-dumps-twins-narrow	
 Modules/_pickle.c	2230	2393	save_long	save_long(PicklerObject *self, PyObject *obj)	modelled	pickle-save-long-twins,pickle-save-long-twins-sized	
 Modules/_pickle.c	2396	2435	save_float	save_float(PicklerObject *self, PyObject *obj)	todo		
-Modules/_pickle.c	2445	2508	_Pickler_write_bytes	_Pickler_write_bytes(PicklerObject *self, const char *header, Py_ssize_t header_size, const char *data, Py_ssize_t data_size, PyObject *payload)	todo		
-Modules/_pickle.c	2511	2556	_save_bytes_data	_save_bytes_data(PickleState *st, PicklerObject *self, PyObject *obj, const char *data, Py_ssize_t size)	todo		
-Modules/_pickle.c	2559	2605	save_bytes	save_bytes(PickleState *st, PicklerObject *self, PyObject *obj)	todo		
-Modules/_pickle.c	2608	2632	_save_bytearray_data	_save_bytearray_data(PickleState *state, PicklerObject *self, PyObject *obj, const char *data, Py_ssize_t size)	todo		
-Modules/_pickle.c	2635	2669	save_bytearray	save_bytearray(PickleState *state, PicklerObject *self, PyObject *obj)	todo		
+Modules/_pickle.c	2445	2508	_Pickler_write_bytes	_Pickler_write_bytes(PicklerObject *self, const char *header, Py_ssize_t header_size, const char *data, Py_ssize_t data_size, PyObject *payload)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	2511	2556	_save_bytes_data	_save_bytes_data(PickleState *st, PicklerObject *self, PyObject *obj, const char *data, Py_ssize_t size)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	2559	2605	save_bytes	save_bytes(PickleState *st, PicklerObject *self, PyObject *obj)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	2608	2632	_save_bytearray_data	_save_bytearray_data(PickleState *state, PicklerObject *self, PyObject *obj, const char *data, Py_ssize_t size)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	2635	2669	save_bytearray	save_bytearray(PickleState *state, PicklerObject *self, PyObject *obj)	modelled	pickle-dumps-twins-narrow	
 Modules/_pickle.c	2672	2734	save_picklebuffer	save_picklebuffer(PickleState *st, PicklerObject *self, PyObject *obj)	todo		
-Modules/_pickle.c	2739	2805	raw_unicode_escape	raw_unicode_escape(PyObject *obj)	todo		
-Modules/_pickle.c	2808	2862	write_unicode_binary	write_unicode_binary(PicklerObject *self, PyObject *obj)	todo		
-Modules/_pickle.c	2865	2899	save_unicode	save_unicode(PickleState *state, PicklerObject *self, PyObject *obj)	todo		
-Modules/_pickle.c	2903	2922	store_tuple_elements	store_tuple_elements(PickleState *state, PicklerObject *self, PyObject *t, Py_ssize_t len)	todo		
-Modules/_pickle.c	2931	3028	save_tuple	save_tuple(PickleState *state, PicklerObject *self, PyObject *obj)	todo		
-Modules/_pickle.c	3037	3150	batch_list	batch_list(PickleState *state, PicklerObject *self, PyObject *iter, PyObject *origobj)	todo		
-Modules/_pickle.c	3164	3230	batch_list_exact	batch_list_exact(PickleState *state, PicklerObject *self, PyObject *obj)	todo		
-Modules/_pickle.c	3233	3293	save_list	save_list(PickleState *state, PicklerObject *self, PyObject *obj)	todo		
-Modules/_pickle.c	3307	3442	batch_dict	batch_dict(PickleState *state, PicklerObject *self, PyObject *iter, PyObject *origobj)	todo		
-Modules/_pickle.c	3454	3523	batch_dict_exact_impl	batch_dict_exact_impl(PickleState *state, PicklerObject *self, PyObject *obj)	todo		
-Modules/_pickle.c	3528	3535	batch_dict_exact	batch_dict_exact(PickleState *state, PicklerObject *self, PyObject *obj)	todo		
-Modules/_pickle.c	3538	3602	save_dict	save_dict(PickleState *state, PicklerObject *self, PyObject *obj)	todo		
-Modules/_pickle.c	3605	3679	save_set	save_set(PickleState *state, PicklerObject *self, PyObject *obj)	todo		
-Modules/_pickle.c	3682	3757	save_frozenset_impl	save_frozenset_impl(PickleState *state, PicklerObject *self, PyObject *obj)	todo		
-Modules/_pickle.c	3760	3770	save_frozenset	save_frozenset(PickleState *state, PicklerObject *self, PyObject *obj)	todo		
+Modules/_pickle.c	2739	2805	raw_unicode_escape	raw_unicode_escape(PyObject *obj)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	2808	2862	write_unicode_binary	write_unicode_binary(PicklerObject *self, PyObject *obj)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	2865	2899	save_unicode	save_unicode(PickleState *state, PicklerObject *self, PyObject *obj)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	2903	2922	store_tuple_elements	store_tuple_elements(PickleState *state, PicklerObject *self, PyObject *t, Py_ssize_t len)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	2931	3028	save_tuple	save_tuple(PickleState *state, PicklerObject *self, PyObject *obj)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	3037	3150	batch_list	batch_list(PickleState *state, PicklerObject *self, PyObject *iter, PyObject *origobj)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	3164	3230	batch_list_exact	batch_list_exact(PickleState *state, PicklerObject *self, PyObject *obj)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	3233	3293	save_list	save_list(PickleState *state, PicklerObject *self, PyObject *obj)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	3307	3442	batch_dict	batch_dict(PickleState *state, PicklerObject *self, PyObject *iter, PyObject *origobj)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	3454	3523	batch_dict_exact_impl	batch_dict_exact_impl(PickleState *state, PicklerObject *self, PyObject *obj)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	3528	3535	batch_dict_exact	batch_dict_exact(PickleState *state, PicklerObject *self, PyObject *obj)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	3538	3602	save_dict	save_dict(PickleState *state, PicklerObject *self, PyObject *obj)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	3605	3679	save_set	save_set(PickleState *state, PicklerObject *self, PyObject *obj)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	3682	3757	save_frozenset_impl	save_frozenset_impl(PickleState *state, PicklerObject *self, PyObject *obj)	modelled	pickle-dumps-twins-narrow	
+Modules/_pickle.c	3760	3770	save_frozenset	save_frozenset(PickleState *state, PicklerObject *self, PyObject *obj)	modelled	pickle-dumps-twins-narrow	
 Modules/_pickle.c	3773	3832	fix_imports	fix_imports(PickleState *st, PyObject **module_name, PyObject **global_name)	todo		
 Modules/_pickle.c	3835	4054	save_global	save_global(PickleState *st, PicklerObject *self, PyObject *obj, PyObject *name)	todo		
 Modules/_pickle.c	4057	4070	save_singleton_type	save_singleton_type(PickleState *state, PicklerObject *self, PyObject *obj, PyObject *singleton)	todo		
@@ -95,9 +95,9 @@ Modules/_pickle.c	4073	4085	save_type	save_type(PickleState *state, PicklerObjec
 Modules/_pickle.c	4088	4142	save_pers	save_pers(PickleState *state, PicklerObject *self, PyObject *obj)	todo		
 Modules/_pickle.c	4145	4153	get_class	get_class(PyObject *obj)	todo		
 Modules/_pickle.c	4159	4509	save_reduce	save_reduce(PickleState *st, PicklerObject *self, PyObject *args, PyObject *obj)	todo		
-Modules/_pickle.c	4512	4730	save	save(PickleState *st, PicklerObject *self, PyObject *obj, int pers_save)	todo		
+Modules/_pickle.c	4512	4730	save	save(PickleState *st, PicklerObject *self, PyObject *obj, int pers_save)	modelled	pickle-dumps-twins-narrow	
 Modules/_pickle.c	4733	4736	persistent_id	persistent_id(PyObject *self, PyObject *obj)	todo		
-Modules/_pickle.c	4739	4797	dump	dump(PickleState *state, PicklerObject *self, PyObject *obj)	todo		
+Modules/_pickle.c	4739	4797	dump	dump(PickleState *state, PicklerObject *self, PyObject *obj)	modelled	pickle-dumps-twins-narrow	
 Modules/_pickle.c	4812	4819	_pickle_Pickler_clear_memo_impl	_pickle_Pickler_clear_memo_impl(PicklerObject *self) /*[clinic end generated code: output=8665c8658aaa094b input=01bdad52f3d93e56]*/	todo		
 Modules/_pickle.c	4833	4864	_pickle_Pickler_dump_impl	_pickle_Pickler_dump_impl(PicklerObject *self, PyTypeObject *cls, PyObject *obj) /*[clinic end generated code: output=952cf7f68b1445bb input=f949d84151983594]*/	todo		
 Modules/_pickle.c	4874	4890	_pickle_Pickler___sizeof___impl	_pickle_Pickler___sizeof___impl(PicklerObject *self) /*[clinic end generated code: output=23ad75658d3b59ff input=d8127c8e7012ebd7]*/	excluded		platform: reports the C struct and buffer sizes of this build
@@ -128,7 +128,7 @@ Modules/_pickle.c	5521	5528	load_binint	load_binint(PickleState *state, Unpickle
 Modules/_pickle.c	5531	5538	load_binint1	load_binint1(PickleState *state, UnpicklerObject *self)	todo		
 Modules/_pickle.c	5541	5548	load_binint2	load_binint2(PickleState *state, UnpicklerObject *self)	todo		
 Modules/_pickle.c	5551	5574	load_long	load_long(PickleState *state, UnpicklerObject *self)	modelled	pickle-long-line-twins,pickle-long-line-twins-no-nul	
-Modules/_pickle.c	5580	5611	load_counted_long	load_counted_long(PickleState *st, UnpicklerObject *self, int size)	todo		
+Modules/_pickle.c	5580	5611	load_counted_long	load_counted_long(PickleState *st, UnpicklerObject *self, int size)	modelled	pickle-decode-encode-long	
 Modules/_pickle.c	5614	5640	load_float	load_float(PickleState *state, UnpicklerObject *self)	todo		
 Modules/_pickle.c	5643	5661	load_binfloat	load_binfloat(PickleState *state, UnpicklerObject *self)	todo		
 Modules/_pickle.c	5664	5708	load_string	load_string(PickleState *st, UnpicklerObject *self)	todo		
@@ -200,9 +200,9 @@ Modules/_pickle.c	7750	7825	Unpickler_set_memo	Unpickler_set_memo(PyObject *op, 
 Modules/_pickle.c	7828	7839	Unpickler_getattr	Unpickler_getattr(PyObject *self, PyObject *name)	todo		
 Modules/_pickle.c	7842	7854	Unpickler_setattr	Unpickler_setattr(PyObject *self, PyObject *name, PyObject *value)	todo		
 Modules/_pickle.c	7926	7958	_pickle_dump_impl	_pickle_dump_impl(PyObject *module, PyObject *obj, PyObject *file, PyObject *protocol, int fix_imports, PyObject *buffer_callback) /*[clinic end generated code: output=706186dba996490c input=b89ce8d0e911fd46]*/	todo		
-Modules/_pickle.c	7992	8019	_pickle_dumps_impl	_pickle_dumps_impl(PyObject *module, PyObject *obj, PyObject *protocol, int fix_imports, PyObject *buffer_callback) /*[clinic end generated code: output=fbab0093a5580fdf input=139fc546886c63ac]*/	todo		
+Modules/_pickle.c	7992	8019	_pickle_dumps_impl	_pickle_dumps_impl(PyObject *module, PyObject *obj, PyObject *protocol, int fix_imports, PyObject *buffer_callback) /*[clinic end generated code: output=fbab0093a5580fdf input=139fc546886c63ac]*/	modelled	pickle-dumps-twins,pickle-dumps-twins-batch-ok,pickle-dumps-twins-batch-ok-long,pickle-dumps-twins-narrow	
 Modules/_pickle.c	8058	8088	_pickle_load_impl	_pickle_load_impl(PyObject *module, PyObject *file, int fix_imports, const char *encoding, const char *errors, PyObject *buffers) /*[clinic end generated code: output=250452d141c23e76 input=46c7c31c92f4f371]*/	todo		
-Modules/_pickle.c	8119	8149	_pickle_loads_impl	_pickle_loads_impl(PyObject *module, PyObject *data, int fix_imports, const char *encoding, const char *errors, PyObject *buffers) /*[clinic end generated code: output=82ac1e6b588e6d02 input=b3615540d0535087]*/	todo		
+Modules/_pickle.c	8119	8149	_pickle_loads_impl	_pickle_loads_impl(PyObject *module, PyObject *data, int fix_imports, const char *encoding, const char *errors, PyObject *buffers) /*[clinic end generated code: output=82ac1e6b588e6d02 input=b3615540d0535087]*/	modelled	pickle-loads-twins-accept,pickle-loads-twins-exact	
 Modules/_pickle.c	8160	8164	pickle_clear	pickle_clear(PyObject *m)	excluded		no-behaviour: reference counting or GC support, no visible effect beyond object lifetime
 Modules/_pickle.c	8167	8170	pickle_free	pickle_free(void *m)	excluded		no-behaviour: reference counting or GC support, no visible effect beyond object lifetime
 Modules/_pickle.c	8173	8196	pickle_traverse	pickle_traverse(PyObject *m, visitproc visit, void *arg)	excluded		no-behaviour: reference counting or GC support, no visible effect beyond object lifetime
