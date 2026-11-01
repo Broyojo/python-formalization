@@ -1,6 +1,6 @@
 id: dictset-odict-stale-fast-nodes
 title: "After dict.popitem(od), od.popitem() and od.pop(k) segfault, and iterating od never ends"
-priority: P2
+priority: P3
 kind: null-dereference
 module: dictset
 files: [Objects/odictobject.c]
@@ -17,15 +17,16 @@ summary: |
      from that node to its successor for ever: list(od) does not terminate and grows a list
      until memory runs out, and repr(od) does the same through PyDict_Copy.
 likelihood: |
-  Low. It takes dict.popitem(od) or dict.pop on an OrderedDict, which odictobject.c warns about
-  (:746-761 covers PyDict_DelItem). The code could still be reached by a dict-subclass-unaware
-  C helper or by a super().popitem() in a mixin with dict earlier in the MRO.
+  Low. It takes an explicit dict.popitem(od) on an OrderedDict, which bypasses the class. A subclass
+  calling super().popitem() is not affected: that reaches OrderedDict's own method (tested).
 maybe_intended: |
-  Bypassing OrderedDict is known to desynchronise it and the misuse is unsupported: gh-154835
-  on inconsistent state from a stateful __eq__ was closed as not planned. But a crash or a hang
-  from pure Python has been treated as a bug: gh-68914 fixed the repr and an iterator hang after
-  dict.__setitem__/__delitem__ on an OrderedDict. A maintainer would probably want the
-  NULL dereference gone and might accept the hang as the cost of the misuse.
+  Partly, and a maintainer may well decline this. Bypassing OrderedDict through dict's methods is
+  known to desynchronise it. On gh-68914 (dict.__setitem__ on an OrderedDict) the closing comment
+  says some holes probably remain and that the answer should likely be to document "don't do that".
+  gh-154835, on inconsistent state from a stateful __eq__, was closed as not planned.
+  Against that, gh-154817 is open with a PR for the same NULL dereference, so the crash has a route
+  to a fix regardless of this trigger. The hang is the part with no such route, and on the
+  precedent above "don't do that" is a fair answer to it.
 reproducer: |
   import itertools, resource, subprocess, sys
   from collections import OrderedDict
@@ -77,7 +78,7 @@ duplicates:
   issues:
     - {number: 154817, state: open, relation: "SAME CRASH LINE, different trigger (stateful __eq__). PR gh-154818 would fix the segfault here too, not the hang"}
     - {number: 154835, state: closed, relation: "not planned: desynchronisation from a stateful __eq__"}
-    - {number: 68914, state: closed, relation: "precedent: crash and hang after dict.__setitem__ on OrderedDict were fixed"}
+    - {number: 68914, state: closed, relation: "precedent AGAINST: closing comment suggests documenting 'don't do that' for dict.__setitem__ on an OrderedDict"}
   queries: ["OrderedDict segfault", "OrderedDict crash", "OrderedDict dict.popitem",
             "OrderedDict infinite loop", "bugforge README: no OrderedDict entry"]
   note: |

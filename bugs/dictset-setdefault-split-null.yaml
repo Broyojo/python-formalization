@@ -14,12 +14,14 @@ summary: |
   with value == NULL, and `Py_NewRef(value)` dereferences NULL.
 
   The exact-str path is safe because it takes the insert_split_key branch; only a key that is
-  not an exact str reaches the generic lookup, so the trigger is a str subclass equal to a key
-  some other instance set.
+  not an exact str reaches the generic lookup, so the trigger is a str subclass, such as an
+  enum.StrEnum member, equal to a key some other instance set.
 likelihood: |
-  Low in ordinary code, but nothing about it is exotic: a str subclass (enum.StrEnum members are
-  one) used as a key against vars(obj), for a class where another instance has set that
-  attribute and this one has not. It needs no reentrancy, threads, or ctypes.
+  Low to moderate. Nothing about it is exotic: enum.StrEnum members hash and compare like their
+  str value, so vars(obj).setdefault(E.FOO, 5) crashes when another instance of the class has set
+  obj's attribute `foo` and this one has not. This was run, not inferred. It needs no reentrancy,
+  threads or ctypes. It does need setdefault on an instance __dict__, with a non-exact-str key
+  naming an attribute that this instance lacks.
 maybe_intended: |
   No. `assert(value != NULL)` at :4499 states the opposite of what happens, and it is compiled
   out of release builds. A debug build should abort there instead.
