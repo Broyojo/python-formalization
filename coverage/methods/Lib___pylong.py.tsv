@@ -12,4 +12,4 @@ Lib/_pylong.py	465	493	_int2digits	_int2digits(a, n)	todo
 Lib/_pylong.py	496	508	_digits2int	_digits2int(digits, n)	todo		
 Lib/_pylong.py	511	525	_divmod_pos	_divmod_pos(a, b)	todo		
 Lib/_pylong.py	528	541	int_divmod	int_divmod(a, b)	modelled	mathint-divmod-floor	
-Lib/_pylong.py	706	722	consumer	consumer(w, limit, need_hi)	todo		
+Lib/_pylong.py	706	722	consumer	consumer(w, limit, need_hi)	excluded		test-support: inside `if 0:` at Lib/_pylong.py:705; brute-force test scaffolding for compute_powers, never defined at run time

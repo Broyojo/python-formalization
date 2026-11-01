@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Objects/longobject.c	44	48	_Py_DECREF_INT	_Py_DECREF_INT(PyLongObject *op)	todo		
+Objects/longobject.c	44	48	_Py_DECREF_INT	_Py_DECREF_INT(PyLongObject *op)	excluded		no-behaviour: reference count bookkeeping with a specialized destructor; no Python-visible value
 Objects/longobject.c	51	56	is_medium_int	is_medium_int(stwodigits x)	todo		
 Objects/longobject.c	59	63	get_small_int	get_small_int(sdigit ival)	todo		
 Objects/longobject.c	66	76	maybe_small_long	maybe_small_long(PyLongObject *v)	todo		
@@ -78,9 +78,9 @@ Objects/longobject.c	3385	3478	_PyLong_Frexp	_PyLong_Frexp(PyLongObject *a, int6
 Objects/longobject.c	3484	3513	PyLong_AsDouble	PyLong_AsDouble(PyObject *v)	todo		
 Objects/longobject.c	3522	3540	long_compare	long_compare(PyLongObject *a, PyLongObject *b)	modelled	listsort-long-compare	
 Objects/longobject.c	3543	3552	long_richcompare	long_richcompare(PyObject *self, PyObject *other, int op)	modelled	listsort-long-compare	
-Objects/longobject.c	3555	3568	_PyLong_ExactDealloc	_PyLong_ExactDealloc(PyObject *self)	todo		
-Objects/longobject.c	3571	3588	long_dealloc	long_dealloc(PyObject *self)	todo		
-Objects/longobject.c	3591	3644	long_hash	long_hash(PyObject *obj)	modelled	typeobj-long-hash	
+Objects/longobject.c	3555	3568	_PyLong_ExactDealloc	_PyLong_ExactDealloc(PyObject *self)	excluded		no-behaviour: returns memory to the freelist or allocator; immortal small ints are only re-marked
+Objects/longobject.c	3571	3588	long_dealloc	long_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the only effect is on freed memory and the freelist
+Objects/longobject.c	3591	3644	long_hash	long_hash(PyObject *obj)	todo		
 Objects/longobject.c	3650	3679	x_add	x_add(PyLongObject *a, PyLongObject *b)	todo		
 Objects/longobject.c	3684	3735	x_sub	x_sub(PyLongObject *a, PyLongObject *b)	todo		
 Objects/longobject.c	3738	3768	long_add	long_add(PyLongObject *a, PyLongObject *b)	todo		
@@ -106,7 +106,7 @@ Objects/longobject.c	4504	4758	long_true_divide	long_true_divide(PyObject *v, Py
 Objects/longobject.c	4761	4770	long_mod	long_mod(PyObject *a, PyObject *b)	todo		
 Objects/longobject.c	4773	4793	long_divmod	long_divmod(PyObject *a, PyObject *b)	todo		
 Objects/longobject.c	4817	4873	long_invmod	long_invmod(PyLongObject *a, PyLongObject *n)	modelled	mathint-pow-neg-exp-inverse	
-Objects/longobject.c	4878	5156	long_pow	long_pow(PyObject *v, PyObject *w, PyObject *x)	modelled	mathint-pow-neg-exp-inverse	
+Objects/longobject.c	4878	5156	long_pow	long_pow(PyObject *v, PyObject *w, PyObject *x)	todo		withdrawn: loops mirrored in LongObj/Pow.lean but MULT is total, so the goto Error paths are not expressed
 Objects/longobject.c	5159	5174	long_invert	long_invert(PyObject *self)	todo		
 Objects/longobject.c	5177	5188	long_neg	long_neg(PyLongObject *v)	todo		
 Objects/longobject.c	5191	5194	long_neg_method	long_neg_method(PyObject *v)	todo		
@@ -148,8 +148,8 @@ Objects/longobject.c	6406	6409	long_long_getter	long_long_getter(PyObject *self,
 Objects/longobject.c	6418	6422	int_is_integer_impl	int_is_integer_impl(PyObject *self) /*[clinic end generated code: output=90f8e794ce5430ef input=7e41c4d4416e05f2]*/	todo		
 Objects/longobject.c	6425	6445	long_vectorcall	long_vectorcall(PyObject *type, PyObject * const*args, size_t nargsf, PyObject *kwnames)	todo		
 Objects/longobject.c	6613	6640	PyLong_GetInfo	PyLong_GetInfo(void)	todo		
-Objects/longobject.c	6646	6656	_PyLong_InitTypes	_PyLong_InitTypes(PyInterpreterState *interp)	todo		
-Objects/longobject.c	6660	6663	_PyLong_FiniTypes	_PyLong_FiniTypes(PyInterpreterState *interp)	todo		
+Objects/longobject.c	6646	6656	_PyLong_InitTypes	_PyLong_InitTypes(PyInterpreterState *interp)	excluded		internal-bootstrap: registers the sys.int_info struct sequence at interpreter start
+Objects/longobject.c	6660	6663	_PyLong_FiniTypes	_PyLong_FiniTypes(PyInterpreterState *interp)	excluded		internal-bootstrap: unregisters the sys.int_info struct sequence at interpreter shutdown
 Objects/longobject.c	6668	6670	PyUnstable_Long_IsCompact	PyUnstable_Long_IsCompact(const PyLongObject* op) {	todo		
 Objects/longobject.c	6675	6677	PyUnstable_Long_CompactValue	PyUnstable_Long_CompactValue(const PyLongObject* op) {	todo		
 Objects/longobject.c	6680	6683	PyLong_FromInt32	PyObject* PyLong_FromInt32(int32_t value)	todo		
@@ -162,7 +162,7 @@ Objects/longobject.c	6744	6747	PyLong_AsUInt32	int PyLong_AsUInt32(PyObject *obj
 Objects/longobject.c	6749	6752	PyLong_AsUInt64	int PyLong_AsUInt64(PyObject *obj, uint64_t *value)	todo		
 Objects/longobject.c	6764	6767	PyLong_GetNativeLayout	PyLong_GetNativeLayout(void)	todo		
 Objects/longobject.c	6771	6810	PyLong_Export	PyLong_Export(PyObject *obj, PyLongExport *export_long)	todo		
-Objects/longobject.c	6814	6821	PyLong_FreeExport	PyLong_FreeExport(PyLongExport *export_long)	todo		
+Objects/longobject.c	6814	6821	PyLong_FreeExport	PyLong_FreeExport(PyLongExport *export_long)	excluded		no-behaviour: drops the reference held by the export; no value is produced
 Objects/longobject.c	6827	6849	PyLongWriter_Create	PyLongWriter_Create(int negative, Py_ssize_t ndigits, void **digits)	todo		
-Objects/longobject.c	6853	6862	PyLongWriter_Discard	PyLongWriter_Discard(PyLongWriter *writer)	todo		
+Objects/longobject.c	6853	6862	PyLongWriter_Discard	PyLongWriter_Discard(PyLongWriter *writer)	excluded		no-behaviour: frees an unfinished writer; no value is produced
 Objects/longobject.c	6866	6875	PyLongWriter_Finish	PyLongWriter_Finish(PyLongWriter *writer)	todo		

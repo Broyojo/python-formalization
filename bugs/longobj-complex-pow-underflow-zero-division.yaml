@@ -1,0 +1,63 @@
+id: longobj-complex-pow-underflow-zero-division
+title: "complex(1e-200) ** -2 raises ZeroDivisionError: zero to a negative or complex power, for a nonzero base"
+priority: P3
+kind: wrong-exception
+module: longobj
+files: [Objects/complexobject.c]
+functions: [complex_pow, c_powi, c_powu, _Py_c_quot, _Py_rc_quot]
+summary: |
+  For an integer exponent n with -100 <= n < 0, c_powi computes 1 / x**-n. When x**-n
+  underflows to 0, the division sets EDOM, which complex_pow reports as a zero base. The
+  base is not zero, and the true result overflows, so the exception has the wrong type
+  and the wrong message. The two paths in complex_pow disagree on the same value:
+  complex(1e-200) ** -2 raises ZeroDivisionError, while complex(1e-200) ** -2.5, on the
+  slow path, raises OverflowError, as float does: 1e-200 ** -2 is OverflowError.
+likelihood: |
+  Low to moderate. Any base small enough that its power underflows, with an integer
+  exponent down to -100; for an exponent of -100 that is |x| below about 1e-3.2, so
+  complex(1e-4) ** -100 is an ordinary-looking way to hit it.
+maybe_intended: |
+  Probably not intended: the message states something false. A maintainer could still
+  say either exception signals a result that cannot be represented, and rate it low.
+  gh-156695 proposes computing (1/z) ** -n, which would change this path, but that issue
+  is about accuracy and does not mention the exception.
+reproducer: |
+  def kind(f):
+      try:
+          return repr(f())
+      except Exception as e:
+          return type(e).__name__
+  z = complex(1e-200)
+  fast, slow, real = kind(lambda: z ** -2), kind(lambda: z ** -2.5), kind(lambda: 1e-200 ** -2)
+  print('complex(1e-200) ** -2   ->', fast)
+  print('complex(1e-200) ** -2.5 ->', slow)
+  print('1e-200 ** -2            ->', real)
+  if fast == 'ZeroDivisionError' and slow == 'OverflowError' and real == 'OverflowError':
+      print('REPRODUCED longobj-complex-pow-underflow-zero-division')
+expected: |
+  OverflowError: complex exponentiation, as on the slow path and for float.
+promised_by: |
+  The message, "zero to a negative or complex power", and agreement between the two paths
+  of complex_pow.
+cause: |
+  Objects/complexobject.c:363 divides by c_powu's result, which can underflow to 0;
+  _Py_c_quot sets EDOM on lines 200-201; lines 746-749 report it as a zero base. On main
+  the same happens through _Py_rc_quot.
+possible_fix: |
+  Test the base rather than the divisor: when the base is nonzero and the division sets
+  EDOM, report ERANGE. Or compute (1/x) ** n for negative n, as gh-156695 suggests, which
+  overflows instead of underflowing.
+tested:
+  python3 (3.14.7): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues: []
+  related:
+    - {number: 156695, state: open, relation: "same code path (accuracy of small negative integer exponents); does not report the exception"}
+    - {number: 156886, state: closed, relation: "same message on a different cause (infinite phase)"}
+  queries: ["zero to a negative or complex power", "complex exponentiation", "complex errno",
+            "complex ZeroDivisionError underflow"]
+  bugforge: "only complex-related entry is cmath-20261003-033712-c2 (cmath.isclose, #158697); not this one"
+lean:
+  property: PyLean.LongObj.Cplx.PowZeroDivisionNeedsZeroBase
+  theorem: PyLean.LongObj.Cplx.powZeroDivisionNeedsZeroBase_refuted

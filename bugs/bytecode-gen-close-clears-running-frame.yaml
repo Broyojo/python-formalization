@@ -1,0 +1,94 @@
+id: bytecode-gen-close-clears-running-frame
+title: "gen_close's fast path does not check FRAME_EXECUTING: close() during the RESUME of a running generator frees its frame, a use-after-free reachable from __del__, a signal handler or sys.monitoring"
+priority: P1
+kind: crash
+module: bytecode
+files: [Objects/genobject.c]
+functions: ["gen_close", "is_resume", "gen_clear_frame"]
+summary: |
+  On 3.14, gen_close (:386-453) only rejects a running generator indirectly, through the
+  FRAME_EXECUTING check in gen_send_ex2 at the end. Before that it tests the frame's
+  instruction: if instr_ptr is a RESUME with RESUME_OPARG_DEPTH1_MASK and no unwind tool
+  is active (:410-422), it sets FRAME_COMPLETED and clears the frame. That test assumes the
+  generator is suspended, and nothing says so. A generator being resumed is
+  FRAME_EXECUTING (:257) and its instr_ptr still points at the RESUME after the yield
+  while that RESUME runs, and RESUME can run arbitrary Python: its eval-breaker check runs
+  the GC (so __del__ and weakref callbacks) and signal handlers, and INSTRUMENTED_RESUME
+  runs sys.monitoring PY_RESUME callbacks. Any of these calling gen.close() on the
+  generator at a plain top-level `yield` clears the frame the eval loop is about to run,
+  then returns None. The interpreter continues on the cleared frame: it reads freed
+  locals, so the process segfaults; a debug build aborts with WITHIN_STACK_BOUNDS. Crashes
+  were observed through the GC and through sys.monitoring; the signal path goes through the
+  same check but a timer-driven attempt did not hit the window.
+
+  The reproducer uses only the GC: itertools.chain drives gc.enable() and an allocation in
+  C, with no eval-breaker check in between, and then next(gen), so the collection runs at
+  the generator's RESUME and a __del__ there calls gen.close(). A sys.monitoring PY_RESUME
+  callback calling gen.close() crashes the same way, deterministically.
+likelihood: |
+  Low. Needs a close() of a generator from a finalizer, weakref callback or signal handler,
+  landing exactly on that generator's RESUME, which makes it rare and hard to diagnose when it
+  happens. With a sys.monitoring tool that closes the generator it is deterministic.
+maybe_intended: |
+  No. gen_send_ex2 and every other path raise ValueError("generator already executing") for
+  this state (Doc/reference/expressions.rst:784). Main no longer has the bug: its gen_close
+  checks FRAME_EXECUTING first, apparently a side effect of the free-threading work on
+  python/cpython#120321.
+reproducer: |
+  import subprocess, sys, textwrap
+  code = r'''
+  import gc, itertools
+  class L: pass
+  def g():
+      x = L()
+      yield 1
+      print(x)
+      yield 2
+  gen = g(); next(gen)
+  class D:
+      def __del__(self):
+          gen.close()
+  gc.collect()
+  gc.disable()
+  d = D(); d.me = d; del d
+  gc.set_threshold(1, 1, 1)
+  print(list(itertools.chain(map(lambda _: gc.enable(), [0]), map(list, [(), (), ()]), gen)))
+  '''
+  r = subprocess.run([sys.executable, "-c", textwrap.dedent(code)], capture_output=True, text=True)
+  print("returncode", r.returncode, "stderr", r.stderr[-120:])
+  if r.returncode < 0:
+      print('REPRODUCED bytecode-gen-close-clears-running-frame')
+expected: |
+  gen.close() raises ValueError("generator already executing") (reported as unraisable from
+  __del__), and the generator goes on running.
+observed: |
+  python3 3.14.7: SIGSEGV (returncode -11) on the first line after the yield. With the
+  sys.monitoring PY_RESUME variant: SIGSEGV as well; debug build: Assertion
+  WITHIN_STACK_BOUNDS() failed. close() returns None and gi_frame is None while the frame
+  is running. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): ValueError: generator already executing, generator
+  finishes normally. NOT REPRODUCED (fixed by the gen_close rewrite, not backported to 3.14).
+  3.14 branch tip on 2026-11-01 (gh api contents, ref=3.14): this code is unchanged from 3.14.7.
+promised_by: |
+  Undisputed invariant: no crash from pure Python. Doc/reference/expressions.rst:784: calling a
+  generator method on a generator that is already executing raises ValueError.
+cause: |
+  Objects/genobject.c:410-422 tests is_resume(frame->instr_ptr) and the depth-1 bit without
+  looking at gi_frame_state; :391 and :396 are the only state checks before it.
+possible_fix: |
+  Check FRAME_EXECUTING at the top of gen_close, as main does:
+      if (gen->gi_frame_state == FRAME_EXECUTING) { set the same ValueError as gen_send_ex2; return NULL; }
+  A backport of that one check to 3.14 is enough; it also makes the depth-1 test correct for
+  every state that reaches it.
+duplicates:
+  issues:
+    - {number: 120321, state: closed, relation: "the free-threading work that happened to fix main", reason: "completed (2026-08-19)"}
+  bugforge: "no generator entries in vendor/bugforge-results/README.md"
+  queries: ["generator close frame cleared executing", "gen_close RESUME running generator",
+            "generator close crash signal handler", "generator close during resume segfault",
+            "close generator from __del__ crash", "generator close monitoring PY_RESUME",
+            "generator already executing close crash"]
+lean:
+  property: PyLean.Bytecode.GenObj.GenCloseRejectsExecuting
+  theorem: PyLean.Bytecode.GenObj.genCloseRejectsExecuting_refuted
+  also: [PyLean.Bytecode.GenObj.GenCloseRejectsExecutingPastResume, PyLean.Bytecode.GenObj.genCloseRejectsExecutingPastResume_proven]

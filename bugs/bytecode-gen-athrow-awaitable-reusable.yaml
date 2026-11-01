@@ -1,0 +1,85 @@
+id: bytecode-gen-athrow-awaitable-reusable
+title: "A finished athrow() awaitable that went through an await stays reusable: send() resumes the generator with ag_running False"
+priority: P3
+kind: state-corruption
+module: bytecode
+files: [Objects/genobject.c]
+functions: ["async_gen_athrow_send", "async_gen_athrow_iternext", "async_gen_unwrap_value"]
+summary: |
+  async_gen_athrow_send closes the awaitable on the first step (check_error, :2214-2217), but later
+  steps in athrow() mode end at :2189-2190:
+      if (o->agt_args) { return async_gen_unwrap_value(o->agt_gen, retval); }
+  That clears ag_running_async and raises StopIteration(value), and returns without setting
+  agt_state = AWAITABLE_STATE_CLOSED. asend (:1819-1821), athrow's own throw (:2269-2272) and aclose
+  mode (check_error) all do. So once a body handles the thrown exception by awaiting something and
+  then yields, the athrow() awaitable has finished but stays in AWAITABLE_STATE_ITER. Sending to it
+  again does not raise "cannot reuse already awaited aclose()/athrow()": it resumes the generator
+  through :2188, with ag_running False, because only the INIT path sets the flag. While it sits at
+  its next await, a concurrent __anext__() is not detected as running.
+likelihood: |
+  Low: a finished awaitable has to be driven again, which normal `await` never does. Hand-written
+  event-loop or trampoline code that retries an awaitable can do it. The missing flag defeats the
+  protection of python/cpython#74956 in that case.
+maybe_intended: |
+  No: fixed on main, whose do_send path sets AWAITABLE_STATE_CLOSED and clears ag_running_async when
+  retval is NULL. The fix was not backported.
+reproducer: |
+  import types
+  @types.coroutine
+  def sus(v):
+      yield v
+  async def ag():
+      try:
+          yield 1
+      except ValueError:
+          await sus("handling")
+          yield 2
+      await sus("resumed by a finished awaitable")
+      yield 3
+  a = ag()
+  try:
+      a.__anext__().send(None)
+  except StopIteration:
+      pass
+  t = a.athrow(ValueError)
+  print(t.send(None))
+  try:
+      t.send(None)
+  except StopIteration as e:
+      print("awaitable finished with", e.value, "ag_running", a.ag_running)
+  try:
+      v = t.send(None)
+      print("reused:", v, "ag_running", a.ag_running)
+      if v == "resumed by a finished awaitable" and not a.ag_running:
+          print('REPRODUCED bytecode-gen-athrow-awaitable-reusable')
+  except RuntimeError as e:
+      print("rejected:", e)
+expected: |
+  RuntimeError: cannot reuse already awaited aclose()/athrow(), as for asend and for aclose().
+observed: |
+  python3 3.14.7: the third send returns "resumed by a finished awaitable" with ag_running False.
+  REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): RuntimeError: cannot reuse already awaited
+  aclose()/athrow(). NOT REPRODUCED.
+  3.14 branch tip on 2026-11-01 (gh api contents, ref=3.14): this code is unchanged from 3.14.7.
+promised_by: |
+  The error message itself, and the sibling paths at :1819-1821 and :2269-2272.
+cause: |
+  Objects/genobject.c:2189-2190 return without the two lines the throw path has at :2269-2272.
+possible_fix: |
+  Same as main:
+      retval = async_gen_unwrap_value(o->agt_gen, retval);
+      if (retval == NULL) { o->agt_state = AWAITABLE_STATE_CLOSED; o->agt_gen->ag_running_async = 0; }
+      return retval;
+duplicates:
+  issues:
+    - {number: 160347, state: open, relation: "different: a free-threading race on a shared aclose() awaitable", reason: ""}
+    - {number: 74956, state: closed, relation: "the original concurrent-anext protection", reason: "fixed"}
+  bugforge: "no generator entries in vendor/bugforge-results/README.md"
+  queries: ["aclose athrow reuse", "cannot reuse already awaited aclose", "async generator athrow awaitable state",
+            "athrow AWAITABLE_STATE_CLOSED", "athrow StopAsyncIteration", "athrow ag_running"]
+lean:
+  property: PyLean.Bytecode.GenObj.AThrowErrorCloses
+  theorem: PyLean.Bytecode.GenObj.aThrowErrorCloses_refuted
+  also: [PyLean.Bytecode.GenObj.AcloseErrorCloses, PyLean.Bytecode.GenObj.acloseErrorCloses_proven,
+         PyLean.Bytecode.GenObj.AThrowStartErrorCloses, PyLean.Bytecode.GenObj.aThrowStartErrorCloses_proven]
