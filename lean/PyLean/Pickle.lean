@@ -3,6 +3,8 @@ import PyLean.Pickle.Diff
 import PyLean.Pickle.SaveLongProps
 import PyLean.Pickle.LongLineProps
 import PyLean.Pickle.IntNarrow
+import PyLean.Pickle.LongShortest
+import PyLean.Pickle.TextRoundtrip
 import PyLean.Pickle.EncProps
 import PyLean.Pickle.EncFrame
 import PyLean.Pickle.DecProps
@@ -25,6 +27,17 @@ def entries : List Entry := [
     statement := "decode_long(encode_long(x)) == x for every int x, through the trimmed two's-complement encoding at every byte boundary."
     source := "docstrings of encode_long and decode_long, Lib/pickle.py:356-404", status := .proven
     prop := ``DecodeEncodeLong, thm := some ``decodeEncodeLong_proven },
+  { id := "pickle-encode-long-shortest", pyFile := "Lib/pickle.py"
+    pyFns := ["encode_long", "decode_long"]
+    statement := "encode_long(x) is the unique shortest byte string that decode_long maps to x, so encode_long is a bijection from ints onto the shortest encodings, including the sign-trimmed -(2**(8*j - 1))."
+    source := "docstrings of encode_long and decode_long, Lib/pickle.py:356-404; LONG1/LONG4 in Lib/pickletools.py", status := .proven
+    prop := ``EncodeLongShortest, thm := some ``encodeLongShortest_proven },
+  { id := "pickle-text-int-roundtrip", pyFile := "Lib/pickle.py"
+    pyFns := ["save_long", "load_int", "load_long"]
+    statement := "For every int with at most 4300 decimal digits, the protocol 0/1 lines I<x> and L<x>L read back as the int x in both unpicklers, never as a bool."
+    source := "pickle round trip, Doc/library/pickle.rst", status := .proven
+    prop := ``TextIntRoundtrip, thm := some ``textIntRoundtrip_proven
+    notes := "Past 4300 digits repr raises ValueError at dump time, in both twins." },
   { id := "pickle-save-long-twins", pyFile := "Modules/_pickle.c"
     pyFns := ["save_long"]
     statement := "For every int and protocol 0-5, the C and Python save_long produce the same bytes or the same exception."
