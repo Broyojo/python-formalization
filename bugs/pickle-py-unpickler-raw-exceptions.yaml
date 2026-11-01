@@ -1,0 +1,52 @@
+id: pickle-py-unpickler-raw-exceptions
+title: "pickle.py: malformed streams raise raw IndexError, KeyError and struct.error where _pickle raises UnpicklingError"
+priority: P4
+kind: twin-mismatch
+module: pickle
+files: [Lib/pickle.py, Modules/_pickle.c]
+functions: [_Unpickler.load, load_pop, load_stop, pop_mark, load_binint]
+summary: |
+  On a malformed stream the C unpickler raises UnpicklingError, with a message such as "unpickling
+  stack underflow", "could not find MARK", "invalid load key" or "pickle data was truncated". The
+  Python unpickler lets the underlying error through: `b'0'` gives IndexError "pop from empty list",
+  `b'\xff'` gives KeyError 255, `b'J\x01\x02'` gives struct.error. Across the difftest's hand-made
+  streams this is by far the most common twin difference, in class and in message. An empty input is
+  EOFError in both, but with no message in Python.
+likelihood: |
+  Any corrupted pickle read by the pure-Python unpickler.
+maybe_intended: |
+  Yes, in practice. Doc/library/pickle.rst: "Note that other exceptions may also be raised during
+  unpickling, including (but not necessarily limited to) AttributeError, EOFError, ImportError, and
+  IndexError." Recorded for completeness, not for filing.
+reproducer: |
+  import pickle
+  def r(f, s):
+      try: return ('ok', f(s))
+      except Exception as e: return (type(e).__name__, str(e))
+  ok = []
+  for s, want in ((b'0', 'IndexError'), (b'\xff', 'KeyError'), (b'J\x01\x02', 'error')):
+      c, p = r(pickle.loads, s), r(pickle._loads, s)
+      print(s, 'C', c, 'Python', p)
+      ok.append(c[0] == 'UnpicklingError' and p[0] == want)
+  if all(ok):
+      print('REPRODUCED pickle-py-unpickler-raw-exceptions')
+expected: |
+  No promise; the documentation allows it.
+observed: |
+  python3 3.14.7: C UnpicklingError for all three; Python IndexError, KeyError, struct.error. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): REPRODUCED, same behaviour.
+promised_by: |
+  Nothing; see `maybe_intended`.
+cause: |
+  Lib/pickle.py:1294-1323 has no handler around `dispatch[key[0]](self)`; :1325-1329 and the
+  `stack.pop()` / `stack[-1]` sites rely on list errors. Modules/_pickle.c:519-528, :5376-5388.
+possible_fix: |
+  None needed.
+duplicates:
+  issues:
+    - {number: 43076, state: closed, relation: related (unifying pickle and cPickle exception hierarchies), reason: "closed long ago"}
+  queries: ["pickle IndexError", "unpickling stack underflow", "unpickling exceptions", "pickle FRAME"]
+  bugforge: "no pickle entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Pickle.LoadsTwinsExact
+  theorem: PyLean.Pickle.loadsTwinsExact_refuted

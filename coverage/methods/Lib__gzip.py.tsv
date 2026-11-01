@@ -44,6 +44,6 @@ Lib/gzip.py	540	545	_GzipReader._read_gzip_header	_read_gzip_header(self)	todo
 Lib/gzip.py	547	598	_GzipReader.read	read(self, size=-1)	todo		candidates:pyio-bytesio-read-after-seek
 Lib/gzip.py	600	619	_GzipReader._read_eof	_read_eof(self)	todo		
 Lib/gzip.py	621	623	_GzipReader._rewind	_rewind(self)	todo		
-Lib/gzip.py	626	640	compress	compress(data, compresslevel=_COMPRESS_LEVEL_BEST, *, mtime=0)	todo		
+Lib/gzip.py	626	640	compress	compress(data, compresslevel=_COMPRESS_LEVEL_BEST, *, mtime=0)	todo		candidates:itertools-simple-doc-agree
 Lib/gzip.py	643	665	decompress	decompress(data)	todo		
 Lib/gzip.py	668	716	main	main()	todo		

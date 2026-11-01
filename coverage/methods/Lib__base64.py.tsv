@@ -1,9 +1,9 @@
 file	line	endline	name	signature	status	entry	note
-Lib/base64.py	31	43	_bytes_from_decode_data	_bytes_from_decode_data(s)	todo		
-Lib/base64.py	48	59	b64encode	b64encode(s, altchars=None)	todo		
-Lib/base64.py	62	85	b64decode	b64decode(s, altchars=None, validate=False)	todo		
-Lib/base64.py	88	93	standard_b64encode	standard_b64encode(s)	todo		
-Lib/base64.py	95	103	standard_b64decode	standard_b64decode(s)	todo		
+Lib/base64.py	31	43	_bytes_from_decode_data	_bytes_from_decode_data(s)	modelled	textlibs-base64-round-trip	
+Lib/base64.py	48	59	b64encode	b64encode(s, altchars=None)	modelled	textlibs-base64-round-trip	
+Lib/base64.py	62	85	b64decode	b64decode(s, altchars=None, validate=False)	modelled	textlibs-base64-round-trip	
+Lib/base64.py	88	93	standard_b64encode	standard_b64encode(s)	modelled	textlibs-base64-standard-round-trip	
+Lib/base64.py	95	103	standard_b64decode	standard_b64decode(s)	modelled	textlibs-base64-standard-round-trip	
 Lib/base64.py	109	116	urlsafe_b64encode	urlsafe_b64encode(s)	todo		
 Lib/base64.py	118	131	urlsafe_b64decode	urlsafe_b64decode(s)	todo		
 Lib/base64.py	163	196	_b32encode	_b32encode(alphabet, s)	todo		
@@ -23,7 +23,7 @@ Lib/base64.py	518	520	z85encode	z85encode(s)	todo
 Lib/base64.py	522	532	z85decode	z85decode(s)	todo		
 Lib/base64.py	541	547	encode	encode(input, output)	todo		
 Lib/base64.py	550	554	decode	decode(input, output)	todo		
-Lib/base64.py	556	569	_input_type_check	_input_type_check(s)	todo		
+Lib/base64.py	556	569	_input_type_check	_input_type_check(s)	modelled	textlibs-base64-input-check	
 Lib/base64.py	572	580	encodebytes	encodebytes(s)	todo		
 Lib/base64.py	583	586	decodebytes	decodebytes(s)	todo		
-Lib/base64.py	590	621	main	main()	todo		
+Lib/base64.py	590	621	main	main()	modelled	textlibs-base64-main-flags	
