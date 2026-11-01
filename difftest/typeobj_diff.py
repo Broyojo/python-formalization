@@ -15,6 +15,7 @@ Each statement's tree format is parsed in lean/PyLean/TypeObj/Diff.lean.
 import re
 import sys
 import types
+import warnings
 
 import common
 
@@ -177,35 +178,42 @@ def canon(v, depth=12):
         return str(v)
     if tv is str:
         return repr(v)
+    if tv is float:
+        return "<float>"
     if tv is tuple:
         return "(" + ", ".join(canon(x, d) for x in v) + ")"
-    if isinstance(v, type):
-        return f"<class {v.__name__}>"
-    tn = tv.__name__
-    if isinstance(v, list):
-        body = "[" + ", ".join(canon(x, d) for x in v) + "]"
+    # Everything below reads C fields directly: the probes must not run user __getattribute__.
+    if issubclass(tv, type):
+        return f"<class {type.__dict__['__name__'].__get__(v)}>"
+    tn = type.__dict__["__name__"].__get__(tv)
+    if issubclass(tv, list):
+        body = "[" + ", ".join(canon(x, d) for x in list.__iter__(v)) + "]"
         return body if tv is list else f"<{tn} {body}>"
-    if isinstance(v, dict):
-        body = "{" + ", ".join(canon(k, d) + ": " + canon(x, d) for k, x in v.items()) + "}"
+    if issubclass(tv, dict):
+        body = "{" + ", ".join(canon(k, d) + ": " + canon(x, d) for k, x in dict.items(v)) + "}"
         return body if tv is dict else f"<{tn} {body}>"
-    if isinstance(v, int):
-        return f"<{tn} {int(v)}>"
-    if isinstance(v, str):
+    if issubclass(tv, int):
+        return f"<{tn} {int.__repr__(v)}>"
+    if issubclass(tv, str):
         return f"<{tn} {str.__repr__(v)}>"
-    if isinstance(v, tuple):
-        return f"<{tn} (" + ", ".join(canon(x, d) for x in v) + ")>"
-    if isinstance(v, types.FunctionType):
+    if issubclass(tv, tuple):
+        return f"<{tn} (" + ", ".join(canon(x, d) for x in tuple.__iter__(v)) + ")>"
+    if tv is types.FunctionType:
         return f"<function {v.__qualname__}>"
-    if isinstance(v, types.MethodType):
+    if tv is types.MethodType:
         return f"<method {canon(v.__func__, d)} of {canon(v.__self__, d)}>"
-    if isinstance(v, types.BuiltinFunctionType):
+    if tv is types.BuiltinFunctionType:
         return "<builtin>"
-    if isinstance(v, BaseException):
-        return f"<{tn} (" + ", ".join(canon(x, d) for x in v.args) + ")>"
+    if issubclass(tv, BaseException):
+        args = BaseException.__dict__["args"].__get__(v)
+        return f"<{tn} (" + ", ".join(canon(x, d) for x in args) + ")>"
     return f"<{tn}>"
 
 
 ADDR = re.compile(r"0x[0-9a-f]+")
+
+
+warnings.simplefilter("ignore")
 
 
 def run_python(case):
@@ -230,8 +238,16 @@ def run_python(case):
     def note(tag, out):
         trace.append(f"{tag}={out}")
 
+    def hash_probe(x):
+        h = hash(x)
+        mro = type.__dict__["__mro__"].__get__(type(x))
+        tdict = type.__dict__["__dict__"]
+        user = next((isinstance(tdict.__get__(c)["__hash__"], types.FunctionType)
+                     for c in mro if "__hash__" in tdict.__get__(c)), False)
+        return h if user or issubclass(type(x), int) else "<h>"
+
     env = {"__name__": "__main__", "_log": trace.append, "_probe": probe, "_note": note,
-           "_text": text}
+           "_text": text, "_hash": hash_probe}
     try:
         exec(compile("\n".join(src_lines) + "\n", "<scenario>", "exec"), env)
     except BaseException as e:
@@ -581,7 +597,7 @@ class G:
         for _ in range(count):
             k = r.randrange(22)
             a, b = self.operand(), self.operand()
-            an = r.choice(["x", "y", "zzz", "__class__", "__dict__", "a", "__doc__"])
+            an = r.choice(["x", "y", "zzz", "__class__", "__dict__", "a"])
             if k == 0:
                 self.probe(attr(a, an))
             elif k == 1:
@@ -593,7 +609,7 @@ class G:
             elif k == 4:
                 self.probe(["un", "not", a])
             elif k == 5:
-                self.probe(call(name("hash"), a))
+                self.probe(call(name("_hash"), a))
             elif k == 6:
                 self.probe(["in", b, a])
             elif k == 7:

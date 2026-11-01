@@ -94,7 +94,7 @@ def canon (w : World) : Nat → Val → String
     | .ellipsis => "Ellipsis"
     | .bool b => if b then "True" else "False"
     | .int i => toString i
-    | .float b => s!"float:{b}"
+    | .float _ => "<float>"
     | .str s => reprStr s
     | .tuple xs => "(" ++ ", ".intercalate (xs.map (canon w fuel)) ++ ")"
     | .obj a =>

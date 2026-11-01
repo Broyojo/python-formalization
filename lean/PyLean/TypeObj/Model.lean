@@ -214,7 +214,7 @@ inductive Builtin where
   | tpNewWrapper (ty : Addr)
   -- object
   | objectInitSubclass | objectSubclasshook | objectFormat | objectDir | objectSizeof
-  | objectGetstate | objectReduce | objectReduceEx
+  | objectGetstate | objectReduce | objectReduceEx | classGetitem
   -- type
   | typeMro | typeSubclasses | typePrepare | typeInstancecheck | typeSubclasscheck | typeDir
   | typeSizeof
@@ -224,7 +224,11 @@ inductive Builtin where
   -- property
   | propertyGetter | propertySetter | propertyDeleter | propertySetName
   -- sequences
-  | tupleCount | tupleIndex | listAppend | strFormat
+  | tupleCount | tupleIndex | listAppend | strFormat | dunderGetitem | dunderContains
+  /-- A `PyMethodDef` of an exception class, by name (`Exceptions.lean`). -/
+  | excMethod (name : String)
+  /-- Harness: `hash(x)` as the difftest can compare it. -/
+  | hashProbe
   deriving Repr, Inhabited, DecidableEq
 
 /-- Which C wrapper function a `wrapper_descriptor` uses (`slotdefs`'s `wrapper` column).
@@ -464,6 +468,9 @@ def listIter : Addr := 27
 def tupleIter : Addr := 28
 def strIter : Addr := 29
 def cell : Addr := 30
+/-- `types.GenericAlias` and `types.UnionType`: the last two rows of the table. -/
+def genericAlias : Addr := 102
+def unionType : Addr := 103
 -- Exception classes used by C code.
 def BaseException : Addr := 31
 def Exception : Addr := 32
@@ -487,8 +494,9 @@ def BaseExceptionGroup : Addr := 49
 def ExceptionGroup : Addr := 50
 def DeprecationWarning : Addr := 51
 def RuntimeWarning : Addr := 52
+def MemoryError : Addr := 53
 /-- First address not reserved above; the remaining exception classes follow. -/
-def firstFree : Addr := 53
+def firstFree : Addr := 54
 end B
 
 /-! ## Reading the world -/
@@ -689,6 +697,8 @@ structure Rt where
   getsetSet (owner : Addr) (n : Name) (obj : Val) (value : Option Val) : M Unit
   /-- Call the `tp_new` function `f` on type `t`. -/
   tpNew (f : SlotFn) (t : Addr) (args : List Val) (kw : Kw) : M Val
+  /-- Call the `tp_call` function `f` on `self`, for `wrap_call`. -/
+  tpCall (f : SlotFn) (self : Val) (args : List Val) (kw : Kw) : M Val
   deriving Inhabited
 
 /-- `Py_ssize_t` range check. -/

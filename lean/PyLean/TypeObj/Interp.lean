@@ -29,7 +29,8 @@ def rtOf (exec : Rt → Nat → Val → NameDict → M Val) : Nat → Rt
       iterNext := fun _ => raise .fuel
       getsetGet := fun _ _ _ => raise .fuel
       getsetSet := fun _ _ _ _ => raise .fuel
-      tpNew := fun _ _ _ _ => raise .fuel }
+      tpNew := fun _ _ _ _ => raise .fuel
+      tpCall := fun _ _ _ _ => raise .fuel }
   | n + 1 =>
     { exec := fun c f l => exec (rtOf exec n) c f l
       call := fun f a k => pyCall (rtOf exec n) f a k
@@ -45,6 +46,7 @@ def rtOf (exec : Rt → Nat → Val → NameDict → M Val) : Nat → Rt
       iterNext := fun v => pyIterNext (rtOf exec n) v
       getsetGet := fun o m v => getsetGetImpl (rtOf exec n) o m v
       getsetSet := fun o m v x => getsetSetImpl (rtOf exec n) o m v x
-      tpNew := fun f t a k => callTpNew (rtOf exec n) f t a k }
+      tpNew := fun f t a k => callTpNew (rtOf exec n) f t a k
+      tpCall := fun f s a k => callTpCall (rtOf exec n) f s a k }
 
 end PyLean.TypeObj

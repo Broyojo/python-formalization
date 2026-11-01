@@ -388,21 +388,6 @@ def superInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
       | _ => unmodelled
   | n => typeErr s!"super() expected at most 2 arguments, got {n}"
 
-/-- `BaseException_new`, `Objects/exceptions.c:60`. -/
-def baseExceptionNew (t : Addr) (args : List Val) : M Val := alloc t (.exc { args := args })
-
-/-- `BaseException_init`, `Objects/exceptions.c:88`. -/
-def baseExceptionInit (self : Val) (args : List Val) (kw : Kw) : M Unit := do
-  let w ← getW
-  noKeywords (typeName w self) kw
-  match self with
-  | .obj a =>
-    modObj a fun o =>
-      match o.body with
-      | .exc d => { o with body := .exc { d with args := args } }
-      | _ => o
-  | _ => unmodelled
-
 /-- `slot_tp_new`, `Objects/typeobject.c:10587`. -/
 def slotTpNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
   let func ← rt.getAttr (.obj t) "__new__"
@@ -421,11 +406,11 @@ def callTpNew (rt : Rt) (f : SlotFn) (t : Addr) (args : List Val) (kw : Kw) : M 
   | .c .tuple => tupleNew rt t args kw
   | .c .list | .c .dict | .c .property | .c .classmethod | .c .staticmethod | .c .super =>
     alloc t (freshBody w t)
-  | .c .exception => baseExceptionNew t args
   | .c .none =>
     if excessArgs args kw then typeErr "NoneType takes no arguments" else pure .none
   | .c .notImpl =>
     if excessArgs args kw then typeErr "NotImplementedType takes no arguments" else pure .notImpl
+  | .c e => if isExcFamily e then excTpNew rt e t args kw else unmodelled
   | _ => unmodelled
 
 /-- `type_init`, `Objects/typeobject.c:3883`. -/
@@ -454,7 +439,7 @@ def callTpInit (rt : Rt) (f : SlotFn) (self : Val) (args : List Val) (kw : Kw) :
   | .c .classmethod => descrWrapInit rt "classmethod" self args kw .classmethod
   | .c .staticmethod => descrWrapInit rt "staticmethod" self args kw .staticmethod
   | .c .super => superInit rt self args kw
-  | .c .exception => baseExceptionInit self args kw
+  | .c e => if isExcFamily e then excTpInit rt e self args kw else unmodelled
   | _ => unmodelled
 
 /-- `type_call`, `Objects/typeobject.c:2331`. -/
@@ -584,10 +569,7 @@ def wrapperApply (rt : Rt) (p : SlotDef) (f : SlotFn) (self : Val) (args : List 
     (kw : Kw) : M Val := do
   match p.wrapper with
   | none => unmodelled
-  | some .call =>
-    match f with
-    | .generic => callMethod rt self "__call__" args kw
-    | _ => rt.call self args kw
+  | some .call => rt.tpCall f self args kw
   | some .init =>
     callTpInit rt f self args kw
     pure .none
@@ -808,6 +790,7 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
   let noKw (n : String) : M Unit := unless kw.isEmpty do typeErr s!"{n}() takes no keyword arguments"
   match b with
   | .stub _ => unmodelled
+  | .excMethod n => excMethod rt n selfV args kw
   | .tpNewWrapper ty => tpNewWrapper rt ty args kw
   | .objectInitSubclass =>
     noKw (typeOf w selfV |> fun _ => (match selfV with
@@ -820,6 +803,10 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
         | .obj a => tpName w a
         | _ => "")}.__init_subclass__() takes no arguments ({args.length} given)"
   | .objectSubclasshook => pure .notImpl
+  | .classGetitem =>
+    match args with
+    | [_] => alloc B.genericAlias .plain
+    | _ => typeErr s!"__class_getitem__() takes exactly one argument ({args.length} given)"
   | .objectFormat =>
     match args with
     | [s] =>
@@ -916,6 +903,15 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
     match args with
     | [o] => .int <$> rt.hash o
     | _ => typeErr s!"hash() takes exactly one argument ({args.length} given)"
+  | .hashProbe =>
+    match args with
+    | [o] =>
+      let h ← rt.hash o
+      let w ← getW
+      if slotOf w (typeOf w o) .tp_hash == some .generic || (intOf w o).isSome then
+        pure (.int h)
+      else pure (.str "<h>")
+    | _ => unmodelled
   | .callable =>
     match args with
     | [o] => pure (.bool (slotOf w (typeOf w o) .tp_call).isSome)
@@ -964,6 +960,18 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
       pure .none
     | _, _ =>
       typeErr s!"__set_name__() takes 2 positional arguments but {args.length} were given"
+  | .dunderGetitem =>
+    match args with
+    | [k] =>
+      match slotIn w selfV .mp_subscript with
+      | some _ =>
+        callMpSubscript rt (if (dictOf w selfV).isSome then .c .dict else .c .list) selfV k
+      | none => unmodelled
+    | _ => typeErr s!"__getitem__() takes exactly one argument ({args.length} given)"
+  | .dunderContains =>
+    match args with
+    | [k] => .bool <$> callContains rt (.c .dict) selfV k
+    | _ => typeErr s!"__contains__() takes exactly one argument ({args.length} given)"
   | .listAppend =>
     match args, selfV with
     | [x], .obj a =>
@@ -1115,17 +1123,7 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
       if n == "__self_class__" then return (ot.map Val.obj).getD .none
       unmodelled
     | _ => unmodelled
-  if owner == B.BaseException then
-    match payloadOf w obj with
-    | some (.exc e) =>
-      if n == "args" then return .tuple e.args
-      if n == "__traceback__" then return e.traceback
-      if n == "__context__" then return e.context.getD .none
-      if n == "__cause__" then return e.cause.getD .none
-      if n == "__suppress_context__" then return .bool e.suppressContext
-      if n == "__dict__" then return ← genericGetDict obj
-      unmodelled
-    | _ => unmodelled
+  if isSubtype w owner B.BaseException then return ← excGetsetGet rt owner n obj
   if owner == B.int then
     let i := (intOf w obj).getD 0
     if n == "real" || n == "numerator" then return .int i
@@ -1237,37 +1235,7 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
           | none => typeErr "__defaults__ must be set to a tuple object"
       unmodelled
     | _, _ => unmodelled
-  if owner == B.BaseException then
-    match payloadOf w obj, obj with
-    | some (.exc e), .obj a =>
-      let setE (g : ExcData) : M Unit := modObj a fun o => { o with body := .exc g }
-      if n == "args" then
-        match value with
-        | none => typeErr "args may not be deleted"
-        | some v => return ← setE { e with args := ← pySequenceTuple rt v }
-      if n == "__cause__" then
-        match value with
-        | none => typeErr "__cause__ may not be deleted"
-        | some .none => return ← setE { e with cause := none, suppressContext := true }
-        | some v =>
-          if isSubtype w (typeOf w v) B.BaseException then
-            return ← setE { e with cause := some v, suppressContext := true }
-          typeErr "exception cause must be None or derive from BaseException"
-      if n == "__context__" then
-        match value with
-        | none => typeErr "__context__ may not be deleted"
-        | some .none => return ← setE { e with context := none }
-        | some v =>
-          if isSubtype w (typeOf w v) B.BaseException then
-            return ← setE { e with context := some v }
-          typeErr "exception context must be None or derive from BaseException"
-      if n == "__suppress_context__" then
-        match value with
-        | some v => return ← setE { e with suppressContext := ← rt.isTrue v }
-        | none => typeErr "can't delete numeric/char attribute"
-      if n == "__dict__" then return ← objectSetDict obj value
-      unmodelled
-    | _, _ => unmodelled
+  if isSubtype w owner B.BaseException then return ← excGetsetSet rt owner n obj value
   if owner == B.property then
     match payloadOf w obj, obj with
     | some (.property g s d doc name gd), .obj a =>
@@ -1296,48 +1264,45 @@ def methodCheckArgs (owner : Addr) (name : Name) (args : List Val) (kw : Kw) : M
     descrCheck owner name self
     unless kw.isEmpty do typeErr s!"{fs} takes no keyword arguments"
 
-/-- `_PyObject_Call`, `Objects/call.c:333`, on the `tp_call` slot; the vectorcall entry
-points of functions and methods behave the same. -/
-def pyCall (rt : Rt) (f : Val) (args : List Val) (kw : Kw) : M Val := do
+/-- Apply the `tp_call` function `s` to `f`. -/
+def callTpCall (rt : Rt) (s : SlotFn) (f : Val) (args : List Val) (kw : Kw) : M Val := do
   let w ← getW
-  let tp := typeOf w f
-  match slotOf w tp .tp_call with
-  | none => typeErr s!"'{trunc 200 (tpName w tp)}' object is not callable"
-  | some .generic => slotTpCall rt f args kw
-  | some (.c .type) =>
+  match s with
+  | .generic => slotTpCall rt f args kw
+  | .c .type =>
     match f with
     | .obj t => typeCall rt t args kw
     | _ => unmodelled
-  | some (.c .function) =>
+  | .c .function =>
     match payloadOf w f with
     | some (.func fd) => functionCall rt f fd args kw
     | _ => unmodelled
-  | some (.c .method) =>
+  | .c .method =>
     match payloadOf w f with
     | some (.bound func self) => rt.call func (self :: args) kw
     | _ => unmodelled
-  | some (.c .builtinFn) =>
+  | .c .builtinFn =>
     match payloadOf w f with
     | some (.builtin b self) => callBuiltin rt b self args kw
     | _ => unmodelled
-  | some (.c .wrapperDescr) =>
+  | .c .wrapperDescr =>
     match payloadOf w f with
     | some (.wrapperDescr o p g) => wrapperdescrCall rt o p g args kw
     | _ => unmodelled
-  | some (.c .methodWrapper) =>
+  | .c .methodWrapper =>
     match payloadOf w f with
     | some (.methodWrapper d self) =>
       match payloadOf w d with
       | some (.wrapperDescr _ p g) => wrapperApply rt p g self args kw
       | _ => unmodelled
     | _ => unmodelled
-  | some (.c .methodDescr) =>
+  | .c .methodDescr =>
     match payloadOf w f with
     | some (.methodDescr o n b) =>
       methodCheckArgs o n args kw
       callBuiltin rt b (some (args.headD .none)) (args.drop 1) kw
     | _ => unmodelled
-  | some (.c .classmethodDescr) =>
+  | .c .classmethodDescr =>
     match payloadOf w f with
     | some (.classmethodDescr o n b) =>
       match args with
@@ -1346,10 +1311,19 @@ def pyCall (rt : Rt) (f : Val) (args : List Val) (kw : Kw) : M Val := do
         let bound ← classmethodGet o n b none (some self)
         rt.call bound rest kw
     | _ => unmodelled
-  | some (.c .staticmethod) =>
+  | .c .staticmethod =>
     match payloadOf w f with
     | some (.staticmethod g) => rt.call g args kw
     | _ => unmodelled
   | _ => unmodelled
+
+/-- `_PyObject_Call`, `Objects/call.c:333`, on the `tp_call` slot; the vectorcall entry
+points of functions and methods behave the same. -/
+def pyCall (rt : Rt) (f : Val) (args : List Val) (kw : Kw) : M Val := do
+  let w ← getW
+  let tp := typeOf w f
+  match slotOf w tp .tp_call with
+  | none => typeErr s!"'{trunc 200 (tpName w tp)}' object is not callable"
+  | some s => callTpCall rt s f args kw
 
 end PyLean.TypeObj

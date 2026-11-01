@@ -22,6 +22,8 @@ def familyOf (a : Addr) : CFn :=
   | 21 => .property | 22 => .classmethod | 23 => .staticmethod | 24 => .super
   | 25 => .mappingproxy | 26 => .seqIter | 27 => .listIter | 28 => .tupleIter | 29 => .strIter
   | 30 => .cell
+  | 37 => .keyError
+  | 102 | 103 => .unmodelled
   | _ => .exception
 
 /-- Sequence types answer `__add__` and friends with `sq_*` slots. -/
@@ -64,6 +66,11 @@ def methodOf (tn n : String) : Builtin :=
   | "property", "deleter" => .propertyDeleter
   | "property", "__set_name__" => .propertySetName
   | "list", "append" => .listAppend
+  | "list", "__getitem__" | "dict", "__getitem__" => .dunderGetitem
+  | "dict", "__contains__" => .dunderContains
+  | "int", "__format__" | "str", "__format__" | "float", "__format__" => .objectFormat
+  | _, "__class_getitem__" => .classGetitem
+  | "BaseException", _ | "BaseExceptionGroup", _ => .excMethod (tn ++ "." ++ n)
   | _, _ => .stub (tn ++ "." ++ n)
 
 /-- The `__bases__` of a builtin. `ExceptionGroup` is the one multiple-inheritance
@@ -179,7 +186,7 @@ def builtinFunctions : List (Name × Builtin) :=
    ("setattr", .setattr), ("delattr", .delattr), ("hasattr", .hasattr), ("len", .len),
    ("iter", .iter), ("next", .next), ("repr", .repr), ("hash", .hash),
    ("callable", .callable), ("dir", .dir), ("abs", .abs), ("divmod", .divmod), ("pow", .pow),
-   ("format", .format)]
+   ("format", .format), ("_hash", .hashProbe)]
 
 /-- The initial world and the `builtins` namespace. -/
 def initialState : World × NameDict :=

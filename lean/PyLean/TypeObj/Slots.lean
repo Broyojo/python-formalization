@@ -134,8 +134,8 @@ structure UpdState where
   deriving Inhabited
 
 /-- One iteration of the loop in `update_one_slot`, `Objects/typeobject.c:11336-11415`.
-The `descr` with `*ptr == ml_meth` test at `:11401` is never true in this model, because
-no type here stores a `PyMethodDef` function in a slot. -/
+The `*ptr == ml_meth` test at `:11401` holds for the `METH_COEXIST` methods
+`list.__getitem__` and `dict.__getitem__`, whose `ml_meth` is `mp_subscript`. -/
 def updateOneSlotStep (w : World) (t : Addr) (ptr : Slot) (st : UpdState) (p : SlotDef) :
     UpdState :=
   match findInMro w t p.name with
@@ -161,6 +161,12 @@ def updateOneSlotStep (w : World) (t : Addr) (ptr : Slot) (st : UpdState) (p : S
         { st with specific := slotOf w t .tp_new }
       else
         { st with useGeneric := true, generic := p.generic }
+    | some (.methodDescr owner nm _) =>
+      let cur := slotOf w t ptr
+      let same := ptr == .mp_subscript && nm == "__getitem__" &&
+        ((owner == B.list && cur == some (.c .list)) || (owner == B.dict && cur == some (.c .dict)))
+      if st.generic.isNone && same then { st with useGeneric := true, generic := cur }
+      else { st with useGeneric := true, generic := p.generic }
     | _ =>
       match descr with
       | .none =>

@@ -1,4 +1,4 @@
-import PyLean.TypeObj.Attr
+import PyLean.TypeObj.Exceptions
 
 /-!
 The abstract object protocols: rich comparison, truth, hashing, repr/str
@@ -107,12 +107,28 @@ def unicodeRichcompare (w : World) (a b : Val) (op : CmpOp) : Val :=
   | some x, some y => .bool (cmpInt (strCompare x.toList y.toList) 0 op)
   | _, _ => .notImpl
 
+/-- `dict_equal`, `Objects/dictobject.c`, for the value comparisons. -/
+def dictEqualLoop (rt : Rt) (bs : List (Val × Val)) : List (Val × Val) → M Bool
+  | [] => pure true
+  | (k, av) :: rest => do
+    match dictLookup bs k with
+    | none => pure false
+    | some bv =>
+      if ← richCompareBool rt bv av .eq then dictEqualLoop rt bs rest else pure false
+
+/-- `dict_richcompare`, `Objects/dictobject.c:4332`. -/
+def dictRichcompare (rt : Rt) (a b : List (Val × Val)) (op : CmpOp) : M Val := do
+  if op == .eq || op == .ne then
+    let eq ← if a.length != b.length then pure false else dictEqualLoop rt b a
+    pure (.bool (if op == .eq then eq else !eq))
+  else pure .notImpl
+
 /-- A `tp_richcompare` that never reaches back into `object_richcompare` with `Py_NE`. -/
 def callRichcompareEq (rt : Rt) (f : SlotFn) (a b : Val) (op : CmpOp) : M Val := do
   let w ← getW
   match f with
   | .generic => slotTpRichcompare rt a b op
-  | .c .object => objectRichcompare rt (pure .notImpl) a b op
+  | .c .object | .c .none => objectRichcompare rt (pure .notImpl) a b op
   | .c .int | .c .bool => pure (longRichcompare w a b op)
   | .c .str => pure (unicodeRichcompare w a b op)
   | .c .tuple =>
@@ -124,13 +140,40 @@ def callRichcompareEq (rt : Rt) (f : SlotFn) (a b : Val) (op : CmpOp) : M Val :=
     | some x, some y => listRichcompare rt x y op
     | _, _ => pure .notImpl
   | .c .method => methodRichcompare rt a b op
+  | .c .dict =>
+    match dictOf w a, dictOf w b with
+    | some x, some y => dictRichcompare rt x y op
+    | _, _ => pure .notImpl
+  | .c .float =>
+    match a, b with
+    | .float _, .float _ => unmodelled
+    | _, _ => pure .notImpl
+  | .c .builtinFn =>
+    -- `meth_richcompare`, `Objects/methodobject.c:318`.
+    match op, payloadOf w a, payloadOf w b with
+    | .eq, some (.builtin f s1), some (.builtin g s2)
+    | .ne, some (.builtin f s1), some (.builtin g s2) =>
+      let same := (match s1, s2 with
+        | some x, some y => x.is y
+        | none, none => true
+        | _, _ => false) && f == g
+      pure (.bool (if op == .eq then same else !same))
+    | _, _, _ => pure .notImpl
+  | .c .methodWrapper =>
+    -- `wrapper_richcompare`, `Objects/descrobject.c:1320`.
+    match op, payloadOf w a, payloadOf w b with
+    | .eq, some (.methodWrapper d1 s1), some (.methodWrapper d2 s2)
+    | .ne, some (.methodWrapper d1 s1), some (.methodWrapper d2 s2) =>
+      let same := d1.is d2 && s1.is s2
+      pure (.bool (if op == .eq then same else !same))
+    | _, _, _ => pure .notImpl
   | _ => unmodelled
 
 /-- Call the `tp_richcompare` function `f`. `object_richcompare` with `Py_NE` calls
 `Py_TYPE(self)->tp_richcompare(self, other, Py_EQ)`. -/
 def callRichcompare (rt : Rt) (f : SlotFn) (a b : Val) (op : CmpOp) : M Val := do
   match f with
-  | .c .object =>
+  | .c .object | .c .none =>
     let eqSlot : M Val := do
       let w ← getW
       match slotOf w (typeOf w a) .tp_richcompare with
@@ -218,6 +261,11 @@ def callHash (rt : Rt) (f : SlotFn) (v : Val) : M Int := do
     pure (match v with
       | .obj a => (a : Int)
       | _ => 0)
+  | .c .str => pure 0
+  | .c .tuple =>
+    for x in ((tupleOf w v).getD []) do
+      let _ ← rt.hash x
+    pure 0
   | _ => unmodelled
 
 /-- `PyObject_Hash`, `Objects/object.c:1153`. -/
@@ -273,6 +321,13 @@ def typeRepr (w : World) (t : Addr) : String :=
     else s!"<class '{d.name}'>"
   | none => s!"<class '{d.name}'>"
 
+/-- The `CFn` families that belong to `Objects/exceptions.c`. -/
+def isExcFamily : CFn → Bool
+  | .exception | .exceptionGroup | .stopIteration | .systemExit | .importError | .osError
+  | .nameError | .attributeError | .syntaxError | .keyError | .memoryError
+  | .unicodeEncodeError | .unicodeDecodeError | .unicodeTranslateError => true
+  | _ => false
+
 /-- Comma-joined reprs. -/
 def reprList (rt : Rt) : List Val → M (List String)
   | [] => pure []
@@ -309,6 +364,12 @@ def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
   | .c .list =>
     let rs ← reprList rt ((listOf w v).getD [])
     pure (.str ("[" ++ ", ".intercalate rs ++ "]"))
+  | .c .dict =>
+    let es := (dictOf w v).getD []
+    let ks ← reprList rt (es.map (·.1))
+    let vs ← reprList rt (es.map (·.2))
+    pure (.str ("{" ++ ", ".intercalate ((ks.zip vs).map fun (k, x) => k ++ ": " ++ x) ++ "}"))
+  | .c e => if isExcFamily e then excCallRepr rt e v else unmodelled
   | _ => unmodelled
 
 /-- `PyObject_Repr`, `Objects/object.c:757`. -/
@@ -327,11 +388,15 @@ def callStr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
   let w ← getW
   match f with
   | .generic => vectorcallMethod rt "__str__" [v]
-  | .c .object =>
-    match slotOf w (typeOf w v) .tp_repr with
-    | some r => callRepr rt r v
-    | none => pure (.str (objectRepr w v))
-  | .c .str => pure (.str ((strOf w v).getD ""))
+  | .c e =>
+    if isExcFamily e then excCallStr rt e v else
+    match e with
+    | .object =>
+      match slotOf w (typeOf w v) .tp_repr with
+      | some r => callRepr rt r v
+      | none => pure (.str (objectRepr w v))
+    | .str => pure (.str ((strOf w v).getD ""))
+    | _ => unmodelled
   | _ => unmodelled
 
 /-- `PyObject_Str`, `Objects/object.c:799`. -/
@@ -634,6 +699,10 @@ def longBinary (s : Slot) (a b : Int) : M Val :=
   | .nb_floor_divide =>
     if b == 0 then raiseC B.ZeroDivisionError "division by zero"
     else pure (.int (Int.fdiv a b))
+  | .nb_true_divide =>
+    -- A float whose bits are not modelled: `long_true_divide` belongs to `LongObj`.
+    if b == 0 then raiseC B.ZeroDivisionError "division by zero"
+    else pure (.float 0)
   | .nb_remainder =>
     if b == 0 then raiseC B.ZeroDivisionError "division by zero"
     else pure (.int (Int.fmod a b))
@@ -680,6 +749,28 @@ def callNbBinary (rt : Rt) (s : Slot) (f : SlotFn) (a b : Val) : M Val := do
     match intOf w a, intOf w b, a, b with
     | none, _, .float _, _ | _, none, _, .float _ => unmodelled
     | _, _, _, _ => pure .notImpl
+  | .c .type =>
+    -- `_Py_union_type_or`: only classes and `None` are unionable.
+    let unionable (x : Val) : Bool := x.is .none || typeCheck w x
+    if unionable a && unionable b then
+      if a.is b then pure a else alloc B.unionType .plain
+    else pure .notImpl
+  | .c .str =>
+    -- `unicode_mod`: `%` formatting needs a `str` on the left. Only format strings with
+    -- no conversion are modelled: `PyUnicode_Format` then checks the arguments were used.
+    match strOf w a with
+    | none => pure .notImpl
+    | some fmt =>
+      if fmt.contains '%' then unmodelled
+      else if (slotIn w b .mp_subscript).isSome && (tupleOf w b).isNone && (strOf w b).isNone then
+        pure (.str fmt)
+      else
+        match tupleOf w b with
+        | some [] => pure (.str fmt)
+        | _ => typeErr "not all arguments converted during string formatting"
+  | .c .dict =>
+    -- `dict_or`, `Objects/dictobject.c`.
+    if (dictOf w a).isSome && (dictOf w b).isSome then unmodelled else pure .notImpl
   | _ => unmodelled
 
 /-- `binary_op1`, `Objects/abstract.c:930`. -/
@@ -760,7 +851,18 @@ def callSqConcat (rt : Rt) (f : SlotFn) (a b : Val) : M Val := do
 def callSqRepeat (f : SlotFn) (a : Val) (n : Int) : M Val := do
   let w ← getW
   let k := if n < 0 then 0 else n
-  if k > 1000000 then unmodelled else
+  let size : Nat := match f with
+    | .c .str => ((strOf w a).getD "").length
+    | .c .tuple => ((tupleOf w a).getD []).length
+    | .c .list => ((listOf w a).getD []).length
+    | _ => 0
+  -- An allocation of 2^48 items fails: `PyErr_NoMemory` in `list_repeat` and friends.
+  if size != 0 && k * size ≥ 2 ^ 48 then
+    if (k * size : Int) > PyLean.ssizeMax && f == .c .str then
+      overflowErr "repeated string is too long"
+    raiseC B.MemoryError ""
+  if size != 0 && k * size > 1000000 then unmodelled else
+  let k := if size == 0 then 0 else k
   match f with
   | .c .str => pure (.str (strRepeat ((strOf w a).getD "") k))
   | .c .tuple => pure (.tuple (listRepeat ((tupleOf w a).getD []) k))
@@ -873,7 +975,11 @@ def slotNbPower (rt : Rt) (self other modulus : Val) : M Val :=
 def longPow (w : World) (a b z : Val) : M Val :=
   match intOf w a, intOf w b, z with
   | some x, some y, .none =>
-    if y < 0 || y > 10000 then unmodelled else pure (.int (x ^ y.toNat))
+    if y < 0 then
+      -- `long_pow` hands negative exponents to `float_pow`.
+      if x == 0 then raiseC B.ZeroDivisionError "zero to a negative power"
+      else pure (.float 0)
+    else if y > 10000 then unmodelled else pure (.int (x ^ y.toNat))
   | some _, some _, _ => unmodelled
   | _, _, _ => pure .notImpl
 
@@ -970,6 +1076,19 @@ def pyNumberAbsolute (rt : Rt) := unaryFunc rt .nb_absolute "__abs__" "abs()"
 def pyNumberCheck (w : World) (o : Val) : Bool :=
   (slotIn w o .nb_index).isSome || (slotIn w o .nb_int).isSome || (slotIn w o .nb_float).isSome
 
+/-- `PyLong_FromUnicodeObject(s, 10)` for ASCII decimal literals with surrounding
+whitespace and a sign. `LongObj` has the full parser. -/
+def parseIntLiteral (s : String) : Option Int :=
+  let t := (s.trimAscii).toString
+  let (neg, digits) := match t.toList with
+    | '-' :: r => (true, r)
+    | '+' :: r => (false, r)
+    | r => (false, r)
+  if digits.isEmpty || !digits.all Char.isDigit then none
+  else
+    let n : Nat := digits.foldl (fun acc c => acc * 10 + (c.toNat - 48)) 0
+    some (if neg then -(n : Int) else n)
+
 /-- `PyNumber_Long`, `Objects/abstract.c:1509`, up to the string-parsing fallbacks. -/
 def pyNumberLong (rt : Rt) (o : Val) : M Val := do
   match o with
@@ -991,7 +1110,12 @@ def pyNumberLong (rt : Rt) (o : Val) : M Val := do
       | some _ => .int <$> pyNumberIndex rt o
       | none =>
         match strOf w o with
-        | some _ => unmodelled
+        | some st =>
+          match parseIntLiteral st with
+          | some i => pure (.int i)
+          | none =>
+            let r ← rt.repr o
+            valueErr s!"invalid literal for int() with base 10: {r}"
         | none =>
           typeErr s!"int() argument must be a string, a bytes-like object or a real number, not '{trunc 200 (typeName w o)}'"
 
@@ -1051,6 +1175,21 @@ def callSqItem (rt : Rt) (f : SlotFn) (s : Val) (i : Int) : M Val := do
     at' (((strOf w s).getD "").toList.map fun c => Val.str c.toString) "string index out of range"
   | _ => unmodelled
 
+/-- Hash a dict key with `dict_unhashable_type`, `Objects/dictobject.c`: an unhashable
+key's `TypeError` is replaced. -/
+def dictHashKey (rt : Rt) (key : Val) : M Unit := do
+  let _ ← tryM (rt.hash key) fun e => do
+    let w ← getW
+    match e with
+    | .exc c m v =>
+      if c == B.TypeError then
+        let t ← match v with
+          | some x => rt.str x
+          | none => pure m
+        typeErr s!"cannot use '{typeFQN w (typeOf w key)}' as a dict key ({t})"
+      else raise e
+    | _ => raise e
+
 /-- Call `mp_subscript`. Builtin sequences take integer indices; slices belong to the
 `RangeSlice` and `Sequences` modules. -/
 def callMpSubscript (rt : Rt) (f : SlotFn) (o key : Val) : M Val := do
@@ -1070,12 +1209,12 @@ def callMpSubscript (rt : Rt) (f : SlotFn) (o key : Val) : M Val := do
   | .c .tuple => bySeq f "tuple"
   | .c .str => bySeq f "str"
   | .c .dict =>
+    dictHashKey rt key
     match dictLookup ((dictOf w o).getD []) key with
     | some v => pure v
     | none =>
       let x ← alloc B.KeyError (.exc { args := [key] })
-      let r ← rt.repr key
-      raise (.exc B.KeyError r (some x))
+      raise (.exc B.KeyError "" (some x))
   | _ => unmodelled
 
 /-- `PySequence_GetItem`, `Objects/abstract.c:1832`. -/
@@ -1131,6 +1270,8 @@ def callAssSubscript (rt : Rt) (f : SlotFn) (o key : Val) (value : Option Val) :
     | none => let _ ← vectorcallMethod rt "__delitem__" [o, key]
     | some v => let _ ← vectorcallMethod rt "__setitem__" [o, key, v]
   | .c .dict =>
+    dictHashKey rt key
+    let w ← getW
     let es := (dictOf w o).getD []
     match o with
     | .obj a =>
@@ -1141,8 +1282,7 @@ def callAssSubscript (rt : Rt) (f : SlotFn) (o key : Val) (value : Option Val) :
         | some _ => modObj a fun ob => { ob with body := .dict (dictDelEntry es key) }
         | none =>
           let x ← alloc B.KeyError (.exc { args := [key] })
-          let r ← rt.repr key
-          raise (.exc B.KeyError r (some x))
+          raise (.exc B.KeyError "" (some x))
     | _ => unmodelled
   | .c .list =>
     let xs := (listOf w o).getD []
@@ -1222,6 +1362,10 @@ def callIter (rt : Rt) (f : SlotFn) (o : Val) : M Val := do
   match f with
   | .generic => slotTpIter rt o
   | .c .list => alloc B.listIter (.seqIter (some o) 0)
+  | .c .dict =>
+    let w ← getW
+    let keys ← alloc B.list (.list (((dictOf w o).getD []).map (·.1)))
+    alloc B.listIter (.seqIter (some keys) 0)
   | .c .tuple => alloc B.tupleIter (.seqIter (some o) 0)
   | .c .str => alloc B.strIter (.seqIter (some o) 0)
   | .c .seqIter | .c .listIter | .c .tupleIter | .c .strIter => pure o
@@ -1331,10 +1475,23 @@ def pySequenceTuple (rt : Rt) (v : Val) : M (List Val) := do
       let it ← rt.getIter v
       collectIter rt it iterFuel
 
-/-- `PySequence_List`, `Objects/abstract.c:2072`, items only. -/
+/-- `PySequence_List`, `Objects/abstract.c:2072`, items only, through `list_extend`
+(`Objects/listobject.c`): exact lists and tuples are copied, anything else is iterated
+after `PyObject_LengthHint(iterable, 8)` sizes the result. The hint is observable: it
+calls `__len__` or `__length_hint__`. -/
 def pySequenceList (rt : Rt) (v : Val) : M (List Val) := do
-  let it ← rt.getIter v
-  collectIter rt it iterFuel
+  let w ← getW
+  match v with
+  | .tuple xs => pure xs
+  | _ =>
+    match listOf w v, typeOf w v == B.list with
+    | some xs, true => pure xs
+    | _, _ =>
+      let it ← rt.getIter v
+      let n ← pyLengthHint rt v 8
+      -- `list_preallocate_exact`: a size no allocator can serve.
+      if n ≥ 2 ^ 48 then raiseC B.MemoryError ""
+      collectIter rt it iterFuel
 
 /-- The three operations of `_PySequence_IterSearch`. -/
 inductive IterSearchOp where
@@ -1419,7 +1576,10 @@ def callContains (rt : Rt) (f : SlotFn) (seq ob : Val) : M Bool := do
   | .generic => slotSqContains rt seq ob
   | .c .tuple => anyEq rt ob ((tupleOf w seq).getD [])
   | .c .list => anyEq rt ob ((listOf w seq).getD [])
-  | .c .dict => pure (dictLookup ((dictOf w seq).getD []) ob).isSome
+  | .c .dict =>
+    dictHashKey rt ob
+    let w ← getW
+    pure (dictLookup ((dictOf w seq).getD []) ob).isSome
   | .c .str =>
     match strOf w ob with
     | some t => pure (strContains ((strOf w seq).getD "").toList t.toList)
