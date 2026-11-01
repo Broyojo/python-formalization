@@ -721,6 +721,12 @@ def instantiate (c : Val) (args : List Val) (kw : List String) : RM Val := do
           | .cls k => pure k.slots.length
           | _ => pure 0
         | _ => pure 0))
+      -- `object_new`, `Objects/typeobject.c:6867`
+      if let .ref ca := c then
+        if let .cls k ← getObj ca then
+          if !k.abstractMethods.isEmpty then
+            let names := joinStrs "', '" k.abstractMethods
+            typeError s!"Can't instantiate abstract class {k.name} without an implementation for abstract method{if k.abstractMethods.length == 1 then "" else "s"} '{names}'"
       if isExc then
         let t ← mkTuple (args.take npos)
         let isStop ← isSubtype c (.cls "StopIteration")

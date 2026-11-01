@@ -1,0 +1,141 @@
+import PyLean.Bytecode.SpecHeap
+import PyLean.Bytecode.Frames
+import PyLean.Bytecode.FrameProps
+import PyLean.Bytecode.Builtins
+
+/-!
+The registry-facing statements: closed propositions over the theorems in
+`SpecBasic.lean`, `SpecHeap.lean`, `StackEffect.lean` and `Frames.lean`, and the
+refutations.
+-/
+
+namespace PyLean.Bytecode
+
+open Uop
+
+/-- Stack depth on entry, the invariant the compiler's `stackdepth` establishes. -/
+abbrev Deep (s : St) (n : Nat) : Prop := n ≤ s.stack.length
+
+/-- `BINARY_OP_ADD_INT` is `BINARY_OP` for `+` and `+=` on every stack. -/
+def BinaryAddInt : Prop := ∀ (e : Env), Lawful e.om → ∀ s, Deep s 2 → (e.oparg = 0 ∨ e.oparg = 13) →
+  execOp e .BINARY_OP_ADD_INT s = execOp e .BINARY_OP s
+theorem binaryAddInt_proven : BinaryAddInt := fun e h s d o => binaryAddInt_spec e h s d o
+
+def BinarySubInt : Prop := ∀ (e : Env), Lawful e.om → ∀ s, Deep s 2 → (e.oparg = 10 ∨ e.oparg = 23) →
+  execOp e .BINARY_OP_SUBTRACT_INT s = execOp e .BINARY_OP s
+theorem binarySubInt_proven : BinarySubInt := fun e h s d o => binarySubInt_spec e h s d o
+
+def BinaryMulInt : Prop := ∀ (e : Env), Lawful e.om → ∀ s, Deep s 2 → (e.oparg = 5 ∨ e.oparg = 18) →
+  execOp e .BINARY_OP_MULTIPLY_INT s = execOp e .BINARY_OP s
+theorem binaryMulInt_proven : BinaryMulInt := fun e h s d o => binaryMulInt_spec e h s d o
+
+def BinaryAddFloat : Prop := ∀ (e : Env), Lawful e.om → ∀ s, Deep s 2 → (e.oparg = 0 ∨ e.oparg = 13) →
+  execOp e .BINARY_OP_ADD_FLOAT s = execOp e .BINARY_OP s
+theorem binaryAddFloat_proven : BinaryAddFloat := fun e h s d o => binaryAddFloat_spec e h s d o
+
+def BinarySubFloat : Prop := ∀ (e : Env), Lawful e.om → ∀ s, Deep s 2 → (e.oparg = 10 ∨ e.oparg = 23) →
+  execOp e .BINARY_OP_SUBTRACT_FLOAT s = execOp e .BINARY_OP s
+theorem binarySubFloat_proven : BinarySubFloat := fun e h s d o => binarySubFloat_spec e h s d o
+
+def BinaryMulFloat : Prop := ∀ (e : Env), Lawful e.om → ∀ s, Deep s 2 → (e.oparg = 5 ∨ e.oparg = 18) →
+  execOp e .BINARY_OP_MULTIPLY_FLOAT s = execOp e .BINARY_OP s
+theorem binaryMulFloat_proven : BinaryMulFloat := fun e h s d o => binaryMulFloat_spec e h s d o
+
+def BinaryAddUnicode : Prop := ∀ (e : Env), Lawful e.om → ∀ s, Deep s 2 → (e.oparg = 0 ∨ e.oparg = 13) →
+  execOp e .BINARY_OP_ADD_UNICODE s = execOp e .BINARY_OP s
+theorem binaryAddUnicode_proven : BinaryAddUnicode := fun e h s d o => binaryAddUnicode_spec e h s d o
+
+/-- `list[int]`: all stacks, all indices, including negative, too large and huge. -/
+def SubscrListInt : Prop := ∀ (e : Env), Lawful e.om → e.oparg = 26 → ∀ s, Deep s 2 →
+  (∀ v ∈ s.stack, Live s.regs.rt v) →
+  execOp e .BINARY_OP_SUBSCR_LIST_INT s = execOp e .BINARY_OP s
+theorem subscrListInt_proven : SubscrListInt := fun e h o s d l => subscrListInt_spec e h o s d l
+
+/-- Stack effects, against `_PyOpcode_num_popped`/`_pushed`, for all opcodes that
+complete in the same frame. -/
+def StackEffects : Prop := ∀ (e : Env) (o : Op), validOparg o e.oparg → leavesFrame o = false →
+  Eff (numPopped o e.oparg) (numPushed o e.oparg) (execOp e o)
+theorem stackEffects_proven : StackEffects := fun e o v f => eff_execOp e o v f
+
+/-- Without a monitoring tool an instrumented instruction is the plain one. -/
+def InstrumentedPlain : Prop := ∀ (e : Env),
+  execOp e .INSTRUMENTED_END_SEND = execOp e .END_SEND ∧
+  execOp e .INSTRUMENTED_FOR_ITER = _FOR_ITER e ∧
+  execOp e .INSTRUMENTED_RETURN_VALUE = (do _RETURN_VALUE_EVENT; RETURN_VALUE) ∧
+  execOp e .INSTRUMENTED_JUMP_FORWARD = execOp e .JUMP_FORWARD ∧
+  execOp e .INSTRUMENTED_POP_JUMP_IF_TRUE = execOp e .POP_JUMP_IF_TRUE ∧
+  execOp e .INSTRUMENTED_POP_JUMP_IF_FALSE = execOp e .POP_JUMP_IF_FALSE ∧
+  execOp e .INSTRUMENTED_POP_JUMP_IF_NONE = execOp e .POP_JUMP_IF_NONE ∧
+  execOp e .INSTRUMENTED_POP_JUMP_IF_NOT_NONE = execOp e .POP_JUMP_IF_NOT_NONE
+theorem instrumentedPlain_proven : InstrumentedPlain := fun _ => ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+/-- A form the interpreter rewrites to, and back, with no other effect. -/
+def PlainFamilies : Prop := ∀ (e : Env) (s : St),
+  execOp e .NOT_TAKEN s = execOp e .NOP s ∧
+  execOp e .RESUME_CHECK s = execOp e .RESUME s ∧
+  execOp e .LOAD_CONST_MORTAL s = execOp e .LOAD_CONST s ∧
+  execOp e .LOAD_CONST_IMMORTAL s = execOp e .LOAD_CONST s ∧
+  execOp e .LOAD_FAST_BORROW s = execOp e .LOAD_FAST s ∧
+  execOp e .POP_ITER s = execOp e .POP_TOP s ∧
+  execOp e .JUMP_BACKWARD_NO_JIT s = execOp e .JUMP_BACKWARD s
+theorem plainFamilies_proven : PlainFamilies := fun _ _ => ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+
+/-! ## The recursion check -/
+
+/-- Whether an instruction raised, or completed. -/
+def completed {σ : Type} : EStateM.Result Err σ Unit → Bool
+  | .ok _ _ => true
+  | .error .dispatch _ => true
+  | _ => false
+
+/-- A suspended generator at address 0. -/
+def susp : GenObj := { frameState := -2, frame := { code := 2 } }
+
+/-- `yield from` on it with the recursion budget spent. -/
+def recSt : St :=
+  { regs := { rt := { heap := #[.gen susp], pyRecursionRemaining := 0 } },
+    stack := [.none, .ref 0] }
+
+def recEnv : Env :=
+  { P := #[{}, {}, {}], om := Proto.mkOM #[] 0, ctx := ⟨fun _ _ => throw .fuel⟩,
+    opcode := .SEND_GEN, oparg := 0, this := 0 }
+
+/-- `SEND_GEN` is `SEND`, the same as every other specialization is its generic form.
+False: the generic path goes through `start_frame`, which enforces the recursion
+limit, and `_PUSH_FRAME` does not check it. -/
+def SendGenAgrees : Prop := ∀ (e : Env) (s : St),
+  completed (execOp e .SEND_GEN s) = completed (execOp e .SEND s)
+
+theorem sendGenAgrees_refuted : ¬SendGenAgrees := by
+  intro h
+  exact absurd (h recEnv recSt) (by decide)
+
+/-! ## `__abstractmethods__` -/
+
+/-- A class with an abstract method, `__init__` a simple function, specialized. -/
+def absSt : St :=
+  { regs := { rt := { heap := #[.dict {}, .cls { name := "C", dict := 0, version := 7,
+                                                 abstractMethods := ["f"] },
+                                .func { code := 2 }] },
+              frame := { code := 2 } },
+    stack := [.null, .ref 1] }
+
+def absEnv : Env :=
+  { P := #[{}, {}, { argcount := 1, nlocalsplus := 1 }], om := Proto.mkOM #[] 0,
+    ctx := ⟨fun _ _ => throw .fuel⟩, opcode := .CALL_ALLOC_AND_ENTER_INIT, oparg := 0, this := 0,
+    cache := [.tagged 7, .ref 2] }
+
+/-- Instantiating a class with abstract methods never allocates: `object_new` refuses
+(`Objects/typeobject.c:6867`). False for `CALL_ALLOC_AND_ENTER_INIT`, which skips
+`object_new` and which `specialize_class_call` does not withhold from such a class. -/
+def AbstractNeverAllocates : Prop := ∀ (e : Env) (s : St) (k : ClassObj),
+  s.stack.getD 1 .null = .ref 1 → s.regs.rt.heap[1]? = some (.cls k) → k.abstractMethods ≠ [] →
+  completed (CALL_ALLOC_AND_ENTER_INIT e s) = false
+
+theorem abstractNeverAllocates_refuted : ¬AbstractNeverAllocates := by
+  intro h
+  have := h absEnv absSt { name := "C", dict := 0, version := 7, abstractMethods := ["f"] }
+    rfl rfl (by decide)
+  exact absurd this (by decide)
+
+end PyLean.Bytecode

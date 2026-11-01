@@ -186,6 +186,8 @@ structure ClassObj where
   slots : List String := []
   /-- Instances have a `__dict__`. -/
   hasDict : Bool := true
+  /-- `__abstractmethods__`; non-empty is `Py_TPFLAGS_IS_ABSTRACT`. -/
+  abstractMethods : List String := []
   deriving Inhabited
 
 structure InstObj where

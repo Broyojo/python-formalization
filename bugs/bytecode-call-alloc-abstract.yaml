@@ -1,0 +1,77 @@
+id: bytecode-call-alloc-abstract
+title: "CALL_ALLOC_AND_ENTER_INIT instantiates an abstract class, bypassing object.__new__'s ABC check"
+priority: P2
+kind: specialization-mismatch
+module: bytecode
+files: [Python/bytecodes.c, Python/specialize.c, Objects/typeobject.c]
+functions: ["_CHECK_AND_ALLOCATE_OBJECT", "_CREATE_INIT_FRAME", "specialize_class_call",
+            "get_init_for_simple_managed_python_class", "object_new"]
+summary: |
+  Calling a class whose `tp_new is object.__new__` and whose `__init__` is a simple Python
+  function specializes the CALL to `CALL_ALLOC_AND_ENTER_INIT`. The specialized opcode's
+  `_CHECK_AND_ALLOCATE_OBJECT` uop (Python/bytecodes.c:4137) allocates the instance directly with
+  `PyType_GenericAlloc` and then runs `__init__`; it never calls `tp_new`/`object_new`. But
+  `object_new` (Objects/typeobject.c:6852-6867) is where `Py_TPFLAGS_IS_ABSTRACT` is enforced:
+  it raises `TypeError: Can't instantiate abstract class ... without an implementation for
+  abstract method ...`. So a class with a non-empty `__abstractmethods__` that reaches this
+  specialization can be instantiated once it is hot, even though the first (generic) call
+  correctly raised `TypeError`. `specialize_class_call` / `get_init_for_simple_managed_python_class`
+  (Python/specialize.c:1937-2012) check `tp_new == object.__new__`, `tp_alloc ==
+  PyType_GenericAlloc`, heap type, and a simple-function `__init__`, but never
+  `Py_TPFLAGS_IS_ABSTRACT`.
+likelihood: |
+  Low to medium. It needs a class created without `abc.ABCMeta` setting the flag at class
+  creation (ABCMeta-created classes are caught earlier, at `__call__`), i.e. `__abstractmethods__`
+  assigned after the fact, or a metaclass that sets it. The reproducer assigns
+  `C.__abstractmethods__` directly, which is exactly what `abc` does internally. With a normal
+  `abc.ABC` subclass the metaclass's `__call__` is reached first, so the hole is only visible for
+  classes whose flag is set without going through ABCMeta.__call__ on every call.
+maybe_intended: |
+  No. The generic path and `object_new` both reject the instantiation; the specialized path
+  silently succeeds, so the two disagree. This is a soundness hole in the specialization guard,
+  not a documented relaxation.
+reproducer: |
+  class C:
+      def __init__(self):
+          pass
+  C.__abstractmethods__ = frozenset({'f'})
+  def mk():
+      return C()
+  created = 0
+  errors = 0
+  for _ in range(40):
+      try:
+          mk()
+          created += 1
+      except TypeError:
+          errors += 1
+  print('created', created, 'errors', errors)
+  # The first (generic) call raises; once specialized, instantiation succeeds.
+  if created > 1 and errors >= 1:
+      print('REPRODUCED bytecode-call-alloc-abstract')
+expected: |
+  Every call to `C()` raises `TypeError: Can't instantiate abstract class C ...`, as the first
+  one does and as `object_new` guarantees.
+observed: |
+  python3 3.14.7: created 39, errors 1. REPRODUCED.
+  main (vendor/cpython-main/python.exe, 3.15.0a0): created 39, errors 1. REPRODUCED.
+promised_by: |
+  object_new, Objects/typeobject.c:6867 ("if (type->tp_flags & Py_TPFLAGS_IS_ABSTRACT)"); the
+  generic CALL path reaches it and raises, the specialized path does not.
+cause: |
+  Python/specialize.c:1995-2012 (specialize_class_call) and 1937-1963
+  (get_init_for_simple_managed_python_class) do not reject `tp->tp_flags & Py_TPFLAGS_IS_ABSTRACT`,
+  so `_CHECK_AND_ALLOCATE_OBJECT` (Python/bytecodes.c:4137-4159) allocates and enters `__init__`
+  without ever running `object_new`'s abstract-method check.
+possible_fix: |
+  Add `if (tp->tp_flags & Py_TPFLAGS_IS_ABSTRACT) { SPECIALIZATION_FAIL(...); goto generic; }` to
+  `specialize_class_call` before choosing `CALL_ALLOC_AND_ENTER_INIT`, or re-check the flag in
+  `_CHECK_AND_ALLOCATE_OBJECT` and deopt.
+duplicates:
+  issues: []
+  queries: ["CALL_ALLOC_AND_ENTER_INIT abstract", "specialized call abstract class instantiate",
+            "abstractmethods specialization bypass", "instantiate abstract class specialized"]
+  note: "No matching issue found. bugforge-results/README.md has no abstract/specialization entry."
+lean:
+  property: PyLean.Bytecode.AbstractNeverAllocates
+  theorem: PyLean.Bytecode.abstractNeverAllocates_refuted
