@@ -1,35 +1,35 @@
 file	line	endline	name	signature	status	entry	note
 Lib/pickletools.py	193	208	ArgumentDescriptor.__init__	__init__(self, name, n, reader, doc)	excluded		no-behaviour: asserts and field stores on a static table built at import
-Lib/pickletools.py	212	222	read_uint1	read_uint1(f)	todo		
-Lib/pickletools.py	231	243	read_uint2	read_uint2(f)	todo		
-Lib/pickletools.py	252	264	read_int4	read_int4(f)	todo		
-Lib/pickletools.py	273	285	read_uint4	read_uint4(f)	todo		
-Lib/pickletools.py	294	306	read_uint8	read_uint8(f)	todo		
-Lib/pickletools.py	315	360	read_stringnl	read_stringnl(f, decode=True, stripquotes=True, *, encoding='latin-1')	todo		
-Lib/pickletools.py	372	373	read_stringnl_noescape	read_stringnl_noescape(f)	todo		
-Lib/pickletools.py	386	393	read_stringnl_noescape_pair	read_stringnl_noescape_pair(f)	todo		
-Lib/pickletools.py	409	424	read_string1	read_string1(f)	todo		
-Lib/pickletools.py	438	458	read_string4	read_string4(f)	todo		
-Lib/pickletools.py	472	487	read_bytes1	read_bytes1(f)	todo		
-Lib/pickletools.py	500	521	read_bytes4	read_bytes4(f)	todo		
-Lib/pickletools.py	534	556	read_bytes8	read_bytes8(f)	todo		
-Lib/pickletools.py	569	591	read_bytearray8	read_bytearray8(f)	todo		
-Lib/pickletools.py	603	615	read_unicodestringnl	read_unicodestringnl(f)	todo		
-Lib/pickletools.py	629	653	read_unicodestring1	read_unicodestring1(f)	todo		
-Lib/pickletools.py	668	694	read_unicodestring4	read_unicodestring4(f)	todo		
-Lib/pickletools.py	709	735	read_unicodestring8	read_unicodestring8(f)	todo		
-Lib/pickletools.py	750	770	read_decimalnl_short	read_decimalnl_short(f)	todo		
-Lib/pickletools.py	772	786	read_decimalnl_long	read_decimalnl_long(f)	todo		
+Lib/pickletools.py	212	222	read_uint1	read_uint1(f)	modelled	pickletools-read-uint-exact	
+Lib/pickletools.py	231	243	read_uint2	read_uint2(f)	modelled	pickletools-read-uint-exact	
+Lib/pickletools.py	252	264	read_int4	read_int4(f)	modelled	pickletools-read-int4-roundtrip	
+Lib/pickletools.py	273	285	read_uint4	read_uint4(f)	modelled	pickletools-read-uint-exact	
+Lib/pickletools.py	294	306	read_uint8	read_uint8(f)	modelled	pickletools-read-uint-exact	
+Lib/pickletools.py	315	360	read_stringnl	read_stringnl(f, decode=True, stripquotes=True, *, encoding='latin-1')	modelled	pickletools-noescape-no-backslash,pickletools-read-stringnl-plain	
+Lib/pickletools.py	372	373	read_stringnl_noescape	read_stringnl_noescape(f)	modelled	pickletools-noescape-no-backslash,pickletools-noescape-verbatim	
+Lib/pickletools.py	386	393	read_stringnl_noescape_pair	read_stringnl_noescape_pair(f)	modelled	pickletools-noescape-no-backslash	
+Lib/pickletools.py	409	424	read_string1	read_string1(f)	modelled	pickletools-read-counted-roundtrip	
+Lib/pickletools.py	438	458	read_string4	read_string4(f)	modelled	pickletools-read-string4-roundtrip	
+Lib/pickletools.py	472	487	read_bytes1	read_bytes1(f)	modelled	pickletools-read-counted-roundtrip	
+Lib/pickletools.py	500	521	read_bytes4	read_bytes4(f)	modelled	pickletools-read-counted-roundtrip	
+Lib/pickletools.py	534	556	read_bytes8	read_bytes8(f)	modelled	pickletools-read-counted-roundtrip	
+Lib/pickletools.py	569	591	read_bytearray8	read_bytearray8(f)	modelled	pickletools-read-counted-roundtrip	
+Lib/pickletools.py	603	615	read_unicodestringnl	read_unicodestringnl(f)	modelled	pickletools-read-unicodenl	
+Lib/pickletools.py	629	653	read_unicodestring1	read_unicodestring1(f)	modelled	pickletools-read-unicode-roundtrip	
+Lib/pickletools.py	668	694	read_unicodestring4	read_unicodestring4(f)	modelled	pickletools-read-unicode-roundtrip	
+Lib/pickletools.py	709	735	read_unicodestring8	read_unicodestring8(f)	modelled	pickletools-read-unicode-roundtrip	
+Lib/pickletools.py	750	770	read_decimalnl_short	read_decimalnl_short(f)	modelled	pickletools-decimal-short-twin	
+Lib/pickletools.py	772	786	read_decimalnl_long	read_decimalnl_long(f)	modelled	pickletools-decimal-long-twin	
 Lib/pickletools.py	813	820	read_floatnl	read_floatnl(f)	todo		
-Lib/pickletools.py	835	848	read_float8	read_float8(f)	todo		
-Lib/pickletools.py	873	892	read_long1	read_long1(f)	todo		
-Lib/pickletools.py	905	926	read_long4	read_long4(f)	todo		
+Lib/pickletools.py	835	848	read_float8	read_float8(f)	modelled	pickletools-read-float8-exact	
+Lib/pickletools.py	873	892	read_long1	read_long1(f)	modelled	pickletools-read-long-roundtrip	
+Lib/pickletools.py	905	926	read_long4	read_long4(f)	modelled	pickletools-read-long-roundtrip	
 Lib/pickletools.py	961	972	StackObject.__init__	__init__(self, name, obtype, doc)	excluded		no-behaviour: asserts and field stores on a static table built at import
-Lib/pickletools.py	974	975	StackObject.__repr__	__repr__(self)	todo		
+Lib/pickletools.py	974	975	StackObject.__repr__	__repr__(self)	modelled	pickletools-dis-stack-repr	
 Lib/pickletools.py	1124	1150	OpcodeInfo.__init__	__init__(self, name, code, arg, stack_before, stack_after, proto, doc)	excluded		no-behaviour: asserts and field stores on a static table built at import
 Lib/pickletools.py	2224	2260	assure_pickle_consistency	assure_pickle_consistency(verbose=False)	excluded		test-support: consistency check called by no code; deleted at import, :2263
-Lib/pickletools.py	2268	2298	_genops	_genops(data, yield_end_pos=False)	todo		
-Lib/pickletools.py	2300	2323	genops	genops(pickle)	todo		
-Lib/pickletools.py	2328	2390	optimize	optimize(p)	todo		
-Lib/pickletools.py	2395	2546	dis	dis(pickle, out=None, memo=None, indentlevel=4, annotate=0)	todo		
+Lib/pickletools.py	2268	2298	_genops	_genops(data, yield_end_pos=False)	modelled	pickletools-dis-follows-genops,pickletools-genops-fuel,pickletools-genops-wellformed,pickletools-optimize-raw-copy	
+Lib/pickletools.py	2300	2323	genops	genops(pickle)	modelled	pickletools-dis-follows-genops,pickletools-genops-fuel,pickletools-genops-wellformed	
+Lib/pickletools.py	2328	2390	optimize	optimize(p)	modelled	pickletools-optimize-raw-copy	
+Lib/pickletools.py	2395	2546	dis	dis(pickle, out=None, memo=None, indentlevel=4, annotate=0)	modelled	pickletools-dis-follows-genops,pickletools-dis-no-indexerror	
 Lib/pickletools.py	2550	2551	_Example.__init__	__init__(self, value)	excluded		test-support: helper of the module doctests
