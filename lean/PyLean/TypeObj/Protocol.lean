@@ -952,12 +952,19 @@ def callSqRepeat (f : SlotFn) (a : Val) (n : Int) : M Val := do
   | .c .list => alloc B.list (.list (listRepeat ((listOf w a).getD []) k))
   | _ => unmodelled
 
+/-- The items `_list_extend`, `Objects/listobject.c:1402`, appends. Extending a list with
+itself is `list_inplace_repeat(self, 2)` (:1407), which calls neither `__iter__` nor `__len__`;
+the other branches give the items `PySequence_List` does. -/
+def listExtendItems (rt : Rt) (self b : Val) : M (List Val) := do
+  let w ← getW
+  if self.is b then pure ((listOf w self).getD []) else rt.listItems b
+
 /-- `sq_inplace_concat` of `list`: `list_inplace_concat` extends with any iterable and
 returns the list; the other sequences have only `sq_concat`. -/
 def callSqInplaceConcat (rt : Rt) (f : SlotFn) (a b : Val) : M Val := do
   match f, a with
   | .c .list, .obj addr =>
-    let items ← rt.listItems b
+    let items ← listExtendItems rt a b
     modObj addr fun o =>
       match o.body with
       | .list xs => { o with body := .list (xs ++ items) }

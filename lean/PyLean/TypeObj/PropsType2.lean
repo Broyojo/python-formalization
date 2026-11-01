@@ -217,6 +217,31 @@ def ObjectStrUsesRepr : Prop :=
     slotOf w (typeOf w v) .tp_repr = some r →
     callStr rt (.c .object) v w = callRepr rt r v w
 
+/-- **Binding `super` never checks against a NULL type.** For the object `super.__new__(super)`
+allocates, and every `obj`, `super_descr_get` does not reach `supercheck` with a NULL type.
+No hypothesis: `obj = None` is one of the cases covered, and returns `self` at
+`Objects/typeobject.c:12038`. FALSE: `__init__` is what sets `su->type`, and `__new__` can be
+called alone, so `super.__new__(super).__get__(1)` is a NULL dereference. -/
+def SuperBindHasType : Prop :=
+  ∀ (w w' : World) (v o : Val),
+    alloc B.super (freshBody w B.super) w = .ok v w' →
+    superBindsNullType w' v o = false
+
+/-- A heap in which address 24 is `super`, with the MRO it has in CPython. -/
+def superNullW : World :=
+  { heap := (Array.replicate 24 (.val {} : Cell)).push
+      (.ty 1 { name := "super", mro := some [B.super, B.object] }) }
+
+/-- `superNullW` after `super.__new__(super)`. -/
+def superNullW' : World :=
+  { superNullW with
+    heap := superNullW.heap.push (.val { cls := B.super, body := .super none none none }) }
+
+theorem superBindHasType_refuted : ¬SuperBindHasType := by
+  intro h
+  have hb := h superNullW superNullW' (.obj 25) (.int 1) rfl
+  exact absurd hb (by decide)
+
 theorem objectStrUsesRepr_proven : ObjectStrUsesRepr := by
   intro rt v r w h
   simp [callStr, isExcFamily, h]

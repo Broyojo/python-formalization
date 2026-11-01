@@ -817,6 +817,11 @@ def entries : List Entry := [
     "object.__str__ uses tp_repr."
     "typeobject.c:6956"
     ``ObjectStrUsesRepr ``objectStrUsesRepr_proven,
+  { id := "typeobj-super-bind-null-type", pyFile := ty, pyFns := ["super_descr_get", "supercheck"]
+    statement := "Binding the object super.__new__(super) allocates never reaches supercheck with a NULL type."
+    source := "invariant: pure Python does not crash the interpreter", status := .refuted,
+    prop := ``SuperBindHasType, thm := some ``superBindHasType_refuted,
+    bug := some "typeobj-super-uninitialized-get" },
   p "typeobj-super-skips" ty ["_super_lookup_descr", "do_super_lookup", "super_getattro"]
     "super looks strictly after __thisclass__ in the MRO of the object's type."
     "docs: super"

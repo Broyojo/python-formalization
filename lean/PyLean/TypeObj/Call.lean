@@ -323,7 +323,9 @@ def listInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
   match args, self with
   | [], .obj a => modObj a fun o => { o with body := .list [] }
   | x :: _, .obj a =>
-    let xs ← pySequenceList rt x
+    -- `list___init___impl`, `Objects/listobject.c:3491-3497`: clear, then `_list_extend`.
+    modObj a fun o => { o with body := .list [] }
+    let xs ← listExtendItems rt self x
     modObj a fun o => { o with body := .list xs }
   | _, _ => unmodelled
 
@@ -870,6 +872,7 @@ def builtinConv : Builtin → String × MethConv
   | .objectInitSubclass => ("__init_subclass__", .noargs)
   | .objectSubclasshook => ("__subclasshook__", .o)
   | .objectFormat => ("__format__", .o)
+  | .strDunderFormat => ("__format__", .o)
   | .objectDir => ("__dir__", .noargs)
   | .objectSizeof => ("__sizeof__", .noargs)
   | .objectGetstate => ("__getstate__", .noargs)
@@ -957,8 +960,22 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
     | [s] =>
       match strOf w s with
       | some sp =>
-        -- `unicode__format__` accepts type `s`; other specs belong to `UnicodeObj`.
-        if (strOf w selfV).isSome && sp == "s" then pure selfV else objectFormat rt selfV sp
+        objectFormat rt selfV sp
+      | none => typeErr s!"__format__() argument must be str, not {argTypeName w s}"
+    | _ => unmodelled
+  | .strDunderFormat =>
+    -- `unicode___format___impl` through `_PyUnicode_FormatAdvancedWriter`,
+    -- `Python/formatter_unicode.c`: an empty spec is `PyObject_Str`, spec `s` is the string
+    -- data as a new exact `str`. Other specs belong to `UnicodeObj`.
+    match args with
+    | [s] =>
+      match strOf w s with
+      | some "" => .str <$> rt.str selfV
+      | some "s" =>
+        match strOf w selfV with
+        | some v => pure (.str v)
+        | none => unmodelled
+      | some _ => unmodelled
       | none => typeErr s!"__format__() argument must be str, not {argTypeName w s}"
     | _ => unmodelled
   | .objectDir =>

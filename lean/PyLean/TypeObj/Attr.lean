@@ -362,7 +362,17 @@ def supercheck (rt : Rt) (ty : Addr) (obj : Val) : M Addr := do
     | none => ("instance of", typeName w obj)
   typeErr s!"super(type, obj): obj ({kind} {trunc 200 nm}) is not an instance or subtype of type ({trunc 200 (tpName w ty)})."
 
-/-- `super_descr_get`, `Objects/typeobject.c:12033`. -/
+/-- Does `super_descr_get` reach `supercheck(su->type, obj)`, `Objects/typeobject.c:12049`, with
+`su->type == NULL`? Nothing tests for it. `tp_new` leaves the field NULL (`super_init` fills it),
+`PyType_IsSubtype` then just answers no, and the error at :12015 reads `type->tp_name`. -/
+def superBindsNullType (w : World) (self o : Val) : Bool :=
+  match payloadOf w self, o with
+  | _, .none => false
+  | some (.super none none _), _ => typeOf w self == B.super
+  | _, _ => false
+
+/-- `super_descr_get`, `Objects/typeobject.c:12033`. The `none` branch is `superBindsNullType`:
+CPython goes on into a NULL dereference, which is no Python outcome, so the model stops. -/
 def superDescrGet (rt : Rt) (self : Val) (obj : Option Val) : M Val := do
   let w ← getW
   match payloadOf w self with
