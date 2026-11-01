@@ -40,7 +40,7 @@ def wrapArg {α : Type} (a : Py α) (f : α → BM Val) : BM Val :=
 def iternext : BM Val := do
   checkInit
   let l ← readlineRaw (-1)
-  if l = [] then thr .stopIteration else pure (.bytes l)
+  if l = [] then thr .stopIteration else pure (Val.bytes l)
 
 /-- The forwarding properties and methods, bufferedio.c:631-719, :532-537. -/
 def stepOp (s : BufS) : BfOp → BufS × Py Val
@@ -53,7 +53,7 @@ def stepOp (s : BufS) : BfOp → BufS × Py Val
     (wrapArg (optSsize (-1) n) (fun l => do
       checkInit
       let r ← readlineRaw l
-      pure (.bytes r))) s
+      pure (Val.bytes r))) s
   | .next => iternext s
   | .write b => (write b) s
   | .seek p w => (wrapArg (argCInt w) (seek p)) s
@@ -62,14 +62,14 @@ def stepOp (s : BufS) : BfOp → BufS × Py Val
   | .flush => flush s
   | .close => close s
   | .detach => detach s
-  | .closed => (do checkInit; let s ← SM.get; pure (.bool s.raw.closed)) s
-  | .readable => (do checkInit; let s ← SM.get; pure (.bool s.raw.canRead)) s
-  | .writable => (do checkInit; let s ← SM.get; pure (.bool s.raw.canWrite)) s
-  | .seekable => (do checkInit; let s ← SM.get; pure (.bool s.raw.canSeek)) s
+  | .closed => (do checkInit; let s ← SM.get; pure (Val.bool s.raw.closed)) s
+  | .readable => (do checkInit; let s ← SM.get; pure (Val.bool s.raw.canRead)) s
+  | .writable => (do checkInit; let s ← SM.get; pure (Val.bool s.raw.canWrite)) s
+  | .seekable => (do checkInit; let s ← SM.get; pure (Val.bool s.raw.canSeek)) s
   | .isatty => (do
       checkInit
       let s ← SM.get
-      if s.raw.closed then thr closedRaw else pure (.bool false)) s
+      if s.raw.closed then thr closedRaw else pure (Val.bool false)) s
   | .fileno => (do checkInit; thr (unsupportedOp "fileno")) s
   | .name => (do checkInit; thr (noRawAttr "name")) s
   | .mode => (do checkInit; thr (noRawAttr "mode")) s
@@ -88,7 +88,7 @@ def opt (r : Option (List Nat)) : Val := match r with
 /-- `IOBase.__next__` over the buffered `readline`. -/
 def next : PM Val := do
   let l ← readlineRaw none
-  if l = [] then thr .stopIteration else pure (.bytes l)
+  if l = [] then thr .stopIteration else pure (Val.bytes l)
 
 def stepOp (s : BufP) : BfOp → BufP × Py Val
   | .read n => (read n) s
@@ -96,7 +96,7 @@ def stepOp (s : BufP) : BfOp → BufP × Py Val
   | .peek n => (peek n) s
   | .readinto n => (readinto n false) s
   | .readinto1 n => (readinto n true) s
-  | .readline n => (do let r ← readlineRaw n; pure (.bytes r)) s
+  | .readline n => (do let r ← readlineRaw n; pure (Val.bytes r)) s
   | .next => next s
   | .write b => (write b) s
   | .seek p w => (seek p w) s

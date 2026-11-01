@@ -108,12 +108,11 @@ def rawRead (len : Int) : Nat → BM (Int × List Nat)
     SM.put { s with raw := r }
     match res with
     | .exc e => if trapEintr e then rawRead len fuel else thr e
-    | .none => pure (-2, [])
+    | .none => pure ((-2 : Int), ([] : List Nat))
     | .data d =>
       if d.length > 0 ∧ s.absPos ≠ -1 then SM.mod fun s => { s with absPos := s.absPos + d.length }
-      pure (d.length, [])
-      |> fun m => do let (n, _) ← m; pure (n, d)
-    | .count n => pure (n, [])
+      pure ((d.length : Int), d)
+    | .count n => pure ((n : Int), ([] : List Nat))
     | .bad v =>
       if !InSsize v then thr (osError "raw readinto() failed")
       else thr (osError s!"raw readinto() returned invalid length {v} (should have been between 0 and {len})")
@@ -207,18 +206,18 @@ def readFast (n : Int) : BM (Option (List Nat)) := do
 /-- The first loop of `_bufferedreader_read_generic`, bufferedio.c:1824-1845:
 `some out` is an early return. -/
 def genericBlocks : Nat → Int → List Nat → BM (Int × List Nat × Option Val)
-  | 0, r, o => pure (r, o, some .none) >>= fun _ => thr .modelFuel
+  | 0, _, _ => thr .modelFuel
   | fuel + 1, remaining, out => do
     if remaining > 0 then
       let s ← SM.get
       let r : Int := s.size * (remaining / s.size)
-      if r = 0 then pure (remaining, out, none) else
+      if r = 0 then pure (remaining, out, (none : Option Val)) else
       let (n, d) ← rawRead r (fuelR s)
       if n = 0 ∨ n = -2 then
-        if n = 0 ∨ out.length > 0 then pure (remaining, out, some (.bytes out))
-        else pure (remaining, out, some .none)
+        if n = 0 ∨ out.length > 0 then pure (remaining, out, some (Val.bytes out))
+        else pure (remaining, out, some Val.none)
       else genericBlocks fuel (remaining - n) (out ++ d)
-    else pure (remaining, out, none)
+    else pure (remaining, out, (none : Option Val))
 
 /-- The second loop of `_bufferedreader_read_generic`, bufferedio.c:1852-1879. -/
 def genericFill : Nat → Int → List Nat → BM Val
@@ -242,21 +241,18 @@ def genericFill : Nat → Int → List Nat → BM Val
 def readGeneric (n : Int) : BM Val := do
   let s ← SM.get
   let cur := readahead s
-  let mut out : List Nat := []
-  let mut remaining := n
   if n ≤ cur then
     let r ← readFast n
     pure (.bytes (r.getD []))
   else
-    if cur > 0 then
-      out := slice s.buffer s.pos.toNat cur.toNat
-      remaining := remaining - cur
-      SM.mod fun s => { s with pos := s.pos + cur }
+    let out0 : List Nat := if cur > 0 then slice s.buffer s.pos.toNat cur.toNat else []
+    let rem0 : Int := if cur > 0 then n - cur else n
+    if cur > 0 then SM.mod fun s => { s with pos := s.pos + cur }
     let s ← SM.get
     if s.writable then flushRewind
     resetRead
     let s ← SM.get
-    let (remaining, out, early) ← genericBlocks (s.raw.rs.length + remaining.toNat + 3) remaining out
+    let (remaining, out, early) ← genericBlocks (s.raw.rs.length + rem0.toNat + 3) rem0 out0
     match early with
     | some v => pure v
     | none =>
@@ -569,20 +565,19 @@ def write (b : List Nat) : BM Val := do
       let s ← SM.get
       if s.readable then resetRead
       let s ← SM.get
-      SM.mod fun t => { t with
-        buffer := writeAt t.buffer 0 (slice s.buffer s.writePos.toNat (s.writeEnd - s.writePos).toNat)
-        writeEnd := s.writeEnd - s.writePos, rawPos := s.rawPos - s.writePos
-        pos := s.pos - s.writePos, writePos := 0 }
+      let moved := slice s.buffer s.writePos.toNat (s.writeEnd - s.writePos).toNat
+      SM.mod fun t => { t with buffer := writeAt t.buffer 0 moved }
+      SM.mod fun t => { t with writeEnd := s.writeEnd - s.writePos, rawPos := s.rawPos - s.writePos }
+      SM.mod fun t => { t with pos := s.pos - s.writePos, writePos := 0 }
       let s ← SM.get
       let avail := s.size - s.writeEnd
       if len ≤ avail then
-        SM.mod fun s => { s with
-          buffer := writeAt s.buffer s.writeEnd.toNat b, writeEnd := s.writeEnd + len, pos := s.pos + len }
+        SM.mod fun s => { s with buffer := writeAt s.buffer s.writeEnd.toNat b }
+        SM.mod fun s => { s with writeEnd := s.writeEnd + len, pos := s.pos + len }
         pure (.int len)
       else
-        SM.mod fun s => { s with
-          buffer := writeAt s.buffer s.writeEnd.toNat (b.take avail.toNat)
-          writeEnd := s.writeEnd + avail, pos := s.pos + avail }
+        SM.mod fun s => { s with buffer := writeAt s.buffer s.writeEnd.toNat (b.take avail.toNat) }
+        SM.mod fun s => { s with writeEnd := s.writeEnd + avail, pos := s.pos + avail }
         thr (blocking avail.toNat)
     | .ok () =>
       let s ← SM.get

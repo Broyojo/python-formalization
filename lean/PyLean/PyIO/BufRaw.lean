@@ -86,7 +86,7 @@ namespace Raw
 
 /-- `readinto(b)` with `len(b) = len`. -/
 def readinto (r : Raw) (len : Nat) : Raw × RRes :=
-  let r := { r with log := r.log ++ [.readinto len] }
+  let r := { r with log := r.log ++ [RCall.readinto len] }
   if r.closed then (r, .exc rawClosedErr) else
   let take (r : Raw) (k : Nat) : Raw × RRes :=
     let d := (r.data.drop r.pos).take (min k len)
@@ -100,7 +100,7 @@ def readinto (r : Raw) (len : Nat) : Raw × RRes :=
 
 /-- `write(b)`. -/
 def write (r : Raw) (b : List Nat) : Raw × RRes :=
-  let r := { r with log := r.log ++ [.write b] }
+  let r := { r with log := r.log ++ [RCall.write b] }
   if r.closed then (r, .exc rawClosedErr) else
   let put (r : Raw) (k : Nat) : Raw × RRes :=
     let d := b.take k
@@ -119,7 +119,7 @@ def popS (r : Raw) : Raw × SStep :=
 
 /-- `seek(p, w)`. -/
 def seek (r : Raw) (p w : Int) : Raw × Py Int :=
-  let r := { r with log := r.log ++ [.seek p w] }
+  let r := { r with log := r.log ++ [RCall.seek p w] }
   if r.closed then (r, .error rawClosedErr) else
   let (r, st) := r.popS
   match st with
@@ -134,7 +134,7 @@ def seek (r : Raw) (p w : Int) : Raw × Py Int :=
 
 /-- `tell()`. -/
 def tell (r : Raw) : Raw × Py Int :=
-  let r := { r with log := r.log ++ [.tell] }
+  let r := { r with log := r.log ++ [RCall.tell] }
   if r.closed then (r, .error rawClosedErr) else
   let (r, st) := r.popS
   match st with
@@ -144,7 +144,7 @@ def tell (r : Raw) : Raw × Py Int :=
 
 /-- `truncate(p)` (`None` is the current position). -/
 def truncate (r : Raw) (p : Option Int) : Raw × Py Int :=
-  let r := { r with log := r.log ++ [.truncate p] }
+  let r := { r with log := r.log ++ [RCall.truncate p] }
   if r.closed then (r, .error rawClosedErr) else
   let n : Int := p.getD r.pos
   if n < 0 then (r, .error (.valueError "bad truncate")) else
@@ -153,12 +153,12 @@ def truncate (r : Raw) (p : Option Int) : Raw × Py Int :=
 
 /-- `flush()`, the harness logging around `IOBase.flush`. -/
 def flush (r : Raw) : Raw × Py Unit :=
-  let r := { r with log := r.log ++ [.flush] }
+  let r := { r with log := r.log ++ [RCall.flush] }
   if r.closed then (r, .error (.valueError "I/O operation on closed file.")) else (r, .ok ())
 
 /-- `close()`, the harness logging around `IOBase.close`. -/
 def close (r : Raw) : Raw × Py Unit :=
-  let r := { r with log := r.log ++ [.close] }
+  let r := { r with log := r.log ++ [RCall.close] }
   match r.closeFail with
   | some (c, m) => ({ r with closeFail := none }, .error (.named c m))
   | none =>

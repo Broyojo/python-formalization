@@ -30,15 +30,6 @@ def encVal : Val → Json
   | .atom a => encAtom a
   | .list l => Json.arr (l.map encAtom).toArray
 
-def getNats (j : Json) (key : String) : Except String (List Nat) := do
-  let arr ← (← field j key).getArr?
-  (arr.mapM Json.getNat?).map Array.toList
-
-def getOptNats (j : Json) (key : String) : Except String (Option (List Nat)) :=
-  match j.getObjVal? key with
-  | .ok .null | .error _ => .ok none
-  | .ok _ => some <$> getNats j key
-
 def getBOp (j : Json) : Except String BOp := do
   match ← getStr j "op" with
   | "read" => return .read (← getOptInt j "n")
@@ -56,23 +47,6 @@ def getBOp (j : Json) : Except String BOp := do
   | "close" => return .close
   | "next" => return .next
   | "closed" => return .closed
-  | o => throw s!"unknown op {o}"
-
-def getSOp (j : Json) : Except String SOp := do
-  match ← getStr j "op" with
-  | "read" => return .read (← getOptInt j "n")
-  | "readline" => return .readline (← getOptInt j "n")
-  | "readlines" => return .readlines (← getOptInt j "n")
-  | "write" => return .write (← getNats j "b")
-  | "seek" => return .seek (← getInt j "pos") (← getInt j "whence")
-  | "tell" => return .tell
-  | "truncate" => return .truncate (← getOptInt j "n")
-  | "getvalue" => return .getvalue
-  | "close" => return .close
-  | "next" => return .next
-  | "closed" => return .closed
-  | "newlines" => return .newlines
-  | "seektell" => return .seekTell
   | o => throw s!"unknown op {o}"
 
 def encResults (rs : List (Py Val)) : Json :=

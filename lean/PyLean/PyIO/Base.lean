@@ -58,31 +58,31 @@ def excOf (cls msg : String) : PyExc := .named cls msg
 def unsup (m : String) : PyExc := unsupportedOp m
 
 def UObj.callRead (u : UObj) (n : Int) : UObj × Ret :=
-  let u := { u with log := u.log ++ [.read n] }
+  let u := { u with log := u.log ++ [Call.read n] }
   match u.reads with
   | [] => (u, .bytes [])
   | r :: rs => ({ u with reads := rs }, r)
 
 def UObj.callRead1 (u : UObj) (n : Int) : UObj × Ret :=
-  let u := { u with log := u.log ++ [.read1 n] }
+  let u := { u with log := u.log ++ [Call.read1 n] }
   match u.reads with
   | [] => (u, .bytes [])
   | r :: rs => ({ u with reads := rs }, r)
 
 def UObj.callPeek (u : UObj) (n : Int) : UObj × Ret :=
-  let u := { u with log := u.log ++ [.peek n] }
+  let u := { u with log := u.log ++ [Call.peek n] }
   match u.peeks with
   | some (r :: rs) => ({ u with peeks := some rs }, r)
   | _ => (u, .bytes [])
 
 def UObj.callInto (u : UObj) (n : Int) : UObj × (List Nat × Ret) :=
-  let u := { u with log := u.log ++ [.readinto n] }
+  let u := { u with log := u.log ++ [Call.readinto n] }
   match u.intos with
   | [] => (u, ([], .int 0))
   | r :: rs => ({ u with intos := rs }, r)
 
 def UObj.callWrite (u : UObj) (b : List Nat) : UObj × Ret :=
-  let u := { u with log := u.log ++ [.write b] }
+  let u := { u with log := u.log ++ [Call.write b] }
   match u.writes with
   | [] => (u, .none)
   | r :: rs => ({ u with writes := rs }, r)
@@ -115,7 +115,7 @@ def trapEintr (cls : String) : Bool := cls == "InterruptedError"
 
 /-- `_io__IOBase_flush_impl`, iobase.c:172-185, after the script. -/
 def flush (u : UObj) : UObj × Py Val :=
-  let u' := { u with log := u.log ++ [.flush] }
+  let u' := { u with log := u.log ++ [Call.flush] }
   match u.flushes with
   | r :: rs =>
     let u' := { u' with flushes := rs }
@@ -129,6 +129,30 @@ def close (u : UObj) : UObj × Py Val :=
   if u.isClosed then (u, .ok .none) else
   let (u', r) := flush u
   ({ u' with isClosed := true }, r.map (fun _ => .none))
+
+/-- `_io__RawIOBase_read_impl`, iobase.c:922-960, for `n >= 0`. -/
+def rawReadN (u : UObj) (n : Nat) : UObj × Py Val :=
+  match u.callInto n with
+  | (u, (_, .raise c m)) => (u, .error (excOf c m))
+  | (u, (_, .none)) => (u, .ok .none)
+  | (u, (d, .int k)) =>
+    if !InSsize k then (u, .error (.valueError "cannot fit 'int' into an index-sized integer"))
+    else if k < 0 ∨ k > n then
+      (u, .error (.valueError s!"readinto returned {k} outside buffer size {n}"))
+    else (u, .ok (.bytes ((d.take n ++ List.replicate (n - (d.take n).length) 0).take k.toNat)))
+  | (u, (_, .bytes _)) =>
+    (u, .error (.typeError "'bytes' object cannot be interpreted as an integer"))
+
+def readCall (u : UObj) (n : Nat) : UObj × Ret :=
+  if u.rawRead then
+    match rawReadN u n with
+    | (u, .error (.named c m)) => (u, .raise c m)
+    | (u, .error (.valueError m)) => (u, .raise "ValueError" m)
+    | (u, .error (.typeError m)) => (u, .raise "TypeError" m)
+    | (u, .error _) => (u, .raise "ValueError" "")
+    | (u, .ok .none) => (u, .none)
+    | (u, .ok v) => (u, .bytes v.bytesOf)
+  else u.callRead n
 
 /-- The peek step of `_io__IOBase_readline_impl`, iobase.c:582-614. -/
 def readahead (limit : Int) (r : List Nat) : Nat :=
@@ -159,7 +183,7 @@ def readlineLoop (limit : Int) : UObj → List Nat → Nat → UObj × Py (List 
       | (u, .error e) => (u, .error e)
       | (u, .ok none) => readlineLoop limit u res fuel
       | (u, .ok (some nread)) =>
-        match u.callRead nread with
+        match readCall u nread with
         | (u, .raise c m) =>
           if trapEintr c then readlineLoop limit u res fuel else (u, .error (excOf c m))
         | (u, .bytes b) =>
@@ -169,7 +193,7 @@ def readlineLoop (limit : Int) : UObj → List Nat → Nat → UObj × Py (List 
         | (u, r) => (u, .error (osError s!"read() should have returned a bytes object, not '{r.typeName}'"))
     else (u, .ok res)
 
-def fuelOf (u : UObj) : Nat := u.reads.length + (u.peeks.getD []).length + 2
+def fuelOf (u : UObj) : Nat := u.reads.length + u.intos.length + (u.peeks.getD []).length + 2
 
 /-- `_io__IOBase_readline_impl`, iobase.c:569-663. -/
 def readline (u : UObj) (limit : Option Int) : UObj × Py Val :=
@@ -217,29 +241,6 @@ def writelinesLoop : UObj → List (List Nat) → Nat → UObj × Py Val
     | (u, .raise c m) =>
       if trapEintr c then writelinesLoop u (l :: ls) fuel else (u, .error (excOf c m))
     | (u, _) => writelinesLoop u ls fuel
-
-/-- `_io__RawIOBase_read_impl`, iobase.c:922-960, for `n >= 0`. -/
-def rawReadN (u : UObj) (n : Nat) : UObj × Py Val :=
-  match u.callInto n with
-  | (u, (_, .raise c m)) => (u, .error (excOf c m))
-  | (u, (_, .none)) => (u, .ok .none)
-  | (u, (d, .int k)) =>
-    if k < 0 ∨ k > n then
-      (u, .error (.valueError s!"readinto returned {k} outside buffer size {n}"))
-    else (u, .ok (.bytes ((d.take n ++ List.replicate (n - (d.take n).length) 0).take k.toNat)))
-  | (u, (_, .bytes _)) =>
-    (u, .error (.typeError "'bytes' object cannot be interpreted as an integer"))
-
-def readCall (u : UObj) (n : Nat) : UObj × Ret :=
-  if u.rawRead then
-    match rawReadN u n with
-    | (u, .error (.named c m)) => (u, .raise c m)
-    | (u, .error (.valueError m)) => (u, .raise "ValueError" m)
-    | (u, .error (.typeError m)) => (u, .raise "TypeError" m)
-    | (u, .error _) => (u, .raise "ValueError" "")
-    | (u, .ok .none) => (u, .none)
-    | (u, .ok v) => (u, .bytes v.bytesOf)
-  else u.callRead n
 
 /-- The loop of `_io__RawIOBase_readall_impl`, iobase.c:970-1021. -/
 def readallLoop : UObj → List Nat → Bool → Nat → UObj × Py Val
@@ -295,6 +296,7 @@ def step (u : UObj) : UOp → UObj × Py Val
     | .error e => (u, .error e)
     | .ok n =>
       if n < 0 then readallLoop u [] false (u.intos.length + u.reads.length + 2)
+      else if n ≥ memLimit then (u, .error memoryError)
       else rawReadN u n.toNat
   | .rawReadall => readallLoop u [] false (u.intos.length + u.reads.length + 2)
   | .rawReadinto => (u, .error (.named "NotImplementedError" ""))
@@ -321,7 +323,7 @@ def unsupported (u : UObj) (name : String) : PyExc := unsup s!"{u.name}.{name}()
 
 /-- `IOBase.flush`, _pyio.py:380-386, after the script. -/
 def flush (u : UObj) : UObj × Py Val :=
-  let u' := { u with log := u.log ++ [.flush] }
+  let u' := { u with log := u.log ++ [Call.flush] }
   match u.flushes with
   | r :: rs =>
     let u' := { u' with flushes := rs }
@@ -335,6 +337,29 @@ def close (u : UObj) : UObj × Py Val :=
   if u.isClosed then (u, .ok .none) else
   let (u', r) := flush u
   ({ u' with isClosed := true }, r.map (fun _ => .none))
+
+/-- `RawIOBase.read`, _pyio.py:621-635, for `size >= 0`. -/
+def rawReadN (u : UObj) (n : Nat) : UObj × Py Val :=
+  match u.callInto n with
+  | (u, (_, .raise c m)) => (u, .error (excOf c m))
+  | (u, (_, .none)) => (u, .ok .none)
+  | (u, (d, .int k)) =>
+    if k < 0 ∨ k > n then
+      (u, .error (.valueError s!"readinto returned {k} outside buffer size {n}"))
+    else (u, .ok (.bytes ((d.take n ++ List.replicate (n - (d.take n).length) 0).take k.toNat)))
+  | (u, (_, .bytes _)) =>
+    (u, .error (.typeError "'<' not supported between instances of 'bytes' and 'int'"))
+
+def readCall (u : UObj) (n : Nat) : UObj × Ret :=
+  if u.rawRead then
+    match rawReadN u n with
+    | (u, .error (.named c m)) => (u, .raise c m)
+    | (u, .error (.valueError m)) => (u, .raise "ValueError" m)
+    | (u, .error (.typeError m)) => (u, .raise "TypeError" m)
+    | (u, .error _) => (u, .raise "ValueError" "")
+    | (u, .ok .none) => (u, .none)
+    | (u, .ok v) => (u, .bytes v.bytesOf)
+  else u.callRead n
 
 /-- `nreadahead` with `peek`, _pyio.py:524-531. -/
 def nreadahead (size : Int) (r : Ret) : Py Nat :=
@@ -359,7 +384,7 @@ def readlineLoop (size : Int) : UObj → List Nat → Nat → UObj × Py (List N
       match pk with
       | (u, .error e) => (u, .error e)
       | (u, .ok nread) =>
-        match u.callRead nread with
+        match readCall u nread with
         | (u, .raise c m) => (u, .error (excOf c m))
         | (u, .none) | (u, .int 0) | (u, .bytes []) => (u, .ok res)
         | (u, .int _) => (u, .error (.typeError "can't concat int to bytearray"))
@@ -409,29 +434,6 @@ def writelinesLoop : UObj → List (List Nat) → UObj × Py Val
     match u.callWrite l with
     | (u, .raise c m) => (u, .error (excOf c m))
     | (u, _) => writelinesLoop u ls
-
-/-- `RawIOBase.read`, _pyio.py:621-635, for `size >= 0`. -/
-def rawReadN (u : UObj) (n : Nat) : UObj × Py Val :=
-  match u.callInto n with
-  | (u, (_, .raise c m)) => (u, .error (excOf c m))
-  | (u, (_, .none)) => (u, .ok .none)
-  | (u, (d, .int k)) =>
-    if k < 0 ∨ k > n then
-      (u, .error (.valueError s!"readinto returned {k} outside buffer size {n}"))
-    else (u, .ok (.bytes ((d.take n ++ List.replicate (n - (d.take n).length) 0).take k.toNat)))
-  | (u, (_, .bytes _)) =>
-    (u, .error (.typeError "'<' not supported between instances of 'bytes' and 'int'"))
-
-def readCall (u : UObj) (n : Nat) : UObj × Ret :=
-  if u.rawRead then
-    match rawReadN u n with
-    | (u, .error (.named c m)) => (u, .raise c m)
-    | (u, .error (.valueError m)) => (u, .raise "ValueError" m)
-    | (u, .error (.typeError m)) => (u, .raise "TypeError" m)
-    | (u, .error _) => (u, .raise "ValueError" "")
-    | (u, .ok .none) => (u, .none)
-    | (u, .ok v) => (u, .bytes v.bytesOf)
-  else u.callRead n
 
 /-- `RawIOBase.readall`, _pyio.py:637-645; `last` is the falsy `data`. -/
 def readallLoop : UObj → List Nat → Nat → UObj × Py Val
@@ -484,6 +486,8 @@ def step (u : UObj) : UOp → UObj × Py Val
   | .rawRead n =>
     let n := n.getD (-1)
     if n < 0 then readallLoop u [] (u.intos.length + u.reads.length + 2)
+    else if !InSsize n then (u, .error (.overflowError "cannot fit 'int' into an index-sized integer"))
+    else if n ≥ memLimit then (u, .error memoryError)
     else rawReadN u n.toNat
   | .rawReadall => readallLoop u [] (u.intos.length + u.reads.length + 2)
   | .rawReadinto => (u, .error (unsupported u "readinto"))

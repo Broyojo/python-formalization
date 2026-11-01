@@ -156,6 +156,7 @@ def gen_case(rng):
     if kind == "buf":
         names += ["bRead", "bRead1", "bReadinto", "bReadinto", "bReadinto1", "bReadinto1", "bWrite", "bDetach"]
     if kind == "text":
+        names = [n for n in names if n not in ("next", "readlines")]
         names += ["tRead", "tReadline", "tWrite", "tTruncate", "tDetach", "tEncoding", "tNewlines", "tErrors"]
     ops = []
     for _ in range(rng.randint(1, 8)):
