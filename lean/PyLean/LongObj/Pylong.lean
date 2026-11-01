@@ -154,19 +154,20 @@ def decStr (v : Int) : List Char :=
   (if v < 0 then ['-'] else []) ++ Nat.toDigits 10 v.natAbs
 
 /-- `int_to_decimal_string(n)`, _pylong.py:178-221, for a build with `_decimal`. -/
-def intToDecimalString (strf : Int → Py (List Char)) (n : Int) : Py (List Char) := do
+def intToDecimalString (strf : Int → Py (List Char)) (n : Int) : Py (List Char) :=
   let w := bitLength n.natAbs
-  if w > 450000 then
+  if w > 450000 then do
     let d ← intToDecimal n
     return decStr d
-  let w := decEstimate w
-  let pow10 ← computePowersNat w 5 1000 false
-  let pow10 := pow10.map (fun kv => (kv.1, kv.2 <<< kv.1))
-  let m := n.natAbs
-  let sign := if n < 0 then ['-'] else []
-  let s ← itdsInner strf pow10 (w + 1) m w
-  let s := if s.head? = some '0' ∧ m ≠ 0 then s.dropWhile (· == '0') else s
-  return sign ++ s
+  else do
+    let w := decEstimate w
+    let pow10 ← computePowersNat w 5 1000 false
+    let pow10 := pow10.map (fun kv => (kv.1, kv.2 <<< kv.1))
+    let m := n.natAbs
+    let sign := if n < 0 then ['-'] else []
+    let s ← itdsInner strf pow10 (w + 1) m w
+    let s := if s.head? = some '0' ∧ m ≠ 0 then s.dropWhile (· == '0') else s
+    return sign ++ s
 
 /-! ## str to int -/
 

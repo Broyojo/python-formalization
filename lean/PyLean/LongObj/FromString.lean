@@ -801,10 +801,14 @@ def IsLit (base : Nat) (s : List Nat) (neg : Bool) (rb : Nat) (body : List Nat) 
 def litValue (neg : Bool) (rb : Nat) (body : List Nat) : Int :=
   if neg then -(hv rb 0 body : Int) else hv rb 0 body
 
-/-- `pylong_int_from_string` meets its contract on a validated decimal body. -/
-def HookOK (pyl : List Nat → Py (List Nat)) (lim : Nat) : Prop :=
-  ∀ body, DigitPart 10 body → cnt body > 6000 → (lim = 0 ∨ cnt body ≤ lim) →
-    pyl body = .ok (digitsOf (hv 10 0 body))
+/-- `pylong_int_from_string` meets its contract on one validated decimal body. -/
+def HookAt (pyl : List Nat → Py (List Nat)) (lim : Nat) (body : List Nat) : Prop :=
+  cnt body > 6000 → (lim = 0 ∨ cnt body ≤ lim) → pyl body = .ok (digitsOf (hv 10 0 body))
+
+/-- `pylong_int_from_string` meets its contract on validated bodies of bytes, of fewer
+than `N` digits. -/
+def HookOK (pyl : List Nat → Py (List Nat)) (lim N : Nat) : Prop :=
+  ∀ body, DigitPart 10 body → (∀ c ∈ body, c < 256) → cnt body < N → HookAt pyl lim body
 
 theorem space_dv : ∀ c, cIsSpace c = true → digitValue c = 37 := by
   intro c h
@@ -1201,7 +1205,7 @@ instance (lim digits base : Nat) : Decidable (limitHit lim digits base) := by
   unfold limitHit; exact inferInstance
 
 theorem convBody_spec {pyl : List Nat → Py (List Nat)} {lim rb : Nat} {body : List Nat}
-    (hok : HookOK pyl lim) (hrb : 2 ≤ rb ∧ rb ≤ 36) (hdp : DigitPart rb body)
+    (hok : rb = 10 → HookAt pyl lim body) (hrb : 2 ≤ rb ∧ rb ≤ 36) (hdp : DigitPart rb body)
     (hs : cnt body ≤ 2 ^ 58) (hnl : ¬ limitHit lim (cnt body) rb) :
     ∃ z, convBody pyl lim body (cnt body) rb = .ok z ∧ IsDigits z ∧
       (rb &&& (rb - 1) ≠ 0 → z ≠ [] → 0 < val z) ∧ val z = hv rb 0 body := by
@@ -1231,7 +1235,7 @@ theorem convBody_spec {pyl : List Nat → Py (List Nat)} {lim rb : Nat} {body : 
           apply Nat.le_of_not_lt
           intro h
           exact hnl2 ⟨by have : strDigitsThreshold = 640 := rfl; omega, by omega, h⟩
-      rw [hok body hdp h60 hlim]
+      rw [hok rfl h60 hlim]
       refine ⟨_, rfl, digitsOf_digits _, fun _ hz => ?_, val_digitsOf _⟩
       rw [val_digitsOf]
       have : hv 10 0 body ≠ 0 := fun h => hz (digitsOf_eq_nil.2 h)
@@ -1245,7 +1249,7 @@ theorem convBody_spec {pyl : List Nat → Py (List Nat)} {lim rb : Nat} {body : 
 /-- `PyLong_FromString` on a literal: its value, or the digit limit, with `*pend` at the
 end of the string. -/
 theorem pyLongFromString_lit {pyl : List Nat → Py (List Nat)} {lim base rb : Nat} {neg : Bool}
-    {s body : List Nat} (hok : HookOK pyl lim) (hbase : base = 0 ∨ (2 ≤ base ∧ base ≤ 36))
+    {s body : List Nat} (hok : rb = 10 → HookAt pyl lim body) (hbase : base = 0 ∨ (2 ≤ base ∧ base ≤ 36))
     (hl : IsLit base s neg rb body) (hs : cnt body ≤ 2 ^ 58) :
     pyLongFromString pyl lim s (base : Int) =
       if limitHit lim (cnt body) rb then
@@ -1601,8 +1605,8 @@ theorem cnt_le_length : ∀ l : List Nat, cnt l ≤ l.length
 /-- Everything `PyLong_FromString` accepts through to the end of the string is a
 literal of the grammar, and the result is its value. -/
 theorem pyLongFromString_inv {pyl : List Nat → Py (List Nat)} {lim base : Nat} {s : List Nat}
-    {v : Long} (hok : HookOK pyl lim) (hbase : base = 0 ∨ (2 ≤ base ∧ base ≤ 36))
-    (hs : s.length ≤ 2 ^ 58)
+    {v : Long} {N : Nat} (hok : HookOK pyl lim N) (hbase : base = 0 ∨ (2 ≤ base ∧ base ≤ 36))
+    (hs : s.length ≤ 2 ^ 58) (hN : s.length < N) (hbytes : ∀ c ∈ s, c < 256)
     (h : pyLongFromString pyl lim s (base : Int) = (.ok v, some [])) :
     ∃ neg rb body, IsLit base s neg rb body ∧ v = Long.ofInt (litValue neg rb body) := by
   have hrange : ¬ (((base : Int) ≠ 0 ∧ (base : Int) < 2) ∨ (base : Int) > 36) := by omega
@@ -1645,16 +1649,24 @@ theorem pyLongFromString_inv {pyl : List Nat → Py (List Nat)} {lim base : Nat}
             · injection hdt with h3 _; omega
           have hsdec : s = s.takeWhile (fun c => c ≠ 0 && cIsSpace c) ++ s0 := by
             rw [← hs0, List.takeWhile_append_dropWhile]
-          have hcnt : cnt body ≤ 2 ^ 58 := by
-            have h3 := cnt_le_length body
-            have h4 : body.length ≤ s.length := by
-              have : s.length = (s.takeWhile (fun c => c ≠ 0 && cIsSpace c)).length + sg.length +
-                  pre.length + body.length + ws.length := by
-                conv => lhs; rw [hsdec, hs01, hs12, hSd]
-                simp only [List.length_append]
-                omega
+          have hsfull : s = s.takeWhile (fun c => c ≠ 0 && cIsSpace c) ++
+              (sg ++ (pre ++ (body ++ ws))) := by
+            conv => lhs; rw [hsdec, hs01, hs12, hSd]
+          have h4 : body.length ≤ s.length := by
+            have : s.length = (s.takeWhile (fun c => c ≠ 0 && cIsSpace c)).length + sg.length +
+                pre.length + body.length + ws.length := by
+              conv => lhs; rw [hsfull]
+              simp only [List.length_append]
               omega
             omega
+          have h3 := cnt_le_length body
+          have hcnt : cnt body ≤ 2 ^ 58 := by omega
+          have hbody256 : ∀ c ∈ body, c < 256 := fun c hc => hbytes c (by
+            rw [hsfull]
+            simp [hc])
+          have hat : b = 10 → HookAt pyl lim body := by
+            rintro rfl
+            exact hok body hdp hbody256 (by omega)
           have hnl : ¬ limitHit lim (cnt body) b := by
             intro hhit
             have : convBody pyl lim body (cnt body) b =
@@ -1663,7 +1675,7 @@ theorem pyLongFromString_inv {pyl : List Nat → Py (List Nat)} {lim base : Nat}
               rw [if_neg hhit.1, if_pos hhit.2]
             rw [this] at hconv
             cases hconv
-          obtain ⟨z', e', hdz, hpos, hvz⟩ := convBody_spec hok hrb hdp hcnt hnl
+          obtain ⟨z', e', hdz, hpos, hvz⟩ := convBody_spec hat hrb hdp hcnt hnl
           rw [e'] at hconv
           injection hconv with hconv
           subst hconv
@@ -1751,7 +1763,7 @@ theorem pyLongFromString_none {pyl : List Nat → Py (List Nat)} {lim : Nat} {s 
 
 /-- `_PyLong_FromBytes` on a literal. -/
 theorem pyLongFromBytes_lit {pyl : List Nat → Py (List Nat)} {lim base rb : Nat} {neg : Bool}
-    {s body : List Nat} (hok : HookOK pyl lim) (hbase : base = 0 ∨ (2 ≤ base ∧ base ≤ 36))
+    {s body : List Nat} (hok : rb = 10 → HookAt pyl lim body) (hbase : base = 0 ∨ (2 ≤ base ∧ base ≤ 36))
     (hl : IsLit base s neg rb body) (hs : cnt body ≤ 2 ^ 58) :
     pyLongFromBytes pyl lim s (base : Int) =
       if limitHit lim (cnt body) rb then .error (.valueError (limitToIntMsg lim (cnt body)))
@@ -1764,8 +1776,9 @@ theorem pyLongFromBytes_lit {pyl : List Nat → Py (List Nat)} {lim base rb : Na
 
 /-- `_PyLong_FromBytes` accepts only literals. -/
 theorem pyLongFromBytes_inv {pyl : List Nat → Py (List Nat)} {lim base : Nat} {s : List Nat}
-    {v : Long} (hok : HookOK pyl lim) (hbase : base = 0 ∨ (2 ≤ base ∧ base ≤ 36))
-    (hs : s.length ≤ 2 ^ 58) (h : pyLongFromBytes pyl lim s (base : Int) = .ok v) :
+    {v : Long} {N : Nat} (hok : HookOK pyl lim N) (hbase : base = 0 ∨ (2 ≤ base ∧ base ≤ 36))
+    (hs : s.length ≤ 2 ^ 58) (hN : s.length < N) (hbytes : ∀ c ∈ s, c < 256)
+    (h : pyLongFromBytes pyl lim s (base : Int) = .ok v) :
     ∃ neg rb body, IsLit base s neg rb body ∧ v = Long.ofInt (litValue neg rb body) := by
   unfold pyLongFromBytes at h
   cases hr : pyLongFromString pyl lim s (base : Int) with
@@ -1784,12 +1797,12 @@ theorem pyLongFromBytes_inv {pyl : List Nat → Py (List Nat)} {lim base : Nat} 
         | ok w =>
           injection h with h
           subst h
-          exact pyLongFromString_inv hok hbase hs hr
+          exact pyLongFromString_inv hok hbase hs hN hbytes hr
       | cons _ _ => cases h
 
 /-- `PyLong_FromUnicodeObject` on a string whose transform is a literal. -/
 theorem pyLongFromUnicodeObject_lit {pyl : List Nat → Py (List Nat)} {lim base rb : Nat}
-    {neg : Bool} {u body : List Nat} (hok : HookOK pyl lim)
+    {neg : Bool} {u body : List Nat} (hok : rb = 10 → HookAt pyl lim body)
     (hbase : base = 0 ∨ (2 ≤ base ∧ base ≤ 36))
     (hl : IsLit base (transformDecimalAndSpace u) neg rb body) (hs : cnt body ≤ 2 ^ 58) :
     pyLongFromUnicodeObject pyl lim u (base : Int) =
@@ -1804,8 +1817,9 @@ theorem pyLongFromUnicodeObject_lit {pyl : List Nat → Py (List Nat)} {lim base
 
 /-- `PyLong_FromUnicodeObject` accepts only strings whose transform is a literal. -/
 theorem pyLongFromUnicodeObject_inv {pyl : List Nat → Py (List Nat)} {lim base : Nat}
-    {u : List Nat} {v : Long} (hok : HookOK pyl lim) (hbase : base = 0 ∨ (2 ≤ base ∧ base ≤ 36))
-    (hs : (transformDecimalAndSpace u).length ≤ 2 ^ 58)
+    {u : List Nat} {v : Long} {N : Nat} (hok : HookOK pyl lim N) (hbase : base = 0 ∨ (2 ≤ base ∧ base ≤ 36))
+    (hs : (transformDecimalAndSpace u).length ≤ 2 ^ 58) (hN : (transformDecimalAndSpace u).length < N)
+    (hbytes : ∀ c ∈ transformDecimalAndSpace u, c < 256)
     (h : pyLongFromUnicodeObject pyl lim u (base : Int) = .ok v) :
     ∃ neg rb body, IsLit base (transformDecimalAndSpace u) neg rb body ∧
       v = Long.ofInt (litValue neg rb body) := by
@@ -1827,7 +1841,7 @@ theorem pyLongFromUnicodeObject_inv {pyl : List Nat → Py (List Nat)} {lim base
         | ok w =>
           injection h with h
           subst h
-          exact pyLongFromString_inv hok hbase hs hr
+          exact pyLongFromString_inv hok hbase hs hN hbytes hr
       | cons _ _ => cases h
 
 /-! ### Printed numbers are literals -/
@@ -1836,6 +1850,34 @@ theorem dv_digitChar : ∀ d, d < 16 → digitValue (Nat.digitChar d).toNat = d 
 
 /-- The characters of `Nat.toDigits`, as code points. -/
 def digitBytes (b n : Nat) : List Nat := (Nat.toDigits b n).map Char.toNat
+
+theorem digitChar_ascii : ∀ d, d < 16 → (Nat.digitChar d).toNat < 128 := by decide
+
+theorem digitBytes_ascii {b : Nat} (hb : b = 2 ∨ b = 8 ∨ b = 10 ∨ b = 16) (n : Nat) :
+    ∀ c ∈ digitBytes b n, c < 128 := by
+  have hb1 : 1 < b := by omega
+  have hb16 : b ≤ 16 := by omega
+  induction n using Nat.strongRecOn with
+  | ind n ih =>
+    by_cases hlt : n < b
+    · unfold digitBytes
+      rw [Nat.toDigits_of_lt_base hlt]
+      intro c hc
+      simp only [List.map_cons, List.map_nil, List.mem_singleton] at hc
+      subst hc
+      exact digitChar_ascii n (by omega)
+    · have hge : b ≤ n := by omega
+      have e : digitBytes b n = digitBytes b (n / b) ++ [(Nat.digitChar (n % b)).toNat] := by
+        unfold digitBytes
+        rw [Nat.toDigits_of_base_le hb1 hge]
+        simp
+      rw [e]
+      intro c hc
+      rcases List.mem_append.1 hc with h | h
+      · exact ih _ (Nat.div_lt_self (by omega) hb1) c h
+      · simp only [List.mem_singleton] at h
+        subst h
+        exact digitChar_ascii _ (Nat.lt_of_lt_of_le (Nat.mod_lt _ (by omega)) hb16)
 
 theorem digitBytes_spec {b : Nat} (hb : b = 2 ∨ b = 8 ∨ b = 10 ∨ b = 16) (n : Nat) :
     digitBytes b n ≠ [] ∧ (∀ c ∈ digitBytes b n, digitValue c < b) ∧ hv b 0 (digitBytes b n) = n := by
