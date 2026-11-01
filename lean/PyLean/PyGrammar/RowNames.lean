@@ -28,19 +28,43 @@ def check_format_args : List String := [
   "parse_format", "optimize_format"]
 
 def check_names_always : List String := [
-  "validate_expr"]
+  ]
 
 def check_no_null_deref : List String := [
-  "validate_pattern", "validate_patterns"]
+  ]
 
 def check_nonempty : List String := [
+  ]
+
+def check_null_sites : List String := [
+  "validate_pattern", "validate_patterns", "_PyAST_Validate"]
+
+def check_rejects : List String := [
+  "validate_comprehension", "validate_keywords", "validate_args", "validate_arguments", "validate_expr", "ensure_literal_number",
+  "ensure_literal_negative", "ensure_literal_complex", "validate_pattern_match_value", "validate_capture", "_validate_nonempty_seq", "validate_assignlist",
+  "validate_body", "validate_stmt", "validate_stmts", "validate_exprs", "validate_typeparam", "validate_type_params"]
+
+def check_set_context_last : List String := [
+  ]
+
+def check_set_context_restores : List String := [
   ]
 
 def check_syntax_only_identity : List String := [
   ]
 
+def check_table_covers : List String := [
+  ]
+
+def check_target_legal : List String := [
+  ]
+
+def check_targets : List String := [
+  "_set_seq_context", "_set_name_context", "_set_tuple_context", "_set_list_context", "_set_subscript_context", "_set_attribute_context",
+  "_set_starred_context", "_PyPegen_set_expr_context", "_PyPegen_get_invalid_target"]
+
 def check_try_twin : List String := [
-  "validate_stmt"]
+  ]
 
 def check_validate_name : List String := [
   "validate_name"]

@@ -58,9 +58,20 @@ CREDIT = {
         "Lib___ast_unparse.py": ["Unparser._write_ftstring_inner"]},
     "pygrammar-unparse-c-roundtrip": {"Python__ast_unparse.c": ["append_joinedstr"]},
     "pygrammar-check-validate-name": {"Python__ast.c": ["validate_name"]},
-    "pygrammar-check-try-twin": {"Python__ast.c": ["validate_stmt"]},
-    "pygrammar-check-no-null-deref": {"Python__ast.c": ["validate_pattern", "validate_patterns"]},
-    "pygrammar-check-names-always": {"Python__ast.c": ["validate_expr"]},
+    "pygrammar-check-rejects": {
+        "Python__ast.c": [
+            "validate_comprehension", "validate_keywords", "validate_args", "validate_arguments",
+            "validate_expr", "ensure_literal_number", "ensure_literal_negative",
+            "ensure_literal_complex", "validate_pattern_match_value", "validate_capture",
+            "_validate_nonempty_seq", "validate_assignlist", "validate_body", "validate_stmt",
+            "validate_stmts", "validate_exprs", "validate_typeparam", "validate_type_params"]},
+    "pygrammar-check-null-sites": {
+        "Python__ast.c": ["validate_pattern", "validate_patterns", "_PyAST_Validate"]},
+    "pygrammar-check-targets": {
+        "Parser__action_helpers.c": [
+            "_PyPegen_set_expr_context", "_set_seq_context", "_set_name_context",
+            "_set_tuple_context", "_set_list_context", "_set_subscript_context",
+            "_set_attribute_context", "_set_starred_context", "_PyPegen_get_invalid_target"]},
     "pygrammar-check-fold-reaches": {"Python__ast_preprocess.c": ["astfold_pattern"]},
     "pygrammar-check-fold-reaches-narrow": {
         "Python__ast_preprocess.c": [
@@ -100,8 +111,10 @@ CREDIT = {
 
 # Entries that hold as properties but credit no row: `Rows.<id>` is empty for them.
 NO_ROWS = ["grammar-left-recursion", "grammar-call-rule-sound", "peg-first-error",
-           "check-syntax-only-identity", "peg-roundtrip-parser",
-           "peg-roundtrip-actions", "lex-exact-tokens", "check-nonempty"]
+           "check-syntax-only-identity", "check-no-null-deref", "peg-roundtrip-parser",
+           "peg-roundtrip-actions", "lex-exact-tokens", "check-nonempty", "check-table-covers",
+           "check-try-twin", "check-names-always", "check-target-legal",
+           "check-set-context-last", "check-set-context-restores"]
 
 CREDITED = {(stem, name): entry for entry, files in CREDIT.items()
             for stem, names in files.items() for name in names}

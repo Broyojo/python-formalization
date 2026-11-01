@@ -1,6 +1,9 @@
 import PyLean.Registry
 import PyLean.PyGrammar.RowNames
 import PyLean.PyGrammar.Check.FoldProps
+import PyLean.PyGrammar.Check.NullSites
+import PyLean.PyGrammar.Check.TableCovers
+import PyLean.PyGrammar.Check.Targets
 
 /-! Registry entries for the `Check` part of `PyGrammar`. -/
 
@@ -21,13 +24,91 @@ def entries : List Entry := [
     bug := some "pygrammar-check-trystar-handlers" },
   { id := "pygrammar-check-no-null-deref"
     pyFile := "Python/ast.c"
-    pyFns := ["validate_pattern", "validate_patterns"]
+    pyFns := Rows.check_no_null_deref
     statement := "On no tree does _PyAST_Validate dereference NULL."
     source := "invariant: no crash"
     status := .refuted
     prop := ``ValidateNoNullDeref
     thm := some ``validateNoNullDeref_refuted
     bug := some "pygrammar-check-none-in-list-segfault" },
+  { id := "pygrammar-check-null-sites"
+    pyFile := "Python/ast.c"
+    pyFns := Rows.check_null_sites
+    statement := "_PyAST_Validate dereferences NULL on a tree only if a None sits at one of its " ++
+      "unchecked fields: Try or TryStar handlers, the patterns of MatchSequence, MatchOr, " ++
+      "MatchMapping or MatchClass, MatchMapping keys, MatchClass kwd_attrs, or a required field."
+    source := "invariant: no crash, exact form of pygrammar-check-none-in-list-segfault"
+    status := .proven
+    prop := ``NullSites
+    thm := some ``nullSites_proven
+    notes := "One direction: a None there can crash; the refutation shows one does. Proved " ++
+      "over all 24 validators, so it also says every other path is free of this crash." },
+  { id := "pygrammar-check-rejects"
+    pyFile := "Python/ast.c"
+    pyFns := Rows.check_rejects
+    statement := "_PyAST_Validate accepts a tree only if every position of it satisfies the table " ++
+      "`spec`: node rules (BoolOp arity, equal lengths in Dict and Compare, nonempty bodies and " ++
+      "generators, Try shape, literal pattern shapes, positions, context, names), a None only " ++
+      "where a list allows one, and the same for each child, for every tree."
+    source := "invariant: the checks of Python/ast.c, each stated as a condition"
+    status := .proven
+    prop := ``ValidateRejects
+    thm := some ``validateRejects_proven
+    notes := "One direction: accepted implies in the table. That the table holds no rule the " ++
+      "validators lack follows from this; that it omits none is checked for children by " ++
+      "pygrammar-check-table-covers, and for node rules only by reading the table. Which check " ++
+      "fails first and its message are the difftest's. expr_context_name and validate_constant " ++
+      "are not credited: the first is message text, the second is modelled as always passing." },
+  { id := "pygrammar-check-table-covers"
+    pyFile := "Python/ast.c"
+    pyFns := Rows.check_table_covers
+    statement := "Every present child that Parser/Python.asdl gives a node of the right arity is " ++
+      "listed in its row of the validator table, except NamedExpr.target."
+    source := "Parser/Python.asdl, through the generated Ctor.fields"
+    status := .proven
+    prop := ``TableCovers
+    thm := some ``tableCovers_proven
+    notes := "A fact about the table of pygrammar-check-rejects, so it credits no row. The one " ++
+      "exception is the refutation pygrammar-check-names-always." },
+  { id := "pygrammar-check-targets"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.check_targets
+    statement := "A target for which _PyPegen_get_invalid_target finds nothing, as STAR_TARGETS or " ++
+      "DEL_TARGETS, becomes under _PyPegen_set_expr_context a tree whose every target position " ++
+      "passes the context switch of validate_expr."
+    source := "the three implementations agreeing: Parser/action_helpers.c and Python/ast.c"
+    status := .proven
+    prop := ``TargetValidates
+    thm := some ``targetValidates_proven
+    notes := "TShape is the type invariant of parser output. FOR_TARGETS is out: it looks through " ++
+      "`in`, which the rewrite does not. Vacuous alone for a get_invalid_target that blames " ++
+      "everything; pygrammar-check-target-legal closes that." },
+  { id := "pygrammar-check-target-legal"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.check_target_legal
+    statement := "_PyPegen_get_invalid_target returns NULL for a STAR_TARGETS target built only " ++
+      "from names, attributes, subscripts, stars, tuples and lists."
+    source := "Parser/action_helpers.c:1184-1238, the converse of pygrammar-check-targets"
+    status := .proven
+    prop := ``LegalTargetAccepted
+    thm := some ``legalTargetAccepted_proven
+    notes := "The fuel bound is the tree's height; the call sites pass 100000." },
+  { id := "pygrammar-check-set-context-last"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.check_set_context_last
+    statement := "Setting a context and then another gives the same tree as setting the second."
+    source := "Parser/action_helpers.c:316 'equivalent to expr but with ctx as context'"
+    status := .proven
+    prop := ``SetContextLast
+    thm := some ``setContextLast_proven },
+  { id := "pygrammar-check-set-context-restores"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.check_set_context_restores
+    statement := "Changing the context of a tree and changing it back gives the tree."
+    source := "Parser/action_helpers.c:316 'equivalent to expr but with ctx as context'"
+    status := .proven
+    prop := ``SetContextRestores
+    thm := some ``setContextRestores_proven },
   { id := "pygrammar-check-names-always"
     pyFile := "Python/ast.c"
     pyFns := Rows.check_names_always

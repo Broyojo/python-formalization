@@ -130,6 +130,24 @@ def validateNonemptySeq (s : Ast) (what owner : String) : V :=
   | .null => true
   | _ => false
 
+/-- The first switch of `validate_expr`, `Python/ast.c:216-246`: the node's own context, if it has
+one. -/
+def exprCtx (c : Ctor) (fs : List Ast) (ctx : Ctor) : Except V (Option Ctor) :=
+  match c, fs with
+  | .Attribute, [_, _, x] => .ok (some (ctxOfAst x))
+  | .Subscript, [_, _, x] => .ok (some (ctxOfAst x))
+  | .Starred, [_, x] => .ok (some (ctxOfAst x))
+  | .Name, [id, x] =>
+    match validateName id with
+    | .ok () => .ok (some (ctxOfAst x))
+    | e => .error e
+  | .List, [_, x] => .ok (some (ctxOfAst x))
+  | .Tuple, [_, x] => .ok (some (ctxOfAst x))
+  | _, _ =>
+    if ctx != .Load then
+      .error (verr s!"expression which can't be assigned to in {ctxName ctx} context")
+    else .ok none
+
 mutual
   /-- `validate_comprehension`, `Python/ast.c:72-87`. -/
   def validateComprehension : Nat → Ast → V
@@ -140,56 +158,66 @@ mutual
 
   def validateComps : Nat → List Ast → V
     | 0, _ => .error .modelFuel
-    | _ + 1, [] => ok1
-    | f + 1, .node _ [target, iter, ifs, _] _ :: rest =>
-      (validateExpr f target .Store).and fun _ =>
-      (validateExpr f iter .Load).and fun _ =>
-      (validateExprs f (seqL ifs) .Load false).and fun _ =>
-      validateComps f rest
-    | f + 1, _ :: rest => validateComps f rest
+    | f + 1, xs =>
+      match xs with
+      | [] => ok1
+      | .node _ [target, iter, ifs, _] _ :: rest =>
+        (validateExpr f target .Store).and fun _ =>
+        (validateExpr f iter .Load).and fun _ =>
+        (validateExprs f (seqL ifs) .Load false).and fun _ =>
+        validateComps f rest
+      | _ :: rest => validateComps f rest
 
   /-- `validate_keywords` -/
   def validateKeywords : Nat → List Ast → V
     | 0, _ => .error .modelFuel
-    | _ + 1, [] => ok1
-    | f + 1, .node _ [_, value] _ :: rest =>
-      (validateExpr f value .Load).and fun _ => validateKeywords f rest
-    | f + 1, _ :: rest => validateKeywords f rest
+    | f + 1, xs =>
+      match xs with
+      | [] => ok1
+      | .node _ [_, value] _ :: rest =>
+        (validateExpr f value .Load).and fun _ => validateKeywords f rest
+      | _ :: rest => validateKeywords f rest
 
   /-- `validate_args` -/
   def validateArgs : Nat → List Ast → V
     | 0, _ => .error .modelFuel
-    | _ + 1, [] => ok1
-    | f + 1, .node _ [_, annotation, _] l :: rest =>
-      (validatePositions l).and fun _ =>
-      (if isNull annotation then ok1 else validateExpr f annotation .Load).and fun _ =>
-      validateArgs f rest
-    | f + 1, _ :: rest => validateArgs f rest
+    | f + 1, xs =>
+      match xs with
+      | [] => ok1
+      | .node _ [_, annotation, _] l :: rest =>
+        (validatePositions l).and fun _ =>
+        (if isNull annotation then ok1 else validateExpr f annotation .Load).and fun _ =>
+        validateArgs f rest
+      | _ :: rest => validateArgs f rest
 
   /-- `arg->annotation` of an optional `arg`. -/
   def validateOptArgAnnotation : Nat → Ast → V
     | 0, _ => .error .modelFuel
-    | f + 1, .node _ [_, annotation, _] _ =>
-      if isNull annotation then ok1 else validateExpr f annotation .Load
-    | _ + 1, _ => ok1
+    | f + 1, a =>
+      match a with
+      | .node _ [_, annotation, _] _ =>
+        if isNull annotation then ok1 else validateExpr f annotation .Load
+      | _ => ok1
 
   /-- `validate_arguments`, `Python/ast.c:128-154`. -/
   def validateArguments : Nat → Ast → V
     | 0, _ => .error .modelFuel
-    | f + 1, .node _ [posonly, args, vararg, kwonly, kwDefaults, kwarg, defaults] _ =>
-      (validateArgs f (seqL posonly)).and fun _ =>
-      (validateArgs f (seqL args)).and fun _ =>
-      (validateOptArgAnnotation f vararg).and fun _ =>
-      (validateArgs f (seqL kwonly)).and fun _ =>
-      (validateOptArgAnnotation f kwarg).and fun _ =>
-      if seqLen defaults > seqLen posonly + seqLen args then
-        verr "more positional defaults than args on arguments"
-      else if seqLen kwDefaults != seqLen kwonly then
-        verr "length of kwonlyargs is not the same as kw_defaults on arguments"
-      else
-        (validateExprs f (seqL defaults) .Load false).and fun _ =>
-        validateExprs f (seqL kwDefaults) .Load true
-    | _ + 1, _ => ok1
+    | f + 1, a =>
+      match a with
+      | .node _ [posonly, args, vararg, kwonly, kwDefaults, kwarg, defaults] _ =>
+        (validateArgs f (seqL posonly)).and fun _ =>
+        (validateArgs f (seqL args)).and fun _ =>
+        (validateOptArgAnnotation f vararg).and fun _ =>
+        (validateArgs f (seqL kwonly)).and fun _ =>
+        (validateOptArgAnnotation f kwarg).and fun _ =>
+        if seqLen defaults > seqLen posonly + seqLen args then
+          verr "more positional defaults than args on arguments"
+        else if seqLen kwDefaults != seqLen kwonly then
+          verr "length of kwonlyargs is not the same as kw_defaults on arguments"
+        else
+          (validateExprs f (seqL defaults) .Load false).and fun _ =>
+          validateExprs f (seqL kwDefaults) .Load true
+      | _ => ok1
 
   /-- `validate_expr`, `Python/ast.c:210-410`. -/
   def validateExpr : Nat → Ast → Ctor → V
@@ -198,23 +226,7 @@ mutual
       match exp with
       | .node c fs l =>
         (validatePositions l).and fun _ =>
-        -- First check expression context.
-        let actual : Except V (Option Ctor) :=
-          match c, fs with
-          | .Attribute, [_, _, x] => .ok (some (ctxOfAst x))
-          | .Subscript, [_, _, x] => .ok (some (ctxOfAst x))
-          | .Starred, [_, x] => .ok (some (ctxOfAst x))
-          | .Name, [id, x] =>
-            match validateName id with
-            | .ok () => .ok (some (ctxOfAst x))
-            | e => .error e
-          | .List, [_, x] => .ok (some (ctxOfAst x))
-          | .Tuple, [_, x] => .ok (some (ctxOfAst x))
-          | _, _ =>
-            if ctx != .Load then
-              .error (verr s!"expression which can't be assigned to in {ctxName ctx} context")
-            else .ok none
-        match actual with
+        match exprCtx c fs ctx with
         | .error e => e
         | .ok a =>
           match a with
@@ -293,12 +305,14 @@ mutual
   /-- `validate_exprs` -/
   def validateExprs : Nat → List Ast → Ctor → Bool → V
     | 0, _, _, _ => .error .modelFuel
-    | _ + 1, [], _, _ => ok1
-    | f + 1, e :: rest, ctx, nullOk =>
-      if isNull e then
-        if nullOk then validateExprs f rest ctx nullOk
-        else verr "None disallowed in expression list"
-      else (validateExpr f e ctx).and fun _ => validateExprs f rest ctx nullOk
+    | f + 1, xs, ctx, nullOk =>
+      match xs with
+      | [] => ok1
+      | e :: rest =>
+        if isNull e then
+          if nullOk then validateExprs f rest ctx nullOk
+          else verr "None disallowed in expression list"
+        else (validateExpr f e ctx).and fun _ => validateExprs f rest ctx nullOk
 
   /-- `validate_pattern_match_value`, `Python/ast.c:484-536`. -/
   def validateMatchValue : Nat → Ast → V
@@ -320,13 +334,15 @@ mutual
   /-- The key loop of `MatchMapping` in `validate_pattern`. -/
   def validateMappingKeys : Nat → List Ast → V
     | 0, _ => .error .modelFuel
-    | _ + 1, [] => ok1
-    | _ + 1, .null :: _ => nullDeref
-    | f + 1, key :: rest =>
-      match key with
-      | .node .Constant (.const .none :: _) _ | .node .Constant (.const .true_ :: _) _
-      | .node .Constant (.const .false_ :: _) _ => validateMappingKeys f rest
-      | _ => (validateMatchValue f key).and fun _ => validateMappingKeys f rest
+    | f + 1, xs =>
+      match xs with
+      | [] => ok1
+      | .null :: _ => nullDeref
+      | key :: rest =>
+        match key with
+        | .node .Constant (.const .none :: _) _ | .node .Constant (.const .true_ :: _) _
+        | .node .Constant (.const .false_ :: _) _ => validateMappingKeys f rest
+        | _ => (validateMatchValue f key).and fun _ => validateMappingKeys f rest
 
   /-- `validate_pattern`, `Python/ast.c:550-699`. -/
   def validatePattern : Nat → Ast → Bool → V
@@ -385,9 +401,10 @@ mutual
   /-- `validate_patterns` -/
   def validatePatterns : Nat → List Ast → Bool → V
     | 0, _, _ => .error .modelFuel
-    | _ + 1, [], _ => ok1
-    | f + 1, p :: rest, starOk =>
-      (validatePattern f p starOk).and fun _ => validatePatterns f rest starOk
+    | f + 1, xs, starOk =>
+      match xs with
+      | [] => ok1
+      | p :: rest => (validatePattern f p starOk).and fun _ => validatePatterns f rest starOk
 
   /-- `validate_assignlist` -/
   def validateAssignlist : Nat → Ast → Ctor → V
@@ -405,36 +422,42 @@ mutual
   /-- The `with` item loop. -/
   def validateWithItems : Nat → List Ast → V
     | 0, _ => .error .modelFuel
-    | _ + 1, [] => ok1
-    | f + 1, .node _ [ctxExpr, vars] _ :: rest =>
-      (validateExpr f ctxExpr .Load).and fun _ =>
-      (if isNull vars then ok1 else validateExpr f vars .Store).and fun _ =>
-      validateWithItems f rest
-    | f + 1, _ :: rest => validateWithItems f rest
+    | f + 1, xs =>
+      match xs with
+      | [] => ok1
+      | .node _ [ctxExpr, vars] _ :: rest =>
+        (validateExpr f ctxExpr .Load).and fun _ =>
+        (if isNull vars then ok1 else validateExpr f vars .Store).and fun _ =>
+        validateWithItems f rest
+      | _ :: rest => validateWithItems f rest
 
   /-- The `match` case loop. -/
   def validateCases : Nat → List Ast → V
     | 0, _ => .error .modelFuel
-    | _ + 1, [] => ok1
-    | f + 1, .node _ [pat, guard, body] _ :: rest =>
-      (validatePattern f pat false).and fun _ =>
-      (if isNull guard then ok1 else validateExpr f guard .Load).and fun _ =>
-      (validateBody f body "match_case").and fun _ =>
-      validateCases f rest
-    | f + 1, _ :: rest => validateCases f rest
+    | f + 1, xs =>
+      match xs with
+      | [] => ok1
+      | .node .match_case_ [pat, guard, body] _ :: rest =>
+        (validatePattern f pat false).and fun _ =>
+        (if isNull guard then ok1 else validateExpr f guard .Load).and fun _ =>
+        (validateBody f body "match_case").and fun _ =>
+        validateCases f rest
+      | _ :: rest => validateCases f rest
 
   /-- The handler loop; only `Try` checks handler positions (`Python/ast.c`, `Try_kind`
   against `TryStar_kind`). -/
   def validateHandlers : Nat → List Ast → Bool → V
     | 0, _, _ => .error .modelFuel
-    | _ + 1, [], _ => ok1
-    | _ + 1, .null :: _, _ => nullDeref
-    | f + 1, .node _ [ty, _, body] l :: rest, positions =>
-      (if positions then validatePositions l else ok1).and fun _ =>
-      (if isNull ty then ok1 else validateExpr f ty .Load).and fun _ =>
-      (validateBody f body "ExceptHandler").and fun _ =>
-      validateHandlers f rest positions
-    | f + 1, _ :: rest, positions => validateHandlers f rest positions
+    | f + 1, xs, positions =>
+      match xs with
+      | [] => ok1
+      | .null :: _ => nullDeref
+      | .node _ [ty, _, body] l :: rest =>
+        (if positions then validatePositions l else ok1).and fun _ =>
+        (if isNull ty then ok1 else validateExpr f ty .Load).and fun _ =>
+        (validateBody f body "ExceptHandler").and fun _ =>
+        validateHandlers f rest positions
+      | _ :: rest => validateHandlers f rest positions
 
   /-- The shared body of `Try_kind`/`TryStar_kind`. -/
   def validateTry : Nat → String → Ast → Ast → Ast → Ast → Bool → V
@@ -471,10 +494,12 @@ mutual
   /-- `validate_type_params` -/
   def validateTypeParams : Nat → List Ast → V
     | 0, _ => .error .modelFuel
-    | _ + 1, [] => ok1
-    | f + 1, tp :: rest =>
-      (if isNull tp then ok1 else validateTypeParam f tp).and fun _ =>
-      validateTypeParams f rest
+    | f + 1, xs =>
+      match xs with
+      | [] => ok1
+      | tp :: rest =>
+        (if isNull tp then ok1 else validateTypeParam f tp).and fun _ =>
+        validateTypeParams f rest
 
   /-- `validate_stmt`, `Python/ast.c:727-951`. -/
   def validateStmt : Nat → Ast → V
@@ -567,10 +592,12 @@ mutual
   /-- `validate_stmts` -/
   def validateStmts : Nat → List Ast → V
     | 0, _ => .error .modelFuel
-    | _ + 1, [] => ok1
-    | f + 1, s :: rest =>
-      if isNull s then verr "None disallowed in statement list"
-      else (validateStmt f s).and fun _ => validateStmts f rest
+    | f + 1, xs =>
+      match xs with
+      | [] => ok1
+      | s :: rest =>
+        if isNull s then verr "None disallowed in statement list"
+        else (validateStmt f s).and fun _ => validateStmts f rest
 end
 
 /-- Node count, a bound for all the fuel above. -/
