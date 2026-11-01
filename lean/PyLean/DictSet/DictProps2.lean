@@ -149,7 +149,8 @@ theorem delitemCommon_spec (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K V
       have h4 : k'.size = k.size := rfl
       rw [h2', h3, h4]
       exact w.nent
-    usableNN := w.usableNN }
+    usableNN := w.usableNN
+    small := w.small }
   have huq : ∀ (j : Nat) (e' : Ent K V), k.entries[j]? = some (some e') →
       eqv e'.key key = true → j = ix := fun j e' a b => by
     have hmatch : eqv e'.key e.key = true := H.trans _ key _ b (by rw [H.symm]; exact heq)
@@ -273,7 +274,8 @@ theorem dictPopitem_spec (H : Honest P hf eqv) (mp : PyDict K V)
         have h5' := w.nent
         rw [h3', h4']
         omega
-      usableNN := w.usableNN }
+      usableNN := w.usableNN
+      small := w.small }
     have hlive : liveEntries k' = (k.entries.take i).filterMap id := rfl
     refine ⟨(e.key, e.value), { mp with used := mp.used - 1, body := .combined k' }, ?_,
       ⟨⟨k', rfl, hw, ?_⟩⟩, ?_⟩

@@ -6,16 +6,12 @@ Objects/dictobject.c	222	split_keys_entry_added	FAITHFUL	yes	-	-	Inside the Py_G
 Objects/dictobject.c	410	_PyDict_DebugMallocStats	FAITHFUL	yes	-	-	Prints freelist sizes for sys._debugmallocstats and nothing else.
 Objects/dictobject.c	434	dictkeys_incref	FAITHFUL	yes	-	-	Reference count of the keys object only.
 Objects/dictobject.c	447	dictkeys_decref	FAITHFUL	yes	-	-	Drops references and frees, which passes under the ruling on plain reference dropping in AGENTS.md.
-Objects/dictobject.c	547	calculate_log2_keysize	HOLLOW	yes	no	yes	The theorem is a lower bound only, so fun m => m + 3 passes, and the smallest dk_size promised at :545 is not stated.
-Objects/dictobject.c	574	estimate_log2_keysize	HOLLOW	yes	no	yes	The theorem is a lower bound only, so fun n => n + 3 passes, and nothing ties the result to being the reverse of USABLE_FRACTION (:568) or to (n*3 + 1) / 2.
 Objects/dictobject.c	635	dump_entries	FAITHFUL	yes	-	-	Compiled only under DEBUG_PYDICT (:633-648).
 Objects/dictobject.c	651	_PyDict_CheckConsistency	FAITHFUL	yes	-	-	Compiled in, but its only callers are asserts here and _PyObject_CheckConsistency, itself used through assert.
 Objects/dictobject.c	756	new_keys_object	FAITHFUL	yes	yes	yes	Total in the model, so the MemoryError disjunct of SetItemRefines cannot absorb a wrong table: bad indices or an oversized usable break Chain or load; the malloc NULL is out of memory, as in earlier reviews, and log2_bytes is storage only.
 Objects/dictobject.c	812	free_keys_object	FAITHFUL	yes	-	-	Freelist or free only.
 Objects/dictobject.c	856	free_values	FAITHFUL	yes	-	-	Free only.
-Objects/dictobject.c	897	new_dict_with_shared_keys	HOLLOW	yes	no	yes	SplitFresh is stated only for the keys of a class with no attributes, dictNewKeysForClass P [], so the size taken from any other keys is unpinned and a constant Values.new 30 passes.
 Objects/dictobject.c	981	lookdict_index	FAITHFUL	yes	yes	yes	DelItemRefines has no error disjunct, so a wrong or failing slot search breaks it; the DKIX_EMPTY return is unreachable under Chain.
-Objects/dictobject.c	1002	do_lookup	HOLLOW	yes	no	yes	With the cmp < 0 return deleted, so that DKIX_KEY_CHANGED reads as a hit, every listed theorem still holds, and DoLookupRaises covers the first probe only although its registry statement says the loop.
 Objects/dictobject.c	1046	compare_unicode_generic	FAITHFUL	yes	yes	yes	The raise and changed paths hold for every protocol, and LookupFound and LookupMissing pin the honest answers.
 Objects/dictobject.c	1075	unicodekeys_lookup_generic	FAITHFUL	yes	yes	yes	A single call with no branch of its own, run by LookupFound on a unicode table with a non-exact-str key; a miss and a raising __eq__ are charged to do_lookup.
 Objects/dictobject.c	1081	compare_unicode_unicode	FAITHFUL	yes	yes	yes	No callback can run here and str_eq is true of exact strs, so Honest costs nothing.
@@ -37,49 +33,22 @@ Objects/dictobject.c	1588	lookup_threadsafe_unicode	FAITHFUL	yes	-	-	Inside the 
 Objects/dictobject.c	1620	_Py_dict_lookup_threadsafe_stackref	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :1371-1643; the GIL twin is the row at :1654.
 Objects/dictobject.c	1733	_PyDict_EnablePerThreadRefcounting	FAITHFUL	yes	-	-	Only an assert outside the Py_GIL_DISABLED block at :1736-1749.
 Objects/dictobject.c	1753	is_unusable_slot	FAITHFUL	yes	yes	yes	A Bool predicate, so the MemoryError disjunct cannot absorb it: treating a live slot as free breaks Chain; whether a dummy is reused stays unpinned but has no Python-visible effect.
-Objects/dictobject.c	1766	find_empty_slot	HOLLOW	yes	no	yes	SetItemRefines allows MemoryError with the dict unchanged on any input, so a version that raises it whenever the table holds a dummy, refusing inserts after a delete, passes.
-Objects/dictobject.c	1782	insertion_resize	HOLLOW	yes	no	yes	A version that always answers MemoryError with the dict unchanged passes the unconditional first disjunct of SetItemRefines, so a dict that never grows satisfies it.
-Objects/dictobject.c	1788	insert_combined_dict	HOLLOW	yes	no	yes	A version that always answers MemoryError with the dict unchanged passes the unconditional first disjunct of SetItemRefines.
-Objects/dictobject.c	1832	insert_split_key	HOLLOW	yes	no	yes	Reached only through the setitem conjunct of SplitRefines, and a version that always fails passes its unconditional MemoryError disjunct.
-Objects/dictobject.c	1863	insert_split_value	HOLLOW	yes	no	yes	Reached only through the setitem conjunct of SplitRefines, so a version that refuses to overwrite an existing value with MemoryError passes.
-Objects/dictobject.c	1891	insertdict	HOLLOW	yes	no	yes	dict-insert-failure pins the lookup error only, and after a good lookup a version that answers MemoryError with the dict unchanged passes the setitem conjunct of SplitRefines.
-Objects/dictobject.c	1962	insert_to_emptydict	HOLLOW	yes	no	yes	A version that always answers MemoryError with the dict unchanged passes SetItemRefines, its only theorem.
-Objects/dictobject.c	2007	dictresize	HOLLOW	yes	no	yes	This row is build_indices_generic and no entry names it: the pinned popitem conjunct resizes with unicode 1 and so runs build_indices_unicode in C, the generic route is reached only through the MemoryError disjunct, and dict-insert-failure is about :2073.
-Objects/dictobject.c	2025	build_indices_unicode	HOLLOW	yes	no	yes	SetItemRefines is its only entry and a failing build passes its MemoryError disjunct; the popitem conjunct of dict-split-refines would pin the shared buildIndices, but that entry does not list this row.
-Objects/dictobject.c	2065	dictresize	HOLLOW	yes	no	yes	Only the split to unicode branch is pinned, by the popitem conjunct; the other branches are reached only through the MemoryError disjunct, so a version that refuses every combined table passes, and :2138-2142 is outside dictResize.
-Objects/dictobject.c	2301	dict_getitem	HOLLOW	no	yes	yes	The PyErr_FormatUnraisable calls at :2310 and :2336, and the KeyError test that skips the second, are not mirrored, so the failure paths this row exists for report nothing to sys.unraisablehook.
-Objects/dictobject.c	2439	_PyDict_GetItemRef_KnownHash	HOLLOW	yes	no	yes	ReadersFaithful has no clause for a slot with a value, so a version that always answers missing passes and the found return at :2459-2461 is unpinned.
 Objects/dictobject.c	2465	PyDict_GetItemRef	FAITHFUL	yes	yes	yes	Its own two checks are stated for every protocol, and the found path of its tail call is charged to _PyDict_GetItemRef_KnownHash.
-Objects/dictobject.c	2516	PyDict_GetItemWithError	HOLLOW	yes	no	yes	ReadersFaithful has no clause for a slot with a value, so a version that always returns NULL passes and the return of a found value at :2540 is unpinned.
-Objects/dictobject.c	2678	setitem_take2_lock_held	HOLLOW	yes	no	yes	The hash failure is pinned, but after a good hash a version that answers MemoryError with the dict unchanged passes both listed theorems.
 Objects/dictobject.c	2773	delete_index_from_values	FAITHFUL	yes	yes	yes	List.erase is the find-and-shift loop under nodup, and the del conjunct of SplitRefines has no error disjunct and depends on the order array.
 Objects/dictobject.c	2791	delitem_common	FAITHFUL	yes	yes	yes	Split branch in dict-split-refines and combined branch in dict-delitem-refines, which that entry's note names without listing this row; neither has an error disjunct, and no callback runs here.
 Objects/dictobject.c	2834	PyDict_DelItem	FAITHFUL	yes	yes	yes	Its own body is the hash test and a tail call, and both are covered; the PyDict_Check and raising __eq__ paths belong to the callee.
-Objects/dictobject.c	2847	_PyDict_DelItem_KnownHash_LockHeld	HOLLOW	no	no	yes	The PyDict_Check failure at :2853-2856 is not mirrored, and DelItemRefines assumes Honest, so the DKIX_ERROR return at :2864 has no theorem.
 Objects/dictobject.c	2945	clear_embedded_values	FAITHFUL	yes	yes	yes	SplitInv after clear needs an empty order array and NULL values, so a stand-in that leaves them fails; the later decrefs are plain reference dropping.
-Objects/dictobject.c	2960	clear_lock_held	HOLLOW	no	yes	yes	The PyDict_Check return at :2969-2970 is not mirrored, the same gap that withdrew _PyDict_Next, and dictClear cannot express a non-dict argument.
-Objects/dictobject.c	3365	dict_dealloc	HOLLOW	no	-	-	_PyDict_NotifyEvent(PyDict_EVENT_DEALLOCATED) at :3370 calls watcher callbacks that can resurrect the dict, and the return at :3371-3373 acts on that, so this is an explicit effect and not plain reference dropping.
-Objects/dictobject.c	3505	dict_subscript	HOLLOW	no	no	yes	__missing__ is a pure K -> Py V that cannot change the dict, the failed _PyObject_LookupSpecial at :3531 is not mirrored, and ReadersFaithful covers only missing = none and has no found clause.
-Objects/dictobject.c	3735	dict_update_arg	HOLLOW	yes	no	yes	UpdateArgRoutes quantifies over .other only, so the PyDict_CheckExact route at :3737-3739 is unpinned and a wrong .exact branch passes.
-Objects/dictobject.c	3795	merge_from_seq2_lock_held	HOLLOW	no	no	yes	The note added at :3825-3830 is left out, Seq2Order states the pair clause for override true only so the setdefault branch at :3855 is unpinned, and PyObject_GetIter at :3806 is outside the statement.
-Objects/dictobject.c	3892	dict_dict_merge	HOLLOW	yes	no	yes	Both theorems are about mergeLive with mergeStep as a black box and dictDictMerge never appears, so the self and empty tests, the clone, the one big resize and the override branches at :3960-3974 are unpinned.
-Objects/dictobject.c	3991	dict_merge	HOLLOW	yes	no	yes	MergeGeneric covers the slow path but says nothing of .dict, so a wrong fast route passes, and the test at :4008 is an input constructor rather than a check.
-Objects/dictobject.c	4387	dict_get_impl	HOLLOW	yes	no	yes	ReadersFaithful has no clause for a slot with a value, so a version that always returns the default passes.
-Objects/dictobject.c	4409	dict_setdefault_ref_lock_held	HOLLOW	no	yes	yes	The PyDict_Check failure at :4420-4426 is not mirrored, the same gap that withdrew PyDict_SetItem.
 Objects/dictobject.c	4542	dict_setdefault_impl	FAITHFUL	yes	yes	yes	The counterexample runs this function to the NULL dereference and the property is its own no-crash invariant; bugs/dictset-setdefault-split-null.yaml exists.
 Objects/dictobject.c	4597	dict_popitem_impl	FAITHFUL	yes	yes	yes	Neither dict-split-refines nor dict-popitem-lifo, which its note names, has an error disjunct, and no callback runs here; the tuple allocated first needs no step because the model starts from the state after any GC it triggers.
 Objects/dictobject.c	4682	dict_traverse	FAITHFUL	yes	-	-	GC traversal, which passes under the ruling in AGENTS.md.
 Objects/dictobject.c	4714	dict_tp_clear	FAITHFUL	yes	-	-	Reference-dropping tp_clear, which passes under the ruling in AGENTS.md, though it does empty the dict.
 Objects/dictobject.c	4837	PyDict_Contains	FAITHFUL	yes	yes	yes	Its own body is the hash test and a tail call, and the found path of that call is charged to _PyDict_Contains_KnownHash.
-Objects/dictobject.c	4862	_PyDict_Contains_KnownHash	HOLLOW	yes	no	yes	ReadersFaithful has no clause for a slot with a value, so a version that always answers 0 passes and the return 1 at :4879 is unpinned.
-Objects/dictobject.c	5133	dictiter_new	HOLLOW	yes	no	yes	RevIterLenNonneg starts only reverse iterators on dicts that are never split, so the forward branch at :5156 and the split branch at :5149 are outside it, the gap that withdrew dict_iter.
 Objects/dictobject.c	5174	dictiter_dealloc	FAITHFUL	yes	-	-	Untracks and drops references only.
 Objects/dictobject.c	5185	dictiter_traverse	FAITHFUL	yes	-	-	GC traversal, which passes under the ruling in AGENTS.md.
 Objects/dictobject.c	5194	dictiter_len	FAITHFUL	yes	yes	yes	The counterexample reaches the size_t wrap of a negative len, which a non-wrapping stand-in would not refute; bugs/dictset-reversed-iter-length-hint.yaml exists.
 Objects/dictobject.c	5555	acquire_key_value	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :5549-5685.
 Objects/dictobject.c	5579	dictiter_iternext_threadsafe	FAITHFUL	yes	-	-	Inside the Py_GIL_DISABLED block at :5549-5685.
 Objects/dictobject.c	5688	acquire_iter_result	FAITHFUL	yes	-	-	Compiled in the GIL build, but the tuple is reused only when uniquely referenced, so no other holder can see it.
-Objects/dictobject.c	5777	dictreviter_iter_lock_held	HOLLOW	yes	no	yes	RevIterLenNonneg starts from a combined dict and cannot reach a split one, so the split branch at :5798-5803 is outside it, the gap that withdrew the forward iterators.
 Objects/dictobject.c	5964	dictview_dealloc	FAITHFUL	yes	-	-	Untracks and drops references only.
 Objects/dictobject.c	5974	dictview_traverse	FAITHFUL	yes	-	-	GC traversal, which passes under the ruling in AGENTS.md.
 Objects/dictobject.c	7108	_PyObject_ManagedDictValidityCheck	FAITHFUL	yes	-	-	Inside #if 0 (:7104-7132).

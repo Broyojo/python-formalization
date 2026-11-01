@@ -97,12 +97,12 @@ theorem lookupAssoc_proven : LookupAssoc := fun _ _ _ _ _ _ H d hd key =>
   let ⟨ix, h, _, _⟩ := lookup_assoc H d hd key
   ⟨ix, h⟩
 
-/-- `d[key] = v` is the list operation; the table stays well formed. `MemoryError`, with the dict
-unchanged, is the only failure. -/
+/-- `d[key] = v` is the list operation; the table stays well formed. The only failure is
+`MemoryError`, with the dict unchanged, and only when a resize would need `2 ** 64` slots. -/
 def SetItemRefines : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (hf : K → Int) (eqv : K → K → Bool),
     Honest P hf eqv → ∀ (mp : PyDict K V), DictInv hf eqv P.isStr mp → ∀ (key : K) (v : V),
-      dictSetItem P key v mp = (.error memoryError, mp) ∨
+      (TooBig mp.used ∧ dictSetItem P key v mp = (.error memoryError, mp)) ∨
       ∃ d', dictSetItem P key v mp = (.ok (), d') ∧ DictInv hf eqv P.isStr d' ∧
         dictAssoc d' = assocSet eqv (dictAssoc mp) key v
 theorem setItemRefines_proven : SetItemRefines := fun _ _ _ _ _ _ H mp hd key v =>
@@ -213,7 +213,7 @@ theorem modelEqualsAssoc_proven : ModelEqualsAssoc := by
     cases op with
     | set k v =>
       simp only [conRun] at h
-      rcases dictSetItem_spec H d hd k v with h1 | ⟨d1, h1, h2, h3⟩
+      rcases dictSetItem_spec H d hd k v with ⟨_, h1⟩ | ⟨d1, h1, h2, h3⟩
       · rw [h1] at h
         simp at h
       · rw [h1] at h
