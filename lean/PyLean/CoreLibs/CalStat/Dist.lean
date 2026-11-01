@@ -537,6 +537,12 @@ def ND.invCdf (L : Libm) (X : ND) (p : Val) : Py Flt := do
 def ND.quantiles (L : Libm) (X : ND) (n : Int) : Py (List Flt) :=
   (rangeI 1 n).mapM (fun i => do ND.invCdf L X (.flt (← intTrueDiv i n)))
 
+/-- The `mean`, `median`, `mode` and `stdev` properties, statistics.py:1342-1364. -/
+def ND.meanP (X : ND) : Flt := X.mu
+def ND.medianP (X : ND) : Flt := X.mu
+def ND.modeP (X : ND) : Flt := X.mu
+def ND.stdevP (X : ND) : Flt := X.sigma
+
 /-- `NormalDist.variance`, statistics.py:1367-1369. -/
 def ND.variance (X : ND) : Flt := Flt.mul X.sigma X.sigma
 

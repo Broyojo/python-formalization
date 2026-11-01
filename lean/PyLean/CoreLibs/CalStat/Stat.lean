@@ -38,6 +38,12 @@ def exactRatio (x : Val) : Py Ratio :=
   | .abc n d => .ok (.ratio n d)
   | v => .error (.typeError s!"can't convert type '{v.cls.name}' to numerator/denominator")
 
+/-- `_isfinite`, statistics.py:1558-1562. -/
+def isFiniteV (x : Val) : Py Bool :=
+  match x with
+  | .dec d => .ok d.isFinite
+  | v => do return (← asDouble v).isFinite
+
 /-! ## `_coerce`, statistics.py:1565-1594 -/
 
 def coerce (T S : Cls) : Py Cls :=
@@ -557,33 +563,38 @@ def hmSum (ws data : List Val) (errmsg : String) : Py (Cls × Val × Nat) := do
     sumStep st term.toN) ({} : SumSt)
   sumFinish id st
 
+def hmErrmsg : String := "harmonic mean does not support negative values"
+
+/-- `harmonic_mean` from statistics.py:305 on, past the single-value shortcut. -/
+def hmGeneral (data : List PyN) (weights : Option (List PyN)) : Py PyN := do
+  let n := data.length
+  let (ws, sumWeights) ← match weights with
+    | none => pure ((List.replicate n (Val.int 1)), Val.int n)
+    | some w => do
+      if w.length != n then throw (statErr "Number of weights does not match data size")
+      let st ← w.foldlM (fun st x => do
+        if ← vltPy x.v (.int 0) then throw (statErr hmErrmsg)
+        sumStep st x) ({} : SumSt)
+      let (_, sw, _) ← sumFinish id st
+      pure (w.map (·.v), sw)
+  match hmSum ws (data.map (·.v)) hmErrmsg with
+  | .error e => if excIsZeroDiv e then return (Val.int 0).toN else .error e
+  | .ok (T, total, _) =>
+    if ← vlePy total (.int 0) then throw (statErr "Weighted sum must be positive")
+    convert (← vdiv sumWeights total) T
+
 /-- `harmonic_mean`, statistics.py:264-324. -/
 def harmonicMean (data : List PyN) (weights : Option (List PyN)) : Py PyN := do
-  let errmsg := "harmonic mean does not support negative values"
   let n := data.length
   if n < 1 then throw (statErr "harmonic_mean requires at least one data point")
   match data, weights with
   | [x], none =>
     match x.v with
     | .int _ | .flt _ | .frac _ | .dec _ =>
-      if ← vltPy x.v (.int 0) then throw (statErr errmsg)
+      if ← vltPy x.v (.int 0) then throw (statErr hmErrmsg)
       return x
     | _ => throw (.typeError "unsupported type")
-  | _, _ =>
-    let (ws, sumWeights) ← match weights with
-      | none => pure ((List.replicate n (Val.int 1)), Val.int n)
-      | some w => do
-        if w.length != n then throw (statErr "Number of weights does not match data size")
-        let st ← w.foldlM (fun st x => do
-          if ← vltPy x.v (.int 0) then throw (statErr errmsg)
-          sumStep st x) ({} : SumSt)
-        let (_, sw, _) ← sumFinish id st
-        pure (w.map (·.v), sw)
-    match hmSum ws (data.map (·.v)) errmsg with
-    | .error e => if excIsZeroDiv e then return (Val.int 0).toN else .error e
-    | .ok (T, total, _) =>
-      if ← vlePy total (.int 0) then throw (statErr "Weighted sum must be positive")
-      convert (← vdiv sumWeights total) T
+  | _, _ => hmGeneral data weights
 
 /-! ## `quantiles`, statistics.py:1175-1223 -/
 

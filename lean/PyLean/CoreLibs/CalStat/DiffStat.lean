@@ -200,6 +200,7 @@ def runStat (fn : String) (j : Json) : Option (Except String Json) :=
   match fn with
   | "s._exact_ratio" => some do
     return encPy encRatio (exactRatio (← getV j "x").v)
+  | "s._isfinite" => some do return encPy toJson (isFiniteV (← getV j "x").v)
   | "s._coerce" => some do return encPy encCls (coerce (← getCls j "T") (← getCls j "S"))
   | "s._sum" => some do
     return encPy (fun t => Json.arr #[encCls t.1, encV t.2.1, toJson t.2.2]) (sumOf (← getL j "data"))
@@ -282,7 +283,7 @@ def runStat (fn : String) (j : Json) : Option (Except String Json) :=
   | "s.nd.zscore" => some do return encPy encV (ND.zscore (← getND j "X") (← getV j "x").v)
   | "s.nd.props" => some do
     let X ← getND j "X"
-    return Json.arr #[encF X.mu, encF X.mu, encF X.mu, encF X.sigma, encF X.variance]
+    return Json.arr #[encF X.meanP, encF X.medianP, encF X.modeP, encF X.stdevP, encF X.variance]
   | "s.nd.add" => some do return encPy encND (ND.add (← getND j "X") (← getND j "Y"))
   | "s.nd.sub" => some do return encPy encND (ND.sub (← getND j "X") (← getND j "Y"))
   | "s.nd.addc" => some do return encPy encND (ND.addConst (← getND j "X") (← getV j "x").v)

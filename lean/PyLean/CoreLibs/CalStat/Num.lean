@@ -446,20 +446,25 @@ def sumprod (p q : List PyN) : Py Val := sumprodLoop {} p q
 
 /-! ## `sorted` and `bisect` -/
 
+def isDecNan (x : PyN) : Bool :=
+  match x.v with
+  | .dec .nan | .dec .snan => true
+  | _ => false
+
+def isStrV (x : PyN) : Bool :=
+  match x.v with
+  | .str _ => true
+  | _ => false
+
 /-- `sorted(xs)`: the `ListSort` mirror of `list.sort` with `vlt`. Any list of two or more items
 makes every item meet `<` at least once, so a Decimal NaN or a value without an order
 against the others raises; which pair raises first is not modelled, hence the `~`. -/
 def pySorted (xs : List PyN) : Py (List PyN) :=
   if xs.length ≥ 2 then
-    match xs.find? (fun x => match x.v with
-      | .dec .nan | .dec .snan => true
-      | _ => false) with
+    match xs.find? isDecNan with
     | some _ => .error invalidOp
     | none =>
-      let allStr := xs.all (fun x => match x.v with
-        | .str _ => true
-        | _ => false)
-      if allStr || xs.all (fun x => x.v.ordered) then
+      if xs.all isStrV || xs.all (fun x => x.v.ordered) then
         .ok (ListSort.listSort (fun a b => vlt a.v b.v) xs)
       else .error (.typeError "~'<' not supported between instances")
   else .ok xs
