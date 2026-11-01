@@ -85,12 +85,14 @@ def computePowers (w moreThan : Nat) (needHi : Bool) : Py (PowDict α) := do
   let need ← cpWork needHi moreThan (4 * w + 4) [w] [] []
   let extra ← cpExtra moreThan ((need.map (· + 1)).sum + 1) need []
   if ¬ (needHi = true ∨ extra = []) then throw (.assertionError "")
-  let keys := (need.foldr List.insert extra).mergeSort (· ≤ ·)
-  let d ← cpBuild mul pow base keys []
-  if ¬ need.all (fun k => (dGet k d).isSome) then throw (.assertionError "")
-  let excess := d.filter (fun kv => kv.1 ∉ need)
-  if excess ≠ [] ∧ ¬ needHi = true then throw (.assertionError "")
-  return d.filter (fun kv => kv.1 ∈ need)
+  else
+    let keys := (need.foldr List.insert extra).mergeSort (· ≤ ·)
+    let d ← cpBuild mul pow base keys []
+    if ¬ need.all (fun k => (dGet k d).isSome) then throw (.assertionError "")
+    else
+      let excess := d.filter (fun kv => kv.1 ∉ need)
+      if excess ≠ [] ∧ ¬ needHi = true then throw (.assertionError "")
+      else return d.filter (fun kv => kv.1 ∈ need)
 
 end
 
