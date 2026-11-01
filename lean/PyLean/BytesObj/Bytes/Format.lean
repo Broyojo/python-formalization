@@ -336,7 +336,7 @@ def unsupportedChar (c : Int) (index : Int) : PyExc :=
   if c < 0 then .overflowError "character argument not in range(0x110000)"
   else
     let hex := String.ofList ((Nat.toDigits 16 c.toNat))
-    .valueError ("~unsupported format character '" ++ s!"{Char.ofNat c.toNat}' (0x{hex}) at index {index}")
+    .valueError ("unsupported format character '" ++ s!"{Char.ofNat c.toNat}' (0x{hex}) at index {index}")
 
 /-- Lines 958-1047 of `_PyBytes_FormatEx`: the sign block, the `alloc`
 reservation, the writes and the mapping check. -/
