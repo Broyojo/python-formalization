@@ -777,14 +777,40 @@ def EClass.verifyContinuous (c : EClass) : Py Unit :=
         else (intRange (low + 1) high).filter (fun k => !values.contains k)
       if missing.isEmpty then .ok () else .error (.valueError "~missing values")
 
-/-- The `NAMED_FLAGS` check, Lib/enum.py:1981-2014, on non-negative `int` values. -/
+/-- An alias with a bit that is not the value of a member, Lib/enum.py:1987-1999. A negative value has `toNat` 0, and
+so no bits, which is the `continue` at :1991-1993. -/
+def EClass.missesName (c : EClass) (p : Name × Name) : Bool :=
+  if c.memberNames.contains p.1 then false else
+  match c.valueOf p.2 with
+  | some (.atom (.int v)) => (bitsOf v.toNat).any (fun b => !c.intValues.contains (b : Int))
+  | _ => false
+
+/-- The `NAMED_FLAGS` check, Lib/enum.py:1981-2014, on `int` values. -/
 def EClass.verifyNamed (c : EClass) : Py Unit :=
-  let memberValues := c.intValues
-  let missingName := c.memberMap.any (fun p =>
-    if c.memberNames.contains p.1 then false else
-    match c.valueOf p.2 with
-    | some (.atom (.int v)) => (bitsOf v.toNat).any (fun b => !memberValues.contains (b : Int))
-    | _ => false)
-  if missingName then .error (.valueError "~invalid Flag") else .ok ()
+  if c.memberMap.any c.missesName then .error (.valueError "~invalid Flag") else .ok ()
+
+/-- One of the checks of `verify`. -/
+inductive Check where
+  | unique
+  | continuous
+  | named
+  deriving Repr, DecidableEq, Inhabited
+
+def EClass.verifyOne (c : EClass) (memberName : Name → Name) : Check → Py Unit
+  | .unique => c.verifyUnique memberName
+  | .continuous => c.verifyContinuous
+  | .named => c.verifyNamed
+
+def EClass.verifyAll (c : EClass) (memberName : Name → Name) : List Check → Py Unit
+  | [] => .ok ()
+  | k :: r =>
+    match c.verifyOne memberName k with
+    | .error e => .error e
+    | .ok () => c.verifyAll memberName r
+
+/-- `verify.__call__`, Lib/enum.py:1937-2015. `isEnum` is `issubclass(enumeration, Enum)`. -/
+def EClass.verifyCall (c : EClass) (isEnum : Bool) (memberName : Name → Name) (checks : List Check) : Py Unit :=
+  if !isEnum then .error (.typeError "the 'verify' decorator only works with Enum and Flag")
+  else c.verifyAll memberName checks
 
 end PyLean.CoreLibs.EnumDC

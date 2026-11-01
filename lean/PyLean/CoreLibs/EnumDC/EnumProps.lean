@@ -424,8 +424,7 @@ private theorem gnv_not_private (c : Name) : isPrivate c "_generate_next_value_"
 
 /-- The functional API and the class statement agree: `Enum('C', names)` is `class C(Enum)` with `auto()` for every
 name, table for table, for every list of different ordinary names and every class name; and the values are `1 .. n`, in
-order. Docs: "the first argument of the call to Enum is the name of the enumeration", "the second argument is the source
-of enumeration member names", and "assigned values start at 1". The hypotheses are the type invariant of a class body:
+order. Docstring of `_create_`: "Values are incremented by 1 from `start`". The hypotheses are the type invariant of a class body:
 names not repeated, and not the special names, which are not members in either form. -/
 def FunctionalMatchesClass : Prop :=
   ∀ (c : Name) (names : List Name), (∀ n ∈ names, Ordinary c n) → names.Nodup →
@@ -685,8 +684,8 @@ theorem uniqueNamed_proven : UniqueNamed := by
   · simp only [List.any_eq_true, bne_iff_ne, not_exists, not_and, Decidable.not_not] at h
     simpa using h
 
-/-- `Enum.__new__` finds a value bound by `_add_value_alias_`: "A member can be looked up by its value alias". False for
-a class with a `name` of its own: Lib/enum.py:1234 files the value under `self.name` and :1165 does `cls[name]`, which is
+/-- `Enum.__new__` finds a value bound by `_add_value_alias_`, as in the example of the docs,
+`Color.RED._add_value_alias_(42)` and then `Color(42)`. False for a class with a `name` of its own: Lib/enum.py:1234 files the value under `self.name` and :1165 does `cls[name]`, which is
 a `KeyError` from a lookup that should end in the member. -/
 def ValueAliasFound : Prop :=
   ∀ (c c' : EClass) (f : Name → Name) (m : Name) (v : EV), c.memberMap.lookup m = some m →
@@ -702,7 +701,7 @@ theorem valueAliasFound_refuted : ¬ValueAliasFound := by
 
 /-! ### The body and `EnumDict` used directly -/
 
-/-- `EnumDict` is public, "to allow subclasses of `EnumType`", so `d['A'] = auto()` works on one. False:
+/-- `EnumDict` is public, "exposed to allow subclasses of `EnumType`", so `d['A'] = auto()` works on one. False:
 `_generate_next_value` is only set by the `__setitem__` of `__prepare__`, so `auto()` is an `AttributeError`. -/
 def EnumDictAuto : Prop :=
   ∀ c key : Name, Ordinary c key → ∃ r, ({ clsName := some c } : EnumDict).set key (.atom (.auto none)) = .ok r
@@ -732,7 +731,7 @@ theorem enumDictUpdateKeys_refuted : ¬EnumDictUpdateKeys := by
 
 /-- The default `_generate_next_value_`: the first value is `start`; after that one more than the largest value, which
 is greater than each value so far; values with no order or no `+ 1` are the `TypeError`s of the source. Docs of `auto`:
-"the highest member + 1". -/
+the highest value seen, incremented by one. -/
 def EnumGenerateRules : Prop :=
   ∀ (st i : Int) (r : List Int) (s : String),
     enumGenerate st [] = .ok (.int st) ∧
@@ -813,8 +812,8 @@ theorem strEnumValues_proven : StrEnumValues := by
     simp [strEnumNew]
 
 /-- `_order_`: for a class that is not a `Flag`, a non-empty order that names members and nothing that is an alias
-passes exactly when it is the definition order. Docs: "`_order_` -- ... used in Python 2/3 code to ensure member order
-is consistent". -/
+passes exactly when it is the definition order. Docs: "It will be checked against the actual order of the enumeration
+and raise an error if the two do not match". -/
 def OrderCheck : Prop :=
   ∀ (c : EClass) (o : List Name), c.kind ≠ .flag → o ≠ [] →
     (∀ x ∈ o, (c.memberMap.lookup x).isSome = true → c.memberNames.contains x = true) →
@@ -837,8 +836,8 @@ theorem orderCheck_proven : OrderCheck := by
   · simp [h]
 
 /-- `verify(CONTINUOUS)` on a class that is not a `Flag`: it passes exactly when every integer between the lowest and
-the highest value is a value. Docs: "Ensure there are no missing values between the highest-valued member and the
-lowest-valued member". -/
+the highest value is a value. Docs: "Ensure that there are no missing values between the lowest-valued member and the
+highest-valued member". -/
 def VerifyContinuous : Prop :=
   ∀ (c : EClass) (i : Int) (is : List Int), c.kind ≠ .flag → c.intValues = i :: is →
     (c.verifyContinuous = .ok () ↔
@@ -940,6 +939,251 @@ theorem flagClassContainsValue_refuted : ¬FlagClassContainsValue := by
   rw [this] at h1
   simp only [Except.ok.injEq, FlagVal.flag.injEq] at h1
   omega
+
+/-- `Flag._generate_next_value_`: the first value is `start`; after that the next power of two above every value so far.
+Docs of `auto`, for `Flag`. Values with no order are the `TypeError`s of the source. -/
+def FlagGenerateRules : Prop :=
+  ∀ (st : Int) (count : Nat) (last : List EV) (i : Nat) (r : List Nat) (s : String),
+    flagGenerate st 0 last = .ok (.int st) ∧
+    (∃ k, flagGenerate 1 (count + 1) ((i :: r).map (fun (x : Nat) => .atom (.int (x : Int)))) =
+        .ok (.int ((2 ^ k : Nat) : Int)) ∧ ∀ x ∈ i :: r, x < 2 ^ k) ∧
+    (flagGenerate 1 (count + 1) [.atom (.str s)]).raises "TypeError" ∧
+    (flagGenerate 1 (count + 1) [.atom (.int i), .atom (.str s)]).raises "TypeError"
+
+private theorem foldl_cast (l : List Nat) (a : Nat) :
+    (l.map (fun (x : Nat) => (x : Int))).foldl max (a : Int) = ((l.foldl max a : Nat) : Int) := by
+  induction l generalizing a with
+  | nil => rfl
+  | cons x xs ih =>
+    simp only [List.map_cons, List.foldl_cons]
+    have : max (a : Int) (x : Int) = ((max a x : Nat) : Int) := by omega
+    rw [this, ih]
+
+private theorem foldl_nat_bound (l : List Nat) (a : Nat) : a ≤ l.foldl max a ∧ ∀ x ∈ l, x ≤ l.foldl max a := by
+  induction l generalizing a with
+  | nil => simp
+  | cons y ys ih =>
+    simp only [List.foldl_cons]
+    obtain ⟨h1, h2⟩ := ih (max a y)
+    refine ⟨by omega, ?_⟩
+    intro x hx
+    rcases List.mem_cons.1 hx with rfl | hx
+    · omega
+    · exact h2 x hx
+
+private theorem lt_two_pow_bitLength (n : Nat) : n < 2 ^ bitLength n := by
+  unfold bitLength
+  split
+  · rename_i h; subst h; decide
+  · exact Nat.lt_log2_self
+
+theorem flagGenerateRules_proven : FlagGenerateRules := by
+  intro st count last i r s
+  refine ⟨rfl, ?_, ⟨.typeError "~invalid flag value", rfl, rfl⟩, ⟨.typeError "~not supported between instances", rfl, rfl⟩⟩
+  obtain ⟨h1, h2⟩ := foldl_nat_bound r i
+  refine ⟨bitLength (r.foldl max i), ?_, ?_⟩
+  · have hs : sortable ((i :: r).map (fun x : Nat => EV.atom (.int (x : Int)))) = true := by
+      apply sortable_ints
+      intro v hv
+      simp only [List.mem_map] at hv
+      obtain ⟨x, _, rfl⟩ := hv
+      exact ⟨x, rfl⟩
+    have hi : intsOf ((i :: r).map (fun x : Nat => EV.atom (.int (x : Int)))) =
+        (i : Int) :: r.map (fun (x : Nat) => (x : Int)) := by
+      induction r with
+      | nil => rfl
+      | cons y ys ih =>
+        have := ih (foldl_nat_bound ys i).1 (foldl_nat_bound ys i).2 (by
+          apply sortable_ints
+          intro v hv
+          simp only [List.mem_map] at hv
+          obtain ⟨x, _, rfl⟩ := hv
+          exact ⟨x, rfl⟩)
+        simpa [intsOf] using this
+    simp only [flagGenerate, Nat.add_eq_zero_iff, Nat.one_ne_zero, and_false, ↓reduceIte]
+    simp only [List.map_cons, List.isEmpty_cons, Bool.false_eq_true, ↓reduceIte]
+    simp only [List.map_cons] at hs hi
+    rw [hs, hi]
+    simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte, foldl_cast]
+    simp [Int.natAbs_natCast]
+  · intro x hx
+    have hb := lt_two_pow_bitLength (r.foldl max i)
+    rcases List.mem_cons.1 hx with rfl | hx
+    · omega
+    · have := h2 x hx
+      omega
+
+/-- The class blocks what would undo a member: `__setattr__` and `__delattr__` raise `AttributeError` on a name in
+`_member_map_`, aliases too, and leave any other name alone. Docstring of `__setattr__`: "Block attempts to reassign
+Enum members." -/
+def ClassAttrGuards : Prop :=
+  ∀ (c : EClass) (attrs : List Name) (n : Name),
+    ((c.memberMap.lookup n).isSome = true → (c.setAttr n).raises "AttributeError" ∧ (c.delAttr attrs n).raises "AttributeError") ∧
+    ((c.memberMap.lookup n).isSome = false → c.setAttr n = .ok () ∧
+      (c.delAttr attrs n = .ok () ↔ attrs.contains n = true) ∧
+      (attrs.contains n = false → (c.delAttr attrs n).raises "AttributeError"))
+
+theorem classAttrGuards_proven : ClassAttrGuards := by
+  intro c attrs n
+  refine ⟨?_, ?_⟩
+  · intro h
+    refine ⟨⟨.named "AttributeError" "~cannot reassign member", ?_, rfl⟩,
+      ⟨.named "AttributeError" "~cannot delete member", ?_, rfl⟩⟩
+    · simp only [EClass.setAttr, h, ↓reduceIte]
+    · simp only [EClass.delAttr, h, ↓reduceIte]
+  · intro h
+    refine ⟨?_, ?_, ?_⟩
+    · simp only [EClass.setAttr, h, Bool.false_eq_true, ↓reduceIte]
+    · simp only [EClass.delAttr, h, Bool.false_eq_true, ↓reduceIte]
+      cases attrs.contains n <;> simp
+    · intro ha
+      refine ⟨.named "AttributeError" "~", ?_, rfl⟩
+      simp only [EClass.delAttr, h, ha, Bool.false_eq_true, ↓reduceIte]
+
+private theorem bitLength_bound (a : Nat) (w : Nat) (h : bitLength a ≤ w) : a < 2 ^ w :=
+  Nat.lt_of_lt_of_le (lt_two_pow_bitLength a) (Nat.pow_le_pow_right (by decide) h)
+
+private theorem twos_nat (op : Nat → Nat → Nat) (a b : Nat) (w : Nat)
+    (hw : w = bitLength (a : Int).natAbs + bitLength (b : Int).natAbs + 2)
+    (hop : ∀ x y k, x < 2 ^ k → y < 2 ^ k → op x y < 2 ^ k) (haa : a < 2 ^ (w - 1)) (hbb : b < 2 ^ (w - 1)) :
+    twos op a b = (op a b : Nat) := by
+  have hr : op a b < 2 ^ (w - 1) := hop a b _ haa hbb
+  have hw1 : 2 ^ w = 2 * 2 ^ (w - 1) := by
+    have : w = (w - 1) + 1 := by omega
+    conv => lhs; rw [this, Nat.pow_succ]
+    omega
+  have ha : ((a : Int) % ((2 ^ w : Nat) : Int)).toNat = a := by
+    have : a < 2 ^ w := by omega
+    rw [Int.emod_eq_of_lt (by omega) (by omega)]
+    simp
+  have hb : ((b : Int) % ((2 ^ w : Nat) : Int)).toNat = b := by
+    have : b < 2 ^ w := by omega
+    rw [Int.emod_eq_of_lt (by omega) (by omega)]
+    simp
+  have hcast : ((2 : Int) ^ w) = ((2 ^ w : Nat) : Int) := by simp
+  simp only [twos, ← hw, hcast, ha, hb]
+  have : ¬ ((op a b : Nat) : Int) * 2 ≥ ((2 ^ w : Nat) : Int) := by omega
+  rw [if_neg this]
+
+/-- `|`, `&` and `^` of two members run the bit operation on the two values, through the two's complement of the mirror,
+and give what the operators on the values give: `self.__class__(value | other_value)`. The three methods are told apart
+here by the operation, and `FlagOpsCommute` holds of them. -/
+def FlagBinOnMembers : Prop :=
+  ∀ (c : FlagCls) (m : Bool) (a b : Nat),
+    flagBin c m (· ||| ·) (some a) (.same (some b)) = some (c.orOp a b) ∧
+    flagBin c m (· &&& ·) (some a) (.same (some b)) = some (c.andOp a b) ∧
+    flagBin c m (· ^^^ ·) (some a) (.same (some b)) = some (c.xorOp a b)
+
+theorem flagBinOnMembers_proven : FlagBinOnMembers := by
+  intro c m a b
+  have hw : ∀ w, w = bitLength ((a : Int)).natAbs + bitLength ((b : Int)).natAbs + 2 →
+      a < 2 ^ (w - 1) ∧ b < 2 ^ (w - 1) := by
+    intro w h
+    simp only [Int.natAbs_natCast] at h
+    exact ⟨bitLength_bound a _ (by omega), bitLength_bound b _ (by omega)⟩
+  have h := hw _ rfl
+  refine ⟨?_, ?_, ?_⟩
+  · simp only [flagBin, getValue, Option.map_some, Int.ofNat_eq_natCast, FlagCls.orOp]
+    rw [twos_nat _ a b _ rfl (fun x y k hx hy => Nat.or_lt_two_pow hx hy) h.1 h.2]
+  · simp only [flagBin, getValue, Option.map_some, Int.ofNat_eq_natCast, FlagCls.andOp]
+    rw [twos_nat _ a b _ rfl (fun x y k hx _ => Nat.lt_of_le_of_lt Nat.and_le_left hx) h.1 h.2]
+  · simp only [flagBin, getValue, Option.map_some, Int.ofNat_eq_natCast, FlagCls.xorOp]
+    rw [twos_nat _ a b _ rfl (fun x y k hx hy => Nat.xor_lt_two_pow hx hy) h.1 h.2]
+
+/-- `~x` under `STRICT` and `CONFORM` is `_singles_mask_ & ~value`: the single bits that `x` does not have, and it
+shares no bit with `x`. Docs of `Flag.__invert__`: "Returns all the flags in type(self) that are not in self". Under
+`EJECT` and `KEEP` it is the class called on `~value`. -/
+def InvertBits : Prop :=
+  ∀ (c : FlagCls) (a : Nat),
+    ((c.boundary = .strict ∨ c.boundary = .conform) → c.invert a = c.call (notAnd a c.singlesMask : Nat) ∧
+      ∀ i, (notAnd a c.singlesMask).testBit i = (c.singlesMask.testBit i && !a.testBit i)) ∧
+    ((c.boundary = .eject ∨ c.boundary = .keep) → c.invert a = c.call (-(a : Int) - 1))
+
+theorem invertBits_proven : InvertBits := by
+  intro c a
+  refine ⟨?_, ?_⟩
+  · intro h
+    refine ⟨?_, ?_⟩
+    · rcases h with h | h <;> simp [FlagCls.invert, h]
+    · intro i
+      simp only [notAnd, Nat.testBit_and, Nat.testBit_xor]
+      cases hs : c.singlesMask.testBit i with
+      | false => simp
+      | true =>
+        have hlt : i < bitLength c.singlesMask := by
+          apply Classical.byContradiction
+          intro hge
+          have : c.singlesMask < 2 ^ i :=
+            Nat.lt_of_lt_of_le (lt_two_pow_bitLength _) (Nat.pow_le_pow_right (by decide) (by omega))
+          rw [Nat.testBit_lt_two_pow this] at hs
+          exact Bool.noConfusion hs
+        simp [Nat.testBit_two_pow_sub_one, hlt]
+  · intro h
+    rcases h with h | h <;> simp [FlagCls.invert, h]
+
+/-! ### `verify` -/
+
+/-- `verify` runs its checks in order, and passes exactly when each passes; on anything but an enumeration it raises
+`TypeError` before it looks at them. `NAMED_FLAGS` passes exactly when no alias has a bit outside the values of the
+members. -/
+def VerifyCall : Prop :=
+  ∀ (c : EClass) (f : Name → Name) (checks : List Check),
+    (c.verifyCall true f checks = .ok () ↔ ∀ k ∈ checks, c.verifyOne f k = .ok ()) ∧
+    c.verifyCall false f checks = .error (.typeError "the 'verify' decorator only works with Enum and Flag") ∧
+    (c.verifyNamed = .ok () ↔ ∀ p ∈ c.memberMap, c.memberNames.contains p.1 = false → ∀ v,
+      c.valueOf p.2 = some (.atom (.int v)) → ∀ b ∈ bitsOf v.toNat, (b : Int) ∈ c.intValues)
+
+theorem verifyCall_proven : VerifyCall := by
+  intro c f checks
+  refine ⟨?_, rfl, ?_⟩
+  · simp only [EClass.verifyCall, Bool.not_true, Bool.false_eq_true, ↓reduceIte]
+    induction checks with
+    | nil => simp [EClass.verifyAll]
+    | cons k r ih =>
+      simp only [EClass.verifyAll, List.mem_cons, forall_eq_or_imp]
+      cases h : c.verifyOne f k with
+      | error e => simp
+      | ok u => simpa using ih
+  · have hm : ∀ p, c.missesName p = true ↔ c.memberNames.contains p.1 = false ∧ ∃ v,
+        c.valueOf p.2 = some (.atom (.int v)) ∧ ∃ b ∈ bitsOf v.toNat, (b : Int) ∉ c.intValues := by
+      intro p
+      unfold EClass.missesName
+      by_cases hc : c.memberNames.contains p.1 = true
+      · simp only [hc, ↓reduceIte, Bool.false_eq_true, Bool.true_eq_false, false_and]
+      · have hc' : c.memberNames.contains p.1 = false := Bool.eq_false_iff.2 hc
+        simp only [hc', Bool.false_eq_true, ↓reduceIte, true_and]
+        cases hv : c.valueOf p.2 with
+        | none => simp
+        | some w =>
+          cases w with
+          | atom a =>
+            cases a with
+            | int v =>
+              simp only [List.any_eq_true, Bool.not_eq_true', Option.some.injEq, EV.atom.injEq, Atom.int.injEq]
+              constructor
+              · rintro ⟨b, hb, hq⟩
+                exact ⟨v, rfl, b, hb, by simpa using hq⟩
+              · rintro ⟨u, rfl, b, hb, hq⟩
+                exact ⟨b, hb, by simpa using hq⟩
+            | _ => simp
+          | _ => simp
+    simp only [EClass.verifyNamed]
+    cases h : c.memberMap.any c.missesName with
+    | true =>
+      simp only [↓reduceIte, reduceCtorEq, false_iff]
+      intro hall
+      obtain ⟨p, hp, hq⟩ := List.any_eq_true.1 h
+      obtain ⟨h1, v, h2, b, h3, h4⟩ := (hm p).1 hq
+      exact h4 (hall p hp h1 v h2 b h3)
+    | false =>
+      simp only [Bool.false_eq_true, ↓reduceIte, true_iff]
+      intro p hp hc v hv b hb
+      apply Classical.byContradiction
+      intro hn
+      have : c.memberMap.any c.missesName = true :=
+        List.any_eq_true.2 ⟨p, hp, (hm p).2 ⟨hc, v, hv, b, hb, hn⟩⟩
+      rw [h] at this
+      exact Bool.noConfusion this
 
 /-! ### Names and bits -/
 

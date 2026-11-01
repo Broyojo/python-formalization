@@ -209,10 +209,12 @@ def classOp (d : EnumDict) (c : EClass) (op : Json) : Except String Json := do
         | .ok c' => enumNew c' none v false .none))
   | "unique" => pure (unitJ (c.unique memberName))
   | "verify" =>
-    match ← (← op.getArrVal? 1).getStr? with
-    | "unique" => pure (unitJ (c.verifyUnique memberName))
-    | "continuous" => pure (unitJ c.verifyContinuous)
-    | _ => pure (unitJ c.verifyNamed)
+    let checks ← (← (← op.getArrVal? 1).getArr?).toList.mapM fun k => do
+      match ← k.getStr? with
+      | "unique" => pure Check.unique
+      | "continuous" => pure Check.continuous
+      | _ => pure Check.named
+    pure (unitJ (c.verifyCall true memberName checks))
   | _ => throw "class op"
 
 def runClass (j : Json) : Except String Json := do
@@ -379,6 +381,7 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "ec_progress" =>
     pure (encPy (fun (n : Name) => toJson (String.ofList n)) (enumNew {} none (.atom (.int 1)) true .none))
   | "ec_flag" => runFlag j
+  | "ec_verify_other" => pure (unitJ (({} : EClass).verifyCall false id [.unique]))
   | _ => throw s!"unknown fn enumdc.{fn}"
 
 def handler : Handler := fun fn j => some (run fn j)

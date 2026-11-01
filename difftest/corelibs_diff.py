@@ -4146,7 +4146,7 @@ def enumdc_gverify(rng):
             v = ["int", rng.choice([-2, -1, 0, 1, 2, 3, 4, 5, 6])]
         body.append([key, v])
     return {"fn": "enumdc.ec_class", "kind": kind, "body": body,
-            "op": ["verify", rng.choice(["unique", "continuous", "named"])]}
+            "op": ["verify", [rng.choice(["unique", "continuous", "named"]) for _ in range(rng.randrange(0, 4))]]}
 
 
 def enumdc_gupdate(rng):
@@ -4207,7 +4207,7 @@ def enumdc_gen(rng):
         return {"fn": "enumdc.ec_scan",
                 "bases": [rng.choice(["absent", "prop", "descr", "plain"]) for _ in range(rng.randrange(0, 5))]}
     if r0 == 13:
-        return {"fn": "enumdc.ec_progress"}
+        return {"fn": "enumdc.ec_progress"} if rng.random() < .5 else {"fn": "enumdc.ec_verify_other"}
     if r0 <= 17:
         return enumdc_gflag(rng)
     r = rng.randrange(0, 12)
@@ -4421,9 +4421,9 @@ def enumdc_class(case):
         if k == "unique":
             enumdc_enum.unique(C)
             return None
-        check = {"unique": enumdc_enum.UNIQUE, "continuous": enumdc_enum.CONTINUOUS,
-                 "named": enumdc_enum.NAMED_FLAGS}[op[1]]
-        enumdc_enum.verify(check)(C)
+        checks = [{"unique": enumdc_enum.UNIQUE, "continuous": enumdc_enum.CONTINUOUS,
+                   "named": enumdc_enum.NAMED_FLAGS}[k] for k in op[1]]
+        enumdc_enum.verify(*checks)(C)
         return None
     return py_result(go)
 
@@ -4533,6 +4533,10 @@ def enumdc_run(case):
         return py_result(enumdc_new_in_progress)
     if fn == "ec_flag":
         return enumdc_flag(case)
+    if fn == "ec_verify_other":
+        def go():
+            enumdc_enum.verify(enumdc_enum.UNIQUE)(int)
+        return py_result(go)
     if fn.startswith("flag_"):
         F = enumdc_cls(case)
         v, w = case["v"], case.get("w", 0)
