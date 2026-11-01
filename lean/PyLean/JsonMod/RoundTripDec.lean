@@ -42,30 +42,34 @@ def decV (cfg : ECfg) (dcfg : DCfg) : Nat → EVal → JVal
     | .str t => .str (decS cfg.ensureAscii t)
     | .list xs => .arr (xs.map (decV cfg dcfg f))
     | .dict kvs => .obj (addAll dcfg [] (decI cfg (decV cfg dcfg f) (sortedItems cfg kvs)))
+    | .other n t =>
+      match cfg.dflt n t with
+      | .ok v' => decV cfg dcfg f v'
+      | .error _ => .null
     | _ => .null
 
 /-! ### Views of the encoder -/
 
-theorem cEncList_cons {cfg : ECfg} {f lvl i : Nat} {sep : PStr} {x : EVal} {xs : List EVal} {body : PStr}
-    (h : cEncList cfg f lvl sep i (x :: xs) = .ok body) :
-    ∃ t b, cEnc cfg f lvl x = .ok t ∧ cEncList cfg f lvl sep (i + 1) xs = .ok b ∧
+theorem cEncList_cons {cfg : ECfg} {f lvl i : Nat} {seen : List Nat} {sep : PStr} {x : EVal} {xs : List EVal} {body : PStr}
+    (h : cEncList cfg f lvl seen sep i (x :: xs) = .ok body) :
+    ∃ t b, cEnc cfg f lvl seen x = .ok t ∧ cEncList cfg f lvl seen sep (i + 1) xs = .ok b ∧
       body = (if i ≠ 0 then sep else []) ++ t ++ b := by
   simp only [cEncList] at h
-  cases h1 : cEnc cfg f lvl x with
+  cases h1 : cEnc cfg f lvl seen x with
   | error e => rw [h1] at h; cases h
   | ok t =>
     rw [h1] at h
     simp only at h
-    cases h2 : cEncList cfg f lvl sep (i + 1) xs with
+    cases h2 : cEncList cfg f lvl seen sep (i + 1) xs with
     | error e => rw [h2] at h; cases h
     | ok b =>
       rw [h2] at h
       simp only [Except.ok.injEq] at h
       exact ⟨t, b, rfl, rfl, h.symm⟩
 
-theorem cEncList_shift (cfg : ECfg) (f lvl : Nat) (sep : PStr) :
+theorem cEncList_shift (cfg : ECfg) (f lvl : Nat) (seen : List Nat) (sep : PStr) :
     ∀ (xs : List EVal) (i j : Nat), i ≠ 0 → j ≠ 0 →
-      cEncList cfg f lvl sep i xs = cEncList cfg f lvl sep j xs := by
+      cEncList cfg f lvl seen sep i xs = cEncList cfg f lvl seen sep j xs := by
   intro xs
   induction xs with
   | nil => intro i j _ _; simp [cEncList]
@@ -74,28 +78,30 @@ theorem cEncList_shift (cfg : ECfg) (f lvl : Nat) (sep : PStr) :
     simp only [cEncList, hi, hj, ne_eq, not_false_eq_true, ↓reduceIte]
     rw [ih (i + 1) (j + 1) (by omega) (by omega)]
 
-theorem cEncList_one {cfg : ECfg} {f lvl : Nat} {sep : PStr} {y : EVal} {ys : List EVal} {b : PStr}
-    (h : cEncList cfg f lvl sep 1 (y :: ys) = .ok b) :
-    ∃ b0, cEncList cfg f lvl sep 0 (y :: ys) = .ok b0 ∧ b = sep ++ b0 := by
+theorem cEncList_one {cfg : ECfg} {f lvl : Nat} {seen : List Nat} {sep : PStr} {y : EVal} {ys : List EVal} {b : PStr}
+    (h : cEncList cfg f lvl seen sep 1 (y :: ys) = .ok b) :
+    ∃ b0, cEncList cfg f lvl seen sep 0 (y :: ys) = .ok b0 ∧ b = sep ++ b0 := by
   obtain ⟨t, b1, h1, h2, h3⟩ := cEncList_cons h
   refine ⟨t ++ b1, ?_, by rw [h3]; simp⟩
   simp only [cEncList, h1]
-  rw [cEncList_shift cfg f lvl sep ys (0 + 1) (1 + 1) (by omega) (by omega), h2]
+  rw [cEncList_shift cfg f lvl seen sep ys (0 + 1) (1 + 1) (by omega) (by omega), h2]
   simp
 
-theorem cEncList_head {cfg : ECfg} {f lvl : Nat} {sep : PStr} {xs : List EVal} {b : PStr}
-    (hne : xs ≠ []) (h : cEncList cfg f lvl sep 0 xs = .ok b) : ∃ c r, b = c :: r ∧ ValHead c := by
+theorem cEncList_head {cfg : ECfg} (hL : Layout cfg) {f lvl : Nat} {seen : List Nat} {sep : PStr} {xs : List EVal}
+    {b : PStr} (hok : EVal.okJList xs = true) (hne : xs ≠ []) (h : cEncList cfg f lvl seen sep 0 xs = .ok b) :
+    ∃ c r, b = c :: r ∧ ValHead c := by
   cases xs with
   | nil => exact absurd rfl hne
   | cons x xs =>
+    simp only [EVal.okJList, Bool.and_eq_true] at hok
     obtain ⟨t, b1, h1, _, h3⟩ := cEncList_cons h
-    obtain ⟨c, r, rfl, hc⟩ := cEnc_head h1
+    obtain ⟨c, r, rfl, hc⟩ := cEnc_head hL hok.1 h1
     exact ⟨c, r ++ b1, by rw [h3]; simp, hc⟩
 
-theorem cEnc_list_view {cfg : ECfg} {f lvl : Nat} {xs : List EVal} {t : PStr} (hL : Layout cfg)
-    (hne : xs ≠ []) (h : cEnc cfg (f + 1) lvl (.list xs) = .ok t) :
+theorem cEnc_list_view {cfg : ECfg} {f lvl : Nat} {seen : List Nat} {xs : List EVal} {t : PStr} (hL : Layout cfg)
+    (hne : xs ≠ []) (h : cEnc cfg (f + 1) lvl seen (.list xs) = .ok t) :
     ∃ lvl' pre sep post body, wsOnly pre = true ∧ wsOnly post = true ∧ SepOk sep 44 ∧
-      cEncList cfg f lvl' sep 0 xs = .ok body ∧ t = [91] ++ pre ++ body ++ post ++ [93] := by
+      cEncList cfg f lvl' seen sep 0 xs = .ok body ∧ t = [91] ++ pre ++ body ++ post ++ [93] := by
   have hl : ¬ xs.length = 0 := by simpa using hne
   simp only [cEnc, hl, ↓reduceIte] at h
   cases hi : cfg.indent with
@@ -110,7 +116,7 @@ theorem cEnc_list_view {cfg : ECfg} {f lvl : Nat} {xs : List EVal} {t : PStr} (h
   | some ind =>
     have hw := hL.ind ind hi
     simp only [hi] at h
-    cases hb : cEncList cfg f (lvl + 1) (cSepIndent cfg ind (lvl + 1)) 0 xs with
+    cases hb : cEncList cfg f (lvl + 1) seen (cSepIndent cfg ind (lvl + 1)) 0 xs with
     | error e => rw [hb] at h; cases h
     | ok body =>
       rw [hb] at h
@@ -121,12 +127,12 @@ theorem cEnc_list_view {cfg : ECfg} {f lvl : Nat} {xs : List EVal} {t : PStr} (h
         ⟨a, b ++ cNewlineIndent ind (lvl + 1), ?_, h2, wsOnly_append h3 (wsOnly_nl hw _)⟩, hb, by rw [← h]⟩
       simp [cSepIndent, h1]
 
-theorem cEnc_dict_view {cfg : ECfg} {f lvl : Nat} {kvs : List (EKey × EVal)} {t : PStr} (hL : Layout cfg)
-    (hne : kvs ≠ []) (h : cEnc cfg (f + 1) lvl (.dict kvs) = .ok t) :
+theorem cEnc_dict_view {cfg : ECfg} {f lvl : Nat} {seen : List Nat} {kvs : List (EKey × EVal)} {t : PStr}
+    (hL : Layout cfg) (hne : kvs ≠ []) (h : cEnc cfg (f + 1) lvl seen (.dict kvs) = .ok t) :
     ∃ lvl' sep body first post, SepOk sep 44 ∧ wsOnly post = true ∧
       (first = true → post = []) ∧
       (if cfg.sortKeys then sortItems kvs else .ok kvs) = .ok (sortedItems cfg kvs) ∧
-      cEncItems cfg f lvl' sep true (sortedItems cfg kvs) = .ok (body, first) ∧
+      cEncItems cfg f lvl' seen sep true (sortedItems cfg kvs) = .ok (body, first) ∧
       t = [123] ++ body ++ post ++ [125] := by
   have hl : ¬ kvs.length = 0 := by simpa using hne
   simp only [cEnc, hl, ↓reduceIte] at h
@@ -139,7 +145,7 @@ theorem cEnc_dict_view {cfg : ECfg} {f lvl : Nat} {kvs : List (EKey × EVal)} {t
     cases hi : cfg.indent with
     | none =>
       simp only [hi, hs] at h
-      cases hb : cEncItems cfg f lvl cfg.itemSep true items with
+      cases hb : cEncItems cfg f lvl seen cfg.itemSep true items with
       | error e => rw [hb] at h; cases h
       | ok r =>
         obtain ⟨body, first⟩ := r
@@ -149,7 +155,7 @@ theorem cEnc_dict_view {cfg : ECfg} {f lvl : Nat} {kvs : List (EKey × EVal)} {t
     | some ind =>
       have hw := hL.ind ind hi
       simp only [hi, hs] at h
-      cases hb : cEncItems cfg f (lvl + 1) (cSepIndent cfg ind (lvl + 1)) true items with
+      cases hb : cEncItems cfg f (lvl + 1) seen (cSepIndent cfg ind (lvl + 1)) true items with
       | error e => rw [hb] at h; cases h
       | ok r =>
         obtain ⟨body, first⟩ := r
@@ -178,12 +184,13 @@ theorem firstPre_ws {cfg : ECfg} (hL : Layout cfg) (lvl : Nat) : wsOnly (firstPr
   · rename_i ind hi; exact wsOnly_nl (hL.ind ind hi) _
   · rfl
 
-theorem items_view (cfg : ECfg) (f lvl : Nat) (sep : PStr) (g : EVal → JVal) :
-    ∀ (items : List (EKey × EVal)) (first : Bool) (b : PStr) (fst : Bool), EVal.okItems items = true →
-    cEncItems cfg f lvl sep first items = .ok (b, fst) →
+theorem items_view (cfg : ECfg) (hc : cfg.customEnc = none) (f lvl : Nat) (seen : List Nat) (sep : PStr)
+    (g : EVal → JVal) :
+    ∀ (items : List (EKey × EVal)) (first : Bool) (b : PStr) (fst : Bool), EVal.okJItems items = true →
+    cEncItems cfg f lvl seen sep first items = .ok (b, fst) →
     (b = [] ∧ fst = first ∧ decI cfg g items = []) ∨
-    (∃ ks x t items' b', strOk ks = true ∧ x.ok = true ∧ EVal.okItems items' = true ∧
-      cEnc cfg f lvl x = .ok t ∧ cEncItems cfg f lvl sep false items' = .ok (b', fst) ∧
+    (∃ ks x t items' b', strOk ks = true ∧ x.okJ = true ∧ EVal.okJItems items' = true ∧
+      cEnc cfg f lvl seen x = .ok t ∧ cEncItems cfg f lvl seen sep false items' = .ok (b', fst) ∧
       b = (if first then firstPre cfg lvl else sep) ++ cStrEnc cfg ks ++ cfg.keySep ++ t ++ b' ∧
       decI cfg g items = (decS cfg.ensureAscii ks, g x) :: decI cfg g items') := by
   intro items
@@ -195,8 +202,8 @@ theorem items_view (cfg : ECfg) (f lvl : Nat) (sep : PStr) (g : EVal → JVal) :
   | cons p items ih =>
     obtain ⟨k, x⟩ := p
     intro first b fst hok h
-    simp only [EVal.okItems, Bool.and_eq_true] at hok
-    simp only [cEncItems] at h
+    simp only [EVal.okJItems, Bool.and_eq_true] at hok
+    simp only [cEncItems, cEncStr_std hc] at h
     cases hk : cKeyStr cfg k with
     | error e => rw [hk] at h; cases h
     | ok o =>
@@ -209,12 +216,12 @@ theorem items_view (cfg : ECfg) (f lvl : Nat) (sep : PStr) (g : EVal → JVal) :
         exact ih first b fst hok.2 h
       | some ks =>
         simp only at h
-        cases h1 : cEnc cfg f lvl x with
+        cases h1 : cEnc cfg f lvl seen x with
         | error e => rw [h1] at h; cases h
         | ok t =>
           rw [h1] at h
           simp only at h
-          cases h2 : cEncItems cfg f lvl sep false items with
+          cases h2 : cEncItems cfg f lvl seen sep false items with
           | error e => rw [h2] at h; cases h
           | ok r =>
             obtain ⟨b', fst'⟩ := r
@@ -226,9 +233,9 @@ theorem items_view (cfg : ECfg) (f lvl : Nat) (sep : PStr) (g : EVal → JVal) :
               cases cfg.indent <;> rfl
             · simp [decI, hk]
 
-theorem items_fst (cfg : ECfg) (f lvl : Nat) (sep : PStr) :
+theorem items_fst (cfg : ECfg) (hc : cfg.customEnc = none) (f lvl : Nat) (seen : List Nat) (sep : PStr) :
     ∀ (items : List (EKey × EVal)) (b : PStr) (fst : Bool),
-    cEncItems cfg f lvl sep false items = .ok (b, fst) → fst = false := by
+    cEncItems cfg f lvl seen sep false items = .ok (b, fst) → fst = false := by
   intro items
   induction items with
   | nil =>
@@ -238,7 +245,7 @@ theorem items_fst (cfg : ECfg) (f lvl : Nat) (sep : PStr) :
   | cons p items ih =>
     obtain ⟨k, x⟩ := p
     intro b fst h
-    simp only [cEncItems] at h
+    simp only [cEncItems, cEncStr_std hc] at h
     cases hk : cKeyStr cfg k with
     | error e => rw [hk] at h; cases h
     | ok o =>
@@ -247,12 +254,12 @@ theorem items_fst (cfg : ECfg) (f lvl : Nat) (sep : PStr) :
       | none => exact ih b fst h
       | some ks =>
         simp only at h
-        cases h1 : cEnc cfg f lvl x with
+        cases h1 : cEnc cfg f lvl seen x with
         | error e => rw [h1] at h; cases h
         | ok t =>
           rw [h1] at h
           simp only at h
-          cases h2 : cEncItems cfg f lvl sep false items with
+          cases h2 : cEncItems cfg f lvl seen sep false items with
           | error e => rw [h2] at h; cases h
           | ok r =>
             obtain ⟨b', fst'⟩ := r
@@ -280,12 +287,39 @@ theorem Delim_of_sep {sep R : PStr} (hs : SepOk sep 44) : Delim (sep ++ R) := by
     simp only [wsOnly, List.all_cons, Bool.and_eq_true] at ha
     exact Or.inr ⟨c, r ++ 44 :: (b ++ R), by simp, Or.inl ha.1⟩
 
+theorem okJItems_insert (p : EKey × EVal) (items : List (EKey × EVal)) :
+    EVal.okJItems (insertItem p items) = (p.1.ok && EVal.okJ p.2 && EVal.okJItems items) := by
+  induction items with
+  | nil => simp [insertItem, EVal.okJItems]
+  | cons q t ih =>
+    simp only [insertItem]
+    split
+    · simp [EVal.okJItems]
+    · simp only [EVal.okJItems, ih]
+      cases p.1.ok <;> cases EVal.okJ p.2 <;> cases q.1.ok <;> cases EVal.okJ q.2 <;> simp
+
+theorem okJItems_foldr (kvs : List (EKey × EVal)) :
+    EVal.okJItems (kvs.foldr insertItem []) = EVal.okJItems kvs := by
+  induction kvs with
+  | nil => rfl
+  | cons p t ih => simp only [List.foldr_cons, okJItems_insert, ih, EVal.okJItems]
+
+theorem sortItems_okJ {kvs items : List (EKey × EVal)} (h : sortItems kvs = .ok items) :
+    EVal.okJItems items = EVal.okJItems kvs := by
+  unfold sortItems at h
+  split at h
+  · cases h; rfl
+  · cases h; rfl
+  · split at h
+    · cases h; exact okJItems_foldr _
+    · cases h
+
 theorem sortedItems_ok {cfg : ECfg} {kvs : List (EKey × EVal)}
     (h : (if cfg.sortKeys then sortItems kvs else .ok kvs) = .ok (sortedItems cfg kvs))
-    (hok : EVal.okItems kvs = true) : EVal.okItems (sortedItems cfg kvs) = true := by
+    (hok : EVal.okJItems kvs = true) : EVal.okJItems (sortedItems cfg kvs) = true := by
   by_cases hs : cfg.sortKeys = true
   · simp only [hs, ↓reduceIte] at h
-    rw [sortItems_ok h, hok]
+    rw [sortItems_okJ h, hok]
   · simp only [hs, Bool.false_eq_true, ↓reduceIte, Except.ok.injEq] at h
     rw [← h, hok]
 
@@ -298,14 +332,14 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n 
       cEnc cfg f lvl v = .ok t → s.drop p = t ++ rest → Delim rest →
       D (cScanOnce dcfg s n p) (decV cfg dcfg f v) (p + t.length)) ∧
     (∀ (f lvl : Nat) (sep : PStr) (xs : List EVal) (e : Nat) (acc : List JVal) (body post rest : PStr),
-      SepOk sep 44 → EVal.okList xs = true → xs ≠ [] → cEncList cfg f lvl sep 0 xs = .ok body →
+      SepOk sep 44 → EVal.okList xs = true → xs ≠ [] → cEncList cfg f lvl seen sep 0 xs = .ok body →
       s.drop e = body ++ post ++ 93 :: rest → wsOnly post = true →
       D (cArrLoop dcfg s n e acc) (.arr (acc ++ xs.map (decV cfg dcfg f)))
         (e + body.length + post.length + 1)) ∧
     (∀ (f lvl : Nat) (sep ks : PStr) (x : EVal) (items : List (EKey × EVal)) (q : Nat)
       (acc : List (PStr × JVal)) (t body : PStr) (fst : Bool) (post rest : PStr),
       SepOk sep 44 → strOk ks = true → x.ok = true → EVal.okItems items = true →
-      cEnc cfg f lvl x = .ok t → cEncItems cfg f lvl sep false items = .ok (body, fst) →
+      cEnc cfg f lvl seen x = .ok t → cEncItems cfg f lvl seen sep false items = .ok (body, fst) →
       s.drop q = cStrEnc cfg ks ++ cfg.keySep ++ t ++ body ++ post ++ 125 :: rest → wsOnly post = true →
       D (cObjBody dcfg s n q acc)
         (.obj (addAll dcfg acc ((decS cfg.ensureAscii ks, decV cfg dcfg f x) ::

@@ -28,8 +28,9 @@ theorem loop_u_nolow (s : PStr) (strict : Bool) (b : Int) (f e n m : Nat) (a R :
     have hnl : ¬ (0xdc00 ≤ m ∧ m ≤ 0xdfff) := by omega
     have e6 : e + 0 + 1 + 5 = e + 6 := by omega
     have e2 : e + 0 + 1 + 1 = e + 2 := by omega
-    simp only [pyScanLoop, hf, List.getD_eq_getElem?_getD]
-    simp [h0, h1, e2, hx, e6, ht, hh, hx2, hnl]
+    have e8 : e + 6 + 1 + 1 = e + 6 + 2 := rfl
+    simp only [pyScanLoop, decodeUXXXX, hf, List.getD_eq_getElem?_getD]
+    simp [h0, h1, e2, hx, e6, ht, hh, e8, hx2, hnl]
   · exact loop_u s strict b f e n a _ hs' hn (Or.inl (by simpa using hh))
 
 theorem mergeSurr_notHigh (c : Nat) (t : PStr) (h : isHigh c = false) :

@@ -128,6 +128,13 @@ theorem cFind_drop (strict : Bool) : ∀ (t : PStr) (j : Nat),
 theorem getD_drop (s : PStr) (e k : Nat) : (s.drop e).getD k 0 = s.getD (e + k) 0 := by
   simp [List.getD_eq_getElem?_getD]
 
+theorem decodeU_ok {s : PStr} {p v : Nat} (h : hex4 s (p + 1) = some v) : decodeUXXXX s p = .ok v := by
+  simp [decodeUXXXX, h]
+
+theorem decodeU_bad {s : PStr} {p : Nat} (h : hex4 s (p + 1) = none) :
+    decodeUXXXX s p = .error (.jde "Invalid \\uXXXX escape" (p : Int)) := by
+  simp [decodeUXXXX, h]
+
 theorem hex4_le {s : PStr} {p v : Nat} (h : hex4 s p = some v) : p + 4 ≤ s.length := by
   unfold hex4 at h
   split at h
@@ -240,8 +247,8 @@ theorem py_last_u (s : PStr) (strict : Bool) (b : Int) (f p u : Nat) (a : PStr)
     simp [findTerm, (List.getElem?_eq_some_iff.mp h92).2, isTerm]
   simp only [pyScanLoop, hft, Nat.add_zero, List.getD_eq_getElem?_getD, h92, Option.getD_some]
   simp only [Nat.reduceEqDiff, ↓reduceIte, ne_eq, not_true_eq_false, h117, not_false_eq_true]
-  have h2 : p + 1 + 1 = p + 2 := by omega
-  simp only [h2, hx]
+  have h2 : decodeUXXXX s (p + 1) = .ok u := decodeU_ok hx
+  simp only [h2]
   have hd : (s.drop (p + 1 + 5)).take 2 = [] := by
     rw [List.drop_eq_nil_of_le (by omega)]; rfl
   simp only [hd, reduceCtorEq, and_false, ↓reduceIte]
@@ -311,7 +318,7 @@ theorem scanLoop_rel (s : PStr) (strict : Bool) (b : Nat) :
           · simp [cScanLoop, hcf0, List.getD_eq_getElem?_getD, hs0]
         · -- backslash
           subst hq
-          simp only [pyScanLoop, cScanLoop, hft, hcf0, List.getD_eq_getElem?_getD, hs0, Option.getD_some,
+          simp only [pyScanLoop, decodeUXXXX, cScanLoop, hft, hcf0, List.getD_eq_getElem?_getD, hs0, Option.getD_some,
             Nat.add_zero, List.take_zero, List.append_nil, Nat.reduceEqDiff, ↓reduceIte, ne_eq,
             not_true_eq_false, not_false_eq_true, reduceCtorEq, and_false]
           cases hesc : s[e + k + 1]? with
@@ -329,7 +336,9 @@ theorem scanLoop_rel (s : PStr) (strict : Bool) (b : Nat) :
             have q3 : e + k + 1 + 1 + 4 - 5 = e + k + 1 := by omega
             have q4 : e + k + 1 + 1 - 1 = e + k + 1 := by omega
             have q5 : e + k + 1 + 1 + 4 + 1 = e + k + 1 + 5 + 1 := by omega
-            simp only [q1, q2, q3, q4, q5]
+            have q6 : e + k + 1 + 1 + 4 + 2 = e + k + 1 + 5 + 2 := by omega
+            have q7 : e + k + 1 + 5 + 1 + 1 = e + k + 1 + 5 + 2 := rfl
+            simp only [q1, q2, q3, q4, q5, q6, q7]
             by_cases hu : esc = 117
             · subst hu
               simp only [not_true_eq_false, ↓reduceIte]

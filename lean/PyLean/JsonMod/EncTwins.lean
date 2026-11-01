@@ -15,8 +15,12 @@ def cpOk (c : Nat) : Bool := c ≤ 0x10FFFF
 
 def strOk (s : PStr) : Bool := s.all cpOk
 
+/-- The text of `float.__repr__` is ASCII. -/
+def fltOk (r : PStr) : Bool := r.all (· < 128)
+
 def EKey.ok : EKey → Bool
   | .str s => strOk s
+  | .flt _ r => fltOk r
   | _ => true
 
 mutual
@@ -24,6 +28,7 @@ mutual
 points are at most `0x10FFFF`. A type invariant of `EVal`. -/
 def EVal.ok : EVal → Bool
   | .str s => strOk s
+  | .flt _ r => fltOk r
   | .list xs => EVal.okList xs
   | .dict kvs => EVal.okItems kvs
   | _ => true
@@ -34,6 +39,15 @@ def EVal.okItems : List (EKey × EVal) → Bool
   | [] => true
   | (k, x) :: xs => k.ok && EVal.ok x && EVal.okItems xs
 end
+
+/-- What the encoder options promise: no custom `encoder`, and `default()`
+returns Python values. -/
+structure ECfg.Ok (cfg : ECfg) : Prop where
+  cst : cfg.customEnc = none
+  dfl : ∀ n t v', cfg.dflt n t = .ok v' → v'.ok = true
+
+theorem cEncStr_std {cfg : ECfg} (h : cfg.customEnc = none) (s : PStr) : cEncStr cfg s = .ok (cStrEnc cfg s) := by
+  simp [cEncStr, h]
 
 theorem and_0xf (x : Nat) : x &&& 0xf = x % 16 := Nat.and_two_pow_sub_one_eq_mod x 4
 
@@ -147,15 +161,56 @@ theorem strEnc_twins (cfg : ECfg) (s : PStr) (hs : strOk s = true) : pyStrEnc cf
   · exact asciiEscape_twins s hs
   · exact escape_twins s
 
+/-- `floatstr` and `encoder_encode_float` agree on every float. -/
+theorem floatStr_twins (cfg : ECfg) (b : Nat) (r : PStr) : pyFloatStr cfg b r = cEncodeFloat cfg b r := by
+  by_cases h1 : fltExp b = 2047
+  · by_cases h2 : fltMant b = 0
+    · cases h3 : fltNeg b <;> cases h4 : cfg.allowNan <;>
+        simp [pyFloatStr, cEncodeFloat, fltIsNan, fltIsFinite, fltIsPosInf, fltIsNegInf, h1, h2, h3, h4]
+    · cases h4 : cfg.allowNan <;>
+        simp [pyFloatStr, cEncodeFloat, fltIsNan, fltIsFinite, fltIsPosInf, fltIsNegInf, h1, h2, h4]
+  · simp [pyFloatStr, cEncodeFloat, fltIsNan, fltIsFinite, fltIsPosInf, fltIsNegInf, h1]
+
 theorem keyStr_twins (cfg : ECfg) (k : EKey) : pyKeyStr cfg k = cKeyStr cfg k := by
   cases k with
   | bool b => cases b <;> rfl
+  | flt b r => simp only [pyKeyStr, cKeyStr, floatStr_twins]
   | _ => rfl
+
+theorem fltOk_str {r : PStr} (h : fltOk r = true) : strOk r = true := by
+  apply List.all_eq_true.mpr
+  intro c hc
+  have := List.all_eq_true.mp h c hc
+  simp only [decide_eq_true_eq] at this
+  simp only [cpOk, decide_eq_true_eq]
+  omega
+
+theorem cEncodeFloat_ok {cfg : ECfg} {b : Nat} {r t : PStr} (hr : fltOk r = true)
+    (h : cEncodeFloat cfg b r = .ok t) : fltOk t = true := by
+  unfold cEncodeFloat at h
+  split at h
+  · split at h
+    · cases h
+    · split at h
+      · cases h; decide
+      · split at h
+        · cases h; decide
+        · cases h; decide
+  · cases h; exact hr
 
 theorem keyStr_ok {cfg : ECfg} {k : EKey} {ks : PStr} (hk : k.ok = true)
     (h : cKeyStr cfg k = .ok (some ks)) : strOk ks = true := by
   cases k with
   | str s => simp [cKeyStr] at h; subst h; exact hk
+  | flt b r =>
+    simp only [cKeyStr] at h
+    cases hr : cEncodeFloat cfg b r with
+    | error e => rw [hr] at h; cases h
+    | ok t =>
+      rw [hr] at h
+      simp only [Except.map, Except.ok.injEq, Option.some.injEq] at h
+      subst h
+      exact fltOk_str (cEncodeFloat_ok hk hr)
   | int n =>
     simp only [cKeyStr] at h
     cases hr : intRepr n with
@@ -191,8 +246,8 @@ theorem keyStr_ok {cfg : ECfg} {k : EKey} {ks : PStr} (hk : k.ok = true)
           · omega
           · have := hd _ _ c hc; omega
         · have := hd _ _ c hc; omega
-  | bool b => cases b <;> simp [cKeyStr] at h <;> subst h <;> decide
-  | none => simp [cKeyStr] at h; subst h; decide
+  | bool b => cases b <;> simp [cKeyStr, encodedConst] at h <;> subst h <;> decide
+  | none => simp [cKeyStr, encodedConst] at h; subst h; decide
   | tup n => simp only [cKeyStr] at h; split at h <;> cases h
 
 theorem okItems_insert (p : EKey × EVal) (items : List (EKey × EVal)) :
@@ -223,9 +278,10 @@ theorem sortItems_ok {kvs items : List (EKey × EVal)} (h : sortItems kvs = .ok 
     · cases h
 
 theorem encList_twins (cfg : ECfg) (f : Nat)
-    (ih : ∀ lvl v, v.ok = true → pyEnc cfg f lvl v = cEnc cfg f lvl v) (lvl : Nat) (sep : PStr) :
+    (ih : ∀ lvl seen v, v.ok = true → pyEnc cfg f lvl seen v = cEnc cfg f lvl seen v)
+    (lvl : Nat) (seen : List Nat) (sep : PStr) :
     ∀ (xs : List EVal) (i : Nat), EVal.okList xs = true →
-    pyEncList cfg f lvl sep (decide (i = 0)) xs = cEncList cfg f lvl sep i xs := by
+    pyEncList cfg f lvl seen sep (decide (i = 0)) xs = cEncList cfg f lvl seen sep i xs := by
   intro xs
   induction xs with
   | nil => intro i _; simp [pyEncList, cEncList]
@@ -233,17 +289,18 @@ theorem encList_twins (cfg : ECfg) (f : Nat)
     intro i h
     simp only [EVal.okList, Bool.and_eq_true] at h
     simp only [pyEncList, cEncList]
-    rw [ih lvl x h.1]
+    rw [ih lvl seen x h.1]
     have := ihx (i + 1) h.2
     simp only [Nat.add_one_ne_zero, decide_false] at this
     rw [this]
     by_cases hi : i = 0 <;> simp [hi]
 
-theorem encItems_twins (cfg : ECfg) (f : Nat)
-    (ih : ∀ lvl v, v.ok = true → pyEnc cfg f lvl v = cEnc cfg f lvl v) (lvl : Nat) (sep : PStr) :
+theorem encItems_twins (cfg : ECfg) (hc : cfg.customEnc = none) (f : Nat)
+    (ih : ∀ lvl seen v, v.ok = true → pyEnc cfg f lvl seen v = cEnc cfg f lvl seen v)
+    (lvl : Nat) (seen : List Nat) (sep : PStr) :
     ∀ (items : List (EKey × EVal)) (first : Bool), EVal.okItems items = true →
-    pyEncItems cfg f lvl (cfg.indent.map fun ind => [10] ++ rep ind lvl) sep first items =
-      cEncItems cfg f lvl sep first items := by
+    pyEncItems cfg f lvl seen (cfg.indent.map fun ind => [10] ++ rep ind lvl) sep first items =
+      cEncItems cfg f lvl seen sep first items := by
   intro items
   induction items with
   | nil => intro _ _; simp [pyEncItems, cEncItems]
@@ -251,7 +308,7 @@ theorem encItems_twins (cfg : ECfg) (f : Nat)
     obtain ⟨k, x⟩ := p
     intro first h
     simp only [EVal.okItems, Bool.and_eq_true] at h
-    simp only [pyEncItems, cEncItems, keyStr_twins]
+    simp only [pyEncItems, cEncItems, keyStr_twins, cEncStr_std hc]
     cases hk : cKeyStr cfg k with
     | error e => rfl
     | ok o =>
@@ -259,27 +316,34 @@ theorem encItems_twins (cfg : ECfg) (f : Nat)
       | none => exact ihx first h.2
       | some ks =>
         simp only
-        rw [ih lvl x h.1.2, ihx false h.2, strEnc_twins cfg ks (keyStr_ok h.1.1 hk)]
+        rw [ih lvl seen x h.1.2, ihx false h.2, strEnc_twins cfg ks (keyStr_ok h.1.1 hk)]
         cases cfg.indent <;> rfl
 
-theorem enc_twins (cfg : ECfg) : ∀ (f lvl : Nat) (v : EVal), v.ok = true →
-    pyEnc cfg f lvl v = cEnc cfg f lvl v := by
+theorem enc_twins (cfg : ECfg) (hO : cfg.Ok) : ∀ (f lvl : Nat) (seen : List Nat) (v : EVal), v.ok = true →
+    pyEnc cfg f lvl seen v = cEnc cfg f lvl seen v := by
   intro f
   induction f with
-  | zero => intro lvl v _; simp [pyEnc, cEnc]
+  | zero => intro lvl seen v _; simp [pyEnc, cEnc]
   | succ f ih =>
-    intro lvl v hv
+    intro lvl seen v hv
     cases v with
     | none => simp [pyEnc, cEnc]
     | bool b => cases b <;> simp [pyEnc, cEnc]
     | int n => simp [pyEnc, cEnc]
-    | str s => simp only [pyEnc, cEnc]; rw [strEnc_twins cfg s hv]
+    | flt b r => simp only [pyEnc, cEnc, floatStr_twins]
+    | str s => simp only [pyEnc, cEnc, cEncStr_std hO.cst]; rw [strEnc_twins cfg s hv]
     | back k => simp [pyEnc, cEnc]
-    | other => simp [pyEnc, cEnc]
+    | other n t =>
+      simp only [pyEnc, cEnc]
+      split
+      · rfl
+      · cases hd : cfg.dflt n t with
+        | error e => rfl
+        | ok v' => exact ih lvl (n :: seen) v' (hO.dfl n t v' hd)
     | list xs =>
-      have hl : ∀ sep lvl', pyEncList cfg f lvl' sep true xs = cEncList cfg f lvl' sep 0 xs := by
+      have hl : ∀ sep lvl', pyEncList cfg f lvl' seen sep true xs = cEncList cfg f lvl' seen sep 0 xs := by
         intro sep lvl'
-        have := encList_twins cfg f ih lvl' sep xs 0 hv
+        have := encList_twins cfg f ih lvl' seen sep xs 0 hv
         simpa using this
       simp only [pyEnc, cEnc, List.length_eq_zero_iff]
       split
@@ -302,32 +366,33 @@ theorem enc_twins (cfg : ECfg) : ∀ (f lvl : Nat) (v : EVal), v.ok = true →
           simp only
           cases hi : cfg.indent with
           | none =>
-            have := encItems_twins cfg f ih lvl cfg.itemSep items true hok
+            have := encItems_twins cfg hO.cst f ih lvl seen cfg.itemSep items true hok
             simp only [hi, Option.map_none] at this
             simp only [this]
           | some ind =>
-            have := encItems_twins cfg f ih (lvl + 1) (cfg.itemSep ++ [10] ++ rep ind (lvl + 1)) items true hok
+            have := encItems_twins cfg hO.cst f ih (lvl + 1) seen (cfg.itemSep ++ [10] ++ rep ind (lvl + 1)) items true hok
             simp only [hi, Option.map_some, List.append_assoc] at this
             simp only [cSepIndent, cNewlineIndent, List.append_assoc]
             rw [this]
-            cases cEncItems cfg f (lvl + 1) (cfg.itemSep ++ ([10] ++ rep ind (lvl + 1))) true items with
+            cases cEncItems cfg f (lvl + 1) seen (cfg.itemSep ++ ([10] ++ rep ind (lvl + 1))) true items with
             | error e => rfl
             | ok r => obtain ⟨body, first⟩ := r; cases first <;> rfl
 
 /-- On the same value (a type-correct Python object: code points at most
-`0x10FFFF`) and options, `json.dumps` with the C encoder and with the
-pure-Python encoder return the same text or raise the same exception (class
-and message; `TypeError` from mixed-type `sort_keys` excepted, whose message
-both take from the same `list.sort`). -/
-def DumpsTwins : Prop := ∀ (cfg : ECfg) (v : EVal), v.ok = true → dumpsPy cfg v = dumpsC cfg v
+`0x10FFFF`, ASCII `float.__repr__`), for every `default()` returning such values,
+every `allow_nan` and the other options, `json.dumps` with the C encoder and
+with the pure-Python encoder return the same text or raise the same exception
+(class and message; `TypeError` from mixed-type `sort_keys` excepted, whose
+message both take from the same `list.sort`). -/
+def DumpsTwins : Prop := ∀ (cfg : ECfg) (v : EVal), cfg.Ok → v.ok = true → dumpsPy cfg v = dumpsC cfg v
 
 theorem dumpsTwins_proven : DumpsTwins := by
-  intro cfg v hv
+  intro cfg v hO hv
   cases v with
   | str s =>
     simp only [dumpsPy, dumpsC]
     rw [strEnc_twins cfg s hv]
     rfl
-  | _ => simp only [dumpsPy, dumpsC]; exact enc_twins cfg _ 0 _ hv
+  | _ => simp only [dumpsPy, dumpsC]; exact enc_twins cfg hO _ 0 [] _ hv
 
 end PyLean.JsonMod
