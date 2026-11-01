@@ -1,0 +1,46 @@
+id: unicodeobj-format-percent-star-width
+title: "'%*d' negates a PY_SSIZE_T_MIN width, which overflows Py_ssize_t"
+priority: P5
+kind: undefined-behaviour
+module: unicodeobject
+files: [Objects/unicodeobject.c]
+functions: ["unicode_format_arg_parse"]
+status: duplicate
+duplicate_of: python/cpython#151847 (open, with PR gh-151849)
+summary: |
+  `unicode_format_arg_parse` turns a negative `*` width into left-justification with
+  `arg->width = -arg->width`. For PY_SSIZE_T_MIN that overflows, which is undefined behaviour in
+  C. Builds use -fno-strict-overflow, so in practice the width stays negative and takes the
+  "no padding" path. NOT A NEW FINDING: this is python/cpython#151847.
+likelihood: |
+  Very rare: a width of exactly -2**63.
+maybe_intended: |
+  No. The open issue and its PR treat it as a defect.
+reproducer: |
+  got = '%*d' % (-2 ** 63, 1)
+  print(repr(got))
+  try:
+      '%*d' % (-2 ** 63 + 1, 1)
+      neighbour = 'no error'
+  except MemoryError:
+      neighbour = 'MemoryError'
+  print(neighbour)
+  if got == '1' and neighbour == 'MemoryError':
+      print('REPRODUCED unicodeobj-format-percent-star-width')
+expected: |
+  OverflowError or MemoryError, as for the neighbouring width.
+tested: "NOT RUN: the build pod was down when this record was written"
+promised_by: |
+  Invariant: no signed overflow in C.
+cause: |
+  Objects/unicodeobject.c:15111-15113.
+possible_fix: |
+  See PR gh-151849.
+lean: |
+  Refuted by starWidthNegated_refuted (lean/PyLean/UnicodeObj/FormatPercent.lean).
+duplicates:
+  issues:
+    - {number: 151847, state: open, relation: same, reason: "PY_SSIZE_T_MIN negate UB in unicode_format.c and bytesobject.c"}
+  queries: ["format star width negative", "PY_SSIZE_T_MIN width format", "percent format width overflow",
+            "unicode_format_arg_parse"]
+  bugforge: "no match in vendor/bugforge-results/README.md"
