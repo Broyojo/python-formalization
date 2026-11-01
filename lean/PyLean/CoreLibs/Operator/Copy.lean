@@ -94,6 +94,11 @@ def updateFrom (y : Nat) : Heap → List (Nat × Nat) → Py Heap
     | .error e => .error e
     | .ok h => updateFrom y h rest
 
+def noneCell (h : Heap) (s : Nat) : Bool :=
+  match h.get s with
+  | .atom 0 => true
+  | _ => false
+
 /-- The state step without `__setstate__`, Lib/copy.py:244-252, on a state that is already copied: a two-item tuple
 is `(state, slotstate)`; the state goes through `__dict__.update`, the slot state through `setattr`. `None` is the
 atom `0` in the model's graphs. -/
@@ -102,21 +107,17 @@ def stateStep (h : Heap) (y st : Nat) : Py Heap :=
     match h.get s with
     | .dict items => updateFrom y h items
     | _ => .error (.typeError "~object is not iterable")
-  let isNone (s : Nat) : Bool :=
-    match h.get s with
-    | .atom 0 => true
-    | _ => false
   match h.get st with
   | .tuple [a, b] =>
-    let h1 : Py Heap := if isNone a then .ok h else update h a
+    let h1 : Py Heap := if noneCell h a then .ok h else update h a
     match h1 with
     | .error e => .error e
     | .ok h2 =>
-      if isNone b then .ok h2 else
+      if noneCell h b then .ok h2 else
       match h2.get b with
       | .dict items => updateFrom y h2 items
       | _ => .error (.named "AttributeError" "~object has no attribute 'items'")
-  | _ => if isNone st then .ok h else update h st
+  | _ => if noneCell h st then .ok h else update h st
 
 /-- `y.__setstate__(state)`. The model stores it, so that it can be observed. -/
 def setstateOf (h : Heap) (y st : Nat) (fail : Option PyExc) : Py Heap :=
@@ -277,13 +278,13 @@ mutual
                       match deepOpt fuel h3 state with
                       | .error e => .error e
                       | .ok (h4, st') =>
-                        match deepOptList fuel h4 listiter with
+                        match reconRest h4 y st' none none setstate with
                         | .error e => .error e
-                        | .ok (h5, li) =>
-                          match deepOptPairs fuel h5 dictiter with
+                        | .ok h5 =>
+                          match deepAppend fuel h5 y (listiter.getD []) with
                           | .error e => .error e
-                          | .ok (h6, di) =>
-                            match reconRest h6 y st' li di setstate with
+                          | .ok h6 =>
+                            match deepSetItems fuel h6 y (dictiter.getD []) with
                             | .error e => .error e
                             | .ok h7 => .ok (h7, y)
           | .atom _ => .ok (h, x)
@@ -335,21 +336,32 @@ mutual
       | .error e => .error e
       | .ok (h1, s') => .ok (h1, some s')
 
-  def deepOptList : Nat → Heap → Option (List Nat) → Py (Heap × Option (List Nat))
-    | _, h, none => .ok (h, none)
-    | 0, _, some _ => .error .modelFuel
-    | fuel + 1, h, some l =>
-      match deepList fuel h l with
+  /-- `for item in listiter: item = deepcopy(item, memo); y.append(item)`, Lib/copy.py:256-258. -/
+  def deepAppend : Nat → Heap → Nat → List Nat → Py Heap
+    | 0, _, _, _ => .error .modelFuel
+    | _ + 1, h, _, [] => .ok h
+    | fuel + 1, h, y, i :: rest =>
+      match deepcopy fuel h i with
       | .error e => .error e
-      | .ok (h1, l') => .ok (h1, some l')
+      | .ok (h1, i') =>
+        match appendTo h1 y i' with
+        | .error e => .error e
+        | .ok h2 => deepAppend fuel h2 y rest
 
-  def deepOptPairs : Nat → Heap → Option (List (Nat × Nat)) → Py (Heap × Option (List (Nat × Nat)))
-    | _, h, none => .ok (h, none)
-    | 0, _, some _ => .error .modelFuel
-    | fuel + 1, h, some l =>
-      match deepPairs fuel h l with
+  /-- The same for `dictiter`, Lib/copy.py:264-267: the key, the value, then the store. -/
+  def deepSetItems : Nat → Heap → Nat → List (Nat × Nat) → Py Heap
+    | 0, _, _, _ => .error .modelFuel
+    | _ + 1, h, _, [] => .ok h
+    | fuel + 1, h, y, (k, v) :: rest =>
+      match deepcopy fuel h k with
       | .error e => .error e
-      | .ok (h1, l') => .ok (h1, some l')
+      | .ok (h1, k') =>
+        match deepcopy fuel h1 v with
+        | .error e => .error e
+        | .ok (h2, v') =>
+          match setItemOf h2 y k' v' with
+          | .error e => .error e
+          | .ok h3 => deepSetItems fuel h3 y rest
 end
 
 /-- `pickle` accepts two to six items, Modules/_pickle.c `save_reduce`. -/

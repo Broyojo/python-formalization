@@ -347,14 +347,13 @@ inductive TruthObj where
   /-- No truth slot at all. -/
   | plain
 
-/-- `slot_sq_length`, Objects/typeobject.c: an `int` that fits and is not negative. -/
+/-- `slot_sq_length`, Objects/typeobject.c: not negative, tested first, and then it must fit. -/
 def sqLength (r : Py Int) : Py Int :=
   match r with
   | .error e => .error e
   | .ok n =>
-    match fitSsize .overflowError "int" n with
-    | .error e => .error e
-    | .ok m => if m < 0 then .error (.valueError "__len__() should return >= 0") else .ok m
+    if n < 0 then .error (.valueError "__len__() should return >= 0")
+    else fitSsize .overflowError "int" n
 
 /-- `PyObject_IsTrue`, Objects/object.c:2060-2085, with `slot_nb_bool`, Objects/typeobject.c:10202. -/
 def isTrue : TruthObj → Py Bool
@@ -514,6 +513,8 @@ structure SetArgs (σ : Type) where
   tn : String
   keyTn : String
 
+def objMsg (tn what : String) : PyExc := .typeError s!"'{tn}' object {what}"
+
 /-- `PySequence_SetItem`, :1884-1908, and `PySequence_DelItem`, :1917-1941, with the message of the last line. -/
 def sequenceSet {σ : Type} (A : SetArgs σ) (i : Int) (notSupported : String) : Py σ :=
   match A.sqAss with
@@ -529,14 +530,14 @@ def sequenceSet {σ : Type} (A : SetArgs σ) (i : Int) (notSupported : String) :
   | none =>
     match A.mp with
     | some _ => .error (.typeError s!"{A.tn} is not a sequence")
-    | none => .error (.typeError s!"'{A.tn}' object {notSupported}")
+    | none => .error (objMsg A.tn notSupported)
 
 /-- The shared body of `PyObject_SetItem`, Objects/abstract.c:226-257, and `PyObject_DelItem`, :260-291. -/
 def assignItem {σ : Type} (A : SetArgs σ) (bottom seqBottom : String) : Py σ :=
   match A.mp with
   | some r => r
   | none =>
-    let err : Py σ := .error (.typeError s!"'{A.tn}' object {bottom}")
+    let err : Py σ := .error (objMsg A.tn bottom)
     if A.hasSeq then
       match A.keyIndex with
       | some r =>

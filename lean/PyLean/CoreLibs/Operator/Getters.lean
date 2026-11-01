@@ -181,22 +181,28 @@ structure AttrPy where
   names : List Chain
   deriving Repr, DecidableEq
 
+/-- The check at Lib/operator.py:252 and the `attr.split('.')` at :255. -/
+def namePy : AttrArg → Py Chain
+  | .str s => .ok (splitChars s)
+  | .strSub _ c => .ok c
+  | .other => .error (.typeError attrNameMsg)
+
+/-- The check and the split at Modules/_operator.c:1283-1345. -/
+def nameC : AttrArg → Py Chain
+  | .str s | .strSub s _ => .ok (splitChars s)
+  | .other => .error (.typeError attrNameMsg)
+
 /-- `attrgetter.__init__`, Lib/operator.py:250-266: one attribute directly, and for more a getter each, so
 the check at :252 runs for each, in order, after `_attrs` is set. -/
 def attrgetterNewPy (args : List AttrArg) : Py AttrPy :=
-  match mapPy (fun a => match a with
-      | .str s => .ok (splitChars s)
-      | .strSub _ c => .ok c
-      | .other => .error (.typeError attrNameMsg)) args with
+  match mapPy namePy args with
   | .error e => .error e
   | .ok names => .ok ⟨args, names⟩
 
 /-- What `attrgetter_new`, Modules/_operator.c:1262-1367, stores: the characters of each name, split, whatever
 the class of the `str`. -/
 def attrgetterNewC (args : List AttrArg) : Py (List Chain) :=
-  mapPy (fun a => match a with
-    | .str s | .strSub s _ => .ok (splitChars s)
-    | .other => .error (.typeError attrNameMsg)) args
+  mapPy nameC args
 
 /-- `attrgetter.__call__` in both twins: one name gives the value, more give the tuple, in order. -/
 def attrCall {α : Type} (ga : GetAttr α) (names : List Chain) (obj : α) : Py (Out α) :=
