@@ -2599,6 +2599,105 @@ class TextwrapArea:
         return common.py_result(body)
 
 
+@area("quopri", 4)
+class QuopriArea:
+    A = [b" ", b"\t", b"\r", b"\n", b"=", b".", b"_", b"a", b"\x00", b"\xff", b"\r\n", b"=\n", b"=41", b"=4", b"=g", b"~", b"\x7f", b"=ab", b"=AB", b"= \n"]
+
+    @classmethod
+    def data(cls, r):
+        k = r.random()
+        if k < 0.25:
+            return b"a" * r.choice([1, 70, 73, 74, 75, 76, 77, 78, 150, 151, 152, 153]) + b"".join(r.choice(cls.A) for _ in range(r.randint(0, 3)))
+        if k < 0.4:
+            return bytes(r.randrange(256) for _ in range(r.randint(0, 100)))
+        return b"".join(r.choice(cls.A) for _ in range(r.randint(0, 12)))
+
+    @classmethod
+    def gen(cls, r):
+        fn = r.choice(["encodestring", "decodestring", "py_encodestring", "py_decodestring", "encode_c", "decode_c", "encode_py", "decode_py",
+                       "helpers"])
+        c = {"mod": "textlibs", "fn": "quopri." + fn, "q": r.random() < 0.5, "h": r.random() < 0.5}
+        d = cls.data(r)
+        boom = {"raise": ["ValueError", "boom"]}
+        if fn == "helpers":
+            c["c"] = r.randrange(256)
+        elif fn.endswith("string"):
+            c["d"] = list(d)
+        elif fn.endswith("_c"):
+            c["rd"] = boom if r.random() < 0.15 else list(d)
+            c["writes"] = [r.choice([None, None, {"raise": ["OSError", "boom"]}]) for _ in range(r.choice([0, 0, 1]))]
+        else:
+            lines = [list(x) for x in d.splitlines(True) if b"\r" not in x[:-1]] if r.random() < 0.5 else [list(x) for x in cls.nlsplit(d)]
+            if r.random() < 0.2:
+                lines.insert(r.randint(0, len(lines)), boom)
+            if r.random() < 0.1:
+                lines.insert(r.randint(0, len(lines)), [])
+            c["lines"] = lines
+            c["writes"] = [r.choice([None, None, {"raise": ["OSError", "boom"]}]) for _ in range(r.choice([0, 0, 1, 2, 3]))]
+        return c
+
+    @staticmethod
+    def nlsplit(d):
+        return [x for x in __import__("re").findall(b"[^\n]*\n|[^\n]+", d)]
+
+    @classmethod
+    def run(cls, c):
+        import quopri
+        fn = c["fn"].split(".")[1]
+
+        class F:
+            def __init__(self):
+                self.written, self.i, self.w = [], 0, list(c.get("writes", []))
+
+            def read(self):
+                if isinstance(c["rd"], dict):
+                    raise ValueError("boom")
+                return bytes(c["rd"])
+
+            def readline(self):
+                if self.i >= len(c["lines"]):
+                    return b""
+                x = c["lines"][self.i]
+                self.i += 1
+                if isinstance(x, dict):
+                    raise ValueError("boom")
+                return bytes(x)
+
+            def write(self, b):
+                self.written.append(list(b))
+                if self.w:
+                    if self.w.pop(0) is not None:
+                        raise OSError("boom")
+
+        def body():
+            saved = quopri.a2b_qp, quopri.b2a_qp
+            if fn.endswith("_py") or fn.startswith("py_"):
+                quopri.a2b_qp = quopri.b2a_qp = None
+            try:
+                if fn == "helpers":
+                    b = bytes([c["c"]])
+                    x = quopri.ishex(b)
+                    return [1 if quopri.needsquoting(b, c["q"], c["h"]) else 0, 1 if x else 0] + list(quopri.quote(b)) + \
+                        ([quopri.unhex(b + b)] if x else [])
+                if fn in ("encodestring", "py_encodestring"):
+                    return list(quopri.encodestring(bytes(c["d"]), c["q"], c["h"]))
+                if fn in ("decodestring", "py_decodestring"):
+                    return list(quopri.decodestring(bytes(c["d"]), c["h"]))
+                f = F()
+                try:
+                    if fn.startswith("encode"):
+                        quopri.encode(f, f, c["q"], c["h"])
+                    else:
+                        quopri.decode(f, f, c["h"])
+                    res = {"ok": None}
+                except Exception as e:
+                    res = {"exc": type(e).__name__, "msg": str(e)}
+                return {"written": f.written, "res": res}
+            finally:
+                quopri.a2b_qp, quopri.b2a_qp = saved
+        return common.py_result(body)
+
+
 only = os.environ.get("TEXTLIBS_ONLY")
 names = [n for n in AREAS if not only or n in only.split(",")]
 weights = [AREAS[n][1] for n in names]

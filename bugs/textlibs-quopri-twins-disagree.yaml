@@ -1,0 +1,45 @@
+id: textlibs-quopri-twins-disagree
+title: "DUPLICATE of #62222 and #60677: quopri's pure-Python bodies differ from binascii"
+priority: P4
+kind: twin-disagreement
+module: textlibs
+files: [Lib/quopri.py, Modules/binascii.c]
+functions: ["encode", "decode", "encodestring", "decodestring"]
+summary: |
+  encodestring(b' ', header=True) is `=20` from binascii and `_` from the pure-Python body. For decoding,
+  binascii drops a final `=` that the pure-Python body keeps, and in 3.14 binascii keeps trailing
+  whitespace before a newline that the pure-Python body strips. The pure-Python bodies run only if
+  binascii cannot be imported, which no current build does.
+likelihood: |
+  Very low on CPython, since binascii is always there (#133896).
+maybe_intended: |
+  Not designed, but of no practical effect while the fallback is dead code.
+reproducer: |
+  import binascii, quopri
+  c1 = quopri.encodestring(b' ', False, True)
+  c2 = quopri.decodestring(b'=')
+  saved = quopri.a2b_qp, quopri.b2a_qp
+  quopri.a2b_qp = quopri.b2a_qp = None
+  p1 = quopri.encodestring(b' ', False, True)
+  p2 = quopri.decodestring(b'=')
+  quopri.a2b_qp, quopri.b2a_qp = saved
+  print(c1, p1, c2, p2)
+  if c1 == b'=20' and p1 == b'_' and c2 == b'' and p2 == b'=':
+      print('REPRODUCED textlibs-quopri-twins-disagree')
+expected: |
+  The same result from both bodies.
+observed: |
+  python3 3.14.7: b'=20' b'_' b'' b'='. REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED. Main has added strip_ws to decode and a2b_qp, and changed the
+  pure-Python body, so the trailing-whitespace difference is gone there.
+promised_by: |
+  Nothing explicit: the two bodies are meant to be interchangeable.
+cause: |
+  Lib/quopri.py:51-55 and :57-99 are separate implementations, as are :117-121 and :123-151.
+possible_fix: |
+  Remove the fallback, as #133896 proposes.
+duplicates: |
+  DUPLICATE of #62222 (open, with a table of these differences) and #60677 (open). #133896 (open) would
+  remove the fallback. Do not file. Queries: gh search issues --repo python/cpython quopri; a2b_qp;
+  gh api of the comments of #62222 and #60677.
+lean: lean/PyLean/TextLibs/QuopriProps.lean (EncodeTwin, DecodeTwin)

@@ -1,0 +1,39 @@
+id: textlibs-quopri-mixed-line-ends
+title: "DUPLICATE of #64320: b2a_qp rewrites line ends, so mixed text does not round-trip"
+priority: P4
+kind: wrong-result
+module: textlibs
+files: [Modules/binascii.c]
+functions: ["binascii_b2a_qp_impl"]
+summary: |
+  In text mode b2a_qp takes the kind of line end from the first line and writes every later line end
+  that way. `a2b_qp(b2a_qp(b'\\n\\r\\n'))` is `b'\\n\\n'`, and `b'\\r\\n\\n'` comes back as
+  `b'\\r\\n\\r\\n'`. With `istext=False`, or no `\\r\\n` in the data, the round trip is proven for all
+  bytes.
+likelihood: |
+  Moderate for binary data through the quopri codec, since quopri.encode has no istext argument.
+maybe_intended: |
+  Yes for text: the source comment says the first line decides. It matters for binary data.
+reproducer: |
+  import binascii, quopri
+  a = binascii.a2b_qp(binascii.b2a_qp(b'\n\r\n'))
+  b = quopri.decodestring(quopri.encodestring(b'\r\n\n'))
+  print(a, b)
+  if a == b'\n\n' and b == b'\r\n\r\n':
+      print('REPRODUCED textlibs-quopri-mixed-line-ends')
+expected: |
+  The data back, or a documented note that line ends are normalised.
+observed: |
+  python3 3.14.7: b'\n\n' b'\r\n\r\n'. REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED.
+promised_by: |
+  Nothing explicit. Doc/library/binascii.rst says only that with istext newlines are not encoded.
+cause: |
+  Modules/binascii.c:1094-1096 sets crlf from the first newline, and the line-end branch at
+  :1192-1208 writes that kind of line end for every later line.
+possible_fix: |
+  Document it, as #64320 asks, or give quopri.encode a way to pass istext=False.
+duplicates: |
+  DUPLICATE of #64320 (open), which has these exact examples. Do not file. Queries: gh search issues
+  --repo python/cpython quopri; a2b_qp; b2a_qp; "quoted-printable"; gh api of the comments of #64320.
+lean: lean/PyLean/TextLibs/QpProps.lean (QpRoundTrip; QpRoundTripNarrow is the proven version)

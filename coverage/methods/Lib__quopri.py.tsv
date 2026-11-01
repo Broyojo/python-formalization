@@ -1,10 +1,10 @@
 file	line	endline	name	signature	status	entry	note
-Lib/quopri.py	19	32	needsquoting	needsquoting(c, quotetabs, header)	todo		
-Lib/quopri.py	34	38	quote	quote(c)	todo		
-Lib/quopri.py	42	99	encode	encode(input, output, quotetabs, header=False)	todo		
-Lib/quopri.py	101	108	encodestring	encodestring(s, quotetabs=False, header=False)	todo		
-Lib/quopri.py	112	151	decode	decode(input, output, header=False)	todo		
-Lib/quopri.py	153	160	decodestring	decodestring(s, header=False)	todo		
-Lib/quopri.py	165	168	ishex	ishex(c)	todo		
-Lib/quopri.py	170	184	unhex	unhex(s)	todo		
+Lib/quopri.py	19	32	needsquoting	needsquoting(c, quotetabs, header)	modelled	textlibs-quopri-quote-set-twin,textlibs-quopri-encode-twin	
+Lib/quopri.py	34	38	quote	quote(c)	modelled	textlibs-quopri-quote-decodes,textlibs-quopri-encode-twin,textlibs-quopri-py-round-trip	
+Lib/quopri.py	42	99	encode	encode(input, output, quotetabs, header=False)	modelled	textlibs-quopri-file-round-trip,textlibs-quopri-file-failures,textlibs-quopri-encode-twin,textlibs-quopri-py-round-trip	
+Lib/quopri.py	101	108	encodestring	encodestring(s, quotetabs=False, header=False)	modelled	textlibs-quopri-file-round-trip,textlibs-quopri-encode-twin	
+Lib/quopri.py	112	151	decode	decode(input, output, header=False)	modelled	textlibs-quopri-file-round-trip,textlibs-quopri-file-failures,textlibs-quopri-decode-twin,textlibs-quopri-py-round-trip	
+Lib/quopri.py	153	160	decodestring	decodestring(s, header=False)	modelled	textlibs-quopri-file-round-trip,textlibs-quopri-decode-twin	
+Lib/quopri.py	165	168	ishex	ishex(c)	modelled	textlibs-quopri-quote-decodes	
+Lib/quopri.py	170	184	unhex	unhex(s)	modelled	textlibs-quopri-quote-decodes	
 Lib/quopri.py	188	230	main	main()	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

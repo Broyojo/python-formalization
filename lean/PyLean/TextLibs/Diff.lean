@@ -6,6 +6,7 @@ import PyLean.TextLibs.ReDiff
 import PyLean.TextLibs.PathDiff
 import PyLean.TextLibs.ShlexDiff
 import PyLean.TextLibs.TextwrapDiff
+import PyLean.TextLibs.QuopriDiff
 
 /-! Differential-testing handler for `textlibs` cases (`"mod": "textlibs"`).
 The function name's prefix (`struct.`, `binascii.`, ...) selects the sub-handler. -/
@@ -22,6 +23,7 @@ def run (fn : String) (j : Json) : Except String Json :=
   else if fn.startsWith "path." then Path.run fn j
   else if fn.startsWith "shlex." then Shlex.run fn j
   else if fn.startsWith "textwrap." then Textwrap.run fn j
+  else if fn.startsWith "quopri." then Quopri.run fn j
   else throw s!"unknown fn {fn}"
 
 def handler : Handler := fun fn j => some (run fn j)

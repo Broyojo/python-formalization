@@ -8,6 +8,7 @@ import PyLean.TextLibs.ReMisc
 import PyLean.TextLibs.PathProps
 import PyLean.TextLibs.ShlexProps
 import PyLean.TextLibs.TextwrapProps
+import PyLean.TextLibs.QuopriProps
 import PyLean.TextLibs.CsvSniffProps
 
 /-!
@@ -34,6 +35,7 @@ open PyLean.TextLibs.Re
 open PyLean.TextLibs.Path
 open PyLean.TextLibs.Textwrap
 open PyLean.TextLibs.Shlex
+open PyLean.TextLibs.Quopri
 
 /-- The integer routines `IntCodesRoundTrip` drives through `runPack` and `runUnpack`. -/
 def structIntFns : List String :=
@@ -1124,7 +1126,47 @@ def entries : List Entry := [
     statement := "Text that fits in width passes, whatever the placeholder."
     source := "docs: shorten", status := .refuted
     prop := ``FittingTextPasses, thm := some ``fittingTextPasses_refuted
-    bug := some "textlibs-textwrap-placeholder-check-first" }
+    bug := some "textlibs-textwrap-placeholder-check-first" },
+  { id := "textlibs-binascii-qp-round-trip", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_qp_impl", "binascii_b2a_qp_impl"]
+    statement := "a2b_qp(b2a_qp(d)) == d for all bytes and both of quotetabs and header, given istext=False or no CRLF in d."
+    source := "the implementation disagreeing with itself: round trip", status := .proven
+    prop := ``QpRoundTripNarrow, thm := some ``qpRoundTripNarrow_proven },
+  { id := "textlibs-binascii-qp-round-trip-broad", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_qp_impl", "binascii_b2a_qp_impl"]
+    statement := "a2b_qp(b2a_qp(d)) == d for all bytes."
+    source := "the implementation disagreeing with itself: round trip", status := .refuted
+    prop := ``QpRoundTrip, thm := some ``qpRoundTrip_refuted
+    bug := some "textlibs-quopri-mixed-line-ends" },
+  { id := "textlibs-quopri-file-round-trip", pyFile := "Lib/quopri.py", pyFns := ["encode", "decode", "encodestring", "decodestring"]
+    statement := "encode then decode on files gives one write each and the data back, for all bytes and flags, with no CRLF in the data."
+    source := "the implementation disagreeing with itself: round trip", status := .proven
+    prop := ``FileRoundTrip, thm := some ``fileRoundTrip_proven },
+  { id := "textlibs-quopri-file-failures", pyFile := "Lib/quopri.py", pyFns := ["encode", "decode"]
+    statement := "A read that raises passes through with nothing written; a write that raises passes through after that write."
+    source := "invariant", status := .proven
+    prop := ``FileFailures, thm := some ``fileFailures_proven },
+  { id := "textlibs-quopri-quote-set-twin", pyFile := "Lib/quopri.py", pyFns := ["needsquoting"]
+    statement := "In the middle of a line, needsquoting and b2a_qp quote the same bytes."
+    source := "the implementation disagreeing with itself: C and Python twins", status := .proven
+    prop := ``QuoteSetTwin, thm := some ``quoteSetTwin_proven },
+  { id := "textlibs-quopri-quote-decodes", pyFile := "Lib/quopri.py", pyFns := ["quote", "ishex", "unhex"]
+    statement := "The pure-Python decoder undoes quote, for every byte."
+    source := "the implementation disagreeing with itself: round trip", status := .proven
+    prop := ``QuoteDecodes, thm := some ``quoteDecodes_proven },
+  { id := "textlibs-quopri-encode-twin", pyFile := "Lib/quopri.py", pyFns := ["encode", "encodestring", "needsquoting", "quote"]
+    statement := "The two bodies of encodestring agree."
+    source := "the implementation disagreeing with itself: C and Python twins", status := .refuted
+    prop := ``EncodeTwin, thm := some ``encodeTwin_refuted
+    bug := some "textlibs-quopri-twins-disagree" },
+  { id := "textlibs-quopri-decode-twin", pyFile := "Lib/quopri.py", pyFns := ["decode", "decodestring"]
+    statement := "The two bodies of decodestring agree."
+    source := "the implementation disagreeing with itself: C and Python twins", status := .refuted
+    prop := ``DecodeTwin, thm := some ``decodeTwin_refuted
+    bug := some "textlibs-quopri-twins-disagree" },
+  { id := "textlibs-quopri-py-round-trip", pyFile := "Lib/quopri.py", pyFns := ["encode", "decode", "quote"]
+    statement := "The pure-Python body round-trips."
+    source := "the implementation disagreeing with itself: round trip", status := .refuted
+    prop := ``PyRoundTrip, thm := some ``pyRoundTrip_refuted
+    bug := some "textlibs-quopri-py-soft-break-escape" }
 ]
 
 end PyLean.TextLibs
