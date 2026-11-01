@@ -5,6 +5,7 @@ import PyLean.TypeObj.PropsBuffer
 import PyLean.TypeObj.PropsType2
 import PyLean.TypeObj.ExcProps
 import PyLean.TypeObj.PropsList
+import PyLean.TypeObj.PropsDict
 
 /-!
 The data model: `Objects/typeobject.c`, `Objects/object.c`, `Objects/abstract.c`,
@@ -843,6 +844,14 @@ def entries : List Entry := [
     "list.__init__ empties the list before it extends it."
     "listobject.c:3491-3497"
     ``ListInitClearsFirst ``listInitClearsFirst_proven,
+  p "typeobj-dict-lookup-other-hash" "Objects/dictobject.c" ["compare_generic", "dictkeys_generic_lookup"]
+    "A key that is no entry and shares no entry's hash is reported absent and no comparison runs, for every __eq__."
+    "dictobject.c:1107-1126"
+    ``DictProbeSkipsOtherHashes ``dictProbeSkipsOtherHashes_proven,
+  p "typeobj-dict-lookup-identity" "Objects/dictobject.c" ["compare_generic", "dictkeys_generic_lookup"]
+    "A key object already in the dict is found without running Python code when no earlier entry shares its hash."
+    "dictobject.c:1107"
+    ``DictProbeFindsIdentical ``dictProbeFindsIdentical_proven,
   p "typeobj-super-skips" ty ["_super_lookup_descr", "do_super_lookup", "super_getattro"]
     "super looks strictly after __thisclass__ in the MRO of the object's type."
     "docs: super"

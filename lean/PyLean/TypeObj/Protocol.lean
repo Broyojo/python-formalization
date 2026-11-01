@@ -14,6 +14,9 @@ protocols; the full semantics of those types belongs to the `LongObj`, `UnicodeO
 
 namespace PyLean.TypeObj
 
+/-- Loop bound for iteration. A model limit, not a Python one. -/
+def iterFuel : Nat := 100000
+
 /-! ## Truth and comparison -/
 
 /-- `PyObject_RichCompareBool`, `Objects/object.c:1119`. -/
@@ -107,19 +110,80 @@ def unicodeRichcompare (w : World) (a b : Val) (op : CmpOp) : Val :=
   | some x, some y => .bool (cmpInt (strCompare x.toList y.toList) 0 op)
   | _, _ => .notImpl
 
-/-- `dict_equal`, `Objects/dictobject.c`, for the value comparisons. -/
-def dictEqualLoop (rt : Rt) (bs : List (Val × Val)) : List (Val × Val) → M Bool
-  | [] => pure true
-  | (k, av) :: rest => do
-    match dictLookup bs k with
-    | none => pure false
-    | some bv =>
-      if ← richCompareBool rt bv av .eq then dictEqualLoop rt bs rest else pure false
+/-- The hash of a str. CPython randomises it per process, so only equality of hashes can be
+observed. This is FNV-1a over the code points, kept away from the small ints of ordinary code. -/
+def strHash (t : String) : Int :=
+  let h := t.toList.foldl (fun (acc : Nat) c => ((acc ^^^ c.toNat) * 1099511628211) % 2 ^ 64)
+    14695981039346656037
+  ((h % 2 ^ 61 : Nat) : Int) + 2 ^ 61
+
+/-- The entries of the dict at `a`. -/
+def dictEntries (w : World) (a : Addr) : List (Val × Val) :=
+  match (w.objAt a).body with
+  | .dict es => es
+  | _ => []
+
+/-- `me_hash` of key `k` of the dict at `a`. A key with no record was stored by a C path of the
+model, and is an exact str. -/
+def storedHash (w : World) (a : Addr) (k : Val) : Int :=
+  match (w.objAt a).keyHashes.find? (·.1.is k), k with
+  | some (_, h), _ => h
+  | none, .str t => strHash t
+  | none, _ => 0
+
+/-- `_Py_dict_lookup`, `Objects/dictobject.c:1248`, through `compare_generic`, `:1102`: identity,
+then the stored hash, then `PyObject_RichCompareBool(startkey, key, Py_EQ)`, and a restart when
+the entry changed under the comparison (`:1118`). `some i` is the index of the entry.
+
+The model has no hash table, so it visits entries in insertion order. Only entries of equal hash
+can be compared, and those share a probe sequence in the same order, unless a deletion left a slot
+that a later key reused. C deletes in place, so deleting another entry during the comparison
+leaves `ep->me_key` alone; the list here closes the gap, so the entry is found again by identity,
+and only its removal restarts. A resize during the comparison also restarts C
+(`dk != mp->ma_keys`), which the model cannot see. -/
+def dictProbe (rt : Rt) (a : Addr) (key : Val) (hash : Int) : Nat → Nat → M (Option Nat)
+  | 0, _ => raise .fuel
+  | fuel + 1, i => do
+    let w ← getW
+    match (dictEntries w a)[i]? with
+    | none => pure none
+    | some (k, _) =>
+      if k.is key then pure (some i)
+      else if storedHash w a k == hash then
+        let cmp ← richCompareBool rt k key .eq
+        let w ← getW
+        match (dictEntries w a).findIdx? (·.1.is k) with
+        | some j =>
+          if cmp then pure (some j) else dictProbe rt a key hash fuel (j + 1)
+        | none => dictProbe rt a key hash fuel 0
+      else dictProbe rt a key hash fuel (i + 1)
+
+/-- The loop of `dict_equal_lock_held`, `Objects/dictobject.c:4270`: for each entry of `a`, look
+its key up in `b` with the stored hash, then compare `aval` with `bval`. Both dicts are read again
+each time, because the comparisons can change them. -/
+def dictEqualLoop (rt : Rt) (a b : Addr) : Nat → Nat → M Bool
+  | 0, _ => raise .fuel
+  | fuel + 1, i => do
+    let w ← getW
+    match (dictEntries w a)[i]? with
+    | none => pure true
+    | some (k, aval) =>
+      match ← dictProbe rt b k (storedHash w a k) iterFuel 0 with
+      | none => pure false
+      | some j =>
+        let w ← getW
+        match (dictEntries w b)[j]? with
+        | none => pure false
+        | some (_, bval) =>
+          if ← richCompareBool rt aval bval .eq then dictEqualLoop rt a b fuel (i + 1)
+          else pure false
 
 /-- `dict_richcompare`, `Objects/dictobject.c:4332`. -/
-def dictRichcompare (rt : Rt) (a b : List (Val × Val)) (op : CmpOp) : M Val := do
+def dictRichcompare (rt : Rt) (a b : Addr) (op : CmpOp) : M Val := do
   if op == .eq || op == .ne then
-    let eq ← if a.length != b.length then pure false else dictEqualLoop rt b a
+    let w ← getW
+    let eq ← if (dictEntries w a).length != (dictEntries w b).length then pure false
+      else dictEqualLoop rt a b iterFuel 0
     pure (.bool (if op == .eq then eq else !eq))
   else pure .notImpl
 
@@ -155,9 +219,9 @@ def callRichcompareEq (rt : Rt) (f : SlotFn) (a b : Val) (op : CmpOp) : M Val :=
     let m ← proxyMapping a
     rt.richCompare m b op
   | .c .dict =>
-    match dictOf w a, dictOf w b with
-    | some x, some y => dictRichcompare rt x y op
-    | _, _ => pure .notImpl
+    match a, b, dictOf w a, dictOf w b with
+    | .obj x, .obj y, some _, some _ => dictRichcompare rt x y op
+    | _, _, _, _ => pure .notImpl
   | .c .float =>
     match a, b with
     | .float _, .float _ => gap%
@@ -266,6 +330,23 @@ def slotTpHash (rt : Rt) (self : Val) : M Int := do
     | none => typeErr "__hash__ method should return an integer"
     | some i => pure (hashOfInt i)
 
+/-- The loop of `tuple_hash`, `Objects/tupleobject.c:335-343`, over 64-bit unsigned values. -/
+def tupleHashLoop (rt : Rt) (acc : Nat) : List Val → M Nat
+  | [] => pure acc
+  | x :: xs => do
+    let h ← rt.hash x
+    let lane := (h % 2 ^ 64).toNat
+    let acc := (acc + lane * 14029467366897019727) % 2 ^ 64
+    let acc := ((acc <<< 31) % 2 ^ 64) ||| (acc >>> 33)
+    tupleHashLoop rt ((acc * 11400714785074694791) % 2 ^ 64) xs
+
+/-- `tuple_hash`, `Objects/tupleobject.c:323`. -/
+def tupleHash (rt : Rt) (xs : List Val) : M Int := do
+  let acc : Nat ← tupleHashLoop rt 2870177450012600261 xs
+  let acc : Nat := (acc + (xs.length ^^^ (2870177450012600261 ^^^ 3527539))) % 2 ^ 64
+  let acc : Nat := if acc == 2 ^ 64 - 1 then 1546275796 else acc
+  pure (if acc ≥ 2 ^ 63 then (acc : Int) - 2 ^ 64 else (acc : Int))
+
 /-- Call the `tp_hash` function `f`. -/
 def callHash (rt : Rt) (f : SlotFn) (v : Val) : M Int := do
   let w ← getW
@@ -292,11 +373,11 @@ def callHash (rt : Rt) (f : SlotFn) (v : Val) : M Int := do
     -- `mappingproxy_hash`, `Objects/descrobject.c:1204`.
     let m ← proxyMapping v
     rt.hash m
-  | .c .str => pure 0
+  | .c .str => pure (strHash ((strOf w v).getD ""))
   | .c .tuple =>
-    for x in ((tupleOf w v).getD []) do
-      let _ ← rt.hash x
-    pure 0
+    -- `tuple_hash`, `Objects/tupleobject.c:323`. C keeps the result in `ob_hash`, so a second
+    -- hash of one tuple does not call the items again; a tuple value here has no such place.
+    tupleHash rt ((tupleOf w v).getD [])
   | _ => gap%
 
 /-- `PyObject_Hash`, `Objects/object.c:1153`. -/
@@ -366,9 +447,6 @@ def reprList (rt : Rt) : List Val → M (List String)
     let r ← rt.repr x
     let rs ← reprList rt xs
     pure (r :: rs)
-
-/-- Loop bound for iteration. A model limit, not a Python one. -/
-def iterFuel : Nat := 100000
 
 /-- Remove the first entry that is `v`: the search of `Py_ReprLeave`, `Objects/object.c:3053`. -/
 def reprStackErase (v : Val) : List Val → List Val
@@ -942,8 +1020,8 @@ def intXor (a b : Int) : Int :=
 
 /-- Hash a dict key with `dict_unhashable_type`, `Objects/dictobject.c`: an unhashable
 key's `TypeError` is replaced. -/
-def dictHashKey (rt : Rt) (key : Val) : M Unit := do
-  let _ ← tryM (rt.hash key) fun e => do
+def dictHashKey (rt : Rt) (key : Val) : M Int := do
+  tryM (rt.hash key) fun e => do
     let w ← getW
     match e with
     | .exc c m v =>
@@ -965,20 +1043,53 @@ def raiseWithNote {α : Type} (rt : Rt) (e : PyErr) (note : String) : M α := do
     | .exc c m _ => .exc c m (some x)
     | e => e)
 
-/-- `setitem_lock_held` on the dict at `addr`: hash the key, then store. -/
-def dictSetAt (rt : Rt) (addr : Addr) (k v : Val) : M Unit := do
-  dictHashKey rt k
-  modObj addr fun o =>
-    match o.body with
-    | .dict es => { o with body := .dict (dictSetEntry es k v) }
-    | body => { o with body := body }
+/-- `insertdict`, `Objects/dictobject.c:1891`, with a known hash: an existing entry keeps its key
+and takes the value; otherwise the pair goes at the end with its hash recorded. -/
+def dictInsert (rt : Rt) (addr : Addr) (k : Val) (h : Int) (v : Val) : M Unit := do
+  match ← dictProbe rt addr k h iterFuel 0 with
+  | some i =>
+    modObj addr fun o =>
+      match o.body with
+      | .dict es => { o with body := .dict (es.modify i fun e => (e.1, v)) }
+      | body => { o with body := body }
+  | none =>
+    modObj addr fun o =>
+      match o.body with
+      | .dict es =>
+        { o with body := .dict (es ++ [(k, v)]), keyHashes := (k, h) :: o.keyHashes }
+      | body => { o with body := body }
 
-/-- `dict_dict_merge`: the entries of a dict with `dict_iter`, which runs no Python code. -/
-def dictMergeEntries (addr : Addr) (es : List (Val × Val)) : M Unit :=
-  modObj addr fun o =>
-    match o.body with
-    | .dict d => { o with body := .dict (es.foldl (fun d (k, v) => dictSetEntry d k v) d) }
-    | body => { o with body := body }
+/-- `setitem_lock_held` on the dict at `addr`: hash the key, then `insertdict`. -/
+def dictSetAt (rt : Rt) (addr : Addr) (k v : Val) : M Unit := do
+  let h ← dictHashKey rt k
+  dictInsert rt addr k h v
+
+/-- The loop of `dict_dict_merge`, `Objects/dictobject.c:3952`: `_PyDict_Next` over `other`, each
+pair through `insertdict` with its stored hash, which can run `__eq__`, and that can change
+`other`. -/
+def dictDictMergeLoop (rt : Rt) (addr other : Addr) (orig : Nat) : Nat → Nat → M Unit
+  | 0, _ => raise .fuel
+  | fuel + 1, i => do
+    let w ← getW
+    match (dictEntries w other)[i]? with
+    | none => pure ()
+    | some (k, v) =>
+      dictInsert rt addr k (storedHash w other k) v
+      let w ← getW
+      if (dictEntries w other).length != orig then runtimeErr "dict mutated during update"
+      dictDictMergeLoop rt addr other orig fuel (i + 1)
+
+/-- `dict_dict_merge`, `Objects/dictobject.c:3892`. An empty target takes a clone of the table,
+which C does only for a clean `other` (`:3909`); the model has no table to test that on, and the
+difference shows only for keys of equal hash. -/
+def dictDictMerge (rt : Rt) (addr other : Addr) : M Unit := do
+  let w ← getW
+  let es := dictEntries w other
+  if other == addr || es.isEmpty then pure ()
+  else if (dictEntries w addr).isEmpty then
+    let hashes := (w.objAt other).keyHashes
+    modObj addr fun o => { o with body := .dict es, keyHashes := hashes }
+  else dictDictMergeLoop rt addr other es.length iterFuel 0
 
 /-- `PySequence_Fast(v, "object is not iterable")`, `Objects/abstract.c`: an exact list or tuple
 is used as it is, and only a `TypeError` from `PyObject_GetIter` is replaced. -/
@@ -1025,37 +1136,46 @@ def dictMergeLoop (rt : Rt) (addr : Addr) (b it : Val) : Nat → M Unit
       dictSetAt rt addr k v
       dictMergeLoop rt addr b it fuel
 
+/-- `dict_merge`, `Objects/dictobject.c:3991`, with `override` 1. -/
+def dictMerge (rt : Rt) (addr : Addr) (x : Val) : M Unit := do
+  let w ← getW
+  match x, dictOf w x, slotOf w (typeOf w x) .tp_iter == some (.c .dict) with
+  | .obj other, some _, true => dictDictMerge rt addr other
+  | _, _, _ =>
+    -- `PyMapping_Keys`, then `method_output_as_list`, `Objects/abstract.c:2424`: an exact
+    -- list is returned as it is, so the loop below sees later changes to it.
+    let f ← rt.getAttr x "keys"
+    let out ← rt.call f [] []
+    let w ← getW
+    let keys ← if typeOf w out == B.list then pure out else do
+      let it ← tryM (rt.getIter out) fun e => do
+        let w ← getW
+        if excMatches w e B.TypeError then
+          typeErr s!"{trunc 200 (typeName w x)}.keys() returned a non-iterable (type {trunc 200 (typeName w out)})"
+        else raise e
+      let xs ← rt.listItems it
+      alloc B.list (.list xs)
+    let it ← rt.getIter keys
+    dictMergeLoop rt addr x it iterFuel
+
 /-- `dict_update_arg`, `Objects/dictobject.c:3735`, into the dict at `addr`, which `dict_or`,
 `dict_ior` and `dict_update_common` each supply. -/
 def dictUpdateArg (rt : Rt) (addr : Addr) (x : Val) : M Unit := do
   let w ← getW
-  if typeOf w x == B.dict then dictMergeEntries addr ((dictOf w x).getD [])
+  if typeOf w x == B.dict then dictMerge rt addr x
   else
     match ← rt.getOptionalAttr x "keys" with
-    | some _ =>
-      let w ← getW
-      -- `dict_merge`, `:4008`.
-      if (dictOf w x).isSome && slotOf w (typeOf w x) .tp_iter == some (.c .dict) then
-        dictMergeEntries addr ((dictOf w x).getD [])
-      else
-        -- `PyMapping_Keys`, then `method_output_as_list`, `Objects/abstract.c:2424`: an exact
-        -- list is returned as it is, so the loop below sees later changes to it.
-        let f ← rt.getAttr x "keys"
-        let out ← rt.call f [] []
-        let w ← getW
-        let keys ← if typeOf w out == B.list then pure out else do
-          let it ← tryM (rt.getIter out) fun e => do
-            let w ← getW
-            if excMatches w e B.TypeError then
-              typeErr s!"{trunc 200 (typeName w x)}.keys() returned a non-iterable (type {trunc 200 (typeName w out)})"
-            else raise e
-          let xs ← rt.listItems it
-          alloc B.list (.list xs)
-        let it ← rt.getIter keys
-        dictMergeLoop rt addr x it iterFuel
+    | some _ => dictMerge rt addr x
     | none =>
       let it ← rt.getIter x
       mergeSeq2Loop rt addr it iterFuel 0
+
+/-- `PyDict_Copy`, `Objects/dictobject.c:4228`: a fresh dict, filled by `dict_merge` when the type
+overrides `tp_iter` (`:4184`), so an override is seen. -/
+def dictCopy (rt : Rt) (x : Val) : M Addr := do
+  let d ← allocCell (.val { cls := B.dict, body := .dict [] })
+  dictMerge rt d x
+  pure d
 
 /-- `long_add`, `long_sub`, ... on values that passed `CHECK_BINOP`. -/
 def longBinary (s : Slot) (a b : Int) : M Val :=
@@ -1146,14 +1266,11 @@ def callNbBinary (rt : Rt) (s : Slot) (f : SlotFn) (a b : Val) : M Val := do
     -- `dict_or`, `Objects/dictobject.c`, through `dict_update_arg`: a non-exact dict is first
     -- asked for `keys`, then merged directly if it has `dict_iter`.
     match dictOf w a, dictOf w b with
-    | some x, some _ =>
+    | some _, some _ =>
       -- A failed update drops the copy, so its partial state cannot be seen.
-      let new ← alloc B.dict (.dict x)
-      match new with
-      | .obj addr =>
-        dictUpdateArg rt addr b
-        pure new
-      | _ => gap%
+      let addr ← dictCopy rt a
+      dictUpdateArg rt addr b
+      pure (.obj addr)
     | _, _ => pure .notImpl
   | _ => gap%
 
@@ -1675,12 +1792,26 @@ def callMpSubscript (rt : Rt) (f : SlotFn) (o key : Val) : M Val := do
   | .c .tuple => bySeq f "tuple"
   | .c .str => bySeq f "str"
   | .c .dict =>
-    dictHashKey rt key
-    match dictLookup ((dictOf w o).getD []) key with
+    -- `dict_subscript`, `Objects/dictobject.c:3505`.
+    let h ← dictHashKey rt key
+    let found ← match o with
+      | .obj a =>
+        match ← dictProbe rt a key h iterFuel 0 with
+        | some i =>
+          let w ← getW
+          pure (((dictEntries w a)[i]?).map (·.2))
+        | none => pure none
+      | _ => gap%
+    match found with
     | some v => pure v
     | none =>
-      let x ← alloc B.KeyError (.exc { args := [key] })
-      raise (.exc B.KeyError "" (some x))
+      let w ← getW
+      let missing ← if typeOf w o == B.dict then pure none else lookupSpecial rt o "__missing__"
+      match missing with
+      | some m => rt.call m [key] []
+      | none =>
+        let x ← alloc B.KeyError (.exc { args := [key] })
+        raise (.exc B.KeyError "" (some x))
   | .c .mappingproxy =>
     -- `mappingproxy_getitem`, `Objects/descrobject.c:1052`.
     let m ← proxyMapping o
@@ -1740,16 +1871,19 @@ def callAssSubscript (rt : Rt) (f : SlotFn) (o key : Val) (value : Option Val) :
     | none => let _ ← vectorcallMethod rt "__delitem__" [o, key]
     | some v => let _ ← vectorcallMethod rt "__setitem__" [o, key, v]
   | .c .dict =>
-    dictHashKey rt key
-    let w ← getW
-    let es := (dictOf w o).getD []
+    -- `dict_ass_sub`, `Objects/dictobject.c:3541`, then `insertdict` or `PyDict_DelItem`.
+    let h ← dictHashKey rt key
     match o with
     | .obj a =>
       match value with
-      | some v => modObj a fun ob => { ob with body := .dict (dictSetEntry es key v) }
+      | some v => dictInsert rt a key h v
       | none =>
-        match dictLookup es key with
-        | some _ => modObj a fun ob => { ob with body := .dict (dictDelEntry es key) }
+        match ← dictProbe rt a key h iterFuel 0 with
+        | some i =>
+          modObj a fun ob =>
+            match ob.body with
+            | .dict es => { ob with body := .dict (es.eraseIdx i) }
+            | body => { ob with body := body }
         | none =>
           let x ← alloc B.KeyError (.exc { args := [key] })
           raise (.exc B.KeyError "" (some x))
@@ -2059,9 +2193,11 @@ def callContains (rt : Rt) (f : SlotFn) (seq ob : Val) : M Bool := do
   | .c .tuple => anyEq rt ob ((tupleOf w seq).getD [])
   | .c .list => anyEq rt ob ((listOf w seq).getD [])
   | .c .dict =>
-    dictHashKey rt ob
-    let w ← getW
-    pure (dictLookup ((dictOf w seq).getD []) ob).isSome
+    -- `PyDict_Contains`, `Objects/dictobject.c:4837`.
+    let h ← dictHashKey rt ob
+    match seq with
+    | .obj a => pure (← dictProbe rt a ob h iterFuel 0).isSome
+    | _ => gap%
   | .c .mappingproxy =>
     -- `mappingproxy_contains`, `Objects/descrobject.c:1089`: `PyDict_Contains` on an exact
     -- dict is the `sq_contains` of that dict.
@@ -2070,10 +2206,9 @@ def callContains (rt : Rt) (f : SlotFn) (seq ob : Val) : M Bool := do
   | .c .dictKeys =>
     -- `dictkeys_contains`, `Objects/dictobject.c`: the dict's own table, never an override.
     match payloadOf w seq with
-    | some (.seqIter (some d) _) =>
-      dictHashKey rt ob
-      let w ← getW
-      pure (dictLookup ((dictOf w d).getD []) ob).isSome
+    | some (.seqIter (some (.obj d)) _) =>
+      let h ← dictHashKey rt ob
+      pure (← dictProbe rt d ob h iterFuel 0).isSome
     | _ => gap%
   | .c .str =>
     match strOf w ob with

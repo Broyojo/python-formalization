@@ -337,7 +337,8 @@ def dictInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
     match args with
     | [] => pure ()
     | x :: _ => dictUpdateArg rt a x
-    dictMergeEntries a (kw.map fun (k, v) => (Val.str k, v))
+    for (k, v) in kw do
+      dictInsert rt a (.str k) (strHash k) v
   | _ => gap%
 
 /-- `property_init_impl`, `Objects/descrobject.c:1837`, with the clinic argument

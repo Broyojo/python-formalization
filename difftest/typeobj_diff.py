@@ -1540,10 +1540,123 @@ def fam_dict_update(g):
     g.probe(name("d"))
 
 
+def fam_dict_lookup(g):
+    """dict lookup: __eq__ runs only on equal stored hashes, not on identity, and its result, its
+    exception and its changes to the dict all count."""
+    r = g.rng
+    mode = r.choice(["true", "false", "raise", "notimpl", "truthy", "falsy-raises", "clear", "other"])
+    eq = [["log", "K.__eq__"]]
+    if mode == "raise":
+        eq.append(["raise", call(name(r.choice(["ValueError", "TypeError", "KeyError"])), lit("q"))])
+    elif mode == "clear":
+        # Deletes an earlier entry: C leaves the entry under comparison where it is.
+        eq.append(["if", ["in", lit(51), name("target")],
+                   [["delitem", name("target"), lit(51)]], []])
+        eq.append(["ret", lit(False)])
+    elif mode == "other":
+        eq.append(["setitem", name("other"), lit(70), lit(1)])
+        eq.append(["ret", lit(False)])
+    else:
+        eq.append(["ret", {"true": lit(True), "false": lit(False), "notimpl": NOTIMPL,
+                           "truthy": lit("yes"), "falsy-raises": call(name("B"))}[mode]])
+    cls(g, "B", (), [g.method("__bool__", "B.__bool__", ["s"],
+                              [["log", "B.__bool__"], ["raise", call(name("ValueError"), lit("b"))]])])
+    cls(g, "K", (), [g.method("__hash__", "K.__hash__", ["s"],
+                              [["log", "K.__hash__"], ["ret", attr(name("s"), "h")]]),
+                     g.method("__eq__", "K.__eq__", ["s", "o"], eq),
+                     g.method("__repr__", "K.__repr__", ["s"], [["ret", lit("K")]])])
+    g.main.append(["assign", "target", ["dict", []]])
+    g.main.append(["assign", "other", ["dict", []]])
+
+    def key(v, h):
+        g.main.append(["assign", v, call(name("K"))])
+        g.main.append(["setattr", name(v), "h", lit(h)])
+
+    h = r.choice([1, 2, 7])
+    key("k1", h)
+    key("k2", h)
+    key("k3", r.choice([h, h + 1]))
+    if mode == "clear":
+        # 51 has a home slot of its own: reuse of a freed slot among keys of equal hash needs the
+        # real table, and the model visits such keys in insertion order (see `dictProbe`).
+        g.main.append(["setitem", name("target"), lit(51), lit(0)])
+    g.probes(["setitem", name("target"), name("k1"), lit("one")])
+    for e in [name("target"), ["in", name("k1"), name("target")], ["in", name("k2"), name("target")],
+              ["in", name("k3"), name("target")], ["sub", name("target"), name("k1")],
+              ["sub", name("target"), name("k2")], ["sub", name("target"), name("k3")],
+              ["in", lit(h), name("target")], ["sub", name("target"), lit(h)], name("target")]:
+        g.probe(e)
+    g.probes(["setitem", name("target"), name("k2"), lit("two")])
+    g.probe(name("target"))
+    g.probes(["setitem", name("target"), lit(h), lit("int")])
+    g.probe(name("target"))
+    g.probes(["delitem", name("target"), name("k3")])
+    g.probe(name("target"))
+    g.probes(["delitem", name("target"), name("k1")])
+    g.probe(name("target"))
+    # Numbers and strs that compare equal share a key, and the first key object stays.
+    for e in [["dict", [[lit(1), lit("a")], [lit(True), lit("b")]]],
+              ["dict", [[lit(True), lit("a")], [lit(1), lit("b")]]],
+              ["dict", [[lit(0), lit("a")], [lit(False), lit("b")], [lit(2), lit("c")]]],
+              ["in", lit(True), ["dict", [[lit(1), lit("a")]]]],
+              ["sub", ["dict", [[lit(1), lit("a")]]], lit(True)],
+              ["sub", ["dict", [[lit(-1), lit("a")]]], lit(-2)],
+              ["in", lit(-2), ["dict", [[lit(-1), lit("a")]]]],
+              ["sub", ["dict", [[lit(["bigint", str(2**61 - 1)]), lit("a")]]], lit(0)],
+              ["in", lit(2**31), ["dict", [[lit(2**31), lit("a")]]]],
+              ["sub", ["dict", [[["tuple", [lit(1), lit("a")]], lit(5)]]], ["tuple", [lit(1), lit("a")]]],
+              ["sub", ["dict", [[["tuple", [lit(True)]], lit(5)]]], ["tuple", [lit(1)]]],
+              ["dict", [[["list", []], lit(1)]]], ["sub", ["dict", []], ["list", []]],
+              ["in", ["dict", []], ["dict", []]],
+              ["dict", [[lit("a"), lit(1)], [lit("a"), lit(2)]]]]:
+        g.probe(e)
+    # str subclass keys: the stored key is what the comparison starts from.
+    cls(g, "S", ["str"], [g.method("__eq__", "S.__eq__", ["s", "o"], [["log", "S.__eq__"], ["ret", lit(True)]]),
+                          g.method("__hash__", "S.__hash__", ["s"], [["log", "S.__hash__"],
+                                                                     ["ret", call(name("hash"), lit("zz"))]])])
+    for e in [["sub", ["dict", [[call(name("S"), lit("x")), lit(1)]]], lit("zz")],
+              ["sub", ["dict", [[lit("zz"), lit(1)]]], call(name("S"), lit("x"))],
+              ["in", lit("x"), ["dict", [[call(name("S"), lit("x")), lit(1)]]]]]:
+        g.probe(e)
+    # __missing__ belongs to subclasses, looked up on the type.
+    miss = r.choice([[["ret", name("k")]], [["raise", call(name("ValueError"), name("k"))]]])
+    cls(g, "MD", ["dict"], [g.method("__missing__", "MD.__missing__", ["s", "k"],
+                                     [["log", "MD.__missing__"]] + miss)])
+    cls(g, "ND", ["dict"], None)
+    g.main.append(["assign", "md", call(name("MD"), ["dict", [[lit(1), lit(2)]]])])
+    g.main.append(["assign", "nd", call(name("ND"))])
+    g.main.append(["setattr", name("nd"), "__missing__", lit(1)])
+    for e in [["sub", name("md"), lit(1)], ["sub", name("md"), lit(9)], ["in", lit(9), name("md")],
+              ["sub", name("nd"), lit(9)]]:
+        g.probe(e)
+    # dict_equal compares aval with bval, after a lookup with the stored hash.
+    g.main.append(["assign", "x", ["dict", [[lit(1), call(name("K"))]]]])
+    g.main.append(["assign", "y", ["dict", [[lit(1), call(name("K"))]]]])
+    g.probe(["cmp", "==", name("x"), name("y")])
+    g.probe(["cmp", "!=", name("x"), name("y")])
+    g.probe(["cmp", "<", name("x"), name("y")])
+    g.probe(["cmp", "==", ["dict", [[name("k1"), lit(1)]]], ["dict", [[name("k2"), lit(1)]]]])
+    g.probe(["cmp", "==", ["dict", [[lit(1), lit(1)]]], ["dict", [[lit(True), lit(True)]]]])
+    g.probe(["cmp", "==", ["dict", [[lit(1), lit(1)]]], ["dict", [[lit(2), lit(1)]]]])
+    # A merge into a dict that holds something compares keys, and sees a change to the source.
+    g.main.append(["assign", "other", ["dict", [[name("k1"), lit(1)], [lit(3), lit(4)]]]])
+    g.main.append(["assign", "target", ["dict", [[name("k2"), lit(2)]]]])
+    g.probes(["aug", "target", "|", name("other")])
+    g.probe(name("target"))
+    g.probe(name("other"))
+    # tuple_hash, against real values.
+    for t in [(), (1,), (1, 2), (1, (2, 3)), (None,), (True, False), (-1,), (2**61 - 1, 2**64)]:
+        def tv(x):
+            if isinstance(x, tuple):
+                return ["tuple", [tv(i) for i in x]]
+            return lit(["bigint", str(x)]) if isinstance(x, int) and not isinstance(x, bool) and abs(x) > 2**31 else lit(x)
+        g.probe(["cmp", "==", call(name("hash"), tv(t)), lit(["bigint", str(hash(t))])])
+
+
 FAMILIES = [fam_calls, fam_property, fam_super, fam_mro, fam_class_stmt, fam_class_assign,
             fam_wrappers, fam_abstract, fam_type_attrs, fam_slot_updates, fam_descriptors,
             fam_iter_seq, fam_numbers, fam_list_extend, fam_repr, fam_descr_proto,
-            fam_dict_update]
+            fam_dict_update, fam_dict_lookup]
 
 
 def gen_case(rng):

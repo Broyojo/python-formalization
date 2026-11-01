@@ -369,6 +369,10 @@ structure Obj where
   /-- `__slots__` member values; an absent name is an unset slot. -/
   slotVals : NameDict := []
   body : Payload := .plain
+  /-- `me_hash` of the keys of a dict, recorded when each is stored; the first match counts. A key
+  stored by a C path of the model (attribute dicts, keyword arguments) is an exact str and is not
+  listed: see `storedHash`. -/
+  keyHashes : List (Val × Int) := []
 
 /-- A heap cell: an ordinary object or a type object. -/
 inductive Cell where

@@ -287,9 +287,16 @@ mutual
         let xs ← evalList env rt fr fuel es
         alloc B.list (.list xs)
       | .dictE es => do
-        let ks ← evalList env rt fr fuel (es.map (·.1))
-        let vs ← evalList env rt fr fuel (es.map (·.2))
-        alloc B.dict (.dict ((ks.zip vs).foldl (fun d (k, v) => dictSetEntry d k v) []))
+        -- `key, value, key, value`, then `BUILD_MAP`, which stores them in order.
+        let xs ← evalList env rt fr fuel (es.flatMap fun (k, v) => [k, v])
+        let d ← allocCell (.val { cls := B.dict, body := .dict [] })
+        let rec store : List Val → M Unit
+          | k :: v :: rest => do
+            dictSetAt rt d k v
+            store rest
+          | _ => pure ()
+        store xs
+        pure (.obj d)
       | .sub a k => do
         let x ← evalExpr env rt fr fuel a
         let y ← evalExpr env rt fr fuel k

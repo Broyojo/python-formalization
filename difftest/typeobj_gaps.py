@@ -179,6 +179,7 @@ def main():
     cats = collections.Counter()
     sites = collections.Counter()
     example = {}
+    attrs = collections.defaultdict(collections.Counter)
     bad = []
     crash = []
     for c, lo in zip(cases, res):
@@ -202,6 +203,7 @@ def main():
             s = m.group(1)
             sites[s] += 1
             cats["gap"] += 1
+            attrs[s][re.sub(r"^_probe\('p\d+', lambda: ", "", source(c).split("\n")[-1])[:60]] += 1
             example.setdefault(s, (source(c).split("\n")[-1], py[-1:]))
         else:
             cats["disagree"] += 1
@@ -217,7 +219,7 @@ def main():
     if args.out:
         with open(args.out, "w") as f:
             json.dump({"cats": cats, "sites": sites, "example": example, "bad": bad,
-                       "crash": crash, "known": known}, f, indent=0)
+                       "crash": crash, "known": known, "attrs": attrs}, f, indent=0)
     for k, src in crash[:40]:
         print("CRASH", k, src[:150])
 
