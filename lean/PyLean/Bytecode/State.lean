@@ -314,6 +314,17 @@ def BM.lift {α : Type} (m : BM α) : M α := fun s =>
 instance : MonadLift RM BM := ⟨RM.lift⟩
 instance : MonadLift BM M := ⟨BM.lift⟩
 
+/-- Two's-complement view of an `Int` in `w` bits. -/
+def twos (w : Nat) (i : Int) : Nat := (i % ((2 : Int) ^ w)).toNat
+/-- The inverse of `twos`, for `n < 2 ^ w`. -/
+def fromTwos (w n : Nat) : Int := if 2 ^ (w - 1) ≤ n then (n : Int) - (2 : Int) ^ w else n
+/-- A width that holds `a` and `b` and a sign bit. -/
+def bitWidth (a b : Int) : Nat := Nat.log2 (a.natAbs + b.natAbs + 1) + 3
+/-- `int.__and__`, `__or__`, `__xor__` on Python's infinite two's complement. -/
+def intAnd (a b : Int) : Int := let w := bitWidth a b; fromTwos w (twos w a &&& twos w b)
+def intOr (a b : Int) : Int := let w := bitWidth a b; fromTwos w (twos w a ||| twos w b)
+def intXor (a b : Int) : Int := let w := bitWidth a b; fromTwos w (twos w a ^^^ twos w b)
+
 /-- `Py_DEBUG`-only `assert` or bytecode no compiler emits. -/
 def fault {α : Type} {σ : Type} (msg : String) : EStateM Err σ α := throw (.fault msg)
 

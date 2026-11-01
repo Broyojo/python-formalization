@@ -225,7 +225,10 @@ def _SPECIALIZE_LOAD_SUPER_ATTR : M Unit := pure ()
 /-- `:2172`. -/
 def _LOAD_SUPER_ATTR (e : Env) : M Unit := stk 3 1 fun
   | [gs, c, slf] => do
-    let args := if e.oparg &&& 2 != 0 then [c, slf] else []
+    -- With `oparg & 2 == 0` C calls `super()` with no arguments, and
+    -- `super_init_without_args` reads `__class__` and the first local from the
+    -- frame: the same two values the compiler has put on the stack.
+    let args := if e.oparg &&& 2 != 0 || gs == .cls "super" then [c, slf] else []
     let sup ← e.om.call e.ctx gs args []
     let name ← getName e (e.oparg >>> 2)
     pure [← e.om.getAttr e.ctx sup name]
