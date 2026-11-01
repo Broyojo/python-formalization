@@ -1,0 +1,67 @@
+id: typeobj-super-uninitialized-get
+title: "super.__new__(super).__get__(1) segfaults: super_descr_get calls supercheck with su->type NULL, and supercheck reads type->tp_name for its error"
+priority: P2
+kind: crash
+module: typeobj
+files: [Objects/typeobject.c]
+functions: ["super_descr_get", "supercheck"]
+summary: |
+  `super` keeps its fields NULL until `super_init` runs, and `__new__` can be called on its
+  own. `super_getattro` and `super_repr` tolerate the NULL type, but `super_descr_get` does
+  not: when `su->obj` is NULL it calls `supercheck(su->type, obj)` (typeobject.c:12049).
+  `PyType_IsSubtype(x, NULL)` answers no without dereferencing, so `supercheck` falls through
+  to its error message, which reads `type->tp_name` (:12015).
+
+      s = super.__new__(super)
+      s.__get__(1)          # segfault
+
+  It also happens with no explicit `__get__`, because a `super` object is a descriptor:
+
+      class A:
+          s = super.__new__(super)
+      A().s                 # segfault
+
+  A subclass of `super` takes the other branch at :12042 and gets a clean
+  `RuntimeError: super(): no arguments`.
+likelihood: |
+  Low. It takes `__new__` without `__init__` on `super` itself, and then binding the object.
+  Nobody writes that deliberately; generic code calling `cls.__new__(cls)` could produce the
+  object, and `copy.copy` of one keeps it uninitialised, but no such use is known here.
+maybe_intended: |
+  No. Pure Python must not crash the interpreter, and the repr shows the state is expected to
+  exist: `<super: <class 'NULL'>, NULL>`.
+reproducer: |
+  import subprocess, sys
+  cases = ["super.__new__(super).__get__(1)",
+           "class A:\n    s = super.__new__(super)\nA().s"]
+  codes = [subprocess.run([sys.executable, '-c', c], capture_output=True).returncode
+           for c in cases]
+  print('return codes', codes)
+  if all(c < 0 for c in codes):
+      print('REPRODUCED typeobj-super-uninitialized-get')
+expected: |
+  A TypeError, or `self` returned unbound, as a super subclass gets a clean exception.
+observed: |
+  python3 3.14.7: both cases die with SIGSEGV (return code -11). REPRODUCED.
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): both cases SIGSEGV. REPRODUCED by
+  scripts/check_bugs.py.
+promised_by: |
+  Undisputed invariant: pure Python must not crash the interpreter.
+cause: |
+  Objects/typeobject.c:12038 tests `su->obj` but not `su->type`; :12049 passes the NULL on;
+  :12015 dereferences it. :12058 would also `Py_NewRef(su->type)` if control got that far.
+possible_fix: |
+  Treat a NULL `su->type` like an already-bound object at :12038 and return `self`, or raise
+  TypeError. Open PR #155379 addresses the dereference.
+duplicates:
+  issues:
+    - {number: 155376, state: open, relation: "duplicate: same crash, same cause, labelled type-crash, filed 2026-08-08"}
+  prs:
+    - {number: 155379, state: open, relation: "gh-155376: prevent supercheck NULL dereference"}
+  queries: ["super __new__ segfault", "uninitialized super object crash", "supercheck NULL",
+            "super_descr_get", "PR: supercheck", "bugforge-results/README.md: no match for super"]
+  searched_again: "2026-11-01, as separate words; multi-word entries in `queries` above were exact phrases, so their empty results are weak evidence"
+  queries_as_words: ["super uninitialized"]
+lean:
+  property: PyLean.TypeObj.SuperBindHasType
+  theorem: PyLean.TypeObj.superBindHasType_refuted

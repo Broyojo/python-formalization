@@ -1,0 +1,63 @@
+id: binary64-format-precision-near-int-max
+title: "Float formatting with a precision near INT_MAX wraps a C int and prints the wrong value"
+priority: P3
+kind: integer-overflow
+module: binary64
+files: [Python/pystrtod.c, Python/dtoa.c]
+functions: ["PyOS_double_to_string", "_Py_dg_dtoa"]
+summary: |
+  The format parsers accept any precision up to INT_MAX, and two C int computations wrap
+  on the way to the digits. In PyOS_double_to_string, 'e' does precision++, so INT_MAX
+  becomes INT_MIN and dtoa falls back to one digit: format(1.5, '.2147483647e') is
+  '2e+00'. In _Py_dg_dtoa mode 3, i = ndigits + k + 1 wraps once ndigits + k >= INT_MAX,
+  so ilim goes negative, no digits are produced, and format(123.456, '.2147483647f') is a
+  2 GiB string of zeros. Both are signed overflow, so undefined behaviour in C; the results
+  above are what the x86-64 build does.
+likelihood: |
+  Needs a precision within about 300 of INT_MAX. No sane program asks for that, but
+  templates and format specs can come from untrusted input. The memory-unsafe sibling of
+  this bug is what gh-158446 fixed.
+maybe_intended: |
+  No. gh-158446 fixed it upstream by rejecting these precisions, so this record only
+  documents that the Lean model refutes the 3.14.7 behaviour, independently of that report.
+reproducer: |
+  e = format(1.5, '.2147483647e')
+  print('e format ->', repr(e))
+  try:
+      f = format(123.456, '.2147483647f')
+  except (ValueError, MemoryError) as exc:
+      print('f format ->', repr(exc))
+      f = ''
+  print('f format ->', len(f), repr(f[:12]))
+  if e == '2e+00' and f.startswith('0.0000'):
+      print('REPRODUCED binary64-format-precision-near-int-max')
+expected: |
+  Either the correctly rounded digits (a 2 GiB string starting '1.5000' and '123.4560'), or
+  an exception. Never a different number.
+promised_by: |
+  Doc/library/string.rst, format codes 'e' and 'f': the precision is the number of digits
+  after the decimal point.
+cause: |
+  Python/pystrtod.c:1240 `precision++` on an int that may be INT_MAX.
+  Python/dtoa.c:2377 `i = ndigits + k + 1` in mode 3, with ndigits near INT_MAX.
+  Python/formatter_unicode.c:1165 and Objects/unicodeobject.c:15172 only reject values
+  above INT_MAX.
+possible_fix: |
+  Already done upstream by gh-158446: DOUBLE_TO_STRING_PRECISION_MAX in Python/pystrtod.c:411
+  and a clamp of ndigits in Python/dtoa.c:2385-2388 on main.
+tested: |
+  python3 3.14.7: REPRODUCED. main: not reproduced (the check added for gh-158446 raises
+  ValueError).
+duplicates:
+  issues:
+    - {number: 158446, state: closed, relation: duplicate (same root cause; that report is the memory-safety side of the same overflow), reason: completed, fixed by gh-158474 and backported in gh-158477}
+  related:
+    - {number: 135782, state: closed, relation: other overflow worry in dtoa.c (Balloc size), reason: not_planned (no way to reach it from Python)}
+  queries: ["dtoa integer overflow precision", "format float precision INT_MAX", "float format precision too big",
+            "repo:python/cpython is:issue precision format float overflow \"2147483647\"", "repo:python/cpython is:issue dtoa overflow"]
+  bugforge: "no dtoa or format-precision entry"
+lean:
+  property: PyLean.Binary64.EFormatDigitCount
+  theorem: PyLean.Binary64.eFormatDigitCount_refuted
+  also:
+    - {property: PyLean.Binary64.DtoaFixedKeepsIntegerPart, theorem: PyLean.Binary64.dtoaFixedKeepsIntegerPart_refuted}

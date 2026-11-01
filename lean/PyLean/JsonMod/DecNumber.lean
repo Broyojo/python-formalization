@@ -214,9 +214,9 @@ theorem numberRest_twin (cfg : DCfg) (s : PStr) (start a : Nat) (sign : PStr) (h
       cMatchNumber cfg s start =
       (if reFrac ((s.drop a).drop ip.length) ≠ [] ∨
           reExp (((s.drop a).drop ip.length).drop (reFrac ((s.drop a).drop ip.length)).length) ≠ [] then
-        .ok (.hook .float (sign ++ ip ++ reFrac ((s.drop a).drop ip.length) ++
-          reExp (((s.drop a).drop ip.length).drop (reFrac ((s.drop a).drop ip.length)).length)),
-          start + ((sign ++ ip).length + (reFrac ((s.drop a).drop ip.length)).length +
+        (cfg.parseFloat (sign ++ ip ++ reFrac ((s.drop a).drop ip.length) ++
+          reExp (((s.drop a).drop ip.length).drop (reFrac ((s.drop a).drop ip.length)).length))).map
+          (·, start + ((sign ++ ip).length + (reFrac ((s.drop a).drop ip.length)).length +
             (reExp (((s.drop a).drop ip.length).drop (reFrac ((s.drop a).drop ip.length)).length)).length))
        else (parseInt cfg (sign ++ ip)).map (·, start + ((sign ++ ip).length +
           (reFrac ((s.drop a).drop ip.length)).length +
@@ -270,7 +270,7 @@ theorem matchNumber_twin (cfg : DCfg) (s : PStr) (idx : Nat) (h : idx < s.length
     (numberRe (s.drop idx) = none ∧ cMatchNumber cfg s idx = .error (.stop idx)) ∨
     (∃ i fr ex, numberRe (s.drop idx) = some (i, fr, ex) ∧
       cMatchNumber cfg s idx =
-        (if fr ≠ [] ∨ ex ≠ [] then .ok (.hook .float (i ++ fr ++ ex), idx + (i.length + fr.length + ex.length))
+        (if fr ≠ [] ∨ ex ≠ [] then (cfg.parseFloat (i ++ fr ++ ex)).map (·, idx + (i.length + fr.length + ex.length))
          else (parseInt cfg i).map (·, idx + (i.length + fr.length + ex.length)))) := by
   have hd := drop_cons h
   rw [List.getD_eq_getElem?_getD] at hd

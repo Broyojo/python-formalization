@@ -78,7 +78,7 @@ Lib/argparse.py	1406	1408	Namespace.__init__	__init__(self, **kwargs)	todo
 Lib/argparse.py	1410	1413	Namespace.__eq__	__eq__(self, other)	todo		
 Lib/argparse.py	1415	1416	Namespace.__contains__	__contains__(self, key)	todo		
 Lib/argparse.py	1421	1469	_ActionsContainer.__init__	__init__(self, description, prefix_chars, argument_default, conflict_handler)	todo		
-Lib/argparse.py	1475	1477	_ActionsContainer.register	register(self, registry_name, value, object)	todo		
+Lib/argparse.py	1475	1477	_ActionsContainer.register	register(self, registry_name, value, object)	todo		candidates:calstat-statistics-kernels-centred
 Lib/argparse.py	1479	1480	_ActionsContainer._registry_get	_registry_get(self, registry_name, value, default=None)	todo		
 Lib/argparse.py	1486	1493	_ActionsContainer.set_defaults	set_defaults(self, **kwargs)	todo		
 Lib/argparse.py	1495	1499	_ActionsContainer.get_default	get_default(self, dest)	todo		

@@ -31,7 +31,7 @@ Lib/tracemalloc.py	215	218	Traceback.__eq__	__eq__(self, other)	todo
 Lib/tracemalloc.py	220	223	Traceback.__lt__	__lt__(self, other)	todo		
 Lib/tracemalloc.py	225	226	Traceback.__str__	__str__(self)	todo		
 Lib/tracemalloc.py	228	234	Traceback.__repr__	__repr__(self)	todo		
-Lib/tracemalloc.py	236	254	Traceback.format	format(self, limit=None, most_recent_first=False)	todo		
+Lib/tracemalloc.py	236	254	Traceback.format	format(self, limit=None, most_recent_first=False)	todo		candidates:calstat-calendar-formatstring-width
 Lib/tracemalloc.py	257	269	get_object_traceback	get_object_traceback(obj)	todo		
 Lib/tracemalloc.py	278	281	Trace.__init__	__init__(self, trace)	todo		
 Lib/tracemalloc.py	284	285	Trace.domain	domain(self)	todo		

@@ -1,0 +1,45 @@
+id: corelibs-statistics-correlation-out-of-range
+title: "statistics.correlation returns values outside [-1, 1] on exactly proportional data"
+priority: P4
+kind: wrong-result
+module: corelibs
+files: [Lib/statistics.py]
+functions: ["correlation", "_sqrtprod"]
+summary: |
+  For two points, which are always perfectly correlated, the function can return
+  -1.0000000000000002. In a random scan about 1.4% of proportional float inputs of length 2 to 6
+  land outside the range. Code that continues with `math.acos(r)` or `sqrt(1 - r*r)` then raises
+  ValueError.
+likelihood: |
+  Moderate on near-perfectly correlated data; the excess is one ulp.
+maybe_intended: |
+  Likely called float rounding. NumPy's corrcoef clips to [-1, 1] for this very reason, so a clamp is
+  an accepted answer. A maintainer may still decide the documentation sentence is about the
+  mathematical quantity (compare python/cpython#158786).
+reproducer: |
+  import statistics
+  x = [0.7954931175397417, -0.10543425671828932]
+  y = [-2.386479352619225, -0.10543425671828932]
+  r = statistics.correlation(x, y)
+  print(r)
+  if not -1.0 <= r <= 1.0:
+      print('REPRODUCED corelibs-statistics-correlation-out-of-range')
+expected: |
+  A value in [-1.0, 1.0].
+observed: |
+  python3 3.14.7: -1.0000000000000002. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): -1.0000000000000002. REPRODUCED.
+promised_by: |
+  statistics.py:690-691: "Pearson's correlation coefficient r takes values between -1 and +1."
+cause: |
+  Lib/statistics.py:736: `sxy / _sqrtprod(sxx, syy)` has no clamp, and each of the three float results
+  carries its own rounding.
+possible_fix: |
+  `max(-1.0, min(1.0, r))` on the result, after the NaN case.
+duplicates:
+  issues: []
+  queries: ["correlation greater than 1", "statistics.correlation rounding exceeds", "correlation -1.0000000000000002",
+            "statistics.correlation out of range", "bugforge README: statistics.correlation entries, none on the range"]
+lean:
+  property: PyLean.CoreLibs.CalStat.CorrelationBounded
+  theorem: PyLean.CoreLibs.CalStat.correlationBounded_refuted

@@ -1,6 +1,5 @@
 import PyLean.Pickle.EncProps
-import PyLean.Pickle.SaveLongProps
-import PyLean.Pickle.IntLineProps
+import PyLean.Pickle.Narrow
 
 /-!
 Simulation between the two picklers: from related states they make the same
@@ -542,9 +541,9 @@ theorem batchLen_ne_one (n i : Nat) (hi : i < n) (h : n % 1000 ≠ 1) : batchLen
 theorem batchLen_one : batchLen 1 0 = 1 := rfl
 
 mutual
-/-- Every int in `x` passes the C size check of `save_long`. -/
+/-- No int in `x` is `long4Edge`, the one int only the Python pickler encodes. -/
 def IntsOk : PV → Prop
-  | .int i => bitLength i.natAbs / 8 + 1 ≤ 0x7fffffff
+  | .int i => i ≠ long4Edge
   | .tuple _ xs | .list _ xs | .set _ xs | .frozenset _ xs => IntsOkList xs
   | .dict _ kvs => IntsOkPairs kvs
   | _ => True
@@ -615,9 +614,11 @@ theorem simSave (base : List Event) (p : Nat) (hp : p ≤ 5) :
     rw [pySave, cSave]
     exact sim_bind (sim_emit _ trivial) (by split <;> exact sim_wr _)
   | .int i, _, hi => by
-    rw [pySave, cSave, ← saveLongTwinsAgreeSized_proven p i hp hi]
-    exact sim_bind (sim_emit _ trivial) (sim_lift (by
-      cases cSaveLong p i <;> simp [SameOutcome]) (fun v => sim_wr v))
+    rw [pySave, cSave]
+    have hsame := saveLongSameOutcome_proven p i hp hi
+    refine sim_bind (sim_emit _ trivial) (sim_lift ?_ (fun v => sim_wr v))
+    cases ha : pySaveLong p i <;> cases hb : cSaveLong p i <;>
+      simp_all [SameOutcome]
   | .str o s, _, _ => by rw [pySave, cSave]; exact sim_strobj p o s
   | .bytes o b, _, _ => by rw [pySave, cSave]; exact sim_bytesobj p o b
   | .bytearray o b, _, _ => by rw [pySave, cSave]; exact sim_bytearrayobj p o b

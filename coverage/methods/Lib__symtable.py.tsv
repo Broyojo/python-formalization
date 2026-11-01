@@ -47,4 +47,4 @@ Lib/symtable.py	377	380	Symbol.is_comp_cell	is_comp_cell(self)	todo
 Lib/symtable.py	382	393	Symbol.is_namespace	is_namespace(self)	todo		
 Lib/symtable.py	395	397	Symbol.get_namespaces	get_namespaces(self)	todo		
 Lib/symtable.py	399	410	Symbol.get_namespace	get_namespace(self)	todo		
-Lib/symtable.py	419	446	main	main(args)	todo		
+Lib/symtable.py	419	446	main	main(args)	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

@@ -1,8 +1,8 @@
 file	line	endline	name	signature	status	entry	note
 Modules/_io/bytesio.c	47	54	check_closed	check_closed(bytesio *self)	todo		
 Modules/_io/bytesio.c	57	65	check_exports	check_exports(bytesio *self)	todo		
-Modules/_io/bytesio.c	84	89	set_shared_buf	set_shared_buf(bytesio *self)	todo		
-Modules/_io/bytesio.c	92	97	clear_shared_buf	clear_shared_buf(bytesio *self)	todo		
+Modules/_io/bytesio.c	84	89	set_shared_buf	set_shared_buf(bytesio *self)	excluded		platform: sets a field that exists only under Py_GIL_DISABLED; empty on the default build
+Modules/_io/bytesio.c	92	97	clear_shared_buf	clear_shared_buf(bytesio *self)	excluded		platform: sets a field that exists only under Py_GIL_DISABLED; empty on the default build
 Modules/_io/bytesio.c	100	115	resize_unshared_buffer_lock_held	resize_unshared_buffer_lock_held(bytesio *self, Py_ssize_t size)	todo		
 Modules/_io/bytesio.c	122	152	scan_eol_lock_held	scan_eol_lock_held(bytesio *self, Py_ssize_t len)	todo		
 Modules/_io/bytesio.c	158	174	unshare_buffer_lock_held	unshare_buffer_lock_held(bytesio *self, size_t size)	todo		
@@ -38,10 +38,10 @@ Modules/_io/bytesio.c	1048	1067	bytesio_new	bytesio_new(PyTypeObject *type, PyOb
 Modules/_io/bytesio.c	1078	1107	_io_BytesIO___init___impl	_io_BytesIO___init___impl(bytesio *self, PyObject *initvalue) /*[clinic end generated code: output=65c0c51e24c5b621 input=3da5a74ee4c4f1ac]*/	todo		
 Modules/_io/bytesio.c	1110	1124	bytesio_sizeof_lock_held	bytesio_sizeof_lock_held(PyObject *op)	todo		
 Modules/_io/bytesio.c	1127	1134	bytesio_sizeof	bytesio_sizeof(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
-Modules/_io/bytesio.c	1137	1144	bytesio_traverse	bytesio_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/_io/bytesio.c	1147	1155	bytesio_clear	bytesio_clear(PyObject *op)	todo		
+Modules/_io/bytesio.c	1137	1144	bytesio_traverse	bytesio_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal/clear of object references, no Python-visible result
+Modules/_io/bytesio.c	1147	1155	bytesio_clear	bytesio_clear(PyObject *op)	excluded		no-behaviour: GC traversal/clear of object references, no Python-visible result
 Modules/_io/bytesio.c	1229	1247	bytesiobuf_getbuffer_lock_held	bytesiobuf_getbuffer_lock_held(PyObject *op, Py_buffer *view, int flags)	todo		
 Modules/_io/bytesio.c	1250	1263	bytesiobuf_getbuffer	bytesiobuf_getbuffer(PyObject *op, Py_buffer *view, int flags)	todo		
 Modules/_io/bytesio.c	1266	1271	bytesiobuf_releasebuffer	bytesiobuf_releasebuffer(PyObject *op, Py_buffer *Py_UNUSED(view))	todo		
-Modules/_io/bytesio.c	1274	1280	bytesiobuf_traverse	bytesiobuf_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Modules/_io/bytesio.c	1283	1292	bytesiobuf_dealloc	bytesiobuf_dealloc(PyObject *op)	todo		
+Modules/_io/bytesio.c	1274	1280	bytesiobuf_traverse	bytesiobuf_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal/clear of object references, no Python-visible result
+Modules/_io/bytesio.c	1283	1292	bytesiobuf_dealloc	bytesiobuf_dealloc(PyObject *op)	excluded		no-behaviour: frees memory and drops references only; no finalizer, no output

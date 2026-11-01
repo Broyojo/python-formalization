@@ -1,6 +1,7 @@
 import PyLean.DiffCore
 import PyLean.Pickle.Enc
 import PyLean.Pickle.DecC
+import PyLean.Pickle.Tools
 
 /-!
 Differential-testing handler for `pickle` cases (`"mod": "pickle"`).
@@ -16,6 +17,15 @@ Differential-testing handler for `pickle` cases (`"mod": "pickle"`).
 `{"t": kind, "v": payload}`; set and frozenset elements are sorted by their
 compact JSON text, and a container reached again on the current path is
 `{"t": "rec", "v": depth}` (`difftest/pickle_diff.py` does the same).
+
+`pickletools` cases take `{"data": [bytes]}` and `tell`, false for a file
+without `tell`:
+
+* `genops` returns `[name, arg, pos, end_pos]` for each opcode.
+* `optimize` returns the optimized pickle.
+* `dis` also takes `indent`, `annotate` and `memo`, pairs of key and stack
+  object name. It returns the printed text, or the exception with that text
+  and a NUL before the message.
 -/
 
 namespace PyLean.Pickle
@@ -114,8 +124,46 @@ def dvJson (h : Heap) : Nat → List Nat → DV → Json
 def loadsJson (r : Py (DV × Heap)) : Json :=
   encPy (fun (v, h) => dvJson h 100000 [] v) r
 
+def tvJson : Option TV → Json
+  | none => Json.null
+  | some (.int i) => mk "int" (toJson (hexInt i))
+  | some (.bool b) => mk "bool" (toJson b)
+  | some (.bytes b) => mk "bytes" (bytesJson b)
+  | some (.bytearray b) => mk "bytearray" (bytesJson b)
+  | some (.str s) => mk "str" (toJson s)
+  | some (.float b) => mk "float" (bytesJson b)
+
+def genopJson (op : GenOp) : Json :=
+  Json.arr #[toJson op.info.name, tvJson op.arg, toJson op.pos, toJson op.endPos]
+
+/-- A `dis` outcome. A `~` message is not rendered, so its text is not compared. -/
+def disJson : String × Option PyExc → Json
+  | (out, none) => Json.mkObj [("ok", toJson out)]
+  | (out, some e) =>
+    if e.message.startsWith "~" then encPy (α := String) toJson (.error e)
+    else Json.mkObj [("exc", toJson e.className), ("msg", toJson (out ++ "\x00" ++ e.message))]
+
+/-- The `memo` dict of a `dis` case: a repeated key keeps the last value. -/
+def getMemoPairs (j : Json) : Except String (List (Int × String)) := do
+  let ps ← (← j.getArr?).toList.mapM fun p => do
+    match (← p.getArr?).toList with
+    | [k, n] => return ((← k.getInt?), (← n.getStr?))
+    | _ => throw "bad memo pair"
+  return ps.foldl (fun m kv => memoStore m kv.1 kv.2) []
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
+  | "genops" =>
+    let d ← getBytesArr (← field j "data")
+    let tell ← getBool j "tell"
+    return encPy (fun ops => Json.arr (ops.map genopJson).toArray) (genops tell d)
+  | "optimize" =>
+    return encPy bytesJson (optimize (← getBytesArr (← field j "data")))
+  | "dis" =>
+    let d ← getBytesArr (← field j "data")
+    let tell ← getBool j "tell"
+    let memo ← getMemoPairs (← field j "memo")
+    return disJson (dis tell d memo (← getNat j "indent") (← getNat j "annotate"))
   | "dumps" =>
     let isC := (← getStr j "impl") == "c"
     let x ← getPV (← field j "val")

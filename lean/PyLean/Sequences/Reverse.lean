@@ -1,4 +1,4 @@
-import PyLean.Sequences.Index
+import PyLean.Sequences.DequeOps
 
 /-!
 `deque.reverse()`: the two-cursor swap loop over the blocks reverses the items.
@@ -8,14 +8,18 @@ namespace PyLean.Sequences
 
 open PyLean
 
+set_option linter.unusedSectionVars false
+
+variable {α : Type} [Inhabited α]
+
 /-- The items after `k` swaps of the outermost pairs. -/
-def swapped (k : Nat) (l : List Int) : List Int :=
+def swapped (k : Nat) (l : List α) : List α :=
   (List.range l.length).map (fun j => if j < k ∨ l.length - k ≤ j then ix l (l.length - 1 - j : Nat) else ix l j)
 
-theorem length_swapped (k : Nat) (l : List Int) : (swapped k l).length = l.length := by
+theorem length_swapped (k : Nat) (l : List α) : (swapped k l).length = l.length := by
   simp [swapped]
 
-theorem swapped_zero (l : List Int) : swapped 0 l = l := by
+theorem swapped_zero (l : List α) : swapped 0 l = l := by
   apply List.ext_getElem?
   intro j
   unfold swapped
@@ -28,11 +32,7 @@ theorem swapped_zero (l : List Int) : swapped 0 l = l := by
     simp [List.getElem?_eq_getElem hj]
   · rw [List.getElem?_eq_none (by simp; omega), List.getElem?_eq_none (by omega)]; rfl
 
-theorem ix_eq_getElem (l : List Int) (j : Nat) (hj : j < l.length) : ix l j = l[j] := by
-  unfold ix; rw [List.getD_eq_getElem?_getD, show ((j : Int)).toNat = j by omega, List.getElem?_eq_getElem hj]
-  rfl
-
-theorem swapped_half (l : List Int) : swapped (l.length / 2) l = l.reverse := by
+theorem swapped_half (l : List α) : swapped (l.length / 2) l = l.reverse := by
   apply List.ext_getElem?
   intro j
   unfold swapped
@@ -43,11 +43,11 @@ theorem swapped_half (l : List Int) : swapped (l.length / 2) l = l.reverse := by
     rw [List.getElem?_eq_getElem (by omega)]
     congr 1
     split
-    · rw [ix_eq_getElem _ _ (by omega)]
-    · rw [ix_eq_getElem _ _ hj]; congr 1; omega
+    · rw [ix_getElem _ _ (by omega)]
+    · rw [ix_getElem _ _ hj]; congr 1; omega
   · rw [List.getElem?_eq_none (by simp; omega), List.getElem?_eq_none (by simp; omega)]; rfl
 
-theorem swapped_step (l : List Int) (k : Nat) (hk : k < l.length / 2) :
+theorem swapped_step (l : List α) (k : Nat) (hk : k < l.length / 2) :
     ((swapped k l).set k (ix (swapped k l) (l.length - 1 - k : Nat))).set (l.length - 1 - k)
       (ix (swapped k l) k) = swapped (k + 1) l := by
   have hn := length_swapped k l
@@ -92,7 +92,7 @@ theorem swapped_step (l : List Int) (k : Nat) (hk : k < l.length / 2) :
 
 namespace Deque
 
-theorem write_items (d : Deque) (b j v : Int) (d' : Deque) (h : d.write b j v = .ok d') :
+theorem write_items (d : Deque α) (b j : Int) (v : α) (d' : Deque α) (h : d.write b j v = .ok d') :
     d'.left = d.left ∧ d'.right = d.right ∧ d'.maxlen = d.maxlen ∧
       d'.items = d.items.set (b * 64 + j - d.left).toNat v := by
   unfold write at h
@@ -103,7 +103,7 @@ theorem write_items (d : Deque) (b j v : Int) (d' : Deque) (h : d.write b j v = 
     · simp only [Except.ok.injEq] at h; subst h; exact ⟨rfl, rfl, rfl, rfl⟩
     · exact nomatch h
 
-theorem reverseLoop_spec (l : List Int) : ∀ (m : Nat) (d : Deque) (k : Nat) (lb li rb ri : Int),
+theorem reverseLoop_spec (l : List α) : ∀ (m : Nat) (d : Deque α) (k : Nat) (lb li rb ri : Int),
     d.Layout → d.items = swapped k l → l.length = d.items.length →
     lb * 64 + li - d.left = k → 0 ≤ li → li < 64 →
     rb * 64 + ri - d.left = (l.length - 1 - k : Nat) → 0 ≤ ri → ri < 64 →
@@ -137,7 +137,7 @@ theorem reverseLoop_spec (l : List Int) : ∀ (m : Nat) (d : Deque) (k : Nat) (l
     have hst := swapped_step l k hk2
     rw [← hi] at hst
     obtain ⟨c1, c2, c3⟩ := step1_pos d lb li k hlp hl0 hl1
-    have hL2 : ({ d with items := ((d.items.set k (ix d.items ((l.length - 1 - k : Nat) : Int))).set (l.length - 1 - k) (ix d.items (k : Int))) } : Deque).Layout := by
+    have hL2 : ({ d with items := ((d.items.set k (ix d.items ((l.length - 1 - k : Nat) : Int))).set (l.length - 1 - k) (ix d.items (k : Int))) } : Deque α).Layout := by
       rw [layout_iff]; simp only [List.length_set]; exact h'
     obtain ⟨d', h3, h4, h5, h6, h7⟩ := ih _ (k + 1) (step1 lb li).1 (step1 lb li).2
       (if ri - 1 < 0 then (rb - 1, 64 - 1) else (rb, ri - 1)).1
@@ -154,11 +154,11 @@ for every deque with the layout invariant, the two-cursor swap loop over the
 blocks (`deque_reverse_impl`) only touches used slots and leaves exactly the
 reversed items, with the layout and `maxlen` unchanged. -/
 def DequeReverse : Prop :=
-  ∀ (d : Deque), d.WF → ∃ d', d.reverse = .ok d' ∧ d'.items = d.items.reverse ∧ d'.WF ∧
+  ∀ (α : Type) [Inhabited α] (d : Deque α), d.WF → ∃ d', d.reverse = .ok d' ∧ d'.items = d.items.reverse ∧ d'.WF ∧
     d'.maxlen = d.maxlen
 
 theorem dequeReverse_proven : DequeReverse := by
-  intro d h
+  intro α _ d h
   have h' := h.1
   rw [Deque.layout_iff] at h'
   unfold Deque.reverse

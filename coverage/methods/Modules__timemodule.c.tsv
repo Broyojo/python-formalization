@@ -14,13 +14,13 @@ Modules/timemodule.c	367	385	time_pthread_getcpuclockid	time_pthread_getcpuclock
 Modules/timemodule.c	394	412	time_sleep	time_sleep(PyObject *self, PyObject *timeout_obj)	todo		
 Modules/timemodule.c	508	524	parse_time_t_args	parse_time_t_args(PyObject *args, const char *format, time_t *pwhen)	todo		
 Modules/timemodule.c	527	545	time_gmtime	time_gmtime(PyObject *module, PyObject *args)	todo		
-Modules/timemodule.c	549	557	timegm	timegm(struct tm *p)	todo		
+Modules/timemodule.c	549	557	timegm	timegm(struct tm *p)	todo		candidates:calstat-calendar-timegm-ordinal,calstat-calendar-timegm-roundtrip
 Modules/timemodule.c	571	594	time_localtime	time_localtime(PyObject *module, PyObject *args)	todo		
 Modules/timemodule.c	611	672	gettmarg	gettmarg(time_module_state *state, PyObject *args, struct tm *p, const char *format)	todo		
 Modules/timemodule.c	679	742	checktm	checktm(struct tm* buf)	todo		
 Modules/timemodule.c	784	867	time_strftime1	time_strftime1(time_char **outbuf, size_t *bufsize, time_char *format, size_t fmtlen, struct tm *tm)	todo		
 Modules/timemodule.c	870	976	time_strftime	time_strftime(PyObject *module, PyObject *args)	todo		
-Modules/timemodule.c	990	1002	time_strptime	time_strptime(PyObject *self, PyObject *args)	todo		
+Modules/timemodule.c	990	1002	time_strptime	time_strptime(PyObject *self, PyObject *args)	todo		candidates:strptime-methods
 Modules/timemodule.c	1014	1032	_asctime	_asctime(struct tm *timeptr)	todo		
 Modules/timemodule.c	1035	1056	time_asctime	time_asctime(PyObject *module, PyObject *args)	todo		
 Modules/timemodule.c	1066	1075	time_ctime	time_ctime(PyObject *self, PyObject *args)	todo		

@@ -20,10 +20,10 @@ Lib/ctypes/__init__.py	417	433	CDLL.__init__	__init__(self, name, mode=DEFAULT_M
 Lib/ctypes/__init__.py	436	451	CDLL._load_library	_load_library(self, name, mode, handle, winmode)	todo		
 Lib/ctypes/__init__.py	454	475	CDLL._load_library	_load_library(self, name, mode, handle, winmode)	todo		
 Lib/ctypes/__init__.py	477	481	CDLL.__repr__	__repr__(self)	todo		
-Lib/ctypes/__init__.py	483	488	CDLL.__getattr__	__getattr__(self, name)	todo		
+Lib/ctypes/__init__.py	483	488	CDLL.__getattr__	__getattr__(self, name)	todo		candidates:calstat-calendar-module-getattr
 Lib/ctypes/__init__.py	490	494	CDLL.__getitem__	__getitem__(self, name_or_ordinal)	todo		
 Lib/ctypes/__init__.py	537	538	LibraryLoader.__init__	__init__(self, dlltype)	todo		
-Lib/ctypes/__init__.py	540	548	LibraryLoader.__getattr__	__getattr__(self, name)	todo		
+Lib/ctypes/__init__.py	540	548	LibraryLoader.__getattr__	__getattr__(self, name)	todo		candidates:calstat-calendar-module-getattr
 Lib/ctypes/__init__.py	550	551	LibraryLoader.__getitem__	__getitem__(self, name)	todo		
 Lib/ctypes/__init__.py	553	554	LibraryLoader.LoadLibrary	LoadLibrary(self, name)	todo		
 Lib/ctypes/__init__.py	577	582	WinError	WinError(code=None, descr=None)	todo		

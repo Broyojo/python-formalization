@@ -1,0 +1,80 @@
+id: pickle-tools-noescape-decodes-escapes
+title: "pickletools: read_stringnl_noescape undoes escapes, so GLOBAL and PERSID arguments differ from what pickle reads, and valid pickles are rejected"
+priority: P4
+kind: twin-mismatch
+module: pickle
+files: [Lib/pickletools.py, Lib/pickle.py, Modules/_pickle.c]
+functions: [read_stringnl_noescape, read_stringnl_noescape_pair, read_stringnl, _genops, genops, optimize, dis]
+summary: |
+  `read_stringnl_noescape` calls `read_stringnl(f, stripquotes=False, encoding='utf-8')`, which leaves
+  `decode=True`, so `codecs.escape_decode` runs on the line. The descriptor says "without embedded
+  escapes", and both unpicklers read these lines verbatim.
+
+  A persistent id ending in a backslash pickles and unpickles at protocol 0 in both twins, yet
+  `pickletools.genops`, `dis` and `optimize` raise ValueError "Trailing \ in string" on it. `pid\x` raises
+  "invalid \x escape". `pid\x41` parses, but `genops` reports `pidA` where the unpicklers see `pid\x41`
+  (and `\n` a newline). GLOBAL's module and name go through the same reader.
+likelihood: |
+  Needs a backslash in a protocol 0 persistent id, or in a GLOBAL module or name. Uncommon, but such
+  ids are legal and the pickles are produced by the stock picklers. Only the tool is affected:
+  loading works.
+maybe_intended: |
+  Unlikely. The function name and the descriptor doc both say no escapes. Serhiy Storchaka ruled in
+  python/cpython#126997 and #127045 that pickletools being more lenient than pickle is not a problem,
+  but listed the opposite direction, pickletools not supporting input pickle accepts, among the "real
+  bugs" of #126997 and fixed those in #127062. The rejection here is that direction.
+  python/cpython#154848 discusses scanners that rely on pickletools; no bypass is claimed or shown here.
+reproducer: |
+  import io, pickle, pickletools
+  class P(pickle.Pickler):
+      def persistent_id(self, obj):
+          return obj if isinstance(obj, str) and obj.startswith('pid') else None
+  class U(pickle.Unpickler):
+      def persistent_load(self, pid):
+          return ('loaded', pid)
+  class PyU(pickle._Unpickler):
+      def persistent_load(self, pid):
+          return ('loaded', pid)
+  def dump(pid):
+      f = io.BytesIO()
+      P(f, 0).dump(pid)
+      return f.getvalue()
+  s = dump('pid\\')
+  ok = U(io.BytesIO(s)).load() == PyU(io.BytesIO(s)).load() == ('loaded', 'pid\\')
+  try:
+      list(pickletools.genops(s))
+      rejected = False
+  except ValueError as e:
+      print('genops', e)
+      rejected = True
+  t = dump('pid\\x41')
+  shown = [a for _, a, _ in pickletools.genops(t)][0]
+  loaded = U(io.BytesIO(t)).load()[1]
+  print('stream', t, 'pickletools', shown, 'unpickler', loaded)
+  if ok and rejected and shown == 'pidA' and loaded == 'pid\\x41':
+      print('REPRODUCED pickle-tools-noescape-decodes-escapes')
+expected: |
+  `genops` reports the argument the unpicklers read, and accepts every stream they accept.
+observed: |
+  python3 3.14.7: REPRODUCED.
+  main (python.exe 3.16.0a1+dev): REPRODUCED. Lib/pickletools.py:374-375 there is unchanged.
+promised_by: |
+  The `stringnl_noescape` descriptor, Lib/pickletools.py:375-384: "without embedded escapes". Twin
+  relation with `load_persid` (Lib/pickle.py:1350-1358, `.decode("ascii")`) and `load_global`
+  (Lib/pickle.py:1633-1637, `.decode("utf-8")`).
+cause: |
+  Lib/pickletools.py:372-373 does not pass `decode=False`, and Lib/pickletools.py:358-359 runs
+  `codecs.escape_decode` on the line. `read_stringnl_noescape_pair` (:386-393) inherits it.
+possible_fix: |
+  Decode without escape processing: read the line with `decode=False, stripquotes=False` and call
+  `.decode('utf-8')`. The doctest at :389 has no backslashes, so it keeps passing.
+duplicates:
+  issues:
+    - {number: 126997, state: closed, relation: related, reason: "same reader, non-ASCII arguments only; fixed by #127062, which did not touch escapes"}
+    - {number: 127045, state: closed, relation: related, reason: "states the maintainers' position on leniency, the opposite direction"}
+    - {number: 154848, state: open, relation: related, reason: "pickletools vs C unpickler divergence, about FRAME"}
+  queries: ["pickletools", "pickletools dis IndexError", "read_stringnl_noescape", "persistent id backslash pickle protocol 0", "pickletools int_max_str_digits", "pickletools genops escape"]
+  bugforge: "no pickletools entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Pickle.NoescapeVerbatim
+  theorem: PyLean.Pickle.noescapeVerbatim_refuted

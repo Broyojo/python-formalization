@@ -31,7 +31,7 @@ Lib/codecs.py	376	381	StreamWriter.write	write(self, object)	todo		candidates:py
 Lib/codecs.py	383	388	StreamWriter.writelines	writelines(self, list)	todo		
 Lib/codecs.py	390	400	StreamWriter.reset	reset(self)	todo		
 Lib/codecs.py	402	405	StreamWriter.seek	seek(self, offset, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
-Lib/codecs.py	407	412	StreamWriter.__getattr__	__getattr__(self, name, getattr=getattr)	todo		
+Lib/codecs.py	407	412	StreamWriter.__getattr__	__getattr__(self, name, getattr=getattr)	todo		candidates:calstat-calendar-module-getattr
 Lib/codecs.py	414	415	StreamWriter.__enter__	__enter__(self)	todo		
 Lib/codecs.py	417	418	StreamWriter.__exit__	__exit__(self, type, value, tb)	todo		
 Lib/codecs.py	420	421	StreamWriter.__reduce_ex__	__reduce_ex__(self, proto)	todo		
@@ -44,7 +44,7 @@ Lib/codecs.py	627	638	StreamReader.reset	reset(self)	todo
 Lib/codecs.py	640	646	StreamReader.seek	seek(self, offset, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
 Lib/codecs.py	648	654	StreamReader.__next__	__next__(self)	todo		
 Lib/codecs.py	656	657	StreamReader.__iter__	__iter__(self)	todo		
-Lib/codecs.py	659	664	StreamReader.__getattr__	__getattr__(self, name, getattr=getattr)	todo		
+Lib/codecs.py	659	664	StreamReader.__getattr__	__getattr__(self, name, getattr=getattr)	todo		candidates:calstat-calendar-module-getattr
 Lib/codecs.py	666	667	StreamReader.__enter__	__enter__(self)	todo		
 Lib/codecs.py	669	670	StreamReader.__exit__	__exit__(self, type, value, tb)	todo		
 Lib/codecs.py	672	673	StreamReader.__reduce_ex__	__reduce_ex__(self, proto)	todo		
@@ -58,7 +58,7 @@ Lib/codecs.py	728	730	StreamReaderWriter.write	write(self, data)	todo		candidate
 Lib/codecs.py	732	734	StreamReaderWriter.writelines	writelines(self, list)	todo		
 Lib/codecs.py	736	739	StreamReaderWriter.reset	reset(self)	todo		
 Lib/codecs.py	741	745	StreamReaderWriter.seek	seek(self, offset, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
-Lib/codecs.py	747	752	StreamReaderWriter.__getattr__	__getattr__(self, name, getattr=getattr)	todo		
+Lib/codecs.py	747	752	StreamReaderWriter.__getattr__	__getattr__(self, name, getattr=getattr)	todo		candidates:calstat-calendar-module-getattr
 Lib/codecs.py	756	757	StreamReaderWriter.__enter__	__enter__(self)	todo		
 Lib/codecs.py	759	760	StreamReaderWriter.__exit__	__exit__(self, type, value, tb)	todo		
 Lib/codecs.py	762	763	StreamReaderWriter.__reduce_ex__	__reduce_ex__(self, proto)	todo		
@@ -72,7 +72,7 @@ Lib/codecs.py	846	849	StreamRecoder.write	write(self, data)	todo		candidates:pyi
 Lib/codecs.py	851	855	StreamRecoder.writelines	writelines(self, list)	todo		
 Lib/codecs.py	857	860	StreamRecoder.reset	reset(self)	todo		
 Lib/codecs.py	862	866	StreamRecoder.seek	seek(self, offset, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
-Lib/codecs.py	868	873	StreamRecoder.__getattr__	__getattr__(self, name, getattr=getattr)	todo		
+Lib/codecs.py	868	873	StreamRecoder.__getattr__	__getattr__(self, name, getattr=getattr)	todo		candidates:calstat-calendar-module-getattr
 Lib/codecs.py	875	876	StreamRecoder.__enter__	__enter__(self)	todo		
 Lib/codecs.py	878	879	StreamRecoder.__exit__	__exit__(self, type, value, tb)	todo		
 Lib/codecs.py	881	882	StreamRecoder.__reduce_ex__	__reduce_ex__(self, proto)	todo		

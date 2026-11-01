@@ -1,0 +1,69 @@
+id: typeobj-property-subclass-doc-lost
+title: "property subclass: .setter/.getter/.deleter drop an explicit doc=, because property_copy reads prop_doc, which __init__ leaves NULL for subclasses"
+priority: P3
+kind: self-inconsistency
+module: typeobj
+files: [Objects/descrobject.c]
+functions: ["property_copy", "property_init_impl"]
+summary: |
+  `property_init_impl` stores the docstring in `prop_doc` only for exact `property`. For a
+  subclass it stores it in the instance `__dict__` instead (descrobject.c:1878-1909), so that
+  it is not shadowed by `__doc__` in the class dict, and `prop_doc` stays NULL.
+  `property_copy`, used by `.getter`, `.setter` and `.deleter`, still takes the doc from
+  `pold->prop_doc` (:1785), passes None, and the new object has no docstring:
+
+      class P(property): pass
+      p = P(None, None, None, "doc")
+      p.__doc__                                # 'doc'
+      p.setter(lambda self, v: None).__doc__   # None
+      property(None, None, None, "doc").setter(lambda self, v: None).__doc__   # 'doc'
+
+  The common `@P def x(self): "doc"` decorator form keeps its docstring because `getter_doc`
+  is set and the new object re-reads it from the getter. The loss needs an explicit `doc=`.
+likelihood: |
+  Low to moderate. Any property subclass (cached_property-style helpers, ORMs, validators)
+  that passes `doc=` and is then used with `@x.setter`. The result is a silently missing
+  docstring in help() and in documentation tools, no error.
+maybe_intended: |
+  No. property_init_impl's comment shows the dict storage exists to keep the doc visible on
+  subclasses; property_copy predates it and was not updated. The exact type and the subclass
+  behave differently for no stated reason.
+reproducer: |
+  class P(property):
+      pass
+  def setter(self, value):
+      pass
+  plain = property(None, None, None, "doc")
+  sub = P(None, None, None, "doc")
+  print(plain.__doc__, plain.setter(setter).__doc__)
+  print(sub.__doc__, sub.setter(setter).__doc__)
+  if (sub.__doc__ == "doc" and plain.setter(setter).__doc__ == "doc"
+          and sub.setter(setter).__doc__ is None):
+      print('REPRODUCED typeobj-property-subclass-doc-lost')
+expected: |
+  `p.setter(f).__doc__ == p.__doc__` for an explicit docstring, for property and for its
+  subclasses.
+observed: |
+  python3 3.14.7: doc doc / doc None. REPRODUCED.
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED by scripts/check_bugs.py.
+promised_by: |
+  The twin behaviour of exact `property`; Doc/library/functions.rst, property: the returned
+  property object "has an attribute ... a copy of the property with ..." the accessor changed.
+cause: |
+  Objects/descrobject.c:1785 reads `pold->prop_doc`; :1878-1909 leaves it NULL for
+  subclasses and writes `__doc__` through PyObject_SetAttr.
+possible_fix: |
+  In property_copy, for a subclass read `__doc__` from the object with
+  PyObject_GetOptionalAttr when `getter_doc` is false, or keep prop_doc set for subclasses
+  as well and use the attribute only as a mirror.
+duplicates:
+  issues: []
+  queries: ["property subclass doc setter", "property subclass __doc__ lost getter"]
+  bugforge: "no match"
+  searched_again: "2026-11-01, as separate words; multi-word entries in `queries` above were exact phrases, so their empty results are weak evidence"
+  queries_as_words: ["property subclass doc setter", "property subclass __doc__ lost", "property getter setter docstring subclass", "property_copy doc"]
+  related:
+    - {number: 50140, state: closed, relation: "related, not a duplicate: 2009 fix for the auto __doc__ of property subclasses, the code path this finding sits on"}
+lean:
+  property: PyLean.TypeObj.PropertyCopyKeepsDoc
+  theorem: PyLean.TypeObj.propertyCopyKeepsDoc_refuted

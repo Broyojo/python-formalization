@@ -1,6 +1,6 @@
 file	line	endline	name	signature	status	entry	note
 Lib/tabnanny.py	30	36	errprint	errprint(*args)	todo		
-Lib/tabnanny.py	38	54	main	main()	todo		
+Lib/tabnanny.py	38	54	main	main()	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output
 Lib/tabnanny.py	61	62	NannyNag.__init__	__init__(self, lineno, msg, line)	todo		
 Lib/tabnanny.py	63	64	NannyNag.get_lineno	get_lineno(self)	todo		
 Lib/tabnanny.py	65	66	NannyNag.get_msg	get_msg(self)	todo		

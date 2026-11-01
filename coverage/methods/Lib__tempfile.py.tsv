@@ -25,7 +25,7 @@ Lib/tempfile.py	471	478	_TemporaryFileCloser.close	close(self)	todo
 Lib/tempfile.py	480	484	_TemporaryFileCloser.__del__	__del__(self)	todo		
 Lib/tempfile.py	495	504	_TemporaryFileWrapper.__init__	__init__(self, file, name, delete=True, delete_on_close=True)	todo		
 Lib/tempfile.py	506	508	_TemporaryFileWrapper.__repr__	__repr__(self)	todo		
-Lib/tempfile.py	510	527	_TemporaryFileWrapper.__getattr__	__getattr__(self, name)	todo		
+Lib/tempfile.py	510	527	_TemporaryFileWrapper.__getattr__	__getattr__(self, name)	todo		candidates:calstat-calendar-module-getattr
 Lib/tempfile.py	531	533	_TemporaryFileWrapper.__enter__	__enter__(self)	todo		
 Lib/tempfile.py	537	540	_TemporaryFileWrapper.__exit__	__exit__(self, exc, value, tb)	todo		
 Lib/tempfile.py	542	546	_TemporaryFileWrapper.close	close(self)	todo		
@@ -46,7 +46,7 @@ Lib/tempfile.py	793	794	SpooledTemporaryFile.errors	errors(self)	todo
 Lib/tempfile.py	796	798	SpooledTemporaryFile.fileno	fileno(self)	todo		
 Lib/tempfile.py	800	801	SpooledTemporaryFile.flush	flush(self)	todo		
 Lib/tempfile.py	803	804	SpooledTemporaryFile.isatty	isatty(self)	todo		
-Lib/tempfile.py	807	811	SpooledTemporaryFile.mode	mode(self)	todo		
+Lib/tempfile.py	807	811	SpooledTemporaryFile.mode	mode(self)	todo		candidates:calstat-statistics-mode-spec
 Lib/tempfile.py	814	818	SpooledTemporaryFile.name	name(self)	todo		
 Lib/tempfile.py	821	822	SpooledTemporaryFile.newlines	newlines(self)	todo		
 Lib/tempfile.py	824	825	SpooledTemporaryFile.readable	readable(self)	todo		

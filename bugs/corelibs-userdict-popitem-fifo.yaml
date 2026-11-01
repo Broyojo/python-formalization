@@ -1,0 +1,43 @@
+id: corelibs-userdict-popitem-fifo
+title: "UserDict.popitem is FIFO, dict.popitem is LIFO (fixed on main, present in 3.14)"
+priority: P4
+kind: duplicate-already-fixed
+module: corelibs
+files: [Lib/_collections_abc.py, Lib/collections/__init__.py]
+functions: ["MutableMapping.popitem"]
+summary: |
+  UserDict inherits MutableMapping.popitem, which removes `next(iter(self))`, the oldest key, while
+  dict.popitem removes the newest. Found by comparing UserDict with dict method by method. Already
+  reported and fixed on main as gh-147957 (GH-147958); kept as a record that 3.14 still has it.
+likelihood: |
+  Medium for a change of behaviour between versions; code that drains a UserDict sees a new order on
+  3.15. Nothing to report.
+maybe_intended: |
+  No, upstream changed it.
+reproducer: |
+  from collections import UserDict
+  u = UserDict(a=1, b=2)
+  d = {'a': 1, 'b': 2}
+  r = u.popitem(), d.popitem()
+  print(r)
+  if r == (('a', 1), ('b', 2)):
+      print('REPRODUCED corelibs-userdict-popitem-fifo')
+expected: |
+  ('b', 2) from both.
+observed: |
+  python3 3.14.7: ('a', 1) and ('b', 2). REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): ('b', 2) from both. NOT REPRODUCED, fixed by GH-147958.
+promised_by: |
+  Doc/library/stdtypes.rst:5491: "Pairs are returned in LIFO (last-in, first-out) order."
+  Doc/library/collections.rst:1337: "Class that simulates a dictionary."
+cause: |
+  Lib/_collections_abc.py:944-954.
+possible_fix: |
+  None needed: main defines UserDict.popitem as `return self.data.popitem()`.
+duplicates:
+  issues:
+    - {number: 147957, state: closed, relation: "duplicate: 'popitem from UserDict in LIFO order', fixed on main by GH-147958", reason: "same defect"}
+  queries: ["UserDict popitem", "bugforge README: UserDict only in an unrelated plistlib entry"]
+lean:
+  property: PyLean.CoreLibs.Coll.UserDictPopitemMatchesDict
+  theorem: PyLean.CoreLibs.Coll.userDictPopitemMatchesDict_refuted
