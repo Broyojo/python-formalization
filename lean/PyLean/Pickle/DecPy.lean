@@ -201,215 +201,315 @@ def memoPutPy (i : Int) (v : DV) : PyM Unit := modify fun s =>
 /-- Python's error for an unknown opcode byte: `KeyError(key[0])`. -/
 def pyKeyError (c : UInt8) : PyExc := .keyError (toString c.toNat)
 
-/-- One opcode of `_Unpickler.load` (`Lib/pickle.py:1294-1323`); `some v` on
-`STOP`. -/
-def pyStep (op : UInt8) : PyM (Option DV) := do
-  let h := (← get).heap
-  if op == oPROTO then
-    -- load_proto, :1336-1341
-    let p ← pyRead1
-    if p ≤ 5 then modify fun s => { s with proto := p } else pyThrow (.valueError s!"unsupported pickle protocol: {p}")
-    return Option.none
-  else if op == oFRAME then
-    -- load_frame, :1343-1347; _Unframer.load_frame, :306-310
-    let size := leNat (← pyUnpack 8)
-    if size > ssizeMaxN then pyThrow (.valueError s!"frame size > sys.maxsize: {size}")
-    let s ← get
-    match s.frame with
-    | some (f, fp) =>
-      set { s with frame := some (f, f.length) }
-      if fp < f.length then pyThrow (unpicklingError "beginning of a new frame before end of current frame")
-    | Option.none => pure ()
+/-! ## Opcode handlers (`Lib/pickle.py:1336-1858`) -/
+
+/-- `load_proto`, :1336-1341. -/
+def pyLoadProto : PyM Unit := do
+  let p ← pyRead1
+  if p ≤ 5 then modify fun s => { s with proto := p }
+  else pyThrow (.valueError s!"unsupported pickle protocol: {p}")
+
+/-- The tail of `load_frame` once the size is read: `_Unframer.load_frame`, :306-310. -/
+def pyStartFrame (size : Nat) : PyM Unit := do
+  let s ← get
+  match s.frame with
+  | some (f, fp) =>
+    set { s with frame := some (f, f.length) }
+    if fp < f.length then pyThrow (unpicklingError "beginning of a new frame before end of current frame")
+    else
+      let data ← fileRead size
+      modify fun s => { s with frame := some (data, 0) }
+  | Option.none =>
     let data ← fileRead size
     modify fun s => { s with frame := some (data, 0) }
-    return Option.none
-  else if op == oNONE then push .none; return Option.none
-  else if op == oNEWFALSE then push (.bool false); return Option.none
-  else if op == oNEWTRUE then push (.bool true); return Option.none
-  else if op == oINT then
-    match ← pyLift (pyLoadIntLine (← pyReadline)) with
-    | .int v => push (.int v)
-    | .bool b => push (.bool b)
-    return Option.none
-  else if op == oBININT then push (.int (leInt (← pyUnpack 4))); return Option.none
-  else if op == oBININT1 then push (.int (← pyRead1)); return Option.none
-  else if op == oBININT2 then push (.int (leNat (← pyUnpack 2))); return Option.none
-  else if op == oLONG then push (.int (← pyLift (pyLoadLongLine (← pyReadline)))); return Option.none
-  else if op == oLONG1 then
-    let n ← pyRead1
-    push (.int (decodeLong (← pyRead n))); return Option.none
-  else if op == oLONG4 then
-    let n := leInt (← pyUnpack 4)
-    if n < 0 then pyThrow (unpicklingError "LONG pickle has negative byte count")
-    push (.int (decodeLong (← pyRead n.toNat))); return Option.none
-  else if op == oSTRING then
-    let data := (← pyReadline).dropLast
-    if data.length ≥ 2 ∧ data.head? = data.getLast? ∧ (data.head? = some 0x22 ∨ data.head? = some 0x27) then
-      push (← pyLift (decodeString (← pyLift (escapeDecode 0 ((data.drop 1).dropLast)))))
-    else pyThrow (unpicklingError "the STRING opcode argument must be quoted")
-    return Option.none
-  else if op == oBINSTRING then
-    let n := leInt (← pyUnpack 4)
-    if n < 0 then pyThrow (unpicklingError "BINSTRING pickle has negative byte count")
-    push (← pyLift (decodeString (← pyRead n.toNat))); return Option.none
-  else if op == oSHORT_BINSTRING then
-    let n ← pyRead1
-    push (← pyLift (decodeString (← pyRead n))); return Option.none
-  else if op == oBINBYTES then
-    let n := leNat (← pyUnpack 4)
-    push (.bytes (← pyRead n)); return Option.none
-  else if op == oSHORT_BINBYTES then
-    let n ← pyRead1
-    push (.bytes (← pyRead n)); return Option.none
-  else if op == oBINBYTES8 then
-    let n := leNat (← pyUnpack 8)
-    if n > ssizeMaxN then pyThrow (unpicklingError s!"BINBYTES8 exceeds system's maximum size of {ssizeMaxN} bytes")
-    push (.bytes (← pyRead n)); return Option.none
-  else if op == oBYTEARRAY8 then
-    let n := leNat (← pyUnpack 8)
-    if n > ssizeMaxN then pyThrow (unpicklingError s!"BYTEARRAY8 exceeds system's maximum size of {ssizeMaxN} bytes")
+
+/-- `load_frame`, :1343-1347. -/
+def pyLoadFrame : PyM Unit := do
+  let size := leNat (← pyUnpack 8)
+  if size > ssizeMaxN then pyThrow (.valueError s!"frame size > sys.maxsize: {size}")
+  else pyStartFrame size
+
+def pyLoadNone : PyM Unit := push .none
+def pyLoadFalse : PyM Unit := push (.bool false)
+def pyLoadTrue : PyM Unit := push (.bool true)
+
+/-- `load_int`, :1376-1385. -/
+def pyLoadInt : PyM Unit := do
+  match ← pyLift (pyLoadIntLine (← pyReadline)) with
+  | .int v => push (.int v)
+  | .bool b => push (.bool b)
+
+def pyLoadBinint : PyM Unit := do push (.int (leInt (← pyUnpack 4)))
+def pyLoadBinint1 : PyM Unit := do push (.int (← pyRead1))
+def pyLoadBinint2 : PyM Unit := do push (.int (leNat (← pyUnpack 2)))
+def pyLoadLong : PyM Unit := do push (.int (← pyLift (pyLoadLongLine (← pyReadline))))
+
+/-- `load_long1`, :1406-1410. -/
+def pyLoadLong1 : PyM Unit := do
+  let n ← pyRead1
+  push (.int (decodeLong (← pyRead n)))
+
+/-- `load_long4`, :1412-1419. -/
+def pyLoadLong4 : PyM Unit := do
+  let n := leInt (← pyUnpack 4)
+  if n < 0 then pyThrow (unpicklingError "LONG pickle has negative byte count")
+  else push (.int (decodeLong (← pyRead n.toNat)))
+
+def quotedString (data : Bytes) : Prop :=
+  data.length ≥ 2 ∧ data.head? = data.getLast? ∧ (data.head? = some 0x22 ∨ data.head? = some 0x27)
+
+instance (data : Bytes) : Decidable (quotedString data) := by unfold quotedString; exact inferInstance
+
+/-- `load_string`, :1438-1446. -/
+def pyLoadString : PyM Unit := do
+  let data := (← pyReadline).dropLast
+  if quotedString data then
+    push (← pyLift (decodeString (← pyLift (escapeDecode 0 ((data.drop 1).dropLast)))))
+  else pyThrow (unpicklingError "the STRING opcode argument must be quoted")
+
+/-- `load_binstring`, :1448-1455. -/
+def pyLoadBinstring : PyM Unit := do
+  let n := leInt (← pyUnpack 4)
+  if n < 0 then pyThrow (unpicklingError "BINSTRING pickle has negative byte count")
+  else push (← pyLift (decodeString (← pyRead n.toNat)))
+
+def pyLoadShortBinstring : PyM Unit := do
+  let n ← pyRead1
+  push (← pyLift (decodeString (← pyRead n)))
+
+def pyLoadBinbytes : PyM Unit := do
+  let n := leNat (← pyUnpack 4)
+  push (.bytes (← pyRead n))
+
+def pyLoadShortBinbytes : PyM Unit := do
+  let n ← pyRead1
+  push (.bytes (← pyRead n))
+
+/-- `load_binbytes8`, :1485-1491. -/
+def pyLoadBinbytes8 : PyM Unit := do
+  let n := leNat (← pyUnpack 8)
+  if n > ssizeMaxN then pyThrow (unpicklingError s!"BINBYTES8 exceeds system's maximum size of {ssizeMaxN} bytes")
+  else push (.bytes (← pyRead n))
+
+/-- `load_bytearray8`, :1493-1501. -/
+def pyLoadBytearray8 : PyM Unit := do
+  let n := leNat (← pyUnpack 8)
+  if n > ssizeMaxN then pyThrow (unpicklingError s!"BYTEARRAY8 exceeds system's maximum size of {ssizeMaxN} bytes")
+  else
     let b ← pyReadinto n
-    push (← pyAlloc (.bytearray b)); return Option.none
-  else if op == oUNICODE then
-    push (.str (← pyLift (decodeRUE (← pyReadline).dropLast))); return Option.none
-  else if op == oBINUNICODE then
-    let n := leNat (← pyUnpack 4)
-    push (.str (← pyLift (decodeUtf8SP (← pyRead n)))); return Option.none
-  else if op == oSHORT_BINUNICODE then
-    let n ← pyRead1
-    push (.str (← pyLift (decodeUtf8SP (← pyRead n)))); return Option.none
-  else if op == oBINUNICODE8 then
-    let n := leNat (← pyUnpack 8)
-    if n > ssizeMaxN then pyThrow (unpicklingError s!"BINUNICODE8 exceeds system's maximum size of {ssizeMaxN} bytes")
-    push (.str (← pyLift (decodeUtf8SP (← pyRead n)))); return Option.none
-  else if op == oTUPLE then push (.tuple (← pyPopMark)); return Option.none
-  else if op == oEMPTY_TUPLE then push (.tuple []); return Option.none
-  else if op == oTUPLE1 then
-    let s ← get
-    match s.stack with
-    | a :: r => set { s with stack := .tuple [a] :: r }
-    | [] => pyThrow (.indexError "list index out of range")
-    return Option.none
-  else if op == oTUPLE2 then
-    let s ← get
-    match s.stack with
-    | b :: a :: r => set { s with stack := .tuple [a, b] :: r }
-    | _ => pyThrow (.indexError "list index out of range")
-    return Option.none
-  else if op == oTUPLE3 then
-    let s ← get
-    match s.stack with
-    | c :: b :: a :: r => set { s with stack := .tuple [a, b, c] :: r }
-    | _ => pyThrow (.indexError "list index out of range")
-    return Option.none
-  else if op == oEMPTY_LIST then push (← pyAlloc (.list [])); return Option.none
-  else if op == oEMPTY_DICT then push (← pyAlloc (.dict [])); return Option.none
-  else if op == oEMPTY_SET then push (← pyAlloc (.set [])); return Option.none
-  else if op == oFROZENSET then
-    let items ← pyPopMark
-    push (← pyLift (mkFrozenset (← get).heap items)); return Option.none
-  else if op == oLIST then
-    let items ← pyPopMark
-    push (← pyAlloc (.list items)); return Option.none
-  else if op == oDICT then
-    -- load_dict, :1580-1585: {items[i]: items[i+1] for i in range(0, len(items), 2)}
-    let items ← pyPopMark
-    let rec build (acc : List (DV × DV)) : List DV → Py (List (DV × DV))
-      | [] => .ok acc
-      | [_] => .error (.indexError "list index out of range")
-      | k :: v :: r => do build (← dictSet h acc k v) r
-    let kvs ← pyLift (build [] items)
-    push (← pyAlloc (.dict kvs)); return Option.none
-  else if op == oAPPEND then
-    let value ← pyPop
-    let lst ← pyTop
-    setHeap (← pyLift (appendTo (← get).heap lst value)); return Option.none
-  else if op == oAPPENDS then
-    let items ← pyPopMark
-    let lst ← pyTop
-    let h := (← get).heap
-    if hasExtend h lst then setHeap (← pyLift (extendObj h lst items))
-    else match lst with
-      | .glob _ => pyThrow (excluded "global as APPENDS target")
-      | _ => pyThrow (attributeError s!"'{lst.typeName h}' object has no attribute 'append'")
-    return Option.none
-  else if op == oSETITEM then
-    let value ← pyPop
-    let key ← pyPop
-    let d ← pyTop
-    setHeap (← pyLift (setItem (← get).heap d key value)); return Option.none
-  else if op == oSETITEMS then
-    let items ← pyPopMark
-    let d ← pyTop
-    let rec go (h : Heap) : List DV → Py Heap
-      | [] => .ok h
-      | [_] => .error (.indexError "list index out of range")
-      | k :: v :: r => do go (← setItem h d k v) r
-    setHeap (← pyLift (go (← get).heap items)); return Option.none
-  else if op == oADDITEMS then
-    let items ← pyPopMark
-    let so ← pyTop
-    let h := (← get).heap
-    if isSetRef h so then setHeap (← pyLift (setUpdate h so items))
-    else pyThrow (noAdd h so)
-    return Option.none
-  else if op == oPOP then
-    -- load_pop, :1704-1709
-    if (← get).stack ≠ [] then discard pyPop else discard pyPopMark
-    return Option.none
-  else if op == oPOP_MARK then discard pyPopMark; return Option.none
-  else if op == oDUP then push (← pyTop); return Option.none
-  else if op == oGET then
-    let i ← pyLift (pyIntOfBytes (← pyReadline).dropLast)
-    discard (memoGetPy i); return Option.none
-  else if op == oBINGET then discard (memoGetPy (← pyRead1)); return Option.none
-  else if op == oLONG_BINGET then discard (memoGetPy (leNat (← pyUnpack 4))); return Option.none
-  else if op == oPUT then
-    let i ← pyLift (pyIntOfBytes (← pyReadline).dropLast)
-    if i < 0 then pyThrow (.valueError "negative PUT argument")
-    memoPutPy i (← pyTop); return Option.none
-  else if op == oBINPUT then
-    let i ← pyRead1
-    memoPutPy i (← pyTop); return Option.none
-  else if op == oLONG_BINPUT then
-    let i := leNat (← pyUnpack 4)
-    memoPutPy i (← pyTop); return Option.none
-  else if op == oMEMOIZE then
-    let v ← pyTop
-    memoPutPy (← get).memo.length v; return Option.none
-  else if op == oMARK then
-    modify fun s => { s with metastack := s.stack :: s.metastack, stack := [] }; return Option.none
-  else if op == oSTOP then return some (← pyPop)
-  else if op == oGLOBAL then
-    -- load_global, :1633-1638 (names decoded as UTF-8)
-    let m := (← pyReadline).dropLast
-    let n := (← pyReadline).dropLast
-    let m ← pyLift (match utf8Dec false m with | some s => .ok s | Option.none => .error unicodeDecodeError)
-    let n ← pyLift (match utf8Dec false n with | some s => .ok s | Option.none => .error unicodeDecodeError)
-    push (.glob (← pyLift (findGlob (← get).proto m n))); return Option.none
-  else if op == oSTACK_GLOBAL then
-    -- load_stack_global, :1640-1646
-    let name ← pyPop
-    let module ← pyPop
-    match module, name with
-    | .str m, .str n => push (.glob (← pyLift (findGlob (← get).proto m n)))
-    | _, _ => pyThrow (unpicklingError "STACK_GLOBAL requires str")
-    return Option.none
-  else if op == oREDUCE then
-    -- load_reduce, :1697-1702
-    let args ← pyPop
-    let func ← pyTop
-    match func, args with
-    | .glob g, .tuple xs =>
-      let (h', v) ← pyLift (callGlob (← get).heap g xs)
-      modify fun s => { s with heap := h', stack := v :: s.stack.drop 1 }
-    | _, _ => pyThrow (excluded "REDUCE")
-    return Option.none
-  else if op == oFLOAT || op == oBINFLOAT || op == oPERSID || op == oBINPERSID || op == oINST
-      || op == oOBJ || op == oNEWOBJ || op == oNEWOBJ_EX || op == oBUILD || op == oEXT1
-      || op == oEXT2 || op == oEXT4 || op == oNEXT_BUFFER || op == oREADONLY_BUFFER then
-    pyThrow (excluded "opcode")
-  else pyThrow (pyKeyError op)
+    push (← pyAlloc (.bytearray b))
+
+def pyLoadUnicode : PyM Unit := do push (.str (← pyLift (decodeRUE (← pyReadline).dropLast)))
+
+def pyLoadBinunicode : PyM Unit := do
+  let n := leNat (← pyUnpack 4)
+  push (.str (← pyLift (decodeUtf8SP (← pyRead n))))
+
+def pyLoadShortBinunicode : PyM Unit := do
+  let n ← pyRead1
+  push (.str (← pyLift (decodeUtf8SP (← pyRead n))))
+
+/-- `load_binunicode8`, :1477-1483. -/
+def pyLoadBinunicode8 : PyM Unit := do
+  let n := leNat (← pyUnpack 8)
+  if n > ssizeMaxN then pyThrow (unpicklingError s!"BINUNICODE8 exceeds system's maximum size of {ssizeMaxN} bytes")
+  else push (.str (← pyLift (decodeUtf8SP (← pyRead n))))
+
+def pyLoadTuple : PyM Unit := do push (.tuple (← pyPopMark))
+def pyLoadEmptyTuple : PyM Unit := push (.tuple [])
+
+/-- `load_tuple1`, :1546-1548: `self.stack[-1] = (self.stack[-1],)`. -/
+def pyLoadTuple1 : PyM Unit := do
+  let s ← get
+  match s.stack with
+  | a :: r => set { s with stack := .tuple [a] :: r }
+  | [] => pyThrow (.indexError "list index out of range")
+
+def pyLoadTuple2 : PyM Unit := do
+  let s ← get
+  match s.stack with
+  | b :: a :: r => set { s with stack := .tuple [a, b] :: r }
+  | _ => pyThrow (.indexError "list index out of range")
+
+def pyLoadTuple3 : PyM Unit := do
+  let s ← get
+  match s.stack with
+  | c :: b :: a :: r => set { s with stack := .tuple [a, b, c] :: r }
+  | _ => pyThrow (.indexError "list index out of range")
+
+def pyLoadEmptyList : PyM Unit := do push (← pyAlloc (.list []))
+def pyLoadEmptyDict : PyM Unit := do push (← pyAlloc (.dict []))
+def pyLoadEmptySet : PyM Unit := do push (← pyAlloc (.set []))
+
+/-- `load_frozenset`, :1570-1573. -/
+def pyLoadFrozenset : PyM Unit := do
+  let items ← pyPopMark
+  push (← pyLift (mkFrozenset (← get).heap items))
+
+/-- `load_list`, :1575-1578. -/
+def pyLoadList : PyM Unit := do
+  let items ← pyPopMark
+  push (← pyAlloc (.list items))
+
+/-- The dict comprehension of `load_dict`, :1583-1584. -/
+def dictBuild (h : Heap) (acc : List (DV × DV)) : List DV → Py (List (DV × DV))
+  | [] => .ok acc
+  | [_] => .error (.indexError "list index out of range")
+  | k :: v :: r => do dictBuild h (← dictSet h acc k v) r
+
+/-- `load_dict`, :1580-1585. -/
+def pyLoadDict : PyM Unit := do
+  let items ← pyPopMark
+  let kvs ← pyLift (dictBuild (← get).heap [] items)
+  push (← pyAlloc (.dict kvs))
+
+/-- `load_append`, :1772-1776. -/
+def pyLoadAppend : PyM Unit := do
+  let value ← pyPop
+  let lst ← pyTop
+  setHeap (← pyLift (appendTo (← get).heap lst value))
+
+/-- The `extend`, falling back on `append`, of `load_appends`, :1782-1795. -/
+def pyExtendItems (lst : DV) (items : List DV) : PyM Unit := do
+  let h := (← get).heap
+  if hasExtend h lst then setHeap (← pyLift (extendObj h lst items))
+  else
+    match lst with
+    | .glob _ => pyThrow (excluded "global as APPENDS target")
+    | _ => pyThrow (attributeError s!"'{lst.typeName h}' object has no attribute 'append'")
+
+/-- `load_appends`, :1779-1795. -/
+def pyLoadAppends : PyM Unit := do
+  let items ← pyPopMark
+  let lst ← pyTop
+  pyExtendItems lst items
+
+/-- `load_setitem`, :1797-1803. -/
+def pyLoadSetitem : PyM Unit := do
+  let value ← pyPop
+  let key ← pyPop
+  let d ← pyTop
+  setHeap (← pyLift (setItem (← get).heap d key value))
+
+/-- The loop of `load_setitems`, :1808-1809. -/
+def setitemsGo (d : DV) (h : Heap) : List DV → Py Heap
+  | [] => .ok h
+  | [_] => .error (.indexError "list index out of range")
+  | k :: v :: r => do setitemsGo d (← setItem h d k v) r
+
+/-- `load_setitems`, :1805-1809. -/
+def pyLoadSetitems : PyM Unit := do
+  let items ← pyPopMark
+  let d ← pyTop
+  setHeap (← pyLift (setitemsGo d (← get).heap items))
+
+/-- `load_additems`, :1812-1820. -/
+def pyLoadAdditems : PyM Unit := do
+  let items ← pyPopMark
+  let so ← pyTop
+  let h := (← get).heap
+  if isSetRef h so then setHeap (← pyLift (setUpdate h so items))
+  else pyThrow (noAdd h so)
+
+/-- `load_pop`, :1704-1709. -/
+def pyLoadPop : PyM Unit := do
+  if (← get).stack ≠ [] then discard pyPop else discard pyPopMark
+
+def pyLoadPopMark : PyM Unit := do discard pyPopMark
+def pyLoadDup : PyM Unit := do push (← pyTop)
+
+/-- `load_get`, :1719-1726. -/
+def pyLoadGet : PyM Unit := do
+  let i ← pyLift (pyIntOfBytes (← pyReadline).dropLast)
+  discard (memoGetPy i)
+
+def pyLoadBinget : PyM Unit := do discard (memoGetPy (← pyRead1))
+def pyLoadLongBinget : PyM Unit := do discard (memoGetPy (leNat (← pyUnpack 4)))
+
+/-- `load_put`, :1746-1751. -/
+def pyLoadPut : PyM Unit := do
+  let i ← pyLift (pyIntOfBytes (← pyReadline).dropLast)
+  if i < 0 then pyThrow (.valueError "negative PUT argument")
+  else memoPutPy i (← pyTop)
+
+def pyLoadBinput : PyM Unit := do
+  let i ← pyRead1
+  memoPutPy i (← pyTop)
+
+def pyLoadLongBinput : PyM Unit := do
+  let i := leNat (← pyUnpack 4)
+  memoPutPy i (← pyTop)
+
+/-- `load_memoize`, :1767-1769: the value is evaluated first. -/
+def pyLoadMemoize : PyM Unit := do
+  let v ← pyTop
+  memoPutPy (← get).memo.length v
+
+/-- `load_mark`, :1847-1851. -/
+def pyLoadMark : PyM Unit :=
+  modify fun s => { s with metastack := s.stack :: s.metastack, stack := [] }
+
+def utf8Name (b : Bytes) : Py (List Nat) :=
+  match utf8Dec false b with
+  | some s => .ok s
+  | Option.none => .error unicodeDecodeError
+
+/-- `load_global`, :1633-1638 (names decoded as UTF-8). -/
+def pyLoadGlobal : PyM Unit := do
+  let m := (← pyReadline).dropLast
+  let n := (← pyReadline).dropLast
+  let m ← pyLift (utf8Name m)
+  let n ← pyLift (utf8Name n)
+  push (.glob (← pyLift (findGlob (← get).proto m n)))
+
+/-- `load_stack_global`, :1640-1646. -/
+def pyLoadStackGlobal : PyM Unit := do
+  let name ← pyPop
+  let module ← pyPop
+  match module, name with
+  | .str m, .str n => push (.glob (← pyLift (findGlob (← get).proto m n)))
+  | _, _ => pyThrow (unpicklingError "STACK_GLOBAL requires str")
+
+/-- `load_reduce`, :1697-1702. -/
+def pyLoadReduce : PyM Unit := do
+  let args ← pyPop
+  let func ← pyTop
+  match func, args with
+  | .glob g, .tuple xs =>
+    let (h', v) ← pyLift (callGlob (← get).heap g xs)
+    modify fun s => { s with heap := h', stack := v :: s.stack.drop 1 }
+  | _, _ => pyThrow (excluded "REDUCE")
+
+/-- The `dispatch` dict for the modelled opcodes other than `STOP`. -/
+def pyTable : List (UInt8 × PyM Unit) := [
+  (oPROTO, pyLoadProto), (oFRAME, pyLoadFrame), (oNONE, pyLoadNone), (oNEWFALSE, pyLoadFalse),
+  (oNEWTRUE, pyLoadTrue), (oINT, pyLoadInt), (oBININT, pyLoadBinint), (oBININT1, pyLoadBinint1),
+  (oBININT2, pyLoadBinint2), (oLONG, pyLoadLong), (oLONG1, pyLoadLong1), (oLONG4, pyLoadLong4),
+  (oSTRING, pyLoadString), (oBINSTRING, pyLoadBinstring), (oSHORT_BINSTRING, pyLoadShortBinstring),
+  (oBINBYTES, pyLoadBinbytes), (oSHORT_BINBYTES, pyLoadShortBinbytes), (oBINBYTES8, pyLoadBinbytes8),
+  (oBYTEARRAY8, pyLoadBytearray8), (oUNICODE, pyLoadUnicode), (oBINUNICODE, pyLoadBinunicode),
+  (oSHORT_BINUNICODE, pyLoadShortBinunicode), (oBINUNICODE8, pyLoadBinunicode8), (oTUPLE, pyLoadTuple),
+  (oEMPTY_TUPLE, pyLoadEmptyTuple), (oTUPLE1, pyLoadTuple1), (oTUPLE2, pyLoadTuple2), (oTUPLE3, pyLoadTuple3),
+  (oEMPTY_LIST, pyLoadEmptyList), (oEMPTY_DICT, pyLoadEmptyDict), (oEMPTY_SET, pyLoadEmptySet),
+  (oFROZENSET, pyLoadFrozenset), (oLIST, pyLoadList), (oDICT, pyLoadDict), (oAPPEND, pyLoadAppend),
+  (oAPPENDS, pyLoadAppends), (oSETITEM, pyLoadSetitem), (oSETITEMS, pyLoadSetitems),
+  (oADDITEMS, pyLoadAdditems), (oPOP, pyLoadPop), (oPOP_MARK, pyLoadPopMark), (oDUP, pyLoadDup),
+  (oGET, pyLoadGet), (oBINGET, pyLoadBinget), (oLONG_BINGET, pyLoadLongBinget), (oPUT, pyLoadPut),
+  (oBINPUT, pyLoadBinput), (oLONG_BINPUT, pyLoadLongBinput), (oMEMOIZE, pyLoadMemoize), (oMARK, pyLoadMark),
+  (oGLOBAL, pyLoadGlobal), (oSTACK_GLOBAL, pyLoadStackGlobal), (oREDUCE, pyLoadReduce)]
+
+/-- Opcodes that run code or are out of scope for the plain-data model. -/
+def excludedOps : List UInt8 := [oFLOAT, oBINFLOAT, oPERSID, oBINPERSID, oINST, oOBJ, oNEWOBJ, oNEWOBJ_EX,
+  oBUILD, oEXT1, oEXT2, oEXT4, oNEXT_BUFFER, oREADONLY_BUFFER]
+
+/-- One opcode of `_Unpickler.load` (`Lib/pickle.py:1294-1323`); `some v` on
+`STOP` (`load_stop`, :1853-1855). -/
+def pyStep (op : UInt8) : PyM (Option DV) :=
+  if op == oSTOP then do return some (← pyPop)
+  else match pyTable.lookup op with
+    | some h => do h; return Option.none
+    | Option.none =>
+      if excludedOps.contains op then pyThrow (excluded "opcode") else pyThrow (pyKeyError op)
 
 /-- The dispatch loop of `_Unpickler.load`, with fuel (each step consumes at
 least one input byte). -/
