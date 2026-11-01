@@ -6,6 +6,7 @@ import PyLean.CoreLibs.Misc.Numbers.Diff
 import PyLean.CoreLibs.Misc.Keyword
 import PyLean.CoreLibs.Misc.Types.Diff
 import PyLean.CoreLibs.Misc.Contextlib.Diff
+import PyLean.CoreLibs.Misc.Weakref.Diff
 
 /-! Differential-testing handler for `corelibs` cases with `"fn": "misc.<name>"`.
 The dispatcher in `CoreLibs/Diff.lean` strips the `misc.` prefix. -/
@@ -23,6 +24,7 @@ def run (fn : String) (j : Json) : Except String Json :=
   | "keyword" => Keyword.runCase j
   | "types" => Types.runCase j
   | "ctx" => Contextlib.runCase j
+  | "weakref" => Weakref.runCase j
   | _ => throw s!"unknown fn misc.{fn}"
 
 def handler : Handler := fun fn j => some (run fn j)

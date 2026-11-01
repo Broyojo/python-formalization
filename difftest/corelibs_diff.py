@@ -1379,12 +1379,522 @@ def misc_run_ctx(case):
     return {"ok": misc_cres(run, [])}
 
 
+# --- weakref ---
+
+import copy as misc_copy  # noqa: E402
+import weakref as misc_weakref  # noqa: E402
+
+
+class MiscW:
+    def __init__(self, i, val):
+        self.i, self.val = i, val
+
+    def __eq__(self, other):
+        return isinstance(other, MiscW) and self.val == other.val
+
+    def __hash__(self):
+        return hash(self.val)
+
+    def __deepcopy__(self, memo):
+        return self
+
+    def m(self):
+        pass
+
+
+def misc_pv(o):
+    return ["o", o.i] if isinstance(o, MiscW) else ["i", o]
+
+
+def misc_gen_weakref(rng):
+    kind = rng.choice(["wvd", "wvd", "wkd", "wkd", "wm", "keyed", "fin", "fin"])
+    case = {"fn": "misc.weakref", "k": kind}
+    n = 4
+    case["vals"] = [rng.randint(0, 3) for _ in range(n + 16)]
+    def pv():
+        return ["o", rng.randrange(n)] if rng.random() < 0.9 else ["i", rng.randint(0, 3)]
+    def key():
+        return rng.choice("abc")
+    def kpv():
+        return ["o", rng.randrange(n)] if rng.random() < 0.9 else ["i", 1]
+    if kind == "wvd":
+        def items():
+            return [[key(), pv()] for _ in range(rng.randint(0, 3))]
+        case["eager"] = rng.random() < 0.6
+        case["init"] = [[key(), ["o", rng.randrange(n)]] for _ in range(rng.randint(0, 3))]
+        ops = []
+        for _ in range(rng.randint(1, 12)):
+            k = rng.random()
+            ops.append(rng.choice([
+                ["set", key(), pv()], ["set", key(), pv()], ["get_", key()], ["del", key()], ["len"],
+                ["in", key()], ["repr"], ["copy"], ["deepcopy"], ["get", key(), pv()], ["items"],
+                ["keys"], ["iter"], ["irefs"], ["vrefs"], ["values"], ["popitem"],
+                ["pop", key(), [pv()][:rng.randint(0, 1)]], ["setdefault", key(), pv()],
+                ["update", rng.choice([None, items()])], ["update_pairs", items()], ["ior", items()],
+                ["or", rng.choice([None, items()])], ["ror", rng.choice([None, items()])],
+                ["kill", rng.randrange(n)], ["kill", rng.randrange(n)]]))
+        case["ops"] = ops
+    elif kind == "wkd":
+        def items():
+            return [[kpv(), rng.randint(0, 3)] for _ in range(rng.randint(0, 3))]
+        case["eager"] = rng.random() < 0.6
+        case["init"] = [[["o", rng.randrange(n)], rng.randint(0, 3)] for _ in range(rng.randint(0, 3))]
+        ops = []
+        for _ in range(rng.randint(1, 12)):
+            ops.append(rng.choice([
+                ["set", kpv(), rng.randint(0, 3)], ["set", kpv(), 1], ["get_", kpv()], ["del", kpv()],
+                ["len"], ["repr"], ["copy"], ["deepcopy"], ["get", kpv(), 9], ["in", kpv()],
+                ["items"], ["keys"], ["iter"], ["values"], ["krefs"], ["popitem"],
+                ["pop", kpv(), [9][:rng.randint(0, 1)]], ["setdefault", kpv(), 7],
+                ["update", rng.choice([None, items()]), rng.random() < 0.2],
+                ["update_pairs", items()], ["ior", items()],
+                ["or", rng.choice([None, items()])], ["ror", rng.choice([None, items()])],
+                ["kill", rng.randrange(n)], ["kill", rng.randrange(n)]]))
+        case["ops"] = ops
+    elif kind == "wm":
+        ops = []
+        for _ in range(rng.randint(1, 10)):
+            i, j = rng.randrange(3), rng.randrange(3)
+            ops.append(rng.choice([
+                ["new", rng.randrange(n), 10 + rng.randrange(2), rng.random() < 0.5],
+                ["new", rng.randrange(n), 10 + rng.randrange(2), rng.random() < 0.5],
+                ["bad"], ["call", i], ["eq", i, j], ["ne", i, j], ["eqo", i], ["alive", i],
+                ["kill", rng.choice([rng.randrange(n), 10 + rng.randrange(2)])]]))
+        case["ops"] = ops
+    elif kind == "keyed":
+        case["v"] = pv()
+    else:
+        def fs(d=0):
+            k = rng.random()
+            if k < 0.5 or d > 1:
+                return ["ret", rng.randint(0, 9)]
+            if k < 0.7:
+                return ["boom"]
+            if k < 0.8:
+                return ["base"]
+            return ["spawn", rng.randint(100, 200), rng.randrange(n), fs(d + 1)]
+        ops = []
+        fid = 0
+        for _ in range(rng.randint(1, 12)):
+            k = rng.random()
+            if k < 0.35:
+                ops.append(["new", fid, pv(), fs()])
+                fid += 1
+            else:
+                f = rng.randrange(fid + 1)
+                ops.append(rng.choice([["call", f], ["detach", f], ["peek", f], ["alive", f],
+                                       ["atexit", f], ["set_atexit", f, rng.random() < 0.5],
+                                       ["repr", f], ["kill", rng.randrange(n)],
+                                       ["kill", rng.randrange(n)], ["exit"]]))
+        if rng.random() < 0.5:
+            ops.append(["exit"])
+        case["ops"] = ops
+    return case
+
+
+def misc_run_wvd(case, objs):
+    dead = set()
+    def val(p):
+        return objs[p[1]] if p[0] == "o" else p[1]
+    def isdead(p):
+        return p[0] == "o" and p[1] in dead
+    def items(l):
+        return None if l is None else misc_MappingItems([(k, val(v)) for k, v in l])
+    def anydead(l):
+        return any(isdead(v) for _, v in (l or []))
+    def dump(x):
+        return [[k, misc_pv(v)] for k, v in x.items()]
+    def res(thunk):
+        try:
+            return ["ok", thunk()]
+        except KeyError as e:
+            return ["exc", "KeyError", str(e)]
+        except TypeError as e:
+            return ["exc", "TypeError", str(e)]
+    WVD = misc_weakref.WeakValueDictionary
+    try:
+        init = [(k, val(v)) for k, v in case["init"]]
+        if case["eager"]:
+            d = WVD(init)
+        else:
+            d = WVD()
+            d._remove = lambda wr: None
+            d.update(init)
+        del init
+    except TypeError as e:
+        return {"ok": [["exc", "TypeError", str(e)]]}
+    out = []
+    for op in case["ops"]:
+        n = op[0]
+        if n == "set":
+            r = "skip" if isdead(op[2]) else res(lambda: d.__setitem__(op[1], val(op[2])))
+        elif n == "get_":
+            r = res(lambda: misc_pv(d[op[1]]))
+        elif n == "del":
+            r = res(lambda: d.__delitem__(op[1]))
+        elif n == "len":
+            r = len(d)
+        elif n == "in":
+            r = op[1] in d
+        elif n == "repr":
+            r = repr(d).replace(hex(id(d)), "ADDR")
+        elif n == "copy":
+            r = res(lambda: dump(d.copy()))
+        elif n == "deepcopy":
+            r = res(lambda: dump(misc_copy.deepcopy(d)))
+        elif n == "get":
+            r = "skip" if isdead(op[2]) else misc_pv(d.get(op[1], val(op[2])))
+        elif n == "items":
+            r = [[k, misc_pv(v)] for k, v in d.items()]
+        elif n == "keys":
+            r = list(d.keys())
+        elif n == "iter":
+            r = list(d)
+        elif n == "irefs":
+            r = [None if x() is None else misc_pv(x()) for x in d.itervaluerefs()]
+        elif n == "vrefs":
+            r = [None if x() is None else misc_pv(x()) for x in d.valuerefs()]
+        elif n == "values":
+            r = [misc_pv(v) for v in d.values()]
+        elif n == "popitem":
+            def f():
+                k, v = d.popitem()
+                return [k, misc_pv(v)]
+            r = res(f)
+        elif n == "pop":
+            r = "skip" if any(isdead(a) for a in op[2]) else res(lambda: misc_pv(d.pop(op[1], *[val(a) for a in op[2]])))
+        elif n == "setdefault":
+            r = "skip" if isdead(op[2]) else res(lambda: misc_pv(d.setdefault(op[1], val(op[2]))))
+        elif n == "update":
+            r = "skip" if anydead(op[1]) else res(lambda: d.update(items(op[1])))
+        elif n == "update_pairs":
+            r = "skip" if anydead(op[1]) else res(lambda: d.update([(k, val(v)) for k, v in op[1]]))
+        elif n == "ior":
+            r = "skip" if anydead(op[1]) else res(lambda: (d.__ior__(items(op[1])), None)[1])
+        elif n in ("or", "ror"):
+            if anydead(op[1]):
+                r = "skip"
+            else:
+                def f():
+                    v = getattr(d, "__" + n + "__")(5 if op[1] is None else items(op[1]))
+                    return "NotImplemented" if v is NotImplemented else dump(v)
+                r = res(f)
+                if r == ["ok", "NotImplemented"]:
+                    r = "NotImplemented"
+        else:
+            dead.add(op[1])
+            objs.pop(op[1], None)
+            r = None
+        out.append(r)
+    out.append([[k, None if wr() is None else misc_pv(wr())] for k, wr in d.data.items()])
+    return {"ok": out}
+
+
+class misc_MappingItems(misc_cabc.Mapping):
+    """A Mapping that keeps a list of items, repeated keys included, like the model's `other`."""
+
+    def __init__(self, items):
+        self._items = list(items)
+
+    def __getitem__(self, k):
+        for a, b in self._items:
+            if a == k:
+                return b
+        raise KeyError(k)
+
+    def __iter__(self):
+        seen = []
+        for a, _ in self._items:
+            if a not in seen:
+                seen.append(a)
+        return iter(seen)
+
+    def __len__(self):
+        return len(list(iter(self)))
+
+    def items(self):
+        return list(self._items)
+
+
+def misc_run_wkd(case, objs):
+    dead = set()
+    def key(p):
+        return objs[p[1]] if p[0] == "o" else p[1]
+    def isdead(p):
+        return p[0] == "o" and p[1] in dead
+    def items(l):
+        return None if l is None else misc_MappingItems([(key(k), v) for k, v in l])
+    def anydead(l):
+        return any(isdead(k) for k, _ in (l or []))
+    def dump(x):
+        return [[misc_pv(k), v] for k, v in x.items()]
+    def res(thunk):
+        try:
+            return ["ok", thunk()]
+        except KeyError as e:
+            m = str(e)
+            return ["exc", "KeyError", "~" if "weakref" in m else m]
+        except TypeError as e:
+            return ["exc", "TypeError", str(e)]
+    WKD = misc_weakref.WeakKeyDictionary
+    init = misc_MappingItems([(key(k), v) for k, v in case["init"]])
+    if case["eager"]:
+        d = WKD(init)
+    else:
+        d = WKD()
+        d._remove = lambda wr: None
+        d.update(init)
+    del init
+    out = []
+    for op in case["ops"]:
+        n = op[0]
+        if n in ("set", "get_", "del", "get", "in", "pop", "setdefault") and isdead(op[1]):
+            r = "skip"
+        elif n == "set":
+            r = res(lambda: d.__setitem__(key(op[1]), op[2]))
+        elif n == "get_":
+            r = res(lambda: d[key(op[1])])
+        elif n == "del":
+            r = res(lambda: d.__delitem__(key(op[1])))
+        elif n == "len":
+            r = len(d)
+        elif n == "repr":
+            r = repr(d).replace(hex(id(d)), "ADDR")
+        elif n == "copy":
+            r = res(lambda: dump(d.copy()))
+        elif n == "deepcopy":
+            r = res(lambda: dump(misc_copy.deepcopy(d)))
+        elif n == "get":
+            r = res(lambda: d.get(key(op[1]), op[2]))
+        elif n == "in":
+            r = key(op[1]) in d
+        elif n == "items":
+            r = [[misc_pv(k), v] for k, v in d.items()]
+        elif n == "keys":
+            r = [misc_pv(k) for k in d.keys()]
+        elif n == "iter":
+            r = [misc_pv(k) for k in d]
+        elif n == "values":
+            r = list(d.values())
+        elif n == "krefs":
+            r = [None if x() is None else misc_pv(x()) for x in d.keyrefs()]
+        elif n == "popitem":
+            def f():
+                k, v = d.popitem()
+                return [misc_pv(k), v]
+            r = res(f)
+        elif n == "pop":
+            r = res(lambda: d.pop(key(op[1]), *op[2]))
+        elif n == "setdefault":
+            r = res(lambda: d.setdefault(key(op[1]), op[2]))
+        elif n == "update":
+            if anydead(op[1]):
+                r = "skip"
+            elif op[2]:
+                r = res(lambda: d.update(items(op[1]), a=1))
+            else:
+                r = res(lambda: d.update(items(op[1])))
+        elif n == "update_pairs":
+            r = "skip" if anydead(op[1]) else res(lambda: d.update([(key(k), v) for k, v in op[1]]))
+        elif n == "ior":
+            r = "skip" if anydead(op[1]) else res(lambda: (d.__ior__(items(op[1])), None)[1])
+        elif n in ("or", "ror"):
+            if anydead(op[1]):
+                r = "skip"
+            else:
+                def f():
+                    v = getattr(d, "__" + n + "__")(5 if op[1] is None else items(op[1]))
+                    return "NotImplemented" if v is NotImplemented else dump(v)
+                r = res(f)
+                if r == ["ok", "NotImplemented"]:
+                    r = "NotImplemented"
+        else:
+            dead.add(op[1])
+            objs.pop(op[1], None)
+            r = None
+        out.append(r)
+    out.append([[None if k() is None else misc_pv(k()), v] for k, v in d.data.items()])
+    return {"ok": out}
+
+
+def misc_run_wm(case):
+    vals = case["vals"]
+    objs = {i: MiscW(i, vals[i]) for i in range(4)}
+    funcs = {10: (lambda self: None), 11: (lambda self: None)}
+    ids = {id(f): i for i, f in funcs.items()}
+    ms = []
+    fired = []
+    out = []
+    for op in case["ops"]:
+        n = op[0]
+        if n == "new":
+            o, f = op[1], op[2]
+            if o not in objs or f not in funcs:
+                out.append("skip")
+                continue
+            idx = len(ms)
+            def cb(wr, idx=idx):
+                fired.append(idx)
+            ms.append(misc_weakref.WeakMethod(misc_types.MethodType(funcs[f], objs[o]),
+                                              cb if op[3] else None))
+            out.append(idx)
+        elif n == "bad":
+            out.append(misc_res(lambda: misc_weakref.WeakMethod(5)))
+        elif n == "call":
+            if op[1] >= len(ms):
+                out.append("skip")
+            else:
+                r = ms[op[1]]()
+                out.append(None if r is None else [r.__self__.i, ids[id(r.__func__)]])
+                del r
+        elif n in ("eq", "ne"):
+            if op[1] >= len(ms) or op[2] >= len(ms):
+                out.append("skip")
+            else:
+                v = getattr(ms[op[1]], "__" + n + "__")(ms[op[2]])
+                out.append(None if v is NotImplemented else v)
+        elif n == "eqo":
+            if op[1] >= len(ms):
+                out.append("skip")
+            else:
+                v = ms[op[1]].__eq__(5)
+                out.append(None if v is NotImplemented else v)
+        elif n == "alive":
+            out.append("skip" if op[1] >= len(ms) else ms[op[1]]._alive)
+        else:
+            fired.clear()
+            objs.pop(op[1], None)
+            funcs.pop(op[1], None)
+            out.append(sorted(fired, reverse=True))
+    return {"ok": out}
+
+
+def misc_run_keyed(case):
+    p = case["v"]
+    log = []
+    if p[0] == "i":
+        return {"ok": misc_res(lambda: misc_weakref.KeyedRef(p[1], None, "k"))}
+    o = MiscW(p[1], 0)
+    r = misc_weakref.KeyedRef(o, log.append, "k")
+    first = misc_pv(r())
+    del o
+    assert log == [r]
+    return {"ok": [r.key, first, None if r() is None else misc_pv(r())]}
+
+
+def misc_run_fin(case):
+    fin = misc_weakref.finalize
+    saved = dict(fin._registry), fin._shutdown, fin._dirty
+    fin._registry.clear()
+    fin._shutdown = False
+    fin._dirty = False
+    vals = case["vals"]
+    objs = {i: MiscW(i, vals[i]) for i in range(4)}
+    fs = {}
+    log = []
+    hook_saved = sys.excepthook
+    def hook(t, v, tb):
+        log.append(["hook", t.__name__, str(v)])
+    sys.excepthook = hook
+    spec = {}
+
+    def mk(s):
+        def f():
+            log.append(["run", s])
+            if s[0] == "ret":
+                return s[1]
+            if s[0] == "boom":
+                raise ValueError("boom")
+            if s[0] == "base":
+                raise KeyboardInterrupt("base")
+            if s[2] in objs:
+                fs[s[1]] = fin(objs[s[2]], mk(s[3]))
+        spec[f] = s
+        return f
+
+    def peek(r):
+        return None if r is None else [misc_pv(r[0]), spec[r[1]]]
+
+    def base_res(thunk):
+        try:
+            return ["ok", thunk()]
+        except BaseException as e:
+            return ["exc", type(e).__name__, str(e)]
+
+    out = []
+    try:
+        for op in case["ops"]:
+            n = op[0]
+            f = fs.get(op[1]) if n in ("call", "detach", "peek", "alive", "atexit", "set_atexit", "repr") else None
+            if n == "new":
+                p = op[2]
+                if p[0] == "o" and p[1] not in objs:
+                    out.append("skip")
+                    continue
+                o = objs[p[1]] if p[0] == "o" else p[1]
+                def build():
+                    fs[op[1]] = fin(o, mk(op[3]))
+                out.append(misc_res(build))
+                del o
+            elif n == "kill":
+                objs.pop(op[1], None)
+                out.append(None)
+            elif n == "exit":
+                r = base_res(fin._exitfunc)
+                out.append(r)
+            elif f is None:
+                # a finalizer that was never created: every query sees a dead one
+                out.append({"call": ["ok", None], "detach": None, "peek": None, "alive": False,
+                            "atexit": False, "set_atexit": None,
+                            "repr": "<finalize object at ADDR; dead>"}[n])
+            elif n == "call":
+                out.append(base_res(f))
+            elif n == "detach":
+                out.append(peek(f.detach()))
+            elif n == "peek":
+                out.append(peek(f.peek()))
+            elif n == "alive":
+                out.append(f.alive)
+            elif n == "atexit":
+                out.append(f.atexit)
+            elif n == "set_atexit":
+                f.atexit = op[2]
+                out.append(None)
+            else:
+                t = f.peek()
+                r = repr(f).replace(hex(id(f)), "ADDR")
+                if t is not None:
+                    r = r.replace(hex(id(t[0])), "OBJ")
+                del t
+                out.append(r)
+        reg = [next(k for k, v in fs.items() if v is f2) for f2 in fin._registry]
+        r = [out, log, reg, fin._shutdown, fin._dirty]
+    finally:
+        fin._registry.clear()
+        fin._registry.update(saved[0])
+        fin._shutdown, fin._dirty = saved[1], saved[2]
+        sys.excepthook = hook_saved
+    return {"ok": r}
+
+
+def misc_run_weakref(case):
+    k = case["k"]
+    if k in ("wvd", "wkd"):
+        objs = {i: MiscW(i, case["vals"][i]) for i in range(4)}
+        return misc_run_wvd(case, objs) if k == "wvd" else misc_run_wkd(case, objs)
+    if k == "wm":
+        return misc_run_wm(case)
+    if k == "keyed":
+        return misc_run_keyed(case)
+    return misc_run_fin(case)
+
+
 MISC_GENS = [misc_gen_graphlib, misc_gen_sched, misc_gen_queue, misc_gen_numbers,
-             misc_gen_keyword, misc_gen_types, misc_gen_ctx]
+             misc_gen_keyword, misc_gen_types, misc_gen_ctx, misc_gen_weakref]
 MISC_RUNS = {"misc.graphlib": misc_run_graphlib, "misc.sched": misc_run_sched,
              "misc.queue": misc_run_queue, "misc.numbers": misc_run_numbers,
              "misc.keyword": misc_run_keyword, "misc.types": misc_run_types,
-             "misc.ctx": misc_run_ctx}
+             "misc.ctx": misc_run_ctx, "misc.weakref": misc_run_weakref}
 
 
 MISC_ONLY = os.environ.get("MISC_ONLY")
