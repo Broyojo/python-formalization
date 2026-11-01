@@ -1020,7 +1020,9 @@ def functools_dispatch_case(rng):
                 impl = d.dispatch(cls)
                 out.append({"ok": impl(None)})
             except RuntimeError as e:
-                out.append({"exc": "RuntimeError", "msg": str(e)})
+                msg = str(e)
+                out.append({"exc": "RuntimeError",
+                            "msg": "~Ambiguous dispatch" if msg.startswith("Ambiguous") else msg})
     return {"fn": "functools.dispatch", "worlds": worlds, "ops": ops, "expect": out}
 
 
@@ -1847,8 +1849,154 @@ def operator_mark(is_abs):
 
 # ====== BEGIN AREA enumdc (Lib/enum.py, Lib/dataclasses.py) ======
 # Everything for this area stays between these two markers; prefix top-level names with enumdc_.
-enumdc_gen = None  # replace with def enumdc_gen(rng) -> case dict with "fn": "enumdc.<name>"
-enumdc_run = None  # replace with def enumdc_run(case) -> common.py_result-style dict
+import dataclasses as enumdc_dc  # noqa: E402
+import enum as enumdc_enum  # noqa: E402
+
+enumdc_DEFS = [[["A", 1], ["B", 2], ["C", 4]], [["A", 1], ["C", 4]], [["A", 1], ["B", 2], ["AB", 3]],
+               [["A", 1], ["AB", 3]], [["A", 1], ["X", 6]], [["B", 2], ["A", 1]],
+               [["Z", 0], ["A", 1], ["B", 2]], [["A", 1], ["B", 2], ["X", 8]],
+               [["C", 4], ["A", 1], ["B", 2]]]
+enumdc_BOUND = {"strict": enumdc_enum.STRICT, "conform": enumdc_enum.CONFORM,
+                "eject": enumdc_enum.EJECT, "keep": enumdc_enum.KEEP}
+
+
+def enumdc_cls(case):
+    return enumdc_enum.Flag("F", [tuple(m) for m in case["members"]],
+                            boundary=enumdc_BOUND[case["boundary"]])
+
+
+def enumdc_out(x, F):
+    if isinstance(x, F):
+        return ["flag", x.value, x.name]
+    return ["plain", x]
+
+
+def enumdc_gen(rng):
+    r = rng.randrange(0, 12)
+    if r <= 5:
+        v = rng.randrange(-12, 20)
+        w = rng.randrange(0, 16)
+        base = {"members": rng.choice(enumdc_DEFS),
+                "boundary": rng.choice(["strict", "conform", "eject", "keep"]), "v": v, "w": w}
+        return {"fn": "enumdc." + ["flag_call", "flag_call", "flag_or", "flag_and", "flag_xor",
+                                   "flag_invert"][r], **base}
+    if r == 6:
+        return {"fn": "enumdc.flag_iter", "members": rng.choice(enumdc_DEFS),
+                "boundary": rng.choice(["strict", "conform", "keep"]), "v": rng.randrange(0, 16)}
+    if r == 7:
+        return {"fn": "enumdc.names", "s": rng.choice(["__a__", "_a_", "__", "___", "____", "_____",
+                                                       "__a_", "_a__", "a", "", "_", "__ab__",
+                                                       "_F__x", "_F__x__", "_F__x_", "_F__"])}
+    if r == 8:
+        n = rng.randrange(0, 40)
+        return {"fn": "enumdc.bits", "n": n, "last": [rng.randrange(1, 9) for _ in range(rng.randrange(1, 4))],
+                "count": rng.randrange(0, 3)}
+    if r == 9:
+        return {"fn": "enumdc.hash_action", "u": rng.random() < .5, "e": rng.random() < .5,
+                "f": rng.random() < .5, "h": rng.random() < .5}
+    fs = []
+    for name in rng.sample(["a", "b", "c", "d"], rng.randrange(0, 5)):
+        fs.append({"name": name, "default": rng.random() < .4, "init": rng.random() < .8,
+                   "kw": rng.random() < .3})
+    if r == 10:
+        return {"fn": "enumdc.dc_init", "fields": fs}
+    keep = [f for f in fs if f["init"]]
+    return {"fn": "enumdc.dc_replace", "fields": fs,
+            "changes": [f["name"] for f in rng.sample(fs, rng.randrange(0, len(fs) + 1))]}
+
+
+def enumdc_make(fs):
+    spec = []
+    for f in fs:
+        kw = {"init": f["init"], "kw_only": f["kw"]}
+        if f["default"]:
+            kw["default"] = 0
+        spec.append((f["name"], int, enumdc_dc.field(**kw)))
+    return enumdc_dc.make_dataclass("D", spec)
+
+
+def enumdc_hash(case):
+    u, e, f, h = case["u"], case["e"], case["f"], case["h"]
+    ns = {"__hash__": (lambda s: 5)} if h else {}
+    C = type("C", (), {"__annotations__": {"x": int}, **ns})
+    try:
+        D = enumdc_dc.dataclass(unsafe_hash=u, eq=e, frozen=f)(C)
+    except TypeError:
+        return {"ok": "exception"}
+    v = D.__dict__.get("__hash__", "absent")
+    if h:
+        if v is ns["__hash__"]:
+            return {"ok": "none"}
+        return {"ok": "add"}
+    if "__hash__" not in C.__dict__ or v == "absent":
+        return {"ok": "none"}
+    if v is None:
+        return {"ok": "setNone" if e else "none"}
+    return {"ok": "add"}
+
+
+def enumdc_run(case):
+    fn = case["fn"].split(".")[1]
+    if fn.startswith("flag_"):
+        F = enumdc_cls(case)
+        v, w = case["v"], case.get("w", 0)
+        if fn == "flag_call":
+            return py_result(lambda: enumdc_out(F(v), F))
+        if fn == "flag_iter":
+            def go():
+                x = F(v)
+                return [x.value, [m.name if m is not None else None for m in x], len(x)]
+            return py_result(go)
+
+        def binop(f):
+            def go():
+                a = F(v)
+                if not isinstance(a, F):
+                    return "skip"
+                b = F(w)
+                if not isinstance(b, F):
+                    return "skip"
+                return enumdc_out(f(a, b), F)
+            return py_result(go)
+        if fn == "flag_or":
+            return binop(lambda a, b: a | b)
+        if fn == "flag_and":
+            return binop(lambda a, b: a & b)
+        if fn == "flag_xor":
+            return binop(lambda a, b: a ^ b)
+        return binop(lambda a, b: ~a)
+    if fn == "names":
+        s = case["s"]
+        return {"ok": [enumdc_enum._is_dunder(s), enumdc_enum._is_sunder(s),
+                       enumdc_enum._is_private("F", s)]}
+    if fn == "bits":
+        n = case["n"]
+        last = case["last"]
+        return {"ok": [enumdc_enum.show_flag_values(n), enumdc_enum._is_single_bit(n),
+                       enumdc_enum._high_bit(n),
+                       enumdc_enum.Flag._generate_next_value_("x", None, case["count"], last),
+                       enumdc_enum.Enum._generate_next_value_("x", 1, case["count"], last)]}
+    if fn == "hash_action":
+        return enumdc_hash(case)
+    if fn == "dc_init":
+        return py_result(lambda: [f.name for f in enumdc_dc.fields(enumdc_make(case["fields"]))])
+    if fn == "dc_replace":
+        def go():
+            D = enumdc_make(case["fields"])
+            o = object.__new__(D)
+            for f in case["fields"]:
+                setattr(o, f["name"], 1)
+            ch = {k: 2 for k in case["changes"]}
+            seen = {}
+            orig = D.__init__
+
+            def spy(self, **kw):
+                seen.update(kw)
+            D.__init__ = spy
+            enumdc_dc.replace(o, **ch)
+            return sorted(seen)
+        return py_result(go)
+    raise ValueError(fn)
 # ====== END AREA enumdc ======
 
 # ====== BEGIN AREA misc (Lib/contextlib.py, Lib/numbers.py, Lib/keyword.py, Lib/types.py, Lib/weakref.py, Lib/graphlib.py, Lib/sched.py, Lib/queue.py) ======
