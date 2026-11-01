@@ -283,6 +283,9 @@ def gen_case1(rng):
     if k < 0.18:
         return {"mod": "decimal", "fn": rng.choice(["parse_py", "parse_c"]),
                 "s": cps(gen_numeric_string(rng))}
+    if k < 0.21:
+        return {"mod": "decimal", "fn": rng.choice(["strrt_py", "strrt_c"]),
+                "a": gen_dec(rng, huge=True, wide=True, special=0.15)}
     if k < 0.24:
         return {"mod": "decimal", "fn": rng.choice(["str_py", "str_c"]),
                 "a": gen_dec(rng, huge=True, wide=True, special=0.15)}
@@ -378,6 +381,9 @@ def run_python(case):
         if fn in ("str_py", "str_c"):
             M = P if fn == "str_py" else C
             return cps(str(build(M, case["a"])))
+        if fn in ("strrt_py", "strrt_c"):
+            M = P if fn == "strrt_py" else C
+            return enc_dec(M.Decimal(str(build(M, case["a"]))))
         if fn in ("tuple_py", "tuple_c"):
             M = P if fn == "tuple_py" else C
             digits = case["digits"]

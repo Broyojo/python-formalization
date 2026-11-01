@@ -339,4 +339,342 @@ theorem mpdNumeric_eval (neg : Bool) (P : List Char) (ex : ExPart) (hx : ExOk ex
     simp only [h4, fracOk, hf, decide_true, Bool.not_true, Bool.false_eq_true, ↓reduceIte]
     rw [if_neg (Int.not_lt.mpr hD), hfin _ (Or.inr rfl)]
 
+/-! ## The shape theorem -/
+
+/-- `digits`, or `digits . digits`. -/
+def numBody (I : List Char) (fr : Option (List Char)) : List Char :=
+  I ++ (match fr with | none => [] | some F => '.' :: F)
+
+theorem scan_dot (i : Nat) (T : List Char) (st : ScanState) (hd : st.dpoint = none) (he : st.exp = none)
+    (ha : st.afterE = false) :
+    scanLoop i ('.' :: T) st = scanLoop (i + 1) T { st with dpoint := some i } := by
+  obtain ⟨d0, e0, c0, a0⟩ := st
+  simp only at hd he ha
+  subst hd he ha
+  rw [scanLoop]
+  simp
+
+theorem filter_AD {X : List Char} (hX : AD X) : X.filter (· != '.') = X := by
+  apply List.filter_eq_self.mpr
+  intro c hc
+  have := (digit_facts (hX c hc)).2.1
+  simpa using this
+
+theorem digitVal_zero : digitVal '0' = some 0 := by decide
+
+theorem foldl_zeros (Z : List Char) (hZ : ∀ c ∈ Z, c = '0') :
+    Z.foldl (fun acc c => acc * 10 + (digitVal c).getD 0) 0 = 0 := by
+  induction Z with
+  | nil => rfl
+  | cons z rest ih =>
+    obtain rfl : z = '0' := hZ z (by simp)
+    simp only [List.foldl_cons, digitVal_zero, Option.getD_some, Nat.zero_mul, Nat.zero_add]
+    exact ih (fun c hc => hZ c (by simp [hc]))
+
+theorem digitsValue_zeros (Z X : List Char) (hZ : ∀ c ∈ Z, c = '0') :
+    digitsValue (Z ++ X) = digitsValue X := by
+  simp only [digitsValue, List.foldl_append, foldl_zeros Z hZ]
+
+/-- A digit string of length `n` reads as less than `10^n`. -/
+theorem digits_lt (X : List Char) (hX : AD X) : Nat.ofDigitChars 10 X 0 < 10 ^ X.length := by
+  induction X with
+  | nil => simp [Nat.ofDigitChars]
+  | cons x xs ih =>
+    have hd := isDigit_iff'.mp (hX x (by simp))
+    have hi := ih (fun c hc => hX c (by simp [hc]))
+    rw [Nat.ofDigitChars_cons, Nat.ofDigitChars_eq_ofDigitChars_zero]
+    simp only [List.length_cons, Nat.mul_zero, Nat.zero_add, show '0'.toNat = 48 from rfl]
+    have hk : x.toNat - 48 ≤ 9 := by omega
+    have hp : 10 ^ xs.length * (x.toNat - 48) ≤ 10 ^ xs.length * 9 := Nat.mul_le_mul_left _ hk
+    rw [Nat.pow_succ]
+    omega
+
+theorem digit_split (X : List Char) (hX : AD X) (hne : X ≠ []) :
+    ∃ Z c R, X = Z ++ c :: R ∧ (∀ z ∈ Z, z = '0') ∧ (c ≠ '0' ∨ R = []) := by
+  induction X with
+  | nil => exact absurd rfl hne
+  | cons x xs ih =>
+    by_cases hx : x = '0'
+    · cases xs with
+      | nil => exact ⟨[], x, [], rfl, by simp, Or.inr rfl⟩
+      | cons y ys =>
+        obtain ⟨Z, c, R, h1, h2, h3⟩ := ih (fun a ha => hX a (by simp [ha])) (by simp)
+        refine ⟨'0' :: Z, c, R, by rw [h1, hx]; rfl, ?_, h3⟩
+        intro z hz
+        simp only [List.mem_cons] at hz
+        rcases hz with rfl | hz
+        · rfl
+        · exact h2 z hz
+    · exact ⟨[], x, xs, rfl, by simp, Or.inl hx⟩
+
+/-- The value of significant digits and their count. -/
+theorem numDigits_sig (c : Char) (R : List Char) (hc : c.isDigit = true) (hR : AD R)
+    (h0 : c ≠ '0' ∨ R = []) : numDigits (digitsValue (c :: R)) = (c :: R).length := by
+  have hA : AD (c :: R) := by
+    intro x hx
+    simp only [List.mem_cons] at hx
+    rcases hx with rfl | hx
+    · exact hc
+    · exact hR x hx
+  by_cases hz : c = '0'
+  · subst hz
+    have : R = [] := h0.resolve_left (fun h => h rfl)
+    subst this
+    decide
+  · have := toDigits_ofDigitChars _ (c :: R) rfl hA (by simp) (by simpa using hz)
+    rw [digitsValue_eq _ hA]
+    simp only [numDigits, this]
+
+theorem mpd_caseA (neg : Bool) (Z : List Char) (c : Char) (R : List Char) (fr : Option (List Char))
+    (ex : ExPart) (hZ : ∀ z ∈ Z, z = '0') (hc : c.isDigit = true) (hR : AD R)
+    (hF : AD (fr.getD [])) (hx : ExOk ex)
+    (h0 : c ≠ '0' ∨ (R = [] ∧ fr.getD [] = []))
+    (hf : ((fr.getD []).length : Int) ≤ mpdMaxPrec)
+    (hD : (((c :: R) ++ fr.getD []).length : Int) ≤ mpdMaxPrec)
+    (he1 : mpdMinEtiny ≤ exVal ex - (fr.getD []).length)
+    (he2 : exVal ex - ((fr.getD []).length : Int) ≤ mpdMaxEmax) :
+    mpdNumeric neg (numBody (Z ++ c :: R) fr ++ expPart ex) =
+      .fin neg (digitsValue ((Z ++ c :: R) ++ fr.getD [])) ((c :: R) ++ fr.getD []).length
+        (exVal ex - (fr.getD []).length) := by
+  have hcd : Skips (c :: (R ++ (match fr with | none => [] | some F => '.' :: F) ++ expPart ex)) :=
+    Or.inl ⟨c, _, rfl, hc⟩
+  have hval : digitsValue ((Z ++ c :: R) ++ fr.getD []) = digitsValue ((c :: R) ++ fr.getD []) := by
+    rw [List.append_assoc, digitsValue_zeros Z _ hZ]
+  have hAll : AD (c :: R ++ fr.getD []) := by
+    intro x hx'
+    simp only [List.cons_append, List.mem_cons, List.mem_append] at hx'
+    rcases hx' with rfl | h | h
+    · exact hc
+    · exact hR x h
+    · exact hF x h
+  cases fr with
+  | none =>
+    simp only [Option.getD_none] at *
+    have hT : c ≠ '0' ∨ (R = [] ∧ ¬ Skips (expPart ex)) :=
+      h0.imp id (fun h => ⟨h.1, not_skips_exp ex hx⟩)
+    have hsc : scanLoop 0 (numBody (Z ++ c :: R) none ++ expPart ex) {} =
+        some { coeff := some Z.length, exp := ex.map (fun _ => Z.length + 1 + R.length) } := by
+      simp only [numBody, List.append_nil, List.append_assoc, List.cons_append]
+      rw [scan_zeros Z _ 0 ({} : ScanState) ⟨rfl, rfl, rfl⟩ hZ (Or.inl ⟨c, _, rfl, hc⟩), Nat.zero_add]
+      have hfirst := scan_first c R (expPart ex) Z.length {} ⟨rfl, rfl, rfl⟩ hc hT hR
+      simp only [List.cons_append] at hfirst
+      rw [hfirst, scan_exp ex hx _ _ rfl rfl rfl]
+    have hP : (numBody (Z ++ c :: R) none).length = Z.length + 1 + R.length := by
+      simp [numBody]; omega
+    simp only [List.append_nil] at hval ⊢
+    rw [hval]
+    refine mpdNumeric_eval neg _ ex hx _ Z.length 0 _ (c :: R) hsc ?_ rfl (by rw [hP]; omega)
+      (Or.inl ⟨rfl, rfl, ?_⟩) ?_ (by simp [mpdMaxPrec]) ?_ (by simpa using he1) (by simpa using he2)
+    · simp [hP]
+    · rw [hP]; simp; omega
+    · have h1 : numBody (Z ++ c :: R) none = Z ++ c :: R := by simp [numBody]
+      have h2 : (Z ++ c :: R).drop Z.length = c :: R := by simp
+      rw [hP, h1, h2]
+      have : Z.length + 1 + R.length - Z.length = (c :: R).length := by simp; omega
+      rw [this, List.take_length]
+      apply filter_AD
+      simpa using hAll
+    · simpa using hD
+  | some F =>
+    simp only [Option.getD_some] at *
+    have hnotsk : c ≠ '0' ∨ (R = [] ∧ ¬ Skips ('.' :: (F ++ expPart ex))) := by
+      refine h0.imp id (fun h => ⟨h.1, ?_⟩)
+      have hF0 : F = [] := by simpa using h.2
+      rw [hF0]
+      rintro (⟨d, r, h1, h2⟩ | ⟨d, r, h1, h2⟩)
+      · simp only [List.nil_append, List.cons.injEq] at h1
+        rw [← h1.1] at h2
+        revert h2; decide
+      · simp only [List.nil_append, List.cons.injEq, true_and] at h1
+        exact not_skips_exp ex hx (Or.inl ⟨d, r, h1, h2⟩)
+    have hsc : scanLoop 0 (numBody (Z ++ c :: R) (some F) ++ expPart ex) {} =
+        some { dpoint := some (Z.length + 1 + R.length), coeff := some Z.length,
+               exp := ex.map (fun _ => Z.length + 1 + R.length + 1 + F.length) } := by
+      simp only [numBody, List.append_assoc, List.cons_append]
+      rw [scan_zeros Z _ 0 ({} : ScanState) ⟨rfl, rfl, rfl⟩ hZ (Or.inl ⟨c, _, rfl, hc⟩), Nat.zero_add]
+      have hfirst := scan_first c R ('.' :: (F ++ expPart ex)) Z.length {} ⟨rfl, rfl, rfl⟩ hc hnotsk hR
+      simp only [List.cons_append] at hfirst
+      rw [hfirst, scan_dot _ _ _ rfl rfl rfl,
+        scan_settled F _ _ _ hF (Or.inl rfl) rfl, scan_exp ex hx _ _ rfl rfl rfl]
+    have hP : (numBody (Z ++ c :: R) (some F)).length = Z.length + 1 + R.length + 1 + F.length := by
+      simp [numBody]; omega
+    rw [hval]
+    refine mpdNumeric_eval neg _ ex hx _ Z.length F.length _ (c :: R ++ F) hsc ?_ rfl (by rw [hP]; omega)
+      (Or.inr ⟨Z.length + 1 + R.length, rfl, ?_, ?_⟩) ?_ hf ?_ he1 he2
+    · simp [hP]
+    · rw [hP]; omega
+    · rw [hP, if_pos (by omega)]; simp; omega
+    · have h1 : numBody (Z ++ c :: R) (some F) = Z ++ c :: (R ++ '.' :: F) := by simp [numBody]
+      have h2 : (Z ++ c :: (R ++ '.' :: F)).drop Z.length = c :: (R ++ '.' :: F) := by simp
+      rw [hP, h1, h2]
+      have : Z.length + 1 + R.length + 1 + F.length - Z.length = (c :: (R ++ '.' :: F)).length := by
+        simp; omega
+      rw [this, List.take_length]
+      have hdot : (c :: (R ++ '.' :: F)).filter (· != '.') = c :: R ++ F := by
+        have hk : c :: (R ++ '.' :: F) = (c :: R) ++ '.' :: F := rfl
+        have h3 : ('.' :: F).filter (· != '.') = F.filter (· != '.') := by simp
+        rw [hk, List.filter_append, h3]
+        rw [filter_AD (fun x hx' => hAll x (by
+          simp only [List.cons_append, List.mem_cons, List.mem_append] at hx' ⊢
+          rcases hx' with h | h
+          · exact Or.inl h
+          · exact Or.inr (Or.inl h))), filter_AD (X := F) hF]
+      exact hdot
+    · exact hD
+
+theorem mpd_caseB (neg : Bool) (I Z : List Char) (c : Char) (R : List Char) (ex : ExPart)
+    (hI : ∀ z ∈ I, z = '0') (hZ : ∀ z ∈ Z, z = '0') (hc : c.isDigit = true) (hR : AD R)
+    (hx : ExOk ex) (h0 : c ≠ '0' ∨ R = [])
+    (hf : (((Z ++ c :: R)).length : Int) ≤ mpdMaxPrec)
+    (he1 : mpdMinEtiny ≤ exVal ex - (Z ++ c :: R).length)
+    (he2 : exVal ex - ((Z ++ c :: R).length : Int) ≤ mpdMaxEmax) :
+    mpdNumeric neg (numBody I (some (Z ++ c :: R)) ++ expPart ex) =
+      .fin neg (digitsValue (I ++ (Z ++ c :: R))) (c :: R).length (exVal ex - (Z ++ c :: R).length) := by
+  have hcd : Skips (c :: (R ++ expPart ex)) := Or.inl ⟨c, _, rfl, hc⟩
+  have hzd : AD Z := fun z hz => by rw [hZ z hz]; exact zero_isDigit
+  have hAD : AD (Z ++ c :: R) := by
+    intro x hx'
+    simp only [List.mem_append, List.mem_cons] at hx'
+    rcases hx' with h | rfl | h
+    · exact hzd x h
+    · exact hc
+    · exact hR x h
+  -- the head of the fraction is a digit, so the zeros of `I` are skipped
+  have hdot : Skips ('.' :: (Z ++ c :: (R ++ expPart ex))) := by
+    cases Z with
+    | nil => exact Or.inr ⟨c, _, rfl, hc⟩
+    | cons z zs => exact Or.inr ⟨z, _, rfl, hzd z (by simp)⟩
+  have hsc : scanLoop 0 (numBody I (some (Z ++ c :: R)) ++ expPart ex) {} =
+      some { dpoint := some I.length, coeff := some (I.length + 1 + Z.length),
+             exp := ex.map (fun _ => I.length + 1 + (Z ++ c :: R).length) } := by
+    simp only [numBody, List.append_assoc, List.cons_append]
+    rw [scan_zeros I _ 0 ({} : ScanState) ⟨rfl, rfl, rfl⟩ hI hdot, Nat.zero_add]
+    rw [scan_dot _ _ _ rfl rfl rfl]
+    rw [scan_zeros Z _ _ { dpoint := some I.length } ⟨rfl, rfl, rfl⟩ hZ hcd]
+    have hfirst := scan_first c R (expPart ex) (I.length + 1 + Z.length) { dpoint := some I.length }
+      ⟨rfl, rfl, rfl⟩ hc (h0.imp id (fun h => ⟨h, not_skips_exp ex hx⟩)) hR
+    simp only [List.cons_append] at hfirst
+    rw [hfirst]
+    have hlen : I.length + 1 + Z.length + 1 + R.length = I.length + 1 + (Z ++ c :: R).length := by
+      simp; omega
+    rw [hlen, scan_exp ex hx _ _ rfl rfl rfl]
+  have hP : (numBody I (some (Z ++ c :: R))).length = I.length + 1 + (Z ++ c :: R).length := by
+    simp [numBody]; omega
+  have hsplit : numBody I (some (Z ++ c :: R)) = (I ++ '.' :: Z) ++ c :: R := by
+    simp [numBody]
+  have hdrop : (numBody I (some (Z ++ c :: R))).drop (I.length + 1 + Z.length) = c :: R := by
+    rw [hsplit]
+    have : I.length + 1 + Z.length = (I ++ '.' :: Z).length := by simp; omega
+    rw [this, List.drop_left]
+  have hval : digitsValue (I ++ (Z ++ c :: R)) = digitsValue (c :: R) := by
+    rw [digitsValue_zeros I _ hI, digitsValue_zeros Z _ hZ]
+  rw [hval]
+  apply mpdNumeric_eval neg _ ex hx _ (I.length + 1 + Z.length) _ _ (c :: R) hsc
+  · rw [hP]
+  · rfl
+  · rw [hP]; simp
+  · right
+    refine ⟨I.length, rfl, ?_, ?_⟩
+    · rw [hP]; omega
+    · rw [hP, if_neg (by omega)]
+      simp; omega
+  · rw [hdrop, hP]
+    have hR' : AD (c :: R) := by
+      intro x hx'
+      simp only [List.mem_cons] at hx'
+      rcases hx' with rfl | h
+      · exact hc
+      · exact hR x h
+    have : I.length + 1 + (Z ++ c :: R).length - (I.length + 1 + Z.length) = (c :: R).length := by
+      simp; omega
+    rw [this, List.take_length, filter_AD hR']
+  · exact hf
+  · have : ((c :: R).length : Int) ≤ ((Z ++ c :: R).length : Int) := by simp; omega
+    omega
+  · exact he1
+  · exact he2
+
+/-- `mpd_qset_string`'s numeric branch on `digits [. digits] [e [sign] digits]`
+returns the exact value and exponent, given that the fraction is at most
+`MPD_MAX_PREC` digits long, the significant digits fit, and the exponent is
+within libmpdec's range. -/
+theorem mpd_num (neg : Bool) (I : List Char) (fr : Option (List Char)) (ex : ExPart)
+    (hI : AD I) (hF : AD (fr.getD [])) (hne : I ++ fr.getD [] ≠ []) (hx : ExOk ex)
+    (hf : ((fr.getD []).length : Int) ≤ mpdMaxPrec)
+    (hD : (numDigits (digitsValue (I ++ fr.getD [])) : Int) ≤ mpdMaxPrec)
+    (he1 : mpdMinEtiny ≤ exVal ex - (fr.getD []).length)
+    (he2 : exVal ex - ((fr.getD []).length : Int) ≤ mpdMaxEmax) :
+    mpdNumeric neg (numBody I fr ++ expPart ex) =
+      .fin neg (digitsValue (I ++ fr.getD [])) (numDigits (digitsValue (I ++ fr.getD [])))
+        (exVal ex - (fr.getD []).length) := by
+  have hAD : AD (I ++ fr.getD []) := by
+    intro x hx'
+    rcases List.mem_append.mp hx' with h | h
+    · exact hI x h
+    · exact hF x h
+  have allZero : ∀ {L : List Char}, (∀ z ∈ L, z = '0') → AD L :=
+    fun h z hz => by rw [h z hz]; exact zero_isDigit
+  -- does the integer part hold a significant digit?
+  by_cases hsig : ∃ Z c R, I = Z ++ c :: R ∧ (∀ z ∈ Z, z = '0') ∧ (c ≠ '0' ∨ (R = [] ∧ fr.getD [] = []))
+  · obtain ⟨Z, c, R, rfl, hZ, h0⟩ := hsig
+    have hc : c.isDigit = true := hI c (by simp)
+    have hR : AD R := fun x h => hI x (by simp [h])
+    have hsg : c ≠ '0' ∨ (R ++ fr.getD []) = [] := by
+      rcases h0 with h | ⟨h1, h2⟩
+      · exact Or.inl h
+      · right; simp [h1, h2]
+    have hval : digitsValue ((Z ++ c :: R) ++ fr.getD []) = digitsValue (c :: (R ++ fr.getD [])) := by
+      rw [List.append_assoc, digitsValue_zeros Z _ hZ]; rfl
+    have hnum := numDigits_sig c (R ++ fr.getD []) hc
+      (fun x h => by
+        rcases List.mem_append.mp h with h | h
+        · exact hR x h
+        · exact hF x h) hsg
+    rw [hval, hnum] at hD
+    rw [hval, hnum]
+    have := mpd_caseA neg Z c R fr ex hZ hc hR hF hx h0 hf (by simpa using hD) he1 he2
+    rw [this]
+    congr 1
+  · -- the integer part is all zeros, and the digits are in the fraction
+    have hIz : ∀ z ∈ I, z = '0' := by
+      by_cases hI0 : I = []
+      · subst hI0; simp
+      obtain ⟨Z, c, R, h1, h2, h3⟩ := digit_split I hI hI0
+      have hc0 : c = '0' := by
+        by_cases hc : c = '0'
+        · exact hc
+        · exact absurd ⟨Z, c, R, h1, h2, Or.inl hc⟩ hsig
+      subst hc0
+      have hR : R = [] := h3.resolve_left (fun h => h rfl)
+      subst hR
+      intro z hz
+      rw [h1] at hz
+      simp only [List.mem_append, List.mem_cons, List.not_mem_nil, or_false] at hz
+      rcases hz with h | h
+      · exact h2 z h
+      · exact h
+    have hFne : fr.getD [] ≠ [] := by
+      intro hF0
+      by_cases hI0 : I = []
+      · subst hI0; rw [hF0] at hne; exact hne rfl
+      obtain ⟨Z, c, R, h1, h2, h3⟩ := digit_split I hI hI0
+      have hc0 : c = '0' := hIz c (by rw [h1]; simp)
+      subst hc0
+      have hR : R = [] := h3.resolve_left (fun h => h rfl)
+      exact hsig ⟨Z, '0', R, h1, h2, Or.inr ⟨hR, hF0⟩⟩
+    cases fr with
+    | none => exact absurd rfl hFne
+    | some F =>
+      simp only [Option.getD_some] at *
+      obtain ⟨Z, c, R, rfl, hZ, h0⟩ := digit_split F hF hFne
+      have hc : c.isDigit = true := hF c (by simp)
+      have hR : AD R := fun x h => hF x (by simp [h])
+      have hval : digitsValue (I ++ (Z ++ c :: R)) = digitsValue (c :: R) := by
+        rw [digitsValue_zeros I _ hIz, digitsValue_zeros Z _ hZ]
+      have hnum := numDigits_sig c R hc hR h0
+      rw [hval] at hD ⊢
+      rw [hnum] at hD ⊢
+      have := mpd_caseB neg I Z c R ex hIz hZ hc hR hx h0 hf he1 he2
+      rw [this, hval]
+
 end PyLean.Decimal

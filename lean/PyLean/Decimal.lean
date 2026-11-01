@@ -4,6 +4,7 @@ import PyLean.Decimal.Refute
 import PyLean.Decimal.TupleProps
 import PyLean.Decimal.Props
 import PyLean.Decimal.Quantize
+import PyLean.Decimal.RoundTrip
 
 /-!
 `Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.14.7.
@@ -48,6 +49,18 @@ def entries : List Entry := [
     status := .refuted, prop := ``StrRoundTripPy, thm := some ``strRoundTripPy_refuted
     bug := some "decimal-pydecimal-int-max-str-digits"
     notes := "d = Decimal(10**4300) built from a tuple: str(d) has 4301 digits and cannot be parsed back." },
+  { id := "decimal-str-roundtrip-py-bounded", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal.__str__", "Decimal.__new__ (str)"]
+    statement := "For every decimal d within the C limits whose coefficient has at most 4294 digits (NaN payload at most 4300), Decimal(str(d)) == d in _pydecimal, with the same sign, coefficient, exponent and NaN kind and payload."
+    source := "invariant (narrowed version of decimal-str-roundtrip-py)"
+    status := .proven, prop := ``StrRoundTripPyBounded, thm := some ``strRoundTripPyBounded_proven
+    notes := "4294 rather than 4300 because str() of a value such as 0.00000ddd adds up to six zeros, which int() counts. The excluded cases are the int-limit refutation." },
+  { id := "decimal-str-roundtrip-c", pyFile := "Modules/_decimal/_decimal.c"
+    pyFns := ["dec_str", "PyDecType_FromUnicodeExactWS", "numeric_as_ascii", "mpd_qset_string"]
+    statement := "For every decimal d within the C limits (NaNs and infinities included) whose coefficient has at most MPD_MAX_PREC - 5 digits, Decimal(str(d)) == d in _decimal, with the same sign, coefficient, exponent and NaN kind and payload."
+    source := "invariant (__repr__ comment, _pydecimal.py:981: 'eval(repr(d)) == d'; both twins)"
+    status := .proven, prop := ``StrRoundTripC, thm := some ``strRoundTripC_proven
+    notes := "The -5 is real in the model: mpd_qset_string rejects more than MPD_MAX_PREC fraction digits (io.c:286), and 0.00000ddd adds zeros to the fraction, so a value with about 10**18 digits would not read back. No such string fits in memory; this is not recorded as a bug." },
   { id := "decimal-hash-twins-agree", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.__hash__"]
     statement := "Whenever _decimal hashes a decimal, _pydecimal hashes it to the same int."

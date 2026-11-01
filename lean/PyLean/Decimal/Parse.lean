@@ -58,71 +58,87 @@ inductive PyMatch where
   | nan (neg : Bool) (signal : Bool) (diag : List Char)
   deriving Repr, DecidableEq
 
+/-- The optional sign of a numeral. -/
+def expSign : List Char → Bool × List Char
+  | '-' :: r => (true, r)
+  | '+' :: r => (false, r)
+  | r => (false, r)
+
 /-- `(E(?P<exp>[-+]?\d+))? \z` on what follows the fraction. -/
 def matchExpEnd : List Char → Option (Option (Bool × List Char))
   | [] => some none
   | c :: cs =>
     if c == 'e' || c == 'E' then
-      let (eneg, body) := match cs with
-        | '-' :: r => (true, r)
-        | '+' :: r => (false, r)
-        | r => (false, r)
+      let (eneg, body) := expSign cs
       if body ≠ [] ∧ body.all isDigit then some (some (eneg, body)) else none
     else none
+
+/-- `(\.(?P<frac>\d*))?` -/
+def matchFrac : List Char → List Char × List Char
+  | '.' :: r => (r.takeWhile isDigit, r.dropWhile isDigit)
+  | r => ([], r)
 
 /-- The numeric alternative after the lookahead. -/
 def matchNum (neg : Bool) (s : List Char) : Option PyMatch :=
   let intpart := s.takeWhile isDigit
   let r1 := s.dropWhile isDigit
-  let (frac, r2) := match r1 with
-    | '.' :: r => (r.takeWhile isDigit, r.dropWhile isDigit)
-    | r => ([], r)
+  let (frac, r2) := matchFrac r1
   match matchExpEnd r2 with
   | some ex => some (.num neg intpart frac ex)
   | none => none
 
+/-- The lookahead `(?=\d|\.\d)`. -/
+def pyLook : List Char → Bool
+  | c :: r => isDigit c || (c == '.' && match r with | d :: _ => isDigit d | [] => false)
+  | [] => false
+
+/-- `(?P<signal>s)?`: the optional `s` of a NaN. -/
+def matchSig : List Char → Bool × List Char
+  | c :: r => if ciMatch 's' c then (true, r) else (false, c :: r)
+  | [] => (false, [])
+
+/-- `s?NaN\d*\z`. -/
+def matchNan (neg : Bool) (s : List Char) : Option PyMatch :=
+  let (sig, r) := matchSig s
+  match matchWord "nan".toList r with
+  | some d => if d.all isDigit then some (.nan neg sig d) else none
+  | none => none
+
 /-- `_parser(t)` (`re.match` with `\z`), returning the groups. -/
 def pyMatch (t : List Char) : Option PyMatch :=
-  let (neg, s) := match t with
-    | '-' :: r => (true, r)
-    | '+' :: r => (false, r)
-    | r => (false, r)
-  -- (?=\d|\.\d)
-  let look := match s with
-    | c :: r => isDigit c || (c == '.' && match r with | d :: _ => isDigit d | [] => false)
-    | [] => false
-  if look then matchNum neg s
+  let (neg, s) := expSign t
+  if pyLook s then matchNum neg s
   else match matchWord "inf".toList s with
     | some [] => some (.inf neg)
     | some r => if matchWord "inity".toList r = some [] then some (.inf neg) else none
-    | none =>
-      let (sig, r) := match s with
-        | c :: r => if ciMatch 's' c then (true, r) else (false, c :: r)
-        | [] => (false, [])
-      match matchWord "nan".toList r with
-      | some d => if d.all isDigit then some (.nan neg sig d) else none
-      | none => none
+    | none => matchNan neg s
+
+/-- The finite branch of `__new__`, _pydecimal.py:501-506. -/
+def pyNum (neg : Bool) (intpart frac : List Char) (ex : Option (Bool × List Char)) : Py Dec := do
+  -- exp = int(m.group('exp') or '0')   (:503)
+  let e : Int ← match ex with
+    | none => pure 0
+    | some (eneg, ds) => do
+      intLimit ds.length
+      pure (if eneg then -(digitsValue ds : Int) else digitsValue ds)
+  -- self._int = str(int(intpart+fracpart))   (:504)
+  intLimit (intpart ++ frac).length
+  return .fin neg (digitsValue (intpart ++ frac)) (e - frac.length)
+
+/-- The NaN branch of `__new__`, _pydecimal.py:508-516. -/
+def pyNanVal (neg sig : Bool) (d : List Char) : Py Dec := do
+  -- self._int = str(int(diag or '0')).lstrip('0')   (:511)
+  intLimit (if d = [] then 1 else d.length)
+  return .nan neg sig (digitsValue d)
 
 /-- `_pydecimal.Decimal(value)` for a `str` value, _pydecimal.py:486-532,
 with the default context (InvalidOperation trapped). -/
 def pyParse (s : List Char) : Py Dec :=
   match pyMatch ((strip s).filter (· ≠ '_')) with
   | none => .error invalidOp
-  | some (.num neg intpart frac ex) => do
-    -- exp = int(m.group('exp') or '0')   (:503)
-    let e : Int ← match ex with
-      | none => pure 0
-      | some (eneg, ds) => do
-        intLimit ds.length
-        pure (if eneg then -(digitsValue ds : Int) else digitsValue ds)
-    -- self._int = str(int(intpart+fracpart))   (:504)
-    intLimit (intpart ++ frac).length
-    return .fin neg (digitsValue (intpart ++ frac)) (e - frac.length)
+  | some (.num neg intpart frac ex) => pyNum neg intpart frac ex
   | some (.inf neg) => .ok (.inf neg)
-  | some (.nan neg sig d) => do
-    -- self._int = str(int(diag or '0')).lstrip('0')   (:511)
-    intLimit (if d = [] then 1 else d.length)
-    return .nan neg sig (digitsValue d)
+  | some (.nan neg sig d) => pyNanVal neg sig d
 
 /-! ## The C twin -/
 
@@ -196,12 +212,6 @@ def scanLoop : Nat → List Char → ScanState → Option ScanState
       else scanLoop (i + 1) cs { st with coeff := some i }
     else scanLoop (i + 1) cs st
 
-/-- The optional sign of a numeral. -/
-def expSign : List Char → Bool × List Char
-  | '-' :: r => (true, r)
-  | '+' :: r => (false, r)
-  | r => (false, r)
-
 /-- `mpd_strtossize` (= `strtoll`) on the indicator's tail, as used by
 `strtoexp` (io.c:76-88) and the `errno` test at io.c:273-278: `none` for
 `EINVAL`, a saturated value on `ERANGE`. The tail is `[+-]?digits` by the
@@ -265,24 +275,23 @@ def mpdNumeric (neg : Bool) (s : List Char) : MpdParse :=
         let cds := ((s.drop coeff).take (endc - coeff)).filter (· != '.')
         .fin neg (digitsValue cds) df.1 (finalExp (ex.getD 0) df.2)
 
+/-- The payload branches of `mpd_qset_string`, io.c:226-237 and :242-252. -/
+def mpdPayload (neg sig : Bool) (r : List Char) : MpdParse :=
+  if r = [] then .nan neg sig 0 0
+  else match scanPayload r with
+    | none => .syntax
+    | some ds => if (ds.length : Int) > mpdMaxPrec then .syntax
+                 else .nan neg sig (digitsValue ds) ds.length
+
 /-- `mpd_qset_string(dec, s, maxcontext)`, io.c:200-328, up to the call of
 `mpd_qfinalize`. -/
 def mpdSetString (s0 : List Char) : MpdParse :=
-  let (neg, s) := match s0 with
-    | '+' :: r => (false, r)
-    | '-' :: r => (true, r)
-    | r => (false, r)
-  let payload (sig : Bool) (r : List Char) : MpdParse :=
-    if r = [] then .nan neg sig 0 0
-    else match scanPayload r with
-      | none => .syntax
-      | some ds => if (ds.length : Int) > mpdMaxPrec then .syntax
-                   else .nan neg sig (digitsValue ds) ds.length
+  let (neg, s) := expSign s0
   match strneq "nan".toList s false with
-  | some r => payload false r
+  | some r => mpdPayload neg false r
   | none =>
   match strneq "snan".toList s false with
-  | some r => payload true r
+  | some r => mpdPayload neg true r
   | none =>
   match strneq "inf".toList s false with
   | some r => if r = [] || (strneq "inity".toList r true).isSome then .inf neg else .syntax

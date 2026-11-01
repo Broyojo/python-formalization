@@ -3,6 +3,7 @@ import PyLean.Decimal.Parse
 import PyLean.Decimal.Arith
 import PyLean.Decimal.Tuple
 import PyLean.Decimal.Format
+import PyLean.Decimal.RoundTrip
 import PyLean.Decimal.Quantize
 
 /-! Differential-testing handler for `decimal` cases (`"mod": "decimal"`).
@@ -129,6 +130,8 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "parse_c" => return encPy encDec (cParse (← getChars j "s"))
   | "str_py" => return encPy encStr (pyStr (← getDec j "a"))
   | "str_c" => return encPy encStr (.ok (toSci (← getDec j "a")) : Py (List Char))
+  | "strrt_c" => return encPy encDec (cParse (toSci (← getDec j "a")))
+  | "strrt_py" => return encPy encDec (pyStr (← getDec j "a") >>= pyParse)
   | "tuple_py" =>
     let (s, ds, e) ← getTuple j
     return encPy encStr (pyFromTuple s ds e >>= (pyStrObj ·))
