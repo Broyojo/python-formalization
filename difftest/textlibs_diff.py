@@ -923,6 +923,165 @@ class CsvArea:
         return res
 
 
+# ---- re --------------------------------------------------------------------
+
+import re
+from re import _parser as sre_parse
+
+
+def re_item(op, av):
+    n = str(op)
+    if n == "LITERAL":
+        return ["l", av]
+    if n == "RANGE":
+        return ["r", av[0], av[1]]
+    if n == "CATEGORY":
+        return ["c", str(av)]
+    return ["n"]
+
+
+def re_nodes(seq):
+    return [re_node(op, av) for op, av in seq]
+
+
+def re_node(op, av):
+    n = str(op)
+    if n == "LITERAL":
+        return ["lit", av]
+    if n == "NOT_LITERAL":
+        return ["nlit", av]
+    if n == "ANY":
+        return ["any"]
+    if n == "IN":
+        return ["in", [re_item(o, a) for o, a in av]]
+    if n == "AT":
+        return ["at", str(av)]
+    if n == "GROUPREF":
+        return ["gref", av]
+    if n == "GROUPREF_EXISTS":
+        return ["gex", av[0], re_nodes(av[1]), None if av[2] is None else re_nodes(av[2])]
+    if n == "BRANCH":
+        return ["br", [re_nodes(x) for x in av[1]]]
+    if n == "SUBPATTERN":
+        return ["sub", av[0], av[1], av[2], re_nodes(av[3])]
+    if n in ("MAX_REPEAT", "MIN_REPEAT", "POSSESSIVE_REPEAT"):
+        return ["rep", n, int(av[0]), int(av[1]), re_nodes(av[2])]
+    if n == "ATOMIC_GROUP":
+        return ["atom", re_nodes(av)]
+    if n == "ASSERT":
+        return ["as", av[0], re_nodes(av[1])]
+    if n == "ASSERT_NOT":
+        return ["nas", av[0], re_nodes(av[1])]
+    if n == "FAILURE":
+        return ["fail"]
+    raise TypeError(n)
+
+
+def re_src(c):
+    return "".join(map(chr, c["pat"])) if c["text"] else bytes(c["pat"])
+
+
+@area("re", 8)
+class ReArea:
+    ATOMS = ["a", "b", "c", "x", "1", "_", " ", "-", ".", "^", "$", r"\d", r"\w", r"\s", r"\D", r"\W", r"\S", r"\b",
+             r"\B", r"\A", r"\Z", r"\z", r"\n", r"\t", r"\\", r"\x41", r"\101", r"\0", r"\07", r"\377", r"\400",
+             r"A", r"\U00000041", r"\U00110000", r"\q", r"\_", r"\.", r"\8", r"\1", r"\2", r"\12", r"\123", "é"]
+    SETS = ["[a]", "[^a]", "[ab]", "[^ab]", "[a-c]", "[a-c0]", "[]a]", "[^]a]", "[a-]", "[-a]", "[\\d]", "[^\\s]", "[\\w-]",
+            "[\\d-a]", "[a-\\d]", "[c-a]", "[", "[a", "[a-", "[\\", "[\\x4]", "[\\400]", "[\\8]", "[\\q]", "[\\b]",
+            "[\\x41-\\x43]", "[a-a]", "[aa]", "[--a]", "[[a]", "[a&&b]"]
+    QUANT = ["*", "+", "?", "*?", "+?", "??", "*+", "++", "?+", "{2}", "{1,3}", "{,3}", "{2,}", "{,}", "{}", "{a}", "{1",
+             "{1,", "{3,1}", "{0}", "{0,0}", "{1,3}?", "{1,3}+", "{4294967295}", "{4294967294}", "{4294967296}", "**",
+             "*?+", "{" + "9" * 5000 + "}", "{1," + "9" * 4400 + "}", "{" + "9" * 4300 + "}"]
+    FLAGS = ["(?i)", "(?m)", "(?s)", "(?x)", "(?a)", "(?L)", "(?u)", "(?i:", "(?-i:", "(?i-s:", "(?a:", "(?-a:", "(?L:",
+             "(?u:", "(?ia:", "(?iz)", "(?-z:", "(?i-:", "(?-:", "(?-i)", "(?i-i:", "(?1)", "(?i", "(?-", "(?i-", "(?i-s"]
+
+    @classmethod
+    def gen_pat(cls, r, depth=0):
+        out = []
+        for _ in range(r.choice([0, 1, 1, 2, 2, 3, 4])):
+            roll = r.random()
+            if roll < 0.32:
+                out.append(r.choice(cls.ATOMS))
+            elif roll < 0.42:
+                out.append(r.choice(cls.SETS))
+            elif roll < 0.52:
+                out.append(r.choice(cls.QUANT))
+            elif roll < 0.57:
+                out.append(r.choice(cls.FLAGS))
+            elif roll < 0.62:
+                out.append("|")
+            elif depth < 3:
+                inner = cls.gen_pat(r, depth + 1)
+                n = r.choice(["g", "g", "g", "nc", "name", "ref", "la", "nla", "lb", "nlb", "atomic", "cond", "condname",
+                              "comment", "open", "close", "badext"])
+                out.append({"g": f"({inner})", "nc": f"(?:{inner})", "name": f"(?P<n{r.randrange(3)}>{inner})",
+                            "ref": r.choice(["(?P=n0)", "(?P=n1)", "(?P=)", "(?P=1a)", "(?P<>a)", "(?P<1a>a)", "(?P<a", "(?P"]),
+                            "la": f"(?={inner})", "nla": f"(?!{inner})", "lb": f"(?<={inner})", "nlb": f"(?<!{inner})",
+                            "atomic": f"(?>{inner})",
+                            "cond": f"(?({r.choice('0123')}){inner}|{cls.gen_pat(r, depth + 1)})",
+                            "condname": f"(?(n{r.randrange(2)}){inner})",
+                            "comment": r.choice(["(?#x)", "(?#", "(?#)"]), "open": "(", "close": ")",
+                            "badext": r.choice(["(?", "(?P>a)", "(?<a)", "(?<", "(?Z)", "(?P", "(?(", "(?()", "(?(a", "(?(1)a|b|c)"])}[n])
+        return "".join(out)
+
+    @classmethod
+    def gen(cls, r):
+        pat = cls.gen_pat(r)
+        if r.random() < 0.05:
+            pat += "\n" + cls.gen_pat(r)
+        if r.random() < 0.1:
+            pat = "(?x) " + pat.replace("a", " a # c\n")
+        if r.random() < 0.35:
+            # groups first, so backreferences and conditionals parse
+            refs = [r"\1", r"\2", "(?P=n0)", "(?(1)x|y)", "(?(n0)x)", "(?(2)x)", "(?(n0)|y)", r"(?<=\1)", r"(?<=(?P=n0))",
+                    "(?(1)x|y|z)", "(?<=(a)\\1)", "(?(3)x)", r"[\1]", "(?(1)(?(2)x|y)|z)"]
+            pat = ("(?P<n0>" + r.choice(["a", "ab", "a|bc", "a*", "(?:a)"]) + ")(" + r.choice(["b", "", "b?"]) + ")"
+                   + cls.gen_pat(r, 2) + r.choice(refs) + r.choice(cls.QUANT[:8] + ["", "", ""]))
+        text = r.random() < 0.8
+        flags = r.choice([0, 0, 0, 0, 0, 2, 8, 16, 64, 256] + ([32, 4, 256 | 32, 4 | 256] if r.random() < 0.3 else [0]))
+        if not text:
+            pat = pat.replace("é", "\xe9")
+        c = {"mod": "textlibs", "fn": "re.parse", "pat": [ord(x) for x in pat], "text": text, "flags": flags}
+        if r.random() < 0.3:
+            c["fn"] = "re.template"
+            c["repl"] = [ord(x) for x in "".join(r.choice(
+                ["a", "\\1", "\\2", "\\0", "\\07", "\\123", "\\400", "\\g<1>", "\\g<0>", "\\g<n0>", "\\g<zz>", "\\g<", "\\g", "\\g<>",
+                 "\\g<1", "\\g<1a>", "\\8", "\\12", "\\n", "\\\\", "\\q", "\\_", "\\.", "\\g<" + "9" * 5000 + ">",
+                 "\\g<2147483647>", "\\g<99>"]) for _ in range(r.choice([0, 1, 2, 3])))]
+        return c
+
+    @classmethod
+    def run(cls, c):
+        src = re_src(c)
+
+        def body():
+            if c["fn"] == "re.parse":
+                p = sre_parse.parse(src, c["flags"])
+                return {"p": re_nodes(p), "flags": p.state.flags, "groups": p.state.groups,
+                        "width": list(p.getwidth()), "gd": [[[ord(x) for x in k], v] for k, v in p.state.groupdict.items()]}
+            pat = re.compile(src, c["flags"]) if False else None
+            p = sre_parse.parse(src, c["flags"])
+
+            class P:
+                groups = p.state.groups - 1
+                groupindex = p.state.groupdict
+            repl = "".join(map(chr, c["repl"]))
+            if not c["text"]:
+                if max(c["repl"], default=0) > 255:
+                    return None
+                repl = bytes(c["repl"])
+            res = sre_parse.parse_template(repl, P)
+            return [{"g": x} if isinstance(x, int) else (x if isinstance(x, list) else
+                    (list(x) if isinstance(x, bytes) else [ord(ch) for ch in x])) for x in res]
+
+        res = common.py_result(body)
+        return res
+
+    @staticmethod
+    def norm(lean_exc_msg):
+        return lean_exc_msg
+
+
 # ---- driver ----------------------------------------------------------------
 
 only = os.environ.get("TEXTLIBS_ONLY")

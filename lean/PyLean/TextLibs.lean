@@ -3,6 +3,7 @@ import PyLean.TextLibs.Diff
 import PyLean.TextLibs.StructClose
 import PyLean.TextLibs.BinasciiProps2
 import PyLean.TextLibs.CsvProps
+import PyLean.TextLibs.ReProps
 
 /-!
 Text and binary formats, CPython 3.14.7. `Modules/_struct.c` is modelled in
@@ -14,6 +15,7 @@ so only the proofs reach them, not the difftest.
 `Modules/binascii.c` and `Lib/base64.py` are in `TextLibs/BinasciiModel.lean` and
 `TextLibs/BinasciiRest.lean`; `hexlify`'s `sep` argument is not modelled. `Modules/_csv.c` and
 `Lib/csv.py` are in `TextLibs/CsvModel.lean`, whose `float()` covers ASCII text only.
+`Lib/re/_parser.py` is in `TextLibs/ReParse.lean`, without `\\N{...}` and non-ASCII group names.
 -/
 
 namespace PyLean.TextLibs
@@ -22,6 +24,7 @@ open PyLean.Registry
 open PyLean.TextLibs.Struct
 open PyLean.TextLibs.Binascii
 open PyLean.TextLibs.Csv
+open PyLean.TextLibs.Re
 
 /-- The integer routines `IntCodesRoundTrip` drives through `runPack` and `runUnpack`. -/
 def structIntFns : List String :=
@@ -346,7 +349,44 @@ def entries : List Entry := [
   { id := "textlibs-csv-dictwriter-writerows", pyFile := "Lib/csv.py", pyFns := ["DictWriter.writerows"]
     statement := "DictWriter.writerows writes the concatenation of what writerow writes for each dict."
     source := "docs: writerows", status := .proven
-    prop := ``DictWriterowsConcat, thm := some ``dictWriterowsConcat_proven }
+    prop := ``DictWriterowsConcat, thm := some ``dictWriterowsConcat_proven },
+  { id := "textlibs-re-digit-limit-parse", pyFile := "Lib/re/_parser.py"
+    pyFns := ["State.__init__", "State.groups", "State.opengroup", "State.closegroup", "State.checkgroup",
+      "State.checklookbehindgroup", "SubPattern.__init__", "SubPattern.__len__", "SubPattern.__delitem__",
+      "SubPattern.__getitem__", "SubPattern.__setitem__", "SubPattern.insert", "SubPattern.append", "SubPattern.getwidth",
+      "Tokenizer.__init__", "Tokenizer.__next", "Tokenizer.match", "Tokenizer.get", "Tokenizer.getwhile",
+      "Tokenizer.getuntil", "Tokenizer.tell", "Tokenizer.seek", "Tokenizer.error", "Tokenizer.checkgroupname",
+      "_escape", "_class_escape", "_uniq", "_parse_sub", "_parse", "_parse_flags", "parse"]
+    statement := "For every allowed sys.set_int_max_str_digits value, a str pattern parsed with no flags reports a bad pattern as PatternError or OverflowError, and never leaks ValueError."
+    source := "docs: re.compile raises PatternError; Lib/re/_parser.py:671", status := .refuted
+    prop := ``ParseNoValueError, thm := some ``parseNoValueError_refuted
+    bug := some "textlibs-re-int-digit-limit"
+    notes := "Counterexample at the lowest allowed limit, 640, with 641 digits, because the kernel cannot evaluate the parser on 4301. The YAML reproducer shows the default limit on CPython. The parser model agrees with CPython on whole trees, widths and exact error messages." },
+  { id := "textlibs-re-digit-limit-template", pyFile := "Lib/re/_parser.py", pyFns := ["parse_template"]
+    statement := "For every allowed sys.set_int_max_str_digits value, a replacement template reports a bad group reference as PatternError, and never leaks ValueError."
+    source := "docs: re.sub", status := .refuted
+    prop := ``TemplateNoValueError, thm := some ``templateNoValueError_refuted
+    bug := some "textlibs-re-int-digit-limit" },
+  { id := "textlibs-re-tell", pyFile := "Lib/re/_parser.py", pyFns := ["Tokenizer.tell", "Tokenizer.pos", "Tokenizer.__next"]
+    statement := "After reading a token, tell() is the position of that token."
+    source := "invariant: error positions point at the current token", status := .proven
+    prop := ``TellAfterAdv, thm := some ``tellAfterAdv_proven },
+  { id := "textlibs-re-fix-flags", pyFile := "Lib/re/_parser.py", pyFns := ["fix_flags"]
+    statement := "A str pattern rejects LOCALE, and without ASCII it gets UNICODE."
+    source := "docs: re.ASCII, re.LOCALE", status := .proven
+    prop := ``FixFlagsStr, thm := some ``fixFlagsStr_proven },
+  { id := "textlibs-re-uniq", pyFile := "Lib/re/_parser.py", pyFns := ["_uniq"]
+    statement := "_uniq keeps exactly the same items."
+    source := "invariant", status := .proven
+    prop := ``UniqMembers, thm := some ``uniqMembers_proven },
+  { id := "textlibs-re-message", pyFile := "Lib/re/_constants.py", pyFns := ["PatternError.__init__"]
+    statement := "A pattern without a newline gets the plain position suffix, with no line or column."
+    source := "Lib/re/_constants.py:41-50", status := .proven
+    prop := ``MessagePlain, thm := some ``messagePlain_proven },
+  { id := "textlibs-re-escape-twins", pyFile := "Lib/re/_parser.py", pyFns := ["_escape", "_class_escape"]
+    statement := "_escape and _class_escape agree on every single-character ASCII escape, except those that mean something else outside a set."
+    source := "the implementation disagreeing with itself", status := .proven
+    prop := ``EscapeTwins, thm := some ``escapeTwins_proven }
 ]
 
 end PyLean.TextLibs
