@@ -821,9 +821,91 @@ def coll_run_us(case):
     return r
 
 
-coll_GENS = [coll_gen_ctr, coll_gen_cm, coll_gen_ud, coll_gen_ul, coll_gen_us]
+coll_NT_NAMES = ["a", "b", "x", "y", "z", "count", "index", "match", "type", "self", "_a", "__b",
+                 "_0", "_1", "class", "def", "None", "True", "1x", "a b", "", "a-b", "a_b",
+                 "ﬁ", "fi", "a＿b", "\U0001d41d\U0001d41e\U0001d41f",
+                 "\U0001d40d\U0001d428\U0001d427\U0001d41e", "\U0001d41a"]
+coll_NT_GOOD = ["a", "b", "x", "y", "z", "count", "match", "self", "c1", "a_b"]
+coll_NT_TYPES = ["T", "Point", "_T", "ﬁ", "class", "1x", "", "a b", "None"]
+coll_NT_FSTRS = ["a b", "a,b", "a, b c", "  ", "", "a\tb\nc", "x,,y", "a a", "a,_b"]
+
+
+def coll_gen_nt(rng):
+    op = rng.choice(["create", "create", "call", "make", "replace", "repr", "asdict", "getnewargs",
+                     "getattr", "roundtrip"])
+    case = {"fn": "coll.nt", "op": op, "rename": rng.random() < 0.4}
+    case["typename"] = "T" if op != "create" or rng.random() < 0.7 else rng.choice(coll_NT_TYPES)
+    pool = coll_NT_NAMES if rng.random() < 0.5 else coll_NT_GOOD
+    if rng.random() < 0.15:
+        case["fstr"] = rng.choice(coll_NT_FSTRS)
+        names = case["fstr"].replace(",", " ").split()
+    else:
+        names = [rng.choice(pool) for _ in range(rng.randint(0, 5))]
+        if rng.random() < 0.6:
+            names = list(dict.fromkeys(names))
+        case["fields"] = names
+    if rng.random() < 0.4:
+        case["defaults"] = [rng.randint(0, 9) for _ in range(rng.randint(0, len(names) + 1))]
+    n = len(names)
+    if op == "call":
+        case["vals"] = [rng.randint(0, 9) for _ in range(rng.randint(0, n + 1))]
+        case["kw"] = [[rng.choice(names + ["q"]), rng.randint(0, 9)]
+                      for _ in range(rng.randint(0, 2))]
+        case["kw"] = [[k, v] for k, v in dict(case["kw"]).items()]
+    else:
+        case["vals"] = [rng.randint(0, 9) for _ in range(n)]
+    if op == "make" and rng.random() < 0.3:
+        case["vals"].append(1)
+    if op == "replace":
+        case["kw"] = [[rng.choice(names + ["q", "r"]), rng.randint(0, 9)]
+                      for _ in range(rng.randint(0, 2))]
+        case["kw"] = [[k, v] for k, v in dict(case["kw"]).items()]
+    if op == "getattr":
+        case["name"] = rng.choice(names + ["nope"])
+    return case
+
+
+def coll_run_nt(case):
+    op = case["op"]
+    fields = case.get("fstr", case.get("fields"))
+    defaults = case.get("defaults")
+
+    def body():
+        T = coll_collections.namedtuple(case["typename"], fields, rename=case["rename"],
+                                        defaults=defaults, module="m")
+        assert T.__match_args__ == T._fields
+        if op == "create":
+            d = T.__new__.__defaults__
+            return {"typename": T.__name__, "fields": list(T._fields),
+                    "args": list(T.__new__.__code__.co_varnames[1:]),
+                    "defaults": list(d) if d else [],
+                    "fd": [[k, v] for k, v in T._field_defaults.items()], "doc": T.__doc__,
+                    "newdoc": T.__new__.__doc__}
+        vals = case["vals"]
+        if op == "call":
+            return list(T(*vals, **coll_d(case["kw"])))
+        if op == "make":
+            return list(T._make(vals))
+        p = T._make(vals)
+        if op == "replace":
+            return list(p._replace(**coll_d(case["kw"])))
+        if op == "repr":
+            return repr(p)
+        if op == "asdict":
+            return coll_enc(p._asdict())
+        if op == "getnewargs":
+            return list(p.__getnewargs__())
+        if op == "getattr":
+            return getattr(p, case["name"])
+        if op == "roundtrip":
+            return list(T(**p._asdict()))
+        raise AssertionError(op)
+    return py_result(body)
+
+
+coll_GENS = [coll_gen_ctr, coll_gen_cm, coll_gen_ud, coll_gen_ul, coll_gen_us, coll_gen_nt]
 coll_RUNS = {"coll.ctr": coll_run_ctr, "coll.cm": coll_run_cm, "coll.ud": coll_run_ud,
-             "coll.ul": coll_run_ul, "coll.us": coll_run_us}
+             "coll.ul": coll_run_ul, "coll.us": coll_run_us, "coll.nt": coll_run_nt}
 
 
 def coll_gen(rng):

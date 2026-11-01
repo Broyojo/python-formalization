@@ -2,6 +2,7 @@ import PyLean.DiffCore
 import PyLean.CoreLibs.Coll.UserDict
 import PyLean.CoreLibs.Coll.UserList
 import PyLean.CoreLibs.Coll.UserString
+import PyLean.CoreLibs.Coll.Namedtuple
 
 /-! Differential-testing handler for `corelibs` cases with `"fn": "coll.<name>"`.
 The dispatcher in `CoreLibs/Diff.lean` strips the `coll.` prefix.
@@ -648,6 +649,66 @@ def runUS (j : Json) : Except String Json := do
     if (← getBool j "plain") then return encPy encURes (strCall asciiOps c u.data)
     else return encPy encURes (usCall asciiOps c u)
 
+/-! ### `namedtuple` -/
+
+/-- The NFKC of the characters the generator uses. -/
+def nfkcChar (c : Char) : String :=
+  let n := c.toNat
+  if n == 0xfb01 then "fi"
+  else if n == 0xff3f then "_"
+  else if 0x1d400 ≤ n && n ≤ 0x1d419 then String.singleton (Char.ofNat (n - 0x1d400 + 65))
+  else if 0x1d41a ≤ n && n ≤ 0x1d433 then String.singleton (Char.ofNat (n - 0x1d41a + 97))
+  else String.singleton c
+
+def idStart (c : Char) : Bool :=
+  let n := c.toNat
+  isAl n || n == 95 || n == 0xfb01 || (0x1d400 ≤ n && n ≤ 0x1d433)
+
+def idCont (c : Char) : Bool := idStart c || isDig c.toNat || c.toNat == 0xff3f
+
+/-- `str.isidentifier` and NFKC on the generator's alphabet. -/
+def genU : UniId where
+  isidentifier s :=
+    match s.toList with
+    | [] => false
+    | c :: t => idStart c && t.all idCont
+  nfkc s := String.join (s.toList.map nfkcChar)
+
+def encNT (T : NT Int) : Json :=
+  Json.mkObj [("typename", toJson T.typename), ("fields", encStrs T.fields), ("args", encStrs T.args),
+    ("defaults", encInts T.defaults), ("fd", encItems T.fieldDefaults), ("doc", toJson T.doc),
+    ("newdoc", toJson T.newDoc)]
+
+def runNT (j : Json) : Except String Json := do
+  let op ← getStr j "op"
+  let typename ← getStr j "typename"
+  let fn : FieldNames ← match j.getObjVal? "fstr" with
+    | .ok v => pure (.str (← v.getStr?))
+    | .error _ => pure (.list (← getStrs j "fields"))
+  let rename ← getBool j "rename"
+  let defaults : Option (List Int) ← match j.getObjVal? "defaults" with
+    | .ok .null | .error _ => pure none
+    | .ok _ => pure (some (← getInts j "defaults"))
+  let T? : Py (NT Int) := namedtuple genU typename fn rename defaults
+  if op == "create" then return encPy encNT T?
+  match T? with
+  | .error e => return encPy encNT (.error e)
+  | .ok T =>
+    let vals ← getInts j "vals"
+    match op with
+    | "call" => return encPy encInts (ntCall T vals (← getItems j "kw"))
+    | "make" => return encPy encInts (ntMake T vals)
+    | "replace" => return encPy encInts (ntReplace T vals (← getItems j "kw"))
+    | "repr" => return okS (ntRepr rvInt T vals)
+    | "asdict" => return okJ (encItems (ntAsdict T vals))
+    | "getnewargs" => return okJ (encInts vals)
+    | "getattr" =>
+      match ntGetattr T vals (← getStr j "name") with
+      | some v => return okI v
+      | none => return encPy toJson (.error (.named "AttributeError" "~no attribute") : Py Int)
+    | "roundtrip" => return encPy encInts (ntCall T [] (ntAsdict T vals))
+    | _ => throw s!"unknown nt op {op}"
+
 def run (fn : String) (j : Json) : Except String Json :=
   match fn with
   | "ctr" => runCtr j
@@ -655,6 +716,7 @@ def run (fn : String) (j : Json) : Except String Json :=
   | "ud" => runUD j
   | "ul" => runUL j
   | "us" => runUS j
+  | "nt" => runNT j
   | _ => throw s!"unknown fn coll.{fn}"
 
 def handler : Handler := fun fn j => some (run fn j)
