@@ -71,7 +71,7 @@ promised_by: |
   more than the errors).
 cause: |
   Modules/itertoolsmodule.c:2100-2101: `if (repeat == 0) { nargs = 0; }`; the argument loop at
-  :2119-2126 runs up to nargs and stores into pools, which has npools (here 0) slots.
+  :2120-2127 runs up to nargs and stores into pools, which has npools (here 0) slots.
 possible_fix: |
   Keep nargs = 0 for the loop that fills pools, and when repeat == 0 first run PySequence_Tuple on
   each argument and discard the result, so errors and consumption match every other repeat.
