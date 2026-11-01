@@ -362,11 +362,11 @@ def strtodFast (rv : F64) (nd : Nat) (e : Int) : Option F64 :=
     else none
   else none
 
-/-- `_Py_dg_strtod`, the numeric half, dtoa.c:1522-2077: `(value, errno == ERANGE)`.
-`none` means the model's loop fuel ran out. -/
-def strtodValue (s : List Nat) (p : Parsed) : Option (F64 × Bool) :=
-  let sgn (x : F64) : F64 := if p.sign then x.neg else x
-  if p.nd == 0 then some (sgn d0, false)
+/-- `_Py_dg_strtod`, the numeric half, dtoa.c:1522-2074, before the sign goes on at
+`ret:`, `undfl:` and `ovfl:`: `(|value|, errno == ERANGE)`. `none` means the model's
+loop fuel ran out. -/
+def strtodAbs (s : List Nat) (p : Parsed) : Option (F64 × Bool) :=
+  if p.nd == 0 then some (d0, false)
   else
     let i0 := stripZeros s p.s0 p.nd0 p.nd
     let e := p.e + ((p.nd : Int) - i0)
@@ -378,7 +378,7 @@ def strtodValue (s : List Nat) (p : Parsed) : Option (F64 × Bool) :=
     let rv0 := F64.ofInt y
     let rv1 := if 9 < k then F64.add (F64.mul (tens (k - 9)) rv0) (F64.ofInt z) else rv0
     match strtodFast rv1 nd e with
-    | some r => some (sgn r, false)
+    | some r => some (r, false)
     | none =>
       let e1 : Int := e + ((nd : Int) - k)
       let scaled : Except StrtodExit (F64 × Nat) :=
@@ -386,9 +386,9 @@ def strtodValue (s : List Nat) (p : Parsed) : Option (F64 × Bool) :=
         else if e1 < 0 then scaleDown rv1 (-e1).toNat
         else .ok (rv1, 0)
       match scaled with
-      | .error .ovfl => some (sgn (F64.inf false), true)
-      | .error .undfl => some (sgn d0, false)
-      | .error (.ret r) => some (sgn r, false)
+      | .error .ovfl => some (F64.inf false, true)
+      | .error .undfl => some (d0, false)
+      | .error (.ret r) => some (r, false)
       | .ok (rv2, scale) =>
         let bcnd0 := nd
         -- truncate to 18 digits for very long inputs, dtoa.c:1696-1724
@@ -407,9 +407,9 @@ def strtodValue (s : List Nat) (p : Parsed) : Option (F64 × Bool) :=
         let bd0 := s2b digT ndT yT
         match strtodLoop bd0 eT ndT scale 64 bcnd0 rv2 with
         | .cont .. => none
-        | .exit .ovfl => some (sgn (F64.inf false), true)
-        | .exit .undfl => some (sgn d0, false)
-        | .exit (.ret r) => some (sgn r, false)
+        | .exit .ovfl => some (F64.inf false, true)
+        | .exit .undfl => some (d0, false)
+        | .exit (.ret r) => some (r, false)
         | .brk rv3 bcnd =>
           let rv4 :=
             if ndT < bcnd then
@@ -417,7 +417,11 @@ def strtodValue (s : List Nat) (p : Parsed) : Option (F64 × Bool) :=
             else rv3
           let rv5 :=
             if scale != 0 then F64.mul rv4 (mkWords (Exp_1 - 2 * P * Exp_msk1) 0) else rv4
-          some (sgn rv5, false)
+          some (rv5, false)
+
+/-- The sign goes on last, dtoa.c:2076, :2089 and :2097. -/
+def strtodValue (s : List Nat) (p : Parsed) : Option (F64 × Bool) :=
+  (strtodAbs s p).map fun r => (if p.sign then r.1.neg else r.1, r.2)
 
 /-- `_Py_dg_strtod`, dtoa.c:1385-2108: value, `*se`, and whether `errno` is
 `ERANGE`. `none` means the model's fuel ran out. -/

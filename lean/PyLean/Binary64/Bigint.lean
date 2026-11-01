@@ -67,15 +67,21 @@ def s2b (dig : Nat → Nat) (nd y9 : Nat) : Bigint :=
   let b : Bigint := { x := [y9] }
   if nd ≤ 9 then b else s2bLoop dig (nd - 9) 9 b
 
+/-- One `if (!(x & mask)) { k += s; x <<= s; }` of `hi0bits`. -/
+def hiStep (mask s : Nat) (st : Nat × Nat) : Nat × Nat :=
+  if st.2 &&& mask == 0 then (st.1 + s, shl32 st.2 s) else st
+
 /-- `hi0bits`, dtoa.c:518-545. -/
 def hi0bits (x0 : Nat) : Nat :=
-  let (k1, x1) := if x0 &&& 0xffff0000 == 0 then (16, shl32 x0 16) else (0, x0)
-  let (k2, x2) := if x1 &&& 0xff000000 == 0 then (k1 + 8, shl32 x1 8) else (k1, x1)
-  let (k3, x3) := if x2 &&& 0xf0000000 == 0 then (k2 + 4, shl32 x2 4) else (k2, x2)
-  let (k4, x4) := if x3 &&& 0xc0000000 == 0 then (k3 + 2, shl32 x3 2) else (k3, x3)
-  if x4 &&& 0x80000000 == 0 then
-    if x4 &&& 0x40000000 == 0 then 32 else k4 + 1
-  else k4
+  let st := hiStep 0xc0000000 2 (hiStep 0xf0000000 4 (hiStep 0xff000000 8
+    (hiStep 0xffff0000 16 (0, x0))))
+  if st.2 &&& 0x80000000 == 0 then
+    if st.2 &&& 0x40000000 == 0 then 32 else st.1 + 1
+  else st.1
+
+/-- One `if (!(x & mask)) { k += s; x >>= s; }` of `lo0bits`. -/
+def loStep (mask s : Nat) (st : Nat × Nat) : Nat × Nat :=
+  if st.2 &&& mask == 0 then (st.1 + s, st.2 / 2 ^ s) else st
 
 /-- `lo0bits`, dtoa.c:550-591: the count, and `*y` afterwards. -/
 def lo0bits (y : Nat) : Nat × Nat :=
@@ -85,14 +91,11 @@ def lo0bits (y : Nat) : Nat × Nat :=
     else if x &&& 2 != 0 then (1, x / 2)
     else (2, x / 4)
   else
-    let (k1, x1) := if x &&& 0xffff == 0 then (16, x / 2 ^ 16) else (0, x)
-    let (k2, x2) := if x1 &&& 0xff == 0 then (k1 + 8, x1 / 2 ^ 8) else (k1, x1)
-    let (k3, x3) := if x2 &&& 0xf == 0 then (k2 + 4, x2 / 2 ^ 4) else (k2, x2)
-    let (k4, x4) := if x3 &&& 0x3 == 0 then (k3 + 2, x3 / 2 ^ 2) else (k3, x3)
-    if x4 &&& 1 == 0 then
-      let x5 := x4 / 2
-      if x5 == 0 then (32, y) else (k4 + 1, x5)
-    else (k4, x4)
+    let st := loStep 0x3 2 (loStep 0xf 4 (loStep 0xff 8 (loStep 0xffff 16 (0, x))))
+    if st.2 &&& 1 == 0 then
+      let x5 := st.2 / 2
+      if x5 == 0 then (32, y) else (st.1 + 1, x5)
+    else st
 
 /-- `i2b`, dtoa.c:595-606. -/
 def i2b (i : Nat) : Bigint := { x := [i] }

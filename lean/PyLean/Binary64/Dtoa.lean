@@ -11,8 +11,8 @@ CPython only ever calls `_Py_dg_dtoa` with mode 0, 2 or 3 (`format_float_short` 
 the floating-point quick path out. Its `leftright` branch at dtoa.c:2441-2459 and
 the bookkeeping for modes 1, 4, 5 and above are therefore not modelled.
 
-Precisions stay `int`-sized `Int`s and the C `int` wrap is modelled with `wrap32`,
-because CPython is built with `-fwrapv` and both of the wraps below happen.
+Precisions stay `int`-sized `Int`s, and C `int` overflow is modelled with `wrap32`,
+which is what the x86-64 build does at the two places below that overflow.
 -/
 
 namespace PyLean.Binary64
