@@ -65,11 +65,11 @@ possible_fix: |
   Convert before storing: `digits.append(int(digit))`, or join with `'%d' % d`. Whether to validate
   value[1] for 'F' is a separate choice; matching _decimal would change accepted inputs.
 tested:
-  python3 (3.14.7): NOT YET RUN
-  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): NOT YET RUN
+  python3 (3.14.7, Linux, bundled libmpdec 2.5.1): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev, bundled libmpdec 2.5.1): REPRODUCED
 duplicates:
   issues: []
-  queries: []
+  queries: ["Decimal tuple bool", "Decimal tuple True digits", "decimal as_tuple bool", "_pydecimal tuple"]
   bugforge: "no decimal entries in vendor/bugforge-results/README.md"
 lean:
   property: PyLean.Decimal.TupleTwinsAgree

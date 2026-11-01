@@ -58,11 +58,11 @@ possible_fix: |
   Spell the keywords with explicit ASCII classes ([Ii][Nn][Ff]...) and drop re.IGNORECASE, keeping
   `\d` Unicode-aware; or check `.isascii()` on the keyword part. `[eE]` covers the exponent marker.
 tested:
-  python3 (3.14.7): NOT YET RUN
-  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): NOT YET RUN
+  python3 (3.14.7, Linux, bundled libmpdec 2.5.1): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev, bundled libmpdec 2.5.1): REPRODUCED
 duplicates:
   issues: []
-  queries: []
+  queries: ["Decimal unicode Infinity", "decimal IGNORECASE", "_pydecimal regex unicode", "Decimal unicode letters"]
   bugforge: "no decimal entries in vendor/bugforge-results/README.md"
 lean:
   property: PyLean.Decimal.ParseCAcceptsPy

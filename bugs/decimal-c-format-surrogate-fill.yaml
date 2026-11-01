@@ -48,11 +48,11 @@ possible_fix: |
   On a UnicodeEncodeError from that call, clear it and take the existing pydec_format path, which
   handles any str.
 tested:
-  python3 (3.14.7): NOT YET RUN
-  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): NOT YET RUN
+  python3 (3.14.7, Linux, bundled libmpdec 2.5.1): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev, bundled libmpdec 2.5.1): REPRODUCED
 duplicates:
   issues: []
-  queries: []
+  queries: ["decimal format surrogate", "Decimal format UnicodeEncodeError", "decimal fill character", "_decimal format fill"]
   bugforge: "no decimal entries in vendor/bugforge-results/README.md"
 lean:
   property: PyLean.Decimal.FormatNoEncodeError

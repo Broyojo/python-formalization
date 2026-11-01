@@ -58,11 +58,15 @@ possible_fix: |
   After the NUL-fill replacement, reject `memchr(fmt, '\0', size)` hits by taking the existing
   pydec_format path, which reports ValueError for the complete string.
 tested:
-  python3 (3.14.7): NOT YET RUN
-  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): NOT YET RUN
+  python3 (3.14.7, Linux, bundled libmpdec 2.5.1): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev, bundled libmpdec 2.5.1): REPRODUCED
 duplicates:
   issues: []
-  queries: []
+  related:
+    - {number: 61968, state: closed, relation: added the NUL fill special case; does not address a NUL later in the spec}
+    - {number: 60945, state: closed, relation: same class fixed for int() and float() (strings treated as NUL-terminated)}
+  queries: ["decimal format null", "decimal format NUL character", "Decimal __format__ null", "_decimal format fill",
+            "_decimal _pydecimal format difference"]
   bugforge: "no decimal entries in vendor/bugforge-results/README.md"
 lean:
   property: PyLean.Decimal.FormatCAcceptsOnlyPy

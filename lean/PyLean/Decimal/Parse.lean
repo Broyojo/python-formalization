@@ -168,6 +168,12 @@ structure ScanState where
   afterE : Bool := false
   deriving Repr
 
+/-- `scan_dpoint_exp`'s test whether a zero is the first relevant digit:
+neither a digit nor `.digit` follows it (io.c:163-166). -/
+def lookNone (cs : List Char) : Bool :=
+  (!(match cs.head? with | some d => isAsciiDigit d | none => false) &&
+    !(cs.head? == some '.' && (match (cs.drop 1).head? with | some d => isAsciiDigit d | none => false)))
+
 /-- `scan_dpoint_exp`: the loop over the characters at positions `i`,
 `i+1`, ...; `none` for a syntax error. -/
 def scanLoop : Nat → List Char → ScanState → Option ScanState
@@ -185,24 +191,23 @@ def scanLoop : Nat → List Char → ScanState → Option ScanState
     else if !isAsciiDigit c then none
     else if st.coeff.isNone && st.exp.isNone then
       if c == '0' then
-        let next := cs.head?
-        let next2 := (cs.drop 1).head?
-        let nextDigit := match next with | some d => isAsciiDigit d | none => false
-        let dotDigit := next == some '.' && (match next2 with | some d => isAsciiDigit d | none => false)
-        if !nextDigit && !dotDigit then scanLoop (i + 1) cs { st with coeff := some i }
+        if lookNone cs then scanLoop (i + 1) cs { st with coeff := some i }
         else scanLoop (i + 1) cs st
       else scanLoop (i + 1) cs { st with coeff := some i }
     else scanLoop (i + 1) cs st
+
+/-- The optional sign of a numeral. -/
+def expSign : List Char → Bool × List Char
+  | '-' :: r => (true, r)
+  | '+' :: r => (false, r)
+  | r => (false, r)
 
 /-- `mpd_strtossize` (= `strtoll`) on the indicator's tail, as used by
 `strtoexp` (io.c:76-88) and the `errno` test at io.c:273-278: `none` for
 `EINVAL`, a saturated value on `ERANGE`. The tail is `[+-]?digits` by the
 scan. -/
 def strtoexp (t : List Char) : Option Int :=
-  let (neg, body) := match t with
-    | '-' :: r => (true, r)
-    | '+' :: r => (false, r)
-    | r => (false, r)
+  let (neg, body) := expSign t
   if body = [] then none
   else
     let v : Int := if neg then -(digitsValue body : Int) else digitsValue body
@@ -215,6 +220,50 @@ inductive MpdParse where
   | inf (neg : Bool)
   | nan (neg : Bool) (signaling : Bool) (payload : Nat) (digits : Nat)
   deriving Repr, DecidableEq
+
+/-- The exponent-part of `mpd_qset_string`, io.c:269-279. -/
+def scanExponent (st : ScanState) (s : List Char) : Option (Option Int) :=
+  match st.exp with
+  | none => some none
+  | some x => (some <$> strtoexp (s.drop (x + 1)))
+
+/-- `digits` and `fracdigits`, io.c:281-295. -/
+def digitsFrac (dpoint : Option Nat) (coeff endc : Nat) : Nat × Option Nat :=
+  match dpoint with
+  | some d => (if d > coeff then endc - coeff - 1 else endc - coeff, some (endc - d - 1))
+  | none => (endc - coeff, none)
+
+def fracOk : Option Nat → Bool
+  | some f => decide ((f : Int) ≤ mpdMaxPrec)
+  | none => true
+
+/-- The exponent after the fraction digits and the saturations, io.c:289-304. -/
+def finalExp (e0 : Int) (frac : Option Nat) : Int :=
+  let e1 : Int := match frac with
+    | some f => if e0 < mpdSsizeMin + f then mpdSsizeMin else e0 - f
+    | none => e0
+  let e2 := if e1 > mpdExpInf then mpdExpInf else e1
+  if e2 = mpdSsizeMin then mpdSsizeMin + 1 else e2
+
+/-- The numeric branch of `mpd_qset_string`, io.c:263-305 and :307-322, after
+the sign and the special-value keywords. -/
+def mpdNumeric (neg : Bool) (s : List Char) : MpdParse :=
+  match scanLoop 0 s {} with
+  | none => .syntax
+  | some st =>
+    match st.coeff with
+    | none => .syntax
+    | some coeff =>
+      match scanExponent st s with
+      | none => .syntax
+      | some ex =>
+        let endc := st.exp.getD s.length
+        let df := digitsFrac st.dpoint coeff endc
+        if !fracOk df.2 then .syntax else
+        if (df.1 : Int) > mpdMaxPrec then .syntax else
+        -- string_to_coeff: the `digits` digits from `coeff`, skipping the point
+        let cds := ((s.drop coeff).take (endc - coeff)).filter (· != '.')
+        .fin neg (digitsValue cds) df.1 (finalExp (ex.getD 0) df.2)
 
 /-- `mpd_qset_string(dec, s, maxcontext)`, io.c:200-328, up to the call of
 `mpd_qfinalize`. -/
@@ -237,38 +286,7 @@ def mpdSetString (s0 : List Char) : MpdParse :=
   | none =>
   match strneq "inf".toList s false with
   | some r => if r = [] || (strneq "inity".toList r true).isSome then .inf neg else .syntax
-  | none =>
-  match scanLoop 0 s {} with
-  | none => .syntax
-  | some st =>
-    match st.coeff with
-    | none => .syntax
-    | some coeff =>
-      let fin := s.length
-      -- exponent-part (io.c:269-279)
-      let ex : Option (Option Int) := match st.exp with
-        | none => some none
-        | some x => (some <$> strtoexp (s.drop (x + 1)))
-      match ex with
-      | none => .syntax
-      | some ex =>
-        let e0 : Int := ex.getD 0
-        let endc := st.exp.getD fin
-        let digits0 := endc - coeff
-        let (digits, fracdigits) := match st.dpoint with
-          | some d => (if d > coeff then digits0 - 1 else digits0, some (endc - d - 1))
-          | none => (digits0, none)
-        let fracOk := match fracdigits with | some f => (f : Int) ≤ mpdMaxPrec | none => true
-        if !fracOk then .syntax else
-        let e1 : Int := match fracdigits with
-          | some f => if e0 < mpdSsizeMin + f then mpdSsizeMin else e0 - f
-          | none => e0
-        if (digits : Int) > mpdMaxPrec then .syntax else
-        let e2 := if e1 > mpdExpInf then mpdExpInf else e1
-        let e3 := if e2 = mpdSsizeMin then mpdSsizeMin + 1 else e2
-        -- string_to_coeff: the `digits` digits from `coeff`, skipping the point
-        let cds := ((s.drop coeff).take (endc - coeff)).filter (· != '.')
-        .fin neg (digitsValue cds) digits e3
+  | none => mpdNumeric neg s
 
 /-- `PyDecType_FromUnicodeExactWS` (_decimal.c:2276-2293 and 2224-2250), with
 the default context (InvalidOperation trapped). -/

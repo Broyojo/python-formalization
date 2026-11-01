@@ -86,8 +86,8 @@ possible_fix: |
   useful only if the multiplication facet were ever wanted, is to round the int product before
   converting it to a string.
 tested:
-  python3 (3.14.7): NOT YET RUN
-  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): NOT YET RUN
+  python3 (3.14.7, Linux, bundled libmpdec 2.5.1): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev, bundled libmpdec 2.5.1): REPRODUCED
 duplicates:
   issues:
     - {number: 96589, state: closed, relation: duplicate (same root cause; int <-> Decimal part), reason: not_planned (won't fix, decided on the merits by core developers)}
