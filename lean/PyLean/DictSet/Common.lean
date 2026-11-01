@@ -138,4 +138,22 @@ structure Iterable (α : Type) where
   stop : Option PyExc := none
   deriving Inhabited
 
+/-- An iterator driven from C, as a script of calls: `getIter` is `PyObject_GetIter`, and each
+step is one `PyIter_Next`, which may raise, may change whatever the state holds, and returns
+`none` on exhaustion. A step can depend on the state, so an iterator whose length depends on
+what the loop did fits, up to the length of the script. -/
+structure ReIter (σ α : Type) where
+  getIter : M σ Unit := pure ()
+  steps : List (M σ (Option α))
+
+/-- An `Iterable` as such a script: no re-entry, and failures only where `Iterable` has them. -/
+def ReIter.ofIterable {σ α : Type} (it : Iterable α) : ReIter σ α :=
+  { getIter := match it.getIter with
+      | some e => M.throw e
+      | none => pure ()
+    steps := it.items.map (fun x => pure (some x)) ++
+      match it.stop with
+      | some e => [M.throw e]
+      | none => [] }
+
 end PyLean.DictSet

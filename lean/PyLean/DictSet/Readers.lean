@@ -169,6 +169,9 @@ left, and a slot with no value (`ix >= 0`, `*value_addr == NULL`: a split key th
 read as absent, never dereferenced. -/
 def ReadersFaithful : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (key : K) (mp : PyDict K V),
+    -- not a dict: the two C API readers that check raise `SystemError`
+    pyDictGetItemRef P false key mp = (.error badInternalCall, mp) ∧
+    pyDictGetItemWithError P false key mp = (.error badInternalCall, mp) ∧
     -- a raising hash: every reader raises the rewritten exception, dict unchanged
     (∀ e, P.hash key = .error e →
       pyDictGetItemRef P true key mp = (.error (dictUnhashableType P key e), mp) ∧
@@ -193,7 +196,7 @@ def ReadersFaithful : Prop :=
 
 theorem readersFaithful_proven : ReadersFaithful := by
   intro K V _ P key mp
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨rfl, rfl, ?_, ?_, ?_⟩
   · intro e he
     refine ⟨?_, ?_, ?_, ?_, fun dflt => ?_⟩ <;>
       simp only [getItemRef_wrap, getItemWithError_wrap, contains_wrap, subscript_wrap,

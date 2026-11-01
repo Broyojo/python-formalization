@@ -39,6 +39,8 @@ structure St where
   touched : Array Bool := #[]
   nextDict : Nat := 1000
   names : List DObj := []
+  /-- The dict slot that a mutating `__eq__` acts on, when the test names one. -/
+  tgt : Option Nat := none
   deriving Inhabited
 
 def enc : DObj → Json
@@ -143,10 +145,23 @@ def mapArg (st : St) (ksJ pairsJ : Json) : Except String (MergeArg DObj DObj) :=
   let ps ← (← arrOf pairsJ).mapM fun p => do
     let a ← p.getArr?
     return ((← obj st (← arg a 0)), (← obj st (← arg a 1)))
-  return .mapping (.ok ks) fun k =>
-    match ps.find? (fun p => p.1 == k) with
-    | some p => .ok p.2
-    | none => .error (keyErr dProto k)
+  return .mapping (pure ks) fun k =>
+    M.lift (match ps.find? (fun p => p.1 == k) with
+      | some p => .ok p.2
+      | none => .error (keyErr dProto k))
+
+/-- `['mr', keys, pairs, hook, act, keysRaises]`: as `mapArg`, but `__getitem__` of `hook` first
+does `act` to the receiver, and `keys()` may raise. -/
+def mapHookArg (st : St) (a : Array Json) : Except String (MergeArg DObj DObj) := do
+  let m ← mapArg st (← arg a 1) (← arg a 2)
+  let hook ← obj st (← arg a 3)
+  let act ← argN a 4
+  let kr ← (← arg a 5).getBool?
+  match m with
+  | .mapping keys getitem =>
+    return .mapping (if kr then M.throw (.valueError "keys") else keys) fun k s =>
+      getitem k (if k == hook then evilAct st.pool act s else s)
+  | m => return m
 
 /-- `['d', slot]` exact dict, `['sub', slot]` subclass with `dict.__iter__`,
 `['p', items, stop?]` iterable of pairs, `['m', keys, pairs]` mapping, `['n']`. -/
@@ -158,21 +173,55 @@ def updArg (st : St) (j : Json) : Except String (UpdateArg DObj DObj) := do
   | "sub" =>
     -- The test copies the dict into a subclass instance with `dict.update`.
     let (_, c) := dictMerge dProto (.dict st.ds[← argN a 1]!) 1 ({ ident := 77 } : DD)
-    return .other (.ok true) (.dict c) { items := [] }
+    return .other (pure true) (.dict c) { steps := [] }
   | "p" =>
     let items ← (← arrOf (← arg a 1)).mapM (seq2Item st)
     let stop ← (← arg a 2).getBool?
-    return .other (.ok false) (.dict {})
-      { items, stop := if stop then some (.valueError "stop") else none }
-  | "m" => return .other (.ok true) (← mapArg st (← arg a 1) (← arg a 2)) { items := [] }
+    return .other (pure false) (.dict {})
+      (ReIter.ofIterable { items, stop := if stop then some (.valueError "stop") else none })
+  | "pr" =>
+    -- `['pr', items, hook, act, stop]`: the iterator does `act` to the receiver before
+    -- yielding element `hook`.
+    let items ← (← arrOf (← arg a 1)).mapM (seq2Item st)
+    let hook ← argN a 2
+    let act ← argN a 3
+    let stop ← (← arg a 4).getBool?
+    let steps : List (DM DObj DObj (Option (Seq2Item DObj DObj))) :=
+      items.zipIdx.map fun (x, i) s =>
+        (.ok (some x), if i == hook then evilAct st.pool act s else s)
+    return .other (pure false) (.dict {})
+      { steps := steps ++ if stop then [M.throw (.valueError "stop")] else [] }
+  | "m" => return .other (pure true) (← mapArg st (← arg a 1) (← arg a 2)) { steps := [] }
+  | "mr" => return .other (pure true) (← mapHookArg st a) { steps := [] }
+  | "hr" => return .other (M.throw (.valueError "hasattr")) (.dict {}) { steps := [] }
   | "n" =>
-    return .other (.ok false) (.dict {})
-      { getIter := some (.typeError "'int' object is not iterable"), items := [] }
+    return .other (pure false) (.dict {})
+      (ReIter.ofIterable { getIter := some (.typeError "'int' object is not iterable"), items := [] })
   | t => throw s!"update arg {t}"
 
+/-- The protocol of an operation on slot `i`. -/
+def protoAt (st : St) (i : Nat) : Proto DObj DD :=
+  match st.tgt with
+  | none => dProto
+  | some t => if i == t then selfProto st.pool else peerProto st.pool
+
+/-- Run on slot `i`. With a target in another slot, that slot is the object `__eq__` can reach, so
+it is lent to the state and taken back: a merge from it leaves its final state in `peer`. -/
 def withD {α : Type} (st : St) (i : Nat) (m : DM DObj DObj α) : Py α × St :=
-  let (r, d) := m st.ds[i]!
-  (r, { st with ds := st.ds.set! i d })
+  match st.tgt with
+  | some t =>
+    if i == t then
+      let (r, d) := m st.ds[i]!
+      (r, { st with ds := st.ds.set! i { d with peer := none } })
+    else
+      let (r, d) := m { st.ds[i]! with peer := some st.ds[t]!.toPeer }
+      let src := match d.peer with
+        | some p => p.toDict
+        | none => st.ds[t]!
+      (r, { st with ds := (st.ds.set! t src).set! i { d with peer := none } })
+  | none =>
+    let (r, d) := m st.ds[i]!
+    (r, { st with ds := st.ds.set! i { d with peer := none } })
 
 def withS {α : Type} (st : St) (i : Nat) (m : SM DObj α) : Py α × St :=
   let (r, s) := m st.ss[i]!
@@ -206,7 +255,7 @@ def cmpOf (s : String) : Except String CmpOp :=
 def stepDict (st : St) (name : String) (a : Array Json) : Except String (Option (Json × St)) := do
   let i := (a[1]?.bind fun j => j.getNat?.toOption).getD 0
   let k (n : Nat) : Except String DObj := do obj st (← arg a n)
-  let P := dProto
+  let P := protoAt st i
   match name with
   | "set" => return some (resJ unitJ (withD st i (dictSetItem P (← k 2) (← k 3))))
   | "get" => return some (resJ enc (withD st i (dictSubscript P none (← k 2))))
@@ -892,7 +941,11 @@ def run (fn : String) (j : Json) : Except String Json := do
   let poolJ ← arrOf (← field j "pool")
   let pool ← poolJ.mapM parseAtom
   let poolA := (pool.map DObj.atom).toArray
-  let st := initSt poolA []
+  let tgt : Option Nat := match (j.getObjValAs? String "target").toOption with
+    | some "d0" => some 0
+    | some "d1" => some 1
+    | _ => none
+  let st := { initSt poolA [] with tgt }
   let ops ← arrOf (← field j "ops")
   let every := (j.getObjValAs? Nat "every").toOption.getD 1
   let runOps := fun st => runOps every st ops 0 #[]
