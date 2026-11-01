@@ -2224,10 +2224,16 @@ def _gen_low(rng):
 def _gen_script(rng):
     store = []
     specs = []
+    singletons = []     # empty and one-byte `bytes` are shared, so `m.obj` could not tell two apart
     for _ in range(rng.choice([1, 1, 2, 3])):
         s = _gen_exporter(rng, store)
         if s is None:
             return None
+        if s["kind"] == "bytes":
+            o = _build_exporter(s)
+            if any(o is e for e in singletons):
+                continue
+            singletons.append(o)
         specs.append(s)
     exps = [{k: s[k] for k in ("buf", "len", "itemsize", "readonly", "ndim", "format", "shape", "strides",
                                "suboffsets", "unhash")} for s in specs]
