@@ -11,6 +11,7 @@ Exits non-zero on any mismatch. See difftest/common.py.
 """
 
 import ctypes
+import struct
 import sys
 import warnings
 
@@ -113,6 +114,8 @@ def gen_case(rng):
                      "pow", "powmod", "lopsided", "balanced", "balanced", "bigsquare", "knuth", "bigdiv",
                      "as_long_overflow", "as_long", "sizeof", "ratio", "int_info", "as_longlong",
                      "as_ulonglong", "void_ptr", "native", "native", "fixed", "int_new", "from_native",
+                     "true_div", "true_div", "true_div", "as_double", "as_double", "from_double",
+                     "true_div_round", "as_double_round",
                      "as_int", "as_ssize", "as_ulong", "as_size_t", "as_mask", "from_c", "get_sign",
                      "bit_length", "bit_count", "hash", "bool_repr", "bool_invert", "bool_op"])
     c = {"mod": "longobj", "fn": fn}
@@ -121,6 +124,37 @@ def gen_case(rng):
     elif fn in ("square", "invert", "neg", "abs", "bool", "get_sign", "bit_length", "bit_count",
                 "hash", "sizeof", "ratio"):
         c["a"] = edge_int(rng)
+    elif fn in ("true_div", "true_div_round"):
+        style = rng.randrange(5)
+        if style == 0:
+            c["a"], c["b"] = edge_int(rng), edge_int(rng)
+        elif style == 1:
+            # ties and near-ties at the 53-bit boundary
+            k = rng.randrange(54, 70)
+            c["a"] = ((1 << 53) + rng.randrange(-3, 4)) << rng.randrange(0, 12)
+            c["b"] = (1 << rng.randrange(0, k)) * rng.choice([1, 1, 3, 5])
+        elif style == 2:
+            # the overflow boundary
+            e = rng.randrange(1000, 1100)
+            c["a"] = ((1 << 53) - rng.randrange(0, 3)) << rng.randrange(960, 1100)
+            c["b"] = (1 << (e - 1000)) + rng.choice([0, 0, 1])
+        elif style == 3:
+            # the subnormal and underflow boundary, where double rounding would show
+            c["a"] = rng.randrange(1, 1 << 60)
+            c["b"] = (1 << rng.randrange(1010, 1140)) + rng.choice([0, 0, 1, rng.randrange(1 << 60)])
+        else:
+            c["a"] = digits(rng, rng.randrange(1, 60)) * rng.choice([1, -1])
+            c["b"] = (digits(rng, rng.randrange(1, 60)) + 1) * rng.choice([1, -1])
+    elif fn in ("as_double", "as_double_round"):
+        k = rng.choice([54, 55, 56, 64, 100, 1000, 1022, 1023, 1024, 1025])
+        v = ((1 << 53) + rng.randrange(-3, 4)) << (k - 53)
+        v += rng.choice([0, 0, 1, -1, 1 << (k - 54), -(1 << (k - 54)), (1 << (k - 54)) + 1])
+        c["a"] = rng.choice([v, -v, edge_int(rng), ((1 << 1024) - (1 << 970)) + rng.randrange(-2, 3)])
+    elif fn == "from_double":
+        c["bits"] = rng.choice([
+            0, 1 << 63, 0x7ff << 52, (0x7ff << 52) + (1 << 63), (0x7ff << 52) + 1,
+            rng.getrandbits(64), (rng.randrange(1023, 1100) << 52) + rng.getrandbits(52),
+            ((1023 + 63) << 52) + rng.choice([0, 1]), (((1023 + 63) << 52) | (1 << 63)) + rng.choice([0, 1])])
     elif fn == "int_new":
         # the paths that stop before a parser: the parsers have their own cases
         kind = rng.choice(["none", "str", "other"])
@@ -205,7 +239,13 @@ def gen_case(rng):
         c["b"] = rng.choice([0, 1, 2, 3, 4, 5, 6, 7, 8, B - 1, B, B + 1, B * B - 1, B * B, B * B + 1,
                              digits(rng, 3), digits(rng, 4), rng.randrange(-5, 0),
                              digits(rng, rng.randrange(1, 4))])
+    if c["fn"] == "true_div_round" and c["b"] == 0:
+        c["b"] = 1
     return c
+
+
+def inf_bits(negative):
+    return (0x7ff << 52) + ((1 << 63) if negative else 0)
 
 
 def run_python(c):
@@ -268,6 +308,23 @@ def run_python(c):
             x, y = API.PyLong_AsUnsignedLongMask(a), API.PyLong_AsUnsignedLongLongMask(a)
             assert x == y
             return x
+        if fn == "true_div_round":
+            # the open statement: the rounded quotient, infinity where / raises
+            try:
+                return struct.unpack("<Q", struct.pack("<d", a / b))[0]
+            except OverflowError:
+                return inf_bits((a < 0) != (b < 0))
+        if fn == "as_double_round":
+            try:
+                return struct.unpack("<Q", struct.pack("<d", float(a)))[0]
+            except OverflowError:
+                return inf_bits(a < 0)
+        if fn == "true_div":
+            return struct.unpack("<Q", struct.pack("<d", a / b))[0]
+        if fn == "as_double":
+            return struct.unpack("<Q", struct.pack("<d", float(a)))[0]
+        if fn == "from_double":
+            return int(struct.unpack("<d", struct.pack("<Q", c["bits"]))[0])
         if fn == "int_new":
             kind, base = c["kind"], c["base"]
             kw = {} if base is None else {"base": max(min(base, sys.maxsize), -sys.maxsize - 1)}

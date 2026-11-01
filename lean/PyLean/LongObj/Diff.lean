@@ -1,6 +1,7 @@
 import PyLean.DiffCore
 import PyLean.LongObj.IntNew
 import PyLean.LongObj.DiffComplex
+import PyLean.LongObj.LongFloat
 
 /-! Differential-testing handler for `longobj` cases (`"mod": "longobj"`). -/
 
@@ -91,6 +92,17 @@ def run (fn : String) (j : Json) : Except String Json := do
     let flags ← getInt j "flags"
     if ← getBool j "unsigned" then encResult toJson (fromUnsignedNativeBytes bs flags)
     else encResult toJson (fromNativeBytes bs flags)
+  | "true_div" =>
+    encResult (fun d : Cplx.Dbl => toJson d.bits) (trueDivide (← getLong j "a") (← getLong j "b"))
+  | "as_double" => encResult (fun d : Cplx.Dbl => toJson d.bits) (longFloat (← getLong j "a"))
+  | "from_double" => encResult toJson (fromDouble ⟨← getNat j "bits"⟩)
+  | "true_div_round" =>
+    let a ← getInt j "a"
+    let b ← getInt j "b"
+    return encPy toJson (.ok (Cplx.Dbl.roundQ (decide (a < 0) != decide (b < 0)) a.natAbs b.natAbs).bits)
+  | "as_double_round" =>
+    let a ← getInt j "a"
+    return encPy toJson (.ok (Cplx.Dbl.roundQ (decide (a < 0)) a.natAbs 1).bits)
   | "from_c" =>
     let a ← getInt j "a"
     return encPy encLong (.ok (if 0 ≤ a then fromCUInt a.toNat else fromCInt a))

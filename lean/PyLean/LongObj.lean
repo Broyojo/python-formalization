@@ -6,6 +6,7 @@ import PyLean.LongObj.Methods
 import PyLean.LongObj.Conv2
 import PyLean.LongObj.IntNew
 import PyLean.LongObj.EntriesComplex
+import PyLean.LongObj.LongFloat
 
 /-!
 All of `Objects/longobject.c`, `Objects/boolobject.c`, `Objects/complexobject.c`, CPython 3.14.7.
@@ -20,6 +21,6 @@ namespace PyLean.LongObj
 
 open PyLean.Registry
 
-def entries : List Entry := entriesArith ++ entriesConv ++ entriesMethods ++ entriesConv2 ++ entriesIntNew ++ entriesComplex
+def entries : List Entry := entriesArith ++ entriesConv ++ entriesMethods ++ entriesConv2 ++ entriesIntNew ++ entriesComplex ++ entriesFloat
 
 end PyLean.LongObj
