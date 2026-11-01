@@ -279,6 +279,9 @@ structure Rt where
   /-- `_PyThreadState_HasStackSpace`: whether the current data-stack chunk has
   room. It depends on the allocator's chunk boundaries, so it is an oracle. -/
   stackSpace : Bool := true
+  /-- Written only by the profiling loop of the difftest: per code object and
+  instruction, the specialized form seen first. -/
+  profile : Array (Array (Option Instr)) := #[]
   deriving Inhabited
 
 /-- Everything except the evaluation stack of the current frame. -/

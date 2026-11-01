@@ -114,6 +114,8 @@ def intBinary (nb : Nat) (a b : Int) : RM (Option Val) :=
   | 2 => if b == 0 then raiseS "ZeroDivisionError" "division by zero"
          else pure (some (.int (Int.fdiv a b)))
   | 3 => if b < 0 then valueError "negative shift count"
+         else if a == 0 then pure (some (.int 0))
+         else if b ≥ 1 <<< 24 then fault "left shift too large for the model"
          else pure (some (.int (a * (2 : Int) ^ b.toNat)))
   | 5 => pure (some (.int (a * b)))
   | 6 => if b == 0 then raiseS "ZeroDivisionError" "division by zero"
@@ -124,6 +126,8 @@ def intBinary (nb : Nat) (a b : Int) : RM (Option Val) :=
     else if a == 0 then raiseS "ZeroDivisionError" "zero to a negative power"
     else pure (some (.float (pyPow (Num.ofInt a) (Num.ofInt b))))
   | 9 => if b < 0 then valueError "negative shift count"
+         -- `long_rshift1`: a shift past every digit leaves the sign
+         else if b ≥ 1 <<< 24 then pure (some (.int (if a < 0 then -1 else 0)))
          else pure (some (.int (Int.fdiv a ((2 : Int) ^ b.toNat))))
   | 10 => pure (some (.int (a - b)))
   | 11 =>
@@ -340,6 +344,13 @@ def genericGetAttr (o : Val) (name : String) : RM Val := do
   match o with
   | .ref a =>
     if let .inst i ← getObj a then
+      -- `member_get` for a `__slots__` name
+      if let .ref ca := i.cls then
+        if let .cls c ← getObj ca then
+          if let some idx := c.slots.findIdx? (· == name) then
+            let v := i.slots.getD idx .null
+            if v == .null then noAttr o name
+            return v
       if i.dict != .null then
         if let some v ← dictGetStr i.dict name then return v
   | _ => pure ()
@@ -433,6 +444,12 @@ def getAttrImpl (o : Val) (name : String) : RM Val := do
       | "stop" => return .int stop
       | "step" => return .int step
       | _ => pure ()
+    | _ => pure ()
+  if let .cls n := o then
+    match name with
+    | "__name__" | "__qualname__" => return .str n
+    | "__module__" => return .str "builtins"
+    | "__mro__" => return ← mkTuple (← mroOf o)
     | _ => pure ()
   if ← isType o then
     return ← typeGetAttr om ctx o name
@@ -557,7 +574,8 @@ def setAttrImpl (o : Val) (name : String) (v : Val) : RM Unit := do
       let cls ← getObj (match i.cls with | .ref c => c | _ => 0)
       if let .cls c := cls then
         if let some idx := c.slots.findIdx? (· == name) then
-          if isDel && i.slots.getD idx .null == .null then noAttr o name
+          if isDel && i.slots.getD idx .null == .null then
+            raiseVal (← newExc (.cls "AttributeError") [.str name])
           setObj a (.inst { i with slots := i.slots.setIfInBounds idx v })
           return ()
         if !c.hasDict then
@@ -733,12 +751,8 @@ def isTrueImpl (v : Val) : RM Bool := do
         | some x => typeError s!"__bool__ should return bool, returned {← tpName x}"
         | none => pure true
       | none =>
-        match ← callDunder om ctx v "__len__" [] with
-        | some (.int n) => pure (n != 0)
-        | some (.bool b) => pure b
-        | some _ => pure true
-        | none =>
-          if i.base != .null then om.isTrue ctx i.base else pure true
+        if (← userLookup i.cls "__len__").isSome then return (← om.length ctx v) != 0
+        if i.base != .null then om.isTrue ctx i.base else pure true
     | _ => pure true
   | _ => pure true
 
@@ -767,7 +781,7 @@ def hashImpl (v : Val) : RM Int := do
       let hs ← items.toList.mapM (om.hash ctx)
       pure (hs.foldl (fun h x => (h * 1000003 + x) % 2305843009213693951) 0x345678)
     | .set true items =>
-      pure (items.toList.foldl (fun h kv => (h + kv.1) % 2305843009213693951) 7)
+      pure (frozensetHash items)
     | .inst i =>
       match ← userLookup i.cls "__hash__" with
       | some .none => unhashable
@@ -784,32 +798,6 @@ def hashImpl (v : Val) : RM Int := do
   | .cls n => pure (hashStr n)
   | .builtin n => pure (hashStr n)
   | _ => pure 1
-
-/-- `dict_unhashable_type`, `Objects/dictobject.c:2352`. -/
-def dictHashable (k : Val) : RM Unit := do
-  let _ ← tryExc (om.hash ctx k) fun e => do
-    if ← isExcInstance e then
-      if (← typeOf e) == .cls "TypeError" then
-        let t ← tpName k
-        if ← (do
-              let d ← excData e
-              let a ← tupleItems d.args
-              pure (a.getD 0 .null == .str s!"unhashable type: '{t}'")) then
-          typeError s!"cannot use '{t}' as a dict key (unhashable type: '{t}')"
-    throw (.exc e)
-
-/-- `set_unhashable_type`, `Objects/setobject.c:228`. -/
-def setHashable (k : Val) : RM Unit := do
-  let _ ← tryExc (om.hash ctx k) fun e => do
-    if ← isExcInstance e then
-      if (← typeOf e) == .cls "TypeError" then
-        let t ← tpName k
-        if ← (do
-              let d ← excData e
-              let a ← tupleItems d.args
-              pure (a.getD 0 .null == .str s!"unhashable type: '{t}'")) then
-          typeError s!"cannot use '{t}' as a set element (unhashable type: '{t}')"
-    throw (.exc e)
 
 /-- The `__index__` protocol for subscripts. -/
 def asIndex (i : Val) : RM (Option Int) := do
@@ -848,6 +836,7 @@ def getItemImpl (c k : Val) : RM Val := do
         return .str (strSlice s (← sliceRange cs.length x y z))
     match ← asIndex om ctx k with
     | some n =>
+      let n ← indexSsize n
       let i := if n < 0 then n + cs.length else n
       if i < 0 || i ≥ cs.length then raiseS "IndexError" "string index out of range"
       pure (.str (cs.getD i.toNat ' ').toString)
@@ -859,6 +848,7 @@ def getItemImpl (c k : Val) : RM Val := do
         return .bytes (idx.filterMap fun i => b[i]?)
     match ← asIndex om ctx k with
     | some n =>
+      let n ← indexSsize n
       let i := if n < 0 then n + b.length else n
       if i < 0 || i ≥ b.length then raiseS "IndexError" "index out of range"
       pure (.int (b.getD i.toNat 0).toNat)
@@ -882,11 +872,18 @@ def getItemImpl (c k : Val) : RM Val := do
         pure (items.getD i.toNat .null)
       | none => badIdx name
     | .dict _ =>
-      dictHashable om ctx k
       match ← dictGet om ctx c k with
       | some v => pure v
       | none => raiseVal (← newExc (.cls "KeyError") [k])
     | .range start _ step len =>
+      if let .ref b := k then
+        if let .slice x y z ← getObj b then
+          let st ← sliceIndex z 1
+          if st == 0 then valueError "slice step cannot be zero"
+          let lo ← sliceIndex x (if st < 0 then PyLean.ssizeMax else 0)
+          let hi ← sliceIndex y (if st < 0 then PyLean.ssizeMin else PyLean.ssizeMax)
+          let (b0, b1, n) := adjustIndices len lo hi st
+          return ← alloc (.range (start + b0 * step) (start + b1 * step) (step * st) n)
       match ← asIndex om ctx k with
       | some n =>
         let i := if n < 0 then n + len else n
@@ -936,7 +933,6 @@ def setItemImpl (c k v : Val) : RM Unit := do
         setObj a (.list (items.setIfInBounds i.toNat v))
       | none => typeError s!"list indices must be integers or slices, not {← tpName k}"
     | .dict _ =>
-      dictHashable om ctx k
       dictSet om ctx c k v
     | _ =>
       match ← callDunder om ctx c "__setitem__" [k, v] with
@@ -958,14 +954,14 @@ def delItemImpl (c k : Val) : RM Unit := do
           return ()
       match ← asIndex om ctx k with
       | some n =>
+        let n ← indexSsize n
         let i := if n < 0 then n + items.size else n
         if i < 0 || i ≥ items.size then
           raiseS "IndexError" "list assignment index out of range"
         setObj a (.list (items.eraseIdxIfInBounds i.toNat))
       | none => typeError s!"list indices must be integers or slices, not {← tpName k}"
     | .dict d =>
-      dictHashable om ctx k
-      let h ← om.hash ctx k
+      let h ← hashFor om ctx "dict key" k
       match ← dictFind (eqBool om ctx k) d h with
       | some i => dictRemoveAt c d i
       | none => raiseVal (← newExc (.cls "KeyError") [k])
@@ -1139,16 +1135,16 @@ def genClose (n : Nat) (a : Addr) : RM Val := do
     let e ← match err with
       | some e => pure e
       | none => newExc (.cls "GeneratorExit") []
-    let r : RM (Option Val) := tryExc (some <$> genSendEx ctx a (some .none) (some e) true)
+    -- lines 428-452: a yield is an error, `GeneratorExit` is swallowed, and a
+    -- `StopIteration` carries the value `return` gave
+    let r : RM (Except Val Val) := tryExc (Except.ok <$> genSendEx ctx a (some .none) (some e) true)
       fun x => do
-        if ← givenMatches x 8 (.cls "GeneratorExit") then pure none
-        else if ← givenMatches x 8 (.cls "StopIteration") then
-          pure (some (.tagged 0))
+        if ← givenMatches x 8 (.cls "GeneratorExit") then pure (.error .none)
+        else if ← givenMatches x 8 (.cls "StopIteration") then pure (.error (← excData x).value)
         else throw (.exc x)
     match ← r with
-    | none => return .none
-    | some (.tagged _) => fault "close value"
-    | some _ =>
+    | .error v => return v
+    | .ok _ =>
       runtimeError (match g.kind with
         | .coro => "coroutine ignored GeneratorExit"
         | .asyncGen => "async generator ignored GeneratorExit"
@@ -1156,12 +1152,8 @@ def genClose (n : Nat) (a : Addr) : RM Val := do
 
 end
 
-/-- The value a `close()` returned through `StopIteration`
-(`Objects/genobject.c:447-451`). -/
-def genCloseV (a : Addr) : RM Val :=
-  tryExc (genClose P om ctx 64 a) fun x => do
-    if ← givenMatches x 8 (.cls "StopIteration") then pure (← excData x).value
-    else throw (.exc x)
+/-- `generator.close()`. -/
+def genCloseV (a : Addr) : RM Val := genClose P om ctx 64 a
 
 end
 

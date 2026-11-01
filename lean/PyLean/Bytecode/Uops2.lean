@@ -176,7 +176,7 @@ def functionStr (e : Env) (f : Val) : RM String := do
   | .str qn =>
     let m ← tryExc (e.om.getAttr e.ctx f "__module__") fun _ => pure .null
     match m with
-    | .str "builtins" | .str "__main__" => pure s!"{qn}()"
+    | .str "builtins" => pure s!"{qn}()"
     | .str mn => pure s!"{mn}.{qn}()"
     | _ => pure s!"{qn}()"
   | _ =>

@@ -18,6 +18,39 @@ def seqBinary (nb : Nat) (l r : Val) : RM (Option Val) := do
   match nb, l, r with
   | 0, .str a, .str b => pure (some (.str (a ++ b)))
   | 0, .bytes a, .bytes b => pure (some (.bytes (a ++ b)))
+  | 6, .str a, _ =>
+    -- `PyUnicode_Format` for a template with no conversion in it
+    if a.contains '%' then fault "str % with conversions is not modelled"
+    else
+      let mapping ← match r with
+        | .ref b =>
+          match ← getObj b with
+          | .dict _ | .list _ | .range .. => pure true
+          | .tuple x => pure (x.size == 0)
+          | _ => pure false
+        | _ => pure false
+      if mapping then pure (some (.str a))
+      else typeError "not all arguments converted during string formatting"
+  | 6, .bytes a, _ =>
+    if a.contains 37 then fault "bytes % with conversions is not modelled"
+    else
+      let mapping ← match r with
+        | .ref b =>
+          match ← getObj b with
+          | .dict _ | .list _ | .range .. => pure true
+          | .tuple x => pure (x.size == 0)
+          | _ => pure false
+        | _ => pure false
+      if mapping then pure (some (.bytes a))
+      else typeError "not all arguments converted during bytes formatting"
+  | 5, .bytes a, _ =>
+    match intOf r with
+    | some n => pure (some (.bytes (List.flatten (List.replicate n.toNat a))))
+    | none => pure none
+  | 5, _, .bytes b =>
+    match intOf l with
+    | some n => pure (some (.bytes (List.flatten (List.replicate n.toNat b))))
+    | none => pure none
   | 5, .str a, _ =>
     match intOf r with
     | some n => pure (some (.str (pyStrRepeat a n)))
@@ -88,6 +121,24 @@ def builtinBinary (nb : Nat) (l r : Val) : RM (Option Val) := do
       else seqBinary om ctx nb l r
     | _, _ => seqBinary om ctx nb l r
 
+/-- `list(iterable)`/`PySequence_List`. -/
+def seqToList (v : Val) : RM (List Val) := do
+  drain om ctx (← om.getIter ctx v) 1000000 []
+
+/-- `dict_update_arg`, `Objects/dictobject.c`: a mapping, or a sequence of pairs. -/
+def dictUpdateArgFwd (d o : Val) : RM Unit := do
+  if (← isExactDict o) || (← optAttr om ctx o "keys").isSome then
+    return ← om.dictUpdate ctx d o
+  let pairs ← seqToList om ctx o
+  for (p, i) in pairs.zipIdx do
+    let kv ← tryExc (seqToList om ctx p) fun e => do
+      if ← givenMatches e 8 (.cls "TypeError") then
+        typeError s!"cannot convert dictionary update sequence element #{i} to a sequence"
+      else throw (.exc e)
+    match kv with
+    | [k, v] => dictSet om ctx d k v
+    | _ => valueError s!"dictionary update sequence element #{i} has length {kv.length}; 2 is required"
+
 /-- The concatenation errors of `PyNumber_Add`/`Multiply` when the left operand
 is a sequence, `Objects/abstract.c`. -/
 def seqError (nb : Nat) (l r : Val) : RM (Option String) := do
@@ -132,7 +183,7 @@ def binaryOpImpl (nb : Nat) (l r : Val) : RM Val := do
           setObj a (.list (List.flatten (List.replicate n.toNat x.toList)).toArray)
           return l
       | .dict _, 7 =>
-        om.dictUpdate ctx l r
+        dictUpdateArgFwd om ctx l r
         return l
       | .set _ _, _ =>
         if let some v ← seqBinary om ctx base l r then
@@ -196,13 +247,21 @@ def containsImpl (c item : Val) : RM Bool := do
     match item with
     | .str t => pure ((s.splitOn t).length > 1 || t == "")
     | _ => typeError s!"'in <string>' requires string as left operand, not {← tpName item}"
+  | .bytes b =>
+    match item with
+    | .int i =>
+      if i < 0 || i > 255 then valueError "byte must be in range(0, 256)"
+      pure (b.contains (UInt8.ofNat i.toNat))
+    | .bool x => pure (b.contains (if x then 1 else 0))
+    | .bytes t =>
+      let n := t.length
+      pure ((List.range (b.length + 1)).any fun i => (b.drop i).take n == t)
+    | _ => typeError s!"a bytes-like object is required, not '{← tpName item}'"
   | .ref a =>
     match ← getObj a with
     | .dict _ => do
-      dictHashable om ctx item
       dictContains om ctx c item
     | .set .. => do
-      setHashable om ctx item
       setContains om ctx c item
     | .range start stop step len =>
       match intOf item with
@@ -247,7 +306,10 @@ def lengthImpl (v : Val) : RM Int := do
         pure n
       | some (.bool b) => pure (if b then 1 else 0)
       | some x => typeError s!"'{← tpName x}' object cannot be interpreted as an integer"
-      | none => typeError s!"object of type '{← tpName v}' has no len()"
+      | none =>
+        let p ← payload v
+        if p != v then om.length ctx p
+        else typeError s!"object of type '{← tpName v}' has no len()"
   | _ => typeError s!"object of type '{← tpName v}' has no len()"
 
 /-- Join with `, `, as `list_repr` does. -/
@@ -720,10 +782,6 @@ def kwGet (args : List Val) (kw : List String) (n : String) : Option Val :=
   let npos := args.length - kw.length
   (kw.zip (args.drop npos)).lookup n
 
-/-- `list(iterable)`/`PySequence_List`. -/
-def seqToList (v : Val) : RM (List Val) := do
-  drain om ctx (← om.getIter ctx v) 1000000 []
-
 /-- `str.split(sep)`, whitespace form. -/
 def splitWs (s : String) : List String :=
   (s.split Char.isWhitespace).toList.map (fun x => x.toString) |>.filter (· != "")
@@ -831,7 +889,6 @@ def callMethod (tp name : String) (self : Val) (args : List Val) (kw : List Stri
   | "dict", "get" =>
     match args with
     | k :: rest =>
-      dictHashable om ctx k
       match ← dictGet om ctx self k with
       | some v => pure v
       | none => pure (rest.headD .none)
@@ -845,8 +902,7 @@ def callMethod (tp name : String) (self : Val) (args : List Val) (kw : List Stri
     | .ref a, k :: rest =>
       match ← getObj a with
       | .dict d =>
-        dictHashable om ctx k
-        let h ← om.hash ctx k
+        let h ← hashFor om ctx "dict key" k
         match ← dictFind (eqBool om ctx k) d h with
         | some i =>
           let v := d.entries[i]?.map (·.value)
@@ -861,7 +917,6 @@ def callMethod (tp name : String) (self : Val) (args : List Val) (kw : List Stri
   | "dict", "setdefault" =>
     match args with
     | k :: rest =>
-      dictHashable om ctx k
       match ← dictGet om ctx self k with
       | some v => pure v
       | none =>
@@ -871,7 +926,7 @@ def callMethod (tp name : String) (self : Val) (args : List Val) (kw : List Stri
     | [] => typeError "setdefault expected at least 1 argument, got 0"
   | "dict", "update" =>
     match args with
-    | [o] => om.dictUpdate ctx self o; pure .none
+    | [o] => dictUpdateArgFwd om ctx self o; pure .none
     | _ => pure .none
   | "dict", "clear" =>
     match self with
@@ -914,17 +969,15 @@ def callMethod (tp name : String) (self : Val) (args : List Val) (kw : List Stri
   | "set", "add" =>
     match args with
     | [v] =>
-      setHashable om ctx v
       setAdd om ctx self v
       pure .none
     | _ => typeError s!"set.add() takes exactly one argument ({args.length} given)"
   | "set", "discard" | "set", "remove" =>
     match self, args with
     | .ref a, [k] =>
-      setHashable om ctx k
       match ← getObj a with
       | .set f items =>
-        let h ← om.hash ctx k
+        let h ← hashFor om ctx "set element" k
         let rest ← items.toList.filterM fun kv => do
           if kv.1 == h then return !(← eqBool om ctx k kv.2) else pure true
         if rest.length == items.size && name == "remove" then
@@ -1174,14 +1227,13 @@ def callType (n : String) (args : List Val) (kw : List String) : RM Val := do
     | [] => pure s
     | [v] =>
       for x in ← seqToList om ctx v do
-        setHashable om ctx x
         setAdd om ctx s x
       pure s
     | _ => typeError s!"{n} expected at most 1 argument, got {args.length}"
   | "dict" =>
     let d ← mkDict
     let npos := args.length - kw.length
-    if let [m] := args.take npos then om.dictUpdate ctx d m
+    if let [m] := args.take npos then dictUpdateArgFwd om ctx d m
     for (k, v) in kw.zip (args.drop npos) do dictSetStr d k v
     pure d
   | "range" => rangeNew om ctx args
@@ -1455,21 +1507,7 @@ def dictMergeImpl (override : Nat) (d o : Val) : RM Unit := do
           raiseVal (← newExc (.cls "KeyError") [k])
       dictSet om ctx d k (← om.getItem ctx o k)
   | none =>
-    if override == 2 then
-      raiseVal (← newExc (.cls "AttributeError") [.str s!"'{← tpName o}' object has no attribute 'keys'"])
-    -- a sequence of pairs
-    let pairs ← tryExc (seqToList om ctx o) fun e => do
-      if ← givenMatches e 8 (.cls "TypeError") then
-        typeError s!"'{← tpName o}' object is not iterable"
-      else throw (.exc e)
-    for (p, i) in pairs.zipIdx do
-      let kv ← tryExc (seqToList om ctx p) fun e => do
-        if ← givenMatches e 8 (.cls "TypeError") then
-          typeError s!"cannot convert dictionary update sequence element #{i} to a sequence"
-        else throw (.exc e)
-      match kv with
-      | [k, v] => dictSet om ctx d k v
-      | _ => valueError s!"dictionary update sequence element #{i} has length {kv.length}; 2 is required"
+    raiseVal (← newExc (.cls "AttributeError") [.str s!"'{← tpName o}' object has no attribute 'keys'"])
 
 /-- `stopiteration_error`, `Python/intrinsics.c:142-184`. -/
 def stopIterationError (f : Frame) (exc : Val) : RM Val := do
@@ -1738,7 +1776,6 @@ def mkOM (P : Program) : Nat → ObjModel
         for v in vals do listAppend l v
       setUpdate := fun ctx s o => do
         for v in ← seqToList om ctx o do
-          setHashable om ctx v
           setAdd om ctx s v
       intrinsic1 := fun ctx f n v => intrinsic1Impl P om ctx f n v
       intrinsic2 := fun _ f n a b => intrinsic2Impl f n a b

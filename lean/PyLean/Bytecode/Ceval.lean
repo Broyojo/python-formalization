@@ -529,9 +529,20 @@ def eqBool (a b : Val) : RM Bool := do
   if a == b then pure true
   else om.isTrue ctx (← om.richCompare ctx a b 2)
 
+/-- `dict_unhashable_type`, `Objects/dictobject.c:2352`, and its twin
+`set_unhashable_type`, `Objects/setobject.c:228`: an exact `TypeError` from
+`hash()` is re-raised with the container in the message. -/
+def hashFor (what : String) (key : Val) : RM Int :=
+  tryExc (om.hash ctx key) fun e => do
+    if (← typeOf e) == .cls "TypeError" then
+      match ← om.str ctx e with
+      | .str m => typeError s!"cannot use '{← tpName key}' as a {what} ({m})"
+      | _ => throw (.exc e)
+    else throw (.exc e)
+
 /-- `PyDict_GetItemRef`: `none` is "absent". -/
 def dictGet (dv key : Val) : RM (Option Val) := do
-  let h ← om.hash ctx key
+  let h ← hashFor om ctx "dict key" key
   let d ← getDict dv
   match ← dictFind (eqBool om ctx key) d h with
   | some i => pure (d.entries[i]?.map (·.value))
@@ -539,7 +550,7 @@ def dictGet (dv key : Val) : RM (Option Val) := do
 
 /-- `PyDict_SetItem`. -/
 def dictSet (dv key v : Val) : RM Unit := do
-  let h ← om.hash ctx key
+  let h ← hashFor om ctx "dict key" key
   let d ← getDict dv
   let idx ← dictFind (eqBool om ctx key) d h
   dictInsertAt dv d idx h key v
@@ -550,7 +561,7 @@ def dictContains (dv key : Val) : RM Bool := do
 
 /-- `_PySet_AddTakeRef` on a set address. -/
 def setAdd (sv key : Val) : RM Unit := do
-  let h ← om.hash ctx key
+  let h ← hashFor om ctx "set element" key
   match sv with
   | .ref a =>
     match ← getObj a with
@@ -564,9 +575,22 @@ def setAdd (sv key : Val) : RM Unit := do
     | _ => fault "expected a set"
   | _ => fault "expected a set"
 
-/-- `_PySet_Contains`, without the frozenset fallback of an unhashable set. -/
+/-- `frozenset_hash_impl` over the stored hashes. -/
+def frozensetHash (items : Array (Int × Val)) : Int :=
+  items.toList.foldl (fun h kv => (h + kv.1) % 2305843009213693951) 7
+
+/-- `_PySet_Contains`, `set_contains_lock_held`, `Objects/setobject.c:2270-2285`:
+an unhashable `set` key is looked up as if it were a `frozenset`. -/
 def setContains (sv key : Val) : RM Bool := do
-  let h ← om.hash ctx key
+  let h ← tryExc (hashFor om ctx "set element" key) fun e => do
+    match key with
+    | .ref a =>
+      match ← getObj a with
+      | .set _ items =>
+        if ← givenMatches e 8 (.cls "TypeError") then pure (frozensetHash items)
+        else throw (.exc e)
+      | _ => throw (.exc e)
+    | _ => throw (.exc e)
   match sv with
   | .ref a =>
     match ← getObj a with
