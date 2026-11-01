@@ -46,7 +46,7 @@ def cFind (strict : Bool) : PStr → CFind
 
 /-- The `while (1)` loop of `scanstring_unicode`, :402-535, from `end` with the
 writer's contents `acc` (`none` while the writer is empty). -/
-def cScanLoop (s : PStr) (strict : Bool) (begin : Nat) : Nat → Nat → Option PStr → DR (PStr × Nat)
+def cScanLoop (s : PStr) (strict : Bool) (begin : Int) : Nat → Nat → Option PStr → DR (PStr × Nat)
   | 0, _, _ => fuelOut
   | f + 1, e, acc =>
     match cFind strict (s.drop e) with
@@ -91,7 +91,7 @@ def cScanLoop (s : PStr) (strict : Bool) (begin : Nat) : Nat → Nat → Option 
 /-- `scanstring_unicode(pystr, end, strict)`, :371-544 (`end <= len`). -/
 def cScanstring (s : PStr) (e : Nat) (strict : Bool) : DR (PStr × Nat) :=
   if s.length < e then .error (.exc (.valueError "end is out of bounds"))
-  else cScanLoop s strict (e - 1) (s.length + 1) e none
+  else cScanLoop s strict ((e : Int) - 1) (s.length + 1) e none
 
 /-- The sign, :928-935: `if (idx > end_idx) raise_stop_iteration(start)`. -/
 def cNumSign (s : PStr) (start : Nat) : Option Nat :=

@@ -327,18 +327,18 @@ theorem addAll_cons (dcfg : DCfg) (acc : List (PStr × JVal)) (k : PStr) (v : JV
     addAll dcfg (cAddPair dcfg acc k v) ps = addAll dcfg acc ((k, v) :: ps) := rfl
 
 /-- The text after a value in an array, ahead of the next element. -/
-theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n : Nat,
-    (∀ (f lvl : Nat) (v : EVal) (t : PStr) (p : Nat) (rest : PStr), v.ok = true →
-      cEnc cfg f lvl v = .ok t → s.drop p = t ++ rest → Delim rest →
+theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) (hR : dcfg.Rec) : ∀ n : Nat,
+    (∀ (f lvl : Nat) (seen : List Nat) (v : EVal) (t : PStr) (p : Nat) (rest : PStr), v.okJ = true →
+      cEnc cfg f lvl seen v = .ok t → s.drop p = t ++ rest → Delim rest →
       D (cScanOnce dcfg s n p) (decV cfg dcfg f v) (p + t.length)) ∧
-    (∀ (f lvl : Nat) (sep : PStr) (xs : List EVal) (e : Nat) (acc : List JVal) (body post rest : PStr),
-      SepOk sep 44 → EVal.okList xs = true → xs ≠ [] → cEncList cfg f lvl seen sep 0 xs = .ok body →
+    (∀ (f lvl : Nat) (seen : List Nat) (sep : PStr) (xs : List EVal) (e : Nat) (acc : List JVal) (body post rest : PStr),
+      SepOk sep 44 → EVal.okJList xs = true → xs ≠ [] → cEncList cfg f lvl seen sep 0 xs = .ok body →
       s.drop e = body ++ post ++ 93 :: rest → wsOnly post = true →
       D (cArrLoop dcfg s n e acc) (.arr (acc ++ xs.map (decV cfg dcfg f)))
         (e + body.length + post.length + 1)) ∧
-    (∀ (f lvl : Nat) (sep ks : PStr) (x : EVal) (items : List (EKey × EVal)) (q : Nat)
+    (∀ (f lvl : Nat) (seen : List Nat) (sep ks : PStr) (x : EVal) (items : List (EKey × EVal)) (q : Nat)
       (acc : List (PStr × JVal)) (t body : PStr) (fst : Bool) (post rest : PStr),
-      SepOk sep 44 → strOk ks = true → x.ok = true → EVal.okItems items = true →
+      SepOk sep 44 → strOk ks = true → x.okJ = true → EVal.okJItems items = true →
       cEnc cfg f lvl seen x = .ok t → cEncItems cfg f lvl seen sep false items = .ok (body, fst) →
       s.drop q = cStrEnc cfg ks ++ cfg.keySep ++ t ++ body ++ post ++ 125 :: rest → wsOnly post = true →
       D (cObjBody dcfg s n q acc)
@@ -355,10 +355,11 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n 
   | succ n ih =>
     obtain ⟨ihS, ihA, ihO⟩ := ih
     refine ⟨?_, ?_, ?_⟩
-    · intro f lvl v t p rest hok he hs hd
-      cases f with
-      | zero => simp [cEnc] at he
-      | succ f =>
+    · intro f
+      induction f with
+      | zero => intro lvl seen v t p rest _ he; simp [cEnc] at he
+      | succ f ihF =>
+        intro lvl seen v t p rest hok he hs hd
         cases v with
         | none =>
           simp only [cEnc, Except.ok.injEq] at he
@@ -409,20 +410,30 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n 
           have hstep : cScanOnce dcfg s (n + 1) p = cMatchNumber dcfg s p := by
             simp only [cScanOnce, hl, ↓reduceIte, hg, hnot.1, hnot.2.1, hnot.2.2.1, hnot.2.2.2.1,
               hnot.2.2.2.2.1, hnot.2.2.2.2.2.1, hnot.2.2.2.2.2.2.1, hnot.2.2.2.2.2.2.2, false_and, hm]
-          rw [hstep, matchNumber_repr dcfg s p he hs hd hlt]
+          rw [hstep, matchNumber_repr dcfg hR s p he hs hd hlt]
           exact D.ok
         | str x =>
-          simp only [cEnc, Except.ok.injEq] at he
+          simp only [cEnc, cEncStr_std hL.cst, Except.ok.injEq] at he
           subst he
           obtain ⟨r, hr⟩ := cStrEnc_head cfg x
           have hs' : s.drop p = 34 :: (r ++ rest) := by rw [hs, hr, List.cons_append]
           have hscan := scan_enc_c cfg s x rest p dcfg.strict hok hs
           rw [scanOnce_str dcfg n hs' hscan]
           exact D.ok
+        | flt b r => simp [EVal.okJ] at hok
         | back k => simp only [cEnc] at he; cases he
-        | other => simp [cEnc] at he
+        | other k tn =>
+          simp only [cEnc] at he
+          split at he
+          · cases he
+          · cases hdf : cfg.dflt k tn with
+            | error e => rw [hdf] at he; cases he
+            | ok v' =>
+              rw [hdf] at he
+              simp only [decV, hdf]
+              exact ihF lvl (k :: seen) v' t p rest (hL.dfl k tn v' hdf) he hs hd
         | list xs =>
-          have hxs : EVal.okList xs = true := hok
+          have hxs : EVal.okJList xs = true := hok
           by_cases hx : xs = []
           · subst hx
             simp only [cEnc, List.length_nil, ↓reduceIte, Except.ok.injEq] at he
@@ -438,7 +449,7 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n 
             simp only [n1, ↓reduceIte, decV, List.map_nil]
             exact D.ok
           · obtain ⟨lvl', pre, sep, post, body, hpre, hpost, hsep, hb, rfl⟩ := cEnc_list_view hL hx he
-            obtain ⟨c, r, hbody, hc⟩ := cEncList_head hx hb
+            obtain ⟨c, r, hbody, hc⟩ := cEncList_head hL hxs hx hb
             have hs' : s.drop p = 91 :: (pre ++ body ++ post ++ [93] ++ rest) := by
               rw [hs]; simp [List.append_assoc]
             rw [scanOnce_arr dcfg n hs']
@@ -455,7 +466,7 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n 
             have n1 : (p + 1 + pre.length ≥ s.length ∨ s.getD (p + 1 + pre.length) 0 ≠ 93) := by
               rw [h3]; exact Or.inr hnot.2.1
             simp only [n1, ↓reduceIte, decV]
-            have := ihA f lvl' sep xs (p + 1 + pre.length) [] body post rest hsep hxs hx hb
+            have := ihA f lvl' seen sep xs (p + 1 + pre.length) [] body post rest hsep hxs hx hb
               (by rw [hd2]) hpost
             simp only [List.nil_append] at this
             have e : p + ([91] ++ pre ++ body ++ post ++ [93]).length =
@@ -464,7 +475,7 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n 
             rw [e]
             exact this
         | dict kvs =>
-          have hkvs : EVal.okItems kvs = true := hok
+          have hkvs : EVal.okJItems kvs = true := hok
           by_cases hx : kvs = []
           · subst hx
             simp only [cEnc, List.length_nil, ↓reduceIte, Except.ok.injEq] at he
@@ -480,12 +491,12 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n 
             have hse : sortedItems cfg [] = [] := by
               unfold sortedItems
               by_cases h : cfg.sortKeys = true <;> simp [h, sortItems]
-            simp only [n1, ↓reduceIte, decV, hse, decI]
+            simp only [n1, ↓reduceIte, decV, hse, decI, hR.fin]
             exact D.ok
           · obtain ⟨lvl', sep, body, first, post, hsep, hpost, hfirst, hsort, hb, rfl⟩ :=
               cEnc_dict_view hL hx he
             have hok2 := sortedItems_ok hsort hkvs
-            rcases items_view cfg f lvl' sep (decV cfg dcfg f) _ true body first hok2 hb with
+            rcases items_view cfg hL.cst f lvl' seen sep (decV cfg dcfg f) _ true body first hok2 hb with
               ⟨rfl, rfl, hdec⟩ | ⟨ks, x, t, items', b', hks, hxok, hok', hx1, hb', hbody, hdec⟩
             · obtain rfl := hfirst rfl
               have hs' : s.drop p = 123 :: 125 :: rest := by rw [hs]; rfl
@@ -496,7 +507,7 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n 
               obtain ⟨h1, _, h3⟩ := char_at hd1
               rw [hw]
               have n1 : ¬ (p + 1 ≥ s.length ∨ s.getD (p + 1) 0 ≠ 125) := by rw [h3]; simp; omega
-              simp only [n1, ↓reduceIte, decV, hdec]
+              simp only [n1, ↓reduceIte, decV, hdec, hR.fin]
               exact D.ok
             · simp only [↓reduceIte] at hbody
               obtain ⟨kr, hkr⟩ := cStrEnc_head cfg ks
@@ -517,11 +528,11 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n 
                   s.getD (p + 1 + (firstPre cfg lvl').length) 0 ≠ 125) := by rw [h3]; simp
               have n2 : ¬ (p + 1 + (firstPre cfg lvl').length ≥ s.length ∨
                   s.getD (p + 1 + (firstPre cfg lvl').length) 0 ≠ 34) := by rw [h3]; simp; omega
-              have hfalse := items_fst cfg f lvl' sep _ _ _ hb'
+              have hfalse := items_fst cfg hL.cst f lvl' seen sep _ _ _ hb'
               subst hfalse
               have hpost' : wsOnly post = true := hpost
               simp only [n1, n2, ↓reduceIte, decV, hdec]
-              have := ihO f lvl' sep ks x items' (p + 1 + (firstPre cfg lvl').length) [] t b' false post rest
+              have := ihO f lvl' seen sep ks x items' (p + 1 + (firstPre cfg lvl').length) [] t b' false post rest
                 hsep hks hxok hok' hx1 hb' (by rw [hd2]) hpost'
               have e : p + ([123] ++ body ++ post ++ [125]).length =
                   p + 1 + (firstPre cfg lvl').length + (cStrEnc cfg ks).length + cfg.keySep.length + t.length +
@@ -530,13 +541,13 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n 
                 simp only [List.length_append, List.length_cons, List.length_nil]; omega
               rw [e]
               exact this
-    · intro f lvl sep xs e acc body post rest hsep hok hne hb hs hpost
+    · intro f lvl seen sep xs e acc body post rest hsep hok hne hb hs hpost
       cases xs with
       | nil => exact absurd rfl hne
       | cons x ys =>
         obtain ⟨t, b1, h1, h2, h3⟩ := cEncList_cons hb
         simp only [ne_eq, not_true_eq_false, ↓reduceIte, List.nil_append] at h3
-        simp only [EVal.okList, Bool.and_eq_true] at hok
+        simp only [EVal.okJList, Bool.and_eq_true] at hok
         subst h3
         simp only [cArrLoop]
         cases ys with
@@ -544,7 +555,7 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n 
           simp only [cEncList, Except.ok.injEq] at h2
           subst h2
           have hs' : s.drop e = t ++ (post ++ 93 :: rest) := by simpa [List.append_assoc] using hs
-          rcases ihS f lvl x t e (post ++ 93 :: rest) hok.1 h1 hs' (Delim_of_ws hpost (Or.inl rfl)) with h | h
+          rcases ihS f lvl seen x t e (post ++ 93 :: rest) hok.1 h1 hs' (Delim_of_ws hpost (Or.inl rfl)) with h | h
           · left; rw [h]; rfl
           · right
             rw [h]
@@ -555,7 +566,7 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n 
         | cons y ys' =>
           obtain ⟨b0, hb0, rfl⟩ := cEncList_one (b := b1) (by simpa using h2)
           obtain ⟨a, c, hsp, ha, hc⟩ := hsep
-          obtain ⟨ch, r, hb0', hch⟩ := cEncList_head (by simp) hb0
+          obtain ⟨ch, r, hb0', hch⟩ := cEncList_head hL hok.2 (by simp) hb0
           have hR : wsLen (b0 ++ post ++ 93 :: rest) = 0 ∧ ∀ r', (b0 ++ post ++ 93 :: rest) ≠ 93 :: r' := by
             rw [hb0']
             have hn := hch.not
@@ -565,7 +576,7 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n 
             exact hn.2.1 e'.1
           have hs1 : s.drop e = t ++ (sep ++ (b0 ++ post ++ 93 :: rest)) := by
             rw [hs]; simp [List.append_assoc]
-          rcases ihS f lvl x t e _ hok.1 h1 hs1 (Delim_of_sep ⟨a, c, hsp, ha, hc⟩) with h | h
+          rcases ihS f lvl seen x t e _ hok.1 h1 hs1 (Delim_of_sep ⟨a, c, hsp, ha, hc⟩) with h | h
           · left; rw [h]; rfl
           · have hd := drop_after hs1
             have hd2 : s.drop (e + t.length) = a ++ 44 :: (c ++ (b0 ++ post ++ 93 :: rest)) := by
@@ -579,7 +590,7 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n 
               have h4 : s.drop (e + t.length + a.length + 1) = c ++ (b0 ++ post ++ 93 :: rest) := by
                 rw [← List.drop_drop, h3]; simp
               exact drop_after h4
-            have := ihA f lvl sep (y :: ys') _ (acc ++ [decV cfg dcfg f x]) b0 post rest ⟨a, c, hsp, ha, hc⟩ hok.2
+            have := ihA f lvl seen sep (y :: ys') _ (acc ++ [decV cfg dcfg f x]) b0 post rest ⟨a, c, hsp, ha, hc⟩ hok.2
               (by simp) hb0 hd3 hpost
             have e1 : e + (t ++ (sep ++ b0)).length + post.length + 1 =
                 e + t.length + a.length + 1 + c.length + b0.length + post.length + 1 := by
@@ -590,7 +601,7 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n 
             simp only [List.map_cons] at this ⊢
             rw [e1, e2]
             exact this
-    · intro f lvl sep ks x items q acc t body fst post rest hsep hks hx hitems h1 hb hs hpost
+    · intro f lvl seen sep ks x items q acc t body fst post rest hsep hks hx hitems h1 hb hs hpost
       simp only [cObjBody]
       have hs2 : s.drop q = cStrEnc cfg ks ++ (cfg.keySep ++ (t ++ (body ++ (post ++ 125 :: rest)))) := by
         simpa [List.append_assoc] using hs
@@ -607,7 +618,7 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n 
       obtain ⟨hlt, _, h3⟩ := char_at hd3
       have hd4 : s.drop (q + (cStrEnc cfg ks).length + a.length + 1) = c ++ RR := by
         rw [← List.drop_drop, hd3]; simp
-      obtain ⟨c0, r0, ht, hhead⟩ := cEnc_head h1
+      obtain ⟨c0, r0, ht, hhead⟩ := cEnc_head hL hx h1
       have hRR : RR = c0 :: (r0 ++ (body ++ (post ++ 125 :: rest))) := by rw [← hR, ht]; simp
       have hw2 : wsEnd s (q + (cStrEnc cfg ks).length + a.length + 1) =
           q + (cStrEnc cfg ks).length + a.length + 1 + c.length :=
@@ -621,16 +632,16 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n 
       rw [← hR] at hd5
       have hkl : cfg.keySep.length = a.length + 1 + c.length := by
         rw [hsp]; simp only [List.length_append, List.length_cons]; omega
-      rcases items_view cfg f lvl sep (decV cfg dcfg f) items false body fst hitems hb with
+      rcases items_view cfg hL.cst f lvl seen sep (decV cfg dcfg f) items false body fst hitems hb with
         ⟨rfl, rfl, hdec⟩ | ⟨ks', x', t', items', b', hks', hx', hok', hx1, hb', hbody, hdec⟩
       · simp only [List.nil_append] at hd5
-        rcases ihS f lvl x t _ (post ++ 125 :: rest) hx h1 hd5 (Delim_of_ws hpost (Or.inr rfl)) with h | h
+        rcases ihS f lvl seen x t _ (post ++ 125 :: rest) hx h1 hd5 (Delim_of_ws hpost (Or.inr rfl)) with h | h
         · left; rw [h]; rfl
         · right
           rw [h]
           simp only
           rw [cObjAfter_close_eval (drop_after hd5) hpost]
-          simp only [Int.toNat_natCast, hdec]
+          simp only [Int.toNat_natCast, hdec, hR.fin]
           have e1 : q + (cStrEnc cfg ks).length + a.length + 1 + c.length + t.length + post.length + 1 =
               q + (cStrEnc cfg ks).length + cfg.keySep.length + t.length + ([] : PStr).length + post.length + 1 := by
             simp only [List.length_nil]; omega
@@ -645,7 +656,7 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n 
           rw [← hR2, hkr]; simp
         have hd6 : s.drop (q + (cStrEnc cfg ks).length + a.length + 1 + c.length) = t ++ (sep ++ R2) := by
           rw [hd5, ← hR2]; simp [List.append_assoc]
-        rcases ihS f lvl x t _ _ hx h1 hd6 (Delim_of_sep ⟨a2, c2, hsp2, ha2, hc2⟩) with h | h
+        rcases ihS f lvl seen x t _ _ hx h1 hd6 (Delim_of_sep ⟨a2, c2, hsp2, ha2, hc2⟩) with h | h
         · left; rw [h]; rfl
         · have hd7 := drop_after hd6
           have hd8 : s.drop (q + (cStrEnc cfg ks).length + a.length + 1 + c.length + t.length) =
@@ -669,7 +680,7 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) : ∀ n 
           simp only [n2, ↓reduceIte]
           have hd13 : s.drop idx = cStrEnc cfg ks' ++ cfg.keySep ++ t' ++ b' ++ post ++ 125 :: rest := by
             rw [hd11, ← hR2]
-          have := ihO f lvl sep ks' x' items' idx (cAddPair dcfg acc (decS cfg.ensureAscii ks) (decV cfg dcfg f x))
+          have := ihO f lvl seen sep ks' x' items' idx (cAddPair dcfg acc (decS cfg.ensureAscii ks) (decV cfg dcfg f x))
             t' b' fst post rest ⟨a2, c2, hsp2, ha2, hc2⟩ hks' hx' hok' hx1 hb' hd13 hpost
           rw [addAll_cons] at this
           simp only [hdec]

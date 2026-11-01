@@ -61,7 +61,7 @@ theorem cFind_found_lt : ∀ (strict : Bool) (t : PStr) (k : Nat), cFind strict 
         | ctrl k' => rw [hf] at h; cases h
         | eof => rw [hf] at h; cases h
 
-theorem scanLoop_good (s : PStr) (strict : Bool) (b : Nat) :
+theorem scanLoop_good (s : PStr) (strict : Bool) (b : Int) :
     ∀ (g e : Nat) (acc : Option PStr), s.length + 1 - e ≤ g → e ≤ s.length →
       Good e (cScanLoop s strict b g e acc) := by
   intro g

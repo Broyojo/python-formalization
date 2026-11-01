@@ -6,6 +6,8 @@ import PyLean.JsonMod.EncTwins
 import PyLean.JsonMod.RoundTripTop
 import PyLean.JsonMod.Strict
 import PyLean.JsonMod.DocProps
+import PyLean.JsonMod.ApiProps
+import PyLean.JsonMod.ToolProps
 
 /-!
 `Lib/json/` pure-Python scanner/encoder vs `Modules/_json.c`, CPython 3.14.7.

@@ -91,13 +91,12 @@ theorem ErrRel.stopConv {s : PStr} {pe ce : DErr} (h : ErrRel s pe ce) :
 
 theorem ResRel.fuel {α : Type} {s : PStr} : ResRel (α := α) s fuelOut fuelOut := ResRel.err_eq _
 
-/-- `scanstring` at a non-negative position `e >= 1`. -/
-theorem scanstring_rel (s : PStr) (strict : Bool) (e : Nat) (h1 : 1 ≤ e) (h2 : e ≤ s.length) :
+/-- `scanstring` at a position in range. -/
+theorem scanstring_rel (s : PStr) (strict : Bool) (e : Nat) (h2 : e ≤ s.length) :
     ResRel s (pyScanstring s (e : Int) strict) (cScanstring s e strict) := by
   unfold pyScanstring cScanstring
-  have hb : ((e : Int) - 1) = ((e - 1 : Nat) : Int) := by omega
   have hn : ¬ s.length < e := by omega
-  simp only [hb, clampPos_nat h2, hn, ↓reduceIte, cScanLoop_none]
+  simp only [clampPos_nat h2, hn, ↓reduceIte, cScanLoop_none]
   exact scanLoop_rel s strict (e - 1) (s.length + 1) (s.length + 1) e [] (by omega) (by omega) h2
 
 /-- `JVal` of an object: `object_pairs_hook(pairs)` or `dict(pairs)`. -/
@@ -292,7 +291,7 @@ theorem sim (cfg : DCfg) (s : PStr) : ∀ n : Nat,
         · subst h34
           simp only [↓reduceIte]
           rw [show (idx : Int) + 1 = ((idx + 1 : Nat) : Int) by omega]
-          rcases scanstring_rel s cfg.strict (idx + 1) (by omega) (by omega) with
+          rcases scanstring_rel s cfg.strict (idx + 1) (by omega) with
             ⟨v, k, hk, h1, h2⟩ | ⟨pe, ce, h1, h2, he⟩
           · rw [h1, h2]; exact ResRel.ok _ k hk
           · rw [h1, h2]; exact Or.inr ⟨pe, ce, rfl, rfl, he⟩
@@ -461,7 +460,7 @@ theorem sim (cfg : DCfg) (s : PStr) : ∀ n : Nat,
       have hql : q < s.length := (List.getElem?_eq_some_iff.mp hq).1
       simp only [pyObjLoop, cObjBody]
       rw [show (q : Int) + 1 = ((q + 1 : Nat) : Int) by omega]
-      rcases scanstring_rel s cfg.strict (q + 1) (by omega) (by omega) with
+      rcases scanstring_rel s cfg.strict (q + 1) (by omega) with
         ⟨key, k, hk, h1, h2⟩ | ⟨pe, ce, h1, h2, he⟩
       · rw [h1, h2]
         simp only []

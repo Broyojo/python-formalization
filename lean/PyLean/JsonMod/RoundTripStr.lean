@@ -338,7 +338,7 @@ theorem scan_enc_c (cfg : ECfg) (s : PStr) (t rest : PStr) (p : Nat) (strict : B
     have h2 := congrArg List.length hs
     simp only [List.length_drop, List.length_append] at h2
     omega
-  rcases scanstring_rel s strict (p + 1) (by omega) hl with ⟨v, k, _, h3, h4⟩ | ⟨pe, ce, h3, _, _⟩
+  rcases scanstring_rel s strict (p + 1) hl with ⟨v, k, _, h3, h4⟩ | ⟨pe, ce, h3, _, _⟩
   · rw [hpy] at h3
     simp only [Except.ok.injEq, Prod.mk.injEq] at h3
     obtain ⟨rfl, h5⟩ := h3

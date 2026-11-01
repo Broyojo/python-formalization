@@ -62,14 +62,14 @@ theorem pyLoop_srel (s : PStr) (b : Int) : ∀ (f e : Nat) (acc : PStr),
           · cases backslash esc with
             | none => exact Or.inl rfl
             | some ch => exact ih _ _
-          · cases hex4 s (e + k + 1 + 1) with
-            | none => exact Or.inl rfl
-            | some uni =>
+          · cases decodeUXXXX s (e + k + 1) with
+            | error err => exact Or.inl rfl
+            | ok uni =>
               simp only
               refine SRel.ite _ (fun _ => ?_) (fun _ => ih _ _)
-              cases hex4 s (e + k + 1 + 5 + 2) with
-              | none => exact Or.inl rfl
-              | some uni2 =>
+              cases decodeUXXXX s (e + k + 1 + 5 + 1) with
+              | error err => exact Or.inl rfl
+              | ok uni2 =>
                 simp only
                 exact SRel.ite _ (fun _ => ih _ _) (fun _ => ih _ _)
 

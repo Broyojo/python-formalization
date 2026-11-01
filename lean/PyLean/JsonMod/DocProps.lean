@@ -260,10 +260,10 @@ theorem intRepr_ascii {n : Int} {t : PStr} (h : intRepr n = .ok t) : isAscii t =
   · exact isAscii_append (a := [45]) (by decide) hds
   · exact hds
 
-theorem encList_ascii (cfg : ECfg) (f lvl : Nat) (sep : PStr) (hsep : isAscii sep = true)
-    (ih : ∀ lvl' v t, v.ok = true → cEnc cfg f lvl' v = .ok t → isAscii t = true) :
+theorem encList_ascii (cfg : ECfg) (f lvl : Nat) (seen : List Nat) (sep : PStr) (hsep : isAscii sep = true)
+    (ih : ∀ lvl' seen' v t, v.ok = true → cEnc cfg f lvl' seen' v = .ok t → isAscii t = true) :
     ∀ (xs : List EVal) (i : Nat) (b : PStr), EVal.okList xs = true →
-      cEncList cfg f lvl sep i xs = .ok b → isAscii b = true := by
+      cEncList cfg f lvl seen sep i xs = .ok b → isAscii b = true := by
   intro xs
   induction xs with
   | nil =>
@@ -275,16 +275,17 @@ theorem encList_ascii (cfg : ECfg) (f lvl : Nat) (sep : PStr) (hsep : isAscii se
     simp only [EVal.okList, Bool.and_eq_true] at hok
     obtain ⟨t, b1, h1, h2, h3⟩ := cEncList_cons h
     subst h3
-    refine isAscii_append (isAscii_append ?_ (ih lvl x t hok.1 h1)) (ihx (i + 1) b1 hok.2 h2)
+    refine isAscii_append (isAscii_append ?_ (ih lvl seen x t hok.1 h1)) (ihx (i + 1) b1 hok.2 h2)
     split
     · exact hsep
     · rfl
 
-theorem encItems_ascii (cfg : ECfg) (ha : cfg.ensureAscii = true) (hk : isAscii cfg.keySep = true)
-    (f lvl : Nat) (sep : PStr) (hsep : isAscii sep = true) (hpre : isAscii (firstPre cfg lvl) = true)
-    (ih : ∀ lvl' v t, v.ok = true → cEnc cfg f lvl' v = .ok t → isAscii t = true) :
+theorem encItems_ascii (cfg : ECfg) (hc : cfg.customEnc = none) (ha : cfg.ensureAscii = true)
+    (hk : isAscii cfg.keySep = true)
+    (f lvl : Nat) (seen : List Nat) (sep : PStr) (hsep : isAscii sep = true) (hpre : isAscii (firstPre cfg lvl) = true)
+    (ih : ∀ lvl' seen' v t, v.ok = true → cEnc cfg f lvl' seen' v = .ok t → isAscii t = true) :
     ∀ (items : List (EKey × EVal)) (first : Bool) (b : PStr) (fst : Bool), EVal.okItems items = true →
-      cEncItems cfg f lvl sep first items = .ok (b, fst) → isAscii b = true := by
+      cEncItems cfg f lvl seen sep first items = .ok (b, fst) → isAscii b = true := by
   intro items
   induction items with
   | nil =>
@@ -295,7 +296,7 @@ theorem encItems_ascii (cfg : ECfg) (ha : cfg.ensureAscii = true) (hk : isAscii 
     obtain ⟨k, x⟩ := p
     intro first b fst hok h
     simp only [EVal.okItems, Bool.and_eq_true] at hok
-    simp only [cEncItems] at h
+    simp only [cEncItems, cEncStr_std hc] at h
     cases hkk : cKeyStr cfg k with
     | error e => rw [hkk] at h; cases h
     | ok o =>
@@ -304,12 +305,12 @@ theorem encItems_ascii (cfg : ECfg) (ha : cfg.ensureAscii = true) (hk : isAscii 
       | none => exact ihx first b fst hok.2 h
       | some ks =>
         simp only at h
-        cases h1 : cEnc cfg f lvl x with
+        cases h1 : cEnc cfg f lvl seen x with
         | error e => rw [h1] at h; cases h
         | ok t =>
           rw [h1] at h
           simp only at h
-          cases h2 : cEncItems cfg f lvl sep false items with
+          cases h2 : cEncItems cfg f lvl seen sep false items with
           | error e => rw [h2] at h; cases h
           | ok r =>
             obtain ⟨b', fst'⟩ := r
@@ -318,20 +319,21 @@ theorem encItems_ascii (cfg : ECfg) (ha : cfg.ensureAscii = true) (hk : isAscii 
             obtain ⟨rfl, rfl⟩ := h
             have hk' := keyStr_ok hok.1.1 hkk
             refine isAscii_append (isAscii_append (isAscii_append (isAscii_append ?_ (cStrEnc_ascii ha hk'))
-              hk) (ih lvl x t hok.1.2 h1)) (ihx false b' fst' hok.2 h2)
+              hk) (ih lvl seen x t hok.1.2 h1)) (ihx false b' fst' hok.2 h2)
             split
             · unfold firstPre at hpre
               cases hi : cfg.indent <;> simp only [hi] at hpre ⊢ <;> exact hpre
             · exact hsep
 
-theorem enc_ascii (cfg : ECfg) (ha : cfg.ensureAscii = true) (hs : isAscii cfg.itemSep = true)
+theorem enc_ascii (cfg : ECfg) (hO : cfg.Ok) (ha : cfg.ensureAscii = true) (hs : isAscii cfg.itemSep = true)
     (hk : isAscii cfg.keySep = true) (hi : ∀ i, cfg.indent = some i → isAscii i = true) :
-    ∀ (f lvl : Nat) (v : EVal) (t : PStr), v.ok = true → cEnc cfg f lvl v = .ok t → isAscii t = true := by
+    ∀ (f lvl : Nat) (seen : List Nat) (v : EVal) (t : PStr), v.ok = true →
+      cEnc cfg f lvl seen v = .ok t → isAscii t = true := by
   intro f
   induction f with
-  | zero => intro lvl v t _ h; simp [cEnc] at h
+  | zero => intro lvl seen v t _ h; simp [cEnc] at h
   | succ f ih =>
-    intro lvl v t hok he
+    intro lvl seen v t hok he
     have hsepi : ∀ ind lvl', cfg.indent = some ind → isAscii (cSepIndent cfg ind lvl') = true :=
       fun ind lvl' h => isAscii_append hs (isAscii_nl (hi ind h) lvl')
     have hfp : ∀ lvl', isAscii (firstPre cfg lvl') = true := by
@@ -354,11 +356,23 @@ theorem enc_ascii (cfg : ECfg) (ha : cfg.ensureAscii = true) (hs : isAscii cfg.i
       simp only [cEnc] at he
       exact intRepr_ascii he
     | str x =>
-      simp only [cEnc, Except.ok.injEq] at he
+      simp only [cEnc, cEncStr_std hO.cst, Except.ok.injEq] at he
       subst he
       exact cStrEnc_ascii ha hok
+    | flt b r =>
+      simp only [cEnc] at he
+      have := cEncodeFloat_ok hok he
+      simpa [isAscii, fltOk] using this
     | back k => simp only [cEnc] at he; cases he
-    | other => simp [cEnc] at he
+    | other n tn =>
+      simp only [cEnc] at he
+      split at he
+      · cases he
+      · cases hd : cfg.dflt n tn with
+        | error e => rw [hd] at he; cases he
+        | ok v' =>
+          rw [hd] at he
+          exact ih lvl (n :: seen) v' t (hO.dfl n tn v' hd) he
     | list xs =>
       simp only [cEnc] at he
       split at he
@@ -367,24 +381,24 @@ theorem enc_ascii (cfg : ECfg) (ha : cfg.ensureAscii = true) (hs : isAscii cfg.i
       · cases hind : cfg.indent with
         | none =>
           simp only [hind] at he
-          cases hb : cEncList cfg f lvl cfg.itemSep 0 xs with
+          cases hb : cEncList cfg f lvl seen cfg.itemSep 0 xs with
           | error e => rw [hb] at he; cases he
           | ok body =>
             rw [hb] at he
             simp only [Except.ok.injEq] at he
             subst he
-            have := encList_ascii cfg f lvl cfg.itemSep hs ih xs 0 body hok hb
+            have := encList_ascii cfg f lvl seen cfg.itemSep hs ih xs 0 body hok hb
             exact isAscii_append (isAscii_append (isAscii_append (isAscii_append (a := [91]) (by decide) rfl)
               this) rfl) (by decide)
         | some ind =>
           simp only [hind] at he
-          cases hb : cEncList cfg f (lvl + 1) (cSepIndent cfg ind (lvl + 1)) 0 xs with
+          cases hb : cEncList cfg f (lvl + 1) seen (cSepIndent cfg ind (lvl + 1)) 0 xs with
           | error e => rw [hb] at he; cases he
           | ok body =>
             rw [hb] at he
             simp only [Except.ok.injEq] at he
             subst he
-            have := encList_ascii cfg f (lvl + 1) _ (hsepi ind _ hind) ih xs 0 body hok hb
+            have := encList_ascii cfg f (lvl + 1) seen _ (hsepi ind _ hind) ih xs 0 body hok hb
             exact isAscii_append (isAscii_append (isAscii_append (isAscii_append (a := [91]) (by decide)
               (isAscii_nl (hi ind hind) _)) this) (isAscii_nl (hi ind hind) _)) (by decide)
     | dict kvs =>
@@ -405,25 +419,25 @@ theorem enc_ascii (cfg : ECfg) (ha : cfg.ensureAscii = true) (hs : isAscii cfg.i
           cases hind : cfg.indent with
           | none =>
             simp only [hind, hsort] at he
-            cases hb : cEncItems cfg f lvl cfg.itemSep true items with
+            cases hb : cEncItems cfg f lvl seen cfg.itemSep true items with
             | error e => rw [hb] at he; cases he
             | ok r =>
               obtain ⟨body, first⟩ := r
               rw [hb] at he
               simp only [Except.ok.injEq] at he
               subst he
-              have := encItems_ascii cfg ha hk f lvl cfg.itemSep hs (hfp lvl) ih items true body first hok2 hb
+              have := encItems_ascii cfg hO.cst ha hk f lvl seen cfg.itemSep hs (hfp lvl) ih items true body first hok2 hb
               exact isAscii_append (isAscii_append (isAscii_append (a := [123]) (by decide) this) rfl) (by decide)
           | some ind =>
             simp only [hind, hsort] at he
-            cases hb : cEncItems cfg f (lvl + 1) (cSepIndent cfg ind (lvl + 1)) true items with
+            cases hb : cEncItems cfg f (lvl + 1) seen (cSepIndent cfg ind (lvl + 1)) true items with
             | error e => rw [hb] at he; cases he
             | ok r =>
               obtain ⟨body, first⟩ := r
               rw [hb] at he
               simp only [Except.ok.injEq] at he
               subst he
-              have := encItems_ascii cfg ha hk f (lvl + 1) _ (hsepi ind _ hind) (hfp _) ih items true body first hok2 hb
+              have := encItems_ascii cfg hO.cst ha hk f (lvl + 1) seen _ (hsepi ind _ hind) (hfp _) ih items true body first hok2 hb
               refine isAscii_append (isAscii_append (isAscii_append (a := [123]) (by decide) this) ?_) (by decide)
               split
               · exact isAscii_nl (hi ind hind) _
@@ -432,20 +446,21 @@ theorem enc_ascii (cfg : ECfg) (ha : cfg.ensureAscii = true) (hs : isAscii cfg.i
 /-- `ensure_ascii` (`JSONEncoder.__init__`, encoder.py:114-115: "the output is
 guaranteed to be str objects with all incoming non-ASCII and non-printable
 characters escaped"): with `ensure_ascii=True`, every code point of the output
-of either encoder is ASCII, unless `indent` or a separator itself is not. -/
+of either encoder is ASCII, unless `indent` or a separator itself is not, for
+every value and every `default` (type invariants `ECfg.Ok`, `EVal.ok`). -/
 def EnsureAsciiOutput : Prop :=
-  ∀ (cfg : ECfg) (v : EVal) (d : PStr), cfg.ensureAscii = true → isAscii cfg.itemSep = true →
+  ∀ (cfg : ECfg) (v : EVal) (d : PStr), cfg.Ok → cfg.ensureAscii = true → isAscii cfg.itemSep = true →
     isAscii cfg.keySep = true → (∀ i, cfg.indent = some i → isAscii i = true) → v.ok = true →
     (dumpsPy cfg v = .ok d ∨ dumpsC cfg v = .ok d) → ∀ c ∈ d, c < 128
 
 theorem ensureAsciiOutput_proven : EnsureAsciiOutput := by
-  intro cfg v d ha hs hk hi hok he c hc
+  intro cfg v d hO ha hs hk hi hok he c hc
   have he' : dumpsC cfg v = .ok d := by
     rcases he with h | h
-    · rw [← dumpsTwins_proven cfg v hok]; exact h
+    · rw [← dumpsTwins_proven cfg v hO hok]; exact h
     · exact h
-  rw [dumpsC_eq] at he'
-  have := List.all_eq_true.mp (enc_ascii cfg ha hs hk hi _ 0 v d hok he') c hc
+  rw [dumpsC_eq cfg hO.cst] at he'
+  have := List.all_eq_true.mp (enc_ascii cfg hO ha hs hk hi _ 0 [] v d hok he') c hc
   simpa using this
 
 /-! ### Int literals -/
@@ -479,7 +494,7 @@ def tooManyDigits (k : Nat) : PyExc :=
 `parse_int`: `loads` returns its value when it has at most 4300 digits, and
 raises the `ValueError` of `int()` otherwise, in both twins. -/
 def IntLiteral : Prop :=
-  ∀ (cfg : DCfg) (neg : Bool) (ds : PStr), cfg.intHook = false → (∀ c ∈ ds, isDigit c = true) →
+  ∀ (cfg : DCfg) (neg : Bool) (ds : PStr), cfg.parseIntFn = none → (∀ c ∈ ds, isDigit c = true) →
     (ds = [48] ∨ ∃ d r, ds = d :: r ∧ 49 ≤ d ∧ d ≤ 57) →
     (ds.length ≤ maxStrDigits →
       loadsPy cfg (if neg then 45 :: ds else ds) = .ok (.int (if neg then -(decVal ds : Int) else decVal ds)) ∧
