@@ -3959,6 +3959,7 @@ def operator_abc_run(case):
 
 # ====== BEGIN AREA enumdc (Lib/enum.py, Lib/dataclasses.py) ======
 # Everything for this area stays between these two markers; prefix top-level names with enumdc_.
+import collections as enumdc_collections  # noqa: E402
 import dataclasses as enumdc_dc  # noqa: E402
 import enum as enumdc_enum  # noqa: E402
 
@@ -4193,8 +4194,184 @@ def enumdc_gflag(rng):
             "v": rng.randrange(0, 8), "self_none": not mixin and rng.random() < .1, "other": other}
 
 
+def enumdc_gfield(rng, name, kind, plain_default=True):
+    f = {"name": name, "kind": kind, "default": None, "unhash": False, "factory": None, "init": rng.random() < .85,
+         "repr": rng.random() < .8, "hash": rng.choice([None, None, True, False]), "compare": rng.random() < .8,
+         "kw": rng.choice([None, None, True, False])}
+    r = rng.randrange(0, 8)
+    if r <= 2:
+        f["default"] = rng.randrange(0, 5)
+    elif r == 3 and plain_default:
+        f["factory"] = rng.randrange(5, 9)
+    elif r == 4 and rng.random() < .3:
+        f["default"] = rng.randrange(0, 5)
+        f["unhash"] = True
+    return f
+
+
+def enumdc_gbase(rng):
+    fields = []
+    for name in rng.sample(["a", "b", "c", "d"], rng.randrange(0, 3)):
+        kind = rng.choice(["plain", "plain", "plain", "classvar", "initvar"])
+        f = enumdc_gfield(rng, name, kind, kind == "plain")
+        f["unhash"] = f["unhash"] and kind != "plain"
+        f["kw"] = None if kind == "classvar" else bool(f["kw"])
+        f["init"] = True if kind == "classvar" else f["init"]
+        fields.append(f)
+    # A base must be a valid dataclass: no default before a field without one.
+    seen = False
+    for f in fields:
+        if f["kind"] == "classvar" or f["kw"] or not f["init"]:
+            continue
+        if f["default"] is not None or f["factory"] is not None:
+            seen = True
+        elif seen:
+            f["default"] = 1
+    return {"fields": fields, "frozen": rng.random() < .3}
+
+
+def enumdc_gdc(rng):
+    params = {"init": rng.random() < .9, "repr": rng.random() < .9, "eq": rng.random() < .85, "order": rng.random() < .15,
+              "unsafe_hash": rng.random() < .15, "frozen": rng.random() < .2, "match_args": rng.random() < .85,
+              "kw_only": rng.random() < .15, "slots": rng.random() < .07, "weakref_slot": rng.random() < .03}
+    if rng.random() < .7:
+        params["weakref_slot"] = False
+    bases = [enumdc_gbase(rng) for _ in range(rng.choice([0, 0, 0, 1, 1, 2]))]
+    frozen = rng.random()
+    if frozen < .85 and bases:
+        v = bases[0]["frozen"]
+        for b in bases:
+            b["frozen"] = v
+        params["frozen"] = v
+    anns = []
+    for name in rng.sample(["a", "b", "c", "e", "f"], rng.randrange(0, 5)):
+        kind = rng.choice(["plain", "plain", "plain", "plain", "classvar", "initvar"])
+        r = rng.randrange(0, 5)
+        if r <= 1:
+            attr = ["missing"]
+        elif r == 2:
+            attr = ["value", rng.randrange(0, 5), rng.random() < .1]
+        else:
+            attr = ["field", enumdc_gfield(rng, name, kind)]
+            if rng.random() < .9 and kind != "plain":
+                attr[1]["factory"] = None
+            if rng.random() < .9 and kind == "classvar":
+                attr[1]["kw"] = None
+        anns.append({"name": name, "kind": kind, "attr": attr})
+    if rng.random() < .15:
+        anns.insert(rng.randrange(0, len(anns) + 1), {"name": "_", "kind": "kw", "attr": ["missing"]})
+    if rng.random() < .03:
+        anns.insert(rng.randrange(0, len(anns) + 1), {"name": "__", "kind": "kw", "attr": ["missing"]})
+    defined = [n for n in ["__repr__", "__eq__", "__lt__", "__setattr__", "__init__", "__match_args__"]
+               if rng.random() < .06]
+    names = []
+    for b in bases:
+        names += [f["name"] for f in b["fields"]]
+    names += [a["name"] for a in anns if a["kind"] != "kw"]
+    names = list(dict.fromkeys(names))
+    r = rng.randrange(0, 6)
+    if r <= 1:
+        op = ["info"]
+    else:
+        params["init"] = True
+        defined = [n for n in defined if n not in ("__init__", "__setattr__")]
+        args = [rng.randrange(10, 20) for _ in range(rng.randrange(0, len(names) + 2))]
+        kw = [[n, rng.randrange(20, 30)] for n in rng.sample(names, rng.randrange(0, len(names) + 1))]
+        if rng.random() < .1:
+            kw.append(["zz", 1])
+        if r <= 3:
+            args = args[:rng.randrange(0, len(args) + 1)]
+            if rng.random() < .5:
+                args, kw = [], [[n, rng.randrange(20, 30)] for n in names]
+            op = ["init", args, kw]
+        else:
+            ch = [[n, rng.randrange(30, 40)] for n in rng.sample(names, rng.randrange(0, len(names) + 1))]
+            if rng.random() < .7:
+                args, kw = [], [[n, rng.randrange(20, 30)] for n in names]
+            op = ["replace", args, kw, ch]
+    return {"fn": "enumdc.dc_class", "params": params, "bases": bases, "anns": anns,
+            "stray": "s" if rng.random() < .02 else None, "hash": rng.choice([None, None, None, None, False, True]),
+            "defined": defined, "has_slots": op[0] == "info" and rng.random() < .1, "post": rng.random() < .2, "op": op}
+
+
+def enumdc_gdv(rng, depth):
+    r = rng.randrange(0, 15 if depth > 0 else 4)
+    if r == 0:
+        return ["atom", rng.randrange(-3, 4)]
+    if r == 1:
+        return ["str", rng.choice(["x", "y", ""])]
+    if r == 2:
+        return ["copied", rng.randrange(0, 3)]
+    if r == 3:
+        return ["unhash", rng.randrange(0, 3)]
+    items = lambda: [enumdc_gdv(rng, depth - 1) for _ in range(rng.randrange(0, 3))]
+    if r in (4, 5):
+        return ["list", items()]
+    if r == 6:
+        return ["tuple", items()]
+    if r == 7:
+        return ["named", items()]
+    if r == 8:
+        return ["listSub", items()]
+    if r == 9:
+        return ["tupleSub", items()]
+    if r in (10, 11):
+        return enumdc_ginst(rng, depth - 1)
+    keys = {}
+    for _ in range(rng.randrange(0, 3)):
+        k = rng.choice([["atom", rng.randrange(0, 3)], ["str", "k"], ["copied", 1],
+                        ["tuple", [["atom", rng.randrange(0, 2)]]],
+                        ["inst", ["p"], [["atom", rng.randrange(0, 2)]]]])
+        keys[str(k)] = k
+    ks = list(keys.values())
+    kind = ["dict", "dictSub", "defaultDict", "counter"][r - 12 if r <= 14 else 0]
+    if rng.random() < .25:
+        kind = "counter"
+    if kind == "counter":
+        return [kind, ks, [["atom", rng.randrange(1, 3)] for _ in ks]]
+    return [kind, ks, [enumdc_gdv(rng, depth - 1) for _ in ks]]
+
+
+def enumdc_ginst(rng, depth):
+    names = rng.sample(["p", "q", "r"], rng.randrange(0, 4))
+    return ["inst", names, [enumdc_gdv(rng, depth) for _ in names]]
+
+
+def enumdc_gmisc(rng):
+    r = rng.randrange(0, 7)
+    if r == 0:
+        fs = [enumdc_gfield(rng, n, "plain") for n in rng.sample(["a", "b", "c", "d"], rng.randrange(0, 5))]
+        return {"fn": "enumdc.dc_hash", "fields": fs}
+    if r == 1:
+        n = rng.randrange(0, 4)
+        return {"fn": "enumdc.dc_eq", "terms": [rng.choice(["t", "t", "f", "raise"]) for _ in range(n)],
+                "same": rng.random() < .1, "same_class": rng.random() < .85}
+    if r == 2:
+        n = rng.randrange(0, 4)
+        a = [rng.randrange(0, 3) for _ in range(n)]
+        return {"fn": "enumdc.dc_order", "a": a, "b": [rng.choice([x, rng.randrange(0, 3)]) for x in a],
+                "op": rng.choice(["lt", "le", "gt", "ge"]), "same_class": rng.random() < .9}
+    if r == 3:
+        names = rng.sample(["a", "b", "c"], rng.randrange(0, 4))
+        return {"fn": "enumdc.dc_frozen", "fields": names, "name": rng.choice(["a", "b", "z"]),
+                "exact": rng.random() < .5, "del": rng.random() < .5}
+    if r == 4:
+        items = []
+        for _ in range(rng.randrange(0, 4)):
+            s = rng.choice(["a", "b", "a", "x1", "_y", "1a", "a-b", "", "class", "def", "None", "match", "type"])
+            items.append(rng.choice([["name", s], ["named", s], ["name", s], ["named", s], ["notStr"], ["bad"]]))
+        return {"fn": "enumdc.dc_make", "items": items}
+    if r == 5:
+        return {"fn": "enumdc.dc_asdict", "v": enumdc_ginst(rng, 3), "fact": rng.choice(["dict", "dictLike", "list"])}
+    return {"fn": "enumdc.dc_astuple", "v": enumdc_ginst(rng, 3), "fact": rng.choice(["tuple", "list"])}
+
+
 def enumdc_gen(rng):
-    r0 = rng.randrange(0, 25)
+    r0 = rng.randrange(0, 40)
+    if r0 >= 33:
+        return enumdc_gmisc(rng)
+    if r0 >= 25:
+        return enumdc_gdc(rng)
     if r0 <= 8:
         return enumdc_gclass(rng)
     if r0 == 9:
@@ -4519,8 +4696,284 @@ def enumdc_flag(case):
     return py_result(go)
 
 
+def enumdc_fld(f):
+    kw = {"init": f["init"], "repr": f["repr"], "hash": f["hash"], "compare": f["compare"]}
+    if f["kw"] is not None:
+        kw["kw_only"] = f["kw"]
+    if f["default"] is not None:
+        kw["default"] = [f["default"]] if f["unhash"] else f["default"]
+    if f["factory"] is not None:
+        v = f["factory"]
+        kw["default_factory"] = lambda: v
+    return enumdc_dc.field(**kw)
+
+
+def enumdc_ann(kind):
+    import typing
+    return {"plain": int, "classvar": typing.ClassVar[int], "initvar": enumdc_dc.InitVar[int],
+            "kw": enumdc_dc.KW_ONLY}[kind]
+
+
+def enumdc_user(*a, **k):
+    return None
+
+
+enumdc_user.user = True
+
+
+def enumdc_mkbase(b):
+    ns = {"__annotations__": {f["name"]: enumdc_ann(f["kind"]) for f in b["fields"]}}
+    for f in b["fields"]:
+        ns[f["name"]] = enumdc_fld(f)
+    return enumdc_dc.dataclass(frozen=b["frozen"])(type("B", (), ns))
+
+
+def enumdc_plain(x):
+    return x[0] if isinstance(x, list) else x
+
+
+def enumdc_obj(C, o, seen):
+    post = seen.get("post")
+    return [[enumdc_plain(getattr(o, f.name, "unset")) for f in enumdc_dc.fields(C)],
+            None if post is None else [enumdc_plain(x) for x in post]]
+
+
+def enumdc_dcclass(case):
+    op = case["op"]
+    p = case["params"]
+    seen = {}
+
+    def go():
+        bases = tuple(enumdc_mkbase(b) for b in reversed(case["bases"]))
+        anns = {}
+        ns = {}
+        for a in case["anns"]:
+            anns[a["name"]] = enumdc_ann(a["kind"])
+            at = a["attr"]
+            if at[0] == "value":
+                ns[a["name"]] = [at[1]] if at[2] else at[1]
+            elif at[0] == "field":
+                ns[a["name"]] = enumdc_fld(at[1])
+        ns["__annotations__"] = anns
+        if case["stray"]:
+            ns[case["stray"]] = enumdc_dc.field()
+        for n in case["defined"]:
+            ns[n] = () if n == "__match_args__" else enumdc_user
+        if case["hash"] is True:
+            ns["__hash__"] = enumdc_user
+        elif case["hash"] is False:
+            ns["__hash__"] = None
+        if case["has_slots"]:
+            ns["__slots__"] = ()
+        if case["post"]:
+            def __post_init__(self, *a):
+                seen["post"] = list(a)
+            ns["__post_init__"] = __post_init__
+        C = enumdc_dc.dataclass(**p)(type("C", bases, ns))
+        if op[0] == "info":
+            sig = []
+            kwl = []
+            if p["init"] or "__init__" in case["defined"]:
+                pass
+            fl = list(C.__dataclass_fields__.values())
+            kinds = {enumdc_dc._FIELD: "plain", enumdc_dc._FIELD_CLASSVAR: "classVar",
+                     enumdc_dc._FIELD_INITVAR: "initVar"}
+            has = lambda f: f.default is not enumdc_dc.MISSING or f.default_factory is not enumdc_dc.MISSING
+            all_ = [f for f in fl if f._field_type is not enumdc_dc._FIELD_CLASSVAR]
+            std, kwo = enumdc_dc._fields_in_init_order(all_)
+            hash_ = C.__dict__.get("__hash__", "absent")
+            state = hash_ if hash_ == "absent" else ("None" if hash_ is None else
+                                                     ("user" if hash_ is enumdc_user else "gen"))
+            names = ["__init__", "__repr__", "__eq__", "__lt__", "__le__", "__gt__", "__ge__", "__setattr__",
+                     "__delattr__"]
+            gen = [n for n in names if n in C.__dict__ and C.__dict__[n] is not enumdc_user]
+            return [[[f.name, "PyLean.CoreLibs.EnumDC.FKind." + kinds[f._field_type],
+                      None if f.kw_only is enumdc_dc.MISSING else f.kw_only,
+                      None if f.default is enumdc_dc.MISSING else enumdc_plain(f.default),
+                      f.default_factory is not enumdc_dc.MISSING] for f in fl],
+                    [[f.name, has(f)] for f in std], [[f.name, has(f)] for f in kwo],
+                    None if "__match_args__" in case["defined"] or not p["match_args"]
+                    else list(C.__match_args__), state, gen]
+        o = C(*op[1], **dict(op[2]))
+        if op[0] == "init":
+            return enumdc_obj(C, o, seen)
+        return enumdc_obj(C, enumdc_dc.replace(o, **dict(op[3])), seen)
+    return py_result(go)
+
+
+class enumdc_Cp:
+    def __init__(self, n):
+        self.n = n
+
+    def __eq__(self, o):
+        return isinstance(o, enumdc_Cp) and self.n == o.n
+
+    def __hash__(self):
+        return hash(("cp", self.n))
+
+
+class enumdc_L(list):
+    pass
+
+
+class enumdc_T(tuple):
+    pass
+
+
+class enumdc_D(dict):
+    pass
+
+
+enumdc_INST = {}
+enumdc_NT = {}
+
+
+def enumdc_dv(v):
+    k = v[0]
+    if k == "atom" or k == "str":
+        return v[1]
+    if k == "copied":
+        return enumdc_Cp(v[1])
+    if k == "unhash":
+        return {v[1]}
+    if k in ("list", "tuple", "named", "listSub", "tupleSub"):
+        l = [enumdc_dv(x) for x in v[1]]
+        if k == "list":
+            return l
+        if k == "tuple":
+            return tuple(l)
+        if k == "listSub":
+            return enumdc_L(l)
+        if k == "tupleSub":
+            return enumdc_T(l)
+        n = len(l)
+        if n not in enumdc_NT:
+            enumdc_NT[n] = enumdc_collections.namedtuple("N", ["f%d" % i for i in range(n)])
+        return enumdc_NT[n](*l)
+    if k == "inst":
+        key = tuple(v[1])
+        if key not in enumdc_INST:
+            enumdc_INST[key] = enumdc_dc.make_dataclass("I", list(key), frozen=True)
+        return enumdc_INST[key](*[enumdc_dv(x) for x in v[2]])
+    pairs = [(enumdc_dv(a), enumdc_dv(b)) for a, b in zip(v[1], v[2])]
+    if k == "dict":
+        return dict(pairs)
+    if k == "dictSub":
+        return enumdc_D(pairs)
+    if k == "defaultDict":
+        return enumdc_collections.defaultdict(int, pairs)
+    return enumdc_collections.Counter(dict(pairs))
+
+
+def enumdc_dvenc(x):
+    enc = enumdc_dvenc
+    if isinstance(x, int):
+        return ["atom", x]
+    if isinstance(x, str):
+        return ["str", x]
+    if isinstance(x, enumdc_Cp):
+        return ["copied", x.n]
+    if isinstance(x, set):
+        return ["unhash", next(iter(x))]
+    if isinstance(x, enumdc_L):
+        return ["listSub", [enc(i) for i in x]]
+    if isinstance(x, list):
+        return ["list", [enc(i) for i in x]]
+    if isinstance(x, enumdc_T):
+        return ["tupleSub", [enc(i) for i in x]]
+    if isinstance(x, tuple) and hasattr(x, "_fields"):
+        return ["named", [enc(i) for i in x]]
+    if isinstance(x, tuple):
+        return ["tuple", [enc(i) for i in x]]
+    name = ("counter" if isinstance(x, enumdc_collections.Counter) else
+            "defaultDict" if isinstance(x, enumdc_collections.defaultdict) else
+            "dictSub" if isinstance(x, enumdc_D) else "dict")
+    return [name, [enc(k) for k in x.keys()], [enc(v) for v in x.values()]]
+
+
+def enumdc_dcmisc(case, fn):
+    def go():
+        if fn == "dc_hash":
+            fs = case["fields"]
+            for f in fs:
+                f["default"] = None
+                f["factory"] = None
+                f["unhash"] = False
+            ns = {"__annotations__": {f["name"]: int for f in fs}}
+            C = enumdc_dc.make_dataclass("H", [(f["name"], int, enumdc_dc.field(hash=f["hash"], compare=f["compare"]))
+                                               for f in fs], unsafe_hash=True)
+            vals = {f["name"]: 1000 + i for i, f in enumerate(fs)}
+            h = hash(C(*vals.values()))
+            names = [f["name"] for f in fs]
+            for m in range(2 ** len(names)):
+                sub = [n for i, n in enumerate(names) if m >> i & 1]
+                if hash(tuple(vals[n] for n in sub)) == h:
+                    return sub
+            return "none"
+        if fn == "dc_eq":
+            terms = case["terms"]
+
+            class E:
+                def __init__(self, t):
+                    self.t = t
+
+                def __eq__(self, o):
+                    if self.t == "raise":
+                        raise ValueError("eq")
+                    return 1 if self.t == "t" else 0
+            names = ["f%d" % i for i in range(len(terms))]
+            C = enumdc_dc.make_dataclass("Q", names)
+            a = C(*[E(t) for t in terms])
+            if case["same"]:
+                return int(C.__eq__(a, a))
+            b = C(*[E(t) for t in terms]) if case["same_class"] else 3
+            r = C.__eq__(a, b)
+            return "NotImplemented" if r is NotImplemented else int(r)
+        if fn == "dc_order":
+            names = ["f%d" % i for i in range(len(case["a"]))]
+            C = enumdc_dc.make_dataclass("O", names, order=True)
+            a = C(*case["a"])
+            b = C(*case["b"]) if case["same_class"] else 3
+            r = getattr(C, "__%s__" % case["op"])(a, b)
+            return "NotImplemented" if r is NotImplemented else r
+        if fn == "dc_frozen":
+            C = enumdc_dc.make_dataclass("F", case["fields"], frozen=True)
+            G = C if case["exact"] else type("G", (C,), {})
+            o = G(*[1 for _ in case["fields"]])
+            n = case["name"]
+            if case["del"]:
+                if not case["exact"] and n not in case["fields"]:
+                    object.__setattr__(o, n, 1)
+                delattr(o, n)
+            else:
+                setattr(o, n, 1)
+            return None
+        if fn == "dc_make":
+            items = []
+            for i in case["items"]:
+                if i[0] == "name":
+                    items.append(i[1])
+                elif i[0] == "named":
+                    items.append((i[1], int))
+                elif i[0] == "notStr":
+                    items.append((1, int))
+                else:
+                    items.append(("a", int, enumdc_dc.field(), 1))
+            return [f.name for f in enumdc_dc.fields(enumdc_dc.make_dataclass("X", items))]
+        o = enumdc_dv(case["v"])
+        if fn == "dc_asdict":
+            fact = {"dict": dict, "dictLike": lambda p: dict(p), "list": list}[case["fact"]]
+            return enumdc_dvenc(enumdc_dc.asdict(o, dict_factory=fact))
+        return enumdc_dvenc(enumdc_dc.astuple(o, tuple_factory={"tuple": tuple, "list": list}[case["fact"]]))
+    return py_result(go)
+
+
 def enumdc_run(case):
     fn = case["fn"].split(".")[1]
+    if fn == "dc_class":
+        return enumdc_dcclass(case)
+    if fn in ("dc_hash", "dc_eq", "dc_order", "dc_frozen", "dc_make", "dc_asdict", "dc_astuple"):
+        return enumdc_dcmisc(case, fn)
     if fn == "ec_class":
         return enumdc_class(case)
     if fn == "ec_update":

@@ -1,0 +1,48 @@
+id: corelibs-dataclasses-asdict-dataclass-key
+title: "dataclasses.asdict raises TypeError on a dict field keyed by a frozen dataclass, where astuple works"
+priority: P4
+kind: crash-on-valid-input
+module: corelibs
+files: [Lib/dataclasses.py]
+functions: ["_asdict_inner"]
+summary: |
+  _asdict_inner converts the keys of a dict too, and a dataclass key becomes a dict, which cannot be a key, so
+  asdict(C({K(1): 2})) raises TypeError. astuple makes the key a tuple, and works.
+likelihood: |
+  Low to moderate: frozen dataclasses are natural keys.
+maybe_intended: |
+  No, but it has no obvious fix, and it is already open upstream.
+reproducer: |
+  from dataclasses import dataclass, asdict, astuple
+  @dataclass
+  class C:
+      x: object
+  @dataclass(frozen=True)
+  class K:
+      a: int
+  t = astuple(C({K(1): 2}))
+  try:
+      asdict(C({K(1): 2}))
+      r = 'no error'
+  except TypeError:
+      r = 'TypeError'
+  print(t, r)
+  if t == ({(1,): 2},) and r == 'TypeError':
+      print('REPRODUCED corelibs-dataclasses-asdict-dataclass-key')
+expected: |
+  A dict result, or a documented restriction.
+observed: |
+  python3 3.14.7: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Doc/library/dataclasses.rst: dicts are recursed into.
+cause: |
+  Lib/dataclasses.py:1528-1531 builds a dict with the converted key.
+possible_fix: |
+  Leave keys unconverted, or convert a dataclass key some other way.
+duplicates:
+  issues:
+    - {number: 87307, state: open, relation: "duplicate", reason: "asdict fails with frozen dataclass keys, using raw dict form"}
+  queries: ["gh search issues asdict dataclass dict keys unhashable", "bugforge README: no match for dataclass"]
+lean:
+  property: PyLean.CoreLibs.EnumDC.AsdictWhereAstuple
+  theorem: PyLean.CoreLibs.EnumDC.asdictWhereAstuple_refuted

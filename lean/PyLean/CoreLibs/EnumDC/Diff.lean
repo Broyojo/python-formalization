@@ -1,5 +1,6 @@
 import PyLean.DiffCore
 import PyLean.CoreLibs.EnumDC.EnumClass
+import PyLean.CoreLibs.EnumDC.Dataclass
 
 /-! Differential-testing handler for `corelibs` cases with `"fn": "enumdc.<name>"`.
 The dispatcher in `CoreLibs/Diff.lean` strips the `enumdc.` prefix. -/
@@ -319,6 +320,146 @@ def runFlag (j : Json) : Except String Json := do
     | _ => pure (okJ (toJson (c.classContains (some (← vO.getInt?)))))
   | _ => throw "flag op"
 
+/-! ### Dataclasses -/
+
+def getOptBool (j : Json) (key : String) : Except String (Option Bool) := do
+  match ← field j key with
+  | .null => pure none
+  | v => pure (some (← v.getBool?))
+
+def getOptInt (j : Json) (key : String) : Except String (Option Int) := do
+  match ← field j key with
+  | .null => pure none
+  | v => pure (some (← v.getInt?))
+
+def decFKind (s : String) : FKind :=
+  match s with
+  | "classvar" => .classVar
+  | "initvar" => .initVar
+  | _ => .plain
+
+def decField (j : Json) : Except String DField := do
+  pure { name := ← getStr j "name", kind := decFKind (← getStr j "kind"), dflt := ← getOptInt j "default",
+         unhash := ← getBool j "unhash", factory := ← getOptInt j "factory", init := ← getBool j "init",
+         repr := ← getBool j "repr", hash := ← getOptBool j "hash", compare := ← getBool j "compare",
+         kwOnly := ← getOptBool j "kw" }
+
+def decParams (j : Json) : Except String DParams := do
+  pure { init := ← getBool j "init", repr := ← getBool j "repr", eq := ← getBool j "eq", order := ← getBool j "order",
+         unsafeHash := ← getBool j "unsafe_hash", frozen := ← getBool j "frozen", matchArgs := ← getBool j "match_args",
+         kwOnly := ← getBool j "kw_only", slots := ← getBool j "slots", weakrefSlot := ← getBool j "weakref_slot" }
+
+/-- `getattr(cls, name, MISSING)` for a name the class does not set: the bases, the last in the reversed MRO first. -/
+def baseAttr (bases : List (List DField × Bool)) (name : String) : ClsAttr :=
+  match bases.reverse.findSome? (fun b => (b.1.find? (fun f => f.name == name && f.dflt.isSome))) with
+  | some f =>
+    match f.dflt with
+    | some d => .value d f.unhash
+    | none => .missing
+  | none => .missing
+
+def decAnn (bases : List (List DField × Bool)) (j : Json) : Except String Ann := do
+  let name ← getStr j "name"
+  let kind ← match ← getStr j "kind" with
+    | "kw" => pure AnnKind.kwMarker
+    | s => pure (.field (decFKind s))
+  let a ← field j "attr"
+  let attr ← match ← (← a.getArrVal? 0).getStr? with
+    | "value" => pure (ClsAttr.value (← (← a.getArrVal? 1).getInt?) (← (← a.getArrVal? 2).getBool?))
+    | "field" => pure (.field (← decField (← a.getArrVal? 1)))
+    | _ => pure (baseAttr bases name)
+  pure { name, kind, attr }
+
+def infoJ (c : DClass) (i : DInfo) : Json :=
+  let fieldJ (f : DField) : Json := toJson [toJson f.name, toJson (repr f.kind).pretty, toJson f.kwOnly, toJson f.dflt,
+    toJson f.factory.isSome]
+  let paramJ (f : DField) : Json := toJson [toJson f.name, toJson (f.dflt.isSome || f.factory.isSome)]
+  let hashState : String := match i.hash with
+    | .add => "gen"
+    | .setNone => "None"
+    | _ =>
+      match c.hashAttr with
+      | some true => "user"
+      | some false => "None"
+      | none => if c.defined.contains "__eq__" then "None" else "absent"
+  toJson [toJson (i.fields.map fieldJ), toJson (i.std.map paramJ), toJson (i.kw.map paramJ), toJson i.matchArgs,
+    toJson hashState, toJson i.generated]
+
+def objJ (i : DInfo) (o : DObj) : Json :=
+  toJson [toJson (i.real.map fun f =>
+      match getAttrD i o f.name with
+      | .ok v => toJson v
+      | .error _ => toJson "unset"),
+    toJson o.post]
+
+def runDc (j : Json) : Except String Json := do
+  let bases ← (← getArr j "bases").mapM fun b => do
+    pure ((← (← getArr b "fields").mapM decField), ← getBool b "frozen")
+  let anns ← (← getArr j "anns").mapM (decAnn bases)
+  let defined ← (← getArr j "defined").mapM (·.getStr?)
+  let c : DClass := { params := ← decParams (← field j "params"), bases, anns, defined,
+                      stray := match ← field j "stray" with
+                        | .str s => some s
+                        | _ => none,
+                      hashAttr := ← getOptBool j "hash", hasSlots := ← getBool j "has_slots" }
+  let post ← getBool j "post"
+  let op ← field j "op"
+  match processClass c with
+  | .error e => pure (unitJ (.error e))
+  | .ok i =>
+    match ← (← op.getArrVal? 0).getStr? with
+    | "info" => pure (okJ (infoJ c i))
+    | k =>
+      let args ← (← (← op.getArrVal? 1).getArr?).toList.mapM (·.getInt?)
+      let kw ← (← (← op.getArrVal? 2).getArr?).toList.mapM fun p => do
+        pure ((← (← p.getArrVal? 0).getStr?), (← (← p.getArrVal? 1).getInt?))
+      match callInit i post args kw with
+      | .error e => pure (unitJ (.error e))
+      | .ok o =>
+        if k == "init" then pure (okJ (objJ i o)) else
+        let ch ← (← (← op.getArrVal? 3).getArr?).toList.mapM fun p => do
+          pure ((← (← p.getArrVal? 0).getStr?), (← (← p.getArrVal? 1).getInt?))
+        pure (encPy (objJ i) (dcReplace i post o ch))
+
+def decDV : Nat → Json → Except String DV
+  | 0, _ => throw "too deep"
+  | f + 1, j => do
+    let k ← (← j.getArrVal? 0).getStr?
+    let a ← j.getArrVal? 1
+    let l := fun (x : Json) => do (← x.getArr?).toList.mapM (decDV f)
+    match k with
+    | "atom" => pure (.atom (← a.getInt?))
+    | "str" => pure (.str (← a.getStr?))
+    | "copied" => pure (.copied (← a.getInt?))
+    | "unhash" => pure (.unhash (← a.getInt?))
+    | "list" => pure (.list (← l a))
+    | "tuple" => pure (.tuple (← l a))
+    | "named" => pure (.named (← l a))
+    | "listSub" => pure (.listSub (← l a))
+    | "tupleSub" => pure (.tupleSub (← l a))
+    | "inst" => pure (.inst (← (← a.getArr?).toList.mapM (·.getStr?)) (← l (← j.getArrVal? 2)))
+    | "dict" => pure (.dict (← l a) (← l (← j.getArrVal? 2)))
+    | "dictSub" => pure (.dictSub (← l a) (← l (← j.getArrVal? 2)))
+    | "defaultDict" => pure (.defaultDict (← l a) (← l (← j.getArrVal? 2)))
+    | "counter" => pure (.counter (← l a) (← l (← j.getArrVal? 2)))
+    | _ => throw "dv"
+
+partial def encDV : DV → Json
+  | .atom n => toJson [toJson "atom", toJson n]
+  | .str s => toJson [toJson "str", toJson s]
+  | .copied n => toJson [toJson "copied", toJson n]
+  | .unhash n => toJson [toJson "unhash", toJson n]
+  | .list l => toJson [toJson "list", toJson (l.map encDV)]
+  | .tuple l => toJson [toJson "tuple", toJson (l.map encDV)]
+  | .named l => toJson [toJson "named", toJson (l.map encDV)]
+  | .listSub l => toJson [toJson "listSub", toJson (l.map encDV)]
+  | .tupleSub l => toJson [toJson "tupleSub", toJson (l.map encDV)]
+  | .dict k v => toJson [toJson "dict", toJson (k.map encDV), toJson (v.map encDV)]
+  | .dictSub k v => toJson [toJson "dictSub", toJson (k.map encDV), toJson (v.map encDV)]
+  | .defaultDict k v => toJson [toJson "defaultDict", toJson (k.map encDV), toJson (v.map encDV)]
+  | .counter k v => toJson [toJson "counter", toJson (k.map encDV), toJson (v.map encDV)]
+  | .inst _ _ => Json.null
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
   | "flag_call" =>
@@ -381,6 +522,49 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "ec_progress" =>
     pure (encPy (fun (n : Name) => toJson (String.ofList n)) (enumNew {} none (.atom (.int 1)) true .none))
   | "ec_flag" => runFlag j
+  | "dc_class" => runDc j
+  | "dc_hash" =>
+    let fs ← (← getArr j "fields").mapM decField
+    pure (okJ (toJson ((hashFields fs).map (·.name))))
+  | "dc_eq" =>
+    let terms ← (← getArr j "terms").mapM fun t => do
+      match ← t.getStr? with
+      | "raise" => pure (Except.error (PyExc.valueError "eq") : Py (Int × Bool))
+      | "t" => pure (.ok ((1 : Int), true))
+      | _ => pure (.ok ((0 : Int), false))
+    match dcEq (1 : Int) (← getBool j "same") (← getBool j "same_class") terms with
+    | none => pure (okJ "NotImplemented")
+    | some r => pure (encPy (fun (x : Int) => toJson x) r)
+  | "dc_order" =>
+    let a ← (← getArr j "a").mapM (·.getInt?)
+    let b ← (← getArr j "b").mapM (·.getInt?)
+    match dcOrder (← getStr j "op") (← getBool j "same_class") a b with
+    | none => pure (okJ "NotImplemented")
+    | some r => pure (okJ (toJson r))
+  | "dc_frozen" =>
+    let names ← (← getArr j "fields").mapM (·.getStr?)
+    let n ← getStr j "name"
+    let e ← getBool j "exact"
+    if ← getBool j "del" then pure (unitJ (frozenDel e names n)) else pure (unitJ (frozenSet e names n))
+  | "dc_make" =>
+    let items ← (← getArr j "items").mapM fun i => do
+      match ← (← i.getArrVal? 0).getStr? with
+      | "name" => pure (MakeItem.name (← (← i.getArrVal? 1).getStr?))
+      | "named" => pure (.named (← (← i.getArrVal? 1).getStr?))
+      | "notStr" => pure .notStr
+      | _ => pure .bad
+    pure (encPy (fun (l : List String) => toJson l) (makeNames items []))
+  | "dc_asdict" =>
+    let v ← decDV 8 (← field j "v")
+    let f := match ← getStr j "fact" with
+      | "dict" => DictFact.dict
+      | "dictLike" => .dictLike
+      | _ => .list
+    pure (encPy encDV (asdictV f v))
+  | "dc_astuple" =>
+    let v ← decDV 8 (← field j "v")
+    let f := if (← getStr j "fact") == "tuple" then TupFact.tuple else .list
+    pure (encPy encDV (astupleV f v))
   | "ec_verify_other" => pure (unitJ (({} : EClass).verifyCall false id [.unique]))
   | _ => throw s!"unknown fn enumdc.{fn}"
 
