@@ -67,18 +67,25 @@ def divPow2 (n d : Nat) (e : Int) : Nat × Nat × Nat :=
   let D := d * 2 ^ e.toNat
   (N / D, N % D, D)
 
+/-- Round `q + r / D` to an integer: nearest, ties to even. -/
+def roundInt (q r D : Nat) : Nat :=
+  if decide (D < 2 * r) || (decide (2 * r = D) && q % 2 == 1) then q + 1 else q
+
+/-- Exponent of the least significant bit of the result: `p` bits below the leading
+bit of `n / d`, but never below `etiny`. -/
+def roundExp (f : Fmt) (n d : Nat) : Int :=
+  max (floorLog2Q n d - ((f.p - 1 : Nat) : Int)) f.etiny
+
 /-- Round the positive rational `n / d` to the nearest number of format `f`, ties
 to even, with gradual underflow. `none` means overflow; `some (m, e)` is the value
 `m * 2 ^ e`, where either `2 ^ (p - 1) ≤ m < 2 ^ p`, or `e = etiny` and
 `m < 2 ^ (p - 1)` (a subnormal or zero). -/
 def roundPos (f : Fmt) (n d : Nat) : Option (Nat × Int) :=
-  let k := floorLog2Q n d
-  let e : Int := max (k - ((f.p - 1 : Nat) : Int)) f.etiny
-  let (q, r, D) := divPow2 n d e
-  let up : Bool := decide (D < 2 * r) || (decide (2 * r = D) && q % 2 == 1)
-  let q' := if up then q + 1 else q
-  let (m, e') : Nat × Int := if q' = 2 ^ f.p then (2 ^ (f.p - 1), e + 1) else (q', e)
-  if (f.emax : Int) < e' + ((f.p - 1 : Nat) : Int) then none else some (m, e')
+  let e := roundExp f n d
+  let t := divPow2 n d e
+  let q' := roundInt t.1 t.2.1 t.2.2
+  let r : Nat × Int := if q' = 2 ^ f.p then (2 ^ (f.p - 1), e + 1) else (q', e)
+  if (f.emax : Int) < r.2 + ((f.p - 1 : Nat) : Int) then none else some r
 
 /-- Bit pattern of a rounded result. -/
 def Fmt.encode (f : Fmt) (neg : Bool) (r : Option (Nat × Int)) : Nat :=
