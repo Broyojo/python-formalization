@@ -324,8 +324,8 @@ def subset (h : Heap) (orig : ExcId) (excs : List ExcId) : Heap × Option ExcId 
         children := some excs }
     (h, some e)
 
-mutual
-/-- `exceptiongroup_split_recursive`, Objects/exceptions.c:1326-1435. `cs` is the matcher. -/
+/-- `exceptiongroup_split_recursive`, Objects/exceptions.c:1326-1435. `cs` is the matcher. The fold
+is the `for` loop over `eg->excs`, :1379-1411; the result is `(match, rest)`. -/
 def splitRec (cs : List String) : Nat → Heap → ExcId → Heap × Option ExcId × Option ExcId
   | 0, h, _ => (h, none, none)
   | fuel + 1, h, exc =>
@@ -334,20 +334,14 @@ def splitRec (cs : List String) : Nat → Heap → ExcId → Heap × Option ExcI
       match (h.get exc).children with
       | none => (h, none, some exc)
       | some excs =>
-        let (h, ms, rs) := splitAll cs fuel h excs
+        let (h, ms, rs) := excs.foldl
+          (fun (st : Heap × List ExcId × List ExcId) e =>
+            let x := splitRec cs fuel st.1 e
+            (x.1, st.2.1 ++ x.2.1.toList, st.2.2 ++ x.2.2.toList))
+          (h, [], [])
         let (h, m) := subset h exc ms
         let (h, r) := subset h exc rs
         (h, m, r)
-
-/-- The recursive calls of `exceptiongroup_split_recursive`, Objects/exceptions.c:1379-1411. -/
-def splitAll (cs : List String) : Nat → Heap → List ExcId → Heap × List ExcId × List ExcId
-  | _, h, [] => (h, [], [])
-  | 0, h, _ => (h, [], [])
-  | fuel + 1, h, e :: rest =>
-    let (h, m, r) := splitRec cs fuel h e
-    let (h, ms, rs) := splitAll cs fuel h rest
-    (h, m.toList ++ ms, r.toList ++ rs)
-end
 
 /-- `BaseExceptionGroup.split`, Objects/exceptions.c:1444-1474, with a tuple of classes. -/
 def split (cs : List String) (h : Heap) (e : ExcId) : Heap × Option ExcId × Option ExcId :=
