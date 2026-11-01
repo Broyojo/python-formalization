@@ -45,7 +45,7 @@ possible_fix: |
   Keep the error, or clamp with PyNumber_AsSsize_t(maxsize_O, NULL), which saturates.
 duplicates:
   issues: []
-  queries: ["pending: GitHub search API rate limited at triage time"]
+  queries: ["lru_cache maxsize OverflowError", "bugforge README: no match for lru_cache"]
 lean:
   property: PyLean.CoreLibs.Functools.LruMaxsizeTwinsAlways
   theorem: PyLean.CoreLibs.Functools.lruMaxsizeTwinsAlways_refuted

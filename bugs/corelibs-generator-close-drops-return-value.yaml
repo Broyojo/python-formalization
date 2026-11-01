@@ -67,8 +67,7 @@ possible_fix: |
 duplicates:
   issues:
     - {number: 104770, state: closed, relation: "the feature that created the mismatch; it does not touch the ABC", reason: "different change"}
-  queries: ["collections.abc Generator close", "generator close return value GeneratorExit", "Generator ABC close",
-            "generator.close return value", "bugforge README: no match for Generator or close"]
+  queries: ["collections.abc Generator close", "bugforge README: no match for Generator or close"]
 lean:
   property: PyLean.CoreLibs.CollAbc.CloseReturnsSameValue
   theorem: PyLean.CoreLibs.CollAbc.closeReturnsSameValue_refuted

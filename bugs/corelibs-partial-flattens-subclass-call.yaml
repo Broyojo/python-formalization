@@ -54,7 +54,7 @@ duplicates:
     - {number: 52078, state: closed, relation: "the optimisation itself, 'Flatten nested functools.partial'", reason: "not this bug"}
     - {number: 159157, state: open, relation: "search hit on partial, free-threaded scaling", reason: "unrelated"}
     - {number: 77600, state: closed, relation: "search hit, 'Add functools.partialclass'", reason: "unrelated"}
-  queries: ["partial subclass __call__ flatten", "functools.partial subclass nested", "partial subclass",
+  queries: ["functools partial subclass __call__", "partial subclass",
             "bugforge README: no match for functools.partial"]
 lean:
   property: PyLean.CoreLibs.Functools.PartialCallsWrappedObject

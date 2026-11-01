@@ -107,7 +107,8 @@ theorem concatTwinsOnUserSequences_proven : ConcatTwinsOnUserSequences := by
 /-- `operator.concat(a, b)` is `a + b` for sequences, the docstring's "Same as a + b, for a and b
 sequences". False: C calls `a`'s `sq_concat` first, while `a + b` tries `nb_add`, which reaches the
 reflected `__radd__` of `b`, so `operator.concat([1], UserList([2]))` raises `TypeError` where
-`[1] + UserList([2])` works. -/
+`[1] + UserList([2])` works. python/cpython#73325 defends the C behaviour for a non-sequence left
+operand, so this records the twin difference and is not a report. -/
 def ConcatIsPlus : Prop :=
   ∀ (A : ConcatArgs Nat) (lt rt : String) (a b : Nat), A.seqA = true → A.seqB = true →
     concatC A lt a b = plus A lt rt a b

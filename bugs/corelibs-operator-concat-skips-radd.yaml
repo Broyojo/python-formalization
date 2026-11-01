@@ -1,12 +1,13 @@
 id: corelibs-operator-concat-skips-radd
 title: "operator.concat(a, b) is not a + b when b defines __radd__: the C function never tries it"
-priority: P3
+priority: P4
 kind: twin-mismatch
 module: corelibs
 files: [Objects/abstract.c, Modules/_operator.c, Lib/operator.py]
 functions: ["_operator_concat_impl", "_operator_iconcat_impl", "concat", "iconcat"]
 summary: |
-  The docstring of operator.concat says "Same as a + b, for a and b sequences". The pure-Python
+  RELATED to the open python/cpython#73325, where maintainers defended the behaviour; read that first.
+  The new part here is only the disagreement with the pure-Python twin. The docstring of operator.concat says "Same as a + b, for a and b sequences". The pure-Python
   function does that. The C function calls PySequence_Concat, which goes straight to a's sq_concat
   when it has one. For a a list or a tuple, that raises TypeError at once, where a + b first tries
   nb_add and so reaches b.__radd__. operator.concat([1], UserList([2])) raises TypeError, while
@@ -17,9 +18,10 @@ likelihood: |
   Low to moderate. It needs a sequence with __radd__ on the right of operator.concat. UserList and
   UserString are in the standard library, deque is not affected since it has no __radd__.
 maybe_intended: |
-  Partly. PySequence_Concat is the documented C-API operation for sq_concat, and the C function may
-  be read as defined by it. But the docstring and the twin both say a + b, so one of them is wrong.
-  A maintainer might prefer a documentation note to a behaviour change.
+  Largely yes. In #73325 serhiy-storchaka says concat is the Python API to sq_concat and points to
+  operator.add, vstinner calls the difference from add deliberate, and rhettinger says it is too late
+  to change. Their case is a non-sequence on the left; here the left operand is a sequence, and
+  Lib/operator.py gives the other answer. A documentation note is the most a maintainer would accept.
 reproducer: |
   import operator
   from collections import UserList
@@ -50,8 +52,11 @@ possible_fix: |
   Have _operator_concat_impl check for a sequence as Lib/operator.py does, then call PyNumber_Add;
   likewise PyNumber_InPlaceAdd for iconcat. Or document the difference.
 duplicates:
-  issues: []
-  queries: ["pending: GitHub search API rate limited at triage time"]
+  issues:
+    - {number: 73325, state: open, relation: "same function, 'operator.concat/iconcat could only work if left operand is a sequence'", reason: "related; maintainers declined to change the semantics"}
+    - {number: 55686, state: open, relation: "same root, 'Incorrect operand precedence when implementing sequences in C'", reason: "related"}
+    - {number: 37334, state: closed, relation: "same root, 'sq_concat prevents __radd__ from working'", reason: "related, about the + operator"}
+  queries: ["operator concat __radd__", "bugforge README: no match for operator.concat"]
 lean:
   property: PyLean.CoreLibs.Operator.ConcatIsPlus
   theorem: PyLean.CoreLibs.Operator.concatIsPlus_refuted

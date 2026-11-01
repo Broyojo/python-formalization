@@ -55,8 +55,12 @@ cause: |
 possible_fix: |
   Test the members: for a union, `any(hasattr(arg, '__abstractmethods__') for arg in cls.__args__)`.
 duplicates:
-  issues: []
-  queries: ["pending: GitHub search API rate limited at triage time"]
+  issues:
+    - {number: 90172, state: closed, relation: "added union support to singledispatch", reason: "the change that left the test behind"}
+    - {number: 117097, state: open, relation: "search hit, 'Changed behavior of singledispatch in Python 3.12'", reason: "title only; not this defect by its title"}
+    - {number: 62444, state: closed, relation: "search hit, the C3 and ABC support", reason: "unrelated"}
+  queries: ["singledispatch union", "singledispatch abc register cache",
+            "bugforge README: no match for singledispatch"]
 lean:
   property: PyLean.CoreLibs.Functools.UnionAbcRegistrationInvalidates
   theorem: PyLean.CoreLibs.Functools.unionAbcRegistrationInvalidates_refuted

@@ -1,12 +1,14 @@
 id: corelibs-copy-reduce-six-tuple
 title: "copy.copy and copy.deepcopy raise TypeError on a __reduce__ result with a state_setter, which pickle accepts"
-priority: P3
+priority: P4
 kind: logic-error
 module: corelibs
 files: [Lib/copy.py]
 functions: ["_reconstruct", "copy", "deepcopy"]
 summary: |
-  Since 3.8 __reduce__ may return a sixth item, a state_setter callable, and pickle honours it. The
+  DUPLICATE of the closed python/cpython#90494, which is why this stays a record and is not to be
+  filed. There serhiy-storchaka made the old `deepcopy` parameter keyword-only and said support for the
+  sixth item is a new feature that needs its own issue. No such issue turned up. Since 3.8 __reduce__ may return a sixth item, a state_setter callable, and pickle honours it. The
   copy module unpacks the same result into _reconstruct(x, None, *rv), whose signature takes five
   items, so a class using that form pickles fine and fails in copy.copy and copy.deepcopy with
   "_reconstruct() takes from 4 to 7 positional arguments but 8 were given", even when the sixth
@@ -14,9 +16,8 @@ summary: |
 likelihood: |
   Low. The sixth item is rarely used; a class that uses it and is also copied will fail loudly.
 maybe_intended: |
-  Oversight is more likely: the copy module predates the sixth item, and the error message names a
-  private function with an argument count rather than saying the form is unsupported. A maintainer
-  could still decide not to support it, and then the docs should say so.
+  Known. The closing comments in #90494 treat it as a missing feature, not a bug. The remaining
+  defect is that the docs do not mention the limit and the error names a private function.
 reproducer: |
   import copy, pickle
   def build():
@@ -51,8 +52,9 @@ possible_fix: |
   Add a state_setter parameter to _reconstruct, called with (y, state) in place of the
   __setstate__ path, as pickle does.
 duplicates:
-  issues: []
-  queries: ["pending: GitHub search API rate limited at triage time"]
+  issues:
+    - {number: 90494, state: closed, relation: "same defect, 'Sixth element of tuple from __reduce__(), inconsistency between pickle and copy'", reason: "duplicate; support deferred to a new feature issue"}
+  queries: ["copy state_setter", "bugforge README: no match for copy or __reduce__"]
 lean:
   property: PyLean.CoreLibs.Operator.CopyAcceptsPickleReduce
   theorem: PyLean.CoreLibs.Operator.copyAcceptsPickleReduce_refuted
