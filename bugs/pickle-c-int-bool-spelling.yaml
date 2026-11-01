@@ -1,0 +1,43 @@
+id: pickle-c-int-bool-spelling
+title: "_pickle: INT opcode returns a bool for any 3-byte line that strtol reads as 0 or 1 (' 1', '+1', '-0')"
+priority: P4
+kind: twin-mismatch
+module: pickle
+files: [Modules/_pickle.c, Lib/pickle.py]
+functions: [load_int]
+summary: |
+  `I00\n` and `I01\n` are the protocol 0/1 spellings of False and True. `pickle.py` compares the
+  line with those two byte strings. `_pickle` asks whether the line has 3 bytes and strtol gave 0 or
+  1, so `I 1\n`, `I+1\n`, `I-0\n` and `I\t0\n` load as bools in C and as ints in Python. The values
+  compare equal but `type()` differs.
+likelihood: |
+  Very low: only hand-made pickles. pickle never writes these spellings.
+maybe_intended: |
+  No. Duplicate of python/cpython#135241, fixed on main by gh-135242, which was not backported to 3.14.
+reproducer: |
+  import pickle
+  data = b'I 1\n.'
+  c, p = pickle.loads(data), pickle._loads(data)
+  print('C', repr(c), 'Python', repr(p))
+  if type(c) is bool and type(p) is int:
+      print('REPRODUCED pickle-c-int-bool-spelling')
+expected: |
+  Only `00` and `01` are bools, in both twins.
+observed: |
+  python3 3.14.7: `I 1\n.`: C True, Python 1. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): NOT REPRODUCED: fixed by gh-135242; `I 1` loads as the int 1 in C.
+promised_by: |
+  Lib/pickletools.py documents `I00`/`I01` as the only bool spellings of INT; twin relation.
+cause: |
+  Modules/_pickle.c:5426 `if (len == 3 && (x == 0 || x == 1))`. Lib/pickle.py:1376-1385 compares
+  bytes.
+possible_fix: |
+  Already on main: also require `s[0] == '0'`.
+duplicates:
+  issues:
+    - {number: 135241, state: closed, relation: duplicate, reason: "fixed on main (gh-135242), not backported to 3.14"}
+  queries: ["pickle INT opcode", "load_int", "pickle bool INT", "pickle I01"]
+  bugforge: "no pickle entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Pickle.IntLineTwins
+  theorem: PyLean.Pickle.intLineTwins_refuted

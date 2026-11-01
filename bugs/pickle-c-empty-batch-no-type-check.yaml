@@ -1,0 +1,49 @@
+id: pickle-c-empty-batch-no-type-check
+title: "_pickle: APPENDS and ADDITEMS with no items accept any target; pickle.py raises AttributeError"
+priority: P4
+kind: twin-mismatch
+module: pickle
+files: [Modules/_pickle.c, Lib/pickle.py]
+functions: [do_append, load_additems]
+summary: |
+  With an empty MARK batch, `do_append` and `load_additems` return before looking at the target.
+  `b'N(e.'` loads as None in C and raises AttributeError in Python; `b'](\x90.'` loads as [] in C and
+  raises AttributeError in Python. 3.14's C pickler itself emits empty batches (see
+  pickle-c-batch-encoding), which is why the early return existed.
+likelihood: |
+  Hand-made pickles only.
+maybe_intended: |
+  It was a deliberate optimisation, but upstream removed it. Duplicate of python/cpython#135573,
+  fixed on main (gh-144950), not in 3.14.
+reproducer: |
+  import pickle
+  def r(f, s):
+      try: return ('ok', f(s))
+      except Exception as e: return (type(e).__name__, str(e))
+  ok = []
+  for s in (b'N(e.', b'](\x90.'):
+      c, p = r(pickle.loads, s), r(pickle._loads, s)
+      print(s, 'C', c, 'Python', p)
+      ok.append(c[0] == 'ok' and p[0] == 'AttributeError')
+  if all(ok):
+      print('REPRODUCED pickle-c-empty-batch-no-type-check')
+expected: |
+  Both twins reject a target with no `extend`/`append` (or `add`), or both accept it.
+observed: |
+  python3 3.14.7: `N(e.` C None / Python AttributeError; `](\x90.` C [] / Python AttributeError. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): NOT REPRODUCED: the early returns are gone, C raises AttributeError too (gh-144950).
+promised_by: |
+  Twin relation.
+cause: |
+  Modules/_pickle.c:6662-6663 and :6806-6807 `if (len == x) return 0` before the target is used.
+  Lib/pickle.py:1779-1795 and :1812-1821 always look up the method.
+possible_fix: |
+  Already on main: remove the early returns.
+duplicates:
+  issues:
+    - {number: 135573, state: closed, relation: duplicate, reason: "fixed on main (gh-144950), not in 3.14"}
+  queries: ["pickle APPENDS", "pickle ADDITEMS", "_pickle nothing to do"]
+  bugforge: "no pickle entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Pickle.LoadsTwinsAccept
+  theorem: PyLean.Pickle.loadsTwinsAccept_refuted

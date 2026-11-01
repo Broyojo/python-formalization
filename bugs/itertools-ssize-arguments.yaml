@@ -1,0 +1,63 @@
+id: itertools-ssize-arguments
+title: "itertools arguments are limited to Py_ssize_t while the documented equivalents accept any int (known, won't fix)"
+priority: P4
+kind: doc-mismatch
+module: itertools
+files: [Modules/itertoolsmodule.c]
+functions: ["islice_new", "itertools_combinations_impl", "itertools_permutations_impl", "repeat_new"]
+summary: |
+  islice start/stop/step, combinations/cwr/permutations r, repeat times, batched n, product
+  repeat and tee n are converted to Py_ssize_t. Ints above sys.maxsize raise (ValueError for
+  islice, OverflowError elsewhere), while the "Roughly equivalent to" code accepts them:
+  islice('abc', 2**63) gives 'abc' in the doc code, combinations('abc', 2**63) and
+  permutations('abc', 2**63) are empty there, repeat(x, 2**63) is effectively endless.
+  Recorded only so that the broad Lean properties (itertools-islice-doc-agree,
+  itertools-combinatorics-doc-agree-nonneg, itertools-repeat-doc-agree) have their excluded
+  case on record; every narrowed version is proven or refuted separately.
+likelihood: |
+  Very low; needs arguments above 2**63 - 1.
+maybe_intended: |
+  Yes. gh-50554 (bpo-6305, "islice doesn't accept large stop values") was closed as won't fix by
+  Raymond Hettinger after a full patch was written: "a lot of code for little benefit"; the
+  error messages were clarified to say 0 <= x <= sys.maxsize. The same reasoning applies to the
+  other arguments. Do not report.
+reproducer: |
+  import itertools
+  out = []
+  for name, make in [('islice', lambda: list(itertools.islice('abc', 2**63))),
+                     ('combinations', lambda: list(itertools.combinations('abc', 2**63))),
+                     ('permutations', lambda: list(itertools.permutations('abc', 2**63))),
+                     ('repeat', lambda: next(itertools.repeat('x', 2**63)))]:
+      try:
+          r = make()
+      except (ValueError, OverflowError) as e:
+          r = type(e).__name__
+      out.append(r)
+      print(f'{name}(..., 2**63) ->', r)
+  if out == ['ValueError', 'OverflowError', 'OverflowError', 'OverflowError']:
+      print('REPRODUCED itertools-ssize-arguments')
+expected: |
+  Per the doc code: ['a', 'b', 'c'], [], [], 'x'. Per the C error messages (and gh-50554):
+  exceptions, as observed.
+observed: |
+  python3 3.14.7 (macOS and the Linux build pod): ValueError, OverflowError, OverflowError, OverflowError. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Only the "Roughly equivalent to" code (Doc/library/itertools.rst); the islice messages state
+  the limit.
+cause: |
+  Argument Clinic Py_ssize_t converters and PyNumber_AsSsize_t/PyLong_AsSsize_t calls in the
+  constructors (e.g. :1616, :1628, :1632, :1652 for islice; clinic `r: Py_ssize_t` for
+  combinations; :2877 for permutations; format "n" in repeat_new :3750).
+possible_fix: |
+  None proposed (won't fix upstream).
+duplicates:
+  issues:
+    - {number: 50554, state: closed, relation: "duplicate (islice)", reason: "won't fix"}
+    - {number: 74722, state: closed, relation: "islice uses PyNumber_AsSsize_t (index objects)", reason: "fixed; related"}
+    - {number: 135330, state: closed, relation: "repeat times argument validation", reason: "closed; negative times intended like range"}
+  queries: ["islice in:title (all 20 results read)", "islice maxsize", "itertools.repeat (titles read)",
+            "itertools.combinations (titles read)"]
+lean:
+  property: PyLean.Itertools.IsliceDocAgree
+  theorem: PyLean.Itertools.isliceDocAgree_refuted

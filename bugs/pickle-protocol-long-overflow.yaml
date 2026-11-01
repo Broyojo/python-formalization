@@ -1,0 +1,53 @@
+id: pickle-protocol-long-overflow
+title: "pickle: a protocol outside C long raises OverflowError in C, while pickle.py accepts huge negatives and raises ValueError for huge positives"
+priority: P4
+kind: twin-mismatch
+module: pickle
+files: [Modules/_pickle.c, Lib/pickle.py]
+functions: [_Pickler_SetProtocol, _Pickler.__init__]
+summary: |
+  `pickle.py` documents that any negative protocol selects the highest one, and `_Pickler.__init__`
+  implements that for every int. The C pickler converts the argument with `PyLong_AsLong` first, so
+  `pickle.dumps(None, -2**63 - 1)` raises OverflowError where `pickle._dumps` succeeds, and
+  `pickle.dumps(None, 2**63)` raises OverflowError where `pickle._dumps` raises the documented
+  ValueError "pickle protocol must be <= 5".
+likelihood: |
+  Negligible. Nobody passes a protocol below -2**63. Recorded so the encoder twin property has its
+  exclusions on record.
+maybe_intended: |
+  Not designed, but harmless; a maintainer would likely not spend time on it.
+reproducer: |
+  import pickle
+  def r(f, *a):
+      try: return ('ok', f(*a))
+      except Exception as e: return (type(e).__name__, str(e))
+  neg = -2**63 - 1
+  big = 2**63
+  a, b = r(pickle.dumps, None, neg), r(pickle._dumps, None, neg)
+  c, d = r(pickle.dumps, None, big), r(pickle._dumps, None, big)
+  print('protocol', neg, 'C', a, 'Python', b)
+  print('protocol', big, 'C', c, 'Python', d)
+  if a[0] == 'OverflowError' and b[0] == 'ok' and c[0] == 'OverflowError' and d[0] == 'ValueError':
+      print('REPRODUCED pickle-protocol-long-overflow')
+expected: |
+  Both twins treat every negative int as the highest protocol, and raise ValueError for every int
+  above 5.
+observed: |
+  python3 3.14.7: -2**63-1: C OverflowError, Python ok. 2**63: C OverflowError, Python ValueError. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): REPRODUCED, same behaviour.
+promised_by: |
+  Doc/library/pickle.rst (Pickler): "Specifying a negative protocol version selects the highest
+  protocol version supported"; the same sentence is in the docstrings at Lib/pickle.py:425-427 and
+  in Modules/_pickle.c.
+cause: |
+  Modules/_pickle.c:1192-1196 returns -1 when `PyLong_AsLong` overflows, instead of testing the
+  sign with `PyLong_AsLongAndOverflow`. Lib/pickle.py:455-458 compares the Python int.
+possible_fix: |
+  Use `PyLong_AsLongAndOverflow`: overflow < 0 means highest protocol, overflow > 0 means ValueError.
+duplicates:
+  issues: []
+  queries: ["pickle protocol OverflowError", "pickle protocol argument", "pickle negative protocol"]
+  bugforge: "no pickle entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Pickle.DumpsTwinsAgreeBatchOk
+  theorem: PyLean.Pickle.dumpsTwinsAgreeBatchOk_refuted

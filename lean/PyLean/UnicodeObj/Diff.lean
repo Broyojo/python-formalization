@@ -1,4 +1,7 @@
-import PyLean.DiffCore
+import PyLean.UnicodeObj.ObjectDiff
+import PyLean.UnicodeObj.CodecDiff
+import PyLean.UnicodeObj.FormatDiff
+import PyLean.UnicodeObj.TextDiff
 
 /-! Differential-testing handler for `unicodeobj` cases (`"mod": "unicodeobj"`). -/
 
@@ -6,9 +9,8 @@ namespace PyLean.UnicodeObj
 
 open Lean PyLean PyLean.Diff
 
-def run (fn : String) (_j : Json) : Except String Json :=
-  throw s!"unknown fn {fn}"
-
-def handler : Handler := fun fn j => some (run fn j)
+def handler : Handler := fun fn j =>
+  (ObjectDiff.handler fn j) <|> (CodecDiff.handler fn j) <|> (FormatDiff.handler fn j)
+    <|> (TextDiff.handler fn j) <|> some (throw s!"unknown fn {fn}")
 
 end PyLean.UnicodeObj

@@ -1,24 +1,24 @@
 file	line	endline	name	signature	status	entry	note
 Modules/_json.c	114	147	ascii_escape_unichar	ascii_escape_unichar(Py_UCS4 c, unsigned char *output, Py_ssize_t chars)	todo		
-Modules/_json.c	150	210	ascii_escape_unicode	ascii_escape_unicode(PyObject *pystr)	todo		
-Modules/_json.c	213	304	escape_unicode	escape_unicode(PyObject *pystr)	todo		
+Modules/_json.c	150	210	ascii_escape_unicode	ascii_escape_unicode(PyObject *pystr)	modelled	json-dumps-twins,json-ensure-ascii-output	
+Modules/_json.c	213	304	escape_unicode	escape_unicode(PyObject *pystr)	modelled	json-dumps-twins	
 Modules/_json.c	307	325	raise_errmsg	raise_errmsg(const char *msg, PyObject *s, Py_ssize_t end)	todo		
 Modules/_json.c	328	335	raise_stop_iteration	raise_stop_iteration(Py_ssize_t idx)	todo		
 Modules/_json.c	338	362	_build_rval_index_tuple	_build_rval_index_tuple(PyObject *rval, Py_ssize_t idx) {	todo		
 Modules/_json.c	365	369	_PyUnicodeWriter_IsEmpty	_PyUnicodeWriter_IsEmpty(PyUnicodeWriter *writer_pub)	todo		
-Modules/_json.c	372	544	scanstring_unicode	scanstring_unicode(PyObject *pystr, Py_ssize_t end, int strict, Py_ssize_t *next_end_ptr)	todo		
-Modules/_json.c	560	580	py_scanstring	py_scanstring(PyObject* Py_UNUSED(self), PyObject *args)	todo		
+Modules/_json.c	372	544	scanstring_unicode	scanstring_unicode(PyObject *pystr, Py_ssize_t end, int strict, Py_ssize_t *next_end_ptr)	modelled	json-loads-twins-pos,json-loads-twins-scan,json-roundtrip,json-strict-literal,json-strict-only-control	
+Modules/_json.c	560	580	py_scanstring	py_scanstring(PyObject* Py_UNUSED(self), PyObject *args)	todo		candidates:json-roundtrip,json-roundtrip-str
 Modules/_json.c	589	604	py_encode_basestring_ascii	py_encode_basestring_ascii(PyObject* Py_UNUSED(self), PyObject *pystr)	todo		
 Modules/_json.c	614	629	py_encode_basestring	py_encode_basestring(PyObject* Py_UNUSED(self), PyObject *pystr)	todo		
 Modules/_json.c	632	640	scanner_dealloc	scanner_dealloc(PyObject *self)	todo		
 Modules/_json.c	643	653	scanner_traverse	scanner_traverse(PyObject *op, visitproc visit, void *arg)	todo		
 Modules/_json.c	656	665	scanner_clear	scanner_clear(PyObject *op)	todo		
-Modules/_json.c	668	797	_parse_object_unicode	_parse_object_unicode(PyScannerObject *s, PyObject *memo, PyObject *pystr, Py_ssize_t idx, Py_ssize_t *next_idx_ptr)	todo		
-Modules/_json.c	800	876	_parse_array_unicode	_parse_array_unicode(PyScannerObject *s, PyObject *memo, PyObject *pystr, Py_ssize_t idx, Py_ssize_t *next_idx_ptr) {	todo		
+Modules/_json.c	668	797	_parse_object_unicode	_parse_object_unicode(PyScannerObject *s, PyObject *memo, PyObject *pystr, Py_ssize_t idx, Py_ssize_t *next_idx_ptr)	modelled	json-loads-twins-scan	
+Modules/_json.c	800	876	_parse_array_unicode	_parse_array_unicode(PyScannerObject *s, PyObject *memo, PyObject *pystr, Py_ssize_t idx, Py_ssize_t *next_idx_ptr) {	modelled	json-loads-twins-scan	
 Modules/_json.c	879	902	_parse_constant	_parse_constant(PyScannerObject *s, const char *constant, Py_ssize_t idx, Py_ssize_t *next_idx_ptr) {	todo		
-Modules/_json.c	905	1016	_match_number_unicode	_match_number_unicode(PyScannerObject *s, PyObject *pystr, Py_ssize_t start, Py_ssize_t *next_idx_ptr) {	todo		
-Modules/_json.c	1019	1125	scan_once_unicode	scan_once_unicode(PyScannerObject *s, PyObject *memo, PyObject *pystr, Py_ssize_t idx, Py_ssize_t *next_idx_ptr)	todo		
-Modules/_json.c	1128	1156	scanner_call	scanner_call(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Modules/_json.c	905	1016	_match_number_unicode	_match_number_unicode(PyScannerObject *s, PyObject *pystr, Py_ssize_t start, Py_ssize_t *next_idx_ptr) {	modelled	json-int-literal,json-loads-twins-scan	
+Modules/_json.c	1019	1125	scan_once_unicode	scan_once_unicode(PyScannerObject *s, PyObject *memo, PyObject *pystr, Py_ssize_t idx, Py_ssize_t *next_idx_ptr)	modelled	json-decode-terminates,json-loads-twins,json-raw-decode-twins-in-range	
+Modules/_json.c	1128	1156	scanner_call	scanner_call(PyObject *self, PyObject *args, PyObject *kwds)	modelled	json-raw-decode-twins	
 Modules/_json.c	1159	1203	scanner_new	scanner_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
 Modules/_json.c	1227	1272	encoder_new	encoder_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
 Modules/_json.c	1286	1303	create_indent_cache	create_indent_cache(PyEncoderObject *s, Py_ssize_t indent_level)	todo		

@@ -1,0 +1,52 @@
+id: textlibs-csv-skipinitialspace-round-trip
+title: "csv.writer does not quote a leading space under skipinitialspace=True, so the reader silently drops it"
+priority: P3
+kind: data-loss
+module: textlibs
+files: [Modules/_csv.c]
+functions: ["join_append_data", "parse_process_char"]
+summary: |
+  With skipinitialspace=True, `csv.writer` writes the field ' a' unquoted, and `csv.reader` with the
+  same dialect reads 'a'. A field ' ' reads back as ''. The data changes silently: no error is
+  raised, and the dialect is the same on both sides. In a sweep of 300000 random dialects and rows,
+  every round trip failure had skipinitialspace=True; with it off, none failed (the Lean refutation
+  is CsvRoundTrip; the narrowed CsvRoundTripNoSkip stays open).
+likelihood: |
+  Moderate where skipinitialspace=True is used for writing as well as reading, and values can start
+  with a space. Many users set it only for reading, where the data was not written by this module.
+maybe_intended: |
+  Unclear, and probably not. The writer already handles the neighbouring case: python/cpython#115712
+  made it quote empty fields for delimiter=' ' with skipinitialspace=True, because they would
+  otherwise be lost, and #138005 documented that. A leading space is the same loss. Against this,
+  the docs describe skipinitialspace in terms of the reader, and quoting changes the output of
+  existing programs, so a maintainer may prefer a documentation note. QUOTE_NONE has no quoting to
+  use, so the fix there would be escaping or an error.
+reproducer: |
+  import csv, io
+  rows = [[' a', 'b']]
+  buf = io.StringIO(newline='')
+  csv.writer(buf, skipinitialspace=True).writerows(rows)
+  back = list(csv.reader(io.StringIO(buf.getvalue(), newline=''), skipinitialspace=True))
+  print(repr(buf.getvalue()), back)
+  if back != rows:
+      print('REPRODUCED textlibs-csv-skipinitialspace-round-trip')
+expected: |
+  `[[' a', 'b']]` reads back unchanged, because the writer quotes the field: `" a",b`.
+observed: |
+  python3 3.14.7: writes ' a,b\r\n', reads [['a', 'b']]. REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
+promised_by: |
+  docs: "To make it as easy as possible to interface with modules which implement the DB API", and
+  the csv module's purpose of reading what writer wrote; the dialect is the same on both sides.
+cause: |
+  Modules/_csv.c:1186-1193 decides which characters force quoting and does not consider a space at
+  the start of a field; Modules/_csv.c:766-768 skips spaces at the start of an unquoted field.
+possible_fix: |
+  In join_append, when dialect->skipinitialspace is set and the field starts with a space, set
+  quoted (or raise under QUOTE_NONE, as the empty-field case does).
+duplicates: |
+  No report of the leading-space case found. Related: python/cpython#115712 (empty fields, fixed),
+  #138005 (documentation of that case). Not in the bugforge list.
+  Queries: gh api search/issues q='repo:python/cpython csv writer skipinitialspace leading space quote';
+  q='repo:python/cpython csv skipinitialspace'; q='repo:python/cpython csv skipinitialspace empty field space delimiter'
+lean: lean/PyLean/TextLibs/CsvProps.lean (CsvRoundTrip, csvRoundTrip_refuted)

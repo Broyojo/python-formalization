@@ -1,0 +1,48 @@
+id: pickle-py-truncated-frame
+title: "pickle.py: a FRAME longer than the remaining data is accepted; _pickle reports truncation"
+priority: P4
+kind: twin-mismatch
+module: pickle
+files: [Lib/pickle.py, Modules/_pickle.c]
+functions: [_Unframer.load_frame, load_frame]
+summary: |
+  `_Unframer.load_frame` wraps whatever `file_read(frame_size)` returns, without checking its length.
+  `b'\x95\x03\x00\x00\x00\x00\x00\x00\x00N.'` claims 3 bytes with 2 present: `pickle._loads` returns
+  None, `pickle.loads` raises UnpicklingError "pickle data was truncated".
+likelihood: |
+  Truncated or hand-made streams, pure-Python unpickler only, and only if the object ends inside
+  the short frame.
+maybe_intended: |
+  Serhiy Storchaka closed python/cpython#128853 saying the twins may differ on invalid input. Main's
+  `_chunked_file_read` change (gh-115952 work) nevertheless added the check, and raises EOFError.
+reproducer: |
+  import pickle
+  data = b'\x95\x03\x00\x00\x00\x00\x00\x00\x00N.'
+  def r(f, s):
+      try: return ('ok', f(s))
+      except Exception as e: return (type(e).__name__, str(e))
+  c, p = r(pickle.loads, data), r(pickle._loads, data)
+  print('C', c, 'Python', p)
+  if c[0] == 'UnpicklingError' and p == ('ok', None):
+      print('REPRODUCED pickle-py-truncated-frame')
+expected: |
+  Both twins reject the stream.
+observed: |
+  python3 3.14.7: C UnpicklingError 'pickle data was truncated'; Python returns None. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): NOT REPRODUCED: Python now raises EOFError (C still UnpicklingError; both reject).
+promised_by: |
+  PEP 3154 (framing); twin relation.
+cause: |
+  Lib/pickle.py:306-310. Modules/_pickle.c:7062-7063 reads `frame_len` bytes through
+  `_Unpickler_Read`, which fails.
+possible_fix: |
+  Already on main: raise when the read is short.
+duplicates:
+  issues:
+    - {number: 128853, state: closed, relation: duplicate, reason: "closed, not considered an issue; main changed anyway"}
+    - {number: 115952, state: closed, relation: related, reason: "introduced the chunked read on main"}
+  queries: ["pickle FRAME", "Unframer", "pickle frame shorter", "pickle frame truncated", "BINBYTES"]
+  bugforge: "no pickle entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Pickle.FrameTwins
+  theorem: PyLean.Pickle.frameTwins_refuted
