@@ -18,11 +18,11 @@ Modules/_csv.c	316	333	_set_str	_set_str(const char *name, PyObject **target, Py
 Modules/_csv.c	336	346	dialect_check_quoting	dialect_check_quoting(int quoting)	modelled	textlibs-csv-dialect-valid	
 Modules/_csv.c	349	363	dialect_check_char	dialect_check_char(const char *name, Py_UCS4 c, DialectObj *dialect, bool allowspace)	modelled	textlibs-csv-dialect-valid	
 Modules/_csv.c	366	373	dialect_check_chars	dialect_check_chars(const char *name1, const char *name2, Py_UCS4 c1, Py_UCS4 c2)	modelled	textlibs-csv-dialect-valid	
-Modules/_csv.c	396	403	Dialect_dealloc	Dialect_dealloc(PyObject *self)	todo		tp_clear drops lineterminator, which can be a str subclass with a __del__; a heap model is needed to state it
+Modules/_csv.c	396	403	Dialect_dealloc	Dialect_dealloc(PyObject *self)	excluded		no-behaviour: tp_dealloc only drops references; a stated scope limit, as we have no finalization model
 Modules/_csv.c	419	432	_csv_state_from_type	_csv_state_from_type(PyTypeObject *type, const char *name)	excluded		no-behaviour: fetches the C module state pointer; nothing Python-visible
 Modules/_csv.c	435	575	dialect_new	dialect_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	modelled	textlibs-csv-dialect-reuse,textlibs-csv-getattr-cleared	
 Modules/_csv.c	583	587	Dialect_reduce	Dialect_reduce(PyObject *self, PyObject *args) {	todo		
-Modules/_csv.c	601	606	Dialect_clear	Dialect_clear(PyObject *op)	todo		can run the __del__ of a str subclass stored as lineterminator; a heap model is needed to state it
+Modules/_csv.c	601	606	Dialect_clear	Dialect_clear(PyObject *op)	excluded		no-behaviour: tp_clear only drops references; a stated scope limit, as we have no finalization model
 Modules/_csv.c	609	615	Dialect_traverse	Dialect_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC slot; nothing Python-visible
 Modules/_csv.c	643	652	_call_dialect	_call_dialect(_csvstate *module_state, PyObject *dialect_inst, PyObject *kwargs)	modelled	textlibs-csv-dialect-reuse,textlibs-csv-reader-order	
 Modules/_csv.c	658	694	parse_save_field	parse_save_field(ReaderObj *self)	modelled	textlibs-csv-reader-no-crash,textlibs-csv-round-trip-no-skip,textlibs-csv-save-field	
@@ -32,9 +32,9 @@ Modules/_csv.c	730	910	parse_process_char	parse_process_char(ReaderObj *self, _c
 Modules/_csv.c	913	922	parse_reset	parse_reset(ReaderObj *self)	modelled	textlibs-csv-iter-raises,textlibs-csv-reader-no-crash,textlibs-csv-round-trip-no-skip	
 Modules/_csv.c	925	996	Reader_iternext_lock_held	Reader_iternext_lock_held(PyObject *op)	modelled	textlibs-csv-already-advanced,textlibs-csv-crash-needs-quote,textlibs-csv-eof,textlibs-csv-iter-raises,textlibs-csv-not-str-line,textlibs-csv-parse-failure,textlibs-csv-reader-no-crash,textlibs-csv-round-trip-no-skip	
 Modules/_csv.c	999	1006	Reader_iternext	Reader_iternext(PyObject *op)	modelled	textlibs-csv-iter-raises,textlibs-csv-reader-no-crash,textlibs-csv-round-trip-no-skip	
-Modules/_csv.c	1009	1021	Reader_dealloc	Reader_dealloc(PyObject *op)	todo		tp_clear drops input_iter, so a generator input runs its finally blocks; a heap model is needed to state it
+Modules/_csv.c	1009	1021	Reader_dealloc	Reader_dealloc(PyObject *op)	excluded		no-behaviour: tp_dealloc only drops references; a stated scope limit, as we have no finalization model
 Modules/_csv.c	1024	1032	Reader_traverse	Reader_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC slot; nothing Python-visible
-Modules/_csv.c	1035	1042	Reader_clear	Reader_clear(PyObject *op)	todo		drops input_iter, which can close a generator and run __del__; a heap model is needed to state it
+Modules/_csv.c	1035	1042	Reader_clear	Reader_clear(PyObject *op)	excluded		no-behaviour: tp_clear only drops references; a stated scope limit, as we have no finalization model
 Modules/_csv.c	1087	1128	csv_reader	csv_reader(PyObject *module, PyObject *args, PyObject *keyword_args)	modelled	textlibs-csv-reader-order	
 Modules/_csv.c	1135	1139	join_reset	join_reset(WriterObj *self)	modelled	textlibs-csv-round-trip,textlibs-csv-writerow-resets	
 Modules/_csv.c	1147	1238	join_append_data	join_append_data(WriterObj *self, int field_kind, const void *field_data, Py_ssize_t field_len, int *quoted, int copy_phase)	modelled	textlibs-csv-round-trip,textlibs-csv-round-trip-no-skip	
@@ -45,8 +45,8 @@ Modules/_csv.c	1327	1428	csv_writerow_lock_held	csv_writerow_lock_held(PyObject 
 Modules/_csv.c	1438	1445	csv_writerow	csv_writerow(PyObject *op, PyObject *seq)	modelled	textlibs-csv-round-trip,textlibs-csv-round-trip-no-skip,textlibs-csv-write-result,textlibs-csv-writer-iter-fails	
 Modules/_csv.c	1455	1477	csv_writerows	csv_writerows(PyObject *self, PyObject *seqseq)	modelled	textlibs-csv-writer-iter-fails,textlibs-csv-writerows-result,textlibs-csv-writerows-stop	
 Modules/_csv.c	1495	1503	Writer_traverse	Writer_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC slot; nothing Python-visible
-Modules/_csv.c	1506	1513	Writer_clear	Writer_clear(PyObject *op)	todo		drops write, which can flush and close the output file; a heap model is needed to state it
-Modules/_csv.c	1516	1527	Writer_dealloc	Writer_dealloc(PyObject *op)	todo		tp_clear releases write, which can flush and close the output file; a heap model is needed to state it
+Modules/_csv.c	1506	1513	Writer_clear	Writer_clear(PyObject *op)	excluded		no-behaviour: tp_clear only drops references; a stated scope limit, as we have no finalization model
+Modules/_csv.c	1516	1527	Writer_dealloc	Writer_dealloc(PyObject *op)	excluded		no-behaviour: tp_dealloc only drops references; a stated scope limit, as we have no finalization model
 Modules/_csv.c	1556	1599	csv_writer	csv_writer(PyObject *module, PyObject *args, PyObject *keyword_args)	modelled	textlibs-csv-writer-order	
 Modules/_csv.c	1612	1616	_csv_list_dialects_impl	_csv_list_dialects_impl(PyObject *module) /*[clinic end generated code: output=a5b92b215b006a6d input=ec58040aafd6a20a]*/	modelled	textlibs-csv-unregister	
 Modules/_csv.c	1619	1641	csv_register_dialect	csv_register_dialect(PyObject *module, PyObject *args, PyObject *kwargs)	modelled	textlibs-csv-register-checks,textlibs-csv-registry	

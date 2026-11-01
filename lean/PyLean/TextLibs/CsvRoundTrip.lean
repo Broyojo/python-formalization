@@ -913,4 +913,79 @@ theorem csvRoundTripNoSkip_proven : CsvRoundTripNoSkip := by
         rw [← hfs]
         exact hk
 
+/-! #### What each assumption of `CsvRoundTripNoSkip` excludes -/
+
+/-- `CsvRoundTripNoSkip` for any `lineterminator`. Refuted: the reader ignores `lineterminator` and
+takes it as field text. The docs say so, so this records the assumption and is not a defect. -/
+def CsvRoundTripAnyTerminator : Prop :=
+  ∀ (a : DArgs) (d : Dialect) (row : List (List Nat)) (lim : Int) (fuel g : Nat) (c : WCtx) (o : Obj)
+    (t : List Nat),
+    dialectBuild a = .ok d → (d.quoting = QUOTE_MINIMAL ∨ d.quoting = QUOTE_ALL) →
+    d.skipinitialspace = false →
+    d.delimiter < 0x110000 → d.quotechar < 0x110000 →
+    (d.escapechar < 0x110000 ∨ d.escapechar = NOT_SET) →
+    row.length < 2 ^ 31 → (∀ f ∈ row, (f.length : Int) ≤ lim ∧ ∀ x ∈ f, x < 0x110000) →
+    writerowM d fuel {} (rowObj row) = (c, .ok o) → c.written = [t] →
+    (readerNext d (g + 4) { acts := [.ret (.str t)], limit := lim }).2 = .ok (some (row.map Field.str))
+
+theorem csvRoundTripAnyTerminator_refuted : ¬CsvRoundTripAnyTerminator := by
+  intro h
+  have := h { lineterminator := some (.str [120]) } ⟨true, false, false, 0, 44, 34, NOT_SET, [120]⟩
+    [[97]] 131072 16 0 { buf := [97, 120], numFields := 1, written := [[97, 120]] } .none
+    [97, 120] (by decide +kernel) (.inl rfl) rfl (by decide) (by decide) (.inr rfl) (by decide)
+    (by simp) rfl rfl
+  revert this
+  decide +kernel
+
+/-- `CsvRoundTripNoSkip` without the field size limit. Refuted: the writer has no limit and the reader
+raises `csv.Error`, as `field_size_limit` documents. This records the assumption. -/
+def CsvRoundTripOverLimit : Prop :=
+  ∀ (a : DArgs) (d : Dialect) (row : List (List Nat)) (lim : Int) (fuel g : Nat) (c : WCtx) (o : Obj)
+    (t : List Nat),
+    dialectBuild a = .ok d → (d.quoting = QUOTE_MINIMAL ∨ d.quoting = QUOTE_ALL) →
+    d.skipinitialspace = false →
+    (d.lineterminator = [13, 10] ∨ d.lineterminator = [10] ∨ d.lineterminator = [13]) →
+    d.delimiter < 0x110000 → d.quotechar < 0x110000 →
+    (d.escapechar < 0x110000 ∨ d.escapechar = NOT_SET) →
+    row.length < 2 ^ 31 → (∀ f ∈ row, ∀ x ∈ f, x < 0x110000) →
+    writerowM d fuel {} (rowObj row) = (c, .ok o) → c.written = [t] →
+    (readerNext d (g + 4) { acts := [.ret (.str t)], limit := lim }).2 = .ok (some (row.map Field.str))
+
+theorem csvRoundTripOverLimit_refuted : ¬CsvRoundTripOverLimit := by
+  intro h
+  have := h {} ⟨true, false, false, 0, 44, 34, NOT_SET, [13, 10]⟩
+    [[97]] 0 16 0 { buf := [97, 13, 10], numFields := 1, written := [[97, 13, 10]] } .none
+    [97, 13, 10] (by decide +kernel) (.inl rfl) rfl (.inl rfl) (by decide) (by decide) (.inr rfl)
+    (by decide) (by simp) rfl rfl
+  revert this
+  decide +kernel
+
+/-- `CsvRoundTripNoSkip` for every quoting style. The proof only covers the two that always give
+strings, but this held for all six in a sweep of 300000 random dialects and rows on CPython, so the
+assumption is a limit of the proof rather than a known limit of `csv`. -/
+def CsvRoundTripAnyQuoting : Prop :=
+  ∀ (a : DArgs) (d : Dialect) (row : List (List Nat)) (lim : Int) (fuel g : Nat) (c : WCtx) (o : Obj)
+    (t : List Nat),
+    dialectBuild a = .ok d → d.skipinitialspace = false →
+    (d.lineterminator = [13, 10] ∨ d.lineterminator = [10] ∨ d.lineterminator = [13]) →
+    d.delimiter < 0x110000 → d.quotechar < 0x110000 →
+    (d.escapechar < 0x110000 ∨ d.escapechar = NOT_SET) →
+    row.length < 2 ^ 31 → (∀ f ∈ row, (f.length : Int) ≤ lim ∧ ∀ x ∈ f, x < 0x110000) →
+    writerowM d fuel {} (rowObj row) = (c, .ok o) → c.written = [t] →
+    (readerNext d (g + 4) { acts := [.ret (.str t)], limit := lim }).2 = .ok (some (row.map Field.str))
+
+/-- `CsvRoundTripNoSkip` without the code point assumptions. Those are the type invariant of `str`:
+no Python string holds a value of `0x110000` or more. In the model the statement is false only at
+`EOL` and `NOT_SET`, the sentinels `Modules/_csv.c` keeps outside that range, so there is no Python
+reproducer and it stays `.open` rather than refuted. -/
+def CsvRoundTripNotCodePoints : Prop :=
+  ∀ (a : DArgs) (d : Dialect) (row : List (List Nat)) (lim : Int) (fuel g : Nat) (c : WCtx) (o : Obj)
+    (t : List Nat),
+    dialectBuild a = .ok d → (d.quoting = QUOTE_MINIMAL ∨ d.quoting = QUOTE_ALL) →
+    d.skipinitialspace = false →
+    (d.lineterminator = [13, 10] ∨ d.lineterminator = [10] ∨ d.lineterminator = [13]) →
+    row.length < 2 ^ 31 → (∀ f ∈ row, (f.length : Int) ≤ lim) →
+    writerowM d fuel {} (rowObj row) = (c, .ok o) → c.written = [t] →
+    (readerNext d (g + 4) { acts := [.ret (.str t)], limit := lim }).2 = .ok (some (row.map Field.str))
+
 end PyLean.TextLibs.Csv

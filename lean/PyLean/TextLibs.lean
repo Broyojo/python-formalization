@@ -267,6 +267,29 @@ def entries : List Entry := [
     source := "the module's purpose: reader reads what writer wrote; docs: the reader recognises only \\r and \\n", status := .proven
     prop := ``CsvRoundTripNoSkip, thm := some ``csvRoundTripNoSkip_proven
     notes := "Runs through the unquoted, escaped and quoted states of the reader and the escape and doublequote logic of the writer. Each excluded case is on record: textlibs-csv-round-trip for skipinitialspace, textlibs-csv-num-fields for 2^31 fields." },
+  { id := "textlibs-csv-round-trip-any-terminator", pyFile := "Modules/_csv.c"
+    pyFns := ["parse_process_char", "join_append_lineterminator"]
+    statement := "The round trip holds for any line terminator."
+    source := "the assumption of textlibs-csv-round-trip-no-skip", status := .refuted
+    prop := ``CsvRoundTripAnyTerminator, thm := some ``csvRoundTripAnyTerminator_refuted
+    bug := some "textlibs-csv-round-trip-documented-limits"
+    notes := "lineterminator='x': the reader takes the terminator as field text. Documented, so this records the assumption and is not for filing." },
+  { id := "textlibs-csv-round-trip-over-limit", pyFile := "Modules/_csv.c", pyFns := ["parse_add_char"]
+    statement := "The round trip holds for fields over the field size limit."
+    source := "the assumption of textlibs-csv-round-trip-no-skip", status := .refuted
+    prop := ``CsvRoundTripOverLimit, thm := some ``csvRoundTripOverLimit_refuted
+    bug := some "textlibs-csv-round-trip-documented-limits"
+    notes := "The writer has no limit and the reader raises csv.Error. Documented, so this records the assumption and is not for filing." },
+  { id := "textlibs-csv-round-trip-any-quoting", pyFile := "Modules/_csv.c", pyFns := []
+    statement := "The round trip holds for every quoting style."
+    source := "the assumption of textlibs-csv-round-trip-no-skip", status := .open
+    prop := ``CsvRoundTripAnyQuoting
+    notes := "Held for all six styles in 300000 random dialects and rows on CPython. The proof covers QUOTE_MINIMAL and QUOTE_ALL; the others need the float and None paths of parse_save_field shown not to fire on what the writer quotes." },
+  { id := "textlibs-csv-round-trip-not-code-points", pyFile := "Modules/_csv.c", pyFns := []
+    statement := "The round trip holds for values that are not code points."
+    source := "the assumption of textlibs-csv-round-trip-no-skip", status := .open
+    prop := ``CsvRoundTripNotCodePoints
+    notes := "False in the model at the EOL and NOT_SET sentinels, which no str can hold: the assumption is the type invariant of str. There is no Python reproducer, so it is recorded here rather than refuted." },
   { id := "textlibs-csv-writerow-resets", pyFile := "Modules/_csv.c", pyFns := ["join_reset"]
     statement := "Whatever a failed row left in the record buffer, the next writerow starts clean."
     source := "Modules/_csv.c:1346", status := .proven

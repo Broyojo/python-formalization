@@ -1,0 +1,46 @@
+id: textlibs-csv-round-trip-documented-limits
+title: "NOT FOR FILING: the csv round trip does not hold past two documented limits"
+priority: P4
+kind: documented-limitation
+module: textlibs
+files: [Modules/_csv.c]
+functions: ["parse_process_char", "parse_add_char"]
+summary: |
+  This records why CsvRoundTripNoSkip carries two assumptions; it is not a defect report. With
+  lineterminator='x', the reader takes the terminator as field text, so 'a' reads back as 'ax'. And a
+  field over field_size_limit() is written, but the reader raises csv.Error. Both are documented.
+likelihood: |
+  Not applicable.
+maybe_intended: |
+  Yes, both. The docs say the reader is hard-coded to recognise '\r' or '\n' and ignores
+  lineterminator, and field_size_limit exists to make the reader refuse long fields.
+reproducer: |
+  import csv, io
+  buf = io.StringIO(newline='')
+  csv.writer(buf, lineterminator='x').writerow(['a'])
+  terminator = next(csv.reader([buf.getvalue()], lineterminator='x'))
+  buf = io.StringIO(newline='')
+  csv.writer(buf).writerow(['a' * 200000])
+  try:
+      next(csv.reader([buf.getvalue()]))
+      limit = None
+  except csv.Error as e:
+      limit = str(e)
+  print(terminator, limit)
+  if terminator == ['ax'] and limit is not None:
+      print('REPRODUCED textlibs-csv-round-trip-documented-limits')
+expected: |
+  What is observed: both behaviours are the documented ones.
+observed: |
+  python3 3.14.7: ['ax'], field larger than field limit (131072). REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED.
+promised_by: |
+  docs of Dialect.lineterminator and csv.field_size_limit, which promise this behaviour.
+cause: |
+  Modules/_csv.c:740 and :750 test only '\n' and '\r'; Modules/_csv.c:717 enforces the limit in the
+  reader, and the writer has no such check.
+possible_fix: |
+  None. Nothing to fix.
+duplicates: |
+  Not a report, so no query was needed.
+lean: lean/PyLean/TextLibs/CsvRoundTrip.lean (CsvRoundTripAnyTerminator, CsvRoundTripOverLimit)
