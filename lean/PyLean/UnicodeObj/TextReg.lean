@@ -1,5 +1,6 @@
 import PyLean.Registry
 import PyLean.UnicodeObj.TextProps2
+import PyLean.UnicodeObj.TextTranslateX
 
 /-! Registry entries of the text slice. -/
 
@@ -62,6 +63,37 @@ def textEntries : List Entry := [
     source := "invariant: fast path vs general path; str.translate docstring"
     status := .proven, prop := ``TranslateFastSlow, thm := some ``translateFastSlow_proven
     notes := "Pure tables only: the fast path caches one lookup per ASCII character, so a stateful __getitem__ is called fewer times." },
+  { id := "unicodeobj-text-translate-pure-fast-slow", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicode_fast_translate", "unicode_fast_translate_lookup", "_PyUnicode_TranslateCharmap", "unicode_translate"]
+    statement := "For a table with no state, the ASCII fast path and the general loop give the same result, success or failure, for every string."
+    source := "invariant: fast path vs general path"
+    status := .proven, prop := ``TranslatePureFastSlow, thm := some ``translatePureFastSlow_proven },
+  { id := "unicodeobj-text-translate-stateful-table", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicode_fast_translate"]
+    statement := "For any table, including one with state, the ASCII fast path gives what the general loop gives."
+    source := "invariant: fast path vs general path"
+    status := .refuted, prop := ``TranslateStatefulFastSlow, thm := some ``translateStatefulFastSlow_refuted
+    bug := some "unicodeobj-text-translate-stateful-table" },
+  { id := "unicodeobj-text-translate-one-lookup", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicode_fast_translate", "unicode_fast_translate_lookup"]
+    statement := "If the fast path finishes, it asked the table about each distinct character of the string exactly once, for every table."
+    source := "invariant: what ascii_table is for"
+    status := .proven, prop := ``FastPathOneLookupPerChar, thm := some ``fastPathOneLookupPerChar_proven },
+  { id := "unicodeobj-text-translate-doc", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["charmaptranslate_lookup", "charmaptranslate_output", "unicode_translate"]
+    statement := "With allowed answers, str.translate leaves a character on LookupError, deletes it on None, and replaces it with an ordinal or a string, for every table with no state."
+    source := "str.translate docs"
+    status := .proven, prop := ``TranslateDocReading, thm := some ``translateDocReading_proven },
+  { id := "unicodeobj-text-translate-bad-item", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["charmaptranslate_lookup", "charmaptranslate_output"]
+    statement := "The first answer that is not allowed decides the result: an ordinal out of range, an object of the wrong type, or an exception from __getitem__ other than LookupError."
+    source := "str.translate docs; invariant: exact errors"
+    status := .proven, prop := ``TranslateBadItem, thm := some ``translateBadItem_proven },
+  { id := "unicodeobj-text-translate-callback-position", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicode_translate_call_errorhandler", "make_translate_exception"]
+    statement := "A translate handler's position lands inside the string, and a negative one counts from the end."
+    source := "invariant: no out-of-bounds read"
+    status := .proven, prop := ``TranslateCallbackPosition, thm := some ``translateCallbackPosition_proven },
   { id := "unicodeobj-text-translate-strict", pyFile := "Objects/unicodeobject.c"
     pyFns := []
     statement := "PyUnicode_Translate(s, table, NULL) agrees with the per-character reading whenever no character maps to None."

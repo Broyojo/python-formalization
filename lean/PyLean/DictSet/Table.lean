@@ -154,14 +154,34 @@ inductive Body (K V : Type) where
   | split (k : Keys K Unit) (v : Values V)
   deriving Repr, Inhabited
 
+/-- A second `PyDictObject`, as a callback sees it: the fields of `PyDict` without `peer`. -/
+structure PeerDict (K V : Type) where
+  ident : Nat
+  used : Nat
+  body : Body K V
+  nextId : Nat
+  deriving Repr, Inhabited
+
 /-- `PyDictObject`. `ident` is its address; `nextId` is the allocator handing out
-fresh `Keys.ident`s. -/
+fresh `Keys.ident`s.
+
+`peer` is not a field of the C struct. The state of `DM` is what a callback can reach, and
+during `dict_dict_merge` that is two objects: the receiver and the source, which a key's
+`__eq__` may mutate (`orig_size` at :3981 exists for this). `peer` carries the source; every
+table operation leaves it alone, so only a callback, through `Proto.eq`, can change it. -/
 structure PyDict (K V : Type) where
   ident : Nat := 0
   used : Nat := 0
   body : Body K V := .combined emptyKeys
   nextId : Nat := 1
+  peer : Option (PeerDict K V) := none
   deriving Repr, Inhabited
+
+def PyDict.toPeer {K V : Type} (d : PyDict K V) : PeerDict K V :=
+  { ident := d.ident, used := d.used, body := d.body, nextId := d.nextId }
+
+def PeerDict.toDict {K V : Type} (p : PeerDict K V) : PyDict K V :=
+  { ident := p.ident, used := p.used, body := p.body, nextId := p.nextId }
 
 namespace Body
 variable {K V : Type}

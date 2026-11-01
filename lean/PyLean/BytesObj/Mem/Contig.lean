@@ -27,13 +27,13 @@ theorem cmpBadFormat_proven : CmpBadFormat := by
 `copy_single`, through either branch of `copy_base`: the bytes are those the source held
 before the copy, also when the two views overlap (`memmove` semantics, and the scratch buffer
 in the strided branch). Hypotheses: `equiv_structure` passed (the function checks it) and
-either both strides are `itemsize` or the destination items do not overlap each other. -/
+the destination items do not overlap each other, which is automatic with one item or none. -/
 def CopySingleSpec : Prop :=
   ∀ (st : St) (self : Nat) (dest src : Buf) (n ds ss : Int),
     baseInaccessible st self = false → equivStructure dest src = .ok () →
     dest.shape = some [n] → dest.strides = some [ds] → src.strides = some [ss] → dest.ndim = 1 →
     src.ndim = 1 → dest.suboffsets = none → src.suboffsets = none → 0 ≤ n → 0 < dest.itemsize →
-    (dest.itemsize ≤ ds ∨ ds ≤ -dest.itemsize) →
+    (n ≤ 1 ∨ dest.itemsize ≤ ds ∨ ds ≤ -dest.itemsize) →
     (∀ j : Nat, (j : Int) < n → 0 ≤ dest.buf + j * ds ∧ dest.buf + j * ds + dest.itemsize ≤ st.mem.length) →
     let r := copySingle self dest src st
     r.1 = .ok () ∧ ∀ k : Nat, (k : Int) < n →
@@ -129,8 +129,7 @@ theorem mbufRelease_ok (k : Nat) (st : St) : (mbufRelease k st).1 = .ok () := by
   dsimp only
   split
   · rfl
-  · unfold pyBufferRelease
-    split <;> rfl
+  · exact pyBufferRelease_ok _ _
 
 theorem memoryRelease_ok (i : Nat) (st : St) : (memoryRelease i st).1 = .ok () := by
   unfold memoryRelease
@@ -141,13 +140,27 @@ theorem memoryRelease_ok (i : Nat) (st : St) : (memoryRelease i st).1 = .ok () :
     · exact mbufRelease_ok _ _
     · rfl
 
-/-- `PyMemoryView_GetContiguous` for a 1-D source (:965-1001): a write request on a read-only
-view and a write request on a non-contiguous view raise `BufferError`, and a view already
-contiguous in the requested order comes back on the same memory.
-Hypotheses: a live, unrestricted view. -/
+theorem memoryDealloc_ok (i : Nat) (st : St) : (memoryDealloc i st).1 = .ok () := by
+  have h := memoryRelease_ok i st
+  unfold memoryDealloc
+  dsimp only
+  rcases hr : memoryRelease i st with ⟨r, s⟩
+  rw [hr] at h
+  simp only at h
+  subst h
+  dsimp only
+  split
+  · split
+    · exact memoryRelease_ok _ _
+    · rfl
+  · rfl
+
+/-- `PyMemoryView_GetContiguous` for a source of any shape (:965-1001): a write request on a
+read-only view and a write request on a non-contiguous view raise `BufferError`, and a view already
+contiguous in the requested order comes back on the same memory. `GetContiguousCopy` is the
+remaining exit. Hypotheses: a live, unrestricted view. -/
 def GetContiguousRules : Prop :=
-  ∀ (st : St) (self : Nat) (n d : Int) (f : List Char) (order : Char),
-    Live1D st self n d f →
+  ∀ (st : St) (self : Nat) (order : Char), LiveView st self →
     let v := (st.mv self).view
     (v.readonly = true →
       (memoryViewGetContiguous (.view self) true order st).1 =
@@ -161,9 +174,9 @@ def GetContiguousRules : Prop :=
         .error (bufferError "writable contiguous buffer requested for a non-contiguous object."))
 
 theorem getContiguousRules_proven : GetContiguousRules := by
-  intro st self n d f order hL
-  have hview := viewCopy_1d _ n d f hL.ndim hL.shape hL.strides hL.subs hL.format
-  have ⟨hr1, hA⟩ := mbufAddView_added (st.mv self).mbuf (st.mv self).view st (by rw [hL.ndim]; omega)
+  intro st self order hL
+  have hview := viewCopy_full _ hL.full
+  have ⟨hr1, hA⟩ := mbufAddView_added (st.mv self).mbuf (st.mv self).view st hL.small
   rw [hview] at hA
   have e : memoryViewFromObject (.view self) st =
       mbufAddView (st.mv self).mbuf (some (st.mv self).view) st := by
@@ -174,7 +187,7 @@ theorem getContiguousRules_proven : GetContiguousRules := by
   simp only at hr1 hA
   subst hr1
   have hnew : (st1.mv st.mvs.length).view = (st.mv self).view := by rw [hA.new]
-  have hdeal : ∀ s, (memoryDealloc st.mvs.length s).1 = .ok () := fun s => memoryRelease_ok _ _
+  have hdeal : ∀ s, (memoryDealloc st.mvs.length s).1 = .ok () := fun s => memoryDealloc_ok _ _
   have thrown : ∀ (s : St) (x : PyExc),
       ((memoryDealloc st.mvs.length >>= fun _ => (throw x : M Nat)) s).1 = .error x := by
     intro s x
@@ -218,7 +231,8 @@ def FromContigCopy : Prop :=
     let v := (r.2.mv i).view
     r.1 = .ok i ∧ v.buf = base ∧ v.shape = some sh ∧ v.format = src.format ∧
       v.strides = some (cStrides src.itemsize sh) ∧ v.suboffsets = none ∧
-      rdBytes r.2.mem base src.len.toNat = flatBytes m src.itemsize sh strs src.suboffsets src.buf
+      rdBytes r.2.mem base src.len.toNat = flatBytes m src.itemsize sh strs src.suboffsets src.buf ∧
+      ∀ j, j < st.mvs.length → r.2.mv j = st.mv j
 
 theorem simple_full (e : Buf) (h : e.suboffsets = none) : simpleGetbuffer e bufFullRO = .ok e := by
   have h1 : req bufFullRO bufWritable = false := by decide
@@ -316,7 +330,7 @@ theorem fromContigCopy_proven : FromContigCopy := by
       { obj := some (.exp 1000000), buf := st.mem.length, len := src.len,
         itemsize := src.itemsize, readonly := (s.mb st.mbufs.length).master.readonly, ndim := src.ndim,
         format := some f, shape := some sh, strides := some (cStrides src.itemsize sh),
-        suboffsets := none } := by
+        suboffsets := none, hook := (s.mb st.mbufs.length).master.hook } := by
     rw [hdest, hx]
     simp [initSharedValues, hB.buf, hB.len, hB.format, hB.obj, hf, Int.toNat_of_nonneg hlenN]
   have hequiv := equiv_self src dest sh hsh hn (by rw [hd, hsh]) (by rw [hd]) (by rw [hd, hf]) (by rw [hd])
@@ -350,7 +364,7 @@ theorem fromContigCopy_proven : FromContigCopy := by
         (flatBytes (st.mem ++ List.replicate src.len.toNat 0) src.itemsize sh strs src.suboffsets src.buf) } : St).mv
         st.mvs.length = { s3.mv st.mvs.length with view := dest, flags := initFlags dest } :=
     St.mv_setMv s3 _ _ hn3
-  refine ⟨trivial, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨trivial, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · rw [hmv, hd]
   · rw [hmv, hd]
   · rw [hmv, hd, hf]
@@ -359,6 +373,10 @@ theorem fromContigCopy_proven : FromContigCopy := by
   · have e : src.len.toNat = (flatBytes (st.mem ++ List.replicate src.len.toNat 0) src.itemsize sh strs
         src.suboffsets src.buf).length := by omega
     exact (congrArg (rdBytes _ _) e).trans hrd
+  · intro j hj
+    show (s3.setMv st.mvs.length _).mv j = _
+    rw [St.mv_setMv_ne _ _ _ _ (by omega), hA.old j (by rw [hmvs]; exact hj)]
+    simp [St.mv, hB.mvs]
 
 /-- `PyMemoryView_FromBuffer` on a `Py_buffer` that has only `buf`, `len` and `itemsize`, the case
 its comment singles out ("init_shape_strides() must be able to reconstruct missing values",
@@ -401,7 +419,7 @@ theorem fromBufferReconstructs_proven : FromBufferReconstructs := by
       { obj := none, buf := info.buf, len := info.len, itemsize := info.itemsize,
         readonly := info.readonly, ndim := 1, format := some ['B'],
         shape := some [Int.tdiv info.len info.itemsize], strides := some [info.itemsize],
-        suboffsets := none } := by
+        suboffsets := none, hook := info.hook } := by
     rw [hb]
     simp [viewCopy, initShapeStrides, initSharedValues, initSuboffsets, h1, hsh, hst, hfm, hsb]
   rw [hvc]

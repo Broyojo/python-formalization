@@ -24,8 +24,7 @@ theorem fire_ok (r : Option Nat) (st : St) : ∃ s, fire r st = (.ok (), s) := b
         simp only
         split
         · rfl
-        · unfold pyBufferRelease
-          split <;> rfl
+        · exact pyBufferRelease_ok _ _
       · rfl
   cases r with
   | none => exact ⟨st, rfl⟩

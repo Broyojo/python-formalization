@@ -238,6 +238,8 @@ inductive Builtin where
   | dictKeysMethod | iterLengthHint
   /-- `__getnewargs__` of `int`, `str`, `tuple`, and a `__reduce__` that gives a fixed name. -/
   | getnewargs | reduceName (s : String)
+  /-- `mappingproxy_keys` and its like: the method of that name on the mapping. -/
+  | proxyCall (name : String)
   /-- `str.__format__`, and `int.__format__` with `float.__format__`.
   `object.__format__` is `objectFormat`. -/
   | strDunderFormat | numDunderFormat
@@ -508,6 +510,8 @@ def bytearray : Addr := 103
 def traceback : Addr := 104
 def dictKeyIter : Addr := 105
 def dictKeys : Addr := 106
+/-- `PyUnicodeIter_Type`; `strIter` is the iterator for compact ASCII strings. -/
+def strIterU : Addr := 107
 -- Exception classes used by C code.
 def BaseException : Addr := 31
 def Exception : Addr := 32

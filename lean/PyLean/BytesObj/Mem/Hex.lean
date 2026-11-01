@@ -81,6 +81,19 @@ theorem hexGroups_proven : HexGroups := by
          | exact filter_hexLeft c hc _ _ _ hb
          | (rw [filter_hexRight c hc _ _ _ (by simpa using hb), List.reverse_reverse]))
 
+/-- A view with suboffsets is not C-contiguous by its flags, unless it has no dimensions. -/
+theorem isC_no_subs (v : Buf) (h : (initFlags v).isC = true) (h0 : v.ndim ≠ 0) : v.suboffsets = none := by
+  cases hsb : v.suboffsets with
+  | none => rfl
+  | some s =>
+    exfalso
+    simp only [initFlags, hsb, Option.isSome_some, ↓reduceIte, Flags.isC, Bool.or_false] at h
+    split at h
+    · rename_i hn
+      exact h0 hn
+    · split at h <;> simp at h
+    · simp at h
+
 /-- A true flag means contiguous: whenever `init_flags` reports C-contiguity, so does
 `PyBuffer_IsContiguous`. -/
 theorem isC_contig (v : Buf) (h : (initFlags v).isC = true) (hs : v.suboffsets = none) :
@@ -122,14 +135,40 @@ one behaviour. Hypotheses: `self` is live, its flags are those `init_flags` comp
 apart). -/
 def HexIsTobytes : Prop :=
   ∀ (st : St) (self : Nat) (sep : Option Obj) (bps : Int) (b : List Nat),
+    (∀ r rel, sep ≠ some (.lenLike r rel)) →
     baseInaccessible st self = false →
     (st.mv self).flags.isC = (initFlags (st.mv self).view).isC →
     ((st.mv self).view.ndim = 0 → (st.mv self).view.suboffsets = none) →
     memoryviewTobytes self none st = (.ok b, st) →
     (memoryviewHex self sep bps st).1 = strhexWithSep b sep bps
 
+theorem strhexWithSepM_plain (arg : M (List Nat)) (sep : Option Obj) (bps : Int) (st : St) (b : List Nat)
+    (hsep : ∀ r rel, sep ≠ some (.lenLike r rel)) (ha : (arg st).1 = .ok b) :
+    (strhexWithSepM arg sep bps st).1 = strhexWithSep b sep bps := by
+  unfold strhexWithSepM strhexWithSep
+  split
+  · rename_i r rel
+    exact absurd rfl (hsep r rel)
+  · simp only [M.bind_app, M.lift]
+    cases h : strhexSep sep bps with
+    | error e => rfl
+    | ok p =>
+      obtain ⟨c, g⟩ := p
+      simp only [bind, Except.bind]
+      rcases hx : arg st with ⟨r, s⟩
+      rw [hx] at ha
+      simp only at ha
+      subst ha
+      rfl
+
+theorem withExport_fst {α : Type} (i : Nat) (x : M α) (st : St) :
+    (withExport i x st).1 =
+      (x (st.setMv i { st.mv i with exports := (st.mv i).exports + 1 })).1 := by
+  unfold withExport
+  simp only
+
 theorem hexIsTobytes_proven : HexIsTobytes := by
-  intro st self sep bps b hl hflags h0 ht
+  intro st self sep bps b hsep hl hflags h0 ht
   have htb : pyBufferToContiguous st.mem (st.mv self).view (st.mv self).view.len 'C' = .ok b := by
     simp only [memoryviewTobytes, M.bind_app, checkReleased_ok _ _ hl, M.pure_app, M.get, M.lift,
       parseOrder] at ht
@@ -152,8 +191,11 @@ theorem hexIsTobytes_proven : HexIsTobytes := by
     have hc := isC_contig _ (hflags ▸ hC) hs
     simp only [pyBufferToContiguous, hc, ne_eq, not_true_eq_false, ↓reduceIte, Except.ok.injEq] at htb
     rw [← htb]
-    simp only [memoryviewHex, M.bind_app, checkReleased_ok _ _ hl, M.get, hC, ↓reduceIte, M.lift]
+    simp only [memoryviewHex, M.bind_app, checkReleased_ok _ _ hl, M.get, hC, ↓reduceIte, M.pure_app]
+    rw [withExport_fst]
+    exact strhexWithSepM_plain _ _ _ _ _ hsep rfl
   · simp only [memoryviewHex, M.bind_app, checkReleased_ok _ _ hl, M.get, hC, Bool.false_eq_true,
       ↓reduceIte, M.lift, htb]
+    exact strhexWithSepM_plain _ _ _ _ _ hsep rfl
 
 end PyLean.BytesObj.Mem

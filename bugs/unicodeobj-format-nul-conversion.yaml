@@ -1,0 +1,54 @@
+id: unicodeobj-format-nul-conversion
+title: "str.format accepts a NUL as a conversion and treats it as no conversion"
+priority: P5
+kind: validation
+module: unicodeobject
+files: [Objects/stringlib/unicode_format.h]
+functions: ["parse_field", "output_markup", "formatteriter_next"]
+summary: |
+  parse_field stores the character after ! in *conversion, and '\0' also means "no conversion".
+  output_markup only calls do_conversion when conversion != '\0', so '{!\x00}' skips the check that
+  rejects every other character: '{!\x00}'.format(1) is '1', where '{!\x01}'.format(1) raises
+  ValueError. string.Formatter behaves the same, because formatteriter_next reports None for a NUL
+  conversion. The \x branch of do_conversion's error message prints a value it can never receive
+  as NUL. This is the same sentinel pattern as unicodeobj-format-nul-presentation-type.
+likelihood: |
+  Very low. It needs a NUL inside a format string, right after the !. It rejects nothing useful and
+  corrupts nothing: the field formats as if no conversion had been written.
+maybe_intended: |
+  No, but harmless. Worth mentioning only alongside the NUL presentation type, as one report about
+  NUL being used as a sentinel for user-controlled characters.
+reproducer: |
+  import string
+  a = '{!\x00}'.format(1)
+  b = string.Formatter().format('{!\x00}', 1)
+  try:
+      '{!\x01}'.format(1)
+      c = 'accepted'
+  except ValueError as e:
+      c = str(e)
+  print(repr(a), repr(b), repr(c))
+  if a == '1' and b == '1' and c == 'Unknown conversion specifier \\x1':
+      print('REPRODUCED unicodeobj-format-nul-conversion')
+expected: |
+  ValueError: Unknown conversion specifier \x0
+observed: |
+  '1'
+tested: "REPRODUCED on python3 3.14.7 by scripts/check_bugs.py; '1' on main (3.16.0a1+dev) by hand"
+promised_by: |
+  Doc/library/string.rst: conversion is one of r, s or a.
+cause: |
+  Objects/stringlib/unicode_format.h:564 initialises *conversion to '\0', :606 reads the character
+  after !, and :822 tests conversion != '\0'. Nothing separates "no conversion" from a NUL read at
+  :606.
+possible_fix: |
+  In parse_field, reject a conversion character of '\0' at :606, with the existing message.
+lean: |
+  Refuted by conversionChecked_refuted (lean/PyLean/UnicodeObj/FormatStrProps.lean), on the whole of
+  doStringFormat. conversionRejected_proven shows every other character is refused with the exact
+  error, so NUL is the only gap.
+duplicates:
+  issues:
+    - {number: 144325, state: open, relation: unrelated, reason: "error messages of format specs, not conversions"}
+  queries: ["conversion specifier NUL", "Unknown conversion specifier", "str.format null character conversion"]
+  bugforge: "no match in vendor/bugforge-results/README.md"

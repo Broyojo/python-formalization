@@ -1,0 +1,60 @@
+id: unicodeobj-text-translate-stateful-table
+title: "str.translate looks a table up a different number of times on ASCII and non-ASCII strings"
+priority: P5
+kind: twin-mismatch
+module: unicodeobject
+files: [Objects/unicodeobject.c]
+functions: ["unicode_fast_translate", "_PyUnicode_TranslateCharmap"]
+summary: |
+  For an ASCII string, unicode_fast_translate caches each answer in ascii_table, so the table is
+  asked once per distinct character. The general loop asks once per position, and asks again for the
+  character after a deleted run, because the lookup that ended the run is discarded. When the fast
+  path gives up, the character it gave up on is looked up again by the general loop, and nothing is
+  cached from then on. For a table whose __getitem__ has no state, none of this is visible: that case
+  is proven equal. A table with state sees it: 'aa'.translate(t) with a table that answers 'x' then
+  'y' gives 'xx', and 'aa\xe9'.translate(t) gives 'xyy'.
+likelihood: |
+  Very low. It needs a table whose answer for a character changes between lookups. defaultdict and
+  other memoising tables are not affected, since a second lookup gives the first answer.
+maybe_intended: |
+  Yes, as far as I can tell: this is the caching that bpo-21118 added on purpose. The documentation
+  says each character is "mapped through the given translation table" and promises nothing about
+  how many lookups happen. I expect a maintainer to call this an implementation detail and not a bug,
+  and I do not recommend filing it. It is recorded because the property is on record as refuted, and
+  because it marks exactly where the fast path stops being transparent. The real bug class here was
+  python/cpython#70651, wrong output with an ordinary table; TranslatePureFastSlow rules that out.
+reproducer: |
+  class Flip:
+      def __init__(self):
+          self.n = 0
+      def __getitem__(self, key):
+          self.n += 1
+          return 'x' if self.n == 1 else 'y'
+  ascii_result = 'aa'.translate(Flip())
+  other_result = 'aa\xe9'.translate(Flip())
+  print(ascii_result, other_result)
+  if ascii_result == 'xx' and other_result == 'xyy':
+      print('REPRODUCED unicodeobj-text-translate-stateful-table')
+expected: |
+  No promise exists. If the fast path were fully transparent, 'xy' for the ASCII string.
+observed: |
+  'xx' for the ASCII string, 'xyy' for the other.
+tested: "REPRODUCED on python3 3.14.7 by scripts/check_bugs.py; same results on main (3.16.0a1+dev) by hand"
+promised_by: |
+  Nothing explicit: only the general expectation that a fast path is an optimisation.
+cause: |
+  Objects/unicodeobject.c:9436-9483: ascii_table caches every answer for the rest of the string.
+  :9563-9573: the run scan discards each lookup, and the main loop asks again.
+possible_fix: |
+  None needed.
+lean: |
+  Refuted by translateStatefulFastSlow_refuted (lean/PyLean/UnicodeObj/TextTranslateX.lean).
+  translatePureFastSlow_proven is the narrow form, for a table with no state, and
+  fastPathOneLookupPerChar_proven shows the cache does what it is for.
+duplicates:
+  issues:
+    - {number: 70651, state: closed, relation: related, reason: "a real bug in the same fast path, wrong output with an ordinary table, fixed"}
+    - {number: 65364, state: closed, relation: related, reason: "the optimisation request behind this path"}
+  queries: ["str.translate __getitem__ called", "translate fast ascii optimize cache", "str.translate stateful",
+            "unicode_fast_translate"]
+  bugforge: "no match in vendor/bugforge-results/README.md"

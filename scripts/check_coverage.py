@@ -27,7 +27,7 @@ METHODS = ROOT / "coverage" / "methods"
 REVIEW = ROOT / "coverage" / "review"
 FIELDS = ["file", "line", "endline", "name", "signature", "status", "entry", "note"]
 EXCLUSION_REASONS = ("no-behaviour:", "deprecated:", "internal-bootstrap:", "platform:",
-                     "vendored:", "test-support:", "generated:")
+                     "vendored:", "test-support:", "generated:", "trivial:")
 
 
 def read_registry():

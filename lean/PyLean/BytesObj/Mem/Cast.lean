@@ -8,11 +8,41 @@ namespace PyLean.BytesObj.Mem
 
 open PyLean
 
+/-- A dimension of the view has length 0. -/
+def HasZero (v : Buf) : Prop := ∃ i, i < v.ndim ∧ (v.shape.getD []).getD i 1 = 0
+
+theorem any_take_zero (l : List Int) (n : Nat) :
+    (l.take n).any (· == 0) = true ↔ ∃ i, i < n ∧ l.getD i 1 = 0 := by
+  induction l generalizing n with
+  | nil => simp
+  | cons a as ih =>
+    cases n with
+    | zero => simp
+    | succ n =>
+      simp only [List.take_succ_cons, List.any_cons, Bool.or_eq_true, beq_iff_eq, ih]
+      constructor
+      · rintro (h | ⟨i, hi, e⟩)
+        · exact ⟨0, by omega, by simpa using h⟩
+        · exact ⟨i + 1, by omega, by simpa using e⟩
+      · rintro ⟨i, hi, e⟩
+        cases i with
+        | zero => exact Or.inl (by simpa using e)
+        | succ i => exact Or.inr ⟨i, by omega, by simpa using e⟩
+
+/-- `zero_in_shape`, :1412-1423: true exactly when a dimension has length 0. -/
+theorem zeroInShape_iff (v : Buf) : zeroInShape v = true ↔ HasZero v :=
+  any_take_zero _ _
+
+theorem zeroInShape_false (v : Buf) (h : ¬ HasZero v) : zeroInShape v = false := by
+  cases hz : zeroInShape v with
+  | false => rfl
+  | true => exact absurd ((zeroInShape_iff v).1 hz) h
+
 /-- What `cast_to_1D` leaves in the view. -/
 def castView (view : Buf) (fstr : List Char) (size : Int) : Buf :=
   { obj := view.obj, buf := view.buf, len := view.len, itemsize := size, readonly := view.readonly,
     ndim := 1, format := some fstr, shape := some [view.len.tdiv size], strides := some [size],
-    suboffsets := none }
+    suboffsets := none, hook := view.hook }
 
 /-- `m.cast(format)` on a live C-contiguous view, with a native `format`, when one side has
 byte size and the length is a multiple of the new item size, gives a new view registered
@@ -25,7 +55,7 @@ def Cast1DSpec : Prop :=
     self < st.mvs.length → (st.mv self).mbuf < st.mbufs.length →
     baseInaccessible st self = false → (st.mv self).flags.restricted = false →
     (st.mv self).flags.isC = true →
-    ((st.mv self).view.ndim = 1 ∨ zeroInShape (st.mv self).view = false) →
+    ((st.mv self).view.ndim = 1 ∨ ¬ HasZero (st.mv self).view) →
     (∀ ch ∈ format, ch.toNat < 128) →
     getNativeFmtchar format = some (c, size) →
     getNativeFmtstr format = some fstr →
@@ -118,7 +148,9 @@ theorem cast1DSpec_proven : Cast1DSpec := by
   have hany := any_ascii_false format hasc
   have hz' : ((Option.isSome (none : Option ShapeArg) || (st.mv self).view.ndim != 1) &&
       zeroInShape (st.mv self).view) = false := by
-    rcases hz with h | h <;> simp [h]
+    rcases hz with h | h
+    · simp [h]
+    · simp [zeroInShape_false _ h]
   dsimp only
   unfold memoryviewCast
   simp only [M.bind_app, checkReleased_ok _ _ hrel, checkRestricted_ok _ _ hres, M.get, hC,
@@ -245,17 +277,28 @@ theorem isCContiguous_cStrides (v : Buf) (sh : List Int) (hs : v.shape = some sh
     simpa [cStrides] using this
 
 /-- A shape cast: if `cast_to_ND` succeeds on the 1-D view left by `cast_to_1D` (no
-suboffsets, by the assertion at :1387), then the view has `ndim == len(shape)`, the given
-shape, C strides, `product(shape) * itemsize == len`, positive dimensions, and reports
-`c_contiguous`. Hypothesis: `i` is a live view. -/
+suboffsets, by the assertion at :1387), then with `ndim == 0` the view has no shape or strides and
+one item, and otherwise it has `ndim == len(shape)`, the given shape, C strides,
+`product(shape) * itemsize == len` and positive dimensions; either way it reports `c_contiguous`.
+A shape of another byte size is refused, leaving the state alone (:1402-1406). Hypothesis: `i` is
+a live view. -/
 def CastNDSpec : Prop :=
   ∀ (st st' : St) (i ndim : Nat) (items : List Obj) (u : Unit),
-    i < st.mvs.length → (st.mv i).view.suboffsets = none → ndim = items.length → 0 < ndim →
-    castToND i items ndim st = (.ok u, st') →
-    ∃ sh, let v := (st'.mv i).view
-      v.shape = some sh ∧ v.ndim = ndim ∧ v.strides = some (cStrides v.itemsize sh) ∧
-      v.len = sh.foldl (· * ·) 1 * v.itemsize ∧ v.len = (st.mv i).view.len ∧
-      (∀ x ∈ sh, 0 < x) ∧ (st'.mv i).flags.isC = true
+    i < st.mvs.length → (st.mv i).view.suboffsets = none → ndim = items.length →
+    (castToND i items ndim st = (.ok u, st') →
+      (ndim = 0 → let v := (st'.mv i).view
+        v.ndim = 0 ∧ v.shape = none ∧ v.strides = none ∧ v.len = v.itemsize ∧
+        v.len = (st.mv i).view.len ∧ (st'.mv i).flags.isC = true) ∧
+      (0 < ndim → ∃ sh, let v := (st'.mv i).view
+        v.shape = some sh ∧ v.ndim = ndim ∧ v.strides = some (cStrides v.itemsize sh) ∧
+        v.len = sh.foldl (· * ·) 1 * v.itemsize ∧ v.len = (st.mv i).view.len ∧
+        (∀ x ∈ sh, 0 < x) ∧ (st'.mv i).flags.isC = true)) ∧
+    (ndim = 0 → (st.mv i).view.len ≠ (st.mv i).view.itemsize →
+      castToND i items ndim st =
+        (.error (.typeError "memoryview: product(shape) * itemsize != buffer size"), st)) ∧
+    (∀ l sh, 0 < ndim → copyShape items (st.mv i).view.itemsize = .ok (l, sh) → (st.mv i).view.len ≠ l →
+      castToND i items ndim st =
+        (.error (.typeError "memoryview: product(shape) * itemsize != buffer size"), st))
 
 theorem foldl_mul (l : List Int) (a b : Int) :
     l.foldl (· * ·) (a * b) = l.foldl (· * ·) a * b := by
@@ -283,8 +326,13 @@ theorem initFlags_isC_of (v : Buf) (sh : List Int) (hvs : v.suboffsets = none)
   | n + 2, _, hn =>
     simp [hvs, Flags.isC, pyBufferIsContiguous, hC]
 
-theorem castNDSpec_proven : CastNDSpec := by
-  intro st st' i ndim items u hi hsub hnd hpos h
+theorem castND_pos (st st' : St) (i ndim : Nat) (items : List Obj) (u : Unit)
+    (hi : i < st.mvs.length) (hsub : (st.mv i).view.suboffsets = none) (hnd : ndim = items.length)
+    (hpos : 0 < ndim) (h : castToND i items ndim st = (.ok u, st')) :
+    ∃ sh, let v := (st'.mv i).view
+      v.shape = some sh ∧ v.ndim = ndim ∧ v.strides = some (cStrides v.itemsize sh) ∧
+      v.len = sh.foldl (· * ·) 1 * v.itemsize ∧ v.len = (st.mv i).view.len ∧
+      (∀ x ∈ sh, 0 < x) ∧ (st'.mv i).flags.isC = true := by
   have hnz : ¬ ndim = 0 := by omega
   unfold castToND at h
   rcases hc : copyShape items (st.mv i).view.itemsize with e | ⟨l, sh⟩
@@ -300,5 +348,40 @@ theorem castNDSpec_proven : CastNDSpec := by
       · rw [h1]; exact foldl_mul_one _ _
       · exact initFlags_isC_of _ sh hsub rfl rfl (by simp only; omega) hpos
     · simp [M.bind_app, M.get, hnz, M.lift, hc, M.pure_app, hl, M.throw_app] at h
+
+theorem castNDSpec_proven : CastNDSpec := by
+  intro st st' i ndim items u hi hsub hnd
+  refine ⟨fun h => ⟨fun h0 => ?_, fun hpos => castND_pos st st' i ndim items u hi hsub hnd hpos h⟩,
+    fun h0 hne => ?_, fun l sh hpos hc hne => ?_⟩
+  · subst h0
+    unfold castToND at h
+    by_cases hl : (st.mv i).view.len = (st.mv i).view.itemsize
+    · simp only [M.bind_app, M.get, ↓reduceIte, M.pure_app, hl, ne_eq, not_true_eq_false, M.set,
+        Prod.mk.injEq] at h
+      obtain ⟨-, rfl⟩ := h
+      rw [St.mv_setMv _ _ _ hi]
+      dsimp only
+      refine ⟨rfl, rfl, rfl, hl.symm ▸ rfl, hl.symm, ?_⟩
+      simp [initFlags, hsub, Flags.isC]
+    · simp [M.bind_app, M.get, M.pure_app, hl, M.throw_app] at h
+  · subst h0
+    unfold castToND
+    simp [M.bind_app, M.get, M.pure_app, hne, M.throw_app]
+  · have hnz : ¬ ndim = 0 := by omega
+    unfold castToND
+    simp [M.bind_app, M.get, hnz, M.lift, hc, M.pure_app, hne, M.throw_app]
+
+/-- `cast_to_ND` when the shape fits. -/
+theorem castToND_ok (i : Nat) (items : List Obj) (ndim : Nat) (st : St) (l : Int) (sh : List Int)
+    (hz : ndim ≠ 0) (hc : copyShape items (st.mv i).view.itemsize = .ok (l, sh))
+    (hl : (st.mv i).view.len = l) :
+    castToND i items ndim st =
+      (.ok (), st.setMv i { st.mv i with
+        view := { (st.mv i).view with
+          ndim := ndim, shape := some sh, strides := some (cStrides (st.mv i).view.itemsize sh) },
+        flags := initFlags { (st.mv i).view with
+          ndim := ndim, shape := some sh, strides := some (cStrides (st.mv i).view.itemsize sh) } }) := by
+  unfold castToND
+  simp only [M.bind_app, M.get, hz, ↓reduceIte, M.lift, hc, M.pure_app, hl, ne_eq, not_true_eq_false, M.set]
 
 end PyLean.BytesObj.Mem

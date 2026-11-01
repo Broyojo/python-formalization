@@ -53,6 +53,14 @@ observed: |
   python3 3.14.7: `d.get(S('x'), 'default')` -> 'default', then SIGSEGV in setdefault, exit -11.
   REPRODUCED.
   main (3.16.0a1+dev, ef1fce0): identical. REPRODUCED by check_bugs.py.
+
+  Audit of the other entry points. 47 operations on such a dict, each in a forked child on both
+  interpreters, with a plain str subclass and with one that overrides __eq__: the mapping methods,
+  update in all its forms, |, |=, ==, the keys and items views and their set operations, getattr,
+  setattr, delattr, and the constructors of dict, OrderedDict, defaultdict and Counter. setdefault
+  is the only one that crashes, so the defect is this one branch. It is not tied to a live instance:
+  d.copy() of the split dict gives a plain dict that crashes the same way, and it survives
+  d.clear(), and a pop or delete of other keys, before the call.
 promised_by: |
   Doc/library/stdtypes.rst, dict.setdefault: "If key is in the dictionary, return its value.
   If not, insert key with a value of default and return default." Invariant: no crash.

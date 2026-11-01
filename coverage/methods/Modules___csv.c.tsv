@@ -5,7 +5,7 @@ Modules/_csv.c	66	75	_csv_traverse	_csv_traverse(PyObject *module, visitproc vis
 Modules/_csv.c	78	81	_csv_free	_csv_free(void *module)	excluded		no-behaviour: frees memory
 Modules/_csv.c	163	170	get_dialect_from_registry	get_dialect_from_registry(PyObject *name_obj, _csvstate *module_state)	modelled	textlibs-csv-dialect-unknown-name,textlibs-csv-get-dialect	
 Modules/_csv.c	173	180	get_char_or_None	get_char_or_None(Py_UCS4 c)	modelled	textlibs-csv-dialect-rebuild	
-Modules/_csv.c	183	187	Dialect_get_lineterminator	Dialect_get_lineterminator(PyObject *op, void *Py_UNUSED(ignored))	modelled	textlibs-csv-dialect-rebuild,textlibs-csv-lineterminator-stored,textlibs-csv-lineterminator-not-null	
+Modules/_csv.c	183	187	Dialect_get_lineterminator	Dialect_get_lineterminator(PyObject *op, void *Py_UNUSED(ignored))	modelled	textlibs-csv-lineterminator-stored,textlibs-csv-lineterminator-not-null	
 Modules/_csv.c	190	194	Dialect_get_delimiter	Dialect_get_delimiter(PyObject *op, void *Py_UNUSED(ignored))	modelled	textlibs-csv-dialect-rebuild	
 Modules/_csv.c	197	201	Dialect_get_escapechar	Dialect_get_escapechar(PyObject *op, void *Py_UNUSED(ignored))	modelled	textlibs-csv-dialect-rebuild	
 Modules/_csv.c	204	208	Dialect_get_quotechar	Dialect_get_quotechar(PyObject *op, void *Py_UNUSED(ignored))	modelled	textlibs-csv-dialect-rebuild	
@@ -24,12 +24,12 @@ Modules/_csv.c	435	575	dialect_new	dialect_new(PyTypeObject *type, PyObject *arg
 Modules/_csv.c	583	587	Dialect_reduce	Dialect_reduce(PyObject *self, PyObject *args) {	modelled	textlibs-csv-no-pickle	
 Modules/_csv.c	601	606	Dialect_clear	Dialect_clear(PyObject *op)	excluded		no-behaviour: tp_clear only drops references; a stated scope limit, as we have no finalization model
 Modules/_csv.c	609	615	Dialect_traverse	Dialect_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC slot; nothing Python-visible
-Modules/_csv.c	643	652	_call_dialect	_call_dialect(_csvstate *module_state, PyObject *dialect_inst, PyObject *kwargs)	modelled	textlibs-csv-dialect-reuse,textlibs-csv-call-dialect,textlibs-csv-reuse-never-fails,textlibs-csv-reader-order	
+Modules/_csv.c	643	652	_call_dialect	_call_dialect(_csvstate *module_state, PyObject *dialect_inst, PyObject *kwargs)	modelled	textlibs-csv-call-dialect,textlibs-csv-reuse-never-fails	
 Modules/_csv.c	658	694	parse_save_field	parse_save_field(ReaderObj *self)	modelled	textlibs-csv-round-trip-no-skip,textlibs-csv-save-field,textlibs-csv-reader-no-crash	
 Modules/_csv.c	697	711	parse_grow_buff	parse_grow_buff(ReaderObj *self)	excluded		no-behaviour: grows the field buffer; the reader's result does not depend on its capacity
 Modules/_csv.c	714	727	parse_add_char	parse_add_char(ReaderObj *self, _csvstate *module_state, Py_UCS4 c)	modelled	textlibs-csv-add-char-limit,textlibs-csv-limit-live,textlibs-csv-round-trip,textlibs-csv-round-trip-no-skip	
 Modules/_csv.c	730	910	parse_process_char	parse_process_char(ReaderObj *self, _csvstate *module_state, Py_UCS4 c)	modelled	textlibs-csv-eat-crnl,textlibs-csv-round-trip,textlibs-csv-round-trip-no-skip	
-Modules/_csv.c	913	922	parse_reset	parse_reset(ReaderObj *self)	modelled	textlibs-csv-iter-raises,textlibs-csv-reader-no-crash,textlibs-csv-round-trip-no-skip	
+Modules/_csv.c	913	922	parse_reset	parse_reset(ReaderObj *self)	modelled	textlibs-csv-reader-resets	
 Modules/_csv.c	925	996	Reader_iternext_lock_held	Reader_iternext_lock_held(PyObject *op)	modelled	textlibs-csv-round-trip-no-skip,textlibs-csv-iter-raises,textlibs-csv-eof,textlibs-csv-not-str-line,textlibs-csv-parse-failure,textlibs-csv-already-advanced,textlibs-csv-reader-no-crash,textlibs-csv-crash-needs-quote	
 Modules/_csv.c	999	1006	Reader_iternext	Reader_iternext(PyObject *op)	modelled	textlibs-csv-round-trip-no-skip,textlibs-csv-iter-raises,textlibs-csv-reader-no-crash	
 Modules/_csv.c	1009	1021	Reader_dealloc	Reader_dealloc(PyObject *op)	excluded		no-behaviour: tp_dealloc only drops references; a stated scope limit, as we have no finalization model
@@ -48,7 +48,7 @@ Modules/_csv.c	1495	1503	Writer_traverse	Writer_traverse(PyObject *op, visitproc
 Modules/_csv.c	1506	1513	Writer_clear	Writer_clear(PyObject *op)	excluded		no-behaviour: tp_clear only drops references; a stated scope limit, as we have no finalization model
 Modules/_csv.c	1516	1527	Writer_dealloc	Writer_dealloc(PyObject *op)	excluded		no-behaviour: tp_dealloc only drops references; a stated scope limit, as we have no finalization model
 Modules/_csv.c	1556	1599	csv_writer	csv_writer(PyObject *module, PyObject *args, PyObject *keyword_args)	modelled	textlibs-csv-writer-order	
-Modules/_csv.c	1612	1616	_csv_list_dialects_impl	_csv_list_dialects_impl(PyObject *module) /*[clinic end generated code: output=a5b92b215b006a6d input=ec58040aafd6a20a]*/	modelled	textlibs-csv-unregister	
+Modules/_csv.c	1612	1616	_csv_list_dialects_impl	_csv_list_dialects_impl(PyObject *module) /*[clinic end generated code: output=a5b92b215b006a6d input=ec58040aafd6a20a]*/	modelled	textlibs-csv-list-dialects,textlibs-csv-subclass-key	
 Modules/_csv.c	1619	1641	csv_register_dialect	csv_register_dialect(PyObject *module, PyObject *args, PyObject *kwargs)	modelled	textlibs-csv-register-sees-callbacks,textlibs-csv-subclass-key,textlibs-csv-registry,textlibs-csv-register-checks	
 Modules/_csv.c	1653	1666	_csv_unregister_dialect_impl	_csv_unregister_dialect_impl(PyObject *module, PyObject *name) /*[clinic end generated code: output=0813ebca6c058df4 input=e1cf81bfe3ba0f62]*/	modelled	textlibs-csv-unregister	
 Modules/_csv.c	1677	1681	_csv_get_dialect_impl	_csv_get_dialect_impl(PyObject *module, PyObject *name) /*[clinic end generated code: output=aa988cd573bebebb input=74865c659dcb441f]*/	modelled	textlibs-csv-get-dialect	

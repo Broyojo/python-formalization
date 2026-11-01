@@ -1,4 +1,5 @@
 import PyLean.DictSet.Props2
+import PyLean.DictSet.Stable
 
 /-!
 The wrappers over lookup, insertion and deletion, and `update`, on a well-formed combined table.
@@ -95,7 +96,7 @@ theorem mergeLoop_spec (H : Honest P hf eqv) :
     have hrest : ∀ e ∈ rest, e.2.2 = hf e.1 := fun e he => hh e (by simp [he])
     have hunf : mergeLoop P 1 ((key, v, hf key) :: rest) d =
         (insertDict P key (hf key) v >>= fun _ => mergeLoop P 1 rest) d := by
-      simp only [mergeLoop]
+      simp only [mergeLoop, mergeStep]
       rfl
     rcases insertDict_inv H d hd key v with h1 | ⟨d1, h1, h2, h3⟩
     · left
@@ -136,14 +137,49 @@ theorem update_distinct : ∀ (es : List (K × V × Int)) (l : List (K × V)),
       simp only [List.any_append, List.any_cons, List.any_nil, Bool.or_false, Bool.or_eq_false_iff]
       exact ⟨hn e (by simp [he]), hp'.1 e he⟩
 
+omit [DecidableEq K] in
+/-- `peer` plays no part in the invariant or in the list a dict stands for. -/
+theorem dictInv_peer {isStr : K → Bool} (d : PyDict K V) (hd : DictInv hf eqv isStr d)
+    (p : Option (PeerDict K V)) : DictInv hf eqv isStr { d with peer := p } :=
+  let ⟨⟨k, hb, w, hu⟩⟩ := hd
+  ⟨⟨k, hb, w, hu⟩⟩
+
+/-- If no callback touches the source, `mergeLive` is the snapshot. -/
+theorem mergeLive_items (hp : ∀ a b s, (P.eq a b s).2.peer = s.peer) (ov : Nat)
+    (other : PyDict K V) (ok : Keys K V)
+    (hob : other.body = .combined ok) (d : PyDict K V) :
+    mergeLive P ov other.used (mergeFuel other) 0 { d with peer := some other.toPeer } =
+      mergeLoop P ov (dictItems other) { d with peer := some other.toPeer } := by
+  have hn : other.body.nentries = ok.nentries := by simp [Body.nentries, hob]
+  have hf1 : ok.nentries < 0 + mergeFuel other := by
+    simp only [mergeFuel, hn]
+    generalize 2 ^ other.body.log2Size = t
+    omega
+  have h := mergeLive_quiet hp ov other ok hob (mergeFuel other) 0
+    { d with peer := some other.toPeer } rfl (Nat.zero_le _) hf1
+  have hfuel := dictNextAll_fuel other ok hob (mergeFuel other) (other.body.nentries + other.used + 1) 0
+    (Nat.zero_le _) hf1 (by omega)
+  rw [hfuel] at h
+  exact h
+
 /-- The tail of `dict_dict_merge`, from any well-formed target. -/
-theorem mergeRest_spec (H : Honest P hf eqv) (mp other : PyDict K V)
+theorem mergeRest_spec (H : Honest P hf eqv) (mp other : PyDict K V) (ok : Keys K V)
+    (hob : other.body = .combined ok)
     (hd : DictInv hf eqv P.isStr mp)
     (hh : ∀ e ∈ dictItems other, e.2.2 = hf e.1) :
     (∃ s, mergeRest P other 1 mp = (.error memoryError, s)) ∨
     ∃ d', mergeRest P other 1 mp = (.ok (), d') ∧ DictInv hf eqv P.isStr d' ∧
       dictAssoc d' = assocUpdateFrom eqv (dictAssoc mp) (dictItems other) := by
   obtain ⟨k, hb, w, hu⟩ := hd.wf
+  have tail : ∀ d : PyDict K V, DictInv hf eqv P.isStr d →
+      (∃ s, mergeLive P 1 other.used (mergeFuel other) 0 { d with peer := some other.toPeer } =
+        (.error memoryError, s)) ∨
+      ∃ d', mergeLive P 1 other.used (mergeFuel other) 0 { d with peer := some other.toPeer } =
+        (.ok (), d') ∧ DictInv hf eqv P.isStr d' ∧
+        dictAssoc d' = assocUpdateFrom eqv (dictAssoc d) (dictItems other) := by
+    intro d hd0
+    rw [mergeLive_items (fun a b s => by rw [H.eq_ok]) 1 other ok hob]
+    exact mergeLoop_spec H (dictItems other) _ (dictInv_peer d hd0 _) hh
   simp only [mergeRest]
   by_cases hr : usableFraction (2 ^ mp.body.log2Size) < other.used
   · rw [if_pos hr]
@@ -157,7 +193,7 @@ theorem mergeRest_spec (H : Honest P hf eqv) (mp other : PyDict K V)
       have hd1 : DictInv hf eqv P.isStr d1 := ⟨⟨k', rfl, h2, by simp [d1, hu, h3]⟩⟩
       have ha : dictAssoc d1 = dictAssoc mp := by
         simp [dictAssoc, d1, hb, Keys.items, h3]
-      have := mergeLoop_spec H (dictItems other) d1 hd1 hh
+      have := tail d1 hd1
       rw [ha] at this
       exact this
     · left
@@ -165,7 +201,7 @@ theorem mergeRest_spec (H : Honest P hf eqv) (mp other : PyDict K V)
       simp only [dictResize]
       rw [if_pos (by omega)]
   · rw [if_neg hr]
-    exact mergeLoop_spec H (dictItems other) mp hd hh
+    exact tail mp hd
 
 /-- `dict_dict_merge` with `override == 1`, the operation behind `update`, `|=` and `dict(d)`:
 the fold of `d[k] = v` over the source, whichever of its paths runs. -/
@@ -184,7 +220,7 @@ theorem dictDictMerge_spec (H : Honest P hf eqv) (mp other : PyDict K V)
     obtain ⟨x, hx, rfl⟩ := List.mem_map.mp he
     obtain ⟨t, ht⟩ := (mem_live ok x).mp hx
     exact wo.hashes t x ht
-  have hrest := mergeRest_spec H mp other hd hh
+  have hrest := mergeRest_spec H mp other ok hob hd hh
   have hid : (other.ident == mp.ident) = false := by simpa using hne
   simp only [dictDictMerge, hid, Bool.false_or]
   by_cases h0 : other.used = 0
@@ -221,9 +257,9 @@ theorem dictDictMerge_spec (H : Honest P hf eqv) (mp other : PyDict K V)
       exact hrest
 
 /-- The slow path of `dict_merge` with `override == 1`: `d[k] = E[k]` for each key. -/
-theorem mergeGeneric_spec (H : Honest P hf eqv) (getitem : K → Py V) :
+theorem mergeGeneric_spec (H : Honest P hf eqv) (getitem : K → DM K V V) :
     ∀ (ks : List K) (vs : List V) (d : PyDict K V), DictInv hf eqv P.isStr d →
-      ks.length = vs.length → (∀ p ∈ ks.zip vs, getitem p.1 = .ok p.2) →
+      ks.length = vs.length → (∀ p ∈ ks.zip vs, ∀ s, getitem p.1 s = (.ok p.2, s)) →
       (∃ s, mergeGenericLoop P getitem 1 ks d = (.error memoryError, s)) ∨
       ∃ d', mergeGenericLoop P getitem 1 ks d = (.ok (), d') ∧ DictInv hf eqv P.isStr d' ∧
         dictAssoc d' = (ks.zip vs).foldl (fun l p => assocSet eqv l p.1 p.2) (dictAssoc d) := by
@@ -237,11 +273,11 @@ theorem mergeGeneric_spec (H : Honest P hf eqv) (getitem : K → Py V) :
     cases vs with
     | nil => simp at hl
     | cons v vrest =>
-      have hg0 : getitem key = .ok v := hg (key, v) (by simp)
+      have hg0 : ∀ s, getitem key s = (.ok v, s) := hg (key, v) (by simp)
       have hunf : mergeGenericLoop P getitem 1 (key :: rest) d =
           (dictSetItem P key v >>= fun _ => mergeGenericLoop P getitem 1 rest) d := by
         simp only [mergeGenericLoop, bne_self_eq_false, Bool.false_eq_true, if_false]
-        simp [M.bind_run, M.pure_run, M.lift_run, hg0]
+        simp [M.bind_run, M.pure_run, hg0]
       rcases dictSetItem_spec H d hd key v with h1 | ⟨d1, h1, h2, h3⟩
       · exact Or.inl ⟨d, by rw [hunf]; exact M.bind_err h1⟩
       · have hnext : mergeGenericLoop P getitem 1 (key :: rest) d =
@@ -259,8 +295,8 @@ theorem mergeGeneric_spec (H : Honest P hf eqv) (getitem : K → Py V) :
 reported after the earlier pairs went in, as `for k, v in E: D[k] = v` does. -/
 theorem seq2_spec (H : Honest P hf eqv) :
     ∀ (ps : List (K × V)) (i : Nat) (d : PyDict K V), DictInv hf eqv P.isStr d →
-      (∃ s, seq2Loop P true i (ps.map fun p => Seq2Item.pair p.1 p.2) none d = (.error memoryError, s)) ∨
-      ∃ d', seq2Loop P true i (ps.map fun p => Seq2Item.pair p.1 p.2) none d = (.ok (), d') ∧
+      (∃ s, seq2Loop P true i (ps.map fun p => pure (some (Seq2Item.pair p.1 p.2))) d = (.error memoryError, s)) ∨
+      ∃ d', seq2Loop P true i (ps.map fun p => pure (some (Seq2Item.pair p.1 p.2))) d = (.ok (), d') ∧
         DictInv hf eqv P.isStr d' ∧
         dictAssoc d' = ps.foldl (fun l p => assocSet eqv l p.1 p.2) (dictAssoc d) := by
   intro ps
@@ -271,15 +307,15 @@ theorem seq2_spec (H : Honest P hf eqv) :
   | cons p rest ih =>
     intro i d hd
     obtain ⟨key, v⟩ := p
-    have hunf : seq2Loop P true i ((((key, v) :: rest)).map fun p => Seq2Item.pair p.1 p.2) none d =
+    have hunf : seq2Loop P true i (((key, v) :: rest).map fun p => pure (some (Seq2Item.pair p.1 p.2))) d =
         (dictSetItem P key v >>= fun _ =>
-          seq2Loop P true (i + 1) (rest.map fun p => Seq2Item.pair p.1 p.2) none) d := by
+          seq2Loop P true (i + 1) (rest.map fun p => pure (some (Seq2Item.pair p.1 p.2)))) d := by
       simp only [List.map_cons, seq2Loop]
       simp [M.bind_run]
     rcases dictSetItem_spec H d hd key v with h1 | ⟨d1, h1, h2, h3⟩
     · exact Or.inl ⟨d, by rw [hunf]; exact M.bind_err h1⟩
-    · have hnext : seq2Loop P true i (((key, v) :: rest).map fun p => Seq2Item.pair p.1 p.2) none d =
-          seq2Loop P true (i + 1) (rest.map fun p => Seq2Item.pair p.1 p.2) none d1 := by
+    · have hnext : seq2Loop P true i (((key, v) :: rest).map fun p => pure (some (Seq2Item.pair p.1 p.2))) d =
+          seq2Loop P true (i + 1) (rest.map fun p => pure (some (Seq2Item.pair p.1 p.2))) d1 := by
         rw [hunf]
         exact M.bind_ok h1
       rcases ih (i + 1) d1 h2 with ⟨s, h4⟩ | ⟨d2, h4, h5, h6⟩
@@ -312,15 +348,16 @@ theorem dictMergeSelf_proven : DictMergeSelf := by
 /-- The mapping route: `for k in E.keys(): D[k] = E[k]`. -/
 def MergeMappingRefines : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (hf : K → Int) (eqv : K → K → Bool),
-    Honest P hf eqv → ∀ (getitem : K → Py V) (ks : List K) (vs : List V) (d : PyDict K V),
-      DictInv hf eqv P.isStr d → ks.length = vs.length → (∀ p ∈ ks.zip vs, getitem p.1 = .ok p.2) →
-      (∃ s, dictMerge P (.mapping (.ok ks) getitem) 1 d = (.error memoryError, s)) ∨
-      ∃ d', dictMerge P (.mapping (.ok ks) getitem) 1 d = (.ok (), d') ∧ DictInv hf eqv P.isStr d' ∧
+    Honest P hf eqv → ∀ (getitem : K → DM K V V) (ks : List K) (vs : List V) (d : PyDict K V),
+      DictInv hf eqv P.isStr d → ks.length = vs.length →
+      (∀ p ∈ ks.zip vs, ∀ s, getitem p.1 s = (.ok p.2, s)) →
+      (∃ s, dictMerge P (.mapping (pure ks) getitem) 1 d = (.error memoryError, s)) ∨
+      ∃ d', dictMerge P (.mapping (pure ks) getitem) 1 d = (.ok (), d') ∧ DictInv hf eqv P.isStr d' ∧
         dictAssoc d' = (ks.zip vs).foldl (fun l p => assocSet eqv l p.1 p.2) (dictAssoc d)
 theorem mergeMappingRefines_proven : MergeMappingRefines := by
   intro K V _ P hf eqv H getitem ks vs d hd hl hg
-  have hunf : dictMerge P (.mapping (.ok ks) getitem) 1 d = mergeGenericLoop P getitem 1 ks d := by
-    simp only [dictMerge, M.bind_run, M.lift_run]
+  have hunf : dictMerge P (.mapping (pure ks) getitem) 1 d = mergeGenericLoop P getitem 1 ks d := by
+    simp only [dictMerge, M.bind_run, M.pure_run]
   rw [hunf]
   exact mergeGeneric_spec H getitem ks vs d hd hl hg
 
@@ -328,9 +365,10 @@ theorem mergeMappingRefines_proven : MergeMappingRefines := by
 def MergeSeq2Refines : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (hf : K → Int) (eqv : K → K → Bool),
     Honest P hf eqv → ∀ (ps : List (K × V)) (d : PyDict K V), DictInv hf eqv P.isStr d →
-      (∃ s, mergeFromSeq2 P { items := ps.map fun p => Seq2Item.pair p.1 p.2 } true d =
+      (∃ s, mergeFromSeq2 P { steps := ps.map fun p => pure (some (Seq2Item.pair p.1 p.2)) } true d =
         (.error memoryError, s)) ∨
-      ∃ d', mergeFromSeq2 P { items := ps.map fun p => Seq2Item.pair p.1 p.2 } true d = (.ok (), d') ∧
+      ∃ d', mergeFromSeq2 P { steps := ps.map fun p => pure (some (Seq2Item.pair p.1 p.2)) } true d =
+        (.ok (), d') ∧
         DictInv hf eqv P.isStr d' ∧
         dictAssoc d' = ps.foldl (fun l p => assocSet eqv l p.1 p.2) (dictAssoc d)
 theorem mergeSeq2Refines_proven : MergeSeq2Refines := fun _ _ _ _ _ _ H ps d hd =>
@@ -339,12 +377,13 @@ theorem mergeSeq2Refines_proven : MergeSeq2Refines := fun _ _ _ _ _ _ H ps d hd 
 /-- `dict_update_arg` picks the route its docstring describes. -/
 def UpdateArgRoutes : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (d : PyDict K V)
-    (m : MergeArg K V) (q : Iterable (Seq2Item K V)),
-    dictUpdateArg P (.other (.ok true) m q) d = dictMerge P m 1 d ∧
-    dictUpdateArg P (.other (.ok false) m q) d = mergeFromSeq2 P q true d
+    (hk : DM K V Bool) (m : MergeArg K V) (q : ReIter (PyDict K V) (Seq2Item K V)),
+    (∀ d', hk d = (.ok true, d') → dictUpdateArg P (.other hk m q) d = dictMerge P m 1 d') ∧
+    (∀ d', hk d = (.ok false, d') → dictUpdateArg P (.other hk m q) d = mergeFromSeq2 P q true d') ∧
+    (∀ e d', hk d = (.error e, d') → dictUpdateArg P (.other hk m q) d = (.error e, d'))
 theorem updateArgRoutes_proven : UpdateArgRoutes := by
-  intro K V _ P d m q
-  constructor <;> simp [dictUpdateArg, M.bind_run, M.lift_run]
+  intro K V _ P d hk m q
+  refine ⟨?_, ?_, ?_⟩ <;> intros <;> simp_all [dictUpdateArg, M.bind_run]
 
 /-- `dict.pop`, with and without a default. -/
 def PopDefaultSpec : Prop :=

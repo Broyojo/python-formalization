@@ -230,8 +230,8 @@ def partialCallPy {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw : Lis
 /-- A read past the end of the call's argument array, which C does not check. -/
 def oobRead : PyExc := .named "SIGSEGV" "read past the end of the call arguments"
 
-/-- The first loop of the merge in `partial_call`, Modules/_functoolsmodule.c:544-552, and of
-`partial_vectorcall`, :447-455: `none` when `args[j]` is past the end. -/
+/-- The first loop of the merge in `partial_call`, Modules/_functoolsmodule.c:550-558, and of
+`partial_vectorcall`, :450-458: `none` when `args[j]` is past the end. -/
 def cMergeLoop {α : Type} (args : List α) : List (PArg α) → Nat → Option (List α × Nat)
   | [], j => some ([], j)
   | .ph :: rest, j =>
@@ -240,7 +240,7 @@ def cMergeLoop {α : Type} (args : List α) : List (PArg α) → Nat → Option 
     | some a => (cMergeLoop args rest (j + 1)).map (fun r => (a :: r.1, r.2))
   | .val v :: rest, j => (cMergeLoop args rest j).map (fun r => (v :: r.1, r.2))
 
-/-- The whole merge, with `phcount` taken from the object as C does: the second loop, :554-558, copies
+/-- The whole merge, with `phcount` taken from the object as C does: the second loop, :560-565, copies
 `nargs - phcount` items from `j` on. -/
 def cMerge {α : Type} (pargs : List (PArg α)) (ph : Nat) (args : List α) : Option (List α) :=
   match cMergeLoop args pargs 0 with
@@ -261,17 +261,34 @@ def partialCallC {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw : List
       | some tot => callFn func tot totKw
     else callFn func (valsOf pargs ++ args) totKw
 
+/-- A `memcpy` past the end of the stack array, which C does not check. -/
+def oobWrite : PyExc := .named "SIGABRT" "write past the end of the stack array"
+
+/-- The merge of `partial_vectorcall`, :450-462. The stack holds `pto_nargs + nargs - phcount` items, sized by
+`phcount`, and the `memcpy` at :460-462 copies `nargs - j` items after the stored ones, so it stays inside only
+when `j` is `phcount`. -/
+def vecMerge {α : Type} (pargs : List (PArg α)) (ph : Nat) (args : List α) : Py (List α) :=
+  match cMergeLoop args pargs 0 with
+  | none => .error oobRead
+  | some (_, j) =>
+    if ph < args.length ∧ j ≠ ph then .error oobWrite
+    else
+      match cMerge pargs ph args with
+      | none => .error oobRead
+      | some tot => .ok tot
+
 /-- `partial_vectorcall`, Modules/_functoolsmodule.c:386-476, reached when the wrapped function
 supports vectorcall (`partial_setvectorcall`, :480-492); `partial_vectorcall_fallback`, :374-383,
-sends a `partial` with stored keywords to `partial_call`. -/
+sends a `partial` with stored keywords to `partial_call`. The fast path for a one-element tuple, :419-428,
+gives the same call on a well-formed object, where such a tuple has no placeholder. -/
 def partialVectorcall {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw : List (String × α))
     (ph : Nat) (args : List α) (kw : List (String × α)) : Py (Called α) :=
   if !pkw.isEmpty then partialCallC func pargs pkw ph args kw
   else if args.length < ph then .error (.typeError (missingMsg ph args.length))
   else if ph ≠ 0 then
-    match cMerge pargs ph args with
-    | none => .error oobRead
-    | some tot => callFn func tot kw
+    match vecMerge pargs ph args with
+    | .error e => .error e
+    | .ok tot => callFn func tot kw
   else callFn func (valsOf pargs ++ args) kw
 
 /-- `partial.__get__`, Lib/functools.py:395-398, `partial_descr_get`, Modules/_functoolsmodule.c:362-368, and
@@ -310,7 +327,7 @@ def partialReprPy {α : Type} (E : ReprEnv α) (cls : String) (func : Py String)
   let k ← mapPy (kwRepr E) kw
   pure (cls ++ "(" ++ joinComma (f :: a ++ k) ++ ")")
 
-/-- The fold at Modules/_functoolsmodule.c:637-644 and :648-657: `arglist` grows by `", x"`. -/
+/-- The fold at Modules/_functoolsmodule.c:639-646 and :648-661: `arglist` grows by `", x"`. -/
 def reprFold {β : Type} (f : β → Py String) : String → List β → Py String
   | acc, [] => .ok acc
   | acc, x :: xs =>

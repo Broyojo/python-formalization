@@ -1,25 +1,25 @@
 file	line	endline	name	signature	status	entry	note
-Objects/setobject.c	79	130	set_lookkey	set_lookkey(PySetObject *so, PyObject *key, Py_hash_t hash)	todo		
-Objects/setobject.c	135	217	set_add_entry_takeref	set_add_entry_takeref(PySetObject *so, PyObject *key, Py_hash_t hash)	todo		
-Objects/setobject.c	220	225	set_add_entry	set_add_entry(PySetObject *so, PyObject *key, Py_hash_t hash)	todo		
+Objects/setobject.c	79	130	set_lookkey	set_lookkey(PySetObject *so, PyObject *key, Py_hash_t hash)	modelled	set-probe-failure,set-table-refines	
+Objects/setobject.c	135	217	set_add_entry_takeref	set_add_entry_takeref(PySetObject *so, PyObject *key, Py_hash_t hash)	modelled	set-probe-failure,set-table-refines	
+Objects/setobject.c	220	225	set_add_entry	set_add_entry(PySetObject *so, PyObject *key, Py_hash_t hash)	todo		one-line call of set_add_entry_takeref, no theorem of its own
 Objects/setobject.c	228	241	set_unhashable_type	set_unhashable_type(PyObject *key)	todo		
-Objects/setobject.c	244	255	_PySet_AddTakeRef	_PySet_AddTakeRef(PySetObject *so, PyObject *key)	todo		
-Objects/setobject.c	258	290	set_table_resize	Internal routine used by set_table_resize() to insert an item which is known to be absent from the set. Besides the performance benefit, there is also safety benefit since using set_add_entry() risks making a callback in the middle of a set_table_resize(), see issue 1456209. The caller is responsible for updating the key's reference count and the setobject's fill and used fields. */ static void set_insert_clean(setentry *table, size_t mask, PyObject *key, Py_hash_t hash)	todo		withdrawn: hypothesis minused < 2**63 assumes the size fits, and the theorem is on a helper
-Objects/setobject.c	301	377	set_table_resize	set_table_resize(PySetObject *so, Py_ssize_t minused)	todo		withdrawn: hypothesis minused < 2**63 assumes the size fits, and the theorem is on a helper
-Objects/setobject.c	380	388	set_contains_entry	set_contains_entry(PySetObject *so, PyObject *key, Py_hash_t hash)	todo		
-Objects/setobject.c	394	410	set_discard_entry	set_discard_entry(PySetObject *so, PyObject *key, Py_hash_t hash)	todo		
-Objects/setobject.c	413	421	set_add_key	set_add_key(PySetObject *so, PyObject *key)	todo		
-Objects/setobject.c	424	432	set_contains_key	set_contains_key(PySetObject *so, PyObject *key)	todo		
-Objects/setobject.c	435	443	set_discard_key	set_discard_key(PySetObject *so, PyObject *key)	todo		
-Objects/setobject.c	446	454	set_empty_to_minsize	set_empty_to_minsize(PySetObject *so)	todo		withdrawn: theorem is rfl on a thin definition
-Objects/setobject.c	457	504	set_clear_internal	set_clear_internal(PyObject *self)	todo		withdrawn: theorem is rfl on a thin definition
-Objects/setobject.c	520	541	set_next	set_next(PySetObject *so, Py_ssize_t *pos_ptr, setentry **entry_ptr)	todo		
+Objects/setobject.c	244	255	_PySet_AddTakeRef	_PySet_AddTakeRef(PySetObject *so, PyObject *key)	todo		one-line wrapper, no definition of its own
+Objects/setobject.c	258	290	set_table_resize	Internal routine used by set_table_resize() to insert an item which is known to be absent from the set. Besides the performance benefit, there is also safety benefit since using set_add_entry() risks making a callback in the middle of a set_table_resize(), see issue 1456209. The caller is responsible for updating the key's reference count and the setobject's fill and used fields. */ static void set_insert_clean(setentry *table, size_t mask, PyObject *key, Py_hash_t hash)	modelled	set-table-refines	
+Objects/setobject.c	301	377	set_table_resize	set_table_resize(PySetObject *so, Py_ssize_t minused)	modelled	set-table-refines	
+Objects/setobject.c	380	388	set_contains_entry	set_contains_entry(PySetObject *so, PyObject *key, Py_hash_t hash)	modelled	set-table-refines	
+Objects/setobject.c	394	410	set_discard_entry	set_discard_entry(PySetObject *so, PyObject *key, Py_hash_t hash)	modelled	set-table-refines	
+Objects/setobject.c	413	421	set_add_key	set_add_key(PySetObject *so, PyObject *key)	modelled	set-hash-failure,set-table-refines	
+Objects/setobject.c	424	432	set_contains_key	set_contains_key(PySetObject *so, PyObject *key)	modelled	set-hash-failure,set-table-refines	
+Objects/setobject.c	435	443	set_discard_key	set_discard_key(PySetObject *so, PyObject *key)	modelled	set-hash-failure,set-table-refines	
+Objects/setobject.c	446	454	set_empty_to_minsize	set_empty_to_minsize(PySetObject *so)	modelled	set-clear	
+Objects/setobject.c	457	504	set_clear_internal	set_clear_internal(PyObject *self)	modelled	set-clear	
+Objects/setobject.c	520	541	set_next	set_next(PySetObject *so, Py_ssize_t *pos_ptr, setentry **entry_ptr)	modelled	set-iter-order	
 Objects/setobject.c	544	563	set_dealloc	set_dealloc(PyObject *self)	excluded		no-behaviour: deallocation, runs when no reference remains
 Objects/setobject.c	566	617	set_repr_lock_held	set_repr_lock_held(PySetObject *so)	todo		
 Objects/setobject.c	620	628	set_repr	set_repr(PyObject *self)	todo		
 Objects/setobject.c	631	635	set_len	set_len(PyObject *self)	todo		
 Objects/setobject.c	638	707	set_merge_lock_held	set_merge_lock_held(PySetObject *so, PyObject *otherset)	todo		
-Objects/setobject.c	720	743	set_pop_impl	set_pop_impl(PySetObject *so) /*[clinic end generated code: output=4d65180f1271871b input=9296c84921125060]*/	todo		
+Objects/setobject.c	720	743	set_pop_impl	set_pop_impl(PySetObject *so) /*[clinic end generated code: output=4d65180f1271871b input=9296c84921125060]*/	modelled	set-pop	
 Objects/setobject.c	746	755	set_traverse	set_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or GC clear hook, no effect on the object's Python-level behaviour
 Objects/setobject.c	763	766	_shuffle_bits	_shuffle_bits(Py_uhash_t h)	todo		withdrawn: the order-free proof works for any shuffle; \"depends only on active entries\" is unproved
 Objects/setobject.c	779	818	frozenset_hash_impl	frozenset_hash_impl(PyObject *self)	todo		withdrawn: the order-free proof works for any shuffle; \"depends only on active entries\" is unproved

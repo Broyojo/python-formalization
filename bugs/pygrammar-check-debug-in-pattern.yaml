@@ -1,0 +1,64 @@
+id: pygrammar-check-debug-in-pattern
+title: "__debug__ in a match value pattern or mapping key is not folded, so it ignores compile(..., optimize=N)"
+priority: P4
+kind: semantic-mismatch
+module: pygrammar
+files: [Python/ast_preprocess.c]
+functions: ["astfold_pattern", "fold_const_match_patterns"]
+summary: |
+  astfold_expr replaces Name('__debug__', Load) with a constant chosen from the optimize level of
+  this compile. astfold_pattern sends MatchValue.value and each MatchMapping key to
+  fold_const_match_patterns, which only folds negative and complex literals and does not walk the
+  expression. So in `case __debug__.real:` the name survives, and at run time it reads the builtin,
+  whose value comes from the process's -O, not from compile(). With compile(src, 'x', 'exec',
+  optimize=1) in a process without -O, `__debug__.real` in an expression is 0 while the same
+  expression in a case pattern is 1. The same source therefore sees two values of __debug__.
+  MatchClass.cls is walked, so `case __debug__(a=1):` is folded; a guard is folded as well.
+likelihood: |
+  Very low. It needs `__debug__` as the root of a dotted name in a value pattern, in a program
+  compiled at an optimize level other than the process's. Nobody is likely to write this by hand.
+  Generated code is the only plausible way to reach it.
+maybe_intended: |
+  Possibly tolerated rather than intended. The comment at the top of astfold_pattern says "We still
+  recurse into all subexpressions and subpatterns anyway", which is not so for these two fields.
+  A maintainer may well answer that this does not matter, and could fairly close it as won't-fix.
+  It may be worth one line inside a report on something else, not a report of its own.
+reproducer: |
+  src = '''
+  match 1:
+      case __debug__.real:
+          hit = 1
+      case _:
+          hit = 0
+  expr = __debug__.real
+  '''
+  ns = {}
+  exec(compile(src, 'x', 'exec', optimize=1), ns)
+  print(ns['expr'], ns['hit'])
+  import sys
+  if sys.flags.optimize == 0 and ns['expr'] == 0 and ns['hit'] == 1:
+      print('REPRODUCED pygrammar-check-debug-in-pattern')
+expected: |
+  Both uses of __debug__ have the value the optimize level gives: expr == 0 and hit == 0.
+promised_by: |
+  The compile() documentation: optimize "specifies the optimization level of the compiler", and at
+  level 1 and above `__debug__` is false. The comment in astfold_pattern,
+  Python/ast_preprocess.c:900-902, says subexpressions are recursed into.
+cause: |
+  Python/ast_preprocess.c:905-906, MatchValue_kind, and 913-914, MatchMapping_kind, call
+  fold_const_match_patterns (lines 857-895) rather than astfold_expr. That function handles
+  UnaryOp and BinOp of constants only, and its `default` leaves the node unwalked.
+possible_fix: |
+  In fold_const_match_patterns, walk what it does not fold: an Attribute value with
+  CALL(astfold_expr, ...) on the default path, or give it a call to astfold_expr first.
+tested:
+  python3 (3.14.7): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["__debug__ match case pattern", "__debug__ optimize pattern",
+            "fold_const_match_patterns", "astfold_pattern", "__debug__ constant folding ast optimizer"]
+  bugforge: "none"
+lean:
+  property: PyLean.PyGrammar.Check.FoldReachesAll
+  theorem: PyLean.PyGrammar.Check.foldReachesAll_refuted

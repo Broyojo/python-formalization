@@ -31,6 +31,17 @@ structure Honest (P : Proto K (PyDict K V)) (hf : K → Int) (eqv : K → K → 
   trans : ∀ a b c, eqv a b = true → eqv b c = true → eqv a c = true
   hash_cons : ∀ a b, eqv a b = true → hf a = hf b
 
+/-- What any keys object satisfies, the shared keys of a split table included. A search needs no
+more than this. -/
+structure Core (hf : K → Int) (eqv : K → K → Bool) (isStr : K → Bool) (k : Keys K V) : Prop
+    extends Chain k where
+  hashes : ∀ ix e, k.entry ix = some e → e.hash = hf e.key
+  uniq : ∀ i1 e1 i2 e2, k.entry i1 = some e1 → k.entry i2 = some e2 →
+    eqv e1.key e2.key = true → i1 = i2
+  strs : ∀ ix e, k.kind ≠ .general → k.entry ix = some e → isStr e.key = true
+  load : (k.filled : Int) + k.usable ≤ usableFraction k.size
+  usableNN : 0 ≤ k.usable
+
 structure WF (hf : K → Int) (eqv : K → K → Bool) (isStr : K → Bool) (k : Keys K V) : Prop
     extends Chain k where
   hashes : ∀ ix e, k.entry ix = some e → e.hash = hf e.key
@@ -41,6 +52,11 @@ structure WF (hf : K → Int) (eqv : K → K → Bool) (isStr : K → Bool) (k :
   load : (k.filled : Int) + k.usable ≤ usableFraction k.size
   nent : (k.nentries : Int) + k.usable ≤ usableFraction k.size
   usableNN : 0 ≤ k.usable
+
+theorem WF.toCore {hf : K → Int} {eqv : K → K → Bool} {isStr : K → Bool} {k : Keys K V}
+    (w : WF hf eqv isStr k) : Core hf eqv isStr k :=
+  { toChain := w.toChain, hashes := w.hashes, uniq := w.uniq, strs := w.strs, load := w.load
+    usableNN := w.usableNN }
 
 theorem usableFraction_lt (n : Nat) (h : 0 < n) : usableFraction n < n := by
   simp only [usableFraction, Nat.shiftLeft_eq]
@@ -55,10 +71,22 @@ theorem WF.filled_lt {hf : K → Int} {eqv : K → K → Bool} {isStr : K → Bo
   have h3 := usableFraction_lt k.size k.size_pos
   omega
 
+theorem Core.filled_lt {hf : K → Int} {eqv : K → K → Bool} {isStr : K → Bool} {k : Keys K V}
+    (w : Core hf eqv isStr k) : k.filled < k.size := by
+  have h1 := w.load
+  have h2 := w.usableNN
+  have h3 := usableFraction_lt k.size k.size_pos
+  omega
+
+theorem Core.stops {hf : K → Int} {eqv : K → K → Bool} {isStr : K → Bool} {k : Keys K V}
+    (w : Core hf eqv isStr k) (h : Int) :
+    ∃ j, j < probeFuel k.log2Size ∧ k.getIndex (k.pos h j) = DKIX_EMPTY :=
+  exists_stop k w.toChain (exists_empty k w.toChain w.filled_lt) h
+
 theorem WF.stops {hf : K → Int} {eqv : K → K → Bool} {isStr : K → Bool} {k : Keys K V}
     (w : WF hf eqv isStr k) (h : Int) :
     ∃ j, j < probeFuel k.log2Size ∧ k.getIndex (k.pos h j) = DKIX_EMPTY :=
-  exists_stop k w.toChain (exists_empty k w.toChain w.filled_lt) h
+  w.toCore.stops h
 
 section Lookup
 variable {P : Proto K (PyDict K V)} {hf : K → Int} {eqv : K → K → Bool}
@@ -134,11 +162,11 @@ theorem compareUnicodeUnicode_spec (H : Honest P hf eqv) (e : Ent K V) (hh : e.h
 private def seqIdx (k : Keys K V) (h : Int) (j : Nat) : Int := k.getIndex (k.pos h j)
 
 /-- Where the search ends, for any check that agrees with `eqv`. -/
-theorem search_found {σ : Type} (k : Keys K V) (w : WF hf eqv P.isStr k) (H : Honest P hf eqv)
+theorem search_found {σ W : Type} (k : Keys K W) (w : Core hf eqv P.isStr k) (H : Honest P hf eqv)
     (getIx : σ → Nat → Int) (check : Nat → M σ Int) (s : σ) (key : K)
     (hget : ∀ i, getIx s i = k.getIndex i)
     (hck : ∀ ix e, k.entry ix = some e → check ix s = (.ok (if eqv e.key key then 1 else 0), s))
-    (ix : Nat) (e : Ent K V) (he : k.entry ix = some e) (heq : eqv e.key key = true) :
+    (ix : Nat) (e : Ent K W) (he : k.entry ix = some e) (heq : eqv e.key key = true) :
     doLookup getIx check (probeFuel k.log2Size) k.mask (toU64 (hf key) &&& k.mask) (toU64 (hf key)) s
       = (.ok (ix : Int), s) := by
   have hhash : e.hash = hf key := (w.hashes ix e he).trans (H.hash_cons _ _ heq)
@@ -147,7 +175,7 @@ theorem search_found {σ : Type} (k : Keys K V) (w : WF hf eqv P.isStr k) (H : H
   let c : Nat → Bool := fun t => match k.entry t with
     | some e' => eqv e'.key key
     | none => false
-  have hidxNat : ∀ j, seqIdx k (hf key) j ≥ 0 → ∃ (t : Nat) (e' : Ent K V),
+  have hidxNat : ∀ j, seqIdx k (hf key) j ≥ 0 → ∃ (t : Nat) (e' : Ent K W),
       seqIdx k (hf key) j = (t : Int) ∧ k.entry t = some e' := by
     intro j hj
     rcases w.range (k.pos (hf key) j) (k.pos_lt _ _) with h | h | h
@@ -186,7 +214,7 @@ theorem search_found {σ : Type} (k : Keys K V) (w : WF hf eqv P.isStr k) (H : H
   rw [hval] at h5
   exact h5
 
-theorem search_missing {σ : Type} (k : Keys K V) (w : WF hf eqv P.isStr k)
+theorem search_missing {σ W : Type} (k : Keys K W) (w : Core hf eqv P.isStr k)
     (getIx : σ → Nat → Int) (check : Nat → M σ Int) (s : σ) (key : K)
     (hget : ∀ i, getIx s i = k.getIndex i)
     (hck : ∀ ix e, k.entry ix = some e → check ix s = (.ok (if eqv e.key key then 1 else 0), s))
@@ -194,7 +222,7 @@ theorem search_missing {σ : Type} (k : Keys K V) (w : WF hf eqv P.isStr k)
     doLookup getIx check (probeFuel k.log2Size) k.mask (toU64 (hf key) &&& k.mask) (toU64 (hf key)) s
       = (.ok DKIX_EMPTY, s) := by
   obtain ⟨j0, hj0, h1⟩ := w.stops (hf key)
-  have hidxNat : ∀ j, seqIdx k (hf key) j ≥ 0 → ∃ (t : Nat) (e' : Ent K V),
+  have hidxNat : ∀ j, seqIdx k (hf key) j ≥ 0 → ∃ (t : Nat) (e' : Ent K W),
       seqIdx k (hf key) j = (t : Int) ∧ k.entry t = some e' := by
     intro j hj
     rcases w.range (k.pos (hf key) j) (k.pos_lt _ _) with h | h | h
@@ -231,14 +259,14 @@ theorem lookupAux_found (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K V)
   simp only [dictLookupAux, hmask, hfuel, hkind]
   by_cases hg : k.kind = .general
   · simp only [hg, bne_self_eq_false, Bool.false_eq_true, if_false, dictkeysGenericLookup]
-    rw [search_found k w H bodyIx (fun t => compareGeneric P t key (hf key)) mp key hget
+    rw [search_found k w.toCore H bodyIx (fun t => compareGeneric P t key (hf key)) mp key hget
       (fun t e' h => compareGeneric_spec H mp k hb t e' h (w.hashes t e' h) key) ix e he heq]
     simp [hne, hpos, hval]
   · have hg' : (k.kind != .general) = true := by simpa using hg
     simp only [hg', if_true]
     by_cases hs : P.isStr key = true
     · simp only [hs, if_true]
-      rw [search_found k w H bodyIx (checkUnicode P key (hf key)) mp key hget
+      rw [search_found k w.toCore H bodyIx (checkUnicode P key (hf key)) mp key hget
         (fun t e' h => by
           have hstr := w.strs t e' hg h
           have hkh := entryKH_combined mp k hb t
@@ -247,7 +275,7 @@ theorem lookupAux_found (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K V)
           rw [compareUnicodeUnicode_spec H e' (w.hashes t e' h) key hs hstr]) ix e he heq]
       simp [hne, hpos, hval]
     · simp only [hs, if_false, Bool.false_eq_true, unicodekeysLookupGeneric]
-      rw [search_found k w H bodyIx (fun t => compareUnicodeGeneric P t key (hf key)) mp key hget
+      rw [search_found k w.toCore H bodyIx (fun t => compareUnicodeGeneric P t key (hf key)) mp key hget
         (fun t e' h => compareUnicodeGeneric_spec H mp k hb t e' h (w.hashes t e' h) key) ix e he heq]
       simp [hne, hpos, hval]
 
@@ -265,14 +293,14 @@ theorem lookupAux_missing (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K V)
   simp only [dictLookupAux, hmask, hfuel, hkind]
   by_cases hg : k.kind = .general
   · simp only [hg, bne_self_eq_false, Bool.false_eq_true, if_false, dictkeysGenericLookup]
-    rw [search_missing k w bodyIx (fun t => compareGeneric P t key (hf key)) mp key hget
+    rw [search_missing k w.toCore bodyIx (fun t => compareGeneric P t key (hf key)) mp key hget
       (fun t e' h => compareGeneric_spec H mp k hb t e' h (w.hashes t e' h) key) hno]
     simp [hne, hneg]
   · have hg' : (k.kind != .general) = true := by simpa using hg
     simp only [hg', if_true]
     by_cases hs : P.isStr key = true
     · simp only [hs, if_true]
-      rw [search_missing k w bodyIx (checkUnicode P key (hf key)) mp key hget
+      rw [search_missing k w.toCore bodyIx (checkUnicode P key (hf key)) mp key hget
         (fun t e' h => by
           have hstr := w.strs t e' hg h
           have hkh := entryKH_combined mp k hb t
@@ -281,7 +309,7 @@ theorem lookupAux_missing (H : Honest P hf eqv) (mp : PyDict K V) (k : Keys K V)
           rw [compareUnicodeUnicode_spec H e' (w.hashes t e' h) key hs hstr]) hno]
       simp [hne, hneg]
     · simp only [hs, if_false, Bool.false_eq_true, unicodekeysLookupGeneric]
-      rw [search_missing k w bodyIx (fun t => compareUnicodeGeneric P t key (hf key)) mp key hget
+      rw [search_missing k w.toCore bodyIx (fun t => compareUnicodeGeneric P t key (hf key)) mp key hget
         (fun t e' h => compareUnicodeGeneric_spec H mp k hb t e' h (w.hashes t e' h) key) hno]
       simp [hne, hneg]
 
