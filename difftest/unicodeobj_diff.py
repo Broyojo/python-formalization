@@ -959,6 +959,27 @@ def gen_text_translate(rng):
     return {"mod": "unicodeobj", "fn": fn, "s": s, "table": [[k, v] for k, v in table.items()]}
 
 
+@gen("text", 5)
+def gen_text_translate_x(rng):
+    s = text_str(rng) if rng.random() < 0.5 else [rng.choice([97, 98, 99, 100]) for _ in range(rng.randint(0, 7))]
+    if rng.random() < 0.25:
+        s = s + [rng.choice([0xe9, 0x20ac, 0x1f600])]
+    keys = list(dict.fromkeys(s + rng.sample(TEXT_ALPH, 2)))
+    table = [[k, [text_item(rng) for _ in range(rng.randint(1, 3))]] for k in keys if rng.random() < 0.75]
+    mode = rng.choice(["ignore", "ignore", "strict", "custom"])
+    script = []
+    for _ in range(rng.randint(1, 4)):
+        r = rng.random()
+        if r < 0.1:
+            script.append({"t": "raise"})
+        elif r < 0.2:
+            script.append({"t": "bad", "form": rng.randint(0, 2)})
+        else:
+            pos, rel = (rng.choice([0, 0, 0, 1, -1]), True) if rng.random() < 0.7 else (rng.choice(CB_POS), False)
+            script.append({"t": "ret", "rep": cps_of(rng.choice(["", "x", "\xe9", "\U0001f600"])), "pos": pos, "rel": rel})
+    return {"mod": "unicodeobj", "fn": "text_translate_x", "s": s, "table": table, "mode": mode, "script": script}
+
+
 @gen("text", 3)
 def gen_text_maketrans(rng):
     r = rng.random()
@@ -1058,6 +1079,50 @@ def run_text_bytes(c):
 @run("text_repr")
 def run_text_repr(c):
     return cps_of(repr(s_of(c["s"])))
+
+
+class ScriptMapping:
+    """The n-th lookup of a key gets its n-th answer, and the last answer repeats."""
+
+    def __init__(self, table):
+        self.d = {k: [conv_item(v) for v in vs] for k, vs in table}
+        self.seen = {}
+
+    def __getitem__(self, k):
+        vs = self.d[k]
+        n = self.seen.get(k, 0)
+        self.seen[k] = n + 1
+        v = vs[min(n, len(vs) - 1)]
+        if v is RAISE:
+            raise ValueError("boom")
+        return v
+
+
+def tr_handler(script):
+    items = list(script)
+
+    def handler(e):
+        if not items:
+            raise RuntimeError("done")
+        r = items.pop(0)
+        if r["t"] == "raise":
+            raise ValueError("boom")
+        if r["t"] == "bad":
+            return ["x", ("x",), (b"x", 1)][r["form"]]
+        return s_of(r["rep"]), r["pos"] + e.end if r["rel"] else r["pos"]
+    return handler
+
+
+@run("text_translate_x")
+def run_text_translate_x(c):
+    import codecs
+    s, m = s_of(c["s"]), ScriptMapping(c["table"])
+    if c["mode"] == "ignore":
+        return cps_of(s.translate(m))
+    if c["mode"] == "strict":
+        return cps_of(TRANSLATE(s, m, None))
+    codecs.register_error("uo_tr", tr_handler(c["script"]))
+    return cps_of(TRANSLATE(s, m, b"uo_tr"))
 
 
 @run("text_translate")

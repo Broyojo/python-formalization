@@ -197,13 +197,13 @@ Objects/unicodeobject.c	8916	8970	charmapencode_output	charmapencode_output(Py_U
 Objects/unicodeobject.c	8975	9113	charmap_encoding_error	charmap_encoding_error( PyObject *unicode, Py_ssize_t *inpos, PyObject *mapping, PyObject **exceptionObject, _Py_error_handler *error_handler, PyObject **error_handler_obj, const char *errors, PyObject **res, Py_ssize_t *respos)	todo		
 Objects/unicodeobject.c	9116	9182	_PyUnicode_EncodeCharmap	_PyUnicode_EncodeCharmap(PyObject *unicode, PyObject *mapping, const char *errors)	todo		
 Objects/unicodeobject.c	9185	9193	PyUnicode_AsCharmapString	PyUnicode_AsCharmapString(PyObject *unicode, PyObject *mapping)	todo		
-Objects/unicodeobject.c	9197	9217	make_translate_exception	make_translate_exception(PyObject **exceptionObject, PyObject *unicode, Py_ssize_t startpos, Py_ssize_t endpos, const char *reason)	todo		
-Objects/unicodeobject.c	9224	9273	unicode_translate_call_errorhandler	unicode_translate_call_errorhandler(const char *errors, PyObject **errorHandler, const char *reason, PyObject *unicode, PyObject **exceptionObject, Py_ssize_t startpos, Py_ssize_t endpos, Py_ssize_t *newpos)	todo		
-Objects/unicodeobject.c	9281	9332	charmaptranslate_lookup	charmaptranslate_lookup(Py_UCS4 c, PyObject *mapping, PyObject **result, Py_UCS4 *replace)	todo		
-Objects/unicodeobject.c	9338	9381	charmaptranslate_output	charmaptranslate_output(Py_UCS4 ch, PyObject *mapping, _PyUnicodeWriter *writer)	todo		
-Objects/unicodeobject.c	9384	9430	unicode_fast_translate_lookup	unicode_fast_translate_lookup(PyObject *mapping, Py_UCS1 ch, Py_UCS1 *translate)	todo		
-Objects/unicodeobject.c	9436	9484	unicode_fast_translate	unicode_fast_translate(PyObject *input, PyObject *mapping, _PyUnicodeWriter *writer, int ignore, Py_ssize_t *input_pos)	todo		
-Objects/unicodeobject.c	9487	9601	_PyUnicode_TranslateCharmap	_PyUnicode_TranslateCharmap(PyObject *input, PyObject *mapping, const char *errors)	todo		
+Objects/unicodeobject.c	9197	9217	make_translate_exception	make_translate_exception(PyObject **exceptionObject, PyObject *unicode, Py_ssize_t startpos, Py_ssize_t endpos, const char *reason)	modelled	unicodeobj-text-translate-callback-position	
+Objects/unicodeobject.c	9224	9273	unicode_translate_call_errorhandler	unicode_translate_call_errorhandler(const char *errors, PyObject **errorHandler, const char *reason, PyObject *unicode, PyObject **exceptionObject, Py_ssize_t startpos, Py_ssize_t endpos, Py_ssize_t *newpos)	modelled	unicodeobj-text-translate-callback-position	
+Objects/unicodeobject.c	9281	9332	charmaptranslate_lookup	charmaptranslate_lookup(Py_UCS4 c, PyObject *mapping, PyObject **result, Py_UCS4 *replace)	modelled	unicodeobj-text-translate-doc,unicodeobj-text-translate-bad-item	
+Objects/unicodeobject.c	9338	9381	charmaptranslate_output	charmaptranslate_output(Py_UCS4 ch, PyObject *mapping, _PyUnicodeWriter *writer)	modelled	unicodeobj-text-translate-doc,unicodeobj-text-translate-bad-item	
+Objects/unicodeobject.c	9384	9430	unicode_fast_translate_lookup	unicode_fast_translate_lookup(PyObject *mapping, Py_UCS1 ch, Py_UCS1 *translate)	modelled	unicodeobj-text-translate-pure-fast-slow,unicodeobj-text-translate-one-lookup	
+Objects/unicodeobject.c	9436	9484	unicode_fast_translate	unicode_fast_translate(PyObject *input, PyObject *mapping, _PyUnicodeWriter *writer, int ignore, Py_ssize_t *input_pos)	modelled	unicodeobj-text-translate-pure-fast-slow,unicodeobj-text-translate-one-lookup,unicodeobj-text-translate-stateful-table	
+Objects/unicodeobject.c	9487	9601	_PyUnicode_TranslateCharmap	_PyUnicode_TranslateCharmap(PyObject *input, PyObject *mapping, const char *errors)	modelled	unicodeobj-text-translate-pure-fast-slow	
 Objects/unicodeobject.c	9604	9611	PyUnicode_Translate	PyUnicode_Translate(PyObject *str, PyObject *mapping, const char *errors)	todo		
 Objects/unicodeobject.c	9614	9657	_PyUnicode_TransformDecimalAndSpaceToASCII	_PyUnicode_TransformDecimalAndSpaceToASCII(PyObject *unicode)	modelled	unicodeobj-text-transform-decimal	
 Objects/unicodeobject.c	9682	9762	any_find_slice	any_find_slice(PyObject* s1, PyObject* s2, Py_ssize_t start, Py_ssize_t end, int direction)	modelled	strsearch-find-str-bytes	
@@ -309,7 +309,7 @@ Objects/unicodeobject.c	13365	13368	unicode_str	PyObject *unicode_str(PyObject *
 Objects/unicodeobject.c	13377	13381	unicode_swapcase_impl	unicode_swapcase_impl(PyObject *self) /*[clinic end generated code: output=5d28966bf6d7b2af input=3f3ef96d5798a7bb]*/	todo		
 Objects/unicodeobject.c	13384	13420	unicode_maketrans_from_dict	unicode_maketrans_from_dict(PyObject *x, PyObject *newdict)	todo		
 Objects/unicodeobject.c	13448	13526	unicode_maketrans_impl	unicode_maketrans_impl(PyObject *x, PyObject *y, PyObject *z) /*[clinic end generated code: output=a925c89452bd5881 input=66bc00a1b4258a6e]*/	modelled	unicodeobj-text-maketrans-translate	
-Objects/unicodeobject.c	13545	13549	unicode_translate	unicode_translate(PyObject *self, PyObject *table) /*[clinic end generated code: output=3cb448ff2fd96bf3 input=9874c06808f58900]*/	todo		
+Objects/unicodeobject.c	13545	13549	unicode_translate	unicode_translate(PyObject *self, PyObject *table) /*[clinic end generated code: output=3cb448ff2fd96bf3 input=9874c06808f58900]*/	modelled	unicodeobj-text-translate-pure-fast-slow,unicodeobj-text-translate-doc	
 Objects/unicodeobject.c	13558	13564	unicode_upper_impl	unicode_upper_impl(PyObject *self) /*[clinic end generated code: output=1b7ddd16bbcdc092 input=db3d55682dfe2e6c]*/	todo		
 Objects/unicodeobject.c	13578	13609	unicode_zfill_impl	unicode_zfill_impl(PyObject *self, Py_ssize_t width) /*[clinic end generated code: output=e13fb6bdf8e3b9df input=c6b2f772c6f27799]*/	modelled	strsearch-zfill-spec	
 Objects/unicodeobject.c	13627	13664	unicode_startswith_impl	unicode_startswith_impl(PyObject *self, PyObject *subobj, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=4bd7cfd0803051d4 input=5f918b5f5f89d856]*/	todo		
