@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Lib/re/_constants.py	37	53	PatternError.__init__	__init__(self, msg, pattern=None, pos=None)	todo		
+Lib/re/_constants.py	37	53	PatternError.__init__	__init__(self, msg, pattern=None, pos=None)	modelled	textlibs-re-message	
 Lib/re/_constants.py	60	63	_NamedIntConstant.__new__	__new__(cls, value, name)	excluded		internal-bootstrap: module start-up
 Lib/re/_constants.py	65	66	_NamedIntConstant.__repr__	__repr__(self)	excluded		test-support: debugging aid; opcodes compare as ints
 Lib/re/_constants.py	72	75	_makecodes	_makecodes(*names)	excluded		internal-bootstrap: module start-up
