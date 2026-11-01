@@ -1,0 +1,83 @@
+id: typeobj-exc-split-sets-suppress-context
+title: "split() and subgroup() set __suppress_context__ on their results, which hides __context__ in tracebacks"
+priority: P3
+kind: self-inconsistency
+module: typeobj
+files: [Objects/exceptions.c]
+functions: ["exceptiongroup_subset", "PyException_SetCause"]
+summary: |
+  `exceptiongroup_subset` copies the metadata of the original group to each part it builds:
+  traceback, context, cause and notes. It copies the cause with
+  `PyException_SetCause(eg, PyException_GetCause(orig))`, and `PyException_SetCause` always
+  sets `suppress_context`, also when the cause is NULL. So every group built by `split()`,
+  `subgroup()` or `except*` has `__suppress_context__ == True` whatever the original has, and
+  it keeps `__context__`, which the traceback printer then skips:
+
+      try:
+          try:
+              raise ValueError('ctx')
+          except ValueError:
+              raise ExceptionGroup('g', [TypeError(1), KeyError(2)])
+      except ExceptionGroup as e:
+          e.__suppress_context__      # False
+          m, r = e.split(TypeError)
+          m.__suppress_context__      # True
+          m.__context__               # ValueError('ctx'), kept but never displayed
+
+  The visible effect is with `except*`. The group that propagates out of a partly handled
+  `except*` is built by this code, so an uncaught exception loses the "During handling of the
+  above exception, another exception occurred" section, and the `ValueError` above never
+  appears in the output.
+likelihood: |
+  Moderate wherever `except*` runs inside an exception handler: the traceback is silently
+  shorter. It takes a person reading a traceback to notice.
+maybe_intended: |
+  Unlikely. The function exists to give the parts the metadata of the original, and the
+  comment says "with metadata from _orig". The flag is a side effect of the helper used to
+  store the cause. It could be argued that `__suppress_context__` is not in the list in the
+  `derive` documentation, but a group that keeps `__context__` and hides it fits neither
+  reading.
+reproducer: |
+  import traceback
+  try:
+      try:
+          raise ValueError('ctx')
+      except ValueError:
+          raise ExceptionGroup('g', [TypeError(1), KeyError(2)])
+  except ExceptionGroup as e:
+      m, r = e.split(TypeError)
+      full = ''.join(traceback.format_exception(e))
+      part = ''.join(traceback.format_exception(m))
+      print('original', e.__suppress_context__, 'part', m.__suppress_context__, repr(m.__context__))
+      print('context shown: original', 'ctx' in full, 'part', 'ctx' in part)
+      if not e.__suppress_context__ and m.__suppress_context__ and m.__context__ is e.__context__ \
+              and 'ctx' in full and 'ctx' not in part:
+          print('REPRODUCED typeobj-exc-split-sets-suppress-context')
+expected: |
+  `m.__suppress_context__` is False, as on the original, and the part's traceback shows the
+  context.
+promised_by: |
+  The comment on `exceptiongroup_subset` ("wrapping excs with metadata from _orig") and the
+  documentation of `derive`: split and subgroup keep the metadata of the group. The
+  implementation disagrees with itself: it keeps `__context__` and disables it.
+cause: |
+  Objects/exceptions.c:1200 calls `PyException_SetCause`, and :555 sets
+  `suppress_context = 1` unconditionally.
+possible_fix: |
+  After copying the cause, set the new group's `suppress_context` from the original's, or
+  store the cause without going through `PyException_SetCause`.
+reproduces:
+  python3 (3.14.7): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["exception group split suppress_context", "suppress_context subgroup", "except* __context__ traceback",
+            "ExceptionGroup __suppress_context__ split", "except* __suppress_context__",
+            "bugforge-results/README.md: no exceptions.c entries"]
+  searched_again: "2026-11-01, as separate words; multi-word entries in `queries` above were exact phrases, so their empty results are weak evidence"
+  queries_as_words: ["exception group split suppress_context", "subgroup __suppress_context__", "except star traceback context hidden", "__suppress_context__ ExceptionGroup", "ExceptionGroup __context__ split", "suppress_context derive"]
+  related:
+    - {number: 99619, state: closed, relation: "related, not a duplicate: a doc fix saying derive does not copy __cause__ and friends; split uses exceptiongroup_subset instead"}
+lean:
+  property: PyLean.TypeObj.SubsetCopiesSuppressContext
+  theorem: PyLean.TypeObj.subsetCopiesSuppressContext_refuted

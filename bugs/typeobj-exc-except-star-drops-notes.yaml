@@ -1,0 +1,88 @@
+id: typeobj-exc-except-star-drops-notes
+title: "A note added in an except* handler is lost on re-raise: is_same_exception_metadata compares an unused field"
+priority: P3
+kind: logic-error
+module: typeobj
+files: [Objects/exceptions.c]
+functions: ["is_same_exception_metadata", "_PyExc_PrepReraiseStar", "BaseException_add_note_impl"]
+summary: |
+  `_PyExc_PrepReraiseStar` tells a re-raised subgroup from a newly raised exception with
+  `is_same_exception_metadata`, which compares `notes`, `traceback`, `cause` and `context` of
+  the two objects. `notes` there is the C field `PyBaseExceptionObject.notes`, which nothing
+  writes: `add_note` stores `__notes__` as an ordinary instance attribute. The comparison is
+  always NULL with NULL.
+
+  So a handler that adds a note and re-raises is classified as a plain re-raise. The result
+  is projected from the original group, and the object the note was added to is thrown away:
+
+      try:
+          try:
+              raise ExceptionGroup('g', [ValueError(1), TypeError(2)])
+          except* ValueError as e:
+              e.add_note('while loading config')
+              raise
+      except ExceptionGroup as x:
+          x.__notes__                 # AttributeError
+          x.exceptions                # (ValueError(1), TypeError(2))
+
+  The note is on neither the result nor anything in it. With `except ValueError as e:`, the
+  same code keeps the note, and adding a note and re-raising is the use PEP 678 describes.
+likelihood: |
+  Moderate where `except*` is used: annotating and re-raising is the normal way to use notes,
+  and the loss is silent.
+maybe_intended: |
+  Partly. A bare `raise` in `except*` re-raises "the same exceptions", and the group `e` is
+  documented as a derived copy, so a reader could expect changes to it to vanish. But the
+  code compares `notes` on purpose, which shows that notes were meant to count, and the field
+  became dead when notes moved to `__notes__`. A change here could also go the other way:
+  documenting that notes added to `e` do not survive, and deleting the comparison and the
+  unused field.
+reproducer: |
+  try:
+      try:
+          raise ExceptionGroup('g', [ValueError(1), TypeError(2)])
+      except* ValueError as e:
+          e.add_note('while loading config')
+          raise
+  except ExceptionGroup as x:
+      got = [getattr(x, '__notes__', None)] + [getattr(s, '__notes__', None) for s in x.exceptions]
+      print(repr(x), got)
+      plain = None
+      try:
+          try:
+              raise ValueError(1)
+          except ValueError as e:
+              e.add_note('while loading config')
+              raise
+      except ValueError as y:
+          plain = y.__notes__
+      print('except keeps', plain)
+      if got == [None, None, None] and plain == ['while loading config']:
+          print('REPRODUCED typeobj-exc-except-star-drops-notes')
+expected: |
+  The note reaches the caller, on the re-raised part of the group; that means treating `e` as
+  changed when its `__notes__` differ, which is what the comparison of `notes` asks for.
+promised_by: |
+  The code itself: Objects/exceptions.c:1595 compares notes as part of "same metadata". PEP 678
+  defines notes as `__notes__`, and `add_note` documents no exception for `except*`.
+cause: |
+  Objects/exceptions.c:1595 reads `e1->notes == e2->notes`; `BaseException_add_note_impl`
+  (:298) uses `__notes__` through `PyObject_SetAttr`, and `notes` is only ever cleared
+  (:69, :138).
+possible_fix: |
+  Compare `__notes__` (a lookup in the instance dict, by identity of the list as
+  `exceptiongroup_subset` makes a new list for each part it builds, so the comparison needs to
+  be by contents), or remove the field and document the behaviour in the `except*` section.
+reproduces:
+  python3 (3.14.7): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues: []
+  queries: ["add_note except*", "__notes__ except*", "notes exception group reraise", "is_same_exception_metadata",
+            "except* note lost", "PrepReraiseStar notes", "except* add_note reraise note lost",
+            "bugforge-results/README.md: no exceptions.c entries"]
+  searched_again: "2026-11-01, as separate words; multi-word entries in `queries` above were exact phrases, so their empty results are weak evidence"
+  queries_as_words: ["except star notes lost", "add_note except reraise", "exception group notes reraise", "is_same_exception_metadata", "add_note", "__notes__ except", "__notes__ ExceptionGroup", "PrepReraiseStar"]
+lean:
+  property: PyLean.TypeObj.SameMetadataComparesNotes
+  theorem: PyLean.TypeObj.sameMetadataComparesNotes_refuted

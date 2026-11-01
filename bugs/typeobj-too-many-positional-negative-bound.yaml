@@ -1,0 +1,55 @@
+id: typeobj-too-many-positional-negative-bound
+title: "TypeError for too many arguments can report a negative minimum: 'takes from -2 to 1 positional arguments'"
+priority: P4
+kind: wrong-message
+module: typeobj
+files: [Python/ceval.c]
+functions: ["too_many_positional", "PyFunction_SetDefaults", "func_set_defaults"]
+summary: |
+  `__defaults__` accepts a tuple of any length (funcobject.c:842). The rest of the call path
+  copes with more defaults than parameters, using the last ones (ceval.c:1858, m < 0), but
+  `too_many_positional` prints `co_argcount - defcount` unchecked:
+
+      def f(a): pass
+      f.__defaults__ = (1, 2, 3)
+      f(1, 2)  # TypeError: f() takes from -2 to 1 positional arguments but 2 were given
+
+  The call itself is rejected correctly; only the text is wrong.
+likelihood: |
+  Very low: it needs `__defaults__` assigned by hand with too many values.
+maybe_intended: |
+  Not intended, but a maintainer may reasonably consider it not worth a change. Recorded
+  because the model mirrors the arithmetic and the property fails; not proposed for filing
+  on its own.
+reproducer: |
+  def f(a):
+      return a
+  f.__defaults__ = (1, 2, 3)
+  try:
+      f(1, 2)
+  except TypeError as e:
+      msg = str(e)
+  print(msg)
+  if 'from -2 to 1' in msg:
+      print('REPRODUCED typeobj-too-many-positional-negative-bound')
+expected: |
+  A non-negative lower bound ("from 0 to 1"), or the plain "takes 1 positional argument".
+observed: |
+  python3 3.14.7: f() takes from -2 to 1 positional arguments but 2 were given. REPRODUCED.
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED by scripts/check_bugs.py.
+promised_by: |
+  invariant: an argument count in an error message is not negative.
+cause: |
+  Python/ceval.c:1510 computes `atleast = co_argcount - defcount` and does not clamp it;
+  Objects/funcobject.c:842 (`func_set_defaults`) does not limit the tuple's length.
+possible_fix: |
+  `Py_MAX(0, co_argcount - defcount)` at ceval.c:1510.
+duplicates:
+  issues: []
+  queries: ["__defaults__ longer than positional arguments takes from"]
+  bugforge: "no match"
+  searched_again: "2026-11-01, as separate words; multi-word entries in `queries` above were exact phrases, so their empty results are weak evidence"
+  queries_as_words: ["takes from positional arguments negative", "too_many_positional", "positional arguments keyword-only defaults error message wrong count"]
+lean:
+  property: PyLean.TypeObj.TooManyPositionalBound
+  theorem: PyLean.TypeObj.tooManyPositionalBound_refuted
