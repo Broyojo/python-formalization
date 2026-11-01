@@ -15,11 +15,12 @@ open PyLean
 
 variable {K V : Type} [DecidableEq K]
 
-/-- The list a dict stands for: live entries in `dk_entries` order. -/
+/-- The list a dict stands for: live entries in `dk_entries` order, or, for a split table, the
+values the dict holds, in the order of its insertion-order array. -/
 def dictAssoc (d : PyDict K V) : List (K × V) :=
   match d.body with
   | .combined k => k.items
-  | .split _ _ => []
+  | .split k v => (splitLive k v d.used).map fun e => (e.key, e.value)
 
 structure DictInv (hf : K → Int) (eqv : K → K → Bool) (isStr : K → Bool) (d : PyDict K V) : Prop where
   wf : ∃ k, d.body = .combined k ∧ WF hf eqv isStr k ∧ d.used = (liveEntries k).length

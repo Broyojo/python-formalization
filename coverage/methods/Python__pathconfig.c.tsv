@@ -4,7 +4,7 @@ Python/pathconfig.c	55	74	_PyPathConfig_ClearGlobal	_PyPathConfig_ClearGlobal(vo
 Python/pathconfig.c	77	119	_PyPathConfig_ReadGlobal	_PyPathConfig_ReadGlobal(PyConfig *config)	todo		
 Python/pathconfig.c	122	193	_PyPathConfig_UpdateGlobal	_PyPathConfig_UpdateGlobal(const PyConfig *config)	todo		
 Python/pathconfig.c	197	200	path_out_of_memory	path_out_of_memory(const char *func)	todo		
-Python/pathconfig.c	203	236	PyAPI_FUNC	PyAPI_FUNC(void) Py_SetPath(const wchar_t *path)	todo		
+Python/pathconfig.c	203	236	Py_SetPath	PyAPI_FUNC(void) Py_SetPath(const wchar_t *path)	todo		
 Python/pathconfig.c	240	254	Py_SetPythonHome	Py_SetPythonHome(const wchar_t *home)	todo		
 Python/pathconfig.c	258	272	Py_SetProgramName	Py_SetProgramName(const wchar_t *program_name)	todo		
 Python/pathconfig.c	276	284	Py_GetPath	Py_GetPath(void)	todo		

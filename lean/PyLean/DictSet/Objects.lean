@@ -22,7 +22,8 @@ structure Atom where
   isStrLike : Bool := false
   /-- `__eq__` raises `ValueError('eq')`. -/
   raises : Bool := false
-  /-- `__eq__` mutates the container: 1 clears it, 2 pops an item. -/
+  /-- `__eq__` mutates a dict: 1 clears it, 2 pops an item, `10 + i` pops an item and stores its
+  value under pool object `i`, which keeps the number of items. -/
   act : Nat := 0
   rep : String := ""
   tname : String := ""
@@ -134,6 +135,47 @@ def dProto : Proto DObj DD :=
         match dictPopitem s with
         | (_, s') => (.ok false, s')
       | _ => (DObj.eq a b, s) }
+
+/-- A comparison with no side effect, for the insertion inside `evilAct`. -/
+def plainProto : Proto DObj DD :=
+  { dKeyOps with eq := fun a b s => (DObj.eq a b, s) }
+
+/-- What `evil_act` in the test does to a dict. -/
+def evilAct (pool : Array DObj) (n : Nat) (t : DD) : DD :=
+  match n with
+  | 0 => t
+  | 1 => dictClear t
+  | 2 => (dictPopitem t).2
+  | n =>
+    match dictPopitem t with
+    | (.ok (_, v), t') => (dictSetItem plainProto pool[n - 10]! v t').2
+    | (.error _, t') => t'
+
+/-- `KEvil.__eq__` answers `False`, or raises once it has acted if the key is flagged so. -/
+def evilAnswer (a b : DObj) : Py Bool :=
+  match a, b with
+  | .atom x, .atom y => if x.raises || y.raises then .error (.valueError "eq") else .ok false
+  | _, _ => .ok false
+
+/-- `__eq__` acting on the dict being probed. -/
+def selfProto (pool : Array DObj) : Proto DObj DD :=
+  { dKeyOps with
+    eq := fun a b s =>
+      match DObj.action a b with
+      | 0 => (DObj.eq a b, s)
+      | n => (evilAnswer a b, evilAct pool n s) }
+
+/-- `__eq__` acting on the other dict: the source, while a merge runs. -/
+def peerProto (pool : Array DObj) : Proto DObj DD :=
+  { dKeyOps with
+    eq := fun a b s =>
+      match DObj.action a b with
+      | 0 => (DObj.eq a b, s)
+      | n =>
+        (evilAnswer a b,
+         match s.peer with
+         | some p => { s with peer := some (evilAct pool n p.toDict).toPeer }
+         | none => s) }
 
 def sProto : Proto DObj DS :=
   { dKeyOps with

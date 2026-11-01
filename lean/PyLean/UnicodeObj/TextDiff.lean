@@ -3,6 +3,7 @@ import PyLean.StrSearch.Diff
 import PyLean.UnicodeObj.Repr
 import PyLean.UnicodeObj.TextTranslate
 import PyLean.UnicodeObj.TextDedent
+import PyLean.UnicodeObj.TextTranslateX
 
 /-! Difftest handler for the text slice (`fn` names start with `text_`). -/
 
@@ -135,6 +136,40 @@ def run (fn : String) (j : Json) : Except String Json := do
     let some f := bytesOp (← getStr j "op") | throw "bad op"
     return encPy id (.ok (f (← getSeq j "s")) : Py Json)
   | "text_repr" => return encPy encStr (.ok (unicodeRepr (← getSeq j "s")) : Py Str)
+  | "text_translate_x" =>
+    let s ← getSeq j "s"
+    let arr ← (← field j "table").getArr?
+    let tbl ← arr.toList.mapM fun e => do
+      let pair ← e.getArr?
+      let k ← (pair[0]!).getNat?
+      let items ← (pair[1]!).getArr?
+      return (k, ← items.toList.mapM getItem)
+    -- the n-th lookup of a key gets its n-th answer, and the last answer repeats
+    let m : MapH := fun hist =>
+      let c := hist.getLastD 0
+      match tbl.lookup c with
+      | none => .missing
+      | some items => items.getD (hist.count c - 1) (items.getLastD .missing)
+    let fuel := 400
+    match ← getStr j "mode" with
+    | "ignore" => return encPy encStr (translateCharmapX m .ignore s fuel)
+    | "strict" => return encPy encStr (translateCharmapX m .strict s fuel)
+    | _ =>
+      let steps ← (← field j "script").getArr?
+      let script ← steps.toList.mapM fun st => do
+        let t ← getStr st "t"
+        if t == "raise" then return fun (_ : Nat) => TransResp.raises (.valueError "boom")
+        else if t == "bad" then return fun _ => .bad
+        else
+          let rep ← getSeq st "rep"
+          let pos ← getInt st "pos"
+          let rel ← getBool st "rel"
+          return fun stop => .ret rep (if rel then stop + pos else pos)
+      let cb : TransCB := fun hist =>
+        match script[hist.length - 1]? with
+        | some f => f ((hist.getLast?.map (·.stop)).getD 0)
+        | none => .raises (.named "RuntimeError" "done")
+      return encPy encStr (translateCharmapX m (.custom cb) s fuel)
   | "text_translate" =>
     let d ← getTable j
     return encPy encStr (unicodeTranslate (← getSeq j "s") (dictMapping d))

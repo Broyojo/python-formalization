@@ -27,7 +27,7 @@ Lib/multiprocessing/pool.py	345	349	Pool._setup_queues	_setup_queues(self)	todo
 Lib/multiprocessing/pool.py	351	353	Pool._check_running	_check_running(self)	todo		
 Lib/multiprocessing/pool.py	355	360	Pool.apply	apply(self, func, args=(), kwds={})	todo		
 Lib/multiprocessing/pool.py	362	367	Pool.map	map(self, func, iterable, chunksize=None)	todo		
-Lib/multiprocessing/pool.py	369	375	Pool.starmap	starmap(self, func, iterable, chunksize=None)	modelled	itertools-simple-doc-agree	
+Lib/multiprocessing/pool.py	369	375	Pool.starmap	starmap(self, func, iterable, chunksize=None)	todo		
 Lib/multiprocessing/pool.py	377	383	Pool.starmap_async	starmap_async(self, func, iterable, chunksize=None, callback=None, error_callback=None)	todo		
 Lib/multiprocessing/pool.py	385	394	Pool._guarded_task_generation	_guarded_task_generation(self, result_job, func, iterable)	todo		
 Lib/multiprocessing/pool.py	396	423	Pool.imap	imap(self, func, iterable, chunksize=1)	todo		

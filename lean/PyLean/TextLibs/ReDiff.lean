@@ -1,5 +1,5 @@
 import PyLean.DiffCore
-import PyLean.TextLibs.ReApi
+import PyLean.TextLibs.ReSem
 
 /-! `re.*` difftest cases; see `difftest/textlibs_diff.py`. Trees travel as nested arrays with
 the opcode's short name first. -/
@@ -106,6 +106,21 @@ def gidxs (j : Json) : Except String (List GIdx) := do
 def encPat (p : Pat) : Json := Json.mkObj [("code", toJson p.code.toList), ("groups", toJson p.groups)]
 
 def run (fn : String) (j : Json) : Except String Json := do
+  if fn == "re.sem" then
+    let pat ← nats (← field j "pat")
+    let flags ← getNat j "flags"
+    let s ← nats (← field j "s")
+    let full ← getBool j "full"
+    return encPy id (do
+      let p ← parse true pat flags
+      match semMatch true p flags pat s 0 s.length full with
+      | none => throw .modelFuel
+      | some none => return Json.null
+      | some (some o) =>
+        return Json.mkObj [("stop", toJson o.stop), ("groups", Json.arr (o.groups.map encOptSpan).toArray),
+          ("last", (match o.last with
+            | some i => toJson i
+            | none => Json.null))] : Py Json)
   if fn == "re.validate" then
     let code ← nats (← field j "code")
     let groups ← getInt j "groups"
@@ -157,7 +172,7 @@ def run (fn : String) (j : Json) : Except String Json := do
     let p := compilePat text pat flags
     let body : Py Json := do
       let p ← p
-      if mode != "prepr" && mode != "peq" && mode != "sub" then checkSubject p !stext
+      if mode != "prepr" && mode != "peq" && mode != "sub" && mode != "subcall" then checkSubject p !stext
       match mode with
       | "match" | "fullmatch" | "search" =>
         return (match ← runMatch p subj pos endpos mode with
@@ -194,6 +209,17 @@ def run (fn : String) (j : Json) : Except String Json := do
         return toJson [patEq p q, patHashInput p == patHashInput q]
       | "sub" =>
         let (r, n) ← subx p repl subj cnt !stext
+        return Json.arr #[toJson r, toJson n]
+      | "subcall" =>
+        let steps ← liftS (do (← (← field j "script").getArr?).toList.mapM fun x => do
+          if let .ok v := x.getObjVal? "raise" then
+            return (.error (.valueError (← v.getStr?)) : Py CallRet)
+          if let .ok v := x.getObjVal? "other" then
+            return (.ok (.other (← v.getStr?)) : Py CallRet)
+          if x.isNull then return (.ok .none_ : Py CallRet)
+          return (.ok (.text (← nats x)) : Py CallRet))
+        let f : Nat → MatchR → Py CallRet := fun k _ => steps.getD k (.ok (.text []))
+        let (r, n) ← subCall p f subj cnt !stext
         return Json.arr #[toJson r, toJson n]
       | "expand" =>
         match ← runMatch p subj pos endpos "search" with

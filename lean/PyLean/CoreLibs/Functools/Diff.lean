@@ -29,6 +29,10 @@ def intFun (bad : Option Int) (kind : String) : Int → Int → Py Int := fun a 
 
 def parseSource (j : Json) : Except String (Source Int) := do
   if ← getBool j "noniter" then pure .notIterable
+  else if (j.getObjVal? "iterraise").toOption.bind (·.getStr?.toOption) == some "TypeError" then
+    pure (.iterRaises (.typeError "mine") true)
+  else if (j.getObjVal? "iterraise").toOption.bind (·.getStr?.toOption) == some "ValueError" then
+    pure (.iterRaises (.valueError "mine") false)
   else
     let err : Option PyExc := if ← getBool j "itfail" then some (.valueError "it") else none
     pure (.iter (← getIntList j "xs") err)
@@ -279,6 +283,8 @@ def parseMKind (j : Json) : Except String (MKind Int) := do
     pure (.custom get sel (.base id))
   | _ => parseMKindI j
 
+def unitJ' : Py Unit → Json := encPy (fun _ => Json.null)
+
 def run (fn : String) (j : Json) : Except String Json := do
   let c := (j.getObjVal? "twin").toOption.bind (·.getStr?.toOption) == some "c"
   let newP : PartialNew Int := if c then partialNewC else partialNewPy
@@ -288,6 +294,107 @@ def run (fn : String) (j : Json) : Except String Json := do
     let s ← parseSource j
     let i ← getOptInt j "initial"
     pure (encPy toJson ((if c then reduceC else reducePy) f s i))
+  | "make_key_meta" =>
+    let n ← getInt j "n"
+    let typed ← getBool j "typed"
+    let bad ← getBool j "bad"
+    let args : List Int := (List.range n.toNat).map (fun (i : Nat) => (i : Int))
+    let O : MkKeyOps Int := ⟨fun _ => false, fun _ => 0⟩
+    let h : Int → Py Unit := fun _ => if bad then .error (.typeError "~unhashable type") else .ok ()
+    pure (encPy (fun _ => toJson "key") (makeKeyPyFull O h (.ok typed) args []))
+  | "lru_stacked" =>
+    let py : Bool := !c
+    let a1 ← getInt j "m1"
+    let a2 ← getInt j "m2"
+    let t1 ← getBool j "t1"
+    let t2 ← getBool j "t2"
+    let mode : Option Int → Py LruMode := if c then wrapperCMode true else wrapperPyMode
+    let none0 : Wrapped (LruAttr Bool) := ⟨fun _ => .ok none, fun _ => .ok (some [])⟩
+    let paramsJ : Option (LruAttr Bool) → Json := fun x => match x with
+      | some (.params m t) => toJson [toJson m, toJson t]
+      | _ => Json.null
+    match lruBuild py 1 mode (.int a1) t1 none0 (.other 0) with
+    | .error e => pure (encPy toJson (.error e : Py Int))
+    | .ok (_, inner) =>
+      match lruBuild py 2 mode (.int a2) t2 (lruAsWrapped inner) (.other 1) with
+      | .error e => pure (encPy toJson (.error e : Py Int))
+      | .ok (_, outer) =>
+        let infoOf : Nat := match outer.dict.lookup "cache_info" with
+          | some (.info i) => i
+          | _ => 2
+        pure (okJ (toJson [paramsJ (outer.dict.lookup "cache_parameters"), toJson infoOf]))
+  | "wraps_ph" =>
+    let which ← getStr j "which"
+    let ph : PArg (WArg Int) := .ph
+    let names : PArg (WArg Int) := .val (.names [])
+    let self : PArg (WArg Int) := .val (.names [])
+    let r := match which with
+      | "wrapped" => wrapsP ph names names
+      | "assigned" => wrapsP self ph names
+      | "updated" => wrapsP self names ph
+      | _ => wrapsP self names names
+    pure (encPy (fun _ => toJson "partial") r)
+  | "update_wrapper_fn" =>
+    let attr ← getStr j "attr"
+    let entry ← getStr j "entry"
+    let wrapped : Wrapped String := ⟨fun k => if k == "__name__" then .ok (some attr) else .ok none,
+      fun _ => .ok (some [("__name__", entry)])⟩
+    let w0 : Wrapper String := { dict := [], descr := wrapperAssignments }
+    pure (encPy (fun (r : Wrapper String) => toJson [toJson (r.get "__name__"), toJson (r.dict.lookup "__name__")])
+      (updateWrapper w0 wrapped "self" wrapperAssignments wrapperUpdates))
+  | "lru_evict" =>
+    let arm ← getBool j "arm"
+    let F : Faults Nat := { noFaults Nat with
+      evict := fun k _ => if arm && k == 2 then some (.valueError "eq") else none }
+    let cfg : Cfg Nat Int := ⟨2, fun k _ => .ret ((k : Int) * 10), F, -1⟩
+    let ops : List Nat := [1, 2, 1, 3, 2]
+    let rJ : Py Int → Json := fun r => match r with
+      | .ok v => if v == -1 then Json.null else toJson v
+      | .error e => toJson e.className
+    if c then
+      let (rs, s) := ops.foldl (fun (acc : List (Py Int) × CLru Nat Int) k =>
+        let (r, s') := callC cfg 9 k acc.2
+        (acc.1 ++ [r], s')) ([], emptyC)
+      pure (okJ (toJson [toJson (rs.map rJ), toJson [s.hits, s.misses, s.cache.length]]))
+    else
+      let (rs, s) := ops.foldl (fun (acc : List (Py Int) × PyLru Nat Int) k =>
+        let (r, s') := callPy cfg 9 k acc.2
+        (acc.1 ++ [r], s')) ([], emptyPy)
+      pure (okJ (toJson [toJson (rs.map rJ), toJson [s.hits, s.misses, s.cache.length]]))
+  | "key_hash" => pure (unitJ' keyHash)
+  | "key_isinstance" => pure (encPy (fun (b : Bool) => toJson b) (keyIsinstance (!c)))
+  | "partial_duck" =>
+    let args ← (← getArr j "args").mapM parsePArg
+    let pargs ← (← getArr j "pargs").mapM parsePArg
+    let r : Py (Fn Int) := if c then partialNewC none (.base 9) args []
+      else duckNewPy none (.base 1) pargs [] (phCount pargs) args []
+    pure (encPy (fun x => match x with
+      | .pobj _ _ f a _ _ => toJson [toJson (match f with
+          | .base i => (i : Int)
+          | _ => -1), toJson (a.map fun p => match p with
+          | .ph => toJson "PH"
+          | .val v => toJson v)]
+      | _ => Json.null) r)
+  | "repr_mut" =>
+    let vals ← getIntList j "vals"
+    let mutAt ← getOptInt j "mut"
+    let kw : List (String × Int) := vals.map (fun v => (s!"k{v}", v))
+    let E : ReprEnv Int := ⟨fun v => .ok (toString v)⟩
+    let m : Int → Bool := fun v => some v == mutAt
+    let r : Py String := if c then partialReprFullC E m ("zz", 0) "functools.partial" (.ok "f") [] kw
+      else partialReprFullPy E m (.ok "functools") (.ok "partial") (.ok "f") [] kw
+    pure (encPy toJson r)
+  | "repr_read" =>
+    let bad ← getStr j "bad"
+    let fail : String → Py String := fun k => if k == bad then .error (.valueError "read") else .ok k
+    let E : ReprEnv Int := ⟨fun v => .ok (toString v)⟩
+    pure (encPy toJson (partialReprFullPy E (fun _ => false) (fail "__module__") (fail "__qualname__") (.ok "f") [] []))
+  | "pm_new_fail" =>
+    let which ← getStr j "which"
+    let t : MTarget Int := { kind := .obj .notCallable, abstract := .ok none,
+                             getFail := if which == "get" then some (.valueError "get") else none,
+                             reprFail := if which == "repr" then some (.valueError "repr") else none }
+    pure (encPy (fun _ => toJson "pm") (partialmethodNew (.target t) [] []))
   | "reduce_wrapper" =>
     let names ← getStrList j "names"
     let warnE ← getBool j "werror"
@@ -304,7 +411,7 @@ def run (fn : String) (j : Json) : Except String Json := do
       | v => some <$> parseOp (← v.getStr?)
     let C : OrdClass :=
       ⟨fun o => .ok (if o ∈ roots then some 1 else some 0), fun _ => some 0,
-        fun o => if some o = setFail then .error (.valueError "set") else .ok ()⟩
+        fun o _ => if some o = setFail then .error (.valueError "set") else .ok ()⟩
     let op ← parseOp (← getStr j "op")
     let res ← getInt j "res"
     let eqv ← getInt j "eq"
@@ -323,8 +430,8 @@ def run (fn : String) (j : Json) : Except String Json := do
     match totalOrdering C with
     | .error e => pure (encPy toJson (.error e : Py Int))
     | .ok (root, added) =>
-      if op ∈ added then
-        match (convert root).lookup op with
+      if op ∈ added.map Prod.fst then
+        match added.lookup op with
         | some s => pure (encPy rJ (derived P s 0 0))
         | none => throw "not added"
       else if op ∈ roots then pure (encPy rJ (P.root 0 0))
@@ -385,8 +492,20 @@ def run (fn : String) (j : Json) : Except String Json := do
         let args : StArgs Int ← match ← getStr st "argkind" with
           | "tuple" => pure (.tuple raw)
           | "sub" =>
-            if ← getBool st "iterbad" then pure (.sub raw (.error (.valueError "iter")))
-            else pure (.sub raw (.ok (← (← getArr st "iter").mapM parsePArg)))
+            let it : Py (List (PArg Int)) ← if ← getBool st "iterbad" then pure (.error (.valueError "iter"))
+              else pure (.ok (← (← getArr st "iter").mapM parsePArg))
+            let it2 : Py (List (PArg Int)) ← match (← field st "iter2") with
+              | .null => pure it
+              | v => pure (.ok (← (← v.getArr?).toList.mapM parsePArg))
+            let t0 := TupSub.iterates raw it
+            let truth : Py Bool ← match ← getStr st "truth" with
+              | "no" => pure (.ok false)
+              | "raise" => pure (.error (.valueError "truth"))
+              | _ => pure t0.truth
+            let len : Py Nat ← match ← getStr st "lenv" with
+              | "raise" => pure (.error (.valueError "len"))
+              | _ => pure t0.len
+            pure (.sub { t0 with truth, len, iter2 := it2 })
           | _ => pure .other
         let kwv ← parseKwV (← field st "kwitems")
         let kw : StKw Int ← match ← getStr st "kw" with
@@ -444,7 +563,7 @@ def run (fn : String) (j : Json) : Except String Json := do
       | _ => pure (.ok none)
     let pargs ← (← getArr j "args").mapM parsePArg
     let pkw ← parseKwV (← field j "kw")
-    let t : MTarget Int := ⟨← parseMKind j, ab⟩
+    let t : MTarget Int := { kind := ← parseMKind j, abstract := ab }
     let nest ← (← getArr j "nest").mapM parsePArg
     let obj := if ← getBool j "instance" then some (501 : Int) else none
     let more ← getIntList j "more"
@@ -456,7 +575,7 @@ def run (fn : String) (j : Json) : Except String Json := do
       callGot got more morekw
     pure (encPy calledJ r)
   | "pm_new" =>
-    let t : MTarget Int := ⟨.obj .notCallable, .ok none⟩
+    let t : MTarget Int := { kind := .obj .notCallable, abstract := .ok none }
     let args ← (← getArr j "args").mapM parsePArg
     pure (encPy (fun _ => Json.null) (partialmethodNew (.target t) args []))
   | "unwrap" =>
@@ -503,7 +622,7 @@ def run (fn : String) (j : Json) : Except String Json := do
           toJson (0 : Nat)]]))
       else
         let F := faultsOf (some m) (← keys "hash") (← keys "getk") (← keys "recheckk") (← keys "insertk")
-        let cfg : Cfg Nat Int := ⟨m, f, F⟩
+        let cfg : Cfg Nat Int := ⟨m, f, F, -1⟩
         if c then
           let (rs, s) := driveOps emptyC (callC cfg lruFuel) emptyC ops
           pure (okJ (toJson [resJ rs, infoJ (infoC m s)]))
@@ -614,22 +733,29 @@ def run (fn : String) (j : Json) : Except String Json := do
     let inst : Option (InstDict Int) := match dkind with
       | "class" => none
       | "none" => some .none
-      | "frozen" => some (.dict d true)
-      | _ => some (.dict d false)
+      | "dictraises" => some (.raises (.valueError "dict"))
+      | "getfails" => some (.dict d (some (.valueError "get")) none)
+      | "frozen" => some (.dict d none (some (.typeError "frozen", true)))
+      | "setfails" => some (.dict d none (some (.valueError "set", false)))
+      | _ => some (.dict d none none)
     let mode ← getStr j "func"
-    let func : Attrs Int → Py (Int × Attrs Int) := fun x => match mode with
-      | "raise" => .error (.valueError "f")
-      | "mutate" => .ok (5, setAttr (setAttr x "extra" 3) (name.getD "p") 9)
-      | _ => .ok (5, x)
+    let func : Attrs Int → Py Int × Attrs Int := fun x => match mode with
+      | "raise" => (.error (.valueError "f"), x)
+      | "writeraise" => (.error (.valueError "f"), setAttr x "extra" 3)
+      | "mutate" => (.ok 5, setAttr (setAttr x "extra" 3) (name.getD "p") 9)
+      | _ => (.ok 5, x)
+    let sortD : Option (Attrs Int) → Json := fun x => match x with
+      | none => Json.null
+      | some l => toJson ((l.mergeSort (fun a b => decide (a.1 ≤ b.1))).map fun p => toJson [toJson p.1, toJson p.2])
+    let r := cachedGet ⟨func, name, 0, 0⟩ inst
     let cJ : CachedOut Int → Json := fun o => match o with
       | .self => "self"
-      | .val v x => toJson [toJson v,
-          toJson ((x.mergeSort (fun a b => decide (a.1 ≤ b.1))).map fun p => toJson [toJson p.1, toJson p.2])]
-    pure (encPy cJ (cachedGet ⟨func, name, 0, 0⟩ inst))
+      | .val v => toJson [toJson v, sortD r.2]
+    pure (Json.mkObj [("ok", Json.mkObj [("r", encPy cJ r.1), ("d", sortD r.2)])])
   | "cached_init" =>
     let tbl ← parseTable j "tbl"
     let read : String → Py (Option Int) := fun k => (readerOf tbl k).map (·.map (fun _ => 1))
-    pure (encPy (fun (x : CachedProp Int) => toJson x.attrname) (cachedNew (fun d => .ok (0, d)) read))
+    pure (encPy (fun (x : CachedProp Int) => toJson x.attrname) (cachedNew (fun d => (.ok 0, d)) read))
   | "set_name" =>
     let a := (← field j "attr").getStr?.toOption
     pure (encPy toJson (setName a (← getStr j "name")))

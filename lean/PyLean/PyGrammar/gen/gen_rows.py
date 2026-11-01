@@ -62,12 +62,13 @@ CREDIT = {
     "pygrammar-check-try-twin": {"Python__ast.c": ["validate_stmt"]},
     "pygrammar-check-no-null-deref": {"Python__ast.c": ["validate_pattern", "validate_patterns"]},
     "pygrammar-check-names-always": {"Python__ast.c": ["validate_expr"]},
-    "pygrammar-check-syntax-only-identity": {
+    "pygrammar-check-fold-reaches": {"Python__ast_preprocess.c": ["astfold_pattern"]},
+    "pygrammar-check-fold-reaches-narrow": {
         "Python__ast_preprocess.c": [
-            "astfold_body", "astfold_mod", "astfold_expr", "astfold_keyword",
-            "astfold_comprehension", "astfold_arguments", "astfold_arg", "astfold_stmt",
-            "astfold_excepthandler", "astfold_withitem", "astfold_pattern", "astfold_match_case",
-            "astfold_type_param", "_PyAST_Preprocess"]},
+            "astfold_mod", "astfold_expr", "astfold_keyword", "astfold_comprehension",
+            "astfold_arguments", "astfold_arg", "astfold_stmt", "astfold_excepthandler",
+            "astfold_withitem", "astfold_match_case", "astfold_type_param"]},
+    "pygrammar-check-fold-docstring": {"Python__ast_preprocess.c": ["astfold_body"]},
     "pygrammar-check-fold-value": {
         "Python__ast_preprocess.c": ["fold_const_match_patterns", "make_const"]},
     "pygrammar-check-format-args": {
@@ -99,7 +100,8 @@ CREDIT = {
 }
 
 # Entries that hold as properties but credit no row: `Rows.<id>` is empty for them.
-NO_ROWS = ["grammar-left-recursion", "grammar-call-rule-sound", "peg-first-error", "peg-roundtrip-parser",
+NO_ROWS = ["grammar-left-recursion", "grammar-call-rule-sound", "peg-first-error",
+           "check-syntax-only-identity", "peg-roundtrip-parser",
            "peg-roundtrip-actions", "lex-exact-tokens", "check-nonempty"]
 
 CREDITED = {(stem, name): entry for entry, files in CREDIT.items()

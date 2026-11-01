@@ -2,13 +2,13 @@ file	line	endline	name	signature	status	entry	note
 Modules/_sre/sre.c	60	66	sre_isalnum	static int sre_isalnum(unsigned int ch) {	todo		
 Modules/_sre/sre.c	68	74	sre_tolower	static unsigned int sre_tolower(unsigned int ch) {	todo		
 Modules/_sre/sre.c	76	82	sre_toupper	static unsigned int sre_toupper(unsigned int ch) {	todo		
-Modules/_sre/sre.c	143	146	sre_lower_ascii	static unsigned int sre_lower_ascii(unsigned int ch)	todo		
+Modules/_sre/sre.c	143	146	sre_lower_ascii	static unsigned int sre_lower_ascii(unsigned int ch)	modelled	textlibs-re-ascii-case	
 Modules/_sre/sre.c	154	157	sre_lower_locale	static unsigned int sre_lower_locale(unsigned int ch)	todo		
 Modules/_sre/sre.c	159	162	sre_upper_locale	static unsigned int sre_upper_locale(unsigned int ch)	todo		
 Modules/_sre/sre.c	172	175	sre_lower_unicode	static unsigned int sre_lower_unicode(unsigned int ch)	todo		
 Modules/_sre/sre.c	177	180	sre_upper_unicode	static unsigned int sre_upper_unicode(unsigned int ch)	todo		
-Modules/_sre/sre.c	183	227	sre_category	sre_category(SRE_CODE category, unsigned int ch)	todo		
-Modules/_sre/sre.c	230	235	char_loc_ignore	char_loc_ignore(SRE_CODE pattern, SRE_CODE ch)	todo		
+Modules/_sre/sre.c	183	227	sre_category	sre_category(SRE_CODE category, unsigned int ch)	modelled	textlibs-re-category-negation	
+Modules/_sre/sre.c	230	235	char_loc_ignore	char_loc_ignore(SRE_CODE pattern, SRE_CODE ch)	modelled	textlibs-re-char-loc-ignore	
 Modules/_sre/sre.c	241	248	data_stack_dealloc	data_stack_dealloc(SRE_STATE* state)	todo		
 Modules/_sre/sre.c	251	270	data_stack_grow	data_stack_grow(SRE_STATE* state, Py_ssize_t size)	todo		
 Modules/_sre/sre.c	279	305	repeat_pool_malloc	repeat_pool_malloc(SRE_STATE *state)	todo		
@@ -16,16 +16,16 @@ Modules/_sre/sre.c	308	327	repeat_pool_free	repeat_pool_free(SRE_STATE *state, S
 Modules/_sre/sre.c	330	349	repeat_pool_clear	repeat_pool_clear(SRE_STATE *state)	todo		
 Modules/_sre/sre.c	385	390	get_sre_module_state	get_sre_module_state(PyObject *m)	todo		
 Modules/_sre/sre.c	418	422	_sre_getcodesize_impl	_sre_getcodesize_impl(PyObject *module) /*[clinic end generated code: output=e0db7ce34a6dd7b1 input=bd6f6ecf4916bb2b]*/	todo		
-Modules/_sre/sre.c	433	438	_sre_ascii_iscased_impl	_sre_ascii_iscased_impl(PyObject *module, int character) /*[clinic end generated code: output=4f454b630fbd19a2 input=9f0bd952812c7ed3]*/	todo		
+Modules/_sre/sre.c	433	438	_sre_ascii_iscased_impl	_sre_ascii_iscased_impl(PyObject *module, int character) /*[clinic end generated code: output=4f454b630fbd19a2 input=9f0bd952812c7ed3]*/	modelled	textlibs-re-ascii-case	
 Modules/_sre/sre.c	449	454	_sre_unicode_iscased_impl	_sre_unicode_iscased_impl(PyObject *module, int character) /*[clinic end generated code: output=9c5ddee0dc2bc258 input=51e42c3b8dddb78e]*/	todo		
-Modules/_sre/sre.c	465	469	_sre_ascii_tolower_impl	_sre_ascii_tolower_impl(PyObject *module, int character) /*[clinic end generated code: output=228294ed6ff2a612 input=272c609b5b61f136]*/	todo		
+Modules/_sre/sre.c	465	469	_sre_ascii_tolower_impl	_sre_ascii_tolower_impl(PyObject *module, int character) /*[clinic end generated code: output=228294ed6ff2a612 input=272c609b5b61f136]*/	modelled	textlibs-re-ascii-case	
 Modules/_sre/sre.c	480	484	_sre_unicode_tolower_impl	_sre_unicode_tolower_impl(PyObject *module, int character) /*[clinic end generated code: output=6422272d7d7fee65 input=91d708c5f3c2045a]*/	todo		
 Modules/_sre/sre.c	487	498	state_reset	state_reset(SRE_STATE* state)	todo		
 Modules/_sre/sre.c	501	536	getstring	getstring(PyObject* string, Py_ssize_t* p_length, int* p_isbytes, int* p_charsize, Py_buffer *view)	todo		
 Modules/_sre/sre.c	539	615	state_init	state_init(SRE_STATE* state, PatternObject* pattern, PyObject* string, Py_ssize_t start, Py_ssize_t end)	todo		
 Modules/_sre/sre.c	618	629	state_fini	state_fini(SRE_STATE* state)	todo		
 Modules/_sre/sre.c	636	650	getslice	getslice(int isbytes, const void *ptr, PyObject* string, Py_ssize_t start, Py_ssize_t end)	todo		
-Modules/_sre/sre.c	653	680	state_getslice	state_getslice(SRE_STATE* state, Py_ssize_t index, PyObject* string, int empty)	todo		
+Modules/_sre/sre.c	653	680	state_getslice	state_getslice(SRE_STATE* state, Py_ssize_t index, PyObject* string, int empty)	todo		withdrawn: its laws assume scanLoop succeeds, which nothing states; waits for textlibs-re-sem-agrees-no-self-test
 Modules/_sre/sre.c	683	706	pattern_error	pattern_error(Py_ssize_t status)	todo		
 Modules/_sre/sre.c	709	720	pattern_traverse	pattern_traverse(PyObject *op, visitproc visit, void *arg)	todo		
 Modules/_sre/sre.c	723	733	pattern_clear	pattern_clear(PyObject *op)	todo		
@@ -35,14 +35,14 @@ Modules/_sre/sre.c	758	766	sre_search	sre_search(SRE_STATE* state, SRE_CODE* pat
 Modules/_sre/sre.c	781	810	_sre_SRE_Pattern_match_impl	_sre_SRE_Pattern_match_impl(PatternObject *self, PyTypeObject *cls, PyObject *string, Py_ssize_t pos, Py_ssize_t endpos) /*[clinic end generated code: output=ec6208ea58a0cca0 input=4bdb9c3e564d13ac]*/	todo		
 Modules/_sre/sre.c	825	855	_sre_SRE_Pattern_fullmatch_impl	_sre_SRE_Pattern_fullmatch_impl(PatternObject *self, PyTypeObject *cls, PyObject *string, Py_ssize_t pos, Py_ssize_t endpos) /*[clinic end generated code: output=625b75b027ef94da input=50981172ab0fcfdd]*/	todo		
 Modules/_sre/sre.c	872	900	_sre_SRE_Pattern_search_impl	_sre_SRE_Pattern_search_impl(PatternObject *self, PyTypeObject *cls, PyObject *string, Py_ssize_t pos, Py_ssize_t endpos) /*[clinic end generated code: output=bd7f2d9d583e1463 input=afa9afb66a74a4b3]*/	todo		
-Modules/_sre/sre.c	913	997	_sre_SRE_Pattern_findall_impl	_sre_SRE_Pattern_findall_impl(PatternObject *self, PyObject *string, Py_ssize_t pos, Py_ssize_t endpos) /*[clinic end generated code: output=f4966baceea60aca input=5b6a4ee799741563]*/	todo		
-Modules/_sre/sre.c	1014	1037	_sre_SRE_Pattern_finditer_impl	_sre_SRE_Pattern_finditer_impl(PatternObject *self, PyTypeObject *cls, PyObject *string, Py_ssize_t pos, Py_ssize_t endpos) /*[clinic end generated code: output=1791dbf3618ade56 input=812e332a4848cbaf]*/	todo		
+Modules/_sre/sre.c	913	997	_sre_SRE_Pattern_findall_impl	_sre_SRE_Pattern_findall_impl(PatternObject *self, PyObject *string, Py_ssize_t pos, Py_ssize_t endpos) /*[clinic end generated code: output=f4966baceea60aca input=5b6a4ee799741563]*/	todo		withdrawn: its laws assume scanLoop succeeds, which nothing states; waits for textlibs-re-sem-agrees-no-self-test
+Modules/_sre/sre.c	1014	1037	_sre_SRE_Pattern_finditer_impl	_sre_SRE_Pattern_finditer_impl(PatternObject *self, PyTypeObject *cls, PyObject *string, Py_ssize_t pos, Py_ssize_t endpos) /*[clinic end generated code: output=1791dbf3618ade56 input=812e332a4848cbaf]*/	todo		withdrawn: its laws assume scanLoop succeeds, which nothing states; waits for textlibs-re-sem-agrees-no-self-test
 Modules/_sre/sre.c	1051	1059	_sre_SRE_Pattern_scanner_impl	_sre_SRE_Pattern_scanner_impl(PatternObject *self, PyTypeObject *cls, PyObject *string, Py_ssize_t pos, Py_ssize_t endpos) /*[clinic end generated code: output=f70cd506112f1bd9 input=2e487e5151bcee4c]*/	todo		
-Modules/_sre/sre.c	1071	1162	_sre_SRE_Pattern_split_impl	_sre_SRE_Pattern_split_impl(PatternObject *self, PyObject *string, Py_ssize_t maxsplit) /*[clinic end generated code: output=7ac66f381c45e0be input=1eeeb10dafc9947a]*/	todo		
+Modules/_sre/sre.c	1071	1162	_sre_SRE_Pattern_split_impl	_sre_SRE_Pattern_split_impl(PatternObject *self, PyObject *string, Py_ssize_t maxsplit) /*[clinic end generated code: output=7ac66f381c45e0be input=1eeeb10dafc9947a]*/	todo		withdrawn: its laws assume scanLoop succeeds, which nothing states; waits for textlibs-re-sem-agrees-no-self-test
 Modules/_sre/sre.c	1165	1219	compile_template	compile_template(_sremodulestate *module_state, PatternObject *pattern, PyObject *template)	todo		
-Modules/_sre/sre.c	1224	1416	pattern_subx	pattern_subx(_sremodulestate* module_state, PatternObject* self, PyObject* ptemplate, PyObject* string, Py_ssize_t count, Py_ssize_t subn)	todo		
-Modules/_sre/sre.c	1431	1438	_sre_SRE_Pattern_sub_impl	_sre_SRE_Pattern_sub_impl(PatternObject *self, PyTypeObject *cls, PyObject *repl, PyObject *string, Py_ssize_t count) /*[clinic end generated code: output=4be141ab04bca60d input=d8d1d4ac2311a07c]*/	todo		
-Modules/_sre/sre.c	1453	1461	_sre_SRE_Pattern_subn_impl	_sre_SRE_Pattern_subn_impl(PatternObject *self, PyTypeObject *cls, PyObject *repl, PyObject *string, Py_ssize_t count) /*[clinic end generated code: output=da02fd85258b1e1f input=8b78a65b8302e58d]*/	todo		
+Modules/_sre/sre.c	1224	1416	pattern_subx	pattern_subx(_sremodulestate* module_state, PatternObject* self, PyObject* ptemplate, PyObject* string, Py_ssize_t count, Py_ssize_t subn)	todo		withdrawn: its laws assume scanLoop succeeds, which nothing states; waits for textlibs-re-sem-agrees-no-self-test
+Modules/_sre/sre.c	1431	1438	_sre_SRE_Pattern_sub_impl	_sre_SRE_Pattern_sub_impl(PatternObject *self, PyTypeObject *cls, PyObject *repl, PyObject *string, Py_ssize_t count) /*[clinic end generated code: output=4be141ab04bca60d input=d8d1d4ac2311a07c]*/	todo		withdrawn: its laws assume scanLoop succeeds, which nothing states; waits for textlibs-re-sem-agrees-no-self-test
+Modules/_sre/sre.c	1453	1461	_sre_SRE_Pattern_subn_impl	_sre_SRE_Pattern_subn_impl(PatternObject *self, PyTypeObject *cls, PyObject *repl, PyObject *string, Py_ssize_t count) /*[clinic end generated code: output=da02fd85258b1e1f input=8b78a65b8302e58d]*/	todo		withdrawn: its laws assume scanLoop succeeds, which nothing states; waits for textlibs-re-sem-agrees-no-self-test
 Modules/_sre/sre.c	1469	1473	_sre_SRE_Pattern___copy___impl	_sre_SRE_Pattern___copy___impl(PatternObject *self) /*[clinic end generated code: output=85dedc2db1bd8694 input=a730a59d863bc9f5]*/	todo		
 Modules/_sre/sre.c	1484	1488	_sre_SRE_Pattern___deepcopy___impl	_sre_SRE_Pattern___deepcopy___impl(PatternObject *self, PyObject *memo) /*[clinic end generated code: output=75efe69bd12c5d7d input=a465b1602f997bed]*/	todo		
 Modules/_sre/sre.c	1502	1510	_sre_SRE_Pattern__fail_after_impl	_sre_SRE_Pattern__fail_after_impl(PatternObject *self, int count, PyObject *exception) /*[clinic end generated code: output=9a6bf12135ac50c2 input=ef80a45c66c5499d]*/	todo		
@@ -57,38 +57,38 @@ Modules/_sre/sre.c	2249	2259	_validate	_validate(PatternObject *self)	todo
 Modules/_sre/sre.c	2265	2273	match_traverse	match_traverse(PyObject *op, visitproc visit, void *arg)	todo		
 Modules/_sre/sre.c	2276	2283	match_clear	match_clear(PyObject *op)	todo		
 Modules/_sre/sre.c	2286	2293	match_dealloc	match_dealloc(PyObject *self)	todo		
-Modules/_sre/sre.c	2296	2325	match_getslice_by_index	match_getslice_by_index(MatchObject* self, Py_ssize_t index, PyObject* def)	todo		
-Modules/_sre/sre.c	2328	2360	match_getindex	match_getindex(MatchObject* self, PyObject* index)	todo		
-Modules/_sre/sre.c	2363	2372	match_getslice	match_getslice(MatchObject* self, PyObject* index, PyObject* def)	todo		
+Modules/_sre/sre.c	2296	2325	match_getslice_by_index	match_getslice_by_index(MatchObject* self, Py_ssize_t index, PyObject* def)	modelled	textlibs-re-match-methods-agree	
+Modules/_sre/sre.c	2328	2360	match_getindex	match_getindex(MatchObject* self, PyObject* index)	modelled	textlibs-re-group-index-range	
+Modules/_sre/sre.c	2363	2372	match_getslice	match_getslice(MatchObject* self, PyObject* index, PyObject* def)	modelled	textlibs-re-match-methods-agree	
 Modules/_sre/sre.c	2383	2394	_sre_SRE_Match_expand_impl	_sre_SRE_Match_expand_impl(MatchObject *self, PyObject *template) /*[clinic end generated code: output=931b58ccc323c3a1 input=4bfdb22c2f8b146a]*/	todo		
-Modules/_sre/sre.c	2397	2430	match_group	match_group(PyObject *op, PyObject* args)	todo		
+Modules/_sre/sre.c	2397	2430	match_group	match_group(PyObject *op, PyObject* args)	modelled	textlibs-re-match-methods-agree	
 Modules/_sre/sre.c	2433	2437	match_getitem	match_getitem(PyObject *op, PyObject* name)	todo		
-Modules/_sre/sre.c	2449	2470	_sre_SRE_Match_groups_impl	_sre_SRE_Match_groups_impl(MatchObject *self, PyObject *default_value) /*[clinic end generated code: output=daf8e2641537238a input=bb069ef55dabca91]*/	todo		
-Modules/_sre/sre.c	2482	2517	_sre_SRE_Match_groupdict_impl	_sre_SRE_Match_groupdict_impl(MatchObject *self, PyObject *default_value) /*[clinic end generated code: output=29917c9073e41757 input=0ded7960b23780aa]*/	todo		
-Modules/_sre/sre.c	2529	2540	_sre_SRE_Match_start_impl	_sre_SRE_Match_start_impl(MatchObject *self, PyObject *group) /*[clinic end generated code: output=3f6e7f9df2fb5201 input=ced8e4ed4b33ee6c]*/	todo		
-Modules/_sre/sre.c	2552	2563	_sre_SRE_Match_end_impl	_sre_SRE_Match_end_impl(MatchObject *self, PyObject *group) /*[clinic end generated code: output=f4240b09911f7692 input=1b799560c7f3d7e6]*/	todo		
+Modules/_sre/sre.c	2449	2470	_sre_SRE_Match_groups_impl	_sre_SRE_Match_groups_impl(MatchObject *self, PyObject *default_value) /*[clinic end generated code: output=daf8e2641537238a input=bb069ef55dabca91]*/	modelled	textlibs-re-match-methods-agree	
+Modules/_sre/sre.c	2482	2517	_sre_SRE_Match_groupdict_impl	_sre_SRE_Match_groupdict_impl(MatchObject *self, PyObject *default_value) /*[clinic end generated code: output=29917c9073e41757 input=0ded7960b23780aa]*/	modelled	textlibs-re-groupdict-agrees	
+Modules/_sre/sre.c	2529	2540	_sre_SRE_Match_start_impl	_sre_SRE_Match_start_impl(MatchObject *self, PyObject *group) /*[clinic end generated code: output=3f6e7f9df2fb5201 input=ced8e4ed4b33ee6c]*/	modelled	textlibs-re-match-methods-agree	
+Modules/_sre/sre.c	2552	2563	_sre_SRE_Match_end_impl	_sre_SRE_Match_end_impl(MatchObject *self, PyObject *group) /*[clinic end generated code: output=f4240b09911f7692 input=1b799560c7f3d7e6]*/	modelled	textlibs-re-match-methods-agree	
 Modules/_sre/sre.c	2566	2590	_pair	_pair(Py_ssize_t i1, Py_ssize_t i2)	todo		
-Modules/_sre/sre.c	2602	2613	_sre_SRE_Match_span_impl	_sre_SRE_Match_span_impl(MatchObject *self, PyObject *group) /*[clinic end generated code: output=f02ae40594d14fe6 input=8fa6014e982d71d4]*/	todo		
-Modules/_sre/sre.c	2616	2638	match_regs	match_regs(MatchObject* self)	todo		
+Modules/_sre/sre.c	2602	2613	_sre_SRE_Match_span_impl	_sre_SRE_Match_span_impl(MatchObject *self, PyObject *group) /*[clinic end generated code: output=f02ae40594d14fe6 input=8fa6014e982d71d4]*/	modelled	textlibs-re-match-methods-agree	
+Modules/_sre/sre.c	2616	2638	match_regs	match_regs(MatchObject* self)	modelled	textlibs-re-match-methods-agree	
 Modules/_sre/sre.c	2646	2650	_sre_SRE_Match___copy___impl	_sre_SRE_Match___copy___impl(MatchObject *self) /*[clinic end generated code: output=a779c5fc8b5b4eb4 input=3bb4d30b6baddb5b]*/	todo		
 Modules/_sre/sre.c	2661	2665	_sre_SRE_Match___deepcopy___impl	_sre_SRE_Match___deepcopy___impl(MatchObject *self, PyObject *memo) /*[clinic end generated code: output=2b657578eb03f4a3 input=779d12a31c2c325e]*/	todo		
 Modules/_sre/sre.c	2677	2683	match_lastindex_get	match_lastindex_get(PyObject *op, void *Py_UNUSED(ignored))	todo		
 Modules/_sre/sre.c	2686	2698	match_lastgroup_get	match_lastgroup_get(PyObject *op, void *Py_UNUSED(ignored))	todo		
 Modules/_sre/sre.c	2701	2708	match_regs_get	match_regs_get(PyObject *op, void *Py_UNUSED(ignored))	todo		
 Modules/_sre/sre.c	2711	2724	match_repr	match_repr(PyObject *op)	todo		
-Modules/_sre/sre.c	2728	2800	pattern_new_match	pattern_new_match(_sremodulestate* module_state, PatternObject* pattern, SRE_STATE* state, Py_ssize_t status)	todo		
+Modules/_sre/sre.c	2728	2800	pattern_new_match	pattern_new_match(_sremodulestate* module_state, PatternObject* pattern, SRE_STATE* state, Py_ssize_t status)	todo		withdrawn: its laws assume scanLoop succeeds, which nothing states; waits for textlibs-re-sem-agrees-no-self-test
 Modules/_sre/sre.c	2807	2813	scanner_traverse	scanner_traverse(PyObject *op, visitproc visit, void *arg)	todo		
 Modules/_sre/sre.c	2816	2821	scanner_clear	scanner_clear(PyObject *op)	todo		
 Modules/_sre/sre.c	2824	2833	scanner_dealloc	scanner_dealloc(PyObject *self)	todo		
 Modules/_sre/sre.c	2836	2850	scanner_begin	scanner_begin(ScannerObject* self)	todo		
 Modules/_sre/sre.c	2853	2857	scanner_end	scanner_end(ScannerObject* self)	todo		
 Modules/_sre/sre.c	2868	2906	_sre_SRE_Scanner_match_impl	_sre_SRE_Scanner_match_impl(ScannerObject *self, PyTypeObject *cls) /*[clinic end generated code: output=6e22c149dc0f0325 input=b5146e1f30278cb7]*/	todo		
-Modules/_sre/sre.c	2918	2956	_sre_SRE_Scanner_search_impl	_sre_SRE_Scanner_search_impl(ScannerObject *self, PyTypeObject *cls) /*[clinic end generated code: output=23e8fc78013f9161 input=056c2d37171d0bf2]*/	todo		
+Modules/_sre/sre.c	2918	2956	_sre_SRE_Scanner_search_impl	_sre_SRE_Scanner_search_impl(ScannerObject *self, PyTypeObject *cls) /*[clinic end generated code: output=23e8fc78013f9161 input=056c2d37171d0bf2]*/	todo		withdrawn: its laws assume scanLoop succeeds, which nothing states; waits for textlibs-re-sem-agrees-no-self-test
 Modules/_sre/sre.c	2959	2985	pattern_scanner	pattern_scanner(_sremodulestate *module_state, PatternObject *self, PyObject *string, Py_ssize_t pos, Py_ssize_t endpos)	todo		
 Modules/_sre/sre.c	2991	3000	template_traverse	template_traverse(PyObject *op, visitproc visit, void *arg)	todo		
 Modules/_sre/sre.c	3003	3011	template_clear	template_clear(PyObject *op)	todo		
 Modules/_sre/sre.c	3014	3021	template_dealloc	template_dealloc(PyObject *self)	todo		
-Modules/_sre/sre.c	3024	3087	expand_template	expand_template(TemplateObject *self, MatchObject *match)	todo		
+Modules/_sre/sre.c	3024	3087	expand_template	expand_template(TemplateObject *self, MatchObject *match)	todo		withdrawn: its laws assume scanLoop succeeds, which nothing states; waits for textlibs-re-sem-agrees-no-self-test
 Modules/_sre/sre.c	3091	3113	pattern_hash	pattern_hash(PyObject *op)	todo		
 Modules/_sre/sre.c	3116	3162	pattern_richcompare	pattern_richcompare(PyObject *lefto, PyObject *righto, int op)	todo		
 Modules/_sre/sre.c	3350	3361	sre_traverse	sre_traverse(PyObject *module, visitproc visit, void *arg)	todo		

@@ -10,26 +10,26 @@ Lib/dataclasses.py	312	326	Field.__repr__	__repr__(self)	todo
 Lib/dataclasses.py	336	341	Field.__set_name__	__set_name__(self, owner, name)	todo		
 Lib/dataclasses.py	359	371	_DataclassParams.__init__	__init__(self, init, repr, eq, order, unsafe_hash, frozen, match_args, kw_only, slots, weakref_slot)	todo		
 Lib/dataclasses.py	373	385	_DataclassParams.__repr__	__repr__(self)	todo		
-Lib/dataclasses.py	391	412	field	field(*, default=MISSING, default_factory=MISSING, init=True, repr=True, hash=None, compare=True, metadata=None, kw_only=MISSING, doc=None)	todo		withdrawn: thin; the table is not the three action functions
-Lib/dataclasses.py	415	421	_fields_in_init_order	_fields_in_init_order(fields)	modelled	corelibs-dataclasses-init-order	
+Lib/dataclasses.py	391	412	field	field(*, default=MISSING, default_factory=MISSING, init=True, repr=True, hash=None, compare=True, metadata=None, kw_only=MISSING, doc=None)	modelled	corelibs-dc-get-field	
+Lib/dataclasses.py	415	421	_fields_in_init_order	_fields_in_init_order(fields)	modelled	corelibs-dataclasses-init-order,corelibs-dc-process-accepted	
 Lib/dataclasses.py	424	433	_tuple_str	_tuple_str(obj_name, fields)	todo		withdrawn: thin; the table is not the three action functions
 Lib/dataclasses.py	437	444	_FuncBuilder.__init__	__init__(self, globals)	todo		
 Lib/dataclasses.py	446	476	_FuncBuilder.add_fn	add_fn(self, name, args, body, *, locals=None, return_type=MISSING, overwrite_error=False, unconditional_add=False, decorator=None, annotation_fields=None)	todo		
-Lib/dataclasses.py	478	533	_FuncBuilder.add_fns_to_class	add_fns_to_class(self, cls)	todo		
+Lib/dataclasses.py	478	533	_FuncBuilder.add_fns_to_class	add_fns_to_class(self, cls)	modelled	corelibs-dc-add-fns	
 Lib/dataclasses.py	536	576	_make_annotate_function	_make_annotate_function(__class__, method_name, annotation_fields, return_type)	todo		
 Lib/dataclasses.py	579	588	_field_assign	_field_assign(frozen, name, value, self_name)	todo		
-Lib/dataclasses.py	591	648	_field_init	_field_init(f, frozen, globals, self_name, slots)	todo		
+Lib/dataclasses.py	591	648	_field_init	_field_init(f, frozen, globals, self_name, slots)	modelled	corelibs-dc-field-value,corelibs-dc-init-values	
 Lib/dataclasses.py	651	667	_init_param	_init_param(f)	todo		
-Lib/dataclasses.py	670	725	_init_fn	_init_fn(fields, std_fields, kw_only_fields, frozen, has_post_init, self_name, func_builder, slots)	todo		withdrawn: thin; the table is not the three action functions
-Lib/dataclasses.py	728	748	_frozen_set_del_attr	_frozen_set_del_attr(cls, fields, func_builder)	todo		
+Lib/dataclasses.py	670	725	_init_fn	_init_fn(fields, std_fields, kw_only_fields, frozen, has_post_init, self_name, func_builder, slots)	modelled	corelibs-dc-init-check,corelibs-dc-bind,corelibs-dc-init-values,corelibs-dc-init-binds,corelibs-dc-init-binds-narrow	
+Lib/dataclasses.py	728	748	_frozen_set_del_attr	_frozen_set_del_attr(cls, fields, func_builder)	modelled	corelibs-dc-frozen	
 Lib/dataclasses.py	751	753	_is_classvar	_is_classvar(a_type, typing)	todo		
 Lib/dataclasses.py	756	760	_is_initvar	_is_initvar(a_type, dataclasses)	todo		
 Lib/dataclasses.py	762	763	_is_kw_only	_is_kw_only(a_type, dataclasses)	todo		
 Lib/dataclasses.py	766	822	_is_type	_is_type(annotation, cls, a_module, a_type, is_type_predicate)	todo		
-Lib/dataclasses.py	825	920	_get_field	_get_field(cls, a_name, a_type, default_kw_only)	todo		
-Lib/dataclasses.py	922	928	_set_new_attribute	_set_new_attribute(cls, name, value)	todo		
+Lib/dataclasses.py	825	920	_get_field	_get_field(cls, a_name, a_type, default_kw_only)	modelled	corelibs-dc-get-field	
+Lib/dataclasses.py	922	928	_set_new_attribute	_set_new_attribute(cls, name, value)	modelled	corelibs-dc-add-fns	
 Lib/dataclasses.py	936	941	_hash_set_none	_hash_set_none(cls, fields, func_builder)	todo		withdrawn: thin; the table is not the three action functions
-Lib/dataclasses.py	943	949	_hash_add	_hash_add(cls, fields, func_builder)	todo		withdrawn: thin; the table is not the three action functions
+Lib/dataclasses.py	943	949	_hash_add	_hash_add(cls, fields, func_builder)	modelled	corelibs-dc-hash-fields	
 Lib/dataclasses.py	951	954	_hash_exception	_hash_exception(cls, fields, func_builder)	todo		withdrawn: thin; the table is not the three action functions
 Lib/dataclasses.py	986	1243	_process_class	_process_class(cls, init, repr, eq, order, unsafe_hash, frozen, match_args, kw_only, slots, weakref_slot)	todo		
 Lib/dataclasses.py	1251	1252	_dataclass_getstate	_dataclass_getstate(self)	todo		
@@ -42,10 +42,10 @@ Lib/dataclasses.py	1423	1451	dataclass	dataclass(cls=None, /, *, init=True, repr
 Lib/dataclasses.py	1454	1469	fields	fields(class_or_instance)	todo		withdrawn: thin; the table is not the three action functions
 Lib/dataclasses.py	1472	1474	_is_dataclass_instance	_is_dataclass_instance(obj)	todo		
 Lib/dataclasses.py	1477	1481	is_dataclass	is_dataclass(obj)	todo		
-Lib/dataclasses.py	1484	1505	asdict	asdict(obj, *, dict_factory=dict)	todo		
-Lib/dataclasses.py	1508	1573	_asdict_inner	_asdict_inner(obj, dict_factory)	todo		
-Lib/dataclasses.py	1576	1597	astuple	astuple(obj, *, tuple_factory=tuple)	todo		
-Lib/dataclasses.py	1600	1633	_astuple_inner	_astuple_inner(obj, tuple_factory)	todo		
+Lib/dataclasses.py	1484	1505	asdict	asdict(obj, *, dict_factory=dict)	modelled	corelibs-dc-asdict-astuple	
+Lib/dataclasses.py	1508	1573	_asdict_inner	_asdict_inner(obj, dict_factory)	modelled	corelibs-dc-asdict-astuple,corelibs-dc-twins,corelibs-dc-fast-slow,corelibs-dc-counter,corelibs-dc-asdict-where-astuple	
+Lib/dataclasses.py	1576	1597	astuple	astuple(obj, *, tuple_factory=tuple)	modelled	corelibs-dc-asdict-astuple	
+Lib/dataclasses.py	1600	1633	_astuple_inner	_astuple_inner(obj, tuple_factory)	modelled	corelibs-dc-asdict-astuple,corelibs-dc-twins	
 Lib/dataclasses.py	1636	1760	make_dataclass	make_dataclass(cls_name, fields, *, bases=(), namespace=None, init=True, repr=True, eq=True, order=False, unsafe_hash=False, frozen=False, match_args=True, kw_only=False, slots=False, weakref_slot=False, module=None, decorator=dataclass)	todo		
-Lib/dataclasses.py	1763	1779	replace	replace(obj, /, **changes)	todo		withdrawn: thin; the table is not the three action functions; candidates:strsearch-replace-str-bytes
-Lib/dataclasses.py	1782	1813	_replace	_replace(self, /, **changes)	todo		withdrawn: thin; the table is not the three action functions
+Lib/dataclasses.py	1763	1779	replace	replace(obj, /, **changes)	modelled	corelibs-dc-replace-spec,corelibs-dc-replace-errors	
+Lib/dataclasses.py	1782	1813	_replace	_replace(self, /, **changes)	modelled	corelibs-dc-replace-spec,corelibs-dc-replace-errors	

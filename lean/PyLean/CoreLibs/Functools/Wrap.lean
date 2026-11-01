@@ -19,15 +19,23 @@ def setAttr {α : Type} (o : Attrs α) (k : String) (v : α) : Attrs α :=
 /-- `dict.update`. -/
 def dictUpdate {α : Type} (d e : Attrs α) : Attrs α := e.foldl (fun acc p => setAttr acc p.1 p.2) d
 
-/-- The object written to. Its attributes live in `dict`, so `__dict__` and `setattr` see the same table,
-unless `hasDict` is false, as with `__slots__`, when `setattr` goes to `slots`. `setFail` is an exception from
-`setattr`, for a read-only attribute, and `others` holds any other dict-valued attribute `updated` may name. -/
+/-- The object written to. Its attributes live in `dict`, so `__dict__` and `setattr` see the same table, unless `hasDict`
+is false, as with `__slots__`, or the name is one of `descr`, data descriptors of the type, as the six names of
+`WRAPPER_ASSIGNMENTS` are on a function: `setattr` then goes to `slots`, and `__dict__` does not see it. `setFail` is an
+exception from `setattr`, for a read-only attribute, `others` holds any other dict-valued attribute `updated` may
+name, and `readFail` an exception from reading one. -/
 structure Wrapper (α : Type) where
   dict : Attrs α
   hasDict : Bool := true
   slots : Attrs α := []
   setFail : String → Option PyExc := fun _ => none
   others : Attrs (Attrs α) := []
+  descr : List String := []
+  readFail : String → Option PyExc := fun _ => none
+
+/-- `getattr(wrapper, k)`, after `update_wrapper`: a data descriptor goes before `__dict__`. -/
+def Wrapper.get {α : Type} (w : Wrapper α) (k : String) : Option α :=
+  if w.descr.contains k || !w.hasDict then w.slots.lookup k else w.dict.lookup k
 
 /-- The object read from. `read` is `getattr`: `none` is `AttributeError`, and any other exception is one.
 `dictOf` is `getattr(wrapped, attr, {})`, with the `{}` default written `none`. -/
@@ -39,7 +47,7 @@ def wrapperSet {α : Type} (w : Wrapper α) (k : String) (v : α) : Py (Wrapper 
   match w.setFail k with
   | some e => .error e
   | none =>
-    if w.hasDict then .ok { w with dict := setAttr w.dict k v }
+    if w.hasDict && !w.descr.contains k then .ok { w with dict := setAttr w.dict k v }
     else .ok { w with slots := setAttr w.slots k v }
 
 /-- The first loop of `update_wrapper`, Lib/functools.py:49-56. -/
@@ -59,6 +67,9 @@ target is read first, so a missing one raises before `wrapped` is read. -/
 def updateLoop {α : Type} (wrapped : Wrapped α) : List String → Wrapper α → Py (Wrapper α)
   | [], w => .ok w
   | a :: rest, w =>
+    match w.readFail a with
+    | some e => .error e
+    | none =>
     let target : Option (Attrs α) :=
       if a == "__dict__" then (if w.hasDict then some w.dict else none) else w.others.lookup a
     match target with
@@ -106,11 +117,13 @@ def runUpdateWrapper {α : Type} (c : Called (WArg α)) : Py (Wrapper α) :=
     updateWrapper w d self a u
   | _, _, _, _, _ => .error (.typeError "~update_wrapper() got unexpected arguments")
 
-/-- `wraps`, Lib/functools.py:65-77: `partial(update_wrapper, wrapped=..., assigned=..., updated=...)`. -/
+/-- `wraps`, Lib/functools.py:65-77: `partial(update_wrapper, wrapped=..., assigned=..., updated=...)`. Each argument is
+any object, so `Placeholder` too, which `partial` refuses as a keyword. -/
+def wrapsP {α : Type} (wrapped assigned updated : PArg (WArg α)) : Py (Fn (WArg α)) :=
+  partialNewC none (.base updateWrapperId) [] [("wrapped", wrapped), ("assigned", assigned), ("updated", updated)]
+
 def wraps {α : Type} (wrapped : Wrapped α) (self : α) (assigned updated : List String) : Py (Fn (WArg α)) :=
-  partialNewC none (.base updateWrapperId) []
-    [("wrapped", .val (.wrapped wrapped self)), ("assigned", .val (.names assigned)),
-      ("updated", .val (.names updated))]
+  wrapsP (.val (.wrapped wrapped self)) (.val (.names assigned)) (.val (.names updated))
 
 /-- `wraps(...)(wrapper)`. -/
 def wrapsCall {α : Type} (p : Fn (WArg α)) (w : Wrapper α) : Py (Wrapper α) :=
@@ -147,6 +160,39 @@ def lruDecorate (mode : Option Int → Py LruMode) (arg : MaxsizeArg) (typed : B
 def cacheDecorate (mode : Option Int → Py LruMode) (fail : Option PyExc) : Py LruRec :=
   lruDecorate mode .none false fail
 
+/-- What the `__dict__` of a cached function holds. `id` tells caches apart. `typed` is `cache_parameters()` as given: any
+object. -/
+inductive LruAttr (τ : Type) where
+  | params (maxsize : Option Int) (typed : τ)
+  | info (id : Nat)
+  | clear (id : Nat)
+  | other (id : Nat)
+  deriving Repr, DecidableEq
+
+/-- The `__dict__` of a cached function before `update_wrapper`. The Python wrapper is a function that was given
+`cache_info` and `cache_clear` at Lib/functools.py:712-713; the C one has them as methods of its type, which are not in the
+`__dict__`. Both get `cache_parameters` at :587 and :595. -/
+def lruDict {τ : Type} (py : Bool) (id : Nat) (m : Option Int) (t : τ) : Attrs (LruAttr τ) :=
+  (if py then [("cache_info", .info id), ("cache_clear", .clear id)] else []) ++ [("cache_parameters", .params m t)]
+
+/-- `lru_cache(maxsize, typed)(f)`, Lib/functools.py:579-597, with the real `update_wrapper` at :588 and :596, on an object
+that is its own attribute table. `id` is this cache, and `self` it as an attribute value. -/
+def lruBuild {τ : Type} (py : Bool) (id : Nat) (mode : Option Int → Py LruMode) (arg : MaxsizeArg) (t : τ)
+    (user : Wrapped (LruAttr τ)) (self : LruAttr τ) : Py (LruMode × Wrapper (LruAttr τ)) :=
+  match lruCacheArg arg with
+  | .error e => .error e
+  | .ok m =>
+    match mode m with
+    | .error e => .error e
+    | .ok w =>
+      match updateWrapper { dict := lruDict py id m t } user self wrapperAssignments wrapperUpdates with
+      | .error e => .error e
+      | .ok r => .ok (w, r)
+
+/-- A cached function as the thing being wrapped: `__dict__` is its table. -/
+def lruAsWrapped {τ : Type} (w : Wrapper (LruAttr τ)) : Wrapped (LruAttr τ) :=
+  ⟨fun _ => .ok none, fun _ => .ok (some w.dict)⟩
+
 /-! ### `_warn_python_reduce_kwargs` -/
 
 /-- The `wrapper` of `_warn_python_reduce_kwargs`, Lib/functools.py:1141-1152. `warn` is `warnings.warn(...)`,
@@ -161,22 +207,26 @@ def reduceWarnWrapper {β : Type} (kwnames : List String) (warn : Py Unit) (call
 
 /-! ### `cached_property` -/
 
-/-- What `instance.__dict__` is. `frozen` raises `TypeError` on item assignment, as a `mappingproxy` does. -/
+/-- What `instance.__dict__` is. `none` is `AttributeError`, as with `__slots__`, and `raises` any other exception from the
+read. A `dict` may have a `get` that raises, and a store that raises: a `TypeError` is what a `mappingproxy` does, and
+`isType` says whether the exception is one, or a subclass. -/
 inductive InstDict (α : Type) where
   | none
-  | dict (d : Attrs α) (frozen : Bool)
+  | raises (e : PyExc)
+  | dict (d : Attrs α) (getFail : Option PyExc) (setFail : Option (PyExc × Bool))
 
 /-- A `cached_property`. `read` gives `func.__doc__` and `func.__module__`. -/
 structure CachedProp (α : Type) where
-  /-- The function: it gets the instance's dict, which it may change, and gives the value and the dict. -/
-  func : Attrs α → Py (α × Attrs α)
+  /-- The function: it gets the instance's dict, which it may change, and gives its result and the dict, which it leaves
+  changed even if it raises. -/
+  func : Attrs α → Py α × Attrs α
   attrname : Option String
   doc : α
   module : α
 
 /-- `cached_property.__init__`, Lib/functools.py:1095-1099: reading `__doc__` or `__module__` may fail,
 `AttributeError` included, and the object is not built. -/
-def cachedNew {α : Type} (func : Attrs α → Py (α × Attrs α)) (read : String → Py (Option α)) :
+def cachedNew {α : Type} (func : Attrs α → Py α × Attrs α) (read : String → Py (Option α)) :
     Py (CachedProp α) :=
   match read "__doc__" with
   | .error e => .error e
@@ -200,31 +250,40 @@ def setName (attrname : Option String) (name : String) : Py (Option String) :=
 /-- What `cached_property.__get__` gives. -/
 inductive CachedOut (α : Type) where
   | self
-  /-- The value, and the instance dict afterwards. -/
-  | val (v : α) (d : Attrs α)
+  | val (v : α)
 
-/-- `cached_property.__get__`, Lib/functools.py:1110-1135. `obj` is `none` for class access. The
-function may have stored under the same name while it ran; the store at :1128 overwrites it. -/
-def cachedGet {α : Type} (c : CachedProp α) (obj : Option (InstDict α)) : Py (CachedOut α) :=
+/-- `cached_property.__get__`, Lib/functools.py:1110-1135: its result, and the instance dict afterwards, when there is
+one. `obj` is `none` for class access. The function may have stored under the same name while it ran; the store at :1128
+overwrites it. A function that raises leaves the dict as it left it. -/
+def cachedGet {α : Type} (c : CachedProp α) (obj : Option (InstDict α)) : Py (CachedOut α) × Option (Attrs α) :=
   match obj with
-  | none => .ok .self
+  | none => (.ok .self, none)
   | some inst =>
     match c.attrname with
     | none =>
-      .error (.typeError "Cannot use cached_property instance without calling __set_name__ on it.")
+      (.error (.typeError "Cannot use cached_property instance without calling __set_name__ on it."),
+       match inst with
+       | .dict d _ _ => some d
+       | _ => none)
     | some name =>
       match inst with
-      | .none => .error (.typeError "~No '__dict__' attribute on instance")
-      | .dict d frozen =>
-        match d.lookup name with
-        | some v => .ok (.val v d)
+      | .none => (.error (.typeError "~No '__dict__' attribute on instance"), none)
+      | .raises e => (.error e, none)
+      | .dict d getFail setFail =>
+        match getFail with
+        | some e => (.error e, some d)
         | none =>
-          match c.func d with
-          | .error e => .error e
-          | .ok (v, d') =>
-            if frozen then
-              .error (.typeError "~The '__dict__' attribute does not support item assignment")
-            else .ok (.val v (setAttr d' name v))
+          match d.lookup name with
+          | some v => (.ok (.val v), some d)
+          | none =>
+            match c.func d with
+            | (.error e, d') => (.error e, some d')
+            | (.ok v, d') =>
+              match setFail with
+              | some (e, isType) =>
+                (.error (if isType then .typeError "~The '__dict__' attribute does not support item assignment" else e),
+                 some d')
+              | none => (.ok (.val v), some (setAttr d' name v))
 
 /-! ### `singledispatchmethod` -/
 

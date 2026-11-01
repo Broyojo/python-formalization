@@ -1,0 +1,57 @@
+id: textlibs-html-parser-entity-chunking
+title: "HTMLParser with convert_charrefs=False reports a different entity name depending on where the feed splits"
+priority: P4
+kind: twin-disagreement
+module: textlibs
+files: [Lib/html/parser.py]
+functions: ["HTMLParser.goahead"]
+summary: |
+  `feed('&amp-->')` calls `handle_entityref('amp--')`. `feed('&amp--')` then `feed('>')` calls
+  `handle_entityref('amp-')`, followed by data `->`. The entity regex needs one character after the
+  name, and `-` is allowed in the name, so at the end of a chunk the match backtracks and takes the
+  last `-` as the terminator. The parser accepts that match and does not wait for more input. The
+  default `convert_charrefs=True` is not affected.
+likelihood: |
+  Low. It needs `convert_charrefs=False`, a name ending in `-` or `.`, and a chunk boundary there.
+maybe_intended: |
+  No, since feed is meant to take data in pieces of any size, but names like these are not real
+  entities, so a maintainer may not treat it as a priority.
+reproducer: |
+  from html.parser import HTMLParser
+
+  class P(HTMLParser):
+      def __init__(self):
+          super().__init__(convert_charrefs=False)
+          self.names = []
+      def handle_entityref(self, name):
+          self.names.append(name)
+
+  a = P()
+  a.feed('&amp-->')
+  a.close()
+  b = P()
+  b.feed('&amp--')
+  b.feed('>')
+  b.close()
+  print(a.names, b.names)
+  if a.names == ['amp--'] and b.names == ['amp-']:
+      print('REPRODUCED textlibs-html-parser-entity-chunking')
+expected: |
+  The same events however the text is split.
+observed: |
+  python3 3.14.7: ['amp--'] ['amp-'], REPRODUCED.
+  main 3.16.0a1+dev: ['amp--'] ['amp-'], REPRODUCED.
+promised_by: |
+  Doc/library/html.parser.rst:99-100: "It is processed insofar as it consists of complete elements;
+  incomplete data is buffered until more data is fed".
+cause: |
+  Lib/html/parser.py:25 is `&([a-zA-Z][-.a-zA-Z0-9]*)[^a-zA-Z0-9]`. `-` and `.` are in the name and
+  also match the terminator. Lib/html/parser.py:352-360 accepts the match at the end of rawdata, with
+  the terminator the regex found by backtracking, and does not reach the `incomplete` check at :361.
+possible_fix: |
+  When not at end and the match ends at the end of rawdata, or its name could grow, wait for more
+  input, as the charref branch does.
+duplicates: |
+  None found. #140875 (closed) was about dropped ampersands with convert_charrefs=False. Queries: gh
+  search issues --repo python/cpython "HTMLParser feed chunk"; "html.parser convert_charrefs".
+lean: not modelled; html.parser has no Lean model yet, so there is no refutation.

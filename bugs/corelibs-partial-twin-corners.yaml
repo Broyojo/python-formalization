@@ -1,0 +1,86 @@
+id: corelibs-partial-twin-corners
+title: "partial twins differ on an object claiming to be a partial, on a repr that grows keywords, and in __setstate__ on subclasses"
+priority: P4
+kind: twin-mismatch
+module: corelibs
+files: [Lib/functools.py, Modules/_functoolsmodule.c]
+functions: ["_partial_new", "_partial_repr", "partial.__setstate__"]
+summary: |
+  Four small differences between the Python and C partial. _partial_new uses isinstance, which goes through __class__,
+  so an object that claims to be a partial is taken apart, where PyObject_TypeCheck leaves it as the function.
+  _partial_repr runs a generator over self.keywords, so a repr that adds a keyword raises RuntimeError, where the PyDict_Next
+  loop of C goes on. In __setstate__, dict(kwds) runs an overridden keys of an empty dict subclass, which PyDict_Copy
+  skips. And for a tuple subclass the Python twin goes through the protocol: a __bool__ that says no lets a trailing
+  placeholder through, and a stateful __iter__ makes phcount count one iteration when args keeps another. The
+  matching C defect, with memory unsafety, is corelibs-partial-setstate-phcount.
+likelihood: |
+  Very low: each needs a hostile object, and the Python twin only runs without _functools.
+maybe_intended: |
+  Differences of implementation, not worth a report by themselves; useful for the group report on partial.
+reproducer: |
+  from test.support import import_helper
+  py = import_helper.import_fresh_module('functools', blocked=['_functools'])
+  c = import_helper.import_fresh_module('functools', fresh=['_functools'])
+  def inner():
+      return 0
+  def duck(m):
+      class Fake:
+          func = staticmethod(inner)
+          args = ()
+          keywords = {}
+          _phcount = 0
+          _merger = None
+          __class__ = property(lambda s: m.partial)
+          def __call__(self):
+              return 1
+      return m.partial(Fake()).func is inner
+  a = duck(py), duck(c)
+  def grow(m):
+      hold = []
+      class V:
+          def __repr__(self):
+              if hold:
+                  hold.pop().keywords['zz'] = 0
+              return 'v'
+      p = m.partial(inner, k=V())
+      hold.append(p)
+      try:
+          repr(p)
+          return 'ok'
+      except RuntimeError:
+          return 'RuntimeError'
+  b = grow(py), grow(c)
+  def empty(m):
+      class D(dict):
+          def keys(self):
+              raise ValueError('conv')
+          def __iter__(self):
+              raise ValueError('conv')
+      p = m.partial(inner)
+      try:
+          p.__setstate__((inner, (), D(), None))
+          return 'ok'
+      except ValueError:
+          return 'ValueError'
+  d = empty(py), empty(c)
+  print(a, b, d)
+  if a == (True, False) and b == ('RuntimeError', 'ok') and d == ('ValueError', 'ok'):
+      print('REPRODUCED corelibs-partial-twin-corners')
+expected: |
+  The same outcome in both twins.
+observed: |
+  python3 3.14.7: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Nothing explicit: the two twins.
+cause: |
+  Lib/functools.py:329 against Modules/_functoolsmodule.c:215; :365 against :651-660; :422-423 against PyDict_Copy at
+  Modules/_functoolsmodule.c:748-749; :415-419 against :725-743.
+possible_fix: |
+  None needed, apart from the C defect recorded on its own.
+duplicates:
+  issues: []
+  queries: ["gh search issues partial repr keywords changed size during iteration",
+            "gh search issues functools partial isinstance __class__ subclass flatten", "bugforge README: no match"]
+lean:
+  property: PyLean.CoreLibs.Functools.PartialNewDuck
+  theorem: PyLean.CoreLibs.Functools.partialNewDuck_refuted

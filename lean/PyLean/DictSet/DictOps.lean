@@ -308,29 +308,62 @@ def cloneCombinedDictKeys (id : Nat) (k : Keys K V) : Keys K V :=
 section Merge
 variable [DecidableEq K] (P : Proto K (PyDict K V))
 
-/-- The loop of `dict_dict_merge` (:3952-3986) over `other`'s items. The check
-`orig_size != other->ma_used` (:3981) cannot fire here, since a comparison can only
-reach the receiver in this model; see `Diff.lean`. -/
+/-- The body of the loop of `dict_dict_merge` (:3956-3975). -/
+def mergeStep (override : Nat) (key : K) (hash : Int) (value : V) : DM K V Unit :=
+  if override == 1 then
+    insertDict P key hash value
+  else do
+    let err ← dictContainsKnownHash P key hash
+    if !err then
+      insertDict P key hash value
+    else if override != 0 then
+      M.throw (keyErr P key)
+
+/-- The message of :3982-3983. -/
+def mergeMutated : PyExc := runtimeError "dict mutated during update"
+
+/-- The loop of `dict_dict_merge` (:3952-3986). `_PyDict_Next` reads the source as it stands
+now, so what a callback did to it shows at the next step; the test at :3981 comes after the
+error test at :3978, and compares only the number of items. Running out of `fuel` is a limit
+of the model, never a Python outcome. -/
+def mergeLive (override origSize : Nat) : Nat → Int → DM K V Unit
+  | 0, _ => M.throw .modelFuel
+  | fuel + 1, pos => fun mp =>
+    match mp.peer with
+    | none => (.error .modelFuel, mp)
+    | some src =>
+      match dictNext src.toDict pos with
+      | none => (.ok (), mp)
+      | some (pos', key, value, hash) =>
+        match mergeStep P override key hash value mp with
+        | (.error e, s) => (.error e, s)
+        | (.ok _, s) =>
+          match s.peer with
+          | none => (.error .modelFuel, s)
+          | some src' =>
+            if origSize != src'.used then (.error mergeMutated, s)
+            else mergeLive override origSize fuel pos' s
+
+/-- `mergeLive` on a source that stays put: the list of its items. The proofs use this form. -/
 def mergeLoop (override : Nat) : List (K × V × Int) → DM K V Unit
   | [] => pure ()
   | (key, value, hash) :: rest => do
-    if override == 1 then
-      insertDict P key hash value
-    else
-      let err ← dictContainsKnownHash P key hash
-      if !err then
-        insertDict P key hash value
-      else if override != 0 then
-        M.throw (keyErr P key)
+    mergeStep P override key hash value
     mergeLoop override rest
 
-/-- The tail of `dict_dict_merge` (:3934-3987): one big resize, then the insertions. -/
+/-- More steps than a source of this shape can take. -/
+def mergeFuel (other : PyDict K V) : Nat :=
+  other.body.nentries + other.used + 2 ^ other.body.log2Size + 64
+
+/-- The tail of `dict_dict_merge` (:3934-3987): one big resize, then the loop. From here on
+`peer` holds the source, and the caller reads the source's final state from it. -/
 def mergeRest (other : PyDict K V) (override : Nat) : DM K V Unit := fun mp =>
   match (if usableFraction (2 ^ mp.body.log2Size) < other.used then
            dictResize (estimateLog2Keysize (mp.used + other.used)) other.body.isUnicode mp
          else (.ok (), mp)) with
   | (.error e, s) => (.error e, s)
-  | (.ok _, s) => mergeLoop P override (dictItems other) s
+  | (.ok _, s) =>
+    mergeLive P override other.used (mergeFuel other) 0 { s with peer := some other.toPeer }
 
 /-- `dict_dict_merge` (:3891-3988). -/
 def dictDictMerge (other : PyDict K V) (override : Nat) : DM K V Unit := fun mp =>
@@ -354,11 +387,13 @@ def dictDictMerge (other : PyDict K V) (override : Nat) : DM K V Unit := fun mp 
 inductive MergeArg (K V : Type) where
   /-- `PyDict_Check(b) && Py_TYPE(b)->tp_iter == dict_iter`. -/
   | dict (d : PyDict K V)
-  /-- Otherwise: `PyMapping_Keys(b)` (a list, or the error) and `PyObject_GetItem`. -/
-  | mapping (keys : Py (List K)) (getitem : K → Py V)
+  /-- Otherwise: `PyMapping_Keys(b)` and `PyObject_GetItem`. Both run Python code, so both may
+  raise and may change the receiver. The list is private to `dict_merge` once built, which is
+  why the loop can walk it. -/
+  | mapping (keys : DM K V (List K)) (getitem : K → DM K V V)
 
 /-- The slow loop of `dict_merge` (:4042-4075). -/
-def mergeGenericLoop (getitem : K → Py V) (override : Nat) : List K → DM K V Unit
+def mergeGenericLoop (getitem : K → DM K V V) (override : Nat) : List K → DM K V Unit
   | [] => pure ()
   | key :: rest => do
     let skip ← (if override != 1 then do
@@ -371,7 +406,7 @@ def mergeGenericLoop (getitem : K → Py V) (override : Nat) : List K → DM K V
       else pure false
     else pure false)
     if !skip then
-      let value ← M.lift (getitem key)
+      let value ← getitem key
       dictSetItem P key value
     mergeGenericLoop getitem override rest
 
@@ -381,8 +416,14 @@ def dictMerge (b : MergeArg K V) (override : Nat) : DM K V Unit :=
   match b with
   | .dict other => dictDictMerge P other override
   | .mapping keys getitem => do
-    let ks ← M.lift keys
+    let ks ← keys
     mergeGenericLoop P getitem override ks
+
+/-- The test at the top of `dict_merge` (:4002-4005), which only the C API can fail. -/
+def dictMergeChecked (aIsDict : Bool) (b : Option (MergeArg K V)) (override : Nat) : DM K V Unit :=
+  match aIsDict, b with
+  | true, some arg => dictMerge P arg override
+  | _, _ => M.throw badInternalCall
 
 /-- One element of the iterable given to `dict.update`, after `PySequence_Fast`. -/
 inductive Seq2Item (K V : Type) where
@@ -391,30 +432,30 @@ inductive Seq2Item (K V : Type) where
   | wrongLen (n : Nat)
   | pair (k : K) (v : V)
 
-/-- The loop of `merge_from_seq2_lock_held` (:3810-3866). The note added at :3826 does
+/-- The loop of `merge_from_seq2_lock_held` (:3810-3866). Each step is one `PyIter_Next`: it
+may raise and may change the receiver, and `none` is exhaustion. The note added at :3826 does
 not change `str(e)`. -/
-def seq2Loop (override : Bool) : Nat → List (Seq2Item K V) → Option PyExc → DM K V Unit
-  | _, [], stop =>
-    match stop with
-    | some e => M.throw e
+def seq2Loop (override : Bool) : Nat → List (DM K V (Option (Seq2Item K V))) → DM K V Unit
+  | _, [] => pure ()
+  | i, step :: rest => do
+    match ← step with
     | none => pure ()
-  | i, item :: rest, stop => do
-    match item with
-    | .notSeq e => M.throw e
-    | .wrongLen n =>
-      M.throw (.valueError s!"dictionary update sequence element #{i} has length {n}; 2 is required")
-    | .pair k v =>
-      if override then
-        dictSetItem P k v
-      else
-        let _ ← dictSetdefaultRef P k v false false
-    seq2Loop override (i + 1) rest stop
+    | some item =>
+      match item with
+      | .notSeq e => M.throw e
+      | .wrongLen n =>
+        M.throw (.valueError s!"dictionary update sequence element #{i} has length {n}; 2 is required")
+      | .pair k v =>
+        if override then
+          dictSetItem P k v
+        else
+          let _ ← dictSetdefaultRef P k v false false
+      seq2Loop override (i + 1) rest
 
 /-- `merge_from_seq2_lock_held` (:3794-3878), `PyDict_MergeFromSeq2` (:3880-3889). -/
-def mergeFromSeq2 (seq2 : Iterable (Seq2Item K V)) (override : Bool) : DM K V Unit :=
-  match seq2.getIter with
-  | some e => M.throw e
-  | none => seq2Loop P override 0 seq2.items seq2.stop
+def mergeFromSeq2 (seq2 : ReIter (PyDict K V) (Seq2Item K V)) (override : Bool) : DM K V Unit := do
+  seq2.getIter
+  seq2Loop P override 0 seq2.steps
 
 /-- The argument of `dict.update`, `dict()`, `|=`. -/
 inductive UpdateArg (K V : Type) where
@@ -422,14 +463,15 @@ inductive UpdateArg (K V : Type) where
   | exact (d : PyDict K V)
   /-- Anything else: `PyObject_HasAttrWithError(arg, "keys")`, then the mapping route or
   the sequence route. -/
-  | other (hasKeys : Py Bool) (asMapping : MergeArg K V) (seq2 : Iterable (Seq2Item K V))
+  | other (hasKeys : DM K V Bool) (asMapping : MergeArg K V)
+      (seq2 : ReIter (PyDict K V) (Seq2Item K V))
 
 /-- `dict_update_arg` (:3733-3748). -/
 def dictUpdateArg (arg : UpdateArg K V) : DM K V Unit :=
   match arg with
   | .exact d => dictMerge P (.dict d) 1
   | .other hasKeys asMapping seq2 => do
-    let h ← M.lift hasKeys
+    let h ← hasKeys
     if h then dictMerge P asMapping 1 else mergeFromSeq2 P seq2 true
 
 /-- `_PyDict_HasOnlyStringKeys` (:1717-1730). -/

@@ -92,14 +92,6 @@ theorem autoValues_proven : AutoValues := by
   · intro s
     simp [flagNext]
 
-/-- `repr` and `str` of a flag: a named value shows its name, a nameless one the number. -/
-def FlagReprShape : Prop :=
-  ∀ (cls n : String) (v : Nat),
-    flagRepr cls (some n) v = s!"<{cls}.{n}: {v}>" ∧ flagRepr cls none v = s!"<{cls}: {v}>" ∧
-    flagStr cls (some n) v = s!"{cls}.{n}" ∧ flagStr cls none v = s!"{cls}({v})"
-
-theorem flagReprShape_proven : FlagReprShape := fun _ _ _ => ⟨rfl, rfl, rfl, rfl⟩
-
 /-- The if-statement version of the table, from bpo-32929 referenced at Lib/dataclasses.py:981. -/
 def hashByIf (unsafeHash eq frozen explicit : Bool) : HashAction :=
   if unsafeHash then (if explicit then .exception else .add)

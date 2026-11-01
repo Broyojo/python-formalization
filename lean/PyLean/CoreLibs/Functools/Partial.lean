@@ -148,6 +148,14 @@ def partialNewPy {α : Type} (outer : Option Nat) (func : Fn α) (args : List (P
     | .error e => .error e
     | .ok (t, k, p) => .ok (.pobj outer none func t k p)
 
+/-- An object whose `__class__` claims `partial`, with the attributes one has. `isinstance` at Lib/functools.py:329 accepts it
+through `__class__`, so the Python class takes it apart like a `partial`. -/
+def duckNewPy {α : Type} (outer : Option Nat) (inner : Fn α) (pargs : List (PArg α)) (pkw : List (String × α)) (pph : Nat)
+    (args : List (PArg α)) (kw : List (String × PArg α)) : Py (Fn α) :=
+  match newCore args kw (some (pargs, pkw, pph)) with
+  | .error e => .error e
+  | .ok (t, k, p) => .ok (.pobj outer none inner t k p)
+
 /-- The checks of `partial_new`, Modules/_functoolsmodule.c:181-211, in that order. -/
 def validateNew {α : Type} (func : Fn α) (args : List (PArg α)) (kw : List (String × PArg α)) :
     Py (List (String × α)) :=
@@ -230,8 +238,8 @@ def partialCallPy {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw : Lis
 /-- A read past the end of the call's argument array, which C does not check. -/
 def oobRead : PyExc := .named "SIGSEGV" "read past the end of the call arguments"
 
-/-- The first loop of the merge in `partial_call`, Modules/_functoolsmodule.c:544-552, and of
-`partial_vectorcall`, :447-455: `none` when `args[j]` is past the end. -/
+/-- The first loop of the merge in `partial_call`, Modules/_functoolsmodule.c:550-558, and of
+`partial_vectorcall`, :450-458: `none` when `args[j]` is past the end. -/
 def cMergeLoop {α : Type} (args : List α) : List (PArg α) → Nat → Option (List α × Nat)
   | [], j => some ([], j)
   | .ph :: rest, j =>
@@ -240,7 +248,7 @@ def cMergeLoop {α : Type} (args : List α) : List (PArg α) → Nat → Option 
     | some a => (cMergeLoop args rest (j + 1)).map (fun r => (a :: r.1, r.2))
   | .val v :: rest, j => (cMergeLoop args rest j).map (fun r => (v :: r.1, r.2))
 
-/-- The whole merge, with `phcount` taken from the object as C does: the second loop, :554-558, copies
+/-- The whole merge, with `phcount` taken from the object as C does: the second loop, :560-565, copies
 `nargs - phcount` items from `j` on. -/
 def cMerge {α : Type} (pargs : List (PArg α)) (ph : Nat) (args : List α) : Option (List α) :=
   match cMergeLoop args pargs 0 with
@@ -261,17 +269,34 @@ def partialCallC {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw : List
       | some tot => callFn func tot totKw
     else callFn func (valsOf pargs ++ args) totKw
 
+/-- A `memcpy` past the end of the stack array, which C does not check. -/
+def oobWrite : PyExc := .named "SIGABRT" "write past the end of the stack array"
+
+/-- The merge of `partial_vectorcall`, :450-462. The stack holds `pto_nargs + nargs - phcount` items, sized by
+`phcount`, and the `memcpy` at :460-462 copies `nargs - j` items after the stored ones, so it stays inside only
+when `j` is `phcount`. -/
+def vecMerge {α : Type} (pargs : List (PArg α)) (ph : Nat) (args : List α) : Py (List α) :=
+  match cMergeLoop args pargs 0 with
+  | none => .error oobRead
+  | some (_, j) =>
+    if ph < args.length ∧ j ≠ ph then .error oobWrite
+    else
+      match cMerge pargs ph args with
+      | none => .error oobRead
+      | some tot => .ok tot
+
 /-- `partial_vectorcall`, Modules/_functoolsmodule.c:386-476, reached when the wrapped function
 supports vectorcall (`partial_setvectorcall`, :480-492); `partial_vectorcall_fallback`, :374-383,
-sends a `partial` with stored keywords to `partial_call`. -/
+sends a `partial` with stored keywords to `partial_call`. The fast path for a one-element tuple, :419-428,
+gives the same call on a well-formed object, where such a tuple has no placeholder. -/
 def partialVectorcall {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw : List (String × α))
     (ph : Nat) (args : List α) (kw : List (String × α)) : Py (Called α) :=
   if !pkw.isEmpty then partialCallC func pargs pkw ph args kw
   else if args.length < ph then .error (.typeError (missingMsg ph args.length))
   else if ph ≠ 0 then
-    match cMerge pargs ph args with
-    | none => .error oobRead
-    | some tot => callFn func tot kw
+    match vecMerge pargs ph args with
+    | .error e => .error e
+    | .ok tot => callFn func tot kw
   else callFn func (valsOf pargs ++ args) kw
 
 /-- `partial.__get__`, Lib/functools.py:395-398, `partial_descr_get`, Modules/_functoolsmodule.c:362-368, and
@@ -310,7 +335,7 @@ def partialReprPy {α : Type} (E : ReprEnv α) (cls : String) (func : Py String)
   let k ← mapPy (kwRepr E) kw
   pure (cls ++ "(" ++ joinComma (f :: a ++ k) ++ ")")
 
-/-- The fold at Modules/_functoolsmodule.c:637-644 and :648-657: `arglist` grows by `", x"`. -/
+/-- The fold at Modules/_functoolsmodule.c:639-646 and :648-661: `arglist` grows by `", x"`. -/
 def reprFold {β : Type} (f : β → Py String) : String → List β → Py String
   | acc, [] => .ok acc
   | acc, x :: xs =>
@@ -326,6 +351,51 @@ def partialReprC {α : Type} (E : ReprEnv α) (cls : String) (func : Py String)
   let f ← func
   pure (cls ++ "(" ++ f ++ l ++ ")")
 
+/-- The generator of `_partial_repr`, Lib/functools.py:365: `mut v` says that `repr(v)` changes the size of `self.keywords`, so
+the iterator raises `RuntimeError` at its next step, the last one too. -/
+def kwLoopPy {α : Type} (E : ReprEnv α) (grows : α → Bool) : List (String × α) → Py (List String)
+  | [] => .ok []
+  | p :: r =>
+    match kwRepr E p with
+    | .error e => .error e
+    | .ok s =>
+      if grows p.2 then .error (.named "RuntimeError" "dictionary changed size during iteration")
+      else
+        match kwLoopPy E grows r with
+        | .error e => .error e
+        | .ok l => .ok (s :: l)
+
+/-- The `PyDict_Next` loop of `partial_repr`, Modules/_functoolsmodule.c:648-661, which has no check on the size: a `repr` that
+adds `extra` to the dict only makes the loop go further. -/
+def kwLoopC {α : Type} (E : ReprEnv α) (grows : α → Bool) (extra : String × α) : String → List (String × α) → Py String
+  | acc, [] => .ok acc
+  | acc, p :: r =>
+    match kwRepr E p with
+    | .error e => .error e
+    | .ok s =>
+      if grows p.2 then reprFold (kwRepr E) (acc ++ ", " ++ s) (r ++ [extra])
+      else kwLoopC E grows extra (acc ++ ", " ++ s) r
+
+/-- `_partial_repr`, Lib/functools.py:359-366, with each read: `cls.__module__`, `cls.__qualname__`, which a metaclass can
+intercept, `repr(self.func)`, the arguments and the keywords, in order. -/
+def partialReprFullPy {α : Type} (E : ReprEnv α) (grows : α → Bool) (mod qual : Py String) (func : Py String)
+    (args : List (PArg α)) (kw : List (String × α)) : Py String := do
+  let m ← mod
+  let q ← qual
+  let f ← func
+  let a ← mapPy (argRepr E) args
+  let k ← kwLoopPy E grows kw
+  pure (m ++ "." ++ q ++ "(" ++ joinComma (f :: a ++ k) ++ ")")
+
+/-- `partial_repr`, Modules/_functoolsmodule.c:610-687, in its order: the arguments, the keywords, the module and the qualified
+name from the type itself, and `repr(fn)` last. -/
+def partialReprFullC {α : Type} (E : ReprEnv α) (grows : α → Bool) (extra : String × α) (cls : String) (func : Py String)
+    (args : List (PArg α)) (kw : List (String × α)) : Py String := do
+  let a ← reprFold (argRepr E) "" args
+  let l ← kwLoopC E grows extra a kw
+  let f ← func
+  pure (cls ++ "(" ++ f ++ l ++ ")")
+
 /-- `recursive_repr()` around `_partial_repr`, Lib/reprlib.py:12-29, and `Py_ReprEnter`, :619-625:
 `running` says the object is already being repr'd on this thread. `partialmethod.__repr__` has no guard,
 Lib/functools.py:451. -/
@@ -334,12 +404,30 @@ def reprGuard (running : Bool) (body : Py String) : Py String :=
 
 /-! ### `__reduce__` and `__setstate__` -/
 
+/-- A tuple subclass in a state. `raw` is what `PyTuple_GET_ITEM` sees, so what C reads. The Python twin goes through the
+protocol, which a subclass can override: `truth` is `bool(args)` at Lib/functools.py:415, `last` is `args[-1]` there, `len` is
+`len(args)` at :300, and `iter1` and `iter2` are the iterations at :303 and :419, which a stateful `__iter__` can make differ.
+C iterates once, at Modules/_functoolsmodule.c:739-743, which is `iter1`. -/
+structure TupSub (α : Type) where
+  raw : List (PArg α)
+  truth : Py Bool
+  last : Py (PArg α)
+  len : Py Nat
+  iter1 : Py (List (PArg α))
+  iter2 : Py (List (PArg α))
+
+/-- A tuple subclass that overrides none of this, the case `tuple(args)` at Lib/functools.py:419 exists for. -/
+def TupSub.honest {α : Type} (raw : List (PArg α)) : TupSub α :=
+  ⟨raw, .ok (!raw.isEmpty), .ok (raw.getLast?.getD .ph), .ok raw.length, .ok raw, .ok raw⟩
+
+/-- A tuple subclass with its own `__iter__`, the same on each iteration. -/
+def TupSub.iterates {α : Type} (raw : List (PArg α)) (it : Py (List (PArg α))) : TupSub α :=
+  { TupSub.honest raw with iter1 := it, iter2 := it }
+
 /-- The second item of a state. -/
 inductive StArgs (α : Type) where
   | tuple (items : List (PArg α))
-  /-- A tuple subclass: `raw` is what `PyTuple_GET_ITEM`, `len` and `args[-1]` see, `iter` is what iterating it
-  gives, the same on each iteration. -/
-  | sub (raw : List (PArg α)) (iter : Py (List (PArg α)))
+  | sub (t : TupSub α)
   | other
 
 /-- The third item of a state. -/
@@ -365,7 +453,7 @@ inductive PState (α : Type) where
 
 def StArgs.raw {α : Type} : StArgs α → Option (List (PArg α))
   | .tuple i => some i
-  | .sub r _ => some r
+  | .sub t => some t.raw
   | .other => none
 
 /-- Whether the tuple and dict checks at Lib/functools.py:410-412, Modules/_functoolsmodule.c:716-719, pass. -/
@@ -380,6 +468,40 @@ def stateShapeOk {α : Type} (func : Fn α) (args : StArgs α) (kw : StKw α) (n
 
 def invalidState := "invalid partial state"
 
+/-- `args and args[-1] is Placeholder`, once `bool(args)` is `b`. -/
+def lastIsPh {α : Type} (t : TupSub α) (b : Bool) : Py Bool :=
+  if b then
+    match t.last with
+    | .error e => .error e
+    | .ok a => .ok (isPh a)
+  else .ok false
+
+/-- The reads of `args` in `partial.__setstate__`, Lib/functools.py:415-419, in order: the items that are kept, and
+`phcount`. `_partial_prepare_merger` starts with `if not args`, at :298, so with `args` false it reads nothing more. -/
+def pyHead {α : Type} (t : TupSub α) : Py (List (PArg α) × Nat) :=
+  match t.truth with
+  | .error e => .error e
+  | .ok b =>
+    match lastIsPh t b with
+    | .error e => .error e
+    | .ok true => .error (.typeError trailingMsg)
+    | .ok false =>
+      if !b then
+        -- the only iteration is the one at :419
+        match t.iter1 with
+        | .error e => .error e
+        | .ok it => .ok (it, 0)
+      else
+      match t.len with
+      | .error e => .error e
+      | .ok n =>
+        match t.iter1 with
+        | .error e => .error e
+        | .ok it1 =>
+          match t.iter2 with
+          | .error e => .error e
+          | .ok it2 => .ok (it2, (prepareMergerOf n it1).1)
+
 /-- `partial.__setstate__`, Lib/functools.py:404-432, as a replacement of the object. Nothing is assigned
 until every step that can raise has passed, so a failure leaves the object as it was. `__dict__` is
 always set; the mirror writes `some`. -/
@@ -391,16 +513,12 @@ def setstatePy {α : Type} (outer : Option Nat) : PState α → Py (Fn α)
     match args.raw with
     | none => .error (.typeError invalidState)
     | some raw =>
-      if trailingPh raw then .error (.typeError trailingMsg) else
-      -- `enumerate(args)` at :303 and `tuple(args)` at :419 both iterate
-      let iter : Py (List (PArg α)) :=
-        match args with
-        | .sub _ it => it
-        | _ => .ok raw
-      match iter with
+      let t := match args with
+        | .sub t => t
+        | _ => TupSub.honest raw
+      match pyHead t with
       | .error e => .error e
-      | .ok items =>
-        let phcount := (prepareMergerOf raw.length items).1
+      | .ok (items, phcount) =>
         let kwds : Py (List (String × α)) :=
           match kw with
           | .exact d => .ok d
@@ -428,7 +546,7 @@ def setstateC {α : Type} (outer : Option Nat) : PState α → Py (Fn α)
       let phcount := phCount raw
       let items : Py (List (PArg α)) :=
         match args with
-        | .sub _ it => it
+        | .sub t => t.iter1
         | _ => .ok raw
       match items with
       | .error e => .error e
@@ -542,6 +660,9 @@ inductive MKind (α : Type) where
 structure MTarget (α : Type) where
   kind : MKind α
   abstract : Py (Option α)
+  /-- An exception from `hasattr(func, "__get__")` that is not `AttributeError`, and one from `repr(func)`. -/
+  getFail : Option PyExc := none
+  reprFail : Option PyExc := none
 
 /-- A `partialmethod`. `dict` is absent because `__get__` does not read it. -/
 structure PMeth (α : Type) where
@@ -574,12 +695,20 @@ def partialmethodNew {α : Type} (func : MArg α) (args : List (PArg α)) (kw : 
     | .error e => .error e
     | .ok (t, k, ph) => .ok ⟨p.func, t, k, ph⟩
   | .target t =>
-    if !t.kind.isCallable && !t.kind.hasGet then
-      .error (.typeError "~the first argument must be a callable or a descriptor")
-    else
+    let body : Py (PMeth α) :=
       match newCore args kw none with
       | .error e => .error e
       | .ok (a, k, ph) => .ok ⟨t, a, k, ph⟩
+    if t.kind.isCallable then body
+    else
+      match t.getFail with
+      | some e => .error e
+      | none =>
+        if t.kind.hasGet then body
+        else
+          match t.reprFail with
+          | some e => .error e
+          | none => .error (.typeError "~the first argument must be a callable or a descriptor")
 
 /-- The function `_make_unbound_method` returns, Lib/functools.py:453-470. -/
 structure UMethod (α : Type) where

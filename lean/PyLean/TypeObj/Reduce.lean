@@ -133,9 +133,16 @@ objects that hold more than their `__dict__` and slots. -/
 def objectGetstateDefault (rt : Rt) (obj : Val) (required : Bool) : M Val := do
   let w ← getW
   let d := tdata w (typeOf w obj)
+  let d' (t : Addr) : NameDict := (tdata w t).dict
   if required && d.itemsize != 0 then
     typeErr s!"cannot pickle {trunc 200 (typeName w obj)} objects"
-  let state ← if instanceDictEmpty w obj then pure .none else genericGetDict obj
+  -- The `__dict__` of a class is `tp_dict`, here a `NameDict`, read out as a dict. A static type
+  -- keeps its dict per interpreter, so its `tp_dict` field is NULL and it counts as empty.
+  let state ← match asType w obj with
+    | some t =>
+      if (tdata w t).heap then alloc B.dict (.dict ((d' t).map fun (k, v) => (Val.str k, v)))
+      else pure .none
+    | none => if instanceDictEmpty w obj then pure .none else genericGetDict obj
   let names ← typeGetSlotNames rt (typeOf w obj)
   let w ← getW
   let count := ((listOf w names).getD []).length
@@ -312,6 +319,50 @@ def objectReduceEx (rt : Rt) (self : Val) (proto : Int) : M Val := do
     | some objreduce =>
       if clsreduce.is objreduce then commonReduce rt self proto else rt.call reduce [] []
     | none => gap%
+
+/-- `merge_class_dict`, `Objects/typeobject.c:6524`: the class's `__dict__`, then each base in the
+order of `__bases__`, recursively. A failed `PySequence_Size` is dropped (`:6555`). -/
+def mergeClassDict (rt : Rt) (d : Addr) : Nat → Val → M Unit
+  | 0, _ => raise .fuel
+  | fuel + 1, aclass => do
+    match ← rt.getOptionalAttr aclass "__dict__" with
+    | some cd => dictMerge rt d cd
+    | none => pure ()
+    match ← rt.getOptionalAttr aclass "__bases__" with
+    | none => pure ()
+    | some bases =>
+      let n ← tryM (rt.size bases) fun e =>
+        match e with
+        | .exc _ _ _ => pure (-1)
+        | e => raise e
+      for i in List.range n.toNat do
+        let base ← rt.getItem bases (.int i)
+        mergeClassDict rt d fuel base
+
+/-- `PyDict_Keys` of the dict at `d`, as a list. -/
+def dictKeysList (d : Addr) : M Val := do
+  let w ← getW
+  alloc B.list (.list ((dictEntries w d).map (·.1)))
+
+/-- `type___dir___impl`, `Objects/typeobject.c:6587`. -/
+def typeDirImpl (rt : Rt) (self : Val) : M Val := do
+  let d ← allocCell (.val { cls := B.dict, body := .dict [] })
+  mergeClassDict rt d iterFuel self
+  dictKeysList d
+
+/-- `object___dir___impl`, `Objects/typeobject.c`: a copy of `__dict__` if that is a dict, then the
+class, whose attributes are merged in. -/
+def objectDirImpl (rt : Rt) (self : Val) : M Val := do
+  let d ← match ← rt.getOptionalAttr self "__dict__" with
+    | some x =>
+      let w ← getW
+      if (dictOf w x).isSome then dictCopy rt x
+      else allocCell (.val { cls := B.dict, body := .dict [] })
+    | none => allocCell (.val { cls := B.dict, body := .dict [] })
+  match ← rt.getOptionalAttr self "__class__" with
+  | some c => mergeClassDict rt d iterFuel c
+  | none => pure ()
+  dictKeysList d
 
 /-- `PyLong_AsInt`, the argument of `__reduce_ex__`. -/
 def longAsInt (rt : Rt) (v : Val) : M Int := do

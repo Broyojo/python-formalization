@@ -541,6 +541,8 @@ def builtinConv : Builtin → String × MethConv
   | .dunderGetitem => ("__getitem__", .o)
   | .dunderContains => ("__contains__", .o)
   | .dictKeysMethod => ("keys", .noargs)
+  | .proxyCall "get" => ("get", .fast)
+  | .proxyCall n => (n, .noargs)
   | .getnewargs => ("__getnewargs__", .noargs)
   | .reduceName _ => ("__reduce__", .noargs)
   | .iterLengthHint => ("__length_hint__", .noargs)
@@ -1984,7 +1986,13 @@ def callIter (rt : Rt) (f : SlotFn) (o : Val) : M Val := do
       | _ => gap%
     | _ => gap%
   | .c .tuple => alloc B.tupleIter (.seqIter (some o) 0)
-  | .c .str => alloc B.strIter (.seqIter (some o) 0)
+  | .c .str =>
+    -- `unicode_iter`, `Objects/unicodeobject.c`: compact ASCII has an iterator of its own, and an
+    -- instance of a subclass is not compact.
+    let ascii := match o with
+      | .str s => s.toList.all (·.toNat < 128)
+      | _ => false
+    alloc (if ascii then B.strIter else B.strIterU) (.seqIter (some o) 0)
   | .c .mappingproxy =>
     -- `mappingproxy_getiter`, `Objects/descrobject.c:1197`.
     let m ← proxyMapping o

@@ -65,6 +65,8 @@ inductive KeyProbe where
   | eqRaises (e : PyExc)
   | noMatch
   | equals (k : List Nat)
+  /-- It hashes as `k` and its `__eq__` raises, so a dict raises only if it holds a key equal to `k`. -/
+  | eqRaisesAt (k : List Nat) (e : PyExc)
   deriving Repr, DecidableEq, Inhabited
 
 mutual
@@ -98,8 +100,14 @@ mutual
     | int (n : Int)
     /-- A `bool`, which is an `int` subclass but not `PyLong_CheckExact`. -/
     | bool (b : Bool)
-    /-- An instance of `_csv.Dialect` or a subclass. -/
+    /-- An instance of `_csv.Dialect` with nothing of Python's in it: no class attribute shadows a
+    getter, `tp_init` is `object_init`, and `lineterminator` is the `str` in `d`. -/
     | dialect (ty : TyName) (d : Dialect)
+    /-- Any instance. `lt` is the object in the `lineterminator` slot, `NULL` until `_set_str` ran,
+    `attrs` what the subclass's own attributes do, and `init` what its `tp_init` does when
+    `type_call` runs it on this instance again. -/
+    | dialectX (ty : TyName) (d : Dialect) (lt : Option Obj) (attrs : List (String × Except PyExc Obj))
+        (init : Except PyExc Unit)
     /-- Anything else, by what it does: `PyObject_IsTrue`, dict lookup, attributes,
     `PyNumber_Check`, `PyObject_Str` and `PyObject_GetIter`. -/
     | other (ty : TyName) (truth : Except PyExc Bool) (key : KeyProbe)
@@ -121,8 +129,15 @@ def Obj.ty : Obj → TyName
   | .int _ => builtinTy "int"
   | .bool _ => builtinTy "bool"
   | .dialect t _ => t
+  | .dialectX t _ _ _ _ => t
   | .other t _ _ _ _ _ _ => t
   | .func _ => builtinTy "function"
+
+/-- `PyObject_TypeCheck(o, dialect_type)`, with the settings in the C struct. -/
+def Obj.asDialect : Obj → Option Dialect
+  | .dialect _ d => some d
+  | .dialectX _ d _ _ _ => some d
+  | _ => Option.none
 
 /-- `PyUnicode_Check`, with the text. -/
 def Obj.asStr : Obj → Option (List Nat)
@@ -138,6 +153,7 @@ def Obj.isTrue : Obj → Py Bool
   | .int n => .ok (n != 0)
   | .bool b => .ok b
   | .dialect _ _ => .ok true
+  | .dialectX _ _ _ _ _ => .ok true
   | .other _ t _ _ _ _ _ => t
   | .func _ => .ok true
 
@@ -161,6 +177,7 @@ def Obj.dictFind (o : Obj) (present : List Nat → Bool) : Py (Option (List Nat)
   | .eqRaises e => .error e
   | .noMatch => .ok Option.none
   | .equals k => .ok (if present k then some k else Option.none)
+  | .eqRaisesAt k e => if present k then .error e else .ok Option.none
 
 /-- `PyObject_Str` for an `int`, with the default limit of `sys.set_int_max_str_digits`. -/
 def intText (n : Int) : Py (List Nat) :=
@@ -179,6 +196,7 @@ def Obj.pyStr : Obj → List Eff × Py (List Nat)
   | .int n => ([], intText n)
   | .bool b => ([], .ok (strToList (if b then "True" else "False")))
   | .dialect t _ => ([], .ok (strToList s!"<{t.tp} object>"))
+  | .dialectX t _ _ _ _ => ([], .ok (strToList s!"<{t.tp} object>"))
   | .other _ _ _ _ _ s _ => s
   | .func _ => ([], .ok (strToList "<function>"))
 
@@ -313,8 +331,27 @@ def dialectBuild (a : DArgs) : Py Dialect := do
 /-- `get_char_or_None`, `Modules/_csv.c:172-180`. -/
 def getCharOrNone (c : Nat) : Obj := if c = NOT_SET then .none else .str [c]
 
-/-- `Dialect_get_lineterminator`, `Modules/_csv.c:182-187`. -/
-def dialectGetLineterminator (d : Dialect) : Obj := .str d.lineterminator
+/-- What `Dialect_get_lineterminator` hands back: the object in the slot itself, which a value
+compare could not tell from a copy, or `NULL`. -/
+inductive LtRes where
+  | stored (o : Obj)
+  | null
+
+/-- `Dialect_get_lineterminator`, `Modules/_csv.c:182-187`: `Py_XNewRef(self->lineterminator)`. The
+slot is `NULL` on an instance `_set_str` has not reached, which a subclass `__del__` can see when
+`dialect_new` fails before `:530`. -/
+def dialectGetLineterminator (slot : Option Obj) : LtRes :=
+  match slot with
+  | some o => .stored o
+  | Option.none => .null
+
+/-- The getter returning `NULL` with no exception set, as the interpreter reports it. -/
+def nullReturn : PyExc := .named "SystemError" "error return without exception set"
+
+/-- The attribute read of `LOAD_ATTR` on the getter. -/
+def ltAttr : LtRes → Py Obj
+  | .stored o => .ok o
+  | .null => .error nullReturn
 /-- `Dialect_get_delimiter`, `Modules/_csv.c:189-194`. -/
 def dialectGetDelimiter (d : Dialect) : Obj := getCharOrNone d.delimiter
 /-- `Dialect_get_escapechar`, `Modules/_csv.c:196-201`. -/
@@ -325,12 +362,12 @@ def dialectGetQuotechar (d : Dialect) : Obj := getCharOrNone d.quotechar
 def dialectGetQuoting (d : Dialect) : Obj := .int d.quoting
 
 /-- `PyObject_GetAttrString` on a dialect: `Dialect_getsetlist` and `Dialect_memberlist`,
-`Modules/_csv.c:377-393`. -/
-def dialectGetattr (d : Dialect) (t : TyName) (n : String) : Py Obj :=
+`Modules/_csv.c:377-393`. `slot` is what the `lineterminator` slot holds. -/
+def dialectGetattr (d : Dialect) (slot : Option Obj) (t : TyName) (n : String) : Py Obj :=
   match n with
   | "delimiter" => .ok (dialectGetDelimiter d)
   | "escapechar" => .ok (dialectGetEscapechar d)
-  | "lineterminator" => .ok (dialectGetLineterminator d)
+  | "lineterminator" => ltAttr (dialectGetLineterminator slot)
   | "quotechar" => .ok (dialectGetQuotechar d)
   | "quoting" => .ok (dialectGetQuoting d)
   | "doublequote" => .ok (.bool d.doublequote)
@@ -341,7 +378,11 @@ def dialectGetattr (d : Dialect) (t : TyName) (n : String) : Py Obj :=
 /-- `PyObject_GetAttrString`. -/
 def Obj.getattr (o : Obj) (n : String) : Py Obj :=
   match o with
-  | .dialect t d => dialectGetattr d t n
+  | .dialect t d => dialectGetattr d (some (.str d.lineterminator)) t n
+  | .dialectX t d lt attrs _ =>
+    match attrs.lookup n with
+    | some r => r
+    | Option.none => dialectGetattr d lt t n
   | .other t _ _ attrs _ _ _ =>
     match attrs.lookup n with
     | some r => r
@@ -369,18 +410,46 @@ def dialectAttrs (o : Obj) (a : DArgs) : DArgs :=
     skipinitialspace := getattrOr o a.skipinitialspace "skipinitialspace"
     strict := getattrOr o a.strict "strict" }
 
-/-- The registry, `module_state->dialects`: a dict in insertion order, of `Dialect` objects. -/
-abbrev Registry := List (List Nat × Obj)
+/-- The registry, `module_state->dialects`: a dict in insertion order. Each key is the object that
+was registered, which a `str` subclass keeps with its own `__hash__` and `__eq__`. -/
+abbrev Registry := List (Obj × Obj)
+
+/-- Does a stored key equal a looked-up text? A key whose hash differs is never compared. -/
+def keyAnswers (key : Obj) (k : List Nat) : Py Bool :=
+  match key.dictKey with
+  | .equals j => .ok (j == k)
+  | .eqRaises e => .error e
+  | .eqRaisesAt j e => if j == k then .error e else .ok false
+  | _ => .ok false
+
+/-- A dict lookup of a text: the entry, or the exception of a stored key's `__eq__`. -/
+def regFind : Registry → List Nat → Py (Option (Obj × Obj))
+  | [], _ => .ok Option.none
+  | (key, v) :: r, k =>
+    match keyAnswers key k with
+    | .error e => .error e
+    | .ok true => .ok (some (key, v))
+    | .ok false => regFind r k
+
+/-- A dict lookup of any object, `PyDict_GetItemRef`. -/
+def regLookup (r : Registry) (name : Obj) : Py (Option (Obj × Obj)) :=
+  match name.dictKey with
+  | .hashRaises e => .error (dictHashErr name e)
+  | .eqRaises e => .error e
+  | .noMatch => .ok Option.none
+  | .equals k => regFind r k
+  | .eqRaisesAt k e =>
+    match regFind r k with
+    | .ok (some _) => .error e
+    | x => x
 
 /-- `get_dialect_from_registry`, `Modules/_csv.c:162-170`: `PyDict_GetItemRef` returning `-1`
 leaves its exception, and `0` raises `csv.Error`. -/
 def getDialectFromRegistry (r : Registry) (name : Obj) : Py Obj :=
-  match name.dictFind (fun k => (r.lookup k).isSome) with
+  match regLookup r name with
   | .error e => .error e
-  | .ok k =>
-    match k.bind (fun k => r.lookup k) with
-    | some d => .ok d
-    | Option.none => .error (csvErr "unknown dialect")
+  | .ok (some (_, d)) => .ok d
+  | .ok Option.none => .error (csvErr "unknown dialect")
 
 /-- `_csv_get_dialect_impl`, `Modules/_csv.c:1676-1681`. -/
 def csvGetDialect (r : Registry) (name : Obj) : Py Obj := getDialectFromRegistry r name
@@ -420,17 +489,25 @@ def argsOf : List (Option Obj) → DArgs
   | _ => {}
 
 /-- What `dialect_new` returns: the object it was given, or a new one. A result of `same` is the
-same object as the argument, which equal contents would not show. -/
+same object as the argument, which equal contents would not show. `lt` is the object stored in the
+slot of a new one. -/
 inductive DRes where
-  | same (ty : TyName) (d : Dialect)
-  | fresh (ty : TyName) (d : Dialect)
-  deriving Repr, DecidableEq, Inhabited
+  | same (o : Obj) (d : Dialect)
+  | fresh (ty : TyName) (d : Dialect) (lt : Obj)
+  deriving Inhabited
 
 def DRes.dialect : DRes → Dialect
-  | .same _ d | .fresh _ d => d
+  | .same _ d | .fresh _ d _ => d
 
 def DRes.obj : DRes → Obj
-  | .same t d | .fresh t d => .dialect t d
+  | .same o _ => o
+  | .fresh t d lt => .dialectX t d (some lt) [] (.ok ())
+
+/-- The object `_set_str` stores: the argument itself, or the default. -/
+def ltObj (a : DArgs) : Obj := a.lineterminator.getD (.str [13, 10])
+
+def dialectFresh (ty : TyName) (a : DArgs) : Py DRes := do
+  return .fresh ty (← dialectBuild a) (ltObj a)
 
 /-- `dialect_new`, `Modules/_csv.c:434-575`. `ty` is the type being instantiated. -/
 def dialectNew (r : Registry) (ty : TyName) (args : Args) : Py DRes := do
@@ -446,20 +523,43 @@ def dialectNew (r : Registry) (ty : TyName) (args : Args) : Py DRes := do
     a.lineterminator.isNone && a.quotechar.isNone && a.quoting.isNone &&
     a.skipinitialspace.isNone && a.strict.isNone
   match dialect? with
-  | some (.dialect t d) =>
-    if noOverrides then return .same t d
-    return .fresh ty (← dialectBuild (dialectAttrs (.dialect t d) a))
-  | some o => return .fresh ty (← dialectBuild (dialectAttrs o a))
-  | Option.none => return .fresh ty (← dialectBuild a)
+  | Option.none => dialectFresh ty a
+  | some o =>
+    match o.asDialect with
+    | some d => if noOverrides then return .same o d else dialectFresh ty (dialectAttrs o a)
+    | Option.none => dialectFresh ty (dialectAttrs o a)
+
+/-- `tp_init` in `type_call`, `Objects/typeobject.c:2382-2384`. It runs on whatever `tp_new` returned.
+A new `_csv.Dialect` has `object_init`, and so does a reused instance with nothing of Python's in it.
+A reused subclass instance runs its own `__init__`, with the arguments of this call. -/
+def tpInit (res : DRes) : Py DRes :=
+  match res with
+  | .same (.dialectX _ _ _ _ (.error e)) _ => .error e
+  | _ => .ok res
+
+/-- `PyObject_Call(type, ...)` for `_csv.Dialect`. -/
+def typeCall (r : Registry) (args : Args) : Py DRes := do
+  tpInit (← dialectNew r dialectTy args)
 
 /-- `_call_dialect`, `Modules/_csv.c:642-652`. -/
 def callDialect (r : Registry) (inst : Option Obj) (kw : List (List Nat × Obj)) : Py DRes :=
   match inst with
-  | some o => dialectNew r dialectTy ⟨[o], kw⟩
-  | Option.none => dialectNew r dialectTy ⟨[], kw⟩
+  | some o => typeCall r ⟨[o], kw⟩
+  | Option.none => typeCall r ⟨[], kw⟩
 
 /-- `Dialect_reduce`, `Modules/_csv.c:582-587`. -/
 def dialectReduce (t : TyName) : Py Unit := .error (.typeError s!"cannot pickle '{t.short}' instances")
+
+/-- `o.__reduce_ex__(protocol)` or `o.__reduce__()` on a dialect: the class's own if it has one, and
+`Dialect_reduce` otherwise, which is `METH_VARARGS` and ignores its arguments. -/
+def dialectPickle (o : Obj) (method : String) : Py Unit :=
+  match o with
+  | .dialectX t _ _ attrs _ =>
+    match attrs.lookup method with
+    | some (.ok _) => .ok ()
+    | some (.error e) => .error e
+    | Option.none => dialectReduce t
+  | _ => dialectReduce o.ty
 
 /-- `Dialect._validate`, `Lib/csv.py:111-116`: `_Dialect(self)`, with `TypeError` re-raised as
 `csv.Error`. -/
@@ -486,8 +586,9 @@ def unixDialect : Dialect := ⟨true, false, false, QUOTE_ALL, 44, 34, NOT_SET, 
 
 /-- The registry after `import csv`. -/
 def initialRegistry : Registry :=
-  [(strToList "excel", .dialect dialectTy excel), (strToList "excel-tab", .dialect dialectTy excelTab),
-   (strToList "unix", .dialect dialectTy unixDialect)]
+  [(.str (strToList "excel"), .dialect dialectTy excel),
+   (.str (strToList "excel-tab"), .dialect dialectTy excelTab),
+   (.str (strToList "unix"), .dialect dialectTy unixDialect)]
 
 /-- `PyArg_UnpackTuple(args, name, 1, 2, ...)`. -/
 def unpack12 (name : String) : List Obj → Py (Obj × Option Obj)
@@ -496,34 +597,84 @@ def unpack12 (name : String) : List Obj → Py (Obj × Option Obj)
   | [a, b] => .ok (a, some b)
   | l => .error (.typeError s!"{name} expected at most 2 arguments, got {l.length}")
 
-/-- `PyDict_SetItem`: an equal key keeps its place and its key object. -/
-def registrySet (r : Registry) (k : List Nat) (d : Obj) : Registry :=
-  if (r.lookup k).isSome then r.map (fun p => if p.1 = k then (k, d) else p) else r ++ [(k, d)]
+/-- `PyDict_SetItem` of a text: an equal key keeps its place and its key object, and a new key goes
+last, as the object given. -/
+def regPut (name d : Obj) : Registry → List Nat → Py Registry
+  | [], _ => .ok [(name, d)]
+  | (key, v) :: r, k =>
+    match keyAnswers key k with
+    | .error e => .error e
+    | .ok true => .ok ((key, d) :: r)
+    | .ok false => do return (key, v) :: (← regPut name d r k)
 
-/-- `csv_register_dialect`, `Modules/_csv.c:1618-1641`. -/
-def csvRegisterDialect (r : Registry) (args : Args) : Py Registry := do
-  let (name, dialectObj) ← unpack12 "register_dialect" args.pos
-  match name.asStr with
-  | Option.none => throw (.typeError "dialect name must be a string")
-  | some s =>
-    let d ← callDialect r dialectObj args.kw
-    match name.dictFind (fun k => (r.lookup k).isSome) with
-    | .error e => throw e
-    | .ok (some k) => return registrySet r k d.obj
-    | .ok Option.none => return r ++ [(s, d.obj)]
+/-- `PyDict_SetItem`. -/
+def regSet (r : Registry) (name d : Obj) : Py Registry :=
+  match name.dictKey with
+  | .hashRaises e => .error (dictHashErr name e)
+  | .eqRaises e => .error e
+  | .noMatch => .ok (r ++ [(name, d)])
+  | .equals k => regPut name d r k
+  | .eqRaisesAt k e =>
+    match regFind r k with
+    | .error e' => .error e'
+    | .ok (some _) => .error e
+    | .ok Option.none => .ok (r ++ [(name, d)])
+
+/-- `csv_register_dialect`, `Modules/_csv.c:1618-1641`. `_call_dialect` at `:1632` can run Python: a
+`__bool__`, an attribute of the dialect object, a subclass `__init__`. `during` is what those did to
+the registry, for any `during`; `PyDict_SetItem` at `:1635` sees the result, and a failed call leaves
+it there. The lookup of a string dialect happens first, in the registry as it stood. -/
+def csvRegisterDialect (r : Registry) (during : Registry → Registry) (args : Args) : Registry × Py Unit :=
+  match unpack12 "register_dialect" args.pos with
+  | .error e => (r, .error e)
+  | .ok (name, dialectObj) =>
+    match name.asStr with
+    | Option.none => (r, .error (.typeError "dialect name must be a string"))
+    | some _ =>
+      match callDialect r dialectObj args.kw with
+      | .error e => (during r, .error e)
+      | .ok d =>
+        match regSet (during r) name d.obj with
+        | .error e => (during r, .error e)
+        | .ok r2 => (r2, .ok ())
+
+/-- `PyDict_Pop` of a text. -/
+def regDel : Registry → List Nat → Py (Option Registry)
+  | [], _ => .ok Option.none
+  | (key, v) :: r, k =>
+    match keyAnswers key k with
+    | .error e => .error e
+    | .ok true => .ok (some r)
+    | .ok false =>
+      match regDel r k with
+      | .error e => .error e
+      | .ok (some r2) => .ok (some ((key, v) :: r2))
+      | .ok Option.none => .ok Option.none
 
 /-- `_csv_unregister_dialect_impl`, `Modules/_csv.c:1652-1666`. `PyDict_Pop` on an empty dict
 returns `0` without hashing, `Objects/dictobject.c:3171-3176`. -/
 def csvUnregisterDialect (r : Registry) (name : Obj) : Py Registry :=
   if r.isEmpty then .error (csvErr "unknown dialect")
   else
-    match name.dictFind (fun k => (r.lookup k).isSome) with
+    let gone : Py (Option Registry) :=
+      match name.dictKey with
+      | .hashRaises e => .error (dictHashErr name e)
+      | .eqRaises e => .error e
+      | .noMatch => .ok Option.none
+      | .equals k => regDel r k
+      | .eqRaisesAt k e =>
+        match regFind r k with
+        | .error e' => .error e'
+        | .ok (some _) => .error e
+        | .ok Option.none => .ok Option.none
+    match gone with
     | .error e => .error e
-    | .ok (some k) => .ok (r.filter (·.1 != k))
+    | .ok (some r2) => .ok r2
     | .ok Option.none => .error (csvErr "unknown dialect")
 
-/-- `_csv_list_dialects_impl`, `Modules/_csv.c:1611-1616`. -/
-def csvListDialects (r : Registry) : List (List Nat) := r.map (·.1)
+/-- `_csv_list_dialects_impl`, `Modules/_csv.c:1611-1616`: `PyDict_Keys`, the key objects in insertion
+order. -/
+def csvListDialects (r : Registry) : List Obj := r.map (·.1)
 
 /-- `_csv_field_size_limit_impl`, `Modules/_csv.c:1694-1713`: the value returned, which is the old
 limit, and the limit now in force. -/

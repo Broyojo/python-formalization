@@ -1,0 +1,45 @@
+id: corelibs-wraps-placeholder
+title: "functools.wraps(Placeholder) raises TypeError, where update_wrapper(f, Placeholder) works"
+priority: P4
+kind: twin-mismatch
+module: corelibs
+files: [Lib/functools.py]
+functions: ["wraps"]
+summary: |
+  wraps is partial(update_wrapper, wrapped=wrapped, assigned=assigned, updated=updated), and since 3.14 partial refuses
+  Placeholder as a keyword. So wraps(Placeholder) fails with "Placeholder cannot be passed as a keyword argument",
+  which names something the caller did not do, while the direct call works.
+likelihood: |
+  Negligible: nobody wraps Placeholder.
+maybe_intended: |
+  A consequence of the implementation, not a decision. Recorded for the twin of wraps and update_wrapper, not worth a
+  report by itself.
+reproducer: |
+  from functools import Placeholder, update_wrapper, wraps
+  def f():
+      pass
+  update_wrapper(f, Placeholder)
+  try:
+      wraps(Placeholder)
+      r = 'no error'
+  except TypeError as e:
+      r = str(e)
+  print(r)
+  if r == 'Placeholder cannot be passed as a keyword argument':
+      print('REPRODUCED corelibs-wraps-placeholder')
+expected: |
+  wraps(x)(f) behaves as update_wrapper(f, x).
+observed: |
+  python3 3.14.7: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Doc/library/functools.rst: wraps is a convenience function for update_wrapper.
+cause: |
+  Lib/functools.py:76-77, through the keyword check of partial.
+possible_fix: |
+  None needed.
+duplicates:
+  issues: []
+  queries: ["gh search issues Placeholder wraps partial keyword", "bugforge README: no match"]
+lean:
+  property: PyLean.CoreLibs.Functools.WrapsAcceptsAnything
+  theorem: PyLean.CoreLibs.Functools.wrapsAcceptsAnything_refuted

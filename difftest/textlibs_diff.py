@@ -1125,6 +1125,8 @@ def csv_obj(j, ctx=None):
         return j["b"]
     if "sub" in j:
         return Sub(txt(j["sub"]), j["key"])
+    if "dsub" in j:
+        return mk_dsub(j["dsub"], ctx)
     if "d" in j:
         return csv.get_dialect(txt(j["d"]))
     if "cls" in j:
@@ -1185,11 +1187,59 @@ def csv_src(c, ctx=None):
     return (txt(v),) if isinstance(v, list) else (csv_obj(v, ctx),)
 
 
+def mk_dsub(spec, ctx):
+    """An instance of a `_csv.Dialect` subclass: its class attributes, and what `__init__` does when
+    `type_call` runs it again."""
+    ns = {"__module__": "m"}
+
+    def raiser(exc):
+        def f(self, *a):
+            raise mk_exc(exc)
+        return f
+    for name, res in spec["attrs"]:
+        if name.startswith("__reduce"):
+            ns[name] = raiser(res["raise"]) if "raise" in res else (lambda self, *a: None)
+        elif "raise" in res:
+            ns[name] = property(raiser(res["raise"]))
+        else:
+            ns[name] = csv_obj(res["ok"], ctx)
+    init = spec["init"]
+
+    def __init__(self, *a, **k):
+        if getattr(self, "_ready", False) and "raise" in init:
+            raise mk_exc(init["raise"])
+    ns["__init__"] = __init__
+    inst = type("DSub", (_csv.Dialect,), ns)(**{k: csv_obj(v, ctx) for k, v in spec["base"]})
+    inst._ready = True
+    return inst
+
+
+class Hook:
+    """An object whose `__bool__` changes the registry, inside `_call_dialect`."""
+
+    def __init__(self, ops, ctx):
+        self.ops, self.ctx = ops, ctx
+
+    def __bool__(self):
+        for d in self.ops:
+            try:
+                n = csv_obj(d["name"], self.ctx)
+                if d["op"] == "reg":
+                    csv.register_dialect(n, delimiter=";")
+                else:
+                    csv.unregister_dialect(n)
+            except Exception:
+                pass
+        return True
+
+
 def enc_dialect(d):
+    """The C fields, through `_csv.Dialect`'s own descriptors, whatever a subclass shadows."""
     ch = lambda x: None if x is None else cps(x)
-    return {"delimiter": ch(d.delimiter), "doublequote": bool(d.doublequote), "escapechar": ch(d.escapechar),
-            "lineterminator": cps(d.lineterminator), "quotechar": ch(d.quotechar), "quoting": int(d.quoting),
-            "skipinitialspace": bool(d.skipinitialspace), "strict": bool(d.strict)}
+    g = lambda n: getattr(_csv.Dialect, n).__get__(d)
+    return {"delimiter": ch(g("delimiter")), "doublequote": bool(g("doublequote")), "escapechar": ch(g("escapechar")),
+            "lineterminator": cps(g("lineterminator")), "quotechar": ch(g("quotechar")), "quoting": int(g("quoting")),
+            "skipinitialspace": bool(g("skipinitialspace")), "strict": bool(g("strict"))}
 
 
 def enc_field(x):
@@ -1282,12 +1332,73 @@ class CsvArea:
         if numeric and r.random() < 0.6:
             return r.choice(["1", "2.5", "-3", "1e5", "0", " 4", "5 ", ".5", "5.", "1_000", "inf", "-Infinity", "nan",
                              "1e400", "1e-400", "0.1", "abc", "", "1__0", "_1", "1_", "+7", "e5", ".", "1e", "1e+2",
-                             "9007199254740993", "123456789012345678901234567890"])
+                             "9007199254740993", "123456789012345678901234567890", "\U00010d40", "\U000116da", "\U00010d41\U00010d42"])
         pool = cls.TEXT if numeric else cls.TEXT + "\xe9€"
         return "".join(r.choice(pool) for _ in range(r.choice([0, 0, 1, 1, 2, 3, 5, 8])))
 
+    SNIFF = ['a', 'b', '1', ',', ';', '\t', ' ', '"', "'", '\n', '\n', '\r\n', '\r', '|', ':', 'x y', '""', '1.5', ',"', '",', ';"',
+             '";', "'\n", "\n'", '\n"', '"\n', ', "', '\xe9', "''", '\\', ', ']
+
+    @classmethod
+    def gen_sniff(cls, r):
+        if r.random() < 0.3:
+            # rows with a common shape, over more than one chunk
+            row = "".join(r.choice(cls.SNIFF) for _ in range(r.randint(1, 8))).replace("\n", "").replace("\r", "")
+            alt = "".join(r.choice(cls.SNIFF) for _ in range(r.randint(1, 8))).replace("\n", "").replace("\r", "")
+            s = "\n".join(r.choice([row, row, row, alt]) for _ in range(r.choice([2, 3, 9, 10, 11, 12, 25])))
+        else:
+            s = "".join(r.choice(cls.SNIFF) for _ in range(r.randint(0, 16)))
+        return {"mod": "textlibs", "fn": "csv.sniff", "s": cps(s),
+                "delims": r.choice([None, None, None, cps(",;"), cps(","), cps("\t"), cps("abc"), cps(":|"), cps('"'), []])}
+
+    @classmethod
+    def dsub(cls, r):
+        exc = r.choice([["ValueError", "boom"], ["TypeError", "DSub.__init__() takes 1 positional argument but 2 were given"]])
+        base = r.choice([[], [], [["delimiter", {"s": cps(";")}]], [["lineterminator", {"s": cps("\n")}]],
+                         [["lineterminator", {"sub": cps("\r"), "key": None}]], [["quotechar", None]], [["quoting", {"i": 1}]]])
+        pool = [["delimiter", {"ok": {"s": cps("|")}}], ["delimiter", {"raise": ["ValueError", "boom"]}], ["quotechar", {"ok": None}],
+                ["strict", {"ok": {"b": True}}], ["quoting", {"ok": {"i": 3}}], ["lineterminator", {"ok": {"s": cps("\n")}}],
+                ["doublequote", {"raise": ["TypeError", "boom"]}], ["delimiter", {"ok": {"i": 1}}], ["__reduce__", {"ok": None}],
+                ["__reduce_ex__", {"raise": ["ValueError", "boom"]}]]
+        attrs = {}
+        for x in r.sample(pool, r.choice([0, 0, 1, 2, 3])):
+            attrs[x[0]] = x[1]
+        return {"dsub": {"base": base, "attrs": [[k, v] for k, v in attrs.items()],
+                         "init": r.choice([{"ok": None}, {"ok": None}, {"raise": exc}])}}
+
+    @classmethod
+    def gen_dobj(cls, r):
+        names = [{"s": cps("mine")}, {"s": cps("excel")}, {"s": cps("zz")}, {"sub": cps("mine"), "key": None},
+                 {"sub": cps("mine"), "key": {"k": cps("mine")}}, {"sub": cps("q"), "key": {"k": cps("excel")}},
+                 {"sub": cps("e"), "key": {"eq": ["ValueError", "boom"]}}, {"sub": cps("h"), "key": {"hash": ["ValueError", "boom"]}},
+                 {"sub": cps("t"), "key": {"hash": ["TypeError", "boom"]}}]
+        k = r.choice(["regseq", "regseq", "pickle", "ltget", "readerd", "writerd", "dialect"])
+        c = {"mod": "textlibs", "fn": "csv." + k}
+        if k == "regseq":
+            ops = []
+            for _ in range(r.randint(1, 5)):
+                op = r.choice(["register", "register", "get", "unregister"])
+                o = {"op": op, "name": r.choice(names)}
+                if op == "register":
+                    o["during"] = [{"op": r.choice(["reg", "unreg"]), "name": r.choice(names)} for _ in range(r.choice([0, 0, 1, 2]))]
+                ops.append(o)
+            c["ops"] = ops
+        elif k == "pickle":
+            c["obj"] = r.choice([cls.dsub(r), cls.dsub(r), {"d": cps("excel")}])
+            c["method"] = r.choice(["__reduce__", "__reduce_ex__"])
+        elif k == "ltget":
+            c["obj"] = cls.dsub(r)
+        else:
+            c["src"] = r.choice([cls.dsub(r), cls.dsub(r), {"d": cps("excel")}, cps("unix"), None])
+            c["args"] = r.choice([{}, {}, cls.args(r, True), {"delimiter": {"s": cps(";")}}])
+        return c
+
     @classmethod
     def gen(cls, r):
+        if os.environ.get("CSV_SNIFF") == "1" or r.random() < 0.1:
+            return cls.gen_sniff(r)
+        if os.environ.get("CSV_DOBJ") == "1" or r.random() < 0.15:
+            return cls.gen_dobj(r)
         fn = r.choice(["dialect", "dialect", "reader", "reader", "reader", "reader", "script", "script", "script", "writer",
                        "writer", "writer", "roundtrip", "roundtrip", "field_size_limit", "registry", "get_dialect", "unpack",
                        "dictreader", "dictwriter", "dictwriterows", "writeheader", "extrasaction", "classvalidate"])
@@ -1483,9 +1594,28 @@ class CsvArea:
         fn = c["fn"].split(".")[1]
         if fn in ("reader", "writer"):
             return in_child(lambda: cls.run_io(c, fn))
+        if fn == "sniff":
+            def sniff_body():
+                ds = c["delims"]
+                d = csv.Sniffer().sniff(txt(c["s"]), None if ds is None else txt(ds))
+                return {"d": cps(d.delimiter), "q": cps(d.quotechar), "dq": bool(d.doublequote),
+                        "skip": bool(d.skipinitialspace)}
+            return common.py_result(sniff_body)
+        if fn == "regseq":
+            return cls.run_regseq(c)
 
         def body():
             ctx = CsvCtx()
+            if fn == "pickle":
+                getattr(csv_obj(c["obj"], ctx), c["method"])(*([2] if c["method"] == "__reduce_ex__" else []))
+                return None
+            if fn == "ltget":
+                x = csv_obj(c["obj"], ctx).lineterminator
+                return [cps(x), isinstance(x, Sub)]
+            if fn == "readerd":
+                return enc_dialect(csv.reader([], *csv_src(c, ctx), **csv_kw(c, ctx)).dialect)
+            if fn == "writerd":
+                return enc_dialect(csv.writer(io.StringIO(), *csv_src(c, ctx), **csv_kw(c, ctx)).dialect)
             if fn == "dialect":
                 src = csv_src(c, ctx)
                 d = _csv.Dialect(*src, **csv_kw(c, ctx))
@@ -1582,6 +1712,34 @@ class CsvArea:
         if "exc" in res:
             res["msg"] = norm_msg(res["msg"])
         return res
+
+    @classmethod
+    def run_regseq(cls, c):
+        ctx = CsvCtx()
+        saved = {n: csv.get_dialect(n) for n in csv.list_dialects()}
+
+        def one(o):
+            name = csv_obj(o["name"], ctx)
+            if o["op"] == "register":
+                kw = {"delimiter": ";"}
+                if o["during"]:
+                    kw["doublequote"] = Hook(o["during"], ctx)
+                csv.register_dialect(name, **kw)
+                return None
+            if o["op"] == "get":
+                return cps(csv.get_dialect(name).delimiter)
+            csv.unregister_dialect(name)
+            return None
+        try:
+            out = [common.py_result(lambda o=o: one(o)) for o in c["ops"]]
+            keys = csv.list_dialects()
+            res = {"out": out, "keys": [cps(n) for n in keys], "sub": [isinstance(n, Sub) for n in keys]}
+        finally:
+            for n in list(csv.list_dialects()):
+                csv.unregister_dialect(n)
+            for n, d in saved.items():
+                csv.register_dialect(n, d)
+        return {"ok": res}
 
     @classmethod
     def run_io(cls, c, fn):
@@ -1798,6 +1956,8 @@ class ReArea:
         if not text:
             pat = pat.replace("é", "\xe9")
         c = {"mod": "textlibs", "fn": "re.parse", "pat": [ord(x) for x in pat], "text": text, "flags": flags}
+        if os.environ.get("RE_SEM") == "1" or r.random() < 0.1:
+            return cls.gen_sem(r)
         if os.environ.get("RE_EXEC") == "1" or r.random() < 0.5:
             return cls.gen_exec(r)
         if r.random() < 0.45:
@@ -1815,6 +1975,74 @@ class ReArea:
                  "\\g<1", "\\g<1a>", "\\8", "\\12", "\\n", "\\\\", "\\q", "\\_", "\\.", "\\g<" + "9" * 5000 + ">",
                  "\\g<2147483647>", "\\g<99>"]) for _ in range(r.choice([0, 1, 2, 3])))]
         return c
+
+    SEM_ATOMS = ["a", "b", "c", "a", "b", "A", "s", "k", ".", "[ab]", "[^a]", "[a-c]", "\\w", "\\W", "\\d", "\\s", "\\b",
+                 "\\B", "^", "$", "\\A", "\\Z", ""]
+
+    @classmethod
+    def gen_tree(cls, r, d, st):
+        """A pattern as text. st is [groups opened, groups closed]: a conditional or a backreference
+        names a closed group, since one that tests its own open group is a recorded refutation."""
+        c = r.random()
+        if d <= 0 or c < 0.3:
+            return r.choice(cls.SEM_ATOMS)
+        if c < 0.45:
+            return cls.gen_tree(r, d - 1, st) + cls.gen_tree(r, d - 1, st)
+        if c < 0.58:
+            return "(?:" + cls.gen_tree(r, d - 1, st) + "|" + cls.gen_tree(r, d - 1, st) + ")"
+        if c < 0.73:
+            st[0] += 1
+            g = st[0]
+            inner = cls.gen_tree(r, d - 1, st)
+            st[1].append(g)
+            return "(" + inner + ")"
+        if c < 0.88:
+            q = r.choice(["*", "+", "?", "{2}", "{1,2}", "{0,2}", "{2,3}", "{2,}"]) + r.choice(["", "", "?", "+"])
+            return "(?:" + cls.gen_tree(r, d - 1, st) + ")" + q
+        if c < 0.91:
+            return "(?>" + cls.gen_tree(r, d - 1, st) + ")"
+        if c < 0.94:
+            return r.choice(["(?=", "(?!"]) + cls.gen_tree(r, d - 1, st) + ")"
+        if c < 0.96:
+            st[0] += 2
+            st[1].extend([st[0] - 1])
+            st[1].append(st[0])
+            body = r.choice(["(a)()", "(.)()", "(a)()b", "(a|b)()", "(?:(a)|b)()"])
+            return r.choice(["(?<=", "(?<!"]) + body + ")"
+        if st[1]:
+            g = r.choice(st[1])
+            if r.random() < 0.5:
+                return "\\%d" % g
+            return "(?(%d)%s|%s)" % (g, cls.gen_tree(r, d - 1, st), cls.gen_tree(r, d - 1, st))
+        return "b"
+
+    @classmethod
+    def gen_sem(cls, r):
+        flags = r.choice([0, 0, 0, 2, 2, 8, 16, 256, 2 | 256, 2 | 16])
+        while True:
+            pat = cls.gen_tree(r, r.choice([2, 3, 3, 4]), [0, []])
+            try:
+                re.compile(pat, flags)
+                break
+            except Exception:
+                continue
+        alpha = "aabbcAskK _\n\xe9\xc9\u017f\u212a"
+        subj = "".join(r.choice(alpha) for _ in range(r.randint(0, 6)))
+        return {"mod": "textlibs", "fn": "re.sem", "pat": [ord(x) for x in pat], "flags": flags,
+                "s": [ord(x) for x in subj], "full": r.random() < 0.4}
+
+    @classmethod
+    def run_sem(cls, c):
+        pat = "".join(map(chr, c["pat"]))
+        subj = "".join(map(chr, c["s"]))
+
+        def body():
+            m = (re.fullmatch if c["full"] else re.match)(pat, subj, c["flags"])
+            if m is None:
+                return None
+            gs = [None if m.span(i) == (-1, -1) else list(m.span(i)) for i in range(1, m.re.groups + 1)]
+            return {"stop": m.end(), "groups": gs, "last": m.lastindex}
+        return common.py_result(body)
 
     @classmethod
     def gen_validate(cls, r):
@@ -1926,8 +2154,8 @@ class ReArea:
         chars = [ch for ch in pat if ch not in "()[]{}?*+|^$.\\-:=!<>"] or ["a"]
         alpha = (chars + ["a", "b", "c", "\n", " ", "A", "é"]) if r.random() < 0.8 else ["a", "b"]
         subj = "".join(r.choice(alpha) for _ in range(r.choice([0, 1, 2, 3, 4, 5, 6, 8])))
-        mode = r.choice(["match", "fullmatch", "search", "search", "findall", "finditer", "scanmatch", "split", "sub", "expand",
-                         "groups", "matchop", "matchop", "prepr", "peq"])
+        mode = r.choice(["match", "fullmatch", "search", "search", "findall", "finditer", "scanmatch", "split", "sub", "subcall",
+                         "subcall", "expand", "groups", "matchop", "matchop", "prepr", "peq"])
         n = len(subj)
         text = True
         if r.random() < 0.15 and all(ord(x) < 128 for x in pat) and flags & 32 == 0:
@@ -1954,8 +2182,11 @@ class ReArea:
         if r.random() < 0.25:
             c["pos"] = r.choice([0, 1, 2, n, n + 1, -1, -(2**62)])
             c["endpos"] = r.choice([0, 1, 2, n, n + 1, -1, 2**62, n - 1])
-        if mode in ("split", "sub"):
+        if mode in ("split", "sub", "subcall"):
             c["count"] = r.choice([0, 0, 0, 1, 2, -1])
+        if mode == "subcall":
+            c["script"] = [r.choice([[97], [], [120, 121], None, None, {"other": "int"}, {"other": "float"}, {"raise": "boom"}])
+                           for _ in range(r.randint(0, 6))]
         if mode in ("sub", "expand"):
             c["repl"] = [ord(x) for x in r.choice(["", "x", "\\g<0>", "[\\g<0>]", "\\1", "\\g<1>", "a\\1b", "\\n", "\\\\", "\\2"])]
         return c
@@ -2011,6 +2242,22 @@ class ReArea:
                 repl = bytes(c.get("repl", []))
             if mode == "sub":
                 r, n = p.subn(repl, s, c["count"])
+                return [val(r), n]
+            if mode == "subcall":
+                calls = [0]
+
+                def f(m):
+                    i = calls[0]
+                    calls[0] += 1
+                    x = c["script"][i] if i < len(c["script"]) else []
+                    if isinstance(x, dict) and "raise" in x:
+                        raise ValueError(x["raise"])
+                    if isinstance(x, dict):
+                        return {"int": 5, "float": 1.5}[x["other"]]
+                    if x is None:
+                        return None
+                    return bytes(x) if isinstance(s, (bytes, bytearray)) else "".join(map(chr, x))
+                r, n = p.subn(f, s, c["count"])
                 return [val(r), n]
             m = p.search(s, pos, endpos)
             if m is None:
@@ -2087,6 +2334,8 @@ class ReArea:
 
     @classmethod
     def run(cls, c):
+        if c["fn"] == "re.sem":
+            return cls.run_sem(c)
         if c["fn"] == "re.exec":
             return cls.run_exec(c)
         if c["fn"] == "re.validate":
@@ -2130,6 +2379,181 @@ class ReArea:
 
 
 # ---- driver ----------------------------------------------------------------
+
+@area("path", 8)
+class PathArea:
+    PARTS = ["a", "b", ".", "..", "/", "//", "///", "\\", "\\\\", "C:", "c:", ":", "\\\\?\\", "\\\\?\\UNC\\", "\\\\h\\s", "//h/s", "UNC",
+             "x.y", ".z", "..w", "...", " ", "\xe9", "\x00", ""]
+
+    @classmethod
+    def val(cls, r):
+        t = "".join(r.choice(cls.PARTS) for _ in range(r.choice([0, 1, 1, 2, 3, 3, 4, 5, 6, 8])))
+        return {"b": list(t.encode("latin-1"))} if r.random() < 0.2 else {"s": cps(t)}
+
+    @classmethod
+    def arg(cls, r):
+        x = r.random()
+        if x < 0.82:
+            return cls.val(r)
+        if x < 0.92:
+            return {"pl": cls.val(r)}
+        if x < 0.95:
+            return {"pl": {"raise": r.choice([["ValueError", "boom"], ["TypeError", "boom"], ["AttributeError", "boom"]])}}
+        if x < 0.97:
+            return {"pl": {"bad": "int"}}
+        return {"o": r.choice(["int", "NoneType"])}
+
+    @classmethod
+    def gen(cls, r):
+        f = r.choice(["pisabs", "psplit", "psplitext", "pbasename", "pdirname", "pjoin", "pjoin", "psplitroot", "pnormpath", "pnormpath",
+                      "nisabs", "nsplit", "nsplitext", "nsplitroot", "njoin", "njoin", "njoin", "nnormpath", "nnormpath"])
+        c = {"mod": "textlibs", "fn": "path." + f}
+        if f in ("pjoin", "njoin"):
+            k = r.choice([1, 2, 2, 2, 3, 4])
+            if r.random() < 0.8:
+                c["args"] = [cls.val(r) if r.random() < 0.9 else cls.arg(r) for _ in range(k)]
+                if r.random() < 0.9:
+                    b = "b" in c["args"][0]
+                    c["args"] = [({"b": a.get("b", a.get("s"))} if b else {"s": a.get("b", a.get("s"))}) if ("b" in a or "s" in a) else a for a in c["args"]]
+            else:
+                c["args"] = [cls.arg(r) for _ in range(k)]
+        elif f in ("pnormpath", "psplitroot"):
+            c["args"] = [cls.val(r)]
+        else:
+            c["args"] = [cls.arg(r)]
+        return c
+
+    @staticmethod
+    def obj(j):
+        class PL:
+            def __init__(self, v):
+                self.v = v
+
+            def __fspath__(self):
+                v = self.v
+                if "raise" in v:
+                    raise mk_exc(v["raise"])
+                if "bad" in v:
+                    return 5
+                return bytes(v["b"]) if "b" in v else txt(v["s"])
+        PL.__qualname__ = "PL"
+        if "pl" in j:
+            return PL(j["pl"])
+        if "o" in j:
+            return {"int": 1, "NoneType": None}[j["o"]]
+        return bytes(j["b"]) if "b" in j else txt(j["s"])
+
+    @staticmethod
+    def enc(x):
+        if isinstance(x, tuple):
+            return [PathArea.enc(y) for y in x]
+        if isinstance(x, bool):
+            return x
+        return [isinstance(x, bytes), list(x) if isinstance(x, bytes) else cps(x)]
+
+    @classmethod
+    def run(cls, c):
+        import ntpath
+        import posixpath
+        f = c["fn"].split(".")[1]
+        mod = posixpath if f[0] == "p" else ntpath
+        args = [cls.obj(j) for j in c["args"]]
+
+        def body():
+            if warnings:
+                warnings.simplefilter("ignore")
+            r = getattr(mod, f[1:])(*args)
+            if f == "pnormpath":
+                return [cls.enc(r), cls.enc(r)]
+            return cls.enc(r)
+        return common.py_result(body)
+
+
+@area("shlex", 6)
+class ShlexArea:
+    PARTS = ["a", "b", " ", "  ", "'", '"', "\\", "#", "\n", "\t", "\r", "$", "\xe9", "(", ")", ";", "&", "|", "<", ">", "=", "*", "~", "-", ".",
+             "/", "''", '""', "\\'", '\\"', "\\\\", "\u0100", "ab c"]
+
+    @classmethod
+    def text(cls, r, n=12):
+        return "".join(r.choice(cls.PARTS) for _ in range(r.randint(0, n)))
+
+    @classmethod
+    def gen(cls, r):
+        f = r.choice(["split", "split", "lex", "lex", "lex", "quote", "join"])
+        c = {"mod": "textlibs", "fn": "shlex." + f}
+        if f == "split":
+            c.update(s=cps(cls.text(r)), comments=r.random() < 0.3, posix=r.random() < 0.7)
+        elif f == "lex":
+            c.update(s=cps(cls.text(r)), posix=r.random() < 0.6, wsplit=r.random() < 0.4)
+            if r.random() < 0.4:
+                c["punct"] = cps(r.choice(["();<>|&", "();", "|", "<>"]))
+            if r.random() < 0.2:
+                c["commenters"] = cps(r.choice(["", "#;", "a"]))
+            if r.random() < 0.15:
+                c["quotes"] = cps(r.choice(["'", '"', "'a"]))
+            if r.random() < 0.15:
+                c["escape"] = cps(r.choice(["", "^", "\\^"]))
+            if r.random() < 0.2:
+                c["fail"] = r.randint(0, 10)
+        elif f == "quote":
+            if r.random() < 0.8:
+                c["s"] = cps(cls.text(r, 5))
+            elif r.random() < 0.3:
+                c["raise"] = True
+            else:
+                c["truth"] = r.random() < 0.5
+        else:
+            c["args"] = [cps(cls.text(r, 4)) for _ in range(r.randint(0, 4))]
+        return c
+
+    @classmethod
+    def run(cls, c):
+        import shlex
+        f = c["fn"].split(".")[1]
+
+        def body():
+            if f == "split":
+                return [cps(x) for x in shlex.split(txt(c["s"]), comments=c["comments"], posix=c["posix"])]
+            if f == "lex":
+                inner = io.StringIO(txt(c["s"]))
+
+                class S:
+                    n = c.get("fail")
+
+                    def tick(self):
+                        if S.n is not None:
+                            if S.n == 0:
+                                raise ValueError("boom")
+                            S.n -= 1
+
+                    def read(self, k):
+                        self.tick()
+                        return inner.read(k)
+
+                    def readline(self):
+                        self.tick()
+                        return inner.readline()
+                pc = txt(c["punct"]) if "punct" in c else False
+                lx = shlex.shlex(S(), posix=c["posix"], punctuation_chars=pc)
+                lx.whitespace_split = c["wsplit"]
+                for k in ("commenters", "quotes", "escape"):
+                    if k in c:
+                        setattr(lx, k, txt(c[k]))
+                return [cps(x) for x in lx]
+            if f == "quote":
+                if "s" in c:
+                    return cps(shlex.quote(txt(c["s"])))
+
+                class Obj:
+                    def __bool__(self):
+                        if "raise" in c:
+                            raise ValueError("boom")
+                        return c["truth"]
+                return cps(shlex.quote(Obj()))
+            return cps(shlex.join([txt(a) for a in c["args"]]))
+        return common.py_result(body)
+
 
 only = os.environ.get("TEXTLIBS_ONLY")
 names = [n for n in AREAS if not only or n in only.split(",")]

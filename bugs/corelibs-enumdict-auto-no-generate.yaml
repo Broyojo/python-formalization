@@ -1,0 +1,57 @@
+id: corelibs-enumdict-auto-no-generate
+title: "EnumDict used directly has no _generate_next_value, so auto() fails, and update then stores the wrong keys"
+priority: P4
+kind: crash-on-valid-input
+module: corelibs
+files: [Lib/enum.py]
+functions: ["EnumDict.__init__", "EnumDict.__setitem__", "EnumDict.update"]
+summary: |
+  EnumDict has been public since 3.13. EnumDict.__init__ does not set _generate_next_value; only the __setitem__ of
+  '_generate_next_value_' in EnumType.__prepare__ does. So d = EnumDict('C'); d['A'] = auto() raises AttributeError:
+  'EnumDict' object has no attribute '_generate_next_value'. EnumDict.update makes it worse. Its try wraps the whole
+  loop over members.keys(), so the AttributeError from __setitem__ is taken to mean that members has no keys method,
+  and it goes on with `for name, value in members`, which unpacks the keys of the mapping. d.update({'AB': auto()})
+  therefore raises nothing and leaves {'A': 'B'} in the namespace.
+likelihood: |
+  Low. EnumDict is mostly used through __prepare__, which fills the attribute. A metaclass that builds its own EnumDict
+  and calls update is where this would be seen.
+maybe_intended: |
+  The missing attribute may be acceptable, as a documented use is "called with the name of the enum class", and a
+  class needs a generator. The silent wrong store in update is not intended: the except clause means to tell a
+  mapping from pairs.
+reproducer: |
+  from enum import EnumDict, auto
+  d = EnumDict('C')
+  try:
+      d['A'] = auto()
+      first = 'no error'
+  except AttributeError as e:
+      first = 'AttributeError'
+  e2 = EnumDict('C')
+  e2.update({'AB': auto()})
+  print(first, dict(e2))
+  if first == 'AttributeError' and dict(e2) == {'A': 'B'}:
+      print('REPRODUCED corelibs-enumdict-auto-no-generate')
+expected: |
+  auto() gets the default generator, or a clear error, and update never stores 'A' for a key 'AB'.
+observed: |
+  python3 3.14.7: AttributeError, {'A': 'B'}. REPRODUCED.
+  main (3.16.0a1+dev): same, REPRODUCED.
+promised_by: |
+  Doc/library/enum.rst, EnumDict: "It is exposed to allow subclasses of EnumType with advanced behavior". update
+  overrides the MutableMapping method, and no mapping should be read as an iterable of pairs.
+cause: |
+  Lib/enum.py:334-340 does not set _generate_next_value, which :423 reads. :449-452 catches AttributeError around
+  the assignments as well as around members.keys().
+possible_fix: |
+  Give __init__ a default generator or raise a clear TypeError, and take keys = members.keys() in the try, with the loop
+  in an else.
+duplicates:
+  issues:
+    - {number: 78931, state: closed, relation: "search hit, 'locals().update doesn't work in Enum body'", reason: "different"}
+    - {number: 71175, state: closed, relation: "search hit, 'Add AutoNumberedEnum to stdlib'", reason: "different"}
+  queries: ["gh search issues EnumDict _generate_next_value", "gh search issues EnumDict auto AttributeError",
+            "gh search issues EnumDict update", "bugforge README: no match for enum"]
+lean:
+  property: PyLean.CoreLibs.EnumDC.EnumDictUpdateKeys
+  theorem: PyLean.CoreLibs.EnumDC.enumDictUpdateKeys_refuted

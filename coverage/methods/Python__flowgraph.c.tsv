@@ -41,8 +41,8 @@ Python/flowgraph.c	711	713	except_stack_top	except_stack_top(struct _PyCfgExcept
 Python/flowgraph.c	716	725	make_except_stack	make_except_stack(void) {	todo		
 Python/flowgraph.c	728	736	copy_except_stack	copy_except_stack(struct _PyCfgExceptStack *stack) {	todo		
 Python/flowgraph.c	739	750	make_cfg_traversal_stack	make_cfg_traversal_stack(basicblock *entryblock) {	todo		
-Python/flowgraph.c	766	787	Py_LOCAL	Py_LOCAL(int) get_stack_effects(int opcode, int oparg, int jump, stack_effects *effects)	todo		
-Python/flowgraph.c	789	802	Py_LOCAL_INLINE	Py_LOCAL_INLINE(int) stackdepth_push(basicblock ***sp, basicblock *b, int depth)	todo		
+Python/flowgraph.c	766	787	get_stack_effects	Py_LOCAL(int) get_stack_effects(int opcode, int oparg, int jump, stack_effects *effects)	todo		
+Python/flowgraph.c	789	802	stackdepth_push	Py_LOCAL_INLINE(int) stackdepth_push(basicblock ***sp, basicblock *b, int depth)	todo		
 Python/flowgraph.c	808	882	calculate_stackdepth	calculate_stackdepth(cfg_builder *g)	todo		
 Python/flowgraph.c	885	990	label_exception_targets	label_exception_targets(basicblock *entryblock) {	todo		
 Python/flowgraph.c	995	1040	remove_unreachable	remove_unreachable(basicblock *entryblock) {	todo		

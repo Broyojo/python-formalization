@@ -313,6 +313,12 @@ theorem cMerge_ok {α : Type} (pargs : List (PArg α)) (args : List α) (h : phC
     List.take_of_length_le (by simp)
   simp only [cMerge, h1, hc, ite_true, ht, h2]
 
+theorem vecMerge_ok {α : Type} (pargs : List (PArg α)) (args : List α) (h : phCount pargs ≤ args.length) :
+    vecMerge pargs (phCount pargs) args = .ok (fillCall pargs args) := by
+  obtain ⟨t, h1, _⟩ := cMergeLoop_ok args pargs 0 (by omega)
+  simp only [Nat.zero_add] at h1
+  simp only [vecMerge, h1, cMerge_ok pargs args h, ne_eq, not_true_eq_false, and_false, ite_false]
+
 theorem partialCallC_spec {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw kw : List (String × α))
     (ph : Nat) (args : List α) (hph : ph = phCount pargs) :
     partialCallC func pargs pkw ph args kw =
@@ -346,7 +352,7 @@ theorem partialVectorcall_spec {α : Type} (func : Fn α) (pargs : List (PArg α
       by_cases h0 : phCount pargs = 0
       · simp only [h0, ne_eq, not_true_eq_false, ite_false]
         rw [fillCall_no_ph pargs args h0]
-      · simp only [h0, ne_eq, not_false_eq_true, ite_true, cMerge_ok pargs args h1]
+      · simp only [h0, ne_eq, not_false_eq_true, ite_true, vecMerge_ok pargs args h1]
   · simp only [he, Bool.not_false, ite_true, ite_false]
     rw [partialCallC_spec func pargs pkw kw _ args rfl]
     simp [he]
@@ -639,9 +645,36 @@ theorem partialGetBinds_proven : PartialGetBinds := fun _ _ _ _ _ => ⟨rfl, by 
 preconditions of the narrowed twin property. The first is refuted by `PartialStateKeepsPhcountAlways`; the
 second is the `PyDict_Copy` shortcut, where C skips an overridden `keys` that Python calls. -/
 def NoTupleSub {α : Type} : PState α → Prop
-  | .four _ (.sub _ _) _ _ => False
+  | .four _ (.sub _) _ _ => False
   | .four _ _ (.sub [] (some _)) _ => False
   | _ => True
+
+/-- A state of the kind `tuple(args)` at Lib/functools.py:419 is there for: a tuple subclass counts when it overrides none
+of what `__setstate__` reads. A subclass that does is on record in `PartialStateKeepsPhcountAlways`, and in
+`PartialStateViews` for what the Python twin reads. The empty dict subclass is on record in `PartialStateEmptyDictSub`. -/
+def HonestState {α : Type} : PState α → Prop
+  | .four _ (.sub t) _ _ => t = TupSub.honest t.raw
+  | _ => True
+
+theorem pyHead_honest {α : Type} (raw : List (PArg α)) :
+    pyHead (TupSub.honest raw) = if trailingPh raw then .error (.typeError trailingMsg) else .ok (raw, phCount raw) := by
+  have hp : (prepareMergerOf raw.length raw).1 = phCount raw := prepareMerger_count raw
+  cases hl : raw.getLast? with
+  | none =>
+    have he : raw = [] := List.getLast?_eq_none_iff.1 hl
+    subst he
+    simp [pyHead, lastIsPh, TupSub.honest, trailingPh]
+    rfl
+  | some a =>
+    have hne : raw.isEmpty = false := by
+      cases raw with
+      | nil => simp at hl
+      | cons _ _ => rfl
+    cases a with
+    | ph => simp [pyHead, lastIsPh, TupSub.honest, trailingPh, hl, hne, isPh]
+    | val x =>
+      simp [pyHead, lastIsPh, TupSub.honest, trailingPh, hl, hne, isPh]
+      simpa using hp
 
 /-- The dict field of a Python object is always there; C leaves it `NULL`. -/
 def withDict {α : Type} : Fn α → Fn α
@@ -657,15 +690,15 @@ failing on a dict subclass propagates from both, leaving the object as it was be
 has run. They differ in two messages: Python says "must be a tuple" and "expected 4 items", C says "invalid
 partial state". The result keeps the invariant `PWf`. A tuple subclass is excluded by a documented
 precondition and handled by the next two properties. -/
-def PartialStateTwins : Prop :=
-  ∀ (α : Type) (o : Option Nat) (st : PState α), NoTupleSub st →
-    (∀ r, setstateC o st = .ok r → setstatePy o st = .ok (withDict r)) ∧
-    (∀ r, setstatePy o st = .ok r → ∃ c, setstateC o st = .ok c ∧ withDict c = r) ∧
-    (∀ e, setstateC o st = .error e → ∃ e', setstatePy o st = .error e' ∧ e'.className = e.className) ∧
-    (∀ d f a k ph, setstateC o st = .ok (.pobj o d f a k ph) → PWf a ph)
+def StateAgrees {α : Type} (o : Option Nat) (st : PState α) : Prop :=
+  (∀ r, setstateC o st = .ok r → setstatePy o st = .ok (withDict r)) ∧
+  (∀ r, setstatePy o st = .ok r → ∃ c, setstateC o st = .ok c ∧ withDict c = r) ∧
+  (∀ e, setstateC o st = .error e → ∃ e', setstatePy o st = .error e' ∧ e'.className = e.className) ∧
+  (∀ d f a k ph, setstateC o st = .ok (.pobj o d f a k ph) → PWf a ph)
 
-theorem partialStateTwins_proven : PartialStateTwins := by
-  intro α o st hs
+/-- `PartialStateTwins`, on states with an exact tuple. -/
+theorem stateAgrees_tuple {α : Type} (o : Option Nat) (st : PState α) (hs : NoTupleSub st) : StateAgrees o st := by
+  unfold StateAgrees
   cases st with
   | notTuple =>
     exact ⟨by simp [setstateC], by simp [setstatePy],
@@ -675,7 +708,7 @@ theorem partialStateTwins_proven : PartialStateTwins := by
       fun e h => by cases h; exact ⟨_, rfl, rfl⟩, by simp [setstateC]⟩
   | four func args kw ns =>
     cases args with
-    | sub r it => exact hs.elim
+    | sub t => exact hs.elim
     | other =>
       have hbad : stateShapeOk func StArgs.other kw ns = false := by simp [stateShapeOk, StArgs.raw]
       simp only [setstateC, setstatePy, hbad, Bool.not_false, ite_true]
@@ -683,7 +716,7 @@ theorem partialStateTwins_proven : PartialStateTwins := by
     | tuple items =>
       simp only [setstateC, setstatePy]
       by_cases hsh : stateShapeOk func (.tuple items) kw ns = true
-      · simp only [hsh, Bool.not_true, Bool.false_eq_true, ite_false, StArgs.raw]
+      · simp only [hsh, Bool.not_true, Bool.false_eq_true, ite_false, StArgs.raw, pyHead_honest]
         by_cases ht : trailingPh items = true
         · simp only [ht, ite_true]
           exact ⟨by simp, by simp, fun e h => by cases h; exact ⟨_, rfl, rfl⟩, by simp⟩
@@ -736,6 +769,118 @@ theorem partialStateTwins_proven : PartialStateTwins := by
         simp only [hsh, Bool.not_false, ite_true]
         exact ⟨by simp, by simp, fun e h => by cases h; exact ⟨_, rfl, rfl⟩, by simp⟩
 
+/-- `__setstate__` in C and in Python agree on an exact tuple and on a tuple subclass that overrides nothing they read, the
+case `tuple(args)` exists for; see `StateAgrees` for what they agree on. They differ in two messages: Python says "must be
+a tuple" and "expected 4 items", C says "invalid partial state". -/
+def PartialStateTwins : Prop :=
+  ∀ (α : Type) (o : Option Nat) (st : PState α), HonestState st →
+    (match st with
+     | .four _ _ (.sub [] (some _)) _ => False
+     | _ => True) → StateAgrees o st
+
+theorem partialStateTwins_proven : PartialStateTwins := by
+  intro α o st hs hk
+  cases st with
+  | notTuple => exact stateAgrees_tuple o _ trivial
+  | size n => exact stateAgrees_tuple o _ trivial
+  | four func args kw ns =>
+    have hnt : ∀ A : StArgs α, (∀ t, A ≠ .sub t) → NoTupleSub (PState.four func A kw ns) := by
+      intro A hA
+      cases A with
+      | sub t => exact absurd rfl (hA t)
+      | tuple r =>
+        cases kw with
+        | sub d fl =>
+          cases d with
+          | nil =>
+            cases fl with
+            | some e => exact hk.elim
+            | none => trivial
+          | cons _ _ => trivial
+        | _ => trivial
+      | other =>
+        cases kw with
+        | sub d fl =>
+          cases d with
+          | nil =>
+            cases fl with
+            | some e => exact hk.elim
+            | none => trivial
+          | cons _ _ => trivial
+        | _ => trivial
+    cases args with
+    | tuple r => exact stateAgrees_tuple o _ (hnt _ (by simp))
+    | other => exact stateAgrees_tuple o _ (hnt _ (by simp))
+    | sub t =>
+      have he : t = TupSub.honest t.raw := hs
+      have main := stateAgrees_tuple o (.four func (.tuple t.raw) kw ns) (hnt _ (by simp))
+      have eC : setstateC o (.four func (.sub t) kw ns) = setstateC o (.four func (.tuple t.raw) kw ns) := by
+        rw [he]
+        rfl
+      have eP : setstatePy o (.four func (.sub t) kw ns) = setstatePy o (.four func (.tuple t.raw) kw ns) := by
+        rw [he]
+        rfl
+      unfold StateAgrees at main ⊢
+      rw [eC, eP]
+      exact main
+
+/-- The reads of a tuple subclass in the Python twin, in order, each from the source: an overridden `__bool__` that says no
+leaves `args[-1]`, `__len__` and the first iteration unread, so a trailing placeholder gets through, with a count of nought;
+`__bool__`, `__getitem__`, `__len__` and each `__iter__` raising propagates; and what is kept is the second iteration, and
+what is counted the first. -/
+def PartialStateViews : Prop :=
+  ∀ (α : Type) (t : TupSub α) (e : PyExc) (l1 l2 : List (PArg α)) (n : Nat) (a : α),
+    (t.truth = .error e → pyHead t = .error e) ∧
+    (t.truth = .ok true → t.last = .error e → pyHead t = .error e) ∧
+    (t.truth = .ok true → t.last = .ok .ph → pyHead t = .error (.typeError trailingMsg)) ∧
+    (t.truth = .ok false → t.iter1 = .ok l1 → pyHead t = .ok (l1, 0)) ∧
+    (t.truth = .ok false → t.iter1 = .error e → pyHead t = .error e) ∧
+    (t.truth = .ok true → t.last = .ok (.val a) →
+      (t.len = .ok n → t.iter1 = .ok l1 → t.iter2 = .ok l2 → pyHead t = .ok (l2, (prepareMergerOf n l1).1)) ∧
+      (t.len = .error e → pyHead t = .error e) ∧
+      (t.len = .ok n → t.iter1 = .error e → pyHead t = .error e) ∧
+      (t.len = .ok n → t.iter1 = .ok l1 → t.iter2 = .error e → pyHead t = .error e))
+
+theorem partialStateViews_proven : PartialStateViews := by
+  intro α t e l1 l2 n a
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro h; simp [pyHead, lastIsPh, h]
+  · intro h1 h2; simp [pyHead, lastIsPh, h1, h2]
+  · intro h1 h2; simp [pyHead, lastIsPh, h1, h2, isPh]
+  · intro h1 h2; simp [pyHead, lastIsPh, h1, h2]
+  · intro h1 h2; simp [pyHead, lastIsPh, h1, h2]
+  · intro h1 h2
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · intro h3 h4 h5; simp [pyHead, lastIsPh, h1, h2, h3, h4, h5, isPh]
+    · intro h3; simp [pyHead, lastIsPh, h1, h2, h3, isPh]
+    · intro h3 h4; simp [pyHead, lastIsPh, h1, h2, h3, h4, isPh]
+    · intro h3 h4 h5; simp [pyHead, lastIsPh, h1, h2, h3, h4, h5, isPh]
+
+/-- The Python twin too keeps the count of what it kept. False: it counts the first iteration, and keeps the second. -/
+def PartialStatePyPhcount : Prop :=
+  ∀ (st : PState Nat) (d : Option (List (String × Nat))) (f : Fn Nat) (a : List (PArg Nat))
+    (k : List (String × Nat)) (ph : Nat),
+    setstatePy none st = .ok (.pobj none d f a k ph) → ph = phCount a
+
+theorem partialStatePyPhcount_refuted : ¬PartialStatePyPhcount := by
+  intro h
+  have := h (.four (.base 0) (.sub ⟨[.val 1], .ok true, .ok (.val 1), .ok 1, .ok [.val 1], .ok [.ph, .val 1]⟩) .none .none)
+    (some []) (.base 0) [.ph, .val 1] [] 0 (by decide)
+  revert this
+  decide
+
+/-- An empty dict subclass in a state behaves alike in the twins. False: `dict(kwds)` in Python runs an overridden `keys`,
+which may raise, and `PyDict_Copy` in C skips the items of an empty dict and calls nothing. -/
+def PartialStateEmptyDictSub : Prop :=
+  ∀ (α : Type) (o : Option Nat) (st : PState α) (e : PyExc), setstatePy o st = .error e →
+    ∃ e', setstateC o st = .error e'
+
+theorem partialStateEmptyDictSub_refuted : ¬PartialStateEmptyDictSub := by
+  intro h
+  obtain ⟨e', he⟩ := h Nat none (.four (.base 0) (.tuple []) (.sub [] (some (.valueError "conv"))) .none)
+    (.valueError "conv") rfl
+  cases he
+
 /-- After a successful `__setstate__`, `_phcount` counts the placeholders of `args`, whatever the state. False
 for a tuple subclass whose `__iter__` differs from its storage: C counts the storage and keeps the iteration. -/
 def PartialStateKeepsPhcountAlways : Prop :=
@@ -745,7 +890,7 @@ def PartialStateKeepsPhcountAlways : Prop :=
 
 theorem partialStateKeepsPhcountAlways_refuted : ¬PartialStateKeepsPhcountAlways := by
   intro h
-  have := h (.four (.base 0) (.sub [.ph, .val 1] (.ok [.val 1, .val 2])) .none .none) none (.base 0)
+  have := h (.four (.base 0) (.sub (.iterates [.ph, .val 1] (.ok [.val 1, .val 2]))) .none .none) none (.base 0)
     [.val 1, .val 2] [] 1 (by decide)
   revert this
   decide
@@ -761,23 +906,41 @@ def PartialCallInBoundsAlways : Prop :=
 
 theorem partialCallInBoundsAlways_refuted : ¬PartialCallInBoundsAlways := by
   intro h
-  have := (h (.four (.base 0) (.sub [.ph, .val 1] (.ok [.ph, .ph, .val 1])) .none .none) none (.base 0)
+  have := (h (.four (.base 0) (.sub (.iterates [.ph, .val 1] (.ok [.ph, .ph, .val 1]))) .none .none) none (.base 0)
     [.ph, .ph, .val 1] [] 1 [10] (by decide)).1
+  revert this
+  decide
+
+/-- A vectorcall of a `partial` writes only inside its stack array, whatever `__setstate__` was given. False
+when `args` has fewer placeholders than `phcount`, with more call arguments than `phcount`: the `memcpy` starts
+at `j`, not at `phcount`, and overruns the array by the difference. With a tuple of four items and three call
+arguments that is `small_stack`, and glibc reports stack smashing. -/
+def PartialVectorcallWritesInBounds : Prop :=
+  ∀ (st : PState Nat) (d : Option (List (String × Nat))) (f : Fn Nat) (a : List (PArg Nat))
+    (k : List (String × Nat)) (ph : Nat) (args : List Nat),
+    setstateC none st = .ok (.pobj none d f a k ph) → partialVectorcall f a k ph args [] ≠ .error oobWrite
+
+theorem partialVectorcallWritesInBounds_refuted : ¬PartialVectorcallWritesInBounds := by
+  intro h
+  have := h (.four (.base 0) (.sub (.iterates [.ph, .ph, .val 1] (.ok [.val 1, .val 2, .val 3, .val 4]))) .none .none)
+    none (.base 0) [.val 1, .val 2, .val 3, .val 4] [] 2 [10, 11, 12] (by decide)
   revert this
   decide
 
 /-- The narrowed statement: without a tuple subclass in the state, a call of the result stays in bounds in
 both C paths. -/
 def PartialCallInBounds : Prop :=
-  ∀ (α : Type) (st : PState α), NoTupleSub st → ∀ (d : Option (List (String × α))) (f : Fn α)
+  ∀ (α : Type) (st : PState α), HonestState st → (match st with
+    | .four _ _ (.sub [] (some _)) _ => False
+    | _ => True) → ∀ (d : Option (List (String × α))) (f : Fn α)
     (a : List (PArg α)) (k : List (String × α)) (ph : Nat) (args : List α),
     callFn f (fillCall a args) (if k.isEmpty then [] else mergeKw k []) ≠ .error oobRead →
     setstateC none st = .ok (.pobj none d f a k ph) →
     partialCallC f a k ph args [] ≠ .error oobRead ∧ partialVectorcall f a k ph args [] ≠ .error oobRead
 
 theorem partialCallInBounds_proven : PartialCallInBounds := by
-  intro α st hs d f a k ph args hf h
-  have hw := (partialStateTwins_proven α none st hs).2.2.2 d f a k ph h
+  intro α st hs hk d f a k ph args hf h
+  have hw := (partialStateTwins_proven α none st hs hk).2.2.2 d f a k ph h
   have hv := partialVectorcall_spec f a k [] ph args hw.1
   rw [hv]
   have : partialCallC f a k ph args [] ≠ .error oobRead := by
@@ -837,12 +1000,12 @@ theorem partialReduceRoundTrip_proven : PartialReduceRoundTrip := by
       | nil =>
         have hs := hsh .none ns (by simp) hns
         simp only [List.isEmpty_nil, ite_true, setstatePy, hs, Bool.not_true,
-          Bool.false_eq_true, ite_false, StArgs.raw, h2, prepareMergerOf_length]
+          Bool.false_eq_true, ite_false, StArgs.raw, h2, pyHead_honest]
         rfl
       | cons p ps =>
         have hs := hsh (.exact (p :: ps)) ns (by simp) hns
         simp only [List.isEmpty_cons, Bool.false_eq_true, ite_false, setstatePy,
-          hs, Bool.not_true, StArgs.raw, h2, prepareMergerOf_length]
+          hs, Bool.not_true, StArgs.raw, h2, pyHead_honest]
         rfl
     cases d with
     | none => simpa using hkw .none (by simp)
@@ -1274,26 +1437,26 @@ def PartialmethodKinds : Prop :=
     (o c x : α) (args : List α), PWf pargs ph → ph ≤ args.length →
     let call := Except.ok (ε := PyExc) (Called.mk id (fillCall pargs args) (mergeKw pkw kw))
     let first (v : α) : Py (Called α) := .ok ⟨id, v :: fillCall pargs args, mergeKw pkw kw⟩
-    (do callGot (← pmGet new ⟨⟨.fn id, .ok a⟩, pargs, pkw, ph⟩ (some o) c) args kw) = first o ∧
-    (do callGot (← pmGet new ⟨⟨.fn id, .ok a⟩, pargs, pkw, ph⟩ none c) (x :: args) kw) = first x ∧
-    (do callGot (← pmGet new ⟨⟨.classm id, .ok a⟩, pargs, pkw, ph⟩ (some o) c) args kw) = first c ∧
-    (do callGot (← pmGet new ⟨⟨.classm id, .ok a⟩, pargs, pkw, ph⟩ none c) args kw) = first c ∧
-    (do callGot (← pmGet new ⟨⟨.staticm id, .ok a⟩, pargs, pkw, ph⟩ (some o) c) args kw) = call ∧
-    (do callGot (← pmGet new ⟨⟨.staticm id, .ok a⟩, pargs, pkw, ph⟩ none c) args kw) = call
+    (do callGot (← pmGet new ⟨⟨.fn id, .ok a, none, none⟩, pargs, pkw, ph⟩ (some o) c) args kw) = first o ∧
+    (do callGot (← pmGet new ⟨⟨.fn id, .ok a, none, none⟩, pargs, pkw, ph⟩ none c) (x :: args) kw) = first x ∧
+    (do callGot (← pmGet new ⟨⟨.classm id, .ok a, none, none⟩, pargs, pkw, ph⟩ (some o) c) args kw) = first c ∧
+    (do callGot (← pmGet new ⟨⟨.classm id, .ok a, none, none⟩, pargs, pkw, ph⟩ none c) args kw) = first c ∧
+    (do callGot (← pmGet new ⟨⟨.staticm id, .ok a, none, none⟩, pargs, pkw, ph⟩ (some o) c) args kw) = call ∧
+    (do callGot (← pmGet new ⟨⟨.staticm id, .ok a, none, none⟩, pargs, pkw, ph⟩ none c) args kw) = call
 
 theorem partialmethodKinds_proven : PartialmethodKinds := by
   intro α new hnew a id pargs pkw kw ph o c x args hw hl call first
   have hnl : ¬ args.length < ph := by omega
   have hb : ∀ (kind : MKind α) (nf : Fn α) (self : Option α),
       (∀ o d g a k ph, nf ≠ .pobj o d g a k ph) → nf.isCallable = true →
-      (do callGot (← pmBound new ⟨⟨kind, .ok a⟩, pargs, pkw, ph⟩ nf (.ok self)) args kw) =
+      (do callGot (← pmBound new ⟨{ kind := kind, abstract := .ok a }, pargs, pkw, ph⟩ nf (.ok self)) args kw) =
         callFn nf (fillCall pargs args) (mergeKw pkw kw) := by
     intro kind nf self h1 h2
-    have := pmBound_call ⟨⟨kind, .ok a⟩, pargs, pkw, ph⟩ nf self hw args kw h1 h2 new hnew
+    have := pmBound_call ⟨{ kind := kind, abstract := .ok a }, pargs, pkw, ph⟩ nf self hw args kw h1 h2 new hnew
     simpa [hnl] using this
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
   · simpa [pmGet, callFn, first] using hb (.fn id) (.bound (.base id) o) (some o) (by simp) rfl
-  · have hm := methodCall_spec ⟨⟨⟨.fn id, .ok a⟩, pargs, pkw, ph⟩, a⟩ x args kw hw.1
+  · have hm := methodCall_spec ⟨⟨⟨.fn id, .ok a, none, none⟩, pargs, pkw, ph⟩, a⟩ x args kw hw.1
     dsimp only at hm
     simp [pmGet, pmUnbound, makeUnbound, bind, Except.bind, callGot, hm, hnl, callKind, first]
   · simpa [pmGet, callFn, first] using hb (.classm id) (.bound (.base id) c) (some c) (by simp) rfl
@@ -1306,9 +1469,9 @@ propagates; `obj.m` for a plain function does not read it. A `__get__` that rais
 def PartialmethodAbstractRead : Prop :=
   ∀ (α : Type) (new : PartialNew α) (e : PyExc) (id : Nat) (pargs : List (PArg α)) (pkw : List (String × α))
     (ph : Nat) (c : α),
-    pmGet new ⟨⟨.fn id, .error e⟩, pargs, pkw, ph⟩ none c = .error e ∧
+    pmGet new ⟨⟨.fn id, .error e, none, none⟩, pargs, pkw, ph⟩ none c = .error e ∧
     (∀ (s : Py (Option α)) (call : Fn α) (ab : Py (Option α)) (obj : Option α),
-      pmGet new ⟨⟨.custom (fun _ => .error e) s call, ab⟩, pargs, pkw, ph⟩ obj c = .error e) ∧
+      pmGet new ⟨⟨.custom (fun _ => .error e) s call, ab, none, none⟩, pargs, pkw, ph⟩ obj c = .error e) ∧
     (∀ (u : UMethod α) (p : PMeth α) (a : Option α), makeUnbound p = .ok u →
       p.func.abstract = .ok a → u.self = p ∧ u.isAbstract = a)
 
@@ -1373,14 +1536,133 @@ theorem partialmethodNested_proven : PartialmethodNested := by
       left
       simp [hl, h3, h1]
 
-/-- `partialmethod(obj)` raises exactly for an object neither callable nor a descriptor, before anything else. -/
+/-- `partialmethod(obj)` raises `TypeError` for an object neither callable nor a descriptor, before anything else; but an
+exception from `hasattr(func, "__get__")`, and one from the `repr` in the message, comes out in place of it. -/
 def PartialmethodRejects : Prop :=
-  ∀ (α : Type) (t : MTarget α) (args : List (PArg α)) (kw : List (String × PArg α)),
-    t.kind.isCallable = false → t.kind.hasGet = false →
-    (partialmethodNew (.target t) args kw).raises "TypeError"
+  ∀ (α : Type) (t : MTarget α) (args : List (PArg α)) (kw : List (String × PArg α)) (e : PyExc),
+    t.kind.isCallable = false →
+    (t.getFail = some e → partialmethodNew (.target t) args kw = .error e) ∧
+    (t.getFail = none → t.kind.hasGet = false →
+      (t.reprFail = none → (partialmethodNew (.target t) args kw).raises "TypeError") ∧
+      (t.reprFail = some e → partialmethodNew (.target t) args kw = .error e))
 
 theorem partialmethodRejects_proven : PartialmethodRejects := by
-  intro α t args kw h1 h2
-  exact ⟨_, by simp [partialmethodNew, h1, h2]; rfl, rfl⟩
+  intro α t args kw e h1
+  refine ⟨?_, ?_⟩
+  · intro h
+    simp [partialmethodNew, h1, h]
+  · intro h h2
+    refine ⟨?_, ?_⟩
+    · intro h3
+      exact ⟨.typeError "~the first argument must be a callable or a descriptor", by
+        simp [partialmethodNew, h1, h, h2, h3], rfl⟩
+    · intro h3
+      simp [partialmethodNew, h1, h, h2, h3]
+
+/-- The twins of `partial` take the same objects apart. False: `isinstance` in Python goes through `__class__`, so an object
+that claims to be a `partial` is flattened, where `PyObject_TypeCheck` in C leaves it as the function. -/
+def PartialNewDuck : Prop :=
+  ∀ (fake : Nat) (inner : Fn Nat) (pargs : List (PArg Nat)) (pkw : List (String × Nat)) (pph : Nat) (args : List (PArg Nat)),
+    duckNewPy none inner pargs pkw pph args [] = partialNewC none (.base fake) args []
+
+theorem partialNewDuck_refuted : ¬PartialNewDuck := by
+  intro h
+  have := h 9 (.base 1) [] [] 0 []
+  revert this
+  decide
+
+/-- The full `repr` of a `partial`, in Python: the two reads from the class come first, and an exception from either stops
+it before any `repr`; then `repr(self.func)`, the arguments and the keywords. -/
+def PartialReprFull : Prop :=
+  ∀ (α : Type) (E : ReprEnv α) (grows : α → Bool) (mod qual f : Py String) (args : List (PArg α)) (kw : List (String × α))
+    (e : PyExc) (m q : String),
+    (mod = .error e → partialReprFullPy E grows mod qual f args kw = .error e) ∧
+    (mod = .ok m → qual = .error e → partialReprFullPy E grows mod qual f args kw = .error e) ∧
+    (mod = .ok m → qual = .ok q → f = .error e → partialReprFullPy E grows mod qual f args kw = .error e) ∧
+    ((∀ p ∈ kw, grows p.2 = false) → mod = .ok m → qual = .ok q →
+      partialReprFullPy E grows mod qual f args kw = partialReprPy E (m ++ "." ++ q) f args kw)
+
+private theorem kwLoop_noMut {α : Type} (E : ReprEnv α) (grows : α → Bool) :
+    ∀ kw : List (String × α), (∀ p ∈ kw, grows p.2 = false) → kwLoopPy E grows kw = mapPy (kwRepr E) kw
+  | [], _ => rfl
+  | p :: r, h => by
+    have h1 := h p (by simp)
+    simp only [kwLoopPy, mapPy, bind, Except.bind]
+    cases hk : kwRepr E p with
+    | error e => rfl
+    | ok s =>
+      simp only [h1, Bool.false_eq_true, ↓reduceIte, kwLoop_noMut E grows r (fun q hq => h q (by simp [hq]))]
+      cases mapPy (kwRepr E) r <;> rfl
+
+theorem partialReprFull_proven : PartialReprFull := by
+  intro α E grows mod qual f args kw e m q
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro h; subst h; rfl
+  · intro h1 h2; subst h1 h2; rfl
+  · intro h1 h2 h3; subst h1 h2 h3; rfl
+  · intro h1 h2 h3
+    subst h2 h3
+    simp only [partialReprFullPy, partialReprPy, kwLoop_noMut E grows kw h1, bind, Except.bind, pure, Except.pure]
+
+/-- The twins of `repr` agree on keywords whose `repr` is harmless. False when one adds to `self.keywords`: the generator in
+Python raises `RuntimeError` at its next step, where the `PyDict_Next` loop of C goes on. -/
+def PartialReprMutation : Prop :=
+  ∀ (E : ReprEnv Nat) (grows : Nat → Bool) (extra : String × Nat) (kw : List (String × Nat)) (x : String),
+    (partialReprFullPy E grows (.ok "m") (.ok "p") (.ok x) [] kw).toOption.isSome = true ↔
+      (partialReprFullC E grows extra "m.p" (.ok x) [] kw).toOption.isSome = true
+
+theorem partialReprMutation_refuted : ¬PartialReprMutation := by
+  intro h
+  have := (h ⟨fun _ => .ok "v"⟩ (fun _ => true) ("z", 1) [("a", 1)] "f").2 (by decide)
+  revert this
+  decide
+
+/-- A `partial` holding itself prints `...` at each such place in both twins, wherever it is among the arguments and whatever
+the other arguments print: `none` stands for the partial, whose `repr` meets the guard already set. -/
+def selfEnv {α : Type} (s : α → String) : ReprEnv (Option α) :=
+  ⟨fun v => match v with
+    | none => reprGuard true (.error .modelFuel)
+    | some a => .ok (s a)⟩
+
+def selfShown {α : Type} (s : α → String) : PArg (Option α) → String
+  | .ph => "Placeholder"
+  | .val none => "..."
+  | .val (some a) => s a
+
+def PartialReprSelfAnywhere : Prop :=
+  ∀ (α : Type) (s : α → String) (cls f : String) (args : List (PArg (Option α))),
+    partialReprPy (selfEnv s) cls (.ok f) args [] = .ok (cls ++ "(" ++ joinComma (f :: args.map (selfShown s)) ++ ")") ∧
+    partialReprC (selfEnv s) cls (.ok f) args [] =
+      .ok (cls ++ "(" ++ f ++ (args.map (selfShown s)).foldl (fun a x => a ++ ", " ++ x) "" ++ ")")
+
+private theorem self_args {α : Type} (s : α → String) : ∀ args : List (PArg (Option α)),
+    mapPy (argRepr (selfEnv s)) args = .ok (args.map (selfShown s))
+  | [] => rfl
+  | a :: r => by
+    have ih := self_args s r
+    have ha : argRepr (selfEnv s) a = .ok (selfShown s a) := by
+      cases a with
+      | ph => rfl
+      | val v =>
+        cases v <;> rfl
+    simp [mapPy, ha, ih, bind, Except.bind, pure, Except.pure]
+
+private theorem self_fold {α : Type} (s : α → String) : ∀ (args : List (PArg (Option α))) (acc : String),
+    reprFold (argRepr (selfEnv s)) acc args = .ok ((args.map (selfShown s)).foldl (fun a x => a ++ ", " ++ x) acc)
+  | [], _ => rfl
+  | a :: r, acc => by
+    have ha : argRepr (selfEnv s) a = .ok (selfShown s a) := by
+      cases a with
+      | ph => rfl
+      | val v =>
+        cases v <;> rfl
+    simp only [reprFold, ha, List.map_cons, List.foldl_cons]
+    exact self_fold s r _
+
+theorem partialReprSelfAnywhere_proven : PartialReprSelfAnywhere := by
+  intro α s cls f args
+  constructor
+  · simp [partialReprPy, self_args, mapPy, bind, Except.bind, pure, Except.pure]
+  · simp only [partialReprC, self_fold, reprFold, bind, Except.bind, pure, Except.pure]
 
 end PyLean.CoreLibs.Functools

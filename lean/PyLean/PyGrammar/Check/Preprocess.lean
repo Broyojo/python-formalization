@@ -44,7 +44,7 @@ inductive Step where
   /-- `POP_CONTEXT` -/
   | pop
 
-/-- The visits of each `case`, `Python/ast_preprocess.c:519-948`. -/
+/-- The visits of each `case`, `Python/ast_preprocess.c:519-965`. -/
 def visits : Ctor → List Step
   -- astfold_expr
   | .BoolOp => [.fld 1]
@@ -101,6 +101,9 @@ def visits : Ctor → List Step
   | .MatchClass => [.fld 0, .fld 1, .fld 3]
   | .MatchAs => [.fld 0]
   | .MatchOr => [.fld 0]
+  -- astfold_type_param
+  | .TypeVar => [.fld 1, .fld 2]
+  | .ParamSpec | .TypeVarTuple => [.fld 1]
   | _ => []
 
 /-- `_PyAST_GetDocString`, `Python/ast.c:1077-1091`. -/
@@ -313,6 +316,12 @@ def removeDocstring : List Ast → List Ast
   | _ :: rest => rest
   | [] => []
 
+/-- "Turn a constant folded string expression statement into a JoinedStr so that it is not
+mistaken for a docstring", the end of `astfold_body`. -/
+def hideDocstring : List Ast → List Ast
+  | .node .Expr [v] l :: rest => .node .Expr [.node .JoinedStr [.seq [v]] l] l :: rest
+  | xs => xs
+
 /-- `BEFORE_RETURN` and `BEFORE_LOOP_EXIT`, the checks made ahead of a node's children. -/
 def preVisit (c : Ctor) (l : Option Loc) : FM Unit :=
   match c, l with
@@ -360,7 +369,7 @@ mutual
 
   /-- `CALL_SEQ`: elements in order, `NULL` skipped. -/
   def foldList : Nat → List Ast → FM (List Ast)
-    | 0, xs => fun s => (xs, s)
+    | 0, xs => fun s => (xs, { s with fuelOut := true })
     | _ + 1, [] => fun s => ([], s)
     | f + 1, x :: xs => fun s =>
       let r1 := fold f x s
@@ -369,22 +378,17 @@ mutual
 
   /-- `astfold_body`, `Python/ast_preprocess.c`. -/
   def foldBody : Nat → List Ast → FM (List Ast)
-    | 0, xs => fun s => (xs, s)
+    | 0, xs => fun s => (xs, { s with fuelOut := true })
     | f + 1, stmts => fun st =>
       let doc := (getDocString stmts).isSome
       let strip := doc && decide (st.optimize ≥ 2)
       let doc' := if strip then false else doc
       let r := foldList f (if strip then removeDocstring stmts else stmts) st
-      if !doc' && (getDocString r.1).isSome then
-        match r.1 with
-        | .node .Expr [v] l :: rest =>
-          (.node .Expr [.node .JoinedStr [.seq [v]] l] l :: rest, r.2)
-        | _ => r
-      else r
+      if !doc' && (getDocString r.1).isSome then (hideDocstring r.1, r.2) else r
 
   /-- Run a `visits` row over the fields. -/
   def runSteps : Nat → List Step → List Ast → FM (List Ast)
-    | 0, _, fs => fun s => (fs, s)
+    | 0, _, fs => fun s => (fs, { s with fuelOut := true })
     | _ + 1, [], fs => fun s => (fs, s)
     | f + 1, s :: rest, fs => fun st =>
       match s with
@@ -396,7 +400,9 @@ mutual
         | .seq xs =>
           let r := foldBody f xs st
           runSteps f rest (fs.set i (.seq r.1)) r.2
-        | _ => runSteps f rest fs st
+        | x =>
+          let r := fold f x st
+          runSteps f rest (fs.set i r.1) r.2
       | .ann i =>
         if st.futureAnnotations then runSteps f rest fs st
         else
@@ -407,14 +413,18 @@ mutual
 end
 
 /-- `astfold_mod`, `Python/ast_preprocess.c:495-514`. -/
-def foldMod (fuel : Nat) (m : Ast) : FM Ast :=
+def foldMod (fuel : Nat) (m : Ast) : FM Ast := fun st =>
   match m with
-  | .node .Module (b :: rest) l => do
-    let b' ← foldBody fuel (seqL b)
-    return .node .Module (.seq b' :: rest) l
-  | .node .Interactive [b] l => do
-    return .node .Interactive [.seq (← foldList fuel (seqL b))] l
-  | m => return m
+  | .node .Module (b :: rest) l =>
+    let r := foldBody fuel (seqL b) st
+    (.node .Module (.seq r.1 :: rest) l, r.2)
+  | .node .Interactive [b] l =>
+    let r := foldList fuel (seqL b) st
+    (.node .Interactive [.seq r.1] l, r.2)
+  | .node .Expression [b] l =>
+    let r := fold fuel b st
+    (.node .Expression [r.1] l, r.2)
+  | m => (m, st)
 
 /-- `FUTURE_*` names accepted by `future_check_features`, `Python/future.c`. -/
 def knownFutures : List (List Nat) :=

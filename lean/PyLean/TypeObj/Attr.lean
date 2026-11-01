@@ -381,7 +381,11 @@ def superDescrGet (rt : Rt) (self : Val) (obj : Option Val) : M Val := do
     | none, _ | some .none, _ | _, some _ => pure self
     | some o, none =>
       if typeOf w self != B.super then
-        rt.call (.obj (typeOf w self)) [(ty.map Val.obj).getD .none, o] []
+        -- `PyObject_CallFunctionObjArgs(Py_TYPE(su), su->type, obj, NULL)`: a NULL `su->type`
+        -- ends the argument list there.
+        rt.call (.obj (typeOf w self)) (match ty with
+          | some t => [.obj t, o]
+          | none => []) []
       else
         match ty with
         | none => gap%

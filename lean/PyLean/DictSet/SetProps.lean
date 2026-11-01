@@ -2,10 +2,7 @@ import PyLean.DictSet.SetOps
 
 /-!
 Exact properties of the set table that hold without the probing invariant: the frozenset hash, the
-resize size, `clear`, iteration.
-
-Table-level refinement of set probing, the analogue of `DictProps.lean`, is not proved. See the
-open entry `set-table-refines` in the registry.
+resize size, `clear`, iteration. The refinement of set probing is in `SetRefine.lean`.
 -/
 
 namespace PyLean.DictSet
@@ -165,13 +162,5 @@ def setAbs (eqv : K → K → Bool) : List (SOp K) → List K → List K
   | [], l => l
   | .add k :: rest, l => setAbs eqv rest (if l.any (eqv · k) then l else l ++ [k])
   | .discard k :: rest, l => setAbs eqv rest (l.filter fun x => !eqv x k)
-
-/-- The set table refines a list without duplicates: the dict theorem, for linear probing. Open:
-it needs the probing invariant of `Chain` restated over `set_lookkey`'s nested loops, for `set_add_entry`'s
-freeslot and `set_table_resize`. -/
-def SetTableRefines : Prop :=
-  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (hf : K → Int) (eqv : K → K → Bool),
-    HonestSet P hf eqv → ∀ (ops : List (SOp K)) (key : K),
-      (setContainsKey P key (setProg P ops {})).1 = .ok ((setAbs eqv ops []).any (eqv · key))
 
 end PyLean.DictSet

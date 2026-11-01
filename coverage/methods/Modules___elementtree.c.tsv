@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_elementtree.c	62	68	Py_LOCAL_INLINE	Py_LOCAL_INLINE(void) _set_joined_ptr(PyObject **p, PyObject *new_joined_ptr)	todo		
+Modules/_elementtree.c	62	68	_set_joined_ptr	Py_LOCAL_INLINE(void) _set_joined_ptr(PyObject **p, PyObject *new_joined_ptr)	todo		
 Modules/_elementtree.c	73	78	_clear_joined_ptr	static void _clear_joined_ptr(PyObject **p)	todo		
 Modules/_elementtree.c	112	117	get_elementtree_state	get_elementtree_state(PyObject *module)	todo		
 Modules/_elementtree.c	120	125	get_elementtree_state_by_cls	get_elementtree_state_by_cls(PyTypeObject *cls)	todo		
@@ -112,7 +112,7 @@ Modules/_elementtree.c	3710	3831	_elementtree_XMLParser___init___impl	_elementtr
 Modules/_elementtree.c	3834	3853	xmlparser_gc_traverse	xmlparser_gc_traverse(PyObject *op, visitproc visit, void *arg)	todo		
 Modules/_elementtree.c	3856	3882	xmlparser_gc_clear	xmlparser_gc_clear(PyObject *op)	todo		
 Modules/_elementtree.c	3885	3892	xmlparser_dealloc	xmlparser_dealloc(PyObject *self)	todo		
-Modules/_elementtree.c	3894	3903	Py_LOCAL_INLINE	Py_LOCAL_INLINE(int) _check_xmlparser(XMLParserObject* self)	todo		
+Modules/_elementtree.c	3894	3903	_check_xmlparser	Py_LOCAL_INLINE(int) _check_xmlparser(XMLParserObject* self)	todo		
 Modules/_elementtree.c	3906	3929	expat_parse	expat_parse(elementtreestate *st, XMLParserObject *self, const char *data, int data_len, int final)	todo		
 Modules/_elementtree.c	3937	3963	_elementtree_XMLParser_close_impl	_elementtree_XMLParser_close_impl(XMLParserObject *self) /*[clinic end generated code: output=d68d375dd23bc7fb input=ca7909ca78c3abfe]*/	todo		
 Modules/_elementtree.c	3971	3997	_elementtree_XMLParser_flush_impl	_elementtree_XMLParser_flush_impl(XMLParserObject *self) /*[clinic end generated code: output=42fdb8795ca24509 input=effbecdb28715949]*/	todo		

@@ -1,0 +1,57 @@
+id: textlibs-csv-dialect-subclass-reinit
+title: "csv.reader, csv.writer and register_dialect run a _csv.Dialect subclass's __init__ again, with the instance as its argument"
+priority: P4
+kind: wrong-result
+module: textlibs
+files: [Modules/_csv.c]
+functions: ["_call_dialect", "dialect_new"]
+summary: |
+  `_call_dialect` calls the type `_csv.Dialect` with the dialect instance as an argument. `dialect_new`
+  returns that same instance when it can be reused, and `type_call` then runs `tp_init` on the result,
+  because it is an instance of the type called. For a subclass that is the subclass's own `__init__`,
+  called with the instance as an extra argument. A subclass with `def __init__(self)` gives
+  `TypeError: D.__init__() takes 1 positional argument but 2 were given` from
+  `csv.reader([], D())`, and one that accepts `*args` is re-initialised by every reader and writer
+  made from it.
+likelihood: |
+  Low. It needs a direct subclass of the undocumented `_csv.Dialect` type with a custom `__init__`.
+  The documented `csv.Dialect` class is not a subclass of it and is unaffected.
+maybe_intended: |
+  Not designed, but `_csv.Dialect` is private, and a maintainer may not want to change it. The message
+  points at the wrong call.
+reproducer: |
+  import _csv, csv
+
+  class D(_csv.Dialect):
+      def __init__(self):
+          pass
+
+  d = D()
+  try:
+      csv.reader([], d)
+      r = None
+  except TypeError as e:
+      r = str(e)
+  print(r)
+  if r == 'D.__init__() takes 1 positional argument but 2 were given':
+      print('REPRODUCED textlibs-csv-dialect-subclass-reinit')
+expected: |
+  The instance is used as it is, as dialect_new's "Can we reuse this instance?" branch intends.
+observed: |
+  python3 3.14.7: D.__init__() takes 1 positional argument but 2 were given. REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED.
+promised_by: |
+  Nothing explicit, since the type is private. csv.reader's docs accept "an instance of a subclass of
+  the Dialect class", which here is the public class.
+cause: |
+  Modules/_csv.c:647 calls PyObject_VectorcallDict on the type. Objects/typeobject.c:2382-2384 runs
+  tp_init on whatever tp_new returned when it is an instance of the type, and Modules/_csv.c:475-485
+  returns the argument itself.
+possible_fix: |
+  In _call_dialect, return the instance directly when it is a Dialect and kwargs is empty, or give
+  Dialect a tp_init that does nothing for a reused instance.
+duplicates: |
+  None found. #138352 is about get_dialect returning _csv.Dialect. Bugforge has no such entry.
+  Queries: gh search issues --repo python/cpython "Dialect subclass"; "csv.Dialect __init__";
+  "_csv.Dialect".
+lean: lean/PyLean/TextLibs/CsvProps.lean (ReuseNeverFails; CallDialectLaw states what happens instead)

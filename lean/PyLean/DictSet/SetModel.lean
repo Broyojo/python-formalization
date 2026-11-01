@@ -188,6 +188,9 @@ def setTableResize (minused : Nat) : SM K Unit := do
   let newsize := setNewSize minused 64 PySet_MINSIZE
   if newsize == PySet_MINSIZE && so.mask + 1 == PySet_MINSIZE && so.fill == so.used then
     return ()
+  -- `PyMem_NEW(setentry, newsize)` (:343): a request above PY_SSIZE_T_MAX / sizeof(setentry)
+  -- fails without calling the allocator; an allocator that gives up earlier is not modelled.
+  if newsize > (2 ^ 63 - 1) / 16 then M.throw (.named "MemoryError" "")
   let fresh : List (Slot K) := List.replicate newsize .null
   let t ← M.lift (reinsertAll (newsize - 1) fresh so.table)
   M.put { so with

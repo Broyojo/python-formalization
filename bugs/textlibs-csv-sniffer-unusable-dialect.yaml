@@ -1,0 +1,59 @@
+id: textlibs-csv-sniffer-unusable-dialect
+title: "csv.Sniffer.sniff returns a dialect with delimiter equal to quotechar, which reader rejects"
+priority: P3
+kind: invariant-violation
+module: textlibs
+files: [Lib/csv.py]
+functions: ["Sniffer.sniff", "Sniffer._guess_delimiter", "Sniffer.has_header"]
+summary: |
+  `csv.Sniffer().sniff('"')` returns a dialect whose delimiter and quotechar are both `"`. Passing it
+  to `csv.reader` raises `ValueError: bad delimiter or quotechar value`. So does
+  `csv.Sniffer().has_header('"')`, and it leaks ValueError rather than csv.Error, the exception that
+  every other failed sniff raises. Any sample where `"` is the steadiest character does this, such as
+  'a"b\nc"d\n'. `_guess_delimiter` counts all of ASCII, `"` included, and `sniff` then fills in `"` as
+  the default quotechar. The same happens with `'`: sniff("''") gives `'` for both.
+likelihood: |
+  Low to moderate. It needs a sample with no better delimiter and a steady count of quote characters,
+  such as a one-column file of quoted text with odd quoting, and reaches users as a ValueError from
+  code that only expects csv.Error.
+maybe_intended: |
+  No. The check that rejects the dialect was added later than the guessing code, and the two were
+  never reconciled. Main has rewritten Sniffer and no longer does this, so this is a 3.14 backport
+  question only.
+reproducer: |
+  import csv, io
+  d = csv.Sniffer().sniff('"')
+  try:
+      list(csv.reader(io.StringIO('"'), d))
+      used = None
+  except ValueError as e:
+      used = str(e)
+  try:
+      csv.Sniffer().has_header('"')
+      header = None
+  except ValueError as e:
+      header = str(e)
+  print(repr(d.delimiter), repr(d.quotechar), used, header)
+  if d.delimiter == d.quotechar == '"' and used == header == 'bad delimiter or quotechar value':
+      print('REPRODUCED textlibs-csv-sniffer-unusable-dialect')
+expected: |
+  csv.Error("Could not determine delimiter"), or a usable dialect.
+observed: |
+  python3 3.14.7: '"', '"', bad delimiter or quotechar value (twice). REPRODUCED.
+  main 3.16.0a1+dev: raises csv.Error at sniff, so the reproducer prints a traceback. NOT reproduced;
+  Sniffer was rewritten there.
+promised_by: |
+  Doc/library/csv.rst: sniff returns "a Dialect subclass reflecting the parameters found". A subclass
+  that reader rejects reflects nothing usable.
+cause: |
+  Lib/csv.py:384 counts every ASCII character as a possible delimiter, including both quote
+  characters. Lib/csv.py:272 then defaults quotechar to `"` with no test against delimiter.
+possible_fix: |
+  Leave the quote characters out of `ascii` in _guess_delimiter, or raise Error when delimiter equals
+  quotechar. A 3.14 branch fix only, since main has moved on.
+duplicates: |
+  None found for this symptom. Open Sniffer issues are about other wrong guesses: #68975 (alphanumeric
+  delimiters), #97611, #119123, #157678, #159635, #159177. Bugforge csv-20261003-135109-c1 is a
+  different has_header failure. Queries: gh search issues --repo python/cpython "Sniffer"; "csv.Sniffer
+  delimiter"; "Sniffer quotechar"; grep -i sniff vendor/bugforge-results/README.md.
+lean: lean/PyLean/TextLibs/CsvSniffProps.lean (SniffUsable)
