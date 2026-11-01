@@ -1370,9 +1370,96 @@ def fam_repr(g):
     g.probe(call(name("repr"), name("t")))
 
 
+def fam_descr_proto(g):
+    """Protocols of the descriptor family, on their failure paths: a mappingproxy over a user
+    mapping that can raise, a bound method whose __func__ or __self__ misbehaves, and the two
+    argument parsers of super."""
+    r = g.rng
+    fail = r.choice(["ok", "raise", "ok"])
+
+    def body(q, ret):
+        out = [["log", q]]
+        if fail == "raise":
+            out.append(["raise", call(name(r.choice(["ValueError", "TypeError", "KeyError"])), lit("m"))])
+        out.append(["ret", ret])
+        return out
+
+    m = [g.method("__getitem__", "M.__getitem__", ["s", "k"], body("M.__getitem__", name("k"))),
+         g.method("__len__", "M.__len__", ["s"], body("M.__len__", lit(3))),
+         g.method("__contains__", "M.__contains__", ["s", "k"], body("M.__contains__", lit(True))),
+         g.method("__iter__", "M.__iter__", ["s"], body("M.__iter__", call(name("iter"), ["list", [lit(1)]]))),
+         g.method("__eq__", "M.__eq__", ["s", "o"], body("M.__eq__", lit(1))),
+         g.method("__or__", "M.__or__", ["s", "o"], body("M.__or__", lit(2))),
+         g.method("__ror__", "M.__ror__", ["s", "o"], body("M.__ror__", lit(3))),
+         g.method("__repr__", "M.__repr__", ["s"], body("M.__repr__", lit("mr"))),
+         g.method("__str__", "M.__str__", ["s"], body("M.__str__", lit("ms")))]
+    if r.random() < 0.5:
+        m.append(g.method("__hash__", "M.__hash__", ["s"], body("M.__hash__", lit(5))))
+    cls(g, "M", (), m)
+    cls(g, "A", (), [g.method("m", "A.m", ["s"], [["ret", lit(1)]]),
+                     g.method("__repr__", "A.__repr__", ["s"], body("A.__repr__", lit("ar")))])
+    g.main.append(["assign", "a", call(name("A"))])
+    g.main.append(["assign", "Proxy", call(name("type"), attr(name("A"), "__dict__"))])
+    g.main.append(["assign", "Meth", call(name("type"), attr(name("a"), "m"))])
+    g.probes(["assign", "p", call(name("Proxy"), call(name("M")))])
+    for e in [call(name("len"), name("p")), ["sub", name("p"), lit(1)], ["in", lit(1), name("p")],
+              call(name("next"), call(name("iter"), name("p"))), call(name("_hash"), name("p")),
+              call(name("str"), name("p")), call(name("repr"), name("p")),
+              ["cmp", "==", name("p"), lit(1)], ["cmp", "!=", name("p"), lit(1)],
+              ["cmp", "<", name("p"), lit(1)], ["bin", "|", name("p"), lit(1)],
+              ["bin", "|", lit(1), name("p")], call(attr(name("p"), "__ior__"), lit(1)),
+              call(name("Proxy"), name("p")), call(name("Proxy"), ["list", []]),
+              call(name("Proxy"), ["tuple", []]), call(name("Proxy"), lit(1)), call(name("Proxy")),
+              call(name("Proxy"), lit(1), lit(2)), call(name("Proxy"), ["dict", [[lit(1), lit(2)]]]),
+              # Lengths: the class dict holds __firstlineno__, a line of the generated source.
+              call(name("len"), ["bin", "|", attr(name("A"), "__dict__"), ["dict", []]]),
+              call(name("len"), ["bin", "|", ["dict", []], attr(name("A"), "__dict__")]),
+              ["in", lit("m"), attr(name("A"), "__dict__")],
+              call(name("repr"), call(name("Proxy"), ["dict", [[lit(1), name("a")]]]))]:
+        g.probe(e)
+    g.probes(["aug", "p", "|", lit(1)])
+    # Bound methods.
+    cls(g, "C", (), [g.method("__call__", "C.__call__", ["s", "*a"] if False else ["s"], [["ret", lit(1)]]),
+                     ["assign", "__hash__", NONE],
+                     ["assign", "__qualname__", lit(1)] if False else ["assign", "zz", lit(1)]])
+    g.main.append(["assign", "c", call(name("C"))])
+    for e in [call(name("Meth"), lit(1), lit(2)), call(name("Meth"), name("c"), NONE),
+              call(name("Meth"), name("c")), call(name("Meth")),
+              call(name("Meth"), name("c"), name("a")),
+              call(name("repr"), call(name("Meth"), name("c"), name("a"))),
+              call(name("_hash"), call(name("Meth"), name("c"), name("a"))),
+              call(name("_hash"), attr(name("a"), "m")),
+              call(name("repr"), attr(name("a"), "m")),
+              ["cmp", "==", attr(name("a"), "m"), attr(name("a"), "m")],
+              ["cmp", "==", attr(name("a"), "m"), attr(call(name("A")), "m")],
+              ["cmp", "<", attr(name("a"), "m"), attr(name("a"), "m")],
+              call(name("repr"), attr(name("A"), "m")), call(name("repr"), name("len")),
+              call(name("repr"), attr(["list", []], "append")),
+              call(name("repr"), attr(name("list"), "append")),
+              call(name("repr"), attr(name("int"), "__add__")),
+              call(name("repr"), attr(lit(1), "__add__")),
+              call(name("repr"), ["sub", attr(name("type"), "__dict__"), lit("__bases__")]),
+              call(name("repr"), call(name("classmethod"), attr(name("A"), "m"))),
+              call(name("repr"), call(name("staticmethod"), attr(name("a"), "m"))),
+              ["sub", name("type"), lit(1)]]:
+        g.probe(e)
+    # The two parsers of super: exact super is super_vectorcall, the rest super_init.
+    cls(g, "S", ["super"], None)
+    for f in ["super", "S"]:
+        for args in [[lit(1)], [name("A"), lit(1)], [name("A"), name("a"), lit(1)],
+                     [name("int"), lit("s")], [name("A")], [name("A"), name("a")]]:
+            g.probe(call(name("repr"), call(name(f), *args)))
+    g.probe(call(attr(call(name("super"), name("A")), "__init__"), lit(1)))
+    g.probe(call(attr(call(name("super"), name("A")), "__init__"), name("A"), name("a"), lit(1)))
+    g.probe(call(name("repr"), attr(call(name("super"), name("A"), name("a")), "m")))
+    g.probe(call(attr(["dict", []], "__ior__"), lit(1)))
+    g.probe(call(attr(["dict", []], "__ior__"), ["list", [["tuple", [lit(1), lit(2)]]]]))
+    g.probe(call(attr(["dict", []], "__or__"), lit(1)))
+
+
 FAMILIES = [fam_calls, fam_property, fam_super, fam_mro, fam_class_stmt, fam_class_assign,
             fam_wrappers, fam_abstract, fam_type_attrs, fam_slot_updates, fam_descriptors,
-            fam_iter_seq, fam_numbers, fam_list_extend, fam_repr]
+            fam_iter_seq, fam_numbers, fam_list_extend, fam_repr, fam_descr_proto]
 
 
 def gen_case(rng):
