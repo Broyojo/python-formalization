@@ -1,0 +1,73 @@
+id: decimal-c-context-inherits-flags
+title: "_decimal's Context() copies the flags set on DefaultContext, although flags=None is documented to clear them"
+priority: P3
+kind: wrong-result
+module: decimal
+files: [Modules/_decimal/_decimal.c]
+functions: ["context_new", "context_init", "context_setattrs"]
+summary: |
+  The Context constructor documents that with no flags argument all flags are cleared. In _decimal
+  it starts from a copy of the whole DefaultContext template, status word included, and flags=None
+  then leaves that word alone. So any flag set on DefaultContext appears in every later Context():
+    decimal.DefaultContext.divide(Decimal(1), Decimal(3))     # sets Inexact and Rounded on the template
+    decimal.Context().flags[decimal.Inexact]                  -> True    (_pydecimal: 0)
+    decimal.Context(prec=5).flags[decimal.Rounded]            -> True    (_pydecimal: 0)
+  A program that creates a context, computes, and then reads flags[Inexact] to decide whether a
+  result is exact gets a wrong answer for an exact computation. The other paths from the template
+  all clear the word: a new thread's context (init_current_context) and setcontext(DefaultContext).
+likelihood: |
+  Low. The flags on DefaultContext have to be set first, which takes calling a Context method on
+  DefaultContext itself or assigning to its flags. The docs tell people to change its fields, not to
+  compute with it, so most programs never do this. When it does happen the effect is silent and
+  lasts until DefaultContext.clear_flags().
+maybe_intended: |
+  Unlikely. The sentence in the docs is specific to flags, _pydecimal does what it says, and the
+  two sibling paths in _decimal.c clear the word explicitly (see cause). The copy looks like it was
+  written for prec, Emin, Emax, rounding, clamp and traps, with status swept along by the struct
+  assignment. A grep of Lib/test/test_decimal.py finds no test of Context() with flags set on the template.
+reproducer: |
+  import _decimal as C, _pydecimal as P
+  def stale(M):
+      D = M.DefaultContext
+      D.clear_flags()
+      try:
+          D.divide(M.Decimal(1), M.Decimal(3))
+          n = M.Context()
+          return bool(n.flags[M.Inexact]), bool(n.flags[M.Rounded])
+      finally:
+          D.clear_flags()
+  c, p = stale(C), stale(P)
+  print('_decimal   Context() after DefaultContext.divide: Inexact, Rounded =', c)
+  print('_pydecimal Context() after DefaultContext.divide: Inexact, Rounded =', p)
+  if c == (True, True) and p == (False, False):
+      print('REPRODUCED decimal-c-context-inherits-flags')
+expected: |
+  All flags of a new Context() are clear, as in _pydecimal.
+promised_by: |
+  Doc/library/decimal.rst:1118-1119: "If the flags field is not specified or is None, all flags
+  are cleared." Twin agreement: Lib/_pydecimal.py:3898-3899 `self.flags = dict.fromkeys(_signals, 0)`.
+cause: |
+  Modules/_decimal/_decimal.c:1421 `*ctx = *CTX(state->default_context_template);` in context_new
+  copies the status word, and context_setattrs (:1304) only writes it when flags is not None. The
+  sibling paths clear it after copying: init_current_context at :1841 and PyDec_SetCurrentContext at
+  :1902 (`CTX(tl_context)->status = 0`, `CTX(v)->status = 0`). Same on main at :1466-1467.
+possible_fix: |
+  Add `ctx->status = 0;` after the template copy in context_new.
+tested:
+  python3 (3.14.7, Linux, bundled libmpdec 2.5.1): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev, bundled libmpdec 2.5.1): REPRODUCED
+duplicates:
+  issues: []
+  related: [141148, 123284, 155051]
+  queries: ["decimal Context flags DefaultContext", "_decimal context_new status template",
+            "decimal DefaultContext capitals", "decimal Context capitals default",
+            "decimal Context constructor flags not cleared", "DefaultContext flags new context",
+            "decimal localcontext None", "decimal context_new", "gh-146011 decimal",
+            "decimal SignalDict context dealloc",
+            "decimal flags cleared Context constructor documentation",
+            "Context flags inherited DefaultContext _decimal"]
+  bugforge: "no decimal entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Decimal.ContextNewClearsFlagsC
+  theorem: PyLean.Decimal.contextNewClearsFlagsC_refuted
+  narrowed: PyLean.Decimal.ContextNewCleanTemplate

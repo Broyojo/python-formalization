@@ -1,0 +1,79 @@
+id: decimal-c-signaldict-eq-raw-bits
+title: "_decimal's Context.flags compares unequal to its own copy after InvalidOperation: SignalDict == compares raw status bits, not items"
+priority: P3
+kind: wrong-result
+module: decimal
+files: [Modules/_decimal/_decimal.c]
+functions: ["signaldict_richcompare", "dict_as_flags"]
+summary: |
+  ctx.flags is a MutableMapping from signals to bools, but its == compares the underlying libmpdec
+  status words. One signal, InvalidOperation, covers seven status bits: an operation sets the one bit
+  for its condition, while assigning the signal or converting a dict sets all seven. So two flag
+  mappings with identical items can compare unequal:
+    c = decimal.Context(traps=[])
+    c.divide(Decimal(0), Decimal(0))
+    c.flags[decimal.InvalidOperation]     -> True
+    c.flags == c.flags.copy()             -> False   (_pydecimal: True)
+    c.flags == dict(c.flags)              -> False   (_pydecimal: True)
+    c.flags != c.flags.copy()             -> True
+    d = decimal.Context(traps=[]); d.create_decimal('xyz')
+    c.flags == d.flags                    -> False, though c.flags[s] == d.flags[s] for every s
+                                             (_pydecimal: True)
+  The usual way to ask whether a computation raised any new flag is to snapshot the flags and compare
+  them afterwards, and that comparison reports a change that did not happen.
+likelihood: |
+  Low to moderate. It needs an untrapped InvalidOperation, so a context with that trap off, such as
+  ExtendedContext, and code that compares flags as mappings rather than reading single signals. It
+  is silent when it happens.
+maybe_intended: |
+  Unlikely. SignalDict derives from MutableMapping (_decimal.c:6079-6080), whose __eq__ compares items
+  (Lib/_collections_abc.py:822), and _pydecimal's plain dict behaves that way. The word comparison
+  looks like a shortcut written for the common case, where a signal has one bit. The test suite
+  compares flags with assertEqual (for example Lib/test/test_decimal.py:3010, :3072, :3790), but
+  those contexts are not left with a partial InvalidOperation word, so the difference does not show.
+reproducer: |
+  import _decimal as C, _pydecimal as P
+  def probe(M):
+      a = M.Context(traps=[])
+      a.divide(M.Decimal(0), M.Decimal(0))
+      b = M.Context(traps=[])
+      b.create_decimal('xyz')
+      same_items = all(a.flags[s] == b.flags[s] for s in a.flags)
+      return same_items, bool(a.flags[M.InvalidOperation]), a.flags == a.flags.copy(), a.flags == b.flags
+  c, p = probe(C), probe(P)
+  print('_decimal   same items, InvalidOperation, flags == copy, a.flags == b.flags:', c)
+  print('_pydecimal same items, InvalidOperation, flags == copy, a.flags == b.flags:', p)
+  if c == (True, True, False, False) and p == (True, True, True, True):
+      print('REPRODUCED decimal-c-signaldict-eq-raw-bits')
+expected: |
+  flags == flags.copy() is True, and two flag mappings with the same items are equal, as in _pydecimal.
+promised_by: |
+  The Mapping contract: Lib/_collections_abc.py:822 `return dict(self.items()) == dict(other.items())`,
+  and SignalDict is declared a MutableMapping at Modules/_decimal/_decimal.c:6079-6080. Twin agreement.
+cause: |
+  Modules/_decimal/_decimal.c signaldict_richcompare, :787-820: `SdFlags(v)==SdFlags(w)` and
+  `SdFlags(v)==flags` compare whole words. dict_as_flags (:538-578) sets `cm->flag`, which for
+  InvalidOperation is MPD_IEEE_Invalid_operation (Modules/_decimal/libmpdec/mpdecimal.h:274-280), while
+  an operation sets a single condition bit such as MPD_Division_undefined. flags_as_dict (:516-535) and
+  signaldict_getitem (:691-705) already treat any of those bits as the one signal, so the mapping view
+  and the comparison disagree. Same on main.
+possible_fix: |
+  Compare per signal: normalize each word with a helper that maps any bit of
+  MPD_IEEE_Invalid_operation to the whole mask before comparing. A separate open issue,
+  python/cpython#158063, concerns the same function: it reads SdFlagAddr(w) before checking that w is a
+  SignalDict. A fix to one should look at the other.
+tested:
+  python3 (3.14.7, Linux, bundled libmpdec 2.5.1): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev, bundled libmpdec 2.5.1): REPRODUCED
+duplicates:
+  issues: []
+  related: [158063, 157086, 160945]
+  queries: ["decimal SignalDict equality", "decimal flags compare copy", "SignalDict richcompare",
+            "decimal flags comparison InvalidOperation", "signaldict dict_as_flags",
+            "decimal context flags equal", "MPD_IEEE_Invalid_operation flags", "decimal flags != copy"]
+  bugforge: "no decimal entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Decimal.SignalDictEqualityByItems
+  theorem: PyLean.Decimal.signalDictEqualityByItems_refuted
+  also: [PyLean.Decimal.SignalDictEqualsCopy, PyLean.Decimal.signalDictEqualsCopy_refuted]
+  narrowed: PyLean.Decimal.SignalDictEqualityCanonical

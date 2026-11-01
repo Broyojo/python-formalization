@@ -9,24 +9,91 @@ ipaddress-summarize-reversed	proven	Lib/ipaddress.py	summarize_address_range
 ipaddress-subnets-partition	proven	Lib/ipaddress.py	_BaseNetwork.subnets
 ipaddress-supernet-contains	proven	Lib/ipaddress.py	_BaseNetwork.supernet
 ipaddress-address-exclude-partition	proven	Lib/ipaddress.py	_BaseNetwork.address_exclude
-datetime-ordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ord2ymd,_ymd2ord,C ord_to_ymd,C ymd_to_ord
-datetime-toordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ord2ymd,C ord_to_ymd
-datetime-date-add-timedelta	proven	Lib/_pydatetime.py	date.__add__,C add_date_timedelta,C normalize_y_m_d
-datetime-isocalendar-roundtrip	proven	Lib/_pydatetime.py	date.isocalendar,date.fromisocalendar,_isoweek_to_gregorian,C iso_to_ymd
-datetime-fromisocalendar-exact	proven	Lib/_pydatetime.py	date.fromisocalendar,_isoweek_to_gregorian,date.isocalendar
-datetime-fromisocalendar-twins	proven	Lib/_pydatetime.py	date.fromisocalendar,C date_fromisocalendar
-datetime-timedelta-ctor-twins	proven	Lib/_pydatetime.py	timedelta.__new__,C delta_new,C microseconds_to_delta_ex
-datetime-timedelta-ctor-exact	proven	Lib/_pydatetime.py	timedelta.__new__
-datetime-timedelta-ops-twins	proven	Lib/_pydatetime.py	timedelta.__add__,__sub__,__neg__,__abs__,__mul__,__floordiv__,__truediv__,__mod__,__divmod__
-datetime-timedelta-divmod	proven	Lib/_pydatetime.py	timedelta.__divmod__,__floordiv__,__mod__
+datetime-ordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ymd2ord,_ord2ymd,_is_leap,_days_before_year,_days_in_month,_days_before_month,_check_date_fields,C date_fromordinal,C date_toordinal,C ord_to_ymd,C ymd_to_ord,C is_leap,C days_in_month,C days_before_month,C days_before_year,C check_date_args
+datetime-toordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ord2ymd,_ymd2ord,C ord_to_ymd,C ymd_to_ord
+datetime-date-add-timedelta	proven	Lib/_pydatetime.py	date.__add__,_ymd2ord,_ord2ymd,_check_date_fields,C add_date_timedelta,C date_add,C normalize_y_m_d,C normalize_date,C ord_to_ymd,C ymd_to_ord
+datetime-isocalendar-roundtrip	proven	Lib/_pydatetime.py	date.isocalendar,date.fromisocalendar,_isoweek_to_gregorian,_isoweek1monday,C date_isocalendar,C date_fromisocalendar,C iso_week1_monday,C weekday
+datetime-fromisocalendar-exact	proven	Lib/_pydatetime.py	date.fromisocalendar,date.isocalendar,_isoweek_to_gregorian,_isoweek1monday
+datetime-fromisocalendar-twins	proven	Lib/_pydatetime.py	date.fromisocalendar,_isoweek_to_gregorian,C date_fromisocalendar
+datetime-timedelta-ctor-twins	proven	Lib/_pydatetime.py	timedelta.__new__,C delta_new,C accum,C microseconds_to_delta_ex,C new_delta_ex,C check_delta_day_range,C checked_divmod,C normalize_pair,C normalize_d_s_us,C divmod
+datetime-timedelta-ctor-exact	proven	Lib/_pydatetime.py	timedelta.__new__,timedelta.days,timedelta.seconds,timedelta.microseconds
+datetime-timedelta-ops-twins	proven	Lib/_pydatetime.py	timedelta.__add__,timedelta.__sub__,timedelta.__neg__,timedelta.__abs__,timedelta.__mul__,timedelta.__floordiv__,timedelta.__truediv__,timedelta.__mod__,timedelta.__divmod__,timedelta._to_microseconds,_divide_and_round,C delta_add,C delta_subtract,C delta_negative,C delta_abs,C delta_multiply,C delta_divide,C delta_truedivide,C delta_remainder,C delta_divmod,C multiply_int_timedelta,C divide_timedelta_int,C divide_timedelta_timedelta,C truedivide_timedelta_int,C divide_nearest,C delta_to_microseconds
+datetime-timedelta-divmod	proven	Lib/_pydatetime.py	timedelta.__divmod__,timedelta.__floordiv__,timedelta.__mod__,timedelta._to_microseconds
+datetime-timedelta-compare	proven	Lib/_pydatetime.py	timedelta.__eq__,timedelta.__le__,timedelta.__lt__,timedelta.__ge__,timedelta.__gt__,timedelta._cmp,timedelta._getstate,_cmp,C delta_cmp,C delta_richcompare,C diff_to_bool
+datetime-timedelta-bool-hash	proven	Lib/_pydatetime.py	timedelta.__bool__,timedelta.__hash__,C delta_bool,C delta_hash
+datetime-timedelta-reduce	proven	Lib/_pydatetime.py	timedelta.__reduce__,timedelta._getstate,C delta_reduce,C delta_getstate
+datetime-timedelta-pos-rsub	proven	Lib/_pydatetime.py	timedelta.__pos__,timedelta.__rsub__,C delta_positive
 datetime-timezone-range	proven	Lib/_pydatetime.py	timezone.__new__,C new_timezone
-datetime-date-isoformat-roundtrip	proven	Lib/_pydatetime.py	date.isoformat,date.fromisoformat,datetime.fromisoformat,_parse_isoformat_date,C parse_isoformat_date
-datetime-date-fromiso-twins	refuted	Lib/_pydatetime.py	date.fromisoformat,_parse_isoformat_date,C date_fromisoformat
-datetime-time-fromiso-twins	refuted	Lib/_pydatetime.py	time.fromisoformat,_parse_hh_mm_ss_ff,C parse_hh_mm_ss_ff
-datetime-datetime-fromiso-twins	refuted	Lib/_pydatetime.py	datetime.fromisoformat,C parse_isoformat_time
-datetime-datetime-fromiso-bare-separator	refuted	Lib/_pydatetime.py	datetime.fromisoformat
+datetime-timezone-name	proven	Lib/_pydatetime.py	timezone.__str__,timezone.tzname,timezone._name_from_offset,C timezone_str,C timezone_tzname
+datetime-tzinfo-base	proven	Lib/_pydatetime.py	tzinfo.tzname,tzinfo.utcoffset,tzinfo.dst,C tzinfo_nogo,C tzinfo_tzname,C tzinfo_utcoffset,C tzinfo_dst
+datetime-timezone-methods	proven	Lib/_pydatetime.py	timezone.utcoffset,timezone.dst,timezone.__eq__,timezone.__hash__,timezone.__getinitargs__,C timezone_utcoffset,C timezone_dst,C timezone_richcompare,C timezone_hash,C timezone_getinitargs
+datetime-timezone-new	proven	Lib/_pydatetime.py	timezone.__new__,timezone._create,C timezone_new,C create_timezone,C new_timezone
+datetime-time-offsets	proven	Lib/_pydatetime.py	time.utcoffset,time.dst,_check_utc_offset,C call_tzinfo_method,C call_utcoffset,C call_dst,C get_tzinfo_member,C time_utcoffset,C time_dst
+datetime-datetime-offsets	proven	Lib/_pydatetime.py	datetime.utcoffset,datetime.dst,_check_utc_offset,C call_tzinfo_method,C call_utcoffset,C call_dst,C get_tzinfo_member,C datetime_utcoffset,C datetime_dst
+datetime-tzname-twins	proven	Lib/_pydatetime.py	time.tzname,datetime.tzname,_check_tzname,C time_tzname,C datetime_tzname,C call_tzname
+datetime-time-repr	proven	Lib/_pydatetime.py	time.__repr__,_get_class_module,C time_repr,C append_keyword_tzinfo,C append_keyword_fold
+datetime-datetime-repr	proven	Lib/_pydatetime.py	datetime.__repr__,_get_class_module,C datetime_repr,C append_keyword_tzinfo,C append_keyword_fold
+datetime-time-isoformat-twins	proven	Lib/_pydatetime.py	time.isoformat,time._tzstr,_format_time,_format_offset,C time_isoformat,C time_str,C format_utcoffset
+datetime-datetime-isoformat-twins	proven	Lib/_pydatetime.py	datetime.isoformat,datetime.__str__,_format_time,_format_offset,C datetime_isoformat,C datetime_str,C format_utcoffset
+datetime-replace-combine	proven	Lib/_pydatetime.py	time.replace,datetime.replace,datetime.combine,datetime.date,datetime.time,datetime.timetz,C datetime_time_replace_impl,C datetime_datetime_replace_impl,C datetime_combine,C datetime_getdate,C datetime_gettime,C datetime_gettimetz
+datetime-time-pickle	proven	Lib/_pydatetime.py	time._getstate,time.__setstate,time.__reduce_ex__,time.__reduce__,C time_getstate,C time_from_pickle,C time_reduce_ex,C time_reduce
+datetime-datetime-pickle	proven	Lib/_pydatetime.py	datetime._getstate,datetime.__setstate,datetime.__reduce_ex__,datetime.__reduce__,C datetime_getstate,C datetime_from_pickle,C datetime_reduce_ex,C datetime_reduce
+datetime-time-ctor	proven	Lib/_pydatetime.py	time.__new__,_check_time_fields,_check_tzinfo_arg,C time_new,C new_time_ex2,C check_time_args,C check_tzinfo_subclass
+datetime-datetime-ctor	proven	Lib/_pydatetime.py	datetime.__new__,_check_date_fields,_check_time_fields,_check_tzinfo_arg,C datetime_new,C new_datetime_ex2,C check_date_args,C check_time_args,C check_tzinfo_subclass
+datetime-time-compare-base	proven	Lib/_pydatetime.py	time.__eq__,time.__le__,time.__lt__,time.__ge__,time.__gt__,time._cmp,_cmp,C time_richcompare,C diff_to_bool
+datetime-time-compare-twins	refuted	Lib/_pydatetime.py	time.__eq__,time._cmp,C time_richcompare
+datetime-time-hash-total	refuted	Lib/_pydatetime.py	time.__hash__
+datetime-time-eq-hash	refuted	Lib/_pydatetime.py	C time_hash,C time_richcompare
+datetime-date-compare	proven	Lib/_pydatetime.py	date.__eq__,date.__le__,date.__lt__,date.__ge__,date.__gt__,date._cmp,_cmp,C date_richcompare,C diff_to_bool
+datetime-date-hash	proven	Lib/_pydatetime.py	date.__hash__,date._getstate,C date_hash,C generic_hash,C date_getstate
+datetime-date-weekday	proven	Lib/_pydatetime.py	date.weekday,date.isoweekday,C date_weekday,C date_isoweekday,C weekday
+datetime-date-subtract	proven	Lib/_pydatetime.py	date.__sub__,C date_subtract,C add_date_timedelta
+datetime-date-replace	proven	Lib/_pydatetime.py	date.replace,C datetime_date_replace_impl
+datetime-date-timetuple	proven	Lib/_pydatetime.py	date.timetuple,_build_struct_time,C date_timetuple,C build_struct_time
+datetime-ctime	proven	Lib/_pydatetime.py	date.ctime,datetime.ctime,C date_ctime,C datetime_ctime,C format_ctime
+datetime-date-repr	proven	Lib/_pydatetime.py	date.__repr__,_get_class_module,C date_repr
+datetime-date-pickle	proven	Lib/_pydatetime.py	date._getstate,date.__setstate,date.__reduce__,C date_getstate,C date_from_pickle,C date_reduce
+datetime-date-ctor	proven	Lib/_pydatetime.py	date.__new__,_check_date_fields,C date_new,C new_date_ex,C check_date_args
+datetime-isocalendardate	proven	Lib/_pydatetime.py	IsoCalendarDate.__new__,IsoCalendarDate.year,IsoCalendarDate.week,IsoCalendarDate.weekday,IsoCalendarDate.__repr__,C iso_calendar_date_repr,C iso_calendar_date_year,C iso_calendar_date_week,C iso_calendar_date_weekday
+datetime-datetime-sub-twins	proven	Lib/_pydatetime.py	datetime.__sub__,C datetime_subtract,C delta_cmp,C delta_subtract
+datetime-datetime-add	proven	Lib/_pydatetime.py	datetime.__add__,C datetime_add,C add_datetime_timedelta,C normalize_datetime
+datetime-datetime-sub-delta	proven	Lib/_pydatetime.py	datetime.__sub__,C datetime_subtract,C add_datetime_timedelta,C normalize_datetime
+datetime-timezone-fromutc	proven	Lib/_pydatetime.py	timezone.fromutc,C timezone_fromutc
+datetime-datetime-hash	proven	Lib/_pydatetime.py	datetime.__hash__,C datetime_hash
+datetime-datetime-timetuple	proven	Lib/_pydatetime.py	datetime.timetuple,C datetime_timetuple
+datetime-datetime-utctimetuple	proven	Lib/_pydatetime.py	datetime.utctimetuple,C datetime_utctimetuple
+datetime-datetime-compare	proven	Lib/_pydatetime.py	datetime.__eq__,datetime.__le__,datetime.__lt__,datetime.__ge__,datetime.__gt__,datetime._cmp,_cmp,C datetime_richcompare,C diff_to_bool,C flip_fold,C get_flip_fold_offset,C pep495_eq_exception
+datetime-strftime-twins	refuted	Lib/_pydatetime.py	_wrap_strftime,C wrap_strftime
+datetime-astimezone-twins	refuted	Lib/_pydatetime.py	datetime.astimezone,C datetime_astimezone
+datetime-time-pickle-ctor-twins	refuted	Lib/_pydatetime.py	time.__new__,C time_new
+datetime-mktime-twins	proven	Lib/_pydatetime.py	datetime._mktime,C local_to_seconds
+datetime-mktime-fixed	proven	Lib/_pydatetime.py	datetime._mktime,C local_to_seconds
+datetime-utc-to-seconds	proven	Lib/_pydatetime.py	C utc_to_seconds,C ymd_to_ord
+datetime-packed-accessors	proven	Lib/_pydatetime.py	date.year,date.month,date.day,time.hour,time.minute,time.second,time.microsecond,datetime.hour,datetime.minute,datetime.second,datetime.microsecond,C date_year,C date_month,C date_day,C time_hour,C time_minute,C py_time_second,C time_microsecond,C datetime_hour,C datetime_minute,C datetime_second,C datetime_microsecond,C set_date_fields
+datetime-subclass-construction	proven	Lib/_pydatetime.py	C new_date_subclass_ex,C new_datetime_ex,C new_datetime_subclass_fold_ex,C call_subclass_fold,C new_time_ex,C new_time_subclass_fold_ex
+datetime-format-via-strftime	proven	Lib/_pydatetime.py	date.__format__,time.__format__,C date_format
+datetime-tzinfo-reduce	proven	Lib/_pydatetime.py	tzinfo.__reduce__,C tzinfo_reduce
+datetime-sanitize-isoformat	proven	Lib/_pydatetime.py	C _sanitize_isoformat_str
+strptime-julian-weekday	proven	Lib/_strptime.py	_calc_julian_from_U_or_W
+strptime-seqtore-sorted	proven	Lib/_strptime.py	TimeRE.__seqToRE
+strptime-compile-errors	proven	Lib/_strptime.py	TimeRE.pattern,TimeRE.compile,TimeRE.__init__
+strptime-methods	proven	Lib/_strptime.py	_strptime,_strptime_datetime_date,_strptime_datetime_time,_strptime_datetime_datetime,_parse_tz,C date_strptime,C time_strptime,C datetime_strptime
+datetime-strptime-wrappers	proven	Lib/_pydatetime.py	date.strptime,time.strptime,datetime.strptime
+datetime-date-isoformat-roundtrip	proven	Lib/_pydatetime.py	date.isoformat,date.fromisoformat,datetime.fromisoformat,_parse_isoformat_date,_find_isoformat_datetime_separator,_is_ascii_digit,C date_isoformat,C date_str,C date_fromisoformat,C datetime_fromisoformat,C tzinfo_from_isoformat_results,C parse_isoformat_date,C parse_digits,C is_digit,C _find_isoformat_datetime_separator
+datetime-date-fromiso-twins	refuted	Lib/_pydatetime.py	date.fromisoformat,_parse_isoformat_date,C date_fromisoformat,C parse_isoformat_date,C parse_digits
+datetime-time-fromiso-twins	refuted	Lib/_pydatetime.py	time.fromisoformat,_parse_hh_mm_ss_ff,_parse_isoformat_time,C time_fromisoformat,C parse_hh_mm_ss_ff,C parse_isoformat_time
+datetime-datetime-fromiso-twins	refuted	Lib/_pydatetime.py	datetime.fromisoformat,_parse_isoformat_time,C datetime_fromisoformat,C parse_isoformat_time
+datetime-datetime-fromiso-bare-separator	refuted	Lib/_pydatetime.py	datetime.fromisoformat,_find_isoformat_datetime_separator
 datetime-datetime-fromiso-midnight-valid-date	refuted	Lib/_pydatetime.py	datetime.fromisoformat,C datetime_fromisoformat
 datetime-date-fromiso-ten-chars	refuted	Lib/_pydatetime.py	date.fromisoformat,_parse_isoformat_date,C parse_isoformat_date
+datetime-time-isoformat-roundtrip	open	Lib/_pydatetime.py	time.isoformat,time.fromisoformat,_parse_isoformat_time,_parse_hh_mm_ss_ff,_format_time,_format_offset,C time_fromisoformat,C parse_isoformat_time,C parse_hh_mm_ss_ff
+datetime-datetime-isoformat-roundtrip	open	Lib/_pydatetime.py	datetime.isoformat,datetime.fromisoformat,_find_isoformat_datetime_separator,C datetime_isoformat,C datetime_fromisoformat
+datetime-datetime-eq-hash	open	Lib/_pydatetime.py	C datetime_hash,C datetime_richcompare
+datetime-strftime-twins-narrow	open	Lib/_pydatetime.py	_wrap_strftime,C wrap_strftime,C make_freplacement,C make_somezreplacement,C make_Zreplacement,C format_utcoffset
+datetime-time-compare-whole-minutes	open	Lib/_pydatetime.py	time._cmp,C time_richcompare
+datetime-astimezone-to-timezone	open	Lib/_pydatetime.py	datetime.astimezone,timezone.fromutc,C datetime_astimezone,C timezone_fromutc
+datetime-tzinfo-fromutc	open	Lib/_pydatetime.py	tzinfo.fromutc,C tzinfo_fromutc
+datetime-timedelta-str-repr	open	Lib/_pydatetime.py	timedelta.__str__,timedelta.__repr__,C delta_str,C delta_repr
 fractions-ctor-normalizes	proven	Lib/fractions.py	Fraction.__new__
 fractions-ctor-zero-denominator	refuted	Lib/fractions.py	Fraction.__new__
 fractions-arith-exact	proven	Lib/fractions.py	Fraction._add,Fraction._sub,Fraction._mul,Fraction._div,_operator_fallbacks
@@ -113,29 +180,60 @@ accel-heapify-makes-heap	proven	Lib/heapq.py	heapify,heapify_max
 accel-nsmallest-sorted-prefix	proven	Lib/heapq.py	nsmallest
 accel-nlargest-sorted-prefix	proven	Lib/heapq.py	nlargest
 accel-merge-sorted	proven	Lib/heapq.py	merge
-decimal-parse-c-accepts-py	refuted	Modules/_decimal/_decimal.c	Decimal.__new__ (str),numeric_as_ascii,mpd_qset_string,_pydecimal._parser
-decimal-parse-c-accepts-py-casefree	proven	Modules/_decimal/_decimal.c	Decimal.__new__ (str),numeric_as_ascii,scan_dpoint_exp,scan_payload,mpd_qset_string
-decimal-parse-py-accepts-c	refuted	Lib/_pydecimal.py	Decimal.__new__ (str)
-decimal-str-roundtrip-py	refuted	Lib/_pydecimal.py	Decimal.__str__,Decimal.__new__ (str)
-decimal-str-roundtrip-py-bounded	proven	Lib/_pydecimal.py	Decimal.__str__,Decimal.__new__ (str)
-decimal-str-roundtrip-c	proven	Modules/_decimal/_decimal.c	dec_str,PyDecType_FromUnicodeExactWS,numeric_as_ascii,mpd_qset_string
-decimal-hash-twins-agree	refuted	Lib/_pydecimal.py	Decimal.__hash__
-decimal-int-conversions-py	refuted	Lib/_pydecimal.py	Decimal.__floor__,Decimal.__ceil__,Decimal.__round__
-decimal-mul-no-valueerror-py	refuted	Lib/_pydecimal.py	Decimal.__mul__,Decimal.__add__,_WorkRep,_normalize
-decimal-tuple-twins-agree	refuted	Lib/_pydecimal.py	Decimal.__new__ (tuple),dectuple_as_str
-decimal-tuple-twins-agree-int-digits	proven	Lib/_pydecimal.py	Decimal.__new__ (tuple),dectuple_as_str,Decimal.__str__
-decimal-format-c-accepts-only-py	refuted	Modules/_decimal/_decimal.c	dec_format,mpd_parse_fmt_str
+decimal-parse-c-accepts-py	refuted	Modules/_decimal/_decimal.c	Decimal.__new__,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii
+decimal-parse-c-accepts-py-casefree	proven	Modules/_decimal/_decimal.c	Decimal.__new__,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii
+decimal-parse-py-accepts-c	refuted	Lib/_pydecimal.py	Decimal.__new__,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii
+decimal-str-roundtrip-py	refuted	Lib/_pydecimal.py	Decimal.__str__,Decimal.__new__
+decimal-str-roundtrip-py-bounded	proven	Lib/_pydecimal.py	Decimal.__str__,Decimal.__new__
+decimal-str-roundtrip-c	proven	Modules/_decimal/_decimal.c	dec_str,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii
+decimal-hash-twins-agree	refuted	Lib/_pydecimal.py	Decimal.__hash__,_dec_hash
+decimal-int-conversions-py	refuted	Lib/_pydecimal.py	Decimal.__floor__,Decimal.__ceil__,Decimal.__round__,Decimal._rescale,Decimal.__int__,dec_as_long,dec_floor,dec_ceil,PyDec_Round
+decimal-mul-no-valueerror-py	refuted	Lib/_pydecimal.py	Decimal.__mul__,_WorkRep.__init__
+decimal-add-no-valueerror-py	refuted	Lib/_pydecimal.py	Decimal.__add__,_WorkRep.__init__,_normalize
+decimal-sub-no-valueerror-py	refuted	Lib/_pydecimal.py	Decimal.__sub__,Decimal.__add__,Decimal.copy_negate,_WorkRep.__init__,_normalize
+decimal-add-correct	open	Lib/_pydecimal.py	Decimal.__add__,_normalize,_WorkRep.__init__,Decimal._fix
+decimal-sub-correct	open	Lib/_pydecimal.py	Decimal.__sub__,Decimal.__add__,_normalize,Decimal._fix
+decimal-mul-overflow-correct	open	Lib/_pydecimal.py	Decimal.__mul__,Decimal._fix,Overflow.handle
+decimal-mul-subnormal-correct	open	Lib/_pydecimal.py	Decimal.__mul__,Decimal._fix
+decimal-parse-converse	open	Lib/_pydecimal.py	Decimal.__new__,PyDecType_FromUnicodeExactWS,numeric_as_ascii
+decimal-as-tuple-roundtrip	open	Lib/_pydecimal.py	Decimal.as_tuple,PyDec_AsTuple,dectuple_as_str
+decimal-normalize-correct	open	Lib/_pydecimal.py	Decimal.normalize,Decimal._fix
+decimal-copy-ops-correct	proven	Lib/_pydecimal.py	Decimal.copy_abs,Decimal.copy_negate,Decimal.copy_sign,Decimal.compare_total_mag
+decimal-classification-correct	proven	Lib/_pydecimal.py	Decimal.number_class,Decimal.is_nan,Decimal.is_qnan,Decimal.is_snan,Decimal.is_finite,Decimal.is_infinite,Decimal.is_normal,Decimal.is_subnormal,Decimal.is_zero,Decimal.is_canonical,Decimal.__bool__,Decimal._isnan,Decimal._isinfinity
+decimal-comparisons-consistent	proven	Lib/_pydecimal.py	Decimal.__eq__,Decimal.__lt__,Decimal.__le__,Decimal.__gt__,Decimal.__ge__,Decimal.compare,Decimal.compare_signal,Decimal._cmp,Decimal._check_nans,Decimal._compare_check_nans,Decimal._fix_nan
+decimal-minmax-correct	proven	Lib/_pydecimal.py	Decimal.max,Decimal.min,Decimal.max_mag,Decimal.min_mag
+decimal-raise-error-correct	proven	Lib/_pydecimal.py	Context._raise_error,DecimalException.handle,InvalidOperation.handle,ConversionSyntax.handle,DivisionByZero.handle,DivisionImpossible.handle,DivisionUndefined.handle,InvalidContext.handle,Overflow.handle
+decimal-context-methods-match-decimal	proven	Lib/_pydecimal.py	_convert_other,Context.add,Context.subtract,Context.multiply,Context.divide,Context.divide_int,Context.divmod,Context.remainder,Context.compare,Context.compare_signal,Context.max,Context.max_mag,Context.min,Context.min_mag,Context.logical_and,Context.logical_or,Context.logical_xor,Context.next_toward,Context.quantize,Context.remainder_near,Context.rotate,Context.scaleb,Context.shift,Context.compare_total,Context.compare_total_mag,Context.copy_sign,Context.same_quantum,Context.abs,Context.logb,Context.logical_invert,Context.minus,Context.plus,Context.next_minus,Context.next_plus,Context.normalize,Context.to_integral_exact,Context.to_integral_value,Context.number_class,Context.is_normal,Context.is_subnormal,Context.to_eng_string,Context.to_sci_string,Context.copy_abs,Context.copy_negate,Context.copy_decimal,Context.is_finite,Context.is_infinite,Context.is_nan,Context.is_qnan,Context.is_signed,Context.is_snan,Context.is_zero,Context.canonical,Context.is_canonical,Context.radix,Context.fma
+decimal-reflected-operators	proven	Lib/_pydecimal.py	_convert_other,Decimal.__rsub__,Decimal.__rtruediv__,Decimal.__rdivmod__,Decimal.__rmod__,Decimal.__rfloordiv__
+decimal-c-context-clears-flags	refuted	Modules/_decimal/_decimal.c	context_new,context_init
+decimal-c-context-copies-capitals	refuted	Modules/_decimal/_decimal.c	context_new,context_init
+decimal-context-clears-flags-py	proven	Lib/_pydecimal.py	Context.__init__,Context.__setattr__,Context._set_signal_dict
+decimal-c-context-clean-template	proven	Modules/_decimal/_decimal.c	context_new,context_init
+decimal-context-attr-twins	proven	Lib/_pydecimal.py	Context.__setattr__,Context._set_integer_check,context_setattr,context_setprec,context_setemin,context_setemax,context_setcapitals,context_setclamp
+decimal-c-signaldict-eq-items	refuted	Modules/_decimal/_decimal.c	signaldict_richcompare
+decimal-c-signaldict-eq-copy	refuted	Modules/_decimal/_decimal.c	signaldict_richcompare,dict_as_flags,flags_as_dict
+decimal-c-signaldict-eq-canonical	proven	Modules/_decimal/_decimal.c	signaldict_richcompare
+decimal-c-signaldict-set-get	proven	Modules/_decimal/_decimal.c	signaldict_getitem,signaldict_setitem
+decimal-divide-correct	proven	Lib/_pydecimal.py	Decimal._divide,Decimal._rescale,_WorkRep.__init__
+decimal-truediv-specials	proven	Lib/_pydecimal.py	Decimal.__truediv__
+decimal-truediv-core	proven	Lib/_pydecimal.py	Decimal.__truediv__,_WorkRep.__init__
+decimal-divmod-consistent	proven	Lib/_pydecimal.py	Decimal.__divmod__,Decimal.__mod__,Decimal.__floordiv__,Decimal._divide,Decimal._fix
+decimal-floordiv-twins-agree	refuted	Lib/_pydecimal.py	Decimal.__floordiv__,Decimal._divide
+decimal-floordiv-twins-in-range	open	Lib/_pydecimal.py	Decimal.__floordiv__,Decimal._divide
+decimal-tuple-twins-agree	refuted	Lib/_pydecimal.py	Decimal.__new__,dectuple_as_str,PyDecType_FromCStringExact,Decimal.__str__,dec_str
+decimal-tuple-twins-agree-int-digits	proven	Lib/_pydecimal.py	Decimal.__new__,dectuple_as_str,PyDecType_FromCStringExact,Decimal.__str__,dec_str
+decimal-format-c-accepts-only-py	refuted	Modules/_decimal/_decimal.c	dec_format
 decimal-format-no-encode-error	refuted	Modules/_decimal/_decimal.c	dec_format
 decimal-rounding-modes-correct	proven	Lib/_pydecimal.py	Decimal._rescale,Decimal._round_down,Decimal._round_up,Decimal._round_half_up,Decimal._round_half_down,Decimal._round_half_even,Decimal._round_ceiling,Decimal._round_floor,Decimal._round_05up
-decimal-to-integral-value-correct	proven	Lib/_pydecimal.py	Decimal.to_integral_value
-decimal-quantize-correct	proven	Lib/_pydecimal.py	Decimal.quantize,Decimal._rescale,Decimal._fix,Decimal.__round__
-decimal-mul-correctly-rounded	proven	Lib/_pydecimal.py	Decimal.__mul__,Decimal._fix
-decimal-to-integral-exact-correct	proven	Lib/_pydecimal.py	Decimal.to_integral_exact
+decimal-to-integral-value-correct	proven	Lib/_pydecimal.py	Decimal.to_integral_value,Decimal._rescale
+decimal-quantize-correct	proven	Lib/_pydecimal.py	Decimal.quantize,Decimal._rescale,Decimal._fix,Decimal.__round__,Decimal._cmp,Decimal.adjusted,Context.Etiny,Context.Etop,Context._raise_error
+decimal-mul-correctly-rounded	proven	Lib/_pydecimal.py	Decimal.__mul__,Decimal._fix,_WorkRep.__init__,Context.Etiny,Context.Etop,Context._raise_error
+decimal-to-integral-exact-correct	proven	Lib/_pydecimal.py	Decimal.to_integral_exact,Decimal._rescale,Decimal._cmp,Context._raise_error
 decimal-int-conversions-c	proven	Modules/_decimal/_decimal.c	dec_as_long,PyDec_Round,dec_floor,dec_ceil,dec_trunc
-decimal-int-conversions-py-or-limit	proven	Lib/_pydecimal.py	Decimal.__floor__,Decimal.__ceil__,Decimal.__round__,Decimal.__int__
+decimal-int-conversions-py-or-limit	proven	Lib/_pydecimal.py	Decimal.__floor__,Decimal.__ceil__,Decimal.__round__,Decimal.__int__,Decimal._rescale
 decimal-hash-consistent-c	proven	Modules/_decimal/_decimal.c	_dec_hash,dec_from_long
 decimal-ratio-correct-c	proven	Modules/_decimal/_decimal.c	dec_as_integer_ratio
-decimal-compare-total-order	proven	Lib/_pydecimal.py	Decimal.compare_total,Decimal._cmp
+decimal-compare-total-order	proven	Lib/_pydecimal.py	Decimal.compare_total,Decimal._cmp,Decimal._isnan
 pyio-bytesio-twins-agree	refuted	Modules/_io/bytesio.c	_io.BytesIO,_pyio.BytesIO
 pyio-bytesio-twins-same-class	refuted	Modules/_io/bytesio.c	_io.BytesIO.seek,_pyio.BytesIO.seek
 pyio-bytesio-twins-same-class-in-range	refuted	Modules/_io/bytesio.c	_io.BytesIO.getbuffer,_io.BytesIO.write,_io.BytesIO.truncate,_io.BytesIO.close
@@ -210,25 +308,49 @@ json-tool-roundtrip	open	Lib/json/tool.py	main
 json-loads-bytes	open	Lib/json/__init__.py	loads,detect_encoding
 json-roundtrip-float	open	Lib/json/encoder.py	encoder_encode_float,_match_number_unicode
 json-dumps-accepted-float	open	Lib/json/encoder.py	JSONEncoder.encode,scan_once_unicode
-pickle-decode-encode-long	proven	Lib/pickle.py	encode_long,decode_long
+pickle-decode-encode-long	proven	Lib/pickle.py	encode_long,decode_long,load_counted_long
 pickle-encode-long-shortest	proven	Lib/pickle.py	encode_long,decode_long
-pickle-text-int-roundtrip	proven	Lib/pickle.py	save_long,load_int,load_long
+pickle-text-int-roundtrip	proven	Lib/pickle.py	_Pickler.save_long,_Unpickler.load_int,_Unpickler.load_long,load_int,load_long
 pickle-save-long-twins	refuted	Modules/_pickle.c	save_long
-pickle-save-long-twins-sized	proven	Modules/_pickle.c	save_long
+pickle-save-long-same-outcome	proven	Modules/_pickle.c	save_long,_Pickler.save_long,encode_long
+pickle-save-long-twins-sized	proven	Modules/_pickle.c	save_long,_Pickler.save_long,encode_long
 pickle-int-line-twins	refuted	Modules/_pickle.c	load_int
 pickle-int-line-twins-no-bool-spelling	refuted	Modules/_pickle.c	load_int
 pickle-int-line-twins-no-nul	refuted	Modules/_pickle.c	load_int
-pickle-int-line-twins-narrow	proven	Modules/_pickle.c	load_int
+pickle-int-line-twins-narrow	proven	Modules/_pickle.c	load_int,_Unpickler.load_int
 pickle-long-line-twins	refuted	Modules/_pickle.c	load_long
-pickle-long-line-twins-no-nul	proven	Modules/_pickle.c	load_long
-pickle-dumps-twins	refuted	Modules/_pickle.c	dumps,_dumps
-pickle-dumps-twins-batch-ok	refuted	Modules/_pickle.c	dumps,_dumps
-pickle-dumps-twins-batch-ok-long	refuted	Modules/_pickle.c	dumps,_dumps
-pickle-dumps-twins-narrow	proven	Modules/_pickle.c	dumps,_dumps
-pickle-loads-twins-exact	refuted	Modules/_pickle.c	loads,_loads
-pickle-loads-twins-accept	refuted	Modules/_pickle.c	loads,_loads
+pickle-long-line-twins-no-nul	proven	Modules/_pickle.c	load_long,_Unpickler.load_long
+pickle-dumps-twins	refuted	Modules/_pickle.c	_pickle_dumps_impl,_dumps
+pickle-dumps-twins-batch-ok	refuted	Modules/_pickle.c	_pickle_dumps_impl,_dumps
+pickle-dumps-twins-batch-ok-long	refuted	Modules/_pickle.c	_pickle_dumps_impl,_dumps
+pickle-dumps-twins-narrow	proven	Modules/_pickle.c	dump,_pickle_dumps_impl,save,save_none,save_bool,save_long,save_bytes,_save_bytes_data,save_bytearray,_save_bytearray_data,_Pickler_write_bytes,save_unicode,write_unicode_binary,raw_unicode_escape,store_tuple_elements,save_tuple,save_list,batch_list,batch_list_exact,save_dict,batch_dict,batch_dict_exact_impl,batch_dict_exact,save_set,save_frozenset_impl,save_frozenset,memo_get,memo_put,_Pickler_Write,_Pickler_OpcodeBoundary,_Pickler_CommitFrame,_Pickler_SetProtocol,_write_size64,_Pickler.dump,_dumps,_Pickler.__init__,_Pickler.memoize,_Pickler.put,_Pickler.get,_Pickler.save,_Pickler.save_none,_Pickler.save_bool,_Pickler.save_long,_Pickler._save_bytes_no_memo,_Pickler.save_bytes,_Pickler._save_bytearray_no_memo,_Pickler.save_bytearray,_Pickler.save_str,_Pickler.save_tuple,_Pickler.save_list,_Pickler._batch_appends,_Pickler.save_dict,_Pickler._batch_setitems,_Pickler.save_set,_Pickler.save_frozenset,_Framer.__init__,_Framer.start_framing,_Framer.end_framing,_Framer.commit_frame,_Framer.write,_Framer.write_large_bytes,encode_long
+pickle-dumps-twins-exact-sized	open	Modules/_pickle.c	_pickle_dumps_impl,_dumps
+pickle-roundtrip	open	Lib/pickle.py	_dumps,_loads,_pickle_dumps_impl,_pickle_loads_impl
+pickle-loads-twins-exact	refuted	Modules/_pickle.c	_pickle_loads_impl,_loads
+pickle-loads-twins-accept	refuted	Modules/_pickle.c	_pickle_loads_impl,_loads
+pickle-loads-twins-narrow	open	Modules/_pickle.c	_pickle_loads_impl,_loads
 pickle-frame-twins	refuted	Lib/pickle.py	_Unframer.load_frame,load_frame
 pickle-put-twins	refuted	Modules/_pickle.c	load_put
+pickletools-read-uint-exact	proven	Lib/pickletools.py	read_uint1,read_uint2,read_uint4,read_uint8
+pickletools-read-int4-roundtrip	proven	Lib/pickletools.py	read_int4
+pickletools-read-counted-roundtrip	proven	Lib/pickletools.py	read_bytes1,read_string1,read_bytes4,read_bytes8,read_bytearray8
+pickletools-read-string4-roundtrip	proven	Lib/pickletools.py	read_string4
+pickletools-read-long-roundtrip	proven	Lib/pickletools.py	read_long1,read_long4
+pickletools-read-unicode-roundtrip	proven	Lib/pickletools.py	read_unicodestring1,read_unicodestring4,read_unicodestring8
+pickletools-read-float8-exact	proven	Lib/pickletools.py	read_float8
+pickletools-read-unicodenl	proven	Lib/pickletools.py	read_unicodestringnl
+pickletools-decimal-short-twin	proven	Lib/pickletools.py	read_decimalnl_short
+pickletools-decimal-long-twin	proven	Lib/pickletools.py	read_decimalnl_long
+pickletools-read-stringnl-plain	proven	Lib/pickletools.py	read_stringnl
+pickletools-noescape-verbatim	refuted	Lib/pickletools.py	read_stringnl_noescape
+pickletools-noescape-no-backslash	proven	Lib/pickletools.py	read_stringnl_noescape,read_stringnl_noescape_pair,read_stringnl
+pickletools-genops-fuel	proven	Lib/pickletools.py	_genops,genops
+pickletools-genops-wellformed	proven	Lib/pickletools.py	_genops,genops
+pickletools-dis-no-indexerror	refuted	Lib/pickletools.py	dis
+pickletools-dis-follows-genops	proven	Lib/pickletools.py	dis,_genops,genops
+pickletools-dis-stack-repr	proven	Lib/pickletools.py	StackObject.__repr__
+pickletools-optimize-raw-copy	proven	Lib/pickletools.py	optimize,_genops
+pickle-optimize-sound	open	Lib/pickletools.py	optimize
 itertools-islice-doc-agree	refuted	Modules/itertoolsmodule.c	islice_new,islice_next
 itertools-islice-doc-agree-ssize	refuted	Modules/itertoolsmodule.c	islice_new,islice_next
 itertools-islice-doc-agree-nowrap	proven	Modules/itertoolsmodule.c	islice_new,islice_next
@@ -262,23 +384,55 @@ itertools-grouper-direct	proven	Modules/itertoolsmodule.c	itertools__grouper_imp
 itertools-groupby-ctor-error	proven	Modules/itertoolsmodule.c	itertools_groupby_impl
 itertools-tee-doc-agree	proven	Modules/itertoolsmodule.c	itertools_tee_impl,itertools__tee_impl,tee_next,teedataobject_newinternal,teedataobject_jumplink,teedataobject_getitem,teedataobject_getitem_lock_held,tee_fromiterable,tee_copy,tee_copy_impl
 itertools-teedataobject-args	proven	Modules/itertoolsmodule.c	itertools_teedataobject_impl
-sequences-deque-ends-evict	proven	Modules/_collectionsmodule.c	deque_append_lock_held,deque_appendleft_lock_held,deque_extend_impl,deque_extendleft_impl,deque_pop_impl,deque_popleft_impl
-sequences-deque-construct	proven	Modules/_collectionsmodule.c	deque_new,deque_init_impl
+sequences-deque-ends-evict	proven	Modules/_collectionsmodule.c	deque_append_lock_held,deque_append_impl,deque_appendleft_lock_held,deque_appendleft_impl,deque_extend_impl,deque_extendleft_impl,deque_pop_impl,deque_popleft_impl,deque_clear,deque_clearmethod_impl,deque_inplace_concat,finalize_iterator,consume_iterator
+sequences-deque-construct	proven	Modules/_collectionsmodule.c	deque_new,deque_init_impl,deque_len,deque_get_maxlen
 sequences-deque-rotate-loop	proven	Modules/_collectionsmodule.c	_deque_rotate,deque_rotate_impl
-sequences-subscript-agree	proven	Modules/_collectionsmodule.c	deque_item_lock_held,deque_ass_item_lock_held,deque_del_item,list_subscript,list_ass_item_lock_held,array_subscr,array_ass_subscr
-sequences-index-agree	proven	Objects/listobject.c	list_index_impl,array_array_index_impl,deque_index_impl
-sequences-insert-agree	proven	Objects/listobject.c	list_insert_impl,ins1,array_array_insert_impl,deque_insert_impl
+sequences-subscript-agree	proven	Modules/_collectionsmodule.c	deque_item_lock_held,deque_item,deque_ass_item_lock_held,deque_ass_item,deque_del_item,valid_index,list_subscript,list_ass_item_lock_held
+sequences-index-agree	proven	Objects/listobject.c	list_index_impl,deque_index_impl
+sequences-insert-agree	proven	Objects/listobject.c	list_insert_impl,ins1,deque_insert_impl
 sequences-insert-is-slice-assign	refuted	Objects/listobject.c	list_insert_impl,list_ass_subscript_lock_held
 sequences-insert-is-slice-assign-ssize	proven	Objects/listobject.c	list_insert_impl,list_ass_subscript_lock_held
-sequences-pop-remove-count-agree	proven	Objects/listobject.c	list_pop_impl,array_array_pop_impl,deque_pop_impl,deque_popleft_impl,list_remove_impl,array_array_remove_impl,deque_remove_impl,list_count_impl,array_array_count_impl,deque_count_impl
+sequences-pop-remove-count-agree	proven	Objects/listobject.c	list_pop_impl,deque_pop_impl,deque_popleft_impl,list_remove_impl,deque_remove_impl,list_count_impl,deque_count_impl,deque_contains,deque_contains_lock_held
 sequences-list-slice-assign	proven	Objects/listobject.c	list_ass_subscript_lock_held,list_ass_slice_lock_held,adjust_slice_indexes
 sequences-array-slice-assign-agree	refuted	Modules/arraymodule.c	array_ass_subscr
 sequences-array-slice-assign-agree-nonempty	proven	Modules/arraymodule.c	array_ass_subscr
-sequences-array-range-check	proven	Modules/arraymodule.c	b_setitem,BB_setitem,h_setitem,i_setitem,q_setitem,ins1,array_new
-sequences-deque-irepeat	refuted	Modules/_collectionsmodule.c	deque_inplace_repeat_lock_held,deque_repeat
-sequences-deque-irepeat-checked	proven	Modules/_collectionsmodule.c	deque_inplace_repeat_lock_held
+sequences-array-range-check	proven	Modules/arraymodule.c	b_setitem,BB_setitem,h_setitem,HH_setitem,i_setitem,II_setitem,l_setitem,LL_setitem,q_setitem,QQ_setitem,ins1,ins,array_resize,array_array_append_impl,array_array_insert_impl,array_new
+sequences-array-subscript	proven	Modules/arraymodule.c	array_subscr,array_ass_subscr,array_item,array_ass_item,getarrayitem,array_del_slice,array_length
+sequences-array-insert-agree	proven	Modules/arraymodule.c	array_array_insert_impl,ins,ins1
+sequences-array-search-agree	proven	Modules/arraymodule.c	array_array_index_impl,array_array_count_impl,array_contains,array_array_remove_impl,array_array_pop_impl,getarrayitem,array_del_slice
+sequences-array-non-index-item	proven	Modules/arraymodule.c	b_setitem,BB_setitem,h_setitem,HH_setitem,i_setitem,II_setitem,l_setitem,LL_setitem,q_setitem,QQ_setitem
+sequences-array-get-set	proven	Modules/arraymodule.c	b_getitem,b_setitem,BB_getitem,BB_setitem,h_getitem,h_setitem,HH_getitem,HH_setitem,i_getitem,i_setitem,II_getitem,II_setitem,l_getitem,l_setitem,LL_getitem,LL_setitem,q_getitem,q_setitem,QQ_getitem,QQ_setitem,getarrayitem
+sequences-array-char-items	proven	Modules/arraymodule.c	u_getitem,u_setitem,w_getitem,w_setitem
+sequences-array-float-items	open	Modules/arraymodule.c	f_getitem,f_setitem,d_getitem,d_setitem
+sequences-array-del-slice-agree	open	Modules/arraymodule.c	array_ass_subscr
+sequences-array-bytes-round-trip	proven	Modules/arraymodule.c	frombytes,array_array_frombytes_impl,array_array_tobytes_impl
+sequences-array-byteswap	proven	Modules/arraymodule.c	array_array_byteswap_impl
+sequences-array-concat	proven	Modules/arraymodule.c	array_concat,array_inplace_concat,array_do_extend,array_array_extend_impl
+sequences-array-iter-extend	proven	Modules/arraymodule.c	array_iter_extend,array_array_extend_impl
+sequences-array-repeat	proven	Modules/arraymodule.c	array_repeat,array_inplace_repeat,newarrayobject,newarrayobject_untracked
+sequences-array-clear-copy	proven	Modules/arraymodule.c	array_array_clear_impl,array_array___copy___impl,array_array___deepcopy___impl,array_slice
+sequences-array-fromlist	proven	Modules/arraymodule.c	array_array_fromlist_impl,array_array_tolist_impl,setarrayitem,getarrayitem
+sequences-array-reverse	proven	Modules/arraymodule.c	array_array_reverse_impl
+sequences-array-attrs	proven	Modules/arraymodule.c	array_resize,newarrayobject,newarrayobject_untracked,array_length,array_array___sizeof___impl,array_array_buffer_info_impl,array_get_typecode,array_get_itemsize
+sequences-array-buffer	proven	Modules/arraymodule.c	array_buffer_getbuf,array_buffer_relbuf,array_resize
+sequences-array-iterator	proven	Modules/arraymodule.c	array_iter,arrayiter_next,array_arrayiterator___reduce___impl,array_arrayiterator___setstate___impl
+sequences-array-reduce	proven	Modules/arraymodule.c	array_array___reduce_ex___impl,array__array_reconstructor_impl,make_array,typecode_to_mformat_code
+sequences-array-reconstruct-utf	refuted	Modules/arraymodule.c	array__array_reconstructor_impl
+sequences-array-w-tounicode	refuted	Modules/arraymodule.c	array_array_tounicode_impl
+sequences-array-tounicode-checked	proven	Modules/arraymodule.c	array_array_tounicode_impl
+sequences-array-w-fromunicode	refuted	Modules/arraymodule.c	array_array_fromunicode_impl
+sequences-array-fromunicode-checked	proven	Modules/arraymodule.c	array_array_fromunicode_impl
+sequences-defdict-getitem	proven	Modules/_collectionsmodule.c	defdict_missing
+sequences-defdict-copy-reduce	proven	Modules/_collectionsmodule.c	defdict_copy,new_defdict,defdict_reduce
+sequences-defdict-repr-init-or	proven	Modules/_collectionsmodule.c	defdict_repr,defdict_init,defdict_or
+sequences-count-agree	proven	Modules/_collectionsmodule.c	_collections__count_elements_impl
+sequences-count-elements	proven	Modules/_collectionsmodule.c	_collections__count_elements_impl
+sequences-tuplegetter	proven	Modules/_collectionsmodule.c	tuplegetter_new_impl,tuplegetter_descr_get,tuplegetter_descr_set,tuplegetter_reduce,tuplegetter_repr
+sequences-deque-irepeat	refuted	Modules/_collectionsmodule.c	deque_inplace_repeat_lock_held,deque_inplace_repeat,deque_repeat
+sequences-deque-irepeat-checked	proven	Modules/_collectionsmodule.c	deque_inplace_repeat_lock_held,deque_inplace_repeat,deque_repeat
 sequences-list-repeat	proven	Objects/listobject.c	list_inplace_repeat_lock_held,list_repeat_lock_held
-sequences-deque-copy-concat	proven	Modules/_collectionsmodule.c	deque_copy_impl,deque_concat_lock_held
+sequences-deque-copy-concat	refuted	Modules/_collectionsmodule.c	deque_copy_impl,deque___copy___impl,deque_concat_lock_held,deque_concat
+sequences-deque-copy-concat-checked	proven	Modules/_collectionsmodule.c	deque_copy_impl,deque___copy___impl,deque_concat_lock_held,deque_concat
 sequences-deque-reverse	proven	Modules/_collectionsmodule.c	deque_reverse_impl
 listsort-powerloop-first-bit	proven	Objects/listobject.c	powerloop
 listsort-powerloop-no-overflow	proven	Objects/listobject.c	powerloop
@@ -298,6 +452,84 @@ listsort-int-sorted-stable	proven	Objects/listobject.c	list.sort
 listsort-reverse-stable	proven	Objects/listobject.c	list.sort
 listsort-key	proven	Objects/listobject.c	list.sort
 listsort-long-compare	proven	Objects/listobject.c	unsafe_long_compare,unsafe_object_compare,long_compare,long_richcompare
+binary64-round-nearest-even	proven	Objects/floatobject.c	
+binary64-bits-value-roundtrip	proven	Objects/floatobject.c	
+binary64-fma-correct	proven	Objects/floatobject.c	
+float-add-correct	proven	Objects/floatobject.c	float_add
+float-sub-correct	proven	Objects/floatobject.c	float_sub
+float-mul-correct	proven	Objects/floatobject.c	float_mul
+float-div-correct	proven	Objects/floatobject.c	float_div
+float-int-operand-correct	proven	Objects/floatobject.c	_Py_convert_int_to_double
+float-int-conversions	proven	Objects/floatobject.c	float___trunc___impl,float___floor___impl,float___ceil___impl
+float-is-integer	proven	Objects/floatobject.c	float_is_integer_impl
+float-divmod-twins	proven	Objects/floatobject.c	float_rem,_float_div_mod,float_divmod,float_floor_div
+float-divmod-zero	proven	Objects/floatobject.c	float_rem,float_divmod,float_floor_div
+float-floordiv-exact-floor	refuted	Objects/floatobject.c	_float_div_mod,float_floor_div
+float-divmod-quotient-doc	refuted	Objects/floatobject.c	_float_div_mod,float_divmod
+float-pow-special-values	proven	Objects/floatobject.c	float_pow
+float-hash-basics	proven	Objects/floatobject.c	float_hash
+float-unary	proven	Objects/floatobject.c	float_neg,float_abs,float_bool
+float-identities	proven	Objects/floatobject.c	float_float,float_conjugate_impl,float_getreal,float_getimag,float___getnewargs___impl,float_from_number_impl,float_new_impl,float_subtype_new,float_vectorcall
+float-getformat	proven	Objects/floatobject.c	float___getformat___impl
+float-info	proven	Objects/floatobject.c	PyFloat_GetMax,PyFloat_GetMin,PyFloat_GetInfo
+float-hex-sign	proven	Objects/floatobject.c	float_hex_impl,char_from_hex
+float-fromhex-trailing-garbage	refuted	Objects/floatobject.c	float_fromhex_impl,hex_from_char
+float-pack8-roundtrip	proven	Objects/floatobject.c	PyFloat_Pack8,PyFloat_Unpack8
+float-pack2-roundtrip	open	Objects/floatobject.c	PyFloat_Pack2,PyFloat_Unpack2
+dtoa-fixed-keeps-integer-part	refuted	Python/dtoa.c	_Py_dg_dtoa
+pystrtod-e-format-digit-count	refuted	Python/pystrtod.c	PyOS_double_to_string,format_float_short
+float-int-compare-exact	proven	Objects/floatobject.c	float_richcompare
+float-as-double	proven	Objects/floatobject.c	PyFloat_AsDouble
+float-blank-string	proven	Objects/floatobject.c	float_from_string_inner,PyFloat_FromString
+float-repr-special	proven	Objects/floatobject.c	float_repr
+float-round-extremes	proven	Objects/floatobject.c	float___round___impl,double_round
+dtoa-multadd	proven	Python/dtoa.c	multadd
+dtoa-s2b	proven	Python/dtoa.c	s2b,i2b
+dtoa-hi0bits	proven	Python/dtoa.c	hi0bits
+dtoa-lo0bits	proven	Python/dtoa.c	lo0bits
+dtoa-mult	proven	Python/dtoa.c	mult
+dtoa-pow5mult	proven	Python/dtoa.c	pow5mult
+dtoa-lshift	proven	Python/dtoa.c	lshift
+dtoa-cmp	proven	Python/dtoa.c	cmp
+dtoa-diff	proven	Python/dtoa.c	diff
+dtoa-dshift	proven	Python/dtoa.c	dshift
+dtoa-ulp	proven	Python/dtoa.c	ulp,sulp
+dtoa-sd2b	proven	Python/dtoa.c	sd2b
+dtoa-bigcomp-choice	proven	Python/dtoa.c	bigcomp
+dtoa-strtod-no-number	proven	Python/dtoa.c	_Py_dg_strtod
+dtoa-strtod-sign	proven	Python/dtoa.c	_Py_dg_strtod
+dtoa-strtod-fast-path	proven	Python/dtoa.c	_Py_dg_strtod
+dtoa-special-values	proven	Python/dtoa.c	_Py_dg_dtoa
+float-hash-numeric-tower	open	Objects/floatobject.c	float_hash
+float-hex-roundtrip	open	Objects/floatobject.c	float_hex_impl,float_fromhex_impl
+float-repr-roundtrip	open	Objects/floatobject.c	float_repr
+strtod-correctly-rounded	open	Python/dtoa.c	_Py_dg_strtod
+dtoa-fixed-correct	open	Python/dtoa.c	_Py_dg_dtoa
+dtoa-shortest-roundtrip	open	Python/dtoa.c	_Py_dg_dtoa
+float-round-half-even	open	Objects/floatobject.c	float___round___impl
+float-as-integer-ratio	proven	Objects/floatobject.c	float_as_integer_ratio_impl
+float-pack4-roundtrip	proven	Objects/floatobject.c	PyFloat_Pack4,PyFloat_Unpack4
+dtoa-quorem	open	Python/dtoa.c	quorem
+dtoa-d2b	open	Python/dtoa.c	d2b
+dtoa-b2d	open	Python/dtoa.c	b2d
+dtoa-ratio	open	Python/dtoa.c	ratio
+complex-parts	proven	Objects/complexobject.c	_Py_c_sum,_Py_cr_sum,_Py_rc_sum,_Py_c_diff,_Py_cr_diff,_Py_rc_diff,_Py_c_neg,complex_neg,complex_pos,complex_conjugate_impl,complex___getnewargs___impl,complex___complex___impl
+complex-prod-shape	proven	Objects/complexobject.c	_Py_c_prod,_Py_cr_prod,_Py_rc_prod
+complex-div-zero	proven	Objects/complexobject.c	_Py_c_quot,_Py_cr_quot,_Py_rc_quot
+complex-abs	proven	Objects/complexobject.c	_Py_c_abs,complex_abs
+complex-bool	proven	Objects/complexobject.c	complex_bool
+complex-compare	proven	Objects/complexobject.c	complex_richcompare
+complex-pow-special	proven	Objects/complexobject.c	_Py_c_pow,c_powu,c_powi,complex_pow
+complex-abs-nan-any-errno	refuted	Objects/complexobject.c	_Py_c_abs,complex_abs
+complex-pow-edom-only-for-zero	refuted	Objects/complexobject.c	_Py_c_pow
+complex-real-operand	proven	Objects/complexobject.c	real_to_double,real_to_complex
+complex-repr	proven	Objects/complexobject.c	complex_repr
+complex-blank-string	proven	Objects/complexobject.c	complex_from_string_inner,complex_subtype_from_string
+pystrtod-case-insensitive-match	proven	Python/pystrtod.c	case_insensitive_match
+pystrtod-parse-inf-or-nan	proven	Python/pystrtod.c	_Py_parse_inf_or_nan
+pystrtod-ascii-strtod-fallback	proven	Python/pystrtod.c	_PyOS_ascii_strtod
+pystrtod-string-to-double	proven	Python/pystrtod.c	PyOS_string_to_double
+pystrtod-underscores	proven	Python/pystrtod.c	_Py_string_to_number_with_underscores
 bytesobj-tuple-hash-empty	proven	Objects/tupleobject.c	tuple_hash,tuple_get_empty
 bytesobj-tuple-hash-not-minus-one	proven	Objects/tupleobject.c	tuple_hash
 bytesobj-tuple-hash-cached	proven	Objects/tupleobject.c	tuple_hash
@@ -463,7 +695,11 @@ unicodeobj-object-repeat-length	proven	Objects/unicodeobject.c	unicode_repeat
 unicodeobj-object-compare-order	proven	Objects/unicodeobject.c	unicode_compare
 unicodeobj-codec-utf8-rejects-forbidden	proven	Objects/stringlib/codecs.h	unicode_decode_utf8_impl
 unicodeobj-codec-utf8-strict-iff-wf	open	Objects/stringlib/codecs.h	unicode_decode_utf8_impl
-unicodeobj-codec-utf8-round-trip	open	Objects/stringlib/codecs.h	unicode_encode_utf8
+unicodeobj-codec-utf8-round-trip	proven	Objects/stringlib/codecs.h	unicode_encode_utf8,unicode_decode_utf8,unicode_decode_utf8_impl,PyUnicode_DecodeUTF8,PyUnicode_DecodeUTF8Stateful,PyUnicode_AsUTF8String,_PyUnicode_AsUTF8String
+unicodeobj-codec-utf16-round-trip	proven	Objects/unicodeobject.c	PyUnicode_DecodeUTF16Stateful,PyUnicode_DecodeUTF16,_PyUnicode_EncodeUTF16,PyUnicode_AsUTF16String
+unicodeobj-codec-utf32-round-trip	proven	Objects/unicodeobject.c	PyUnicode_DecodeUTF32Stateful,PyUnicode_DecodeUTF32,_PyUnicode_EncodeUTF32,PyUnicode_AsUTF32String
+unicodeobj-codec-decode-handler-advances	proven	Objects/unicodeobject.c	unicode_decode_call_errorhandler_writer,make_decode_exception
+unicodeobj-codec-encode-handler-advances	proven	Objects/unicodeobject.c	unicode_encode_call_errorhandler,make_encode_exception,raise_encode_exception
 unicodeobj-codec-surrogateescape-round-trip	open	Objects/unicodeobject.c	unicode_decode_utf8_impl
 unicodeobj-format-nul-presentation-type	refuted	Python/formatter_unicode.c	parse_internal_render_format_spec,_PyFloat_FormatAdvancedWriter,_PyComplex_FormatAdvancedWriter
 unicodeobj-format-nul-int-str	proven	Python/formatter_unicode.c	_PyLong_FormatAdvancedWriter,_PyUnicode_FormatAdvancedWriter,unknown_presentation_type
@@ -474,6 +710,11 @@ unicodeobj-format-group-loop	refuted	Objects/unicodeobject.c	_PyUnicode_InsertTh
 unicodeobj-format-group-digits	open	Objects/unicodeobject.c	_PyUnicode_InsertThousandsGrouping
 unicodeobj-format-percent-int-fast-slow	proven	Objects/unicodeobject.c	_PyUnicode_FormatLong,mainformatlong
 unicodeobj-format-percent-star-width	refuted	Objects/unicodeobject.c	unicode_format_arg_parse
+unicodeobj-format-parse-number	proven	Python/formatter_unicode.c	parse_number
+unicodeobj-format-empty-spec	proven	Python/formatter_unicode.c	format_obj
+unicodeobj-format-float-internal	open	Python/formatter_unicode.c	format_float_internal
+unicodeobj-format-complex-internal	open	Python/formatter_unicode.c	format_complex_internal
+unicodeobj-format-percent-float	open	Objects/unicodeobject.c	formatfloat
 unicodeobj-format-percent-no-directive	proven	Objects/unicodeobject.c	PyUnicode_Format,unicode_mod
 unicodeobj-text-case-ascii-fast-path	proven	Objects/unicodeobject.c	ascii_upper_or_lower,do_upper,do_lower,do_upper_or_lower,do_casefold,unicode_upper_impl,unicode_lower_impl,unicode_casefold_impl
 unicodeobj-text-case-output-bound	proven	Objects/unicodeobject.c	do_capitalize,do_swapcase,do_title,do_upper,do_lower,do_casefold,case_operation,lower_ucs4,unicode_title_impl,unicode_capitalize_impl,unicode_swapcase_impl,unicode_upper_impl,unicode_lower_impl,unicode_casefold_impl
@@ -559,8 +800,22 @@ textlibs-csv-extrasaction	proven	Lib/csv.py	DictWriter.__init__
 textlibs-csv-dictreader-count	proven	Lib/csv.py	DictReader.__init__,DictReader.__iter__,DictReader.fieldnames,DictReader.__next__
 textlibs-csv-writeheader	proven	Lib/csv.py	DictWriter.writeheader
 textlibs-csv-dictwriter-writerows	proven	Lib/csv.py	DictWriter.writerows
-textlibs-re-digit-limit-parse	refuted	Lib/re/_parser.py	State.__init__,State.groups,State.opengroup,State.closegroup,State.checkgroup,State.checklookbehindgroup,SubPattern.__init__,SubPattern.__len__,SubPattern.__delitem__,SubPattern.__getitem__,SubPattern.__setitem__,SubPattern.insert,SubPattern.append,SubPattern.getwidth,Tokenizer.__init__,Tokenizer.__next,Tokenizer.match,Tokenizer.get,Tokenizer.getwhile,Tokenizer.getuntil,Tokenizer.tell,Tokenizer.seek,Tokenizer.error,Tokenizer.checkgroupname,_escape,_class_escape,_uniq,_parse_sub,_parse,_parse_flags,parse
+textlibs-re-digit-limit-parse	refuted	Lib/re/_parser.py	_parse,parse
 textlibs-re-digit-limit-template	refuted	Lib/re/_parser.py	parse_template
+textlibs-re-parse-plain	proven	Lib/re/_parser.py	State.__init__,Tokenizer.__init__,Tokenizer.__next,Tokenizer.get,_parse_sub,_parse,parse
+textlibs-re-group-lifecycle	proven	Lib/re/_parser.py	State.groups,State.opengroup,State.closegroup,State.checkgroup
+textlibs-re-lookbehind-groups	proven	Lib/re/_parser.py	State.checklookbehindgroup
+textlibs-re-seek	proven	Lib/re/_parser.py	Tokenizer.seek
+textlibs-re-error-position	proven	Lib/re/_parser.py	Tokenizer.error
+textlibs-re-match	proven	Lib/re/_parser.py	Tokenizer.match
+textlibs-re-getwhile	proven	Lib/re/_parser.py	Tokenizer.getwhile
+textlibs-re-getuntil	proven	Lib/re/_parser.py	Tokenizer.getuntil
+textlibs-re-group-name	proven	Lib/re/_parser.py	Tokenizer.checkgroupname
+textlibs-re-width-ordered	proven	Lib/re/_parser.py	SubPattern.getwidth
+textlibs-re-prefix-factor	proven	Lib/re/_parser.py	_parse_sub
+textlibs-re-branch-set	proven	Lib/re/_parser.py	_parse_sub
+textlibs-re-flags	proven	Lib/re/_parser.py	_parse_flags
+textlibs-re-template-plain	proven	Lib/re/_parser.py	parse_template
 textlibs-re-tell	proven	Lib/re/_parser.py	Tokenizer.tell,Tokenizer.pos,Tokenizer.__next
 textlibs-re-fix-flags	proven	Lib/re/_parser.py	fix_flags
 textlibs-re-uniq	proven	Lib/re/_parser.py	_uniq

@@ -8,10 +8,10 @@ Modules/_io/bufferedio.c	166	172	_io__BufferedIOBase_read_impl	_io__BufferedIOBa
 Modules/_io/bufferedio.c	188	194	_io__BufferedIOBase_read1_impl	_io__BufferedIOBase_read1_impl(PyObject *self, PyTypeObject *cls, int Py_UNUSED(size)) /*[clinic end generated code: output=2e7fc62972487eaa input=af76380e020fd9e6]*/	todo		
 Modules/_io/bufferedio.c	213	219	_io__BufferedIOBase_write_impl	_io__BufferedIOBase_write_impl(PyObject *self, PyTypeObject *cls, PyObject *Py_UNUSED(b)) /*[clinic end generated code: output=712c635246bf2306 input=9793f5c8f71029ad]*/	todo		
 Modules/_io/bufferedio.c	294	326	_enter_buffered_busy	_enter_buffered_busy(buffered *self)	todo		
-Modules/_io/bufferedio.c	406	413	buffered_clear	buffered_clear(PyObject *op)	todo		
+Modules/_io/bufferedio.c	406	413	buffered_clear	buffered_clear(PyObject *op)	excluded		no-behaviour: GC traversal/clear of object references, no Python-visible result
 Modules/_io/bufferedio.c	416	437	buffered_dealloc	buffered_dealloc(PyObject *op)	todo		
 Modules/_io/bufferedio.c	445	453	_io__Buffered___sizeof___impl	_io__Buffered___sizeof___impl(buffered *self) /*[clinic end generated code: output=0231ef7f5053134e input=07a32d578073ea64]*/	todo		
-Modules/_io/bufferedio.c	456	463	buffered_traverse	buffered_traverse(PyObject *op, visitproc visit, void *arg)	todo		
+Modules/_io/bufferedio.c	456	463	buffered_traverse	buffered_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal/clear of object references, no Python-visible result
 Modules/_io/bufferedio.c	477	489	_io__Buffered__dealloc_warn_impl	_io__Buffered__dealloc_warn_impl(buffered *self, PyObject *source) /*[clinic end generated code: output=d8db21c6dec0e614 input=8f845f2a4786391c]*/	todo		
 Modules/_io/bufferedio.c	504	509	_io__Buffered_simple_flush_impl	_io__Buffered_simple_flush_impl(buffered *self) /*[clinic end generated code: output=29ebb3820db1bdfd input=5248cb84a65f80bd]*/	todo		
 Modules/_io/bufferedio.c	512	523	buffered_closed	buffered_closed(buffered *self)	todo		
