@@ -382,6 +382,8 @@ structure World where
   trace : List String := []
   /-- `globals()['__name__']` of the running frame, read by `type_new_set_module`. -/
   curModule : Option Val := none
+  /-- The objects `Py_ReprEnter` holds, `Objects/object.c:3003`, most recent first. -/
+  reprStack : List Val := []
   deriving Inhabited
 
 /-- A raised exception. `val` is the exception object when one exists; a C-level

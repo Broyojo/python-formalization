@@ -1311,9 +1311,68 @@ def fam_list_extend(g):
         g.probe(name("l"))
 
 
+def fam_repr(g):
+    """Containers' repr: the recursion guard, its release on error, key then value order, and a
+    __repr__ that mutates the container."""
+    r = g.rng
+    kind = r.choice(["log", "raise", "mutate", "raise-once"])
+    def repr_body(q):
+        out = [["log", q]]
+        if kind == "raise":
+            out.append(["raise", call(name(r.choice(["ValueError", "TypeError"])), lit("r"))])
+        elif kind == "raise-once":
+            out.append(["if", attr(name("s"), "armed"),
+                        [["setattr", name("s"), "armed", lit(False)],
+                         ["raise", call(name("ValueError"), lit("r"))]], []])
+        elif kind == "mutate":
+            out.append(["if", ["cmp", "<", call(name("len"), attr(name("s"), "t")), lit(4)],
+                        [["expr", call(attr(attr(name("s"), "t"), "append"), lit(7))]], []])
+        out.append(["ret", lit(q)])
+        return out
+    cls(g, "K", (), [g.method("__repr__", "K.__repr__", ["s"], repr_body("K")),
+                     g.method("__hash__", "K.__hash__", ["s"], [["ret", lit(1)]])])
+    cls(g, "V", (), [g.method("__repr__", "V.__repr__", ["s"], repr_body("V"))])
+    g.main.append(["assign", "t", ["list", []]])
+    g.main.append(["assign", "k", call(name("K"))])
+    g.main.append(["assign", "v", call(name("V"))])
+    for o in ("k", "v"):
+        g.main.append(["setattr", name(o), "t", name("t")])
+        g.main.append(["setattr", name(o), "armed", lit(True)])
+    g.main.append(["expr", call(attr(name("t"), "append"), name("k"))])
+    g.main.append(["expr", call(attr(name("t"), "append"), name("v"))])
+    g.probe(call(name("repr"), name("t")))
+    g.probe(call(name("repr"), ["dict", [[name("k"), name("v")], [lit(2), name("v")]]]))
+    g.probe(call(name("repr"), ["tuple", [name("k"), name("v")]]))
+    g.probe(call(name("repr"), ["tuple", [name("v")]]))
+    # Cycles through a list, a dict and a tuple.
+    g.main.append(["assign", "c", ["list", [lit(1)]]])
+    g.main.append(["expr", call(attr(name("c"), "append"), name("c"))])
+    g.probe(call(name("repr"), name("c")))
+    g.main.append(["assign", "d", ["dict", [[lit(1), lit(2)]]]])
+    g.main.append(["setitem", name("d"), lit(3), name("d")])
+    g.probe(call(name("repr"), name("d")))
+    g.main.append(["assign", "e", ["list", []]])
+    g.main.append(["assign", "u", ["tuple", [name("e")]]])
+    g.main.append(["expr", call(attr(name("e"), "append"), name("u"))])
+    g.probe(call(name("repr"), name("e")))
+    g.probe(call(name("repr"), name("u")))
+    g.probe(call(name("repr"), ["list", [name("e"), name("e")]]))
+    g.probe(call(name("repr"), ["dict", []]))
+    g.probe(call(name("repr"), ["tuple", []]))
+    g.probe(call(name("repr"), ["list", []]))
+    cls(g, "DL", ["dict"], None)
+    g.main.append(["assign", "x", call(name("DL"))])
+    g.main.append(["setitem", name("x"), name("k"), name("x")])
+    g.probe(call(name("repr"), name("x")))
+    g.probe(call(name("format"), name("x")))
+    g.probe(call(name("str"), name("c")))
+    # The guard was released: the same objects print again.
+    g.probe(call(name("repr"), name("t")))
+
+
 FAMILIES = [fam_calls, fam_property, fam_super, fam_mro, fam_class_stmt, fam_class_assign,
             fam_wrappers, fam_abstract, fam_type_attrs, fam_slot_updates, fam_descriptors,
-            fam_iter_seq, fam_numbers, fam_list_extend]
+            fam_iter_seq, fam_numbers, fam_list_extend, fam_repr]
 
 
 def gen_case(rng):

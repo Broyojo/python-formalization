@@ -339,6 +339,55 @@ def reprList (rt : Rt) : List Val → M (List String)
     let rs ← reprList rt xs
     pure (r :: rs)
 
+/-- Loop bound for iteration. A model limit, not a Python one. -/
+def iterFuel : Nat := 100000
+
+/-- Remove the first entry that is `v`: the search of `Py_ReprLeave`, `Objects/object.c:3053`. -/
+def reprStackErase (v : Val) : List Val → List Val
+  | [] => []
+  | x :: xs => if x.is v then xs else x :: reprStackErase v xs
+
+/-- `Py_ReprEnter`, `Objects/object.c:3003`, and `Py_ReprLeave`, `:3037`, around `body`: an
+object already on the stack gives `cycle`, and every exit from `body` leaves the stack, as the
+`error:` labels of `list_repr_impl` and `dict_repr_lock_held` do. -/
+def withRepr (v : Val) (cycle : String) (body : M Val) : M Val := do
+  let w ← getW
+  if w.reprStack.any (·.is v) then pure (.str cycle)
+  else
+    modW fun w => { w with reprStack := v :: w.reprStack }
+    let leave : M Unit := modW fun w => { w with reprStack := reprStackErase v w.reprStack }
+    let r ← tryM body fun e => do
+      leave
+      raise e
+    leave
+    pure r
+
+/-- The loop of `list_repr_impl`, `Objects/listobject.c:596`: `repr` may mutate the list, so the
+size and the item are read again each time. -/
+def listReprLoop (rt : Rt) (v : Val) : Nat → Nat → List String → M (List String)
+  | 0, _, _ => raise .fuel
+  | fuel + 1, i, acc => do
+    let w ← getW
+    match ((listOf w v).getD [])[i]? with
+    | none => pure acc.reverse
+    | some item =>
+      let r ← rt.repr item
+      listReprLoop rt v fuel (i + 1) (r :: acc)
+
+/-- The loop of `dict_repr_lock_held`, `Objects/dictobject.c:3434`: `repr(key)`, then
+`repr(value)`, pair by pair, with the dict read again each time. A deletion during the loop is
+not exact: `_PyDict_Next` walks a table with dummy entries, and the model has a list. -/
+def dictReprLoop (rt : Rt) (v : Val) : Nat → Nat → List String → M (List String)
+  | 0, _, _ => raise .fuel
+  | fuel + 1, i, acc => do
+    let w ← getW
+    match ((dictOf w v).getD [])[i]? with
+    | none => pure acc.reverse
+    | some (k, x) =>
+      let kr ← rt.repr k
+      let vr ← rt.repr x
+      dictReprLoop rt v fuel (i + 1) ((kr ++ ": " ++ vr) :: acc)
+
 /-- Call the `tp_repr` function `f`. -/
 def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
   let w ← getW
@@ -359,19 +408,24 @@ def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
     | .obj a => pure (.str (typeRepr w a))
     | _ => unmodelled
   | .c .tuple =>
+    -- `tuple_repr`, `Objects/tupleobject.c:240`: the empty check comes before the guard.
     let xs := (tupleOf w v).getD []
-    let rs ← reprList rt xs
-    match rs with
-    | [r] => pure (.str s!"({r},)")
-    | _ => pure (.str ("(" ++ ", ".intercalate rs ++ ")"))
+    if xs.isEmpty then pure (.str "()") else
+    withRepr v "(...)" do
+      let rs ← reprList rt xs
+      match rs with
+      | [r] => pure (.str s!"({r},)")
+      | _ => pure (.str ("(" ++ ", ".intercalate rs ++ ")"))
   | .c .list =>
-    let rs ← reprList rt ((listOf w v).getD [])
-    pure (.str ("[" ++ ", ".intercalate rs ++ "]"))
+    -- `list_repr_impl`, `Objects/listobject.c:575`.
+    withRepr v "[...]" do
+      let rs ← listReprLoop rt v iterFuel 0 []
+      pure (.str ("[" ++ ", ".intercalate rs ++ "]"))
   | .c .dict =>
-    let es := (dictOf w v).getD []
-    let ks ← reprList rt (es.map (·.1))
-    let vs ← reprList rt (es.map (·.2))
-    pure (.str ("{" ++ ", ".intercalate ((ks.zip vs).map fun (k, x) => k ++ ": " ++ x) ++ "}"))
+    -- `dict_repr_lock_held`, `Objects/dictobject.c:3403`: the guard comes before the empty check.
+    withRepr v "{...}" do
+      let rs ← dictReprLoop rt v iterFuel 0 []
+      pure (.str ("{" ++ ", ".intercalate rs ++ "}"))
   | .c e => if isExcFamily e then excCallRepr rt e v else unmodelled
   | _ => unmodelled
 
@@ -951,9 +1005,6 @@ def callSqRepeat (f : SlotFn) (a : Val) (n : Int) : M Val := do
   | .c .tuple => pure (.tuple (listRepeat ((tupleOf w a).getD []) k))
   | .c .list => alloc B.list (.list (listRepeat ((listOf w a).getD []) k))
   | _ => unmodelled
-
-/-- Loop bound for iteration. A model limit, not a Python one. -/
-def iterFuel : Nat := 100000
 
 /-- Append `items` to the list at `addr`. -/
 def listAppendAll (addr : Addr) (items : List Val) : M Unit :=
