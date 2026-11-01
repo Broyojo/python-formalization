@@ -114,6 +114,15 @@ def stripQuotes (s : Str) : Str :=
   let a := dropTo s.length s
   (dropTo a.length a.reverse).reverse
 
+/-- `translate_newlines` of the tokenizer (Parser/tokenizer/helpers.c): the `python -c`
+probe reads the text back from a string literal, which has been through this. It is
+part of the probe, not of `_PyUnicode_Dedent`. -/
+def tokenizerNewlines : Str → Str
+  | [] => []
+  | 13 :: 10 :: t => 10 :: tokenizerNewlines t
+  | 13 :: t => 10 :: tokenizerNewlines t
+  | c :: t => c :: tokenizerNewlines t
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
   | "text_case" =>
@@ -158,7 +167,7 @@ def run (fn : String) (j : Json) : Except String Json := do
     | none => throw "dedent undefined"
     | some r =>
       let c := r.headD 0
-      let v : Json := if c == 32 || c == 9 then toJson (-1 : Int) else toJson (stripQuotes r)
+      let v : Json := if c == 32 || c == 9 then toJson (-1 : Int) else toJson (tokenizerNewlines (stripQuotes r))
       return Json.mkObj [("ok", v)]
   | "text_transform" => return encPy encStr (.ok (transformDecimalAndSpace (← getSeq j "s")) : Py Str)
   | "text_sweep" => return encPy toJson (.ok (sweepHash (← getNat j "lo") (← getNat j "hi")) : Py Nat)

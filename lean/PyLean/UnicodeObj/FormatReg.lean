@@ -11,7 +11,7 @@ open PyLean.Registry
 def formatEntries : List Entry := [
   { id := "unicodeobj-format-nul-presentation-type", pyFile := "Python/formatter_unicode.c"
     pyFns := ["parse_internal_render_format_spec", "_PyFloat_FormatAdvancedWriter",
-      "_PyComplex_FormatAdvancedWriter", "format_complex_internal"]
+      "_PyComplex_FormatAdvancedWriter"]
     statement := "A format spec ending in NUL is rejected by float and complex, as it is by int and str."
     source := "the presentation types of Doc/library/string.rst; int and str as twins"
     status := .refuted, prop := ``FormatNulRejected, thm := some ``formatNulRejected_refuted
@@ -34,8 +34,7 @@ def formatEntries : List Entry := [
     source := "format spec mini-language, Doc/library/string.rst"
     status := .proven, prop := ``StrFormatShape, thm := some ``strFormatShape_proven },
   { id := "unicodeobj-format-int-fast-slow", pyFile := "Python/formatter_unicode.c"
-    pyFns := ["format_long_internal", "calc_number_widths", "fill_number", "get_locale_info",
-      "free_locale_info"]
+    pyFns := ["format_long_internal", "calc_number_widths", "fill_number", "get_locale_info"]
     statement := "When format_long_internal takes its _PyLong_FormatWriter shortcut, the general path would give the same text, for every int, in all four bases, with or without #."
     source := "invariant: fast path vs general path"
     status := .proven, prop := ``IntFastSlow, thm := some ``intFastSlow_proven },

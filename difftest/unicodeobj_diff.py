@@ -83,7 +83,7 @@ def gen_obj_slice(rng):
 def gen_obj_repeat(rng):
     n = rng.choice([-1, 0, 1, 2, 3, 7])
     s = obj_str(rng)
-    if rng.random() < 0.1 and s:
+    if rng.random() < 0.1 and len(s) >= 2:  # OverflowError; a shorter s would really allocate
         n = sys.maxsize
     return {"mod": "unicodeobj", "fn": "obj_repeat", "s": s, "n": n}
 
@@ -229,7 +229,9 @@ def hex_of(v):
 
 
 PCT_TYPES = "sradiuoxXc"
-PCT_OBJS = [0, 1, -1, 7, 255, -255, 65, 0x10ffff, 0x110000, 2 ** 63, -2 ** 63, 10 ** 30, 10 ** 4300,
+# A `*` takes its width from these, and the model builds a list of that length, so they stay small
+# apart from values that fail the conversion.
+PCT_OBJS = [0, 1, -1, 7, 255, -255, 65, 2 ** 63, -2 ** 63, 10 ** 30, 10 ** 4300,
             True, False, None, "", "a", "abc", chr(0xe9), chr(0x20ac), chr(0x1f600), "it's"]
 
 
@@ -271,7 +273,7 @@ def gen_fmt_percent(rng):
                                               for _ in range(rng.randint(1, 2)))
         count = fmt.count("%") - 2 * fmt.count("%%") + fmt.count("*")
         count = max(0, count + rng.choice([0, 0, 0, 0, 1, -1]))
-        items = [rng.choice(PCT_OBJS) if rng.random() < 0.8 else rng.choice([3, -3, 12, 2 ** 31])
+        items = [rng.choice(PCT_OBJS) if rng.random() < 0.8 else rng.choice([3, -3, 12, 40])
                  for _ in range(count)]
         if rng.random() < 0.15 and len(items) == 1:
             args = {"k": "single", "item": pct_enc(items[0])}

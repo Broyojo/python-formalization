@@ -17,7 +17,10 @@ likelihood: |
 maybe_intended: |
   No. The open issue and its PR treat it as a defect.
 reproducer: |
-  got = '%*d' % (-2 ** 63, 1)
+  try:
+      got = '%*d' % (-2 ** 63, 1)
+  except OverflowError as e:
+      got = str(e)
   print(repr(got))
   try:
       '%*d' % (-2 ** 63 + 1, 1)
@@ -28,8 +31,10 @@ reproducer: |
   if got == '1' and neighbour == 'MemoryError':
       print('REPRODUCED unicodeobj-format-percent-star-width')
 expected: |
-  OverflowError or MemoryError, as for the neighbouring width.
-tested: "NOT RUN: the build pod was down when this record was written"
+  OverflowError or MemoryError, as for the neighbouring width. Main now raises OverflowError.
+observed: |
+  3.14.7 returns '1', with no error and no padding.
+tested: "REPRODUCED on python3 3.14.7. NOT reproduced on main (3.16.0a1+dev), which raises OverflowError: format argument 1: too big for width"
 promised_by: |
   Invariant: no signed overflow in C.
 cause: |
