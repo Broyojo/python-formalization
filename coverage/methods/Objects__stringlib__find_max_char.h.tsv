@@ -1,0 +1,3 @@
+file	line	endline	name	signature	status	entry	note
+Objects/stringlib/find_max_char.h	20	44	stringlib_find_max_char	Py_LOCAL_INLINE(Py_UCS4) STRINGLIB(find_max_char)(const STRINGLIB_CHAR *begin, const STRINGLIB_CHAR *end)	todo		
+Objects/stringlib/find_max_char.h	59	123	stringlib_find_max_char	Py_LOCAL_INLINE(Py_UCS4) STRINGLIB(find_max_char)(const STRINGLIB_CHAR *begin, const STRINGLIB_CHAR *end)	todo		

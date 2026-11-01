@@ -1,0 +1,7 @@
+file	line	endline	name	signature	status	entry	note
+Objects/stringlib/codecs.h	22	252	stringlib_utf8_decode	Py_LOCAL_INLINE(Py_UCS4) STRINGLIB(utf8_decode)(const char **inptr, const char *end, STRINGLIB_CHAR *dest, Py_ssize_t *outpos)	todo		
+Objects/stringlib/codecs.h	260	482	stringlib_utf8_encoder	Py_LOCAL_INLINE(PyBytesWriter*) STRINGLIB(utf8_encoder)(PyObject *unicode, const STRINGLIB_CHAR *data, Py_ssize_t size, _Py_error_handler error_handler, const char *errors, char **end)	todo		changed-in-3.15: new function
+Objects/stringlib/codecs.h	512	624	stringlib_utf16_decode	Py_LOCAL_INLINE(Py_UCS4) STRINGLIB(utf16_decode)(const unsigned char **inptr, const unsigned char *e, STRINGLIB_CHAR *dest, Py_ssize_t *outpos, int native_ordering)	todo		
+Objects/stringlib/codecs.h	632	752	stringlib_utf16_encode	Py_LOCAL_INLINE(Py_ssize_t) STRINGLIB(utf16_encode)(const STRINGLIB_CHAR *in, Py_ssize_t len, unsigned short **outptr, int native_ordering)	todo		
+Objects/stringlib/codecs.h	755	767	stringlib_SWAB4	STRINGLIB(SWAB4)(STRINGLIB_CHAR ch)	todo		changed-in-3.15: new function
+Objects/stringlib/codecs.h	769	840	stringlib_utf32_encode	Py_LOCAL_INLINE(Py_ssize_t) STRINGLIB(utf32_encode)(const STRINGLIB_CHAR *in, Py_ssize_t len, uint32_t **outptr, int native_ordering)	todo		

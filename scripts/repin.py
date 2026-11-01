@@ -104,26 +104,22 @@ def new_inventory(src):
 
 
 def pair_rows(old_rows, new_rows):
-    """Match on (name, signature), then on name alone in file order."""
+    """Match on (name, signature), then name alone, then signature alone, which
+    catches a row the old inventory named after a macro."""
     free = list(new_rows)
     pairs = []
-    rest = []
-    for row in old_rows:
-        hit = next((n for n in free if (n["name"], n["signature"]) == (row["name"], row["signature"])), None)
-        if hit:
-            free.remove(hit)
-            pairs.append((row, hit))
-        else:
-            rest.append(row)
-    unmatched = []
-    for row in rest:
-        hit = next((n for n in free if n["name"] == row["name"]), None)
-        if hit:
-            free.remove(hit)
-            pairs.append((row, hit))
-        else:
-            unmatched.append(row)
-    return pairs, unmatched, free
+    rest = old_rows
+    for key in (lambda r: (r["name"], r["signature"]), lambda r: r["name"], lambda r: r["signature"]):
+        unmatched = []
+        for row in rest:
+            hit = next((n for n in free if key(n) == key(row)), None)
+            if hit:
+                free.remove(hit)
+                pairs.append((row, hit))
+            else:
+                unmatched.append(row)
+        rest = unmatched
+    return pairs, rest, free
 
 
 def settle(old, new, same, tally):

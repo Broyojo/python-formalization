@@ -1,0 +1,2 @@
+file	line	endline	name	signature	status	entry	note
+Objects/stringlib/repr.h	9	95	stringlib_repr	STRINGLIB(repr)(PyObject *unicode, Py_UCS4 quote, STRINGLIB_CHAR *odata)	todo		changed-in-3.15: new function

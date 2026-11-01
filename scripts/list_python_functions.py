@@ -69,8 +69,13 @@ def python_rows(path, rel):
 C_DEF = re.compile(r"^(?:[A-Za-z_][\w ]*[ *]+)?\*?([A-Za-z_]\w*)\s*\(")
 # Return-type macros: the function's name follows, on this line or the next.
 C_WRAPPER = re.compile(r"^(?:static\s+)?(?:Py_LOCAL_INLINE|Py_LOCAL|PyAPI_FUNC|PyMODINIT_FUNC)\([^)]*\)\s*")
-# Modules/_sre/sre_lib.h names its functions through a macro: SRE(match)(...).
-SRE_NAME = re.compile(r"^SRE\((\w+)\)")
+# Template headers name their functions through a macro: SRE(match)(...) in
+# Modules/_sre/sre_lib.h, STRINGLIB(find)(...) in Objects/stringlib/.
+TEMPLATE_NAME = re.compile(r"^(SRE|STRINGLIB)\((\w+)\)")
+
+
+def template_name(line):
+    return TEMPLATE_NAME.sub(lambda m: f"{m[1].lower()}_{m[2]}", line)
 
 
 def c_rows(path):
@@ -78,13 +83,14 @@ def c_rows(path):
     rows = []
     i = 0
     while i < len(lines):
-        line = SRE_NAME.sub(r"sre_\1", lines[i])
+        line = template_name(lines[i])
         wrapper = C_WRAPPER.match(line)
         if wrapper:
             rest = line[wrapper.end():]
-            match = C_DEF.match(rest or (lines[i + 1] if i + 1 < len(lines) else ""))
+            following = template_name(lines[i + 1]) if i + 1 < len(lines) else ""
+            match = C_DEF.match(rest or following)
             if match and not rest:
-                line = lines[i + 1]
+                line = following
         else:
             match = C_DEF.match(line)
         if (not match or line.startswith(("typedef", "extern", "#", "static PyMethodDef", "PyDoc_"))

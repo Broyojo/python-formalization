@@ -2355,6 +2355,7 @@ changed	Objects/setobject.c	79	414	set_lookkey	modelled	set-probe-failure,set-ta
 changed	Objects/setobject.c	821	1015	frozenset_hash	todo	
 changed	Objects/setobject.c	901	1095	setiter_iternext	modelled	set-iter-len
 changed	Objects/setobject.c	993	1187	set_update_dict_lock_held	todo	
+changed	Objects/stringlib/join.h	7	156	stringlib_bytes_join	todo	
 changed	Objects/stringlib/unicode_format.h	1155	1156	fieldnameiter_next	todo	
 changed	Objects/stringlib/unicode_format.h	1239	1240	formatter_field_name_split	todo	
 changed	Objects/structseq.c	28	28	get_type_attr_as_size	todo	
@@ -5582,9 +5583,19 @@ new	Objects/setobject.c		437	set_lookkey_threadsafe	todo
 new	Objects/setobject.c		467	free_entries	todo	
 new	Objects/setobject.c		81	ensure_shared_on_read	todo	
 new	Objects/setobject.c		97	set_compare_threadsafe	todo	
-new	Objects/stringlib/unicode_format.h		55	SubString_init	todo	
-new	Objects/stringlib/unicode_format.h		64	SubString_new_object	todo	
-new	Objects/stringlib/unicode_format.h		73	SubString_new_object_or_empty	todo	
+new	Objects/stringlib/codecs.h		260	stringlib_utf8_encoder	todo	
+new	Objects/stringlib/codecs.h		755	stringlib_SWAB4	todo	
+new	Objects/stringlib/fastsearch.h		327	stringlib__preprocess	todo	
+new	Objects/stringlib/fastsearch.h		370	stringlib__two_way	todo	
+new	Objects/stringlib/fastsearch.h		506	stringlib__two_way_find	todo	
+new	Objects/stringlib/fastsearch.h		519	stringlib__two_way_count	todo	
+new	Objects/stringlib/fastsearch.h		557	stringlib_default_find	todo	
+new	Objects/stringlib/fastsearch.h		617	stringlib_adaptive_find	todo	
+new	Objects/stringlib/fastsearch.h		690	stringlib_default_rfind	todo	
+new	Objects/stringlib/fastsearch.h		740	stringlib_count_char	todo	
+new	Objects/stringlib/fastsearch.h		757	stringlib_count_char_no_maxcount	todo	
+new	Objects/stringlib/join.h		7	stringlib_bytes_join_lock_held	todo	
+new	Objects/stringlib/repr.h		9	stringlib_repr	todo	
 new	Objects/tupleobject.c		206	_PyTuple_FromPair	todo	
 new	Objects/tupleobject.c		215	_PyTuple_FromPairSteal	todo	
 new	Objects/tupleobject.c		242	_PyStolenTuple_Free	todo	
@@ -6688,39 +6699,8 @@ removed	Objects/rangeobject.c	844		rangeiter_len	modelled	rangeslice-iter-reduce
 removed	Objects/rangeobject.c	854		rangeiter_reduce	modelled	rangeslice-iter-reduce
 removed	Objects/rangeobject.c	885		rangeiter_setstate	modelled	rangeslice-setstate-clips
 removed	Objects/setobject.c	2270		set_contains_lock_held	todo	
-removed	Objects/stringlib/codecs.h	22		Py_LOCAL_INLINE	todo	
 removed	Objects/stringlib/codecs.h	260		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/codecs.h	500		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/codecs.h	620		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/codecs.h	757		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/count.h	12		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/fastsearch.h	115		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/fastsearch.h	196		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/fastsearch.h	248		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/fastsearch.h	49		Py_LOCAL_INLINE	todo	
 removed	Objects/stringlib/fastsearch.h	772		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/find.h	26		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/find.h	45		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/find.h	53		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/find.h	63		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/find.h	7		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/find_max_char.h	20		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/find_max_char.h	59		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/join.h	7		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/localeutil.h	46		InsertThousandsGrouping_fill	modelled	unicodeobj-format-group-loop,unicodeobj-format-float-grouping
-removed	Objects/stringlib/partition.h	12		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/partition.h	69		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/replace.h	7		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/split.h	101		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/split.h	144		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/split.h	192		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/split.h	242		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/split.h	286		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/split.h	335		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/split.h	53		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/unicode_format.h	54		Py_LOCAL_INLINE	excluded	
-removed	Objects/stringlib/unicode_format.h	63		Py_LOCAL_INLINE	todo	
-removed	Objects/stringlib/unicode_format.h	72		Py_LOCAL_INLINE	todo	
 removed	Objects/tupleobject.c	387		_PyTuple_FromArray	modelled	bytesobj-tuple-construct
 removed	Objects/tupleobject.c	486		tuple_concat	modelled	bytesobj-tuple-concat
 removed	Objects/typeobject.c	11213		resolve_slotdups	todo	

@@ -1,0 +1,14 @@
+file	line	endline	name	signature	status	entry	note
+Objects/stringlib/fastsearch.h	49	104	stringlib_find_char	Py_LOCAL_INLINE(Py_ssize_t) STRINGLIB(find_char)(const STRINGLIB_CHAR* s, Py_ssize_t n, STRINGLIB_CHAR ch)	todo		
+Objects/stringlib/fastsearch.h	115	177	stringlib_rfind_char	Py_LOCAL_INLINE(Py_ssize_t) STRINGLIB(rfind_char)(const STRINGLIB_CHAR* s, Py_ssize_t n, STRINGLIB_CHAR ch)	todo		
+Objects/stringlib/fastsearch.h	196	246	stringlib__lex_search	Py_LOCAL_INLINE(Py_ssize_t) STRINGLIB(_lex_search)(const STRINGLIB_CHAR *needle, Py_ssize_t len_needle, Py_ssize_t *return_period, int invert_alphabet)	todo		
+Objects/stringlib/fastsearch.h	248	305	stringlib__factorize	Py_LOCAL_INLINE(Py_ssize_t) STRINGLIB(_factorize)(const STRINGLIB_CHAR *needle, Py_ssize_t len_needle, Py_ssize_t *return_period)	todo		
+Objects/stringlib/fastsearch.h	327	367	stringlib__preprocess	STRINGLIB(_preprocess)(const STRINGLIB_CHAR *needle, Py_ssize_t len_needle, STRINGLIB(prework) *p)	todo		changed-in-3.15: new function
+Objects/stringlib/fastsearch.h	370	502	stringlib__two_way	STRINGLIB(_two_way)(const STRINGLIB_CHAR *haystack, Py_ssize_t len_haystack, STRINGLIB(prework) *p)	todo		changed-in-3.15: new function
+Objects/stringlib/fastsearch.h	506	515	stringlib__two_way_find	STRINGLIB(_two_way_find)(const STRINGLIB_CHAR *haystack, Py_ssize_t len_haystack, const STRINGLIB_CHAR *needle, Py_ssize_t len_needle)	todo		changed-in-3.15: new function
+Objects/stringlib/fastsearch.h	519	543	stringlib__two_way_count	STRINGLIB(_two_way_count)(const STRINGLIB_CHAR *haystack, Py_ssize_t len_haystack, const STRINGLIB_CHAR *needle, Py_ssize_t len_needle, Py_ssize_t maxcount)	todo		changed-in-3.15: new function
+Objects/stringlib/fastsearch.h	557	613	stringlib_default_find	STRINGLIB(default_find)(const STRINGLIB_CHAR* s, Py_ssize_t n, const STRINGLIB_CHAR* p, Py_ssize_t m, Py_ssize_t maxcount, int mode)	todo		changed-in-3.15: new function
+Objects/stringlib/fastsearch.h	617	686	stringlib_adaptive_find	STRINGLIB(adaptive_find)(const STRINGLIB_CHAR* s, Py_ssize_t n, const STRINGLIB_CHAR* p, Py_ssize_t m, Py_ssize_t maxcount, int mode)	todo		changed-in-3.15: new function
+Objects/stringlib/fastsearch.h	690	736	stringlib_default_rfind	STRINGLIB(default_rfind)(const STRINGLIB_CHAR* s, Py_ssize_t n, const STRINGLIB_CHAR* p, Py_ssize_t m, Py_ssize_t maxcount, int mode)	todo		changed-in-3.15: new function
+Objects/stringlib/fastsearch.h	740	753	stringlib_count_char	STRINGLIB(count_char)(const STRINGLIB_CHAR *s, Py_ssize_t n, const STRINGLIB_CHAR p0, Py_ssize_t maxcount)	todo		changed-in-3.15: new function
+Objects/stringlib/fastsearch.h	757	769	stringlib_count_char_no_maxcount	STRINGLIB(count_char_no_maxcount)(const STRINGLIB_CHAR *s, Py_ssize_t n, const STRINGLIB_CHAR p0) /* A specialized function of count_char that does not cut off at a maximum. As a result, the compiler is able to vectorize the loop. */	todo		changed-in-3.15: new function
