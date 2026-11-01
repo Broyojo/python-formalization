@@ -328,6 +328,9 @@ def makeFunction (env : Env) (rt : Rt) (fr : Frame) (fuel : Nat) (n qual : Name)
     (code : Nat) : M Val := do
   let defaults ← evalList env rt fr fuel p.defaults
   let kwdefaults ← evalKw env rt fr fuel p.kwdefaults
+  let kwdefaultsObj ←
+    if kwdefaults.isEmpty then pure none
+    else some <$> alloc B.dict (.dict (kwdefaults.map fun (k, v) => (Val.str k, v)))
   let w ← getW
   let cellAddr : Option Addr := match fr.cell with
     | some (.obj c) => some c
@@ -337,8 +340,9 @@ def makeFunction (env : Env) (rt : Rt) (fr : Frame) (fuel : Nat) (n qual : Name)
     argcount := p.pos.length, posonly := p.posonly, kwonly := p.kwonly.length
     varnames := p.pos ++ p.kwonly ++ p.varargs.toList ++ p.varkw.toList
     hasVarargs := p.varargs.isSome, hasVarkw := p.varkw.isSome
-    defaults := defaults, kwdefaults := kwdefaults, code := code, classCell := cellAddr
-    defaultsSet := !defaults.isEmpty, kwdefaultsSet := !kwdefaults.isEmpty })
+    defaults := defaults, code := code, classCell := cellAddr
+    defaultsObj := if defaults.isEmpty then none else some (.tuple defaults)
+    kwdefaultsObj := kwdefaultsObj })
 
 /-- Instantiate what `raise X` names: `_PyErr_SetObject` with a class calls it. -/
 def raiseValue (rt : Rt) (v : Val) : M Val := do

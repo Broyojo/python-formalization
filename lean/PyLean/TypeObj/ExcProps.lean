@@ -1,5 +1,6 @@
 import PyLean.Registry
 import PyLean.TypeObj.ExcPropsGroup
+import PyLean.TypeObj.ExcPropsSplitTotal
 
 /-!
 The registry of `Objects/exceptions.c`. The properties live in `ExcPropsBase`, `ExcPropsRest`,
@@ -233,6 +234,15 @@ def excEntries : List Entry := [
   p "typeobj-exc-split-structure" ["exceptiongroup_split_recursive", "BaseExceptionGroup_split_impl"]
     "Under the same hypotheses each part has the shape specSplit gives: matching exceptions stay whole, a partly matching group is rebuilt around its matching children, and empty groups are dropped."
     "docs for BaseExceptionGroup.subgroup ('preserves the nesting structure')" ``SplitPreservesStructure ``splitPreservesStructure_proven,
+  p "typeobj-exc-split-computes-spec" ["exceptiongroup_split_recursive", "exceptiongroup_subset", "BaseExceptionGroup_split_impl", "BaseExceptionGroup_subgroup_impl"]
+    "Under SplitHyp and SplitTotalHyp (matcher, derive and __notes__ do not raise, derive returns a group, in worlds satisfying an invariant I) split and subgroup succeed and return exactly the parts of specSplit, so a function that only succeeds on a full match fails."
+    "docs for BaseExceptionGroup.split; exceptions.c:1326-1442" ``SplitComputesSpec ``splitComputesSpec_proven,
+  p "typeobj-exc-split-hyps-inhabited" []
+    "SplitHyp and SplitTotalHyp are met together by a concrete rt on a group that matches in part, with the real subsetCopyMeta and exceptiongroupSubset: the totality theorem is not vacuous."
+    "non-vacuity of typeobj-exc-split-computes-spec" ``SplitHypsInhabited ``splitHypsInhabited_proven,
+  p "typeobj-exc-split-failures" ["exceptiongroup_split_recursive", "exceptiongroup_subset"]
+    "A matcher that raises makes the recursion raise the same exception, and derive returning a non-group is the exact TypeError."
+    "exceptions.c:1183-1187, 1337-1339" ``SplitPropagatesFailures ``splitPropagatesFailures_proven,
   p "typeobj-exc-subgroup-is-split-match" ["exceptiongroup_split_recursive"]
     "Under the same hypotheses, the recursion with construct_rest false builds the shape of the match part of the recursion with construct_rest true, and no rest."
     "docs for BaseExceptionGroup.split" ``SubgroupEqualsSplitMatch ``subgroupEqualsSplitMatch_proven,

@@ -8,6 +8,7 @@ import PyLean.TypeObj.PropsList
 import PyLean.TypeObj.PropsDict
 import PyLean.TypeObj.PropsReduce
 import PyLean.TypeObj.PropsTotal
+import PyLean.TypeObj.PropsMethods
 
 /-!
 The data model: `Objects/typeobject.c`, `Objects/object.c`, `Objects/abstract.c`,
@@ -38,6 +39,10 @@ private def ty := "Objects/typeobject.c"
 private def ob := "Objects/object.c"
 private def ab := "Objects/abstract.c"
 private def ca := "Objects/call.c"
+private def co := "Objects/classobject.c"
+private def me := "Objects/methodobject.c"
+private def de := "Objects/descrobject.c"
+private def fu := "Objects/funcobject.c"
 
 def entries : List Entry := [
   -- C3
@@ -899,6 +904,49 @@ def entries : List Entry := [
   p "typeobj-super-skips" ty ["_super_lookup_descr", "do_super_lookup", "super_getattro"]
     "super looks strictly after __thisclass__ in the MRO of the object's type."
     "docs: super"
-    ``SuperSkipsThisClass ``superSkipsThisClass_proven ] ++ excEntries
+    ``SuperSkipsThisClass ``superSkipsThisClass_proven,
+  p "typeobj-method-eq-by-binding" co ["method_richcompare", "method_hash"]
+    "Binding one function to one object twice gives methods that compare equal and hash equal; bound to different objects they compare unequal."
+    "data model: __hash__, equal objects hash equal; classobject.c:210, :266"
+    ``BoundMethodEqualityByBinding ``boundMethodEqualityByBinding_proven,
+  p "typeobj-func-descr-get-binds" fu ["func_descr_get"]
+    "f.__get__(x) builds what types.MethodType(f, x) builds, and with no instance or None it returns f."
+    "funcobject.c:1279" ``MethodNewAgreesWithBinding ``methodNewAgreesWithBinding_proven,
+  p "typeobj-method-equal-hash-equal" co ["method_richcompare", "method_hash"]
+    "Two methods that compare equal hash equal, for any two functions that compare and hash equal."
+    "data model: __hash__" ``BoundMethodEqualHashEqual ``boundMethodEqualHashEqual_proven,
+  p "typeobj-method-compare-protocol" co ["method_richcompare"]
+    "A raising __eq__ of __func__ raises out of == and != even when the selves differ, != negates ==, and orderings or another type give NotImplemented."
+    "classobject.c:210" ``MethodCompareProtocol ``methodCompareProtocol_proven,
+  p "typeobj-method-hash-propagates" co ["method_hash"]
+    "An unhashable __func__ makes the method unhashable with the same exception."
+    "classobject.c:270-273" ``MethodHashPropagates ``methodHashPropagates_proven,
+  p "typeobj-method-new-binding" co ["method_new_impl"]
+    "types.MethodType(f, x) builds what f.__get__(x) builds when it accepts, and refuses a non-callable, then None, with the exact TypeError."
+    "classobject.c:180 against funcobject.c:1279" ``MethodNewAgreesWithBinding ``methodNewAgreesWithBinding_proven,
+  p "typeobj-cfunction-eq-by-binding" me ["meth_richcompare", "meth_hash"]
+    "Two builtin methods are equal exactly when they are one C function on one object, and then their hashes agree."
+    "methodobject.c:318, :343" ``CFunctionEqualityByBinding ``cFunctionEqualityByBinding_proven,
+  p "typeobj-method-get-binds" de ["method_get"]
+    "A method descriptor read through an instance builds a builtin method whose equality follows the C function and the instance."
+    "descrobject.c:138" ``CFunctionEqualityByBinding ``cFunctionEqualityByBinding_proven,
+  p "typeobj-wrapper-eq-by-binding" de ["wrapper_richcompare", "wrapper_hash", "wrapperdescr_get"]
+    "Two method-wrappers are equal exactly when they wrap one descriptor on one object, and then their hashes agree."
+    "descrobject.c:1320, :1346" ``WrapperEqualityByBinding ``wrapperEqualityByBinding_proven,
+  p "typeobj-descr-gets-share-guard" de ["descr_check", "method_get", "wrapperdescr_get"]
+    "With no instance the binding descriptors return themselves and do nothing; given an instance of the wrong type all four raise the same TypeError."
+    "descrobject.c:80" ``DescrGetsShareGuard ``descrGetsShareGuard_proven,
+  p "typeobj-reduce-getattr-method" co ["method___reduce___impl"]
+    "__reduce__ of a bound method applied to itself is getattr(__self__, __func__.__name__), and a raising __name__ raises."
+    "classobject.c:90" ``ReduceIsGetattr ``reduceIsGetattr_proven,
+  p "typeobj-reduce-getattr-cfunction" me ["meth_reduce"]
+    "__reduce__ of a builtin method applied to itself is getattr(__self__, name); with no __self__ it is the bare name."
+    "methodobject.c:192" ``ReduceIsGetattr ``reduceIsGetattr_proven,
+  p "typeobj-reduce-getattr-descr" de ["wrapper_reduce", "descr_reduce"]
+    "__reduce__ of a method-wrapper or a descriptor applied to itself is getattr of the object or class and the name."
+    "descrobject.c:630, :1369" ``ReduceIsGetattr ``reduceIsGetattr_proven,
+  p "typeobj-classmethod-bindings-agree" fu ["cm_descr_get"]
+    "cm.__get__(o), cm.__get__(o, type(o)) and cm.__get__(None, type(o)) build methods that compare equal."
+    "funcobject.c:1546" ``ClassmethodBindingsAgree ``classmethodBindingsAgree_proven ] ++ excEntries
 
 end PyLean.TypeObj
