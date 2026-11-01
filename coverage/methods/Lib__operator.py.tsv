@@ -1,65 +1,65 @@
 file	line	endline	name	signature	status	entry	note
-Lib/operator.py	27	29	lt	lt(a, b)	modelled	corelibs-operator-compare-default	
-Lib/operator.py	31	33	le	le(a, b)	modelled	corelibs-operator-compare-default	
-Lib/operator.py	35	37	eq	eq(a, b)	modelled	corelibs-operator-compare-default	
-Lib/operator.py	39	41	ne	ne(a, b)	modelled	corelibs-operator-compare-default	
-Lib/operator.py	43	45	ge	ge(a, b)	modelled	corelibs-operator-compare-default	
-Lib/operator.py	47	49	gt	gt(a, b)	modelled	corelibs-operator-compare-default	
-Lib/operator.py	53	55	not_	not_(a)	modelled	corelibs-operator-unary-truth	
-Lib/operator.py	57	59	truth	truth(a)	modelled	corelibs-operator-unary-truth	
-Lib/operator.py	61	63	is_	is_(a, b)	modelled	corelibs-operator-unary-truth	
-Lib/operator.py	65	67	is_not	is_not(a, b)	modelled	corelibs-operator-unary-truth	
-Lib/operator.py	69	71	is_none	is_none(a)	modelled	corelibs-operator-unary-truth	
-Lib/operator.py	73	75	is_not_none	is_not_none(a)	modelled	corelibs-operator-unary-truth	
-Lib/operator.py	79	81	abs	abs(a)	modelled	corelibs-operator-unary-truth	
-Lib/operator.py	83	85	add	add(a, b)	modelled	corelibs-operator-binary-dispatch	
+Lib/operator.py	27	29	lt	lt(a, b)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	31	33	le	le(a, b)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	35	37	eq	eq(a, b)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	39	41	ne	ne(a, b)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	43	45	ge	ge(a, b)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	47	49	gt	gt(a, b)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	53	55	not_	not_(a)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	57	59	truth	truth(a)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	61	63	is_	is_(a, b)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	65	67	is_not	is_not(a, b)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	69	71	is_none	is_none(a)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	73	75	is_not_none	is_not_none(a)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	79	81	abs	abs(a)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	83	85	add	add(a, b)	todo		withdrawn: thin or definitional entry
 Lib/operator.py	87	89	and_	and_(a, b)	modelled	corelibs-operator-binary-dispatch	
 Lib/operator.py	91	93	floordiv	floordiv(a, b)	modelled	corelibs-operator-binary-dispatch	
-Lib/operator.py	95	97	index	index(a)	modelled	corelibs-operator-index-twins	candidates:strsearch-find-str-bytes
-Lib/operator.py	99	101	inv	inv(a)	modelled	corelibs-operator-unary-truth	
+Lib/operator.py	95	97	index	index(a)	todo		withdrawn: thin or definitional entry; candidates:strsearch-find-str-bytes
+Lib/operator.py	99	101	inv	inv(a)	todo		withdrawn: thin or definitional entry
 Lib/operator.py	104	106	lshift	lshift(a, b)	modelled	corelibs-operator-binary-dispatch	
 Lib/operator.py	108	110	mod	mod(a, b)	modelled	corelibs-operator-binary-dispatch	
-Lib/operator.py	112	114	mul	mul(a, b)	modelled	corelibs-operator-binary-dispatch	
+Lib/operator.py	112	114	mul	mul(a, b)	todo		withdrawn: thin or definitional entry
 Lib/operator.py	116	118	matmul	matmul(a, b)	modelled	corelibs-operator-binary-dispatch	
-Lib/operator.py	120	122	neg	neg(a)	modelled	corelibs-operator-unary-truth	
+Lib/operator.py	120	122	neg	neg(a)	todo		withdrawn: thin or definitional entry
 Lib/operator.py	124	126	or_	or_(a, b)	modelled	corelibs-operator-binary-dispatch	
-Lib/operator.py	128	130	pos	pos(a)	modelled	corelibs-operator-unary-truth	
-Lib/operator.py	132	134	pow	pow(a, b)	modelled	mathint-pow-neg-exp-inverse	
+Lib/operator.py	128	130	pos	pos(a)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	132	134	pow	pow(a, b)	modelled	mathint-pow-neg-exp-inverse	withdrawn: thin or definitional entry
 Lib/operator.py	136	138	rshift	rshift(a, b)	modelled	corelibs-operator-binary-dispatch	
 Lib/operator.py	140	142	sub	sub(a, b)	modelled	corelibs-operator-binary-dispatch	
 Lib/operator.py	144	146	truediv	truediv(a, b)	modelled	corelibs-operator-binary-dispatch	
 Lib/operator.py	148	150	xor	xor(a, b)	modelled	corelibs-operator-binary-dispatch	
 Lib/operator.py	154	159	concat	concat(a, b)	modelled	corelibs-operator-concat-is-plus,corelibs-operator-concat-user-sequences	
-Lib/operator.py	161	163	contains	contains(a, b)	modelled	corelibs-operator-subscript-call	
+Lib/operator.py	161	163	contains	contains(a, b)	todo		withdrawn: thin or definitional entry
 Lib/operator.py	165	171	countOf	countOf(a, b)	modelled	corelibs-operator-count-index	
-Lib/operator.py	173	175	delitem	delitem(a, b)	modelled	corelibs-operator-subscript-call	
-Lib/operator.py	177	179	getitem	getitem(a, b)	modelled	corelibs-operator-subscript-call	
+Lib/operator.py	173	175	delitem	delitem(a, b)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	177	179	getitem	getitem(a, b)	todo		withdrawn: thin or definitional entry
 Lib/operator.py	181	187	indexOf	indexOf(a, b)	modelled	corelibs-operator-count-index	
-Lib/operator.py	189	191	setitem	setitem(a, b, c)	modelled	corelibs-operator-subscript-call	
+Lib/operator.py	189	191	setitem	setitem(a, b, c)	todo		withdrawn: thin or definitional entry
 Lib/operator.py	193	230	length_hint	length_hint(obj, default=0)	modelled	corelibs-operator-length-hint-twins	
-Lib/operator.py	234	236	call	call(obj, /, *args, **kwargs)	modelled	corelibs-operator-subscript-call	
-Lib/operator.py	250	266	attrgetter.__init__	__init__(self, attr, /, *attrs)	modelled	corelibs-operator-attrgetter-chain	
-Lib/operator.py	268	269	attrgetter.__call__	__call__(self, obj, /)	modelled	corelibs-operator-attrgetter-chain	
-Lib/operator.py	271	274	attrgetter.__repr__	__repr__(self)	modelled	corelibs-operator-attrgetter-chain	
-Lib/operator.py	276	277	attrgetter.__reduce__	__reduce__(self)	modelled	corelibs-operator-attrgetter-chain	
-Lib/operator.py	287	297	itemgetter.__init__	__init__(self, item, /, *items)	modelled	corelibs-operator-itemgetter-fast-path	
-Lib/operator.py	299	300	itemgetter.__call__	__call__(self, obj, /)	modelled	corelibs-operator-itemgetter-fast-path	
-Lib/operator.py	302	305	itemgetter.__repr__	__repr__(self)	modelled	corelibs-operator-itemgetter-fast-path	
-Lib/operator.py	307	308	itemgetter.__reduce__	__reduce__(self)	modelled	corelibs-operator-itemgetter-fast-path	
-Lib/operator.py	319	324	methodcaller.__init__	__init__(self, name, /, *args, **kwargs)	modelled	corelibs-operator-methodcaller-vectorcall	
-Lib/operator.py	326	327	methodcaller.__call__	__call__(self, obj, /)	modelled	corelibs-operator-methodcaller-vectorcall	
-Lib/operator.py	329	335	methodcaller.__repr__	__repr__(self)	modelled	corelibs-operator-methodcaller-vectorcall	
-Lib/operator.py	337	342	methodcaller.__reduce__	__reduce__(self)	modelled	corelibs-operator-methodcaller-vectorcall	
-Lib/operator.py	347	350	iadd	iadd(a, b)	modelled	corelibs-operator-inplace-fallback	
+Lib/operator.py	234	236	call	call(obj, /, *args, **kwargs)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	250	266	attrgetter.__init__	__init__(self, attr, /, *attrs)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	268	269	attrgetter.__call__	__call__(self, obj, /)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	271	274	attrgetter.__repr__	__repr__(self)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	276	277	attrgetter.__reduce__	__reduce__(self)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	287	297	itemgetter.__init__	__init__(self, item, /, *items)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	299	300	itemgetter.__call__	__call__(self, obj, /)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	302	305	itemgetter.__repr__	__repr__(self)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	307	308	itemgetter.__reduce__	__reduce__(self)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	319	324	methodcaller.__init__	__init__(self, name, /, *args, **kwargs)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	326	327	methodcaller.__call__	__call__(self, obj, /)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	329	335	methodcaller.__repr__	__repr__(self)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	337	342	methodcaller.__reduce__	__reduce__(self)	todo		withdrawn: thin or definitional entry
+Lib/operator.py	347	350	iadd	iadd(a, b)	todo		withdrawn: thin or definitional entry
 Lib/operator.py	352	355	iand	iand(a, b)	modelled	corelibs-operator-inplace-fallback	
 Lib/operator.py	357	363	iconcat	iconcat(a, b)	modelled	corelibs-operator-concat-user-sequences	
 Lib/operator.py	365	368	ifloordiv	ifloordiv(a, b)	modelled	corelibs-operator-inplace-fallback	
 Lib/operator.py	370	373	ilshift	ilshift(a, b)	modelled	corelibs-operator-inplace-fallback	
 Lib/operator.py	375	378	imod	imod(a, b)	modelled	corelibs-operator-inplace-fallback	
-Lib/operator.py	380	383	imul	imul(a, b)	modelled	corelibs-operator-inplace-fallback	
+Lib/operator.py	380	383	imul	imul(a, b)	todo		withdrawn: thin or definitional entry
 Lib/operator.py	385	388	imatmul	imatmul(a, b)	modelled	corelibs-operator-inplace-fallback	
 Lib/operator.py	390	393	ior	ior(a, b)	modelled	corelibs-operator-inplace-fallback	
-Lib/operator.py	395	398	ipow	ipow(a, b)	modelled	corelibs-operator-inplace-fallback	
+Lib/operator.py	395	398	ipow	ipow(a, b)	todo		withdrawn: thin or definitional entry
 Lib/operator.py	400	403	irshift	irshift(a, b)	modelled	corelibs-operator-inplace-fallback	
 Lib/operator.py	405	408	isub	isub(a, b)	modelled	corelibs-operator-inplace-fallback	
 Lib/operator.py	410	413	itruediv	itruediv(a, b)	modelled	corelibs-operator-inplace-fallback	

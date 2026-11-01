@@ -113,10 +113,7 @@ def canon (w : World) : Nat → Val → String
         | some (.boxed x) => s!"<{tn} {canon w fuel x}>"
         | some (.func f) => s!"<function {f.qualname}>"
         | some (.bound f s) => s!"<method {canon w fuel f} of {canon w fuel s}>"
-        | some (.builtin b _) =>
-          match b with
-          | .stub n => s!"<builtin {n}>"
-          | _ => "<builtin>"
+        | some (.builtin _ _) => "<builtin>"
         | some (.exc e) =>
           s!"<{tn} " ++ "(" ++ ", ".intercalate (e.args.map (canon w fuel)) ++ ")>"
         | _ => let _ := a; s!"<{tn}>"
@@ -227,7 +224,8 @@ abbrev Flow := Frame × Option Val
 /-- Text of an exception for probes: `type(e).__name__` and `str(e)`. -/
 def errText (rt : Rt) (e : PyErr) : M String := do
   match e with
-  | .fuel => pure "!MODEL-GAP"
+  | .fuel => pure "!MODEL-FUEL"
+  | .gap site => pure s!"!MODEL-GAP@{site}"
   | .exc cls msg val =>
     let w ← getW
     match val with
@@ -289,9 +287,16 @@ mutual
         let xs ← evalList env rt fr fuel es
         alloc B.list (.list xs)
       | .dictE es => do
-        let ks ← evalList env rt fr fuel (es.map (·.1))
-        let vs ← evalList env rt fr fuel (es.map (·.2))
-        alloc B.dict (.dict ((ks.zip vs).foldl (fun d (k, v) => dictSetEntry d k v) []))
+        -- `key, value, key, value`, then `BUILD_MAP`, which stores them in order.
+        let xs ← evalList env rt fr fuel (es.flatMap fun (k, v) => [k, v])
+        let d ← allocCell (.val { cls := B.dict, body := .dict [] })
+        let rec store : List Val → M Unit
+          | k :: v :: rest => do
+            dictSetAt rt d k v
+            store rest
+          | _ => pure ()
+        store xs
+        pure (.obj d)
       | .sub a k => do
         let x ← evalExpr env rt fr fuel a
         let y ← evalExpr env rt fr fuel k
@@ -523,7 +528,7 @@ mutual
       if isclass then
         match meta0 with
         | .obj m => .obj <$> calculateMetaclass m basesV
-        | _ => unmodelled
+        | _ => gap%
       else pure meta0
     let prep ← rt.getOptionalAttr metaV "__prepare__"
     let ns ← match prep with
@@ -605,7 +610,8 @@ def runScenario (codes : Array (List Stmt)) (main : List Stmt) : List String :=
   | .ok _ w => w.trace.reverse
   | .err e w =>
     let tail := match e with
-      | .fuel => "MODEL-GAP"
+      | .fuel => "MODEL-FUEL"
+      | .gap site => s!"MODEL-GAP@{site}"
       | .exc c m _ => s!"UNCAUGHT {tpName w c}: {m}"
     (tail :: w.trace).reverse
 

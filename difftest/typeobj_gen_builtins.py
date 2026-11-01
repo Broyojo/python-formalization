@@ -103,14 +103,15 @@ def kind(tname, key, v):
     if isinstance(v, staticmethod):
         return ".stat"
     if isinstance(v, str):
-        return ".doc"
+        return f"(.docStr {lean_str(v)})"
     if v is None:
         return ".noneV"
     return ".other"
 
 
 def lean_str(s):
-    return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    s = s.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\t", "\\t")
+    return '"' + s + '"'
 
 
 def emit(addr, name, t, index):
@@ -134,7 +135,7 @@ def main():
     print('namespace PyLean.TypeObj\n')
     print('''/-- The kind of a `tp_dict` value of a builtin type. -/
 inductive EntryKind where
-  | w | m | c | new | noneV | stat | doc | other
+  | w | m | c | new | noneV | stat | docStr (s : String) | other
   | g (canSet : Bool)
   | mem (readonly : Bool)
   deriving Repr, Inhabited, DecidableEq

@@ -1,4 +1,4 @@
 file	line	endline	name	signature	status	entry	note
 Objects/stringlib/localeutil.h	11	16	GroupGenerator_init	GroupGenerator_init(GroupGenerator *self, const char *grouping)	modelled	unicodeobj-format-group-loop	
-Objects/stringlib/localeutil.h	21	40	GroupGenerator_next	GroupGenerator_next(GroupGenerator *self)	modelled	unicodeobj-format-group-loop	
-Objects/stringlib/localeutil.h	46	97	InsertThousandsGrouping_fill	InsertThousandsGrouping_fill(_PyUnicodeWriter *writer, Py_ssize_t *buffer_pos, PyObject *digits, Py_ssize_t *digits_pos, Py_ssize_t n_chars, Py_ssize_t n_zeros, PyObject *thousands_sep, Py_ssize_t thousands_sep_len, Py_UCS4 *maxchar, int forward)	modelled	unicodeobj-format-group-loop	
+Objects/stringlib/localeutil.h	21	40	GroupGenerator_next	GroupGenerator_next(GroupGenerator *self)	modelled	unicodeobj-format-group-loop,unicodeobj-format-float-grouping	
+Objects/stringlib/localeutil.h	46	97	InsertThousandsGrouping_fill	InsertThousandsGrouping_fill(_PyUnicodeWriter *writer, Py_ssize_t *buffer_pos, PyObject *digits, Py_ssize_t *digits_pos, Py_ssize_t n_chars, Py_ssize_t n_zeros, PyObject *thousands_sep, Py_ssize_t thousands_sep_len, Py_UCS4 *maxchar, int forward)	modelled	unicodeobj-format-group-loop,unicodeobj-format-float-grouping	

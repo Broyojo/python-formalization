@@ -44,6 +44,58 @@ def float_bits(x):
     return int.from_bytes(struct.pack("<d", x), "little")
 
 
+STRUCT_EXCS = {"ValueError": ValueError, "TypeError": TypeError, "OverflowError": OverflowError,
+               "ZeroDivisionError": ZeroDivisionError, "OSError": OSError}
+
+
+def s_res(r, conv=lambda x: x):
+    def call(self, *a):
+        if "raise" in r:
+            raise STRUCT_EXCS[r["raise"][0]](r["raise"][1])
+        return conv(r["ok"])
+    return call
+
+
+def struct_obj(v):
+    ns = {"__bool__": s_res(v["truth"])}
+    if v.get("index") is not None:
+        ns["__index__"] = s_res(v["index"])
+    if v.get("float") is not None:
+        ns["__float__"] = s_res(v["float"], bits_float)
+    if v.get("cplx") is not None:
+        ns["__complex__"] = s_res(v["cplx"], lambda x: complex(bits_float(x[0]), bits_float(x[1])))
+    return type("O", (), ns)()
+
+
+class RaisingBuffer:
+    def __init__(self, x):
+        self.x = x
+
+    def __buffer__(self, flags):
+        raise STRUCT_EXCS[self.x[0]](self.x[1])
+
+
+RaisingBuffer.__name__ = RaisingBuffer.__qualname__ = "BF"
+
+
+def buf_dec(b):
+    if "bytes" in b:
+        return bytes(b["bytes"])
+    if "ba" in b:
+        return bytearray(b["ba"])
+    if "raises" in b:
+        return RaisingBuffer(b["raises"])
+    return {"int": 1, "list": [], "NoneType": None}[b["ty"]]
+
+
+def off_dec(o):
+    if "i" in o:
+        return o["i"]
+    if "idx" in o:
+        return type("O", (), {"__index__": s_res(o["idx"])})()
+    return {"str": "x", "list": [], "NoneType": None}[o["ty"]]
+
+
 def sv_dec(a):
     t, v = a["t"], a["v"]
     if t == "i":
@@ -58,6 +110,8 @@ def sv_dec(a):
         return bits_float(v)
     if t == "c":
         return complex(bits_float(v[0]), bits_float(v[1]))
+    if t == "obj":
+        return struct_obj(v)
     return "x" if v else ""
 
 
@@ -75,7 +129,20 @@ def sv_enc(x):
     raise TypeError(type(x))
 
 
+class RaisingHash:
+    def __init__(self, x):
+        self.x = x
+
+    def __hash__(self):
+        raise STRUCT_EXCS[self.x[0]](self.x[1])
+
+
+RaisingHash.__name__ = RaisingHash.__qualname__ = "H"
+
+
 def fmt_dec(f):
+    if "hr" in f:
+        return RaisingHash(f["hr"])
     if "s" in f:
         return "".join(map(chr, f["s"]))
     if "b" in f:
@@ -159,6 +226,16 @@ class StructArea:
         return {"t": "f", "v": r.choice(cls.FLOATS)}
 
     @classmethod
+    def obj_arg(cls, r, code):
+        x = lambda: {"raise": [r.choice(["ValueError", "TypeError", "OverflowError", "ZeroDivisionError"]), "boom"]}
+        ok = lambda v: {"ok": v}
+        return {"t": "obj", "v": {
+            "truth": r.choice([ok(True), ok(False), x()]),
+            "index": r.choice([None, ok(r.choice([0, 1, -1, 300, 2**70])), x()]),
+            "float": r.choice([None, None, ok(r.choice(cls.FLOATS)), x()]),
+            "cplx": r.choice([None, None, ok([r.choice(cls.FLOATS), r.choice(cls.FLOATS)]), x()])}}
+
+    @classmethod
     def args_for(cls, r, fmt):
         try:
             s = struct.Struct(fmt_dec(fmt))
@@ -178,6 +255,8 @@ class StructArea:
             out.extend(cls.value(r, c) for _ in range(n))
         if r.random() < 0.05:
             out = out[:-1] if out and r.random() < 0.5 else out + [{"t": "i", "v": 0}]
+        if out and r.random() < 0.25:
+            out[r.randrange(len(out))] = cls.obj_arg(r, "")
         return out
 
     @classmethod
@@ -195,17 +274,68 @@ class StructArea:
     @classmethod
     def gen(cls, r):
         fn = r.choice(["calcsize", "info", "pack", "pack", "pack", "Struct.pack", "unpack", "unpack",
-                       "unpack_from", "iter_unpack", "iter_hint", "pack_into", "uninit"])
+                       "unpack_from", "iter_unpack", "iter_hint", "pack_into", "uninit", "pack_into2", "unpack2",
+                       "unpack_from2", "iter2", "iter2", "mod2"])
         fmt = cls.fmt(r)
         if r.random() < 0.01:
             fmt = r.choice([{"o": "int", "h": True}, {"o": "list", "h": False}, {"o": "float", "h": True},
-                            {"o": "NoneType", "h": True}, {"s": [0xff]}, {"b": [0xff]}, {"s": [0x105, 0x69]}])
+                            {"o": "NoneType", "h": True}, {"s": [0xff]}, {"b": [0xff]}, {"s": [0x105, 0x69]},
+                            {"o": "H", "hr": ["ValueError", "boom"]}, {"o": "H", "hr": ["TypeError", "boom"]}])
         try:
             if struct.calcsize(fmt_dec(fmt)) > 4096:  # would only test the allocator
                 fn = r.choice(["calcsize", "info"])
         except Exception:
             pass
         c = {"mod": "textlibs", "fn": "struct." + fn, "fmt": fmt}
+        if fn in ("pack_into2", "unpack2", "unpack_from2", "iter2", "mod2"):
+            try:
+                n = struct.calcsize(fmt_dec(fmt))
+            except Exception:
+                n = 0
+            if n > 4096:
+                c["fn"] = "struct.calcsize"
+                return c
+            k = r.choice([n, n, n, 2 * n, n + 1, max(n - 1, 0), 0])
+            blob = [r.randrange(256) for _ in range(k)]
+            bad = r.choice([{"ty": "int"}, {"ty": "list"}, {"raises": ["ValueError", "boom"], "ty": "BF"},
+                            {"raises": ["TypeError", "boom"], "ty": "BF"}])
+            if fn == "pack_into2":
+                c["n"] = r.choice([0, 1, 2, 2, 2, 2, 2, 2])
+                c["args"] = cls.args_for(r, fmt)
+                c["buf"] = r.choice([{"ba": blob}, {"ba": blob}, {"ba": blob}, {"bytes": blob}, bad])
+                c["off"] = r.choice([{"i": 0}, {"i": 0}, {"idx": {"ok": 0}}, {"idx": {"ok": 1}}, {"idx": {"raise": ["ValueError", "boom"]}},
+                                     {"idx": {"ok": 2**70}}, {"ty": "str"}, {"i": -1}])
+                if c["n"] != 2:
+                    c.pop("args")
+                    c["args"] = []
+                return c
+            c["buf"] = r.choice([{"bytes": blob}, {"bytes": blob}, {"ba": blob}, bad])
+            if fn == "mod2":
+                c["op"] = r.choice(["unpack", "unpack", "unpack_from", "iter", "pack0", "pack_into0"])
+                c["off"] = r.choice([{"i": 0}, {"idx": {"ok": 0}}, {"idx": {"raise": ["ValueError", "boom"]}}, {"ty": "str"}])
+            if fn == "unpack_from2":
+                c["off"] = r.choice([{"i": 0}, {"idx": {"ok": 0}}, {"idx": {"ok": 1}}, {"idx": {"raise": ["ValueError", "boom"]}},
+                                     {"idx": {"ok": 2**70}}, {"ty": "str"}, {"i": -1}])
+            if fn == "iter2":
+                # re-init only while the next read stays inside the buffer: anything else is undefined
+                idx, size, ops = 0, n, []
+                for _ in range(r.choice([1, 2, 3, 5, 8])):
+                    roll = r.random()
+                    if roll < 0.55:
+                        if size and idx < k and (idx + size > k or k % n if n else True):
+                            break
+                        ops.append("next")
+                        idx += size
+                    elif roll < 0.8:
+                        if size == 0:
+                            break
+                        ops.append("len")
+                    else:
+                        g = r.choice(["b", "h", "bb", "i", "0s", "2b"])
+                        ops.append({"s": [ord(x) for x in g]})
+                        size = struct.calcsize(g)
+                c["ops"] = ops
+            return c
         if fn in ("pack", "Struct.pack", "pack_into"):
             c["args"] = cls.args_for(r, fmt)
         if fn in ("unpack", "unpack_from", "iter_unpack", "iter_hint", "pack_into"):
@@ -225,6 +355,59 @@ class StructArea:
     @classmethod
     def run(cls, c):
         fn = c["fn"][len("struct."):]
+        if fn == "pack_into2":
+            def body():
+                s = struct.Struct(fmt_dec(c["fmt"]))
+                b = buf_dec(c["buf"]) if c["n"] else None
+                a = [sv_dec(x) for x in c["args"]]
+                if c["n"] == 0:
+                    s.pack_into()
+                elif c["n"] == 1:
+                    s.pack_into(b)
+                else:
+                    s.pack_into(b, off_dec(c["off"]), *a)
+                return list(b)
+            return common.py_result(body)
+        if fn == "mod2":
+            def body():
+                op = c["op"]
+                if op == "pack0":
+                    return list(struct.pack())
+                if op == "pack_into0":
+                    return struct.pack_into()
+                f = fmt_dec(c["fmt"])
+                b = buf_dec(c["buf"])
+                if op == "unpack":
+                    return [sv_enc(x) for x in struct.unpack(f, b)]
+                if op == "unpack_from":
+                    return [sv_enc(x) for x in struct.unpack_from(f, b, off_dec(c["off"]))]
+                struct.iter_unpack(f, b)
+                return None
+            return common.py_result(body)
+        if fn == "unpack2":
+            return common.py_result(lambda: [sv_enc(x) for x in struct.Struct(fmt_dec(c["fmt"])).unpack(buf_dec(c["buf"]))])
+        if fn == "unpack_from2":
+            return common.py_result(lambda: [sv_enc(x) for x in struct.Struct(fmt_dec(c["fmt"])).unpack_from(buf_dec(c["buf"]), off_dec(c["off"]))])
+        if fn == "iter2":
+            def body():
+                s = struct.Struct(fmt_dec(c["fmt"]))
+                it = s.iter_unpack(buf_dec(c["buf"]))
+                out = []
+                for op in c["ops"]:
+                    if op == "next":
+                        try:
+                            out.append({"ok": [sv_enc(x) for x in next(it)]})
+                        except StopIteration:
+                            out.append({"ok": []})
+                            out.append(None)
+                    elif op == "len":
+                        out.append({"ok": it.__length_hint__()})
+                    else:
+                        with warnings.catch_warnings():
+                            warnings.simplefilter("ignore")
+                            s.__init__("".join(map(chr, op["s"])))
+                return out
+            return common.py_result(body)
         if fn == "uninit":
             s = struct.Struct.__new__(struct.Struct)
             return {"ok": {"size": s.size, "pack": common.py_result(lambda: list(s.pack())),
@@ -302,7 +485,78 @@ def data_dec(d):
     """{"b": [...]} is bytes, {"s": [...]} is a str by code points."""
     if d is None:
         return None
+    if "nb" in d:
+        return {"int": 1, "list": [], "NoneType": None, "float": 1.5}[d["nb"]]
+    if "rz" in d:
+        return RaisingBuffer(d["rz"])
     return bytes(d["b"]) if "b" in d else "".join(map(chr, d["s"]))
+
+
+def flag_dec(f):
+    if isinstance(f, bool):
+        return f
+    return type("O", (), {"__bool__": s_res(f)})()
+
+
+def int_dec(f):
+    if isinstance(f, int):
+        return f
+    return type("O", (), {"__index__": s_res(f)})()
+
+
+def bad_data(r):
+    return r.choice([{"nb": "int"}, {"nb": "list"}, {"nb": "NoneType"}, {"rz": ["ValueError", "boom"]}, {"rz": ["TypeError", "boom"]},
+                     {"s": [97, 98]}, {"s": [233]}, {"b": [97, 98, 99, 100]}])
+
+
+def file_read(c):
+    class F:
+        def __init__(self):
+            self.d, self.pos, self.i = bytes(c.get("d", [])), 0, 0
+            self.lines = list(c.get("lines", []))
+            self.written, self.w = [], 0
+
+        def read(self, n):
+            st = c["reads"][self.i] if self.i < len(c["reads"]) else None
+            self.i += 1
+            if st is not None and "raise" in st:
+                raise STRUCT_EXCS[st["raise"][0]](st["raise"][1])
+            m = n if st is None else min(st["give"], n)
+            out = self.d[self.pos:self.pos + m]
+            self.pos += len(out)
+            return out
+
+        def readline(self):
+            if not self.lines:
+                return b""
+            l = self.lines.pop(0)
+            if isinstance(l, dict):
+                raise STRUCT_EXCS[l["raise"][0]](l["raise"][1])
+            return bytes(l)
+
+        def write(self, b):
+            self.written.append(list(b))
+            if self.w < len(c["writes"]):
+                x = c["writes"][self.w]
+                self.w += 1
+                if x is not None:
+                    raise STRUCT_EXCS[x["raise"][0]](x["raise"][1])
+
+    return F()
+
+
+def r_hex(c):
+    g = int_dec(c["group"])
+    sep = c.get("sep")
+    if sep is None:
+        return lambda x: binascii.hexlify(x, bytes_per_sep=g)
+    if "len" in sep:
+        o = [0] * sep["len"]
+    elif "raise" in sep:
+        o = type("O", (), {"__len__": s_res(sep)})()
+    else:
+        o = data_dec(sep)
+    return lambda x: binascii.b2a_hex(x, o, g)
 
 
 class Codec:
@@ -353,8 +607,24 @@ class BinasciiArea(Codec):
         d = cls.raw(r)
         fn = r.choice(["a2b_base64", "a2b_base64", "a2b_base64", "b2a_base64", "a2b_hex", "b2a_hex",
                        "a2b_uu", "a2b_uu", "a2b_uu", "b2a_uu", "crc_hqx", "a2b_qp", "a2b_qp", "b2a_qp",
-                       "b2a_qp", "b2a_qp", "qp_bound", "qp_bound"])
+                       "b2a_qp", "b2a_qp", "qp_bound", "qp_bound", "api", "flag", "hex", "hex"])
         c = {"mod": "textlibs", "fn": "binascii." + fn}
+        if fn == "api":
+            c["op"] = r.choice(["b2a_base64", "a2b_base64", "a2b_hex", "a2b_uu", "b2a_uu", "crc_hqx", "a2b_qp", "b2a_qp"])
+            c["d"] = bad_data(r)
+            return c
+        if fn == "flag":
+            c["op"] = r.choice(["b2a_base64", "a2b_base64", "b2a_uu", "a2b_qp", "b2a_qp1", "b2a_qp2", "b2a_qp3"])
+            c["d"] = {"b": [97, 98, 99, 100]} if r.random() < 0.8 else bad_data(r)
+            c["f"] = r.choice([True, False, {"raise": ["ValueError", "boom"]}, {"raise": ["TypeError", "boom"]}])
+            return c
+        if fn == "hex":
+            c["d"] = {"b": d} if r.random() < 0.9 else bad_data(r)
+            c["sep"] = r.choice([None, {"s": [58]}, {"b": [58]}, {"s": [97]}, {"s": [233]}, {"s": [0x20ac]}, {"b": [200]}, {"s": []}, {"b": []},
+                                 {"s": [58, 59]}, {"b": [58, 59]}, {"len": 1}, {"len": 2}, {"len": 0}, {"raise": ["ValueError", "boom"]}])
+            c["group"] = r.choice([0, 1, 2, 3, 4, 5, -1, -2, -3, -4, 7, 100, -100, 2**31 - 1, -2**31, 2**31, -2**31 - 1, 2**70,
+                                   {"raise": ["ValueError", "boom"]}])
+            return c
         if fn in ("b2a_qp", "qp_bound"):
             c.update(cls.qp_input(r))
             return c
@@ -417,6 +687,30 @@ class BinasciiArea(Codec):
         fn = c["fn"].split(".")[1]
 
         def body():
+            if fn == "api":
+                x = data_dec(c["d"])
+                op = c["op"]
+                if op == "crc_hqx":
+                    return [binascii.crc_hqx(x, 0)]
+                if op == "b2a_qp":
+                    return list(binascii.b2a_qp(x))
+                return list(getattr(binascii, op)(x))
+            if fn == "flag":
+                x, f, op = data_dec(c["d"]), flag_dec(c["f"]), c["op"]
+                if op == "b2a_base64":
+                    return list(binascii.b2a_base64(x, newline=f))
+                if op == "a2b_base64":
+                    return list(binascii.a2b_base64(x, strict_mode=f))
+                if op == "b2a_uu":
+                    return list(binascii.b2a_uu(x, backtick=f))
+                if op == "a2b_qp":
+                    return list(binascii.a2b_qp(x, header=f))
+                k = {"b2a_qp1": "quotetabs", "b2a_qp2": "istext", "b2a_qp3": "header"}[op]
+                return list(binascii.b2a_qp(x, **{k: f}))
+            if fn == "hex":
+                x = data_dec(c["d"])
+                f = r_hex(c)
+                return list(f(x))
             if fn == "qp_bound":
                 return True
             if fn == "a2b_uu":
@@ -450,8 +744,8 @@ class Base64Area(Codec):
                        "b32hexencode", "b32decode", "b32decode", "b32decode", "b32hexdecode",
                        "b32hexdecode", "b16encode", "b16decode", "b16decode", "a85encode", "a85decode",
                        "a85decode", "b85encode", "b85decode", "b85decode", "z85encode", "z85decode", "z85decode",
-                       "encodebytes", "decodebytes", "encode", "decode", "standard_b64encode",
-                       "standard_b64decode", "input_check", "main_select"])
+                       "encodebytes", "decodebytes", "encode_file", "encode_file", "decode_file", "decode_file",
+                       "standard_b64encode", "standard_b64decode", "input_check", "main_select", "any", "any"])
         c = {"mod": "textlibs", "fn": "base64." + fn}
         raw = bytes(d)
         if r.random() < 0.3:
@@ -485,10 +779,35 @@ class Base64Area(Codec):
             b = list(base64.z85encode(raw))
             c["d"] = cls.wrap(r, b if r.random() < 0.4 else cls.corrupt(r, b, b";_`|~#%0 "))
             return c
-        if fn in ("encodebytes", "encode"):
+        if fn == "any":
+            c["name"] = r.choice(["b64encode", "standard_b64encode", "urlsafe_b64encode", "b32encode", "b32hexencode", "b16encode",
+                                  "a85encode", "b85encode", "z85encode", "encodebytes", "decodebytes"])
+            c["d"] = bad_data(r)
+            return c
+        if fn == "encode_file":
+            c["d"] = [r.randrange(256) for _ in range(r.choice([0, 1, 10, 56, 57, 58, 113, 114, 115, 200]))]
+            c["reads"] = []
+            for _ in range(r.choice([0, 0, 1, 2, 4, 8])):
+                c["reads"].append(r.choice([{"give": r.choice([0, 1, 2, 10, 56, 57, 100])}, {"give": 3}, {"give": 20},
+                                            {"raise": ["ValueError", "boom"]}]))
+            c["writes"] = [r.choice([None, None, None, {"raise": ["OSError", "boom"]}]) for _ in range(r.choice([0, 0, 1, 2]))]
+            return c
+        if fn == "decode_file":
+            t = base64.encodebytes(bytes(r.randrange(256) for _ in range(r.choice([0, 3, 57, 60, 120]))))
+            lines = [list(x) for x in t.splitlines(True)]
+            if r.random() < 0.3 and lines:
+                lines[r.randrange(len(lines))] = [33, 61]
+            if r.random() < 0.2:
+                lines.insert(r.randint(0, len(lines)), {"raise": ["ValueError", "boom"]})
+            if r.random() < 0.15:
+                lines.insert(r.randint(0, len(lines)), [])
+            c["lines"] = lines
+            c["writes"] = [r.choice([None, None, {"raise": ["OSError", "boom"]}]) for _ in range(r.choice([0, 0, 1, 2]))]
+            return c
+        if fn == "encodebytes":
             c["d"] = [r.randrange(256) for _ in range(r.choice([0, 1, 56, 57, 58, 113, 114, 115, 200]))]
             return c
-        if fn in ("decodebytes", "decode"):
+        if fn == "decodebytes":
             t = base64.encodebytes(bytes(r.randrange(256) for _ in range(r.choice([0, 3, 57, 60, 120]))))
             c["d"] = list(t) if r.random() < 0.5 else cls.corrupt(r, t, cls.B64 + b"\n")
             c["d"] = [x if x < 256 else 0 for x in c["d"]]
@@ -551,6 +870,16 @@ class Base64Area(Codec):
                 return _type_check_probe(c)
             if fn == "main_select":
                 return _main_probe(c["flags"])
+            if fn == "any":
+                return list(getattr(base64, c["name"])(data_dec(c["d"])))
+            if fn in ("encode_file", "decode_file"):
+                f = file_read(c)
+                try:
+                    (base64.encode if fn == "encode_file" else base64.decode)(f, f)
+                    res = {"ok": None}
+                except Exception as e:
+                    res = {"exc": type(e).__name__, "msg": str(e)}
+                return {"written": f.written, "res": res}
             f = getattr(base64, fn)
             if fn == "a85encode":
                 return list(f(bytes(c["d"]), foldspaces=c["foldspaces"], wrapcol=c["wrapcol"], pad=c["pad"],
@@ -564,10 +893,6 @@ class Base64Area(Codec):
                 return list(f(data_dec(c["d"])))
             if fn == "decodebytes":
                 return list(f(bytes(c["d"])))
-            if fn in ("encode", "decode"):
-                out = io.BytesIO()
-                f(io.BytesIO(bytes(c["d"])), out)
-                return list(out.getvalue())
             if fn == "b64decode":
                 return list(f(data_dec(c["d"]), altchars=data_dec(c.get("alt")), validate=c["validate"]))
             if fn == "urlsafe_b64decode":
@@ -615,6 +940,8 @@ def _main_probe(flags):
 # ---- csv -------------------------------------------------------------------
 
 import csv
+import _csv
+import json
 
 
 def cps(t):
@@ -633,24 +960,229 @@ class NotNum:
         return self.t
 
 
-def csv_obj(j):
+class CsvCtx:
+    reader = None
+    writer = None
+
+
+EXCS = {"ValueError": ValueError, "TypeError": TypeError, "ZeroDivisionError": ZeroDivisionError,
+        "AttributeError": AttributeError, "OSError": OSError}
+
+
+def mk_exc(x):
+    return EXCS[x[0]](x[1])
+
+
+def run_eff(e, ctx):
+    try:
+        if e["e"] == "advance":
+            next(ctx.reader)
+        elif e["e"] == "limit":
+            csv.field_size_limit(csv_obj(e["n"], ctx))
+        else:
+            ctx.writer.writerow(csv_obj(e["row"], ctx))
+    except Exception:
+        pass
+
+
+class Scripted:
+    def __init__(self, steps, ctx):
+        self.steps, self.ctx, self.i = steps, ctx, 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        while self.i < len(self.steps):
+            st = self.steps[self.i]
+            self.i += 1
+            if "s" in st:
+                return txt(st["s"])
+            k = st.get("k")
+            if k == "eff":
+                run_eff(st["e"], self.ctx)
+            elif k == "ret":
+                return csv_obj(st["o"], self.ctx)
+            elif k == "raise":
+                raise mk_exc(st["x"])
+            elif k == "stop":
+                raise StopIteration
+            else:
+                return 7
+        raise StopIteration
+
+
+def key_hash(k):
+    if k is None:
+        return 12345
+    if "hash" in k:
+        raise mk_exc(k["hash"])
+    if "eq" in k:
+        return hash("excel")
+    return hash(txt(k["k"]))
+
+
+def key_eq(k, other):
+    if k is None:
+        return False
+    if "eq" in k:
+        raise mk_exc(k["eq"])
+    return isinstance(other, str) and txt(k["k"]) == other
+
+
+class Other:
+    __module__ = "m"
+
+    def __init__(self, spec, ctx):
+        self.__dict__["_spec"], self.__dict__["_ctx"] = spec, ctx
+
+    def __bool__(self):
+        t = self._spec["truth"]
+        if "raise" in t:
+            raise mk_exc(t["raise"])
+        return t["ok"]
+
+    def __hash__(self):
+        return key_hash(self._spec["key"])
+
+    def __eq__(self, other):
+        return key_eq(self._spec["key"], other)
+
+    def __getattr__(self, n):
+        for k, v in self._spec["attrs"]:
+            if k == n:
+                if "raise" in v:
+                    raise mk_exc(v["raise"])
+                return csv_obj(v["ok"], self._ctx)
+        raise AttributeError(n)
+
+    def __str__(self):
+        st = self._spec["str"]
+        for e in st["effs"]:
+            run_eff(e, self._ctx)
+        if "raise" in st["res"]:
+            raise mk_exc(st["res"]["raise"])
+        return txt(st["res"]["ok"])
+
+    def __iter__(self):
+        it = self._spec["iter"]
+        if "raise" in it:
+            raise mk_exc(it["raise"])
+        return Scripted(it["ok"], self._ctx)
+
+
+class OtherNum(Other):
+    def __float__(self):
+        return 1.0
+
+
+OtherNum.__qualname__ = OtherNum.__name__ = "Other"
+OtherNum.__module__ = "m"
+
+
+class Sub(str):
+    __module__ = "m"
+
+    def __new__(cls, t, key):
+        o = super().__new__(cls, t)
+        o.key = key
+        return o
+
+    def __hash__(self):
+        return key_hash(self.key)
+
+    def __eq__(self, other):
+        return key_eq(self.key, other)
+
+
+class WriteFn:
+    def __init__(self, calls, ctx):
+        self.calls, self.ctx, self.i = calls, ctx, 0
+
+    def __call__(self, line):
+        self.ctx.written.append(cps(line))
+        if self.i >= len(self.calls):
+            return None
+        c = self.calls[self.i]
+        self.i += 1
+        for e in c["effs"]:
+            run_eff(e, self.ctx)
+        if "raise" in c["res"]:
+            raise mk_exc(c["res"]["raise"])
+        return csv_obj(c["res"]["ok"], self.ctx)
+
+
+def csv_obj(j, ctx=None):
     if j is None:
         return None
     if "s" in j:
         return txt(j["s"])
     if "i" in j:
         return j["i"]
+    if "big" in j:
+        return 10**4400
     if "b" in j:
         return j["b"]
+    if "sub" in j:
+        return Sub(txt(j["sub"]), j["key"])
+    if "d" in j:
+        return csv.get_dialect(txt(j["d"]))
+    if "cls" in j:
+        return getattr(csv, j["cls"])
+    if "func" in j:
+        return WriteFn(j["func"], ctx)
+    if "spec" in j:
+        return (OtherNum if j["spec"]["num"] else Other)(j["spec"], ctx)
     return {"list": [], "float": 1.5, "bytes": b"x"}.get(j["o"], [])
 
 
-def csv_kw(c):
-    return {k: csv_obj(v) for k, v in c["args"].items()}
+def in_child(fn):
+    """Run fn in a forked child: a segfault is a result here, not the end of the run."""
+    rd, wr = os.pipe()
+    pid = os.fork()
+    if pid == 0:
+        os.close(rd)
+        try:
+            out = fn()
+        except BaseException as e:
+            out = {"exc": type(e).__name__, "msg": str(e)}
+        os.write(wr, json.dumps(out).encode())
+        os._exit(0)
+    os.close(wr)
+    buf = b""
+    while True:
+        chunk = os.read(rd, 65536)
+        if not chunk:
+            break
+        buf += chunk
+    os.close(rd)
+    _, status = os.waitpid(pid, 0)
+    if os.WIFSIGNALED(status) or not buf:
+        return {"exc": "SegmentationFault", "msg": ""}
+    return json.loads(buf)
 
 
-def csv_src(c):
-    return () if c.get("src") is None else (txt(c["src"]),)
+def enc_ret(x):
+    if x is None:
+        return None
+    if type(x) is str:
+        return {"s": cps(x)}
+    if type(x) is bool:
+        return {"b": x}
+    if type(x) is int:
+        return {"i": x}
+    return {"obj": None}
+
+
+def csv_kw(c, ctx=None):
+    return {k: csv_obj(v, ctx) for k, v in c["args"].items()}
+
+
+def csv_src(c, ctx=None):
+    v = c.get("src")
+    if v is None:
+        return ()
+    return (txt(v),) if isinstance(v, list) else (csv_obj(v, ctx),)
 
 
 def enc_dialect(d):
@@ -668,23 +1200,35 @@ def enc_field(x):
     return {"f": float_bits(x)}
 
 
+def norm_msg(m):
+    if m.startswith("could not convert"):
+        return "~could not convert string to float: "
+    if "unexpected keyword argument" in m:
+        return "~this function got an unexpected keyword argument"
+    if m.startswith("dict contains fields"):
+        return "~dict contains fields not in fieldnames"
+    if m.startswith("extrasaction"):
+        return "~extrasaction must be 'raise' or 'ignore'"
+    if m.startswith("zip("):
+        return "~zip() argument must support iteration"
+    return m
+
+
 def norm_exc(e):
-    m = str(e)
-    if isinstance(e, ValueError) and m.startswith("could not convert"):
-        m = "~could not convert string to float"
-    return [type(e).__name__, m]
+    return [type(e).__name__, norm_msg(str(e))]
 
 
-def csv_line(j):
-    return txt(j["s"]) if "s" in j else 7
-
-
-def wfield(j):
-    if j is None:
-        return None
-    if "s" in j:
-        return txt(j["s"])
-    return (int(txt(j["t"])) if j["num"] else NotNum(txt(j["t"])))
+def spec_obj(r, depth=0):
+    """A random object with fallible behaviour; the Lean side builds the same thing."""
+    x = lambda: [r.choice(["ValueError", "TypeError", "ZeroDivisionError", "OSError"]), "boom"]
+    res = lambda ok, p=0.25: {"raise": x()} if r.random() < p else {"ok": ok}
+    attrs = []
+    return {"o": "Other", "spec": {
+        "truth": res(r.random() < 0.5),
+        "key": r.choice([None, None, {"hash": x()}, {"eq": x()}, {"k": cps("excel")}]),
+        "attrs": attrs, "num": r.random() < 0.3,
+        "str": {"effs": [], "res": res(cps(r.choice(["", "s", "a,b", '"', "12"])))},
+        "iter": res([], 0.5)}}
 
 
 @area("csv", 6)
@@ -744,13 +1288,23 @@ class CsvArea:
 
     @classmethod
     def gen(cls, r):
-        fn = r.choice(["dialect", "reader", "reader", "reader", "reader", "writerow", "writerow", "writerows",
-                       "roundtrip", "roundtrip", "field_size_limit", "registry", "get_dialect", "dictreader",
-                       "dictwriter", "writeheader", "extrasaction"])
+        fn = r.choice(["dialect", "dialect", "reader", "reader", "reader", "reader", "script", "script", "script", "writer",
+                       "writer", "writer", "roundtrip", "roundtrip", "field_size_limit", "registry", "get_dialect", "unpack",
+                       "dictreader", "dictwriter", "dictwriterows", "writeheader", "extrasaction", "classvalidate"])
         c = {"mod": "textlibs", "fn": "csv." + fn}
         if fn == "dialect":
-            c["args"] = cls.args(r, False)
-            c["src"] = r.choice([None, None, cps("excel"), cps("unix"), cps("excel-tab"), cps("nope")])
+            c["args"] = r.choice([{}, {}, cls.args(r, False), cls.args(r, True)])
+            c["src"] = r.choice([None, None, cps("excel"), cps("unix"), cps("excel-tab"), cps("nope"), {"d": cps("excel")}, {"d": cps("unix")},
+                                 {"cls": "excel"}, {"cls": "unix_dialect"}, None, {"i": 1}, spec_obj(r)])
+            if c["src"] is None and "None" == r.choice(["None", "x", "x", "x"]):
+                c["src"] = {"o": "float", "t": True}
+            if r.random() < 0.05:
+                c["args"]["bogus"] = {"i": 1}
+            if r.random() < 0.05 and c["src"] is not None:
+                c["args"]["dialect"] = {"s": cps("excel")}
+            if r.random() < 0.15:
+                k = r.choice(["doublequote", "skipinitialspace", "strict"])
+                c["args"][k] = spec_obj(r)
         elif fn in ("reader", "roundtrip"):
             c["fn"] = "csv.reader"
             a = cls.valid_args(r) if r.random() < 0.9 else cls.args(r, False)
@@ -779,28 +1333,97 @@ class CsvArea:
             if r.random() < 0.02:
                 c["lines"].insert(r.randint(0, len(c["lines"])), {"o": "int"})
             c["limit"] = r.choice([131072, 131072, 131072, 3, 1, 0, -1])
-        elif fn in ("writerow", "writerows"):
+        elif fn == "script":
+            c["fn"] = "csv.reader"
+            a = cls.valid_args(r)
+            c["args"], c["src"] = a, None
+            q = a.get("quoting", {}).get("i", 0)
+
+            def step():
+                roll = r.random()
+                if roll < 0.5:
+                    t = r.choice(['"abc', 'a,b', '"q"', 'x"', '', '1', 'a"b,c', '"a\n', 'b"\n', 'abcd,efgh', '\n'])
+                    return {"s": cps(t)}
+                if roll < 0.68:
+                    return {"k": "eff", "e": {"e": "advance"}}
+                if roll < 0.76:
+                    return {"k": "eff", "e": {"e": "limit", "n": r.choice([{"i": 2}, {"i": 131072}, {"s": cps("x")}, {"i": 2**70}])}}
+                if roll < 0.86:
+                    return {"k": "raise", "x": [r.choice(["ValueError", "TypeError", "OSError"]), "boom"]}
+                if roll < 0.96:
+                    return {"k": "stop"}
+                return {"o": "int"}
+
+            c["lines"] = [step() for _ in range(r.choice([1, 2, 3, 4, 6, 8]))]
+            c["limit"] = r.choice([131072, 131072, 3])
+        elif fn == "writer":
             a = cls.valid_args(r) if r.random() < 0.9 else cls.args(r, False)
             c["args"], c["src"] = a, None
 
-            def row():
-                out = []
-                for _ in range(r.choice([0, 1, 1, 2, 3, 4])):
-                    roll = r.random()
-                    if roll < 0.7:
-                        out.append({"s": cps(cls.text(r, False))})
-                    elif roll < 0.85:
-                        out.append(None)
-                    elif roll < 0.95:
-                        out.append({"t": cps(str(r.choice([0, 1, -5, 123]))), "num": True})
-                    else:
-                        out.append({"t": cps(cls.text(r, False)), "num": False})
-                return out
+            def eff(depth):
+                return {"e": "row", "row": row_obj(depth + 1)}
 
-            if fn == "writerow":
-                c["row"] = row()
-            else:
-                c["rows"] = [row() for _ in range(r.choice([0, 1, 2, 3]))]
+            def field(depth):
+                roll = r.random()
+                if roll < 0.55:
+                    return {"s": cps(cls.text(r, False))}
+                if roll < 0.68:
+                    return None
+                if roll < 0.78:
+                    return r.choice([{"i": 0}, {"i": -5}, {"i": 123}, {"big": 1}, {"b": True}])
+                if roll < 0.84:
+                    return {"sub": cps(cls.text(r, False)), "key": None}
+                o = spec_obj(r)
+                if r.random() < 0.3 and depth < 1:
+                    o["spec"]["str"]["effs"] = [eff(depth)]
+                return o
+
+            def row_obj(depth):
+                roll = r.random()
+                n = r.choice([0, 1, 1, 2, 3, 4])
+                if roll < 0.5:
+                    return {"o": "Other", "spec": {"truth": {"ok": True}, "key": None, "attrs": [], "num": False,
+                                                   "str": {"effs": [], "res": {"ok": []}},
+                                                   "iter": {"ok": [{"k": "ret", "o": field(depth)} for _ in range(n)]}}}
+                steps = []
+                for _ in range(n + 1):
+                    k = r.random()
+                    if k < 0.65:
+                        steps.append({"k": "ret", "o": field(depth)})
+                    elif k < 0.75 and depth < 1:
+                        steps.append({"k": "eff", "e": eff(depth)})
+                    elif k < 0.85:
+                        steps.append({"k": "raise", "x": [r.choice(["ValueError", "OSError"]), "boom"]})
+                    else:
+                        steps.append({"k": "stop"})
+                res = {"raise": [r.choice(["TypeError", "ValueError"]), "boom"]} if r.random() < 0.1 else {"ok": steps}
+                return {"o": "Other", "spec": {"truth": {"ok": True}, "key": None, "attrs": [], "num": False,
+                                               "str": {"effs": [], "res": {"ok": []}}, "iter": res}}
+
+            calls = []
+            for _ in range(r.choice([0, 1, 2])):
+                res = r.choice([{"ok": None}, {"ok": {"i": 42}}, {"ok": {"s": cps("x")}}, {"raise": ["OSError", "boom"]}, {"ok": {"b": False}}])
+                calls.append({"effs": [eff(0)] if r.random() < 0.2 else [], "res": res})
+            c["file"] = {"o": "Other", "spec": {"truth": {"ok": True}, "key": None, "num": False, "str": {"effs": [], "res": {"ok": []}},
+                                                "iter": {"ok": []}, "attrs": [["write", {"ok": {"func": calls}}]]}}
+            if r.random() < 0.05:
+                c["file"] = r.choice([{"i": 1}, {"o": "Other", "spec": {"truth": {"ok": True}, "key": None, "num": False,
+                                                                       "str": {"effs": [], "res": {"ok": []}}, "iter": {"ok": []},
+                                                                       "attrs": r.choice([[["write", {"raise": ["OSError", "boom"]}]],
+                                                                                          [["write", {"ok": {"i": 1}}]], []])}}])
+            ops = []
+            for _ in range(r.choice([1, 1, 2, 3])):
+                if r.random() < 0.7:
+                    ops.append(["row", row_obj(0) if r.random() < 0.95 else r.choice([{"i": 1}, None, {"s": cps("ab")}])])
+                else:
+                    rows = [{"k": "ret", "o": row_obj(0)} for _ in range(r.choice([0, 1, 2, 3]))]
+                    if r.random() < 0.3:
+                        rows.append({"k": "raise", "x": ["ValueError", "boom"]})
+                    if r.random() < 0.2:
+                        rows.insert(0, {"k": "eff", "e": eff(0)})
+                    ops.append(["rows", {"o": "Other", "spec": {"truth": {"ok": True}, "key": None, "attrs": [], "num": False,
+                                                                "str": {"effs": [], "res": {"ok": []}}, "iter": {"ok": rows}}}])
+            c["ops"] = ops
         elif fn == "field_size_limit":
             c["cur"] = 131072
             c["new"] = r.choice([{"i": 5}, {"i": 0}, {"i": -1}, {"i": 2**70}, {"o": "float", "t": True}, {"b": True}, None])
@@ -808,10 +1431,31 @@ class CsvArea:
                 del c["new"]
         elif fn == "registry":
             c["op"] = r.choice(["register", "unregister"])
-            c["name"] = r.choice([cps("mine"), cps("excel"), cps("nope"), cps("unix")])
+            c["name"] = r.choice([{"s": cps("mine")}, {"s": cps("excel")}, {"s": cps("nope")}, {"s": cps("unix")}, {"i": 1}, None,
+                                  {"sub": cps("mine"), "key": r.choice([None, {"k": cps("excel")}, {"hash": ["ValueError", "boom"]},
+                                                                        {"hash": ["TypeError", "boom"]}, {"eq": ["TypeError", "boom"]}])},
+                                  spec_obj(r), {"o": "list", "t": False}])
             c["args"] = cls.args(r, r.random() < 0.8)
+            c["src"] = r.choice([None, None, {"d": cps("excel")}, cps("unix"), cps("nope")])
         elif fn == "get_dialect":
-            c["name"] = r.choice([cps("excel"), cps("excel-tab"), cps("unix"), cps("nope")])
+            c["name"] = r.choice([{"s": cps("excel")}, {"s": cps("excel-tab")}, {"s": cps("unix")}, {"s": cps("nope")}, {"i": 1}, None,
+                                  {"o": "list", "t": False}, spec_obj(r),
+                                  {"sub": cps("zz"), "key": r.choice([None, {"k": cps("unix")}, {"hash": ["TypeError", "boom"]}])}])
+        elif fn == "unpack":
+            c["f"] = r.choice(["reader", "writer", "register_dialect"])
+            c["pos"] = [r.choice([{"i": 1}, {"s": cps("a")}, None, {"s": cps("excel")}]) for _ in range(r.choice([0, 0, 1, 2, 3, 4]))]
+        elif fn == "classvalidate":
+            attrs = []
+            for k, v in [("delimiter", {"s": cps(",")}), ("quotechar", {"s": cps('"')}), ("quoting", {"i": 0}), ("doublequote", {"b": True})]:
+                roll = r.random()
+                if roll < 0.5:
+                    attrs.append([k, {"ok": v}])
+                elif roll < 0.7:
+                    attrs.append([k, {"ok": r.choice([{"s": cps("ab")}, {"i": 9}, None, {"s": cps("\n")}])}])
+                elif roll < 0.85:
+                    attrs.append([k, {"raise": ["ZeroDivisionError", "boom"]}])
+            c["obj"] = {"o": "Other", "spec": {"truth": {"ok": True}, "key": None, "num": False, "str": {"effs": [], "res": {"ok": []}},
+                                               "iter": {"ok": []}, "attrs": attrs}}
         elif fn == "dictreader":
             c["lines"] = [{"s": cps(r.choice(["a,b\r\n", "1,2,3\n", "\n", "x\r\n", ",\n", "", "a,a\n", "p,q,r,s\n"]))}
                           for _ in range(r.choice([0, 1, 2, 3, 4]))]
@@ -822,6 +1466,12 @@ class CsvArea:
             c["raises"] = r.random() < 0.5
             c["row"] = [[cps(k), {"s": cps(v)}] for k, v in
                         r.choice([[("a", "1")], [("a", "1"), ("b", "x,y")], [("c", "3")], [], [("a", "1"), ("c", "3")]])]
+        elif fn == "dictwriterows":
+            c["names"] = r.choice([[cps("a"), cps("b")], [cps("b")], []])
+            c["raises"] = r.random() < 0.5
+            c["rows"] = [[[cps(k), {"s": cps(v)}] for k, v in
+                          r.choice([[("a", "1")], [("a", "1"), ("b", "x,y")], [("c", "3")], [], [("a", "1"), ("c", "3")]])]
+                         for _ in range(r.choice([0, 1, 2, 3]))]
         elif fn == "writeheader":
             c["names"] = r.choice([[cps("a"), cps("b")], [cps("x,y")], [], [cps("a"), cps("a")]])
         else:
@@ -831,35 +1481,15 @@ class CsvArea:
     @classmethod
     def run(cls, c):
         fn = c["fn"].split(".")[1]
+        if fn in ("reader", "writer"):
+            return in_child(lambda: cls.run_io(c, fn))
 
         def body():
+            ctx = CsvCtx()
             if fn == "dialect":
-                return enc_dialect(csv.reader([], *csv_src(c), **csv_kw(c)).dialect)
-            if fn == "reader":
-                rd = csv.reader([csv_line(l) for l in c["lines"]], *csv_src(c), **csv_kw(c))
-                old = csv.field_size_limit(c["limit"])
-                rows, exc = [], None
-                try:
-                    for row in rd:
-                        rows.append([enc_field(x) for x in row])
-                except Exception as e:
-                    exc = norm_exc(e)
-                finally:
-                    csv.field_size_limit(old)
-                return {"rows": rows, "exc": exc, "n": rd.line_num}
-            if fn == "writerow":
-                buf = io.StringIO(newline="")
-                csv.writer(buf, *csv_src(c), **csv_kw(c)).writerow([wfield(x) for x in c["row"]])
-                return cps(buf.getvalue())
-            if fn == "writerows":
-                buf = io.StringIO(newline="")
-                w = csv.writer(buf, *csv_src(c), **csv_kw(c))
-                exc = None
-                try:
-                    w.writerows([[wfield(x) for x in row] for row in c["rows"]])
-                except Exception as e:
-                    exc = norm_exc(e)
-                return {"text": cps(buf.getvalue()), "exc": exc}
+                src = csv_src(c, ctx)
+                d = _csv.Dialect(*src, **csv_kw(c, ctx))
+                return {"d": enc_dialect(d), "same": bool(src) and d is src[0] or (bool(src) and isinstance(src[0], str) and d is csv.get_dialect(src[0]))}
             if fn == "field_size_limit":
                 old = csv.field_size_limit()
                 try:
@@ -872,10 +1502,11 @@ class CsvArea:
             if fn == "registry":
                 saved = {n: csv.get_dialect(n) for n in csv.list_dialects()}
                 try:
+                    name = csv_obj(c["name"], ctx)
                     if c["op"] == "register":
-                        csv.register_dialect(txt(c["name"]), **csv_kw(c))
+                        csv.register_dialect(name, *csv_src(c, ctx), **csv_kw(c, ctx))
                     else:
-                        csv.unregister_dialect(txt(c["name"]))
+                        csv.unregister_dialect(name)
                     return [cps(n) for n in csv.list_dialects()]
                 finally:
                     for n in list(csv.list_dialects()):
@@ -883,18 +1514,35 @@ class CsvArea:
                     for n, d in saved.items():
                         csv.register_dialect(n, d)
             if fn == "get_dialect":
-                return enc_dialect(csv.get_dialect(txt(c["name"])))
+                return enc_dialect(csv.get_dialect(csv_obj(c["name"], ctx)))
+            if fn == "unpack":
+                pos = [csv_obj(x, ctx) for x in c["pos"]]
+                saved = list(csv.list_dialects())
+                if c["f"] == "reader":
+                    csv.reader(*pos)
+                    return None
+                if c["f"] == "writer":
+                    csv.writer(*pos)
+                    return None
+                try:
+                    csv.register_dialect(*pos)
+                    return [cps(n) for n in csv.list_dialects()]
+                finally:
+                    for n in list(csv.list_dialects()):
+                        if n not in saved:
+                            csv.unregister_dialect(n)
             if fn == "dictreader":
                 names = None if c["names"] is None else [txt(n) for n in c["names"]]
                 rk = None if c["restkey"] is None else txt(c["restkey"])
                 sentinel = object()
-                rd = csv.DictReader([txt(l["s"]) for l in c["lines"]], fieldnames=names, restkey=rk, restval=sentinel)
+                rd = csv.DictReader(Scripted(c["lines"], ctx), fieldnames=names, restkey=rk, restval=sentinel)
+                ctx.reader = rd.reader
                 rows, exc = [], None
                 try:
                     for d in rd:
                         row = []
                         for k, v in d.items():
-                            jk = None if k is None else cps(k)
+                            jk = enc_field(k)
                             if v is sentinel:
                                 row.append([jk, {"restval": None}])
                             elif k == rk and isinstance(v, list):
@@ -904,28 +1552,69 @@ class CsvArea:
                         rows.append(row)
                 except Exception as e:
                     exc = norm_exc(e)
-                return {"rows": rows, "exc": exc}
-            if fn == "dictwriter":
-                buf = io.StringIO(newline="")
-                w = csv.DictWriter(buf, [txt(n) for n in c["names"]], extrasaction="raise" if c["raises"] else "ignore")
-                w.writerow({txt(k): wfield(v) for k, v in c["row"]})
-                return cps(buf.getvalue())
-            if fn == "writeheader":
-                buf = io.StringIO(newline="")
-                csv.DictWriter(buf, [txt(n) for n in c["names"]]).writeheader()
-                return cps(buf.getvalue())
+                return {"rows": rows, "exc": exc, "n": rd.line_num}
+            if fn in ("dictwriter", "dictwriterows", "writeheader"):
+                ctx.written = []
+                f = type("F", (), {"write": WriteFn([], ctx)})()
+                names = [txt(n) for n in c["names"]]
+                w = csv.DictWriter(f, names, extrasaction="raise" if c.get("raises", True) else "ignore")
+                try:
+                    if fn == "dictwriter":
+                        r = {"ok": enc_ret(w.writerow({txt(k): csv_obj(v, ctx) for k, v in c["row"]}))}
+                    elif fn == "dictwriterows":
+                        r = {"ok": enc_ret(w.writerows([{txt(k): csv_obj(v, ctx) for k, v in row} for row in c["rows"]]))}
+                    else:
+                        r = {"ok": enc_ret(w.writeheader())}
+                except Exception as e:
+                    r = {"exc": type(e).__name__, "msg": norm_msg(str(e))}
+                return {"res": r, "written": ctx.written}
+            if fn == "classvalidate":
+                obj = csv_obj(c["obj"], ctx)
+                try:
+                    _csv.Dialect(obj)
+                except TypeError as e:
+                    raise csv.Error(str(e)) from None
+                return None
             csv.DictWriter(io.StringIO(), ["a"], extrasaction=txt(c["s"]))
             return txt(c["s"]).lower() == "raise"
 
         res = common.py_result(body)
-        if "exc" in res and (res["msg"].startswith("dict contains fields") or res["msg"].startswith("extrasaction")):
-            res["msg"] = {"d": "~dict contains fields not in fieldnames", "e": "~extrasaction must be 'raise' or 'ignore'"}[res["msg"][0]]
+        if "exc" in res:
+            res["msg"] = norm_msg(res["msg"])
         return res
+
+    @classmethod
+    def run_io(cls, c, fn):
+        ctx = CsvCtx()
+        ctx.written = []
+        if fn == "reader":
+            rd = csv.reader(Scripted(c["lines"], ctx), *csv_src(c), **csv_kw(c, ctx))
+            ctx.reader = rd
+            csv.field_size_limit(c["limit"])
+            rows, exc = [], None
+            try:
+                for row in rd:
+                    rows.append([enc_field(x) for x in row])
+            except Exception as e:
+                exc = norm_exc(e)
+            return {"ok": {"rows": rows, "exc": exc, "n": rd.line_num, "limit": csv.field_size_limit()}}
+        wr = csv.writer(csv_obj(c["file"], ctx), *csv_src(c), **csv_kw(c, ctx))
+        ctx.writer = wr
+        out = []
+        for k, o in c["ops"]:
+            try:
+                x = (wr.writerow if k == "row" else wr.writerows)(csv_obj(o, ctx))
+                out.append({"ok": enc_ret(x)})
+            except Exception as e:
+                out.append({"exc": type(e).__name__, "msg": norm_msg(str(e))})
+        return {"ok": {"res": out, "written": ctx.written}}
 
 
 # ---- re --------------------------------------------------------------------
 
 import re
+import _sre
+import json
 from re import _parser as sre_parse
 
 
@@ -978,7 +1667,19 @@ def re_node(op, av):
 
 
 def re_src(c):
-    return "".join(map(chr, c["pat"])) if c["text"] else bytes(c["pat"])
+    if c["text"]:
+        return "".join(map(chr, c["pat"]))
+    return bytes(c["pat"])
+
+
+def _sre_parse(pat):
+    from re import _parser
+    return _parser.parse(pat, 0)
+
+
+def _sre_code(p):
+    from re import _compiler
+    return _compiler._code(p, 0)
 
 
 @area("re", 8)
@@ -1024,6 +1725,61 @@ class ReArea:
                             "badext": r.choice(["(?", "(?P>a)", "(?<a)", "(?<", "(?Z)", "(?P", "(?(", "(?()", "(?(a", "(?(1)a|b|c)"])}[n])
         return "".join(out)
 
+    CHARS = ["a", "b", "k", "s", "i", "K", "S", "I", "z", "0", "9", "_", " ", "-", "é", "É", "ſ", "K", "ı", "İ", "µ", "Μ", "ß",
+             "σ", "ς", "Σ", "中", "€", "\U00010400", "\U00010428", "ǅ"]
+
+    @classmethod
+    def cset(cls, r):
+        parts = []
+        for _ in range(r.choice([1, 1, 2, 3, 4, 6, 20])):
+            roll = r.random()
+            if roll < 0.45:
+                parts.append(r.choice(cls.CHARS))
+            elif roll < 0.75:
+                a = r.choice([0x30, 0x41, 0x61, 0xc0, 0x100, 0x370, 0x400, 0x4e00, 0xfb00, 0xff00, 0xffe0, 0x10400, 0x1f600])
+                # only ranges that start near the top of the BMP may cross it: one starting low
+                # costs 65536 table lookups and reaches no other branch
+                b = a + r.choice([0, 1, 2, 5, 25, 26, 100, 300] + ([70000] if a >= 0xff00 else []))
+                parts.append(chr(a) + "-" + chr(min(b, 0x10ffff)))
+            else:
+                parts.append(r.choice(["\\d", "\\D", "\\s", "\\S", "\\w", "\\W"]))
+        return "[" + r.choice(["", "", "", "^"]) + "".join(parts) + "]"
+
+    @classmethod
+    def compile_pat(cls, r):
+        def atom():
+            roll = r.random()
+            if roll < 0.35:
+                return r.choice(cls.CHARS)
+            if roll < 0.7:
+                return cls.cset(r)
+            if roll < 0.8:
+                return r.choice([".", "\\d", "\\w", "\\s", "\\b", "\\B", "^", "$", "\\A", "\\Z"])
+            return "(" + r.choice(["", "?:", "?i:", "?a:", "?P<x>", "?>", "?-i:", "?s:", "?m:"]).replace("?P<x>", "?P<x%d>" % r.randrange(10**6)) + atom() + atom() + ")"
+
+        def item():
+            a = atom()
+            if a[0] in "^$\\" and len(a) < 3 or a in ("^", "$"):
+                return a
+            return a + r.choice(["", "", "", "*", "+", "?", "*?", "+?", "*+", "{2,3}", "{2}?", "{1,4}+"])
+
+        n = r.choice([0, 1, 1, 2, 3, 5])
+        body = "".join(item() for _ in range(n))
+        roll = r.random()
+        if roll < 0.15:
+            return body + "|" + "".join(item() for _ in range(2))
+        if roll < 0.25:
+            return "(?=" + body + ")" + item()
+        if roll < 0.35:
+            return "(?<=" + r.choice(cls.CHARS) + cls.cset(r) + ")" + body
+        if roll < 0.42:
+            return "(?<!" + r.choice(cls.CHARS) + "*)" + body
+        if roll < 0.5:
+            return "ab|ac|" + item()
+        if roll < 0.6:
+            return r.choice(["abcabd", "(ab)c", "(a)(b)c", "(?:ab)c", "(?i)ab", "ab(?i:c)d", "1(2)3", "aa", "aba", "abab"]) + body
+        return body
+
     @classmethod
     def gen(cls, r):
         pat = cls.gen_pat(r)
@@ -1042,7 +1798,17 @@ class ReArea:
         if not text:
             pat = pat.replace("é", "\xe9")
         c = {"mod": "textlibs", "fn": "re.parse", "pat": [ord(x) for x in pat], "text": text, "flags": flags}
-        if r.random() < 0.3:
+        if os.environ.get("RE_EXEC") == "1" or r.random() < 0.5:
+            return cls.gen_exec(r)
+        if r.random() < 0.45:
+            c["fn"] = "re.code"
+            # charsets, case folding and literal prefixes
+            if r.random() < 0.6:
+                pat = cls.compile_pat(r)
+                c["pat"] = [ord(x) for x in pat]
+                c["text"] = text = all(ord(x) < 256 for x in pat) is False or r.random() < 0.85
+                c["flags"] = r.choice([0, 2, 2, 2, 8, 16, 256, 2 | 256, 2 | 8] + ([4, 2 | 4] if not text else []))
+        elif r.random() < 0.4:
             c["fn"] = "re.template"
             c["repl"] = [ord(x) for x in "".join(r.choice(
                 ["a", "\\1", "\\2", "\\0", "\\07", "\\123", "\\400", "\\g<1>", "\\g<0>", "\\g<n0>", "\\g<zz>", "\\g<", "\\g", "\\g<>",
@@ -1051,15 +1817,296 @@ class ReArea:
         return c
 
     @classmethod
+    def gen_validate(cls, r):
+        pat = cls.compile_pat(r) if r.random() < 0.7 else cls.gen_pat(r)
+        try:
+            p = _sre_parse(pat)
+            code = _sre_code(p)
+            groups = p.state.groups - 1
+        except Exception:
+            code, groups = [1], 0
+        code = list(code)
+        for _ in range(r.choice([0, 1, 1, 2, 3])):
+            i = r.randrange(len(code))
+            code[i] = r.choice([0, 1, 2, 3, 4, 5, 8, 13, 14, 15, 16, 17, 18, 19, 23, 24, 27, 28, 29, code[i] + 1, code[i] - 1 if code[i] else 0,
+                                len(code), 2**32 - 1])
+        if r.random() < 0.1:
+            code = code[:r.randrange(len(code) + 1)]
+        # A skip below these bounds makes the validator itself read outside the array, which is
+        # undefined behaviour, not an outcome to compare. The model reports it as a separate case.
+        if any((w in (13, 31, 35, 39) and code[i + 1:i + 2] and code[i + 1] < 2) or (w == 14 and code[i + 1:i + 2] and code[i + 1] < 5)
+               for i, w in enumerate(code)):
+            code = [1]
+        return {"mod": "textlibs", "fn": "re.validate", "text": True, "pat": [], "flags": 0, "code": code,
+                "groups": r.choice([groups, groups, groups, 0, groups + 1, -1])}
+
+    @classmethod
+    def run_validate(cls, c):
+        rd, wr = os.pipe()
+        pid = os.fork()
+        if pid == 0:
+            os.close(rd)
+            try:
+                _sre.compile(None, 0, c["code"], c["groups"], {}, ())
+                out = {"ok": True}
+            except Exception as e:
+                out = {"exc": type(e).__name__, "msg": str(e)}
+            os.write(wr, json.dumps(out).encode())
+            os._exit(0)
+        os.close(wr)
+        buf = b""
+        while True:
+            chunk = os.read(rd, 4096)
+            if not chunk:
+                break
+            buf += chunk
+        os.close(rd)
+        _, status = os.waitpid(pid, 0)
+        if os.WIFSIGNALED(status) or not buf:
+            return {"exc": "SegmentationFault", "msg": ""}
+        return json.loads(buf)
+
+    @classmethod
+    def gen_scanner(cls, r):
+        pool = ["a", "b+", "[a-c]", r"\\w+", r"\\d", r"\\s", "é", "(?i)a", "(?x) a b", "(a)", "(a)(b)", "x|y", "", "a*", r"(a)\\1", "(?i:b)", "."]
+        n = r.choice([0, 1, 2, 3])
+        phrases = [r.choice(pool).replace("\\\\", "\\") for _ in range(n)]
+        flags = r.choice([0, 0, 2, 8, 16, 256, 32])
+        s = "".join(r.choice("abcxyAB é1 ٣") for _ in range(r.choice([0, 1, 2, 3, 5, 8])))
+        return {"mod": "textlibs", "fn": "re.scanner", "text": True, "pat": [], "phrases": [[ord(x) for x in ph] for ph in phrases],
+                "flags": flags, "s": [ord(x) for x in s]}
+
+    @classmethod
+    def run_scanner(cls, c):
+        phrases = ["".join(map(chr, ph)) for ph in c["phrases"]]
+        lex = [(ph, None if i % 3 == 2 else i) for i, ph in enumerate(phrases)]
+
+        def body():
+            r, rest = re.Scanner(lex, c["flags"]).scan("".join(map(chr, c["s"])))
+            return [r, [ord(x) for x in rest]]
+
+        return common.py_result(body)
+
+    @classmethod
+    def gen_exec(cls, r):
+        k = r.random()
+        if k < 0.04:
+            return cls.gen_validate(r)
+        if k < 0.08:
+            return cls.gen_scanner(r)
+        if k < 0.10:
+            s = "".join(r.choice("ab.*()[]{}?+-|^$\\&~# \t\n\r\x0b\x0c/é_%") for _ in range(r.choice([0, 1, 3, 8])))
+            return {"mod": "textlibs", "fn": "re.escape", "text": True, "pat": [], "flags": 0, "s": [ord(x) for x in s]}
+        if k < 0.12:
+            f = r.choice(["sub", "subn", "split"])
+            c = {"mod": "textlibs", "fn": "re.args", "text": True, "pat": [], "flags": 0, "f": f,
+                 "args": [r.choice([0, 1, 2]) for _ in range(r.choice([0, 0, 1, 1, 2, 3, 4]))]}
+            if r.random() < 0.3:
+                c["kw1"] = r.choice([0, 1, 2])
+            if r.random() < 0.3:
+                c["kw2"] = r.choice([0, 2])
+            return c
+        for _ in range(50):
+            pat = cls.compile_pat(r) if r.random() < 0.8 else cls.gen_pat(r)
+            flags = r.choice([0, 0, 0, 2, 2, 8, 16, 256, 2 | 256, 2 | 8])
+            if r.random() < 0.2:
+                pat = r.choice(["(a)|b", "(a)|(b)", "(a|b)*", "(a|(b))+", "((a)|b)*c", "(a*)*", "(a*)+", "(?:(a)|b)*", "(a)?b",
+                                "(a)*?b", "(?P<x>a)(?P=x)", "(a)\\1", "(a*)\\1", "(?:(a)|(b))+\\1", "(a)(?(1)b|c)",
+                                "(?:(a)|b)(?(1)c|d)", "(?=(a))a", "(?!(a))b", "(?<=(a))b", "(?>a+)a", "a*+a", "(?>(a)|b)+",
+                                "(?:a|ab)+?c", "(a|ab)(c|bcd)", "\\bfoo\\b", "(?m)^a$", "a$", "^", "$", "\\Z", "", "(?:)", "()",
+                                "()*", "(a|)*", "(|a)+", "(?:a?)*", "(?:a?)*?b", "(?:(a)?)*", "(a?)+?b", "(?i)aB", "[a-c]+", "a{2,3}",
+                                "(ab){2}", "(a){0}", "(a){0}b", "a{0}", "(?:a|b){2,}?", "(?:ab)*+a", "(a)++", "(a|b)*+b"])
+            try:
+                re.compile(pat, flags)
+                break
+            except Exception:
+                continue
+        else:
+            pat, flags = "a", 0
+        chars = [ch for ch in pat if ch not in "()[]{}?*+|^$.\\-:=!<>"] or ["a"]
+        alpha = (chars + ["a", "b", "c", "\n", " ", "A", "é"]) if r.random() < 0.8 else ["a", "b"]
+        subj = "".join(r.choice(alpha) for _ in range(r.choice([0, 1, 2, 3, 4, 5, 6, 8])))
+        mode = r.choice(["match", "fullmatch", "search", "search", "findall", "finditer", "scanmatch", "split", "sub", "expand",
+                         "groups", "matchop", "matchop", "prepr", "peq"])
+        n = len(subj)
+        text = True
+        if r.random() < 0.15 and all(ord(x) < 128 for x in pat) and flags & 32 == 0:
+            try:
+                re.compile(pat.encode(), flags & ~256)
+                text, flags = False, flags & ~256
+            except Exception:
+                pass
+        if not text:
+            subj = "".join(ch for ch in subj if ord(ch) < 256)
+        c = {"mod": "textlibs", "fn": "re.exec", "pat": [ord(x) for x in pat], "text": text, "flags": flags, "mode": mode,
+             "s": [ord(x) for x in subj], "pos": 0, "endpos": 2**63 - 1, "count": 0,
+             "stext": text if (r.random() < 0.96 or any(ord(x) > 255 for x in subj)) else not text}
+        if mode == "matchop":
+            c["op"] = r.choice(["group", "group", "getitem", "start", "end", "span", "regs", "repr"])
+            pool = [0, 1, 2, 3, -1, 10**30, -10**30, [120], [97], [121], {}]
+            c["gs"] = [r.choice(pool) for _ in range(r.choice([0, 1, 1, 1, 2, 3]))]
+            if c["op"] not in ("group",) and not c["gs"]:
+                c["gs"] = [0]
+        if mode == "peq":
+            q = r.choice([pat, pat, pat + "a", ""])
+            c["pat2"] = [ord(x) for x in q]
+            c["flags2"] = r.choice([flags, flags, flags ^ 2])
+        if r.random() < 0.25:
+            c["pos"] = r.choice([0, 1, 2, n, n + 1, -1, -(2**62)])
+            c["endpos"] = r.choice([0, 1, 2, n, n + 1, -1, 2**62, n - 1])
+        if mode in ("split", "sub"):
+            c["count"] = r.choice([0, 0, 0, 1, 2, -1])
+        if mode in ("sub", "expand"):
+            c["repl"] = [ord(x) for x in r.choice(["", "x", "\\g<0>", "[\\g<0>]", "\\1", "\\g<1>", "a\\1b", "\\n", "\\\\", "\\2"])]
+        return c
+
+    @classmethod
+    def run_exec(cls, c):
+        src, flags, mode = re_src(c), c["flags"], c["mode"]
+        s = "".join(map(chr, c["s"]))
+        if not c["stext"]:
+            s = bytes(c["s"])
+        pos, endpos = c["pos"], c["endpos"]
+
+        def unval(x):
+            return x if isinstance(x, list) else None
+
+        def enc_m(m):
+            if m is None:
+                return None
+            spans = []
+            for g in range(m.re.groups + 1):
+                sp = m.span(g)
+                spans.append(None if sp == (-1, -1) else list(sp))
+            return {"spans": spans, "lastindex": m.lastindex}
+
+        def val(x):
+            if x is None:
+                return None
+            return list(x) if isinstance(x, bytes) else [ord(ch) for ch in x]
+
+        def item(x):
+            return [val(y) for y in x] if isinstance(x, tuple) else val(x)
+
+        def body():
+            p = re.compile(src, flags)
+            if mode == "prepr":
+                return [ord(ch) for ch in repr(p)]
+            if mode == "peq":
+                q = re.compile(type(src)().join([]) if False else (("".join(map(chr, c["pat2"])) if c["text"] else bytes(c["pat2"]))), c["flags2"])
+                return [p == q, hash(p) == hash(q)]
+            if mode in ("match", "fullmatch", "search"):
+                return enc_m(getattr(p, mode)(s, pos, endpos))
+            if mode == "findall":
+                return [item(x) for x in p.findall(s, pos, endpos)]
+            if mode == "finditer":
+                return [enc_m(m) for m in p.finditer(s, pos, endpos)]
+            if mode == "scanmatch":
+                sc = p.scanner(s, pos, endpos)
+                return [enc_m(m) for m in iter(sc.match, None)]
+            if mode == "split":
+                return [val(x) for x in p.split(s, c["count"])]
+            repl = "".join(map(chr, c.get("repl", [])))
+            if not c["text"]:
+                repl = bytes(c.get("repl", []))
+            if mode == "sub":
+                r, n = p.subn(repl, s, c["count"])
+                return [val(r), n]
+            m = p.search(s, pos, endpos)
+            if m is None:
+                return None
+            if mode == "matchop":
+                gs = [("".join(map(chr, g)) if isinstance(g, list) else ([] if isinstance(g, dict) else g)) for g in c["gs"]]
+                op = c["op"]
+                if op == "group":
+                    x = m.group(*gs)
+                    return [val(y) for y in x] if isinstance(x, tuple) else val(x)
+                if op == "getitem":
+                    return val(m[gs[0]])
+                if op == "start":
+                    return m.start(gs[0])
+                if op == "end":
+                    return m.end(gs[0])
+                if op == "span":
+                    return list(m.span(gs[0]))
+                if op == "regs":
+                    return [list(x) for x in m.regs]
+                return [ord(ch) for ch in repr(m)]
+            if mode == "expand":
+                return val(m.expand(repl))
+            return {"groups": [val(x) for x in m.groups()],
+                    "gd": [[[ord(ch) for ch in k], val(v)] for k, v in m.groupdict().items()],
+                    "lastgroup": None if m.lastgroup is None else [ord(ch) for ch in m.lastgroup]}
+
+        return common.py_result(body)
+
+    @classmethod
+    def run_args(cls, c):
+        first = "maxsplit" if c["f"] == "split" else "count"
+        kw = {}
+        if "kw1" in c:
+            kw[first] = c["kw1"]
+        if "kw2" in c:
+            kw["flags"] = c["kw2"]
+        seen = []
+
+        class P:
+            pass
+
+        def body():
+            import warnings
+            real = re._compile
+
+            class Rec:
+                def sub(self, repl, string, count):
+                    seen.append(count)
+
+                def subn(self, repl, string, count):
+                    seen.append(count)
+
+                def split(self, string, maxsplit):
+                    seen.append(maxsplit)
+
+            def fake(pattern, flags):
+                seen.append(int(flags))
+                return Rec()
+
+            re._compile = fake
+            try:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    if c["f"] == "split":
+                        re.split("a", "b", *c["args"], **kw)
+                    else:
+                        getattr(re, c["f"])("a", "b", "c", *c["args"], **kw)
+            finally:
+                re._compile = real
+            return [seen[1], seen[0]]
+
+        return common.py_result(body)
+
+    @classmethod
     def run(cls, c):
+        if c["fn"] == "re.exec":
+            return cls.run_exec(c)
+        if c["fn"] == "re.validate":
+            return cls.run_validate(c)
+        if c["fn"] == "re.scanner":
+            return cls.run_scanner(c)
+        if c["fn"] == "re.args":
+            return cls.run_args(c)
+        if c["fn"] == "re.escape":
+            s = "".join(map(chr, c["s"]))
+            return {"ok": [ord(x) for x in re.escape(s)]}
         src = re_src(c)
 
         def body():
+            if c["fn"] == "re.code":
+                return [int(x) for x in re._compiler._code(sre_parse.parse(src, c["flags"]), c["flags"])]
             if c["fn"] == "re.parse":
                 p = sre_parse.parse(src, c["flags"])
                 return {"p": re_nodes(p), "flags": p.state.flags, "groups": p.state.groups,
                         "width": list(p.getwidth()), "gd": [[[ord(x) for x in k], v] for k, v in p.state.groupdict.items()]}
-            pat = re.compile(src, c["flags"]) if False else None
             p = sre_parse.parse(src, c["flags"])
 
             class P:

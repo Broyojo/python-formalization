@@ -48,9 +48,14 @@ Bug reports stay held to a high bar: fewer, better findings beat many weak ones.
     `bind_ok`-style step, it does not count. Nor does `rfl` on a one-line
     definition, a hard-coded constant, or a single-example instance. A refutation
     covers only the functions its counterexample runs.
+  - Test a theorem by asking what wrong function would also satisfy it. If
+    `fun _ => .error` or "always take the first" passes, it pins nothing, even
+    when the mirror above it is exact. Rebuilt files mostly fail here now.
   - Do not force `Bool` where Python returns an arbitrary object, do not use `=`
     on value structures to claim object identity, and do not merge a twin
     difference into one model (duck typing in Python, an exact type check in C).
+- Classes may be modelled by identity, as a stated scope limit: a metaclass that
+  overrides `__eq__`, `__hash__` or `__repr__` is out of scope.
 - GC traversal rows are `no-behaviour:` by policy, as a stated scope limit: we have
   no heap model, though `gc.get_referents()` can observe them. `tp_clear` and
   `tp_dealloc` that only drop references are excluded the same way, because we
@@ -103,9 +108,17 @@ Shared files (`Core.lean`, `DiffCore.lean`, `Registry.lean`, `DiffMain.lean`,
 Do not edit them. If you truly need a new `PyExc` constructor or helper, put a
 local definition in your module and mention it in your report.
 
+Python version: everything is pinned to 3.14.7 today, and the project will migrate
+to 3.15.2, the latest release, once the current quality round ends. Until a module
+is told to migrate, keep citing 3.14.7. Formalize one version; other versions get
+reproducers and difftests only.
+
 Sources (absolute paths; `vendor/` is not in git worktrees):
 - CPython 3.14.7 source (matches `python3`, cite these line numbers):
   `/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.14`
+- CPython 3.15.2 source, the migration target:
+  `/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.15`
+  (its interpreter on the pod is `$HOME/pf/vendor/cpython-3.15/python`)
 - CPython main source: `/Users/broyojo/code/projects/python-formalization/vendor/cpython-main`
 - CPython main interpreter (to check bugs still exist on main):
   `/Users/broyojo/code/projects/python-formalization/vendor/cpython-main/python.exe`

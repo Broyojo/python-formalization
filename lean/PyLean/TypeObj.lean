@@ -5,6 +5,8 @@ import PyLean.TypeObj.PropsBuffer
 import PyLean.TypeObj.PropsType2
 import PyLean.TypeObj.ExcProps
 import PyLean.TypeObj.PropsList
+import PyLean.TypeObj.PropsDict
+import PyLean.TypeObj.PropsReduce
 
 /-!
 The data model: `Objects/typeobject.c`, `Objects/object.c`, `Objects/abstract.c`,
@@ -39,19 +41,19 @@ private def ca := "Objects/call.c"
 def entries : List Entry := [
   -- C3
   p "typeobj-c3-local-precedence" ty
-    ["tail_contains", "pmerge", "check_duplicates", "mro_implementation_unlocked", "mro_implementation"]
+    ["tail_contains", "pmerge", "mro_implementation_unlocked"]
     "For all bases and base MROs, a successful slow-path linearization lists the bases in their declared order."
     "typeobject.c:3131-3133 (local precedence order)"
     ``C3LocalPrecedence ``c3LocalPrecedence_proven,
-  p "typeobj-c3-monotonic" ty ["pmerge", "mro_implementation_unlocked", "type_mro_impl"]
+  p "typeobj-c3-monotonic" ty ["pmerge", "mro_implementation_unlocked"]
     "For all bases and base MROs, the slow-path MRO extends the MRO of every base without reordering."
     "typeobject.c:3135-3137 (monotonicity)"
     ``C3Monotonic ``c3Monotonic_proven,
-  p "typeobj-c3-monotonic-transitive" ty ["pmerge", "mro_implementation_unlocked", "mro_internal_unlocked", "mro_internal", "mro_invoke"]
+  p "typeobj-c3-monotonic-transitive" ty ["pmerge", "mro_implementation_unlocked"]
     "In every hierarchy linearized by mro_implementation, for every class t and every s in its MRO, the MRO of s is a sublist of the MRO of t."
     "typeobject.c:3135-3137; precondition Linearized is the type invariant of classes with the default mro()"
     ``C3MonotonicTransitive ``c3MonotonicTransitive_proven,
-  p "typeobj-c3-self-head" ty ["mro_implementation_unlocked"]
+  p "typeobj-c3-self-head" ty []
     "In a linearized hierarchy each class is the first entry of its own MRO."
     "invariant: the fast path and pmerge both start with the class"
     ``C3SelfHead ``c3SelfHead_proven,
@@ -94,32 +96,32 @@ def entries : List Entry := [
     "A class with no tp_hash and no __hash__ in its dict gets __hash__ = None and tp_hash = PyObject_HashNotImplemented."
     "typeobject.c:8775-8779"
     ``HashNoneWhenEqDefined ``hashNoneWhenEqDefined_proven,
-  p "typeobj-overrides-hash" ty ["overrides_hash", "inherit_slots"]
+  p "typeobj-overrides-hash" ty []
     "A class dict with __eq__ or __hash__ blocks the joint inheritance of tp_richcompare and tp_hash."
     "typeobject.c:8381-8394"
     ``OverridesHashBlocksInherit ``overridesHashBlocksInherit_proven,
-  p "typeobj-dunder-name" ty ["is_dunder_name", "type_update_dict"]
+  p "typeobj-dunder-name" ty []
     "is_dunder_name accepts only names longer than 4 starting with two underscores."
     "typeobject.c:5776"
     ``IsDunderNameShape ``isDunderNameShape_proven,
-  p "typeobj-mangle-dunders" ty ["type_new_copy_slots"]
+  p "typeobj-mangle-dunders" ty []
     "_Py_Mangle leaves a __slots__ name unchanged unless it starts with __ and does not end with __."
     "language reference, private name mangling"
     ``MangleKeepsDunders ``mangleKeepsDunders_proven,
-  p "typeobj-slots-must-be-str" ty ["valid_identifier", "type_new_visit_slots"]
+  p "typeobj-slots-must-be-str" ty []
     "A non-string __slots__ item raises TypeError with the message of :3870."
     "typeobject.c:3868-3872"
     ``SlotNotesIdentifier ``slotNotesIdentifier_proven,
   -- attribute lookup
-  p "typeobj-lookup-first-in-mro" ty ["find_name_in_mro", "_PyType_Lookup", "_PyType_LookupRef", "_PyType_LookupStackRefAndVersion"]
+  p "typeobj-lookup-first-in-mro" ty ["find_name_in_mro", "_PyType_Lookup"]
     "The type lookup of a name returns the value in the first class of the MRO whose dict has it."
     "docs: Customizing attribute access; typeobject.c:5748-5763"
     ``TypeLookupFirstInMro ``typeLookupFirstInMro_proven,
-  p "typeobj-getattr-data-descr" ob ["_PyObject_GenericGetAttrWithDict", "PyObject_GenericGetAttr", "PyDescr_IsData"]
+  p "typeobj-getattr-data-descr" ob ["_PyObject_GenericGetAttrWithDict"]
     "If the MRO provides a data descriptor, generic getattr calls its __get__ and never reads the instance dict, for every instance dict and __get__."
     "docs: Invoking Descriptors"
     ``GenericGetattrDataDescriptorFirst ``genericGetattrDataDescriptorFirst_proven,
-  p "typeobj-getattr-instance-dict" ob ["_PyObject_GenericGetAttrWithDict", "PyObject_GenericGetAttr", "_PyObject_GetDictPtr"]
+  p "typeobj-getattr-instance-dict" ob ["_PyObject_GenericGetAttrWithDict", "_PyObject_GetDictPtr"]
     "With no data descriptor, a name in the instance dict is returned, with no __get__ call."
     "docs: Invoking Descriptors"
     ``GenericGetattrInstanceDictNext ``genericGetattrInstanceDictNext_proven,
@@ -135,7 +137,7 @@ def entries : List Entry := [
     "With suppress set, a missing name returns NULL with no exception."
     "object.c:1815"
     ``GenericGetattrMissingSuppressed ``genericGetattrMissingSuppressed_proven,
-  p "typeobj-type-getattro-meta-data" ty ["_Py_type_getattro_impl", "_Py_type_getattro"]
+  p "typeobj-type-getattro-meta-data" ty ["_Py_type_getattro_impl"]
     "A data descriptor on the metaclass wins over the class's own attributes."
     "docs: Invoking Descriptors; typeobject.c:6132"
     ``TypeGetattroMetaDataDescriptorFirst ``typeGetattroMetaDataDescriptorFirst_proven,
@@ -143,12 +145,12 @@ def entries : List Entry := [
     "Without a metaclass data descriptor, the class's own attribute is bound with obj = NULL."
     "typeobject.c:6146-6160"
     ``TypeGetattroClassAttrNext ``typeGetattroClassAttrNext_proven,
-  p "typeobj-setattr-descr" ob ["_PyObject_GenericSetAttrWithDict", "PyObject_GenericSetAttr"]
+  p "typeobj-setattr-descr" ob []
     "If the type has a descriptor with tp_descr_set, generic setattr calls it, for every instance dict state."
     "docs: Invoking Descriptors"
     ``GenericSetattrDescriptorFirst ``genericSetattrDescriptorFirst_proven,
   -- comparison
-  p "typeobj-swapped-op" ob ["do_richcompare"]
+  p "typeobj-swapped-op" ob []
     "_Py_SwappedOp is an involution."
     "object.c:1039"
     ``SwappedInvolution ``swappedInvolution_proven,
@@ -156,7 +158,7 @@ def entries : List Entry := [
     "For every object, PyObject_RichCompareBool(x, x, ==) is true and (x, x, !=) false, with no user code run and the world unchanged."
     "object.c:1124-1125 (Guarantees that identity implies equality)"
     ``RichCompareBoolIdentity ``richCompareBoolIdentity_proven,
-  p "typeobj-container-reflexive" "Objects/listobject.c" ["list_richcompare_impl", "list_richcompare", "tuple_richcompare"]
+  p "typeobj-container-reflexive" "Objects/listobject.c" ["list_richcompare_impl", "tuple_richcompare"]
     "For every list of values, whatever their __eq__, xs == xs, not xs != xs, xs <= xs and not xs < xs, with no user code run."
     "docs: Comparisons (identity implies equality for container items)"
     ``ContainerEqReflexive ``containerEqReflexive_proven,
@@ -181,7 +183,7 @@ def entries : List Entry := [
     "typeobject.c:6981-6982"
     ``ObjectNeInvertsEq ``objectNeInvertsEq_proven,
   -- truth
-  p "typeobj-istrue-singletons" ob ["PyObject_IsTrue", "PyObject_Not"]
+  p "typeobj-istrue-singletons" ob []
     "True, False and None answer without any slot."
     "object.c:2063-2068"
     ``IsTrueSingletons ``isTrueSingletons_proven,
@@ -210,12 +212,12 @@ def entries : List Entry := [
     "A non-int __hash__ result raises the exact TypeError."
     "typeobject.c:10316"
     ``SlotHashNonInt ``slotHashNonInt_proven,
-  p "typeobj-slot-hash-none" ty ["slot_tp_hash", "PyObject_HashNotImplemented"]
+  p "typeobj-slot-hash-none" ty ["slot_tp_hash"]
     "__hash__ = None raises unhashable type."
     "docs: object.__hash__"
     ``SlotHashNoneUnhashable ``slotHashNoneUnhashable_proven,
   -- operators
-  p "typeobj-binop-same-type" ab ["binary_op1", "PyNumber_Add", "PyNumber_Multiply"]
+  p "typeobj-binop-same-type" ab ["binary_op1"]
     "For operands of one type, a NotImplemented from the left slot is the result: the reflected method never runs."
     "docs: Emulating numeric types, note on identical types"
     ``BinaryOp1SameType ``binaryOp1SameType_proven,
@@ -243,7 +245,7 @@ def entries : List Entry := [
     "sq_concat runs only after the number slots answered NotImplemented, and only for the left operand."
     "abstract.c:1128-1143"
     ``NumberAddConcatFallback ``numberAddConcatFallback_proven,
-  p "typeobj-seq-repeat-index" ab ["sequence_repeat"]
+  p "typeobj-seq-repeat-index" ab []
     "A repeat count without __index__ raises the exact TypeError."
     "abstract.c:1157"
     ``SequenceRepeatNeedsIndex ``sequenceRepeatNeedsIndex_proven,
@@ -257,7 +259,7 @@ def entries : List Entry := [
     status := .refuted, prop := ``InPlaceMultiplyMatchesMultiply,
     thm := some ``inPlaceMultiplyMatchesMultiply_refuted, bug := some "typeobj-imul-sequence-fallback" },
   -- conversions
-  p "typeobj-index-identity" ab ["_PyNumber_Index", "PyIndex_Check"]
+  p "typeobj-index-identity" ab ["_PyNumber_Index"]
     "_PyNumber_Index of an int returns it without running __index__."
     "abstract.c:1406"
     ``IndexOfIntIdentity ``indexOfIntIdentity_proven,
@@ -285,20 +287,20 @@ def entries : List Entry := [
     "mp_subscript takes precedence over sq_item."
     "abstract.c:159-164"
     ``GetItemMappingFirst ``getItemMappingFirst_proven,
-  p "typeobj-class-getitem" ab ["PyObject_GetItem", "PyObject_GetOptionalAttr"]
+  p "typeobj-class-getitem" ab ["PyObject_GetItem"]
     "On a class without __getitem__ on its metaclass, C[k] calls C.__class_getitem__(k)."
     "docs: Emulating generic types"
     ``ClassGetitemFallback ``classGetitemFallback_proven,
   -- iteration
-  p "typeobj-iter-checks" ab ["PyObject_GetIter", "PyIter_Check"]
+  p "typeobj-iter-checks" ab ["PyObject_GetIter"]
     "An __iter__ result that is not an iterator raises the exact TypeError."
     "abstract.c:2819-2825"
     ``GetIterChecksResult ``getIterChecksResult_proven,
-  p "typeobj-iter-seq-fallback" ab ["PyObject_GetIter", "PySequence_Check"]
+  p "typeobj-iter-seq-fallback" ab ["PyObject_GetIter"]
     "A sequence with no tp_iter iterates through a seqiterobject."
     "abstract.c:2812-2814"
     ``GetIterSequenceFallback ``getIterSequenceFallback_proven,
-  p "typeobj-iter-none" ty ["slot_tp_iter", "has_dunder_getitem", "maybe_call_special_no_args"]
+  p "typeobj-iter-none" ty ["slot_tp_iter"]
     "__iter__ = None disables the __getitem__ fallback."
     "docs: object.__iter__, None blocks fallback; typeobject.c:10507"
     ``IterNoneNotIterable ``iterNoneNotIterable_proven,
@@ -306,11 +308,11 @@ def entries : List Entry := [
     "An exhausted seqiterobject stays exhausted."
     "iterator protocol, docs: Iterator Types"
     ``SeqIterExhaustionSticky ``seqIterExhaustionSticky_proven,
-  p "typeobj-contains-slot" ab ["PySequence_Contains", "PySequence_In"]
+  p "typeobj-contains-slot" ab []
     "x in y uses sq_contains when present."
     "abstract.c:2234"
     ``ContainsUsesSlot ``containsUsesSlot_proven,
-  p "typeobj-contains-none" ty ["slot_sq_contains", "maybe_call_special_one_arg"]
+  p "typeobj-contains-none" ty ["slot_sq_contains"]
     "__contains__ = None raises instead of falling back to iteration."
     "docs: object.__contains__; typeobject.c:10094"
     ``ContainsNoneNotContainer ``containsNoneNotContainer_proven,
@@ -319,7 +321,7 @@ def entries : List Entry := [
     "abstract.c:2166"
     ``IterSearchIdentity ``iterSearchIdentity_proven,
   -- isinstance
-  p "typeobj-isinstance-exact" ab ["object_recursive_isinstance", "PyObject_IsInstance"]
+  p "typeobj-isinstance-exact" ab ["object_recursive_isinstance"]
     "isinstance(x, type(x)) is true with no __instancecheck__ lookup."
     "abstract.c:2634-2637"
     ``IsinstanceExactType ``isinstanceExactType_proven,
@@ -327,16 +329,16 @@ def entries : List Entry := [
     "On a non-class second argument with __instancecheck__, the result is the truth of its call."
     "docs: Customizing instance and subclass checks"
     ``IsinstanceUsesChecker ``isinstanceUsesChecker_proven,
-  p "typeobj-object-isinstance" ab ["object_isinstance", "_PyObject_RealIsInstance", "type___instancecheck___impl"]
+  p "typeobj-object-isinstance" ab ["object_isinstance"]
     "A real subtype answers true without reading __class__."
     "abstract.c:2600-2602"
     ``ObjectIsinstanceSubtype ``objectIsinstanceSubtype_proven,
-  p "typeobj-issubclass-mro" ab ["recursive_issubclass", "_PyObject_RealIsSubclass", "type___subclasscheck___impl"]
+  p "typeobj-issubclass-mro" ab ["recursive_issubclass"]
     "issubclass on classes is membership in the MRO."
     "abstract.c:2707-2709"
     ``RecursiveIssubclassMro ``recursiveIssubclassMro_proven,
   -- instance creation
-  p "typeobj-excess-args" ty ["excess_args"]
+  p "typeobj-excess-args" ty []
     "excess_args is false exactly when no argument was passed."
     "typeobject.c:6825"
     ``ExcessArgsIffAny ``excessArgsIffAny_proven,
@@ -344,7 +346,7 @@ def entries : List Entry := [
     "The table of excess-argument errors: overriding neither, __new__ only, or __init__ only gives the three behaviours of the comment before excess_args."
     "typeobject.c:6790-6830"
     ``ObjectNewInitTable ``objectNewInitTable_proven,
-  p "typeobj-type-one-arg" ty ["type_call", "type_vectorcall"]
+  p "typeobj-type-one-arg" ty []
     "type(x) returns the type of x with no __new__ call."
     "typeobject.c:2346-2354"
     ``TypeCallOneArg ``typeCallOneArg_proven,
@@ -356,20 +358,20 @@ def entries : List Entry := [
     "tp_init comes from the type of the result of __new__."
     "typeobject.c:2382-2384"
     ``TypeCallInitsResultType ``typeCallInitsResultType_proven,
-  p "typeobj-init-returns-none" ty ["slot_tp_init", "call_method"]
+  p "typeobj-init-returns-none" ty ["slot_tp_init"]
     "A non-None __init__ result raises the exact TypeError."
     "docs: object.__init__"
     ``InitMustReturnNone ``initMustReturnNone_proven,
   -- binding
-  p "typeobj-function-binding" "Objects/funcobject.c" ["func_descr_get"]
+  p "typeobj-function-binding" "Objects/funcobject.c" []
     "A function binds from an instance and returns itself from the class."
     "docs: Functions and methods (descriptor howto)"
     ``FunctionBinding ``functionBinding_proven,
-  p "typeobj-bound-method-self" "Objects/classobject.c" ["method_vectorcall", "PyMethod_New"]
+  p "typeobj-bound-method-self" "Objects/classobject.c" []
     "Calling a bound method calls the function with self prepended."
     "docs: Instance methods"
     ``BoundMethodPrependsSelf ``boundMethodPrependsSelf_proven,
-  p "typeobj-classmethod-staticmethod" "Objects/funcobject.c" ["cm_descr_get", "sm_descr_get"]
+  p "typeobj-classmethod-staticmethod" "Objects/funcobject.c" []
     "classmethod binds the class from class or instance; staticmethod returns the callable."
     "docs: Static Methods, Class Methods"
     ``ClassStaticBinding ``classStaticBinding_proven,
@@ -378,7 +380,7 @@ def entries : List Entry := [
     "docs: property"
     ``PropertyGet ``propertyGet_proven,
   { id := "typeobj-property-copy-doc", pyFile := "Objects/descrobject.c",
-    pyFns := ["property_copy", "property_getter", "property_setter", "property_deleter"]
+    pyFns := ["property_copy"]
     statement := "p.setter(f) keeps an explicit docstring of p, for property and its subclasses."
     source := "the twin behaviour of exact property; docs: property", status := .refuted,
     prop := ``PropertyCopyKeepsDoc, thm := some ``propertyCopyKeepsDoc_refuted,
@@ -389,19 +391,19 @@ def entries : List Entry := [
     source := "invariant", status := .refuted,
     prop := ``TooManyPositionalBound, thm := some ``tooManyPositionalBound_refuted,
     bug := some "typeobj-too-many-positional-negative-bound" },
-  p "typeobj-special-lookup-type-only" ty ["_PyObject_LookupSpecial", "_PyObject_LookupSpecialMethod", "lookup_method_ex", "lookup_maybe_method"]
+  p "typeobj-special-lookup-type-only" ty []
     "If no class in the MRO has a special method, it is not found, even with the name in the instance dict."
     "docs: Special method lookup"
     ``SpecialLookupIgnoresInstance ``specialLookupIgnoresInstance_proven,
-  p "typeobj-lookup-method-unbound" ty ["lookup_method_ex", "lookup_method", "vectorcall_unbound", "call_unbound_noarg", "PyType_HasFeature"]
+  p "typeobj-lookup-method-unbound" ty []
     "A method descriptor found on the type stays unbound and is called with self first."
     "typeobject.c:2910-2913"
     ``LookupMethodDescriptorUnbound ``lookupMethodDescriptorUnbound_proven,
-  p "typeobj-missing-method" ty ["vectorcall_method", "vectorcall_maybe", "lookup_method", "call_method_noarg"]
+  p "typeobj-missing-method" ty []
     "A missing method raises AttributeError(name) through lookup_method and gives NotImplemented through vectorcall_maybe."
     "typeobject.c:2903-2905, :3050"
     ``MissingMethodOutcomes ``missingMethodOutcomes_proven,
-  p "typeobj-maybe-call-none" ty ["maybe_call_special_no_args", "maybe_call_special_one_arg", "_PyObject_MaybeCallSpecialNoArgs", "_PyObject_MaybeCallSpecialOneArg"]
+  p "typeobj-maybe-call-none" ty []
     "A special method set to None reads as defined-None for callers that pass attr_is_none."
     "typeobject.c:3073-3077"
     ``MaybeCallNone ``maybeCallNone_proven,
@@ -409,7 +411,7 @@ def entries : List Entry := [
     "__getattr__ does not run when the default lookup finds the name."
     "docs: object.__getattr__"
     ``GetattrHookNotCalledWhenFound ``getattrHookNotCalledWhenFound_proven,
-  p "typeobj-getattr-hook-missing" ty ["_Py_slot_tp_getattr_hook", "call_attribute"]
+  p "typeobj-getattr-hook-missing" ty ["_Py_slot_tp_getattr_hook"]
     "__getattr__ runs, with the name, when the default lookup misses."
     "docs: object.__getattr__"
     ``GetattrHookCalledWhenMissing ``getattrHookCalledWhenMissing_proven,
@@ -417,7 +419,7 @@ def entries : List Entry := [
     "A __getattribute__ raising AttributeError falls back to __getattr__; any other exception propagates."
     "docs: object.__getattribute__"
     ``GetattributeAttributeErrorFallback ``getattributeAttributeErrorFallback_proven,
-  p "typeobj-no-hook-dispatch" ty ["_Py_slot_tp_getattr_hook", "_Py_slot_tp_getattro"]
+  p "typeobj-no-hook-dispatch" ty ["_Py_slot_tp_getattr_hook"]
     "With no __getattr__ the hook behaves as the plain dispatcher."
     "typeobject.c:10401-10407"
     ``NoHookSimpleDispatch ``noHookSimpleDispatch_proven,
@@ -425,27 +427,27 @@ def entries : List Entry := [
     "On a found attribute the suppressing and raising generic lookups return the same value and the same state."
     "fast path vs raising path, object.c:1336-1345"
     ``OptionalAttrAgrees ``optionalAttrAgrees_proven,
-  p "typeobj-slot-setattr" ty ["slot_tp_setattro"]
+  p "typeobj-slot-setattr" ty []
     "Assignment goes to __setattr__, deletion to __delattr__."
     "typeobject.c:10448-10454"
     ``SlotSetattrDispatch ``slotSetattrDispatch_proven,
-  p "typeobj-slot-descr-set" ty ["slot_tp_descr_set"]
+  p "typeobj-slot-descr-set" ty []
     "Assignment goes to __set__, deletion to __delete__."
     "typeobject.c:10556-10562"
     ``SlotDescrSetDispatch ``slotDescrSetDispatch_proven,
-  p "typeobj-slot-descr-get" ty ["slot_tp_descr_get"]
+  p "typeobj-slot-descr-get" ty []
     "__get__ receives None for a missing instance; a descriptor whose __get__ is gone returns itself."
     "typeobject.c:10529-10543"
     ``SlotDescrGetArgs ``slotDescrGetArgs_proven,
-  p "typeobj-slot-richcompare" ty ["slot_tp_richcompare"]
+  p "typeobj-slot-richcompare" ty []
     "A missing comparison method answers NotImplemented."
     "typeobject.c:10474-10479"
     ``SlotRichcompareMissing ``slotRichcompareMissing_proven,
-  p "typeobj-slot-new" ty ["slot_tp_new"]
+  p "typeobj-slot-new" ty []
     "__new__ is found with getattr on the class and called with the class first."
     "typeobject.c:10592-10597"
     ``SlotNewPrependsType ``slotNewPrependsType_proven,
-  p "typeobj-slot1bin-same-type" ty ["slot_nb_power", "method_is_overloaded"]
+  p "typeobj-slot1bin-same-type" ty []
     "Same operand types: NotImplemented from __op__ is final, __rop__ does not run."
     "typeobject.c:10001-10003"
     ``Slot1BinSameType ``slot1BinSameType_proven,
@@ -457,55 +459,55 @@ def entries : List Entry := [
     "x.__op__(y) calls the slot with (x, y) and x.__rop__(y) with (y, x)."
     "typeobject.c:9304-9326"
     ``WrapBinarySwaps ``wrapBinarySwaps_proven,
-  p "typeobj-wrap-arity" ty ["wrap_unaryfunc", "check_num_args"]
+  p "typeobj-wrap-arity" ty []
     "A zero-argument wrapper called with arguments raises the exact TypeError."
     "typeobject.c:9229-9231"
     ``WrapperArityChecked ``wrapperArityChecked_proven,
-  p "typeobj-wrap-keywords" "Objects/descrobject.c" ["wrapperdescr_raw_call", "wrapper_call", "Py_LOCAL_INLINE"]
+  p "typeobj-wrap-keywords" "Objects/descrobject.c" []
     "Wrappers other than __call__ and __init__ refuse keywords."
     "descrobject.c:526-531"
     ``WrapperRejectsKeywords ``wrapperRejectsKeywords_proven,
-  p "typeobj-attr-string-forms" ob ["PyObject_GetAttrString", "PyObject_DelAttr", "PyObject_DelAttrString", "PyObject_SetAttrString", "PyObject_GetOptionalAttrString"]
+  p "typeobj-attr-string-forms" ob []
     "The C string forms equal the object-name forms."
     "object.c:1174-1232"
     ``AttrStringForms ``attrStringForms_proven,
-  p "typeobj-hasattr" ob ["PyObject_HasAttrWithError", "PyObject_HasAttrStringWithError", "PyObject_HasAttr", "PyObject_HasAttrString"]
+  p "typeobj-hasattr" ob []
     "hasattr is whether PyObject_GetOptionalAttr found the name."
     "object.c:1417-1437"
     ``HasAttrIffOptional ``hasAttrIffOptional_proven,
-  p "typeobj-not" ob ["PyObject_Not"]
+  p "typeobj-not" ob []
     "PyObject_Not negates PyObject_IsTrue."
     "object.c:2088"
     ``NotNegates ``notNegates_proven,
-  p "typeobj-callable" ob ["PyCallable_Check", "object_is_not_callable", "_PyObject_Call", "PyObject_Call"]
+  p "typeobj-callable" ob []
     "Calling an object whose type has no tp_call raises the exact TypeError."
     "call.c:196"
     ``CallableCheck ``callableCheck_proven,
-  p "typeobj-py-is" ob ["Py_Is", "Py_IsNone", "Py_IsTrue", "Py_IsFalse"]
+  p "typeobj-py-is" ob []
     "Py_Is is reflexive."
     "object.c:3275"
     ``IsReflexive ``isReflexive_proven,
-  p "typeobj-seq-concat" ab ["PySequence_Concat"]
+  p "typeobj-seq-concat" ab []
     "A non-sequence without sq_concat cannot be concatenated."
     "abstract.c:1728-1734"
     ``SequenceConcatFallback ``sequenceConcatFallback_proven,
-  p "typeobj-seq-repeat" ab ["PySequence_Repeat"]
+  p "typeobj-seq-repeat" ab []
     "A non-sequence without sq_repeat cannot be repeated."
     "abstract.c:1754-1765"
     ``SequenceRepeatFallback ``sequenceRepeatFallback_proven,
-  p "typeobj-seq-iconcat" ab ["PySequence_InPlaceConcat"]
+  p "typeobj-seq-iconcat" ab []
     "sq_inplace_concat takes precedence."
     "abstract.c:1776"
     ``SequenceInPlaceConcatOrder ``sequenceInPlaceConcatOrder_proven,
-  p "typeobj-mapping-optional" ab ["PyMapping_GetOptionalItem", "PyMapping_GetOptionalItemString", "PyMapping_HasKey", "PyMapping_HasKeyWithError", "PyMapping_HasKeyString", "PyMapping_HasKeyStringWithError"]
+  p "typeobj-mapping-optional" ab []
     "KeyError from __getitem__ reads as absent."
     "abstract.c:213-222"
     ``MappingOptionalItem ``mappingOptionalItem_proven,
-  p "typeobj-call-object" ca ["PyObject_CallObject"]
+  p "typeobj-call-object" ca []
     "NULL args call with no arguments; a tuple is unpacked."
     "call.c:460"
     ``CallObjectArgs ``callObjectArgs_proven,
-  p "typeobj-call-family" ca ["PyObject_CallNoArgs", "PyObject_CallOneArg", "_PyObject_Call_Prepend"]
+  p "typeobj-call-family" ca []
     "The call helpers reduce to PyObject_Call."
     "call.c:102, :386, :478"
     ``CallFamily ``callFamily_proven,
@@ -525,11 +527,11 @@ def entries : List Entry := [
     "Without __slots__ a class adds a dict and a weakref unless its base provides them."
     "docs: __slots__"
     ``NoSlotsAddsDictWeak ``noSlotsAddsDictWeak_proven,
-  p "typeobj-slots-string" ty ["type_new_get_slots"]
+  p "typeobj-slots-string" ty []
     "A string __slots__ is one name."
     "docs: __slots__"
     ``SlotsStringIsOneName ``slotsStringIsOneName_proven,
-  p "typeobj-slots-dict-twice" ty ["type_new_visit_slots"]
+  p "typeobj-slots-dict-twice" ty []
     "__dict__ twice in __slots__ raises the exact TypeError."
     "typeobject.c:3990"
     ``SlotDictTwiceRejected ``slotDictTwiceRejected_proven,
@@ -537,7 +539,7 @@ def entries : List Entry := [
     "Only plain functions are wrapped."
     "typeobject.c:4354, :4381"
     ``WrapInDictOnlyFunctions ``wrapInDictOnlyFunctions_proven,
-  p "typeobj-ready-new" ty ["type_ready_set_new"]
+  p "typeobj-ready-new" ty []
     "An existing tp_new is kept."
     "typeobject.c:8847-8863"
     ``TypeReadyNewInherited ``typeReadyNewInherited_proven,
@@ -549,7 +551,7 @@ def entries : List Entry := [
     "__hash__ = None anywhere first in the MRO makes tp_hash PyObject_HashNotImplemented."
     "typeobject.c:11392-11397"
     ``UpdateHashNone ``updateHashNone_proven,
-  p "typeobj-subtype-mro" ty ["PyType_IsSubtype", "is_subtype_with_mro"]
+  p "typeobj-subtype-mro" ty []
     "For a finished class, subtyping is membership in the MRO."
     "typeobject.c:2807-2819"
     ``SubtypeIsMroMember ``subtypeIsMroMember_proven,
@@ -565,27 +567,27 @@ def entries : List Entry := [
     "A non-empty spec raises; the empty spec is str(self)."
     "typeobject.c:7880-7886"
     ``ObjectFormatSpec ``objectFormatSpec_proven,
-  p "typeobj-type-init" ty ["type_init"]
+  p "typeobj-type-init" ty []
     "type.__init__ takes one or three arguments."
     "typeobject.c:3895"
     ``TypeInitArity ``typeInitArity_proven,
-  p "typeobj-type-two-args" ty ["type_call"]
+  p "typeobj-type-two-args" ty []
     "type() with two arguments is refused."
     "typeobject.c:2359"
     ``TypeCallTwoArgs ``typeCallTwoArgs_proven,
-  p "typeobj-new-wrapper" ty ["tp_new_wrapper"]
+  p "typeobj-new-wrapper" ty []
     "X.__new__ needs a type as first argument."
     "typeobject.c:9833-9846"
     ``NewWrapperChecks ``newWrapperChecks_proven,
-  p "typeobj-descr-check" "Objects/descrobject.c" ["descr_check", "descr_setcheck", "method_get", "wrapperdescr_get", "member_get", "getset_get", "member_set", "getset_set"]
+  p "typeobj-descr-check" "Objects/descrobject.c" []
     "A descriptor of C refuses an object that is not a C."
     "descrobject.c:80-91"
     ``DescrCheckRefuses ``descrCheckRefuses_proven,
-  p "typeobj-descr-from-class" "Objects/descrobject.c" ["method_get", "wrapperdescr_get", "member_get", "getset_get"]
+  p "typeobj-descr-from-class" "Objects/descrobject.c" []
     "From the class a descriptor is itself."
     "descrobject.c:141, :166, :187, :207"
     ``DescriptorFromClass ``descriptorFromClass_proven,
-  p "typeobj-slot-member-unset" "Objects/descrobject.c" ["member_get"]
+  p "typeobj-slot-member-unset" "Objects/descrobject.c" []
     "An unset __slots__ member raises AttributeError."
     "docs: __slots__"
     ``SlotMemberUnset ``slotMemberUnset_proven,
@@ -605,12 +607,12 @@ def entries : List Entry := [
     "From all-maximal indices the odometer wraps to zero."
     "abstract.c:554-562"
     ``AddOneWraps ``addOneWraps_proven,
-  { id := "typeobj-copydata-bounds", pyFile := ab, pyFns := ["PyObject_CopyData", "PyBuffer_GetPointer"]
+  { id := "typeobj-copydata-bounds", pyFile := ab, pyFns := ["PyObject_CopyData"]
     statement := "With dest.len >= src.len, every element copied by PyObject_CopyData lands inside dest."
     source := "invariant: no out-of-bounds write; docs: PyObject_CopyData", status := .refuted,
     prop := ``CopyDataInBounds, thm := some ``copyDataInBounds_refuted,
     bug := some "typeobj-copydata-shape-mismatch" },
-  p "typeobj-repr-str-result" ob ["PyObject_Repr", "slot_tp_repr"]
+  p "typeobj-repr-str-result" ob ["PyObject_Repr"]
     "repr() of an object whose __repr__ returns a non-str raises the exact TypeError."
     "object.c:788"
     ``ReprMustReturnStr ``reprMustReturnStr_proven,
@@ -618,11 +620,11 @@ def entries : List Entry := [
     "str() of an object whose __str__ returns a non-str raises the exact TypeError."
     "object.c:831"
     ``StrMustReturnStr ``strMustReturnStr_proven,
-  p "typeobj-str-exact" ob ["PyObject_Str"]
+  p "typeobj-str-exact" ob []
     "str(s) of an exact str returns s with no slot call."
     "object.c:806"
     ``StrExactShortcut ``strExactShortcut_proven,
-  p "typeobj-hash-no-slot" ob ["PyObject_Hash"]
+  p "typeobj-hash-no-slot" ob []
     "A type with no tp_hash is unhashable."
     "object.c:1170"
     ``HashNoSlot ``hashNoSlot_proven,
@@ -630,11 +632,11 @@ def entries : List Entry := [
     "hash(i) is never -1 for an int."
     "object.c docs: hash values"
     ``LongHashNotMinusOne ``longHashNotMinusOne_proven,
-  p "typeobj-attr-context" ob ["_PyObject_SetAttributeErrorContext"]
+  p "typeobj-attr-context" ob []
     "Exceptions other than AttributeError pass through unchanged."
     "object.c:1266"
     ``AttrContextOnlyAttributeError ``attrContextOnlyAttributeError_proven,
-  p "typeobj-setattr-no-slot" ob ["PyObject_SetAttr"]
+  p "typeobj-setattr-no-slot" ob []
     "A type with tp_getattro and no tp_setattro has read-only attributes."
     "object.c:1480"
     ``SetAttrNoSlot ``setAttrNoSlot_proven,
@@ -642,11 +644,11 @@ def entries : List Entry := [
     "LOAD_ATTR method form: a method descriptor stays unbound unless the instance dict shadows it."
     "object.c:1568-1577"
     ``GetMethodDescriptor ``getMethodDescriptor_proven,
-  p "typeobj-setdict" ty ["_PyObject_SetDict", "subtype_setdict", "PyObject_GenericSetDict"]
+  p "typeobj-setdict" ty []
     "__dict__ can only be set to a dict."
     "typeobject.c:3767"
     ``SetDictRequiresDict ``setDictRequiresDict_proven,
-  p "typeobj-getdict" ty ["subtype_dict"]
+  p "typeobj-getdict" ty []
     "__dict__ on an object without one raises."
     "dictobject.c:7616"
     ``GetDictRequiresDictPtr ``getDictRequiresDictPtr_proven,
@@ -654,11 +656,11 @@ def entries : List Entry := [
     "len() uses sq_length, then mp_length, then raises."
     "abstract.c:57-72"
     ``ObjectSizeOrder ``objectSizeOrder_proven,
-  p "typeobj-size-protocols" ab ["PySequence_Size", "PyMapping_Size"]
+  p "typeobj-size-protocols" ab []
     "PySequence_Size refuses a pure mapping and PyMapping_Size a pure sequence."
     "abstract.c:1695, :2281"
     ``SizeProtocolsDistinct ``sizeProtocolsDistinct_proven,
-  p "typeobj-length-hint-default" ab ["PyObject_LengthHint", "_PyObject_HasLen"]
+  p "typeobj-length-hint-default" ab ["PyObject_LengthHint"]
     "With no __len__ and no __length_hint__ the default is returned."
     "abstract.c:88-92"
     ``LengthHintDefault ``lengthHintDefault_proven,
@@ -666,7 +668,7 @@ def entries : List Entry := [
     "NotImplemented from __length_hint__ means the default."
     "abstract.c:130"
     ``LengthHintNotImplemented ``lengthHintNotImplemented_proven,
-  p "typeobj-setitem-mapping" ab ["PyObject_SetItem", "PyObject_DelItem", "PyObject_DelItemString", "PyMapping_SetItemString", "PyMapping_GetItemString"]
+  p "typeobj-setitem-mapping" ab []
     "Item assignment and deletion prefer mp_ass_subscript."
     "abstract.c:233"
     ``SetItemMappingFirst ``setItemMappingFirst_proven,
@@ -674,7 +676,7 @@ def entries : List Entry := [
     "Negative indices get len(s) added before sq_ass_item."
     "abstract.c:1893-1901"
     ``SequenceSetItemNegative ``sequenceSetItemNegative_proven,
-  p "typeobj-ternary-no-slots" ab ["ternary_op", "PyNumber_Power", "_PyNumber_PowerNoMod"]
+  p "typeobj-ternary-no-slots" ab []
     "pow with no slot anywhere names two types when the modulus is None."
     "abstract.c:1091-1098"
     ``TernaryNoSlots ``ternaryNoSlots_proven,
@@ -690,19 +692,19 @@ def entries : List Entry := [
     "An exact int is returned; a non-int __int__ result raises the exact TypeError."
     "abstract.c:1519, :1532"
     ``NumberLongChecks ``numberLongChecks_proven,
-  p "typeobj-number-check" ab ["PyNumber_Check"]
+  p "typeobj-number-check" ab []
     "PyNumber_Check tests the three conversion slots."
     "abstract.c:903"
     ``NumberCheckSlots ``numberCheckSlots_proven,
-  p "typeobj-iter-next-stop" ab ["iternext", "PyIter_Next", "slot_tp_iternext"]
+  p "typeobj-iter-next-stop" ab ["PyIter_Next"]
     "StopIteration means exhausted; other exceptions propagate."
     "abstract.c:2880"
     ``IterNextStop ``iterNextStop_proven,
-  p "typeobj-iter-check" ab ["PyIter_Check", "_PyObject_NextNotImplemented"]
+  p "typeobj-iter-check" ab []
     "A type with _PyObject_NextNotImplemented is not an iterator."
     "abstract.c:2853"
     ``IterCheckNotImplemented ``iterCheckNotImplemented_proven,
-  p "typeobj-tuple-of-tuple" ab ["PySequence_Tuple"]
+  p "typeobj-tuple-of-tuple" ab []
     "tuple(t) of an exact tuple does not iterate."
     "abstract.c:2005"
     ``TupleOfTuple ``tupleOfTuple_proven,
@@ -714,71 +716,71 @@ def entries : List Entry := [
     "isinstance(x, ()) is False."
     "docs: isinstance"
     ``IsinstanceEmptyTuple ``isinstanceEmptyTuple_proven,
-  p "typeobj-wrap-next" ty ["wrap_next"]
+  p "typeobj-wrap-next" ty []
     "NULL from the slot with no exception raises StopIteration."
     "typeobject.c:9696"
     ``WrapNextStops ``wrapNextStops_proven,
-  p "typeobj-wrap-descr-get" ty ["wrap_descr_get"]
+  p "typeobj-wrap-descr-get" ty []
     "__get__(None, None) is refused."
     "typeobject.c:9714"
     ``WrapDescrGetNoneNone ``wrapDescrGetNoneNone_proven,
-  p "typeobj-hackcheck" ty ["hackcheck", "hackcheck_unlocked", "wrap_setattr", "wrap_delattr"]
+  p "typeobj-hackcheck" ty []
     "object.__setattr__ on an instance skips the type check."
     "typeobject.c:9580"
     ``HackcheckInstances ``hackcheckInstances_proven,
-  p "typeobj-getindex" ty ["getindex", "wrap_sq_item", "wrap_sq_setitem", "wrap_sq_delitem"]
+  p "typeobj-getindex" ty []
     "A non-negative index passes through getindex."
     "typeobject.c:9404"
     ``GetIndexNonNegative ``getIndexNonNegative_proven,
-  p "typeobj-slot-call" ty ["slot_tp_call", "wrap_call"]
+  p "typeobj-slot-call" ty []
     "slot_tp_call is __call__ on the type."
     "typeobject.c:10343"
     ``SlotCallDispatch ``slotCallDispatch_proven,
-  p "typeobj-slot-repr" ty ["slot_tp_repr"]
+  p "typeobj-slot-repr" ty []
     "Without __repr__ on the type the default text is used."
     "typeobject.c:10296"
     ``SlotReprDefault ``slotReprDefault_proven,
-  p "typeobj-supercheck" ty ["supercheck", "super_init_impl", "super_vectorcall", "super_init"]
+  p "typeobj-supercheck" ty ["supercheck"]
     "A subclass of type gives itself; an instance gives its type."
     "typeobject.c:11959-11965"
     ``SupercheckCases ``supercheckCases_proven,
-  p "typeobj-super-get-bound" ty ["super_descr_get"]
+  p "typeobj-super-get-bound" ty []
     "__get__ of a bound super object returns it."
     "typeobject.c:12038"
     ``SuperGetBound ``superGetBound_proven,
-  p "typeobj-compat-reflexive" ty ["compatible_for_assignment", "compatible_with_tp_base", "same_slots_added"]
+  p "typeobj-compat-reflexive" ty []
     "Assigning __class__ to the same class passes the layout test."
     "invariant"
     ``CompatibleReflexive ``compatibleReflexive_proven,
-  p "typeobj-special-attr-immutable" ty ["check_set_special_type_attr", "type_set_name", "type_set_qualname", "type_set_module", "type_set_doc"]
+  p "typeobj-special-attr-immutable" ty []
     "Special attributes of immutable types cannot be set."
     "typeobject.c:1421"
     ``TypeDocSet ``typeDocSet_proven,
-  p "typeobj-wrapper-arity0" ty ["wrap_lenfunc", "wrap_inquirypred", "wrap_hashfunc", "check_num_args"]
+  p "typeobj-wrapper-arity0" ty []
     "Zero-argument wrappers called with arguments raise the exact TypeError."
     "typeobject.c:9229"
     ``WrapperArity0 ``wrapperArity0_proven,
-  p "typeobj-wrapper-arity1" ty ["wrap_richcmpfunc", "wrap_descr_delete", "wrap_sq_delitem", "wrap_objobjproc", "wrap_delitem", "wrap_indexargfunc", "wrap_sq_item"]
+  p "typeobj-wrapper-arity1" ty []
     "One-argument wrappers called with another count raise the exact TypeError."
     "typeobject.c:9229"
     ``WrapperArity1 ``wrapperArity1_proven,
-  p "typeobj-wrapper-pow" ty ["wrap_ternaryfunc", "wrap_ternaryfunc_r", "check_pow_args"]
+  p "typeobj-wrapper-pow" ty []
     "__pow__ wrappers accept one or two arguments."
     "typeobject.c:9250"
     ``WrapperArityPow ``wrapperArityPow_proven,
-  p "typeobj-wrap-init" ty ["wrap_init"]
+  p "typeobj-wrap-init" ty []
     "__init__ through the wrapper returns None."
     "typeobject.c:9817"
     ``WrapInitReturnsNone ``wrapInitReturnsNone_proven,
-  p "typeobj-wrap-len-hash" ty ["wrap_lenfunc", "wrap_hashfunc"]
+  p "typeobj-wrap-len-hash" ty []
     "__len__ and __hash__ wrappers return the slot result as an int."
     "typeobject.c:9275, :9637"
     ``WrapLenHash ``wrapLenHash_proven,
-  p "typeobj-wrap-richcmp" ty ["wrap_richcmpfunc"]
+  p "typeobj-wrap-richcmp" ty []
     "__eq__ and friends apply tp_richcompare with their op."
     "typeobject.c:9661-9670"
     ``WrapRichcmp ``wrapRichcmp_proven,
-  p "typeobj-wrapperdescr-self" "Objects/descrobject.c" ["wrapperdescr_call"]
+  p "typeobj-wrapperdescr-self" "Objects/descrobject.c" []
     "An unbound slot wrapper refuses a first argument of another class."
     "descrobject.c:554"
     ``WrapperDescrSelfChecked ``wrapperDescrSelfChecked_proven,
@@ -786,11 +788,11 @@ def entries : List Entry := [
     "type.__new__ argument count and name type are checked with the exact messages."
     "typeobject.c:4774"
     ``TypeNewArgs ``typeNewArgs_proven,
-  p "typeobj-type-new-empty-bases" ty ["type_new_get_bases"]
+  p "typeobj-type-new-empty-bases" ty []
     "Empty bases mean (object,)."
     "typeobject.c:4699-4707"
     ``TypeNewEmptyBases ``typeNewEmptyBases_proven,
-  p "typeobj-type-new-mro-entries" ty ["type_new_get_bases"]
+  p "typeobj-type-new-mro-entries" ty []
     "type() refuses a base with __mro_entries__."
     "typeobject.c:4715-4724"
     ``TypeNewMroEntries ``typeNewMroEntries_proven,
@@ -798,27 +800,27 @@ def entries : List Entry := [
     "__classcell__ must be a cell."
     "typeobject.c:4485"
     ``ClassCellChecked ``classCellChecked_proven,
-  p "typeobj-type-getters" ty ["type_get_bases", "type_get_mro"]
+  p "typeobj-type-getters" ty []
     "__bases__ and __mro__ read tp_bases and tp_mro."
     "typeobject.c:1686-1705"
     ``TypeGetters ``typeGetters_proven,
-  p "typeobj-type-name-getters" ty ["type_name", "type_qualname", "_PyType_Name"]
+  p "typeobj-type-name-getters" ty []
     "__name__ and __qualname__ of a heap type are ht_name and ht_qualname."
     "typeobject.c:1460, :1473"
     ``TypeNameGetters ``typeNameGetters_proven,
-  p "typeobj-object-get-class" ty ["object_get_class"]
+  p "typeobj-object-get-class" ty []
     "obj.__class__ through the descriptor is type(obj)."
     "typeobject.c:7017"
     ``ObjectGetClass ``objectGetClass_proven,
-  p "typeobj-type-repr" ty ["type_repr", "type_module"]
+  p "typeobj-type-repr" ty []
     "repr of a heap class is <class 'module.qualname'>."
     "typeobject.c:2318"
     ``TypeReprHeap ``typeReprHeap_proven,
-  p "typeobj-object-str" ty ["object_str"]
+  p "typeobj-object-str" ty []
     "object.__str__ uses tp_repr."
     "typeobject.c:6956"
     ``ObjectStrUsesRepr ``objectStrUsesRepr_proven,
-  { id := "typeobj-super-bind-null-type", pyFile := ty, pyFns := ["super_descr_get", "supercheck"]
+  { id := "typeobj-super-bind-null-type", pyFile := ty, pyFns := ["super_descr_get"]
     statement := "Binding the object super.__new__(super) allocates never reaches supercheck with a NULL type."
     source := "invariant: pure Python does not crash the interpreter", status := .refuted,
     prop := ``SuperBindHasType, thm := some ``superBindHasType_refuted,
@@ -835,14 +837,34 @@ def entries : List Entry := [
     "A length hint that overflows m + n is ignored; otherwise an unservable total is a MemoryError."
     "listobject.c:1241-1259"
     ``ListReserveRule ``listReserveRule_proven,
-  p "typeobj-list-extend-iter-first" "Objects/listobject.c" ["list_extend_iter_lock_held"]
+  p "typeobj-list-extend-iter-first" "Objects/listobject.c" []
     "A failing __iter__ ends the extension before the length hint runs."
     "listobject.c:1227-1234"
     ``ListExtendIterFirst ``listExtendIterFirst_proven,
-  p "typeobj-list-init-clears" "Objects/listobject.c" ["list___init___impl"]
+  p "typeobj-list-init-clears" "Objects/listobject.c" []
     "list.__init__ empties the list before it extends it."
     "listobject.c:3491-3497"
     ``ListInitClearsFirst ``listInitClearsFirst_proven,
+  p "typeobj-dict-lookup-other-hash" "Objects/dictobject.c" ["compare_generic", "dictkeys_generic_lookup"]
+    "A key that is no entry and shares no entry's hash is reported absent and no comparison runs, for every __eq__."
+    "dictobject.c:1107-1126"
+    ``DictProbeSkipsOtherHashes ``dictProbeSkipsOtherHashes_proven,
+  p "typeobj-dict-lookup-identity" "Objects/dictobject.c" ["compare_generic", "dictkeys_generic_lookup"]
+    "A key object already in the dict is found without running Python code when no earlier entry shares its hash."
+    "dictobject.c:1107"
+    ``DictProbeFindsIdentical ``dictProbeFindsIdentical_proven,
+  p "typeobj-reduce-newargs-validated" ty ["_PyObject_GetNewArguments"]
+    "Whatever __getnewargs_ex__ returned, only a pair of a tuple and a dict is accepted, and nothing else happens."
+    "typeobject.c:7538-7574"
+    ``NewargsExValidated ``newargsExValidated_proven,
+  p "typeobj-slotnames-typed" ty ["_PyType_GetSlotNames"]
+    "For every class and Rt, a value _PyType_GetSlotNames returns is None or a list."
+    "invariant: typeobject.c:7381"
+    ``SlotNamesWellTyped ``slotNamesWellTyped_proven,
+  p "typeobj-getstate-guard" ty ["object_getstate_default"]
+    "If the slot loop of object_getstate_default completes, __slotnames__ has its original size, for every getter."
+    "typeobject.c:7440"
+    ``GetstateSlotsGuard ``getstateSlotsGuard_proven,
   p "typeobj-super-skips" ty ["_super_lookup_descr", "do_super_lookup", "super_getattro"]
     "super looks strictly after __thisclass__ in the MRO of the object's type."
     "docs: super"
