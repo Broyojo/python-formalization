@@ -1464,6 +1464,8 @@ def misc_gen_weakref(rng):
     elif kind == "keyed":
         case["v"] = pv()
     else:
+        spawned = [99]  # a finalizer is an object: each spawn gets an id of its own
+
         def fs(d=0):
             k = rng.random()
             if k < 0.5 or d > 1:
@@ -1472,7 +1474,8 @@ def misc_gen_weakref(rng):
                 return ["boom"]
             if k < 0.8:
                 return ["base"]
-            return ["spawn", rng.randint(100, 200), rng.randrange(n), fs(d + 1)]
+            spawned[0] += 1
+            return ["spawn", spawned[0], rng.randrange(n), fs(d + 1)]
         ops = []
         fid = 0
         for _ in range(rng.randint(1, 12)):

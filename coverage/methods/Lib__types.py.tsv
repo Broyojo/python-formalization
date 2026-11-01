@@ -1,25 +1,25 @@
 file	line	endline	name	signature	status	entry	note
-Lib/types.py	80	88	new_class	new_class(name, bases=(), kwds=None, exec_body=None)	todo		
-Lib/types.py	90	109	resolve_bases	resolve_bases(bases)	todo		
-Lib/types.py	111	141	prepare_class	prepare_class(name, bases=(), kwds=None)	todo		
-Lib/types.py	143	158	_calculate_meta	_calculate_meta(meta, bases)	todo		
-Lib/types.py	161	186	get_original_bases	get_original_bases(cls, /)	todo		
-Lib/types.py	207	215	DynamicClassAttribute.__init__	__init__(self, fget=None, fset=None, fdel=None, doc=None)	todo		
-Lib/types.py	217	224	DynamicClassAttribute.__get__	__get__(self, instance, ownerclass=None)	todo		
-Lib/types.py	226	229	DynamicClassAttribute.__set__	__set__(self, instance, value)	todo		
-Lib/types.py	231	234	DynamicClassAttribute.__delete__	__delete__(self, instance)	todo		
-Lib/types.py	236	240	DynamicClassAttribute.getter	getter(self, fget)	todo		
-Lib/types.py	242	245	DynamicClassAttribute.setter	setter(self, fset)	todo		
-Lib/types.py	247	250	DynamicClassAttribute.deleter	deleter(self, fdel)	todo		
-Lib/types.py	255	259	_GeneratorWrapper.__init__	__init__(self, gen)	todo		
-Lib/types.py	260	261	_GeneratorWrapper.send	send(self, val)	todo		
-Lib/types.py	262	263	_GeneratorWrapper.throw	throw(self, tp, *rest)	todo		
-Lib/types.py	264	265	_GeneratorWrapper.close	close(self)	todo		
-Lib/types.py	267	268	_GeneratorWrapper.gi_code	gi_code(self)	todo		
-Lib/types.py	270	271	_GeneratorWrapper.gi_frame	gi_frame(self)	todo		
-Lib/types.py	273	274	_GeneratorWrapper.gi_running	gi_running(self)	todo		
-Lib/types.py	276	277	_GeneratorWrapper.gi_yieldfrom	gi_yieldfrom(self)	todo		
-Lib/types.py	279	280	_GeneratorWrapper.gi_suspended	gi_suspended(self)	todo		
-Lib/types.py	286	287	_GeneratorWrapper.__next__	__next__(self)	todo		
-Lib/types.py	288	291	_GeneratorWrapper.__iter__	__iter__(self)	todo		
-Lib/types.py	294	343	coroutine	coroutine(func)	todo		
+Lib/types.py	80	88	new_class	new_class(name, bases=(), kwds=None, exec_body=None)	modelled	misc-types-new-class-orig-bases	
+Lib/types.py	90	109	resolve_bases	resolve_bases(bases)	modelled	misc-types-resolve-bases-flat,misc-types-resolve-bases-twin	
+Lib/types.py	111	141	prepare_class	prepare_class(name, bases=(), kwds=None)	modelled	misc-types-prepare-class-default,misc-types-prepare-class-meta	
+Lib/types.py	143	158	_calculate_meta	_calculate_meta(meta, bases)	modelled	misc-types-calculate-meta	
+Lib/types.py	161	186	get_original_bases	get_original_bases(cls, /)	modelled	misc-types-get-original-bases	
+Lib/types.py	207	215	DynamicClassAttribute.__init__	__init__(self, fget=None, fset=None, fdel=None, doc=None)	modelled	misc-types-dca-accessors,misc-types-dca-doc	
+Lib/types.py	217	224	DynamicClassAttribute.__get__	__get__(self, instance, ownerclass=None)	modelled	misc-types-dca-descriptor	
+Lib/types.py	226	229	DynamicClassAttribute.__set__	__set__(self, instance, value)	modelled	misc-types-dca-descriptor	
+Lib/types.py	231	234	DynamicClassAttribute.__delete__	__delete__(self, instance)	modelled	misc-types-dca-descriptor	
+Lib/types.py	236	240	DynamicClassAttribute.getter	getter(self, fget)	modelled	misc-types-dca-accessors,misc-types-dca-doc	
+Lib/types.py	242	245	DynamicClassAttribute.setter	setter(self, fset)	modelled	misc-types-dca-accessors	
+Lib/types.py	247	250	DynamicClassAttribute.deleter	deleter(self, fdel)	modelled	misc-types-dca-accessors	
+Lib/types.py	255	259	_GeneratorWrapper.__init__	__init__(self, gen)	modelled	misc-types-generator-wrapper	
+Lib/types.py	260	261	_GeneratorWrapper.send	send(self, val)	modelled	misc-types-generator-wrapper	
+Lib/types.py	262	263	_GeneratorWrapper.throw	throw(self, tp, *rest)	modelled	misc-types-generator-wrapper	
+Lib/types.py	264	265	_GeneratorWrapper.close	close(self)	modelled	misc-types-generator-wrapper	
+Lib/types.py	267	268	_GeneratorWrapper.gi_code	gi_code(self)	modelled	misc-types-generator-wrapper	
+Lib/types.py	270	271	_GeneratorWrapper.gi_frame	gi_frame(self)	modelled	misc-types-generator-wrapper	
+Lib/types.py	273	274	_GeneratorWrapper.gi_running	gi_running(self)	modelled	misc-types-generator-wrapper	
+Lib/types.py	276	277	_GeneratorWrapper.gi_yieldfrom	gi_yieldfrom(self)	modelled	misc-types-generator-wrapper	
+Lib/types.py	279	280	_GeneratorWrapper.gi_suspended	gi_suspended(self)	modelled	misc-types-generator-wrapper	
+Lib/types.py	286	287	_GeneratorWrapper.__next__	__next__(self)	modelled	misc-types-generator-wrapper	
+Lib/types.py	288	291	_GeneratorWrapper.__iter__	__iter__(self)	modelled	misc-types-generator-wrapper	
+Lib/types.py	294	343	coroutine	coroutine(func)	modelled	misc-types-coroutine,misc-types-coroutine-wrapped	
