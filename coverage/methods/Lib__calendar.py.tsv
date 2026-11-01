@@ -1,73 +1,73 @@
 file	line	endline	name	signature	status	entry	note
-Lib/calendar.py	33	34	IllegalMonthError.__init__	__init__(self, month)	todo		
-Lib/calendar.py	35	36	IllegalMonthError.__str__	__str__(self)	todo		
-Lib/calendar.py	40	41	IllegalWeekdayError.__init__	__init__(self, weekday)	todo		
-Lib/calendar.py	42	43	IllegalWeekdayError.__str__	__str__(self)	todo		
-Lib/calendar.py	46	56	__getattr__	__getattr__(name)	todo		
-Lib/calendar.py	101	102	_localized_month.__init__	__init__(self, format)	todo		
-Lib/calendar.py	104	109	_localized_month.__getitem__	__getitem__(self, i)	todo		
-Lib/calendar.py	111	112	_localized_month.__len__	__len__(self)	todo		
-Lib/calendar.py	120	121	_localized_day.__init__	__init__(self, format)	todo		
-Lib/calendar.py	123	128	_localized_day.__getitem__	__getitem__(self, i)	todo		
-Lib/calendar.py	130	131	_localized_day.__len__	__len__(self)	todo		
-Lib/calendar.py	143	145	isleap	isleap(year)	todo		
-Lib/calendar.py	148	153	leapdays	leapdays(y1, y2)	todo		
-Lib/calendar.py	156	160	weekday	weekday(year, month, day)	todo		
-Lib/calendar.py	163	165	_validate_month	_validate_month(month)	todo		
-Lib/calendar.py	167	173	monthrange	monthrange(year, month)	todo		
-Lib/calendar.py	176	177	_monthlen	_monthlen(year, month)	todo		
-Lib/calendar.py	180	184	_prevmonth	_prevmonth(year, month)	todo		
-Lib/calendar.py	187	191	_nextmonth	_nextmonth(year, month)	todo		
-Lib/calendar.py	200	201	Calendar.__init__	__init__(self, firstweekday=0)	todo		
-Lib/calendar.py	203	204	Calendar.getfirstweekday	getfirstweekday(self)	todo		
-Lib/calendar.py	206	207	Calendar.setfirstweekday	setfirstweekday(self, firstweekday)	todo		
-Lib/calendar.py	211	217	Calendar.iterweekdays	iterweekdays(self)	todo		
-Lib/calendar.py	219	226	Calendar.itermonthdates	itermonthdates(self, year, month)	todo		
-Lib/calendar.py	228	238	Calendar.itermonthdays	itermonthdays(self, year, month)	todo		
-Lib/calendar.py	240	246	Calendar.itermonthdays2	itermonthdays2(self, year, month)	todo		
-Lib/calendar.py	248	264	Calendar.itermonthdays3	itermonthdays3(self, year, month)	todo		
-Lib/calendar.py	266	272	Calendar.itermonthdays4	itermonthdays4(self, year, month)	todo		
-Lib/calendar.py	274	280	Calendar.monthdatescalendar	monthdatescalendar(self, year, month)	todo		
-Lib/calendar.py	282	290	Calendar.monthdays2calendar	monthdays2calendar(self, year, month)	todo		
-Lib/calendar.py	292	298	Calendar.monthdayscalendar	monthdayscalendar(self, year, month)	todo		
-Lib/calendar.py	300	308	Calendar.yeardatescalendar	yeardatescalendar(self, year, width=3)	todo		
-Lib/calendar.py	310	318	Calendar.yeardays2calendar	yeardays2calendar(self, year, width=3)	todo		
-Lib/calendar.py	320	327	Calendar.yeardayscalendar	yeardayscalendar(self, year, width=3)	todo		
-Lib/calendar.py	336	340	TextCalendar.prweek	prweek(self, theweek, width)	todo		
-Lib/calendar.py	342	350	TextCalendar.formatday	formatday(self, day, weekday, width)	todo		
-Lib/calendar.py	352	356	TextCalendar.formatweek	formatweek(self, theweek, width)	todo		
-Lib/calendar.py	358	366	TextCalendar.formatweekday	formatweekday(self, day, width)	todo		
-Lib/calendar.py	368	372	TextCalendar.formatweekheader	formatweekheader(self, width)	todo		
-Lib/calendar.py	374	383	TextCalendar.formatmonthname	formatmonthname(self, theyear, themonth, width, withyear=True)	todo		
-Lib/calendar.py	385	389	TextCalendar.prmonth	prmonth(self, theyear, themonth, w=0, l=0)	todo		
-Lib/calendar.py	391	405	TextCalendar.formatmonth	formatmonth(self, theyear, themonth, w=0, l=0)	todo		
-Lib/calendar.py	407	443	TextCalendar.formatyear	formatyear(self, theyear, w=2, l=1, c=6, m=3)	todo		
-Lib/calendar.py	445	447	TextCalendar.pryear	pryear(self, theyear, w=0, l=0, c=6, m=3)	todo		
-Lib/calendar.py	476	484	HTMLCalendar.formatday	formatday(self, day, weekday)	todo		
-Lib/calendar.py	486	491	HTMLCalendar.formatweek	formatweek(self, theweek)	todo		
-Lib/calendar.py	493	498	HTMLCalendar.formatweekday	formatweekday(self, day)	todo		
-Lib/calendar.py	500	505	HTMLCalendar.formatweekheader	formatweekheader(self)	todo		
-Lib/calendar.py	507	517	HTMLCalendar.formatmonthname	formatmonthname(self, theyear, themonth, withyear=True)	todo		
-Lib/calendar.py	519	537	HTMLCalendar.formatmonth	formatmonth(self, theyear, themonth, withyear=True)	todo		
-Lib/calendar.py	539	561	HTMLCalendar.formatyear	formatyear(self, theyear, width=3)	todo		
-Lib/calendar.py	563	584	HTMLCalendar.formatyearpage	formatyearpage(self, theyear, width=3, css='calendar.css', encoding=None)	todo		
-Lib/calendar.py	588	590	different_locale.__init__	__init__(self, locale)	todo		
-Lib/calendar.py	592	594	different_locale.__enter__	__enter__(self)	todo		
-Lib/calendar.py	596	597	different_locale.__exit__	__exit__(self, *args)	todo		
-Lib/calendar.py	600	607	_get_default_locale	_get_default_locale()	todo		
-Lib/calendar.py	616	620	LocaleTextCalendar.__init__	__init__(self, firstweekday=0, locale=None)	todo		
-Lib/calendar.py	622	624	LocaleTextCalendar.formatweekday	formatweekday(self, day, width)	todo		
-Lib/calendar.py	626	628	LocaleTextCalendar.formatmonthname	formatmonthname(self, theyear, themonth, width, withyear=True)	todo		
-Lib/calendar.py	636	640	LocaleHTMLCalendar.__init__	__init__(self, firstweekday=0, locale=None)	todo		
-Lib/calendar.py	642	644	LocaleHTMLCalendar.formatweekday	formatweekday(self, day)	todo		
-Lib/calendar.py	646	648	LocaleHTMLCalendar.formatmonthname	formatmonthname(self, theyear, themonth, withyear=True)	todo		
-Lib/calendar.py	652	654	_CLIDemoCalendar.__init__	__init__(self, highlight_day=None, *args, **kwargs)	todo		
-Lib/calendar.py	656	676	_CLIDemoCalendar.formatweek	formatweek(self, theweek, width, *, highlight_day=None)	todo		
-Lib/calendar.py	678	700	_CLIDemoCalendar.formatmonth	formatmonth(self, theyear, themonth, w=0, l=0)	todo		
-Lib/calendar.py	702	752	_CLIDemoCalendar.formatyear	formatyear(self, theyear, w=2, l=1, c=6, m=3)	todo		
-Lib/calendar.py	756	758	_CLIDemoLocaleCalendar.__init__	__init__(self, highlight_day=None, *args, **kwargs)	todo		
-Lib/calendar.py	766	769	setfirstweekday	setfirstweekday(firstweekday)	todo		
-Lib/calendar.py	786	788	format	format(cols, colwidth=_colwidth, spacing=_spacing)	todo		
-Lib/calendar.py	791	794	formatstring	formatstring(cols, colwidth=_colwidth, spacing=_spacing)	todo		
-Lib/calendar.py	801	808	timegm	timegm(tuple)	todo		
-Lib/calendar.py	811	922	main	main(args=None)	todo		
+Lib/calendar.py	33	34	IllegalMonthError.__init__	__init__(self, month)	modelled	calstat-calendar-monthrange-spec	
+Lib/calendar.py	35	36	IllegalMonthError.__str__	__str__(self)	modelled	calstat-calendar-monthrange-spec	
+Lib/calendar.py	40	41	IllegalWeekdayError.__init__	__init__(self, weekday)	modelled	calstat-calendar-setfirstweekday	
+Lib/calendar.py	42	43	IllegalWeekdayError.__str__	__str__(self)	modelled	calstat-calendar-setfirstweekday	
+Lib/calendar.py	46	56	__getattr__	__getattr__(name)	modelled	calstat-calendar-module-getattr	
+Lib/calendar.py	101	102	_localized_month.__init__	__init__(self, format)	modelled	calstat-calendar-localized-tables	
+Lib/calendar.py	104	109	_localized_month.__getitem__	__getitem__(self, i)	modelled	calstat-calendar-localized-tables	
+Lib/calendar.py	111	112	_localized_month.__len__	__len__(self)	modelled	calstat-calendar-localized-tables	
+Lib/calendar.py	120	121	_localized_day.__init__	__init__(self, format)	modelled	calstat-calendar-localized-tables	
+Lib/calendar.py	123	128	_localized_day.__getitem__	__getitem__(self, i)	modelled	calstat-calendar-localized-tables	
+Lib/calendar.py	130	131	_localized_day.__len__	__len__(self)	modelled	calstat-calendar-localized-tables	
+Lib/calendar.py	143	145	isleap	isleap(year)	modelled	calstat-calendar-isleap-cycle,calstat-calendar-leapdays-count	
+Lib/calendar.py	148	153	leapdays	leapdays(y1, y2)	modelled	calstat-calendar-isleap-cycle,calstat-calendar-leapdays-count	
+Lib/calendar.py	156	160	weekday	weekday(year, month, day)	modelled	calstat-calendar-weekday-cycle,calstat-calendar-weekday-next-day	
+Lib/calendar.py	163	165	_validate_month	_validate_month(month)	modelled	calstat-calendar-monthrange-spec	
+Lib/calendar.py	167	173	monthrange	monthrange(year, month)	modelled	calstat-calendar-monthrange-chain,calstat-calendar-monthrange-spec	
+Lib/calendar.py	176	177	_monthlen	_monthlen(year, month)	modelled	calstat-calendar-itermonthdays4-weekday,calstat-calendar-monthrange-spec	
+Lib/calendar.py	180	184	_prevmonth	_prevmonth(year, month)	modelled	calstat-calendar-itermonthdays4-weekday,calstat-calendar-prev-next-month	
+Lib/calendar.py	187	191	_nextmonth	_nextmonth(year, month)	modelled	calstat-calendar-monthrange-chain,calstat-calendar-prev-next-month,calstat-calendar-weekday-next-day	
+Lib/calendar.py	200	201	Calendar.__init__	__init__(self, firstweekday=0)	modelled	calstat-calendar-firstweekday-modulo	
+Lib/calendar.py	203	204	Calendar.getfirstweekday	getfirstweekday(self)	modelled	calstat-calendar-firstweekday-modulo	
+Lib/calendar.py	206	207	Calendar.setfirstweekday	setfirstweekday(self, firstweekday)	modelled	calstat-calendar-firstweekday-modulo	
+Lib/calendar.py	211	217	Calendar.iterweekdays	iterweekdays(self)	modelled	calstat-calendar-firstweekday-modulo	
+Lib/calendar.py	219	226	Calendar.itermonthdates	itermonthdates(self, year, month)	modelled	calstat-calendar-itermonthdates-restricted	
+Lib/calendar.py	228	238	Calendar.itermonthdays	itermonthdays(self, year, month)	modelled	calstat-calendar-itermonthdays-shape,calstat-calendar-itermonthdays-vs-3	
+Lib/calendar.py	240	246	Calendar.itermonthdays2	itermonthdays2(self, year, month)	modelled	calstat-calendar-itermonthdays2-weekday	
+Lib/calendar.py	248	264	Calendar.itermonthdays3	itermonthdays3(self, year, month)	modelled	calstat-calendar-itermonthdays-vs-3,calstat-calendar-itermonthdays3-consecutive,calstat-calendar-itermonthdays4-weekday	
+Lib/calendar.py	266	272	Calendar.itermonthdays4	itermonthdays4(self, year, month)	modelled	calstat-calendar-itermonthdays4-weekday	
+Lib/calendar.py	274	280	Calendar.monthdatescalendar	monthdatescalendar(self, year, month)	modelled	calstat-calendar-month-dates-matrix	
+Lib/calendar.py	282	290	Calendar.monthdays2calendar	monthdays2calendar(self, year, month)	modelled	calstat-calendar-month-matrices	
+Lib/calendar.py	292	298	Calendar.monthdayscalendar	monthdayscalendar(self, year, month)	modelled	calstat-calendar-month-matrices	
+Lib/calendar.py	300	308	Calendar.yeardatescalendar	yeardatescalendar(self, year, width=3)	modelled	calstat-calendar-year-matrices	
+Lib/calendar.py	310	318	Calendar.yeardays2calendar	yeardays2calendar(self, year, width=3)	modelled	calstat-calendar-year-matrices	
+Lib/calendar.py	320	327	Calendar.yeardayscalendar	yeardayscalendar(self, year, width=3)	modelled	calstat-calendar-year-matrices	
+Lib/calendar.py	336	340	TextCalendar.prweek	prweek(self, theweek, width)	modelled	calstat-calendar-text-week-width	
+Lib/calendar.py	342	350	TextCalendar.formatday	formatday(self, day, weekday, width)	modelled	calstat-calendar-text-week-width	
+Lib/calendar.py	352	356	TextCalendar.formatweek	formatweek(self, theweek, width)	modelled	calstat-calendar-text-week-width	
+Lib/calendar.py	358	366	TextCalendar.formatweekday	formatweekday(self, day, width)	modelled	calstat-calendar-text-header-width	
+Lib/calendar.py	368	372	TextCalendar.formatweekheader	formatweekheader(self, width)	modelled	calstat-calendar-text-header-width	
+Lib/calendar.py	374	383	TextCalendar.formatmonthname	formatmonthname(self, theyear, themonth, width, withyear=True)	modelled	calstat-calendar-formatmonthname	
+Lib/calendar.py	385	389	TextCalendar.prmonth	prmonth(self, theyear, themonth, w=0, l=0)	modelled	calstat-calendar-formatmonth-lines	
+Lib/calendar.py	391	405	TextCalendar.formatmonth	formatmonth(self, theyear, themonth, w=0, l=0)	modelled	calstat-calendar-formatmonth-lines	
+Lib/calendar.py	407	443	TextCalendar.formatyear	formatyear(self, theyear, w=2, l=1, c=6, m=3)	modelled	calstat-calendar-formatyear-lines,calstat-calendar-formatyear-month-count,calstat-calendar-text-year-months	
+Lib/calendar.py	445	447	TextCalendar.pryear	pryear(self, theyear, w=0, l=0, c=6, m=3)	modelled	calstat-calendar-formatyear-lines	
+Lib/calendar.py	476	484	HTMLCalendar.formatday	formatday(self, day, weekday)	modelled	calstat-calendar-html-month-lines	
+Lib/calendar.py	486	491	HTMLCalendar.formatweek	formatweek(self, theweek)	modelled	calstat-calendar-html-month-lines	
+Lib/calendar.py	493	498	HTMLCalendar.formatweekday	formatweekday(self, day)	modelled	calstat-calendar-html-month-lines	
+Lib/calendar.py	500	505	HTMLCalendar.formatweekheader	formatweekheader(self)	modelled	calstat-calendar-html-month-lines	
+Lib/calendar.py	507	517	HTMLCalendar.formatmonthname	formatmonthname(self, theyear, themonth, withyear=True)	modelled	calstat-calendar-formatmonthname	
+Lib/calendar.py	519	537	HTMLCalendar.formatmonth	formatmonth(self, theyear, themonth, withyear=True)	modelled	calstat-calendar-html-month-lines	
+Lib/calendar.py	539	561	HTMLCalendar.formatyear	formatyear(self, theyear, width=3)	modelled	calstat-calendar-formatyear-month-count,calstat-calendar-html-year-months	
+Lib/calendar.py	563	584	HTMLCalendar.formatyearpage	formatyearpage(self, theyear, width=3, css='calendar.css', encoding=None)	modelled	calstat-calendar-xmlcharref-ascii	
+Lib/calendar.py	588	590	different_locale.__init__	__init__(self, locale)	modelled	calstat-calendar-different-locale-restores	
+Lib/calendar.py	592	594	different_locale.__enter__	__enter__(self)	modelled	calstat-calendar-different-locale-restores	
+Lib/calendar.py	596	597	different_locale.__exit__	__exit__(self, *args)	modelled	calstat-calendar-different-locale-restores	
+Lib/calendar.py	600	607	_get_default_locale	_get_default_locale()	modelled	calstat-calendar-get-default-locale	
+Lib/calendar.py	616	620	LocaleTextCalendar.__init__	__init__(self, firstweekday=0, locale=None)	modelled	calstat-calendar-get-default-locale	
+Lib/calendar.py	622	624	LocaleTextCalendar.formatweekday	formatweekday(self, day, width)	modelled	calstat-calendar-locale-calendar-methods	
+Lib/calendar.py	626	628	LocaleTextCalendar.formatmonthname	formatmonthname(self, theyear, themonth, width, withyear=True)	modelled	calstat-calendar-locale-calendar-methods	
+Lib/calendar.py	636	640	LocaleHTMLCalendar.__init__	__init__(self, firstweekday=0, locale=None)	modelled	calstat-calendar-get-default-locale	
+Lib/calendar.py	642	644	LocaleHTMLCalendar.formatweekday	formatweekday(self, day)	modelled	calstat-calendar-locale-calendar-methods	
+Lib/calendar.py	646	648	LocaleHTMLCalendar.formatmonthname	formatmonthname(self, theyear, themonth, withyear=True)	modelled	calstat-calendar-locale-calendar-methods	
+Lib/calendar.py	652	654	_CLIDemoCalendar.__init__	__init__(self, highlight_day=None, *args, **kwargs)	modelled	calstat-calendar-demo-is-text	
+Lib/calendar.py	656	676	_CLIDemoCalendar.formatweek	formatweek(self, theweek, width, *, highlight_day=None)	modelled	calstat-calendar-demo-is-text	
+Lib/calendar.py	678	700	_CLIDemoCalendar.formatmonth	formatmonth(self, theyear, themonth, w=0, l=0)	modelled	calstat-calendar-demo-is-text	
+Lib/calendar.py	702	752	_CLIDemoCalendar.formatyear	formatyear(self, theyear, w=2, l=1, c=6, m=3)	modelled	calstat-calendar-demo-is-text,calstat-calendar-demo-year-column,calstat-calendar-text-year-months	
+Lib/calendar.py	756	758	_CLIDemoLocaleCalendar.__init__	__init__(self, highlight_day=None, *args, **kwargs)	modelled	calstat-calendar-demo-is-text	
+Lib/calendar.py	766	769	setfirstweekday	setfirstweekday(firstweekday)	modelled	calstat-calendar-setfirstweekday	
+Lib/calendar.py	786	788	format	format(cols, colwidth=_colwidth, spacing=_spacing)	modelled	calstat-calendar-formatstring-width	
+Lib/calendar.py	791	794	formatstring	formatstring(cols, colwidth=_colwidth, spacing=_spacing)	modelled	calstat-calendar-formatstring-width	
+Lib/calendar.py	801	808	timegm	timegm(tuple)	modelled	calstat-calendar-timegm-ordinal,calstat-calendar-timegm-roundtrip	
+Lib/calendar.py	811	922	main	main(args=None)	modelled	calstat-calendar-main-checks,calstat-calendar-main-month-output	
