@@ -1088,6 +1088,62 @@ def b_rbyteobjs(rng):
             else ["int", rng.randint(0, 255)] for _ in range(rng.randint(0, 6))]
 
 
+def b_cap_stars(fmt, arg):
+    """Cap the ints a `*` really consumes, so that no case asks for a huge result.
+
+    A value is dangerous by position, not size: as a precision `2 ** 40` is a cheap
+    OverflowError, as a width it pads to 1 TiB, which the model would build as a list.
+    A bare `%` part before a `%.*` spec re-parses as `%%` and shifts every later
+    argument by one, so a value generated as a precision can become a width. This
+    walks the format as `_PyBytes_FormatEx` does (bytesobject.c:672-823) to find what
+    each `*` takes. Only a tuple can get as far as allocating: a single argument is
+    used up by the `*`, and the `getnextarg` at :823 then raises.
+    """
+    if arg[0] != "tuple":
+        return arg
+    args, i, k, n = arg[1], 0, 0, len(fmt)
+
+    def take(risky):
+        nonlocal k
+        if k < len(args) and args[k][0] == "int" and risky(args[k][1]):
+            args[k] = ["int", args[k][1] % 1000]
+        k += 1
+
+    while i < n:
+        if fmt[i] != 37:
+            i += 1
+            continue
+        i += 1
+        if i < n and fmt[i] == 37:      # `%%` takes no argument; `%5%` does (:823)
+            i += 1
+            continue
+        if i < n and fmt[i] == 40:      # no mapping: "format requires a mapping"
+            break
+        while i < n and fmt[i] in b"-+ #0":
+            i += 1
+        if i < n and fmt[i] == 42:
+            take(lambda v: 2000 < abs(v) < 2 ** 47)
+            i += 1
+        else:
+            while i < n and 48 <= fmt[i] <= 57:
+                i += 1
+        if i < n and fmt[i] == 46:
+            i += 1
+            if i < n and fmt[i] == 42:
+                take(lambda v: 2000 < v < 2 ** 31)
+                i += 1
+            else:
+                while i < n and 48 <= fmt[i] <= 57:
+                    i += 1
+        if i < n and fmt[i] in b"hlL":
+            i += 1
+        if i >= n:
+            break
+        i += 1
+        k += 1
+    return arg
+
+
 def b_rfmt(rng):
     """Format strings with every parser path; returns (format bytes, args object)."""
     parts, args = [], []
@@ -1155,7 +1211,7 @@ def b_rfmt(rng):
         a = ["list", args]
     else:
         a = ["tuple", args + [["int", 1]]]
-    return list(fmt), a
+    return list(fmt), b_cap_stars(fmt, a)
 
 
 def b_robj_ascii(rng, depth=2):
