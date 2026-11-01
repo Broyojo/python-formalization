@@ -115,12 +115,12 @@ theorem lookup_restarts (P : Proto K (PyDict K V)) (key : K) (hash : Int) (n : N
 the result (`dictobject.c:3520-3530`). -/
 theorem subscript_missing {P : Proto K (PyDict K V)} {hf : K → Int} {eqv : K → K → Bool}
     (H : Honest P hf eqv) (d : PyDict K V) (hd : DictInv hf eqv P.isStr d) (key : K)
-    (f : K → Py V) (habs : assocGet eqv (dictAssoc d) key = none) :
-    dictSubscript P (some f) key d = (f key, d) := by
+    (f : K → DM K V V) (habs : assocGet eqv (dictAssoc d) key = none) :
+    dictSubscript P (some (pure (some f))) key d = f key d := by
   obtain ⟨ix, h1, _, _⟩ := lookup_assoc H d hd key
   rw [habs] at h1
   simp only [dictSubscript, M.bind_run, hashKey_ok H key d, h1]
-  rfl
+  simp [subscriptMissing, M.bind_run]
 
 /-- `PyDict_GetItem` never raises. -/
 def GetItemSuppressed : Prop :=
@@ -256,8 +256,9 @@ theorem insertFailure_proven : InsertFailure := by
 /-- `d[key]` on an absent key of a subclass with `__missing__`. -/
 def MissingHook : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (hf : K → Int) (eqv : K → K → Bool),
-    Honest P hf eqv → ∀ (d : PyDict K V), DictInv hf eqv P.isStr d → ∀ (key : K) (f : K → Py V),
-      assocGet eqv (dictAssoc d) key = none → dictSubscript P (some f) key d = (f key, d)
+    Honest P hf eqv → ∀ (d : PyDict K V), DictInv hf eqv P.isStr d → ∀ (key : K) (f : K → DM K V V),
+      assocGet eqv (dictAssoc d) key = none →
+      dictSubscript P (some (pure (some f))) key d = f key d
 theorem missingHook_proven : MissingHook := fun _ _ _ _ _ _ H d hd key f habs =>
   subscript_missing H d hd key f habs
 

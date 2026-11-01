@@ -14,7 +14,7 @@ open PyLean
 variable {K V : Type}
 
 /-- `PyErr_BadInternalCall()`: `SystemError` with `file:line` in the message. -/
-def badInternalCall : PyExc := systemError "~bad argument to internal function"
+def badInternalCall : PyExc := badInternalCallT
 
 section
 variable [DecidableEq K] (P : Proto K (PyDict K V))
@@ -29,6 +29,21 @@ def dictGetitemSuppress (isDict : Bool) (key : K) : DM K V (Option V) :=
     M.tryCatch (do
       let r ← dictLookup P key hash
       return r.2) (fun _ => pure none)
+
+/-- `dict_getitem` with what it reports: `(value, unraisable)`, the second being the exception
+passed to `PyErr_FormatUnraisable` (:2310, :2336). A `KeyError` from the lookup is dropped without
+a report (:2335). -/
+def dictGetitemFull (isDict : Bool) (key : K) : DM K V (Option V × Option PyExc) :=
+  if !isDict then pure (none, none) else
+  match P.hash key with
+  | .error e => pure (none, some e)
+  | .ok hash => fun mp =>
+    match dictLookup P key hash mp with
+    | (.ok r, s) => (.ok (r.2, none), s)
+    | (.error e, s) =>
+      match e with
+      | .keyError _ => (.ok (none, none), s)
+      | e => (.ok (none, some e), s)
 
 /-- `_PyDict_GetItem_KnownHash` (:2389-2409). -/
 def dictGetItemKnownHash (isDict : Bool) (key : K) (hash : Int) : DM K V (Option V) := do
@@ -102,19 +117,24 @@ def pyDictContains (key : K) : DM K V Bool := do
   let hash ← hashKey P key
   dictContainsKnownHash P key hash
 
-/-- `dict_subscript` (:3504-3538). `missing` is `__missing__` of a subclass:
-`none` for an exact dict or a subclass without it. -/
-def dictSubscript (missing : Option (K → Py V)) (key : K) : DM K V V := do
+/-- The branch of `dict_subscript` for a key that is not there (:3520-3535). `missing` is `none` for
+an exact dict. Otherwise it is `_PyObject_LookupSpecial(mp, "__missing__")`, which may raise, with
+the method it finds; both may change the dict. -/
+def subscriptMissing (missing : Option (DM K V (Option (K → DM K V V)))) (key : K) : DM K V V :=
+  match missing with
+  | none => M.throw (keyErr P key)
+  | some look => do
+    match ← look with
+    | some f => f key
+    | none => M.throw (keyErr P key)
+
+/-- `dict_subscript` (:3504-3538). -/
+def dictSubscript (missing : Option (DM K V (Option (K → DM K V V)))) (key : K) : DM K V V := do
   let hash ← hashKey P key
   let r ← dictLookup P key hash
   match r.2 with
-  | some v =>
-    if r.1 == DKIX_EMPTY then M.throw (keyErr P key)
-    return v
-  | none =>
-    match missing with
-    | some f => M.lift (f key)
-    | none => M.throw (keyErr P key)
+  | some v => if r.1 == DKIX_EMPTY then subscriptMissing P missing key else return v
+  | none => subscriptMissing P missing key
 
 /-- `dict_ass_sub` (:3540-3547). -/
 def dictAssSub (key : K) (w : Option V) : DM K V Unit :=
@@ -222,6 +242,11 @@ def dictSetdefaultRef (key : K) (dflt : V) (result incref : Bool) : DM K V (Nat 
     let r ← dictLookup P key hash
     continueAt r.1 r.2
 
+/-- `dict_setdefault_ref_lock_held` with its `PyDict_Check` (:4420-4426). -/
+def dictSetdefaultRefChecked (isDict : Bool) (key : K) (dflt : V) (result incref : Bool) :
+    DM K V (Nat × Option V) :=
+  if isDict then dictSetdefaultRef P key dflt result incref else M.throw badInternalCall
+
 /-- `dict.setdefault` (`dict_setdefault_impl`, :4541-4549), `PyDict_SetDefaultRef`
 (:4507-4516). -/
 def dictSetdefault (key : K) (dflt : V) : DM K V V := do
@@ -296,6 +321,19 @@ def dictClear (mp : PyDict K V) : PyDict K V :=
         { mp with used := 0, body := .split k (clearEmbeddedValues v k.nentries) }
       else
         { mp with used := 0, body := .combined emptyKeys }
+
+/-- `dict_dealloc` (:3365-3399). The `PyDict_EVENT_DEALLOCATED` watchers run on the live dict (:3370)
+and may change it and keep a reference. `watch` is that run: whether the dict was resurrected, and the
+dict it left. Then `_PyObject_ResurrectEnd` (:3371) ends the function, leaving the dict as it is; the
+rest only drops references. The result is the dict that lives on, if any. -/
+def dictDealloc (watch : PyDict K V → Bool × PyDict K V) (mp : PyDict K V) : Option (PyDict K V) :=
+  match watch mp with
+  | (true, s) => some s
+  | (false, _) => none
+
+/-- `clear_lock_held` returns at once on something that is not a dict (:2969-2970). -/
+def dictClearChecked (isDict : Bool) (mp : PyDict K V) : PyDict K V :=
+  if isDict then dictClear mp else mp
 
 /-- `copy_values` (:4125-4144). -/
 def copyValues (v : Values V) : Values V :=
@@ -419,10 +457,24 @@ def dictMerge (b : MergeArg K V) (override : Nat) : DM K V Unit :=
     let ks ← keys
     mergeGenericLoop P getitem override ks
 
-/-- The test at the top of `dict_merge` (:4002-4005), which only the C API can fail. -/
-def dictMergeChecked (aIsDict : Bool) (b : Option (MergeArg K V)) (override : Nat) : DM K V Unit :=
+/-- The right operand of `dict_merge` as an object: whether it passes the test at :4008, what it
+holds as a dict, and how the slow path reads it. -/
+structure MergeObj (K V : Type) where
+  isDict : Bool
+  /-- `Py_TYPE(b)->tp_iter == dict_iter`. -/
+  iterIsDict : Bool
+  asDict : PyDict K V
+  keys : DM K V (List K)
+  getitem : K → DM K V V
+
+/-- The route `dict_merge` takes on it (:4008). -/
+def MergeObj.route (b : MergeObj K V) : MergeArg K V :=
+  if b.isDict && b.iterIsDict then .dict b.asDict else .mapping b.keys b.getitem
+
+/-- `dict_merge` (:3990-4088) with its entry test (:4002-4005), which only the C API can fail. -/
+def dictMergeChecked (aIsDict : Bool) (b : Option (MergeObj K V)) (override : Nat) : DM K V Unit :=
   match aIsDict, b with
-  | true, some arg => dictMerge P arg override
+  | true, some arg => dictMerge P arg.route override
   | _, _ => M.throw badInternalCall
 
 /-- One element of the iterable given to `dict.update`, after `PySequence_Fast`. -/
@@ -432,9 +484,12 @@ inductive Seq2Item (K V : Type) where
   | wrongLen (n : Nat)
   | pair (k : K) (v : V)
 
+/-- The note `merge_from_seq2_lock_held` adds to a `TypeError` from `PySequence_Fast` (:3825-3830). -/
+def seq2Note (i : Nat) : String :=
+  s!"Cannot convert dictionary update sequence element #{i} to a sequence"
+
 /-- The loop of `merge_from_seq2_lock_held` (:3810-3866). Each step is one `PyIter_Next`: it
-may raise and may change the receiver, and `none` is exhaustion. The note added at :3826 does
-not change `str(e)`. -/
+may raise and may change the receiver, and `none` is exhaustion. -/
 def seq2Loop (override : Bool) : Nat → List (DM K V (Option (Seq2Item K V))) → DM K V Unit
   | _, [] => pure ()
   | i, step :: rest => do
@@ -442,7 +497,11 @@ def seq2Loop (override : Bool) : Nat → List (DM K V (Option (Seq2Item K V))) �
     | none => pure ()
     | some item =>
       match item with
-      | .notSeq e => M.throw e
+      | .notSeq e =>
+        match e with
+        | .typeError _ => M.modify fun mp => { mp with note := some (seq2Note i) }
+        | _ => pure ()
+        M.throw e
       | .wrongLen n =>
         M.throw (.valueError s!"dictionary update sequence element #{i} has length {n}; 2 is required")
       | .pair k v =>
@@ -646,6 +705,19 @@ inductive IterKind where
   | key | value | item
   deriving DecidableEq, Repr, Inhabited
 
+/-- What one `next()` hands back. -/
+inductive IterItem (K V : Type) where
+  | key (k : K)
+  | value (v : V)
+  | item (k : K) (v : V)
+  deriving Repr, DecidableEq
+
+/-- The difference between the three bodies: the key, the value, or a pair. -/
+def IterKind.result {K V : Type} : IterKind → K × V → IterItem K V
+  | .key, p => .key p.1
+  | .value, p => .value p.2
+  | .item, p => .item p.1 p.2
+
 /-- `dictiterobject` (:5123-5130). `alive` is `di_dict != NULL`. -/
 structure DictIter where
   alive : Bool := true
@@ -744,6 +816,13 @@ def dictiterNextReverse (d : PyDict K V) (di : DictIter) : Py (Option (K × V)) 
 
 def dictiterNext (d : PyDict K V) (di : DictIter) : Py (Option (K × V)) × DictIter :=
   if di.rev then dictiterNextReverse d di else dictiterNextForward d di
+
+/-- `next(it)`, with what the iterator's flavour hands back. -/
+def dictiterYield (d : PyDict K V) (di : DictIter) : Py (Option (IterItem K V)) × DictIter :=
+  match dictiterNext d di with
+  | (.ok (some p), di') => (.ok (some (di.kind.result p)), di')
+  | (.ok none, di') => (.ok none, di')
+  | (.error e, di') => (.error e, di')
 
 /-- `PyObject_LengthHint` on a dict iterator, as `list(it)` runs it first
 (`Objects/abstract.c`): a hint that does not fit `Py_ssize_t` raises. -/

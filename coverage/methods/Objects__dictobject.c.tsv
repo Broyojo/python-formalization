@@ -1,8 +1,8 @@
 file	line	endline	name	signature	status	entry	note
-Objects/dictobject.c	187	191	load_keys_nentries	load_keys_nentries(PyDictObject *mp)	todo		
-Objects/dictobject.c	194	198	set_keys	set_keys(PyDictObject *mp, PyDictKeysObject *keys)	todo		withdrawn: theorem is rfl on a thin definition
-Objects/dictobject.c	201	205	set_values	set_values(PyDictObject *mp, PyDictValues *values)	todo		
-Objects/dictobject.c	222	230	split_keys_entry_added	static inline void split_keys_entry_added(PyDictKeysObject *keys)	todo		
+Objects/dictobject.c	187	191	load_keys_nentries	load_keys_nentries(PyDictObject *mp)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
+Objects/dictobject.c	194	198	set_keys	set_keys(PyDictObject *mp, PyDictKeysObject *keys)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
+Objects/dictobject.c	201	205	set_values	set_values(PyDictObject *mp, PyDictValues *values)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
+Objects/dictobject.c	222	230	split_keys_entry_added	static inline void split_keys_entry_added(PyDictKeysObject *keys)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
 Objects/dictobject.c	254	258	split_keys_entry_added	static inline void split_keys_entry_added(PyDictKeysObject *keys)	todo		
 Objects/dictobject.c	261	264	set_keys	set_keys(PyDictObject *mp, PyDictKeysObject *keys)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/dictobject.c	267	270	set_values	set_values(PyDictObject *mp, PyDictValues *values)	todo		
@@ -13,8 +13,8 @@ Objects/dictobject.c	434	444	dictkeys_incref	dictkeys_incref(PyDictKeysObject *d
 Objects/dictobject.c	447	476	dictkeys_decref	dictkeys_decref(PyInterpreterState *interp, PyDictKeysObject *dk, bool use_qsbr)	excluded		no-behaviour: reference counting of the keys object, no Python-visible effect
 Objects/dictobject.c	480	501	dictkeys_get_index	dictkeys_get_index(const PyDictKeysObject *keys, Py_ssize_t i)	todo		withdrawn: the C width switch is not mirrored, and the theorem is arithmetic on USABLE_FRACTION
 Objects/dictobject.c	505	529	dictkeys_set_index	dictkeys_set_index(PyDictKeysObject *keys, Py_ssize_t i, Py_ssize_t ix)	todo		withdrawn: the C width switch is not mirrored, and the theorem is arithmetic on USABLE_FRACTION
-Objects/dictobject.c	547	566	calculate_log2_keysize	calculate_log2_keysize(Py_ssize_t minsize)	todo		review: The theorem is a lower bound only, so fun m => m + 3 passes, and the smallest dk_size promised at :545 is not stated.
-Objects/dictobject.c	574	577	estimate_log2_keysize	estimate_log2_keysize(Py_ssize_t n)	todo		review: The theorem is a lower bound only, so fun n => n + 3 passes, and nothing ties the result to being the reverse of USABLE_FRACTION (:568) or to (n*3 + 1) / 2.
+Objects/dictobject.c	547	566	calculate_log2_keysize	calculate_log2_keysize(Py_ssize_t minsize)	modelled	dict-keysize-smallest	
+Objects/dictobject.c	574	577	estimate_log2_keysize	estimate_log2_keysize(Py_ssize_t n)	modelled	dict-estimate-smallest	
 Objects/dictobject.c	625	631	get_index_from_order	get_index_from_order(PyDictObject *mp, Py_ssize_t i)	todo		
 Objects/dictobject.c	635	647	dump_entries	dump_entries(PyDictKeysObject *dk)	excluded		no-behaviour: printf under #ifdef DEBUG_PYDICT
 Objects/dictobject.c	651	752	_PyDict_CheckConsistency	_PyDict_CheckConsistency(PyObject *op, int check_content)	excluded		no-behaviour: debug-only, compiled out or only asserts in release builds
@@ -24,11 +24,11 @@ Objects/dictobject.c	829	836	values_size_from_count	values_size_from_count(size_
 Objects/dictobject.c	841	853	new_values	new_values(size_t size)	todo		
 Objects/dictobject.c	856	866	free_values	free_values(PyDictValues *values, bool use_qsbr)	excluded		no-behaviour: allocator plumbing, frees memory only
 Objects/dictobject.c	870	894	new_dict	new_dict(PyInterpreterState *interp, PyDictKeysObject *keys, PyDictValues *values, Py_ssize_t used, int free_values_on_failure)	todo		withdrawn: theorem is rfl on a thin definition
-Objects/dictobject.c	897	909	new_dict_with_shared_keys	new_dict_with_shared_keys(PyInterpreterState *interp, PyDictKeysObject *keys)	todo		review: SplitFresh is stated only for the keys of a class with no attributes, dictNewKeysForClass P [], so the size taken from any other keys is unpinned and a constant Values.new 30 passes.
+Objects/dictobject.c	897	909	new_dict_with_shared_keys	new_dict_with_shared_keys(PyInterpreterState *interp, PyDictKeysObject *keys)	modelled	dict-split-fresh	
 Objects/dictobject.c	913	969	clone_combined_dict_keys	clone_combined_dict_keys(PyDictObject *orig)	todo		the C body is reference counting and allocation failure; the model is a copy with a new ident
 Objects/dictobject.c	972	977	PyDict_New	PyDict_New(void)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/dictobject.c	981	999	lookdict_index	lookdict_index(PyDictKeysObject *k, Py_hash_t hash, Py_ssize_t index)	modelled	dict-delitem-refines	
-Objects/dictobject.c	1002	1043	do_lookup	do_lookup(PyDictObject *mp, PyDictKeysObject *dk, PyObject *key, Py_hash_t hash, int (*check_lookup)(PyDictObject *, PyDictKeysObject *, void *, Py_ssize_t ix, PyObject *key, Py_hash_t))	todo		review: With the cmp < 0 return deleted, so that DKIX_KEY_CHANGED reads as a hit, every listed theorem still holds, and DoLookupRaises covers the first probe only although its registry statement says the loop.
+Objects/dictobject.c	1002	1043	do_lookup	do_lookup(PyDictObject *mp, PyDictKeysObject *dk, PyObject *key, Py_hash_t hash, int (*check_lookup)(PyDictObject *, PyDictKeysObject *, void *, Py_ssize_t ix, PyObject *key, Py_hash_t))	modelled	dict-do-lookup-body,dict-lookup-found,dict-lookup-index-valid,dict-lookup-missing,dict-lookup-no-mutate	
 Objects/dictobject.c	1046	1071	compare_unicode_generic	compare_unicode_generic(PyDictObject *mp, PyDictKeysObject *dk, void *ep0, Py_ssize_t ix, PyObject *key, Py_hash_t hash)	modelled	dict-compare-unicode-failure,dict-lookup-found,dict-lookup-index-valid,dict-lookup-missing,dict-lookup-no-mutate	
 Objects/dictobject.c	1075	1078	unicodekeys_lookup_generic	unicodekeys_lookup_generic(PyDictObject *mp, PyDictKeysObject* dk, PyObject *key, Py_hash_t hash)	modelled	dict-lookup-found,dict-lookup-no-mutate	
 Objects/dictobject.c	1081	1093	compare_unicode_unicode	compare_unicode_unicode(PyDictObject *mp, PyDictKeysObject *dk, void *ep0, Py_ssize_t ix, PyObject *key, Py_hash_t hash)	modelled	dict-lookup-found,dict-lookup-missing	
@@ -41,7 +41,7 @@ Objects/dictobject.c	1160	1180	unicodekeys_lookup_split	unicodekeys_lookup_split
 Objects/dictobject.c	1189	1196	_PyDictKeys_StringLookup	_PyDictKeys_StringLookup(PyDictKeysObject* dk, PyObject *key)	todo		
 Objects/dictobject.c	1199	1211	_PyDictKeys_StringLookupAndVersion	_PyDictKeys_StringLookupAndVersion(PyDictKeysObject *dk, PyObject *key, uint32_t *version)	todo		
 Objects/dictobject.c	1217	1230	_PyDictKeys_StringLookupSplit	_PyDictKeys_StringLookupSplit(PyDictKeysObject* dk, PyObject *key)	todo		
-Objects/dictobject.c	1243	1311	_Py_dict_lookup	_Py_dict_lookup() is general-purpose, and may return DKIX_ERROR if (and only if) a comparison raises an exception. When the key isn't found a DKIX_EMPTY is returned. */ Py_ssize_t _Py_dict_lookup(PyDictObject *mp, PyObject *key, Py_hash_t hash, PyObject **value_addr)	modelled	dict-lookup-control,dict-lookup-index-valid,dict-split-refines	
+Objects/dictobject.c	1243	1311	_Py_dict_lookup	_Py_dict_lookup() is general-purpose, and may return DKIX_ERROR if (and only if) a comparison raises an exception. When the key isn't found a DKIX_EMPTY is returned. */ Py_ssize_t _Py_dict_lookup(PyDictObject *mp, PyObject *key, Py_hash_t hash, PyObject **value_addr)	modelled	dict-lookup-control,dict-lookup-found,dict-lookup-index-valid,dict-lookup-missing,dict-split-refines	
 Objects/dictobject.c	1315	1328	ensure_shared_on_read	ensure_shared_on_read(PyDictObject *mp)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
 Objects/dictobject.c	1331	1334	_PyDict_EnsureSharedOnRead	_PyDict_EnsureSharedOnRead(PyDictObject *mp)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
 Objects/dictobject.c	1338	1355	ensure_shared_on_resize	ensure_shared_on_resize(PyDictObject *mp)	excluded		platform: body is empty unless Py_GIL_DISABLED
@@ -52,60 +52,60 @@ Objects/dictobject.c	1417	1444	compare_unicode_unicode_threadsafe	compare_unicod
 Objects/dictobject.c	1447	1450	unicodekeys_lookup_unicode_threadsafe	unicodekeys_lookup_unicode_threadsafe(PyDictKeysObject* dk, PyObject *key, Py_hash_t hash)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
 Objects/dictobject.c	1453	1481	compare_generic_threadsafe	compare_generic_threadsafe(PyDictObject *mp, PyDictKeysObject *dk, void *ep0, Py_ssize_t ix, PyObject *key, Py_hash_t hash)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
 Objects/dictobject.c	1484	1487	dictkeys_generic_lookup_threadsafe	dictkeys_generic_lookup_threadsafe(PyDictObject *mp, PyDictKeysObject* dk, PyObject *key, Py_hash_t hash)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
-Objects/dictobject.c	1490	1585	_Py_dict_lookup_threadsafe	_Py_dict_lookup_threadsafe(PyDictObject *mp, PyObject *key, Py_hash_t hash, PyObject **value_addr)	todo		
+Objects/dictobject.c	1490	1585	_Py_dict_lookup_threadsafe	_Py_dict_lookup_threadsafe(PyDictObject *mp, PyObject *key, Py_hash_t hash, PyObject **value_addr)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
 Objects/dictobject.c	1588	1617	lookup_threadsafe_unicode	lookup_threadsafe_unicode(PyDictKeysObject *dk, PyObject *key, Py_hash_t hash, _PyStackRef *value_addr)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
-Objects/dictobject.c	1620	1641	_Py_dict_lookup_threadsafe_stackref	_Py_dict_lookup_threadsafe_stackref(PyDictObject *mp, PyObject *key, Py_hash_t hash, _PyStackRef *value_addr)	todo		
+Objects/dictobject.c	1620	1641	_Py_dict_lookup_threadsafe_stackref	_Py_dict_lookup_threadsafe_stackref(PyDictObject *mp, PyObject *key, Py_hash_t hash, _PyStackRef *value_addr)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
 Objects/dictobject.c	1646	1651	_Py_dict_lookup_threadsafe	_Py_dict_lookup_threadsafe(PyDictObject *mp, PyObject *key, Py_hash_t hash, PyObject **value_addr)	todo		
 Objects/dictobject.c	1654	1665	_Py_dict_lookup_threadsafe_stackref	_Py_dict_lookup_threadsafe_stackref(PyDictObject *mp, PyObject *key, Py_hash_t hash, _PyStackRef *value_addr)	todo		
 Objects/dictobject.c	1672	1715	_PyDict_GetMethodStackRef	_PyDict_GetMethodStackRef(PyDictObject *mp, PyObject *key, _PyStackRef *method)	todo		
 Objects/dictobject.c	1718	1730	_PyDict_HasOnlyStringKeys	_PyDict_HasOnlyStringKeys(PyObject *dict)	todo		
 Objects/dictobject.c	1733	1750	_PyDict_EnablePerThreadRefcounting	_PyDict_EnablePerThreadRefcounting(PyObject *op)	excluded		platform: body is empty unless Py_GIL_DISABLED
 Objects/dictobject.c	1753	1760	is_unusable_slot	is_unusable_slot(Py_ssize_t ix)	modelled	dict-setitem-refines	
-Objects/dictobject.c	1766	1779	find_empty_slot	find_empty_slot(PyDictKeysObject *keys, Py_hash_t hash)	todo		review: SetItemRefines allows MemoryError with the dict unchanged on any input, so a version that raises it whenever the table holds a dummy, refusing inserts after a delete, passes.
-Objects/dictobject.c	1782	1785	insertion_resize	insertion_resize(PyInterpreterState *interp, PyDictObject *mp, int unicode)	todo		review: A version that always answers MemoryError with the dict unchanged passes the unconditional first disjunct of SetItemRefines, so a dict that never grows satisfies it.
-Objects/dictobject.c	1788	1829	insert_combined_dict	insert_combined_dict(PyInterpreterState *interp, PyDictObject *mp, Py_hash_t hash, PyObject *key, PyObject *value)	todo		review: A version that always answers MemoryError with the dict unchanged passes the unconditional first disjunct of SetItemRefines.
-Objects/dictobject.c	1832	1860	insert_split_key	insert_split_key(PyDictKeysObject *keys, PyObject *key, Py_hash_t hash)	todo		review: Reached only through the setitem conjunct of SplitRefines, and a version that always fails passes its unconditional MemoryError disjunct.
-Objects/dictobject.c	1863	1882	insert_split_value	insert_split_value(PyInterpreterState *interp, PyDictObject *mp, PyObject *key, PyObject *value, Py_ssize_t ix)	todo		review: Reached only through the setitem conjunct of SplitRefines, so a version that refuses to overwrite an existing value with MemoryError passes.
-Objects/dictobject.c	1891	1957	insertdict	insertdict(PyInterpreterState *interp, PyDictObject *mp, PyObject *key, Py_hash_t hash, PyObject *value)	todo		review: dict-insert-failure pins the lookup error only, and after a good lookup a version that answers MemoryError with the dict unchanged passes the setitem conjunct of SplitRefines.
-Objects/dictobject.c	1962	2004	insert_to_emptydict	insert_to_emptydict(PyInterpreterState *interp, PyDictObject *mp, PyObject *key, Py_hash_t hash, PyObject *value)	todo		review: A version that always answers MemoryError with the dict unchanged passes SetItemRefines, its only theorem.
-Objects/dictobject.c	2007	2022	dictresize	Internal routine used by dictresize() to build a hashtable of entries. */ static void build_indices_generic(PyDictKeysObject *keys, PyDictKeyEntry *ep, Py_ssize_t n)	todo		review: This row is build_indices_generic and no entry names it: the pinned popitem conjunct resizes with unicode 1 and so runs build_indices_unicode in C, the generic route is reached only through the MemoryError disjunct, and dict-insert-failure is about :2073.
-Objects/dictobject.c	2025	2038	build_indices_unicode	build_indices_unicode(PyDictKeysObject *keys, PyDictUnicodeEntry *ep, Py_ssize_t n)	todo		review: SetItemRefines is its only entry and a failing build passes its MemoryError disjunct; the popitem conjunct of dict-split-refines would pin the shared buildIndices, but that entry does not list this row.
-Objects/dictobject.c	2041	2048	invalidate_and_clear_inline_values	invalidate_and_clear_inline_values(PyDictValues *values)	todo		
-Objects/dictobject.c	2065	2214	dictresize	dictresize(PyInterpreterState *interp, PyDictObject *mp, uint8_t log2_newsize, int unicode)	todo		review: Only the split to unicode branch is pinned, by the popitem conjunct; the other branches are reached only through the MemoryError disjunct, so a version that refuses every combined table passes, and :2138-2142 is outside dictResize.
+Objects/dictobject.c	1766	1779	find_empty_slot	find_empty_slot(PyDictKeysObject *keys, Py_hash_t hash)	modelled	dict-setitem-refines	
+Objects/dictobject.c	1782	1785	insertion_resize	insertion_resize(PyInterpreterState *interp, PyDictObject *mp, int unicode)	modelled	dict-setitem-refines	
+Objects/dictobject.c	1788	1829	insert_combined_dict	insert_combined_dict(PyInterpreterState *interp, PyDictObject *mp, Py_hash_t hash, PyObject *key, PyObject *value)	modelled	dict-setitem-refines	
+Objects/dictobject.c	1832	1860	insert_split_key	insert_split_key(PyDictKeysObject *keys, PyObject *key, Py_hash_t hash)	modelled	dict-split-refines	
+Objects/dictobject.c	1863	1882	insert_split_value	insert_split_value(PyInterpreterState *interp, PyDictObject *mp, PyObject *key, PyObject *value, Py_ssize_t ix)	modelled	dict-split-refines	
+Objects/dictobject.c	1891	1957	insertdict	insertdict(PyInterpreterState *interp, PyDictObject *mp, PyObject *key, Py_hash_t hash, PyObject *value)	modelled	dict-insert-failure,dict-setitem-refines,dict-split-refines	
+Objects/dictobject.c	1962	2004	insert_to_emptydict	insert_to_emptydict(PyInterpreterState *interp, PyDictObject *mp, PyObject *key, Py_hash_t hash, PyObject *value)	modelled	dict-setitem-refines	
+Objects/dictobject.c	2007	2022	build_indices_generic	Internal routine used by dictresize() to build a hashtable of entries. */ static void build_indices_generic(PyDictKeysObject *keys, PyDictKeyEntry *ep, Py_ssize_t n)	modelled	dict-resize-refines	
+Objects/dictobject.c	2025	2038	build_indices_unicode	build_indices_unicode(PyDictKeysObject *keys, PyDictUnicodeEntry *ep, Py_ssize_t n)	modelled	dict-resize-refines,dict-setitem-refines	
+Objects/dictobject.c	2041	2048	invalidate_and_clear_inline_values	invalidate_and_clear_inline_values(PyDictValues *values)	modelled	dict-resize-invalidates-inline	
+Objects/dictobject.c	2065	2214	dictresize	dictresize(PyInterpreterState *interp, PyDictObject *mp, uint8_t log2_newsize, int unicode)	modelled	dict-insert-failure,dict-resize-refines,dict-split-refines	
 Objects/dictobject.c	2217	2242	dict_new_presized	dict_new_presized(PyInterpreterState *interp, Py_ssize_t minused, bool unicode)	todo		
 Objects/dictobject.c	2245	2249	_PyDict_NewPresized	_PyDict_NewPresized(Py_ssize_t minused)	todo		
 Objects/dictobject.c	2252	2288	_PyDict_FromItems	_PyDict_FromItems(PyObject *const *keys, Py_ssize_t keys_offset, PyObject *const *values, Py_ssize_t values_offset, Py_ssize_t length)	todo		
-Objects/dictobject.c	2301	2342	dict_getitem	dict_getitem(PyObject *op, PyObject *key, const char *warnmsg)	todo		review: The PyErr_FormatUnraisable calls at :2310 and :2336, and the KeyError test that skips the second, are not mirrored, so the failure paths this row exists for report nothing to sys.unraisablehook.
+Objects/dictobject.c	2301	2342	dict_getitem	dict_getitem(PyObject *op, PyObject *key, const char *warnmsg)	modelled	dict-getitem-body,dict-getitem-link	
 Objects/dictobject.c	2345	2350	PyDict_GetItem	PyDict_GetItem(PyObject *op, PyObject *key)	todo		withdrawn: one-line call of dict_getitem, no theorem of its own
 Objects/dictobject.c	2353	2366	dict_unhashable_type	dict_unhashable_type(PyObject *key)	todo		
 Objects/dictobject.c	2369	2383	_PyDict_LookupIndex	_PyDict_LookupIndex(PyDictObject *mp, PyObject *key)	todo		
 Objects/dictobject.c	2390	2409	_PyDict_GetItem_KnownHash	_PyDict_GetItem_KnownHash(PyObject *op, PyObject *key, Py_hash_t hash)	todo		withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
 Objects/dictobject.c	2416	2432	_PyDict_GetItemRef_KnownHash_LockHeld	_PyDict_GetItemRef_KnownHash_LockHeld(PyDictObject *op, PyObject *key, Py_hash_t hash, PyObject **result)	todo		withdrawn: near-copy of _PyDict_GetItemRef_KnownHash, no definition or theorem of its own
-Objects/dictobject.c	2439	2462	_PyDict_GetItemRef_KnownHash	_PyDict_GetItemRef_KnownHash(PyDictObject *op, PyObject *key, Py_hash_t hash, PyObject **result)	todo		review: ReadersFaithful has no clause for a slot with a value, so a version that always answers missing passes and the found return at :2459-2461 is unpinned.
+Objects/dictobject.c	2439	2462	_PyDict_GetItemRef_KnownHash	_PyDict_GetItemRef_KnownHash(PyDictObject *op, PyObject *key, Py_hash_t hash, PyObject **result)	modelled	dict-readers-faithful	
 Objects/dictobject.c	2465	2481	PyDict_GetItemRef	PyDict_GetItemRef(PyObject *op, PyObject *key, PyObject **result)	modelled	dict-readers-faithful	
 Objects/dictobject.c	2484	2509	_PyDict_GetItemRef_Unicode_LockHeld	_PyDict_GetItemRef_Unicode_LockHeld(PyDictObject *op, PyObject *key, PyObject **result)	todo		withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
-Objects/dictobject.c	2516	2541	PyDict_GetItemWithError	PyDict_GetItemWithError(PyObject *op, PyObject *key)	todo		review: ReadersFaithful has no clause for a slot with a value, so a version that always returns NULL passes and the return of a found value at :2540 is unpinned.
+Objects/dictobject.c	2516	2541	PyDict_GetItemWithError	PyDict_GetItemWithError(PyObject *op, PyObject *key)	modelled	dict-readers-faithful	
 Objects/dictobject.c	2544	2552	_PyDict_GetItemWithError	_PyDict_GetItemWithError(PyObject *dp, PyObject *kv)	todo		withdrawn: was listed under dict-readers-faithful, whose statement never runs it
 Objects/dictobject.c	2555	2564	_PyDict_GetItemIdWithError	_PyDict_GetItemIdWithError(PyObject *dp, _Py_Identifier *key)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/dictobject.c	2567	2577	_PyDict_GetItemStringWithError	_PyDict_GetItemStringWithError(PyObject *v, const char *key)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/dictobject.c	2592	2614	_PyDict_LoadGlobal	_PyDict_LoadGlobal(PyDictObject *globals, PyDictObject *builtins, PyObject *key)	todo		
 Objects/dictobject.c	2617	2640	_PyDict_LoadGlobalStackRef	_PyDict_LoadGlobalStackRef(PyDictObject *globals, PyDictObject *builtins, PyObject *key, _PyStackRef *res)	todo		
 Objects/dictobject.c	2643	2674	_PyDict_LoadBuiltinsFromGlobals	_PyDict_LoadBuiltinsFromGlobals(PyObject *globals)	todo		
-Objects/dictobject.c	2678	2700	setitem_take2_lock_held	setitem_take2_lock_held(PyDictObject *mp, PyObject *key, PyObject *value)	todo		review: The hash failure is pinned, but after a good hash a version that answers MemoryError with the dict unchanged passes both listed theorems.
+Objects/dictobject.c	2678	2700	setitem_take2_lock_held	setitem_take2_lock_held(PyDictObject *mp, PyObject *key, PyObject *value)	modelled	dict-hash-failure,dict-setitem-refines	
 Objects/dictobject.c	2703	2710	_PyDict_SetItem_Take2	_PyDict_SetItem_Take2(PyDictObject *mp, PyObject *key, PyObject *value)	todo		withdrawn: critical-section wrapper sharing setitem_take2_lock_held's definition, no theorem of its own
 Objects/dictobject.c	2719	2729	PyDict_SetItem	PyDict_SetItem(PyObject *op, PyObject *key, PyObject *value)	todo		withdrawn: its own PyDict_Check failure path is not mirrored, and it has no Lean definition of its own
 Objects/dictobject.c	2732	2738	setitem_lock_held	setitem_lock_held(PyDictObject *mp, PyObject *key, PyObject *value)	todo		withdrawn: reference-counting wrapper sharing setitem_take2_lock_held's definition, no theorem of its own
 Objects/dictobject.c	2742	2751	_PyDict_SetItem_KnownHash_LockHeld	_PyDict_SetItem_KnownHash_LockHeld(PyDictObject *mp, PyObject *key, PyObject *value, Py_hash_t hash)	todo		
 Objects/dictobject.c	2754	2770	_PyDict_SetItem_KnownHash	_PyDict_SetItem_KnownHash(PyObject *op, PyObject *key, PyObject *value, Py_hash_t hash)	todo		
 Objects/dictobject.c	2773	2788	delete_index_from_values	delete_index_from_values(PyDictValues *values, Py_ssize_t ix)	modelled	dict-split-refines	
-Objects/dictobject.c	2791	2831	delitem_common	delitem_common(PyDictObject *mp, Py_hash_t hash, Py_ssize_t ix, PyObject *old_value)	modelled	dict-split-refines	
+Objects/dictobject.c	2791	2831	delitem_common	delitem_common(PyDictObject *mp, Py_hash_t hash, Py_ssize_t ix, PyObject *old_value)	modelled	dict-delitem-refines,dict-split-refines	
 Objects/dictobject.c	2834	2844	PyDict_DelItem	PyDict_DelItem(PyObject *op, PyObject *key)	modelled	dict-delitem-refines,dict-hash-failure	
-Objects/dictobject.c	2847	2875	_PyDict_DelItem_KnownHash_LockHeld	_PyDict_DelItem_KnownHash_LockHeld(PyObject *op, PyObject *key, Py_hash_t hash)	todo		review: The PyDict_Check failure at :2853-2856 is not mirrored, and DelItemRefines assumes Honest, so the DKIX_ERROR return at :2864 has no theorem.
+Objects/dictobject.c	2847	2875	_PyDict_DelItem_KnownHash_LockHeld	_PyDict_DelItem_KnownHash_LockHeld(PyObject *op, PyObject *key, Py_hash_t hash)	modelled	dict-checks,dict-del-known-hash-body,dict-delitem-refines	
 Objects/dictobject.c	2878	2885	_PyDict_DelItem_KnownHash	_PyDict_DelItem_KnownHash(PyObject *op, PyObject *key, Py_hash_t hash)	todo		withdrawn: critical-section wrapper sharing the _LockHeld definition, no theorem of its own
 Objects/dictobject.c	2888	2925	delitemif_lock_held	delitemif_lock_held(PyObject *op, PyObject *key, int (*predicate)(PyObject *value, void *arg), void *arg)	todo		
 Objects/dictobject.c	2932	2942	_PyDict_DelItemIf	_PyDict_DelItemIf(PyObject *op, PyObject *key, int (*predicate)(PyObject *value, void *arg), void *arg)	todo		
 Objects/dictobject.c	2945	2957	clear_embedded_values	clear_embedded_values(PyDictValues *values, Py_ssize_t nentries)	modelled	dict-split-refines	
-Objects/dictobject.c	2960	3002	clear_lock_held	clear_lock_held(PyObject *op)	todo		review: The PyDict_Check return at :2969-2970 is not mirrored, the same gap that withdrew _PyDict_Next, and dictClear cannot express a non-dict argument.
+Objects/dictobject.c	2960	3002	clear_lock_held	clear_lock_held(PyObject *op)	modelled	dict-checks,dict-split-refines	
 Objects/dictobject.c	3005	3007	_PyDict_Clear_LockHeld	_PyDict_Clear_LockHeld(PyObject *op) {	todo		withdrawn: theorem covers combined tables only; the split branch of this body is unproved
 Objects/dictobject.c	3010	3015	PyDict_Clear	PyDict_Clear(PyObject *op)	todo		withdrawn: theorem covers combined tables only; the split branch of this body is unproved
 Objects/dictobject.c	3023	3083	_PyDict_Next	_PyDict_Next(PyObject *op, Py_ssize_t *ppos, PyObject **pkey, PyObject **pvalue, Py_hash_t *phash)	todo		withdrawn: both table shapes are proved, but its PyDict_Check return is not mirrored
@@ -119,11 +119,11 @@ Objects/dictobject.c	3233	3236	_PyDict_Pop	_PyDict_Pop(PyObject *dict, PyObject 
 Objects/dictobject.c	3239	3263	dict_dict_fromkeys	dict_dict_fromkeys(PyInterpreterState *interp, PyDictObject *mp, PyObject *iterable, PyObject *value)	todo		
 Objects/dictobject.c	3266	3288	dict_set_fromkeys	dict_set_fromkeys(PyInterpreterState *interp, PyDictObject *mp, PyObject *iterable, PyObject *value)	todo		
 Objects/dictobject.c	3292	3360	_PyDict_FromKeys	_PyDict_FromKeys(PyObject *cls, PyObject *iterable, PyObject *value)	todo		
-Objects/dictobject.c	3365	3399	dict_dealloc	dict_dealloc(PyObject *self)	todo		review: _PyDict_NotifyEvent(PyDict_EVENT_DEALLOCATED) at :3370 calls watcher callbacks that can resurrect the dict, and the return at :3371-3373 acts on that, so this is an explicit effect and not plain reference dropping.
+Objects/dictobject.c	3365	3399	dict_dealloc	dict_dealloc(PyObject *self)	modelled	dict-dealloc	
 Objects/dictobject.c	3403	3486	dict_repr_lock_held	dict_repr_lock_held(PyObject *self)	todo		
 Objects/dictobject.c	3489	3496	dict_repr	dict_repr(PyObject *self)	todo		
 Objects/dictobject.c	3499	3502	dict_length	dict_length(PyObject *self)	todo		withdrawn: theorem is rfl on a thin definition
-Objects/dictobject.c	3505	3538	dict_subscript	dict_subscript(PyObject *self, PyObject *key)	todo		review: __missing__ is a pure K -> Py V that cannot change the dict, the failed _PyObject_LookupSpecial at :3531 is not mirrored, and ReadersFaithful covers only missing = none and has no found clause.
+Objects/dictobject.c	3505	3538	dict_subscript	dict_subscript(PyObject *self, PyObject *key)	modelled	dict-readers-faithful,dict-subscript-body	
 Objects/dictobject.c	3541	3547	dict_ass_sub	dict_ass_sub(PyObject *mp, PyObject *v, PyObject *w)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/dictobject.c	3556	3591	keys_lock_held	keys_lock_held(PyObject *dict)	todo		the allocation retry at the head of the body is not mirrored
 Objects/dictobject.c	3594	3602	PyDict_Keys	PyDict_Keys(PyObject *dict)	todo		withdrawn: theorem covers combined tables only; the split branch of this body is unproved
@@ -132,13 +132,13 @@ Objects/dictobject.c	3643	3650	PyDict_Values	PyDict_Values(PyObject *dict)	todo	
 Objects/dictobject.c	3653	3703	items_lock_held	items_lock_held(PyObject *dict)	todo		the allocation retry at the head of the body is not mirrored
 Objects/dictobject.c	3706	3714	PyDict_Items	PyDict_Items(PyObject *dict)	todo		withdrawn: theorem covers combined tables only; the split branch of this body is unproved
 Objects/dictobject.c	3727	3731	dict_fromkeys_impl	dict_fromkeys_impl(PyTypeObject *type, PyObject *iterable, PyObject *value) /*[clinic end generated code: output=8fb98e4b10384999 input=382ba4855d0f74c3]*/	todo		
-Objects/dictobject.c	3735	3748	dict_update_arg	dict_update_arg(PyObject *self, PyObject *arg)	todo		review: UpdateArgRoutes quantifies over .other only, so the PyDict_CheckExact route at :3737-3739 is unpinned and a wrong .exact branch passes.
+Objects/dictobject.c	3735	3748	dict_update_arg	dict_update_arg(PyObject *self, PyObject *arg)	modelled	dict-update-arg-routes	
 Objects/dictobject.c	3751	3771	dict_update_common	dict_update_common(PyObject *self, PyObject *args, PyObject *kwds, const char *methname)	todo		
 Objects/dictobject.c	3777	3782	dict_update	dict_update(PyObject *self, PyObject *args, PyObject *kwds)	todo		
-Objects/dictobject.c	3795	3878	merge_from_seq2_lock_held	merge_from_seq2_lock_held(PyObject *d, PyObject *seq2, int override)	todo		review: The note added at :3825-3830 is left out, Seq2Order states the pair clause for override true only so the setdefault branch at :3855 is unpinned, and PyObject_GetIter at :3806 is outside the statement.
+Objects/dictobject.c	3795	3878	merge_from_seq2_lock_held	merge_from_seq2_lock_held(PyObject *d, PyObject *seq2, int override)	modelled	dict-merge-seq2-order	
 Objects/dictobject.c	3881	3889	PyDict_MergeFromSeq2	PyDict_MergeFromSeq2(PyObject *d, PyObject *seq2, int override)	todo		critical-section wrapper of merge_from_seq2_lock_held
-Objects/dictobject.c	3892	3988	dict_dict_merge	dict_dict_merge(PyInterpreterState *interp, PyDictObject *mp, PyDictObject *other, int override)	todo		review: Both theorems are about mergeLive with mergeStep as a black box and dictDictMerge never appears, so the self and empty tests, the clone, the one big resize and the override branches at :3960-3974 are unpinned.
-Objects/dictobject.c	3991	4088	dict_merge	dict_merge(PyInterpreterState *interp, PyObject *a, PyObject *b, int override)	todo		review: MergeGeneric covers the slow path but says nothing of .dict, so a wrong fast route passes, and the test at :4008 is an input constructor rather than a check.
+Objects/dictobject.c	3892	3988	dict_dict_merge	dict_dict_merge(PyInterpreterState *interp, PyDictObject *mp, PyDictObject *other, int override)	modelled	dict-dict-merge-body,dict-merge-guard,dict-merge-quiet,dict-merge-rest-body,dict-merge-step-body	
+Objects/dictobject.c	3991	4088	dict_merge	dict_merge(PyInterpreterState *interp, PyObject *a, PyObject *b, int override)	modelled	dict-merge-generic	
 Objects/dictobject.c	4091	4095	PyDict_Update	PyDict_Update(PyObject *a, PyObject *b)	todo		thin wrapper of dict_merge, no definition of its own
 Objects/dictobject.c	4098	4103	PyDict_Merge	PyDict_Merge(PyObject *a, PyObject *b, int override)	todo		thin wrapper of dict_merge, no definition of its own; the normalisation override != 0 is unproved
 Objects/dictobject.c	4106	4110	_PyDict_MergeEx	_PyDict_MergeEx(PyObject *a, PyObject *b, int override)	todo		thin wrapper of dict_merge, no definition of its own
@@ -151,14 +151,14 @@ Objects/dictobject.c	4259	4318	dict_equal_lock_held	dict_equal_lock_held(PyDictO
 Objects/dictobject.c	4321	4329	dict_equal	dict_equal(PyDictObject *a, PyDictObject *b)	todo		
 Objects/dictobject.c	4332	4349	dict_richcompare	dict_richcompare(PyObject *v, PyObject *w, int op)	todo		
 Objects/dictobject.c	4363	4374	dict___contains___impl	dict___contains___impl(PyDictObject *self, PyObject *key) /*[clinic end generated code: output=1b314e6da7687dae input=fe1cb42ad831e820]*/	todo		withdrawn: converts PyDict_Contains to a bool object, no definition or theorem of its own
-Objects/dictobject.c	4387	4406	dict_get_impl	dict_get_impl(PyDictObject *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=bba707729dee05bf input=279ddb5790b6b107]*/	todo		review: ReadersFaithful has no clause for a slot with a value, so a version that always returns the default passes.
-Objects/dictobject.c	4409	4505	dict_setdefault_ref_lock_held	dict_setdefault_ref_lock_held(PyObject *d, PyObject *key, PyObject *default_value, PyObject **result, int incref_result)	todo		review: The PyDict_Check failure at :4420-4426 is not mirrored, the same gap that withdrew PyDict_SetItem.
+Objects/dictobject.c	4387	4406	dict_get_impl	dict_get_impl(PyDictObject *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=bba707729dee05bf input=279ddb5790b6b107]*/	modelled	dict-readers-faithful	
+Objects/dictobject.c	4409	4505	dict_setdefault_ref_lock_held	dict_setdefault_ref_lock_held(PyObject *d, PyObject *key, PyObject *default_value, PyObject **result, int incref_result)	modelled	dict-checks,dict-setdefault-no-crash	
 Objects/dictobject.c	4508	4516	PyDict_SetDefaultRef	PyDict_SetDefaultRef(PyObject *d, PyObject *key, PyObject *default_value, PyObject **result)	todo		withdrawn: the counterexample does not run this function
 Objects/dictobject.c	4519	4526	PyDict_SetDefault	PyDict_SetDefault(PyObject *d, PyObject *key, PyObject *defaultobj)	todo		
 Objects/dictobject.c	4542	4549	dict_setdefault_impl	dict_setdefault_impl(PyDictObject *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=f8c1101ebf69e220 input=9237af9a0a224302]*/	modelled	dict-setdefault-no-crash	
 Objects/dictobject.c	4559	4564	dict_clear_impl	dict_clear_impl(PyDictObject *self) /*[clinic end generated code: output=5139a830df00830a input=0bf729baba97a4c2]*/	todo		withdrawn: theorem covers combined tables only; the split branch of this body is unproved
 Objects/dictobject.c	4580	4584	dict_pop_impl	dict_pop_impl(PyDictObject *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=3abb47b89f24c21c input=e221baa01044c44c]*/	todo		withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
-Objects/dictobject.c	4597	4679	dict_popitem_impl	dict_popitem_impl(PyDictObject *self) /*[clinic end generated code: output=e65fcb04420d230d input=ef28b4da5f0f762e]*/	modelled	dict-split-refines	
+Objects/dictobject.c	4597	4679	dict_popitem_impl	dict_popitem_impl(PyDictObject *self) /*[clinic end generated code: output=e65fcb04420d230d input=ef28b4da5f0f762e]*/	modelled	dict-popitem-lifo,dict-split-refines	
 Objects/dictobject.c	4682	4711	dict_traverse	dict_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or GC clear hook, no effect on the object's Python-level behaviour
 Objects/dictobject.c	4714	4718	dict_tp_clear	dict_tp_clear(PyObject *op)	excluded		no-behaviour: GC traversal or GC clear hook, no effect on the object's Python-level behaviour
 Objects/dictobject.c	4723	4738	_PyDict_SizeOf_LockHeld	_PyDict_SizeOf_LockHeld(PyDictObject *mp)	todo		
@@ -169,34 +169,34 @@ Objects/dictobject.c	4776	4790	dict_or	dict_or(PyObject *self, PyObject *other)	
 Objects/dictobject.c	4793	4799	dict_ior	dict_ior(PyObject *self, PyObject *other)	todo		one-line call of dict_update_arg
 Objects/dictobject.c	4837	4846	PyDict_Contains	PyDict_Contains(PyObject *op, PyObject *key)	modelled	dict-readers-faithful	
 Objects/dictobject.c	4849	4858	PyDict_ContainsString	PyDict_ContainsString(PyObject *op, const char *key)	todo		withdrawn: theorem is rfl on a thin definition
-Objects/dictobject.c	4862	4882	_PyDict_Contains_KnownHash	_PyDict_Contains_KnownHash(PyObject *op, PyObject *key, Py_hash_t hash)	todo		review: ReadersFaithful has no clause for a slot with a value, so a version that always answers 0 passes and the return 1 at :4879 is unpinned.
+Objects/dictobject.c	4862	4882	_PyDict_Contains_KnownHash	_PyDict_Contains_KnownHash(PyObject *op, PyObject *key, Py_hash_t hash)	modelled	dict-readers-faithful	
 Objects/dictobject.c	4885	4892	_PyDict_ContainsId	_PyDict_ContainsId(PyObject *op, _Py_Identifier *key)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/dictobject.c	4914	4938	dict_new	dict_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/dictobject.c	4941	4944	dict_init	dict_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		
 Objects/dictobject.c	4947	4975	dict_vectorcall	dict_vectorcall(PyObject *type, PyObject * const*args, size_t nargsf, PyObject *kwnames)	todo		
-Objects/dictobject.c	4978	4982	dict_iter	dict_iter(PyObject *self)	todo		withdrawn: theorem covers combined tables only; the split branch of this body is unproved
+Objects/dictobject.c	4978	4982	dict_iter	dict_iter(PyObject *self)	modelled	dict-iter-order	
 Objects/dictobject.c	5044	5059	PyDict_GetItemString	PyDict_GetItemString(PyObject *v, const char *key)	todo		
 Objects/dictobject.c	5062	5072	PyDict_GetItemStringRef	PyDict_GetItemStringRef(PyObject *v, const char *key, PyObject **result)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/dictobject.c	5075	5082	_PyDict_SetItemId	_PyDict_SetItemId(PyObject *v, _Py_Identifier *key, PyObject *item)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/dictobject.c	5085	5097	PyDict_SetItemString	PyDict_SetItemString(PyObject *v, const char *key, PyObject *item)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/dictobject.c	5100	5106	_PyDict_DelItemId	_PyDict_DelItemId(PyObject *v, _Py_Identifier *key)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/dictobject.c	5109	5119	PyDict_DelItemString	PyDict_DelItemString(PyObject *v, const char *key)	todo		withdrawn: theorem is rfl on a thin definition
-Objects/dictobject.c	5133	5171	dictiter_new	dictiter_new(PyDictObject *dict, PyTypeObject *itertype)	todo		review: RevIterLenNonneg starts only reverse iterators on dicts that are never split, so the forward branch at :5156 and the split branch at :5149 are outside it, the gap that withdrew dict_iter.
+Objects/dictobject.c	5133	5171	dictiter_new	dictiter_new(PyDictObject *dict, PyTypeObject *itertype)	modelled	dict-iter-order,dict-reviter-len	
 Objects/dictobject.c	5174	5182	dictiter_dealloc	dictiter_dealloc(PyObject *self)	excluded		no-behaviour: deallocation, runs when no reference remains
 Objects/dictobject.c	5185	5191	dictiter_traverse	dictiter_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or GC clear hook, no effect on the object's Python-level behaviour
 Objects/dictobject.c	5194	5201	dictiter_len	dictiter_len(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	dict-reviter-len	
-Objects/dictobject.c	5228	5292	dictiter_iternextkey_lock_held	dictiter_iternextkey_lock_held(PyDictObject *d, PyObject *self)	todo		withdrawn: theorem covers combined tables only; the split branch of this body is unproved
-Objects/dictobject.c	5297	5315	dictiter_iternextkey	dictiter_iternextkey(PyObject *self)	todo		withdrawn: theorem covers combined tables only; the split branch of this body is unproved
-Objects/dictobject.c	5353	5415	dictiter_iternextvalue_lock_held	dictiter_iternextvalue_lock_held(PyDictObject *d, PyObject *self)	todo		withdrawn: theorem covers combined tables only; the split branch of this body is unproved
-Objects/dictobject.c	5420	5438	dictiter_iternextvalue	dictiter_iternextvalue(PyObject *self)	todo		withdrawn: theorem covers combined tables only; the split branch of this body is unproved
-Objects/dictobject.c	5474	5547	dictiter_iternextitem_lock_held	dictiter_iternextitem_lock_held(PyDictObject *d, PyObject *self, PyObject **out_key, PyObject **out_value)	todo		withdrawn: theorem covers combined tables only; the split branch of this body is unproved
+Objects/dictobject.c	5228	5292	dictiter_iternextkey_lock_held	dictiter_iternextkey_lock_held(PyDictObject *d, PyObject *self)	modelled	dict-iter-failure,dict-iter-order	
+Objects/dictobject.c	5297	5315	dictiter_iternextkey	dictiter_iternextkey(PyObject *self)	modelled	dict-iter-order	
+Objects/dictobject.c	5353	5415	dictiter_iternextvalue_lock_held	dictiter_iternextvalue_lock_held(PyDictObject *d, PyObject *self)	modelled	dict-iter-failure,dict-iter-order	
+Objects/dictobject.c	5420	5438	dictiter_iternextvalue	dictiter_iternextvalue(PyObject *self)	modelled	dict-iter-order	
+Objects/dictobject.c	5474	5547	dictiter_iternextitem_lock_held	dictiter_iternextitem_lock_held(PyDictObject *d, PyObject *self, PyObject **out_key, PyObject **out_value)	modelled	dict-iter-failure,dict-iter-order	
 Objects/dictobject.c	5555	5576	acquire_key_value	acquire_key_value(PyObject **key_loc, PyObject *value, PyObject **value_loc, PyObject **out_key, PyObject **out_value)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
 Objects/dictobject.c	5579	5683	dictiter_iternext_threadsafe	dictiter_iternext_threadsafe(PyDictObject *d, PyObject *self, PyObject **out_key, PyObject **out_value)	excluded		platform: free-threaded build only (Py_GIL_DISABLED); the GIL build the model covers has no such code
 Objects/dictobject.c	5688	5695	acquire_iter_result	acquire_iter_result(PyObject *result)	excluded		no-behaviour: reuses the result tuple only when no one else can see it
-Objects/dictobject.c	5698	5738	dictiter_iternextitem	dictiter_iternextitem(PyObject *self)	todo		withdrawn: theorem covers combined tables only; the split branch of this body is unproved
-Objects/dictobject.c	5777	5872	dictreviter_iter_lock_held	dictreviter_iter_lock_held(PyDictObject *d, PyObject *self)	todo		review: RevIterLenNonneg starts from a combined dict and cannot reach a split one, so the split branch at :5798-5803 is outside it, the gap that withdrew the forward iterators.
-Objects/dictobject.c	5875	5889	dictreviter_iternext	dictreviter_iternext(PyObject *self)	todo		withdrawn: the d == NULL path and the critical section are not mirrored
-Objects/dictobject.c	5911	5916	dict___reversed___impl	dict___reversed___impl(PyDictObject *self) /*[clinic end generated code: output=e674483336d1ed51 input=23210ef3477d8c4d]*/	todo		withdrawn: one-line call of dictiter_new, no theorem of its own
+Objects/dictobject.c	5698	5738	dictiter_iternextitem	dictiter_iternextitem(PyObject *self)	modelled	dict-iter-order	
+Objects/dictobject.c	5777	5872	dictreviter_iter_lock_held	dictreviter_iter_lock_held(PyDictObject *d, PyObject *self)	modelled	dict-iter-failure,dict-iter-order,dict-reviter-len	
+Objects/dictobject.c	5875	5889	dictreviter_iternext	dictreviter_iternext(PyObject *self)	modelled	dict-iter-order	
+Objects/dictobject.c	5911	5916	dict___reversed___impl	dict___reversed___impl(PyDictObject *self) /*[clinic end generated code: output=e674483336d1ed51 input=23210ef3477d8c4d]*/	modelled	dict-iter-order	
 Objects/dictobject.c	5919	5931	dictiter_reduce	dictiter_reduce(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
 Objects/dictobject.c	5964	5971	dictview_dealloc	dictview_dealloc(PyObject *self)	excluded		no-behaviour: deallocation, runs when no reference remains
 Objects/dictobject.c	5974	5979	dictview_traverse	dictview_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or GC clear hook, no effect on the object's Python-level behaviour
@@ -206,7 +206,7 @@ Objects/dictobject.c	6015	6022	dictview_mapping	dictview_mapping(PyObject *view,
 Objects/dictobject.c	6041	6062	all_contained_in	all_contained_in(PyObject *self, PyObject *other)	todo		
 Objects/dictobject.c	6065	6121	dictview_richcompare	dictview_richcompare(PyObject *self, PyObject *other, int op)	todo		
 Objects/dictobject.c	6124	6145	dictview_repr	dictview_repr(PyObject *self)	todo		
-Objects/dictobject.c	6150	6157	dictkeys_iter	dictkeys_iter(PyObject *self)	todo		withdrawn: theorem is rfl on a thin definition
+Objects/dictobject.c	6150	6157	dictkeys_iter	dictkeys_iter(PyObject *self)	modelled	dict-view-iter-order	
 Objects/dictobject.c	6160	6166	dictkeys_contains	dictkeys_contains(PyObject *self, PyObject *obj)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/dictobject.c	6183	6194	dictviews_to_set	dictviews_to_set(PyObject *self)	todo		
 Objects/dictobject.c	6197	6213	dictviews_sub	dictviews_sub(PyObject *self, PyObject *other)	todo		
@@ -217,14 +217,14 @@ Objects/dictobject.c	6403	6416	dictitems_xor	dictitems_xor(PyObject *self, PyObj
 Objects/dictobject.c	6419	6438	dictviews_xor	dictviews_xor(PyObject* self, PyObject *other)	todo		
 Objects/dictobject.c	6460	6508	dictviews_isdisjoint	dictviews_isdisjoint(PyObject *self, PyObject *other)	todo		
 Objects/dictobject.c	6566	6570	dict_keys_impl	dict_keys_impl(PyDictObject *self) /*[clinic end generated code: output=aac2830c62990358 input=42f48a7a771212a7]*/	todo		withdrawn: theorem is rfl on a thin definition
-Objects/dictobject.c	6573	6580	dictkeys_reversed	dictkeys_reversed(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
-Objects/dictobject.c	6585	6592	dictitems_iter	dictitems_iter(PyObject *self)	todo		withdrawn: theorem is rfl on a thin definition
+Objects/dictobject.c	6573	6580	dictkeys_reversed	dictkeys_reversed(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	dict-view-iter-order	
+Objects/dictobject.c	6585	6592	dictitems_iter	dictitems_iter(PyObject *self)	modelled	dict-view-iter-order	
 Objects/dictobject.c	6595	6612	dictitems_contains	dictitems_contains(PyObject *self, PyObject *obj)	todo		
 Objects/dictobject.c	6678	6682	dict_items_impl	dict_items_impl(PyDictObject *self) /*[clinic end generated code: output=88c7db7150c7909a input=87c822872eb71f5a]*/	todo		withdrawn: theorem is rfl on a thin definition
-Objects/dictobject.c	6685	6692	dictitems_reversed	dictitems_reversed(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
-Objects/dictobject.c	6697	6704	dictvalues_iter	dictvalues_iter(PyObject *self)	todo		withdrawn: theorem is rfl on a thin definition
+Objects/dictobject.c	6685	6692	dictitems_reversed	dictitems_reversed(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	dict-view-iter-order	
+Objects/dictobject.c	6697	6704	dictvalues_iter	dictvalues_iter(PyObject *self)	modelled	dict-view-iter-order	
 Objects/dictobject.c	6768	6772	dict_values_impl	dict_values_impl(PyDictObject *self) /*[clinic end generated code: output=ce9f2e9e8a959dd4 input=b46944f85493b230]*/	todo		withdrawn: theorem is rfl on a thin definition
-Objects/dictobject.c	6775	6782	dictvalues_reversed	dictvalues_reversed(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
+Objects/dictobject.c	6775	6782	dictvalues_reversed	dictvalues_reversed(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	dict-view-iter-order	
 Objects/dictobject.c	6788	6818	_PyDict_NewKeysForClass	_PyDict_NewKeysForClass(PyHeapTypeObject *cls)	todo		
 Objects/dictobject.c	6821	6854	_PyObject_InitInlineValues	_PyObject_InitInlineValues(PyObject *obj, PyTypeObject *tp)	todo		
 Objects/dictobject.c	6857	6871	make_dict_from_instance_attributes	make_dict_from_instance_attributes(PyInterpreterState *interp, PyDictKeysObject *keys, PyDictValues *values)	todo		

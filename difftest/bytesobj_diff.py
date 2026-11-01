@@ -980,6 +980,68 @@ class BDun:
         return self.r
 
 
+class BBoom(Exception):
+    """A class no C code tests for: it has to come back as it went in."""
+
+
+def b_exc(e):
+    return {"TypeError": TypeError, "ValueError": ValueError, "OverflowError": OverflowError,
+            "BBoom": BBoom}[e[0]](e[1])
+
+
+class BIdxRaises:
+    def __init__(self, e):
+        self.e = e
+
+    def __index__(self):
+        raise b_exc(self.e)
+
+
+class BIdxBad:
+    """`__index__` returning a non-int: the same as raising the `TypeError` it causes."""
+
+    def __index__(self):
+        return "x"
+
+
+class BDunRaises:
+    def __init__(self, e):
+        self.e = e
+
+    def __bytes__(self):
+        raise b_exc(self.e)
+
+
+class BIterCall:
+    def __init__(self, e):
+        self.e = e
+
+    def __iter__(self):
+        raise b_exc(self.e)
+
+
+class BHint:
+    def __init__(self, xs, hint):
+        self.it = iter(xs)
+        self.hint = hint
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return next(self.it)
+
+    def __length_hint__(self):
+        if isinstance(self.hint, list):
+            raise b_exc(self.hint)
+        return self.hint
+
+
+def b_iter_raises(xs, e):
+    yield from xs
+    raise b_exc(e)
+
+
 def b_bflt(x):
     import math
     if math.isnan(x):
@@ -1015,6 +1077,16 @@ def b_build(o):
         return tuple(b_build(x) for x in o[1])
     if t == "iter":
         return (b_build(x) for x in o[1])
+    if t == "iterraises":
+        return b_iter_raises([b_build(x) for x in o[1]], o[2])
+    if t == "iterhint":
+        return BHint([b_build(x) for x in o[1]], o[2])
+    if t == "itercallraises":
+        return BIterCall(o[1])
+    if t == "indexraises":
+        return BIdxRaises(o[1])
+    if t == "dunderraises":
+        return BDunRaises(o[1])
     if t == "dict":
         return {bytes(k): b_build(v) for k, v in o[1]}
     if t == "index":
@@ -1055,6 +1127,8 @@ def b_rint(rng):
 
 def b_robj(rng, depth=2):
     r = rng.random()
+    if rng.random() < 0.06:
+        return b_rfail(rng)
     if r < 0.25:
         return ["int", b_rint(rng)]
     if r < 0.45:
@@ -1082,6 +1156,28 @@ def b_robj(rng, depth=2):
         k = rng.choice(["list", "tuple", "iter"])
         return [k, [b_robj(rng, depth - 1) for _ in range(rng.randint(0, 3))]]
     return ["plain"]
+
+
+B_EXC = [["TypeError", "boom"], ["ValueError", "boom"], ["OverflowError", "boom"], ["BBoom", "boom"]]
+B_HINT = [0, 1, 3, 64, 100, -1, -5, 2 ** 70, -2 ** 70]
+
+
+def b_rfail(rng):
+    """An object one of whose methods raises, or an iterator with a hint."""
+    k = rng.randrange(6)
+    e = rng.choice(B_EXC)
+    items = b_rbyteobjs(rng)
+    if rng.random() < 0.2 and items:
+        items[rng.randrange(len(items))] = rng.choice([["int", 256], ["str", [97]], ["indexraises", e]])
+    if k == 0:
+        return ["indexraises", e]
+    if k == 1:
+        return ["dunderraises", e]
+    if k == 2:
+        return ["iterraises", items, e]
+    if k == 3:
+        return ["itercallraises", e]
+    return ["iterhint", items, rng.choice(B_HINT + B_EXC)]
 
 
 def b_rbyteobjs(rng):
@@ -1236,7 +1332,8 @@ def b_robj_ascii(rng, depth=2):
 def b_noaddr(o):
     """`%a` of a misaligned argument: objects whose repr has an address are out of scope."""
     t = o[0]
-    if t in ("memview", "plain", "iter", "index", "dunder"):
+    if t in ("memview", "plain", "iter", "index", "dunder", "iterraises", "iterhint", "itercallraises",
+             "indexraises", "dunderraises"):
         return ["int", 1]
     if t in ("list", "tuple"):
         return [t, [b_noaddr(x) for x in o[1]]]
@@ -1307,7 +1404,35 @@ def b_rhex_input(rng):
     return b_robj(rng, 1)
 
 
+def b_gen_fail(rng):
+    """Every C call that runs a callback, with a callback that raises."""
+    ty = rng.choice(["bytes", "bytearray"])
+    s = b_rbytes(rng)
+    c = {"mod": "bytesobj", "s": s}
+    x = b_rfail(rng)
+    k = rng.randrange(6)
+    if k == 0:
+        c["fn"], c["x"] = ty + ".new", x
+    elif k == 1:
+        c["fn"] = ty + "." + rng.choice(BSEARCH_M)
+        c["sub"], c["start"], c["end"] = x, None, None
+    elif k == 2:
+        c["fn"], c["sub"] = ty + ".contains", x
+    elif k == 3:
+        c["fn"], c["it"] = ty + ".join", x
+    elif k == 4:
+        c["fn"] = ty + "." + rng.choice(["startswith", "endswith"])
+        c["sub"] = rng.choice([x, ["tuple", [["bytes", s[:1]], x]]])
+        c["start"], c["end"] = None, None
+    else:
+        conv = rng.choice(b"dixoXucbsfeg")
+        c["fn"], c["s"], c["arg"] = ty + ".mod", [37, conv], rng.choice([x, ["tuple", [x]]])
+    return c
+
+
 def gen_bytes(rng):
+    if rng.random() < 0.08:
+        return b_gen_fail(rng)
     ty = rng.choice(["bytes", "bytes", "bytearray"])
     s = b_rbytes(rng)
     r = rng.random()
@@ -1460,10 +1585,14 @@ def b_rbaop(rng):
     n = 8
 
     def bo():
+        if rng.random() < 0.15:
+            return b_rfail(rng)
         return rng.choice([["int", rng.randint(0, 255)], ["int", rng.randint(0, 255)], ["int", 256], ["int", -1], ["int", 2 ** 70],
                            ["index", 5], ["bool", True], ["str", [97]], ["none"], b_bflt(1.0)])
 
     def src():
+        if rng.random() < 0.25:
+            return b_rfail(rng)
         return rng.choice([["bytes", b_rbytes(rng)], ["bytes", b_rbytes(rng)], ["bytes", []], ["bytearray", b_rbytes(rng)],
                            ["list", b_rbyteobjs(rng)], ["iter", b_rbyteobjs(rng)], ["tuple", b_rbyteobjs(rng)], ["int", 3], ["str", [97]],
                            ["str", []], ["none"], ["memview", b_rbytes(rng), [0]]])
@@ -1513,10 +1642,11 @@ def b_rbaop(rng):
         return {"m": "mul", "n": rng.choice([0, 1, 2, -1, sys.maxsize, 2 ** 63])}
     if r < 0.96:
         return {"m": "concat", "x": src()}
-    if r < 0.98:
+    if r < 0.975:
         return {"m": "init", "x": rng.choice([None, ["bytes", b_rbytes(rng)], ["int", 5], ["int", 0], ["int", -1], ["str", [97]],
                                               ["list", [["int", rng.randint(0, 255)] for _ in range(rng.randint(0, 4))]],
-                                              ["tuple", [["int", 1], ["index", 2]]], ["iter", b_rbyteobjs(rng)], ["none"]]),
+                                              ["tuple", [["int", 1], ["index", 2]]], ["iter", b_rbyteobjs(rng)], ["none"],
+                                              b_rfail(rng), b_rfail(rng), b_rfail(rng)]),
                 "enc": rng.choice([None, None, "latin-1"]), "err": rng.choice([None, None, "strict"])}
     return {"m": "itersetstate", "n": rng.choice([0, 1, 3, -1, -5, 100, 2 ** 63])}
 

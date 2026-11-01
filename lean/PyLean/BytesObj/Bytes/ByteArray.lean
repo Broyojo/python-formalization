@@ -203,7 +203,8 @@ def baExtendBuffer (self : BA) (v : SetVal) : Py BA :=
 def getByteValue (arg : Obj) : Py Nat :=
   match arg.index? with
   | none => .error (notInteger arg)
-  | some v =>
+  | some (.error e) => .error e
+  | some (.ok v) =>
     if v < 0 ∨ v ≥ 256 then .error (.valueError "byte must be in range(0, 256)")
     else .ok v.toNat
 
@@ -298,10 +299,11 @@ where
   baFromObjectItems (v : Obj) : Py Seq :=
     match v.buffer? with
     | some b => .ok b
-    | none =>
-      match iterItems? v with
-      | none => .error (.typeError s!"cannot convert '{v.typeName}' object to bytearray")
-      | some items => items.mapM getByteValue
+    | none => do
+      let items ← getIterOr (.typeError s!"cannot convert '{v.typeName}' object to bytearray") v
+      let vals ← items.mapM getByteValue
+      iterFinish v
+      return vals
 
 /-- The extended-slice part of `bytearray_ass_subscript_lock_held`,
 bytearrayobject.c:824-883, for `step ≠ 1`. `needed == 0` is the deletion branch, also
@@ -486,11 +488,14 @@ def baInit (self : BA) (arg : Option Obj) (encoding errors : Option String) : In
       | .ok b => (b, none)
       | .error e => fail e
     let slow (self : BA) (o : Obj) : InitRes :=
-      match baItems o with
-      | none => (self, some (.typeError s!"cannot convert '{o.typeName}' object to bytearray"))
-      | some items =>
+      match getIterOr (.typeError s!"cannot convert '{o.typeName}' object to bytearray") o with
+      | .error e => (self, some e)
+      | .ok items =>
         let rec run (cur : BA) : List Obj → InitRes
-          | [] => (cur, none)
+          | [] =>
+            match iterFinish o with
+            | .ok () => (cur, none)
+            | .error e => (cur, some e)
           | item :: rest =>
             match baInitLoop cur [item] with
             | .ok next => run next rest
@@ -512,18 +517,7 @@ def baInit (self : BA) (arg : Option Obj) (encoding errors : Option String) : In
       if encoding.isSome then fail (.typeError "encoding without a string argument")
       else if errors.isSome then fail (.typeError "errors without a string argument")
       else
-        match o.index? with
-        | some v =>
-          match countOf o v with
-          | .error e => fail e
-          | .ok count =>
-            if count < 0 then fail (.valueError "negative count")
-            else if count > 0 then
-              match baResize self count with
-              | .error e => fail e
-              | .ok r => (({ r with data := List.replicate count.toNat 0 } : BA), none)
-            else (self, none)
-        | none =>
+        let notCount : Unit → InitRes := fun _ =>
           match o.buffer? with
           | some view =>
             match baResize self view.length with
@@ -543,6 +537,19 @@ def baInit (self : BA) (arg : Option Obj) (encoding errors : Option String) : In
                   | .error e => (r, some e)
                   | .ok r0 => slow r0 o
             | _ => slow self o
+        match o.index? with
+        | some (.ok v) =>
+          match countOf o v with
+          | .error e => fail e
+          | .ok count =>
+            if count < 0 then fail (.valueError "negative count")
+            else if count > 0 then
+              match baResize self count with
+              | .error e => fail e
+              | .ok r => (({ r with data := List.replicate count.toNat 0 } : BA), none)
+            else (self, none)
+        | some (.error e) => if isTypeError e then notCount () else fail e
+        | none => notCount ()
 
 /-- `bytearray(x)` for a fresh object. -/
 def baNew (arg : Option Obj) (encoding errors : Option String) : Py BA :=
@@ -556,13 +563,14 @@ def baExtend (self : BA) (o : Obj) : Py BA := do
   match o.buffer? with
   | some b => baExtendBuffer self { bytes := b }
   | none =>
-    let items ← match iterItems? o with
-      | some xs => pure xs
-      | none => throw (.typeError s!"can't extend bytearray with {o.typeName}")
+    let items ← getIterOr (.typeError s!"can't extend bytearray with {o.typeName}") o
+    let bufSize ← lengthHint o 32
+    let _ ← baFromStringAndSize none bufSize
     let isStr : Bool := match o with | .str _ => true | _ => false
     let vals ← (items.mapM getByteValue).mapError fun e =>
       if isStr = true ∧ e.className = "TypeError" then .typeError "expected iterable of integers; got: 'str'"
       else e
+    iterFinish o
     let r := baSetsliceLinear self self.size self.size (seqData vals)
     r
 

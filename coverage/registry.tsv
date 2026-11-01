@@ -1598,16 +1598,38 @@ textlibs-re-compiled-prefix-block	proven	Lib/re/_compiler.py	_compile_info
 textlibs-re-literal-prefix-sound	proven	Lib/re/_compiler.py	_get_literal_prefix,_get_iscased
 textlibs-re-charset-preserved	proven	Lib/re/_compiler.py	_optimize_charset,_compile_charset
 textlibs-re-charset-preserved-ignorecase	open	Lib/re/_compiler.py	
-textlibs-re-findall-is-finditer	proven	Modules/_sre/sre.c	_sre_SRE_Pattern_findall_impl,state_getslice,pattern_new_match,_sre_SRE_Pattern_finditer_impl,_sre_SRE_Scanner_search_impl
-textlibs-re-split-is-finditer	proven	Modules/_sre/sre.c	_sre_SRE_Pattern_split_impl
-textlibs-re-sub-is-finditer	proven	Modules/_sre/sre.c	pattern_subx,expand_template
-textlibs-re-sub-call-is-finditer	proven	Modules/_sre/sre.c	pattern_subx,_sre_SRE_Pattern_sub_impl,_sre_SRE_Pattern_subn_impl
+textlibs-re-findall-is-finditer	proven	Modules/_sre/sre.c	
+textlibs-re-split-is-finditer	proven	Modules/_sre/sre.c	
+textlibs-re-sub-is-finditer	proven	Modules/_sre/sre.c	
+textlibs-re-sub-call-is-finditer	proven	Modules/_sre/sre.c	
 textlibs-re-group-index-range	proven	Modules/_sre/sre.c	match_getindex
 textlibs-re-match-methods-agree	proven	Modules/_sre/sre.c	match_getslice,match_getslice_by_index,match_group,_sre_SRE_Match_start_impl,_sre_SRE_Match_end_impl,_sre_SRE_Match_span_impl,match_regs,_sre_SRE_Match_groups_impl
 textlibs-re-groupdict-agrees	proven	Modules/_sre/sre.c	_sre_SRE_Match_groupdict_impl
 textlibs-re-scanner-agrees-compile	refuted	Lib/re/__init__.py	Scanner.__init__,Scanner.scan
 textlibs-csv-sniff-usable	refuted	Lib/csv.py	Sniffer.sniff,Sniffer._guess_delimiter
 textlibs-csv-sniff-respects-delimiters	proven	Lib/csv.py	Sniffer.sniff,Sniffer._guess_quote_and_delimiter,Sniffer._guess_delimiter
+textlibs-re-combine-flags	proven	Lib/re/_compiler.py	_combine_flags
+textlibs-re-ascii-case	proven	Modules/_sre/sre.c	sre_lower_ascii,_sre_ascii_iscased_impl,_sre_ascii_tolower_impl
+textlibs-re-char-loc-ignore	proven	Modules/_sre/sre.c	char_loc_ignore
+textlibs-re-category-negation	proven	Modules/_sre/sre.c	sre_category
+textlibs-re-compile-law	proven	Lib/re/__init__.py	_compile
+textlibs-re-escape-round-trip	open	Lib/re/__init__.py	
+textlibs-path-p-splitext	proven	Lib/posixpath.py	splitext
+textlibs-path-n-splitext	proven	Lib/ntpath.py	splitext
+textlibs-path-p-split	proven	Lib/posixpath.py	split
+textlibs-path-p-join	proven	Lib/posixpath.py	join
+textlibs-path-p-join-mix	refuted	Lib/posixpath.py	join
+textlibs-path-p-join-fspath-error	refuted	Lib/posixpath.py	join
+textlibs-path-p-join-other-errors	proven	Lib/posixpath.py	join
+textlibs-path-p-normpath-twin	open	Lib/posixpath.py	
+textlibs-path-p-normpath-idempotent	open	Lib/posixpath.py	
+textlibs-path-n-splitroot	proven	Lib/ntpath.py	splitdrive
+textlibs-path-n-join-absolute	proven	Lib/ntpath.py	join
+textlibs-path-n-normpath-relative	refuted	Lib/ntpath.py	
+textlibs-shlex-join-round-trip	proven	Lib/shlex.py	shlex.read_token,shlex.__next__,split,join,quote
+textlibs-shlex-quote-type	refuted	Lib/shlex.py	quote
+textlibs-shlex-stream-failure	proven	Lib/shlex.py	shlex.read_token
+textlibs-shlex-open-quote	proven	Lib/shlex.py	shlex.read_token
 textlibs-csv-round-trip	refuted	Modules/_csv.c	join_reset,join_append_data,join_append,join_append_lineterminator,csv_writerow_lock_held,csv_writerow,parse_add_char,parse_process_char
 textlibs-csv-round-trip-no-skip	proven	Modules/_csv.c	join_append_data,join_append,join_append_lineterminator,csv_writerow_lock_held,csv_writerow,parse_save_field,parse_add_char,parse_process_char,parse_reset,Reader_iternext_lock_held,Reader_iternext
 textlibs-csv-round-trip-any-terminator	refuted	Modules/_csv.c	parse_process_char,join_append_lineterminator
@@ -1625,6 +1647,20 @@ textlibs-csv-dialect-bool-raises	proven	Modules/_csv.c	_set_bool
 textlibs-csv-dialect-rebuild	proven	Modules/_csv.c	get_char_or_None,Dialect_get_lineterminator,Dialect_get_delimiter,Dialect_get_escapechar,Dialect_get_quotechar,Dialect_get_quoting
 textlibs-csv-dialect-reuse	proven	Modules/_csv.c	dialect_new,_call_dialect
 textlibs-csv-getattr-cleared	proven	Modules/_csv.c	dialect_new
+textlibs-csv-dialect-keywords	proven	Modules/_csv.c	dialect_new
+textlibs-csv-dialect-arg-errors	proven	Modules/_csv.c	dialect_new
+textlibs-csv-dialect-unknown-name	proven	Modules/_csv.c	dialect_new,get_dialect_from_registry
+textlibs-csv-dialect-new-valid	proven	Modules/_csv.c	dialect_new
+textlibs-csv-subclass-attrs	proven	Modules/_csv.c	dialect_new
+textlibs-csv-lineterminator-stored	proven	Modules/_csv.c	Dialect_get_lineterminator
+textlibs-csv-lineterminator-not-null	refuted	Modules/_csv.c	Dialect_get_lineterminator
+textlibs-csv-call-dialect	proven	Modules/_csv.c	_call_dialect
+textlibs-csv-reuse-never-fails	refuted	Modules/_csv.c	_call_dialect
+textlibs-csv-no-pickle	proven	Modules/_csv.c	Dialect_reduce
+textlibs-csv-register-sees-callbacks	proven	Modules/_csv.c	csv_register_dialect
+textlibs-csv-subclass-key	proven	Modules/_csv.c	csv_register_dialect,_csv_list_dialects_impl
+textlibs-csv-list-dialects	proven	Modules/_csv.c	_csv_list_dialects_impl
+textlibs-csv-reader-resets	proven	Modules/_csv.c	parse_reset
 textlibs-csv-registry	proven	Modules/_csv.c	csv_register_dialect
 textlibs-csv-register-checks	proven	Modules/_csv.c	csv_register_dialect
 textlibs-csv-get-dialect	proven	Modules/_csv.c	get_dialect_from_registry,_csv_get_dialect_impl

@@ -6,6 +6,9 @@ import PyLean.UnicodeObj.FormatPercent
 import PyLean.UnicodeObj.FormatStr
 import PyLean.UnicodeObj.ObjectWriter
 import PyLean.UnicodeObj.ObjectFromFormat
+import PyLean.UnicodeObj.ObjectIter
+import PyLean.UnicodeObj.ObjectIntern
+import PyLean.UnicodeObj.ObjectJoin
 
 /-! Difftest handler for the formatting slice (`fn` names start with `fmt_`). -/
 
@@ -138,11 +141,86 @@ def getVArg (j : Json) : Except String VArg := do
   | "inst" => return .inst (← getTName (← field j "n"))
   | o => throw s!"bad arg {o}"
 
+def getISimple (j : Json) : Except String ISimple := do
+  match ← getStr j "op" with
+  | "next" => return .next
+  | "setstate" => return .setstate (← getG (← field j "o"))
+  | o => throw s!"bad simple op {o}"
+
+def getIOp (j : Json) : Except String IOp := do
+  match ← getStr j "op" with
+  | "next" => return .next
+  | "len" => return .len
+  | "setstate" => return .setstate (← getG (← field j "o"))
+  | "reduce" =>
+    let pre ← (← (← field j "pre").getArr?).toList.mapM getISimple
+    match ← getStr j "r" with
+    | "orig" => return .reduce pre (.found 0)
+    | "alt" => return .reduce pre (.found 1)
+    | "missing" => return .reduce pre .missing
+    | "raise" => return .reduce pre (.raises (.valueError "hook"))
+    | o => throw s!"bad lookup {o}"
+  | o => throw s!"bad op {o}"
+
+def getKOp (j : Json) : Except String KOp := do
+  match ← getStr j "op" with
+  | "new" => return .newStr (← getSeq j "s")
+  | "sub" => return .newSub (← getSeq j "s")
+  | "other" => return .newOther
+  | "mortal" => return .mortal (← getNat j "h")
+  | "immortal" => return .immortal (← getNat j "h")
+  | "fromstring" => return .fromString (← getSeq j "s")
+  | o => throw s!"bad op {o}"
+
+def getJItem (j : Json) : Except String JItem := do
+  match ← getStr j "t" with
+  | "exact" => return .exact (← getSeq j "s")
+  | "sub" => return .sub (← getSeq j "s")
+  | "other" => return .other (← getStr j "n")
+  | o => throw s!"bad item {o}"
+
+def getJExc (s : String) : PyExc :=
+  if s == "TypeError" then .typeError "boom" else .valueError "boom"
+
+def getJStep (j : Json) : Except String (Py JItem) := do
+  match j.getObjVal? "exc" with
+  | .ok e => return .error (getJExc (← e.getStr?))
+  | .error _ => return .ok (← getJItem j)
+
+def getJSep (j : Json) : Except String JSep := do
+  match ← getStr j "t" with
+  | "null" => return .null
+  | "str" => return .str (← getSeq j "s")
+  | "other" => return .other (← getStr j "n")
+  | o => throw s!"bad separator {o}"
+
+def getJSeq (j : Json) : Except String JSeq := do
+  match ← getStr j "t" with
+  | "array" => return .array (← (← (← field j "items").getArr?).toList.mapM getJItem)
+  | "iter" => return .iter (← (← (← field j "steps").getArr?).toList.mapM getJStep)
+  | "getiter" => return .getIterFails (getJExc (← getStr j "exc"))
+  | o => throw s!"bad sequence {o}"
+
 def kindJson : Kind → Json
   | .ascii => Json.arr #[toJson (1 : Nat), toJson true]
   | .ucs1 => Json.arr #[toJson (1 : Nat), toJson false]
   | .ucs2 => Json.arr #[toJson (2 : Nat), toJson false]
   | .ucs4 => Json.arr #[toJson (4 : Nat), toJson false]
+
+def encIOut : IOut → Json
+  | .item none => Json.null
+  | .item (some (s, k)) => Json.arr #[toJson s, kindJson k]
+  | .len n => toJson n
+  | .unit r => encPy (fun (_ : Unit) => Json.null) r
+  | .reduced r =>
+    encPy (fun (x : IterReduced) => Json.arr #[toJson x.1, toJson x.2.1,
+      match x.2.2 with
+      | some i => toJson i
+      | none => Json.null]) r
+
+def encJOut : JOut → Json
+  | .itself => toJson "itself"
+  | .fresh t k _ => Json.arr #[toJson t, kindJson k]
 
 def encOptStr : Option Str → Json
   | some s => toJson s
@@ -203,6 +281,27 @@ def run (fn : String) (j : Json) : Except String Json := do
         toJson (consumedOut r)]
       Json.arr #[Json.arr (trace.map step).toArray, toJson text, kindJson kind])
       (writerCreate (← getInt j "n"))
+  | "fmt_join" =>
+    return encPy encJOut (pyUnicodeJoin (← getJSep (← field j "sep")) (← getJSeq (← field j "seq")))
+  | "fmt_intern" =>
+    let ops ← (← (← field j "ops").getArr?).toList.mapM getKOp
+    let statics ← (← (← field j "statics").getArr?).toList.mapM fun x => do
+      return (← (← x.getArr?).toList.mapM (·.getNat?))
+    let (W, hs, rs) := runKOps (startWorld statics) [] ops
+    -- For each handle: the first handle that is the same object, and the two flags.
+    let show1 (h : ObjId) : Json :=
+      let o := W.objs h
+      Json.arr #[toJson (hs.findIdx (· == h)), toJson (o.state != .none), toJson o.immortal]
+    return encPy (fun (x : Json) => x)
+      (.ok (Json.arr #[Json.arr (rs.map (encPy (fun (_ : Unit) => Json.null))).toArray,
+        Json.arr (hs.map show1).toArray]))
+  | "fmt_iter" =>
+    let ops ← (← (← field j "ops").getArr?).toList.mapM getIOp
+    let it0 := unicodeIter (← getSeq j "s") (← (← field j "exact").getBool?)
+    let (_, out) := runIOps it0 ops
+    let name := if it0.asciiType then "str_ascii_iterator" else "str_iterator"
+    return encPy (fun (x : Json) => x)
+      (.ok (Json.arr #[toJson name, Json.arr (out.map encIOut).toArray]))
   | "fmt_fromformat" =>
     let args ← (← (← field j "args").getArr?).toList.mapM getVArg
     return encPy (fun (r : Str × Kind) => Json.arr #[toJson r.1, kindJson r.2])

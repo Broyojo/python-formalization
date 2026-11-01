@@ -3468,7 +3468,7 @@ def operator_graph(rng):
     n = rng.randrange(1, 7)
     cells = []
     for i in range(n):
-        k = rng.choice(["atom", "atom", "list", "tuple", "dict", "inst", "method", "cls", "hooked"])
+        k = rng.choice(["atom", "atom", "list", "tuple", "dict", "inst", "method", "cls", "meta", "hooked"])
         if k == "atom":
             cells.append({"k": k, "n": rng.randrange(0, 4)})
         elif k == "list":
@@ -3487,10 +3487,10 @@ def operator_graph(rng):
                                             for a in rng.sample(["a", "b"], rng.randrange(0, 3))]})
         elif k == "method":
             cells.append({"k": k, "self": rng.randrange(0, n)})
-        elif k == "cls":
+        elif k in ("cls", "meta"):
             cells.append({"k": k})
         else:
-            c = {"k": k, "copier": rng.choice(["no", "no", "ok", "raise"]),
+            c = {"k": k, "copier": rng.choice(["no", "no", "ok", "raise"]), "tag": str(i),
                  "deepcopier": rng.choice(["no", "no", "ok", "raise"])}
             rv = rng.choice(["absent", "str", "raise", "tuple", "tuple", "tuple"])
             if rv == "tuple":
@@ -3522,13 +3522,33 @@ def operator_graph(rng):
                 continue
             c["args"] = [rng.choice(ok) for _ in c["args"]]
             if c["state"] is not None:
-                c["state"] = rng.choice(ok)
-                if cells[c["state"]]["n"] == 0:      # the model's `None`
-                    c["state"] = None
+                if c["setstate"] in ("ok", "raise"):
+                    # `__setstate__` stores what it gets, so the state may lead back to the object itself
+                    # through a list, which is the reason `memo[id(x)] = y` comes first in `_reconstruct`
+                    c["state"] = rng.randrange(0, n)
+                else:
+                    c["state"] = rng.choice(ok)
+                    if cells[c["state"]]["n"] == 0:      # the model's `None`
+                        c["state"] = None
             if c["listiter"] is not None:
-                c["listiter"] = [rng.choice(ok)]
+                c["listiter"] = [rng.randrange(0, n) if c["kind"] == "list" else rng.choice(ok)]
+            distinct = list({cells[j]["n"]: j for j in ok}.values())
+            if c["kind"] == "dict" and c["size"] >= 5 and rng.random() < .6:
+                c["dictiter"] = [[key, rng.randrange(0, n)] for key in rng.sample(distinct, min(len(distinct), 2))]
+    # a key whose `__deepcopy__` raises: no store happens, so `dict`'s merging of equal keys cannot show, and
+    # which exception comes out says which of the key and the value was copied first
+    raising = [j for j in range(n) if cells[j]["k"] == "hooked" and cells[j]["deepcopier"] == "raise"]
+    for c in cells:
+        if c["k"] == "dict" and raising and rng.random() < .5:
+            c["items"] = [rng.choice(raising), rng.randrange(0, n)] + c["items"]
+    memo = []
+    if rng.random() < .3:
+        for _ in range(2):
+            a = rng.randrange(0, n)
+            if cells[a]["k"] != "atom":
+                memo.append([a, rng.randrange(0, n)])
     return {"fn": "operator.deepcopy", "cells": cells, "root": rng.randrange(0, n),
-            "shallow": rng.random() < .3}
+            "shallow": rng.random() < .3, "memo": memo}
 
 
 class operator_Atom(int):
@@ -3584,13 +3604,13 @@ def operator_hooked(spec, objs):
         body["__copy__"] = lambda s: operator_Atom(1)
     elif spec["copier"] == "raise":
         def cf(s):
-            raise ValueError("copier")
+            raise ValueError("copier" + spec["tag"])
         body["__copy__"] = cf
     if spec["deepcopier"] == "ok":
         body["__deepcopy__"] = lambda s, memo: operator_Atom(1)
     elif spec["deepcopier"] == "raise":
         def df(s, memo):
-            raise ValueError("deepcopier")
+            raise ValueError("deepcopier" + spec["tag"])
         body["__deepcopy__"] = df
     rv = spec["rv"]
 
@@ -3601,7 +3621,8 @@ def operator_hooked(spec, objs):
             raise ValueError("reduce")
         t = [operator_ctor(spec), tuple(objs[j] for j in spec["args"]),
              objs[spec["state"]] if spec["state"] is not None else None,
-             iter([objs[j] for j in spec["listiter"]]) if spec["listiter"] is not None else None, None, None]
+             iter([objs[j] for j in spec["listiter"]]) if spec["listiter"] is not None else None,
+             iter([(objs[a], objs[b]) for a, b in spec["dictiter"]]) if spec["dictiter"] is not None else None, None]
         return tuple(t[:spec["size"]])
     body["__reduce_ex__"] = reduce_ex if rv != "absent" else None
     body["__reduce__"] = None
@@ -3622,6 +3643,8 @@ def operator_build_graph(cells):
             objs[i] = operator_Inst()
         elif k == "cls":
             objs[i] = operator_Empty
+        elif k == "meta":
+            objs[i] = operator_Meta("MetaCls", (), {})      # one object per cell, as `memo` keys on identity
         elif k == "hooked":
             objs[i] = operator_hooked(c, objs)
     for i, c in enumerate(cells):
@@ -3649,6 +3672,8 @@ def operator_render(o, seen):
         return ["atom", int(o)]
     if o is operator_Empty:
         return ["cls"]
+    if isinstance(o, operator_Meta):
+        return ["meta"]
     if type(o).__name__ == "Hooked":
         return ["hooked"]
     for i, s in enumerate(seen):
@@ -3853,6 +3878,10 @@ def operator_run(case):
     if fn == "abc":
         return operator_abc_run(case)
     raise ValueError(fn)
+
+
+class operator_Meta(type):
+    pass
 
 
 class operator_Empty:
@@ -4183,10 +4212,12 @@ def operator_attr(case, m, fn):
 def operator_deep(case):
     objs = operator_build_graph(case["cells"])
     x = objs[case["root"]]
-    f = operator_copy.copy if case["shallow"] else operator_copy.deepcopy
+    memo = {}
+    for a, b in case["memo"]:
+        memo[id(objs[a])] = objs[b]
 
     def go():
-        y = f(x)
+        y = operator_copy.copy(x) if case["shallow"] else operator_copy.deepcopy(x, memo)
         return [operator_render(y, []), y is x]
     r = py_result(go)
     if "exc" in r:

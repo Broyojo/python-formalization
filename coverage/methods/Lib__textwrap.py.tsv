@@ -3,8 +3,8 @@ Lib/textwrap.py	112	137	TextWrapper.__init__	__init__(self, width=70, initial_in
 Lib/textwrap.py	143	154	TextWrapper._munge_whitespace	_munge_whitespace(self, text)	todo		
 Lib/textwrap.py	157	177	TextWrapper._split	_split(self, text)	todo		
 Lib/textwrap.py	179	195	TextWrapper._fix_sentence_endings	_fix_sentence_endings(self, chunks)	todo		
-Lib/textwrap.py	197	230	TextWrapper._handle_long_word	_handle_long_word(self, reversed_chunks, cur_line, cur_len, width)	todo		
-Lib/textwrap.py	238	339	TextWrapper._wrap_chunks	_wrap_chunks(self, chunks)	todo		
+Lib/textwrap.py	197	230	TextWrapper._handle_long_word	_handle_long_word(self, reversed_chunks, cur_line, cur_len, width)	modelled	textlibs-textwrap-terminates,textlibs-textwrap-succeeds,textlibs-textwrap-width-narrow,textlibs-textwrap-keeps-text,textlibs-textwrap-no-break,textlibs-textwrap-greedy	
+Lib/textwrap.py	238	339	TextWrapper._wrap_chunks	_wrap_chunks(self, chunks)	modelled	textlibs-textwrap-terminates,textlibs-textwrap-succeeds,textlibs-textwrap-errors,textlibs-textwrap-width,textlibs-textwrap-width-narrow,textlibs-textwrap-keeps-text,textlibs-textwrap-max-lines,textlibs-textwrap-no-break,textlibs-textwrap-greedy,textlibs-textwrap-fitting-text	
 Lib/textwrap.py	341	343	TextWrapper._split_chunks	_split_chunks(self, text)	todo		
 Lib/textwrap.py	347	359	TextWrapper.wrap	wrap(self, text)	todo		
 Lib/textwrap.py	361	368	TextWrapper.fill	fill(self, text)	todo		

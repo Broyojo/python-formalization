@@ -33,24 +33,24 @@ Lib/calendar.py	292	298	Calendar.monthdayscalendar	monthdayscalendar(self, year,
 Lib/calendar.py	300	308	Calendar.yeardatescalendar	yeardatescalendar(self, year, width=3)	modelled	calstat-calendar-year-matrices	
 Lib/calendar.py	310	318	Calendar.yeardays2calendar	yeardays2calendar(self, year, width=3)	modelled	calstat-calendar-year-matrices	
 Lib/calendar.py	320	327	Calendar.yeardayscalendar	yeardayscalendar(self, year, width=3)	modelled	calstat-calendar-year-matrices	
-Lib/calendar.py	336	340	TextCalendar.prweek	prweek(self, theweek, width)	modelled	calstat-calendar-text-week-width	
-Lib/calendar.py	342	350	TextCalendar.formatday	formatday(self, day, weekday, width)	modelled	calstat-calendar-text-week-width	
-Lib/calendar.py	352	356	TextCalendar.formatweek	formatweek(self, theweek, width)	modelled	calstat-calendar-text-week-width	
-Lib/calendar.py	358	366	TextCalendar.formatweekday	formatweekday(self, day, width)	modelled	calstat-calendar-text-header-width	
-Lib/calendar.py	368	372	TextCalendar.formatweekheader	formatweekheader(self, width)	modelled	calstat-calendar-text-header-width	
-Lib/calendar.py	374	383	TextCalendar.formatmonthname	formatmonthname(self, theyear, themonth, width, withyear=True)	modelled	calstat-calendar-formatmonthname	
-Lib/calendar.py	385	389	TextCalendar.prmonth	prmonth(self, theyear, themonth, w=0, l=0)	modelled	calstat-calendar-formatmonth-lines	
-Lib/calendar.py	391	405	TextCalendar.formatmonth	formatmonth(self, theyear, themonth, w=0, l=0)	modelled	calstat-calendar-formatmonth-lines	
-Lib/calendar.py	407	443	TextCalendar.formatyear	formatyear(self, theyear, w=2, l=1, c=6, m=3)	modelled	calstat-calendar-formatyear-lines,calstat-calendar-formatyear-month-count,calstat-calendar-text-year-months	
-Lib/calendar.py	445	447	TextCalendar.pryear	pryear(self, theyear, w=0, l=0, c=6, m=3)	modelled	calstat-calendar-formatyear-lines	
-Lib/calendar.py	476	484	HTMLCalendar.formatday	formatday(self, day, weekday)	modelled	calstat-calendar-html-month-lines	
-Lib/calendar.py	486	491	HTMLCalendar.formatweek	formatweek(self, theweek)	modelled	calstat-calendar-html-month-lines	
-Lib/calendar.py	493	498	HTMLCalendar.formatweekday	formatweekday(self, day)	modelled	calstat-calendar-html-month-lines	
-Lib/calendar.py	500	505	HTMLCalendar.formatweekheader	formatweekheader(self)	modelled	calstat-calendar-html-month-lines	
-Lib/calendar.py	507	517	HTMLCalendar.formatmonthname	formatmonthname(self, theyear, themonth, withyear=True)	modelled	calstat-calendar-formatmonthname	
-Lib/calendar.py	519	537	HTMLCalendar.formatmonth	formatmonth(self, theyear, themonth, withyear=True)	modelled	calstat-calendar-html-month-lines	
-Lib/calendar.py	539	561	HTMLCalendar.formatyear	formatyear(self, theyear, width=3)	modelled	calstat-calendar-formatyear-month-count,calstat-calendar-html-year-months	
-Lib/calendar.py	563	584	HTMLCalendar.formatyearpage	formatyearpage(self, theyear, width=3, css='calendar.css', encoding=None)	modelled	calstat-calendar-xmlcharref-ascii	
+Lib/calendar.py	336	340	TextCalendar.prweek	prweek(self, theweek, width)	todo		withdrawn: length or line count only: any text of that shape passes
+Lib/calendar.py	342	350	TextCalendar.formatday	formatday(self, day, weekday, width)	todo		withdrawn: length or line count only: any text of that shape passes
+Lib/calendar.py	352	356	TextCalendar.formatweek	formatweek(self, theweek, width)	todo		withdrawn: length or line count only: any text of that shape passes
+Lib/calendar.py	358	366	TextCalendar.formatweekday	formatweekday(self, day, width)	todo		withdrawn: length or line count only: any text of that shape passes
+Lib/calendar.py	368	372	TextCalendar.formatweekheader	formatweekheader(self, width)	todo		withdrawn: length or line count only: any text of that shape passes
+Lib/calendar.py	374	383	TextCalendar.formatmonthname	formatmonthname(self, theyear, themonth, width, withyear=True)	todo		withdrawn: an existential over month names: always January passes
+Lib/calendar.py	385	389	TextCalendar.prmonth	prmonth(self, theyear, themonth, w=0, l=0)	todo		withdrawn: length or line count only: any text of that shape passes
+Lib/calendar.py	391	405	TextCalendar.formatmonth	formatmonth(self, theyear, themonth, w=0, l=0)	todo		withdrawn: length or line count only: any text of that shape passes
+Lib/calendar.py	407	443	TextCalendar.formatyear	formatyear(self, theyear, w=2, l=1, c=6, m=3)	todo		withdrawn: length or line count only: any text of that shape passes
+Lib/calendar.py	445	447	TextCalendar.pryear	pryear(self, theyear, w=0, l=0, c=6, m=3)	todo		withdrawn: length or line count only: any text of that shape passes
+Lib/calendar.py	476	484	HTMLCalendar.formatday	formatday(self, day, weekday)	todo		withdrawn: length or line count only: any text of that shape passes
+Lib/calendar.py	486	491	HTMLCalendar.formatweek	formatweek(self, theweek)	todo		withdrawn: length or line count only: any text of that shape passes
+Lib/calendar.py	493	498	HTMLCalendar.formatweekday	formatweekday(self, day)	todo		withdrawn: length or line count only: any text of that shape passes
+Lib/calendar.py	500	505	HTMLCalendar.formatweekheader	formatweekheader(self)	todo		withdrawn: length or line count only: any text of that shape passes
+Lib/calendar.py	507	517	HTMLCalendar.formatmonthname	formatmonthname(self, theyear, themonth, withyear=True)	todo		withdrawn: an existential over month names: always January passes
+Lib/calendar.py	519	537	HTMLCalendar.formatmonth	formatmonth(self, theyear, themonth, withyear=True)	todo		withdrawn: length or line count only: any text of that shape passes
+Lib/calendar.py	539	561	HTMLCalendar.formatyear	formatyear(self, theyear, width=3)	todo		withdrawn: length or line count only: any text of that shape passes
+Lib/calendar.py	563	584	HTMLCalendar.formatyearpage	formatyearpage(self, theyear, width=3, css='calendar.css', encoding=None)	todo		withdrawn: length or line count only: any text of that shape passes
 Lib/calendar.py	588	590	different_locale.__init__	__init__(self, locale)	modelled	calstat-calendar-different-locale-restores	
 Lib/calendar.py	592	594	different_locale.__enter__	__enter__(self)	modelled	calstat-calendar-different-locale-restores	
 Lib/calendar.py	596	597	different_locale.__exit__	__exit__(self, *args)	modelled	calstat-calendar-different-locale-restores	
@@ -62,12 +62,12 @@ Lib/calendar.py	636	640	LocaleHTMLCalendar.__init__	__init__(self, firstweekday=
 Lib/calendar.py	642	644	LocaleHTMLCalendar.formatweekday	formatweekday(self, day)	modelled	calstat-calendar-locale-calendar-methods	
 Lib/calendar.py	646	648	LocaleHTMLCalendar.formatmonthname	formatmonthname(self, theyear, themonth, withyear=True)	modelled	calstat-calendar-locale-calendar-methods	
 Lib/calendar.py	652	654	_CLIDemoCalendar.__init__	__init__(self, highlight_day=None, *args, **kwargs)	modelled	calstat-calendar-demo-is-text	
-Lib/calendar.py	656	676	_CLIDemoCalendar.formatweek	formatweek(self, theweek, width, *, highlight_day=None)	modelled	calstat-calendar-demo-is-text	
-Lib/calendar.py	678	700	_CLIDemoCalendar.formatmonth	formatmonth(self, theyear, themonth, w=0, l=0)	modelled	calstat-calendar-demo-is-text	
-Lib/calendar.py	702	752	_CLIDemoCalendar.formatyear	formatyear(self, theyear, w=2, l=1, c=6, m=3)	modelled	calstat-calendar-demo-is-text,calstat-calendar-demo-year-column,calstat-calendar-text-year-months	
+Lib/calendar.py	656	676	_CLIDemoCalendar.formatweek	formatweek(self, theweek, width, *, highlight_day=None)	todo		withdrawn: equal to the text calendar only, whose text is not pinned
+Lib/calendar.py	678	700	_CLIDemoCalendar.formatmonth	formatmonth(self, theyear, themonth, w=0, l=0)	todo		withdrawn: equal to the text calendar only, whose text is not pinned
+Lib/calendar.py	702	752	_CLIDemoCalendar.formatyear	formatyear(self, theyear, w=2, l=1, c=6, m=3)	todo		withdrawn: equal to the text calendar only, whose text is not pinned
 Lib/calendar.py	756	758	_CLIDemoLocaleCalendar.__init__	__init__(self, highlight_day=None, *args, **kwargs)	modelled	calstat-calendar-demo-is-text	
 Lib/calendar.py	766	769	setfirstweekday	setfirstweekday(firstweekday)	modelled	calstat-calendar-setfirstweekday	
-Lib/calendar.py	786	788	format	format(cols, colwidth=_colwidth, spacing=_spacing)	modelled	calstat-calendar-formatstring-width	
-Lib/calendar.py	791	794	formatstring	formatstring(cols, colwidth=_colwidth, spacing=_spacing)	modelled	calstat-calendar-formatstring-width	
+Lib/calendar.py	786	788	format	format(cols, colwidth=_colwidth, spacing=_spacing)	todo		withdrawn: length or line count only: any text of that shape passes
+Lib/calendar.py	791	794	formatstring	formatstring(cols, colwidth=_colwidth, spacing=_spacing)	todo		withdrawn: length or line count only: any text of that shape passes
 Lib/calendar.py	801	808	timegm	timegm(tuple)	modelled	calstat-calendar-timegm-ordinal,calstat-calendar-timegm-roundtrip	
 Lib/calendar.py	811	922	main	main(args=None)	modelled	calstat-calendar-main-checks,calstat-calendar-main-month-output	

@@ -200,6 +200,8 @@ theorem keeps_all (n : Nat) : ∀ fuel : Nat,
       split at e
       · cases e
         exact Keeps.refl n _ hn
+      · cases e
+        exact Keeps.refl n _ hn
       · split at e
         · cases e
           exact Keeps.refl n _ hn
@@ -242,6 +244,9 @@ theorem keeps_all (n : Nat) : ∀ fuel : Nat,
               cases e
               exact k1.trans (keeps_alloc_rem n h1 _ x k1.1).1
           · -- class
+            cases e
+            exact Keeps.refl n _ hn
+          · -- class with a metaclass
             cases e
             exact Keeps.refl n _ hn
           · -- plain instance
@@ -432,7 +437,8 @@ no other effect, and an atom is itself. `copy` docs: "keeping a memo dictionary"
 def DeepcopyMemo : Prop :=
   ∀ (fuel : Nat) (h : Heap) (x y : Nat) (n : Int),
     (h.get x = .atom n → deepcopy (fuel + 1) h x = .ok (h, x)) ∧
-    (h.memo.lookup x = some y → (∀ m, h.get x ≠ .atom m) → deepcopy (fuel + 1) h x = .ok (h, y)) ∧
+    (h.memo.lookup x = some y → (∀ m, h.get x ≠ .atom m) → (∀ m, h.get x ≠ .cls m) →
+      deepcopy (fuel + 1) h x = .ok (h, y)) ∧
     (h.get x = .list [x] → h.memo.lookup x = none → ∃ h', deepcopy (fuel + 4) h x = .ok (h', h.cells.length) ∧
       h'.get h.cells.length = .list [h.cells.length])
 
@@ -441,10 +447,11 @@ theorem deepcopyMemo_proven : DeepcopyMemo := by
   refine ⟨?_, ?_, ?_⟩
   · intro hc
     simp [deepcopy, hc]
-  · intro hl hn
+  · intro hl hn hc
     rw [deepcopy]
     split
     · next m hm => exact absurd hm (hn m)
+    · next m hm => exact absurd hm (hc m)
     · simp [hl]
   · intro hc hm
     have hx := get_of_list h x _ hc
