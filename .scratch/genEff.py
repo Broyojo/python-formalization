@@ -179,7 +179,8 @@ def leavesFrame : Op → Bool
 -- is just proved elsewhere. (The specialized members `FOR_ITER_LIST` etc. use `stk` and are
 -- covered by `eff_execOp`.)
 def peekDispatch : Op → Bool
-  | .FOR_ITER | .INSTRUMENTED_FOR_ITER | .SEND | .WITH_EXCEPT_START | .RERAISE => true
+  | .FOR_ITER | .INSTRUMENTED_FOR_ITER | .SEND | .WITH_EXCEPT_START | .RERAISE
+  | .CLEANUP_THROW | .END_ASYNC_FOR | .INSTRUMENTED_END_ASYNC_FOR => true
   | _ => false
 
 /-- The two super-instructions that fold a following `STORE_FAST`/`POP_TOP` with
@@ -214,7 +215,9 @@ macro_rules
     | (refine Eff.post0 ?_ fun _ => ?_ <;> eff_auto)
     | (refine Eff.same ?_ fun _ => ?_ <;> eff_auto)
     | (refine Eff.append ?_ fun _ => ?_ <;> eff_auto)
-    | (split <;> eff_auto))
+    | (split <;> eff_auto)
+    | (refine Eff.cast (eff_stk _ _ _) ?_ ?_ <;> omega)
+    | (refine Eff.cast (eff_stkK _ _ _) ?_ ?_ <;> omega))
 
 set_option maxHeartbeats 2000000 in
 theorem eff_execOp (e : Env) (o : Op) (hv : validOparg o e.oparg) (hf : leavesFrame o = false)
@@ -226,7 +229,8 @@ theorem eff_execOp (e : Env) (o : Op) (hv : validOparg o e.oparg) (hf : leavesFr
     | exact absurd hp (by decide)
     | (simp only [execOp, numPopped, numPushed, validOparg, UOPS] at hv ⊢ <;> first
         | eff_auto
-        | (refine Eff.cast (m := _) ?_ (by omega) (by omega); eff_auto))
+        | (refine Eff.cast (eff_stk _ _ _) ?_ ?_ <;> omega)
+        | (refine Eff.cast (eff_stkK _ _ _) ?_ ?_ <;> omega))
 
 end PyLean.Bytecode
 '''

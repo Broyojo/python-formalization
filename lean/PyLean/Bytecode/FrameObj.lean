@@ -221,8 +221,12 @@ def explainIncompatible (toS : Int) : String :=
 
 /-- `first_line_not_before`, lines 1594-1607; `lines` holds `-1` where no line starts. -/
 def firstLineNotBefore (lines : Array Int) (line : Int) : Int :=
-  let r := lines.foldl (fun acc l => if l ≥ line && (acc == none || some l < acc) then some l else acc)
-    (none : Option Int)
+  let r := lines.foldl (fun acc l =>
+    if l ≥ line then
+      match acc with
+      | none => some l
+      | some a => if l < a then some l else some a
+    else acc) (none : Option Int)
   r.getD (-1)
 
 /-- What `frame_lineno_set_impl` decides, lines 1705-1787, on a line event. -/

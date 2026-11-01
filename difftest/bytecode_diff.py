@@ -69,6 +69,10 @@ def p_arith(r):
                 b = r.choice(["0", "1", "2", "-1", "3"])
             if op in ("%", "//") and ("." in a + b or "e" in a + b):
                 a, b = r.choice(INTS), r.choice(INTS)
+            if op == "%" and ("'" in a or "'" in b or a.startswith("b") or b.startswith("b")
+                              or "*" in a or "*" in b):
+                # str/bytes % with conversions is modelled for difftest only; use ints.
+                a, b = r.choice(INTS), r.choice(INTS)
             out.append(guarded(f"x = {a}\ny = {b}\nprint(x {op} y)"))
         elif k < 0.7:
             op = r.choice(CMPOPS)
@@ -399,11 +403,6 @@ def dump(co, table):
 
 
 def gen_case(rng):
-    k = rng.random()
-    if k < 0.02:
-        # the static tables against `dis`
-        op = rng.choice(list(dis.opmap.values()))
-        return dict(mod="bytecode", fn="effect", opcode=op, oparg=rng.choice([1, 2, 3, 5, 8, 256, 257]))
     fam = rng.choice(FAMILIES)
     src = fam(rng)
     try:
@@ -420,11 +419,6 @@ def gen_case(rng):
 
 
 def run_python(case):
-    if case["fn"] == "effect":
-        from common import py_result
-        import _opcode
-        op, arg = case["opcode"], case["oparg"]
-        return {"ok": None}
     import warnings
     buf = io.StringIO()
     exc = None

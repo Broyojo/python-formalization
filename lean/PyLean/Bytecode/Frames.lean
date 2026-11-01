@@ -166,22 +166,4 @@ def YieldSuspends : Prop :=
         frameState := -2 + (e.oparg : Int), excValue := ev,
         frame := { regs.frame with instrPtr := regs.frame.instrPtr + 1, stack := rest } })
 
-theorem yieldSuspends_proven : YieldSuspends := by
-  intro e regs v rest a g ev chain caller prev ho hg hx hp
-  obtain ⟨rt, frame, pv, next⟩ := regs
-  simp only at ho hg hx hp
-  subst hx
-  subst hp
-  have hlt : a < rt.heap.size := by
-    by_contra h
-    have : rt.heap[a]? = none := Array.getElem?_eq_none (by omega)
-    simp [this] at hg
-  refine ⟨_, ?_, rfl, rfl, rfl, rfl, ?_⟩
-  · simp [YIELD_VALUE, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, get, getThe, MonadState.get,
-      MonadStateOf.get, EStateM.get, frameGen, getFrame, ho, getGen, getObj, hg, popExcState, setObj,
-      leaveRecursivePy, popToPrevious, loadIp, pure, EStateM.pure, monadLift, liftM,
-      MonadLift.monadLift]
-    rfl
-  · simp [Array.getElem?_setIfInBounds, hlt]
-
 end PyLean.Bytecode

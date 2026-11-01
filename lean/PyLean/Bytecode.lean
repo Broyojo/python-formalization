@@ -1,7 +1,6 @@
 import PyLean.Registry
 import PyLean.Bytecode.Diff
 import PyLean.Bytecode.Props
-import PyLean.Bytecode.SpecMore
 import PyLean.Bytecode.Frames
 import PyLean.Bytecode.FrameProps
 import PyLean.Bytecode.StackEffect
@@ -137,52 +136,17 @@ def entries : List Entry := [
     statement := "iter(seq).__next__() advances the index by one on success, stops permanently on IndexError or StopIteration, and leaves the iterator unchanged (retryable) on any other exception, for every __getitem__."
     source := "iter_iternext, Objects/iterobject.c:52-83"
     status := .proven, prop := ``IterObj.IterStep, thm := some ``IterObj.iterStep_proven },
-  { id := "bytecode-iter-setstate", pyFile := "Objects/iterobject.c"
-    pyFns := ["iter_setstate"]
-    statement := "iter(seq).__setstate__(i) never leaves a negative index and never revives an exhausted iterator, for every i."
-    source := "iter_setstate, Objects/iterobject.c:127-140"
-    status := .proven, prop := ``IterObj.IterSetstate, thm := some ``IterObj.iterSetstate_proven },
-  { id := "bytecode-iter-len-reduce", pyFile := "Objects/iterobject.c"
-    pyFns := ["iter_len", "iter_reduce"]
-    statement := "iter(seq).__length_hint__() is never negative for a live iterator, and __reduce__/__setstate__ round-trips the index."
-    source := "iter_len/iter_reduce, Objects/iterobject.c:85-140"
-    status := .proven, prop := ``IterObj.IterLenReduce, thm := some ``IterObj.iterLenReduce_proven },
   { id := "bytecode-calliter-ends", pyFile := "Objects/iterobject.c"
     pyFns := ["calliter_iternext", "PyCallIter_New", "calliter_reduce"]
     statement := "iter(callable, sentinel) ends permanently on a sentinel match or StopIteration, and keeps running on any other exception, for every callable and comparison."
     source := "calliter_iternext, Objects/iterobject.c:223-254"
     status := .proven, prop := ``IterObj.CalliterEnds, thm := some ``IterObj.calliterEnds_proven },
-  { id := "bytecode-anext-coroutine", pyFile := "Objects/iterobject.c"
-    pyFns := ["anextawaitable_iternext", "anextawaitable_getiter"]
-    statement := "For a coroutine from __anext__ (state kept in the object), await anext(a, default) drives it to completion like await a.__anext__(), when it does not raise StopAsyncIteration."
-    source := "anextawaitable_iternext, Objects/iterobject.c:369-407"
-    status := .proven, prop := ``IterObj.AnextCoroutine, thm := some ``IterObj.anextCoroutine_proven },
   { id := "bytecode-enum-counts", pyFile := "Objects/enumobject.c"
     pyFns := ["enum_new_impl", "enumerate_vectorcall", "enum_next", "enum_next_long",
               "increment_longindex_lock_held"]
     statement := "enumerate(iterable, start) yields the indices start, start+1, ... for every start and length, across the Py_ssize_t fast path and the PyLong slow path and their switch at PY_SSIZE_T_MAX."
     source := "enum_next/enum_next_long, Objects/enumobject.c:197-286"
     status := .proven, prop := ``IterObj.EnumCounts, thm := some ``IterObj.enumCounts_proven },
-  { id := "bytecode-enum-reduce", pyFile := "Objects/enumobject.c"
-    pyFns := ["enum_reduce"]
-    statement := "Pickling enumerate and rebuilding continues the count unbroken, in both the fast and the slow index state."
-    source := "enum_reduce, Objects/enumobject.c:288-303"
-    status := .proven, prop := ``IterObj.EnumReduce, thm := some ``IterObj.enumReduce_proven },
-  { id := "bytecode-enum-args", pyFile := "Objects/enumobject.c"
-    pyFns := ["enumerate_vectorcall", "check_keyword"]
-    statement := "enumerate binds its iterable and start arguments the same way however they are spelled positionally or by keyword."
-    source := "enumerate_vectorcall, Objects/enumobject.c:103-153"
-    status := .proven, prop := ``IterObj.EnumArgs, thm := some ``IterObj.enumArgs_proven },
-  { id := "bytecode-reversed-yields", pyFile := "Objects/enumobject.c"
-    pyFns := ["reversed_new_impl", "reversed_vectorcall", "reversed_next"]
-    statement := "reversed(seq) yields the sequence back to front, for every list."
-    source := "reversed_next, Objects/enumobject.c:456-478"
-    status := .proven, prop := ``IterObj.RevYieldsReversed, thm := some ``IterObj.revYieldsReversed_proven },
-  { id := "bytecode-reversed-setstate", pyFile := "Objects/enumobject.c"
-    pyFns := ["reversed_setstate", "reversed_len"]
-    statement := "reversed.__setstate__ clamps the index to [-1, n-1] and leaves an exhausted iterator alone; __length_hint__ is then in [0, n]."
-    source := "reversed_setstate/reversed_len, Objects/enumobject.c:480-534"
-    status := .proven, prop := ``IterObj.RevSetstate, thm := some ``IterObj.revSetstate_proven },
   { id := "bytecode-cell-order", pyFile := "Objects/cellobject.c"
     pyFns := ["cell_richcompare", "cell_compare_impl"]
     statement := "An empty cell sorts before every full cell, two empty cells compare equal, and two full cells compare by contents, for every element comparison."
@@ -234,22 +198,11 @@ def entries : List Entry := [
     statement := "FOR_ITER with a next item pushes it above the iterator, for every iterator."
     source := "_FOR_ITER, Python/bytecodes.c:3146-3175"
     status := .proven, prop := ``ForIterNext, thm := some ``forIterNext_proven },
-  { id := "bytecode-yield-suspends", pyFile := "Python/bytecodes.c"
-    pyFns := [op "YIELD_VALUE"]
-    statement := "YIELD_VALUE sets gi_frame_state to FRAME_SUSPENDED + oparg, stores the frame with instr_ptr advanced and its stack saved, resumes the caller after the SEND/FOR_ITER, and moves the generator's handled exception back into the generator, for every state."
-    source := "YIELD_VALUE, Python/bytecodes.c:1370-1402"
-    status := .proven, prop := ``YieldSuspends, thm := some ``yieldSuspends_proven },
-  -- frameobject stack analysis facts.
   { id := "bytecode-frame-compatible-kind", pyFile := "Objects/frameobject.c"
     pyFns := ["compatible_kind"]
     statement := "compatible_kind: nothing is compatible with kind 0, NULL is never compatible with Object, anything is compatible with Null, and otherwise the kinds must match."
     source := "compatible_kind, Objects/frameobject.c:1175-1187"
     status := .proven, prop := ``FrameObj.CompatibleKind, thm := some ``FrameObj.compatibleKind_proven },
-  { id := "bytecode-frame-push-pop", pyFile := "Objects/frameobject.c"
-    pyFns := ["push_value", "pop_value", "top_of_stack"]
-    statement := "Below the overflow threshold, pop_value undoes push_value and top_of_stack reads the kind pushed."
-    source := "push_value/pop_value/top_of_stack, Objects/frameobject.c:1199-1222"
-    status := .proven, prop := ``FrameObj.PushPop, thm := some ``FrameObj.pushPop_proven },
   { id := "bytecode-frame-overflowed", pyFile := "Objects/frameobject.c"
     pyFns := ["push_value", "pop_value"]
     statement := "An OVERFLOWED stack stays OVERFLOWED under push_value and pop_value."

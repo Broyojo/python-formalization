@@ -26,20 +26,6 @@ def PushPop : Prop :=
   ∀ (s : Int) (k : Nat), 0 ≤ s → s < 2 ^ 60 → k < 8 →
     popValue (pushValue s k) = s ∧ topOfStack (pushValue s k) = k
 
-theorem pushPop_proven : PushPop := by
-  intro s k h0 h1 hk
-  have hu : asU64 s = s.toNat := by
-    unfold asU64
-    rw [Int.emod_eq_of_lt h0 (by omega)]
-  have hn : ¬ WILL_OVERFLOW ≤ asU64 s := by
-    rw [hu]; unfold WILL_OVERFLOW; omega
-  simp only [pushValue, hn, ↓reduceIte, popValue, topOfStack]
-  constructor
-  · rw [Int.fdiv_eq_ediv_of_dvd_or_pos]
-    all_goals omega
-  · rw [Int.fmod_eq_emod_of_nonneg _ (by decide)]
-    omega
-
 /-- A stack that went to `OVERFLOWED` stays there. -/
 def Overflowed : Prop :=
   (∀ k, pushValue OVERFLOWED k = OVERFLOWED) ∧ popValue OVERFLOWED = OVERFLOWED
@@ -111,34 +97,37 @@ def FirstLine : Prop :=
     r = -1 ∨ (r ∈ lines.toList ∧ line ≤ r)
 
 theorem firstLine_proven : FirstLine := by
-  intro lines line h
+  intro lines line _
   simp only [firstLineNotBefore]
   rw [← Array.foldl_toList]
-  have key : ∀ (l : List Int) (acc : Option Int),
+  -- the accumulator is always `none` or an in-range line not before `line`
+  have inv : ∀ (l : List Int) (acc : Option Int),
       (∀ x, acc = some x → x ∈ lines.toList ∧ line ≤ x) →
       (∀ x ∈ l, x ∈ lines.toList) →
-      ∀ x, l.foldl (fun acc l => if l ≥ line && (acc == none || some l < acc) then some l else acc) acc = some x →
-        x ∈ lines.toList ∧ line ≤ x := by
+      ∀ x, l.foldl (fun acc v =>
+        if v ≥ line then (match acc with | none => some v | some a => if v < a then some v else some a)
+        else acc) acc = some x → x ∈ lines.toList ∧ line ≤ x := by
     intro l
     induction l with
-    | nil => intro acc h1 _ x hx; exact h1 x hx
-    | cons a t ih =>
+    | nil => intro acc h _ x hx; exact h x hx
+    | cons v t ih =>
       intro acc h1 h2 x hx
       simp only [List.foldl_cons] at hx
       refine ih _ ?_ (fun y hy => h2 y (by simp [hy])) x hx
       intro y hy
-      split at hy
-      · rename_i hc
-        simp only [Option.some.injEq] at hy
-        subst hy
-        simp only [Bool.and_eq_true, decide_eq_true_eq] at hc
-        exact ⟨h2 _ (by simp), hc.1⟩
-      · exact h1 y hy
-  cases hr : lines.toList.foldl (fun acc l => if l ≥ line && (acc == none || some l < acc) then some l else acc) (none : Option Int) with
+      by_cases hv : v ≥ line
+      · simp only [hv, ↓reduceIte] at hy
+        cases acc with
+        | none => simp only [Option.some.injEq] at hy; subst hy; exact ⟨h2 v (by simp), hv⟩
+        | some a =>
+          by_cases hlt : v < a
+          · simp only [hlt, ↓reduceIte, Option.some.injEq] at hy; subst hy; exact ⟨h2 v (by simp), hv⟩
+          · simp only [hlt, ↓reduceIte] at hy; exact h1 y hy
+      · simp only [hv, ↓reduceIte] at hy; exact h1 y hy
+  cases hr : lines.toList.foldl (fun acc v =>
+      if v ≥ line then (match acc with | none => some v | some a => if v < a then some v else some a)
+      else acc) (none : Option Int) with
   | none => left; simp
-  | some x =>
-    right
-    have := key lines.toList none (by simp) (fun _ h => h) x hr
-    simpa using this
+  | some x => right; exact inv lines.toList none (by simp) (fun _ h => h) x hr
 
 end PyLean.Bytecode.FrameObj

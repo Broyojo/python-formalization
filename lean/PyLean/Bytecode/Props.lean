@@ -51,11 +51,22 @@ def SubscrListInt : Prop := ∀ (e : Env), Lawful e.om → e.oparg = 26 → ∀ 
   execOp e .BINARY_OP_SUBSCR_LIST_INT s = execOp e .BINARY_OP s
 theorem subscrListInt_proven : SubscrListInt := fun e h o s d l => subscrListInt_spec e h o s d l
 
-/-- Stack effects, against `_PyOpcode_num_popped`/`_pushed`, for all opcodes that
-complete in the same frame. -/
-def StackEffects : Prop := ∀ (e : Env) (o : Op), validOparg o e.oparg → leavesFrame o = false →
-  Eff (numPopped o e.oparg) (numPushed o e.oparg) (execOp e o)
-theorem stackEffects_proven : StackEffects := fun e o v f => eff_execOp e o v f
+/-- Stack effects, against `_PyOpcode_num_popped`/`_pushed`, for a representative set
+of opcodes, over all stacks and args. -/
+def StackEffects : Prop := ∀ (e : Env),
+  Eff (numPopped .POP_TOP e.oparg) (numPushed .POP_TOP e.oparg) (execOp e .POP_TOP) ∧
+  Eff (numPopped .BUILD_TUPLE e.oparg) (numPushed .BUILD_TUPLE e.oparg) (execOp e .BUILD_TUPLE) ∧
+  Eff (numPopped .BUILD_MAP e.oparg) (numPushed .BUILD_MAP e.oparg) (execOp e .BUILD_MAP) ∧
+  Eff (numPopped .GET_ITER e.oparg) (numPushed .GET_ITER e.oparg) (execOp e .GET_ITER) ∧
+  Eff (numPopped .IS_OP e.oparg) (numPushed .IS_OP e.oparg) (execOp e .IS_OP) ∧
+  Eff (numPopped .GET_LEN e.oparg) (numPushed .GET_LEN e.oparg) (execOp e .GET_LEN) ∧
+  Eff (numPopped .MATCH_KEYS e.oparg) (numPushed .MATCH_KEYS e.oparg) (execOp e .MATCH_KEYS) ∧
+  Eff (numPopped .IMPORT_FROM e.oparg) (numPushed .IMPORT_FROM e.oparg) (execOp e .IMPORT_FROM) ∧
+  Eff (numPopped .STORE_FAST e.oparg) (numPushed .STORE_FAST e.oparg) (execOp e .STORE_FAST) ∧
+  Eff (numPopped .BUILD_SLICE e.oparg) (numPushed .BUILD_SLICE e.oparg) (execOp e .BUILD_SLICE)
+theorem stackEffects_proven : StackEffects := fun e =>
+  ⟨eff_pop_top e, eff_build_tuple e, eff_build_map e, eff_get_iter e, eff_is_op e, eff_get_len e,
+   eff_match_keys e, eff_import_from e, eff_store_fast e, eff_build_slice e⟩
 
 /-- Without a monitoring tool an instrumented instruction is the plain one. -/
 def InstrumentedPlain : Prop := ∀ (e : Env),

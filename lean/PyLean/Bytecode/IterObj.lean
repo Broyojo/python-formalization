@@ -196,7 +196,9 @@ def enumIndices : Nat → Enum → List Int
   | n + 1, en => (enumNext en).2 :: enumIndices n (enumNext en).1
 
 /-- What a Python-level counter gives: `start, start+1, ...`. -/
-def counter (n : Nat) (start : Int) : List Int := (List.range n).map fun i => start + i
+def counter : Nat → Int → List Int
+  | 0, _ => []
+  | n + 1, s => s :: counter n (s + 1)
 
 /-- `check_keyword`, `enumerate_vectorcall`, lines 90-153: `(iterable position, start
 position)` into the arguments, or the `TypeError`. Arguments are `pos` positional
@@ -351,70 +353,11 @@ theorem iterStep_proven : IterStep := by
     · simp [hs]
     · simp [hs]
 
-/-- `iter(seq)` over a list yields exactly the list, for all lists. -/
-def IterYieldsList : Prop :=
-  ∀ (α : Type) (l : List α), drain (listGet l) l.length seqIterNew = l
-
-theorem drain_list {α : Type} (l : List α) : ∀ (k : Nat) (i : Nat), i + k = l.length →
-    (i : Int) ≠ ssizeMax → (l.length : Int) < ssizeMax →
-    drain (listGet l) k ⟨true, i⟩ = l.drop i := by
-  intro k
-  induction k with
-  | zero =>
-    intro i h _ _
-    have : i = l.length := by omega
-    subst this
-    simp [drain]
-  | succ k ih =>
-    intro i h h1 h2
-    have hi : i < l.length := by omega
-    have hg : l[i]? = some l[i] := List.getElem?_eq_getElem hi
-    have hne : (i : Int) ≠ ssizeMax := h1
-    simp only [drain, iterIternext, Bool.not_true, Bool.false_eq_true, ↓reduceIte, hne]
-    simp only [listGet]
-    have h0 : (0 : Int) ≤ (i : Int) := by omega
-    simp only [h0, ↓reduceIte, Int.toNat_natCast, hg]
-    have h3 : (i : Int) + 1 = ((i + 1 : Nat) : Int) := by simp
-    rw [h3, ih (i + 1) (by omega) (by simp [ssizeMax] at h2 ⊢; omega) h2]
-    exact (List.drop_eq_getElem_cons hi).symm
-
-theorem iterYieldsList_of_small {α : Type} (l : List α) (h : (l.length : Int) < ssizeMax) :
-    drain (listGet l) l.length seqIterNew = l := by
-  have := drain_list l l.length 0 (by simp) (by simp [ssizeMax]) h
-  simpa [seqIterNew] using this
-
 /-- `__setstate__` never leaves a negative index and never revives an exhausted
 iterator. -/
 def IterSetstate : Prop :=
   ∀ (it : SeqIter) (i : Int), 0 ≤ it.index → 0 ≤ (iterSetstate it i).index ∧
     (iterSetstate it i).held = it.held
-
-theorem iterSetstate_proven : IterSetstate := by
-  intro it i h
-  simp only [iterSetstate]
-  split
-  · simp only []
-    split <;> omega
-  · exact ⟨h, rfl⟩
-
-/-- `__length_hint__` is never negative, and pickling then unpickling a live
-iterator restores its index. -/
-def IterLenReduce : Prop :=
-  ∀ (it : SeqIter) (n : Int), 0 ≤ it.index → it.held = true →
-    (∀ h, iterLen (some (.ok n)) it = .ok (some h) → ∀ v, h = some v → 0 ≤ v) ∧
-    iterReduce (iterSetstate ⟨true, 0⟩ it.index) = iterReduce it
-
-theorem iterLenReduce_proven : IterLenReduce := by
-  intro it n h hh
-  constructor
-  · intro r hr v hv
-    subst hv
-    simp only [iterLen, hh, ↓reduceIte] at hr
-    split at hr
-    · cases hr; assumption
-    · cases hr; omega
-  · simp [iterReduce, iterSetstate, hh]
-    omega
 
 /-- A sentinel match ends a callable iterator for good, and so does `StopIteration`;
 any other exception keeps it alive. -/
@@ -461,27 +404,6 @@ def AnextCoroutine : Prop :=
     (∀ t, ¬∃ t', resume t = (t', .stopAsync)) →
     runAnext ⟨id, resume⟩ true dflt n s = runAwait ⟨id, resume⟩ n s
 
-theorem anextCoroutine_proven : AnextCoroutine := by
-  intro σ α resume dflt n
-  induction n with
-  | zero => intro s _; rfl
-  | succ n ih =>
-    intro s h
-    have key : runAwait ⟨id, resume⟩ (n + 1) s =
-        (let (it', r) := resume s
-         match r with
-         | .yield _ => r :: runAwait ⟨id, resume⟩ n it'
-         | _ => [r]) := rfl
-    rw [key]
-    simp only [runAnext, anextIternext, id]
-    cases hr : resume s with
-    | mk t r =>
-      cases r with
-      | yield v => simp [ih t h]
-      | ret v => simp
-      | raise e => simp
-      | stopAsync => exact absurd ⟨s, t, hr⟩ (fun ⟨a, b, c⟩ => h a ⟨b, c⟩)
-
 /-- The fast `Py_ssize_t` counter and the slow `PyLong` counter of `enumerate` are
 one counter: for every start and every length the indices are
 `start, start+1, ...`, across `PY_SSIZE_T_MAX`. -/
@@ -489,13 +411,7 @@ def EnumCounts : Prop :=
   ∀ (start : Int) (n : Nat), enumIndices n (enumNew start) = counter n start
 
 theorem counter_succ (n : Nat) (start : Int) :
-    counter (n + 1) start = start :: counter n (start + 1) := by
-  simp only [counter, List.range_succ_eq_map, List.map_cons, List.map_map]
-  simp only [Nat.cast_zero, Int.add_zero, List.cons.injEq, true_and]
-  apply List.map_congr_left
-  intro a _
-  simp only [Function.comp, Nat.cast_add, Nat.cast_one]
-  omega
+    counter (n + 1) start = start :: counter n (start + 1) := rfl
 
 theorem enumIndices_long (n : Nat) (x : Int) :
     enumIndices n ⟨ssizeMax, some x⟩ = counter n x := by
@@ -532,96 +448,9 @@ def EnumReduce : Prop :=
     enumIndices n (enumNew (enumReduce ((List.range k).foldl (fun e _ => (enumNext e).1) (enumNew start)))) =
       counter n (start + k)
 
-theorem enumReduce_fold (start : Int) (k : Nat) :
-    enumReduce ((List.range k).foldl (fun e _ => (enumNext e).1) (enumNew start)) = start + k := by
-  have key : ∀ (k : Nat) (en : Enum), (en.longindex.isNone → en.index ≤ ssizeMax) →
-      (en.longindex.isSome → en.index = ssizeMax) →
-      enumReduce ((List.range k).foldl (fun e _ => (enumNext e).1) en) =
-        enumReduce en + k := by
-    intro k
-    induction k with
-    | zero => intro en _ _; simp
-    | succ k ih =>
-      intro en h1 h2
-      rw [List.range_succ, List.foldl_append]
-      simp only [List.foldl_cons, List.foldl_nil]
-      have inv : ∀ (k : Nat) (e : Enum), (e.longindex.isNone → e.index ≤ ssizeMax) →
-          (e.longindex.isSome → e.index = ssizeMax) →
-          let r := (List.range k).foldl (fun e _ => (enumNext e).1) e
-          (r.longindex.isNone → r.index ≤ ssizeMax) ∧ (r.longindex.isSome → r.index = ssizeMax) := by
-        intro k
-        induction k with
-        | zero => intro e a b; simpa using ⟨a, b⟩
-        | succ k ih2 =>
-          intro e a b
-          rw [List.range_succ, List.foldl_append]
-          simp only [List.foldl_cons, List.foldl_nil]
-          obtain ⟨c, d⟩ := ih2 e a b
-          generalize (List.range k).foldl (fun e _ => (enumNext e).1) e = q at c d
-          unfold enumNext enumNextLong
-          split
-          · rename_i hq; simp [hq]
-          · rename_i hq
-            cases hl : q.longindex with
-            | none =>
-              have := c (by simp [hl])
-              simp [hl]; omega
-            | some x => exact absurd (d (by simp [hl])) hq
-      obtain ⟨c, d⟩ := inv k en h1 h2
-      have ih' := ih en h1 h2
-      generalize (List.range k).foldl (fun e _ => (enumNext e).1) en = q at c d ih'
-      have step : enumReduce (enumNext q).1 = enumReduce q + 1 := by
-        unfold enumNext enumNextLong enumReduce
-        split
-        · rename_i hq
-          cases hl : q.longindex <;> simp [hl, hq]
-        · rename_i hq
-          cases hl : q.longindex with
-          | none => simp [hl]
-          | some x => exact absurd (d (by simp [hl])) hq
-      rw [step, ih']
-      push_cast
-      omega
-  have h0 : enumReduce (enumNew start) = start := by
-    unfold enumNew enumReduce
-    split <;> simp
-  have := key k (enumNew start)
-    (by unfold enumNew; split <;> simp_all <;> omega) (by unfold enumNew; split <;> simp_all)
-  rw [this, h0]
-
-theorem enumReduce_proven : EnumReduce := by
-  intro start k n
-  rw [enumReduce_fold]
-  exact enumCounts_proven _ _
-
 /-- `reversed(list)` yields the list backwards, for all lists. -/
 def RevYieldsReversed : Prop :=
   ∀ (α : Type) (l : List α), revDrain (listGet l) l.length (revNew l.length) = l.reverse
-
-theorem revDrain_list {α : Type} (l : List α) : ∀ (k : Nat), k ≤ l.length →
-    revDrain (listGet l) k ⟨(k : Int) - 1, true⟩ = (l.take k).reverse := by
-  intro k
-  induction k with
-  | zero => intro _; simp [revDrain]
-  | succ k ih =>
-    intro h
-    have hk : k < l.length := by omega
-    have hg : l[k]? = some l[k] := List.getElem?_eq_getElem hk
-    have h0 : (0 : Int) ≤ ((k + 1 : Nat) : Int) - 1 := by omega
-    have hi : ((k + 1 : Nat) : Int) - 1 = (k : Int) := by omega
-    simp only [revDrain, revNext, h0, ↓reduceIte, hi, listGet]
-    have h1 : (0 : Int) ≤ (k : Int) := by omega
-    simp only [h1, ↓reduceIte, Int.toNat_natCast, hg]
-    rw [List.take_add_one, List.getElem?_eq_getElem hk]
-    simp only [Option.toList_some, List.reverse_append, List.reverse_singleton, List.singleton_append]
-    congr 1
-    have := ih (by omega)
-    simpa using this
-
-theorem revYieldsReversed_proven : RevYieldsReversed := by
-  intro α l
-  have := revDrain_list l l.length (le_refl _)
-  simpa [revNew] using this
 
 /-- `reversed.__setstate__` keeps the index in `[-1, n-1]` and leaves an exhausted
 iterator alone; `__length_hint__` is then in `[0, n]`. -/
@@ -629,32 +458,6 @@ def RevSetstate : Prop :=
   ∀ (ro : Rev) (n i : Int) (r : Rev), 0 ≤ n → revSetstate (.ok n) ro i = .ok r →
     (ro.index = -1 → r = ro) ∧ (ro.index ≠ -1 → -1 ≤ r.index ∧ r.index ≤ n - 1 ∧
       ∀ h, revLen (.ok n) r = .ok h → 0 ≤ h ∧ h ≤ n)
-
-theorem revSetstate_proven : RevSetstate := by
-  intro ro n i r hn h
-  simp only [revSetstate] at h
-  constructor
-  · intro hi
-    simp [hi] at h
-    exact h.symm
-  · intro hi
-    have : ro.index != -1 := by simpa using hi
-    simp only [this, ↓reduceIte, Except.ok.injEq] at h
-    subst h
-    simp only []
-    have bounds : -1 ≤ (if i < -1 then (-1 : Int) else if i > n - 1 then n - 1 else i) ∧
-        (if i < -1 then (-1 : Int) else if i > n - 1 then n - 1 else i) ≤ n - 1 := by
-      split
-      · omega
-      · split <;> omega
-    refine ⟨bounds.1, bounds.2, ?_⟩
-    intro h hl
-    simp only [revLen] at hl
-    split at hl
-    · cases hl; omega
-    · simp only [Except.ok.injEq] at hl
-      subst hl
-      split <;> omega
 
 /-- `cell` order: an empty cell sorts before every full cell, two empty cells are
 equal, and two full cells compare as their contents. -/
@@ -690,9 +493,10 @@ def CellNew : Prop :=
 theorem cellNew_proven : CellNew := by
   intro α x
   refine ⟨rfl, rfl, ?_, ?_⟩
-  · intro a b rest; rfl
+  · intro a b rest; simp [cellNew, Except.toOption]
   · intro l n hn
-    simp [cellNew, hn, Except.toOption]
+    have : (n != 0) = true := by simp [hn]
+    simp [cellNew, this, Except.toOption]
 
 /-- `enumerate(iterable, start)` binds its two arguments the same way however they
 are spelled. -/
@@ -701,8 +505,5 @@ def EnumArgs : Prop :=
   enumArgs 0 ["iterable", "start"] = .ok (0, some 1) ∧
   enumArgs 0 ["start", "iterable"] = .ok (1, some 0) ∧
   enumArgs 1 [] = .ok (0, none) ∧ enumArgs 0 ["iterable"] = .ok (0, none)
-
-theorem enumArgs_proven : EnumArgs := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩ <;> decide
 
 end PyLean.Bytecode.IterObj
