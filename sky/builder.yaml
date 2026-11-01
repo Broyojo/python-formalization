@@ -1,6 +1,10 @@
 # Build host for Lean proofs and differential tests. Pinned to our own
 # Kubernetes cluster: never let this fail over to a paid cloud. CPU only, so it
 # takes no GPUs, and it leaves 32 CPUs on the node for other jobs.
+#
+# All state lives in /dev/shm. The node's disk is shared with every other job
+# there and is nearly full, so builds must not write to it. /dev/shm counts
+# against this pod's memory, and everything in it is a disposable cache.
 #   sky launch -c pylean sky/builder.yaml -i 120 --down -y
 name: pylean-builder
 
@@ -13,9 +17,14 @@ resources:
 setup: |
   set -euo pipefail
   SUDO=$(command -v sudo || true)
+  S=/dev/shm/pylean
+  mkdir -p $S/pf $S/elan $S/tmp
+  ln -sfn $S/pf $HOME/pf
+  ln -sfn $S/elan $HOME/.elan
+  export TMPDIR=$S/tmp
   $SUDO apt-get update -qq
   $SUDO apt-get install -y -qq build-essential git curl rsync zstd pkg-config \
-    libssl-dev zlib1g-dev libbz2-dev liblzma-dev libffi-dev libsqlite3-dev libreadline-dev
+    libssl-dev zlib1g-dev libbz2-dev liblzma-dev libffi-dev libsqlite3-dev libreadline-dev libmpdec-dev
 
   # Lean, at the toolchain the project pins.
   curl -sSfL https://elan.lean-lang.org/elan-init.sh -o /tmp/elan-init.sh
@@ -31,7 +40,7 @@ setup: |
   if [ ! -x $HOME/pf/py314/bin/python3 ]; then
     (cd $V/cpython-3.14 && ./configure --quiet --prefix=$HOME/pf/py314 && make -j32 -s >build.log 2>&1 && make -s install >>build.log 2>&1)
   fi
-  if [ ! -x $V/cpython-main/python ]; then
+  if ! $V/cpython-main/python -c "import _decimal" 2>/dev/null; then
     mkdir -p $V/cpython-main
     (cd $V/cpython-main && git init -q && git fetch -q --depth 1 https://github.com/python/cpython.git ef1fce0a69a19360643fb82ea3545ede21495c73 && git checkout -q FETCH_HEAD && ./configure --quiet && make -j32 -s >build.log 2>&1)
   fi
@@ -47,6 +56,7 @@ setup: |
   # Remote commands get these tools on PATH.
   cat > $HOME/pf/env.sh <<'ENV'
   export PATH=$HOME/pf/py314/bin:$HOME/.elan/bin:$PATH
+  export TMPDIR=/dev/shm/pylean/tmp
   ENV
   sed -i 's/^  //' $HOME/pf/env.sh
 
