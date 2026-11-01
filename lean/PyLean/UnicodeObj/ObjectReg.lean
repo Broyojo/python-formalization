@@ -29,7 +29,7 @@ def objectEntries : List Entry := [
     source := "implementation against itself: the sentinel -2 against -1; C11 7.21.6.1"
     status := .proven, prop := ``FromFormatIntStarOmitted, thm := some ``fromFormatIntStarOmitted_proven },
   { id := "unicodeobj-fromformat-write-str-negative-copy", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["unicode_fromformat_write_str"]
+    pyFns := []
     statement := "unicode_fromformat_write_str does the bad copy exactly when the precision is below -1, for every string, width and flag."
     source := "invariant: no crash"
     status := .proven, prop := ``WriteStrNegativeCopy, thm := some ``writeStrNegativeCopy_proven },
@@ -39,8 +39,7 @@ def objectEntries : List Entry := [
     source := "invariant: the range of a parsed precision"
     status := .proven, prop := ``ParserPrecisionRange, thm := some ``parserPrecisionRange_proven },
   { id := "unicodeobj-fromformat-canonical", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["unicode_fromformat_arg", "unicode_fromformat_write_utf8", "unicode_fromformat_write_wcstr",
-      "PyUnicode_FromFormatV", "PyUnicode_FromFormat"]
+    pyFns := []
     statement := "Every str PyUnicode_FromFormat returns has the canonical kind, for every format and all arguments, including when a precision makes the text narrower than the string it came from."
     source := "invariant: _PyUnicode_CheckConsistency"
     status := .proven, prop := ``FromFormatCanonical, thm := some ``fromFormatCanonical_proven },
@@ -60,7 +59,7 @@ def objectEntries : List Entry := [
     source := "invariant: round trip through %%"
     status := .proven, prop := ``FromFormatEscape, thm := some ``fromFormatEscape_proven },
   { id := "unicodeobj-writer-format-appends", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["PyUnicodeWriter_Format", "unicode_from_format"]
+    pyFns := ["PyUnicodeWriter_Format"]
     statement := "PyUnicodeWriter_Format is PyUnicode_FromFormat appended to what the writer holds: same exception, same text, for every writer, or no text on failure."
     source := "implementation against itself: the writer path against the object path"
     status := .proven, prop := ``WriterFormatAppends, thm := some ``writerFormatAppends_proven },
@@ -71,8 +70,7 @@ def objectEntries : List Entry := [
     status := .refuted, prop := ``WriterFormatUnobservable, thm := some ``writerFormatUnobservable_refuted
     bug := some "unicodeobj-writer-rollback-noncanonical" },
   { id := "unicodeobj-writer-text", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["PyUnicodeWriter_WriteStr", "PyUnicodeWriter_WriteRepr", "PyUnicodeWriter_WriteASCII",
-      "PyUnicodeWriter_WriteWideChar", "find_maxchar_surrogates", "PyUnicodeWriter_WriteUTF8"]
+    pyFns := ["PyUnicodeWriter_WriteStr", "PyUnicodeWriter_WriteRepr", "PyUnicodeWriter_WriteASCII", "PyUnicodeWriter_WriteWideChar", "find_maxchar_surrogates", "PyUnicodeWriter_WriteUTF8"]
     statement := "For every script of writer operations, the text is what the successful ones wrote, in order: WriteStr is str(), WriteRepr is repr(), a decode is bytes.decode, each raises what they raise, and a failed operation leaves no characters."
     source := "implementation against itself: the exact-str and exact-int fast paths and the writer's decoder against the object-level functions; Doc/c-api/unicode.rst"
     status := .proven, prop := ``WriterText, thm := some ``writerText_proven },
@@ -81,6 +79,11 @@ def objectEntries : List Entry := [
     statement := "PyUnicodeWriter_DecodeUTF8Stateful writes the text and reports the *consumed of PyUnicode_DecodeUTF8Stateful, for every built-in handler."
     source := "implementation against itself: the writer path against the stateful decoder; Doc/c-api/unicode.rst"
     status := .proven, prop := ``WriterConsumed, thm := some ``writerConsumed_proven },
+  { id := "unicodeobj-writer-finish-one-byte", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicode_result"]
+    statement := "A one-byte buffer holding at most one character finishes with the canonical kind, whatever the writer has been through."
+    source := "invariant: _PyUnicode_CheckConsistency; the LATIN1 singleton of unicode_result"
+    status := .proven, prop := ``WriterFinishOneByte, thm := some ``writerFinishOneByte_proven },
   { id := "unicodeobj-writer-consumed-failure", pyFile := "Objects/unicodeobject.c"
     pyFns := []
     statement := "When the stateful decoder raises, PyUnicodeWriter_DecodeUTF8Stateful raises the same exception, keeps no text, and sets *consumed to 0, for every built-in handler."
@@ -92,7 +95,7 @@ def objectEntries : List Entry := [
     source := "invariant: _PyUnicodeWriter_Update"
     status := .proven, prop := ``WriterCapValue, thm := some ``writerCapValue_proven },
   { id := "unicodeobj-writer-finish-canonical", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["PyUnicodeWriter_Create", "_PyUnicodeWriter_Init", "PyUnicodeWriter_Finish", "unicode_result"]
+    pyFns := ["PyUnicodeWriter_Finish", "unicode_result"]
     statement := "Unless a decode fails, the str that PyUnicodeWriter_Finish returns has the canonical kind, for every script from any PyUnicodeWriter_Create."
     source := "invariant: _PyUnicode_CheckConsistency"
     status := .proven, prop := ``WriterFinishCanonical, thm := some ``writerFinishCanonical_proven },
@@ -114,8 +117,7 @@ def objectEntries : List Entry := [
     status := .refuted, prop := ``WriterFailureUnobservable, thm := some ``writerFailureUnobservable_refuted
     bug := some "unicodeobj-writer-rollback-noncanonical" },
   { id := "unicodeobj-writer-paths-agree", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["PyUnicodeWriter_WriteChar", "_PyUnicodeWriter_WriteChar", "_PyUnicodeWriter_WriteCharInline",
-      "PyUnicodeWriter_WriteUCS4"]
+    pyFns := ["PyUnicodeWriter_WriteChar", "_PyUnicodeWriter_WriteChar", "_PyUnicodeWriter_WriteCharInline", "PyUnicodeWriter_WriteUCS4"]
     statement := "WriteStr, WriteUCS4, WriteWideChar, WriteSubstring of all of it, WriteChar for each character, and WriteUTF8 or DecodeUTF8Stateful of its encoding leave the same writer, from every writer."
     source := "implementation against itself: six ways to write one string"
     status := .proven, prop := ``WriterPathsAgree, thm := some ``writerPathsAgree_proven },
@@ -140,7 +142,7 @@ def objectEntries : List Entry := [
     source := "invariant: PEP 393 canonical kind (_PyUnicode_CheckConsistency)"
     status := .proven, prop := ``SliceKind, thm := some ``sliceKind_proven },
   { id := "unicodeobj-object-repeat-length", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["unicode_repeat"]
+    pyFns := []
     statement := "s * n has n * len(s) characters, and OverflowError is raised exactly when that exceeds PY_SSIZE_T_MAX."
     source := "invariant: no silent wraparound"
     status := .proven, prop := ``RepeatLength, thm := some ``repeatLength_proven },

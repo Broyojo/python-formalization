@@ -1,7 +1,7 @@
 file	line	endline	name	signature	status	entry	note
 Objects/stringlib/transmogrify.h	16	24	return_self	return_self(PyObject *self)	todo		
-Objects/stringlib/transmogrify.h	37	102	stringlib_expandtabs_impl	stringlib_expandtabs_impl(PyObject *self, int tabsize) /*[clinic end generated code: output=069cb7fae72e4c2b input=3c6d3b12aa3ccbea]*/	modelled	strsearch-expandtabs-str-bytes	
-Objects/stringlib/transmogrify.h	105	131	pad	pad(PyObject *self, Py_ssize_t left, Py_ssize_t right, char fill)	modelled	strsearch-pad-str-bytes	
+Objects/stringlib/transmogrify.h	37	102	stringlib_expandtabs_impl	stringlib_expandtabs_impl(PyObject *self, int tabsize) /*[clinic end generated code: output=069cb7fae72e4c2b input=3c6d3b12aa3ccbea]*/	todo		
+Objects/stringlib/transmogrify.h	105	131	pad	pad(PyObject *self, Py_ssize_t left, Py_ssize_t right, char fill)	modelled	strsearch-pad-str-bytes,strsearch-center-balanced	
 Objects/stringlib/transmogrify.h	146	154	stringlib_ljust_impl	stringlib_ljust_impl(PyObject *self, Py_ssize_t width, char fillchar) /*[clinic end generated code: output=c79ca173c5ff8337 input=eff2d014bc7d80df]*/	modelled	strsearch-pad-str-bytes	
 Objects/stringlib/transmogrify.h	170	178	stringlib_rjust_impl	stringlib_rjust_impl(PyObject *self, Py_ssize_t width, char fillchar) /*[clinic end generated code: output=7df5d728a5439570 input=218b0bd31308955d]*/	modelled	strsearch-pad-str-bytes	
 Objects/stringlib/transmogrify.h	194	207	stringlib_center_impl	stringlib_center_impl(PyObject *self, Py_ssize_t width, char fillchar) /*[clinic end generated code: output=d8da2e055288b4c2 input=3776fd278765d89b]*/	modelled	strsearch-pad-str-bytes	
