@@ -132,7 +132,7 @@ def IndexAgree : Prop :=
   ∀ (α : Type) [Inhabited α] (f : α → α → Bool) (l : List α) (x : α) (start stop : Option Int),
     (l.length : Int) ≤ ssizeMax →
     ∃ a b r, sliceIndices ⟨start, stop, none⟩ l.length = .ok (a, b, 1) ∧ IsFirst (f · x) l a b r ∧
-      listIndex f l x start stop = toRes "list.index(x): x not in list" r ∧
+      listIndexBy f l x start stop = toRes "list.index(x): x not in list" r ∧
       (∀ d : Deque α, d.WF → d.items = l →
         d.index (pureCmp f) x start stop = (toRes "deque.index(x): x not in deque" r, d))
 
@@ -222,16 +222,16 @@ theorem isFirst_unique (p : α → Bool) (l : List α) (a b : Int) (r r' : Optio
           rw [this] at k5; exact nomatch k5
 
 theorem listIndex_eq (f : α → α → Bool) (l : List α) (x : α) (start stop : Option Int) :
-    listIndex f l x start stop = toRes "list.index(x): x not in list"
+    listIndexBy f l x start stop = toRes "list.index(x): x not in list"
       (listIndexLoop f l x (normIdx (sliceIndex (stop.getD ssizeMax)) l.length)
         (normIdx (sliceIndex (start.getD 0)) l.length) (l.length + 1)) := by
-  unfold listIndex toRes normIdx
+  unfold listIndexBy toRes normIdx
   dsimp only
   split <;> rename_i heq <;> rw [heq]
 
 theorem list_isFirst (f : α → α → Bool) (l : List α) (x : α) (start stop : Option Int)
     (hlen : (l.length : Int) ≤ ssizeMax) :
-    ∃ r, listIndex f l x start stop = toRes "list.index(x): x not in list" r ∧
+    ∃ r, listIndexBy f l x start stop = toRes "list.index(x): x not in list" r ∧
       IsFirst (f · x) l (clip1 start 0 l.length) (clip1 stop l.length l.length) r := by
   have hn : (0 : Int) ≤ l.length := by omega
   rw [listIndex_eq]

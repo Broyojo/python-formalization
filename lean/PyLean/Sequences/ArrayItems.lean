@@ -335,7 +335,7 @@ def ArraySearchAgree : Prop :=
     let p := fun x => g (decode a.tc x)
     (∃ s e r, sliceIndices ⟨start, stop, none⟩ a.items.length = .ok (s, e, 1) ∧ IsFirst p a.items s e r ∧
       arrIndex a (pureEq g) start stop = toRes "array.index(x): x not in array" r ∧
-      listIndex (fun y (_ : Int) => p y) a.items 0 start stop = toRes "list.index(x): x not in list" r) ∧
+      listIndexBy (fun y (_ : Int) => p y) a.items 0 start stop = toRes "list.index(x): x not in list" r) ∧
     arrCount a (pureEq g) = .ok (a.items.filter p).length ∧
     arrContains a (pureEq g) = .ok (a.items.any p) ∧
     (arrRemove a (pureEq g)).map (·.items) = removeSpec "array.remove(x): x not in array" a.items p ∧

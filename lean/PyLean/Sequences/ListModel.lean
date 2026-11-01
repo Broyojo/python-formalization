@@ -64,7 +64,7 @@ def listIndexLoop (f : α → α → Bool) (l : List α) (x : α) (stop : Int) :
 
 /-- `l.index(x[, start[, stop]])`: `slice_index(accept={int})` arguments
 (saturating), `list_index_impl` (listobject.c:3282-3316). -/
-def listIndex (f : α → α → Bool) (l : List α) (x : α) (start stop : Option Int) : Py Int :=
+def listIndexBy (f : α → α → Bool) (l : List α) (x : α) (start stop : Option Int) : Py Int :=
   let n : Int := l.length
   let start := sliceIndex (start.getD 0)
   let stop := sliceIndex (stop.getD ssizeMax)
@@ -75,14 +75,22 @@ def listIndex (f : α → α → Bool) (l : List α) (x : α) (start stop : Opti
   | none => .error (.valueError "list.index(x): x not in list")
 
 /-- `l.count(x)`, `list_count_impl` (listobject.c:3323-3346). -/
-def listCount (f : α → α → Bool) (l : List α) (x : α) : Int := (l.filter (f · x)).length
+def listCountBy (f : α → α → Bool) (l : List α) (x : α) : Int := (l.filter (f · x)).length
 
 /-- `l.remove(x)`, `list_remove_impl` (listobject.c:3361-3382): the first
 match is deleted with `list_ass_slice(self, i, i+1, NULL)`. -/
-def listRemove (f : α → α → Bool) (l : List α) (x : α) : Py (List α) :=
+def listRemoveBy (f : α → α → Bool) (l : List α) (x : α) : Py (List α) :=
   match firstFrom (f · x) l 0 l.length with
   | some i => .ok (l.eraseIdx i)
   | none => .error (.valueError "list.remove(x): x not in list")
+
+/-- `listIndexBy`, `listCountBy` and `listRemoveBy` for `int` items and `==`. -/
+def listIndex (l : List Int) (x : Int) (start stop : Option Int) : Py Int :=
+  listIndexBy (· == ·) l x start stop
+
+def listCount (l : List Int) (x : Int) : Int := listCountBy (· == ·) l x
+
+def listRemove (l : List Int) (x : Int) : Py (List Int) := listRemoveBy (· == ·) l x
 
 /-- `l[i]` for an int `i`: `list_subscript` (listobject.c:3646-3656) and
 `list_item` (:668-687). -/

@@ -141,9 +141,9 @@ def stepList (l : List Int) (op : Array Json) : Except String (Json × List Int)
   | "append" => return (okJ unitJ, listAppend l (← jInt (← arg op 1)))
   | "insert" => return keep (listInsert l (← jInt (← arg op 1)) (← jInt (← arg op 2))) (fun _ => unitJ) id
   | "pop" => return keep (listPop l (← optArg op 1)) (fun p => toJson p.1) (·.2)
-  | "index" => return keep (listIndex f l (← jInt (← arg op 1)) (← optArg op 2) (← optArg op 3)) toJson (fun _ => l)
-  | "count" => return (okJ (toJson (listCount f l (← jInt (← arg op 1)))), l)
-  | "remove" => return keep (listRemove f l (← jInt (← arg op 1))) (fun _ => unitJ) id
+  | "index" => return keep (listIndexBy f l (← jInt (← arg op 1)) (← optArg op 2) (← optArg op 3)) toJson (fun _ => l)
+  | "count" => return (okJ (toJson (listCountBy f l (← jInt (← arg op 1)))), l)
+  | "remove" => return keep (listRemoveBy f l (← jInt (← arg op 1))) (fun _ => unitJ) id
   | "getitem" => return keep (listGetItem l (← jInt (← arg op 1))) toJson (fun _ => l)
   | "setitem" => return keep (listAssItem l (← jInt (← arg op 1)) (some (← jInt (← arg op 2)))) (fun _ => unitJ) id
   | "delitem" => return keep (listAssItem l (← jInt (← arg op 1)) none) (fun _ => unitJ) id

@@ -823,7 +823,7 @@ def arrReverse (a : Arr) : Arr :=
 
 /-! ### Machine formats, pickling -/
 
-/-- `typecode_to_mformat_code` (arraymodule.c:2002-2086) on a little-endian machine. -/
+/-- `typecode_to_mformat_code` (arraymodule.c:2002-2093) on a little-endian machine. -/
 def mformatOf : TC → Int
   | .b => 1 | .B => 0
   | .u | .w => 20
@@ -832,7 +832,7 @@ def mformatOf : TC → Int
   | .i => 8 | .I => 6
   | .l | .q => 12 | .L | .Q => 10
 
-/-- `mformat_descriptors` (arraymodule.c:1966-1989): size, signed, big-endian. The
+/-- `mformat_descriptors` (arraymodule.c:1966-1993): size, signed, big-endian. The
 sizes of the UTF rows, 4 and 8, are what the source has. -/
 def mformatDescr (c : Int) : Nat × Bool × Bool :=
   match c with
@@ -875,7 +875,7 @@ inductive Init where
   | arr (a : Arr)
   | iter (src : PyIterable PyVal)
 
-/-- `array_new` (arraymodule.c:2798-2978) once `PyArg_ParseTuple("C|O:array")` has given
+/-- `array_new` (arraymodule.c:2798-2973) once `PyArg_ParseTuple("C|O:array")` has given
 the typecode character `c`. `tname` is the type being instantiated. -/
 def arrNew (tname : String) (c : Char) (initial : Init) : Py Arr :=
   let isUnicode := c == 'u' || c == 'w'
@@ -974,7 +974,7 @@ def decodeUTF16 (bs : List Nat) (big : Bool) : Py (List Nat) :=
     go units (units.length + 1)
 
 /-- `array._array_reconstructor(arraytype, typecode, mformat_code, items)`
-(`array__array_reconstructor_impl`, arraymodule.c:2156-2360), with `items` bytes and
+(`array__array_reconstructor_impl`, arraymodule.c:2156-2351), with `items` bytes and
 `arraytype` a subclass of `array.array` named `tname`. The checks of `arraytype` and
 of `items` being bytes are the arguments' types here. -/
 def reconstruct (tname : String) (typecode : Char) (mformat : Int) (items : List Nat) : Py Arr :=
@@ -1076,7 +1076,7 @@ structure ArrIter where
 /-- `array_iter` (arraymodule.c:3101-3120). -/
 def arrIter : ArrIter := ⟨0, true⟩
 
-/-- `arrayiter_next` (arraymodule.c:3123-3140). -/
+/-- `arrayiter_next` (arraymodule.c:3124-3145). -/
 def arrIterNext (a : Arr) (it : ArrIter) : Py (Option PyVal) × ArrIter :=
   if !it.live then (.ok none, it)
   else if it.index < a.items.length then

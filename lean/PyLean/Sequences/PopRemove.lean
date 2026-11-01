@@ -106,14 +106,14 @@ otherwise), `count(x)` is the same number for both and `x in d` is `any`. -/
 def PopRemoveCountAgree : Prop :=
   ∀ (α : Type) [Inhabited α] (f : α → α → Bool) (l : List α) (x : α) (i : Option Int),
     listPop l i = popSpec "pop from empty list" l i ∧
-    listRemove f l x = removeSpec "list.remove(x): x not in list" l (f · x) ∧
+    listRemoveBy f l x = removeSpec "list.remove(x): x not in list" l (f · x) ∧
     (∀ d : Deque α, d.WF → d.items = l →
       d.pop.map (fun p => (p.1, p.2.items)) = popSpec "pop from an empty deque" l none ∧
       d.popleft.map (fun p => (p.1, p.2.items)) = popSpec "pop from an empty deque" l (some 0) ∧
       (d.remove (pureCmp f) x).1 = ((removeSpec "" l (f · x)).map (fun _ => ())).mapError
         (fun _ => .valueError "deque.remove(x): x not in deque") ∧
       (∀ l', removeSpec "" l (f · x) = .ok l' → (d.remove (pureCmp f) x).2.items = l') ∧
-      d.count (pureCmp f) x = (.ok (listCount f l x), d) ∧
+      d.count (pureCmp f) x = (.ok (listCountBy f l x), d) ∧
       d.contains (pureCmp f) x = (.ok (l.any (f · x)), d))
 
 theorem firstFrom_eq_find (p : α → Bool) (l : List α) :
@@ -207,13 +207,13 @@ theorem dequeRemove_eq (d : Deque α) (h : d.WF) (f : α → α → Bool) (x : �
     rw [hi, ← he]; simp
 
 theorem dequeCount_eq (d : Deque α) (h : d.WF) (f : α → α → Bool) (x : α) :
-    d.count (pureCmp f) x = (.ok (listCount f d.items x), d) := by
+    d.count (pureCmp f) x = (.ok (listCountBy f d.items x), d) := by
   have h' := h.1
   rw [Deque.layout_iff] at h'
   unfold Deque.count
   rw [countLoop_spec d h.1 f x d.items.length 0 0 d.left 0 (by omega) h'.1 h'.2.1 (by omega)
     (by rw [Deque.size_eq]; omega)]
-  simp [listCount]
+  simp [listCountBy]
 
 theorem dequeContains_eq (d : Deque α) (h : d.WF) (f : α → α → Bool) (x : α) :
     d.contains (pureCmp f) x = (.ok (d.items.any (f · x)), d) := by
@@ -230,7 +230,7 @@ theorem dequeContains_eq (d : Deque α) (h : d.WF) (f : α → α → Bool) (x :
 theorem popRemoveCountAgree_proven : PopRemoveCountAgree := by
   intro α _ f l x i
   refine ⟨rfl, ?_, fun d hd hl => ?_⟩
-  · unfold listRemove removeSpec; rw [firstFrom_eq_find]; rfl
+  · unfold listRemoveBy removeSpec; rw [firstFrom_eq_find]; rfl
   · subst hl
     obtain ⟨r1, r2⟩ := dequeRemove_eq d hd f x
     exact ⟨dequePop_eq d hd, dequePopleft_eq d hd, r1, r2, dequeCount_eq d hd f x, dequeContains_eq d hd f x⟩
