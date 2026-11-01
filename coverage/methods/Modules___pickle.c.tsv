@@ -65,7 +65,7 @@ Modules/_pickle.c	2146	2180	fast_save_enter	fast_save_enter(PicklerObject *self,
 Modules/_pickle.c	2183	2196	fast_save_leave	fast_save_leave(PicklerObject *self, PyObject *obj)	todo		
 Modules/_pickle.c	2199	2206	save_none	save_none(PicklerObject *self, PyObject *obj)	todo		
 Modules/_pickle.c	2209	2227	save_bool	save_bool(PicklerObject *self, PyObject *obj)	todo		
-Modules/_pickle.c	2230	2393	save_long	save_long(PicklerObject *self, PyObject *obj)	todo		
+Modules/_pickle.c	2230	2393	save_long	save_long(PicklerObject *self, PyObject *obj)	modelled	pickle-save-long-twins,pickle-save-long-twins-sized	
 Modules/_pickle.c	2396	2435	save_float	save_float(PicklerObject *self, PyObject *obj)	todo		
 Modules/_pickle.c	2445	2508	_Pickler_write_bytes	_Pickler_write_bytes(PicklerObject *self, const char *header, Py_ssize_t header_size, const char *data, Py_ssize_t data_size, PyObject *payload)	todo		
 Modules/_pickle.c	2511	2556	_save_bytes_data	_save_bytes_data(PickleState *st, PicklerObject *self, PyObject *obj, const char *data, Py_ssize_t size)	todo		
@@ -119,7 +119,7 @@ Modules/_pickle.c	5310	5322	Pickler_setattr	Pickler_setattr(PyObject *self, PyOb
 Modules/_pickle.c	5369	5373	find_class	find_class(UnpicklerObject *self, PyObject *module_name, PyObject *global_name)	todo		
 Modules/_pickle.c	5376	5388	marker	marker(PickleState *st, UnpicklerObject *self)	todo		
 Modules/_pickle.c	5391	5395	load_none	load_none(PickleState *state, UnpicklerObject *self)	todo		
-Modules/_pickle.c	5398	5438	load_int	load_int(PickleState *state, UnpicklerObject *self)	todo		
+Modules/_pickle.c	5398	5438	load_int	load_int(PickleState *state, UnpicklerObject *self)	modelled	pickle-int-line-twins,pickle-int-line-twins-narrow,pickle-int-line-twins-no-bool-spelling,pickle-int-line-twins-no-nul	
 Modules/_pickle.c	5441	5446	load_bool	load_bool(PickleState *state, UnpicklerObject *self, PyObject *boolean)	todo		
 Modules/_pickle.c	5452	5476	calc_binsize	calc_binsize(char *bytes, int nbytes)	todo		
 Modules/_pickle.c	5484	5503	calc_binint	calc_binint(char *bytes, int nbytes)	todo		
@@ -127,7 +127,7 @@ Modules/_pickle.c	5506	5518	load_binintx	load_binintx(UnpicklerObject *self, cha
 Modules/_pickle.c	5521	5528	load_binint	load_binint(PickleState *state, UnpicklerObject *self)	todo		
 Modules/_pickle.c	5531	5538	load_binint1	load_binint1(PickleState *state, UnpicklerObject *self)	todo		
 Modules/_pickle.c	5541	5548	load_binint2	load_binint2(PickleState *state, UnpicklerObject *self)	todo		
-Modules/_pickle.c	5551	5574	load_long	load_long(PickleState *state, UnpicklerObject *self)	todo		
+Modules/_pickle.c	5551	5574	load_long	load_long(PickleState *state, UnpicklerObject *self)	modelled	pickle-long-line-twins,pickle-long-line-twins-no-nul	
 Modules/_pickle.c	5580	5611	load_counted_long	load_counted_long(PickleState *st, UnpicklerObject *self, int size)	todo		
 Modules/_pickle.c	5614	5640	load_float	load_float(PickleState *state, UnpicklerObject *self)	todo		
 Modules/_pickle.c	5643	5661	load_binfloat	load_binfloat(PickleState *state, UnpicklerObject *self)	todo		
@@ -163,7 +163,7 @@ Modules/_pickle.c	6388	6421	load_get	load_get(PickleState *st, UnpicklerObject *
 Modules/_pickle.c	6424	6447	load_binget	load_binget(PickleState *st, UnpicklerObject *self)	todo		
 Modules/_pickle.c	6450	6473	load_long_binget	load_long_binget(PickleState *st, UnpicklerObject *self)	todo		
 Modules/_pickle.c	6479	6562	load_extension	load_extension(PickleState *st, UnpicklerObject *self, int nbytes)	todo		
-Modules/_pickle.c	6565	6593	load_put	load_put(PickleState *state, UnpicklerObject *self)	todo		
+Modules/_pickle.c	6565	6593	load_put	load_put(PickleState *state, UnpicklerObject *self)	modelled	pickle-put-twins	
 Modules/_pickle.c	6596	6612	load_binput	load_binput(PickleState *state, UnpicklerObject *self)	todo		
 Modules/_pickle.c	6615	6636	load_long_binput	load_long_binput(PickleState *state, UnpicklerObject *self)	todo		
 Modules/_pickle.c	6639	6648	load_memoize	load_memoize(PickleState *state, UnpicklerObject *self)	todo		

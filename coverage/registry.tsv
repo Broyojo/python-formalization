@@ -172,6 +172,25 @@ json-strict-only-control	proven	Lib/json/decoder.py	JSONDecoder,py_scanstring,C 
 json-strict-literal	proven	Lib/json/decoder.py	JSONDecoder,py_scanstring,C scanstring_unicode
 json-ensure-ascii-output	proven	Lib/json/encoder.py	json.dumps,py_encode_basestring_ascii,C ascii_escape_unicode
 json-int-literal	proven	Lib/json/scanner.py	json.loads,NUMBER_RE,C _match_number_unicode,int
+pickle-decode-encode-long	proven	Lib/pickle.py	encode_long,decode_long
+pickle-encode-long-shortest	proven	Lib/pickle.py	encode_long,decode_long
+pickle-text-int-roundtrip	proven	Lib/pickle.py	save_long,load_int,load_long
+pickle-save-long-twins	refuted	Modules/_pickle.c	save_long
+pickle-save-long-twins-sized	proven	Modules/_pickle.c	save_long
+pickle-int-line-twins	refuted	Modules/_pickle.c	load_int
+pickle-int-line-twins-no-bool-spelling	refuted	Modules/_pickle.c	load_int
+pickle-int-line-twins-no-nul	refuted	Modules/_pickle.c	load_int
+pickle-int-line-twins-narrow	proven	Modules/_pickle.c	load_int
+pickle-long-line-twins	refuted	Modules/_pickle.c	load_long
+pickle-long-line-twins-no-nul	proven	Modules/_pickle.c	load_long
+pickle-dumps-twins	refuted	Modules/_pickle.c	dumps,_dumps
+pickle-dumps-twins-batch-ok	refuted	Modules/_pickle.c	dumps,_dumps
+pickle-dumps-twins-batch-ok-long	refuted	Modules/_pickle.c	dumps,_dumps
+pickle-dumps-twins-narrow	proven	Modules/_pickle.c	dumps,_dumps
+pickle-loads-twins-exact	refuted	Modules/_pickle.c	loads,_loads
+pickle-loads-twins-accept	refuted	Modules/_pickle.c	loads,_loads
+pickle-frame-twins	refuted	Lib/pickle.py	_Unframer.load_frame,load_frame
+pickle-put-twins	refuted	Modules/_pickle.c	load_put
 itertools-islice-doc-agree	refuted	Modules/itertoolsmodule.c	islice_new,islice_next
 itertools-islice-doc-agree-ssize	refuted	Modules/itertoolsmodule.c	islice_new,islice_next
 itertools-islice-doc-agree-nowrap	proven	Modules/itertoolsmodule.c	islice_new,islice_next
