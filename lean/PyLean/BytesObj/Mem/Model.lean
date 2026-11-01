@@ -354,6 +354,13 @@ def memoryViewGetContiguous (obj : Obj) (writable : Bool) (order : Char) : M Nat
 
 /-! ## Casting -/
 
+/-- The test `get_native_fmtchar(&srcchar, view->format) >= 0 && IS_BYTE_FORMAT(srcchar)`
+of :1302-1303. -/
+def srcIsByte (view : Buf) : Bool :=
+  match getNativeFmtchar (view.format.getD ['B']) with
+  | some (c, _) => isByteFormat c
+  | none => false
+
 /-- `cast_to_1D`, :1275-1335, on the fresh view `i`. -/
 def castTo1D (i : Nat) (format : List Char) : M Unit := do
   let st ← M.get
@@ -362,10 +369,7 @@ def castTo1D (i : Nat) (format : List Char) : M Unit := do
   if format.any (fun c => c.toNat ≥ 128) then throw unicodeEncodeError
   let some (destchar, itemsize) := getNativeFmtchar format
     | throw (.valueError "memoryview: destination format must be a native single character format prefixed with an optional '@'")
-  let srcOk := match getNativeFmtchar (view.format.getD ['B']) with
-    | some (c, _) => isByteFormat c
-    | none => false
-  if !srcOk && !isByteFormat destchar then
+  if !srcIsByte view && !isByteFormat destchar then
     throw (.typeError "memoryview: cannot cast between two non-byte formats")
   if view.len.tmod itemsize ≠ 0 then
     throw (.typeError "memoryview: length is not a multiple of itemsize")
@@ -1047,30 +1051,33 @@ def compareBufs (m : Mem) (vv ww : Buf) : Py Bool :=
         | .ok uq => run '_' (some (up, uq))
     else run vfmt Option.none
 
-/-- `memory_richcompare`, :3098-3199. `none` is `NotImplemented`. The check of `v` at
-:3113 comes before `PyObject_GetBuffer(w)` at :3127, which runs Python code; nothing
-looks at `v` again. -/
-def memoryRichcompare (v : Nat) (w : Obj) (op : CmpOp) : M (Option Bool) := do
-  let finish (equal : Bool) : M (Option Bool) :=
-    pure (some (if op = .eq then equal else !equal))
-  if op = .other then return Option.none
+/-- The part of `memory_richcompare` before the label `result:`, :3107-3178: `equal`,
+with `none` for `MV_COMPARE_NOT_IMPL`. The check of `v` at :3113 comes before
+`PyObject_GetBuffer(w)` at :3127, which runs Python code; nothing looks at `v` again. -/
+def memoryRichEqual (v : Nat) (w : Obj) : M (Option Bool) := do
   let st ← M.get
   if baseInaccessible st v then
-    return ← finish (w == .view v)
+    return some (w == .view v)
   let vv := (st.mv v).view
   match w with
   | .view i =>
     if baseInaccessible st i then
-      return ← finish (i == v)
+      return some (i == v)
     let ww := (st.mv i).view
-    finish (← M.lift (compareBufs st.mem vv ww))
+    return some (← M.lift (compareBufs st.mem vv ww))
   | .bytes _ | .exporter _ _ =>
     match ← tryCatch (some <$> getBufferFull w) (fun _ => pure Option.none) with
     | Option.none => return Option.none
     | some ww =>
       let st ← M.get
-      finish (← M.lift (compareBufs st.mem vv ww))
+      return some (← M.lift (compareBufs st.mem vv ww))
   | _ => return Option.none
+
+/-- `memory_richcompare`, :3098-3199. `none` is `NotImplemented`. -/
+def memoryRichcompare (v : Nat) (w : Obj) (op : CmpOp) : M (Option Bool) := do
+  if op = .other then return Option.none
+  let e ← memoryRichEqual v w
+  return e.map fun equal => if op = .eq then equal else !equal
 
 /-! ## Hash (:3205-3260) -/
 
