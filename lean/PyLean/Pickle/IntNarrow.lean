@@ -212,7 +212,9 @@ theorem two_byte_all : ∀ a < 256, ∀ k < 10, checkAD a k = true := by decide 
 /-- `IntLineTwinsNoNul` without lines of more than 4300 digits. -/
 def IntLineTwinsNarrow : Prop :=
   ∀ body : Bytes, nl ∉ body → (0 : UInt8) ∉ body → ¬ BoolSpelling body →
-    (body.filter isDigit).length ≤ maxStrDigits →
+    (∀ x c, strtol (body ++ [nl]) = (x, c, false) →
+      ((body ++ [nl]).getD c 0 = nl ∨ (body ++ [nl]).getD c 0 = 0) →
+      (body.filter isDigit).length ≤ maxStrDigits) →
     SameOutcome (cLoadIntLine (body ++ [nl])) (pyLoadIntLine (body ++ [nl]))
 
 theorem boolSpelling_of_boolB {a d : UInt8} (h : boolB a d = true) : BoolSpelling [a, d] := by
@@ -257,7 +259,7 @@ theorem intLineTwinsNarrow_proven : IntLineTwinsNarrow := by
   by_cases hfast : e = false ∧ ((body ++ [nl]).getD c 0 = nl ∨ (body ++ [nl]).getD c 0 = 0)
   · obtain ⟨he, hend⟩ := hfast
     subst he
-    obtain ⟨hparse, pre, ds, hbody, hds, hdig⟩ := strtol_fast body hnl hz hne hlim x c hst hend
+    obtain ⟨hparse, pre, ds, hbody, hds, hdig⟩ := strtol_fast body hnl hz hne (hlim x c hst hend) x c hst hend
     by_cases h2 : body.length = 2
     · match body, h2 with
       | [a, d], _ =>

@@ -1,6 +1,6 @@
 file	line	endline	name	signature	status	entry	note
 Lib/unittest/loader.py	26	28	_FailedTest.__init__	__init__(self, method_name, exception)	todo		
-Lib/unittest/loader.py	30	35	_FailedTest.__getattr__	__getattr__(self, name)	todo		
+Lib/unittest/loader.py	30	35	_FailedTest.__getattr__	__getattr__(self, name)	todo		candidates:calstat-calendar-module-getattr
 Lib/unittest/loader.py	38	41	_make_failed_import_test	_make_failed_import_test(name, suiteClass)	todo		
 Lib/unittest/loader.py	43	46	_make_failed_load_tests	_make_failed_load_tests(name, exception, suiteClass)	todo		
 Lib/unittest/loader.py	48	50	_make_failed_test	_make_failed_test(methodname, exception, suiteClass, message)	todo		

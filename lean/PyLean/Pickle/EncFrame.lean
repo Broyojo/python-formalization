@@ -243,9 +243,11 @@ theorem preEv_FR (p : Nat) :
     simp [preEv, h2, h4, FR, PyFramer.step, CFramer.step, CFramer.write]
 
 /-- The picklers agree, exception class aside, on every plain value without the
-batch shapes of `BatchOk`, whose ints pass C's size check, for every protocol
-within C `long`. Each hypothesis is one of the refutations above. Both raise
-for oversized objects, with different classes. -/
+batch shapes of `BatchOk` and without `long4Edge`, for every protocol within C
+`long`. Each hypothesis is one of the refutations above. Both raise for
+oversized objects; that the classes then differ is on record in
+`pickle-dumps-twins-batch-ok-long`, and exact equality below that size is the
+open `pickle-dumps-twins-exact-sized`. -/
 def DumpsTwinsNarrow : Prop :=
   ∀ (x : PV) (protocol : Int), longMin ≤ protocol → protocol ≤ longMax →
     BatchOk (effProto protocol) x → IntsOk x →

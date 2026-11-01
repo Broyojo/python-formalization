@@ -4,7 +4,7 @@ Lib/imaplib.py	202	228	IMAP4.__init__	__init__(self, host='', port=IMAP4_PORT, t
 Lib/imaplib.py	230	234	IMAP4._mode_ascii	_mode_ascii(self)	todo		
 Lib/imaplib.py	237	241	IMAP4._mode_utf8	_mode_utf8(self)	todo		
 Lib/imaplib.py	244	287	IMAP4._connect	_connect(self)	todo		
-Lib/imaplib.py	290	294	IMAP4.__getattr__	__getattr__(self, attr)	todo		
+Lib/imaplib.py	290	294	IMAP4.__getattr__	__getattr__(self, attr)	todo		candidates:calstat-calendar-module-getattr
 Lib/imaplib.py	296	297	IMAP4.__enter__	__enter__(self)	todo		
 Lib/imaplib.py	299	306	IMAP4.__exit__	__exit__(self, *args)	todo		
 Lib/imaplib.py	312	323	IMAP4._create_socket	_create_socket(self, timeout)	todo		

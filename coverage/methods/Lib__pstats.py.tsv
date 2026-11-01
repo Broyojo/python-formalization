@@ -52,7 +52,7 @@ Lib/pstats.py	735	737	ProfileBrowser.help_sort	help_sort(self)	todo
 Lib/pstats.py	738	739	ProfileBrowser.complete_sort	complete_sort(self, text, *args)	todo		
 Lib/pstats.py	741	742	ProfileBrowser.do_stats	do_stats(self, line)	todo		
 Lib/pstats.py	743	745	ProfileBrowser.help_stats	help_stats(self)	todo		
-Lib/pstats.py	747	751	ProfileBrowser.do_strip	do_strip(self, line)	todo		
+Lib/pstats.py	747	751	ProfileBrowser.do_strip	do_strip(self, line)	todo		candidates:bytesobj-bytes-strip-twins
 Lib/pstats.py	752	753	ProfileBrowser.help_strip	help_strip(self)	todo		
 Lib/pstats.py	755	756	ProfileBrowser.help_help	help_help(self)	todo		
 Lib/pstats.py	758	761	ProfileBrowser.postcmd	postcmd(self, stop, line)	todo		

@@ -20,7 +20,7 @@ Lib/logging/__init__.py	451	453	PercentStyle.__init__	__init__(self, fmt, *, def
 Lib/logging/__init__.py	455	456	PercentStyle.usesTime	usesTime(self)	todo		
 Lib/logging/__init__.py	458	461	PercentStyle.validate	validate(self)	todo		
 Lib/logging/__init__.py	463	468	PercentStyle._format	_format(self, record)	todo		
-Lib/logging/__init__.py	470	474	PercentStyle.format	format(self, record)	todo		
+Lib/logging/__init__.py	470	474	PercentStyle.format	format(self, record)	todo		candidates:calstat-calendar-formatstring-width
 Lib/logging/__init__.py	485	490	StrFormatStyle._format	_format(self, record)	todo		
 Lib/logging/__init__.py	492	508	StrFormatStyle.validate	validate(self)	todo		
 Lib/logging/__init__.py	516	518	StringTemplateStyle.__init__	__init__(self, *args, **kwargs)	todo		
@@ -33,11 +33,11 @@ Lib/logging/__init__.py	658	675	Formatter.formatException	formatException(self, 
 Lib/logging/__init__.py	677	681	Formatter.usesTime	usesTime(self)	todo		
 Lib/logging/__init__.py	683	684	Formatter.formatMessage	formatMessage(self, record)	todo		
 Lib/logging/__init__.py	686	697	Formatter.formatStack	formatStack(self, stack_info)	todo		
-Lib/logging/__init__.py	699	729	Formatter.format	format(self, record)	todo		
+Lib/logging/__init__.py	699	729	Formatter.format	format(self, record)	todo		candidates:calstat-calendar-formatstring-width
 Lib/logging/__init__.py	740	748	BufferingFormatter.__init__	__init__(self, linefmt=None)	todo		
 Lib/logging/__init__.py	750	754	BufferingFormatter.formatHeader	formatHeader(self, records)	todo		
 Lib/logging/__init__.py	756	760	BufferingFormatter.formatFooter	formatFooter(self, records)	todo		
-Lib/logging/__init__.py	762	772	BufferingFormatter.format	format(self, records)	todo		
+Lib/logging/__init__.py	762	772	BufferingFormatter.format	format(self, records)	todo		candidates:calstat-calendar-formatstring-width
 Lib/logging/__init__.py	789	798	Filter.__init__	__init__(self, name='')	todo		
 Lib/logging/__init__.py	800	813	Filter.filter	filter(self, record)	todo		
 Lib/logging/__init__.py	820	824	Filterer.__init__	__init__(self)	todo		
@@ -56,7 +56,7 @@ Lib/logging/__init__.py	965	966	Handler._at_fork_reinit	_at_fork_reinit(self)	to
 Lib/logging/__init__.py	968	973	Handler.acquire	acquire(self)	todo		
 Lib/logging/__init__.py	975	980	Handler.release	release(self)	todo		
 Lib/logging/__init__.py	982	986	Handler.setLevel	setLevel(self, level)	todo		
-Lib/logging/__init__.py	988	999	Handler.format	format(self, record)	todo		
+Lib/logging/__init__.py	988	999	Handler.format	format(self, record)	todo		candidates:calstat-calendar-formatstring-width
 Lib/logging/__init__.py	1001	1009	Handler.emit	emit(self, record)	todo		
 Lib/logging/__init__.py	1011	1028	Handler.handle	handle(self, record)	todo		
 Lib/logging/__init__.py	1030	1034	Handler.setFormatter	setFormatter(self, fmt)	todo		

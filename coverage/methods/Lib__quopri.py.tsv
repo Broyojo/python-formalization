@@ -7,4 +7,4 @@ Lib/quopri.py	112	151	decode	decode(input, output, header=False)	todo
 Lib/quopri.py	153	160	decodestring	decodestring(s, header=False)	todo		
 Lib/quopri.py	165	168	ishex	ishex(c)	todo		
 Lib/quopri.py	170	184	unhex	unhex(s)	todo		
-Lib/quopri.py	188	230	main	main()	todo		
+Lib/quopri.py	188	230	main	main()	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

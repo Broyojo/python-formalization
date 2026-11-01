@@ -1,0 +1,57 @@
+id: sequences-deque-subclass-copy-maxlen-truncated
+title: "deque subclass copy reads maxlen as a C int: maxlen=2**32 copies to an empty deque, maxlen=2**31 raises ValueError"
+priority: P4
+kind: silent-wraparound
+module: sequences
+files: [Modules/_collectionsmodule.c]
+functions: ["deque_copy_impl", "deque___copy___impl", "deque_concat_lock_held"]
+summary: |
+  For a deque subclass, deque_copy_impl rebuilds the copy with
+  PyObject_CallFunction(type, "Oi", deque, old_deque->maxlen). maxlen is a Py_ssize_t but "i"
+  reads an int, so on LP64 the low 32 bits are taken. D([1, 2, 3], maxlen=2**32).copy() gives
+  D([], maxlen=0), maxlen=2**32 + 5 gives maxlen=5, and maxlen=2**31 raises ValueError. The
+  same path serves copy.copy(d), d + other and d * n. An exact deque is fine.
+  Lean: DequeCopyConcat is refuted by this input; DequeCopyConcatChecked (exact deque, or
+  maxlen below 2**31) is proven.
+likelihood: |
+  Low. It needs a subclass and a maxlen above 2**31, which nobody needs in practice except as
+  "effectively unbounded".
+maybe_intended: |
+  No. It is a varargs format mismatch, and main has already fixed it.
+reproducer: |
+  from collections import deque
+  class D(deque):
+      pass
+  zero = D([1, 2, 3], maxlen=2**32).copy()
+  five = D([1, 2, 3], maxlen=2**32 + 5).copy()
+  try:
+      D([1, 2, 3], maxlen=2**31).copy()
+      err = None
+  except ValueError as e:
+      err = str(e)
+  print(repr(zero), repr(five), err)
+  if list(zero) == [] and zero.maxlen == 0 and five.maxlen == 5 and err == 'maxlen must be non-negative':
+      print('REPRODUCED sequences-deque-subclass-copy-maxlen-truncated')
+expected: |
+  A copy with the same items and maxlen.
+observed: |
+  python3 3.14.7: D([], maxlen=0); D([1, 2, 3], maxlen=5); ValueError. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): fixed, the copies keep maxlen. Not reproduced.
+promised_by: |
+  Doc/library/collections.rst:503-507 (copy creates a shallow copy of the deque).
+cause: |
+  Modules/_collectionsmodule.c:648-649 (3.14.7) passes old_deque->maxlen for format "i". main
+  uses "n" (:651-652).
+possible_fix: |
+  Backport the "On" format of gh-159739 / PR #159765 to 3.14, if it has not been.
+duplicates:
+  issues:
+    - {number: 159739, state: unknown, relation: "duplicate: commit e3c395542 'gh-159739: Preserve the full maxlen when copying deque subclasses (#159765)' fixes this on main"}
+    - {number: 152042, state: open, relation: "copy of deque subclasses drops instance attributes; related path, different defect"}
+  queries: ["deque copy", "deque maxlen", "deque copy subclass maxlen", "deque maxlen Py_ssize_t",
+            "gh search prs: deque maxlen", "gh search prs: deque copy maxlen",
+            "gh api repos/python/cpython/commits?path=Modules/_collectionsmodule.c&per_page=12",
+            "bugforge README: no deque entries"]
+lean:
+  property: PyLean.Sequences.DequeCopyConcat
+  theorem: PyLean.Sequences.dequeCopyConcat_refuted

@@ -1,31 +1,31 @@
 file	line	endline	name	signature	status	entry	note
-Lib/queue.py	46	70	Queue.__init__	__init__(self, maxsize=0)	todo		
-Lib/queue.py	72	92	Queue.task_done	task_done(self)	todo		
-Lib/queue.py	94	105	Queue.join	join(self)	todo		
-Lib/queue.py	107	110	Queue.qsize	qsize(self)	todo		
-Lib/queue.py	112	124	Queue.empty	empty(self)	todo		
-Lib/queue.py	126	135	Queue.full	full(self)	todo		
-Lib/queue.py	137	175	Queue.put	put(self, item, block=True, timeout=None)	todo		
-Lib/queue.py	177	215	Queue.get	get(self, block=True, timeout=None)	todo		
-Lib/queue.py	217	223	Queue.put_nowait	put_nowait(self, item)	todo		
-Lib/queue.py	225	231	Queue.get_nowait	get_nowait(self)	todo		
-Lib/queue.py	233	256	Queue.shutdown	shutdown(self, immediate=False)	todo		
-Lib/queue.py	263	264	Queue._init	_init(self, maxsize)	todo		
-Lib/queue.py	266	267	Queue._qsize	_qsize(self)	todo		
-Lib/queue.py	270	271	Queue._put	_put(self, item)	todo		
-Lib/queue.py	274	275	Queue._get	_get(self)	todo		
-Lib/queue.py	286	287	PriorityQueue._init	_init(self, maxsize)	todo		
-Lib/queue.py	289	290	PriorityQueue._qsize	_qsize(self)	todo		
-Lib/queue.py	292	293	PriorityQueue._put	_put(self, item)	todo		
-Lib/queue.py	295	296	PriorityQueue._get	_get(self)	todo		
-Lib/queue.py	302	303	LifoQueue._init	_init(self, maxsize)	todo		
-Lib/queue.py	305	306	LifoQueue._qsize	_qsize(self)	todo		
-Lib/queue.py	308	309	LifoQueue._put	_put(self, item)	todo		
-Lib/queue.py	311	312	LifoQueue._get	_get(self)	todo		
-Lib/queue.py	325	327	_PySimpleQueue.__init__	__init__(self)	todo		
-Lib/queue.py	329	336	_PySimpleQueue.put	put(self, item, block=True, timeout=None)	todo		
-Lib/queue.py	338	353	_PySimpleQueue.get	get(self, block=True, timeout=None)	todo		
-Lib/queue.py	355	361	_PySimpleQueue.put_nowait	put_nowait(self, item)	todo		
-Lib/queue.py	363	369	_PySimpleQueue.get_nowait	get_nowait(self)	todo		
-Lib/queue.py	371	373	_PySimpleQueue.empty	empty(self)	todo		
-Lib/queue.py	375	377	_PySimpleQueue.qsize	qsize(self)	todo		
+Lib/queue.py	46	70	Queue.__init__	__init__(self, maxsize=0)	modelled	misc-queue-fifo	
+Lib/queue.py	72	92	Queue.task_done	task_done(self)	modelled	misc-queue-task-accounting	
+Lib/queue.py	94	105	Queue.join	join(self)	modelled	misc-queue-task-accounting	
+Lib/queue.py	107	110	Queue.qsize	qsize(self)	modelled	misc-queue-size-predicates	
+Lib/queue.py	112	124	Queue.empty	empty(self)	modelled	misc-queue-size-predicates	
+Lib/queue.py	126	135	Queue.full	full(self)	modelled	misc-queue-size-predicates	
+Lib/queue.py	137	175	Queue.put	put(self, item, block=True, timeout=None)	modelled	misc-queue-failed-put,misc-queue-fifo,misc-queue-nowait-boundary,misc-queue-timed-outcome,misc-queue-timeout-validation	
+Lib/queue.py	177	215	Queue.get	get(self, block=True, timeout=None)	modelled	misc-queue-fifo,misc-queue-nowait-boundary,misc-queue-timed-outcome,misc-queue-timeout-validation	
+Lib/queue.py	217	223	Queue.put_nowait	put_nowait(self, item)	modelled	misc-queue-fifo,misc-queue-nowait-boundary	
+Lib/queue.py	225	231	Queue.get_nowait	get_nowait(self)	modelled	misc-queue-fifo,misc-queue-nowait-boundary	
+Lib/queue.py	233	256	Queue.shutdown	shutdown(self, immediate=False)	modelled	misc-queue-shutdown	
+Lib/queue.py	263	264	Queue._init	_init(self, maxsize)	modelled	misc-queue-fifo	
+Lib/queue.py	266	267	Queue._qsize	_qsize(self)	modelled	misc-queue-fifo	
+Lib/queue.py	270	271	Queue._put	_put(self, item)	modelled	misc-queue-fifo	
+Lib/queue.py	274	275	Queue._get	_get(self)	modelled	misc-queue-fifo	
+Lib/queue.py	286	287	PriorityQueue._init	_init(self, maxsize)	modelled	misc-queue-priority	
+Lib/queue.py	289	290	PriorityQueue._qsize	_qsize(self)	modelled	misc-queue-priority	
+Lib/queue.py	292	293	PriorityQueue._put	_put(self, item)	modelled	misc-queue-failed-put,misc-queue-priority	
+Lib/queue.py	295	296	PriorityQueue._get	_get(self)	modelled	misc-queue-priority	
+Lib/queue.py	302	303	LifoQueue._init	_init(self, maxsize)	modelled	misc-queue-lifo	
+Lib/queue.py	305	306	LifoQueue._qsize	_qsize(self)	modelled	misc-queue-lifo	
+Lib/queue.py	308	309	LifoQueue._put	_put(self, item)	modelled	misc-queue-lifo	
+Lib/queue.py	311	312	LifoQueue._get	_get(self)	modelled	misc-queue-lifo	
+Lib/queue.py	325	327	_PySimpleQueue.__init__	__init__(self)	modelled	misc-simplequeue-twins-blocking	
+Lib/queue.py	329	336	_PySimpleQueue.put	put(self, item, block=True, timeout=None)	modelled	misc-simplequeue-twins-blocking	
+Lib/queue.py	338	353	_PySimpleQueue.get	get(self, block=True, timeout=None)	modelled	misc-simplequeue-twins,misc-simplequeue-twins-blocking	
+Lib/queue.py	355	361	_PySimpleQueue.put_nowait	put_nowait(self, item)	modelled	misc-simplequeue-twins-blocking	
+Lib/queue.py	363	369	_PySimpleQueue.get_nowait	get_nowait(self)	modelled	misc-simplequeue-twins-blocking	
+Lib/queue.py	371	373	_PySimpleQueue.empty	empty(self)	modelled	misc-simplequeue-twins-blocking	
+Lib/queue.py	375	377	_PySimpleQueue.qsize	qsize(self)	modelled	misc-simplequeue-twins-blocking	

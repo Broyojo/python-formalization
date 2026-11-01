@@ -1,0 +1,63 @@
+id: corelibs-operator-concat-skips-radd
+title: "operator.concat(a, b) is not a + b when b defines __radd__: the C function never tries it"
+priority: P4
+kind: twin-mismatch
+module: corelibs
+files: [Objects/abstract.c, Modules/_operator.c, Lib/operator.py]
+functions: ["_operator_concat_impl", "_operator_iconcat_impl", "concat", "iconcat"]
+summary: |
+  RELATED to the open python/cpython#73325, where maintainers defended the behaviour; read that first.
+  The new part here is only the disagreement with the pure-Python twin. The docstring of operator.concat says "Same as a + b, for a and b sequences". The pure-Python
+  function does that. The C function calls PySequence_Concat, which goes straight to a's sq_concat
+  when it has one. For a a list or a tuple, that raises TypeError at once, where a + b first tries
+  nb_add and so reaches b.__radd__. operator.concat([1], UserList([2])) raises TypeError, while
+  [1] + UserList([2]) and the pure-Python concat give UserList([1, 2]). iconcat has the same shape,
+  and it also differs on a list: a += b reaches __radd__ first, so the result is what __radd__
+  returned, while C's iconcat extends the list in place.
+likelihood: |
+  Low to moderate. It needs a sequence with __radd__ on the right of operator.concat. UserList and
+  UserString are in the standard library, deque is not affected since it has no __radd__.
+maybe_intended: |
+  Largely yes. In #73325 serhiy-storchaka says concat is the Python API to sq_concat and points to
+  operator.add, vstinner calls the difference from add deliberate, and rhettinger says it is too late
+  to change. Their case is a non-sequence on the left; here the left operand is a sequence, and
+  Lib/operator.py gives the other answer. A documentation note is the most a maintainer would accept.
+reproducer: |
+  import operator
+  from collections import UserList
+  from test.support import import_helper
+  py = import_helper.import_fresh_module('operator', blocked=['_operator'])
+  def attempt(f, *args):
+      try:
+          return f(*args)
+      except TypeError as e:
+          return 'TypeError'
+  a, b = [1], UserList([2])
+  print('a + b:', a + b)
+  print('C concat:', attempt(operator.concat, a, b))
+  print('Python concat:', attempt(py.concat, a, b))
+  if attempt(operator.concat, a, b) == 'TypeError' and py.concat(a, b) == [1, 2] and a + b == [1, 2]:
+      print('REPRODUCED corelibs-operator-concat-skips-radd')
+expected: |
+  operator.concat([1], UserList([2])) returns UserList([1, 2]), as a + b does.
+observed: |
+  python3 3.14.7: a + b is [1, 2], Python concat is [1, 2], C concat raises TypeError. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): same, REPRODUCED.
+promised_by: |
+  Docstrings at Modules/_operator.c:457 and Lib/operator.py:155, "Same as a + b, for a and b sequences".
+cause: |
+  Objects/abstract.c:1718-1723 returns from sq_concat before any nb_add. PyNumber_Add,
+  Objects/abstract.c:1128, tries nb_add through binary_op1 first and sq_concat only after that.
+possible_fix: |
+  Have _operator_concat_impl check for a sequence as Lib/operator.py does, then call PyNumber_Add;
+  likewise PyNumber_InPlaceAdd for iconcat. Or document the difference.
+duplicates:
+  issues:
+    - {number: 73325, state: open, relation: "same function, 'operator.concat/iconcat could only work if left operand is a sequence'", reason: "related; maintainers declined to change the semantics"}
+    - {number: 55686, state: open, relation: "same root, 'Incorrect operand precedence when implementing sequences in C'", reason: "related"}
+    - {number: 37334, state: closed, relation: "same root, 'sq_concat prevents __radd__ from working'", reason: "related, about the + operator"}
+    - {number: 158733, state: closed, relation: "same family, 'operator.iconcat ignores list subclass __iadd__ override', from bugforge", reason: "closed not planned with a batch of automated reports, so not judged on its merits"}
+  queries: ["operator concat __radd__", "bugforge README: operator-20261003-044103-c1, the iconcat entry above"]
+lean:
+  property: PyLean.CoreLibs.Operator.ConcatIsPlus
+  theorem: PyLean.CoreLibs.Operator.concatIsPlus_refuted

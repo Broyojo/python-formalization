@@ -1,0 +1,57 @@
+id: binary64-fromhex-overflow-before-trailing-garbage
+title: "float.fromhex raises OverflowError instead of ValueError for a malformed string with a large exponent"
+priority: P4
+kind: validation-order
+module: binary64
+files: [Objects/floatobject.c]
+functions: ["float_fromhex_impl"]
+summary: |
+  float.fromhex checks the end of the string only at the `finished:` label. A value that
+  overflows jumps to `overflow_error` first, so '1p2000x' raises OverflowError although the
+  string is not a hexadecimal float at all, while '1p-2000x', '1p5x' and 'x' all raise
+  ValueError. Whether a malformed string is reported as malformed depends on the magnitude
+  of the prefix.
+likelihood: |
+  Needs malformed input with a huge exponent, and code that tells the two exceptions apart.
+  float('1e2000x') on the same input shape raises ValueError, so a parser wrapper that
+  catches ValueError for bad input sees an unexpected exception type here.
+maybe_intended: |
+  Unlikely to be deliberate, but harmless enough that a maintainer could leave it. The
+  function's comments only discuss overflow of valid strings.
+reproducer: |
+  def outcome(s):
+      try:
+          return float.fromhex(s)
+      except Exception as e:
+          return type(e).__name__
+  print('1p2000x  ->', outcome('1p2000x'))
+  print('1p1024 z ->', outcome('1p1024 z'))
+  print('1p-2000x ->', outcome('1p-2000x'))
+  print('1p5x     ->', outcome('1p5x'))
+  if (outcome('1p2000x') == 'OverflowError' and outcome('1p1024 z') == 'OverflowError'
+          and outcome('1p-2000x') == 'ValueError' and outcome('1p5x') == 'ValueError'):
+      print('REPRODUCED binary64-fromhex-overflow-before-trailing-garbage')
+expected: |
+  ValueError('invalid hexadecimal floating-point string') for all four strings.
+promised_by: |
+  Doc/library/stdtypes.rst, float.fromhex: the string has the form
+  [sign] ['0x'] integer ['.' fraction] ['p' exponent] with optional surrounding whitespace.
+  floatobject.c:1464 has the error for anything else.
+cause: |
+  Objects/floatobject.c:1384, :1400 and :1442 `goto overflow_error` while the check for
+  trailing characters is at :1449-1452, after `finished:`.
+possible_fix: |
+  Validate the whole string before computing the value: finish the grammar scan (the
+  trailing whitespace loop and `s != s_end`) right after the exponent at :1365, then turn
+  the `goto overflow_error` paths back on. The `finished:` path can then drop its check.
+tested: |
+  python3 3.14.7: REPRODUCED. main: REPRODUCED.
+duplicates:
+  issues: []
+  related: []
+  queries: ["repo:python/cpython is:issue float.fromhex", "repo:python/cpython is:issue fromhex OverflowError",
+            "repo:python/cpython is:issue \"hexadecimal value too large\""]
+  bugforge: "no float.fromhex entry"
+lean:
+  property: PyLean.Binary64.FromhexRejectsTrailingGarbage
+  theorem: PyLean.Binary64.fromhexRejectsTrailingGarbage_refuted

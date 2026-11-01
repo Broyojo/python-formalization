@@ -1,0 +1,51 @@
+id: binary64-complex-abs-stale-errno
+title: "abs(complex(nan, 1)) raises OverflowError when errno is left over from an earlier overflow"
+priority: P3
+kind: stale-state
+module: binary64
+files: [Objects/complexobject.c]
+functions: ["_Py_c_abs", "complex_abs"]
+summary: |
+  _Py_c_abs documents that it sets errno to ERANGE on overflow and to 0 otherwise, but its NaN
+  return leaves errno alone, and complex_abs does not clear it first. An earlier abs() that
+  overflowed leaves ERANGE behind, so the next abs() of a complex with a NaN part raises
+  OverflowError('absolute value too large') instead of returning nan. The result depends on
+  unrelated code that ran before.
+likelihood: |
+  Needs a NaN complex after a call that left ERANGE and nothing in between that clears it. The
+  difftest hit it twice in 50000 cases by chance.
+maybe_intended: |
+  No. gh-155526 fixed it.
+reproducer: |
+  nan = float('nan')
+  def out(z):
+      try:
+          return abs(z)
+      except OverflowError as e:
+          return repr(e)
+  first = out(complex(1.7e308, 1.7e308))
+  second = out(complex(nan, 1.0))
+  print(first, second)
+  if 'absolute value too large' in str(first) and 'absolute value too large' in str(second):
+      print('REPRODUCED binary64-complex-abs-stale-errno')
+expected: |
+  nan for the second call, as on main.
+promised_by: |
+  Comment at Objects/complexobject.c:370: "sets errno = ERANGE on overflow; otherwise errno = 0".
+cause: |
+  Objects/complexobject.c:389 returns without setting errno, and :783-784 reads it.
+possible_fix: |
+  Already done upstream by gh-155526: complex_abs sets errno = 0 before the call.
+tested: |
+  python3 3.14.7: REPRODUCED. main: not reproduced.
+duplicates:
+  issues:
+    - {number: 155526, state: closed, relation: duplicate, reason: fixed on main}
+  related:
+    - {number: 156145, state: open, relation: wider question of relying on errno from libm}
+  queries: ["repo:python/cpython is:issue abs complex nan OverflowError errno",
+            "repo:python/cpython is:issue \"absolute value too large\""]
+  bugforge: "no complex abs entry"
+lean:
+  property: PyLean.Binary64.ComplexAbsNaN
+  theorem: PyLean.Binary64.complexAbsNaN_refuted

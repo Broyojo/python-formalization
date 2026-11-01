@@ -26,6 +26,24 @@ theorem Good.ok' {α : Type} {e k : Nat} (v : α) (h : e < k) : Good e (.ok (v, 
 theorem Good.mono {α : Type} {e e' : Nat} {r : DR (α × Nat)} (h : Good e' r) (he : e ≤ e') : Good e r :=
   ⟨h.1, fun v k hr => by have := h.2 v k hr; omega⟩
 
+/-- The callbacks are Python callables: they return or raise. -/
+structure DCfg.Real (cfg : DCfg) : Prop where
+  fin : ∀ a, cFinish cfg a ≠ fuelOut
+  flt : ∀ t, cfg.parseFloat t ≠ fuelOut
+  int : ∀ h, cfg.parseIntFn = some h → ∀ t, h t ≠ fuelOut
+  con : ∀ t, cfg.parseConstant t ≠ fuelOut
+
+/-- A callback's result ending after `e`. -/
+theorem map_good {β : Type} {r : DR β} {e k : Nat} (hne : r ≠ fuelOut) (h : e < k) :
+    Good e (r.map (fun x => (x, k))) := by
+  cases r with
+  | ok v => exact Good.ok' v h
+  | error x =>
+    apply Good.err
+    intro hx
+    subst hx
+    exact hne rfl
+
 theorem cFind_found_lt : ∀ (strict : Bool) (t : PStr) (k : Nat), cFind strict t = .found k → k < t.length
   | _, [], _, h => by simp [cFind] at h
   | strict, d :: t, k, h => by
@@ -43,7 +61,7 @@ theorem cFind_found_lt : ∀ (strict : Bool) (t : PStr) (k : Nat), cFind strict 
         | ctrl k' => rw [hf] at h; cases h
         | eof => rw [hf] at h; cases h
 
-theorem scanLoop_good (s : PStr) (strict : Bool) (b : Nat) :
+theorem scanLoop_good (s : PStr) (strict : Bool) (b : Int) :
     ∀ (g e : Nat) (acc : Option PStr), s.length + 1 - e ≤ g → e ≤ s.length →
       Good e (cScanLoop s strict b g e acc) := by
   intro g
@@ -93,17 +111,17 @@ theorem scanstring_good (s : PStr) (e : Nat) (strict : Bool) : Good e (cScanstri
   · exact Good.err (by simp)
   · exact scanLoop_good s strict (e - 1) (s.length + 1) e none (by omega) (by omega)
 
-theorem parseInt_map_good (cfg : DCfg) (t : PStr) (e k : Nat) (h : e < k) :
-    Good e ((parseInt cfg t).map (fun x => (x, k))) := by
+theorem parseInt_ne (cfg : DCfg) (hR : cfg.Real) (t : PStr) : parseInt cfg t ≠ fuelOut := by
   unfold parseInt
-  split
-  · exact Good.ok' _ h
-  · cases hp : pyIntOfText t with
-    | ok n => exact Good.ok' _ h
+  cases hi : cfg.parseIntFn with
+  | some h => exact hR.int h hi t
+  | none =>
+    simp only
+    cases hp : pyIntOfText t with
+    | ok n => simp [fuelOut]
     | error x =>
-      apply Good.err
       intro hx
-      simp only [DErr.exc.injEq] at hx
+      simp only [fuelOut, Except.error.injEq, DErr.exc.injEq] at hx
       subst hx
       unfold pyIntOfText at hp
       dsimp only at hp
@@ -140,15 +158,15 @@ theorem numberRe_pos {t i fr ex : PStr} (h : numberRe t = some (i, fr, ex)) : 1 
     have := reInt_pos hi
     simp; omega
 
-theorem matchNumber_good (cfg : DCfg) (s : PStr) (idx : Nat) (h : idx < s.length) :
+theorem matchNumber_good (cfg : DCfg) (hR : cfg.Real) (s : PStr) (idx : Nat) (h : idx < s.length) :
     Good idx (cMatchNumber cfg s idx) := by
   rcases matchNumber_twin cfg s idx h with ⟨_, h2⟩ | ⟨i, fr, ex, h1, h2⟩
   · rw [h2]; exact Good.err (by simp)
   · have := numberRe_pos h1
     rw [h2]
     split
-    · exact Good.ok' _ (by omega)
-    · exact parseInt_map_good _ _ _ _ (by omega)
+    · exact map_good (hR.flt _) (by omega)
+    · exact map_good (parseInt_ne cfg hR _) (by omega)
 
 theorem cArrAfter_close' {s : PStr} {e : Nat} {i : Int} (h : cArrAfter s e = .close i) :
     ∃ m : Nat, i = m ∧ e < m := by
@@ -203,11 +221,12 @@ theorem cObjAfter_next' {s : PStr} {e : Nat} {i : Int} (h : cObjAfter s e = .nex
         have h2 := wsEnd_ge s (wsEnd s e + 1)
         exact ⟨_, rfl, by omega⟩
 
-theorem cConst_good (name : String) (idx : Nat) (h : 1 ≤ (cs name).length) : Good idx (cConst name idx) :=
-  Good.ok' _ (by omega)
+theorem cConst_good (cfg : DCfg) (hR : cfg.Real) (name : String) (idx : Nat) (h : 1 ≤ (cs name).length) :
+    Good idx (cConst cfg name idx) :=
+  map_good (hR.con _) (by omega)
 
 /-- The C scanner never runs out of fuel when it has `2 * (len - idx) + 3`. -/
-theorem nofuel (cfg : DCfg) (s : PStr) : ∀ n : Nat,
+theorem nofuel (cfg : DCfg) (hR : cfg.Real) (s : PStr) : ∀ n : Nat,
     (∀ idx : Nat, 2 * (s.length - idx) + 3 ≤ n → Good idx (cScanOnce cfg s n idx)) ∧
     (∀ (e : Nat) (acc : List JVal), 2 * (s.length - e) + 4 ≤ n → Good e (cArrLoop cfg s n e acc)) ∧
     (∀ (q : Nat) (acc : List (PStr × JVal)), 2 * (s.length - q) + 4 ≤ n →
@@ -242,7 +261,7 @@ theorem nofuel (cfg : DCfg) (s : PStr) : ∀ n : Nat,
             · split
               · exact Good.err (by simp)
               · exact (ihO _ _ (by omega)).mono (by omega)
-            · exact Good.ok' _ (by omega)
+            · exact map_good (hR.fin _) (by omega)
           · split
             · split
               · exact (ihA _ _ (by omega)).mono (by omega)
@@ -254,12 +273,12 @@ theorem nofuel (cfg : DCfg) (s : PStr) : ∀ n : Nat,
                 · split
                   · exact Good.ok' _ (by omega)
                   · split
-                    · exact cConst_good _ _ (by decide)
+                    · exact cConst_good cfg hR _ _ (by decide)
                     · split
-                      · exact cConst_good _ _ (by decide)
+                      · exact cConst_good cfg hR _ _ (by decide)
                       · split
-                        · exact cConst_good _ _ (by decide)
-                        · exact matchNumber_good cfg s idx hlt
+                        · exact cConst_good cfg hR _ _ (by decide)
+                        · exact matchNumber_good cfg hR s idx hlt
     · simp only [cArrLoop]
       have hS := ihS e (by omega)
       cases hr : cScanOnce cfg s n e with
@@ -316,7 +335,8 @@ theorem nofuel (cfg : DCfg) (s : PStr) : ∀ n : Nat,
             cases ha : cObjAfter s k2 with
             | close i =>
               obtain ⟨m, rfl, hm⟩ := cObjAfter_close' ha
-              exact Good.ok' _ (by simp; omega)
+              simp only [Int.toNat_natCast]
+              exact map_good (hR.fin _) (by omega)
             | err x =>
               apply Good.err
               intro hx
@@ -337,8 +357,9 @@ theorem nofuel (cfg : DCfg) (s : PStr) : ∀ n : Nat,
                 exact (ihO m _ (by omega)).mono (by omega)
 
 /-- `cScanOnce` with the document's fuel never runs out. -/
-theorem docFuel_good (cfg : DCfg) (s : PStr) (idx : Nat) : Good idx (cScanOnce cfg s (docFuel s) idx) :=
-  (nofuel cfg s (docFuel s)).1 idx (by simp only [docFuel]; omega)
+theorem docFuel_good (cfg : DCfg) (hR : cfg.Real) (s : PStr) (idx : Nat) :
+    Good idx (cScanOnce cfg s (docFuel s) idx) :=
+  (nofuel cfg hR s (docFuel s)).1 idx (by simp only [docFuel]; omega)
 
 /-- `raw_decode(s, idx)`, the step `json.loads` runs, for
 `0 <= idx <= sys.maxsize`, always ends with a value or a Python exception in both
@@ -346,13 +367,13 @@ twins: the models never run out of fuel, so the twin theorems are about real
 outcomes and the decoder does not hang. (`RecursionError` on deep nesting is out
 of scope.) -/
 def DecodeTerminates : Prop :=
-  ∀ (cfg : DCfg) (s : PStr) (idx : Int), 0 ≤ idx → idx ≤ ssizeMax →
+  ∀ (cfg : DCfg) (s : PStr) (idx : Int), cfg.Real → 0 ≤ idx → idx ≤ ssizeMax →
     rawDecodePy cfg s idx ≠ fuelOut ∧ rawDecodeC cfg s idx ≠ fuelOut
 
 theorem decodeTerminates_proven : DecodeTerminates := by
-  intro cfg s idx h0 h1
+  intro cfg s idx hR h0 h1
   obtain ⟨n, rfl⟩ : ∃ n : Nat, idx = n := ⟨idx.toNat, by omega⟩
-  have hg := docFuel_good cfg s n
+  have hg := docFuel_good cfg hR s n
   have hc : rawDecodeC cfg s (n : Int) ≠ fuelOut := by
     have hr : ¬ ((n : Int) < ssizeMin ∨ (n : Int) > ssizeMax) := by
       simp only [ssizeMin, ssizeMax] at h1 ⊢; omega
