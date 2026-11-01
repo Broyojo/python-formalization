@@ -87,6 +87,9 @@ class IntoMix:
             return 0
         d, r = self.intos.pop(0)
         m = min(len(d), len(b))
+        # C RawIOBase.read hands readinto an uninitialised bytearray and _pyio a
+        # zeroed one (see bugs/pyio-rawiobase-read-uninitialised.yaml)
+        b[:] = bytes(len(b))
         b[:m] = bytes(d[:m])
         return ret(r)
 
@@ -257,6 +260,7 @@ def run_extra(c):
             elif k == "getstate":
                 st = f.__getstate__()
                 v = [st[0], st[1], st[2]] if key == "c" else [bytes(st["_buffer"]), st["_pos"]]
+                st = None
             elif k == "setstate":
                 v = f.__setstate__((bytes(op["b"]), op["pos"], None))
             elif k in ("readable", "writable", "seekable", "flush", "isatty"):
@@ -264,6 +268,7 @@ def run_extra(c):
             else:
                 v = pyio_diff.apply(f, op, "bytesio_" + key, views)
             out.append({"ok": pyio_diff.enc(v)})
+            v = None  # a live getvalue() result would keep the buffer shared
         except StopIteration:
             out.append({"exc": "StopIteration", "msg": ""})
         except Exception as e:

@@ -64,10 +64,11 @@ def stepOp (t : TC) : TXOp → TC × Py Val
     match optSsize (-1) n with
     | .error e => (t, .error e)
     | .ok n => (read n) t
-  | .readline n =>
-    match optSsize (-1) n with
-    | .error e => (t, .error e)
-    | .ok n => (do checkAttached; let r ← readlineRaw n; pure (Val.str r)) t
+  | .readline none => (t, .error (.typeError "'NoneType' object cannot be interpreted as an integer"))
+  | .readline (some n) =>
+    -- textio.c:2375: `size: Py_ssize_t = -1`, so unlike `read` no `None`
+    if !InSsize n then (t, .error (.overflowError "Python int too large to convert to C ssize_t"))
+    else (do checkAttached; let r ← readlineRaw n; pure (Val.str r)) t
   | .next => next t
   | .readlines h =>
     match optSsize (-1) h with

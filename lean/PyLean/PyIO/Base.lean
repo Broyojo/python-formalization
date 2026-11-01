@@ -292,12 +292,11 @@ def step (u : UObj) : UOp → UObj × Py Val
     -- iobase_finalize, iobase.c:296-333: errors of close() are unraisable
     if u.isClosed then (u, .ok .none) else let (u, _) := close u; (u, .ok .none)
   | .rawRead n =>
-    match optSsize (-1) n with
-    | .error e => (u, .error e)
-    | .ok n =>
-      if n < 0 then readallLoop u [] false (u.intos.length + u.reads.length + 2)
-      else if n ≥ memLimit then (u, .error memoryError)
-      else rawReadN u n.toNat
+    let n := n.getD (-1)
+    if !InSsize n then (u, .error (.overflowError "Python int too large to convert to C ssize_t"))
+    else if n < 0 then readallLoop u [] false (u.intos.length + u.reads.length + 2)
+    else if n ≥ memLimit then (u, .error memoryError)
+    else rawReadN u n.toNat
   | .rawReadall => readallLoop u [] false (u.intos.length + u.reads.length + 2)
   | .rawReadinto => (u, .error (.named "NotImplementedError" ""))
   | .rawWrite => (u, .error (.named "NotImplementedError" ""))

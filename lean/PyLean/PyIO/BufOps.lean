@@ -63,8 +63,11 @@ def stepOp (s : BufS) : BfOp → BufS × Py Val
   | .close => close s
   | .detach => detach s
   | .closed => (do checkInit; let s ← SM.get; pure (Val.bool s.raw.closed)) s
-  | .readable => (do checkInit; let s ← SM.get; pure (Val.bool s.raw.canRead)) s
-  | .writable => (do checkInit; let s ← SM.get; pure (Val.bool s.raw.canWrite)) s
+  -- BufferedReader has no writable(), BufferedWriter no readable(): the fields
+  -- carry the kind (reader/writer/random) fixed at init, so a writer reports
+  -- `readable = False` even though its raw is readable.
+  | .readable => (do checkInit; let s ← SM.get; pure (Val.bool s.readable)) s
+  | .writable => (do checkInit; let s ← SM.get; pure (Val.bool s.writable)) s
   | .seekable => (do checkInit; let s ← SM.get; pure (Val.bool s.raw.canSeek)) s
   | .isatty => (do
       checkInit

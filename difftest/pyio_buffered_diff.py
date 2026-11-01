@@ -291,7 +291,7 @@ def run_python(c):
             out.append({"exc": "StopIteration", "msg": ""})
         except Exception as e:
             out.append(norm(e))
-    res = {"ok": out, "log": pyio_diff.enc(raw.calls), "data": list(raw.d), "pos": raw.p}
+    res = {"ok": out, "log": raw.calls, "data": list(raw.d), "pos": raw.p}
     raw.cf = None
     return res
 
