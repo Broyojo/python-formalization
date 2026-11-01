@@ -1996,8 +1996,8 @@ class ReArea:
         chars = [ch for ch in pat if ch not in "()[]{}?*+|^$.\\-:=!<>"] or ["a"]
         alpha = (chars + ["a", "b", "c", "\n", " ", "A", "é"]) if r.random() < 0.8 else ["a", "b"]
         subj = "".join(r.choice(alpha) for _ in range(r.choice([0, 1, 2, 3, 4, 5, 6, 8])))
-        mode = r.choice(["match", "fullmatch", "search", "search", "findall", "finditer", "scanmatch", "split", "sub", "expand",
-                         "groups", "matchop", "matchop", "prepr", "peq"])
+        mode = r.choice(["match", "fullmatch", "search", "search", "findall", "finditer", "scanmatch", "split", "sub", "subcall",
+                         "subcall", "expand", "groups", "matchop", "matchop", "prepr", "peq"])
         n = len(subj)
         text = True
         if r.random() < 0.15 and all(ord(x) < 128 for x in pat) and flags & 32 == 0:
@@ -2024,8 +2024,11 @@ class ReArea:
         if r.random() < 0.25:
             c["pos"] = r.choice([0, 1, 2, n, n + 1, -1, -(2**62)])
             c["endpos"] = r.choice([0, 1, 2, n, n + 1, -1, 2**62, n - 1])
-        if mode in ("split", "sub"):
+        if mode in ("split", "sub", "subcall"):
             c["count"] = r.choice([0, 0, 0, 1, 2, -1])
+        if mode == "subcall":
+            c["script"] = [r.choice([[97], [], [120, 121], None, None, {"other": "int"}, {"other": "float"}, {"raise": "boom"}])
+                           for _ in range(r.randint(0, 6))]
         if mode in ("sub", "expand"):
             c["repl"] = [ord(x) for x in r.choice(["", "x", "\\g<0>", "[\\g<0>]", "\\1", "\\g<1>", "a\\1b", "\\n", "\\\\", "\\2"])]
         return c
@@ -2081,6 +2084,22 @@ class ReArea:
                 repl = bytes(c.get("repl", []))
             if mode == "sub":
                 r, n = p.subn(repl, s, c["count"])
+                return [val(r), n]
+            if mode == "subcall":
+                calls = [0]
+
+                def f(m):
+                    i = calls[0]
+                    calls[0] += 1
+                    x = c["script"][i] if i < len(c["script"]) else []
+                    if isinstance(x, dict) and "raise" in x:
+                        raise ValueError(x["raise"])
+                    if isinstance(x, dict):
+                        return {"int": 5, "float": 1.5}[x["other"]]
+                    if x is None:
+                        return None
+                    return bytes(x) if isinstance(s, (bytes, bytearray)) else "".join(map(chr, x))
+                r, n = p.subn(f, s, c["count"])
                 return [val(r), n]
             m = p.search(s, pos, endpos)
             if m is None:

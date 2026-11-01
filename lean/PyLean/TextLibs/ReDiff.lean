@@ -172,7 +172,7 @@ def run (fn : String) (j : Json) : Except String Json := do
     let p := compilePat text pat flags
     let body : Py Json := do
       let p ← p
-      if mode != "prepr" && mode != "peq" && mode != "sub" then checkSubject p !stext
+      if mode != "prepr" && mode != "peq" && mode != "sub" && mode != "subcall" then checkSubject p !stext
       match mode with
       | "match" | "fullmatch" | "search" =>
         return (match ← runMatch p subj pos endpos mode with
@@ -209,6 +209,17 @@ def run (fn : String) (j : Json) : Except String Json := do
         return toJson [patEq p q, patHashInput p == patHashInput q]
       | "sub" =>
         let (r, n) ← subx p repl subj cnt !stext
+        return Json.arr #[toJson r, toJson n]
+      | "subcall" =>
+        let steps ← liftS (do (← (← field j "script").getArr?).toList.mapM fun x => do
+          if let .ok v := x.getObjVal? "raise" then
+            return (.error (.valueError (← v.getStr?)) : Py CallRet)
+          if let .ok v := x.getObjVal? "other" then
+            return (.ok (.other (← v.getStr?)) : Py CallRet)
+          if x.isNull then return (.ok .none_ : Py CallRet)
+          return (.ok (.text (← nats x)) : Py CallRet))
+        let f : Nat → MatchR → Py CallRet := fun k _ => steps.getD k (.ok (.text []))
+        let (r, n) ← subCall p f subj cnt !stext
         return Json.arr #[toJson r, toJson n]
       | "expand" =>
         match ← runMatch p subj pos endpos "search" with

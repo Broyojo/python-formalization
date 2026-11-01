@@ -4,7 +4,7 @@ import PyLean.TextLibs.StructFail
 import PyLean.TextLibs.BinasciiProps7
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
-import PyLean.TextLibs.ReCharset3
+import PyLean.TextLibs.ReApiProps
 
 /-!
 Text and binary formats, CPython 3.14.7. `Modules/_struct.c` is modelled in
@@ -527,6 +527,44 @@ def entries : List Entry := [
     source := "an optimization preserves the set it replaces", status := .open
     prop := ``CharsetPreservedIgnorecase
     notes := "Difftest agrees (re.sem), and categories in cased sets agree on all code points. Needs the fix-table steps of literalPass and rangeMark proved like the case-free ones." },
+  { id := "textlibs-re-findall-is-finditer", pyFile := "Modules/_sre/sre.c"
+    pyFns := ["_sre_SRE_Pattern_findall_impl", "state_getslice", "pattern_new_match", "_sre_SRE_Pattern_finditer_impl", "_sre_SRE_Scanner_search_impl"]
+    statement := "findall is finditer with each match read as the whole match, the group, or the tuple of groups, with '' for a group that did not take part. For every pattern."
+    source := "twin: findall and finditer", status := .proven
+    prop := ``FindallIsFinditer, thm := some ``findallIsFinditer_proven },
+  { id := "textlibs-re-split-is-finditer", pyFile := "Modules/_sre/sre.c", pyFns := ["_sre_SRE_Pattern_split_impl"]
+    statement := "split cuts at the spans finditer finds and keeps the groups, including for patterns that match the empty string."
+    source := "twin: split and finditer", status := .proven
+    prop := ``SplitIsFinditer, thm := some ``splitIsFinditer_proven
+    notes := "maxsplit 0; a positive maxsplit stops the same loop early." },
+  { id := "textlibs-re-sub-is-finditer", pyFile := "Modules/_sre/sre.c", pyFns := ["pattern_subx", "expand_template"]
+    statement := "sub with a string repl rebuilds the subject from what finditer finds, with a literal or an expanded template at each match; a template that fails fails the call."
+    source := "twin: sub and finditer", status := .proven
+    prop := ``SubIsFinditer, thm := some ``subIsFinditer_proven
+    notes := "count 0. textlibs-re-sub-call-is-finditer has the callable path." },
+  { id := "textlibs-re-sub-call-is-finditer", pyFile := "Modules/_sre/sre.c", pyFns := ["pattern_subx", "_sre_SRE_Pattern_sub_impl", "_sre_SRE_Pattern_subn_impl"]
+    statement := "A callable repl is called once per match in order, for any callable: a call that raises ends sub with that exception and no later call runs, and a result of the wrong type surfaces only at the join."
+    source := "docs: re.sub with a function", status := .proven
+    prop := ``SubCallIsFinditer, thm := some ``subCallIsFinditer_proven },
+  { id := "textlibs-re-group-index-range", pyFile := "Modules/_sre/sre.c", pyFns := ["match_getindex"]
+    statement := "An integer group index is valid exactly when it is in range, however large; the failure is IndexError."
+    source := "docs: Match.group", status := .proven
+    prop := ``GroupIndexRange, thm := some ``groupIndexRange_proven },
+  { id := "textlibs-re-match-methods-agree", pyFile := "Modules/_sre/sre.c"
+    pyFns := ["match_getslice", "match_getslice_by_index", "match_group", "_sre_SRE_Match_start_impl", "_sre_SRE_Match_end_impl", "_sre_SRE_Match_span_impl", "match_regs", "_sre_SRE_Match_groups_impl"]
+    statement := "span, start, end, regs, group and groups say the same thing about a group and fail the same way, for every index object."
+    source := "twin: the Match methods", status := .proven
+    prop := ``MatchMethodsAgree, thm := some ``matchMethodsAgree_proven },
+  { id := "textlibs-re-groupdict-agrees", pyFile := "Modules/_sre/sre.c", pyFns := ["_sre_SRE_Match_groupdict_impl"]
+    statement := "groupdict()[name] is group(name)."
+    source := "docs: Match.groupdict", status := .proven
+    prop := ``GroupdictAgrees, thm := some ``groupdictAgrees_proven },
+  { id := "textlibs-re-scanner-agrees-compile", pyFile := "Lib/re/__init__.py", pyFns := ["Scanner.__init__", "Scanner.scan"]
+    statement := "What a phrase matches under re.compile is a token of re.Scanner."
+    source := "twin: Scanner and compile", status := .refuted
+    prop := ``ScannerAgreesCompile, thm := some ``scannerAgreesCompile_refuted
+    bug := some "textlibs-re-scanner-drops-flags"
+    notes := "\\w+ on 'é'. The counterexample runs Scanner.__init__ and the first step of Scanner.scan." },
   { id := "textlibs-csv-round-trip", pyFile := "Modules/_csv.c"
     pyFns := ["join_reset", "join_append_data", "join_append", "join_append_lineterminator", "csv_writerow_lock_held",
       "csv_writerow", "parse_add_char", "parse_process_char"]
