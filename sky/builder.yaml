@@ -5,7 +5,7 @@
 # All state lives in /dev/shm. The node's disk is shared with every other job
 # there and is nearly full, so builds must not write to it. /dev/shm counts
 # against this pod's memory, and everything in it is a disposable cache.
-#   sky launch -c pylean sky/builder.yaml -i 120 --down -y
+#   sky launch -c pylean sky/builder.yaml -i 5 --down -y -d
 name: pylean-builder
 
 workdir: .
@@ -62,7 +62,7 @@ setup: |
   ENV
   sed -i 's/^  //' $HOME/pf/env.sh
 
+# Keeps the pod alive while Lean runs; see the comment in the script.
 run: |
-  # The lakefile's -M cap only applies to lake build, not to lake env lean.
-  pgrep -f pf/watchdog.sh >/dev/null || (setsid nohup bash $HOME/sky_workdir/sky/watchdog.sh >/dev/null 2>&1 < /dev/null &)
   echo builder ready
+  bash sky/watchdog.sh
