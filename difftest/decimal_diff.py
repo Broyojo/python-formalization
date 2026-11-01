@@ -254,6 +254,55 @@ def gen_ctx(rng):
             "traps": [t for t in SIGNALS if rng.random() < 0.15]}
 
 
+# Methods checked generically, name -> how the Python side calls them.
+METHODS = {
+    "neg": lambda M, a, b, t: -a, "pos": lambda M, a, b, t: +a, "abs": lambda M, a, b, t: abs(a),
+    "copy_abs": lambda M, a, b, t: a.copy_abs(), "copy_negate": lambda M, a, b, t: a.copy_negate(),
+    "bool": lambda M, a, b, t: bool(a), "adjusted": lambda M, a, b, t: a.adjusted(),
+    "is_nan": lambda M, a, b, t: a.is_nan(), "is_qnan": lambda M, a, b, t: a.is_qnan(),
+    "is_snan": lambda M, a, b, t: a.is_snan(), "is_infinite": lambda M, a, b, t: a.is_infinite(),
+    "is_finite": lambda M, a, b, t: a.is_finite(), "is_signed": lambda M, a, b, t: a.is_signed(),
+    "is_zero": lambda M, a, b, t: a.is_zero(), "is_canonical": lambda M, a, b, t: a.is_canonical(),
+    "is_normal": lambda M, a, b, t: a.is_normal(), "is_subnormal": lambda M, a, b, t: a.is_subnormal(),
+    "number_class": lambda M, a, b, t: a.number_class(), "same_quantum": lambda M, a, b, t: a.same_quantum(b),
+    "radix": lambda M, a, b, t: a.radix(), "canonical": lambda M, a, b, t: a.canonical(),
+    "conjugate": lambda M, a, b, t: a.conjugate(), "real": lambda M, a, b, t: a.real,
+    "imag": lambda M, a, b, t: a.imag,
+    "eq": lambda M, a, b, t: a == b, "lt": lambda M, a, b, t: a < b, "le": lambda M, a, b, t: a <= b,
+    "gt": lambda M, a, b, t: a > b, "ge": lambda M, a, b, t: a >= b,
+    "compare": lambda M, a, b, t: a.compare(b), "compare_signal": lambda M, a, b, t: a.compare_signal(b),
+    "compare_total_mag": lambda M, a, b, t: int(a.compare_total_mag(b)),
+    "max": lambda M, a, b, t: a.max(b), "min": lambda M, a, b, t: a.min(b),
+    "max_mag": lambda M, a, b, t: a.max_mag(b), "min_mag": lambda M, a, b, t: a.min_mag(b),
+    "logb": lambda M, a, b, t: a.logb(), "logical_and": lambda M, a, b, t: a.logical_and(b),
+    "logical_or": lambda M, a, b, t: a.logical_or(b), "logical_xor": lambda M, a, b, t: a.logical_xor(b),
+    "logical_invert": lambda M, a, b, t: a.logical_invert(), "rotate": lambda M, a, b, t: a.rotate(b),
+    "shift": lambda M, a, b, t: a.shift(b), "scaleb": lambda M, a, b, t: a.scaleb(b),
+    "next_minus": lambda M, a, b, t: a.next_minus(), "next_plus": lambda M, a, b, t: a.next_plus(),
+    "next_toward": lambda M, a, b, t: a.next_toward(b), "fma": lambda M, a, b, t: a.fma(b, t),
+    "to_eng_string": lambda M, a, b, t: cps(a.to_eng_string()), "repr": lambda M, a, b, t: cps(repr(a)),
+}
+LOGICAL = {"logical_and", "logical_or", "logical_xor", "logical_invert"}
+SMALL_INT = {"rotate", "shift", "scaleb"}
+
+
+def gen_method(rng):
+    name = rng.choice(list(METHODS))
+    impl = rng.choice(["py", "c"])
+    a, b, t = gen_dec(rng, wide=True), gen_dec(rng, wide=True), gen_dec(rng, wide=True, special=0.15)
+    ctx = gen_ctx(rng)
+    if rng.random() < 0.25:
+        b = a if rng.random() < 0.5 else (["F", not a[1], a[2], a[3]] if a[0] == "F" else b)
+    if name in LOGICAL and rng.random() < 0.9:
+        n = rng.choice([1, 2, 3, 5, 9, 30])
+        a = ["F", False, str(int("".join(rng.choice("01") for _ in range(n)))), 0]
+        b = ["F", False, str(int("".join(rng.choice("01") for _ in range(n)))), 0]
+    if name in SMALL_INT and rng.random() < 0.9:
+        n = rng.randint(-35, 35)
+        b = ["F", n < 0, str(abs(n)), 0]
+    return {"mod": "decimal", "fn": "m", "m": name, "impl": impl, "ctx": ctx, "a": a, "b": b, "t": t}
+
+
 OPS = ["add", "sub", "mul", "quantize", "quantize", "tiv", "tie", "roundn", "normalize", "fix"]
 
 
@@ -273,12 +322,14 @@ def gen_case(rng):
     while True:
         c = gen_case1(rng)
         if c["fn"].endswith("_c") or c.get("impl") == "c":
-            if not all(in_c_limits(c[k]) for k in ("a", "b") if k in c):
+            if not all(in_c_limits(c[k]) for k in ("a", "b", "t") if k in c):
                 continue
         return c
 
 
 def gen_case1(rng):
+    if rng.random() < 0.4:
+        return gen_method(rng)
     k = rng.random()
     if k < 0.18:
         return {"mod": "decimal", "fn": rng.choice(["parse_py", "parse_c"]),
@@ -377,6 +428,24 @@ def run_op(M, case):
     return [enc_dec(r), flags]
 
 
+def enc_val(M, v):
+    if isinstance(v, M.Decimal):
+        return enc_dec(v)
+    return v
+
+
+def run_method(M, case):
+    c = case["ctx"]
+    ctx = M.Context(prec=c["prec"], rounding=getattr(M, c["rounding"]), Emin=c["emin"],
+                    Emax=c["emax"], clamp=c["clamp"], traps=[getattr(M, t) for t in c["traps"]],
+                    flags=[])
+    a, b, t = build(M, case["a"]), build(M, case["b"]), build(M, case["t"])
+    with M.localcontext(ctx) as cx:
+        r = METHODS[case["m"]](M, a, b, t)
+        flags = sorted(s for s in SIGNALS if cx.flags[getattr(M, s)])
+    return [enc_val(M, r), flags]
+
+
 def run_python(case):
     fn = case["fn"]
 
@@ -444,6 +513,8 @@ def run_python(case):
             return enc_dec(build(M, case["a"]).copy_sign(build(M, case["b"])))
         if fn == "op":
             return run_op(MODS[case["impl"]], case)
+        if fn == "m":
+            return run_method(MODS[case["impl"]], case)
         raise SystemExit("unknown fn " + fn)
 
     return common.py_result(thunk)

@@ -5,6 +5,7 @@ import PyLean.Decimal.Tuple
 import PyLean.Decimal.Format
 import PyLean.Decimal.RoundTrip
 import PyLean.Decimal.MulProps
+import PyLean.Decimal.Ops
 import PyLean.Decimal.Quantize
 
 /-! Differential-testing handler for `decimal` cases (`"mod": "decimal"`).
@@ -125,6 +126,66 @@ def roundOf (m : String) : Except String Rounding :=
   | "int" => pure .down | "floor" => pure .floor | "ceil" => pure .ceiling
   | "round" => pure .halfEven | _ => throw s!"bad int mode {m}"
 
+def jDec {α : Type} (m : DM α) (enc : α → Json) : DM Json := enc <$> m
+def jD (m : DM Dec) : DM Json := jDec m encDec
+def jB (m : DM Bool) : DM Json := jDec m toJson
+def pureJ (v : Json) : DM Json := pure v
+
+/-- The methods checked generically: `Decimal` methods under a context. -/
+def evalM (c : Ctx) (name : String) (a b t : Dec) : Option (DM Json) :=
+  match name with
+  | "neg" => some (jD (dunderNeg c a))
+  | "pos" => some (jD (dunderPos c a))
+  | "abs" => some (jD (dunderAbs c a))
+  | "copy_abs" => some (pureJ (encDec (copyAbs a)))
+  | "copy_negate" => some (pureJ (encDec (copyNegate a)))
+  | "bool" => some (pureJ (toJson (decBool a)))
+  | "adjusted" => some (pureJ (toJson a.adjusted))
+  | "is_nan" => some (pureJ (toJson (isNanP a)))
+  | "is_qnan" => some (pureJ (toJson (isQnan a)))
+  | "is_snan" => some (pureJ (toJson (isSnan a)))
+  | "is_infinite" => some (pureJ (toJson (isInfinite a)))
+  | "is_finite" => some (pureJ (toJson (isFinite a)))
+  | "is_signed" => some (pureJ (toJson (isSigned a)))
+  | "is_zero" => some (pureJ (toJson (isZero a)))
+  | "is_canonical" => some (pureJ (toJson (isCanonical a)))
+  | "is_normal" => some (pureJ (toJson (isNormal c a)))
+  | "is_subnormal" => some (pureJ (toJson (isSubnormal c a)))
+  | "number_class" => some (pureJ (toJson (numberClass c a)))
+  | "same_quantum" => some (pureJ (toJson (sameQuantum a b)))
+  | "radix" => some (pureJ (encDec radixD))
+  | "canonical" => some (pureJ (encDec (canonicalD a)))
+  | "conjugate" => some (pureJ (encDec (conjugateD a)))
+  | "real" => some (pureJ (encDec (realD a)))
+  | "imag" => some (pureJ (encDec (imagD a)))
+  | "eq" => some (jB (dunderEq c a b))
+  | "lt" => some (jB (dunderLt c a b))
+  | "le" => some (jB (dunderLe c a b))
+  | "gt" => some (jB (dunderGt c a b))
+  | "ge" => some (jB (dunderGe c a b))
+  | "compare" => some (jD (compareD c a b))
+  | "compare_signal" => some (jD (compareSignal c a b))
+  | "compare_total_mag" => some (pureJ (toJson (compareTotalMag a b)))
+  | "max" => some (jD (maxD c a b))
+  | "min" => some (jD (minD c a b))
+  | "max_mag" => some (jD (maxMag c a b))
+  | "min_mag" => some (jD (minMag c a b))
+  | "logb" => some (jD (logb c a))
+  | "logical_and" => some (jD (logicalAnd c a b))
+  | "logical_or" => some (jD (logicalOr c a b))
+  | "logical_xor" => some (jD (logicalXor c a b))
+  | "logical_invert" => some (jD (logicalInvert c a))
+  | "rotate" => some (jD (rotate c a b))
+  | "shift" => some (jD (shift c a b))
+  | "scaleb" => some (jD (scaleb c a b))
+  | "next_minus" => some (jD (nextMinus c a))
+  | "next_plus" => some (jD (nextPlus c a))
+  | "next_toward" => some (jD (nextToward c a b))
+  | "fma" => some (jD (fma c a b t))
+  | "to_eng_string" => some (pureJ (encStr (toEng a c.capitals)))
+  | "repr" => some (pureJ (encStr (reprD a)))
+  | _ => none
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
   | "parse_py" => return encPy encDec (pyParse (← getChars j "s"))
@@ -194,6 +255,14 @@ def run (fn : String) (j : Json) : Except String Json := do
     let co := natOfStr (← getStr j "c1") * natOfStr (← getStr j "c2")
     let r := roundPrec m neg co ((← getInt j "e1") + (← getInt j "e2")) (← getNat j "prec")
     return Json.mkObj [("ok", Json.arr #[toJson (String.ofList (Nat.toDigits 10 r.1)), toJson r.2])]
+  | "m" =>
+    let c ← getCtx j
+    let a ← getDec j "a"
+    let b ← getDec j "b"
+    let t ← getDec j "t"
+    let name ← getStr j "m"
+    let some r := evalM c name a b t | throw s!"unknown method {name}"
+    return encPy (fun (p : Json × List Signal) => Json.arr #[p.1, flagNames p.2]) (r.run [])
   | "compare_total" => return Json.mkObj [("ok", toJson (compareTotal (← getDec j "a") (← getDec j "b")))]
   | "copy_sign" => return Json.mkObj [("ok", encDec (copySign (← getDec j "a") (← getDec j "b")))]
   | _ => throw s!"unknown fn {fn}"
