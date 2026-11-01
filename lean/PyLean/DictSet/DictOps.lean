@@ -145,25 +145,29 @@ def dictDelItemIf (pred : V → Py Bool) (key : K) : DM K V Bool := do
     else return false
 
 /-- `_PyDict_Pop_KnownHash` (:3110-3155): `some v` is 1, `none` is 0. -/
-def dictPopKnownHash (key : K) (hash : Int) : DM K V (Option V) := do
-  let mp ← M.get
-  if mp.used == 0 then return none
-  let r ← dictLookup P key hash
-  match r.2 with
-  | none => return none
-  | some old =>
-    if r.1 == DKIX_EMPTY then return none
-    delitemCommon hash r.1.toNat
-    return some old
+def dictPopKnownHash (key : K) (hash : Int) : DM K V (Option V) := fun mp =>
+  if mp.used == 0 then (.ok none, mp) else
+  match dictLookup P key hash mp with
+  | (.error e, s) => (.error e, s)
+  | (.ok (ix, old), s) =>
+    match old with
+    | none => (.ok none, s)
+    | some v =>
+      if ix == DKIX_EMPTY then (.ok none, s)
+      else
+        match delitemCommon hash ix.toNat s with
+        | (.ok _, s') => (.ok (some v), s')
+        | (.error e, s') => (.error e, s')
 
 /-- `pop_lock_held` (:3157-3187), `PyDict_Pop` (:3189-3198). An empty dict answers before
 the key is hashed. -/
-def pyDictPop (isDict : Bool) (key : K) : DM K V (Option V) := do
-  if !isDict then M.throw badInternalCall
-  let mp ← M.get
-  if mp.used == 0 then return none
-  let hash ← hashKey P key
-  dictPopKnownHash P key hash
+def pyDictPop (isDict : Bool) (key : K) : DM K V (Option V) := fun mp =>
+  if !isDict then (.error badInternalCall, mp)
+  else if mp.used == 0 then (.ok none, mp)
+  else
+    match P.hash key with
+    | .error e => (.error (dictUnhashableType P key e), mp)
+    | .ok hash => dictPopKnownHash P key hash mp
 
 /-- `dict_pop_default` (:3218-3230), `_PyDict_Pop`, `dict.pop`. -/
 def dictPopDefault (key : K) (dflt : Option V) : DM K V V := do

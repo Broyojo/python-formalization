@@ -233,6 +233,45 @@ theorem lastLive_spec (es : List (Option (Ent K V))) (n : Nat) (hn : n ≤ es.le
         · rw [hl, h']; exact h2
         · rw [htake, hv]; simp [h4]
 
+/-- `lastLive_spec`, and nothing live above the entry it finds. -/
+theorem lastLive_above (es : List (Option (Ent K V))) (n : Nat) (hn : n ≤ es.length) :
+    (lastLive es n = none ∧ (es.take n).filterMap id = []) ∨
+    (∃ i e, i < n ∧ lastLive es n = some (i, e) ∧ es[i]? = some (some e) ∧
+      (es.take n).filterMap id = (es.take i).filterMap id ++ [e] ∧
+      ∀ t, i < t → t < n → ∀ e', es[t]? ≠ some (some e')) := by
+  induction n with
+  | zero => exact Or.inl ⟨rfl, by simp⟩
+  | succ n ih =>
+    have hlt : n < es.length := by omega
+    have hget : es[n]? = some es[n] := List.getElem?_eq_getElem hlt
+    have htake : es.take (n + 1) = es.take n ++ [es[n]] := by
+      rw [List.take_succ, hget]
+      rfl
+    have hl : lastLive es (n + 1) = match es[n]? with
+        | some (some e) => some (n, e)
+        | _ => lastLive es n := rfl
+    cases hv : es[n] with
+    | some e =>
+      have h' : es[n]? = some (some e) := by rw [hget, hv]
+      refine Or.inr ⟨n, e, by omega, ?_, h', ?_, fun t a b => by omega⟩
+      · rw [hl, h']
+      · rw [htake, hv]; simp
+    | none =>
+      have h' : es[n]? = some none := by rw [hget, hv]
+      rcases ih (by omega) with ⟨h1, h2⟩ | ⟨i, e, h1, h2, h3, h4, h5⟩
+      · refine Or.inl ⟨?_, ?_⟩
+        · rw [hl, h']; exact h1
+        · rw [htake, hv]; simp [h2]
+      · refine Or.inr ⟨i, e, by omega, ?_, h3, ?_, ?_⟩
+        · rw [hl, h']; exact h2
+        · rw [htake, hv]; simp [h4]
+        · intro t a b e'
+          by_cases ht : t = n
+          · subst ht
+            rw [h']
+            simp
+          · exact h5 t a (by omega) e'
+
 end Lists
 
 theorem chain_new (id log2 : Nat) (unicode : Bool) :

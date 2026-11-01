@@ -1,0 +1,62 @@
+id: dictset-setiter-negative-length-hint
+title: "A set iterator's __length_hint__ goes negative after same-size mutation, so list(it) raises ValueError"
+priority: P4
+kind: missing-check
+module: dictset
+files: [Objects/setobject.c]
+functions: ["setiter_iternext", "setiter_len"]
+summary: |
+  setiter_iternext decrements si->len with no check, and setiter_len returns it as is. If the set
+  is mutated between steps at the same size, the iterator can yield more items than it started
+  with, si->len goes negative, and __length_hint__() returns a negative number. list(it) and
+  anything else using PyObject_LengthHint then raise ValueError, where iteration alone would
+  have gone on. This is the set counterpart of gh-158254, which fixed the same pattern for
+  reversed dict iterators; dict's forward iterator has guarded against it for years.
+likelihood: |
+  Low: it takes mutation during iteration that keeps the size equal, which the size check cannot
+  see, followed by list(it) on the same iterator.
+maybe_intended: |
+  Mutating a set during iteration is unsupported, and the docs promise nothing about the result.
+  A maintainer could reasonably say this is fine, but a length hint must not be negative, and the
+  dict fix sets a precedent. Expect "low priority, a small patch is welcome" at best.
+reproducer: |
+  s = {1, 2}
+  it = iter(s)
+  next(it)
+  next(it)
+  s.remove(2)
+  s.add(3)
+  print(next(it), it.__length_hint__())
+  hint = it.__length_hint__()
+  s.remove(3)
+  s.add(4)
+  try:
+      print(list(it))
+  except ValueError as e:
+      print('ValueError', e)
+      if hint < 0:
+          print('REPRODUCED dictset-setiter-negative-length-hint')
+expected: |
+  __length_hint__() is never negative. Raising RuntimeError on the unexpected element, as dict's
+  iterators do, would also be acceptable.
+observed: |
+  python3 3.14.7: 3 -1, then ValueError: __length_hint__() should return >= 0.
+  main: 3 -1, then ValueError: set_iterator.__length_hint__() must return a non-negative int.
+promised_by: |
+  Invariant: PEP 424 requires __length_hint__ to return an int >= 0, and PyObject_LengthHint
+  enforces it. Internal consistency with dictiter_iternextkey_lock_held.
+cause: |
+  Objects/setobject.c:940 `si->len--` has no guard; :868-870 hands it to PyLong_FromSsize_t.
+  Compare Objects/dictobject.c:5279-5283.
+possible_fix: |
+  Before :940, `if (si->len == 0) { raise RuntimeError "Set changed during iteration"; }`, or
+  clamp at 0 in setiter_len.
+duplicates:
+  issues:
+    - {number: 144356, state: open, relation: "data race in the same function under no-gil, a different defect"}
+    - {number: 158254, state: closed, relation: "same pattern on reversed dict iterators, fixed; set was not touched"}
+  queries: ["set iterator length_hint", "length_hint dict iterator",
+            "API: __length_hint__ set negative in:title,body (0 hits)"]
+lean:
+  property: PyLean.DictSet.SetIterLenNonneg
+  theorem: PyLean.DictSet.setIterLenNonneg_refuted

@@ -783,10 +783,12 @@ def gen_case(rng):
         pool, ops = gen_dict(rng)
     elif r < 0.23:
         pool, ops = gen_growth(rng)
+        case = {"every": 32}
     elif r < 0.41:
         pool, ops = gen_set(rng)
     elif r < 0.44:
         pool, ops = gen_set_growth(rng)
+        case = {"every": 32}
     elif r < 0.53:
         pool, ops = gen_views(rng)
     elif r < 0.63:
@@ -1301,8 +1303,11 @@ def run_python(case):
         return run_forked(case)
     r = Runner(case)
     out = []
-    for op in case["ops"]:
-        out.append([common.py_result(lambda: r.step(op)), r.digest()])
+    every = case.get("every", 1)
+    last = len(case["ops"]) - 1
+    for i, op in enumerate(case["ops"]):
+        res = common.py_result(lambda: r.step(op))
+        out.append([res, r.digest() if i % every == 0 or i == last else None])
     return {"ok": out}
 
 

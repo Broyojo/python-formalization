@@ -77,35 +77,37 @@ def setChanged (so : SetObj K) (table slot : Nat) (startkey : K) : Bool :=
     | .active k _ => decide (k ≠ startkey)
     | _ => true
 
-/-- The inner loop of `set_lookkey` (:94-126). -/
-def lookScan (frozen : Bool) (key : K) (hash : Int) : Nat → Nat → Nat → SM K LookScan
-  | probes, slot, mask => do
-    let so ← M.get
-    match so.slot slot with
-    | .null => return .found slot
-    | .dummy =>
-      match probes with
-      | 0 => return .next mask
-      | p + 1 => lookScan frozen key hash p (slot + 1) mask
-    | .active startkey h =>
-      if h = hash then
-        if startkey = key then return .found slot
-        if P.isStr startkey && P.isStr key && P.strEq startkey key then return .found slot
-        let table := so.tableId
-        let cmp ← P.eq startkey key
-        if !frozen then
-          let so' ← M.get
-          if setChanged so' table slot startkey then return .restart
-        if cmp then return .found slot
+/-- One pass of the body of the `do` loop of `set_lookkey` (:95-125): `.inl` ends the block, `.inr`
+carries on at the next entry with this `mask`. -/
+def lookStep (frozen : Bool) (key : K) (hash : Int) (slot mask : Nat) : SM K (LookScan ⊕ Nat) := do
+  let so ← M.get
+  match so.slot slot with
+  | .null => return .inl (.found slot)
+  | .dummy => return .inr mask
+  | .active startkey h =>
+    if h = hash then
+      if startkey = key then return .inl (.found slot)
+      if P.isStr startkey && P.isStr key && P.strEq startkey key then return .inl (.found slot)
+      let table := so.tableId
+      let cmp ← P.eq startkey key
+      if !frozen then
         let so' ← M.get
-        match probes with
-        | 0 => return .next so'.mask
-        | p + 1 => lookScan frozen key hash p (slot + 1) so'.mask
-      else
-        match probes with
-        | 0 => return .next mask
-        | p + 1 => lookScan frozen key hash p (slot + 1) mask
-termination_by probes _ _ => probes
+        if setChanged so' table slot startkey then return .inl .restart
+      if cmp then return .inl (.found slot)
+      let so' ← M.get
+      return .inr so'.mask
+    else return .inr mask
+
+/-- The inner loop of `set_lookkey` (:94-126): `do { ... } while (probes--)`. -/
+def lookScan (frozen : Bool) (key : K) (hash : Int) : Nat → Nat → Nat → SM K LookScan
+  | 0, slot, mask => do
+    match ← lookStep P frozen key hash slot mask with
+    | .inl r => return r
+    | .inr m => return .next m
+  | p + 1, slot, mask => do
+    match ← lookStep P frozen key hash slot mask with
+    | .inl r => return r
+    | .inr m => lookScan frozen key hash p (slot + 1) m
 
 /-- The outer loop of `set_lookkey` (:91-129). -/
 def lookOuter (frozen : Bool) (key : K) (hash : Int) : Nat → Nat → Nat → Nat → SM K (Option Nat)
@@ -212,34 +214,37 @@ inductive AddScan where
 section Add
 variable [DecidableEq K] (P : Proto K (SetObj K))
 
+/-- One pass of the body of the `do` loop of `set_add_entry_takeref` (:157-184). -/
+def addStep (key : K) (hash : Int) (slot mask : Nat) (freeslot : Option Nat) :
+    SM K (AddScan ⊕ (Nat × Option Nat)) := do
+  let so ← M.get
+  match so.slot slot with
+  | .null => return .inl (.unused slot freeslot mask)
+  | .dummy =>
+    -- else if (entry->hash == -1): the last dummy seen wins
+    return .inr (mask, some slot)
+  | .active startkey h =>
+    if h = hash then
+      if startkey = key then return .inl .active
+      if P.isStr startkey && P.isStr key && P.strEq startkey key then return .inl .active
+      let table := so.tableId
+      let cmp ← P.eq startkey key
+      if cmp then return .inl .active
+      let so' ← M.get
+      if setChanged so' table slot startkey then return .inl .restart
+      return .inr (so'.mask, freeslot)
+    else return .inr (mask, freeslot)
+
 /-- The inner loop of `set_add_entry_takeref` (:156-185). -/
 def addScan (key : K) (hash : Int) : Nat → Nat → Nat → Option Nat → SM K AddScan
-  | probes, slot, mask, freeslot => do
-    let so ← M.get
-    match so.slot slot with
-    | .null => return .unused slot freeslot mask
-    | .dummy =>
-      -- else if (entry->hash == -1): the last dummy seen wins
-      match probes with
-      | 0 => return .next (some slot) mask
-      | p + 1 => addScan key hash p (slot + 1) mask (some slot)
-    | .active startkey h =>
-      if h = hash then
-        if startkey = key then return .active
-        if P.isStr startkey && P.isStr key && P.strEq startkey key then return .active
-        let table := so.tableId
-        let cmp ← P.eq startkey key
-        if cmp then return .active
-        let so' ← M.get
-        if setChanged so' table slot startkey then return .restart
-        match probes with
-        | 0 => return .next freeslot so'.mask
-        | p + 1 => addScan key hash p (slot + 1) so'.mask freeslot
-      else
-        match probes with
-        | 0 => return .next freeslot mask
-        | p + 1 => addScan key hash p (slot + 1) mask freeslot
-termination_by probes _ _ _ => probes
+  | 0, slot, mask, freeslot => do
+    match ← addStep P key hash slot mask freeslot with
+    | .inl r => return r
+    | .inr (m, fs) => return .next fs m
+  | p + 1, slot, mask, freeslot => do
+    match ← addStep P key hash slot mask freeslot with
+    | .inl r => return r
+    | .inr (m, fs) => addScan key hash p (slot + 1) m fs
 
 def addOuter (key : K) (hash : Int) : Nat → Nat → Nat → Nat → Option Nat → SM K AddScan
   | 0, _, _, _, _ => M.throw .modelFuel

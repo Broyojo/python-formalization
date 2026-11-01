@@ -865,13 +865,18 @@ def isCrash (r : Json) : Bool :=
   | .ok (.str "<crash>") => true
   | _ => false
 
-def runOps (st : St) : List Json → Array Json → Except String (Array Json)
-  | [], acc => .ok acc
-  | op :: rest, acc => do
+/-- `every`: compare the state only on every `every`-th operation and on the last. The growth
+scenarios run thousands of operations on large tables. -/
+def runOps (every : Nat) (st : St) : List Json → Nat → Array Json → Except String (Array Json)
+  | [], _, acc => .ok acc
+  | op :: rest, i, acc => do
     let (r, st') ← step st op
     if isCrash r then return acc.push (Json.arr #[r, Json.null])
-    let (dg, st'') ← digest st'
-    runOps st'' rest (acc.push (Json.arr #[r, dg]))
+    if i % every == 0 || rest.isEmpty then
+      let (dg, st'') ← digest st'
+      runOps every st'' rest (i + 1) (acc.push (Json.arr #[r, dg]))
+    else
+      runOps every st' rest (i + 1) (acc.push (Json.arr #[r, Json.null]))
 
 def initSt (pool : Array DObj) (names : List DObj) : St :=
   { pool, names
@@ -887,27 +892,29 @@ def run (fn : String) (j : Json) : Except String Json := do
   let poolA := (pool.map DObj.atom).toArray
   let st := initSt poolA []
   let ops ← arrOf (← field j "ops")
+  let every := (j.getObjValAs? Nat "every").toOption.getD 1
+  let runOps := fun st => runOps every st ops 0 #[]
   match fn with
   | "scenario" =>
-    return okJ (Json.arr (← runOps st ops #[]))
+    return okJ (Json.arr (← runOps st))
   | "odict" =>
     let st := { st with
       ods := #[odictNew 21, odictNew 22, odictNew 23]
       oits := #[none, none, none, none]
       touched := #[false, false, false, false] }
-    return okJ (Json.arr (← runOps st ops #[]))
+    return okJ (Json.arr (← runOps st))
   | "pyod" =>
     let st := { st with
       pods := #[pyodNew 31, pyodNew 33, pyodNew 35]
       gens := #[none, none, none, none] }
-    return okJ (Json.arr (← runOps st ops #[]))
+    return okJ (Json.arr (← runOps st))
   | "instances" =>
     let names ← (← arrOf (← field j "names")).mapM (obj st)
     let st := { st with
       names
       insts := #[none, none, none]
       touched := #[false, false, false] }
-    return okJ (Json.arr (← runOps st ops #[]))
+    return okJ (Json.arr (← runOps st))
   | _ => throw s!"unknown fn {fn}"
 
 def handler : Handler := fun fn j => some (run fn j)
