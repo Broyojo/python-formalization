@@ -1,0 +1,98 @@
+id: bytecode-gen-close-deep-chain-stack-overflow
+title: "gen_close and _gen_throw recurse along a yield-from chain with no stack guard: close() or dropping the generator segfaults at the default recursion limit"
+priority: P2
+kind: crash
+module: bytecode
+files: [Objects/genobject.c]
+functions: ["gen_close", "gen_close_iter", "_gen_throw", "_PyGen_Finalize"]
+summary: |
+  gen_close (:386-453) closes the sub-iterator of a suspended `yield from` through
+  gen_close_iter (:335-360), which calls gen_close directly for an exact generator or
+  coroutine; _gen_throw (:465-595) calls itself at :506 in the same way. Neither has a
+  recursion check: the walk down the chain runs no Python code, so nothing reaches
+  _Py_EnterRecursiveCall or the eval loop's limit. A chain does not need deep Python
+  recursion to build, because a delegation link is formed by one short resume of the
+  outer generator while the inner one is suspended at a plain `yield`:
+
+      def link():
+          sub = yield
+          while sub is None:
+              sub = yield
+          yield from sub
+
+  With g0.send(g1), g1.send(g2), ... each send runs at stack depth 2, so a chain of a
+  million generators builds in about a second with sys.getrecursionlimit() == 1000.
+  first.close(), first.throw(ValueError), or just dropping the last reference
+  (tp_finalize -> _PyGen_Finalize -> gen_close) then overflows the C stack. On an 8 MiB
+  stack the crash starts between 60000 and 100000 links. gen_close_iter treats coroutines
+  like generators, so a chain of `await`s takes the same path (read from the code, not run).
+likelihood: |
+  Low in ordinary code: nobody builds a 100000-link delegation chain on purpose, and a
+  chain built by plain recursion stops at the recursion limit. It needs the pattern
+  above, or a long-running framework that keeps wrapping a generator in another
+  delegating generator. It is reachable from pure Python with no setrecursionlimit, no
+  ctypes and no C extension, which is why it is worth reporting.
+maybe_intended: |
+  Probably not, but a maintainer could reasonably rate it low. python/cpython#86078 ("Long
+  generator chain causes segmentation fault") was closed as invalid because it needed
+  sys.setrecursionlimit(), which the docs mark as at your own risk; that does not apply here.
+  python/cpython#58218 (deeply nested itertools objects) is the same class of bug and was closed
+  as not planned in 2019, before the C stack checks of 3.12-3.14, so a similar answer is possible.
+reproducer: |
+  import subprocess, sys
+  code = r'''
+  import sys
+  assert sys.getrecursionlimit() == 1000
+  def link():
+      sub = yield
+      while sub is None:
+          sub = yield
+      yield from sub
+  first = g = link(); next(g)
+  for i in range(1000000):
+      h = link(); next(h)
+      g.send(h)
+      g = h
+  first.close()
+  print("survived")
+  '''
+  import textwrap
+  r = subprocess.run([sys.executable, "-c", textwrap.dedent(code)], capture_output=True, text=True)
+  print("returncode", r.returncode, r.stdout[-20:])
+  if r.returncode < 0:
+      print('REPRODUCED bytecode-gen-close-deep-chain-stack-overflow')
+expected: |
+  A RecursionError, or an iterative walk down the chain; no crash, as for other recursion in C
+  such as repr() or comparison of deeply nested containers.
+observed: |
+  python3 3.14.7: SIGSEGV (returncode -11) for close(), for throw(ValueError) and for dropping
+  the last reference; the faulthandler C stack is two frames repeated. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): SIGSEGV for all three. REPRODUCED.
+promised_by: |
+  Undisputed invariant: pure Python does not crash the interpreter at default settings.
+  The Python docs for sys.setrecursionlimit() tie crashes to raising the limit; this needs
+  no such thing.
+cause: |
+  Objects/genobject.c:341 (gen_close_iter calls gen_close) and :405 (gen_close calls
+  gen_close_iter), and :506 (_gen_throw calls itself), with no _Py_EnterRecursiveCall or
+  _Py_ReachedRecursionLimit on the path. Main has the same recursion
+  (Objects/genobject.c gen_close_iter:432, gen_close).
+possible_fix: |
+  In gen_close_iter and in _gen_throw's generator branch, call
+  _Py_EnterRecursiveCallTstate(tstate, " while closing a generator") /
+  _Py_LeaveRecursiveCallTstate around the recursive call, so the chain ends in a
+  RecursionError. Better for close(): walk the chain with an explicit loop, so that
+  finalizing a long chain still closes every link; _PyGen_Finalize runs from dealloc,
+  where a RecursionError would be unraisable and the chain would stay unclosed.
+duplicates:
+  issues:
+    - {number: 86078, state: closed, relation: "related, not a duplicate: needed sys.setrecursionlimit() and recursion in Python", reason: "invalid (2020)"}
+    - {number: 58218, state: closed, relation: "same class of bug in itertools", reason: "not_planned (2019)"}
+  bugforge: "no generator entries in vendor/bugforge-results/README.md"
+  queries: ["gen_close recursion", "generator close stack overflow", "yield from recursion segfault",
+            "deep generator chain segfault", "yield from chain close", "_gen_throw",
+            "generator close during resume segfault"]
+lean:
+  property: PyLean.Bytecode.GenObj.GenCloseStackBounded
+  theorem: PyLean.Bytecode.GenObj.genCloseStackBounded_refuted
+  also: [PyLean.Bytecode.GenObj.GenThrowStackBounded, PyLean.Bytecode.GenObj.genThrowStackBounded_refuted]
