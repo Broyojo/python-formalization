@@ -1052,6 +1052,10 @@ def TokKind.exact? : TokKind → Option String
   | .EXCLAMATION => some "!"
   | _ => none
 
+/-- Every token kind, in file order. -/
+def TokKind.all : _root_.List TokKind :=
+  [TokKind.ENDMARKER, TokKind.NAME, TokKind.NUMBER, TokKind.STRING, TokKind.NEWLINE, TokKind.INDENT, TokKind.DEDENT, TokKind.LPAR, TokKind.RPAR, TokKind.LSQB, TokKind.RSQB, TokKind.COLON, TokKind.COMMA, TokKind.SEMI, TokKind.PLUS, TokKind.MINUS, TokKind.STAR, TokKind.SLASH, TokKind.VBAR, TokKind.AMPER, TokKind.LESS, TokKind.GREATER, TokKind.EQUAL, TokKind.DOT, TokKind.PERCENT, TokKind.LBRACE, TokKind.RBRACE, TokKind.EQEQUAL, TokKind.NOTEQUAL, TokKind.LESSEQUAL, TokKind.GREATEREQUAL, TokKind.TILDE, TokKind.CIRCUMFLEX, TokKind.LEFTSHIFT, TokKind.RIGHTSHIFT, TokKind.DOUBLESTAR, TokKind.PLUSEQUAL, TokKind.MINEQUAL, TokKind.STAREQUAL, TokKind.SLASHEQUAL, TokKind.PERCENTEQUAL, TokKind.AMPEREQUAL, TokKind.VBAREQUAL, TokKind.CIRCUMFLEXEQUAL, TokKind.LEFTSHIFTEQUAL, TokKind.RIGHTSHIFTEQUAL, TokKind.DOUBLESTAREQUAL, TokKind.DOUBLESLASH, TokKind.DOUBLESLASHEQUAL, TokKind.AT, TokKind.ATEQUAL, TokKind.RARROW, TokKind.ELLIPSIS, TokKind.COLONEQUAL, TokKind.EXCLAMATION, TokKind.OP, TokKind.TYPE_IGNORE, TokKind.TYPE_COMMENT, TokKind.SOFT_KEYWORD, TokKind.FSTRING_START, TokKind.FSTRING_MIDDLE, TokKind.FSTRING_END, TokKind.TSTRING_START, TokKind.TSTRING_MIDDLE, TokKind.TSTRING_END, TokKind.COMMENT, TokKind.NL, TokKind.ERRORTOKEN, TokKind.ENCODING]
+
 /-- Number of token types in `Grammar/Tokens`. -/
 def TokKind.count : Nat := 69
 
