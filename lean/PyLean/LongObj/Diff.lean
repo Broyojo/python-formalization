@@ -1,5 +1,6 @@
 import PyLean.DiffCore
 import PyLean.LongObj.IntNew
+import PyLean.LongObj.DiffComplex
 
 /-! Differential-testing handler for `longobj` cases (`"mod": "longobj"`). -/
 
@@ -130,6 +131,9 @@ def run (fn : String) (j : Json) : Except String Json := do
     | none => throw "bad op"
   | _ => throw s!"unknown fn {fn}"
 
-def handler : Handler := fun fn j => some (run fn j)
+def handler : Handler := fun fn j =>
+  match runComplex fn j with
+  | some r => some r
+  | none => some (run fn j)
 
 end PyLean.LongObj
