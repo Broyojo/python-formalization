@@ -44,6 +44,58 @@ def float_bits(x):
     return int.from_bytes(struct.pack("<d", x), "little")
 
 
+STRUCT_EXCS = {"ValueError": ValueError, "TypeError": TypeError, "OverflowError": OverflowError,
+               "ZeroDivisionError": ZeroDivisionError}
+
+
+def s_res(r, conv=lambda x: x):
+    def call(self, *a):
+        if "raise" in r:
+            raise STRUCT_EXCS[r["raise"][0]](r["raise"][1])
+        return conv(r["ok"])
+    return call
+
+
+def struct_obj(v):
+    ns = {"__bool__": s_res(v["truth"])}
+    if v.get("index") is not None:
+        ns["__index__"] = s_res(v["index"])
+    if v.get("float") is not None:
+        ns["__float__"] = s_res(v["float"], bits_float)
+    if v.get("cplx") is not None:
+        ns["__complex__"] = s_res(v["cplx"], lambda x: complex(bits_float(x[0]), bits_float(x[1])))
+    return type("O", (), ns)()
+
+
+class RaisingBuffer:
+    def __init__(self, x):
+        self.x = x
+
+    def __buffer__(self, flags):
+        raise STRUCT_EXCS[self.x[0]](self.x[1])
+
+
+RaisingBuffer.__name__ = RaisingBuffer.__qualname__ = "BF"
+
+
+def buf_dec(b):
+    if "bytes" in b:
+        return bytes(b["bytes"])
+    if "ba" in b:
+        return bytearray(b["ba"])
+    if "raises" in b:
+        return RaisingBuffer(b["raises"])
+    return {"int": 1, "list": [], "NoneType": None}[b["ty"]]
+
+
+def off_dec(o):
+    if "i" in o:
+        return o["i"]
+    if "idx" in o:
+        return type("O", (), {"__index__": s_res(o["idx"])})()
+    return {"str": "x", "list": [], "NoneType": None}[o["ty"]]
+
+
 def sv_dec(a):
     t, v = a["t"], a["v"]
     if t == "i":
@@ -58,6 +110,8 @@ def sv_dec(a):
         return bits_float(v)
     if t == "c":
         return complex(bits_float(v[0]), bits_float(v[1]))
+    if t == "obj":
+        return struct_obj(v)
     return "x" if v else ""
 
 
@@ -75,7 +129,20 @@ def sv_enc(x):
     raise TypeError(type(x))
 
 
+class RaisingHash:
+    def __init__(self, x):
+        self.x = x
+
+    def __hash__(self):
+        raise STRUCT_EXCS[self.x[0]](self.x[1])
+
+
+RaisingHash.__name__ = RaisingHash.__qualname__ = "H"
+
+
 def fmt_dec(f):
+    if "hr" in f:
+        return RaisingHash(f["hr"])
     if "s" in f:
         return "".join(map(chr, f["s"]))
     if "b" in f:
@@ -159,6 +226,16 @@ class StructArea:
         return {"t": "f", "v": r.choice(cls.FLOATS)}
 
     @classmethod
+    def obj_arg(cls, r, code):
+        x = lambda: {"raise": [r.choice(["ValueError", "TypeError", "OverflowError", "ZeroDivisionError"]), "boom"]}
+        ok = lambda v: {"ok": v}
+        return {"t": "obj", "v": {
+            "truth": r.choice([ok(True), ok(False), x()]),
+            "index": r.choice([None, ok(r.choice([0, 1, -1, 300, 2**70])), x()]),
+            "float": r.choice([None, None, ok(r.choice(cls.FLOATS)), x()]),
+            "cplx": r.choice([None, None, ok([r.choice(cls.FLOATS), r.choice(cls.FLOATS)]), x()])}}
+
+    @classmethod
     def args_for(cls, r, fmt):
         try:
             s = struct.Struct(fmt_dec(fmt))
@@ -178,6 +255,8 @@ class StructArea:
             out.extend(cls.value(r, c) for _ in range(n))
         if r.random() < 0.05:
             out = out[:-1] if out and r.random() < 0.5 else out + [{"t": "i", "v": 0}]
+        if out and r.random() < 0.25:
+            out[r.randrange(len(out))] = cls.obj_arg(r, "")
         return out
 
     @classmethod
@@ -195,17 +274,68 @@ class StructArea:
     @classmethod
     def gen(cls, r):
         fn = r.choice(["calcsize", "info", "pack", "pack", "pack", "Struct.pack", "unpack", "unpack",
-                       "unpack_from", "iter_unpack", "iter_hint", "pack_into", "uninit"])
+                       "unpack_from", "iter_unpack", "iter_hint", "pack_into", "uninit", "pack_into2", "unpack2",
+                       "unpack_from2", "iter2", "iter2", "mod2"])
         fmt = cls.fmt(r)
         if r.random() < 0.01:
             fmt = r.choice([{"o": "int", "h": True}, {"o": "list", "h": False}, {"o": "float", "h": True},
-                            {"o": "NoneType", "h": True}, {"s": [0xff]}, {"b": [0xff]}, {"s": [0x105, 0x69]}])
+                            {"o": "NoneType", "h": True}, {"s": [0xff]}, {"b": [0xff]}, {"s": [0x105, 0x69]},
+                            {"o": "H", "hr": ["ValueError", "boom"]}, {"o": "H", "hr": ["TypeError", "boom"]}])
         try:
             if struct.calcsize(fmt_dec(fmt)) > 4096:  # would only test the allocator
                 fn = r.choice(["calcsize", "info"])
         except Exception:
             pass
         c = {"mod": "textlibs", "fn": "struct." + fn, "fmt": fmt}
+        if fn in ("pack_into2", "unpack2", "unpack_from2", "iter2", "mod2"):
+            try:
+                n = struct.calcsize(fmt_dec(fmt))
+            except Exception:
+                n = 0
+            if n > 4096:
+                c["fn"] = "struct.calcsize"
+                return c
+            k = r.choice([n, n, n, 2 * n, n + 1, max(n - 1, 0), 0])
+            blob = [r.randrange(256) for _ in range(k)]
+            bad = r.choice([{"ty": "int"}, {"ty": "list"}, {"raises": ["ValueError", "boom"], "ty": "BF"},
+                            {"raises": ["TypeError", "boom"], "ty": "BF"}])
+            if fn == "pack_into2":
+                c["n"] = r.choice([0, 1, 2, 2, 2, 2, 2, 2])
+                c["args"] = cls.args_for(r, fmt)
+                c["buf"] = r.choice([{"ba": blob}, {"ba": blob}, {"ba": blob}, {"bytes": blob}, bad])
+                c["off"] = r.choice([{"i": 0}, {"i": 0}, {"idx": {"ok": 0}}, {"idx": {"ok": 1}}, {"idx": {"raise": ["ValueError", "boom"]}},
+                                     {"idx": {"ok": 2**70}}, {"ty": "str"}, {"i": -1}])
+                if c["n"] != 2:
+                    c.pop("args")
+                    c["args"] = []
+                return c
+            c["buf"] = r.choice([{"bytes": blob}, {"bytes": blob}, {"ba": blob}, bad])
+            if fn == "mod2":
+                c["op"] = r.choice(["unpack", "unpack", "unpack_from", "iter", "pack0", "pack_into0"])
+                c["off"] = r.choice([{"i": 0}, {"idx": {"ok": 0}}, {"idx": {"raise": ["ValueError", "boom"]}}, {"ty": "str"}])
+            if fn == "unpack_from2":
+                c["off"] = r.choice([{"i": 0}, {"idx": {"ok": 0}}, {"idx": {"ok": 1}}, {"idx": {"raise": ["ValueError", "boom"]}},
+                                     {"idx": {"ok": 2**70}}, {"ty": "str"}, {"i": -1}])
+            if fn == "iter2":
+                # re-init only while the next read stays inside the buffer: anything else is undefined
+                idx, size, ops = 0, n, []
+                for _ in range(r.choice([1, 2, 3, 5, 8])):
+                    roll = r.random()
+                    if roll < 0.55:
+                        if size and idx < k and (idx + size > k or k % n if n else True):
+                            break
+                        ops.append("next")
+                        idx += size
+                    elif roll < 0.8:
+                        if size == 0:
+                            break
+                        ops.append("len")
+                    else:
+                        g = r.choice(["b", "h", "bb", "i", "0s", "2b"])
+                        ops.append({"s": [ord(x) for x in g]})
+                        size = struct.calcsize(g)
+                c["ops"] = ops
+            return c
         if fn in ("pack", "Struct.pack", "pack_into"):
             c["args"] = cls.args_for(r, fmt)
         if fn in ("unpack", "unpack_from", "iter_unpack", "iter_hint", "pack_into"):
@@ -225,6 +355,59 @@ class StructArea:
     @classmethod
     def run(cls, c):
         fn = c["fn"][len("struct."):]
+        if fn == "pack_into2":
+            def body():
+                s = struct.Struct(fmt_dec(c["fmt"]))
+                b = buf_dec(c["buf"]) if c["n"] else None
+                a = [sv_dec(x) for x in c["args"]]
+                if c["n"] == 0:
+                    s.pack_into()
+                elif c["n"] == 1:
+                    s.pack_into(b)
+                else:
+                    s.pack_into(b, off_dec(c["off"]), *a)
+                return list(b)
+            return common.py_result(body)
+        if fn == "mod2":
+            def body():
+                op = c["op"]
+                if op == "pack0":
+                    return list(struct.pack())
+                if op == "pack_into0":
+                    return struct.pack_into()
+                f = fmt_dec(c["fmt"])
+                b = buf_dec(c["buf"])
+                if op == "unpack":
+                    return [sv_enc(x) for x in struct.unpack(f, b)]
+                if op == "unpack_from":
+                    return [sv_enc(x) for x in struct.unpack_from(f, b, off_dec(c["off"]))]
+                struct.iter_unpack(f, b)
+                return None
+            return common.py_result(body)
+        if fn == "unpack2":
+            return common.py_result(lambda: [sv_enc(x) for x in struct.Struct(fmt_dec(c["fmt"])).unpack(buf_dec(c["buf"]))])
+        if fn == "unpack_from2":
+            return common.py_result(lambda: [sv_enc(x) for x in struct.Struct(fmt_dec(c["fmt"])).unpack_from(buf_dec(c["buf"]), off_dec(c["off"]))])
+        if fn == "iter2":
+            def body():
+                s = struct.Struct(fmt_dec(c["fmt"]))
+                it = s.iter_unpack(buf_dec(c["buf"]))
+                out = []
+                for op in c["ops"]:
+                    if op == "next":
+                        try:
+                            out.append({"ok": [sv_enc(x) for x in next(it)]})
+                        except StopIteration:
+                            out.append({"ok": []})
+                            out.append(None)
+                    elif op == "len":
+                        out.append({"ok": it.__length_hint__()})
+                    else:
+                        with warnings.catch_warnings():
+                            warnings.simplefilter("ignore")
+                            s.__init__("".join(map(chr, op["s"])))
+                return out
+            return common.py_result(body)
         if fn == "uninit":
             s = struct.Struct.__new__(struct.Struct)
             return {"ok": {"size": s.size, "pack": common.py_result(lambda: list(s.pack())),

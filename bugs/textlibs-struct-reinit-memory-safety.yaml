@@ -1,0 +1,78 @@
+id: textlibs-struct-reinit-memory-safety
+title: "Calling Struct.__init__ on a live Struct reaches freed and out-of-bounds memory from pure Python"
+priority: P2
+kind: memory-safety
+module: textlibs
+files: [Modules/_struct.c]
+functions: ["s_pack_internal", "s_pack", "s_pack_into", "unpackiter_iternext", "unpackiter_len", "prepare_s"]
+summary: |
+  Struct.__init__ can be called again on a Struct that is in use. prepare_s frees s_codes and replaces
+  s_size and s_len (Modules/_struct.c:1759-1764), and no method or iterator guards against it. A
+  conversion such as __index__ can do this in the middle of a method, and any code can do it between
+  two next() calls of an iterator. This has one root cause and these consequences:
+  1. s_pack_internal keeps walking the freed s_codes after the conversion returns (:2178, :2243).
+     This use-after-free segfaults with allocator churn on 3.14.7 and on main.
+  2. iter_unpack, after a larger format: unpackiter_iternext reads past the buffer, because the only
+     bound is an assert (:2080). This returns heap contents as bytes on 3.14.7 and on main.
+  3. iter_unpack, after a zero-sized format: unpackiter_len divides by zero (:2055). SIGFPE on
+     3.14.7 and on main. next() on such an iterator also never ends.
+  4. s_pack on 3.14.7 finishes with the new s_size (:2292), returning heap contents as bytes. Fixed
+     on main.
+  5. s_pack_into on 3.14.7 checks nargs before the offset's __index__ runs (:2316, :2340), so a longer
+     format makes s_pack_internal read past args. Fixed on main, which rechecks.
+likelihood: |
+  Low in ordinary code: re-initialising a Struct in use is unusual, and main now warns about
+  re-initialisation. It is reachable from pure Python, though, and 2 and 4 disclose heap memory.
+maybe_intended: |
+  No for the memory errors. Main's FutureWarning shows re-initialisation is on its way out, and a
+  maintainer may prefer that to guards. It is only a warning on main, and 3.14 has no warning at all,
+  so the crashes remain until the feature is removed. Related reports were never judged on merit:
+  python/cpython#158695 was closed with a batch of tracker spam from an automated filer.
+reproducer: |
+  import struct, subprocess, sys, warnings
+  warnings.simplefilter('ignore')
+  s = struct.Struct('b')
+  it = s.iter_unpack(bytes(8))
+  next(it)
+  s.__init__('64s')
+  leaked = next(it)[0]
+  print('read', len(leaked), 'bytes from an 8-byte buffer')
+  code = """
+  import struct, warnings
+  warnings.simplefilter('ignore')
+  s = struct.Struct('b')
+  it = s.iter_unpack(bytes(8))
+  s.__init__('0s')
+  it.__length_hint__()
+  """
+  p = subprocess.run([sys.executable, '-c', code], capture_output=True)
+  print('length hint exit status', p.returncode)
+  if len(leaked) > 8 and p.returncode < 0:
+      print('REPRODUCED textlibs-struct-reinit-memory-safety')
+expected: |
+  An exception, or a Struct that cannot be changed while in use. No read outside the buffer, no crash.
+observed: |
+  python3 3.14.7: 64 bytes read from an 8-byte buffer, exit status -8 (SIGFPE). REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED.
+promised_by: |
+  The undisputed invariant that Python code does not read freed memory or crash the interpreter.
+cause: |
+  prepare_s frees s_codes at Modules/_struct.c:1760-1761 with no check that a method or iterator is
+  using the object. s_pack_internal holds a pointer into it across e->pack (:2178, :2236, :2243).
+  unpackiter_iternext and unpackiter_len read so->s_size afresh (:2080-2084, :2055).
+possible_fix: |
+  Refuse __init__ on an initialised Struct, as main's FutureWarning announces, and backport a guard.
+  Failing that: make the iterator keep its own copy of the size, and take a private reference to the
+  codes in s_pack_internal.
+duplicates: |
+  No report of the pack use-after-free or the over-reads. Related, same root cause, different site:
+  python/cpython#158695 (closed not planned as bulk filing; division at :2143 through __buffer__), and
+  the bugforge entries "Struct reinitialization to a zero-sized format makes an existing iter_unpack
+  iterator nonterminating" (not filed) and "struct.Struct.iter_unpack crashes when __buffer__
+  reinitializes the Struct to a zero-sized format".
+  Queries: gh search issues --repo python/cpython "struct re-initialization use after free";
+  "Struct __init__ __index__ crash"; "struct.Struct __init__ reinitialization"; "struct segfault pack
+  __index__"; "struct.Struct use-after-free"; "Struct __init__ deprecate re-initialization"; "struct
+  pack mutate format during __index__"; gh search prs "Struct re-initialization FutureWarning";
+  gh issue view 158695; gh issue view 158748.
+lean: lean/PyLean/TextLibs/StructFail.lean (PackNoUnsafe, PackIntoNoUnsafe, IterNoOverRead, IterLenNoCrash)

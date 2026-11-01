@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.TextLibs.Diff
-import PyLean.TextLibs.StructClose
+import PyLean.TextLibs.StructFail
 import PyLean.TextLibs.BinasciiProps2
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
@@ -172,6 +172,81 @@ def entries : List Entry := [
     statement := "Before __init__, .size is -1 and every method raises RuntimeError."
     source := "invariant: ENSURE_STRUCT_IS_READY, Modules/_struct.c:1914-1921", status := .proven
     prop := ``UninitStruct, thm := some ``uninitStruct_proven },
+  { id := "textlibs-struct-get-pylong", pyFile := "Modules/_struct.c", pyFns := ["get_pylong"]
+    statement := "get_pylong gives the result of __index__, including what it raises, and struct.error for an object without it."
+    source := "Modules/_struct.c:111-133", status := .proven
+    prop := ``GetPylongLaw, thm := some ``getPylongLaw_proven },
+  { id := "textlibs-struct-index-raises", pyFile := "Modules/_struct.c"
+    pyFns := ["get_long", "get_ulong", "get_longlong", "get_ulonglong", "get_ssize_t", "get_size_t"]
+    statement := "An exception from __index__ other than OverflowError comes out of every integer format unchanged."
+    source := "Modules/_struct.c:143-150", status := .proven
+    prop := ``IndexRaises, thm := some ``indexRaises_proven },
+  { id := "textlibs-struct-index-overflow", pyFile := "Modules/_struct.c", pyFns := ["np_int"]
+    statement := "An OverflowError from __index__ becomes the format's range error."
+    source := "Modules/_struct.c:575-578", status := .proven
+    prop := ``IndexOverflow, thm := some ``indexOverflow_proven },
+  { id := "textlibs-struct-bool-raises", pyFile := "Modules/_struct.c", pyFns := ["np_bool", "bp_bool"]
+    statement := "A raising __bool__ raises out of ?, in both format tables."
+    source := "Modules/_struct.c:744-746", status := .proven
+    prop := ``BoolRaises, thm := some ``boolRaises_proven },
+  { id := "textlibs-struct-float-replaced", pyFile := "Modules/_struct.c"
+    pyFns := ["pack_halffloat", "np_float", "np_double", "bp_float", "bp_double", "lp_float", "lp_double"]
+    statement := "A __float__ that raises does not get through: every failure of PyFloat_AsDouble becomes struct.error."
+    source := "Modules/_struct.c:280-285", status := .proven
+    prop := ``FloatFailureReplaced, thm := some ``floatFailureReplaced_proven },
+  { id := "textlibs-struct-pack-into-order", pyFile := "Modules/_struct.c", pyFns := ["s_pack_into"]
+    statement := "s_pack_into checks the item count, then the buffer, then the offset."
+    source := "Modules/_struct.c:2316-2344", status := .proven
+    prop := ``PackIntoOrder, thm := some ``packIntoOrder_proven },
+  { id := "textlibs-struct-offset-laws", pyFile := "Modules/_struct.c", pyFns := ["s_pack_into", "Struct_unpack_from_impl"]
+    statement := "Too large an offset is IndexError for pack_into and OverflowError for unpack_from, and an exception from __index__ comes out of both."
+    source := "Modules/_struct.c:2340-2344", status := .proven
+    prop := ``OffsetLaws, thm := some ``offsetLaws_proven },
+  { id := "textlibs-struct-module-order", pyFile := "Modules/_struct.c"
+    pyFns := ["unpack_impl", "unpack_from_impl", "iter_unpack_impl", "pack", "pack_into"]
+    statement := "The module functions report a bad format ahead of a bad buffer and need a format at all; otherwise they are the Struct methods."
+    source := "Modules/_struct.c:2591-2705", status := .proven
+    prop := ``ModuleOrder, thm := some ``moduleOrder_proven },
+  { id := "textlibs-struct-unpack-buffer", pyFile := "Modules/_struct.c", pyFns := ["Struct_unpack_impl", "Struct_unpack_from_impl"]
+    statement := "unpack and unpack_from raise what the buffer conversion raises, before looking at the length."
+    source := "the clinic conversions of Struct.unpack", status := .proven
+    prop := ``UnpackBufferFirst, thm := some ``unpackBufferFirst_proven },
+  { id := "textlibs-struct-iter-order", pyFile := "Modules/_struct.c", pyFns := ["Struct_iter_unpack_impl"]
+    statement := "iter_unpack refuses a zero-sized format first, then a failing buffer, then a length that is not a multiple."
+    source := "Modules/_struct.c:2129-2150", status := .proven
+    prop := ``IterUnpackOrder, thm := some ``iterUnpackOrder_proven },
+  { id := "textlibs-struct-iter-drive", pyFile := "Modules/_struct.c", pyFns := ["unpackiter_iternext"]
+    statement := "With the Struct left alone, the iterator object yields the tuples of the list model, and its read stays in the buffer."
+    source := "docs: iter_unpack", status := .proven
+    prop := ``IterDriveAgrees, thm := some ``iterDriveAgrees_proven },
+  { id := "textlibs-struct-iter-len", pyFile := "Modules/_struct.c", pyFns := ["unpackiter_len"]
+    statement := "The iterator's __length_hint__ is the remaining length over s_size."
+    source := "Modules/_struct.c:2055", status := .proven
+    prop := ``IterLenAgrees, thm := some ``iterLenAgrees_proven },
+  { id := "textlibs-struct-reinit-pack", pyFile := "Modules/_struct.c", pyFns := ["s_pack", "s_pack_internal"]
+    statement := "No conversion can free the format codes pack is walking."
+    source := "undisputed: Python code must not reach freed memory", status := .refuted
+    prop := ``PackNoUnsafe, thm := some ``packNoUnsafe_refuted
+    bug := some "textlibs-struct-reinit-memory-safety"
+    notes := "__index__ calls s.__init__, which frees s_codes during s_pack_internal." },
+  { id := "textlibs-struct-reinit-pack-into", pyFile := "Modules/_struct.c", pyFns := ["s_pack_into", "s_pack_internal"]
+    statement := "pack_into reads only the arguments it was given."
+    source := "undisputed: Python code must not reach out-of-bounds memory", status := .refuted
+    prop := ``PackIntoNoUnsafe, thm := some ``packIntoNoUnsafe_refuted
+    bug := some "textlibs-struct-reinit-memory-safety"
+    notes := "The offset's __index__ installs a longer format after nargs was checked. On 3.14.7; main rechecks." },
+  { id := "textlibs-struct-reinit-iter", pyFile := "Modules/_struct.c", pyFns := ["unpackiter_iternext"]
+    statement := "iter_unpack reads only the buffer it was given."
+    source := "undisputed: Python code must not reach out-of-bounds memory", status := .refuted
+    prop := ``IterNoOverRead, thm := some ``iterNoOverRead_refuted
+    bug := some "textlibs-struct-reinit-memory-safety"
+    notes := "A larger format installed between next() calls: the bound is only an assert." },
+  { id := "textlibs-struct-reinit-iter-len", pyFile := "Modules/_struct.c", pyFns := ["unpackiter_len"]
+    statement := "__length_hint__ does not divide by zero."
+    source := "undisputed: Python code must not crash the interpreter", status := .refuted
+    prop := ``IterLenNoCrash, thm := some ``iterLenNoCrash_refuted
+    bug := some "textlibs-struct-reinit-memory-safety"
+    notes := "A zero-sized format installed after the iterator was made: SIGFPE." },
   { id := "textlibs-struct-range-error", pyFile := "Modules/_struct.c", pyFns := ["_range_error"]
     statement := "_range_error's message states the exact range of the entry, for every integer entry that uses it."
     source := "invariant", status := .proven

@@ -9,11 +9,31 @@ The three format tables and `init_endian_tables` are mirrored literally: table
 entries name their pack and unpack routines through the `UFn`/`PFn` enumerations
 and the swap of native routines into `lilendian_table` is computed, not assumed.
 `Struct` objects are the pair `(codes, s_size, s_len)` from `prepare_s`.
+
+Arguments can fail. `SV.obj` is an object by what it does: `__index__`, `__float__`, `__complex__`
+and `__bool__` can each raise, and `BufArg` and `OffArg` do the same for buffers and offsets. A
+conversion can also call `__init__` on the `Struct` in use, which frees `s_codes` and changes
+`s_size` and `s_len` under the running C function. When the C then reads freed memory or past an
+array, the result is `MEMORY`: that is undefined behaviour rather than an outcome, so it is stated
+and refuted but never compared with CPython.
 -/
 
 namespace PyLean.TextLibs.Struct
 
 open PyLean PyLean.TextLibs
+
+/-- An object handed to `pack`, by what its conversions do. `none` is a missing method. `reinit` says
+that the conversion this format uses also calls `__init__` with a valid format on the `Struct` that
+is packing. -/
+structure PyO where
+  index : Option (Py Int) := none
+  float : Option (Py Nat) := none
+  cplx : Option (Py (Nat × Nat)) := none
+  truth : Py Bool := .ok true
+  reinit : Bool := false
+  deriving DecidableEq, Inhabited
+
+instance : Repr PyO := ⟨fun _ _ => "PyO"⟩
 
 /-- Python objects handed to `pack`, and objects `unpack` returns. -/
 inductive SV where
@@ -30,10 +50,16 @@ inductive SV where
   | bool (b : Bool)
   /-- Any other object, with its truth value (`str`, `None`, ...). -/
   | other (truth : Bool)
+  /-- An object with conversions that can raise and re-enter. -/
+  | obj (o : PyO)
   deriving Repr, DecidableEq, Inhabited
 
 /-- `struct.error`. -/
 def structErr (m : String) : PyExc := .named "error" m
+
+/-- Undefined behaviour in C: a read of freed memory or past an array, or a division by zero. Not a
+Python exception. -/
+def MEMORY : PyExc := .named "MemoryUnsafe" ""
 
 /-- The unpack routines of the three tables (`Modules/_struct.c:365-521, 865-993, 1196-1317`). -/
 inductive UFn where
@@ -291,6 +317,8 @@ inductive FmtArg where
   | bytes (b : List Nat)
   /-- Any other object: its type name, and whether it is hashable. -/
   | other (tyName : String) (hashable : Bool)
+  /-- An object whose `__hash__` raises. -/
+  | hashRaises (tyName : String) (e : PyExc)
   deriving Repr, DecidableEq, Inhabited
 
 /-- `Struct___init___impl`, `Modules/_struct.c:1808-1835`. -/
@@ -299,7 +327,7 @@ def structInit : FmtArg → Py SObj
     if cps.all (· < 128) then prepareS cps
     else .error (.named "UnicodeEncodeError" "~'ascii' codec can't encode character")
   | .bytes b => prepareS b
-  | .other t _ =>
+  | .other t _ | .hashRaises t _ =>
     .error (.typeError s!"Struct() argument 1 must be a str or bytes object, not {t}")
 
 /-- `cache_struct_converter`, `Modules/_struct.c:2504-2552`. A cache hit returns the
@@ -312,6 +340,10 @@ def cacheStruct : FmtArg → Py SObj
   | .other t hashable =>
     if hashable then structInit (.other t hashable)
     else .error (.typeError s!"cannot use '{t}' as a dict key (unhashable type: '{t}')")
+  | .hashRaises t e =>
+    match e with
+    | .typeError m => .error (.typeError s!"cannot use '{t}' as a dict key ({m})")
+    | e => .error e
 
 /-- `_range_error`, `Modules/_struct.c:314-342`. -/
 def rangeError (f : FormatDef) (isUnsigned : Bool) : PyExc :=
@@ -325,6 +357,7 @@ def rangeError (f : FormatDef) (isUnsigned : Bool) : PyExc :=
 /-- `get_pylong`, `Modules/_struct.c:111-133`. -/
 def getPylong : SV → Py Int
   | .int n | .index n => .ok n
+  | .obj { index := some r, .. } => r
   | _ => .error (structErr "required argument is not an integer")
 
 /-- A C integer conversion, raising `OverflowError msg` outside `[lo, hi]`. -/
@@ -396,26 +429,41 @@ def lpLoop : Nat → Int → List Nat
   | i + 1, x => (x % 256).toNat :: lpLoop i (x / 256)
 
 /-- `PyObject_IsTrue`. -/
-def isTrue : SV → Bool
-  | .int n => n != 0
+def isTrue : SV → Py Bool
+  | .int n => .ok (n != 0)
   -- an object with `__index__` but no `__bool__`/`__len__` is always true
-  | .index _ => true
-  | .bytes b | .bytearray b => !b.isEmpty
-  | .float x => f64.frac x != 0 || f64.expOf x != 0
-  | .cplx a b => (f64.frac a != 0 || f64.expOf a != 0) || (f64.frac b != 0 || f64.expOf b != 0)
-  | .bool b => b
-  | .other t => t
+  | .index _ => .ok true
+  | .bytes b | .bytearray b => .ok !b.isEmpty
+  | .float x => .ok (f64.frac x != 0 || f64.expOf x != 0)
+  | .cplx a b => .ok ((f64.frac a != 0 || f64.expOf a != 0) || (f64.frac b != 0 || f64.expOf b != 0))
+  | .bool b => .ok b
+  | .other t => .ok t
+  | .obj o => o.truth
 
-/-- `PyFloat_AsDouble`: `none` for every failure (`struct` replaces the exception). -/
+/-- `Py` to `Option`: `struct` replaces every exception from these two conversions, a raising
+`__float__` included, `Modules/_struct.c:280-285`. -/
+def okOf {α : Type} : Py α → Option α
+  | .ok a => some a
+  | .error _ => none
+
+/-- `PyFloat_AsDouble`: `none` for every failure. `__float__` comes before `__index__`. -/
 def asDouble : SV → Option Nat
   | .float x => some x
   | .int n | .index n => intToDouble n
   | .bool b => some (if b then 0x3FF0000000000000 else 0)
+  | .obj o =>
+    match o.float with
+    | some r => okOf r
+    | none =>
+      match o.index with
+      | some r => (okOf r).bind intToDouble
+      | none => none
   | _ => none
 
-/-- `PyComplex_AsCComplex`. -/
+/-- `PyComplex_AsCComplex`. `__complex__` comes first. -/
 def asCComplex : SV → Option (Nat × Nat)
   | .cplx a b => some (a, b)
+  | .obj { cplx := some r, .. } => okOf r
   | v => (asDouble v).map (·, 0)
 
 def notFloat : PyExc := structErr "required argument is not a float"
@@ -580,7 +628,7 @@ def runPack (f : FormatDef) (v : SV) : Py (List Nat) :=
       .error (structErr s!"'{f.format}' format requires 0 <= number <= {ulongMax}")
     | .error e => .error e
     | .ok x => .ok (twos 8 x)
-  | .npBool => .ok [if isTrue v then 1 else 0]
+  | .npBool => do return [if (← isTrue v) then 1 else 0]
   | .npHalffloat => packHalffloat v true
   | .npFloat => packFloatStd v true
   | .npDouble => packDoubleStd v true
@@ -604,7 +652,7 @@ def runPack (f : FormatDef) (v : SV) : Py (List Nat) :=
   | .bpUint => packUintStd f v false
   | .bpLonglong => packLonglongStd f v false
   | .bpUlonglong => packUlonglongStd f v false
-  | .bpBool => .ok [if isTrue v then 1 else 0]
+  | .bpBool => do return [if (← isTrue v) then 1 else 0]
   | .bpHalffloat => packHalffloat v false
   | .bpFloat => packFloatStd v false
   | .bpDouble => packDoubleStd v false
@@ -786,6 +834,11 @@ def packCall (e : FormatDef) (v : SV) : Py (List Nat) :=
   | .error (.overflowError _), .int _ => .error (structErr "int too large to convert")
   | r, _ => r
 
+/-- Did the conversion of this value call `Struct.__init__`? -/
+def SV.reinits : SV → Bool
+  | .obj o => o.reinit
+  | _ => false
+
 /-- One `while (j--)` turn of `s_pack_internal`: the whole buffer is threaded because
 `'p'` may write past its field. -/
 def packOne (code : Code) (buf : List Nat) (off : Nat) (v : SV) : Py (List Nat) :=
@@ -798,6 +851,8 @@ def packOne (code : Code) (buf : List Nat) (off : Nat) (v : SV) : Py (List Nat) 
     return overlay buf off w
   else do
     let w ← packCall e v
+    -- `res += code->size` and `code++` read the array a re-entrant `__init__` freed
+    if v.reinits then throw MEMORY
     return overlay buf off w
 
 /-- `while (j--)` of `s_pack_internal`; the result is the buffer and the unused args. -/
@@ -828,20 +883,18 @@ def structPack (s : SObj) (args : List SV) : Py (List Nat) :=
     -- slack, which `Finish` cuts off
     do return (← sPackInternal s (List.replicate (s.sSize + 1) 0) args).take s.sSize
 
-/-- `PyNumber_AsSsize_t(args[1], PyExc_IndexError)`. -/
-def asSsizeIndex (n : Int) : Py Int :=
+/-- `PyNumber_AsSsize_t(args[1], PyExc_IndexError)`: the message names the type of the argument, not
+of what `__index__` returned. -/
+def asSsizeIndex (n : Int) (ty : String := "int") : Py Int :=
   if n < longMin ∨ n > longMax then
-    .error (.indexError "cannot fit 'int' into an index-sized integer")
+    .error (.indexError s!"cannot fit '{ty}' into an index-sized integer")
   else .ok n
 
 /-- `s_pack_into`, `Modules/_struct.c:2304-2396`: the buffer afterwards. -/
-def structPackInto (s : SObj) (buffer : List Nat) (offset0 : Int) (args : List SV) :
+def packIntoBody (s : SObj) (buffer : List Nat) (offset : Int) (args : List SV) :
     Py (List Nat) := do
-  if args.length ≠ s.sLen then
-    throw (structErr s!"pack_into expected {s.sLen} items for packing (got {args.length})")
   let len : Int := buffer.length
   let size : Int := s.sSize
-  let offset ← asSsizeIndex offset0
   let offset ←
     if offset < 0 then
       if offset + size > 0 then
@@ -857,6 +910,138 @@ def structPackInto (s : SObj) (buffer : List Nat) (offset0 : Int) (args : List S
   let tail ← sPackInternal s (buffer.drop o) args
   -- `.take`: a `0p` count byte past the end of the buffer is not part of the object
   return (buffer.take o ++ tail).take buffer.length
+
+def structPackInto (s : SObj) (buffer : List Nat) (offset0 : Int) (args : List SV) :
+    Py (List Nat) := do
+  if args.length ≠ s.sLen then
+    throw (structErr s!"pack_into expected {s.sLen} items for packing (got {args.length})")
+  packIntoBody s buffer (← asSsizeIndex offset0) args
+
+/-- A buffer argument. `raises` is an object whose `__buffer__` raises. -/
+inductive BufArg where
+  | bytes (b : List Nat)
+  | bytearray (b : List Nat)
+  | notBuffer (ty : String)
+  | raises (ty : String) (e : PyExc)
+  deriving Repr, DecidableEq, Inhabited
+
+/-- `y*`, and `PyObject_GetBuffer` with `PyBUF_SIMPLE`: a raising `__buffer__` passes through. -/
+def readBuf : BufArg → Py (List Nat)
+  | .bytes b | .bytearray b => .ok b
+  | .notBuffer t => .error (.typeError s!"a bytes-like object is required, not '{t}'")
+  | .raises _ e => .error e
+
+/-- `w*`, `Modules/_struct.c:2335`: any failure, a raising `__buffer__` too, is this `TypeError`. -/
+def writeBuf : BufArg → Py (List Nat)
+  | .bytearray b => .ok b
+  | .bytes _ => .error (.typeError "argument must be read-write bytes-like object, not bytes")
+  | .notBuffer t | .raises t _ =>
+    .error (.typeError s!"argument must be read-write bytes-like object, not {t}")
+
+/-- An offset argument. `index` is an object with `__index__`, which may also call `__init__` on the
+`Struct`; `none` means it does not. -/
+inductive OffArg where
+  | int (n : Int)
+  | index (ty : String) (r : Py Int) (reinit : Option SObj)
+  | notIndex (ty : String)
+  deriving Inhabited
+
+/-- The type name of an offset. -/
+def OffArg.ty : OffArg → String
+  | .int _ => "int"
+  | .index t _ _ => t
+  | .notIndex t => t
+
+/-- `_PyNumber_Index`. -/
+def offNumber : OffArg → Py Int
+  | .int n => .ok n
+  | .index _ r _ => r
+  | .notIndex t => .error (.typeError s!"'{t}' object cannot be interpreted as an integer")
+
+/-- The clinic `Py_ssize_t` argument of `unpack_from`. -/
+def offSsize (a : OffArg) : Py Int := do ssizeArg (← offNumber a)
+
+/-- `Struct_unpack_impl`: the clinic takes the buffer first. -/
+def structUnpackA (s : SObj) (b : BufArg) : Py (List SV) := do
+  structUnpack s (← readBuf b)
+
+/-- `Struct_unpack_from_impl`: the clinic takes the buffer, then the offset. -/
+def structUnpackFromA (s : SObj) (b : BufArg) (off : OffArg) : Py (List SV) := do
+  let buf ← readBuf b
+  structUnpackFrom s buf (← offSsize off)
+
+/-- The arguments of `s_pack_into`. -/
+inductive PackIntoArgs where
+  | noBuffer
+  | noOffset
+  | full (b : BufArg) (off : OffArg) (args : List SV)
+  deriving Inhabited
+
+/-- `s_pack_into`, `Modules/_struct.c:2304-2396`, with the `Struct` as it is once the offset has been
+converted. `nargs` is checked against the `s_len` from before that conversion, so a longer format
+installed by `__index__` makes `s_pack_internal` read past `args`. -/
+def structPackIntoA (s : SObj) : PackIntoArgs → Py (List Nat)
+  | .noBuffer => .error (structErr "pack_into expected buffer argument")
+  | .noOffset => .error (structErr "pack_into expected offset argument")
+  | .full b off args =>
+    if args.length ≠ s.sLen then
+      .error (structErr s!"pack_into expected {s.sLen} items for packing (got {args.length})")
+    else do
+      let buffer ← writeBuf b
+      let n ← offNumber off
+      let offset ← asSsizeIndex n off.ty
+      let s' := match off with
+        | .index _ _ (some t) => t
+        | _ => s
+      if args.length < s'.sLen then throw MEMORY
+      packIntoBody s' buffer offset args
+
+/-- A `struct.unpack_iterator`: `so` is `NULL` once exhausted. The `Struct` is a shared object, so its
+current state is passed in. -/
+structure UIter where
+  live : Bool := true
+  buf : List Nat
+  index : Nat := 0
+  deriving Repr, DecidableEq, Inhabited
+
+/-- `Struct_iter_unpack_impl`, `Modules/_struct.c:2121-2154`. -/
+def structIterUnpackA (s : SObj) (b : BufArg) : Py UIter :=
+  if s.sSize = 0 then .error (structErr "cannot iteratively unpack with a struct of length 0")
+  else
+    match readBuf b with
+    | .error e => .error e
+    | .ok buf =>
+      if buf.length % s.sSize ≠ 0 then
+        .error (structErr s!"iterative unpacking requires a buffer of a multiple of {s.sSize} bytes")
+      else .ok { buf }
+
+/-- `unpackiter_iternext`, `Modules/_struct.c:2065-2086`: `none` is `StopIteration`. The bound on the
+read is only an `assert`, against the `s_size` of the moment, which `__init__` can have changed. -/
+def iterNextU (s : SObj) (it : UIter) : UIter × Py (Option (List SV)) :=
+  if !it.live then (it, .ok none)
+  else if it.index ≥ it.buf.length then ({ it with live := false }, .ok none)
+  else if it.index + s.sSize > it.buf.length then (it, .error MEMORY)
+  else
+    match sUnpackInternal s (it.buf.drop it.index) with
+    | .ok r => ({ it with index := it.index + s.sSize }, .ok (some r))
+    | .error e => ({ it with index := it.index + s.sSize }, .error e)
+
+/-- `unpackiter_len`, `Modules/_struct.c:2046-2058`: `/ s_size` is undefined when it is `0`, which
+`__init__` can make it. -/
+def iterLenU (s : SObj) (it : UIter) : Py Nat :=
+  if !it.live then .ok 0
+  else if s.sSize = 0 then .error MEMORY
+  else .ok ((it.buf.length - it.index) / s.sSize)
+
+/-- `list(iterator)`. -/
+def iterDrive (s : SObj) : (fuel : Nat) → UIter → Py (List (List SV))
+  | 0, _ => .error .modelFuel
+  | fuel + 1, it =>
+    match iterNextU s it with
+    | (_, .error e) => .error e
+    | (_, .ok none) => .ok []
+    | (it', .ok (some r)) => do
+      return r :: (← iterDrive s fuel it')
 
 /-- `s_sizeof`, `Modules/_struct.c:2417-2427` (`_PyObject_SIZE` is 56). -/
 def sSizeof (s : SObj) : Nat := 56 + 32 + 32 * s.codes.length
@@ -912,5 +1097,27 @@ def modUnpackFrom (f : FmtArg) (buf : List Nat) (off : Int) : Py (List SV) := do
 /-- `iter_unpack_impl`, `Modules/_struct.c:2699-2705`. -/
 def modIterUnpack (f : FmtArg) (buf : List Nat) : Py (List (List SV)) := do
   structIterUnpack (← cacheStruct f) buf
+
+/-- `unpack_impl` with its arguments as objects: the clinic converts the format, then the buffer. -/
+def modUnpackA (f : FmtArg) (b : BufArg) : Py (List SV) := do
+  structUnpackA (← cacheStruct f) b
+
+/-- `unpack_from_impl`: the format, then the buffer, then the offset. -/
+def modUnpackFromA (f : FmtArg) (b : BufArg) (off : OffArg) : Py (List SV) := do
+  structUnpackFromA (← cacheStruct f) b off
+
+/-- `iter_unpack_impl`, whose buffer is an `object` that `Struct_iter_unpack_impl` converts. -/
+def modIterUnpackA (f : FmtArg) (b : BufArg) : Py UIter := do
+  structIterUnpackA (← cacheStruct f) b
+
+/-- `pack`, `Modules/_struct.c:2591-2609`: the format is the first of `*args`. -/
+def modPackA : List SV → Option FmtArg → Py (List Nat)
+  | _, none => .error (.typeError "missing format argument")
+  | args, some f => do structPack (← cacheStruct f) args
+
+/-- `pack_into`, `Modules/_struct.c:2619-2637`. -/
+def modPackIntoA : PackIntoArgs → Option FmtArg → Py (List Nat)
+  | _, none => .error (.typeError "missing format argument")
+  | a, some f => do structPackIntoA (← cacheStruct f) a
 
 end PyLean.TextLibs.Struct
