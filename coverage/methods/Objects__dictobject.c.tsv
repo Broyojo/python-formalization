@@ -28,13 +28,13 @@ Objects/dictobject.c	897	909	new_dict_with_shared_keys	new_dict_with_shared_keys
 Objects/dictobject.c	913	969	clone_combined_dict_keys	clone_combined_dict_keys(PyDictObject *orig)	todo		withdrawn: the orig_size check (:3981) is not modelled and iterables here cannot re-enter
 Objects/dictobject.c	972	977	PyDict_New	PyDict_New(void)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/dictobject.c	981	999	lookdict_index	lookdict_index(PyDictKeysObject *k, Py_hash_t hash, Py_ssize_t index)	modelled	dict-delitem-refines	
-Objects/dictobject.c	1002	1043	do_lookup	do_lookup(PyDictObject *mp, PyDictKeysObject *dk, PyObject *key, Py_hash_t hash, int (*check_lookup)(PyDictObject *, PyDictKeysObject *, void *, Py_ssize_t ix, PyObject *key, Py_hash_t))	modelled	dict-lookup-found,dict-lookup-missing	
-Objects/dictobject.c	1046	1071	compare_unicode_generic	compare_unicode_generic(PyDictObject *mp, PyDictKeysObject *dk, void *ep0, Py_ssize_t ix, PyObject *key, Py_hash_t hash)	modelled	dict-lookup-found,dict-lookup-missing	
-Objects/dictobject.c	1075	1078	unicodekeys_lookup_generic	unicodekeys_lookup_generic(PyDictObject *mp, PyDictKeysObject* dk, PyObject *key, Py_hash_t hash)	modelled	dict-lookup-found	
+Objects/dictobject.c	1002	1043	do_lookup	do_lookup(PyDictObject *mp, PyDictKeysObject *dk, PyObject *key, Py_hash_t hash, int (*check_lookup)(PyDictObject *, PyDictKeysObject *, void *, Py_ssize_t ix, PyObject *key, Py_hash_t))	modelled	dict-lookup-found,dict-lookup-missing,dict-lookup-no-mutate	
+Objects/dictobject.c	1046	1071	compare_unicode_generic	compare_unicode_generic(PyDictObject *mp, PyDictKeysObject *dk, void *ep0, Py_ssize_t ix, PyObject *key, Py_hash_t hash)	modelled	dict-lookup-found,dict-lookup-missing,dict-lookup-no-mutate	
+Objects/dictobject.c	1075	1078	unicodekeys_lookup_generic	unicodekeys_lookup_generic(PyDictObject *mp, PyDictKeysObject* dk, PyObject *key, Py_hash_t hash)	modelled	dict-lookup-found,dict-lookup-no-mutate	
 Objects/dictobject.c	1081	1093	compare_unicode_unicode	compare_unicode_unicode(PyDictObject *mp, PyDictKeysObject *dk, void *ep0, Py_ssize_t ix, PyObject *key, Py_hash_t hash)	modelled	dict-lookup-found,dict-lookup-missing	
 Objects/dictobject.c	1096	1099	unicodekeys_lookup_unicode	unicodekeys_lookup_unicode(PyDictKeysObject* dk, PyObject *key, Py_hash_t hash)	todo		
-Objects/dictobject.c	1102	1127	compare_generic	compare_generic(PyDictObject *mp, PyDictKeysObject *dk, void *ep0, Py_ssize_t ix, PyObject *key, Py_hash_t hash)	modelled	dict-compare-generic-failure,dict-lookup-found,dict-lookup-missing	
-Objects/dictobject.c	1130	1133	dictkeys_generic_lookup	dictkeys_generic_lookup(PyDictObject *mp, PyDictKeysObject* dk, PyObject *key, Py_hash_t hash)	modelled	dict-lookup-found	
+Objects/dictobject.c	1102	1127	compare_generic	compare_generic(PyDictObject *mp, PyDictKeysObject *dk, void *ep0, Py_ssize_t ix, PyObject *key, Py_hash_t hash)	modelled	dict-compare-generic-failure,dict-lookup-found,dict-lookup-missing,dict-lookup-no-mutate	
+Objects/dictobject.c	1130	1133	dictkeys_generic_lookup	dictkeys_generic_lookup(PyDictObject *mp, PyDictKeysObject* dk, PyObject *key, Py_hash_t hash)	modelled	dict-lookup-found,dict-lookup-no-mutate	
 Objects/dictobject.c	1136	1139	check_keys_unicode	check_keys_unicode(PyDictKeysObject *dk, PyObject *key)	todo		
 Objects/dictobject.c	1142	1151	hash_unicode_key	hash_unicode_key(PyObject *key)	todo		
 Objects/dictobject.c	1160	1180	unicodekeys_lookup_split	unicodekeys_lookup_split(PyDictKeysObject* dk, PyObject *key, Py_hash_t hash)	todo		
@@ -80,12 +80,12 @@ Objects/dictobject.c	2345	2350	PyDict_GetItem	PyDict_GetItem(PyObject *op, PyObj
 Objects/dictobject.c	2353	2366	dict_unhashable_type	dict_unhashable_type(PyObject *key)	todo		
 Objects/dictobject.c	2369	2383	_PyDict_LookupIndex	_PyDict_LookupIndex(PyDictObject *mp, PyObject *key)	todo		
 Objects/dictobject.c	2390	2409	_PyDict_GetItem_KnownHash	_PyDict_GetItem_KnownHash(PyObject *op, PyObject *key, Py_hash_t hash)	todo		withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
-Objects/dictobject.c	2416	2432	_PyDict_GetItemRef_KnownHash_LockHeld	_PyDict_GetItemRef_KnownHash_LockHeld(PyDictObject *op, PyObject *key, Py_hash_t hash, PyObject **result)	todo		withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
-Objects/dictobject.c	2439	2462	_PyDict_GetItemRef_KnownHash	_PyDict_GetItemRef_KnownHash(PyDictObject *op, PyObject *key, Py_hash_t hash, PyObject **result)	todo		withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
-Objects/dictobject.c	2465	2481	PyDict_GetItemRef	PyDict_GetItemRef(PyObject *op, PyObject *key, PyObject **result)	todo		withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
+Objects/dictobject.c	2416	2432	_PyDict_GetItemRef_KnownHash_LockHeld	_PyDict_GetItemRef_KnownHash_LockHeld(PyDictObject *op, PyObject *key, Py_hash_t hash, PyObject **result)	modelled	dict-readers-faithful	
+Objects/dictobject.c	2439	2462	_PyDict_GetItemRef_KnownHash	_PyDict_GetItemRef_KnownHash(PyDictObject *op, PyObject *key, Py_hash_t hash, PyObject **result)	modelled	dict-readers-faithful	
+Objects/dictobject.c	2465	2481	PyDict_GetItemRef	PyDict_GetItemRef(PyObject *op, PyObject *key, PyObject **result)	modelled	dict-readers-faithful	
 Objects/dictobject.c	2484	2509	_PyDict_GetItemRef_Unicode_LockHeld	_PyDict_GetItemRef_Unicode_LockHeld(PyDictObject *op, PyObject *key, PyObject **result)	todo		withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
-Objects/dictobject.c	2516	2541	PyDict_GetItemWithError	PyDict_GetItemWithError(PyObject *op, PyObject *key)	todo		withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
-Objects/dictobject.c	2544	2552	_PyDict_GetItemWithError	_PyDict_GetItemWithError(PyObject *dp, PyObject *kv)	todo		withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
+Objects/dictobject.c	2516	2541	PyDict_GetItemWithError	PyDict_GetItemWithError(PyObject *op, PyObject *key)	modelled	dict-readers-faithful	
+Objects/dictobject.c	2544	2552	_PyDict_GetItemWithError	_PyDict_GetItemWithError(PyObject *dp, PyObject *kv)	modelled	dict-readers-faithful	
 Objects/dictobject.c	2555	2564	_PyDict_GetItemIdWithError	_PyDict_GetItemIdWithError(PyObject *dp, _Py_Identifier *key)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/dictobject.c	2567	2577	_PyDict_GetItemStringWithError	_PyDict_GetItemStringWithError(PyObject *v, const char *key)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/dictobject.c	2592	2614	_PyDict_LoadGlobal	_PyDict_LoadGlobal(PyDictObject *globals, PyDictObject *builtins, PyObject *key)	todo		
@@ -123,7 +123,7 @@ Objects/dictobject.c	3365	3399	dict_dealloc	dict_dealloc(PyObject *self)	exclude
 Objects/dictobject.c	3403	3486	dict_repr_lock_held	dict_repr_lock_held(PyObject *self)	todo		
 Objects/dictobject.c	3489	3496	dict_repr	dict_repr(PyObject *self)	todo		
 Objects/dictobject.c	3499	3502	dict_length	dict_length(PyObject *self)	todo		withdrawn: theorem is rfl on a thin definition
-Objects/dictobject.c	3505	3538	dict_subscript	dict_subscript(PyObject *self, PyObject *key)	todo		withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
+Objects/dictobject.c	3505	3538	dict_subscript	dict_subscript(PyObject *self, PyObject *key)	modelled	dict-readers-faithful	
 Objects/dictobject.c	3541	3547	dict_ass_sub	dict_ass_sub(PyObject *mp, PyObject *v, PyObject *w)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/dictobject.c	3556	3591	keys_lock_held	keys_lock_held(PyObject *dict)	todo		withdrawn: theorem covers combined tables only; the split branch of this body is unproved
 Objects/dictobject.c	3594	3602	PyDict_Keys	PyDict_Keys(PyObject *dict)	todo		withdrawn: theorem covers combined tables only; the split branch of this body is unproved
@@ -150,8 +150,8 @@ Objects/dictobject.c	4245	4252	PyDict_Size	PyDict_Size(PyObject *mp)	todo		withd
 Objects/dictobject.c	4259	4318	dict_equal_lock_held	dict_equal_lock_held(PyDictObject *a, PyDictObject *b)	todo		
 Objects/dictobject.c	4321	4329	dict_equal	dict_equal(PyDictObject *a, PyDictObject *b)	todo		
 Objects/dictobject.c	4332	4349	dict_richcompare	dict_richcompare(PyObject *v, PyObject *w, int op)	todo		
-Objects/dictobject.c	4363	4374	dict___contains___impl	dict___contains___impl(PyDictObject *self, PyObject *key) /*[clinic end generated code: output=1b314e6da7687dae input=fe1cb42ad831e820]*/	todo		withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
-Objects/dictobject.c	4387	4406	dict_get_impl	dict_get_impl(PyDictObject *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=bba707729dee05bf input=279ddb5790b6b107]*/	todo		withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
+Objects/dictobject.c	4363	4374	dict___contains___impl	dict___contains___impl(PyDictObject *self, PyObject *key) /*[clinic end generated code: output=1b314e6da7687dae input=fe1cb42ad831e820]*/	modelled	dict-readers-faithful	
+Objects/dictobject.c	4387	4406	dict_get_impl	dict_get_impl(PyDictObject *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=bba707729dee05bf input=279ddb5790b6b107]*/	modelled	dict-readers-faithful	
 Objects/dictobject.c	4409	4505	dict_setdefault_ref_lock_held	dict_setdefault_ref_lock_held(PyObject *d, PyObject *key, PyObject *default_value, PyObject **result, int incref_result)	modelled	dict-setdefault-no-crash	
 Objects/dictobject.c	4508	4516	PyDict_SetDefaultRef	PyDict_SetDefaultRef(PyObject *d, PyObject *key, PyObject *default_value, PyObject **result)	todo		withdrawn: the counterexample does not run this function
 Objects/dictobject.c	4519	4526	PyDict_SetDefault	PyDict_SetDefault(PyObject *d, PyObject *key, PyObject *defaultobj)	todo		
@@ -167,9 +167,9 @@ Objects/dictobject.c	4752	4760	_PyDict_KeysSize	_PyDict_KeysSize(PyDictKeysObjec
 Objects/dictobject.c	4769	4773	dict___sizeof___impl	dict___sizeof___impl(PyDictObject *self) /*[clinic end generated code: output=44279379b3824bda input=4fec4ddfc44a4d1a]*/	todo		
 Objects/dictobject.c	4776	4790	dict_or	dict_or(PyObject *self, PyObject *other)	todo		
 Objects/dictobject.c	4793	4799	dict_ior	dict_ior(PyObject *self, PyObject *other)	todo		withdrawn: the orig_size check (:3981) is not modelled and iterables here cannot re-enter
-Objects/dictobject.c	4837	4846	PyDict_Contains	PyDict_Contains(PyObject *op, PyObject *key)	todo		withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
+Objects/dictobject.c	4837	4846	PyDict_Contains	PyDict_Contains(PyObject *op, PyObject *key)	modelled	dict-readers-faithful	
 Objects/dictobject.c	4849	4858	PyDict_ContainsString	PyDict_ContainsString(PyObject *op, const char *key)	todo		withdrawn: theorem is rfl on a thin definition
-Objects/dictobject.c	4862	4882	_PyDict_Contains_KnownHash	_PyDict_Contains_KnownHash(PyObject *op, PyObject *key, Py_hash_t hash)	todo		withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
+Objects/dictobject.c	4862	4882	_PyDict_Contains_KnownHash	_PyDict_Contains_KnownHash(PyObject *op, PyObject *key, Py_hash_t hash)	modelled	dict-readers-faithful	
 Objects/dictobject.c	4885	4892	_PyDict_ContainsId	_PyDict_ContainsId(PyObject *op, _Py_Identifier *key)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/dictobject.c	4914	4938	dict_new	dict_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		withdrawn: theorem is rfl on a thin definition
 Objects/dictobject.c	4941	4944	dict_init	dict_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		

@@ -2,6 +2,8 @@ import PyLean.Registry
 import PyLean.DictSet.Diff
 import PyLean.DictSet.Props4
 import PyLean.DictSet.Failure
+import PyLean.DictSet.Readers
+import PyLean.DictSet.Mutation
 import PyLean.DictSet.SetProps
 import PyLean.DictSet.Findings
 
@@ -106,6 +108,19 @@ def entries : List Entry := [
     statement := "Each C API read returns what the association list holds for the key and leaves the dict unchanged."
     source := "Doc/c-api/dict.rst", status := .proven
     prop := ``ReadFamily, thm := some ``readFamily_proven },
+  { id := "dict-lookup-no-mutate", pyFile := "Objects/dictobject.c",
+    pyFns := ["do_lookup", "compare_generic", "compare_unicode_generic", "dictkeys_generic_lookup",
+      "unicodekeys_lookup_generic"]
+    statement := "If __eq__ never mutates the dict (a lying comparison that returns arbitrary booleans but leaves the object alone), then _Py_dict_lookup leaves the table byte-identical, whatever it answers, so Chain/WF/DictInv all survive. The only route by which lookup can change the table is a genuinely mutating __eq__."
+    source := "dictobject.c:1001-1133; the dk re-read and DKIX_KEY_CHANGED checks at 1062, 1118", status := .proven
+    prop := ``InvUnderLyingEq, thm := some ``invUnderLyingEq_proven },
+  { id := "dict-readers-faithful", pyFile := "Objects/dictobject.c",
+    pyFns := ["PyDict_GetItemRef", "_PyDict_GetItemRef_KnownHash_LockHeld", "_PyDict_GetItemRef_KnownHash",
+      "PyDict_GetItemWithError", "_PyDict_GetItemWithError", "PyDict_Contains", "_PyDict_Contains_KnownHash",
+      "dict___contains___impl", "dict_subscript", "dict_get_impl"]
+    statement := "For every key protocol, including a hash or __eq__ that raises or mutates the dict, each reader is faithful to _Py_dict_lookup: a raising hash or lookup propagates with the state the lookup left, and a slot with ix >= 0 but no value (a split key this dict lacks) reads as absent and is never dereferenced."
+    source := "dictobject.c:2420-2509, 2537, 4835-4882, 3504-3538, 4386-4406; the ix>=0,value==NULL note at 1915-1922", status := .proven
+    prop := ``ReadersFaithful, thm := some ``readersFaithful_proven },
   { id := "dict-contains", pyFile := "Objects/dictobject.c",
     pyFns := []
     statement := "key in d is true exactly when the association list holds the key; the dict is unchanged."
