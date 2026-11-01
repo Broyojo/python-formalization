@@ -1,5 +1,7 @@
 import PyLean.DiffCore
 import PyLean.DictSet.Objects
+import PyLean.DictSet.ODictPy
+import PyLean.DictSet.Managed
 
 /-! Differential-testing handler for `dictset` cases (`"mod": "dictset"`).
 
@@ -19,12 +21,24 @@ inductive It where
   | s (slot : Nat) (si : SetIter)
   deriving Inhabited
 
+abbrev OD := ODict DObj DObj
+abbrev POD := PyOD DObj DObj
+
 structure St where
   pool : Array DObj
   ds : Array DD
   ss : Array DS
   its : Array (Option It)
   next : Nat
+  ods : Array OD := #[]
+  oits : Array (Option (ODictIter DObj)) := #[]
+  pods : Array POD := #[]
+  gens : Array (Option (Nat × IterKind × PyODGen)) := #[]
+  keys : Keys DObj Unit := default
+  insts : Array (Option (Inst DObj DObj)) := #[]
+  touched : Array Bool := #[]
+  nextDict : Nat := 1000
+  names : List DObj := []
   deriving Inhabited
 
 def enc : DObj → Json
@@ -39,7 +53,7 @@ def encDict (d : DD) : Json :=
 def encSet (s : DS) : Json :=
   Json.arr #[encs ((setEntries s).map (·.1)), toJson s.sizeOf]
 
-def digest (st : St) : Json :=
+def digestBase (st : St) : Json :=
   Json.arr #[Json.arr (st.ds.map encDict), Json.arr (st.ss.map encSet)]
 
 def okJ (v : Json) : Json := Json.mkObj [("ok", v)]
@@ -59,7 +73,8 @@ def parseAtom (j : Json) : Except String Atom := do
   return { uid := ← getNat j "u", cls := ← getNat j "c", hash := ← getInt j "h"
            hkind := ← getNat j "hk", isStr := ← getBool j "s", isStrLike := ← getBool j "sl"
            raises := ← getBool j "r", act := ← getNat j "a", rep := ← getStr j "rep"
-           tname := ← getStr j "t", fs := ← getOptInt j "fs" }
+           tname := ← getStr j "t", fs := ← getOptInt j "fs"
+           nan := (j.getObjValAs? Bool "nan").toOption.getD false }
 
 def arg (op : Array Json) (k : Nat) : Except String Json :=
   match op[k]? with
@@ -140,7 +155,10 @@ def updArg (st : St) (j : Json) : Except String (UpdateArg DObj DObj) := do
   let tag ← (← arg a 0).getStr?
   match tag with
   | "d" => return .exact st.ds[← argN a 1]!
-  | "sub" => return .other (.ok true) (.dict st.ds[← argN a 1]!) { items := [] }
+  | "sub" =>
+    -- The test copies the dict into a subclass instance with `dict.update`.
+    let (_, c) := dictMerge dProto (.dict st.ds[← argN a 1]!) 1 ({ ident := 77 } : DD)
+    return .other (.ok true) (.dict c) { items := [] }
   | "p" =>
     let items ← (← arrOf (← arg a 1)).mapM (seq2Item st)
     let stop ← (← arg a 2).getBool?
@@ -482,6 +500,304 @@ def stepView (st : St) (name : String) (a : Array Json) : Except String (Option 
     | _ => throw "v_len"
   | _ => return none
 
+/-- `__map`'s comparison: a plain dict of the same keys. -/
+def mapProto : Proto DObj (PyDict DObj Nat) :=
+  { dKeyOps with eq := fun a b s => (DObj.eq a b, s) }
+
+def pairItem (twin : Bool) (st : St) (j : Json) : Except String (PairItem DObj DObj) := do
+  let a ← j.getArr?
+  let tag ← (← arg a 0).getStr?
+  match tag with
+  | "p" => return .pair (← obj st (← arg a 1)) (← obj st (← arg a 2))
+  | "b" =>
+    return .notIter (.typeError (if twin then "cannot unpack non-iterable int object"
+                                 else "'int' object is not iterable"))
+  | "l" => return .wrong (← argN a 1)
+  | t => throw s!"pair item {t}"
+
+/-- `['d', slot]`, `['m', keys, pairs]`, `['p', items, stop]`, `['it', items, iter]`, `['n']`. -/
+def odArg (twin : Bool) (st : St) (j : Json) : Except String (ODictArg DObj DObj) := do
+  let a ← j.getArr?
+  let tag ← (← arg a 0).getStr?
+  let pitems (x : Json) : Except String (List (PairItem DObj DObj)) := do
+    (← arrOf x).mapM (pairItem twin st)
+  match tag with
+  | "d" => return .exact st.ds[← argN a 1]!
+  | "m" =>
+    let ks ← objs st (← arg a 1)
+    let ps ← (← arrOf (← arg a 2)).mapM fun p => do
+      let q ← p.getArr?
+      return ((← obj st (← arg q 0)), (← obj st (← arg q 1)))
+    return .keysObj { items := ks } fun k =>
+      match ps.find? (fun p => p.1 == k) with
+      | some p => .ok p.2
+      | none => .error (keyErr dProto k)
+  | "p" =>
+    let stop ← (← arg a 2).getBool?
+    return .pairs { items := ← pitems (← arg a 1)
+                    stop := if stop then some (.valueError "stop") else none }
+  | "it" => return .itemsObj { items := ← pitems (← arg a 1) } { items := ← pitems (← arg a 2) }
+  | "n" => return .pairs { getIter := some (.typeError "'int' object is not iterable"), items := [] }
+  | t => throw s!"od arg {t}"
+
+def withO {α : Type} (st : St) (i : Nat) (m : OM DObj DObj α) : Py α × St :=
+  let (r, d) := m st.ods[i]!
+  (r, { st with ods := st.ods.set! i d })
+
+def withP {α : Type} (st : St) (i : Nat) (m : PM DObj DObj α) : Py α × St :=
+  let (r, d) := m st.pods[i]!
+  (r, { st with pods := st.pods.set! i d })
+
+def encKVo (kind : IterKind) (p : DObj × Option DObj) : Json :=
+  match kind, p.2 with
+  | .value, some v => enc v
+  | .item, some v => Json.arr #[enc p.1, enc v]
+  | _, _ => enc p.1
+
+def iterKindOf (s : String) : IterKind :=
+  match s with
+  | "k" => .key
+  | "v" => .value
+  | _ => .item
+
+def stepOD (st : St) (name : String) (a : Array Json) : Except String (Option (Json × St)) := do
+  let i := (a[1]?.bind fun j => j.getNat?.toOption).getD 0
+  let k (n : Nat) : Except String DObj := do obj st (← arg a n)
+  let P := dProto
+  match name with
+  | "o_set" => return some (resJ unitJ (withO st i (odictSetItem P (← k 2) (← k 3))))
+  | "o_del" => return some (resJ unitJ (withO st i (odictDelItem P (← k 2))))
+  | "o_get" => return some (resJ enc (withO st i (onDict (dictSubscript P none (← k 2)))))
+  | "o_in" => return some (resJ toJson (withO st i (onDict (pyDictContains P (← k 2)))))
+  | "o_pop" => return some (resJ enc (withO st i (odictPop P (← k 2) none)))
+  | "o_popd" => return some (resJ enc (withO st i (odictPop P (← k 2) (some (← k 3)))))
+  | "o_popitem" =>
+    return some (resJ encPair (withO st i (odictPopitem P (← (← arg a 2).getBool?))))
+  | "o_sdef" => return some (resJ enc (withO st i (odictSetdefault P (← k 2) (← k 3))))
+  | "o_mte" =>
+    return some (resJ unitJ (withO st i (odictMoveToEnd P (← k 2) (← (← arg a 3).getBool?))))
+  | "o_clear" => return some (okJ Json.null, { st with ods := st.ods.set! i (odictClear st.ods[i]!) })
+  | "o_copy" =>
+    let (id, st) := fresh st
+    match odictCopy P st.ods[i]! id with
+    | .ok r => return some (okJ Json.null, { st with ods := st.ods.set! 2 r })
+    | .error e => return some (errJ e, st)
+  | "o_upd" =>
+    let kw ← (← arrOf (← arg a 3)).mapM fun p => do
+      let q ← p.getArr?
+      return ((← obj st (← arg q 0)), (← obj st (← arg q 1)))
+    return some (resJ unitJ (withO st i (mutablemappingUpdate P [← odArg false st (← arg a 2)] kw)))
+  | "o_ior" =>
+    return some (resJ unitJ (withO st i (odictInplaceOr P (← odArg false st (← arg a 2)))))
+  | "o_or" =>
+    let (id, st) := fresh st
+    match odictOr P st.ods[i]! id (← odArg false st (← arg a 2)) with
+    | .ok r => return some (okJ Json.null, { st with ods := st.ods.set! 2 r })
+    | .error e => return some (errJ e, st)
+  | "o_eq" =>
+    let j ← argN a 2
+    let ne ← (← arg a 3).getBool?
+    return some (enc1 toJson (odictRichcompare P dEnv.veq st.ods[i]! st.ods[j]! ne), st)
+  | "o_eqd" =>
+    let j ← argN a 2
+    let ne ← (← arg a 3).getBool?
+    return some (enc1 toJson (odictEqDict P dEnv.veq st.ods[i]! st.ds[j]! ne), st)
+  | "o_fromkeys" =>
+    let (id, st) := fresh st
+    match odictFromkeys P id { items := ← objs st (← arg a 2) } (← k 3) with
+    | .ok r => return some (okJ Json.null, { st with ods := st.ods.set! 2 r })
+    | .error e => return some (errJ e, st)
+  | "o_repr" =>
+    return some (enc1 toJson (odictRepr P (fun x => .ok x.reprStr) (fun x => .ok x.reprStr)
+      "OrderedDict" false st.ods[i]!), st)
+  | "o_itnew" =>
+    let n ← argN a 1
+    let slot ← argN a 2
+    let kind := iterKindOf (← (← arg a 3).getStr?)
+    let rev ← (← arg a 4).getBool?
+    return some (okJ Json.null,
+      { st with oits := st.oits.set! n (some (odictiterNew st.ods[slot]! kind rev)) })
+  | "o_itnext" =>
+    let n ← argN a 1
+    let slot ← argN a 2
+    match st.oits[n]! with
+    | none => throw "no iterator"
+    | some di =>
+      let (r, di', od') := odictiterIternext P st.ods[slot]! di
+      let st := { st with oits := st.oits.set! n (some di'), ods := st.ods.set! slot od' }
+      match r with
+      | .ok (some x) => return some (okJ (encKVo di.kind x), st)
+      | .ok none => return some (errJ .stopIteration, st)
+      | .error e => return some (errJ e, st)
+  -- The underlying dict, bypassing the odict.
+  | "r_set" => return some (resJ unitJ (withO st i (onDict (dictSetItem P (← k 2) (← k 3)))))
+  | "r_del" => return some (resJ unitJ (withO st i (onDict (dictDelItem P (← k 2)))))
+  | "r_popitem" => return some (resJ encPair (withO st i (onDict dictPopitem)))
+  | "r_pop" => return some (resJ enc (withO st i (onDict (dictPopDefault P (← k 2) none))))
+  | "r_clear" =>
+    let od := st.ods[i]!
+    return some (okJ Json.null, { st with ods := st.ods.set! i { od with d := dictClear od.d } })
+  | _ => return none
+
+def stepPOD (st : St) (name : String) (a : Array Json) : Except String (Option (Json × St)) := do
+  let i := (a[1]?.bind fun j => j.getNat?.toOption).getD 0
+  let k (n : Nat) : Except String DObj := do obj st (← arg a n)
+  let P := dProto
+  let Q := mapProto
+  match name with
+  | "p_set" => return some (resJ unitJ (withP st i (pyodSetItem P Q (← k 2) (← k 3))))
+  | "p_del" => return some (resJ unitJ (withP st i (pyodDelItem P Q (← k 2))))
+  | "p_get" => return some (resJ enc (withP st i (onD (dictSubscript P none (← k 2)))))
+  | "p_in" => return some (resJ toJson (withP st i (onD (pyDictContains P (← k 2)))))
+  | "p_pop" => return some (resJ enc (withP st i (pyodPop P Q (← k 2) none)))
+  | "p_popd" => return some (resJ enc (withP st i (pyodPop P Q (← k 2) (some (← k 3)))))
+  | "p_popitem" =>
+    return some (resJ encPair (withP st i (pyodPopitem P Q (← (← arg a 2).getBool?))))
+  | "p_sdef" => return some (resJ enc (withP st i (pyodSetdefault P Q (← k 2) (← k 3))))
+  | "p_mte" =>
+    return some (resJ unitJ (withP st i (pyodMoveToEnd Q (← k 2) (← (← arg a 3).getBool?))))
+  | "p_clear" => return some (okJ Json.null, { st with pods := st.pods.set! i (pyodClear st.pods[i]!) })
+  | "p_copy" =>
+    let (id, st) := fresh st
+    match pyodCopy P Q st.pods[i]! id with
+    | .ok r => return some (okJ Json.null, { st with pods := st.pods.set! 2 r })
+    | .error e => return some (errJ e, st)
+  | "p_upd" =>
+    let kw ← (← arrOf (← arg a 3)).mapM fun p => do
+      let q ← p.getArr?
+      return ((← obj st (← arg q 0)), (← obj st (← arg q 1)))
+    return some (resJ unitJ (withP st i (pyodUpdate P Q (some (← odArg true st (← arg a 2))) kw)))
+  | "p_ior" =>
+    return some (resJ unitJ (withP st i (pyodIor P Q (← odArg true st (← arg a 2)))))
+  | "p_or" =>
+    let (id, st) := fresh st
+    match pyodOr P Q st.pods[i]! id (← odArg true st (← arg a 2)) with
+    | .ok r => return some (okJ Json.null, { st with pods := st.pods.set! 2 r })
+    | .error e => return some (errJ e, st)
+  | "p_eq" =>
+    let j ← argN a 2
+    let ne ← (← arg a 3).getBool?
+    let r := pyodEq P dEnv.veq DObj.plainEq st.pods[i]! st.pods[j]!
+    return some (enc1 (fun b => toJson (b != ne)) r, st)
+  | "p_fromkeys" =>
+    let (id, st) := fresh st
+    match pyodFromkeys P Q id { items := ← objs st (← arg a 2) } (← k 3) with
+    | .ok r => return some (okJ Json.null, { st with pods := st.pods.set! 2 r })
+    | .error e => return some (errJ e, st)
+  | "p_itnew" =>
+    let n ← argN a 1
+    let slot ← argN a 2
+    let kind := iterKindOf (← (← arg a 3).getStr?)
+    let rev ← (← arg a 4).getBool?
+    return some (okJ Json.null, { st with gens := st.gens.set! n (some (slot, kind, { rev })) })
+  | "p_itnext" =>
+    let n ← argN a 1
+    match st.gens[n]! with
+    | none => throw "no generator"
+    | some (slot, kind, g) =>
+      let o := st.pods[slot]!
+      let (r, g') := pyodGenNext o g
+      let st := { st with gens := st.gens.set! n (some (slot, kind, g')) }
+      match r with
+      | .ok (some x) =>
+        match kind with
+        | .key => return some (okJ (enc x), st)
+        | _ =>
+          -- `yield self._mapping[key]`, `yield (key, self._mapping[key])`
+          match (dictSubscript P none x o.d).1 with
+          | .ok v =>
+            return some (okJ (match kind with
+              | .value => enc v
+              | _ => Json.arr #[enc x, enc v]), st)
+          | .error e =>
+            return some (errJ e, { st with gens := st.gens.set! n (some (slot, kind, { g' with state := .done })) })
+      | .ok none => return some (errJ .stopIteration, st)
+      | .error e => return some (errJ e, st)
+  | _ => return none
+
+/-- The state of instance `n`, as `Managed.lean` wants it, and writing it back. -/
+def objSt (st : St) (n : Nat) : ObjSt DObj DObj :=
+  { keys := st.keys, inst := st.insts[n]!.getD default, nextDict := st.nextDict }
+
+def putObj (st : St) (n : Nat) (s : ObjSt DObj DObj) : St :=
+  { st with keys := s.keys, insts := st.insts.set! n (some s.inst), nextDict := s.nextDict }
+
+def withI {α : Type} (st : St) (n : Nat) (m : IM DObj DObj α) : Py α × St :=
+  let (r, s) := m (objSt st n)
+  (r, putObj st n s)
+
+/-- `object.__delattr__`: a `KeyError` from the dict becomes `AttributeError`
+(`_PyObject_GenericSetAttrWithDict`). -/
+def delAttrErr (st : St) (name : DObj) (r : Json × St) : Json × St :=
+  match r.1.getObjVal? "exc" with
+  | .ok (.str "KeyError") =>
+    (errJ (attributeError s!"'C' object has no attribute {name.reprStr}"), r.2)
+  | _ => r
+
+def stepInst (st : St) (name : String) (a : Array Json) : Except String (Option (Json × St)) := do
+  let n := (a[1]?.bind fun j => j.getNat?.toOption).getD 0
+  let k (i : Nat) : Except String DObj := do obj st (← arg a i)
+  let P := dProto
+  let touch (st : St) : St := { st with touched := st.touched.set! n true }
+  match name with
+  | "i_new" =>
+    let (keys', inst) := initInlineValues st.keys
+    return some (okJ Json.null, { st with
+      keys := keys', insts := st.insts.set! n (some inst), touched := st.touched.set! n false })
+  | "i_set" =>
+    return some (resJ unitJ (withI st n (storeInstanceAttribute P "C" (← k 2) (some (← k 3)))))
+  | "i_del" =>
+    let nm ← k 2
+    let r := resJ unitJ (withI st n (storeInstanceAttribute P "C" nm none))
+    return some (delAttrErr st nm r)
+  | "i_get" =>
+    let nm ← k 2
+    let (r, st') := withI st n (genericGetAttr P nm)
+    match r with
+    | .ok (some v) => return some (okJ (enc v), st')
+    | .ok none => return some (errJ (attributeError s!"'C' object has no attribute {nm.reprStr}"), st')
+    | .error e => return some (errJ e, st')
+  | "i_dict" =>
+    return some (resJ (fun _ => Json.null) (withI (touch st) n ensureManagedDict))
+  | "i_deldict" =>
+    let st' := putObj st n (setManagedDict (objSt st n) none)
+    return some (okJ Json.null, { st' with touched := st'.touched.set! n false })
+  | "i_setdict" =>
+    let ps ← (← arrOf (← arg a 2)).mapM fun p => do
+      let q ← p.getArr?
+      return ((← obj st (← arg q 0)), (← obj st (← arg q 1)))
+    let (id, st) := fresh st
+    match dictFromItems P id ps with
+    | .error e => return some (errJ e, st)
+    | .ok d =>
+      let st' := putObj st n (setManagedDict (objSt st n) (some d))
+      return some (okJ Json.null, touch st')
+  | "i_copy" =>
+    let (id, st) := fresh st
+    let (r, st') := withI (touch st) n ensureManagedDict
+    match r with
+    | .error e => return some (errJ e, st')
+    | .ok d => return some (toDSlot2 st' (dictCopy P (refreshKeys st'.keys d) id false (.dict d)))
+  | "i_d" =>
+    -- A dict operation on `o.__dict__`: run the dict handler with the dict in a scratch slot.
+    let (r, st') := withI (touch st) n ensureManagedDict
+    match r with
+    | .error e => return some (errJ e, st')
+    | .ok d =>
+      let sub := (← arg a 2)
+      let b ← sub.getArr?
+      let inner ← (← arg b 0).getStr?
+      let d' := refreshKeys st'.keys d
+      let before := isInlineDict d'
+      let st2 := { st' with ds := st'.ds.set! 2 d' }
+      match ← stepDict st2 inner (#[Json.str inner, toJson (2 : Nat)] ++ b.extract 1 b.size) with
+      | none => throw s!"i_d {inner}"
+      | some (res, st3) =>
+        let s := objSt st3 n
+        let s' := syncDict before st3.ds[2]! s
+        return some (res, touch (putObj { st3 with ds := st3.ds.set! 2 st'.ds[2]! } n s'))
+  | _ => return none
+
 def step (st : St) (op : Json) : Except String (Json × St) := do
   let a ← op.getArr?
   let name ← (← arg a 0).getStr?
@@ -489,30 +805,109 @@ def step (st : St) (op : Json) : Except String (Json × St) := do
   if let some r := ← stepIter st name a then return r
   if let some r := ← stepSet st name a then return r
   if let some r := ← stepView st name a then return r
+  if let some r := ← stepOD st name a then return r
+  if let some r := ← stepPOD st name a then return r
+  if let some r := ← stepInst st name a then return r
   throw s!"unknown op {name}"
+
+/-- `[__sizeof__, dict.keys(od), list(od)]`. `list(od)` can rebuild `od_fast_nodes`, so the
+digest threads the state, as the Python side does by running the same code. -/
+def digestOD (limit : Nat) (od : OD) : Json × OD :=
+  let size := odictSizeOf od
+  let ks := dictKeysList od.d
+  let (r, _, od') := odictiterTake dProto limit od (odictiterNew od .key false) []
+  (Json.arr #[toJson size, encs ks, enc1 (fun l => encs (l.map (·.1))) r], od')
+
+def digestPOD (o : POD) : Json :=
+  Json.arr #[encs (dictKeysList o.d), encs (dictValuesList o.d), encs o.keysList]
+
+/-- Digest of instance `n`: every attribute by name; and the dict, if the scenario has looked
+at it (a digest must not materialize one). -/
+def digestInst (st : St) (n : Nat) : Except String (Json × St) := do
+  match st.insts[n]! with
+  | none => return (Json.null, st)
+  | some _ =>
+    let mut st := st
+    let mut attrs : Array Json := #[]
+    -- `getattr` may materialize a dict, so the state is threaded.
+    for nm in st.names do
+      let (r, st') := withI st n (genericGetAttr dProto nm)
+      st := st'
+      attrs := attrs.push (match r with
+        | .ok (some v) => enc v
+        | _ => Json.null)
+    if st.touched[n]! then
+      let (r, st') := withI st n ensureManagedDict
+      match r with
+      | .ok d => return (Json.arr #[Json.arr attrs, encDict (refreshKeys st'.keys d)], st')
+      | .error _ => throw "digest"
+    else return (Json.arr #[Json.arr attrs, Json.null], st)
+
+def digest (st : St) : Except String (Json × St) := do
+  let mut st := st
+  let mut ods : Array Json := #[]
+  for i in [0:st.ods.size] do
+    let (j, od') := digestOD (st.pool.size + 2) st.ods[i]!
+    st := { st with ods := st.ods.set! i od' }
+    ods := ods.push j
+  let mut insts : Array Json := #[]
+  for i in [0:st.insts.size] do
+    let (j, st') ← digestInst st i
+    st := st'
+    insts := insts.push j
+  -- A copy of a split dict shares the class's keys, which may have moved on.
+  let base := digestBase { st with ds := st.ds.map (refreshKeys st.keys) }
+  return (Json.arr #[base, Json.arr ods, Json.arr (st.pods.map digestPOD), Json.arr insts], st)
+
+/-- A crash ends the scenario, as it does the process. -/
+def isCrash (r : Json) : Bool :=
+  match r.getObjVal? "exc" with
+  | .ok (.str "<crash>") => true
+  | _ => false
 
 def runOps (st : St) : List Json → Array Json → Except String (Array Json)
   | [], acc => .ok acc
   | op :: rest, acc => do
     let (r, st') ← step st op
-    runOps st' rest (acc.push (Json.arr #[r, digest st']))
+    if isCrash r then return acc.push (Json.arr #[r, Json.null])
+    let (dg, st'') ← digest st'
+    runOps st'' rest (acc.push (Json.arr #[r, dg]))
 
-def initSt (pool : Array DObj) : St :=
-  { pool
+def initSt (pool : Array DObj) (names : List DObj) : St :=
+  { pool, names
     ds := #[{ ident := 1 }, { ident := 2 }, { ident := 3 }]
     ss := #[{ ident := 11 }, { ident := 12 }, { ident := 13 }]
     its := #[none, none, none, none]
-    next := 100 }
+    next := 100
+    keys := dictNewKeysForClass dProto [] }
 
 def run (fn : String) (j : Json) : Except String Json := do
   let poolJ ← arrOf (← field j "pool")
   let pool ← poolJ.mapM parseAtom
-  let st := initSt (pool.map DObj.atom).toArray
+  let poolA := (pool.map DObj.atom).toArray
+  let st := initSt poolA []
+  let ops ← arrOf (← field j "ops")
   match fn with
   | "scenario" =>
-    let ops ← arrOf (← field j "ops")
-    let r ← runOps st ops #[]
-    return okJ (Json.arr r)
+    return okJ (Json.arr (← runOps st ops #[]))
+  | "odict" =>
+    let st := { st with
+      ods := #[odictNew 21, odictNew 22, odictNew 23]
+      oits := #[none, none, none, none]
+      touched := #[false, false, false, false] }
+    return okJ (Json.arr (← runOps st ops #[]))
+  | "pyod" =>
+    let st := { st with
+      pods := #[pyodNew 31, pyodNew 33, pyodNew 35]
+      gens := #[none, none, none, none] }
+    return okJ (Json.arr (← runOps st ops #[]))
+  | "instances" =>
+    let names ← (← arrOf (← field j "names")).mapM (obj st)
+    let st := { st with
+      names
+      insts := #[none, none, none]
+      touched := #[false, false, false] }
+    return okJ (Json.arr (← runOps st ops #[]))
   | _ => throw s!"unknown fn {fn}"
 
 def handler : Handler := fun fn j => some (run fn j)

@@ -13,9 +13,13 @@ needs no model of str or float hashing.
 Slots 0 and 1 keep their object; slot 2 receives results, so iterators stay valid.
 """
 
+import importlib.util
+import itertools
 import json
-import random
+import os
+import resource
 import sys
+from collections import OrderedDict
 
 import common
 
@@ -104,6 +108,39 @@ class DictSub(dict):
     """Keeps dict's tp_iter, so dict_merge takes the fast path."""
 
 
+class ItemsOnly:
+    """No keys(): `items` matters to odict's C update, iteration to the pure-Python one."""
+
+    def __init__(self, its, it):
+        self.its, self.it = its, it
+
+    def items(self):
+        return list(self.its)
+
+    def __iter__(self):
+        return iter(self.it)
+
+
+def load_py_ordereddict():
+    """The pure-Python OrderedDict, with `_collections` hidden from the module."""
+    import collections
+    saved = sys.modules.get("_collections")
+    sys.modules["_collections"] = None
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "py_collections", collections.__file__,
+            submodule_search_locations=collections.__path__)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+    finally:
+        sys.modules["_collections"] = saved
+    return mod.OrderedDict
+
+
+PyOrderedDict = load_py_ordereddict()
+assert PyOrderedDict is not OrderedDict and "popitem" in PyOrderedDict.__dict__
+
+
 # hash(nan) depends on the object's address, so a scenario must not rebuild them.
 NANS = [float("nan"), float("nan")]
 
@@ -120,7 +157,8 @@ def build(spec):
     if kind == "nan":
         return NANS[p]
     if kind == "str":
-        return p
+        # setattr() interns the name, and the key in __dict__ must be the pool object.
+        return sys.intern(p)
     if kind == "strsub":
         return S(p)
     if kind == "K":
@@ -165,6 +203,7 @@ class Pool:
         spec["sl"] = isinstance(o, str)
         spec["rep"] = repr(o)
         spec["t"] = type(o).__name__
+        spec["nan"] = kind == "nan"
         self.specs.append(spec)
         return u
 
@@ -542,24 +581,230 @@ def gen_evil(rng):
     return pool, ops, target
 
 
+def pair_item(rng, n):
+    r = rng.random()
+    if r < 0.9:
+        return ["p", rng.randrange(n), rng.randrange(n)]
+    if r < 0.95:
+        return ["b"]
+    return ["l", rng.choice([0, 1, 3])]
+
+
+def od_arg(rng, n):
+    k = lambda: rng.randrange(n)
+    r = rng.random()
+    if r < 0.3:
+        return ["d", rng.randrange(2)]
+    if r < 0.55:
+        ks = [k() for _ in range(rng.randint(0, 6))]
+        return ["m", ks, [[x, k()] for x in ks if rng.random() < 0.9]]
+    if r < 0.8:
+        return ["p", [pair_item(rng, n) for _ in range(rng.randint(0, 6))], rng.random() < 0.1]
+    if r < 0.95:
+        return ["it", [pair_item(rng, n) for _ in range(rng.randint(0, 3))],
+                [pair_item(rng, n) for _ in range(rng.randint(0, 3))]]
+    return ["n"]
+
+
+def od_ops(rng, n, p, specs):
+    """One OrderedDict operation; `p` is the prefix, `o_` for C and `p_` for pure Python."""
+    k = lambda: rng.randrange(n)
+    i = rng.choice([0, 0, 1])
+    r = rng.random()
+    if r < 0.30:
+        return [p + "set", i, k(), k()]
+    if r < 0.38:
+        return [p + "del", i, k()]
+    if r < 0.42:
+        return [p + rng.choice(["get", "in"]), i, k()]
+    if r < 0.47:
+        return [p + "pop", i, k()]
+    if r < 0.51:
+        return [p + "popd", i, k(), k()]
+    if r < 0.58:
+        return [p + "popitem", i, rng.random() < 0.5]
+    if r < 0.64:
+        return [p + "sdef", i, k(), k()]
+    if r < 0.74:
+        return [p + "mte", i, k(), rng.random() < 0.5]
+    if r < 0.76:
+        return [p + "clear", i]
+    if r < 0.80:
+        return [p + "copy", i]
+    if r < 0.87:
+        strs = [s["u"] for s in specs if s["s"]]
+        kw = []
+        if strs and rng.random() < 0.3:
+            kw = [[x, k()] for x in rng.sample(strs, min(len(strs), 2))]
+        return [p + "upd", i, od_arg(rng, n), kw]
+    if r < 0.90:
+        return [p + "ior", i, od_arg(rng, n)]
+    if r < 0.92:
+        return [p + "or", i, ["d", rng.randrange(2)]]
+    if r < 0.96:
+        return [p + "eq", i, rng.randrange(3), rng.random() < 0.3]
+    return [p + "fromkeys", 0, [k() for _ in range(rng.randint(0, 6))], k()]
+
+
+def od_pool(rng):
+    pool = Pool()
+    r = rng.random()
+    if r < 0.3:
+        int_pool(pool, rng, rng.randint(4, 24), 32)
+    elif r < 0.5:
+        str_pool(pool, rng, rng.randint(4, 12))
+    else:
+        mixed_pool(pool, rng)
+    return pool
+
+
+def gen_odict(rng):
+    pool = od_pool(rng)
+    n = len(pool.specs)
+    ops = []
+    raw = rng.random() < 0.25
+    live = set()
+    for _ in range(rng.randint(5, 40)):
+        r = rng.random()
+        if r < 0.12:
+            x = rng.randrange(2)
+            ops.append(["set", x, rng.randrange(n), rng.randrange(n)])
+        elif r < 0.17:
+            it = rng.randrange(4)
+            live.add(it)
+            ops.append(["o_itnew", it, rng.randrange(2), rng.choice("kvi"), rng.random() < 0.5])
+        elif r < 0.27 and live:
+            ops.append(["o_itnext", rng.choice(sorted(live)), None])
+        elif r < 0.30:
+            if not raw:
+                ops.append(["o_repr", rng.randrange(3)])
+        elif r < 0.34:
+            ops.append(["o_eqd", rng.randrange(2), rng.randrange(2), rng.random() < 0.3])
+        elif raw and r < 0.45:
+            i = rng.randrange(2)
+            ops.append(rng.choice([["r_set", i, rng.randrange(n), rng.randrange(n)],
+                                   ["r_del", i, rng.randrange(n)], ["r_popitem", i],
+                                   ["r_pop", i, rng.randrange(n)], ["r_clear", i]]))
+        else:
+            ops.append(od_ops(rng, n, "o_", pool.specs))
+    # An iterator is tied to the slot it was made from.
+    slots = {}
+    fixed = []
+    for op in ops:
+        if op[0] == "o_itnew":
+            slots[op[1]] = op[2]
+        if op[0] == "o_itnext":
+            op = ["o_itnext", op[1], slots[op[1]]]
+        fixed.append(op)
+    return pool, fixed
+
+
+def gen_pyod(rng):
+    pool = od_pool(rng)
+    n = len(pool.specs)
+    ops = []
+    live = set()
+    for _ in range(rng.randint(5, 40)):
+        r = rng.random()
+        if r < 0.1:
+            ops.append(["set", rng.randrange(2), rng.randrange(n), rng.randrange(n)])
+        elif r < 0.15:
+            it = rng.randrange(4)
+            kind = rng.choice("kvi")
+            if rng.random() < 0.5:
+                # Reversed generators walk weak proxies, which die with their link when the
+                # list changes (ReferenceError). The model has no reference counts, so a
+                # reversed generator here only runs while nothing is mutated.
+                live.discard(it)
+                ops.append(["p_itnew", it, rng.randrange(2), kind, True])
+                ops.extend(["p_itnext", it] for _ in range(rng.randint(1, 8)))
+            else:
+                live.add(it)
+                ops.append(["p_itnew", it, rng.randrange(2), kind, False])
+        elif r < 0.27 and live:
+            ops.append(["p_itnext", rng.choice(sorted(live))])
+        else:
+            ops.append(od_ops(rng, n, "p_", pool.specs))
+    return pool, ops
+
+
+def gen_instances(rng):
+    pool = Pool()
+    names = []
+    for i in range(rng.randint(2, rng.choice([6, 12, 40]))):
+        names.append(pool.add("str", "a" + str(i), ("str", i)))
+    subs = []
+    if rng.random() < 0.6:
+        subs.append(pool.add("strsub", "a0", ("str", 0)))
+        subs.append(pool.add("strsub", "a1", ("str", 1)))
+    int_pool(pool, rng, 4, 16)
+    n = len(pool.specs)
+    v = lambda: rng.randrange(n)
+    nm = lambda: rng.choice(names) if not subs or rng.random() < 0.9 else rng.choice(subs)
+    ops = [["i_new", 0]]
+    if rng.random() < 0.7:
+        ops.append(["i_new", 1])
+    made = {o[1] for o in ops}
+    for _ in range(rng.randint(5, 50)):
+        i = rng.choice(sorted(made))
+        r = rng.random()
+        if r < 0.40:
+            ops.append(["i_set", i, nm(), v()])
+        elif r < 0.50:
+            ops.append(["i_del", i, nm()])
+        elif r < 0.55:
+            ops.append(["i_get", i, nm()])
+        elif r < 0.60:
+            ops.append(["i_dict", i])
+        elif r < 0.63:
+            ops.append(["i_deldict", i])
+        elif r < 0.66:
+            ops.append(["i_setdict", i, [[rng.choice(names), v()] for _ in range(rng.randint(0, 3))]])
+        elif r < 0.70:
+            ops.append(["i_copy", i])
+        elif r < 0.72 and len(made) < 3:
+            x = len(made)
+            made.add(x)
+            ops.append(["i_new", x])
+        else:
+            k = nm() if rng.random() < 0.8 else v()
+            ops.append(["i_d", i, rng.choice([
+                ["set", k, v()], ["set", k, v()], ["del", k], ["get", k], ["in", k], ["getd", k, v()],
+                ["sdef", k, v()], ["sdef", k, v()], ["pop", k], ["popd", k, v()], ["popitem"],
+                ["clear"], ["len"], ["keys"], ["items"], ["repr"]])])
+    return pool, ops, names
+
+
 def gen_case(rng):
     r = rng.random()
     target = None
-    if r < 0.30:
+    case = None
+    if r < 0.20:
         pool, ops = gen_dict(rng)
-    elif r < 0.33:
+    elif r < 0.23:
         pool, ops = gen_growth(rng)
-    elif r < 0.60:
+    elif r < 0.41:
         pool, ops = gen_set(rng)
-    elif r < 0.63:
+    elif r < 0.44:
         pool, ops = gen_set_growth(rng)
-    elif r < 0.78:
+    elif r < 0.53:
         pool, ops = gen_views(rng)
-    elif r < 0.93:
+    elif r < 0.63:
         pool, ops = gen_iters(rng)
-    else:
+    elif r < 0.69:
         pool, ops, target = gen_evil(rng)
-    return {"mod": "dictset", "fn": "scenario", "pool": pool.specs, "ops": ops, "target": target}
+    elif r < 0.81:
+        pool, ops = gen_odict(rng)
+        case = {"fn": "odict", "fork": True}
+    elif r < 0.89:
+        pool, ops = gen_pyod(rng)
+        case = {"fn": "pyod"}
+    else:
+        pool, ops, names = gen_instances(rng)
+        case = {"fn": "instances", "fork": True, "names": names}
+    c = {"mod": "dictset", "fn": "scenario", "pool": pool.specs, "ops": ops, "target": target}
+    c.update(case or {})
+    return c
 
 
 class Runner:
@@ -569,6 +814,16 @@ class Runner:
         self.ds = [{}, {}, {}]
         self.ss = [set(), set(), set()]
         self.its = [None] * 4
+        self.fn = case["fn"]
+        self.limit = len(self.pool) + 2
+        self.ods = [OrderedDict(), OrderedDict(), OrderedDict()] if self.fn == "odict" else []
+        self.pods = [PyOrderedDict(), PyOrderedDict(), PyOrderedDict()] if self.fn == "pyod" else []
+        self.oits = [None] * 4
+        self.gens = [None] * 4
+        self.names = [self.pool[i] for i in case.get("names", [])]
+        self.C = type("C", (), {})
+        self.objs = [None] * 3 if self.fn == "instances" else []
+        self.touched = [False] * 3
         t = case.get("target")
         if t == "d":
             TARGET[0] = self.ds[0]
@@ -588,9 +843,169 @@ class Runner:
             return tuple(self.O(x) for x in j)
         return self.pool[j]
 
+    def enc1(self, thunk):
+        return common.py_result(thunk)
+
     def digest(self):
-        return [[[self.Es(d.keys()), self.Es(d.values()), d.__sizeof__()] for d in self.ds],
+        base = [[[self.Es(d.keys()), self.Es(d.values()), d.__sizeof__()] for d in self.ds],
                 [[self.Es(s), s.__sizeof__()] for s in self.ss]]
+        ods = []
+        for od in self.ods:
+            size = od.__sizeof__()
+            ks = self.Es(dict.keys(od))
+            # Bounded: after dict.popitem(od) iteration can cycle for ever (see
+            # bugs/dictset-odict-stale-fast-nodes.yaml), growing a list until memory runs out.
+            ods.append([size, ks, self.enc1(lambda: self.Es(itertools.islice(od, self.limit)))])
+        pods = [[self.Es(dict.keys(o)), self.Es(dict.values(o)), self.Es(list(o))]
+                for o in self.pods]
+        insts = []
+        for o, t in zip(self.objs, self.touched):
+            if o is None:
+                insts.append(None)
+                continue
+            attrs = []
+            for nm in self.names:
+                v = getattr(o, nm, None)
+                attrs.append(None if v is None else self.E(v))
+            if t:
+                d = o.__dict__
+                insts.append([attrs, [self.Es(d.keys()), self.Es(d.values()), d.__sizeof__()]])
+            else:
+                insts.append([attrs, None])
+        return [base, ods, pods, insts]
+
+    def od_arg(self, a):
+        t = a[0]
+        if t == "d":
+            return self.ds[a[1]]
+        if t == "m":
+            return Mapping([self.O(x) for x in a[1]], [(self.O(p[0]), self.O(p[1])) for p in a[2]])
+        if t == "p":
+            items = [self.seq2(x) for x in a[1]]
+            if a[2]:
+                def gen():
+                    yield from items
+                    raise ValueError("stop")
+                return gen()
+            return items
+        if t == "it":
+            return ItemsOnly([self.seq2(x) for x in a[1]], [self.seq2(x) for x in a[2]])
+        return 5
+
+    def step_od(self, op, ods, Cls):
+        name = op[0][2:]
+        P = self.pool
+        od = ods[op[1]] if isinstance(op[1], int) and op[1] < len(ods) else None
+        if name == "set":
+            od[P[op[2]]] = P[op[3]]
+        elif name == "del":
+            del od[P[op[2]]]
+        elif name == "get":
+            return self.E(od[P[op[2]]])
+        elif name == "in":
+            return P[op[2]] in od
+        elif name == "pop":
+            return self.E(od.pop(P[op[2]]))
+        elif name == "popd":
+            return self.E(od.pop(P[op[2]], P[op[3]]))
+        elif name == "popitem":
+            return self.E(od.popitem(op[2]))
+        elif name == "sdef":
+            return self.E(od.setdefault(P[op[2]], P[op[3]]))
+        elif name == "mte":
+            od.move_to_end(P[op[2]], op[3])
+        elif name == "clear":
+            od.clear()
+        elif name == "copy":
+            ods[2] = od.copy()
+        elif name == "upd":
+            od.update(self.od_arg(op[2]), **{P[a]: P[b] for a, b in op[3]})
+        elif name == "ior":
+            ods[op[1]] |= self.od_arg(op[2])
+        elif name == "or":
+            ods[2] = od | self.od_arg(op[2])
+        elif name == "eq":
+            return (od != ods[op[2]]) if op[3] else (od == ods[op[2]])
+        elif name == "eqd":
+            return (od != self.ds[op[2]]) if op[3] else (od == self.ds[op[2]])
+        elif name == "fromkeys":
+            ods[2] = Cls.fromkeys([P[x] for x in op[2]], P[op[3]])
+        elif name == "repr":
+            return repr(od)
+        else:
+            raise ValueError(op)
+        return None
+
+    def view_of(self, od, kind):
+        return {"k": od.keys, "v": od.values, "i": od.items}[kind]()
+
+    def step_odx(self, op):
+        name = op[0]
+        P = self.pool
+        if name == "o_itnew":
+            v = self.view_of(self.ods[op[2]], op[3])
+            self.oits[op[1]] = reversed(v) if op[4] else iter(v)
+            return None
+        if name == "o_itnext":
+            return self.E(next(self.oits[op[1]]))
+        if name == "p_itnew":
+            v = self.view_of(self.pods[op[2]], op[3])
+            self.gens[op[1]] = reversed(v) if op[4] else iter(v)
+            return None
+        if name == "p_itnext":
+            return self.E(next(self.gens[op[1]]))
+        if name == "r_set":
+            dict.__setitem__(self.ods[op[1]], P[op[2]], P[op[3]])
+            return None
+        if name == "r_del":
+            dict.__delitem__(self.ods[op[1]], P[op[2]])
+            return None
+        if name == "r_popitem":
+            return self.E(dict.popitem(self.ods[op[1]]))
+        if name == "r_pop":
+            return self.E(dict.pop(self.ods[op[1]], P[op[2]]))
+        if name == "r_clear":
+            dict.clear(self.ods[op[1]])
+            return None
+        if name[:2] == "o_":
+            return self.step_od(op, self.ods, OrderedDict)
+        return self.step_od(op, self.pods, PyOrderedDict)
+
+    def step_inst(self, op):
+        name = op[0]
+        P = self.pool
+        n = op[1]
+        o = self.objs[n]
+        if name == "i_new":
+            self.objs[n] = self.C()
+            self.touched[n] = False
+        elif name == "i_set":
+            setattr(o, P[op[2]], P[op[3]])
+        elif name == "i_del":
+            delattr(o, P[op[2]])
+        elif name == "i_get":
+            return self.E(getattr(o, P[op[2]]))
+        elif name == "i_dict":
+            o.__dict__
+            self.touched[n] = True
+        elif name == "i_deldict":
+            del o.__dict__
+            self.touched[n] = False
+        elif name == "i_setdict":
+            o.__dict__ = {P[a]: P[b] for a, b in op[2]}
+            self.touched[n] = True
+        elif name == "i_copy":
+            self.ds[2] = o.__dict__.copy()
+            self.touched[n] = True
+        elif name == "i_d":
+            self.touched[n] = True
+            keep = self.ds[2]
+            self.ds[2] = o.__dict__
+            try:
+                return self.step([op[2][0], 2] + op[2][1:])
+            finally:
+                self.ds[2] = keep
+        return None
 
     def set_arg(self, a):
         t = a[0]
@@ -656,6 +1071,10 @@ class Runner:
         name = op[0]
         P = self.pool
         ds, ss = self.ds, self.ss
+        if name[:2] in ("o_", "p_", "r_"):
+            return self.step_odx(op)
+        if name[:2] == "i_":
+            return self.step_inst(op)
         if name == "set":
             ds[op[1]][P[op[2]]] = P[op[3]]
             return None
@@ -846,7 +1265,40 @@ class Runner:
         return None
 
 
+def run_forked(case):
+    """The scenario in a child, so that a crash the model predicts can be observed."""
+    rd, wr = os.pipe()
+    pid = os.fork()
+    if pid == 0:
+        os.close(rd)
+        resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+        resource.setrlimit(resource.RLIMIT_CPU, (20, 25))
+        resource.setrlimit(resource.RLIMIT_AS, (2 ** 31, 2 ** 31))
+        # A child must never return into the parent's loop, whatever goes wrong here.
+        try:
+            with os.fdopen(wr, "w") as f:
+                r = Runner(case)
+                for op in case["ops"]:
+                    res = common.py_result(lambda: r.step(op))
+                    f.write(json.dumps([res, r.digest()]) + "\n")
+                    f.flush()
+        except BaseException as e:
+            print("child failed:", repr(e), file=sys.stderr)
+            os._exit(3)
+        os._exit(0)
+    os.close(wr)
+    with os.fdopen(rd) as f:
+        data = f.read()
+    _, status = os.waitpid(pid, 0)
+    out = [json.loads(line) for line in data.splitlines()]
+    if os.WIFSIGNALED(status):
+        out.append([{"exc": "<crash>", "msg": ""}, None])
+    return {"ok": out}
+
+
 def run_python(case):
+    if case.get("fork"):
+        return run_forked(case)
     r = Runner(case)
     out = []
     for op in case["ops"]:

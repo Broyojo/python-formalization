@@ -28,6 +28,8 @@ structure Atom where
   tname : String := ""
   /-- For a `set` object: the hash of the equal frozenset. -/
   fs : Option Int := none
+  /-- Not equal to itself. -/
+  nan : Bool := false
   deriving DecidableEq, Repr, Inhabited
 
 /-- A pool object, or a pair built by the items views. -/
@@ -76,6 +78,14 @@ def eq (x y : DObj) : Py Bool :=
     | .ok false => .ok false
     | .ok true => eq b d
   | _, _ => .ok false
+
+/-- `operator.eq`: no identity shortcut (an object not equal to itself stays unequal). -/
+def plainEq (x y : DObj) : Py Bool :=
+  match x, y with
+  | .atom a, .atom b =>
+    if a.raises || b.raises then .error (.valueError "eq")
+    else .ok (a.cls == b.cls && !a.nan && !b.nan)
+  | _, _ => eq x y
 
 /-- Which mutation `x == y` performs. -/
 def action : DObj → DObj → Nat

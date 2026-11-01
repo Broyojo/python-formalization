@@ -77,7 +77,7 @@ def systemError (msg : String) : PyExc := .named "SystemError" msg
 /-- Not a Python exception: the interpreter would dereference NULL here
 (`Py_NewRef(NULL)`) and die with SIGSEGV. A property "never crashes" says that
 this value is never produced. -/
-def crash (where_ : String) : PyExc := .named "<crash>" where_
+def crash (_where : String) : PyExc := .named "<crash>" ""
 
 /-- The object protocol keys are used through. -/
 structure KeyOps (K : Type) where
