@@ -1646,6 +1646,7 @@ import operator as functools_operator  # noqa: E402
 import warnings as functools_warnings  # noqa: E402
 from test.support import import_helper as functools_ih  # noqa: E402
 
+import gc as functools_gc  # noqa: E402
 functools_C = functools_ih.import_fresh_module("functools", fresh=["_functools"])
 functools_P = functools_ih.import_fresh_module("functools", blocked=["_functools"])
 
@@ -3002,16 +3003,26 @@ def functools_lru_ptr_run(case, m):
         return run(case["script"][key.n])
     box["w"] = w = m.lru_cache(maxsize=case["maxsize"])(user)
     out = []
-    for op in case["ops"]:
-        if op == "clear":
-            w.cache_clear()
-            continue
-        if isinstance(op, list):
-            box["left"] = op[1]
-            continue
-        r = py_result(lambda: w(keys[op]))
-        i = w.cache_info()
-        out.append([r.get("ok") if "ok" in r else r["exc"], i.hits, i.misses, i.currsize])
+    # bugs/corelibs-lru-evicted-hit-gc-hang.yaml: a case can leave the list with a cycle, and then the collector hangs on
+    # this wrapper, so it stays off until `cache_clear` has cut the list
+    gc_was_on = functools_gc.isenabled()
+    functools_gc.disable()
+    try:
+        for op in case["ops"]:
+            if op == "clear":
+                w.cache_clear()
+                continue
+            if isinstance(op, list):
+                box["left"] = op[1]
+                continue
+            r = py_result(lambda: w(keys[op]))
+            i = w.cache_info()
+            out.append([r.get("ok") if "ok" in r else r["exc"], i.hits, i.misses, i.currsize])
+    finally:
+        box["left"] = None
+        w.cache_clear()
+        if gc_was_on:
+            functools_gc.enable()
     return {"ok": out}
 
 

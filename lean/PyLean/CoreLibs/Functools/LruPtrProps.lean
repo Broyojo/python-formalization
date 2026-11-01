@@ -89,6 +89,35 @@ theorem lruTwinsRaisingEq_refuted : ¬LruTwinsRaisingEq := by
   revert h2
   decide +kernel
 
+/-- `next` from the root comes back to the root, in at most `n` steps: what `lru_cache_tp_traverse` needs to end. -/
+def closesFrom {K V : Type} [Inhabited V] (s : LS K V) : Nat → Nat → Bool
+  | 0, _ => false
+  | n + 1, i => if i = s.root then true else closesFrom s n (s.link i).next
+
+def ringCloses {K V : Type} [Inhabited V] (s : LS K V) : Bool :=
+  closesFrom s (s.links.length + 1) (s.link s.root).next
+
+/-- The reproducer of `corelibs-lru-evicted-hit-gc-hang`: size 2, keys `1` and `2` have equal hashes, and the fourth
+comparison, which is in the pop of key `2`, calls the wrapper with key `2` and raises. -/
+def gcCfg : PCfg Nat Int :=
+  ⟨2, fun k _ => .ret (k : Int), fun k => if k = 3 then 11802529618835948721 else 9693246245718318424,
+    .call 2 (fun _ => .raise (.valueError "eq")), -1⟩
+
+/-- The C wrapper's list stays a ring through the root, for any calls and any `__eq__`. Refuted: `[1, 2, 1, 3]`. In the
+fourth call the oldest link is unlinked and its key popped, Modules/_functoolsmodule.c:1427-1434. The pop runs `__eq__`,
+which calls the wrapper with that key: a hit, since the dict still has it, so the link is appended. Then `__eq__` raises,
+and the error path prepends the same link, :1435-1445. The list has a cycle without the root, and
+`lru_cache_tp_traverse` never ends. -/
+def LruRingCloses : Prop :=
+  ∀ (cfg : PCfg Nat Int) (ks : List Nat) (t : Option Nat),
+    ringCloses (ptrSeq (callPtrC cfg 40) ks (LS.empty t)).2 = true
+
+theorem lruRingCloses_refuted : ¬LruRingCloses := by
+  intro h
+  have := h gcCfg [1, 2, 1, 3] (some 4)
+  revert this
+  decide +kernel
+
 section General
 variable {K V : Type} [DecidableEq K] [Inhabited V]
 
