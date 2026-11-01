@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.TextLibs.Diff
-import PyLean.TextLibs.StructRound
+import PyLean.TextLibs.StructClose
 import PyLean.TextLibs.BinasciiProps
 
 /-!
@@ -101,6 +101,79 @@ def entries : List Entry := [
     source := "invariant", status := .open
     prop := ``HalfRoundTrip
     notes := "CPython agrees on all 65536 patterns (scratch sweep). decide +kernel passes the first 1024 patterns but hits a deterministic timeout on 65536; this needs a symbolic proof, not a smaller range." },
+  { id := "textlibs-struct-float-round-trip", pyFile := "Modules/_struct.c"
+    pyFns := ["unpack_float", "lu_float", "lp_float"]
+    statement := "For every non-NaN 32-bit pattern, packing the unpacked float gives back the same four bytes."
+    source := "invariant", status := .open
+    prop := ``FloatRoundTrip
+    notes := "Needs a symbolic proof over encodeRounded, especially for subnormal floats." },
+  { id := "textlibs-struct-prepare-two-passes", pyFile := "Modules/_struct.c"
+    pyFns := ["prepare_s", "whichtable", "getentry"]
+    statement := "For every format prepare_s accepts, its two passes agree: s_size is the first pass's size, s_len is the sum of the codes' repeats, and there is one code per counted item."
+    source := "invariant: pack reads s_len arguments by walking the codes (Modules/_struct.c:2178-2183)", status := .proven
+    prop := ``PrepareSAgree, thm := some ``prepareSAgree_proven },
+  { id := "textlibs-struct-char-code", pyFile := "Modules/_struct.c", pyFns := ["nu_char", "np_char"]
+    statement := "c round-trips every byte and rejects every value that is not a length-1 bytes object."
+    source := "docs: the c format character", status := .proven
+    prop := ``CharCode, thm := some ``charCode_proven },
+  { id := "textlibs-struct-bool-code", pyFile := "Modules/_struct.c", pyFns := ["np_bool", "bp_bool", "nu_bool", "bu_bool"]
+    statement := "? stores the truth value of any object in one byte and reads it back, in native and standard mode."
+    source := "docs: format characters, note on ?", status := .proven
+    prop := ``BoolCode, thm := some ``boolCode_proven },
+  { id := "textlibs-struct-scalar-byte-order", pyFile := "Modules/_struct.c"
+    pyFns := ["unpack_halffloat", "pack_halffloat", "unpack_float", "unpack_double", "nu_halffloat", "np_halffloat",
+      "bu_halffloat", "lu_halffloat", "bp_halffloat", "lp_halffloat", "bu_float", "lu_float", "bp_float", "lp_float",
+      "bu_double", "lu_double", "bp_double", "lp_double", "nu_double", "np_double"]
+    statement := "For e, f and d, little-endian bytes are the reverse of big-endian bytes for every value (or both raise the same error), and unpacking a buffer little-endian equals unpacking its reverse big-endian."
+    source := "docs: byte order is the only difference between < and >", status := .proven
+    prop := ``ScalarByteOrder, thm := some ``scalarByteOrder_proven
+    notes := "True on 3.14.7. On main <f quiets a signalling NaN and >f does not; see textlibs-struct-native-float-snan." },
+  { id := "textlibs-struct-native-float-pack", pyFile := "Modules/_struct.c", pyFns := ["np_float"]
+    statement := "Native f packs every value to the reverse of >f's bytes, or raises the same error."
+    source := "docs: native order is little-endian on this build", status := .proven
+    prop := ``NativeFloatPack, thm := some ``nativeFloatPack_proven },
+  { id := "textlibs-struct-complex-byte-order", pyFile := "Modules/_struct.c"
+    pyFns := ["bu_double_complex", "lu_double_complex", "bp_double_complex", "lp_double_complex", "nu_double_complex",
+      "np_double_complex", "lu_float_complex", "lp_float_complex", "bu_float_complex", "bp_float_complex"]
+    statement := "For D, and for F through the standard routines, the little-endian bytes are each part byte-reversed in place, for every value and every buffer of the right size."
+    source := "docs: byte order is the only difference between < and >", status := .proven
+    prop := ``ComplexByteOrder, thm := some ``complexByteOrder_proven
+    notes := "lu_float_complex, lp_float_complex, lu_double_complex and lp_double_complex are replaced at start-up on this build, so only proofs reach them." },
+  { id := "textlibs-struct-native-float-snan", pyFile := "Modules/_struct.c", pyFns := ["nu_float"]
+    statement := "unpack('f', b) and unpack('<f', b) agree on every 4-byte buffer."
+    source := "invariant: native and little-endian differ only in alignment on this build", status := .refuted
+    prop := ``NativeFloatMatchesStd, thm := some ``nativeFloatMatchesStd_refuted
+    bug := some "textlibs-struct-native-float-snan" },
+  { id := "textlibs-struct-native-complex-snan", pyFile := "Modules/_struct.c", pyFns := ["nu_float_complex"]
+    statement := "unpack('F', b) and unpack('>F', swapped b) agree on every 8-byte buffer."
+    source := "invariant: byte order is the only difference", status := .refuted
+    prop := ``NativeComplexMatchesBig, thm := some ``nativeComplexMatchesBig_refuted
+    bug := some "textlibs-struct-native-float-snan" },
+  { id := "textlibs-struct-unpack-from-offsets", pyFile := "Modules/_struct.c", pyFns := ["Struct_unpack_from_impl", "unpack_from_impl"]
+    statement := "A negative offset counts from the end of the buffer, and offset 0 on an exact-size buffer is unpack."
+    source := "docstring: a negative offset counts from the end of the buffer", status := .proven
+    prop := ``UnpackFromOffsets, thm := some ``unpackFromOffsets_proven
+    notes := "Hypothesis len < 2**63 is the type invariant of a Python buffer." },
+  { id := "textlibs-struct-iter-length", pyFile := "Modules/_struct.c", pyFns := ["unpackiter_len", "unpackiter_iternext"]
+    statement := "iter_unpack yields exactly len(buffer) / size tuples, which is the fresh iterator's __length_hint__."
+    source := "docstring: the bytes length must be a multiple of the struct size", status := .proven
+    prop := ``IterUnpackLength, thm := some ``iterUnpackLength_proven },
+  { id := "textlibs-struct-accessors", pyFile := "Modules/_struct.c", pyFns := ["s_get_format", "s_get_size", "s_sizeof", "calcsize_impl"]
+    statement := "For every accepted str format, Struct(fmt).format == fmt, .size and calcsize(fmt) are the size prepare_s computed, and __sizeof__ counts one formatcode per code plus the sentinel."
+    source := "docs: Struct.format, Struct.size", status := .proven
+    prop := ``Accessors, thm := some ``accessors_proven },
+  { id := "textlibs-struct-uninitialized", pyFile := "Modules/_struct.c", pyFns := ["s_new"]
+    statement := "Before __init__, .size is -1 and every method raises RuntimeError."
+    source := "invariant: ENSURE_STRUCT_IS_READY, Modules/_struct.c:1914-1921", status := .proven
+    prop := ``UninitStruct, thm := some ``uninitStruct_proven },
+  { id := "textlibs-struct-range-error", pyFile := "Modules/_struct.c", pyFns := ["_range_error"]
+    statement := "_range_error's message states the exact range of the entry, for every integer entry that uses it."
+    source := "invariant", status := .proven
+    prop := ``RangeErrorBounds, thm := some ``rangeErrorBounds_proven },
+  { id := "textlibs-struct-repr", pyFile := "Modules/_struct.c", pyFns := ["s_repr"]
+    statement := "repr(Struct(fmt)) of a format without control characters is Struct('fmt')."
+    source := "invariant: repr round-trips the format", status := .proven
+    prop := ``ReprPlain, thm := some ``reprPlain_proven },
   { id := "textlibs-binascii-base64-round-trip", pyFile := "Modules/binascii.c"
     pyFns := ["binascii_a2b_base64_impl", "binascii_b2a_base64_impl"]
     statement := "a2b_base64(b2a_base64(d, newline=False), strict_mode=s) == d for every bytes value d and both strict modes."

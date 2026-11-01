@@ -13,9 +13,9 @@ namespace PyLean.TextLibs.Struct
 open PyLean PyLean.TextLibs
 
 set_option linter.unusedSimpArgs false
--- Many small theorems: elaborate them in sequence, so one file does not ask a shared
--- many-core build pod for a full thread pool.
-set_option Elab.async false
+
+
+
 
 /-! ### The C sign extension -/
 
