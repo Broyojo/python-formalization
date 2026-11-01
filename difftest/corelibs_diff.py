@@ -1886,6 +1886,8 @@ functools_SOURCES = [
 
 
 def functools_gen(rng):
+    if rng.random() < .12:
+        return functools_lru_ptr(rng, rng.choice(["c", "py"]))
     r = rng.randrange(0, 27)
     twin = rng.choice(["c", "py"])
     if r == 0:
@@ -1999,6 +2001,8 @@ def functools_gen(rng):
         return functools_register_case(rng)
     k = rng.randrange(0, 19)
     if k == 13:
+        if rng.random() < .7:
+            return functools_lru_ptr(rng, twin_pick(rng))
         if rng.random() < .5:
             return {"fn": "functools.lru_evict", "twin": twin_pick(rng), "arm": rng.random() < .7}
         return {"fn": "functools.key_hash", "twin": twin_pick(rng)}
@@ -2107,6 +2111,29 @@ def functools_setstate_case(rng, twin):
         (twin == "c" and len(state["iter"]) >= 2 and
          (ph_it == ph_raw or (ph_it < ph_raw and len(more) <= ph_raw)))
     return {"fn": "functools.setstate", "twin": twin, "state": state, "more": more, "call": safe}
+
+
+def functools_lru_ptr(rng, twin):
+    """Two keys collide, so a dict operation on one of them with the other in the dict runs one `__eq__`, and the
+    countdown set by `arm` picks which. The hook may call the wrapper, clear it, or raise."""
+    n = rng.randrange(3, 8)
+    pair = rng.sample(range(n), 2)
+    ops = []
+    for _ in range(rng.randrange(2, 16)):
+        x = rng.random()
+        if x < .05:
+            ops.append("clear")
+        elif x < .22:
+            ops.append(["arm", rng.randrange(1, 6)])
+        else:
+            ops.append(rng.choice(pair) if rng.random() < .5 else rng.randrange(n))
+    hook = [(["clear"] if rng.random() < .15 else ["call", rng.choice(pair) if rng.random() < .6 else rng.randrange(n)])
+            for _ in range(rng.randrange(0, 3))]
+    hook.append(rng.choice([["ret", 0], ["ret", 0], ["ret", 0], ["raise"]]))
+    return {"fn": "functools.lru_ptr", "twin": twin, "maxsize": rng.randrange(1, 5), "ops": ops, "pair": pair,
+            "hook": hook, "script": [[st for st in steps if st[0] != "call" or st[1] > k]
+                                     for k, steps in enumerate(functools_script(rng, n, 1))],
+            "hashes": [hash((1000 if k in pair else k,)) & (2 ** 64 - 1) for k in range(n)]}
 
 
 def functools_lru_case(rng, twin):
@@ -2239,6 +2266,8 @@ def functools_run(case):
         it = functools_iter(case)
         args = (f, it) if case["initial"] is None else (f, it, case["initial"])
         return py_result(lambda: m.reduce(*args))
+    if fn == "lru_ptr":
+        return functools_lru_ptr_run(case, m)
     if fn == "lru_evict":
         armed = [False]
 
@@ -2931,6 +2960,59 @@ class functools_key:
                     k.count = None
                     raise ValueError("eq")
         return self.n == other.n
+
+
+def functools_lru_ptr_run(case, m):
+    box = {"left": None}
+
+    def run(steps):
+        for s in steps:
+            if s[0] == "ret":
+                return s[1]
+            if s[0] == "raise":
+                raise ValueError("f")
+            if s[0] == "clear":
+                box["w"].cache_clear()
+            if s[0] == "call":
+                try:
+                    box["w"](keys[s[1]])
+                except Exception:
+                    pass
+        return 0
+
+    class Key:
+        def __init__(self, n):
+            self.n = n
+
+        def __hash__(self):
+            return 1000 if self.n in case["pair"] else self.n
+
+        def __eq__(self, other):
+            if box["left"] is not None:
+                box["left"] -= 1
+                if box["left"] == 0:
+                    box["left"] = None
+                    run(case["hook"])
+            return self.n == other.n
+
+    n = len(case["script"])
+    keys = [Key(i) for i in range(n)]
+
+    def user(key):
+        return run(case["script"][key.n])
+    box["w"] = w = m.lru_cache(maxsize=case["maxsize"])(user)
+    out = []
+    for op in case["ops"]:
+        if op == "clear":
+            w.cache_clear()
+            continue
+        if isinstance(op, list):
+            box["left"] = op[1]
+            continue
+        r = py_result(lambda: w(keys[op]))
+        i = w.cache_info()
+        out.append([r.get("ok") if "ok" in r else r["exc"], i.hits, i.misses, i.currsize])
+    return {"ok": out}
 
 
 def functools_lru(case, m):

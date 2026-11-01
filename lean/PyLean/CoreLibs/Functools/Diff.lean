@@ -1,5 +1,6 @@
 import PyLean.DiffCore
 import PyLean.CoreLibs.Functools.Wrap
+import PyLean.CoreLibs.Functools.LruPtr
 
 /-! Differential-testing handler for `corelibs` cases with `"fn": "functools.<name>"`.
 The dispatcher in `CoreLibs/Diff.lean` strips the `functools.` prefix. Most cases carry
@@ -170,6 +171,30 @@ def stepsProg : List Step → Prog Nat Int
   | .raise :: _ => .raise (.valueError "f")
   | .call k :: rest => .call k (fun _ => stepsProg rest)
   | .clear :: rest => .clear (stepsProg rest)
+
+/-- One operation of a pointer-model run. -/
+inductive PtrOp where
+  | call (k : Nat)
+  | clear
+  | arm (n : Nat)
+
+def parsePtrOp (j : Json) : Except String PtrOp := do
+  match j with
+  | .str "clear" => pure .clear
+  | .arr _ => pure (.arm (← (← j.getArrVal? 1).getNat?))
+  | v => pure (.call (← v.getNat?))
+
+def ptrDrive (call : Nat → LS Nat Int → Py Int × LS Nat Int) (ops : List PtrOp) : List Json × LS Nat Int :=
+  ops.foldl (fun (acc : List Json × LS Nat Int) op =>
+    match op with
+    | .clear => (acc.1, acc.2.clear)
+    | .arm n => (acc.1, { acc.2 with trig := some n })
+    | .call k =>
+      let (r, s) := call k acc.2
+      let rj : Json := match r with
+        | .ok v => if v == -1 then Json.null else toJson v
+        | .error e => toJson e.className
+      (acc.1 ++ [toJson [rj, toJson s.hits, toJson s.misses, toJson s.size]], s)) ([], LS.empty)
 
 /-- Key `n` has script `a[n]` on an odd miss count and `b[n]` on an even one. -/
 def scriptF (a b : List (List Step)) (k m : Nat) : Prog Nat Int :=
@@ -361,6 +386,15 @@ def run (fn : String) (j : Json) : Except String Json := do
         let (r, s') := callPy cfg 9 k acc.2
         (acc.1 ++ [r], s')) ([], emptyPy)
       pure (okJ (toJson [toJson (rs.map rJ), toJson [s.hits, s.misses, s.cache.length]]))
+  | "lru_ptr" =>
+    let script ← (← getArr j "script").mapM fun r => do (← r.getArr?).toList.mapM parseStep
+    let hook ← (← getArr j "hook").mapM parseStep
+    let ops ← (← getArr j "ops").mapM parsePtrOp
+    let hashes ← getNatList j "hashes"
+    let cfg : PCfg Nat Int := ⟨← getNat j "maxsize", fun k _ => stepsProg (script.getD k []),
+      fun k => hashes.getD k 0, stepsProg hook, -1⟩
+    let (rs, _) := if c then ptrDrive (callPtrC cfg lruFuel) ops else ptrDrive (callPtrP cfg lruFuel) ops
+    pure (okJ (toJson rs))
   | "key_hash" => pure (unitJ' keyHash)
   | "key_isinstance" => pure (encPy (fun (b : Bool) => toJson b) (keyIsinstance (!c)))
   | "partial_duck" =>

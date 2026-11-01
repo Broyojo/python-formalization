@@ -4,6 +4,7 @@ import PyLean.CoreLibs.Functools.Diff
 import PyLean.CoreLibs.Functools.Props
 import PyLean.CoreLibs.Functools.CompareProps
 import PyLean.CoreLibs.Functools.WrapProps
+import PyLean.CoreLibs.Functools.LruPtrProps
 
 /-! Registry for the `Functools` area of CoreLibs: Lib/functools.py, Modules/_functoolsmodule.c, CPython 3.14.7. -/
 
@@ -976,7 +977,89 @@ def entries : List Entry := [
     source := "Lib/functools.py:1041-1048"
     status := .proven
     prop := ``SdmGetReads
-    thm := some ``sdmGetReads_proven }
+    thm := some ``sdmGetReads_proven },
+  { id := "corelibs-lru-twins-reentrant-eq"
+    pyFile := "Lib/functools.py"
+    pyFns := ["_lru_cache_wrapper", "bounded_lru_cache_update_lock_held", "bounded_lru_cache_wrapper"]
+    statement := "The twins give the same results for any calls and any __eq__. Refuted: a re-entrant __eq__ in the store leaves an orphan link, and Python's del raises KeyError where C keeps going."
+    source := "twin"
+    status := .refuted
+    prop := ``LruTwinsReentrantEq
+    thm := some ``lruTwinsReentrantEq_refuted
+    bug := some "corelibs-lru-reentrant-eq-keyerror" },
+  { id := "corelibs-lru-orphan-reached"
+    pyFile := "Lib/functools.py"
+    pyFns := ["_lru_cache_wrapper", "_functools__lru_cache_wrapper_cache_info_impl", "lru_cache_append_link"]
+    statement := "A re-entrant __eq__ in the store gives two links for one dict entry, in both twins; C's entry is the newer link and Python's the older."
+    source := "Modules/_functoolsmodule.c:1398-1402"
+    status := .proven
+    prop := ``LruOrphanReached
+    thm := some ``lruOrphanReached_proven },
+  { id := "corelibs-lru-twins-raising-eq"
+    pyFile := "Lib/functools.py"
+    pyFns := ["_lru_cache_wrapper"]
+    statement := "A raising __eq__ leaves the twins in the same state. Refuted: after a failed eviction C has put the link back, and Python's next hit on that key returns None."
+    source := "twin"
+    status := .refuted
+    prop := ``LruTwinsRaisingEq
+    thm := some ``lruTwinsRaisingEq_refuted
+    bug := some "corelibs-lru-failed-delete-none" },
+  { id := "corelibs-lru-orphan-c"
+    pyFile := "Lib/functools.py"
+    pyFns := ["_lru_cache_wrapper", "bounded_lru_cache_update_lock_held", "lru_cache_extract_link"]
+    statement := "C's orphan branch for any state: the computed result is returned, the link is gone, and the new key is not stored."
+    source := "Modules/_functoolsmodule.c:1446-1454"
+    status := .proven
+    prop := ``LruOrphanC
+    thm := some ``lruOrphanC_proven },
+  { id := "corelibs-lru-orphan-py"
+    pyFile := "Lib/functools.py"
+    pyFns := ["_lru_cache_wrapper"]
+    statement := "The same state in Python: the root has moved and del raises KeyError to the caller."
+    source := "Lib/functools.py:669-683"
+    status := .proven
+    prop := ``LruOrphanP
+    thm := some ``lruOrphanP_proven },
+  { id := "corelibs-lru-pop-raises-c"
+    pyFile := "Lib/functools.py"
+    pyFns := ["_lru_cache_wrapper", "bounded_lru_cache_update_lock_held", "lru_cache_prepend_link", "lru_cache_extract_link"]
+    statement := "A raising __eq__ in C's eviction: the link goes back to the oldest place and the exception propagates."
+    source := "Modules/_functoolsmodule.c:1435-1445"
+    status := .proven
+    prop := ``LruPopRaisesC
+    thm := some ``lruPopRaisesC_proven },
+  { id := "corelibs-lru-del-raises-py"
+    pyFile := "Lib/functools.py"
+    pyFns := ["_lru_cache_wrapper"]
+    statement := "A raising __eq__ in Python's del: the dict keeps the key, and its link is the new root, which holds no key."
+    source := "Lib/functools.py:675-683"
+    status := .proven
+    prop := ``LruDelRaisesP
+    thm := some ``lruDelRaisesP_proven },
+  { id := "corelibs-lru-clear-resets"
+    pyFile := "Lib/functools.py"
+    pyFns := ["_lru_cache_wrapper", "_functools__lru_cache_wrapper_cache_clear_impl"]
+    statement := "cache_clear empties the dict, resets the counters and leaves the root where it is."
+    source := "Lib/functools.py:703-709"
+    status := .proven
+    prop := ``LruClearResets
+    thm := some ``lruClearResets_proven },
+  { id := "corelibs-lru-uncached-runs"
+    pyFile := "Lib/functools.py"
+    pyFns := ["_lru_cache_wrapper", "uncached_lru_cache_wrapper"]
+    statement := "maxsize 0: every call is a miss that runs the function, and its exception propagates."
+    source := "Lib/functools.py:617-622"
+    status := .proven
+    prop := ``LruUncachedRuns
+    thm := some ``lruUncachedRuns_proven },
+  { id := "corelibs-lru-infinite-memo"
+    pyFile := "Lib/functools.py"
+    pyFns := ["_lru_cache_wrapper", "infinite_lru_cache_wrapper"]
+    statement := "maxsize None: a miss stores the result and the next call is a hit that does not run the function."
+    source := "Lib/functools.py:626-637"
+    status := .proven
+    prop := ``LruInfiniteMemo
+    thm := some ``lruInfiniteMemo_proven }
 ]
 
 end PyLean.CoreLibs.Functools

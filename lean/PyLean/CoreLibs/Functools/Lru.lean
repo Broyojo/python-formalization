@@ -8,6 +8,9 @@ raise, so the re-check after the call is a real branch. The four dict operations
 may each raise, from `__hash__` or from an `__eq__` on a colliding key (`Faults`). The Python wrapper
 writes to the ring before the dict and the C wrapper the other way round, so a failing insertion leaves
 the two in different states.
+
+A `__eq__` that re-enters the wrapper is not modelled here, and neither is the state after a failed `del`
+beyond its first consequence: `LruPtr.lean` has both, with the links as cells and the dict as a table.
 -/
 
 namespace PyLean.CoreLibs.Functools
