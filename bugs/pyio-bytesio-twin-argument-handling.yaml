@@ -1,0 +1,83 @@
+id: pyio-bytesio-twin-argument-handling
+title: "io.BytesIO and _pyio.BytesIO differ on int arguments outside Py_ssize_t, check order and error messages"
+priority: P4
+kind: twin-mismatch
+module: pyio
+files: [Modules/_io/bytesio.c, Modules/_io/clinic/bytesio.c.h, Lib/_pyio.py]
+functions: ["_io_BytesIO_seek_impl", "_io_BytesIO_readlines_impl", "_io_BytesIO_truncate_impl", "IOBase.readline"]
+summary: |
+  A collection of argument-handling differences, none of which corrupts data.
+  (1) Int arguments outside Py_ssize_t: C raises OverflowError, Python proceeds: seek(2**63),
+  readlines(2**64) (a mere hint), read/readline(2**64), truncate(2**63), seek(0, 2**31) (Python:
+  ValueError). seek(sys.maxsize) followed by seek(sys.maxsize, 1): C 'new position too large',
+  Python seeks.
+  (2) Check order: C converts arguments before CHECK_CLOSED, so closed.seek(2**64) raises
+  OverflowError in C and ValueError in Python.
+  (3) IOBase.readline's loop does not run for size 0, so _pyio.BytesIO.readline(0) on a closed
+  stream returns b'' where C raises ValueError.
+  (4) Messages: 'read from closed file' vs 'I/O operation on closed file.', 'negative seek position
+  -1' vs 'negative seek value -1', and so on.
+likelihood: |
+  Very low; these need absurd arguments or a closed stream.
+maybe_intended: |
+  Yes: implementation details of a C type with Py_ssize_t fields. Maintainers have called such
+  differences implementation details before, and IOBase's docstring says calling methods on a
+  closed stream is undefined (Lib/_pyio.py:325-326). Worth reporting only as a footnote; the
+  readlines(2**64) OverflowError is the only one with an argument for changing it, since a hint
+  has no reason to fit a C type.
+reproducer: |
+  import io, _pyio, sys
+  def attempt(f):
+      try:
+          return ('ok', f())
+      except Exception as e:
+          return (type(e).__name__, str(e))
+  def closed(m):
+      b = m.BytesIO()
+      b.close()
+      return b
+  def cumulative(m):
+      b = m.BytesIO()
+      b.seek(sys.maxsize)
+      return b.seek(sys.maxsize, 1)
+  cases = [
+      ('seek(2**63)', lambda m: m.BytesIO().seek(2 ** 63)),
+      ('readlines(2**64)', lambda m: m.BytesIO(b'a\nb').readlines(2 ** 64)),
+      ('truncate(2**63)', lambda m: m.BytesIO(b'ab').truncate(2 ** 63)),
+      ('seek(0, 2**31)', lambda m: m.BytesIO().seek(0, 2 ** 31)),
+      ('seek(maxsize), seek(maxsize, 1)', cumulative),
+      ('closed.seek(2**64)', lambda m: closed(m).seek(2 ** 64)),
+      ('closed.readline(0)', lambda m: closed(m).readline(0)),
+      ('closed.read()', lambda m: closed(m).read()),
+  ]
+  differ = 0
+  for name, f in cases:
+      c, p = attempt(lambda: f(io)), attempt(lambda: f(_pyio))
+      differ += c != p
+      print('%-32s C %r\n%-32s P %r' % (name, c, '', p))
+  if differ == len(cases):
+      print('REPRODUCED pyio-bytesio-twin-argument-handling')
+expected: |
+  The twins agree, or the differences are accepted as implementation details.
+observed: |
+  python3 3.14.7: all eight cases differ as listed in the summary. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): all eight still differ; truncate(2**63)'s message is now "cannot fit 'int' into an
+  index-sized integer" (gh-160781). REPRODUCED.
+promised_by: |
+  No documentation. Invariant: Lib/_pyio.py is a Python implementation of the same API.
+cause: |
+  Argument Clinic conversions run before the impl bodies (Modules/_io/clinic/bytesio.c.h:239, :278,
+  :318, :475, :486); Modules/_io/bytesio.c:596 (readlines) and :703 (truncate) narrow with
+  PyLong_AsSsize_t / PyLong_AsLong; Lib/_pyio.py:546 skips the read for size 0.
+possible_fix: |
+  None needed. If anything: saturate the readlines hint in C.
+duplicates:
+  issues:
+    - {number: 73927, state: closed, relation: "same area: BytesIO argument conversion (bpo-29741)", reason: "different bug, fixed"}
+    - {number: 158952, state: open, relation: "same kind of twin mismatch: _pyio.BytesIO.readinto with a read-only buffer", reason: "different bug"}
+  queries: ["BytesIO seek OverflowError", "BytesIO readlines OverflowError", "_pyio BytesIO", "BytesIO readlines",
+            "bugforge README: no io entries"]
+lean:
+  properties: [PyLean.PyIO.BytesIOTwinsAgree, PyLean.PyIO.BytesIOTwinsSameClass, PyLean.PyIO.BytesIOTwinsSameClassNoAllocFail]
+  theorems: [PyLean.PyIO.bytesIOTwinsAgree_refuted, PyLean.PyIO.bytesIOTwinsSameClass_refuted, PyLean.PyIO.bytesIOTwinsSameClassNoAllocFail_refuted]
+  also_proven: "PyLean.PyIO.BytesIOTwinsSameClassCore: with every exclusion above in place, the twins agree on all values and exception classes"

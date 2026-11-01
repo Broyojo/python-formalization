@@ -65,7 +65,7 @@ def entries : List Entry := [
     statement := "With int arguments in C range, no getbuffer(), no allocation failure and no readline(0) on a closed stream, io.BytesIO and _pyio.BytesIO return the same values and raise exceptions of the same classes for every initial value and operation sequence (read, read1, readline, readlines, readinto, write, seek, tell, truncate, getvalue, close, next, closed)."
     source := "invariant: C accelerator vs pure-Python twin"
     status := .proven, prop := ``BytesIOTwinsSameClassCore, thm := some ``bytesIOTwinsSameClassCore_proven
-    notes := "Each hypothesis is exactly one of the refutations above. readline(0) on a closed stream is excluded by IOBase's 'calling any method on a closed stream is undefined' (_pyio.py:325-326). Proof: simulation, both twins keep the same buffer, position and closed flag; readline/readlines/next go through lineLen." },
+    notes := "Each hypothesis is exactly one of the refutations above; the allocation hypothesis also excludes seek(sys.maxsize) + seek(sys.maxsize, 1), where C raises 'new position too large' (listed in pyio-bytesio-twin-argument-handling). readline(0) on a closed stream is excluded by IOBase's 'calling any method on a closed stream is undefined' (_pyio.py:325-326). Proof: simulation, both twins keep the same buffer, position and closed flag; readline/readlines/next go through lineLen." },
   -- BytesIO: documented behaviour
   { id := "pyio-bytesio-tell-after-write", pyFile := "Modules/_io/bytesio.c"
     pyFns := ["_io.BytesIO.write", "_pyio.BytesIO.write"]
@@ -163,7 +163,7 @@ def entries : List Entry := [
   { id := "pyio-stringio-newlines-attr", pyFile := "Lib/_pyio.py"
     pyFns := ["TextIOWrapper.newlines"]
     statement := "On an open StringIO with a legal newline, after any reads, the newlines attribute is None, a str or a tuple in both twins (it never raises)."
-    source := "Doc/library/io.rst:919-922 (TextIOBase.newlines: 'A string, a tuple of strings, or None ... this may not be available'); twin behaviour"
+    source := "Doc/library/io.rst:918-922 (TextIOBase.newlines: 'A string, a tuple of strings, or None ... this may not be available'); twin behaviour"
     status := .refuted, prop := ``StringIONewlinesAttr, thm := some ``stringIONewlinesAttr_refuted
     bug := some "pyio-stringio-pyio-newlines-attributeerror"
     notes := "_pyio with newline '\\n', '\\r' or '\\r\\n': AttributeError once a decoder exists." }

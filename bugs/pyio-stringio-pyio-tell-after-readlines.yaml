@@ -1,0 +1,73 @@
+id: pyio-stringio-pyio-tell-after-readlines
+title: "tell() raises OSError after readlines(hint) stops early (_pyio.StringIO and every TextIOWrapper)"
+priority: P4
+kind: twin-mismatch
+module: pyio
+files: [Lib/_pyio.py, Modules/_io/textio.c, Modules/_io/iobase.c]
+functions: ["TextIOWrapper.__next__", "IOBase.readlines", "textiowrapper_iternext"]
+summary: |
+  TextIOWrapper.__next__ clears `_telling` and only restores it at StopIteration. IOBase.readlines
+  iterates with `for line in self` and breaks out when the hint is reached, so `_telling` stays
+  false and tell() raises OSError('telling position disabled by next() call') although the caller
+  never used iteration. A plain f.readlines(1000) on a text file followed by f.tell() fails, and
+  seek(0, 1) too. _pyio.StringIO inherits this (also after a plain next()), while io.StringIO does
+  not. A later read does not re-enable tell(); flush(), getvalue() or truncate() do, after which
+  _pyio raises AssertionError('pending decoded text') from tell() instead.
+likelihood: |
+  Low to moderate for the file case (readlines(hint) in a batch loop that records offsets),
+  low for _pyio.StringIO.
+maybe_intended: |
+  The next()/tell() restriction is documented behaviour and gh-81217 (open) asks to remove it. The
+  readlines(hint) leak is a surprising consequence that the existing report does not mention: a
+  method with no iterator in its interface disables tell(). A maintainer would most likely treat
+  this as part of gh-81217. The AssertionError is an internal error leaking.
+reproducer: |
+  import io, _pyio
+  def attempt(f):
+      try:
+          return f.tell()
+      except Exception as e:
+          return '%s: %s' % (type(e).__name__, e)
+  data = 'a\nb\nc\n'
+  r = {}
+  for name, make in (('io.StringIO', lambda: io.StringIO(data)),
+                     ('_pyio.StringIO', lambda: _pyio.StringIO(data)),
+                     ('io.TextIOWrapper', lambda: io.TextIOWrapper(io.BytesIO(data.encode()), encoding='ascii'))):
+      f = make()
+      lines = f.readlines(1)
+      r[name] = attempt(f)
+      print(name, lines, '-> tell():', r[name])
+  s = _pyio.StringIO(data)
+  s.readlines(1)
+  s.getvalue()
+  after = attempt(s)
+  print('_pyio.StringIO readlines(1), getvalue(), tell():', after)
+  if r['io.StringIO'] == 2 and str(r['_pyio.StringIO']).startswith('OSError') \
+     and str(r['io.TextIOWrapper']).startswith('OSError') and after.startswith('AssertionError'):
+      print('REPRODUCED pyio-stringio-pyio-tell-after-readlines')
+expected: |
+  tell() returns the position after a completed readlines() call, as io.StringIO does.
+observed: |
+  python3 3.14.7: io.StringIO tell() == 2; _pyio.StringIO and io.TextIOWrapper raise OSError after
+  readlines(1); _pyio.StringIO after readlines(1), getvalue(): AssertionError: pending decoded text.
+  REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Twin: io.StringIO. No doc sentence promises tell() after readlines(hint); the documented
+  restriction is only about next().
+cause: |
+  Lib/_pyio.py:2605-2612 sets _telling False and restores it only on exhaustion; Lib/_pyio.py:576-580
+  breaks out of the for loop. C: Modules/_io/textio.c:3201 and Modules/_io/iobase.c:765-766. The
+  AssertionError comes from flush() (Lib/_pyio.py:2231-2233) setting _telling back while decoded
+  chars remain and the snapshot is None, so Lib/_pyio.py:2394-2396 fires.
+possible_fix: |
+  Resolve gh-81217 by dropping the `telling` optimisation, or have readlines() read with readline()
+  on text streams so iteration state is not left behind.
+duplicates:
+  issues:
+    - {number: 81217, state: open, relation: "same root cause (next() disables tell)", reason: "broader report; does not mention readlines(hint) or _pyio.StringIO"}
+  queries: ["telling position disabled by next() call", "telling position disabled", "StringIO tell after readlines",
+            "_pyio StringIO", "bugforge README: no io entries"]
+lean:
+  property: PyLean.PyIO.StringIOTellAfterReads
+  theorem: PyLean.PyIO.stringIOTellAfterReads_refuted

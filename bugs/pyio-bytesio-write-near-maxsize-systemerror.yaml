@@ -1,0 +1,63 @@
+id: pyio-bytesio-write-near-maxsize-systemerror
+title: "io.BytesIO.write near sys.maxsize raises SystemError, and a failed write closes the stream and loses its data (3.14.7)"
+priority: P4
+kind: duplicate-already-fixed
+module: pyio
+files: [Modules/_io/bytesio.c, Objects/bytesobject.c]
+functions: ["resize_buffer_lock_held", "resize_unshared_buffer_lock_held", "_PyBytes_Resize"]
+summary: |
+  Two defects in 3.14.7, both already fixed upstream after that release. (1) When pos + len(b) is
+  exactly sys.maxsize, resize_buffer_lock_held passes its `size > PY_SSIZE_T_MAX` check and
+  computes alloc = size + 1 = 2**63, which is negative as a Py_ssize_t, so write raises SystemError
+  instead of OverflowError. (2) When the buffer is not shared, the resize goes through
+  _PyBytes_Resize, which on failure frees the bytes object and sets the pointer to NULL. self->buf
+  is then NULL, which is how BytesIO represents "closed": any failed resize (the SystemError above,
+  or MemoryError for seek(2**62)) silently closes the stream and destroys its contents. The
+  difftest found this; the model carries a `shared` flag because the outcome depends on whether the
+  buffer object is referenced elsewhere.
+likelihood: |
+  Very low for the exact size; the data loss needs a failed allocation in write().
+maybe_intended: |
+  No: fixed upstream.
+reproducer: |
+  import io, sys
+  def attempt(pos):
+      # bytes(bytearray(...)) so the BytesIO holds the only reference to its buffer
+      b = io.BytesIO(bytes(bytearray(b'abc')))
+      b.seek(pos)
+      try:
+          b.write(b'x')
+          r = 'ok'
+      except Exception as e:
+          r = type(e).__name__
+      return r, b.closed
+  a = attempt(sys.maxsize - 1)
+  m = attempt(2 ** 62)
+  print('seek(sys.maxsize - 1); write(b"x"):', a)
+  print('seek(2**62); write(b"x"):', m)
+  if a == ('SystemError', True) and m == ('MemoryError', True):
+      print('REPRODUCED pyio-bytesio-write-near-maxsize-systemerror')
+expected: |
+  OverflowError (resp. MemoryError) with the stream still open and its data intact.
+observed: |
+  python3 3.14.7: seek(sys.maxsize - 1) + write: SystemError and closed; seek(2**62) + write:
+  MemoryError and closed. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): OverflowError, not closed; MemoryError, not closed. NOT REPRODUCED (fixed).
+promised_by: |
+  Invariant: no internal error leaking, and a failed write does not destroy data.
+cause: |
+  Modules/_io/bytesio.c:190-215 has no check on alloc after the size computation, and
+  resize_unshared_buffer_lock_held (:100-115) uses _PyBytes_Resize, whose failure path clears the
+  pointer (Objects/bytesobject.c:3224-3229, :3263-3270).
+possible_fix: |
+  Already applied: `if (alloc > PY_SSIZE_T_MAX) goto overflow;` and _PyBytes_ResizeKeepOnError.
+duplicates:
+  status: duplicate
+  issues:
+    - {number: 160781, state: closed, relation: "duplicate of defect 1 (same reproducer)", reason: "fixed by GH-160783; 3.14 backport GH-160892 merged 2026-10-29, after 3.14.7"}
+    - {number: 157242, state: closed, relation: "duplicate of defect 2", reason: "fixed by GH-157344; 3.14 backport GH-159529 merged 2026-10-16, after 3.14.7"}
+  queries: ["BytesIO SystemError", "_PyBytes_ResizeKeepOnError (PRs)", "gh-157242 (PRs)", "bytesio resize overflow (PRs)",
+            "BytesIO write SystemError negative size", "commits touching Modules/_io/bytesio.c (gh api)"]
+lean:
+  property: PyLean.PyIO.BytesIOTwinsSameClassNoExport
+  theorem: PyLean.PyIO.bytesIOTwinsSameClassNoExport_refuted

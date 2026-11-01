@@ -1,0 +1,76 @@
+id: pyio-stringio-newline-none-split-crlf
+title: "io.StringIO(newline=None) turns a \\r\\n split across two writes into two newlines"
+priority: P3
+kind: twin-mismatch
+module: pyio
+files: [Modules/_io/stringio.c, Modules/_io/textio.c]
+functions: ["write_str", "_PyIncrementalNewlineDecoder_decode"]
+summary: |
+  With newline=None the C StringIO translates line endings on write, once per write() call, with
+  the decoder's `final` flag always set. A '\r' at the end of one write is therefore translated to
+  '\n' immediately, and a '\n' at the start of the next write stays, so 'a\r' + '\nb' gives
+  'a\n\nb'. Written as one string the same text gives 'a\nb'. The stored text and the number of
+  lines depend on how the text was split into write() calls, and `newlines` reports
+  ('\r', '\n') for text that only has a CRLF. _pyio.StringIO stores the raw text and translates
+  it as a whole on read and getvalue(), so it returns 'a\nb' for both, as does a real text file
+  written in two pieces and read back with newline=None.
+likelihood: |
+  Low. newline=None is rarely passed to StringIO, and the split must fall exactly between \r and
+  \n. It can happen when CRLF text arrives in chunks (a socket or pipe reader feeding a StringIO
+  in universal-newline mode); then one blank line is added at each unlucky boundary.
+maybe_intended: |
+  The "always final" comment shows that the one-shot translation was deliberate, but not that this
+  outcome was. bpo-5265 (test_issue5265, "StringIO can duplicate newlines in universal newlines
+  mode") fixed the same symptom for a different path, which suggests maintainers consider it a
+  bug. A fix would have to keep a pending \r across writes and flush it on reads and seeks, so
+  it may be judged not worth it, in which case a docs note is the alternative. bpo-20435
+  (gh-64634) fixed _pyio.getvalue() to match C on translation, so twin mismatches here are in scope.
+reproducer: |
+  import io, _pyio
+  res = {}
+  for m in (io, _pyio):
+      s = m.StringIO(newline=None)
+      s.write('a\r')
+      s.write('\nb')
+      one = m.StringIO(newline=None)
+      one.write('a\r\nb')
+      s.seek(0)
+      lines = s.readlines()
+      res[m.__name__] = (s.getvalue(), one.getvalue(), lines)
+      print(m.__name__, 'two writes:', repr(s.getvalue()), 'one write:', repr(one.getvalue()),
+            'lines:', lines, 'newlines:', s.newlines)
+  b = io.BytesIO()
+  f = io.TextIOWrapper(b, encoding='ascii', newline='')
+  f.write('a\r'); f.write('\nb'); f.flush()
+  back = io.TextIOWrapper(io.BytesIO(b.getvalue()), encoding='ascii', newline=None).read()
+  print('file written in two pieces, read with newline=None:', repr(back))
+  if res['io'][0] == 'a\n\nb' and res['io'][1] == 'a\nb' and res['_pyio'][0] == 'a\nb' and back == 'a\nb':
+      print('REPRODUCED pyio-stringio-newline-none-split-crlf')
+expected: |
+  getvalue() does not depend on how the text was split into writes: 'a\nb' in both cases, as in
+  _pyio.StringIO and in a text file read with newline=None.
+observed: |
+  python3 3.14.7: io two writes 'a\n\nb' (lines ['a\n', '\n', 'b'], newlines ('\r', '\n')), one write
+  'a\nb'; _pyio 'a\nb' for both; the two-piece file reads back as 'a\nb'. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Doc/library/io.rst:1142: StringIO's newline "works like that of TextIOWrapper"; there, universal
+  newlines translate '\r\n' to '\n'. The twin is the main evidence; no doc sentence states
+  independence from write chunking.
+cause: |
+  Modules/_io/stringio.c:199-200 calls `_PyIncrementalNewlineDecoder_decode(self->decoder, obj, 1
+  /* always final */)` for each write, so the decoder's pendingcr logic (textio.c:372-382, only
+  when !final) never runs.
+possible_fix: |
+  Pass final=0 for writes and keep the pending '\r' in the decoder, flushing it before any read,
+  seek, tell, truncate, getvalue or pickling. Otherwise document that translation is per write.
+duplicates:
+  issues:
+    - {number: 64634, state: closed, relation: "same area (bpo-20435, _pyio getvalue vs C with newline=None), different bug", reason: "fixed _pyio.getvalue only; Pitrou: other problems need a new issue"}
+  queries: ["StringIO newline None split write", "StringIO \\r\\n separate writes", "StringIO universal newlines write duplicate",
+            "StringIO newline", "StringIO newline None carriage return", "StringIO universal newlines write",
+            "StringIO newline (PRs)", "bugforge README: no io entries"]
+lean:
+  property: PyLean.PyIO.StringIOWritesTwins
+  theorem: PyLean.PyIO.stringIOWritesTwins_refuted
+  also_proven: "PyLean.PyIO.StringIOWritesTwinsNotNone: for every other legal newline, write sequences agree exactly"

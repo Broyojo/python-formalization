@@ -1,0 +1,66 @@
+id: pyio-stringio-pyio-write-after-read
+title: "_pyio.StringIO: write and truncate after a read act on the read-ahead position, not the logical one"
+priority: P4
+kind: twin-mismatch
+module: pyio
+files: [Lib/_pyio.py]
+functions: ["TextIOWrapper.write", "TextIOWrapper.truncate", "TextIOWrapper._read_chunk"]
+summary: |
+  _pyio.StringIO is a TextIOWrapper, which reads 2048-byte chunks ahead. After read(1) the
+  underlying BytesIO is already at the end, and write() does not move it back, so
+  StringIO('abcdef') + read(1) + write('X') gives 'abcdefX' where io.StringIO gives 'aXcdef'.
+  truncate() has the matching problem: after read(1), truncate(2) really cuts the buffer, but the
+  decoded read-ahead stays, so read() returns 'bcdef' (data past the truncation) where C returns
+  'b'. The same behaviour exists in the C and Python TextIOWrapper over 'r+' files, where it is a
+  long-known issue; here it makes the two StringIO implementations disagree on ASCII text with no
+  seek involved.
+likelihood: |
+  Low: needs _pyio, and interleaved reads and writes without a seek.
+maybe_intended: |
+  Known limitation of TextIOWrapper, not specific to StringIO. "XXX What if we were just reading?"
+  sits in the code at Lib/_pyio.py:2268. A maintainer would close this as a duplicate of the
+  interlaced read/write issues unless a patch for _pyio.StringIO alone is cheap.
+reproducer: |
+  import io, _pyio
+  def rw(m):
+      s = m.StringIO('abcdef')
+      s.read(1)
+      s.write('X')
+      return s.getvalue()
+  def rt(m):
+      s = m.StringIO('abcdef')
+      s.read(1)
+      s.truncate(2)
+      return s.read(), s.getvalue()
+  print('read(1), write(X):      io', rw(io), ' _pyio', rw(_pyio))
+  print('read(1), truncate(2):   io', rt(io), ' _pyio', rt(_pyio))
+  if rw(io) == 'aXcdef' and rw(_pyio) == 'abcdefX' and rt(io) == ('b', 'ab') and rt(_pyio) == ('bcdef', 'ab'):
+      print('REPRODUCED pyio-stringio-pyio-write-after-read')
+expected: |
+  The write overwrites at the position returned by tell() ('aXcdef'), and read() after truncate(2)
+  stops at the new end, as in io.StringIO.
+observed: |
+  python3 3.14.7: write: io 'aXcdef', _pyio 'abcdefX'; truncate: io ('b', 'ab'), _pyio ('bcdef', 'ab').
+  REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Twin only (io.StringIO).
+cause: |
+  Lib/_pyio.py:2256-2278 writes at self.buffer's position, which is ahead of the logical position
+  by the unread part of _decoded_chars, and then discards those chars. Lib/_pyio.py:2484-2488
+  truncates the buffer without touching _decoded_chars.
+possible_fix: |
+  In TextIOWrapper.write/truncate, seek back to the logical position first when decoded chars are
+  pending (`self.seek(self.tell())`), or give _pyio.StringIO its own str-buffer implementation.
+duplicates:
+  issues:
+    - {number: 82891, state: open, relation: "duplicate for TextIOWrapper ('unsynchronized write pointer')", reason: "superseded by bpo-12215"}
+    - {number: 56424, state: closed, relation: "duplicate for TextIOWrapper (bpo-12215, issues with interlaced read-write)", reason: ""}
+    - {number: 70103, state: closed, relation: "same symptom on files", reason: ""}
+    - {number: 67750, state: closed, relation: "same symptom on files", reason: ""}
+    - {number: 69377, state: open, relation: "a comment there notices that truncate() does not clear the read buffer", reason: ""}
+  queries: ["TextIOWrapper write after read", "interlaced read write", "TextIOWrapper truncate read buffer",
+            "_pyio StringIO", "bugforge README: no io entries"]
+lean:
+  property: PyLean.PyIO.StringIOReadWriteTwins
+  theorem: PyLean.PyIO.stringIOReadWriteTwins_refuted

@@ -1,0 +1,57 @@
+id: pyio-stringio-pyio-newlines-attributeerror
+title: "_pyio.TextIOWrapper.newlines raises AttributeError once a non-universal stream has been read"
+priority: P4
+kind: twin-mismatch
+module: pyio
+files: [Lib/_pyio.py]
+functions: ["TextIOWrapper.newlines"]
+summary: |
+  _pyio's `newlines` property returns `self._decoder.newlines if self._decoder else None`. With
+  newline set to '\n' (the StringIO default), '\r' or '\r\n' the decoder is the plain codec
+  decoder, which has no `newlines` attribute, so reading the property raises AttributeError as soon
+  as a read has created the decoder. It works before the first read (None), so the failure depends
+  on the stream's history. The C property uses PyObject_GetOptionalAttr and returns None. The same
+  happens for _pyio.TextIOWrapper over a file, not only StringIO.
+likelihood: |
+  Low. It needs _pyio (normally only used in tests or on implementations without _io) and reading
+  `newlines` on a stream with a fixed newline, where the value is not interesting.
+maybe_intended: |
+  The docs say `newlines` "may not be available", which technically covers an AttributeError, but
+  raising only after the first read is an accident. A maintainer would likely take the one-line
+  fix as a twin-consistency cleanup.
+reproducer: |
+  import io, _pyio
+  def show(m):
+      s = m.StringIO('a\nb')
+      before = s.newlines
+      s.read()
+      try:
+          return before, repr(s.newlines)
+      except AttributeError as e:
+          return before, 'AttributeError: %s' % e
+  c = show(io)
+  p = show(_pyio)
+  print('io   ', c)
+  print('_pyio', p)
+  if c == (None, 'None') and p[0] is None and p[1].startswith('AttributeError'):
+      print('REPRODUCED pyio-stringio-pyio-newlines-attributeerror')
+expected: |
+  None, as in the C TextIOWrapper and StringIO.
+observed: |
+  python3 3.14.7: io (None, None); _pyio None before the read, then AttributeError:
+  'IncrementalDecoder' object has no attribute 'newlines'. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Doc/library/io.rst:918-922 says "A string, a tuple of strings, or None ... this may not be
+  available"; the C twin returns None (Modules/_io/textio.c:3276-3287).
+cause: |
+  Lib/_pyio.py:2707-2709 assumes every decoder has `newlines`; only IncrementalNewlineDecoder does.
+possible_fix: |
+  `return getattr(self._decoder, 'newlines', None)`.
+duplicates:
+  issues: []
+  queries: ["IncrementalDecoder object has no attribute newlines", "TextIOWrapper newlines attribute",
+            "newlines AttributeError", "_pyio StringIO", "bugforge README: no io entries"]
+lean:
+  property: PyLean.PyIO.StringIONewlinesAttr
+  theorem: PyLean.PyIO.stringIONewlinesAttr_refuted
