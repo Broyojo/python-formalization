@@ -104,7 +104,9 @@ def write (r : Raw) (b : List Nat) : Raw × RRes :=
   if r.closed then (r, .exc rawClosedErr) else
   let put (r : Raw) (k : Nat) : Raw × RRes :=
     let d := b.take k
-    ({ r with data := writeAt r.data r.pos d, pos := r.pos + d.length }, .count d.length)
+    -- as the harness raw: a zero-length write does not pad up to a position past the end
+    ({ r with data := if d = [] then r.data else writeAt r.data r.pos d, pos := r.pos + d.length },
+     .count d.length)
   match r.ws with
   | [] => put r b.length
   | .short k :: t => put { r with ws := t } k
@@ -148,6 +150,8 @@ def truncate (r : Raw) (p : Option Int) : Raw × Py Int :=
   if r.closed then (r, .error rawClosedErr) else
   let n : Int := p.getD r.pos
   if n < 0 then (r, .error (.valueError "bad truncate")) else
+  -- the bound of the harness raw: never build the zeros of a huge scripted position
+  if n > 2 ^ 24 then (r, .error (.overflowError "too big")) else
   let d := (r.data ++ List.replicate (n.toNat - r.data.length) 0).take n.toNat
   ({ r with data := d }, .ok n)
 

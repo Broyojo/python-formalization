@@ -64,7 +64,7 @@ def drop_stale_tell(ops):
         k = op["op"]
         if stale and (k in ("tell", "seektell") or (k == "seek" and op.get("whence") == 1)):
             continue
-        if k == "next":
+        if k in ("next", "readlines"):  # readlines iterates, so it also stops telling
             nexted = True
         if nexted and k in ("flush", "truncate", "reconfigure"):
             stale = True
