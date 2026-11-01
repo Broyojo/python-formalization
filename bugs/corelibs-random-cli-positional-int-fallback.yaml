@@ -1,0 +1,63 @@
+id: corelibs-random-cli-positional-int-fallback
+title: "python -m random 0 prints a float, and python -m random -5 a negative float, where --integer raises"
+priority: P3
+kind: logic-error
+module: corelibs
+files: [Lib/random.py]
+functions: ["main"]
+summary: |
+  The help says of a positional argument "integer: same as --integer". For an integer below 1 it
+  is not. main() runs `val = int(val); return randint(1, val)` inside a try whose
+  `except ValueError` is meant for int(val), but randint's "empty range" ValueError lands there too.
+  val is now an int, so the handler's float(val) succeeds and uniform(0, val) runs:
+  `python -m random 0` prints 0.0, and `python -m random -5` prints something like
+  -3.378311363952542, while `python -m random --integer 0` and `--integer -5` raise ValueError. With
+  an integer too large for a float the handler itself fails with OverflowError.
+likelihood: |
+  Low. The command-line interface is a convenience, added in 3.13, and random integers from 1 to 0
+  are rarely asked for. It would mostly appear when N comes from a shell variable that happens to
+  be 0, and then a float in place of an error passes silently.
+maybe_intended: |
+  Probably not intended: the nested try reads as a chain of "is it an int, is it a float, else
+  split it", and the rebinding of val looks accidental. test_random's test_main covers only
+  positive N. It is possible a maintainer prefers to leave it, or to make the docs vaguer.
+reproducer: |
+  import random
+  random.seed(1)
+  out0 = random.main(['0'])
+  outm = random.main(['-5'])
+  print(repr(out0), repr(outm))
+  errs = []
+  for arg in ('0', '-5'):
+      try:
+          random.main(['--integer', arg])
+      except ValueError as e:
+          errs.append(str(e))
+  print(errs)
+  if out0 == 0.0 and isinstance(out0, float) and isinstance(outm, float) and -5 <= outm <= 0 and len(errs) == 2:
+      print('REPRODUCED corelibs-random-cli-positional-int-fallback')
+expected: |
+  The same as --integer: ValueError: empty range in randint(1, 0).
+observed: |
+  python3 3.14.7: main(['0']) returns 0.0, main(['-5']) a float in [-5, 0], and --integer 0 and
+  --integer -5 both raise ValueError. REPRODUCED.
+  main (python.exe 3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Lib/random.py:1041 help text, "integer: same as --integer".
+cause: |
+  Lib/random.py:1067-1078: the try at :1067 covers both `val = int(val)` (:1069) and
+  `return randint(1, val)` (:1070), and the handler at :1071 runs float(val) on the rebound int.
+possible_fix: |
+  Narrow the try so that only int(val) is inside it, and likewise for float(val):
+  `try: n = int(val) except ValueError: pass else: return randint(1, n)`.
+duplicates:
+  issues:
+    - {number: 123968, state: closed, relation: "same function, --float range", reason: "different bug"}
+    - {number: 118131, state: closed, relation: "added the command line", reason: "not a duplicate"}
+  queries: ["python -m random", "random command line", "random __main__ negative integer", "python -m random 0",
+            "random main randint ValueError float", "random main randint negative", "random CLI",
+            "bugforge README: no entry for this"]
+lean:
+  property: PyLean.CoreLibs.Rand.MainPositionalMatchesOption
+  theorem: PyLean.CoreLibs.Rand.mainPositionalMatchesOption_refuted
+  also_proven: "PyLean.CoreLibs.Rand.MainPositionalPositive: for N >= 1 the two forms are the same call"

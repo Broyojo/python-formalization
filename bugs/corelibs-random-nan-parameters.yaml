@@ -1,0 +1,92 @@
+id: corelibs-random-nan-parameters
+title: "NaN parameters hang gammavariate, betavariate and vonmisesvariate, and trip an assert in binomialvariate"
+priority: P4
+kind: missing-validation
+module: corelibs
+files: [Lib/random.py]
+functions: ["Random.gammavariate", "Random.betavariate", "Random.vonmisesvariate", "Random.binomialvariate"]
+summary: |
+  The parameter checks are written so that a NaN passes them, and every comparison after that is
+  false. gammavariate(nan, 1.0) passes `alpha <= 0.0 or beta <= 0.0`, is neither `> 1.0` nor
+  `== 1.0`, and enters the alpha < 1 loop, where no draw can reach a `break`: it spins forever and
+  cannot be interrupted by anything but a signal. betavariate inherits that through either
+  parameter. vonmisesvariate(0.0, nan) passes `kappa <= 1e-6` and spins the same way.
+  binomialvariate(2, nan) passes `p <= 0.0 or p >= 1.0`, fails both branch tests and raises a bare
+  AssertionError at :850, with n == 1 it returns 0, and under python -O the assert is gone and
+  _floor(nan) raises. The other distributions just return nan.
+likelihood: |
+  Low. It takes a NaN reaching a parameter, which usually means an earlier computation already
+  went wrong. The hang is what makes it worth a line: a NaN in a simulation stops the process with
+  no message, where a neighbouring function returns nan.
+maybe_intended: |
+  Quite possibly not worth changing. The maintainer's position in python/cpython#134668 and
+  python/cpython#158786 is that the random module is not obliged to handle inputs that real use
+  does not produce, and python/cpython#135647 about missing parameter checks was closed as not
+  planned. Against that, python/cpython#61343 (vonmisesvariate hanging for a large kappa) was fixed.
+  Rewriting the check as `if not (alpha > 0.0 and beta > 0.0)` costs nothing on the normal path. A
+  human should decide whether this goes upstream at all; the large finite alpha form of the hang
+  was already filed by bugforge and closed in the bulk cleanup without a decision.
+reproducer: |
+  import random
+  nan = float('nan')
+  class Hang(Exception):
+      pass
+  class Limited(random.Random):
+      draws = 0
+      def random(self):
+          self.draws += 1
+          if self.draws > 200000:
+              raise Hang
+          return super().random()
+  def spins(name, *args):
+      try:
+          getattr(Limited(1), name)(*args)
+      except Hang:
+          return True
+      return False
+  hung = [spins('gammavariate', nan, 1.0), spins('betavariate', nan, 1.0), spins('betavariate', 1.0, nan),
+          spins('vonmisesvariate', 0.0, nan)]
+  print(hung)
+  try:
+      random.Random(1).binomialvariate(2, nan)
+      err = None
+  except Exception as e:
+      err = type(e).__name__
+  print(err, random.Random(1).binomialvariate(1, nan))
+  sane = not spins('gammavariate', 0.5, 1.0) and not spins('vonmisesvariate', 0.0, 1.0)
+  if all(hung) and err == 'AssertionError' and sane:
+      print('REPRODUCED corelibs-random-nan-parameters')
+expected: |
+  ValueError, as for other invalid parameters, or at least termination.
+observed: |
+  python3 3.14.7: gammavariate(nan, 1.0), betavariate(nan, 1.0), betavariate(1.0, nan) and
+  vonmisesvariate(0.0, nan) are still looping after 200000 draws; binomialvariate(2, nan) raises
+  AssertionError; binomialvariate(1, nan) returns 0. REPRODUCED.
+  main (python.exe 3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Undisputed invariant: a library function does not hang, and an assert is not an error message.
+  binomialvariate's own message says "p must be in the range 0.0 <= p <= 1.0" (Lib/random.py:819).
+cause: |
+  Lib/random.py:687 `if alpha <= 0.0 or beta <= 0.0`, :642 `if kappa <= 1e-6`, :814
+  `if p <= 0.0 or p >= 1.0`: a NaN is false in each. In gammavariate's loop (:720-733) `p > 1.0` and
+  `u1 <= _exp(-x)` are false for NaN, in vonmisesvariate's (:648-655) both acceptance tests are.
+possible_fix: |
+  Invert the tests so that NaN fails them: `if not (alpha > 0.0 and beta > 0.0)`,
+  `if not 0.0 < p < 1.0`, and an explicit `isnan(kappa)` check or `if not kappa > 1e-6` branch
+  that raises for NaN.
+duplicates:
+  issues:
+    - {number: 158745, state: closed, relation: "bugforge: gammavariate hangs for large finite alpha", reason: "related, same loop family, different input; closed as bulk, not decided"}
+    - {number: 158744, state: closed, relation: "bugforge: betavariate hangs for large finite parameters", reason: "related, different input"}
+    - {number: 135647, state: closed, relation: "vonmisesvariate and lognormvariate accept invalid parameters", reason: "related, closed not planned"}
+    - {number: 61343, state: closed, relation: "vonmisesvariate hang for a large kappa", reason: "fixed, different input"}
+    - {number: 154001, state: closed, relation: "binomialvariate ZeroDivisionError", reason: "different bug"}
+  queries: ["gammavariate nan", "vonmisesvariate nan", "binomialvariate nan", "binomialvariate AssertionError",
+            "binomialvariate", "vonmisesvariate", "gammavariate hang", "gammavariate infinite loop", "betavariate nan",
+            "nan random module infinite loop", "binomialvariate assert",
+            "bugforge README: random-20261003-101511-c1 and -c3 cover the large finite case, not NaN"]
+lean:
+  property: PyLean.CoreLibs.Rand.GammaExitsForSomeDraws
+  theorem: PyLean.CoreLibs.Rand.gammaExitsForSomeDraws_refuted
+  also_refuted: "VonmisesExitsForSomeDraws, BinomialRejectsNaN"
+  note: "gammaGS_nan and vonmisesLoop_nan hold for every float type satisfying IeeeNaN, which binary64 does; the registered refutations pick the small model NanF because Lean cannot reduce Float."

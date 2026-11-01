@@ -1,0 +1,46 @@
+id: corelibs-statistics-quantiles-method-unchecked
+title: "statistics.quantiles accepts an unknown method when the data has one point"
+priority: P4
+kind: validation-order
+module: corelibs
+files: [Lib/statistics.py]
+functions: ["quantiles"]
+summary: |
+  The single-point shortcut returns before `method` is looked at, so
+  `quantiles([1], method='bogus')` returns `[1, 1, 1]`, while the same call with two points raises
+  `ValueError: Unknown method: 'bogus'`. A typo in `method` passes tests that happen to use one point.
+likelihood: |
+  Low. It needs a wrong method name and one data point.
+maybe_intended: |
+  Unlikely. The single-point branch was added for the data, and the method check at the end simply is
+  not reached. The sibling correlation() checks `method` before doing any work.
+reproducer: |
+  import statistics
+  r = statistics.quantiles([1], method='bogus')
+  print(r)
+  try:
+      statistics.quantiles([1, 2], method='bogus')
+  except ValueError as e:
+      print('ValueError:', e)
+      if r == [1, 1, 1]:
+          print('REPRODUCED corelibs-statistics-quantiles-method-unchecked')
+expected: |
+  ValueError: Unknown method: 'bogus' in both calls.
+observed: |
+  python3 3.14.7: [1, 1, 1], then ValueError. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
+promised_by: |
+  statistics.py:1223 raises for an unknown method; Doc/library/statistics.rst lists the two methods.
+cause: |
+  Lib/statistics.py:1198-1201 returns before the checks at :1203 and :1212, and the ValueError is the
+  fall-through at :1223.
+possible_fix: |
+  Check `method` right after `n`, before sorting.
+duplicates:
+  issues:
+    - {number: 158759, state: closed, relation: "same function: infinite cut points from finite inputs", reason: "different bug"}
+  queries: ["statistics.quantiles method", "statistics quantiles single data point",
+            "bugforge README: statistics.quantiles, one entry on overflow"]
+lean:
+  property: PyLean.CoreLibs.CalStat.QuantilesMethodChecked
+  theorem: PyLean.CoreLibs.CalStat.quantilesMethodChecked_refuted

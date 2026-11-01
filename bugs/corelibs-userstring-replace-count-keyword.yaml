@@ -1,0 +1,46 @@
+id: corelibs-userstring-replace-count-keyword
+title: "UserString.replace(old, new, count=n) raises TypeError: the parameter is named maxsplit"
+priority: P3
+kind: sibling-mismatch
+module: corelibs
+files: [Lib/collections/__init__.py]
+functions: ["UserString.replace"]
+summary: |
+  str.replace accepts `count` as a keyword since 3.13. UserString.replace is declared
+  `replace(self, old, new, maxsplit=-1)`, a name str.replace never had, so u.replace('a', 'b', count=1)
+  raises TypeError while u.replace('a', 'b', maxsplit=1), which str rejects, works. Code that
+  moves to the 3.13 keyword form breaks on UserString only.
+likelihood: |
+  Medium-low: the keyword form is what the docs now advertise, and the failure is immediate.
+maybe_intended: |
+  No. `maxsplit` looks like a slip copied from split; nothing depends on it except a caller who found the
+  name by reading the source. Renaming it breaks those callers, so accepting both for a while is an option.
+reproducer: |
+  from collections import UserString
+  print('aaa'.replace('a', 'b', count=1))
+  try:
+      print(UserString('aaa').replace('a', 'b', count=1))
+  except TypeError as e:
+      print(type(e).__name__, e)
+      print(UserString('aaa').replace('a', 'b', maxsplit=1))
+      print('REPRODUCED corelibs-userstring-replace-count-keyword')
+expected: |
+  'baa' from both.
+observed: |
+  python3 3.14.7: TypeError "UserString.replace() got an unexpected keyword argument 'count'". REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Doc/library/stdtypes.rst:2502-2503: "Changed in version 3.13: count is now supported as a keyword argument."
+  Doc/library/collections.rst:1403: "Class that simulates a string object."
+cause: |
+  Lib/collections/__init__.py:1558 `def replace(self, old, new, maxsplit=-1):`, unchanged when gh-106487
+  added the keyword to str.replace.
+possible_fix: |
+  `def replace(self, old, new, count=-1):` and pass `count` through at :1563.
+duplicates:
+  issues: []
+  queries: ["UserString replace count", "UserString keyword argument", "UserString maxsplit",
+            "bugforge README: no UserString entries"]
+lean:
+  property: PyLean.CoreLibs.Coll.UserStringReplaceCountKeyword
+  theorem: PyLean.CoreLibs.Coll.userStringReplaceCountKeyword_refuted

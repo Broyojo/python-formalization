@@ -1,0 +1,52 @@
+id: corelibs-pysimplequeue-nonblocking-timeout
+title: "_PySimpleQueue.get(block=False, timeout=...) raises ValueError; the docstring and _queue.SimpleQueue ignore timeout"
+priority: P4
+kind: twin-mismatch
+module: corelibs
+files: [Lib/queue.py, Modules/_queuemodule.c]
+functions: ["_PySimpleQueue.get"]
+summary: |
+  The docstring of `_PySimpleQueue.get` says `timeout` is ignored when `block` is false. The method
+  validates it anyway and passes it to `Semaphore.acquire(block, timeout)`, which raises
+  ValueError("can't specify timeout for non-blocking acquire"), even when an item is available.
+  A negative timeout raises the other ValueError. `_queue.SimpleQueue.get` returns the item or
+  raises Empty in both cases.
+likelihood: |
+  Very low: the pure-Python class runs only when `_queue` is missing.
+maybe_intended: |
+  No. Already reported and fixed.
+reproducer: |
+  import queue
+  q = queue._PySimpleQueue()
+  q.put(1)
+  try:
+      r = q.get(False, 1)
+  except ValueError as e:
+      r = str(e)
+  c = queue.SimpleQueue()
+  c.put(1)
+  print(r, c.get(False, 1))
+  if r == "can't specify timeout for non-blocking acquire":
+      print('REPRODUCED corelibs-pysimplequeue-nonblocking-timeout')
+expected: |
+  1 from both.
+observed: |
+  python3 3.14.7: _PySimpleQueue raises ValueError, SimpleQueue returns 1. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): both return 1, not reproduced, fixed by
+  gh-156477.
+promised_by: |
+  Docstring, Lib/queue.py:341-347; Doc/library/queue.rst for SimpleQueue.get.
+cause: |
+  Lib/queue.py:349-351: the timeout test and the `acquire` call do not depend on `block`, and
+  Lib/threading.py:506-507 refuses a timeout with blocking false. Modules/_queuemodule.c:389 reads
+  the timeout only when `block` is true.
+possible_fix: |
+  `if not block: timeout = None` first, as main does.
+duplicates:
+  issues:
+    - {number: 156476, state: closed, relation: "same bug, fixed by gh-156477 with backports gh-156487, gh-156488, gh-156489", reason: "duplicate: do not report"}
+  queries: ["SimpleQueue timeout", "_PySimpleQueue", "SimpleQueue get block False timeout",
+            "bugforge README: no queue entries"]
+lean:
+  property: PyLean.CoreLibs.Misc.Queue.SimpleQueueGetTwins
+  theorem: PyLean.CoreLibs.Misc.Queue.simpleQueueGetTwins_refuted

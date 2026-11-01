@@ -1,0 +1,54 @@
+id: corelibs-enum-strict-unnamed-bit
+title: "A STRICT Flag accepts a value made only of bits that exist inside a multi-bit member, then rejects it in combinations"
+priority: P4
+kind: logic-error
+module: corelibs
+files: [Lib/enum.py]
+functions: ["Flag._missing_"]
+summary: |
+  For class F(Flag): A = 1; X = 6, the default STRICT boundary rejects F(3) with "no members with value
+  2", yet F(2) is accepted as a nameless pseudo-member. Flag._missing_ tests `not combined_value` before
+  the strict test, so a value with no member at all skips the check. The accepted F(2) then breaks
+  closure: F(2) | F.A raises ValueError, though both operands are valid values of the class.
+likelihood: |
+  Low. It needs a multi-bit member whose bits are not all named, which verify(NAMED_FLAGS) exists to
+  forbid but which is allowed by default, and a value built from part of it.
+maybe_intended: |
+  Probably not intended: the comment at Lib/enum.py:1460 says a value "must not include any skipped
+  flags". A maintainer might answer that such a class should use verify(NAMED_FLAGS).
+reproducer: |
+  from enum import Flag
+  class F(Flag):
+      A = 1
+      X = 6
+  def attempt(f):
+      try:
+          return f()
+      except ValueError as e:
+          return 'ValueError'
+  two = attempt(lambda: F(2))
+  three = attempt(lambda: F(3))
+  combined = attempt(lambda: F(2) | F.A)
+  print(repr(two), three, combined)
+  if isinstance(two, F) and two.name is None and three == 'ValueError' and combined == 'ValueError':
+      print('REPRODUCED corelibs-enum-strict-unnamed-bit')
+expected: |
+  F(2) raises ValueError, as F(3) does.
+observed: |
+  python3 3.14.7: F(2) is <F: 2>, F(3) and F(2) | F.A raise ValueError. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): same, REPRODUCED.
+promised_by: |
+  The docstring of FlagBoundary at Lib/enum.py:1389, "strict" -> error is raised, and the comment at
+  Lib/enum.py:1460.
+cause: |
+  Lib/enum.py:1524-1527: `if not combined_value: pseudo_member._name_ = None` comes first, so
+  `elif unknown and cls._boundary_ is STRICT` is not reached when no member matched.
+possible_fix: |
+  Test `unknown and cls._boundary_ is STRICT` first.
+duplicates:
+  issues:
+    - {number: 88408, state: closed, relation: "search hit, 'enum.IntFlag regression: missing values cause TypeError'", reason: "different"}
+  queries: ["enum Flag STRICT unnamed bits", "bugforge README: no match for enum.Flag"]
+lean:
+  property: PyLean.CoreLibs.EnumDC.StrictValuesAreNamed
+  theorem: PyLean.CoreLibs.EnumDC.strictValuesAreNamed_refuted
