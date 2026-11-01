@@ -18,7 +18,7 @@ def CastRejections : Prop :=
     ((st.mv self).flags.isC = false →
       c = (.error (.typeError "memoryview: casts are restricted to C-contiguous views"), st)) ∧
     ((st.mv self).flags.isC = true → (s.isSome = true ∨ (st.mv self).view.ndim ≠ 1) →
-      zeroInShape (st.mv self).view = true →
+      HasZero (st.mv self).view →
       c = (.error (.typeError "memoryview: cannot cast view with zeros in shape or strides"), st))
 
 theorem castRejections_proven : CastRejections := by
@@ -30,7 +30,8 @@ theorem castRejections_proven : CastRejections := by
       Bool.not_false, ↓reduceIte, M.throw_app]
   · intro h1 h2 h3
     have hz : ((s.isSome || (st.mv self).view.ndim != 1) && zeroInShape (st.mv self).view) = true := by
-      rcases h2 with h | h <;> simp [h, h3]
+      have h3' := (zeroInShape_iff _).2 h3
+      rcases h2 with h | h <;> simp [h, h3']
     simp only [memoryviewCast, M.bind_app, checkReleased_ok _ _ hl, checkRestricted_ok _ _ hr, M.get, h1,
       Bool.not_true, Bool.false_eq_true, ↓reduceIte, hz, M.throw_app]
 
@@ -57,18 +58,16 @@ theorem packTypeErrors_proven : PackTypeErrors := by
     pylongAsLld, pylongAsLlu, pylongAsZd, pylongAsZu, numberIndex, M.throw_app, fixErrorInt]
 
 /-- A view in a reference cycle (`memory_clear`, :1171-1180) is released like any other if
-it has no exports, and left alone if it has; `mbuf_clear` (:138-145) and `memory_dealloc`
-(:1150-1161) are the same release. -/
+it has no exports, and left alone if it has. -/
 def ClearIsRelease : Prop :=
-  ∀ (st : St) (i k : Nat),
+  ∀ (st : St) (i : Nat),
     ((st.mv i).exports = 0 → memoryClear i st = memoryRelease i st) ∧
     ((st.mv i).exports ≠ 0 → memoryClear i st = (.ok (), st)) ∧
-    memoryDealloc i st = memoryRelease i st ∧ mbufClear k st = mbufRelease k st ∧
     (memoryRepr i st).2 = st
 
 theorem clearIsRelease_proven : ClearIsRelease := by
-  intro st i k
-  refine ⟨fun h => ?_, fun h => ?_, rfl, rfl, rfl⟩
+  intro st i
+  refine ⟨fun h => ?_, fun h => ?_, rfl⟩
   · simp [memoryClear, getExports, h]
   · simp [memoryClear, getExports, h]
 

@@ -1,5 +1,7 @@
 import PyLean.Registry
 import PyLean.BytesObj.Mem.Fallible
+import PyLean.BytesObj.Mem.Effects
+import PyLean.BytesObj.Mem.CmpTree
 import PyLean.BytesObj.Mem.Contig
 
 /-! Registry entries for memoryview (Objects/memoryobject.c). -/
@@ -200,8 +202,8 @@ def entries : List Entry := [
     source := "Fast path against general path", status := .proven
     prop := ``HexIsTobytes, thm := some ``hexIsTobytes_proven },
   { id := "bytesobj-memoryview-clear-release", pyFile := memFile
-    pyFns := ["memory_clear", "mbuf_clear", "memory_dealloc"]
-    statement := "A view in a reference cycle is released like any other if it has no exports and left alone if it has; mbuf_clear and memory_dealloc are that release."
+    pyFns := ["memory_clear"]
+    statement := "A view in a reference cycle is released like any other if it has no exports and left alone if it has."
     source := "memoryobject.c:178-179, :1171-1180", status := .proven
     prop := ``ClearIsRelease, thm := some ``clearIsRelease_proven },
   { id := "bytesobj-memoryview-repr", pyFile := memFile
@@ -302,6 +304,81 @@ def entries : List Entry := [
     statement := "tobytes(None) is tobytes('C'), and any order but C, F, A raises ValueError('order must be 'C', 'F' or 'A')."
     source := "memoryview.tobytes docstring, memoryobject.c:2263-2276", status := .proven
     prop := ``TobytesOrderArg, thm := some ``tobytesOrderArg_proven },
+  { id := "bytesobj-memoryview-dealloc-weakrefs", pyFile := memFile
+    pyFns := ["memory_dealloc"]
+    statement := "memory_dealloc releases the view first; only then does PyObject_ClearWeakRefs run a weakref callback, on a view already released, and a release the callback asks for of a view with exports is refused."
+    source := "memoryobject.c:1150-1161", status := .proven
+    prop := ``DeallocRules, thm := some ``deallocRules_proven },
+  { id := "bytesobj-memoryview-dealloc-on-fail", pyFile := memFile
+    pyFns := ["mbuf_dealloc", "PyMemoryView_FromObjectAndFlags"]
+    statement := "When mbuf_add_view refuses a buffer of more than 64 dimensions, memoryview(x) raises ValueError, and mbuf_dealloc releases the master that no view ever kept, running __release_buffer__."
+    source := "memoryobject.c:119-128, :811-819", status := .proven
+    prop := ``MbufDeallocOnFail, thm := some ``mbufDeallocOnFail_proven },
+  { id := "bytesobj-memoryview-mbuf-release", pyFile := memFile
+    pyFns := ["mbuf_release", "mbuf_clear"]
+    statement := "The first release of a managed buffer marks it and gives back the master, running __release_buffer__ or taking back an export of the view it came from; later releases do nothing."
+    source := "memoryobject.c:106-117, :137-144", status := .proven
+    prop := ``MbufReleaseRules, thm := some ``mbufReleaseRules_proven },
+  { id := "bytesobj-memoryview-hex-holds-export", pyFile := memFile
+    pyFns := ["memoryview_hex_impl"]
+    statement := "With a sep whose __len__ calls self.release(), hex raises, and a contiguous view refuses the release because it holds an export over the call, while a non-contiguous view, hexing a private copy, is released."
+    source := "memoryobject.c:2352-2354, gh-143195", status := .proven
+    prop := ``HexHoldsExport, thm := some ``hexHoldsExport_proven },
+  { id := "bytesobj-memoryview-hash-holds-export", pyFile := memFile
+    pyFns := ["memory_hash"]
+    statement := "memory_hash holds an export around PyObject_Hash: an exporter __hash__ calling self.release() is refused, one that raises passes its exception with no effect and no cached hash, one that releases another view succeeds."
+    source := "memoryobject.c:3231-3233, gh-142664", status := .proven
+    prop := ``HashHoldsExport, thm := some ``hashHoldsExport_proven },
+  { id := "bytesobj-memoryview-compare-releases", pyFile := memFile
+    pyFns := ["memory_richcompare"]
+    statement := "v == w releases w's buffer after the result is known: the result is the comparison of the buffers even when __release_buffer__ releases v, and that release has happened when == returns."
+    source := "memoryobject.c:3190-3199", status := .proven
+    prop := ``CompareReleases, thm := some ``compareReleases_proven },
+  { id := "bytesobj-memoryview-eq-failures", pyFile := memFile
+    pyFns := ["memoryview_count_impl", "memoryview_index_impl"]
+    statement := "An exception from __eq__ passes out of count and index at once; an __eq__ that calls self.release() succeeds, and the next step raises the released error, except on a view of one item, where count returns."
+    source := "memoryobject.c:2797-2816, :2872-2895", status := .proven
+    prop := ``EqFailures, thm := some ``eqFailures_proven },
+  { id := "bytesobj-memoryview-iter-null", pyFile := memFile
+    pyFns := ["memoryiter_next"]
+    statement := "An item at NULL ends the iteration with no exception, though the iterator has not reached its length and keeps its view, stepped past that item."
+    source := "memoryobject.c:3506-3509", status := .proven
+    prop := ``IterNull, thm := some ``iterNull_proven },
+  { id := "bytesobj-memoryview-slice-failures", pyFile := memFile
+    pyFns := ["init_slice"]
+    statement := "A slice key is unpacked in the order step, zero test, start, stop: a failing step comes first, a zero step stops the __index__ of start and stop from running, and otherwise the failing part's error is raised."
+    source := "Objects/sliceobject.c:218-258", status := .proven
+    prop := ``SliceFailures, thm := some ``sliceFailures_proven },
+  { id := "bytesobj-memoryview-slice-cleanup", pyFile := memFile
+    pyFns := ["memory_subscript", "memory_ass_sub"]
+    statement := "When a slice key fails, m[s] raises and gives back the export the sliced view took on the managed buffer, and m[s] = x raises and gives back x's buffer, running __release_buffer__."
+    source := "memoryobject.c:2589-2600, :2681-2711", status := .proven
+    prop := ``SliceCleanup, thm := some ``sliceCleanup_proven },
+  { id := "bytesobj-memoryview-cmp-is-tolist", pyFile := memFile
+    pyFns := ["memory_richcompare", "cmp_base", "cmp_rec", "unpack_cmp", "struct_unpack_cmp", "struct_unpack_single"]
+    statement := "v == w is v.tolist() == w.tolist() for any two live views of native formats, the same or different, of any shape, strides and suboffsets, floats included; with a different ndim v == w is False, though the lists can be equal."
+    source := "Doc/library/stdtypes.rst memoryview.__eq__; fast path against struct path", status := .proven
+    prop := ``CmpIsTolist, thm := some ``cmpIsTolist_proven },
+  { id := "bytesobj-memoryview-cmp-non-native", pyFile := memFile
+    pyFns := ["memory_richcompare", "cmp_base", "struct_unpack_cmp", "struct_unpack_single"]
+    statement := "With a format that is not native, 1-D views are equal exactly when every pair of items agrees under struct_unpack_cmp, which compares one-value tuples by that value and longer tuples as tuples."
+    source := "memoryobject.c:2128-2144, :2931-2956, :3140-3158", status := .proven
+    prop := ``CmpNonNative, thm := some ``cmpNonNative_proven },
+  { id := "bytesobj-memoryview-equiv-rules", pyFile := memFile
+    pyFns := ["equiv_format", "equiv_shape", "equiv_structure"]
+    statement := "A slice assignment goes ahead exactly if the formats agree apart from a leading @, the item sizes and dimensions are equal, and the shapes are equal up to the first dimension of length 0; otherwise ValueError."
+    source := "memoryobject.c:287-339", status := .proven
+    prop := ``EquivRules, thm := some ``equivRules_proven },
+  { id := "bytesobj-memoryview-copy-single-refuses", pyFile := memFile
+    pyFns := ["copy_single"]
+    statement := "copy_single re-checks the view after the Python code that got the source's buffer, then refuses a source of another structure, writing nothing."
+    source := "memoryobject.c:404-432", status := .proven
+    prop := ``CopySingleRefuses, thm := some ``copySingleRefuses_proven },
+  { id := "bytesobj-memoryview-adjust-fmt", pyFile := memFile
+    pyFns := ["adjust_fmt"]
+    statement := "After an optional @ the format must be one character; anything else raises NotImplementedError naming the whole format."
+    source := "memoryobject.c:2152-2164", status := .proven
+    prop := ``AdjustFmtRules, thm := some ``adjustFmtRules_proven },
   { id := "bytesobj-memoryview-float32-round-trip", pyFile := memFile
     pyFns := ["pack_single", "unpack_single"]
     statement := "Storing a double read from a float item stores the same float: narrow32 (widen32 x) = x for every non-NaN 32-bit pattern."

@@ -8,11 +8,41 @@ namespace PyLean.BytesObj.Mem
 
 open PyLean
 
+/-- A dimension of the view has length 0. -/
+def HasZero (v : Buf) : Prop := ∃ i, i < v.ndim ∧ (v.shape.getD []).getD i 1 = 0
+
+theorem any_take_zero (l : List Int) (n : Nat) :
+    (l.take n).any (· == 0) = true ↔ ∃ i, i < n ∧ l.getD i 1 = 0 := by
+  induction l generalizing n with
+  | nil => simp
+  | cons a as ih =>
+    cases n with
+    | zero => simp
+    | succ n =>
+      simp only [List.take_succ_cons, List.any_cons, Bool.or_eq_true, beq_iff_eq, ih]
+      constructor
+      · rintro (h | ⟨i, hi, e⟩)
+        · exact ⟨0, by omega, by simpa using h⟩
+        · exact ⟨i + 1, by omega, by simpa using e⟩
+      · rintro ⟨i, hi, e⟩
+        cases i with
+        | zero => exact Or.inl (by simpa using e)
+        | succ i => exact Or.inr ⟨i, by omega, by simpa using e⟩
+
+/-- `zero_in_shape`, :1412-1423: true exactly when a dimension has length 0. -/
+theorem zeroInShape_iff (v : Buf) : zeroInShape v = true ↔ HasZero v :=
+  any_take_zero _ _
+
+theorem zeroInShape_false (v : Buf) (h : ¬ HasZero v) : zeroInShape v = false := by
+  cases hz : zeroInShape v with
+  | false => rfl
+  | true => exact absurd ((zeroInShape_iff v).1 hz) h
+
 /-- What `cast_to_1D` leaves in the view. -/
 def castView (view : Buf) (fstr : List Char) (size : Int) : Buf :=
   { obj := view.obj, buf := view.buf, len := view.len, itemsize := size, readonly := view.readonly,
     ndim := 1, format := some fstr, shape := some [view.len.tdiv size], strides := some [size],
-    suboffsets := none }
+    suboffsets := none, hook := view.hook }
 
 /-- `m.cast(format)` on a live C-contiguous view, with a native `format`, when one side has
 byte size and the length is a multiple of the new item size, gives a new view registered
@@ -25,7 +55,7 @@ def Cast1DSpec : Prop :=
     self < st.mvs.length → (st.mv self).mbuf < st.mbufs.length →
     baseInaccessible st self = false → (st.mv self).flags.restricted = false →
     (st.mv self).flags.isC = true →
-    ((st.mv self).view.ndim = 1 ∨ zeroInShape (st.mv self).view = false) →
+    ((st.mv self).view.ndim = 1 ∨ ¬ HasZero (st.mv self).view) →
     (∀ ch ∈ format, ch.toNat < 128) →
     getNativeFmtchar format = some (c, size) →
     getNativeFmtstr format = some fstr →
@@ -118,7 +148,9 @@ theorem cast1DSpec_proven : Cast1DSpec := by
   have hany := any_ascii_false format hasc
   have hz' : ((Option.isSome (none : Option ShapeArg) || (st.mv self).view.ndim != 1) &&
       zeroInShape (st.mv self).view) = false := by
-    rcases hz with h | h <;> simp [h]
+    rcases hz with h | h
+    · simp [h]
+    · simp [zeroInShape_false _ h]
   dsimp only
   unfold memoryviewCast
   simp only [M.bind_app, checkReleased_ok _ _ hrel, checkRestricted_ok _ _ hres, M.get, hC,

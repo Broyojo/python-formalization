@@ -171,7 +171,7 @@ theorem sliceItems_proven : SliceItems := by
     rw [hrr] at hr1 hA
     simp only at hr1 hA
     subst hr1
-    simp only [M.onError, M.bind_app, fire, M.pure_app, M.get, M.lift, hA.new, hi, M.modify]
+    simp only [M.onError, M.bind_app, sliceEvents_none s h0, M.pure_app, M.get, M.lift, hA.new, hi, M.modify]
   rw [hmemsub]
   have hn1 : st.mvs.length < (mbufAddView (st.mv self).mbuf (some (st.mv self).view) st).2.mvs.length := by
     rw [hA.len]; omega

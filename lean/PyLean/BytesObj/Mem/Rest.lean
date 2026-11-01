@@ -17,7 +17,8 @@ structure Hashable (st : St) (i : Nat) : Prop where
   fresh : (st.mv i).hash = none
   readonly : (st.mv i).view.readonly = true
   format : ∃ c size, getNativeFmtchar ((st.mv i).view.format.getD []) = some (c, size) ∧ isByteFormat c = true
-  obj : (st.mv i).view.obj = none ∨ ∃ e, (st.mv i).view.obj = some (.exp e) ∧ st.unhashable.getD e none = none
+  obj : (st.mv i).view.obj = none ∨ ∃ e, (st.mv i).view.obj = some (.exp e) ∧
+    st.unhashable.getD e none = none ∧ st.hashHook.getD e none = none
 
 theorem memoryHash_contig (st : St) (i : Nat) (h : Hashable st i) (hC : (st.mv i).flags.isC = true) :
     memoryHash i st =
@@ -28,10 +29,11 @@ theorem memoryHash_contig (st : St) (i : Nat) (h : Hashable st i) (hC : (st.mv i
   unfold memoryHash
   simp only [memoryHashF, M.bind_app, M.get, h.fresh, hc, h.readonly, Bool.not_true, Bool.false_eq_true,
     ↓reduceIte, hf, hb, M.pure_app, hC, M.modify]
-  rcases h.obj with ho | ⟨e, ho, hu⟩
+  rcases h.obj with ho | ⟨e, ho, hu, hk⟩
   · simp only [ho]
     rfl
-  · simp only [ho, hu]
+  · simp only [ho, hu, hk, M.bind_app]
+    rw [withExport_same i (do fire none; pure ()) st h.valid rfl]
     rfl
 
 theorem memoryHash_strided (st : St) (i : Nat) (b : List Nat) (h : Hashable st i)
@@ -43,16 +45,18 @@ theorem memoryHash_strided (st : St) (i : Nat) (b : List Nat) (h : Hashable st i
   unfold memoryHash
   simp only [memoryHashF, M.bind_app, M.get, h.fresh, hc, h.readonly, Bool.not_true, Bool.false_eq_true,
     ↓reduceIte, hf, hb, M.pure_app, hC, M.modify, Bool.not_false, M.lift, hb2]
-  rcases h.obj with ho | ⟨e, ho, hu⟩
+  rcases h.obj with ho | ⟨e, ho, hu, hk⟩
   · simp only [ho]
     rfl
-  · simp only [ho, hu]
+  · simp only [ho, hu, hk, M.bind_app]
+    rw [withExport_same i (do fire none; pure ()) st h.valid rfl]
     rfl
 
 /-- `hash(m) == hash(m.tobytes())` for every read-only 1-D view of a byte format, for every
 stride (Doc/library/stdtypes.rst, `memoryview.__hash__`), and the value stays: a later `hash`
 gives the same even after `release()`. Hypotheses: the conditions of the function itself
-(read-only, byte format, hashable exporter), and the type invariants of the view. -/
+(read-only, byte format, an exporter whose `__hash__` succeeds and touches no view: the other
+cases are `HashHoldsExport`), and the type invariants of the view. -/
 def HashIsTobytes : Prop :=
   ∀ (st : St) (self : Nat) (n d : Int) (f : List Char),
     Live1D st self n d f → Hashable st self → 0 < (st.mv self).view.itemsize →
@@ -201,7 +205,7 @@ theorem getbufRules_proven : GetbufRules := by
   have hgb : memoryGetbuf self flags st =
       match getbufView (st.mv self).view (st.mv self).flags flags with
       | .error e => (.error e, st)
-      | .ok v => (.ok { v with obj := some (.mv self) },
+      | .ok v => (.ok { v with obj := some (.mv self), hook := none },
           st.setMv self { st.mv self with exports := (st.mv self).exports + 1 }) := by
     simp only [memoryGetbuf, M.bind_app, hc, hc2, M.get, M.lift]
     cases getbufView (st.mv self).view (st.mv self).flags flags <;> rfl
@@ -302,7 +306,7 @@ theorem newFromExporter_proven : NewFromExporter := by
     simp only [memoryviewNew, memoryViewFromObject, memoryViewFromObjectAndFlags, M.bind_app, fire,
       M.pure_app, viewOfExporter, managedBufferFromObject, mbufAlloc, M.lift, hg, M.modify, Ret.get_val]
     rw [← hst2]
-    rw [show (M.onError (mbufAddView st.mbufs.length none) (mbufRelease st.mbufs.length)) st2 =
+    rw [show (M.onError (mbufAddView st.mbufs.length none) (mbufDealloc st.mbufs.length)) st2 =
       mbufAddView st.mbufs.length (some b) st2 from ?_]
     have hn : mbufAddView st.mbufs.length none st2 = mbufAddView st.mbufs.length (some b) st2 := by
       rw [mbufAddView_none, hmb]

@@ -1,14 +1,8 @@
 file	line	name	verdict	mirror	property	settled	reason
 Objects/memoryobject.c	72	mbuf_alloc	FAITHFUL	yes	yes	yes	The NULL return is out of memory, which no model here expresses; passes on the fresh MBuf fields NewFromExporter states.
 Objects/memoryobject.c	89	_PyManagedBuffer_FromObject	HOLLOW	no	no	yes	Obj.exporter cannot raise from __buffer__, so the PyObject_GetBuffer failure at :97-101 is not expressible for a Python exporter, and new-exporter states only the success of flags = PyBUF_FULL_RO on a 1-D buffer.
-Objects/memoryobject.c	107	mbuf_release	HOLLOW	no	yes	yes	pyBufferRelease acts only on a memoryview master (Model.lean:74-75 puts other exporters out of scope), so PyBuffer_Release at :116 cannot run a Python __release_buffer__ or drop the exporter's last reference, both Python-visible and re-entrant.
-Objects/memoryobject.c	120	mbuf_dealloc	HOLLOW	no	-	-	Not no-behaviour: when mbuf_add_view fails (:816-817, :845-846) or mbuf_copy_format fails (:909-911) no view ever existed, so mbuf_release at :124 is the first release and runs PyBuffer_Release, which viewOfExporter itself models as mbufRelease.
 Objects/memoryobject.c	131	mbuf_traverse	FAITHFUL	yes	-	-	
-Objects/memoryobject.c	139	mbuf_clear	HOLLOW	yes	no	yes	The only statement is the conjunct mbufClear k st = mbufRelease k st, a bare alias proved by rfl, and the mirror inherits the missing __release_buffer__ of mbuf_release.
 Objects/memoryobject.c	272	last_dim_is_contiguous	HOLLOW	yes	no	yes	Every listed theorem has dest.suboffsets = none, so the conjunct !HAVE_SUBOFFSETS_IN_LAST_DIM(dest) at :275 is constantly true and could be deleted with all of them still holding.
-Objects/memoryobject.c	288	equiv_format	HOLLOW	yes	no	yes	Both entries only see it return true (assumed in CopySingleSpec, a self-format in equiv_self), so the rejection at :296-298, its stated purpose at :281-286, is in no proposition.
-Objects/memoryobject.c	308	equiv_shape	HOLLOW	yes	no	yes	Only the reflexive instance is proven (shapeLoop_refl) and CmpBadFormat and CopySingleSpec assume the result, so neither the unequal exit at :316-317 nor the stop at a zero dimension at :318-319 is stated.
-Objects/memoryobject.c	328	equiv_structure	HOLLOW	yes	no	yes	CopySingleSpec assumes equivStructure = .ok and equiv_self feeds it a copy of the source, so the ValueError at :332-334 is in no proposition.
 Objects/memoryobject.c	345	copy_base	HOLLOW	yes	no	yes	No theorem has destination suboffsets (CopySingleSpec assumes none on both sides, TobytesC has a plain destination), so the ADJUST_PTR of dptr at :365, reached by a slice assignment on a PIL view, is unstated.
 Objects/memoryobject.c	375	copy_rec	HOLLOW	yes	no	yes	Both listed theorems fix the destination to C strides, and the Fortran destination is what bytesobj-memoryview-tobytes-fortran leaves .open because copy_rec interleaves the writes.
 Objects/memoryobject.c	405	copy_single	HOLLOW	yes	no	yes	CopySingleSpec assumes no suboffsets on either side, non-overlapping destination items, a live view and equivStructure = .ok, so the CHECK_RELEASED_INT_AGAIN re-check at :407 and the failure at :412-413 are stated nowhere and the registry sentence overclaims.
@@ -38,7 +32,6 @@ Objects/memoryobject.c	1049	PyBuffer_ToContiguous	HOLLOW	yes	no	yes	Tobytes1D is
 Objects/memoryobject.c	1090	get_exports	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	1109	_memory_release	FAITHFUL	yes	yes	yes	Its own lines are mirrored in order; the gap in PyBuffer_Release is charged to mbuf_release.
 Objects/memoryobject.c	1129	memoryview_release_impl	FAITHFUL	yes	yes	yes	The SystemError arm at :1145-1147 is mirrored and unreachable under export counting.
-Objects/memoryobject.c	1151	memory_dealloc	HOLLOW	no	no	yes	memoryDealloc is a bare alias of memoryRelease: PyObject_ClearWeakRefs at :1158-1159, which clears weakrefs and runs their callbacks, and Py_CLEAR(self->mbuf) at :1157 have no counterpart, and the only statement is memoryDealloc i st = memoryRelease i st by rfl.
 Objects/memoryobject.c	1164	memory_traverse	FAITHFUL	yes	-	-	
 Objects/memoryobject.c	1172	memory_clear	FAITHFUL	yes	yes	yes	Both arms are stated, though the proposition is close to the definition; Py_CLEAR(self->mbuf) at :1177 is dropped with no visible effect because BASE_INACCESSIBLE tests the released flag first.
 Objects/memoryobject.c	1183	memory_enter	HOLLOW	no	no	yes	memoryEnter returns Unit, so return Py_NewRef(self) at :1186 (with m as x binds m) is not modelled, and the only entry states the released arm.
@@ -48,7 +41,6 @@ Objects/memoryobject.c	1232	get_native_fmtstr	FAITHFUL	yes	yes	yes
 Objects/memoryobject.c	1276	cast_to_1D	FAITHFUL	yes	yes	yes	The error arms at :1295-1312 are mirrored verbatim and taken as hypotheses; no theorem states them.
 Objects/memoryobject.c	1339	copy_shape	FAITHFUL	yes	yes	yes	Soundness only (if the copy succeeds the result is the positive product); the error arms are mirrored verbatim and unstated.
 Objects/memoryobject.c	1378	cast_to_ND	HOLLOW	yes	no	yes	CastNDSpec assumes 0 < ndim, so the 0-dim branch at :1390-1394 (m.cast(f, [])) is excluded, and the length mismatch at :1402-1406 is unstated.
-Objects/memoryobject.c	1414	zero_in_shape	HOLLOW	yes	no	yes	Cast1DSpec and CastRejections take zeroInShape as an opaque Bool and no proof unfolds it (Cast.lean:28, Misc.lean:21), so both hold for any definition of it.
 Objects/memoryobject.c	1448	memoryview_cast_impl	HOLLOW	yes	no	yes	Cast1DSpec has shape = none and CastRejections stops at the second check, so the shape path at :1468-1482 and :1491 and the cleanup at :1496-1498 are not stated at this level; CastNDSpec is on castToND alone.
 Objects/memoryobject.c	1508	memoryview_toreadonly_impl	HOLLOW	yes	no	yes	ToReadonlySpec assumes Live1D, which is neither a type invariant nor a precondition of toreadonly, so N-D and suboffset views are unstated.
 Objects/memoryobject.c	1529	memory_getbuf	FAITHFUL	yes	yes	yes	GetbufRules covers all flags and views; each contiguity refusal is covered only by 'a failure changes nothing', and the CHECK_RESTRICTED_INT arm is mirrored and unstated.
@@ -60,13 +52,10 @@ Objects/memoryobject.c	1875	pack_single	HOLLOW	no	no	yes	Obj cannot raise from _
 Objects/memoryobject.c	2045	unpacker_new	FAITHFUL	yes	-	-	
 Objects/memoryobject.c	2063	unpacker_free	FAITHFUL	yes	-	-	Applies for the stock struct.Struct; the Py_XDECREFs at :2066-2067 could run a finalizer only if struct.Struct is replaced.
 Objects/memoryobject.c	2075	struct_get_unpacker	HOLLOW	no	no	yes	The import failure at :2082-2084 is dropped (State.lean:383-384), though fix_struct_error_int exists to preserve it, CmpBadFormat assumes the rejection as a hypothesis, and CmpFastStruct only parses one native character.
-Objects/memoryobject.c	2128	struct_unpack_single	HOLLOW	yes	no	yes	The only theorem is CmpFastStruct, one native code compared with itself, a pair memory_richcompare sends to the fast path at :3145, so the real inputs (differing or non-native formats) and the multi-item tuple at :2143 are unstated.
-Objects/memoryobject.c	2153	adjust_fmt	HOLLOW	yes	no	yes	Every theorem takes adjustFmt = .ok fmt as a hypothesis and no proof unfolds it, so the '@' skip and the NotImplementedError at :2161-2163 are in no proposition and index-item holds for any definition.
 Objects/memoryobject.c	2168	tolist_base	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	2195	tolist_rec	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	2237	memoryview_tolist_impl	HOLLOW	yes	no	yes	TolistFlat requires sh != [], so the 0-dim arm at :2248-2250 is excluded although the registry sentence says any dimension.
 Objects/memoryobject.c	2279	memoryview_tobytes_impl	HOLLOW	yes	no	yes	Results are proven only for 1-D, no suboffsets, order None or 'C': the 'F' and 'A' branches at :2289-2294 have no result in any proposition, and the two .open tobytes entries record the N-D cases.
-Objects/memoryobject.c	2338	memoryview_hex_impl	HOLLOW	no	yes	yes	The export bump around _Py_strhex_with_sep at :2352-2354 (gh-143195) is dropped (Model.lean:730-732), so a sep whose __len__ releases m or raises is not expressible; hex-groups is on strhexBody, which is Python/pystrhex.c, not this function.
 Objects/memoryobject.c	2376	memory_repr	FAITHFUL	yes	yes	yes	The proposition restates the body by rfl, accepted only because the body is one flag test; the %p address is not modelled.
 Objects/memoryobject.c	2391	lookup_dimension	FAITHFUL	yes	yes	yes	Passes on the union: index-item for negative and out-of-range indices, tuple-item for dim > 0 and suboffsets.
 Objects/memoryobject.c	2417	ptr_from_index	HOLLOW	yes	no	yes	The body is right, but every theorem reaching it is Live1D, so a 1-D view with suboffsets is outside all of them.
@@ -82,11 +71,7 @@ Objects/memoryobject.c	2746	memory_length	HOLLOW	yes	no	yes	No proposition menti
 Objects/memoryobject.c	2787	memoryview_count_impl	HOLLOW	no	no	yes	itemEqObj is a total Bool, so a failing PyObject_RichCompareBool at :2812-2815 and an __eq__ that releases m are not expressible, and CountIsList is restricted to built-in x on Live1D.
 Objects/memoryobject.c	2840	memoryview_index_impl	HOLLOW	no	no	yes	itemEqObj is a total Bool, so a failing comparison at :2892-2894 and the mutation during == that the comment at :2873-2876 names are not expressible, and IndexIsSearch is restricted to built-in x on Live1D.
 Objects/memoryobject.c	2917	fix_struct_error_int	HOLLOW	yes	no	yes	CmpBadFormat states the StructError arm only, with the error as a hypothesis, and the ImportError and MemoryError arm at :2921-2924 is dead because no model path raises them.
-Objects/memoryobject.c	2932	struct_unpack_cmp	HOLLOW	yes	no	yes	The only theorem compares one native unpacker with itself, a pair memory_richcompare sends to the fast path at :3145, so comparison of two differing or non-native formats, the case this function exists for, is unstated.
 Objects/memoryobject.c	2974	unpack_cmp	FAITHFUL	yes	yes	yes	
-Objects/memoryobject.c	3041	cmp_base	HOLLOW	yes	no	yes	CmpReflexive is the only statement and compares a view with itself, so a body returning true for everything would satisfy it; the unequal exit at :3053-3054 and any two distinct views are unstated.
-Objects/memoryobject.c	3063	cmp_rec	HOLLOW	yes	no	yes	CmpReflexive is the only statement and compares a view with itself, so a body returning true for everything would satisfy it; the unequal exit at :3091-3092 and any two distinct views are unstated.
-Objects/memoryobject.c	3099	memory_richcompare	HOLLOW	no	no	yes	PyBuffer_Release(ww) at :3192-3193 has no counterpart, so __release_buffer__ during == is not expressible, nor is a raising __buffer__ at :3127-3130, and no proposition relates == to tolist() for two distinct views.
 Objects/memoryobject.c	3206	memory_hash	HOLLOW	no	no	yes	The export bump around PyObject_Hash at :3231-3233 (gh-142664) is dropped (Model.lean:1111-1112), so an exporter __hash__ that releases m is not expressible, and HashIsTobytes is Live1D, leaving N-D views and a memoryview exporter unstated.
 Objects/memoryobject.c	3268	_IntTupleFromSsizet	FAITHFUL	yes	yes	yes	
 Objects/memoryobject.c	3292	memory_obj_get	FAITHFUL	yes	yes	yes	

@@ -129,8 +129,7 @@ theorem mbufRelease_ok (k : Nat) (st : St) : (mbufRelease k st).1 = .ok () := by
   dsimp only
   split
   · rfl
-  · unfold pyBufferRelease
-    split <;> rfl
+  · exact pyBufferRelease_ok _ _
 
 theorem memoryRelease_ok (i : Nat) (st : St) : (memoryRelease i st).1 = .ok () := by
   unfold memoryRelease
@@ -140,6 +139,21 @@ theorem memoryRelease_ok (i : Nat) (st : St) : (memoryRelease i st).1 = .ok () :
   · split
     · exact mbufRelease_ok _ _
     · rfl
+
+theorem memoryDealloc_ok (i : Nat) (st : St) : (memoryDealloc i st).1 = .ok () := by
+  have h := memoryRelease_ok i st
+  unfold memoryDealloc
+  dsimp only
+  rcases hr : memoryRelease i st with ⟨r, s⟩
+  rw [hr] at h
+  simp only at h
+  subst h
+  dsimp only
+  split
+  · split
+    · exact memoryRelease_ok _ _
+    · rfl
+  · rfl
 
 /-- `PyMemoryView_GetContiguous` for a 1-D source (:965-1001): a write request on a read-only
 view and a write request on a non-contiguous view raise `BufferError`, and a view already
@@ -174,7 +188,7 @@ theorem getContiguousRules_proven : GetContiguousRules := by
   simp only at hr1 hA
   subst hr1
   have hnew : (st1.mv st.mvs.length).view = (st.mv self).view := by rw [hA.new]
-  have hdeal : ∀ s, (memoryDealloc st.mvs.length s).1 = .ok () := fun s => memoryRelease_ok _ _
+  have hdeal : ∀ s, (memoryDealloc st.mvs.length s).1 = .ok () := fun s => memoryDealloc_ok _ _
   have thrown : ∀ (s : St) (x : PyExc),
       ((memoryDealloc st.mvs.length >>= fun _ => (throw x : M Nat)) s).1 = .error x := by
     intro s x
@@ -316,7 +330,7 @@ theorem fromContigCopy_proven : FromContigCopy := by
       { obj := some (.exp 1000000), buf := st.mem.length, len := src.len,
         itemsize := src.itemsize, readonly := (s.mb st.mbufs.length).master.readonly, ndim := src.ndim,
         format := some f, shape := some sh, strides := some (cStrides src.itemsize sh),
-        suboffsets := none } := by
+        suboffsets := none, hook := (s.mb st.mbufs.length).master.hook } := by
     rw [hdest, hx]
     simp [initSharedValues, hB.buf, hB.len, hB.format, hB.obj, hf, Int.toNat_of_nonneg hlenN]
   have hequiv := equiv_self src dest sh hsh hn (by rw [hd, hsh]) (by rw [hd]) (by rw [hd, hf]) (by rw [hd])
@@ -401,7 +415,7 @@ theorem fromBufferReconstructs_proven : FromBufferReconstructs := by
       { obj := none, buf := info.buf, len := info.len, itemsize := info.itemsize,
         readonly := info.readonly, ndim := 1, format := some ['B'],
         shape := some [Int.tdiv info.len info.itemsize], strides := some [info.itemsize],
-        suboffsets := none } := by
+        suboffsets := none, hook := info.hook } := by
     rw [hb]
     simp [viewCopy, initShapeStrides, initSharedValues, initSuboffsets, h1, hsh, hst, hfm, hsb]
   rw [hvc]

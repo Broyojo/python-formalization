@@ -111,9 +111,13 @@ def jObj (d : DS) (j : Json) : Except String (Option Obj) := do
       return (d.pick (← v.getInt?)).map .view
     if let .ok v := j.getObjVal? "exp" then
       let k ← v.getNat?
+      let hook : Option Nat ← match j.getObjVal? "hook" with
+        | .ok h => pure (d.pick (← h.getInt?))
+        | .error _ => pure none
+      let b : Buf := { d.exps[k]! with hook := hook }
       let r ← match j.getObjVal? "end" with
-        | .ok e => jRet (.ok d.exps[k]!) e
-        | .error _ => pure (.val d.exps[k]!)
+        | .ok e => jRet (.ok b) e
+        | .error _ => pure (.val b)
       return some (.exporter r (← jRel d j))
     if let .ok v := j.getObjVal? "idx" then
       return some (.index (← jRet v.getInt? v) (← jRel d j))
@@ -121,6 +125,10 @@ def jObj (d : DS) (j : Json) : Except String (Option Obj) := do
       return some (.floatLike (← jRet v.getNat? v) (← jRel d j))
     if let .ok v := j.getObjVal? "bln" then
       return some (.boolLike (← jRet v.getBool? v) (← jRel d j))
+    if let .ok v := j.getObjVal? "lenobj" then
+      return some (.lenLike (← jRet v.getInt? v) (← jRel d j))
+    if let .ok v := j.getObjVal? "eqobj" then
+      return some (.eqLike (← jRet v.getBool? v) (← jRel d j))
     throw "bad object"
   | _ => throw "bad object"
 
@@ -132,7 +140,20 @@ def jSlice (j : Json) : Except String Slice := do
 
 def jKeyElem (d : DS) (j : Json) : Except String (Option KeyElem) := do
   if let .ok v := j.getObjVal? "slice" then
-    return some (.slice (← jSlice v) (← jRel d j))
+    let fail ← match j.getObjVal? "fail" with
+      | .ok f =>
+        let part ← match ← getStr f "part" with
+          | "start" => pure SlicePart.start
+          | "stop" => pure SlicePart.stop
+          | "step" => pure SlicePart.step
+          | p => throw s!"slice part {p}"
+        let how ← match f.getObjVal? "notindex" with
+          | .ok _ => pure (Ret.raises (.typeError
+              "slice indices must be integers or None or have an __index__ method"))
+          | .error _ => jRet (.ok ()) f
+        pure (some { part := part, how := how : SliceFail })
+      | .error _ => pure none
+    return some (.slice (← jSlice v) (← jRel d j) fail)
   return (← jObj d j).map .obj
 
 def jKey (d : DS) (j : Json) : Except String (Option Key) := do
@@ -300,6 +321,10 @@ def stepOp (d : DS) (op : Array Json) : Except String (Json × DS) := do
       let a ← jAttr (← (← argAt op 2).getStr?)
       return runM d (memoryGet i a) (fun d v => (attrJ d v, d))
   | "repr" => withH fun i => return runM d (memoryRepr i) (plain toJson)
+  | "weak" => withH fun i => do
+      let t := d.pick (← (← argAt op 2).getInt?)
+      let st := d.st.setMv i { d.st.mv i with weakcb := t }
+      return (okJ .null, { d with st := st })
   | "drop" => withH fun i => do
       if canDrop d i then
         let (_, st) := memoryDealloc i d.st
@@ -374,7 +399,12 @@ def script (j : Json) : Except String Json := do
   let exps ← (← (← field j "exps").getArr?).toList.mapIdxM fun i e => jBuf e i
   let unh ← (← (← field j "exps").getArr?).toList.mapM jUnhash
   let ops ← (← field j "ops").getArr?
+  let hooks ← (← (← field j "exps").getArr?).toList.mapM fun e =>
+    match e.getObjVal? "hashrel" with
+    | .ok v => (some <$> v.getNat?)
+    | .error _ => (pure none : Except String (Option Nat))
   let mut d : DS := { st := { mem := mem, unhashable := unh }, exps := exps.toArray }
+  d := { d with st := { d.st with hashHook := hooks } }
   let mut out : Array Json := #[]
   for op in ops do
     let (r, d') ← stepOp d (← op.getArr?)
