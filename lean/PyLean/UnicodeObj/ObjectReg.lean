@@ -4,6 +4,7 @@ import PyLean.UnicodeObj.ObjectWriterProps
 import PyLean.UnicodeObj.ObjectFromFormatTwin
 import PyLean.UnicodeObj.ObjectFromFormatWriter
 import PyLean.UnicodeObj.ObjectIterProps
+import PyLean.UnicodeObj.ObjectInternProps
 
 /-! Registry entries of the object slice. -/
 
@@ -12,6 +13,31 @@ namespace PyLean.UnicodeObj
 open PyLean.Registry
 
 def objectEntries : List Entry := [
+  { id := "unicodeobj-intern-canonical", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["intern_common"]
+    statement := "For every two exact strings of equal text, in any state, the second intern returns the object of the first. Objects are compared by id."
+    source := "Doc/library/sys.rst: sys.intern; invariant of the interned tables"
+    status := .proven, prop := ``InternCanonical, thm := some ``internCanonical_proven },
+  { id := "unicodeobj-intern-spec", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["intern_common", "immortalize_interned"]
+    statement := "Interning keeps the tables consistent and every object's text, returns an object of the same text, leaves non-str objects and instances of subclasses alone, and gives an interned result for an exact str, not mortal if immortality was asked for."
+    source := "invariant of the interned tables; unicodeobject.c:16010-16014"
+    status := .proven, prop := ``InternSpec, thm := some ``internSpec_proven },
+  { id := "unicodeobj-intern-idempotent", pyFile := "Objects/unicodeobject.c"
+    pyFns := []
+    statement := "Interning what interning returned changes nothing."
+    source := "invariant: idempotence"
+    status := .proven, prop := ``InternIdempotent, thm := some ``internIdempotent_proven },
+  { id := "unicodeobj-intern-mortality", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["_PyUnicode_InternMortal", "_PyUnicode_InternImmortal", "PyUnicode_InternInPlace", "PyUnicode_InternImmortal"]
+    statement := "PyUnicode_InternInPlace makes a new interned string mortal and leaves what the dict holds, PyUnicode_InternImmortal makes it immortal and promotes what the dict holds."
+    source := "implementation against itself: the two entry points; InternalDocs/string_interning.md"
+    status := .proven, prop := ``InternMortality, thm := some ``internMortality_proven },
+  { id := "unicodeobj-intern-from-string", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["PyUnicode_InternFromString"]
+    statement := "PyUnicode_InternFromString raises what the strict decode raises, and otherwise gives an interned string of the decoded text, the same object each time."
+    source := "implementation against itself: the C string path against intern_common"
+    status := .proven, prop := ``InternFromStringSpec, thm := some ``internFromStringSpec_proven },
   { id := "unicodeobj-iter-drains", pyFile := "Objects/unicodeobject.c"
     pyFns := ["unicodeiter_next", "unicode_ascii_iter_next", "unicode_char", "unicode_iter"]
     statement := "list(iter(s)) is the characters of s, each a one-character string of the canonical kind, for both iterator types and for a subclass of str, and the iterator ends."

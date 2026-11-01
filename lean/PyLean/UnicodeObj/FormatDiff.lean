@@ -7,6 +7,7 @@ import PyLean.UnicodeObj.FormatStr
 import PyLean.UnicodeObj.ObjectWriter
 import PyLean.UnicodeObj.ObjectFromFormat
 import PyLean.UnicodeObj.ObjectIter
+import PyLean.UnicodeObj.ObjectIntern
 
 /-! Difftest handler for the formatting slice (`fn` names start with `fmt_`). -/
 
@@ -160,6 +161,16 @@ def getIOp (j : Json) : Except String IOp := do
     | o => throw s!"bad lookup {o}"
   | o => throw s!"bad op {o}"
 
+def getKOp (j : Json) : Except String KOp := do
+  match ← getStr j "op" with
+  | "new" => return .newStr (← getSeq j "s")
+  | "sub" => return .newSub (← getSeq j "s")
+  | "other" => return .newOther
+  | "mortal" => return .mortal (← getNat j "h")
+  | "immortal" => return .immortal (← getNat j "h")
+  | "fromstring" => return .fromString (← getSeq j "s")
+  | o => throw s!"bad op {o}"
+
 def kindJson : Kind → Json
   | .ascii => Json.arr #[toJson (1 : Nat), toJson true]
   | .ucs1 => Json.arr #[toJson (1 : Nat), toJson false]
@@ -236,6 +247,18 @@ def run (fn : String) (j : Json) : Except String Json := do
         toJson (consumedOut r)]
       Json.arr #[Json.arr (trace.map step).toArray, toJson text, kindJson kind])
       (writerCreate (← getInt j "n"))
+  | "fmt_intern" =>
+    let ops ← (← (← field j "ops").getArr?).toList.mapM getKOp
+    let statics ← (← (← field j "statics").getArr?).toList.mapM fun x => do
+      return (← (← x.getArr?).toList.mapM (·.getNat?))
+    let (W, hs, rs) := runKOps (startWorld statics) [] ops
+    -- For each handle: the first handle that is the same object, and the two flags.
+    let show1 (h : ObjId) : Json :=
+      let o := W.objs h
+      Json.arr #[toJson (hs.findIdx (· == h)), toJson (o.state != .none), toJson o.immortal]
+    return encPy (fun (x : Json) => x)
+      (.ok (Json.arr #[Json.arr (rs.map (encPy (fun (_ : Unit) => Json.null))).toArray,
+        Json.arr (hs.map show1).toArray]))
   | "fmt_iter" =>
     let ops ← (← (← field j "ops").getArr?).toList.mapM getIOp
     let it0 := unicodeIter (← getSeq j "s") (← (← field j "exact").getBool?)

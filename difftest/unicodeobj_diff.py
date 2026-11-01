@@ -922,6 +922,120 @@ def run_fmt_iter(c):
     it = iter(s if c["exact"] else ItSub(s))
     return [type(it).__name__, [it_run(it, op) for op in c["ops"]]]
 
+# ==== interning (fn name fmt_intern) ====
+
+KN_STATICS = ["__init__", "__name__", "__dict__"]
+KN_SUFFIX = ["", "", "\xe9", "€", "\U0001f600"]
+KN_WIDE_USED = set()
+
+
+def kn_wide(rng):
+    """One wide character no case of this run has used: it cannot carry a token."""
+    while True:
+        c = rng.randrange(0x10000, 0x110000)
+        if c not in KN_WIDE_USED:
+            KN_WIDE_USED.add(c)
+            return chr(c)
+
+
+
+@gen("format", 4)
+def gen_fmt_intern(rng):
+    # The interned dict outlives a case and immortal strings never leave it, so a case uses its own
+    # text. Handles are in the order the operations make them.
+    token = "k" + format(rng.getrandbits(64), "x")
+    texts = [token + rng.choice(KN_SUFFIX) for _ in range(2)] + [token]
+    texts += ["€" + token[1:], rng.choice(KN_STATICS), rng.choice(["", "a", "\xe9", "\xff"])]
+    wide1 = kn_wide(rng)
+    ops, n = [], 0
+    for _ in range(rng.randint(1, 10)):
+        r = rng.random()
+        if n == 0 or r < 0.35:
+            ops.append({"op": "new", "s": cps_of(rng.choice(texts))})
+        elif r < 0.42:
+            ops.append({"op": "new", "s": cps_of(wide1)})
+        elif r < 0.5:
+            ops.append({"op": "sub", "s": cps_of(rng.choice(texts))})
+        elif r < 0.54:
+            ops.append({"op": "other"})
+        elif r < 0.76:
+            ops.append({"op": "mortal", "h": rng.randrange(n)})
+        elif r < 0.9:
+            ops.append({"op": "immortal", "h": rng.randrange(n)})
+        else:
+            b = rng.choice([rng.choice(texts).encode("utf-8", "surrogatepass"), b"a", b"", b"\xff", token.encode() + b"\xc3"])
+            ops.append({"op": "fromstring", "s": list(b)})
+            if b in (b"\xff",) or b.endswith(b"\xc3"):
+                n -= 1
+        n += 1
+    return {"mod": "unicodeobj", "fn": "fmt_intern", "statics": [cps_of(s) for s in KN_STATICS], "ops": ops}
+
+
+class KnSub(str):
+    pass
+
+
+class KnOther:
+    pass
+
+
+def kn_new(s):
+    # A fresh object: join makes one unless there is a singleton.
+    return "".join(list(s)) if len(s) != 1 else chr(ord(s))
+
+
+def kn_inplace(fn, x):
+    import ctypes
+    api = ctypes.pythonapi
+    p = ctypes.py_object(x)
+    api.Py_IncRef.argtypes = [ctypes.py_object]
+    api.Py_IncRef.restype = None
+    api.Py_IncRef(x)  # the call steals one reference; what it leaves in p is never released
+    f = getattr(api, fn)
+    f.argtypes, f.restype = [ctypes.POINTER(ctypes.py_object)], None
+    f(ctypes.byref(p))
+    return p.value
+
+
+@run("fmt_intern")
+def run_fmt_intern(c):
+    import ctypes
+    api = ctypes.pythonapi
+    api.PyUnicode_InternFromString.restype = ctypes.py_object
+    api.PyUnicode_InternFromString.argtypes = [ctypes.c_char_p]
+    hs, rs = [], []
+    for op in c["ops"]:
+        k = op["op"]
+        if k == "new":
+            hs.append(kn_new(str_of(op["s"])))
+        elif k == "sub":
+            hs.append(KnSub(str_of(op["s"])))
+        elif k == "other":
+            hs.append(KnOther())
+        elif k == "mortal":
+            hs.append(kn_inplace("PyUnicode_InternInPlace", hs[op["h"]]))
+        elif k == "immortal":
+            hs.append(kn_inplace("PyUnicode_InternImmortal", hs[op["h"]]))
+        else:
+            r = common.py_result(lambda: api.PyUnicode_InternFromString(bytes(op["s"])))
+            if "ok" in r:
+                hs.append(r["ok"])
+                rs.append({"ok": None})
+            else:
+                rs.append(r)
+            continue
+        rs.append({"ok": None})
+    import sys
+
+    def is_interned(x):
+        return sys._is_interned(x) if type(x) is str or isinstance(x, str) else False
+
+    def show(x):
+        first = next(i for i, y in enumerate(hs) if y is x)
+        return [first, is_interned(x), sys._is_immortal(x)]
+
+    return [rs, [show(x) for x in hs]]
+
 # ==== end str.format ====
 
 

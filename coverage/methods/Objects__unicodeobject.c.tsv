@@ -363,17 +363,17 @@ Objects/unicodeobject.c	15841	15863	_init_global_state	_init_global_state(void)	
 Objects/unicodeobject.c	15866	15872	_PyUnicode_InitState	_PyUnicode_InitState(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter start-up or shutdown of the unicode state
 Objects/unicodeobject.c	15876	15892	_PyUnicode_InitGlobalObjects	_PyUnicode_InitGlobalObjects(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter start-up or shutdown of the unicode state
 Objects/unicodeobject.c	15896	15911	_PyUnicode_InitTypes	_PyUnicode_InitTypes(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter start-up or shutdown of the unicode state
-Objects/unicodeobject.c	15914	15950	intern_static	intern_static(PyInterpreterState *interp, PyObject *s /* stolen */)	todo		
-Objects/unicodeobject.c	15953	15960	_PyUnicode_InternStatic	_PyUnicode_InternStatic(PyInterpreterState *interp, PyObject **p)	todo		
-Objects/unicodeobject.c	15963	15980	immortalize_interned	immortalize_interned(PyObject *s)	todo		
+Objects/unicodeobject.c	15914	15950	intern_static	intern_static(PyInterpreterState *interp, PyObject *s /* stolen */)	excluded		internal-bootstrap: runs only during runtime initialization
+Objects/unicodeobject.c	15953	15960	_PyUnicode_InternStatic	_PyUnicode_InternStatic(PyInterpreterState *interp, PyObject **p)	excluded		internal-bootstrap: asserts the runtime is not initialized
+Objects/unicodeobject.c	15963	15980	immortalize_interned	immortalize_interned(PyObject *s)	modelled	unicodeobj-intern-spec,unicodeobj-intern-mortality	immortalizeInterned
 Objects/unicodeobject.c	15984	15991	can_immortalize_safely	can_immortalize_safely(PyObject *s)	todo		
-Objects/unicodeobject.c	15995	16163	intern_common	intern_common(PyInterpreterState *interp, PyObject *s /* stolen */, bool immortalize)	todo		
-Objects/unicodeobject.c	16166	16170	_PyUnicode_InternImmortal	_PyUnicode_InternImmortal(PyInterpreterState *interp, PyObject **p)	todo		
-Objects/unicodeobject.c	16173	16177	_PyUnicode_InternMortal	_PyUnicode_InternMortal(PyInterpreterState *interp, PyObject **p)	todo		
+Objects/unicodeobject.c	15995	16163	intern_common	intern_common(PyInterpreterState *interp, PyObject *s /* stolen */, bool immortalize)	modelled	unicodeobj-intern-canonical,unicodeobj-intern-spec,unicodeobj-intern-mortality	internCommon, default build; PyDict_SetDefaultRef failure is allocation only
+Objects/unicodeobject.c	16166	16170	_PyUnicode_InternImmortal	_PyUnicode_InternImmortal(PyInterpreterState *interp, PyObject **p)	modelled	unicodeobj-intern-mortality	internImmortal
+Objects/unicodeobject.c	16173	16177	_PyUnicode_InternMortal	_PyUnicode_InternMortal(PyInterpreterState *interp, PyObject **p)	modelled	unicodeobj-intern-mortality	internMortal
 Objects/unicodeobject.c	16181	16185	_PyUnicode_InternInPlace	_PyUnicode_InternInPlace(PyInterpreterState *interp, PyObject **p)	todo		
-Objects/unicodeobject.c	16188	16192	PyUnicode_InternInPlace	PyUnicode_InternInPlace(PyObject **p)	todo		
-Objects/unicodeobject.c	16197	16201	PyUnicode_InternImmortal	PyUnicode_InternImmortal(PyObject **p)	todo		
-Objects/unicodeobject.c	16204	16213	PyUnicode_InternFromString	PyUnicode_InternFromString(const char *cp)	todo		
+Objects/unicodeobject.c	16188	16192	PyUnicode_InternInPlace	PyUnicode_InternInPlace(PyObject **p)	modelled	unicodeobj-intern-mortality	internMortal
+Objects/unicodeobject.c	16197	16201	PyUnicode_InternImmortal	PyUnicode_InternImmortal(PyObject **p)	modelled	unicodeobj-intern-mortality	internImmortal
+Objects/unicodeobject.c	16204	16213	PyUnicode_InternFromString	PyUnicode_InternFromString(const char *cp)	modelled	unicodeobj-intern-from-string	internFromString
 Objects/unicodeobject.c	16217	16302	_PyUnicode_ClearInterned	_PyUnicode_ClearInterned(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter start-up or shutdown of the unicode state
 Objects/unicodeobject.c	16314	16320	unicodeiter_dealloc	unicodeiter_dealloc(PyObject *op)	excluded		no-behaviour: memory management with no Python-visible effect
 Objects/unicodeobject.c	16323	16328	unicodeiter_traverse	unicodeiter_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: memory management with no Python-visible effect
