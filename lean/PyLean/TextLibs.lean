@@ -259,6 +259,18 @@ def entries : List Entry := [
     prop := ``CsvRoundTrip, thm := some ``csvRoundTrip_refuted
     bug := some "textlibs-csv-skipinitialspace-round-trip"
     notes := "skipinitialspace=True, field ' a'. The counterexample runs the plain-character path of join_append_data and the START_FIELD, IN_FIELD and EAT_CRNL states of parse_process_char." },
+  { id := "textlibs-csv-round-trip-no-skip", pyFile := "Modules/_csv.c"
+    pyFns := ["join_append_data", "join_append", "join_append_lineterminator", "csv_writerow_lock_held", "csv_writerow",
+      "parse_save_field", "parse_add_char", "parse_process_char", "parse_reset", "Reader_iternext_lock_held",
+      "Reader_iternext"]
+    statement := "With skipinitialspace off, QUOTE_MINIMAL or QUOTE_ALL, a newline line terminator and fields within the limit, reading back what writerow wrote gives the row."
+    source := "the module's purpose: reader reads what writer wrote; docs: the reader recognises only \\r and \\n", status := .proven
+    prop := ``CsvRoundTripNoSkip, thm := some ``csvRoundTripNoSkip_proven
+    notes := "Runs through the unquoted, escaped and quoted states of the reader and the escape and doublequote logic of the writer. Each excluded case is on record: textlibs-csv-round-trip for skipinitialspace, textlibs-csv-num-fields for 2^31 fields." },
+  { id := "textlibs-csv-writerow-resets", pyFile := "Modules/_csv.c", pyFns := ["join_reset"]
+    statement := "Whatever a failed row left in the record buffer, the next writerow starts clean."
+    source := "Modules/_csv.c:1346", status := .proven
+    prop := ``WriterowResets, thm := some ``writerowResets_proven },
   { id := "textlibs-csv-set-char", pyFile := "Modules/_csv.c", pyFns := ["_set_char"]
     statement := "_set_char accepts exactly a missing argument, as the default, or a str or str subclass of length one."
     source := "the checks' messages", status := .proven

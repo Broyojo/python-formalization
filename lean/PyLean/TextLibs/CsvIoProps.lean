@@ -353,6 +353,16 @@ theorem strRaises_proven : StrRaises := by
   intro d fuel c f e r nf h1 h2 h3
   simp [fieldLoop, h1, h2, h3, runEffs]
 
+/-- `join_reset`: whatever a failed row left in the record buffer, the next `writerow` starts clean,
+so an empty row writes only the terminator. -/
+def WriterowResets : Prop :=
+  ∀ (d : Dialect) (fuel : Nat) (c : WCtx), c.calls = [] →
+    (writerowM d (fuel + 4) c (iterObj [])).1.written = c.written ++ [d.lineterminator]
+
+theorem writerowResets_proven : WriterowResets := by
+  intro d fuel c h
+  simp [writerowM, iterObj, Obj.getIter, fieldLoop, finishRow, callWrite, h]
+
 /-- `self->num_fields` is a C `int`, incremented with no check at `Modules/_csv.c:1297`, and
 `join_append_data` writes a delimiter when it is positive. The statement is the invariant the
 delimiter logic needs: once a field has been appended, the count stays positive. It is false at

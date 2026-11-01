@@ -10,7 +10,7 @@ Modules/_csv.c	190	194	Dialect_get_delimiter	Dialect_get_delimiter(PyObject *op,
 Modules/_csv.c	197	201	Dialect_get_escapechar	Dialect_get_escapechar(PyObject *op, void *Py_UNUSED(ignored))	modelled	textlibs-csv-dialect-rebuild	
 Modules/_csv.c	204	208	Dialect_get_quotechar	Dialect_get_quotechar(PyObject *op, void *Py_UNUSED(ignored))	modelled	textlibs-csv-dialect-rebuild	
 Modules/_csv.c	211	215	Dialect_get_quoting	Dialect_get_quoting(PyObject *op, void *Py_UNUSED(ignored))	modelled	textlibs-csv-dialect-rebuild	
-Modules/_csv.c	218	229	_set_bool	_set_bool(const char *name, char *target, PyObject *src, bool dflt)	modelled	textlibs-csv-dialect-stores,textlibs-csv-dialect-bool-raises	
+Modules/_csv.c	218	229	_set_bool	_set_bool(const char *name, char *target, PyObject *src, bool dflt)	modelled	textlibs-csv-dialect-bool-raises,textlibs-csv-dialect-stores	
 Modules/_csv.c	232	250	_set_int	_set_int(const char *name, int *target, PyObject *src, int dflt)	modelled	textlibs-csv-set-int	
 Modules/_csv.c	253	283	_set_char_or_none	_set_char_or_none(const char *name, Py_UCS4 *target, PyObject *src, Py_UCS4 dflt)	modelled	textlibs-csv-set-char-or-none	
 Modules/_csv.c	286	313	_set_char	_set_char(const char *name, Py_UCS4 *target, PyObject *src, Py_UCS4 dflt)	modelled	textlibs-csv-set-char	
@@ -25,31 +25,31 @@ Modules/_csv.c	583	587	Dialect_reduce	Dialect_reduce(PyObject *self, PyObject *a
 Modules/_csv.c	601	606	Dialect_clear	Dialect_clear(PyObject *op)	todo		can run the __del__ of a str subclass stored as lineterminator; a heap model is needed to state it
 Modules/_csv.c	609	615	Dialect_traverse	Dialect_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC slot; nothing Python-visible
 Modules/_csv.c	643	652	_call_dialect	_call_dialect(_csvstate *module_state, PyObject *dialect_inst, PyObject *kwargs)	modelled	textlibs-csv-dialect-reuse,textlibs-csv-reader-order	
-Modules/_csv.c	658	694	parse_save_field	parse_save_field(ReaderObj *self)	modelled	textlibs-csv-save-field,textlibs-csv-reader-no-crash	
+Modules/_csv.c	658	694	parse_save_field	parse_save_field(ReaderObj *self)	modelled	textlibs-csv-reader-no-crash,textlibs-csv-round-trip-no-skip,textlibs-csv-save-field	
 Modules/_csv.c	697	711	parse_grow_buff	parse_grow_buff(ReaderObj *self)	excluded		no-behaviour: grows the field buffer; the reader's result does not depend on its capacity
-Modules/_csv.c	714	727	parse_add_char	parse_add_char(ReaderObj *self, _csvstate *module_state, Py_UCS4 c)	modelled	textlibs-csv-round-trip,textlibs-csv-add-char-limit,textlibs-csv-limit-live	
-Modules/_csv.c	730	910	parse_process_char	parse_process_char(ReaderObj *self, _csvstate *module_state, Py_UCS4 c)	modelled	textlibs-csv-round-trip,textlibs-csv-eat-crnl	
-Modules/_csv.c	913	922	parse_reset	parse_reset(ReaderObj *self)	modelled	textlibs-csv-iter-raises,textlibs-csv-reader-no-crash	
-Modules/_csv.c	925	996	Reader_iternext_lock_held	Reader_iternext_lock_held(PyObject *op)	modelled	textlibs-csv-iter-raises,textlibs-csv-eof,textlibs-csv-not-str-line,textlibs-csv-parse-failure,textlibs-csv-already-advanced,textlibs-csv-reader-no-crash,textlibs-csv-crash-needs-quote	
-Modules/_csv.c	999	1006	Reader_iternext	Reader_iternext(PyObject *op)	modelled	textlibs-csv-iter-raises,textlibs-csv-reader-no-crash	
+Modules/_csv.c	714	727	parse_add_char	parse_add_char(ReaderObj *self, _csvstate *module_state, Py_UCS4 c)	modelled	textlibs-csv-add-char-limit,textlibs-csv-limit-live,textlibs-csv-round-trip,textlibs-csv-round-trip-no-skip	
+Modules/_csv.c	730	910	parse_process_char	parse_process_char(ReaderObj *self, _csvstate *module_state, Py_UCS4 c)	modelled	textlibs-csv-eat-crnl,textlibs-csv-round-trip,textlibs-csv-round-trip-no-skip	
+Modules/_csv.c	913	922	parse_reset	parse_reset(ReaderObj *self)	modelled	textlibs-csv-iter-raises,textlibs-csv-reader-no-crash,textlibs-csv-round-trip-no-skip	
+Modules/_csv.c	925	996	Reader_iternext_lock_held	Reader_iternext_lock_held(PyObject *op)	modelled	textlibs-csv-already-advanced,textlibs-csv-crash-needs-quote,textlibs-csv-eof,textlibs-csv-iter-raises,textlibs-csv-not-str-line,textlibs-csv-parse-failure,textlibs-csv-reader-no-crash,textlibs-csv-round-trip-no-skip	
+Modules/_csv.c	999	1006	Reader_iternext	Reader_iternext(PyObject *op)	modelled	textlibs-csv-iter-raises,textlibs-csv-reader-no-crash,textlibs-csv-round-trip-no-skip	
 Modules/_csv.c	1009	1021	Reader_dealloc	Reader_dealloc(PyObject *op)	todo		tp_clear drops input_iter, so a generator input runs its finally blocks; a heap model is needed to state it
 Modules/_csv.c	1024	1032	Reader_traverse	Reader_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC slot; nothing Python-visible
 Modules/_csv.c	1035	1042	Reader_clear	Reader_clear(PyObject *op)	todo		drops input_iter, which can close a generator and run __del__; a heap model is needed to state it
 Modules/_csv.c	1087	1128	csv_reader	csv_reader(PyObject *module, PyObject *args, PyObject *keyword_args)	modelled	textlibs-csv-reader-order	
-Modules/_csv.c	1135	1139	join_reset	join_reset(WriterObj *self)	modelled	textlibs-csv-round-trip	
-Modules/_csv.c	1147	1238	join_append_data	join_append_data(WriterObj *self, int field_kind, const void *field_data, Py_ssize_t field_len, int *quoted, int copy_phase)	modelled	textlibs-csv-round-trip	
+Modules/_csv.c	1135	1139	join_reset	join_reset(WriterObj *self)	modelled	textlibs-csv-round-trip,textlibs-csv-writerow-resets	
+Modules/_csv.c	1147	1238	join_append_data	join_append_data(WriterObj *self, int field_kind, const void *field_data, Py_ssize_t field_len, int *quoted, int copy_phase)	modelled	textlibs-csv-round-trip,textlibs-csv-round-trip-no-skip	
 Modules/_csv.c	1241	1257	join_check_rec_size	join_check_rec_size(WriterObj *self, Py_ssize_t rec_len)	excluded		no-behaviour: grows the record buffer; the written text does not depend on its capacity
-Modules/_csv.c	1260	1300	join_append	join_append(WriterObj *self, PyObject *field, int quoted)	modelled	textlibs-csv-round-trip,textlibs-csv-num-fields,textlibs-csv-join-delimiter	
-Modules/_csv.c	1303	1324	join_append_lineterminator	join_append_lineterminator(WriterObj *self)	modelled	textlibs-csv-round-trip,textlibs-csv-write-result	
-Modules/_csv.c	1327	1428	csv_writerow_lock_held	csv_writerow_lock_held(PyObject *op, PyObject *seq)	modelled	textlibs-csv-round-trip,textlibs-csv-writer-iter-fails,textlibs-csv-write-result,textlibs-csv-field-raises,textlibs-csv-str-raises	
-Modules/_csv.c	1438	1445	csv_writerow	csv_writerow(PyObject *op, PyObject *seq)	modelled	textlibs-csv-round-trip,textlibs-csv-writer-iter-fails,textlibs-csv-write-result	
-Modules/_csv.c	1455	1477	csv_writerows	csv_writerows(PyObject *self, PyObject *seqseq)	modelled	textlibs-csv-writer-iter-fails,textlibs-csv-writerows-stop,textlibs-csv-writerows-result	
+Modules/_csv.c	1260	1300	join_append	join_append(WriterObj *self, PyObject *field, int quoted)	modelled	textlibs-csv-join-delimiter,textlibs-csv-num-fields,textlibs-csv-round-trip,textlibs-csv-round-trip-no-skip	
+Modules/_csv.c	1303	1324	join_append_lineterminator	join_append_lineterminator(WriterObj *self)	modelled	textlibs-csv-round-trip,textlibs-csv-round-trip-no-skip,textlibs-csv-write-result	
+Modules/_csv.c	1327	1428	csv_writerow_lock_held	csv_writerow_lock_held(PyObject *op, PyObject *seq)	modelled	textlibs-csv-field-raises,textlibs-csv-round-trip,textlibs-csv-round-trip-no-skip,textlibs-csv-str-raises,textlibs-csv-write-result,textlibs-csv-writer-iter-fails	
+Modules/_csv.c	1438	1445	csv_writerow	csv_writerow(PyObject *op, PyObject *seq)	modelled	textlibs-csv-round-trip,textlibs-csv-round-trip-no-skip,textlibs-csv-write-result,textlibs-csv-writer-iter-fails	
+Modules/_csv.c	1455	1477	csv_writerows	csv_writerows(PyObject *self, PyObject *seqseq)	modelled	textlibs-csv-writer-iter-fails,textlibs-csv-writerows-result,textlibs-csv-writerows-stop	
 Modules/_csv.c	1495	1503	Writer_traverse	Writer_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC slot; nothing Python-visible
 Modules/_csv.c	1506	1513	Writer_clear	Writer_clear(PyObject *op)	todo		drops write, which can flush and close the output file; a heap model is needed to state it
 Modules/_csv.c	1516	1527	Writer_dealloc	Writer_dealloc(PyObject *op)	todo		tp_clear releases write, which can flush and close the output file; a heap model is needed to state it
 Modules/_csv.c	1556	1599	csv_writer	csv_writer(PyObject *module, PyObject *args, PyObject *keyword_args)	modelled	textlibs-csv-writer-order	
 Modules/_csv.c	1612	1616	_csv_list_dialects_impl	_csv_list_dialects_impl(PyObject *module) /*[clinic end generated code: output=a5b92b215b006a6d input=ec58040aafd6a20a]*/	modelled	textlibs-csv-unregister	
-Modules/_csv.c	1619	1641	csv_register_dialect	csv_register_dialect(PyObject *module, PyObject *args, PyObject *kwargs)	modelled	textlibs-csv-registry,textlibs-csv-register-checks	
+Modules/_csv.c	1619	1641	csv_register_dialect	csv_register_dialect(PyObject *module, PyObject *args, PyObject *kwargs)	modelled	textlibs-csv-register-checks,textlibs-csv-registry	
 Modules/_csv.c	1653	1666	_csv_unregister_dialect_impl	_csv_unregister_dialect_impl(PyObject *module, PyObject *name) /*[clinic end generated code: output=0813ebca6c058df4 input=e1cf81bfe3ba0f62]*/	modelled	textlibs-csv-unregister	
 Modules/_csv.c	1677	1681	_csv_get_dialect_impl	_csv_get_dialect_impl(PyObject *module, PyObject *name) /*[clinic end generated code: output=aa988cd573bebebb input=74865c659dcb441f]*/	modelled	textlibs-csv-get-dialect	
 Modules/_csv.c	1695	1713	_csv_field_size_limit_impl	_csv_field_size_limit_impl(PyObject *module, PyObject *new_limit) /*[clinic end generated code: output=f2799ecd908e250b input=77db7485ee3ae90a]*/	modelled	textlibs-csv-field-limit,textlibs-csv-limit-live	
