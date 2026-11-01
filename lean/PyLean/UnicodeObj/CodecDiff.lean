@@ -3,6 +3,7 @@ import PyLean.StrSearch.Diff
 import PyLean.UnicodeObj.CodecProps
 import PyLean.UnicodeObj.CodecCharmap
 import PyLean.UnicodeObj.CodecCallback
+import PyLean.UnicodeObj.ObjectUtf8
 
 /-! Difftest handler for the codecs slice (`fn` names start with `codec_`). -/
 
@@ -75,6 +76,12 @@ def getDH (j : Json) : Except String DH := do
   | .error _ =>
     let arr ← (← field j "script").getArr?
     return .custom (scriptDec (← arr.toList.mapM getDecResp))
+
+/-- A handler by name, a script, or a missing one. -/
+def getDHX (j : Json) : Except String DH := do
+  match j.getObjVal? "handler" with
+  | .ok _ => return .std (← getHandler (Json.mkObj [("errors", ← field j "handler")]))
+  | .error _ => getDH j
 
 def getEH (j : Json) : Except String EH := do
   match j.getObjVal? "missing" with
@@ -164,6 +171,26 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "codec_ascii_decode" => return encPy toJson (asciiDecode (← getSeq j "b") (← getHandler j))
   | "codec_latin1_decode" =>
     return encPy toJson (.ok (latin1Decode (← getSeq j "b")) : Py Str)
+  | "codec_utf8_obj" =>
+    let b ← getSeq j "b"
+    let consumed ← (← field j "consumed").getBool?
+    let enc (r : (Str × Kind) × Nat) : Json :=
+      Json.arr #[toJson r.1.1, toJson r.1.2.width, toJson (r.1.2 == .ascii),
+        toJson (if consumed then r.2 else 0)]
+    if (j.getObjVal? "null").toOption.isSome then
+      return encPy enc (unicodeDecodeUtf8 b (.std .strict) true consumed (b.length + 100))
+    else
+      return encPy enc (unicodeDecodeUtf8 b (← getDHX j) false consumed (b.length + 100))
+  | "codec_utf8_writer" =>
+    let b ← getSeq j "b"
+    let consumed ← (← field j "consumed").getBool?
+    let pre ← getSeq j "pre"
+    let w0 : UWriter := if pre.isEmpty then {} else { text := pre, cap := prepareCap 0 (maxCharOf pre) }
+    let (w1, r) := writerDecodeStateful w0 b (b.length : Int) (← getDHX j) consumed (b.length + 100)
+    let (text, kind) := w1.finish
+    return encPy (fun (x : Json) => x) (.ok (Json.arr #[encPy (fun (_ : Nat) => Json.null) r,
+      toJson (match r with | .ok n => n | .error _ => 0), toJson text, toJson kind.width,
+      toJson (kind == .ascii)]))
   | "codec_cb_decode" =>
     let b ← getSeq j "b"
     let H ← getDH j

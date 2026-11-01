@@ -6,6 +6,7 @@ import PyLean.UnicodeObj.ObjectFromFormatWriter
 import PyLean.UnicodeObj.ObjectIterProps
 import PyLean.UnicodeObj.ObjectInternProps
 import PyLean.UnicodeObj.ObjectJoinProps
+import PyLean.UnicodeObj.ObjectUtf8Writer
 
 /-! Registry entries of the object slice. -/
 
@@ -14,6 +15,26 @@ namespace PyLean.UnicodeObj
 open PyLean.Registry
 
 def objectEntries : List Entry := [
+  { id := "unicodeobj-utf8-std-is-callback", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicode_decode_utf8_impl"]
+    statement := "The ignore, replace and surrogateescape handlers written out inside the UTF-8 decoder do what the registered handlers of those names do through the Python path, for every input and every handler."
+    source := "implementation against itself: inline handlers against Python/codecs.c, unicodeobject.c:5383-5412"
+    status := .proven, prop := ``Utf8StdIsCallback, thm := some ``utf8StdIsCallback_proven },
+  { id := "unicodeobj-writer-decode-any-handler", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicode_decode_utf8_writer"]
+    statement := "Decoding into a writer, with any handler, adds what bytes.decode gives, or raises the same exception with none of the text kept; a success keeps the capacity what the text needs."
+    source := "implementation against itself: the writer entry against unicode_decode_utf8_impl"
+    status := .proven, prop := ``WriterDecodeX, thm := some ``writerDecodeX_proven },
+  { id := "unicodeobj-writer-decode-stateful-any-handler", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["PyUnicodeWriter_DecodeUTF8Stateful"]
+    statement := "PyUnicodeWriter_DecodeUTF8Stateful, for any size and handler, gives the text of the decoder and sets *consumed, and on a failure rolls the text back and sets *consumed to 0."
+    source := "Doc/c-api/unicode.rst: PyUnicodeWriter_DecodeUTF8Stateful"
+    status := .proven, prop := ``WriterDecodeStatefulX, thm := some ``writerDecodeStatefulX_proven },
+  { id := "unicodeobj-decode-utf8-spec", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicode_decode_utf8", "PyUnicode_DecodeUTF8Stateful", "PyUnicode_DecodeUTF8"]
+    statement := "The empty, one byte and ASCII fast paths and the guess of maxchr from the first byte change nothing: the result is what the plain loop gives, for every handler, and its kind is canonical."
+    source := "implementation against itself: fast paths against the loop; invariant: _PyUnicode_CheckConsistency"
+    status := .proven, prop := ``DecodeUtf8Spec, thm := some ``decodeUtf8Spec_proven },
   { id := "unicodeobj-join-spec", pyFile := "Objects/unicodeobject.c"
     pyFns := ["_PyUnicode_JoinArray"]
     statement := "sep.join(items) is the items with the separator between them, of the canonical kind, for every list of strings that fits; one exact str is returned itself, and one item of a subclass ignores the separator."

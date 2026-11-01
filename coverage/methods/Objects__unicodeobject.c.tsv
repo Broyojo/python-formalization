@@ -125,7 +125,7 @@ Objects/unicodeobject.c	4538	4635	unicode_decode_call_errorhandler_writer	unicod
 Objects/unicodeobject.c	4719	4724	PyUnicode_DecodeUTF7	PyUnicode_DecodeUTF7(const char *s, Py_ssize_t size, const char *errors)	todo		
 Objects/unicodeobject.c	4734	4928	PyUnicode_DecodeUTF7Stateful	PyUnicode_DecodeUTF7Stateful(const char *s, Py_ssize_t size, const char *errors, Py_ssize_t *consumed)	todo		
 Objects/unicodeobject.c	4932	5029	_PyUnicode_EncodeUTF7	_PyUnicode_EncodeUTF7(PyObject *str, int base64SetO, int base64WhiteSpace, const char *errors)	todo		
-Objects/unicodeobject.c	5040	5045	PyUnicode_DecodeUTF8	PyUnicode_DecodeUTF8(const char *s, Py_ssize_t size, const char *errors)	todo		
+Objects/unicodeobject.c	5040	5045	PyUnicode_DecodeUTF8	PyUnicode_DecodeUTF8(const char *s, Py_ssize_t size, const char *errors)	modelled	unicodeobj-decode-utf8-spec	
 Objects/unicodeobject.c	5081	5084	ctz	ctz(size_t v)	todo		
 Objects/unicodeobject.c	5088	5097	ctz	ctz(size_t v)	todo		
 Objects/unicodeobject.c	5105	5147	load_unaligned	load_unaligned(const unsigned char *p, size_t size)	todo		
@@ -134,10 +134,10 @@ Objects/unicodeobject.c	5222	5226	scalar_utf8_start_char	scalar_utf8_start_char(
 Objects/unicodeobject.c	5229	5232	vector_utf8_start_chars	vector_utf8_start_chars(size_t v)	todo		
 Objects/unicodeobject.c	5237	5270	utf8_count_codepoints	utf8_count_codepoints(const unsigned char *s, const unsigned char *end)	todo		
 Objects/unicodeobject.c	5273	5303	ascii_decode	ascii_decode(const char *start, const char *end, Py_UCS1 *dest)	todo		
-Objects/unicodeobject.c	5306	5425	unicode_decode_utf8_impl	unicode_decode_utf8_impl(_PyUnicodeWriter *writer, const char *starts, const char *s, const char *end, _Py_error_handler error_handler, const char *errors, Py_ssize_t *consumed)	todo		
-Objects/unicodeobject.c	5429	5518	unicode_decode_utf8	unicode_decode_utf8(const char *s, Py_ssize_t size, _Py_error_handler error_handler, const char *errors, Py_ssize_t *consumed)	todo		
-Objects/unicodeobject.c	5523	5559	unicode_decode_utf8_writer	unicode_decode_utf8_writer(_PyUnicodeWriter *writer, const char *s, Py_ssize_t size, _Py_error_handler error_handler, const char *errors, Py_ssize_t *consumed)	todo		
-Objects/unicodeobject.c	5563	5571	PyUnicode_DecodeUTF8Stateful	PyUnicode_DecodeUTF8Stateful(const char *s, Py_ssize_t size, const char *errors, Py_ssize_t *consumed)	todo		
+Objects/unicodeobject.c	5306	5425	unicode_decode_utf8_impl	unicode_decode_utf8_impl(_PyUnicodeWriter *writer, const char *starts, const char *s, const char *end, _Py_error_handler error_handler, const char *errors, Py_ssize_t *consumed)	modelled	unicodeobj-utf8-std-is-callback	
+Objects/unicodeobject.c	5429	5518	unicode_decode_utf8	unicode_decode_utf8(const char *s, Py_ssize_t size, _Py_error_handler error_handler, const char *errors, Py_ssize_t *consumed)	modelled	unicodeobj-decode-utf8-spec	
+Objects/unicodeobject.c	5523	5559	unicode_decode_utf8_writer	unicode_decode_utf8_writer(_PyUnicodeWriter *writer, const char *s, Py_ssize_t size, _Py_error_handler error_handler, const char *errors, Py_ssize_t *consumed)	modelled	unicodeobj-writer-decode-any-handler	
+Objects/unicodeobject.c	5563	5571	PyUnicode_DecodeUTF8Stateful	PyUnicode_DecodeUTF8Stateful(const char *s, Py_ssize_t size, const char *errors, Py_ssize_t *consumed)	modelled	unicodeobj-decode-utf8-spec	
 Objects/unicodeobject.c	5587	5692	_Py_DecodeUTF8Ex	_Py_DecodeUTF8Ex(const char *s, Py_ssize_t size, wchar_t **wstr, size_t *wlen, const char **reason, _Py_error_handler errors)	todo		
 Objects/unicodeobject.c	5696	5712	_Py_DecodeUTF8_surrogateescape	_Py_DecodeUTF8_surrogateescape(const char *arg, Py_ssize_t arglen, size_t *wlen)	todo		
 Objects/unicodeobject.c	5726	5847	_Py_EncodeUTF8Ex	_Py_EncodeUTF8Ex(const wchar_t *text, char **str, size_t *error_pos, const char **reason, int raw_malloc, _Py_error_handler errors)	todo		
@@ -332,7 +332,7 @@ Objects/unicodeobject.c	14051	14069	PyUnicodeWriter_WriteSubstring	PyUnicodeWrit
 Objects/unicodeobject.c	14073	14134	_PyUnicodeWriter_WriteASCIIString	_PyUnicodeWriter_WriteASCIIString(_PyUnicodeWriter *writer, const char *ascii, Py_ssize_t len)	todo		
 Objects/unicodeobject.c	14138	14147	PyUnicodeWriter_WriteASCII	PyUnicodeWriter_WriteASCII(PyUnicodeWriter *writer, const char *str, Py_ssize_t size)	modelled	unicodeobj-writer-text,unicodeobj-writer-finish-canonical	applyOp .ascii, with asciiBytes
 Objects/unicodeobject.c	14151	14167	PyUnicodeWriter_WriteUTF8	PyUnicodeWriter_WriteUTF8(PyUnicodeWriter *writer, const char *str, Py_ssize_t size)	modelled	unicodeobj-writer-text,unicodeobj-writer-paths-agree	applyOp .utf8: the put back of pos; that it leaves maxchar is the refuted entry
-Objects/unicodeobject.c	14171	14192	PyUnicodeWriter_DecodeUTF8Stateful	PyUnicodeWriter_DecodeUTF8Stateful(PyUnicodeWriter *writer, const char *string, Py_ssize_t length, const char *errors, Py_ssize_t *consumed)	todo		
+Objects/unicodeobject.c	14171	14192	PyUnicodeWriter_DecodeUTF8Stateful	PyUnicodeWriter_DecodeUTF8Stateful(PyUnicodeWriter *writer, const char *string, Py_ssize_t length, const char *errors, Py_ssize_t *consumed)	modelled	unicodeobj-writer-decode-stateful-any-handler	
 Objects/unicodeobject.c	14196	14207	_PyUnicodeWriter_WriteLatin1String	_PyUnicodeWriter_WriteLatin1String(_PyUnicodeWriter *writer, const char *str, Py_ssize_t len)	todo		
 Objects/unicodeobject.c	14210	14239	_PyUnicodeWriter_Finish	_PyUnicodeWriter_Finish(_PyUnicodeWriter *writer)	todo		
 Objects/unicodeobject.c	14243	14249	PyUnicodeWriter_Finish	PyUnicodeWriter_Finish(PyUnicodeWriter *writer)	modelled	unicodeobj-writer-finish-canonical,unicodeobj-writer-finish-one-byte	UWriter.finish; the readonly branch of _PyUnicodeWriter_Finish is reached after PyUnicodeWriter_Format, and returns the same text and kind
