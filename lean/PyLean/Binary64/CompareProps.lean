@@ -58,7 +58,7 @@ theorem compareInts_exact (op : CmpOp) (a b : Int) :
   have h3 : (b : Rat) ≤ a ↔ b ≤ a := Rat.intCast_le_intCast
   have h4 : (b : Rat) < a ↔ b < a := Rat.intCast_lt_intCast
   have h5 : (a : Rat) = b ↔ a = b := Rat.intCast_inj
-  cases op <;> simp [compareInts, exactCompare, h1, h2, h3, h4, h5]
+  cases op <;> by_cases he : a = b <;> simp [compareInts, exactCompare, h1, h2, h3, h4, h5, he]
 
 /-- A finite nonzero `x`, up to sign, sits in `[2 ^ (e - 1), 2 ^ e)` for `frexp`'s `e`. -/
 theorem frexp_exp_bounds {x : F64} (hx : x.isFinite = true) (hz : x.isZero = false) :
@@ -292,9 +292,11 @@ theorem frac_isZero {x : F64} (hx : x.isFinite = true) (hz : x.isZero = false) :
   rw [add_of_finite hx hn, toRat_neg, i2]
   by_cases h : x.toRat + -(x.truncInt : Rat) = 0
   · have h2 : x.toRat = (x.truncInt : Rat) := by grind
-    simp only [h, ↓reduceIte, zero_isZero, h2, decide_true]
+    rw [if_pos h, zero_isZero]; simp [h2]
   · have h2 : ¬ x.toRat = (x.truncInt : Rat) := by intro c; apply h; rw [c]; grind
-    simp only [h, ↓reduceIte, h2, decide_false]
+    rw [if_neg h]
+    have hd : decide (x.toRat = (x.truncInt : Rat)) = false := by simp [h2]
+    rw [hd]
     obtain ⟨Z1, h3⟩ := toRat_grid x hx
     obtain ⟨Z2, h4⟩ := int_grid x.truncInt
     apply ofRat_ne_zero_of_grid (Z := Z1 - Z2)
@@ -317,14 +319,11 @@ theorem compare_signs {x : F64} {vs : Int} {w : Int} (op : CmpOp)
   have a := small_exact vs (by omega)
   have b := small_exact w.sign (by omega)
   rw [compareDoubles_finite op a.1 b.1, a.2, b.2]
-  have c1 : ((0 : Int) : Rat) = 0 := rfl
-  have c2 : ((1 : Int) : Rat) = 1 := rfl
-  have c3 : ((-1 : Int) : Rat) = -1 := rfl
   rcases hv with ⟨h1, h2⟩ | ⟨h1, h2⟩ | ⟨h1, h2⟩ <;> rcases hw with ⟨h3, h4⟩ | ⟨h3, h4⟩ | ⟨h3, h4⟩ <;>
-    rw [h1, h3] at * <;> first
-    | exact absurd rfl hne
-    | exact exactCompare_lt op (by simp only [c1, c2, c3]; decide) (by grind)
-    | exact exactCompare_gt op (by simp only [c1, c2, c3]; decide) (by grind)
+    rw [h1, h3] <;> first
+    | (exfalso; omega)
+    | exact exactCompare_lt op (by decide +kernel) (by grind)
+    | exact exactCompare_gt op (by decide +kernel) (by grind)
 
 /-- The branch where the int has more than 1024 bits: it dominates. -/
 theorem compare_huge {x : F64} {vs : Int} {w : Int} (op : CmpOp) (hx : x.isFinite = true)
@@ -510,8 +509,8 @@ theorem compareFiniteInt_exact {x : F64} (hx : x.isFinite = true) (w : Int) (op 
           rw [compareDoubles_finite op hd0 hx, d0_toRat]
           have hab : Rat.abs x.toRat < Rat.abs (w : Rat) :=
             qlt_le e2 (Rat.le_trans (pw_le (by omega)) n1)
-          rcases hv with ⟨h1, _⟩ | ⟨h1, h2⟩ | ⟨h1, h2⟩
-          · omega
+          rcases hv with ⟨_, h1⟩ | ⟨h1, h2⟩ | ⟨h1, h2⟩
+          · exact absurd h1 hvz
           · have h4 : (w : Rat) < 0 := by
               rcases hw with ⟨h3, _⟩ | ⟨_, h3⟩ | ⟨h3, _⟩ <;> first | omega | exact h3
             rw [abs_of_nonpos (Rat.le_of_lt h2), abs_of_nonpos (Rat.le_of_lt h4)] at hab
@@ -526,8 +525,8 @@ theorem compareFiniteInt_exact {x : F64} (hx : x.isFinite = true) (w : Int) (op 
             rw [compareDoubles_finite op hx hd0, d0_toRat]
             have hab : Rat.abs (w : Rat) < Rat.abs x.toRat :=
               qlt_le n2 (Rat.le_trans (pw_le (by omega)) e1)
-            rcases hv with ⟨h1, _⟩ | ⟨h1, h2⟩ | ⟨h1, h2⟩
-            · omega
+            rcases hv with ⟨_, h1⟩ | ⟨h1, h2⟩ | ⟨h1, h2⟩
+            · exact absurd h1 hvz
             · have h4 : (w : Rat) < 0 := by
                 rcases hw with ⟨h3, _⟩ | ⟨_, h3⟩ | ⟨h3, _⟩ <;> first | omega | exact h3
               rw [abs_of_nonpos (Rat.le_of_lt h2), abs_of_nonpos (Rat.le_of_lt h4)] at hab

@@ -16,24 +16,6 @@ theorem scan_stop {s : List Nat} {p : Nat → Bool} {i fuel : Nat} (h : p (at_ s
 theorem scanFrom_stop {s : List Nat} {p : Nat → Bool} {i : Nat} (h : p (at_ s i) = false) :
     scanFrom s p i = i := scan_stop h
 
-/-- Every position `scan` passes satisfies `p`, and it stops on one that fails, given
-enough fuel. -/
-theorem scan_stops_on_fail {s : List Nat} {p : Nat → Bool} (hz : p 0 = false) :
-    ∀ fuel i, s.length + 1 ≤ i + fuel → p (at_ s (scan s p fuel i)) = false := by
-  intro fuel
-  induction fuel with
-  | zero =>
-    intro i h
-    have : at_ s i = 0 := by
-      unfold at_; rw [List.getD_eq_default]; omega
-    simp [scan, this, hz]
-  | succ n ih =>
-    intro i h
-    unfold scan
-    split
-    · exact ih (i + 1) (by omega)
-    · simpa using ‹_›
-
 /-! ## `case_insensitive_match` and `_Py_parse_inf_or_nan` -/
 
 /-- `case_insensitive_match` is true exactly when the lowered input spells `t`. -/
@@ -81,7 +63,12 @@ theorem parseInfOrNan_proven : ParseInfOrNan := by
   generalize hq : (if at_ s p == 45 then (true, p + 1) else if at_ s p == 43 then (false, p + 1) else (false, p)) = q
   obtain ⟨negate, i⟩ := q
   have hi : p ≤ i := by
-    split at hq <;> [skip; split at hq] <;> simp at hq <;> omega
+    by_cases c1 : (at_ s p == 45) = true
+    · simp only [c1, ↓reduceIte, Prod.mk.injEq] at hq; omega
+    · by_cases c2 : (at_ s p == 43) = true
+      · simp only [c1, c2, ↓reduceIte, Bool.false_eq_true, Prod.mk.injEq] at hq; omega
+      · simp only [c1, c2, ↓reduceIte, Bool.false_eq_true, Prod.mk.injEq] at hq; omega
+  dsimp only
   by_cases h1 : case_insensitive_match s i [105, 110, 102] = true
   · simp only [h1, ↓reduceIte]
     right
@@ -130,19 +117,23 @@ theorem stringToDoubleContract_proven : StringToDoubleContract := by
   | some r =>
     obtain ⟨v, fp, er⟩ := r
     simp only [hr] at h
-    by_cases h1 : fp = p
-    · simp [h1] at h
-    · by_cases h2 : at_ s fp = 0
-      · have h3 : e = fp := by
-          split at h
-          · simp [h1, h2] at *
-          · split at h
-            · simp at h; simp_all
-            · split at h
-              · simp at h
-              · simp at h; exact h.2.symm
-        rw [h3]; exact ⟨h1, h2⟩
-      · simp [h1, h2] at h
+    by_cases c : ((fp == p) || (at_ s fp != 0)) = true
+    · simp [c] at h
+    · have c1 : (fp == p) = false := by
+        cases hc : (fp == p)
+        · rfl
+        · simp [hc] at c
+      have c2 : (at_ s fp != 0) = false := by
+        cases hc : (at_ s fp != 0)
+        · rfl
+        · simp [hc] at c
+      simp only [c1, c2, Bool.not_false, Bool.true_and, Bool.or_self, Bool.false_eq_true, ↓reduceIte] at h
+      have hne : fp ≠ p := by simpa using c1
+      have hz : at_ s fp = 0 := by simpa using c2
+      split at h
+      · simp at h
+      · simp only [Option.some.injEq, Prod.mk.injEq] at h
+        rw [← h.2]; exact ⟨hne, hz⟩
 
 /-! ## Underscores -/
 
@@ -192,7 +183,8 @@ theorem underscoreRule_proven : UnderscoreRule := by
   intro α s what inner
   refine ⟨?_, ?_, ?_⟩
   · intro h
-    simp [_Py_string_to_number_with_underscores, h]
+    unfold _Py_string_to_number_with_underscores
+    simp only [h, Bool.not_false, ↓reduceIte]
   · intro dup st p h
     simpa using underscoreScan_copy s 0 0 [] dup st p h
   · intro h
@@ -243,7 +235,7 @@ theorem blank_no_underscore (n : Nat) :
   · rfl
   · exfalso
     have h1 := List.contains_iff_mem.1 hc
-    have h2 := List.mem_of_mem_takeWhile h1
+    have h2 := (List.takeWhile_sublist (· != 0)).subset h1
     have := List.eq_of_mem_replicate h2
     omega
 
@@ -341,7 +333,9 @@ theorem strtodFastPathExact_proven : StrtodFastPathExact := by
     · have hz' : ((e : Int) == 0) = false := by simpa using hz
       have hp : (0 : Int) < e := by omega
       have hle : (e : Int) ≤ 22 := by omega
-      have hmul := ofRat_mul_nonzero f1 t1 (by rw [f2, t2]; exact Rat.mul_ne_zero hn0 ht0)
+      have hmul := ofRat_mul_nonzero f1 t1 (by
+        rw [f2, t2]
+        exact Rat.ne_of_gt (Rat.mul_pos (natCast_pos' h0) (natCast_pos' (Nat.pow_pos (by omega)))))
       simp only [hz', Bool.false_eq_true, ↓reduceIte, hp, hle, Int.toNat_natCast]
       rw [hmul, f2, t2]
   · intro hp
@@ -362,19 +356,23 @@ theorem strtodFastPathExact_proven : StrtodFastPathExact := by
       have := congrArg (· * ((10 ^ e : Nat) : Rat)) hc
       simp only [Rat.div_mul_cancel ht0, Rat.zero_mul] at this
       exact hn0 this
-    simp [hq]
+    simp only [hq, ↓reduceIte]
 
 /-- `bigcomp` chooses between `rv` and `rv + ulp`, as its comment says: dtoa.c:1233-1238. -/
 def BigcompChoice : Prop :=
   ∀ (rv : F64) (dig : Nat → Nat) (bc : BCinfo),
     bigcomp rv dig bc = rv ∨ bigcomp rv dig bc = F64.add rv (sulp rv bc.scale)
 
-theorem bigcompChoice_proven : BigcompChoice := by
-  intro rv dig bc
-  unfold bigcomp
-  simp only []
+theorem bigcompRound_choice (rv : F64) (scale : Nat) (dd : Int) (odd : Bool) :
+    bigcompRound rv scale dd odd = rv ∨ bigcompRound rv scale dd odd = F64.add rv (sulp rv scale) := by
+  unfold bigcompRound
   split
   · right; rfl
   · left; rfl
+
+theorem bigcompChoice_proven : BigcompChoice := by
+  intro rv dig bc
+  unfold bigcomp
+  exact bigcompRound_choice rv bc.scale _ _
 
 end PyLean.Binary64

@@ -20,7 +20,11 @@ theorem word_parts (x : F64) :
   have hf := frac_lt x
   have hb := bexp_lt x
   unfold word0 word1
-  split at h <;> (simp only [*]; omega)
+  cases hs : x.sign
+  · simp only [hs, Bool.false_eq_true, ↓reduceIte] at h ⊢
+    refine ⟨by omega, by omega, by omega⟩
+  · simp only [hs, ↓reduceIte] at h ⊢
+    refine ⟨by omega, by omega, by omega⟩
 
 theorem sign_word (x : F64) : (word0 x &&& Sign_bit != 0) = x.sign := by
   have h := land_high_mask (x := word0 x) (n := 32) (k := 31) (word0_lt x) (by omega)
@@ -56,8 +60,7 @@ theorem frac_word (x : F64) : word0 x &&& Frac_mask = x.frac / 2 ^ 32 := by
 
 /-- The start of `_Py_dg_dtoa` clears the sign bit, dtoa.c:2249-2255. -/
 theorem clear_sign (dd : F64) :
-    (if (word0 dd &&& Sign_bit != 0) = true then setWord0 dd (word0 dd - Sign_bit) else dd) = dd.abs := by
-  rw [sign_word]
+    (if dd.sign = true then setWord0 dd (word0 dd - Sign_bit) else dd) = dd.abs := by
   unfold F64.abs
   cases hs : dd.sign
   · simp
@@ -114,11 +117,12 @@ theorem dtoaSpecial_proven : DtoaSpecial := by
     have hf := frac_lt dd
     by_cases hz : dd.frac = 0
     · simp [hz]
-    · have : ¬ (dd.frac % 2 ^ 32 = 0 ∧ dd.frac / 2 ^ 32 = 0) := by omega
-      simp only [hz, beq_iff_eq, Bool.and_eq_true, Bool.false_eq, Bool.and_eq_false_iff]
+    · have h5 : (dd.frac == 0) = false := by simpa using hz
+      rw [h5]
       by_cases h4 : dd.frac % 2 ^ 32 = 0
-      · right; simp; omega
-      · left; simpa using h4
+      · have h6 : dd.frac / 2 ^ 32 ≠ 0 := by omega
+        simp [h6]
+      · simp [h4]
   refine ⟨fun hi => ?_, fun hn' => ?_, fun hz => ?_⟩
   · rw [isInf_eq] at hi
     have c1 : (word0 dd.abs &&& Exp_mask == Exp_mask) = true := by
@@ -153,7 +157,7 @@ theorem reprSpecial_proven : ReprSpecial := by
       fun r => render r.1 := rfl
   obtain ⟨h1, h2, h3⟩ := dtoaSpecial_proven x 0 0
   refine ⟨fun h => ?_, fun h => ?_, fun h => ?_⟩
-  · rw [hdef]; unfold format_float_short; rw [h1 h |> fun _ => h2 h]
+  · rw [hdef]; unfold format_float_short; rw [h2 h]
     cases x.sign <;> rfl
   · rw [hdef]; unfold format_float_short; rw [h1 h]
     cases x.sign <;> rfl
@@ -215,9 +219,15 @@ theorem ulpSpec_proven : UlpSpec := by
   have e1 : (ulpD x).sign = false := by
     unfold F64.sign; rw [hbits]; simp; omega
   have e2 : (ulpD x).bexp = x.bexp - 52 := by
-    unfold F64.bexp; rw [hbits]; omega
+    show ((ulpD x).bits / 2 ^ 52) % 2048 = x.bexp - 52
+    rw [hbits]
+    generalize x.bexp = B at hlt hb
+    omega
   have e3 : (ulpD x).frac = 0 := by
-    unfold F64.frac; rw [hbits]; omega
+    show (ulpD x).bits % 2 ^ 52 = 0
+    rw [hbits]
+    generalize x.bexp = B at hlt hb
+    omega
   have hfin : (ulpD x).isFinite = true := by
     rw [isFinite_eq, e2]; omega
   constructor
@@ -231,8 +241,8 @@ theorem ulpSpec_proven : UlpSpec := by
       unfold F64.lsbExp; rw [e2]; omega
     have hl2 : x.lsbExp = (x.bexp : Int) - 1075 := by
       unfold F64.lsbExp; omega
-    rw [hm, hl, hl2, ← pw_natCast 52 |> fun h => (by simpa using h : ((2 ^ 52 : Nat) : Rat) = pw 52)]
-    rw [← pw_add]; congr 1; omega
+    have e5 : ((52 : Nat) : Int) + ((x.bexp : Int) - 52 - 1075) = (x.bexp : Int) - 1075 := by omega
+    rw [hm, hl, hl2, ← pw_natCast 52, ← pw_add, e5]
   · simp [sulp]
 
 /-- `sd2b` with no scaling reads a positive float as its mantissa and exponent. -/

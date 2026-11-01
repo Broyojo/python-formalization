@@ -475,8 +475,8 @@ theorem pow5Loop_val : ∀ (fuel i k : Nat) (b : Bigint), k < 2 ^ fuel → i + f
       rw [m1]
       by_cases hb : k % 2 = 0
       · simp [hb]
-      · have : k % 2 = 1 := by omega
-        simp only [this, bne_iff_ne, ne_eq, one_ne_zero, not_false_eq_true, ↓reduceIte, Nat.pow_one]
+      · have h1 : k % 2 = 1 := by omega
+        simp only [h1, Nat.pow_one, show ((1 : Nat) != 0) = true from rfl, ↓reduceIte]
         rw [multValue_proven b, p5s_val i hi8]
     unfold pow5Loop
     simp only []
@@ -525,6 +525,5 @@ theorem pow5multValue_proven : Pow5multValue := by
   · have hz' : (k / 4 == 0) = false := by simpa using hz
     simp only [hz', Bool.false_eq_true, ↓reduceIte]
     rw [pow5Loop_val 8 0 (k / 4) b1 (by omega) (by omega), hb, hsplit, Nat.mul_assoc]
-    rfl
 
 end PyLean.Binary64

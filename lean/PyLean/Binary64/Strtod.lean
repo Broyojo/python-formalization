@@ -166,6 +166,10 @@ def bigcompLoop (dig : Nat → Nat) (nd : Nat) (d : Bigint) : Nat → Nat → Bi
     else if !(decide (i' < nd)) then -1
     else bigcompLoop dig nd d fuel i' b1
 
+/-- The last step of `bigcomp`, dtoa.c:1379-1380. -/
+def bigcompRound (rv : F64) (scale : Nat) (dd : Int) (odd : Bool) : F64 :=
+  if 0 < dd || (dd == 0 && odd) then F64.add rv (sulp rv scale) else rv
+
 /-- `bigcomp`, dtoa.c:1274-1382. -/
 def bigcomp (rv : F64) (dig : Nat → Nat) (bc : BCinfo) : F64 :=
   let nd := bc.nd
@@ -189,7 +193,7 @@ def bigcomp (rv : F64) (dig : Nat → Nat) (bc : BCinfo) : F64 :=
   let dd : Int :=
     if 0 ≤ cmp b4 d2' then -1
     else bigcompLoop dig nd d2' (nd + 2) 0 b4
-  if 0 < dd || (dd == 0 && odd) then F64.add rv (sulp rv bc.scale) else rv
+  bigcompRound rv bc.scale dd odd
 
 /-- What one pass of the correction loop decides. -/
 inductive Step where

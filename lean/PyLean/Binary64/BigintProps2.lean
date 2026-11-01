@@ -48,16 +48,18 @@ theorem lshiftLoop_val {k : Nat} (h0 : 0 < k) (h1 : k < 32) : ∀ (x : List Nat)
       rw [← hp, Nat.mul_comm]
       exact Nat.mul_lt_mul_of_pos_left hRlt hkp
     have hdp : d * 2 ^ k = 2 ^ 32 * Q + R * 2 ^ k := by
-      rw [← hdec, Nat.add_mul, Nat.mul_right_comm, Nat.mul_comm (2 ^ (32 - k)), hp]
-      rw [Nat.mul_comm Q]
+      calc d * 2 ^ k = (2 ^ (32 - k) * Q + R) * 2 ^ k := by rw [hdec]
+        _ = 2 ^ 32 * Q + R * 2 ^ k := by rw [← hp]; grind
     have hshl : shl32 d k = 2 ^ k * R := by
       unfold shl32
       rw [hdp, Nat.mul_add_mod, Nat.mod_eq_of_lt hRp, Nat.mul_comm]
     have hor : shl32 d k ||| z = shl32 d k + z := by
       rw [hshl]
       exact (Nat.two_pow_add_eq_or_of_lt hz R).symm
-    simp only [lshiftLoop, limbsVal_cons, hor, ih Q hds (by omega)]
-    rw [hshl, Nat.add_mul, Nat.mul_add, hdp]
+    simp only [lshiftLoop, limbsVal_cons, hor]
+    rw [hQ, ih Q hds (by omega), hshl]
+    have e : (d + 2 ^ 32 * limbsVal ds) * 2 ^ k = d * 2 ^ k + 2 ^ 32 * (limbsVal ds * 2 ^ k) := by grind
+    rw [e, hdp, Nat.mul_add]
     grind
 
 theorem limbsVal_replicate_append (n : Nat) (l : List Nat) :
@@ -143,13 +145,17 @@ theorem cmpLoop_spec : ∀ (ra rb : List Nat), ra.length = rb.length →
     | nil => simp at h
     | cons b bs =>
       simp only [List.length_cons, Nat.add_right_cancel_iff] at h
-      have las : Limbs32 as.reverse := fun d hd => la d (by simp at hd ⊢; exact Or.inr hd)
-      have lbs : Limbs32 bs.reverse := fun d hd => lb d (by simp at hd ⊢; exact Or.inr hd)
+      have las : Limbs32 as.reverse :=
+        fun d hd => la d (List.mem_reverse.2 (List.mem_cons_of_mem _ (List.mem_reverse.1 hd)))
+      have lbs : Limbs32 bs.reverse :=
+        fun d hd => lb d (List.mem_reverse.2 (List.mem_cons_of_mem _ (List.mem_reverse.1 hd)))
+      have hih := ih bs h las lbs
       have ha1 := limbsVal_lt as.reverse las
       have hb1 := limbsVal_lt bs.reverse lbs
       simp only [List.length_reverse] at ha1 hb1
       rw [← h] at hb1
       rw [reverse_val, reverse_val, ← h]
+      clear ih
       generalize limbsVal as.reverse = A at *
       generalize limbsVal bs.reverse = B at *
       generalize 2 ^ (32 * as.length) = P at *
@@ -157,7 +163,7 @@ theorem cmpLoop_spec : ∀ (ra rb : List Nat), ra.length = rb.length →
       by_cases hab : a = b
       · subst hab
         simp only [bne_self_eq_false, Bool.false_eq_true, ↓reduceIte]
-        obtain ⟨i1, i2, i3⟩ := ih bs h las lbs
+        obtain ⟨i1, i2, i3⟩ := hih
         exact ⟨fun c => by have := i1 c; omega, fun c => by have := i2 c; omega,
           fun c => by have := i3 c; omega⟩
       · have hne : (a != b) = true := by simpa using hab
@@ -184,7 +190,7 @@ theorem top_lower {b : Bigint} (hb : Normal b) (h : 1 < b.wds) :
   | cons t ts =>
     have hx : b.x = (t :: ts).reverse := by rw [← hr]; simp
     have htop : b.top = t := by
-      unfold Bigint.top; rw [hx]; simp [List.getLastD]
+      unfold Bigint.top; rw [hx, List.getLastD_eq_getLast?]; simp
     have hlen : b.wds = ts.length + 1 := by
       unfold Bigint.wds; rw [hx]; simp
     have ht : t ≠ 0 := by
@@ -212,7 +218,7 @@ theorem cmpSpec_proven : CmpSpec := by
     by_cases hw : a.wds = b.wds
     · have : ((a.wds : Int) - b.wds != 0) = false := by simp [hw]
       simp only [this, Bool.false_eq_true, ↓reduceIte]
-      have := cmpLoop_spec a.x.reverse b.x.reverse (by simpa using hw)
+      have := cmpLoop_spec a.x.reverse b.x.reverse (by simp only [List.length_reverse]; exact hw)
         (by simpa using ha.limbs) (by simpa using hb.limbs)
       simpa [Bigint.val] using this
     · have hne : ((a.wds : Int) - b.wds != 0) = true := by simp; omega
@@ -292,7 +298,15 @@ theorem diffValue_proven : DiffValue := by
   unfold diff
   by_cases h0 : cmp a b = 0
   · have heq := c2.1 h0
-    simp [h0, heq, Bigint.val, limbsVal]
+    simp only [h0, beq_self_eq_true, ↓reduceIte]
+    refine ⟨?_, ?_⟩
+    · have hm : min a.val b.val = max a.val b.val := by omega
+      rw [hm]
+      show limbsVal [0] + _ = _
+      simp [limbsVal]
+    · constructor
+      · intro h; cases h
+      · intro h; omega
   · have h0' : (cmp a b == 0) = false := by simpa using h0
     simp only [h0', Bool.false_eq_true, ↓reduceIte]
     by_cases hneg : cmp a b < 0
