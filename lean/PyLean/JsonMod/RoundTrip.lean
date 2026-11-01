@@ -137,7 +137,7 @@ theorem loop_u (s : PStr) (strict : Bool) (b : Int) (f e n : Nat) (a R : PStr)
     · rw [hd] at h4; exact h h4
   have e6 : e + 0 + 1 + 5 = e + 6 := by omega
   have e2 : e + 0 + 1 + 1 = e + 2 := by omega
-  simp only [pyScanLoop, hf, List.getD_eq_getElem?_getD]
+  simp only [pyScanLoop, decodeUXXXX, hf, List.getD_eq_getElem?_getD]
   simp [h0, h1, e2, hx, e6, hc]
 
 /-- Two `\uXXXX` escapes of a high and a low surrogate are joined. -/
@@ -156,8 +156,9 @@ theorem loop_pair (s : PStr) (strict : Bool) (b : Int) (f e n m : Nat) (a R : PS
   have e6 : e + 0 + 1 + 5 = e + 6 := by omega
   have e2 : e + 0 + 1 + 1 = e + 2 := by omega
   have e12 : e + 6 + 6 = e + 12 := by omega
-  simp only [pyScanLoop, hf, List.getD_eq_getElem?_getD]
-  simp [h0, h1, e2, hx, e6, ht, hh, hx2, hl, e12]
+  have e8 : e + 6 + 1 + 1 = e + 6 + 2 := rfl
+  simp only [pyScanLoop, decodeUXXXX, hf, List.getD_eq_getElem?_getD]
+  simp [h0, h1, e2, hx, e6, ht, hh, e8, hx2, hl, e12]
 
 /-- The escape of one character with `ensure_ascii=True`. -/
 def escA (c : Nat) : PStr :=

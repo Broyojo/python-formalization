@@ -32,7 +32,7 @@ Modules/_zoneinfo.c	1478	1484	tzrule_transitions	tzrule_transitions(_tzrule *rul
 Modules/_zoneinfo.c	1495	1534	find_tzrule_ttinfo	find_tzrule_ttinfo(_tzrule *rule, int64_t ts, unsigned char fold, int year)	todo		
 Modules/_zoneinfo.c	1548	1590	find_tzrule_ttinfo_fromutc	find_tzrule_ttinfo_fromutc(_tzrule *rule, int64_t ts, int year, unsigned char *fold)	todo		
 Modules/_zoneinfo.c	1608	1715	parse_tz_str	parse_tz_str(zoneinfo_state *state, PyObject *tz_str_obj, _tzrule *out)	todo		
-Modules/_zoneinfo.c	1718	1730	parse_digits	parse_digits(const char **p, int min, int max, int *value)	todo		
+Modules/_zoneinfo.c	1718	1730	parse_digits	parse_digits(const char **p, int min, int max, int *value)	todo		candidates:datetime-date-fromiso-twins,datetime-date-isoformat-roundtrip
 Modules/_zoneinfo.c	1734	1790	parse_abbr	parse_abbr(const char **p, PyObject **abbr)	todo		
 Modules/_zoneinfo.c	1794	1828	parse_tz_delta	parse_tz_delta(const char **p, long *total_seconds)	todo		
 Modules/_zoneinfo.c	1832	1929	parse_transition_rule	parse_transition_rule(const char **p, TransitionRuleType **out)	todo		
@@ -44,7 +44,7 @@ Modules/_zoneinfo.c	2138	2187	ts_to_local	ts_to_local(size_t *trans_idx, int64_t
 Modules/_zoneinfo.c	2191	2208	_bisect	_bisect(const int64_t value, const int64_t *arr, size_t size)	todo		
 Modules/_zoneinfo.c	2212	2247	find_ttinfo	find_ttinfo(zoneinfo_state *state, PyZoneInfo_ZoneInfo *self, PyObject *dt)	todo		
 Modules/_zoneinfo.c	2250	2254	is_leap_year	is_leap_year(int year)	todo		
-Modules/_zoneinfo.c	2258	2268	ymd_to_ord	ymd_to_ord(int y, int m, int d)	todo		candidates:datetime-ordinal-roundtrip
+Modules/_zoneinfo.c	2258	2268	ymd_to_ord	ymd_to_ord(int y, int m, int d)	todo		candidates:datetime-date-add-timedelta,datetime-ordinal-roundtrip,datetime-toordinal-roundtrip,datetime-utc-to-seconds
 Modules/_zoneinfo.c	2277	2340	get_local_timestamp	get_local_timestamp(PyObject *dt, int64_t *local_ts)	todo		
 Modules/_zoneinfo.c	2352	2365	strong_cache_node_new	strong_cache_node_new(PyObject *key, PyObject *zone)	todo		
 Modules/_zoneinfo.c	2369	2375	strong_cache_node_free	strong_cache_node_free(StrongCacheNode *node)	todo		

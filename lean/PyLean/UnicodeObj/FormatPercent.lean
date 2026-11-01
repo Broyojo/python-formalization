@@ -1,24 +1,25 @@
-import PyLean.UnicodeObj.FormatSpec
+import PyLean.UnicodeObj.FormatNumber
 import PyLean.UnicodeObj.Repr
+import PyLean.Binary64.Float
 
 /-!
 `%`-formatting, `PyUnicode_Format` and its helpers,
 Objects/unicodeobject.c:14684-15598.
 
-Arguments are a small universe of objects: `int`, `bool`, `str`, `None`. Generic
-objects would go through their `__str__`, `__repr__` and `__index__`; those cases are
-not modelled. Float conversions (`%e`, `%f`, `%g` and friends) stop at type errors:
-the digits wait for `lean/PyLean/Binary64/`, and `formatfloat` is left unmodelled.
+Arguments are a small universe of objects: `int`, `bool`, `float`, `str`, `None`.
+Generic objects would go through their `__str__`, `__repr__` and `__index__`; those
+cases are not modelled.
 -/
 
 namespace PyLean.UnicodeObj
 
-open PyLean
+open PyLean PyLean.Binary64
 
 /-- The objects `%` is modelled on. -/
 inductive FObj where
   | int (v : Int)
   | bool (b : Bool)
+  | float (x : F64)
   | str (s : Str)
   | none
   deriving Repr, DecidableEq
@@ -26,6 +27,7 @@ inductive FObj where
 def FObj.typeName : FObj → String
   | .int _ => "int"
   | .bool _ => "bool"
+  | .float _ => "float"
   | .str _ => "str"
   | .none => "NoneType"
 
@@ -242,6 +244,10 @@ def formatLongStr (v : Int) (alt : Bool) (prec : Int) (type : Nat) : Py Str := d
 def FObj.strOf : FObj → Py Str
   | .int v => longFormat v 10 false
   | .bool b => .ok (lit (if b then "True" else "False"))
+  | .float x =>
+    match float_repr x with
+    | Option.none => .error .modelFuel
+    | some s => .ok s
   | .str s => .ok s
   | .none => .ok (lit "None")
 
@@ -277,7 +283,14 @@ def mainFormatLong (v : FObj) (arg : FArg) : Py FOut := do
       .typeError s!"%{Char.ofNat t} format: an integer is required, not {v.typeName}"
     else
       .typeError s!"%{Char.ofNat t} format: a real number is required, not {v.typeName}"
-  let some iobj := v.asLong | .error wrong
+  let iobj ← match v with
+    | .float x =>
+      -- `_PyNumber_Index` fails with a TypeError; `PyNumber_Long` keeps its own errors
+      if t == 111 || t == 120 || t == 88 then .error wrong else PyLong_FromDouble x
+    | _ =>
+      match v.asLong with
+      | some i => .ok i
+      | Option.none => .error wrong
   let exact := match v with | .int _ => true | _ => false
   if exact && arg.width == -1 && arg.prec == -1 && !arg.flags.sign && !arg.flags.blank &&
       t != 88 then
@@ -294,10 +307,26 @@ def formatChar : FObj → Py Nat
     | _ => .error (.typeError
         s!"%c requires an int or a unicode character, not a string of length {s.length}")
   | .none => .error (.typeError "%c requires an int or a unicode character, not NoneType")
+  | .float _ => .error (.typeError "%c requires an int or a unicode character, not float")
   | o =>
     let x := (o.asLong).getD 0
     if x < 0 ∨ x > maxUnicode then .error (.overflowError "%c arg not in range(0x110000)")
     else .ok x.toNat
+
+/-- `PyFloat_AsDouble` on the objects of the universe. -/
+def FObj.asDouble : FObj → Py F64
+  | .float x => .ok x
+  | .int v =>
+    if v.natAbs ≥ 2 ^ 1024 - 2 ^ 970 then .error (.overflowError "int too large to convert to float")
+    else .ok (F64.ofInt v)
+  | .bool b => .ok (F64.ofInt (if b then 1 else 0))
+  | v => .error (.typeError s!"must be real number, not {v.typeName}")
+
+/-- `formatfloat`, unicodeobject.c:14707-14737. -/
+def formatFloatPct (v : FObj) (arg : FArg) : Py Str := do
+  let x ← v.asDouble
+  let prec : Int := if arg.prec < 0 then 6 else arg.prec
+  doubleToString x arg.ch prec { alt := arg.flags.alt }
 
 /-- `unicode_format_arg_format`, unicodeobject.c:15216-15317. `index` is `fmtpos - 1`. -/
 def formatArgFormat (ctx : FCtx) (arg : FArg) (index : Nat) : Py (FOut × FCtx) := do
@@ -315,9 +344,10 @@ def formatArgFormat (ctx : FCtx) (arg : FArg) (index : Nat) : Py (FOut × FCtx) 
   else if c == 105 || c == 100 || c == 117 || c == 111 || c == 120 || c == 88 then
     return (← mainFormatLong v arg, ctx)
   else if c == 101 || c == 69 || c == 102 || c == 70 || c == 103 || c == 71 then
-    match v with
-    | .str _ | .none => .error (.typeError s!"must be real number, not {v.typeName}")
-    | _ => .error .modelFuel
+    let s ← formatFloatPct v arg
+    if arg.width == -1 && arg.prec == -1 && !arg.flags.sign && !arg.flags.blank then
+      return (.direct s, ctx)
+    else return (.viaOutput s true, ctx)
   else if c == 99 then
     let ch ← formatChar v
     if arg.width == -1 && arg.prec == -1 then return (.direct [ch], ctx)

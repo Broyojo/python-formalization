@@ -93,7 +93,7 @@ def cProductNew (args : List (Obj α)) (rep? : Option Int) : Py (ProductState α
       if !memNewOk npools then .error memoryError
       else if !tupleNewOk npools then .error memoryError
       else
-        -- :2119-2126: with `repeat == 0` no argument is touched (`nargs` is 0)
+        -- :2120-2127: with `repeat == 0` no argument is touched (`nargs` is 0)
         match (if rep = 0 then .ok [] else args.mapM tupleOf) with
         | .error e => .error e
         | .ok ls =>
@@ -328,12 +328,13 @@ structure PermState (α : Type) where
 
 /-- `itertools_permutations_impl` (:2854-2919): the pool is built first, then
 `r` (`None` → `n`) goes through `PyLong_AsSsize_t`. -/
-def cPermutationsNew (iterable : Obj α) (robj : Option Int) : Py (PermState α) := do
+def cPermutationsNew (iterable : Obj α) (robj : Option Int) (badR : Bool := false) : Py (PermState α) := do
   let pool ← tupleOf iterable
   let n := pool.length
-  let r ← match robj with
-    | none => pure (n : Int)
-    | some v => asSsize v
+  let r ← match badR, robj with
+    | true, _ => throw (.typeError "Expected int as r")
+    | false, none => pure (n : Int)
+    | false, some v => asSsize v
   if r < 0 then throw (.valueError "r must be non-negative")
   if !memNewOk n || !memNewOk r then throw memoryError
   return { pool := pool, indices := List.range n, r := r.toNat,
@@ -386,19 +387,13 @@ def permFuel (pool : List α) (robj : Option Int) : Nat :=
   let r := (robj.getD n).toNat
   if r > n then 2 else (List.range r).foldl (fun acc i => acc * (n - i)) 1 + 2
 
-/-- A `robj` that is neither `None` nor an int (:2873-2876), after the pool. -/
-def cPermutationsBadR (iterable : Obj α) : Py Unit :=
-  match tupleOf iterable with
-  | .error e => .error e
-  | .ok _ => .error (.typeError "Expected int as r")
-
-def cPermutationsF (fuel : Nat) (iterable : Obj α) (robj : Option Int) : Run (List α) :=
-  match cPermutationsNew iterable robj with
+def cPermutationsF (fuel : Nat) (iterable : Obj α) (robj : Option Int) (badR : Bool := false) : Run (List α) :=
+  match cPermutationsNew iterable robj badR with
   | .error e => Run.err e
   | .ok s => drain cPermutationsNext fuel s
 
-def cPermutations (iterable : Obj α) (robj : Option Int) : Run (List α) :=
-  cPermutationsF (permFuel (poolOf iterable) robj) iterable robj
+def cPermutations (iterable : Obj α) (robj : Option Int) (badR : Bool := false) : Run (List α) :=
+  cPermutationsF (permFuel (poolOf iterable) robj) iterable robj badR
 
 /-- Python `l[a:]`-style negative index normalisation for `indices[-j]`
 with `1 ≤ j ≤ n`: position `n - j`. Python `indices[:r]` for an int `r`. -/

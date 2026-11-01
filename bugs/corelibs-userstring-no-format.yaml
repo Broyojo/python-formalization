@@ -1,0 +1,44 @@
+id: corelibs-userstring-no-format
+title: "format(UserString(...), spec) and f-strings with a spec raise TypeError"
+priority: P4
+kind: sibling-mismatch
+module: corelibs
+files: [Lib/collections/__init__.py]
+functions: ["UserString"]
+summary: |
+  UserString wraps every str method but has no __format__, so object.__format__ applies:
+  f"{UserString('a'):>5}" raises TypeError "unsupported format string passed to UserString.__format__"
+  where the same f-string on str gives '    a'. Only the empty spec works.
+likelihood: |
+  Medium-low: padded f-strings are common and a UserString in a table of strings fails at once.
+maybe_intended: |
+  Unclear. Probably an omission: the class dates from before format(). A maintainer could call adding it a
+  feature. Note the method would have to return a plain str, as the __format__ protocol requires.
+reproducer: |
+  from collections import UserString
+  print(repr(f"{'a':>5}"))
+  try:
+      print(repr(f"{UserString('a'):>5}"))
+  except TypeError as e:
+      print(type(e).__name__, e)
+      print('REPRODUCED corelibs-userstring-no-format')
+expected: |
+  '    a' from both.
+observed: |
+  python3 3.14.7: TypeError "unsupported format string passed to UserString.__format__". REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Doc/library/collections.rst:1403: "Class that simulates a string object."
+cause: |
+  Lib/collections/__init__.py:1363-1612 define no __format__; Objects/typeobject.c `object___format___impl`
+  refuses a non-empty spec.
+possible_fix: |
+  `def __format__(self, format_spec): return format(self.data, format_spec)`.
+duplicates:
+  issues:
+    - {number: 83535, state: closed, relation: "'collections.UserString format and format_map return a string', the methods", reason: "not __format__"}
+    - {number: 76022, state: open, relation: "result types of UserString methods", reason: "not __format__"}
+  queries: ["UserString __format__", "UserString format", "UserString f-string", "bugforge README: no UserString entries"]
+lean:
+  property: PyLean.CoreLibs.Coll.UserStringFormatSpec
+  theorem: PyLean.CoreLibs.Coll.userStringFormatSpec_refuted

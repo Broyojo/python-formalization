@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Lib/typing.py	166	170	_LazyAnnotationLib.__getattr__	__getattr__(self, attr)	todo		
+Lib/typing.py	166	170	_LazyAnnotationLib.__getattr__	__getattr__(self, attr)	todo		candidates:calstat-calendar-module-getattr
 Lib/typing.py	175	181	_type_convert	_type_convert(arg, module=None, *, allow_special_forms=False, owner=None)	todo		
 Lib/typing.py	184	214	_type_check	_type_check(arg, msg, is_argument=True, module=None, *, allow_special_forms=False, owner=None)	todo		
 Lib/typing.py	217	219	_is_param_expr	_is_param_expr(arg)	todo		
@@ -16,7 +16,7 @@ Lib/typing.py	426	427	_Sentinel.__repr__	__repr__(self)	todo
 Lib/typing.py	433	493	_eval_type	_eval_type(t, globalns, localns, type_params=_sentinel, *, recursive_guard=frozenset(), format=None, owner=None, parent_fwdref=None, prefer_fwd_module=False)	todo		
 Lib/typing.py	501	503	_Final.__init_subclass__	__init_subclass__(cls, /, *args, **kwds)	todo		
 Lib/typing.py	529	532	_SpecialForm.__init__	__init__(self, getitem)	todo		
-Lib/typing.py	534	538	_SpecialForm.__getattr__	__getattr__(self, item)	todo		
+Lib/typing.py	534	538	_SpecialForm.__getattr__	__getattr__(self, item)	todo		candidates:calstat-calendar-module-getattr
 Lib/typing.py	540	541	_SpecialForm.__mro_entries__	__mro_entries__(self, bases)	todo		
 Lib/typing.py	543	544	_SpecialForm.__repr__	__repr__(self)	todo		
 Lib/typing.py	546	547	_SpecialForm.__reduce__	__reduce__(self)	todo		
@@ -56,7 +56,7 @@ Lib/typing.py	1215	1216	_is_dunder	_is_dunder(attr)	todo
 Lib/typing.py	1228	1232	_BaseGenericAlias.__init__	__init__(self, origin, *, inst=True, name=None)	todo		
 Lib/typing.py	1234	1245	_BaseGenericAlias.__call__	__call__(self, *args, **kwargs)	todo		
 Lib/typing.py	1247	1277	_BaseGenericAlias.__mro_entries__	__mro_entries__(self, bases)	todo		
-Lib/typing.py	1279	1287	_BaseGenericAlias.__getattr__	__getattr__(self, attr)	todo		
+Lib/typing.py	1279	1287	_BaseGenericAlias.__getattr__	__getattr__(self, attr)	todo		candidates:calstat-calendar-module-getattr
 Lib/typing.py	1289	1293	_BaseGenericAlias.__setattr__	__setattr__(self, attr, val)	todo		
 Lib/typing.py	1295	1296	_BaseGenericAlias.__instancecheck__	__instancecheck__(self, obj)	todo		
 Lib/typing.py	1298	1300	_BaseGenericAlias.__subclasscheck__	__subclasscheck__(self, cls)	todo		
@@ -124,7 +124,7 @@ Lib/typing.py	2175	2179	_AnnotatedAlias.__repr__	__repr__(self)	todo
 Lib/typing.py	2181	2184	_AnnotatedAlias.__reduce__	__reduce__(self)	todo		
 Lib/typing.py	2186	2190	_AnnotatedAlias.__eq__	__eq__(self, other)	todo		
 Lib/typing.py	2192	2193	_AnnotatedAlias.__hash__	__hash__(self)	todo		
-Lib/typing.py	2195	2198	_AnnotatedAlias.__getattr__	__getattr__(self, attr)	todo		
+Lib/typing.py	2195	2198	_AnnotatedAlias.__getattr__	__getattr__(self, attr)	todo		candidates:calstat-calendar-module-getattr
 Lib/typing.py	2200	2201	_AnnotatedAlias.__mro_entries__	__mro_entries__(self, bases)	todo		
 Lib/typing.py	2206	2263	Annotated	Annotated(self, *params)	todo		
 Lib/typing.py	2266	2305	runtime_checkable	runtime_checkable(cls)	todo		
@@ -169,7 +169,7 @@ Lib/typing.py	3484	3485	NewType.__repr__	__repr__(self)	todo
 Lib/typing.py	3487	3488	NewType.__reduce__	__reduce__(self)	todo		
 Lib/typing.py	3490	3491	NewType.__or__	__or__(self, other)	todo		
 Lib/typing.py	3493	3494	NewType.__ror__	__ror__(self, other)	todo		
-Lib/typing.py	3522	3523	IO.mode	mode(self)	todo		
+Lib/typing.py	3522	3523	IO.mode	mode(self)	todo		candidates:calstat-statistics-mode-spec
 Lib/typing.py	3527	3528	IO.name	name(self)	todo		
 Lib/typing.py	3531	3532	IO.close	close(self)	todo		
 Lib/typing.py	3536	3537	IO.closed	closed(self)	todo		
@@ -203,4 +203,4 @@ Lib/typing.py	3677	3758	dataclass_transform	dataclass_transform(*, eq_default: b
 Lib/typing.py	3764	3796	override	override(method: F, /)	todo		
 Lib/typing.py	3799	3817	is_protocol	is_protocol(tp: type, /)	todo		
 Lib/typing.py	3820	3836	get_protocol_members	get_protocol_members(tp: type, /)	todo		
-Lib/typing.py	3839	3866	__getattr__	__getattr__(attr)	todo		
+Lib/typing.py	3839	3866	__getattr__	__getattr__(attr)	todo		candidates:calstat-calendar-module-getattr

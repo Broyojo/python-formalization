@@ -1,37 +1,37 @@
 file	line	endline	name	signature	status	entry	note
-Lib/re/_parser.py	77	82	State.__init__	__init__(self)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	84	85	State.groups	groups(self)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	86	97	State.opengroup	opengroup(self, name=None)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	98	99	State.closegroup	closegroup(self, gid, p)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	100	101	State.checkgroup	checkgroup(self, gid)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	103	109	State.checklookbehindgroup	checklookbehindgroup(self, gid, source)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	113	118	SubPattern.__init__	__init__(self, state, data=None)	modelled	textlibs-re-digit-limit-parse	
+Lib/re/_parser.py	77	82	State.__init__	__init__(self)	modelled	textlibs-re-parse-plain	
+Lib/re/_parser.py	84	85	State.groups	groups(self)	modelled	textlibs-re-group-lifecycle	
+Lib/re/_parser.py	86	97	State.opengroup	opengroup(self, name=None)	modelled	textlibs-re-group-lifecycle	
+Lib/re/_parser.py	98	99	State.closegroup	closegroup(self, gid, p)	modelled	textlibs-re-group-lifecycle	
+Lib/re/_parser.py	100	101	State.checkgroup	checkgroup(self, gid)	modelled	textlibs-re-group-lifecycle	
+Lib/re/_parser.py	103	109	State.checklookbehindgroup	checklookbehindgroup(self, gid, source)	modelled	textlibs-re-lookbehind-groups	
+Lib/re/_parser.py	113	118	SubPattern.__init__	__init__(self, state, data=None)	excluded		no-behaviour: one-line delegate to the underlying list; the parser's uses are the model's list operations
 Lib/re/_parser.py	120	161	SubPattern.dump	dump(self, level=0)	excluded		test-support: debug dump, printed only under re.DEBUG
 Lib/re/_parser.py	162	163	SubPattern.__repr__	__repr__(self)	excluded		test-support: debugging aid; the parser and compiler never call it
-Lib/re/_parser.py	164	165	SubPattern.__len__	__len__(self)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	166	167	SubPattern.__delitem__	__delitem__(self, index)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	168	171	SubPattern.__getitem__	__getitem__(self, index)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	172	173	SubPattern.__setitem__	__setitem__(self, index, code)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	174	175	SubPattern.insert	insert(self, index, code)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	176	177	SubPattern.append	append(self, code)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	178	228	SubPattern.getwidth	getwidth(self)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	231	239	Tokenizer.__init__	__init__(self, string)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	240	255	Tokenizer.__next	__next(self)	modelled	textlibs-re-digit-limit-parse,textlibs-re-tell	
-Lib/re/_parser.py	256	260	Tokenizer.match	match(self, char)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	261	264	Tokenizer.get	get(self)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	265	273	Tokenizer.getwhile	getwhile(self, n, charset)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	274	289	Tokenizer.getuntil	getuntil(self, terminator, name)	modelled	textlibs-re-digit-limit-parse	
+Lib/re/_parser.py	164	165	SubPattern.__len__	__len__(self)	excluded		no-behaviour: one-line delegate to the underlying list; the parser's uses are the model's list operations
+Lib/re/_parser.py	166	167	SubPattern.__delitem__	__delitem__(self, index)	excluded		no-behaviour: one-line delegate to the underlying list; the parser's uses are the model's list operations
+Lib/re/_parser.py	168	171	SubPattern.__getitem__	__getitem__(self, index)	excluded		no-behaviour: one-line delegate to the underlying list; the parser's uses are the model's list operations
+Lib/re/_parser.py	172	173	SubPattern.__setitem__	__setitem__(self, index, code)	excluded		no-behaviour: one-line delegate to the underlying list; the parser's uses are the model's list operations
+Lib/re/_parser.py	174	175	SubPattern.insert	insert(self, index, code)	excluded		no-behaviour: one-line delegate to the underlying list; the parser's uses are the model's list operations
+Lib/re/_parser.py	176	177	SubPattern.append	append(self, code)	excluded		no-behaviour: one-line delegate to the underlying list; the parser's uses are the model's list operations
+Lib/re/_parser.py	178	228	SubPattern.getwidth	getwidth(self)	modelled	textlibs-re-width-ordered	
+Lib/re/_parser.py	231	239	Tokenizer.__init__	__init__(self, string)	modelled	textlibs-re-parse-plain	
+Lib/re/_parser.py	240	255	Tokenizer.__next	__next(self)	modelled	textlibs-re-parse-plain,textlibs-re-tell	
+Lib/re/_parser.py	256	260	Tokenizer.match	match(self, char)	modelled	textlibs-re-match	
+Lib/re/_parser.py	261	264	Tokenizer.get	get(self)	modelled	textlibs-re-parse-plain	
+Lib/re/_parser.py	265	273	Tokenizer.getwhile	getwhile(self, n, charset)	modelled	textlibs-re-getwhile	
+Lib/re/_parser.py	274	289	Tokenizer.getuntil	getuntil(self, terminator, name)	modelled	textlibs-re-getuntil	
 Lib/re/_parser.py	291	292	Tokenizer.pos	pos(self)	modelled	textlibs-re-tell	
-Lib/re/_parser.py	293	294	Tokenizer.tell	tell(self)	modelled	textlibs-re-digit-limit-parse,textlibs-re-tell	
-Lib/re/_parser.py	295	297	Tokenizer.seek	seek(self, index)	modelled	textlibs-re-digit-limit-parse	candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
-Lib/re/_parser.py	299	302	Tokenizer.error	error(self, msg, offset=0)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	304	310	Tokenizer.checkgroupname	checkgroupname(self, name, offset)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	312	370	_class_escape	_class_escape(source, escape)	modelled	textlibs-re-digit-limit-parse,textlibs-re-escape-twins	
-Lib/re/_parser.py	372	447	_escape	_escape(source, escape, state)	modelled	textlibs-re-digit-limit-parse,textlibs-re-escape-twins	
-Lib/re/_parser.py	449	450	_uniq	_uniq(items)	modelled	textlibs-re-digit-limit-parse,textlibs-re-uniq	
-Lib/re/_parser.py	452	510	_parse_sub	_parse_sub(source, state, verbose, nested)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	512	885	_parse	_parse(source, state, verbose, nested, first=False)	modelled	textlibs-re-digit-limit-parse	
-Lib/re/_parser.py	887	945	_parse_flags	_parse_flags(source, state, char)	modelled	textlibs-re-digit-limit-parse	
+Lib/re/_parser.py	293	294	Tokenizer.tell	tell(self)	modelled	textlibs-re-tell	
+Lib/re/_parser.py	295	297	Tokenizer.seek	seek(self, index)	modelled	textlibs-re-seek	
+Lib/re/_parser.py	299	302	Tokenizer.error	error(self, msg, offset=0)	modelled	textlibs-re-error-position	
+Lib/re/_parser.py	304	310	Tokenizer.checkgroupname	checkgroupname(self, name, offset)	modelled	textlibs-re-group-name	
+Lib/re/_parser.py	312	370	_class_escape	_class_escape(source, escape)	modelled	textlibs-re-escape-twins	
+Lib/re/_parser.py	372	447	_escape	_escape(source, escape, state)	modelled	textlibs-re-escape-twins	
+Lib/re/_parser.py	449	450	_uniq	_uniq(items)	modelled	textlibs-re-uniq	
+Lib/re/_parser.py	452	510	_parse_sub	_parse_sub(source, state, verbose, nested)	modelled	textlibs-re-branch-set,textlibs-re-parse-plain,textlibs-re-prefix-factor	
+Lib/re/_parser.py	512	885	_parse	_parse(source, state, verbose, nested, first=False)	modelled	textlibs-re-digit-limit-parse,textlibs-re-parse-plain	
+Lib/re/_parser.py	887	945	_parse_flags	_parse_flags(source, state, char)	modelled	textlibs-re-flags	
 Lib/re/_parser.py	947	961	fix_flags	fix_flags(src, flags)	modelled	textlibs-re-fix-flags	
-Lib/re/_parser.py	963	988	parse	parse(str, flags=0, state=None)	modelled	textlibs-re-digit-limit-parse	
+Lib/re/_parser.py	963	988	parse	parse(str, flags=0, state=None)	modelled	textlibs-re-digit-limit-parse,textlibs-re-parse-plain	
 Lib/re/_parser.py	990	1066	parse_template	parse_template(source, pattern)	modelled	textlibs-re-digit-limit-template	

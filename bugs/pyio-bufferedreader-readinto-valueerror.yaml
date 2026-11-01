@@ -1,0 +1,59 @@
+id: pyio-bufferedreader-readinto-valueerror
+title: "_pyio.BufferedReader.readinto raises ValueError when refilled data exceeds the space left in the buffer"
+priority: P3
+kind: sibling-mismatch
+module: pyio
+files: [Lib/_pyio.py, Modules/_io/bufferedio.c]
+functions: ["BufferedReader._readinto", "_buffered_readinto_generic"]
+summary: |
+  BufferedReader._readinto copies from its internal buffer in a loop. Each pass computes
+  avail = min(len(self._read_buf) - self._read_pos, len(buf)), bounded by the size of the whole
+  destination and not by the space left in it, then assigns to buf[written:written+avail]. Once
+  part of the destination is filled and the internal buffer has been refilled, avail can exceed
+  the space left. The memoryview slice is then shorter than the bytes assigned to it, and the
+  assignment raises ValueError. io.BufferedReader returns the data.
+likelihood: |
+  Moderate for anyone using _pyio. It needs only readinto with some data already buffered, the
+  rest of the destination no larger than buffer_size, and more data available. No unusual raw
+  stream is involved. _pyio itself is rarely used in production, which limits the impact.
+maybe_intended: |
+  No. An exception from a memoryview size mismatch is not a designed outcome, the C twin succeeds
+  on the same input, and the comment above the method says it exists to keep _pyio similar to io.
+reproducer: |
+  import _pyio
+  import io
+  results = {}
+  for mod in (io, _pyio):
+      f = mod.BufferedReader(mod.BytesIO(b'abcdefghij'), 3)
+      f.read(1)
+      b = bytearray(3)
+      try:
+          results[mod.__name__] = (f.readinto(b), bytes(b))
+      except ValueError as e:
+          results[mod.__name__] = e
+  print(results)
+  if results['io'] == (3, b'bcd') and isinstance(results['_pyio'], ValueError):
+      print('REPRODUCED pyio-bufferedreader-readinto-valueerror')
+expected: |
+  Both twins return 3 and fill the buffer with b'bcd'.
+observed: |
+  python3 3.14.7: io returns (3, b'bcd'); _pyio raises ValueError "memoryview assignment: lvalue
+  and rvalue have different structures". REPRODUCED.
+  main (python.exe 3.16.0a1+dev): identical. REPRODUCED. Lib/_pyio.py:1211 on main has the same line.
+promised_by: |
+  Lib/_pyio.py is the pure-Python twin of the C module. Doc/library/io.rst documents
+  BufferedIOBase.readinto as reading bytes into a pre-allocated buffer and returning the count,
+  with no such error.
+cause: |
+  Lib/_pyio.py:1175 `avail = min(len(self._read_buf) - self._read_pos, len(buf))` should bound by
+  the remaining space. The assignment follows at :1177-1178 and the loop starts at :1172.
+possible_fix: |
+  Use `avail = min(len(self._read_buf) - self._read_pos, len(buf) - written)`, and add a test that
+  calls readinto with a partly filled internal buffer to test_io for both implementations.
+duplicates:
+  issues: []
+  queries: ["BufferedReader readinto memoryview assignment", "_pyio readinto ValueError lvalue and rvalue",
+            "_pyio BufferedReader _readinto avail", "bugforge README: no readinto entries"]
+lean:
+  property: PyLean.PyIO.BufferedReaderReadintoTwins
+  theorem: PyLean.PyIO.bufferedReaderReadintoTwins_refuted

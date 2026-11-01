@@ -2,39 +2,39 @@ file	line	endline	name	signature	status	entry	note
 Lib/_pyio.py	41	65	text_encoding	text_encoding(encoding, stacklevel=2)	todo		
 Lib/_pyio.py	75	272	open	open(file, mode='r', buffering=-1, encoding=None, errors=None, newline=None, closefd=True, opener=None)	todo		
 Lib/_pyio.py	276	290	_open_code_with_warning	_open_code_with_warning(path)	todo		
-Lib/_pyio.py	341	344	IOBase._unsupported	_unsupported(self, name)	todo		
-Lib/_pyio.py	348	364	IOBase.seek	seek(self, pos, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
-Lib/_pyio.py	366	368	IOBase.tell	tell(self)	todo		
-Lib/_pyio.py	370	376	IOBase.truncate	truncate(self, pos=None)	todo		candidates:pyio-truncate-keeps-position
-Lib/_pyio.py	380	385	IOBase.flush	flush(self)	todo		
+Lib/_pyio.py	341	344	IOBase._unsupported	_unsupported(self, name)	modelled	pyio-base-unsupported-ops	
+Lib/_pyio.py	348	364	IOBase.seek	seek(self, pos, whence=0)	modelled	pyio-base-unsupported-ops	candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/_pyio.py	366	368	IOBase.tell	tell(self)	modelled	pyio-base-unsupported-ops	
+Lib/_pyio.py	370	376	IOBase.truncate	truncate(self, pos=None)	modelled	pyio-base-unsupported-ops	candidates:pyio-truncate-keeps-position
+Lib/_pyio.py	380	385	IOBase.flush	flush(self)	modelled	pyio-bytesio-inquiries	
 Lib/_pyio.py	390	399	IOBase.close	close(self)	todo		
 Lib/_pyio.py	401	418	IOBase.__del__	__del__(self)	todo		
-Lib/_pyio.py	422	428	IOBase.seekable	seekable(self)	todo		
-Lib/_pyio.py	430	435	IOBase._checkSeekable	_checkSeekable(self, msg=None)	todo		
-Lib/_pyio.py	437	442	IOBase.readable	readable(self)	todo		
-Lib/_pyio.py	444	449	IOBase._checkReadable	_checkReadable(self, msg=None)	todo		
-Lib/_pyio.py	451	456	IOBase.writable	writable(self)	todo		
-Lib/_pyio.py	458	463	IOBase._checkWritable	_checkWritable(self, msg=None)	todo		
-Lib/_pyio.py	466	471	IOBase.closed	closed(self)	todo		
-Lib/_pyio.py	473	478	IOBase._checkClosed	_checkClosed(self, msg=None)	todo		
-Lib/_pyio.py	482	485	IOBase.__enter__	__enter__(self)	todo		
+Lib/_pyio.py	422	428	IOBase.seekable	seekable(self)	modelled	pyio-base-inquiries-false	
+Lib/_pyio.py	430	435	IOBase._checkSeekable	_checkSeekable(self, msg=None)	modelled	pyio-base-checks-unsupported	
+Lib/_pyio.py	437	442	IOBase.readable	readable(self)	modelled	pyio-base-inquiries-false	
+Lib/_pyio.py	444	449	IOBase._checkReadable	_checkReadable(self, msg=None)	modelled	pyio-base-checks-unsupported	
+Lib/_pyio.py	451	456	IOBase.writable	writable(self)	modelled	pyio-base-inquiries-false	
+Lib/_pyio.py	458	463	IOBase._checkWritable	_checkWritable(self, msg=None)	modelled	pyio-base-checks-unsupported	
+Lib/_pyio.py	466	471	IOBase.closed	closed(self)	modelled	pyio-base-closed-protocol	
+Lib/_pyio.py	473	478	IOBase._checkClosed	_checkClosed(self, msg=None)	modelled	pyio-base-closed-protocol,pyio-bytesio-inquiries	
+Lib/_pyio.py	482	485	IOBase.__enter__	__enter__(self)	modelled	pyio-base-closed-protocol	
 Lib/_pyio.py	487	489	IOBase.__exit__	__exit__(self, *args)	todo		
-Lib/_pyio.py	495	501	IOBase.fileno	fileno(self)	todo		
-Lib/_pyio.py	503	509	IOBase.isatty	isatty(self)	todo		
+Lib/_pyio.py	495	501	IOBase.fileno	fileno(self)	modelled	pyio-base-unsupported-ops	
+Lib/_pyio.py	503	509	IOBase.isatty	isatty(self)	modelled	pyio-base-closed-protocol,pyio-bytesio-inquiries	
 Lib/_pyio.py	513	553	IOBase.readline	readline(self, size=-1)	modelled	pyio-bytesio-twins-same-class-no-alloc-fail	
-Lib/_pyio.py	555	557	IOBase.__iter__	__iter__(self)	todo		
-Lib/_pyio.py	559	563	IOBase.__next__	__next__(self)	todo		
+Lib/_pyio.py	555	557	IOBase.__iter__	__iter__(self)	modelled	pyio-base-closed-protocol,pyio-bytesio-readlines-hint-doc,pyio-bytesio-twins-same-class-core	
+Lib/_pyio.py	559	563	IOBase.__next__	__next__(self)	modelled	pyio-bytesio-readlines-hint-doc,pyio-bytesio-twins-same-class-core	
 Lib/_pyio.py	565	581	IOBase.readlines	readlines(self, hint=None)	modelled	pyio-stringio-tell-after-reads	
-Lib/_pyio.py	583	591	IOBase.writelines	writelines(self, lines)	todo		
+Lib/_pyio.py	583	591	IOBase.writelines	writelines(self, lines)	modelled	pyio-bytesio-writelines	
 Lib/_pyio.py	610	627	RawIOBase.read	read(self, size=-1)	todo		candidates:pyio-bytesio-read-after-seek
 Lib/_pyio.py	629	638	RawIOBase.readall	readall(self)	todo		
 Lib/_pyio.py	640	646	RawIOBase.readinto	readinto(self, b)	todo		
 Lib/_pyio.py	648	654	RawIOBase.write	write(self, b)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
 Lib/_pyio.py	676	694	BufferedIOBase.read	read(self, size=-1)	todo		candidates:pyio-bytesio-read-after-seek
 Lib/_pyio.py	696	700	BufferedIOBase.read1	read1(self, size=-1)	todo		
-Lib/_pyio.py	702	714	BufferedIOBase.readinto	readinto(self, b)	todo		
+Lib/_pyio.py	702	714	BufferedIOBase.readinto	readinto(self, b)	modelled	pyio-bufferedreader-readinto-twins,pyio-bytesio-twins-same-class-core	
 Lib/_pyio.py	716	725	BufferedIOBase.readinto1	readinto1(self, b)	todo		
-Lib/_pyio.py	727	740	BufferedIOBase._readinto	_readinto(self, b, read1)	todo		
+Lib/_pyio.py	727	740	BufferedIOBase._readinto	_readinto(self, b, read1)	modelled	pyio-bytesio-twins-same-class-core	
 Lib/_pyio.py	742	751	BufferedIOBase.write	write(self, b)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
 Lib/_pyio.py	753	760	BufferedIOBase.detach	detach(self)	todo		
 Lib/_pyio.py	774	775	_BufferedIOMixin.__init__	__init__(self, raw)	todo		
@@ -48,35 +48,35 @@ Lib/_pyio.py	831	832	_BufferedIOMixin.seekable	seekable(self)	todo
 Lib/_pyio.py	835	836	_BufferedIOMixin.raw	raw(self)	todo		
 Lib/_pyio.py	839	840	_BufferedIOMixin.closed	closed(self)	todo		
 Lib/_pyio.py	843	844	_BufferedIOMixin.name	name(self)	todo		
-Lib/_pyio.py	847	848	_BufferedIOMixin.mode	mode(self)	todo		
+Lib/_pyio.py	847	848	_BufferedIOMixin.mode	mode(self)	todo		candidates:calstat-statistics-mode-spec
 Lib/_pyio.py	850	851	_BufferedIOMixin.__getstate__	__getstate__(self)	todo		
 Lib/_pyio.py	853	861	_BufferedIOMixin.__repr__	__repr__(self)	todo		
 Lib/_pyio.py	863	865	_BufferedIOMixin._dealloc_warn	_dealloc_warn(self, source)	todo		
 Lib/_pyio.py	869	870	_BufferedIOMixin.fileno	fileno(self)	todo		
 Lib/_pyio.py	872	873	_BufferedIOMixin.isatty	isatty(self)	todo		
-Lib/_pyio.py	884	889	BytesIO.__init__	__init__(self, initial_bytes=None)	todo		
-Lib/_pyio.py	891	894	BytesIO.__getstate__	__getstate__(self)	todo		
-Lib/_pyio.py	896	901	BytesIO.getvalue	getvalue(self)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
-Lib/_pyio.py	903	908	BytesIO.getbuffer	getbuffer(self)	todo		
-Lib/_pyio.py	910	913	BytesIO.close	close(self)	todo		
-Lib/_pyio.py	915	934	BytesIO.read	read(self, size=-1)	todo		candidates:pyio-bytesio-read-after-seek
-Lib/_pyio.py	936	939	BytesIO.read1	read1(self, size=-1)	todo		
-Lib/_pyio.py	941	958	BytesIO.write	write(self, b)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
-Lib/_pyio.py	960	979	BytesIO.seek	seek(self, pos, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
-Lib/_pyio.py	981	984	BytesIO.tell	tell(self)	todo		
-Lib/_pyio.py	986	1001	BytesIO.truncate	truncate(self, pos=None)	todo		candidates:pyio-truncate-keeps-position
-Lib/_pyio.py	1003	1006	BytesIO.readable	readable(self)	todo		
-Lib/_pyio.py	1008	1011	BytesIO.writable	writable(self)	todo		
-Lib/_pyio.py	1013	1016	BytesIO.seekable	seekable(self)	todo		
-Lib/_pyio.py	1030	1041	BufferedReader.__init__	__init__(self, raw, buffer_size=DEFAULT_BUFFER_SIZE)	todo		
+Lib/_pyio.py	884	889	BytesIO.__init__	__init__(self, initial_bytes=None)	modelled	pyio-bytesio-twins-same-class-core	
+Lib/_pyio.py	891	894	BytesIO.__getstate__	__getstate__(self)	modelled	pyio-bytesio-pickle-roundtrip	
+Lib/_pyio.py	896	901	BytesIO.getvalue	getvalue(self)	modelled	pyio-bytesio-getvalue-zero-fill,pyio-bytesio-twins-same-class-core,pyio-bytesio-writes-concat	candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/_pyio.py	903	908	BytesIO.getbuffer	getbuffer(self)	modelled	pyio-bytesio-twins-same-class-in-range	
+Lib/_pyio.py	910	913	BytesIO.close	close(self)	modelled	pyio-bytesio-twins-agree,pyio-bytesio-twins-same-class-core,pyio-bytesio-twins-same-class-no-alloc-fail	
+Lib/_pyio.py	915	934	BytesIO.read	read(self, size=-1)	modelled	pyio-bytesio-read-after-seek,pyio-bytesio-twins-agree,pyio-bytesio-twins-same-class-core	candidates:pyio-bytesio-read-after-seek
+Lib/_pyio.py	936	939	BytesIO.read1	read1(self, size=-1)	modelled	pyio-bytesio-twins-same-class-core	
+Lib/_pyio.py	941	958	BytesIO.write	write(self, b)	modelled	pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-twins-same-class-core,pyio-bytesio-twins-same-class-in-range,pyio-bytesio-twins-same-class-no-export,pyio-bytesio-writes-concat	candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/_pyio.py	960	979	BytesIO.seek	seek(self, pos, whence=0)	modelled	pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class,pyio-bytesio-twins-same-class-core,pyio-bytesio-twins-same-class-no-export	candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/_pyio.py	981	984	BytesIO.tell	tell(self)	modelled	pyio-bytesio-twins-same-class-core	
+Lib/_pyio.py	986	1001	BytesIO.truncate	truncate(self, pos=None)	modelled	pyio-bytesio-twins-same-class-core,pyio-truncate-keeps-position	candidates:pyio-truncate-keeps-position
+Lib/_pyio.py	1003	1006	BytesIO.readable	readable(self)	modelled	pyio-bytesio-inquiries	
+Lib/_pyio.py	1008	1011	BytesIO.writable	writable(self)	modelled	pyio-bytesio-inquiries	
+Lib/_pyio.py	1013	1016	BytesIO.seekable	seekable(self)	modelled	pyio-bytesio-inquiries	
+Lib/_pyio.py	1030	1041	BufferedReader.__init__	__init__(self, raw, buffer_size=DEFAULT_BUFFER_SIZE)	modelled	pyio-bufferedreader-readinto-twins	
 Lib/_pyio.py	1043	1044	BufferedReader.readable	readable(self)	todo		
 Lib/_pyio.py	1046	1048	BufferedReader._reset_read_buf	_reset_read_buf(self)	todo		
-Lib/_pyio.py	1050	1061	BufferedReader.read	read(self, size=None)	todo		candidates:pyio-bytesio-read-after-seek
-Lib/_pyio.py	1063	1113	BufferedReader._read_unlocked	_read_unlocked(self, n=None)	todo		
+Lib/_pyio.py	1050	1061	BufferedReader.read	read(self, size=None)	modelled	pyio-bufferedreader-readinto-twins	candidates:pyio-bytesio-read-after-seek
+Lib/_pyio.py	1063	1113	BufferedReader._read_unlocked	_read_unlocked(self, n=None)	modelled	pyio-bufferedreader-readinto-twins	
 Lib/_pyio.py	1115	1124	BufferedReader.peek	peek(self, size=0)	todo		
-Lib/_pyio.py	1126	1135	BufferedReader._peek_unlocked	_peek_unlocked(self, n=0)	todo		
+Lib/_pyio.py	1126	1135	BufferedReader._peek_unlocked	_peek_unlocked(self, n=0)	modelled	pyio-bufferedreader-readinto-twins	
 Lib/_pyio.py	1137	1149	BufferedReader.read1	read1(self, size=-1)	todo		
-Lib/_pyio.py	1156	1202	BufferedReader._readinto	_readinto(self, buf, read1)	todo		
+Lib/_pyio.py	1156	1202	BufferedReader._readinto	_readinto(self, buf, read1)	modelled	pyio-bufferedreader-readinto-twins	
 Lib/_pyio.py	1204	1206	BufferedReader.tell	tell(self)	todo		
 Lib/_pyio.py	1208	1217	BufferedReader.seek	seek(self, pos, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
 Lib/_pyio.py	1228	1237	BufferedWriter.__init__	__init__(self, raw, buffer_size=DEFAULT_BUFFER_SIZE)	todo		
@@ -134,7 +134,7 @@ Lib/_pyio.py	1829	1832	FileIO.fileno	fileno(self)	todo
 Lib/_pyio.py	1834	1837	FileIO.isatty	isatty(self)	todo		
 Lib/_pyio.py	1839	1852	FileIO._isatty_open_only	_isatty_open_only(self)	todo		
 Lib/_pyio.py	1855	1857	FileIO.closefd	closefd(self)	todo		
-Lib/_pyio.py	1860	1878	FileIO.mode	mode(self)	todo		
+Lib/_pyio.py	1860	1878	FileIO.mode	mode(self)	todo		candidates:calstat-statistics-mode-spec
 Lib/_pyio.py	1889	1897	TextIOBase.read	read(self, size=-1)	todo		candidates:pyio-bytesio-read-after-seek
 Lib/_pyio.py	1899	1901	TextIOBase.write	write(self, s)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
 Lib/_pyio.py	1903	1905	TextIOBase.truncate	truncate(self, pos=None)	todo		candidates:pyio-truncate-keeps-position
@@ -144,14 +144,14 @@ Lib/_pyio.py	1924	1926	TextIOBase.encoding	encoding(self)	todo
 Lib/_pyio.py	1929	1936	TextIOBase.newlines	newlines(self)	todo		
 Lib/_pyio.py	1939	1943	TextIOBase.errors	errors(self)	todo		
 Lib/_pyio.py	1955	1960	IncrementalNewlineDecoder.__init__	__init__(self, decoder, translate, errors='strict')	todo		
-Lib/_pyio.py	1962	1991	IncrementalNewlineDecoder.decode	decode(self, input, final=False)	todo		
-Lib/_pyio.py	1993	2002	IncrementalNewlineDecoder.getstate	getstate(self)	todo		
-Lib/_pyio.py	2004	2008	IncrementalNewlineDecoder.setstate	setstate(self, state)	todo		
-Lib/_pyio.py	2010	2014	IncrementalNewlineDecoder.reset	reset(self)	todo		
+Lib/_pyio.py	1962	1991	IncrementalNewlineDecoder.decode	decode(self, input, final=False)	modelled	pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none	
+Lib/_pyio.py	1993	2002	IncrementalNewlineDecoder.getstate	getstate(self)	modelled	pyio-stringio-writes-twins-not-none	
+Lib/_pyio.py	2004	2008	IncrementalNewlineDecoder.setstate	setstate(self, state)	modelled	pyio-stringio-writes-twins-not-none	
+Lib/_pyio.py	2010	2014	IncrementalNewlineDecoder.reset	reset(self)	modelled	pyio-stringio-writes-twins-not-none	
 Lib/_pyio.py	2021	2030	IncrementalNewlineDecoder.newlines	newlines(self)	todo		
-Lib/_pyio.py	2066	2096	TextIOWrapper.__init__	__init__(self, buffer, encoding=None, errors=None, newline=None, line_buffering=False, write_through=False)	todo		
+Lib/_pyio.py	2066	2096	TextIOWrapper.__init__	__init__(self, buffer, encoding=None, errors=None, newline=None, line_buffering=False, write_through=False)	modelled	pyio-stringio-py-newline-legal	
 Lib/_pyio.py	2098	2102	TextIOWrapper._check_newline	_check_newline(self, newline)	modelled	pyio-stringio-py-newline-legal	
-Lib/_pyio.py	2104	2129	TextIOWrapper._configure	_configure(self, encoding=None, errors=None, newline=None, line_buffering=False, write_through=False)	todo		
+Lib/_pyio.py	2104	2129	TextIOWrapper._configure	_configure(self, encoding=None, errors=None, newline=None, line_buffering=False, write_through=False)	modelled	pyio-stringio-py-newline-legal	
 Lib/_pyio.py	2140	2155	TextIOWrapper.__repr__	__repr__(self)	todo		
 Lib/_pyio.py	2158	2159	TextIOWrapper.encoding	encoding(self)	todo		
 Lib/_pyio.py	2162	2163	TextIOWrapper.errors	errors(self)	todo		
@@ -159,37 +159,37 @@ Lib/_pyio.py	2166	2167	TextIOWrapper.line_buffering	line_buffering(self)	todo
 Lib/_pyio.py	2170	2171	TextIOWrapper.write_through	write_through(self)	todo		
 Lib/_pyio.py	2174	2175	TextIOWrapper.buffer	buffer(self)	todo		
 Lib/_pyio.py	2177	2218	TextIOWrapper.reconfigure	reconfigure(self, *, encoding=None, errors=None, newline=Ellipsis, line_buffering=None, write_through=None)	todo		
-Lib/_pyio.py	2220	2223	TextIOWrapper.seekable	seekable(self)	todo		
-Lib/_pyio.py	2225	2226	TextIOWrapper.readable	readable(self)	todo		
-Lib/_pyio.py	2228	2229	TextIOWrapper.writable	writable(self)	todo		
-Lib/_pyio.py	2231	2233	TextIOWrapper.flush	flush(self)	todo		
+Lib/_pyio.py	2220	2223	TextIOWrapper.seekable	seekable(self)	modelled	pyio-stringio-inquiries	
+Lib/_pyio.py	2225	2226	TextIOWrapper.readable	readable(self)	modelled	pyio-stringio-inquiries	
+Lib/_pyio.py	2228	2229	TextIOWrapper.writable	writable(self)	modelled	pyio-stringio-inquiries	
+Lib/_pyio.py	2231	2233	TextIOWrapper.flush	flush(self)	modelled	pyio-stringio-writes-twins-not-none	
 Lib/_pyio.py	2235	2240	TextIOWrapper.close	close(self)	todo		
 Lib/_pyio.py	2243	2244	TextIOWrapper.closed	closed(self)	todo		
 Lib/_pyio.py	2247	2248	TextIOWrapper.name	name(self)	todo		
-Lib/_pyio.py	2250	2251	TextIOWrapper.fileno	fileno(self)	todo		
-Lib/_pyio.py	2253	2254	TextIOWrapper.isatty	isatty(self)	todo		
+Lib/_pyio.py	2250	2251	TextIOWrapper.fileno	fileno(self)	modelled	pyio-stringio-unsupported	
+Lib/_pyio.py	2253	2254	TextIOWrapper.isatty	isatty(self)	modelled	pyio-stringio-inquiries	
 Lib/_pyio.py	2256	2278	TextIOWrapper.write	write(self, s)	modelled	pyio-stringio-init-write-twins,pyio-stringio-read-write-twins	
 Lib/_pyio.py	2280	2283	TextIOWrapper._get_encoder	_get_encoder(self)	todo		
-Lib/_pyio.py	2285	2291	TextIOWrapper._get_decoder	_get_decoder(self)	todo		
-Lib/_pyio.py	2296	2299	TextIOWrapper._set_decoded_chars	_set_decoded_chars(self, chars)	todo		
-Lib/_pyio.py	2301	2309	TextIOWrapper._get_decoded_chars	_get_decoded_chars(self, n=None)	todo		
+Lib/_pyio.py	2285	2291	TextIOWrapper._get_decoder	_get_decoder(self)	modelled	pyio-stringio-newlines-attr,pyio-stringio-writes-twins-not-none	
+Lib/_pyio.py	2296	2299	TextIOWrapper._set_decoded_chars	_set_decoded_chars(self, chars)	modelled	pyio-stringio-read-write-twins	
+Lib/_pyio.py	2301	2309	TextIOWrapper._get_decoded_chars	_get_decoded_chars(self, n=None)	modelled	pyio-stringio-read-write-twins	
 Lib/_pyio.py	2311	2318	TextIOWrapper._get_locale_encoding	_get_locale_encoding(self)	todo		
-Lib/_pyio.py	2320	2324	TextIOWrapper._rewind_decoded_chars	_rewind_decoded_chars(self, n)	todo		
-Lib/_pyio.py	2326	2366	TextIOWrapper._read_chunk	_read_chunk(self)	todo		
+Lib/_pyio.py	2320	2324	TextIOWrapper._rewind_decoded_chars	_rewind_decoded_chars(self, n)	modelled	pyio-stringio-tell-after-reads	
+Lib/_pyio.py	2326	2366	TextIOWrapper._read_chunk	_read_chunk(self)	modelled	pyio-stringio-read-write-twins	
 Lib/_pyio.py	2368	2376	TextIOWrapper._pack_cookie	_pack_cookie(self, position, dec_flags=0, bytes_to_feed=0, need_eof=False, chars_to_skip=0)	todo		
 Lib/_pyio.py	2378	2383	TextIOWrapper._unpack_cookie	_unpack_cookie(self, bigint)	todo		
 Lib/_pyio.py	2385	2482	TextIOWrapper.tell	tell(self)	modelled	pyio-stringio-tell-after-reads	
 Lib/_pyio.py	2484	2488	TextIOWrapper.truncate	truncate(self, pos=None)	todo		candidates:pyio-truncate-keeps-position
 Lib/_pyio.py	2490	2496	TextIOWrapper.detach	detach(self)	todo		
-Lib/_pyio.py	2498	2571	TextIOWrapper.seek	seek(self, cookie, whence=0)	todo		candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
+Lib/_pyio.py	2498	2571	TextIOWrapper.seek	seek(self, cookie, whence=0)	modelled	pyio-stringio-init-write-twins	candidates:pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class
 Lib/_pyio.py	2573	2603	TextIOWrapper.read	read(self, size=None)	modelled	pyio-stringio-read-write-twins	
 Lib/_pyio.py	2605	2612	TextIOWrapper.__next__	__next__(self)	modelled	pyio-stringio-tell-after-reads	
-Lib/_pyio.py	2614	2705	TextIOWrapper.readline	readline(self, size=None)	todo		
+Lib/_pyio.py	2614	2705	TextIOWrapper.readline	readline(self, size=None)	modelled	pyio-stringio-tell-after-reads	
 Lib/_pyio.py	2708	2709	TextIOWrapper.newlines	newlines(self)	modelled	pyio-stringio-newlines-attr	
 Lib/_pyio.py	2711	2713	TextIOWrapper._dealloc_warn	_dealloc_warn(self, source)	todo		
 Lib/_pyio.py	2723	2737	StringIO.__init__	__init__(self, initial_value='', newline='\\n')	modelled	pyio-stringio-init-write-twins,pyio-stringio-py-newline-legal	
-Lib/_pyio.py	2739	2747	StringIO.getvalue	getvalue(self)	todo		candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
+Lib/_pyio.py	2739	2747	StringIO.getvalue	getvalue(self)	modelled	pyio-stringio-init-write-twins,pyio-stringio-read-write-twins,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none	candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
 Lib/_pyio.py	2749	2752	StringIO.__repr__	__repr__(self)	todo		
-Lib/_pyio.py	2755	2756	StringIO.errors	errors(self)	todo		
-Lib/_pyio.py	2759	2760	StringIO.encoding	encoding(self)	todo		
-Lib/_pyio.py	2762	2764	StringIO.detach	detach(self)	todo		
+Lib/_pyio.py	2755	2756	StringIO.errors	errors(self)	modelled	pyio-stringio-unsupported	
+Lib/_pyio.py	2759	2760	StringIO.encoding	encoding(self)	modelled	pyio-stringio-unsupported	
+Lib/_pyio.py	2762	2764	StringIO.detach	detach(self)	modelled	pyio-stringio-unsupported	

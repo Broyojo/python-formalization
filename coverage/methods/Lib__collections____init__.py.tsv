@@ -1,15 +1,15 @@
 file	line	endline	name	signature	status	entry	note
-Lib/collections/__init__.py	71	72	_OrderedDictKeysView.__reversed__	__reversed__(self)	todo		
-Lib/collections/__init__.py	76	78	_OrderedDictItemsView.__reversed__	__reversed__(self)	todo		
-Lib/collections/__init__.py	82	84	_OrderedDictValuesView.__reversed__	__reversed__(self)	todo		
+Lib/collections/__init__.py	71	72	_OrderedDictKeysView.__reversed__	__reversed__(self)	todo		candidates:coll-userdict-reversible
+Lib/collections/__init__.py	76	78	_OrderedDictItemsView.__reversed__	__reversed__(self)	todo		candidates:coll-userdict-reversible
+Lib/collections/__init__.py	82	84	_OrderedDictValuesView.__reversed__	__reversed__(self)	todo		candidates:coll-userdict-reversible
 Lib/collections/__init__.py	104	111	OrderedDict.__new__	__new__(cls, /, *args, **kwds)	todo		
 Lib/collections/__init__.py	113	117	OrderedDict.__init__	__init__(self, other=(), /, **kwds)	todo		
 Lib/collections/__init__.py	119	131	OrderedDict.__setitem__	__setitem__(self, key, value, dict_setitem=dict.__setitem__, proxy=_proxy, Link=_Link)	todo		
 Lib/collections/__init__.py	133	144	OrderedDict.__delitem__	__delitem__(self, key, dict_delitem=dict.__delitem__)	todo		
 Lib/collections/__init__.py	146	153	OrderedDict.__iter__	__iter__(self)	todo		
-Lib/collections/__init__.py	155	162	OrderedDict.__reversed__	__reversed__(self)	todo		
+Lib/collections/__init__.py	155	162	OrderedDict.__reversed__	__reversed__(self)	todo		candidates:coll-userdict-reversible
 Lib/collections/__init__.py	164	169	OrderedDict.clear	clear(self)	todo		
-Lib/collections/__init__.py	171	192	OrderedDict.popitem	popitem(self, last=True)	todo		
+Lib/collections/__init__.py	171	192	OrderedDict.popitem	popitem(self, last=True)	todo		candidates:coll-userdict-popitem-lifo,coll-userdict-popitem-narrow
 Lib/collections/__init__.py	194	217	OrderedDict.move_to_end	move_to_end(self, key, last=True)	todo		
 Lib/collections/__init__.py	219	226	OrderedDict.__sizeof__	__sizeof__(self)	todo		
 Lib/collections/__init__.py	230	232	OrderedDict.keys	keys(self)	todo		
@@ -25,167 +25,167 @@ Lib/collections/__init__.py	317	324	OrderedDict.__eq__	__eq__(self, other)	todo
 Lib/collections/__init__.py	326	328	OrderedDict.__ior__	__ior__(self, other)	todo		
 Lib/collections/__init__.py	330	335	OrderedDict.__or__	__or__(self, other)	todo		
 Lib/collections/__init__.py	337	342	OrderedDict.__ror__	__ror__(self, other)	todo		
-Lib/collections/__init__.py	361	533	namedtuple	namedtuple(typename, field_names, *, rename=False, defaults=None, module=None)	todo		
-Lib/collections/__init__.py	540	544	_count_elements	_count_elements(mapping, iterable)	todo		
-Lib/collections/__init__.py	605	617	Counter.__init__	__init__(self, iterable=None, /, **kwds)	todo		
-Lib/collections/__init__.py	619	622	Counter.__missing__	__missing__(self, key)	todo		
-Lib/collections/__init__.py	624	626	Counter.total	total(self)	todo		
-Lib/collections/__init__.py	628	645	Counter.most_common	most_common(self, n=None)	todo		
-Lib/collections/__init__.py	647	666	Counter.elements	elements(self)	todo		
-Lib/collections/__init__.py	671	680	Counter.fromkeys	fromkeys(cls, iterable, v=None)	todo		
-Lib/collections/__init__.py	682	714	Counter.update	update(self, iterable=None, /, **kwds)	todo		
-Lib/collections/__init__.py	716	741	Counter.subtract	subtract(self, iterable=None, /, **kwds)	todo		
-Lib/collections/__init__.py	743	745	Counter.copy	copy(self)	todo		
-Lib/collections/__init__.py	747	748	Counter.__reduce__	__reduce__(self)	todo		
-Lib/collections/__init__.py	750	753	Counter.__delitem__	__delitem__(self, elem)	todo		
-Lib/collections/__init__.py	755	764	Counter.__repr__	__repr__(self)	todo		
-Lib/collections/__init__.py	800	804	Counter.__eq__	__eq__(self, other)	todo		
-Lib/collections/__init__.py	806	810	Counter.__ne__	__ne__(self, other)	todo		
-Lib/collections/__init__.py	812	816	Counter.__le__	__le__(self, other)	todo		
-Lib/collections/__init__.py	818	822	Counter.__lt__	__lt__(self, other)	todo		
-Lib/collections/__init__.py	824	828	Counter.__ge__	__ge__(self, other)	todo		
-Lib/collections/__init__.py	830	834	Counter.__gt__	__gt__(self, other)	todo		
-Lib/collections/__init__.py	836	853	Counter.__add__	__add__(self, other)	todo		
-Lib/collections/__init__.py	855	872	Counter.__sub__	__sub__(self, other)	todo		
-Lib/collections/__init__.py	874	892	Counter.__or__	__or__(self, other)	todo		
-Lib/collections/__init__.py	894	909	Counter.__and__	__and__(self, other)	todo		
-Lib/collections/__init__.py	911	917	Counter.__pos__	__pos__(self)	todo		
-Lib/collections/__init__.py	919	928	Counter.__neg__	__neg__(self)	todo		
-Lib/collections/__init__.py	930	935	Counter._keep_positive	_keep_positive(self)	todo		
-Lib/collections/__init__.py	937	948	Counter.__iadd__	__iadd__(self, other)	todo		
-Lib/collections/__init__.py	950	961	Counter.__isub__	__isub__(self, other)	todo		
-Lib/collections/__init__.py	963	976	Counter.__ior__	__ior__(self, other)	todo		
-Lib/collections/__init__.py	978	991	Counter.__iand__	__iand__(self, other)	todo		
-Lib/collections/__init__.py	1012	1017	ChainMap.__init__	__init__(self, *maps)	todo		
-Lib/collections/__init__.py	1019	1020	ChainMap.__missing__	__missing__(self, key)	todo		
-Lib/collections/__init__.py	1022	1028	ChainMap.__getitem__	__getitem__(self, key)	todo		
-Lib/collections/__init__.py	1030	1031	ChainMap.get	get(self, key, default=None)	todo		
-Lib/collections/__init__.py	1033	1034	ChainMap.__len__	__len__(self)	todo		
-Lib/collections/__init__.py	1036	1040	ChainMap.__iter__	__iter__(self)	todo		
-Lib/collections/__init__.py	1042	1046	ChainMap.__contains__	__contains__(self, key)	todo		
-Lib/collections/__init__.py	1048	1049	ChainMap.__bool__	__bool__(self)	todo		
-Lib/collections/__init__.py	1052	1053	ChainMap.__repr__	__repr__(self)	todo		
-Lib/collections/__init__.py	1056	1058	ChainMap.fromkeys	fromkeys(cls, iterable, value=None, /)	todo		
-Lib/collections/__init__.py	1060	1062	ChainMap.copy	copy(self)	todo		
-Lib/collections/__init__.py	1066	1075	ChainMap.new_child	new_child(self, m=None, **kwargs)	todo		
-Lib/collections/__init__.py	1078	1080	ChainMap.parents	parents(self)	todo		
-Lib/collections/__init__.py	1082	1083	ChainMap.__setitem__	__setitem__(self, key, value)	todo		
-Lib/collections/__init__.py	1085	1089	ChainMap.__delitem__	__delitem__(self, key)	todo		
-Lib/collections/__init__.py	1091	1096	ChainMap.popitem	popitem(self)	todo		
-Lib/collections/__init__.py	1098	1103	ChainMap.pop	pop(self, key, *args)	todo		
-Lib/collections/__init__.py	1105	1107	ChainMap.clear	clear(self)	todo		
-Lib/collections/__init__.py	1109	1111	ChainMap.__ior__	__ior__(self, other)	todo		
-Lib/collections/__init__.py	1113	1118	ChainMap.__or__	__or__(self, other)	todo		
-Lib/collections/__init__.py	1120	1126	ChainMap.__ror__	__ror__(self, other)	todo		
-Lib/collections/__init__.py	1136	1141	UserDict.__init__	__init__(self, dict=None, /, **kwargs)	todo		
-Lib/collections/__init__.py	1143	1144	UserDict.__len__	__len__(self)	todo		
-Lib/collections/__init__.py	1146	1151	UserDict.__getitem__	__getitem__(self, key)	todo		
-Lib/collections/__init__.py	1153	1154	UserDict.__setitem__	__setitem__(self, key, item)	todo		
-Lib/collections/__init__.py	1156	1157	UserDict.__delitem__	__delitem__(self, key)	todo		
-Lib/collections/__init__.py	1159	1160	UserDict.__iter__	__iter__(self)	todo		
-Lib/collections/__init__.py	1164	1165	UserDict.__contains__	__contains__(self, key)	todo		
-Lib/collections/__init__.py	1167	1170	UserDict.get	get(self, key, default=None)	todo		
-Lib/collections/__init__.py	1174	1175	UserDict.__repr__	__repr__(self)	todo		
-Lib/collections/__init__.py	1177	1182	UserDict.__or__	__or__(self, other)	todo		
-Lib/collections/__init__.py	1184	1189	UserDict.__ror__	__ror__(self, other)	todo		
-Lib/collections/__init__.py	1191	1196	UserDict.__ior__	__ior__(self, other)	todo		
-Lib/collections/__init__.py	1198	1203	UserDict.__copy__	__copy__(self)	todo		
-Lib/collections/__init__.py	1205	1216	UserDict.copy	copy(self)	todo		
-Lib/collections/__init__.py	1219	1223	UserDict.fromkeys	fromkeys(cls, iterable, value=None)	todo		
-Lib/collections/__init__.py	1233	1242	UserList.__init__	__init__(self, initlist=None)	todo		
-Lib/collections/__init__.py	1244	1245	UserList.__repr__	__repr__(self)	todo		
-Lib/collections/__init__.py	1247	1248	UserList.__lt__	__lt__(self, other)	todo		
-Lib/collections/__init__.py	1250	1251	UserList.__le__	__le__(self, other)	todo		
-Lib/collections/__init__.py	1253	1254	UserList.__eq__	__eq__(self, other)	todo		
-Lib/collections/__init__.py	1256	1257	UserList.__gt__	__gt__(self, other)	todo		
-Lib/collections/__init__.py	1259	1260	UserList.__ge__	__ge__(self, other)	todo		
-Lib/collections/__init__.py	1262	1263	UserList.__cast	__cast(self, other)	todo		
-Lib/collections/__init__.py	1265	1266	UserList.__contains__	__contains__(self, item)	todo		
-Lib/collections/__init__.py	1268	1269	UserList.__len__	__len__(self)	todo		
-Lib/collections/__init__.py	1271	1275	UserList.__getitem__	__getitem__(self, i)	todo		
-Lib/collections/__init__.py	1277	1278	UserList.__setitem__	__setitem__(self, i, item)	todo		
-Lib/collections/__init__.py	1280	1281	UserList.__delitem__	__delitem__(self, i)	todo		
-Lib/collections/__init__.py	1283	1288	UserList.__add__	__add__(self, other)	todo		
-Lib/collections/__init__.py	1290	1295	UserList.__radd__	__radd__(self, other)	todo		
-Lib/collections/__init__.py	1297	1304	UserList.__iadd__	__iadd__(self, other)	todo		
-Lib/collections/__init__.py	1306	1307	UserList.__mul__	__mul__(self, n)	todo		
-Lib/collections/__init__.py	1311	1313	UserList.__imul__	__imul__(self, n)	todo		
-Lib/collections/__init__.py	1315	1320	UserList.__copy__	__copy__(self)	todo		
-Lib/collections/__init__.py	1322	1323	UserList.append	append(self, item)	todo		
-Lib/collections/__init__.py	1325	1326	UserList.insert	insert(self, i, item)	todo		
-Lib/collections/__init__.py	1328	1329	UserList.pop	pop(self, i=-1)	todo		
-Lib/collections/__init__.py	1331	1332	UserList.remove	remove(self, item)	todo		
-Lib/collections/__init__.py	1334	1335	UserList.clear	clear(self)	todo		
-Lib/collections/__init__.py	1337	1338	UserList.copy	copy(self)	todo		
-Lib/collections/__init__.py	1340	1341	UserList.count	count(self, item)	todo		candidates:strsearch-count-repeated-find,strsearch-find-slice-literal,strsearch-find-str-bytes
-Lib/collections/__init__.py	1343	1344	UserList.index	index(self, item, *args)	todo		candidates:strsearch-find-str-bytes
-Lib/collections/__init__.py	1346	1347	UserList.reverse	reverse(self)	todo		
-Lib/collections/__init__.py	1349	1350	UserList.sort	sort(self, /, *args, **kwds)	todo		
-Lib/collections/__init__.py	1352	1356	UserList.extend	extend(self, other)	todo		
-Lib/collections/__init__.py	1365	1371	UserString.__init__	__init__(self, seq)	todo		
-Lib/collections/__init__.py	1373	1374	UserString.__str__	__str__(self)	todo		
-Lib/collections/__init__.py	1376	1377	UserString.__repr__	__repr__(self)	todo		
-Lib/collections/__init__.py	1379	1380	UserString.__int__	__int__(self)	todo		
-Lib/collections/__init__.py	1382	1383	UserString.__float__	__float__(self)	todo		
-Lib/collections/__init__.py	1385	1386	UserString.__complex__	__complex__(self)	todo		
-Lib/collections/__init__.py	1388	1389	UserString.__hash__	__hash__(self)	todo		
-Lib/collections/__init__.py	1391	1392	UserString.__getnewargs__	__getnewargs__(self)	todo		
-Lib/collections/__init__.py	1394	1397	UserString.__eq__	__eq__(self, string)	todo		
-Lib/collections/__init__.py	1399	1402	UserString.__lt__	__lt__(self, string)	todo		
-Lib/collections/__init__.py	1404	1407	UserString.__le__	__le__(self, string)	todo		
-Lib/collections/__init__.py	1409	1412	UserString.__gt__	__gt__(self, string)	todo		
-Lib/collections/__init__.py	1414	1417	UserString.__ge__	__ge__(self, string)	todo		
-Lib/collections/__init__.py	1419	1422	UserString.__contains__	__contains__(self, char)	todo		
-Lib/collections/__init__.py	1424	1425	UserString.__len__	__len__(self)	todo		
-Lib/collections/__init__.py	1427	1428	UserString.__getitem__	__getitem__(self, index)	todo		
-Lib/collections/__init__.py	1430	1435	UserString.__add__	__add__(self, other)	todo		
-Lib/collections/__init__.py	1437	1440	UserString.__radd__	__radd__(self, other)	todo		
-Lib/collections/__init__.py	1442	1443	UserString.__mul__	__mul__(self, n)	todo		
-Lib/collections/__init__.py	1447	1448	UserString.__mod__	__mod__(self, args)	todo		
-Lib/collections/__init__.py	1450	1451	UserString.__rmod__	__rmod__(self, template)	todo		
-Lib/collections/__init__.py	1454	1455	UserString.capitalize	capitalize(self)	todo		
-Lib/collections/__init__.py	1457	1458	UserString.casefold	casefold(self)	todo		
-Lib/collections/__init__.py	1460	1461	UserString.center	center(self, width, *args)	todo		candidates:strsearch-center-balanced,strsearch-pad-str-bytes
-Lib/collections/__init__.py	1463	1466	UserString.count	count(self, sub, start=0, end=_sys.maxsize)	todo		candidates:strsearch-count-repeated-find,strsearch-find-slice-literal,strsearch-find-str-bytes
-Lib/collections/__init__.py	1468	1471	UserString.removeprefix	removeprefix(self, prefix, /)	todo		
-Lib/collections/__init__.py	1473	1476	UserString.removesuffix	removesuffix(self, suffix, /)	todo		
-Lib/collections/__init__.py	1478	1481	UserString.encode	encode(self, encoding='utf-8', errors='strict')	todo		
+Lib/collections/__init__.py	361	533	namedtuple	namedtuple(typename, field_names, *, rename=False, defaults=None, module=None)	modelled	coll-namedtuple-asdict-narrow,coll-namedtuple-asdict-roundtrip,coll-namedtuple-defaults,coll-namedtuple-instance-methods,coll-namedtuple-rename-narrow,coll-namedtuple-rename-total,coll-namedtuple-source-attribute,coll-namedtuple-validation	
+Lib/collections/__init__.py	540	544	_count_elements	_count_elements(mapping, iterable)	modelled	coll-count-elements-twins,coll-counter-first-seen-order,coll-counter-update-adds	
+Lib/collections/__init__.py	605	617	Counter.__init__	__init__(self, iterable=None, /, **kwds)	modelled	coll-counter-first-seen-order,coll-counter-update-adds	
+Lib/collections/__init__.py	619	622	Counter.__missing__	__missing__(self, key)	modelled	coll-counter-update-adds	
+Lib/collections/__init__.py	624	626	Counter.total	total(self)	modelled	coll-counter-total	
+Lib/collections/__init__.py	628	645	Counter.most_common	most_common(self, n=None)	modelled	coll-counter-most-common-prefix,coll-counter-most-common-sorted	
+Lib/collections/__init__.py	647	666	Counter.elements	elements(self)	modelled	coll-counter-elements	
+Lib/collections/__init__.py	671	680	Counter.fromkeys	fromkeys(cls, iterable, v=None)	modelled	coll-counter-fromkeys	
+Lib/collections/__init__.py	682	714	Counter.update	update(self, iterable=None, /, **kwds)	modelled	coll-counter-subtract,coll-counter-update-adds,coll-counter-update-fast-slow	
+Lib/collections/__init__.py	716	741	Counter.subtract	subtract(self, iterable=None, /, **kwds)	modelled	coll-counter-subtract	
+Lib/collections/__init__.py	743	745	Counter.copy	copy(self)	modelled	coll-counter-copy-reduce	
+Lib/collections/__init__.py	747	748	Counter.__reduce__	__reduce__(self)	modelled	coll-counter-copy-reduce	
+Lib/collections/__init__.py	750	753	Counter.__delitem__	__delitem__(self, elem)	modelled	coll-counter-delitem	
+Lib/collections/__init__.py	755	764	Counter.__repr__	__repr__(self)	modelled	coll-counter-repr	
+Lib/collections/__init__.py	800	804	Counter.__eq__	__eq__(self, other)	modelled	coll-counter-compare-order,coll-counter-compare-pointwise,coll-counter-set-correspondence	
+Lib/collections/__init__.py	806	810	Counter.__ne__	__ne__(self, other)	modelled	coll-counter-compare-pointwise,coll-counter-set-correspondence	
+Lib/collections/__init__.py	812	816	Counter.__le__	__le__(self, other)	modelled	coll-counter-compare-order,coll-counter-compare-pointwise,coll-counter-set-correspondence	
+Lib/collections/__init__.py	818	822	Counter.__lt__	__lt__(self, other)	modelled	coll-counter-compare-order,coll-counter-compare-pointwise,coll-counter-set-correspondence	
+Lib/collections/__init__.py	824	828	Counter.__ge__	__ge__(self, other)	modelled	coll-counter-compare-order,coll-counter-compare-pointwise,coll-counter-set-correspondence	
+Lib/collections/__init__.py	830	834	Counter.__gt__	__gt__(self, other)	modelled	coll-counter-compare-order,coll-counter-compare-pointwise,coll-counter-set-correspondence	
+Lib/collections/__init__.py	836	853	Counter.__add__	__add__(self, other)	modelled	coll-counter-ops-contract,coll-counter-ops-pointwise,coll-counter-set-correspondence	
+Lib/collections/__init__.py	855	872	Counter.__sub__	__sub__(self, other)	modelled	coll-counter-ops-contract,coll-counter-ops-pointwise,coll-counter-set-correspondence	
+Lib/collections/__init__.py	874	892	Counter.__or__	__or__(self, other)	modelled	coll-counter-ops-contract,coll-counter-ops-pointwise,coll-counter-set-correspondence	
+Lib/collections/__init__.py	894	909	Counter.__and__	__and__(self, other)	modelled	coll-counter-ops-contract,coll-counter-ops-pointwise,coll-counter-set-correspondence	
+Lib/collections/__init__.py	911	917	Counter.__pos__	__pos__(self)	modelled	coll-counter-ops-contract,coll-counter-ops-pointwise,coll-counter-unary-binary	
+Lib/collections/__init__.py	919	928	Counter.__neg__	__neg__(self)	modelled	coll-counter-ops-contract,coll-counter-ops-pointwise,coll-counter-unary-binary	
+Lib/collections/__init__.py	930	935	Counter._keep_positive	_keep_positive(self)	modelled	coll-counter-inplace,coll-counter-keep-positive	
+Lib/collections/__init__.py	937	948	Counter.__iadd__	__iadd__(self, other)	modelled	coll-counter-inplace	
+Lib/collections/__init__.py	950	961	Counter.__isub__	__isub__(self, other)	modelled	coll-counter-inplace	
+Lib/collections/__init__.py	963	976	Counter.__ior__	__ior__(self, other)	modelled	coll-counter-inplace	
+Lib/collections/__init__.py	978	991	Counter.__iand__	__iand__(self, other)	modelled	coll-counter-inplace	
+Lib/collections/__init__.py	1012	1017	ChainMap.__init__	__init__(self, *maps)	modelled	coll-chainmap-child-parents	
+Lib/collections/__init__.py	1019	1020	ChainMap.__missing__	__missing__(self, key)	modelled	coll-chainmap-flat-view	
+Lib/collections/__init__.py	1022	1028	ChainMap.__getitem__	__getitem__(self, key)	modelled	coll-chainmap-flat-view	
+Lib/collections/__init__.py	1030	1031	ChainMap.get	get(self, key, default=None)	modelled	coll-chainmap-flat-view	
+Lib/collections/__init__.py	1033	1034	ChainMap.__len__	__len__(self)	modelled	coll-chainmap-flat-view	
+Lib/collections/__init__.py	1036	1040	ChainMap.__iter__	__iter__(self)	modelled	coll-chainmap-flat-view	
+Lib/collections/__init__.py	1042	1046	ChainMap.__contains__	__contains__(self, key)	modelled	coll-chainmap-flat-view	
+Lib/collections/__init__.py	1048	1049	ChainMap.__bool__	__bool__(self)	modelled	coll-chainmap-flat-view	
+Lib/collections/__init__.py	1052	1053	ChainMap.__repr__	__repr__(self)	modelled	coll-chainmap-repr	
+Lib/collections/__init__.py	1056	1058	ChainMap.fromkeys	fromkeys(cls, iterable, value=None, /)	modelled	coll-chainmap-child-parents	
+Lib/collections/__init__.py	1060	1062	ChainMap.copy	copy(self)	modelled	coll-chainmap-union-flat	
+Lib/collections/__init__.py	1066	1075	ChainMap.new_child	new_child(self, m=None, **kwargs)	modelled	coll-chainmap-child-parents	
+Lib/collections/__init__.py	1078	1080	ChainMap.parents	parents(self)	modelled	coll-chainmap-child-parents	
+Lib/collections/__init__.py	1082	1083	ChainMap.__setitem__	__setitem__(self, key, value)	modelled	coll-chainmap-writes-first	
+Lib/collections/__init__.py	1085	1089	ChainMap.__delitem__	__delitem__(self, key)	modelled	coll-chainmap-writes-first	
+Lib/collections/__init__.py	1091	1096	ChainMap.popitem	popitem(self)	modelled	coll-chainmap-writes-first	
+Lib/collections/__init__.py	1098	1103	ChainMap.pop	pop(self, key, *args)	modelled	coll-chainmap-writes-first	
+Lib/collections/__init__.py	1105	1107	ChainMap.clear	clear(self)	modelled	coll-chainmap-writes-first	
+Lib/collections/__init__.py	1109	1111	ChainMap.__ior__	__ior__(self, other)	modelled	coll-chainmap-union-flat	
+Lib/collections/__init__.py	1113	1118	ChainMap.__or__	__or__(self, other)	modelled	coll-chainmap-union-flat	
+Lib/collections/__init__.py	1120	1126	ChainMap.__ror__	__ror__(self, other)	modelled	coll-chainmap-union-flat	
+Lib/collections/__init__.py	1136	1141	UserDict.__init__	__init__(self, dict=None, /, **kwargs)	modelled	coll-userdict-constructors-union	
+Lib/collections/__init__.py	1143	1144	UserDict.__len__	__len__(self)	modelled	coll-userdict-matches-dict	
+Lib/collections/__init__.py	1146	1151	UserDict.__getitem__	__getitem__(self, key)	modelled	coll-userdict-matches-dict,coll-userdict-missing-like-dict	
+Lib/collections/__init__.py	1153	1154	UserDict.__setitem__	__setitem__(self, key, item)	modelled	coll-userdict-set-del	
+Lib/collections/__init__.py	1156	1157	UserDict.__delitem__	__delitem__(self, key)	modelled	coll-userdict-set-del	
+Lib/collections/__init__.py	1159	1160	UserDict.__iter__	__iter__(self)	modelled	coll-userdict-matches-dict	
+Lib/collections/__init__.py	1164	1165	UserDict.__contains__	__contains__(self, key)	modelled	coll-userdict-matches-dict,coll-userdict-missing-like-dict,coll-userdict-missing-narrow	
+Lib/collections/__init__.py	1167	1170	UserDict.get	get(self, key, default=None)	modelled	coll-userdict-matches-dict,coll-userdict-missing-like-dict,coll-userdict-missing-narrow	
+Lib/collections/__init__.py	1174	1175	UserDict.__repr__	__repr__(self)	modelled	coll-userdict-clear-repr	
+Lib/collections/__init__.py	1177	1182	UserDict.__or__	__or__(self, other)	modelled	coll-userdict-constructors-union	
+Lib/collections/__init__.py	1184	1189	UserDict.__ror__	__ror__(self, other)	modelled	coll-userdict-constructors-union	
+Lib/collections/__init__.py	1191	1196	UserDict.__ior__	__ior__(self, other)	modelled	coll-userdict-constructors-union	
+Lib/collections/__init__.py	1198	1203	UserDict.__copy__	__copy__(self)	modelled	coll-userdict-constructors-union	
+Lib/collections/__init__.py	1205	1216	UserDict.copy	copy(self)	modelled	coll-userdict-constructors-union	
+Lib/collections/__init__.py	1219	1223	UserDict.fromkeys	fromkeys(cls, iterable, value=None)	modelled	coll-userdict-constructors-union	
+Lib/collections/__init__.py	1233	1242	UserList.__init__	__init__(self, initlist=None)	modelled	coll-userlist-operands	
+Lib/collections/__init__.py	1244	1245	UserList.__repr__	__repr__(self)	modelled	coll-userlist-observers	
+Lib/collections/__init__.py	1247	1248	UserList.__lt__	__lt__(self, other)	modelled	coll-userlist-int-instance,coll-userlist-operands	
+Lib/collections/__init__.py	1250	1251	UserList.__le__	__le__(self, other)	modelled	coll-userlist-int-instance,coll-userlist-operands	
+Lib/collections/__init__.py	1253	1254	UserList.__eq__	__eq__(self, other)	modelled	coll-userlist-int-instance,coll-userlist-operands	
+Lib/collections/__init__.py	1256	1257	UserList.__gt__	__gt__(self, other)	modelled	coll-userlist-operands	
+Lib/collections/__init__.py	1259	1260	UserList.__ge__	__ge__(self, other)	modelled	coll-userlist-operands	
+Lib/collections/__init__.py	1262	1263	UserList.__cast	__cast(self, other)	modelled	coll-userlist-operands	
+Lib/collections/__init__.py	1265	1266	UserList.__contains__	__contains__(self, item)	modelled	coll-userlist-observers	
+Lib/collections/__init__.py	1268	1269	UserList.__len__	__len__(self)	modelled	coll-userlist-observers	
+Lib/collections/__init__.py	1271	1275	UserList.__getitem__	__getitem__(self, i)	modelled	coll-userlist-observers	
+Lib/collections/__init__.py	1277	1278	UserList.__setitem__	__setitem__(self, i, item)	modelled	coll-userlist-simulates	
+Lib/collections/__init__.py	1280	1281	UserList.__delitem__	__delitem__(self, i)	modelled	coll-userlist-simulates	
+Lib/collections/__init__.py	1283	1288	UserList.__add__	__add__(self, other)	modelled	coll-userlist-operands	
+Lib/collections/__init__.py	1290	1295	UserList.__radd__	__radd__(self, other)	modelled	coll-userlist-operands	
+Lib/collections/__init__.py	1297	1304	UserList.__iadd__	__iadd__(self, other)	modelled	coll-userlist-operands,coll-userlist-simulates	
+Lib/collections/__init__.py	1306	1307	UserList.__mul__	__mul__(self, n)	modelled	coll-userlist-observers	
+Lib/collections/__init__.py	1311	1313	UserList.__imul__	__imul__(self, n)	modelled	coll-userlist-simulates	
+Lib/collections/__init__.py	1315	1320	UserList.__copy__	__copy__(self)	modelled	coll-userlist-copies	
+Lib/collections/__init__.py	1322	1323	UserList.append	append(self, item)	modelled	coll-userlist-simulates	
+Lib/collections/__init__.py	1325	1326	UserList.insert	insert(self, i, item)	modelled	coll-userlist-simulates	
+Lib/collections/__init__.py	1328	1329	UserList.pop	pop(self, i=-1)	modelled	coll-userlist-simulates	
+Lib/collections/__init__.py	1331	1332	UserList.remove	remove(self, item)	modelled	coll-userlist-simulates	
+Lib/collections/__init__.py	1334	1335	UserList.clear	clear(self)	modelled	coll-userlist-simulates	
+Lib/collections/__init__.py	1337	1338	UserList.copy	copy(self)	modelled	coll-userlist-copies	
+Lib/collections/__init__.py	1340	1341	UserList.count	count(self, item)	modelled	coll-userlist-observers	candidates:strsearch-count-repeated-find,strsearch-find-slice-literal,strsearch-find-str-bytes
+Lib/collections/__init__.py	1343	1344	UserList.index	index(self, item, *args)	modelled	coll-userlist-observers	candidates:strsearch-find-str-bytes
+Lib/collections/__init__.py	1346	1347	UserList.reverse	reverse(self)	modelled	coll-userlist-int-instance,coll-userlist-simulates	
+Lib/collections/__init__.py	1349	1350	UserList.sort	sort(self, /, *args, **kwds)	modelled	coll-userlist-int-instance,coll-userlist-simulates	
+Lib/collections/__init__.py	1352	1356	UserList.extend	extend(self, other)	modelled	coll-userlist-operands,coll-userlist-simulates	
+Lib/collections/__init__.py	1365	1371	UserString.__init__	__init__(self, seq)	modelled	coll-userstring-construct-add	
+Lib/collections/__init__.py	1373	1374	UserString.__str__	__str__(self)	modelled	coll-userstring-construct-add	
+Lib/collections/__init__.py	1376	1377	UserString.__repr__	__repr__(self)	modelled	coll-userstring-simulates	
+Lib/collections/__init__.py	1379	1380	UserString.__int__	__int__(self)	modelled	coll-userstring-construct-add,coll-userstring-simulates	
+Lib/collections/__init__.py	1382	1383	UserString.__float__	__float__(self)	modelled	coll-userstring-construct-add,coll-userstring-simulates	
+Lib/collections/__init__.py	1385	1386	UserString.__complex__	__complex__(self)	modelled	coll-userstring-construct-add,coll-userstring-simulates	
+Lib/collections/__init__.py	1388	1389	UserString.__hash__	__hash__(self)	modelled	coll-userstring-order-hash,coll-userstring-simulates	
+Lib/collections/__init__.py	1391	1392	UserString.__getnewargs__	__getnewargs__(self)	modelled	coll-userstring-construct-add	
+Lib/collections/__init__.py	1394	1397	UserString.__eq__	__eq__(self, string)	modelled	coll-userstring-order-hash,coll-userstring-simulates,coll-userstring-unwrap-narrow	
+Lib/collections/__init__.py	1399	1402	UserString.__lt__	__lt__(self, string)	modelled	coll-userstring-order-hash,coll-userstring-simulates,coll-userstring-unwrap-narrow	
+Lib/collections/__init__.py	1404	1407	UserString.__le__	__le__(self, string)	modelled	coll-userstring-order-hash,coll-userstring-simulates,coll-userstring-unwrap-narrow	
+Lib/collections/__init__.py	1409	1412	UserString.__gt__	__gt__(self, string)	modelled	coll-userstring-order-hash,coll-userstring-simulates,coll-userstring-unwrap-narrow	
+Lib/collections/__init__.py	1414	1417	UserString.__ge__	__ge__(self, string)	modelled	coll-userstring-order-hash,coll-userstring-simulates,coll-userstring-unwrap-narrow	
+Lib/collections/__init__.py	1419	1422	UserString.__contains__	__contains__(self, char)	modelled	coll-userstring-simulates,coll-userstring-unwrap-narrow	
+Lib/collections/__init__.py	1424	1425	UserString.__len__	__len__(self)	modelled	coll-userstring-simulates	
+Lib/collections/__init__.py	1427	1428	UserString.__getitem__	__getitem__(self, index)	modelled	coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1430	1435	UserString.__add__	__add__(self, other)	modelled	coll-userstring-construct-add	
+Lib/collections/__init__.py	1437	1440	UserString.__radd__	__radd__(self, other)	modelled	coll-userstring-construct-add	
+Lib/collections/__init__.py	1442	1443	UserString.__mul__	__mul__(self, n)	modelled	coll-userstring-mul,coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1447	1448	UserString.__mod__	__mod__(self, args)	modelled	coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1450	1451	UserString.__rmod__	__rmod__(self, template)	modelled	coll-userstring-construct-add	
+Lib/collections/__init__.py	1454	1455	UserString.capitalize	capitalize(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1457	1458	UserString.casefold	casefold(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1460	1461	UserString.center	center(self, width, *args)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-siblings	candidates:strsearch-center-balanced,strsearch-pad-str-bytes
+Lib/collections/__init__.py	1463	1466	UserString.count	count(self, sub, start=0, end=_sys.maxsize)	modelled	coll-userstring-simulates,coll-userstring-unwrap-narrow	candidates:strsearch-count-repeated-find,strsearch-find-slice-literal,strsearch-find-str-bytes
+Lib/collections/__init__.py	1468	1471	UserString.removeprefix	removeprefix(self, prefix, /)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-narrow	
+Lib/collections/__init__.py	1473	1476	UserString.removesuffix	removesuffix(self, suffix, /)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-narrow	
+Lib/collections/__init__.py	1478	1481	UserString.encode	encode(self, encoding='utf-8', errors='strict')	modelled	coll-userstring-construct-add,coll-userstring-simulates	
 Lib/collections/__init__.py	1483	1484	UserString.endswith	endswith(self, suffix, start=0, end=_sys.maxsize)	modelled	strsearch-tailmatch-str-bytes	
 Lib/collections/__init__.py	1486	1487	UserString.expandtabs	expandtabs(self, tabsize=8)	modelled	strsearch-expandtabs-str-bytes	
-Lib/collections/__init__.py	1489	1492	UserString.find	find(self, sub, start=0, end=_sys.maxsize)	todo		candidates:strsearch-count-repeated-find,strsearch-find-extreme,strsearch-find-slice-literal,strsearch-find-str-bytes,strsearch-rfind-reverse
-Lib/collections/__init__.py	1494	1495	UserString.format	format(self, /, *args, **kwds)	todo		
-Lib/collections/__init__.py	1497	1498	UserString.format_map	format_map(self, mapping)	todo		
-Lib/collections/__init__.py	1500	1503	UserString.index	index(self, sub, start=0, end=_sys.maxsize)	todo		candidates:strsearch-find-str-bytes
-Lib/collections/__init__.py	1505	1506	UserString.isalpha	isalpha(self)	todo		
-Lib/collections/__init__.py	1508	1509	UserString.isalnum	isalnum(self)	todo		
-Lib/collections/__init__.py	1511	1512	UserString.isascii	isascii(self)	todo		
-Lib/collections/__init__.py	1514	1515	UserString.isdecimal	isdecimal(self)	todo		
-Lib/collections/__init__.py	1517	1518	UserString.isdigit	isdigit(self)	todo		
-Lib/collections/__init__.py	1520	1521	UserString.isidentifier	isidentifier(self)	todo		
-Lib/collections/__init__.py	1523	1524	UserString.islower	islower(self)	todo		
-Lib/collections/__init__.py	1526	1527	UserString.isnumeric	isnumeric(self)	todo		
-Lib/collections/__init__.py	1529	1530	UserString.isprintable	isprintable(self)	todo		
-Lib/collections/__init__.py	1532	1533	UserString.isspace	isspace(self)	todo		
-Lib/collections/__init__.py	1535	1536	UserString.istitle	istitle(self)	todo		
-Lib/collections/__init__.py	1538	1539	UserString.isupper	isupper(self)	todo		
-Lib/collections/__init__.py	1541	1542	UserString.join	join(self, seq)	todo		
+Lib/collections/__init__.py	1489	1492	UserString.find	find(self, sub, start=0, end=_sys.maxsize)	modelled	coll-userstring-simulates,coll-userstring-unwrap-narrow	candidates:strsearch-count-repeated-find,strsearch-find-extreme,strsearch-find-slice-literal,strsearch-find-str-bytes,strsearch-rfind-reverse
+Lib/collections/__init__.py	1494	1495	UserString.format	format(self, /, *args, **kwds)	modelled	coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1497	1498	UserString.format_map	format_map(self, mapping)	modelled	coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1500	1503	UserString.index	index(self, sub, start=0, end=_sys.maxsize)	modelled	coll-userstring-simulates,coll-userstring-unwrap-narrow	candidates:strsearch-find-str-bytes
+Lib/collections/__init__.py	1505	1506	UserString.isalpha	isalpha(self)	modelled	coll-userstring-simulates	
+Lib/collections/__init__.py	1508	1509	UserString.isalnum	isalnum(self)	modelled	coll-userstring-simulates	
+Lib/collections/__init__.py	1511	1512	UserString.isascii	isascii(self)	modelled	coll-userstring-simulates	
+Lib/collections/__init__.py	1514	1515	UserString.isdecimal	isdecimal(self)	modelled	coll-userstring-simulates	
+Lib/collections/__init__.py	1517	1518	UserString.isdigit	isdigit(self)	modelled	coll-userstring-simulates	
+Lib/collections/__init__.py	1520	1521	UserString.isidentifier	isidentifier(self)	modelled	coll-userstring-simulates	
+Lib/collections/__init__.py	1523	1524	UserString.islower	islower(self)	modelled	coll-userstring-simulates	
+Lib/collections/__init__.py	1526	1527	UserString.isnumeric	isnumeric(self)	modelled	coll-userstring-simulates	
+Lib/collections/__init__.py	1529	1530	UserString.isprintable	isprintable(self)	modelled	coll-userstring-simulates	
+Lib/collections/__init__.py	1532	1533	UserString.isspace	isspace(self)	modelled	coll-userstring-simulates	
+Lib/collections/__init__.py	1535	1536	UserString.istitle	istitle(self)	modelled	coll-userstring-simulates	
+Lib/collections/__init__.py	1538	1539	UserString.isupper	isupper(self)	modelled	coll-userstring-simulates	
+Lib/collections/__init__.py	1541	1542	UserString.join	join(self, seq)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-siblings	
 Lib/collections/__init__.py	1544	1545	UserString.ljust	ljust(self, width, *args)	modelled	strsearch-pad-str-bytes	
-Lib/collections/__init__.py	1547	1548	UserString.lower	lower(self)	todo		
+Lib/collections/__init__.py	1547	1548	UserString.lower	lower(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1550	1551	UserString.lstrip	lstrip(self, chars=None)	modelled	strsearch-strip-paths	
-Lib/collections/__init__.py	1555	1556	UserString.partition	partition(self, sep)	todo		candidates:strsearch-partition-find
-Lib/collections/__init__.py	1558	1563	UserString.replace	replace(self, old, new, maxsplit=-1)	todo		candidates:strsearch-replace-str-bytes
+Lib/collections/__init__.py	1555	1556	UserString.partition	partition(self, sep)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-siblings	candidates:strsearch-partition-find
+Lib/collections/__init__.py	1558	1563	UserString.replace	replace(self, old, new, maxsplit=-1)	modelled	coll-userstring-replace-count,coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-narrow	candidates:strsearch-replace-str-bytes
 Lib/collections/__init__.py	1565	1568	UserString.rfind	rfind(self, sub, start=0, end=_sys.maxsize)	modelled	strsearch-find-extreme,strsearch-find-str-bytes,strsearch-rfind-reverse	
 Lib/collections/__init__.py	1570	1573	UserString.rindex	rindex(self, sub, start=0, end=_sys.maxsize)	modelled	strsearch-find-str-bytes	
 Lib/collections/__init__.py	1575	1576	UserString.rjust	rjust(self, width, *args)	modelled	strsearch-pad-str-bytes	
 Lib/collections/__init__.py	1578	1579	UserString.rpartition	rpartition(self, sep)	modelled	strsearch-partition-find	
 Lib/collections/__init__.py	1581	1582	UserString.rstrip	rstrip(self, chars=None)	modelled	strsearch-strip-paths	
-Lib/collections/__init__.py	1584	1585	UserString.split	split(self, sep=None, maxsplit=-1)	todo		candidates:strsearch-split-char-fast-path,strsearch-split-rsplit-agree
-Lib/collections/__init__.py	1587	1588	UserString.rsplit	rsplit(self, sep=None, maxsplit=-1)	todo		candidates:strsearch-split-char-fast-path,strsearch-split-rsplit-agree
+Lib/collections/__init__.py	1584	1585	UserString.split	split(self, sep=None, maxsplit=-1)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-siblings	candidates:strsearch-split-char-fast-path,strsearch-split-rsplit-agree
+Lib/collections/__init__.py	1587	1588	UserString.rsplit	rsplit(self, sep=None, maxsplit=-1)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-siblings	candidates:strsearch-split-char-fast-path,strsearch-split-rsplit-agree
 Lib/collections/__init__.py	1590	1591	UserString.splitlines	splitlines(self, keepends=False)	modelled	strsearch-splitlines-str-bytes	
 Lib/collections/__init__.py	1593	1594	UserString.startswith	startswith(self, prefix, start=0, end=_sys.maxsize)	modelled	strsearch-find-slice-literal,strsearch-tailmatch-str-bytes	
-Lib/collections/__init__.py	1596	1597	UserString.strip	strip(self, chars=None)	todo		candidates:strsearch-strip-paths
-Lib/collections/__init__.py	1599	1600	UserString.swapcase	swapcase(self)	todo		
-Lib/collections/__init__.py	1602	1603	UserString.title	title(self)	todo		
-Lib/collections/__init__.py	1605	1606	UserString.translate	translate(self, *args)	todo		
-Lib/collections/__init__.py	1608	1609	UserString.upper	upper(self)	todo		
+Lib/collections/__init__.py	1596	1597	UserString.strip	strip(self, chars=None)	modelled	coll-userstring-result-class,coll-userstring-simulates,coll-userstring-unwrap-siblings	candidates:strsearch-strip-paths
+Lib/collections/__init__.py	1599	1600	UserString.swapcase	swapcase(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1602	1603	UserString.title	title(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1605	1606	UserString.translate	translate(self, *args)	modelled	coll-userstring-result-class,coll-userstring-simulates	
+Lib/collections/__init__.py	1608	1609	UserString.upper	upper(self)	modelled	coll-userstring-result-class,coll-userstring-simulates	
 Lib/collections/__init__.py	1611	1612	UserString.zfill	zfill(self, width)	modelled	strsearch-pad-str-bytes,strsearch-zfill-spec	

@@ -28,8 +28,9 @@ theorem loop_u_nolow (s : PStr) (strict : Bool) (b : Int) (f e n m : Nat) (a R :
     have hnl : ¬ (0xdc00 ≤ m ∧ m ≤ 0xdfff) := by omega
     have e6 : e + 0 + 1 + 5 = e + 6 := by omega
     have e2 : e + 0 + 1 + 1 = e + 2 := by omega
-    simp only [pyScanLoop, hf, List.getD_eq_getElem?_getD]
-    simp [h0, h1, e2, hx, e6, ht, hh, hx2, hnl]
+    have e8 : e + 6 + 1 + 1 = e + 6 + 2 := rfl
+    simp only [pyScanLoop, decodeUXXXX, hf, List.getD_eq_getElem?_getD]
+    simp [h0, h1, e2, hx, e6, ht, hh, e8, hx2, hnl]
   · exact loop_u s strict b f e n a _ hs' hn (Or.inl (by simpa using hh))
 
 theorem mergeSurr_notHigh (c : Nat) (t : PStr) (h : isHigh c = false) :
@@ -337,7 +338,7 @@ theorem scan_enc_c (cfg : ECfg) (s : PStr) (t rest : PStr) (p : Nat) (strict : B
     have h2 := congrArg List.length hs
     simp only [List.length_drop, List.length_append] at h2
     omega
-  rcases scanstring_rel s strict (p + 1) (by omega) hl with ⟨v, k, _, h3, h4⟩ | ⟨pe, ce, h3, _, _⟩
+  rcases scanstring_rel s strict (p + 1) hl with ⟨v, k, _, h3, h4⟩ | ⟨pe, ce, h3, _, _⟩
   · rw [hpy] at h3
     simp only [Except.ok.injEq, Prod.mk.injEq] at h3
     obtain ⟨rfl, h5⟩ := h3

@@ -136,6 +136,6 @@ Lib/inspect.py	3254	3257	Signature.__reduce__	__reduce__(self)	todo
 Lib/inspect.py	3259	3260	Signature.__setstate__	__setstate__(self, state)	todo		
 Lib/inspect.py	3262	3263	Signature.__repr__	__repr__(self)	todo		
 Lib/inspect.py	3265	3266	Signature.__str__	__str__(self)	todo		
-Lib/inspect.py	3268	3326	Signature.format	format(self, *, max_width=None, quote_annotation_strings=True)	todo		
+Lib/inspect.py	3268	3326	Signature.format	format(self, *, max_width=None, quote_annotation_strings=True)	todo		candidates:calstat-calendar-formatstring-width
 Lib/inspect.py	3329	3334	signature	signature(obj, *, follow_wrapped=True, globals=None, locals=None, eval_str=False, annotation_format=Format.VALUE)	todo		
 Lib/inspect.py	3359	3414	_main	_main()	todo		

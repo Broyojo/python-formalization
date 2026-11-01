@@ -11,4 +11,4 @@ Lib/cProfile.py	109	114	Profile.runcall	runcall(self, func, /, *args, **kw)	todo
 Lib/cProfile.py	116	118	Profile.__enter__	__enter__(self)	todo		
 Lib/cProfile.py	120	121	Profile.__exit__	__exit__(self, *exc_info)	todo		
 Lib/cProfile.py	125	129	label	label(code)	todo		
-Lib/cProfile.py	133	201	main	main()	todo		
+Lib/cProfile.py	133	201	main	main()	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

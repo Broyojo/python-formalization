@@ -7,4 +7,4 @@ Objects/boolobject.c	71	84	bool_invert	bool_invert(PyObject *v)	todo
 Objects/boolobject.c	87	92	bool_and	bool_and(PyObject *a, PyObject *b)	todo		
 Objects/boolobject.c	95	100	bool_or	bool_or(PyObject *a, PyObject *b)	todo		
 Objects/boolobject.c	103	108	bool_xor	bool_xor(PyObject *a, PyObject *b)	todo		
-Objects/boolobject.c	160	167	bool_dealloc	bool_dealloc(PyObject *boolean)	todo		
+Objects/boolobject.c	160	167	bool_dealloc	bool_dealloc(PyObject *boolean)	excluded		no-behaviour: never called; re-marks an immortal object

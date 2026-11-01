@@ -1,60 +1,60 @@
 file	line	endline	name	signature	status	entry	note
-Lib/contextlib.py	25	27	AbstractContextManager.__enter__	__enter__(self)	todo		
-Lib/contextlib.py	30	32	AbstractContextManager.__exit__	__exit__(self, exc_type, exc_value, traceback)	todo		
-Lib/contextlib.py	35	38	AbstractContextManager.__subclasshook__	__subclasshook__(cls, C)	todo		
-Lib/contextlib.py	49	51	AbstractAsyncContextManager.__aenter__	__aenter__(self)	todo		
-Lib/contextlib.py	54	56	AbstractAsyncContextManager.__aexit__	__aexit__(self, exc_type, exc_value, traceback)	todo		
-Lib/contextlib.py	59	63	AbstractAsyncContextManager.__subclasshook__	__subclasshook__(cls, C)	todo		
-Lib/contextlib.py	69	79	ContextDecorator._recreate_cm	_recreate_cm(self)	todo		
-Lib/contextlib.py	81	86	ContextDecorator.__call__	__call__(self, func)	todo		
-Lib/contextlib.py	92	95	AsyncContextDecorator._recreate_cm	_recreate_cm(self)	todo		
-Lib/contextlib.py	97	102	AsyncContextDecorator.__call__	__call__(self, func)	todo		
-Lib/contextlib.py	108	115	_GeneratorContextManagerBase.__init__	__init__(self, func, args, kwds)	todo		
-Lib/contextlib.py	122	126	_GeneratorContextManagerBase._recreate_cm	_recreate_cm(self)	todo		
-Lib/contextlib.py	136	143	_GeneratorContextManager.__enter__	__enter__(self)	todo		
-Lib/contextlib.py	145	200	_GeneratorContextManager.__exit__	__exit__(self, typ, value, traceback)	todo		
-Lib/contextlib.py	209	216	_AsyncGeneratorContextManager.__aenter__	__aenter__(self)	todo		
-Lib/contextlib.py	218	273	_AsyncGeneratorContextManager.__aexit__	__aexit__(self, typ, value, traceback)	todo		
-Lib/contextlib.py	276	306	contextmanager	contextmanager(func)	todo		
-Lib/contextlib.py	309	339	asynccontextmanager	asynccontextmanager(func)	todo		
-Lib/contextlib.py	359	360	closing.__init__	__init__(self, thing)	todo		
-Lib/contextlib.py	361	362	closing.__enter__	__enter__(self)	todo		
-Lib/contextlib.py	363	364	closing.__exit__	__exit__(self, *exc_info)	todo		
-Lib/contextlib.py	385	386	aclosing.__init__	__init__(self, thing)	todo		
-Lib/contextlib.py	387	388	aclosing.__aenter__	__aenter__(self)	todo		
-Lib/contextlib.py	389	390	aclosing.__aexit__	__aexit__(self, *exc_info)	todo		
-Lib/contextlib.py	397	400	_RedirectStream.__init__	__init__(self, new_target)	todo		
-Lib/contextlib.py	402	405	_RedirectStream.__enter__	__enter__(self)	todo		
-Lib/contextlib.py	407	408	_RedirectStream.__exit__	__exit__(self, exctype, excinst, exctb)	todo		
-Lib/contextlib.py	444	445	suppress.__init__	__init__(self, *exceptions)	todo		
-Lib/contextlib.py	447	448	suppress.__enter__	__enter__(self)	todo		
-Lib/contextlib.py	450	469	suppress.__exit__	__exit__(self, exctype, excinst, exctb)	todo		
-Lib/contextlib.py	476	477	_BaseExitStack._create_exit_wrapper	_create_exit_wrapper(cm, cm_exit)	todo		
-Lib/contextlib.py	480	483	_BaseExitStack._create_cb_wrapper	_create_cb_wrapper(callback, /, *args, **kwds)	todo		
-Lib/contextlib.py	485	486	_BaseExitStack.__init__	__init__(self)	todo		
-Lib/contextlib.py	488	493	_BaseExitStack.pop_all	pop_all(self)	todo		
-Lib/contextlib.py	495	513	_BaseExitStack.push	push(self, exit)	todo		
-Lib/contextlib.py	515	532	_BaseExitStack.enter_context	enter_context(self, cm)	todo		
-Lib/contextlib.py	534	545	_BaseExitStack.callback	callback(self, callback, /, *args, **kwds)	todo		
-Lib/contextlib.py	547	550	_BaseExitStack._push_cm_exit	_push_cm_exit(self, cm, cm_exit)	todo		
-Lib/contextlib.py	552	553	_BaseExitStack._push_exit_callback	_push_exit_callback(self, callback, is_sync=True)	todo		
-Lib/contextlib.py	568	569	ExitStack.__enter__	__enter__(self)	todo		
-Lib/contextlib.py	571	623	ExitStack.__exit__	__exit__(self, *exc_details)	todo		
-Lib/contextlib.py	625	627	ExitStack.close	close(self)	todo		
-Lib/contextlib.py	645	646	AsyncExitStack._create_async_exit_wrapper	_create_async_exit_wrapper(cm, cm_exit)	todo		
-Lib/contextlib.py	649	652	AsyncExitStack._create_async_cb_wrapper	_create_async_cb_wrapper(callback, /, *args, **kwds)	todo		
-Lib/contextlib.py	654	670	AsyncExitStack.enter_async_context	enter_async_context(self, cm)	todo		
-Lib/contextlib.py	672	688	AsyncExitStack.push_async_exit	push_async_exit(self, exit)	todo		
-Lib/contextlib.py	690	701	AsyncExitStack.push_async_callback	push_async_callback(self, callback, /, *args, **kwds)	todo		
-Lib/contextlib.py	703	705	AsyncExitStack.aclose	aclose(self)	todo		
-Lib/contextlib.py	707	711	AsyncExitStack._push_async_cm_exit	_push_async_cm_exit(self, cm, cm_exit)	todo		
-Lib/contextlib.py	713	714	AsyncExitStack.__aenter__	__aenter__(self)	todo		
-Lib/contextlib.py	716	772	AsyncExitStack.__aexit__	__aexit__(self, *exc_details)	todo		
-Lib/contextlib.py	786	787	nullcontext.__init__	__init__(self, enter_result=None)	todo		
-Lib/contextlib.py	789	790	nullcontext.__enter__	__enter__(self)	todo		
-Lib/contextlib.py	792	793	nullcontext.__exit__	__exit__(self, *excinfo)	todo		
-Lib/contextlib.py	795	796	nullcontext.__aenter__	__aenter__(self)	todo		
-Lib/contextlib.py	798	799	nullcontext.__aexit__	__aexit__(self, *excinfo)	todo		
-Lib/contextlib.py	805	807	chdir.__init__	__init__(self, path)	todo		
-Lib/contextlib.py	809	811	chdir.__enter__	__enter__(self)	todo		
-Lib/contextlib.py	813	814	chdir.__exit__	__exit__(self, *excinfo)	todo		
+Lib/contextlib.py	25	27	AbstractContextManager.__enter__	__enter__(self)	modelled	misc-ctx-abstract-bases	
+Lib/contextlib.py	30	32	AbstractContextManager.__exit__	__exit__(self, exc_type, exc_value, traceback)	modelled	misc-ctx-abstract-bases	
+Lib/contextlib.py	35	38	AbstractContextManager.__subclasshook__	__subclasshook__(cls, C)	modelled	misc-ctx-abstract-bases,misc-ctx-subclasshook-none	
+Lib/contextlib.py	49	51	AbstractAsyncContextManager.__aenter__	__aenter__(self)	modelled	misc-ctx-abstract-bases	
+Lib/contextlib.py	54	56	AbstractAsyncContextManager.__aexit__	__aexit__(self, exc_type, exc_value, traceback)	modelled	misc-ctx-abstract-bases	
+Lib/contextlib.py	59	63	AbstractAsyncContextManager.__subclasshook__	__subclasshook__(cls, C)	modelled	misc-ctx-abstract-bases,misc-ctx-subclasshook-none	
+Lib/contextlib.py	69	79	ContextDecorator._recreate_cm	_recreate_cm(self)	modelled	misc-ctx-decorator	
+Lib/contextlib.py	81	86	ContextDecorator.__call__	__call__(self, func)	modelled	misc-ctx-decorator	
+Lib/contextlib.py	92	95	AsyncContextDecorator._recreate_cm	_recreate_cm(self)	modelled	misc-ctx-decorator	
+Lib/contextlib.py	97	102	AsyncContextDecorator.__call__	__call__(self, func)	modelled	misc-ctx-decorator	
+Lib/contextlib.py	108	115	_GeneratorContextManagerBase.__init__	__init__(self, func, args, kwds)	modelled	misc-ctx-recreate	
+Lib/contextlib.py	122	126	_GeneratorContextManagerBase._recreate_cm	_recreate_cm(self)	modelled	misc-ctx-recreate	
+Lib/contextlib.py	136	143	_GeneratorContextManager.__enter__	__enter__(self)	modelled	misc-ctx-enter,misc-ctx-try-finally	
+Lib/contextlib.py	145	200	_GeneratorContextManager.__exit__	__exit__(self, typ, value, traceback)	modelled	misc-ctx-async-twin,misc-ctx-exit-never-raises-value,misc-ctx-exit-no-exception,misc-ctx-exit-throw-cases,misc-ctx-try-finally	
+Lib/contextlib.py	209	216	_AsyncGeneratorContextManager.__aenter__	__aenter__(self)	modelled	misc-ctx-enter	
+Lib/contextlib.py	218	273	_AsyncGeneratorContextManager.__aexit__	__aexit__(self, typ, value, traceback)	modelled	misc-ctx-async-twin,misc-ctx-exit-never-raises-value,misc-ctx-exit-no-exception,misc-ctx-exit-throw-cases	
+Lib/contextlib.py	276	306	contextmanager	contextmanager(func)	modelled	misc-ctx-recreate,misc-ctx-try-finally	
+Lib/contextlib.py	309	339	asynccontextmanager	asynccontextmanager(func)	modelled	misc-ctx-recreate,misc-ctx-try-finally	
+Lib/contextlib.py	359	360	closing.__init__	__init__(self, thing)	modelled	misc-ctx-closing	
+Lib/contextlib.py	361	362	closing.__enter__	__enter__(self)	modelled	misc-ctx-closing	
+Lib/contextlib.py	363	364	closing.__exit__	__exit__(self, *exc_info)	modelled	misc-ctx-closing	
+Lib/contextlib.py	385	386	aclosing.__init__	__init__(self, thing)	modelled	misc-ctx-closing	
+Lib/contextlib.py	387	388	aclosing.__aenter__	__aenter__(self)	modelled	misc-ctx-closing	
+Lib/contextlib.py	389	390	aclosing.__aexit__	__aexit__(self, *exc_info)	modelled	misc-ctx-closing	
+Lib/contextlib.py	397	400	_RedirectStream.__init__	__init__(self, new_target)	modelled	misc-ctx-redirect	
+Lib/contextlib.py	402	405	_RedirectStream.__enter__	__enter__(self)	modelled	misc-ctx-redirect	
+Lib/contextlib.py	407	408	_RedirectStream.__exit__	__exit__(self, exctype, excinst, exctb)	modelled	misc-ctx-redirect	
+Lib/contextlib.py	444	445	suppress.__init__	__init__(self, *exceptions)	modelled	misc-ctx-suppress-plain	
+Lib/contextlib.py	447	448	suppress.__enter__	__enter__(self)	modelled	misc-ctx-suppress-plain	
+Lib/contextlib.py	450	469	suppress.__exit__	__exit__(self, exctype, excinst, exctb)	modelled	misc-ctx-suppress-group,misc-ctx-suppress-plain	
+Lib/contextlib.py	476	477	_BaseExitStack._create_exit_wrapper	_create_exit_wrapper(cm, cm_exit)	modelled	misc-ctx-callback-cannot-suppress	
+Lib/contextlib.py	480	483	_BaseExitStack._create_cb_wrapper	_create_cb_wrapper(callback, /, *args, **kwds)	modelled	misc-ctx-callback-cannot-suppress	
+Lib/contextlib.py	485	486	_BaseExitStack.__init__	__init__(self)	modelled	misc-ctx-stack-registration	
+Lib/contextlib.py	488	493	_BaseExitStack.pop_all	pop_all(self)	modelled	misc-ctx-stack-registration	
+Lib/contextlib.py	495	513	_BaseExitStack.push	push(self, exit)	modelled	misc-ctx-stack-registration	
+Lib/contextlib.py	515	532	_BaseExitStack.enter_context	enter_context(self, cm)	modelled	misc-ctx-stack-registration	
+Lib/contextlib.py	534	545	_BaseExitStack.callback	callback(self, callback, /, *args, **kwds)	modelled	misc-ctx-stack-registration	
+Lib/contextlib.py	547	550	_BaseExitStack._push_cm_exit	_push_cm_exit(self, cm, cm_exit)	modelled	misc-ctx-stack-registration	
+Lib/contextlib.py	552	553	_BaseExitStack._push_exit_callback	_push_exit_callback(self, callback, is_sync=True)	modelled	misc-ctx-stack-registration	
+Lib/contextlib.py	568	569	ExitStack.__enter__	__enter__(self)	modelled	misc-ctx-stack-registration	
+Lib/contextlib.py	571	623	ExitStack.__exit__	__exit__(self, *exc_details)	modelled	misc-ctx-exit-keeps-context-acyclic,misc-ctx-exit-lifo,misc-ctx-exit-matches-nested,misc-ctx-exit-terminates	
+Lib/contextlib.py	625	627	ExitStack.close	close(self)	modelled	misc-ctx-async-exit-matches	
+Lib/contextlib.py	645	646	AsyncExitStack._create_async_exit_wrapper	_create_async_exit_wrapper(cm, cm_exit)	modelled	misc-ctx-callback-cannot-suppress	
+Lib/contextlib.py	649	652	AsyncExitStack._create_async_cb_wrapper	_create_async_cb_wrapper(callback, /, *args, **kwds)	modelled	misc-ctx-callback-cannot-suppress	
+Lib/contextlib.py	654	670	AsyncExitStack.enter_async_context	enter_async_context(self, cm)	modelled	misc-ctx-stack-registration	
+Lib/contextlib.py	672	688	AsyncExitStack.push_async_exit	push_async_exit(self, exit)	modelled	misc-ctx-stack-registration	
+Lib/contextlib.py	690	701	AsyncExitStack.push_async_callback	push_async_callback(self, callback, /, *args, **kwds)	modelled	misc-ctx-stack-registration	
+Lib/contextlib.py	703	705	AsyncExitStack.aclose	aclose(self)	modelled	misc-ctx-async-exit-matches	
+Lib/contextlib.py	707	711	AsyncExitStack._push_async_cm_exit	_push_async_cm_exit(self, cm, cm_exit)	modelled	misc-ctx-stack-registration	
+Lib/contextlib.py	713	714	AsyncExitStack.__aenter__	__aenter__(self)	modelled	misc-ctx-stack-registration	
+Lib/contextlib.py	716	772	AsyncExitStack.__aexit__	__aexit__(self, *exc_details)	modelled	misc-ctx-async-exit-matches,misc-ctx-exit-keeps-context-acyclic,misc-ctx-exit-terminates	
+Lib/contextlib.py	786	787	nullcontext.__init__	__init__(self, enter_result=None)	modelled	misc-ctx-nullcontext	
+Lib/contextlib.py	789	790	nullcontext.__enter__	__enter__(self)	modelled	misc-ctx-nullcontext	
+Lib/contextlib.py	792	793	nullcontext.__exit__	__exit__(self, *excinfo)	modelled	misc-ctx-nullcontext	
+Lib/contextlib.py	795	796	nullcontext.__aenter__	__aenter__(self)	modelled	misc-ctx-nullcontext	
+Lib/contextlib.py	798	799	nullcontext.__aexit__	__aexit__(self, *excinfo)	modelled	misc-ctx-nullcontext	
+Lib/contextlib.py	805	807	chdir.__init__	__init__(self, path)	modelled	misc-ctx-chdir	
+Lib/contextlib.py	809	811	chdir.__enter__	__enter__(self)	modelled	misc-ctx-chdir	
+Lib/contextlib.py	813	814	chdir.__exit__	__exit__(self, *excinfo)	modelled	misc-ctx-chdir	

@@ -1,0 +1,43 @@
+id: longobj-complex-pow-infinite-base-overflow
+title: "complex('inf') ** 1 raises OverflowError: complex exponentiation"
+priority: P4
+kind: wrong-exception
+module: longobj
+files: [Objects/complexobject.c]
+functions: [complex_pow]
+summary: |
+  _Py_ADJUST_ERANGE2 takes any infinite result for an overflow. With an infinite base the
+  infinite result is exact, so x ** 1 raises, where float('inf') ** 1 returns inf.
+likelihood: |
+  Low. Needs an infinite base.
+maybe_intended: |
+  No. Already accepted upstream as a bug: gh-156693, fixed on main.
+reproducer: |
+  z = complex('inf')
+  try:
+      print(z ** 1)
+  except OverflowError as e:
+      print('OverflowError:', e)
+      print('REPRODUCED longobj-complex-pow-infinite-base-overflow')
+expected: |
+  (inf+0j), as on main.
+promised_by: |
+  The real case: float('inf') ** 1 is inf.
+cause: |
+  Objects/complexobject.c:740 applies _Py_ADJUST_ERANGE2 to the result of c_powi whatever
+  the base was, and line 336 does the same in _Py_c_pow.
+possible_fix: |
+  Main applies the adjustment only when the operands are finite. That is the fix to
+  backport to 3.14.
+tested:
+  python3 (3.14.7): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): NOT REPRODUCED (fixed by gh-156693)
+duplicates:
+  issues:
+    - {number: 156693, state: closed, relation: same bug, fixed on main, not in 3.14.7}
+  related: []
+  queries: ["complex exponentiation"]
+  bugforge: "only complex-related entry is cmath-20261003-033712-c2 (cmath.isclose, #158697); not this one"
+lean:
+  property: PyLean.LongObj.Cplx.PowOneNeverRaises
+  theorem: PyLean.LongObj.Cplx.powOneNeverRaises_refuted

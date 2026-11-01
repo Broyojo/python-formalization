@@ -7,4 +7,4 @@ Lib/timeit.py	183	207	Timer.repeat	repeat(self, repeat=default_repeat, number=de
 Lib/timeit.py	209	228	Timer.autorange	autorange(self, callback=None)	todo		
 Lib/timeit.py	231	234	timeit	timeit(stmt='pass', setup='pass', timer=default_timer, number=default_number, globals=None)	todo		
 Lib/timeit.py	237	240	repeat	repeat(stmt='pass', setup='pass', timer=default_timer, repeat=default_repeat, number=default_number, globals=None)	todo		
-Lib/timeit.py	243	374	main	main(args=None, *, _wrap_timer=None)	todo		
+Lib/timeit.py	243	374	main	main(args=None, *, _wrap_timer=None)	todo		candidates:calstat-calendar-main-checks,calstat-calendar-main-month-output

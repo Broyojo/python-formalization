@@ -15,7 +15,11 @@ summary: |
   raw_decode('{}x', -3) == ({}, -1), raw_decode('null ', -5) == (None, -1), and
   raw_decode('12', -3) raises JSONDecodeError('Expecting value: line 1 column -2 (char -3)').
   For idx > sys.maxsize C raises OverflowError while Python raises JSONDecodeError. For
-  0 <= idx <= sys.maxsize the twins agree (Lean: json-raw-decode-twins-in-range).
+  0 <= idx <= sys.maxsize the twins agree (Lean: json-raw-decode-twins-in-range). The helper one
+  level down has the same gap: c_scanstring(s, end) raises ValueError('end is out of bounds') for
+  end outside [0, len(s)], while py_scanstring('ab', 5) raises JSONDecodeError naming char 4, past
+  the end of the document (Lean: json-scanstring-twins; for 0 <= end <= len(s) the twins agree,
+  json-scanstring-twins-in-range).
 likelihood: |
   Low: needs a negative index passed to raw_decode (an off-by-one or `idx - k` computation), and
   only matters where _json is unavailable (other implementations, or the blocked-import test
@@ -41,7 +45,16 @@ reproducer: |
       c, p = run(json, s, idx), run(pyjson, s, idx)
       out.append((c, p))
       print(f'raw_decode({s!r}, {idx}): C {c} | Python {p}')
-  if out[0][0].startswith('ValueError: idx cannot be negative') and out[0][1] == '(12, 2)':
+  def scan(f):
+      try:
+          return repr(f('ab', 5))
+      except Exception as e:
+          return f'{type(e).__name__}: {e}'
+  c_scan = scan(json.decoder.c_scanstring)
+  py_scan = scan(pyjson.decoder.py_scanstring)
+  print(f"scanstring('ab', 5): C {c_scan} | Python {py_scan}")
+  if (out[0][0].startswith('ValueError: idx cannot be negative') and out[0][1] == '(12, 2)'
+          and c_scan == 'ValueError: end is out of bounds' and py_scan.startswith('JSONDecodeError')):
       print('REPRODUCED json-py-raw-decode-negative-index')
 expected: |
   ValueError('idx cannot be negative') from both twins for every idx < 0.
@@ -50,7 +63,7 @@ observed: |
   raw_decode('{}x', -3) -> C ValueError / Python ({}, -1); raw_decode('null ', -5) -> C
   ValueError / Python (None, -1); raw_decode('[1, 2]', -1) -> Python JSONDecodeError at
   'line 1 column 0 (char -1)'; raw_decode('12', 2**63) -> C OverflowError / Python
-  JSONDecodeError.
+  JSONDecodeError; scanstring('ab', 5) -> C ValueError / Python JSONDecodeError at char 4.
 promised_by: |
   C/Python twin agreement and the explicit check in Modules/_json.c (bpo-21529); the
   raw_decode docstring describes idx as an index into s where a document begins.
@@ -59,11 +72,13 @@ cause: |
   without checking idx >= 0, and NUMBER_RE.match(string, idx) clamps a negative pos to 0;
   JSONObject/JSONArray (Lib/json/decoder.py:137-259) continue from the negative index.
   Modules/_json.c:1037-1040 (scan_once_unicode) raises ValueError("idx cannot be negative").
-  Unchanged on main.
+  Modules/_json.c:398-401 (scanstring_unicode) checks end; Lib/json/decoder.py:70-127 (py_scanstring)
+  does not, and STRINGCHUNK.match(s, end) clamps it. Unchanged on main.
 possible_fix: |
   In py_make_scanner's scan_once (Lib/json/scanner.py:65), or in JSONDecoder.raw_decode, add
   `if idx < 0: raise ValueError('idx cannot be negative')`, and extend test_negative_index to
-  idx=-1.
+  idx=-1. In py_scanstring, the matching `if not 0 <= end <= len(s): raise ValueError('end is out
+  of bounds')`.
 reproduces:
   python3 (3.14.7): REPRODUCED
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
