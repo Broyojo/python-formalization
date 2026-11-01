@@ -1,0 +1,75 @@
+id: unicodeobj-writer-rollback-noncanonical
+title: "A failed PyUnicodeWriter_WriteUTF8 leaves the buffer widened, and Finish returns a non-canonical str"
+priority: P4
+kind: invariant-violation
+module: unicodeobject
+files: [Objects/unicodeobject.c]
+functions: ["PyUnicodeWriter_WriteUTF8", "PyUnicodeWriter_DecodeUTF8Stateful", "_PyUnicodeWriter_Finish"]
+status: duplicate
+duplicate_of: python/cpython#158439 (closed), fixed by PR gh-158442 on main
+summary: |
+  PyUnicodeWriter_WriteUTF8 and PyUnicodeWriter_DecodeUTF8Stateful put `writer->pos` back when the
+  decode fails, but not `writer->maxchar`: characters decoded before the error have already widened
+  the buffer. _PyUnicodeWriter_Finish takes the kind from the buffer and never looks at the
+  characters, so the str it returns can break the canonical kind invariant. Such a str prints as
+  'a' and is not equal to 'a'. NOT A NEW FINDING: this is python/cpython#158439. Found here
+  independently, by modelling the capacity. Worth a human's note only because no 3.14 backport is
+  visible, and 3.14.7 still has it.
+likelihood: |
+  Low. It needs C code that keeps using a writer after a write failed, which the documentation
+  allows ("leave the writer unchanged"), and input with a non-ASCII character before the bad byte.
+  The standard library does not: its five WriteUTF8 call sites in Objects, Python and Modules
+  (structseq.c:285 and 311, Python-ast.c:5889, ast_unparse.c:40, _datetimemodule.c:2007) all give
+  up on failure, and none of them calls DecodeUTF8Stateful. An extension that falls back to another
+  write after a failed WriteUTF8 would hit it.
+maybe_intended: |
+  No. The documentation promises the writer is unchanged on error, and the upstream issue treats
+  it as a defect.
+reproducer: |
+  import ctypes
+  api = ctypes.pythonapi
+  P = ctypes.c_void_p
+  api.PyUnicodeWriter_Create.restype, api.PyUnicodeWriter_Create.argtypes = P, [ctypes.c_ssize_t]
+  api.PyUnicodeWriter_WriteChar.restype = ctypes.c_int
+  api.PyUnicodeWriter_WriteChar.argtypes = [P, ctypes.c_uint32]
+  api.PyUnicodeWriter_WriteUTF8.restype = ctypes.c_int
+  api.PyUnicodeWriter_WriteUTF8.argtypes = [P, ctypes.c_char_p, ctypes.c_ssize_t]
+  api.PyUnicodeWriter_Finish.restype, api.PyUnicodeWriter_Finish.argtypes = ctypes.py_object, [P]
+  w = api.PyUnicodeWriter_Create(0)
+  api.PyUnicodeWriter_WriteChar(w, ord('a'))
+  try:
+      api.PyUnicodeWriter_WriteUTF8(w, b'\xe2\x82\xac\xff', 4)
+  except UnicodeDecodeError as e:
+      print('raised:', e)
+  s = api.PyUnicodeWriter_Finish(w)
+  print(repr(s), 'equal:', s == 'a', 'isascii:', s.isascii(), 'in dict:', s in {'a': 1})
+  if repr(s) == "'a'" and s != 'a' and not s.isascii():
+      print('REPRODUCED unicodeobj-writer-rollback-noncanonical')
+expected: |
+  The string 'a', equal to 'a', as if the failed write had not been made.
+observed: |
+  3.14.7 returns a two-byte string that prints as 'a', differs from 'a', hashes differently, is
+  missing from a dict holding 'a', and has isascii() False.
+tested: "REPRODUCED on python3 3.14.7. NOT reproduced on main (3.16.0a1+dev), which returns 'a'."
+promised_by: |
+  Doc/c-api/unicode.rst:1828 for WriteUTF8 and 1924 for DecodeUTF8Stateful: "On error, set an
+  exception, leave the writer unchanged, and return -1." Invariant: _PyUnicode_CheckConsistency
+  requires the canonical kind.
+cause: |
+  Objects/unicodeobject.c:14163-14165 and 14185-14190 restore only `pos`; 5536 and the widening in
+  unicode_decode_utf8_impl have changed the buffer by then; 14210-14239 and 807-835 keep its kind.
+possible_fix: |
+  PR gh-158442 adds _PyUnicodeWriter.recheck_maxchar. On main the failure path sets it when maxchar
+  grew (Objects/unicodeobject.c:5461-5466), and Finish then scans the characters and narrows
+  (Objects/unicode_writer.c:583). A backport to 3.14 would close it there.
+lean: |
+  Refuted by writerAlwaysCanonical_refuted and writerFailureUnobservable_refuted
+  (lean/PyLean/UnicodeObj/ObjectWriterProps.lean); the narrowed writerFinishCanonical_proven and
+  writerFailureKeepsState_proven show that a failed decode is the only exception.
+duplicates:
+  issues:
+    - {number: 158439, state: closed, relation: same, reason: "C API: Fix PyUnicodeWriter_WriteUTF8() and PyUnicodeWriter_Format() error handling; PR gh-158442 adds recheck_maxchar"}
+  queries: ["PyUnicodeWriter Finish", "PyUnicodeWriter maxchar", "PyUnicodeWriter canonical",
+            "gh search prs PyUnicodeWriter_Finish", "PyUnicodeWriter_WriteUTF8", "gh search prs 158439",
+            "gh issue view 158439"]
+  bugforge: "no match in vendor/bugforge-results/README.md"
