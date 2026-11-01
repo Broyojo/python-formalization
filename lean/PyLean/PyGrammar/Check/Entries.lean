@@ -1,6 +1,7 @@
 import PyLean.Registry
 import PyLean.PyGrammar.RowNames
 import PyLean.PyGrammar.Check.FoldProps
+import PyLean.PyGrammar.Check.NullSites
 
 /-! Registry entries for the `Check` part of `PyGrammar`. -/
 
@@ -21,13 +22,25 @@ def entries : List Entry := [
     bug := some "pygrammar-check-trystar-handlers" },
   { id := "pygrammar-check-no-null-deref"
     pyFile := "Python/ast.c"
-    pyFns := ["validate_pattern", "validate_patterns"]
+    pyFns := Rows.check_no_null_deref
     statement := "On no tree does _PyAST_Validate dereference NULL."
     source := "invariant: no crash"
     status := .refuted
     prop := ``ValidateNoNullDeref
     thm := some ``validateNoNullDeref_refuted
     bug := some "pygrammar-check-none-in-list-segfault" },
+  { id := "pygrammar-check-null-sites"
+    pyFile := "Python/ast.c"
+    pyFns := Rows.check_null_sites
+    statement := "_PyAST_Validate dereferences NULL on a tree only if a None sits at one of its " ++
+      "unchecked fields: Try or TryStar handlers, the patterns of MatchSequence, MatchOr, " ++
+      "MatchMapping or MatchClass, MatchMapping keys, MatchClass kwd_attrs, or a required field."
+    source := "invariant: no crash, exact form of pygrammar-check-none-in-list-segfault"
+    status := .proven
+    prop := ``NullSites
+    thm := some ``nullSites_proven
+    notes := "One direction: a None there can crash; the refutation shows one does. Proved " ++
+      "over all 24 validators, so it also says every other path is free of this crash." },
   { id := "pygrammar-check-names-always"
     pyFile := "Python/ast.c"
     pyFns := Rows.check_names_always

@@ -31,10 +31,13 @@ def check_names_always : List String := [
   "validate_expr"]
 
 def check_no_null_deref : List String := [
-  "validate_pattern", "validate_patterns"]
+  ]
 
 def check_nonempty : List String := [
   ]
+
+def check_null_sites : List String := [
+  "validate_pattern", "validate_patterns", "_PyAST_Validate"]
 
 def check_syntax_only_identity : List String := [
   ]

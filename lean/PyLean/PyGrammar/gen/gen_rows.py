@@ -59,7 +59,8 @@ CREDIT = {
     "pygrammar-unparse-c-roundtrip": {"Python__ast_unparse.c": ["append_joinedstr"]},
     "pygrammar-check-validate-name": {"Python__ast.c": ["validate_name"]},
     "pygrammar-check-try-twin": {"Python__ast.c": ["validate_stmt"]},
-    "pygrammar-check-no-null-deref": {"Python__ast.c": ["validate_pattern", "validate_patterns"]},
+    "pygrammar-check-null-sites": {
+        "Python__ast.c": ["validate_pattern", "validate_patterns", "_PyAST_Validate"]},
     "pygrammar-check-names-always": {"Python__ast.c": ["validate_expr"]},
     "pygrammar-check-fold-reaches": {"Python__ast_preprocess.c": ["astfold_pattern"]},
     "pygrammar-check-fold-reaches-narrow": {
@@ -100,7 +101,7 @@ CREDIT = {
 
 # Entries that hold as properties but credit no row: `Rows.<id>` is empty for them.
 NO_ROWS = ["grammar-left-recursion", "grammar-call-rule-sound", "peg-first-error",
-           "check-syntax-only-identity", "peg-roundtrip-parser",
+           "check-syntax-only-identity", "check-no-null-deref", "peg-roundtrip-parser",
            "peg-roundtrip-actions", "lex-exact-tokens", "check-nonempty"]
 
 CREDITED = {(stem, name): entry for entry, files in CREDIT.items()

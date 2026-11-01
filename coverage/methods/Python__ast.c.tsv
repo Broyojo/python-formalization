@@ -12,15 +12,15 @@ Python/ast.c	427	441	ensure_literal_negative	ensure_literal_negative(expr_ty exp
 Python/ast.c	444	481	ensure_literal_complex	ensure_literal_complex(expr_ty exp)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Python/ast.c	484	536	validate_pattern_match_value	validate_pattern_match_value(expr_ty exp)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Python/ast.c	539	547	validate_capture	validate_capture(PyObject *name)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast.c	550	699	validate_pattern	validate_pattern(pattern_ty p, int star_ok)	modelled	pygrammar-check-no-null-deref	
+Python/ast.c	550	699	validate_pattern	validate_pattern(pattern_ty p, int star_ok)	modelled	pygrammar-check-null-sites	
 Python/ast.c	702	708	_validate_nonempty_seq	_validate_nonempty_seq(asdl_seq *seq, const char *what, const char *owner)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Python/ast.c	712	717	validate_assignlist	validate_assignlist(asdl_expr_seq *targets, expr_context_ty ctx)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Python/ast.c	720	724	validate_body	validate_body(asdl_stmt_seq *body, const char *owner)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Python/ast.c	727	951	validate_stmt	validate_stmt(stmt_ty stmt)	modelled	pygrammar-check-try-twin	
 Python/ast.c	954	970	validate_stmts	validate_stmts(asdl_stmt_seq *seq)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Python/ast.c	973	990	validate_exprs	validate_exprs(asdl_expr_seq *exprs, expr_context_ty ctx, int null_ok)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast.c	993	1003	validate_patterns	validate_patterns(asdl_pattern_seq *patterns, int star_ok)	modelled	pygrammar-check-no-null-deref	
+Python/ast.c	993	1003	validate_patterns	validate_patterns(asdl_pattern_seq *patterns, int star_ok)	modelled	pygrammar-check-null-sites	
 Python/ast.c	1006	1030	validate_typeparam	validate_typeparam(type_param_ty tp)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Python/ast.c	1033	1044	validate_type_params	validate_type_params(asdl_type_param_seq *tps)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Python/ast.c	1047	1074	_PyAST_Validate	_PyAST_Validate(mod_ty mod)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
+Python/ast.c	1047	1074	_PyAST_Validate	_PyAST_Validate(mod_ty mod)	modelled	pygrammar-check-null-sites	
 Python/ast.c	1077	1091	_PyAST_GetDocString	_PyAST_GetDocString(asdl_stmt_seq *body)	modelled	pygrammar-ast-docstring-twins	
