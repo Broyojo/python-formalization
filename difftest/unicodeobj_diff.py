@@ -2326,6 +2326,312 @@ def run_text_sweep(c):
 # ==== end text slice ====
 
 
+# ==== str method slice (fn names meth_*) ====
+
+import operator
+
+ME_ALPH = [0x20, 0x9, 0xa, 0xd, 0x1c, 0x1f, 0x85, 0xa0, 0x1680, 0x2028, 0x3000, 0x200b, 0x41, 0x61,
+           0x62, 0x78, 0x2d, 0x2b, 0x30, 0x31, 0x7f, 0xe9, 0xff, 0x100, 0x141, 0x3a3, 0x20ac, 0xd800,
+           0xffff, 0x10000, 0x10041, 0x1f600, 0x10ffff]
+ME_INTS = [0, 1, -1, 2, 3, 4, 5, 7, 8, 9, 10, -2, -3, -5, -9, -10, 2 ** 30 - 1, 2 ** 30, -2 ** 30,
+           -2 ** 30 - 1, M, M + 1, -M - 1, -M - 2, 2 ** 64, -2 ** 64, 10 ** 30]
+ME_OTHER = {"float": 2.5, "list": [], "bytes": b"a", "dict": {}}
+
+
+class MeIdx:
+    """An object whose __index__ answers an int, raises, or returns a non-int."""
+
+    def __init__(self, mode, v=0):
+        self.mode, self.v = mode, v
+
+    def __index__(self):
+        if self.mode == "ok":
+            return self.v
+        if self.mode == "raise":
+            raise ValueError("boom")
+        return "x"
+
+
+def me_str(rng, maxlen=8):
+    k = rng.random()
+    if k < 0.3:
+        pool = [c for c in ME_ALPH if c < 128]
+    elif k < 0.5:
+        pool = [c for c in ME_ALPH if c < 256]
+    elif k < 0.7:
+        pool = [c for c in ME_ALPH if c < 65536]
+    else:
+        pool = ME_ALPH
+    return [rng.choice(pool) for _ in range(rng.randint(0, maxlen))]
+
+
+def me_int(rng, n=8):
+    r = rng.random()
+    if r < 0.5:
+        return rng.randint(-n - 2, n + 2)
+    return rng.choice(ME_INTS)
+
+
+def me_index_arg(rng, n=8):
+    """An argument meant as an index: mostly an int, sometimes another object."""
+    r = rng.random()
+    if r < 0.75:
+        return {"t": "int", "v": me_int(rng, n)}
+    if r < 0.85:
+        mode = rng.choice(["ok", "ok", "raise", "bad"])
+        v = me_int(rng, n)
+        obj = MeIdx(mode, v)
+        try:
+            res = {"ok": operator.index(obj)}
+        except Exception as e:
+            res = {"exc": type(e).__name__, "msg": str(e)}
+        return {"t": "index", "tp": "MeIdx", "r": res, "mode": mode, "v": v}
+    if r < 0.9:
+        return {"t": "none"}
+    if r < 0.95:
+        return {"t": "str", "s": me_str(rng, 2)}
+    return {"t": "other", "tp": rng.choice(list(ME_OTHER))}
+
+
+def me_obj(a):
+    t = a["t"]
+    if t == "int":
+        return a["v"]
+    if t == "str":
+        return s_of(a["s"])
+    if t == "none":
+        return None
+    if t == "tuple":
+        return tuple(me_obj(x) for x in a["items"])
+    if t == "index":
+        return MeIdx(a["mode"], a["v"])
+    return ME_OTHER[a["tp"]]
+
+
+@gen("meth", 6)
+def gen_meth_strip(rng):
+    s = me_str(rng)
+    r = rng.random()
+    if r < 0.3:
+        chars = {"t": "none"}
+    elif r < 0.85:
+        pool = s + ME_ALPH if s and rng.random() < 0.6 else ME_ALPH
+        chars = {"t": "str", "s": [rng.choice(pool) for _ in range(rng.randint(0, 4))]}
+    else:
+        chars = rng.choice([{"t": "int", "v": 1}, {"t": "other", "tp": "bytes"},
+                            {"t": "other", "tp": "list"}])
+    return {"mod": "unicodeobj", "fn": "meth_strip", "s": s, "chars": chars,
+            "op": rng.choice(["strip", "lstrip", "rstrip"])}
+
+
+@run("meth_strip")
+def run_meth_strip(c):
+    return cps_of(getattr(s_of(c["s"]), c["op"])(me_obj(c["chars"])))
+
+
+_ME_FINDCHAR = ctypes.pythonapi.PyUnicode_FindChar
+_ME_FINDCHAR.argtypes = [ctypes.py_object, ctypes.c_uint32, ctypes.c_ssize_t, ctypes.c_ssize_t,
+                         ctypes.c_int]
+_ME_FINDCHAR.restype = ctypes.c_ssize_t
+_ME_SUBSTRING = ctypes.pythonapi.PyUnicode_Substring
+_ME_SUBSTRING.argtypes = [ctypes.py_object, ctypes.c_ssize_t, ctypes.c_ssize_t]
+_ME_SUBSTRING.restype = ctypes.py_object
+ME_SSIZE = [0, 1, -1, 2, 3, 5, 8, 9, -2, -5, -9, M, -M - 1, M - 1]
+
+
+def me_ssize(rng):
+    return rng.randint(-10, 10) if rng.random() < 0.6 else rng.choice(ME_SSIZE)
+
+
+@gen("meth", 3)
+def gen_meth_findchar(rng):
+    s = me_str(rng)
+    pool = s + ME_ALPH + [0x10041, 0x1ff41, 0xffff0041, 0xffffffff, 0x110000]
+    return {"mod": "unicodeobj", "fn": "meth_findchar", "s": s, "ch": rng.choice(pool),
+            "start": me_ssize(rng), "end": me_ssize(rng), "dir": rng.choice([1, -1, 1, -1, 0, 2])}
+
+
+@run("meth_findchar")
+def run_meth_findchar(c):
+    return _ME_FINDCHAR(s_of(c["s"]), c["ch"], c["start"], c["end"], c["dir"])
+
+
+@gen("meth", 2)
+def gen_meth_substring(rng):
+    return {"mod": "unicodeobj", "fn": "meth_substring", "s": me_str(rng), "start": me_ssize(rng),
+            "end": me_ssize(rng)}
+
+
+@run("meth_substring")
+def run_meth_substring(c):
+    return cps_of(_ME_SUBSTRING(s_of(c["s"]), c["start"], c["end"]))
+
+
+@gen("meth", 5)
+def gen_meth_pad(rng):
+    s = me_str(rng, 6)
+    if s and rng.random() < 0.3:
+        s[0] = rng.choice([0x2b, 0x2d])
+    op = rng.choice(["center", "ljust", "rjust", "zfill"])
+    c = {"mod": "unicodeobj", "fn": "meth_pad", "op": op, "s": s,
+         "width": me_index_arg(rng, len(s) + 4)}
+    if op != "zfill" and rng.random() < 0.6:
+        r = rng.random()
+        if r < 0.8:
+            c["fill"] = {"t": "str", "s": [rng.choice(ME_ALPH)]}
+        elif r < 0.9:
+            c["fill"] = {"t": "str", "s": me_str(rng, 3)}
+        else:
+            c["fill"] = rng.choice([{"t": "int", "v": 32}, {"t": "none"}, {"t": "other", "tp": "bytes"}])
+    return c
+
+
+@run("meth_pad")
+def run_meth_pad(c):
+    s = s_of(c["s"])
+    args = [me_obj(c["width"])] + ([me_obj(c["fill"])] if "fill" in c else [])
+    return cps_of(getattr(s, c["op"])(*args))
+
+
+def me_affix(rng, s):
+    """A str argument that often is a prefix, suffix or middle piece of s."""
+    r = rng.random()
+    if s and r < 0.6:
+        i = rng.randint(0, len(s))
+        j = rng.randint(i, len(s))
+        piece = s[i:j]
+        if rng.random() < 0.2 and piece:
+            piece = piece[:-1] + [rng.choice(ME_ALPH)]
+        return piece
+    return me_str(rng, 3)
+
+
+@gen("meth", 5)
+def gen_meth_startswith(rng):
+    s = me_str(rng)
+    r = rng.random()
+    if r < 0.6:
+        sub = {"t": "str", "s": me_affix(rng, s)}
+    elif r < 0.9:
+        items = [{"t": "str", "s": me_affix(rng, s)} for _ in range(rng.randint(0, 3))]
+        if rng.random() < 0.3:
+            items.insert(rng.randint(0, len(items)), rng.choice(
+                [{"t": "int", "v": 1}, {"t": "none"}, {"t": "other", "tp": "bytes"}]))
+        sub = {"t": "tuple", "items": items}
+    else:
+        sub = rng.choice([{"t": "int", "v": 1}, {"t": "none"}, {"t": "other", "tp": "list"}])
+    c = {"mod": "unicodeobj", "fn": "meth_startswith", "op": rng.choice(["startswith", "endswith"]),
+         "s": s, "sub": sub}
+    if rng.random() < 0.6:
+        c["start"] = me_index_arg(rng, len(s) + 2)
+        if rng.random() < 0.6:
+            c["end"] = me_index_arg(rng, len(s) + 2)
+    return c
+
+
+@run("meth_startswith")
+def run_meth_startswith(c):
+    args = [me_obj(c["sub"])]
+    if "start" in c:
+        args.append(me_obj(c["start"]))
+        if "end" in c:
+            args.append(me_obj(c["end"]))
+    return getattr(s_of(c["s"]), c["op"])(*args)
+
+
+@gen("meth", 3)
+def gen_meth_removeaffix(rng):
+    s = me_str(rng)
+    if rng.random() < 0.9:
+        affix = {"t": "str", "s": me_affix(rng, s)}
+    else:
+        affix = rng.choice([{"t": "int", "v": 1}, {"t": "none"}, {"t": "other", "tp": "bytes"}])
+    return {"mod": "unicodeobj", "fn": "meth_removeaffix", "s": s, "affix": affix,
+            "op": rng.choice(["removeprefix", "removesuffix"])}
+
+
+@run("meth_removeaffix")
+def run_meth_removeaffix(c):
+    return cps_of(getattr(s_of(c["s"]), c["op"])(me_obj(c["affix"])))
+
+
+_ME_TAILMATCH = ctypes.pythonapi.PyUnicode_Tailmatch
+_ME_TAILMATCH.argtypes = [ctypes.py_object, ctypes.py_object, ctypes.c_ssize_t, ctypes.c_ssize_t,
+                          ctypes.c_int]
+_ME_TAILMATCH.restype = ctypes.c_ssize_t
+
+
+@gen("meth", 3)
+def gen_meth_tailmatch(rng):
+    s = me_str(rng)
+    a = {"t": "str", "s": s} if rng.random() < 0.95 else {"t": "int", "v": 3}
+    b = {"t": "str", "s": me_affix(rng, s)} if rng.random() < 0.95 else {"t": "none"}
+    return {"mod": "unicodeobj", "fn": "meth_tailmatch", "str": a, "sub": b,
+            "start": me_ssize(rng), "end": me_ssize(rng), "dir": rng.choice([1, -1, 0, 2])}
+
+
+@run("meth_tailmatch")
+def run_meth_tailmatch(c):
+    return _ME_TAILMATCH(me_obj(c["str"]), me_obj(c["sub"]), c["start"], c["end"], c["dir"])
+
+
+@gen("meth", 5)
+def gen_meth_slice(rng):
+    s = me_str(rng)
+    form = rng.choice(["binary", "binary", "subscript", "index"])
+    c = {"mod": "unicodeobj", "fn": "meth_slice", "form": form, "s": s,
+         "a": me_index_arg(rng, len(s) + 2)}
+    if form != "index":
+        c["b"] = me_index_arg(rng, len(s) + 2)
+    if form == "subscript":
+        c["c"] = {"t": "none"} if rng.random() < 0.3 else me_index_arg(rng, 3)
+    return c
+
+
+def me_binary_slice(s, a, b):
+    return s[a:b]  # BINARY_SLICE, which runs _PyUnicode_BinarySlice for an exact str
+
+
+@run("meth_slice")
+def run_meth_slice(c):
+    s = s_of(c["s"])
+    a = me_obj(c["a"])
+    if c["form"] == "binary":
+        return cps_of(me_binary_slice(s, a, me_obj(c["b"])))
+    if c["form"] == "subscript":
+        return cps_of(s[slice(a, me_obj(c["b"]), me_obj(c["c"]))])
+    return cps_of(s[a])
+
+
+@gen("meth", 4)
+def gen_meth_partition(rng):
+    s = me_str(rng)
+    r = rng.random()
+    if r < 0.85:
+        sep = {"t": "str", "s": me_affix(rng, s)}
+    elif r < 0.92:
+        sep = {"t": "str", "s": s + me_str(rng, 2)}
+    else:
+        sep = rng.choice([{"t": "int", "v": 1}, {"t": "none"}, {"t": "other", "tp": "bytes"}])
+    return {"mod": "unicodeobj", "fn": "meth_partition", "s": s, "sep": sep,
+            "op": rng.choice(["partition", "rpartition"])}
+
+
+@run("meth_partition")
+def run_meth_partition(c):
+    return [cps_of(x) for x in getattr(s_of(c["s"]), c["op"])(me_obj(c["sep"]))]
+
+
+def me_width_value(a):
+    if a["t"] == "int":
+        return a["v"]
+    if a["t"] == "index" and "ok" in a["r"]:
+        return a["r"]["ok"]
+    return 0
+
+# ==== end str method slice ====
+
+
 # The size cap. The model builds its output as a list, so a case that asks for a huge result
 # (a large width, a large repeat) can take hundreds of GB in pydiff, where CPython would raise
 # MemoryError at once. Every generated case passes through size_ok, and one that could
@@ -2354,6 +2660,10 @@ def digit_runs(s):
 
 def size_ok(c):
     fn = c["fn"]
+    if fn == "meth_pad":
+        # Above the cap only widths PyUnicode_New refuses at once (>= sys.maxsize) stay in.
+        v = me_width_value(c["width"])
+        return v <= SIZE_CAP or v >= sys.maxsize
     if fn == "obj_repeat":
         n, length = c["n"], len(c["s"])
         return n <= 0 or length * n <= SIZE_CAP or (length > 0 and length * n > sys.maxsize)
