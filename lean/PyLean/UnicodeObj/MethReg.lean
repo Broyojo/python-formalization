@@ -3,6 +3,7 @@ import PyLean.UnicodeObj.MethCase
 import PyLean.UnicodeObj.MethStripProps
 import PyLean.UnicodeObj.MethPadProps
 import PyLean.UnicodeObj.MethTailProps
+import PyLean.UnicodeObj.MethSliceProps
 
 /-! Registry entries of the `str` method slice. -/
 
@@ -75,7 +76,17 @@ def methEntries : List Entry := [
       "PyUnicode_Substring"]
     statement := "For every string, removeprefix returns string[len(prefix):] when it starts with the prefix and the string otherwise; removesuffix returns string[:-len(suffix)] when it ends with a non-empty suffix and the string otherwise; a non-str argument raises TypeError."
     source := "str.removeprefix/removesuffix docs"
-    status := .proven, prop := ``RemoveAffixDoc, thm := some ``removeAffixDoc_proven }
+    status := .proven, prop := ``RemoveAffixDoc, thm := some ``removeAffixDoc_proven },
+  { id := "unicodeobj-meth-slice-twin", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["_PyUnicode_BinarySlice", "unicode_subscript", "PyUnicode_Substring"]
+    statement := "For every string and every pair of bound objects (any ints, None, objects whose __index__ answers or raises, objects without __index__), the 3.15 fast path _PyUnicode_BinarySlice behind s[a:b] gives what unicode_subscript gives for s[slice(a, b)], result or exception; for int bounds both are Python's slice."
+    source := "invariant: fast path vs general path (BINARY_SLICE vs BINARY_SUBSCR); sequence slicing docs"
+    status := .proven, prop := ``SliceTwin, thm := some ``sliceTwin_proven },
+  { id := "unicodeobj-meth-index-doc", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicode_subscript", "unicode_getitem"]
+    statement := "For every string and object i, s[i] is the character at i (from the end when negative) for an index in [-len, len), IndexError for any other int, the __index__ exception when it raises, and TypeError for an object without __index__."
+    source := "sequence indexing docs"
+    status := .proven, prop := ``IndexDoc, thm := some ``indexDoc_proven }
 ]
 
 end PyLean.UnicodeObj

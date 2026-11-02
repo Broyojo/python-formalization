@@ -3,6 +3,7 @@ import PyLean.StrSearch.Diff
 import PyLean.UnicodeObj.MethStrip
 import PyLean.UnicodeObj.MethPad
 import PyLean.UnicodeObj.MethTail
+import PyLean.UnicodeObj.MethSlice
 
 /-! Difftest handler for the `str` method slice (`fn` names start with `meth_`). -/
 
@@ -92,6 +93,16 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "meth_tailmatch" =>
     return encPy toJson (pyUnicodeTailmatch (← decArg (← field j "str")) (← decArg (← field j "sub"))
       (← getInt j "start") (← getInt j "end") (← getInt j "dir"))
+  | "meth_slice" =>
+    let s ← getSeq j "s"
+    let a ← decArg (← field j "a")
+    let r ← match ← getStr j "form" with
+      | "binary" => pure (unicodeBinarySlice s a (← decArg (← field j "b")))
+      | "subscript" =>
+        pure (unicodeSubscript s (.slice ⟨a, ← decArg (← field j "b"), ← decArg (← field j "c")⟩))
+      | "index" => pure (unicodeSubscript s (.obj a))
+      | f => throw s!"bad form {f}"
+    return encPy encStr r
   | _ => throw s!"unknown fn {fn}"
 
 def handler : Handler := fun fn j =>

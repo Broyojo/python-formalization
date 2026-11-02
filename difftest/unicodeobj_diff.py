@@ -2575,6 +2575,34 @@ def run_meth_tailmatch(c):
     return _ME_TAILMATCH(me_obj(c["str"]), me_obj(c["sub"]), c["start"], c["end"], c["dir"])
 
 
+@gen("meth", 5)
+def gen_meth_slice(rng):
+    s = me_str(rng)
+    form = rng.choice(["binary", "binary", "subscript", "index"])
+    c = {"mod": "unicodeobj", "fn": "meth_slice", "form": form, "s": s,
+         "a": me_index_arg(rng, len(s) + 2)}
+    if form != "index":
+        c["b"] = me_index_arg(rng, len(s) + 2)
+    if form == "subscript":
+        c["c"] = {"t": "none"} if rng.random() < 0.3 else me_index_arg(rng, 3)
+    return c
+
+
+def me_binary_slice(s, a, b):
+    return s[a:b]  # BINARY_SLICE, which runs _PyUnicode_BinarySlice for an exact str
+
+
+@run("meth_slice")
+def run_meth_slice(c):
+    s = s_of(c["s"])
+    a = me_obj(c["a"])
+    if c["form"] == "binary":
+        return cps_of(me_binary_slice(s, a, me_obj(c["b"])))
+    if c["form"] == "subscript":
+        return cps_of(s[slice(a, me_obj(c["b"]), me_obj(c["c"]))])
+    return cps_of(s[a])
+
+
 def me_width_value(a):
     if a["t"] == "int":
         return a["v"]
