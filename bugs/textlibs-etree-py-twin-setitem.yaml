@@ -11,6 +11,10 @@ summary: |
   generator or any other one-shot iterator is exhausted by the first loop, so
   e[1:1] = (x for x in new) inserts nothing, and e[:] = iter(new) empties the element. The C
   accelerator calls PySequence_Fast once and stores every item.
+  Element.extend differs the other way on a failing iterator: C materialises the iterable with
+  PySequence_Fast before appending, so an iterator that yields two Elements and then raises leaves
+  the element unchanged in C and with both appended in the twin (which, like list.extend, appends
+  as it goes). Neither is documented; recorded as a twin difference.
   The twin also checks the value before the index, so e[100] = 5 raises TypeError there and
   IndexError in C; that difference is cosmetic and is recorded only for completeness.
 likelihood: |

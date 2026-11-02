@@ -3380,9 +3380,20 @@ class EtreeArea:
 
     @classmethod
     def gen(cls, r):
-        f = r.choice(["get", "set", "set", "set", "del"])
+        f = r.choice(["get", "set", "set", "set", "del", "append", "insert", "extend"])
         c = {"mod": "textlibs", "fn": "etree." + f, "impl": r.choice(["c", "py"]),
              "kids": list(range(r.randint(0, 9)))}
+        if f in ("append", "insert", "extend"):
+            c["obj"] = r.choice([60, 61, 1000])
+            if f == "insert":
+                c["idx"] = r.choice(cls.VALS[1:])
+            if f == "extend":
+                xs = [60 + i for i in range(r.randint(0, 5))]
+                if xs and r.random() < 0.15:
+                    xs[r.randrange(len(xs))] = 1000
+                c["arg"] = {"kind": r.choice(["seq", "seq", "iter", "noniter"]), "xs": xs,
+                            "raise": r.random() < 0.3, "eff": r.choice([0, 0, 1, 2, 3])}
+            return c
         if r.random() < 0.3:
             c["idx"] = r.choice(cls.VALS[1:])
             if f == "set":
@@ -3421,7 +3432,7 @@ class EtreeArea:
         def mk(n):
             return mod.Element("e%d" % n) if n < 1000 else n
 
-        key = c["idx"] if "idx" in c else slice(*c["slice"])
+        key = c["idx"] if "idx" in c else slice(*c["slice"]) if "slice" in c else None
         f = c["fn"].split(".")[1]
         if f == "get":
             return common.py_result(lambda: [num(k) for k in e[key]] if isinstance(key, slice) else num(e[key]))
@@ -3448,7 +3459,13 @@ class EtreeArea:
             return g()
 
         def body():
-            if f == "del":
+            if f == "append":
+                e.append(mk(c["obj"]))
+            elif f == "insert":
+                e.insert(c["idx"], mk(c["obj"]))
+            elif f == "extend":
+                e.extend(arg())
+            elif f == "del":
                 del e[key]
             elif "idx" in c:
                 e[key] = mk(c["obj"])

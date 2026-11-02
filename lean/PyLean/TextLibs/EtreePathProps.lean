@@ -1,4 +1,4 @@
-import PyLean.TextLibs.EtreeDiff
+import PyLean.TextLibs.EtreePath
 
 /-!
 Properties of the ElementPath model (`EtreePath.lean`).

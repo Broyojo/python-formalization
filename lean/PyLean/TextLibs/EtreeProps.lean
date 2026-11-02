@@ -1,4 +1,4 @@
-import PyLean.TextLibs.EtreeDiff
+import PyLean.TextLibs.EtreeModel
 import PyLean.Sequences.SliceAssign
 
 /-!

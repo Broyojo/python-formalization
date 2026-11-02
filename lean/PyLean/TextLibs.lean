@@ -14,6 +14,7 @@ import PyLean.TextLibs.DifflibHunks
 import PyLean.TextLibs.CsvSniffProps
 import PyLean.TextLibs.EtreeProps
 import PyLean.TextLibs.EtreePathProps
+import PyLean.TextLibs.EtreeWriters
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1417,7 +1418,26 @@ def entries : List Entry := [
     statement := "The same theorem, from the C side: checkpath is false on such names and the fast path's children scan equals the compiled child step."
     source := "the implementation disagreeing with itself (C fast path against ElementPath)", status := .proven
     prop := ``Etree.PlainTagTwins, thm := some ``Etree.plainTagTwins_proven
-    notes := "Outside plain names the two routes differ: 'a:b', 'a b' and '(a)' match a literal tag in C and raise or match nothing in ElementPath." }
+    notes := "Outside plain names the two routes differ: 'a:b', 'a b' and '(a)' match a literal tag in C and raise or match nothing in ElementPath." },
+  { id := "textlibs-etree-writers-twins", pyFile := "Modules/_elementtree.c"
+    pyFns := ["_elementtree_Element_append_impl", "_elementtree_Element_extend_impl",
+      "_elementtree_Element_insert_impl", "element_add_subelement"]
+    statement := "For Element arguments, append and insert leave the same children and raise the same exception in C and in the Python twin for every int index, and extend of a list or tuple leaves the same children and raises the same exception class."
+    source := "the implementation disagreeing with itself (C and Python twins)", status := .proven
+    prop := ``Etree.WritersTwins, thm := some ``Etree.writersTwins_proven
+    notes := "insert's clamp and shift loop are proven equal to list.insert's ins1Pos and insAt." },
+  { id := "textlibs-etree-writers-twins-py", pyFile := "Lib/xml/etree/ElementTree.py"
+    pyFns := ["Element.append", "Element.extend", "Element.insert"]
+    statement := "The same theorem, credited to the Python twin's methods."
+    source := "the implementation disagreeing with itself (C and Python twins)", status := .proven
+    prop := ``Etree.WritersTwins, thm := some ``Etree.writersTwins_proven },
+  { id := "textlibs-etree-extend-iter-twins", pyFile := "Modules/_elementtree.c"
+    pyFns := ["_elementtree_Element_extend_impl", "Element.extend"]
+    statement := "extend leaves the same children in both twins for every iterable."
+    source := "the implementation disagreeing with itself (C and Python twins)", status := .refuted
+    prop := ``Etree.ExtendTwins, thm := some ``Etree.extendTwins_refuted
+    bug := some "textlibs-etree-py-twin-setitem"
+    notes := "An iterator that yields two Elements and raises: C materialises it first and appends nothing, the twin has appended both." }
 ]
 
 end PyLean.TextLibs

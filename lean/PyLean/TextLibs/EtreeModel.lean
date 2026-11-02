@@ -43,6 +43,9 @@ structure Ty (α : Type) where
   tpName : α → String
   pyName : α → String
 
+/-- The difftest's and the refutations' children: numbers below 1000 are Elements, the rest ints. -/
+def caseTy : Ty Nat := { isElem := (· < 1000), tpName := fun _ => "int", pyName := fun _ => "int" }
+
 /-- The children after a store or delete, and its outcome. -/
 abbrev Out (α : Type) := List α × Py Unit
 

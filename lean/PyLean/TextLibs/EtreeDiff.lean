@@ -1,6 +1,7 @@
 import PyLean.DiffCore
 import PyLean.TextLibs.EtreeModel
 import PyLean.TextLibs.EtreePath
+import PyLean.TextLibs.EtreeWriters
 
 /-! `etree.*` difftest cases; see `EtreeArea` in `difftest/textlibs_diff.py`. A child is a
 number: below 1000 an Element whose tag is `e<n>`, otherwise the int `n` (not an Element). -/
@@ -10,7 +11,6 @@ namespace PyLean.TextLibs.Etree
 open Lean PyLean PyLean.Diff
 open PyLean.RangeSlice (Slice)
 
-def caseTy : Ty Nat := { isElem := (· < 1000), tpName := fun _ => "int", pyName := fun _ => "int" }
 
 def nats (j : Json) : Except String (List Nat) := do (← j.getArr?).toList.mapM Json.getNat?
 
@@ -147,6 +147,14 @@ def run (fn : String) (j : Json) : Except String Json := do
       let s ← getSlice j
       let a ← getArg j
       return encOut (if c then setSliceC caseTy kids s a else setSlicePy caseTy kids s a)
+  | "etree.append" => return encOut ((if c then appendC else appendPy) caseTy kids (← getNat j "obj"))
+  | "etree.insert" =>
+    let i ← getInt j "idx"
+    let x ← getNat j "obj"
+    return encOut (if c then insertC caseTy kids i x else insertPy caseTy kids i x)
+  | "etree.extend" =>
+    let a ← getArg j
+    return encOut (if c then extendC caseTy kids a else extendPy caseTy kids a)
   | "etree.del" =>
     if isIdx then
       let i ← getInt j "idx"
