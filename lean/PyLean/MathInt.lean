@@ -23,6 +23,7 @@ import PyLean.MathInt.FltHypot
 import PyLean.MathInt.FltGammaProps
 import PyLean.MathInt.FltIsclose
 import PyLean.MathInt.FltFmod
+import PyLean.MathInt.FltPow
 
 /-!
 Integer functions of `math.integer` (`Modules/mathintegermodule.c`, re-exported by
@@ -51,6 +52,12 @@ namespace PyLean.MathInt
 open PyLean.Registry
 
 def entries : List Entry := [
+  { id := "mathint-pow-twin", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math.pow"]
+    statement := "For every C library pow that follows C99 Annex F on finite arguments (pow(1, y) = pow(x, ±0) = 1, the zero-base rules, no NaN and only range errno for a positive base, pow(-x, n) = ±pow(x, n) for integer n, NaN for a negative base and non-integer exponent) and all floats x, y: where x ** y returns a float, math.pow(x, y) returns the same float (or a NaN where that is a NaN); where x ** y returns a complex number or raises ZeroDivisionError, math.pow raises ValueError; where x ** y raises OverflowError, so does math.pow."
+    source := "Doc/library/math.rst: pow (\"Exceptional cases follow the IEEE 754 standard as far as possible\"; the ValueError for a negative base and non-integer exponent; the 3.11 change for pow(±0.0, -inf)); the twin float_pow in Objects/floatobject.c", status := .proven
+    prop := ``PowTwin, thm := some ``powTwin_proven
+    notes := "The two functions special-case infinities, NaNs, zeros and negative bases with separate code (mathmodule.c:2376-2403 and floatobject.c:713-778); the proof checks every branch pair." },
   { id := "mathint-isclose-doc", pyFile := "Modules/mathmodule.c"
     pyFns := ["math.isclose"]
     statement := "isclose(a, b, rel_tol=rt, abs_tol=at) raises ValueError('tolerances must be non-negative') for a negative tolerance; with 0 <= rel_tol < 1 and abs_tol >= 0, a NaN is close to nothing, an infinity only to itself, finite a and b are close exactly when abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol) in Python float arithmetic, and isclose(a, b) == isclose(b, a); the defaults are rel_tol=1e-09, abs_tol=0.0."
