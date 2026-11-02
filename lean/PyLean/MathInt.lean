@@ -21,6 +21,8 @@ import PyLean.MathInt.FltNext
 import PyLean.MathInt.FltFma
 import PyLean.MathInt.FltHypot
 import PyLean.MathInt.FltGammaProps
+import PyLean.MathInt.FltIsclose
+import PyLean.MathInt.FltFmod
 
 /-!
 Integer functions of `math.integer` (`Modules/mathintegermodule.c`, re-exported by
@@ -49,6 +51,23 @@ namespace PyLean.MathInt
 open PyLean.Registry
 
 def entries : List Entry := [
+  { id := "mathint-isclose-doc", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math.isclose"]
+    statement := "isclose(a, b, rel_tol=rt, abs_tol=at) raises ValueError('tolerances must be non-negative') for a negative tolerance; with 0 <= rel_tol < 1 and abs_tol >= 0, a NaN is close to nothing, an infinity only to itself, finite a and b are close exactly when abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol) in Python float arithmetic, and isclose(a, b) == isclose(b, a); the defaults are rel_tol=1e-09, abs_tol=0.0."
+    source := "Doc/library/math.rst: isclose (\"If no errors occur, the result will be: abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)\"; \"rel_tol must be nonnegative and less than 1.0\"; NaN and inf rules)", status := .proven
+    prop := ``IsCloseDoc, thm := some ``isCloseDoc_proven
+    notes := "With rel_tol NaN the C test can be true through abs_tol while Python's max(nan, abs_tol) is nan; NaN tolerances are outside the documented range and excluded." },
+  { id := "mathint-fmod-doc", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math.fmod"]
+    statement := "For every argument object, fmod raises conversion errors in argument order; fmod(x, ±inf) is x for finite x; a NaN argument gives a NaN; fmod(inf, y) and fmod(x, 0) raise ValueError('math domain error') for non-NaN arguments; and for finite x and nonzero finite y the result r is finite, exactly x - n*y for an integer n, abs(r) < abs(y), and r has the sign of x (zeros included)."
+    source := "Doc/library/math.rst: fmod (\"exactly (mathematically; to infinite precision) equal to x - n*y for some integer n such that the result has the same sign as x and magnitude less than abs(y)\")", status := .proven
+    prop := ``FmodDoc, thm := some ``fmodDoc_proven
+    notes := "The C fmod is the exact IEEE remainder-by-truncation (F64.fmod); the proof shows its exact value is representable." },
+  { id := "mathint-modf-doc", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math.modf"]
+    statement := "For every argument object, modf raises the conversion error; modf(nan) is (nan, nan); modf(±inf) is (±0.0, ±inf); for finite x it returns (f, i) with i the integer part of x (truncated toward 0), f + i == x exactly, abs(f) < 1, and both f and i carrying the sign of x, zeros included."
+    source := "Doc/library/math.rst: modf (\"Return the fractional and integer parts of x. Both results carry the sign of x and are floats.\")", status := .proven
+    prop := ``ModfDoc, thm := some ``modfDoc_proven },
   { id := "mathint-fma-doc", pyFile := "Modules/mathmodule.c"
     pyFns := ["math.fma"]
     statement := "For every argument object, math.fma raises conversion errors in argument order; for finite x, y, z it returns the exact x*y + z rounded once (+0.0 for an exact zero unless the product and z are both negative zeros) or raises OverflowError('overflow in fma') when that rounds to infinity; a NaN argument gives a NaN and never raises; otherwise an invalid operation (0*inf, or inf - inf between the product and z) raises ValueError('invalid operation in fma') and anything else returns the infinity of the right sign."
