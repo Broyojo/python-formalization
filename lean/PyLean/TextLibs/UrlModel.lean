@@ -262,20 +262,33 @@ structure Res where
   keep : Option Bool
   deriving Repr, DecidableEq, Inhabited
 
-/-- `_encode_result` on a result object: `_ResultMixinStr.encode('ascii', 'strict')`. -/
-def encodeFields : List (Option Str) → Py (List (Option Str))
-  | [] => .ok []
-  | f :: r => do
-    let x ← match f with
-      | none => pure none
-      | some s => (asciiEnc s).map some
-    let t ← encodeFields r
-    pure (x :: t)
+/-- One field of `_ResultMixinStr.encode` (:148-156): `x.encode(encoding, errors) if x is not None
+else None`. -/
+def encField (e : Enc) (h : UnicodeObj.ErrHandler) : Option Str → Py (Option Str)
+  | none => .ok none
+  | some s => (encodeWith e h s).map some
 
-/-- Build the result and apply `_coerce_result`, then set `_keep_empty`. -/
+/-- One field of `_ResultMixinBytes.decode` (:163-171). -/
+def decField (e : Enc) (h : UnicodeObj.ErrHandler) : Option Str → Py (Option Str)
+  | none => .ok none
+  | some s => (decodeWith e h s).map some
+
+/-- `_ResultMixinStr.encode`, :148-156: the fields in order, then `_keep_empty` copied when set. -/
+def resEncode (r : Res) (e : Enc) (h : UnicodeObj.ErrHandler) : Py Res := do
+  let f ← r.fields.mapM (encField e h)
+  pure { fields := f, isBytes := true, keep := r.keep }
+
+/-- `_ResultMixinBytes.decode`, :163-171. -/
+def resDecode (r : Res) (e : Enc) (h : UnicodeObj.ErrHandler) : Py Res := do
+  let f ← r.fields.mapM (decField e h)
+  pure { fields := f, isBytes := false, keep := r.keep }
+
+/-- Build the result, apply `_coerce_result` (`_encode_result` is `result.encode('ascii',
+'strict')`, which finds `_keep_empty` unset), then set `_keep_empty`. -/
 def mkRes (isB : Bool) (fields : List (Option Str)) (keep : Bool) : Py Res := do
-  let f ← if isB then encodeFields fields else pure fields
-  pure { fields := f, isBytes := isB, keep := some keep }
+  let r : Res := { fields, isBytes := false, keep := none }
+  let r ← if isB then resEncode r .ascii .strict else pure r
+  pure { r with keep := some keep }
 
 /-- The tuple as `urlunsplit` and `urlunparse` see it. -/
 structure Comp where
@@ -1037,29 +1050,19 @@ def hostname (r : Res) : Py (Option Str) :=
       if r.isBytes then .ok (some (a.map UnicodeObj.pyToLower ++ tail))
       else (UnicodeObj.unicodeLower a).map (fun l => some (l ++ tail))
 
-/-- `port`, :197-207. -/
-def port (r : Res) : Py (Option Nat) :=
-  let hi := if r.isBytes then hostinfoB r.netloc else hostinfoS r.netloc
-  match hi.2 with
+/-- The body of `port` once `self._hostinfo[1]` is read, :200-207. -/
+def portOf : Option Str → Py (Option Nat)
   | none => .ok none
   | some p =>
-    if !p.isEmpty && p.all isAsciiDigit then do
-      let n ← intOfDigits p
-      if n ≤ 65535 then pure (some n) else throw (.valueError "Port out of range 0-65535")
+    if !p.isEmpty && p.all isAsciiDigit then
+      match intOfDigits p with
+      | .error e => .error e
+      | .ok n => if n ≤ 65535 then .ok (some n) else .error (.valueError "Port out of range 0-65535")
     else .error (.valueError "~Port could not be cast to integer value")
 
-/-- `_ResultMixinStr.encode` (:148-156) and `_ResultMixinBytes.decode` (:163-171). -/
-def resEncode (r : Res) (e : Enc) (h : UnicodeObj.ErrHandler) : Py Res := do
-  let f ← r.fields.mapM (fun x => match x with
-    | none => pure none
-    | some s => (encodeWith e h s).map some)
-  pure { fields := f, isBytes := true, keep := r.keep }
-
-def resDecode (r : Res) (e : Enc) (h : UnicodeObj.ErrHandler) : Py Res := do
-  let f ← r.fields.mapM (fun x => match x with
-    | none => pure none
-    | some s => (decodeWith e h s).map some)
-  pure { fields := f, isBytes := false, keep := r.keep }
+/-- `port`, :197-207. -/
+def port (r : Res) : Py (Option Nat) :=
+  portOf (if r.isBytes then hostinfoB r.netloc else hostinfoS r.netloc).2
 
 /-! ## The legacy helpers, :1209-1407 (`str` arguments) -/
 

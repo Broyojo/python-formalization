@@ -22,6 +22,7 @@ import PyLean.TextLibs.ZoneinfoBefore
 import PyLean.TextLibs.SimpleQueueGet
 import PyLean.TextLibs.UrlQuery
 import PyLean.TextLibs.UrlBrackets
+import PyLean.TextLibs.UrlTwins
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1591,7 +1592,30 @@ def entries : List Entry := [
     source := "comment at Lib/urllib/parse.py:528-529; python/cpython#105704 and #77523", status := .refuted
     prop := ``Url.BracketsOnlyInUserinfo, thm := some ``Url.bracketsOnlyInUserinfo_refuted
     bug := some "textlibs-urllib-userinfo-brackets"
-    notes := "Duplicate of the open #77523; refuted with the oracle ip_address('example.com') raising, as CPython does." }
+    notes := "Duplicate of the open #77523; refuted with the oracle ip_address('example.com') raising, as CPython does." },
+  { id := "textlibs-urllib-netloc-twin", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["_NetlocResultMixinStr._userinfo", "_NetlocResultMixinBytes._userinfo", "_NetlocResultMixinStr._hostinfo",
+      "_NetlocResultMixinBytes._hostinfo", "_NetlocResultMixinBase.username", "_NetlocResultMixinBase.password",
+      "_NetlocResultMixinBase.hostname"]
+    statement := "For every result whose netloc is ASCII or None, the bytes result classes give the same username, password, hostname and port as the str classes (bytes.lower() agreeing with str.lower(), port errors of the same class)."
+    source := "the implementation disagreeing with itself: the twin mixins at Lib/urllib/parse.py:212-277", status := .proven
+    prop := ``Url.NetlocTwin, thm := some ``Url.netlocTwin_proven },
+  { id := "textlibs-urllib-port", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["_NetlocResultMixinBase.port"]
+    statement := "For every str or bytes result: a port is in 0-65535, every error is ValueError, a netloc host:digits (no '@', '[', ':' in the host, at most 4300 ASCII digits) gives int(digits) or the range error, and a netloc without '@', '[', ':' has no port."
+    source := "docs of urlsplit ('Port number as integer, if present'; invalid port raises ValueError)", status := .proven
+    prop := ``Url.PortSpec, thm := some ``Url.portSpec_proven },
+  { id := "textlibs-urllib-bytes-twin", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["_decode_args", "_encode_result", "_ResultMixinStr.encode", "_ResultMixinBytes.decode"]
+    statement := "For every ASCII bytes URL, every allow_fragments and missing_as_none, urlsplit(b) == urlsplit(b.decode()).encode('ascii') (errors included, _keep_empty kept), and urlsplit(b).decode('ascii') == urlsplit(b.decode())."
+    source := "the implementation disagreeing with itself (bytes path against str path); docs 'Parsing ASCII Encoded Bytes'", status := .proven
+    prop := ``Url.BytesTwin, thm := some ``Url.bytesTwin_proven },
+  { id := "textlibs-urllib-nfkc-check", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["_checknetloc"]
+    statement := "For every URL whose netloc has no brackets and every NFKC oracle, urlsplit accepts it exactly when the netloc is ASCII, or its NFKC form without '@:#?' is unchanged or contains none of '/?#@:'."
+    source := "docs of urlsplit (characters that decompose under NFKC into / ? # @ : raise ValueError)", status := .proven
+    prop := ``Url.NfkcCheck, thm := some ``Url.nfkcCheck_proven
+    notes := "unicodedata.normalize('NFKC', _) is the quantified oracle nfkc." }
 ]
 
 end PyLean.TextLibs
