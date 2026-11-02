@@ -92,7 +92,7 @@ def gbThen (k : GbState α κ → Option (Option PyExc) × GbState α κ) :
 
 /-- The `for (;;)` loop of `groupby_next` (:544-571): `none` is the `break`, and
 `some e` a `return NULL`, after a failed comparison (:563-564) or a failed
-`groupby_step` (:569-570). Each iteration but the last takes an item, so
+`groupby_step` (:564-565). Each iteration but the last takes an item, so
 `it.length + 1` iterations are enough, whatever a hook takes. -/
 def gbSkip (K : KeyEq κ) (key : α → Py κ) (run : List (GbOp κ) → GbState α κ → GbState α κ) :
     Nat → GbState α κ → Option (Option PyExc) × GbState α κ
