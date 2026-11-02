@@ -230,22 +230,37 @@ def encIdxStr : Nat ⊕ Str → Json
   | .inl n => Json.mkObj [("i", toJson n)]
   | .inr s => Json.mkObj [("s", toJson s)]
 
+/-- What a subclass's `__str__` (or `__float__`) does, from the case: `null` for the base type's. -/
+def getOutcome {α : Type} (j : Json) (key : String) (dflt : Py α) (ok : Json → Except String α)
+    (tn : String) : Except String (Py α) := do
+  match j.getObjVal? key with
+  | .ok .null | .error _ => return dflt
+  | .ok o =>
+    match ← getStr o "k" with
+    | "ok" => return .ok (← ok o)
+    | "raise" => return .error (.valueError "boom")
+    | "int" => return .error (.typeError s!"{tn}.__float__() must return a float, not int")
+    | k => throw s!"bad outcome {k}"
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
   | "fmt_str" =>
-    return encPy toJson (formatStrAdvanced (← getSeq j "s") (← getSeq j "spec"))
+    let s ← getSeq j "s"
+    let tn := (j.getObjVal? "tn" >>= (·.getStr?)).toOption.getD "str"
+    let exact := tn == "str"
+    let strObj ← getOutcome j "str" (.ok s) (fun o => getSeq o "s") tn
+    return encPy toJson (formatStrAdvancedObj tn exact strObj s (← getSeq j "spec"))
   | "fmt_int" =>
     let v ← getHexInt j "v"
     let name ← getStr j "name"
-    let shown : Str := if name == "bool" then lit (if v == 1 then "True" else "False")
-      else match longFormat v 10 false with | .ok s => s | .error _ => []
-    let spec ← getSeq j "spec"
-    if spec.isEmpty && name == "int" then
-      return encPy (fun (s : Str) => toJson s) (longFormat v 10 false)
-    return encPy toJson (do
-      match ← formatLongAdvanced v name spec shown with
-      | some s => .ok s
-      | none => formatLongAsFloat v spec name)
+    let tn := (j.getObjVal? "tn" >>= (·.getStr?)).toOption.getD name
+    let exact := tn == "int"
+    let base : Py Str := if name == "bool" then .ok (lit (if v == 1 then "True" else "False"))
+      else longFormat v 10 false
+    let strObj ← getOutcome j "str" base (fun o => getSeq o "s") tn
+    let toFloat ← getOutcome j "flt" (pyNumberFloatLong v)
+      (fun o => do return Binary64.F64.ofBits (← getHexInt o "x").toNat) tn
+    return encPy toJson (formatLongAdvancedObj tn exact strObj toFloat v (← getSeq j "spec"))
   | "fmt_strformat" =>
     let s ← getSeq j "s"
     let args ← (← (← field j "args").getArr?).toList.mapM getG
@@ -323,11 +338,15 @@ def run (fn : String) (j : Json) : Except String Json := do
     return encPy toJson (pyUnicodeFormat (← getSeq j "fmt") (← getArgs (← field j "args")))
   | "fmt_float" =>
     let x := Binary64.F64.ofBits (← getHexInt j "x").toNat
-    return encPy toJson (formatFloatAdvanced x (← getSeq j "spec"))
+    let tn := (j.getObjVal? "tn" >>= (·.getStr?)).toOption.getD "float"
+    let strObj ← getOutcome j "str" (floatStr x) (fun o => getSeq o "s") tn
+    return encPy toJson (formatFloatAdvancedObj tn strObj x (← getSeq j "spec"))
   | "fmt_complex" =>
     let re := Binary64.F64.ofBits (← getHexInt j "re").toNat
     let im := Binary64.F64.ofBits (← getHexInt j "im").toNat
-    return encPy toJson (formatComplexAdvanced re im (← getSeq j "spec"))
+    let tn := (j.getObjVal? "tn" >>= (·.getStr?)).toOption.getD "complex"
+    let strObj ← getOutcome j "str" (complexStr re im) (fun o => getSeq o "s") tn
+    return encPy toJson (formatComplexAdvancedObj tn strObj re im (← getSeq j "spec"))
   | _ => throw s!"unknown fn {fn}"
 
 def handler : Handler := fun fn j =>

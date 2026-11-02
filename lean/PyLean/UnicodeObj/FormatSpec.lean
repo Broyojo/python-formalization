@@ -42,12 +42,24 @@ structure FormatSpec where
 def hexPlain (n : Nat) : String :=
   String.ofList (Nat.toDigits 16 n)
 
-/-- `unknown_presentation_type`, unicode_formatter.c:250-266. -/
+/-- The longest prefix of `cs` whose UTF-8 encoding fits in `n` bytes. -/
+def takeUtf8 : Nat → List Char → List Char
+  | _, [] => []
+  | n, c :: cs => if c.utf8Size ≤ n then c :: takeUtf8 (n - c.utf8Size) cs else []
+
+/-- `'%.200s'` of `Py_TYPE(obj)->tp_name` in `PyErr_Format`: `unicode_fromformat_write_utf8`,
+Objects/unicodeobject.c:2623-2661, reads at most 200 bytes and, when it stops at the limit, drops
+a UTF-8 sequence cut short there. `tp_name` is the UTF-8 of the type's `__name__`, which has no NUL
+and no surrogate (`type_new` refuses both), so the bytes it reads are the longest prefix of whole
+characters that fits in 200 bytes. -/
+def tpNameShown (tpName : String) : String := String.ofList (takeUtf8 200 tpName.toList)
+
+/-- `unknown_presentation_type`, unicode_formatter.c:250-266. `typeName` is `tp_name`. -/
 def unknownPresentationType (t : Nat) (typeName : String) : PyExc :=
   if t > 32 ∧ t < 128 then
-    .valueError s!"Unknown format code '{Char.ofNat t}' for object of type '{typeName}'"
+    .valueError s!"Unknown format code '{Char.ofNat t}' for object of type '{tpNameShown typeName}'"
   else
-    .valueError s!"Unknown format code '\\x{hexPlain t}' for object of type '{typeName}'"
+    .valueError s!"Unknown format code '\\x{hexPlain t}' for object of type '{tpNameShown typeName}'"
 
 /-- `invalid_thousands_separator_type`, unicode_formatter.c:269-280. -/
 def invalidThousandsSeparatorType (specifier t : Nat) : PyExc :=
@@ -167,7 +179,7 @@ def parseType (typeName : String) (spec : Str) (f : FormatSpec) (rest : List Nat
   | [t] => validateSpec { f with type := t }
   | _ =>
     .error (.valueError
-      s!"Invalid format specifier '{toLeanString spec}' for object of type '{typeName}'")
+      s!"Invalid format specifier '{toLeanString spec}' for object of type '{tpNameShown typeName}'")
 
 /-- The rest of `parse_internal_render_format_spec`, unicode_formatter.c:459-607. -/
 def parseTail (typeName : String) (spec : Str) (f : FormatSpec) (rest : List Nat) :
@@ -314,7 +326,9 @@ def calcNumberWidths (nPrefix : Nat) (signChar : Nat) (digits : Str) (nRemainder
     else (0, 0, 0)
   .ok (l, sign, s, r, text)
 
-/-- `fill_number`, unicode_formatter.c:907-1012, without decimal point or fraction. -/
+/-- `fill_number`, unicode_formatter.c:907-1012, without decimal point or fraction. The
+`SystemError("non-ascii grouped digit")` of :966-970 cannot happen: `toupper` is set only for the
+`X` type, whose digits, zeros and separator (`_` or none) are ASCII. -/
 def fillNumber (l : Nat) (sign : Option Nat) (pfx : Str) (s : Nat) (text remainder : Str)
     (r fill : Nat) (toupper : Bool) : Str :=
   let up (x : Str) := if toupper then x.map pyToUpper else x
@@ -388,14 +402,25 @@ def formatStringInternal (value : Str) (f : FormatSpec) : Py Str :=
 
 /-! ## The dispatchers -/
 
-/-- `_PyUnicode_FormatAdvancedWriter`, unicode_formatter.c:1792-1825. `exact` is
-`PyUnicode_CheckExact(obj)`; both branches for an empty spec write `str(obj)`. -/
-def formatStrAdvanced (value spec : Str) : Py Str := do
-  if spec.isEmpty then .ok value
+/-- `format_obj`, unicode_formatter.c:1777-1789: `PyObject_Str(obj)` written out, or its
+exception. `strObj` is what `PyObject_Str` gives, which for a subclass runs its `__str__` (or a
+`__repr__` it inherits through `object.__str__`) and can raise. -/
+def formatObj (strObj : Py Str) : Py Str := strObj
+
+/-- `_PyUnicode_FormatAdvancedWriter`, unicode_formatter.c:1792-1825, for a `str` (or subclass)
+instance with text `value`. `tpName` is `Py_TYPE(obj)->tp_name`, `exact` is
+`PyUnicode_CheckExact(obj)`, `strObj` is `PyObject_Str(obj)`. -/
+def formatStrAdvancedObj (tpName : String) (exact : Bool) (strObj : Py Str) (value spec : Str) :
+    Py Str := do
+  if spec.isEmpty then
+    if exact then .ok value else formatObj strObj
   else
-    let f ← parseFormatSpec "str" spec 115 60
+    let f ← parseFormatSpec tpName spec 115 60
     if f.type == 115 then formatStringInternal value f
-    else .error (unknownPresentationType f.type "str")
+    else .error (unknownPresentationType f.type tpName)
+
+/-- `format(s, spec)` for an exact `str`. -/
+def formatStrAdvanced (value spec : Str) : Py Str := formatStrAdvancedObj "str" true (.ok value) value spec
 
 /-- The check `format_float_internal` makes first, unicode_formatter.c:1405-1409. -/
 def formatFloatChecks (f : FormatSpec) : Py Unit :=
@@ -422,25 +447,26 @@ def formatLongAdvanced (v : Int) (name : String) (spec : Str) (emptyStr : Str) :
     else .error (unknownPresentationType t name)
 
 /-- `_PyFloat_FormatAdvancedWriter`, unicode_formatter.c:1890-1926, up to its call of
-`format_float_internal`: `none` for the empty spec, else the parsed spec. -/
-def formatFloatDispatch (spec : Str) : Py (Option FormatSpec) := do
+`format_float_internal`: `none` for the empty spec, else the parsed spec. `tpName` is
+`Py_TYPE(obj)->tp_name`. -/
+def formatFloatDispatch (spec : Str) (tpName : String := "float") : Py (Option FormatSpec) := do
   if spec.isEmpty then .ok none
   else
-    let f ← parseFormatSpec "float" spec 0 62
+    let f ← parseFormatSpec tpName spec 0 62
     let t := f.type
     if t == 0 || t == 101 || t == 69 || t == 102 || t == 70 || t == 103 || t == 71 ||
         t == 110 || t == 37 then .ok (some f)
-    else .error (unknownPresentationType t "float")
+    else .error (unknownPresentationType t tpName)
 
 /-- `_PyComplex_FormatAdvancedWriter`, unicode_formatter.c:1929-1964, up to its call of
 `format_complex_internal`. -/
-def formatComplexDispatch (spec : Str) : Py (Option FormatSpec) := do
+def formatComplexDispatch (spec : Str) (tpName : String := "complex") : Py (Option FormatSpec) := do
   if spec.isEmpty then .ok none
   else
-    let f ← parseFormatSpec "complex" spec 0 62
+    let f ← parseFormatSpec tpName spec 0 62
     let t := f.type
     if t == 0 || t == 101 || t == 69 || t == 102 || t == 70 || t == 103 || t == 71 ||
         t == 110 then .ok (some f)
-    else .error (unknownPresentationType t "complex")
+    else .error (unknownPresentationType t tpName)
 
 end PyLean.UnicodeObj

@@ -229,15 +229,48 @@ def formatLongAsFloat (v : Int) (spec : Str) (name : String) : Py Str := do
   let f ← parseFormatSpec name spec 100 62
   formatFloatInternal (F64.ofInt v) f
 
-/-- `_PyFloat_FormatAdvancedWriter`, unicode_formatter.c:1890-1926. The empty spec is
-`str(obj)`. -/
-def formatFloatAdvanced (val : F64) (spec : Str) : Py Str := do
-  match ← formatFloatDispatch spec with
-  | none =>
-    match float_repr val with
-    | none => .error .modelFuel
-    | some s => .ok s
+/-- `PyNumber_Float` of an exact `int`: `long_float`, which raises once the int rounds to
+infinity, from `2**1024 - 2**970` up. -/
+def pyNumberFloatLong (v : Int) : Py F64 :=
+  if v.natAbs ≥ 2 ^ 1024 - 2 ^ 970 then .error (.overflowError "int too large to convert to float")
+  else .ok (F64.ofInt v)
+
+/-- `_PyLong_FormatAdvancedWriter`, unicode_formatter.c:1828-1887, for an `int` (or subclass)
+instance of value `v`. `tpName` is `Py_TYPE(obj)->tp_name`, `exact` is `PyLong_CheckExact(obj)`,
+`strObj` is `PyObject_Str(obj)` (what `format_obj` writes) and `toFloat` is `PyNumber_Float(obj)`,
+which for a subclass can run its `__float__` and raise. For an exact int, the empty spec is
+`_PyLong_FormatWriter(writer, obj, 10, 0)`. -/
+def formatLongAdvancedObj (tpName : String) (exact : Bool) (strObj : Py Str) (toFloat : Py F64)
+    (v : Int) (spec : Str) : Py Str := do
+  if spec.isEmpty then
+    if exact then longFormat v 10 false else formatObj strObj
+  else
+    let f ← parseFormatSpec tpName spec 100 62
+    let t := f.type
+    if t == 98 || t == 99 || t == 100 || t == 111 || t == 120 || t == 88 || t == 110 then
+      formatLongInternal v f exact
+    else if t == 101 || t == 69 || t == 102 || t == 70 || t == 103 || t == 71 || t == 37 then do
+      let x ← toFloat
+      formatFloatInternal x f
+    else .error (unknownPresentationType t tpName)
+
+/-- `_PyFloat_FormatAdvancedWriter`, unicode_formatter.c:1890-1926, for a `float` (or subclass)
+instance of value `val`: an empty spec is `format_obj`, whatever the type. -/
+def formatFloatAdvancedObj (tpName : String) (strObj : Py Str) (val : F64) (spec : Str) :
+    Py Str := do
+  match ← formatFloatDispatch spec tpName with
+  | none => formatObj strObj
   | some f => formatFloatInternal val f
+
+/-- `str()` of an exact float: `float_repr`. `none` from the model is its fuel running out. -/
+def floatStr (val : F64) : Py Str :=
+  match float_repr val with
+  | none => .error .modelFuel
+  | some s => .ok s
+
+/-- `format(x, spec)` for an exact `float`. -/
+def formatFloatAdvanced (val : F64) (spec : Str) : Py Str :=
+  formatFloatAdvancedObj "float" (floatStr val) val spec
 
 /-! ## `format_complex_internal` -/
 
@@ -274,14 +307,22 @@ def formatComplexInternal (re im : F64) (f : FormatSpec) : Py Str := do
     let imBuf ← doubleToString im type2 precision flags
     complexRest reBuf imBuf f skipRe addParens
 
-/-- `_PyComplex_FormatAdvancedWriter`, unicode_formatter.c:1929-1964. The empty spec is
-`str(obj)`. -/
-def formatComplexAdvanced (re im : F64) (spec : Str) : Py Str := do
-  match ← formatComplexDispatch spec with
-  | none =>
-    match complex_repr ⟨re, im⟩ with
-    | none => .error .modelFuel
-    | some s => .ok s
+/-- `_PyComplex_FormatAdvancedWriter`, unicode_formatter.c:1929-1964, for a `complex` (or
+subclass) instance: an empty spec is `format_obj`, whatever the type. -/
+def formatComplexAdvancedObj (tpName : String) (strObj : Py Str) (re im : F64) (spec : Str) :
+    Py Str := do
+  match ← formatComplexDispatch spec tpName with
+  | none => formatObj strObj
   | some f => formatComplexInternal re im f
+
+/-- `str()` of an exact complex: `complex_repr`. -/
+def complexStr (re im : F64) : Py Str :=
+  match complex_repr ⟨re, im⟩ with
+  | none => .error .modelFuel
+  | some s => .ok s
+
+/-- `format(z, spec)` for an exact `complex`. -/
+def formatComplexAdvanced (re im : F64) (spec : Str) : Py Str :=
+  formatComplexAdvancedObj "complex" (complexStr re im) re im spec
 
 end PyLean.UnicodeObj

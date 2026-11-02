@@ -6,6 +6,7 @@ import PyLean.UnicodeObj.FormatStrProps
 import PyLean.UnicodeObj.StrFormatDoc
 import PyLean.UnicodeObj.IntFormatDoc
 import PyLean.UnicodeObj.FormatNumErrors
+import PyLean.UnicodeObj.FormatEntryDoc
 
 /-! Registry entries of the formatting slice. -/
 
@@ -41,35 +42,58 @@ def formatEntries : List Entry := [
     source := "invariant: fast path vs general path"
     status := .proven, prop := ``IntFastSlow, thm := some ``intFastSlow_proven },
   { id := "unicodeobj-format-str-doc", pyFile := "Objects/unicode_formatter.c"
-    pyFns := ["_PyUnicode_FormatAdvancedWriter", "parse_internal_render_format_spec", "get_integer",
-      "is_alignment_token", "is_sign_element", "calc_padding", "fill_padding", "format_string_internal"]
-    statement := "For every string, fill character, alignment <, > or ^, width and optional precision in ASCII digits (at most sys.maxsize), format(s, fill + align + width [+ '.' + precision] + 's') truncates to the precision and pads with fill to the width as the format mini-language documents."
-    source := "docs: Doc/library/string.rst, Format Specification Mini-Language (fill, align, width, precision for str)"
-    status := .proven, prop := ``StrFormatDoc, thm := some ``strFormatDoc_proven
-    notes := "Smoke-tested on 3.15.2 with 300k random strings, fills (digits and alignment characters included), widths and precisions; the model is the one the fmt_str difftest checks." },
+    pyFns := ["_PyUnicode_FormatAdvancedWriter", "format_obj", "format_string_internal", "calc_padding",
+      "fill_padding", "unknown_presentation_type"]
+    statement := "For every str or subclass instance, type name and spec the grammar describes: an empty spec gives the string (exact type) or str(obj), its exception included (subclass); otherwise the spec is read as docParse says, a sign, z, # or '=' is refused with its message, the s type cuts to the precision and pads to the width as documented (no width: no padding), and any other type raises 'Unknown format code' with the type name cut to 200 bytes."
+    source := "docs: Doc/library/string.rst, Format Specification Mini-Language; the messages as written"
+    status := .proven, prop := ``StrFormatSpecDoc, thm := some ``strFormatSpecDoc_proven
+    notes := "format_string_internal is StrInternalDoc, for every spec satisfying SpecInv (what the parser returns, parse_inv). The subclass, type-name and __str__ paths are in the fmt_sub difftest." },
+  { id := "unicodeobj-format-parse-doc", pyFile := "Objects/unicode_formatter.c"
+    pyFns := ["parse_internal_render_format_spec", "get_integer", "is_alignment_token", "is_sign_element",
+      "invalid_thousands_separator_type", "invalid_comma_and_underscore"]
+    statement := "For every spec written from the grammar's fields (fill, alignment, sign, z, #, 0, width and precision in decimal digits of any script and any size, the separators after each, doubled separators, and a type or a longer tail), the parser returns the documented fields or the documented refusal: digits above sys.maxsize, both separators, a missing precision, an invalid specifier, and a separator the type does not take, with their messages in the order the parser meets them."
+    source := "docs: the format_spec grammar of Doc/library/string.rst; round trip of the parser"
+    status := .proven, prop := ``ParseDoc, thm := some ``parseDoc_proven },
   { id := "unicodeobj-format-int-as-str", pyFile := "Objects/unicode_formatter.c"
-    pyFns := ["_PyLong_FormatAdvancedWriter", "format_long_internal"]
+    pyFns := []
     statement := "For every int within the 4300-digit limit, fill character, alignment <, > or ^ and width, format(n, fill + align + width + 'd') equals format(str(n), fill + align + width + 's'), the documented padding of str(n)."
     source := "the implementation disagreeing with itself (int and str formatting of the same text)"
     status := .proven, prop := ``IntFormatAsStr, thm := some ``intFormatAsStr_proven
-    notes := "Goes through the slow path of format_long_internal (a width is given), calc_number_widths and fill_number; smoke-tested on 3.15.2 with 200k ints including 4000-digit ones." },
+    notes := "Goes through the slow path of format_long_internal (a width is given), calc_number_widths and fill_number; smoke-tested on 3.15.2 with 200k ints including 4000-digit ones. The int rows are covered by unicodeobj-format-int-doc." },
+  { id := "unicodeobj-format-int-doc", pyFile := "Objects/unicode_formatter.c"
+    pyFns := ["format_long_internal", "calc_number_widths", "fill_number", "get_locale_info"]
+    statement := "For every int, exact or not, and every parsed spec with an integer type: no precision and no z; for c no sign and no #, the character, OverflowError outside a C long and outside range(0x110000); for b, o, x, X, d, n the digits of |n| in the base (upper case for X) after the prefix # adds (0X for X), grouped by 3 for , and _ and by 4 for _ with b, o, x, X, zero padded with the fewest zeros that reach the width under 0=, and padded by the alignment; base 10 keeps the 4300-digit limit; fast path included."
+    source := "docs: Doc/library/string.rst, integer presentation types, grouping, width"
+    status := .proven, prop := ``IntFormatDoc, thm := some ``intFormatDoc_proven },
+  { id := "unicodeobj-format-long-entry", pyFile := "Objects/unicode_formatter.c"
+    pyFns := ["_PyLong_FormatAdvancedWriter", "format_obj"]
+    statement := "For every int or subclass instance, type name, str(obj) and float(obj) outcome (either can raise) and spec the grammar describes: an empty spec gives str(n) (exact int, 4300-digit limit included) or str(obj) (subclass); an integer type is docInt; a float type formats float(obj), its exception included, as docFloat; any other type raises 'Unknown format code' with the type name."
+    source := "docs: empty spec is str(); 'float() is used to convert the integer'; the messages as written"
+    status := .proven, prop := ``LongEntryDoc, thm := some ``longEntryDoc_proven },
   { id := "unicodeobj-format-str-errors", pyFile := "Objects/unicode_formatter.c"
-    pyFns := ["unknown_presentation_type", "invalid_thousands_separator_type", "invalid_comma_and_underscore"]
-    statement := "format(s, t) for every string and every one-character type t that is not s or another mini-language field raises 'Unknown format code ...' (with \\x.. outside 33..127); ',' with '_' in either order, and ',' or '_' with the str type, raise their own messages."
+    pyFns := []
+    statement := "format(s, t) for every str or subclass, type name and one-character type t that is no mini-language field raises 'Unknown format code ...' with the message written out (in hex outside 33..127); ',' with '_' in either order after the width or the precision, and ',' or '_' with the str type, raise their messages."
     source := "docs: the mini-language's presentation types for str; the messages as written"
-    status := .proven, prop := ``StrFormatErrors, thm := some ``strFormatErrors_proven
-    notes := "Checked on 3.15.2 for every code point below 0x30000 and 20000 above that satisfies the hypothesis." },
-  { id := "unicodeobj-format-group-loop", pyFile := "Objects/unicode_formatter.c"
-    pyFns := ["_PyUnicode_InsertThousandsGrouping", "GroupGenerator_init", "GroupGenerator_next", "InsertThousandsGrouping_fill"]
-    statement := "The rounds of the grouping loop are bounded by the number of digits."
-    source := "invariant: no hang"
-    status := .refuted, prop := ``GroupLoopLinear, thm := some ``groupLoopLinear_refuted
-    bug := some "unicodeobj-format-grouping-width-loop" },
+    status := .proven, prop := ``StrFormatErrors, thm := some ``strFormatErrors_proven },
+  { id := "unicodeobj-format-frac-separator-unchecked", pyFile := "Objects/unicode_formatter.c"
+    pyFns := ["parse_internal_render_format_spec"]
+    statement := "A separator after the precision is refused for the str type, as the separator after the width is."
+    source := "docs: ',' and '_' are 'not supported' for presentation types other than d and the float types; twin: the separator after the width"
+    status := .refuted, prop := ``FracSeparatorChecked, thm := some ``fracSeparatorChecked_refuted
+    bug := some "unicodeobj-format-frac-separator-unchecked" },
   { id := "unicodeobj-format-group-digits", pyFile := "Objects/unicode_formatter.c"
-    pyFns := ["_PyUnicode_InsertThousandsGrouping"]
-    statement := "With no padding, dropping the separator from the grouped text gives the digits back, and the count is the text's length."
-    source := "invariant: format spec mini-language"
-    status := .proven, prop := ``GroupDigits, thm := some ``groupDigits_proven },
+    pyFns := ["_PyUnicode_InsertThousandsGrouping", "GroupGenerator_init", "GroupGenerator_next",
+      "InsertThousandsGrouping_fill"]
+    statement := "For every grouping size 0 < g < 127, separator, non-empty digits and min_width, the backward call writes the digits with the separator between groups of g counted from the right, padded with exactly the leading zeros that reach min_width (none if it is reached, and never a leading separator), and returns the text's length."
+    source := "docs: 'Inserts a comma every 3 digits', zero padding to the width"
+    status := .proven, prop := ``GroupingPlacement, thm := some ``groupingPlacement_proven
+    notes := "The bug unicodeobj-format-grouping-width-loop (no size or signal check before the counting loop that precedes a doomed allocation) has no Lean statement: the model has no allocator and no interrupts. Its former refutation bounded the rounds by the digits, which CPython never promises, and was withdrawn." },
+  { id := "unicodeobj-format-group-fraction", pyFile := "Objects/unicode_formatter.c"
+    pyFns := ["_PyUnicode_InsertThousandsGrouping", "GroupGenerator_init", "GroupGenerator_next",
+      "InsertThousandsGrouping_fill"]
+    statement := "For every grouping size 0 < g < 127, separator and non-empty fraction, the forward call (min_width the fraction's length) writes the fraction with the separator between groups of g counted from the decimal point."
+    source := "docs: the grouping option for the fractional part"
+    status := .proven, prop := ``GroupingFraction, thm := some ``groupingFraction_proven },
   { id := "unicodeobj-format-percent-int-fast-slow", pyFile := "Objects/unicode_format.c"
     pyFns := []
     statement := "With no precision, _PyUnicode_FormatLong gives what the fast path _PyLong_FormatWriter writes, for %d, %o and %x, with or without #, for every int."
@@ -87,27 +111,49 @@ def formatEntries : List Entry := [
     source := "invariant"
     status := .proven, prop := ``ParseNumberSplit, thm := some ``parseNumberSplit_proven },
   { id := "unicodeobj-format-float-internal", pyFile := "Objects/unicode_formatter.c"
-    pyFns := ["format_float_internal"]
+    pyFns := []
     statement := "For every float and every spec with no separator, format(x, spec) is the buffer of PyOS_double_to_string with the sign the spec asks for and the padding of its width, fill and alignment."
     source := "format spec mini-language, Doc/library/string.rst"
     status := .proven, prop := ``FloatSpecLayout, thm := some ``floatSpecLayout_proven },
-  { id := "unicodeobj-format-float-fast-slow", pyFile := "Objects/unicode_formatter.c"
+  { id := "unicodeobj-format-float-buf", pyFile := "Objects/unicode_formatter.c"
     pyFns := ["format_float_internal"]
+    statement := "For every float and float type, format_float_internal asks PyOS_double_to_string for what the docs give: repr ('r', ADD_DOT_0) for no type and no precision, 'g' with ADD_DOT_0 for no type with a precision, 'g' for n, 'f' of 100x then '%' for %, the type itself otherwise, precision 6 by default, # and z as ALT and NO_NEG_0."
+    source := "docs: Doc/library/string.rst, presentation types for float"
+    status := .proven, prop := ``FloatBufDoc, thm := some ``floatBufDoc_proven },
+  { id := "unicodeobj-format-float-doc", pyFile := "Objects/unicode_formatter.c"
+    pyFns := ["format_float_internal", "calc_number_widths", "fill_number", "parse_number", "get_locale_info",
+      "_PyUnicode_InsertThousandsGrouping", "InsertThousandsGrouping_fill", "GroupGenerator_init",
+      "GroupGenerator_next"]
+    statement := "For every float and every parsed spec with a float type: 'precision too big' above INT_MAX, else the documented PyOS_double_to_string text laid out as documented: the sign option, the integral digits grouped by 3 from the decimal point with , or _ (none for n), the fraction grouped by 3 from the point with the separator after the precision, the rest as is, zero padded under 0= with the fewest grouped zeros that reach the width, else padded by the alignment; fast path included."
+    source := "docs: Doc/library/string.rst, grouping, width, alignment"
+    status := .proven, prop := ``FloatFormatDoc, thm := some ``floatFormatDoc_proven },
+  { id := "unicodeobj-format-float-entry", pyFile := "Objects/unicode_formatter.c"
+    pyFns := ["_PyFloat_FormatAdvancedWriter", "format_obj"]
+    statement := "For every float or subclass instance, type name, str(obj) outcome (it can raise) and spec the grammar describes: an empty spec gives str(obj); a float type or none is docFloat; any other type raises 'Unknown format code' with the type name."
+    source := "docs: empty spec is str(); the float presentation types"
+    status := .proven, prop := ``FloatEntryDoc, thm := some ``floatEntryDoc_proven },
+  { id := "unicodeobj-format-complex-entry", pyFile := "Objects/unicode_formatter.c"
+    pyFns := ["_PyComplex_FormatAdvancedWriter", "format_obj"]
+    statement := "For every complex or subclass instance, type name, str(obj) outcome (it can raise) and spec the grammar describes: an empty spec gives str(obj); a complex type or none goes to format_complex_internal; any other type raises 'Unknown format code' with the type name."
+    source := "docs: empty spec is str(); the complex presentation types"
+    status := .proven, prop := ``ComplexEntryDoc, thm := some ``complexEntryDoc_proven },
+  { id := "unicodeobj-format-float-fast-slow", pyFile := "Objects/unicode_formatter.c"
+    pyFns := []
     statement := "The fast path of format_float_internal gives what the general path gives, for every float and every spec that takes it."
     source := "invariant: fast path vs slow path"
     status := .proven, prop := ``FloatFastSlowAgree, thm := some ``floatFastSlowAgree_proven },
   { id := "unicodeobj-format-float-width", pyFile := "Objects/unicode_formatter.c"
-    pyFns := ["format_float_internal", "calc_number_widths", "fill_number"]
+    pyFns := []
     statement := "format(x, spec) is at least width characters long, for every float and every spec, separators included."
     source := "format spec docs: width is the minimum total field width"
     status := .proven, prop := ``FloatWidthIsMinimum, thm := some ``floatWidthIsMinimum_proven },
   { id := "unicodeobj-format-int-width", pyFile := "Objects/unicode_formatter.c"
-    pyFns := ["calc_number_widths", "fill_number"]
+    pyFns := []
     statement := "format(n, spec) is at least width characters long, for every int and every spec, on the prefix path of '#x' and for the 'c' type."
     source := "format spec docs: width is the minimum total field width"
     status := .proven, prop := ``IntWidthIsMinimum, thm := some ``intWidthIsMinimum_proven },
   { id := "unicodeobj-format-float-grouping", pyFile := "Objects/unicode_formatter.c"
-    pyFns := ["_PyUnicode_InsertThousandsGrouping", "InsertThousandsGrouping_fill", "GroupGenerator_next"]
+    pyFns := []
     statement := "Adding ',' or '_' to the integer part, the fraction or both changes a float's text only by the separators, including '.3_f', where the integer loop runs with an empty separator."
     source := "invariant: a separator only separates"
     status := .proven, prop := ``FloatGroupingOnlyInserts, thm := some ``floatGroupingOnlyInserts_proven },

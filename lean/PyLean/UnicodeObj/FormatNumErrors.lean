@@ -36,9 +36,9 @@ def FloatComplexErrors : Prop :=
     formatComplexInternal re im f =
       .error (.valueError "'=' alignment flag is not allowed in complex format specifier")) ∧
   (∀ (x : F64) (t : Nat), PlainChar t → t ≠ 0 → t ∉ floatTypes →
-    formatFloatAdvanced x [t] = .error (unknownPresentationType t "float")) ∧
+    formatFloatAdvanced x [t] = .error (unknownTypeMessage t "float")) ∧
   (∀ (re im : F64) (t : Nat), PlainChar t → t ≠ 0 → t ∉ complexTypes →
-    formatComplexAdvanced re im [t] = .error (unknownPresentationType t "complex"))
+    formatComplexAdvanced re im [t] = .error (unknownTypeMessage t "complex"))
 
 theorem plainChar_parse (name : String) (t dt : Nat) (ht : PlainChar t) :
     parseFormatSpec name [t] dt 62 = .ok { align := 62, type := t } := by
@@ -59,11 +59,11 @@ theorem floatComplexErrors_proven : FloatComplexErrors := by
   · have hp := plainChar_parse "float" t 0 ht
     simp only [floatTypes, List.mem_cons, List.not_mem_nil, or_false, not_or] at hn
     obtain ⟨n1, n2, n3, n4, n5, n6, n7, n8⟩ := hn
-    simp [formatFloatAdvanced, formatFloatDispatch, hp, bind, Except.bind, n1, n2, n3, n4, n5, n6, n7, n8, h0]
+    simp [formatFloatAdvanced, formatFloatAdvancedObj, formatFloatDispatch, hp, bind, Except.bind, n1, n2, n3, n4, n5, n6, n7, n8, h0, unknownTypeMessage_eq]
   · have hp := plainChar_parse "complex" t 0 ht
     simp only [complexTypes, List.mem_cons, List.not_mem_nil, or_false, not_or] at hn
     obtain ⟨n1, n2, n3, n4, n5, n6, n7⟩ := hn
-    simp [formatComplexAdvanced, formatComplexDispatch, hp, bind, Except.bind, n1, n2, n3, n4, n5, n6, n7, h0]
+    simp [formatComplexAdvanced, formatComplexAdvancedObj, formatComplexDispatch, hp, bind, Except.bind, n1, n2, n3, n4, n5, n6, n7, h0, unknownTypeMessage_eq]
 
 /-- The documented presentation types of float and complex are e E f F g G n % and none (an empty
 type field). `format(1, '\x00')` and `format('a', '\x00')` raise "Unknown format code '\x0'", as
