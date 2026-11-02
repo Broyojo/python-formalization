@@ -1,0 +1,49 @@
+id: datetime-fromisocalendar-overflow-class
+title: "date.fromisocalendar raises OverflowError in C and ValueError in Python for components outside C int"
+priority: P4
+kind: twin-mismatch
+module: datetime
+files: [Modules/_datetimemodule.c, Modules/clinic/_datetimemodule.c.h]
+functions: ["C datetime_date_fromisocalendar", "date.fromisocalendar"]
+summary: |
+  Until 3.14 date_fromisocalendar turned the OverflowError of its "iii" conversion into
+  ValueError('ISO calendar component out of range'), so the twins raised the same class.
+  The Argument Clinic conversion in 3.15 dropped that, so date.fromisocalendar(2**31, 1, 1)
+  raises OverflowError from the generated wrapper in C and ValueError in _pydatetime.
+  This is recorded because it refutes a twin property that held on 3.14.7. It is DELIBERATE:
+  Misc/NEWS.d/3.15.0a1.rst says fromisocalendar "can now raise OverflowError for out of range
+  arguments", and Lib/test/datetimetester.py:2187 accepts either class. Do not file it. It is
+  the same class of difference as the constructors, rejected in gh-158778.
+likelihood: Only for components beyond 2**31; such a value is an error in both twins either way.
+maybe_intended: Yes. Stated in NEWS (gh-136571) and in the test.
+reproducer: |
+  import datetime, _pydatetime
+  def outcome(f, *a):
+      try:
+          return repr(f(*a))
+      except Exception as e:
+          return type(e).__name__
+  c = outcome(datetime.date.fromisocalendar, 2**31, 1, 1)
+  py = outcome(_pydatetime.date.fromisocalendar, 2**31, 1, 1)
+  print('C:', c, ' Python:', py)
+  if c == 'OverflowError' and py == 'ValueError':
+      print('REPRODUCED datetime-fromisocalendar-overflow-class')
+expected: The same exception class from both implementations, if the twins are to agree here.
+promised_by: C/Python twin agreement; nothing documents the class for this input.
+cause: |
+  Modules/clinic/_datetimemodule.c.h:352-363 (the `PyLong_AsInt` conversions) reach the caller
+  directly; the handler of the 3.14 body is gone from datetime_date_fromisocalendar_impl,
+  Modules/_datetimemodule.c:3478-3503.
+possible_fix: None needed; the change is deliberate.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 136571, state: closed, relation: introduced it deliberately}
+    - {number: 158778, state: closed, relation: related (OverflowError versus ValueError, rejected)}
+  queries: ["fromisocalendar OverflowError", "fromisocalendar ValueError", "datetime argument clinic fromisocalendar",
+            "datetime Argument Clinic overflow"]
+lean:
+  property: PyLean.Datetime.FromisocalendarTwins
+  theorem: PyLean.Datetime.fromisocalendarTwins_refuted

@@ -334,26 +334,43 @@ theorem fromisocalendarExact_proven : FromisocalendarExact := by
     cases hr
 
 /-- `date.fromisocalendar`: C and Python agree on the result and the exception
-class for all ints (C reports out-of-`int` components with its own message). -/
+class for all ints. -/
 def FromisocalendarTwins : Prop :=
   ∀ Y W D : Int, SameOutcome (fromisocalendarPy Y W D) (fromisocalendarC Y W D)
 
-theorem fromisocalendarTwins_proven : FromisocalendarTwins := by
-  intro Y W D
+/-- `date.fromisocalendar(2**31, 1, 1)`: Python rejects the year with `ValueError`, and C
+stops at the clinic `int` conversion with `OverflowError`. Until 3.14 C turned that
+`OverflowError` into `ValueError`. -/
+theorem fromisocalendarTwins_refuted : ¬FromisocalendarTwins := by
+  intro h
+  have h1 := h (2 ^ 31) 1 1
+  have e1 : fromisocalendarPy (2 ^ 31) 1 1 = .error (.valueError s!"year must be in 1..9999, not {(2 : Int) ^ 31}") := by
+    decide
+  have e2 : fromisocalendarC (2 ^ 31) 1 1 =
+      .error (.overflowError "Python int too large to convert to C int") := by decide
+  rw [e1, e2] at h1
+  simp [SameOutcome, PyExc.className] at h1
+
+/-- The same with every component a C `int`, the domain the clinic conversion lets through:
+C and Python agree on the result and the exception class. -/
+def FromisocalendarTwinsCInt : Prop :=
+  ∀ Y W D : Int, fitsCInt Y → fitsCInt W → fitsCInt D →
+    SameOutcome (fromisocalendarPy Y W D) (fromisocalendarC Y W D)
+
+theorem fromisocalendarTwinsCInt_proven : FromisocalendarTwinsCInt := by
+  intro Y W D hY hW hD
+  have hf : fitsCInt Y ∧ fitsCInt W ∧ fitsCInt D := ⟨hY, hW, hD⟩
   by_cases hv : ValidIso Y W D
-  · have hf : fitsCInt Y ∧ fitsCInt W ∧ fitsCInt D := by
-      unfold ValidIso MINYEAR MAXYEAR at hv; unfold fitsCInt; omega
-    unfold fromisocalendarPy fromisocalendarC
+  · unfold fromisocalendarPy fromisocalendarC
     rw [isoweekToGregorianPy_ok _ _ _ hv, if_neg (by simp [hf]), (isoToYmdC_eq _ _ _).1 hv]
     exact sameOutcome_refl _
   · obtain ⟨e, he, hc⟩ := isoweekToGregorianPy_err Y W D hv
     have hpy : fromisocalendarPy Y W D = .error e := by unfold fromisocalendarPy; rw [he]; rfl
     rw [hpy]
     unfold fromisocalendarC
-    split
-    · simp only [SameOutcome]; rw [hc]; rfl
-    · obtain ⟨e', he'⟩ := (isoToYmdC_eq Y W D).2 hv
-      rw [he']
-      split <;> first | (simp only [SameOutcome]; rw [hc]; rfl) | (exfalso; simp_all)
+    rw [if_neg (by simp [hf])]
+    obtain ⟨e', he'⟩ := (isoToYmdC_eq Y W D).2 hv
+    rw [he']
+    split <;> first | (simp only [SameOutcome]; rw [hc]; rfl) | (exfalso; simp_all)
 
 end PyLean.Datetime

@@ -1,0 +1,67 @@
+id: datetime-strptime-oy-day-without-year
+title: "strptime rejects %d with %Oy as 'without a year directive', though %Oy is the year"
+priority: P4
+kind: wrong-error
+module: datetime
+files: [Lib/_strptime.py]
+functions: ["TimeRE.pattern"]
+summary: |
+  3.15 made %d without a year a ValueError. TimeRE.pattern decides that by comparing each
+  directive with exactly 'Y', 'y' and 'G', so %Oy, the alternative-digits spelling of %y, does
+  not count, although it fills group `y` and _strptime reads that group as the year. In a
+  locale with alternative digits, or where locale.ALT_DIGITS is unavailable (LC_alt_digits is
+  None), strptime(s, '%d/%m/%Oy') raises "Day of month directive '%d' may not be used without
+  a year directive". On 3.14 the same format parsed, with a DeprecationWarning from the
+  same check. '%Od/%m/%Oy' parses, because %Od does not count as a day either, so '%Od' alone
+  also escapes the new error, the opposite way round.
+
+  In the C locale LC_alt_digits is empty, %Oy translates to '' and captures nothing, so the
+  error is correct there. Formats such as '%d %F' or '%d %D' are not affected in practice:
+  they name group `d` twice and would fail in re.compile anyway.
+likelihood: |
+  Low. It needs %Oy together with %d, in a locale with alternative digits or on a platform
+  without ALT_DIGITS. The reproducer stands in a LocaleTime, because the build pod has only
+  the C locale; a real locale was not tried.
+maybe_intended: |
+  Probably not intended, since the message is wrong for this format, but a maintainer could
+  reasonably answer that %Oy is rare. Worth one line in a wider strptime note, not an issue of
+  its own.
+reproducer: |
+  import _strptime
+  class Stand_in:
+      def __init__(self):
+          real = _strptime.LocaleTime()
+          for k in ('f_weekday', 'a_weekday', 'f_month', 'a_month', 'am_pm', 'timezone',
+                    'LC_date_time', 'LC_date', 'LC_time', 'LC_time_ampm', 'lang', 'tzname', 'daylight'):
+              setattr(self, k, getattr(real, k))
+          self.LC_alt_digits = None
+  regexes = _strptime.TimeRE(Stand_in())
+  print('%Oy is', regexes['Oy'])
+  try:
+      regexes.pattern('%d/%m/%Oy')
+      raised = False
+  except ValueError as e:
+      print(e)
+      raised = 'without a year' in str(e)
+  print(regexes.compile('%Od/%m/%Oy').match('01/02/03').groupdict())
+  if raised and '(?P<y>' in regexes['Oy']:
+      print('REPRODUCED datetime-strptime-oy-day-without-year')
+expected: '%d/%m/%Oy parses as %Od/%m/%Oy does, since it has a year.'
+promised_by: |
+  The message itself ("without a year directive"), and Doc/library/datetime.rst:2922 ("Using %d
+  without a year now raises ValueError"), which does not cover a format that has one.
+cause: |
+  Lib/_strptime.py:471-474: `case 'Y' | 'y' | 'G'` compares the whole directive, so 'Oy' falls
+  through and year_in_format stays False at :483. :475-477 miss 'Od' the same way.
+possible_fix: Count 'Oy' as a year and 'Od' as a day in the `match` of `repl`.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 70647, state: closed, relation: related (the change that added the error)}
+  queries: ["strptime day of month without year", "strptime without year ValueError directive", "strptime Oy",
+            "strptime alt digits year", "_strptime 70647"]
+lean:
+  property: PyLean.Datetime.StrptimeDayNeedsYear
+  theorem: PyLean.Datetime.strptimeDayNeedsYear_refuted

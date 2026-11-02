@@ -3,7 +3,7 @@ import PyLean.Datetime.Delta
 /-!
 The proleptic Gregorian calendar core of `date`: ordinals, ISO calendar,
 `date ± timedelta` and the field checks, after `Lib/_pydatetime.py` and
-`Modules/_datetimemodule.c` (CPython 3.14.7).
+`Modules/_datetimemodule.c` (CPython 3.15.2).
 
 The C helpers use truncating `/` and `%` on `int` (`Int.tdiv`, `Int.tmod`);
 Python uses floor division. Where the source asserts that its inputs are
@@ -32,12 +32,12 @@ def daysInMonthTable (m : Int) : Int :=
 def daysBeforeMonthTable (m : Int) : Int :=
   [-1, 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334].getD m.toNat (-1)
 
-/-- `_days_in_month`, _pydatetime.py:56-61; C `days_in_month`, :443-452.
+/-- `_days_in_month`, _pydatetime.py:56-61; C `days_in_month`, :439-447.
 Both assert `1 <= month <= 12`; every caller establishes it. -/
 def daysInMonth (y m : Int) : Int :=
   if m = 2 ∧ isLeap y then 29 else daysInMonthTable m
 
-/-- `_days_before_month`, _pydatetime.py:63-66; C `days_before_month`, :455-468. -/
+/-- `_days_before_month`, _pydatetime.py:63-66; C `days_before_month`, :451-461. -/
 def daysBeforeMonth (y m : Int) : Int :=
   daysBeforeMonthTable m + (if m > 2 ∧ isLeap y then 1 else 0)
 
@@ -88,15 +88,15 @@ def ord2ymd (n : Int) : Int × Int × Int :=
 
 /-! ### C calendar helpers -/
 
-/-- C `days_before_year`, :474-484 (truncating division; asserts `year >= 1`). -/
+/-- C `days_before_year`, :467-476 (truncating division; asserts `year >= 1`). -/
 def daysBeforeYearC (year : Int) : Int :=
   let y := year - 1
   y * 365 + y.tdiv 4 - y.tdiv 100 + y.tdiv 400
 
-/-- C `ymd_to_ord`, :586-590. -/
+/-- C `ymd_to_ord`, :571-574. -/
 def ymdToOrdC (y m d : Int) : Int := daysBeforeYearC y + daysBeforeMonth y m + d
 
-/-- The month search at the end of C `ord_to_ymd`, :571-582; the estimate
+/-- The month search at the end of C `ord_to_ymd`, :487-567; the estimate
 correction uses `days_in_month(year, month)`. -/
 def monthDayC (year : Int) (leapyear : Bool) (n : Int) : Int × Int :=
   -- `(n + 50) >> 5`: arithmetic shift, i.e. floor division by 32
@@ -109,7 +109,7 @@ def monthDayC (year : Int) (leapyear : Bool) (n : Int) : Int × Int :=
     else (month, preceding)
   (month, n - preceding + 1)
 
-/-- C `ord_to_ymd`, :494-583 (asserts `ordinal >= 1`; callers check it). -/
+/-- C `ord_to_ymd`, :487-567 (asserts `ordinal >= 1`; callers check it). -/
 def ordToYmdC (ordinal : Int) : Int × Int × Int :=
   let ordinal := ordinal - 1
   let n400 := ordinal.tdiv DI400Y
@@ -130,7 +130,7 @@ def ordToYmdC (ordinal : Int) : Int × Int × Int :=
 
 /-! ### Field checks -/
 
-/-- `_check_date_fields`, _pydatetime.py:578-589; C `check_date_args`, :674-696
+/-- `_check_date_fields`, _pydatetime.py:578-589; C `check_date_args`, :659-680
 (same order and messages). -/
 def checkDate (y m d : Int) : Py (Int × Int × Int) :=
   if ¬(MINYEAR ≤ y ∧ y ≤ MAXYEAR) then .error (.valueError s!"year must be in 1..9999, not {y}")
@@ -147,8 +147,8 @@ def ValidDate (y m d : Int) : Prop :=
 
 instance (y m d : Int) : Decidable (ValidDate y m d) := by unfold ValidDate; infer_instance
 
-/-- `_check_time_fields`, _pydatetime.py:591-607 with `fold=0`; C
-`check_time_args`, :701-727. -/
+/-- `_check_time_fields`, _pydatetime.py:591-606 with `fold=0`; C
+`check_time_args`, :686-711. -/
 def checkTime (h mi s us : Int) : Py (Int × Int × Int × Int) :=
   if ¬(0 ≤ h ∧ h ≤ 23) then .error (.valueError s!"hour must be in 0..23, not {h}")
   else if ¬(0 ≤ mi ∧ mi ≤ 59) then .error (.valueError s!"minute must be in 0..59, not {mi}")
@@ -170,10 +170,10 @@ def fromordinalPy (n : Int) : Py (Int × Int × Int) :=
   let (y, m, d) := ord2ymd n
   checkDate y m d
 
-/-- `date.fromordinal(n)` in C, `date_fromordinal`, :3417-3437 (`"i"` conversion,
-then the `ordinal >= 1` check). -/
+/-- `date.fromordinal(n)` in C, `datetime_date_fromordinal_impl`, :3406-3419 (the clinic
+`int` conversion, then the `ordinal >= 1` check). -/
 def fromordinalC (n : Int) : Py (Int × Int × Int) :=
-  if ¬fitsCInt n then .error (.overflowError "~Python int too large to convert to C int")
+  if ¬fitsCInt n then .error (.overflowError "Python int too large to convert to C int")
   else if n < 1 then .error (.valueError "ordinal must be >= 1")
   else let (y, m, d) := ordToYmdC n; checkDate y m d
 
@@ -186,7 +186,7 @@ def dateAddPy (y m d : Int) (t : Delta) : Py (Int × Int × Int) :=
   if 0 < o ∧ o ≤ MAXORDINAL then fromordinalPy o
   else .error (.overflowError "result out of range")
 
-/-- `normalize_y_m_d`, _datetimemodule.c:770-831. -/
+/-- `normalize_y_m_d`, _datetimemodule.c:771-831. -/
 def normalizeYMDC (y m d : Int) : Py (Int × Int × Int) :=
   let dim := daysInMonth y m
   let r : Option (Int × Int × Int) :=
@@ -208,7 +208,7 @@ def normalizeYMDC (y m d : Int) : Py (Int × Int × Int) :=
     else .error (.overflowError "date value out of range")
   | none => .error (.overflowError "date value out of range")
 
-/-- `add_date_timedelta`, _datetimemodule.c:3546-3559 (`negate = 0`), then
+/-- `add_date_timedelta`, _datetimemodule.c:3547-3559 (`negate = 0`), then
 `new_date_subclass_ex` (whose `check_date_args` cannot fail after
 normalization). -/
 def dateAddC (y m d : Int) (t : Delta) : Py (Int × Int × Int) := do
@@ -239,7 +239,7 @@ def isocalendar (y m d : Int) : Int × Int × Int :=
   else if week ≥ 52 ∧ today ≥ isoWeek1Monday (y + 1) then (y + 1, 1, day + 1)
   else (y, week + 1, day + 1)
 
-/-- `_isoweek_to_gregorian`, _pydatetime.py:522-554. -/
+/-- `_isoweek_to_gregorian`, _pydatetime.py:522-551. -/
 def isoweekToGregorianPy (year week day : Int) : Py (Int × Int × Int) :=
   if ¬(MINYEAR ≤ year ∧ year ≤ MAXYEAR) then
     .error (.valueError s!"year must be in 1..9999, not {year}")
@@ -258,15 +258,15 @@ def isoweekToGregorianPy (year week day : Int) : Py (Int × Int × Int) :=
       let dayOffset := (week - 1) * 7 + (day - 1)
       .ok (ord2ymd (isoWeek1Monday year + dayOffset))
 
-/-- `date.fromisocalendar(year, week, day)`, _pydatetime.py:1077-1082. -/
+/-- `date.fromisocalendar(year, week, day)`, _pydatetime.py:1078-1082. -/
 def fromisocalendarPy (year week day : Int) : Py (Int × Int × Int) := do
   let (y, m, d) ← isoweekToGregorianPy year week day
   checkDate y m d
 
-/-- C `weekday`, :593-597. -/
+/-- C `weekday`, :578-581. -/
 def weekdayC (y m d : Int) : Int := (ymdToOrdC y m d + 6).tmod 7
 
-/-- C `iso_to_ymd`, :616-650; returns the C status code or the date. -/
+/-- C `iso_to_ymd`, :601-634; returns the C status code or the date. -/
 def isoToYmdC (isoYear isoWeek isoDay : Int) : Except Int (Int × Int × Int) :=
   if isoYear < MINYEAR ∨ isoYear > MAXYEAR then .error (-4)
   else
@@ -284,11 +284,13 @@ def isoToYmdC (isoYear isoWeek isoDay : Int) : Except Int (Int × Int × Int) :=
       let dayOffset := (isoWeek - 1) * 7 + isoDay - 1
       .ok (ordToYmdC (day1 + dayOffset))
 
-/-- `date.fromisocalendar`, C `date_fromisocalendar`, :3480-3520. The
-`OverflowError` of the `"iii"` conversion is turned into `ValueError`. -/
+/-- `date.fromisocalendar`, `datetime_date_fromisocalendar_impl`, :3478-3503, after the
+clinic `int` conversions of `year`, `week` and `day`. Until 3.14 the C code turned their
+`OverflowError` into `ValueError("ISO calendar component out of range")`; the clinic wrapper
+does not, so the `OverflowError` now reaches the caller. -/
 def fromisocalendarC (year week day : Int) : Py (Int × Int × Int) :=
   if ¬(fitsCInt year ∧ fitsCInt week ∧ fitsCInt day) then
-    .error (.valueError "ISO calendar component out of range")
+    .error (.overflowError "Python int too large to convert to C int")
   else
     match isoToYmdC year week day with
     | .error (-4) => .error (.valueError s!"year must be in 1..9999, not {year}")

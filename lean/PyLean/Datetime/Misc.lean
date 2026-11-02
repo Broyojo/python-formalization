@@ -37,7 +37,7 @@ def reprC (t : Delta) : String :=
   let args := if args.isEmpty then "0" else args
   s!"datetime.timedelta({args})"
 
-/-- `timedelta.__reduce__`, Py:943-944, and `delta_reduce`, :3056-3060: the
+/-- `timedelta.__reduce__`, Py:962-963, and `delta_reduce`, :3056-3060: the
 constructor arguments. -/
 def reduceArgs (t : Delta) : List Int := t.getstate
 
@@ -50,7 +50,7 @@ inductive TzName where
   | other
   deriving Repr, DecidableEq, Inhabited
 
-/-- `timezone.__new__`, Py:2407-2420, through `timezone._create`, Py:2426-2430:
+/-- `timezone.__new__`, Py:2462-2475, through `timezone._create`, Py:2481-2485:
 `oid` is the identity of the new object. -/
 def timezoneNewPy (oid : Nat) (offset : Delta) (name : TzName) : Py Tz :=
   match name with
@@ -65,10 +65,11 @@ def timezoneNewPy (oid : Nat) (offset : Delta) (name : TzName) : Py Tz :=
     | .ok _ => .ok ⟨oid, .timezone offset (some s)⟩
     | .error e => .error e
 
-/-- `timezone_new`, @3.14.7:4295-4304, `new_timezone`, :1459-1479, `create_timezone`, :1431-1453. -/
+/-- `timezone_new_impl`, :4363-4367, `new_timezone`, :1459-1479, `create_timezone`, :1431-1453.
+The clinic wrapper checks `name` first; `offset` is a `timedelta` in this signature. -/
 def timezoneNewC (oid : Nat) (offset : Delta) (name : TzName) : Py Tz :=
   match name with
-  | .other => .error (.typeError "~timezone() argument 2 must be str")
+  | .other => .error (.typeError "~timezone() argument 'name' must be str")
   | .omitted =>
     if !offset.bool then .ok tzUTC
     else match newTimezoneC offset with
@@ -79,20 +80,20 @@ def timezoneNewC (oid : Nat) (offset : Delta) (name : TzName) : Py Tz :=
       .error (.valueError "~offset must be a timedelta strictly between -timedelta(hours=24) and timedelta(hours=24)")
     else .ok ⟨oid, .timezone offset (some s)⟩
 
-/-- `timezone.__eq__`, Py:2438-2441: offsets compare, names do not. -/
+/-- `timezone.__eq__`, Py:2493-2496: offsets compare, names do not. -/
 def timezoneEqPy (a b : Delta) : Bool := a.richPy .eq b
 
 /-- `timezone_richcompare`, :4379-4389: `none` is `NotImplemented`. -/
 def timezoneRichC (op : CmpOp) (a b : Delta) : Option Bool :=
   if op = .eq ∨ op = .ne then some (a.richC op b) else none
 
-/-- `timezone.__hash__`, Py:2443-2444, and `timezone_hash`, :4392-4396. -/
+/-- `timezone.__hash__`, Py:2498-2499, and `timezone_hash`, :4392-4396. -/
 def timezoneHashKey (offset : Delta) : HashKey := offset.hashKey
 
-/-- `timezone.__getinitargs__`, Py:2432-2436, and `timezone_getinitargs`, :4526-4532. -/
+/-- `timezone.__getinitargs__`, Py:2487-2491, and `timezone_getinitargs`, :4526-4532. -/
 def timezoneGetinitargs (offset : Delta) (name : Option String) : Delta × Option String := (offset, name)
 
-/-- `tzinfo.__reduce__`, Py:1345-1351, and `tzinfo_reduce`, :4257-4283: the
+/-- `tzinfo.__reduce__`, Py:1370-1376, and `tzinfo_reduce`, :4257-4283: the
 constructor arguments (from `__getinitargs__` if there is one) and the state. -/
 def tzinfoReduce {α σ : Type} (getinitargs : Option (Unit → Py (List α))) (state : Py σ) :
     Py (List α × σ) := do
@@ -107,7 +108,7 @@ is acceptable. -/
 def timezoneCheckArg (ok : Bool) (meth : String) : Py Unit :=
   if ok then .ok () else .error (.typeError s!"~{meth}() argument must be a datetime instance or None")
 
-/-- `timezone.__init_subclass__`, Py:2422-2423. -/
+/-- `timezone.__init_subclass__`, Py:2477-2478. -/
 def timezoneInitSubclass : Py Unit :=
   .error (.typeError "type 'datetime.timezone' is not an acceptable base type")
 
@@ -118,7 +119,7 @@ def utcToSecondsC (y m d hh mi s : Int) : Py Int :=
   if y < MINYEAR ∨ y > MAXYEAR then .error (.valueError s!"year must be in 1..9999, not {y}")
   else .ok (((ymdToOrdC y m d * 24 + hh) * 60 + mi) * 60 + s)
 
-/-- `datetime._mktime`, Py:1979-2011, over the local-time function. `loc u` is
+/-- `datetime._mktime`, Py:2029-2061, over the local-time function. `loc u` is
 `(datetime(*time.localtime(u)[:6]) - epoch) // timedelta(0, 1)`, `t` is
 `(self - epoch) // timedelta(0, 1)`. -/
 def mktimePy (loc : Int → Py Int) (t fold : Int) : Py Int := do

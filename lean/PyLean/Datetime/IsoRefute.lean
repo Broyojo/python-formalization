@@ -1,7 +1,7 @@
 import PyLean.Datetime.Spec
 
 /-!
-ISO 8601 parsing (`fromisoformat`) in CPython 3.14.7: properties refuted by
+ISO 8601 parsing (`fromisoformat`) in CPython 3.15.2: properties refuted by
 concrete strings. Each refutation is evaluated on the models of both twins.
 -/
 
@@ -14,13 +14,14 @@ class for every string. -/
 def DateFromisoTwins : Prop :=
   ∀ s : List Char, SameOutcome (dateFromIsoPy s) (dateFromIsoC s)
 
-/-- `_pydatetime.date.fromisoformat('2020-+1-01')` is `date(2020, 1, 1)`:
-`int('+1')` accepts the sign. The C parser rejects the string. -/
+/-- C `date.fromisoformat('20040509\u0660')` is `date(2004, 5, 9)`: the length check counts
+UTF-8 bytes, so the eight digits and the two bytes of U+0660 pass as ten, and the parser
+ignores what follows the day. Python refuses the string because it is not ASCII. -/
 theorem dateFromisoTwins_refuted : ¬DateFromisoTwins := by
   intro h
-  have h1 := h "2020-+1-01".toList
-  have e1 : dateFromIsoPy "2020-+1-01".toList = .ok (2020, 1, 1) := by decide
-  have e2 : dateFromIsoC "2020-+1-01".toList = .error (.valueError "~Invalid isoformat string") := by decide
+  have h1 := h "20040509\u0660".toList
+  have e1 : dateFromIsoPy "20040509\u0660".toList = .error (.valueError "Argument must be an ASCII str") := by decide
+  have e2 : dateFromIsoC "20040509\u0660".toList = .ok (2004, 5, 9) := by decide
   rw [e1, e2] at h1
   exact h1
 

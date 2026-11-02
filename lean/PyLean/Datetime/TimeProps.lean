@@ -289,31 +289,72 @@ theorem datetimePickle_proven : DatetimePickle := by
     simp only [dtSetstate, hm7, ite_false, Option.some.injEq, DT.mk.injEq, and_true]
     omega
 
-/-- `time(h, m, s, us, tz, fold=f)` with C-`int` fields: the twins agree. Fields
-outside `int` are the rejected class of gh-158778. -/
+/-- `time(h, m, s, us, tz, fold=f)` with C-`int` fields, `fold` among them: the twins agree.
+Fields outside `int` are the rejected class of gh-158778; for `fold`, `TimeCtorFoldTwins` has
+that case on record as a refutation. -/
 def TimeCtorInt : Prop :=
-  ∀ (h mi s us f : Int) (tz : Arg), fitsCInt h → fitsCInt mi → fitsCInt s → fitsCInt us →
+  ∀ (h mi s us f : Int) (tz : Arg), fitsCInt h → fitsCInt mi → fitsCInt s → fitsCInt us → fitsCInt f →
     (tz = .none_ ∨ ∃ t, tz = .tz t) →
     timeNewPy (.int h) (.int mi) (.int s) (.int us) tz f = timeNewC [.int h, .int mi, .int s, .int us, tz] f
 
 theorem timeCtorInt_proven : TimeCtorInt := by
-  intro h mi s us f tz h1 h2 h3 h4 htz
+  intro h mi s us f tz h1 h2 h3 h4 h5 htz
   rcases htz with rfl | ⟨t, rfl⟩ <;>
-    simp [timeNewPy, timeNewC, stateOf, pyIndex, parseI, h1, h2, h3, h4, checkTzinfoArgPy, checkTzinfoSubclassC,
-      bind, Except.bind, pure, Except.pure]
+    simp [timeNewPy, timeNewC, datetimeTimeClinicC, datetimeTimeImplC, clinicArity, stateOf, pyIndex, parseI_int,
+      h1, h2, h3, h4, h5, checkTzinfoArgPy, checkTzinfoSubclassC, bind, Except.bind, pure, Except.pure]
 
 /-- `datetime(y, ..., us, tz, fold=f)` with C-`int` fields: the twins agree. -/
 def DatetimeCtorInt : Prop :=
+  ∀ (y m d h mi s us f : Int) (tz : Arg), fitsCInt y → fitsCInt m → fitsCInt d → fitsCInt h → fitsCInt mi →
+    fitsCInt s → fitsCInt us → fitsCInt f → (tz = .none_ ∨ ∃ t, tz = .tz t) →
+    datetimeNewPy (.int y) (.int m) (.int d) (.int h) (.int mi) (.int s) (.int us) tz f =
+      datetimeNewC [.int y, .int m, .int d, .int h, .int mi, .int s, .int us, tz] f
+
+theorem datetimeCtorInt_proven : DatetimeCtorInt := by
+  intro y m d h mi s us f tz h1 h2 h3 h4 h5 h6 h7 h8 htz
+  rcases htz with rfl | ⟨t, rfl⟩ <;>
+    simp [datetimeNewPy, datetimeNewC, datetimeDatetimeClinicC, datetimeDatetimeImplC, clinicArity, stateOf, pyIndex,
+      parseI_int, h1, h2, h3, h4, h5, h6, h7, h8, checkTzinfoArgPy, checkTzinfoSubclassC, bind, Except.bind, pure,
+      Except.pure]
+
+/-- `time(h, m, s, us, tz, fold=f)` with C-`int` fields and any int `fold`: the twins agree. -/
+def TimeCtorFoldTwins : Prop :=
+  ∀ (h mi s us f : Int) (tz : Arg), fitsCInt h → fitsCInt mi → fitsCInt s → fitsCInt us →
+    (tz = .none_ ∨ ∃ t, tz = .tz t) →
+    timeNewPy (.int h) (.int mi) (.int s) (.int us) tz f = timeNewC [.int h, .int mi, .int s, .int us, tz] f
+
+/-- `time(0, 0, 0, 0, None, fold=2**31)`: Python raises `ValueError` from the check on `fold`,
+and C stops at the clinic `int` conversion with `OverflowError`. -/
+theorem timeCtorFoldTwins_refuted : ¬TimeCtorFoldTwins := by
+  intro h
+  have hf : fitsCInt 0 := by unfold fitsCInt; decide
+  have h1 := h 0 0 0 0 (2 ^ 31) .none_ hf hf hf hf (Or.inl rfl)
+  have e1 : timeNewPy (.int 0) (.int 0) (.int 0) (.int 0) .none_ (2 ^ 31) =
+      .error (.valueError s!"fold must be either 0 or 1, not {(2 ^ 31 : Int)}") := rfl
+  have e2 : timeNewC [.int 0, .int 0, .int 0, .int 0, .none_] (2 ^ 31) =
+      .error (.overflowError "Python int too large to convert to C int") := rfl
+  rw [e1, e2] at h1
+  simp at h1
+
+/-- `datetime(y, ..., us, tz, fold=f)` with C-`int` fields and any int `fold`: the twins agree. -/
+def DatetimeCtorFoldTwins : Prop :=
   ∀ (y m d h mi s us f : Int) (tz : Arg), fitsCInt y → fitsCInt m → fitsCInt d → fitsCInt h → fitsCInt mi →
     fitsCInt s → fitsCInt us → (tz = .none_ ∨ ∃ t, tz = .tz t) →
     datetimeNewPy (.int y) (.int m) (.int d) (.int h) (.int mi) (.int s) (.int us) tz f =
       datetimeNewC [.int y, .int m, .int d, .int h, .int mi, .int s, .int us, tz] f
 
-theorem datetimeCtorInt_proven : DatetimeCtorInt := by
-  intro y m d h mi s us f tz h1 h2 h3 h4 h5 h6 h7 htz
-  rcases htz with rfl | ⟨t, rfl⟩ <;>
-    simp [datetimeNewPy, datetimeNewC, stateOf, pyIndex, parseI, h1, h2, h3, h4, h5, h6, h7, checkTzinfoArgPy,
-      checkTzinfoSubclassC, bind, Except.bind, pure, Except.pure]
+/-- `datetime(1, 1, 1, 0, 0, 0, 0, None, fold=2**31)`, as for `time`. -/
+theorem datetimeCtorFoldTwins_refuted : ¬DatetimeCtorFoldTwins := by
+  intro h
+  have hf : fitsCInt 0 := by unfold fitsCInt; decide
+  have hg : fitsCInt 1 := by unfold fitsCInt; decide
+  have h1 := h 1 1 1 0 0 0 0 (2 ^ 31) .none_ hg hg hg hf hf hf hf (Or.inl rfl)
+  have e1 : datetimeNewPy (.int 1) (.int 1) (.int 1) (.int 0) (.int 0) (.int 0) (.int 0) .none_ (2 ^ 31) =
+      .error (.valueError s!"fold must be either 0 or 1, not {(2 ^ 31 : Int)}") := rfl
+  have e2 : datetimeNewC [.int 1, .int 1, .int 1, .int 0, .int 0, .int 0, .int 0, .none_] (2 ^ 31) =
+      .error (.overflowError "Python int too large to convert to C int") := rfl
+  rw [e1, e2] at h1
+  simp at h1
 
 /-! ### Comparison and hash -/
 
