@@ -237,7 +237,7 @@ def pyLoadLongLine (line : Bytes) : Py Int :=
   let val := if val ≠ [] ∧ val.getLast? = some 0x4c then val.dropLast else val
   pyIntOfBytes val
 
-/-- `load_long` (`Modules/_pickle.c:5674-5700`): a final `L` before the newline
+/-- `load_long` (`Modules/_pickle.c:5674-5697`): a final `L` before the newline
 is overwritten with NUL. -/
 def cLoadLongLine (s : Bytes) : Py Int :=
   if s.length < 2 then .error (unpicklingError "pickle data was truncated")

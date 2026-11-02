@@ -9,7 +9,9 @@ import PyLean.Pickle.ToolsTable
 A reader runs over a file: the data and a position. `read_floatnl` stops at
 `float()`, which needs the binary64 model, with the `Excluded` marker. `dis`
 stops the same way on `repr` of a float and of a character outside Latin-1,
-whose printability needs the Unicode database.
+whose printability needs the Unicode database. `dis` is modelled without a theme:
+the colours of `get_theme(tty_file=out)` add escapes around the same text, and
+it measures each line through `decolor`; the difftest compares the two.
 -/
 
 namespace PyLean.Pickle
@@ -485,7 +487,7 @@ def pad4 (s : String) : String := s ++ spaces (4 - s.length)
 
 def markObj : String := "mark"
 
-/-- The stack and memo that `dis` emulates, `:2545-2552`. Stacks have their top
+/-- The stack and memo that `dis` emulates, `:2466-2473`. Stacks have their top
 first. -/
 structure DisSt where
   stack : List String := []
@@ -508,7 +510,7 @@ structure MarkRes where
   errormsg : Option String
 
 /-- `while stack[-1] is not markobject: stack.pop()` and the `stack.pop()` that
-follows, `:2582-2584`. `stack[-1]` raises on an empty stack. -/
+follows, `:2509-2511`. `stack[-1]` raises on an empty stack. -/
 def popToMark : List String → Py (List String)
   | [] => .error (.indexError "list index out of range")
   | x :: r => if x == markObj then .ok r else popToMark r
@@ -517,7 +519,7 @@ def markText : Option Nat → String
   | none => "(MARK at unknown opcode offset)"
   | some p => s!"(MARK at {p})"
 
-/-- `:2566-2592`. -/
+/-- `:2491-2519`. -/
 def markPhase (info : OpInfo) (stack : List String) (markstack : List (Option Nat)) : Py MarkRes :=
   let n := info.before.length
   if info.before.contains markObj || (info.name == "POP" && stack.head? == some markObj) then
@@ -542,7 +544,7 @@ structure MemoRes where
   markmsg : Option String
   errormsg : Option String
 
-/-- `:2594-2617`. -/
+/-- `:2521-2540`. -/
 def memoPhase (info : OpInfo) (arg : Option TV) (stack : List String) (memo : List (Int × String))
     (markmsg errormsg : Option String) : Py MemoRes :=
   let name := info.name
@@ -566,7 +568,7 @@ def memoPhase (info : OpInfo) (arg : Option TV) (stack : List String) (memo : Li
       | none => .ok ⟨memo, info.after, markmsg, errormsg⟩
   else .ok ⟨memo, info.after, markmsg, errormsg⟩
 
-/-- `:2619-2628`. -/
+/-- `:2542-2557`. -/
 def argText (info : OpInfo) (arg : Option TV) (markmsg : Option String) (line : String) : Py String :=
   if arg.isNone && markmsg.isNone then .ok line
   else do
@@ -582,7 +584,7 @@ def argText (info : OpInfo) (arg : Option TV) (markmsg : Option String) (line : 
     | some m => return l ++ " " ++ m
     | none => return l
 
-/-- `:2629-2635`: the line and the new `annocol`. -/
+/-- `:2558-2566`: the line and the new `annocol`. -/
 def annotateLine (info : OpInfo) (annotate annocol : Nat) (line : String) : String × Nat :=
   if annotate = 0 then (line, annocol)
   else
@@ -595,7 +597,7 @@ def dmLift {α : Type} (out : String) : Py α → DM α
   | .ok a => .ok a
   | .error e => .error (e, out)
 
-/-- The stack effects, `:2643-2653`. -/
+/-- The stack effects, `:2574-2584`. -/
 def stackPhase (out : String) (stack : List String) (markstack : List (Option Nat)) (numtopop : Nat)
     (after : List String) (pos : Option Nat) : DM (List String × List (Option Nat)) :=
   if stack.length < numtopop then
@@ -604,7 +606,7 @@ def stackPhase (out : String) (stack : List String) (markstack : List (Option Na
     let ms := if after.contains markObj then pos :: markstack else markstack
     .ok (after.reverse ++ stack.drop numtopop, ms)
 
-/-- The body of the loop of `dis`, `:2554-2653`. -/
+/-- The body of the loop of `dis`, `:2476-2584`. -/
 def disStep (indentlevel annotate : Nat) (s : DisSt) (op : GenOp) : DM DisSt := do
   let info := op.info
   let out := match op.pos with
@@ -623,7 +625,7 @@ def disStep (indentlevel annotate : Nat) (s : DisSt) (op : GenOp) : DM DisSt := 
     return { stack, memo := k.memo, maxproto := max s.maxproto info.proto, markstack := ms,
              annocol := col, out }
 
-/-- `:2655-2657`. -/
+/-- `:2586-2592`. -/
 def disEnd (s : DisSt) : String × Option PyExc :=
   let out := s.out ++ s!"highest protocol among opcodes = {s.maxproto}\n"
   if s.stack.isEmpty then (out, none)
@@ -646,7 +648,7 @@ def disLoop (hasTell : Bool) (indentlevel annotate : Nat) (data : Bytes) :
         if op.info.code == oSTOP then disEnd s'
         else disLoop hasTell indentlevel annotate data fuel pos' s'
 
-/-- `dis(data, out, memo, indentlevel, annotate)`, `:2502-2657`: the text it
+/-- `dis(data, out, memo, indentlevel, annotate)`, `:2423-2592`: the text it
 printed, and the exception it raised. -/
 def dis (hasTell : Bool) (data : Bytes) (memo : List (Int × String)) (indentlevel annotate : Nat) :
     String × Option PyExc :=

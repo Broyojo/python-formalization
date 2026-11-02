@@ -770,7 +770,7 @@ def pyDumps (x : PV) (protocol : Int) : Py Bytes := do
   let (_, st) ← (pyBody proto x).run {}
   return pyFrame st.ev.reverse
 
-/-- `dump` (`Modules/_pickle.c:4869-4931`). -/
+/-- `dump` (`Modules/_pickle.c:4869-4927`). -/
 def cBody (proto : Nat) (x : PV) : EncM Unit := do
   if proto ≥ 2 then wr [oPROTO, proto.toUInt8]
   if proto ≥ 4 then emit .start
@@ -778,7 +778,7 @@ def cBody (proto : Nat) (x : PV) : EncM Unit := do
   wr [oSTOP]
   emit .finish
 
-/-- `pickle.dumps(obj, protocol)` (`_pickle_dumps_impl`, `Modules/_pickle.c:8122-8158`). -/
+/-- `pickle.dumps(obj, protocol)` (`_pickle_dumps_impl`, `Modules/_pickle.c:8122-8149`). -/
 def cDumps (x : PV) (protocol : Int) : Py Bytes := do
   let proto ← cProtocol protocol
   let (_, st) ← (cBody proto x).run {}

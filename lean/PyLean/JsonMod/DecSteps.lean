@@ -149,7 +149,7 @@ theorem arrAfter_twin (s : PStr) (e : Nat) (he : e ≤ s.length) : pyArrAfter s 
 theorem getD_of_some {s : PStr} {i c : Nat} (h : s[i]? = some c) : s.getD i 0 = c := by
   simp [List.getD_eq_getElem?_getD, h]
 
-/-- The colon of `JSONObject` against `_parse_object_unicode`, :716-725. -/
+/-- The colon of `JSONObject` against `_parse_object_unicode`, :795-801. -/
 theorem objColon_twin (s : PStr) (e : Nat) (he : e ≤ s.length) :
     pyObjColon s (e : Int) =
       (if wsEnd s e ≥ s.length ∨ s.getD (wsEnd s e) 0 ≠ 58 then

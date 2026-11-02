@@ -520,7 +520,7 @@ def cLoadStackGlobal : CM Unit := do
   | .str m, .str n => cPush (.glob (← cLift (findGlob (← get).proto m n)))
   | _, _ => cThrow (unpicklingError "STACK_GLOBAL requires str")
 
-/-- `load_reduce`, :7119-7143. -/
+/-- `load_reduce`, :7119-7140. -/
 def cLoadReduce : CM Unit := do
   let args ← cPop
   let func ← cPop
