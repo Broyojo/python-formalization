@@ -105,7 +105,8 @@ def flagsAsDict (st : Status) : SigDict := signalMap.map (fun s => (s, hasSignal
 def lookupKey (d : List (SigKey × Bool)) (k : SigKey) : Option Bool :=
   (d.find? (fun p => p.1 == k)).map (·.2)
 
-/-- `dict_as_flags`, _decimal.c:549-589. -/
+/-- `dict_as_flags`, _decimal.c:549-589. Since 3.15 it takes `PyAnyDict_Check`, so a
+`frozendict` is `CtxArg.dict` here; `_pydecimal` still wants a `dict`. -/
 def dictAsFlags : CtxArg → Py Status
   | .dict d =>
     if d.length ≠ 9 then .error (.keyError "'invalid signal dict'")
@@ -254,18 +255,18 @@ def contextSetattrs (c : CContext) (a : CtxInit) : Py CContext := do
 template's `capitals`. -/
 def contextNew (template : CContext) : CContext := { template with capitals := 1 }
 
-/-- `Context(...)`: `context_new` then `context_init`, _decimal.c@3.14.7:1485-1515. -/
+/-- `Context(...)`: `context_new` then `context_init_impl`, _decimal.c:1556-1567. -/
 def cContextCall (template : CContext) (a : CtxInit) : Py CContext :=
   contextSetattrs (contextNew template) a
 
-/-- `context_clear_traps`, `context_clear_flags`, _decimal.c@3.14.7:1365-1377. -/
+/-- `_decimal_Context_clear_traps_impl`, `_decimal_Context_clear_flags_impl`, _decimal.c:1403-1423. -/
 def cClearTraps (c : CContext) : CContext := { c with traps := [] }
 def cClearFlags (c : CContext) : CContext := { c with status := [] }
 
-/-- `context_copy`, _decimal.c@3.14.7:1611-1626: every field, `capitals` included. -/
+/-- `context_copy`, _decimal.c:1671-1686: every field, `capitals` included. -/
 def contextCopyC (c : CContext) : CContext := c
 
-/-- `context_reduce`, _decimal.c@3.14.7:1629-1659: the constructor arguments. -/
+/-- `_decimal_Context___reduce___impl`, _decimal.c:1724-1756: the constructor arguments. -/
 def contextReduceC (c : CContext) : CtxInit :=
   { prec := .int c.prec, rounding := .str c.round.name, emin := .int c.emin, emax := .int c.emax
     capitals := .int c.capitals, clamp := .int c.clamp
@@ -311,7 +312,8 @@ def extendedContextC : CContext :=
 /-- `MPD_IEEE_CONTEXT_MAX_BITS` on a 64-bit build. -/
 def mpdIeeeMaxBits : Int := 512
 
-/-- `ieee_context`, _decimal.c@3.14.7:1576-1608, with `mpd_ieee_context`,
+/-- `_decimal_IEEEContext`, whose clinic `Py_ssize_t` converter takes `__index__`, and
+`_decimal_IEEEContext_impl`, _decimal.c:1640-1669, with `mpd_ieee_context`,
 libmpdec/context.c:129-146. -/
 def ieeeContextC (template : CContext) (v : CtxArg) : Py CContext := do
   let bits ← longAsSsize v
@@ -407,7 +409,7 @@ structure CThread where
 def initCurrentContext (template : CContext) : CContext :=
   { contextCopyC template with status := [] }
 
-/-- `current_context`, _decimal.c:1951-1967; `PyDec_GetCurrentContext`, @3.14.7:1880-1885. -/
+/-- `current_context`, _decimal.c:1951-1967; `PyDec_GetCurrentContext`, :1976-1981. -/
 def currentContextC (template : CContext) (t : CThread) : CContext × CThread :=
   match t.current with
   | some c => (c, t)
@@ -426,7 +428,7 @@ inductive LocalArg where
   | ctx (c : CContext)
   | other
 
-/-- `ctxmanager_new`, _decimal.c@3.14.7:1923-1986: the local context, and the global one to restore. -/
+/-- `_decimal_localcontext_impl`, _decimal.c:2072-2120: the local context, and the global one to restore. -/
 def ctxmanagerNew (template : CContext) (t : CThread) (local_ : LocalArg) (a : CtxInit) :
     Py (CContext × CContext × CThread) := do
   let (global, t1) := currentContextC template t
@@ -446,13 +448,13 @@ def ctxmanagerRestoreGlobal (global : CContext) : CThread := setCurrentContextC 
 
 /-! ## `Context.canonical` -/
 
-/-- `ctx_canonical`, _decimal.c@3.14.7:5569-5580: `Decimal` only, like `_pydecimal`, with
+/-- `_decimal_Context_canonical_impl`, _decimal.c:7020-7033: `Decimal` only, like `_pydecimal`, with
 another message. -/
 def ctxCanonicalC : Arg → Py Dec
   | .dec d => .ok (canonicalD d)
   | _ => .error (.typeError "argument must be a Decimal")
 
-/-- `ctx_iscanonical`, _decimal.c@3.14.7:5543-5553. -/
+/-- `_decimal_Context_is_canonical_impl`, _decimal.c:6962-6975. -/
 def ctxIsCanonicalC : Arg → Py Bool
   | .dec d => .ok (isCanonical d)
   | _ => .error (.typeError "argument must be a Decimal")

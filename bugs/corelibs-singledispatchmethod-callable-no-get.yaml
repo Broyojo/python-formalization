@@ -32,6 +32,7 @@ expected: |
   The implementation runs.
 observed: |
   python3 3.14.7: AttributeError. REPRODUCED. main (3.16.0a1+dev): NOT REPRODUCED, fixed by #140873: the reproducer prints (1,).
+  python3 3.15.2: NOT REPRODUCED: the method is called as it is when it has no __get__, Lib/functools.py:1098-1112.
 promised_by: |
   The check at Lib/functools.py:1002 accepts it.
 cause: |

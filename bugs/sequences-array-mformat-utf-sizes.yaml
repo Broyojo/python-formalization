@@ -34,14 +34,14 @@ reproducer: |
 expected: |
   array('w', 'abc').
 observed: |
-  python3 3.14.7: ValueError for 1 and 3 characters, UTF-16 and UTF-32, either order except the
+  python3 3.15.2: ValueError for 1 and 3 characters, UTF-16 and UTF-32, either order except the
   native UTF-32-LE fast path. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |
   Invariant: a pickle of an array loads on any machine; the table's comment says UTF-32 and
   the other rows give the unit size.
 cause: |
-  Modules/arraymodule.c@3.14.7:1989-1992 `{4, 0, 0}, {4, 0, 1}, {8, 0, 0}, {8, 0, 1}`,
+  Modules/arraymodule.c:2119-2122 `{4, 0, 0}, {4, 0, 1}, {8, 0, 0}, {8, 0, 1}`,
   used by the check in array__array_reconstructor_impl.
 possible_fix: |
   Sizes {2, 0, 0}, {2, 0, 1}, {4, 0, 0}, {4, 0, 1}.

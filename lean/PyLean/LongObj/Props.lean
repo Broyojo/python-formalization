@@ -65,6 +65,33 @@ def LongAddSubExact : Prop :=
 theorem longAddSubExact_proven : LongAddSubExact := fun a b h1 h2 =>
   ⟨longAdd_spec a b h1 h2, longSub_spec a b h1 h2⟩
 
+/-- The functions behind the specialized `BINARY_OP_{ADD,SUBTRACT,MULTIPLY}_INT`. On compact
+ints they give the canonical object of the exact result when that result is medium, and
+otherwise decline (`none`, `PyStackRef_NULL`, never an exception) so the generic path
+takes over. Compact operands are their only precondition (`assert`ed in the C). -/
+def CompactOpsExact : Prop :=
+  ∀ a b : Int, a.natAbs < 2 ^ 30 → b.natAbs < 2 ^ 30 →
+    compactAdd (.ofInt a) (.ofInt b) =
+      (if (a + b).natAbs < 2 ^ 30 then some (.ofInt (a + b)) else none) ∧
+    compactSub (.ofInt a) (.ofInt b) =
+      (if (a - b).natAbs < 2 ^ 30 then some (.ofInt (a - b)) else none) ∧
+    compactMul (.ofInt a) (.ofInt b) =
+      (if (a * b).natAbs < 2 ^ 30 then some (.ofInt (a * b)) else none)
+
+theorem compactOpsExact_proven : CompactOpsExact := by
+  intro a b ha hb
+  have ea := Long.medium_ofInt ha
+  have eb := Long.medium_ofInt hb
+  refine ⟨?_, ?_, ?_⟩
+  · simp only [compactAdd, ea, eb]
+    exact mediumFromSTwoDigits_eq (by omega) (by omega)
+  · simp only [compactSub, ea, eb]
+    exact mediumFromSTwoDigits_eq (by omega) (by omega)
+  · simp only [compactMul, ea, eb]
+    have h := Int.natAbs_mul a b
+    have hlt : a.natAbs * b.natAbs < 2 ^ 30 * 2 ^ 30 := Nat.mul_lt_mul'' ha hb
+    exact mediumFromSTwoDigits_eq (by omega) (by omega)
+
 /-- `v_iadd` and `v_isub`: for `len y <= len x`, carries and borrows propagate as far as
 the top of `x`, and the value is exact modulo the width of `x`. -/
 def VectorAddSub : Prop :=

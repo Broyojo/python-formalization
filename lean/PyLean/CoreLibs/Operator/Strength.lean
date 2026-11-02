@@ -116,7 +116,7 @@ def IndexExact : Prop :=
     (o.isInt = none → o.slot = some (.error e) → indexC o = .error e) ∧
     (o.isInt = none → o.slot = some (.ok (.exact n)) → indexC o = .ok (.exact n)) ∧
     (o.isInt = none → o.slot = some (.ok (.other tn)) →
-      indexC o = .error (.typeError s!"__index__ returned non-int (type {tn})")) ∧
+      indexC o = .error (.typeError s!"{o.tn}.__index__() must return an int, not {tn}")) ∧
     (o.isInt = none → o.slot = some (.ok (.sub n)) → o.warn = none → indexC o = .ok (.exact n)) ∧
     (o.isInt = none → o.slot = some (.ok (.sub n)) → o.warn = some e → indexC o = .error e) ∧
     (o.inst = some r → indexPy o = r) ∧
@@ -397,10 +397,10 @@ def LengthHintCExact : Prop :=
         (o.hint = some (.error (.typeError m')) → lengthHintC o (.int d) = .ok d) ∧
         (isTypeError e = false → o.hint = some (.error e) → lengthHintC o (.int d) = .error e) ∧
         (o.hint = some (.ok (.other tn)) →
-          lengthHintC o (.int d) = .error (.typeError s!"__length_hint__ must be an integer, not {tn}")) ∧
+          lengthHintC o (.int d) = .error (.typeError s!"{o.tn}.__length_hint__() must return an int, not {tn}")) ∧
         (o.hint = some (.ok (.int v)) → 0 ≤ v → v ≤ ssizeMax → lengthHintC o (.int d) = .ok v) ∧
         (o.hint = some (.ok (.int v)) → v < 0 → ssizeMin ≤ v →
-          lengthHintC o (.int d) = .error (.valueError negativeHint)) ∧
+          lengthHintC o (.int d) = .error (.valueError (negativeHintC o))) ∧
         (o.hint = some (.ok (.int v)) → (v > ssizeMax ∨ v < ssizeMin) →
           lengthHintC o (.int d) = .error (.overflowError "Python int too large to convert to C ssize_t"))))
 

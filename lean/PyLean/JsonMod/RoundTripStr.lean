@@ -325,7 +325,7 @@ theorem scan_enc_py (cfg : ECfg) (s : PStr) (t rest : PStr) (p : Nat) (strict : 
     rw [loopN s strict _ t _ (p + 1) [] rest (by omega) hd]
     exact ok_congr (by simp [decS, ha]) (by omega)
 
-/-- `scanstring_unicode` on a string written by `encoder_encode_string`. -/
+/-- `scanstring_unicode` on a string written by `encoder_write_string`. -/
 theorem scan_enc_c (cfg : ECfg) (s : PStr) (t rest : PStr) (p : Nat) (strict : Bool)
     (hok : strOk t = true) (hs : s.drop p = cStrEnc cfg t ++ rest) :
     cScanstring s (p + 1) strict = .ok (decS cfg.ensureAscii t, p + (cStrEnc cfg t).length) := by

@@ -37,7 +37,7 @@ reproducer: |
 expected: |
   Both twins return 3 and fill the buffer with b'bcd'.
 observed: |
-  python3 3.14.7: io returns (3, b'bcd'); _pyio raises ValueError "memoryview assignment: lvalue
+  python3 3.15.2: io returns (3, b'bcd'); _pyio raises ValueError "memoryview assignment: lvalue
   and rvalue have different structures". REPRODUCED.
   main (python.exe 3.16.0a1+dev): identical. REPRODUCED. Lib/_pyio.py:1230 on main has the same line.
 promised_by: |

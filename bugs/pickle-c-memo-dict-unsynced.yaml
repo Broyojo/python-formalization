@@ -1,0 +1,76 @@
+id: pickle-c-memo-dict-unsynced
+title: "pickle: C Unpickler's memo_dict is unknown to MEMOIZE, memo.copy() and the memo setter (new in 3.15)"
+priority: P4
+kind: twin-mismatch
+module: pickle
+files: [Modules/_pickle.c, Lib/pickle.py, Lib/pickletools.py]
+functions: [_Unpickler_MemoPut, load_memoize, _pickle_UnpicklerMemoProxy_copy_impl, Unpickler_set_memo]
+summary: |
+  gh-115952 sends sparse memo keys to a new `memo_dict`. The rest of the unpickler still treats the
+  array as the whole memo. Three results, on 3.15.2:
+  - `memo_len` does not count dict keys, and MEMOIZE writes at `memo_len`. After `BINPUT 200`,
+    `MEMOIZE` stores at index 0 in C and at index 1 in Python, so `b'Nq\xc8K\x07\x940h\x01.'` raises
+    UnpicklingError in C and returns 7 in Python, and `h\x00` instead of `h\x01` does the reverse.
+  - `Unpickler.memo.copy()` and `__reduce__` read only the array: after `BINPUT 200`, C gives `{}` and
+    `_Unpickler.memo` is `{200: None}`.
+  - `u.memo = {}` does not clear `memo_dict`: a following `BINGET 200` finds the old object in C and
+    raises UnpicklingError in Python.
+likelihood: |
+  Only hand-made or hostile streams: the picklers write dense indices, and PUT and MEMOIZE in separate
+  protocols. The MEMOIZE case means two unpicklers read the same bytes as different objects, which is
+  what a pickle scanner cares about. No memory-safety effect found.
+maybe_intended: |
+  No. The comment on `memo_len` says "Number of objects in the memo", the MEMOIZE opcode is defined by
+  that number, and through 3.14 it held. The reference counts of the migrated entries are fine.
+reproducer: |
+  import io, pickle
+  def r(f, s):
+      try: return ('ok', f(s))
+      except Exception as e: return (type(e).__name__, str(e))
+  s = b'Nq\xc8K\x07\x940h\x01.'
+  c, p = r(pickle.loads, s), r(pickle._loads, s)
+  print('MEMOIZE after BINPUT 200: C', c, 'Python', p)
+  u = pickle.Unpickler(io.BytesIO(b'Nq\xc8.')); u.load()
+  v = pickle._Unpickler(io.BytesIO(b'Nq\xc8.')); v.load()
+  print('memo after BINPUT 200: C', u.memo.copy(), 'Python', v.memo)
+  w = pickle.Unpickler(io.BytesIO(b'K\x07q\xc8.h\xc8.')); w.load(); w.memo = {}
+  x = pickle._Unpickler(io.BytesIO(b'K\x07q\xc8.h\xc8.')); x.load(); x.memo = {}
+  a, b = r(lambda _: w.load(), None), r(lambda _: x.load(), None)
+  print('BINGET 200 after memo = {}: C', a, 'Python', b)
+  if (c[0] == 'UnpicklingError' and p == ('ok', 7) and u.memo.copy() == {} and v.memo == {200: None}
+          and a == ('ok', 7) and b[0] == 'UnpicklingError'):
+      print('REPRODUCED pickle-c-memo-dict-unsynced')
+expected: |
+  Both unpicklers number the memo the same way, and the memo proxy shows and replaces all of it.
+observed: |
+  python3 3.15.2: all three differ. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): REPRODUCED, same behaviour.
+promised_by: |
+  Lib/pickletools.py:1874-1875: "The index of the memo location to write is the number of elements
+  currently present in the memo." Lib/pickle.py:1798-1800 does that with `len(memo)`. The `memo`
+  attribute replaces the memo in Python.
+cause: |
+  Modules/_pickle.c:1697-1736 (`_Unpickler_MemoPut`) returns from the dict branch before the
+  `memo_len++`, and :1663-1692 (`_Unpickler_MemoGet`) moves a key into the array without counting it.
+  :6775-6784 (`load_memoize`) writes at `memo_len`. :7747-7776 (`_pickle_UnpicklerMemoProxy_copy_impl`)
+  loops over the array only, and `__reduce__` is built on it. :7880-7955 (`Unpickler_set_memo`) calls
+  `_Unpickler_MemoCleanup` but leaves `memo_dict`, unlike `_pickle_UnpicklerMemoProxy_clear_impl`
+  (:7724-7738).
+possible_fix: |
+  Keep a total count for MEMOIZE, for example `memo_len + PyDict_GET_SIZE(memo_dict)` while no key has
+  been moved, or count moved keys in `_Unpickler_MemoGet`. Merge `memo_dict` in `copy`, and clear it in
+  the setter.
+duplicates:
+  issues:
+    - {number: 115952, state: closed, relation: related, reason: "the change that added memo_dict (PR 119204)"}
+    - {number: 111066, state: open, relation: related, reason: "Assigning a dict to the memo fails: the setter's dict path writes to the old array; separate defect, 3.14 too"}
+    - {number: 157120, state: closed, relation: related, reason: "memo proxy assignment, free-threaded race; not this"}
+    - {number: 144410, state: closed, relation: related, reason: "PUT above sys.maxsize; not this"}
+  queries: ["pickle MEMOIZE", "pickle memo_dict", "Unpickler memo sparse", "pickle memo huge index memory",
+            "Unpickler memo copy proxy", "pickle load_memoize memo_len", "unpickler memo dict sparse (PRs)",
+            "Unpickler memo setter dict", "Unpickler_set_memo", "unpickler.memo assignment dict lost"]
+  bugforge: "no pickle entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Pickle.MemoizeTwins
+  theorem: PyLean.Pickle.memoizeTwins_refuted
+  note: "The Lean model covers the MEMOIZE case. The memo proxy is not modelled; its two cases are reproducer only."

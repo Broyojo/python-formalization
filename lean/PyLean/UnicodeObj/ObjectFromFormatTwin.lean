@@ -3,7 +3,7 @@ import PyLean.UnicodeObj.FormatProps
 
 /-!
 `PyUnicode_FromFormat` against Python's `%` operator: two separate implementations of the layout of
-an integer, unicodeobject.c:2878-2919 and unicodeobject.c@3.14.7:14762-14884 with 15320-15469.
+an integer, unicodeobject.c:2878-2919 and unicode_format.c:193-315 with 820-969.
 
 Both sides are brought to one form: spaces, sign, zeros, digits, spaces.
 -/
@@ -483,9 +483,9 @@ theorem wrapU_fits {sm : Nat} {v : Int} (h : UnsignedFits sm v) :
     · simp only [wrapU]
       omega
 
-theorem main_direct (v : Int) (arg : FArg) (hw : arg.width = -1) (hp : arg.prec = -1)
+theorem main_direct {ctx : FCtx} (v : Int) (arg : FArg) (hw : arg.width = -1) (hp : arg.prec = -1)
     (hs : arg.flags.sign = false) (hb : arg.flags.blank = false) (hc : arg.ch ≠ 88) :
-    mainFormatLong (.int v) arg =
+    mainFormatLong ctx (.int v) arg =
       (longFormat v (if arg.ch == 111 then 8 else if arg.ch == 120 then 16 else 10)
         arg.flags.alt).map .direct := by
   have hc' : (arg.ch != 88) = true := by simpa using hc
@@ -493,8 +493,8 @@ theorem main_direct (v : Int) (arg : FArg) (hw : arg.width = -1) (hp : arg.prec 
     Bool.not_false, beq_self_eq_true, Bool.true_and, hc', if_true]
   cases longFormat v _ _ <;> rfl
 
-theorem main_via (v : Int) (arg : FArg) (h : ¬(arg.width = -1 ∧ arg.prec = -1)) :
-    mainFormatLong (.int v) arg =
+theorem main_via {ctx : FCtx} (v : Int) (arg : FArg) (h : ¬(arg.width = -1 ∧ arg.prec = -1)) :
+    mainFormatLong ctx (.int v) arg =
       (formatLongStr v arg.flags.alt arg.prec arg.ch).map (fun s => FOut.viaOutput s true) := by
   have hb : (arg.width == -1 && arg.prec == -1) = false := by
     cases h1 : arg.width == -1 <;> cases h2 : arg.prec == -1 <;> simp_all
@@ -510,11 +510,11 @@ are excluded because C prints it as unsigned, which `sprintInt` shows: that is t
 the layout. Width and precision are what a format can write, or -1 for none. The bound on the
 precision is the `OverflowError` of `_PyUnicode_FormatLong`. -/
 def IntMatchesPercent : Prop :=
-  ∀ (v width prec : Int) (zero ljust : Bool) (sm c : Nat),
+  ∀ (ctx : FCtx) (v width prec : Int) (zero ljust : Bool) (sm c : Nat),
     ((c = 100 ∨ c = 105) ∧ SignedFits sm v ∨ (c = 117 ∨ c = 111 ∨ c = 120) ∧ UnsignedFits sm v) →
     -1 ≤ width → -1 ≤ prec → prec ≤ 2 ^ 31 - 4 →
     percentOut { ch := c, flags := { ljust := ljust, zero := zero }, width := width, prec := prec }
-      (mainFormatLong (.int v)
+      (mainFormatLong ctx (.int v)
         { ch := c, flags := { ljust := ljust, zero := zero }, width := width, prec := prec }) =
       .ok (intLayout (sprintInt c sm v) width prec zero ljust)
 
@@ -537,7 +537,7 @@ theorem sprint_form {c sm : Nat} {v : Int} {base : Nat}
     rcases hc with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> simp [hn]
 
 theorem intMatchesPercent_proven : IntMatchesPercent := by
-  intro v width prec zero ljust sm c hc hw hp hp2
+  intro ctx v width prec zero ljust sm c hc hw hp hp2
   obtain ⟨base, hb⟩ : ∃ base,
       ((c = 100 ∨ c = 105) ∧ SignedFits sm v ∧ base = 10) ∨
       ((c = 117 ∧ base = 10 ∨ c = 111 ∧ base = 8 ∨ c = 120 ∧ base = 16) ∧ UnsignedFits sm v) := by

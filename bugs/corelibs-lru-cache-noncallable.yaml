@@ -31,6 +31,7 @@ expected: |
   The same outcome in both twins.
 observed: |
   python3 3.14.7: C: TypeError, Python: accepted. REPRODUCED. main (3.16.0a1+dev): NOT REPRODUCED: the pure-Python wrapper rejects a non-callable there too.
+  python3 3.15.2: NOT REPRODUCED: _lru_cache_wrapper rejects a non-callable, Lib/functools.py:605-606.
 promised_by: |
   Nothing.
 cause: |

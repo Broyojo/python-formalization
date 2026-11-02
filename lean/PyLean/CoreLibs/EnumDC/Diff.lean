@@ -1,6 +1,7 @@
 import PyLean.DiffCore
 import PyLean.CoreLibs.EnumDC.EnumClass
 import PyLean.CoreLibs.EnumDC.Dataclass
+import PyLean.CoreLibs.EnumDC.DcAnnot
 
 /-! Differential-testing handler for `corelibs` cases with `"fn": "enumdc.<name>"`.
 The dispatcher in `CoreLibs/Diff.lean` strips the `enumdc.` prefix. -/
@@ -440,9 +441,23 @@ def decDV : Nat → Json → Except String DV
     | "inst" => pure (.inst (← (← a.getArr?).toList.mapM (·.getStr?)) (← l (← j.getArrVal? 2)))
     | "dict" => pure (.dict (← l a) (← l (← j.getArrVal? 2)))
     | "dictSub" => pure (.dictSub (← l a) (← l (← j.getArrVal? 2)))
+    | "frozenDict" => pure (.frozenDict (← l a) (← l (← j.getArrVal? 2)))
     | "defaultDict" => pure (.defaultDict (← l a) (← l (← j.getArrVal? 2)))
     | "counter" => pure (.counter (← l a) (← l (← j.getArrVal? 2)))
     | _ => throw "dv"
+
+/-- The objects of the harness's module for `dc_annotation`: `a.b.c`, with `none` for a `None` and two that raise. -/
+def annWorld (o : String) (n : String) : Py (Option String) :=
+  if o == "bad" then .error (.valueError "get")
+  else if o == "boom" then .error (.named "Boom" "get")
+  else
+    match o, n with
+    | "", "a" => .ok (some "a")
+    | "", "bad" => .ok (some "bad")
+    | "", "boom" => .ok (some "boom")
+    | "a", "b" => .ok (some "a.b")
+    | "a.b", "c" => .ok (some "a.b.c")
+    | _, _ => .ok none
 
 partial def encDV : DV → Json
   | .atom n => toJson [toJson "atom", toJson n]
@@ -456,6 +471,7 @@ partial def encDV : DV → Json
   | .tupleSub l => toJson [toJson "tupleSub", toJson (l.map encDV)]
   | .dict k v => toJson [toJson "dict", toJson (k.map encDV), toJson (v.map encDV)]
   | .dictSub k v => toJson [toJson "dictSub", toJson (k.map encDV), toJson (v.map encDV)]
+  | .frozenDict k v => toJson [toJson "frozenDict", toJson (k.map encDV), toJson (v.map encDV)]
   | .defaultDict k v => toJson [toJson "defaultDict", toJson (k.map encDV), toJson (v.map encDV)]
   | .counter k v => toJson [toJson "counter", toJson (k.map encDV), toJson (v.map encDV)]
   | .inst _ _ => Json.null
@@ -554,6 +570,19 @@ def run (fn : String) (j : Json) : Except String Json := do
       | "notStr" => pure .notStr
       | _ => pure .bad
     pure (encPy (fun (l : List String) => toJson l) (makeNames items []))
+  | "dc_annotation" =>
+    let isExc : PyExc → Bool := fun e => e.className != "Boom"
+    let r := typeFromAnnotation annWorld isExc "" (← getStr j "s").toList
+    pure (encPy (fun (o : Option String) => toJson o) r)
+  | "dc_doc" =>
+    let name ← getStr j "name"
+    let sig : Py String ← match ← getStr j "sig" with
+      | "typeerror" => pure (.error (.typeError "sig"))
+      | "valueerror" => pure (.error (.valueError "sig"))
+      | "keyerror" => pure (.error (.named "KeyError" "'sig'"))
+      | s => pure (.ok s)
+    let set : Option PyExc := if ← getBool j "setfail" then some (.named "AttributeError" "set") else none
+    pure (encPy (fun (o : String) => toJson o) (autoDocGet name sig set))
   | "dc_asdict" =>
     let v ← decDV 8 (← field j "v")
     let f := match ← getStr j "fact" with

@@ -100,6 +100,7 @@ observed: |
   KeyError, ValueError; the second stack's close() does not return (stopped by the 3 s alarm).
   REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   The comments at Lib/contextlib.py:634-635 ("We manipulate the exception state so it behaves as
   though we were actually nesting multiple with statements") and :651-652. Not hanging is an

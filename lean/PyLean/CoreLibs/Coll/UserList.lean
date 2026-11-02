@@ -2,7 +2,7 @@ import PyLean.Accel.Select
 import PyLean.Sequences.ListModel
 
 /-!
-`collections.UserList`, Lib/collections/__init__.py:1285-1411 (CPython 3.14.7).
+`collections.UserList`, Lib/collections/__init__.py:1285-1411 (CPython 3.15.2).
 
 `UserList` is a wrapper: what it adds to `list` is operand dispatch, re-wrapping in
 `self.__class__`, and `__cast`. The wrapped `list` methods are the fields of `ListOps`,

@@ -34,7 +34,7 @@ reproducer: |
 expected: |
   Both functions decode the same bytes to the same result.
 observed: |
-  python3 3.14.7: b'abc', Incorrect padding. REPRODUCED.
+  python3 3.15.2: b'abc', Incorrect padding. REPRODUCED.
   main 3.16.0a1+dev: the same. REPRODUCED.
 promised_by: |
   The two functions document the same format, and RFC 2045 section 6.8 has decoders ignore line

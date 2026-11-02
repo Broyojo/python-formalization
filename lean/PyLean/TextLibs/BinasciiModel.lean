@@ -2,7 +2,7 @@ import PyLean.Core
 
 /-!
 Model of the base64, base32, base16 and hex paths of `Modules/binascii.c` and
-`Lib/base64.py`, CPython 3.14.7. Shifts and masks of the C loops are written with
+`Lib/base64.py`, CPython 3.15.2. Shifts and masks of the C loops are written with
 `/` and `%` on naturals, which is what they compute there.
 -/
 
@@ -38,7 +38,7 @@ def bufData : Data → Py (List Nat)
   | .notBuffer t => .error (.typeError s!"a bytes-like object is required, not '{t}'")
   | .raises _ e => .error e
 
-/-- `table_b2a_base64`, `Modules/binascii.c@3.14.7:104-105`. -/
+/-- `table_b2a_base64`, `Modules/binascii.c:113-114`. -/
 def b2aChar (v : Nat) : Nat :=
   if v < 26 then 65 + v
   else if v < 52 then 97 + (v - 26)
@@ -46,7 +46,7 @@ def b2aChar (v : Nat) : Nat :=
   else if v = 62 then 43
   else 47
 
-/-- `table_a2b_base64`, `Modules/binascii.c:79-99`; `255` is its `-1`, and the `'='`
+/-- `table_a2b_base64`, `Modules/binascii.c:81-99`; `255` is its `-1`, and the `'='`
 entry is never read because padding is handled first. -/
 def a2bChar (c : Nat) : Nat :=
   if 65 ≤ c ∧ c ≤ 90 then c - 65
@@ -72,8 +72,8 @@ def decStep (st : Dec) (v : Nat) : Dec :=
   | 2 => { st with quad := 3, out := st.out ++ [(st.left * 16 + v / 4) % 256], left := v % 4 }
   | _ => { st with quad := 0, out := st.out ++ [(st.left * 64 + v) % 256], left := 0 }
 
-/-- The `for` loop of `binascii_a2b_base64_impl`, `Modules/binascii.c@3.14.7:407-486`. `i` is the
-loop index, used only by the "Leading padding" test. -/
+/-- The slow loop of `binascii_a2b_base64_impl`, `Modules/binascii.c:811-898`, with default options and
+the fast path left out, as a specification: `BinasciiEq.lean` has the C loop equal to it. -/
 def a2bLoop (strict : Bool) : List Nat → (i : Nat) → Dec → Py Dec
   | [], _, st => .ok st
   | c :: cs, i, st =>
@@ -83,7 +83,7 @@ def a2bLoop (strict : Bool) : List Nat → (i : Nat) → Dec → Py Dec
       if st.quad ≥ 2 ∧ st.quad + pads ≤ 4 then a2bLoop strict cs (i + 1) st'
       else if !strict then a2bLoop strict cs (i + 1) st'
       else if st.quad = 1 then .ok st'
-      else .error (err (if st.quad = 0 ∧ i = 0 then "Leading padding not allowed"
+      else .error (err (if st.quad = 0 ∧ st.out.isEmpty then "Leading padding not allowed"
                         else "Excess padding not allowed"))
     else
       let v := a2bChar c
@@ -107,7 +107,7 @@ def a2bBase64Bytes (strict : Bool) (b : List Nat) : Py (List Nat) := do
 def a2bBase64 (strict : Bool) (d : Data) : Py (List Nat) := do
   a2bBase64Bytes strict (← asciiBuffer d)
 
-/-- The `while (leftbits >= 6)` of `binascii_b2a_base64_impl`, `Modules/binascii.c@3.14.7:575-579`. -/
+/-- The bit-at-a-time drain of a specification of `binascii_b2a_base64_impl`, which writes three bytes at a time since 3.15. -/
 def b2aDrain (left : Nat) : (fuel : Nat) → (bits : Nat) → List Nat × Nat
   | 0, bits => ([], bits)
   | fuel + 1, bits =>
@@ -117,7 +117,7 @@ def b2aDrain (left : Nat) : (fuel : Nat) → (bits : Nat) → List Nat × Nat
       (c :: r, bits')
     else ([], bits)
 
-/-- The byte loop, `Modules/binascii.c@3.14.7:569-580`. `leftchar` is 32-bit and wraps. -/
+/-- The byte loop of that specification. `leftchar` is 32-bit and wraps. -/
 def b2aLoop : List Nat → (left bits : Nat) → List Nat × Nat × Nat
   | [], left, bits => ([], left, bits)
   | b :: bs, left, bits =>
@@ -126,7 +126,7 @@ def b2aLoop : List Nat → (left bits : Nat) → List Nat × Nat × Nat
     let (r, l2, b2) := b2aLoop bs left' bits'
     (out ++ r, l2, b2)
 
-/-- `binascii_b2a_base64_impl`, `Modules/binascii.c:960-1637`. -/
+/-- `binascii_b2a_base64_impl`, `Modules/binascii.c:960-1049`. -/
 def b2aBase64 (data : List Nat) (newline : Bool) : List Nat :=
   let (out, left, bits) := b2aLoop data 0 0
   let tail :=
@@ -142,7 +142,7 @@ def digitValue (c : Nat) : Nat :=
   else if 65 ≤ c ∧ c ≤ 90 then c - 65 + 10
   else 37
 
-/-- The loop of `binascii_a2b_hex_impl`, `Modules/binascii.c@3.14.7:922-935`. -/
+/-- Pairs of digits, a specification of `a2bHexIg` for an even number of digits and no `ignorechars`. -/
 def a2bHexLoop : List Nat → Py (List Nat)
   | a :: b :: r =>
     let top := digitValue a
@@ -185,19 +185,19 @@ def strhexSep : SepArg → Py (Option Nat)
   | .seqlen 1 => .error (.typeError "sep must be str or bytes.")
   | _ => .error (.valueError "sep must be length 1.")
 
-/-- The negative `bytes_per_sep_group` loop, `Python/pystrhex.c@3.14.7:97-113`: groups count from the left. -/
+/-- The negative `bytes_per_sep_group` loop, `Python/pystrhex.c:210-226`: groups count from the left. -/
 def hexLeft (sep k : Nat) : (chunks : Nat) → List Nat → List Nat
   | 0, l => b2aHex l
   | c + 1, l => b2aHex (l.take k) ++ [sep] ++ hexLeft sep k c (l.drop k)
 
-/-- The positive loop, `Python/pystrhex.c:226-244`, which fills from the end: groups count from the
+/-- The positive loop, `Python/pystrhex.c:227-244`, which fills from the end: groups count from the
 right. -/
 def hexRight (sep k : Nat) : (chunks : Nat) → List Nat → List Nat
   | 0, l => b2aHex l
   | c + 1, l =>
     hexRight sep k c (l.take (l.length - k)) ++ [sep] ++ b2aHex (l.drop (l.length - k))
 
-/-- `_Py_strhex_impl`, `Python/pystrhex.c@3.14.7:7-143`, returning bytes. -/
+/-- `_Py_strhex_impl`, `Python/pystrhex.c:116-254`, returning bytes. -/
 def strhexBytes (data : List Nat) (sep : SepArg) (group : Int) : Py (List Nat) := do
   let sc ← strhexSep sep
   match sc with
@@ -239,7 +239,7 @@ def upper (s : List Nat) : List Nat := s.map fun c => if 97 ≤ c ∧ c ≤ 122 
 
 def plusSlash : List Nat := [43, 47]
 
-/-- `b64encode`, `Lib/base64.py@3.14.7:48-59`. -/
+/-- `b64encode` (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def b64encode (s : List Nat) (alt : Option (List Nat)) : Py (List Nat) :=
   let encoded := b2aBase64 s false
   match alt with
@@ -248,7 +248,7 @@ def b64encode (s : List Nat) (alt : Option (List Nat)) : Py (List Nat) :=
     if a.length ≠ 2 then .error (.assertionError "~repr(altchars)")
     else .ok (translate plusSlash a encoded)
 
-/-- `b64decode`, `Lib/base64.py@3.14.7:62-85`. -/
+/-- `b64decode` (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def b64decode (s : Data) (alt : Option Data) (validate : Bool) : Py (List Nat) := do
   let s ← bytesFromDecodeData s
   match alt with
@@ -260,10 +260,10 @@ def b64decode (s : Data) (alt : Option Data) (validate : Bool) : Py (List Nat) :
 
 def dashUnderscore : List Nat := [45, 95]
 
-/-- `urlsafe_b64encode`, `Lib/base64.py@3.14.7:109-116`. -/
+/-- `urlsafe_b64encode` (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def urlsafeEncode (s : List Nat) : List Nat := translate plusSlash dashUnderscore (b2aBase64 s false)
 
-/-- `urlsafe_b64decode`, `Lib/base64.py@3.14.7:118-131`. -/
+/-- `urlsafe_b64decode` (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def urlsafeDecode (s : Data) : Py (List Nat) := do
   let s ← bytesFromDecodeData s
   b64decode (.bytes (translate dashUnderscore plusSlash s)) none false
@@ -271,11 +271,11 @@ def urlsafeDecode (s : Data) : Py (List Nat) := do
 def b32alphabet : List Nat := "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".toList.map Char.toNat
 def b32hexalphabet : List Nat := "0123456789ABCDEFGHIJKLMNOPQRSTUV".toList.map Char.toNat
 
-/-- `b32tab2[x]`, `Lib/base64.py@3.14.7:167-168`. -/
+/-- `b32tab2[x]` (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def b32pair (alpha : List Nat) (x : Nat) : List Nat :=
   [alpha.getD (x / 32) 0, alpha.getD (x % 32) 0]
 
-/-- The `for i in range(0, len(s), 5)` loop, `Lib/base64.py@3.14.7:180-186`. -/
+/-- The `for i in range(0, len(s), 5)` loop (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def b32Chunks (alpha : List Nat) : (fuel : Nat) → List Nat → List Nat
   | 0, _ => []
   | _ + 1, [] => []
@@ -285,7 +285,7 @@ def b32Chunks (alpha : List Nat) : (fuel : Nat) → List Nat → List Nat
       b32pair alpha (q / 2 ^ 10 % 1024) ++ b32pair alpha (q % 1024) ++
       b32Chunks alpha fuel (s.drop 5)
 
-/-- `_b32encode`, `Lib/base64.py@3.14.7:163-196`. -/
+/-- `_b32encode` (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def b32encode (alpha s : List Nat) : List Nat :=
   let leftover := s.length % 5
   let s' := if leftover ≠ 0 then s ++ List.replicate (5 - leftover) 0 else s
@@ -300,7 +300,7 @@ def b32rev (alpha : List Nat) (c : Nat) : Option Nat := alpha.findIdx? (· == c)
 def toBytes5 (acc : Nat) : List Nat :=
   [acc / 2 ^ 32 % 256, acc / 2 ^ 24 % 256, acc / 2 ^ 16 % 256, acc / 2 ^ 8 % 256, acc % 256]
 
-/-- The inner `for c in quanta` loop, `Lib/base64.py@3.14.7:227-231`. -/
+/-- The inner `for c in quanta` loop (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def b32Quanta (alpha : List Nat) (acc : Nat) : List Nat → Py Nat
   | [] => .ok acc
   | c :: cs =>
@@ -308,7 +308,7 @@ def b32Quanta (alpha : List Nat) (acc : Nat) : List Nat → Py Nat
     | none => .error (err "Non-base32 digit found")
     | some v => b32Quanta alpha (acc * 32 + v) cs
 
-/-- The outer loop, `Lib/base64.py@3.14.7:224-232`: the bytes and the last `acc`. -/
+/-- The outer loop (a specification; `BinasciiC.lean` has the function of 3.15.2): the bytes and the last `acc`. -/
 def b32DecLoop (alpha : List Nat) : (fuel : Nat) → List Nat → List Nat → Nat → Py (List Nat × Nat)
   | 0, _, dec, acc => .ok (dec, acc)
   | _ + 1, [], dec, acc => .ok (dec, acc)
@@ -319,7 +319,7 @@ def b32DecLoop (alpha : List Nat) : (fuel : Nat) → List Nat → List Nat → N
 /-- `s.rstrip(b'=')`. -/
 def rstripPad (s : List Nat) : List Nat := (s.reverse.dropWhile (· == 61)).reverse
 
-/-- `_b32decode`, `Lib/base64.py@3.14.7:198-241`. -/
+/-- `_b32decode` (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def b32decode (alpha : List Nat) (s0 : Data) (casefold : Bool) (map01 : Option Data) :
     Py (List Nat) := do
   let s ← bytesFromDecodeData s0
@@ -342,10 +342,10 @@ def b32decode (alpha : List Nat) (s0 : Data) (casefold : Bool) (map01 : Option D
     return decoded.take (decoded.length - 5) ++ (toBytes5 acc).take leftover
   return decoded
 
-/-- `b16encode`, `Lib/base64.py@3.14.7:267-270`. -/
+/-- `b16encode` (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def b16encode (s : List Nat) : List Nat := upper (b2aHex s)
 
-/-- `b16decode`, `Lib/base64.py@3.14.7:273-288`. -/
+/-- `b16decode` (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def b16decode (s0 : Data) (casefold : Bool) : Py (List Nat) := do
   let s ← bytesFromDecodeData s0
   let s := if casefold then upper s else s

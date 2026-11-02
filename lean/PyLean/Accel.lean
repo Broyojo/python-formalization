@@ -20,7 +20,7 @@ import PyLean.Accel.Diff
 /-!
 C accelerators vs. their pure-Python twins: `bisect` (`Modules/_bisectmodule.c`
 vs `Lib/bisect.py`) and `heapq` (`Modules/_heapqmodule.c` vs `Lib/heapq.py`),
-CPython 3.14.7, over int elements compared with `<` and pure key functions.
+CPython 3.15.2, over int elements compared with `<` and pure key functions.
 Mutation of the list during a comparison is out of scope.
 -/
 
@@ -44,11 +44,24 @@ def entries : List Entry := [
     bug := some "accel-bisect-ssize-bounds"
     notes := "lo or hi outside Py_ssize_t: C raises OverflowError at argument parsing, Python returns lo or raises ValueError/IndexError." },
   { id := "accel-bisect-twins-agree-in-range", pyFile := "Modules/_bisectmodule.c"
-    pyFns := ["bisect_left", "bisect_right", "insort_left", "insort_right"]
+    pyFns := ["bisect_left"]
     statement := "For lo and hi in Py_ssize_t range and hi != -1, the C and Python bisect/insort functions agree exactly (value or exception and message, and final list)."
+    source := "invariant: C accelerator vs pure-Python twin", status := .refuted
+    prop := ``BisectTwinsAgreeInRange, thm := some ``bisectTwinsAgreeInRange_refuted
+    bug := some "accel-bisect-negative-lo-message"
+    notes := "Proven on 3.14.7. On 3.15.2 a negative lo gives 'lo cannot be negative' in C and 'lo must be non-negative' in Python." },
+  { id := "accel-bisect-twins-agree-nonneg-lo", pyFile := "Modules/_bisectmodule.c"
+    pyFns := ["bisect_left", "bisect_right", "insort_left", "insort_right"]
+    statement := "For 0 <= lo <= sys.maxsize, hi in Py_ssize_t range and hi != -1, the C and Python bisect/insort functions agree exactly (value or exception and message, and final list)."
     source := "invariant: C accelerator vs pure-Python twin", status := .proven
-    prop := ``BisectTwinsAgreeInRange, thm := some ``bisectTwinsAgreeInRange_proven
-    notes := "The two hypotheses are exactly the refuted cases above. On main the negative-lo message differs (see accel-bisect-ssize-bounds)." },
+    prop := ``BisectTwinsAgreeNonnegLo, thm := some ``bisectTwinsAgreeNonnegLo_proven
+    notes := "The three hypotheses are exactly the refuted cases above." },
+  { id := "accel-bisect-negative-lo-raises", pyFile := "Modules/_bisectmodule.c"
+    pyFns := ["bisect_left", "bisect_right", "insort_left", "insort_right"]
+    statement := "For every negative lo that fits a Py_ssize_t and every hi, including hi that C cannot convert, both twins raise ValueError with their own message."
+    source := "bisect docs on lo/hi; clinic/_bisectmodule.c.h:96-100 vs Lib/bisect.py:34-35", status := .proven
+    prop := ``BisectNegativeLoRaises, thm := some ``bisectNegativeLoRaises_proven
+    notes := "C checks lo while parsing it, so a negative lo wins over an hi outside Py_ssize_t. That is new in 3.15: 3.14.7 raised OverflowError for such an hi." },
   { id := "accel-bisect-left-partition", pyFile := "Lib/bisect.py"
     pyFns := ["bisect_left"]
     statement := "For a sorted by key and 0 <= lo <= hi <= len(a), both twins return the same ip in [lo, hi] with key(e) < x on a[lo:ip] and key(e) >= x on a[ip:hi]."
@@ -57,19 +70,19 @@ def entries : List Entry := [
   { id := "accel-bisect-right-partition", pyFile := "Lib/bisect.py"
     pyFns := ["bisect_right"]
     statement := "For a sorted by key and 0 <= lo <= hi <= len(a), both twins return the same ip in [lo, hi] with key(e) <= x on a[lo:ip] and key(e) > x on a[ip:hi]."
-    source := "bisect_right docstring, Lib/bisect.py:24-26; Doc/library/bisect.rst:71-74", status := .proven
+    source := "bisect_right docstring, Lib/bisect.py:24-26; Doc/library/bisect.rst:70-72", status := .proven
     prop := ``BisectRightPartition, thm := some ``bisectRightPartition_proven },
   { id := "accel-bisect-doc-partition", pyFile := "Lib/bisect.py"
     pyFns := ["bisect_left", "bisect_right"]
     statement := "For a sorted by key and any lo, hi: whenever a twin returns ip, the slices a[lo:ip] and a[ip:hi] satisfy the documented partition."
-    source := "Doc/library/bisect.rst:48-51 and :74-77", status := .refuted
+    source := "Doc/library/bisect.rst:48-51 and :70-72", status := .refuted
     prop := ``BisectDocPartition, thm := some ``bisectDocPartition_refuted
     bug := some "accel-bisect-hi-minus-one"
     notes := "Negative hi: the search range is empty but a[ip:hi] uses negative-index slicing (python/cpython#125889)." },
   { id := "accel-bisect-doc-partition-nonneg-hi", pyFile := "Lib/bisect.py"
     pyFns := ["bisect_left", "bisect_right"]
     statement := "For a sorted by key, any lo and hi=None or hi >= 0 (including lo > hi and hi > len(a)): whenever either twin returns ip, the documented slice partition holds."
-    source := "Doc/library/bisect.rst:48-51 and :74-77", status := .proven
+    source := "Doc/library/bisect.rst:48-51 and :70-72", status := .proven
     prop := ``BisectDocPartitionNonnegHi, thm := some ``bisectDocPartitionNonnegHi_proven
     notes := "For hi > len(a) the search either returns a correct ip or raises IndexError; it never returns a wrong one." },
   { id := "accel-insort-keeps-sorted", pyFile := "Lib/bisect.py"
@@ -109,16 +122,30 @@ def entries : List Entry := [
     prop := ``HeapifyMakesHeap, thm := some ``heapifyMakesHeap_proven },
   { id := "accel-nsmallest-sorted-prefix", pyFile := "Lib/heapq.py"
     pyFns := ["nsmallest"]
-    statement := "For n >= 0, nsmallest(n, iterable, key) == sorted(iterable, key=key)[:n], ties included, for sized and unsized iterables."
+    statement := "For n >= 0, nsmallest(n, iterable, key) == sorted(iterable, key=key)[:n], ties included, for sized and unsized iterables whose len() is their item count."
     source := "nsmallest docstring, Lib/heapq.py:477-481; Doc/library/heapq.rst:183-188", status := .proven
     prop := ``NsmallestIsSortedPrefix, thm := some ``nsmallestIsSortedPrefix_proven
-    notes := "Covers the n == 1 min() shortcut, the n >= len sorted() shortcut and both heap branches. Negative n is excluded: its meaning is undefined (python/cpython#57483); nsmallest returns [] there while sorted(...)[:n] drops items." },
+    notes := "Covers the n == 1 min() shortcut, the n >= len sorted() shortcut and both heap branches. Negative n is excluded: its meaning is undefined (python/cpython#57483); nsmallest returns [] there while sorted(...)[:n] drops items. The hypothesis on len() is refuted below as accel-nsmallest-any-len." },
+  { id := "accel-nsmallest-any-len", pyFile := "Lib/heapq.py"
+    pyFns := ["nsmallest"]
+    statement := "For n >= 0 and any len(iterable), nsmallest(n, iterable, key) == sorted(iterable, key=key)[:n]."
+    source := "nsmallest docstring, Lib/heapq.py:477-481; Doc/library/heapq.rst:183-188", status := .refuted
+    prop := ``NsmallestAnyLen, thm := some ``nsmallestAnyLen_refuted
+    bug := some "accel-heapq-select-trusts-len"
+    notes := "True on 3.14.7, which sliced. 3.15 returns sorted(iterable) whole when n >= len(iterable), so a __len__ below the item count gives more than n items." },
   { id := "accel-nlargest-sorted-prefix", pyFile := "Lib/heapq.py"
     pyFns := ["nlargest"]
-    statement := "For n >= 0, nlargest(n, iterable, key) == sorted(iterable, key=key, reverse=True)[:n], ties included."
+    statement := "For n >= 0, nlargest(n, iterable, key) == sorted(iterable, key=key, reverse=True)[:n], ties included, for sized and unsized iterables whose len() is their item count."
     source := "nlargest docstring, Lib/heapq.py:537-541; Doc/library/heapq.rst:174-180", status := .proven
     prop := ``NlargestIsSortedPrefix, thm := some ``nlargestIsSortedPrefix_proven
     notes := "As for nsmallest; negative n excluded (python/cpython#57483)." },
+  { id := "accel-nlargest-any-len", pyFile := "Lib/heapq.py"
+    pyFns := ["nlargest"]
+    statement := "For n >= 0 and any len(iterable), nlargest(n, iterable, key) == sorted(iterable, key=key, reverse=True)[:n]."
+    source := "nlargest docstring, Lib/heapq.py:537-541; Doc/library/heapq.rst:174-180", status := .refuted
+    prop := ``NlargestAnyLen, thm := some ``nlargestAnyLen_refuted
+    bug := some "accel-heapq-select-trusts-len"
+    notes := "As accel-nsmallest-any-len." },
   { id := "accel-merge-sorted", pyFile := "Lib/heapq.py"
     pyFns := ["merge"]
     statement := "For inputs sorted by key (descending if reverse), list(merge(*its, key, reverse)) == sorted(chain(*its), key=key, reverse=reverse), ties included."

@@ -34,7 +34,7 @@ reproducer: |
 expected: |
   `[[' a', 'b']]` reads back unchanged, because the writer quotes the field: `" a",b`.
 observed: |
-  python3 3.14.7: writes ' a,b\r\n', reads [['a', 'b']]. REPRODUCED.
+  python3 3.15.2: writes ' a,b\r\n', reads [['a', 'b']]. REPRODUCED.
   main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
 promised_by: |
   docs: "To make it as easy as possible to interface with modules which implement the DB API", and

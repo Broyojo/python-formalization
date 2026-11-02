@@ -46,7 +46,7 @@ reproducer: |
 expected: |
   Two lines everywhere: the total after the first line (2) does not exceed the hint (2).
 observed: |
-  python3 3.14.7: io.BytesIO, _pyio.BytesIO, _pyio.BufferedReader and _pyio.StringIO return one line;
+  python3 3.15.2: io.BytesIO, _pyio.BytesIO, _pyio.BufferedReader and _pyio.StringIO return one line;
   io.BufferedReader, io.StringIO and io.TextIOWrapper return two. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |

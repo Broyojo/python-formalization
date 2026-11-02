@@ -65,6 +65,7 @@ possible_fix: |
   Convert before storing: `digits.append(int(digit))`, or join with `'%d' % d`. Whether to validate
   value[1] for 'F' is a separate choice; matching _decimal would change accepted inputs.
 tested:
+  python3 3.15.2: REPRODUCED
   python3 (3.14.7, Linux, bundled libmpdec 2.5.1): REPRODUCED
   main (vendor/cpython-main/python.exe, 3.16.0a1+dev, bundled libmpdec 2.5.1): REPRODUCED
 duplicates:

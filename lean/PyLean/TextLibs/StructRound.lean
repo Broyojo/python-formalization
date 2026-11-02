@@ -185,9 +185,9 @@ theorem npUnsigned_ok {f : FormatDef} {hi x : Int} (h1 : 0 ≤ x) (h2 : x ≤ hi
 def isUnsignedCode (c : Char) : Bool :=
   c == 'B' || c == 'H' || c == 'I' || c == 'L' || c == 'N' || c == 'Q' || c == 'P'
 
-def loOf (e : FormatDef) : Int := if isUnsignedCode e.format then 0 else -(2 ^ (e.size * 8 - 1))
+def loOf (e : FormatDef) : Int := if isUnsignedCode e.code then 0 else -(2 ^ (e.size * 8 - 1))
 def hiOf (e : FormatDef) : Int :=
-  if isUnsignedCode e.format then 2 ^ (e.size * 8) - 1 else 2 ^ (e.size * 8 - 1) - 1
+  if isUnsignedCode e.code then 2 ^ (e.size * 8) - 1 else 2 ^ (e.size * 8 - 1) - 1
 
 /-- Packing `n` in the entry's documented range succeeds, gives `size` bytes, and
 unpacking them returns `n`. -/
@@ -228,7 +228,7 @@ theorem signExt_of_emod (k v : Nat) (n : Int) (hk : k = 15 ∨ k = 31 ∨ k = 63
     omega
 
 /-- A native signed entry (`np_*` then `nu_*`). -/
-theorem rt_signed (e : FormatDef) (hs : e.size ≠ 0) (hc : isUnsignedCode e.format = false)
+theorem rt_signed (e : FormatDef) (hs : e.size ≠ 0) (hc : isUnsignedCode e.code = false)
     (hp : ∀ n, loOf e ≤ n → n ≤ hiOf e → runPack e (.int n) = .ok (twos e.size n))
     (hu : ∀ p, runUnpack e p = .ok (.int (signedOf e.size (leVal (p.take e.size))))) :
     IntEntryRoundTrip e := by
@@ -239,7 +239,7 @@ theorem rt_signed (e : FormatDef) (hs : e.size ≠ 0) (hc : isUnsignedCode e.for
   rw [nativeSignedRoundTrip_proven e.size n hs (by simpa using h1) (by simp at h2; omega)]
 
 /-- A native unsigned entry. -/
-theorem rt_unsigned (e : FormatDef) (hc : isUnsignedCode e.format = true)
+theorem rt_unsigned (e : FormatDef) (hc : isUnsignedCode e.code = true)
     (hp : ∀ n, loOf e ≤ n → n ≤ hiOf e → runPack e (.int n) = .ok (twos e.size n))
     (hu : ∀ p, runUnpack e p = .ok (.int (leVal (p.take e.size)))) :
     IntEntryRoundTrip e := by
@@ -252,7 +252,7 @@ theorem rt_unsigned (e : FormatDef) (hc : isUnsignedCode e.format = true)
 /-- A standard entry, given how its loop's output decodes. -/
 theorem rt_std (e : FormatDef) (w : Int → List Nat) (dec : List Nat → Nat) (k : Nat)
     (hk : k = 15 ∨ k = 31 ∨ k = 63) (hsz : e.size * 8 = k + 1)
-    (hc : isUnsignedCode e.format = false)
+    (hc : isUnsignedCode e.code = false)
     (hl : ∀ n, (w n).length = e.size)
     (hd : ∀ n, (dec (w n) : Int) = n % 2 ^ (k + 1))
     (hp : ∀ n, loOf e ≤ n → n ≤ hiOf e → runPack e (.int n) = .ok (w n))
@@ -266,7 +266,7 @@ theorem rt_std (e : FormatDef) (w : Int → List Nat) (dec : List Nat → Nat) (
 
 /-- A standard unsigned entry. -/
 theorem rt_std_u (e : FormatDef) (w : Int → List Nat) (dec : List Nat → Nat)
-    (hc : isUnsignedCode e.format = true)
+    (hc : isUnsignedCode e.code = true)
     (hl : ∀ n, (w n).length = e.size)
     (hd : ∀ n, (dec (w n) : Int) = n % 2 ^ (8 * e.size))
     (hp : ∀ n, loOf e ≤ n → n ≤ hiOf e → runPack e (.int n) = .ok (w n))
@@ -323,192 +323,192 @@ theorem packUintStd_ok (f : FormatDef) (n : Int) (le : Bool) (hs : f.size = 2 �
   rw [hL]
   rcases hs with h | h <;> rw [h] at h2 ⊢ <;> simp at h2 <;> simp [orRange, bind, Except.bind, pure, Except.pure] <;> omega
 
-theorem rt_nuByte_npByte_0 : IntEntryRoundTrip ⟨'b', 1, 0, .nuByte, .npByte⟩ :=
+theorem rt_nuByte_npByte_0 : IntEntryRoundTrip ⟨['b'], 1, 0, .nuByte, .npByte⟩ :=
   rt_signed _ (by decide) (by decide) (fun n h1 h2 => by
-    rw [show loOf (⟨'b', 1, 0, .nuByte, .npByte⟩ : FormatDef) = (-128) by decide] at h1; rw [show hiOf (⟨'b', 1, 0, .nuByte, .npByte⟩ : FormatDef) = (127) by decide] at h2
+    rw [show loOf (⟨['b'], 1, 0, .nuByte, .npByte⟩ : FormatDef) = (-128) by decide] at h1; rw [show hiOf (⟨['b'], 1, 0, .nuByte, .npByte⟩ : FormatDef) = (127) by decide] at h2
     simp (disch := omega) only [runPack, orRange, getLong_int, getUlong_int, getLonglong_int, getUlonglong_int, getSsizeT_int, getSizeT_int, npSigned_ok, npUnsigned_ok, bind, Except.bind, pure, Except.pure]) (fun _ => rfl)
 
-theorem rt_nuUbyte_npUbyte_0 : IntEntryRoundTrip ⟨'B', 1, 0, .nuUbyte, .npUbyte⟩ :=
+theorem rt_nuUbyte_npUbyte_0 : IntEntryRoundTrip ⟨['B'], 1, 0, .nuUbyte, .npUbyte⟩ :=
   rt_unsigned _ (by decide) (fun n h1 h2 => by
-    rw [show loOf (⟨'B', 1, 0, .nuUbyte, .npUbyte⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨'B', 1, 0, .nuUbyte, .npUbyte⟩ : FormatDef) = (255) by decide] at h2
+    rw [show loOf (⟨['B'], 1, 0, .nuUbyte, .npUbyte⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨['B'], 1, 0, .nuUbyte, .npUbyte⟩ : FormatDef) = (255) by decide] at h2
     simp (disch := omega) only [runPack, orRange, getLong_int, getUlong_int, getLonglong_int, getUlonglong_int, getSsizeT_int, getSizeT_int, npSigned_ok, npUnsigned_ok, bind, Except.bind, pure, Except.pure]) (fun _ => rfl)
 
-theorem rt_nuShort_npShort_2 : IntEntryRoundTrip ⟨'h', 2, 2, .nuShort, .npShort⟩ :=
+theorem rt_nuShort_npShort_2 : IntEntryRoundTrip ⟨['h'], 2, 2, .nuShort, .npShort⟩ :=
   rt_signed _ (by decide) (by decide) (fun n h1 h2 => by
-    rw [show loOf (⟨'h', 2, 2, .nuShort, .npShort⟩ : FormatDef) = (-32768) by decide] at h1; rw [show hiOf (⟨'h', 2, 2, .nuShort, .npShort⟩ : FormatDef) = (32767) by decide] at h2
+    rw [show loOf (⟨['h'], 2, 2, .nuShort, .npShort⟩ : FormatDef) = (-32768) by decide] at h1; rw [show hiOf (⟨['h'], 2, 2, .nuShort, .npShort⟩ : FormatDef) = (32767) by decide] at h2
     simp (disch := omega) only [runPack, orRange, getLong_int, getUlong_int, getLonglong_int, getUlonglong_int, getSsizeT_int, getSizeT_int, npSigned_ok, npUnsigned_ok, bind, Except.bind, pure, Except.pure]) (fun _ => rfl)
 
-theorem rt_nuUshort_npUshort_2 : IntEntryRoundTrip ⟨'H', 2, 2, .nuUshort, .npUshort⟩ :=
+theorem rt_nuUshort_npUshort_2 : IntEntryRoundTrip ⟨['H'], 2, 2, .nuUshort, .npUshort⟩ :=
   rt_unsigned _ (by decide) (fun n h1 h2 => by
-    rw [show loOf (⟨'H', 2, 2, .nuUshort, .npUshort⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨'H', 2, 2, .nuUshort, .npUshort⟩ : FormatDef) = (65535) by decide] at h2
+    rw [show loOf (⟨['H'], 2, 2, .nuUshort, .npUshort⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨['H'], 2, 2, .nuUshort, .npUshort⟩ : FormatDef) = (65535) by decide] at h2
     simp (disch := omega) only [runPack, orRange, getLong_int, getUlong_int, getLonglong_int, getUlonglong_int, getSsizeT_int, getSizeT_int, npSigned_ok, npUnsigned_ok, bind, Except.bind, pure, Except.pure]) (fun _ => rfl)
 
-theorem rt_nuInt_npInt_4 : IntEntryRoundTrip ⟨'i', 4, 4, .nuInt, .npInt⟩ :=
+theorem rt_nuInt_npInt_4 : IntEntryRoundTrip ⟨['i'], 4, 4, .nuInt, .npInt⟩ :=
   rt_signed _ (by decide) (by decide) (fun n h1 h2 => by
-    rw [show loOf (⟨'i', 4, 4, .nuInt, .npInt⟩ : FormatDef) = (-2147483648) by decide] at h1; rw [show hiOf (⟨'i', 4, 4, .nuInt, .npInt⟩ : FormatDef) = (2147483647) by decide] at h2
+    rw [show loOf (⟨['i'], 4, 4, .nuInt, .npInt⟩ : FormatDef) = (-2147483648) by decide] at h1; rw [show hiOf (⟨['i'], 4, 4, .nuInt, .npInt⟩ : FormatDef) = (2147483647) by decide] at h2
     simp (disch := omega) only [runPack, orRange, getLong_int, getUlong_int, getLonglong_int, getUlonglong_int, getSsizeT_int, getSizeT_int, npSigned_ok, npUnsigned_ok, bind, Except.bind, pure, Except.pure]) (fun _ => rfl)
 
-theorem rt_nuUint_npUint_4 : IntEntryRoundTrip ⟨'I', 4, 4, .nuUint, .npUint⟩ :=
+theorem rt_nuUint_npUint_4 : IntEntryRoundTrip ⟨['I'], 4, 4, .nuUint, .npUint⟩ :=
   rt_unsigned _ (by decide) (fun n h1 h2 => by
-    rw [show loOf (⟨'I', 4, 4, .nuUint, .npUint⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨'I', 4, 4, .nuUint, .npUint⟩ : FormatDef) = (4294967295) by decide] at h2
+    rw [show loOf (⟨['I'], 4, 4, .nuUint, .npUint⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨['I'], 4, 4, .nuUint, .npUint⟩ : FormatDef) = (4294967295) by decide] at h2
     simp (disch := omega) only [runPack, orRange, getLong_int, getUlong_int, getLonglong_int, getUlonglong_int, getSsizeT_int, getSizeT_int, npSigned_ok, npUnsigned_ok, bind, Except.bind, pure, Except.pure]) (fun _ => rfl)
 
-theorem rt_nuLong_npLong_8 : IntEntryRoundTrip ⟨'l', 8, 8, .nuLong, .npLong⟩ :=
+theorem rt_nuLong_npLong_8 : IntEntryRoundTrip ⟨['l'], 8, 8, .nuLong, .npLong⟩ :=
   rt_signed _ (by decide) (by decide) (fun n h1 h2 => by
-    rw [show loOf (⟨'l', 8, 8, .nuLong, .npLong⟩ : FormatDef) = (-9223372036854775808) by decide] at h1; rw [show hiOf (⟨'l', 8, 8, .nuLong, .npLong⟩ : FormatDef) = (9223372036854775807) by decide] at h2
+    rw [show loOf (⟨['l'], 8, 8, .nuLong, .npLong⟩ : FormatDef) = (-9223372036854775808) by decide] at h1; rw [show hiOf (⟨['l'], 8, 8, .nuLong, .npLong⟩ : FormatDef) = (9223372036854775807) by decide] at h2
     simp (disch := omega) only [runPack, orRange, getLong_int, getUlong_int, getLonglong_int, getUlonglong_int, getSsizeT_int, getSizeT_int, npSigned_ok, npUnsigned_ok, bind, Except.bind, pure, Except.pure]) (fun _ => rfl)
 
-theorem rt_nuUlong_npUlong_8 : IntEntryRoundTrip ⟨'L', 8, 8, .nuUlong, .npUlong⟩ :=
+theorem rt_nuUlong_npUlong_8 : IntEntryRoundTrip ⟨['L'], 8, 8, .nuUlong, .npUlong⟩ :=
   rt_unsigned _ (by decide) (fun n h1 h2 => by
-    rw [show loOf (⟨'L', 8, 8, .nuUlong, .npUlong⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨'L', 8, 8, .nuUlong, .npUlong⟩ : FormatDef) = (18446744073709551615) by decide] at h2
+    rw [show loOf (⟨['L'], 8, 8, .nuUlong, .npUlong⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨['L'], 8, 8, .nuUlong, .npUlong⟩ : FormatDef) = (18446744073709551615) by decide] at h2
     simp (disch := omega) only [runPack, orRange, getLong_int, getUlong_int, getLonglong_int, getUlonglong_int, getSsizeT_int, getSizeT_int, npSigned_ok, npUnsigned_ok, bind, Except.bind, pure, Except.pure]) (fun _ => rfl)
 
-theorem rt_nuSsizeT_npSsizeT_8 : IntEntryRoundTrip ⟨'n', 8, 8, .nuSsizeT, .npSsizeT⟩ :=
+theorem rt_nuSsizeT_npSsizeT_8 : IntEntryRoundTrip ⟨['n'], 8, 8, .nuSsizeT, .npSsizeT⟩ :=
   rt_signed _ (by decide) (by decide) (fun n h1 h2 => by
-    rw [show loOf (⟨'n', 8, 8, .nuSsizeT, .npSsizeT⟩ : FormatDef) = (-9223372036854775808) by decide] at h1; rw [show hiOf (⟨'n', 8, 8, .nuSsizeT, .npSsizeT⟩ : FormatDef) = (9223372036854775807) by decide] at h2
+    rw [show loOf (⟨['n'], 8, 8, .nuSsizeT, .npSsizeT⟩ : FormatDef) = (-9223372036854775808) by decide] at h1; rw [show hiOf (⟨['n'], 8, 8, .nuSsizeT, .npSsizeT⟩ : FormatDef) = (9223372036854775807) by decide] at h2
     simp (disch := omega) only [runPack, orRange, getLong_int, getUlong_int, getLonglong_int, getUlonglong_int, getSsizeT_int, getSizeT_int, npSigned_ok, npUnsigned_ok, bind, Except.bind, pure, Except.pure]) (fun _ => rfl)
 
-theorem rt_nuSizeT_npSizeT_8 : IntEntryRoundTrip ⟨'N', 8, 8, .nuSizeT, .npSizeT⟩ :=
+theorem rt_nuSizeT_npSizeT_8 : IntEntryRoundTrip ⟨['N'], 8, 8, .nuSizeT, .npSizeT⟩ :=
   rt_unsigned _ (by decide) (fun n h1 h2 => by
-    rw [show loOf (⟨'N', 8, 8, .nuSizeT, .npSizeT⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨'N', 8, 8, .nuSizeT, .npSizeT⟩ : FormatDef) = (18446744073709551615) by decide] at h2
+    rw [show loOf (⟨['N'], 8, 8, .nuSizeT, .npSizeT⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨['N'], 8, 8, .nuSizeT, .npSizeT⟩ : FormatDef) = (18446744073709551615) by decide] at h2
     simp (disch := omega) only [runPack, orRange, getLong_int, getUlong_int, getLonglong_int, getUlonglong_int, getSsizeT_int, getSizeT_int, npSigned_ok, npUnsigned_ok, bind, Except.bind, pure, Except.pure]) (fun _ => rfl)
 
-theorem rt_nuLonglong_npLonglong_8 : IntEntryRoundTrip ⟨'q', 8, 8, .nuLonglong, .npLonglong⟩ :=
+theorem rt_nuLonglong_npLonglong_8 : IntEntryRoundTrip ⟨['q'], 8, 8, .nuLonglong, .npLonglong⟩ :=
   rt_signed _ (by decide) (by decide) (fun n h1 h2 => by
-    rw [show loOf (⟨'q', 8, 8, .nuLonglong, .npLonglong⟩ : FormatDef) = (-9223372036854775808) by decide] at h1; rw [show hiOf (⟨'q', 8, 8, .nuLonglong, .npLonglong⟩ : FormatDef) = (9223372036854775807) by decide] at h2
+    rw [show loOf (⟨['q'], 8, 8, .nuLonglong, .npLonglong⟩ : FormatDef) = (-9223372036854775808) by decide] at h1; rw [show hiOf (⟨['q'], 8, 8, .nuLonglong, .npLonglong⟩ : FormatDef) = (9223372036854775807) by decide] at h2
     simp (disch := omega) only [runPack, orRange, getLong_int, getUlong_int, getLonglong_int, getUlonglong_int, getSsizeT_int, getSizeT_int, npSigned_ok, npUnsigned_ok, bind, Except.bind, pure, Except.pure]) (fun _ => rfl)
 
-theorem rt_nuUlonglong_npUlonglong_8 : IntEntryRoundTrip ⟨'Q', 8, 8, .nuUlonglong, .npUlonglong⟩ :=
+theorem rt_nuUlonglong_npUlonglong_8 : IntEntryRoundTrip ⟨['Q'], 8, 8, .nuUlonglong, .npUlonglong⟩ :=
   rt_unsigned _ (by decide) (fun n h1 h2 => by
-    rw [show loOf (⟨'Q', 8, 8, .nuUlonglong, .npUlonglong⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨'Q', 8, 8, .nuUlonglong, .npUlonglong⟩ : FormatDef) = (18446744073709551615) by decide] at h2
+    rw [show loOf (⟨['Q'], 8, 8, .nuUlonglong, .npUlonglong⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨['Q'], 8, 8, .nuUlonglong, .npUlonglong⟩ : FormatDef) = (18446744073709551615) by decide] at h2
     simp (disch := omega) only [runPack, orRange, getLong_int, getUlong_int, getLonglong_int, getUlonglong_int, getSsizeT_int, getSizeT_int, npSigned_ok, npUnsigned_ok, bind, Except.bind, pure, Except.pure]) (fun _ => rfl)
 
-theorem rt_nuVoidP_npVoidP_8 : IntEntryRoundTrip ⟨'P', 8, 8, .nuVoidP, .npVoidP⟩ :=
+theorem rt_nuVoidP_npVoidP_8 : IntEntryRoundTrip ⟨['P'], 8, 8, .nuVoidP, .npVoidP⟩ :=
   rt_unsigned _ (by decide) (fun n h1 h2 => by
-    rw [show loOf (⟨'P', 8, 8, .nuVoidP, .npVoidP⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨'P', 8, 8, .nuVoidP, .npVoidP⟩ : FormatDef) = (18446744073709551615) by decide] at h2
+    rw [show loOf (⟨['P'], 8, 8, .nuVoidP, .npVoidP⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨['P'], 8, 8, .nuVoidP, .npVoidP⟩ : FormatDef) = (18446744073709551615) by decide] at h2
     exact packVoidP_ok h1 h2) (fun _ => rfl)
 
-theorem rt_nuShort_npShort_0 : IntEntryRoundTrip ⟨'h', 2, 0, .nuShort, .npShort⟩ :=
+theorem rt_nuShort_npShort_0 : IntEntryRoundTrip ⟨['h'], 2, 0, .nuShort, .npShort⟩ :=
   rt_signed _ (by decide) (by decide) (fun n h1 h2 => by
-    rw [show loOf (⟨'h', 2, 0, .nuShort, .npShort⟩ : FormatDef) = (-32768) by decide] at h1; rw [show hiOf (⟨'h', 2, 0, .nuShort, .npShort⟩ : FormatDef) = (32767) by decide] at h2
+    rw [show loOf (⟨['h'], 2, 0, .nuShort, .npShort⟩ : FormatDef) = (-32768) by decide] at h1; rw [show hiOf (⟨['h'], 2, 0, .nuShort, .npShort⟩ : FormatDef) = (32767) by decide] at h2
     simp (disch := omega) only [runPack, orRange, getLong_int, getUlong_int, getLonglong_int, getUlonglong_int, getSsizeT_int, getSizeT_int, npSigned_ok, npUnsigned_ok, bind, Except.bind, pure, Except.pure]) (fun _ => rfl)
 
-theorem rt_nuUshort_npUshort_0 : IntEntryRoundTrip ⟨'H', 2, 0, .nuUshort, .npUshort⟩ :=
+theorem rt_nuUshort_npUshort_0 : IntEntryRoundTrip ⟨['H'], 2, 0, .nuUshort, .npUshort⟩ :=
   rt_unsigned _ (by decide) (fun n h1 h2 => by
-    rw [show loOf (⟨'H', 2, 0, .nuUshort, .npUshort⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨'H', 2, 0, .nuUshort, .npUshort⟩ : FormatDef) = (65535) by decide] at h2
+    rw [show loOf (⟨['H'], 2, 0, .nuUshort, .npUshort⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨['H'], 2, 0, .nuUshort, .npUshort⟩ : FormatDef) = (65535) by decide] at h2
     simp (disch := omega) only [runPack, orRange, getLong_int, getUlong_int, getLonglong_int, getUlonglong_int, getSsizeT_int, getSizeT_int, npSigned_ok, npUnsigned_ok, bind, Except.bind, pure, Except.pure]) (fun _ => rfl)
 
-theorem rt_nuInt_npInt_0 : IntEntryRoundTrip ⟨'i', 4, 0, .nuInt, .npInt⟩ :=
+theorem rt_nuInt_npInt_0 : IntEntryRoundTrip ⟨['i'], 4, 0, .nuInt, .npInt⟩ :=
   rt_signed _ (by decide) (by decide) (fun n h1 h2 => by
-    rw [show loOf (⟨'i', 4, 0, .nuInt, .npInt⟩ : FormatDef) = (-2147483648) by decide] at h1; rw [show hiOf (⟨'i', 4, 0, .nuInt, .npInt⟩ : FormatDef) = (2147483647) by decide] at h2
+    rw [show loOf (⟨['i'], 4, 0, .nuInt, .npInt⟩ : FormatDef) = (-2147483648) by decide] at h1; rw [show hiOf (⟨['i'], 4, 0, .nuInt, .npInt⟩ : FormatDef) = (2147483647) by decide] at h2
     simp (disch := omega) only [runPack, orRange, getLong_int, getUlong_int, getLonglong_int, getUlonglong_int, getSsizeT_int, getSizeT_int, npSigned_ok, npUnsigned_ok, bind, Except.bind, pure, Except.pure]) (fun _ => rfl)
 
-theorem rt_nuUint_npUint_0 : IntEntryRoundTrip ⟨'I', 4, 0, .nuUint, .npUint⟩ :=
+theorem rt_nuUint_npUint_0 : IntEntryRoundTrip ⟨['I'], 4, 0, .nuUint, .npUint⟩ :=
   rt_unsigned _ (by decide) (fun n h1 h2 => by
-    rw [show loOf (⟨'I', 4, 0, .nuUint, .npUint⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨'I', 4, 0, .nuUint, .npUint⟩ : FormatDef) = (4294967295) by decide] at h2
+    rw [show loOf (⟨['I'], 4, 0, .nuUint, .npUint⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨['I'], 4, 0, .nuUint, .npUint⟩ : FormatDef) = (4294967295) by decide] at h2
     simp (disch := omega) only [runPack, orRange, getLong_int, getUlong_int, getLonglong_int, getUlonglong_int, getSsizeT_int, getSizeT_int, npSigned_ok, npUnsigned_ok, bind, Except.bind, pure, Except.pure]) (fun _ => rfl)
 
-theorem rt_nuLonglong_npLonglong_0 : IntEntryRoundTrip ⟨'q', 8, 0, .nuLonglong, .npLonglong⟩ :=
+theorem rt_nuLonglong_npLonglong_0 : IntEntryRoundTrip ⟨['q'], 8, 0, .nuLonglong, .npLonglong⟩ :=
   rt_signed _ (by decide) (by decide) (fun n h1 h2 => by
-    rw [show loOf (⟨'q', 8, 0, .nuLonglong, .npLonglong⟩ : FormatDef) = (-9223372036854775808) by decide] at h1; rw [show hiOf (⟨'q', 8, 0, .nuLonglong, .npLonglong⟩ : FormatDef) = (9223372036854775807) by decide] at h2
+    rw [show loOf (⟨['q'], 8, 0, .nuLonglong, .npLonglong⟩ : FormatDef) = (-9223372036854775808) by decide] at h1; rw [show hiOf (⟨['q'], 8, 0, .nuLonglong, .npLonglong⟩ : FormatDef) = (9223372036854775807) by decide] at h2
     simp (disch := omega) only [runPack, orRange, getLong_int, getUlong_int, getLonglong_int, getUlonglong_int, getSsizeT_int, getSizeT_int, npSigned_ok, npUnsigned_ok, bind, Except.bind, pure, Except.pure]) (fun _ => rfl)
 
-theorem rt_nuUlonglong_npUlonglong_0 : IntEntryRoundTrip ⟨'Q', 8, 0, .nuUlonglong, .npUlonglong⟩ :=
+theorem rt_nuUlonglong_npUlonglong_0 : IntEntryRoundTrip ⟨['Q'], 8, 0, .nuUlonglong, .npUlonglong⟩ :=
   rt_unsigned _ (by decide) (fun n h1 h2 => by
-    rw [show loOf (⟨'Q', 8, 0, .nuUlonglong, .npUlonglong⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨'Q', 8, 0, .nuUlonglong, .npUlonglong⟩ : FormatDef) = (18446744073709551615) by decide] at h2
+    rw [show loOf (⟨['Q'], 8, 0, .nuUlonglong, .npUlonglong⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨['Q'], 8, 0, .nuUlonglong, .npUlonglong⟩ : FormatDef) = (18446744073709551615) by decide] at h2
     simp (disch := omega) only [runPack, orRange, getLong_int, getUlong_int, getLonglong_int, getUlonglong_int, getSsizeT_int, getSizeT_int, npSigned_ok, npUnsigned_ok, bind, Except.bind, pure, Except.pure]) (fun _ => rfl)
 
-theorem rt_buShort_bpInt_h : IntEntryRoundTrip ⟨'h', 2, 0, .buShort, .bpInt⟩ :=
+theorem rt_buShort_bpInt_h : IntEntryRoundTrip ⟨['h'], 2, 0, .buShort, .bpInt⟩ :=
   rt_std _ (bpLoop 2) beVal 15 (by decide) (by decide) (by decide) (bpLoop_length 2) (beVal_bpLoop 2) (fun n h1 h2 => by
-    rw [show loOf (⟨'h', 2, 0, .buShort, .bpInt⟩ : FormatDef) = (-32768) by decide] at h1; rw [show hiOf (⟨'h', 2, 0, .buShort, .bpInt⟩ : FormatDef) = (32767) by decide] at h2
+    rw [show loOf (⟨['h'], 2, 0, .buShort, .bpInt⟩ : FormatDef) = (-32768) by decide] at h1; rw [show hiOf (⟨['h'], 2, 0, .buShort, .bpInt⟩ : FormatDef) = (32767) by decide] at h2
     exact packIntStd_ok _ _ _ (by decide) (by first | omega | (simp; omega)) (by first | omega | (simp; omega))) (fun _ => rfl)
 
-theorem rt_buUint_bpUint_H : IntEntryRoundTrip ⟨'H', 2, 0, .buUint, .bpUint⟩ :=
+theorem rt_buUint_bpUint_H : IntEntryRoundTrip ⟨['H'], 2, 0, .buUint, .bpUint⟩ :=
   rt_std_u _ (bpLoop 2) beVal (by decide) (bpLoop_length 2) (beVal_bpLoop 2) (fun n h1 h2 => by
-    rw [show loOf (⟨'H', 2, 0, .buUint, .bpUint⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨'H', 2, 0, .buUint, .bpUint⟩ : FormatDef) = (65535) by decide] at h2
+    rw [show loOf (⟨['H'], 2, 0, .buUint, .bpUint⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨['H'], 2, 0, .buUint, .bpUint⟩ : FormatDef) = (65535) by decide] at h2
     exact packUintStd_ok _ _ _ (by decide) (by first | omega | (simp; omega)) (by first | omega | (simp; omega))) (fun _ => rfl)
 
-theorem rt_buInt_bpInt_i : IntEntryRoundTrip ⟨'i', 4, 0, .buInt, .bpInt⟩ :=
+theorem rt_buInt_bpInt_i : IntEntryRoundTrip ⟨['i'], 4, 0, .buInt, .bpInt⟩ :=
   rt_std _ (bpLoop 4) beVal 31 (by decide) (by decide) (by decide) (bpLoop_length 4) (beVal_bpLoop 4) (fun n h1 h2 => by
-    rw [show loOf (⟨'i', 4, 0, .buInt, .bpInt⟩ : FormatDef) = (-2147483648) by decide] at h1; rw [show hiOf (⟨'i', 4, 0, .buInt, .bpInt⟩ : FormatDef) = (2147483647) by decide] at h2
+    rw [show loOf (⟨['i'], 4, 0, .buInt, .bpInt⟩ : FormatDef) = (-2147483648) by decide] at h1; rw [show hiOf (⟨['i'], 4, 0, .buInt, .bpInt⟩ : FormatDef) = (2147483647) by decide] at h2
     exact packIntStd_ok _ _ _ (by decide) (by first | omega | (simp; omega)) (by first | omega | (simp; omega))) (fun _ => rfl)
 
-theorem rt_buUint_bpUint_I : IntEntryRoundTrip ⟨'I', 4, 0, .buUint, .bpUint⟩ :=
+theorem rt_buUint_bpUint_I : IntEntryRoundTrip ⟨['I'], 4, 0, .buUint, .bpUint⟩ :=
   rt_std_u _ (bpLoop 4) beVal (by decide) (bpLoop_length 4) (beVal_bpLoop 4) (fun n h1 h2 => by
-    rw [show loOf (⟨'I', 4, 0, .buUint, .bpUint⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨'I', 4, 0, .buUint, .bpUint⟩ : FormatDef) = (4294967295) by decide] at h2
+    rw [show loOf (⟨['I'], 4, 0, .buUint, .bpUint⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨['I'], 4, 0, .buUint, .bpUint⟩ : FormatDef) = (4294967295) by decide] at h2
     exact packUintStd_ok _ _ _ (by decide) (by first | omega | (simp; omega)) (by first | omega | (simp; omega))) (fun _ => rfl)
 
-theorem rt_buInt_bpInt_l : IntEntryRoundTrip ⟨'l', 4, 0, .buInt, .bpInt⟩ :=
+theorem rt_buInt_bpInt_l : IntEntryRoundTrip ⟨['l'], 4, 0, .buInt, .bpInt⟩ :=
   rt_std _ (bpLoop 4) beVal 31 (by decide) (by decide) (by decide) (bpLoop_length 4) (beVal_bpLoop 4) (fun n h1 h2 => by
-    rw [show loOf (⟨'l', 4, 0, .buInt, .bpInt⟩ : FormatDef) = (-2147483648) by decide] at h1; rw [show hiOf (⟨'l', 4, 0, .buInt, .bpInt⟩ : FormatDef) = (2147483647) by decide] at h2
+    rw [show loOf (⟨['l'], 4, 0, .buInt, .bpInt⟩ : FormatDef) = (-2147483648) by decide] at h1; rw [show hiOf (⟨['l'], 4, 0, .buInt, .bpInt⟩ : FormatDef) = (2147483647) by decide] at h2
     exact packIntStd_ok _ _ _ (by decide) (by first | omega | (simp; omega)) (by first | omega | (simp; omega))) (fun _ => rfl)
 
-theorem rt_buUint_bpUint_L : IntEntryRoundTrip ⟨'L', 4, 0, .buUint, .bpUint⟩ :=
+theorem rt_buUint_bpUint_L : IntEntryRoundTrip ⟨['L'], 4, 0, .buUint, .bpUint⟩ :=
   rt_std_u _ (bpLoop 4) beVal (by decide) (bpLoop_length 4) (beVal_bpLoop 4) (fun n h1 h2 => by
-    rw [show loOf (⟨'L', 4, 0, .buUint, .bpUint⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨'L', 4, 0, .buUint, .bpUint⟩ : FormatDef) = (4294967295) by decide] at h2
+    rw [show loOf (⟨['L'], 4, 0, .buUint, .bpUint⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨['L'], 4, 0, .buUint, .bpUint⟩ : FormatDef) = (4294967295) by decide] at h2
     exact packUintStd_ok _ _ _ (by decide) (by first | omega | (simp; omega)) (by first | omega | (simp; omega))) (fun _ => rfl)
 
-theorem rt_buLonglong_bpLonglong_q : IntEntryRoundTrip ⟨'q', 8, 0, .buLonglong, .bpLonglong⟩ :=
+theorem rt_buLonglong_bpLonglong_q : IntEntryRoundTrip ⟨['q'], 8, 0, .buLonglong, .bpLonglong⟩ :=
   rt_std _ (bpLoop 8) beVal 63 (by decide) (by decide) (by decide) (bpLoop_length 8) (beVal_bpLoop 8) (fun n h1 h2 => by
-    rw [show loOf (⟨'q', 8, 0, .buLonglong, .bpLonglong⟩ : FormatDef) = (-9223372036854775808) by decide] at h1; rw [show hiOf (⟨'q', 8, 0, .buLonglong, .bpLonglong⟩ : FormatDef) = (9223372036854775807) by decide] at h2
+    rw [show loOf (⟨['q'], 8, 0, .buLonglong, .bpLonglong⟩ : FormatDef) = (-9223372036854775808) by decide] at h1; rw [show hiOf (⟨['q'], 8, 0, .buLonglong, .bpLonglong⟩ : FormatDef) = (9223372036854775807) by decide] at h2
     exact packLonglongStd_ok _ _ _ h1 h2) (fun _ => rfl)
 
-theorem rt_buUlonglong_bpUlonglong_Q : IntEntryRoundTrip ⟨'Q', 8, 0, .buUlonglong, .bpUlonglong⟩ :=
+theorem rt_buUlonglong_bpUlonglong_Q : IntEntryRoundTrip ⟨['Q'], 8, 0, .buUlonglong, .bpUlonglong⟩ :=
   rt_std_u _ (bpLoop 8) beVal (by decide) (bpLoop_length 8) (beVal_bpLoop 8) (fun n h1 h2 => by
-    rw [show loOf (⟨'Q', 8, 0, .buUlonglong, .bpUlonglong⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨'Q', 8, 0, .buUlonglong, .bpUlonglong⟩ : FormatDef) = (18446744073709551615) by decide] at h2
+    rw [show loOf (⟨['Q'], 8, 0, .buUlonglong, .bpUlonglong⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨['Q'], 8, 0, .buUlonglong, .bpUlonglong⟩ : FormatDef) = (18446744073709551615) by decide] at h2
     exact packUlonglongStd_ok _ _ _ h1 h2) (fun _ => rfl)
 
-theorem rt_luShort_lpInt_h : IntEntryRoundTrip ⟨'h', 2, 0, .luShort, .lpInt⟩ :=
+theorem rt_luShort_lpInt_h : IntEntryRoundTrip ⟨['h'], 2, 0, .luShort, .lpInt⟩ :=
   rt_std _ (lpLoop 2) leVal 15 (by decide) (by decide) (by decide) (lpLoop_length 2) (leVal_lpLoop 2) (fun n h1 h2 => by
-    rw [show loOf (⟨'h', 2, 0, .luShort, .lpInt⟩ : FormatDef) = (-32768) by decide] at h1; rw [show hiOf (⟨'h', 2, 0, .luShort, .lpInt⟩ : FormatDef) = (32767) by decide] at h2
+    rw [show loOf (⟨['h'], 2, 0, .luShort, .lpInt⟩ : FormatDef) = (-32768) by decide] at h1; rw [show hiOf (⟨['h'], 2, 0, .luShort, .lpInt⟩ : FormatDef) = (32767) by decide] at h2
     exact packIntStd_ok _ _ _ (by decide) (by first | omega | (simp; omega)) (by first | omega | (simp; omega))) (fun _ => rfl)
 
-theorem rt_luUint_lpUint_H : IntEntryRoundTrip ⟨'H', 2, 0, .luUint, .lpUint⟩ :=
+theorem rt_luUint_lpUint_H : IntEntryRoundTrip ⟨['H'], 2, 0, .luUint, .lpUint⟩ :=
   rt_std_u _ (lpLoop 2) leVal (by decide) (lpLoop_length 2) (leVal_lpLoop 2) (fun n h1 h2 => by
-    rw [show loOf (⟨'H', 2, 0, .luUint, .lpUint⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨'H', 2, 0, .luUint, .lpUint⟩ : FormatDef) = (65535) by decide] at h2
+    rw [show loOf (⟨['H'], 2, 0, .luUint, .lpUint⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨['H'], 2, 0, .luUint, .lpUint⟩ : FormatDef) = (65535) by decide] at h2
     exact packUintStd_ok _ _ _ (by decide) (by first | omega | (simp; omega)) (by first | omega | (simp; omega))) (fun _ => rfl)
 
-theorem rt_luInt_lpInt_i : IntEntryRoundTrip ⟨'i', 4, 0, .luInt, .lpInt⟩ :=
+theorem rt_luInt_lpInt_i : IntEntryRoundTrip ⟨['i'], 4, 0, .luInt, .lpInt⟩ :=
   rt_std _ (lpLoop 4) leVal 31 (by decide) (by decide) (by decide) (lpLoop_length 4) (leVal_lpLoop 4) (fun n h1 h2 => by
-    rw [show loOf (⟨'i', 4, 0, .luInt, .lpInt⟩ : FormatDef) = (-2147483648) by decide] at h1; rw [show hiOf (⟨'i', 4, 0, .luInt, .lpInt⟩ : FormatDef) = (2147483647) by decide] at h2
+    rw [show loOf (⟨['i'], 4, 0, .luInt, .lpInt⟩ : FormatDef) = (-2147483648) by decide] at h1; rw [show hiOf (⟨['i'], 4, 0, .luInt, .lpInt⟩ : FormatDef) = (2147483647) by decide] at h2
     exact packIntStd_ok _ _ _ (by decide) (by first | omega | (simp; omega)) (by first | omega | (simp; omega))) (fun _ => rfl)
 
-theorem rt_luUint_lpUint_I : IntEntryRoundTrip ⟨'I', 4, 0, .luUint, .lpUint⟩ :=
+theorem rt_luUint_lpUint_I : IntEntryRoundTrip ⟨['I'], 4, 0, .luUint, .lpUint⟩ :=
   rt_std_u _ (lpLoop 4) leVal (by decide) (lpLoop_length 4) (leVal_lpLoop 4) (fun n h1 h2 => by
-    rw [show loOf (⟨'I', 4, 0, .luUint, .lpUint⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨'I', 4, 0, .luUint, .lpUint⟩ : FormatDef) = (4294967295) by decide] at h2
+    rw [show loOf (⟨['I'], 4, 0, .luUint, .lpUint⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨['I'], 4, 0, .luUint, .lpUint⟩ : FormatDef) = (4294967295) by decide] at h2
     exact packUintStd_ok _ _ _ (by decide) (by first | omega | (simp; omega)) (by first | omega | (simp; omega))) (fun _ => rfl)
 
-theorem rt_luInt_lpInt_l : IntEntryRoundTrip ⟨'l', 4, 0, .luInt, .lpInt⟩ :=
+theorem rt_luInt_lpInt_l : IntEntryRoundTrip ⟨['l'], 4, 0, .luInt, .lpInt⟩ :=
   rt_std _ (lpLoop 4) leVal 31 (by decide) (by decide) (by decide) (lpLoop_length 4) (leVal_lpLoop 4) (fun n h1 h2 => by
-    rw [show loOf (⟨'l', 4, 0, .luInt, .lpInt⟩ : FormatDef) = (-2147483648) by decide] at h1; rw [show hiOf (⟨'l', 4, 0, .luInt, .lpInt⟩ : FormatDef) = (2147483647) by decide] at h2
+    rw [show loOf (⟨['l'], 4, 0, .luInt, .lpInt⟩ : FormatDef) = (-2147483648) by decide] at h1; rw [show hiOf (⟨['l'], 4, 0, .luInt, .lpInt⟩ : FormatDef) = (2147483647) by decide] at h2
     exact packIntStd_ok _ _ _ (by decide) (by first | omega | (simp; omega)) (by first | omega | (simp; omega))) (fun _ => rfl)
 
-theorem rt_luUint_lpUint_L : IntEntryRoundTrip ⟨'L', 4, 0, .luUint, .lpUint⟩ :=
+theorem rt_luUint_lpUint_L : IntEntryRoundTrip ⟨['L'], 4, 0, .luUint, .lpUint⟩ :=
   rt_std_u _ (lpLoop 4) leVal (by decide) (lpLoop_length 4) (leVal_lpLoop 4) (fun n h1 h2 => by
-    rw [show loOf (⟨'L', 4, 0, .luUint, .lpUint⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨'L', 4, 0, .luUint, .lpUint⟩ : FormatDef) = (4294967295) by decide] at h2
+    rw [show loOf (⟨['L'], 4, 0, .luUint, .lpUint⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨['L'], 4, 0, .luUint, .lpUint⟩ : FormatDef) = (4294967295) by decide] at h2
     exact packUintStd_ok _ _ _ (by decide) (by first | omega | (simp; omega)) (by first | omega | (simp; omega))) (fun _ => rfl)
 
-theorem rt_luLonglong_lpLonglong_q : IntEntryRoundTrip ⟨'q', 8, 0, .luLonglong, .lpLonglong⟩ :=
+theorem rt_luLonglong_lpLonglong_q : IntEntryRoundTrip ⟨['q'], 8, 0, .luLonglong, .lpLonglong⟩ :=
   rt_std _ (lpLoop 8) leVal 63 (by decide) (by decide) (by decide) (lpLoop_length 8) (leVal_lpLoop 8) (fun n h1 h2 => by
-    rw [show loOf (⟨'q', 8, 0, .luLonglong, .lpLonglong⟩ : FormatDef) = (-9223372036854775808) by decide] at h1; rw [show hiOf (⟨'q', 8, 0, .luLonglong, .lpLonglong⟩ : FormatDef) = (9223372036854775807) by decide] at h2
+    rw [show loOf (⟨['q'], 8, 0, .luLonglong, .lpLonglong⟩ : FormatDef) = (-9223372036854775808) by decide] at h1; rw [show hiOf (⟨['q'], 8, 0, .luLonglong, .lpLonglong⟩ : FormatDef) = (9223372036854775807) by decide] at h2
     exact packLonglongStd_ok _ _ _ h1 h2) (fun _ => rfl)
 
-theorem rt_luUlonglong_lpUlonglong_Q : IntEntryRoundTrip ⟨'Q', 8, 0, .luUlonglong, .lpUlonglong⟩ :=
+theorem rt_luUlonglong_lpUlonglong_Q : IntEntryRoundTrip ⟨['Q'], 8, 0, .luUlonglong, .lpUlonglong⟩ :=
   rt_std_u _ (lpLoop 8) leVal (by decide) (lpLoop_length 8) (leVal_lpLoop 8) (fun n h1 h2 => by
-    rw [show loOf (⟨'Q', 8, 0, .luUlonglong, .lpUlonglong⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨'Q', 8, 0, .luUlonglong, .lpUlonglong⟩ : FormatDef) = (18446744073709551615) by decide] at h2
+    rw [show loOf (⟨['Q'], 8, 0, .luUlonglong, .lpUlonglong⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨['Q'], 8, 0, .luUlonglong, .lpUlonglong⟩ : FormatDef) = (18446744073709551615) by decide] at h2
     exact packUlonglongStd_ok _ _ _ h1 h2) (fun _ => rfl)
 
 /-- `lilendianTable` after `init_endian_tables`, spelled out. -/
 def lilExplicit : List FormatDef :=
-  [⟨'x', 1, 0, .none, .none⟩, ⟨'b', 1, 0, .nuByte, .npByte⟩, ⟨'B', 1, 0, .nuUbyte, .npUbyte⟩,
-   ⟨'c', 1, 0, .nuChar, .npChar⟩, ⟨'s', 1, 0, .none, .none⟩, ⟨'p', 1, 0, .none, .none⟩,
-   ⟨'h', 2, 0, .nuShort, .npShort⟩, ⟨'H', 2, 0, .nuUshort, .npUshort⟩,
-   ⟨'i', 4, 0, .nuInt, .npInt⟩, ⟨'I', 4, 0, .nuUint, .npUint⟩,
-   ⟨'l', 4, 0, .luInt, .lpInt⟩, ⟨'L', 4, 0, .luUint, .lpUint⟩,
-   ⟨'q', 8, 0, .nuLonglong, .npLonglong⟩, ⟨'Q', 8, 0, .nuUlonglong, .npUlonglong⟩,
-   ⟨'?', 1, 0, .buBool, .bpBool⟩, ⟨'e', 2, 0, .nuHalffloat, .npHalffloat⟩,
-   ⟨'f', 4, 0, .luFloat, .lpFloat⟩, ⟨'d', 8, 0, .luDouble, .lpDouble⟩,
-   ⟨'F', 8, 0, .nuFloatComplex, .npFloatComplex⟩, ⟨'D', 16, 0, .nuDoubleComplex, .npDoubleComplex⟩]
+  [⟨['x'], 1, 0, .none, .none⟩, ⟨['b'], 1, 0, .nuByte, .npByte⟩, ⟨['B'], 1, 0, .nuUbyte, .npUbyte⟩,
+   ⟨['c'], 1, 0, .nuChar, .npChar⟩, ⟨['s'], 1, 0, .none, .none⟩, ⟨['p'], 1, 0, .none, .none⟩,
+   ⟨['h'], 2, 0, .nuShort, .npShort⟩, ⟨['H'], 2, 0, .nuUshort, .npUshort⟩,
+   ⟨['i'], 4, 0, .nuInt, .npInt⟩, ⟨['I'], 4, 0, .nuUint, .npUint⟩,
+   ⟨['l'], 4, 0, .luInt, .lpInt⟩, ⟨['L'], 4, 0, .luUint, .lpUint⟩,
+   ⟨['q'], 8, 0, .nuLonglong, .npLonglong⟩, ⟨['Q'], 8, 0, .nuUlonglong, .npUlonglong⟩,
+   ⟨['?'], 1, 0, .buBool, .bpBool⟩, ⟨['e'], 2, 0, .nuHalffloat, .npHalffloat⟩,
+   ⟨['f'], 4, 0, .luFloat, .lpFloat⟩, ⟨['d'], 8, 0, .luDouble, .lpDouble⟩,
+   ⟨['F'], 8, 0, .nuFloatComplex, .npFloatComplex⟩, ⟨['D'], 16, 0, .nuDoubleComplex, .npDoubleComplex⟩]
 
 /-- The integer format codes of `Modules/_struct.c`. -/
 def isIntCode (c : Char) : Bool := "bBhHiIlLnNqQP".toList.contains c
@@ -516,56 +516,56 @@ def isIntCode (c : Char) : Bool := "bBhHiIlLnNqQP".toList.contains c
 /-- Every integer entry of every table, including the pre-swap little-endian table. -/
 def intEntries : List FormatDef :=
   (nativeTable ++ bigendianTable ++ lilendianTable0 ++ lilendianTable).filter
-    (fun e => isIntCode e.format)
+    (fun e => isIntCode e.code)
 
 /-- Every integer entry of every table round-trips every value in its range. -/
 def IntCodesRoundTrip : Prop := ∀ e ∈ intEntries, IntEntryRoundTrip e
 
 /-- `intEntries`, spelled out in table order. -/
 def intEntriesExplicit : List FormatDef :=
-  [⟨'b', 1, 0, .nuByte, .npByte⟩,
-   ⟨'B', 1, 0, .nuUbyte, .npUbyte⟩,
-   ⟨'h', 2, 2, .nuShort, .npShort⟩,
-   ⟨'H', 2, 2, .nuUshort, .npUshort⟩,
-   ⟨'i', 4, 4, .nuInt, .npInt⟩,
-   ⟨'I', 4, 4, .nuUint, .npUint⟩,
-   ⟨'l', 8, 8, .nuLong, .npLong⟩,
-   ⟨'L', 8, 8, .nuUlong, .npUlong⟩,
-   ⟨'n', 8, 8, .nuSsizeT, .npSsizeT⟩,
-   ⟨'N', 8, 8, .nuSizeT, .npSizeT⟩,
-   ⟨'q', 8, 8, .nuLonglong, .npLonglong⟩,
-   ⟨'Q', 8, 8, .nuUlonglong, .npUlonglong⟩,
-   ⟨'P', 8, 8, .nuVoidP, .npVoidP⟩,
-   ⟨'b', 1, 0, .nuByte, .npByte⟩,
-   ⟨'B', 1, 0, .nuUbyte, .npUbyte⟩,
-   ⟨'h', 2, 0, .buShort, .bpInt⟩,
-   ⟨'H', 2, 0, .buUint, .bpUint⟩,
-   ⟨'i', 4, 0, .buInt, .bpInt⟩,
-   ⟨'I', 4, 0, .buUint, .bpUint⟩,
-   ⟨'l', 4, 0, .buInt, .bpInt⟩,
-   ⟨'L', 4, 0, .buUint, .bpUint⟩,
-   ⟨'q', 8, 0, .buLonglong, .bpLonglong⟩,
-   ⟨'Q', 8, 0, .buUlonglong, .bpUlonglong⟩,
-   ⟨'b', 1, 0, .nuByte, .npByte⟩,
-   ⟨'B', 1, 0, .nuUbyte, .npUbyte⟩,
-   ⟨'h', 2, 0, .luShort, .lpInt⟩,
-   ⟨'H', 2, 0, .luUint, .lpUint⟩,
-   ⟨'i', 4, 0, .luInt, .lpInt⟩,
-   ⟨'I', 4, 0, .luUint, .lpUint⟩,
-   ⟨'l', 4, 0, .luInt, .lpInt⟩,
-   ⟨'L', 4, 0, .luUint, .lpUint⟩,
-   ⟨'q', 8, 0, .luLonglong, .lpLonglong⟩,
-   ⟨'Q', 8, 0, .luUlonglong, .lpUlonglong⟩,
-   ⟨'b', 1, 0, .nuByte, .npByte⟩,
-   ⟨'B', 1, 0, .nuUbyte, .npUbyte⟩,
-   ⟨'h', 2, 0, .nuShort, .npShort⟩,
-   ⟨'H', 2, 0, .nuUshort, .npUshort⟩,
-   ⟨'i', 4, 0, .nuInt, .npInt⟩,
-   ⟨'I', 4, 0, .nuUint, .npUint⟩,
-   ⟨'l', 4, 0, .luInt, .lpInt⟩,
-   ⟨'L', 4, 0, .luUint, .lpUint⟩,
-   ⟨'q', 8, 0, .nuLonglong, .npLonglong⟩,
-   ⟨'Q', 8, 0, .nuUlonglong, .npUlonglong⟩]
+  [⟨['b'], 1, 0, .nuByte, .npByte⟩,
+   ⟨['B'], 1, 0, .nuUbyte, .npUbyte⟩,
+   ⟨['h'], 2, 2, .nuShort, .npShort⟩,
+   ⟨['H'], 2, 2, .nuUshort, .npUshort⟩,
+   ⟨['i'], 4, 4, .nuInt, .npInt⟩,
+   ⟨['I'], 4, 4, .nuUint, .npUint⟩,
+   ⟨['l'], 8, 8, .nuLong, .npLong⟩,
+   ⟨['L'], 8, 8, .nuUlong, .npUlong⟩,
+   ⟨['n'], 8, 8, .nuSsizeT, .npSsizeT⟩,
+   ⟨['N'], 8, 8, .nuSizeT, .npSizeT⟩,
+   ⟨['q'], 8, 8, .nuLonglong, .npLonglong⟩,
+   ⟨['Q'], 8, 8, .nuUlonglong, .npUlonglong⟩,
+   ⟨['P'], 8, 8, .nuVoidP, .npVoidP⟩,
+   ⟨['b'], 1, 0, .nuByte, .npByte⟩,
+   ⟨['B'], 1, 0, .nuUbyte, .npUbyte⟩,
+   ⟨['h'], 2, 0, .buShort, .bpInt⟩,
+   ⟨['H'], 2, 0, .buUint, .bpUint⟩,
+   ⟨['i'], 4, 0, .buInt, .bpInt⟩,
+   ⟨['I'], 4, 0, .buUint, .bpUint⟩,
+   ⟨['l'], 4, 0, .buInt, .bpInt⟩,
+   ⟨['L'], 4, 0, .buUint, .bpUint⟩,
+   ⟨['q'], 8, 0, .buLonglong, .bpLonglong⟩,
+   ⟨['Q'], 8, 0, .buUlonglong, .bpUlonglong⟩,
+   ⟨['b'], 1, 0, .nuByte, .npByte⟩,
+   ⟨['B'], 1, 0, .nuUbyte, .npUbyte⟩,
+   ⟨['h'], 2, 0, .luShort, .lpInt⟩,
+   ⟨['H'], 2, 0, .luUint, .lpUint⟩,
+   ⟨['i'], 4, 0, .luInt, .lpInt⟩,
+   ⟨['I'], 4, 0, .luUint, .lpUint⟩,
+   ⟨['l'], 4, 0, .luInt, .lpInt⟩,
+   ⟨['L'], 4, 0, .luUint, .lpUint⟩,
+   ⟨['q'], 8, 0, .luLonglong, .lpLonglong⟩,
+   ⟨['Q'], 8, 0, .luUlonglong, .lpUlonglong⟩,
+   ⟨['b'], 1, 0, .nuByte, .npByte⟩,
+   ⟨['B'], 1, 0, .nuUbyte, .npUbyte⟩,
+   ⟨['h'], 2, 0, .nuShort, .npShort⟩,
+   ⟨['H'], 2, 0, .nuUshort, .npUshort⟩,
+   ⟨['i'], 4, 0, .nuInt, .npInt⟩,
+   ⟨['I'], 4, 0, .nuUint, .npUint⟩,
+   ⟨['l'], 4, 0, .luInt, .lpInt⟩,
+   ⟨['L'], 4, 0, .luUint, .lpUint⟩,
+   ⟨['q'], 8, 0, .nuLonglong, .npLonglong⟩,
+   ⟨['Q'], 8, 0, .nuUlonglong, .npUlonglong⟩]
 
 theorem intCodesRoundTrip_proven : IntCodesRoundTrip := by
   unfold IntCodesRoundTrip

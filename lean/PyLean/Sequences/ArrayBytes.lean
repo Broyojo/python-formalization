@@ -162,7 +162,7 @@ theorem itemOfBytes_range (tc : TC) (bs : List Nat) (hl : bs.length = tc.itemsiz
 /-- Splitting the bytes of a list of items gives the items' bytes. -/
 theorem chunks_flatMap (tc : TC) (xs : List Int) (fuel : Nat) (hf : xs.length ≤ fuel) :
     chunks tc.itemsize.toNat (xs.flatMap (itemBytes tc)) fuel = xs.map (itemBytes tc) := by
-  have hn : 0 < tc.itemsize.toNat := by rcases itemsize_cases tc with h | h | h | h <;> rw [h] <;> decide
+  have hn : 0 < tc.itemsize.toNat := by rcases itemsize_cases tc with h | h | h | h | h <;> rw [h] <;> decide
   induction xs generalizing fuel with
   | nil =>
     cases fuel <;> rfl
@@ -236,7 +236,7 @@ theorem arrayBytesRoundTrip_proven : ArrayBytesRoundTrip := by
     rw [← htc] at hlen
     have hbs : ((arrToBytes b).length : Int) = (b.items.length : Int) * a.tc.itemsize := by
       rw [hlen, Int.natCast_mul, show ((a.tc.itemsize.toNat : Nat) : Int) = a.tc.itemsize by
-        rcases hsz with h | h | h | h <;> rw [h] <;> rfl]
+        rcases hsz with h | h | h | h | h <;> rw [h] <;> rfl]
     by_cases hb0 : b.items.length = 0
     · have he : b.items = [] := List.eq_nil_of_length_eq_zero hb0
       unfold arrFromBytes
@@ -247,7 +247,7 @@ theorem arrayBytesRoundTrip_proven : ArrayBytesRoundTrip := by
     have hdiv : ((arrToBytes b).length : Int) % a.tc.itemsize = 0 := by
       rw [hbs]; exact Int.mul_emod_left _ _
     have hq : ((arrToBytes b).length : Int) / a.tc.itemsize = b.items.length := by
-      rw [hbs]; exact Int.mul_ediv_cancel _ (by rcases hsz with h | h | h | h <;> rw [h] <;> decide)
+      rw [hbs]; exact Int.mul_ediv_cancel _ (by rcases hsz with h | h | h | h | h <;> rw [h] <;> decide)
     obtain ⟨a1, hr, hi, ht, _⟩ := arrResize_ok a (a.items.length + b.items.length) hx (by omega) hf
     have hres : a1.items = a.items ++ List.replicate b.items.length 0 := by
       rw [hi, show ((a.items.length : Int) + b.items.length) = (a.items.length : Int) + (b.items.length : Nat) by rfl]
@@ -273,7 +273,7 @@ theorem arrayBytesRoundTrip_proven : ArrayBytesRoundTrip := by
         have := length_arrToBytes b
         unfold arrToBytes at this
         rw [this]
-        rcases itemsize_cases b.tc with h | h | h | h <;> rw [h] <;> simp <;> omega)]
+        rcases itemsize_cases b.tc with h | h | h | h | h <;> rw [h] <;> simp <;> omega)]
       exact map_itemOf b.tc b.items hw
     rw [ht] at hch
     rw [hch, hres]
@@ -285,22 +285,57 @@ theorem arrayBytesRoundTrip_proven : ArrayBytesRoundTrip := by
     simp only [bind, Except.bind, pure, Except.pure, throwE]
     rw [iteT hw']
 
+theorem length_swapBytes (tc : TC) (bs : List Nat) : (swapBytes tc bs).length = bs.length := by
+  cases tc <;> simp [swapBytes]
+  all_goals omega
+
+theorem mem_swapBytes (tc : TC) (bs : List Nat) (b : Nat) (h : b ∈ swapBytes tc bs) : b ∈ bs := by
+  cases tc
+  case Zf =>
+    simp only [swapBytes, List.mem_append, List.mem_reverse] at h
+    rcases h with h | h
+    · exact List.mem_of_mem_take h
+    · exact List.mem_of_mem_drop h
+  case Zd =>
+    simp only [swapBytes, List.mem_append, List.mem_reverse] at h
+    rcases h with h | h
+    · exact List.mem_of_mem_take h
+    · exact List.mem_of_mem_drop h
+  all_goals exact List.mem_reverse.mp h
+
+theorem swap_parts (bs : List Nat) (k : Nat) (h : k ≤ bs.length) :
+    (((bs.take k).reverse ++ (bs.drop k).reverse).take k).reverse ++
+      (((bs.take k).reverse ++ (bs.drop k).reverse).drop k).reverse = bs := by
+  have hl : (bs.take k).reverse.length = k := by simp; omega
+  rw [List.take_left' hl, List.drop_left' hl]
+  simp
+
+/-- `swapBytes` is its own inverse on the bytes of an item. -/
+theorem swapBytes_swapBytes (tc : TC) (bs : List Nat) (h : bs.length = tc.itemsize.toNat) :
+    swapBytes tc (swapBytes tc bs) = bs := by
+  cases tc
+  case Zf => exact swap_parts bs 4 (by rw [h]; decide)
+  case Zd => exact swap_parts bs 8 (by rw [h]; decide)
+  all_goals exact List.reverse_reverse bs
+
 theorem swapped_item (tc : TC) (x : Int) :
-    itemBytes tc (itemOfBytes tc (itemBytes tc x).reverse) = (itemBytes tc x).reverse :=
-  itemBytes_itemOfBytes tc _ (by rw [List.length_reverse, length_itemBytes])
-    (fun b hb => itemBytes_lt tc x b (List.mem_reverse.mp hb))
+    itemBytes tc (itemOfBytes tc (swapBytes tc (itemBytes tc x))) = swapBytes tc (itemBytes tc x) :=
+  itemBytes_itemOfBytes tc _ (by rw [length_swapBytes, length_itemBytes])
+    (fun b hb => itemBytes_lt tc x b (mem_swapBytes _ _ _ hb))
 
 theorem itemOfBytes_inj (tc : TC) (x y : Int) (hx : tc.lo ≤ x ∧ x ≤ tc.hi) (hy : tc.lo ≤ y ∧ y ≤ tc.hi)
     (h : itemBytes tc x = itemBytes tc y) : x = y := by
   rw [← itemOfBytes_itemBytes tc x hx, ← itemOfBytes_itemBytes tc y hy, h]
 
-/-- `a.byteswap()` reverses the bytes of every item, in place, and is its own
-inverse on any array (type invariant `WF`, for every typecode): `tobytes` then
-gives each item's bytes reversed, the result is `WF` again, and a second
-`byteswap` restores the array. -/
+/-- `a.byteswap()` swaps the bytes of every item in place and is its own inverse on any
+array (type invariant `WF`, for every typecode): `tobytes` then gives each item's bytes
+reversed (`swapBytes`), or for `Zf` and `Zd` the bytes of each part reversed with the real
+part still first, as `array.byteswap` documents since 3.15. The result is `WF` again, and a
+second `byteswap` restores the array. -/
 def ArrayByteswap : Prop :=
   ∀ (a : Arr), a.WF →
-    (arrByteswap a).WF ∧ arrToBytes (arrByteswap a) = a.items.flatMap (fun x => (itemBytes a.tc x).reverse) ∧
+    (arrByteswap a).WF ∧
+    arrToBytes (arrByteswap a) = a.items.flatMap (fun x => swapBytes a.tc (itemBytes a.tc x)) ∧
     arrByteswap (arrByteswap a) = a
 
 theorem arrayByteswap_proven : ArrayByteswap := by
@@ -309,24 +344,24 @@ theorem arrayByteswap_proven : ArrayByteswap := by
   · intro y hy
     simp only [arrByteswap, List.mem_map] at hy
     obtain ⟨x, _, rfl⟩ := hy
-    exact itemOfBytes_range a.tc _ (by rw [List.length_reverse, length_itemBytes])
-      (fun b hb => itemBytes_lt a.tc x b (List.mem_reverse.mp hb))
+    exact itemOfBytes_range a.tc _ (by rw [length_swapBytes, length_itemBytes])
+      (fun b hb => itemBytes_lt a.tc x b (mem_swapBytes _ _ _ hb))
   · simp only [arrToBytes, arrByteswap]
     generalize a.items = l
     induction l with
     | nil => rfl
     | cons x xs ih => simp only [List.map_cons, List.flatMap_cons, swapped_item, ih]
   · have h : ∀ l : List Int, (∀ x ∈ l, a.tc.lo ≤ x ∧ x ≤ a.tc.hi) →
-        (l.map (fun x => itemOfBytes a.tc (itemBytes a.tc x).reverse)).map
-          (fun x => itemOfBytes a.tc (itemBytes a.tc x).reverse) = l := by
+        (l.map (fun x => itemOfBytes a.tc (swapBytes a.tc (itemBytes a.tc x)))).map
+          (fun x => itemOfBytes a.tc (swapBytes a.tc (itemBytes a.tc x))) = l := by
       intro l
       induction l with
       | nil => intro _; rfl
       | cons x xs ih =>
         intro hl
         simp only [List.map_cons]
-        rw [swapped_item, List.reverse_reverse, itemOfBytes_itemBytes a.tc x (hl x (by simp)),
-          ih (fun y hy => hl y (by simp [hy]))]
+        rw [swapped_item, swapBytes_swapBytes _ _ (length_itemBytes a.tc x),
+          itemOfBytes_itemBytes a.tc x (hl x (by simp)), ih (fun y hy => hl y (by simp [hy]))]
     obtain ⟨tc, items, al, hb, ex, tn⟩ := a
     simp only [arrByteswap]
     congr 1

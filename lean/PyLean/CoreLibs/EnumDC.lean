@@ -4,13 +4,37 @@ import PyLean.CoreLibs.EnumDC.Props
 import PyLean.CoreLibs.EnumDC.EnumBuild
 import PyLean.CoreLibs.EnumDC.DcProps
 
-/-! Registry for the `EnumDC` area of CoreLibs: Lib/enum.py, Lib/dataclasses.py, CPython 3.14.7. -/
+/-! Registry for the `EnumDC` area of CoreLibs: Lib/enum.py, Lib/dataclasses.py, CPython 3.15.2. -/
 
 namespace PyLean.CoreLibs.EnumDC
 
 open PyLean.Registry
 
 def entries : List Entry := [
+  { id := "corelibs-dc-annotation"
+    pyFile := "Lib/dataclasses.py"
+    pyFns := ["_get_type_from_annotation"]
+    statement := "An annotation that does not start with a dotted name gives nothing, the path stops at the first other character, each name is read from the one before, None ends the walk, an Exception from a read gives nothing and any other exception goes out."
+    source := "Lib/dataclasses.py:759-817"
+    status := .proven
+    prop := ``AnnotationWalks
+    thm := some ``annotationWalks_proven },
+  { id := "corelibs-dc-auto-doc"
+    pyFile := "Lib/dataclasses.py"
+    pyFns := ["_AutoDocstring.__get__"]
+    statement := "The class docstring is its name and its signature without ' -> None'; TypeError and ValueError from the signature leave the name alone, and any other exception goes out."
+    source := "Lib/dataclasses.py:983-997"
+    status := .proven
+    prop := ``AutoDocExact
+    thm := some ``autoDocExact_proven },
+  { id := "corelibs-dc-asdict-frozendict"
+    pyFile := "Lib/dataclasses.py"
+    pyFns := ["_asdict_inner", "_astuple_inner"]
+    statement := "A frozendict in a field is rebuilt from the converted keys and values, in order, as a frozendict; an unhashable converted key is a TypeError, and a failure below it comes out."
+    source := "Lib/dataclasses.py:1569, :1634"
+    status := .proven
+    prop := ``AsdictFrozendict
+    thm := some ``asdictFrozendict_proven },
   { id := "corelibs-dc-get-field"
     pyFile := "Lib/dataclasses.py"
     pyFns := ["_get_field", "field"]

@@ -1,7 +1,7 @@
 import PyLean.Core
 
 /-!
-Model of `Lib/re/_parser.py` and `PatternError` in `Lib/re/_constants.py`, CPython 3.14.7.
+Model of `Lib/re/_parser.py` and `PatternError` in `Lib/re/_constants.py`, CPython 3.15.2.
 
 Not modelled: `\N{...}`, which needs the Unicode name database, and non-ASCII group names, whose
 `str.isidentifier` needs XID tables. The difftest generates neither. `FutureWarning`s and

@@ -27,7 +27,7 @@ reproducer: |
 expected: |
   The data back.
 observed: |
-  python3 3.14.7: b'aaa...==\nFF', and it does not decode to the input. REPRODUCED.
+  python3 3.15.2: b'aaa...==\nFF', and it does not decode to the input. REPRODUCED.
   main 3.16.0a1+dev: the same. REPRODUCED.
 promised_by: |
   Lib/quopri.py:43: "apply quoted-printable encoding".

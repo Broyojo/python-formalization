@@ -45,9 +45,8 @@ expected: |
   Empty iterators (math.comb(3, sys.maxsize) == math.perm(3, sys.maxsize) == 0; cwr of an empty
   pool with r > 0 is empty), as the doc equivalents return.
 observed: |
-  python3 3.14.7 (macOS and the Linux build pod): MemoryError for all three. REPRODUCED.
-  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical (main only moved the r < 0 check
-  into Argument Clinic). REPRODUCED.
+  python3 3.15.2 (Linux build pod): MemoryError for all three. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |
   Doc/library/itertools.rst:224-228 and :541-544 ("The length of the output is given by
   math.comb/math.perm ... or zero when r > n"); for combinations_with_replacement the "Roughly

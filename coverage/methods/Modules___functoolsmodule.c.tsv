@@ -5,12 +5,12 @@ Modules/_functoolsmodule.c	69	72	placeholder_reduce	placeholder_reduce(PyObject 
 Modules/_functoolsmodule.c	80	86	placeholder_dealloc	placeholder_dealloc(PyObject* self)	excluded		no-behaviour: frees the singleton; no Python-visible effect
 Modules/_functoolsmodule.c	89	109	placeholder_new	placeholder_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	modelled	corelibs-functools-placeholder	
 Modules/_functoolsmodule.c	150	157	get_functools_state_by_type	get_functools_state_by_type(PyTypeObject *type)	excluded		internal-bootstrap: module-state accessor with no Python-visible behaviour of its own
-Modules/_functoolsmodule.c	161	322	partial_new	partial_new(PyTypeObject *type, PyObject *args, PyObject *kw)	todo		changed-in-3.15: was corelibs-functools-partial-calls-wrapped,corelibs-functools-partial-new-twins,corelibs-functools-partial-new-twins-always
+Modules/_functoolsmodule.c	161	322	partial_new	partial_new(PyTypeObject *type, PyObject *args, PyObject *kw)	todo		
 Modules/_functoolsmodule.c	325	333	partial_clear	partial_clear(PyObject *self)	excluded		no-behaviour: GC clear of owned references
 Modules/_functoolsmodule.c	336	345	partial_traverse	partial_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
 Modules/_functoolsmodule.c	348	357	partial_dealloc	partial_dealloc(PyObject *self)	excluded		no-behaviour: deallocation
 Modules/_functoolsmodule.c	360	366	partial_descr_get	partial_descr_get(PyObject *self, PyObject *obj, PyObject *type)	modelled	corelibs-functools-partial-get	
-Modules/_functoolsmodule.c	369	571	partial_vectorcall	partial_vectorcall(PyObject *self, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		changed-in-3.15: was corelibs-functools-partial-call-in-bounds,corelibs-functools-partial-call-in-bounds-always,corelibs-functools-partial-call-twins
+Modules/_functoolsmodule.c	369	571	partial_vectorcall	partial_vectorcall(PyObject *self, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
 Modules/_functoolsmodule.c	575	587	partial_setvectorcall	partial_setvectorcall(partialobject *pto)	modelled	corelibs-functools-partial-call-twins	
 Modules/_functoolsmodule.c	592	675	partial_call	partial_call(PyObject *self, PyObject *args, PyObject *kwargs)	modelled	corelibs-functools-partial-call-in-bounds,corelibs-functools-partial-call-in-bounds-always,corelibs-functools-partial-call-twins	
 Modules/_functoolsmodule.c	705	782	partial_repr	partial_repr(PyObject *self)	modelled	corelibs-functools-partial-repr-order,corelibs-functools-partial-repr-self,corelibs-functools-partial-repr-twins	

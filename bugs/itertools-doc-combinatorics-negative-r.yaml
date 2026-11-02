@@ -6,9 +6,9 @@ module: itertools
 files: [Doc/library/itertools.rst]
 functions: ["combinations", "permutations", "combinations_with_replacement"]
 summary: |
-  The C functions raise ValueError("r must be non-negative") for r < 0 (on main the message is
-  "r cannot be negative" for combinations/cwr via Argument Clinic). The "Roughly equivalent to"
-  code has no such check and yields one tuple: combinations('abc', -1) -> [()],
+  The C functions raise ValueError for r < 0: "r cannot be negative" from Argument Clinic for
+  combinations and combinations_with_replacement, before the iterable is read, and "r must be
+  non-negative" for permutations, after it. The "Roughly equivalent to" code has no such check and yields one tuple: combinations('abc', -1) -> [()],
   combinations_with_replacement('abc', -1) -> [()], and permutations('abc', -1) -> [('a', 'b')]
   (indices[:r] with a negative r slices from the end). product's equivalent does check
   (`if repeat < 0: raise ValueError(...)`), so the omission is inconsistent within the page.
@@ -76,17 +76,19 @@ reproducer: |
 expected: |
   The doc equivalents raise ValueError for r < 0, like the C code and like product()'s equivalent.
 observed: |
-  python3 3.14.7 (macOS and the Linux build pod): C raises ValueError; the doc code yields [()] and [('a', 'b')]. REPRODUCED.
+  python3 3.15.2 (Linux build pod): C raises ValueError; the doc code yields [()] and [('a', 'b')]. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical (the doc code is unchanged).
   REPRODUCED.
 promised_by: |
   Doc/library/itertools.rst:237-259, :280-299, :553-581 ("Roughly equivalent to").
 cause: |
-  The doc code lacks the `r < 0` check that Modules/itertoolsmodule.c@3.14.7:2366-2369, @3.14.7:2620-2623 and
-  :2871-2874 perform.
+  The doc code lacks the `r < 0` check that Modules/clinic/itertoolsmodule.c.h:577-581 and :656-660
+  and Modules/itertoolsmodule.c:2871-2874 perform.
 possible_fix: |
-  Add `if r < 0: raise ValueError('r must be non-negative')` to the three equivalents (after
-  `r = n if r is None else r` for permutations).
+  Add `if r < 0: raise ValueError('r cannot be negative')` to the combinations and
+  combinations_with_replacement equivalents, before `tuple(iterable)`, and
+  `if r < 0: raise ValueError('r must be non-negative')` to permutations, after
+  `r = n if r is None else r`, so each matches its C function in message and in order.
 duplicates:
   issues:
     - {number: 118476, state: closed, relation: "corner cases in the islice equivalent", reason: "same kind of doc fix, different function"}

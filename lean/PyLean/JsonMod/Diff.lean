@@ -110,6 +110,14 @@ def objHook (tag : Option String) (m : Nat) : List (PStr × JVal) → DR JVal :=
     | some t => .ok (.arr [.str (cs t), .obj kvs])
     | none => .ok (.obj kvs)
 
+/-- `0` is `None`, `1` wraps the list, `2` and `3` raise. -/
+def arrHook (m : Nat) : Option (List JVal → DR JVal) :=
+  match m with
+  | 0 => none
+  | 2 => some fun _ => .error (.exc hookRaise)
+  | 3 => some fun _ => .error (.stop 3)
+  | _ => some fun xs => .ok (.arr [.str (cs "A"), .arr xs])
+
 def getDCfg (j : Json) : Except String DCfg := do
   let oh := mode j "ohook"
   let ph := mode j "phook"
@@ -117,6 +125,7 @@ def getDCfg (j : Json) : Except String DCfg := do
   return { strict := ← getBool j "strict"
            objectHook := if oh = 0 then none else some (objHook (some "H") oh)
            pairsHook := if ph = 0 then none else some (objHook none ph)
+           arrayHook := arrHook (mode j "ahook")
            parseFloat := textHook .float (mode j "pfloat")
            parseIntFn := if pi = 0 then none else some (textHook .int pi)
            parseConstant := textHook .const (mode j "pconst") }
@@ -195,6 +204,7 @@ def getDecArgs (j : Json) : Except String DecArgs := do
     | .ok v => some <$> v.getBool?
   return { objectHook := if oh = 0 then none else some (objHook (some "H") oh)
            objectPairsHook := if ph = 0 then none else some (objHook none ph)
+           arrayHook := arrHook (mode j "ahook")
            parseFloat := apiHook "F" (mode j "pfloat")
            parseInt := apiHook "I" (mode j "pint")
            parseConstant := apiHook "C" (mode j "pconst")

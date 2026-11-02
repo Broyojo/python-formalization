@@ -55,7 +55,7 @@ theorem approx_bounds_of {a m lo hi : Nat} (h : Approx a m) (h1 : lo * lo ≤ m)
 
 theorem u32_of_lt {x : Nat} (h : x < 2 ^ 32) : u32 x = x := Nat.mod_eq_of_lt h
 
-/-- `_approximate_isqrt(n)` for `2^62 <= n < 2^64`, mathmodule.c@3.14.7:1671-1681:
+/-- `_approximate_isqrt(n)` for `2^62 <= n < 2^64`, mathintegermodule.c:331-341:
 "return `a` satisfying `(a - 1)**2 < n < (a + 1)**2`", with no `uint32_t`
 wraparound. -/
 theorem approxIsqrt_spec (N : Nat) (h1 : 2 ^ 62 ≤ N) (h2 : N < 2 ^ 64) :
@@ -143,7 +143,7 @@ theorem two_pow_le_iff_lt_bitLength (c k : Nat) (hc : 1 ≤ c) : 2 ^ k ≤ c ↔
   · intro h
     exact Nat.le_trans (Nat.pow_le_pow_right (by decide) (by omega)) b1
 
-/-- The `c_bit_length` loop computes `c.bit_length()`, mathmodule.c@3.14.7:1745-1748. -/
+/-- The `c_bit_length` loop computes `c.bit_length()`, mathintegermodule.c:405-408. -/
 theorem cBitLength_eq (c : Nat) (hc : 1 ≤ c) :
     ∀ fuel k, k ≤ bitLength c → bitLength c ≤ k + fuel → cBitLength c fuel k = bitLength c := by
   intro fuel
@@ -173,7 +173,7 @@ theorem shr_lower (n c t : Nat) (hn : 2 ^ (2 * c) ≤ n) (ht : t ≤ c) : 2 ^ (2
   rw [← Nat.pow_add, show 2 * t + 2 * (c - t) = 2 * c by omega]; exact hn
 
 /-- The Newton loop of the slow path keeps `(a-1)^2 < n >> 2(c-d) < (a+1)^2`,
-mathmodule.c@3.14.7:1764-1791. -/
+mathintegermodule.c:424-451. -/
 theorem isqrtLoop_spec (n c : Nat) (hn : 2 ^ (2 * c) ≤ n) (hc : 1 ≤ c) :
     ∀ j d a, d = c >>> j → j + 5 ≤ bitLength c → Approx a (n >>> (2 * (c - d))) →
       Approx (isqrtLoop n c j d a) n := by

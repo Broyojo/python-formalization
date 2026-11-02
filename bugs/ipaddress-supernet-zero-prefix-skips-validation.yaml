@@ -35,7 +35,7 @@ expected: ValueError('current prefixlen is 0, cannot have a prefixlen_diff of 5'
 promised_by: |
   supernet docstring, Lib/ipaddress.py:987-994 ("ValueError: If self.prefixlen -
   prefixlen_diff < 0 ... OR ... new_prefix is a larger number than the current prefix").
-cause: Lib/ipaddress.py:996-997 returns before the checks at :999-1009.
+cause: Lib/ipaddress.py:995-996 returns before the checks at :998-1009.
 possible_fix: Move the `if self._prefixlen == 0` early return below the validation.
 duplicates:
   issues:

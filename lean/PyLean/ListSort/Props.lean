@@ -22,7 +22,7 @@ namespace PyLean.ListSort
 
 /-- `powerloop(s1, n1, n2, n)` returns the first bit position `L >= 1` at which
 the binary expansions of the two run midpoints `(s1 + n1/2)/n` and
-`(s1 + n1 + n2/2)/n` differ (`listsort.txt:382-393`), and `2^L < 2n`. -/
+`(s1 + n1 + n2/2)/n` differ (`listsort.txt:453-464`), and `2^L < 2n`. -/
 def PowerloopFirstBit : Prop :=
   ∀ s1 n1 n2 n : Nat, 0 < n1 → 0 < n2 → s1 + n1 + n2 ≤ n →
     1 ≤ powerloop s1 n1 n2 n ∧
@@ -44,10 +44,10 @@ theorem powerloopNoOverflow_proven : PowerloopNoOverflow := fun s1 n1 n2 n h1 h2
   (powerloop_spec s1 n1 n2 n h1 h2 hn).2.2.2.2 h62
 
 /-- For every list length `N <= PY_SSIZE_T_MAX` and every sequence of positive run
-lengths (any run structure, not only the ones `count_run`/`minrun` produce),
+lengths (any run structure, not only the ones `count_run`/`minrun_next` produce),
 after each `found_new_run` + push the stored powers strictly increase towards
 the top and are `>= 1` (the `assert` at `listobject.c:2739`,
-`listsort.txt:426-427`). -/
+`listsort.txt:497-498`). -/
 def PolicyPowersStrict : Prop :=
   ∀ (N : Nat) (lens : List Nat), N ≤ 2 ^ 63 - 1 → (∀ l ∈ lens, 0 < l) → lens.sum ≤ N →
     PowersStrict (policyRun N lens).1
@@ -141,44 +141,56 @@ def SortPushAssert : Prop :=
 
 theorem sortPushAssert_proven : SortPushAssert := fun _ lt xs h => (sortCore_ok lt xs).1 h
 
-/-- `merge_compute_minrun(n)`: `n` for `n < 64`; otherwise `⌈n / 2^e⌉` for the
-`e` with `32 * 2^e <= n < 64 * 2^e`, hence `32 <= minrun <= 64` (so
-`binarysort`'s `assert(n <= MAX_MINRUN)` holds) and `n / minrun <= 2^e`, with
-`minrun = 32` for powers of two (`listobject.c@3.14.7:2690-2699`, `listsort.txt:313-318`). -/
+/-- The generator `merge_init` (`listobject.c:2282-2288`) sets up and `minrun_next`
+(:2767-2775) runs, for every list length `N`, with `e = mr_e` and `P = 2^e`:
+
+* for `N < 64`, `e = 0` and every value is `N`;
+* for `N >= 64`, `32 * P <= N < 64 * P`, so every value lies in `[32, MAX_MINRUN]`,
+  which is `binarysort`'s `assert(n <= MAX_MINRUN)` at :1843;
+* after `k` calls `mr_current` is `kN mod P`, and call `k` returns
+  `⌊(k+1)N / P⌋ - ⌊kN / P⌋`;
+* any `m` consecutive values add up to `⌊mN / P⌋` or one more: "the lengths of run
+  pairs merged never differ by more than one" (`listsort.txt:311-314`), at every level;
+* the first `P` values add up to exactly `N`, so a list of short natural runs splits
+  into a power of two of runs (`listsort.txt:311`);
+* for `N = 2^j >= 64` every value is 32 (`listsort.txt:277-282`);
+* for `N <= 2**62`, `mr_current + listlen` stays in `Py_ssize_t`
+  (`assert(ms->mr_current >= 0)`, :2771).
+
+The bound on `N` is the one `PowerloopNoOverflow` has: real lists have at most
+`2**60 - 1` items. -/
 def MinrunSpec : Prop :=
-  ∀ n : Nat,
-    (n < 64 → computeMinrun n = n) ∧
-    (64 ≤ n → ∃ e, 32 * 2 ^ e ≤ n ∧ n < 64 * 2 ^ e ∧
-      (computeMinrun n - 1) * 2 ^ e < n ∧ n ≤ computeMinrun n * 2 ^ e ∧
-      32 ≤ computeMinrun n ∧ computeMinrun n ≤ MAX_MINRUN) ∧
-    (∀ j, 6 ≤ j → computeMinrun (2 ^ j) = MAX_MINRUN / 2)
+  ∀ N : Nat,
+    (mergeInitMr N).mask = 2 ^ mrE N - 1 ∧
+    (N < 64 → mrE N = 0 ∧ ∀ k, minrunAt N k = N) ∧
+    (64 ≤ N → 32 * 2 ^ mrE N ≤ N ∧ N < 64 * 2 ^ mrE N ∧
+      ∀ k, 32 ≤ minrunAt N k ∧ minrunAt N k ≤ MAX_MINRUN) ∧
+    (∀ k, (mrAfter (mergeInitMr N) k).current = k * N % 2 ^ mrE N) ∧
+    (∀ k, minrunAt N k = (k + 1) * N / 2 ^ mrE N - k * N / 2 ^ mrE N) ∧
+    (∀ k m, m * N / 2 ^ mrE N ≤ minrunSum N k m ∧ minrunSum N k m ≤ m * N / 2 ^ mrE N + 1) ∧
+    minrunSum N 0 (2 ^ mrE N) = N ∧
+    (∀ j, 6 ≤ j → N = 2 ^ j → ∀ k, minrunAt N k = MAX_MINRUN / 2) ∧
+    (N ≤ 2 ^ 62 → ∀ k, (mrAfter (mergeInitMr N) k).current + N < 2 ^ 63)
 
 theorem minrunSpec_proven : MinrunSpec := by
-  intro n
-  refine ⟨(computeMinrun_spec n).1, (computeMinrun_spec n).2, fun j hj => ?_⟩
-  obtain ⟨e, h1, h2, h3, h4, h5, h6⟩ := (computeMinrun_spec (2 ^ j)).2
-    (by have := Nat.pow_le_pow_right (show 0 < 2 by decide) hj; simpa using this)
-  -- 32 * 2^e <= 2^j < 64 * 2^e forces e = j - 5, and then minrun = 32
-  have he : e + 5 = j := by
-    have a1 : 2 ^ (e + 5) ≤ 2 ^ j := by rw [Nat.pow_add]; simpa [Nat.mul_comm] using h1
-    have a2 : 2 ^ j < 2 ^ (e + 6) := by rw [Nat.pow_add]; simpa [Nat.mul_comm] using h2
-    have b1 := (Nat.pow_le_pow_iff_right (by decide)).1 a1
-    have b2 := (Nat.pow_lt_pow_iff_right (by decide)).1 a2
+  intro N
+  refine ⟨mergeInitMr_mask N, ?_, ?_, mrAfter_current N, minrunAt_formula N, minrunSum_bounds N,
+    minrunSum_full N, ?_, fun h k => current_add_lt N k h⟩
+  · intro h
+    have he := (mrE_bounds N).1 h
+    refine ⟨he, fun k => minrunAt_of_dvd N N (by simp [he]) k⟩
+  · intro h
+    obtain ⟨h1, h2⟩ := (mrE_bounds N).2 h
+    refine ⟨h1, h2, fun k => ?_⟩
+    have hb := minrunAt_bounds N k
+    have hP : 0 < 2 ^ mrE N := Nat.two_pow_pos _
+    have h32 : 32 ≤ N / 2 ^ mrE N := (Nat.le_div_iff_mul_le hP).2 h1
+    have h64 : N / 2 ^ mrE N < 64 := (Nat.div_lt_iff_lt_mul hP).2 h2
+    have hM : MAX_MINRUN = 64 := rfl
     omega
-  subst he
-  rw [Nat.pow_add] at h3 h4
-  have hp := Nat.two_pow_pos e
-  have c1 : computeMinrun (2 ^ e * 2 ^ 5) ≤ 32 := by
-    have : (computeMinrun (2 ^ e * 2 ^ 5) - 1) * 2 ^ e < 32 * 2 ^ e := by
-      rw [Nat.mul_comm 32]; simpa using h3
-    have := Nat.lt_of_mul_lt_mul_right this
-    omega
-  have c2 : 32 ≤ computeMinrun (2 ^ e * 2 ^ 5) := by
-    have : 32 * 2 ^ e ≤ computeMinrun (2 ^ e * 2 ^ 5) * 2 ^ e := by
-      rw [Nat.mul_comm 32]; simpa using h4
-    exact Nat.le_of_mul_le_mul_right this hp
-  show computeMinrun (2 ^ (e + 5)) = 32
-  rw [Nat.pow_add]; omega
+  · intro j hj hN k
+    subst hN
+    exact minrunAt_pow j hj k
 
 /-! ## Goal 2: the pieces and the whole sort -/
 
@@ -415,8 +427,8 @@ theorem keySortStable_proven : KeySortStable := by
 /-! ## Goal 3: the type-specialised compare for int keys -/
 
 /-- For all-int keys of every size, the compare the pre-sort check selects
-(`unsafe_long_compare` when all keys are compact, `long_richcompare` through
-`unsafe_object_compare` otherwise) agrees with `<` on every pair of keys. An
+(`unsafe_long_compare` when all keys are compact, `unsafe_object_compare` over
+`long_richcompare` otherwise) agrees with `<` on every pair of keys. An
 int is compact exactly when `|x| < 2**30`, and then `_PyLong_CompactValue` is
 `x`. The hypotheses `x, y ∈ keys` are needed: `unsafe_long_compare` is only sound
 for compact values, which the check guarantees for the list's own keys. -/
@@ -429,5 +441,26 @@ def LongCompareAgrees : Prop :=
 
 theorem longCompareAgrees_proven : LongCompareAgrees :=
   ⟨isCompact_iff, compactValue_eq, longCompare_lt, selectCompare_eq⟩
+
+/-- `unsafe_object_compare`, for every result type: when `v`'s type lost the slot, or the
+slot answers `NotImplemented`, the answer is `PyObject_RichCompareBool`'s; the slot's
+exception propagates; a `bool` is taken as it is; and any other object is decided by
+`PyObject_IsTrue`, whose own exception propagates. The result of `__lt__` is an
+arbitrary object, not a `bool`. -/
+def ObjectCompareSpec : Prop :=
+  ∀ (ρ : Type) (rich : Py (RichRes ρ)) (isTrue : ρ → Py Bool) (fallback : Py Bool),
+    unsafeObjectCompare false rich isTrue fallback = fallback ∧
+    (rich = .ok .notImplemented → unsafeObjectCompare true rich isTrue fallback = fallback) ∧
+    (∀ e, rich = .error e → unsafeObjectCompare true rich isTrue fallback = .error e) ∧
+    (∀ b, rich = .ok (.bool b) → unsafeObjectCompare true rich isTrue fallback = .ok b) ∧
+    (∀ o, rich = .ok (.other o) → unsafeObjectCompare true rich isTrue fallback = isTrue o)
+
+theorem objectCompareSpec_proven : ObjectCompareSpec := by
+  intro ρ rich isTrue fallback
+  refine ⟨rfl, ?_, ?_, ?_, ?_⟩
+  · intro h; subst h; rfl
+  · intro e h; subst h; rfl
+  · intro b h; subst h; rfl
+  · intro o h; subst h; rfl
 
 end PyLean.ListSort

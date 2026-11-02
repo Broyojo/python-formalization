@@ -39,7 +39,7 @@ cause: |
 possible_fix: |
   In _wrap_strftime test `i < n and format[i] == 'z'` as C does, and otherwise push '%' and ':'.
 reproduces:
-  python3 (3.14.7): REPRODUCED
+  python3 (3.15.2): REPRODUCED
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
 duplicates:
   issues: []

@@ -32,24 +32,27 @@ theorem allBytes_reverse {bs : List Nat} (h : AllBytes bs) : AllBytes bs.reverse
 /-- `int.to_bytes` docs: "An OverflowError is raised if the integer is not
 representable with the given number of bytes"; otherwise the result has
 exactly `length` bytes holding `v mod 256**length` (two's complement when
-`signed`) in the requested byte order. -/
+`signed`) in the requested byte order. The bound on `n` is the largest size a
+`bytes` object can have, `PY_SSIZE_T_MAX - 33`; above it CPython raises
+`OverflowError` (`BytesArgErrors` states that case). -/
 def ToBytesExact : Prop :=
   ∀ (v : Int) (n : Nat) (byteorder : String) (signed : Bool),
-    (byteorder = "little" ∨ byteorder = "big") → (n : Int) ≤ ssizeMax →
+    (byteorder = "little" ∨ byteorder = "big") → (n : Int) ≤ ssizeMax - bytesObjectSize →
     (FitsBytes v n signed → ∃ bs, toBytes v n byteorder signed = .ok bs ∧ bs.length = n ∧
         AllBytes bs ∧ (bytesVal (lsbOf byteorder bs) : Int) = v % 2 ^ (8 * n)) ∧
     (¬ FitsBytes v n signed → (toBytes v n byteorder signed).raises "OverflowError")
 
 theorem toBytes_eq (v : Int) (n : Nat) (byteorder : String) (signed : Bool)
-    (ho : byteorder = "little" ∨ byteorder = "big") (hn : (n : Int) ≤ ssizeMax) :
+    (ho : byteorder = "little" ∨ byteorder = "big") (hn : (n : Int) ≤ ssizeMax - bytesObjectSize) :
     toBytes v n byteorder signed =
       (asByteArray v n signed).map (fun bs => if byteorder = "little" then bs else bs.reverse) := by
   unfold toBytes
   have h1 : ¬ ((n : Int) < ssizeMin ∨ (n : Int) > ssizeMax) := by
-    unfold ssizeMin at *; omega
+    unfold ssizeMin bytesObjectSize at *; omega
   have h2 : ¬ (byteorder ≠ "little" ∧ byteorder ≠ "big") := by
     rcases ho with h | h <;> simp [h]
-  simp only [h1, h2, ite_false, show ¬ ((n : Int) < 0) by omega, Int.toNat_natCast]
+  simp only [h1, h2, ite_false, show ¬ ((n : Int) < 0) by omega,
+    show ¬ ((n : Int) > ssizeMax - bytesObjectSize) by omega, Int.toNat_natCast]
   cases asByteArray v n signed <;> rfl
 
 theorem toBytesExact_proven : ToBytesExact := by
@@ -73,7 +76,7 @@ def FromBytesValue : Prop :=
 
 theorem fromBytesValue_proven : FromBytesValue := by
   intro bs byteorder signed hall ho
-  unfold fromBytes lsbOf
+  unfold fromBytes fromBytesImpl lsbOf
   have h2 : ¬ (byteorder ≠ "little" ∧ byteorder ≠ "big") := by
     rcases ho with h | h <;> simp [h]
   simp only [h2, ite_false]
@@ -106,7 +109,8 @@ theorem getLastD_eq_div (bs : List Nat) (hall : AllBytes bs) (k : Nat) (hk : bs.
 signed=s) == v` whenever `v` fits in `n` bytes. -/
 def BytesRoundTrip : Prop :=
   ∀ (v : Int) (n : Nat) (byteorder : String) (signed : Bool),
-    (byteorder = "little" ∨ byteorder = "big") → (n : Int) ≤ ssizeMax → FitsBytes v n signed →
+    (byteorder = "little" ∨ byteorder = "big") → (n : Int) ≤ ssizeMax - bytesObjectSize →
+    FitsBytes v n signed →
     ∃ bs, toBytes v n byteorder signed = .ok bs ∧ fromBytes bs byteorder signed = .ok v
 
 theorem bytesRoundTrip_proven : BytesRoundTrip := by
@@ -164,31 +168,83 @@ theorem bytesRoundTrip_proven : BytesRoundTrip := by
       have h256i : (256 : Int) ^ (k + 1) = 2 ^ (8 * (k + 1)) := by rw [Int.pow_mul]; rfl
       rw [hval', h256i]; omega
 
-/-- Argument errors of `int.to_bytes` (longobject.c@3.14.7:6306-6324, after Argument
-Clinic's `Py_ssize_t` conversion) and `int.from_bytes` (:6458-6468). -/
+/-- Argument errors of `int.to_bytes` (clinic/longobject.c.h:332-349 for `length`,
+then longobject.c:6399-6410) and `int.from_bytes` (:6459-6469). The exact error is
+stated, because 3.15 moved the negative-length check ahead of the byteorder check and
+reworded it: a negative `length` raises the same `ValueError` whatever `byteorder` is. -/
 def BytesArgErrors : Prop :=
   ∀ (v length : Int) (byteorder : String) (signed : Bool) (bs : List Nat),
-    ((byteorder ≠ "little" ∧ byteorder ≠ "big") → ssizeMin ≤ length → length ≤ ssizeMax →
-      (toBytes v length byteorder signed).raises "ValueError" ∧
+    ((byteorder ≠ "little" ∧ byteorder ≠ "big") → 0 ≤ length → length ≤ ssizeMax →
+      toBytes v length byteorder signed =
+        .error (.valueError "byteorder must be either 'little' or 'big'") ∧
       (fromBytes bs byteorder signed).raises "ValueError") ∧
-    ((byteorder = "little" ∨ byteorder = "big") → ssizeMin ≤ length → length < 0 →
-      (toBytes v length byteorder signed).raises "ValueError") ∧
-    ((length < ssizeMin ∨ length > ssizeMax) → (toBytes v length byteorder signed).raises "OverflowError")
+    (ssizeMin ≤ length → length < 0 →
+      toBytes v length byteorder signed = .error (.valueError "length cannot be negative")) ∧
+    ((length < ssizeMin ∨ length > ssizeMax) → (toBytes v length byteorder signed).raises "OverflowError") ∧
+    ((byteorder = "little" ∨ byteorder = "big") → ssizeMax - bytesObjectSize < length →
+      length ≤ ssizeMax →
+      toBytes v length byteorder signed = .error (.overflowError "byte string is too large"))
 
 theorem bytesArgErrors_proven : BytesArgErrors := by
   intro v length byteorder signed bs
-  refine ⟨fun hb h1 h2 => ⟨?_, ?_⟩, fun hb h1 h2 => ?_, fun h => ?_⟩
+  refine ⟨fun hb h1 h2 => ⟨?_, ?_⟩, fun h1 h2 => ?_, fun h => ?_, fun hb h1 h2 => ?_⟩
+  · unfold toBytes
+    simp only [show ¬ (length < ssizeMin ∨ length > ssizeMax) by unfold ssizeMin; omega,
+      show ¬ (length < 0) by omega, hb, ne_eq, not_false_eq_true, and_self, ite_true, ite_false]
   · refine ⟨.valueError "byteorder must be either 'little' or 'big'", ?_, rfl⟩
-    unfold toBytes; simp only [show ¬ (length < ssizeMin ∨ length > ssizeMax) by omega, hb,
-      ne_eq, not_false_eq_true, and_self, ite_true, ite_false]
-  · refine ⟨.valueError "byteorder must be either 'little' or 'big'", ?_, rfl⟩
-    unfold fromBytes; simp only [hb, ne_eq, not_false_eq_true, and_self, ite_true]
-  · refine ⟨.valueError "length argument must be non-negative", ?_, rfl⟩
-    have : ¬ (byteorder ≠ "little" ∧ byteorder ≠ "big") := by rcases hb with h | h <;> simp [h]
-    unfold toBytes
+    unfold fromBytes fromBytesImpl; simp only [hb, ne_eq, not_false_eq_true, and_self, ite_true]
+  · unfold toBytes
     simp only [show ¬ (length < ssizeMin ∨ length > ssizeMax) by unfold ssizeMax ssizeMin at *; omega,
-      this, h2, ite_true, ite_false]
+      h2, ite_true, ite_false]
   · refine ⟨.overflowError "Python int too large to convert to C ssize_t", ?_, rfl⟩
     unfold toBytes; simp only [h, ite_true]
+  · have h3 : ¬ (byteorder ≠ "little" ∧ byteorder ≠ "big") := by rcases hb with h | h <;> simp [h]
+    unfold toBytes
+    simp only [show ¬ (length < ssizeMin ∨ length > ssizeMax) by
+        unfold ssizeMax ssizeMin bytesObjectSize at *; omega,
+      show ¬ (length < 0) by unfold ssizeMax bytesObjectSize at *; omega, h3, h1, ite_true, ite_false]
+
+/-- `int.from_bytes` docs: the argument "must either be a bytes-like object or an
+iterable producing bytes". The three routes that 3.15 split the body into
+(longobject.c:6471-6497) give the same integer for the same bytes, and the subclass
+constructor receives that integer; a failing buffer export or `PyObject_Bytes`
+propagates without calling the constructor; and a bad `byteorder` raises before the
+object is touched, whatever it would do. -/
+def FromBytesDispatch : Prop :=
+  ∀ (α : Type) (ctor : Int → Py α) (byteorder : String) (signed : Bool),
+    ((byteorder = "little" ∨ byteorder = "big") →
+      (∀ bs, AllBytes bs →
+        let want := ctor (bytesSigned (lsbOf byteorder bs) signed)
+        fromBytesImpl ctor (.exact bs) byteorder signed = want ∧
+        fromBytesImpl ctor (.buffer (.ok bs)) byteorder signed = want ∧
+        fromBytesImpl ctor (.other (.ok bs)) byteorder signed = want) ∧
+      (∀ e : PyExc,
+        fromBytesImpl ctor (.buffer (.error e)) byteorder signed = .error e ∧
+        fromBytesImpl ctor (.other (.error e)) byteorder signed = .error e)) ∧
+    ((byteorder ≠ "little" ∧ byteorder ≠ "big") → ∀ obj,
+      fromBytesImpl ctor obj byteorder signed =
+        .error (.valueError "byteorder must be either 'little' or 'big'"))
+
+theorem fromBytesDispatch_proven : FromBytesDispatch := by
+  intro α ctor byteorder signed
+  refine ⟨fun ho => ?_, fun hb obj => ?_⟩
+  · have h2 : ¬ (byteorder ≠ "little" ∧ byteorder ≠ "big") := by
+      rcases ho with h | h <;> simp [h]
+    have key : ∀ bs, AllBytes bs →
+        fromByteArray (if byteorder = "little" then bs else bs.reverse) signed =
+          bytesSigned (lsbOf byteorder bs) signed := by
+      intro bs hall
+      unfold lsbOf
+      split
+      · exact fromByteArray_spec _ _ hall
+      · exact fromByteArray_spec _ _ (allBytes_reverse hall)
+    refine ⟨fun bs hall => ?_, fun e => ?_⟩
+    · intro want
+      have k := key bs hall
+      refine ⟨?_, ?_, ?_⟩ <;> (simp only [want, fromBytesImpl, h2, ite_false, ← k]) <;> rfl
+    · simp only [fromBytesImpl, h2, ite_false]
+      exact ⟨rfl, rfl⟩
+  · unfold fromBytesImpl
+    simp only [hb, ne_eq, not_false_eq_true, and_self, ite_true]
 
 end PyLean.MathInt

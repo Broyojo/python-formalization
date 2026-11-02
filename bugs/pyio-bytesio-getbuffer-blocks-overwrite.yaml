@@ -47,7 +47,7 @@ reproducer: |
 expected: |
   The same outcome in both twins.
 observed: |
-  python3 3.14.7: io BufferError for overwrite, write(b'') and truncate(5), and for close() of an empty
+  python3 3.15.2: io BufferError for overwrite, write(b'') and truncate(5), and for close() of an empty
   BytesIO; _pyio 1, 0, 5, and the close succeeds with the view alive. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): write and truncate identical, REPRODUCED; close() now succeeds in C too (gh-111331, GH-155383),
   so the close difference is gone; the docs there now say "Closing it does not invalidate the view".
@@ -56,7 +56,7 @@ promised_by: |
   closed."
 cause: |
   Modules/_io/bytesio.c:246 `check_exports` runs before any size test, and :696 in truncate.
-  Lib/_pyio.py@3.14.7:941-958 relies on bytearray, which only checks exports when resizing.
+  Lib/_pyio.py:955-973 relies on bytearray, which only checks exports when resizing.
 possible_fix: |
   Keep C; align _pyio with explicit checks if exact twin behaviour is wanted.
 duplicates:

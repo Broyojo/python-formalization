@@ -1,7 +1,7 @@
 import PyLean.CoreLibs.CalStat.Stat
 
 /-!
-Mirror of `Lib/statistics.py` (CPython 3.14.7): `geometric_mean`, the kernels, `kde`, `kde_random`,
+Mirror of `Lib/statistics.py` (CPython 3.15.2): `geometric_mean`, the kernels, `kde`, `kde_random`,
 `NormalDist` and `_normal_dist_inv_cdf`.
 
 Everything libm computes inexactly is the parameter `L : Libm`: `exp`, `log`, the trigonometric
@@ -66,7 +66,7 @@ def mathErfc (L : Libm) (x : Flt) : Flt := L.erfc x
 def mathLogF (L : Libm) (x : Flt) : Py Flt :=
   math1 (mLog L) false "~expected a positive input" x
 
-/-- `loghelper`, Modules/mathmodule.c@3.14.7:2243-2276, `math.log(x)` for any real `x`. -/
+/-- `loghelper_int` and `loghelper`, Modules/mathmodule.c:1583-1639, `math.log(x)` for any real `x`. -/
 def mathLog (L : Libm) (v : Val) : Py Flt :=
   match v with
   | .int i =>
@@ -477,7 +477,7 @@ def gmStep (L : Libm) (st : GmSt) (x : Val) : Py GmSt := do
   if pos || isnan then
     return { st with fs := ← fsumStep st.fs (← mathLog L x) }
   else if veq x (.flt Flt.pz) then return { st with foundZero := true }
-  else throw (statErr "~('No negative inputs allowed', x)")
+  else throw (statErr "~No negative inputs allowed: x")
 
 def geometricMean (L : Libm) (data : List PyN) : Py Flt := do
   let st ← (data.map (·.v)).foldlM (gmStep L) ({} : GmSt)
@@ -508,15 +508,17 @@ def ND.fromSamples (data : List PyN) : Py ND := do
 def ND.samples (L : Libm) (X : ND) (us : List Flt) : Py (List Flt) :=
   us.mapM (fun u => normalDistInvCdf L u X.mu X.sigma)
 
-/-- `NormalDist.pdf`, statistics.py@3.14.7:1258-1264. -/
+/-- `_SQRT2PI`, Lib/statistics.py:148. -/
+def sqrt2pi : Flt := Flt.sqrt tauF
+
+/-- `NormalDist.pdf`, Lib/statistics.py:1259-1265: `-0.5 * z * z` associates to the left. -/
 def ND.pdf (L : Libm) (X : ND) (x : Val) : Py Val := do
-  let variance := Flt.mul X.sigma X.sigma
-  if !variance.truthy then throw (statErr "pdf() not defined when sigma is zero")
-  let diff ← vsub x (.flt X.mu)
-  let top ← vdiv (← vmul diff diff) (.flt (Flt.mul (Flt.neg Flt.two) variance))
+  let sigma := X.sigma
+  if !sigma.truthy then throw (statErr "pdf() not defined when sigma is zero")
+  let z ← vdiv (← vsub x (.flt X.mu)) (.flt sigma)
+  let top ← vmul (← vmul (.flt (Flt.neg Flt.half)) z) z
   let e ← mathExp L (← asDouble top)
-  let s ← mathSqrt (Flt.mul tauF variance)
-  return .flt (← fltDiv e s)
+  return .flt (← fltDiv e (Flt.mul sqrt2pi sigma))
 
 def sqrt2 : Flt := Flt.sqrt Flt.two
 

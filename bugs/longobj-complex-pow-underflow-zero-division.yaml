@@ -48,6 +48,7 @@ possible_fix: |
   EDOM, report ERANGE. Or compute (1/x) ** n for negative n, as gh-156695 suggests, which
   overflows instead of underflowing.
 tested:
+  python3 3.15.2: REPRODUCED
   python3 (3.14.7): REPRODUCED
   main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
 duplicates:

@@ -14,9 +14,8 @@ import PyLean.MathInt.Gcd
 import PyLean.MathInt.Lehmer
 
 /-!
-Integer functions of `math` (`Modules/mathmodule.c`) and the related `int`
-operations of `Objects/longobject.c`, CPython 3.14.7 (the same C code is in
-`Modules/mathintegermodule.c` on main).
+Integer functions of `math.integer` (`Modules/mathintegermodule.c`, re-exported by
+`math`) and the related `int` operations of `Objects/longobject.c`, CPython 3.15.2.
 
 Model: `MathInt/Model.lean` (isqrt, comb/perm, factorial, gcd/lcm with
 `_PyLong_GCD`) and `MathInt/IntOps.lean` (three-argument pow, to_bytes /
@@ -35,52 +34,52 @@ namespace PyLean.MathInt
 open PyLean.Registry
 
 def entries : List Entry := [
-  { id := "mathint-isqrt-floor-sqrt", pyFile := "Modules/mathmodule.c"
-    pyFns := ["math.isqrt", "_approximate_isqrt"]
+  { id := "mathint-isqrt-floor-sqrt", pyFile := "Modules/mathintegermodule.c"
+    pyFns := ["math.integer.isqrt", "_approximate_isqrt"]
     statement := "For every n >= 0, isqrt(n) returns r with r*r <= n < (r+1)*(r+1)."
     source := "math.isqrt docs: \"the greatest integer a such that a**2 <= n\"", status := .proven
     prop := ``IsqrtFloorSqrt, thm := some ``isqrtFloorSqrt_proven
     notes := "Covers the n < 2**64 fast path (192-entry table checked by the kernel, no uint32_t wraparound, including the top range where the clamped entry 255 matters) and the slow path. c is modelled as an unbounded Nat (C int64 cannot overflow for any representable n)." },
-  { id := "mathint-comb-formula", pyFile := "Modules/mathmodule.c"
-    pyFns := ["math.comb", "perm_comb_small", "perm_comb"]
+  { id := "mathint-comb-formula", pyFile := "Modules/mathintegermodule.c"
+    pyFns := ["math.integer.comb", "perm_comb_small", "perm_comb"]
     statement := "For 0 <= k <= n, comb(n, k) == n! // (k! * (n-k)!) exactly, unless min(k, n-k) > LLONG_MAX, where it raises OverflowError."
     source := "comb docstring: \"Evaluates to n! / (k! * (n - k)!) when k <= n\"", status := .proven
     prop := ``CombFormula, thm := some ``combFormula_proven
     notes := "Covers both uint64 fast paths (odd-part tables checked by the kernel, the C(n,k)*k loop bounded by fast_comb_limits2) and both recursions." },
-  { id := "mathint-perm-formula", pyFile := "Modules/mathmodule.c"
-    pyFns := ["math.perm", "perm_comb_small", "perm_comb"]
+  { id := "mathint-perm-formula", pyFile := "Modules/mathintegermodule.c"
+    pyFns := ["math.integer.perm", "perm_comb_small", "perm_comb"]
     statement := "For 0 <= k <= n, perm(n, k) == n! // (n-k)! exactly, unless k > LLONG_MAX, where it raises OverflowError."
     source := "perm docstring: \"Evaluates to n! / (n - k)! when k <= n\"", status := .proven
     prop := ``PermFormula, thm := some ``permFormula_proven },
-  { id := "mathint-factorial-exact", pyFile := "Modules/mathmodule.c"
-    pyFns := ["math.factorial", "math.perm", "factorial_odd_part", "factorial_partial_product", "count_set_bits"]
+  { id := "mathint-factorial-exact", pyFile := "Modules/mathintegermodule.c"
+    pyFns := ["math.integer.factorial", "math.integer.perm", "factorial_odd_part", "factorial_partial_product", "count_set_bits"]
     statement := "For 0 <= n <= LONG_MAX, factorial(n) and perm(n) equal n!."
     source := "math.factorial docs; perm docstring (k=None returns n!)", status := .proven
     prop := ``FactorialExact, thm := some ``factorialExact_proven
     notes := "Includes the unsigned long tight loop of factorial_partial_product (no wraparound under its num_operands * max_bits <= 64 guard)." },
-  { id := "mathint-isqrt-negative", pyFile := "Modules/mathmodule.c", pyFns := ["math.isqrt"]
+  { id := "mathint-isqrt-negative", pyFile := "Modules/mathintegermodule.c", pyFns := ["math.integer.isqrt"]
     statement := "isqrt(n) raises ValueError for every n < 0."
-    source := "math.isqrt docs; mathmodule.c@3.14.7:1707-1712", status := .proven
+    source := "math.isqrt docs; mathintegermodule.c:367-372", status := .proven
     prop := ``IsqrtRejectsNegative, thm := some ``isqrtRejectsNegative_proven },
-  { id := "mathint-comb-perm-negative", pyFile := "Modules/mathmodule.c"
-    pyFns := ["math.comb", "math.perm"]
+  { id := "mathint-comb-perm-negative", pyFile := "Modules/mathintegermodule.c"
+    pyFns := ["math.integer.comb", "math.integer.perm"]
     statement := "comb(n, k) and perm(n, k) raise ValueError whenever n < 0 or k < 0."
     source := "comb/perm docstrings: \"Raises ValueError if either of the arguments are negative.\""
     status := .proven
     prop := ``CombPermRejectNegative, thm := some ``combPermRejectNegative_proven },
-  { id := "mathint-comb-perm-zero-above", pyFile := "Modules/mathmodule.c"
-    pyFns := ["math.comb", "math.perm"]
+  { id := "mathint-comb-perm-zero-above", pyFile := "Modules/mathintegermodule.c"
+    pyFns := ["math.integer.comb", "math.integer.perm"]
     statement := "For 0 <= n < k (any size), comb(n, k) == 0 and perm(n, k) == 0."
     source := "comb/perm docstrings: \"evaluates to zero when k > n\"", status := .proven
     prop := ``CombPermZeroAbove, thm := some ``combPermZeroAbove_proven },
-  { id := "mathint-factorial-arg-errors", pyFile := "Modules/mathmodule.c"
-    pyFns := ["math.factorial"]
+  { id := "mathint-factorial-arg-errors", pyFile := "Modules/mathintegermodule.c"
+    pyFns := ["math.integer.factorial"]
     statement := "factorial(n) raises ValueError for n < 0 and OverflowError for n > LONG_MAX."
-    source := "math.factorial docs; mathmodule.c@3.14.7:2025-2039", status := .proven
+    source := "math.factorial docs; mathintegermodule.c:698-712", status := .proven
     prop := ``FactorialArgErrors, thm := some ``factorialArgErrors_proven },
   { id := "mathint-to-bytes-exact", pyFile := "Objects/longobject.c"
     pyFns := ["int.to_bytes", "_PyLong_AsByteArray"]
-    statement := "For 0 <= n <= PY_SSIZE_T_MAX and a valid byteorder, v.to_bytes(n, byteorder, signed=s) returns n bytes holding v mod 256**n when v fits (0 <= v < 256**n, or -256**n/2 <= v < 256**n/2 if signed) and raises OverflowError otherwise."
+    statement := "For 0 <= n <= PY_SSIZE_T_MAX - 33 (the largest bytes object) and a valid byteorder, v.to_bytes(n, byteorder, signed=s) returns n bytes holding v mod 256**n when v fits (0 <= v < 256**n, or -256**n/2 <= v < 256**n/2 if signed) and raises OverflowError otherwise."
     source := "int.to_bytes docs: \"An OverflowError is raised if the integer is not representable with the given number of bytes\"", status := .proven
     prop := ``ToBytesExact, thm := some ``toBytesExact_proven
     notes := "Models the 30-bit digit loop, the two's-complement carry, the bit counting of the top digit, the straggler byte and the sign-bit check of _PyLong_AsByteArray." },
@@ -97,29 +96,35 @@ def entries : List Entry := [
     prop := ``BytesRoundTrip, thm := some ``bytesRoundTrip_proven },
   { id := "mathint-bytes-arg-errors", pyFile := "Objects/longobject.c"
     pyFns := ["int.to_bytes", "int.from_bytes"]
-    statement := "A byteorder other than 'little'/'big' raises ValueError in to_bytes and from_bytes; a negative length raises ValueError; a length outside Py_ssize_t raises OverflowError."
-    source := "int.to_bytes / int.from_bytes docs; longobject.c@3.14.7:6306-6324", status := .proven
+    statement := "A negative length raises ValueError('length cannot be negative') whatever the byteorder; otherwise a byteorder other than 'little'/'big' raises ValueError in to_bytes and from_bytes; a length outside Py_ssize_t raises OverflowError, and so does a length above PY_SSIZE_T_MAX - 33 ('byte string is too large')."
+    source := "int.to_bytes / int.from_bytes docs; clinic/longobject.c.h:332-349; longobject.c:6399-6410", status := .proven
     prop := ``BytesArgErrors, thm := some ``bytesArgErrors_proven },
-  { id := "mathint-gcd-small", pyFile := "Modules/mathmodule.c"
-    pyFns := ["math.gcd", "_PyLong_GCD"]
+  { id := "mathint-from-bytes-dispatch", pyFile := "Objects/longobject.c"
+    pyFns := ["int.from_bytes"]
+    statement := "The exact-bytes, buffer and PyObject_Bytes routes of int.from_bytes give the same int for the same bytes, a subclass constructor receives that int, a failing conversion propagates, and a bad byteorder raises before the object is touched."
+    source := "int.from_bytes docs: \"a bytes-like object or an iterable producing bytes\"", status := .proven
+    prop := ``FromBytesDispatch, thm := some ``fromBytesDispatch_proven
+    notes := "The conversions themselves (PyObject_GetBuffer, PyObject_Bytes) are inputs here: the payload is what they yield. Difftest case from_bytes_obj builds real objects for each route." },
+  { id := "mathint-gcd-small", pyFile := "Modules/mathintegermodule.c"
+    pyFns := ["math.integer.gcd", "_PyLong_GCD"]
     statement := "If every argument has abs < 2**60, gcd(*args) is the nonnegative greatest common divisor of the arguments (gcd() == 0), including the 2-argument fast path and the res == 1 short cut."
     source := "math.gcd docs", status := .proven
     prop := ``GcdSmall, thm := some ``gcdSmall_proven
     notes := "Scope: the inputs on which _PyLong_GCD takes its simple: path (Euclid on C longs). Subsumed by mathint-gcd-general." },
-  { id := "mathint-lcm-small", pyFile := "Modules/mathmodule.c"
-    pyFns := ["math.lcm", "long_lcm"]
+  { id := "mathint-lcm-small", pyFile := "Modules/mathintegermodule.c"
+    pyFns := ["math.integer.lcm", "long_lcm"]
     statement := "lcm() == 1, lcm(a) == abs(a), and for abs(a), abs(b) < 2**60, lcm(a, b) is the nonnegative least common multiple (0 if either is 0)."
     source := "math.lcm docs", status := .proven
     prop := ``LcmSmall, thm := some ``lcmSmall_proven
     notes := "Scope as for mathint-gcd-small; subsumed by mathint-lcm-general." },
   { id := "mathint-gcd-general", pyFile := "Objects/longobject.c"
-    pyFns := ["math.gcd", "_PyLong_GCD"]
+    pyFns := ["math.integer.gcd", "_PyLong_GCD"]
     statement := "For all int arguments, gcd(*args) is the nonnegative greatest common divisor (gcd() == 0)."
     source := "math.gcd docs", status := .proven
     prop := ``GcdGeneral, thm := some ``gcdGeneral_proven
     notes := "Includes Lehmer's step of _PyLong_GCD (longobject.c:5782-5907): the cofactors accepted by the test B + q*D <= x - q*y are the true Euclidean cofactors of (a, b), so the digit loop yields two consecutive nonnegative remainders below 2**(30*size_a) (no wraparound), b strictly decreases, and no int64_t intermediate of the inner loop exceeds 2**62 in absolute value." },
-  { id := "mathint-lcm-general", pyFile := "Modules/mathmodule.c"
-    pyFns := ["math.lcm", "long_lcm"]
+  { id := "mathint-lcm-general", pyFile := "Modules/mathintegermodule.c"
+    pyFns := ["math.integer.lcm", "long_lcm"]
     statement := "For all int arguments, lcm(*args) is the nonnegative least common multiple (lcm() == 1, 0 if any argument is 0)."
     source := "math.lcm docs", status := .proven
     prop := ``LcmGeneral, thm := some ``lcmGeneral_proven },

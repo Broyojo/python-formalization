@@ -50,6 +50,7 @@ observed: |
   python3 3.14.7: U gives KeyError, ('missing', {}), True; D gives 'default', ('value', {'x': 'value'}),
   False. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Lib/collections/__init__.py:1204-1205: "Modify __contains__ and get() to work like dict does when
   __missing__ is present." Doc/library/collections.rst:1341: "Class that simulates a dictionary."

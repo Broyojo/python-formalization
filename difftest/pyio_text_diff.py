@@ -72,6 +72,12 @@ def drop_stale_tell(ops):
     return out
 
 
+# what is left to call on a detached or uninitialized TextIOWrapper: each goes
+# through CHECK_ATTACHED or buffer_access_safe
+UNATTACHED = ["buffer", "detach", "closed", "fileno", "name", "seekable", "readable", "writable", "isatty",
+              "flush", "close", "chunkdel"]
+
+
 def gen_tiow(rng):
     fn = rng.choice(["tiow_c", "tiow_py", "tiow_py"])
     c_side = fn == "tiow_c"
@@ -82,7 +88,7 @@ def gen_tiow(rng):
     nl = pyio_diff.NEWLINES[rng.randrange(30)]
     names = ["write", "write", "write", "flush", "tell", "seektell", "closed", "encoding", "errors", "newlines",
              "line_buffering", "write_through", "seekable", "readable", "writable", "isatty", "fileno", "name",
-             "chunkget", "bufvalue"]
+             "chunkget", "bufvalue", "buffer", "chunkdel"]
     if readable:
         names += ["read"] * 4 + ["readline"] * 4 + ["next", "next", "readlines", "seek", "seek", "truncate"]
     if c_side:
@@ -111,10 +117,14 @@ def gen_tiow(rng):
         ops.append({"op": "close"})
     if c_side and rng.random() < 0.08:
         ops += [{"op": "detach"}, {"op": "closed"}]
+        ops += [{"op": rng.choice(UNATTACHED)} for _ in range(rng.randint(0, 3))]
     else:
         ops = drop_stale_tell(ops + [{"op": "flush"}, {"op": "bufvalue"}, {"op": "tell"}, {"op": "newlines"}, {"op": "closed"}])
+    uninit = c_side and rng.random() < 0.04
+    if uninit:
+        ops = [{"op": rng.choice(UNATTACHED + ["tell", "chunkget"])} for _ in range(rng.randint(1, 6))]
     return {"mod": "pyio", "fn": fn, "data": data, "enc": enc, "errors": errors, "newline": nl,
-            "lb": c_side and rng.random() < 0.15, "wt": c_side and rng.random() < 0.15, "ops": ops}
+            "lb": c_side and rng.random() < 0.15, "wt": c_side and rng.random() < 0.15, "ops": ops, "uninit": uninit}
 
 
 def gen_stringx(rng):
@@ -123,10 +133,12 @@ def gen_stringx(rng):
     c.update(pyio_diff.gen_stringio(rng, fn))
     for _ in range(rng.randint(1, 5)):
         k = rng.choice(["readable", "writable", "seekable", "flush", "isatty", "fileno", "detach", "encoding",
-                        "errors", "line_buffering", "name", "getstate", "setstate"])
+                        "errors", "line_buffering", "name", "getstate", "setstate", "truncobj", "truncobj"])
         op = {"op": k}
-        if k in ("getstate", "setstate") and fn == "stringx_py":
+        if k in ("getstate", "setstate", "truncobj") and fn == "stringx_py":
             continue
+        if k == "truncobj":
+            op["a"] = pyio_diff.gen_targ(rng, 8)
         if k == "setstate":
             op.update(v=None if rng.random() < 0.2 else [97, 13, 10, 98], nl=rng.choice(pyio_diff.NEWLINES),
                       pos=rng.choice([0, 1, 3, 100, -1, 2**63]))
@@ -177,6 +189,11 @@ def apply_tiow(f, b, op, key):
     if k == "chunkset":
         f._CHUNK_SIZE = op["v"]
         return None
+    if k == "chunkdel":
+        del f._CHUNK_SIZE
+        return None
+    if k == "buffer":
+        return f.buffer is b
     if k == "reconfigure":
         kw = {"line_buffering": op["lb"], "write_through": op["wt"]}
         if op.get("hasnl"):
@@ -194,8 +211,11 @@ def run_tiow(c):
     nl = None if c["newline"] is None else "".join(map(chr, c["newline"]))
     b = m.BytesIO(bytes(c["data"]))
     try:
-        f = m.TextIOWrapper(b, encoding=c["enc"], errors=c["errors"], newline=nl,
-                            line_buffering=c["lb"], write_through=c["wt"])
+        if c["uninit"]:
+            f = m.TextIOWrapper.__new__(m.TextIOWrapper)
+        else:
+            f = m.TextIOWrapper(b, encoding=c["enc"], errors=c["errors"], newline=nl,
+                                line_buffering=c["lb"], write_through=c["wt"])
     except Exception as e:
         return pyio_diff.norm(e)
     out = []
@@ -233,6 +253,12 @@ def run_stringx(c):
                 val = None if op["v"] is None else "".join(map(chr, op["v"]))
                 n = None if op["nl"] is None else "".join(map(chr, op["nl"]))
                 v = f.__setstate__((val, n, op["pos"], None))
+            elif k == "truncobj":
+                # readline(0) realizes the stream: a closing __index__ on a stream
+                # still accumulating is the crash in bugs/pyio-stringio-truncate-index-close-crash.yaml
+                if not f.closed:
+                    f.readline(0)
+                v = f.truncate(pyio_diff.make_targ(f, op["a"], []))
             elif k in ("readable", "writable", "seekable", "flush", "isatty", "fileno", "detach"):
                 v = getattr(f, k)()
             else:

@@ -152,7 +152,7 @@ def fmt_dec(f):
 
 @area("struct", 6)
 class StructArea:
-    CODES = "xbBcspsphHiIlLnNqQ?efdFDP"
+    CODES = list("xbBcspsphHiIlLnNqQ?efdFDP") + ["Zf", "Zd", "Zf", "Zd"]
     INTS = [0, 1, -1, 127, 128, -128, -129, 255, 256, 32767, 32768, -32768, -32769, 65535, 65536,
             2**31 - 1, 2**31, -2**31, -2**31 - 1, 2**32 - 1, 2**32, 2**63 - 1, 2**63, -2**63,
             -2**63 - 1, 2**64 - 1, 2**64, -2**64, 2**100, -2**100]
@@ -179,7 +179,7 @@ class StructArea:
         s = prefix + "".join(parts)
         roll = r.random()
         if roll < 0.03:
-            s += r.choice(["3", "0", "9" * 20, "z", "\0", "<", "@", "3 i", "\x0b", "!", "1e"])
+            s += r.choice(["3", "0", "9" * 20, "z", "\0", "<", "@", "3 i", "\x0b", "!", "1e", "Z", "Zi", "3Z", "ZF", "Z f", "Zfd", "fZ", "2Zd3"])
         elif roll < 0.06:
             s = r.choice(["9223372036854775807x", "9223372036854775808x", "9223372036854775807xb",
                           "b9223372036854775807h", "4611686018427387904h", "4611686018427387903h",
@@ -188,10 +188,11 @@ class StructArea:
                           "9223372036854775807b9223372036854775807b", "9223372036854775807pp",
                           "9223372036854775808s", "1b9223372036854775806xh", "@b9223372036854775806xq",
                           "=9223372036854775807xh", "<9223372036854775806xh", "bh9223372036854775805x"])
-        return {"s": [ord(c) for c in s]} if roll < 0.98 else {"b": [ord(c) for c in s]}
+        return {"s": [ord(c) for c in s]} if roll < 0.95 else {"b": [ord(c) for c in s]}
 
     @classmethod
     def value(cls, r, code):
+        code = {"Zf": "F", "Zd": "D"}.get(code, code)
         roll = r.random()
         if roll < 0.08:
             return r.choice([{"t": "o", "v": True}, {"t": "o", "v": False},
@@ -246,7 +247,7 @@ class StructArea:
         import re
         out = []
         text = s.format.lstrip("@<>=!")
-        for num, c in re.findall(r"(\d*)([a-zA-Z?])", text):
+        for num, c in re.findall(r"(\d*)(Z[fd]|[a-zA-Z?])", text):
             n = int(num) if num else 1
             if c == "x":
                 continue
@@ -272,10 +273,34 @@ class StructArea:
         return [r.choice(special) if r.random() < 0.7 else r.randrange(256) for _ in range(m)]
 
     @classmethod
+    def life(cls, r):
+        f = lambda: r.choice([{"s": [105]}, {"s": [105]}, {"b": [105]}, {"s": [104]}, {"b": [104]}, {"s": [122]}, {"b": [255]}, {"s": [0xe9]}, {"s": [105, 0, 105]},
+                              {"o": "int", "h": True}, {"s": []}])
+
+        def call():
+            k = r.random()
+            if k < 0.6:
+                return {"pos": [f()], "kw": []}
+            if k < 0.75:
+                return {"pos": [], "kw": [["format", f()]]}
+            if k < 0.82:
+                return {"pos": [], "kw": []}
+            if k < 0.9:
+                return {"pos": [f(), f()], "kw": []}
+            if k < 0.95:
+                return {"pos": [f()], "kw": [["format", f()]]}
+            return {"pos": [], "kw": [["fmt", f()]]}
+        kind = r.choice(["plain", "plain", "init", "new"])
+        return {"mod": "textlibs", "fn": "struct.life", "kind": kind, "newis": kind != "new", "initis": kind != "init", "new": call(),
+                "inits": [call() for _ in range(r.choice([0, 0, 1, 2, 3]))]}
+
+    @classmethod
     def gen(cls, r):
         fn = r.choice(["calcsize", "info", "pack", "pack", "pack", "Struct.pack", "unpack", "unpack",
                        "unpack_from", "iter_unpack", "iter_hint", "pack_into", "uninit", "pack_into2", "unpack2",
-                       "unpack_from2", "iter2", "iter2", "mod2"])
+                       "unpack_from2", "iter2", "iter2", "mod2", "life", "life"])
+        if fn == "life":
+            return cls.life(r)
         fmt = cls.fmt(r)
         if r.random() < 0.01:
             fmt = r.choice([{"o": "int", "h": True}, {"o": "list", "h": False}, {"o": "float", "h": True},
@@ -304,14 +329,16 @@ class StructArea:
                 c["args"] = cls.args_for(r, fmt)
                 c["buf"] = r.choice([{"ba": blob}, {"ba": blob}, {"ba": blob}, {"bytes": blob}, bad])
                 c["off"] = r.choice([{"i": 0}, {"i": 0}, {"idx": {"ok": 0}}, {"idx": {"ok": 1}}, {"idx": {"raise": ["ValueError", "boom"]}},
-                                     {"idx": {"ok": 2**70}}, {"ty": "str"}, {"i": -1}])
+                                     {"idx": {"ok": 2**70}}, {"ty": "str"}, {"i": -1},
+                                     {"idx": {"ok": 0}, "reinit": [cc for cc in r.choice(["b", "bb", "2b", "i", "0s"]).encode()]}])
                 if c["n"] != 2:
                     c.pop("args")
                     c["args"] = []
                 return c
             c["buf"] = r.choice([{"bytes": blob}, {"bytes": blob}, {"ba": blob}, bad])
             if fn == "mod2":
-                c["op"] = r.choice(["unpack", "unpack", "unpack_from", "iter", "pack0", "pack_into0"])
+                c["op"] = r.choice(["unpack", "unpack", "unpack_from", "iter", "pack0", "pack_into0", "pack_into1", "pack_into2", "pack_into"])
+                c["args"] = cls.args_for(r, fmt)
                 c["off"] = r.choice([{"i": 0}, {"idx": {"ok": 0}}, {"idx": {"raise": ["ValueError", "boom"]}}, {"ty": "str"}])
             if fn == "unpack_from2":
                 c["off"] = r.choice([{"i": 0}, {"idx": {"ok": 0}}, {"idx": {"ok": 1}}, {"idx": {"raise": ["ValueError", "boom"]}},
@@ -353,6 +380,51 @@ class StructArea:
         return c
 
     @classmethod
+    def run_life(cls, c):
+        class I(struct.Struct):
+            def __init__(self, *a, **k):
+                super().__init__(*a, **k)
+
+        class N(struct.Struct):
+            def __new__(cls, *a, **k):
+                return super().__new__(cls, *a, **k)
+        ty = {"plain": struct.Struct, "init": I, "new": N}[c["kind"]]
+
+        def fm(x):
+            return fmt_dec(x)
+
+        def wlist(w):
+            return [[x.category.__name__, str(x.message)] for x in w]
+
+        def show(s):
+            try:
+                return [s.size, list(s.format.encode())]
+            except AttributeError:
+                return None
+
+        def do(f):
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                try:
+                    return f(), None, wlist(w)
+                except Exception as e:
+                    return None, {"exc": type(e).__name__, "msg": str(e)}, wlist(w)
+
+        def args(x):
+            return [fm(a) for a in x["pos"]], {k: fm(v) for k, v in x["kw"]}
+        a, k = args(c["new"])
+        s, e, w = do(lambda: ty(*a, **k))
+        if e is not None:
+            return {"ok": {"new": e, "w": w, "ops": []}}
+        out = []
+        first = show(s)
+        for x in c["inits"]:
+            a, k = args(x)
+            _, e, w2 = do(lambda: s.__init__(*a, **k))
+            out.append([show(s) if e is None else e, w2])
+        return {"ok": {"new": first, "w": w, "ops": out}}
+
+    @classmethod
     def run(cls, c):
         fn = c["fn"][len("struct."):]
         if fn == "pack_into2":
@@ -365,7 +437,16 @@ class StructArea:
                 elif c["n"] == 1:
                     s.pack_into(b)
                 else:
-                    s.pack_into(b, off_dec(c["off"]), *a)
+                    o = off_dec(c["off"])
+                    if "reinit" in c["off"]:
+                        class R:
+                            def __index__(self):
+                                with warnings.catch_warnings():
+                                    warnings.simplefilter("ignore")
+                                    s.__init__(bytes(c["off"]["reinit"]).decode())
+                                return c["off"]["idx"]["ok"]
+                        o = R()
+                    s.pack_into(b, o, *a)
                 return list(b)
             return common.py_result(body)
         if fn == "mod2":
@@ -376,7 +457,14 @@ class StructArea:
                 if op == "pack_into0":
                     return struct.pack_into()
                 f = fmt_dec(c["fmt"])
+                if op == "pack_into1":
+                    return struct.pack_into(f)
+                if op == "pack_into2":
+                    return struct.pack_into(f, buf_dec(c["buf"]))
                 b = buf_dec(c["buf"])
+                if op == "pack_into":
+                    struct.pack_into(f, b, off_dec(c["off"]), *[sv_dec(a) for a in c["args"]])
+                    return list(b)
                 if op == "unpack":
                     return [sv_enc(x) for x in struct.unpack(f, b)]
                 if op == "unpack_from":
@@ -408,6 +496,8 @@ class StructArea:
                             s.__init__("".join(map(chr, op["s"])))
                 return out
             return common.py_result(body)
+        if fn == "life":
+            return cls.run_life(c)
         if fn == "uninit":
             s = struct.Struct.__new__(struct.Struct)
             return {"ok": {"size": s.size, "pack": common.py_result(lambda: list(s.pack())),
@@ -464,7 +554,7 @@ def _item_count(s):
     """Item count of a huge-size format without materialising it."""
     import re
     n = 0
-    for num, ch in re.findall(r"(\d*)([a-zA-Z?])", s.format.lstrip("@<>=!")):
+    for num, ch in re.findall(r"(\d*)(Z[fd]|[a-zA-Z?])", s.format.lstrip("@<>=!")):
         if ch in "sp":
             n += 1
         elif ch != "x":
@@ -600,15 +690,138 @@ class Codec:
         return {"b": b}
 
 
+def alpha_dec(x):
+    if x is None:
+        return None
+    return bytes(x["b"]) if "b" in x else 3
+
+
+def kw_of(c, names):
+    """The optional arguments the case gives: `strict`, `alpha` and `ig` have their own encodings."""
+    kw = {}
+    for k in names:
+        if c.get(k) is None:
+            continue
+        if k == "alpha":
+            kw["alphabet"] = alpha_dec(c[k])
+        elif k == "ig":
+            kw["ignorechars"] = data_dec(c[k])
+        elif k == "strict":
+            kw["strict_mode"] = c[k]
+        else:
+            kw[k] = c[k]
+    return kw
+
+
 @area("binascii", 3)
 class BinasciiArea(Codec):
+    WRAP = [0, 0, 0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 16, 76, 77, 2**64 - 1, 2**64, -1]
+
+    @classmethod
+    def perm(cls, r, a):
+        a = list(a)
+        r.shuffle(a)
+        return a
+
+    @classmethod
+    def alpha_arg(cls, r, n, base, std=None):
+        k = r.random()
+        if k < 0.5:
+            return None
+        if k < 0.65:
+            return {"b": list(base)}
+        if k < 0.8:
+            return {"b": cls.perm(r, base)}
+        if k < 0.85:
+            a = list(base)
+            a[r.randrange(n)] = 61
+            return {"b": a}
+        if k < 0.9:
+            a = list(base)
+            a[0] = a[1]
+            return {"b": a}
+        if k < 0.95:
+            return {"b": list(base)[:r.choice([0, 1, n - 1])] + list(base)[:r.choice([0, 0, 2])]}
+        return {"ty": "int"}
+
+    @classmethod
+    def ig_arg(cls, r):
+        return r.choice([None, None, {"b": []}, {"b": [10]}, {"b": [10, 13, 32]}, {"b": [61]}, {"b": [61, 10]}, {"b": [97, 98]}, {"b": [255, 0]}, {"nb": "int"},
+                         {"rz": ["ValueError", "boom"]}])
+
+    @classmethod
+    def enc(cls, f, d, **kw):
+        kw = {k: v for k, v in kw.items() if v is not None}
+        try:
+            return f(bytes(d), **kw)
+        except Exception:
+            return b""
+
+    @classmethod
+    def new_codec(cls, r, c, fn, d):
+        pad_opts = r.random() < 0.5
+        if fn == "a2b_base64":
+            c.update(strict=r.choice([None, True, False]), padded=r.choice([True, True, False]), canonical=r.random() < 0.3,
+                     alpha=cls.alpha_arg(r, 64, cls.B64), ig=cls.ig_arg(r))
+            a = alpha_dec(c["alpha"])
+            t = cls.enc(binascii.b2a_base64, d, alphabet=a if isinstance(a, bytes) else None, newline=False, padded=r.random() < 0.7,
+                        wrapcol=r.choice([0, 0, 4, 8]))
+            c["d"] = cls.wrap(r, cls.corrupt(r, t, cls.B64) if r.random() < 0.7 else t)
+        elif fn == "b2a_base64":
+            c.update(padded=r.random() < 0.7, wrapcol=r.choice(cls.WRAP), newline=r.random() < 0.5, alpha=cls.alpha_arg(r, 64, cls.B64))
+            c["d"] = d
+            if isinstance(c["alpha"], dict) and "ty" in c["alpha"]:
+                c["alpha"] = {"nb": "int"}
+        elif fn == "a2b_base32":
+            c.update(padded=r.choice([True, True, False]), canonical=r.random() < 0.3, alpha=cls.alpha_arg(r, 32, cls.B32), ig=cls.ig_arg(r))
+            a = alpha_dec(c["alpha"])
+            t = cls.enc(binascii.b2a_base32, d, alphabet=a if isinstance(a, bytes) else None, padded=r.random() < 0.7, wrapcol=r.choice([0, 0, 8, 16]))
+            c["d"] = cls.wrap(r, cls.corrupt(r, t, cls.B32) if r.random() < 0.7 else t)
+        elif fn == "b2a_base32":
+            c.update(padded=r.random() < 0.7, wrapcol=r.choice(cls.WRAP), alpha=cls.alpha_arg(r, 32, cls.B32))
+            c["d"] = d + [r.randrange(256) for _ in range(r.choice([0, 0, 1, 2, 3, 4, 5, 6]))]
+            if isinstance(c["alpha"], dict) and "ty" in c["alpha"]:
+                c["alpha"] = {"nb": "int"}
+        elif fn == "a2b_ascii85":
+            c.update(foldspaces=r.random() < 0.5, adobe=r.random() < 0.3, canonical=r.random() < 0.4, ig=cls.ig_arg(r))
+            t = cls.enc(binascii.b2a_ascii85, cls.spacey(r, d), foldspaces=c["foldspaces"], adobe=c["adobe"], pad=r.random() < 0.3,
+                        wrapcol=r.choice([0, 0, 3, 7]))
+            c["d"] = cls.wrap(r, cls.corrupt(r, t, b"!uvzyxs~<> \t\n") if r.random() < 0.6 else list(t))
+        elif fn == "b2a_ascii85":
+            c.update(foldspaces=r.random() < 0.5, adobe=r.random() < 0.4, pad=r.random() < 0.3, wrapcol=r.choice(cls.WRAP))
+            c["d"] = cls.spacey(r, d)
+        elif fn == "a2b_base85":
+            c.update(canonical=r.random() < 0.4, alpha=cls.alpha_arg(r, 85, base64.binascii.BASE85_ALPHABET), ig=cls.ig_arg(r))
+            a = alpha_dec(c["alpha"])
+            t = cls.enc(binascii.b2a_base85, d, alphabet=a if isinstance(a, bytes) else None, pad=r.random() < 0.3, wrapcol=r.choice([0, 0, 5, 10]))
+            c["d"] = cls.wrap(r, cls.corrupt(r, t, b"~}|0Az ,.") if r.random() < 0.6 else list(t))
+            if r.random() < 0.1:
+                c["d"] = {"b": r.choice([[126] * 5, [124, 78, 115, 67, 48], [124, 78, 115, 67, 47], [48], [0]])}
+        elif fn == "b2a_base85":
+            c.update(pad=r.random() < 0.4, wrapcol=r.choice(cls.WRAP), alpha=cls.alpha_arg(r, 85, base64.binascii.BASE85_ALPHABET))
+            c["d"] = d
+            if isinstance(c["alpha"], dict) and "ty" in c["alpha"]:
+                c["alpha"] = {"nb": "int"}
+
+    @staticmethod
+    def spacey(r, d):
+        if r.random() < 0.4:
+            return r.choice([[0, 0, 0, 0], [32, 32, 32, 32], [0, 0, 0, 0, 1], [32, 32, 32, 32, 0, 0], [1, 2, 3], [0], [0, 0], [0, 0, 0]]) + d[:r.choice([0, 4, 8])]
+        return d
+
     @classmethod
     def gen(cls, r):
         d = cls.raw(r)
         fn = r.choice(["a2b_base64", "a2b_base64", "a2b_base64", "b2a_base64", "a2b_hex", "b2a_hex",
                        "a2b_uu", "a2b_uu", "a2b_uu", "b2a_uu", "crc_hqx", "a2b_qp", "a2b_qp", "b2a_qp",
-                       "b2a_qp", "b2a_qp", "qp_bound", "qp_bound", "api", "flag", "hex", "hex"])
+                       "b2a_qp", "b2a_qp", "qp_bound", "qp_bound", "api", "flag", "hex", "hex",
+                       "a2b_base64", "b2a_base64", "a2b_base32", "a2b_base32", "b2a_base32", "a2b_ascii85", "a2b_ascii85", "b2a_ascii85",
+                       "a2b_base85", "a2b_base85", "b2a_base85", "a2b_hex"])
         c = {"mod": "textlibs", "fn": "binascii." + fn}
+        if fn in ("a2b_base32", "b2a_base32", "a2b_ascii85", "b2a_ascii85", "a2b_base85", "b2a_base85") or \
+                (fn in ("a2b_base64", "b2a_base64") and r.random() < 0.7):
+            cls.new_codec(r, c, fn, d)
+            return c
         if fn == "api":
             c["op"] = r.choice(["b2a_base64", "a2b_base64", "a2b_hex", "a2b_uu", "b2a_uu", "crc_hqx", "a2b_qp", "b2a_qp"])
             c["d"] = bad_data(r)
@@ -663,6 +876,7 @@ class BinasciiArea(Codec):
         elif fn == "a2b_hex":
             t = binascii.hexlify(bytes(d))
             c["d"] = cls.wrap(r, cls.corrupt(r, t, b"0123456789abcdefABCDEFgG"))
+            c["ig"] = cls.ig_arg(r)
         elif fn == "b2a_base64":
             c["d"], c["newline"] = d, r.random() < 0.5
         else:
@@ -725,11 +939,27 @@ class BinasciiArea(Codec):
                 return list(binascii.b2a_qp(bytes(c["d"]), quotetabs=c["quotetabs"], istext=c["istext"],
                                             header=c["header"]))
             if fn == "a2b_base64":
-                return list(binascii.a2b_base64(data_dec(c["d"]), strict_mode=c["strict"]))
+                return list(binascii.a2b_base64(data_dec(c["d"]), **kw_of(c, ["strict", "padded", "alpha", "ig", "canonical"])))
             if fn == "b2a_base64":
-                return list(binascii.b2a_base64(bytes(c["d"]), newline=c["newline"]))
+                kw = kw_of(c, ["padded", "wrapcol", "newline"])
+                if c.get("alpha") is not None:
+                    kw["alphabet"] = data_dec(c["alpha"])
+                return list(binascii.b2a_base64(bytes(c["d"]), **kw))
+            if fn == "a2b_base32":
+                return list(binascii.a2b_base32(data_dec(c["d"]), **kw_of(c, ["padded", "alpha", "ig", "canonical"])))
+            if fn in ("b2a_base32", "b2a_base85"):
+                kw = kw_of(c, ["padded", "wrapcol", "pad"])
+                if c.get("alpha") is not None:
+                    kw["alphabet"] = data_dec(c["alpha"])
+                return list(getattr(binascii, fn)(bytes(c["d"]), **kw))
+            if fn == "a2b_ascii85":
+                return list(binascii.a2b_ascii85(data_dec(c["d"]), **kw_of(c, ["foldspaces", "adobe", "ig", "canonical"])))
+            if fn == "b2a_ascii85":
+                return list(binascii.b2a_ascii85(bytes(c["d"]), **kw_of(c, ["foldspaces", "wrapcol", "pad", "adobe"])))
+            if fn == "a2b_base85":
+                return list(binascii.a2b_base85(data_dec(c["d"]), **kw_of(c, ["alpha", "ig", "canonical"])))
             if fn == "a2b_hex":
-                return list(binascii.a2b_hex(data_dec(c["d"])))
+                return list(binascii.a2b_hex(data_dec(c["d"]), **kw_of(c, ["ig"])))
             return list(binascii.b2a_hex(bytes(c["d"])))
 
         return common.py_result(body)
@@ -740,7 +970,7 @@ class Base64Area(Codec):
     @classmethod
     def gen(cls, r):
         d = cls.raw(r)
-        fn = r.choice(["b64decode", "b64decode", "urlsafe_b64encode", "urlsafe_b64decode", "b32encode",
+        fn = r.choice(["b64encode", "b64decode", "b64decode", "urlsafe_b64encode", "urlsafe_b64decode", "b32encode",
                        "b32hexencode", "b32decode", "b32decode", "b32decode", "b32hexdecode",
                        "b32hexdecode", "b16encode", "b16decode", "b16decode", "a85encode", "a85decode",
                        "a85decode", "b85encode", "b85decode", "b85decode", "z85encode", "z85decode", "z85decode",
@@ -751,6 +981,11 @@ class Base64Area(Codec):
         if r.random() < 0.3:
             d = [r.choice([0, 0, 32, 32, 255]) for _ in range(r.choice([1, 2, 3, 4, 5, 7, 8, 9]))]
             raw = bytes(d)
+        ig = r.choice([None, None, {"b": []}, {"b": [10]}, {"b": [10, 32]}, {"b": [61]}, {"b": [97, 98]}])
+        if fn == "b64encode":
+            c.update(d=d, alt=r.choice([None, None, {"b": [45, 95]}, {"b": [42, 33]}, {"b": [45]}, {"b": []}]), padded=r.random() < 0.7,
+                     wrapcol=r.choice([0, 0, 0, 1, 3, 4, 5, 8, 76, -1, 2**64]))
+            return c
         if fn == "a85encode":
             c.update(d=d, foldspaces=r.random() < 0.5, pad=r.random() < 0.3, adobe=r.random() < 0.4,
                      wrapcol=r.choice([0, 0, 1, 2, 3, 5, 7, 76, -1, -5]))
@@ -762,11 +997,14 @@ class Base64Area(Codec):
             b = list(t) if r.random() < 0.4 else cls.corrupt(r, t, b"!uvzyxs~<> \t\n")
             if r.random() < 0.1:
                 b = r.choice([[60, 126, 62], [126, 62], [60, 126, 126, 62], [117] * 5, [115, 56, 87, 45, 34], [33]])
-            c.update(d=cls.wrap(r, b), foldspaces=fold, adobe=adobe,
+            c.update(d=cls.wrap(r, b), foldspaces=fold, adobe=adobe, canonical=r.random() < 0.3,
                      ignore=r.choice([[32, 9, 10, 13, 11], [32, 9, 10, 13, 11], [], [122], [117, 10]]))
             return c
         if fn == "b85encode":
-            c.update(d=d, pad=r.random() < 0.4)
+            c.update(d=d, pad=r.random() < 0.4, wrapcol=r.choice([0, 0, 1, 5, 7, 10, -1]))
+            return c
+        if fn == "z85encode":
+            c.update(d=d, pad=r.random() < 0.4, wrapcol=r.choice([0, 0, 1, 5, 7, 10, -1]))
             return c
         if fn == "b85decode":
             b = list(base64.b85encode(raw, pad=r.random() < 0.3))
@@ -774,10 +1012,12 @@ class Base64Area(Codec):
             if r.random() < 0.1:
                 b = r.choice([[126] * 5, [124, 78, 115, 67, 48], [124, 78, 115, 67, 47], [48], [0]])
             c["d"] = cls.wrap(r, b)
+            c.update(ig=ig, canonical=r.random() < 0.3)
             return c
         if fn == "z85decode":
             b = list(base64.z85encode(raw))
             c["d"] = cls.wrap(r, b if r.random() < 0.4 else cls.corrupt(r, b, b";_`|~#%0 "))
+            c.update(ig=ig, canonical=r.random() < 0.3)
             return c
         if fn == "any":
             c["name"] = r.choice(["b64encode", "standard_b64encode", "urlsafe_b64encode", "b32encode", "b32hexencode", "b16encode",
@@ -839,8 +1079,15 @@ class Base64Area(Codec):
                 t = base64.b64encode(raw, a)
             c["alt"] = alt
             c["d"] = cls.wrap(r, cls.corrupt(r, t, cls.B64))
+            if r.random() < 0.5:
+                c.update(validate=r.choice([None, True, False]), padded=r.random() < 0.7, ig=ig, canonical=r.random() < 0.3)
+        elif fn == "urlsafe_b64encode":
+            c.update(d=d, padded=r.random() < 0.7)
         elif fn == "urlsafe_b64decode":
             c["d"] = cls.wrap(r, cls.corrupt(r, base64.urlsafe_b64encode(raw), cls.B64 + b"-_"))
+            c["padded"] = r.random() < 0.3
+        elif fn in ("b32encode", "b32hexencode"):
+            c.update(d=d, padded=r.random() < 0.7, wrapcol=r.choice([0, 0, 1, 8, 9, 16, -1]))
         elif fn in ("b32decode", "b32hexdecode"):
             hexa = fn == "b32hexdecode"
             t = (base64.b32hexencode if hexa else base64.b32encode)(raw)
@@ -851,12 +1098,16 @@ class Base64Area(Codec):
             c["d"] = cls.wrap(r, t if r.random() < 0.3 else cls.corrupt(r, t, alpha))
             if not hexa:
                 c["map01"] = r.choice([None, None, None, {"b": [76]}, {"s": [73]}, {"b": [76, 76]}])
+            c.update(padded=r.random() < 0.7, ig=ig, canonical=r.random() < 0.3)
+        elif fn == "b16encode":
+            c.update(d=d, wrapcol=r.choice([0, 0, 1, 2, 3, 4, 5, 8, -1, 2**64]))
         elif fn == "b16decode":
             t = base64.b16encode(raw)
             if r.random() < 0.3:
                 t = t.lower()
             c["casefold"] = r.random() < 0.5
             c["d"] = cls.wrap(r, t if r.random() < 0.3 else cls.corrupt(r, t, b"0123456789ABCDEFabcdef"))
+            c["ig"] = ig
         else:
             c["d"] = d
         return c
@@ -881,26 +1132,40 @@ class Base64Area(Codec):
                     res = {"exc": type(e).__name__, "msg": str(e)}
                 return {"written": f.written, "res": res}
             f = getattr(base64, fn)
+            if fn == "b64encode":
+                return list(f(bytes(c["d"]), altchars=data_dec(c.get("alt")), padded=c["padded"], wrapcol=c["wrapcol"]))
+            if fn == "urlsafe_b64encode":
+                return list(f(bytes(c["d"]), padded=c["padded"]))
+            if fn in ("b32encode", "b32hexencode"):
+                return list(f(bytes(c["d"]), padded=c["padded"], wrapcol=c["wrapcol"]))
+            if fn == "b16encode":
+                return list(f(bytes(c["d"]), wrapcol=c["wrapcol"]))
+            if fn == "z85encode":
+                return list(f(bytes(c["d"]), pad=c["pad"], wrapcol=c["wrapcol"]))
             if fn == "a85encode":
                 return list(f(bytes(c["d"]), foldspaces=c["foldspaces"], wrapcol=c["wrapcol"], pad=c["pad"],
                               adobe=c["adobe"]))
             if fn == "a85decode":
                 return list(f(data_dec(c["d"]), foldspaces=c["foldspaces"], adobe=c["adobe"],
-                              ignorechars=bytes(c["ignore"])))
+                              ignorechars=bytes(c["ignore"]), canonical=c["canonical"]))
             if fn == "b85encode":
-                return list(f(bytes(c["d"]), pad=c["pad"]))
-            if fn in ("b85decode", "z85decode", "standard_b64decode"):
+                return list(f(bytes(c["d"]), pad=c["pad"], wrapcol=c["wrapcol"]))
+            if fn in ("b85decode", "z85decode"):
+                return list(f(data_dec(c["d"]), **kw_of(c, ["ig", "canonical"])))
+            if fn == "standard_b64decode":
                 return list(f(data_dec(c["d"])))
             if fn == "decodebytes":
                 return list(f(bytes(c["d"])))
             if fn == "b64decode":
-                return list(f(data_dec(c["d"]), altchars=data_dec(c.get("alt")), validate=c["validate"]))
+                return list(f(data_dec(c["d"]), altchars=data_dec(c.get("alt")), **kw_of(c, ["validate", "padded", "ig", "canonical"])))
             if fn == "urlsafe_b64decode":
-                return list(f(data_dec(c["d"])))
+                return list(f(data_dec(c["d"]), padded=c["padded"]))
             if fn == "b32decode":
-                return list(f(data_dec(c["d"]), casefold=c["casefold"], map01=data_dec(c.get("map01"))))
-            if fn in ("b32hexdecode", "b16decode"):
-                return list(f(data_dec(c["d"]), casefold=c["casefold"]))
+                return list(f(data_dec(c["d"]), casefold=c["casefold"], map01=data_dec(c.get("map01")), **kw_of(c, ["padded", "ig", "canonical"])))
+            if fn == "b32hexdecode":
+                return list(f(data_dec(c["d"]), casefold=c["casefold"], **kw_of(c, ["padded", "ig", "canonical"])))
+            if fn == "b16decode":
+                return list(f(data_dec(c["d"]), casefold=c["casefold"], **kw_of(c, ["ig"])))
             return list(f(bytes(c["d"])))
 
         return common.py_result(body)

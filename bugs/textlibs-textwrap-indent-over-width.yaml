@@ -23,7 +23,7 @@ reproducer: |
 expected: |
   Lines of at most width, or a note in the docs.
 observed: |
-  python3 3.14.7: [' a']. REPRODUCED.
+  python3 3.15.2: [' a']. REPRODUCED.
   main 3.16.0a1+dev: [' a']. REPRODUCED.
 promised_by: |
   Lib/textwrap.py:348-357, the docstring of TextWrapper.wrap: "so it fits in lines of no more than

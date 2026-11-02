@@ -2,7 +2,7 @@ import PyLean.Core
 
 /-!
 Insertion-ordered `dict` over an abstract key type, the substrate of `Counter`,
-`ChainMap` and `UserDict` (Lib/collections/__init__.py, CPython 3.14.7).
+`ChainMap` and `UserDict` (Lib/collections/__init__.py, CPython 3.15.2).
 
 Keys are a type with decidable equality. That stands for the Python contract on
 keys (hash and `==` consistent, `==` an equivalence relation, key objects not

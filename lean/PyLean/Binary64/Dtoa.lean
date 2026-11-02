@@ -224,6 +224,23 @@ def dtoaBig (u : F64) (mode : Nat) (b0 : Bigint) (be : Int) (bbits : Nat) (denor
       shortestDigits S1 (word1 u % 2 == 0) 40 b3 mlo mhi4 [] k
     else fixedDigits S1 ilim 1300 1 b3 [] k
 
+/-- `DOUBLE_TO_STRING_PRECISION_MAX`, pystrtod.c:411, and the bound of the clamp at
+dtoa.c:2385-2388. -/
+def precisionMax : Int := 2147483647 - 1024
+
+/-- The clamp of `ndigits` in modes 3 and 5, dtoa.c:2385-2388, new in 3.15 (gh-158446). -/
+def clampNdigits (ndigits : Int) : Int :=
+  if ndigits > precisionMax then precisionMax
+  else if ndigits < -precisionMax then -precisionMax
+  else ndigits
+
+/-- `ilim`, `ilim1` and `ndigits` in mode 3, dtoa.c:2385-2393. `i = ndigits + k + 1` is
+`int` arithmetic, and the clamp keeps it in range for every `k` a double can give. -/
+def mode3Limits (ndigits0 k : Int) : Int × Int × Int :=
+  let n := clampNdigits ndigits0
+  let i := wrap32 (n + wrap32 (k + 1))
+  (i, wrap32 (i - 1), n)
+
 /-- `_Py_dg_dtoa`, dtoa.c:2197-2814, for modes 0, 2 and 3. `none` means the model's
 fuel ran out. -/
 def _Py_dg_dtoa (dd : F64) (mode : Nat) (ndigits0 : Int) : Option DtoaOut :=
@@ -266,9 +283,7 @@ def _Py_dg_dtoa (dd : F64) (mode : Nat) (ndigits0 : Int) : Option DtoaOut :=
       if mode == 2 then
         let n := if ndigits0 ≤ 0 then 1 else ndigits0
         (n, n, n)
-      else if mode == 3 then
-        let i := wrap32 (ndigits0 + wrap32 (k + 1))
-        (i, wrap32 (i - 1), ndigits0)
+      else if mode == 3 then mode3Limits ndigits0 k
       else (-1, -1, 0)
     let finish (r : List Nat × Int) : Option DtoaOut :=
       some { digits := r.1.reverse, decpt := r.2 + 1, sign }
@@ -392,8 +407,9 @@ where
       | p :: rest => p :: rest
     (go ps.reverse).reverse
 
-/-- `PyOS_double_to_string`, pystrtod.c:1237-1308, for the codes CPython uses. The
-`precision++` at :1263 is `int` arithmetic. -/
+/-- The body of `PyOS_double_to_string`, pystrtod.c:1253-1308, for the codes CPython uses,
+after the guard of `PyOS_double_to_string_checked`. The `precision++` at :1263 is `int`
+arithmetic, which that guard keeps in range. -/
 def PyOS_double_to_string (val : F64) (format_code : Nat) (precision : Int) (fl : DtsFlags) :
     Option (List Piece × DtsType) :=
   let go (code mode : Nat) (prec : Int) (upper : Bool) :=
@@ -406,6 +422,14 @@ def PyOS_double_to_string (val : F64) (format_code : Nat) (precision : Int) (fl 
   else if format_code == 103 then go 103 2 (if precision == 0 then 1 else precision) false
   else if format_code == 114 && precision == 0 then go 114 0 precision false
   else none
+
+/-- `PyOS_double_to_string`, pystrtod.c:1237-1308, with the guard 3.15 added at :1246-1251
+(gh-158446). Only `format` and `%` can pass a precision this large. -/
+def PyOS_double_to_string_checked (val : F64) (format_code : Nat) (precision : Int)
+    (fl : DtsFlags) : Py (Option (List Piece × DtsType)) :=
+  if precision > precisionMax ∨ precision < -precisionMax then
+    .error (.valueError "precision too big")
+  else .ok (PyOS_double_to_string val format_code precision fl)
 
 /-- `float_repr`, floatobject.c:338-354. -/
 def float_repr (x : F64) : Option (List Nat) :=
@@ -528,7 +552,7 @@ def ndZeros : List Nat :=
    0x1a80, 0x1a90, 0x1b50, 0x1bb0, 0x1c40, 0x1c50, 0xa620, 0xa8d0, 0xa900, 0xa9d0,
    0xa9f0, 0xaa50, 0xabf0, 0xff10, 0x104a0, 0x10d30, 0x10d40, 0x11066, 0x110f0, 0x11136, 0x111d0,
    0x112f0, 0x11450, 0x114d0, 0x11650, 0x116c0, 0x116d0, 0x116da, 0x11730, 0x118e0, 0x11950,
-   0x11bf0, 0x11c50, 0x11d50, 0x11da0, 0x11f50, 0x16130, 0x16a60, 0x16ac0, 0x16b50,
+   0x11bf0, 0x11c50, 0x11d50, 0x11da0, 0x11de0, 0x11f50, 0x16130, 0x16a60, 0x16ac0, 0x16b50,
    0x16d70, 0x1ccf0, 0x1d7ce, 0x1d7d8, 0x1d7e2, 0x1d7ec, 0x1d7f6, 0x1e140, 0x1e2f0,
    0x1e4f0, 0x1e5f1, 0x1e950, 0x1fbf0]
 

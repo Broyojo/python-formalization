@@ -24,7 +24,7 @@ import PyLean.Binary64.Diff
 
 /-!
 Shared exact IEEE-754 binary64 model, and `Objects/floatobject.c`, `Python/dtoa.c`,
-`Python/pystrtod.c`, CPython 3.14.7.
+`Python/pystrtod.c`, CPython 3.15.2.
 
 Other modules import `PyLean.Binary64.Model` for the type `F64` and its operations, and
 `PyLean.Binary64.Lemmas` for the theorems about them.
@@ -133,7 +133,7 @@ def entries : List Entry := [
     status := .proven, prop := ``FloatIdentities, thm := some ``floatIdentities_proven },
   { id := "float-getformat", pyFile := floatFile, pyFns := ["float___getformat___impl"]
     statement := "float.__getformat__ answers for 'double' and 'float' and raises ValueError for any other string."
-    source := "float.__getformat__ docstring, floatobject.c@3.14.7:1693-1703"
+    source := "float.__getformat__ docstring, floatobject.c:1672-1688"
     status := .proven, prop := ``GetFormat, thm := some ``getFormat_proven },
   { id := "float-info", pyFile := floatFile
     pyFns := ["PyFloat_GetMax", "PyFloat_GetMin", "PyFloat_GetInfo"]
@@ -154,7 +154,7 @@ def entries : List Entry := [
     notes := "float.fromhex('1p2000x') raises OverflowError: overflow_error leaves before finished: checks the end of the string." },
   { id := "float-pack8-roundtrip", pyFile := floatFile, pyFns := ["PyFloat_Pack8", "PyFloat_Unpack8"]
     statement := "struct.unpack('d', struct.pack('d', x)) restores all 64 bits of every float, NaNs included, in both byte orders."
-    source := "struct docs; floatobject.c@3.14.7:2358-2375"
+    source := "struct docs; floatobject.c:2069-2087"
     status := .proven, prop := ``Pack8RoundTrip, thm := some ``pack8RoundTrip_proven },
   { id := "float-pack2-roundtrip", pyFile := floatFile, pyFns := ["PyFloat_Pack2", "PyFloat_Unpack2"]
     statement := "PyFloat_Pack2 inverts PyFloat_Unpack2 on all 65536 half precision patterns, in both byte orders."
@@ -164,16 +164,22 @@ def entries : List Entry := [
   { id := "dtoa-fixed-keeps-integer-part", pyFile := dtoaFile, pyFns := ["_Py_dg_dtoa"]
     statement := "In mode 3, for |x| >= 1 and any int ndigits >= 0, the returned decimal point lies after the first digit."
     source := "Comment at dtoa.c:2216: through ndigits past the decimal point"
-    status := .refuted, prop := ``DtoaFixedKeepsIntegerPart, thm := some ``dtoaFixedKeepsIntegerPart_refuted
-    bug := some "binary64-format-precision-near-int-max"
-    notes := "format(123.456, '.2147483647f') is all zeros: i = ndigits + k + 1 wraps at dtoa.c:2389. Fixed upstream as gh-158446." },
+    status := .open, prop := ``DtoaFixedKeepsIntegerPart
+    notes := "Refuted on 3.14.7 (bugs/binary64-format-precision-near-int-max.yaml): i = ndigits + k + 1 wrapped. 3.15 clamps ndigits (gh-158446), and dtoa-mode3-no-wrap proves the wrap gone. What is left needs the digit loop of _Py_dg_dtoa, for all x: no refutation applies now, and no proof exists yet." },
+  { id := "dtoa-mode3-no-wrap", pyFile := dtoaFile, pyFns := ["_Py_dg_dtoa"]
+    statement := "In mode 3, for every int ndigits and -330 < k < 330, ndigits is clamped to +-(INT_MAX - 1024) and ndigits + k + 1 does not wrap; for ndigits >= 0 and k >= 0, ilim is positive."
+    source := "Comment at dtoa.c:2380-2384"
+    status := .proven, prop := ``Mode3NoWrap, thm := some ``mode3NoWrap_proven },
   { id := "pystrtod-e-format-digit-count", pyFile := strtodFile
     pyFns := ["PyOS_double_to_string", "format_float_short"]
-    statement := "For finite x and 0 <= p <= INT_MAX, '%.{p}e' % x has p + 1 mantissa digits."
+    statement := "For finite x and 0 <= p <= INT_MAX - 1024, '%.{p}e' % x has p + 1 mantissa digits."
     source := "Doc/library/string.rst, format code 'e'"
-    status := .refuted, prop := ``EFormatDigitCount, thm := some ``eFormatDigitCount_refuted
-    bug := some "binary64-format-precision-near-int-max"
-    notes := "format(1.5, '.2147483647e') is '2e+00': precision++ wraps at pystrtod.c:1263. Fixed upstream as gh-158446." },
+    status := .open, prop := ``EFormatDigitCount
+    notes := "Refuted on 3.14.7 for p = INT_MAX (bugs/binary64-format-precision-near-int-max.yaml). 3.15 refuses p above INT_MAX - 1024 (pystrtod-precision-guard), so that witness is gone. What is left is the digit count of _Py_dg_dtoa in mode 2, for all x: no proof exists yet." },
+  { id := "pystrtod-precision-guard", pyFile := strtodFile, pyFns := ["PyOS_double_to_string"]
+    statement := "A precision beyond +-(INT_MAX - 1024) raises ValueError('precision too big') for every value and format code; any other reaches the body, where precision + 1 for 'e' is exact."
+    source := "Comment at pystrtod.c:404-411"
+    status := .proven, prop := ``PrecisionGuard, thm := some ``precisionGuard_proven },
   { id := "float-int-compare-exact", pyFile := floatFile, pyFns := ["float_richcompare"]
     statement := "Comparing a finite float with an int of any size gives the exact answer, for all six operators; a NaN compares false except for !=, and an infinity compares like its sign."
     source := "Comment at floatobject.c:356-369; Doc/library/stdtypes.rst: comparisons between numbers of different types behave as though the exact values were compared"
@@ -303,9 +309,15 @@ def entries : List Entry := [
     statement := "x.as_integer_ratio() is exact, in lowest terms, with a positive denominator, and raises OverflowError for infinities and ValueError for NaNs."
     source := "float.as_integer_ratio docstring, floatobject.c:1469-1472"
     status := .proven, prop := ``AsIntegerRatioExact, thm := some ``asIntegerRatioExact_proven },
+  { id := "float-struct-f-orders-agree", pyFile := floatFile, pyFns := ["PyFloat_Unpack4"]
+    statement := "On a little-endian host struct.unpack('<f', b) and struct.unpack('>f', b[::-1]) return the same bits."
+    source := "struct docs: '<' and '>' select the same standard size and IEEE 754 format; floatobject.c:2165-2172 keeps a signaling NaN signaling"
+    status := .refuted, prop := ``StructFloatOrdersAgree, thm := some ``structFloatOrdersAgree_refuted
+    bug := some "binary64-struct-f-le-quiets-snan"
+    notes := "New in 3.15: gh-145633 removed the float exception in init_endian_tables, so '<f' reaches nu_float, whose (double)x quiets a signaling NaN." },
   { id := "float-pack4-roundtrip", pyFile := floatFile, pyFns := ["PyFloat_Pack4", "PyFloat_Unpack4"]
     statement := "PyFloat_Pack4 inverts PyFloat_Unpack4 on every binary32 pattern, in both byte orders."
-    source := "struct docs; floatobject.c@3.14.7:2187-2201 and :2509-2522"
+    source := "struct docs; floatobject.c:2015-2036 and :2165-2172"
     status := .proven, prop := ``Pack4RoundTrip, thm := some ``pack4RoundTrip_proven },
   { id := "dtoa-quorem", pyFile := dtoaFile, pyFns := ["quorem"]
     statement := "quorem(b, S) is the quotient digit and the remainder, given b < 10 * S and a normalized S."
@@ -364,9 +376,8 @@ def entries : List Entry := [
   { id := "complex-abs-nan-any-errno", pyFile := complexFile, pyFns := ["_Py_c_abs", "complex_abs"]
     statement := "abs(z) is a NaN for a NaN real part and finite imaginary part, whatever errno held before the call."
     source := "Comment at complexobject.c:370: sets errno = ERANGE on overflow; otherwise errno = 0"
-    status := .refuted, prop := ``ComplexAbsNaN, thm := some ``complexAbsNaN_refuted
-    bug := some "binary64-complex-abs-stale-errno"
-    notes := "The NaN return at complexobject.c:389 leaves errno alone, and complex_abs reads it. Fixed upstream as gh-155526." },
+    status := .proven, prop := ``ComplexAbsNaN, thm := some ``complexAbsNaN_proven
+    notes := "Refuted on 3.14.7 (bugs/binary64-complex-abs-stale-errno.yaml): the NaN return at complexobject.c:389 leaves errno alone. 3.15 sets errno = 0 in complex_abs at :801 (gh-155526)." },
   { id := "complex-pow-edom-only-for-zero", pyFile := complexFile, pyFns := ["_Py_c_pow"]
     statement := "With a nonzero base, _Py_c_pow never leaves EDOM set, for any C library."
     source := "complex_pow, complexobject.c:762-765: EDOM is reported as zero to a negative or complex power"

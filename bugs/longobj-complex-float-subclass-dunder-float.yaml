@@ -34,7 +34,7 @@ reproducer: |
 expected: |
   (42+0j) from all three forms, as in 3.13.
 promised_by: |
-  Doc/library/functions.rst@3.14.7:426-431: complex(x) delegates to x.__complex__(), then falls
+  Doc/builtins/functions.rst:454-459: complex(x) delegates to x.__complex__(), then falls
   back to __float__() and then __index__().
 cause: |
   Objects/complexobject.c:1161 calls PyFloat_AsDouble, whose PyFloat_Check shortcut
@@ -43,6 +43,7 @@ cause: |
 possible_fix: |
   Use PyNumber_Float on line 1141, as 3.13 did for this path, or document the difference.
 tested:
+  python3 3.15.2: REPRODUCED
   python3 (3.14.7): REPRODUCED
   main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
   v3.13.0: not run; source read with `gh api repos/python/cpython/contents/Objects/complexobject.c?ref=v3.13.0`, complex_new_impl converts with PyNumber_Float on every path

@@ -1,7 +1,7 @@
 import PyLean.CoreLibs.Coll.ChainMap
 
 /-!
-`collections.UserDict`, Lib/collections/__init__.py:1175-1278 (CPython 3.14.7), with
+`collections.UserDict`, Lib/collections/__init__.py:1175-1278 (CPython 3.15.2), with
 the methods it inherits from `MutableMapping`, Lib/_collections_abc.py:930-992. Those
 are copied here because `UserDict` differs from `dict` through them.
 
@@ -70,22 +70,23 @@ def udGet (rk : κ → String) (miss : Option (κ → ν)) (u : UD κ ν) (k : �
 /-- `UserDict.__repr__`, :1185-1186. -/
 def udRepr (rk : κ → String) (rv : ν → String) (u : UD κ ν) : String := reprD rk rv u.data
 
-/-- The right operand of `|`: a `UserDict`, a `dict`, or anything else. -/
+/-- The right operand of `|`: a `UserDict`, a `dict`, a `frozendict`, or anything else. -/
 inductive UOpnd (κ ν : Type) where
   | user (d : D κ ν)
   | dict (d : D κ ν)
+  | frozen (d : D κ ν)
   | other
   deriving Repr, DecidableEq
 
 /-- `UserDict.__or__`, :1188-1193; `none` is `NotImplemented`. `self.__class__(d)`
 copies `d` through `__init__`. -/
 def udOr (u : UD κ ν) : UOpnd κ ν → Option (UD κ ν)
-  | .user d | .dict d => some (udNew u.cls (some (D.or_ u.data d)) [])
+  | .user d | .dict d | .frozen d => some (udNew u.cls (some (D.or_ u.data d)) [])
   | .other => none
 
 /-- `UserDict.__ror__`, :1195-1200. -/
 def udRor (u : UD κ ν) : UOpnd κ ν → Option (UD κ ν)
-  | .user d | .dict d => some (udNew u.cls (some (D.or_ d u.data)) [])
+  | .user d | .dict d | .frozen d => some (udNew u.cls (some (D.or_ d u.data)) [])
   | .other => none
 
 /-- `UserDict.__ior__`, :1202-1207, on the pairs of `other`. -/
@@ -120,15 +121,16 @@ def udPop (rk : κ → String) (miss : Option (κ → ν)) (u : UD κ ν) (k : �
     let u' ← udDelitem rk u k
     return (v, u')
 
-/-- `MutableMapping.popitem`, _collections_abc.py:945-955: the first key in iteration
-order. -/
-def udPopitem (rk : κ → String) (miss : Option (κ → ν)) (u : UD κ ν) : Py ((κ × ν) × UD κ ν) :=
-  match udIter u with
-  | [] => .error (.keyError "")
-  | key :: _ => do
-    let value ← udGetitem rk miss u key
-    let u' ← udDelitem rk u key
-    return ((key, value), u')
+/-- `dict.popitem()`. -/
+def dictPopitem (d : D κ ν) : Py ((κ × ν) × D κ ν) :=
+  match D.popitem? d with
+  | some r => .ok r
+  | none => .error (.keyError "'popitem(): dictionary is empty'")
+
+/-- `UserDict.popitem`, Lib/collections/__init__.py:1260-1268: `self.data.popitem()`, so last in, first out. It no longer
+reads `__getitem__` or `__delitem__`, so `__missing__` plays no part. -/
+def udPopitem (_rk : κ → String) (_miss : Option (κ → ν)) (u : UD κ ν) : Py ((κ × ν) × UD κ ν) :=
+  (dictPopitem u.data).map (fun r => (r.1, { u with data := r.2 }))
 
 /-- `MutableMapping.setdefault`, _collections_abc.py:986-992. -/
 def udSetdefault (rk : κ → String) (miss : Option (κ → ν)) (u : UD κ ν) (k : κ) (default : ν) :
@@ -183,12 +185,6 @@ def dictPop (rk : κ → String) (d : D κ ν) (k : κ) (default : Option ν) : 
   | some v, _ => .ok (v, D.del d k)
   | none, some x => .ok (x, d)
   | none, none => .error (.keyError (rk k))
-
-/-- `dict.popitem()`. -/
-def dictPopitem (d : D κ ν) : Py ((κ × ν) × D κ ν) :=
-  match D.popitem? d with
-  | some r => .ok r
-  | none => .error (.keyError "'popitem(): dictionary is empty'")
 
 /-- `dict.setdefault(k, default)`: does not consult `__missing__`. -/
 def dictSetdefault (d : D κ ν) (k : κ) (default : ν) : ν × D κ ν :=

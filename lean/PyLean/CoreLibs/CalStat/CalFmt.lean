@@ -1,7 +1,7 @@
 import PyLean.CoreLibs.CalStat.Cal
 
 /-!
-Mirror of `Lib/calendar.py` (CPython 3.14.7), second part: `TextCalendar`,
+Mirror of `Lib/calendar.py` (CPython 3.15.2), second part: `TextCalendar`,
 `HTMLCalendar`, `different_locale`, the locale subclasses, `_CLIDemoCalendar` and `main`.
 
 Locale dependence is a parameter: the text methods take the `Names` table of the
@@ -29,7 +29,7 @@ def tPrweek (theweek : List (Int × Int)) (width : Int) : Str := tFormatweek the
 
 /-- `TextCalendar.formatweekday`, calendar.py:377-385. -/
 def tFormatweekday (N : Names) (day width : Int) : Py Str := do
-  let names := if width ≥ 9 then N.dayName else N.dayAbbr
+  let names := if width ≥ (N.dayName.map (fun s => (s.length : Int))).foldr max 0 then N.dayName else N.dayAbbr
   let s ← localizedGet names day
   return center (sliceTo s width) width
 
@@ -41,7 +41,7 @@ def tFormatweekheader (N : Names) (c : Calendar) (width : Int) : Py Str := do
 /-- `TextCalendar.formatmonthname`, calendar.py:393-402. -/
 def tFormatmonthname (N : Names) (theyear themonth width : Int) (withyear : Bool) : Py Str := do
   validateMonth themonth
-  let s ← localizedGet (localizedMonthList N.monthName) themonth
+  let s ← localizedGet (localizedMonthList N.standaloneName) themonth
   let s ← if withyear then do
       let y ← reprInt theyear
       pure (s ++ [' '] ++ y)
@@ -76,9 +76,8 @@ def yearWeekLines (row : List (List (List (Int × Int)))) (colwidth c l : Int)
     rstrip (formatstring weeks colwidth c) ++ nl l)).flatten
 
 /-- The header lines of one month row of `formatyear`, calendar.py:441-449. -/
-def yearRowHead (N : Names) (theyear : Int) (months : List Int) (header : Str)
-    (colwidth c l : Int) : Py Str := do
-  let names ← months.mapM (fun k => tFormatmonthname N theyear k colwidth false)
+def yearRowHead (months : List Int) (header : Str) (colwidth c l : Int) (name : Int → Py Str) : Py Str := do
+  let names ← months.mapM name
   return nl l ++ rstrip (formatstring names colwidth c) ++ nl l ++
     rstrip (formatstring (months.map (fun _ => header)) colwidth c) ++ nl l
 
@@ -87,42 +86,44 @@ def textMonthRow (m i : Int) : List Int := rangeI (m * i + 1) (min (m * (i + 1) 
 
 /-- One iteration of the row loop of `formatyear`, calendar.py:439-461; `p` is
 `(row, i)` from `enumerate`. -/
-def yearRow (N : Names) (theyear m : Int) (header : Str) (colwidth c l : Int)
-    (fw : List Int → Nat → List (Int × Int) → Str)
+def yearRow (m : Int) (header : Str) (colwidth c l : Int)
+    (fw : List Int → Nat → List (Int × Int) → Str) (name : Int → Py Str)
     (p : List (List (List (Int × Int))) × Nat) : Py Str := do
   let months := textMonthRow m (p.2 : Int)
-  let head ← yearRowHead N theyear months header colwidth c l
+  let head ← yearRowHead months header colwidth c l name
   return head ++ yearWeekLines p.1 colwidth c l (fw months)
 
 /-- `TextCalendar.formatyear`, calendar.py:426-462, with the week formatter as a
-parameter `fw w months k week`, so that `_CLIDemoCalendar.formatyear` (same text except for
-that call) can share it. -/
+parameter `fw w months k week`, the month name as `name colwidth k`, and `wrap` for what colour adds to the year line
+and to the week header, so that `_CLIDemoCalendar.formatyear`, Lib/calendar.py:768-820, can share it. -/
 def tFormatyearWith (N : Names) (cal : Calendar) (theyear w l c m : Int)
-    (fw : Int → List Int → Nat → List (Int × Int) → Str) : Py Str := do
+    (fw : Int → List Int → Nat → List (Int × Int) → Str) (name : Int → Int → Py Str)
+    (wrapYear wrapHead : Str → Str) : Py Str := do
   let w := max 2 w
   let l := max 1 l
   let c := max 2 c
   let colwidth := (w + 1) * 7 - 1
   let yr ← reprInt theyear
-  let v := rstrip (center yr (colwidth * m + c * (m - 1))) ++ nl l
-  let header ← tFormatweekheader N cal w
+  let v := wrapYear (rstrip (center yr (colwidth * m + c * (m - 1)))) ++ nl l
+  let header := wrapHead (← tFormatweekheader N cal w)
   let rows ← cal.yeardays2calendar theyear m
-  let body ← rows.zipIdx.mapM (yearRow N theyear m header colwidth c l (fw w))
+  let body ← rows.zipIdx.mapM (yearRow m header colwidth c l (fw w) (name colwidth))
   return v ++ body.flatten
 
 def tFormatyear (N : Names) (cal : Calendar) (theyear w l c m : Int) : Py Str :=
   tFormatyearWith N cal theyear w l c m (fun w _ _ wk => tFormatweek wk w)
+    (fun cw k => tFormatmonthname N theyear k cw false) id id
 
 /-- `TextCalendar.pryear`, calendar.py:464-466. -/
 def tPryear (N : Names) (cal : Calendar) (theyear w l c m : Int) : Py Str :=
   tFormatyear N cal theyear w l c m
 
-/-! ## class HTMLCalendar, calendar.py:469-603 -/
+/-! ## class HTMLCalendar, calendar.py:488-617 -/
 
 /-- `HTMLCalendar.cssclasses`, calendar.py:475. -/
 def cssclasses : List Str := ["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map String.toList
 
-/-- `HTMLCalendar.formatday`, calendar.py@3.14.7:476-484. -/
+/-- `HTMLCalendar.formatday`, calendar.py:495-503. -/
 def hFormatday (day weekday : Int) : Py Str := do
   if day = 0 then return lit "<td class=\"noday\">&nbsp;</td>"
   else
@@ -130,26 +131,26 @@ def hFormatday (day weekday : Int) : Py Str := do
     let d ← reprInt day
     return lit "<td class=\"" ++ cls ++ lit "\">" ++ d ++ lit "</td>"
 
-/-- `HTMLCalendar.formatweek`, calendar.py@3.14.7:486-491. -/
+/-- `HTMLCalendar.formatweek`, calendar.py:505-510. -/
 def hFormatweek (theweek : List (Int × Int)) : Py Str := do
   let parts ← theweek.mapM (fun p => hFormatday p.1 p.2)
   return lit "<tr>" ++ parts.flatten ++ lit "</tr>"
 
-/-- `HTMLCalendar.formatweekday`, calendar.py@3.14.7:493-498. -/
+/-- `HTMLCalendar.formatweekday`, calendar.py:512-516. -/
 def hFormatweekday (N : Names) (day : Int) : Py Str := do
   let cls ← pyIndex cssclasses day
   let abbr ← localizedGet N.dayAbbr day
   return lit "<th class=\"" ++ cls ++ lit "\">" ++ abbr ++ lit "</th>"
 
-/-- `HTMLCalendar.formatweekheader`, calendar.py@3.14.7:500-505. -/
+/-- `HTMLCalendar.formatweekheader`, calendar.py:518-523. -/
 def hFormatweekheader (N : Names) (c : Calendar) : Py Str := do
   let parts ← c.iterweekdays.mapM (hFormatweekday N)
   return lit "<tr>" ++ parts.flatten ++ lit "</tr>"
 
-/-- `HTMLCalendar.formatmonthname`, calendar.py@3.14.7:507-517. -/
+/-- `HTMLCalendar.formatmonthname`, calendar.py:525-534. -/
 def hFormatmonthname (N : Names) (theyear themonth : Int) (withyear : Bool) : Py Str := do
   validateMonth themonth
-  let name ← localizedGet (localizedMonthList N.monthName) themonth
+  let name ← localizedGet (localizedMonthList N.standaloneName) themonth
   let s ← if withyear then do
       let y ← reprInt theyear
       pure (name ++ [' '] ++ y)
@@ -157,7 +158,7 @@ def hFormatmonthname (N : Names) (theyear themonth : Int) (withyear : Bool) : Py
   return lit "<tr><th colspan=\"7\" class=\"month\">" ++ s ++ lit "</th></tr>"
 
 def htmlTable (cls : String) : Str :=
-  lit s!"<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" class=\"{cls}\">"
+  lit s!"<table class=\"{cls}\">"
 
 /-- `HTMLCalendar.formatmonth`, calendar.py:536-553. -/
 def hFormatmonth (N : Names) (c : Calendar) (theyear themonth : Int) (withyear : Bool) :
@@ -223,24 +224,40 @@ def encodeChar (k : Codec) (c : Char) : List Nat :=
 
 def encodeXml (k : Codec) (s : Str) : List Nat := s.flatMap (encodeChar k)
 
-/-- `HTMLCalendar.formatyearpage`, calendar.py@3.14.7:563-584. `encoding = None` becomes
-`sys.getdefaultencoding()`, which is `utf-8`. -/
-def hFormatyearpage (N : Names) (c : Calendar) (theyear width : Int) (css : Option Str)
-    (encoding : Option Str) : Py (List Nat) := do
+/-- What `_format_html_page` writes before the stylesheet line, Lib/calendar.py:584-595. -/
+def htmlPageHead (y encoding : Str) : Str :=
+  lit "<!DOCTYPE html>\n" ++ lit "<html lang=\"en\">\n" ++ lit "<head>\n" ++
+    lit "<meta charset=\"" ++ encoding ++ lit "\">\n" ++
+    lit "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n" ++
+    lit "<title>Calendar for " ++ y ++ lit "</title>\n" ++ lit "<style>\n" ++
+    lit ":root { color-scheme: light dark; }\n" ++ lit "table.year { border: solid; }\n" ++
+    lit "table.year > tbody > tr > td { border: solid; vertical-align: top; }\n" ++ lit "</style>\n"
+
+/-- The text of the page, Lib/calendar.py:584-602. -/
+def htmlPageText (y encoding : Str) (css : Option Str) (content : Str) : Str :=
+  htmlPageHead y encoding ++
+    (match css with
+     | some css => lit "<link rel=\"stylesheet\" href=\"" ++ css ++ lit "\">\n"
+     | none => []) ++
+    lit "</head>\n" ++ lit "<body>\n" ++ content ++ lit "</body>\n" ++ lit "</html>\n"
+
+/-- `HTMLCalendar._format_html_page`, Lib/calendar.py:577-603. `encoding = None` becomes `'utf-8'`, and `content` was
+computed by the caller, so its exception comes first. -/
+def hFormatPage (theyear : Int) (content : Str) (css : Option Str) (encoding : Option Str) : Py (List Nat) := do
   let encoding := encoding.getD (lit "utf-8")
   let y ← reprInt theyear
-  let body ← hFormatyear N c theyear width
-  let page := lit "<?xml version=\"1.0\" encoding=\"" ++ encoding ++ lit "\"?>\n" ++
-    lit "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" ++
-    lit "<html>\n" ++ lit "<head>\n" ++
-    lit "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=" ++ encoding ++ lit "\" />\n" ++
-    (match css with
-     | some css => lit "<link rel=\"stylesheet\" type=\"text/css\" href=\"" ++ css ++ lit "\" />\n"
-     | none => []) ++
-    lit "<title>Calendar for " ++ y ++ lit "</title>\n" ++ lit "</head>\n" ++ lit "<body>\n" ++
-    body ++ lit "</body>\n" ++ lit "</html>\n"
   let k ← codecOf encoding
-  return encodeXml k page
+  return encodeXml k (htmlPageText y encoding css content)
+
+/-- `HTMLCalendar.formatyearpage`, Lib/calendar.py:605-610. -/
+def hFormatyearpage (N : Names) (c : Calendar) (theyear width : Int) (css : Option Str)
+    (encoding : Option Str) : Py (List Nat) := do
+  hFormatPage theyear (← hFormatyear N c theyear width) css encoding
+
+/-- `HTMLCalendar.formatmonthpage`, Lib/calendar.py:612-617. -/
+def hFormatmonthpage (N : Names) (c : Calendar) (theyear themonth : Int) (css : Option Str)
+    (encoding : Option Str) : Py (List Nat) := do
+  hFormatPage theyear (← hFormatmonth N c theyear themonth true) css encoding
 
 /-! ## `different_locale` and the locale calendars, calendar.py:620-681 -/
 
@@ -308,28 +325,53 @@ def lhFormatmonthname (e : LocaleEnv) (locale : String) (theyear themonth : Int)
 
 /-! ## `_CLIDemoCalendar`, calendar.py:684-826 -/
 
-/-- The three colour strings `_colorize.get_colors()` supplies. -/
+/-- `_get_theme().calendar`, Lib/calendar.py:689-692 and Lib/_colorize.py:202-206; all empty when colour is off. -/
 structure Ansi where
-  black : Str
-  bgYellow : Str
+  header : Str
+  highlight : Str
+  weekday : Str
   reset : Str
 
 /-- `_CLIDemoCalendar.__init__` keeps `highlight_day`, a `date` or `None`
 (:685-687); `_CLIDemoLocaleCalendar.__init__` does the same (:824-826). -/
 abbrev Highlight := Option Date
 
-/-- `_CLIDemoCalendar.formatweek`, calendar.py@3.14.7:656-676. `highlight_day` is an int or
-`None`; the colours are fetched only when it is truthy. -/
+/-- `_CLIDemoCalendar.formatday`, calendar.py:694-705. `day == highlight_day` is a plain comparison, so a blank cell,
+`day = 0`, is coloured when `highlight_day` is `0`. -/
+def dFormatday (A : Ansi) (day weekday width : Int) (highlightDay : Option Int) : Str :=
+  let s := tFormatday day weekday width
+  if some day = highlightDay then A.highlight ++ s ++ A.reset else s
+
+/-- `_CLIDemoCalendar.formatweek`, calendar.py:707-714. -/
 def dFormatweek (A : Ansi) (theweek : List (Int × Int)) (width : Int)
     (highlightDay : Option Int) : Str :=
-  let truthy := match highlightDay with
-    | some d => d != 0
+  join [' '] (theweek.map (fun p => dFormatday A p.1 p.2 width highlightDay))
+
+/-- `_CLIDemoCalendar.formatweekheader`, calendar.py:716-722. -/
+def dFormatweekheader (A : Ansi) (N : Names) (c : Calendar) (width : Int) : Py Str := do
+  let header ← tFormatweekheader N c width
+  return A.weekday ++ header ++ A.reset
+
+/-- `name.strip()` and what is around it. -/
+def stripParts (s : Str) : Str × Str × Str :=
+  let lead := s.takeWhile isSpaceChar
+  let rest := s.dropWhile isSpaceChar
+  let core := rstrip rest
+  (lead, core, rest.drop core.length)
+
+/-- `_CLIDemoCalendar.formatmonthname`, calendar.py:724-742. `name.replace(name_only, colored_name, 1)` finds the
+stripped name just after the leading spaces; an empty one matches at the very start. -/
+def dFormatmonthname (A : Ansi) (N : Names) (hl : Highlight) (theyear themonth width : Int) (withyear : Bool) :
+    Py Str := do
+  let name ← tFormatmonthname N theyear themonth width withyear
+  let here := match hl with
+    | some (y, m, _) => decide (y = theyear) && decide (m = themonth)
     | none => false
-  let highlight := if truthy then A.black ++ A.bgYellow else []
-  let reset := if truthy then A.reset else []
-  join [' '] (theweek.map (fun p =>
-    if some p.1 = highlightDay then highlight ++ tFormatday p.1 p.2 width ++ reset
-    else tFormatday p.1 p.2 width))
+  if here then
+    let (lead, core, trail) := stripParts name
+    if core.isEmpty then return A.highlight ++ A.reset ++ name
+    return lead ++ A.highlight ++ core ++ A.reset ++ trail
+  else return A.header ++ name ++ A.reset
 
 /-- The `highlight_day` choice at calendar.py:748-755. -/
 def monthHighlight (hl : Highlight) (theyear themonth : Int) : Option Int :=
@@ -343,10 +385,10 @@ def dFormatmonth (A : Ansi) (N : Names) (c : Calendar) (hl : Highlight) (theyear
   let highlightDay := monthHighlight hl theyear themonth
   let w := max 2 w
   let l := max 1 l
-  let s ← tFormatmonthname N theyear themonth (7 * (w + 1) - 1) true
+  let s ← dFormatmonthname A N hl theyear themonth (7 * (w + 1) - 1) true
   let s := rstrip s
   let s := s ++ nl l
-  let s := s ++ rstrip (← tFormatweekheader N c w)
+  let s := s ++ rstrip (← dFormatweekheader A N c w)
   let s := s ++ nl l
   let weeks ← c.monthdays2calendar theyear themonth
   return s ++ (weeks.map (fun week => rstrip (dFormatweek A week w highlightDay) ++ nl l)).flatten
@@ -365,6 +407,8 @@ def dFormatyear (A : Ansi) (N : Names) (cal : Calendar) (hl : Highlight) (theyea
     Py Str :=
   tFormatyearWith N cal theyear w l c m
     (fun w months k wk => dFormatweek A wk w (dYearDay hl theyear months k))
+    (fun cw k => dFormatmonthname A N hl theyear k cw false)
+    (fun year => A.header ++ year ++ A.reset) (fun header => A.weekday ++ header ++ A.reset)
 
 /-! ## `main`, calendar.py:879-993 -/
 
@@ -408,11 +452,16 @@ locale selected by `--locale` (the C table without one), `today` is `date.today(
 def mainRun (A : Ansi) (N : Names) (today : Date) (o : Options) : Py MainOut := do
   if strTruthy o.locale && !strTruthy o.encoding then throw parserError
   if o.type = lit "html" then
-    if (match o.month with | some m => m != 0 | none => false) then throw parserError
     let cal := (Calendar.mk 0).setfirstweekday o.firstWeekday
     let encoding := o.encoding.getD (lit "utf-8")
-    let year := o.year.getD today.1
-    return .bytes (← hFormatyearpage N cal year 3 (some o.css) (some encoding))
+    match o.year with
+    | none => return .bytes (← hFormatyearpage N cal today.1 3 (some o.css) (some encoding))
+    | some y =>
+      match o.month with
+      | some mo =>
+        if mo != 0 then return .bytes (← hFormatmonthpage N cal y mo (some o.css) (some encoding))
+        else return .bytes (← hFormatyearpage N cal y 3 (some o.css) (some encoding))
+      | none => return .bytes (← hFormatyearpage N cal y 3 (some o.css) (some encoding))
   else
     let cal := (Calendar.mk 0).setfirstweekday o.firstWeekday
     let hl : Highlight := some today

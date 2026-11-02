@@ -38,7 +38,7 @@ reproducer: |
 expected: |
   None, as in the C TextIOWrapper and StringIO.
 observed: |
-  python3 3.14.7: io (None, None); _pyio None before the read, then AttributeError:
+  python3 3.15.2: io (None, None); _pyio None before the read, then AttributeError:
   'IncrementalDecoder' object has no attribute 'newlines'. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |

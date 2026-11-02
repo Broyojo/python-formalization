@@ -513,7 +513,9 @@ def longLshift1 (a : Long) (wordshift remshift : Nat) : Py Long :=
     let n := normalize z
     return ⟨a.neg && !n.isEmpty, n⟩
 
-/-- `long_lshift_int64(a, shiftby)` and `_PyLong_Lshift`, longobject.c:5525-5550. -/
+/-- `long_lshift_int64(a, shiftby)` and `_PyLong_Lshift`, longobject.c:5525-5550. The test
+3.15 changed, :5532-5540, is under `#if PY_SSIZE_T_MAX <= INT64_MAX / PyLong_SHIFT`, which
+is false on a 64-bit build, so it is not compiled here. -/
 def longLshiftInt64 (a : Long) (shiftby : Nat) : Py Long :=
   if a.ds = [] then .ok ⟨false, []⟩
   else longLshift1 a (shiftby / 30) (shiftby % 30)

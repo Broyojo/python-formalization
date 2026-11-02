@@ -135,10 +135,11 @@ def encPairRes : NextRes (Int × Int) → Json
   | .exc e => Json.arr #[toJson "exc", toJson e.className, toJson e.message]
 
 /-- A value for `count`: an int, `true`/`false`, `{"f": bits}`, `"bad"` for a
-`Raising` object, `"str"` for a non-number. -/
+`Raising` object, `"badint"` for `RaisingInt(1)`, `"str"` for a non-number. -/
 def decVal (v : Json) : Except String (CVal PyNum) :=
   match v with
   | .str "bad" => .ok (.num .raising)
+  | .str "badint" => .ok (.intSub 1 .raising)
   | .str "str" => .ok (.nonNum .str)
   | .bool b => .ok (.intSub (if b then 1 else 0) (.bool b))
   | .obj _ => do return .num (.float (Binary64.F64.ofBits (← (← v.getObjVal? "f").getNat?)))
@@ -152,6 +153,7 @@ def getOptVal (j : Json) (k : String) : Except String (Option (CVal PyNum)) :=
 def encVal : CVal PyNum → Json
   | .int i => toJson i
   | .intSub _ (.bool b) => Json.bool b
+  | .intSub _ .raising => toJson "badint"
   | .num (.float x) => if x.isNaN then toJson "nan" else Json.mkObj [("f", toJson x.bits)]
   | .num .raising => toJson "bad"
   | _ => toJson "?"

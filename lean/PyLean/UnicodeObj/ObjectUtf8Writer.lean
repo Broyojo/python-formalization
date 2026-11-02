@@ -223,7 +223,7 @@ theorem decodeWriterX_err {b : Bytes} {H : DH} {c : Bool} {fuel : Nat} {e : PyEx
       Nat.sub_zero, List.drop_zero, hw]
     constructor <;> first | rfl | trivial
 
-/-- `unicode_decode_utf8_writer`, with any handler: what it adds is what the decoder of
+/-- `_PyUnicode_DecodeUTF8Writer`, with any handler: what it adds is what the decoder of
 `bytes.decode` gives, whatever the handler does, including replacing the input. If that raises, the
 same exception comes out and none of the text stays. A success keeps the writer's capacity exactly
 what its text needs. `b.length < fuel` is the budget of the model: the fast path spends none of it,
@@ -273,7 +273,7 @@ theorem writerDecodeX_proven : WriterDecodeX := by
         · rw [e, hi, ht, need_empty]
           omega
 
-/-- `PyUnicodeWriter_DecodeUTF8Stateful`, unicodeobject.c@3.14.7:14171-14192, with any handler. `size` picks
+/-- `PyUnicodeWriter_DecodeUTF8Stateful`, unicode_writer.c:515-537, with any handler. `size` picks
 the bytes, negative meaning up to the first NUL. With `consumed` the result is `*consumed`; without
 it nothing is reported. On a failure the position is put back, so no text stays, and `*consumed` is
 0 however far the decoder got. -/

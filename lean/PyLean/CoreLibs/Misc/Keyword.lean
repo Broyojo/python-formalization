@@ -1,7 +1,7 @@
 import PyLean.CoreLibs.Misc.Common
 
 /-!
-`Lib/keyword.py`, CPython 3.14.7. `iskeyword` and `issoftkeyword` are the `__contains__` of a
+`Lib/keyword.py`, CPython 3.15.2. `iskeyword` and `issoftkeyword` are the `__contains__` of a
 frozenset of a literal list (Lib/keyword.py:63-64).
 -/
 
@@ -16,8 +16,8 @@ def kwlist : List String :=
    "in", "is", "lambda", "nonlocal", "not", "or", "pass", "raise", "return", "try", "while",
    "with", "yield"]
 
-/-- `softkwlist`, Lib/keyword.py:55-61. -/
-def softkwlist : List String := ["_", "case", "match", "type"]
+/-- `softkwlist`, Lib/keyword.py:56-62. -/
+def softkwlist : List String := ["_", "case", "lazy", "match", "type"]
 
 /-- `iskeyword`, Lib/keyword.py:63. -/
 def iskeyword (s : String) : Bool := kwlist.contains s

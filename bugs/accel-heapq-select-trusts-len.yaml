@@ -1,0 +1,67 @@
+id: accel-heapq-select-trusts-len
+title: "heapq.nsmallest and nlargest return more than n items when len(iterable) is below the item count, since 3.15"
+priority: P4
+kind: regression
+module: accel
+files: [Lib/heapq.py]
+functions: ["nsmallest", "nlargest"]
+summary: |
+  PR #139087 ("removing redundant slicing in heapq.py") changed the shortcut for n >= size from
+  `return sorted(iterable, key=key)[:n]` to `return sorted(iterable, key=key)`, in nsmallest and
+  in nlargest. The slice is redundant only if `len(iterable)` equals the number of items the
+  iterable yields, and nothing checks that: `size` comes from calling `__len__`, the items from
+  iterating afterwards. An iterable whose `__len__` reports fewer items than it yields now gets
+  all of them back. nsmallest(2, it) returns 4 items for an `it` that yields 3, 1, 2, 5 and has
+  len(it) == 0, and nsmallest(0, it) returns the same 4. On 3.14.7 both results are what the
+  docs say, sorted(iterable)[:n]. When `__len__` is right the docs still hold, with ties, for
+  every n >= 0 (Lean: accel-nsmallest-sorted-prefix, accel-nlargest-sorted-prefix).
+likelihood: |
+  Low. It needs a `__len__` that under-reports, or a container that grows between the len()
+  and the sorted(), for example one shared with another thread. Such iterables are arguably
+  broken, but heapq never promised to trust `__len__`, and the old code did not.
+maybe_intended: |
+  The PR's description assumes `size == len(iterable)`, so the case was not considered rather
+  than rejected. Maintainers may well decide a lying `__len__` is not supported.
+reproducer: |
+  import heapq
+  class Liar:
+      def __init__(self, items, n):
+          self.items, self.n = items, n
+      def __iter__(self):
+          return iter(self.items)
+      def __len__(self):
+          return self.n
+  items = [3, 1, 2, 5]
+  s = heapq.nsmallest(2, Liar(items, 0))
+  l = heapq.nlargest(2, Liar(items, 0))
+  z = heapq.nsmallest(0, Liar(items, 0))
+  print('nsmallest(2):', s, 'nlargest(2):', l, 'nsmallest(0):', z)
+  print('sorted(...)[:2]:', sorted(items)[:2], sorted(items, reverse=True)[:2])
+  if s == [1, 2, 3, 5] and l == [5, 3, 2, 1] and z == [1, 2, 3, 5]:
+      print('REPRODUCED accel-heapq-select-trusts-len')
+expected: |
+  nsmallest(n, it) == sorted(it)[:n], so at most n items, whatever `__len__` says.
+observed: |
+  python3 3.15.2: nsmallest(2) -> [1, 2, 3, 5], nlargest(2) -> [5, 3, 2, 1], nsmallest(0) ->
+  [1, 2, 3, 5]. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+  python3 3.14.7: [1, 2], [5, 3], []. Not reproduced: this is new in 3.15.
+promised_by: |
+  Doc/library/heapq.rst:188 and :179-180, and the docstrings at Lib/heapq.py:477-481 and
+  :537-541: "Equivalent to: sorted(iterable, key=key)[:n]".
+cause: |
+  Lib/heapq.py:497 and :557 return sorted(...) whole, relying on `n >= size` at :496 and :556.
+  `size` is `len(iterable)` from :492 and :552.
+possible_fix: |
+  Put `[:n]` back. It copies at most once more, and only in the shortcut.
+duplicates:
+  issues:
+    - {number: 57483, state: closed, relation: "related: negative n and the equivalence claim"}
+    - {number: 157681, state: closed, relation: "PR on the same doc sentence, for negative n"}
+  queries: ["heapq nsmallest slice sorted redundant", "nsmallest __len__", "nsmallest",
+            "heapq remove slice", "heapq.nsmallest more than n __len__", "nlargest len iterable sorted slice"]
+  bugforge: "#158718 concerns nsmallest and equality, not len(): no match"
+  cause_pr: "#139087, merged 2025-09-18"
+lean:
+  property: PyLean.Accel.NsmallestAnyLen
+  theorem: PyLean.Accel.nsmallestAnyLen_refuted

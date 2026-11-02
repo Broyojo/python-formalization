@@ -3,7 +3,7 @@ import PyLean.Binary64.Dtoa
 
 /-!
 Model of `Modules/_csv.c` and of `Dialect`, `DictReader` and `DictWriter` in `Lib/csv.py`, CPython
-3.14.7. `Sniffer` is not modelled. Characters are code points, and `EOL` and `NOT_SET` are the same
+3.15.2. `Sniffer` is not modelled. Characters are code points, and `EOL` and `NOT_SET` are the same
 out-of-range `Py_UCS4` sentinels as in the source, so each comparison reads as it does there.
 
 Everything the C code calls back into can fail or re-enter, so nothing here takes a plain list of
@@ -389,26 +389,32 @@ def Obj.getattr (o : Obj) (n : String) : Py Obj :=
     | Option.none => .error (attrErr t n)
   | _ => .error (attrErr o.ty n)
 
-/-- `DIALECT_GETATTR`, `Modules/_csv.c@3.14.7:504-511`: any failure is cleared. -/
-def getattrOr (o : Obj) (v : Option Obj) (n : String) : Option Obj :=
+/-- The exceptions `PyObject_GetOptionalAttrString` clears. -/
+def isAttrErr : PyExc → Bool
+  | .named "AttributeError" _ => true
+  | _ => false
+
+/-- `DIALECT_GETATTR`, `Modules/_csv.c:504-511`: only `AttributeError` is cleared. -/
+def getattrOr (o : Obj) (v : Option Obj) (n : String) : Py (Option Obj) :=
   match v with
-  | some x => some x
+  | some x => .ok (some x)
   | Option.none =>
     match o.getattr n with
-    | .ok x => some x
-    | .error _ => Option.none
+    | .ok x => .ok (some x)
+    | .error e => if isAttrErr e then .ok Option.none else .error e
 
-/-- The attributes copied from a dialect argument, `Modules/_csv.c:512-519`. -/
-def dialectAttrs (o : Obj) (a : DArgs) : DArgs :=
-  { a with
-    delimiter := getattrOr o a.delimiter "delimiter"
-    doublequote := getattrOr o a.doublequote "doublequote"
-    escapechar := getattrOr o a.escapechar "escapechar"
-    lineterminator := getattrOr o a.lineterminator "lineterminator"
-    quotechar := getattrOr o a.quotechar "quotechar"
-    quoting := getattrOr o a.quoting "quoting"
-    skipinitialspace := getattrOr o a.skipinitialspace "skipinitialspace"
-    strict := getattrOr o a.strict "strict" }
+/-- The attributes copied from a dialect argument, `Modules/_csv.c:512-519`, in order. -/
+def dialectAttrs (o : Obj) (a : DArgs) : Py DArgs := do
+  let delimiter ← getattrOr o a.delimiter "delimiter"
+  let doublequote ← getattrOr o a.doublequote "doublequote"
+  let escapechar ← getattrOr o a.escapechar "escapechar"
+  let lineterminator ← getattrOr o a.lineterminator "lineterminator"
+  let quotechar ← getattrOr o a.quotechar "quotechar"
+  let quoting ← getattrOr o a.quoting "quoting"
+  let skipinitialspace ← getattrOr o a.skipinitialspace "skipinitialspace"
+  let strict ← getattrOr o a.strict "strict"
+  return { a with delimiter, doublequote, escapechar, lineterminator, quotechar, quoting,
+                  skipinitialspace, strict }
 
 /-- The registry, `module_state->dialects`: a dict in insertion order. Each key is the object that
 was registered, which a `str` subclass keeps with its own `__hash__` and `__eq__`. -/
@@ -465,7 +471,7 @@ def dialectKws : List String :=
   ["dialect", "delimiter", "doublequote", "escapechar", "lineterminator", "quotechar", "quoting",
    "skipinitialspace", "strict"]
 
-/-- `vgetargskeywords`, `Python/getargs.c@3.14.7:1575-1879`, for the format `|OOOOOOOOO`: the object for
+/-- `vgetargskeywords`, `Python/getargs.c:1673-2012`, for the format `|OOOOOOOOO`: the object for
 each entry of `dialect_kws`, positional arguments first. -/
 def parseDialectArgs (a : Args) : Py (List (Option Obj)) :=
   let len := dialectKws.length
@@ -509,6 +515,10 @@ def ltObj (a : DArgs) : Obj := a.lineterminator.getD (.str [13, 10])
 def dialectFresh (ty : TyName) (a : DArgs) : Py DRes := do
   return .fresh ty (← dialectBuild a) (ltObj a)
 
+/-- A new dialect from the attributes of `o` and the arguments. -/
+def freshAttrs (ty : TyName) (o : Obj) (a : DArgs) : Py DRes := do
+  dialectFresh ty (← dialectAttrs o a)
+
 /-- `dialect_new`, `Modules/_csv.c:434-575`. `ty` is the type being instantiated. -/
 def dialectNew (r : Registry) (ty : TyName) (args : Args) : Py DRes := do
   let a := argsOf (← parseDialectArgs args)
@@ -526,8 +536,8 @@ def dialectNew (r : Registry) (ty : TyName) (args : Args) : Py DRes := do
   | Option.none => dialectFresh ty a
   | some o =>
     match o.asDialect with
-    | some d => if noOverrides then return .same o d else dialectFresh ty (dialectAttrs o a)
-    | Option.none => dialectFresh ty (dialectAttrs o a)
+    | some d => if noOverrides then return .same o d else freshAttrs ty o a
+    | Option.none => freshAttrs ty o a
 
 /-- `tp_init` in `type_call`, `Objects/typeobject.c:2522-2524`. It runs on whatever `tp_new` returned.
 A new `_csv.Dialect` has `object_init`, and so does a reused instance with nothing of Python's in it.

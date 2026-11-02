@@ -4,7 +4,7 @@ import PyLean.RangeSlice.Model
 /-!
 Shared vocabulary for the `list` (`Objects/listobject.c`), `array.array`
 (`Modules/arraymodule.c`) and `collections.deque`
-(`Modules/_collectionsmodule.c`) models, CPython 3.14.7.
+(`Modules/_collectionsmodule.c`) models, CPython 3.15.2.
 
 * Elements are Python ints (`Int`) compared with `==`; rich comparison of
   ints never fails, so `PyObject_RichCompareBool` is `decide (a = b)`.

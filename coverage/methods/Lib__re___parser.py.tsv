@@ -29,7 +29,7 @@ Lib/re/_parser.py	304	310	Tokenizer.checkgroupname	checkgroupname(self, name, of
 Lib/re/_parser.py	312	370	_class_escape	_class_escape(source, escape)	modelled	textlibs-re-escape-twins	
 Lib/re/_parser.py	372	447	_escape	_escape(source, escape, state)	modelled	textlibs-re-escape-twins	
 Lib/re/_parser.py	449	450	_uniq	_uniq(items)	modelled	textlibs-re-uniq	
-Lib/re/_parser.py	452	509	_parse_sub	_parse_sub(source, state, verbose, nested)	todo		changed-in-3.15: was textlibs-re-branch-set,textlibs-re-parse-plain,textlibs-re-prefix-factor
+Lib/re/_parser.py	452	509	_parse_sub	_parse_sub(source, state, verbose, nested)	modelled	textlibs-re-parse-plain,textlibs-re-prefix-factor,textlibs-re-branch-set	
 Lib/re/_parser.py	511	884	_parse	_parse(source, state, verbose, nested, first=False)	modelled	textlibs-re-digit-limit-parse,textlibs-re-parse-plain	
 Lib/re/_parser.py	886	944	_parse_flags	_parse_flags(source, state, char)	modelled	textlibs-re-flags	
 Lib/re/_parser.py	946	960	fix_flags	fix_flags(src, flags)	modelled	textlibs-re-fix-flags	

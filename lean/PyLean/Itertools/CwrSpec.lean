@@ -2,7 +2,7 @@ import PyLean.Itertools.CombSpec
 
 /-!
 What `combinations_with_replacement` enumerates, with the documented count
-`(n + r - 1)! / r! / (n - 1)!` (rst:269-271), i.e. `math.comb(n + r - 1, r)`.
+`(n + r - 1)! / r! / (n - 1)!` (rst:274-276), i.e. `math.comb(n + r - 1, r)`.
 -/
 
 namespace PyLean.Itertools

@@ -227,7 +227,7 @@ length hint is the number of remaining values and the range in
 `__reduce__()` yields exactly those values. For the C `long` iterator this
 relies on `range_iter`'s and `range_reverse`'s overflow checks, which keep
 the end value `start + len*step` representable (the intermediate
-`len * step` in `rangeiter_reduce` may wrap, harmlessly under
+`len * step` in `range_iterator___reduce___impl` may wrap, harmlessly under
 `-fno-strict-overflow`). -/
 def IterReduceResumes : Prop :=
   ∀ (r : Range) (L : Int) (n : Nat), r.WF → r.Len L →
@@ -358,10 +358,10 @@ theorem iterReduceResumes_proven : IterReduceResumes := by
 
 /-- `it.__setstate__(state)` clips the state into `[0, len]` for every
 range iterator and every int state: it succeeds and leaves
-`L - clip(state)` values. `longrangeiter_setstate` (rangeobject.c:1099-1142)
-does exactly that; `rangeiter_setstate` (:925-940) first converts with
-`PyLong_AsLong` and raises `OverflowError` for states outside the C `long`
-range. -/
+`L - clip(state)` values. `longrange_iterator___setstate___impl`
+(rangeobject.c:1099-1142) does exactly that; `range_iterator___setstate___impl`
+(:925-940) first converts with `PyLong_AsLong` and raises `OverflowError` for states
+outside the C `long` range. -/
 def SetstateClips : Prop :=
   ∀ (r : Range) (L state : Int), r.WF → r.Len L →
     ∃ it', iterSetstate (rangeIter r) state = .ok it' ∧
@@ -383,5 +383,73 @@ theorem setstate_long_clips (a st m state : Int) :
     ∃ it', iterSetstate (.long a st m) state = .ok it' ∧
       it'.lengthHint = m - (if state < 0 then 0 else if m < state then m else state) :=
   ⟨_, rfl, rfl⟩
+
+/-- `state` clipped into `[0, len]`. -/
+def clipState (state m : Int) : Int := if state < 0 then 0 else if state > m then m else state
+
+/-- `it.__setstate__(state)` is `clip(state)` calls of `next(it)`, for both iterator
+types: same position, same remaining count. For `range_iterator` the state must fit a
+C `long`, which is what `SetstateClips` refutes without that hypothesis. `IsLong a` and
+`0 ≤ m` are the invariants of `iter(r)`, `reversed(r)` and `next`. -/
+def SetstateSkips : Prop :=
+  (∀ a st m state : Int, IsLong a → 0 ≤ m → IsLong state →
+    iterSetstate (.fast a st m) state = .ok (iterTake (clipState state m).toNat (.fast a st m)).2) ∧
+  (∀ a st m state : Int, 0 ≤ m →
+    iterSetstate (.long a st m) state = .ok (iterTake (clipState state m).toNat (.long a st m)).2)
+
+theorem clipState_bounds (state m : Int) (hm : 0 ≤ m) :
+    0 ≤ clipState state m ∧ clipState state m ≤ m := by
+  unfold clipState
+  split
+  · omega
+  · split <;> omega
+
+theorem setstateSkips_proven : SetstateSkips := by
+  refine ⟨?_, ?_⟩
+  · intro a st m state ha hm hs
+    have hc := clipState_bounds state m hm
+    have hmin : min (clipState state m).toNat m.toNat = (clipState state m).toNat := by omega
+    rw [iterTake_fast _ _ _ _ ha hm, hmin, Int.toNat_of_nonneg hc.1]
+    simp only [iterSetstate, asLong, if_pos hs]
+    have hk : (if state < 0 then 0 else if state > m then m else state) = clipState state m := rfl
+    rw [hk, wrap_add_wrap']
+  · intro a st m state hm
+    have hc := clipState_bounds state m hm
+    have hmin : min (clipState state m).toNat m.toNat = (clipState state m).toNat := by omega
+    rw [iterTake_long _ _ _ _ hm, hmin, Int.toNat_of_nonneg hc.1]
+    have hk : (if state < 0 then 0 else if m < state then m else state) = clipState state m := rfl
+    simp only [iterSetstate, hk]
+
+/-- What `__setstate__` does with an object that is not an exact `int`.
+`longrange_iterator` refuses all of them before looking at the value, and does not call
+`__index__`. `range_iterator` takes the value of an `int` subclass or `__index__`, and
+propagates what the conversion raises. -/
+def SetstateStateTypes : Prop :=
+  (∀ (a st m : Int) (s : StateArg), (∀ v, s ≠ .exact v) →
+    iterSetstateObj (.long a st m) s = .error (.typeError s!"state must be an int, not {s.typeName}")) ∧
+  (∀ (a st m v : Int) (s : StateArg), iterSetstateObj (.long a st m) (.exact v) = iterSetstate (.long a st m) v ∧
+    (stateAsLong s = .ok v → iterSetstateObj (.fast a st m) s = iterSetstate (.fast a st m) v)) ∧
+  (∀ (a st m : Int) (s : StateArg) (e : PyExc), stateAsLong s = .error e →
+    iterSetstateObj (.fast a st m) s = .error e) ∧
+  (∀ (v : Int) (tp : String), IsLong v → stateAsLong (.subclass v tp) = .ok v) ∧
+  (∀ (e : PyExc) (tp : String), stateAsLong (.index (.error e) tp) = .error e)
+
+theorem setstateStateTypes_proven : SetstateStateTypes := by
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · intro a st m s hs
+    cases s with
+    | exact v => exact absurd rfl (hs v)
+    | subclass v tp => rfl
+    | index r tp => rfl
+    | other tp => rfl
+  · intro a st m v s
+    refine ⟨rfl, fun h => ?_⟩
+    simp only [iterSetstateObj, h, bind, Except.bind]
+  · intro a st m s e h
+    simp only [iterSetstateObj, h, bind, Except.bind]
+  · intro v tp h
+    simp [stateAsLong, asLong, h]
+  · intro e tp
+    rfl
 
 end PyLean.RangeSlice

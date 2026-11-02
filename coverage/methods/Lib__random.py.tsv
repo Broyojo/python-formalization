@@ -35,5 +35,5 @@ Lib/random.py	924	926	SystemRandom.seed	seed(self, *args, **kwds)	modelled	rand-
 Lib/random.py	928	930	SystemRandom._notimplemented	_notimplemented(self, *args, **kwds)	modelled	rand-sysrandom-no-state	
 Lib/random.py	971	985	_test_generator	_test_generator(n, func, args)	excluded		test-support: timing and summary-statistics printer for the module self-test
 Lib/random.py	988	1006	_test	_test(N=10000)	excluded		test-support: runs _test_generator over a fixed list of calls
-Lib/random.py	1020	1044	_parse_args	_parse_args(arg_list: list[str] | None)	todo		changed-in-3.15: was excluded: test-support: argparse wiring for the CLI; argparse is not in this area, and its result is the data main is modelled over
+Lib/random.py	1020	1044	_parse_args	_parse_args(arg_list: list[str] | None)	excluded		test-support: argparse wiring for the CLI; argparse is not in this area, and its result is the data main is modelled over
 Lib/random.py	1047	1083	main	main(arg_list: list[str] | None=None)	modelled	rand-main-choices,rand-main-positional-matches-option,rand-main-positional-positive	

@@ -160,7 +160,7 @@ theorem insertAgree_proven : InsertAgree := by
 /-! ### `insert` against `s[i:i] = [x]` -/
 
 /-- `list.insert(i, x)` "is equivalent to writing `sequence[index:index] =
-[value]`" (Doc/library/stdtypes.rst@3.14.7:1336-1343), for every int `i`. -/
+[value]`" (Doc/builtins/stdtypes.rst:1612-1615), for every int `i`. -/
 def InsertIsSliceAssign : Prop :=
   ∀ (α : Type) [Inhabited α] (l : List α) (i : Int) (x : α), (l.length : Int) ≤ ssizeMax →
     listInsert l i x = listAssSubscript l ⟨some i, some i, none⟩ (some [x])

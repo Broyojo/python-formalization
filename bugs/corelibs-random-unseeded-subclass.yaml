@@ -47,6 +47,7 @@ observed: |
   _random.Random.__new__(_random.Random, 5).random() is 0.0. REPRODUCED.
   main (python.exe 3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
   3.10 was not run; that it seeded in tp_new comes from bpo-44260's description of the old code.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Lib/random.py:103-115 and Doc/library/random.rst describe subclassing Random, and neither says
   that __init__ must be called. The promise is the behaviour of every version up to 3.10.

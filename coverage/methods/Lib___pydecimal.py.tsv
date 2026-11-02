@@ -12,7 +12,7 @@ Lib/_pydecimal.py	372	377	setcontext	setcontext(context)	todo
 Lib/_pydecimal.py	381	424	localcontext	localcontext(ctx=None, **kwargs)	todo		
 Lib/_pydecimal.py	427	445	IEEEContext	IEEEContext(bits, /)	todo		
 Lib/_pydecimal.py	465	467	_tento	_tento(n)	todo		changed-in-3.15: new function
-Lib/_pydecimal.py	470	501	_is_less_than_pow10a_use_str	_is_less_than_pow10a_use_str(q, a)	todo		changed-in-3.15: new function
+Lib/_pydecimal.py	470	501	_is_less_than_pow10a_use_str	_is_less_than_pow10a_use_str(q, a)	modelled	decimal-divide-verdict,decimal-pow10-band-exact	
 Lib/_pydecimal.py	504	536	_is_less_than_pow10a	_is_less_than_pow10a(q, a, *, exact=True, ulp_order=20)	todo		changed-in-3.15: new function
 Lib/_pydecimal.py	552	700	Decimal.__new__	__new__(cls, value='0', context=None)	modelled	decimal-parse-c-accepts-py,decimal-parse-c-accepts-py-casefree,decimal-parse-py-accepts-c,decimal-str-roundtrip-py,decimal-str-roundtrip-py-bounded,decimal-tuple-twins-agree,decimal-tuple-twins-agree-int-digits	
 Lib/_pydecimal.py	703	715	Decimal.from_number	from_number(cls, number)	todo		
@@ -43,7 +43,7 @@ Lib/_pydecimal.py	1290	1302	Decimal.__sub__	__sub__(self, other, context=None)	m
 Lib/_pydecimal.py	1304	1310	Decimal.__rsub__	__rsub__(self, other, context=None)	modelled	decimal-reflected-operators	
 Lib/_pydecimal.py	1312	1366	Decimal.__mul__	__mul__(self, other, context=None)	modelled	decimal-mul-correctly-rounded,decimal-mul-no-valueerror-py	
 Lib/_pydecimal.py	1369	1426	Decimal.__truediv__	__truediv__(self, other, context=None)	modelled	decimal-truediv-core,decimal-truediv-specials	
-Lib/_pydecimal.py	1428	1464	Decimal._divide	_divide(self, other, context)	todo		changed-in-3.15: was decimal-divide-correct,decimal-divmod-consistent,decimal-floordiv-twins-agree
+Lib/_pydecimal.py	1428	1464	Decimal._divide	_divide(self, other, context)	modelled	decimal-divide-verdict,decimal-divmod-consistent,decimal-floordiv-twins-agree	
 Lib/_pydecimal.py	1466	1471	Decimal.__rtruediv__	__rtruediv__(self, other, context=None)	modelled	decimal-reflected-operators	
 Lib/_pydecimal.py	1473	1507	Decimal.__divmod__	__divmod__(self, other, context=None)	modelled	decimal-divmod-consistent	
 Lib/_pydecimal.py	1509	1514	Decimal.__rdivmod__	__rdivmod__(self, other, context=None)	modelled	decimal-reflected-operators	
@@ -217,7 +217,7 @@ Lib/_pydecimal.py	5599	5625	Context.to_eng_string	to_eng_string(self, a)	modelle
 Lib/_pydecimal.py	5627	5633	Context.to_sci_string	to_sci_string(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5635	5663	Context.to_integral_exact	to_integral_exact(self, a)	modelled	decimal-context-methods-match-decimal	
 Lib/_pydecimal.py	5665	5692	Context.to_integral_value	to_integral_value(self, a)	modelled	decimal-context-methods-match-decimal	
-Lib/_pydecimal.py	5703	5716	_WorkRep.__init__	__init__(self, value=None)	modelled	decimal-add-no-valueerror-py,decimal-divide-correct,decimal-mul-correctly-rounded,decimal-mul-no-valueerror-py,decimal-sub-no-valueerror-py,decimal-truediv-core	
+Lib/_pydecimal.py	5703	5716	_WorkRep.__init__	__init__(self, value=None)	modelled	decimal-add-no-valueerror-py,decimal-divide-verdict,decimal-mul-correctly-rounded,decimal-mul-no-valueerror-py,decimal-sub-no-valueerror-py,decimal-truediv-core	
 Lib/_pydecimal.py	5718	5719	_WorkRep.__repr__	__repr__(self)	todo		
 Lib/_pydecimal.py	5723	5749	_normalize	_normalize(op1, op2, prec=0)	modelled	decimal-add-no-valueerror-py,decimal-sub-no-valueerror-py	
 Lib/_pydecimal.py	5755	5774	_decimal_lshift_exact	_decimal_lshift_exact(n, e)	todo		

@@ -27,6 +27,6 @@ Python/dtoa.c	1388	2110	_Py_dg_strtod	_Py_dg_strtod(const char *s00, char **se)	
 Python/dtoa.c	2113	2128	rv_alloc	rv_alloc(int i)	todo		changed-in-3.15: was excluded: no-behaviour: allocates the digit buffer
 Python/dtoa.c	2131	2143	nrv_alloc	nrv_alloc(const char *s, char **rve, int n)	excluded		no-behaviour: copies a constant string into the digit buffer; the strings are in the DtoaSpecial results
 Python/dtoa.c	2152	2157	_Py_dg_freedtoa	_Py_dg_freedtoa(char *s)	excluded		no-behaviour: frees the digit buffer
-Python/dtoa.c	2198	2814	_Py_dg_dtoa	_Py_dg_dtoa(double dd, int mode, int ndigits, int *decpt, int *sign, char **rve)	todo		changed-in-3.15: was dtoa-fixed-keeps-integer-part,dtoa-special-values
+Python/dtoa.c	2198	2814	_Py_dg_dtoa	_Py_dg_dtoa(double dd, int mode, int ndigits, int *decpt, int *sign, char **rve)	modelled	dtoa-mode3-no-wrap,dtoa-special-values	
 Python/dtoa.c	2819	2842	_PyDtoa_Init	_PyDtoa_Init(PyInterpreterState *interp)	excluded		internal-bootstrap: fills the p5s cache, modelled as the constant p5s and checked in p5s_val
 Python/dtoa.c	2845	2855	_PyDtoa_Fini	_PyDtoa_Fini(PyInterpreterState *interp)	excluded		internal-bootstrap: frees the p5s cache

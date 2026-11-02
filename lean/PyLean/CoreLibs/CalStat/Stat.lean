@@ -1,7 +1,7 @@
 import PyLean.CoreLibs.CalStat.Num
 
 /-!
-Mirror of `Lib/statistics.py` (CPython 3.14.7): the private utilities and the
+Mirror of `Lib/statistics.py` (CPython 3.15.2): the private utilities and the
 functions over `int`, `Fraction`, `float` and `Decimal` data. `NormalDist` and the kernels are
 in `Dist.lean`.
 

@@ -63,6 +63,7 @@ observed: |
   vonmisesvariate(0.0, nan) are still looping after 200000 draws; binomialvariate(2, nan) raises
   AssertionError; binomialvariate(1, nan) returns 0. REPRODUCED.
   main (python.exe 3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Undisputed invariant: a library function does not hang, and an assert is not an error message.
   binomialvariate's own message says "p must be in the range 0.0 <= p <= 1.0" (Lib/random.py:819).

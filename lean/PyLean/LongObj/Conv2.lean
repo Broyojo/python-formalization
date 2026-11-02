@@ -78,7 +78,7 @@ bytes, as signed, or as unsigned when the caller asked for that. -/
 def NativeFit (a : Int) (n : Nat) (ub : Bool) : Prop :=
   (-(2 ^ (8 * n - 1) : Int) ≤ a ∧ a < 2 ^ (8 * n - 1)) ∨ (ub = true ∧ 0 ≤ a ∧ a < 2 ^ (8 * n))
 
-/-- `LONG_TO_INT` and `LONG_TO_UINT`, longobject.c@3.14.7:6700-6742, with `n` bytes. -/
+/-- `LONG_TO_INT` and `LONG_TO_UINT`, longobject.c:6808-6824 and :6836-6853, with `n` bytes. -/
 def toFixed (v : Long) (n : Nat) (unsigned : Bool) (name : String) : Py Unit :=
   if unsigned ∧ v.neg = true then .error (.valueError "Cannot convert negative int")
   else if asNativeRes v n unsigned > n then

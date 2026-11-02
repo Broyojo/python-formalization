@@ -80,10 +80,124 @@ def comb_args(rng, perm):
     return n, k
 
 
+class Idx:
+    """An argument that is an int only through __index__, off the exact-int fast paths."""
+
+    def __init__(self, v):
+        self.v = v
+
+    def __index__(self):
+        return self.v
+
+
+class BytesSub(bytes):
+    """A bytes subclass: 3.15 takes the buffer route and never calls __bytes__."""
+
+    def __bytes__(self):
+        return b"\x7f\x7f"
+
+
+class BytearraySub(bytearray):
+    def __bytes__(self):
+        return b"\x7f\x7f"
+
+
+class HasDunder:
+    def __init__(self, bs):
+        self.bs = bs
+
+    def __bytes__(self):
+        return bytes(self.bs)
+
+
+class DunderRaises:
+    def __bytes__(self):
+        raise KeyError("from __bytes__")
+
+
+class DunderBad:
+    def __bytes__(self):
+        return 5
+
+
+class BufferRaises:
+    def __buffer__(self, flags):
+        raise KeyError("from __buffer__")
+
+
+class BufferAndDunder:
+    """Both protocols: the buffer wins in 3.15."""
+
+    def __init__(self, bs):
+        self.bs = bs
+
+    def __buffer__(self, flags):
+        return memoryview(bytes(self.bs))
+
+    def __bytes__(self):
+        return b"\x7f\x7f"
+
+
+class IntSub(int):
+    pass
+
+
+class IntSubRaises(int):
+    def __new__(cls, *args):
+        raise KeyError("from __new__")
+
+
+def released():
+    m = memoryview(b"ab")
+    m.release()
+    return m
+
+
+# kind -> route, failure a case states, and how run_python builds the object
+OBJ_ROUTES = {
+    "bytes": "exact", "bytes_sub": "buffer", "bytearray": "buffer", "bytearray_sub": "buffer",
+    "memoryview": "buffer", "buffer_and_dunder": "buffer", "strided": "buffer",
+    "released": "buffer", "buffer_raises": "buffer", "list": "other", "tuple": "other",
+    "iter": "other", "dunder": "other", "dunder_raises": "other", "dunder_bad": "other",
+    "str": "other", "int": "other", "none": "other", "float": "other", "list_big": "other",
+}
+OBJ_FAIL = {
+    "strided": ("BufferError", "memoryview: underlying buffer is not C-contiguous"),
+    "released": ("ValueError", "operation forbidden on released memoryview object"),
+    "buffer_raises": ("KeyError", "'from __buffer__'"),
+    "dunder_raises": ("KeyError", "'from __bytes__'"),
+    "dunder_bad": ("TypeError", "~__bytes__ must return bytes"),
+    "str": ("TypeError", "cannot convert 'str' object to bytes"),
+    "int": ("TypeError", "cannot convert 'int' object to bytes"),
+    "none": ("TypeError", "cannot convert 'NoneType' object to bytes"),
+    "float": ("TypeError", "cannot convert 'float' object to bytes"),
+    "list_big": ("ValueError", "bytes must be in range(0, 256)"),
+}
+
+
+def build_obj(kind, bs):
+    return {
+        "bytes": lambda: bytes(bs), "bytes_sub": lambda: BytesSub(bs),
+        "bytearray": lambda: bytearray(bs), "bytearray_sub": lambda: BytearraySub(bs),
+        "memoryview": lambda: memoryview(bytes(bs)),
+        "buffer_and_dunder": lambda: BufferAndDunder(bs),
+        "strided": lambda: memoryview(b"abcd")[::2], "released": released,
+        "buffer_raises": BufferRaises, "list": lambda: list(bs), "tuple": lambda: tuple(bs),
+        "iter": lambda: iter(bs), "dunder": lambda: HasDunder(bs), "dunder_raises": DunderRaises,
+        "dunder_bad": DunderBad, "str": lambda: "ab", "int": lambda: 5, "none": lambda: None,
+        "float": lambda: 1.5, "list_big": lambda: [1, 300],
+    }[kind]()
+
+
 def gen_case(rng):
     fn = rng.choice(["isqrt", "isqrt", "comb", "comb", "perm", "perm", "factorial", "gcd",
-                     "lcm", "pow", "to_bytes", "to_bytes", "from_bytes", "divmod", "round"])
+                     "lcm", "pow", "to_bytes", "to_bytes", "from_bytes", "from_bytes_obj",
+                     "divmod", "round"])
     c = {"mod": "mathint", "fn": fn}
+    # math re-exports the objects of math.integer; reach them both ways, and off the
+    # exact-int fast paths through __index__.
+    if fn in ("isqrt", "comb", "perm", "factorial", "gcd", "lcm"):
+        c.update(ns=rng.choice(["math", "math.integer"]), index=rng.random() < 0.15)
     if fn == "isqrt":
         if rng.random() < 0.3:
             r = edge_nat(rng)
@@ -139,15 +253,39 @@ def gen_case(rng):
         v = edge_int(rng, rng.random() < 0.3)
         nb = (abs(v).bit_length() + 8) // 8
         length = rng.choice([nb, nb - 1, nb + 1, nb - 2, 0, 1, rng.randrange(0, 20), -1,
-                             -P63, -P63 - 1, P63, (abs(v).bit_length() + 7) // 8])
+                             -P63, -P63 - 1, P63, (abs(v).bit_length() + 7) // 8,
+                             P63 - 1, P63 - 2, P63 - 33, 255, 256, 257])  # the writer's 256-byte buffer
         c.update(v=v, length=length, signed=rng.random() < 0.5,
-                 byteorder=rng.choice(["big", "little", "big", "little", "mid", "Big"]))
+                 byteorder=rng.choice(["big", "little", "big", "little", "mid", "Big"]),
+                 index=rng.random() < 0.15)
+        # The clinic defaults: length=1, byteorder='big', signed=False.
+        r = rng.random()
+        if r < 0.1:
+            c.update(length=1, byteorder="big", signed=False, omit=3)
+        elif r < 0.2:
+            c.update(byteorder="big", signed=False, omit=2)
+        elif r < 0.3:
+            c.update(signed=False, omit=1)
     elif fn == "from_bytes":
         n = rng.choice([0, 1, 2, 3, 4, 7, 8, 9, 15, 16, 17, rng.randrange(0, 60)])
         fill = rng.choice([None, 0, 255, 128, 127])
         bs = [rng.randrange(256) if fill is None or rng.random() < 0.2 else fill for _ in range(n)]
         c.update(bytes=bs, signed=rng.random() < 0.5,
                  byteorder=rng.choice(["big", "little", "big", "little", "mid"]))
+    elif fn == "from_bytes_obj":
+        n = rng.choice([0, 1, 2, 3, 4, 7, 8, 9, 15, 16, rng.randrange(0, 40)])
+        fill = rng.choice([None, 0, 255, 128])
+        bs = [rng.randrange(256) if fill is None or rng.random() < 0.2 else fill for _ in range(n)]
+        kind = rng.choice(list(OBJ_ROUTES))
+        c.update(kind=kind, route=OBJ_ROUTES[kind], bytes=bs, signed=rng.random() < 0.5,
+                 byteorder=rng.choice(["big", "little", "big", "little", "big", "little", "mid"]))
+        if kind in OBJ_FAIL:
+            exc, msg = OBJ_FAIL[kind]
+            c["fail"] = {"exc": exc, "msg": msg}
+        cls = rng.choice(["int", "int", "sub", "sub_raises"])
+        c["cls"] = cls
+        if cls == "sub_raises":
+            c["ctor_fail"] = {"exc": "KeyError", "msg": "'from __new__'"}
     elif fn == "divmod":
         r = rng.random()
         if r < 0.15:
@@ -172,26 +310,40 @@ def gen_case(rng):
 
 def run_python(c):
     fn = c["fn"]
+    ns = math.integer if c.get("ns") == "math.integer" else math
+    arg = (lambda x: x) if not c.get("index") or c.get("ns") is None else Idx
     if fn == "isqrt":
-        return common.py_result(lambda: math.isqrt(c["n"]))
+        return common.py_result(lambda: ns.isqrt(arg(c["n"])))
     if fn == "comb":
-        return common.py_result(lambda: math.comb(c["n"], c["k"]))
+        return common.py_result(lambda: ns.comb(arg(c["n"]), arg(c["k"])))
     if fn == "perm":
-        return common.py_result(lambda: math.perm(c["n"], c["k"]))
+        return common.py_result(lambda: ns.perm(arg(c["n"]), c["k"] if c["k"] is None else arg(c["k"])))
     if fn == "factorial":
-        return common.py_result(lambda: math.factorial(c["n"]))
+        return common.py_result(lambda: ns.factorial(arg(c["n"])))
     if fn == "gcd":
-        return common.py_result(lambda: math.gcd(*c["args"]))
+        return common.py_result(lambda: ns.gcd(*map(arg, c["args"])))
     if fn == "lcm":
-        return common.py_result(lambda: math.lcm(*c["args"]))
+        return common.py_result(lambda: ns.lcm(*map(arg, c["args"])))
     if fn == "pow":
         return common.py_result(lambda: pow(c["a"], c["b"], c["m"]))
     if fn == "to_bytes":
-        return common.py_result(lambda: list(c["v"].to_bytes(c["length"], c["byteorder"],
+        length = Idx(c["length"]) if c["index"] else c["length"]
+        omit = c.get("omit", 0)
+        if omit == 3:
+            return common.py_result(lambda: list(c["v"].to_bytes()))
+        if omit == 2:
+            return common.py_result(lambda: list(c["v"].to_bytes(length)))
+        if omit == 1:
+            return common.py_result(lambda: list(c["v"].to_bytes(length, c["byteorder"])))
+        return common.py_result(lambda: list(c["v"].to_bytes(length, c["byteorder"],
                                                              signed=c["signed"])))
     if fn == "from_bytes":
         return common.py_result(lambda: int.from_bytes(bytes(c["bytes"]), c["byteorder"],
                                                        signed=c["signed"]))
+    if fn == "from_bytes_obj":
+        cls = {"int": int, "sub": IntSub, "sub_raises": IntSubRaises}[c["cls"]]
+        obj = build_obj(c["kind"], c["bytes"])
+        return common.py_result(lambda: int(cls.from_bytes(obj, c["byteorder"], signed=c["signed"])))
     if fn == "divmod":
         return common.py_result(lambda: list(divmod(c["a"], c["b"])))
     if fn == "round":
@@ -200,4 +352,6 @@ def run_python(c):
 
 
 if __name__ == "__main__":
+    for name in ("comb", "factorial", "gcd", "isqrt", "lcm", "perm"):
+        assert getattr(math, name) is getattr(math.integer, name), name
     common.main(gen_case, run_python)

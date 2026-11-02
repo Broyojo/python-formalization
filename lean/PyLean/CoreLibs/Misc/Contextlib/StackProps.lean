@@ -298,50 +298,74 @@ theorem exitKeepsContextAcyclic_refuted : ¬ExitKeepsContextAcyclic := by
 
 /-! ### Registering callbacks -/
 
-/-- What `push`, `callback`, `enter_context`, `pop_all` do to `_exit_callbacks`, in the sync and the
-async class. `push` registers the `__exit__` found on the type, bound to the object, or else the
-object as a plain callable. `callback` registers a wrapper around the callable. `enter_context` calls
-`__enter__`, and the exit is pushed only if that succeeded; an object without the protocol gives the
-`TypeError` and pushes nothing. `pop_all` moves everything to a new stack. -/
+/-- `_lookup_special` looks on the type and follows `_descriptor_get`: a class or an object with no `__get__` comes back as
+itself, anything else is what its `__get__` gave, including an exception, and nothing on the type gives the default. -/
+def LookupSpecialFollowsDescriptor : Prop :=
+  ∀ (T : Type) (v dflt : T) (r : Res T),
+    lookupSpecial none dflt = .ok dflt ∧
+    lookupSpecial (some (.isClass v)) dflt = .ok v ∧
+    lookupSpecial (some (.noGet v)) dflt = .ok v ∧
+    lookupSpecial (some (.get r)) dflt = r ∧
+    lookupSentinel (none : Option (Descr T)) = .ok none ∧
+    lookupSentinel (some (.isClass v)) = .ok (some v) ∧
+    lookupSentinel (some (.noGet v)) = .ok (some v) ∧
+    lookupSentinel (some (.get r)) = (match r with | .ok v => .ok (some v) | .error e => .error e)
+
+theorem lookupSpecialFollowsDescriptor_proven : LookupSpecialFollowsDescriptor := by
+  intro T v dflt r
+  refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, ?_⟩
+  cases r <;> rfl
+
+/-- What `push`, `callback`, `enter_context`, `pop_all` do to `_exit_callbacks`, in the sync and the async class. `push`
+registers what `_lookup_special` gives, or else the object as a plain callable, and a failing `__get__` raises and
+registers nothing. `callback` registers a wrapper around the callable. `enter_context` looks up `__enter__` and then
+`__exit__`, either one missing or failing stops it before the enter method runs; it then runs the enter method, and the
+exit is pushed only if that succeeded. `pop_all` moves everything to a new stack. -/
 def StackRegistration : Prop :=
-  ∀ (σ F O A V : Type) (st : Stack F O A) (lookup : ExitLookup F O) (asF : O → F) (o : O) (m f : F)
-    (a : A) (x : Xs σ F O A) (msg attrMsg : String) (en : Xs σ F O A → Xs σ F O A × Res V) (x1 : Xs σ F O A)
-    (v : V) (e : ExcId) (b : Bool),
-    (lookup o = some m → push lookup asF st o = (true, .bound m o) :: st) ∧
-    (lookup o = none → push lookup asF st o = (true, .raw (asF o)) :: st) ∧
-    (lookup o = some m → pushAsyncExit lookup asF st o = (false, .bound m o) :: st) ∧
-    (lookup o = none → pushAsyncExit lookup asF st o = (false, .raw (asF o)) :: st) ∧
+  ∀ (σ F O A V : Type) (st : Stack F O A) (lookup : ExitLookup F O A) (asF : O → F) (o : O) (f : F) (cb : Cb F O A)
+    (a : A) (x : Xs σ F O A) (msg : String) (en : Xs σ F O A → Xs σ F O A × Res V) (x1 : Xs σ F O A)
+    (v : V) (e : ExcId) (b : Bool) (dn : Descr (Xs σ F O A → Xs σ F O A × Res V)) (dx : Descr (Cb F O A)),
+    (lookupSpecial (lookup o) (.raw (asF o)) = .ok cb → push lookup asF st o = ((true, cb) :: st, .ok ())) ∧
+    (lookup o = none → push lookup asF st o = ((true, .raw (asF o)) :: st, .ok ())) ∧
+    (lookup o = some (.get (.error e)) → push lookup asF st o = (st, .error e)) ∧
+    (lookupSpecial (lookup o) (.raw (asF o)) = .ok cb → pushAsyncExit lookup asF st o = ((false, cb) :: st, .ok ())) ∧
+    (lookup o = none → pushAsyncExit lookup asF st o = ((false, .raw (asF o)) :: st, .ok ())) ∧
+    (lookup o = some (.get (.error e)) → pushAsyncExit lookup asF st o = (st, .error e)) ∧
     callback st f a = (true, .wrapped f a) :: st ∧
     pushAsyncCallback st f a = (false, .wrapped f a) :: st ∧
-    pushCmExit st o m = (true, .bound m o) :: st ∧
-    pushAsyncCmExit st o m = (false, .bound m o) :: st ∧
     (Stack.init : Stack F O A) = [] ∧
     popAll st = (st, []) ∧
     stackEnter o = o ∧
-    ((enterContext (fun _ => some (en, f)) msg attrMsg b x o).1.2 =
-      if (en x).2.toBool then (b, .bound f o) :: (en x).1.2 else (en x).1.2) ∧
-    (en x = (x1, .error e) → enterContext (fun _ => some (en, f)) msg attrMsg b x o = (x1, .error e)) ∧
-    (en x = (x1, .ok v) →
-      enterContext (fun _ => some (en, f)) msg attrMsg b x o = ((x1.1, (b, .bound f o) :: x1.2), .ok v)) ∧
-    (enterContext (V := V) (fun _ => none) msg attrMsg b x o).1.2 = x.2
+    (descriptorGet dn = .ok en → descriptorGet dx = .ok cb → en x = (x1, .error e) →
+      enterContext (fun _ => some dn) (fun _ => some dx) msg b x o = (x1, .error e)) ∧
+    (descriptorGet dn = .ok en → descriptorGet dx = .ok cb → en x = (x1, .ok v) →
+      enterContext (fun _ => some dn) (fun _ => some dx) msg b x o = ((x1.1, (b, cb) :: x1.2), .ok v)) ∧
+    (enterContext (V := V) (fun _ => none) lookup msg b x o).1.2 = x.2 ∧
+    (descriptorGet dn = .ok en → (enterContext (fun _ => some dn) (fun _ => none) msg b x o).1.2 = x.2) ∧
+    enterContext (V := V) (fun _ => some (.get (.error e))) lookup msg b x o = (x, .error e) ∧
+    (descriptorGet dn = .ok en →
+      enterContext (fun _ => some dn) (fun _ => some (.get (.error e))) msg b x o = (x, .error e))
 
 theorem stackRegistration_proven : StackRegistration := by
-  intro σ F O A V st lookup asF o m f a x msg attrMsg en x1 v e b
-  refine ⟨?_, ?_, ?_, ?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, ?_, ?_, ?_, rfl⟩
-  · intro h; simp [push, h, pushCmExit, pushExitCallback]
+  intro σ F O A V st lookup asF o f cb a x msg en x1 v e b dn dx
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, rfl, rfl, rfl, rfl, rfl, ?_, ?_, ?_, ?_, rfl, ?_⟩
   · intro h; simp [push, h, pushExitCallback]
-  · intro h; simp [pushAsyncExit, h, pushAsyncCmExit, pushExitCallback]
+  · intro h; simp [push, lookupSpecial, h, pushExitCallback]
+  · intro h; simp [push, lookupSpecial, descriptorGet, h]
   · intro h; simp [pushAsyncExit, h, pushExitCallback]
-  · simp only [enterContext]
-    cases h : en x with
-    | mk y r =>
-      cases r <;> simp [Except.toBool, pushExitCallback]
-  · intro h; simp [enterContext, h]
-  · intro h; simp [enterContext, h, pushExitCallback]
+  · intro h; simp [pushAsyncExit, lookupSpecial, h, pushExitCallback]
+  · intro h; simp [pushAsyncExit, lookupSpecial, descriptorGet, h]
+  · intro h1 h2 h3; simp [enterContext, lookupSentinel, h1, h2, h3]
+  · intro h1 h2 h3; simp [enterContext, lookupSentinel, h1, h2, h3, pushExitCallback]
+  · rfl
+  · intro h1; simp [enterContext, lookupSentinel, h1]
+  · intro h1
+    simp only [enterContext, lookupSentinel, h1]
+    rfl
 
 /-- `callback` "Cannot suppress exceptions": the wrapper of `_create_cb_wrapper` calls the callback
-with its own arguments, drops the result, and ignores the exception details. The wrapper of
-`_create_exit_wrapper` is `cm_exit` bound to `cm`, so it can suppress. -/
+with its own arguments, drops the result, and ignores the exception details. An exit method bound to `cm`, which is
+what `_lookup_special` gives for a function, passes the details on, so it can suppress. -/
 def CallbackCannotSuppress : Prop :=
   ∀ (σ F O A : Type) (c : Calls σ F O A) (f m : F) (a : A) (o : O) (x : Xs σ F O A) (d d' : Option ExcId),
     (Cb.wrapped f a : Cb F O A).call c x d = (Cb.wrapped f a : Cb F O A).call c x d' ∧

@@ -1,0 +1,60 @@
+id: ipaddress-exploded-scoped-network-raises
+title: "ipaddress: IPv6Network.exploded raises AddressValueError for a network with a scope id"
+priority: P3
+kind: crash-on-valid-input
+module: ipaddress
+files: [Lib/ipaddress.py]
+functions: ["_BaseV6._explode_shorthand_ip_string"]
+summary: |
+  IPv6Network('fe80::%eth0/64') builds, and its str(), compressed and network_address work, but
+  its exploded raises AddressValueError: "Only hex digits permitted in '%eth0' in 'fe80::%eth0'".
+  gh-88178 fixed exactly this for IPv6Address and IPv6Interface in 3.15, by parsing a string
+  without the scope id. The third branch of the same function was left alone:
+  _explode_shorthand_ip_string still parses str(self.network_address), which carries the scope
+  id, and then has code that would never reach it, since `_BaseNetwork` returns before the
+  `if self._scope_id:` test.
+likelihood: |
+  Low to moderate: a scoped IPv6Network is unusual, but link-local networks with a zone are
+  what the scope id is for, and the exception is a surprise from a read-only property.
+maybe_intended: |
+  No. Whether a network should carry a scope id at all is debatable, but it can, and every
+  other formatting property works on it. #158727 (scoped networks in address_exclude) and
+  #158728 (the IPv6Address form of this) were closed in a bulk-filing cleanup, not on merits.
+reproducer: |
+  import ipaddress
+  net = ipaddress.IPv6Network('fe80::%eth0/64')
+  print(str(net), net.compressed, net.network_address.scope_id)
+  try:
+      print(net.exploded)
+  except ipaddress.AddressValueError as e:
+      print('AddressValueError:', e)
+      print('REPRODUCED ipaddress-exploded-scoped-network-raises')
+expected: |
+  fe80:0000:0000:0000:0000:0000:0000:0000%eth0/64, in the order IPv6Interface gives, or
+  whatever a maintainer prefers, but a string.
+observed: |
+  python3 3.15.2: AddressValueError: Only hex digits permitted in '%eth0' in 'fe80::%eth0'.
+  REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+  python3 3.14.7: identical. REPRODUCED. Not new in 3.15, but 3.15 fixed the other two branches.
+promised_by: |
+  Lib/ipaddress.py:386-389, "Return the longhand version of the IP address as a string.", and
+  the consistency of str(), compressed and exploded on one object.
+cause: |
+  Lib/ipaddress.py:1868-1869 `ip_str = str(self.network_address)`, then :1875
+  `self._ip_int_from_string(ip_str)`, which refuses the `%`. :1873 is the fix applied to the
+  address branch only.
+possible_fix: |
+  Use `self._string_from_ip_int(self.network_address._ip)` at :1869, or drop the round trip
+  through a string, and decide whether the scope id goes in the result at :1878-1879.
+duplicates:
+  issues:
+    - {number: 88178, state: closed, relation: "same function; fixed the address and interface branches only (PR #25824)"}
+    - {number: 158728, state: closed, relation: "IPv6Address form, not_planned in bulk-filing cleanup"}
+    - {number: 158727, state: closed, relation: "same inputs, other method (address_exclude)"}
+  queries: ["ipaddress exploded scope", "IPv6Network exploded scope_id", "IPv6 scope network exploded AddressValueError",
+            "IPv6Network scope"]
+  bugforge: "lines 127 and 128 of the README are the two neighbours above; the network form of exploded is not listed"
+lean:
+  property: PyLean.Ipaddress.ExplodedTotal
+  theorem: PyLean.Ipaddress.explodedTotal_refuted

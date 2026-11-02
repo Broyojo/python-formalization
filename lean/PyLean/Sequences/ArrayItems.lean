@@ -21,37 +21,27 @@ theorem newArr_ok (t : String) (tc : TC) (n : Int) (h : n ≤ ssizeMax / tc.item
     newArr t tc n = .ok ⟨tc, List.replicate n.toNat 0, n, decide (n > 0), 0, t⟩ := by
   unfold newArr; rw [iteF (by omega)]
 
+theorem arrNewBad_list (s : String) (vs : List PyVal) : arrNewBad s (.list vs) = .ok () := by
+  unfold arrNewBad; split <;> rfl
+
+theorem arrNewBad_bytes (s : String) (bs : List Nat) : arrNewBad s (.bytes bs) = .ok () := by
+  unfold arrNewBad; split <;> rfl
+
 theorem arrNew_list (t : String) (tc : TC) (vs : List PyVal) (xs : List Int)
     (h : vs.mapM (tcSetitem tc true) = .ok xs) (hf : (vs.length : Int) ≤ ssizeMax / tc.itemsize) :
     ∃ b, arrNew t tc.code (.list vs) = .ok b ∧ b.items = xs ∧ b.tc = tc ∧ b.exports = 0 ∧ b.tname = t := by
   unfold arrNew
-  have hb : (if (tc.code == 'u' || tc.code == 'w') then (.ok () : Py Unit) else
-      match Init.list vs with
-      | .str _ => .error (.typeError s!"cannot use a str to initialize an array with typecode '{tc.code}'")
-      | .arr o =>
-        if o.tc == .u || o.tc == .w then
-          .error (.typeError s!"cannot use a unicode array to initialize an array with typecode '{tc.code}'")
-        else .ok ()
-      | _ => .ok ()) = .ok () := by split <;> rfl
-  simp only [hb, find_code, Option.isSome_none, Bool.false_eq_true, ite_false, newArr_ok t tc vs.length hf, h]
+  simp only [arrNewBad_list, find_code, Option.isSome_none, Bool.false_eq_true, ite_false, newArr_ok t tc vs.length hf, h]
   exact ⟨_, rfl, rfl, rfl, rfl, rfl⟩
 
 theorem arrNew_list_err (t : String) (tc : TC) (vs : List PyVal) (e : PyExc)
     (h : vs.mapM (tcSetitem tc true) = .error e) (hf : (vs.length : Int) ≤ ssizeMax / tc.itemsize) :
     arrNew t tc.code (.list vs) = .error e := by
   unfold arrNew
-  have hb : (if (tc.code == 'u' || tc.code == 'w') then (.ok () : Py Unit) else
-      match Init.list vs with
-      | .str _ => .error (.typeError s!"cannot use a str to initialize an array with typecode '{tc.code}'")
-      | .arr o =>
-        if o.tc == .u || o.tc == .w then
-          .error (.typeError s!"cannot use a unicode array to initialize an array with typecode '{tc.code}'")
-        else .ok ()
-      | _ => .ok ()) = .ok () := by split <;> rfl
-  simp only [hb, find_code, Option.isSome_none, Bool.false_eq_true, ite_false, newArr_ok t tc vs.length hf, h]
+  simp only [arrNewBad_list, find_code, Option.isSome_none, Bool.false_eq_true, ite_false, newArr_ok t tc vs.length hf, h]
 
 theorem fits_one (tc : TC) : ((1 : Nat) : Int) ≤ ssizeMax / tc.itemsize := by
-  rcases itemsize_cases tc with h | h | h | h <;> rw [h] <;> decide
+  rcases itemsize_cases tc with h | h | h | h | h <;> rw [h] <;> decide
 
 theorem fits_le (a : Arr) (n m : Int) (h : n ≤ m) (hm : a.Fits m) : a.Fits n := by
   unfold Arr.Fits at *; omega
@@ -60,8 +50,8 @@ theorem fits_le (a : Arr) (n m : Int) (h : n ≤ m) (hm : a.Fits m) : a.Fits n :
 the address space; no buffer exported) and every object `v` with `__index__`
 value `n`: `a.append(v)`, `a.insert(i, v)` (`i` in `Py_ssize_t`), `a[j] = v` (valid
 `j`) and `array(tc, [v])` store exactly `n` when `n` fits the C type's range and raise
-`OverflowError` otherwise (a failed call leaves the array as it was: the model
-returns no new array). An object without `__index__` raises its `TypeError`. -/
+`OverflowError` otherwise (a failed call leaves the array as it was: `ArrayIns1Failure`).
+An object without `__index__` raises its `TypeError`. -/
 def ArrayRangeCheck : Prop :=
   ∀ (a : Arr) (v : PyVal) (n i : Int), a.tc.isInteger = true → a.exports = 0 →
     a.Fits (a.items.length + 1) → (a.items.length : Int) ≤ ssizeMax → toIndex v = .ok n →
@@ -75,10 +65,9 @@ def ArrayRangeCheck : Prop :=
       (0 ≤ i → i < a.items.length → (arrAssIndex a i (some v)).raises "OverflowError") ∧
       (arrNew "array" a.tc.code (.list [v])).raises "OverflowError")
 
-theorem arrIns1_err (a : Arr) (w : Int) (v : PyVal) (e : PyExc) (h : tcSetitem a.tc true v = .error e) :
-    arrIns1 a w v = .error e := by
-  unfold arrIns1
-  simp only [h, bind, Except.bind]
+theorem arrIns1_err (a : Arr) (w : Int) (v : PyVal) (e : PyExc) (ht : a.tc ≠ .e)
+    (h : tcSetitem a.tc true v = .error e) : arrIns1 a w v = .error e := by
+  simp only [arrIns1, arrIns1S_err a w v e (tcCheck_err _ _ _ ht h)]
 
 theorem subIndex_ok (i : Int) (h0 : ssizeMin ≤ i) (h1 : i ≤ ssizeMax) : subIndex i = .ok i := by
   unfold subIndex asSsizeExc; rw [iteT ⟨h0, h1⟩]
@@ -87,6 +76,7 @@ theorem arrayRangeCheck_proven : ArrayRangeCheck := by
   intro a v n i hint hx hf hlen hv
   dsimp only
   obtain ⟨hyes, hno⟩ := tcSetitem_int a.tc hint v n hv
+  have hne : a.tc ≠ .e := fun h => by rw [h] at hint; exact absurd hint (by decide)
   refine ⟨fun fits => ?_, fun nf => ?_⟩
   · have hs := hyes fits
     refine ⟨?_, fun h0 h1 => ?_, fun h0 h1 => ?_, ?_⟩
@@ -110,10 +100,10 @@ theorem arrayRangeCheck_proven : ArrayRangeCheck := by
       exact ⟨b, h1, h2⟩
   · obtain ⟨e, he, hc⟩ := hno nf
     refine ⟨⟨e, he, hc⟩, ⟨e, ?_, hc⟩, fun h0 h1 => ⟨e, ?_, hc⟩, fun h0 h1 => ⟨e, ?_, hc⟩, ⟨e, ?_, hc⟩⟩
-    · exact arrIns1_err _ _ _ _ he
+    · exact arrIns1_err _ _ _ _ hne he
     · have hi : asSsize i = .ok i := by unfold asSsize; rw [iteT ⟨h0, h1⟩]
       simp only [arrInsert, hi, bind, Except.bind]
-      exact arrIns1_err _ _ _ _ he
+      exact arrIns1_err _ _ _ _ hne he
     · simp only [arrAssIndex, subIndex_ok i (by unfold ssizeMin; omega) (by omega), bind, Except.bind,
         pure, Except.pure]
       rw [iteF (show ¬ i < 0 by omega), iteF (show ¬ (i < 0 ∨ i ≥ (a.items.length : Int)) by omega)]

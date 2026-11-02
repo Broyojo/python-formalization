@@ -1,7 +1,7 @@
 import PyLean.CoreLibs.Misc.HeapP
 
 /-!
-`Lib/sched.py`, CPython 3.14.7: `scheduler`.
+`Lib/sched.py`, CPython 3.15.2: `scheduler`.
 
 Generic over the time type `T` ("Numeric type compatible with the return value of the timefunc
 function", Lib/sched.py:36), the priority type `P`, the action type `A`, the argument values `V`

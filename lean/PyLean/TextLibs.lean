@@ -1,7 +1,7 @@
 import PyLean.Registry
 import PyLean.TextLibs.Diff
 import PyLean.TextLibs.StructFail
-import PyLean.TextLibs.BinasciiProps7
+import PyLean.TextLibs.BinasciiEq3
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
 import PyLean.TextLibs.ReMisc
@@ -15,7 +15,7 @@ import PyLean.TextLibs.DifflibLongest
 import PyLean.TextLibs.CsvSniffProps
 
 /-!
-Text and binary formats, CPython 3.14.7. `Modules/_struct.c` is modelled in
+Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
 `TextLibs/StructModel.lean`, on the x86-64 LP64 little-endian build the difftest runs on,
 with floats as exact bit patterns (`TextLibs/Bits.lean`). `lu_short`, `lu_longlong`,
 `lp_longlong` and similar routines are replaced by native ones at start-up on this build,
@@ -85,24 +85,23 @@ def entries : List Entry := [
     statement := "iter_unpack raises struct.error for a zero-sized struct, for every buffer."
     source := "invariant: the loop would not advance; Modules/_struct.c:2293", status := .proven
     prop := ``IterUnpackZeroSize, thm := some ``iterUnpackZeroSize_proven },
-  { id := "textlibs-struct-pack-count", pyFile := "Modules/_struct.c", pyFns := ["s_pack"]
+  { id := "textlibs-struct-pack-count", pyFile := "Modules/_struct.c", pyFns := ["Struct_pack_impl"]
     statement := "pack raises struct.error with the source's message for every wrong argument count, before converting any argument."
     source := "docs: the values must match the format exactly", status := .proven
     prop := ``PackWrongCount, thm := some ``packWrongCount_proven },
   { id := "textlibs-struct-le-complex-float-overflow", pyFile := "Modules/_struct.c"
-    pyFns := ["np_float_complex", "bp_float_complex", "s_pack", "pack"]
+    pyFns := ["np_float_complex", "bp_float_complex", "Struct_pack_impl", "pack_impl"]
     statement := "<F and >F accept the same values: byte order changes the bytes, not whether a value can be packed."
     source := "invariant: f, <f and >f all raise OverflowError", status := .refuted
     prop := ``StdComplexOrderAgree, thm := some ``stdComplexOrderAgree_refuted
     bug := some "textlibs-struct-le-complex-float-overflow"
-    notes := "Duplicate of python/cpython#156865, fixed on main by #156868; 3.14.7 still has it." },
+    notes := "Duplicate of python/cpython#156865, fixed on main by #156868; 3.15.2 still has it." },
   { id := "textlibs-struct-bytes-format-nonascii-error", pyFile := "Modules/_struct.c"
-    pyFns := ["cache_struct_converter", "Struct___init___impl", "pack"]
-    statement := "pack(fmt, ...) and Struct(fmt).pack(...) give the same result for every format object."
-    source := "docs: module functions are equivalent to the Struct methods", status := .refuted
-    prop := ``ModuleMatchesStruct, thm := some ``moduleMatchesStruct_refuted
-    bug := some "textlibs-struct-bytes-format-nonascii-error"
-    notes := "3.14 only; main redesigned this in python/cpython#145850. Low value." },
+    pyFns := ["cache_struct_converter", "set_format", "pack_impl"]
+    statement := "pack(fmt, ...) and Struct(fmt).pack(...) give the same result for every hashable format object."
+    source := "docs: module functions are equivalent to the Struct methods", status := .proven
+    prop := ``ModuleMatchesStruct, thm := some ``moduleMatchesStruct_proven
+    notes := "A str key is encoded and bytes decoded with surrogateescape in both routes, so they agree." },
   { id := "textlibs-struct-void-p-index-overflow", pyFile := "Modules/_struct.c", pyFns := ["np_void_p", "s_pack_internal"]
     statement := "An __index__ object packs with P exactly like the equal int: same bytes or same error."
     source := "invariant: every other integer code", status := .refuted
@@ -110,12 +109,11 @@ def entries : List Entry := [
     bug := some "textlibs-struct-void-p-index-overflow"
     notes := "Reproduces on main too. Trivial on its own." },
   { id := "textlibs-struct-pack-into-0p-outside-field", pyFile := "Modules/_struct.c"
-    pyFns := ["s_pack_internal", "s_pack_into", "pack_into"]
+    pyFns := []
     statement := "pack_into changes no byte outside the calcsize(format) bytes at offset."
-    source := "invariant", status := .refuted
-    prop := ``PackIntoStaysInside, thm := some ``packIntoStaysInside_refuted
-    bug := some "textlibs-struct-pack-into-0p-outside-field"
-    notes := "Duplicate of python/cpython#158762, closed for flooding, not on the merits; main no longer has it." },
+    source := "invariant", status := .open
+    prop := ``PackIntoStaysInside
+    notes := "`packP` writes the count of a p field only when the field has room. Open: the proof needs that every pack routine returns exactly e.size bytes, which is stated for the integers only." },
   { id := "textlibs-struct-half-round-trip", pyFile := "Modules/_struct.c"
     pyFns := ["unpack_halffloat", "pack_halffloat", "nu_halffloat", "np_halffloat"]
     statement := "For every non-NaN 16-bit pattern, packing the unpacked half float gives back the same two bytes."
@@ -148,7 +146,7 @@ def entries : List Entry := [
     statement := "For e, f and d, little-endian bytes are the reverse of big-endian bytes for every value (or both raise the same error), and unpacking a buffer little-endian equals unpacking its reverse big-endian."
     source := "docs: byte order is the only difference between < and >", status := .proven
     prop := ``ScalarByteOrder, thm := some ``scalarByteOrder_proven
-    notes := "True on 3.14.7. On main <f quiets a signalling NaN and >f does not; see textlibs-struct-native-float-snan." },
+    notes := "lu_float, lp_float, lu_double and lp_double are replaced at start-up on this build, so only proofs reach them. As a statement about formats, <f quiets a signalling NaN and >f does not; see textlibs-struct-native-float-snan." },
   { id := "textlibs-struct-native-float-pack", pyFile := "Modules/_struct.c", pyFns := ["np_float"]
     statement := "Native f packs every value to the reverse of >f's bytes, or raises the same error."
     source := "docs: native order is little-endian on this build", status := .proven
@@ -161,10 +159,22 @@ def entries : List Entry := [
     prop := ``ComplexByteOrder, thm := some ``complexByteOrder_proven
     notes := "lu_float_complex, lp_float_complex, lu_double_complex and lp_double_complex are replaced at start-up on this build, so only proofs reach them." },
   { id := "textlibs-struct-native-float-snan", pyFile := "Modules/_struct.c", pyFns := ["nu_float"]
-    statement := "unpack('f', b) and unpack('<f', b) agree on every 4-byte buffer."
-    source := "invariant: native and little-endian differ only in alignment on this build", status := .refuted
-    prop := ``NativeFloatMatchesStd, thm := some ``nativeFloatMatchesStd_refuted
+    statement := "unpack('f', b) and unpack('>f', reversed b) agree on every 4-byte buffer."
+    source := "invariant: byte order is the only difference", status := .refuted
+    prop := ``NativeFloatMatchesBig, thm := some ``nativeFloatMatchesBig_refuted
     bug := some "textlibs-struct-native-float-snan" },
+  { id := "textlibs-struct-little-is-native", pyFile := "Modules/_struct.c", pyFns := ["init_endian_tables"]
+    statement := "unpack('f', b) and unpack('<f', b) agree on every buffer: the native routine is swapped into the little-endian table."
+    source := "invariant: native and little-endian differ only in alignment on this build", status := .proven
+    prop := ``NativeFloatMatchesStd, thm := some ``nativeFloatMatchesStd_proven },
+  { id := "textlibs-struct-z-codes", pyFile := "Modules/_struct.c", pyFns := ["format_equal", "getentry", "align"]
+    statement := "Zf and Zd have the entries of F and D in each table, and a Z with anything else is a bad character."
+    source := "docs: Zf and Zd are the complex codes", status := .proven
+    prop := ``ZCodes, thm := some ``zCodes_proven },
+  { id := "textlibs-struct-life", pyFile := "Modules/_struct.c", pyFns := ["s_new", "s_init", "Struct_impl", "set_format", "same_format", "Struct___init___impl"]
+    statement := "Struct(f) is set_format once; __init__ with an equal format does nothing; with another it warns and changes the format; a subclass with __init__ gets a warning for a bad format in __new__."
+    source := "Modules/_struct.c:1868-2002", status := .proven
+    prop := ``LifeLaw, thm := some ``lifeLaw_proven },
   { id := "textlibs-struct-native-complex-snan", pyFile := "Modules/_struct.c", pyFns := ["nu_float_complex"]
     statement := "unpack('F', b) and unpack('>F', swapped b) agree on every 8-byte buffer."
     source := "invariant: byte order is the only difference", status := .refuted
@@ -179,7 +189,7 @@ def entries : List Entry := [
     statement := "iter_unpack yields exactly len(buffer) / size tuples, which is the fresh iterator's __length_hint__."
     source := "docstring: the bytes length must be a multiple of the struct size", status := .proven
     prop := ``IterUnpackLength, thm := some ``iterUnpackLength_proven },
-  { id := "textlibs-struct-accessors", pyFile := "Modules/_struct.c", pyFns := ["s_get_format", "s_get_size", "s_sizeof", "calcsize_impl"]
+  { id := "textlibs-struct-accessors", pyFile := "Modules/_struct.c", pyFns := ["Struct___sizeof___impl", "calcsize_impl"]
     statement := "For every accepted str format, Struct(fmt).format == fmt, .size and calcsize(fmt) are the size prepare_s computed, and __sizeof__ counts one formatcode per code plus the sentinel."
     source := "docs: Struct.format, Struct.size", status := .proven
     prop := ``Accessors, thm := some ``accessors_proven },
@@ -218,20 +228,20 @@ def entries : List Entry := [
     statement := "__complex__ wins and its failure becomes struct.error; without it the object is real, with imaginary part zero."
     source := "PyComplex_AsCComplex, Objects/complexobject.c", status := .proven
     prop := ``ComplexOrder, thm := some ``complexOrder_proven },
-  { id := "textlibs-struct-buffers", pyFile := "Modules/_struct.c", pyFns := ["s_pack_into", "Struct_unpack_impl"]
-    statement := "y* lets a failing __buffer__ through; the w* of pack_into replaces it with TypeError and refuses bytes."
-    source := "Modules/_struct.c@3.14.7:2335", status := .proven
+  { id := "textlibs-struct-buffers", pyFile := "Modules/_struct.c", pyFns := ["Struct_pack_into_impl", "Struct_unpack_impl"]
+    statement := "y* lets a failing __buffer__ through; the rwbuffer Py_buffer of pack_into replaces it with TypeError and refuses bytes."
+    source := "Modules/clinic/_struct.c.h, the Py_buffer conversions", status := .proven
     prop := ``BufferLaws, thm := some ``bufferLaws_proven },
-  { id := "textlibs-struct-pack-into-order", pyFile := "Modules/_struct.c", pyFns := ["s_pack_into"]
-    statement := "s_pack_into checks the item count, then the buffer, then the offset."
-    source := "Modules/_struct.c@3.14.7:2316-2344", status := .proven
+  { id := "textlibs-struct-pack-into-order", pyFile := "Modules/_struct.c", pyFns := ["Struct_pack_into_impl"]
+    statement := "pack_into converts the buffer, then the offset, and only then compares the item count, with the s_len a __init__ run by __index__ left."
+    source := "Modules/clinic/_struct.c.h and Struct_pack_into_impl", status := .proven
     prop := ``PackIntoOrder, thm := some ``packIntoOrder_proven },
-  { id := "textlibs-struct-offset-laws", pyFile := "Modules/_struct.c", pyFns := ["s_pack_into", "Struct_unpack_from_impl"]
-    statement := "Too large an offset is IndexError for pack_into and OverflowError for unpack_from, and an exception from __index__ comes out of both."
-    source := "Modules/_struct.c@3.14.7:2340-2344", status := .proven
+  { id := "textlibs-struct-offset-laws", pyFile := "Modules/_struct.c", pyFns := ["Struct_pack_into_impl", "Struct_unpack_from_impl"]
+    statement := "Too large an offset is OverflowError for pack_into and for unpack_from, and an exception from __index__ comes out of both."
+    source := "the Py_ssize_t conversions of Modules/clinic/_struct.c.h", status := .proven
     prop := ``OffsetLaws, thm := some ``offsetLaws_proven },
   { id := "textlibs-struct-module-order", pyFile := "Modules/_struct.c"
-    pyFns := ["unpack_impl", "unpack_from_impl", "iter_unpack_impl", "pack", "pack_into"]
+    pyFns := ["unpack_impl", "unpack_from_impl", "iter_unpack_impl", "pack_impl", "pack_into_impl"]
     statement := "The module functions report a bad format ahead of a bad buffer and need a format at all; otherwise they are the Struct methods."
     source := "Modules/_struct.c:2709-2809", status := .proven
     prop := ``ModuleOrder, thm := some ``moduleOrder_proven },
@@ -251,18 +261,18 @@ def entries : List Entry := [
     statement := "The iterator's __length_hint__ is the remaining length over s_size."
     source := "Modules/_struct.c:2220", status := .proven
     prop := ``IterLenAgrees, thm := some ``iterLenAgrees_proven },
-  { id := "textlibs-struct-reinit-pack", pyFile := "Modules/_struct.c", pyFns := ["s_pack", "s_pack_internal"]
+  { id := "textlibs-struct-reinit-pack", pyFile := "Modules/_struct.c", pyFns := ["Struct_pack_impl", "s_pack_internal"]
     statement := "No conversion can free the format codes pack is walking."
     source := "undisputed: Python code must not reach freed memory", status := .refuted
     prop := ``PackNoUnsafe, thm := some ``packNoUnsafe_refuted
     bug := some "textlibs-struct-reinit-memory-safety"
     notes := "__index__ calls s.__init__, which frees s_codes during s_pack_internal." },
-  { id := "textlibs-struct-reinit-pack-into", pyFile := "Modules/_struct.c", pyFns := ["s_pack_into", "s_pack_internal"]
+  { id := "textlibs-struct-reinit-pack-into", pyFile := "Modules/_struct.c", pyFns := ["Struct_pack_into_impl", "s_pack_internal"]
     statement := "pack_into reads only the arguments it was given."
     source := "undisputed: Python code must not reach out-of-bounds memory", status := .refuted
     prop := ``PackIntoNoUnsafe, thm := some ``packIntoNoUnsafe_refuted
     bug := some "textlibs-struct-reinit-memory-safety"
-    notes := "The offset's __index__ installs a longer format after nargs was checked. On 3.14.7; main rechecks." },
+    notes := "An __index__ of a packed value reinitializes the Struct, which frees s_codes during s_pack_internal. The offset can no longer do it: textlibs-struct-pack-into-order has the count checked after the offset is converted." },
   { id := "textlibs-struct-reinit-iter", pyFile := "Modules/_struct.c", pyFns := ["unpackiter_iternext"]
     statement := "iter_unpack reads only the buffer it was given."
     source := "undisputed: Python code must not reach out-of-bounds memory", status := .refuted
@@ -284,34 +294,34 @@ def entries : List Entry := [
     source := "invariant: repr round-trips the format", status := .proven
     prop := ``ReprPlain, thm := some ``reprPlain_proven },
   { id := "textlibs-binascii-base64-round-trip", pyFile := "Modules/binascii.c"
-    pyFns := ["binascii_a2b_base64_impl", "binascii_b2a_base64_impl"]
+    pyFns := ["binascii_a2b_base64_impl", "binascii_b2a_base64_impl", "base64_encode_trio", "base64_encode_fast", "base64_decode_quad", "base64_decode_fast"]
     statement := "a2b_base64(b2a_base64(d, newline=False), strict_mode=s) == d for every bytes value d and both strict modes."
     source := "RFC 4648 and the module's purpose: encoding then decoding returns the data", status := .proven
-    prop := ``Base64RoundTrip, thm := some ``base64RoundTrip_proven
-    notes := "The 32-bit wrap of leftchar is modelled and shown harmless: the encoder only reads low bytes." },
+    prop := ``Base64RoundTripC, thm := some ``base64RoundTripC_proven
+    notes := "Both fast paths are in the model: BinasciiEq.lean has the C loops equal to the bit-at-a-time specification at the default options, and the theorem goes through that." },
   { id := "textlibs-binascii-base64-lenient-filter", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_base64_impl"]
     statement := "With strict_mode=False, removing every byte that is neither in the alphabet nor '=' changes nothing, including which error is raised and its message."
     source := "base64.b64decode docstring: non-alphabet characters are discarded prior to the padding check", status := .proven
-    prop := ``LenientIgnoresNonAlphabet, thm := some ``lenientIgnoresNonAlphabet_proven },
+    prop := ``LenientIgnoresC, thm := some ``lenientIgnoresC_proven },
   { id := "textlibs-binascii-base64-strict-implies-lenient", pyFile := "Modules/binascii.c", pyFns := ["binascii_a2b_base64_impl"]
     statement := "Whatever strict_mode=True accepts, strict_mode=False accepts with the same result."
     source := "docs: strict mode only disallows more input", status := .proven
-    prop := ``StrictImpliesLenient, thm := some ``strictImpliesLenient_proven },
+    prop := ``StrictImpliesLenientC, thm := some ``strictImpliesLenientC_proven },
   { id := "textlibs-binascii-base64-length", pyFile := "Modules/binascii.c", pyFns := ["binascii_b2a_base64_impl"]
     statement := "len(b2a_base64(d, newline=False)) == 4 * ceil(len(d) / 3) for every bytes value d."
     source := "RFC 4648 section 4", status := .proven
-    prop := ``B2aLength, thm := some ``b2aLength_proven },
+    prop := ``B2aLengthC, thm := some ``b2aLengthC_proven },
   { id := "textlibs-binascii-hex-round-trip", pyFile := "Modules/binascii.c"
     pyFns := ["binascii_b2a_hex_impl", "binascii_hexlify_impl", "binascii_a2b_hex_impl", "binascii_unhexlify_impl"]
-    statement := "unhexlify(hexlify(d)) == d for every bytes value d."
+    statement := "unhexlify(hexlify(d), ignorechars=g) == d for every bytes value d and every g."
     source := "docs: a2b_hex is the inverse of b2a_hex", status := .proven
-    prop := ``HexRoundTrip, thm := some ``hexRoundTrip_proven
-    notes := "hexlify's sep and bytes_per_sep arguments are not modelled." },
+    prop := ``HexRoundTripC, thm := some ``hexRoundTripC_proven
+    notes := "The separator arguments are textlibs-binascii-hex-sep." },
   { id := "textlibs-base64-round-trip", pyFile := "Lib/base64.py"
     pyFns := ["b64encode", "b64decode", "_bytes_from_decode_data"]
     statement := "b64decode(b64encode(d), validate=v) == d for every bytes value d and both modes."
     source := "docs: b64decode decodes what b64encode produces", status := .proven
-    prop := ``B64ModuleRoundTrip, thm := some ``b64ModuleRoundTrip_proven
+    prop := ``B64ModuleRoundTripC, thm := some ``b64ModuleRoundTripC_proven
     notes := "Stated without altchars. The str branch of _bytes_from_decode_data is covered by the difftest only." },
   { id := "textlibs-binascii-ascii-buffer", pyFile := "Modules/binascii.c", pyFns := ["ascii_buffer_converter"]
     statement := "An ASCII str and the equal bytes convert alike; any other str raises ValueError."
@@ -344,7 +354,7 @@ def entries : List Entry := [
     pyFns := ["standard_b64encode", "standard_b64decode"]
     statement := "standard_b64decode(standard_b64encode(d)) == d for every bytes value d."
     source := "docstrings", status := .proven
-    prop := ``StandardRoundTrip, thm := some ``standardRoundTrip_proven },
+    prop := ``StandardRoundTripC, thm := some ``standardRoundTripC_proven },
   { id := "textlibs-base64-input-check", pyFile := "Lib/base64.py", pyFns := ["_input_type_check"]
     statement := "_input_type_check accepts exactly one-dimensional views of single-byte formats."
     source := "the checks' messages", status := .proven
@@ -390,46 +400,74 @@ def entries : List Entry := [
   { id := "textlibs-base64-b16-round-trip", pyFile := "Lib/base64.py", pyFns := ["b16encode", "b16decode"]
     statement := "b16decode(b16encode(d)) == d, with only upper case digits, so casefold=False accepts it."
     source := "docs: b16encode, b16decode", status := .proven
-    prop := ``B16RoundTrip, thm := some ``b16RoundTrip_proven },
+    prop := ``B16RoundTripC, thm := some ``b16RoundTripC_proven },
   { id := "textlibs-base64-urlsafe-round-trip", pyFile := "Lib/base64.py", pyFns := ["urlsafe_b64encode", "urlsafe_b64decode"]
-    statement := "urlsafe_b64decode(urlsafe_b64encode(d)) == d."
+    statement := "urlsafe_b64decode(urlsafe_b64encode(d), padded=q) == d, for both values of q: the decoder defaults to padded=False and the encoder pads."
     source := "docs: urlsafe_b64encode", status := .proven
-    prop := ``UrlsafeRoundTrip, thm := some ``urlsafeRoundTrip_proven },
-  { id := "textlibs-base64-b85-round-trip", pyFile := "Lib/base64.py", pyFns := ["_85encode", "b85encode", "b85decode"]
+    prop := ``UrlsafeRoundTripC, thm := some ``urlsafeRoundTripC_proven },
+  { id := "textlibs-base64-b85-round-trip", pyFile := "Lib/base64.py", pyFns := ["b85encode", "b85decode"]
     statement := "b85decode(b85encode(d)) == d, including a cut last group."
     source := "docs: b85encode, b85decode", status := .proven
-    prop := ``B85RoundTrip, thm := some ``b85RoundTrip_proven },
+    prop := ``B85RoundTripC, thm := some ``b85RoundTripC_proven },
   { id := "textlibs-base64-z85-round-trip", pyFile := "Lib/base64.py", pyFns := ["z85encode", "z85decode"]
     statement := "z85decode(z85encode(d)) == d."
     source := "docs: z85encode, z85decode", status := .proven
-    prop := ``Z85RoundTrip, thm := some ``z85RoundTrip_proven },
-  { id := "textlibs-base64-a85-round-trip", pyFile := "Lib/base64.py", pyFns := ["_85encode", "a85encode", "a85decode"]
+    prop := ``Z85RoundTripC, thm := some ``z85RoundTripC_proven },
+  { id := "textlibs-base64-a85-round-trip", pyFile := "Lib/base64.py", pyFns := ["a85encode", "a85decode"]
     statement := "a85decode(a85encode(d, foldspaces=f), foldspaces=f) == d, through the z and y folds and a cut last group."
     source := "docs: a85encode, a85decode", status := .proven
-    prop := ``A85RoundTrip, thm := some ``a85RoundTrip_proven
-    notes := "No wrapcol, no adobe: those are textlibs-base64-a85-wrap-round-trip." },
+    prop := ``A85RoundTripC, thm := some ``a85RoundTripC_proven },
+  { id := "textlibs-binascii-base32-round-trip", pyFile := "Modules/binascii.c"
+    pyFns := ["binascii_a2b_base32_impl", "binascii_b2a_base32_impl", "base32_encode_quint", "base32_encode_fast",
+      "base32_decode_octa", "base32_decode_fast", "get_reverse_table"]
+    statement := "a2b_base32(b2a_base32(d, alphabet=a), alphabet=a) == d for all bytes d and every alphabet of 32 distinct bytes without '=', through both fast paths and all four padding lengths."
+    source := "the implementation disagreeing with itself: round trip", status := .proven
+    prop := ``B32AlphabetRoundTrip, thm := some ``b32AlphabetRoundTrip_proven },
+  { id := "textlibs-binascii-base85-round-trip", pyFile := "Modules/binascii.c"
+    pyFns := ["binascii_a2b_base85_impl", "binascii_b2a_base85_impl", "get_reverse_table"]
+    statement := "a2b_base85(b2a_base85(d, alphabet=a), alphabet=a) == d for all bytes d and every alphabet of 85 distinct bytes, including a cut last group."
+    source := "the implementation disagreeing with itself: round trip", status := .proven
+    prop := ``B85AlphabetRoundTrip, thm := some ``b85AlphabetRoundTrip_proven },
+  { id := "textlibs-binascii-ascii85-round-trip", pyFile := "Modules/binascii.c"
+    pyFns := ["binascii_a2b_ascii85_impl", "binascii_b2a_ascii85_impl"]
+    statement := "a2b_ascii85(b2a_ascii85(d, foldspaces=f), foldspaces=f, ignorechars=g) == d, through the z and y folds and a cut last group."
+    source := "the implementation disagreeing with itself: round trip", status := .proven
+    prop := ``A85RoundTripC, thm := some ``a85RoundTripC_proven },
+  { id := "textlibs-binascii-reverse-tables", pyFile := "Modules/binascii.c", pyFns := ["_Py_ALIGNED_DEF"]
+    statement := "The four static reverse tables, copied from the source, are entry by entry what get_reverse_table builds from their alphabets."
+    source := "Modules/binascii.c:81-99, 192-230, 251-269", status := .proven
+    prop := ``ReverseTables, thm := some ``reverseTables_proven },
+  { id := "textlibs-binascii-hex-ignorechars", pyFile := "Modules/binascii.c"
+    pyFns := ["binascii_a2b_hex_impl", "binascii_unhexlify_impl", "ignorechar"]
+    statement := "unhexlify(s, ignorechars=g) is unhexlify of s without the non-digit bytes of g, failures and their messages included; a digit named in g stays a digit."
+    source := "the docs of ignorechars and Modules/binascii.c:2310-2343", status := .proven
+    prop := ``HexIgnoreLaw, thm := some ``hexIgnoreLaw_proven },
+  { id := "textlibs-binascii-wraplines", pyFile := "Modules/binascii.c", pyFns := ["wraplines"]
+    statement := "wraplines joins lines of exactly width characters, and one last line of at most width, with single newlines, and adds nothing else."
+    source := "the comment at Modules/binascii.c:457-458", status := .proven
+    prop := ``WraplinesLaw, thm := some ``wraplinesLaw_proven },
   { id := "textlibs-base64-a85-wrap-round-trip", pyFile := "Lib/base64.py", pyFns := []
     statement := "The Ascii85 round trip holds with wrapcol and adobe."
     source := "docs: a85encode, a85decode", status := .open
-    prop := ``A85WrapRoundTrip
-    notes := "Needs a85Loop shown to skip the newlines, and the framing shown to survive chunksOf." },
+    prop := ``A85WrapRoundTripC
+    notes := "Needs the loop shown to skip the newlines wraplines inserts, and the framing shown to survive them." },
   { id := "textlibs-base64-b32-round-trip", pyFile := "Lib/base64.py"
-    pyFns := ["_b32encode", "_b32decode", "b32encode", "b32decode", "b32hexencode", "b32hexdecode"]
+    pyFns := ["b32encode", "b32decode", "b32hexencode", "b32hexdecode"]
     statement := "b32decode(b32encode(d)) == d and b32hexdecode(b32hexencode(d)) == d, for every length, so through all four padding lengths."
     source := "docs: b32encode, b32decode", status := .proven
-    prop := ``B32RoundTrip, thm := some ``b32RoundTrip_proven },
-  { id := "textlibs-base64-b32-option-law", pyFile := "Lib/base64.py", pyFns := ["_b32decode", "b32decode"]
-    statement := "casefold and map01 only rewrite the input before decoding, map01 first, whether or not the result then decodes."
+    prop := ``B32RoundTripC, thm := some ``b32RoundTripC_proven },
+  { id := "textlibs-base64-b32-option-law", pyFile := "Lib/base64.py", pyFns := ["b32decode"]
+    statement := "casefold and map01 only rewrite the input before decoding, map01 first, and a map01 that is not one byte is refused by bytes.maketrans."
     source := "docs: b32decode", status := .proven
-    prop := ``B32OptionLaw, thm := some ``b32OptionLaw_proven },
+    prop := ``B32OptionLawC, thm := some ``b32OptionLawC_proven },
   { id := "textlibs-base64-encodebytes-round-trip", pyFile := "Lib/base64.py", pyFns := ["encodebytes", "decodebytes"]
     statement := "decodebytes(encodebytes(d)) == d."
     source := "docs: decodebytes", status := .proven
-    prop := ``DecodebytesRoundTrip, thm := some ``decodebytesRoundTrip_proven },
-  { id := "textlibs-base64-encodebytes-line-length", pyFile := "Lib/base64.py", pyFns := ["encodebytes"]
+    prop := ``DecodebytesRoundTripC, thm := some ``decodebytesRoundTripC_proven },
+  { id := "textlibs-base64-encodebytes-line-length", pyFile := "Lib/base64.py", pyFns := ["encodebytes", "wraplines"]
     statement := "Past 57 bytes, encodebytes starts with exactly 76 characters and a newline, the encoding of the first 57 bytes."
     source := "docs: encodebytes (a newline after every 76 bytes of output)", status := .proven
-    prop := ``EncodebytesLineLength, thm := some ``encodebytesLineLength_proven },
+    prop := ``EncodebytesLineLengthC, thm := some ``encodebytesLineLengthC_proven },
   { id := "textlibs-base64-encode-file-law", pyFile := "Lib/base64.py", pyFns := ["encode"]
     statement := "encode over a file with short reads and scripted failures writes a prefix of encodebytes(data), all of it unless the failure is one the file raised."
     source := "docs: encode", status := .proven
@@ -438,15 +476,15 @@ def entries : List Entry := [
   { id := "textlibs-base64-encode-file-agrees", pyFile := "Lib/base64.py", pyFns := ["encode"]
     statement := "With no failing call, encode writes exactly encodebytes(data), however short the reads."
     source := "twin: encode and encodebytes", status := .proven
-    prop := ``EncodeFileAgrees, thm := some ``encodeFileAgrees_proven },
+    prop := ``EncodeFileAgreesC, thm := some ``encodeFileAgreesC_proven },
   { id := "textlibs-base64-encode-empty-read", pyFile := "Lib/base64.py", pyFns := ["encode"]
     statement := "A read returning nothing before end of file ends encode with no error and nothing written."
-    source := "Lib/base64.py:415 reads until an empty result", status := .proven
+    source := "Lib/base64.py:417 reads until an empty result", status := .proven
     prop := ``EncodeEmptyReadStops, thm := some ``encodeEmptyReadStops_proven },
   { id := "textlibs-base64-decode-file-round-trip", pyFile := "Lib/base64.py", pyFns := ["decode"]
     statement := "decode over the lines readline finds in encodebytes(d) writes d."
     source := "docs: decode", status := .proven
-    prop := ``DecodeFileRoundTrip, thm := some ``decodeFileRoundTrip_proven },
+    prop := ``DecodeFileRoundTripC, thm := some ``decodeFileRoundTripC_proven },
   { id := "textlibs-base64-decode-file-stops", pyFile := "Lib/base64.py", pyFns := ["decode"]
     statement := "A failing readline or a line that does not decode ends decode at once, with nothing more written."
     source := "invariant: failures pass through", status := .proven
@@ -778,12 +816,12 @@ def entries : List Entry := [
     prop := ``DialectReuse, thm := some ``dialectReuse_proven
     notes := "Identity is a constructor of DRes, not equality of contents." },
   { id := "textlibs-csv-getattr-cleared", pyFile := "Modules/_csv.c", pyFns := ["dialect_new"]
-    statement := "Every failure of a dialect attribute is cleared, so an object whose attributes all raise gives the default dialect."
-    source := "Modules/_csv.c@3.14.7:504-511", status := .proven
+    statement := "An AttributeError from a dialect attribute is cleared, so an object without the attributes gives the default dialect; any other exception comes out of dialect_new."
+    source := "DIALECT_GETATTR, Modules/_csv.c", status := .proven
     prop := ``GetattrCleared, thm := some ``getattrCleared_proven },
   { id := "textlibs-csv-dialect-keywords", pyFile := "Modules/_csv.c", pyFns := ["dialect_new"]
     statement := "A keyword beats the attribute, and with one present an object is not reused, even a Dialect: the new one is built from the keywords and the old object's attributes."
-    source := "Modules/_csv.c@3.14.7:504-511 and the reuse test at :475", status := .proven
+    source := "DIALECT_GETATTR and the reuse test, Modules/_csv.c", status := .proven
     prop := ``DialectKeywords, thm := some ``dialectKeywords_proven },
   { id := "textlibs-csv-dialect-arg-errors", pyFile := "Modules/_csv.c", pyFns := ["dialect_new"]
     statement := "PyArg_ParseTupleAndKeywords fails first, for too many arguments and for a keyword that names no parameter."
@@ -798,8 +836,8 @@ def entries : List Entry := [
     source := "Modules/_csv.c:527-560", status := .proven
     prop := ``DialectNewValid, thm := some ``dialectNewValid_proven },
   { id := "textlibs-csv-subclass-attrs", pyFile := "Modules/_csv.c", pyFns := ["dialect_new"]
-    statement := "An attribute of a Dialect subclass shadows the C field for DIALECT_GETATTR; one that raises is cleared."
-    source := "Modules/_csv.c@3.14.7:507", status := .proven
+    statement := "An attribute of a Dialect subclass shadows the C field for DIALECT_GETATTR; one that raises AttributeError is cleared."
+    source := "DIALECT_GETATTR, Modules/_csv.c", status := .proven
     prop := ``SubclassAttrs, thm := some ``subclassAttrs_proven },
   { id := "textlibs-csv-lineterminator-stored", pyFile := "Modules/_csv.c", pyFns := ["Dialect_get_lineterminator"]
     statement := "The getter returns the object in the slot, which is the argument itself, so a str subclass stays one; an empty slot gives NULL."

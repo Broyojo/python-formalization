@@ -29,6 +29,7 @@ reproducer: |
 expected: |
   ValueError from both twins, as `int()` raises.
 observed: |
+  python3 3.15.2: REPRODUCED.
   python3 3.14.7: each stream loads in C, ValueError in Python. REPRODUCED.
   main (python.exe 3.16.0a1+dev): REPRODUCED, same behaviour.
 promised_by: |
@@ -46,6 +47,6 @@ duplicates:
             "author:Legoclones pickle"]
   bugforge: "no pickle entries in vendor/bugforge-results/README.md"
 lean:
-  property: PyLean.Pickle.IntLineTwinsNoBoolSpelling
-  theorem: PyLean.Pickle.intLineTwinsNoBoolSpelling_refuted
+  property: PyLean.Pickle.IntLineTwins
+  theorem: PyLean.Pickle.intLineTwins_refuted
   also: [PyLean.Pickle.LongLineTwins, PyLean.Pickle.longLineTwins_refuted]

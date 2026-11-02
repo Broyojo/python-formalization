@@ -37,6 +37,7 @@ cause: |
 possible_fix: |
   Already done upstream by gh-155526: complex_abs sets errno = 0 before the call.
 tested: |
+  python3 3.15.2: NOT REPRODUCED, fixed. This record describes 3.14.7 and stays in coverage/gone-in-3.15.txt.
   python3 3.14.7: REPRODUCED. main: not reproduced.
 duplicates:
   issues:
@@ -49,3 +50,4 @@ duplicates:
 lean:
   property: PyLean.Binary64.ComplexAbsNaN
   theorem: PyLean.Binary64.complexAbsNaN_refuted
+  note: "That theorem held on 3.14.7. On 3.15.2 the same property is proven, as complexAbsNaN_proven."

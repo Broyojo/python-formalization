@@ -56,11 +56,12 @@ promised_by: |
   agreement: Lib/_pydecimal.py:3983 `self.capitals = capitals if capitals is not None else dc.capitals`.
 cause: |
   Modules/_decimal/_decimal.c:1477 `CtxCaps(self) = 1;` in context_new, whether or not a template was
-  copied at :1468. context_copy keeps the source's value (@3.14.7:1623). Same on main at :1523.
+  copied at :1468. context_copy keeps the source's value (:1683). Same on main at :1523.
 possible_fix: |
   Set capitals from the template when there is one, next to the copy at :1468, and use 1 only in the
   branch that takes dflt_ctx.
 tested:
+  python3 3.15.2: REPRODUCED
   python3 (3.14.7, Linux, bundled libmpdec 2.5.1): REPRODUCED
   main (vendor/cpython-main/python.exe, 3.16.0a1+dev, bundled libmpdec 2.5.1): REPRODUCED
 duplicates:

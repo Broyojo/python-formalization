@@ -77,6 +77,32 @@ theorem deepcopy_tuple_memo (fuel : Nat) (h h1 : Heap) (x y : Nat) (items ys : L
   rw [deepcopy]
   simp only [hc, hm, hd, hm1]
 
+/-- `_deepcopy_frozendict`, with `deepcopy` around it. The keys and values are copied in order with nothing in `memo` for
+`x`; a copy that a recursive structure put there wins, and otherwise the result is a new `frozendict` of the copies, even if
+every copy is the object itself, which is where it differs from `_deepcopy_tuple`; the first failure stops it. Unlike a
+`dict`, the object is not in `memo` while its items are copied. -/
+def DeepcopyFrozendict : Prop :=
+  ∀ (fuel : Nat) (h h1 : Heap) (x y : Nat) (items ys : List (Nat × Nat)) (e : PyExc),
+    h.get x = .fdict items → h.memo.lookup x = none →
+    (deepPairs fuel h items = .ok (h1, ys) → h1.memo.lookup x = none →
+      deepcopy (fuel + 1) h x = .ok (h1.fresh (.fdict ys) x, h1.cells.length)) ∧
+    (deepPairs fuel h items = .ok (h1, ys) → h1.memo.lookup x = some y → deepcopy (fuel + 1) h x = .ok (h1, y)) ∧
+    (deepPairs fuel h items = .error e → deepcopy (fuel + 1) h x = .error e)
+
+theorem deepcopyFrozendict_proven : DeepcopyFrozendict := by
+  intro fuel h h1 x y items ys e hc hm
+  refine ⟨?_, ?_, ?_⟩
+  · intro hd hm1
+    rw [deepcopy]
+    simp only [hc, hm, hd, hm1]
+    rfl
+  · intro hd hm1
+    rw [deepcopy]
+    simp only [hc, hm, hd, hm1]
+  · intro hd
+    rw [deepcopy]
+    simp only [hc, hm, hd]
+
 theorem deepcopy_atom (fuel : Nat) (h : Heap) (x : Nat) (n : Int) (hc : h.get x = .atom n) :
     deepcopy (fuel + 1) h x = .ok (h, x) := by
   simp [deepcopy, hc]
@@ -102,7 +128,7 @@ theorem deepPairs_atoms (h : Heap) : ∀ (fuel : Nat) (l : List (Nat × Nat)),
     have h1 : deepcopy (fuel + 1) h v = .ok (h, v) := deepcopy_atom _ _ _ _ hm
     have h2 : deepcopy (fuel + 1) h k = .ok (h, k) := deepcopy_atom _ _ _ _ hn
     have h3 := deepPairs_atoms h fuel r (fun p hp => ha p (List.mem_cons_of_mem _ hp)) (by simpa using hl)
-    simp [deepPairs, h1, h2, h3]
+    simp [deepPairs, h1, h2, h3, storeKey, keyHashErr, hn]
 
 /-- `_deepcopy_list` on a list of atoms: a new list, recorded in `memo`, with the same items. Every reference is a
 cell of the heap, which is the invariant of a real object graph. -/

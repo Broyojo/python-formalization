@@ -2,7 +2,7 @@ import PyLean.Binary64.Bigint
 import PyLean.Binary64.Float
 
 /-!
-`_Py_dg_strtod` and `bigcomp` from `Python/dtoa.c`, CPython 3.14.7. Every line
+`_Py_dg_strtod` and `bigcomp` from `Python/dtoa.c`, CPython 3.15.2. Every line
 that touches a `double` goes through the exact `F64` operations, so the fast path,
 the scaled starting approximation and the correction loop all run as written.
 The `goto`s become a small exit type.

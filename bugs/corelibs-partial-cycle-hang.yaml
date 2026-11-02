@@ -40,6 +40,7 @@ expected: |
   __setstate__ refuses p itself as func, or the check returns.
 observed: |
   python3 3.14.7: True hung. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Nothing explicit. Undisputed: a predicate should not hang.
 cause: |

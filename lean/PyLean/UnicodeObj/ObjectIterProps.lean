@@ -376,4 +376,30 @@ theorem iterReduceRoundTrip_proven : IterReduceRoundTrip := by
     subst hr
     simp [unicodeiterReduce, hq]
 
+/-- `unicode_char` gives the character in the canonical kind for every code point, the iterators'
+characters included, and `SystemError` for everything above U+10FFFF, for every `Py_UCS4`. -/
+def UnicodeCharSpec : Prop :=
+  ∀ ch : Nat,
+    (ch ≤ maxUnicode → unicodeCharChecked ch = .ok ([ch], canonicalKind [ch])) ∧
+    (ch > maxUnicode → unicodeCharChecked ch =
+      .error (.named "SystemError" "invalid maximum character passed to PyUnicode_New"))
+
+theorem unicodeCharSpec_proven : UnicodeCharSpec := by
+  intro ch
+  have hm : maxUnicode = 0x10FFFF := rfl
+  have e : maxCharOf [ch] = ch := by simp [maxCharOf]
+  constructor
+  · intro h
+    have nb : ¬ch > maxUnicode := by omega
+    simp only [unicodeCharChecked, if_neg nb, canonicalKind, e, unicodeChar, ite_self]
+    by_cases h1 : ch < 256
+    · by_cases h2 : ch < 128
+      · simp [h1, h2, kindOfMax]
+      · have h3 : ¬ch < 128 := h2
+        simp [h1, h2, kindOfMax]
+    · simp [h1]
+  · intro h
+    have nl : ¬ch < 256 := by omega
+    simp only [unicodeCharChecked, if_neg nl, if_pos h]
+
 end PyLean.UnicodeObj

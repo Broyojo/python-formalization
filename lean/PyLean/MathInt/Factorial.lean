@@ -80,7 +80,7 @@ theorem pc_and_pred : ∀ n, 0 < n → pc (n &&& (n - 1)) + 1 = pc n := by
       omega
     · rw [show (n - 1) / 2 = n / 2 by omega, Nat.and_self, h]
 
-/-- `count_set_bits`, mathmodule.c@3.14.7:1484-1492, is the popcount. -/
+/-- `count_set_bits`, mathintegermodule.c:485-493, is the popcount. -/
 theorem countSetBits_eq : ∀ fuel n, pc n ≤ fuel → countSetBits fuel n = pc n := by
   intro fuel
   induction fuel with
@@ -122,7 +122,7 @@ theorem stepProd_lt (s m B : Nat) (hB : ∀ i, i < m → s + 2 * i < 2 ^ B) :
     calc stepProd s m * (s + 2 * m) ≤ 2 ^ (m * B) * (s + 2 * m) := Nat.mul_le_mul_right _ h1
       _ < 2 ^ (m * B) * 2 ^ B := Nat.mul_lt_mul_of_pos_left h2 (Nat.two_pow_pos _)
 
-/-- The tight loop of `factorial_partial_product`, mathmodule.c@3.14.7:1917-1918,
+/-- The tight loop of `factorial_partial_product`, mathintegermodule.c:590-591,
 with all products below `2^64`. -/
 theorem fppLoop_spec (start stop m : Nat) (hm : stop = start + 2 * m)
     (hb : stepProd start m < 2 ^ 64) :
@@ -158,7 +158,7 @@ theorem stepProd_pos (s : Nat) (hs : 0 < s) : ∀ m, 0 < stepProd s m
   | 0 => by simp [stepProd]
   | m + 1 => Nat.mul_pos (stepProd_pos s hs m) (by omega)
 
-/-- `factorial_partial_product(start, stop, max_bits)`, mathmodule.c@3.14.7:1893-1941:
+/-- `factorial_partial_product(start, stop, max_bits)`, mathintegermodule.c:566-614:
 the product of the odd numbers in `[start, stop)`. -/
 theorem fpp_spec : ∀ fuel start stop maxBits,
     start % 2 = 1 → stop % 2 = 1 → start < stop → stop < 2 ^ 64 →
@@ -219,7 +219,7 @@ theorem fpp_spec : ∀ fuel start stop maxBits,
 /-- Product of the odd numbers `<= v`. -/
 def oddUpTo (v : Nat) : Nat := stepProd 1 ((v + 1) / 2)
 
-/-- `product_{i >= 0} oddUpTo (v >> i)`, the formula of mathmodule.c@3.14.7:1840-1842. -/
+/-- `product_{i >= 0} oddUpTo (v >> i)`, the formula of mathintegermodule.c:513-515. -/
 def oddPartF (v : Nat) : Nat := if v = 0 then 1 else oddUpTo v * oddPartF (v / 2)
 decreasing_by omega
 
@@ -248,7 +248,7 @@ theorem fact_split : ∀ n, fact n = oddUpTo n * 2 ^ (n / 2) * fact (n / 2)
         show n + 1 = 2 * (n / 2 + 1) by omega]
       simp only [Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc]
 
-/-- `n! == odd_part << (n - popcount(n))`, mathmodule.c@3.14.7:1877-1884. -/
+/-- `n! == odd_part << (n - popcount(n))`, mathintegermodule.c:550-557. -/
 theorem oddPartF_mul_two_pow : ∀ n, oddPartF n * 2 ^ (n - pc n) = fact n := by
   intro n
   induction n using Nat.strongRecOn with
@@ -271,7 +271,7 @@ theorem oddUpTo_le2 (v : Nat) (h : v ≤ 2) : oddUpTo v = 1 := by
 theorem shiftRight_succ_eq (n c : Nat) : n >>> (c + 1) = (n >>> c) / 2 := by
   rw [Nat.shiftRight_eq_div_pow, Nat.shiftRight_eq_div_pow, Nat.pow_succ, Nat.div_div_eq_div_mul]
 
-/-- The loop of `factorial_odd_part`, mathmodule.c@3.14.7:1958-1986. -/
+/-- The loop of `factorial_odd_part`, mathintegermodule.c:631-659. -/
 theorem factorialOddPartLoop_spec (n : Nat) (hn : n < 2 ^ 63) :
     ∀ c upper inner outer, upper = oddUp (n >>> c) → inner = oddUpTo (n >>> c) →
       outer = oddPartF (n >>> c) → factorialOddPartLoop n c upper inner outer = .ok (oddPartF n) := by

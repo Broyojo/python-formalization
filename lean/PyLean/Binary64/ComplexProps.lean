@@ -119,14 +119,22 @@ def ComplexAbsNaN : Prop :=
   ∀ (m : Libm) (stale : Bool) (z : C), z.re.isNaN = true → z.im.isFinite = true →
     complex_abs m stale z = .ok F64.qnan
 
-/-- With `ERANGE` left over from an earlier overflow, `abs(complex(nan, 1.0))` raises. -/
-theorem complexAbsNaN_refuted : ¬ ComplexAbsNaN := by
-  intro h
-  let m : Libm := { hypot := fun _ _ => d1, pow := fun _ _ => d1, atan2 := fun _ _ => d1, exp := fun _ => d1,
-                    log := fun _ => d1, cos := fun _ => d1, sin := fun _ => d1, trigEdom := F64.isInf }
-  have := h m true ⟨F64.qnan, d1⟩ (by decide +kernel) (by decide +kernel)
-  revert this
-  decide +kernel
+/-- Refuted on 3.14.7, where `ERANGE` left over from an earlier overflow made
+`abs(complex(nan, 1.0))` raise; `errno = 0` at complexobject.c:801 closes that. -/
+theorem complexAbsNaN_proven : ComplexAbsNaN := by
+  intro m stale z hn hf
+  have hni : z.re.isInf = false := by
+    rw [F64.isNaN_eq] at hn
+    cases h : z.re.isInf
+    · rfl
+    · rw [F64.isInf_eq] at h; omega
+  have h1 : z.re.isFinite = false := by
+    rw [F64.isNaN_eq] at hn
+    cases h : z.re.isFinite
+    · rfl
+    · rw [F64.isFinite_eq] at h; omega
+  have h2 : z.im.isInf = false := F64.isInf_false_of_finite hf
+  simp [complex_abs, _Py_c_abs, h1, hni, h2]
 
 /-- `bool(z)` is false exactly when both parts are zero. -/
 def ComplexBool : Prop :=

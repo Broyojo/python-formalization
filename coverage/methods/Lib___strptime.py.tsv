@@ -11,12 +11,12 @@ Lib/_strptime.py	181	258	LocaleTime.__calc_date_time	__calc_date_time(self)	todo
 Lib/_strptime.py	260	292	LocaleTime.__find_month_format	__find_month_format(self, directive)	todo		
 Lib/_strptime.py	294	320	LocaleTime.__find_weekday_format	__find_weekday_format(self, directive)	todo		
 Lib/_strptime.py	322	337	LocaleTime.__calc_timezone	__calc_timezone(self)	todo		
-Lib/_strptime.py	343	431	TimeRE.__init__	__init__(self, locale_time=None)	todo		changed-in-3.15: was strptime-compile-errors
+Lib/_strptime.py	343	431	TimeRE.__init__	__init__(self, locale_time=None)	modelled	strptime-abbreviations,strptime-compile-errors,strptime-day-needs-year	
 Lib/_strptime.py	433	451	TimeRE.__seqToRE	__seqToRE(self, to_convert, directive, altregex=None)	modelled	strptime-seqtore-sorted	
-Lib/_strptime.py	453	500	TimeRE.pattern	pattern(self, format)	todo		changed-in-3.15: was strptime-compile-errors
-Lib/_strptime.py	502	504	TimeRE.compile	compile(self, format)	modelled	strptime-compile-errors	
+Lib/_strptime.py	453	500	TimeRE.pattern	pattern(self, format)	modelled	strptime-compile-errors,strptime-day-needs-year	
+Lib/_strptime.py	502	504	TimeRE.compile	compile(self, format)	modelled	strptime-compile-errors,strptime-day-needs-year	
 Lib/_strptime.py	513	531	_calc_julian_from_U_or_W	_calc_julian_from_U_or_W(year, week_of_year, day_of_week, week_starts_Mon)	modelled	strptime-julian-weekday	
-Lib/_strptime.py	534	807	_strptime	_strptime(data_string, format='%a %b %d %H:%M:%S %Y')	todo		changed-in-3.15: was strptime-methods
+Lib/_strptime.py	534	807	_strptime	_strptime(data_string, format='%a %b %d %H:%M:%S %Y')	modelled	strptime-end-check,strptime-methods,strptime-z-colon	
 Lib/_strptime.py	809	813	_strptime_time	_strptime_time(data_string, format='%a %b %d %H:%M:%S %Y')	todo		
 Lib/_strptime.py	815	820	_strptime_datetime_date	_strptime_datetime_date(cls, data_string, format='%a %b %d %Y')	modelled	strptime-methods	
 Lib/_strptime.py	822	827	_parse_tz	_parse_tz(tzname, gmtoff, gmtoff_fraction)	modelled	strptime-methods	

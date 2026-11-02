@@ -2,8 +2,8 @@ id: unicodeobj-format-nul-presentation-type
 title: "format(1.5, '\\x00') succeeds: float and complex take an explicit NUL for 'no presentation type'"
 priority: P5
 kind: validation
-module: formatter_unicode
-files: [Python/formatter_unicode.c]
+module: unicode_formatter
+files: [Objects/unicode_formatter.c]
 functions: ["parse_internal_render_format_spec", "_PyFloat_FormatAdvancedWriter", "_PyComplex_FormatAdvancedWriter"]
 summary: |
   float and complex pass '\0' as `default_type`, meaning no presentation type was given. The
@@ -32,13 +32,13 @@ expected: |
   ValueError: Unknown format code '\x0' for object of type 'float', as for int and str.
 observed: |
   float and complex accept the spec and format as if no type had been given.
-tested: "REPRODUCED on python3 3.14.7 and on main (3.16.0a1+dev) by scripts/check_bugs.py"
+tested: "REPRODUCED on python3 3.15.2 and on main (3.16.0a1+dev) by scripts/check_bugs.py"
 promised_by: |
   The format specification mini-language in Doc/library/string.rst lists the presentation types,
   and NUL is not one of them. int and str are the twins that reject it.
 cause: |
-  Python/formatter_unicode.c@3.14.7:322-325 stores any final character as the type. @3.14.7:1671 and @3.14.7:1710 are
-  `case '\0'` in the float and complex dispatch, and @3.14.7:341 is the same case in the thousands check.
+  Objects/unicode_formatter.c:557-560 stores any final character as the type. unicode_formatter.c:1909 and 1948 are
+  `case '\0'` in the float and complex dispatch, and unicode_formatter.c:576 is the same case in the thousands check.
 possible_fix: |
   Keep a flag for "type given" in parse_internal_render_format_spec, and raise
   unknown_presentation_type when the given type is NUL.

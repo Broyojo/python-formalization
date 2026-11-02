@@ -39,32 +39,31 @@ def noLibm : Libm Dbl where
 
 /-! ## `abs()` and a stale `errno` -/
 
-/-- `abs(z)` depends only on `z`, not on what the previous C call left in
-`errno`. The comment on line 370 promises `errno` is set either way. -/
+/-- `abs(z)` depends only on `z`, not on what the previous C call left in `errno`.
+Refuted on 3.14.7, where a stale `ERANGE` made `abs(complex(nan, 0))` raise; 3.15 clears
+`errno` at complexobject.c:801. -/
 def ComplexAbsIgnoresStaleErrno : Prop :=
   ∀ (L : Libm Dbl) (z : Cx Dbl) (e : Errno), complex_abs L z e = complex_abs L z Errno.ok
 
-theorem complexAbsIgnoresStaleErrno_refuted : ¬ ComplexAbsIgnoresStaleErrno := by
-  intro h
-  have := h noLibm ⟨qnan, ⟨0⟩⟩ Errno.erange
-  revert this
-  decide +kernel
+theorem complexAbsIgnoresStaleErrno_proven : ComplexAbsIgnoresStaleErrno := by
+  intro L z e
+  simp only [complex_abs]
 
-/-- The narrowing of `ComplexAbsIgnoresStaleErrno`. The NaN branch is the only one that
-keeps the incoming `errno`, so anything but a stale `ERANGE` is harmless there: the
-result on a value with a NaN part and no infinite part is NaN, and nothing is raised. -/
+/-- The NaN branch of `_Py_c_abs` is the only one that keeps the `errno` it finds. Since
+`complex_abs` clears it first, the result on a value with a NaN part and no infinite part
+is NaN and nothing is raised, whatever `errno` was. -/
 def ComplexAbsCleanErrno : Prop :=
-  ∀ (L : Libm Dbl) (z : Cx Dbl) (e : Errno), e ≠ Errno.erange →
+  ∀ (L : Libm Dbl) (z : Cx Dbl) (e : Errno),
     (isnan z.real = true ∨ isnan z.imag = true) →
     isinf z.real = false → isinf z.imag = false →
     complex_abs L z e = .ok qnan
 
 theorem complexAbsCleanErrno_proven : ComplexAbsCleanErrno := by
-  intro L z e he hn hr hi
+  intro L z e hn hr hi
   have hnf : (!isfinite z.real || !isfinite z.imag) = true := by
     rcases hn with hn | hn <;> simp [isfinite, hn]
   simp only [complex_abs, c_abs, hnf, ite_true, hr, hi, Bool.false_eq_true, ite_false]
-  simp [he]
+  simp
   rfl
 
 /-- C99 Annex G, the comment on lines 374-376: an infinite part gives an infinite

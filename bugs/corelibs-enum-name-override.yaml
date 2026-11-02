@@ -45,6 +45,7 @@ expected: |
 observed: |
   python3 3.14.7: ValueError, ValueError, KeyError. REPRODUCED.
   main (3.16.0a1+dev): same, REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   The docstring of unique, "Class decorator for enumerations ensuring unique member values", and the docs: it searches
   __members__ "gathering any aliases it finds". The docs example of _add_value_alias_ for the lookup.

@@ -2,7 +2,7 @@ import PyLean.TextLibs.CsvModel
 import PyLean.TextLibs.ReApi
 
 /-!
-Model of `csv.Sniffer.sniff`, `Lib/csv.py:241-463`, CPython 3.14.7. Main has replaced this code.
+Model of `csv.Sniffer.sniff`, `Lib/csv.py:241-463`, CPython 3.15.2.
 
 The two `_guess` functions run the `re` model and count characters; the dictionaries are association
 lists, in insertion order, which is what `max` and `.items()` see. The one float in the code is
@@ -139,6 +139,11 @@ def splitNL : List Nat → List (List Nat)
       | h :: t => (c :: h) :: t
       | [] => [[c]]
 
+/-- `d[k] = v`, keeping `k` where it is. -/
+def setKey {β : Type} : List (Nat × β) → Nat → β → List (Nat × β)
+  | [], k, v => [(k, v)]
+  | (x, w) :: r, k, v => if x == k then (x, v) :: r else (x, w) :: setKey r k v
+
 /-- `line.count(char)`. -/
 def count1 (line : List Nat) (c : Nat) : Nat := (line.filter (· == c)).length
 
@@ -148,16 +153,29 @@ def countPair (d : Nat) : List Nat → Nat
   | _ => 0
 termination_by l => l.length
 
-/-- `charFrequency`, `Lib/csv.py@3.14.7:395-402`, for one line: every character of `ascii`, in order. -/
+/-- `Counter(line).items()`: the characters in the order they first appear. -/
+def counterOf : List Nat → List (Nat × Nat) → List (Nat × Nat)
+  | [], acc => acc
+  | c :: r, acc =>
+    match acc.lookup c with
+    | some n => counterOf r (setKey acc c (n + 1))
+    | none => counterOf r (acc ++ [(c, 1)])
+
+/-- `char_frequency[char][count] += 1`: a new character goes last, as in a `defaultdict`. -/
+def bumpChar : List (Nat × List (Nat × Nat)) → Nat → Nat → List (Nat × List (Nat × Nat))
+  | [], c, n => [(c, bump [] n)]
+  | (x, w) :: r, c, n => if x == c then (x, bump w n) :: r else (x, w) :: bumpChar r c n
+
+/-- `Lib/csv.py:395-398`, for one line. -/
 def addLine (cf : List (Nat × List (Nat × Nat))) (line : List Nat) : List (Nat × List (Nat × Nat)) :=
-  cf.map fun x => (x.1, bump x.2 (count1 line x.1))
+  (counterOf line []).foldl (fun cf x => if x.1 < 128 then bumpChar cf x.1 x.2 else cf) cf
 
 /-- `max(items, key=lambda x: x[1])`: the first of the largest. -/
 def maxItem : List (Nat × Nat) → Nat × Nat
   | [] => (0, 0)
   | x :: r => r.foldl (fun b y => if y.2 > b.2 then y else b) x
 
-/-- `modes[char]`, `Lib/csv.py@3.14.7:405-417`, or `none` for the `continue`. -/
+/-- `modes[char]`, `Lib/csv.py:406-414`, or `none` for the `continue`. -/
 def modeOf (items : List (Nat × Nat)) : Option (Nat × Int) :=
   match items with
   | [] => none
@@ -167,18 +185,19 @@ def modeOf (items : List (Nat × Nat)) : Option (Nat × Int) :=
     let rest := items.erase b
     some (b.1, (b.2 : Int) - ((rest.map (·.2)).foldl (· + ·) 0 : Nat))
 
-/-- `d[k] = v`, keeping `k` where it is. -/
-def setKey {β : Type} : List (Nat × β) → Nat → β → List (Nat × β)
-  | [], k, v => [(k, v)]
-  | (x, w) :: r, k, v => if x == k then (x, v) :: r else (x, w) :: setKey r k v
+/-- `items`, with the lines a character is missing from, `Lib/csv.py:400-404`. -/
+def itemsOf (numLines : Nat) (counts : List (Nat × Nat)) : List (Nat × Nat) :=
+  let missed := numLines - (counts.map (·.2)).foldl (· + ·) 0
+  if missed ≠ 0 then counts ++ [(0, missed)] else counts
 
-/-- The `for char in charFrequency.keys()`, `Lib/csv.py@3.14.7:404-417`. -/
-def updateModes (modes : List (Nat × (Nat × Int))) : List (Nat × List (Nat × Nat)) → List (Nat × (Nat × Int))
+/-- The `for char, counts in char_frequency.items()`, `Lib/csv.py:399-414`. -/
+def updateModes (numLines : Nat) (modes : List (Nat × (Nat × Int))) :
+    List (Nat × List (Nat × Nat)) → List (Nat × (Nat × Int))
   | [] => modes
-  | (c, items) :: r =>
-    match modeOf items with
-    | none => updateModes modes r
-    | some v => updateModes (setKey modes c v) r
+  | (c, counts) :: r =>
+    match modeOf (itemsOf numLines counts) with
+    | none => updateModes numLines modes r
+    | some v => updateModes numLines (setKey modes c v) r
 
 /-- `(v / total) >= c`, where `/` rounds to a double and `c` is `C / 2^53`, in `[0.9, 1]`. A quotient
 below one half rounds below `c`, and from one half up the doubles are multiples of `2^-53`. -/
@@ -221,19 +240,21 @@ def skipOf (data : List (List Nat)) (d : Nat) : Bool :=
 
 /-- The `while start < len(data)`, `Lib/csv.py:392-442`. `.inl` is a return from inside it. -/
 def gdLoop (delimiters : Option (List Nat)) (data : List (List Nat)) (chunk : Nat) :
-    (fuel iteration start stop : Nat) → List (Nat × List (Nat × Nat)) → List (Nat × (Nat × Int)) →
+    (fuel iteration numLines start stop : Nat) → List (Nat × List (Nat × Nat)) → List (Nat × (Nat × Int)) →
     List (Nat × (Nat × Int)) → Sum (Nat × Bool) (List (Nat × (Nat × Int)))
-  | 0, _, _, _, _, _, d => .inr d
-  | fuel + 1, iteration, start, stop, cf, modes, d =>
+  | 0, _, _, _, _, _, _, d => .inr d
+  | fuel + 1, iteration, numLines, start, stop, cf, modes, d =>
     if start < data.length then
       let iteration := iteration + 1
-      let cf := ((data.drop start).take (stop - start)).foldl addLine cf
-      let modes := updateModes modes cf
+      let lines := (data.drop start).take (stop - start)
+      let numLines := numLines + lines.length
+      let cf := lines.foldl addLine cf
+      let modes := updateModes numLines modes cf
       let total := min (chunk * iteration) data.length
       let d := consistencyLoop delimiters total modes consistencySteps d
       match d with
       | [(k, _)] => .inl (k, skipOf data k)
-      | _ => gdLoop delimiters data chunk fuel iteration stop (stop + chunk) cf modes d
+      | _ => gdLoop delimiters data chunk fuel iteration numLines stop (stop + chunk) cf modes d
     else .inr d
 
 def preferred : List Nat := [44, 9, 59, 32, 58]
@@ -250,8 +271,7 @@ def lastItem : List (Nat × (Nat × Int)) → Nat
 def guessDelimiter (sample : List Nat) (delimiters : Option (List Nat)) : List Nat × Bool :=
   let data := (splitNL sample).filter (!·.isEmpty)
   let chunk := min 10 data.length
-  let cf0 := (List.range 127).map fun c => (c, ([] : List (Nat × Nat)))
-  match gdLoop delimiters data chunk (data.length + 1) 0 0 chunk cf0 [] [] with
+  match gdLoop delimiters data chunk (data.length + 1) 0 0 0 chunk [] [] [] with
   | .inl (k, s) => ([k], s)
   | .inr d =>
     if d.isEmpty then ([], false)

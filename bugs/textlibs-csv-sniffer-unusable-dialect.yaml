@@ -18,7 +18,7 @@ likelihood: |
   code that only expects csv.Error.
 maybe_intended: |
   No. The check that rejects the dialect was added later than the guessing code, and the two were
-  never reconciled. Main has rewritten Sniffer and no longer does this, so this is a 3.14 backport
+  never reconciled. Main has rewritten Sniffer and no longer does this, so this is a 3.15 backport
   question only.
 reproducer: |
   import csv, io
@@ -39,18 +39,18 @@ reproducer: |
 expected: |
   csv.Error("Could not determine delimiter"), or a usable dialect.
 observed: |
-  python3 3.14.7: '"', '"', bad delimiter or quotechar value (twice). REPRODUCED.
+  python3 3.15.2: '"', '"', bad delimiter or quotechar value (twice). REPRODUCED.
   main 3.16.0a1+dev: raises csv.Error at sniff, so the reproducer prints a traceback. NOT reproduced;
   Sniffer was rewritten there.
 promised_by: |
   Doc/library/csv.rst: sniff returns "a Dialect subclass reflecting the parameters found". A subclass
   that reader rejects reflects nothing usable.
 cause: |
-  Lib/csv.py@3.14.7:384 counts every ASCII character as a possible delimiter, including both quote
-  characters. Lib/csv.py:270 then defaults quotechar to `"` with no test against delimiter.
+  Lib/csv.py:396-398 counts every ASCII character of a line as a possible delimiter, including both
+  quote characters. Lib/csv.py:270 then defaults quotechar to `"` with no test against delimiter.
 possible_fix: |
-  Leave the quote characters out of `ascii` in _guess_delimiter, or raise Error when delimiter equals
-  quotechar. A 3.14 branch fix only, since main has moved on.
+  Leave the quote characters out of the counts in _guess_delimiter, or raise Error when delimiter
+  equals quotechar. A 3.15 branch fix only, since main has moved on.
 duplicates: |
   None found for this symptom. Open Sniffer issues are about other wrong guesses: #68975 (alphanumeric
   delimiters), #97611, #119123, #157678, #159635, #159177. Bugforge csv-20261003-135109-c1 is a

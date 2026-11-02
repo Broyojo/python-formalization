@@ -8,10 +8,10 @@ Lib/pickle.py	238	242	_Framer.write	write(self, data)	modelled	pickle-dumps-twin
 Lib/pickle.py	244	257	_Framer.write_large_bytes	write_large_bytes(self, header, payload)	modelled	pickle-dumps-twins-narrow	
 Lib/pickle.py	262	265	_Unframer.__init__	__init__(self, file_read, file_readline, file_tell=None)	todo		
 Lib/pickle.py	267	282	_Unframer.readinto	readinto(self, buf)	todo		
-Lib/pickle.py	284	295	_Unframer.read	read(self, n)	todo		changed-in-3.15: candidates:pyio-bytesio-read-after-seek
+Lib/pickle.py	284	295	_Unframer.read	read(self, n)	todo		
 Lib/pickle.py	297	308	_Unframer.readline	readline(self)	todo		
-Lib/pickle.py	310	317	_Unframer._chunked_file_read	_chunked_file_read(self, size)	todo		changed-in-3.15: new function
-Lib/pickle.py	319	326	_Unframer.load_frame	load_frame(self, frame_size)	todo		changed-in-3.15: was pickle-frame-twins
+Lib/pickle.py	310	317	_Unframer._chunked_file_read	_chunked_file_read(self, size)	modelled	pickle-frame-read	
+Lib/pickle.py	319	326	_Unframer.load_frame	load_frame(self, frame_size)	modelled	pickle-frame-read,pickle-frame-twins	
 Lib/pickle.py	331	334	_getattribute	_getattribute(obj, dotted_path)	todo		
 Lib/pickle.py	336	370	whichmodule	whichmodule(obj, name)	todo		
 Lib/pickle.py	372	400	encode_long	encode_long(x)	modelled	pickle-decode-encode-long,pickle-encode-long-shortest	
@@ -44,7 +44,7 @@ Lib/pickle.py	1067	1074	_Pickler.save_dict	save_dict(self, obj)	modelled	pickle-
 Lib/pickle.py	1078	1113	_Pickler._batch_setitems	_batch_setitems(self, items, obj)	modelled	pickle-dumps-twins-narrow	
 Lib/pickle.py	1115	1134	_Pickler.save_set	save_set(self, obj)	modelled	pickle-dumps-twins-narrow	
 Lib/pickle.py	1137	1161	_Pickler.save_frozenset	save_frozenset(self, obj)	modelled	pickle-dumps-twins-narrow	
-Lib/pickle.py	1164	1227	_Pickler.save_global	save_global(self, obj, name=None)	todo		changed-in-3.15:
+Lib/pickle.py	1164	1227	_Pickler.save_global	save_global(self, obj, name=None)	todo		changed-in-3.15: name mangling is new; pickling arbitrary globals is not modelled, only the five the picklers emit for plain data
 Lib/pickle.py	1229	1253	_Pickler._save_toplevel_by_name	_save_toplevel_by_name(self, module_name, name)	todo		
 Lib/pickle.py	1255	1262	_Pickler.save_type	save_type(self, obj)	todo		
 Lib/pickle.py	1272	1318	_Unpickler.__init__	__init__(self, file, *, fix_imports=True, encoding='ASCII', errors='strict', buffers=None)	todo		
@@ -52,7 +52,7 @@ Lib/pickle.py	1320	1348	_Unpickler.load	load(self)	todo
 Lib/pickle.py	1351	1355	_Unpickler.pop_mark	pop_mark(self)	todo		
 Lib/pickle.py	1357	1358	_Unpickler.persistent_load	persistent_load(self, pid)	todo		
 Lib/pickle.py	1362	1366	_Unpickler.load_proto	load_proto(self)	todo		
-Lib/pickle.py	1369	1373	_Unpickler.load_frame	load_frame(self)	todo		candidates:pickle-frame-twins
+Lib/pickle.py	1369	1373	_Unpickler.load_frame	load_frame(self)	modelled	pickle-frame-read	candidates:pickle-frame-twins
 Lib/pickle.py	1376	1382	_Unpickler.load_persid	load_persid(self)	todo		
 Lib/pickle.py	1385	1387	_Unpickler.load_binpersid	load_binpersid(self)	todo		
 Lib/pickle.py	1390	1391	_Unpickler.load_none	load_none(self)	todo		
@@ -75,7 +75,7 @@ Lib/pickle.py	1491	1492	_Unpickler.load_unicode	load_unicode(self)	todo
 Lib/pickle.py	1495	1500	_Unpickler.load_binunicode	load_binunicode(self)	todo		
 Lib/pickle.py	1503	1508	_Unpickler.load_binunicode8	load_binunicode8(self)	todo		
 Lib/pickle.py	1511	1516	_Unpickler.load_binbytes8	load_binbytes8(self)	todo		
-Lib/pickle.py	1519	1531	_Unpickler.load_bytearray8	load_bytearray8(self)	todo		changed-in-3.15:
+Lib/pickle.py	1519	1531	_Unpickler.load_bytearray8	load_bytearray8(self)	todo		
 Lib/pickle.py	1534	1542	_Unpickler.load_next_buffer	load_next_buffer(self)	todo		
 Lib/pickle.py	1545	1549	_Unpickler.load_readonly_buffer	load_readonly_buffer(self)	todo		
 Lib/pickle.py	1552	1555	_Unpickler.load_short_binstring	load_short_binstring(self)	todo		
@@ -109,8 +109,8 @@ Lib/pickle.py	1735	1739	_Unpickler.load_pop	load_pop(self)	todo
 Lib/pickle.py	1742	1743	_Unpickler.load_pop_mark	load_pop_mark(self)	todo		
 Lib/pickle.py	1746	1747	_Unpickler.load_dup	load_dup(self)	todo		
 Lib/pickle.py	1750	1756	_Unpickler.load_get	load_get(self)	todo		
-Lib/pickle.py	1759	1765	_Unpickler.load_binget	load_binget(self)	todo		changed-in-3.15:
-Lib/pickle.py	1768	1774	_Unpickler.load_long_binget	load_long_binget(self)	todo		changed-in-3.15:
+Lib/pickle.py	1759	1765	_Unpickler.load_binget	load_binget(self)	todo		
+Lib/pickle.py	1768	1774	_Unpickler.load_long_binget	load_long_binget(self)	todo		
 Lib/pickle.py	1777	1781	_Unpickler.load_put	load_put(self)	todo		
 Lib/pickle.py	1784	1788	_Unpickler.load_binput	load_binput(self)	todo		
 Lib/pickle.py	1791	1795	_Unpickler.load_long_binput	load_long_binput(self)	todo		
@@ -124,7 +124,7 @@ Lib/pickle.py	1854	1875	_Unpickler.load_build	load_build(self)	todo
 Lib/pickle.py	1878	1881	_Unpickler.load_mark	load_mark(self)	todo		
 Lib/pickle.py	1884	1886	_Unpickler.load_stop	load_stop(self)	todo		
 Lib/pickle.py	1892	1894	_dump	_dump(obj, file, protocol=None, *, fix_imports=True, buffer_callback=None)	todo		
-Lib/pickle.py	1896	1902	_dumps	_dumps(obj, protocol=None, *, fix_imports=True, buffer_callback=None)	modelled	pickle-dumps-twins-batch-ok,pickle-dumps-twins-batch-ok-long,pickle-dumps-twins-narrow	
+Lib/pickle.py	1896	1902	_dumps	_dumps(obj, protocol=None, *, fix_imports=True, buffer_callback=None)	modelled	pickle-dumps-twins-narrow	
 Lib/pickle.py	1904	1907	_load	_load(file, *, fix_imports=True, encoding='ASCII', errors='strict', buffers=None)	todo		
 Lib/pickle.py	1909	1915	_loads	_loads(s, /, *, fix_imports=True, encoding='ASCII', errors='strict', buffers=None)	modelled	pickle-loads-twins-exact	
-Lib/pickle.py	1935	1951	_main	_main(args=None)	todo		changed-in-3.15:
+Lib/pickle.py	1935	1951	_main	_main(args=None)	todo		changed-in-3.15: argparse front end, not modelled

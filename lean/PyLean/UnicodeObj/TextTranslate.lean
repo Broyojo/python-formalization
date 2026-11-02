@@ -167,6 +167,7 @@ inductive MkKey where
 /-- The first argument of `maketrans`. -/
 inductive MkArg where
   | str (s : Str)
+  /-- An exact `dict` or `frozendict`: `PyAnyDict_CheckExact`. -/
   | dict (items : List (MkKey × MapItem))
   | other
   deriving Repr, DecidableEq

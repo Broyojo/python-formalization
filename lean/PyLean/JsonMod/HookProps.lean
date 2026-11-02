@@ -19,6 +19,7 @@ structure Same (a b : DCfg) : Prop where
   con : a.parseConstant = b.parseConstant
   pairs : a.pairsHook = b.pairsHook
   obj : a.pairsHook.isNone → a.objectHook = b.objectHook
+  arr : ∀ xs, mkArr a xs = mkArr b xs
 
 theorem Same.parseInt {a b : DCfg} (h : Same a b) (t : PStr) : parseInt a t = parseInt b t := by
   simp only [PyLean.JsonMod.parseInt, h.int]
@@ -55,8 +56,8 @@ theorem same_c {a b : DCfg} (h : Same a b) (s : PStr) : ∀ n : Nat,
   | succ n ih =>
     obtain ⟨hs, ha, ho⟩ := ih
     refine ⟨fun i => ?_, fun i acc => ?_, fun i acc => ?_⟩
-    · simp only [cScanOnce, h.strict, h.fin, cConst, h.con, h.matchNumber, ho, ha]
-    · simp only [cArrLoop, hs, ha]
+    · simp only [cScanOnce, h.strict, h.fin, cConst, h.con, h.matchNumber, ho, ha, h.arr]
+    · simp only [cArrLoop, hs, ha, h.arr]
     · simp only [cObjBody, h.strict, hs, h.add, h.fin, ho]
 
 theorem same_py {a b : DCfg} (h : Same a b) (s : PStr) : ∀ n : Nat,
@@ -69,8 +70,8 @@ theorem same_py {a b : DCfg} (h : Same a b) (s : PStr) : ∀ n : Nat,
   | succ n ih =>
     obtain ⟨hs, ha, ho⟩ := ih
     refine ⟨fun i => ?_, fun i acc => ?_, fun i acc => ?_⟩
-    · simp only [pyScanOnce, pyScanNumber, h.strict, h.mkObj, h.flt, h.con, h.parseInt, ho, ha]
-    · simp only [pyArrLoop, hs, ha]
+    · simp only [pyScanOnce, pyScanNumber, h.strict, h.mkObj, h.flt, h.con, h.parseInt, ho, ha, h.arr]
+    · simp only [pyArrLoop, hs, ha, h.arr]
     · simp only [pyObjLoop, h.strict, hs, h.mkObj, ho]
 
 /-- `object_pairs_hook` takes priority (`JSONDecoder.__init__` docstring,
@@ -84,7 +85,7 @@ def PairsHookPriority : Prop :=
 theorem pairsHookPriority_proven : PairsHookPriority := by
   intro cfg g s hp
   have h : Same { cfg with objectHook := some g } cfg :=
-    { strict := rfl, flt := rfl, int := rfl, con := rfl, pairs := rfl
+    { strict := rfl, flt := rfl, int := rfl, con := rfl, pairs := rfl, arr := fun _ => rfl
       obj := fun hn => by
         exfalso
         cases hq : cfg.pairsHook with
@@ -100,13 +101,66 @@ theorem pairsHookPriority_proven : PairsHookPriority := by
       simp only [rawDecodePy, (same_py h s (docFuel s)).1]
     simp only [loadsPy, decodeWith, hr]
 
+/-! ### `array_hook` -/
+
+/-- `array_hook` replaces the list (`JSONDecoder.__init__` docstring,
+decoder.py:311-317): an `array_hook` that gives its list back changes nothing, for
+every document and every other option, in both twins; and on `[]` the result is
+what the hook does, value or exception, `StopIteration` turned into the
+`JSONDecodeError` of `raw_decode`. -/
+def ArrayHook : Prop :=
+  (∀ (cfg : DCfg) (s : PStr),
+    loadsC { cfg with arrayHook := some fun xs => .ok (.arr xs) } s = loadsC { cfg with arrayHook := none } s ∧
+    loadsPy { cfg with arrayHook := some fun xs => .ok (.arr xs) } s = loadsPy { cfg with arrayHook := none } s) ∧
+  (∀ (cfg : DCfg) (h : List JVal → DR JVal), cfg.arrayHook = some h →
+    loadsC cfg [91, 93] = stopToJde (h []) ∧ loadsPy cfg [91, 93] = stopToJde (h []))
+
+theorem arrayHook_proven : ArrayHook := by
+  refine ⟨fun cfg s => ?_, fun cfg h hh => ?_⟩
+  · have h : Same { cfg with arrayHook := some fun xs => .ok (.arr xs) } { cfg with arrayHook := none } :=
+      { strict := rfl, flt := rfl, int := rfl, con := rfl, pairs := rfl, obj := fun _ => rfl
+        arr := fun _ => rfl }
+    constructor
+    · have hr : ∀ idx, rawDecodeC { cfg with arrayHook := some fun xs => .ok (.arr xs) } s idx =
+          rawDecodeC { cfg with arrayHook := none } s idx := by
+        intro idx
+        simp only [rawDecodeC, (same_c h s (docFuel s)).1]
+      simp only [loadsC, decodeWith, hr]
+    · have hr : ∀ idx, rawDecodePy { cfg with arrayHook := some fun xs => .ok (.arr xs) } s idx =
+          rawDecodePy { cfg with arrayHook := none } s idx := by
+        intro idx
+        simp only [rawDecodePy, (same_py h s (docFuel s)).1]
+      simp only [loadsPy, decodeWith, hr]
+  · have hm : mkArr cfg [] = h [] := by simp [mkArr, hh]
+    constructor
+    · have hraw : rawDecodeC cfg [91, 93] ((wsEnd [91, 93] 0 : Nat) : Int) =
+          (match stopToJde ((mkArr cfg []).map (·, (2 : Nat))) with
+           | .ok (v, e) => .ok (v, (e : Int))
+           | .error err => .error err) := rfl
+      unfold loadsC decodeWith
+      rw [hraw, hm]
+      generalize h [] = r
+      cases r with
+      | ok v => rfl
+      | error e => cases e <;> rfl
+    · have hraw : rawDecodePy cfg [91, 93] ((wsEnd [91, 93] 0 : Nat) : Int) =
+          stopToJde ((mkArr cfg []).map (·, (2 : Int))) := rfl
+      unfold loadsPy decodeWith
+      rw [hraw, hm]
+      generalize h [] = r
+      cases r with
+      | ok v => rfl
+      | error e => cases e <;> rfl
+
 /-! ### `JSONDecoder.__init__` -/
 
 /-- `JSONDecoder.__init__`: `parse_float or float` and its siblings: a false
-callable is the same as no callable; the defaults give the default decoder; an
-unknown keyword is rejected. -/
+callable is the same as no callable; the defaults give the default decoder; the
+three object and array hooks are kept as given; an unknown keyword is rejected. -/
 def DecoderInit : Prop :=
   (decoderInit { strict := some true } = .ok {}) ∧
+  (∀ (a : DecArgs), a.kw = [] → ∃ c, decoderInit a = .ok c ∧ c.objectHook = a.objectHook ∧
+    c.pairsHook = a.objectPairsHook ∧ c.arrayHook = a.arrayHook) ∧
   (∀ (a : DecArgs) (h : PStr → DR JVal),
     decoderInit { a with parseFloat := some (false, h) } = decoderInit { a with parseFloat := none } ∧
     decoderInit { a with parseInt := some (false, h) } = decoderInit { a with parseInt := none } ∧
@@ -116,7 +170,10 @@ def DecoderInit : Prop :=
       .error (.typeError s!"JSONDecoder.__init__() got an unexpected keyword argument '{k}'"))
 
 theorem decoderInit_proven : DecoderInit := by
-  refine ⟨rfl, fun a h => ⟨?_, ?_, ?_⟩, fun _ _ _ => rfl⟩ <;> rfl
+  refine ⟨rfl, fun a ha => ?_, fun a h => ⟨?_, ?_, ?_⟩, fun _ _ _ => rfl⟩
+  · simp only [decoderInit, ha]
+    exact ⟨_, rfl, rfl, rfl, rfl⟩
+  all_goals rfl
 
 /-! ### `_decode_uXXXX` -/
 
@@ -132,9 +189,9 @@ theorem decodeUXXXX_proven : DecodeUXXXX := by
     simp only [decodeUXXXX, show p + 1 + 1 = p + 2 from rfl, this]
   · simp only [decodeUXXXX, h]
 
-/-! ### `encoder_encode_string` -/
+/-! ### `encoder_write_string` -/
 
-/-- `encoder_encode_string`: with `fast_encode` the C function; with any other
+/-- `encoder_write_string`: with `fast_encode` the C function; with any other
 `encoder` its result, which must be a `str`. -/
 def EncoderString : Prop :=
   ∀ (cfg : ECfg) (s : PStr),

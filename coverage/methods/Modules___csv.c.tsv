@@ -20,7 +20,7 @@ Modules/_csv.c	349	363	dialect_check_char	dialect_check_char(const char *name, P
 Modules/_csv.c	366	373	dialect_check_chars	dialect_check_chars(const char *name1, const char *name2, Py_UCS4 c1, Py_UCS4 c2)	modelled	textlibs-csv-dialect-valid	
 Modules/_csv.c	396	403	Dialect_dealloc	Dialect_dealloc(PyObject *self)	excluded		no-behaviour: tp_dealloc only drops references; a stated scope limit, as we have no finalization model
 Modules/_csv.c	419	432	_csv_state_from_type	_csv_state_from_type(PyTypeObject *type, const char *name)	excluded		no-behaviour: fetches the C module state pointer; nothing Python-visible
-Modules/_csv.c	435	575	dialect_new	dialect_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	todo		changed-in-3.15: was textlibs-csv-dialect-reuse,textlibs-csv-getattr-cleared,textlibs-csv-dialect-keywords,textlibs-csv-dialect-arg-errors,textlibs-csv-dialect-unknown-name,textlibs-csv-dialect-new-valid,textlibs-csv-subclass-attrs
+Modules/_csv.c	435	575	dialect_new	dialect_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)	modelled	textlibs-csv-dialect-reuse,textlibs-csv-getattr-cleared,textlibs-csv-dialect-keywords,textlibs-csv-dialect-arg-errors,textlibs-csv-dialect-unknown-name,textlibs-csv-dialect-new-valid,textlibs-csv-subclass-attrs	
 Modules/_csv.c	583	587	Dialect_reduce	Dialect_reduce(PyObject *self, PyObject *args) {	modelled	textlibs-csv-no-pickle	
 Modules/_csv.c	601	606	Dialect_clear	Dialect_clear(PyObject *op)	excluded		no-behaviour: tp_clear only drops references; a stated scope limit, as we have no finalization model
 Modules/_csv.c	609	615	Dialect_traverse	Dialect_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC slot; nothing Python-visible

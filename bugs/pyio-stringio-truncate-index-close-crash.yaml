@@ -1,0 +1,65 @@
+id: pyio-stringio-truncate-index-close-crash
+title: "io.StringIO.truncate crashes the interpreter when __index__ closes a stream still accumulating"
+priority: P3
+kind: crash
+module: pyio
+files: [Modules/_io/stringio.c]
+functions: ["_io_StringIO_truncate_impl", "_io_StringIO_close_impl", "realize"]
+summary: |
+  3.15 moved the argument conversion of StringIO.truncate into the body of the method, after
+  CHECK_CLOSED, so `pos.__index__` now runs on a stream already checked as open, and nothing checks
+  again. If __index__ closes the stream, close() discards self->writer and sets it to NULL but
+  leaves self->state and self->string_size alone. A stream that has only been written to is still
+  in STATE_ACCUMULATING, so when the size is below string_size, ENSURE_REALIZED calls realize(),
+  which passes the NULL writer to PyUnicodeWriter_Finish and dereferences it. The process dies with
+  SIGSEGV. In the 3.14.7 source the clinic converter runs first, so CHECK_CLOSED would see the
+  closed stream and raise ValueError. BytesIO.truncate, which already converted in its body, gained
+  a second CHECK_CLOSED after the conversion in 3.15; StringIO did not.
+likelihood: |
+  Low. It needs an __index__ that closes the stream it is the size of. It is reachable from pure
+  Python with no unusual setup, which is why it is a crash and not just a wrong answer.
+maybe_intended: |
+  No. main adds the re-check (GH-160398).
+reproducer: |
+  import subprocess, sys
+  code = '''
+  import io
+  class Closes:
+      def __init__(self, f):
+          self.f = f
+      def __index__(self):
+          self.f.close()
+          return 0
+  f = io.StringIO()
+  f.write('abc')
+  print(f.truncate(Closes(f)))
+  '''
+  r = subprocess.run([sys.executable, '-I', '-c', code], capture_output=True, text=True)
+  print('exit status', r.returncode, repr(r.stderr[-200:]))
+  if r.returncode < 0:
+      print('REPRODUCED pyio-stringio-truncate-index-close-crash')
+expected: |
+  ValueError: I/O operation on closed file, as on main.
+observed: |
+  python3 3.15.2: exit status -11 (SIGSEGV). REPRODUCED.
+  main (python.exe 3.16.0a1+dev): ValueError: I/O operation on closed file. NOT REPRODUCED (fixed).
+promised_by: |
+  Invariant: no crash from pure Python code.
+cause: |
+  Modules/_io/stringio.c:465 checks closed before :472 PyLong_AsLong runs __index__. :601-602 in
+  _io_StringIO_close_impl clear self->writer without changing self->state, and :484 ENSURE_REALIZED
+  reaches :165 PyUnicodeWriter_Finish(self->writer) with NULL.
+possible_fix: |
+  Already on main: CHECK_INITIALIZED and CHECK_CLOSED again after the conversion, as
+  _io_BytesIO_truncate_impl does at Modules/_io/bytesio.c:713-714. It needs a backport to 3.15.
+duplicates:
+  status: duplicate
+  issues:
+    - {number: 159739, state: open, relation: "umbrella issue; GH-160398 adds the re-check to main", reason: "merged 2026-10-24; `gh api commits?path=Modules/_io/stringio.c&sha=3.15` shows no backport"}
+    - {number: 150695, state: closed, relation: "same function, a free-threading race between __init__ and truncate", reason: "different bug"}
+  queries: ["StringIO truncate __index__ crash", "StringIO truncate segfault", "StringIO truncate __index__ (PRs)",
+            "commits touching Modules/_io/stringio.c on main and on 3.15 (gh api)", "gh-159739", "GH-160398",
+            "bugforge README: no io entries"]
+lean:
+  property: PyLean.PyIO.StringIOTruncateNoCrash
+  theorem: PyLean.PyIO.stringIOTruncateNoCrash_refuted

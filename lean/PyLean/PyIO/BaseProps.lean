@@ -72,4 +72,65 @@ theorem baseClosedProtocol_proven : BaseClosedProtocol := by
       (cases h : u.isClosed <;> simp [BC.step, BP.step, h, closedDotE])
   · cases h : u.isClosed <;> simp [BC.step, BP.step, h, closedDotE]
 
+theorem nlPrefix_cons (x : Nat) (xs : List Nat) :
+    nlPrefix (x :: xs) = if x = 10 then 1 else 1 + nlPrefix xs := by
+  unfold nlPrefix
+  simp only [findIdx?]
+  by_cases h : x = 10
+  · simp [h]
+  · simp only [h, ite_false]
+    cases findIdx? xs 10 <;> simp <;> omega
+
+theorem scanNl_eq (R : Int) : ∀ (l : List Nat) (n : Nat), (n : Int) ≤ R →
+    (BC.scanNl R n l : Int) = min ((n + nlPrefix l : Nat) : Int) R := by
+  intro l
+  induction l with
+  | nil => intro n h; simp [BC.scanNl, nlPrefix, findIdx?]; omega
+  | cons x xs ih =>
+    intro n h
+    simp only [BC.scanNl, nlPrefix_cons]
+    by_cases hR : (n : Int) ≥ R
+    · simp only [hR, ite_true]; split <;> omega
+    · simp only [hR, ite_false]
+      by_cases hx : x = 10
+      · simp only [hx, ite_true]; omega
+      · simp only [hx, ite_false]
+        rw [ih (n + 1) (by omega)]
+        omega
+
+/-- The bytes `IOBase.readline` asks for after a non-empty `peek`: up to and including
+the first newline in what `peek` returned, but no more than the `size - len(res)`
+still wanted, or to the first newline if `size` is negative (both twins). Until 3.15
+both bounded this by `size`, so a line assembled over several peeks could overshoot. -/
+def ReadlineReadahead : Prop := ∀ (limit : Int) (len : Nat) (r : List Nat), r ≠ [] →
+  ((len : Int) < limit →
+    (BC.readahead limit len r : Int) = min (nlPrefix r : Int) (limit - len) ∧
+    BP.nreadahead limit len (.bytes r) = .ok (BC.readahead limit len r)) ∧
+  (limit < 0 → BC.readahead limit len r = nlPrefix r ∧ BP.nreadahead limit len (.bytes r) = .ok (nlPrefix r))
+
+theorem readlineReadahead_proven : ReadlineReadahead := by
+  intro limit len r hr
+  have hl : r.length > 0 := List.length_pos_iff.mpr hr
+  constructor
+  · intro h
+    have h0 : limit ≥ 0 := by omega
+    have e : (BC.readahead limit len r : Int) = min (nlPrefix r : Int) (limit - len) := by
+      simp only [BC.readahead, hl, h0, ite_true]
+      rw [scanNl_eq _ _ _ (by omega)]
+      simp
+    refine ⟨e, ?_⟩
+    cases r with
+    | nil => exact absurd rfl hr
+    | cons x xs =>
+      simp only [BP.nreadahead, h0, ite_true]
+      congr 1
+      omega
+  · intro h
+    have h0 : ¬ limit ≥ 0 := by omega
+    constructor
+    · simp [BC.readahead, hl, h0]
+    · cases r with
+      | nil => exact absurd rfl hr
+      | cons x xs => simp [BP.nreadahead, h0]
+
 end PyLean.PyIO

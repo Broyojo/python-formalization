@@ -30,8 +30,9 @@ expected: |
 observed: |
   python3 3.14.7: TypeError "'UserDict' object is not reversible". REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
-  Doc/library/stdtypes.rst@3.14.7:5556: "Dictionaries and dictionary views are reversible."
+  Doc/builtins/stdtypes.rst:5883: "Dictionaries and dictionary views are reversible."
   Doc/library/collections.rst:1341: "Class that simulates a dictionary."
 cause: |
   Lib/_collections_abc.py:824 `__reversed__ = None`, not overridden in Lib/collections/__init__.py:1175.

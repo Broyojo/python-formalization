@@ -173,7 +173,7 @@ theorem wk_yearMap (y m d : Int) : wk (yearMap y) m d = wk y m d := by
 
 theorem cIntArg_ok (x : Int) (h1 : -(2 ^ 31) ≤ x) (h2 : x ≤ 2 ^ 31 - 1) : cIntArg x = .ok x := by
   unfold cIntArg
-  rw [if_neg (by omega), if_neg (by omega), if_neg (by omega)]
+  rw [if_neg (by omega)]
 
 theorem mkDate_ok (y m d : Int) (h : ValidDate y m d) : mkDate y m d = .ok (y, m, d) := by
   have hb := (dimL_bounds (isLeap y) m ⟨h.2.2.1, h.2.2.2.1⟩).2

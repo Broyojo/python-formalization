@@ -45,7 +45,7 @@ possible_fix: |
   d.bit_length() with a correction step comparing against 10**m), and compare
   significand against 10**figures instead of measuring len(str(significand)).
 tested:
-  python3 (3.14.7): REPRODUCED
+  python3 (3.15.2): REPRODUCED
   main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
 duplicates:
   issues:

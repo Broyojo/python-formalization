@@ -12,7 +12,7 @@ summary: |
   hides the rest of the string: datetime.fromisoformat('2020-01-01T12:00Z\x00junk') and
   time.fromisoformat('12:00Z\x00anything') return 12:00 UTC. The pure-Python
   implementation rejects both, as does C without the NUL ('...Zjunk'). This is still the
-  case on main. On 3.14.7 the NUL also ends the time in other positions
+  case on main. On 3.15.2 the NUL also ends the time in other positions
   ('2020-01-01T12\x00', '12:00:00.123456\x00 trailing text'), which gh-159224 fixed on
   main as a side effect of rejecting stray text before an offset.
 likelihood: |
@@ -45,12 +45,12 @@ promised_by: |
   C/Python twin agreement (Lib/_pydatetime.py is the reference implementation; both are
   tested against the same vectors), and the fromisoformat docs (only valid ISO 8601 text).
 cause: |
-  Modules/_datetimemodule.c:1133-1143 (3.14.7; unchanged on main) tests
+  Modules/_datetimemodule.c:1133-1143 (3.15.2; unchanged on main) tests
   `*(tzinfo_pos + 1) != '\0'` rather than `tzinfo_pos + 1 != p_end`.
 possible_fix: |
   Replace the NUL test with a length test: `if (tzinfo_pos + 1 != p_end) return -5;`.
 reproduces:
-  python3 (3.14.7): REPRODUCED
+  python3 (3.15.2): REPRODUCED
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
 duplicates:
   issues:

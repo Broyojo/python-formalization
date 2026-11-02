@@ -48,7 +48,10 @@ def stepOp (s : BufS) : BfOp → BufS × Py Val
     -- a writer inherits `_io__BufferedIOBase_read_impl`, bufferedio.c:166
     if !s.readable then (s, .error (unsupportedOp "read")) else
     (wrapArg (optSsize (-1) n) read) s
-  | .read1 n => (wrapArg (argSsize n) read1) s
+  | .read1 n =>
+    -- a writer inherits `_io__BufferedIOBase_read1_impl`, bufferedio.c:189-195
+    if !s.readable then (s, .error (unsupportedOp "read1")) else
+    (wrapArg (argSsize n) read1) s
   | .peek n =>
     if !s.readable then
       (s, .error (.named "AttributeError" "'_io.BufferedWriter' object has no attribute 'peek'")) else
@@ -107,7 +110,9 @@ def stepOp (s : BufP) : BfOp → BufP × Py Val
   | .read n =>
     if s.kind = 1 then (s, .error (unsupportedOp "BufferedWriter.read() not supported")) else
     (read n) s
-  | .read1 n => (read1 n) s
+  | .read1 n =>
+    if s.kind = 1 then (s, .error (unsupportedOp "BufferedWriter.read1() not supported")) else
+    (read1 n) s
   | .peek n =>
     if s.kind = 1 then
       (s, .error (.named "AttributeError" "'BufferedWriter' object has no attribute 'peek'")) else

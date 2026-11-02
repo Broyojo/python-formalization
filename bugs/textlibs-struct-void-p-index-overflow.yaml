@@ -34,7 +34,7 @@ reproducer: |
 expected: |
   The same exception as for the equal int, as with every other integer code.
 observed: |
-  python3 3.14.7: error / OverflowError. REPRODUCED.
+  python3 3.15.2: error / OverflowError. REPRODUCED.
   main 3.16.0a1+dev (ef1fce0): error / OverflowError. REPRODUCED.
 promised_by: |
   invariant: struct documents struct.error for out-of-range values.

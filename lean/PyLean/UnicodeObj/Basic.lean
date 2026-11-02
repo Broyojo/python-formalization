@@ -3,7 +3,7 @@ import PyLean.StrSearch.Model
 
 /-!
 Shared vocabulary of the `UnicodeObj` model (`Objects/unicodeobject.c`,
-CPython 3.14.7).
+CPython 3.15.2).
 
 A `str` is the list of its code points and a `bytes` the list of its byte
 values. Code points are `Nat`, not `Char`: Python strings can hold lone

@@ -60,7 +60,7 @@ theorem gcd_lt_of (r x M : Nat) (hr : r < M) (hx : x < M) : Nat.gcd r x < M := b
   · rw [h, Nat.gcd_zero_right]; exact hr
   · exact Nat.lt_of_le_of_lt (Nat.gcd_le_right _ h) hx
 
-/-- The loop of `math_gcd_impl` (mathmodule.c@3.14.7:742-758) from a nonnegative
+/-- The loop of `math_integer_gcd_impl` (mathintegermodule.c:54-70) from a nonnegative
 running value `res`. -/
 theorem gcdLoop_spec : ∀ (xs : List Int) (res : Nat), res < 2 ^ 60 →
     (∀ x ∈ xs, x.natAbs < 2 ^ 60) →

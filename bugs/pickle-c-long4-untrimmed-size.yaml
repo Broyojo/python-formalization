@@ -39,6 +39,7 @@ reproducer: |
 expected: |
   Both picklers accept every int whose encoding fits LONG4's signed length.
 observed: |
+  python3 3.15.2: REPRODUCED.
   python3 3.14.7: C OverflowError 'int too large to pickle'; Python writes 2147483655 bytes. REPRODUCED.
   main (python.exe 3.16.0a1+dev): REPRODUCED, same behaviour.
 promised_by: |

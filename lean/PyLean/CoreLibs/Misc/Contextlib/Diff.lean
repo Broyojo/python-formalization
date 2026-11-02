@@ -408,17 +408,38 @@ def runStack (j : Json) : Except String Json := do
     | "push_fn" =>
       let f ← beh 2
       let ret : Stack XF XF Unit := if ← jBoolAt op 3
-        then pushAsyncExit (fun _ => none) id x.2 f
-        else push (fun _ => none) id x.2 f
+        then (pushAsyncExit (fun _ => none) id x.2 f).1
+        else (push (fun _ => none) id x.2 f).1
       x := (x.1, ret)
       out := out.push (toJson f.1)
     | "push_cm" =>
       let f ← beh 2
+      let look : ExitLookup XF XF Unit := fun o => some (.get (.ok (.bound o o)))
       let ret : Stack XF XF Unit := if ← jBoolAt op 3
-        then pushAsyncExit (fun o => some o) id x.2 f
-        else push (fun o => some o) id x.2 f
+        then (pushAsyncExit look id x.2 f).1
+        else (push look id x.2 f).1
       x := (x.1, ret)
       out := out.push (toJson f.1)
+    | "push_static" =>
+      let f ← beh 2
+      let kind ← jStrAt op 4
+      let look : ExitLookup XF XF Unit := fun o =>
+        some (match kind with
+          | "class" => .isClass (.raw o)
+          | "noget" => .noGet (.raw o)
+          | _ => .get (.ok (.raw o)))
+      let ret : Stack XF XF Unit := if ← jBoolAt op 3
+        then (pushAsyncExit look id x.2 f).1
+        else (push look id x.2 f).1
+      x := (x.1, ret)
+      out := out.push (toJson f.1)
+    | "push_descfail" =>
+      let (s, e) := x.1.raiseNew (clsOf "ValueError") "descr"
+      let isAsync ← jBoolAt op 1
+      let look : ExitLookup XF XF Unit := fun _ => some (.get (.error e))
+      let (st, r) := if isAsync then pushAsyncExit look id x.2 (0, .ret false) else push look id x.2 (0, .ret false)
+      x := (s, st)
+      out := out.push (encRes x.1.g.labels x.1.h (fun _ => Json.null) r)
     | "callback" =>
       let f ← beh 2
       x := (x.1, if ← jBoolAt op 3 then pushAsyncCallback x.2 f () else callback x.2 f ())
@@ -428,24 +449,32 @@ def runStack (j : Json) : Except String Json := do
       let en : Int ← jIntAt op 3
       let en2 ← jBoolAt op 4
       let isAsync ← jBoolAt op 5
-      let m : XF → Option ((Xs SW XF XF Unit → Xs SW XF XF Unit × Res Int) × XF) := fun o =>
-        some ((fun x =>
+      let m : XF → Option (Descr (Xs SW XF XF Unit → Xs SW XF XF Unit × Res Int)) := fun _ =>
+        some (.get (.ok (fun x =>
           if en2 then
             let (s, e) := x.1.raiseNew (clsOf "ValueError") "enter"
             ((s, x.2), .error e)
-          else (x, .ok en)), o)
-      let (x', r) := enterContext m "" "" (!isAsync) x f
+          else (x, .ok en))))
+      let (x', r) := enterContext m (fun o => some (.get (.ok (.bound o o)))) "" (!isAsync) x f
       x := x'
       out := out.push (encRes x.1.g.labels x.1.h jInt r)
     | "enter_bad" =>
-      let msg := if ← jBoolAt op 1
-        then "'__main__.MiscNoCM' object does not support the asynchronous context manager protocol"
-        else "'__main__.MiscNoCM' object does not support the context manager protocol"
-      let attr := if ← jBoolAt op 1
-        then "type object 'MiscNoCM' has no attribute '__aenter__'"
-        else "type object 'MiscNoCM' has no attribute '__enter__'"
-      let m : XF → Option ((Xs SW XF XF Unit → Xs SW XF XF Unit × Res Int) × XF) := fun _ => none
-      let (x', r) := enterContext m msg attr true x (0, .ret false)
+      let isAsync ← jBoolAt op 1
+      let kind ← jStrAt op 2
+      let tail := if isAsync then "asynchronous context manager protocol" else "context manager protocol"
+      let msg := s!"'__main__.{if kind == "noexit" then "MiscNoExit" else "MiscNoCM"}' object does not support the {tail}"
+      let body : Xs SW XF XF Unit → Xs SW XF XF Unit × Res Int := fun x => (x, .ok 0)
+      let (x', r) ← match kind with
+        | "none" => pure (enterContext (fun _ => none) (fun _ => none) msg true x ((0, .ret false) : XF))
+        | "noexit" => pure (enterContext (fun _ => some (.noGet body)) (fun _ => none) msg true x ((0, .ret false) : XF))
+        | "enterfail" =>
+          let (s, e) := x.1.raiseNew (clsOf "ValueError") "descr"
+          let y : Xs SW XF XF Unit := (s, x.2)
+          pure (enterContext (fun _ => some (.get (.error e))) (fun _ => none) msg true y ((0, .ret false) : XF))
+        | _ =>
+          let (s, e) := x.1.raiseNew (clsOf "ValueError") "descr"
+          let y : Xs SW XF XF Unit := (s, x.2)
+          pure (enterContext (fun _ => some (.noGet body)) (fun _ => some (.get (.error e))) msg true y ((0, .ret false) : XF))
       x := x'
       out := out.push (encRes x.1.g.labels x.1.h jInt r)
     | "pop_all" =>

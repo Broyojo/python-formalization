@@ -3,7 +3,7 @@ import PyLean.UnicodeObj.CodecWide
 /-!
 ASCII and Latin-1: `unicode_encode_ucs1` (unicodeobject.c:7245-7425),
 `PyUnicode_DecodeASCII` (:7453-7549), `PyUnicode_DecodeLatin1` (:7136-7142), with the
-`backslashreplace` (@3.14.7:851-912) and `xmlcharrefreplace` (@3.14.7:917-971) writers.
+`backslashreplace` (unicodeobject.c:763-825) and `xmlcharrefreplace` (unicodeobject.c:830-891) writers.
 
 The decoder's fast paths (`ascii_decode` and the `replace`/`surrogateescape` case) write
 what the generic handler call would, so `decodeDriver` models them; the difftest checks it.
@@ -27,7 +27,7 @@ def escapedPrefix : List Nat → List Nat
   | [] => []
   | c :: cs => if isEscapedByte c then c :: escapedPrefix cs else []
 
-/-- The `while (pos < size)` of `unicode_encode_ucs1`, unicodeobject.c@3.14.7:7409-7537. -/
+/-- The `while (pos < size)` of `unicode_encode_ucs1`, unicodeobject.c:7276-7411. -/
 def ucs1EncodeLoop (input : Str) (limit : Nat) (h : ErrHandler) (nameOf : Nat → Option Str) :
     Nat → Nat → List Nat → Bytes → Py Bytes
   | 0, _, _, _ => .error .modelFuel

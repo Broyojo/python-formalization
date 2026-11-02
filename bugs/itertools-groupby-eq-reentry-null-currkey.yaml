@@ -11,7 +11,7 @@ summary: |
   comparison: next(groupby) starts a new group, and next() on that group goes through
   _grouper_next, which clears currvalue and currkey (:692-693). If __eq__ then returns False, the
   outer groupby_next takes the break with currkey NULL and dereferences it. Pure Python segfaults
-  the interpreter, on 3.14.7 and on main.
+  the interpreter, on 3.15.2 and on main.
   This is not the bug fixed by gh-143543 and gh-146613 (use-after-free of the keys during the
   comparison). Those fixes hold strong references to snapshots for the comparison; this is the read
   of the live field after it. The regression test of gh-143543 calls next(g) in __eq__ but does not
@@ -59,7 +59,7 @@ reproducer: |
 expected: |
   No crash. Any Python-level outcome will do: a new group, or an exception.
 observed: |
-  python3 3.14.7 (Linux build pod): SIGSEGV, exit status -11. The faulting address resolves to
+  python3 3.15.2 (Linux build pod): SIGSEGV, exit status -11. The faulting address resolves to
   groupby_next (nm on the binary), called from builtin_next with no __eq__ frame above it, so after
   the comparison returned. REPRODUCED.
   main (python.exe 3.16.0a1+dev ef1fce0): SIGSEGV, exit status -11. The code is the same there, at

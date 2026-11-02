@@ -447,6 +447,7 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) (hR : dc
             rw [hw]
             have n1 : ¬ (p + 1 ≥ s.length ∨ s.getD (p + 1) 0 ≠ 93) := by rw [h3]; simp; omega
             simp only [n1, ↓reduceIte, decV, List.map_nil]
+            rw [hR.arr]
             exact D.ok
           · obtain ⟨lvl', pre, sep, post, body, hpre, hpost, hsep, hb, rfl⟩ := cEnc_list_view hL hx he
             obtain ⟨c, r, hbody, hc⟩ := cEncList_head hL hxs hx hb
@@ -562,6 +563,7 @@ theorem dec_enc (cfg : ECfg) (dcfg : DCfg) (s : PStr) (hL : Layout cfg) (hR : dc
             simp only
             rw [cArrAfter_close_eval (drop_after hs') hpost]
             simp only [Int.toNat_natCast, List.map_cons, List.map_nil, List.length_append, List.length_nil]
+            rw [hR.arr]
             rfl
         | cons y ys' =>
           obtain ⟨b0, hb0, rfl⟩ := cEncList_one (b := b1) (by simpa using h2)

@@ -4,7 +4,7 @@ priority: P4
 kind: fast-slow-path-mismatch
 module: rangeslice
 files: [Objects/rangeobject.c]
-functions: ["rangeiter_setstate", "longrangeiter_setstate"]
+functions: ["range_iterator___setstate___impl", "longrange_iterator___setstate___impl"]
 summary: |
   The two range iterator types disagree on out-of-range __setstate__ arguments. The PyLong
   iterator (longrange_iterator) clips any int state into [0, len]. The C long iterator
@@ -18,7 +18,8 @@ likelihood: |
   iter(range(...)) with no state, so real pickles never call it with an out-of-range value.
   Only hand-written calls see the difference.
 maybe_intended: |
-  Probably tolerated. In the review of PR 141317 (gh-141312, which made longrangeiter_setstate
+  Probably tolerated. In the review of PR 141317 (gh-141312, which made longrangeiter_setstate, now
+  longrange_iterator___setstate___impl,
   reject non-exact ints) Serhiy Storchaka wrote that rejecting non-exact ints in one iterator
   and accepting them in the other is fine and that such differences are implementation
   details ("they are never raised in real world"). The big-int case here is the same kind of
@@ -47,7 +48,7 @@ reproducer: |
 expected: |
   Both iterator types clip an exact-int state into [0, len] (or both raise).
 observed: |
-  python3 3.14.7: range_iterator raises "OverflowError: Python int too large to convert to C
+  python3 3.15.2: range_iterator raises "OverflowError: Python int too large to convert to C
   long"; longrange_iterator clips (remaining 0, resp. next() == 2**64). REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |
@@ -55,10 +56,10 @@ promised_by: |
   (longrange_iterator) of the same object type behave alike.
 cause: |
   Objects/rangeobject.c:929 `long index = PyLong_AsLong(state);` propagates OverflowError
-  before the clipping at :932-936, whereas longrangeiter_setstate (:1099-1142) compares and
+  before the clipping at :932-936, whereas longrange_iterator___setstate___impl (:1099-1142) compares and
   clips in PyLong arithmetic.
 possible_fix: |
-  Use PyLong_AsLongAndOverflow() in rangeiter_setstate and map overflow > 0 to r->len and
+  Use PyLong_AsLongAndOverflow() in range_iterator___setstate___impl and map overflow > 0 to r->len and
   overflow < 0 to 0 before the existing clipping.
 duplicates:
   issues:

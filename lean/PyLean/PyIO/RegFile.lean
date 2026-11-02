@@ -34,7 +34,13 @@ def fileEntries : List Entry := [
       "IOBase.__enter__", "IOBase.__iter__", "IOBase.isatty"]
     statement := "closed reports the closed flag. On an open object __enter__, __iter__ and _checkClosed succeed and isatty() is False; on a closed object each raises ValueError('I/O operation on closed file.') (both twins)."
     source := "Doc/library/io.rst (IOBase.closed, IOBase: 'calling any method on a closed stream ... ValueError'); invariant: C and Python twins agree"
-    status := .proven, prop := ``BaseClosedProtocol, thm := some ``baseClosedProtocol_proven }
+    status := .proven, prop := ``BaseClosedProtocol, thm := some ``baseClosedProtocol_proven },
+  { id := "pyio-iobase-readline-readahead", pyFile := "Lib/_pyio.py"
+    pyFns := ["IOBase.readline"]
+    statement := "After a non-empty peek, IOBase.readline asks to read through the first newline of what peek returned, but no more than size - len(res) bytes, or simply through the first newline if size is negative; the C and Python twins compute the same number."
+    source := "invariant: C accelerator vs pure-Python twin; Lib/_pyio.py:516 ('at most size bytes will be read'); iobase.c:612"
+    status := .proven, prop := ``ReadlineReadahead, thm := some ``readlineReadahead_proven
+    notes := "States the step 3.15 changed. The whole loop is bounded in pyio-bufferedreader-readline-bound." }
 ]
 
 end PyLean.PyIO

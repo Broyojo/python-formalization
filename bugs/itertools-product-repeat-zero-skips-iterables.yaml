@@ -63,7 +63,7 @@ reproducer: |
 expected: |
   TypeError for product(5, repeat=0), as for every other repeat and in the doc equivalent.
 observed: |
-  python3 3.14.7 (Linux build pod): product(5, repeat=0) gives [()], the doc equivalent raises
+  python3 3.15.2 (Linux build pod): product(5, repeat=0) gives [()], the doc equivalent raises
   TypeError, and a generator passed with repeat=0 is never started. REPRODUCED.
   main (python.exe 3.16.0a1+dev ef1fce0): identical. REPRODUCED.
 promised_by: |

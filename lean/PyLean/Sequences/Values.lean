@@ -2,12 +2,14 @@ import PyLean.Sequences.Common
 
 /-!
 Python values that `array.array` reads and writes (`Modules/arraymodule.c`,
-CPython 3.14.7), with the conversions of `PyArg_Parse`.
+CPython 3.15.2), with the conversions of `PyArg_Parse`.
 
-* Floats are binary64 bit patterns, single floats binary32 bit patterns, so that
+* Floats are binary64 bit patterns, single floats binary32 and `e` items binary16
+  bit patterns, and a complex is the pair of its parts' binary64 patterns, so that
   storing, loading, `tobytes` and `byteswap` are exact integer operations. The
-  conversions (`int` to `double`, `double` to `float`) and the comparisons are
-  exact arithmetic on those patterns; `lean/PyLean/Binary64/` has no model yet.
+  conversions (`int` to `double`, `double` to `float`, `PyFloat_Pack2`,
+  `PyFloat_Unpack2`, `PyFloat_Unpack4`) and the comparisons are exact arithmetic on
+  those patterns; `lean/PyLean/Binary64/` has no model of these.
   NaN conversion follows the hardware (the quiet bit is set, the payload is kept
   in its top bits), which C leaves unspecified.
 * LP64: `short` 16, `int` and `wchar_t` 32 (signed), `long` and `long long` 64 bits.
@@ -22,6 +24,7 @@ open PyLean
 inductive PyVal where
   | int (n : Int)
   | float (bits : Nat)
+  | complex (re im : Nat)
   | str (cps : List Nat)
   | obj (tname : String) (index : Option Int)
   deriving Repr, DecidableEq, Inhabited
@@ -31,6 +34,7 @@ instance : Inhabited PyVal := ⟨.int 0⟩
 def PyVal.typeName : PyVal → String
   | .int _ => "int"
   | .float _ => "float"
+  | .complex _ _ => "complex"
   | .str _ => "str"
   | .obj t _ => t
 
@@ -91,6 +95,17 @@ def asDouble (v : PyVal) : Py Nat :=
   | .obj _ (some n) => ofInt n
   | v => .error (.typeError s!"must be real number, not {v.typeName}")
 
+/-- `PyComplex_AsCComplex` (Objects/complexobject.c:537-571) on the values we model:
+a complex is itself, anything else is `PyFloat_AsDouble` with imaginary part 0. No
+modelled object has `__complex__`. -/
+def asComplex (v : PyVal) : Py (Nat × Nat) :=
+  match v with
+  | .complex re im => .ok (re, im)
+  | v =>
+    match asDouble v with
+    | .ok b => .ok (b, 0)
+    | .error e => .error e
+
 /-- `(float)x`, round to nearest even, on bit patterns. -/
 def doubleToFloat (bits : Nat) : Nat :=
   let s := if bits ≥ two63 then 2147483648 else 0
@@ -123,6 +138,58 @@ def floatToDouble (bits : Nat) : Nat :=
       let L := bitLength f
       s + ((L + 873) <<< 52) + ((f <<< (53 - L)) - two52)
   else s + ((e + 896) <<< 52) + (f <<< 29)
+
+/-- `PyFloat_Unpack4` (Objects/floatobject.c:2146-2201) on a binary32 pattern: `(double)x`,
+except that a signalling NaN stays signalling (:2165-2177). -/
+def unpack4 (bits : Nat) : Nat :=
+  let y := floatToDouble bits
+  if (bits % 2147483648) >>> 23 = 255 ∧ bits % 8388608 ≠ 0 ∧ bits % 8388608 < 4194304 then
+    y - 2251799813685248
+  else y
+
+/-- `PyFloat_Unpack2` (Objects/floatobject.c:2090-2143), the binary64 pattern of a
+binary16 pattern. A NaN keeps its 10 bits at the top of the fraction (:2118-2124). -/
+def halfToDouble (h : Nat) : Nat :=
+  let s := if h ≥ 32768 then two63 else 0
+  let e := (h % 32768) >>> 10
+  let f := h % 1024
+  if e = 31 then s + (2047 <<< 52) + (f <<< 42)
+  else if e = 0 then
+    if f = 0 then s
+    else
+      let L := bitLength f
+      s + ((L + 998) <<< 52) + ((f <<< (53 - L)) - two52)
+  else s + ((e + 1008) <<< 52) + (f <<< 42)
+
+/-- The error of `PyFloat_Pack2` (Objects/floatobject.c:1996-1999). -/
+def packHalfErr : PyExc := .overflowError "float too large to pack with e format"
+
+/-- `PyFloat_Pack2` (Objects/floatobject.c:1895-2000) on a binary64 pattern: the binary16
+pattern, or `OverflowError`. `be = 0` is a zero, or a subnormal double, which `frexp` puts
+far below `2**-25`, so both give a signed zero. `e` is the exponent `frexp` gives after
+normalising to `[1, 2)`. In the gradual underflow branch `f * 2**(14 + e) * 1024` is
+`m / 2**(28 - e)` for the 53-bit `m`; a carry to 1024 there is the smallest normal, as in
+the source (`bits = 0`, `e = 1`). -/
+def packHalf (bits : Nat) : Py Nat :=
+  let s : Nat := if bits ≥ two63 then 32768 else 0
+  let be := (bits % two63) >>> 52
+  let f := bits % two52
+  if be = 2047 then
+    if f = 0 then .ok (s + 31744)
+    else
+      -- NaN: the top 10 bits of the fraction, or the quiet bit if those are 0
+      let b := f >>> 42
+      .ok (s + 31744 + (if b = 0 then 512 else b))
+  else if be = 0 then .ok s
+  else
+    let e : Int := (be : Int) - 1023
+    if e ≥ 16 then .error packHalfErr
+    else if e < -25 then .ok s
+    else if e < -14 then .ok (s + roundShift (two52 + f) (28 - e).toNat)
+    else
+      let q := roundShift f 42
+      let (q, e') : Nat × Nat := if q = 1024 then (0, (e + 16).toNat) else (q, (e + 15).toNat)
+      if e' = 31 then .error packHalfErr else .ok (s + (e' <<< 10) + q)
 
 /-- A decoded binary64: NaN, infinity with a sign, or `m * 2^e`. -/
 inductive DVal where
@@ -160,6 +227,12 @@ def PyVal.num : PyVal → Option DVal
   | .float b => some (decodeDouble b)
   | _ => none
 
+/-- The parts of a number as `complex_richcompare` sees them
+(Objects/complexobject.c:819-869, `Py_EQ` and `Py_NE` only): an int or float has imaginary part 0. -/
+def PyVal.parts : PyVal → Option (DVal × DVal)
+  | .complex re im => some (decodeDouble re, decodeDouble im)
+  | v => v.num.map (fun x => (x, .finite 0 0))
+
 def opSym : CmpOp → String
   | .lt => "<" | .le => "<=" | .eq => "==" | .ne => "!=" | .gt => ">" | .ge => ">="
 
@@ -186,9 +259,12 @@ def pvEq (a b : PyVal) : Bool :=
   | a, b =>
     match a.num, b.num with
     | some x, some y => numOrder x y == some .eq
-    | _, _ => false
+    | _, _ =>
+      match a.parts, b.parts with
+      | some (r, i), some (r', i') => numOrder r r' == some .eq && numOrder i i' == some .eq
+      | _, _ => false
 
-/-- `PyObject_RichCompare(a, b, op)` on these values. -/
+/-- `PyObject_RichCompare(a, b, op)` on these values. A complex has no order. -/
 def pvRich (op : CmpOp) (a b : PyVal) : Py Bool :=
   match a, b with
   | .str x, .str y => .ok (opHolds op (strOrder x y))
@@ -200,8 +276,8 @@ def pvRich (op : CmpOp) (a b : PyVal) : Py Bool :=
       | none => .ok (op == .ne)
     | _, _ =>
       match op with
-      | .eq => .ok false
-      | .ne => .ok true
+      | .eq => .ok (pvEq a b)
+      | .ne => .ok (!pvEq a b)
       | op => .error (.typeError
           s!"'{opSym op}' not supported between instances of '{a.typeName}' and '{b.typeName}'")
 

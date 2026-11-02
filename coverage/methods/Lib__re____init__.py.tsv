@@ -13,6 +13,6 @@ Lib/re/__init__.py	307	315	escape	escape(pattern)	todo
 Lib/re/__init__.py	332	374	_compile	_compile(pattern, flags)	modelled	textlibs-re-compile-law	
 Lib/re/__init__.py	377	379	_compile_template	_compile_template(pattern, repl)	todo		
 Lib/re/__init__.py	385	386	_pickle	_pickle(p)	todo		
-Lib/re/__init__.py	394	413	Scanner.__init__	__init__(self, lexicon, flags=0)	todo		changed-in-3.15: was textlibs-re-scanner-agrees-compile
-Lib/re/__init__.py	414	433	Scanner.scan	scan(self, string)	todo		changed-in-3.15: was textlibs-re-scanner-agrees-compile
-Lib/re/__init__.py	436	442	__getattr__	__getattr__(name)	todo		changed-in-3.15: new function
+Lib/re/__init__.py	394	413	Scanner.__init__	__init__(self, lexicon, flags=0)	modelled	textlibs-re-scanner-agrees-compile	
+Lib/re/__init__.py	414	433	Scanner.scan	scan(self, string)	modelled	textlibs-re-scanner-agrees-compile	
+Lib/re/__init__.py	436	442	__getattr__	__getattr__(name)	excluded		deprecated: module __getattr__ for re.__version__, removed in 3.20; it warns, returns a constant and raises AttributeError for anything else

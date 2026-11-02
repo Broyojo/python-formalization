@@ -19,7 +19,7 @@ import PyLean.Sequences.CollectionsProps
 `collections.deque`, `collections.defaultdict`, `_count_elements`, `_tuplegetter`
 (`Modules/_collectionsmodule.c`), `list` (`Objects/listobject.c`, the methods shared with
 deque and array; the rest of that file belongs to `BytesObj`) and `array.array`
-(`Modules/arraymodule.c`, all typecodes), CPython 3.14.7. `deque` and `list` are generic in
+(`Modules/arraymodule.c`, all typecodes), CPython 3.15.2. `deque` and `list` are generic in
 the element type, with comparison as an explicit function; the deque model keeps the C
 struct's `leftindex`, `rightindex` and `maxlen`, does the block arithmetic of every walk,
 and its layout invariant (`Deque.WF`) is a hypothesis of the deque properties and is shown
@@ -54,12 +54,12 @@ def entries : List Entry := [
     pyFns := ["deque_item_lock_held", "deque_item", "deque_ass_item_lock_held", "deque_ass_item",
       "deque_del_item", "valid_index", "list_subscript", "list_ass_item_lock_held"]
     statement := "For every element type and every int i (any size): l[i], l[i] = v, del l[i], d[i], d[i] = v and del d[i] add len to a negative index and act on exactly item i when it is in range, raise IndexError otherwise (messages per type), and the deque's left/right block walks reach item i."
-    source := "invariant: sequence indexing; Doc/library/stdtypes.rst@3.14.7:1237-1242", status := .proven
+    source := "invariant: sequence indexing; Doc/builtins/stdtypes.rst:1513-1520", status := .proven
     prop := ``SubscriptAgree, thm := some ``subscriptAgree_proven },
   { id := "sequences-index-agree", pyFile := "Objects/listobject.c"
     pyFns := ["list_index_impl", "deque_index_impl"]
     statement := "For every element type, every equality function, every list l (len <= sys.maxsize) and any int start/stop: list.index and deque.index return the first matching position in range(*slice(start, stop).indices(len(l))) or raise ValueError."
-    source := "list/array/deque index docstrings; Doc/library/stdtypes.rst common sequence s.index(x[, i[, j]])", status := .proven
+    source := "list/array/deque index docstrings; Doc/builtins/stdtypes.rst common sequence s.index(x[, i[, j]])", status := .proven
     prop := ``IndexAgree, thm := some ``indexAgree_proven
     notes := "The deque's whole-block skip loop is covered." },
   { id := "sequences-insert-agree", pyFile := "Objects/listobject.c"
@@ -70,31 +70,31 @@ def entries : List Entry := [
   { id := "sequences-insert-is-slice-assign", pyFile := "Objects/listobject.c"
     pyFns := ["list_insert_impl", "list_ass_subscript_lock_held"]
     statement := "For every list l and every int i, l.insert(i, x) has the same effect as l[i:i] = [x]."
-    source := "Doc/library/stdtypes.rst@3.14.7:1336-1343", status := .refuted
+    source := "Doc/builtins/stdtypes.rst:1612-1615", status := .refuted
     prop := ``InsertIsSliceAssign, thm := some ``insertIsSliceAssign_refuted
     bug := some "sequences-insert-huge-index-vs-slice"
     notes := "|i| >= 2**63: insert raises OverflowError (Py_ssize_t clinic converter), the slice assignment clips. Very low value." },
   { id := "sequences-insert-is-slice-assign-ssize", pyFile := "Objects/listobject.c"
     pyFns := ["list_insert_impl", "list_ass_subscript_lock_held"]
     statement := "For every list l and every int i inside Py_ssize_t, l.insert(i, x) has the same effect as l[i:i] = [x]."
-    source := "Doc/library/stdtypes.rst@3.14.7:1336-1343", status := .proven
+    source := "Doc/builtins/stdtypes.rst:1612-1615", status := .proven
     prop := ``InsertIsSliceAssignSsize, thm := some ``insertIsSliceAssignSsize_proven },
   { id := "sequences-pop-remove-count-agree", pyFile := "Objects/listobject.c"
     pyFns := ["list_pop_impl", "deque_pop_impl", "deque_popleft_impl",
       "list_remove_impl", "deque_remove_impl", "list_count_impl", "deque_count_impl",
       "deque_contains", "deque_contains_lock_held"]
     statement := "For every element type, equality function, list l and optional int i: deque.pop()/popleft() equal list.pop()/pop(0) up to the empty-sequence message; remove(x) deletes the first equal item in both (ValueError otherwise); count(x) and x in d agree."
-    source := "invariant: same methods, three types; Doc/library/stdtypes.rst@3.14.7:1345-1359", status := .proven
+    source := "invariant: same methods, three types; Doc/builtins/stdtypes.rst:1622-1635", status := .proven
     prop := ``PopRemoveCountAgree, thm := some ``popRemoveCountAgree_proven },
   { id := "sequences-list-slice-assign", pyFile := "Objects/listobject.c"
     pyFns := ["list_ass_subscript_lock_held", "list_ass_slice_lock_held", "adjust_slice_indexes"]
     statement := "For every list (len <= sys.maxsize), every slice with int/None parts (any size, step 0 included) and every t: l[s] = t raises ValueError for step 0; with (a, b, c) = s.indices(len(l)) and L = len(range(a, b, c)), step 1 replaces l[a:max(a, b)] by t, any other step raises ValueError unless len(t) == L and replaces l[a + k*c] by t[k]."
-    source := "Doc/reference/simple_stmts.rst (slicing targets); Doc/library/stdtypes.rst@3.14.7:1244-1269 note (1)", status := .proven
+    source := "Doc/reference/simple_stmts.rst (slicing targets); Doc/builtins/stdtypes.rst:1520-1546 note (1)", status := .proven
     prop := ``ListSliceAssign, thm := some ``listSliceAssign_proven },
   { id := "sequences-array-slice-assign-agree", pyFile := "Modules/arraymodule.c"
     pyFns := ["array_ass_subscr"]
     statement := "For every array without exported buffers (any typecode), slice and same-typecode array t, a[s] = t gives the same items as list slice assignment, or an exception of the same class."
-    source := "Doc/library/stdtypes.rst@3.14.7:1252-1269 note (1); Doc/library/array.rst (arrays behave like lists)", status := .refuted
+    source := "Doc/builtins/stdtypes.rst:1528-1546 note (1); Doc/library/array.rst (arrays behave like lists)", status := .refuted
     prop := ``ArraySliceAssignAgree, thm := some ``arraySliceAssignAgree_refuted
     bug := some "sequences-array-extended-slice-empty-deletes"
     notes := "a[::2] = array('b') deletes the slice; list raises ValueError. bytearray behaves like array." },
@@ -168,7 +168,7 @@ def entries : List Entry := [
     prop := ``ArrayBytesRoundTrip, thm := some ``arrayBytesRoundTrip_proven },
   { id := "sequences-array-byteswap", pyFile := "Modules/arraymodule.c"
     pyFns := ["array_array_byteswap_impl"]
-    statement := "For every array of every typecode, byteswap reverses the bytes of each item, keeps the value range and is its own inverse."
+    statement := "For every array of every typecode, byteswap reverses the bytes of each item (of each part, real part first, for Zf and Zd), keeps the value range and is its own inverse."
     source := "Doc/library/array.rst byteswap", status := .proven
     prop := ``ArrayByteswap, thm := some ``arrayByteswap_proven },
   { id := "sequences-array-concat", pyFile := "Modules/arraymodule.c"
@@ -179,8 +179,27 @@ def entries : List Entry := [
   { id := "sequences-array-iter-extend", pyFile := "Modules/arraymodule.c"
     pyFns := ["array_iter_extend", "array_array_extend_impl"]
     statement := "a.extend(iterable) stores items one by one: a refused item or a raising iterator leaves the earlier items appended; a non-iterable raises TypeError."
+    source := "Doc/library/array.rst extend", status := .refuted
+    prop := ``ArrayIterExtend, thm := some ``arrayIterExtend_refuted
+    bug := some "sequences-array-e-ins1-overflow-keeps-slot"
+    notes := "array('e').extend([65536.0]) raises OverflowError and leaves one uninitialised item." },
+  { id := "sequences-array-iter-extend-exact", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_iter_extend", "array_array_extend_impl"]
+    statement := "a.extend(iterable), for every typecode, leaves the items stored one by one, plus the slot of an e item that passed the check of setitem(self, -1, v) and was refused by the store; for every other typecode a refused item or a raising iterator leaves exactly the earlier items; a non-iterable raises TypeError."
     source := "Doc/library/array.rst extend", status := .proven
-    prop := ``ArrayIterExtend, thm := some ``arrayIterExtend_proven },
+    prop := ``ArrayIterExtendExact, thm := some ``arrayIterExtendExact_proven },
+  { id := "sequences-array-ins1-atomic", pyFile := "Modules/arraymodule.c"
+    pyFns := ["ins1", "ins", "array_array_append_impl", "array_array_insert_impl", "e_setitem"]
+    statement := "For every array without exported buffers, a.append(v) or a.insert(i, v) that raises leaves the array as it was."
+    source := "invariant: a failed call changes nothing", status := .refuted
+    prop := ``ArrayIns1Atomic, thm := some ``arrayIns1Atomic_refuted
+    bug := some "sequences-array-e-ins1-overflow-keeps-slot"
+    notes := "array('e').append(65536.0): setitem(self, -1, v) packs nothing, the store after the resize raises OverflowError." },
+  { id := "sequences-array-ins1-failure", pyFile := "Modules/arraymodule.c"
+    pyFns := ["ins1", "ins", "array_array_append_impl", "array_array_insert_impl"]
+    statement := "For every typecode but e, append and insert of a value the store refuses raise its exception and leave the array as it was; a value that passes the first check and is refused by the store is an e item, and append raises with a new last slot."
+    source := "invariant: a failed call changes nothing", status := .proven
+    prop := ``ArrayIns1Failure, thm := some ``arrayIns1Failure_proven },
   { id := "sequences-array-repeat", pyFile := "Modules/arraymodule.c"
     pyFns := ["array_repeat", "array_inplace_repeat", "newarrayobject", "newarrayobject_untracked"]
     statement := "For every array and int n: a * n and a *= n give the same items as list repetition, OverflowError outside Py_ssize_t included."
@@ -271,7 +290,7 @@ def entries : List Entry := [
     prop := ``DefDictCopyReduce, thm := some ``defDictCopyReduce_proven },
   { id := "sequences-defdict-repr-init-or", pyFile := "Modules/_collectionsmodule.c"
     pyFns := ["defdict_repr", "defdict_init", "defdict_or"]
-    statement := "repr shows the factory, or None, or ... while printing it; __init__ refuses a non-callable and replaces the factory before dict.__init__ runs; | has the updated items and the defaultdict operand's type and factory, NotImplemented for a non-dict."
+    statement := "repr shows the factory, or None, or ... while printing it; __init__ refuses a non-callable and replaces the factory before dict.__init__ runs; | has the updated items and the defaultdict operand's type and factory, also with a frozendict operand, NotImplemented for anything else."
     source := "Doc/library/collections.rst defaultdict", status := .proven
     prop := ``DefDictReprInitOr, thm := some ``defDictReprInitOr_proven },
   { id := "sequences-count-agree", pyFile := "Modules/_collectionsmodule.c"
@@ -307,20 +326,20 @@ def entries : List Entry := [
   { id := "sequences-list-repeat", pyFile := "Objects/listobject.c"
     pyFns := ["list_inplace_repeat_lock_held", "list_repeat_lock_held"]
     statement := "For every list (len <= sys.maxsize) and int n: l *= n and l * n agree; outside Py_ssize_t both raise OverflowError; n <= 0 gives []; otherwise l repeated n times, with MemoryError exactly when that exceeds sys.maxsize items."
-    source := "Doc/library/stdtypes.rst@3.14.7:1263-1275 note (2)", status := .proven
+    source := "Doc/builtins/stdtypes.rst:1539-1552 note (2)", status := .proven
     prop := ``ListRepeat, thm := some ``listRepeat_proven },
   { id := "sequences-deque-copy-concat", pyFile := "Modules/_collectionsmodule.c"
     pyFns := ["deque_copy_impl", "deque___copy___impl", "deque_concat_lock_held", "deque_concat"]
     statement := "For every deque d, of any subclass and maxlen, and deque other: d.copy() has the same items and maxlen; d + other holds the last d.maxlen items of list(d) + list(other) with d's maxlen."
-    source := "Doc/library/collections.rst:507-511, 599-600", status := .refuted
-    prop := ``DequeCopyConcat, thm := some ``dequeCopyConcat_refuted
-    bug := some "sequences-deque-subclass-copy-maxlen-truncated"
-    notes := "A subclass goes through PyObject_CallFunction(type, \"Oi\", deque, maxlen): maxlen is read as an int." },
+    source := "Doc/library/collections.rst:507-511, 599-600", status := .proven
+    prop := ``DequeCopyConcat, thm := some ``dequeCopyConcat_proven
+    notes := "Refuted on 3.14.7, where a subclass's maxlen went through the format \"Oi\"; 3.15 uses \"On\"." },
   { id := "sequences-deque-copy-concat-checked", pyFile := "Modules/_collectionsmodule.c"
     pyFns := ["deque_copy_impl", "deque___copy___impl", "deque_concat_lock_held", "deque_concat"]
     statement := "For every deque d and deque other, with d an exact deque or its maxlen inside a C int (or unbounded): d.copy() has the same items and maxlen; d + other holds the last d.maxlen items of list(d) + list(other) with d's maxlen; results keep the invariant."
     source := "Doc/library/collections.rst:507-511, 599-600", status := .proven
-    prop := ``DequeCopyConcatChecked, thm := some ``dequeCopyConcatChecked_proven },
+    prop := ``DequeCopyConcatChecked, thm := some ``dequeCopyConcatChecked_proven
+    notes := "The narrowing the 3.14.7 format needed; sequences-deque-copy-concat now covers it." },
   { id := "sequences-deque-reverse", pyFile := "Modules/_collectionsmodule.c"
     pyFns := ["deque_reverse_impl"]
     statement := "For every deque with the layout invariant, reverse() swaps through the left and right block cursors len // 2 times, touching only used slots, and leaves exactly the reversed items with the layout and maxlen unchanged."

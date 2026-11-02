@@ -1,7 +1,7 @@
 import PyLean.TextLibs.Bits
 
 /-!
-Model of `Modules/_struct.c` (CPython 3.14.7) on an LP64 little-endian build
+Model of `Modules/_struct.c` (CPython 3.15.2) on an LP64 little-endian build
 (`SIZEOF_LONG = 8`, `PY_LITTLE_ENDIAN = 1`), which is the x86-64 build the
 difftest runs on.
 
@@ -85,50 +85,59 @@ inductive PFn where
 
 /-- `formatdef`, `Modules/_struct.c:47-55`. -/
 structure FormatDef where
-  format : Char
+  format : List Char
   size : Nat
   alignment : Nat
   unpack : UFn
   pack : PFn
   deriving Repr, DecidableEq, Inhabited
 
+/-- `f->format` as a C string, for `"%s"`. -/
+def FormatDef.name (f : FormatDef) : String := String.ofList f.format
+
+/-- The first character of the code, the `c` of `prepare_s`. -/
+def FormatDef.code (f : FormatDef) : Char := f.format.headD ' '
+
 /-- `native_table`, `Modules/_struct.c:837-864`, with x86-64 sizes. -/
 def nativeTable : List FormatDef :=
-  [⟨'x', 1, 0, .none, .none⟩, ⟨'b', 1, 0, .nuByte, .npByte⟩, ⟨'B', 1, 0, .nuUbyte, .npUbyte⟩,
-   ⟨'c', 1, 0, .nuChar, .npChar⟩, ⟨'s', 1, 0, .none, .none⟩, ⟨'p', 1, 0, .none, .none⟩,
-   ⟨'h', 2, 2, .nuShort, .npShort⟩, ⟨'H', 2, 2, .nuUshort, .npUshort⟩,
-   ⟨'i', 4, 4, .nuInt, .npInt⟩, ⟨'I', 4, 4, .nuUint, .npUint⟩,
-   ⟨'l', 8, 8, .nuLong, .npLong⟩, ⟨'L', 8, 8, .nuUlong, .npUlong⟩,
-   ⟨'n', 8, 8, .nuSsizeT, .npSsizeT⟩, ⟨'N', 8, 8, .nuSizeT, .npSizeT⟩,
-   ⟨'q', 8, 8, .nuLonglong, .npLonglong⟩, ⟨'Q', 8, 8, .nuUlonglong, .npUlonglong⟩,
-   ⟨'?', 1, 1, .nuBool, .npBool⟩, ⟨'e', 2, 2, .nuHalffloat, .npHalffloat⟩,
-   ⟨'f', 4, 4, .nuFloat, .npFloat⟩, ⟨'d', 8, 8, .nuDouble, .npDouble⟩,
-   ⟨'F', 8, 4, .nuFloatComplex, .npFloatComplex⟩, ⟨'D', 16, 8, .nuDoubleComplex, .npDoubleComplex⟩,
-   ⟨'P', 8, 8, .nuVoidP, .npVoidP⟩]
+  [⟨['x'], 1, 0, .none, .none⟩, ⟨['b'], 1, 0, .nuByte, .npByte⟩, ⟨['B'], 1, 0, .nuUbyte, .npUbyte⟩,
+   ⟨['c'], 1, 0, .nuChar, .npChar⟩, ⟨['s'], 1, 0, .none, .none⟩, ⟨['p'], 1, 0, .none, .none⟩,
+   ⟨['h'], 2, 2, .nuShort, .npShort⟩, ⟨['H'], 2, 2, .nuUshort, .npUshort⟩,
+   ⟨['i'], 4, 4, .nuInt, .npInt⟩, ⟨['I'], 4, 4, .nuUint, .npUint⟩,
+   ⟨['l'], 8, 8, .nuLong, .npLong⟩, ⟨['L'], 8, 8, .nuUlong, .npUlong⟩,
+   ⟨['n'], 8, 8, .nuSsizeT, .npSsizeT⟩, ⟨['N'], 8, 8, .nuSizeT, .npSizeT⟩,
+   ⟨['q'], 8, 8, .nuLonglong, .npLonglong⟩, ⟨['Q'], 8, 8, .nuUlonglong, .npUlonglong⟩,
+   ⟨['?'], 1, 1, .nuBool, .npBool⟩, ⟨['e'], 2, 2, .nuHalffloat, .npHalffloat⟩,
+   ⟨['f'], 4, 4, .nuFloat, .npFloat⟩, ⟨['d'], 8, 8, .nuDouble, .npDouble⟩,
+   ⟨['F'], 8, 4, .nuFloatComplex, .npFloatComplex⟩, ⟨['D'], 16, 8, .nuDoubleComplex, .npDoubleComplex⟩,
+   ⟨['Z', 'f'], 8, 4, .nuFloatComplex, .npFloatComplex⟩, ⟨['Z', 'd'], 16, 8, .nuDoubleComplex, .npDoubleComplex⟩,
+   ⟨['P'], 8, 8, .nuVoidP, .npVoidP⟩]
 
 /-- `bigendian_table`, `Modules/_struct.c:1172-1195`. -/
 def bigendianTable : List FormatDef :=
-  [⟨'x', 1, 0, .none, .none⟩, ⟨'b', 1, 0, .nuByte, .npByte⟩, ⟨'B', 1, 0, .nuUbyte, .npUbyte⟩,
-   ⟨'c', 1, 0, .nuChar, .npChar⟩, ⟨'s', 1, 0, .none, .none⟩, ⟨'p', 1, 0, .none, .none⟩,
-   ⟨'h', 2, 0, .buShort, .bpInt⟩, ⟨'H', 2, 0, .buUint, .bpUint⟩,
-   ⟨'i', 4, 0, .buInt, .bpInt⟩, ⟨'I', 4, 0, .buUint, .bpUint⟩,
-   ⟨'l', 4, 0, .buInt, .bpInt⟩, ⟨'L', 4, 0, .buUint, .bpUint⟩,
-   ⟨'q', 8, 0, .buLonglong, .bpLonglong⟩, ⟨'Q', 8, 0, .buUlonglong, .bpUlonglong⟩,
-   ⟨'?', 1, 0, .buBool, .bpBool⟩, ⟨'e', 2, 0, .buHalffloat, .bpHalffloat⟩,
-   ⟨'f', 4, 0, .buFloat, .bpFloat⟩, ⟨'d', 8, 0, .buDouble, .bpDouble⟩,
-   ⟨'F', 8, 0, .buFloatComplex, .bpFloatComplex⟩, ⟨'D', 16, 0, .buDoubleComplex, .bpDoubleComplex⟩]
+  [⟨['x'], 1, 0, .none, .none⟩, ⟨['b'], 1, 0, .nuByte, .npByte⟩, ⟨['B'], 1, 0, .nuUbyte, .npUbyte⟩,
+   ⟨['c'], 1, 0, .nuChar, .npChar⟩, ⟨['s'], 1, 0, .none, .none⟩, ⟨['p'], 1, 0, .none, .none⟩,
+   ⟨['h'], 2, 0, .buShort, .bpInt⟩, ⟨['H'], 2, 0, .buUint, .bpUint⟩,
+   ⟨['i'], 4, 0, .buInt, .bpInt⟩, ⟨['I'], 4, 0, .buUint, .bpUint⟩,
+   ⟨['l'], 4, 0, .buInt, .bpInt⟩, ⟨['L'], 4, 0, .buUint, .bpUint⟩,
+   ⟨['q'], 8, 0, .buLonglong, .bpLonglong⟩, ⟨['Q'], 8, 0, .buUlonglong, .bpUlonglong⟩,
+   ⟨['?'], 1, 0, .buBool, .bpBool⟩, ⟨['e'], 2, 0, .buHalffloat, .bpHalffloat⟩,
+   ⟨['f'], 4, 0, .buFloat, .bpFloat⟩, ⟨['d'], 8, 0, .buDouble, .bpDouble⟩,
+   ⟨['F'], 8, 0, .buFloatComplex, .bpFloatComplex⟩, ⟨['D'], 16, 0, .buDoubleComplex, .bpDoubleComplex⟩,
+   ⟨['Z', 'f'], 8, 0, .buFloatComplex, .bpFloatComplex⟩, ⟨['Z', 'd'], 16, 0, .buDoubleComplex, .bpDoubleComplex⟩]
 
 /-- `lilendian_table` before `init_endian_tables` runs, `Modules/_struct.c:1488-1513`. -/
 def lilendianTable0 : List FormatDef :=
-  [⟨'x', 1, 0, .none, .none⟩, ⟨'b', 1, 0, .nuByte, .npByte⟩, ⟨'B', 1, 0, .nuUbyte, .npUbyte⟩,
-   ⟨'c', 1, 0, .nuChar, .npChar⟩, ⟨'s', 1, 0, .none, .none⟩, ⟨'p', 1, 0, .none, .none⟩,
-   ⟨'h', 2, 0, .luShort, .lpInt⟩, ⟨'H', 2, 0, .luUint, .lpUint⟩,
-   ⟨'i', 4, 0, .luInt, .lpInt⟩, ⟨'I', 4, 0, .luUint, .lpUint⟩,
-   ⟨'l', 4, 0, .luInt, .lpInt⟩, ⟨'L', 4, 0, .luUint, .lpUint⟩,
-   ⟨'q', 8, 0, .luLonglong, .lpLonglong⟩, ⟨'Q', 8, 0, .luUlonglong, .lpUlonglong⟩,
-   ⟨'?', 1, 0, .buBool, .bpBool⟩, ⟨'e', 2, 0, .luHalffloat, .lpHalffloat⟩,
-   ⟨'f', 4, 0, .luFloat, .lpFloat⟩, ⟨'d', 8, 0, .luDouble, .lpDouble⟩,
-   ⟨'F', 8, 0, .luFloatComplex, .lpFloatComplex⟩, ⟨'D', 16, 0, .luDoubleComplex, .lpDoubleComplex⟩]
+  [⟨['x'], 1, 0, .none, .none⟩, ⟨['b'], 1, 0, .nuByte, .npByte⟩, ⟨['B'], 1, 0, .nuUbyte, .npUbyte⟩,
+   ⟨['c'], 1, 0, .nuChar, .npChar⟩, ⟨['s'], 1, 0, .none, .none⟩, ⟨['p'], 1, 0, .none, .none⟩,
+   ⟨['h'], 2, 0, .luShort, .lpInt⟩, ⟨['H'], 2, 0, .luUint, .lpUint⟩,
+   ⟨['i'], 4, 0, .luInt, .lpInt⟩, ⟨['I'], 4, 0, .luUint, .lpUint⟩,
+   ⟨['l'], 4, 0, .luInt, .lpInt⟩, ⟨['L'], 4, 0, .luUint, .lpUint⟩,
+   ⟨['q'], 8, 0, .luLonglong, .lpLonglong⟩, ⟨['Q'], 8, 0, .luUlonglong, .lpUlonglong⟩,
+   ⟨['?'], 1, 0, .buBool, .bpBool⟩, ⟨['e'], 2, 0, .luHalffloat, .lpHalffloat⟩,
+   ⟨['f'], 4, 0, .luFloat, .lpFloat⟩, ⟨['d'], 8, 0, .luDouble, .lpDouble⟩,
+   ⟨['F'], 8, 0, .luFloatComplex, .lpFloatComplex⟩, ⟨['D'], 16, 0, .luDoubleComplex, .lpDoubleComplex⟩,
+   ⟨['Z', 'f'], 8, 0, .luFloatComplex, .lpFloatComplex⟩, ⟨['Z', 'd'], 16, 0, .luDoubleComplex, .lpDoubleComplex⟩]
 
 /-- The inner `while (ptr->format != '\0')` of `init_endian_tables`: returns the
 updated table and the advanced `other` index. -/
@@ -142,8 +151,7 @@ def initInner (native : FormatDef) (tbl : List FormatDef) (other : Nat) :
       if p.format = native.format then
         let other' := if ptr = other then other + 1 else other
         if p.size ≠ native.size then (tbl, other')
-        else if p.format = 'd' ∨ p.format = 'f' then (tbl, other')
-        else if p.format = '?' then (tbl, other')
+        else if p.format = ['?'] then (tbl, other')
         else (tbl.set ptr { p with pack := native.pack, unpack := native.unpack }, other')
       else initInner native tbl other (ptr + 1) fuel
 
@@ -175,16 +183,25 @@ def whichtable : List Char → Tab × List Char
   | '@' :: r => (.native, r)
   | s => (.native, s)
 
-/-- `getentry`, `Modules/_struct.c:1603-1613`. -/
-def getentry (c : Char) : List FormatDef → Py FormatDef
+/-- `format_equal`, `Modules/_struct.c:1586-1597`: the format is a prefix of the C string `s`. -/
+def formatEqual (e : FormatDef) (s : List Char) : Bool := e.format.isPrefixOf s
+
+/-- `getentry`, `Modules/_struct.c:1604-1614`. -/
+def getentry (s : List Char) : List FormatDef → Py FormatDef
   | [] => .error (structErr "bad char in struct format")
-  | f :: fs => if f.format = c then .ok f else getentry c fs
+  | f :: fs => if formatEqual f s then .ok f else getentry s fs
+
+/-- `strlen(e->format)` of the entry at `s`, by which both passes advance. -/
+def entryLen (tbl : List FormatDef) (s : List Char) : Nat :=
+  match getentry s tbl with
+  | .ok e => e.format.length
+  | .error _ => 0
 
 /-- `PY_SSIZE_T_MAX` as a `Nat`. -/
 def maxN : Nat := 2 ^ 63 - 1
 
 /-- `align`, `Modules/_struct.c:1618-1632`: `none` is the `-1` overflow return.
-`e->format == c` always holds at both call sites. -/
+`format_equal(e, s)` always holds at both call sites. -/
 def align (size : Nat) (e : FormatDef) : Option Nat :=
   if e.alignment ≠ 0 ∧ size > 0 then
     let extra := (e.alignment - 1) - (size - 1) % e.alignment
@@ -218,9 +235,9 @@ structure Pass1 where
   ncodes : Nat := 0
   deriving Repr, DecidableEq, Inhabited
 
-/-- One format item of the first pass, `Modules/_struct.c@3.14.7:1672-1705`. -/
-def pass1Item (tbl : List FormatDef) (st : Pass1) (num : Nat) (c : Char) : Py Pass1 := do
-  let e ← getentry c tbl
+/-- One format item of the first pass, `Modules/_struct.c:1695-1730`, at `c :: r`. -/
+def pass1Item (tbl : List FormatDef) (st : Pass1) (num : Nat) (c : Char) (r : List Char) : Py Pass1 := do
+  let e ← getentry (c :: r) tbl
   let (len, ncodes) ←
     if c = 's' ∨ c = 'p' then
       if st.len = maxN then Except.error overflowErr
@@ -246,8 +263,9 @@ def pass1 (tbl : List FormatDef) : (fuel : Nat) → List Char → Pass1 → Py P
       match scanDigits1 (digit c) s with
       | none => .error overflowErr
       | some (_, none, _) => .error (structErr "repeat count given without format specifier")
-      | some (num, some c', r) => do pass1 tbl fuel r (← pass1Item tbl st num c')
-    else do pass1 tbl fuel s (← pass1Item tbl st 1 c)
+      | some (num, some c', r) =>
+        do pass1 tbl fuel ((c' :: r).drop (entryLen tbl (c' :: r))) (← pass1Item tbl st num c' r)
+    else do pass1 tbl fuel ((c :: s).drop (entryLen tbl (c :: s))) (← pass1Item tbl st 1 c s)
 
 /-- `formatcode`, `Modules/_struct.c:57-62`. -/
 structure Code where
@@ -262,12 +280,12 @@ def scanDigits2 (num : Nat) : List Char → Nat × Option Char × List Char
   | [] => (num, none, [])
   | c :: r => if isDigit c then scanDigits2 (num * 10 + digit c) r else (num, some c, r)
 
-/-- One item of the second pass, `Modules/_struct.c@3.14.7:1733-1752`. `getentry` and `align`
+/-- One item of the second pass, `Modules/_struct.c:1758-1779`, at `c :: r`. `getentry` and `align`
 cannot fail here because the first pass accepted the format. -/
-def pass2Item (tbl : List FormatDef) (acc : List Code × Nat) (num : Nat) (c : Char) :
+def pass2Item (tbl : List FormatDef) (acc : List Code × Nat) (num : Nat) (c : Char) (r : List Char) :
     List Code × Nat :=
   let (codes, size) := acc
-  match getentry c tbl with
+  match getentry (c :: r) tbl with
   | .error _ => acc
   | .ok e =>
     let size := (align size e).getD size
@@ -285,8 +303,9 @@ def pass2 (tbl : List FormatDef) : (fuel : Nat) → List Char → List Code × N
     else if isDigit c then
       match scanDigits2 (digit c) s with
       | (_, none, _) => acc
-      | (num, some c', r) => pass2 tbl fuel r (pass2Item tbl acc num c')
-    else pass2 tbl fuel s (pass2Item tbl acc 1 c)
+      | (num, some c', r) =>
+        pass2 tbl fuel ((c' :: r).drop (entryLen tbl (c' :: r))) (pass2Item tbl acc num c' r)
+    else pass2 tbl fuel ((c :: s).drop (entryLen tbl (c :: s))) (pass2Item tbl acc 1 c s)
 
 /-- An initialised `Struct` object. -/
 structure SObj where
@@ -298,9 +317,11 @@ structure SObj where
 
 def asciiChars (b : List Nat) : List Char := b.map Char.ofNat
 
-/-- `prepare_s`, `Modules/_struct.c:1640-1800`. `sizeof(formatcode) = 32`. -/
+/-- `prepare_s`, `Modules/_struct.c:1640-1800`, on the `str` that `set_format` makes.
+`sizeof(formatcode) = 32`. -/
 def prepareS (format : List Nat) : Py SObj :=
-  if 0 ∈ format then .error (structErr "embedded null character")
+  if !format.all (· < 128) then .error (.valueError "non-ASCII character in struct format")
+  else if 0 ∈ format then .error (structErr "embedded null character")
   else
     let (t, fmt) := whichtable (asciiChars format)
     match pass1 t.table (fmt.length + 1) fmt {} with
@@ -321,21 +342,25 @@ inductive FmtArg where
   | hashRaises (tyName : String) (e : PyExc)
   deriving Repr, DecidableEq, Inhabited
 
-/-- `Struct___init___impl`, `Modules/_struct.c:1964-2004`. -/
-def structInit : FmtArg → Py SObj
-  | .str cps =>
-    if cps.all (· < 128) then prepareS cps
-    else .error (.named "UnicodeEncodeError" "~'ascii' codec can't encode character")
-  | .bytes b => prepareS b
+/-- `PyUnicode_DecodeASCII(.., "surrogateescape")`. -/
+def decodeSurrogate (b : List Nat) : List Nat := b.map (fun x => if x < 128 then x else 0xDC00 + x)
+
+/-- `set_format`, `Modules/_struct.c:1805-1830`. -/
+def setFormat : FmtArg → Py SObj
+  | .str cps => prepareS cps
+  | .bytes b => prepareS (decodeSurrogate b)
   | .other t _ | .hashRaises t _ =>
     .error (.typeError s!"Struct() argument 1 must be a str or bytes object, not {t}")
 
-/-- `cache_struct_converter`, `Modules/_struct.c:2615-2663`. A cache hit returns the
+/-- `Struct(format)`: `s_new` calls `set_format`, and `s_init` then does nothing. -/
+def structInit : FmtArg → Py SObj := setFormat
+
+/-- `cache_struct_converter`, `Modules/_struct.c:2616-2664`. A cache hit returns the
 object built by an earlier identical call, so the cache is not observable; only the
 key conversion (surrogateescape decoding of bytes, then `Struct(key)`) and the hash
 of the key are. -/
 def cacheStruct : FmtArg → Py SObj
-  | .bytes b => structInit (.str (b.map (fun x => if x < 128 then x else 0xDC00 + x)))
+  | .bytes b => structInit (.str (decodeSurrogate b))
   | .str s => structInit (.str s)
   | .other t hashable =>
     if hashable then structInit (.other t hashable)
@@ -349,10 +374,10 @@ def cacheStruct : FmtArg → Py SObj
 def rangeError (f : FormatDef) (isUnsigned : Bool) : PyExc :=
   let ulargest := 2 ^ (f.size * 8) - 1
   if isUnsigned then
-    structErr s!"'{f.format}' format requires 0 <= number <= {ulargest}"
+    structErr s!"'{f.name}' format requires 0 <= number <= {ulargest}"
   else
     let largest := ulargest / 2
-    structErr s!"'{f.format}' format requires {-(largest : Int) - 1} <= number <= {largest}"
+    structErr s!"'{f.name}' format requires {-(largest : Int) - 1} <= number <= {largest}"
 
 /-- `get_pylong`, `Modules/_struct.c:112-134`. -/
 def getPylong : SV → Py Int
@@ -504,7 +529,7 @@ def pyFloatPack2Bits (x : Nat) : Py Nat :=
     else
       pack2Round sign (m - 2 ^ k) (2 ^ k) (E + 15).toNat
 
-/-- `PyFloat_Pack4`, `Objects/floatobject.c@3.14.7:2180-2243`: a 32-bit pattern. -/
+/-- `PyFloat_Pack4`, `Objects/floatobject.c:2003-2066`: a 32-bit pattern. -/
 def pyFloatPack4Bits (x : Nat) : Py Nat :=
   let y := castDoubleToFloat x
   if f32.isInf y && !f64.isInf x then
@@ -528,7 +553,7 @@ def pyFloatUnpack2Bits (h : Nat) : Nat :=
     let (m, ex) : Nat × Int := if e = 0 then (f, -24) else (f + 1024, (e : Int) - 25)
     (f64.encodeRounded sign m ex).getD 0
 
-/-- `PyFloat_Unpack4`, `Objects/floatobject.c@3.14.7:2494-2545`. -/
+/-- `PyFloat_Unpack4`, `Objects/floatobject.c:2146-2201`. -/
 def pyFloatUnpack4Bits (y : Nat) : Nat :=
   let x := castFloatToDouble y
   if f32.isNaN y ∧ y &&& 2 ^ 22 = 0 then x - 2 ^ 51 else x
@@ -572,13 +597,13 @@ def packDCStd (v : SV) (le : Bool) : Py (List Nat) :=
 def packLonglongStd (f : FormatDef) (v : SV) (le : Bool) : Py (List Nat) := do
   let n ← getPylong v
   if n < longMin ∨ n > longMax then
-    throw (structErr s!"'{f.format}' format requires {longMin} <= number <= {longMax}")
+    throw (structErr s!"'{f.name}' format requires {longMin} <= number <= {longMax}")
   return (if le then lpLoop 8 n else bpLoop 8 n)
 
 def packUlonglongStd (f : FormatDef) (v : SV) (le : Bool) : Py (List Nat) := do
   let n ← getPylong v
   if n < 0 ∨ n > ulongMax then
-    throw (structErr s!"'{f.format}' format requires 0 <= number <= {ulongMax}")
+    throw (structErr s!"'{f.name}' format requires 0 <= number <= {ulongMax}")
   return (if le then lpLoop 8 n else bpLoop 8 n)
 
 /-- `bp_int`/`lp_int`, `Modules/_struct.c:998-1024, 1319-1345`. -/
@@ -619,13 +644,13 @@ def runPack (f : FormatDef) (v : SV) : Py (List Nat) :=
   | .npLonglong =>
     match getLonglong v with
     | .error (.overflowError _) =>
-      .error (structErr s!"'{f.format}' format requires {longMin} <= number <= {longMax}")
+      .error (structErr s!"'{f.name}' format requires {longMin} <= number <= {longMax}")
     | .error e => .error e
     | .ok x => .ok (twos 8 x)
   | .npUlonglong =>
     match getUlonglong v with
     | .error (.overflowError _) =>
-      .error (structErr s!"'{f.format}' format requires 0 <= number <= {ulongMax}")
+      .error (structErr s!"'{f.name}' format requires 0 <= number <= {ulongMax}")
     | .error e => .error e
     | .ok x => .ok (twos 8 x)
   | .npBool => do return [if (← isTrue v) then 1 else 0]
@@ -726,11 +751,11 @@ def runUnpack (f : FormatDef) (p : List Nat) : Py SV :=
 def overlay (buf : List Nat) (i : Nat) (w : List Nat) : List Nat :=
   buf.take i ++ w ++ buf.drop (i + w.length)
 
-/-- One `while (j--)` turn of `s_unpack_internal`, `Modules/_struct.c@3.14.7:1884-1900`. -/
+/-- One `while (j--)` turn of `s_unpack_internal`, `Modules/_struct.c:2051-2074`. -/
 def unpackOne (code : Code) (res : List Nat) : Py SV :=
   let e := code.fmtdef
-  if e.format = 's' then .ok (.bytes (res.take code.size))
-  else if e.format = 'p' then
+  if e.format = ['s'] then .ok (.bytes (res.take code.size))
+  else if e.format = ['p'] then
     let n :=
       if code.size = 0 then 0
       else
@@ -805,7 +830,7 @@ def structIterUnpack (s : SObj) (buf : List Nat) : Py (List (List SV)) :=
 def unpackiterLen (s : SObj) (buf : List Nat) (index : Nat) : Nat :=
   (buf.length - index) / s.sSize
 
-/-- The `'s'` branch of `s_pack_internal`, `Modules/_struct.c@3.14.7:2184-2205`; the slot
+/-- The `'s'` branch of `s_pack_internal`, `Modules/_struct.c:2348-2369`; the slot
 `res` of `code.size` bytes comes in and goes out. -/
 def packS (code : Code) (v : SV) (res : List Nat) : Py (List Nat) :=
   let p? := match v with | .bytes b | .bytearray b => some b | _ => none
@@ -815,8 +840,8 @@ def packS (code : Code) (v : SV) (res : List Nat) : Py (List Nat) :=
     let n := if p.length > code.size then code.size else p.length
     .ok (p.take n ++ res.drop n)
 
-/-- The `'p'` branch, `Modules/_struct.c@3.14.7:2206-2234`: the count byte is written even for
-a zero-sized field, where it lands on the first byte after the field. -/
+/-- The `'p'` branch, `Modules/_struct.c:2370-2400`: the count byte is written only when `n > 0`, so
+a zero-sized field writes nothing. -/
 def packP (code : Code) (v : SV) (res : List Nat) : Py (List Nat) :=
   let p? := match v with | .bytes b | .bytearray b => some b | _ => none
   match p? with
@@ -824,9 +849,11 @@ def packP (code : Code) (v : SV) (res : List Nat) : Py (List Nat) :=
   | some p =>
     let n := if code.size = 0 then 0
       else if p.length > code.size - 1 then code.size - 1 else p.length
-    let body := res.take 1 ++ p.take n ++ res.drop (1 + n)
-    let cnt := if n > 255 then 255 else n
-    .ok (body.set 0 cnt)
+    if n > 0 then
+      let body := res.take 1 ++ p.take n ++ res.drop (1 + n)
+      let cnt := if n > 255 then 255 else n
+      .ok (body.set 0 cnt)
+    else .ok res
 
 /-- `e->pack` and the `OverflowError` rewrite of `Modules/_struct.c:2402-2407`. -/
 def packCall (e : FormatDef) (v : SV) : Py (List Nat) :=
@@ -839,15 +866,14 @@ def SV.reinits : SV → Bool
   | .obj o => o.reinit
   | _ => false
 
-/-- One `while (j--)` turn of `s_pack_internal`: the whole buffer is threaded because
-`'p'` may write past its field. -/
+/-- One `while (j--)` turn of `s_pack_internal`. -/
 def packOne (code : Code) (buf : List Nat) (off : Nat) (v : SV) : Py (List Nat) :=
   let e := code.fmtdef
-  if e.format = 's' then do
+  if e.format = ['s'] then do
     let w ← packS code v ((buf.drop off).take code.size)
     return overlay buf off w
-  else if e.format = 'p' then do
-    let w ← packP code v ((buf.drop off).take (max code.size 1))
+  else if e.format = ['p'] then do
+    let w ← packP code v ((buf.drop off).take code.size)
     return overlay buf off w
   else do
     let w ← packCall e v
@@ -874,23 +900,13 @@ def sPackInternal (s : SObj) (buf : List Nat) (args : List SV) : Py (List Nat) :
     packRepeat code code.repeat_ code.offset acc.1 acc.2
   return r.1
 
-/-- `s_pack`, `Modules/_struct.c:2430-2459`. -/
+/-- `Struct_pack_impl`, `Modules/_struct.c:2431-2458`. -/
 def structPack (s : SObj) (args : List SV) : Py (List Nat) :=
   if args.length ≠ s.sLen then
     .error (structErr s!"pack expected {s.sLen} items for packing (got {args.length})")
-  else
-    -- one byte more than `s_size`: a trailing `0p` field writes to `_PyBytesWriter`'s
-    -- slack, which `Finish` cuts off
-    do return (← sPackInternal s (List.replicate (s.sSize + 1) 0) args).take s.sSize
+  else sPackInternal s (List.replicate s.sSize 0) args
 
-/-- `PyNumber_AsSsize_t(args[1], PyExc_IndexError)`: the message names the type of the argument, not
-of what `__index__` returned. -/
-def asSsizeIndex (n : Int) (ty : String := "int") : Py Int :=
-  if n < longMin ∨ n > longMax then
-    .error (.indexError s!"cannot fit '{ty}' into an index-sized integer")
-  else .ok n
-
-/-- `s_pack_into`, `Modules/_struct.c:2478-2539`: the buffer afterwards. -/
+/-- `Struct_pack_into_impl`, `Modules/_struct.c:2478-2537`, past its first check: the buffer afterwards. -/
 def packIntoBody (s : SObj) (buffer : List Nat) (offset : Int) (args : List SV) :
     Py (List Nat) := do
   let len : Int := buffer.length
@@ -908,14 +924,14 @@ def packIntoBody (s : SObj) (buffer : List Nat) (offset : Int) (args : List SV) 
       packing {size} bytes at offset {offset} (actual buffer size is {len})")
   let o := offset.toNat
   let tail ← sPackInternal s (buffer.drop o) args
-  -- `.take`: a `0p` count byte past the end of the buffer is not part of the object
-  return (buffer.take o ++ tail).take buffer.length
+  return buffer.take o ++ tail
 
 def structPackInto (s : SObj) (buffer : List Nat) (offset0 : Int) (args : List SV) :
     Py (List Nat) := do
+  let off ← ssizeArg offset0
   if args.length ≠ s.sLen then
     throw (structErr s!"pack_into expected {s.sLen} items for packing (got {args.length})")
-  packIntoBody s buffer (← asSsizeIndex offset0) args
+  packIntoBody s buffer off args
 
 /-- A buffer argument. `raises` is an object whose `__buffer__` raises. -/
 inductive BufArg where
@@ -931,12 +947,14 @@ def readBuf : BufArg → Py (List Nat)
   | .notBuffer t => .error (.typeError s!"a bytes-like object is required, not '{t}'")
   | .raises _ e => .error e
 
-/-- `w*`, `Modules/_struct.c@3.14.7:2335`: any failure, a raising `__buffer__` too, is this `TypeError`. -/
-def writeBuf : BufArg → Py (List Nat)
+/-- `Py_buffer(accept={rwbuffer})`, the clinic code in `Modules/clinic/_struct.c.h`: any failure, a
+raising `__buffer__` too, is this `TypeError`. `fname` and `pos` name the argument. -/
+def writeBuf (pos : Nat) : BufArg → Py (List Nat)
   | .bytearray b => .ok b
-  | .bytes _ => .error (.typeError "argument must be read-write bytes-like object, not bytes")
+  | .bytes _ =>
+    .error (.typeError s!"pack_into() argument {pos} must be read-write bytes-like object, not bytes")
   | .notBuffer t | .raises t _ =>
-    .error (.typeError s!"argument must be read-write bytes-like object, not {t}")
+    .error (.typeError s!"pack_into() argument {pos} must be read-write bytes-like object, not {t}")
 
 /-- An offset argument. `index` is an object with `__index__`, which may also call `__init__` on the
 `Struct`; `none` means it does not. -/
@@ -970,31 +988,26 @@ def structUnpackFromA (s : SObj) (b : BufArg) (off : OffArg) : Py (List SV) := d
   let buf ← readBuf b
   structUnpackFrom s buf (← offSsize off)
 
-/-- The arguments of `s_pack_into`. -/
+/-- The arguments of `pack_into`, `few n` being only `n` of them when two are required. -/
 inductive PackIntoArgs where
-  | noBuffer
-  | noOffset
+  | few (n : Nat)
   | full (b : BufArg) (off : OffArg) (args : List SV)
   deriving Inhabited
 
-/-- `s_pack_into`, `Modules/_struct.c:2478-2539`, with the `Struct` as it is once the offset has been
-converted. `nargs` is checked against the `s_len` from before that conversion, so a longer format
-installed by `__index__` makes `s_pack_internal` read past `args`. -/
-def structPackIntoA (s : SObj) : PackIntoArgs → Py (List Nat)
-  | .noBuffer => .error (structErr "pack_into expected buffer argument")
-  | .noOffset => .error (structErr "pack_into expected offset argument")
-  | .full b off args =>
-    if args.length ≠ s.sLen then
-      .error (structErr s!"pack_into expected {s.sLen} items for packing (got {args.length})")
-    else do
-      let buffer ← writeBuf b
-      let n ← offNumber off
-      let offset ← asSsizeIndex n off.ty
-      let s' := match off with
-        | .index _ _ (some t) => t
-        | _ => s
-      if args.length < s'.sLen then throw MEMORY
-      packIntoBody s' buffer offset args
+/-- `Struct.pack_into`: the clinic wrapper converts the buffer and then the offset, and only then does
+`Struct_pack_into_impl` look at the `Struct`, so `pos` is the argument number and a `__init__` run by
+`__index__` is seen by the count check. `extra` is what `nargs` counts beyond these. -/
+def structPackIntoA (s : SObj) (pos extra : Nat) : PackIntoArgs → Py (List Nat)
+  | .few n => .error (.typeError s!"pack_into expected at least {extra + 1} arguments, got {n}")
+  | .full b off args => do
+    let buffer ← writeBuf pos b
+    let offset ← offSsize off
+    let s' := match off with
+      | .index _ _ (some t) => t
+      | _ => s
+    if args.length ≠ s'.sLen then
+      throw (structErr s!"pack_into expected {s'.sLen} items for packing (got {args.length})")
+    packIntoBody s' buffer offset args
 
 /-- A `struct.unpack_iterator`: `so` is `NULL` once exhausted. The `Struct` is a shared object, so its
 current state is passed in. -/
@@ -1043,8 +1056,8 @@ def iterDrive (s : SObj) : (fuel : Nat) → UIter → Py (List (List SV))
     | (it', .ok (some r)) => do
       return r :: (← iterDrive s fuel it')
 
-/-- `s_sizeof`, `Modules/_struct.c:2545-2555` (`_PyObject_SIZE` is 56). -/
-def sSizeof (s : SObj) : Nat := 56 + 32 + 32 * s.codes.length
+/-- `Struct___sizeof___impl`, `Modules/_struct.c:2541-2553` (`_PyObject_SIZE` is 64). -/
+def sSizeof (s : SObj) : Nat := 64 + 32 + 32 * s.codes.length
 
 /-- `repr` of one character of an accepted format: the only non-printable ones are the
 `Py_ISSPACE` characters, and a quote or backslash is never accepted. -/
@@ -1057,32 +1070,139 @@ def reprChar (c : Nat) : String :=
 def sRepr (s : SObj) : String :=
   "Struct('" ++ String.join (s.format.map reprChar) ++ "')"
 
-/-- `Struct.format`, `s_get_format`, `Modules/_struct.c@3.14.7:2398-2405`. -/
-def sGetFormat (s : SObj) : List Nat := s.format
-
-/-- `s_new`, `Modules/_struct.c:1867-1951`: a `Struct` before `__init__` has no codes. -/
+/-- `Struct.__new__(Struct)`, `s_new`, `Modules/_struct.c:1868-1950`: with no format the object has no
+codes and no `s_format`. -/
 def sNew : Option SObj := none
 
-/-- `ENSURE_STRUCT_IS_READY`, `Modules/_struct.c:2083-2090`. -/
+/-- `ENSURE_STRUCT_IS_READY`. -/
 def ensureReady (s : Option SObj) : Py SObj :=
   match s with
   | some s => .ok s
   | none => .error (.named "RuntimeError" "Struct object is not initialized")
 
-/-- `s_get_size`, `Modules/_struct.c@3.14.7:2407-2412`: `s_new` stores -1, and this getter is
-the one accessor without `ENSURE_STRUCT_IS_READY`. -/
+/-- The `format` member, `Modules/_struct.c:2577`, `Py_T_OBJECT_EX`: `AttributeError` while `s_format`
+is `NULL`. -/
+def sGetFormat : Option SObj → Py (List Nat)
+  | some s => .ok s.format
+  | none => .error (.named "AttributeError" "'_struct.Struct' object has no attribute 'format'")
+
+/-- The `size` member, `Modules/_struct.c:2579`: `s_new` stores -1. -/
 def sGetSize : Option SObj → Int
   | some s => s.sSize
   | none => -1
 
+/-- A `Struct` object in its life: `obj` is `none` while `s_format` is `NULL`. -/
+structure Live where
+  obj : Option SObj := none
+  initCalled : Bool := false
+  deriving Inhabited
+
+/-- The type a `Struct` is made from: does it keep `s_new` and `s_init` in its slots? -/
+structure SType where
+  newIsS : Bool := true
+  initIsS : Bool := true
+  deriving Inhabited
+
+/-- The warnings a call issued, in order. -/
+abbrev Warns := List (String × String)
+
+/-- Arguments of a call: the positional ones and the keywords. -/
+structure CallArgs where
+  pos : List FmtArg := []
+  kw : List (String × FmtArg) := []
+  deriving Inhabited
+
+/-- The argument parser of `Struct.__new__` and `Struct.__init__`, `_PyArg_UnpackKeywords` with one
+required argument named `format`. -/
+def parseFormat (a : CallArgs) : Py FmtArg :=
+  let n := a.pos.length + a.kw.length
+  if n > 1 then .error (.typeError s!"Struct() takes at most 1 argument ({n} given)")
+  else
+    match a.pos, a.kw with
+    | [f], _ => .ok f
+    | [], [("format", f)] => .ok f
+    | _, _ => .error (.typeError "Struct() missing required argument 'format' (pos 1)")
+
+/-- `Struct_impl`, `Modules/_struct.c:1847-1863`, with the clinic parser before it. -/
+def structImpl (a : CallArgs) : Py Live := do
+  let f ← parseFormat a
+  let s ← setFormat f
+  return { obj := some s }
+
+/-- `s_new`, `Modules/_struct.c:1868-1934`. Warnings are all recorded and do not raise, which is the
+default filter; `-W error` is a stated scope limit. -/
+def sNewL (ty : SType) (a : CallArgs) : Py Live × Warns :=
+  if !ty.newIsS then (structImpl a, [])
+  else
+    let n := a.pos.length + a.kw.length
+    let format : Option FmtArg :=
+      match a.pos, a.kw with
+      | [f], [] => some f
+      | [], [("format", f)] => some f
+      | _, _ => none
+    let w1 : Warns :=
+      if format.isNone && !ty.initIsS then
+        if n > 1 then [("DeprecationWarning", s!"Struct() takes at most 1 argument ({n} given)")]
+        else [("DeprecationWarning", "Struct() missing required argument 'format' (pos 1)")]
+      else []
+    match format with
+    | none => (.ok {}, w1)
+    | some f =>
+      match setFormat f with
+      | .ok s => (.ok { obj := some s }, w1)
+      | .error e =>
+        if ty.initIsS then (.error e, w1)
+        else (.ok {}, w1 ++ [("DeprecationWarning", s!"Invalid 'format' argument for Struct.__new__(): {e.message}")])
+
+/-- `same_format`, `Modules/_struct.c:1937-1950`. -/
+def sameFormat (s : SObj) : FmtArg → Bool
+  | .str cps => cps.all (· < 128) && cps == s.format
+  | .bytes b => b == s.format
+  | _ => false
+
+/-- `Struct___init___impl`, `Modules/_struct.c:1964-1987`. -/
+def structInitImpl (l : Live) (f : FmtArg) : Py Live × Warns :=
+  match l.obj with
+  | none =>
+    match setFormat f with
+    | .ok s => (.ok { obj := some s, initCalled := true }, [])
+    | .error e => (.error e, [])
+  | some s =>
+    if sameFormat s f then (.ok { l with initCalled := true }, [])
+    else
+      let msg :=
+        if l.initCalled then
+          "Re-initialization of Struct by calling the __init__() method will not work in future Python versions"
+        else "Different format arguments for __new__() and __init__() methods of Struct"
+      let w : Warns := [("FutureWarning", msg)]
+      match setFormat f with
+      | .ok s' => (.ok { obj := some s', initCalled := true }, w)
+      | .error e => (.error e, w)
+
+/-- `s_init`, `Modules/_struct.c:1990-2004`. -/
+def sInitL (ty : SType) (l : Live) (a : CallArgs) : Py Live × Warns :=
+  if !l.initCalled && ty.initIsS && l.obj.isSome then (.ok { l with initCalled := true }, [])
+  else
+    match parseFormat a with
+    | .error e => (.error e, [])
+    | .ok f => structInitImpl l f
+
+/-- `cls(*pos, **kw)`: `__new__`, then `__init__` on what it returned. -/
+def typeCallL (ty : SType) (a : CallArgs) : Py Live × Warns :=
+  match sNewL ty a with
+  | (.error e, w) => (.error e, w)
+  | (.ok l, w) =>
+    match sInitL ty l a with
+    | (r, w2) => (r, w ++ w2)
+
 /-- `calcsize_impl`, `Modules/_struct.c:2689-2694`. -/
 def calcsize (f : FmtArg) : Py Nat := do return (← cacheStruct f).sSize
 
-/-- `pack`, `Modules/_struct.c@3.14.7:2591-2609`. -/
+/-- `pack_impl`, `Modules/_struct.c:2711-2716`. -/
 def modPack (f : FmtArg) (args : List SV) : Py (List Nat) := do
   structPack (← cacheStruct f) args
 
-/-- `pack_into`, `Modules/_struct.c:2734-2742`. -/
+/-- `pack_into_impl`, `Modules/_struct.c:2736-2743`. -/
 def modPackInto (f : FmtArg) (buf : List Nat) (off : Int) (args : List SV) : Py (List Nat) := do
   structPackInto (← cacheStruct f) buf off args
 
@@ -1110,14 +1230,16 @@ def modUnpackFromA (f : FmtArg) (b : BufArg) (off : OffArg) : Py (List SV) := do
 def modIterUnpackA (f : FmtArg) (b : BufArg) : Py UIter := do
   structIterUnpackA (← cacheStruct f) b
 
-/-- `pack`, `Modules/_struct.c@3.14.7:2591-2609`: the format is the first of `*args`. -/
+/-- `pack`, the clinic wrapper: the format is the first argument. -/
 def modPackA : List SV → Option FmtArg → Py (List Nat)
-  | _, none => .error (.typeError "missing format argument")
+  | _, none => .error (.typeError "pack expected at least 1 argument, got 0")
   | args, some f => do structPack (← cacheStruct f) args
 
-/-- `pack_into`, `Modules/_struct.c:2734-2742`. -/
+/-- `pack_into`, the clinic wrapper. It checks the count, converts the format, then the buffer and the
+offset. `n` is the number of arguments when there are fewer than three. -/
 def modPackIntoA : PackIntoArgs → Option FmtArg → Py (List Nat)
-  | _, none => .error (.typeError "missing format argument")
-  | a, some f => do structPackIntoA (← cacheStruct f) a
+  | _, none => .error (.typeError "pack_into expected at least 3 arguments, got 0")
+  | .few n, some _ => .error (.typeError s!"pack_into expected at least 3 arguments, got {n}")
+  | a, some f => do structPackIntoA (← cacheStruct f) 2 2 a
 
 end PyLean.TextLibs.Struct

@@ -59,6 +59,7 @@ expected: |
   The same results in both twins: each later call computes its value.
 observed: |
   python3 3.14.7: C [3, 4, 5, 6]; Python raises KeyError on a later call. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Twin agreement, and the docstring of the C function, which says the order is deliberate.
 cause: |

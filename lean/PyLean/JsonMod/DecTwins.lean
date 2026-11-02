@@ -360,7 +360,7 @@ theorem sim (cfg : DCfg) (s : PStr) : ∀ n : Nat,
             by_cases h93 : d = 93
             · subst h93
               simp only [↓reduceIte, ne_eq, not_true_eq_false]
-              exact ResRel.ok _ (w + 1) (by omega)
+              exact ResRel.map _ (w + 1) (by omega)
             · simp only [h93, ↓reduceIte, ne_eq, not_false_eq_true]
               exact ihA w []
         simp only [h91, ↓reduceIte]
@@ -447,7 +447,7 @@ theorem sim (cfg : DCfg) (s : PStr) : ∀ n : Nat,
         cases ha : cArrAfter s k with
         | close i =>
           obtain ⟨m, rfl, hm⟩ := cArrAfter_close ha
-          simpa using ResRel.ok (s := s) (JVal.arr (acc ++ [v])) m hm
+          simpa using ResRel.map (s := s) (mkArr cfg (acc ++ [v])) m hm
         | err x => exact ResRel.err_eq x
         | next i =>
           obtain ⟨m, rfl⟩ := cArrAfter_next ha

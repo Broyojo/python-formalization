@@ -2,8 +2,8 @@ import PyLean.Core
 
 /-!
 Shared vocabulary for the `itertools` models: `Modules/itertoolsmodule.c`
-(CPython 3.14.7) and the "Roughly equivalent to" code in
-`Doc/library/itertools.rst` (3.14.7), over an abstract element type.
+(CPython 3.15.2) and the "Roughly equivalent to" code in
+`Doc/library/itertools.rst` (3.15.2), over an abstract element type.
 
 Conventions:
 
@@ -195,7 +195,7 @@ def memNewOk (n : Int) : Bool :=
   decide (n ≤ ssizeMax / 8) && decide (8 * n < mallocLimit)
 
 /-- `PyTuple_New(n)` succeeds for `n ≥ 1` (Objects/tupleobject.c:53-57,
-`sizeof(PyTupleObject) = 40` on 3.14): the overflow check, then the GC
+`sizeof(PyTupleObject) = 40` on 3.15): the overflow check, then the GC
 allocation of `16 + 40 + 8(n-1)` bytes. `PyTuple_New(0)` returns the
 empty-tuple singleton. -/
 def tupleNewOk (n : Int) : Bool :=

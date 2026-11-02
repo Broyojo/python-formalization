@@ -37,7 +37,7 @@ expected: |
   get_opcodes returns the same list after get_grouped_opcodes, and a second get_grouped_opcodes(3) gives
   the same groups as a fresh matcher.
 observed: |
-  python3 3.14.7: opcodes start at 7 after the call, and get_grouped_opcodes(3) gives one line of context, not three. REPRODUCED.
+  python3 3.15.2: opcodes start at 7 after the call, and get_grouped_opcodes(3) gives one line of context, not three. REPRODUCED.
   main 3.16.0a1+dev: the same. REPRODUCED.
 promised_by: |
   Lib/difflib.py:496-498: "The first tuple has i1 == j1 == 0, and remaining tuples have i1 == the i2 from
