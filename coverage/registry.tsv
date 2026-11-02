@@ -2045,6 +2045,9 @@ textlibs-etree-setstate-attrib	refuted	Modules/_elementtree.c	_elementtree_Eleme
 textlibs-etree-remove-twins	proven	Modules/_elementtree.c	_elementtree_Element_remove_impl
 textlibs-etree-remove-twins-py	proven	Lib/xml/etree/ElementTree.py	Element.remove
 textlibs-etree-remove-twins-all	refuted	Lib/xml/etree/ElementTree.py	Element.remove,_elementtree_Element_remove_impl
+textlibs-etree-copy-independent	refuted	Modules/_elementtree.c	_elementtree_Element___copy___impl,create_new_element
+textlibs-etree-copy-class	refuted	Modules/_elementtree.c	_elementtree_Element___copy___impl,create_new_element
+textlibs-etree-copy-independent-py	proven	Lib/xml/etree/ElementTree.py	Element.__copy__,Element.makeelement
 coll-count-elements-twins	proven	Lib/collections/__init__.py	_count_elements
 coll-counter-update-fast-slow	proven	Lib/collections/__init__.py	Counter.update
 coll-counter-update-adds	proven	Lib/collections/__init__.py	Counter.update,Counter.__init__,Counter.__missing__,_count_elements

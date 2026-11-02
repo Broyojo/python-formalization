@@ -12,7 +12,7 @@ Modules/_elementtree.c	213	216	is_empty_dict	is_empty_dict(PyObject *obj)	todo
 Modules/_elementtree.c	272	287	create_extra	create_extra(ElementObject* self, PyObject* attrib)	todo		
 Modules/_elementtree.c	290	307	dealloc_extra	dealloc_extra(ElementObjectExtra *extra)	todo		
 Modules/_elementtree.c	310	323	clear_extra	clear_extra(ElementObject* self)	todo		
-Modules/_elementtree.c	329	352	create_new_element	create_new_element(elementtreestate *st, PyObject *tag, PyObject *attrib)	todo		
+Modules/_elementtree.c	329	352	create_new_element	create_new_element(elementtreestate *st, PyObject *tag, PyObject *attrib)	modelled	textlibs-etree-copy-class,textlibs-etree-copy-independent	
 Modules/_elementtree.c	355	366	element_new	element_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
 Modules/_elementtree.c	377	406	get_attrib_from_keywords	get_attrib_from_keywords(PyObject *kwds)	todo		changed-in-3.15:
 Modules/_elementtree.c	417	469	element_init	element_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		changed-in-3.15:
@@ -28,7 +28,7 @@ Modules/_elementtree.c	681	693	element_gc_clear	element_gc_clear(PyObject *op)	t
 Modules/_elementtree.c	696	712	element_dealloc	element_dealloc(PyObject *op)	todo		
 Modules/_elementtree.c	726	735	_elementtree_Element_append_impl	_elementtree_Element_append_impl(ElementObject *self, PyTypeObject *cls, PyObject *subelement) /*[clinic end generated code: output=d00923711ea317fc input=8baf92679f9717b8]*/	modelled	textlibs-etree-writers-twins	
 Modules/_elementtree.c	743	752	_elementtree_Element_clear_impl	_elementtree_Element_clear_impl(ElementObject *self) /*[clinic end generated code: output=8bcd7a51f94cfff6 input=3c719ff94bf45dd6]*/	todo		
-Modules/_elementtree.c	763	797	_elementtree_Element___copy___impl	_elementtree_Element___copy___impl(ElementObject *self, PyTypeObject *cls) /*[clinic end generated code: output=da22894421ff2b36 input=91edb92d9f441213]*/	todo		
+Modules/_elementtree.c	763	797	_elementtree_Element___copy___impl	_elementtree_Element___copy___impl(ElementObject *self, PyTypeObject *cls) /*[clinic end generated code: output=da22894421ff2b36 input=91edb92d9f441213]*/	modelled	textlibs-etree-copy-class,textlibs-etree-copy-independent	
 Modules/_elementtree.c	811	921	_elementtree_Element___deepcopy___impl	_elementtree_Element___deepcopy___impl(ElementObject *self, PyObject *memo) /*[clinic end generated code: output=eefc3df50465b642 input=a2d40348c0aade10]*/	todo		
 Modules/_elementtree.c	924	973	deepcopy	deepcopy(elementtreestate *st, PyObject *object, PyObject *memo)	todo		
 Modules/_elementtree.c	982	993	_elementtree_Element___sizeof___impl	_elementtree_Element___sizeof___impl(ElementObject *self) /*[clinic end generated code: output=baae4e7ae9fe04ec input=54e298c501f3e0d0]*/	todo		
