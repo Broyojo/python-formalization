@@ -378,14 +378,14 @@ def finishResume (w : World V X) (r : Ref) (kind : GenKind) (arg : Option (Obj V
       (clearGenFrame w r, .ret v)
   | .raised e => (clearGenFrame w r, .err (some e))
 
-/-- `gen_send_ex2`, :254-325. On 3.15 this has no state checks: the caller has already marked
+/-- `gen_send_ex2`, :259-325. On 3.15 this has no state checks: the caller has already marked
 the generator `FRAME_EXECUTING`, and `exc` is the exception pending when `exc` is set. -/
 def genSendEx2 (h : Hooks V X) (w : World V X) (r : Ref) (arg : Option (Obj V))
     (exc : Option (Exc V)) : World V X × SendResult V :=
   let res := h.resume w r (arg.getD .none) exc
   finishResume res.1 r (w.get r).kind arg res.2
 
-/-- `gen_send_ex`, :327-370: the state checks in source order, then `gen_send_ex2` with the
+/-- `gen_send_ex`, :329-375: the state checks in source order, then `gen_send_ex2` with the
 generator marked `FRAME_EXECUTING`. A coroutine that finished always raises here: the
 `closing` escape of 3.14 is gone, because `gen_close` no longer comes through this. -/
 def genSendEx (h : Hooks V X) (w : World V X) (r : Ref) (arg : Option (Obj V)) :
@@ -745,7 +745,7 @@ def genGetRunning (g : GenObj V) : Bool := decide (g.state = .executing)
 /-- `gen_getsuspended`, :925-931, also `cr_suspended` and `ag_suspended` on 3.15. -/
 def genGetSuspended (g : GenObj V) : Bool := g.state.isSuspended
 
-/-- `_gen_getframe`, :952-966, for `gi_frame`, `cr_frame`, `ag_frame`. -/
+/-- `_gen_getframe`, :953-965, for `gi_frame`, `cr_frame`, `ag_frame`. -/
 def genGetFrame (h : Hooks V X) (w : World V X) (r : Ref) (name : String) : Ret V :=
   match h.audit w name with
   | some e => .err (some e)
@@ -753,7 +753,7 @@ def genGetFrame (h : Hooks V X) (w : World V X) (r : Ref) (name : String) : Ret 
     if (w.get r).state.finished = true then .ok .none
     else .ok (h.frameObject w r)
 
-/-- `_gen_getcode`, :864-870, for `gi_code`, `cr_code`, `ag_code`: `_PyGen_GetCode`
+/-- `_gen_getcode`, :974-981, for `gi_code`, `cr_code`, `ag_code`: `_PyGen_GetCode`
 (:47-50) and `PyGen_GetCode` (:52-58) are this read of `f_executable`. -/
 def genGetCode (h : Hooks V X) (w : World V X) (r : Ref) (name : String) :
     Except (Exc V) Code :=
@@ -761,14 +761,14 @@ def genGetCode (h : Hooks V X) (w : World V X) (r : Ref) (name : String) :
   | some e => .error e
   | none => .ok (w.get r).code
 
-/-- `gen_sizeof`, :985-994. `base` is
+/-- `gen_sizeof`, :1010-1019. `base` is
 `offsetof(PyGenObject, gi_iframe) + offsetof(_PyInterpreterFrame, localsplus)` and
 `_PyFrame_NumSlotsForCodeObject` is `co_nlocalsplus + co_stacksize`
 (`Include/internal/pycore_interpframe.h`). -/
 def genSizeof (base : Nat) (g : GenObj V) : Nat :=
   base + (g.code.nlocalsplus + g.code.stacksize) * 8
 
-/-- `gen_repr`, :722-728, `coro_repr`, :1134-1140, `async_gen_repr`, :1512-1518,
+/-- `gen_repr`, :828-834, `coro_repr`, :1286-1292, `async_gen_repr`, :1659-1665,
 without the trailing `%p`. -/
 def reprPrefix : GenKind → String
   | .gen => "<generator object "
@@ -780,7 +780,7 @@ def genRepr (g : GenObj V) (addr : String) (q : String) : String :=
 
 /-! ## Construction -/
 
-/-- `make_gen`, :940-960: the frame state is `FRAME_CLEARED` until the frame is
+/-- `make_gen`, :1095-1115: the frame state is `FRAME_CLEARED` until the frame is
 copied in (`RETURN_GENERATOR` then sets `FRAME_CREATED`). -/
 def makeGen (kind : GenKind) (code : Code) (funcName funcQualname : Obj V) : GenObj V :=
   { kind := kind, state := .cleared, code := code, name := funcName, qualname := funcQualname }
@@ -807,7 +807,7 @@ def computeCrOrigin (originDepth : Nat) (frames : List (String × Nat × String)
     List (String × Nat × String) :=
   crOriginCollect (crOriginCount originDepth frames 0) frames 0
 
-/-- `_Py_MakeCoro`, :965-1010. Which of the three types the code flags select, and
+/-- `_Py_MakeCoro`, :1117-1162. Which of the three types the code flags select, and
 the tail initialised for each. -/
 def pyMakeCoro (w : World V X) (code : Code) (funcName funcQualname : Obj V) : Option (GenObj V) :=
   let coroFlags := code.flags &&& (CO_GENERATOR ||| CO_COROUTINE ||| CO_ASYNC_GENERATOR)
@@ -824,7 +824,7 @@ def pyMakeCoro (w : World V X) (code : Code) (funcName funcQualname : Obj V) : O
       some { g with origin := some (computeCrOrigin w.originDepth w.callStack) }
   else none
 
-/-- `gen_new_with_qualname`, :1012-1047: the frame is copied, the state is
+/-- `gen_new_with_qualname`, :1164-1199: the frame is copied, the state is
 `FRAME_CREATED`, and a NULL name or qualname falls back to the code object's. -/
 def genNewWithQualname (kind : GenKind) (code : Code) (name qualname : Option (Obj V)) :
     GenObj V :=
@@ -835,27 +835,27 @@ def genNewWithQualname (kind : GenKind) (code : Code) (name qualname : Option (O
     name := name.getD (.str code.name)
     qualname := qualname.getD (.str code.qualname) }
 
-/-- `PyGen_NewWithQualName`, :1049-1053. -/
+/-- `PyGen_NewWithQualName`, :1201-1205. -/
 def pyGenNewWithQualName (code : Code) (name qualname : Option (Obj V)) : GenObj V :=
   genNewWithQualname .gen code name qualname
 
-/-- `PyGen_New`, :1055-1059. -/
+/-- `PyGen_New`, :1207-1211. -/
 def pyGenNew (code : Code) : GenObj V := genNewWithQualname .gen code none none
 
-/-- `PyCoro_New`, :1427-1450. -/
+/-- `PyCoro_New`, :1572-1595. -/
 def pyCoroNew (w : World V X) (code : Code) (name qualname : Option (Obj V)) : GenObj V :=
   let g := genNewWithQualname .coro code name qualname
   if w.originDepth = 0 then { g with origin := none }
   else { g with origin := some (computeCrOrigin w.originDepth w.callStack) }
 
-/-- `PyAsyncGen_New`, :1735-1750. -/
+/-- `PyAsyncGen_New`, :1894-1909. -/
 def pyAsyncGenNew (code : Code) (name qualname : Option (Obj V)) : GenObj V :=
   { genNewWithQualname .asyncGen code name qualname with
     finalizer := none, agClosed := false, agHooksInited := false, agRunningAsync := false }
 
 /-! ## Coroutines -/
 
-/-- `gen_is_coroutine`, :1073-1083. -/
+/-- `gen_is_coroutine`, :1225-1235. -/
 def genIsCoroutine (w : World V X) : Obj V → Bool
   | .gen r =>
     (w.get r).kind = .gen ∧ (w.get r).code.hasFlag CO_ITERABLE_COROUTINE = true
@@ -866,7 +866,7 @@ def isCoro (w : World V X) : Obj V → Bool
   | .gen r => (w.get r).kind = .coro
   | _ => false
 
-/-- `_PyCoro_GetAwaitableIter`, :1245-1287. `%T` omits the module for `__main__` and
+/-- `_PyCoro_GetAwaitableIter`, :1245-1284. `%T` omits the module for `__main__` and
 `builtins`. -/
 def pyCoroGetAwaitableIter (h : Hooks V X) (w : World V X) (o : Obj V) : World V X × Ret V :=
   if isCoro w o = true ∨ genIsCoroutine w o = true then
@@ -886,21 +886,21 @@ def pyCoroGetAwaitableIter (h : Hooks V X) (w : World V X) (o : Obj V) : World V
     | none =>
       (w, .err (some (Exc.typeError ("'" ++ h.typeName o ++ "' object can't be awaited"))))
 
-/-- `coro_wrapper_iternext`, :1309-1314. `coro_await` (:1142-1152) just pairs the
+/-- `coro_wrapper_iternext`, :1454-1459. `coro_await` (:1142-1152) just pairs the
 coroutine with a wrapper, so a wrapper is its coroutine's `Ref`. -/
 def coroWrapperIternext (h : Hooks V X) (w : World V X) (cw : Ref) : World V X × Ret V :=
   genIternext h w cw
 
-/-- `coro_wrapper_send`, :1316-1321. -/
+/-- `coro_wrapper_send`, :1461-1466. -/
 def coroWrapperSend (h : Hooks V X) (w : World V X) (cw : Ref) (arg : Obj V) : World V X × Ret V :=
   genSend h w cw (some arg)
 
-/-- `coro_wrapper_throw`, :1323-1328. -/
+/-- `coro_wrapper_throw`, :1468-1473. -/
 def coroWrapperThrow (h : Hooks V X) (fuel : Nat) (w : World V X) (cw : Ref)
     (args : List (Obj V)) : World V X × Ret V :=
   genThrow h fuel w cw args
 
-/-- `coro_wrapper_close`, :1330-1335. -/
+/-- `coro_wrapper_close`, :1475-1480. -/
 def coroWrapperClose (h : Hooks V X) (fuel : Nat) (w : World V X) (cw : Ref) : World V X × Ret V :=
   genCloseF h fuel w cw
 

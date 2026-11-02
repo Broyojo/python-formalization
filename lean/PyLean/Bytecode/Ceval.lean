@@ -1,10 +1,11 @@
 import PyLean.Bytecode.ObjModel
 
 /-!
-Helpers of `Python/ceval.c` that the instruction bodies call, CPython 3.14.7:
+Helpers of `Python/ceval.c` that the instruction bodies call, CPython 3.15.2:
 the exception table (`get_exception_handler`), argument binding
 (`initialize_locals`), frame creation, `do_raise`, unpacking, name lookup and the
-error formatters. Line numbers refer to `Python/ceval.c` unless stated otherwise.
+error formatters. Line numbers refer to `Python/ceval.c` unless stated otherwise; on 3.15
+the exception table search and `do_raise` live in `Python/ceval.h`.
 -/
 
 namespace PyLean.Bytecode
@@ -120,20 +121,20 @@ def parseVarint (t : Array Nat) (p : Nat) : Nat × Nat :=
       else (val, q + 1)
   go t.size p (t.getD p 0 &&& 63)
 
-/-- `scan_back_to_entry_start`, lines 1613-1617. -/
+/-- `scan_back_to_entry_start`, `Python/ceval.h:440-444`. -/
 def scanBack (t : Array Nat) : Nat → Nat → Nat
   | 0, p => p
   | n + 1, p => if (t.getD p 128) &&& 128 == 0 then scanBack t n (p - 1) else p
 
-/-- `skip_to_next_entry`, lines 1619-1625. -/
+/-- `skip_to_next_entry`, `Python/ceval.h:446-452`. -/
 def skipToNext (t : Array Nat) (e : Nat) : Nat → Nat → Nat
   | 0, p => p
   | n + 1, p => if p < e && (t.getD p 128) &&& 128 == 0 then skipToNext t e n (p + 1) else p
 
-/-- `#define MAX_LINEAR_SEARCH 40`, line 1628. -/
+/-- `#define MAX_LINEAR_SEARCH 40`, `Python/ceval.h:455`. -/
 def maxLinearSearch : Nat := 40
 
-/-- The linear scan of `get_exception_handler`, lines 1659-1677:
+/-- The linear scan of `get_exception_handler`, `Python/ceval.h:457-505`:
 `some (handler, level, lasti)`. -/
 def scanTable (t : Array Nat) (e index : Nat) : Nat → Nat → Option (Nat × Nat × Bool)
   | 0, _ => none
@@ -150,7 +151,7 @@ def scanTable (t : Array Nat) (e index : Nat) : Nat → Nat → Option (Nat × N
         else scanTable t e index n (skipToNext t e t.size scan)
     else none
 
-/-- The binary search of `get_exception_handler`, lines 1646-1657. -/
+/-- The binary search of `get_exception_handler`, `Python/ceval.h:457-505`. -/
 def bisectTable (t : Array Nat) (index : Nat) : Nat → Nat → Nat → Nat × Nat
   | 0, s, e => (s, e)
   | n + 1, s, e =>
@@ -159,7 +160,7 @@ def bisectTable (t : Array Nat) (index : Nat) : Nat → Nat → Nat → Nat × N
     let (s, e) := if offset > index then (s, mid) else (mid, e)
     if e - s > maxLinearSearch then bisectTable t index n s e else (s, e)
 
-/-- `get_exception_handler`, lines 1630-1678. -/
+/-- `get_exception_handler`, `Python/ceval.h:457-505`. -/
 def getExceptionHandler (t : Array Nat) (index : Nat) : Option (Nat × Nat × Bool) :=
   let s := 0
   let e := t.size
@@ -216,7 +217,7 @@ def joinStrs (sep : String) : List String → String
   | [a] => a
   | a :: r => a ++ sep ++ joinStrs sep r
 
-/-- `format_missing`, lines 1388-1449. -/
+/-- `format_missing`, lines 1513-1574. -/
 def formatMissing {α : Type} (kind : String) (names : List String) (qualname : String) : RM α :=
   let len := names.length
   let nameStr :=
@@ -228,7 +229,7 @@ def formatMissing {α : Type} (kind : String) (names : List String) (qualname : 
       joinStrs ", " (names.take (len - 2)) ++ tail
   typeError s!"{qualname}() missing {len} required {kind} argument{if len == 1 then "" else "s"}: {nameStr}"
 
-/-- `missing_arguments`, lines 1451-1488. `defcount = none` is C's `-1`. -/
+/-- `missing_arguments`, lines 1576-1613. `defcount = none` is C's `-1`. -/
 def missingArguments {α : Type} (co : Code) (defcount : Option Nat) (fast : Array Val)
     (qualname : String) : RM α :=
   let (kind, start, stop) :=
@@ -239,7 +240,7 @@ def missingArguments {α : Type} (co : Code) (defcount : Option Nat) (fast : Arr
     fun i => reprName (co.localsplusnames.getD i "")
   formatMissing kind names qualname
 
-/-- `too_many_positional`, lines 1490-1546. -/
+/-- `too_many_positional`, lines 1615-1671. -/
 def tooManyPositional {α : Type} (co : Code) (gvn : Nat) (defaults : Val) (fast : Array Val)
     (qualname : String) : RM α := do
   let kwonlyGiven := ((List.range' co.argcount co.kwonlyargcount).filter
@@ -254,7 +255,7 @@ def tooManyPositional {α : Type} (co : Code) (gvn : Nat) (defaults : Val) (fast
     else ""
   typeError s!"{qualname}() takes {sig} positional argument{if plural then "s" else ""} but {gvn}{kwonlySig} {if gvn == 1 && kwonlyGiven == 0 then "was" else "were"} given"
 
-/-- `positional_only_passed_as_keyword`, lines 1548-1610: raises when any
+/-- `positional_only_passed_as_keyword`, lines 1673-1735: raises when any
 positional-only name appears among the keywords. -/
 def posonlyPassedAsKeyword (co : Code) (kwnames : List String) (qualname : String) : RM Unit := do
   let conflicts := (List.range co.posonlyargcount).flatMap fun k =>
@@ -270,7 +271,7 @@ def kwSlot (co : Code) (name : String) : Option Nat :=
   (List.range' co.posonlyargcount (total - co.posonlyargcount)).find?
     fun j => co.localsplusnames.getD j "" == name
 
-/-- The keyword loop of `initialize_locals`, lines 1747-1846. -/
+/-- The keyword loop of `initialize_locals`, lines 1804-1903. -/
 def bindKeywords (co : Code) (func : FuncObj) (kwdict : Val) :
     List (String × Val) → Array Val → RM (Array Val)
   | [], fast => pure fast
@@ -287,7 +288,7 @@ def bindKeywords (co : Code) (func : FuncObj) (kwdict : Val) :
       dictSetStr kwdict keyword value
       bindKeywords co func kwdict rest fast
 
-/-- `initialize_locals`, lines 1680-1927. `args` are the positional arguments,
+/-- `initialize_locals`, lines 1737-1984. `args` are the positional arguments,
 `kwargs` the keyword arguments in `kwnames` order. -/
 def initializeLocals (co : Code) (func : FuncObj) (fast0 : Array Val)
     (args : List Val) (kwargs : List (String × Val)) : RM (Array Val) := do
@@ -295,21 +296,21 @@ def initializeLocals (co : Code) (func : FuncObj) (fast0 : Array Val)
   let argcount := args.length
   let hasVarargs := flagSet co.flags coVarargs
   let hasVarkw := flagSet co.flags coVarkeywords
-  -- lines 1690-1701
+  -- lines 1747-1758
   let (kwdict, fast) ← if hasVarkw then do
       let kd ← mkDict
       let i := if hasVarargs then totalArgs + 1 else totalArgs
       pure (kd, fast0.setIfInBounds i kd)
     else pure (Val.null, fast0)
-  -- lines 1707-1717
+  -- lines 1764-1774
   let n := if argcount > co.argcount then co.argcount else argcount
   let fast := (List.range n).foldl (fun f j => f.setIfInBounds j (args.getD j .null)) fast
-  -- lines 1720-1738
+  -- lines 1777-1795
   let fast ← if hasVarargs then do
       let u ← mkTuple (args.drop n)
       pure (fast.setIfInBounds totalArgs u)
     else pure fast
-  -- lines 1747-1846, with the posonly check of 1787-1793 done when the first
+  -- lines 1804-1903, with the posonly check of 1844-1850 done when the first
   -- unknown keyword is met
   let needsPosonly := kwdict == .null && co.posonlyargcount != 0 &&
     kwargs.any fun kv => (kwSlot co kv.1).isNone
@@ -319,10 +320,10 @@ def initializeLocals (co : Code) (func : FuncObj) (fast0 : Array Val)
       posonlyPassedAsKeyword co (kwargs.map (·.1)) func.qualname
       bindKeywords co func kwdict (kwargs.drop upto.length) fast
     else bindKeywords co func kwdict kwargs fast
-  -- lines 1849-1853
+  -- lines 1906-1910
   if argcount > co.argcount && !hasVarargs then
     tooManyPositional co argcount func.defaults fast func.qualname
-  -- lines 1856-1883
+  -- lines 1913-1940
   let fast ← if argcount < co.argcount then do
       let defs ← tupleItems func.defaults
       let defcount := defs.size
@@ -336,7 +337,7 @@ def initializeLocals (co : Code) (func : FuncObj) (fast0 : Array Val)
         (fun f i => if f.getD (m + i) .null == .null
           then f.setIfInBounds (m + i) (defs.getD i .null) else f) fast
     else pure fast
-  -- lines 1886-1909
+  -- lines 1943-1966
   if co.kwonlyargcount > 0 then
     let mut fast := fast
     let mut missing := 0
@@ -355,7 +356,7 @@ def initializeLocals (co : Code) (func : FuncObj) (fast0 : Array Val)
     pure fast
   else pure fast
 
-/-- `_PyEvalFramePushAndInit`, lines 1970-2004. `args` holds the positional
+/-- `_PyEvalFramePushAndInit`, lines 2033-2068. `args` holds the positional
 arguments followed by the values of `kwnames`. -/
 def framePushAndInit (P : Program) (funcv locals : Val) (args : List Val)
     (kwnames : List String) : RM Frame := do
@@ -376,7 +377,7 @@ def localsFor (co : Code) (func : FuncObj) : Val :=
 /-- `%.200s` of a C string. -/
 def trunc200 (s : String) : String := String.ofList (s.toList.take 200)
 
-/-- `NameError` with `.name` set, `_PyEval_FormatExcCheckArg`, lines 3455-3482. -/
+/-- `NameError` with `.name` set, `_PyEval_FormatExcCheckArg`, lines 3448-3475. -/
 def formatExcCheckArg {α : Type} (cls msg : String) : RM α := raiseS cls msg
 
 def nameErrorMsg (n : String) : String := s!"name '{trunc200 n}' is not defined"
@@ -388,7 +389,7 @@ def unboundFreeMsg (n : String) : String :=
 /-- `PyUnstable_Code_GetFirstFree`. -/
 def firstFree (c : Code) : Nat := c.nlocalsplus - c.nfreevars
 
-/-- `_PyEval_FormatExcUnbound`, lines 3484-3499. -/
+/-- `_PyEval_FormatExcUnbound`, lines 3477-3492. -/
 def formatExcUnbound {α : Type} (co : Code) (oparg : Nat) : RM α :=
   let name := co.localsplusnames.getD oparg ""
   if oparg < firstFree co then formatExcCheckArg "UnboundLocalError" (unboundLocalMsg name)
@@ -399,7 +400,7 @@ def formatExcUnbound {α : Type} (co : Code) (oparg : Nat) : RM α :=
 def catchMsg : String :=
   "catching classes that do not inherit from BaseException is not allowed"
 
-/-- `_PyEval_CheckExceptTypeValid`, lines 3330-3353. -/
+/-- `_PyEval_CheckExceptTypeValid`, lines 3340-3363. -/
 def checkExceptTypeValid (right : Val) : RM Unit := do
   let items? ← match right with
     | .ref a =>
@@ -414,7 +415,7 @@ def checkExceptTypeValid (right : Val) : RM Unit := do
   | none =>
     if !(← isExcClass right) then typeError catchMsg
 
-/-- `_PyEval_CheckExceptStarTypeValid`, lines 3355-3390. -/
+/-- `_PyEval_CheckExceptStarTypeValid`, lines 3365-3400. -/
 def checkExceptStarTypeValid (right : Val) : RM Unit := do
   checkExceptTypeValid right
   let items? ← match right with
@@ -447,7 +448,7 @@ def callExcClass (e : Val) : RM Val := do
     | _, _ => fault "repr returned non-str"
   pure value
 
-/-- `do_raise`, lines 2193-2291. `true` is "re-raise": the C function returns 1
+/-- `do_raise`, `Python/ceval.h:516-614`. `true` is "re-raise": the C function returns 1
 and the caller goes to `exception_unwind` directly. The exception is carried by
 the thrown `Err`. -/
 def doRaise (exc cause : Val) : RM Unit := do
@@ -480,7 +481,7 @@ def drain (it : Val) : Nat → List Val → RM (List Val)
     | some v => drain it n (v :: acc)
     | none => pure acc.reverse
 
-/-- `_PyEval_UnpackIterableStackRef`, lines 2389-2491. The result is in the order
+/-- `_PyEval_UnpackIterableStackRef`, lines 2357-2459. The result is in the order
 of `*--sp`: first the value that ends up deepest. `argcntafter = none` is `-1`. -/
 def unpackIterable (v : Val) (argcnt : Nat) (argcntafter : Option Nat) : RM (List Val) := do
   let it ← tryExc (om.getIter ctx v) fun e => do
@@ -579,8 +580,8 @@ def setAdd (sv key : Val) : RM Unit := do
 def frozensetHash (items : Array (Int × Val)) : Int :=
   items.toList.foldl (fun h kv => (h + kv.1) % 2305843009213693951) 7
 
-/-- `_PySet_Contains`, `set_contains_lock_held`, `Objects/setobject.c@3.14.7:2270-2285`:
-an unhashable `set` key is looked up as if it were a `frozenset`. -/
+/-- `_PySet_Contains`, `Objects/setobject.c:2544-2564`: an unhashable `set` key is looked up
+as if it were a `frozenset`. -/
 def setContains (sv key : Val) : RM Bool := do
   let h ← tryExc (hashFor om ctx "set element" key) fun e => do
     match key with
@@ -604,7 +605,7 @@ def getOptionalItem (o k : Val) : RM (Option Val) :=
   tryExc (some <$> om.getItem ctx o k) fun e => do
     if ← givenMatches e 8 (.cls "KeyError") then pure none else throw (.exc e)
 
-/-- `_PyEval_ExceptionGroupMatch`, lines 2297-2380: `(match, rest)`. -/
+/-- `_PyEval_ExceptionGroupMatch`, lines 2263-2348: `(match, rest)`. -/
 def exceptionGroupMatch (excValue matchType : Val) : RM (Val × Val) := do
   if excValue == .none then return (.none, .none)
   if ← givenMatches excValue 8 matchType then

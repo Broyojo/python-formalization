@@ -1,9 +1,9 @@
 import PyLean.Bytecode.Ceval
 
 /-!
-The `f_lineno` setter of `Objects/frameobject.c`, CPython 3.14.7: the stack-kind
-analysis `mark_stacks` (lines 1161-1519), `compatible_stack`, the line table search
-and `frame_lineno_set_impl` (lines 1639-1835). All line numbers are in that file.
+The `f_lineno` setter of `Objects/frameobject.c`, CPython 3.15.2: the stack-kind
+analysis `mark_stacks` (lines 1315-1531), `compatible_stack`, the line table search
+and `frame_lineno_set_impl` (lines 1651-1843). All line numbers are in that file.
 A stack is an `int64_t` with three bits per entry; the model keeps it as `Int` and
 applies C's narrowing where the source narrows.
 -/
@@ -12,7 +12,7 @@ namespace PyLean.Bytecode.FrameObj
 
 open PyLean.Bytecode
 
-/-- `enum kind`, lines 1167-1173. -/
+/-- `enum kind`, lines 1175-1181. -/
 def Iterator : Nat := 1
 def Except : Nat := 2
 def Object : Nat := 3
@@ -22,10 +22,10 @@ def Lasti : Nat := 5
 def UNINITIALIZED : Int := -2
 def OVERFLOWED : Int := -1
 def EMPTY_STACK : Int := 0
-/-- `WILL_OVERFLOW`, line 1195: `1ULL << ((21 - 1) * 3)`. -/
+/-- `WILL_OVERFLOW`, line 1203: `1ULL << ((21 - 1) * 3)`. -/
 def WILL_OVERFLOW : Nat := 2 ^ 60
 
-/-- `compatible_kind`, lines 1175-1187. -/
+/-- `compatible_kind`, lines 1183-1195. -/
 def compatibleKind (from_ to : Nat) : Bool :=
   if to == 0 then false
   else if to == Object then from_ != Null
@@ -35,20 +35,20 @@ def compatibleKind (from_ to : Nat) : Bool :=
 /-- `(uint64_t)stack`. -/
 def asU64 (s : Int) : Nat := (s % (2 : Int) ^ 64).toNat
 
-/-- `push_value`, lines 1199-1208. A negative stack is huge as a `uint64_t`. -/
+/-- `push_value`, lines 1207-1216. A negative stack is huge as a `uint64_t`. -/
 def pushValue (stack : Int) (kind : Nat) : Int :=
   if WILL_OVERFLOW ≤ asU64 stack then OVERFLOWED else stack * 8 + kind
 
-/-- `pop_value`, lines 1210-1214: an arithmetic shift. -/
+/-- `pop_value`, lines 1218-1222: an arithmetic shift. -/
 def popValue (stack : Int) : Int := Int.fdiv stack 8
 
-/-- `top_of_stack`, lines 1218-1222. -/
+/-- `top_of_stack`, lines 1226-1230. -/
 def topOfStack (stack : Int) : Nat := (Int.fmod stack 8).toNat
 
-/-- `peek`, lines 1224-1229. -/
+/-- `peek`, lines 1232-1237. -/
 def peek (stack : Int) (n : Nat) : Nat := (Int.fmod (Int.fdiv stack ((2 : Int) ^ (3 * (n - 1)))) 8).toNat
 
-/-- `stack_swap`, lines 1231-1241. The result type of the C function is `Kind`, an
+/-- `stack_swap`, lines 1239-1249. The result type of the C function is `Kind`, an
 enum with unsigned underlying type on the compilers CPython supports, so the
 `int64_t` it computes is narrowed to 32 bits on the way out. -/
 def stackSwap (stack : Int) (n : Nat) : Int :=
@@ -71,7 +71,7 @@ def stackSwap64 (stack : Int) (n : Nat) : Int :=
   let replacedLow := stack - (peek stack n : Int) * w + (top : Int) * w
   replacedLow - (Int.fmod replacedLow 8) + toSwap
 
-/-- `pop_to_level`, lines 1243-1254, fuelled by the 21 entries of a stack. -/
+/-- `pop_to_level`, lines 1251-1262, fuelled by the 21 entries of a stack. -/
 def popToLevel (stack : Int) (level : Nat) : Int :=
   if level == 0 then EMPTY_STACK
   else
@@ -90,7 +90,7 @@ structure Unit' where
 /-- `PyCompile_OpcodeStackEffect`: `pushed - popped`, `Python/flowgraph.c`. -/
 def stackEffect (o : Op) (a : Nat) : Int := (numPushed o a : Int) - numPopped o a
 
-/-- `delta` applied by the `default:` case, lines 1471-1484. -/
+/-- `delta` applied by the `default:` case, lines 1483-1496. -/
 def applyDelta (s : Int) (delta : Int) : Int :=
   if delta < 0 then (List.range delta.natAbs).foldl (fun st _ => popValue st) s
   else (List.range delta.toNat).foldl (fun st _ => pushValue st Object) s
@@ -99,7 +99,7 @@ abbrev Stacks := Array Int
 
 def setS (a : Stacks) (i : Nat) (v : Int) : Stacks := a.setIfInBounds i v
 
-/-- The `switch (opcode)` of `mark_stacks`, lines 1348-1485: the new `stacks` and
+/-- The `switch (opcode)` of `mark_stacks`, lines 1356-1497: the new `stacks` and
 whether `todo` was set. `i` is the instruction, `nextI` the one after it. -/
 def markOne (o : Op) (oparg i nextI : Nat) (s : Int) (st : Stacks) : Stacks × Bool :=
   let cont (ns : Int) := (setS st nextI ns, false)
@@ -134,8 +134,8 @@ def markOne (o : Op) (oparg i nextI : Nat) (s : Int) (st : Stacks) : Stacks × B
   | .COPY => cont (pushValue s (peek s oparg))
   | o => cont (applyDelta s (stackEffect o oparg))
 
-/-- The scan of the instructions, lines 1329-1487. `EXTENDED_ARG` copies the stack
-to each prefix, line 1340. -/
+/-- The scan of the instructions, lines 1336-1499. `EXTENDED_ARG` copies the stack
+to each prefix, lines 1343-1349. -/
 def scanCode (code : Array Unit') (len : Nat) : Nat → Nat → Stacks → Bool → Stacks × Bool
   | 0, _, st, todo => (st, todo)
   | fuel + 1, i, st, todo =>
@@ -160,7 +160,7 @@ def scanCode (code : Array Unit') (len : Nat) : Nat → Nat → Stacks → Bool 
         scanCode code len fuel nextI st (todo || t)
     else (st, todo)
 
-/-- The scan of the exception table, lines 1489-1515. -/
+/-- The scan of the exception table, lines 1500-1527. -/
 def scanTable (t : Array Nat) : Nat → Nat → Stacks → Bool → Stacks × Bool
   | 0, _, st, todo => (st, todo)
   | fuel + 1, p, st, todo =>
@@ -180,7 +180,7 @@ def scanTable (t : Array Nat) : Nat → Nat → Stacks → Bool → Stacks × Bo
       else scanTable t fuel p st todo
     else (st, todo)
 
-/-- `mark_stacks`, lines 1307-1519. -/
+/-- `mark_stacks`, lines 1315-1531. -/
 def markStacks (code : Array Unit') (table : Array Nat) : Stacks :=
   let len := code.size
   let init : Stacks := (Array.replicate (len + 1) UNINITIALIZED).setIfInBounds 0 EMPTY_STACK
@@ -192,7 +192,7 @@ def markStacks (code : Array Unit') (table : Array Nat) : Stacks :=
       if t2 then go n st else st
   go (len + 2) init
 
-/-- `compatible_stack`, lines 1521-1540. -/
+/-- `compatible_stack`, lines 1533-1552. -/
 def compatibleStack (fromS toS : Int) : Bool :=
   if fromS < 0 || toS < 0 then false
   else
@@ -208,7 +208,7 @@ def compatibleStack (fromS toS : Int) : Bool :=
         else t == 0
     walk 40 (down 64 fromS) toS
 
-/-- `explain_incompatible_stack`, lines 1542-1566. -/
+/-- `explain_incompatible_stack`, lines 1554-1578. -/
 def explainIncompatible (toS : Int) : String :=
   if toS == OVERFLOWED then "stack is too deep to analyze"
   else if toS == UNINITIALIZED then
@@ -220,7 +220,7 @@ def explainIncompatible (toS : Int) : String :=
     | 3 | 4 => "incompatible stacks"
     | _ => "can't jump into the body of a for loop"
 
-/-- `first_line_not_before`, lines 1594-1607; `lines` holds `-1` where no line starts. -/
+/-- `first_line_not_before`, lines 1606-1619; `lines` holds `-1` where no line starts. -/
 def firstLineNotBefore (lines : Array Int) (line : Int) : Int :=
   let r := lines.foldl (fun acc l =>
     if l ≥ line then
@@ -230,7 +230,7 @@ def firstLineNotBefore (lines : Array Int) (line : Int) : Int :=
     else acc) (none : Option Int)
   r.getD (-1)
 
-/-- What `frame_lineno_set_impl` decides, lines 1705-1787, on a line event. -/
+/-- What `frame_lineno_set_impl` decides, lines 1713-1795, on a line event. -/
 inductive Jump where
   /-- `ValueError` with this message. -/
   | error (msg : String)
@@ -238,7 +238,7 @@ inductive Jump where
   | ok (addr : Nat) (bestStack : Int)
   deriving Repr, DecidableEq
 
-/-- Lines 1723-1787: `value` is the requested line, `lasti` the current instruction. -/
+/-- Lines 1731-1795: `value` is the requested line, `lasti` the current instruction. -/
 def linenoDecide (code : Array Unit') (table : Array Nat) (lines : Array Int)
     (firstLine value : Int) (lasti : Nat) : Jump :=
   if value < firstLine then .error s!"line {value} comes before the current code block"

@@ -1673,7 +1673,7 @@ def intrinsic2Impl (_ : Frame) (n : Nat) (_ _ : Val) : RM Val := do
   | 0 => raiseS "SystemError" "invalid intrinsic function"
   | _ => fault "intrinsic not modelled"
 
-/-- `_PyCoro_GetAwaitableIter`, `Objects/genobject.c:1246-1287`. The coroutine test comes
+/-- `_PyCoro_GetAwaitableIter`, `Objects/genobject.c:1245-1284`. The coroutine test comes
 first. `%T` omits the module for `__main__` and `builtins`, the only modules here. -/
 def awaitableIter (o : Val) : RM Val := do
   match ← genKindOf o with
@@ -1729,7 +1729,7 @@ def getANextImpl (o : Val) : RM Val := do
         raiseVal err
       else throw (.exc e)
 
-/-- `_PyEval_MatchKeys`, `Python/ceval.c:437-523`. -/
+/-- `_PyEval_MatchKeys`, `Python/ceval.c:439-523`. -/
 def matchKeysImpl (m keys : Val) : RM Val := do
   let ks ← tupleItems keys
   if ks.size == 0 then return ← mkTuple []

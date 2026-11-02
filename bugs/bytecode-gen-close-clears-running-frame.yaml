@@ -69,6 +69,7 @@ observed: |
   main (python.exe 3.16.0a1+dev ef1fce0): ValueError: generator already executing, generator
   finishes normally. NOT REPRODUCED (fixed by the gen_close rewrite, not backported to 3.14).
   3.14 branch tip on 2026-11-01 (gh api contents, ref=3.14): this code is unchanged from 3.14.7.
+  python3 3.15.2: ValueError: generator already executing; gen_close refuses a running frame at Objects/genobject.c:483-486. NOT REPRODUCED.
 promised_by: |
   Undisputed invariant: no crash from pure Python. Doc/reference/expressions.rst:784: calling a
   generator method on a generator that is already executing raises ValueError.

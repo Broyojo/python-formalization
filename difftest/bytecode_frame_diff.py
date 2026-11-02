@@ -79,7 +79,7 @@ def build(body):
 
 
 def line_table(co):
-    """`marklines`, lines 1568-1592 of Objects/frameobject.c."""
+    """`marklines`, lines 1580-1604 of Objects/frameobject.c."""
     n = len(co.co_code) // 2
     lines = [-1] * n
     last = -1

@@ -3,7 +3,7 @@ import PyLean.Bytecode.Uops3
 /-!
 The interpreter loop: instruction dispatch and the labels `error`,
 `exception_unwind`, `exit_unwind` and `start_frame` of `Python/bytecodes.c`
-(lines 5401-5531) and the entry protocol of `_PyEval_EvalFrameDefault`
+(lines 6447-6590) and the entry protocol of `_PyEval_EvalFrameDefault`
 (`Python/ceval.c:1241-1353`).
 
 `Program` indices 0 and 1 are reserved for the two static code objects the
@@ -332,12 +332,12 @@ def unwind (P : Program) : Nat → Val → St → Outcome
     let handled := if s.regs.next = 0 then none else getExceptionHandler table (s.regs.next - 1)
     match handled with
     | some (handler, level, lasti) =>
-      -- lines 5441-5460
+      -- lines 6505-6524
       let kept := s.stack.drop (s.stack.length - level)
       let st1 := if lasti then Val.tagged f.instrPtr :: kept else kept
       .cont { regs := { s.regs with next := handler }, stack := v :: st1 }
     | none =>
-      -- lines 5429-5439, then `exit_unwind` at 5479-5507
+      -- lines 6493-6504, then `exit_unwind_notrace` at 6549-6577
       match (leaveRecursivePy s.regs.rt) with
       | .error e rt => .stop e rt
       | .ok () rt =>

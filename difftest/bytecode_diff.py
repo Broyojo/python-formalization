@@ -460,6 +460,18 @@ def p_fastpath(r):
         "class P:\n    def __init__(self):\n        self.n = 0\n    @property\n    def p(self):\n        self.n += 1\n        return self.n\n"
         "def f(o):\n    return o.p\nx = P()\nprint(f(x), f(x), f(x))\n"
         "class Q:\n    def __getattribute__(self, n):\n        return 'ga:' + n\ndef g(o):\n    return o.p\nprint(g(Q()), g(Q()), g(x))\n",
+        # one site per form: a site first reached by another type specializes to that type
+        "def f(s, i):\n    return s[i]\n" + guarded(f"print(f('aé☃', {r.choice(['0', '1', '2', '3', '-1', 'True', '-4'])}))")
+        + "\n" + guarded(f"print(f('aé☃', {j}))") + "\n" + guarded(f"print(f('abc', {i}))"),
+        "class G:\n    def __getitem__(self, k):\n        return k * 2\nclass H(G):\n    def __getitem__(self, k):\n        return super().__getitem__(k) + 1\n"
+        "class B:\n    def __getitem__(self, k, extra):\n        return k\n"
+        "def f(o, k):\n    return o[k]\nprint(f(G(), 2), f(G(), 'a'))\n" + guarded("print(f(H(), 3))") + "\n" + guarded("print(f(B(), 3))")
+        + "\n" + guarded(f"print(f([1], {i}))") + "\nG.__getitem__ = lambda self, k: 'new'\nprint(f(G(), 2))\n",
+        "class M:\n    def __init__(self):\n        self.v = 1\n    def m(self, a, b=2):\n        return self.v + a + b\n    def n(self):\n        return self.v\n"
+        "def f(o):\n    return o.n(), o.m(1), o.m(1, 2), o.m(a=1), o.m(1, b=3)\nprint(f(M()), f(M()))\n"
+        "def t(o):\n    return 1 if o else 0\nclass E:\n    def __len__(self):\n        return 0\nprint(t(M()), t(M()), t(E()))\n"
+        "b = M().m\nprint(b(1), b(1, 2), b(a=1), b(1, b=3))\n"
+        "M.__len__ = lambda self: 0\nprint(t(M()))\n",
     ]
     return r.choice(pool)
 
@@ -484,8 +496,17 @@ def p_messages(r):
     return r.choice(pool)
 
 
+def p_float_repr(r):
+    """`repr` around powers of two, where the rounding interval is uneven."""
+    lines = []
+    for _ in range(6):
+        e = r.choice([r.randint(-1074, 1023), r.randint(-60, 60), -24, -44])
+        lines.append(f"x = 2.0 ** {e}\nprint(x, -x, x * 3, x / 3, x + x)")
+    return "\n".join(lines)
+
+
 FAMILIES = [p_arith, p_seq, p_unpack, p_loops, p_calls, p_scope, p_exc, p_with, p_gen, p_class, p_comp, p_match, p_strs, p_async,
-            p_virtual, p_fastpath, p_messages]
+            p_virtual, p_fastpath, p_messages, p_float_repr]
 
 
 def enc_const(c, table):

@@ -8,15 +8,15 @@ functions: ["gen_send_ex2", "_gen_throw"]
 summary: |
   An exception thrown into a FRAME_CREATED frame is raised at the first RESUME, outside the handler
   the compiler wraps the body in, so stopiteration_error does not convert it. gen_send_ex2 asserts at
-  :277-279 that no StopIteration (in an async generator, no StopAsyncIteration) comes out of a frame.
-  So gen().throw(StopIteration) aborts a debug build at :277, and agen().athrow(StopAsyncIteration)
-  at :278. A release build raises StopIteration from throw(), which a caller's `for` or `yield from`
+  :318-320 that no StopIteration (in an async generator, no StopAsyncIteration) comes out of a frame.
+  So gen().throw(StopIteration) aborts a debug build at :318, and agen().athrow(StopAsyncIteration)
+  at :319. A release build raises StopIteration from throw(), which a caller's `for` or `yield from`
   takes as the end of iteration: the case PEP 479 exists to remove.
 likelihood: |
   Low. Needs throw(StopIteration) on an unstarted generator; contrived in practice, per the issue.
 maybe_intended: |
   No: the assert states the intent. Already reported as python/cpython#152685, still open. Recorded
-  here because the model reaches the same conclusion; the async generator case at :278 is not in that
+  here because the model reaches the same conclusion; the async generator case at :319 is not in that
   report and could be added to it.
 reproducer: |
   def g():
@@ -32,8 +32,9 @@ expected: |
   RuntimeError("generator raised StopIteration"), as for a started generator, or at least no failed
   assert.
 observed: |
-  python3 3.14.7: StopIteration escapes. Debug build of 3.14.7: Assertion at Objects/genobject.c:318
-  failed; async generator: at :319. REPRODUCED.
+  python3 3.15.2: StopIteration escapes. REPRODUCED. No debug build of 3.15.2 was run; the asserts
+  are at Objects/genobject.c:318-319 by reading. Debug build of 3.14.7: both asserts failed
+  (:279-280 in that version).
   main (python.exe 3.16.0a1+dev ef1fce0): same; debug build of main: asserts at genobject.c:404 and
   :405 failed. REPRODUCED.
 promised_by: |

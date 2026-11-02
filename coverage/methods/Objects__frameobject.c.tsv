@@ -48,13 +48,13 @@ Objects/frameobject.c	1252	1262	pop_to_level	pop_to_level(int64_t stack, int lev
 Objects/frameobject.c	1268	1282	tos_char	tos_char(int64_t stack) {	todo		
 Objects/frameobject.c	1285	1302	print_stack	print_stack(int64_t stack) {	todo		
 Objects/frameobject.c	1305	1311	print_stacks	print_stacks(int64_t *stacks, int n) {	todo		
-Objects/frameobject.c	1316	1531	mark_stacks	mark_stacks(PyCodeObject *code_obj, int len)	todo		changed-in-3.15: was bytecode-flineno-null-on-stack,bytecode-flineno-stack-swap
+Objects/frameobject.c	1316	1531	mark_stacks	mark_stacks(PyCodeObject *code_obj, int len)	todo		
 Objects/frameobject.c	1534	1552	compatible_stack	compatible_stack(int64_t from_stack, int64_t to_stack)	modelled	bytecode-flineno-null-on-stack,bytecode-flineno-stack-swap	
 Objects/frameobject.c	1555	1578	explain_incompatible_stack	explain_incompatible_stack(int64_t to_stack)	todo		
 Objects/frameobject.c	1581	1604	marklines	marklines(PyCodeObject *code, int len)	modelled	bytecode-frame-first-line	
 Objects/frameobject.c	1607	1619	first_line_not_before	first_line_not_before(int *lines, int len, int line)	modelled	bytecode-frame-first-line	
 Objects/frameobject.c	1621	1629	frame_is_suspended	static bool frame_is_suspended(PyFrameObject *frame)	todo		
-Objects/frameobject.c	1652	1843	frame_lineno_set_impl	frame_lineno_set_impl(PyFrameObject *self, PyObject *value) /*[clinic end generated code: output=e64c86ff6be64292 input=36ed3c896b27fb91]*/	todo		changed-in-3.15: was bytecode-flineno-null-on-stack,bytecode-flineno-stack-swap
+Objects/frameobject.c	1652	1843	frame_lineno_set_impl	frame_lineno_set_impl(PyFrameObject *self, PyObject *value) /*[clinic end generated code: output=e64c86ff6be64292 input=36ed3c896b27fb91]*/	todo		
 Objects/frameobject.c	1855	1863	frame_trace_get_impl	frame_trace_get_impl(PyFrameObject *self) /*[clinic end generated code: output=5475cbfce07826cd input=e4eacf2c68cac577]*/	todo		
 Objects/frameobject.c	1874	1887	frame_trace_set_impl	frame_trace_set_impl(PyFrameObject *self, PyObject *value) /*[clinic end generated code: output=d6fe08335cf76ae4 input=9fb7a5805196eae2]*/	todo		
 Objects/frameobject.c	1899	1907	frame_generator_get_impl	frame_generator_get_impl(PyFrameObject *self) /*[clinic end generated code: output=97aeb2392562e55b input=3ffba57ba10f84be]*/	todo		

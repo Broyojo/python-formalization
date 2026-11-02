@@ -49,6 +49,15 @@ def simpleFunction (c : Code) : Bool :=
   c.flags &&& (coVarkeywords ||| coVarargs) == 0 && c.kwonlyargcount == 0 &&
     c.flags &&& coOptimized != 0
 
+/-- The class record of an instance, if the type is a Python class. -/
+def heapClass (v : Val) : RM (Option ClassObj) := do
+  match ← typeOf v with
+  | .ref a =>
+    match ← getObj a with
+    | .cls c => pure (some c)
+    | _ => pure none
+  | _ => pure none
+
 /-- `_Py_Specialize_BinaryOp`. -/
 def suggestBinaryOp (P : Program) (i : Instr) (next? : Option Instr) (f : Frame) :
     Tops → RM (Option Instr)
@@ -114,7 +123,8 @@ def suggestBinaryOp (P : Program) (i : Instr) (next? : Option Instr) (f : Frame)
                   let fo ← getFunc g
                   let co ← getCodeR P fo.code
                   if simpleFunction co && co.argcount == 2 then
-                    pure (specInstr i .BINARY_OP_SUBSCR_GETITEM [.tagged fo.version, g])
+                    let tv := ((← heapClass l).map (·.version)).getD 0
+                    pure (specInstr i .BINARY_OP_SUBSCR_GETITEM [.tagged fo.version, g, .tagged tv])
                   else pure none
                 else pure none
               | none => pure none
@@ -245,15 +255,6 @@ def suggestLoadGlobal (i : Instr) (co : Code) (f : Frame) : RM (Option Instr) :=
     | some ix =>
       pure (specInstr i .LOAD_GLOBAL_BUILTIN [.tagged gd.version, .tagged bd.version, .tagged ix])
     | none => pure none
-
-/-- The class record of an instance, if the type is a Python class. -/
-def heapClass (v : Val) : RM (Option ClassObj) := do
-  match ← typeOf v with
-  | .ref a =>
-    match ← getObj a with
-    | .cls c => pure (some c)
-    | _ => pure none
-  | _ => pure none
 
 /-- A plain Python class of instances, with no attribute hooks. -/
 def plainAttr (t : Val) : RM Bool := do

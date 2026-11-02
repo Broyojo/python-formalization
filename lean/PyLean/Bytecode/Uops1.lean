@@ -46,16 +46,16 @@ def NOT_TAKEN : M Unit := NOP
 def _CHECK_PERIODIC : M Unit := pure ()
 /-- `:168`. -/
 def _CHECK_PERIODIC_IF_NOT_YIELD_FROM : M Unit := pure ()
-/-- `@3.14.7:175`. Rewriting `RESUME` to `RESUME_CHECK` is the quickening relation. -/
+/-- `:175`. Rewriting `RESUME` to `RESUME_CHECK` is the quickening relation. -/
 def _QUICKEN_RESUME : M Unit := pure ()
 /-- `:179`. No monitoring tool is active in the model. -/
 def _MAYBE_INSTRUMENT : M Unit := pure ()
-/-- `@3.14.7:206`. Thread-local bytecode exists only on the free-threaded build. -/
+/-- `:202`. Thread-local bytecode exists only on the free-threaded build. -/
 def _LOAD_BYTECODE : M Unit := pure ()
 /-- `:220`. -/
 def RESUME : M Unit := do
   _LOAD_BYTECODE; _MAYBE_INSTRUMENT; _QUICKEN_RESUME; _CHECK_PERIODIC_IF_NOT_YIELD_FROM
-/-- `:230`: deopts when the eval breaker differs from the code's version. -/
+/-- `:226`: deopts when the eval breaker differs from the code's version. -/
 def RESUME_CHECK : M Unit := pure ()
 /-- `:245`: `_RESUME_CHECK + _JIT`, and `_JIT` does nothing with tier 2 not built. -/
 def RESUME_CHECK_JIT : M Unit := RESUME_CHECK
@@ -114,7 +114,7 @@ def getName (e : Env) (i : Nat) : BM String := do
 def LOAD_CONST (e : Env) : M Unit := stk 0 1 fun _ => do pure [← getConst e]
 /-- `:317`. -/
 def LOAD_SMALL_INT (e : Env) : M Unit := stk 0 1 fun _ => pure [.int e.oparg]
-/-- `@3.14.7:350`. -/
+/-- `:323`. -/
 def STORE_FAST (e : Env) : M Unit := stk 1 0 fun
   | [v] => do setLocal e.oparg v; pure []
   | _ => fault "arity"
@@ -154,11 +154,11 @@ def INSTRUMENTED_END_SEND : M Unit := END_SEND
 
 /-! ### Lines 455-595: unary operators and `TO_BOOL` -/
 
-/-- `@3.14.7:455`. -/
+/-- `:451`. -/
 def UNARY_NEGATIVE (e : Env) : M Unit := stk 1 1 fun
   | [v] => do pure [← e.om.negative e.ctx v]
   | _ => fault "arity"
-/-- `@3.14.7:462`. -/
+/-- `:477`. -/
 def UNARY_NOT : M Unit := stk 1 1 fun
   | [.bool b] => pure [.bool !b]
   | _ => fault "UNARY_NOT on a non-bool"
@@ -175,7 +175,7 @@ def TO_BOOL (e : Env) : M Unit := do _SPECIALIZE_TO_BOOL; _TO_BOOL e
 def TO_BOOL_BOOL : M Unit := guardTop 1 fun
   | [.bool _] => pure false
   | _ => pure true
-/-- `@3.14.7:504`. -/
+/-- `:527`. -/
 def TO_BOOL_INT : M Unit := stk 1 1 fun
   | [.int i] => pure [.bool (i != 0)]
   | _ => throw .deopt
@@ -216,14 +216,14 @@ def _GUARD_TOS_LIST : M Unit := guardTop 1 fun
 def _GUARD_TOS_SLICE : M Unit := guardTop 1 fun
   | [tos] => notSlice tos
   | _ => fault "arity"
-/-- `@3.14.7:536`. -/
+/-- `:547`. -/
 def _TO_BOOL_LIST : M Unit := stk 1 1 fun
   | [.ref a] => do
     match ← (getObj a : RM Obj) with
     | .list items => pure [.bool (items.size != 0)]
     | _ => fault "not a list"
   | _ => fault "not a list"
-/-- `@3.14.7:534`. -/
+/-- `:545`. -/
 def TO_BOOL_LIST : M Unit := do _GUARD_TOS_LIST; _TO_BOOL_LIST
 /-- `:556`. -/
 def TO_BOOL_NONE : M Unit := stk 1 1 fun
@@ -237,13 +237,13 @@ def _GUARD_NOS_UNICODE : M Unit := guardTop 2 fun
 def _GUARD_TOS_UNICODE : M Unit := guardTop 1 fun
   | [v] => pure (notStr v)
   | _ => fault "arity"
-/-- `@3.14.7:562`. -/
+/-- `:580`. -/
 def _TO_BOOL_STR : M Unit := stk 1 1 fun
   | [.str s] => pure [.bool (s != "")]
   | _ => fault "not a str"
 /-- `:588`. -/
 def TO_BOOL_STR : M Unit := do _GUARD_TOS_UNICODE; _TO_BOOL_STR
-/-- `@3.14.7:580`. -/
+/-- `:591`. -/
 def _REPLACE_WITH_TRUE : M Unit := stk 1 1 fun _ => pure [.bool true]
 
 /-- `Py_TYPE(v)->tp_version_tag` for types that have one. -/
@@ -268,12 +268,18 @@ def _GUARD_TYPE_VERSION (e : Env) : M Unit := guardTop 1 fun
 
 /-- `:597`. -/
 def TO_BOOL_ALWAYS_TRUE (e : Env) : M Unit := do _GUARD_TYPE_VERSION e; _REPLACE_WITH_TRUE
-/-- `@3.14.7:590`. -/
+/-- `:604`. -/
 def UNARY_INVERT (e : Env) : M Unit := stk 1 1 fun
   | [v] => do pure [← e.om.invert e.ctx v]
   | _ => fault "arity"
 
-/-! ### Lines 615-890: `BINARY_OP` specializations -/
+/-! ### Lines 615-890: `BINARY_OP` specializations
+
+On 3.15 the arithmetic uops are `(left, right -- res, l, r)`, and each macro ends in two
+`_POP_TOP_INT`, `_POP_TOP_FLOAT` or `_POP_TOP_UNICODE`. Those pops only drop an exact `int`,
+`float` or `str`, so the model folds them into the uop's `stk 2 1`. The failure these uops can
+take with the inputs kept is `PyFloat_FromDouble` or the concatenation running out of memory,
+which is not modelled. -/
 
 /-- `_PyLong_CheckExactAndCompact`, `Include/internal/pycore_long.h:344`, negated: an exact
 `int` of at most one digit is what both int guards ask for on 3.15. -/
@@ -374,35 +380,35 @@ descriptors themselves are in `Specialize.lean`. -/
 def _GUARD_BINARY_OP_EXTEND (d : ExtendDescr) : M Unit := guardTop 2 fun
   | [l, r] => pure !(d.guard l r)
   | _ => fault "arity"
-/-- `:461`. -/
+/-- `:1039`. -/
 def _BINARY_OP_EXTEND (d : ExtendDescr) : M Unit := stk 2 1 fun
   | [l, r] => pure [d.action l r]
   | _ => fault "arity"
-/-- `:475`. -/
+/-- `:1066`. -/
 def BINARY_OP_EXTEND (d : ExtendDescr) : M Unit := do _GUARD_BINARY_OP_EXTEND d; _BINARY_OP_EXTEND d
 
 /-- `_PyBuildSlice_ConsumeRefs(start, stop)`. -/
 def buildSlice2 (start stop : Val) : RM Val := alloc (.slice start stop .none)
-/-- `:481`: placeholder upstream as well. -/
+/-- `:1072`: placeholder upstream as well. -/
 def _SPECIALIZE_BINARY_SLICE : M Unit := pure ()
-/-- `:488`. -/
+/-- `:1079`. -/
 def _BINARY_SLICE (e : Env) : M Unit := stk 3 1 fun
   | [c, s, t] => do
     let sl ← (buildSlice2 s t : RM Val)
     pure [← e.om.getItem e.ctx c sl]
   | _ => fault "arity"
-/-- `:506`. -/
+/-- `:1108`. -/
 def BINARY_SLICE (e : Env) : M Unit := do _SPECIALIZE_BINARY_SLICE; _BINARY_SLICE e
-/-- `:508`. -/
+/-- `:1110`. -/
 def _SPECIALIZE_STORE_SLICE : M Unit := pure ()
-/-- `:515`. -/
+/-- `:1117`. -/
 def _STORE_SLICE (e : Env) : M Unit := stk 4 0 fun
   | [v, c, s, t] => do
     let sl ← (buildSlice2 s t : RM Val)
     e.om.setItem e.ctx c sl v
     pure []
   | _ => fault "arity"
-/-- `:530`. -/
+/-- `:1132`. -/
 def STORE_SLICE (e : Env) : M Unit := do _SPECIALIZE_STORE_SLICE; _STORE_SLICE e
 
 /-- `:1137`. Since 3.15 this takes a negative index too, after `_GUARD_TOS_INT` has made
@@ -420,11 +426,11 @@ def _BINARY_OP_SUBSCR_LIST_INT : M Unit := stk 2 1 fun
   | _ => fault "not list[int]"
 /-- `:1134`. -/
 def BINARY_OP_SUBSCR_LIST_INT : M Unit := do _GUARD_TOS_INT; _GUARD_NOS_LIST; _BINARY_OP_SUBSCR_LIST_INT
-/-- `:564`: `_PyList_SliceSubscript` is the slice branch of `list_subscript`. -/
+/-- `:1167`: `_PyList_SliceSubscript` is the slice branch of `list_subscript`. -/
 def _BINARY_OP_SUBSCR_LIST_SLICE (e : Env) : M Unit := stkK 2 1 fun
   | [l, s] => do pure [← e.om.getItem e.ctx l s]
   | _ => fault "arity"
-/-- `:561`. -/
+/-- `:1164`. -/
 def BINARY_OP_SUBSCR_LIST_SLICE (e : Env) : M Unit := do
   _GUARD_TOS_SLICE; _GUARD_NOS_LIST; _BINARY_OP_SUBSCR_LIST_SLICE e
 /-- `:564`: `PyUnicode_CheckExact` and `PyUnicode_IS_COMPACT_ASCII`. -/
@@ -454,15 +460,15 @@ def _BINARY_OP_SUBSCR_USTR_INT : M Unit := stk 2 1 fun
   | _ => fault "not str[int]"
 /-- `:1207`. -/
 def BINARY_OP_SUBSCR_USTR_INT : M Unit := do _GUARD_TOS_INT; _GUARD_NOS_UNICODE; _BINARY_OP_SUBSCR_USTR_INT
-/-- `:601`. -/
+/-- `:1230`. -/
 def _GUARD_NOS_TUPLE : M Unit := guardTop 2 fun
   | [nos, _] => notTuple nos
   | _ => fault "arity"
-/-- `:606`. -/
+/-- `:1235`. -/
 def _GUARD_TOS_TUPLE : M Unit := guardTop 1 fun
   | [tos] => notTuple tos
   | _ => fault "arity"
-/-- `:614`. -/
+/-- `:1263`. -/
 def _BINARY_OP_SUBSCR_TUPLE_INT : M Unit := stk 2 1 fun
   | [.ref a, .int sub] => do
     if !isNonNegCompact sub then throw .deopt
@@ -473,17 +479,24 @@ def _BINARY_OP_SUBSCR_TUPLE_INT : M Unit := stk 2 1 fun
       | none => throw .deopt
     | _ => fault "not a tuple"
   | _ => fault "not tuple[int]"
-/-- `:611`. -/
+/-- `:1240`. -/
 def BINARY_OP_SUBSCR_TUPLE_INT : M Unit := do _GUARD_TOS_INT; _GUARD_NOS_TUPLE; _BINARY_OP_SUBSCR_TUPLE_INT
-/-- `:633`. -/
-def _GUARD_NOS_DICT : M Unit := guardTop 2 fun
+/-- `:1280`: `mp_subscript == _PyDict_Subscript`. That also admits a subclass with no
+`__getitem__` and a `frozendict`. The model has no `frozendict`, and `suggest` only picks this
+form for an exact dict, so a subclass here takes the generic path to the same result. -/
+def _GUARD_NOS_DICT_SUBSCRIPT : M Unit := guardTop 2 fun
   | [nos, _] => notDict nos
   | _ => fault "arity"
-/-- `:638`. -/
-def _GUARD_TOS_DICT : M Unit := guardTop 1 fun
+/-- `:1286`: `mp_ass_subscript == _PyDict_StoreSubscript`, as `_GUARD_NOS_DICT_SUBSCRIPT`. The
+signature names three values, and `nos` is the second from the top. -/
+def _GUARD_NOS_DICT_STORE_SUBSCRIPT : M Unit := guardTop 2 fun
+  | [nos, _] => notDict nos
+  | _ => fault "arity"
+/-- `:1292`: `PyAnyDict_CheckExact`, which is `dict` here, the model having no `frozendict`. -/
+def _GUARD_TOS_ANY_DICT : M Unit := guardTop 1 fun
   | [tos] => notDict tos
   | _ => fault "arity"
-/-- `:646`. -/
+/-- `:1326`. -/
 def _BINARY_OP_SUBSCR_DICT (e : Env) : M Unit := stk 2 1 fun
   | [d, sub] => do
     let r ← (dictGet e.om e.ctx d sub : RM _)
@@ -491,8 +504,8 @@ def _BINARY_OP_SUBSCR_DICT (e : Env) : M Unit := stk 2 1 fun
     | some v => pure [v]
     | none => (do raiseVal (← newExc (.cls "KeyError") [sub]) : RM _)
   | _ => fault "arity"
-/-- `:643`. -/
-def BINARY_OP_SUBSCR_DICT (e : Env) : M Unit := do _GUARD_NOS_DICT; _BINARY_OP_SUBSCR_DICT e
+/-- `:1307`. -/
+def BINARY_OP_SUBSCR_DICT (e : Env) : M Unit := do _GUARD_NOS_DICT_SUBSCRIPT; _BINARY_OP_SUBSCR_DICT e
 
 /-! ### Frame switching -/
 
@@ -551,7 +564,7 @@ def _PUSH_FRAME (nf : Frame) : M Unit := do
 /-- `frame->return_offset = n`. -/
 def setReturnOffset (n : Nat) : BM Unit := modifyFrame fun f => { f with returnOffset := n }
 
-/-- `:4501`, `_SAVE_RETURN_OFFSET`. -/
+/-- `:6136`, `_SAVE_RETURN_OFFSET`. -/
 def _SAVE_RETURN_OFFSET (e : Env) : BM Unit := do setReturnOffset ((← getNext) - e.this)
 
 /-- The plain form of an instrumented opcode (`_PyOpcode_Deopt` keeps those as
@@ -583,14 +596,17 @@ def uninstr : Op → Op
 /-- `INSTRUCTION_SIZE`: the code units of the current instruction. -/
 def instrSize (o : Op) : Nat := 1 + (uninstr o).deopt.caches
 
-/-- `:4217`: no PEP 523 frame evaluator is installed in the model. -/
+/-- `:4592`: no PEP 523 frame evaluator is installed in the model. -/
 def _CHECK_PEP_523 : M Unit := pure ()
 
 /-- `_PyThreadState_HasStackSpace`. -/
 def hasStackSpace : BM Bool := fun r => .ok r.rt.stackSpace r
 
-/-- `:1263`: `(container, unused -- container, unused, getitem)`. The cached
-function of `ht->_spec_cache` is `cache[1]`, its version `cache[0]`. -/
+/-- `:1341`: `(container, unused -- container, unused, getitem)`. `ht->_spec_cache` belongs to the
+container's type, and `PyType_Modified` empties it (`Objects/typeobject.c:1274`). The model keeps
+it on the instruction: `cache[1]` is the function, `cache[0]` its version, and `cache[2]` the
+version of the type it was filled for. Any other type version stands for a cache that is empty,
+which exits, or that holds that other type's `__getitem__`, which the generic form then calls. -/
 def _BINARY_OP_SUBSCR_CHECK_FUNC (e : Env) : M Val := do
   let ins ← peekN 2
   match ins with
@@ -600,6 +616,7 @@ def _BINARY_OP_SUBSCR_CHECK_FUNC (e : Env) : M Val := do
       | .ref _ => pure true
       | _ => pure false
     deoptIf !heap
+    deoptIf ((← typeVersionOf container) != cacheNat e 2)
     let g := (e.cache[1]?).getD .null
     deoptIf (g == .null)
     let fo ← (getFunc g : RM FuncObj)
@@ -608,7 +625,7 @@ def _BINARY_OP_SUBSCR_CHECK_FUNC (e : Env) : M Val := do
     pure g
   | _ => fault "arity"
 
-/-- `:1279`: `(container, sub, getitem -- new_frame)`. -/
+/-- `:1356`: `(container, sub, getitem -- new_frame)`. -/
 def _BINARY_OP_SUBSCR_INIT_CALL (e : Env) (getitem : Val) : M Frame := do
   let ins ← popN 2
   match ins with
@@ -620,7 +637,7 @@ def _BINARY_OP_SUBSCR_INIT_CALL (e : Env) (getitem : Val) : M Frame := do
     pure { nf with fast := (nf.fast.setIfInBounds 0 container).setIfInBounds 1 sub }
   | _ => fault "arity"
 
-/-- `:1287`. -/
+/-- `:1366`. -/
 def BINARY_OP_SUBSCR_GETITEM (e : Env) : M Unit := do
   _CHECK_PEP_523
   let g ← _BINARY_OP_SUBSCR_CHECK_FUNC e
@@ -636,27 +653,27 @@ def listAppend (l v : Val) : RM Unit := do
     | _ => fault "not a list"
   | _ => fault "not a list"
 
-/-- `:1294`. -/
+/-- `:1374`. -/
 def LIST_APPEND (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
   let v := ins.getLastD .null
   let rest := ins.dropLast
   (listAppend (rest.headD .null) v : RM Unit)
   pure rest
-/-- `:1300`. -/
+/-- `:1380`. -/
 def SET_ADD (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
   let v := ins.getLastD .null
   let rest := ins.dropLast
   (setAdd e.om e.ctx (rest.headD .null) v : RM Unit)
   pure rest
-/-- `:1311`. -/
+/-- `:1399`. -/
 def _SPECIALIZE_STORE_SUBSCR : M Unit := pure ()
-/-- `:1323`. -/
+/-- `:1411`. -/
 def _STORE_SUBSCR (e : Env) : M Unit := stk 3 0 fun
   | [v, c, sub] => do e.om.setItem e.ctx c sub v; pure []
   | _ => fault "arity"
-/-- `:1330`. -/
+/-- `:1418`. -/
 def STORE_SUBSCR (e : Env) : M Unit := do _SPECIALIZE_STORE_SUBSCR; _STORE_SUBSCR e
-/-- `:1335`. -/
+/-- `:1423`. -/
 def _STORE_SUBSCR_LIST_INT : M Unit := stk 3 0 fun
   | [v, .ref a, .int sub] => do
     if !isNonNegCompact sub then throw .deopt
@@ -667,38 +684,38 @@ def _STORE_SUBSCR_LIST_INT : M Unit := stk 3 0 fun
       pure []
     | _ => fault "not a list"
   | _ => fault "not list[int]"
-/-- `:1332`. -/
+/-- `:1420`. -/
 def STORE_SUBSCR_LIST_INT : M Unit := do _GUARD_TOS_INT; _GUARD_NOS_LIST; _STORE_SUBSCR_LIST_INT
-/-- `:1367`. -/
+/-- `:1458`. -/
 def _STORE_SUBSCR_DICT (e : Env) : M Unit := stk 3 0 fun
   | [v, d, sub] => do (dictSet e.om e.ctx d sub v : RM Unit); pure []
   | _ => fault "arity"
-/-- `:1364`. -/
-def STORE_SUBSCR_DICT (e : Env) : M Unit := do _GUARD_NOS_DICT; _STORE_SUBSCR_DICT e
-/-- `:1379`. -/
+/-- `:1454`. -/
+def STORE_SUBSCR_DICT (e : Env) : M Unit := do _GUARD_NOS_DICT_STORE_SUBSCRIPT; _STORE_SUBSCR_DICT e
+/-- `:1490`. -/
 def DELETE_SUBSCR (e : Env) : M Unit := stk 2 0 fun
   | [c, sub] => do e.om.delItem e.ctx c sub; pure []
   | _ => fault "arity"
-/-- `:1387`. -/
+/-- `:1509`. -/
 def CALL_INTRINSIC_1 (e : Env) : M Unit := stk 1 1 fun
   | [v] => do
     let f ← getFrame
     pure [← e.om.intrinsic1 e.ctx f e.oparg v]
   | _ => fault "arity"
-/-- `:1395`. -/
+/-- `:1529`. -/
 def CALL_INTRINSIC_2 (e : Env) : M Unit := stk 2 1 fun
   | [v2, v1] => do
     let f ← getFrame
     pure [← e.om.intrinsic2 e.ctx f e.oparg v2 v1]
   | _ => fault "arity"
-/-- `:1406`. -/
+/-- `:1531`. -/
 def RAISE_VARARGS (e : Env) : M Unit := stk e.oparg 0 fun args => do
   let cause := if e.oparg == 2 then args.getD 1 .null else .null
   let exc := if e.oparg > 0 then args.getD 0 .null else .null
   (doRaise e.om e.ctx exc cause : RM Unit)
   -- `do_raise` always leaves through an exception
   fault "do_raise returned"
-/-- `:1419`. -/
+/-- `:1544`. -/
 def INTERPRETER_EXIT : M Unit := do
   let ins ← popN 1
   throw (.leave (ins.headD .null))
@@ -754,24 +771,24 @@ def RETURN_VALUE : M Unit := do
   BM.lift do loadIp (← getFrame).returnOffset
   pushAll [retval]
 
-/-- `:1319`. -/
+/-- `:1595`. -/
 def _RETURN_VALUE_EVENT : M Unit := pure ()
-/-- `:1326`. -/
+/-- `:1602`. -/
 def INSTRUMENTED_RETURN_VALUE : M Unit := do _RETURN_VALUE_EVENT; RETURN_VALUE
 
-/-- `:1330`. -/
+/-- `:1607`. -/
 def GET_AITER (e : Env) : M Unit := stk 1 1 fun
   | [o] => do pure [← e.om.getAIter e.ctx o]
   | _ => fault "arity"
-/-- `:1371`. -/
+/-- `:1643`. -/
 def GET_ANEXT (e : Env) : M Unit := stkK 1 2 fun
   | [a] => do pure [a, ← e.om.getANext e.ctx a]
   | _ => fault "arity"
-/-- `:1406`. -/
+/-- `:1651`. -/
 def GET_AWAITABLE (e : Env) : M Unit := stk 1 1 fun
   | [o] => do pure [← e.om.getAwaitable e.ctx o e.oparg]
   | _ => fault "arity"
-/-- `:1415`. -/
+/-- `:1664`. -/
 def _SPECIALIZE_SEND : M Unit := pure ()
 
 /-- Exact `generator` or `coroutine` object with `gi_frame_state < FRAME_EXECUTING`:
@@ -969,9 +986,9 @@ def YIELD_VALUE (e : Env) : M Unit := do
   BM.lift (loadIp 2)
   pushAll [retval]
 
-/-- `:1574`. -/
+/-- `:1893`. -/
 def _YIELD_VALUE_EVENT : M Unit := pure ()
-/-- `:1587`. -/
+/-- `:1906`. -/
 def INSTRUMENTED_YIELD_VALUE (e : Env) : M Unit := do _YIELD_VALUE_EVENT; YIELD_VALUE e
 
 /-- `tstate->exc_info->exc_value = v`. -/
@@ -982,14 +999,14 @@ def setExcInfoTop (v : Val) : RM Unit := fun rt =>
 
 def getExcInfoTop : RM Val := fun rt => .ok (rt.excInfo.headD .null) rt
 
-/-- `:1591`. -/
+/-- `:1911`. -/
 def POP_EXCEPT : M Unit := stk 1 0 fun
   | [v] => do
     (setExcInfoTop (if v == .none then .null else v) : RM Unit)
     pure []
   | _ => fault "arity"
 
-/-- `:1598`. -/
+/-- `:1918`. -/
 def RERAISE (e : Env) : M Unit := do
   let ins ← popN 1
   let exc := ins.headD .null
@@ -1000,7 +1017,7 @@ def RERAISE (e : Env) : M Unit := do
     | _ => fault "lasti is not a tagged int"
   throw (.unwind exc)
 
-/-- `:1611`. -/
+/-- `:1931`. -/
 def _END_ASYNC_FOR : M Unit := do
   let ins ← peekN 2
   match ins with
@@ -1012,11 +1029,11 @@ def _END_ASYNC_FOR : M Unit := do
       let _ ← popN 2
       throw (.unwind exc)
   | _ => fault "arity"
-/-- `:1951`. -/
+/-- `:1949`. -/
 def _MONITOR_END_ASYNC_FOR : M Unit := pure ()
-/-- `:1636`. -/
+/-- `:1954`. -/
 def INSTRUMENTED_END_ASYNC_FOR : M Unit := do _MONITOR_END_ASYNC_FOR; _END_ASYNC_FOR
-/-- `:1640`. -/
+/-- `:1958`. -/
 def END_ASYNC_FOR : M Unit := _END_ASYNC_FOR
 
 /-- `:1960`: `(sub_iter, null_in, last_sent_val, exc_value_st -- none, null_out, value)`. -/
@@ -1054,14 +1071,14 @@ def LOAD_COMMON_CONSTANT (e : Env) : M Unit := stk 0 1 fun _ =>
 def optItem (e : Env) (o : Val) (n : String) : RM (Option Val) := do
   if ← isExactDict o then dictGetStr o n else getOptionalItem e.om e.ctx o (.str n)
 
-/-- `:1509`. -/
+/-- `:1986`. -/
 def LOAD_BUILD_CLASS (e : Env) : M Unit := stk 0 1 fun _ => do
   let f ← getFrame
   match ← (optItem e f.builtins "__build_class__" : RM _) with
   | some b => pure [b]
   | none => (raiseS "NameError" "__build_class__ not found" : RM _)
 
-/-- `:1521`. -/
+/-- `:1998`. -/
 def STORE_NAME (e : Env) : M Unit := stk 1 0 fun
   | [v] => do
     let name ← getName e e.oparg
@@ -1073,7 +1090,7 @@ def STORE_NAME (e : Env) : M Unit := stk 1 0 fun
     pure []
   | _ => fault "arity"
 
-/-- `:1541`. -/
+/-- `:2018`. -/
 def DELETE_NAME (e : Env) : M Unit := stk 0 0 fun _ => do
   let name ← getName e e.oparg
   let ns := (← getFrame).locals
@@ -1084,17 +1101,17 @@ def DELETE_NAME (e : Env) : M Unit := stk 0 0 fun _ => do
   del
   pure []
 
-/-- `:1566`. -/
+/-- `:2043`. -/
 def _SPECIALIZE_UNPACK_SEQUENCE : M Unit := pure ()
-/-- `:1580`. -/
+/-- `:2057`. -/
 def _UNPACK_SEQUENCE (e : Env) : M Unit := stk 1 e.oparg fun
   | [seq] => do
     let l ← (unpackIterable e.om e.ctx seq e.oparg none : RM _)
     pure l.reverse
   | _ => fault "arity"
-/-- `:1587`. -/
+/-- `:2064`. -/
 def UNPACK_SEQUENCE (e : Env) : M Unit := do _SPECIALIZE_UNPACK_SEQUENCE; _UNPACK_SEQUENCE e
-/-- `:1592`. -/
+/-- `:2069`. -/
 def _UNPACK_SEQUENCE_TWO_TUPLE : M Unit := stk 1 2 fun
   | [.ref a] => do
     match ← (getObj a : RM Obj) with
@@ -1102,9 +1119,9 @@ def _UNPACK_SEQUENCE_TWO_TUPLE : M Unit := stk 1 2 fun
     | .tuple _ => throw .deopt
     | _ => fault "not a tuple"
   | _ => fault "not a tuple"
-/-- `:1589`. -/
+/-- `:2066`. -/
 def UNPACK_SEQUENCE_TWO_TUPLE : M Unit := do _GUARD_TOS_TUPLE; _UNPACK_SEQUENCE_TWO_TUPLE
-/-- `:1606`. -/
+/-- `:2102`. -/
 def _UNPACK_SEQUENCE_TUPLE (e : Env) : M Unit := stk 1 e.oparg fun
   | [.ref a] => do
     match ← (getObj a : RM Obj) with
@@ -1113,9 +1130,9 @@ def _UNPACK_SEQUENCE_TUPLE (e : Env) : M Unit := stk 1 e.oparg fun
       pure items.toList.reverse
     | _ => fault "not a tuple"
   | _ => fault "not a tuple"
-/-- `:1603`. -/
+/-- `:2099`. -/
 def UNPACK_SEQUENCE_TUPLE (e : Env) : M Unit := do _GUARD_TOS_TUPLE; _UNPACK_SEQUENCE_TUPLE e
-/-- `:1621`. -/
+/-- `:2131`. -/
 def _UNPACK_SEQUENCE_LIST (e : Env) : M Unit := stk 1 e.oparg fun
   | [.ref a] => do
     match ← (getObj a : RM Obj) with
@@ -1124,9 +1141,9 @@ def _UNPACK_SEQUENCE_LIST (e : Env) : M Unit := stk 1 e.oparg fun
       pure items.toList.reverse
     | _ => fault "not a list"
   | _ => fault "not a list"
-/-- `:1618`. -/
+/-- `:2128`. -/
 def UNPACK_SEQUENCE_LIST (e : Env) : M Unit := do _GUARD_TOS_LIST; _UNPACK_SEQUENCE_LIST e
-/-- `:1638`. -/
+/-- `:2148`. -/
 def UNPACK_EX (e : Env) : M Unit :=
   stk 1 ((e.oparg &&& 255) + 1 + (e.oparg >>> 8)) fun
     | [seq] => do
@@ -1134,38 +1151,38 @@ def UNPACK_EX (e : Env) : M Unit :=
       pure l.reverse
     | _ => fault "arity"
 
-/-- `:1651`. -/
+/-- `:2161`. -/
 def _SPECIALIZE_STORE_ATTR : M Unit := pure ()
-/-- `:1664`. -/
+/-- `:2174`. -/
 def _STORE_ATTR (e : Env) : M Unit := stk 2 0 fun
   | [v, owner] => do
     let name ← getName e e.oparg
     e.om.setAttr e.ctx owner name v
     pure []
   | _ => fault "arity"
-/-- `:1672`. -/
+/-- `:2182`. -/
 def STORE_ATTR (e : Env) : M Unit := do _SPECIALIZE_STORE_ATTR; _STORE_ATTR e
-/-- `:1674`. -/
+/-- `:2184`. -/
 def DELETE_ATTR (e : Env) : M Unit := stk 1 0 fun
   | [owner] => do
     let name ← getName e e.oparg
     e.om.delAttr e.ctx owner name
     pure []
   | _ => fault "arity"
-/-- `:1681`. -/
+/-- `:2191`. -/
 def STORE_GLOBAL (e : Env) : M Unit := stk 1 0 fun
   | [v] => do
     let name ← getName e e.oparg
     (dictSetStr (← getFrame).globals name v : RM Unit)
     pure []
   | _ => fault "arity"
-/-- `:1688`. -/
+/-- `:2198`. -/
 def DELETE_GLOBAL (e : Env) : M Unit := stk 0 0 fun _ => do
   let name ← getName e e.oparg
   let found ← (dictPopStr (← getFrame).globals name : RM Bool)
   if !found then (formatExcCheckArg "NameError" (nameErrorMsg name) : RM _)
   pure []
-/-- `:1702`. -/
+/-- `:2212`. -/
 def LOAD_LOCALS : M Unit := stk 0 1 fun _ => do
   let l := (← getFrame).locals
   if l == .null then (raiseS "SystemError" "no locals found" : RM _)
@@ -1181,7 +1198,7 @@ def loadGlobal (e : Env) (name : String) : BM Val := do
     | some v => pure v
     | none => (formatExcCheckArg "NameError" (nameErrorMsg name) : RM _)
 
-/-- `:1712`. -/
+/-- `:2222`. -/
 def LOAD_FROM_DICT_OR_GLOBALS (e : Env) : M Unit := stk 1 1 fun
   | [m] => do
     let name ← getName e e.oparg
@@ -1204,23 +1221,23 @@ def loadName (e : Env) (name : String) : BM Val := do
       | some v => pure v
       | none => (formatExcCheckArg "NameError" (nameErrorMsg name) : RM _)
 
-/-- `:1800`. -/
+/-- `:2244`. -/
 def LOAD_NAME (e : Env) : M Unit := stk 0 1 fun _ => do
   let name ← getName e e.oparg
   pure [← loadName e name]
-/-- `:1812`. -/
+/-- `:2256`. -/
 def _SPECIALIZE_LOAD_GLOBAL : M Unit := pure ()
-/-- `:1826`. -/
+/-- `:2270`. -/
 def _LOAD_GLOBAL (e : Env) : M Unit := stk 0 1 fun _ => do
   let name ← getName e (e.oparg >>> 1)
   pure [← loadGlobal e name]
-/-- `:1832`. -/
+/-- `:2277`. -/
 def _PUSH_NULL_CONDITIONAL (e : Env) : M Unit :=
   stk 0 (e.oparg &&& 1) fun _ => pure (List.replicate (e.oparg &&& 1) .null)
-/-- `:1838`. -/
+/-- `:2283`. -/
 def LOAD_GLOBAL (e : Env) : M Unit := do _SPECIALIZE_LOAD_GLOBAL; _LOAD_GLOBAL e; _PUSH_NULL_CONDITIONAL e
 
-/-- `:1846`. -/
+/-- `:2291`. -/
 def _GUARD_GLOBALS_VERSION (e : Env) : M Unit := guardTop 0 fun _ => do
   let d ← (getDict (← getFrame).globals : RM _)
   return d.version != cacheNat e 0
@@ -1234,15 +1251,15 @@ def dictSlot (dv : Val) (version index : Nat) : BM Val := do
   | some en => pure en.value
   | none => throw .deopt
 
-/-- `:1854`. -/
+/-- `:2299`. -/
 def _LOAD_GLOBAL_MODULE (e : Env) : M Unit := stk 0 1 fun _ => do
   pure [← dictSlot (← getFrame).globals (cacheNat e 0) (cacheNat e 1)]
-/-- `:1874`. -/
+/-- `:2319`. -/
 def _LOAD_GLOBAL_BUILTINS (e : Env) : M Unit := stk 0 1 fun _ => do
   pure [← dictSlot (← getFrame).builtins (cacheNat e 1) (cacheNat e 2)]
-/-- `:1893`. -/
+/-- `:2342`. -/
 def LOAD_GLOBAL_MODULE (e : Env) : M Unit := do _LOAD_GLOBAL_MODULE e; _PUSH_NULL_CONDITIONAL e
-/-- `:1899`. -/
+/-- `:2348`. -/
 def LOAD_GLOBAL_BUILTIN (e : Env) : M Unit := do
   _GUARD_GLOBALS_VERSION e; _LOAD_GLOBAL_BUILTINS e; _PUSH_NULL_CONDITIONAL e
 

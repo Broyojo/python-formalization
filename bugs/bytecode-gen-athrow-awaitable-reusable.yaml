@@ -7,8 +7,8 @@ files: [Objects/genobject.c]
 functions: ["async_gen_athrow_send", "async_gen_athrow_iternext", "async_gen_unwrap_value"]
 summary: |
   async_gen_athrow_send closes the awaitable on the first step (check_error, :2404-2407), but later
-  steps in athrow() mode end at @3.14.7:2189-2190:
-      if (o->agt_args) { return async_gen_unwrap_value(o->agt_gen, retval); }
+  steps in athrow() mode end at :2379-2380:
+      if (o->agt_typ) { return async_gen_unwrap_value(o->agt_gen, retval); }
   That clears ag_running_async and raises StopIteration(value), and returns without setting
   agt_state = AWAITABLE_STATE_CLOSED. asend (:2003-2005), athrow's own throw (:2459-2462) and aclose
   mode (check_error) all do. So once a body handles the thrown exception by awaiting something and
@@ -22,7 +22,7 @@ likelihood: |
   protection of python/cpython#74956 in that case.
 maybe_intended: |
   No: fixed on main, whose do_send path sets AWAITABLE_STATE_CLOSED and clears ag_running_async when
-  retval is NULL. The fix was not backported.
+  retval is NULL. The fix did not reach 3.14 or 3.15.
 reproducer: |
   import types
   @types.coroutine
@@ -57,15 +57,15 @@ reproducer: |
 expected: |
   RuntimeError: cannot reuse already awaited aclose()/athrow(), as for asend and for aclose().
 observed: |
-  python3 3.14.7: the third send returns "resumed by a finished awaitable" with ag_running False.
-  REPRODUCED.
+  python3 3.15.2: the third send returns "resumed by a finished awaitable" with ag_running False.
+  REPRODUCED. Same on 3.14.7.
   main (python.exe 3.16.0a1+dev ef1fce0): RuntimeError: cannot reuse already awaited
   aclose()/athrow(). NOT REPRODUCED.
-  3.14 branch tip on 2026-11-01 (gh api contents, ref=3.14): this code is unchanged from 3.14.7.
+  3.14 branch tip on 2026-11-01 (gh api contents, ref=3.14): this code was unchanged from 3.14.7.
 promised_by: |
   The error message itself, and the sibling paths at :2003-2005 and :2459-2462.
 cause: |
-  Objects/genobject.c@3.14.7:2189-2190 return without the two lines the throw path has at :2459-2462.
+  Objects/genobject.c:2379-2380 return without the two lines the throw path has at :2459-2462.
 possible_fix: |
   Same as main:
       retval = async_gen_unwrap_value(o->agt_gen, retval);

@@ -6,8 +6,8 @@ module: bytecode
 files: [Objects/genobject.c]
 functions: ["_gen_throw", "gen_throw"]
 summary: |
-  _gen_throw validates tb and typ only at throw_here (@3.14.7:541-584). With a `yield from` in progress
-  (@3.14.7:471-539) the arguments are passed down first, so the check runs in the innermost generator. It
+  _gen_throw validates tb and typ only at throw_here (:719-725, through gen_set_exception :546-601).
+  With a `yield from` in progress (:651-717) the arguments are passed down first, so the check runs in the innermost generator. It
   returns NULL with a TypeError and no effect there, and the delegating generator then treats this
   as a failure of the sub-iterator: :712-714 throws the TypeError into its own frame at the `yield
   from`. So g.throw(42) leaves a suspended plain generator suspended, but ends a delegating one
@@ -43,13 +43,13 @@ reproducer: |
 expected: |
   The same outcome with and without delegation: TypeError, generator unchanged.
 observed: |
-  python3 3.14.7: plain stays suspended; delegating generator closed, sub-generator suspended.
-  REPRODUCED.
+  python3 3.15.2: plain stays suspended; delegating generator closed, sub-generator suspended.
+  REPRODUCED. Same on 3.14.7.
   main (python.exe 3.16.0a1+dev ef1fce0): identical. REPRODUCED.
 promised_by: |
   Method versus equivalent method: the same call on the two shapes of generator.
 cause: |
-  Objects/genobject.c@3.14.7:541-584 run after the delegation at @3.14.7:471-539.
+  Objects/genobject.c:719-725 run after the delegation at :651-717.
 possible_fix: |
   Validate typ and tb at the top of gen_throw, once, before any delegation.
 duplicates:

@@ -45,7 +45,7 @@ Python/ceval.c	1674	1735	positional_only_passed_as_keyword	positional_only_passe
 Python/ceval.c	1738	1984	initialize_locals	initialize_locals(PyThreadState *tstate, PyFunctionObject *func, _PyStackRef *localsplus, _PyStackRef const *args, Py_ssize_t argcount, PyObject *kwnames)	todo		
 Python/ceval.c	1987	1998	clear_thread_frame	clear_thread_frame(PyThreadState *tstate, _PyInterpreterFrame * frame)	modelled	bytecode-unwind-no-handler	
 Python/ceval.c	2001	2016	clear_gen_frame	clear_gen_frame(PyThreadState *tstate, _PyInterpreterFrame * frame)	todo		changed-in-3.15:
-Python/ceval.c	2019	2030	_PyEval_FrameClearAndPop	_PyEval_FrameClearAndPop(PyThreadState *tstate, _PyInterpreterFrame * frame)	todo		changed-in-3.15: was bytecode-unwind-no-handler
+Python/ceval.c	2019	2030	_PyEval_FrameClearAndPop	_PyEval_FrameClearAndPop(PyThreadState *tstate, _PyInterpreterFrame * frame)	modelled	bytecode-unwind-no-handler	
 Python/ceval.c	2034	2068	_PyEvalFramePushAndInit	_PyEvalFramePushAndInit(PyThreadState *tstate, _PyStackRef func, PyObject *locals, _PyStackRef const* args, size_t argcount, PyObject *kwnames, _PyInterpreterFrame *previous)	todo		changed-in-3.15:
 Python/ceval.c	2074	2137	_PyEvalFramePushAndInit_Ex	_PyEvalFramePushAndInit_Ex(PyThreadState *tstate, _PyStackRef func, PyObject *locals, Py_ssize_t nargs, PyObject *callargs, PyObject *kwargs, _PyInterpreterFrame *previous)	todo		changed-in-3.15:
 Python/ceval.c	2140	2183	_PyEval_Vector	_PyEval_Vector(PyThreadState *tstate, PyFunctionObject *func, PyObject *locals, PyObject* const* args, size_t argcount, PyObject *kwnames)	todo		changed-in-3.15:

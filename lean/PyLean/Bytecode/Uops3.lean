@@ -204,7 +204,7 @@ def specialCanSuggest (e : Env) (self : Val) (oparg : Nat) : RM Bool := do
   else
     return (← typeHasSpecial e tp "__enter__") && (← typeHasSpecial e tp "__exit__")
 
-/-- `:3489`, `:3495`, `:3512`: `_INSERT_NULL` + `_LOAD_SPECIAL`. -/
+/-- `:4148`, `:3495`, `:3512`: `_INSERT_NULL` + `_LOAD_SPECIAL`. -/
 def LOAD_SPECIAL (e : Env) : M Unit := stkK 1 2 fun
   | [owner] => do
     match ← e.om.lookupSpecial e.ctx owner (specialName e.oparg) with
@@ -215,7 +215,7 @@ def LOAD_SPECIAL (e : Env) : M Unit := stkK 1 2 fun
       (typeError (specialError e.oparg t sug) : RM _)
   | _ => fault "arity"
 
-/-- `:3516`. -/
+/-- `:4153`. -/
 def WITH_EXCEPT_START (e : Env) : M Unit := do
   let ins ← peekN 5
   match ins with
@@ -227,7 +227,7 @@ def WITH_EXCEPT_START (e : Env) : M Unit := do
     pushAll [res]
   | _ => fault "arity"
 
-/-- `:3572`. -/
+/-- `:4213`. -/
 def PUSH_EXC_INFO : M Unit := stk 1 2 fun
   | [exc] => do
     let cur ← (getExcInfoTop : RM Val)
@@ -237,10 +237,10 @@ def PUSH_EXC_INFO : M Unit := stk 1 2 fun
 
 /-! ### Lines 3594-3695: method loads -/
 
-/-- `:3587`. -/
+/-- `:4228`. -/
 def _GUARD_DORV_VALUES_INST_ATTR_FROM_DICT : M Unit := pure ()
 
-/-- `:3594`. The version check says "no instance can shadow `name`"; the model
+/-- `:4235`. The version check says "no instance can shadow `name`"; the model
 states that directly on the instance dict it has. -/
 def _GUARD_KEYS_VERSION (e : Env) : M Unit := guardTop 1 fun
   | [o] => do
@@ -253,49 +253,49 @@ def _GUARD_KEYS_VERSION (e : Env) : M Unit := guardTop 1 fun
     | none => pure false
   | _ => fault "arity"
 
-/-- `@3.14.7:3608`. -/
+/-- `:4242`. -/
 def _LOAD_ATTR_METHOD_WITH_VALUES (e : Env) : M Unit := stk 1 2 fun
   | [o] => pure [(e.cache[1]?).getD .null, o]
   | _ => fault "arity"
-/-- `:3612`. -/
+/-- `:4253`. -/
 def LOAD_ATTR_METHOD_WITH_VALUES (e : Env) : M Unit := do
   _GUARD_TYPE_VERSION e; _GUARD_DORV_VALUES_INST_ATTR_FROM_DICT; _GUARD_KEYS_VERSION e
   _LOAD_ATTR_METHOD_WITH_VALUES e
-/-- `:3619`. -/
+/-- `:4261`. -/
 def _LOAD_ATTR_METHOD_NO_DICT (e : Env) : M Unit := stk 1 2 fun
   | [o] => pure [(e.cache[1]?).getD .null, o]
   | _ => fault "arity"
-/-- `:3631`. -/
+/-- `:4272`. -/
 def LOAD_ATTR_METHOD_NO_DICT (e : Env) : M Unit := do _GUARD_TYPE_VERSION e; _LOAD_ATTR_METHOD_NO_DICT e
-/-- `:3645`. -/
+/-- `:4279`. -/
 def _LOAD_ATTR_NONDESCRIPTOR_WITH_VALUES (e : Env) : M Unit := stk 1 1 fun _ => pure [(e.cache[1]?).getD .null]
-/-- `:3653`. -/
+/-- `:4287`. -/
 def LOAD_ATTR_NONDESCRIPTOR_WITH_VALUES (e : Env) : M Unit := do
   _GUARD_TYPE_VERSION e; _GUARD_DORV_VALUES_INST_ATTR_FROM_DICT; _GUARD_KEYS_VERSION e
   _LOAD_ATTR_NONDESCRIPTOR_WITH_VALUES e
-/-- `@3.14.7:3658`. -/
+/-- `:4295`. -/
 def _LOAD_ATTR_NONDESCRIPTOR_NO_DICT (e : Env) : M Unit := stk 1 1 fun _ => pure [(e.cache[1]?).getD .null]
-/-- `:3669`. -/
+/-- `:4304`. -/
 def LOAD_ATTR_NONDESCRIPTOR_NO_DICT (e : Env) : M Unit := do
   _GUARD_TYPE_VERSION e; _LOAD_ATTR_NONDESCRIPTOR_NO_DICT e
-/-- `:3675`: the dict must not have been created yet. -/
+/-- `:4311`: the dict must not have been created yet. -/
 def _CHECK_ATTR_METHOD_LAZY_DICT : M Unit := guardTop 1 fun
   | [o] => do
     match ← (instOf o : RM _) with
     | some (_, i) => pure (i.dict != .null)
     | none => pure true
   | _ => fault "arity"
-/-- `:3682`. -/
+/-- `:4318`. -/
 def _LOAD_ATTR_METHOD_LAZY_DICT (e : Env) : M Unit := stk 1 2 fun
   | [o] => pure [(e.cache[1]?).getD .null, o]
   | _ => fault "arity"
-/-- `:3694`. -/
+/-- `:4328`. -/
 def LOAD_ATTR_METHOD_LAZY_DICT (e : Env) : M Unit := do
   _GUARD_TYPE_VERSION e; _CHECK_ATTR_METHOD_LAZY_DICT; _LOAD_ATTR_METHOD_LAZY_DICT e
 
 /-! ### Lines 3722-4050: `CALL` -/
 
-/-- `:3763`. -/
+/-- `:4361`. -/
 def _SPECIALIZE_CALL : M Unit := pure ()
 
 /-- `Py_TYPE(callable) == &PyMethod_Type`: `(im_func, im_self)`. -/
@@ -306,7 +306,7 @@ def methodParts : Val → RM (Option (Val × Val))
     | _ => pure none
   | _ => pure none
 
-/-- `:3775`. -/
+/-- `:4373`. -/
 def _MAYBE_EXPAND_METHOD (e : Env) : M Unit := stk (e.oparg + 2) (e.oparg + 2) fun
   | callable :: self :: args => do
     match ← (methodParts callable : RM _) with
@@ -324,7 +324,7 @@ def pushInit (e : Env) (callable : Val) (args : List Val) (kw : List String) : B
   let co ← (getCodeR e.P func.code : RM _)
   (framePushAndInit e.P callable (localsFor co func) args kw : RM _)
 
-/-- `:3788`. -/
+/-- `:4386`. -/
 def _DO_CALL (e : Env) : M Unit := do
   let ins ← peekN (e.oparg + 2)
   match ins with
@@ -339,15 +339,15 @@ def _DO_CALL (e : Env) : M Unit := do
         pure [← e.om.call e.ctx callable (withSelf self args) []]
   | _ => fault "arity"
 
-/-- `:3856`. -/
+/-- `:4436`. -/
 def _MONITOR_CALL : M Unit := pure ()
-/-- `:3877`. -/
+/-- `:4457`. -/
 def CALL (e : Env) : M Unit := do _SPECIALIZE_CALL; _MAYBE_EXPAND_METHOD e; _DO_CALL e; _CHECK_PERIODIC
-/-- `:3878`. -/
+/-- `:4458`. -/
 def INSTRUMENTED_CALL (e : Env) : M Unit := do
   _MAYBE_EXPAND_METHOD e; _MONITOR_CALL; _DO_CALL e; _CHECK_PERIODIC
 
-/-- `:3880`. -/
+/-- `:4460`. -/
 def _PY_FRAME_GENERAL (e : Env) : M Frame := do
   let ins ← popN (e.oparg + 2)
   match ins with
@@ -364,17 +364,17 @@ def funcVersionAt (d : Nat) (e : Env) (bad : Val → BM Bool) : M Unit :=
         pure (f.version != cacheNat e 0)
     | _ => fault "arity"
 
-/-- `:3905`. -/
+/-- `:4485`. -/
 def _CHECK_FUNCTION_VERSION (e : Env) : M Unit :=
   funcVersionAt (e.oparg + 1) e fun c => do return !(← (isFunction c : RM Bool))
-/-- `:3912`: tier 2 only; the same check. -/
+/-- `:4492`: tier 2 only; the same check. -/
 def _CHECK_FUNCTION_VERSION_INLINE (e : Env) : M Unit := _CHECK_FUNCTION_VERSION e
 
-/-- `:4035`. -/
+/-- `:4611`. -/
 def _CHECK_RECURSION_REMAINING : M Unit := guardTop 0 fun _ => do
   pure ((← (getRecursionRemaining : RM Int)) ≤ 1)
 
-/-- `:3918`. -/
+/-- `:4498`. -/
 def CALL_PY_GENERAL (e : Env) : M Unit := do
   _CHECK_PEP_523
   _CHECK_FUNCTION_VERSION e
@@ -383,7 +383,7 @@ def CALL_PY_GENERAL (e : Env) : M Unit := do
   BM.lift (_SAVE_RETURN_OFFSET e)
   _PUSH_FRAME nf
 
-/-- `:3927`. -/
+/-- `:4508`. -/
 def _CHECK_METHOD_VERSION (e : Env) : M Unit := guardTop (e.oparg + 2) fun
   | c :: n :: _ => do
     match ← (methodParts c : RM _) with
@@ -395,7 +395,7 @@ def _CHECK_METHOD_VERSION (e : Env) : M Unit := guardTop (e.oparg + 2) fun
     | none => pure true
   | _ => fault "arity"
 
-/-- `:3937`. -/
+/-- `:4518`. -/
 def _EXPAND_METHOD (e : Env) : M Unit := stk (e.oparg + 2) (e.oparg + 2) fun
   | c :: _ :: args => do
     match ← (methodParts c : RM _) with
@@ -403,7 +403,7 @@ def _EXPAND_METHOD (e : Env) : M Unit := stk (e.oparg + 2) (e.oparg + 2) fun
     | none => fault "not a method"
   | _ => fault "arity"
 
-/-- `:3948`. -/
+/-- `:4529`. -/
 def CALL_BOUND_METHOD_GENERAL (e : Env) : M Unit := do
   _CHECK_PEP_523
   _CHECK_METHOD_VERSION e
@@ -413,7 +413,7 @@ def CALL_BOUND_METHOD_GENERAL (e : Env) : M Unit := do
   BM.lift (_SAVE_RETURN_OFFSET e)
   _PUSH_FRAME nf
 
-/-- `:3959`. -/
+/-- `:4541`. -/
 def _CHECK_IS_NOT_PY_CALLABLE (e : Env) : M Unit := guardTop (e.oparg + 2) fun
   | c :: _ => do
     if ← (isFunction c : RM Bool) then pure true
@@ -427,32 +427,32 @@ def callNonPy (e : Env) : M Unit := stk (e.oparg + 2) 1 fun
     pure [← e.om.call e.ctx callable (withSelf self args) []]
   | _ => fault "arity"
 
-/-- `:3965`. -/
+/-- `:4547`. -/
 def _CALL_NON_PY_GENERAL (e : Env) : M Unit := callNonPy e
-/-- `:3994`. -/
+/-- `:4569`. -/
 def CALL_NON_PY_GENERAL (e : Env) : M Unit := do
   _CHECK_IS_NOT_PY_CALLABLE e; _CALL_NON_PY_GENERAL e; _CHECK_PERIODIC
 
-/-- `:4001`. -/
+/-- `:4577`. -/
 def _CHECK_CALL_BOUND_METHOD_EXACT_ARGS (e : Env) : M Unit := guardTop (e.oparg + 2) fun
   | c :: n :: _ => do
     if n != .null then pure true
     else return (← (methodParts c : RM _)).isNone
   | _ => fault "arity"
-/-- `:4006`. -/
+/-- `:4582`. -/
 def _INIT_CALL_BOUND_METHOD_EXACT_ARGS (e : Env) : M Unit := _EXPAND_METHOD e
 
-/-- `:4020`. -/
+/-- `:4596`. -/
 def _CHECK_FUNCTION_EXACT_ARGS (e : Env) : M Unit := guardTop (e.oparg + 2) fun
   | c :: s :: _ => do
     let f ← (getFunc c : RM _)
     let co ← (getCodeR e.P f.code : RM _)
     pure (co.argcount != e.oparg + (if s != .null then 1 else 0))
   | _ => fault "arity"
-/-- `:4028`. -/
+/-- `:4604`. -/
 def _CHECK_STACK_SPACE : M Unit := guardTop 0 fun _ => do return !(← hasStackSpace)
 
-/-- `:4039`. -/
+/-- `:4615`. -/
 def _INIT_CALL_PY_EXACT_ARGS (e : Env) : M Frame := do
   let ins ← popN (e.oparg + 2)
   match ins with
@@ -464,7 +464,7 @@ def _INIT_CALL_PY_EXACT_ARGS (e : Env) : M Frame := do
     pure { nf with fast := fast }
   | _ => fault "arity"
 
-/-- `:4068`. -/
+/-- `:4644`. -/
 def CALL_BOUND_METHOD_EXACT_ARGS (e : Env) : M Unit := do
   _CHECK_PEP_523
   _CHECK_CALL_BOUND_METHOD_EXACT_ARGS e
@@ -477,7 +477,7 @@ def CALL_BOUND_METHOD_EXACT_ARGS (e : Env) : M Unit := do
   BM.lift (_SAVE_RETURN_OFFSET e)
   _PUSH_FRAME nf
 
-/-- `:4082`. -/
+/-- `:4659`. -/
 def CALL_PY_EXACT_ARGS (e : Env) : M Unit := do
   _CHECK_PEP_523
   _CHECK_FUNCTION_VERSION e
@@ -490,7 +490,7 @@ def CALL_PY_EXACT_ARGS (e : Env) : M Unit := do
 
 /-! ### Lines 4052-4372: calls of known builtins -/
 
-/-- `:4093`. -/
+/-- `:4671`. -/
 def _GUARD_NOS_NULL : M Unit := guardTop 2 fun
   | [n, _] => pure (n != .null)
   | _ => fault "arity"
@@ -498,29 +498,29 @@ def _GUARD_NOS_NULL : M Unit := guardTop 2 fun
 def guardCallable (w : Val) : M Unit := guardTop 3 fun
   | [c, _, _] => pure (c != w)
   | _ => fault "arity"
-/-- `:4097`. -/
+/-- `:4679`. -/
 def _GUARD_CALLABLE_TYPE_1 : M Unit := guardCallable (.cls "type")
-/-- `:4102`. -/
+/-- `:4684`. -/
 def _CALL_TYPE_1 : M Unit := stk 3 1 fun
   | [_, _, a] => do pure [← (typeOf a : RM Val)]
   | _ => fault "arity"
-/-- `:4115`. -/
+/-- `:4694`. -/
 def CALL_TYPE_1 : M Unit := do _GUARD_NOS_NULL; _GUARD_CALLABLE_TYPE_1; _CALL_TYPE_1
-/-- `:4122`. -/
+/-- `:4702`. -/
 def _GUARD_CALLABLE_STR_1 : M Unit := guardCallable (.cls "str")
-/-- `:4127`. -/
+/-- `:4707`. -/
 def _CALL_STR_1 (e : Env) : M Unit := stk 3 1 fun
   | [_, _, a] => do pure [← e.om.str e.ctx a]
   | _ => fault "arity"
-/-- `:4142`. -/
+/-- `:4721`. -/
 def CALL_STR_1 (e : Env) : M Unit := do _GUARD_NOS_NULL; _GUARD_CALLABLE_STR_1; _CALL_STR_1 e; _CHECK_PERIODIC
-/-- `:4150`. -/
+/-- `:4730`. -/
 def _GUARD_CALLABLE_TUPLE_1 : M Unit := guardCallable (.cls "tuple")
-/-- `:4155`: `PySequence_Tuple` is what `tuple(x)` calls. -/
+/-- `:4735`: `PySequence_Tuple` is what `tuple(x)` calls. -/
 def _CALL_TUPLE_1 (e : Env) : M Unit := stk 3 1 fun
   | [c, _, a] => do pure [← e.om.call e.ctx c [a] []]
   | _ => fault "arity"
-/-- `:4170`. -/
+/-- `:4749`. -/
 def CALL_TUPLE_1 (e : Env) : M Unit := do _GUARD_NOS_NULL; _GUARD_CALLABLE_TUPLE_1; _CALL_TUPLE_1 e; _CHECK_PERIODIC
 
 /-- `:4758`: split off `_CHECK_AND_ALLOCATE_OBJECT` of 3.14, so that
@@ -570,7 +570,7 @@ def CALL_ALLOC_AND_ENTER_INIT (e : Env) : M Unit := do
   let nf ← _CREATE_INIT_FRAME e
   _PUSH_FRAME nf
 
-/-- `:4070`. -/
+/-- `:4825`. -/
 def EXIT_INIT_CHECK : M Unit := stkK 1 0 fun
   | [v] => do
     if v != .none then
@@ -585,35 +585,35 @@ def builtinGuard (e : Env) (bad : Val → List Val → BM Bool) : M Unit :=
     | c :: s :: args => bad c (withSelf s args)
     | _ => fault "arity"
 
-/-- `:4080`: `tp->tp_vectorcall == NULL` deopts, `specialCalls` decides. -/
+/-- `:4842`: `tp->tp_vectorcall == NULL` deopts, `specialCalls` decides. -/
 def _CALL_BUILTIN_CLASS (e : Env) : M Unit := do
   builtinGuard e fun c _ => do return !(← (isType c : RM Bool))
   callNonPy e
-/-- `:4104`. -/
+/-- `:4862`. -/
 def CALL_BUILTIN_CLASS (e : Env) : M Unit := do _CALL_BUILTIN_CLASS e; _CHECK_PERIODIC
-/-- `:4110`. -/
+/-- `:4883`. -/
 def _CALL_BUILTIN_O (e : Env) : M Unit := do
   builtinGuard e fun c args => pure (args.length != 1 || !(match c with | .builtin _ => true | _ => false))
   callNonPy e
-/-- `:4139`. -/
+/-- `:4905`. -/
 def CALL_BUILTIN_O (e : Env) : M Unit := do _CALL_BUILTIN_O e; _CHECK_PERIODIC
-/-- `:4145`. -/
+/-- `:4922`. -/
 def _CALL_BUILTIN_FAST (e : Env) : M Unit := do
   builtinGuard e fun c _ => pure !(match c with | .builtin _ => true | _ => false)
   callNonPy e
-/-- `:4176`. -/
+/-- `:4944`. -/
 def CALL_BUILTIN_FAST (e : Env) : M Unit := do _CALL_BUILTIN_FAST e; _CHECK_PERIODIC
-/-- `:4182`. -/
+/-- `:4960`. -/
 def _CALL_BUILTIN_FAST_WITH_KEYWORDS (e : Env) : M Unit := _CALL_BUILTIN_FAST e
-/-- `:4212`. -/
+/-- `:4978`. -/
 def CALL_BUILTIN_FAST_WITH_KEYWORDS (e : Env) : M Unit := do _CALL_BUILTIN_FAST_WITH_KEYWORDS e; _CHECK_PERIODIC
-/-- `:4225`. -/
+/-- `:4997`. -/
 def _GUARD_CALLABLE_LEN : M Unit := guardCallable (.builtin "len")
-/-- `:4231`. -/
+/-- `:5003`. -/
 def _CALL_LEN (e : Env) : M Unit := stkK 3 1 fun
   | [_, _, a] => do pure [.int (← e.om.length e.ctx a)]
   | _ => fault "arity"
-/-- `:4218`. -/
+/-- `:4988`. -/
 def CALL_LEN (e : Env) : M Unit := do _GUARD_NOS_NULL; _GUARD_CALLABLE_LEN; _CALL_LEN e
 /-- `_GUARD_THIRD_NULL`: `(null, unused, unused -- ...)`. -/
 def _GUARD_THIRD_NULL : M Unit := guardTop 3 fun
@@ -651,29 +651,29 @@ def methDescrGuard (e : Env) (min : Nat) : M Unit :=
       if args.length < min then pure true
       else return (← (tpName a : RM String)) != tp
     | _, _ => pure true
-/-- `:4301`. -/
+/-- `:5105`. -/
 def _CALL_METHOD_DESCRIPTOR_O (e : Env) : M Unit := do methDescrGuard e 2; callNonPy e
-/-- `:4334`. -/
+/-- `:5153`. -/
 def CALL_METHOD_DESCRIPTOR_O (e : Env) : M Unit := do _CALL_METHOD_DESCRIPTOR_O e; _CHECK_PERIODIC
-/-- `:4340`. -/
+/-- `:5181`. -/
 def _CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS (e : Env) : M Unit := do methDescrGuard e 1; callNonPy e
-/-- `:4376`. -/
+/-- `:5229`. -/
 def CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS (e : Env) : M Unit := do
   _CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS e; _CHECK_PERIODIC
-/-- `:4382`. -/
+/-- `:5254`. -/
 def _CALL_METHOD_DESCRIPTOR_NOARGS (e : Env) : M Unit := do methDescrGuard e 1; callNonPy e
-/-- `:4414`. -/
+/-- `:5296`. -/
 def CALL_METHOD_DESCRIPTOR_NOARGS (e : Env) : M Unit := do _CALL_METHOD_DESCRIPTOR_NOARGS e; _CHECK_PERIODIC
-/-- `:4420`. -/
+/-- `:5323`. -/
 def _CALL_METHOD_DESCRIPTOR_FAST (e : Env) : M Unit := do methDescrGuard e 1; callNonPy e
-/-- `:4455`. -/
+/-- `:5372`. -/
 def CALL_METHOD_DESCRIPTOR_FAST (e : Env) : M Unit := do _CALL_METHOD_DESCRIPTOR_FAST e; _CHECK_PERIODIC
 
 /-! ### Lines 4591-4840: `CALL_KW` -/
 
-/-- `:4468`. -/
+/-- `:5388`. -/
 def _MONITOR_CALL_KW : M Unit := pure ()
-/-- `:4487`. -/
+/-- `:5407`. -/
 def _MAYBE_EXPAND_METHOD_KW (e : Env) : M Unit := stk (e.oparg + 3) (e.oparg + 3) fun
   | callable :: self :: rest => do
     match ← (methodParts callable : RM _) with
@@ -688,7 +688,7 @@ def kwNames (t : Val) : RM (List String) := do
     | .str s => s
     | _ => "")
 
-/-- `:4499`. -/
+/-- `:5419`. -/
 def _DO_CALL_KW (e : Env) : M Unit := do
   let ins ← peekN (e.oparg + 3)
   match ins with
@@ -706,7 +706,7 @@ def _DO_CALL_KW (e : Env) : M Unit := do
         pure [← e.om.call e.ctx callable (withSelf self args) kw]
   | _ => fault "arity"
 
-/-- `:4570`. -/
+/-- `:5474`. -/
 def _PY_FRAME_KW (e : Env) : M Frame := do
   let ins ← popN (e.oparg + 3)
   match ins with
@@ -716,10 +716,10 @@ def _PY_FRAME_KW (e : Env) : M Frame := do
     BM.lift (pushInit e callable (withSelf self args) kw)
   | _ => fault "arity"
 
-/-- `:4600`. -/
+/-- `:5504`. -/
 def _CHECK_FUNCTION_VERSION_KW (e : Env) : M Unit :=
   funcVersionAt (e.oparg + 2) e fun c => do return !(← (isFunction c : RM Bool))
-/-- `:4607`. -/
+/-- `:5511`. -/
 def CALL_KW_PY (e : Env) : M Unit := do
   _CHECK_PEP_523
   _CHECK_FUNCTION_VERSION_KW e
@@ -727,7 +727,7 @@ def CALL_KW_PY (e : Env) : M Unit := do
   let nf ← _PY_FRAME_KW e
   BM.lift (_SAVE_RETURN_OFFSET e)
   _PUSH_FRAME nf
-/-- `:4616`. -/
+/-- `:5521`. -/
 def _CHECK_METHOD_VERSION_KW (e : Env) : M Unit := guardTop (e.oparg + 3) fun
   | c :: n :: _ => do
     match ← (methodParts c : RM _) with
@@ -738,14 +738,14 @@ def _CHECK_METHOD_VERSION_KW (e : Env) : M Unit := guardTop (e.oparg + 3) fun
         pure (fo.version != cacheNat e 0 || n != .null)
     | none => pure true
   | _ => fault "arity"
-/-- `:4626`. -/
+/-- `:5531`. -/
 def _EXPAND_METHOD_KW (e : Env) : M Unit := stk (e.oparg + 3) (e.oparg + 3) fun
   | c :: _ :: rest => do
     match ← (methodParts c : RM _) with
     | some (f, s) => pure (f :: s :: rest)
     | none => fault "not a method"
   | _ => fault "arity"
-/-- `:4637`. -/
+/-- `:5542`. -/
 def CALL_KW_BOUND_METHOD (e : Env) : M Unit := do
   _CHECK_PEP_523
   _CHECK_METHOD_VERSION_KW e
@@ -753,25 +753,25 @@ def CALL_KW_BOUND_METHOD (e : Env) : M Unit := do
   let nf ← _PY_FRAME_KW e
   BM.lift (_SAVE_RETURN_OFFSET e)
   _PUSH_FRAME nf
-/-- `:4647`. -/
+/-- `:5553`. -/
 def _SPECIALIZE_CALL_KW : M Unit := pure ()
-/-- `:4659`. -/
+/-- `:5565`. -/
 def CALL_KW (e : Env) : M Unit := do _SPECIALIZE_CALL_KW; _MAYBE_EXPAND_METHOD_KW e; _DO_CALL_KW e
-/-- `:4665`. -/
+/-- `:5571`. -/
 def INSTRUMENTED_CALL_KW (e : Env) : M Unit := do _MAYBE_EXPAND_METHOD_KW e; _MONITOR_CALL_KW; _DO_CALL_KW e
-/-- `:4672`. -/
+/-- `:5578`. -/
 def _CHECK_IS_NOT_PY_CALLABLE_KW (e : Env) : M Unit := guardTop (e.oparg + 3) fun
   | c :: _ => do
     if ← (isFunction c : RM Bool) then pure true
     else return (← (methodParts c : RM _)).isSome
   | _ => fault "arity"
-/-- `:4679`. -/
+/-- `:5585`. -/
 def _CALL_KW_NON_PY (e : Env) : M Unit := stk (e.oparg + 3) 1 fun
   | callable :: self :: rest => do
     let kw ← (kwNames (rest.getLastD .null) : RM _)
     pure [← e.om.call e.ctx callable (withSelf self rest.dropLast) kw]
   | _ => fault "arity"
-/-- `:4711`. -/
+/-- `:5608`. -/
 def CALL_KW_NON_PY (e : Env) : M Unit := do
   _CHECK_IS_NOT_PY_CALLABLE_KW e; _CALL_KW_NON_PY e; _CHECK_PERIODIC
 
@@ -865,7 +865,7 @@ def CALL_EX_NON_PY_GENERAL (e : Env) : M Unit := do
   _CHECK_IS_NOT_PY_CALLABLE_EX; _MAKE_CALLARGS_A_TUPLE e; _CALL_FUNCTION_EX_NON_PY_GENERAL e
   _CHECK_PERIODIC
 
-/-- `:4925`. -/
+/-- `:5824`. -/
 def MAKE_FUNCTION (e : Env) : M Unit := stk 1 1 fun
   | [.code i] => do
     let f ← getFrame
@@ -875,7 +875,7 @@ def MAKE_FUNCTION (e : Env) : M Unit := stk 1 1 fun
                             version := co.version }) : RM Val)]
   | _ => fault "MAKE_FUNCTION without a code object"
 
-/-- `:4939`. -/
+/-- `:5826`. -/
 def SET_FUNCTION_ATTRIBUTE (e : Env) : M Unit := stk 2 1 fun
   | [attr, .ref a] => do
     match ← (getObj a : RM Obj) with
@@ -897,7 +897,7 @@ def genKindOfFlags (flags : Nat) : GenKind :=
   else if flagSet flags coAsyncGenerator then .asyncGen
   else .gen
 
-/-- `:5181`. -/
+/-- `:5839`. -/
 def RETURN_GENERATOR (e : Env) : M Unit := do
   let s ← (get : M St)
   let f := s.regs.frame
@@ -918,13 +918,13 @@ def RETURN_GENERATOR (e : Env) : M Unit := do
   BM.lift do loadIp (← getFrame).returnOffset
   pushAll [gen]
 
-/-- `:5204`. -/
+/-- `:5863`. -/
 def BUILD_SLICE (e : Env) : M Unit := stk e.oparg 1 fun args => do
   let start := args.getD 0 .null
   let stop := args.getD 1 .null
   let step := if e.oparg == 3 then args.getD 2 .null else .none
   pure [← (alloc (.slice start stop step) : RM Val)]
-/-- `:5214`. -/
+/-- `:5873`. -/
 def CONVERT_VALUE (e : Env) : M Unit := stk 1 1 fun
   | [v] => do
     match e.oparg with
@@ -933,26 +933,27 @@ def CONVERT_VALUE (e : Env) : M Unit := stk 1 1 fun
     | 3 => pure [← e.om.ascii e.ctx v]
     | _ => fault "bad conversion"
   | _ => fault "arity"
-/-- `:5224`. -/
+/-- `:5883`. -/
 def FORMAT_SIMPLE (e : Env) : M Unit := stk 1 1 fun
   | [.str s] => pure [.str s]
   | [v] => do pure [← e.om.format e.ctx v .null]
   | _ => fault "arity"
-/-- `:5240`. -/
+/-- `:5899`. -/
 def FORMAT_WITH_SPEC (e : Env) : M Unit := stk 2 1 fun
   | [v, f] => do pure [← e.om.format e.ctx v f]
   | _ => fault "arity"
-/-- `:5247`. -/
+/-- `:5906`. -/
 def COPY (e : Env) : M Unit := stk e.oparg (e.oparg + 1) fun ins => pure (ins ++ [ins.headD .null])
-/-- `:5252`. -/
+/-- `:5910`. -/
 def _SPECIALIZE_BINARY_OP : M Unit := pure ()
-/-- `:5266`. -/
+/-- `:5924`: `(lhs, rhs -- res, l, r)`, `ERROR_NO_POP` on failure. The `POP_TOP + POP_TOP` of the
+macro are folded into the `stkK`, since popping has no effect without a finalizer model. -/
 def _BINARY_OP (e : Env) : M Unit := stkK 2 1 fun
   | [l, r] => do pure [← e.om.binaryOp e.ctx e.oparg l r]
   | _ => fault "arity"
-/-- `:5279`. -/
+/-- `:5940`. -/
 def BINARY_OP (e : Env) : M Unit := do _SPECIALIZE_BINARY_OP; _BINARY_OP e
-/-- `:5281`. -/
+/-- `:5942`. -/
 def SWAP (e : Env) : M Unit := stk e.oparg e.oparg fun
   | [] => fault "SWAP 0"
   | b :: rest => pure (rest.getLastD b :: rest.dropLast ++ [b])
@@ -960,19 +961,19 @@ def SWAP (e : Env) : M Unit := stk e.oparg e.oparg fun
 /-- Lines 5132-5192: without a registered tool every instrumented jump is the
 plain one. -/
 def INSTRUMENTED_JUMP_FORWARD (e : Env) : M Unit := JUMP_FORWARD e
-/-- `:5336`. -/
+/-- `:5996`. -/
 def _MONITOR_JUMP_BACKWARD (e : Env) : M Unit := JUMP_BACKWARD_NO_INTERRUPT e
-/-- `:5340`. -/
+/-- `:6000`. -/
 def INSTRUMENTED_NOT_TAKEN : M Unit := NOP
-/-- `:5345`. -/
+/-- `:6005`. -/
 def INSTRUMENTED_JUMP_BACKWARD (e : Env) : M Unit := do _CHECK_PERIODIC; _MONITOR_JUMP_BACKWARD e
-/-- `:5350`. -/
+/-- `:6010`. -/
 def INSTRUMENTED_POP_JUMP_IF_TRUE (e : Env) : M Unit := POP_JUMP_IF_TRUE e
-/-- `:5360`. -/
+/-- `:6020`. -/
 def INSTRUMENTED_POP_JUMP_IF_FALSE (e : Env) : M Unit := POP_JUMP_IF_FALSE e
-/-- `:5370`. -/
+/-- `:6030`. -/
 def INSTRUMENTED_POP_JUMP_IF_NONE (e : Env) : M Unit := POP_JUMP_IF_NONE e
-/-- `:5382`. -/
+/-- `:6042`. -/
 def INSTRUMENTED_POP_JUMP_IF_NOT_NONE (e : Env) : M Unit := POP_JUMP_IF_NOT_NONE e
 
 end PyLean.Bytecode.Uop

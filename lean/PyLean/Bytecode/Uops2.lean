@@ -118,7 +118,7 @@ def BUILD_TEMPLATE (e : Env) : M Unit := stk 2 1 fun
 def BUILD_TUPLE (e : Env) : M Unit := stk e.oparg 1 fun vs => do pure [← (mkTuple vs : RM Val)]
 /-- `:2502`. -/
 def BUILD_LIST (e : Env) : M Unit := stk e.oparg 1 fun vs => do pure [← (mkList vs : RM Val)]
-/-- `@3.14.7:2004`. -/
+/-- `:2533`. -/
 def LIST_EXTEND (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
   let it := ins.getLastD .null
   let rest := ins.dropLast
@@ -128,7 +128,7 @@ def LIST_EXTEND (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
     else throw (.exc exc)
   ext
   pure rest
-/-- `@3.14.7:2026`. -/
+/-- `:2545`. -/
 def SET_UPDATE (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
   let it := ins.getLastD .null
   let rest := ins.dropLast
@@ -158,7 +158,7 @@ def SETUP_ANNOTATIONS (e : Env) : M Unit := stk 0 0 fun _ => do
     let d ← (mkDict : RM Val)
     e.om.setItem e.ctx l (.str "__annotations__") d
   pure []
-/-- `@3.14.7:2104`. -/
+/-- `:2636`. -/
 def DICT_UPDATE (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
   let upd := ins.getLastD .null
   let rest := ins.dropLast
@@ -214,7 +214,7 @@ def DICT_MERGE (e : Env) : M Unit := stk (e.oparg + 4) (e.oparg + 3) fun ins => 
     formatKwargsError e upd exc callable
   u
   pure rest
-/-- `:2205`. -/
+/-- `:2656`. -/
 def MAP_ADD (e : Env) : M Unit := stk (e.oparg + 2) e.oparg fun ins => do
   let rest := ins.dropLast.dropLast
   let key := ins.getD e.oparg .null
@@ -224,9 +224,9 @@ def MAP_ADD (e : Env) : M Unit := stk (e.oparg + 2) e.oparg fun ins => do
 
 /-! ### Lines 2149-2264: `super` -/
 
-/-- `:2228`. -/
+/-- `:2679`. -/
 def _SPECIALIZE_LOAD_SUPER_ATTR : M Unit := pure ()
-/-- `:2241`. -/
+/-- `:2692`. -/
 def _LOAD_SUPER_ATTR (e : Env) : M Unit := stk 3 1 fun
   | [gs, c, slf] => do
     -- With `oparg & 2 == 0` C calls `super()` with no arguments, and
@@ -237,12 +237,12 @@ def _LOAD_SUPER_ATTR (e : Env) : M Unit := stk 3 1 fun
     let name ← getName e (e.oparg >>> 2)
     pure [← e.om.getAttr e.ctx sup name]
   | _ => fault "arity"
-/-- `@3.14.7:2216`. -/
+/-- `:2740`. -/
 def LOAD_SUPER_ATTR (e : Env) : M Unit := do
   _SPECIALIZE_LOAD_SUPER_ATTR; _LOAD_SUPER_ATTR e; _PUSH_NULL_CONDITIONAL e
-/-- `:2218`. -/
+/-- `:2669`. -/
 def INSTRUMENTED_LOAD_SUPER_ATTR (e : Env) : M Unit := do _LOAD_SUPER_ATTR e; _PUSH_NULL_CONDITIONAL e
-/-- `@3.14.7:2221`. -/
+/-- `:2745`. -/
 def LOAD_SUPER_ATTR_ATTR (e : Env) : M Unit := do
   guardTop 3 fun
     | [gs, c, _] => do
@@ -254,7 +254,7 @@ def LOAD_SUPER_ATTR_ATTR (e : Env) : M Unit := do
       let (a, _) ← e.om.superLookup e.ctx c slf name false
       pure [a]
     | _ => fault "arity"
-/-- `@3.14.7:2237`. -/
+/-- `:2761`. -/
 def LOAD_SUPER_ATTR_METHOD (e : Env) : M Unit := do
   guardTop 3 fun
     | [gs, c, _] => do
@@ -270,9 +270,9 @@ def LOAD_SUPER_ATTR_METHOD (e : Env) : M Unit := do
 
 /-! ### Lines 2266-2644: attributes -/
 
-/-- `@3.14.7:2282`. -/
+/-- `:2828`. -/
 def _SPECIALIZE_LOAD_ATTR : M Unit := pure ()
-/-- `:2261`. -/
+/-- `:2841`. -/
 def _LOAD_ATTR (e : Env) : M Unit :=
   stk 1 (1 + (e.oparg &&& 1)) fun
     | [owner] => do
@@ -283,10 +283,10 @@ def _LOAD_ATTR (e : Env) : M Unit :=
       else
         pure [← e.om.getAttr e.ctx owner name]
     | _ => fault "arity"
-/-- `:2278`. -/
+/-- `:2857`. -/
 def LOAD_ATTR (e : Env) : M Unit := do _SPECIALIZE_LOAD_ATTR; _LOAD_ATTR e
-/-- `:2289`. Lock-free on the GIL build. -/
-def _GUARD_TYPE_VERSION_AND_LOCK (e : Env) : M Unit := _GUARD_TYPE_VERSION e
+/-- `:2868`, after `_LOCK_OBJECT`, which does nothing on the GIL build. -/
+def _GUARD_TYPE_VERSION_LOCKED (e : Env) : M Unit := _GUARD_TYPE_VERSION e
 
 /-- The instance record behind a value. -/
 def instOf : Val → RM (Option (Addr × InstObj))
@@ -316,35 +316,35 @@ def instanceSlot (o : Val) (index : Nat) (name : String) : BM Val := do
     | none => throw .deopt
   | none => throw .deopt
 
-/-- `:2309`. -/
+/-- `:2890`. -/
 def _LOAD_ATTR_INSTANCE_VALUE (e : Env) : M Unit := stk 1 1 fun
   | [o] => do
     let name ← getName e (e.oparg >>> 1)
     pure [← instanceSlot o (cacheNat e 1) name]
   | _ => fault "arity"
-/-- `:2326`. -/
+/-- `:2908`. -/
 def LOAD_ATTR_INSTANCE_VALUE (e : Env) : M Unit := do
   _GUARD_TYPE_VERSION e; _CHECK_MANAGED_OBJECT_HAS_VALUES; _LOAD_ATTR_INSTANCE_VALUE e
   _PUSH_NULL_CONDITIONAL e
-/-- `:2334`. -/
+/-- `:2918`. -/
 def _LOAD_ATTR_MODULE (e : Env) : M Unit := stk 1 1 fun
   | [.ref a] => do
     match ← (getObj a : RM Obj) with
     | .module _ d => pure [← dictSlot (.ref d) (cacheNat e 0) (cacheNat e 1)]
     | _ => throw .deopt
   | _ => throw .deopt
-/-- `:2358`. -/
+/-- `:2943`. -/
 def LOAD_ATTR_MODULE (e : Env) : M Unit := do _LOAD_ATTR_MODULE e; _PUSH_NULL_CONDITIONAL e
-/-- `:2364`. -/
+/-- `:2950`. -/
 def _LOAD_ATTR_WITH_HINT (e : Env) : M Unit := stk 1 1 fun
   | [o] => do
     let name ← getName e (e.oparg >>> 1)
     pure [← instanceSlot o (cacheNat e 1) name]
   | _ => fault "arity"
-/-- `:2403`. -/
+/-- `:2990`. -/
 def LOAD_ATTR_WITH_HINT (e : Env) : M Unit := do
   _GUARD_TYPE_VERSION e; _LOAD_ATTR_WITH_HINT e; _PUSH_NULL_CONDITIONAL e
-/-- `:2410`. -/
+/-- `:2999`. -/
 def _LOAD_ATTR_SLOT (e : Env) : M Unit := stk 1 1 fun
   | [o] => do
     match ← (instOf o : RM _) with
@@ -354,7 +354,7 @@ def _LOAD_ATTR_SLOT (e : Env) : M Unit := stk 1 1 fun
       | none => throw .deopt
     | none => throw .deopt
   | _ => fault "arity"
-/-- `:2426`. -/
+/-- `:3016`. -/
 def LOAD_ATTR_SLOT (e : Env) : M Unit := do
   _GUARD_TYPE_VERSION e; _LOAD_ATTR_SLOT e; _PUSH_NULL_CONDITIONAL e
 
@@ -366,19 +366,19 @@ def classVersion : Val → RM (Option Nat)
     | _ => pure none
   | _ => pure none
 
-/-- `:2433`. -/
+/-- `:3025`. -/
 def _CHECK_ATTR_CLASS (e : Env) : M Unit := guardTop 1 fun
   | [o] => do
     match ← (classVersion o : RM _) with
     | some v => pure (v != cacheNat e 0)
     | none => pure true
   | _ => fault "arity"
-/-- `:2441`. -/
+/-- `:3033`. -/
 def _LOAD_ATTR_CLASS (e : Env) : M Unit := stk 1 1 fun _ => pure [(e.cache[1]?).getD .null]
-/-- `:2448`. -/
+/-- `:3040`. -/
 def LOAD_ATTR_CLASS (e : Env) : M Unit := do
   _CHECK_ATTR_CLASS e; _LOAD_ATTR_CLASS e; _PUSH_NULL_CONDITIONAL e
-/-- `:2455`. -/
+/-- `:3048`. -/
 def LOAD_ATTR_CLASS_WITH_METACLASS_CHECK (e : Env) : M Unit := do
   _CHECK_ATTR_CLASS e; _LOAD_ATTR_CLASS e; _PUSH_NULL_CONDITIONAL e
 
@@ -432,7 +432,7 @@ def LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN (e : Env) : M Unit := do
   BM.lift (_SAVE_RETURN_OFFSET e)
   _PUSH_FRAME nf
 
-/-- `@3.14.7:2547`. -/
+/-- `:3107`. -/
 def _GUARD_DORV_NO_DICT : M Unit := pure ()
 
 /-- Replace the `index` slot of an instance's dict under the key `name`. -/
@@ -448,24 +448,24 @@ def instanceStore (o : Val) (index : Nat) (name : String) (v : Val) : BM Unit :=
     | none => throw .deopt
   | none => throw .deopt
 
-/-- `@3.14.7:2559`. -/
+/-- `:3119`. -/
 def _STORE_ATTR_INSTANCE_VALUE (e : Env) : M Unit := stk 2 0 fun
   | [v, o] => do
     instanceStore o (cacheNat e 1) (← getName e e.oparg) v
     pure []
   | _ => fault "arity"
-/-- `@3.14.7:2577`. -/
+/-- `:3142`. -/
 def STORE_ATTR_INSTANCE_VALUE (e : Env) : M Unit := do
-  _GUARD_TYPE_VERSION_AND_LOCK e; _GUARD_DORV_NO_DICT; _STORE_ATTR_INSTANCE_VALUE e
-/-- `@3.14.7:2583`. -/
+  _GUARD_TYPE_VERSION_LOCKED e; _GUARD_DORV_NO_DICT; _STORE_ATTR_INSTANCE_VALUE e
+/-- `:3151`. -/
 def _STORE_ATTR_WITH_HINT (e : Env) : M Unit := stk 2 0 fun
   | [v, o] => do
     instanceStore o (cacheNat e 1) (← getName e e.oparg) v
     pure []
   | _ => fault "arity"
-/-- `:2495`. -/
+/-- `:3186`. -/
 def STORE_ATTR_WITH_HINT (e : Env) : M Unit := do _GUARD_TYPE_VERSION e; _STORE_ATTR_WITH_HINT e
-/-- `:2500`. -/
+/-- `:3193`. -/
 def _STORE_ATTR_SLOT (e : Env) : M Unit := stk 2 0 fun
   | [v, .ref a] => do
     match ← (getObj a : RM Obj) with
@@ -474,33 +474,33 @@ def _STORE_ATTR_SLOT (e : Env) : M Unit := stk 2 0 fun
       pure []
     | _ => throw .deopt
   | _ => throw .deopt
-/-- `:2513`. -/
+/-- `:3207`. -/
 def STORE_ATTR_SLOT (e : Env) : M Unit := do _GUARD_TYPE_VERSION e; _STORE_ATTR_SLOT e
 
 /-! ### Lines 2646-2860: comparison -/
 
-/-- `:2524`. -/
+/-- `:3220`. -/
 def _SPECIALIZE_COMPARE_OP : M Unit := pure ()
-/-- `:2536`. -/
+/-- `:3232`. -/
 def _COMPARE_OP (e : Env) : M Unit := stk 2 1 fun
   | [l, r] => do
     let res ← e.om.richCompare e.ctx l r (e.oparg >>> 5)
     if e.oparg &&& 16 != 0 then pure [.bool (← e.om.isTrue e.ctx res)]
     else pure [res]
   | _ => fault "arity"
-/-- `:2555`. -/
+/-- `:3251`. -/
 def COMPARE_OP (e : Env) : M Unit := do _SPECIALIZE_COMPARE_OP; _COMPARE_OP e
 
 /-- `dleft`/`dright` as C doubles. -/
 def flt (a : UInt64) : Float := Float.ofBits a
 
-/-- `:2566`. -/
+/-- `:3262`. -/
 def _COMPARE_OP_FLOAT (e : Env) : M Unit := stk 2 1 fun
   | [.float l, .float r] =>
     let signIsh := comparisonBit (flt l >= flt r) (flt l <= flt r)
     pure [.bool (signIsh &&& e.oparg != 0)]
   | _ => fault "not floats"
-/-- `:2584`. -/
+/-- `:3280`. -/
 def _COMPARE_OP_INT (e : Env) : M Unit := stk 2 1 fun
   | [.int l, .int r] => do
     if !isCompact l then throw .deopt
@@ -508,32 +508,32 @@ def _COMPARE_OP_INT (e : Env) : M Unit := stk 2 1 fun
     let signIsh := comparisonBit (decide (l ≥ r)) (decide (l ≤ r))
     pure [.bool (signIsh &&& e.oparg != 0)]
   | _ => fault "not ints"
-/-- `:2606`. `COMPARISON_NOT_EQUALS` is 7 (`Include/internal/pycore_code.h:538`). -/
+/-- `:3302`. `COMPARISON_NOT_EQUALS` is 7 (`Include/internal/pycore_code.h:538`). -/
 def _COMPARE_OP_STR (e : Env) : M Unit := stk 2 1 fun
   | [.str l, .str r] =>
     let eq : Nat := if l == r then 1 else 0
     pure [.bool ((7 + eq) &&& e.oparg != 0)]
   | _ => fault "not strs"
-/-- `:2720`. -/
+/-- `:3253`. -/
 def COMPARE_OP_FLOAT (e : Env) : M Unit := do _GUARD_TOS_FLOAT; _GUARD_NOS_FLOAT; _COMPARE_OP_FLOAT e
-/-- `:2723`. -/
+/-- `:3256`. -/
 def COMPARE_OP_INT (e : Env) : M Unit := do _GUARD_TOS_INT; _GUARD_NOS_INT; _COMPARE_OP_INT e
-/-- `:2726`. -/
+/-- `:3259`. -/
 def COMPARE_OP_STR (e : Env) : M Unit := do _GUARD_TOS_UNICODE; _GUARD_NOS_UNICODE; _COMPARE_OP_STR e
 
-/-- `:2787`. -/
+/-- `:3320`. -/
 def IS_OP (e : Env) : M Unit := stk 2 1 fun
   | [l, r] => pure [.bool (((if l == r then 1 else 0) ^^^ e.oparg) != 0)]
   | _ => fault "arity"
-/-- `:2798`. -/
+/-- `:3335`. -/
 def _CONTAINS_OP (e : Env) : M Unit := stk 2 1 fun
   | [l, r] => do
     let res ← e.om.contains e.ctx r l
     pure [.bool (((if res then 1 else 0) ^^^ e.oparg) != 0)]
   | _ => fault "arity"
-/-- `:2808`. -/
+/-- `:3349`. -/
 def _SPECIALIZE_CONTAINS_OP : M Unit := pure ()
-/-- `:2820`. -/
+/-- `:3361`. -/
 def CONTAINS_OP (e : Env) : M Unit := do _SPECIALIZE_CONTAINS_OP; _CONTAINS_OP e
 
 /-- `PyAnySet_CheckExact`. -/
@@ -544,28 +544,28 @@ def notAnySet (v : Val) : BM Bool := do
     | .set .. => pure false
     | _ => pure true
   | _ => pure true
-/-- `:2822`. -/
+/-- `:3363`. -/
 def _GUARD_TOS_ANY_SET : M Unit := guardTop 1 fun
   | [o] => notAnySet o
   | _ => fault "arity"
-/-- `:2829`. -/
+/-- `:3380`. -/
 def _CONTAINS_OP_SET (e : Env) : M Unit := stk 2 1 fun
   | [l, r] => do
     let res ← (setContains e.om e.ctx r l : RM Bool)
     pure [.bool (((if res then 1 else 0) ^^^ e.oparg) != 0)]
   | _ => fault "arity"
-/-- `:2827`. -/
+/-- `:3378`. -/
 def CONTAINS_OP_SET (e : Env) : M Unit := do _GUARD_TOS_ANY_SET; _CONTAINS_OP_SET e
-/-- `:2844`. -/
+/-- `:3399`. -/
 def _CONTAINS_OP_DICT (e : Env) : M Unit := stk 2 1 fun
   | [l, r] => do
     let res ← (dictContains e.om e.ctx r l : RM Bool)
     pure [.bool (((if res then 1 else 0) ^^^ e.oparg) != 0)]
   | _ => fault "arity"
-/-- `:2842`. -/
-def CONTAINS_OP_DICT (e : Env) : M Unit := do _GUARD_TOS_DICT; _CONTAINS_OP_DICT e
+/-- `:3397`. -/
+def CONTAINS_OP_DICT (e : Env) : M Unit := do _GUARD_TOS_ANY_DICT; _CONTAINS_OP_DICT e
 
-/-- `:2856`. -/
+/-- `:3415`. -/
 def CHECK_EG_MATCH (e : Env) : M Unit := stk 2 2 fun
   | [ev, mt] => do
     (checkExceptStarTypeValid mt : RM Unit)
@@ -573,21 +573,21 @@ def CHECK_EG_MATCH (e : Env) : M Unit := stk 2 2 fun
     if m != .none then (setExcInfoTop m : RM Unit)
     pure [rest, m]
   | _ => fault "arity"
-/-- `:2882`. -/
+/-- `:3441`. -/
 def CHECK_EXC_MATCH : M Unit := stkK 2 2 fun
   | [l, r] => do
     (checkExceptTypeValid r : RM Unit)
     let res ← (givenMatches l 8 r : RM Bool)
     pure [l, .bool res]
   | _ => fault "arity"
-/-- `:2897`. -/
+/-- `:3456`. -/
 def IMPORT_NAME (e : Env) : M Unit := stk 2 1 fun
   | [level, fromlist] => do
     let name ← getName e e.oparg
     let f ← getFrame
     pure [← e.om.importName e.ctx f name fromlist level]
   | _ => fault "arity"
-/-- `:2907`. -/
+/-- `:3478`. -/
 def IMPORT_FROM (e : Env) : M Unit := stkK 1 2 fun
   | [from_] => do
     let name ← getName e e.oparg
@@ -596,24 +596,24 @@ def IMPORT_FROM (e : Env) : M Unit := stkK 1 2 fun
 
 /-! ### Lines 2879-3031: jumps -/
 
-/-- `:2914`. -/
+/-- `:3494`. -/
 def JUMP_FORWARD (e : Env) : M Unit := BM.lift (jumpBy e.oparg)
-/-- `:3058`. -/
+/-- `:3656`. -/
 def JUMP_BACKWARD_NO_INTERRUPT (e : Env) : M Unit := BM.lift (jumpBy (-(e.oparg : Int)))
-/-- `:2923`. -/
+/-- `:3503`. -/
 def _SPECIALIZE_JUMP_BACKWARD : M Unit := pure ()
-/-- `:2934`: tier 2 is not built. -/
+/-- `:3515`: tier 2 is not built. -/
 def _JIT : M Unit := pure ()
 /-- `:6604`: only reached while tracing for the JIT, which is not built. -/
 def TRACE_RECORD : M Unit := fault "TRACE_RECORD without a JIT tracer"
-/-- `:2962`. -/
+/-- `:3544`. -/
 def JUMP_BACKWARD (e : Env) : M Unit := do
   _SPECIALIZE_JUMP_BACKWARD; _CHECK_PERIODIC; JUMP_BACKWARD_NO_INTERRUPT e
-/-- `:2968`. -/
+/-- `:3550`. -/
 def JUMP_BACKWARD_NO_JIT (e : Env) : M Unit := do _CHECK_PERIODIC; JUMP_BACKWARD_NO_INTERRUPT e
-/-- `:2973`. -/
+/-- `:3555`. -/
 def JUMP_BACKWARD_JIT (e : Env) : M Unit := do _CHECK_PERIODIC; JUMP_BACKWARD_NO_INTERRUPT e; _JIT
-/-- `:2997`: unreachable on a build without tier 2. -/
+/-- `:3579`: unreachable on a build without tier 2. -/
 def ENTER_EXECUTOR : M Unit := fault "ENTER_EXECUTOR is not supported in this build"
 
 /-- `next_instr->op.code == NOT_TAKEN`. -/
@@ -628,49 +628,49 @@ def jumpIf (e : Env) (flag : Bool) : BM Unit := do
   if flag then jumpBy e.oparg
   else if ← nextIsNotTaken e then jumpBy 1
 
-/-- `:3023`. -/
+/-- `:3621`. -/
 def _POP_JUMP_IF_FALSE (e : Env) : M Unit := stk 1 0 fun
   | [.bool b] => do jumpIf e !b; pure []
   | _ => fault "POP_JUMP_IF_FALSE on a non-bool"
-/-- `:3031`. -/
+/-- `:3629`. -/
 def _POP_JUMP_IF_TRUE (e : Env) : M Unit := stk 1 0 fun
   | [.bool b] => do jumpIf e b; pure []
   | _ => fault "POP_JUMP_IF_TRUE on a non-bool"
-/-- `:3039`. -/
+/-- `:3637`. -/
 def _IS_NONE : M Unit := stk 1 1 fun
   | [v] => pure [.bool (v == .none)]
   | _ => fault "arity"
-/-- `:3050`. -/
+/-- `:3648`. -/
 def POP_JUMP_IF_TRUE (e : Env) : M Unit := _POP_JUMP_IF_TRUE e
-/-- `:3052`. -/
+/-- `:3650`. -/
 def POP_JUMP_IF_FALSE (e : Env) : M Unit := _POP_JUMP_IF_FALSE e
-/-- `:3054`. -/
+/-- `:3652`. -/
 def POP_JUMP_IF_NONE (e : Env) : M Unit := do _IS_NONE; _POP_JUMP_IF_TRUE e
-/-- `:3056`. -/
+/-- `:3654`. -/
 def POP_JUMP_IF_NOT_NONE (e : Env) : M Unit := do _IS_NONE; _POP_JUMP_IF_FALSE e
 
 /-! ### Lines 3033-3119: `len`, pattern matching, iterators -/
 
-/-- `:3068`. -/
+/-- `:3666`. -/
 def GET_LEN (e : Env) : M Unit := stkK 1 2 fun
   | [o] => do pure [o, .int (← e.om.length e.ctx o)]
   | _ => fault "arity"
-/-- `:3077`. -/
+/-- `:3699`. -/
 def MATCH_CLASS (e : Env) : M Unit := stk 3 1 fun
   | [s, t, names] => do
     match ← e.om.matchClass e.ctx s t e.oparg names with
     | some a => pure [a]
     | none => pure [.none]
   | _ => fault "arity"
-/-- `:3096`. -/
+/-- `:3701`. -/
 def MATCH_MAPPING (e : Env) : M Unit := stk 1 2 fun
   | [s] => do pure [s, .bool (← e.om.isMapping s)]
   | _ => fault "arity"
-/-- `:3101`. -/
+/-- `:3706`. -/
 def MATCH_SEQUENCE (e : Env) : M Unit := stk 1 2 fun
   | [s] => do pure [s, .bool (← e.om.isSequence s)]
   | _ => fault "arity"
-/-- `:3106`. -/
+/-- `:3711`. -/
 def MATCH_KEYS (e : Env) : M Unit := stkK 2 3 fun
   | [s, k] => do pure [s, k, ← e.om.matchKeys e.ctx s k]
   | _ => fault "arity"

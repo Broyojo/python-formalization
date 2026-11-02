@@ -9,13 +9,13 @@ summary: |
   `mark_stacks` (Objects/frameobject.c:1316-1531) assigns a `Kind` to each stack slot; `Null` marks
   a `NULL` placeholder such as the `self_or_null` that `LOAD_SPECIAL` / `_INSERT_NULL` push for a
   `with` statement's `__enter__`/`__exit__` lookup (Python/bytecodes.c:4125-4151). `compatible_kind`
-  (lines 1175-1187) allows anything to flow *to* a `Null` slot but, crucially, `mark_stacks`
+  (lines 1183-1195) allows anything to flow *to* a `Null` slot but, crucially, `mark_stacks`
   records the slot that a bound method / `__exit__` is loaded into via the `default:` case as
-  `Object` (line 1480), not `Null`. The jump-target analysis in `frame_lineno_set_impl` then
+  `Object` (lines 1483-1496), not `Null`. The jump-target analysis in `frame_lineno_set_impl` then
   approves a `frame.f_lineno = n` jump that lands just after a `with`'s setup, where the eval
-  stack actually holds a `NULL`. The warning/`None`-assignment pass at lines 1788-1812 only fixes
+  stack actually holds a `NULL`. The warning/`None`-assignment pass at lines 1796-1820 only fixes
   NULL *locals*, not NULL values already on the eval stack, so the interpreter resumes and reads a
-  `NULL` as a live object, segfaulting on both 3.14.7 and main.
+  `NULL` as a live object, segfaulting on 3.14.7, 3.15.2 and main.
 likelihood: |
   Low. It needs a trace function that sets `f_lineno` to jump across a `with` setup. But it is a
   hard interpreter crash reachable from pure Python, and the `None`-to-unbound-locals mitigation
@@ -23,7 +23,7 @@ likelihood: |
 maybe_intended: |
   No. gh-94438 ("frame.setlineno has serious flaws") explicitly listed "does not account for NULLs
   on the stack" as a flaw to fix and marked it done; this reproduces a NULL-on-stack crash on
-  current 3.14.7 and main, so either the fix was incomplete or it regressed.
+  current 3.15.2 and main, so either the fix was incomplete or it regressed.
 reproducer: |
   import subprocess, sys, textwrap
   prog = textwrap.dedent('''
@@ -64,18 +64,18 @@ expected: |
   The jump is either performed safely or rejected with `ValueError`; it must never leave a `NULL`
   on the evaluation stack to be used as an object.
 observed: |
-  python3 3.14.7: segmentation fault (core dumped). REPRODUCED.
+  python3 3.15.2: segmentation fault (returncode -11). REPRODUCED. Same on 3.14.7.
   main (vendor/cpython-main/python.exe, 3.16.0a1+dev): segmentation fault (core dumped). REPRODUCED.
 promised_by: |
   invariant: `frame.f_lineno = n` from a trace function must not corrupt the interpreter.
 cause: |
   Objects/frameobject.c:1483-1496 (the `default:` arm of `mark_stacks`) records pushed slots as
   `Object`, so the `NULL` slot of a `with`/`LOAD_SPECIAL` sequence is analysed as `Object` and
-  `compatible_stack` (1521-1540) approves a jump into it; the NULL-fixup at 1788-1812 covers only
+  `compatible_stack` (1533-1552) approves a jump into it; the NULL-fixup at 1796-1820 covers only
   locals.
 possible_fix: |
   Mark the `self_or_null`/`PUSH_NULL` slots as `Null` in `mark_stacks` (as `PUSH_NULL` already
-  does at line 1426), or extend the resume-time fixup to replace NULLs on the eval stack, or reject
+  does at lines 1438-1439), or extend the resume-time fixup to replace NULLs on the eval stack, or reject
   jumps whose target stack has an `Object` slot where the source has `Null`.
 duplicates:
   issues:

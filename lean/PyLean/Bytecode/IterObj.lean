@@ -3,7 +3,7 @@ import PyLean.DiffCore
 import PyLean.Registry
 
 /-!
-`Objects/iterobject.c`, `Objects/enumobject.c`, `Objects/cellobject.c`, CPython 3.14.7.
+`Objects/iterobject.c`, `Objects/enumobject.c`, `Objects/cellobject.c`, CPython 3.15.2.
 
 Generic over the element type `α` and over what the sequence does: `__getitem__`,
 the callable and the comparison are plain function arguments that may raise, so
@@ -173,18 +173,18 @@ structure Enum where
 def enumNew (start : Int) : Enum :=
   if ssizeMin ≤ start ∧ start ≤ ssizeMax then ⟨start, none⟩ else ⟨ssizeMax, some start⟩
 
-/-- `increment_longindex_lock_held` and `enum_next_long`, lines 176-236. -/
+/-- `increment_longindex_lock_held` and `enum_next_long`, lines 199-230. -/
 def enumNextLong (en : Enum) : Enum × Int :=
   let nx := en.longindex.getD ssizeMax
   ({ en with longindex := some (nx + 1) }, nx)
 
-/-- `enum_next`, lines 238-286, past the `tp_iternext` of the wrapped iterator:
+/-- `enum_next`, lines 232-272, past the `tp_iternext` of the wrapped iterator:
 the state and the index of the pair. -/
 def enumNext (en : Enum) : Enum × Int :=
   if en.index = ssizeMax then enumNextLong en
   else ({ en with index := en.index + 1 }, en.index)
 
-/-- `enum_reduce`, lines 288-303: the `start` of the pickled call. -/
+/-- `enum_reduce`, lines 274-289: the `start` of the pickled call. -/
 def enumReduce (en : Enum) : Int :=
   match en.longindex with
   | some l => l
@@ -200,7 +200,7 @@ def counter : Nat → Int → List Int
   | 0, _ => []
   | n + 1, s => s :: counter n (s + 1)
 
-/-- `check_keyword`, `enumerate_vectorcall`, lines 90-153: `(iterable position, start
+/-- `check_keyword`, `enumerate_vectorcall`, lines 103-153: `(iterable position, start
 position)` into the arguments, or the `TypeError`. Arguments are `pos` positional
 then `kw` names. -/
 def enumArgs (npos : Nat) (kw : List String) : Except String (Nat × Option Nat) :=
@@ -233,11 +233,11 @@ structure Rev where
   held : Bool
   deriving DecidableEq, Repr
 
-/-- `reversed_new_impl`, lines 379-421, for a sequence of length `n` with no
+/-- `reversed_new_impl`, lines 365-407, for a sequence of length `n` with no
 `__reversed__`. -/
 def revNew (n : Int) : Rev := ⟨n - 1, true⟩
 
-/-- `reversed_next`, lines 456-478. -/
+/-- `reversed_next`, lines 442-464. -/
 def revNext {α : Type} (getitem : Int → Py α) (ro : Rev) : Rev × Py (Option α) :=
   if 0 ≤ ro.index then
     match getitem ro.index with
@@ -246,7 +246,7 @@ def revNext {α : Type} (getitem : Int → Py α) (ro : Rev) : Rev × Py (Option
       if stopsSeq e then (⟨-1, false⟩, .ok none) else (⟨-1, false⟩, .error e)
   else (⟨-1, false⟩, .ok none)
 
-/-- `reversed_len`, lines 480-495. -/
+/-- `reversed_len`, lines 466-481. -/
 def revLen (size : Py Int) (ro : Rev) : Py Int :=
   if ro.index = -1 then .ok 0
   else
@@ -256,10 +256,10 @@ def revLen (size : Py Int) (ro : Rev) : Py Int :=
       let position := ro.index + 1
       .ok (if n < position then 0 else position)
 
-/-- `reversed_reduce`, lines 499-510: the index, or `none` for `reversed(())`. -/
+/-- `reversed_reduce`, lines 485-496: the index, or `none` for `reversed(())`. -/
 def revReduce (ro : Rev) : Option Int := if ro.index != -1 then some ro.index else none
 
-/-- `reversed_setstate`, lines 512-534. -/
+/-- `reversed_setstate`, lines 498-520. -/
 def revSetstate (size : Py Int) (ro : Rev) (index : Int) : Py Rev :=
   if ro.index != -1 then
     match size with

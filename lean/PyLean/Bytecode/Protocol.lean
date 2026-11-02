@@ -1057,7 +1057,7 @@ def alreadyExecuting {α : Type} (k : GenKind) : RM α :=
     | .asyncGen => "async generator already executing"
     | .gen => "generator already executing")
 
-/-- `gen_send_ex2`, `Objects/genobject.c:254-325`: the generator is already marked
+/-- `gen_send_ex2`, `Objects/genobject.c:259-325`: the generator is already marked
 `FRAME_EXECUTING`. `exc` is the exception being thrown in, if any. `generator_return_kind`
 (:289-302) reads the same as "the frame state is suspended" on one thread, which is what the
 3.14 code tested and what the model tests. -/
