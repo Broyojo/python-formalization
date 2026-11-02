@@ -1,0 +1,64 @@
+id: unicodeobj-format-nul-type
+title: "format(float/complex, spec) accepts a literal NUL as the presentation type, unlike int, str, Fraction and _pydecimal"
+priority: P4
+kind: twin-divergence
+module: unicodeobj
+files: [Objects/unicode_formatter.c]
+functions: ["_PyFloat_FormatAdvancedWriter", "_PyComplex_FormatAdvancedWriter"]
+summary: |
+  parse_internal_render_format_spec stores '\0' in format.type when the type field is absent, and
+  takes the last character of the spec as the type otherwise. The float and complex writers then
+  treat case '\0' as "no format code", so a literal NUL type character is read as no type:
+  format(1.5, '\x00') == '1.5', format(1+2j, '\x00') == '(1+2j)', format(1.5, '>8\x00') pads, and
+  format(1.5, '.2\x00') == '1.5'. The same spec raises ValueError("Unknown format code '\x0' for
+  object of type 'int'") for int, and for str; Fraction and _pydecimal raise "Invalid format
+  specifier". The C _decimal raises for '\x00' alone but accepts '>8\x00' and '.2\x00', and stops
+  at the NUL ('.2f\x00garbage!' formats as '.2f').
+likelihood: |
+  Low: a NUL in a format spec comes only from untrusted or generated specs (f-string specs from
+  user data, templating). The visible effect is that a malformed spec is silently accepted.
+maybe_intended: |
+  No. '\0' is an internal sentinel for "type absent"; the docs list the types and NUL is not one,
+  and the int path, using 'd' as its default, rejects it.
+reproducer: |
+  from fractions import Fraction
+  def f(x, s):
+      try:
+          return format(x, s)
+      except ValueError:
+          return 'ValueError'
+  got = (f(1.5, '\x00'), f(1+2j, '\x00'), f(1.5, '>8\x00'), f(1, '\x00'), f('a', '\x00'),
+         f(Fraction(3, 2), '\x00'))
+  print(ascii(got))
+  if got == ('1.5', '(1+2j)', '     1.5', 'ValueError', 'ValueError', 'ValueError'):
+      print('REPRODUCED unicodeobj-format-nul-type')
+expected: |
+  ValueError("Unknown format code '\x0' for object of type 'float'") (and 'complex'), as for int.
+observed: |
+  python3 3.15.2: ('1.5', '(1+2j)', '     1.5', 'ValueError', 'ValueError', 'ValueError').
+  REPRODUCED.
+  main (cpython-main/python.exe, 3.16.0a1+dev): identical. REPRODUCED by check_bugs.py.
+promised_by: |
+  Doc/library/string.rst, Format Specification Mini-Language: the table of presentation types for
+  float ("None", e, E, f, F, g, G, n, %), where None means the type field is omitted; int and str
+  reject the same spec.
+cause: |
+  Objects/unicode_formatter.c:1903-1904 and 1942-1943 call parse_internal_render_format_spec with
+  default type '\0', which cannot be told apart from a NUL read from the spec (its type is the
+  spec's remaining character, :558); :1909 and :1948 `case '\0'` then format the value. The C
+  _decimal (Modules/_decimal/_decimal.c) converts the spec to a C string and stops at the NUL.
+possible_fix: |
+  Use a default type that is not a valid code point (e.g. -1 / a Py_UCS4 sentinel above 0x10FFFF)
+  for float and complex, or reject a NUL type in parse_internal_render_format_spec.
+duplicates:
+  issues: []
+  queries: ["format float null character format spec", "format NUL type float",
+            "format spec \\x00 float", "Unknown format code x0", "format_spec null byte",
+            "null format float", "embedded null format_spec", "format spec float (gh-61449 read: unrelated)",
+            "bugforge README: no NUL / format spec entry"]
+  note: |
+    Queries run as separate unquoted terms. gh-61449 ("int and float should detect inconsistent
+    format strings") is about '=' and sign with strings, not this.
+lean:
+  property: PyLean.UnicodeObj.NulTypeRejected
+  theorem: PyLean.UnicodeObj.nulTypeRejected_refuted

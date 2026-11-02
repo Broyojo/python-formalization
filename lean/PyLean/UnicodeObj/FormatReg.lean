@@ -5,6 +5,7 @@ import PyLean.UnicodeObj.FormatPercentProps
 import PyLean.UnicodeObj.FormatStrProps
 import PyLean.UnicodeObj.StrFormatDoc
 import PyLean.UnicodeObj.IntFormatDoc
+import PyLean.UnicodeObj.FormatNumErrors
 
 /-! Registry entries of the formatting slice. -/
 
@@ -86,17 +87,17 @@ def formatEntries : List Entry := [
     source := "invariant"
     status := .proven, prop := ``ParseNumberSplit, thm := some ``parseNumberSplit_proven },
   { id := "unicodeobj-format-float-internal", pyFile := "Objects/unicode_formatter.c"
-    pyFns := []
+    pyFns := ["format_float_internal"]
     statement := "For every float and every spec with no separator, format(x, spec) is the buffer of PyOS_double_to_string with the sign the spec asks for and the padding of its width, fill and alignment."
     source := "format spec mini-language, Doc/library/string.rst"
     status := .proven, prop := ``FloatSpecLayout, thm := some ``floatSpecLayout_proven },
   { id := "unicodeobj-format-float-fast-slow", pyFile := "Objects/unicode_formatter.c"
-    pyFns := []
+    pyFns := ["format_float_internal"]
     statement := "The fast path of format_float_internal gives what the general path gives, for every float and every spec that takes it."
     source := "invariant: fast path vs slow path"
     status := .proven, prop := ``FloatFastSlowAgree, thm := some ``floatFastSlowAgree_proven },
   { id := "unicodeobj-format-float-width", pyFile := "Objects/unicode_formatter.c"
-    pyFns := ["calc_number_widths", "fill_number"]
+    pyFns := ["format_float_internal", "calc_number_widths", "fill_number"]
     statement := "format(x, spec) is at least width characters long, for every float and every spec, separators included."
     source := "format spec docs: width is the minimum total field width"
     status := .proven, prop := ``FloatWidthIsMinimum, thm := some ``floatWidthIsMinimum_proven },
@@ -111,20 +112,33 @@ def formatEntries : List Entry := [
     source := "invariant: a separator only separates"
     status := .proven, prop := ``FloatGroupingOnlyInserts, thm := some ``floatGroupingOnlyInserts_proven },
   { id := "unicodeobj-format-complex-internal", pyFile := "Objects/unicode_formatter.c"
-    pyFns := []
+    pyFns := ["format_complex_internal"]
     statement := "With a presentation type, format(z, spec) is format(z.real, spec) + format(z.imag, '+' + spec) + 'j' with the padding of the spec."
     source := "format spec mini-language, Doc/library/string.rst"
     status := .proven, prop := ``ComplexPartsCompose, thm := some ``complexPartsCompose_proven },
   { id := "unicodeobj-format-complex-repr", pyFile := "Objects/unicode_formatter.c"
-    pyFns := []
+    pyFns := ["format_complex_internal"]
     statement := "A spec with no type, precision or option gives str(z): format_complex_internal and complex_repr drop the real part and add the parentheses under the same rule, for every complex, nan and -0.0 included."
     source := "format() docs; invariant: format vs repr"
     status := .proven, prop := ``ComplexOmittedTypeIsRepr, thm := some ``complexOmittedTypeIsRepr_proven },
   { id := "unicodeobj-format-complex-width", pyFile := "Objects/unicode_formatter.c"
-    pyFns := []
+    pyFns := ["format_complex_internal"]
     statement := "format(z, spec) is at least width characters long, for every complex and every spec."
     source := "format spec docs: width is the minimum total field width"
     status := .proven, prop := ``ComplexWidthIsMinimum, thm := some ``complexWidthIsMinimum_proven },
+  { id := "unicodeobj-format-float-complex-errors", pyFile := "Objects/unicode_formatter.c"
+    pyFns := ["format_float_internal", "format_complex_internal", "_PyFloat_FormatAdvancedWriter",
+      "_PyComplex_FormatAdvancedWriter"]
+    statement := "For every float and complex: a precision above INT_MAX raises 'precision too big'; for complex, then zero padding and then '=' alignment raise their messages; and a one-character spec whose character is no mini-language field, no float (or complex) type and not NUL raises 'Unknown format code ...'."
+    source := "unicode_formatter.c:1403-1406, 1576-1595, 1907-1924, 1946-1962; the documented float and complex presentation types"
+    status := .proven, prop := ``FloatComplexErrors, thm := some ``floatComplexErrors_proven
+    notes := "Checked on 3.15.2 for every code point below 0x3000 on 1.5 and nan, real and complex, and the checks on inf, nan, -0.0 and 1e300." },
+  { id := "unicodeobj-format-float-nul-type", pyFile := "Objects/unicode_formatter.c"
+    pyFns := ["_PyFloat_FormatAdvancedWriter", "_PyComplex_FormatAdvancedWriter"]
+    statement := "float and complex reject a NUL presentation type as int and str do."
+    source := "twin: int and str raise for format(x, '\\x00'); the documented presentation types"
+    status := .refuted, prop := ``NulTypeRejected, thm := some ``nulTypeRejected_refuted
+    bug := some "unicodeobj-format-nul-type" },
   { id := "unicodeobj-format-percent-float-errors", pyFile := "Objects/unicode_format.c"
     pyFns := ["formatfloat"]
     statement := "A %e, %f or %g directive of None, a str or a dict raises TypeError naming the conversion, the argument and its type, and an int too large for a double keeps its OverflowError."
