@@ -18,7 +18,7 @@ namespace PyLean.PyGrammar.Peg
 open Lexer
 
 /-- The entry of a rule. An id past the last rule behaves as the last rule in `ruleOf`. -/
-def firstOf (id : Nat) : Bool × List Nat := firstTable.getD (min id 444) (false, [])
+def firstOf (id : Nat) : Bool × List Nat := firstTable.getD (min id 457) (false, [])
 
 /-- `firstTable` is closed under the grammar. -/
 def AllClosed : Prop :=
@@ -28,29 +28,33 @@ theorem allClosed : AllClosed := by
   unfold AllClosed
   decide +kernel
 
-theorem ruleOf_high (id : Nat) (h : 445 ≤ id) : ruleOf id = ruleOf 444 := by
-  have h444 : ruleOf 444 = r444 := rfl
-  rw [h444]
+theorem ruleOf_high (id : Nat) (h : 458 ≤ id) : ruleOf id = ruleOf 457 := by
+  have h457 : ruleOf 457 = r457 := rfl
+  rw [h457]
   unfold ruleOf
-  rw [if_neg (show ¬ id < 222 by omega), if_neg (show ¬ id < 333 by omega),
-    if_neg (show ¬ id < 389 by omega), if_neg (show ¬ id < 417 by omega),
-    if_neg (show ¬ id < 431 by omega), if_neg (show ¬ id < 438 by omega),
-    if_neg (show ¬ id < 441 by omega), if_neg (show ¬ id < 443 by omega),
-    if_neg (show ¬ id < 444 by omega)]
+  rw [if_neg (show ¬ id < 229 by omega),
+    if_neg (show ¬ id < 343 by omega),
+    if_neg (show ¬ id < 400 by omega),
+    if_neg (show ¬ id < 429 by omega),
+    if_neg (show ¬ id < 443 by omega),
+    if_neg (show ¬ id < 450 by omega),
+    if_neg (show ¬ id < 454 by omega),
+    if_neg (show ¬ id < 456 by omega),
+    if_neg (show ¬ id < 457 by omega)]
 
 theorem closed_all (id : Nat) : Closed firstOf (ruleOf id) (firstOf id) = true := by
   have hall := allClosed
   unfold AllClosed at hall
   rw [List.all_eq_true] at hall
-  by_cases h : id < 445
+  by_cases h : id < 458
   · exact hall id (List.mem_range.mpr h)
-  · have h' : 445 ≤ id := by omega
-    have e : firstOf id = firstOf 444 := by
+  · have h' : 458 ≤ id := by omega
+    have e : firstOf id = firstOf 457 := by
       unfold firstOf
       rw [Nat.min_eq_right (by omega)]
       rfl
     rw [ruleOf_high id h', e]
-    exact hall 444 (List.mem_range.mpr (by decide))
+    exact hall 457 (List.mem_range.mpr (by decide))
 
 /-- A match from `i` to `j` starts as `x` says: empty, if `x` allows that, or at least one token
 long and starting with a type in `x`. -/
@@ -226,16 +230,16 @@ theorem loopBody_consumes (id : Nat) (hk : (ruleOf id).kind = .loop0 ∨ (ruleOf
   have h := loopBodiesConsume
   unfold LoopBodiesConsume at h
   rw [List.all_eq_true] at h
-  have key : ∀ k, k < 445 → ((ruleOf k).kind = .loop0 ∨ (ruleOf k).kind = .loop1) →
+  have key : ∀ k, k < 458 → ((ruleOf k).kind = .loop0 ∨ (ruleOf k).kind = .loop1) →
       (itemsFirst firstOf ((ruleOf k).alts.headD default).items).1 = false := by
     intro k hlt hk'
     have := h k (List.mem_range.mpr hlt)
     rcases hk' with e | e <;> simpa [e] using this
-  by_cases hlt : id < 445
+  by_cases hlt : id < 458
   · exact key id hlt hk
   · have e := ruleOf_high id (by omega)
     rw [e] at hk ⊢
-    exact key 444 (by decide) hk
+    exact key 457 (by decide) hk
 
 /-- `while (items)` in a `_loop` rule cannot spin. On a run with no error, an iteration that
 reaches the end of the alternative has moved `p->mark` forward, for every loop rule. -/

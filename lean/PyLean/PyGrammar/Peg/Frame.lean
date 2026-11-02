@@ -158,18 +158,24 @@ theorem frame_tokenizerError : Frame tokenizerError := by
   unfold tokenizerError
   frame
 
-theorem frame_raiseDecodeBody (e : Option PyError) : Frame (raiseDecodeBody e) := by
+theorem frame_raiseDecodeBody (l : Option Loc) (e : Option PyError) : Frame (raiseDecodeBody l e) := by
   cases e with
   | none => exact Frame.pure _
   | some x =>
     unfold raiseDecodeBody
     frame
 
-macro_rules | `(tactic| frame_leaf) => `(tactic| with_reducible exact frame_raiseDecodeBody _)
+macro_rules | `(tactic| frame_leaf) => `(tactic| with_reducible exact frame_raiseDecodeBody _ _)
 
 theorem frame_raiseDecodeError : Frame raiseDecodeError := by
   unfold raiseDecodeError
   frame
+
+theorem frame_raiseDecodeKnown (l : Loc) : Frame (raiseDecodeKnown l) := by
+  unfold raiseDecodeKnown
+  frame
+
+macro_rules | `(tactic| frame_leaf) => `(tactic| with_reducible exact frame_raiseDecodeKnown _)
 
 macro_rules | `(tactic| frame_leaf) => `(tactic| with_reducible exact frame_tokenizerError)
 macro_rules | `(tactic| frame_leaf) => `(tactic| with_reducible exact frame_raiseDecodeError)
@@ -334,6 +340,24 @@ macro_rules | `(tactic| frame_leaf) => `(tactic| with_reducible exact frame_chec
 macro_rules | `(tactic| frame_leaf) => `(tactic| with_reducible exact frame_argumentsParsingError _)
 macro_rules | `(tactic| frame_leaf) => `(tactic| with_reducible exact frame_nonparenGenexp _ _)
 macro_rules | `(tactic| frame_leaf) => `(tactic| with_reducible exact frame_registerStmts _)
+
+theorem frame_raiseErrorForMissingComma (a b : Ast) : Frame (raiseErrorForMissingComma a b) := by
+  unfold raiseErrorForMissingComma
+  frame
+
+theorem frame_warnRelativeImportOfLazy (d m : Ast) : Frame (warnRelativeImportOfLazy d m) := by
+  unfold warnRelativeImportOfLazy
+  frame
+
+macro_rules | `(tactic| frame_leaf) => `(tactic| with_reducible exact frame_warnRelativeImportOfLazy _ _)
+
+theorem frame_checkedFromImport (d m n z : Ast) (a b c e : Int) :
+    Frame (checkedFromImport d m n z a b c e) := by
+  unfold checkedFromImport
+  frame
+
+macro_rules | `(tactic| frame_leaf) => `(tactic| with_reducible exact frame_raiseErrorForMissingComma _ _)
+macro_rules | `(tactic| frame_leaf) => `(tactic| with_reducible exact frame_checkedFromImport _ _ _ _ _ _ _ _)
 
 set_option maxHeartbeats 4000000 in
 /-- Every helper of `Parser/action_helpers.c` and macro of `Parser/pegen.h` an action calls. -/

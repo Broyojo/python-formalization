@@ -2,6 +2,7 @@ import PyLean.Registry
 import PyLean.PyGrammar.RowNames
 import PyLean.PyGrammar.Peg.Props
 import PyLean.PyGrammar.Peg.TokenProps
+import PyLean.PyGrammar.Peg.ImportProps
 import PyLean.PyGrammar.Peg.RuleFacts
 
 /-! Registry entries for the `Peg` part of `PyGrammar`. -/
@@ -173,7 +174,7 @@ def entries : List Entry := [
     pyFile := "Grammar/python.gram"
     pyFns := []
     statement := "A rule that succeeds starts with a token of a type in its FIRST set, or matched " ++
-      "nothing and is nullable; the table is checked closed over all 445 rules."
+      "nothing and is nullable; the table is checked closed over all 458 rules."
     source := "invariant"
     status := .proven
     prop := ``AllRulesStart
@@ -316,11 +317,62 @@ def entries : List Entry := [
   { id := "pygrammar-peg-strip-interpolation"
     pyFile := "Parser/action_helpers.c"
     pyFns := Rows.peg_strip_interpolation
-    statement := "What _strip_interpolation_expr returns does not end in whitespace or '='."
-    source := "invariant"
+    statement := "_strip_interpolation_debug_expr removes the whitespace after a debug '=' and " ++
+      "keeps what is before it, and it removes nothing but a final '=' and the whitespace and " ++
+      "continuation backslashes after it."
+    source := "the comments in Parser/action_helpers.c:1548-1549 and 1570"
     status := .proven
     prop := ``StripInterpolation
     thm := some ``stripInterpolation_proven },
+  { id := "pygrammar-peg-decode-known"
+    pyFile := "Parser/pegen_errors.c"
+    pyFns := Rows.peg_decode_known
+    statement := "_Pypegen_raise_decode_error_known_location turns a decode error into a " ++
+      "SyntaxError naming its kind on the line of the node, and leaves other exceptions alone."
+    source := "invariant"
+    status := .proven
+    prop := ``RaiseDecodeKnown
+    thm := some ``raiseDecodeKnown_proven },
+  { id := "pygrammar-peg-decode-format-spec"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_decode_format_spec
+    statement := "compile raises no bare UnicodeDecodeError: a string that does not decode is a " ++
+      "SyntaxError, as _PyPegen_decode_fstring_part and _PyPegen_constant_from_string make it."
+    source := "the implementation disagreeing with itself"
+    status := .refuted
+    prop := ``DecodeErrorsAreSyntaxErrors
+    thm := some ``decodeErrorsAreSyntaxErrors_refuted
+    bug := some "pygrammar-peg-format-spec-decode-error"
+    notes := "Duplicates the open python/cpython#157890." },
+  { id := "pygrammar-peg-missing-comma"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_missing_comma
+    statement := "_PyPegen_raise_error_for_missing_comma is silent on legacy statements and " ++
+      "outside brackets, and otherwise raises, on the last line of a multi-line left operand."
+    source := "the comments in Parser/action_helpers.c:967-978"
+    status := .proven
+    prop := ``MissingComma
+    thm := some ``missingComma_proven },
+  { id := "pygrammar-peg-warn-lazy"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_warn_lazy
+    statement := "_warn_relative_import_of_lazy warns on `from . lazy import x` with the right " ++
+      "number of dots, and not on `from .lazy import x` or on the second pass."
+    source := "the comments in Parser/action_helpers.c:2034-2037"
+    status := .proven
+    prop := ``WarnRelativeLazy
+    thm := some ``warnRelativeLazy_proven
+    notes := "Warnings as errors are out of scope, as for warn_invalid_escape_sequence." },
+  { id := "pygrammar-peg-checked-from-import"
+    pyFile := "Parser/action_helpers.c"
+    pyFns := Rows.peg_checked_from_import
+    statement := "_PyPegen_checked_from_import refuses lazy from __future__, otherwise builds " ++
+      "the ImportFrom of the module, names, dots and lazy flag, and only from __future__ import " ++
+      "barry_as_FLUFL turns on `<>`."
+    source := "PEP 810 and Parser/action_helpers.c:2082-2114"
+    status := .proven
+    prop := ``CheckedFromImport
+    thm := some ``checkedFromImport_proven },
   { id := "pygrammar-peg-register-stmts"
     pyFile := "Parser/action_helpers.c"
     pyFns := Rows.peg_register_stmts

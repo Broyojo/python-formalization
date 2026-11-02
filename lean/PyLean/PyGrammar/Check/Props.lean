@@ -134,13 +134,17 @@ theorem docstringRemovalKeepsBody_proven : DocstringRemovalKeepsBody := by
     simp [removeDocstring]
 
 /-- Constant folding of `match` values preserves value: `-c` folds to the constant
-`PyNumber_Negative(c)`, and `a + bj`/`a - bj` to `PyNumber_Add`/`PyNumber_Subtract` of the
-two constants, keeping the node's location. Hypothesis: the tree is being optimized
-(`syntax_check_only` is false). -/
+`PyNumber_Negative(c)`, `+c` to `PyNumber_Positive(c)`, and `a + bj`/`a - bj` to
+`PyNumber_Add`/`PyNumber_Subtract` of the two constants, keeping the node's location.
+Hypothesis: the tree is being optimized (`syntax_check_only` is false). -/
 def FoldPreservesValue : Prop :=
   ∀ (st : PState), st.syntaxCheckOnly = false →
     (∀ (u : Ast) (fs1 : List Ast) (v c : PyConst) (rest : List Ast) (l1 l2 l3 : Option Loc),
       u = .node .USub fs1 l1 → negConst v = some c →
+      foldMatchValue st 2 (.node .UnaryOp [u, .node .Constant (.const v :: rest) l2] l3)
+        = .node .Constant [.const c, .null] l3) ∧
+    (∀ (u : Ast) (fs1 : List Ast) (v c : PyConst) (rest : List Ast) (l1 l2 l3 : Option Loc),
+      u = .node .UAdd fs1 l1 → posConst v = some c →
       foldMatchValue st 2 (.node .UnaryOp [u, .node .Constant (.const v :: rest) l2] l3)
         = .node .Constant [.const c, .null] l3) ∧
     (∀ (a b c : PyConst) (r1 r2 fs : List Ast) (l1 l2 l3 l4 : Option Loc) (add : Bool),
@@ -153,7 +157,10 @@ def FoldPreservesValue : Prop :=
 
 theorem foldPreservesValue_proven : FoldPreservesValue := by
   intro st hs
-  constructor
+  refine ⟨?_, ?_, ?_⟩
+  · intro u fs1 v c rest l1 l2 l3 hu hc
+    subst hu
+    simp [foldMatchValue, hs, hc]
   · intro u fs1 v c rest l1 l2 l3 hu hc
     subst hu
     simp [foldMatchValue, hs, hc]

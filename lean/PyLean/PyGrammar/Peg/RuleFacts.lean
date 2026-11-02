@@ -22,15 +22,15 @@ theorem namedRuleStarts {id : Nat} {name : String} {n : Bool} {t : List Nat}
   exact this
 
 /-- `file` starts with `ENDMARKER`, `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, and 31 more. -/
-theorem rule_file_starts : NamedRuleStarts 0 "file" false [0, 1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 49, 52, 59, 62, 522, 525, 526, 527, 528, 529, 530, 532, 587, 597, 621, 622, 623, 624, 625, 633, 634, 647, 656, 682, 689, 694, 698, 699, 701, 703] :=
+theorem rule_file_starts : NamedRuleStarts 0 "file" false [0, 1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 49, 52, 59, 62, 522, 527, 528, 529, 530, 531, 588, 598, 622, 627, 628, 629, 632, 634, 638, 650, 651, 665, 674, 700, 707, 712, 716, 717, 719, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `interactive` starts with `ENDMARKER`, `NAME`, `NUMBER`, `STRING`, `NEWLINE`, `(`, `[`, `+`, `-`, `*`, and 32 more. -/
-theorem rule_interactive_starts : NamedRuleStarts 1 "interactive" false [0, 1, 2, 3, 4, 7, 9, 14, 15, 16, 25, 31, 49, 52, 59, 62, 522, 525, 526, 527, 528, 529, 530, 532, 587, 597, 621, 622, 623, 624, 625, 633, 634, 647, 656, 682, 689, 694, 698, 699, 701, 703] :=
+theorem rule_interactive_starts : NamedRuleStarts 1 "interactive" false [0, 1, 2, 3, 4, 7, 9, 14, 15, 16, 25, 31, 49, 52, 59, 62, 522, 527, 528, 529, 530, 531, 588, 598, 622, 627, 628, 629, 632, 634, 638, 650, 651, 665, 674, 700, 707, 712, 716, 717, 719, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `eval` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 11 more. -/
-theorem rule_eval_starts : NamedRuleStarts 2 "eval" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_eval_starts : NamedRuleStarts 2 "eval" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `func_type` starts with `(`. -/
@@ -38,39 +38,39 @@ theorem rule_func_type_starts : NamedRuleStarts 3 "func_type" false [7] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `statements` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 30 more. -/
-theorem rule_statements_starts : NamedRuleStarts 4 "statements" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 49, 52, 59, 62, 522, 525, 526, 527, 528, 529, 530, 532, 587, 597, 621, 622, 623, 624, 625, 633, 634, 647, 656, 682, 689, 694, 698, 699, 701, 703] :=
+theorem rule_statements_starts : NamedRuleStarts 4 "statements" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 49, 52, 59, 62, 522, 527, 528, 529, 530, 531, 588, 598, 622, 627, 628, 629, 632, 634, 638, 650, 651, 665, 674, 700, 707, 712, 716, 717, 719, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `statement` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 30 more. -/
-theorem rule_statement_starts : NamedRuleStarts 5 "statement" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 49, 52, 59, 62, 522, 525, 526, 527, 528, 529, 530, 532, 587, 597, 621, 622, 623, 624, 625, 633, 634, 647, 656, 682, 689, 694, 698, 699, 701, 703] :=
+theorem rule_statement_starts : NamedRuleStarts 5 "statement" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 49, 52, 59, 62, 522, 527, 528, 529, 530, 531, 588, 598, 622, 627, 628, 629, 632, 634, 638, 650, 651, 665, 674, 700, 707, 712, 716, 717, 719, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `single_compound_stmt` starts with `NAME`, `@`, `with`, `try`, `if`, `while`, `for`, `async`, `def`, `class`. -/
-theorem rule_single_compound_stmt_starts : NamedRuleStarts 6 "single_compound_stmt" false [1, 49, 647, 656, 682, 689, 694, 698, 699, 701] :=
+theorem rule_single_compound_stmt_starts : NamedRuleStarts 6 "single_compound_stmt" false [1, 49, 665, 674, 700, 707, 712, 716, 717, 719] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `statement_newline` starts with `ENDMARKER`, `NAME`, `NUMBER`, `STRING`, `NEWLINE`, `(`, `[`, `+`, `-`, `*`, and 32 more. -/
-theorem rule_statement_newline_starts : NamedRuleStarts 7 "statement_newline" false [0, 1, 2, 3, 4, 7, 9, 14, 15, 16, 25, 31, 49, 52, 59, 62, 522, 525, 526, 527, 528, 529, 530, 532, 587, 597, 621, 622, 623, 624, 625, 633, 634, 647, 656, 682, 689, 694, 698, 699, 701, 703] :=
+theorem rule_statement_newline_starts : NamedRuleStarts 7 "statement_newline" false [0, 1, 2, 3, 4, 7, 9, 14, 15, 16, 25, 31, 49, 52, 59, 62, 522, 527, 528, 529, 530, 531, 588, 598, 622, 627, 628, 629, 632, 634, 638, 650, 651, 665, 674, 700, 707, 712, 716, 717, 719, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `simple_stmts` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 21 more. -/
-theorem rule_simple_stmts_starts : NamedRuleStarts 8 "simple_stmts" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 522, 525, 526, 527, 528, 529, 530, 532, 587, 597, 621, 622, 623, 624, 625, 633, 634, 703] :=
+theorem rule_simple_stmts_starts : NamedRuleStarts 8 "simple_stmts" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 522, 527, 528, 529, 530, 531, 588, 598, 622, 627, 628, 629, 632, 634, 638, 650, 651, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `simple_stmt` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 21 more. -/
-theorem rule_simple_stmt_starts : NamedRuleStarts 9 "simple_stmt" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 522, 525, 526, 527, 528, 529, 530, 532, 587, 597, 621, 622, 623, 624, 625, 633, 634, 703] :=
+theorem rule_simple_stmt_starts : NamedRuleStarts 9 "simple_stmt" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 522, 527, 528, 529, 530, 531, 588, 598, 622, 627, 628, 629, 632, 634, 638, 650, 651, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `compound_stmt` starts with `NAME`, `@`, `with`, `try`, `if`, `while`, `for`, `async`, `def`, `class`. -/
-theorem rule_compound_stmt_starts : NamedRuleStarts 10 "compound_stmt" false [1, 49, 647, 656, 682, 689, 694, 698, 699, 701] :=
+theorem rule_compound_stmt_starts : NamedRuleStarts 10 "compound_stmt" false [1, 49, 665, 674, 700, 707, 712, 716, 717, 719] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `assignment` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 13 more. -/
-theorem rule_assignment_starts : NamedRuleStarts 11 "assignment" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 526, 527, 528, 587, 597, 621, 622, 623, 624, 703] :=
+theorem rule_assignment_starts : NamedRuleStarts 11 "assignment" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 527, 528, 529, 588, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `annotated_rhs` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 13 more. -/
-theorem rule_annotated_rhs_starts : NamedRuleStarts 12 "annotated_rhs" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 526, 527, 528, 587, 597, 621, 622, 623, 624, 703] :=
+theorem rule_annotated_rhs_starts : NamedRuleStarts 12 "annotated_rhs" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 527, 528, 529, 588, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `augassign` starts with `+=`, `-=`, `*=`, `/=`, `%=`, `&=`, `|=`, `^=`, `<<=`, `>>=`, and 3 more. -/
@@ -82,51 +82,51 @@ theorem rule_return_stmt_starts : NamedRuleStarts 14 "return_stmt" false [522] :
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `raise_stmt` starts with `raise`. -/
-theorem rule_raise_stmt_starts : NamedRuleStarts 15 "raise_stmt" false [525] :=
+theorem rule_raise_stmt_starts : NamedRuleStarts 15 "raise_stmt" false [632] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `pass_stmt` starts with `pass`. -/
-theorem rule_pass_stmt_starts : NamedRuleStarts 16 "pass_stmt" false [526] :=
+theorem rule_pass_stmt_starts : NamedRuleStarts 16 "pass_stmt" false [527] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `break_stmt` starts with `break`. -/
-theorem rule_break_stmt_starts : NamedRuleStarts 17 "break_stmt" false [527] :=
+theorem rule_break_stmt_starts : NamedRuleStarts 17 "break_stmt" false [528] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `continue_stmt` starts with `continue`. -/
-theorem rule_continue_stmt_starts : NamedRuleStarts 18 "continue_stmt" false [528] :=
+theorem rule_continue_stmt_starts : NamedRuleStarts 18 "continue_stmt" false [529] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `global_stmt` starts with `global`. -/
-theorem rule_global_stmt_starts : NamedRuleStarts 19 "global_stmt" false [529] :=
+theorem rule_global_stmt_starts : NamedRuleStarts 19 "global_stmt" false [530] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `nonlocal_stmt` starts with `nonlocal`. -/
-theorem rule_nonlocal_stmt_starts : NamedRuleStarts 20 "nonlocal_stmt" false [530] :=
+theorem rule_nonlocal_stmt_starts : NamedRuleStarts 20 "nonlocal_stmt" false [531] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `del_stmt` starts with `del`. -/
-theorem rule_del_stmt_starts : NamedRuleStarts 21 "del_stmt" false [625] :=
+theorem rule_del_stmt_starts : NamedRuleStarts 21 "del_stmt" false [634] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `yield_stmt` starts with `yield`. -/
-theorem rule_yield_stmt_starts : NamedRuleStarts 22 "yield_stmt" false [587] :=
+theorem rule_yield_stmt_starts : NamedRuleStarts 22 "yield_stmt" false [588] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `assert_stmt` starts with `assert`. -/
-theorem rule_assert_stmt_starts : NamedRuleStarts 23 "assert_stmt" false [532] :=
+theorem rule_assert_stmt_starts : NamedRuleStarts 23 "assert_stmt" false [638] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `import_stmt` starts with `from`, `import`. -/
-theorem rule_import_stmt_starts : NamedRuleStarts 24 "import_stmt" false [633, 634] :=
+/-- `import_stmt` starts with `NAME`, `from`, `import`. -/
+theorem rule_import_stmt_starts : NamedRuleStarts 24 "import_stmt" false [1, 650, 651] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `import_name` starts with `import`. -/
-theorem rule_import_name_starts : NamedRuleStarts 25 "import_name" false [634] :=
+/-- `import_name` starts with `NAME`, `import`. -/
+theorem rule_import_name_starts : NamedRuleStarts 25 "import_name" false [1, 651] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `import_from` starts with `from`. -/
-theorem rule_import_from_starts : NamedRuleStarts 26 "import_from" false [633] :=
+/-- `import_from` starts with `NAME`, `from`. -/
+theorem rule_import_from_starts : NamedRuleStarts 26 "import_from" false [1, 650] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `import_from_targets` starts with `NAME`, `NEWLINE`, `(`, `*`. -/
@@ -154,7 +154,7 @@ theorem rule_dotted_name_starts : NamedRuleStarts 32 "dotted_name" false [1] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `block` starts with `NAME`, `NUMBER`, `STRING`, `NEWLINE`, `(`, `[`, `+`, `-`, `*`, `{`, and 22 more. -/
-theorem rule_block_starts : NamedRuleStarts 33 "block" false [1, 2, 3, 4, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 522, 525, 526, 527, 528, 529, 530, 532, 587, 597, 621, 622, 623, 624, 625, 633, 634, 703] :=
+theorem rule_block_starts : NamedRuleStarts 33 "block" false [1, 2, 3, 4, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 522, 527, 528, 529, 530, 531, 588, 598, 622, 627, 628, 629, 632, 634, 638, 650, 651, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `decorators` starts with `@`. -/
@@ -162,19 +162,19 @@ theorem rule_decorators_starts : NamedRuleStarts 34 "decorators" false [49] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `class_def` starts with `@`, `class`. -/
-theorem rule_class_def_starts : NamedRuleStarts 35 "class_def" false [49, 701] :=
+theorem rule_class_def_starts : NamedRuleStarts 35 "class_def" false [49, 719] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `class_def_raw` starts with `class`. -/
-theorem rule_class_def_raw_starts : NamedRuleStarts 36 "class_def_raw" false [701] :=
+theorem rule_class_def_raw_starts : NamedRuleStarts 36 "class_def_raw" false [719] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `function_def` starts with `@`, `async`, `def`. -/
-theorem rule_function_def_starts : NamedRuleStarts 37 "function_def" false [49, 698, 699] :=
+theorem rule_function_def_starts : NamedRuleStarts 37 "function_def" false [49, 716, 717] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `function_def_raw` starts with `async`, `def`. -/
-theorem rule_function_def_raw_starts : NamedRuleStarts 38 "function_def_raw" false [698, 699] :=
+theorem rule_function_def_raw_starts : NamedRuleStarts 38 "function_def_raw" false [716, 717] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `params` starts with `NAME`, `(`, `*`, `/`, `**`. -/
@@ -238,47 +238,47 @@ theorem rule_default_starts : NamedRuleStarts 53 "default" false [22] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `if_stmt` starts with `if`. -/
-theorem rule_if_stmt_starts : NamedRuleStarts 54 "if_stmt" false [682] :=
+theorem rule_if_stmt_starts : NamedRuleStarts 54 "if_stmt" false [700] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `elif_stmt` starts with `elif`. -/
-theorem rule_elif_stmt_starts : NamedRuleStarts 55 "elif_stmt" false [687] :=
+theorem rule_elif_stmt_starts : NamedRuleStarts 55 "elif_stmt" false [705] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `else_block` starts with `else`. -/
-theorem rule_else_block_starts : NamedRuleStarts 56 "else_block" false [686] :=
+theorem rule_else_block_starts : NamedRuleStarts 56 "else_block" false [704] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `while_stmt` starts with `while`. -/
-theorem rule_while_stmt_starts : NamedRuleStarts 57 "while_stmt" false [689] :=
+theorem rule_while_stmt_starts : NamedRuleStarts 57 "while_stmt" false [707] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `for_stmt` starts with `for`, `async`. -/
-theorem rule_for_stmt_starts : NamedRuleStarts 58 "for_stmt" false [694, 698] :=
+theorem rule_for_stmt_starts : NamedRuleStarts 58 "for_stmt" false [712, 716] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `with_stmt` starts with `with`, `async`. -/
-theorem rule_with_stmt_starts : NamedRuleStarts 59 "with_stmt" false [647, 698] :=
+theorem rule_with_stmt_starts : NamedRuleStarts 59 "with_stmt" false [665, 716] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `with_item` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 11 more. -/
-theorem rule_with_item_starts : NamedRuleStarts 60 "with_item" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_with_item_starts : NamedRuleStarts 60 "with_item" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `try_stmt` starts with `try`. -/
-theorem rule_try_stmt_starts : NamedRuleStarts 61 "try_stmt" false [656] :=
+theorem rule_try_stmt_starts : NamedRuleStarts 61 "try_stmt" false [674] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `except_block` starts with `except`. -/
-theorem rule_except_block_starts : NamedRuleStarts 62 "except_block" false [677] :=
+theorem rule_except_block_starts : NamedRuleStarts 62 "except_block" false [695] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `except_star_block` starts with `except`. -/
-theorem rule_except_star_block_starts : NamedRuleStarts 63 "except_star_block" false [677] :=
+theorem rule_except_star_block_starts : NamedRuleStarts 63 "except_star_block" false [695] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `finally_block` starts with `finally`. -/
-theorem rule_finally_block_starts : NamedRuleStarts 64 "finally_block" false [673] :=
+theorem rule_finally_block_starts : NamedRuleStarts 64 "finally_block" false [691] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `match_stmt` starts with `NAME`. -/
@@ -286,7 +286,7 @@ theorem rule_match_stmt_starts : NamedRuleStarts 65 "match_stmt" false [1] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `subject_expr` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 12 more. -/
-theorem rule_subject_expr_starts : NamedRuleStarts 66 "subject_expr" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_subject_expr_starts : NamedRuleStarts 66 "subject_expr" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `case_block` starts with `NAME`. -/
@@ -294,47 +294,47 @@ theorem rule_case_block_starts : NamedRuleStarts 67 "case_block" false [1] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `guard` starts with `if`. -/
-theorem rule_guard_starts : NamedRuleStarts 68 "guard" false [682] :=
+theorem rule_guard_starts : NamedRuleStarts 68 "guard" false [700] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `patterns` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `-`, `*`, `{`, `FSTRING_START`, `TSTRING_START`, and 3 more. -/
-theorem rule_patterns_starts : NamedRuleStarts 69 "patterns" false [1, 2, 3, 7, 9, 15, 16, 25, 59, 62, 622, 623, 624] :=
+/-- `patterns` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `FSTRING_START`, and 4 more. -/
+theorem rule_patterns_starts : NamedRuleStarts 69 "patterns" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `pattern` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `-`, `{`, `FSTRING_START`, `TSTRING_START`, `True`, and 2 more. -/
-theorem rule_pattern_starts : NamedRuleStarts 70 "pattern" false [1, 2, 3, 7, 9, 15, 25, 59, 62, 622, 623, 624] :=
+/-- `pattern` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `FSTRING_START`, `TSTRING_START`, and 3 more. -/
+theorem rule_pattern_starts : NamedRuleStarts 70 "pattern" false [1, 2, 3, 7, 9, 14, 15, 25, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `as_pattern` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `-`, `{`, `FSTRING_START`, `TSTRING_START`, `True`, and 2 more. -/
-theorem rule_as_pattern_starts : NamedRuleStarts 71 "as_pattern" false [1, 2, 3, 7, 9, 15, 25, 59, 62, 622, 623, 624] :=
+/-- `as_pattern` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `FSTRING_START`, `TSTRING_START`, and 3 more. -/
+theorem rule_as_pattern_starts : NamedRuleStarts 71 "as_pattern" false [1, 2, 3, 7, 9, 14, 15, 25, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `or_pattern` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `-`, `{`, `FSTRING_START`, `TSTRING_START`, `True`, and 2 more. -/
-theorem rule_or_pattern_starts : NamedRuleStarts 72 "or_pattern" false [1, 2, 3, 7, 9, 15, 25, 59, 62, 622, 623, 624] :=
+/-- `or_pattern` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `FSTRING_START`, `TSTRING_START`, and 3 more. -/
+theorem rule_or_pattern_starts : NamedRuleStarts 72 "or_pattern" false [1, 2, 3, 7, 9, 14, 15, 25, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `closed_pattern` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `-`, `{`, `FSTRING_START`, `TSTRING_START`, `True`, and 2 more. -/
-theorem rule_closed_pattern_starts : NamedRuleStarts 73 "closed_pattern" false [1, 2, 3, 7, 9, 15, 25, 59, 62, 622, 623, 624] :=
+/-- `closed_pattern` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `FSTRING_START`, `TSTRING_START`, and 3 more. -/
+theorem rule_closed_pattern_starts : NamedRuleStarts 73 "closed_pattern" false [1, 2, 3, 7, 9, 14, 15, 25, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `literal_pattern` starts with `NUMBER`, `STRING`, `-`, `FSTRING_START`, `TSTRING_START`, `True`, `None`, `False`. -/
-theorem rule_literal_pattern_starts : NamedRuleStarts 74 "literal_pattern" false [2, 3, 15, 59, 62, 622, 623, 624] :=
+/-- `literal_pattern` starts with `NUMBER`, `STRING`, `+`, `-`, `FSTRING_START`, `TSTRING_START`, `True`, `None`, `False`. -/
+theorem rule_literal_pattern_starts : NamedRuleStarts 74 "literal_pattern" false [2, 3, 14, 15, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `literal_expr` starts with `NUMBER`, `STRING`, `-`, `FSTRING_START`, `TSTRING_START`, `True`, `None`, `False`. -/
-theorem rule_literal_expr_starts : NamedRuleStarts 75 "literal_expr" false [2, 3, 15, 59, 62, 622, 623, 624] :=
+/-- `literal_expr` starts with `NUMBER`, `STRING`, `+`, `-`, `FSTRING_START`, `TSTRING_START`, `True`, `None`, `False`. -/
+theorem rule_literal_expr_starts : NamedRuleStarts 75 "literal_expr" false [2, 3, 14, 15, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `complex_number` starts with `NUMBER`, `-`. -/
-theorem rule_complex_number_starts : NamedRuleStarts 76 "complex_number" false [2, 15] :=
+/-- `complex_number` starts with `NUMBER`, `+`, `-`. -/
+theorem rule_complex_number_starts : NamedRuleStarts 76 "complex_number" false [2, 14, 15] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `signed_number` starts with `NUMBER`, `-`. -/
-theorem rule_signed_number_starts : NamedRuleStarts 77 "signed_number" false [2, 15] :=
+/-- `signed_number` starts with `NUMBER`, `+`, `-`. -/
+theorem rule_signed_number_starts : NamedRuleStarts 77 "signed_number" false [2, 14, 15] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `signed_real_number` starts with `NUMBER`, `-`. -/
-theorem rule_signed_real_number_starts : NamedRuleStarts 78 "signed_real_number" false [2, 15] :=
+/-- `signed_real_number` starts with `NUMBER`, `+`, `-`. -/
+theorem rule_signed_real_number_starts : NamedRuleStarts 78 "signed_real_number" false [2, 14, 15] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `real_number` starts with `NUMBER`. -/
@@ -377,16 +377,16 @@ theorem rule_group_pattern_starts : NamedRuleStarts 87 "group_pattern" false [7]
 theorem rule_sequence_pattern_starts : NamedRuleStarts 88 "sequence_pattern" false [7, 9] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `open_sequence_pattern` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `-`, `*`, `{`, `FSTRING_START`, `TSTRING_START`, and 3 more. -/
-theorem rule_open_sequence_pattern_starts : NamedRuleStarts 89 "open_sequence_pattern" false [1, 2, 3, 7, 9, 15, 16, 25, 59, 62, 622, 623, 624] :=
+/-- `open_sequence_pattern` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `FSTRING_START`, and 4 more. -/
+theorem rule_open_sequence_pattern_starts : NamedRuleStarts 89 "open_sequence_pattern" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `maybe_sequence_pattern` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `-`, `*`, `{`, `FSTRING_START`, `TSTRING_START`, and 3 more. -/
-theorem rule_maybe_sequence_pattern_starts : NamedRuleStarts 90 "maybe_sequence_pattern" false [1, 2, 3, 7, 9, 15, 16, 25, 59, 62, 622, 623, 624] :=
+/-- `maybe_sequence_pattern` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `FSTRING_START`, and 4 more. -/
+theorem rule_maybe_sequence_pattern_starts : NamedRuleStarts 90 "maybe_sequence_pattern" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `maybe_star_pattern` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `-`, `*`, `{`, `FSTRING_START`, `TSTRING_START`, and 3 more. -/
-theorem rule_maybe_star_pattern_starts : NamedRuleStarts 91 "maybe_star_pattern" false [1, 2, 3, 7, 9, 15, 16, 25, 59, 62, 622, 623, 624] :=
+/-- `maybe_star_pattern` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `FSTRING_START`, and 4 more. -/
+theorem rule_maybe_star_pattern_starts : NamedRuleStarts 91 "maybe_star_pattern" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `star_pattern` starts with `*`. -/
@@ -397,12 +397,12 @@ theorem rule_star_pattern_starts : NamedRuleStarts 92 "star_pattern" false [16] 
 theorem rule_mapping_pattern_starts : NamedRuleStarts 93 "mapping_pattern" false [25] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `items_pattern` starts with `NAME`, `NUMBER`, `STRING`, `-`, `FSTRING_START`, `TSTRING_START`, `True`, `None`, `False`. -/
-theorem rule_items_pattern_starts : NamedRuleStarts 94 "items_pattern" false [1, 2, 3, 15, 59, 62, 622, 623, 624] :=
+/-- `items_pattern` starts with `NAME`, `NUMBER`, `STRING`, `+`, `-`, `FSTRING_START`, `TSTRING_START`, `True`, `None`, `False`. -/
+theorem rule_items_pattern_starts : NamedRuleStarts 94 "items_pattern" false [1, 2, 3, 14, 15, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `key_value_pattern` starts with `NAME`, `NUMBER`, `STRING`, `-`, `FSTRING_START`, `TSTRING_START`, `True`, `None`, `False`. -/
-theorem rule_key_value_pattern_starts : NamedRuleStarts 95 "key_value_pattern" false [1, 2, 3, 15, 59, 62, 622, 623, 624] :=
+/-- `key_value_pattern` starts with `NAME`, `NUMBER`, `STRING`, `+`, `-`, `FSTRING_START`, `TSTRING_START`, `True`, `None`, `False`. -/
+theorem rule_key_value_pattern_starts : NamedRuleStarts 95 "key_value_pattern" false [1, 2, 3, 14, 15, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `double_star_pattern` starts with `**`. -/
@@ -413,8 +413,8 @@ theorem rule_double_star_pattern_starts : NamedRuleStarts 96 "double_star_patter
 theorem rule_class_pattern_starts : NamedRuleStarts 97 "class_pattern" false [1] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `positional_patterns` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `-`, `{`, `FSTRING_START`, `TSTRING_START`, `True`, and 2 more. -/
-theorem rule_positional_patterns_starts : NamedRuleStarts 98 "positional_patterns" false [1, 2, 3, 7, 9, 15, 25, 59, 62, 622, 623, 624] :=
+/-- `positional_patterns` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `FSTRING_START`, `TSTRING_START`, and 3 more. -/
+theorem rule_positional_patterns_starts : NamedRuleStarts 98 "positional_patterns" false [1, 2, 3, 7, 9, 14, 15, 25, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `keyword_patterns` starts with `NAME`. -/
@@ -454,643 +454,683 @@ theorem rule_type_param_starred_default_starts : NamedRuleStarts 107 "type_param
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `expressions` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 11 more. -/
-theorem rule_expressions_starts : NamedRuleStarts 108 "expressions" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_expressions_starts : NamedRuleStarts 108 "expressions" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `expression` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 11 more. -/
-theorem rule_expression_starts : NamedRuleStarts 109 "expression" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_expression_starts : NamedRuleStarts 109 "expression" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
+  namedRuleStarts (by decide +kernel) (by decide +kernel)
+
+/-- `if_expression` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 7 more. -/
+theorem rule_if_expression_starts : NamedRuleStarts 110 "if_expression" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 598, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `yield_expr` starts with `yield`. -/
-theorem rule_yield_expr_starts : NamedRuleStarts 110 "yield_expr" false [587] :=
+theorem rule_yield_expr_starts : NamedRuleStarts 111 "yield_expr" false [588] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `star_expressions` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 12 more. -/
-theorem rule_star_expressions_starts : NamedRuleStarts 111 "star_expressions" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_star_expressions_starts : NamedRuleStarts 112 "star_expressions" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `star_expression` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 12 more. -/
-theorem rule_star_expression_starts : NamedRuleStarts 112 "star_expression" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_star_expression_starts : NamedRuleStarts 113 "star_expression" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `star_named_expressions` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 12 more. -/
-theorem rule_star_named_expressions_starts : NamedRuleStarts 113 "star_named_expressions" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_star_named_expressions_starts : NamedRuleStarts 114 "star_named_expressions" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
+  namedRuleStarts (by decide +kernel) (by decide +kernel)
+
+/-- `star_named_expressions_sequence` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 13 more. -/
+theorem rule_star_named_expressions_sequence_starts : NamedRuleStarts 115 "star_named_expressions_sequence" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 35, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `star_named_expression` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 12 more. -/
-theorem rule_star_named_expression_starts : NamedRuleStarts 114 "star_named_expression" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_star_named_expression_starts : NamedRuleStarts 116 "star_named_expression" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
+  namedRuleStarts (by decide +kernel) (by decide +kernel)
+
+/-- `star_named_expression_sequence` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 13 more. -/
+theorem rule_star_named_expression_sequence_starts : NamedRuleStarts 117 "star_named_expression_sequence" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 35, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `assignment_expression` starts with `NAME`. -/
-theorem rule_assignment_expression_starts : NamedRuleStarts 115 "assignment_expression" false [1] :=
+theorem rule_assignment_expression_starts : NamedRuleStarts 118 "assignment_expression" false [1] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `named_expression` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 11 more. -/
-theorem rule_named_expression_starts : NamedRuleStarts 116 "named_expression" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_named_expression_starts : NamedRuleStarts 119 "named_expression" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `disjunction` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 7 more. -/
-theorem rule_disjunction_starts : NamedRuleStarts 117 "disjunction" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 597, 622, 623, 624, 703] :=
+theorem rule_disjunction_starts : NamedRuleStarts 120 "disjunction" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 598, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `conjunction` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 7 more. -/
-theorem rule_conjunction_starts : NamedRuleStarts 118 "conjunction" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 597, 622, 623, 624, 703] :=
+theorem rule_conjunction_starts : NamedRuleStarts 121 "conjunction" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 598, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `inversion` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 7 more. -/
-theorem rule_inversion_starts : NamedRuleStarts 119 "inversion" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 597, 622, 623, 624, 703] :=
+theorem rule_inversion_starts : NamedRuleStarts 122 "inversion" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 598, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `comparison` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 6 more. -/
-theorem rule_comparison_starts : NamedRuleStarts 120 "comparison" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 597, 622, 623, 624] :=
+theorem rule_comparison_starts : NamedRuleStarts 123 "comparison" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 598, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `compare_op_bitwise_or_pair` starts with `<`, `>`, `==`, `!=`, `<=`, `>=`, `is`, `in`, `not`. -/
-theorem rule_compare_op_bitwise_or_pair_starts : NamedRuleStarts 121 "compare_op_bitwise_or_pair" false [20, 21, 27, 28, 29, 30, 596, 695, 703] :=
+theorem rule_compare_op_bitwise_or_pair_starts : NamedRuleStarts 124 "compare_op_bitwise_or_pair" false [20, 21, 27, 28, 29, 30, 597, 713, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `eq_bitwise_or` starts with `==`. -/
-theorem rule_eq_bitwise_or_starts : NamedRuleStarts 122 "eq_bitwise_or" false [27] :=
+theorem rule_eq_bitwise_or_starts : NamedRuleStarts 125 "eq_bitwise_or" false [27] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `noteq_bitwise_or` starts with `!=`. -/
-theorem rule_noteq_bitwise_or_starts : NamedRuleStarts 123 "noteq_bitwise_or" false [28] :=
+theorem rule_noteq_bitwise_or_starts : NamedRuleStarts 126 "noteq_bitwise_or" false [28] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `lte_bitwise_or` starts with `<=`. -/
-theorem rule_lte_bitwise_or_starts : NamedRuleStarts 124 "lte_bitwise_or" false [29] :=
+theorem rule_lte_bitwise_or_starts : NamedRuleStarts 127 "lte_bitwise_or" false [29] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `lt_bitwise_or` starts with `<`. -/
-theorem rule_lt_bitwise_or_starts : NamedRuleStarts 125 "lt_bitwise_or" false [20] :=
+theorem rule_lt_bitwise_or_starts : NamedRuleStarts 128 "lt_bitwise_or" false [20] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `gte_bitwise_or` starts with `>=`. -/
-theorem rule_gte_bitwise_or_starts : NamedRuleStarts 126 "gte_bitwise_or" false [30] :=
+theorem rule_gte_bitwise_or_starts : NamedRuleStarts 129 "gte_bitwise_or" false [30] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `gt_bitwise_or` starts with `>`. -/
-theorem rule_gt_bitwise_or_starts : NamedRuleStarts 127 "gt_bitwise_or" false [21] :=
+theorem rule_gt_bitwise_or_starts : NamedRuleStarts 130 "gt_bitwise_or" false [21] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `notin_bitwise_or` starts with `not`. -/
-theorem rule_notin_bitwise_or_starts : NamedRuleStarts 128 "notin_bitwise_or" false [703] :=
+theorem rule_notin_bitwise_or_starts : NamedRuleStarts 131 "notin_bitwise_or" false [721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `in_bitwise_or` starts with `in`. -/
-theorem rule_in_bitwise_or_starts : NamedRuleStarts 129 "in_bitwise_or" false [695] :=
+theorem rule_in_bitwise_or_starts : NamedRuleStarts 132 "in_bitwise_or" false [713] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `isnot_bitwise_or` starts with `is`. -/
-theorem rule_isnot_bitwise_or_starts : NamedRuleStarts 130 "isnot_bitwise_or" false [596] :=
+theorem rule_isnot_bitwise_or_starts : NamedRuleStarts 133 "isnot_bitwise_or" false [597] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `is_bitwise_or` starts with `is`. -/
-theorem rule_is_bitwise_or_starts : NamedRuleStarts 131 "is_bitwise_or" false [596] :=
+theorem rule_is_bitwise_or_starts : NamedRuleStarts 134 "is_bitwise_or" false [597] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `bitwise_or` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 6 more. -/
-theorem rule_bitwise_or_starts : NamedRuleStarts 132 "bitwise_or" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 597, 622, 623, 624] :=
+theorem rule_bitwise_or_starts : NamedRuleStarts 135 "bitwise_or" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 598, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `bitwise_xor` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 6 more. -/
-theorem rule_bitwise_xor_starts : NamedRuleStarts 133 "bitwise_xor" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 597, 622, 623, 624] :=
+theorem rule_bitwise_xor_starts : NamedRuleStarts 136 "bitwise_xor" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 598, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `bitwise_and` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 6 more. -/
-theorem rule_bitwise_and_starts : NamedRuleStarts 134 "bitwise_and" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 597, 622, 623, 624] :=
+theorem rule_bitwise_and_starts : NamedRuleStarts 137 "bitwise_and" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 598, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `shift_expr` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 6 more. -/
-theorem rule_shift_expr_starts : NamedRuleStarts 135 "shift_expr" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 597, 622, 623, 624] :=
+theorem rule_shift_expr_starts : NamedRuleStarts 138 "shift_expr" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 598, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `sum` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 6 more. -/
-theorem rule_sum_starts : NamedRuleStarts 136 "sum" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 597, 622, 623, 624] :=
+theorem rule_sum_starts : NamedRuleStarts 139 "sum" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 598, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `term` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 6 more. -/
-theorem rule_term_starts : NamedRuleStarts 137 "term" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 597, 622, 623, 624] :=
+theorem rule_term_starts : NamedRuleStarts 140 "term" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 598, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `factor` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 6 more. -/
-theorem rule_factor_starts : NamedRuleStarts 138 "factor" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 597, 622, 623, 624] :=
+theorem rule_factor_starts : NamedRuleStarts 141 "factor" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 598, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `power` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `{`, `...`, `FSTRING_START`, `TSTRING_START`, `await`, and 3 more. -/
-theorem rule_power_starts : NamedRuleStarts 139 "power" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 597, 622, 623, 624] :=
+theorem rule_power_starts : NamedRuleStarts 142 "power" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 598, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `await_primary` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `{`, `...`, `FSTRING_START`, `TSTRING_START`, `await`, and 3 more. -/
-theorem rule_await_primary_starts : NamedRuleStarts 140 "await_primary" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 597, 622, 623, 624] :=
+theorem rule_await_primary_starts : NamedRuleStarts 143 "await_primary" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 598, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `primary` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `{`, `...`, `FSTRING_START`, `TSTRING_START`, `True`, and 2 more. -/
-theorem rule_primary_starts : NamedRuleStarts 141 "primary" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 622, 623, 624] :=
+theorem rule_primary_starts : NamedRuleStarts 144 "primary" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `slices` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `:`, `+`, `-`, `*`, `{`, and 13 more. -/
-theorem rule_slices_starts : NamedRuleStarts 142 "slices" false [1, 2, 3, 7, 9, 11, 14, 15, 16, 25, 31, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_slices_starts : NamedRuleStarts 145 "slices" false [1, 2, 3, 7, 9, 11, 14, 15, 16, 25, 31, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `slice` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `:`, `+`, `-`, `{`, `~`, and 12 more. -/
-theorem rule_slice_starts : NamedRuleStarts 143 "slice" false [1, 2, 3, 7, 9, 11, 14, 15, 25, 31, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_slice_starts : NamedRuleStarts 146 "slice" false [1, 2, 3, 7, 9, 11, 14, 15, 25, 31, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `atom` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `{`, `...`, `FSTRING_START`, `TSTRING_START`, `True`, and 2 more. -/
-theorem rule_atom_starts : NamedRuleStarts 144 "atom" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 622, 623, 624] :=
+theorem rule_atom_starts : NamedRuleStarts 147 "atom" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `group` starts with `(`. -/
-theorem rule_group_starts : NamedRuleStarts 145 "group" false [7] :=
+theorem rule_group_starts : NamedRuleStarts 148 "group" false [7] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `lambdef` starts with `lambda`. -/
-theorem rule_lambdef_starts : NamedRuleStarts 146 "lambdef" false [621] :=
+theorem rule_lambdef_starts : NamedRuleStarts 149 "lambdef" false [622] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `lambda_params` starts with `NAME`, `(`, `*`, `/`, `**`. -/
-theorem rule_lambda_params_starts : NamedRuleStarts 147 "lambda_params" false [1, 7, 16, 17, 35] :=
+theorem rule_lambda_params_starts : NamedRuleStarts 150 "lambda_params" false [1, 7, 16, 17, 35] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `lambda_parameters` starts with `NAME`, `*`, `**`. -/
-theorem rule_lambda_parameters_starts : NamedRuleStarts 148 "lambda_parameters" false [1, 16, 35] :=
+theorem rule_lambda_parameters_starts : NamedRuleStarts 151 "lambda_parameters" false [1, 16, 35] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `lambda_slash_no_default` starts with `NAME`. -/
-theorem rule_lambda_slash_no_default_starts : NamedRuleStarts 149 "lambda_slash_no_default" false [1] :=
+theorem rule_lambda_slash_no_default_starts : NamedRuleStarts 152 "lambda_slash_no_default" false [1] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `lambda_slash_with_default` starts with `NAME`. -/
-theorem rule_lambda_slash_with_default_starts : NamedRuleStarts 150 "lambda_slash_with_default" false [1] :=
+theorem rule_lambda_slash_with_default_starts : NamedRuleStarts 153 "lambda_slash_with_default" false [1] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `lambda_star_etc` starts with `*`, `**`. -/
-theorem rule_lambda_star_etc_starts : NamedRuleStarts 151 "lambda_star_etc" false [16, 35] :=
+theorem rule_lambda_star_etc_starts : NamedRuleStarts 154 "lambda_star_etc" false [16, 35] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `lambda_kwds` starts with `**`. -/
-theorem rule_lambda_kwds_starts : NamedRuleStarts 152 "lambda_kwds" false [35] :=
+theorem rule_lambda_kwds_starts : NamedRuleStarts 155 "lambda_kwds" false [35] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `lambda_param_no_default` starts with `NAME`. -/
-theorem rule_lambda_param_no_default_starts : NamedRuleStarts 153 "lambda_param_no_default" false [1] :=
+theorem rule_lambda_param_no_default_starts : NamedRuleStarts 156 "lambda_param_no_default" false [1] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `lambda_param_with_default` starts with `NAME`. -/
-theorem rule_lambda_param_with_default_starts : NamedRuleStarts 154 "lambda_param_with_default" false [1] :=
+theorem rule_lambda_param_with_default_starts : NamedRuleStarts 157 "lambda_param_with_default" false [1] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `lambda_param_maybe_default` starts with `NAME`. -/
-theorem rule_lambda_param_maybe_default_starts : NamedRuleStarts 155 "lambda_param_maybe_default" false [1] :=
+theorem rule_lambda_param_maybe_default_starts : NamedRuleStarts 158 "lambda_param_maybe_default" false [1] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `lambda_param` starts with `NAME`. -/
-theorem rule_lambda_param_starts : NamedRuleStarts 156 "lambda_param" false [1] :=
+theorem rule_lambda_param_starts : NamedRuleStarts 159 "lambda_param" false [1] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `fstring_middle` starts with `{`, `FSTRING_MIDDLE`. -/
-theorem rule_fstring_middle_starts : NamedRuleStarts 157 "fstring_middle" false [25, 60] :=
+theorem rule_fstring_middle_starts : NamedRuleStarts 160 "fstring_middle" false [25, 60] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `fstring_replacement_field` starts with `{`. -/
-theorem rule_fstring_replacement_field_starts : NamedRuleStarts 158 "fstring_replacement_field" false [25] :=
+theorem rule_fstring_replacement_field_starts : NamedRuleStarts 161 "fstring_replacement_field" false [25] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `fstring_conversion` starts with `!`. -/
-theorem rule_fstring_conversion_starts : NamedRuleStarts 159 "fstring_conversion" false [54] :=
+theorem rule_fstring_conversion_starts : NamedRuleStarts 162 "fstring_conversion" false [54] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `fstring_full_format_spec` starts with `:`. -/
-theorem rule_fstring_full_format_spec_starts : NamedRuleStarts 160 "fstring_full_format_spec" false [11] :=
+theorem rule_fstring_full_format_spec_starts : NamedRuleStarts 163 "fstring_full_format_spec" false [11] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `fstring_format_spec` starts with `{`, `FSTRING_MIDDLE`. -/
-theorem rule_fstring_format_spec_starts : NamedRuleStarts 161 "fstring_format_spec" false [25, 60] :=
+theorem rule_fstring_format_spec_starts : NamedRuleStarts 164 "fstring_format_spec" false [25, 60] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `fstring` starts with `FSTRING_START`. -/
-theorem rule_fstring_starts : NamedRuleStarts 162 "fstring" false [59] :=
+theorem rule_fstring_starts : NamedRuleStarts 165 "fstring" false [59] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `tstring_format_spec_replacement_field` starts with `{`. -/
-theorem rule_tstring_format_spec_replacement_field_starts : NamedRuleStarts 163 "tstring_format_spec_replacement_field" false [25] :=
+theorem rule_tstring_format_spec_replacement_field_starts : NamedRuleStarts 166 "tstring_format_spec_replacement_field" false [25] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `tstring_format_spec` starts with `{`, `TSTRING_MIDDLE`. -/
-theorem rule_tstring_format_spec_starts : NamedRuleStarts 164 "tstring_format_spec" false [25, 63] :=
+theorem rule_tstring_format_spec_starts : NamedRuleStarts 167 "tstring_format_spec" false [25, 63] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `tstring_full_format_spec` starts with `:`. -/
-theorem rule_tstring_full_format_spec_starts : NamedRuleStarts 165 "tstring_full_format_spec" false [11] :=
+theorem rule_tstring_full_format_spec_starts : NamedRuleStarts 168 "tstring_full_format_spec" false [11] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `tstring_replacement_field` starts with `{`. -/
-theorem rule_tstring_replacement_field_starts : NamedRuleStarts 166 "tstring_replacement_field" false [25] :=
+theorem rule_tstring_replacement_field_starts : NamedRuleStarts 169 "tstring_replacement_field" false [25] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `tstring_middle` starts with `{`, `TSTRING_MIDDLE`. -/
-theorem rule_tstring_middle_starts : NamedRuleStarts 167 "tstring_middle" false [25, 63] :=
+theorem rule_tstring_middle_starts : NamedRuleStarts 170 "tstring_middle" false [25, 63] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `tstring` starts with `TSTRING_START`. -/
-theorem rule_tstring_starts : NamedRuleStarts 168 "tstring" false [62] :=
+theorem rule_tstring_starts : NamedRuleStarts 171 "tstring" false [62] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `string` starts with `STRING`. -/
-theorem rule_string_starts : NamedRuleStarts 169 "string" false [3] :=
+theorem rule_string_starts : NamedRuleStarts 172 "string" false [3] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `strings` starts with `STRING`, `FSTRING_START`, `TSTRING_START`. -/
-theorem rule_strings_starts : NamedRuleStarts 170 "strings" false [3, 59, 62] :=
+theorem rule_strings_starts : NamedRuleStarts 173 "strings" false [3, 59, 62] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `list` starts with `[`. -/
-theorem rule_list_starts : NamedRuleStarts 171 "list" false [9] :=
+theorem rule_list_starts : NamedRuleStarts 174 "list" false [9] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `tuple` starts with `(`. -/
-theorem rule_tuple_starts : NamedRuleStarts 172 "tuple" false [7] :=
+theorem rule_tuple_starts : NamedRuleStarts 175 "tuple" false [7] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `set` starts with `{`. -/
-theorem rule_set_starts : NamedRuleStarts 173 "set" false [25] :=
+theorem rule_set_starts : NamedRuleStarts 176 "set" false [25] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `dict` starts with `{`. -/
-theorem rule_dict_starts : NamedRuleStarts 174 "dict" false [25] :=
+theorem rule_dict_starts : NamedRuleStarts 177 "dict" false [25] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `double_starred_kvpairs` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `**`, and 12 more. -/
-theorem rule_double_starred_kvpairs_starts : NamedRuleStarts 175 "double_starred_kvpairs" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 35, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_double_starred_kvpairs_starts : NamedRuleStarts 178 "double_starred_kvpairs" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 35, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `double_starred_kvpair` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `**`, and 12 more. -/
-theorem rule_double_starred_kvpair_starts : NamedRuleStarts 176 "double_starred_kvpair" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 35, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_double_starred_kvpair_starts : NamedRuleStarts 179 "double_starred_kvpair" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 35, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `kvpair` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 11 more. -/
-theorem rule_kvpair_starts : NamedRuleStarts 177 "kvpair" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_kvpair_starts : NamedRuleStarts 180 "kvpair" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `for_if_clauses` starts with `for`, `async`. -/
-theorem rule_for_if_clauses_starts : NamedRuleStarts 178 "for_if_clauses" false [694, 698] :=
+theorem rule_for_if_clauses_starts : NamedRuleStarts 181 "for_if_clauses" false [712, 716] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `for_if_clause` starts with `for`, `async`. -/
-theorem rule_for_if_clause_starts : NamedRuleStarts 179 "for_if_clause" false [694, 698] :=
+theorem rule_for_if_clause_starts : NamedRuleStarts 182 "for_if_clause" false [712, 716] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `listcomp` starts with `(`, `[`, `{`. -/
-theorem rule_listcomp_starts : NamedRuleStarts 180 "listcomp" false [7, 9, 25] :=
+theorem rule_listcomp_starts : NamedRuleStarts 183 "listcomp" false [7, 9, 25] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `setcomp` starts with `(`, `[`, `{`. -/
-theorem rule_setcomp_starts : NamedRuleStarts 181 "setcomp" false [7, 9, 25] :=
+theorem rule_setcomp_starts : NamedRuleStarts 184 "setcomp" false [7, 9, 25] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `genexp` starts with `(`, `[`, `{`. -/
-theorem rule_genexp_starts : NamedRuleStarts 182 "genexp" false [7, 9, 25] :=
+theorem rule_genexp_starts : NamedRuleStarts 185 "genexp" false [7, 9, 25] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `dictcomp` starts with `{`. -/
-theorem rule_dictcomp_starts : NamedRuleStarts 183 "dictcomp" false [25] :=
+theorem rule_dictcomp_starts : NamedRuleStarts 186 "dictcomp" false [25] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `arguments` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 13 more. -/
-theorem rule_arguments_starts : NamedRuleStarts 184 "arguments" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 35, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_arguments_starts : NamedRuleStarts 187 "arguments" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 35, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `args` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 13 more. -/
-theorem rule_args_starts : NamedRuleStarts 185 "args" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 35, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_args_starts : NamedRuleStarts 188 "args" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 35, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `kwargs` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 13 more. -/
-theorem rule_kwargs_starts : NamedRuleStarts 186 "kwargs" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 35, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_kwargs_starts : NamedRuleStarts 189 "kwargs" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 35, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `starred_expression` starts with `*`. -/
-theorem rule_starred_expression_starts : NamedRuleStarts 187 "starred_expression" false [16] :=
+theorem rule_starred_expression_starts : NamedRuleStarts 190 "starred_expression" false [16] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `kwarg_or_starred` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 13 more. -/
-theorem rule_kwarg_or_starred_starts : NamedRuleStarts 188 "kwarg_or_starred" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 35, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_kwarg_or_starred_starts : NamedRuleStarts 191 "kwarg_or_starred" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 35, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `kwarg_or_double_starred` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `**`, and 12 more. -/
-theorem rule_kwarg_or_double_starred_starts : NamedRuleStarts 189 "kwarg_or_double_starred" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 35, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_kwarg_or_double_starred_starts : NamedRuleStarts 192 "kwarg_or_double_starred" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 35, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `star_targets` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `*`, `{`, `...`, `FSTRING_START`, `TSTRING_START`, and 3 more. -/
-theorem rule_star_targets_starts : NamedRuleStarts 190 "star_targets" false [1, 2, 3, 7, 9, 16, 25, 52, 59, 62, 622, 623, 624] :=
+theorem rule_star_targets_starts : NamedRuleStarts 193 "star_targets" false [1, 2, 3, 7, 9, 16, 25, 52, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `star_targets_list_seq` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `*`, `{`, `...`, `FSTRING_START`, `TSTRING_START`, and 3 more. -/
-theorem rule_star_targets_list_seq_starts : NamedRuleStarts 191 "star_targets_list_seq" false [1, 2, 3, 7, 9, 16, 25, 52, 59, 62, 622, 623, 624] :=
+theorem rule_star_targets_list_seq_starts : NamedRuleStarts 194 "star_targets_list_seq" false [1, 2, 3, 7, 9, 16, 25, 52, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `star_targets_tuple_seq` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `*`, `{`, `...`, `FSTRING_START`, `TSTRING_START`, and 3 more. -/
-theorem rule_star_targets_tuple_seq_starts : NamedRuleStarts 192 "star_targets_tuple_seq" false [1, 2, 3, 7, 9, 16, 25, 52, 59, 62, 622, 623, 624] :=
+theorem rule_star_targets_tuple_seq_starts : NamedRuleStarts 195 "star_targets_tuple_seq" false [1, 2, 3, 7, 9, 16, 25, 52, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `star_target` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `*`, `{`, `...`, `FSTRING_START`, `TSTRING_START`, and 3 more. -/
-theorem rule_star_target_starts : NamedRuleStarts 193 "star_target" false [1, 2, 3, 7, 9, 16, 25, 52, 59, 62, 622, 623, 624] :=
+theorem rule_star_target_starts : NamedRuleStarts 196 "star_target" false [1, 2, 3, 7, 9, 16, 25, 52, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `target_with_star_atom` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `{`, `...`, `FSTRING_START`, `TSTRING_START`, `True`, and 2 more. -/
-theorem rule_target_with_star_atom_starts : NamedRuleStarts 194 "target_with_star_atom" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 622, 623, 624] :=
+theorem rule_target_with_star_atom_starts : NamedRuleStarts 197 "target_with_star_atom" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `star_atom` starts with `NAME`, `(`, `[`. -/
-theorem rule_star_atom_starts : NamedRuleStarts 195 "star_atom" false [1, 7, 9] :=
+theorem rule_star_atom_starts : NamedRuleStarts 198 "star_atom" false [1, 7, 9] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `single_target` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `{`, `...`, `FSTRING_START`, `TSTRING_START`, `True`, and 2 more. -/
-theorem rule_single_target_starts : NamedRuleStarts 196 "single_target" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 622, 623, 624] :=
+theorem rule_single_target_starts : NamedRuleStarts 199 "single_target" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `single_subscript_attribute_target` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `{`, `...`, `FSTRING_START`, `TSTRING_START`, `True`, and 2 more. -/
-theorem rule_single_subscript_attribute_target_starts : NamedRuleStarts 197 "single_subscript_attribute_target" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 622, 623, 624] :=
+theorem rule_single_subscript_attribute_target_starts : NamedRuleStarts 200 "single_subscript_attribute_target" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `t_primary` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `{`, `...`, `FSTRING_START`, `TSTRING_START`, `True`, and 2 more. -/
-theorem rule_t_primary_starts : NamedRuleStarts 198 "t_primary" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 622, 623, 624] :=
+theorem rule_t_primary_starts : NamedRuleStarts 201 "t_primary" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `t_lookahead` starts with `(`, `[`, `.`. -/
-theorem rule_t_lookahead_starts : NamedRuleStarts 199 "t_lookahead" false [7, 9, 23] :=
+theorem rule_t_lookahead_starts : NamedRuleStarts 202 "t_lookahead" false [7, 9, 23] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `del_targets` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `{`, `...`, `FSTRING_START`, `TSTRING_START`, `True`, and 2 more. -/
-theorem rule_del_targets_starts : NamedRuleStarts 200 "del_targets" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 622, 623, 624] :=
+theorem rule_del_targets_starts : NamedRuleStarts 203 "del_targets" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `del_target` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `{`, `...`, `FSTRING_START`, `TSTRING_START`, `True`, and 2 more. -/
-theorem rule_del_target_starts : NamedRuleStarts 201 "del_target" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 622, 623, 624] :=
+theorem rule_del_target_starts : NamedRuleStarts 204 "del_target" false [1, 2, 3, 7, 9, 25, 52, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `del_t_atom` starts with `NAME`, `(`, `[`. -/
-theorem rule_del_t_atom_starts : NamedRuleStarts 202 "del_t_atom" false [1, 7, 9] :=
+theorem rule_del_t_atom_starts : NamedRuleStarts 205 "del_t_atom" false [1, 7, 9] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `type_expressions` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 13 more. -/
-theorem rule_type_expressions_starts : NamedRuleStarts 203 "type_expressions" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 35, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_type_expressions_starts : NamedRuleStarts 206 "type_expressions" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 35, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `func_type_comment` starts with `NEWLINE`, `TYPE_COMMENT`. -/
-theorem rule_func_type_comment_starts : NamedRuleStarts 204 "func_type_comment" false [4, 57] :=
+theorem rule_func_type_comment_starts : NamedRuleStarts 207 "func_type_comment" false [4, 57] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_arguments` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 13 more. -/
-theorem rule_invalid_arguments_starts : NamedRuleStarts 205 "invalid_arguments" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 35, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_invalid_arguments_starts : NamedRuleStarts 208 "invalid_arguments" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 35, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_kwarg` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `**`, and 12 more. -/
-theorem rule_invalid_kwarg_starts : NamedRuleStarts 206 "invalid_kwarg" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 35, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_invalid_kwarg_starts : NamedRuleStarts 209 "invalid_kwarg" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 35, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `expression_without_invalid` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 8 more. -/
-theorem rule_expression_without_invalid_starts : NamedRuleStarts 207 "expression_without_invalid" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 597, 621, 622, 623, 624, 703] :=
+theorem rule_expression_without_invalid_starts : NamedRuleStarts 210 "expression_without_invalid" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_legacy_expression` starts with `NAME`. -/
-theorem rule_invalid_legacy_expression_starts : NamedRuleStarts 208 "invalid_legacy_expression" false [1] :=
+theorem rule_invalid_legacy_expression_starts : NamedRuleStarts 211 "invalid_legacy_expression" false [1] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_type_param` starts with `*`, `**`. -/
-theorem rule_invalid_type_param_starts : NamedRuleStarts 209 "invalid_type_param" false [16, 35] :=
+theorem rule_invalid_type_param_starts : NamedRuleStarts 212 "invalid_type_param" false [16, 35] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_expression` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 11 more. -/
-theorem rule_invalid_expression_starts : NamedRuleStarts 210 "invalid_expression" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_invalid_expression_starts : NamedRuleStarts 213 "invalid_expression" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
+  namedRuleStarts (by decide +kernel) (by decide +kernel)
+
+/-- `invalid_if_expression` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 7 more. -/
+theorem rule_invalid_if_expression_starts : NamedRuleStarts 214 "invalid_if_expression" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 598, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_named_expression` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 11 more. -/
-theorem rule_invalid_named_expression_starts : NamedRuleStarts 211 "invalid_named_expression" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_invalid_named_expression_starts : NamedRuleStarts 215 "invalid_named_expression" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_assignment` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 13 more. -/
-theorem rule_invalid_assignment_starts : NamedRuleStarts 212 "invalid_assignment" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 526, 527, 528, 587, 597, 621, 622, 623, 624, 703] :=
+theorem rule_invalid_assignment_starts : NamedRuleStarts 216 "invalid_assignment" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 52, 59, 62, 527, 528, 529, 588, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_ann_assign_target` starts with `(`, `[`. -/
-theorem rule_invalid_ann_assign_target_starts : NamedRuleStarts 213 "invalid_ann_assign_target" false [7, 9] :=
+theorem rule_invalid_ann_assign_target_starts : NamedRuleStarts 217 "invalid_ann_assign_target" false [7, 9] :=
+  namedRuleStarts (by decide +kernel) (by decide +kernel)
+
+/-- `invalid_raise_stmt` starts with `raise`. -/
+theorem rule_invalid_raise_stmt_starts : NamedRuleStarts 218 "invalid_raise_stmt" false [632] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_del_stmt` starts with `del`. -/
-theorem rule_invalid_del_stmt_starts : NamedRuleStarts 214 "invalid_del_stmt" false [625] :=
+theorem rule_invalid_del_stmt_starts : NamedRuleStarts 219 "invalid_del_stmt" false [634] :=
+  namedRuleStarts (by decide +kernel) (by decide +kernel)
+
+/-- `invalid_assert_stmt` starts with `assert`. -/
+theorem rule_invalid_assert_stmt_starts : NamedRuleStarts 220 "invalid_assert_stmt" false [638] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_block` starts with `NEWLINE`. -/
-theorem rule_invalid_block_starts : NamedRuleStarts 215 "invalid_block" false [4] :=
+theorem rule_invalid_block_starts : NamedRuleStarts 221 "invalid_block" false [4] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_comprehension` starts with `(`, `[`, `{`. -/
-theorem rule_invalid_comprehension_starts : NamedRuleStarts 216 "invalid_comprehension" false [7, 9, 25] :=
-  namedRuleStarts (by decide +kernel) (by decide +kernel)
-
-/-- `invalid_dict_comprehension` starts with `{`. -/
-theorem rule_invalid_dict_comprehension_starts : NamedRuleStarts 217 "invalid_dict_comprehension" false [25] :=
+theorem rule_invalid_comprehension_starts : NamedRuleStarts 222 "invalid_comprehension" false [7, 9, 25] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_parameters` starts with `NAME`, `(`, `*`, `/`. -/
-theorem rule_invalid_parameters_starts : NamedRuleStarts 218 "invalid_parameters" false [1, 7, 16, 17] :=
+theorem rule_invalid_parameters_starts : NamedRuleStarts 223 "invalid_parameters" false [1, 7, 16, 17] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_default` starts with `=`. -/
-theorem rule_invalid_default_starts : NamedRuleStarts 219 "invalid_default" false [22] :=
+theorem rule_invalid_default_starts : NamedRuleStarts 224 "invalid_default" false [22] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_star_etc` starts with `*`. -/
-theorem rule_invalid_star_etc_starts : NamedRuleStarts 220 "invalid_star_etc" false [16] :=
+theorem rule_invalid_star_etc_starts : NamedRuleStarts 225 "invalid_star_etc" false [16] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_kwds` starts with `**`. -/
-theorem rule_invalid_kwds_starts : NamedRuleStarts 221 "invalid_kwds" false [35] :=
+theorem rule_invalid_kwds_starts : NamedRuleStarts 226 "invalid_kwds" false [35] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_parameters_helper` starts with `NAME`. -/
-theorem rule_invalid_parameters_helper_starts : NamedRuleStarts 222 "invalid_parameters_helper" false [1] :=
+theorem rule_invalid_parameters_helper_starts : NamedRuleStarts 227 "invalid_parameters_helper" false [1] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_lambda_parameters` starts with `NAME`, `(`, `*`, `/`. -/
-theorem rule_invalid_lambda_parameters_starts : NamedRuleStarts 223 "invalid_lambda_parameters" false [1, 7, 16, 17] :=
+theorem rule_invalid_lambda_parameters_starts : NamedRuleStarts 228 "invalid_lambda_parameters" false [1, 7, 16, 17] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_lambda_parameters_helper` starts with `NAME`. -/
-theorem rule_invalid_lambda_parameters_helper_starts : NamedRuleStarts 224 "invalid_lambda_parameters_helper" false [1] :=
+theorem rule_invalid_lambda_parameters_helper_starts : NamedRuleStarts 229 "invalid_lambda_parameters_helper" false [1] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_lambda_star_etc` starts with `*`. -/
-theorem rule_invalid_lambda_star_etc_starts : NamedRuleStarts 225 "invalid_lambda_star_etc" false [16] :=
+theorem rule_invalid_lambda_star_etc_starts : NamedRuleStarts 230 "invalid_lambda_star_etc" false [16] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_lambda_kwds` starts with `**`. -/
-theorem rule_invalid_lambda_kwds_starts : NamedRuleStarts 226 "invalid_lambda_kwds" false [35] :=
+theorem rule_invalid_lambda_kwds_starts : NamedRuleStarts 231 "invalid_lambda_kwds" false [35] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_double_type_comments` starts with `TYPE_COMMENT`. -/
-theorem rule_invalid_double_type_comments_starts : NamedRuleStarts 227 "invalid_double_type_comments" false [57] :=
+theorem rule_invalid_double_type_comments_starts : NamedRuleStarts 232 "invalid_double_type_comments" false [57] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_with_item` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 11 more. -/
-theorem rule_invalid_with_item_starts : NamedRuleStarts 228 "invalid_with_item" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_invalid_with_item_starts : NamedRuleStarts 233 "invalid_with_item" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_for_if_clause` starts with `for`, `async`. -/
-theorem rule_invalid_for_if_clause_starts : NamedRuleStarts 229 "invalid_for_if_clause" false [694, 698] :=
+theorem rule_invalid_for_if_clause_starts : NamedRuleStarts 234 "invalid_for_if_clause" false [712, 716] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_for_target` starts with `for`, `async`. -/
-theorem rule_invalid_for_target_starts : NamedRuleStarts 230 "invalid_for_target" false [694, 698] :=
+theorem rule_invalid_for_target_starts : NamedRuleStarts 235 "invalid_for_target" false [712, 716] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_group` starts with `(`. -/
-theorem rule_invalid_group_starts : NamedRuleStarts 231 "invalid_group" false [7] :=
+theorem rule_invalid_group_starts : NamedRuleStarts 236 "invalid_group" false [7] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_import` starts with `import`. -/
-theorem rule_invalid_import_starts : NamedRuleStarts 232 "invalid_import" false [634] :=
+theorem rule_invalid_import_starts : NamedRuleStarts 237 "invalid_import" false [651] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_dotted_as_name` starts with `NAME`. -/
-theorem rule_invalid_dotted_as_name_starts : NamedRuleStarts 233 "invalid_dotted_as_name" false [1] :=
+theorem rule_invalid_dotted_as_name_starts : NamedRuleStarts 238 "invalid_dotted_as_name" false [1] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_import_from_as_name` starts with `NAME`. -/
-theorem rule_invalid_import_from_as_name_starts : NamedRuleStarts 234 "invalid_import_from_as_name" false [1] :=
+theorem rule_invalid_import_from_as_name_starts : NamedRuleStarts 239 "invalid_import_from_as_name" false [1] :=
+  namedRuleStarts (by decide +kernel) (by decide +kernel)
+
+/-- `invalid_import_from` starts with `from`. -/
+theorem rule_invalid_import_from_starts : NamedRuleStarts 240 "invalid_import_from" false [650] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_import_from_targets` starts with `NAME`, `NEWLINE`. -/
-theorem rule_invalid_import_from_targets_starts : NamedRuleStarts 235 "invalid_import_from_targets" false [1, 4] :=
+theorem rule_invalid_import_from_targets_starts : NamedRuleStarts 241 "invalid_import_from_targets" false [1, 4] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_with_stmt` starts with `with`, `async`. -/
-theorem rule_invalid_with_stmt_starts : NamedRuleStarts 236 "invalid_with_stmt" false [647, 698] :=
+theorem rule_invalid_with_stmt_starts : NamedRuleStarts 242 "invalid_with_stmt" false [665, 716] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_with_stmt_indent` starts with `with`, `async`. -/
-theorem rule_invalid_with_stmt_indent_starts : NamedRuleStarts 237 "invalid_with_stmt_indent" false [647, 698] :=
+theorem rule_invalid_with_stmt_indent_starts : NamedRuleStarts 243 "invalid_with_stmt_indent" false [665, 716] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_try_stmt` starts with `try`. -/
-theorem rule_invalid_try_stmt_starts : NamedRuleStarts 238 "invalid_try_stmt" false [656] :=
+theorem rule_invalid_try_stmt_starts : NamedRuleStarts 244 "invalid_try_stmt" false [674] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_except_stmt` starts with `except`. -/
-theorem rule_invalid_except_stmt_starts : NamedRuleStarts 239 "invalid_except_stmt" false [677] :=
+theorem rule_invalid_except_stmt_starts : NamedRuleStarts 245 "invalid_except_stmt" false [695] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_except_star_stmt` starts with `except`. -/
-theorem rule_invalid_except_star_stmt_starts : NamedRuleStarts 240 "invalid_except_star_stmt" false [677] :=
+theorem rule_invalid_except_star_stmt_starts : NamedRuleStarts 246 "invalid_except_star_stmt" false [695] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_finally_stmt` starts with `finally`. -/
-theorem rule_invalid_finally_stmt_starts : NamedRuleStarts 241 "invalid_finally_stmt" false [673] :=
+theorem rule_invalid_finally_stmt_starts : NamedRuleStarts 247 "invalid_finally_stmt" false [691] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_except_stmt_indent` starts with `except`. -/
-theorem rule_invalid_except_stmt_indent_starts : NamedRuleStarts 242 "invalid_except_stmt_indent" false [677] :=
+theorem rule_invalid_except_stmt_indent_starts : NamedRuleStarts 248 "invalid_except_stmt_indent" false [695] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_except_star_stmt_indent` starts with `except`. -/
-theorem rule_invalid_except_star_stmt_indent_starts : NamedRuleStarts 243 "invalid_except_star_stmt_indent" false [677] :=
+theorem rule_invalid_except_star_stmt_indent_starts : NamedRuleStarts 249 "invalid_except_star_stmt_indent" false [695] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_match_stmt` starts with `NAME`. -/
-theorem rule_invalid_match_stmt_starts : NamedRuleStarts 244 "invalid_match_stmt" false [1] :=
+theorem rule_invalid_match_stmt_starts : NamedRuleStarts 250 "invalid_match_stmt" false [1] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_case_block` starts with `NAME`. -/
-theorem rule_invalid_case_block_starts : NamedRuleStarts 245 "invalid_case_block" false [1] :=
+theorem rule_invalid_case_block_starts : NamedRuleStarts 251 "invalid_case_block" false [1] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `invalid_as_pattern` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `-`, `{`, `FSTRING_START`, `TSTRING_START`, `True`, and 2 more. -/
-theorem rule_invalid_as_pattern_starts : NamedRuleStarts 246 "invalid_as_pattern" false [1, 2, 3, 7, 9, 15, 25, 59, 62, 622, 623, 624] :=
+/-- `invalid_as_pattern` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `FSTRING_START`, `TSTRING_START`, and 3 more. -/
+theorem rule_invalid_as_pattern_starts : NamedRuleStarts 252 "invalid_as_pattern" false [1, 2, 3, 7, 9, 14, 15, 25, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_class_pattern` starts with `NAME`. -/
-theorem rule_invalid_class_pattern_starts : NamedRuleStarts 247 "invalid_class_pattern" false [1] :=
+theorem rule_invalid_class_pattern_starts : NamedRuleStarts 253 "invalid_class_pattern" false [1] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `invalid_class_argument_pattern` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `-`, `{`, `FSTRING_START`, `TSTRING_START`, `True`, and 2 more. -/
-theorem rule_invalid_class_argument_pattern_starts : NamedRuleStarts 248 "invalid_class_argument_pattern" false [1, 2, 3, 7, 9, 15, 25, 59, 62, 622, 623, 624] :=
+/-- `invalid_mapping_pattern` starts with `{`. -/
+theorem rule_invalid_mapping_pattern_starts : NamedRuleStarts 254 "invalid_mapping_pattern" false [25] :=
+  namedRuleStarts (by decide +kernel) (by decide +kernel)
+
+/-- `invalid_class_argument_pattern` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `FSTRING_START`, `TSTRING_START`, and 3 more. -/
+theorem rule_invalid_class_argument_pattern_starts : NamedRuleStarts 255 "invalid_class_argument_pattern" false [1, 2, 3, 7, 9, 14, 15, 25, 59, 62, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_if_stmt` starts with `if`. -/
-theorem rule_invalid_if_stmt_starts : NamedRuleStarts 249 "invalid_if_stmt" false [682] :=
+theorem rule_invalid_if_stmt_starts : NamedRuleStarts 256 "invalid_if_stmt" false [700] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_elif_stmt` starts with `elif`. -/
-theorem rule_invalid_elif_stmt_starts : NamedRuleStarts 250 "invalid_elif_stmt" false [687] :=
+theorem rule_invalid_elif_stmt_starts : NamedRuleStarts 257 "invalid_elif_stmt" false [705] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_else_stmt` starts with `else`. -/
-theorem rule_invalid_else_stmt_starts : NamedRuleStarts 251 "invalid_else_stmt" false [686] :=
+theorem rule_invalid_else_stmt_starts : NamedRuleStarts 258 "invalid_else_stmt" false [704] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_while_stmt` starts with `while`. -/
-theorem rule_invalid_while_stmt_starts : NamedRuleStarts 252 "invalid_while_stmt" false [689] :=
+theorem rule_invalid_while_stmt_starts : NamedRuleStarts 259 "invalid_while_stmt" false [707] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_for_stmt` starts with `for`, `async`. -/
-theorem rule_invalid_for_stmt_starts : NamedRuleStarts 253 "invalid_for_stmt" false [694, 698] :=
+theorem rule_invalid_for_stmt_starts : NamedRuleStarts 260 "invalid_for_stmt" false [712, 716] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_def_raw` starts with `async`, `def`. -/
-theorem rule_invalid_def_raw_starts : NamedRuleStarts 254 "invalid_def_raw" false [698, 699] :=
+theorem rule_invalid_def_raw_starts : NamedRuleStarts 261 "invalid_def_raw" false [716, 717] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_class_def_raw` starts with `class`. -/
-theorem rule_invalid_class_def_raw_starts : NamedRuleStarts 255 "invalid_class_def_raw" false [701] :=
+theorem rule_invalid_class_def_raw_starts : NamedRuleStarts 262 "invalid_class_def_raw" false [719] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
-/-- `invalid_double_starred_kvpairs` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `**`, and 12 more. -/
-theorem rule_invalid_double_starred_kvpairs_starts : NamedRuleStarts 256 "invalid_double_starred_kvpairs" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 35, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+/-- `invalid_double_starred_kvpairs` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 13 more. -/
+theorem rule_invalid_double_starred_kvpairs_starts : NamedRuleStarts 263 "invalid_double_starred_kvpairs" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 35, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
+  namedRuleStarts (by decide +kernel) (by decide +kernel)
+
+/-- `invalid_kvpair_unpacking` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `*`, `{`, `~`, and 13 more. -/
+theorem rule_invalid_kvpair_unpacking_starts : NamedRuleStarts 264 "invalid_kvpair_unpacking" false [1, 2, 3, 7, 9, 14, 15, 16, 25, 31, 35, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_kvpair` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 11 more. -/
-theorem rule_invalid_kvpair_starts : NamedRuleStarts 257 "invalid_kvpair" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 526, 527, 528, 597, 621, 622, 623, 624, 703] :=
+theorem rule_invalid_kvpair_starts : NamedRuleStarts 265 "invalid_kvpair" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 527, 528, 529, 598, 622, 627, 628, 629, 721] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_starred_expression_unpacking` starts with `*`. -/
-theorem rule_invalid_starred_expression_unpacking_starts : NamedRuleStarts 258 "invalid_starred_expression_unpacking" false [16] :=
+theorem rule_invalid_starred_expression_unpacking_starts : NamedRuleStarts 266 "invalid_starred_expression_unpacking" false [16] :=
+  namedRuleStarts (by decide +kernel) (by decide +kernel)
+
+/-- `invalid_starred_expression_unpacking_sequence` starts with `*`, `**`. -/
+theorem rule_invalid_starred_expression_unpacking_sequence_starts : NamedRuleStarts 267 "invalid_starred_expression_unpacking_sequence" false [16, 35] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_starred_expression` starts with `*`. -/
-theorem rule_invalid_starred_expression_starts : NamedRuleStarts 259 "invalid_starred_expression" false [16] :=
+theorem rule_invalid_starred_expression_starts : NamedRuleStarts 268 "invalid_starred_expression" false [16] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_fstring_replacement_field` starts with `{`. -/
-theorem rule_invalid_fstring_replacement_field_starts : NamedRuleStarts 260 "invalid_fstring_replacement_field" false [25] :=
+theorem rule_invalid_fstring_replacement_field_starts : NamedRuleStarts 269 "invalid_fstring_replacement_field" false [25] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_fstring_conversion_character` starts with `!`. -/
-theorem rule_invalid_fstring_conversion_character_starts : NamedRuleStarts 261 "invalid_fstring_conversion_character" false [54] :=
+theorem rule_invalid_fstring_conversion_character_starts : NamedRuleStarts 270 "invalid_fstring_conversion_character" false [54] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_tstring_replacement_field` starts with `{`. -/
-theorem rule_invalid_tstring_replacement_field_starts : NamedRuleStarts 262 "invalid_tstring_replacement_field" false [25] :=
+theorem rule_invalid_tstring_replacement_field_starts : NamedRuleStarts 271 "invalid_tstring_replacement_field" false [25] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_tstring_conversion_character` starts with `!`. -/
-theorem rule_invalid_tstring_conversion_character_starts : NamedRuleStarts 263 "invalid_tstring_conversion_character" false [54] :=
+theorem rule_invalid_tstring_conversion_character_starts : NamedRuleStarts 272 "invalid_tstring_conversion_character" false [54] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_string_tstring_concat` starts with `STRING`, `FSTRING_START`, `TSTRING_START`. -/
-theorem rule_invalid_string_tstring_concat_starts : NamedRuleStarts 264 "invalid_string_tstring_concat" false [3, 59, 62] :=
+theorem rule_invalid_string_tstring_concat_starts : NamedRuleStarts 273 "invalid_string_tstring_concat" false [3, 59, 62] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_arithmetic` starts with `NAME`, `NUMBER`, `STRING`, `(`, `[`, `+`, `-`, `{`, `~`, `...`, and 6 more. -/
-theorem rule_invalid_arithmetic_starts : NamedRuleStarts 265 "invalid_arithmetic" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 597, 622, 623, 624] :=
+theorem rule_invalid_arithmetic_starts : NamedRuleStarts 274 "invalid_arithmetic" false [1, 2, 3, 7, 9, 14, 15, 25, 31, 52, 59, 62, 598, 627, 628, 629] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_factor` starts with `+`, `-`, `~`. -/
-theorem rule_invalid_factor_starts : NamedRuleStarts 266 "invalid_factor" false [14, 15, 31] :=
+theorem rule_invalid_factor_starts : NamedRuleStarts 275 "invalid_factor" false [14, 15, 31] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 /-- `invalid_type_params` starts with `[`. -/
-theorem rule_invalid_type_params_starts : NamedRuleStarts 267 "invalid_type_params" false [9] :=
+theorem rule_invalid_type_params_starts : NamedRuleStarts 276 "invalid_type_params" false [9] :=
+  namedRuleStarts (by decide +kernel) (by decide +kernel)
+
+/-- `invalid_noteq` starts with `<`. -/
+theorem rule_invalid_noteq_starts : NamedRuleStarts 277 "invalid_noteq" false [20] :=
   namedRuleStarts (by decide +kernel) (by decide +kernel)
 
 end PyLean.PyGrammar.Peg

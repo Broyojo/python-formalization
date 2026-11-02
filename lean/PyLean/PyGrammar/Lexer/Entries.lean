@@ -26,25 +26,43 @@ def entries : List Entry := [
       "stacks alone." },
   { id := "pygrammar-lex-accepts-valid"
     pyFile := "Parser/lexer/lexer.c"
-    pyFns := Rows.lex_accepts_valid
+    pyFns := []
     statement := "Every source the compiler accepts tokenizes through TokenizerIter with no " ++
       "exception: the string and readline front ends of the lexer agree on validity."
     source := "invariant"
-    status := .refuted
+    status := .open
     prop := ``TokenizeAcceptsValid
-    thm := some ``tokenizeAcceptsValid_refuted
-    bug := some "pygrammar-lex-tokenize-memoryerror"
-    notes := "Reproduces on 3.14.7, not on main." },
+    notes := "Refuted on 3.14.7 by a stale expression size, pygrammar-lex-tokenize-memoryerror. " ++
+      "3.15.2 reads the expression from tok->buf and that input tokenizes " ++
+      "(staleExprSize_tokenizes). The statement quantifies over all source, and a proof would " ++
+      "relate the parser and both front ends; nothing here does that yet." },
   { id := "pygrammar-lex-debug-text"
     pyFile := "Parser/lexer/lexer.c"
-    pyFns := Rows.lex_debug_text
+    pyFns := []
     statement := "The debug text of f'{expr=}' ends with '=' and optional whitespace."
     source := "docs: f-strings, the '=' specifier"
-    status := .refuted
+    status := .open
     prop := ``DebugTextKeepsEquals
-    thm := some ``debugTextKeepsEquals_refuted
-    bug := some "pygrammar-lex-debug-text-escaped-quote"
-    notes := "Reproduces on 3.14.7, not on main. Upstream #141271." },
+    notes := "Refuted on 3.14.7, pygrammar-lex-debug-text-escaped-quote, upstream #141271, fixed " ++
+      "in 3.15.2 (escapedHash_keeps). The statement quantifies over all source through the " ++
+      "parser. pygrammar-lex-comment-loops states the part of it that is set_ftstring_expr." },
+  { id := "pygrammar-lex-byte-col"
+    pyFile := "Parser/tokenizer/helpers.c"
+    pyFns := Rows.lex_byte_col
+    statement := "byte_col_to_char_col adds one column per byte, except a UTF-8 continuation byte."
+    source := "the comment at Parser/tokenizer/helpers.c:12-13"
+    status := .proven
+    prop := ``ByteColCounts
+    thm := some ``byteColCounts_proven },
+  { id := "pygrammar-lex-comment-loops"
+    pyFile := "Parser/lexer/lexer.c"
+    pyFns := Rows.lex_comment_loops
+    statement := "The two loops of set_ftstring_expr agree: what the comment stripper leaves has " ++
+      "no comment the scan would find, and when the scan finds none it changes nothing."
+    source := "the implementation agreeing with itself, Parser/lexer/lexer.c:133-219"
+    status := .proven
+    prop := ``CommentLoopsAgree
+    thm := some ``commentLoopsAgree_proven },
   { id := "pygrammar-lex-exact-tokens"
     pyFile := "Parser/token.c"
     pyFns := Rows.lex_exact_tokens

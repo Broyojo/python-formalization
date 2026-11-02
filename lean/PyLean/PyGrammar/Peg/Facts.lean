@@ -146,24 +146,125 @@ def DecimalValue : Prop :=
 
 /-! ### Other action helpers -/
 
-/-- `_strip_interpolation_expr`: what remains does not end in whitespace or `=`. -/
-def StripInterpolation : Prop := ∀ s : List Nat,
-  match (stripInterpolationExpr s).getLast? with
-  | some c => !(isUnicodeSpace c || c == 61)
-  | none => True
+theorem dropSpace_tail (r : List Nat) (nl : Bool) :
+    ∃ pre, r = pre ++ (dropTrailingSpace r nl).1 ∧ ∀ c ∈ pre, isUnicodeSpace c = true := by
+  induction r generalizing nl with
+  | nil => exact ⟨[], rfl, by simp⟩
+  | cons c t ih =>
+    unfold dropTrailingSpace
+    split
+    · rename_i hc
+      obtain ⟨pre, e, hp⟩ := ih (nl || c == 13 || c == 10)
+      refine ⟨c :: pre, by simpa using e, fun x hx => ?_⟩
+      rcases List.mem_cons.1 hx with q | q
+      · exact q ▸ hc
+      · exact hp x q
+    · exact ⟨[], rfl, by simp⟩
+
+theorem stripTail_tail (f : Nat) (r : List Nat) :
+    ∃ pre, r = pre ++ stripDebugTail f r ∧
+      ∀ c ∈ pre, isUnicodeSpace c = true ∨ c = 92 := by
+  induction f generalizing r with
+  | zero => exact ⟨[], rfl, by simp⟩
+  | succ f ih =>
+    unfold stripDebugTail
+    split
+    · exact ⟨[], rfl, by simp⟩
+    · obtain ⟨pre, e, hp⟩ := dropSpace_tail r false
+      have hsp : ∀ c ∈ pre, isUnicodeSpace c = true ∨ c = 92 := fun c hc => Or.inl (hp c hc)
+      split
+      · rename_i t hq
+        rw [hq] at e
+        simp only at e
+        obtain ⟨pre2, e2, hp2⟩ := ih t
+        refine ⟨pre ++ 92 :: pre2, ?_, fun c hc => ?_⟩
+        · rw [e]
+          simp only [List.append_assoc, List.cons_append]
+          rw [← e2]
+        · rcases List.mem_append.1 hc with q | q
+          · exact hsp c q
+          · rcases List.mem_cons.1 q with q | q
+            · exact Or.inr q
+            · exact hp2 c q
+      · rw [‹dropTrailingSpace r false = _›] at e
+        exact ⟨pre, e, hsp⟩
+
+theorem dropSpace_all (pre r : List Nat) (nl : Bool) (hp : ∀ c ∈ pre, isUnicodeSpace c = true)
+    (hr : isUnicodeSpace 61 = false) :
+    (dropTrailingSpace (pre ++ 61 :: r) nl).1 = 61 :: r := by
+  induction pre generalizing nl with
+  | nil =>
+    simp only [List.nil_append, dropTrailingSpace, hr]
+    rfl
+  | cons c t ih =>
+    simp only [List.cons_append, dropTrailingSpace]
+    rw [if_pos (hp c (List.mem_cons_self ..))]
+    exact ih _ fun x hx => hp x (List.mem_cons_of_mem _ hx)
+
+/-- `_strip_interpolation_debug_expr`, from its comments: "Discard whitespace ... after the debug
+'=' but preserve whitespace before it", and "Preserve unexpected metadata instead of dropping
+source text". Whitespace after the `=` goes, whatever comes before it, and in no case is anything
+removed but a final `=` and what follows it, which is whitespace and continuation backslashes. -/
+def StripInterpolation : Prop :=
+  (∀ r tail : List Nat, (∀ c ∈ tail, isUnicodeSpace c = true) →
+    stripInterpolationDebugExpr (r ++ 61 :: tail) = r) ∧
+  (∀ s : List Nat, stripInterpolationDebugExpr s = s ∨
+    ∃ tail, s = stripInterpolationDebugExpr s ++ 61 :: tail ∧
+      ∀ c ∈ tail, isUnicodeSpace c = true ∨ c = 92)
+
+theorem strip_step (f : Nat) (r t : List Nat) (nl : Bool) (hne : r ≠ [])
+    (h : dropTrailingSpace r false = (61 :: t, nl)) : stripDebugTail (f + 1) r = 61 :: t := by
+  cases r with
+  | nil => exact (hne rfl).elim
+  | cons c cs =>
+    show (match dropTrailingSpace (c :: cs) false with
+      | (92 :: t, true) => stripDebugTail f t
+      | (r', _) => r') = _
+    rw [h]
+    rfl
 
 theorem stripInterpolation_proven : StripInterpolation := by
-  intro s
-  unfold stripInterpolationExpr
-  generalize hd : s.reverse.dropWhile (fun c => isUnicodeSpace c || c == 61) = t
-  cases t with
-  | nil => simp
-  | cons x xs =>
-    have := List.head_dropWhile_not (l := s.reverse) (fun c => isUnicodeSpace c || c == 61)
-      (by rw [hd]; simp)
-    simp only [hd, List.head_cons] at this
-    simp only [List.getLast?_reverse, List.head?_cons]
-    simpa using this
+  have h61 : isUnicodeSpace 61 = false := by decide
+  constructor
+  · intro r tail ht
+    unfold stripInterpolationDebugExpr
+    have er : (r ++ 61 :: tail).reverse = tail.reverse ++ 61 :: r.reverse := by simp
+    have hd := dropSpace_all tail.reverse r.reverse false (fun c hc => ht c (by simpa using hc)) h61
+    have hne : tail.reverse ++ 61 :: r.reverse ≠ [] := by simp
+    have hn : (r ++ 61 :: tail).length = (r.length + tail.length) + 1 := by
+      simp
+      omega
+    generalize hq : dropTrailingSpace (tail.reverse ++ 61 :: r.reverse) false = q at hd
+    obtain ⟨r', nl⟩ := q
+    simp only at hd
+    subst hd
+    rw [hn, er, strip_step _ _ _ nl hne hq]
+    simp
+  · intro s
+    unfold stripInterpolationDebugExpr
+    obtain ⟨pre, e, hp⟩ := stripTail_tail s.length s.reverse
+    generalize hs : stripDebugTail s.length s.reverse = out at e
+    match out, e with
+    | 61 :: t, e =>
+      refine Or.inr ⟨pre.reverse, ?_, fun c hc => hp c (by simpa using hc)⟩
+      have : s = (pre ++ 61 :: t).reverse := by rw [← e]; simp
+      rw [this]
+      simp
+    | [], _ => exact Or.inl rfl
+    | c :: t, _ =>
+      by_cases hc : c = 61
+      · subst hc
+        rename_i e
+        refine Or.inr ⟨pre.reverse, ?_, fun c hc => hp c (by simpa using hc)⟩
+        have : s = (pre ++ 61 :: t).reverse := by rw [← e]; simp
+        rw [this]
+        simp
+      · left
+        split
+        · rename_i h
+          cases h
+          exact (hc rfl).elim
+        · rfl
 
 /-- `_PyPegen_register_stmts`: nothing in the first pass; in the second it records the last
 statement unless a later one is already recorded. -/

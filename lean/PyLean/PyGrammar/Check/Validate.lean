@@ -89,13 +89,17 @@ def ensureLiteralNumber (e : Ast) (real imag : Bool) : Bool :=
     | _ => false
   | _ => false
 
-/-- `ensure_literal_negative` -/
-def ensureLiteralNegative (e : Ast) (real imag : Bool) : Bool :=
+/-- `ensure_literal_signed`, `Python/ast.c:429-443`. -/
+def ensureLiteralSigned (e : Ast) (real imag : Bool) : Bool :=
   match e with
-  | .node .UnaryOp [.node .USub _ _, operand] _ =>
-    match operand with
-    | .node .Constant _ _ => ensureLiteralNumber operand real imag
-    | _ => false
+  | .node .UnaryOp [op, operand] _ =>
+    let opOk := match op with
+      | .node .USub _ _ | .node .UAdd _ _ => true
+      | _ => false
+    let operandOk := match operand with
+      | .node .Constant _ _ => ensureLiteralNumber operand real imag
+      | _ => false
+    opOk && operandOk
   | _ => false
 
 /-- `ensure_literal_complex` -/
@@ -107,7 +111,7 @@ def ensureLiteralComplex (e : Ast) : Bool :=
       | _ => false
     let leftOk := match left with
       | .node .Constant _ _ => ensureLiteralNumber left true false
-      | .node .UnaryOp _ _ => ensureLiteralNegative left true false
+      | .node .UnaryOp _ _ => ensureLiteralSigned left true false
       | _ => false
     let rightOk := match right with
       | .node .Constant _ _ => ensureLiteralNumber right false true
@@ -129,6 +133,19 @@ def validateNonemptySeq (s : Ast) (what owner : String) : V :=
 @[inline] def isNull : Ast → Bool
   | .null => true
   | _ => false
+
+/-- The loop of `validate_import_names`. `alias` is a product type, so `None` never gets here. -/
+def validateAliases : List Ast → V
+  | [] => ok1
+  | .node .alias_ [name, asname] _ :: rest =>
+    (validateName name).and fun _ =>
+    (if isNull asname then ok1 else validateName asname).and fun _ =>
+    validateAliases rest
+  | _ :: rest => validateAliases rest
+
+/-- `validate_import_names`, `Python/ast.c:714-728`. -/
+def validateImportNames (s : Ast) (what owner : String) : V :=
+  (validateNonemptySeq s what owner).and fun _ => validateAliases (seqL s)
 
 /-- The first switch of `validate_expr`, `Python/ast.c:216-246`: the node's own context, if it has
 one. -/
@@ -264,7 +281,8 @@ mutual
         (validateComprehension f gens).and fun _ => validateExpr f elt .Load
       | .DictComp, [key, value, gens] =>
         (validateComprehension f gens).and fun _ =>
-        (validateExpr f key .Load).and fun _ => validateExpr f value .Load
+        (validateExpr f key .Load).and fun _ =>
+        if isNull value then ok1 else validateExpr f value .Load
       | .Yield, [v] => if isNull v then ok1 else validateExpr f v .Load
       | .YieldFrom, [v] | .Await, [v] => validateExpr f v .Load
       | .Compare, [left, ops, comparators] =>
@@ -326,7 +344,7 @@ mutual
         | .int _ | .float _ | .bytes _ | .complex _ _ | .str _ => ok1
         | _ => verr "unexpected constant inside of a literal pattern"
       | .node .Attribute _ _ => ok1
-      | .node .UnaryOp _ _ => if ensureLiteralNegative exp true true then ok1 else bad
+      | .node .UnaryOp _ _ => if ensureLiteralSigned exp true true then ok1 else bad
       | .node .BinOp _ _ => if ensureLiteralComplex exp then ok1 else bad
       | .node .JoinedStr _ _ | .node .TemplateStr _ _ => ok1
       | _ => bad
@@ -444,32 +462,33 @@ mutual
         validateCases f rest
       | _ :: rest => validateCases f rest
 
-  /-- The handler loop; only `Try` checks handler positions (`Python/ast.c`, `Try_kind`
-  against `TryStar_kind`). -/
+  /-- The handler loop. Only `Try` checks handler positions and handler names: `isTry` is the
+  difference between `Python/ast.c:890-899` and `Python/ast.c:918-924`. -/
   def validateHandlers : Nat → List Ast → Bool → V
     | 0, _, _ => .error .modelFuel
-    | f + 1, xs, positions =>
+    | f + 1, xs, isTry =>
       match xs with
       | [] => ok1
       | .null :: _ => nullDeref
-      | .node _ [ty, _, body] l :: rest =>
-        (if positions then validatePositions l else ok1).and fun _ =>
+      | .node _ [ty, name, body] l :: rest =>
+        (if isTry then validatePositions l else ok1).and fun _ =>
         (if isNull ty then ok1 else validateExpr f ty .Load).and fun _ =>
+        (if isTry && !isNull name then validateName name else ok1).and fun _ =>
         (validateBody f body "ExceptHandler").and fun _ =>
-        validateHandlers f rest positions
-      | _ :: rest => validateHandlers f rest positions
+        validateHandlers f rest isTry
+      | _ :: rest => validateHandlers f rest isTry
 
   /-- The shared body of `Try_kind`/`TryStar_kind`. -/
   def validateTry : Nat → String → Ast → Ast → Ast → Ast → Bool → V
     | 0, _, _, _, _, _, _ => .error .modelFuel
-    | f + 1, name, body, handlers, orelse, finalbody, positions =>
+    | f + 1, name, body, handlers, orelse, finalbody, isTry =>
       (validateBody f body name).and fun _ =>
       if seqLen handlers == 0 && seqLen finalbody == 0 then
         verr s!"{name} has neither except handlers nor finalbody"
       else if seqLen handlers == 0 && seqLen orelse != 0 then
         verr s!"{name} has orelse but no except handlers"
       else
-        (validateHandlers f (seqL handlers) positions).and fun _ =>
+        (validateHandlers f (seqL handlers) isTry).and fun _ =>
         (validateStmts f (seqL finalbody)).and fun _ =>
         validateStmts f (seqL orelse)
 
@@ -509,16 +528,18 @@ mutual
       | .node c fs l =>
         (validatePositions l).and fun _ =>
         match c, fs with
-        | .FunctionDef, [_, args, body, decs, returns, _, tps]
-        | .AsyncFunctionDef, [_, args, body, decs, returns, _, tps] =>
+        | .FunctionDef, [name, args, body, decs, returns, _, tps]
+        | .AsyncFunctionDef, [name, args, body, decs, returns, _, tps] =>
           (validateBody f body (if c == .FunctionDef then "FunctionDef" else "AsyncFunctionDef")).and
             fun _ =>
+          (validateName name).and fun _ =>
           (validateTypeParams f (seqL tps)).and fun _ =>
           (validateArguments f args).and fun _ =>
           (validateExprs f (seqL decs) .Load false).and fun _ =>
           if isNull returns then ok1 else validateExpr f returns .Load
-        | .ClassDef, [_, bases, keywords, body, decs, tps] =>
+        | .ClassDef, [name, bases, keywords, body, decs, tps] =>
           (validateBody f body "ClassDef").and fun _ =>
+          (validateName name).and fun _ =>
           (validateTypeParams f (seqL tps)).and fun _ =>
           (validateExprs f (seqL bases) .Load false).and fun _ =>
           (validateKeywords f (seqL keywords)).and fun _ =>
@@ -576,13 +597,13 @@ mutual
         | .Assert, [t, m] =>
           (validateExpr f t .Load).and fun _ =>
           if isNull m then ok1 else validateExpr f m .Load
-        | .Import, [names] => validateNonemptySeq names "names" "Import"
-        | .ImportFrom, [_, names, level] =>
+        | .Import, [names, _] => validateImportNames names "names" "Import"
+        | .ImportFrom, [_, names, level, _] =>
           let neg := match level with
             | .int v => decide (v < 0)
             | _ => false
           if neg then verr "Negative ImportFrom level"
-          else validateNonemptySeq names "names" "ImportFrom"
+          else validateImportNames names "names" "ImportFrom"
         | .Global, [names] => validateNonemptySeq names "names" "Global"
         | .Nonlocal, [names] => validateNonemptySeq names "names" "Nonlocal"
         | .Expr, [v] => validateExpr f v .Load

@@ -694,11 +694,11 @@ mutual
         visit f pAtom t
         wr " := "
         visit f pAtom v
-      | .Import, [names] => do
-        fill "import "
+      | .Import, [names, isLazy] => do
+        fill (if present isLazy then "lazy import " else "import ")
         sepList f (seqU names) ", "
-      | .ImportFrom, [mod, names, level] => do
-        fill "from "
+      | .ImportFrom, [mod, names, level, isLazy] => do
+        fill (if present isLazy then "lazy from " else "from ")
         let n := match level with
           | .int v => v.toNat
           | _ => 0
@@ -887,9 +887,13 @@ mutual
           | _ => ")")
       | .DictComp, [k, v, g] => do
         wr "{"
-        visit f pTest k
-        wr ": "
-        visit f pTest v
+        if present v then
+          visit f pTest k
+          wr ": "
+          visit f pTest v
+        else
+          wr "**"
+          visit f pTest k
         gens f (seqU g)
         wr "}"
       | .comprehension_, [t, it, ifs, isAsync] => do

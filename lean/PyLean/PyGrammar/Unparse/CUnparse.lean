@@ -306,8 +306,12 @@ mutual
       | .SetComp, [e, g] => do
         return 123 :: (← appendExpr f e prTest) ++ (← appendComps f (seqU g)) ++ [125]
       | .DictComp, [k, v, g] => do
-        return 123 :: (← appendExpr f k prTest) ++ cp ": " ++ (← appendExpr f v prTest)
-          ++ (← appendComps f (seqU g)) ++ [125]
+        let head ←
+          if present v then do
+            pure ((← appendExpr f k prTest) ++ cp ": " ++ (← appendExpr f v prTest))
+          else do
+            pure (cp "**" ++ (← appendExpr f k prTest))
+        return 123 :: head ++ (← appendComps f (seqU g)) ++ [125]
       | .Yield, [v] =>
         if present v then do
           return cp "(yield " ++ (← appendExpr f v prTest) ++ [41]

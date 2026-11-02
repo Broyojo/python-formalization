@@ -253,9 +253,30 @@ def isUnicodeSpace (c : Nat) : Bool :=
     || (0x2000 ≤ c && c ≤ 0x200A) || c == 0x2028 || c == 0x2029 || c == 0x202F || c == 0x205F
     || c == 0x3000
 
-/-- `_strip_interpolation_expr` -/
-def stripInterpolationExpr (s : List Nat) : List Nat :=
-  ((s.reverse).dropWhile (fun c => isUnicodeSpace c || c == 61)).reverse
+/-- The inner loop of `_strip_interpolation_debug_expr`, on the reversed text: drop whitespace,
+noting a line end. -/
+def dropTrailingSpace : List Nat → Bool → List Nat × Bool
+  | [], nl => ([], nl)
+  | c :: t, nl =>
+    if isUnicodeSpace c then dropTrailingSpace t (nl || c == 13 || c == 10) else (c :: t, nl)
+
+/-- The outer loop: whitespace, and a backslash if a line end followed it. -/
+def stripDebugTail : Nat → List Nat → List Nat
+  | 0, r => r
+  | f + 1, r =>
+    match r with
+    | [] => []
+    | _ =>
+      match dropTrailingSpace r false with
+      | (92 :: t, true) => stripDebugTail f t
+      | (r', _) => r'
+
+/-- `_strip_interpolation_debug_expr`, `Parser/action_helpers.c:1544-1576`: whitespace and line
+continuations after the debug `=` go with it. Text with no `=` there is kept whole. -/
+def stripInterpolationDebugExpr (s : List Nat) : List Nat :=
+  match stripDebugTail s.length s.reverse with
+  | 61 :: t => t.reverse
+  | _ => s
 
 /-- Metadata text of a `Token`/`ResultTokenWithMetadata`, as a Python str constant. -/
 def metaConst (m : Ast) : Ast :=
@@ -298,7 +319,10 @@ def interpolation (expression debug conversion format closing : Ast)
   let conv := interpolationConversion debug conversion format
   let (dline, dcol, mdata) := debugInfo conversion format closing el ec
   let exprstr := match mdata with
-    | .str s => .const (.str (stripInterpolationExpr s))
+    | .str s =>
+      match debug with
+      | .null => .const (.str s)
+      | _ => .const (.str (stripInterpolationDebugExpr s))
     | _ => .null
   let loc : Loc := ⟨l, c, el, ec⟩
   let fv := mkAt .Interpolation [expression, exprstr, .int conv, recField format 0] loc
@@ -321,7 +345,7 @@ def decodeFstringPart (isRaw : Bool) (constant : Ast) (tok : Ast) : PM Ast := do
     | _ => none
   match ← decodeString isRaw bstr' t with
   | none =>
-    let _ ← raiseDecodeError
+    let _ ← raiseDecodeKnown (locOf constant)
     return .null
   | some s => return mkAt .Constant [.const (.str s), .null] (locOf constant)
 
@@ -485,6 +509,83 @@ def dotWeight (t : Ast) : Int :=
   | .tok t => if t.type == TokKind.ELLIPSIS.num then 3 else 1
   | _ => 0
 
+/-- `_PyPegen_seq_count_dots`, `Parser/action_helpers.c:143-161`. -/
+def countDots (dots : Ast) : Int := (seqOf dots).foldl (fun acc t => acc + dotWeight t) 0
+
+/-- `_PyPegen_check_legacy_stmt`, `Parser/action_helpers.c:951-962`. -/
+def isLegacyStmt (e : Ast) : Bool :=
+  match e with
+  | .node .Name (.ident id :: _) _ => id == [112, 114, 105, 110, 116] || id == [101, 120, 101, 99]
+  | _ => false
+
+/-- `_PyPegen_raise_error_for_missing_comma`, `Parser/action_helpers.c:965-991`. -/
+def raiseErrorForMissingComma (a b : Ast) : PM Ast := do
+  if isLegacyStmt a then return .null
+  let p ← get
+  if (p.tokenAt (p.mark - 1)).level == 0 then return .null
+  let la := locOf a
+  let msg := "invalid syntax. Perhaps you forgot a comma?"
+  if la.endLineno > la.lineno then
+    raiseErrorKnownLocation "SyntaxError" la.endLineno la.colOffset la.endLineno la.endColOffset msg
+  else
+    let lb := locOf b
+    raiseErrorKnownLocation "SyntaxError" la.lineno la.colOffset lb.endLineno lb.endColOffset msg
+  return .null
+
+/-- `_warn_relative_import_of_lazy`, `Parser/action_helpers.c:2032-2079`, with warnings not turned
+into errors, like `warnInvalidEscapeSeq`. -/
+def warnRelativeImportOfLazy (dots module : Ast) : PM Unit := do
+  let p ← get
+  if p.callInvalidRules then return
+  let m := locOf module
+  match (seqOf dots).getLast? with
+  | some (.tok d) =>
+    if d.endLineno == m.lineno && d.endColOffset == m.colOffset then return
+    let buf := String.ofList (List.replicate (countDots dots).toNat '.')
+    let msg := s!"'from {buf} lazy import' is the same as 'from {buf}lazy import'; "
+      ++ s!"did you mean 'lazy from {buf} import'?"
+    modify fun p =>
+      { p with tok := { p.tok with warnings := ("SyntaxWarning", msg, m.lineno) :: p.tok.warnings } }
+  | _ => pure ()
+
+/-- `alias->name` is `barry_as_FLUFL`. -/
+def isBarryAlias (al : Ast) : Bool :=
+  match fieldOf al "name" with
+  | .ident s => s == "barry_as_FLUFL".toList.map Char.toNat
+  | _ => false
+
+/-- `module == "__future__"` -/
+def isFutureModule (m : Ast) : Bool :=
+  match fieldOf m "id" with
+  | .ident s => s == "__future__".toList.map Char.toNat
+  | _ => false
+
+/-- `module == "lazy"` -/
+def isLazyModule (m : Ast) : Bool :=
+  match fieldOf m "id" with
+  | .ident s => s == [108, 97, 122, 121]
+  | _ => false
+
+/-- `x != NULL` -/
+def hasValue : Ast → Bool
+  | .null => false
+  | _ => true
+
+/-- `_PyPegen_checked_from_import`, `Parser/action_helpers.c:2082-2114`. Fails with `.null`. -/
+def checkedFromImport (dots moduleName names lazy : Ast) (l c el ec : Int) : PM Ast := do
+  let level := countDots dots
+  if level == 0 && isFutureModule moduleName then
+    if hasValue lazy then
+      raiseRange "SyntaxError" lazy lazy "lazy from __future__ import is not allowed"
+      return .null
+    if (seqOf names).any isBarryAlias then
+      modify fun p => { p with flagBarry := true, tok := { p.tok with barryAsBdfl := true } }
+  else if level > 0 && !hasValue lazy && isLazyModule moduleName then
+    warnRelativeImportOfLazy dots moduleName
+  return mkAst .ImportFrom
+    [fieldOf moduleName "id", names, .int level, .int (if hasValue lazy then 1 else 0),
+     .int l, .int c, .int el, .int ec]
+
 /-- `KeywordOrStarred.is_keyword` -/
 def isKeywordRec (k : Ast) : Bool :=
   match recField k 1 with
@@ -607,8 +708,7 @@ def callHelper (h : Helper) (args : List Ast) : PM Ast := do
     let lb := locOf a1
     return mkAt .Name [.ident (id a0 ++ [46] ++ id a1), rec_ .Load []]
       ⟨la.lineno, la.colOffset, lb.endLineno, lb.endColOffset⟩
-  | .seq_count_dots =>
-    return .int ((seqOf a0).foldl (fun acc t => acc + dotWeight t) 0)
+  | .seq_count_dots => return .int (countDots a0)
   | .alias_for_star =>
     return mkAst .alias_ ([.ident [42], .null] ++ args)
   | .map_names_to_ids => return .seq ((seqOf a0).map (fieldOf · "id"))
@@ -654,11 +754,13 @@ def callHelper (h : Helper) (args : List Ast) : PM Ast := do
   | .add_type_comment_to_arg => return addTypeComment a0 a1
   | .NEW_TYPE_COMMENT => return typeCommentOf a0
   | .check_barry_as_flufl => checkBarry a0
-  | .check_legacy_stmt =>
-    match a0 with
-    | .node .Name (.ident id :: _) _ =>
-      return .int (if id == [112, 114, 105, 110, 116] || id == [101, 120, 101, 99] then 1 else 0)
-    | _ => return .int 0
+  | .check_legacy_stmt => return .int (if isLegacyStmt a0 then 1 else 0)
+  | .raise_error_for_missing_comma => raiseErrorForMissingComma a0 a1
+  | .tokens_are_adjacent =>
+    match a0, a1 with
+    | .tok x, .tok y =>
+      return .int (if x.endLineno == y.lineno && x.endColOffset == y.colOffset then 1 else 0)
+    | _, _ => return .int 0
   | .check_fstring_conversion => checkFstringConversion a0 a1
   | .setup_full_format_spec => setupFullFormatSpec a0 a1 (int 2) (int 3) (int 4) (int 5)
   | .get_expr_name =>
@@ -722,18 +824,8 @@ def callHelper (h : Helper) (args : List Ast) : PM Ast := do
   | .concatenate_strings => concatenateStrings a0 (int 1) (int 2) (int 3) (int 4)
   | .concatenate_tstrings =>
     return mkAt .TemplateStr [.seq (buildConcatenatedStr a0)] ⟨int 1, int 2, int 3, int 4⟩
-  | .checked_future_import =>
-    let level := int 2
-    match a0 with
-    | .ident [95, 95, 102, 117, 116, 117, 114, 101, 95, 95] =>
-      if level == 0 then
-        let barry : List Nat := "barry_as_FLUFL".toList.map Char.toNat
-        if (seqOf a1).any (fun al => match fieldOf al "name" with
-            | .ident s => s == barry
-            | _ => false) then
-          modify fun p => { p with flagBarry := true }
-    | _ => pure ()
-    return mkAst .ImportFrom args
+  | .checked_from_import =>
+    checkedFromImport a0 a1 (args.getD 2 .null) (args.getD 3 .null) (int 4) (int 5) (int 6) (int 7)
   | .register_stmts => registerStmts a0
   | .interactive_exit => return .null
   | .PyErr_Occurred => return .int (if (← get).errOccurred then 1 else 0)

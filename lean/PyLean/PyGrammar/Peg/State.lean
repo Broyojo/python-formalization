@@ -38,7 +38,7 @@ structure PS where
   flagBarry : Bool := false
   flagDontImplyDedent : Bool := false
   flagIncomplete : Bool := false
-  featureVersion : Nat := 14
+  featureVersion : Nat := 15
   /-- `type_ignore_comments`: `(lineno, tag)`, oldest first. -/
   typeIgnores : List (Int × List Nat) := []
   knownErrToken : Option Token := none
@@ -197,19 +197,29 @@ def decodeErrType (c : String) : Option String :=
   else if c == "ValueError" then some "value error"
   else none
 
-/-- The body of `_Pypegen_raise_decode_error` on the current exception. -/
-def raiseDecodeBody : Option PyError → PM Unit
+/-- The body of `_Pypegen_raise_decode_error_known_location`, `Parser/pegen_errors.c:90-131`, on
+the current exception. `loc` is the location of `a`, `none` when `a` is `NULL`. -/
+def raiseDecodeBody (loc : Option Loc) : Option PyError → PM Unit
   | some e =>
     match decodeErrType e.cls with
     | some t => do
       modify fun p => { p with tok := { p.tok with err := none } }
-      raiseError0 "SyntaxError" s!"({t}) {e.msg}"
+      match loc with
+      | some l =>
+        raiseErrorKnownLocation "SyntaxError" l.lineno l.colOffset l.endLineno l.endColOffset
+          s!"({t}) {e.msg}"
+      | none => raiseError0 "SyntaxError" s!"({t}) {e.msg}"
     | none => pure ()
   | none => pure ()
 
-/-- `_Pypegen_raise_decode_error`, `Parser/pegen_errors.c:84-131`. -/
+/-- `_Pypegen_raise_decode_error`, `Parser/pegen_errors.c:84-87`: no location. -/
 def raiseDecodeError : PM Int := do
-  raiseDecodeBody (← get).tok.err
+  raiseDecodeBody none (← get).tok.err
+  return -1
+
+/-- `_Pypegen_raise_decode_error_known_location(p, a)` with `a` at `l`. -/
+def raiseDecodeKnown (l : Loc) : PM Int := do
+  raiseDecodeBody (some l) (← get).tok.err
   return -1
 
 /-- Read tokens, recording and skipping `# type: ignore` comments. -/

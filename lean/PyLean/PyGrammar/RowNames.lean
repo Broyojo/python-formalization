@@ -41,8 +41,9 @@ def check_null_sites : List String := [
 
 def check_rejects : List String := [
   "validate_comprehension", "validate_keywords", "validate_args", "validate_arguments", "validate_expr", "ensure_literal_number",
-  "ensure_literal_negative", "ensure_literal_complex", "validate_pattern_match_value", "validate_capture", "_validate_nonempty_seq", "validate_assignlist",
-  "validate_body", "validate_stmt", "validate_stmts", "validate_exprs", "validate_typeparam", "validate_type_params"]
+  "ensure_literal_signed", "ensure_literal_complex", "validate_pattern_match_value", "validate_capture", "_validate_nonempty_seq", "validate_import_names",
+  "validate_assignlist", "validate_body", "validate_stmt", "validate_stmts", "validate_exprs", "validate_typeparam",
+  "validate_type_params"]
 
 def check_set_context_last : List String := [
   ]
@@ -88,41 +89,43 @@ def grammar_call_rule_sound : List String := [
   "rule:maybe_sequence_pattern", "rule:maybe_star_pattern", "rule:star_pattern", "rule:mapping_pattern", "rule:items_pattern", "rule:key_value_pattern",
   "rule:double_star_pattern", "rule:class_pattern", "rule:positional_patterns", "rule:keyword_patterns", "rule:keyword_pattern", "rule:type_alias",
   "rule:type_params", "rule:type_param_seq", "rule:type_param", "rule:type_param_bound", "rule:type_param_default", "rule:type_param_starred_default",
-  "rule:expressions", "rule:expression", "rule:yield_expr", "rule:star_expressions", "rule:star_expression", "rule:star_named_expressions",
-  "rule:star_named_expression", "rule:assignment_expression", "rule:named_expression", "rule:disjunction", "rule:conjunction", "rule:inversion",
-  "rule:comparison", "rule:compare_op_bitwise_or_pair", "rule:eq_bitwise_or", "rule:noteq_bitwise_or", "rule:lte_bitwise_or", "rule:lt_bitwise_or",
-  "rule:gte_bitwise_or", "rule:gt_bitwise_or", "rule:notin_bitwise_or", "rule:in_bitwise_or", "rule:isnot_bitwise_or", "rule:is_bitwise_or",
-  "rule:bitwise_or", "rule:bitwise_xor", "rule:bitwise_and", "rule:shift_expr", "rule:sum", "rule:term",
-  "rule:factor", "rule:power", "rule:await_primary", "rule:primary", "rule:slices", "rule:slice",
-  "rule:atom", "rule:group", "rule:lambdef", "rule:lambda_params", "rule:lambda_parameters", "rule:lambda_slash_no_default",
-  "rule:lambda_slash_with_default", "rule:lambda_star_etc", "rule:lambda_kwds", "rule:lambda_param_no_default", "rule:lambda_param_with_default", "rule:lambda_param_maybe_default",
-  "rule:lambda_param", "rule:fstring_middle", "rule:fstring_replacement_field", "rule:fstring_conversion", "rule:fstring_full_format_spec", "rule:fstring_format_spec",
-  "rule:fstring", "rule:tstring_format_spec_replacement_field", "rule:tstring_format_spec", "rule:tstring_full_format_spec", "rule:tstring_replacement_field", "rule:tstring_middle",
-  "rule:tstring", "rule:string", "rule:strings", "rule:list", "rule:tuple", "rule:set",
-  "rule:dict", "rule:double_starred_kvpairs", "rule:double_starred_kvpair", "rule:kvpair", "rule:for_if_clauses", "rule:for_if_clause",
-  "rule:listcomp", "rule:setcomp", "rule:genexp", "rule:dictcomp", "rule:arguments", "rule:args",
-  "rule:kwargs", "rule:starred_expression", "rule:kwarg_or_starred", "rule:kwarg_or_double_starred", "rule:star_targets", "rule:star_targets_list_seq",
-  "rule:star_targets_tuple_seq", "rule:star_target", "rule:target_with_star_atom", "rule:star_atom", "rule:single_target", "rule:single_subscript_attribute_target",
-  "rule:t_primary", "rule:t_lookahead", "rule:del_targets", "rule:del_target", "rule:del_t_atom", "rule:type_expressions",
-  "rule:func_type_comment", "rule:invalid_arguments", "rule:invalid_kwarg", "rule:expression_without_invalid", "rule:invalid_legacy_expression", "rule:invalid_type_param",
-  "rule:invalid_expression", "rule:invalid_assignment", "rule:invalid_ann_assign_target", "rule:invalid_del_stmt", "rule:invalid_block", "rule:invalid_comprehension",
-  "rule:invalid_dict_comprehension", "rule:invalid_parameters", "rule:invalid_default", "rule:invalid_star_etc", "rule:invalid_kwds", "rule:invalid_parameters_helper",
+  "rule:expressions", "rule:expression", "rule:if_expression", "rule:yield_expr", "rule:star_expressions", "rule:star_expression",
+  "rule:star_named_expressions", "rule:star_named_expressions_sequence", "rule:star_named_expression", "rule:star_named_expression_sequence", "rule:assignment_expression", "rule:named_expression",
+  "rule:disjunction", "rule:conjunction", "rule:inversion", "rule:comparison", "rule:compare_op_bitwise_or_pair", "rule:eq_bitwise_or",
+  "rule:noteq_bitwise_or", "rule:lte_bitwise_or", "rule:lt_bitwise_or", "rule:gte_bitwise_or", "rule:gt_bitwise_or", "rule:notin_bitwise_or",
+  "rule:in_bitwise_or", "rule:isnot_bitwise_or", "rule:is_bitwise_or", "rule:bitwise_or", "rule:bitwise_xor", "rule:bitwise_and",
+  "rule:shift_expr", "rule:sum", "rule:term", "rule:factor", "rule:power", "rule:await_primary",
+  "rule:primary", "rule:slices", "rule:slice", "rule:atom", "rule:group", "rule:lambdef",
+  "rule:lambda_params", "rule:lambda_parameters", "rule:lambda_slash_no_default", "rule:lambda_slash_with_default", "rule:lambda_star_etc", "rule:lambda_kwds",
+  "rule:lambda_param_no_default", "rule:lambda_param_with_default", "rule:lambda_param_maybe_default", "rule:lambda_param", "rule:fstring_middle", "rule:fstring_replacement_field",
+  "rule:fstring_conversion", "rule:fstring_full_format_spec", "rule:fstring_format_spec", "rule:fstring", "rule:tstring_format_spec_replacement_field", "rule:tstring_format_spec",
+  "rule:tstring_full_format_spec", "rule:tstring_replacement_field", "rule:tstring_middle", "rule:tstring", "rule:string", "rule:strings",
+  "rule:list", "rule:tuple", "rule:set", "rule:dict", "rule:double_starred_kvpairs", "rule:double_starred_kvpair",
+  "rule:kvpair", "rule:for_if_clauses", "rule:for_if_clause", "rule:listcomp", "rule:setcomp", "rule:genexp",
+  "rule:dictcomp", "rule:arguments", "rule:args", "rule:kwargs", "rule:starred_expression", "rule:kwarg_or_starred",
+  "rule:kwarg_or_double_starred", "rule:star_targets", "rule:star_targets_list_seq", "rule:star_targets_tuple_seq", "rule:star_target", "rule:target_with_star_atom",
+  "rule:star_atom", "rule:single_target", "rule:single_subscript_attribute_target", "rule:t_primary", "rule:t_lookahead", "rule:del_targets",
+  "rule:del_target", "rule:del_t_atom", "rule:type_expressions", "rule:func_type_comment", "rule:invalid_arguments", "rule:invalid_kwarg",
+  "rule:expression_without_invalid", "rule:invalid_legacy_expression", "rule:invalid_type_param", "rule:invalid_expression", "rule:invalid_if_expression", "rule:invalid_named_expression",
+  "rule:invalid_assignment", "rule:invalid_ann_assign_target", "rule:invalid_raise_stmt", "rule:invalid_del_stmt", "rule:invalid_assert_stmt", "rule:invalid_block",
+  "rule:invalid_comprehension", "rule:invalid_parameters", "rule:invalid_default", "rule:invalid_star_etc", "rule:invalid_kwds", "rule:invalid_parameters_helper",
   "rule:invalid_lambda_parameters", "rule:invalid_lambda_parameters_helper", "rule:invalid_lambda_star_etc", "rule:invalid_lambda_kwds", "rule:invalid_double_type_comments", "rule:invalid_with_item",
   "rule:invalid_for_if_clause", "rule:invalid_for_target", "rule:invalid_group", "rule:invalid_import", "rule:invalid_dotted_as_name", "rule:invalid_import_from_as_name",
-  "rule:invalid_import_from_targets", "rule:invalid_with_stmt", "rule:invalid_with_stmt_indent", "rule:invalid_try_stmt", "rule:invalid_except_stmt", "rule:invalid_except_star_stmt",
-  "rule:invalid_finally_stmt", "rule:invalid_except_stmt_indent", "rule:invalid_except_star_stmt_indent", "rule:invalid_match_stmt", "rule:invalid_case_block", "rule:invalid_as_pattern",
-  "rule:invalid_class_pattern", "rule:invalid_class_argument_pattern", "rule:invalid_if_stmt", "rule:invalid_elif_stmt", "rule:invalid_else_stmt", "rule:invalid_while_stmt",
-  "rule:invalid_for_stmt", "rule:invalid_def_raw", "rule:invalid_class_def_raw", "rule:invalid_double_starred_kvpairs", "rule:invalid_kvpair", "rule:invalid_starred_expression_unpacking",
-  "rule:invalid_starred_expression", "rule:invalid_fstring_replacement_field", "rule:invalid_fstring_conversion_character", "rule:invalid_tstring_replacement_field", "rule:invalid_tstring_conversion_character", "rule:invalid_string_tstring_concat",
-  "rule:invalid_arithmetic", "rule:invalid_factor", "rule:invalid_type_params"]
+  "rule:invalid_import_from", "rule:invalid_import_from_targets", "rule:invalid_with_stmt", "rule:invalid_with_stmt_indent", "rule:invalid_try_stmt", "rule:invalid_except_stmt",
+  "rule:invalid_except_star_stmt", "rule:invalid_finally_stmt", "rule:invalid_except_stmt_indent", "rule:invalid_except_star_stmt_indent", "rule:invalid_match_stmt", "rule:invalid_case_block",
+  "rule:invalid_as_pattern", "rule:invalid_class_pattern", "rule:invalid_mapping_pattern", "rule:invalid_class_argument_pattern", "rule:invalid_if_stmt", "rule:invalid_elif_stmt",
+  "rule:invalid_else_stmt", "rule:invalid_while_stmt", "rule:invalid_for_stmt", "rule:invalid_def_raw", "rule:invalid_class_def_raw", "rule:invalid_double_starred_kvpairs",
+  "rule:invalid_kvpair_unpacking", "rule:invalid_kvpair", "rule:invalid_starred_expression_unpacking", "rule:invalid_starred_expression_unpacking_sequence", "rule:invalid_starred_expression", "rule:invalid_fstring_replacement_field",
+  "rule:invalid_fstring_conversion_character", "rule:invalid_tstring_replacement_field", "rule:invalid_tstring_conversion_character", "rule:invalid_string_tstring_concat", "rule:invalid_arithmetic", "rule:invalid_factor",
+  "rule:invalid_type_params", "rule:invalid_noteq"]
 
 def grammar_left_recursion : List String := [
   ]
 
-def lex_accepts_valid : List String := [
-  "_PyLexer_update_ftstring_expr"]
+def lex_byte_col : List String := [
+  "byte_col_to_char_col"]
 
-def lex_debug_text : List String := [
+def lex_comment_loops : List String := [
   "set_ftstring_expr"]
 
 def lex_exact_tokens : List String := [
@@ -137,11 +140,20 @@ def lex_stacks : List String := [
 def lex_untokenize_lossless : List String := [
   "Untokenizer.add_whitespace", "Untokenizer.add_backslash_continuation"]
 
+def peg_checked_from_import : List String := [
+  "_PyPegen_checked_from_import"]
+
 def peg_concat : List String := [
   "_build_concatenated_str"]
 
 def peg_decode_error : List String := [
   "_Pypegen_raise_decode_error"]
+
+def peg_decode_format_spec : List String := [
+  "_PyPegen_decoded_constant_from_token"]
+
+def peg_decode_known : List String := [
+  "_Pypegen_raise_decode_error_known_location"]
 
 def peg_expect_token : List String := [
   "_PyPegen_expect_token"]
@@ -160,6 +172,9 @@ def peg_make_arguments : List String := [
 
 def peg_memo_cache : List String := [
   "_PyPegen_insert_memo", "_PyPegen_update_memo", "_PyPegen_is_memoized"]
+
+def peg_missing_comma : List String := [
+  "_PyPegen_raise_error_for_missing_comma"]
 
 def peg_never_silent : List String := [
   "_PyPegen_run_parser"]
@@ -186,7 +201,7 @@ def peg_set_syntax_error : List String := [
   "_Pypegen_set_syntax_error"]
 
 def peg_strip_interpolation : List String := [
-  "_strip_interpolation_expr"]
+  "_strip_interpolation_debug_expr"]
 
 def peg_token_readers : List String := [
   "_PyPegen_expect_forced_token", "_PyPegen_expect_soft_keyword", "_PyPegen_name_token", "_PyPegen_soft_keyword_token"]
@@ -196,6 +211,9 @@ def peg_tokenize_full_source : List String := [
 
 def peg_tokenizer_error : List String := [
   "_Pypegen_tokenizer_error"]
+
+def peg_warn_lazy : List String := [
+  "_warn_relative_import_of_lazy"]
 
 def unparse_c_roundtrip : List String := [
   "append_joinedstr"]

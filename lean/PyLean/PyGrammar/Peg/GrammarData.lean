@@ -15,13 +15,13 @@ def r1 : Rule := { name := "interactive", kind := .normal, memo := false, leftRe
   { items := [(.call (.rule 7))], action := (some (.mk .Interactive [(.var 0)])), nvars := 1, guardInvalid := false, extra := false }] }
 
 def r2 : Rule := { name := "eval", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 108)), (.call (.rule 268)), (.call (.tok 0))], action := (some (.mk .Expression [(.var 0)])), nvars := 3, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 108)), (.call (.rule 278)), (.call (.tok 0))], action := (some (.mk .Expression [(.var 0)])), nvars := 3, guardInvalid := false, extra := false }] }
 
 def r3 : Rule := { name := "func_type", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 7)), (.opt (.rule 203)), (.call (.tok 8)), (.call (.tok 51)), (.call (.rule 109)), (.call (.rule 268)), (.call (.tok 0))], action := (some (.mk .FunctionType [(.var 1), (.var 4)])), nvars := 7, guardInvalid := false, extra := false }] }
+  { items := [(.call (.tok 7)), (.opt (.rule 206)), (.call (.tok 8)), (.call (.tok 51)), (.call (.rule 109)), (.call (.rule 278)), (.call (.tok 0))], action := (some (.mk .FunctionType [(.var 1), (.var 4)])), nvars := 7, guardInvalid := false, extra := false }] }
 
 def r4 : Rule := { name := "statements", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 269))], action := (some (.call .seq_flatten [(.var 0)])), nvars := 1, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 279))], action := (some (.call .seq_flatten [(.var 0)])), nvars := 1, guardInvalid := false, extra := false }] }
 
 def r5 : Rule := { name := "statement", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 10))], action := (some (.call .register_stmts [(.call .singleton_seq [(.var 0)])])), nvars := 1, guardInvalid := false, extra := false },
@@ -38,44 +38,44 @@ def r7 : Rule := { name := "statement_newline", kind := .normal, memo := false, 
 
 def r8 : Rule := { name := "simple_stmts", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 9)), (.look false (.tok 13)), (.call (.tok 4))], action := (some (.call .singleton_seq [(.var 0)])), nvars := 2, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 271)), (.opt (.tok 13)), (.call (.tok 4))], action := (some (.var 0)), nvars := 3, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 281)), (.opt (.tok 13)), (.call (.tok 4))], action := (some (.var 0)), nvars := 3, guardInvalid := false, extra := false }] }
 
 def r9 : Rule := { name := "simple_stmt", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
   { items := [(.call (.rule 11))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.look true (.softKw [116, 121, 112, 101])), (.call (.rule 101))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 111))], action := (some (.mk .Expr [(.var 0), .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
+  { items := [(.look true (.rule 282)), (.call (.rule 24))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 112))], action := (some (.mk .Expr [(.var 0), .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
   { items := [(.look true (.tok 522)), (.call (.rule 14))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.rule 272)), (.call (.rule 24))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.tok 525)), (.call (.rule 15))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.tok 526)), (.call (.rule 16))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.tok 625)), (.call (.rule 21))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.tok 587)), (.call (.rule 22))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.tok 532)), (.call (.rule 23))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.tok 527)), (.call (.rule 17))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.tok 528)), (.call (.rule 18))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.tok 529)), (.call (.rule 19))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.tok 530)), (.call (.rule 20))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+  { items := [(.look true (.tok 632)), (.call (.rule 15))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.look true (.tok 527)), (.call (.rule 16))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.look true (.tok 634)), (.call (.rule 21))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.look true (.tok 588)), (.call (.rule 22))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.look true (.tok 638)), (.call (.rule 23))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.look true (.tok 528)), (.call (.rule 17))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.look true (.tok 529)), (.call (.rule 18))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.look true (.tok 530)), (.call (.rule 19))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.look true (.tok 531)), (.call (.rule 20))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
 def r10 : Rule := { name := "compound_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.look true (.rule 273)), (.call (.rule 37))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.tok 682)), (.call (.rule 54))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.rule 274)), (.call (.rule 35))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.rule 275)), (.call (.rule 59))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.rule 276)), (.call (.rule 58))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.tok 656)), (.call (.rule 61))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.tok 689)), (.call (.rule 57))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.look true (.rule 283)), (.call (.rule 37))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.look true (.tok 700)), (.call (.rule 54))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.look true (.rule 284)), (.call (.rule 35))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.look true (.rule 285)), (.call (.rule 59))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.look true (.rule 286)), (.call (.rule 58))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.look true (.tok 674)), (.call (.rule 61))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.look true (.tok 707)), (.call (.rule 57))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.rule 65))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
 def r11 : Rule := { name := "assignment", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call .name), (.call (.tok 11)), (.call (.rule 109)), (.opt (.rule 277))], action := (some (.checkVersion (.int 6) (.str "Variable annotation syntax is") (.mk .AnnAssign [(.check (.call .set_expr_context [(.var 0), (.ctor .Store)])), (.var 2), (.var 3), (.int 1), .extra0, .extra1, .extra2, .extra3]))), nvars := 4, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 278)), (.call (.tok 11)), (.call (.rule 109)), (.opt (.rule 277))], action := (some (.checkVersion (.int 6) (.str "Variable annotations syntax is") (.mk .AnnAssign [(.var 0), (.var 2), (.var 3), (.int 0), .extra0, .extra1, .extra2, .extra3]))), nvars := 4, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 279)), (.call (.rule 12)), (.look false (.tok 22)), (.opt (.tok 57))], action := (some (.mk .Assign [(.var 0), (.var 1), (.call .NEW_TYPE_COMMENT [(.var 2)]), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 196)), (.call (.rule 13)), .cut, (.call (.rule 12))], action := (some (.mk .AugAssign [(.var 0), (.kind (.var 1)), (.var 3), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 212))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+  { items := [(.call .name), (.call (.tok 11)), (.call (.rule 109)), (.opt (.rule 287))], action := (some (.checkVersion (.int 6) (.str "Variable annotation syntax is") (.mk .AnnAssign [(.check (.call .set_expr_context [(.var 0), (.ctor .Store)])), (.var 2), (.var 3), (.int 1), .extra0, .extra1, .extra2, .extra3]))), nvars := 4, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 288)), (.call (.tok 11)), (.call (.rule 109)), (.opt (.rule 287))], action := (some (.checkVersion (.int 6) (.str "Variable annotations syntax is") (.mk .AnnAssign [(.var 0), (.var 2), (.var 3), (.int 0), .extra0, .extra1, .extra2, .extra3]))), nvars := 4, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 289)), (.call (.rule 12)), (.look false (.tok 22)), (.opt (.tok 57))], action := (some (.mk .Assign [(.var 0), (.var 1), (.call .NEW_TYPE_COMMENT [(.var 2)]), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 199)), (.call (.rule 13)), .cut, (.call (.rule 12))], action := (some (.mk .AugAssign [(.var 0), (.kind (.var 1)), (.var 3), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 216))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
 def r12 : Rule := { name := "annotated_rhs", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 110))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 111))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 111))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 112))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
 def r13 : Rule := { name := "augassign", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 36))], action := (some (.call .augoperator [(.ctor .Add)])), nvars := 1, guardInvalid := false, extra := false },
@@ -93,68 +93,72 @@ def r13 : Rule := { name := "augassign", kind := .normal, memo := false, leftRec
   { items := [(.call (.tok 48))], action := (some (.call .augoperator [(.ctor .FloorDiv)])), nvars := 1, guardInvalid := false, extra := false }] }
 
 def r14 : Rule := { name := "return_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 522)), (.opt (.rule 111))], action := (some (.mk .Return [(.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
+  { items := [(.call (.tok 522)), (.opt (.rule 112))], action := (some (.mk .Return [(.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
 
 def r15 : Rule := { name := "raise_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 525)), (.call (.rule 109)), (.opt (.rule 280))], action := (some (.mk .Raise [(.var 1), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 525))], action := (some (.mk .Raise [.null, .null, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
+  { items := [(.call (.tok 632)), (.call (.rule 109)), (.call (.tok 650)), (.call (.rule 109))], action := (some (.mk .Raise [(.var 1), (.var 3), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 218))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.tok 632)), (.call (.rule 109))], action := (some (.mk .Raise [(.var 1), .null, .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 632))], action := (some (.mk .Raise [.null, .null, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
 
 def r16 : Rule := { name := "pass_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 526))], action := (some (.mk .Pass [.extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
+  { items := [(.call (.tok 527))], action := (some (.mk .Pass [.extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
 
 def r17 : Rule := { name := "break_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 527))], action := (some (.mk .Break [.extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
+  { items := [(.call (.tok 528))], action := (some (.mk .Break [.extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
 
 def r18 : Rule := { name := "continue_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 528))], action := (some (.mk .Continue [.extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
+  { items := [(.call (.tok 529))], action := (some (.mk .Continue [.extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
 
 def r19 : Rule := { name := "global_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 529)), (.call (.rule 282))], action := (some (.mk .Global [(.check (.call .map_names_to_ids [(.var 1)])), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
+  { items := [(.call (.tok 530)), (.call (.rule 291))], action := (some (.mk .Global [(.check (.call .map_names_to_ids [(.var 1)])), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
 
 def r20 : Rule := { name := "nonlocal_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 530)), (.call (.rule 282))], action := (some (.mk .Nonlocal [(.check (.call .map_names_to_ids [(.var 1)])), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
+  { items := [(.call (.tok 531)), (.call (.rule 291))], action := (some (.mk .Nonlocal [(.check (.call .map_names_to_ids [(.var 1)])), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
 
 def r21 : Rule := { name := "del_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 625)), (.call (.rule 200)), (.look true (.rule 283))], action := (some (.mk .Delete [(.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 214))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+  { items := [(.call (.tok 634)), (.call (.rule 203)), (.look true (.rule 292))], action := (some (.mk .Delete [(.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 219))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
 def r22 : Rule := { name := "yield_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 110))], action := (some (.mk .Expr [(.var 0), .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
+  { items := [(.call (.rule 111))], action := (some (.mk .Expr [(.var 0), .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
 
 def r23 : Rule := { name := "assert_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 532)), (.call (.rule 109)), (.opt (.rule 284))], action := (some (.mk .Assert [(.var 1), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true }] }
+  { items := [(.call (.rule 220))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.tok 638)), (.call (.rule 109)), (.opt (.rule 293))], action := (some (.mk .Assert [(.var 1), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true }] }
 
-def r24 : Rule := { name := "import_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 232))], action := none, nvars := 1, guardInvalid := true, extra := false },
+def r24 : Rule := { name := "import_stmt", kind := .normal, memo := true, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 237))], action := none, nvars := 1, guardInvalid := true, extra := false },
   { items := [(.call (.rule 25))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.rule 26))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
 def r25 : Rule := { name := "import_name", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 634)), (.call (.rule 30))], action := (some (.mk .Import [(.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
+  { items := [(.opt (.softKw [108, 97, 122, 121])), (.call (.tok 651)), (.call (.rule 30))], action := (some (.mk .Import [(.var 2), (.ite (.var 0) (.int 1) (.int 0)), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true }] }
 
 def r26 : Rule := { name := "import_from", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 633)), (.call (.rule 285)), (.call (.rule 32)), (.call (.tok 634)), (.call (.rule 27))], action := (some (.call .checked_future_import [(.field (.var 2) "id"), (.var 4), (.call .seq_count_dots [(.var 1)]), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 633)), (.call (.rule 286)), (.call (.tok 634)), (.call (.rule 27))], action := (some (.mk .ImportFrom [.null, (.var 3), (.call .seq_count_dots [(.var 1)]), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true }] }
+  { items := [(.call (.rule 240))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.opt (.softKw [108, 97, 122, 121])), (.call (.tok 650)), (.call (.rule 294)), (.call (.rule 32)), (.call (.tok 651)), (.call (.rule 27))], action := (some (.call .checked_from_import [(.var 2), (.var 3), (.var 5), (.var 0), .extra0, .extra1, .extra2, .extra3])), nvars := 6, guardInvalid := false, extra := true },
+  { items := [(.opt (.softKw [108, 97, 122, 121])), (.call (.tok 650)), (.call (.rule 295)), (.call (.tok 651)), (.call (.rule 27))], action := (some (.mk .ImportFrom [.null, (.var 4), (.call .seq_count_dots [(.var 2)]), (.ite (.var 0) (.int 1) (.int 0)), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true }] }
 
 def r27 : Rule := { name := "import_from_targets", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
   { items := [(.call (.tok 7)), (.call (.rule 28)), (.opt (.tok 12)), (.call (.tok 8))], action := (some (.var 1)), nvars := 4, guardInvalid := false, extra := false },
   { items := [(.call (.rule 28)), (.look false (.tok 12))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 16))], action := (some (.call .singleton_seq [(.check (.call .alias_for_star [.extra0, .extra1, .extra2, .extra3]))])), nvars := 1, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 235))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+  { items := [(.call (.rule 241))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
 def r28 : Rule := { name := "import_from_as_names", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 288))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 297))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false }] }
 
 def r29 : Rule := { name := "import_from_as_name", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 234))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call .name), (.opt (.rule 289))], action := (some (.mk .alias_ [(.field (.var 0) "id"), (.ite (.var 1) (.field (.var 1) "id") .null), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
+  { items := [(.call (.rule 239))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call .name), (.opt (.rule 298))], action := (some (.mk .alias_ [(.field (.var 0) "id"), (.ite (.var 1) (.field (.var 1) "id") .null), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
 
 def r30 : Rule := { name := "dotted_as_names", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 291))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 300))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false }] }
 
 def r31 : Rule := { name := "dotted_as_name", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 233))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.rule 32)), (.opt (.rule 289))], action := (some (.mk .alias_ [(.field (.var 0) "id"), (.ite (.var 1) (.field (.var 1) "id") .null), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
+  { items := [(.call (.rule 238))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.rule 32)), (.opt (.rule 298))], action := (some (.mk .alias_ [(.field (.var 0) "id"), (.ite (.var 1) (.field (.var 1) "id") .null), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
 
 def r32 : Rule := { name := "dotted_name", kind := .normal, memo := false, leftRec := true, leader := true, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 32)), (.call (.tok 23)), (.call .name)], action := (some (.call .join_names_with_dot [(.var 0), (.var 2)])), nvars := 3, guardInvalid := false, extra := false },
@@ -163,56 +167,56 @@ def r32 : Rule := { name := "dotted_name", kind := .normal, memo := false, leftR
 def r33 : Rule := { name := "block", kind := .normal, memo := true, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 4)), (.call (.tok 5)), (.call (.rule 4)), (.call (.tok 6))], action := (some (.var 2)), nvars := 4, guardInvalid := false, extra := false },
   { items := [(.call (.rule 8))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 215))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+  { items := [(.call (.rule 221))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
 def r34 : Rule := { name := "decorators", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 292))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 301))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false }] }
 
 def r35 : Rule := { name := "class_def", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 34)), (.call (.rule 36))], action := (some (.call .class_def_decorators [(.var 0), (.var 1)])), nvars := 2, guardInvalid := false, extra := false },
   { items := [(.call (.rule 36))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
 def r36 : Rule := { name := "class_def_raw", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 255))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.tok 701)), (.call .name), (.opt (.rule 102)), (.opt (.rule 293)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.mk .ClassDef [(.field (.var 1) "id"), (.ite (.var 3) (.field (.var 3) "args") .null), (.ite (.var 3) (.field (.var 3) "keywords") .null), (.var 5), .null, (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 6, guardInvalid := false, extra := true }] }
+  { items := [(.call (.rule 262))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.tok 719)), (.call .name), (.opt (.rule 102)), (.opt (.rule 302)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.mk .ClassDef [(.field (.var 1) "id"), (.ite (.var 3) (.field (.var 3) "args") .null), (.ite (.var 3) (.field (.var 3) "keywords") .null), (.var 5), .null, (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 6, guardInvalid := false, extra := true }] }
 
 def r37 : Rule := { name := "function_def", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 34)), (.call (.rule 38))], action := (some (.call .function_def_decorators [(.var 0), (.var 1)])), nvars := 2, guardInvalid := false, extra := false },
   { items := [(.call (.rule 38))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
 def r38 : Rule := { name := "function_def_raw", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 254))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.tok 699)), (.call .name), (.opt (.rule 102)), (.call (.tok 7)), (.opt (.rule 39)), (.call (.tok 8)), (.opt (.rule 294)), (.call (.tok 11)), (.opt (.rule 204)), (.call (.rule 33))], action := (some (.mk .FunctionDef [(.field (.var 1) "id"), (.ite (.var 4) (.var 4) (.check (.call .empty_arguments []))), (.var 9), .null, (.var 6), (.call .NEW_TYPE_COMMENT [(.var 8)]), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 10, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 698)), (.call (.tok 699)), (.call .name), (.opt (.rule 102)), (.call (.tok 7)), (.opt (.rule 39)), (.call (.tok 8)), (.opt (.rule 294)), (.call (.tok 11)), (.opt (.rule 204)), (.call (.rule 33))], action := (some (.checkVersion (.int 5) (.str "Async functions are") (.mk .AsyncFunctionDef [(.field (.var 2) "id"), (.ite (.var 5) (.var 5) (.check (.call .empty_arguments []))), (.var 10), .null, (.var 7), (.call .NEW_TYPE_COMMENT [(.var 9)]), (.var 3), .extra0, .extra1, .extra2, .extra3]))), nvars := 11, guardInvalid := false, extra := true }] }
+  { items := [(.call (.rule 261))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.tok 717)), (.call .name), (.opt (.rule 102)), (.call (.tok 7)), (.opt (.rule 39)), (.call (.tok 8)), (.opt (.rule 303)), (.call (.tok 11)), (.opt (.rule 207)), (.call (.rule 33))], action := (some (.mk .FunctionDef [(.field (.var 1) "id"), (.ite (.var 4) (.var 4) (.check (.call .empty_arguments []))), (.var 9), .null, (.var 6), (.call .NEW_TYPE_COMMENT [(.var 8)]), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 10, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 716)), (.call (.tok 717)), (.call .name), (.opt (.rule 102)), (.call (.tok 7)), (.opt (.rule 39)), (.call (.tok 8)), (.opt (.rule 303)), (.call (.tok 11)), (.opt (.rule 207)), (.call (.rule 33))], action := (some (.checkVersion (.int 5) (.str "Async functions are") (.mk .AsyncFunctionDef [(.field (.var 2) "id"), (.ite (.var 5) (.var 5) (.check (.call .empty_arguments []))), (.var 10), .null, (.var 7), (.call .NEW_TYPE_COMMENT [(.var 9)]), (.var 3), .extra0, .extra1, .extra2, .extra3]))), nvars := 11, guardInvalid := false, extra := true }] }
 
 def r39 : Rule := { name := "params", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 218))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.rule 223))], action := none, nvars := 1, guardInvalid := true, extra := false },
   { items := [(.call (.rule 40))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
 def r40 : Rule := { name := "parameters", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 41)), (.call (.rule 295)), (.call (.rule 296)), (.opt (.rule 43))], action := (some (.checkVersion (.int 8) (.str "Positional-only parameters are") (.call .make_arguments [(.var 0), .null, (.var 1), (.var 2), (.var 3)]))), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 42)), (.call (.rule 296)), (.opt (.rule 43))], action := (some (.checkVersion (.int 8) (.str "Positional-only parameters are") (.call .make_arguments [.null, (.var 0), .null, (.var 1), (.var 2)]))), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 297)), (.call (.rule 296)), (.opt (.rule 43))], action := (some (.call .make_arguments [.null, .null, (.var 0), (.var 1), (.var 2)])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 298)), (.opt (.rule 43))], action := (some (.call .make_arguments [.null, .null, .null, (.var 0), (.var 1)])), nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 41)), (.call (.rule 304)), (.call (.rule 305)), (.opt (.rule 43))], action := (some (.checkVersion (.int 8) (.str "Positional-only parameters are") (.call .make_arguments [(.var 0), .null, (.var 1), (.var 2), (.var 3)]))), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 42)), (.call (.rule 305)), (.opt (.rule 43))], action := (some (.checkVersion (.int 8) (.str "Positional-only parameters are") (.call .make_arguments [.null, (.var 0), .null, (.var 1), (.var 2)]))), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 306)), (.call (.rule 305)), (.opt (.rule 43))], action := (some (.call .make_arguments [.null, .null, (.var 0), (.var 1), (.var 2)])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 307)), (.opt (.rule 43))], action := (some (.call .make_arguments [.null, .null, .null, (.var 0), (.var 1)])), nvars := 2, guardInvalid := false, extra := false },
   { items := [(.call (.rule 43))], action := (some (.call .make_arguments [.null, .null, .null, .null, (.var 0)])), nvars := 1, guardInvalid := false, extra := false }] }
 
 def r41 : Rule := { name := "slash_no_default", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 297)), (.call (.tok 17)), (.call (.tok 12))], action := (some (.var 0)), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 297)), (.call (.tok 17)), (.look true (.tok 8))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 306)), (.call (.tok 17)), (.call (.tok 12))], action := (some (.var 0)), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 306)), (.call (.tok 17)), (.look true (.tok 8))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false }] }
 
 def r42 : Rule := { name := "slash_with_default", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 295)), (.call (.rule 298)), (.call (.tok 17)), (.call (.tok 12))], action := (some (.call .slash_with_default [(.var 0), (.var 1)])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 295)), (.call (.rule 298)), (.call (.tok 17)), (.look true (.tok 8))], action := (some (.call .slash_with_default [(.var 0), (.var 1)])), nvars := 3, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 304)), (.call (.rule 307)), (.call (.tok 17)), (.call (.tok 12))], action := (some (.call .slash_with_default [(.var 0), (.var 1)])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 304)), (.call (.rule 307)), (.call (.tok 17)), (.look true (.tok 8))], action := (some (.call .slash_with_default [(.var 0), (.var 1)])), nvars := 3, guardInvalid := false, extra := false }] }
 
 def r43 : Rule := { name := "star_etc", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 220))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.tok 16)), (.call (.rule 45)), (.call (.rule 299)), (.opt (.rule 44))], action := (some (.call .star_etc [(.var 1), (.var 2), (.var 3)])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 16)), (.call (.rule 46)), (.call (.rule 299)), (.opt (.rule 44))], action := (some (.call .star_etc [(.var 1), (.var 2), (.var 3)])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 16)), (.call (.tok 12)), (.call (.rule 300)), (.opt (.rule 44))], action := (some (.call .star_etc [.null, (.var 2), (.var 3)])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 225))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.tok 16)), (.call (.rule 45)), (.call (.rule 308)), (.opt (.rule 44))], action := (some (.call .star_etc [(.var 1), (.var 2), (.var 3)])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 16)), (.call (.rule 46)), (.call (.rule 308)), (.opt (.rule 44))], action := (some (.call .star_etc [(.var 1), (.var 2), (.var 3)])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 16)), (.call (.tok 12)), (.call (.rule 309)), (.opt (.rule 44))], action := (some (.call .star_etc [.null, (.var 2), (.var 3)])), nvars := 4, guardInvalid := false, extra := false },
   { items := [(.call (.rule 44))], action := (some (.call .star_etc [.null, .null, (.var 0)])), nvars := 1, guardInvalid := false, extra := false }] }
 
 def r44 : Rule := { name := "kwds", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 221))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.rule 226))], action := none, nvars := 1, guardInvalid := true, extra := false },
   { items := [(.call (.tok 35)), (.call (.rule 45))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
 def r45 : Rule := { name := "param_no_default", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
@@ -241,88 +245,88 @@ def r51 : Rule := { name := "annotation", kind := .normal, memo := false, leftRe
   { items := [(.call (.tok 11)), (.call (.rule 109))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
 def r52 : Rule := { name := "star_annotation", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 11)), (.call (.rule 112))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+  { items := [(.call (.tok 11)), (.call (.rule 113))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
 def r53 : Rule := { name := "default", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 22)), (.call (.rule 109))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 219))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+  { items := [(.call (.rule 224))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
 def r54 : Rule := { name := "if_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 249))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.tok 682)), (.call (.rule 116)), (.call (.tok 11)), (.call (.rule 33)), (.call (.rule 55))], action := (some (.mk .If [(.var 1), (.var 3), (.check (.call .singleton_seq [(.var 4)])), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 682)), (.call (.rule 116)), (.call (.tok 11)), (.call (.rule 33)), (.opt (.rule 56))], action := (some (.mk .If [(.var 1), (.var 3), (.var 4), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true }] }
+  { items := [(.call (.rule 256))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.tok 700)), (.call (.rule 119)), (.call (.tok 11)), (.call (.rule 33)), (.call (.rule 55))], action := (some (.mk .If [(.var 1), (.var 3), (.check (.call .singleton_seq [(.var 4)])), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 700)), (.call (.rule 119)), (.call (.tok 11)), (.call (.rule 33)), (.opt (.rule 56))], action := (some (.mk .If [(.var 1), (.var 3), (.var 4), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true }] }
 
 def r55 : Rule := { name := "elif_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 250))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.tok 687)), (.call (.rule 116)), (.call (.tok 11)), (.call (.rule 33)), (.call (.rule 55))], action := (some (.mk .If [(.var 1), (.var 3), (.check (.call .singleton_seq [(.var 4)])), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 687)), (.call (.rule 116)), (.call (.tok 11)), (.call (.rule 33)), (.opt (.rule 56))], action := (some (.mk .If [(.var 1), (.var 3), (.var 4), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true }] }
+  { items := [(.call (.rule 257))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.tok 705)), (.call (.rule 119)), (.call (.tok 11)), (.call (.rule 33)), (.call (.rule 55))], action := (some (.mk .If [(.var 1), (.var 3), (.check (.call .singleton_seq [(.var 4)])), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 705)), (.call (.rule 119)), (.call (.tok 11)), (.call (.rule 33)), (.opt (.rule 56))], action := (some (.mk .If [(.var 1), (.var 3), (.var 4), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true }] }
 
 def r56 : Rule := { name := "else_block", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 251))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.tok 686)), (.call (.forcedTok 11 ":")), (.call (.rule 33))], action := (some (.var 2)), nvars := 3, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 258))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.tok 704)), (.call (.forcedTok 11 ":")), (.call (.rule 33))], action := (some (.var 2)), nvars := 3, guardInvalid := false, extra := false }] }
 
 def r57 : Rule := { name := "while_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 252))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.tok 689)), (.call (.rule 116)), (.call (.tok 11)), (.call (.rule 33)), (.opt (.rule 56))], action := (some (.mk .While [(.var 1), (.var 3), (.var 4), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true }] }
+  { items := [(.call (.rule 259))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.tok 707)), (.call (.rule 119)), (.call (.tok 11)), (.call (.rule 33)), (.opt (.rule 56))], action := (some (.mk .While [(.var 1), (.var 3), (.var 4), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true }] }
 
 def r58 : Rule := { name := "for_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 253))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.tok 694)), (.call (.rule 190)), (.call (.tok 695)), .cut, (.call (.rule 111)), (.call (.tok 11)), (.opt (.tok 57)), (.call (.rule 33)), (.opt (.rule 56))], action := (some (.mk .For [(.var 1), (.var 4), (.var 7), (.var 8), (.call .NEW_TYPE_COMMENT [(.var 6)]), .extra0, .extra1, .extra2, .extra3])), nvars := 9, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 698)), (.call (.tok 694)), (.call (.rule 190)), (.call (.tok 695)), .cut, (.call (.rule 111)), (.call (.tok 11)), (.opt (.tok 57)), (.call (.rule 33)), (.opt (.rule 56))], action := (some (.checkVersion (.int 5) (.str "Async for loops are") (.mk .AsyncFor [(.var 2), (.var 5), (.var 8), (.var 9), (.call .NEW_TYPE_COMMENT [(.var 7)]), .extra0, .extra1, .extra2, .extra3]))), nvars := 10, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 230))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+  { items := [(.call (.rule 260))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.tok 712)), (.call (.rule 193)), (.call (.tok 713)), .cut, (.call (.rule 112)), (.call (.tok 11)), (.opt (.tok 57)), (.call (.rule 33)), (.opt (.rule 56))], action := (some (.mk .For [(.var 1), (.var 4), (.var 7), (.var 8), (.call .NEW_TYPE_COMMENT [(.var 6)]), .extra0, .extra1, .extra2, .extra3])), nvars := 9, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 716)), (.call (.tok 712)), (.call (.rule 193)), (.call (.tok 713)), .cut, (.call (.rule 112)), (.call (.tok 11)), (.opt (.tok 57)), (.call (.rule 33)), (.opt (.rule 56))], action := (some (.checkVersion (.int 5) (.str "Async for loops are") (.mk .AsyncFor [(.var 2), (.var 5), (.var 8), (.var 9), (.call .NEW_TYPE_COMMENT [(.var 7)]), .extra0, .extra1, .extra2, .extra3]))), nvars := 10, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 235))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
 def r59 : Rule := { name := "with_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 237))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.tok 647)), (.call (.tok 7)), (.call (.rule 302)), (.opt (.tok 12)), (.call (.tok 8)), (.call (.tok 11)), (.opt (.tok 57)), (.call (.rule 33))], action := (some (.mk .With [(.var 2), (.var 7), (.call .NEW_TYPE_COMMENT [(.var 6)]), .extra0, .extra1, .extra2, .extra3])), nvars := 8, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 647)), (.call (.rule 302)), (.call (.tok 11)), (.opt (.tok 57)), (.call (.rule 33))], action := (some (.mk .With [(.var 1), (.var 4), (.call .NEW_TYPE_COMMENT [(.var 3)]), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 698)), (.call (.tok 647)), (.call (.tok 7)), (.call (.rule 302)), (.opt (.tok 12)), (.call (.tok 8)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.checkVersion (.int 5) (.str "Async with statements are") (.mk .AsyncWith [(.var 3), (.var 7), .null, .extra0, .extra1, .extra2, .extra3]))), nvars := 8, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 698)), (.call (.tok 647)), (.call (.rule 302)), (.call (.tok 11)), (.opt (.tok 57)), (.call (.rule 33))], action := (some (.checkVersion (.int 5) (.str "Async with statements are") (.mk .AsyncWith [(.var 2), (.var 5), (.call .NEW_TYPE_COMMENT [(.var 4)]), .extra0, .extra1, .extra2, .extra3]))), nvars := 6, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 236))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+  { items := [(.call (.rule 243))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.tok 665)), (.call (.tok 7)), (.call (.rule 311)), (.opt (.tok 12)), (.call (.tok 8)), (.call (.tok 11)), (.opt (.tok 57)), (.call (.rule 33))], action := (some (.mk .With [(.var 2), (.var 7), (.call .NEW_TYPE_COMMENT [(.var 6)]), .extra0, .extra1, .extra2, .extra3])), nvars := 8, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 665)), (.call (.rule 311)), (.call (.tok 11)), (.opt (.tok 57)), (.call (.rule 33))], action := (some (.mk .With [(.var 1), (.var 4), (.call .NEW_TYPE_COMMENT [(.var 3)]), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 716)), (.call (.tok 665)), (.call (.tok 7)), (.call (.rule 311)), (.opt (.tok 12)), (.call (.tok 8)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.checkVersion (.int 5) (.str "Async with statements are") (.mk .AsyncWith [(.var 3), (.var 7), .null, .extra0, .extra1, .extra2, .extra3]))), nvars := 8, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 716)), (.call (.tok 665)), (.call (.rule 311)), (.call (.tok 11)), (.opt (.tok 57)), (.call (.rule 33))], action := (some (.checkVersion (.int 5) (.str "Async with statements are") (.mk .AsyncWith [(.var 2), (.var 5), (.call .NEW_TYPE_COMMENT [(.var 4)]), .extra0, .extra1, .extra2, .extra3]))), nvars := 6, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 242))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
 def r60 : Rule := { name := "with_item", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 109)), (.call (.tok 680)), (.call (.rule 193)), (.look true (.rule 303))], action := (some (.mk .withitem_ [(.var 0), (.var 2)])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 228))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.rule 109)), (.call (.tok 698)), (.call (.rule 196)), (.look true (.rule 312))], action := (some (.mk .withitem_ [(.var 0), (.var 2)])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 233))], action := none, nvars := 1, guardInvalid := true, extra := false },
   { items := [(.call (.rule 109))], action := (some (.mk .withitem_ [(.var 0), .null])), nvars := 1, guardInvalid := false, extra := false }] }
 
 def r61 : Rule := { name := "try_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 238))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.tok 656)), (.call (.forcedTok 11 ":")), (.call (.rule 33)), (.call (.rule 64))], action := (some (.mk .Try [(.var 2), .null, .null, (.var 3), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 656)), (.call (.forcedTok 11 ":")), (.call (.rule 33)), (.call (.rule 304)), (.opt (.rule 56)), (.opt (.rule 64))], action := (some (.mk .Try [(.var 2), (.var 3), (.var 4), (.var 5), .extra0, .extra1, .extra2, .extra3])), nvars := 6, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 656)), (.call (.forcedTok 11 ":")), (.call (.rule 33)), (.call (.rule 305)), (.opt (.rule 56)), (.opt (.rule 64))], action := (some (.checkVersion (.int 11) (.str "Exception groups are") (.mk .TryStar [(.var 2), (.var 3), (.var 4), (.var 5), .extra0, .extra1, .extra2, .extra3]))), nvars := 6, guardInvalid := false, extra := true }] }
+  { items := [(.call (.rule 244))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.tok 674)), (.call (.forcedTok 11 ":")), (.call (.rule 33)), (.call (.rule 64))], action := (some (.mk .Try [(.var 2), .null, .null, (.var 3), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 674)), (.call (.forcedTok 11 ":")), (.call (.rule 33)), (.call (.rule 313)), (.opt (.rule 56)), (.opt (.rule 64))], action := (some (.mk .Try [(.var 2), (.var 3), (.var 4), (.var 5), .extra0, .extra1, .extra2, .extra3])), nvars := 6, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 674)), (.call (.forcedTok 11 ":")), (.call (.rule 33)), (.call (.rule 314)), (.opt (.rule 56)), (.opt (.rule 64))], action := (some (.checkVersion (.int 11) (.str "Exception groups are") (.mk .TryStar [(.var 2), (.var 3), (.var 4), (.var 5), .extra0, .extra1, .extra2, .extra3]))), nvars := 6, guardInvalid := false, extra := true }] }
 
 def r62 : Rule := { name := "except_block", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 242))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.tok 677)), (.call (.rule 109)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.mk .ExceptHandler [(.var 1), .null, (.var 3), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 677)), (.call (.rule 109)), (.call (.tok 680)), (.call .name), (.call (.tok 11)), (.call (.rule 33))], action := (some (.mk .ExceptHandler [(.var 1), (.field (.var 3) "id"), (.var 5), .extra0, .extra1, .extra2, .extra3])), nvars := 6, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 677)), (.call (.rule 108)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.checkVersion (.int 14) (.str "except expressions without parentheses are") (.mk .ExceptHandler [(.var 1), .null, (.var 3), .extra0, .extra1, .extra2, .extra3]))), nvars := 4, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 677)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.mk .ExceptHandler [.null, .null, (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 239))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+  { items := [(.call (.rule 248))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.tok 695)), (.call (.rule 109)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.mk .ExceptHandler [(.var 1), .null, (.var 3), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 695)), (.call (.rule 109)), (.call (.tok 698)), (.call .name), (.call (.tok 11)), (.call (.rule 33))], action := (some (.mk .ExceptHandler [(.var 1), (.field (.var 3) "id"), (.var 5), .extra0, .extra1, .extra2, .extra3])), nvars := 6, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 695)), (.call (.rule 108)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.checkVersion (.int 14) (.str "except expressions without parentheses are") (.mk .ExceptHandler [(.var 1), .null, (.var 3), .extra0, .extra1, .extra2, .extra3]))), nvars := 4, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 695)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.mk .ExceptHandler [.null, .null, (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 245))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
 def r63 : Rule := { name := "except_star_block", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 243))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.tok 677)), (.call (.tok 16)), (.call (.rule 109)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.mk .ExceptHandler [(.var 2), .null, (.var 4), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 677)), (.call (.tok 16)), (.call (.rule 109)), (.call (.tok 680)), (.call .name), (.call (.tok 11)), (.call (.rule 33))], action := (some (.mk .ExceptHandler [(.var 2), (.field (.var 4) "id"), (.var 6), .extra0, .extra1, .extra2, .extra3])), nvars := 7, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 677)), (.call (.tok 16)), (.call (.rule 108)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.checkVersion (.int 14) (.str "except expressions without parentheses are") (.mk .ExceptHandler [(.var 2), .null, (.var 4), .extra0, .extra1, .extra2, .extra3]))), nvars := 5, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 240))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+  { items := [(.call (.rule 249))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.tok 695)), (.call (.tok 16)), (.call (.rule 109)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.mk .ExceptHandler [(.var 2), .null, (.var 4), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 695)), (.call (.tok 16)), (.call (.rule 109)), (.call (.tok 698)), (.call .name), (.call (.tok 11)), (.call (.rule 33))], action := (some (.mk .ExceptHandler [(.var 2), (.field (.var 4) "id"), (.var 6), .extra0, .extra1, .extra2, .extra3])), nvars := 7, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 695)), (.call (.tok 16)), (.call (.rule 108)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.checkVersion (.int 14) (.str "except expressions without parentheses are") (.mk .ExceptHandler [(.var 2), .null, (.var 4), .extra0, .extra1, .extra2, .extra3]))), nvars := 5, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 246))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
 def r64 : Rule := { name := "finally_block", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 241))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.tok 673)), (.call (.forcedTok 11 ":")), (.call (.rule 33))], action := (some (.var 2)), nvars := 3, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 247))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.tok 691)), (.call (.forcedTok 11 ":")), (.call (.rule 33))], action := (some (.var 2)), nvars := 3, guardInvalid := false, extra := false }] }
 
 def r65 : Rule := { name := "match_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.softKw [109, 97, 116, 99, 104])), (.call (.rule 66)), (.call (.tok 11)), (.call (.tok 4)), (.call (.tok 5)), (.call (.rule 306)), (.call (.tok 6))], action := (some (.checkVersion (.int 10) (.str "Pattern matching is") (.mk .Match [(.var 1), (.var 5), .extra0, .extra1, .extra2, .extra3]))), nvars := 7, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 244))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+  { items := [(.call (.softKw [109, 97, 116, 99, 104])), (.call (.rule 66)), (.call (.tok 11)), (.call (.tok 4)), (.call (.tok 5)), (.call (.rule 315)), (.call (.tok 6))], action := (some (.checkVersion (.int 10) (.str "Pattern matching is") (.mk .Match [(.var 1), (.var 5), .extra0, .extra1, .extra2, .extra3]))), nvars := 7, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 250))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
 def r66 : Rule := { name := "subject_expr", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 114)), (.call (.tok 12)), (.opt (.rule 113))], action := (some (.mk .Tuple [(.check (.call .seq_insert_in_front [(.var 0), (.var 2)])), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 116))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 116)), (.call (.tok 12)), (.opt (.rule 114))], action := (some (.mk .Tuple [(.check (.call .seq_insert_in_front [(.var 0), (.var 2)])), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 119))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
 def r67 : Rule := { name := "case_block", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 245))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.rule 251))], action := none, nvars := 1, guardInvalid := true, extra := false },
   { items := [(.call (.softKw [99, 97, 115, 101])), (.call (.rule 69)), (.opt (.rule 68)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.mk .match_case_ [(.var 1), (.var 2), (.var 4)])), nvars := 5, guardInvalid := false, extra := false }] }
 
 def r68 : Rule := { name := "guard", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 682)), (.call (.rule 116))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+  { items := [(.call (.tok 700)), (.call (.rule 119))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
 def r69 : Rule := { name := "patterns", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
   { items := [(.call (.rule 89))], action := (some (.mk .MatchSequence [(.var 0), .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
@@ -333,11 +337,11 @@ def r70 : Rule := { name := "pattern", kind := .normal, memo := false, leftRec :
   { items := [(.call (.rule 72))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
 def r71 : Rule := { name := "as_pattern", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 72)), (.call (.tok 680)), (.call (.rule 82))], action := (some (.mk .MatchAs [(.var 0), (.field (.var 2) "id"), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 246))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+  { items := [(.call (.rule 72)), (.call (.tok 698)), (.call (.rule 82))], action := (some (.mk .MatchAs [(.var 0), (.field (.var 2) "id"), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 252))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
 def r72 : Rule := { name := "or_pattern", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 308))], action := (some (.ite (.eq (.call .asdl_seq_LEN [(.var 0)]) (.int 1)) (.call .asdl_seq_GET [(.var 0), (.int 0)]) (.mk .MatchOr [(.var 0), .extra0, .extra1, .extra2, .extra3]))), nvars := 1, guardInvalid := false, extra := true }] }
+  { items := [(.call (.rule 317))], action := (some (.ite (.eq (.call .asdl_seq_LEN [(.var 0)]) (.int 1)) (.call .asdl_seq_GET [(.var 0), (.int 0)]) (.mk .MatchOr [(.var 0), .extra0, .extra1, .extra2, .extra3]))), nvars := 1, guardInvalid := false, extra := true }] }
 
 def r73 : Rule := { name := "closed_pattern", kind := .normal, memo := true, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 74))], action := none, nvars := 1, guardInvalid := false, extra := false },
@@ -350,20 +354,20 @@ def r73 : Rule := { name := "closed_pattern", kind := .normal, memo := true, lef
   { items := [(.call (.rule 97))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
 def r74 : Rule := { name := "literal_pattern", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 77)), (.look false (.rule 309))], action := (some (.mk .MatchValue [(.var 0), .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 77)), (.look false (.rule 318))], action := (some (.mk .MatchValue [(.var 0), .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
   { items := [(.call (.rule 76))], action := (some (.mk .MatchValue [(.var 0), .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 170))], action := (some (.mk .MatchValue [(.var 0), .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 623))], action := (some (.mk .MatchSingleton [.pyNone, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 622))], action := (some (.mk .MatchSingleton [.pyTrue, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 624))], action := (some (.mk .MatchSingleton [.pyFalse, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
+  { items := [(.call (.rule 173))], action := (some (.mk .MatchValue [(.var 0), .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 628))], action := (some (.mk .MatchSingleton [.pyNone, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 627))], action := (some (.mk .MatchSingleton [.pyTrue, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 629))], action := (some (.mk .MatchSingleton [.pyFalse, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
 
 def r75 : Rule := { name := "literal_expr", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 77)), (.look false (.rule 309))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 77)), (.look false (.rule 318))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.rule 76))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.rule 310)), (.call (.rule 170))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 623))], action := (some (.mk .Constant [.pyNone, .null, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 622))], action := (some (.mk .Constant [.pyTrue, .null, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 624))], action := (some (.mk .Constant [.pyFalse, .null, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
+  { items := [(.look true (.rule 319)), (.call (.rule 173))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 628))], action := (some (.mk .Constant [.pyNone, .null, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 627))], action := (some (.mk .Constant [.pyTrue, .null, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 629))], action := (some (.mk .Constant [.pyFalse, .null, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
 
 def r76 : Rule := { name := "complex_number", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
   { items := [(.call (.rule 78)), (.call (.tok 14)), (.call (.rule 80))], action := (some (.mk .BinOp [(.var 0), (.ctor .Add), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
@@ -371,10 +375,12 @@ def r76 : Rule := { name := "complex_number", kind := .normal, memo := false, le
 
 def r77 : Rule := { name := "signed_number", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
   { items := [(.call .number)], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 14)), (.call .number)], action := (some (.mk .UnaryOp [(.ctor .UAdd), (.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
   { items := [(.call (.tok 15)), (.call .number)], action := (some (.mk .UnaryOp [(.ctor .USub), (.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
 
 def r78 : Rule := { name := "signed_real_number", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
   { items := [(.call (.rule 79))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 14)), (.call (.rule 79))], action := (some (.mk .UnaryOp [(.ctor .UAdd), (.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
   { items := [(.call (.tok 15)), (.call (.rule 79))], action := (some (.mk .UnaryOp [(.ctor .USub), (.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
 
 def r79 : Rule := { name := "real_number", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
@@ -387,13 +393,13 @@ def r81 : Rule := { name := "capture_pattern", kind := .normal, memo := false, l
   { items := [(.call (.rule 82))], action := (some (.mk .MatchAs [.null, (.field (.var 0) "id"), .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
 
 def r82 : Rule := { name := "pattern_capture_target", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.look false (.softKw [95])), (.call .name), (.look false (.rule 311))], action := (some (.call .set_expr_context [(.var 0), (.ctor .Store)])), nvars := 1, guardInvalid := false, extra := false }] }
+  { items := [(.look false (.softKw [95])), (.call .name), (.look false (.rule 320))], action := (some (.call .set_expr_context [(.var 0), (.ctor .Store)])), nvars := 1, guardInvalid := false, extra := false }] }
 
 def r83 : Rule := { name := "wildcard_pattern", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
   { items := [(.call (.softKw [95]))], action := (some (.mk .MatchAs [.null, .null, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
 
 def r84 : Rule := { name := "value_pattern", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 85)), (.look false (.rule 311))], action := (some (.mk .MatchValue [(.var 0), .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
+  { items := [(.call (.rule 85)), (.look false (.rule 320))], action := (some (.mk .MatchValue [(.var 0), .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
 
 def r85 : Rule := { name := "attr", kind := .normal, memo := false, leftRec := true, leader := true, extra := true, withoutInvalid := false, alts := [
   { items := [(.call (.rule 86)), (.call (.tok 23)), (.call .name)], action := (some (.mk .Attribute [(.var 0), (.field (.var 2) "id"), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true }] }
@@ -413,7 +419,7 @@ def r89 : Rule := { name := "open_sequence_pattern", kind := .normal, memo := fa
   { items := [(.call (.rule 91)), (.call (.tok 12)), (.opt (.rule 90))], action := (some (.call .seq_insert_in_front [(.var 0), (.var 2)])), nvars := 3, guardInvalid := false, extra := false }] }
 
 def r90 : Rule := { name := "maybe_sequence_pattern", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 313)), (.opt (.tok 12))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 322)), (.opt (.tok 12))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false }] }
 
 def r91 : Rule := { name := "maybe_star_pattern", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 92))], action := none, nvars := 1, guardInvalid := false, extra := false },
@@ -427,13 +433,14 @@ def r93 : Rule := { name := "mapping_pattern", kind := .normal, memo := false, l
   { items := [(.call (.tok 25)), (.call (.tok 26))], action := (some (.mk .MatchMapping [.null, .null, .null, .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
   { items := [(.call (.tok 25)), (.call (.rule 96)), (.opt (.tok 12)), (.call (.tok 26))], action := (some (.mk .MatchMapping [.null, .null, (.field (.var 1) "id"), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
   { items := [(.call (.tok 25)), (.call (.rule 94)), (.call (.tok 12)), (.call (.rule 96)), (.opt (.tok 12)), (.call (.tok 26))], action := (some (.mk .MatchMapping [(.check (.call .get_pattern_keys [(.var 1)])), (.check (.call .get_patterns [(.var 1)])), (.field (.var 3) "id"), .extra0, .extra1, .extra2, .extra3])), nvars := 6, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 25)), (.call (.rule 94)), (.opt (.tok 12)), (.call (.tok 26))], action := (some (.mk .MatchMapping [(.check (.call .get_pattern_keys [(.var 1)])), (.check (.call .get_patterns [(.var 1)])), .null, .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true }] }
+  { items := [(.call (.tok 25)), (.call (.rule 94)), (.opt (.tok 12)), (.call (.tok 26))], action := (some (.mk .MatchMapping [(.check (.call .get_pattern_keys [(.var 1)])), (.check (.call .get_patterns [(.var 1)])), .null, .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 254))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
 def r94 : Rule := { name := "items_pattern", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 315))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 324))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
 def r95 : Rule := { name := "key_value_pattern", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 316)), (.call (.tok 11)), (.call (.rule 70))], action := (some (.call .key_pattern_pair [(.var 0), (.var 2)])), nvars := 3, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 325)), (.call (.tok 11)), (.call (.rule 70))], action := (some (.call .key_pattern_pair [(.var 0), (.var 2)])), nvars := 3, guardInvalid := false, extra := false }] }
 
 def r96 : Rule := { name := "double_star_pattern", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 35)), (.call (.rule 82))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
@@ -443,13 +450,13 @@ def r97 : Rule := { name := "class_pattern", kind := .normal, memo := false, lef
   { items := [(.call (.rule 86)), (.call (.tok 7)), (.call (.rule 98)), (.opt (.tok 12)), (.call (.tok 8))], action := (some (.mk .MatchClass [(.var 0), (.var 2), .null, .null, .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true },
   { items := [(.call (.rule 86)), (.call (.tok 7)), (.call (.rule 99)), (.opt (.tok 12)), (.call (.tok 8))], action := (some (.mk .MatchClass [(.var 0), .null, (.check (.call .map_names_to_ids [(.check (.call .get_pattern_keys [(.var 2)]))])), (.check (.call .get_patterns [(.var 2)])), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true },
   { items := [(.call (.rule 86)), (.call (.tok 7)), (.call (.rule 98)), (.call (.tok 12)), (.call (.rule 99)), (.opt (.tok 12)), (.call (.tok 8))], action := (some (.mk .MatchClass [(.var 0), (.var 2), (.check (.call .map_names_to_ids [(.check (.call .get_pattern_keys [(.var 4)]))])), (.check (.call .get_patterns [(.var 4)])), .extra0, .extra1, .extra2, .extra3])), nvars := 7, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 247))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+  { items := [(.call (.rule 253))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
 def r98 : Rule := { name := "positional_patterns", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 318))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 327))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false }] }
 
 def r99 : Rule := { name := "keyword_patterns", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 320))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 329))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
 def r100 : Rule := { name := "keyword_pattern", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call .name), (.call (.tok 22)), (.call (.rule 70))], action := (some (.call .key_pattern_pair [(.var 0), (.var 2)])), nvars := 3, guardInvalid := false, extra := false }] }
@@ -458,15 +465,15 @@ def r101 : Rule := { name := "type_alias", kind := .normal, memo := false, leftR
   { items := [(.call (.softKw [116, 121, 112, 101])), (.call .name), (.opt (.rule 102)), (.call (.tok 22)), (.call (.rule 109))], action := (some (.checkVersion (.int 12) (.str "Type statement is") (.mk .TypeAlias [(.check (.call .set_expr_context [(.var 1), (.ctor .Store)])), (.var 2), (.var 4), .extra0, .extra1, .extra2, .extra3]))), nvars := 5, guardInvalid := false, extra := true }] }
 
 def r102 : Rule := { name := "type_params", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 267))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.rule 276))], action := none, nvars := 1, guardInvalid := true, extra := false },
   { items := [(.call (.tok 9)), (.call (.rule 103)), (.call (.tok 10))], action := (some (.checkVersion (.int 12) (.str "Type parameter lists are") (.var 1))), nvars := 3, guardInvalid := false, extra := false }] }
 
 def r103 : Rule := { name := "type_param_seq", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 322)), (.opt (.tok 12))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 331)), (.opt (.tok 12))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false }] }
 
 def r104 : Rule := { name := "type_param", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
   { items := [(.call .name), (.opt (.rule 105)), (.opt (.rule 106))], action := (some (.mk .TypeVar [(.field (.var 0) "id"), (.var 1), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 209))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.rule 212))], action := none, nvars := 1, guardInvalid := true, extra := false },
   { items := [(.call (.tok 16)), (.call .name), (.opt (.rule 107))], action := (some (.mk .TypeVarTuple [(.field (.var 1) "id"), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
   { items := [(.call (.tok 35)), (.call .name), (.opt (.rule 106))], action := (some (.mk .ParamSpec [(.field (.var 1) "id"), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true }] }
 
@@ -477,1249 +484,1304 @@ def r106 : Rule := { name := "type_param_default", kind := .normal, memo := fals
   { items := [(.call (.tok 22)), (.call (.rule 109))], action := (some (.checkVersion (.int 13) (.str "Type parameter defaults are") (.var 1))), nvars := 2, guardInvalid := false, extra := false }] }
 
 def r107 : Rule := { name := "type_param_starred_default", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 22)), (.call (.rule 112))], action := (some (.checkVersion (.int 13) (.str "Type parameter defaults are") (.var 1))), nvars := 2, guardInvalid := false, extra := false }] }
+  { items := [(.call (.tok 22)), (.call (.rule 113))], action := (some (.checkVersion (.int 13) (.str "Type parameter defaults are") (.var 1))), nvars := 2, guardInvalid := false, extra := false }] }
 
 def r108 : Rule := { name := "expressions", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 109)), (.call (.rule 323)), (.opt (.tok 12))], action := (some (.mk .Tuple [(.check (.call .seq_insert_in_front [(.var 0), (.var 1)])), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 109)), (.call (.rule 332)), (.opt (.tok 12))], action := (some (.mk .Tuple [(.check (.call .seq_insert_in_front [(.var 0), (.var 1)])), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
   { items := [(.call (.rule 109)), (.call (.tok 12))], action := (some (.mk .Tuple [(.check (.call .singleton_seq [(.var 0)])), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
   { items := [(.call (.rule 109))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r109 : Rule := { name := "expression", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 210))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.rule 208))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.rule 117)), (.call (.tok 682)), (.call (.rule 117)), (.call (.tok 686)), (.call (.rule 109))], action := (some (.mk .IfExp [(.var 2), (.var 0), (.var 4), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 117))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 146))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r109 : Rule := { name := "expression", kind := .normal, memo := true, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 214))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.rule 213))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.rule 211))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.rule 110))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 120))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 149))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r110 : Rule := { name := "yield_expr", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 587)), (.call (.tok 633)), (.call (.rule 109))], action := (some (.mk .YieldFrom [(.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 587)), (.opt (.rule 111))], action := (some (.mk .Yield [(.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
+def r110 : Rule := { name := "if_expression", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 120)), (.call (.tok 700)), (.call (.rule 120)), (.call (.tok 704)), (.call (.rule 109))], action := (some (.mk .IfExp [(.var 2), (.var 0), (.var 4), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true }] }
 
-def r111 : Rule := { name := "star_expressions", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 112)), (.call (.rule 324)), (.opt (.tok 12))], action := (some (.mk .Tuple [(.check (.call .seq_insert_in_front [(.var 0), (.var 1)])), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 112)), (.call (.tok 12))], action := (some (.mk .Tuple [(.check (.call .singleton_seq [(.var 0)])), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 112))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r111 : Rule := { name := "yield_expr", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 588)), (.call (.tok 650)), (.call (.rule 109))], action := (some (.mk .YieldFrom [(.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 588)), (.opt (.rule 112))], action := (some (.mk .Yield [(.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
 
-def r112 : Rule := { name := "star_expression", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 16)), (.call (.rule 132))], action := (some (.mk .Starred [(.var 1), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
+def r112 : Rule := { name := "star_expressions", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 113)), (.call (.rule 333)), (.opt (.tok 12))], action := (some (.mk .Tuple [(.check (.call .seq_insert_in_front [(.var 0), (.var 1)])), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 113)), (.call (.tok 12))], action := (some (.mk .Tuple [(.check (.call .singleton_seq [(.var 0)])), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 113))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+
+def r113 : Rule := { name := "star_expression", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 16)), (.call (.rule 135))], action := (some (.mk .Starred [(.var 1), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
   { items := [(.call (.rule 109))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r113 : Rule := { name := "star_named_expressions", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 326)), (.opt (.tok 12))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false }] }
+def r114 : Rule := { name := "star_named_expressions", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 335)), (.opt (.tok 12))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r114 : Rule := { name := "star_named_expression", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 16)), (.call (.rule 132))], action := (some (.mk .Starred [(.var 1), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 116))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r115 : Rule := { name := "star_named_expressions_sequence", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 337)), (.opt (.tok 12))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r115 : Rule := { name := "assignment_expression", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call .name), (.call (.tok 53)), .cut, (.call (.rule 109))], action := (some (.checkVersion (.int 8) (.str "Assignment expressions are") (.mk .NamedExpr [(.check (.call .set_expr_context [(.var 0), (.ctor .Store)])), (.var 3), .extra0, .extra1, .extra2, .extra3]))), nvars := 4, guardInvalid := false, extra := true }] }
-
-def r116 : Rule := { name := "named_expression", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 115))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 211))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.rule 109)), (.look false (.tok 53))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
-
-def r117 : Rule := { name := "disjunction", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 118)), (.call (.rule 327))], action := (some (.mk .BoolOp [(.ctor .Or), (.check (.call .seq_insert_in_front [(.var 0), (.var 1)])), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 118))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
-
-def r118 : Rule := { name := "conjunction", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 119)), (.call (.rule 328))], action := (some (.mk .BoolOp [(.ctor .And), (.check (.call .seq_insert_in_front [(.var 0), (.var 1)])), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
+def r116 : Rule := { name := "star_named_expression", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 16)), (.call (.rule 135))], action := (some (.mk .Starred [(.var 1), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
   { items := [(.call (.rule 119))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r119 : Rule := { name := "inversion", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 703)), (.call (.rule 119))], action := (some (.mk .UnaryOp [(.ctor .Not), (.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 120))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r117 : Rule := { name := "star_named_expression_sequence", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 267))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.rule 116))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r120 : Rule := { name := "comparison", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 132)), (.call (.rule 329))], action := (some (.mk .Compare [(.var 0), (.check (.call .get_cmpops [(.var 1)])), (.check (.call .get_exprs [(.var 1)])), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 132))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r118 : Rule := { name := "assignment_expression", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call .name), (.call (.tok 53)), .cut, (.call (.rule 109))], action := (some (.checkVersion (.int 8) (.str "Assignment expressions are") (.mk .NamedExpr [(.check (.call .set_expr_context [(.var 0), (.ctor .Store)])), (.var 3), .extra0, .extra1, .extra2, .extra3]))), nvars := 4, guardInvalid := false, extra := true }] }
 
-def r121 : Rule := { name := "compare_op_bitwise_or_pair", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 122))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 123))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 124))], action := none, nvars := 1, guardInvalid := false, extra := false },
+def r119 : Rule := { name := "named_expression", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 118))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 215))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.rule 109)), (.look false (.tok 53))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+
+def r120 : Rule := { name := "disjunction", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 121)), (.call (.rule 338))], action := (some (.mk .BoolOp [(.ctor .Or), (.check (.call .seq_insert_in_front [(.var 0), (.var 1)])), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 121))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+
+def r121 : Rule := { name := "conjunction", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 122)), (.call (.rule 339))], action := (some (.mk .BoolOp [(.ctor .And), (.check (.call .seq_insert_in_front [(.var 0), (.var 1)])), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 122))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+
+def r122 : Rule := { name := "inversion", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 721)), (.call (.rule 122))], action := (some (.mk .UnaryOp [(.ctor .Not), (.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 123))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+
+def r123 : Rule := { name := "comparison", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 135)), (.call (.rule 340))], action := (some (.mk .Compare [(.var 0), (.check (.call .get_cmpops [(.var 1)])), (.check (.call .get_exprs [(.var 1)])), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 135))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+
+def r124 : Rule := { name := "compare_op_bitwise_or_pair", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 125))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.rule 126))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.rule 127))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 277))], action := none, nvars := 1, guardInvalid := true, extra := false },
   { items := [(.call (.rule 128))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.rule 129))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.rule 130))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 131))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
-
-def r122 : Rule := { name := "eq_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 27)), (.call (.rule 132))], action := (some (.call .cmpop_expr_pair [(.ctor .Eq), (.var 1)])), nvars := 2, guardInvalid := false, extra := false }] }
-
-def r123 : Rule := { name := "noteq_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 330)), (.call (.rule 132))], action := (some (.call .cmpop_expr_pair [(.ctor .NotEq), (.var 1)])), nvars := 2, guardInvalid := false, extra := false }] }
-
-def r124 : Rule := { name := "lte_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 29)), (.call (.rule 132))], action := (some (.call .cmpop_expr_pair [(.ctor .LtE), (.var 1)])), nvars := 2, guardInvalid := false, extra := false }] }
-
-def r125 : Rule := { name := "lt_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 20)), (.call (.rule 132))], action := (some (.call .cmpop_expr_pair [(.ctor .Lt), (.var 1)])), nvars := 2, guardInvalid := false, extra := false }] }
-
-def r126 : Rule := { name := "gte_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 30)), (.call (.rule 132))], action := (some (.call .cmpop_expr_pair [(.ctor .GtE), (.var 1)])), nvars := 2, guardInvalid := false, extra := false }] }
-
-def r127 : Rule := { name := "gt_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 21)), (.call (.rule 132))], action := (some (.call .cmpop_expr_pair [(.ctor .Gt), (.var 1)])), nvars := 2, guardInvalid := false, extra := false }] }
-
-def r128 : Rule := { name := "notin_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 703)), (.call (.tok 695)), (.call (.rule 132))], action := (some (.call .cmpop_expr_pair [(.ctor .NotIn), (.var 2)])), nvars := 3, guardInvalid := false, extra := false }] }
-
-def r129 : Rule := { name := "in_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 695)), (.call (.rule 132))], action := (some (.call .cmpop_expr_pair [(.ctor .In), (.var 1)])), nvars := 2, guardInvalid := false, extra := false }] }
-
-def r130 : Rule := { name := "isnot_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 596)), (.call (.tok 703)), (.call (.rule 132))], action := (some (.call .cmpop_expr_pair [(.ctor .IsNot), (.var 2)])), nvars := 3, guardInvalid := false, extra := false }] }
-
-def r131 : Rule := { name := "is_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 596)), (.call (.rule 132))], action := (some (.call .cmpop_expr_pair [(.ctor .Is), (.var 1)])), nvars := 2, guardInvalid := false, extra := false }] }
-
-def r132 : Rule := { name := "bitwise_or", kind := .normal, memo := false, leftRec := true, leader := true, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 132)), (.call (.tok 18)), (.call (.rule 133))], action := (some (.mk .BinOp [(.var 0), (.ctor .BitOr), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 133))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
-
-def r133 : Rule := { name := "bitwise_xor", kind := .normal, memo := false, leftRec := true, leader := true, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 133)), (.call (.tok 32)), (.call (.rule 134))], action := (some (.mk .BinOp [(.var 0), (.ctor .BitXor), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 131))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 132))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 133))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.rule 134))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r134 : Rule := { name := "bitwise_and", kind := .normal, memo := false, leftRec := true, leader := true, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 134)), (.call (.tok 19)), (.call (.rule 135))], action := (some (.mk .BinOp [(.var 0), (.ctor .BitAnd), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 135))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r125 : Rule := { name := "eq_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 27)), (.call (.rule 135))], action := (some (.call .cmpop_expr_pair [(.ctor .Eq), (.var 1)])), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r135 : Rule := { name := "shift_expr", kind := .normal, memo := false, leftRec := true, leader := true, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 135)), (.call (.tok 33)), (.call (.rule 136))], action := (some (.mk .BinOp [(.var 0), (.ctor .LShift), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 135)), (.call (.tok 34)), (.call (.rule 136))], action := (some (.mk .BinOp [(.var 0), (.ctor .RShift), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 265))], action := none, nvars := 1, guardInvalid := true, extra := false },
+def r126 : Rule := { name := "noteq_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 341)), (.call (.rule 135))], action := (some (.call .cmpop_expr_pair [(.ctor .NotEq), (.var 1)])), nvars := 2, guardInvalid := false, extra := false }] }
+
+def r127 : Rule := { name := "lte_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 29)), (.call (.rule 135))], action := (some (.call .cmpop_expr_pair [(.ctor .LtE), (.var 1)])), nvars := 2, guardInvalid := false, extra := false }] }
+
+def r128 : Rule := { name := "lt_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 20)), (.call (.rule 135))], action := (some (.call .cmpop_expr_pair [(.ctor .Lt), (.var 1)])), nvars := 2, guardInvalid := false, extra := false }] }
+
+def r129 : Rule := { name := "gte_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 30)), (.call (.rule 135))], action := (some (.call .cmpop_expr_pair [(.ctor .GtE), (.var 1)])), nvars := 2, guardInvalid := false, extra := false }] }
+
+def r130 : Rule := { name := "gt_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 21)), (.call (.rule 135))], action := (some (.call .cmpop_expr_pair [(.ctor .Gt), (.var 1)])), nvars := 2, guardInvalid := false, extra := false }] }
+
+def r131 : Rule := { name := "notin_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 721)), (.call (.tok 713)), (.call (.rule 135))], action := (some (.call .cmpop_expr_pair [(.ctor .NotIn), (.var 2)])), nvars := 3, guardInvalid := false, extra := false }] }
+
+def r132 : Rule := { name := "in_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 713)), (.call (.rule 135))], action := (some (.call .cmpop_expr_pair [(.ctor .In), (.var 1)])), nvars := 2, guardInvalid := false, extra := false }] }
+
+def r133 : Rule := { name := "isnot_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 597)), (.call (.tok 721)), (.call (.rule 135))], action := (some (.call .cmpop_expr_pair [(.ctor .IsNot), (.var 2)])), nvars := 3, guardInvalid := false, extra := false }] }
+
+def r134 : Rule := { name := "is_bitwise_or", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 597)), (.call (.rule 135))], action := (some (.call .cmpop_expr_pair [(.ctor .Is), (.var 1)])), nvars := 2, guardInvalid := false, extra := false }] }
+
+def r135 : Rule := { name := "bitwise_or", kind := .normal, memo := false, leftRec := true, leader := true, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 135)), (.call (.tok 18)), (.call (.rule 136))], action := (some (.mk .BinOp [(.var 0), (.ctor .BitOr), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
   { items := [(.call (.rule 136))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r136 : Rule := { name := "sum", kind := .normal, memo := false, leftRec := true, leader := true, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 136)), (.call (.tok 14)), (.call (.rule 137))], action := (some (.mk .BinOp [(.var 0), (.ctor .Add), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 136)), (.call (.tok 15)), (.call (.rule 137))], action := (some (.mk .BinOp [(.var 0), (.ctor .Sub), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+def r136 : Rule := { name := "bitwise_xor", kind := .normal, memo := false, leftRec := true, leader := true, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 136)), (.call (.tok 32)), (.call (.rule 137))], action := (some (.mk .BinOp [(.var 0), (.ctor .BitXor), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
   { items := [(.call (.rule 137))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r137 : Rule := { name := "term", kind := .normal, memo := false, leftRec := true, leader := true, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 137)), (.call (.tok 16)), (.call (.rule 138))], action := (some (.mk .BinOp [(.var 0), (.ctor .Mult), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 137)), (.call (.tok 17)), (.call (.rule 138))], action := (some (.mk .BinOp [(.var 0), (.ctor .Div), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 137)), (.call (.tok 47)), (.call (.rule 138))], action := (some (.mk .BinOp [(.var 0), (.ctor .FloorDiv), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 137)), (.call (.tok 24)), (.call (.rule 138))], action := (some (.mk .BinOp [(.var 0), (.ctor .Mod), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 137)), (.call (.tok 49)), (.call (.rule 138))], action := (some (.checkVersion (.int 5) (.str "The '@' operator is") (.mk .BinOp [(.var 0), (.ctor .MatMult), (.var 2), .extra0, .extra1, .extra2, .extra3]))), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 266))], action := none, nvars := 1, guardInvalid := true, extra := false },
+def r137 : Rule := { name := "bitwise_and", kind := .normal, memo := false, leftRec := true, leader := true, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 137)), (.call (.tok 19)), (.call (.rule 138))], action := (some (.mk .BinOp [(.var 0), (.ctor .BitAnd), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
   { items := [(.call (.rule 138))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r138 : Rule := { name := "factor", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 14)), (.call (.rule 138))], action := (some (.mk .UnaryOp [(.ctor .UAdd), (.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 15)), (.call (.rule 138))], action := (some (.mk .UnaryOp [(.ctor .USub), (.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 31)), (.call (.rule 138))], action := (some (.mk .UnaryOp [(.ctor .Invert), (.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
+def r138 : Rule := { name := "shift_expr", kind := .normal, memo := false, leftRec := true, leader := true, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 138)), (.call (.tok 33)), (.call (.rule 139))], action := (some (.mk .BinOp [(.var 0), (.ctor .LShift), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 138)), (.call (.tok 34)), (.call (.rule 139))], action := (some (.mk .BinOp [(.var 0), (.ctor .RShift), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 274))], action := none, nvars := 1, guardInvalid := true, extra := false },
   { items := [(.call (.rule 139))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r139 : Rule := { name := "power", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 140)), (.call (.tok 35)), (.call (.rule 138))], action := (some (.mk .BinOp [(.var 0), (.ctor .Pow), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+def r139 : Rule := { name := "sum", kind := .normal, memo := false, leftRec := true, leader := true, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 139)), (.call (.tok 14)), (.call (.rule 140))], action := (some (.mk .BinOp [(.var 0), (.ctor .Add), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 139)), (.call (.tok 15)), (.call (.rule 140))], action := (some (.mk .BinOp [(.var 0), (.ctor .Sub), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
   { items := [(.call (.rule 140))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r140 : Rule := { name := "await_primary", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 597)), (.call (.rule 141))], action := (some (.checkVersion (.int 5) (.str "Await expressions are") (.mk .Await [(.var 1), .extra0, .extra1, .extra2, .extra3]))), nvars := 2, guardInvalid := false, extra := true },
+def r140 : Rule := { name := "term", kind := .normal, memo := false, leftRec := true, leader := true, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 140)), (.call (.tok 16)), (.call (.rule 141))], action := (some (.mk .BinOp [(.var 0), (.ctor .Mult), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 140)), (.call (.tok 17)), (.call (.rule 141))], action := (some (.mk .BinOp [(.var 0), (.ctor .Div), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 140)), (.call (.tok 47)), (.call (.rule 141))], action := (some (.mk .BinOp [(.var 0), (.ctor .FloorDiv), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 140)), (.call (.tok 24)), (.call (.rule 141))], action := (some (.mk .BinOp [(.var 0), (.ctor .Mod), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 140)), (.call (.tok 49)), (.call (.rule 141))], action := (some (.checkVersion (.int 5) (.str "The '@' operator is") (.mk .BinOp [(.var 0), (.ctor .MatMult), (.var 2), .extra0, .extra1, .extra2, .extra3]))), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 275))], action := none, nvars := 1, guardInvalid := true, extra := false },
   { items := [(.call (.rule 141))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r141 : Rule := { name := "primary", kind := .normal, memo := false, leftRec := true, leader := true, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 141)), (.call (.tok 23)), (.call .name)], action := (some (.mk .Attribute [(.var 0), (.field (.var 2) "id"), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 141)), (.call (.rule 182))], action := (some (.mk .Call [(.var 0), (.check (.call .singleton_seq [(.var 1)])), .null, .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 141)), (.call (.tok 7)), (.opt (.rule 184)), (.call (.tok 8))], action := (some (.mk .Call [(.var 0), (.ite (.var 2) (.field (.var 2) "args") .null), (.ite (.var 2) (.field (.var 2) "keywords") .null), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 141)), (.call (.tok 9)), (.call (.rule 142)), (.call (.tok 10))], action := (some (.mk .Subscript [(.var 0), (.var 2), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
+def r141 : Rule := { name := "factor", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 14)), (.call (.rule 141))], action := (some (.mk .UnaryOp [(.ctor .UAdd), (.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 15)), (.call (.rule 141))], action := (some (.mk .UnaryOp [(.ctor .USub), (.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 31)), (.call (.rule 141))], action := (some (.mk .UnaryOp [(.ctor .Invert), (.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 142))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+
+def r142 : Rule := { name := "power", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 143)), (.call (.tok 35)), (.call (.rule 141))], action := (some (.mk .BinOp [(.var 0), (.ctor .Pow), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 143))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+
+def r143 : Rule := { name := "await_primary", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 598)), (.call (.rule 144))], action := (some (.checkVersion (.int 5) (.str "Await expressions are") (.mk .Await [(.var 1), .extra0, .extra1, .extra2, .extra3]))), nvars := 2, guardInvalid := false, extra := true },
   { items := [(.call (.rule 144))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r142 : Rule := { name := "slices", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 143)), (.look false (.tok 12))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 332)), (.opt (.tok 12))], action := (some (.mk .Tuple [(.var 0), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
+def r144 : Rule := { name := "primary", kind := .normal, memo := false, leftRec := true, leader := true, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 144)), (.call (.tok 23)), (.call .name)], action := (some (.mk .Attribute [(.var 0), (.field (.var 2) "id"), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 144)), (.call (.rule 185))], action := (some (.mk .Call [(.var 0), (.check (.call .singleton_seq [(.var 1)])), .null, .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 144)), (.call (.tok 7)), (.opt (.rule 187)), (.call (.tok 8))], action := (some (.mk .Call [(.var 0), (.ite (.var 2) (.field (.var 2) "args") .null), (.ite (.var 2) (.field (.var 2) "keywords") .null), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 144)), (.call (.tok 9)), (.call (.rule 145)), (.call (.tok 10))], action := (some (.mk .Subscript [(.var 0), (.var 2), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 147))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r143 : Rule := { name := "slice", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.opt (.rule 109)), (.call (.tok 11)), (.opt (.rule 109)), (.opt (.rule 333))], action := (some (.mk .Slice [(.var 0), (.var 2), (.var 3), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 116))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false }] }
+def r145 : Rule := { name := "slices", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 146)), (.look false (.tok 12))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 343)), (.opt (.tok 12))], action := (some (.mk .Tuple [(.var 0), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
 
-def r144 : Rule := { name := "atom", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+def r146 : Rule := { name := "slice", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.opt (.rule 109)), (.call (.tok 11)), (.opt (.rule 109)), (.opt (.rule 344))], action := (some (.mk .Slice [(.var 0), (.var 2), (.var 3), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 119))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false }] }
+
+def r147 : Rule := { name := "atom", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
   { items := [(.call .name)], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 622))], action := (some (.mk .Constant [.pyTrue, .null, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 624))], action := (some (.mk .Constant [.pyFalse, .null, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 623))], action := (some (.mk .Constant [.pyNone, .null, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
-  { items := [(.look true (.rule 310)), (.call (.rule 170))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 627))], action := (some (.mk .Constant [.pyTrue, .null, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 629))], action := (some (.mk .Constant [.pyFalse, .null, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 628))], action := (some (.mk .Constant [.pyNone, .null, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
+  { items := [(.look true (.rule 319)), (.call (.rule 173))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call .number)], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.tok 7)), (.call (.rule 334))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.tok 9)), (.call (.rule 335))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.look true (.tok 25)), (.call (.rule 336))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.look true (.tok 7)), (.call (.rule 345))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.look true (.tok 9)), (.call (.rule 346))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.look true (.tok 25)), (.call (.rule 347))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 52))], action := (some (.mk .Constant [.pyEllipsis, .null, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
 
-def r145 : Rule := { name := "group", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 7)), (.call (.rule 337)), (.call (.tok 8))], action := (some (.var 1)), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 231))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+def r148 : Rule := { name := "group", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 7)), (.call (.rule 348)), (.call (.tok 8))], action := (some (.var 1)), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 236))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
-def r146 : Rule := { name := "lambdef", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 621)), (.opt (.rule 147)), (.call (.tok 11)), (.call (.rule 109))], action := (some (.mk .Lambda [(.ite (.var 1) (.var 1) (.check (.call .empty_arguments []))), (.var 3), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true }] }
+def r149 : Rule := { name := "lambdef", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 622)), (.opt (.rule 150)), (.call (.tok 11)), (.call (.rule 109))], action := (some (.mk .Lambda [(.ite (.var 1) (.var 1) (.check (.call .empty_arguments []))), (.var 3), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true }] }
 
-def r147 : Rule := { name := "lambda_params", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 223))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.rule 148))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r150 : Rule := { name := "lambda_params", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 228))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.rule 151))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r148 : Rule := { name := "lambda_parameters", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 149)), (.call (.rule 338)), (.call (.rule 339)), (.opt (.rule 151))], action := (some (.checkVersion (.int 8) (.str "Positional-only parameters are") (.call .make_arguments [(.var 0), .null, (.var 1), (.var 2), (.var 3)]))), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 150)), (.call (.rule 339)), (.opt (.rule 151))], action := (some (.checkVersion (.int 8) (.str "Positional-only parameters are") (.call .make_arguments [.null, (.var 0), .null, (.var 1), (.var 2)]))), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 340)), (.call (.rule 339)), (.opt (.rule 151))], action := (some (.call .make_arguments [.null, .null, (.var 0), (.var 1), (.var 2)])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 341)), (.opt (.rule 151))], action := (some (.call .make_arguments [.null, .null, .null, (.var 0), (.var 1)])), nvars := 2, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 151))], action := (some (.call .make_arguments [.null, .null, .null, .null, (.var 0)])), nvars := 1, guardInvalid := false, extra := false }] }
+def r151 : Rule := { name := "lambda_parameters", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 152)), (.call (.rule 349)), (.call (.rule 350)), (.opt (.rule 154))], action := (some (.checkVersion (.int 8) (.str "Positional-only parameters are") (.call .make_arguments [(.var 0), .null, (.var 1), (.var 2), (.var 3)]))), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 153)), (.call (.rule 350)), (.opt (.rule 154))], action := (some (.checkVersion (.int 8) (.str "Positional-only parameters are") (.call .make_arguments [.null, (.var 0), .null, (.var 1), (.var 2)]))), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 351)), (.call (.rule 350)), (.opt (.rule 154))], action := (some (.call .make_arguments [.null, .null, (.var 0), (.var 1), (.var 2)])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 352)), (.opt (.rule 154))], action := (some (.call .make_arguments [.null, .null, .null, (.var 0), (.var 1)])), nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 154))], action := (some (.call .make_arguments [.null, .null, .null, .null, (.var 0)])), nvars := 1, guardInvalid := false, extra := false }] }
 
-def r149 : Rule := { name := "lambda_slash_no_default", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 340)), (.call (.tok 17)), (.call (.tok 12))], action := (some (.var 0)), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 340)), (.call (.tok 17)), (.look true (.tok 11))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false }] }
+def r152 : Rule := { name := "lambda_slash_no_default", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 351)), (.call (.tok 17)), (.call (.tok 12))], action := (some (.var 0)), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 351)), (.call (.tok 17)), (.look true (.tok 11))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r150 : Rule := { name := "lambda_slash_with_default", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 338)), (.call (.rule 341)), (.call (.tok 17)), (.call (.tok 12))], action := (some (.call .slash_with_default [(.var 0), (.var 1)])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 338)), (.call (.rule 341)), (.call (.tok 17)), (.look true (.tok 11))], action := (some (.call .slash_with_default [(.var 0), (.var 1)])), nvars := 3, guardInvalid := false, extra := false }] }
+def r153 : Rule := { name := "lambda_slash_with_default", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 349)), (.call (.rule 352)), (.call (.tok 17)), (.call (.tok 12))], action := (some (.call .slash_with_default [(.var 0), (.var 1)])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 349)), (.call (.rule 352)), (.call (.tok 17)), (.look true (.tok 11))], action := (some (.call .slash_with_default [(.var 0), (.var 1)])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r151 : Rule := { name := "lambda_star_etc", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 225))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.tok 16)), (.call (.rule 153)), (.call (.rule 342)), (.opt (.rule 152))], action := (some (.call .star_etc [(.var 1), (.var 2), (.var 3)])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 16)), (.call (.tok 12)), (.call (.rule 343)), (.opt (.rule 152))], action := (some (.call .star_etc [.null, (.var 2), (.var 3)])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 152))], action := (some (.call .star_etc [.null, .null, (.var 0)])), nvars := 1, guardInvalid := false, extra := false }] }
+def r154 : Rule := { name := "lambda_star_etc", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 230))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.tok 16)), (.call (.rule 156)), (.call (.rule 353)), (.opt (.rule 155))], action := (some (.call .star_etc [(.var 1), (.var 2), (.var 3)])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 16)), (.call (.tok 12)), (.call (.rule 354)), (.opt (.rule 155))], action := (some (.call .star_etc [.null, (.var 2), (.var 3)])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 155))], action := (some (.call .star_etc [.null, .null, (.var 0)])), nvars := 1, guardInvalid := false, extra := false }] }
 
-def r152 : Rule := { name := "lambda_kwds", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 226))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.tok 35)), (.call (.rule 153))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+def r155 : Rule := { name := "lambda_kwds", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 231))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.tok 35)), (.call (.rule 156))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r153 : Rule := { name := "lambda_param_no_default", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 156)), (.call (.tok 12))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 156)), (.look true (.tok 11))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false }] }
+def r156 : Rule := { name := "lambda_param_no_default", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 159)), (.call (.tok 12))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 159)), (.look true (.tok 11))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false }] }
 
-def r154 : Rule := { name := "lambda_param_with_default", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 156)), (.call (.rule 53)), (.call (.tok 12))], action := (some (.call .name_default_pair [(.var 0), (.var 1), .null])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 156)), (.call (.rule 53)), (.look true (.tok 11))], action := (some (.call .name_default_pair [(.var 0), (.var 1), .null])), nvars := 2, guardInvalid := false, extra := false }] }
+def r157 : Rule := { name := "lambda_param_with_default", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 159)), (.call (.rule 53)), (.call (.tok 12))], action := (some (.call .name_default_pair [(.var 0), (.var 1), .null])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 159)), (.call (.rule 53)), (.look true (.tok 11))], action := (some (.call .name_default_pair [(.var 0), (.var 1), .null])), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r155 : Rule := { name := "lambda_param_maybe_default", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 156)), (.opt (.rule 53)), (.call (.tok 12))], action := (some (.call .name_default_pair [(.var 0), (.var 1), .null])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 156)), (.opt (.rule 53)), (.look true (.tok 11))], action := (some (.call .name_default_pair [(.var 0), (.var 1), .null])), nvars := 2, guardInvalid := false, extra := false }] }
+def r158 : Rule := { name := "lambda_param_maybe_default", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 159)), (.opt (.rule 53)), (.call (.tok 12))], action := (some (.call .name_default_pair [(.var 0), (.var 1), .null])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 159)), (.opt (.rule 53)), (.look true (.tok 11))], action := (some (.call .name_default_pair [(.var 0), (.var 1), .null])), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r156 : Rule := { name := "lambda_param", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+def r159 : Rule := { name := "lambda_param", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
   { items := [(.call .name)], action := (some (.mk .arg_ [(.field (.var 0) "id"), .null, .null, .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
 
-def r157 : Rule := { name := "fstring_middle", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 158))], action := none, nvars := 1, guardInvalid := false, extra := false },
+def r160 : Rule := { name := "fstring_middle", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 161))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 60))], action := (some (.call .constant_from_token [(.var 0)])), nvars := 1, guardInvalid := false, extra := false }] }
 
-def r158 : Rule := { name := "fstring_replacement_field", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.opt (.rule 159)), (.opt (.rule 160)), (.call (.tok 26))], action := (some (.call .formatted_value [(.var 1), (.var 2), (.var 3), (.var 4), (.var 5), .extra0, .extra1, .extra2, .extra3])), nvars := 6, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 260))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+def r161 : Rule := { name := "fstring_replacement_field", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.opt (.rule 162)), (.opt (.rule 163)), (.call (.tok 26))], action := (some (.call .formatted_value [(.var 1), (.var 2), (.var 3), (.var 4), (.var 5), .extra0, .extra1, .extra2, .extra3])), nvars := 6, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 269))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
-def r159 : Rule := { name := "fstring_conversion", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r162 : Rule := { name := "fstring_conversion", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 54)), (.call .name)], action := (some (.call .check_fstring_conversion [(.var 0), (.var 1)])), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r160 : Rule := { name := "fstring_full_format_spec", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 11)), (.call (.rule 344))], action := (some (.call .setup_full_format_spec [(.var 0), (.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
+def r163 : Rule := { name := "fstring_full_format_spec", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 11)), (.call (.rule 355))], action := (some (.call .setup_full_format_spec [(.var 0), (.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
 
-def r161 : Rule := { name := "fstring_format_spec", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r164 : Rule := { name := "fstring_format_spec", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 60))], action := (some (.call .decoded_constant_from_token [(.var 0)])), nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 158))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 161))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r162 : Rule := { name := "fstring", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 59)), (.call (.rule 345)), (.call (.tok 61))], action := (some (.call .joined_str [(.var 0), (.var 1), (.var 2)])), nvars := 3, guardInvalid := false, extra := false }] }
+def r165 : Rule := { name := "fstring", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 59)), (.call (.rule 356)), (.call (.tok 61))], action := (some (.call .joined_str [(.var 0), (.var 1), (.var 2)])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r163 : Rule := { name := "tstring_format_spec_replacement_field", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.opt (.rule 159)), (.opt (.rule 165)), (.call (.tok 26))], action := (some (.call .formatted_value [(.var 1), (.var 2), (.var 3), (.var 4), (.var 5), .extra0, .extra1, .extra2, .extra3])), nvars := 6, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 262))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+def r166 : Rule := { name := "tstring_format_spec_replacement_field", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.opt (.rule 162)), (.opt (.rule 168)), (.call (.tok 26))], action := (some (.call .formatted_value [(.var 1), (.var 2), (.var 3), (.var 4), (.var 5), .extra0, .extra1, .extra2, .extra3])), nvars := 6, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 271))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
-def r164 : Rule := { name := "tstring_format_spec", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r167 : Rule := { name := "tstring_format_spec", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 63))], action := (some (.call .decoded_constant_from_token [(.var 0)])), nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 163))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 166))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r165 : Rule := { name := "tstring_full_format_spec", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 11)), (.call (.rule 346))], action := (some (.call .setup_full_format_spec [(.var 0), (.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
+def r168 : Rule := { name := "tstring_full_format_spec", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 11)), (.call (.rule 357))], action := (some (.call .setup_full_format_spec [(.var 0), (.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true }] }
 
-def r166 : Rule := { name := "tstring_replacement_field", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.opt (.rule 159)), (.opt (.rule 165)), (.call (.tok 26))], action := (some (.call .interpolation [(.var 1), (.var 2), (.var 3), (.var 4), (.var 5), .extra0, .extra1, .extra2, .extra3])), nvars := 6, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 262))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+def r169 : Rule := { name := "tstring_replacement_field", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.opt (.rule 162)), (.opt (.rule 168)), (.call (.tok 26))], action := (some (.call .interpolation [(.var 1), (.var 2), (.var 3), (.var 4), (.var 5), .extra0, .extra1, .extra2, .extra3])), nvars := 6, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 271))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
-def r167 : Rule := { name := "tstring_middle", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 166))], action := none, nvars := 1, guardInvalid := false, extra := false },
+def r170 : Rule := { name := "tstring_middle", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 169))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 63))], action := (some (.call .constant_from_token [(.var 0)])), nvars := 1, guardInvalid := false, extra := false }] }
 
-def r168 : Rule := { name := "tstring", kind := .normal, memo := true, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 62)), (.call (.rule 347)), (.call (.tok 64))], action := (some (.checkVersion (.int 14) (.str "t-strings are") (.call .template_str [(.var 0), (.var 1), (.var 2)]))), nvars := 3, guardInvalid := false, extra := false }] }
+def r171 : Rule := { name := "tstring", kind := .normal, memo := true, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 62)), (.call (.rule 358)), (.call (.tok 64))], action := (some (.checkVersion (.int 14) (.str "t-strings are") (.call .template_str [(.var 0), (.var 1), (.var 2)]))), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r169 : Rule := { name := "string", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r172 : Rule := { name := "string", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call .string)], action := (some (.call .constant_from_string [(.var 0)])), nvars := 1, guardInvalid := false, extra := false }] }
 
-def r170 : Rule := { name := "strings", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 264))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.rule 348))], action := (some (.call .concatenate_strings [(.var 0), .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 349))], action := (some (.call .concatenate_tstrings [(.var 0), .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
+def r173 : Rule := { name := "strings", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 273))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.rule 359))], action := (some (.call .concatenate_strings [(.var 0), .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 360))], action := (some (.call .concatenate_tstrings [(.var 0), .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
 
-def r171 : Rule := { name := "list", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 9)), (.opt (.rule 113)), (.call (.tok 10))], action := (some (.mk .List [(.var 1), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true }] }
+def r174 : Rule := { name := "list", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 9)), (.opt (.rule 115)), (.call (.tok 10))], action := (some (.mk .List [(.var 1), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true }] }
 
-def r172 : Rule := { name := "tuple", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 7)), (.opt (.rule 350)), (.call (.tok 8))], action := (some (.mk .Tuple [(.var 1), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true }] }
+def r175 : Rule := { name := "tuple", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 7)), (.opt (.rule 361)), (.call (.tok 8))], action := (some (.mk .Tuple [(.var 1), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true }] }
 
-def r173 : Rule := { name := "set", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 25)), (.call (.rule 113)), (.call (.tok 26))], action := (some (.mk .Set [(.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true }] }
+def r176 : Rule := { name := "set", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 25)), (.call (.rule 115)), (.call (.tok 26))], action := (some (.mk .Set [(.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true }] }
 
-def r174 : Rule := { name := "dict", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 25)), (.opt (.rule 175)), (.call (.tok 26))], action := (some (.mk .Dict [(.check (.call .get_keys [(.var 1)])), (.check (.call .get_values [(.var 1)])), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 25)), (.call (.rule 256)), (.call (.tok 26))], action := none, nvars := 3, guardInvalid := false, extra := false }] }
+def r177 : Rule := { name := "dict", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 25)), (.opt (.rule 178)), (.call (.tok 26))], action := (some (.mk .Dict [(.check (.call .get_keys [(.var 1)])), (.check (.call .get_values [(.var 1)])), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 25)), (.call (.rule 263)), (.call (.tok 26))], action := none, nvars := 3, guardInvalid := false, extra := false }] }
 
-def r175 : Rule := { name := "double_starred_kvpairs", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 352)), (.opt (.tok 12))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false }] }
+def r178 : Rule := { name := "double_starred_kvpairs", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 363)), (.opt (.tok 12))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r176 : Rule := { name := "double_starred_kvpair", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 35)), (.call (.rule 132))], action := (some (.call .key_value_pair [.null, (.var 1)])), nvars := 2, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 177))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r179 : Rule := { name := "double_starred_kvpair", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 35)), (.call (.rule 135))], action := (some (.call .key_value_pair [.null, (.var 1)])), nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 180))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r177 : Rule := { name := "kvpair", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r180 : Rule := { name := "kvpair", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 109)), (.call (.tok 11)), (.call (.rule 109))], action := (some (.call .key_value_pair [(.var 0), (.var 2)])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r178 : Rule := { name := "for_if_clauses", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 353))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false }] }
+def r181 : Rule := { name := "for_if_clauses", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 364))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false }] }
 
-def r179 : Rule := { name := "for_if_clause", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 698)), (.call (.tok 694)), (.call (.rule 190)), (.call (.tok 695)), .cut, (.call (.rule 117)), (.call (.rule 354))], action := (some (.checkVersion (.int 6) (.str "Async comprehensions are") (.mk .comprehension_ [(.var 2), (.var 5), (.var 6), (.int 1)]))), nvars := 7, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 694)), (.call (.rule 190)), (.call (.tok 695)), .cut, (.call (.rule 117)), (.call (.rule 354))], action := (some (.mk .comprehension_ [(.var 1), (.var 4), (.var 5), (.int 0)])), nvars := 6, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 229))], action := none, nvars := 1, guardInvalid := true, extra := false },
-  { items := [(.call (.rule 230))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+def r182 : Rule := { name := "for_if_clause", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 716)), (.call (.tok 712)), (.call (.rule 193)), (.call (.tok 713)), .cut, (.call (.rule 120)), (.call (.rule 365))], action := (some (.checkVersion (.int 6) (.str "Async comprehensions are") (.mk .comprehension_ [(.var 2), (.var 5), (.var 6), (.int 1)]))), nvars := 7, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 712)), (.call (.rule 193)), (.call (.tok 713)), .cut, (.call (.rule 120)), (.call (.rule 365))], action := (some (.mk .comprehension_ [(.var 1), (.var 4), (.var 5), (.int 0)])), nvars := 6, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 234))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.rule 235))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
-def r180 : Rule := { name := "listcomp", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 9)), (.call (.rule 116)), (.call (.rule 178)), (.call (.tok 10))], action := (some (.mk .ListComp [(.var 1), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 216))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+def r183 : Rule := { name := "listcomp", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 9)), (.call (.rule 116)), (.call (.rule 181)), (.call (.tok 10))], action := (some (.mk .ListComp [(.var 1), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 222))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
-def r181 : Rule := { name := "setcomp", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 25)), (.call (.rule 116)), (.call (.rule 178)), (.call (.tok 26))], action := (some (.mk .SetComp [(.var 1), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 216))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+def r184 : Rule := { name := "setcomp", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 25)), (.call (.rule 116)), (.call (.rule 181)), (.call (.tok 26))], action := (some (.mk .SetComp [(.var 1), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 222))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
-def r182 : Rule := { name := "genexp", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 7)), (.call (.rule 355)), (.call (.rule 178)), (.call (.tok 8))], action := (some (.mk .GeneratorExp [(.var 1), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 216))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+def r185 : Rule := { name := "genexp", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 7)), (.call (.rule 366)), (.call (.rule 181)), (.call (.tok 8))], action := (some (.mk .GeneratorExp [(.var 1), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 222))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
-def r183 : Rule := { name := "dictcomp", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 25)), (.call (.rule 177)), (.call (.rule 178)), (.call (.tok 26))], action := (some (.mk .DictComp [(.attr (.var 1) "key"), (.attr (.var 1) "value"), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 217))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+def r186 : Rule := { name := "dictcomp", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 25)), (.call (.rule 180)), (.call (.rule 181)), (.call (.tok 26))], action := (some (.mk .DictComp [(.attr (.var 1) "key"), (.attr (.var 1) "value"), (.var 2), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 25)), (.call (.tok 35)), (.call (.rule 109)), (.call (.rule 181)), (.call (.tok 26))], action := (some (.mk .DictComp [(.var 2), .null, (.var 3), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true }] }
 
-def r184 : Rule := { name := "arguments", kind := .normal, memo := true, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 185)), (.opt (.tok 12)), (.look true (.tok 8))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 205))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+def r187 : Rule := { name := "arguments", kind := .normal, memo := true, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 188)), (.opt (.tok 12)), (.look true (.tok 8))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 208))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
-def r185 : Rule := { name := "args", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 357)), (.opt (.rule 358))], action := (some (.call .collect_call_seqs [(.var 0), (.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 186))], action := (some (.mk .Call [(.call .dummy_name []), (.checkNull (.call .seq_extract_starred_exprs [(.var 0)])), (.checkNull (.call .seq_delete_starred_exprs [(.var 0)])), .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
+def r188 : Rule := { name := "args", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 368)), (.opt (.rule 369))], action := (some (.call .collect_call_seqs [(.var 0), (.var 1), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 189))], action := (some (.mk .Call [(.call .dummy_name []), (.checkNull (.call .seq_extract_starred_exprs [(.var 0)])), (.checkNull (.call .seq_delete_starred_exprs [(.var 0)])), .extra0, .extra1, .extra2, .extra3])), nvars := 1, guardInvalid := false, extra := true }] }
 
-def r186 : Rule := { name := "kwargs", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 360)), (.call (.tok 12)), (.call (.rule 362))], action := (some (.call .join_sequences [(.var 0), (.var 2)])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 360))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 362))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r189 : Rule := { name := "kwargs", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 371)), (.call (.tok 12)), (.call (.rule 373))], action := (some (.call .join_sequences [(.var 0), (.var 2)])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 371))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 373))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r187 : Rule := { name := "starred_expression", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 258))], action := none, nvars := 1, guardInvalid := true, extra := false },
+def r190 : Rule := { name := "starred_expression", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 266))], action := none, nvars := 1, guardInvalid := true, extra := false },
   { items := [(.call (.tok 16)), (.call (.rule 109))], action := (some (.mk .Starred [(.var 1), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 259))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+  { items := [(.call (.rule 268))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
 
-def r188 : Rule := { name := "kwarg_or_starred", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 206))], action := none, nvars := 1, guardInvalid := true, extra := false },
+def r191 : Rule := { name := "kwarg_or_starred", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 209))], action := none, nvars := 1, guardInvalid := true, extra := false },
   { items := [(.call .name), (.call (.tok 22)), (.call (.rule 109))], action := (some (.call .keyword_or_starred [(.check (.mk .keyword_ [(.field (.var 0) "id"), (.var 2), .extra0, .extra1, .extra2, .extra3])), (.int 1)])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 187))], action := (some (.call .keyword_or_starred [(.var 0), (.int 0)])), nvars := 1, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 190))], action := (some (.call .keyword_or_starred [(.var 0), (.int 0)])), nvars := 1, guardInvalid := false, extra := false }] }
 
-def r189 : Rule := { name := "kwarg_or_double_starred", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 206))], action := none, nvars := 1, guardInvalid := true, extra := false },
+def r192 : Rule := { name := "kwarg_or_double_starred", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 209))], action := none, nvars := 1, guardInvalid := true, extra := false },
   { items := [(.call .name), (.call (.tok 22)), (.call (.rule 109))], action := (some (.call .keyword_or_starred [(.check (.mk .keyword_ [(.field (.var 0) "id"), (.var 2), .extra0, .extra1, .extra2, .extra3])), (.int 1)])), nvars := 3, guardInvalid := false, extra := true },
   { items := [(.call (.tok 35)), (.call (.rule 109))], action := (some (.call .keyword_or_starred [(.check (.mk .keyword_ [.null, (.var 1), .extra0, .extra1, .extra2, .extra3])), (.int 1)])), nvars := 2, guardInvalid := false, extra := true }] }
 
-def r190 : Rule := { name := "star_targets", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 193)), (.look false (.tok 12))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 193)), (.call (.rule 363)), (.opt (.tok 12))], action := (some (.mk .Tuple [(.check (.call .seq_insert_in_front [(.var 0), (.var 1)])), (.ctor .Store), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true }] }
+def r193 : Rule := { name := "star_targets", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 196)), (.look false (.tok 12))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 196)), (.call (.rule 374)), (.opt (.tok 12))], action := (some (.mk .Tuple [(.check (.call .seq_insert_in_front [(.var 0), (.var 1)])), (.ctor .Store), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true }] }
 
-def r191 : Rule := { name := "star_targets_list_seq", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 365)), (.opt (.tok 12))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false }] }
+def r194 : Rule := { name := "star_targets_list_seq", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 376)), (.opt (.tok 12))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r192 : Rule := { name := "star_targets_tuple_seq", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 193)), (.call (.rule 366)), (.opt (.tok 12))], action := (some (.call .seq_insert_in_front [(.var 0), (.var 1)])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 193)), (.call (.tok 12))], action := (some (.call .singleton_seq [(.var 0)])), nvars := 2, guardInvalid := false, extra := false }] }
+def r195 : Rule := { name := "star_targets_tuple_seq", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 196)), (.call (.rule 377)), (.opt (.tok 12))], action := (some (.call .seq_insert_in_front [(.var 0), (.var 1)])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 196)), (.call (.tok 12))], action := (some (.call .singleton_seq [(.var 0)])), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r193 : Rule := { name := "star_target", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 16)), (.call (.rule 367))], action := (some (.mk .Starred [(.check (.call .set_expr_context [(.var 1), (.ctor .Store)])), (.ctor .Store), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 194))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r196 : Rule := { name := "star_target", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 16)), (.call (.rule 378))], action := (some (.mk .Starred [(.check (.call .set_expr_context [(.var 1), (.ctor .Store)])), (.ctor .Store), .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 197))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r194 : Rule := { name := "target_with_star_atom", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 198)), (.call (.tok 23)), (.call .name), (.look false (.rule 199))], action := (some (.mk .Attribute [(.var 0), (.field (.var 2) "id"), (.ctor .Store), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 198)), (.call (.tok 9)), (.call (.rule 142)), (.call (.tok 10)), (.look false (.rule 199))], action := (some (.mk .Subscript [(.var 0), (.var 2), (.ctor .Store), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 195))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r197 : Rule := { name := "target_with_star_atom", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 201)), (.call (.tok 23)), (.call .name), (.look false (.rule 202))], action := (some (.mk .Attribute [(.var 0), (.field (.var 2) "id"), (.ctor .Store), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 201)), (.call (.tok 9)), (.call (.rule 145)), (.call (.tok 10)), (.look false (.rule 202))], action := (some (.mk .Subscript [(.var 0), (.var 2), (.ctor .Store), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 198))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r195 : Rule := { name := "star_atom", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+def r198 : Rule := { name := "star_atom", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
   { items := [(.call .name)], action := (some (.call .set_expr_context [(.var 0), (.ctor .Store)])), nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 7)), (.call (.rule 194)), (.call (.tok 8))], action := (some (.call .set_expr_context [(.var 1), (.ctor .Store)])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 7)), (.opt (.rule 192)), (.call (.tok 8))], action := (some (.mk .Tuple [(.var 1), (.ctor .Store), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 9)), (.opt (.rule 191)), (.call (.tok 10))], action := (some (.mk .List [(.var 1), (.ctor .Store), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true }] }
+  { items := [(.call (.tok 7)), (.call (.rule 197)), (.call (.tok 8))], action := (some (.call .set_expr_context [(.var 1), (.ctor .Store)])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 7)), (.opt (.rule 195)), (.call (.tok 8))], action := (some (.mk .Tuple [(.var 1), (.ctor .Store), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 9)), (.opt (.rule 194)), (.call (.tok 10))], action := (some (.mk .List [(.var 1), (.ctor .Store), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true }] }
 
-def r196 : Rule := { name := "single_target", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 197))], action := none, nvars := 1, guardInvalid := false, extra := false },
+def r199 : Rule := { name := "single_target", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 200))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call .name)], action := (some (.call .set_expr_context [(.var 0), (.ctor .Store)])), nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 7)), (.call (.rule 196)), (.call (.tok 8))], action := (some (.var 1)), nvars := 3, guardInvalid := false, extra := false }] }
+  { items := [(.call (.tok 7)), (.call (.rule 199)), (.call (.tok 8))], action := (some (.var 1)), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r197 : Rule := { name := "single_subscript_attribute_target", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 198)), (.call (.tok 23)), (.call .name), (.look false (.rule 199))], action := (some (.mk .Attribute [(.var 0), (.field (.var 2) "id"), (.ctor .Store), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 198)), (.call (.tok 9)), (.call (.rule 142)), (.call (.tok 10)), (.look false (.rule 199))], action := (some (.mk .Subscript [(.var 0), (.var 2), (.ctor .Store), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true }] }
+def r200 : Rule := { name := "single_subscript_attribute_target", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 201)), (.call (.tok 23)), (.call .name), (.look false (.rule 202))], action := (some (.mk .Attribute [(.var 0), (.field (.var 2) "id"), (.ctor .Store), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 201)), (.call (.tok 9)), (.call (.rule 145)), (.call (.tok 10)), (.look false (.rule 202))], action := (some (.mk .Subscript [(.var 0), (.var 2), (.ctor .Store), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true }] }
 
-def r198 : Rule := { name := "t_primary", kind := .normal, memo := false, leftRec := true, leader := true, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 198)), (.call (.tok 23)), (.call .name), (.look true (.rule 199))], action := (some (.mk .Attribute [(.var 0), (.field (.var 2) "id"), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 198)), (.call (.tok 9)), (.call (.rule 142)), (.call (.tok 10)), (.look true (.rule 199))], action := (some (.mk .Subscript [(.var 0), (.var 2), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 198)), (.call (.rule 182)), (.look true (.rule 199))], action := (some (.mk .Call [(.var 0), (.check (.call .singleton_seq [(.var 1)])), .null, .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 198)), (.call (.tok 7)), (.opt (.rule 184)), (.call (.tok 8)), (.look true (.rule 199))], action := (some (.mk .Call [(.var 0), (.ite (.var 2) (.field (.var 2) "args") .null), (.ite (.var 2) (.field (.var 2) "keywords") .null), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 144)), (.look true (.rule 199))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false }] }
+def r201 : Rule := { name := "t_primary", kind := .normal, memo := false, leftRec := true, leader := true, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 201)), (.call (.tok 23)), (.call .name), (.look true (.rule 202))], action := (some (.mk .Attribute [(.var 0), (.field (.var 2) "id"), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 201)), (.call (.tok 9)), (.call (.rule 145)), (.call (.tok 10)), (.look true (.rule 202))], action := (some (.mk .Subscript [(.var 0), (.var 2), (.ctor .Load), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 201)), (.call (.rule 185)), (.look true (.rule 202))], action := (some (.mk .Call [(.var 0), (.check (.call .singleton_seq [(.var 1)])), .null, .extra0, .extra1, .extra2, .extra3])), nvars := 2, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 201)), (.call (.tok 7)), (.opt (.rule 187)), (.call (.tok 8)), (.look true (.rule 202))], action := (some (.mk .Call [(.var 0), (.ite (.var 2) (.field (.var 2) "args") .null), (.ite (.var 2) (.field (.var 2) "keywords") .null), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 147)), (.look true (.rule 202))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false }] }
 
-def r199 : Rule := { name := "t_lookahead", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r202 : Rule := { name := "t_lookahead", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 7))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 9))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 23))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r200 : Rule := { name := "del_targets", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 369)), (.opt (.tok 12))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false }] }
+def r203 : Rule := { name := "del_targets", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 380)), (.opt (.tok 12))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r201 : Rule := { name := "del_target", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 198)), (.call (.tok 23)), (.call .name), (.look false (.rule 199))], action := (some (.mk .Attribute [(.var 0), (.field (.var 2) "id"), (.ctor .Del), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 198)), (.call (.tok 9)), (.call (.rule 142)), (.call (.tok 10)), (.look false (.rule 199))], action := (some (.mk .Subscript [(.var 0), (.var 2), (.ctor .Del), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 202))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r204 : Rule := { name := "del_target", kind := .normal, memo := true, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 201)), (.call (.tok 23)), (.call .name), (.look false (.rule 202))], action := (some (.mk .Attribute [(.var 0), (.field (.var 2) "id"), (.ctor .Del), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 201)), (.call (.tok 9)), (.call (.rule 145)), (.call (.tok 10)), (.look false (.rule 202))], action := (some (.mk .Subscript [(.var 0), (.var 2), (.ctor .Del), .extra0, .extra1, .extra2, .extra3])), nvars := 4, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 205))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r202 : Rule := { name := "del_t_atom", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
+def r205 : Rule := { name := "del_t_atom", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := false, alts := [
   { items := [(.call .name)], action := (some (.call .set_expr_context [(.var 0), (.ctor .Del)])), nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 7)), (.call (.rule 201)), (.call (.tok 8))], action := (some (.call .set_expr_context [(.var 1), (.ctor .Del)])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 7)), (.opt (.rule 200)), (.call (.tok 8))], action := (some (.mk .Tuple [(.var 1), (.ctor .Del), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
-  { items := [(.call (.tok 9)), (.opt (.rule 200)), (.call (.tok 10))], action := (some (.mk .List [(.var 1), (.ctor .Del), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true }] }
+  { items := [(.call (.tok 7)), (.call (.rule 204)), (.call (.tok 8))], action := (some (.call .set_expr_context [(.var 1), (.ctor .Del)])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 7)), (.opt (.rule 203)), (.call (.tok 8))], action := (some (.mk .Tuple [(.var 1), (.ctor .Del), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true },
+  { items := [(.call (.tok 9)), (.opt (.rule 203)), (.call (.tok 10))], action := (some (.mk .List [(.var 1), (.ctor .Del), .extra0, .extra1, .extra2, .extra3])), nvars := 3, guardInvalid := false, extra := true }] }
 
-def r203 : Rule := { name := "type_expressions", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 371)), (.call (.tok 12)), (.call (.tok 16)), (.call (.rule 109)), (.call (.tok 12)), (.call (.tok 35)), (.call (.rule 109))], action := (some (.call .seq_append_to_end [(.check (.call .seq_append_to_end [(.var 0), (.var 3)])), (.var 6)])), nvars := 7, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 371)), (.call (.tok 12)), (.call (.tok 16)), (.call (.rule 109))], action := (some (.call .seq_append_to_end [(.var 0), (.var 3)])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 371)), (.call (.tok 12)), (.call (.tok 35)), (.call (.rule 109))], action := (some (.call .seq_append_to_end [(.var 0), (.var 3)])), nvars := 4, guardInvalid := false, extra := false },
+def r206 : Rule := { name := "type_expressions", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 382)), (.call (.tok 12)), (.call (.tok 16)), (.call (.rule 109)), (.call (.tok 12)), (.call (.tok 35)), (.call (.rule 109))], action := (some (.call .seq_append_to_end [(.check (.call .seq_append_to_end [(.var 0), (.var 3)])), (.var 6)])), nvars := 7, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 382)), (.call (.tok 12)), (.call (.tok 16)), (.call (.rule 109))], action := (some (.call .seq_append_to_end [(.var 0), (.var 3)])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 382)), (.call (.tok 12)), (.call (.tok 35)), (.call (.rule 109))], action := (some (.call .seq_append_to_end [(.var 0), (.var 3)])), nvars := 4, guardInvalid := false, extra := false },
   { items := [(.call (.tok 16)), (.call (.rule 109)), (.call (.tok 12)), (.call (.tok 35)), (.call (.rule 109))], action := (some (.call .seq_append_to_end [(.check (.call .singleton_seq [(.var 1)])), (.var 4)])), nvars := 5, guardInvalid := false, extra := false },
   { items := [(.call (.tok 16)), (.call (.rule 109))], action := (some (.call .singleton_seq [(.var 1)])), nvars := 2, guardInvalid := false, extra := false },
   { items := [(.call (.tok 35)), (.call (.rule 109))], action := (some (.call .singleton_seq [(.var 1)])), nvars := 2, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 371))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 382))], action := (some (.var 0)), nvars := 1, guardInvalid := false, extra := false }] }
 
-def r204 : Rule := { name := "func_type_comment", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 4)), (.call (.tok 57)), (.look true (.rule 372))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 227))], action := none, nvars := 1, guardInvalid := true, extra := false },
+def r207 : Rule := { name := "func_type_comment", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 4)), (.call (.tok 57)), (.look true (.rule 383))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 232))], action := none, nvars := 1, guardInvalid := true, extra := false },
   { items := [(.call (.tok 57))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r205 : Rule := { name := "invalid_arguments", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 373)), (.call (.tok 12)), (.call (.rule 375))], action := (some (.call .RAISE_SYNTAX_ERROR_STARTING_FROM [(.var 1), (.str "iterable argument unpacking follows keyword argument unpacking")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 109)), (.call (.rule 178)), (.call (.tok 12)), (.opt (.rule 376))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.call .get_last_comprehension_item [(.call .seq_last_item [(.var 1)])]), (.str "Generator expression must be parenthesized")])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call .name), (.call (.tok 22)), (.call (.rule 109)), (.call (.rule 178))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 1), (.str "invalid syntax. Maybe you meant '==' or ':=' instead of '='?")])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.opt (.rule 377)), (.call .name), (.call (.tok 22)), (.look true (.rule 378))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 1), (.var 2), (.str "expected argument value expression")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 185)), (.call (.rule 178))], action := (some (.call .nonparen_genexp_in_call [(.var 0), (.var 1)])), nvars := 2, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 185)), (.call (.tok 12)), (.call (.rule 109)), (.call (.rule 178))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 2), (.call .get_last_comprehension_item [(.call .seq_last_item [(.var 3)])]), (.str "Generator expression must be parenthesized")])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 185)), (.call (.tok 12)), (.call (.rule 185))], action := (some (.call .arguments_parsing_error [(.var 0)])), nvars := 3, guardInvalid := false, extra := false }] }
+def r208 : Rule := { name := "invalid_arguments", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 384)), (.call (.tok 12)), (.call (.rule 386))], action := (some (.call .RAISE_SYNTAX_ERROR_STARTING_FROM [(.var 1), (.str "iterable argument unpacking follows keyword argument unpacking")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 109)), (.call (.rule 181)), (.call (.tok 12)), (.opt (.rule 387))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.call .get_last_comprehension_item [(.call .seq_last_item [(.var 1)])]), (.str "Generator expression must be parenthesized")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call .name), (.call (.tok 22)), (.call (.rule 109)), (.call (.rule 181))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 1), (.str "invalid syntax. Maybe you meant '==' or ':=' instead of '='?")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.opt (.rule 388)), (.call .name), (.call (.tok 22)), (.look true (.rule 389))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 1), (.var 2), (.str "expected argument value expression")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 188)), (.call (.rule 181))], action := (some (.call .nonparen_genexp_in_call [(.var 0), (.var 1)])), nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 188)), (.call (.tok 12)), (.call (.rule 109)), (.call (.rule 181))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 2), (.call .get_last_comprehension_item [(.call .seq_last_item [(.var 3)])]), (.str "Generator expression must be parenthesized")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 188)), (.call (.tok 12)), (.call (.rule 188))], action := (some (.call .arguments_parsing_error [(.var 0)])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r206 : Rule := { name := "invalid_kwarg", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 379)), (.call (.tok 22))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 1), (.str "cannot assign to %s"), (.call .PyBytes_AS_STRING [(.attr (.var 0) "bytes")])])), nvars := 2, guardInvalid := false, extra := false },
-  { items := [(.call .name), (.call (.tok 22)), (.call (.rule 109)), (.call (.rule 178))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 1), (.str "invalid syntax. Maybe you meant '==' or ':=' instead of '='?")])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.look false (.rule 380)), (.call (.rule 109)), (.call (.tok 22))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 1), (.str "expression cannot contain assignment, perhaps you meant \"==\"?")])), nvars := 2, guardInvalid := false, extra := false },
+def r209 : Rule := { name := "invalid_kwarg", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 390)), (.call (.tok 22))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 1), (.str "cannot assign to %s"), (.call .PyBytes_AS_STRING [(.attr (.var 0) "bytes")])])), nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call .name), (.call (.tok 22)), (.call (.rule 109)), (.call (.rule 181))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 1), (.str "invalid syntax. Maybe you meant '==' or ':=' instead of '='?")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.look false (.rule 391)), (.call (.rule 109)), (.call (.tok 22))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 1), (.str "expression cannot contain assignment, perhaps you meant \"==\"?")])), nvars := 2, guardInvalid := false, extra := false },
   { items := [(.call (.tok 35)), (.call (.rule 109)), (.call (.tok 22)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 3), (.str "cannot assign to keyword argument unpacking")])), nvars := 4, guardInvalid := false, extra := false }] }
 
-def r207 : Rule := { name := "expression_without_invalid", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := true, alts := [
-  { items := [(.call (.rule 117)), (.call (.tok 682)), (.call (.rule 117)), (.call (.tok 686)), (.call (.rule 109))], action := (some (.mk .IfExp [(.var 2), (.var 0), (.var 4), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true },
-  { items := [(.call (.rule 117))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 146))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r210 : Rule := { name := "expression_without_invalid", kind := .normal, memo := false, leftRec := false, leader := false, extra := true, withoutInvalid := true, alts := [
+  { items := [(.call (.rule 120)), (.call (.tok 700)), (.call (.rule 120)), (.call (.tok 704)), (.call (.rule 109))], action := (some (.mk .IfExp [(.var 2), (.var 0), (.var 4), .extra0, .extra1, .extra2, .extra3])), nvars := 5, guardInvalid := false, extra := true },
+  { items := [(.call (.rule 120))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 149))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r208 : Rule := { name := "invalid_legacy_expression", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call .name), (.look false (.tok 7)), (.call (.rule 111))], action := (some (.ite (.call .check_legacy_stmt [(.var 0)]) (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 1), (.str "Missing parentheses in call to '%U'. Did you mean %U(...)?"), (.field (.var 0) "id"), (.field (.var 0) "id")]) .null)), nvars := 2, guardInvalid := false, extra := false }] }
+def r211 : Rule := { name := "invalid_legacy_expression", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call .name), (.look false (.tok 7)), (.call (.rule 112))], action := (some (.ite (.call .check_legacy_stmt [(.var 0)]) (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 1), (.str "Missing parentheses in call to '%U'. Did you mean %U(...)?"), (.field (.var 0) "id"), (.field (.var 0) "id")]) .null)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r209 : Rule := { name := "invalid_type_param", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r212 : Rule := { name := "invalid_type_param", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 16)), (.call .name), (.call (.tok 11)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_STARTING_FROM [(.var 2), (.ite (.eq (.kind (.var 3)) (.ctor .Tuple)) (.str "cannot use constraints with TypeVarTuple") (.str "cannot use bound with TypeVarTuple"))])), nvars := 4, guardInvalid := false, extra := false },
   { items := [(.call (.tok 35)), (.call .name), (.call (.tok 11)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_STARTING_FROM [(.var 2), (.ite (.eq (.kind (.var 3)) (.ctor .Tuple)) (.str "cannot use constraints with ParamSpec") (.str "cannot use bound with ParamSpec"))])), nvars := 4, guardInvalid := false, extra := false }] }
 
-def r210 : Rule := { name := "invalid_expression", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call .string), (.call (.rule 381)), (.call .string)], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.call .seq_first_item [(.var 1)]), (.call .seq_last_item [(.var 1)]), (.str "invalid syntax. Is this intended to be part of the string?")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.look false (.rule 382)), (.call (.rule 117)), (.call (.rule 207))], action := (some (.ite (.call .check_legacy_stmt [(.var 0)]) .null (.ite (.eq (.attr .lastTok "level") (.int 0)) .null (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 1), (.str "invalid syntax. Perhaps you forgot a comma?")])))), nvars := 2, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 117)), (.call (.tok 682)), (.call (.rule 117)), (.look false (.rule 383))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 2), (.str "expected 'else' after 'if' expression")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 117)), (.call (.tok 682)), (.call (.rule 117)), (.call (.tok 686)), (.look false (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "expected expression after 'else', but statement is given")])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 384)), (.call (.tok 682)), (.call (.rule 117)), (.call (.tok 686)), (.call (.rule 9))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "expected expression before 'if', but statement is given")])), nvars := 5, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 621)), (.opt (.rule 147)), (.call (.tok 11)), (.look true (.tok 60))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 2), (.str "f-string: lambda expressions are not allowed without parentheses")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 621)), (.opt (.rule 147)), (.call (.tok 11)), (.look true (.tok 63))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 2), (.str "t-string: lambda expressions are not allowed without parentheses")])), nvars := 3, guardInvalid := false, extra := false }] }
+def r213 : Rule := { name := "invalid_expression", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call .string), (.call (.rule 392)), (.call .string)], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.call .seq_first_item [(.var 1)]), (.call .seq_last_item [(.var 1)]), (.str "invalid syntax. Is this intended to be part of the string?")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.look false (.rule 393)), (.call (.rule 120)), (.call (.rule 210))], action := (some (.call .raise_error_for_missing_comma [(.var 0), (.var 1)])), nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 120)), (.call (.tok 700)), (.call (.rule 120)), (.look false (.rule 394))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 2), (.str "expected 'else' after 'if' expression")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 120)), (.call (.tok 700)), (.call (.rule 120)), (.call (.tok 704)), (.look false (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "expected expression after 'else', but statement is given")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 395)), (.call (.tok 700)), (.call (.rule 120)), (.call (.tok 704)), (.call (.rule 9))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "expected expression before 'if', but statement is given")])), nvars := 5, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 622)), (.opt (.rule 150)), (.call (.tok 11)), (.look true (.tok 60))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 2), (.str "f-string: lambda expressions are not allowed without parentheses")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 622)), (.opt (.rule 150)), (.call (.tok 11)), (.look true (.tok 63))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 2), (.str "t-string: lambda expressions are not allowed without parentheses")])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r211 : Rule := { name := "invalid_named_expression", kind := .normal, memo := true, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r214 : Rule := { name := "invalid_if_expression", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 120)), (.call (.tok 700)), (.call (.rule 120)), (.call (.tok 704)), (.call (.tok 16))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 4), (.str "cannot unpack only part of a conditional expression")])), nvars := 5, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 120)), (.call (.tok 700)), (.call (.rule 120)), (.call (.tok 704)), (.call (.tok 35))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 4), (.str "cannot use dict unpacking on only part of a conditional expression")])), nvars := 5, guardInvalid := false, extra := false }] }
+
+def r215 : Rule := { name := "invalid_named_expression", kind := .normal, memo := true, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 109)), (.call (.tok 53)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "cannot use assignment expressions with %s"), (.call .get_expr_name [(.var 0)])])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call .name), (.call (.tok 22)), (.call (.rule 132)), (.look false (.rule 385))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 2), (.str "invalid syntax. Maybe you meant '==' or ':=' instead of '='?")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.look false (.rule 386)), (.call (.rule 132)), (.call (.tok 22)), (.call (.rule 132)), (.look false (.rule 385))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "cannot assign to %s here. Maybe you meant '==' instead of '='?"), (.call .get_expr_name [(.var 0)])])), nvars := 3, guardInvalid := false, extra := false }] }
+  { items := [(.call .name), (.call (.tok 22)), (.call (.rule 135)), (.look false (.rule 396))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 2), (.str "invalid syntax. Maybe you meant '==' or ':=' instead of '='?")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.look false (.rule 397)), (.call (.rule 135)), (.call (.tok 22)), (.call (.rule 135)), (.look false (.rule 396))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "cannot assign to %s here. Maybe you meant '==' instead of '='?"), (.call .get_expr_name [(.var 0)])])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r212 : Rule := { name := "invalid_assignment", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 213)), (.call (.tok 11)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "only single target (not %s) can be annotated"), (.call .get_expr_name [(.var 0)])])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 114)), (.call (.tok 12)), (.call (.rule 387)), (.call (.tok 11)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "only single target (not tuple) can be annotated")])), nvars := 5, guardInvalid := false, extra := false },
+def r216 : Rule := { name := "invalid_assignment", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 217)), (.call (.tok 11)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "only single target (not %s) can be annotated"), (.call .get_expr_name [(.var 0)])])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 116)), (.call (.tok 12)), (.call (.rule 398)), (.call (.tok 11)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "only single target (not tuple) can be annotated")])), nvars := 5, guardInvalid := false, extra := false },
   { items := [(.call (.rule 109)), (.call (.tok 11)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "illegal target for annotation")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 388)), (.call (.rule 111)), (.call (.tok 22))], action := (some (.call .RAISE_SYNTAX_ERROR_INVALID_TARGET [(.int 0), (.var 1)])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 388)), (.call (.rule 110)), (.call (.tok 22))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 1), (.str "assignment to yield expression not possible")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 111)), (.call (.rule 13)), (.call (.rule 12))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "'%s' is an illegal expression for augmented assignment"), (.call .get_expr_name [(.var 0)])])), nvars := 3, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 399)), (.call (.rule 112)), (.call (.tok 22))], action := (some (.call .RAISE_SYNTAX_ERROR_INVALID_TARGET [(.int 0), (.var 1)])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 399)), (.call (.rule 111)), (.call (.tok 22))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 1), (.str "assignment to yield expression not possible")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 112)), (.call (.rule 13)), (.call (.rule 12))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "'%s' is an illegal expression for augmented assignment"), (.call .get_expr_name [(.var 0)])])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r213 : Rule := { name := "invalid_ann_assign_target", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 171))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 172))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 7)), (.call (.rule 213)), (.call (.tok 8))], action := (some (.var 1)), nvars := 3, guardInvalid := false, extra := false }] }
+def r217 : Rule := { name := "invalid_ann_assign_target", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 174))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 175))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 7)), (.call (.rule 217)), (.call (.tok 8))], action := (some (.var 1)), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r214 : Rule := { name := "invalid_del_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 625)), (.call (.rule 111))], action := (some (.call .RAISE_SYNTAX_ERROR_INVALID_TARGET [(.int 1), (.var 1)])), nvars := 2, guardInvalid := false, extra := false }] }
+def r218 : Rule := { name := "invalid_raise_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 632)), (.call (.tok 650))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 1), (.str "did you forget an expression between 'raise' and 'from'?")])), nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 632)), (.call (.rule 109)), (.call (.tok 650))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "did you forget an expression after 'from'?")])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r215 : Rule := { name := "invalid_block", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r219 : Rule := { name := "invalid_del_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 634)), (.call (.rule 112))], action := (some (.call .RAISE_SYNTAX_ERROR_INVALID_TARGET [(.int 1), (.var 1)])), nvars := 2, guardInvalid := false, extra := false }] }
+
+def r220 : Rule := { name := "invalid_assert_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 638)), (.call (.rule 109)), (.call (.tok 22)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 1), (.var 3), (.str "cannot assign to %s here. Maybe you meant '==' instead of '='?"), (.call .get_expr_name [(.var 1)])])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 638)), (.call (.rule 109)), (.call (.tok 12)), (.call (.rule 109)), (.call (.tok 22)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 3), (.var 5), (.str "cannot assign to %s here. Maybe you meant '==' instead of '='?"), (.call .get_expr_name [(.var 3)])])), nvars := 6, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 638)), (.call (.rule 109)), (.call (.tok 53)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 1), (.var 3), (.str "cannot use named expression without parentheses here")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 638)), (.call (.rule 109)), (.call (.tok 12)), (.call (.rule 109)), (.call (.tok 53)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 3), (.var 5), (.str "cannot use named expression without parentheses here")])), nvars := 6, guardInvalid := false, extra := false }] }
+
+def r221 : Rule := { name := "invalid_block", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block")])), nvars := 1, guardInvalid := false, extra := false }] }
 
-def r216 : Rule := { name := "invalid_comprehension", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 389)), (.call (.rule 187)), (.call (.rule 178))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 1), (.str "iterable unpacking cannot be used in comprehension")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 390)), (.call (.rule 114)), (.call (.tok 12)), (.call (.rule 113)), (.call (.rule 178))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 1), (.call .seq_last_item [(.var 3)]), (.str "did you forget parentheses around the comprehension target?")])), nvars := 5, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 390)), (.call (.rule 114)), (.call (.tok 12)), (.call (.rule 178))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 1), (.var 2), (.str "did you forget parentheses around the comprehension target?")])), nvars := 4, guardInvalid := false, extra := false }] }
+def r222 : Rule := { name := "invalid_comprehension", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 9)), (.call (.tok 35)), (.call (.rule 109)), (.call (.rule 181))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 1), (.var 2), (.str "cannot use dict unpacking in list comprehension")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 7)), (.call (.tok 35)), (.call (.rule 109)), (.call (.rule 181))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 1), (.var 2), (.str "cannot use dict unpacking in generator expression")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 400)), (.call (.rule 116)), (.call (.tok 12)), (.call (.rule 114)), (.call (.rule 181))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 1), (.call .seq_last_item [(.var 3)]), (.str "did you forget parentheses around the comprehension target?")])), nvars := 5, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 400)), (.call (.rule 116)), (.call (.tok 12)), (.call (.rule 181))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 1), (.var 2), (.str "did you forget parentheses around the comprehension target?")])), nvars := 4, guardInvalid := false, extra := false }] }
 
-def r217 : Rule := { name := "invalid_dict_comprehension", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 25)), (.call (.tok 35)), (.call (.rule 132)), (.call (.rule 178)), (.call (.tok 26))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 1), (.str "dict unpacking cannot be used in dict comprehension")])), nvars := 5, guardInvalid := false, extra := false }] }
+def r223 : Rule := { name := "invalid_parameters", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 17)), (.call (.tok 12))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "at least one parameter must precede /")])), nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 401)), (.call (.rule 308)), (.call (.tok 17))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "/ may appear only once")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.opt (.rule 41)), (.call (.rule 304)), (.call (.rule 227)), (.call (.rule 45))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "parameter without a default follows parameter with a default")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 304)), (.call (.tok 7)), (.call (.rule 306)), (.opt (.tok 12)), (.call (.tok 8))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 1), (.var 4), (.str "Function parameters cannot be parenthesized")])), nvars := 5, guardInvalid := false, extra := false },
+  { items := [(.opt (.rule 401)), (.call (.rule 308)), (.call (.tok 16)), (.call (.rule 402)), (.call (.rule 308)), (.call (.tok 17))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 5), (.str "/ must be ahead of *")])), nvars := 6, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 309)), (.call (.tok 17)), (.call (.tok 16))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "expected comma between / and *")])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r218 : Rule := { name := "invalid_parameters", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 17)), (.call (.tok 12))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "at least one argument must precede /")])), nvars := 2, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 391)), (.call (.rule 299)), (.call (.tok 17))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "/ may appear only once")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.opt (.rule 41)), (.call (.rule 295)), (.call (.rule 222)), (.call (.rule 45))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "parameter without a default follows parameter with a default")])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 295)), (.call (.tok 7)), (.call (.rule 297)), (.opt (.tok 12)), (.call (.tok 8))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 1), (.var 4), (.str "Function parameters cannot be parenthesized")])), nvars := 5, guardInvalid := false, extra := false },
-  { items := [(.opt (.rule 391)), (.call (.rule 299)), (.call (.tok 16)), (.call (.rule 392)), (.call (.rule 299)), (.call (.tok 17))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 5), (.str "/ must be ahead of *")])), nvars := 6, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 300)), (.call (.tok 17)), (.call (.tok 16))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "expected comma between / and *")])), nvars := 3, guardInvalid := false, extra := false }] }
+def r224 : Rule := { name := "invalid_default", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 22)), (.look true (.rule 403))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "expected default value expression")])), nvars := 1, guardInvalid := false, extra := false }] }
 
-def r219 : Rule := { name := "invalid_default", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 22)), (.look true (.rule 393))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "expected default value expression")])), nvars := 1, guardInvalid := false, extra := false }] }
-
-def r220 : Rule := { name := "invalid_star_etc", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 16)), (.call (.rule 394))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "named arguments must follow bare *")])), nvars := 2, guardInvalid := false, extra := false },
+def r225 : Rule := { name := "invalid_star_etc", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 16)), (.call (.rule 404))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "named parameters must follow bare *")])), nvars := 2, guardInvalid := false, extra := false },
   { items := [(.call (.tok 16)), (.call (.tok 12)), (.call (.tok 57))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "bare * has associated type comment")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 16)), (.call (.rule 49)), (.call (.tok 22))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "var-positional argument cannot have default value")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 16)), (.call (.rule 395)), (.call (.rule 299)), (.call (.tok 16)), (.call (.rule 395))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "* argument may appear only once")])), nvars := 5, guardInvalid := false, extra := false }] }
+  { items := [(.call (.tok 16)), (.call (.rule 49)), (.call (.tok 22))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "var-positional parameter cannot have default value")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 16)), (.call (.rule 405)), (.call (.rule 308)), (.call (.tok 16)), (.call (.rule 405))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "* may appear only once")])), nvars := 5, guardInvalid := false, extra := false }] }
 
-def r221 : Rule := { name := "invalid_kwds", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 35)), (.call (.rule 49)), (.call (.tok 22))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "var-keyword argument cannot have default value")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 35)), (.call (.rule 49)), (.call (.tok 12)), (.call (.rule 49))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "arguments cannot follow var-keyword argument")])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 35)), (.call (.rule 49)), (.call (.tok 12)), (.call (.rule 396))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "arguments cannot follow var-keyword argument")])), nvars := 4, guardInvalid := false, extra := false }] }
+def r226 : Rule := { name := "invalid_kwds", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 35)), (.call (.rule 49)), (.call (.tok 22))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "var-keyword parameter cannot have default value")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 35)), (.call (.rule 49)), (.call (.tok 12)), (.call (.rule 49))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "parameters cannot follow var-keyword parameter")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 35)), (.call (.rule 49)), (.call (.tok 12)), (.call (.rule 406))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "parameters cannot follow var-keyword parameter")])), nvars := 4, guardInvalid := false, extra := false }] }
 
-def r222 : Rule := { name := "invalid_parameters_helper", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r227 : Rule := { name := "invalid_parameters_helper", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 42))], action := (some (.call .singleton_seq [(.var 0)])), nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 298))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 307))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r223 : Rule := { name := "invalid_lambda_parameters", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 17)), (.call (.tok 12))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "at least one argument must precede /")])), nvars := 2, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 397)), (.call (.rule 342)), (.call (.tok 17))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "/ may appear only once")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.opt (.rule 149)), (.call (.rule 338)), (.call (.rule 224)), (.call (.rule 153))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "parameter without a default follows parameter with a default")])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 338)), (.call (.tok 7)), (.call (.rule 399)), (.opt (.tok 12)), (.call (.tok 8))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 1), (.var 4), (.str "Lambda expression parameters cannot be parenthesized")])), nvars := 5, guardInvalid := false, extra := false },
-  { items := [(.opt (.rule 397)), (.call (.rule 342)), (.call (.tok 16)), (.call (.rule 400)), (.call (.rule 342)), (.call (.tok 17))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 5), (.str "/ must be ahead of *")])), nvars := 6, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 343)), (.call (.tok 17)), (.call (.tok 16))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "expected comma between / and *")])), nvars := 3, guardInvalid := false, extra := false }] }
+def r228 : Rule := { name := "invalid_lambda_parameters", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 17)), (.call (.tok 12))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "at least one parameter must precede /")])), nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 407)), (.call (.rule 353)), (.call (.tok 17))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "/ may appear only once")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.opt (.rule 152)), (.call (.rule 349)), (.call (.rule 229)), (.call (.rule 156))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "parameter without a default follows parameter with a default")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 349)), (.call (.tok 7)), (.call (.rule 409)), (.opt (.tok 12)), (.call (.tok 8))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 1), (.var 4), (.str "Lambda expression parameters cannot be parenthesized")])), nvars := 5, guardInvalid := false, extra := false },
+  { items := [(.opt (.rule 407)), (.call (.rule 353)), (.call (.tok 16)), (.call (.rule 410)), (.call (.rule 353)), (.call (.tok 17))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 5), (.str "/ must be ahead of *")])), nvars := 6, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 354)), (.call (.tok 17)), (.call (.tok 16))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "expected comma between / and *")])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r224 : Rule := { name := "invalid_lambda_parameters_helper", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 150))], action := (some (.call .singleton_seq [(.var 0)])), nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 341))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r229 : Rule := { name := "invalid_lambda_parameters_helper", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 153))], action := (some (.call .singleton_seq [(.var 0)])), nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 352))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r225 : Rule := { name := "invalid_lambda_star_etc", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 16)), (.call (.rule 401))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "named arguments must follow bare *")])), nvars := 2, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 16)), (.call (.rule 156)), (.call (.tok 22))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "var-positional argument cannot have default value")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 16)), (.call (.rule 402)), (.call (.rule 342)), (.call (.tok 16)), (.call (.rule 402))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "* argument may appear only once")])), nvars := 5, guardInvalid := false, extra := false }] }
+def r230 : Rule := { name := "invalid_lambda_star_etc", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 16)), (.call (.rule 411))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "named parameters must follow bare *")])), nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 16)), (.call (.rule 159)), (.call (.tok 22))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "var-positional parameter cannot have default value")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 16)), (.call (.rule 412)), (.call (.rule 353)), (.call (.tok 16)), (.call (.rule 412))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "* may appear only once")])), nvars := 5, guardInvalid := false, extra := false }] }
 
-def r226 : Rule := { name := "invalid_lambda_kwds", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 35)), (.call (.rule 156)), (.call (.tok 22))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "var-keyword argument cannot have default value")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 35)), (.call (.rule 156)), (.call (.tok 12)), (.call (.rule 156))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "arguments cannot follow var-keyword argument")])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 35)), (.call (.rule 156)), (.call (.tok 12)), (.call (.rule 396))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "arguments cannot follow var-keyword argument")])), nvars := 4, guardInvalid := false, extra := false }] }
+def r231 : Rule := { name := "invalid_lambda_kwds", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 35)), (.call (.rule 159)), (.call (.tok 22))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "var-keyword parameter cannot have default value")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 35)), (.call (.rule 159)), (.call (.tok 12)), (.call (.rule 159))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "parameters cannot follow var-keyword parameter")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 35)), (.call (.rule 159)), (.call (.tok 12)), (.call (.rule 406))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "parameters cannot follow var-keyword parameter")])), nvars := 4, guardInvalid := false, extra := false }] }
 
-def r227 : Rule := { name := "invalid_double_type_comments", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r232 : Rule := { name := "invalid_double_type_comments", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 57)), (.call (.tok 4)), (.call (.tok 57)), (.call (.tok 4)), (.call (.tok 5))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "Cannot have two type comments on def")])), nvars := 5, guardInvalid := false, extra := false }] }
 
-def r228 : Rule := { name := "invalid_with_item", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 109)), (.call (.tok 680)), (.call (.rule 109)), (.look true (.rule 303))], action := (some (.call .RAISE_SYNTAX_ERROR_INVALID_TARGET [(.int 0), (.var 2)])), nvars := 3, guardInvalid := false, extra := false }] }
+def r233 : Rule := { name := "invalid_with_item", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 109)), (.call (.tok 698)), (.call (.rule 109)), (.look true (.rule 312))], action := (some (.call .RAISE_SYNTAX_ERROR_INVALID_TARGET [(.int 0), (.var 2)])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r229 : Rule := { name := "invalid_for_if_clause", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.opt (.tok 698)), (.call (.tok 694)), (.call (.rule 403)), (.look false (.tok 695))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "'in' expected after for-loop variables")])), nvars := 3, guardInvalid := false, extra := false }] }
+def r234 : Rule := { name := "invalid_for_if_clause", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.opt (.tok 716)), (.call (.tok 712)), (.call (.rule 413)), (.look false (.tok 713))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "'in' expected after for-loop variables")])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r230 : Rule := { name := "invalid_for_target", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.opt (.tok 698)), (.call (.tok 694)), (.call (.rule 111))], action := (some (.call .RAISE_SYNTAX_ERROR_INVALID_TARGET [(.int 2), (.var 2)])), nvars := 3, guardInvalid := false, extra := false }] }
+def r235 : Rule := { name := "invalid_for_target", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.opt (.tok 716)), (.call (.tok 712)), (.call (.rule 112))], action := (some (.call .RAISE_SYNTAX_ERROR_INVALID_TARGET [(.int 2), (.var 2)])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r231 : Rule := { name := "invalid_group", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 7)), (.call (.rule 187)), (.call (.tok 8))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 1), (.str "cannot use starred expression here")])), nvars := 3, guardInvalid := false, extra := false },
+def r236 : Rule := { name := "invalid_group", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 7)), (.call (.rule 190)), (.call (.tok 8))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 1), (.str "cannot use starred expression here")])), nvars := 3, guardInvalid := false, extra := false },
   { items := [(.call (.tok 7)), (.call (.tok 35)), (.call (.rule 109)), (.call (.tok 8))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 1), (.str "cannot use double starred expression here")])), nvars := 4, guardInvalid := false, extra := false }] }
 
-def r232 : Rule := { name := "invalid_import", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 634)), (.call (.rule 405)), (.call (.tok 633)), (.call (.rule 32))], action := (some (.call .RAISE_SYNTAX_ERROR_STARTING_FROM [(.var 0), (.str "Did you mean to use 'from ... import ...' instead?")])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 634)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR_STARTING_FROM [(.var 1), (.str "Expected one or more names after 'import'")])), nvars := 2, guardInvalid := false, extra := false }] }
+def r237 : Rule := { name := "invalid_import", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 651)), (.call (.rule 415)), (.call (.tok 650)), (.call (.rule 32))], action := (some (.call .RAISE_SYNTAX_ERROR_STARTING_FROM [(.var 0), (.str "Did you mean to use 'from ... import ...' instead?")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 651)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR_STARTING_FROM [(.var 1), (.str "Expected one or more names after 'import'")])), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r233 : Rule := { name := "invalid_dotted_as_name", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 32)), (.call (.tok 680)), (.look false (.rule 406)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "cannot use %s as import target"), (.call .get_expr_name [(.var 2)])])), nvars := 3, guardInvalid := false, extra := false }] }
+def r238 : Rule := { name := "invalid_dotted_as_name", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 32)), (.call (.tok 698)), (.look false (.rule 416)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "cannot use %s as import target"), (.call .get_expr_name [(.var 2)])])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r234 : Rule := { name := "invalid_import_from_as_name", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call .name), (.call (.tok 680)), (.look false (.rule 406)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "cannot use %s as import target"), (.call .get_expr_name [(.var 2)])])), nvars := 3, guardInvalid := false, extra := false }] }
+def r239 : Rule := { name := "invalid_import_from_as_name", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call .name), (.call (.tok 698)), (.look false (.rule 416)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "cannot use %s as import target"), (.call .get_expr_name [(.var 2)])])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r235 : Rule := { name := "invalid_import_from_targets", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r240 : Rule := { name := "invalid_import_from", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 650)), (.call (.rule 294)), (.call (.rule 32)), (.call (.softKw [108, 97, 122, 121])), (.call (.tok 651)), (.call (.rule 27))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "use 'lazy from ... ' instead of 'from ... lazy import'")])), nvars := 6, guardInvalid := false, extra := false }] }
+
+def r241 : Rule := { name := "invalid_import_from_targets", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 28)), (.call (.tok 12)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "trailing comma not allowed without surrounding parentheses")])), nvars := 3, guardInvalid := false, extra := false },
   { items := [(.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR_STARTING_FROM [(.var 0), (.str "Expected one or more names after 'import'")])), nvars := 1, guardInvalid := false, extra := false }] }
 
-def r236 : Rule := { name := "invalid_with_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.opt (.tok 698)), (.call (.tok 647)), (.call (.rule 408)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.opt (.tok 698)), (.call (.tok 647)), (.call (.tok 7)), (.call (.rule 410)), (.opt (.tok 12)), (.call (.tok 8)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 7, guardInvalid := false, extra := false }] }
+def r242 : Rule := { name := "invalid_with_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.opt (.tok 716)), (.call (.tok 665)), (.call (.rule 418)), (.call (.tok 12)), (.call (.tok 11))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "the last 'with' item has a trailing comma")])), nvars := 5, guardInvalid := false, extra := false },
+  { items := [(.opt (.tok 716)), (.call (.tok 665)), (.call (.rule 418)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.opt (.tok 716)), (.call (.tok 665)), (.call (.tok 7)), (.call (.rule 420)), (.opt (.tok 12)), (.call (.tok 8)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 7, guardInvalid := false, extra := false }] }
 
-def r237 : Rule := { name := "invalid_with_stmt_indent", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.opt (.tok 698)), (.call (.tok 647)), (.call (.rule 408)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'with' statement on line %d"), (.attr (.var 1) "lineno")])), nvars := 5, guardInvalid := false, extra := false },
-  { items := [(.opt (.tok 698)), (.call (.tok 647)), (.call (.tok 7)), (.call (.rule 410)), (.opt (.tok 12)), (.call (.tok 8)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'with' statement on line %d"), (.attr (.var 1) "lineno")])), nvars := 8, guardInvalid := false, extra := false }] }
+def r243 : Rule := { name := "invalid_with_stmt_indent", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.opt (.tok 716)), (.call (.tok 665)), (.call (.rule 418)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'with' statement on line %d"), (.attr (.var 1) "lineno")])), nvars := 5, guardInvalid := false, extra := false },
+  { items := [(.opt (.tok 716)), (.call (.tok 665)), (.call (.tok 7)), (.call (.rule 420)), (.opt (.tok 12)), (.call (.tok 8)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'with' statement on line %d"), (.attr (.var 1) "lineno")])), nvars := 8, guardInvalid := false, extra := false }] }
 
-def r238 : Rule := { name := "invalid_try_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 656)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'try' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 656)), (.call (.tok 11)), (.call (.rule 33)), (.look false (.rule 411))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected 'except' or 'finally' block")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 656)), (.call (.tok 11)), (.call (.rule 412)), (.call (.rule 304)), (.call (.tok 677)), (.call (.tok 16)), (.call (.rule 109)), (.opt (.rule 289)), (.call (.tok 11))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 4), (.var 5), (.str "cannot have both 'except' and 'except*' on the same 'try'")])), nvars := 9, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 656)), (.call (.tok 11)), (.call (.rule 412)), (.call (.rule 305)), (.call (.tok 677)), (.opt (.rule 413)), (.call (.tok 11))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 4), (.str "cannot have both 'except' and 'except*' on the same 'try'")])), nvars := 7, guardInvalid := false, extra := false }] }
+def r244 : Rule := { name := "invalid_try_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 674)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'try' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 674)), (.call (.tok 11)), (.call (.rule 33)), (.look false (.rule 421))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected 'except' or 'finally' block")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 674)), (.call (.tok 11)), (.call (.rule 422)), (.call (.rule 313)), (.call (.tok 695)), (.call (.tok 16)), (.call (.rule 109)), (.opt (.rule 298)), (.call (.tok 11))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 4), (.var 5), (.str "cannot have both 'except' and 'except*' on the same 'try'")])), nvars := 9, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 674)), (.call (.tok 11)), (.call (.rule 422)), (.call (.rule 314)), (.call (.tok 695)), (.opt (.rule 423)), (.call (.tok 11))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 4), (.str "cannot have both 'except' and 'except*' on the same 'try'")])), nvars := 7, guardInvalid := false, extra := false }] }
 
-def r239 : Rule := { name := "invalid_except_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 677)), (.call (.rule 109)), (.call (.tok 12)), (.call (.rule 108)), (.call (.tok 680)), (.call .name), (.call (.tok 11))], action := (some (.call .RAISE_SYNTAX_ERROR_STARTING_FROM [(.var 1), (.str "multiple exception types must be parenthesized when using 'as'")])), nvars := 7, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 677)), (.call (.rule 109)), (.opt (.rule 289)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 677)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 2, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 677)), (.call (.rule 109)), (.call (.tok 680)), (.call (.rule 109)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "cannot use except statement with %s"), (.call .get_expr_name [(.var 3)])])), nvars := 6, guardInvalid := false, extra := false }] }
+def r245 : Rule := { name := "invalid_except_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 695)), (.call (.rule 109)), (.call (.tok 12)), (.call (.rule 108)), (.call (.tok 698)), (.call .name), (.call (.tok 11))], action := (some (.call .RAISE_SYNTAX_ERROR_STARTING_FROM [(.var 1), (.str "multiple exception types must be parenthesized when using 'as'")])), nvars := 7, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 695)), (.call (.rule 109)), (.opt (.rule 298)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 695)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 695)), (.call (.rule 109)), (.call (.tok 698)), (.call (.rule 109)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 3), (.str "cannot use except statement with %s"), (.call .get_expr_name [(.var 3)])])), nvars := 6, guardInvalid := false, extra := false }] }
 
-def r240 : Rule := { name := "invalid_except_star_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 677)), (.call (.tok 16)), (.call (.rule 109)), (.call (.tok 12)), (.call (.rule 108)), (.call (.tok 680)), (.call .name), (.call (.tok 11))], action := (some (.call .RAISE_SYNTAX_ERROR_STARTING_FROM [(.var 2), (.str "multiple exception types must be parenthesized when using 'as'")])), nvars := 8, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 677)), (.call (.tok 16)), (.call (.rule 109)), (.opt (.rule 289)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 5, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 677)), (.call (.tok 16)), (.call (.rule 414))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected one or more exception types")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 677)), (.call (.tok 16)), (.call (.rule 109)), (.call (.tok 680)), (.call (.rule 109)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 4), (.str "cannot use except* statement with %s"), (.call .get_expr_name [(.var 4)])])), nvars := 7, guardInvalid := false, extra := false }] }
+def r246 : Rule := { name := "invalid_except_star_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 695)), (.call (.tok 16)), (.call (.rule 109)), (.call (.tok 12)), (.call (.rule 108)), (.call (.tok 698)), (.call .name), (.call (.tok 11))], action := (some (.call .RAISE_SYNTAX_ERROR_STARTING_FROM [(.var 2), (.str "multiple exception types must be parenthesized when using 'as'")])), nvars := 8, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 695)), (.call (.tok 16)), (.call (.rule 109)), (.opt (.rule 298)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 5, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 695)), (.call (.tok 16)), (.call (.rule 424))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected one or more exception types")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 695)), (.call (.tok 16)), (.call (.rule 109)), (.call (.tok 698)), (.call (.rule 109)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 4), (.str "cannot use except* statement with %s"), (.call .get_expr_name [(.var 4)])])), nvars := 7, guardInvalid := false, extra := false }] }
 
-def r241 : Rule := { name := "invalid_finally_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 673)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'finally' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 3, guardInvalid := false, extra := false }] }
+def r247 : Rule := { name := "invalid_finally_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 691)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'finally' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r242 : Rule := { name := "invalid_except_stmt_indent", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 677)), (.call (.rule 109)), (.opt (.rule 289)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'except' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 5, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 677)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'except' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 3, guardInvalid := false, extra := false }] }
+def r248 : Rule := { name := "invalid_except_stmt_indent", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 695)), (.call (.rule 109)), (.opt (.rule 298)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'except' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 5, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 695)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'except' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r243 : Rule := { name := "invalid_except_star_stmt_indent", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 677)), (.call (.tok 16)), (.call (.rule 109)), (.opt (.rule 289)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'except*' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 6, guardInvalid := false, extra := false }] }
+def r249 : Rule := { name := "invalid_except_star_stmt_indent", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 695)), (.call (.tok 16)), (.call (.rule 109)), (.opt (.rule 298)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'except*' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 6, guardInvalid := false, extra := false }] }
 
-def r244 : Rule := { name := "invalid_match_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r250 : Rule := { name := "invalid_match_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.softKw [109, 97, 116, 99, 104])), (.call (.rule 66)), (.call (.tok 4))], action := (some (.checkVersion (.int 10) (.str "Pattern matching is") (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")]))), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.softKw [109, 97, 116, 99, 104])), (.call (.rule 66)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'match' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 4, guardInvalid := false, extra := false }] }
+  { items := [(.call (.softKw [109, 97, 116, 99, 104])), (.call (.rule 66)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'match' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.softKw [99, 97, 115, 101])), (.call (.rule 69)), (.opt (.rule 68)), (.call (.tok 11)), (.call (.rule 33))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 3), (.str "case statement must be inside match statement")])), nvars := 5, guardInvalid := false, extra := false }] }
 
-def r245 : Rule := { name := "invalid_case_block", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r251 : Rule := { name := "invalid_case_block", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.softKw [99, 97, 115, 101])), (.call (.rule 69)), (.opt (.rule 68)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 4, guardInvalid := false, extra := false },
   { items := [(.call (.softKw [99, 97, 115, 101])), (.call (.rule 69)), (.opt (.rule 68)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'case' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 5, guardInvalid := false, extra := false }] }
 
-def r246 : Rule := { name := "invalid_as_pattern", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 72)), (.call (.tok 680)), (.call (.softKw [95]))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "cannot use '_' as a target")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 72)), (.call (.tok 680)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "cannot use %s as pattern target"), (.call .get_expr_name [(.var 2)])])), nvars := 3, guardInvalid := false, extra := false }] }
+def r252 : Rule := { name := "invalid_as_pattern", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 72)), (.call (.tok 698)), (.call (.softKw [95]))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "cannot use '_' as a target")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 72)), (.call (.tok 698)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "cannot use %s as pattern target"), (.call .get_expr_name [(.var 2)])])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r247 : Rule := { name := "invalid_class_pattern", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 86)), (.call (.tok 7)), (.call (.rule 248))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.call .seq_first_item [(.var 2)]), (.call .seq_last_item [(.var 2)]), (.str "positional patterns follow keyword patterns")])), nvars := 3, guardInvalid := false, extra := false }] }
+def r253 : Rule := { name := "invalid_class_pattern", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 86)), (.call (.tok 7)), (.call (.rule 255))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.call .seq_first_item [(.var 2)]), (.call .seq_last_item [(.var 2)]), (.str "positional patterns follow keyword patterns")])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r248 : Rule := { name := "invalid_class_argument_pattern", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.opt (.rule 415)), (.call (.rule 99)), (.call (.tok 12)), (.call (.rule 98))], action := (some (.var 3)), nvars := 4, guardInvalid := false, extra := false }] }
+def r254 : Rule := { name := "invalid_mapping_pattern", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 25)), (.opt (.rule 425)), (.call (.rule 96)), (.call (.tok 12)), (.call (.rule 94)), (.opt (.tok 12)), (.call (.tok 26))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 2), (.str "double star pattern must be the last (right-most) subpattern in the mapping pattern")])), nvars := 7, guardInvalid := false, extra := false }] }
 
-def r249 : Rule := { name := "invalid_if_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 682)), (.call (.rule 116)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 682)), (.call (.rule 116)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'if' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 4, guardInvalid := false, extra := false }] }
+def r255 : Rule := { name := "invalid_class_argument_pattern", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.opt (.rule 426)), (.call (.rule 99)), (.call (.tok 12)), (.call (.rule 98))], action := (some (.var 3)), nvars := 4, guardInvalid := false, extra := false }] }
 
-def r250 : Rule := { name := "invalid_elif_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 687)), (.call (.rule 116)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 687)), (.call (.rule 116)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'elif' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 4, guardInvalid := false, extra := false }] }
+def r256 : Rule := { name := "invalid_if_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 700)), (.call (.rule 119)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 700)), (.call (.rule 119)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'if' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 4, guardInvalid := false, extra := false }] }
 
-def r251 : Rule := { name := "invalid_else_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 686)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'else' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 686)), (.call (.tok 11)), (.call (.rule 33)), (.call (.tok 687))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "'elif' block follows an 'else' block")])), nvars := 4, guardInvalid := false, extra := false }] }
+def r257 : Rule := { name := "invalid_elif_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 705)), (.call (.rule 119)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 705)), (.call (.rule 119)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'elif' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 4, guardInvalid := false, extra := false }] }
 
-def r252 : Rule := { name := "invalid_while_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 689)), (.call (.rule 116)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 689)), (.call (.rule 116)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'while' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 4, guardInvalid := false, extra := false }] }
+def r258 : Rule := { name := "invalid_else_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 704)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'else' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 704)), (.call (.tok 11)), (.call (.rule 33)), (.call (.tok 705))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "'elif' block follows an 'else' block")])), nvars := 4, guardInvalid := false, extra := false }] }
 
-def r253 : Rule := { name := "invalid_for_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.opt (.tok 698)), (.call (.tok 694)), (.call (.rule 190)), (.call (.tok 695)), (.call (.rule 111)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 6, guardInvalid := false, extra := false },
-  { items := [(.opt (.tok 698)), (.call (.tok 694)), (.call (.rule 190)), (.call (.tok 695)), (.call (.rule 111)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'for' statement on line %d"), (.attr (.var 1) "lineno")])), nvars := 7, guardInvalid := false, extra := false }] }
+def r259 : Rule := { name := "invalid_while_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 707)), (.call (.rule 119)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 707)), (.call (.rule 119)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'while' statement on line %d"), (.attr (.var 0) "lineno")])), nvars := 4, guardInvalid := false, extra := false }] }
 
-def r254 : Rule := { name := "invalid_def_raw", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.opt (.tok 698)), (.call (.tok 699)), (.call .name), (.opt (.rule 102)), (.call (.tok 7)), (.opt (.rule 39)), (.call (.tok 8)), (.opt (.rule 294)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after function definition on line %d"), (.attr (.var 1) "lineno")])), nvars := 10, guardInvalid := false, extra := false },
-  { items := [(.opt (.tok 698)), (.call (.tok 699)), (.call .name), (.opt (.rule 102)), (.call (.forcedTok 7 "(")), (.opt (.rule 39)), (.call (.tok 8)), (.opt (.rule 294)), (.call (.forcedTok 11 ":")), (.opt (.rule 204)), (.call (.rule 33))], action := none, nvars := 11, guardInvalid := false, extra := false }] }
+def r260 : Rule := { name := "invalid_for_stmt", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.opt (.tok 716)), (.call (.tok 712)), (.call (.rule 193)), (.call (.tok 713)), (.call (.rule 112)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 6, guardInvalid := false, extra := false },
+  { items := [(.opt (.tok 716)), (.call (.tok 712)), (.call (.rule 193)), (.call (.tok 713)), (.call (.rule 112)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after 'for' statement on line %d"), (.attr (.var 1) "lineno")])), nvars := 7, guardInvalid := false, extra := false }] }
 
-def r255 : Rule := { name := "invalid_class_def_raw", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 701)), (.call .name), (.opt (.rule 102)), (.opt (.rule 293)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 5, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 701)), (.call .name), (.opt (.rule 102)), (.opt (.rule 293)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after class definition on line %d"), (.attr (.var 0) "lineno")])), nvars := 6, guardInvalid := false, extra := false }] }
+def r261 : Rule := { name := "invalid_def_raw", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.opt (.tok 716)), (.call (.tok 717)), (.call .name), (.opt (.rule 102)), (.call (.tok 7)), (.opt (.rule 39)), (.call (.tok 8)), (.opt (.rule 303)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after function definition on line %d"), (.attr (.var 1) "lineno")])), nvars := 10, guardInvalid := false, extra := false },
+  { items := [(.opt (.tok 716)), (.call (.tok 717)), (.call .name), (.opt (.rule 102)), (.call (.forcedTok 7 "(")), (.opt (.rule 39)), (.call (.tok 8)), (.opt (.rule 303)), (.call (.forcedTok 11 ":")), (.opt (.rule 207)), (.call (.rule 33))], action := none, nvars := 11, guardInvalid := false, extra := false }] }
 
-def r256 : Rule := { name := "invalid_double_starred_kvpairs", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 352)), (.call (.tok 12)), (.call (.rule 257))], action := none, nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 109)), (.call (.tok 11)), (.call (.tok 16)), (.call (.rule 132))], action := (some (.call .RAISE_SYNTAX_ERROR_STARTING_FROM [(.var 2), (.str "cannot use a starred expression in a dictionary value")])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 109)), (.call (.tok 11)), (.look true (.rule 416))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 1), (.str "expression expected after dictionary key and ':'")])), nvars := 2, guardInvalid := false, extra := false }] }
+def r262 : Rule := { name := "invalid_class_def_raw", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 719)), (.call .name), (.opt (.rule 102)), (.opt (.rule 302)), (.call (.tok 4))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "expected ':'")])), nvars := 5, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 719)), (.call .name), (.opt (.rule 102)), (.opt (.rule 302)), (.call (.tok 11)), (.call (.tok 4)), (.look false (.tok 5))], action := (some (.call .RAISE_INDENTATION_ERROR [(.str "expected an indented block after class definition on line %d"), (.attr (.var 0) "lineno")])), nvars := 6, guardInvalid := false, extra := false }] }
 
-def r257 : Rule := { name := "invalid_kvpair", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r263 : Rule := { name := "invalid_double_starred_kvpairs", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 264)), (.opt (.tok 12))], action := none, nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 363)), (.call (.tok 12)), (.call (.rule 427))], action := none, nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 109)), (.call (.tok 11)), (.look true (.rule 428))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 1), (.str "expression expected after dictionary key and ':'")])), nvars := 2, guardInvalid := false, extra := false }] }
+
+def r264 : Rule := { name := "invalid_kvpair_unpacking", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 35)), (.call (.rule 110))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 1), (.str "invalid double starred expression. Did you forget to wrap the conditional expression in parentheses?")])), nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 16)), (.call (.rule 135)), (.call (.tok 11)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 1), (.str "cannot use a starred expression in a dictionary key")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 35)), (.call (.rule 135)), (.call (.tok 11)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 1), (.str "cannot use dict unpacking in a dictionary key")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 109)), (.call (.tok 11)), (.call (.tok 16)), (.call (.rule 135))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 2), (.var 3), (.str "cannot use a starred expression in a dictionary value")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 109)), (.call (.tok 11)), (.call (.tok 35)), (.call (.rule 135))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 2), (.var 3), (.str "cannot use dict unpacking in a dictionary value")])), nvars := 4, guardInvalid := false, extra := false }] }
+
+def r265 : Rule := { name := "invalid_kvpair", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 109)), (.look false (.tok 11))], action := (some (.call .RAISE_ERROR_KNOWN_LOCATION [(.str "SyntaxError"), (.attr (.var 0) "lineno"), (.sub (.attr (.var 0) "end_col_offset") (.int 1)), (.attr (.var 0) "end_lineno"), (.sub (.int 0) (.int 1)), (.str "':' expected after dictionary key")])), nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 109)), (.call (.tok 11)), (.call (.tok 16)), (.call (.rule 132))], action := (some (.call .RAISE_SYNTAX_ERROR_STARTING_FROM [(.var 2), (.str "cannot use a starred expression in a dictionary value")])), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 109)), (.call (.tok 11)), (.look true (.rule 416))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 1), (.str "expression expected after dictionary key and ':'")])), nvars := 2, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 109)), (.call (.tok 11)), (.call (.tok 16)), (.call (.rule 135))], action := (some (.call .RAISE_SYNTAX_ERROR_STARTING_FROM [(.var 2), (.str "cannot use a starred expression in a dictionary value")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 109)), (.call (.tok 11)), (.call (.tok 35)), (.call (.rule 135))], action := (some (.call .RAISE_SYNTAX_ERROR_STARTING_FROM [(.var 2), (.str "cannot use dict unpacking in a dictionary value")])), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 109)), (.call (.tok 11)), (.look true (.rule 428))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 1), (.str "expression expected after dictionary key and ':'")])), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r258 : Rule := { name := "invalid_starred_expression_unpacking", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r266 : Rule := { name := "invalid_starred_expression_unpacking", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 16)), (.call (.rule 110))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 1), (.str "invalid starred expression. Did you forget to wrap the conditional expression in parentheses?")])), nvars := 2, guardInvalid := false, extra := false },
   { items := [(.call (.tok 16)), (.call (.rule 109)), (.call (.tok 22)), (.call (.rule 109))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 3), (.str "cannot assign to iterable argument unpacking")])), nvars := 4, guardInvalid := false, extra := false }] }
 
-def r259 : Rule := { name := "invalid_starred_expression", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r267 : Rule := { name := "invalid_starred_expression_unpacking_sequence", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 35)), (.call (.rule 135))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 0), (.str "cannot use dict unpacking here")])), nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 266))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+
+def r268 : Rule := { name := "invalid_starred_expression", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 16))], action := (some (.call .RAISE_SYNTAX_ERROR [(.str "Invalid star expression")])), nvars := 1, guardInvalid := false, extra := false }] }
 
-def r260 : Rule := { name := "invalid_fstring_replacement_field", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r269 : Rule := { name := "invalid_fstring_replacement_field", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 25)), (.call (.tok 22))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 1), (.str "f-string: valid expression required before '='")])), nvars := 2, guardInvalid := false, extra := false },
   { items := [(.call (.tok 25)), (.call (.tok 54))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 1), (.str "f-string: valid expression required before '!'")])), nvars := 2, guardInvalid := false, extra := false },
   { items := [(.call (.tok 25)), (.call (.tok 11))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 1), (.str "f-string: valid expression required before ':'")])), nvars := 2, guardInvalid := false, extra := false },
   { items := [(.call (.tok 25)), (.call (.tok 26))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 1), (.str "f-string: valid expression required before '}'")])), nvars := 2, guardInvalid := false, extra := false },
   { items := [(.call (.tok 25)), (.look false (.rule 12))], action := (some (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "f-string: expecting a valid expression after '{'")])), nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 25)), (.call (.rule 12)), (.look false (.rule 417))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "f-string: expecting '=', or '!', or ':', or '}'")]))), nvars := 2, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 25)), (.call (.rule 12)), (.call (.tok 22)), (.look false (.rule 418))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "f-string: expecting '!', or ':', or '}'")]))), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.call (.rule 261))], action := none, nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.opt (.rule 419)), (.look false (.rule 420))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "f-string: expecting ':' or '}'")]))), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.opt (.rule 419)), (.call (.tok 11)), (.call (.rule 344)), (.look false (.tok 26))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "f-string: expecting '}', or format specs")]))), nvars := 6, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.opt (.rule 419)), (.look false (.tok 26))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "f-string: expecting '}'")]))), nvars := 4, guardInvalid := false, extra := false }] }
+  { items := [(.call (.tok 25)), (.call (.rule 12)), (.look false (.rule 429))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "f-string: expecting '=', or '!', or ':', or '}'")]))), nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 25)), (.call (.rule 12)), (.call (.tok 22)), (.look false (.rule 430))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "f-string: expecting '!', or ':', or '}'")]))), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.call (.rule 270))], action := none, nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.opt (.rule 431)), (.look false (.rule 432))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "f-string: expecting ':' or '}'")]))), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.opt (.rule 431)), (.call (.tok 11)), (.call (.rule 355)), (.look false (.tok 26))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "f-string: expecting '}', or format specs")]))), nvars := 6, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.opt (.rule 431)), (.look false (.tok 26))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "f-string: expecting '}'")]))), nvars := 4, guardInvalid := false, extra := false }] }
 
-def r261 : Rule := { name := "invalid_fstring_conversion_character", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 54)), (.look true (.rule 420))], action := (some (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "f-string: missing conversion character")])), nvars := 1, guardInvalid := false, extra := false },
+def r270 : Rule := { name := "invalid_fstring_conversion_character", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 54)), (.look true (.rule 432))], action := (some (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "f-string: missing conversion character")])), nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 54)), (.look false .name)], action := (some (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "f-string: invalid conversion character")])), nvars := 1, guardInvalid := false, extra := false }] }
 
-def r262 : Rule := { name := "invalid_tstring_replacement_field", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r271 : Rule := { name := "invalid_tstring_replacement_field", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 25)), (.call (.tok 22))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 1), (.str "t-string: valid expression required before '='")])), nvars := 2, guardInvalid := false, extra := false },
   { items := [(.call (.tok 25)), (.call (.tok 54))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 1), (.str "t-string: valid expression required before '!'")])), nvars := 2, guardInvalid := false, extra := false },
   { items := [(.call (.tok 25)), (.call (.tok 11))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 1), (.str "t-string: valid expression required before ':'")])), nvars := 2, guardInvalid := false, extra := false },
   { items := [(.call (.tok 25)), (.call (.tok 26))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_LOCATION [(.var 1), (.str "t-string: valid expression required before '}'")])), nvars := 2, guardInvalid := false, extra := false },
   { items := [(.call (.tok 25)), (.look false (.rule 12))], action := (some (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "t-string: expecting a valid expression after '{'")])), nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 25)), (.call (.rule 12)), (.look false (.rule 417))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "t-string: expecting '=', or '!', or ':', or '}'")]))), nvars := 2, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 25)), (.call (.rule 12)), (.call (.tok 22)), (.look false (.rule 418))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "t-string: expecting '!', or ':', or '}'")]))), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.call (.rule 263))], action := none, nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.opt (.rule 419)), (.look false (.rule 420))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "t-string: expecting ':' or '}'")]))), nvars := 4, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.opt (.rule 419)), (.call (.tok 11)), (.call (.rule 344)), (.look false (.tok 26))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "t-string: expecting '}', or format specs")]))), nvars := 6, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.opt (.rule 419)), (.look false (.tok 26))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "t-string: expecting '}'")]))), nvars := 4, guardInvalid := false, extra := false }] }
+  { items := [(.call (.tok 25)), (.call (.rule 12)), (.look false (.rule 429))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "t-string: expecting '=', or '!', or ':', or '}'")]))), nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 25)), (.call (.rule 12)), (.call (.tok 22)), (.look false (.rule 430))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "t-string: expecting '!', or ':', or '}'")]))), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.call (.rule 272))], action := none, nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.opt (.rule 431)), (.look false (.rule 432))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "t-string: expecting ':' or '}'")]))), nvars := 4, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.opt (.rule 431)), (.call (.tok 11)), (.call (.rule 355)), (.look false (.tok 26))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "t-string: expecting '}', or format specs")]))), nvars := 6, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 25)), (.call (.rule 12)), (.opt (.tok 22)), (.opt (.rule 431)), (.look false (.tok 26))], action := (some (.ite (.call .PyErr_Occurred []) .null (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "t-string: expecting '}'")]))), nvars := 4, guardInvalid := false, extra := false }] }
 
-def r263 : Rule := { name := "invalid_tstring_conversion_character", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 54)), (.look true (.rule 420))], action := (some (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "t-string: missing conversion character")])), nvars := 1, guardInvalid := false, extra := false },
+def r272 : Rule := { name := "invalid_tstring_conversion_character", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 54)), (.look true (.rule 432))], action := (some (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "t-string: missing conversion character")])), nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 54)), (.look false .name)], action := (some (.call .RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN [(.str "t-string: invalid conversion character")])), nvars := 1, guardInvalid := false, extra := false }] }
 
-def r264 : Rule := { name := "invalid_string_tstring_concat", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 348)), (.call (.rule 168))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.call .seq_last_item [(.var 0)]), (.var 1), (.str "cannot mix t-string literals with string or bytes literals")])), nvars := 2, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 349)), (.call (.rule 421))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.call .seq_last_item [(.var 0)]), (.var 1), (.str "cannot mix t-string literals with string or bytes literals")])), nvars := 2, guardInvalid := false, extra := false }] }
+def r273 : Rule := { name := "invalid_string_tstring_concat", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 359)), (.call (.rule 171))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.call .seq_last_item [(.var 0)]), (.var 1), (.str "cannot mix t-string literals with string or bytes literals")])), nvars := 2, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 360)), (.call (.rule 433))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.call .seq_last_item [(.var 0)]), (.var 1), (.str "cannot mix t-string literals with string or bytes literals")])), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r265 : Rule := { name := "invalid_arithmetic", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 136)), (.call (.rule 422)), (.call (.tok 703)), (.call (.rule 119))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 2), (.var 3), (.str "'not' after an operator must be parenthesized")])), nvars := 4, guardInvalid := false, extra := false }] }
+def r274 : Rule := { name := "invalid_arithmetic", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 139)), (.call (.rule 434)), (.call (.tok 721)), (.call (.rule 122))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 2), (.var 3), (.str "'not' after an operator must be parenthesized")])), nvars := 4, guardInvalid := false, extra := false }] }
 
-def r266 : Rule := { name := "invalid_factor", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 423)), (.call (.tok 703)), (.call (.rule 138))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 1), (.var 2), (.str "'not' after an operator must be parenthesized")])), nvars := 3, guardInvalid := false, extra := false }] }
+def r275 : Rule := { name := "invalid_factor", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 435)), (.call (.tok 721)), (.call (.rule 141))], action := (some (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 1), (.var 2), (.str "'not' after an operator must be parenthesized")])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r267 : Rule := { name := "invalid_type_params", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r276 : Rule := { name := "invalid_type_params", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 9)), (.call (.tok 10))], action := (some (.call .RAISE_SYNTAX_ERROR_STARTING_FROM [(.var 1), (.str "Type parameter list cannot be empty")])), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r268 : Rule := { name := "_loop0_1", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r277 : Rule := { name := "invalid_noteq", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 20)), (.call (.tok 21))], action := (some (.ite (.call .tokens_are_adjacent [(.var 0), (.var 1)]) (.call .RAISE_SYNTAX_ERROR_KNOWN_RANGE [(.var 0), (.var 1), (.str "invalid syntax.  Maybe you meant '!=' instead of '<>'?")]) .null)), nvars := 2, guardInvalid := false, extra := false }] }
+
+def r278 : Rule := { name := "_loop0_1", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 4))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r269 : Rule := { name := "_loop1_2", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r279 : Rule := { name := "_loop1_2", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 5))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r270 : Rule := { name := "_loop0_3", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r280 : Rule := { name := "_loop0_3", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 13)), (.call (.rule 9))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r271 : Rule := { name := "_gather_4", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 9)), (.call (.rule 270))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r281 : Rule := { name := "_gather_4", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 9)), (.call (.rule 280))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r272 : Rule := { name := "_tmp_5", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 634))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 633))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r282 : Rule := { name := "_tmp_5", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 651))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 650))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.softKw [108, 97, 122, 121]))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r273 : Rule := { name := "_tmp_6", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 699))], action := none, nvars := 1, guardInvalid := false, extra := false },
+def r283 : Rule := { name := "_tmp_6", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 717))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 49))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 698))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+  { items := [(.call (.tok 716))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r274 : Rule := { name := "_tmp_7", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 701))], action := none, nvars := 1, guardInvalid := false, extra := false },
+def r284 : Rule := { name := "_tmp_7", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 719))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 49))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r275 : Rule := { name := "_tmp_8", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 647))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 698))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r285 : Rule := { name := "_tmp_8", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 665))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 716))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r276 : Rule := { name := "_tmp_9", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 694))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 698))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r286 : Rule := { name := "_tmp_9", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 712))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 716))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r277 : Rule := { name := "_tmp_10", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r287 : Rule := { name := "_tmp_10", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 22)), (.call (.rule 12))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r278 : Rule := { name := "_tmp_11", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 7)), (.call (.rule 196)), (.call (.tok 8))], action := (some (.var 1)), nvars := 3, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 197))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r288 : Rule := { name := "_tmp_11", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 7)), (.call (.rule 199)), (.call (.tok 8))], action := (some (.var 1)), nvars := 3, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 200))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r279 : Rule := { name := "_loop1_12", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 424))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r289 : Rule := { name := "_loop1_12", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 436))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r280 : Rule := { name := "_tmp_13", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 633)), (.call (.rule 109))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
-
-def r281 : Rule := { name := "_loop0_14", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r290 : Rule := { name := "_loop0_13", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 12)), (.call .name)], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r282 : Rule := { name := "_gather_15", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call .name), (.call (.rule 281))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r291 : Rule := { name := "_gather_14", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call .name), (.call (.rule 290))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r283 : Rule := { name := "_tmp_16", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r292 : Rule := { name := "_tmp_15", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 13))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 4))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r284 : Rule := { name := "_tmp_17", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r293 : Rule := { name := "_tmp_16", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 12)), (.call (.rule 109))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r285 : Rule := { name := "_loop0_18", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 425))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r294 : Rule := { name := "_loop0_17", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 437))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r286 : Rule := { name := "_loop1_19", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 425))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r295 : Rule := { name := "_loop1_18", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 437))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r287 : Rule := { name := "_loop0_20", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r296 : Rule := { name := "_loop0_19", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 12)), (.call (.rule 29))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r288 : Rule := { name := "_gather_21", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 29)), (.call (.rule 287))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r297 : Rule := { name := "_gather_20", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 29)), (.call (.rule 296))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r289 : Rule := { name := "_tmp_22", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 680)), (.call .name)], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+def r298 : Rule := { name := "_tmp_21", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 698)), (.call .name)], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r290 : Rule := { name := "_loop0_23", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r299 : Rule := { name := "_loop0_22", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 12)), (.call (.rule 31))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r291 : Rule := { name := "_gather_24", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 31)), (.call (.rule 290))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r300 : Rule := { name := "_gather_23", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 31)), (.call (.rule 299))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r292 : Rule := { name := "_loop1_25", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 426))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r301 : Rule := { name := "_loop1_24", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 438))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r293 : Rule := { name := "_tmp_26", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 7)), (.opt (.rule 184)), (.call (.tok 8))], action := (some (.var 1)), nvars := 3, guardInvalid := false, extra := false }] }
+def r302 : Rule := { name := "_tmp_25", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 7)), (.opt (.rule 187)), (.call (.tok 8))], action := (some (.var 1)), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r294 : Rule := { name := "_tmp_27", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r303 : Rule := { name := "_tmp_26", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 51)), (.call (.rule 109))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r295 : Rule := { name := "_loop0_28", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r304 : Rule := { name := "_loop0_27", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 45))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r296 : Rule := { name := "_loop0_29", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r305 : Rule := { name := "_loop0_28", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 47))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r297 : Rule := { name := "_loop1_30", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r306 : Rule := { name := "_loop1_29", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 45))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r298 : Rule := { name := "_loop1_31", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r307 : Rule := { name := "_loop1_30", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 47))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r299 : Rule := { name := "_loop0_32", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r308 : Rule := { name := "_loop0_31", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 48))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r300 : Rule := { name := "_loop1_33", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r309 : Rule := { name := "_loop1_32", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 48))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r301 : Rule := { name := "_loop0_34", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r310 : Rule := { name := "_loop0_33", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 12)), (.call (.rule 60))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r302 : Rule := { name := "_gather_35", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 60)), (.call (.rule 301))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r311 : Rule := { name := "_gather_34", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 60)), (.call (.rule 310))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r303 : Rule := { name := "_tmp_36", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r312 : Rule := { name := "_tmp_35", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 12))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 8))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 11))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r304 : Rule := { name := "_loop1_37", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r313 : Rule := { name := "_loop1_36", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 62))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r305 : Rule := { name := "_loop1_38", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r314 : Rule := { name := "_loop1_37", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 63))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r306 : Rule := { name := "_loop1_39", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r315 : Rule := { name := "_loop1_38", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 67))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r307 : Rule := { name := "_loop0_40", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r316 : Rule := { name := "_loop0_39", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 18)), (.call (.rule 73))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r308 : Rule := { name := "_gather_41", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 73)), (.call (.rule 307))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r317 : Rule := { name := "_gather_40", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 73)), (.call (.rule 316))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r309 : Rule := { name := "_tmp_42", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r318 : Rule := { name := "_tmp_41", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 14))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 15))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r310 : Rule := { name := "_tmp_43", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r319 : Rule := { name := "_tmp_42", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call .string)], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 59))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 62))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r311 : Rule := { name := "_tmp_44", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r320 : Rule := { name := "_tmp_43", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 23))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 7))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 22))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r312 : Rule := { name := "_loop0_45", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r321 : Rule := { name := "_loop0_44", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 12)), (.call (.rule 91))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r313 : Rule := { name := "_gather_46", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 91)), (.call (.rule 312))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r322 : Rule := { name := "_gather_45", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 91)), (.call (.rule 321))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r314 : Rule := { name := "_loop0_47", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r323 : Rule := { name := "_loop0_46", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 12)), (.call (.rule 95))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r315 : Rule := { name := "_gather_48", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 95)), (.call (.rule 314))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r324 : Rule := { name := "_gather_47", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 95)), (.call (.rule 323))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r316 : Rule := { name := "_tmp_49", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r325 : Rule := { name := "_tmp_48", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 75))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.rule 85))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r317 : Rule := { name := "_loop0_50", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r326 : Rule := { name := "_loop0_49", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 12)), (.call (.rule 70))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r318 : Rule := { name := "_gather_51", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 70)), (.call (.rule 317))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r327 : Rule := { name := "_gather_50", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 70)), (.call (.rule 326))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r319 : Rule := { name := "_loop0_52", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r328 : Rule := { name := "_loop0_51", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 12)), (.call (.rule 100))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r320 : Rule := { name := "_gather_53", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 100)), (.call (.rule 319))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r329 : Rule := { name := "_gather_52", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 100)), (.call (.rule 328))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r321 : Rule := { name := "_loop0_54", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r330 : Rule := { name := "_loop0_53", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 12)), (.call (.rule 104))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r322 : Rule := { name := "_gather_55", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 104)), (.call (.rule 321))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r331 : Rule := { name := "_gather_54", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 104)), (.call (.rule 330))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r323 : Rule := { name := "_loop1_56", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 284))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r332 : Rule := { name := "_loop1_55", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 293))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r324 : Rule := { name := "_loop1_57", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 427))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r333 : Rule := { name := "_loop1_56", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 439))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r325 : Rule := { name := "_loop0_58", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 12)), (.call (.rule 114))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+def r334 : Rule := { name := "_loop0_57", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 12)), (.call (.rule 116))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r326 : Rule := { name := "_gather_59", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 114)), (.call (.rule 325))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r335 : Rule := { name := "_gather_58", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 116)), (.call (.rule 334))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r327 : Rule := { name := "_loop1_60", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 428))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r336 : Rule := { name := "_loop0_59", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 12)), (.call (.rule 117))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r328 : Rule := { name := "_loop1_61", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 429))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r337 : Rule := { name := "_gather_60", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 117)), (.call (.rule 336))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r329 : Rule := { name := "_loop1_62", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 121))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r338 : Rule := { name := "_loop1_61", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 440))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r330 : Rule := { name := "_tmp_63", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r339 : Rule := { name := "_loop1_62", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 441))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+
+def r340 : Rule := { name := "_loop1_63", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 124))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+
+def r341 : Rule := { name := "_tmp_64", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 28))], action := (some (.ite (.call .check_barry_as_flufl [(.var 0)]) .null (.var 0))), nvars := 1, guardInvalid := false, extra := false }] }
 
-def r331 : Rule := { name := "_loop0_64", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 12)), (.call (.rule 430))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+def r342 : Rule := { name := "_loop0_65", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 12)), (.call (.rule 442))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r332 : Rule := { name := "_gather_65", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 430)), (.call (.rule 331))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r343 : Rule := { name := "_gather_66", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 442)), (.call (.rule 342))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r333 : Rule := { name := "_tmp_66", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r344 : Rule := { name := "_tmp_67", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 11)), (.opt (.rule 109))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r334 : Rule := { name := "_tmp_67", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 172))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 145))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 182))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r345 : Rule := { name := "_tmp_68", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 185))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 175))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 148))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r335 : Rule := { name := "_tmp_68", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 171))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 180))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
-
-def r336 : Rule := { name := "_tmp_69", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 174))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 173))], action := none, nvars := 1, guardInvalid := false, extra := false },
+def r346 : Rule := { name := "_tmp_69", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 183))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 181))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+  { items := [(.call (.rule 174))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r337 : Rule := { name := "_tmp_70", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 110))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 116))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r347 : Rule := { name := "_tmp_70", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 186))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 184))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 177))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 176))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r338 : Rule := { name := "_loop0_71", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 153))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r348 : Rule := { name := "_tmp_71", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 111))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 119))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r339 : Rule := { name := "_loop0_72", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 154))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r349 : Rule := { name := "_loop0_72", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 156))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r340 : Rule := { name := "_loop1_73", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 153))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
-
-def r341 : Rule := { name := "_loop1_74", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 154))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
-
-def r342 : Rule := { name := "_loop0_75", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 155))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
-
-def r343 : Rule := { name := "_loop1_76", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 155))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
-
-def r344 : Rule := { name := "_loop0_77", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 161))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
-
-def r345 : Rule := { name := "_loop0_78", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r350 : Rule := { name := "_loop0_73", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 157))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r346 : Rule := { name := "_loop0_79", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r351 : Rule := { name := "_loop1_74", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 156))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+
+def r352 : Rule := { name := "_loop1_75", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 157))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+
+def r353 : Rule := { name := "_loop0_76", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 158))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+
+def r354 : Rule := { name := "_loop1_77", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 158))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+
+def r355 : Rule := { name := "_loop0_78", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 164))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r347 : Rule := { name := "_loop0_80", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r356 : Rule := { name := "_loop0_79", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 160))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+
+def r357 : Rule := { name := "_loop0_80", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 167))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r348 : Rule := { name := "_loop1_81", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 421))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r358 : Rule := { name := "_loop0_81", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 170))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r349 : Rule := { name := "_loop1_82", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 168))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r359 : Rule := { name := "_loop1_82", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 433))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r350 : Rule := { name := "_tmp_83", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 114)), (.call (.tok 12)), (.opt (.rule 113))], action := (some (.call .seq_insert_in_front [(.var 0), (.var 2)])), nvars := 3, guardInvalid := false, extra := false }] }
+def r360 : Rule := { name := "_loop1_83", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 171))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r351 : Rule := { name := "_loop0_84", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 12)), (.call (.rule 176))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+def r361 : Rule := { name := "_tmp_84", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 117)), (.call (.tok 12)), (.opt (.rule 115))], action := (some (.call .seq_insert_in_front [(.var 0), (.var 2)])), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r352 : Rule := { name := "_gather_85", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 176)), (.call (.rule 351))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r362 : Rule := { name := "_loop0_85", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 12)), (.call (.rule 179))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r353 : Rule := { name := "_loop1_86", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 179))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r363 : Rule := { name := "_gather_86", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 179)), (.call (.rule 362))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r354 : Rule := { name := "_loop0_87", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 431))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r364 : Rule := { name := "_loop1_87", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 182))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r355 : Rule := { name := "_tmp_88", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 115))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 109)), (.look false (.tok 53))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r365 : Rule := { name := "_loop0_88", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 443))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r356 : Rule := { name := "_loop0_89", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 12)), (.call (.rule 432))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+def r366 : Rule := { name := "_tmp_89", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 118))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 109)), (.look false (.tok 53))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 190))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r357 : Rule := { name := "_gather_90", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 432)), (.call (.rule 356))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r367 : Rule := { name := "_loop0_90", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 12)), (.call (.rule 444))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r358 : Rule := { name := "_tmp_91", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 12)), (.call (.rule 186))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+def r368 : Rule := { name := "_gather_91", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 444)), (.call (.rule 367))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r359 : Rule := { name := "_loop0_92", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 12)), (.call (.rule 188))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
-
-def r360 : Rule := { name := "_gather_93", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 188)), (.call (.rule 359))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
-
-def r361 : Rule := { name := "_loop0_94", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r369 : Rule := { name := "_tmp_92", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 12)), (.call (.rule 189))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r362 : Rule := { name := "_gather_95", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 189)), (.call (.rule 361))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r370 : Rule := { name := "_loop0_93", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 12)), (.call (.rule 191))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r363 : Rule := { name := "_loop0_96", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 433))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r371 : Rule := { name := "_gather_94", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 191)), (.call (.rule 370))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r364 : Rule := { name := "_loop0_97", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 12)), (.call (.rule 193))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+def r372 : Rule := { name := "_loop0_95", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 12)), (.call (.rule 192))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r365 : Rule := { name := "_gather_98", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 193)), (.call (.rule 364))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r373 : Rule := { name := "_gather_96", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 192)), (.call (.rule 372))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r366 : Rule := { name := "_loop1_99", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 433))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r374 : Rule := { name := "_loop0_97", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 445))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r367 : Rule := { name := "_tmp_100", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.look false (.tok 16)), (.call (.rule 193))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r375 : Rule := { name := "_loop0_98", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 12)), (.call (.rule 196))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r368 : Rule := { name := "_loop0_101", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 12)), (.call (.rule 201))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+def r376 : Rule := { name := "_gather_99", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 196)), (.call (.rule 375))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r369 : Rule := { name := "_gather_102", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 201)), (.call (.rule 368))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r377 : Rule := { name := "_loop1_100", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 445))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r370 : Rule := { name := "_loop0_103", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r378 : Rule := { name := "_tmp_101", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.look false (.tok 16)), (.call (.rule 196))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+
+def r379 : Rule := { name := "_loop0_102", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 12)), (.call (.rule 204))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+
+def r380 : Rule := { name := "_gather_103", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 204)), (.call (.rule 379))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+
+def r381 : Rule := { name := "_loop0_104", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 12)), (.call (.rule 109))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r371 : Rule := { name := "_gather_104", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 109)), (.call (.rule 370))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r382 : Rule := { name := "_gather_105", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 109)), (.call (.rule 381))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r372 : Rule := { name := "_tmp_105", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r383 : Rule := { name := "_tmp_106", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 4)), (.call (.tok 5))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r373 : Rule := { name := "_tmp_106", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 434))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 186))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r384 : Rule := { name := "_tmp_107", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 446))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 189))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r374 : Rule := { name := "_loop0_107", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 12)), (.call (.rule 435))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+def r385 : Rule := { name := "_loop0_108", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 12)), (.call (.rule 447))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r375 : Rule := { name := "_gather_108", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 435)), (.call (.rule 374))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r386 : Rule := { name := "_gather_109", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 447)), (.call (.rule 385))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r376 : Rule := { name := "_tmp_109", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 185))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 109)), (.call (.rule 178))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r387 : Rule := { name := "_tmp_110", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 188))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 109)), (.call (.rule 181))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r377 : Rule := { name := "_tmp_110", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 185)), (.call (.tok 12))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r388 : Rule := { name := "_tmp_111", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 188)), (.call (.tok 12))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r378 : Rule := { name := "_tmp_111", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r389 : Rule := { name := "_tmp_112", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 12))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 8))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r379 : Rule := { name := "_tmp_112", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 622))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 624))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 623))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r390 : Rule := { name := "_tmp_113", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 627))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 629))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 628))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r380 : Rule := { name := "_tmp_113", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r391 : Rule := { name := "_tmp_114", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call .name), (.call (.tok 22))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r381 : Rule := { name := "_loop1_114", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 436))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r392 : Rule := { name := "_loop1_115", kind := .loop1, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 448))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r382 : Rule := { name := "_tmp_115", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r393 : Rule := { name := "_tmp_116", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call .name), (.call .string)], action := none, nvars := 2, guardInvalid := false, extra := false },
   { items := [(.call .softKeywordToken)], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r383 : Rule := { name := "_tmp_116", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 686))], action := none, nvars := 1, guardInvalid := false, extra := false },
+def r394 : Rule := { name := "_tmp_117", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 704))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 11))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r384 : Rule := { name := "_tmp_117", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r395 : Rule := { name := "_tmp_118", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 16))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.rule 17))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.rule 18))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r385 : Rule := { name := "_tmp_118", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r396 : Rule := { name := "_tmp_119", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 22))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 53))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r386 : Rule := { name := "_tmp_119", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 171))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 172))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 182))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 622))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 623))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 624))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r397 : Rule := { name := "_tmp_120", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 174))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 175))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 185))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 627))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 628))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 629))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r387 : Rule := { name := "_loop0_120", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 113))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r398 : Rule := { name := "_loop0_121", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 114))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r388 : Rule := { name := "_loop0_121", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 424))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r399 : Rule := { name := "_loop0_122", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 436))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r389 : Rule := { name := "_tmp_122", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 9))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 7))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 25))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
-
-def r390 : Rule := { name := "_tmp_123", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r400 : Rule := { name := "_tmp_123", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 9))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 25))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r391 : Rule := { name := "_tmp_124", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r401 : Rule := { name := "_tmp_124", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 41))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.rule 42))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r392 : Rule := { name := "_tmp_125", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r402 : Rule := { name := "_tmp_125", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 12))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.rule 45))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r393 : Rule := { name := "_tmp_126", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r403 : Rule := { name := "_tmp_126", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 8))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 12))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r394 : Rule := { name := "_tmp_127", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r404 : Rule := { name := "_tmp_127", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 8))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 12)), (.call (.rule 437))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+  { items := [(.call (.tok 12)), (.call (.rule 449))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r395 : Rule := { name := "_tmp_128", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r405 : Rule := { name := "_tmp_128", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 45))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 12))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r396 : Rule := { name := "_tmp_129", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r406 : Rule := { name := "_tmp_129", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 16))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 35))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 17))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r397 : Rule := { name := "_tmp_130", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 149))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 150))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
-
-def r398 : Rule := { name := "_loop0_131", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 12)), (.call (.rule 156))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
-
-def r399 : Rule := { name := "_gather_132", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 156)), (.call (.rule 398))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
-
-def r400 : Rule := { name := "_tmp_133", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 12))], action := none, nvars := 1, guardInvalid := false, extra := false },
+def r407 : Rule := { name := "_tmp_130", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 152))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.rule 153))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r401 : Rule := { name := "_tmp_134", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 11))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 12)), (.call (.rule 438))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r408 : Rule := { name := "_loop0_131", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 12)), (.call (.rule 159))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r402 : Rule := { name := "_tmp_135", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 153))], action := none, nvars := 1, guardInvalid := false, extra := false },
+def r409 : Rule := { name := "_gather_132", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 159)), (.call (.rule 408))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+
+def r410 : Rule := { name := "_tmp_133", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 12))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 156))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+
+def r411 : Rule := { name := "_tmp_134", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 11))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 12)), (.call (.rule 450))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+
+def r412 : Rule := { name := "_tmp_135", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 156))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 12))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r403 : Rule := { name := "_tmp_136", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 132)), (.call (.rule 439)), (.opt (.tok 12))], action := none, nvars := 3, guardInvalid := false, extra := false }] }
+def r413 : Rule := { name := "_tmp_136", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 135)), (.call (.rule 451)), (.opt (.tok 12))], action := none, nvars := 3, guardInvalid := false, extra := false }] }
 
-def r404 : Rule := { name := "_loop0_137", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r414 : Rule := { name := "_loop0_137", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 12)), (.call (.rule 32))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r405 : Rule := { name := "_gather_138", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 32)), (.call (.rule 404))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r415 : Rule := { name := "_gather_138", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 32)), (.call (.rule 414))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r406 : Rule := { name := "_tmp_139", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call .name), (.call (.rule 440))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r416 : Rule := { name := "_tmp_139", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call .name), (.call (.rule 452))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r407 : Rule := { name := "_loop0_140", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 12)), (.call (.rule 441))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+def r417 : Rule := { name := "_loop0_140", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 12)), (.call (.rule 453))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r408 : Rule := { name := "_gather_141", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 441)), (.call (.rule 407))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r418 : Rule := { name := "_gather_141", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 453)), (.call (.rule 417))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r409 : Rule := { name := "_loop0_142", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 12)), (.call (.rule 442))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+def r419 : Rule := { name := "_loop0_142", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 12)), (.call (.rule 454))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r410 : Rule := { name := "_gather_143", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 442)), (.call (.rule 409))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r420 : Rule := { name := "_gather_143", kind := .gather, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 454)), (.call (.rule 419))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r411 : Rule := { name := "_tmp_144", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 677))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.tok 673))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r421 : Rule := { name := "_tmp_144", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 695))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.tok 691))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r412 : Rule := { name := "_loop0_145", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r422 : Rule := { name := "_loop0_145", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 33))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r413 : Rule := { name := "_tmp_146", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 109)), (.opt (.rule 289))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r423 : Rule := { name := "_tmp_146", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 109)), (.opt (.rule 298))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r414 : Rule := { name := "_tmp_147", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r424 : Rule := { name := "_tmp_147", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 4))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 11))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r415 : Rule := { name := "_tmp_148", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r425 : Rule := { name := "_tmp_148", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 94)), (.call (.tok 12))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+
+def r426 : Rule := { name := "_tmp_149", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.rule 98)), (.call (.tok 12))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r416 : Rule := { name := "_tmp_149", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r427 : Rule := { name := "_tmp_150", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 265))], action := none, nvars := 1, guardInvalid := true, extra := false },
+  { items := [(.call (.rule 264))], action := none, nvars := 1, guardInvalid := true, extra := false }] }
+
+def r428 : Rule := { name := "_tmp_151", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 26))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 12))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r417 : Rule := { name := "_tmp_150", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r429 : Rule := { name := "_tmp_152", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 22))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 54))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 11))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 26))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r418 : Rule := { name := "_tmp_151", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r430 : Rule := { name := "_tmp_153", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 54))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 11))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 26))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r419 : Rule := { name := "_tmp_152", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r431 : Rule := { name := "_tmp_154", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 54)), (.call .name)], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r420 : Rule := { name := "_tmp_153", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r432 : Rule := { name := "_tmp_155", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 11))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 26))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r421 : Rule := { name := "_tmp_154", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 162))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 169))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r433 : Rule := { name := "_tmp_156", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 165))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 172))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r422 : Rule := { name := "_tmp_155", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r434 : Rule := { name := "_tmp_157", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 14))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 15))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 16))], action := none, nvars := 1, guardInvalid := false, extra := false },
@@ -1728,88 +1790,92 @@ def r422 : Rule := { name := "_tmp_155", kind := .normal, memo := false, leftRec
   { items := [(.call (.tok 47))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 49))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r423 : Rule := { name := "_tmp_156", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r435 : Rule := { name := "_tmp_158", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 14))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 15))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 31))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r424 : Rule := { name := "_tmp_157", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 190)), (.call (.tok 22))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false }] }
+def r436 : Rule := { name := "_tmp_159", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 193)), (.call (.tok 22))], action := (some (.var 0)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r425 : Rule := { name := "_tmp_158", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r437 : Rule := { name := "_tmp_160", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 23))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 52))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r426 : Rule := { name := "_tmp_159", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 49)), (.call (.rule 116)), (.call (.tok 4))], action := (some (.var 1)), nvars := 3, guardInvalid := false, extra := false }] }
+def r438 : Rule := { name := "_tmp_161", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 49)), (.call (.rule 119)), (.call (.tok 4))], action := (some (.var 1)), nvars := 3, guardInvalid := false, extra := false }] }
 
-def r427 : Rule := { name := "_tmp_160", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 12)), (.call (.rule 112))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+def r439 : Rule := { name := "_tmp_162", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 12)), (.call (.rule 113))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r428 : Rule := { name := "_tmp_161", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 588)), (.call (.rule 118))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+def r440 : Rule := { name := "_tmp_163", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 589)), (.call (.rule 121))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r429 : Rule := { name := "_tmp_162", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 589)), (.call (.rule 119))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+def r441 : Rule := { name := "_tmp_164", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 590)), (.call (.rule 122))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r430 : Rule := { name := "_tmp_163", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 143))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 187))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r442 : Rule := { name := "_tmp_165", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 146))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 190))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r431 : Rule := { name := "_tmp_164", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 682)), (.call (.rule 117))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+def r443 : Rule := { name := "_tmp_166", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 700)), (.call (.rule 120))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r432 : Rule := { name := "_tmp_165", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 187))], action := none, nvars := 1, guardInvalid := false, extra := false },
-  { items := [(.call (.rule 355)), (.look false (.tok 22))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r444 : Rule := { name := "_tmp_167", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 190))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 455)), (.look false (.tok 22))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r433 : Rule := { name := "_tmp_166", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 12)), (.call (.rule 193))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
+def r445 : Rule := { name := "_tmp_168", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 12)), (.call (.rule 196))], action := (some (.var 1)), nvars := 2, guardInvalid := false, extra := false }] }
 
-def r434 : Rule := { name := "_tmp_167", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 357)), (.call (.tok 12)), (.call (.rule 186))], action := none, nvars := 3, guardInvalid := false, extra := false }] }
+def r446 : Rule := { name := "_tmp_169", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 368)), (.call (.tok 12)), (.call (.rule 189))], action := none, nvars := 3, guardInvalid := false, extra := false }] }
 
-def r435 : Rule := { name := "_tmp_168", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 187)), (.look false (.tok 22))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r447 : Rule := { name := "_tmp_170", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 190)), (.look false (.tok 22))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r436 : Rule := { name := "_tmp_169", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.look false .string), (.call (.rule 207))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r448 : Rule := { name := "_tmp_171", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.look false .string), (.call (.rule 210))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r437 : Rule := { name := "_tmp_170", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r449 : Rule := { name := "_tmp_172", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 8))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 35))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r438 : Rule := { name := "_tmp_171", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r450 : Rule := { name := "_tmp_173", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 11))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 35))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r439 : Rule := { name := "_loop0_172", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 443))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
+def r451 : Rule := { name := "_loop0_174", kind := .loop0, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 456))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r440 : Rule := { name := "_tmp_173", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+def r452 : Rule := { name := "_tmp_175", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
   { items := [(.call (.tok 12))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 8))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 13))], action := none, nvars := 1, guardInvalid := false, extra := false },
   { items := [(.call (.tok 4))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r441 : Rule := { name := "_tmp_174", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 109)), (.opt (.rule 444))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r453 : Rule := { name := "_tmp_176", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 109)), (.opt (.rule 457))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r442 : Rule := { name := "_tmp_175", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.rule 108)), (.opt (.rule 444))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r454 : Rule := { name := "_tmp_177", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 108)), (.opt (.rule 457))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
-def r443 : Rule := { name := "_tmp_176", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 12)), (.call (.rule 132))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r455 : Rule := { name := "_tmp_178", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.rule 118))], action := none, nvars := 1, guardInvalid := false, extra := false },
+  { items := [(.call (.rule 109)), (.look false (.tok 53))], action := none, nvars := 1, guardInvalid := false, extra := false }] }
 
-def r444 : Rule := { name := "_tmp_177", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
-  { items := [(.call (.tok 680)), (.call (.rule 193))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+def r456 : Rule := { name := "_tmp_179", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 12)), (.call (.rule 135))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
+
+def r457 : Rule := { name := "_tmp_180", kind := .normal, memo := false, leftRec := false, leader := false, extra := false, withoutInvalid := false, alts := [
+  { items := [(.call (.tok 698)), (.call (.rule 196))], action := none, nvars := 2, guardInvalid := false, extra := false }] }
 
 /-- The rule with number `id` (a balanced decision tree over `Nat.blt`). -/
 def ruleOf (id : Nat) : Rule :=
-  if id < 222 then if id < 111 then if id < 55 then if id < 27 then if id < 13 then if id < 6 then if id < 3 then if id < 1 then r0 else if id < 2 then r1 else r2 else if id < 4 then r3 else if id < 5 then r4 else r5 else if id < 9 then if id < 7 then r6 else if id < 8 then r7 else r8 else if id < 11 then if id < 10 then r9 else r10 else if id < 12 then r11 else r12 else if id < 20 then if id < 16 then if id < 14 then r13 else if id < 15 then r14 else r15 else if id < 18 then if id < 17 then r16 else r17 else if id < 19 then r18 else r19 else if id < 23 then if id < 21 then r20 else if id < 22 then r21 else r22 else if id < 25 then if id < 24 then r23 else r24 else if id < 26 then r25 else r26 else if id < 41 then if id < 34 then if id < 30 then if id < 28 then r27 else if id < 29 then r28 else r29 else if id < 32 then if id < 31 then r30 else r31 else if id < 33 then r32 else r33 else if id < 37 then if id < 35 then r34 else if id < 36 then r35 else r36 else if id < 39 then if id < 38 then r37 else r38 else if id < 40 then r39 else r40 else if id < 48 then if id < 44 then if id < 42 then r41 else if id < 43 then r42 else r43 else if id < 46 then if id < 45 then r44 else r45 else if id < 47 then r46 else r47 else if id < 51 then if id < 49 then r48 else if id < 50 then r49 else r50 else if id < 53 then if id < 52 then r51 else r52 else if id < 54 then r53 else r54 else if id < 83 then if id < 69 then if id < 62 then if id < 58 then if id < 56 then r55 else if id < 57 then r56 else r57 else if id < 60 then if id < 59 then r58 else r59 else if id < 61 then r60 else r61 else if id < 65 then if id < 63 then r62 else if id < 64 then r63 else r64 else if id < 67 then if id < 66 then r65 else r66 else if id < 68 then r67 else r68 else if id < 76 then if id < 72 then if id < 70 then r69 else if id < 71 then r70 else r71 else if id < 74 then if id < 73 then r72 else r73 else if id < 75 then r74 else r75 else if id < 79 then if id < 77 then r76 else if id < 78 then r77 else r78 else if id < 81 then if id < 80 then r79 else r80 else if id < 82 then r81 else r82 else if id < 97 then if id < 90 then if id < 86 then if id < 84 then r83 else if id < 85 then r84 else r85 else if id < 88 then if id < 87 then r86 else r87 else if id < 89 then r88 else r89 else if id < 93 then if id < 91 then r90 else if id < 92 then r91 else r92 else if id < 95 then if id < 94 then r93 else r94 else if id < 96 then r95 else r96 else if id < 104 then if id < 100 then if id < 98 then r97 else if id < 99 then r98 else r99 else if id < 102 then if id < 101 then r100 else r101 else if id < 103 then r102 else r103 else if id < 107 then if id < 105 then r104 else if id < 106 then r105 else r106 else if id < 109 then if id < 108 then r107 else r108 else if id < 110 then r109 else r110 else if id < 166 then if id < 138 then if id < 124 then if id < 117 then if id < 114 then if id < 112 then r111 else if id < 113 then r112 else r113 else if id < 115 then r114 else if id < 116 then r115 else r116 else if id < 120 then if id < 118 then r117 else if id < 119 then r118 else r119 else if id < 122 then if id < 121 then r120 else r121 else if id < 123 then r122 else r123 else if id < 131 then if id < 127 then if id < 125 then r124 else if id < 126 then r125 else r126 else if id < 129 then if id < 128 then r127 else r128 else if id < 130 then r129 else r130 else if id < 134 then if id < 132 then r131 else if id < 133 then r132 else r133 else if id < 136 then if id < 135 then r134 else r135 else if id < 137 then r136 else r137 else if id < 152 then if id < 145 then if id < 141 then if id < 139 then r138 else if id < 140 then r139 else r140 else if id < 143 then if id < 142 then r141 else r142 else if id < 144 then r143 else r144 else if id < 148 then if id < 146 then r145 else if id < 147 then r146 else r147 else if id < 150 then if id < 149 then r148 else r149 else if id < 151 then r150 else r151 else if id < 159 then if id < 155 then if id < 153 then r152 else if id < 154 then r153 else r154 else if id < 157 then if id < 156 then r155 else r156 else if id < 158 then r157 else r158 else if id < 162 then if id < 160 then r159 else if id < 161 then r160 else r161 else if id < 164 then if id < 163 then r162 else r163 else if id < 165 then r164 else r165 else if id < 194 then if id < 180 then if id < 173 then if id < 169 then if id < 167 then r166 else if id < 168 then r167 else r168 else if id < 171 then if id < 170 then r169 else r170 else if id < 172 then r171 else r172 else if id < 176 then if id < 174 then r173 else if id < 175 then r174 else r175 else if id < 178 then if id < 177 then r176 else r177 else if id < 179 then r178 else r179 else if id < 187 then if id < 183 then if id < 181 then r180 else if id < 182 then r181 else r182 else if id < 185 then if id < 184 then r183 else r184 else if id < 186 then r185 else r186 else if id < 190 then if id < 188 then r187 else if id < 189 then r188 else r189 else if id < 192 then if id < 191 then r190 else r191 else if id < 193 then r192 else r193 else if id < 208 then if id < 201 then if id < 197 then if id < 195 then r194 else if id < 196 then r195 else r196 else if id < 199 then if id < 198 then r197 else r198 else if id < 200 then r199 else r200 else if id < 204 then if id < 202 then r201 else if id < 203 then r202 else r203 else if id < 206 then if id < 205 then r204 else r205 else if id < 207 then r206 else r207 else if id < 215 then if id < 211 then if id < 209 then r208 else if id < 210 then r209 else r210 else if id < 213 then if id < 212 then r211 else r212 else if id < 214 then r213 else r214 else if id < 218 then if id < 216 then r215 else if id < 217 then r216 else r217 else if id < 220 then if id < 219 then r218 else r219 else if id < 221 then r220 else r221 else if id < 333 then if id < 277 then if id < 249 then if id < 235 then if id < 228 then if id < 225 then if id < 223 then r222 else if id < 224 then r223 else r224 else if id < 226 then r225 else if id < 227 then r226 else r227 else if id < 231 then if id < 229 then r228 else if id < 230 then r229 else r230 else if id < 233 then if id < 232 then r231 else r232 else if id < 234 then r233 else r234 else if id < 242 then if id < 238 then if id < 236 then r235 else if id < 237 then r236 else r237 else if id < 240 then if id < 239 then r238 else r239 else if id < 241 then r240 else r241 else if id < 245 then if id < 243 then r242 else if id < 244 then r243 else r244 else if id < 247 then if id < 246 then r245 else r246 else if id < 248 then r247 else r248 else if id < 263 then if id < 256 then if id < 252 then if id < 250 then r249 else if id < 251 then r250 else r251 else if id < 254 then if id < 253 then r252 else r253 else if id < 255 then r254 else r255 else if id < 259 then if id < 257 then r256 else if id < 258 then r257 else r258 else if id < 261 then if id < 260 then r259 else r260 else if id < 262 then r261 else r262 else if id < 270 then if id < 266 then if id < 264 then r263 else if id < 265 then r264 else r265 else if id < 268 then if id < 267 then r266 else r267 else if id < 269 then r268 else r269 else if id < 273 then if id < 271 then r270 else if id < 272 then r271 else r272 else if id < 275 then if id < 274 then r273 else r274 else if id < 276 then r275 else r276 else if id < 305 then if id < 291 then if id < 284 then if id < 280 then if id < 278 then r277 else if id < 279 then r278 else r279 else if id < 282 then if id < 281 then r280 else r281 else if id < 283 then r282 else r283 else if id < 287 then if id < 285 then r284 else if id < 286 then r285 else r286 else if id < 289 then if id < 288 then r287 else r288 else if id < 290 then r289 else r290 else if id < 298 then if id < 294 then if id < 292 then r291 else if id < 293 then r292 else r293 else if id < 296 then if id < 295 then r294 else r295 else if id < 297 then r296 else r297 else if id < 301 then if id < 299 then r298 else if id < 300 then r299 else r300 else if id < 303 then if id < 302 then r301 else r302 else if id < 304 then r303 else r304 else if id < 319 then if id < 312 then if id < 308 then if id < 306 then r305 else if id < 307 then r306 else r307 else if id < 310 then if id < 309 then r308 else r309 else if id < 311 then r310 else r311 else if id < 315 then if id < 313 then r312 else if id < 314 then r313 else r314 else if id < 317 then if id < 316 then r315 else r316 else if id < 318 then r317 else r318 else if id < 326 then if id < 322 then if id < 320 then r319 else if id < 321 then r320 else r321 else if id < 324 then if id < 323 then r322 else r323 else if id < 325 then r324 else r325 else if id < 329 then if id < 327 then r326 else if id < 328 then r327 else r328 else if id < 331 then if id < 330 then r329 else r330 else if id < 332 then r331 else r332 else if id < 389 then if id < 361 then if id < 347 then if id < 340 then if id < 336 then if id < 334 then r333 else if id < 335 then r334 else r335 else if id < 338 then if id < 337 then r336 else r337 else if id < 339 then r338 else r339 else if id < 343 then if id < 341 then r340 else if id < 342 then r341 else r342 else if id < 345 then if id < 344 then r343 else r344 else if id < 346 then r345 else r346 else if id < 354 then if id < 350 then if id < 348 then r347 else if id < 349 then r348 else r349 else if id < 352 then if id < 351 then r350 else r351 else if id < 353 then r352 else r353 else if id < 357 then if id < 355 then r354 else if id < 356 then r355 else r356 else if id < 359 then if id < 358 then r357 else r358 else if id < 360 then r359 else r360 else if id < 375 then if id < 368 then if id < 364 then if id < 362 then r361 else if id < 363 then r362 else r363 else if id < 366 then if id < 365 then r364 else r365 else if id < 367 then r366 else r367 else if id < 371 then if id < 369 then r368 else if id < 370 then r369 else r370 else if id < 373 then if id < 372 then r371 else r372 else if id < 374 then r373 else r374 else if id < 382 then if id < 378 then if id < 376 then r375 else if id < 377 then r376 else r377 else if id < 380 then if id < 379 then r378 else r379 else if id < 381 then r380 else r381 else if id < 385 then if id < 383 then r382 else if id < 384 then r383 else r384 else if id < 387 then if id < 386 then r385 else r386 else if id < 388 then r387 else r388 else if id < 417 then if id < 403 then if id < 396 then if id < 392 then if id < 390 then r389 else if id < 391 then r390 else r391 else if id < 394 then if id < 393 then r392 else r393 else if id < 395 then r394 else r395 else if id < 399 then if id < 397 then r396 else if id < 398 then r397 else r398 else if id < 401 then if id < 400 then r399 else r400 else if id < 402 then r401 else r402 else if id < 410 then if id < 406 then if id < 404 then r403 else if id < 405 then r404 else r405 else if id < 408 then if id < 407 then r406 else r407 else if id < 409 then r408 else r409 else if id < 413 then if id < 411 then r410 else if id < 412 then r411 else r412 else if id < 415 then if id < 414 then r413 else r414 else if id < 416 then r415 else r416 else if id < 431 then if id < 424 then if id < 420 then if id < 418 then r417 else if id < 419 then r418 else r419 else if id < 422 then if id < 421 then r420 else r421 else if id < 423 then r422 else r423 else if id < 427 then if id < 425 then r424 else if id < 426 then r425 else r426 else if id < 429 then if id < 428 then r427 else r428 else if id < 430 then r429 else r430 else if id < 438 then if id < 434 then if id < 432 then r431 else if id < 433 then r432 else r433 else if id < 436 then if id < 435 then r434 else r435 else if id < 437 then r436 else r437 else if id < 441 then if id < 439 then r438 else if id < 440 then r439 else r440 else if id < 443 then if id < 442 then r441 else r442 else if id < 444 then r443 else r444
+  if id < 229 then if id < 114 then if id < 57 then if id < 28 then if id < 14 then if id < 7 then if id < 3 then if id < 1 then r0 else if id < 2 then r1 else r2 else if id < 5 then if id < 4 then r3 else r4 else if id < 6 then r5 else r6 else if id < 10 then if id < 8 then r7 else if id < 9 then r8 else r9 else if id < 12 then if id < 11 then r10 else r11 else if id < 13 then r12 else r13 else if id < 21 then if id < 17 then if id < 15 then r14 else if id < 16 then r15 else r16 else if id < 19 then if id < 18 then r17 else r18 else if id < 20 then r19 else r20 else if id < 24 then if id < 22 then r21 else if id < 23 then r22 else r23 else if id < 26 then if id < 25 then r24 else r25 else if id < 27 then r26 else r27 else if id < 42 then if id < 35 then if id < 31 then if id < 29 then r28 else if id < 30 then r29 else r30 else if id < 33 then if id < 32 then r31 else r32 else if id < 34 then r33 else r34 else if id < 38 then if id < 36 then r35 else if id < 37 then r36 else r37 else if id < 40 then if id < 39 then r38 else r39 else if id < 41 then r40 else r41 else if id < 49 then if id < 45 then if id < 43 then r42 else if id < 44 then r43 else r44 else if id < 47 then if id < 46 then r45 else r46 else if id < 48 then r47 else r48 else if id < 53 then if id < 51 then if id < 50 then r49 else r50 else if id < 52 then r51 else r52 else if id < 55 then if id < 54 then r53 else r54 else if id < 56 then r55 else r56 else if id < 85 then if id < 71 then if id < 64 then if id < 60 then if id < 58 then r57 else if id < 59 then r58 else r59 else if id < 62 then if id < 61 then r60 else r61 else if id < 63 then r62 else r63 else if id < 67 then if id < 65 then r64 else if id < 66 then r65 else r66 else if id < 69 then if id < 68 then r67 else r68 else if id < 70 then r69 else r70 else if id < 78 then if id < 74 then if id < 72 then r71 else if id < 73 then r72 else r73 else if id < 76 then if id < 75 then r74 else r75 else if id < 77 then r76 else r77 else if id < 81 then if id < 79 then r78 else if id < 80 then r79 else r80 else if id < 83 then if id < 82 then r81 else r82 else if id < 84 then r83 else r84 else if id < 99 then if id < 92 then if id < 88 then if id < 86 then r85 else if id < 87 then r86 else r87 else if id < 90 then if id < 89 then r88 else r89 else if id < 91 then r90 else r91 else if id < 95 then if id < 93 then r92 else if id < 94 then r93 else r94 else if id < 97 then if id < 96 then r95 else r96 else if id < 98 then r97 else r98 else if id < 106 then if id < 102 then if id < 100 then r99 else if id < 101 then r100 else r101 else if id < 104 then if id < 103 then r102 else r103 else if id < 105 then r104 else r105 else if id < 110 then if id < 108 then if id < 107 then r106 else r107 else if id < 109 then r108 else r109 else if id < 112 then if id < 111 then r110 else r111 else if id < 113 then r112 else r113 else if id < 171 then if id < 142 then if id < 128 then if id < 121 then if id < 117 then if id < 115 then r114 else if id < 116 then r115 else r116 else if id < 119 then if id < 118 then r117 else r118 else if id < 120 then r119 else r120 else if id < 124 then if id < 122 then r121 else if id < 123 then r122 else r123 else if id < 126 then if id < 125 then r124 else r125 else if id < 127 then r126 else r127 else if id < 135 then if id < 131 then if id < 129 then r128 else if id < 130 then r129 else r130 else if id < 133 then if id < 132 then r131 else r132 else if id < 134 then r133 else r134 else if id < 138 then if id < 136 then r135 else if id < 137 then r136 else r137 else if id < 140 then if id < 139 then r138 else r139 else if id < 141 then r140 else r141 else if id < 156 then if id < 149 then if id < 145 then if id < 143 then r142 else if id < 144 then r143 else r144 else if id < 147 then if id < 146 then r145 else r146 else if id < 148 then r147 else r148 else if id < 152 then if id < 150 then r149 else if id < 151 then r150 else r151 else if id < 154 then if id < 153 then r152 else r153 else if id < 155 then r154 else r155 else if id < 163 then if id < 159 then if id < 157 then r156 else if id < 158 then r157 else r158 else if id < 161 then if id < 160 then r159 else r160 else if id < 162 then r161 else r162 else if id < 167 then if id < 165 then if id < 164 then r163 else r164 else if id < 166 then r165 else r166 else if id < 169 then if id < 168 then r167 else r168 else if id < 170 then r169 else r170 else if id < 200 then if id < 185 then if id < 178 then if id < 174 then if id < 172 then r171 else if id < 173 then r172 else r173 else if id < 176 then if id < 175 then r174 else r175 else if id < 177 then r176 else r177 else if id < 181 then if id < 179 then r178 else if id < 180 then r179 else r180 else if id < 183 then if id < 182 then r181 else r182 else if id < 184 then r183 else r184 else if id < 192 then if id < 188 then if id < 186 then r185 else if id < 187 then r186 else r187 else if id < 190 then if id < 189 then r188 else r189 else if id < 191 then r190 else r191 else if id < 196 then if id < 194 then if id < 193 then r192 else r193 else if id < 195 then r194 else r195 else if id < 198 then if id < 197 then r196 else r197 else if id < 199 then r198 else r199 else if id < 214 then if id < 207 then if id < 203 then if id < 201 then r200 else if id < 202 then r201 else r202 else if id < 205 then if id < 204 then r203 else r204 else if id < 206 then r205 else r206 else if id < 210 then if id < 208 then r207 else if id < 209 then r208 else r209 else if id < 212 then if id < 211 then r210 else r211 else if id < 213 then r212 else r213 else if id < 221 then if id < 217 then if id < 215 then r214 else if id < 216 then r215 else r216 else if id < 219 then if id < 218 then r217 else r218 else if id < 220 then r219 else r220 else if id < 225 then if id < 223 then if id < 222 then r221 else r222 else if id < 224 then r223 else r224 else if id < 227 then if id < 226 then r225 else r226 else if id < 228 then r227 else r228 else if id < 343 then if id < 286 then if id < 257 then if id < 243 then if id < 236 then if id < 232 then if id < 230 then r229 else if id < 231 then r230 else r231 else if id < 234 then if id < 233 then r232 else r233 else if id < 235 then r234 else r235 else if id < 239 then if id < 237 then r236 else if id < 238 then r237 else r238 else if id < 241 then if id < 240 then r239 else r240 else if id < 242 then r241 else r242 else if id < 250 then if id < 246 then if id < 244 then r243 else if id < 245 then r244 else r245 else if id < 248 then if id < 247 then r246 else r247 else if id < 249 then r248 else r249 else if id < 253 then if id < 251 then r250 else if id < 252 then r251 else r252 else if id < 255 then if id < 254 then r253 else r254 else if id < 256 then r255 else r256 else if id < 271 then if id < 264 then if id < 260 then if id < 258 then r257 else if id < 259 then r258 else r259 else if id < 262 then if id < 261 then r260 else r261 else if id < 263 then r262 else r263 else if id < 267 then if id < 265 then r264 else if id < 266 then r265 else r266 else if id < 269 then if id < 268 then r267 else r268 else if id < 270 then r269 else r270 else if id < 278 then if id < 274 then if id < 272 then r271 else if id < 273 then r272 else r273 else if id < 276 then if id < 275 then r274 else r275 else if id < 277 then r276 else r277 else if id < 282 then if id < 280 then if id < 279 then r278 else r279 else if id < 281 then r280 else r281 else if id < 284 then if id < 283 then r282 else r283 else if id < 285 then r284 else r285 else if id < 314 then if id < 300 then if id < 293 then if id < 289 then if id < 287 then r286 else if id < 288 then r287 else r288 else if id < 291 then if id < 290 then r289 else r290 else if id < 292 then r291 else r292 else if id < 296 then if id < 294 then r293 else if id < 295 then r294 else r295 else if id < 298 then if id < 297 then r296 else r297 else if id < 299 then r298 else r299 else if id < 307 then if id < 303 then if id < 301 then r300 else if id < 302 then r301 else r302 else if id < 305 then if id < 304 then r303 else r304 else if id < 306 then r305 else r306 else if id < 310 then if id < 308 then r307 else if id < 309 then r308 else r309 else if id < 312 then if id < 311 then r310 else r311 else if id < 313 then r312 else r313 else if id < 328 then if id < 321 then if id < 317 then if id < 315 then r314 else if id < 316 then r315 else r316 else if id < 319 then if id < 318 then r317 else r318 else if id < 320 then r319 else r320 else if id < 324 then if id < 322 then r321 else if id < 323 then r322 else r323 else if id < 326 then if id < 325 then r324 else r325 else if id < 327 then r326 else r327 else if id < 335 then if id < 331 then if id < 329 then r328 else if id < 330 then r329 else r330 else if id < 333 then if id < 332 then r331 else r332 else if id < 334 then r333 else r334 else if id < 339 then if id < 337 then if id < 336 then r335 else r336 else if id < 338 then r337 else r338 else if id < 341 then if id < 340 then r339 else r340 else if id < 342 then r341 else r342 else if id < 400 then if id < 371 then if id < 357 then if id < 350 then if id < 346 then if id < 344 then r343 else if id < 345 then r344 else r345 else if id < 348 then if id < 347 then r346 else r347 else if id < 349 then r348 else r349 else if id < 353 then if id < 351 then r350 else if id < 352 then r351 else r352 else if id < 355 then if id < 354 then r353 else r354 else if id < 356 then r355 else r356 else if id < 364 then if id < 360 then if id < 358 then r357 else if id < 359 then r358 else r359 else if id < 362 then if id < 361 then r360 else r361 else if id < 363 then r362 else r363 else if id < 367 then if id < 365 then r364 else if id < 366 then r365 else r366 else if id < 369 then if id < 368 then r367 else r368 else if id < 370 then r369 else r370 else if id < 385 then if id < 378 then if id < 374 then if id < 372 then r371 else if id < 373 then r372 else r373 else if id < 376 then if id < 375 then r374 else r375 else if id < 377 then r376 else r377 else if id < 381 then if id < 379 then r378 else if id < 380 then r379 else r380 else if id < 383 then if id < 382 then r381 else r382 else if id < 384 then r383 else r384 else if id < 392 then if id < 388 then if id < 386 then r385 else if id < 387 then r386 else r387 else if id < 390 then if id < 389 then r388 else r389 else if id < 391 then r390 else r391 else if id < 396 then if id < 394 then if id < 393 then r392 else r393 else if id < 395 then r394 else r395 else if id < 398 then if id < 397 then r396 else r397 else if id < 399 then r398 else r399 else if id < 429 then if id < 414 then if id < 407 then if id < 403 then if id < 401 then r400 else if id < 402 then r401 else r402 else if id < 405 then if id < 404 then r403 else r404 else if id < 406 then r405 else r406 else if id < 410 then if id < 408 then r407 else if id < 409 then r408 else r409 else if id < 412 then if id < 411 then r410 else r411 else if id < 413 then r412 else r413 else if id < 421 then if id < 417 then if id < 415 then r414 else if id < 416 then r415 else r416 else if id < 419 then if id < 418 then r417 else r418 else if id < 420 then r419 else r420 else if id < 425 then if id < 423 then if id < 422 then r421 else r422 else if id < 424 then r423 else r424 else if id < 427 then if id < 426 then r425 else r426 else if id < 428 then r427 else r428 else if id < 443 then if id < 436 then if id < 432 then if id < 430 then r429 else if id < 431 then r430 else r431 else if id < 434 then if id < 433 then r432 else r433 else if id < 435 then r434 else r435 else if id < 439 then if id < 437 then r436 else if id < 438 then r437 else r438 else if id < 441 then if id < 440 then r439 else r440 else if id < 442 then r441 else r442 else if id < 450 then if id < 446 then if id < 444 then r443 else if id < 445 then r444 else r445 else if id < 448 then if id < 447 then r446 else r447 else if id < 449 then r448 else r449 else if id < 454 then if id < 452 then if id < 451 then r450 else r451 else if id < 453 then r452 else r453 else if id < 456 then if id < 455 then r454 else r455 else if id < 457 then r456 else r457
 
 /-- Number of rules, artificial ones included (`Parser/parser.c`). -/
-def ruleCount : Nat := 445
+def ruleCount : Nat := 458
 
 def rule_file : Nat := 0
 def rule_interactive : Nat := 1
@@ -1817,9 +1883,9 @@ def rule_eval : Nat := 2
 def rule_func_type : Nat := 3
 
 /-- `reserved_keywords` of `Parser/parser.c`: spelling and token type. -/
-def keywords : List (List Nat × Nat) := [([114, 101, 116, 117, 114, 110], 522), ([114, 97, 105, 115, 101], 525), ([112, 97, 115, 115], 526), ([98, 114, 101, 97, 107], 527), ([99, 111, 110, 116, 105, 110, 117, 101], 528), ([103, 108, 111, 98, 97, 108], 529), ([110, 111, 110, 108, 111, 99, 97, 108], 530), ([97, 115, 115, 101, 114, 116], 532), ([121, 105, 101, 108, 100], 587), ([111, 114], 588), ([97, 110, 100], 589), ([105, 115], 596), ([97, 119, 97, 105, 116], 597), ([108, 97, 109, 98, 100, 97], 621), ([84, 114, 117, 101], 622), ([78, 111, 110, 101], 623), ([70, 97, 108, 115, 101], 624), ([100, 101, 108], 625), ([102, 114, 111, 109], 633), ([105, 109, 112, 111, 114, 116], 634), ([119, 105, 116, 104], 647), ([116, 114, 121], 656), ([102, 105, 110, 97, 108, 108, 121], 673), ([101, 120, 99, 101, 112, 116], 677), ([97, 115], 680), ([105, 102], 682), ([101, 108, 115, 101], 686), ([101, 108, 105, 102], 687), ([119, 104, 105, 108, 101], 689), ([102, 111, 114], 694), ([105, 110], 695), ([97, 115, 121, 110, 99], 698), ([100, 101, 102], 699), ([99, 108, 97, 115, 115], 701), ([110, 111, 116], 703)]
+def keywords : List (List Nat × Nat) := [([114, 101, 116, 117, 114, 110], 522), ([112, 97, 115, 115], 527), ([98, 114, 101, 97, 107], 528), ([99, 111, 110, 116, 105, 110, 117, 101], 529), ([103, 108, 111, 98, 97, 108], 530), ([110, 111, 110, 108, 111, 99, 97, 108], 531), ([121, 105, 101, 108, 100], 588), ([111, 114], 589), ([97, 110, 100], 590), ([105, 115], 597), ([97, 119, 97, 105, 116], 598), ([108, 97, 109, 98, 100, 97], 622), ([84, 114, 117, 101], 627), ([78, 111, 110, 101], 628), ([70, 97, 108, 115, 101], 629), ([114, 97, 105, 115, 101], 632), ([100, 101, 108], 634), ([97, 115, 115, 101, 114, 116], 638), ([102, 114, 111, 109], 650), ([105, 109, 112, 111, 114, 116], 651), ([119, 105, 116, 104], 665), ([116, 114, 121], 674), ([102, 105, 110, 97, 108, 108, 121], 691), ([101, 120, 99, 101, 112, 116], 695), ([97, 115], 698), ([105, 102], 700), ([101, 108, 115, 101], 704), ([101, 108, 105, 102], 705), ([119, 104, 105, 108, 101], 707), ([102, 111, 114], 712), ([105, 110], 713), ([97, 115, 121, 110, 99], 716), ([100, 101, 102], 717), ([99, 108, 97, 115, 115], 719), ([110, 111, 116], 721)]
 
 /-- `soft_keywords` of `Parser/parser.c`. -/
-def softKeywords : List (List Nat) := [[95], [99, 97, 115, 101], [109, 97, 116, 99, 104], [116, 121, 112, 101]]
+def softKeywords : List (List Nat) := [[95], [99, 97, 115, 101], [108, 97, 122, 121], [109, 97, 116, 99, 104], [116, 121, 112, 101]]
 
 end PyLean.PyGrammar.Peg

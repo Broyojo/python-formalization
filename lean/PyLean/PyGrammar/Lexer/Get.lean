@@ -1,7 +1,7 @@
 import PyLean.PyGrammar.Lexer.State
 
 /-!
-The tokenizer proper: a line-by-line mirror of `Parser/lexer/lexer.c` (3.14.7).
+The tokenizer proper: a line-by-line mirror of `Parser/lexer/lexer.c` (3.15.2).
 A C `goto` becomes a call of the function for its label, and `return MAKE_TOKEN(t)`
 becomes `emit`, which throws the token out of the state monad with the state kept.
 Loop bounds are `fuel` arguments; every call site passes more than the source can
@@ -50,14 +50,7 @@ def underflow (s : TokState) : Bool × TokState :=
       let s1 := if s.start.isNone && !s.insideFString then { s with buf := s.cur } else s
       let fake := s1.fakeNewlineAt == some (e - 1)
       let s2 := { s1 with inp := e, implicitNewline := fake, lineStart := s1.cur }
-      -- `_PyLexer_update_ftstring_expr(tok, 0)`
-      let s3 :=
-        if s2.modeIndex != 0 then
-          let m := s2.mode
-          if m.lastExprBuf.isNone || !(decide (m.lastExprEnd < (0 : Int))) then s2
-          else s2.setMode fun m => { m with lastExprSize := m.lastExprSize + s2.strlen s2.cur }
-        else s2
-      (true, { s3 with lineno := s3.lineno + 1, colOffset := 0 })
+      (true, { s2 with lineno := s2.lineno + 1, colOffset := 0 })
     else
       let s1 := if s.start.isNone then { s with buf := s.cur } else s
       (true, { s1 with lineStart := s1.cur, lineno := s1.lineno + 1, colOffset := 0, inp := e })
@@ -93,17 +86,14 @@ def nextcS (s : TokState) : Int × TokState :=
   modify fun s =>
     if c != EOF then { s with cur := s.cur - 1, colOffset := s.colOffset - 1 } else s
 
-/-- `set_ftstring_expr`, `Parser/lexer/lexer.c:114-237`. The comment-stripping second
-half operates on the same buffer as the scan in the first. Fails with `MemoryError`
-on a negative size, which `PyUnicode_DecodeUTF8` turns into that exception. -/
+/-- `set_ftstring_expr`, `Parser/lexer/lexer.c:114-237`. The expression is the source from
+`last_expr_start` to `tok->start`; the second loop strips comments and, unlike the first
+half of 3.14's, copies an escaped character without reading it as a quote or a comment. -/
 def setFtstringExpr : M Bool := do
   let s ← get
   let m := s.mode
   if !(m.inDebug || m.tstring) || s.metadata.isSome then return false
-  let n := m.lastExprSize - m.lastExprEnd
-  let off := m.lastExprBuf.getD 0
-  let bytes : List Nat :=
-    if n ≤ 0 then [] else s.slice off (off + n.toNat)
+  let bytes : List Nat := s.slice (m.lastExprStart.getD 0) (s.start.getD 0)
   -- First loop: look for `#` outside string literals.
   let rec scan : List Nat → Bool → Nat → Bool
     | [], _, _ => false
@@ -123,7 +113,11 @@ def setFtstringExpr : M Bool := do
     | 0, _, _, _ => []
     | _ + 1, [], _, _ => []
     | f + 1, ch :: rest, inStr, q =>
-      if ch == ch! '"' || ch == ch! '\'' then
+      if ch == ch! '\\' then
+        match rest with
+        | [] => [ch]
+        | e :: t => ch :: e :: strip f t inStr q
+      else if ch == ch! '"' || ch == ch! '\'' then
         if !inStr then ch :: strip f rest true ch
         else if ch == q then ch :: strip f rest false q
         else ch :: strip f rest inStr q
@@ -132,11 +126,8 @@ def setFtstringExpr : M Bool := do
         | [] => []
         | _ :: t => 10 :: strip f t inStr q
       else ch :: strip f rest inStr q
-  if n < 0 then
-    modify fun s => { s with err := some { cls := "MemoryError", msg := "" } }
-    return true
   let out := if scan bytes false 0 then strip (bytes.length + 1) bytes false 0 else bytes
-  -- `PyUnicode_DecodeUTF8(..., NULL)` is strict: a stale size can cut a character in two.
+  -- `PyUnicode_DecodeUTF8(..., NULL)` is strict.
   match firstBadUtf8 (out.length + 1) out 0 with
   | some (i, b, why) =>
     modify fun s => { s with err := some (utf8Error i b why) }
@@ -145,19 +136,9 @@ def setFtstringExpr : M Bool := do
     modify fun s => { s with metadata := some (utf8Decode out) }
     return false
 
-/-- `_PyLexer_update_ftstring_expr`, `Parser/lexer/lexer.c@3.14.7:227-279`, without the case
-`cur == 0`, which is in `underflow`. Allocation cannot fail in the model. -/
-def updateFtstringExpr (cur : Nat) : M Unit :=
-  modify fun s =>
-    let size := s.strlen s.cur
-    if cur == ch! '{' then
-      s.setMode fun m => { m with lastExprBuf := some s.cur, lastExprSize := size, lastExprEnd := -1 }
-    else if cur == ch! '}' || cur == ch! '!' then
-      s.setMode fun m => { m with lastExprEnd := s.strlen (s.start.getD 0) }
-    else if cur == ch! ':' then
-      s.setMode fun m =>
-        if m.lastExprEnd == -1 then { m with lastExprEnd := s.strlen (s.start.getD 0) } else m
-    else s
+/-- `current_tok->last_expr_start = tok->cur`, `Parser/lexer/lexer.c:1381` and `:1494`. -/
+def setExprStart : M Unit :=
+  modify fun s => s.setMode fun m => { m with lastExprStart := some s.cur }
 
 /-- `lookahead`, `Parser/lexer/lexer.c:240-260`. -/
 def lookahead (test : List Nat) : M Bool := do
@@ -448,6 +429,10 @@ def stringBody (quote quoteSize : Int) : Nat → Int → Bool → M Unit
       if s.insideFString then
         let m := s.mode
         if (m.quote : Int) == quote && (m.quoteSize : Int) == quoteSize then
+          -- `tok->level - curly_bracket_depth + curly_bracket_expr_start_depth`, from the top
+          let (_, lineno, _) := s.parenstack.getD (m.curlyDepth - m.curlyExprStart - 1).toNat (0, 0, 0)
+          if lineno != s.lineno then
+            errMsg s!"{m.prefixStr}-string: expecting '}' to close '\{' on line {lineno}"
           errMsg s!"{m.prefixStr}-string: expecting '}'"
       if quoteSize == 3 then
         let _ ← syntaxerror
@@ -543,8 +528,8 @@ def fStringQuote {α : Type} (c : Int) : M α := do
     else (true, second == ch! 't')
   let m : Mode :=
     { fstringMode := true, quote := quote.toNat, quoteSize := quoteSize, start := st,
-      multiLineStart := s.lineStart, firstLine := s.lineno, lastExprBuf := none,
-      lastExprSize := 0, lastExprEnd := -1, inFormatSpec := false, inDebug := false,
+      multiLineStart := s.lineStart, firstLine := s.lineno, lastExprStart := none,
+      inFormatSpec := false, inDebug := false,
       raw, tstring := tstr, curlyDepth := 0, curlyExprStart := -1 }
   pushMode m t
   throw { t with type := if tstr then TokKind.TSTRING_START.num else TokKind.FSTRING_START.num }
@@ -559,7 +544,6 @@ def punctFString (c : Int) : M Unit := do
     let inFormatSpec := cur.inFormatSpec
     let withDebug := cursor == 1 && (cur.inDebug || inFormatSpec)
     let cursorValid := cursor == 0 || withDebug
-    if cursorValid then updateFtstringExpr c.toNat
     if cursorValid && c != ch! '{' then
       if ← setFtstringExpr then errTok
     if c == ch! ':' && cursor == cur.curlyExprStart then
@@ -573,7 +557,9 @@ def punctFString (c : Int) : M Unit := do
 def punctTwo (c : Int) : M Unit := do
   -- Check for two-character token
   let c2 ← nextc
-  let tok2 := twoChars c c2
+  let barry := (← get).barryAsBdfl
+  let tok2 :=
+    if c == ch! '<' && c2 == ch! '>' && !barry then TokKind.OP.num else twoChars c c2
   if tok2 != TokKind.OP.num then
     let c3 ← nextc
     let tok3 := threeChars c c2 c3
@@ -601,13 +587,15 @@ def punctBracket (c : Int) : M Unit := do
     if s.level > 0 then
       let (opening, openLine, _) := s.parenstack.headD (0, 0, 0)
       modify fun s => { s with level := s.level - 1, parenstack := s.parenstack.drop 1 }
-      if !s.extraTokens && !((opening == ch! '(' && c == ch! ')') ||
+      if !((opening == ch! '(' && c == ch! ')') ||
           (opening == ch! '[' && c == ch! ']') || (opening == ch! '{' && c == ch! '}')) then
         if s.insideFString && opening == ch! '{' then
           let previous := cur.curlyDepth - 1
           if previous == cur.curlyExprStart then
             errMsg s!"{cur.prefixStr}-string: unmatched '{chStr c.toNat}'"
-        if openLine != s.lineno then
+        -- With `tok_extra_tokens` other mismatched brackets are allowed.
+        if s.extraTokens then pure ()
+        else if openLine != s.lineno then
           errMsg (s!"closing parenthesis '{chStr c.toNat}' does not match "
             ++ s!"opening parenthesis '{chStr opening}' on line {openLine}")
         else
@@ -963,10 +951,10 @@ def fstringMiddle : Nat → Nat → Bool → M Unit
         errMsg s!"unterminated {cur.prefixStr}-string literal (detected at line {start})"
     if c == (cur.quote : Int) then fstringMiddle f (endQuoteSize + 1) unicodeEscape
     else if c == ch! '{' then
-      updateFtstringExpr c.toNat
       let peek ← nextc
       if peek != ch! '{' || inFormatSpec then
         backup peek
+        setExprStart
         backup c
         modify fun s => s.setMode fun m => { m with curlyExprStart := m.curlyExprStart + 1 }
         if cur.curlyExprStart + 1 ≥ MAX_EXPR_NESTING then
@@ -1016,6 +1004,7 @@ def fstringMode (fuel : Nat) : M Unit := do
   if startChar == ch! '{' then
     let peek1 ← nextc
     backup peek1
+    if peek1 != ch! '{' then setExprStart
     backup startChar
     if peek1 != ch! '{' then
       modify fun s => s.setMode fun m => { m with curlyExprStart := m.curlyExprStart + 1 }

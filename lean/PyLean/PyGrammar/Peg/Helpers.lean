@@ -25,7 +25,7 @@ inductive Helper where
   | check_barry_as_flufl
   | check_fstring_conversion
   | check_legacy_stmt
-  | checked_future_import
+  | checked_from_import
   | class_def_decorators
   | cmpop_expr_pair
   | collect_call_seqs
@@ -61,6 +61,7 @@ inductive Helper where
   | map_names_to_ids
   | name_default_pair
   | nonparen_genexp_in_call
+  | raise_error_for_missing_comma
   | register_stmts
   | seq_append_to_end
   | seq_count_dots
@@ -76,6 +77,7 @@ inductive Helper where
   | slash_with_default
   | star_etc
   | template_str
+  | tokens_are_adjacent
   deriving DecidableEq, Repr
 
 end PyLean.PyGrammar.Peg

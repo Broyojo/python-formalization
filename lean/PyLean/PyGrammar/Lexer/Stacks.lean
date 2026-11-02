@@ -339,17 +339,6 @@ theorem lp_setFtstringExpr {b : Bool} : LP b setFtstringExpr := by
   unfold setFtstringExpr
   lp
 
-theorem lp_updateFtstringExpr {b : Bool} (c : Nat) : LP b (updateFtstringExpr c) := by
-  refine LP.modify' _ fun s h => ?_
-  split
-  · exact I_setMode h _ fun _ => Or.inl rfl
-  · split
-    · exact I_setMode h _ fun _ => Or.inl rfl
-    · split
-      · refine I_setMode h _ fun m => Or.inl ?_
-        split <;> rfl
-      · exact h
-
 theorem LP.forM {b : Bool} {β : Type} (l : List β) (f : β → M Unit) (h : ∀ x, LP b (f x)) :
     LP b (l.forM f) := by
   induction l with
@@ -359,7 +348,11 @@ theorem LP.forM {b : Bool} {β : Type} (l : List β) (f : β → M Unit) (h : �
     exact LP.bind (h x) fun _ => ih
 
 macro_rules | `(tactic| lp_leaf) => `(tactic| with_reducible exact lp_setFtstringExpr)
-macro_rules | `(tactic| lp_leaf) => `(tactic| with_reducible exact lp_updateFtstringExpr _)
+
+theorem lp_setExprStart {b : Bool} : LP b setExprStart :=
+  LP.modify' _ fun _ h => I_setMode h _ fun _ => Or.inl rfl
+
+macro_rules | `(tactic| lp_leaf) => `(tactic| with_reducible exact lp_setExprStart)
 macro_rules | `(tactic| lp_leaf) => `(tactic| with_reducible refine LP.forM _ _ (fun _ => ?_))
 
 theorem lp_lookahead_go {b : Bool} (rest consumed : List Nat) :
