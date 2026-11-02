@@ -1,0 +1,179 @@
+file	line	name	verdict	mirror	property	settled	reason
+Objects/unicodeobject.c	113	_PyUnicode_UTF8	FAITHFUL	-	-	-	An atomic load of the utf8 field with no branch and no Python-visible effect of its own.
+Objects/unicodeobject.c	118	PyUnicode_UTF8	FAITHFUL	-	-	-	Returns the inline data or the utf8 field by compactness; internal plumbing with no refusal and no Python-visible effect of its own.
+Objects/unicodeobject.c	129	PyUnicode_SET_UTF8	FAITHFUL	-	-	-	An atomic store of the utf8 field, internal plumbing.
+Objects/unicodeobject.c	134	PyUnicode_UTF8_LENGTH	FAITHFUL	-	-	-	Returns the length or utf8_length field by compactness; no refusal, no Python-visible effect of its own.
+Objects/unicodeobject.c	145	PyUnicode_SET_UTF8_LENGTH	FAITHFUL	-	-	-	A plain store of utf8_length.
+Objects/unicodeobject.c	159	PyUnicode_SET_HASH	FAITHFUL	-	-	-	An atomic store of the cached hash, internal plumbing.
+Objects/unicodeobject.c	167	_PyUnicode_SHARE_UTF8	FAITHFUL	-	-	-	Compares two internal pointers; no Python-visible effect of its own.
+Objects/unicodeobject.c	176	_PyUnicode_HAS_UTF8_MEMORY	FAITHFUL	-	-	-	Pointer test on the representation; no Python-visible effect of its own.
+Objects/unicodeobject.c	254	hashtable_unicode_hash	HOLLOW	-	-	-	Not start-up only: it is the hash callback of INTERNED_STRINGS, which intern_common queries on every intern (:14360), so it decides which static string sys.intern returns.
+Objects/unicodeobject.c	260	hashtable_unicode_compare	HOLLOW	-	-	-	Not start-up only: it is the equality callback of the INTERNED_STRINGS lookup run by intern_common at :14360 on every intern.
+Objects/unicodeobject.c	283	has_shared_intern_dict	FAITHFUL	-	-	-	Called only from init_interned_dict and clear_interned_dict, i.e. interpreter start-up and shutdown.
+Objects/unicodeobject.c	290	init_interned_dict	FAITHFUL	-	-	-	Creates or shares the per-interpreter interned dict at interpreter start-up.
+Objects/unicodeobject.c	309	clear_interned_dict	FAITHFUL	-	-	-	Clears the interned dict at interpreter shutdown.
+Objects/unicodeobject.c	323	init_global_interned_strings	FAITHFUL	-	-	-	Builds INTERNED_STRINGS and interns the static strings during runtime initialization.
+Objects/unicodeobject.c	366	clear_global_interned_strings	FAITHFUL	-	-	-	Destroys INTERNED_STRINGS at runtime finalization.
+Objects/unicodeobject.c	588	_PyUnicode_CheckConsistency	FAITHFUL	-	-	-	A consistency checker used by assertions and debug builds; it changes nothing a Python program sees.
+Objects/unicodeobject.c	718	_PyUnicode_Result	FAITHFUL	yes	yes	yes	UWriter.finish mirrors the empty and one-character LATIN1 branches; WriterFinishOneByte pins the singleton branch and WriterFinishCanonical the canonical kind for every script.
+Objects/unicodeobject.c	922	make_bloom_mask	FAITHFUL	-	-	-	A speed filter: BloomSuperset (proven on makeBloomMask, which mirrors :922-957) shows it never rejects a member, so results cannot depend on it.
+Objects/unicodeobject.c	1010	findchar	FAITHFUL	yes	yes	yes	findchar mirrors the unit casts and both directions; FindCharDoc pins PyUnicode_FindChar against the documented slice search for every Py_UCS4, including chars that do not survive the cast.
+Objects/unicodeobject.c	1047	unicode_fill_invalid	FAITHFUL	-	-	-	Compiled only under Py_DEBUG (#ifdef at :1040), where it fills fresh buffers with invalid characters.
+Objects/unicodeobject.c	1059	resize_copy	FAITHFUL	-	-	-	Allocation plumbing of unicode_resize; the copied text is observed only through its callers.
+Objects/unicodeobject.c	1074	_PyUnicode_ResizeCompact	FAITHFUL	-	-	-	Reallocation plumbing; the text is observed only through its callers.
+Objects/unicodeobject.c	1136	resize_inplace	FAITHFUL	-	-	-	Reallocation plumbing for non-compact strings; no Python-visible effect of its own.
+Objects/unicodeobject.c	1192	unicode_kind_name	HOLLOW	-	-	-	Not debug-only: PyUnicode_CopyCharacters uses it in a release-build SystemError message ('Cannot copy %s characters into a string of %s characters', :1576-1580).
+Objects/unicodeobject.c	1230	_PyUnicode_utf8	FAITHFUL	-	-	-	A debugger wrapper returning PyUnicode_UTF8; no Python-visible effect.
+Objects/unicodeobject.c	1235	_PyUnicode_compact_data	FAITHFUL	-	-	-	A debugger wrapper returning the compact data pointer; no Python-visible effect.
+Objects/unicodeobject.c	1239	_PyUnicode_data	HOLLOW	-	-	-	Not a plain field accessor: it printf's six lines to stdout before returning the data pointer (:1241-1246), so the no-behaviour reason does not describe it (it is a debugger helper).
+Objects/unicodeobject.c	1251	_PyUnicode_Dump	FAITHFUL	-	-	-	A debug dump to stdout for use from a debugger.
+Objects/unicodeobject.c	1278	PyUnicode_New	HOLLOW	yes	no	yes	NewSizeExact assumes size > 0 and maxchar <= 0x10FFFF, and PadDoc never reaches them, so the two SystemError refusals (:1310-1314, :1320-1324) are never pinned.
+Objects/unicodeobject.c	1602	find_maxchar_surrogates	FAITHFUL	yes	yes	yes	findMaxcharSurrogates mirrors the new-maximum check for a 4-byte wchar_t; WriterText pins WriteWideChar's ValueError against an independent 'first character above U+10FFFF' reference.
+Objects/unicodeobject.c	1640	unicode_dealloc	FAITHFUL	-	-	-	tp_dealloc: removing a dead string from the interned dict and freeing buffers has no effect a live program can observe, as the GC/dealloc policy states.
+Objects/unicodeobject.c	1834	unicode_char	FAITHFUL	yes	yes	yes	unicodeCharChecked mirrors the LATIN1 branch and PyUnicode_New's refusal; UnicodeCharSpec pins the canonical kind for every code point and SystemError above U+10FFFF.
+Objects/unicodeobject.c	1973	PyUnicodeWriter_WriteWideChar	FAITHFUL	yes	yes	yes	writeWide mirrors wcslen, the max scan and the write; WriterText pins its text and error against an independent reference and WriterPathsAgree against WriteStr.
+Objects/unicodeobject.c	2121	unicode_clear_identifiers	FAITHFUL	-	-	-	Releases the cached identifiers at interpreter shutdown.
+Objects/unicodeobject.c	2157	kind_maxchar_limit	FAITHFUL	yes	yes	yes	kindMaxcharLimit mirrors the switch; SliceKind fails for any limit that lets the early break in unicode_subscript pick a narrower kind than the slice needs.
+Objects/unicodeobject.c	2271	PyUnicodeWriter_WriteUCS4	HOLLOW	yes	no	yes	Its only entry, WriterPathsAgree, uses size = len(s), so the 'size must be positive' ValueError and a size shorter than the buffer never run (WriterText covers them but does not name this function).
+Objects/unicodeobject.c	3195	PyUnicodeWriter_Format	FAITHFUL	yes	yes	yes	WriterFormatAppends pins PyUnicodeWriter_Format against PyUnicode_FromFormat for every writer, format and argument list, including no text kept on failure.
+Objects/unicodeobject.c	3205	_PyUnicodeWriter_FormatV	FAITHFUL	yes	yes	yes	The put back of pos on failure (:3214-3216) is pinned by WriterFormatAppends' error case (text unchanged).
+Objects/unicodeobject.c	4280	make_decode_exception	FAITHFUL	yes	yes	yes	DecodeCallbackPosition pins the view the handler sees (object as last left, start, end, reason) and the position semantics for every handler.
+Objects/unicodeobject.c	4306	widechar_resize	FAITHFUL	-	-	-	Inside #ifdef MS_WINDOWS (:4304-4428), not compiled on Linux or macOS.
+Objects/unicodeobject.c	4328	unicode_decode_call_errorhandler_wchar	FAITHFUL	-	-	-	Inside #ifdef MS_WINDOWS (:4304-4428), not compiled on Linux or macOS.
+Objects/unicodeobject.c	4432	unicode_decode_call_errorhandler_writer	FAITHFUL	yes	yes	yes	decodeCallback mirrors lookup, call, tuple parse, object re-read and bounds check; DecodeCallbackPosition forces out-of-range positions to fail and pins negative ones to the new object's end, and WideStdIsCallback/AsciiConstantHandler pin the success path.
+Objects/unicodeobject.c	4921	PyUnicode_DecodeUTF8	FAITHFUL	yes	yes	yes	A wrapper with consumed NULL; DecodeUtf8Spec pins it with the rest of unicode_decode_utf8.
+Objects/unicodeobject.c	5187	unicode_decode_utf8_impl	HOLLOW	yes	no	yes	Utf8Chunks and Utf8StdIsCallback compare the loop only with itself (two chunks against one, inline handlers against the same spans via callback), so a wrong startinpos/endinpos at :5219-5239 or wrong text passes both.
+Objects/unicodeobject.c	5310	unicode_decode_utf8	FAITHFUL	yes	yes	yes	unicodeDecodeUtf8 mirrors the empty, one-byte, all-ASCII and maxchr-guess paths; DecodeUtf8Spec pins them against the plain loop and the result kind as canonical for every handler.
+Objects/unicodeobject.c	5404	_PyUnicode_DecodeUTF8Writer	FAITHFUL	yes	yes	yes	decodeWriterX mirrors the Prepare and ASCII fast path; WriterDecodeX pins it against bytes.decode's decoder for every handler, with no text kept on failure.
+Objects/unicodeobject.c	5445	PyUnicode_DecodeUTF8Stateful	FAITHFUL	yes	yes	yes	Passes _Py_ERROR_STRICT exactly when errors is NULL; DecodeUtf8Spec states that precondition and pins the result.
+Objects/unicodeobject.c	5860	PyUnicode_DecodeUTF32Stateful	HOLLOW	yes	no	yes	wide-std-callback and utf32-chunks compare the decoder with itself (callback against shortcut, chunks against one shot); the round trips that pin the text have no pyFns, so a wrong code point assembly passes.
+Objects/unicodeobject.c	6176	PyUnicode_DecodeUTF16Stateful	HOLLOW	yes	no	yes	wide-std-callback and utf16-chunks compare the decoder with itself; nothing in this row's entries checks the text or the surrogate join, which only the round trip (no pyFns) pins.
+Objects/unicodeobject.c	6522	_PyUnicode_DecodeUnicodeEscapeInternal2	HOLLOW	no	no	yes	escInvalid cites :6733-6741 and :6833-6840, which are 3.14.7 lines (in 3.15.2 the octal and default recordings are at :6626-6633 and :6727-6733); and none of its entries checks successful escapes (a decoder mapping '\\n' or octal to the wrong character passes warns, fails-at and failures).
+Objects/unicodeobject.c	6772	_PyUnicode_DecodeUnicodeEscapeStateful	HOLLOW	no	yes	yes	escWarning, the part of this body the entry pins, cites :6892-6913, which in 3.15.2 is inside PyUnicode_AsUnicodeEscapeString; the warnings are at :6785-6805 (and the entry's source cites the same 3.14.7 lines).
+Objects/unicodeobject.c	6811	PyUnicode_DecodeUnicodeEscape	FAITHFUL	yes	yes	yes	A wrapper with consumed NULL (final=true), cited correctly at :6811-6816 and covered by UnicodeEscapeWarns for both values of final.
+Objects/unicodeobject.c	6821	PyUnicode_AsUnicodeEscapeString	FAITHFUL	yes	yes	yes	unicodeEscapeChar mirrors every branch; UnicodeEscapeClean (decodes back, no warning) and UnicodeEscapePrintable (printable ASCII) pin what the codec documentation promises.
+Objects/unicodeobject.c	6924	_PyUnicode_DecodeRawUnicodeEscapeStateful	HOLLOW	yes	no	yes	RawEscapeFailsAt and RawEscapeFailures only pin failing escapes and the backslash cases; a decoder that read \uXXXX to the wrong character passes both (the round trip has no pyFns).
+Objects/unicodeobject.c	7060	PyUnicode_DecodeRawUnicodeEscape	FAITHFUL	yes	yes	yes	A wrapper with consumed NULL; RawEscapeFailsAt quantifies over final.
+Objects/unicodeobject.c	7069	PyUnicode_AsRawUnicodeEscapeString	HOLLOW	yes	no	yes	RawEscapeEncodeSpec only says Latin-1 is copied and other characters become printable ASCII, so an encoder writing '?' for every character above U+00FF satisfies it.
+Objects/unicodeobject.c	7146	make_encode_exception	FAITHFUL	yes	yes	yes	EncodeCallbackPosition pins the view the handler sees (object, start, end, reason) for every handler.
+Objects/unicodeobject.c	7172	raise_encode_exception	FAITHFUL	yes	yes	yes	Ucs1StrictError pins the strict exception's span (first unencodable character to the end of the run) for both limits and every string.
+Objects/unicodeobject.c	7189	unicode_encode_call_errorhandler	FAITHFUL	yes	yes	yes	encodeCallback mirrors the parse order and checks; EncodeCallbackPosition pins the positions and Ucs1InlineMatchesCallback the success path.
+Objects/unicodeobject.c	7245	unicode_encode_ucs1	HOLLOW	yes	no	yes	Its entries pin the strict span and inline-against-callback agreement only, so the copying of encodable characters (:7280-7284) is never checked: an encoder that drops them passes all three.
+Objects/unicodeobject.c	7453	PyUnicode_DecodeASCII	FAITHFUL	yes	yes	yes	asciiDecodeC mirrors the fast paths and inline handlers; AsciiDecodeSpec pins them against the per-byte generic decoder and the result kind as canonical for every handler.
+Objects/unicodeobject.c	7591	code_page_name	FAITHFUL	-	-	-	Inside #ifdef MS_WINDOWS (:7572-8254).
+Objects/unicodeobject.c	7604	decode_code_page_flags	FAITHFUL	-	-	-	Inside #ifdef MS_WINDOWS (:7572-8254).
+Objects/unicodeobject.c	7622	decode_code_page_strict	FAITHFUL	-	-	-	Inside #ifdef MS_WINDOWS (:7572-8254).
+Objects/unicodeobject.c	7672	decode_code_page_errors	FAITHFUL	-	-	-	Inside #ifdef MS_WINDOWS (:7572-8254).
+Objects/unicodeobject.c	7795	decode_code_page_stateful	FAITHFUL	-	-	-	Inside #ifdef MS_WINDOWS (:7572-8254).
+Objects/unicodeobject.c	7863	PyUnicode_DecodeCodePageStateful	FAITHFUL	-	-	-	Inside #ifdef MS_WINDOWS (:7572-8254).
+Objects/unicodeobject.c	7873	PyUnicode_DecodeMBCSStateful	FAITHFUL	-	-	-	Inside #ifdef MS_WINDOWS (:7572-8254).
+Objects/unicodeobject.c	7882	PyUnicode_DecodeMBCS	FAITHFUL	-	-	-	Inside #ifdef MS_WINDOWS (:7572-8254).
+Objects/unicodeobject.c	7890	encode_code_page_flags	FAITHFUL	-	-	-	Inside #ifdef MS_WINDOWS (:7572-8254).
+Objects/unicodeobject.c	7915	encode_code_page_strict	FAITHFUL	-	-	-	Inside #ifdef MS_WINDOWS (:7572-8254).
+Objects/unicodeobject.c	8012	encode_code_page_errors	FAITHFUL	-	-	-	Inside #ifdef MS_WINDOWS (:7572-8254).
+Objects/unicodeobject.c	8187	PyUnicode_EncodeCodePage	FAITHFUL	-	-	-	Inside #ifdef MS_WINDOWS (:7572-8254).
+Objects/unicodeobject.c	8247	PyUnicode_AsMBCSString	FAITHFUL	-	-	-	Inside #ifdef MS_WINDOWS (:7572-8254).
+Objects/unicodeobject.c	8754	charmapencode_resize	FAITHFUL	-	-	-	Only doubles the requested size and resizes the bytes writer.
+Objects/unicodeobject.c	9182	charmaptranslate_lookup	FAITHFUL	yes	yes	yes	charmaptranslateLookup mirrors every branch; TranslateDocReading pins the allowed answers against the docstring and TranslateBadItem the range, type and pass-through errors.
+Objects/unicodeobject.c	9239	charmaptranslate_output	FAITHFUL	yes	yes	yes	Pinned by TranslateDocReading (keep, delete, ordinal, string) and TranslateBadItem (first bad answer decides).
+Objects/unicodeobject.c	9285	unicode_fast_translate_lookup	FAITHFUL	yes	yes	yes	Every refusal of the fast lookup hands over to the general loop, and TranslatePureFastSlow pins that handover against the loop; FastPathOneLookupPerChar pins the caching.
+Objects/unicodeobject.c	9337	unicode_fast_translate	HOLLOW	yes	no	yes	Its entries only run ignore=1 (str.translate) or the success case, so the ignore=0 exit at :9370-9373 that PyUnicode_Translate takes on a deletion is never exercised.
+Objects/unicodeobject.c	9388	_PyUnicode_TranslateCharmap	HOLLOW	yes	no	yes	TranslatePureFastSlow compares translateCharmapX with translateSlowX, which share translateLoopX, so for non-ASCII input it holds for any loop, and the error-handler branch (:9479-9491) never runs under ignore.
+Objects/unicodeobject.c	9692	PyUnicode_FindChar	FAITHFUL	yes	yes	yes	pyUnicodeFindChar mirrors ADJUST_INDICES and the call; FindCharDoc pins it against the documented slice search.
+Objects/unicodeobject.c	9712	tailmatch	FAITHFUL	yes	yes	yes	tailmatch mirrors the adjust, the first/last check, memcmp and the loop; TailmatchDoc pins every path against an independent prefix/suffix spec.
+Objects/unicodeobject.c	9775	PyUnicode_Tailmatch	FAITHFUL	yes	yes	yes	TailmatchApi pins the TypeError order (str before substr) and the result.
+Objects/unicodeobject.c	9788	ascii_upper_or_lower	FAITHFUL	yes	yes	yes	CaseDocSpec pins the ASCII shortcut against the per-position Unicode mappings, and CaseAsciiFastPath against the general loops.
+Objects/unicodeobject.c	9807	handle_capital_sigma	FAITHFUL	yes	yes	yes	FinalSigmaNoOverlap proves the Unicode Final_Sigma rule away from cased-and-ignorable characters, and the general rule is refuted with a bug record.
+Objects/unicodeobject.c	9836	lower_ucs4	FAITHFUL	yes	yes	yes	lowerUcs4 mirrors the sigma special case; CaseDocSpec and CaseOutputBound pin it.
+Objects/unicodeobject.c	9848	do_capitalize	FAITHFUL	yes	yes	yes	doCapitalize mirrors the title-then-lower loops; CaseDocSpec pins capitalize position by position.
+Objects/unicodeobject.c	9872	do_swapcase	FAITHFUL	yes	yes	yes	doSwapcase mirrors the three branches; CaseDocSpec pins swapcase position by position.
+Objects/unicodeobject.c	9897	do_upper_or_lower	FAITHFUL	yes	yes	yes	Pinned through upper and lower by CaseDocSpec and CaseAsciiFastPath.
+Objects/unicodeobject.c	9918	do_upper	FAITHFUL	yes	yes	yes	Pinned by CaseDocSpec (full uppercase mapping per position) and CaseOutputBound.
+Objects/unicodeobject.c	9924	do_lower	FAITHFUL	yes	yes	yes	Pinned by CaseDocSpec (lowercase with Final_Sigma per position) and CaseOutputBound.
+Objects/unicodeobject.c	9930	do_casefold	FAITHFUL	yes	yes	yes	Pinned by CaseDocSpec (full case folding per position) and CaseOutputBound.
+Objects/unicodeobject.c	9947	do_title	FAITHFUL	yes	yes	yes	titleLoop mirrors previous_is_cased; CaseDocSpec pins titlecase after a non-cased character.
+Objects/unicodeobject.c	9974	case_operation	FAITHFUL	yes	yes	yes	caseOperation mirrors the length check and the kind-narrowing copy; CaseDocSpec pins the OverflowError bound and that the copy loses no bits.
+Objects/unicodeobject.c	10020	PyUnicode_Join	FAITHFUL	yes	yes	yes	JoinSequence pins PySequence_Fast: iterator against list, next() exceptions, and the TypeError replacement only for __iter__.
+Objects/unicodeobject.c	10045	_PyUnicode_JoinArray	FAITHFUL	yes	yes	yes	joinArray mirrors the singleton, separator and pre-pass checks; JoinSpec, JoinErrors (order and messages) and JoinMemcpySafe pin result, failures and the memcpy condition.
+Objects/unicodeobject.c	10258	pad	FAITHFUL	yes	yes	yes	pad mirrors the clamps, the overflow check and PyUnicode_New; PadDoc pins all four callers against the documented results and shows the OverflowError unreachable.
+Objects/unicodeobject.c	10335	split	FAITHFUL	yes	yes	yes	strSplit mirrors the default maxcounts and the kind/length shortcut; ReplaceSplitJoin pins it against an independent split for every string, though the entries name 'str.split', not this inventory name, so prefill will not credit it.
+Objects/unicodeobject.c	10427	rsplit	HOLLOW	yes	no	yes	Its only entry, SplitStrBytes, holds only for byte-valued strings, so the kind1 < kind2 shortcut (:10477) and every wide-kind input are never exercised; its pyFns also say 'str.rsplit', not this name.
+Objects/unicodeobject.c	10577	replace	FAITHFUL	yes	yes	yes	strReplace mirrors the branches and both overflow checks; ReplaceSplitJoin pins it against new.join(s.split(old)) for every string and ReplaceStrBytes covers the empty old, though pyFns say 'str.replace', not this name.
+Objects/unicodeobject.c	10867	unicode_title_impl	FAITHFUL	yes	yes	yes	Pinned by CaseDocSpec.
+Objects/unicodeobject.c	10883	unicode_capitalize_impl	FAITHFUL	yes	yes	yes	Pinned by CaseDocSpec, including the empty-string shortcut.
+Objects/unicodeobject.c	10898	unicode_casefold_impl	FAITHFUL	yes	yes	yes	Pinned by CaseDocSpec, including the ASCII shortcut.
+Objects/unicodeobject.c	10910	convert_uc	FAITHFUL	yes	yes	yes	convertUc mirrors both TypeErrors; PadArgs pins it against the documented fill-character reading after the width conversion.
+Objects/unicodeobject.c	10943	unicode_center_impl	FAITHFUL	yes	yes	yes	The marg & width & 1 split is pinned by PadDoc's centerLeft and PadArgs.
+Objects/unicodeobject.c	11707	unicode_getitem	FAITHFUL	yes	yes	yes	IndexDoc pins the in-range character and the IndexError for every index object.
+Objects/unicodeobject.c	11800	unicode_islower_impl	FAITHFUL	yes	yes	yes	IsCaseDoc pins islower against its docstring for every valid string, shortcut and loop alike.
+Objects/unicodeobject.c	11843	unicode_isupper_impl	FAITHFUL	yes	yes	yes	IsCaseDoc pins isupper against its docstring for every valid string.
+Objects/unicodeobject.c	12057	unicode_isdecimal_impl	FAITHFUL	yes	yes	yes	allShape mirrors the shortcut, empty case and loop; IsPredicates pins 'non-empty and every character decimal'.
+Objects/unicodeobject.c	12094	unicode_isdigit_impl	FAITHFUL	yes	yes	yes	IsPredicates pins 'non-empty and every character a digit' and decimal implies digit.
+Objects/unicodeobject.c	12132	unicode_isnumeric_impl	FAITHFUL	yes	yes	yes	IsPredicates pins 'non-empty and every character numeric' and digit implies numeric.
+Objects/unicodeobject.c	12160	_PyUnicode_ScanIdentifier	FAITHFUL	yes	yes	yes	scanIdentifier mirrors the start and continue tests; IsIdentifierSpec pins the PEP 3131 reading.
+Objects/unicodeobject.c	12194	PyUnicode_IsIdentifier	FAITHFUL	yes	yes	yes	Pinned by IsIdentifierSpec (non-empty and scan reaches the end).
+Objects/unicodeobject.c	12213	unicode_isidentifier_impl	FAITHFUL	yes	yes	yes	Pinned by IsIdentifierSpec.
+Objects/unicodeobject.c	12229	unicode_isprintable_impl	FAITHFUL	yes	yes	yes	IsPrintableRepr pins isprintable to 'repr copies each character' for strings without quote or backslash, which repr escapes for other reasons.
+Objects/unicodeobject.c	12294	unicode_ljust_impl	FAITHFUL	yes	yes	yes	Pinned by PadDoc and PadArgs.
+Objects/unicodeobject.c	12310	unicode_lower_impl	FAITHFUL	yes	yes	yes	Pinned by CaseDocSpec, including the ASCII shortcut.
+Objects/unicodeobject.c	12329	_PyUnicode_XStrip	FAITHFUL	yes	yes	yes	xstrip mirrors the bloom test then FindChar on both scans; StripDoc pins removal of exactly the leading/trailing characters in chars.
+Objects/unicodeobject.c	12376	_PyUnicode_BinarySlice	FAITHFUL	yes	yes	yes	SliceTwin pins the fast path against unicode_subscript for every bound object and against Python's slice for ints.
+Objects/unicodeobject.c	12388	PyUnicode_Substring	FAITHFUL	yes	yes	yes	SubstringDoc pins the IndexError for negative indices and the slice otherwise, through every shortcut.
+Objects/unicodeobject.c	12422	do_strip	FAITHFUL	yes	yes	yes	StripDoc pins both branches (ASCII table and Py_UNICODE_ISSPACE) against str.isspace.
+Objects/unicodeobject.c	12485	do_argstrip	FAITHFUL	yes	yes	yes	StripDoc pins the None, str and TypeError branches with the method name.
+Objects/unicodeobject.c	12515	unicode_strip_impl	FAITHFUL	yes	yes	yes	Pinned by StripDoc.
+Objects/unicodeobject.c	12534	unicode_lstrip_impl	FAITHFUL	yes	yes	yes	Pinned by StripDoc.
+Objects/unicodeobject.c	12553	unicode_rstrip_impl	FAITHFUL	yes	yes	yes	Pinned by StripDoc.
+Objects/unicodeobject.c	12664	unicode_removeprefix_impl	FAITHFUL	yes	yes	yes	RemoveAffixDoc pins the documented result and the TypeError.
+Objects/unicodeobject.c	12692	unicode_removesuffix_impl	FAITHFUL	yes	yes	yes	RemoveAffixDoc pins the documented result, the empty-suffix case and the TypeError.
+Objects/unicodeobject.c	12858	unicode_rjust_impl	FAITHFUL	yes	yes	yes	Pinned by PadDoc and PadArgs.
+Objects/unicodeobject.c	12916	PyUnicode_Partition	FAITHFUL	yes	yes	yes	PartitionDoc pins the documented split, the errors and the kind/length shortcut against the general path.
+Objects/unicodeobject.c	12968	PyUnicode_RPartition	FAITHFUL	yes	yes	yes	PartitionDoc pins rpartition likewise.
+Objects/unicodeobject.c	13035	unicode_partition	FAITHFUL	yes	yes	yes	A wrapper pinned by PartitionDoc.
+Objects/unicodeobject.c	13056	unicode_rpartition	FAITHFUL	yes	yes	yes	A wrapper pinned by PartitionDoc.
+Objects/unicodeobject.c	13128	unicode_swapcase_impl	FAITHFUL	yes	yes	yes	Pinned by CaseDocSpec.
+Objects/unicodeobject.c	13199	unicode_maketrans_impl	HOLLOW	yes	no	yes	MaketransTranslate covers only the two-string form, so the one-argument dict form (:13258-13272) and the three TypeError/ValueError refusals are never exercised by this row's entry.
+Objects/unicodeobject.c	13297	unicode_translate	FAITHFUL	yes	yes	yes	TranslateDocReading pins str.translate against its docstring for every pure table, fast and general path alike.
+Objects/unicodeobject.c	13310	unicode_upper_impl	FAITHFUL	yes	yes	yes	Pinned by CaseDocSpec, including the ASCII shortcut.
+Objects/unicodeobject.c	13331	unicode_zfill_impl	FAITHFUL	yes	yes	yes	PadDoc pins the zeros after a leading sign (zfillSpec) and the MemoryError bound.
+Objects/unicodeobject.c	13381	unicode_startswith_impl	FAITHFUL	yes	yes	yes	StartsEndsDoc pins str, tuple (with the late TypeError) and the other-argument TypeError.
+Objects/unicodeobject.c	13438	unicode_endswith_impl	FAITHFUL	yes	yes	yes	StartsEndsDoc pins endswith likewise.
+Objects/unicodeobject.c	13572	search_longest_common_leading_whitespace	HOLLOW	yes	no	yes	One of its two entries, dedent-textwrap, states an 'exact match of textwrap.dedent' quoted from the 3.14.7 comment; 3.15.2 replaced it with 'Unlike textwrap.dedent, this only supports spaces and tabs' (:13645-13649), so the refuted property is documented behaviour.
+Objects/unicodeobject.c	13651	_PyUnicode_Dedent	HOLLOW	yes	no	yes	Same as above: DedentMatchesTextwrap is refuted by a form-feed line that the 3.15.2 comment says is unsupported, so that entry and its bug record do not stand (DedentDefined does).
+Objects/unicodeobject.c	13804	unicode_subscript	HOLLOW	yes	no	yes	IndexDoc and SliceTwin never use a step, so the extended-slice copy loop (:13837-13866) and 'slice step cannot be zero' are never exercised by this row's entries.
+Objects/unicodeobject.c	14066	_PyUnicode_ExactDealloc	FAITHFUL	-	-	-	Calls unicode_dealloc; dealloc policy.
+Objects/unicodeobject.c	14137	_init_global_state	FAITHFUL	-	-	-	Runtime state initialization.
+Objects/unicodeobject.c	14162	_PyUnicode_InitState	FAITHFUL	-	-	-	Interpreter start-up of the unicode state.
+Objects/unicodeobject.c	14172	_PyUnicode_InitGlobalObjects	FAITHFUL	-	-	-	Interpreter start-up of the global unicode objects.
+Objects/unicodeobject.c	14192	_PyUnicode_InitTypes	FAITHFUL	-	-	-	Type initialization at start-up.
+Objects/unicodeobject.c	14210	intern_static	FAITHFUL	-	-	-	Called only through _PyUnicode_InternStatic during runtime initialization.
+Objects/unicodeobject.c	14249	_PyUnicode_InternStatic	FAITHFUL	-	-	-	Asserts !Py_IsInitialized(): runtime initialization only.
+Objects/unicodeobject.c	14259	immortalize_interned	FAITHFUL	yes	yes	yes	immortalizeInterned sets immortal and the state; InternSpec and InternMortality fail for a version that leaves the string mortal.
+Objects/unicodeobject.c	14291	intern_common	FAITHFUL	yes	yes	yes	internCommon mirrors every early return, the LATIN1 and static lookups and the setdefault; InternCanonical (by id) and InternSpec pin it for every world satisfying the table invariant.
+Objects/unicodeobject.c	14463	_PyUnicode_InternImmortal	FAITHFUL	yes	yes	yes	InternMortality pins the immortal flag and the promotion of a mortal dict entry.
+Objects/unicodeobject.c	14470	_PyUnicode_InternMortal	FAITHFUL	yes	yes	yes	InternMortality pins the mortal flag and that a mortal dict entry is left mortal.
+Objects/unicodeobject.c	14485	PyUnicode_InternInPlace	FAITHFUL	yes	yes	yes	InternMortality pins the mortal entry point.
+Objects/unicodeobject.c	14494	PyUnicode_InternImmortal	FAITHFUL	yes	yes	yes	InternMortality pins the immortal entry point.
+Objects/unicodeobject.c	14501	PyUnicode_InternFromString	FAITHFUL	yes	yes	yes	InternFromStringSpec pins the strict-decode failure and the interned, stable result.
+Objects/unicodeobject.c	14514	_PyUnicode_ClearInterned	FAITHFUL	-	-	-	Interpreter shutdown.
+Objects/unicodeobject.c	14611	unicodeiter_dealloc	FAITHFUL	-	-	-	Only untracks and drops the reference to the string; dealloc policy.
+Objects/unicodeobject.c	14620	unicodeiter_traverse	FAITHFUL	-	-	-	GC traversal; no-behaviour by policy.
+Objects/unicodeobject.c	14628	unicodeiter_next	FAITHFUL	yes	yes	yes	IterDrains pins the items, kinds and end for every string.
+Objects/unicodeobject.c	14653	unicode_ascii_iter_next	FAITHFUL	yes	yes	yes	AsciiIterTwin pins it against the general iterator at every reachable state.
+Objects/unicodeobject.c	14676	unicodeiter_len	FAITHFUL	yes	yes	yes	IterHintExact pins the hint after any script of next and __setstate__.
+Objects/unicodeobject.c	14688	unicodeiter_reduce	FAITHFUL	yes	yes	yes	IterReduceRoundTrip pins reading the iterator after the iter lookup (issue 101765) and the failed-lookup errors.
+Objects/unicodeobject.c	14712	unicodeiter_setstate	FAITHFUL	yes	yes	yes	IterSetstateSpec pins the clamp, the exhausted case and the conversion errors.
+Objects/unicodeobject.c	14784	unicode_iter	FAITHFUL	yes	yes	yes	IterDrains pins both iterator types and subclass instances.
+Objects/unicodeobject.c	14824	config_get_codec_name	FAITHFUL	-	-	-	Reads the config's codec names during interpreter start-up.
+Objects/unicodeobject.c	14871	init_stdio_encoding	FAITHFUL	-	-	-	Start-up of the stdio encoding.
+Objects/unicodeobject.c	14884	init_fs_codec	FAITHFUL	-	-	-	Start-up of the filesystem codec.
+Objects/unicodeobject.c	14941	init_fs_encoding	FAITHFUL	-	-	-	Start-up of the filesystem encoding.
+Objects/unicodeobject.c	14963	_PyUnicode_InitEncodings	FAITHFUL	-	-	-	Start-up of the encodings.
+Objects/unicodeobject.c	14979	_PyUnicode_FiniEncodings	FAITHFUL	-	-	-	Finalization of the encodings.
+Objects/unicodeobject.c	14992	_PyUnicode_EnableLegacyWindowsFSEncoding	FAITHFUL	-	-	-	Inside #ifdef MS_WINDOWS (:14990-15013).
+Objects/unicodeobject.c	15019	unicode_is_finalizing	FAITHFUL	-	-	-	Compiled only under Py_DEBUG.
+Objects/unicodeobject.c	15027	_PyUnicode_FiniTypes	FAITHFUL	-	-	-	Type finalization at shutdown.
+Objects/unicodeobject.c	15036	_PyUnicode_Fini	FAITHFUL	-	-	-	Unicode finalization at shutdown.
+Objects/unicodeobject.c	15082	PyInit__string	FAITHFUL	-	-	-	Only returns PyModuleDef_Init(&_string_module); the note's wording (unicode state) is loose, but it is the import-time init of _string with no behaviour of its own.
+Objects/unicodeobject.c	15089	PyUnicode_KIND	HOLLOW	-	-	-	Not a plain accessor: this exported function raises TypeError('expect str, got %T') for a non-str (:15091-15094), a refusal the note does not state.
+Objects/unicodeobject.c	15099	PyUnicode_DATA	HOLLOW	-	-	-	Not a plain accessor: it raises TypeError('expect str, got %T') for a non-str (:15101-15104).
