@@ -204,9 +204,9 @@ Python/bytecodes.c	2128	2128	opcode:UNPACK_SEQUENCE_LIST	macro(UNPACK_SEQUENCE_L
 Python/bytecodes.c	2131	2131	opcode:_UNPACK_SEQUENCE_LIST	op(_UNPACK_SEQUENCE_LIST, (seq -- values[oparg])) {	todo		
 Python/bytecodes.c	2148	2148	opcode:UNPACK_EX	inst(UNPACK_EX, (seq -- unused[oparg & 0xFF], unused, unused[oparg >> 8], top[0])) {	todo		
 Python/bytecodes.c	2161	2161	opcode:_SPECIALIZE_STORE_ATTR	specializing op(_SPECIALIZE_STORE_ATTR, (counter/1, owner -- owner)) {	todo		changed-in-3.15:
-Python/bytecodes.c	2174	2174	opcode:_STORE_ATTR	op(_STORE_ATTR, (v, owner --)) {	todo		
-Python/bytecodes.c	2182	2182	opcode:STORE_ATTR	macro(STORE_ATTR) = _SPECIALIZE_STORE_ATTR + unused/3 + _STORE_ATTR;	todo		
-Python/bytecodes.c	2184	2184	opcode:DELETE_ATTR	inst(DELETE_ATTR, (owner --)) {	todo		
+Python/bytecodes.c	2174	2174	opcode:_STORE_ATTR	op(_STORE_ATTR, (v, owner --)) {	modelled	bytecode-attr-dispatch	
+Python/bytecodes.c	2182	2182	opcode:STORE_ATTR	macro(STORE_ATTR) = _SPECIALIZE_STORE_ATTR + unused/3 + _STORE_ATTR;	modelled	bytecode-attr-dispatch	
+Python/bytecodes.c	2184	2184	opcode:DELETE_ATTR	inst(DELETE_ATTR, (owner --)) {	modelled	bytecode-attr-dispatch	
 Python/bytecodes.c	2191	2191	opcode:STORE_GLOBAL	inst(STORE_GLOBAL, (v --)) {	todo		
 Python/bytecodes.c	2198	2198	opcode:DELETE_GLOBAL	inst(DELETE_GLOBAL, (--)) {	todo		
 Python/bytecodes.c	2212	2212	opcode:LOAD_LOCALS	inst(LOAD_LOCALS, ( -- locals)) {	todo		
@@ -256,8 +256,8 @@ Python/bytecodes.c	2767	2767	opcode:_GUARD_NOS_TYPE_VERSION	op(_GUARD_NOS_TYPE_V
 Python/bytecodes.c	2774	2774	opcode:_GUARD_LOAD_SUPER_ATTR_METHOD	op(_GUARD_LOAD_SUPER_ATTR_METHOD, (global_super_st, class_st, unused -- global_super_st, class_st, unused)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	2782	2782	opcode:_LOAD_SUPER_ATTR_METHOD	op(_LOAD_SUPER_ATTR_METHOD, (global_super_st, class_st, self_st -- attr, self_or_null)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	2828	2828	opcode:_SPECIALIZE_LOAD_ATTR	specializing op(_SPECIALIZE_LOAD_ATTR, (counter/1, owner -- owner)) {	todo		changed-in-3.15:
-Python/bytecodes.c	2841	2841	opcode:_LOAD_ATTR	op(_LOAD_ATTR, (owner -- attr, self_or_null[oparg&1])) {	todo		changed-in-3.15:
-Python/bytecodes.c	2857	2857	opcode:LOAD_ATTR	macro(LOAD_ATTR) =	todo		
+Python/bytecodes.c	2841	2841	opcode:_LOAD_ATTR	op(_LOAD_ATTR, (owner -- attr, self_or_null[oparg&1])) {	modelled	bytecode-attr-dispatch	
+Python/bytecodes.c	2857	2857	opcode:LOAD_ATTR	macro(LOAD_ATTR) =	modelled	bytecode-attr-dispatch	
 Python/bytecodes.c	2862	2862	opcode:_GUARD_TYPE_VERSION	op(_GUARD_TYPE_VERSION, (type_version/2, owner -- owner)) {	todo		
 Python/bytecodes.c	2868	2868	opcode:_GUARD_TYPE_VERSION_LOCKED	op(_GUARD_TYPE_VERSION_LOCKED, (type_version/2, owner -- owner)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	2878	2878	opcode:_GUARD_TYPE	op(_GUARD_TYPE, (type/4, owner -- owner)) {	todo		changed-in-3.15: new function
