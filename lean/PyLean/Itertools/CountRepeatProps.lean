@@ -60,7 +60,8 @@ theorem countOps_spec (N : NumOps ν) (ty : String) (step : CVal ν) : ∀ (ops 
       cases ha : pyAdd N v step with
       | error e =>
         simp only
-        rw [countOps_spec N ty step ops s v ⟨hst, Or.inr ⟨h1, h2⟩⟩]
+        rw [countOps_spec N ty step ops { cnt := ssizeMax, longCnt := some v, longStep := step } v
+          ⟨rfl, Or.inr ⟨rfl, rfl⟩⟩]
       | ok u =>
         simp only
         rw [countOps_spec N ty step ops { cnt := ssizeMax, longCnt := some u, longStep := step } u
@@ -207,9 +208,9 @@ theorem countFastSlowConsistent_proven : CountFastSlowConsistent := by
   have e2 : (start.map (CVal.int (ν := ν))).getD (.int 0) = .int (start.getD 0) := by cases start <;> rfl
   rw [e1, e2, countSpec_int]
 
-/-- `count(a, b)` raises exactly for non-numbers (:3538-3542), and the fast path is
+/-- `count(a, b)` raises exactly for non-numbers (:3529-3533), and the fast path is
 taken exactly when both are ints, the start fits a `Py_ssize_t` and the step is 1
-(:3544-3585). Otherwise `cnt` is `PY_SSIZE_T_MAX`, as the asserts at :3587-3590
+(:3535-3576). Otherwise `cnt` is `PY_SSIZE_T_MAX`, as the asserts at :3578-3581
 say. For every number type. -/
 def CountNewModes : Prop :=
   ∀ (ν : Type) (a b : Option (CVal ν)),
@@ -327,15 +328,28 @@ theorem countDocAgreeClosed_proven : CountDocAgreeClosed := by
 /-- For every number type and state in slow mode, when adding the step to the
 current value `v` fails: `next()` raises that exception, not returning `v`, and
 leaves the state as it was, so `v` is still there for `repr` and the next attempt
-(:3643-3647). -/
+(:3635-3638). On the call that leaves fast mode at `sys.maxsize`, reachable with an
+int subclass as step whose `__radd__` raises, the same holds of the value
+`PY_SSIZE_T_MAX`, except that `long_cnt` now holds it (:3622-3628): that does not show
+in `repr`. -/
 def CountFailedAddRaisesFirst : Prop :=
-  ∀ (ν : Type) (N : NumOps ν) (s : CountState ν) (v : CVal ν) (e : PyExc),
-    s.cnt = ssizeMax → s.longCnt = some v → pyAdd N v s.longStep = .error e →
-    cCountNext N s = (.exc e, s)
+  ∀ (ν : Type) (N : NumOps ν) (s : CountState ν) (e : PyExc), s.cnt = ssizeMax →
+    (∀ v : CVal ν, s.longCnt = some v → pyAdd N v s.longStep = .error e →
+      cCountNext N s = (.exc e, s)) ∧
+    (s.longCnt = none → pyAdd N (.int ssizeMax) s.longStep = .error e →
+      cCountNext N s = (.exc e, { s with longCnt := some (.int ssizeMax) }) ∧
+      ∀ ty, stepIsOne s.longStep = true →
+        cCountRepr N ty { s with longCnt := some (.int ssizeMax) } = cCountRepr N ty s)
 
 theorem countFailedAddRaisesFirst_proven : CountFailedAddRaisesFirst := by
-  intro ν N s v e h1 h2 h3
-  simp [cCountNext, h1, h2, h3]
+  intro ν N s e h1
+  refine ⟨fun v h2 h3 => ?_, fun h2 h3 => ⟨?_, fun ty ho => ?_⟩⟩
+  · simp only [cCountNext, h1, ↓reduceIte, h2, Option.getD_some, h3]
+    cases s
+    simp_all
+  · simp [cCountNext, h1, h2, h3]
+  · simp [cCountRepr, ho, h1, h2, pyRepr]
+    rfl
 
 /-! ## repeat -/
 

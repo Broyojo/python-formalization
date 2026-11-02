@@ -3,7 +3,7 @@ import PyLean.Itertools.Model
 /-!
 `itertools.count` (Modules/itertoolsmodule.c:3475-3721) and `itertools.repeat`
 (:3723-3851), driven by a sequence of operations (`next(it)`, `repr(it)`,
-`it.__length_hint__()`), and their doc equivalents (rst:320-326, :622-629).
+`it.__length_hint__()`), and their doc equivalents (rst:325-331, :631-638).
 
 `count` keeps a C `Py_ssize_t cnt` while in "fast mode" (int start that fits,
 step exactly 1) and otherwise, or at `PY_SSIZE_T_MAX`, adds Python objects. Its
@@ -123,14 +123,15 @@ def cCountNew (start step : Option (CVal ν)) : Py (CountState ν) :=
     if fast then .ok { cnt := cnt, longCnt := none, longStep := longStep }
     else .ok { cnt := ssizeMax, longCnt := some longCnt, longStep := longStep }
 
-/-- `count_next` (:3645-3672, GIL build) and `count_nextlong` (:3620-3642): the sum
-is computed before the current value is handed over, so a failed add raises in its
-place (@3.14.7:3643-3645) and leaves the state as it was. In fast mode `cnt` becomes an
-exact int: the type of a `bool` start, and `__add__` of an int subclass, are not
-consulted. -/
+/-- `count_next` (:3645-3672, GIL build) and `count_nextlong` (:3620-3642): the switch
+to slow mode stores `long_cnt` at once (:3622-3628), and the sum is computed before the
+current value is handed over, so a failed add raises in its place (:3635-3638) and
+keeps `long_cnt`. In fast mode `cnt` becomes an exact int: the type of a `bool` start,
+and `__add__` of an int subclass, are not consulted. -/
 def cCountNext (N : NumOps ν) (s : CountState ν) : OpRes (CVal ν) × CountState ν :=
   if s.cnt = ssizeMax then
     let lc := s.longCnt.getD (.int ssizeMax)
+    let s := { s with longCnt := some lc }
     match pyAdd N lc s.longStep with
     | .error e => (.exc e, s)
     | .ok up => (.val lc, { s with longCnt := some up })
@@ -175,7 +176,7 @@ def cCount (N : NumOps ν) (start step : Option (CVal ν)) (ops : List Op) (ty :
   | .error e => [.exc e]
   | .ok s => cCountOps N ty s ops
 
-/-- The doc's `count(start=0, step=1)` (rst:320-326) under `k` calls of `next()`:
+/-- The doc's `count(start=0, step=1)` (rst:325-331) under `k` calls of `next()`:
 `yield n`, and only on the next call `n += step`. -/
 def docCountRun (N : NumOps ν) (step : CVal ν) : Nat → CVal ν → Run (CVal ν)
   | 0, _ => ([], none)
@@ -233,7 +234,7 @@ def cRepeat (rp : α → String) (elem : α) (times : Option Int) (ops : List Op
   | .error e => [.inr (.exc e)]
   | .ok s => cRepeatOps rp s ops
 
-/-- The doc's `repeat(object, times=None)` (rst:626-633): the first `k`
+/-- The doc's `repeat(object, times=None)` (rst:631-638): the first `k`
 values. `range(times)` accepts every int. -/
 def docRepeatValues (elem : α) (times : Option Int) (k : Nat) : List α :=
   match times with

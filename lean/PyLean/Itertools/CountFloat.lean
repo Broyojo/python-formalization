@@ -4,9 +4,10 @@ import PyLean.Binary64.Dtoa
 
 /-!
 `count` on real Python numbers: the number types of `CountRepeat.lean` instantiated
-with `float` (exact, by `Binary64`), `bool`, and `Raising`, a class that passes
-`PyNumber_Check` through `__float__` and whose `__add__` and `__radd__` raise. This
-is what the difftest runs, and what refutes the two doc comparisons.
+with `float` (exact, by `Binary64`), `bool`, `Raising`, a class that passes
+`PyNumber_Check` through `__float__` and whose `__add__` and `__radd__` raise, and
+`RaisingInt`, an int subclass with those same methods, which is `.intSub i .raising`.
+This is what the difftest runs, and what refutes the two doc comparisons.
 -/
 
 namespace PyLean.Itertools
@@ -30,16 +31,21 @@ def isFloatVal : CVal PyNum → Bool
   | .num (.float _) => true
   | _ => false
 
-def isRaisingVal : CVal PyNum → Bool
-  | .num .raising => true
-  | _ => false
+/-- Whether `a + b` reaches a raising `__add__` or `__radd__`. `Raising` wins over
+everything: `float_add` and `long_add` answer `NotImplemented` for it. `RaisingInt` is
+an int, so they accept it: its `__add__` runs when it is on the left, and its `__radd__`
+goes first only against a type it subclasses, the exact int, not `bool` or `float`. -/
+def addRaises : CVal PyNum → CVal PyNum → Bool
+  | .num .raising, _ | _, .num .raising => true
+  | .intSub _ .raising, _ => true
+  | .int _, .intSub _ .raising => true
+  | _, _ => false
 
-/-- `__add__`/`__radd__` of `Raising` win over everything: `float_add` and `long_add`
-answer `NotImplemented` for it. With a float operand, `float_add`
+/-- A raising method first. With a float operand, `float_add`
 (Objects/floatobject.c), whose conversion of a huge int raises `OverflowError`;
 otherwise two int-likes, whose sum is an exact int. -/
 def numAdd (a b : CVal PyNum) : Py (CVal PyNum) :=
-  if isRaisingVal a || isRaisingVal b then .error (.valueError "add")
+  if addRaises a b then .error (.valueError "add")
   else if isFloatVal a || isFloatVal b then
     match numToDouble a with
     | .error e => .error e
@@ -56,6 +62,7 @@ def numRepr : CVal PyNum → Py String
     | some r => .ok (String.ofList (r.map Char.ofNat))
     | none => .error (.valueError "~float_repr")
   | .intSub _ (.bool b) => .ok (if b then "True" else "False")
+  | .intSub i .raising => .ok (toString i)
   | .num .raising => .ok "Raising()"
   | _ => .ok "?"
 
@@ -73,7 +80,7 @@ theorem doc_floatSeq (y : Binary64.F64) : ∀ (k : Nat) (x : Binary64.F64),
   | 1, _ => rfl
   | k + 2, x => by
     have := doc_floatSeq y (k + 1) (Binary64.F64.add x y)
-    simp only [docCountRun, floatSeq, pyAdd, numOps, numAdd, isRaisingVal, isFloatVal, numToDouble]
+    simp only [docCountRun, floatSeq, pyAdd, numOps, numAdd, addRaises, isFloatVal, numToDouble]
     simp only [Bool.false_or, Bool.or_false, Bool.false_eq_true, if_false, Bool.true_or, if_true]
     simp only [numOps] at this
     rw [this]
@@ -83,7 +90,7 @@ theorem doc_floatSeq (y : Binary64.F64) : ∀ (k : Nat) (x : Binary64.F64),
 payloads are not modelled) and every `k`: the values are `x`, `x + y`, `x + y + y`,
 ... by repeated IEEE-754 addition, as the doc's generator computes them, and not
 `x + k * y`, which is why the docs suggest `(start + step * i for i in count())` for
-accuracy (rst:328-330). No exception is possible. -/
+accuracy (rst:333-335). No exception is possible. -/
 def CountFloatDocAgree : Prop :=
   ∀ (x y : Binary64.F64) (k : Nat),
     opVals (cCount numOps (some (.num (.float x))) (some (.num (.float y))) (List.replicate k .next)) =
@@ -98,7 +105,7 @@ theorem countFloatDocAgree_proven : CountFloatDocAgree := by
       cases a with
       | num v =>
         cases v with
-        | float u => exact ⟨.num (.float (Binary64.F64.add u y)), by simp [pyAdd, numOps, numAdd, isRaisingVal, isFloatVal, numToDouble], rfl⟩
+        | float u => exact ⟨.num (.float (Binary64.F64.add u y)), by simp [pyAdd, numOps, numAdd, addRaises, isFloatVal, numToDouble], rfl⟩
         | bool b => simp [isFloatVal] at ha
         | raising => simp [isFloatVal] at ha
         | str => simp [isFloatVal] at ha
@@ -115,22 +122,26 @@ theorem countDocAgreeAll_refuted : ¬CountDocAgreeAll := by
   have := congrArg (fun r => r.1.length)
     (h PyNum numOps (.num .raising) (.num (.float Binary64.F64.one)) 1 rfl rfl)
   simp [cCount, cCountNew, argBad, argLong, CVal.isNumber, CVal.isLong, cCountOps, cCountNext, pyAdd,
-    numOps, numAdd, isRaisingVal, opVals, docCountRun, List.replicate, CVal.longVal] at this
+    numOps, numAdd, addRaises, opVals, docCountRun, List.replicate, CVal.longVal] at this
 
 /-- `count(True)`: the add never fails, yet C gives the int 1 where the doc's
 generator gives `True`. -/
 theorem countDocAgreeTotalAdd_refuted : ¬CountDocAgreeTotalAdd := by
   intro h
   have := congrArg (fun r => r.1.map (fun v => match v with | CVal.intSub _ _ => true | _ => false))
-    (h PyNum numOps (.intSub 1 (.bool true)) (.int 1) (fun a => a.isLong = true) 1 rfl rfl
+    (h PyNum numOps (.intSub 1 (.bool true)) (.int 1)
+      (fun a => a.isLong = true ∧ addRaises a (.int 1) = false) 1 rfl rfl
       (fun a ha => by
         cases a with
-        | int i => exact ⟨_, rfl, rfl⟩
+        | int i => exact ⟨_, rfl, rfl, rfl⟩
         | intSub i v =>
-          cases v <;> exact ⟨.int (i + 1), by simp [pyAdd, numOps, numAdd, isRaisingVal, isFloatVal, CVal.longVal], rfl⟩
+          cases v with
+          | raising => simp [addRaises] at ha
+          | _ => exact ⟨.int (i + 1), by simp [pyAdd, numOps, numAdd, addRaises, isFloatVal, CVal.longVal],
+              rfl, rfl⟩
         | num v => simp [CVal.isLong] at ha
         | nonNum v => simp [CVal.isLong] at ha)
-      rfl)
+      ⟨rfl, rfl⟩)
   simp [cCount, cCountNew, argBad, argLong, CVal.isNumber, CVal.isLong, cCountOps, cCountNext, CVal.longVal,
     asSsize, asLongOrMinus1, ssizeMin_eq, ssizeMax_eq, opVals, docCountRun, List.replicate] at this
 

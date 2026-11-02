@@ -3,7 +3,7 @@ import PyLean.Itertools.TeeProps
 /-!
 `tee` with its re-entry guard: this is the mirror of
 `teedataobject_getitem_lock_held` (Modules/itertoolsmodule.c:780-805), its
-wrapper `teedataobject_getitem` (:807-815) and `tee_next` (:948-971, GIL build),
+wrapper `teedataobject_getitem` (:808-815) and `tee_next` (:948-971, GIL build),
 with the input able to call back into the tees. `hooks` holds, for successive
 items, the operations performed after the item is taken and before it is returned
 (as a `map` function does); they run through `tsRun`, the function that runs
@@ -117,14 +117,15 @@ def tsResult (it : Src α) (hooks : List (List TeeOp)) (ops : List TeeOp) (t : T
   (t'.log, it.items.length - t'.it.items.length)
 
 /-- `itertools_tee_impl` (:1161-1196) on a non-tee input: `n` through the
-`Py_ssize_t` converter, `n == 0` returns `()` without touching the iterable, then
+`Py_ssize_t(allow_negative=False)` converter (Modules/clinic/itertoolsmodule.c.h:338-352),
+`n == 0` returns `()` without touching the iterable, then
 `tee_fromiterable` and `n - 1` calls of `tee_copy`. -/
 def cTeeR (iterable : Obj α) (n : Int) (hooks : List (List TeeOp)) (ops : List TeeOp) :
     Py (List (NextRes α) × Nat) :=
   match asSsize n with
   | .error e => .error e
   | .ok n =>
-    if n < 0 then .error (.valueError "n must be >= 0")
+    if n < 0 then .error (.valueError "n cannot be negative")
     else if !tupleNewOk n then .error memoryError
     else if n = 0 then .ok ([], 0)
     else match teeFromIterable iterable hooks with
@@ -429,13 +430,13 @@ structure TeeObj (β : Type) where
   dataobj : Option β
   weakreflist : List WRef
 
-/-- `tee_clear` (:1134-1141): the callbacks run while `dataobj` is still set. It
+/-- `tee_clear` (:1101-1108): the callbacks run while `dataobj` is still set. It
 returns 0 whatever they did. -/
 def teeClear {β : Type} (cb : Nat → Py Unit) (t : TeeObj β) : TeeObj β × List ClearEvent :=
   let ev := if t.weakreflist != [] then clearWeakRefs cb t.weakreflist else []
   ({ dataobj := none, weakreflist := [] }, ev)
 
-/-- `tee_dealloc` (:1144-1151): `tee_clear`; `PyObject_GC_UnTrack`, `PyObject_GC_Del`
+/-- `tee_dealloc` (:1111-1118): `tee_clear`; `PyObject_GC_UnTrack`, `PyObject_GC_Del`
 and the type's reference have no effect a Python program sees here. -/
 def teeDealloc {β : Type} (cb : Nat → Py Unit) (t : TeeObj β) : List ClearEvent := (teeClear cb t).2
 

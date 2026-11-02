@@ -1,7 +1,7 @@
 /-!
-# Model of `list.sort` (CPython 3.14.7, `Objects/listobject.c`)
+# Model of `list.sort` (CPython 3.15.2, `Objects/listobject.c`)
 
-Line numbers refer to `Objects/listobject.c` of CPython 3.14.7.
+Line numbers refer to `Objects/listobject.c` of CPython 3.15.2.
 
 Representation. The C code sorts an array in place and keeps a stack of
 pending runs `struct s_slice {base, len, power}` that point into it
@@ -21,6 +21,12 @@ Loops are structural recursion on a fuel argument, given enough fuel to
 finish (each iteration consumes an element). The proofs show the fuel never
 runs out for a consistent comparison; for an inconsistent one the results of
 the permutation and stack theorems hold whether or not it does.
+
+Minrun. 3.15 replaced the fixed `merge_compute_minrun` by a generator
+(`minrun_next`, `listsort.txt:307-392`): each pass of the main loop draws its own
+minrun, and consecutive values differ by at most one. The generator's fields of
+`MergeState` are `MrState`; nothing in the merge code reads them, so they live in
+`Sorter` next to the array rather than in `MS`.
 -/
 
 namespace PyLean.ListSort
@@ -433,29 +439,53 @@ def forceCollapse {σ : Type} (mergeFn : Nat → Nat → Nat → σ → σ) :
   | stk, s => (stk, s)
 termination_by stk => stk.length
 
-/-- `merge_compute_minrun(n)` (`listobject.c@3.14.7:2690-2711`). -/
-def minrunLoop : Nat → Nat → Nat → Nat
-  | 0, n, r => n + r
-  | fuel + 1, n, r => if n ≥ MAX_MINRUN then minrunLoop fuel (n / 2) (r ||| n % 2) else n + r
+/-! ## minrun: `merge_init` and `minrun_next` -/
 
-def computeMinrun (n : Nat) : Nat := minrunLoop n n 0
+/-- The minrun generator in `MergeState`: `listlen` and `mr_current, mr_e, mr_mask`
+(`listobject.c:1816-1819`). -/
+structure MrState where
+  listlen : Nat
+  current : Nat
+  e : Nat
+  mask : Nat
+  deriving Repr, DecidableEq, Inhabited
+
+/-- `while (list_size >> ms->mr_e >= MAX_MINRUN) ++ms->mr_e;` (:2284-2286). The
+fuel `n` is never exhausted: `n >> n` is 0 (`mrELoop_spec`). -/
+def mrELoop (n : Nat) : Nat → Nat → Nat
+  | 0, e => e
+  | fuel + 1, e => if n >>> e ≥ MAX_MINRUN then mrELoop n fuel (e + 1) else e
+
+/-- The minrun part of `merge_init` (:2279, :2282-2288). -/
+def mergeInitMr (listSize : Nat) : MrState :=
+  let e := mrELoop listSize listSize 0
+  { listlen := listSize, current := 0, e := e, mask := (1 <<< e) - 1 }
+
+/-- `minrun_next(ms)` (:2767-2775). `mr_current` stays a `Nat`: the C
+`assert(ms->mr_current >= 0)` is the no-overflow clause of `MinrunSpec`. -/
+def minrunNext (mr : MrState) : Nat × MrState :=
+  let current := mr.current + mr.listlen
+  let result := current >>> mr.e
+  (result, { mr with current := current &&& mr.mask })
 
 /-! ## The main loop of `list_sort_impl` (`listobject.c:3140-3184`) -/
 
-/-- Sorter state: the array, the merge state, the pending stack, and whether
-every `assert(ms.n < MAX_MERGE_PENDING)` before a push held. -/
+/-- Sorter state: the array, the merge state, the pending stack, whether every
+`assert(ms.n < MAX_MERGE_PENDING)` before a push held, and the minrun generator. -/
 structure Sorter (α : Type) where
   arr : List α
   ms : MS
   stk : List Slice
   pushOk : Bool
+  mr : MrState
 
 /-- One iteration of the `do { } while (nremaining)` loop at array position
 `pos` (`listobject.c:3143-3172`). -/
-def sortStep (lt : α → α → Bool) (N minrun pos : Nat) (st : Sorter α) : Sorter α × Nat :=
+def sortStep (lt : α → α → Bool) (N pos : Nat) (st : Sorter α) : Sorter α × Nat :=
   let nremaining := N - pos
   let (n, rest, ms) := countRun lt (st.arr.drop pos) st.ms
-  -- If short, extend to min(minrun, nremaining).
+  -- If short, extend to min(minrun, nremaining). minrun is drawn on every pass (:3151).
+  let (minrun, mr) := minrunNext st.mr
   let (n, rest, ms) :=
     if n < minrun then
       let force := if nremaining ≤ minrun then nremaining else minrun
@@ -465,23 +495,22 @@ def sortStep (lt : α → α → Bool) (N minrun pos : Nat) (st : Sorter α) : S
   let arr := st.arr.take pos ++ rest
   let (stk, (arr, ms)) := foundNewRun (mergeAtArr lt) N n st.stk (arr, ms)
   let ok := st.pushOk && decide (stk.length < MAX_MERGE_PENDING)
-  ({ arr := arr, ms := ms, stk := ⟨pos, n, 0⟩ :: stk, pushOk := ok }, n)
+  ({ arr := arr, ms := ms, stk := ⟨pos, n, 0⟩ :: stk, pushOk := ok, mr := mr }, n)
 
-def sortLoop (lt : α → α → Bool) (N minrun : Nat) : Nat → Nat → Sorter α → Sorter α
+def sortLoop (lt : α → α → Bool) (N : Nat) : Nat → Nat → Sorter α → Sorter α
   | 0, _, st => st
   | fuel + 1, pos, st =>
-    let (st, n) := sortStep lt N minrun pos st
-    if pos + n < N ∧ n ≠ 0 then sortLoop lt N minrun fuel (pos + n) st else st
+    let (st, n) := sortStep lt N pos st
+    if pos + n < N ∧ n ≠ 0 then sortLoop lt N fuel (pos + n) st else st
 
 /-- The sorting part of `list_sort_impl` on `xs` (already reversed if
 `reverse=True`), from `merge_init` to `merge_force_collapse`. -/
 def sortCore (lt : α → α → Bool) (xs : List α) : Sorter α :=
   let N := xs.length
-  let st : Sorter α := { arr := xs, ms := {}, stk := [], pushOk := true }
+  let st : Sorter α := { arr := xs, ms := {}, stk := [], pushOk := true, mr := mergeInitMr N }
   if N < 2 then st
   else
-    let minrun := computeMinrun N
-    let st := sortLoop lt N minrun N 0 st
+    let st := sortLoop lt N N 0 st
     let (stk, (arr, ms)) := forceCollapse (mergeAtArr lt) st.stk (st.arr, st.ms)
     { st with arr := arr, ms := ms, stk := stk }
 

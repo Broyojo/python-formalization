@@ -3,13 +3,13 @@ import PyLean.ListSort.Props
 import PyLean.ListSort.Diff
 
 /-!
-`list.sort` (powersort/timsort in `Objects/listobject.c`, `Objects/listsort.txt`), CPython 3.14.7.
+`list.sort` (powersort/timsort in `Objects/listobject.c`, `Objects/listsort.txt`), CPython 3.15.2.
 
 The model (`ListSort/Model.lean`) mirrors `count_run`, `binarysort`,
 `gallop_left`/`gallop_right`, `merge_lo`/`merge_hi`/`merge_at`, `powerloop`,
-`found_new_run`, `merge_force_collapse`, `merge_compute_minrun` and the main
-loop of `list_sort_impl`, counting every `<` call; the difftest checks results
-and exact `<`-call counts against CPython. Items are compared by an
+`found_new_run`, `merge_force_collapse`, the minrun generator (`merge_init`,
+`minrun_next`) and the main loop of `list_sort_impl`, counting every `<` call; the
+difftest checks results, exact `<`-call counts and run lengths against CPython. Items are compared by an
 integer-valued key (`kf`), which covers Python ints with `<` (`kf = id`),
 `(value, index)` pairs and `key=` functions returning ints; the permutation and
 stack properties hold for every comparison function. Exceptions raised
@@ -23,16 +23,16 @@ open PyLean.Registry
 def entries : List Entry := [
   { id := "listsort-powerloop-first-bit", pyFile := "Objects/listobject.c", pyFns := ["powerloop"]
     statement := "For all s1, n1 >= 1, n2 >= 1, n with s1+n1+n2 <= n, powerloop(s1, n1, n2, n) returns the first bit position L >= 1 at which the binary expansions of (s1 + n1/2)/n and (s1 + n1 + n2/2)/n differ, and 2^L < 2n."
-    source := "listsort.txt:375-397 (the definition of a run's power)", status := .proven
+    source := "listsort.txt:446-468 (the definition of a run's power)", status := .proven
     prop := ``PowerloopFirstBit, thm := some ``powerloopFirstBit_proven },
   { id := "listsort-powerloop-no-overflow", pyFile := "Objects/listobject.c", pyFns := ["powerloop"]
     statement := "For every list length n <= 2**62 and all valid runs, no intermediate value of powerloop (2*s1 + n1, a + n1 + n2, and every shifted a, b) reaches 2**63, so the Py_ssize_t arithmetic never overflows."
-    source := "invariant: no signed overflow; listsort.txt:412-417 argues it from n <= PY_SSIZE_T_MAX/sizeof(PyObject*)", status := .proven
+    source := "invariant: no signed overflow; listsort.txt:483-488 argues it from n <= PY_SSIZE_T_MAX/sizeof(PyObject*)", status := .proven
     prop := ``PowerloopNoOverflow, thm := some ``powerloopNoOverflow_proven
     notes := "Precondition n <= 2**62: real lists have at most PY_SSIZE_T_MAX/8 = 2**60-1 items (list_resize). For 2**62 < n < 2**63 the model's overflow flag can be set (b reaches 2n-1); unreachable from Python." },
   { id := "listsort-powers-strict", pyFile := "Objects/listobject.c", pyFns := ["found_new_run", "powerloop"]
     statement := "For every list length N <= PY_SSIZE_T_MAX and every sequence of positive run lengths summing to at most N, after each found_new_run + push the powers stored on the pending stack are >= 1 and strictly increase towards the top."
-    source := "listsort.txt:426-427; assert at listobject.c:2739", status := .proven
+    source := "listsort.txt:497-498; assert at listobject.c:2739", status := .proven
     prop := ``PolicyPowersStrict, thm := some ``policyPowersStrict_proven
     notes := "Quantifies over arbitrary run structures, not only those count_run/minrun produce. The proof keeps, per stack entry, a ghost list of the original runs merged into it." },
   { id := "listsort-stack-bound", pyFile := "Objects/listobject.c", pyFns := ["found_new_run", "list_sort_impl"]
@@ -55,11 +55,11 @@ def entries : List Entry := [
     source := "invariant: the assert at listobject.c:3165 is compiled out of release builds, where a violation would write past ms.pending[]", status := .proven
     prop := ``SortPushAssert, thm := some ``sortPushAssert_proven
     notes := "Run lengths come from the model's count_run/binarysort for an arbitrary lt; only 1 <= n <= nremaining is used." },
-  { id := "listsort-minrun", pyFile := "Objects/listobject.c", pyFns := ["merge_compute_minrun"]
-    statement := "merge_compute_minrun(n) is n for n < 64; for n >= 64 it is ceil(n / 2^e) where 32 * 2^e <= n < 64 * 2^e, so 32 <= minrun <= MAX_MINRUN and n/minrun <= 2^e (equality iff 2^e divides n); it is 32 for every power of two >= 64."
-    source := "listobject.c@3.14.7:2690-2699 and listsort.txt:313-318", status := .proven
+  { id := "listsort-minrun", pyFile := "Objects/listobject.c", pyFns := ["minrun_next", "merge_init"]
+    statement := "With e the smallest exponent such that N >> e < 64 and P = 2^e, call k (from 0) of minrun_next returns floor((k+1)N/P) - floor(kN/P) and leaves mr_current = kN mod P. So for N < 64 every value is N; for N >= 64, 32 * P <= N < 64 * P and every value lies in [32, MAX_MINRUN]; any m consecutive values add up to floor(mN/P) or one more; the first P values add up to exactly N; every value is 32 for a power of two >= 64; and mr_current + listlen stays in Py_ssize_t for N <= 2**62."
+    source := "listobject.c:2282-2288, :2767-2775 and listsort.txt:307-392", status := .proven
     prop := ``MinrunSpec, thm := some ``minrunSpec_proven
-    notes := "Also discharges binarysort's assert n <= MAX_MINRUN (force <= minrun). The code comment's \"strictly less than\" a power of 2 is loose for n = 96 etc. (n/minrun = 2 exactly); listsort.txt states it correctly." },
+    notes := "Replaces the 3.14 merge_compute_minrun. Also discharges binarysort's assert n <= MAX_MINRUN at :1843 (force <= minrun). Only the mr_* fields of merge_init are covered here. N <= 2**62 is the bound listsort-powerloop-no-overflow uses: real lists have at most 2**60 - 1 items. The run lengths are difftested against the interpreter (fn \"runs\"); that a real sort draws these values in this order is the model's sortStep, not a separate theorem." },
   { id := "listsort-gallop", pyFile := "Objects/listobject.c", pyFns := ["gallop_left", "gallop_right"]
     statement := "On every sorted vector a[0:n] and every 0 <= hint < n, gallop_left returns the number of items < key (a[k-1] < key <= a[k]) and gallop_right the number of items <= key (a[k-1] <= key < a[k])."
     source := "docstrings at listobject.c:2066-2086 and :2094-2102", status := .proven
@@ -102,7 +102,12 @@ def entries : List Entry := [
     statement := "For all-int keys of every size, the compare chosen by the pre-sort check (unsafe_long_compare when all keys are compact, long_richcompare otherwise) agrees with < on every pair of keys; an int is compact exactly when |x| < 2**30 and _PyLong_CompactValue(x) is then x; long_compare's sign, digit-count and digit-loop logic is correct for all ints."
     source := "assert at listobject.c:2879 (res == PyObject_RichCompareBool(v, w, Py_LT)); the pre-sort check at :2964-3059", status := .proven
     prop := ``LongCompareAgrees, thm := some ``longCompareAgrees_proven
-    notes := "Ints are modelled as a sign and little-endian 30-bit digits (Include/cpython/longintrepr.h); the 15-bit-digit build is not covered. The whole sort with this compare is difftested (fn \"plain\"), not proven equal to the sort with Int <." }
+    notes := "Ints are modelled as a sign and little-endian 30-bit digits (Include/cpython/longintrepr.h); the 15-bit-digit build is not covered. The whole sort with this compare is difftested (fn \"plain\"), not proven equal to the sort with Int <." },
+  { id := "listsort-object-compare", pyFile := "Objects/listobject.c", pyFns := ["unsafe_object_compare"]
+    statement := "For every result type, unsafe_object_compare answers as PyObject_RichCompareBool when v's type no longer has key_richcompare or the slot returns NotImplemented, raises what the slot raises, takes a bool as it is, and decides any other object with PyObject_IsTrue, whose exception propagates."
+    source := "listobject.c:2799-2832", status := .proven
+    prop := ``ObjectCompareSpec, thm := some ``objectCompareSpec_proven
+    notes := "The rich comparison, PyObject_IsTrue and the fallback are parameters with no assumptions. Difftested on two-item lists (fn \"objcmp\"). The sameSlot = false branch is not difftested: slot_tp_richcompare on a type without __lt__ returns NotImplemented, so the branch gives the same answer as the slot would and cannot be told apart from Python. The whole sort does not model a raising comparison, so what the list holds after one is not covered here." }
 ]
 
 end PyLean.ListSort

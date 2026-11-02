@@ -188,12 +188,12 @@ theorem SS.of_feq {kf : α → Int} {P Q A B M : List α} (hA : FEq kf P A) (hB 
 def DataOK (kf : α → Int) (xs : List α) (pos : Nat) (st : Sorter α) : Prop :=
   Runs kf xs st.arr st.stk pos ∧ st.arr.length = xs.length ∧ st.arr.drop pos = xs.drop pos
 
-theorem sortStep_data (kf : α → Int) (xs : List α) (minrun pos : Nat) (st : Sorter α)
+theorem sortStep_data (kf : α → Int) (xs : List α) (pos : Nat) (st : Sorter α)
     (h : DataOK kf xs pos st) (hpos : pos < xs.length) :
-    DataOK kf xs (pos + (sortStep (ltOf kf) xs.length minrun pos st).2)
-      (sortStep (ltOf kf) xs.length minrun pos st).1 ∧
-    1 ≤ (sortStep (ltOf kf) xs.length minrun pos st).2 ∧
-      pos + (sortStep (ltOf kf) xs.length minrun pos st).2 ≤ xs.length := by
+    DataOK kf xs (pos + (sortStep (ltOf kf) xs.length pos st).2)
+      (sortStep (ltOf kf) xs.length pos st).1 ∧
+    1 ≤ (sortStep (ltOf kf) xs.length pos st).2 ∧
+      pos + (sortStep (ltOf kf) xs.length pos st).2 ≤ xs.length := by
   obtain ⟨hruns, hlen, hdrop⟩ := h
   have hX : (xs.drop pos) ≠ [] := by
     intro h; have := congrArg List.length h; simp at this; omega
@@ -209,6 +209,10 @@ theorem sortStep_data (kf : α → Int) (xs : List α) (minrun pos : Nat) (st : 
   have hn0 := hn0 hX
   simp only [List.length_drop] at hn0'
   have hRl : R.length = n0 := by rw [hR.length]; simp; omega
+  -- the run is sorted for every minrun
+  generalize minrunNext st.mr = MR
+  obtain ⟨minrun, mr⟩ := MR
+  simp only
   -- after the optional binary insertion
   have hrun : ∃ n rest ms, (if n0 < minrun then
       ((if xs.length - pos ≤ minrun then xs.length - pos else minrun),
@@ -266,18 +270,18 @@ theorem sortStep_data (kf : α → Int) (xs : List α) (minrun pos : Nat) (st : 
     rw [e1, e2]; exact hR'
   · rw [← List.drop_drop, hd3, hrest, List.drop_left' hR'l, List.drop_drop]
 
-theorem sortLoop_data (kf : α → Int) (xs : List α) (minrun : Nat) :
+theorem sortLoop_data (kf : α → Int) (xs : List α) :
     ∀ (fuel pos : Nat) (st : Sorter α), DataOK kf xs pos st → pos < xs.length → xs.length ≤ pos + fuel →
-      DataOK kf xs xs.length (sortLoop (ltOf kf) xs.length minrun fuel pos st)
+      DataOK kf xs xs.length (sortLoop (ltOf kf) xs.length fuel pos st)
   | 0, pos, st, _, hpos, hf => by omega
   | fuel + 1, pos, st, h, hpos, hf => by
-    have hs := sortStep_data kf xs minrun pos st h hpos
+    have hs := sortStep_data kf xs pos st h hpos
     simp only [sortLoop]
-    generalize sortStep (ltOf kf) xs.length minrun pos st = S at hs
+    generalize sortStep (ltOf kf) xs.length pos st = S at hs
     obtain ⟨st', n⟩ := S
     simp only at hs ⊢
     split
-    · exact sortLoop_data kf xs minrun fuel (pos + n) st' hs.1 (by omega) (by omega)
+    · exact sortLoop_data kf xs fuel (pos + n) st' hs.1 (by omega) (by omega)
     · have : pos + n = xs.length := by omega
       rw [this] at hs
       exact hs.1
@@ -295,9 +299,11 @@ theorem sortCore_eq (kf : α → Int) (xs : List α) : (sortCore (ltOf kf) xs).a
     | [], _ => simp [Sorted]
     | [x], _ => simp [Sorted]
   · rename_i h
-    have h0 : DataOK kf xs 0 { arr := xs, ms := {}, stk := [], pushOk := true } := ⟨rfl, rfl, rfl⟩
-    have hl := sortLoop_data kf xs (computeMinrun xs.length) xs.length 0 _ h0 (by omega) (by omega)
-    generalize sortLoop (ltOf kf) xs.length (computeMinrun xs.length) xs.length 0 _ = st at hl
+    have h0 : DataOK kf xs 0
+        { arr := xs, ms := {}, stk := [], pushOk := true, mr := mergeInitMr xs.length } :=
+      ⟨rfl, rfl, rfl⟩
+    have hl := sortLoop_data kf xs xs.length 0 _ h0 (by omega) (by omega)
+    generalize sortLoop (ltOf kf) xs.length xs.length 0 _ = st at hl
     obtain ⟨hruns, hlen, _⟩ := hl
     have hfc := forceCollapse_data kf xs xs.length xs.length _ st.stk st.arr st.ms (Nat.le_refl _) hruns hlen
       (Nat.le_refl _)

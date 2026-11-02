@@ -2,8 +2,8 @@ import PyLean.Itertools.GroupbyProps
 
 /-!
 `groupby` with everything that can fail or re-enter: this is the mirror of
-`groupby_step` (Modules/itertoolsmodule.c:505-529), `groupby_next` (:531-575)
-and `_grouper_next` (:661-696). The input may raise after its items, the key
+`groupby_step` (Modules/itertoolsmodule.c:505-529), `groupby_next` (:532-575)
+and `_grouper_next` (:662-696). The input may raise after its items, the key
 function may raise on any item, and key comparison is a `KeyEq`: it may raise,
 and a `__eq__` it calls may re-enter the groupby object.
 
@@ -60,7 +60,7 @@ inductive GbStep where
   | ok
   | fail (e : Option PyExc)
 
-/-- `groupby_step` (:510-534). `PyIter_Next` has taken the item before the key
+/-- `groupby_step` (:505-529). `PyIter_Next` has taken the item before the key
 function runs, so a raising key loses that item (:522-526); `currvalue` and
 `currkey` are assigned only after both calls succeeded (:529-532). -/
 def gbStep (key : α → Py κ) (s : GbState α κ) : GbStep × GbState α κ :=
@@ -92,7 +92,7 @@ def gbThen (k : GbState α κ → Option (Option PyExc) × GbState α κ) :
 
 /-- The `for (;;)` loop of `groupby_next` (:544-571): `none` is the `break`, and
 `some e` a `return NULL`, after a failed comparison (:563-564) or a failed
-`groupby_step` (:569-570). Each iteration but the last takes an item, so
+`groupby_step` (:564-565). Each iteration but the last takes an item, so
 `it.length + 1` iterations are enough, whatever a hook takes. -/
 def gbSkip (K : KeyEq κ) (key : α → Py κ) (run : List (GbOp κ) → GbState α κ → GbState α κ) :
     Nat → GbState α κ → Option (Option PyExc) × GbState α κ
@@ -112,11 +112,11 @@ def gbFail {β : Type} : Option PyExc → GbRes β
   | none => .stop
   | some e => .exc e
 
-/-- `_grouper_create` (:632-644): a new grouper becomes the current one. -/
+/-- `_grouper_create` (:625-637): a new grouper becomes the current one. -/
 def gbCreate (g : CGroupby α κ) (tgtkey : κ) : CGroupby α κ :=
   { g with groupers := g.groupers ++ [tgtkey], currgrouper := some g.groupers.length }
 
-/-- `groupby_next` (:536-582). `currgrouper` is cleared first (:542), so the
+/-- `groupby_next` (:532-575). `currgrouper` is cleared first (:542), so the
 current group is invalidated even when this call then fails.
 
 After the loop's `break` the C code reads `gbo->currkey` unchecked (:572). The
@@ -137,7 +137,7 @@ def gbValue {β : Type} : Option β → GbRes β
   | none => .stop
   | some v => .val v
 
-/-- `_grouper_next` (:668-703). `currkey` is not null at :689 (`assert` at :683):
+/-- `_grouper_next` (:662-696). `currkey` is not null at :689 (`assert` at :683):
 `groupby_step` sets it with `currvalue`, and :699-700 clear them together.
 `rcmp <= 0` is :694-696: `-1` is the exception, `0` the end of the group. The
 hook may have taken `currvalue`, and then `r` is `NULL` at :698: a plain stop. -/
@@ -177,7 +177,7 @@ def gbRun [Inhabited κ] (K : KeyEq κ) (key : α → Py κ) : Nat → List (GbO
   | 0, _, s => s
   | d + 1, ops, s => gbFold K key (gbRun K key d) ops s
 
-/-- `itertools_groupby_impl` (:461-480). -/
+/-- `itertools_groupby_impl` (:456-475). -/
 def gbInit (iterable : Obj α) (hooks : List (List (GbOp κ))) : Py (GbState α κ) :=
   match getIter iterable with
   | .error e => .error e

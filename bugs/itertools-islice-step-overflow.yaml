@@ -47,7 +47,7 @@ reproducer: |
 expected: |
   [1] and [5] (the item at index start only; start + step is past any possible input).
 observed: |
-  python3 3.14.7 (macOS and the Linux build pod): [1, 2] and [5, 6]; with stop=10 the result is [1]. REPRODUCED.
+  python3 3.15.2 (Linux build pod): [1, 2] and [5, 6]; with stop=10 the result is [1]. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical (islice_next is unchanged on
   main). REPRODUCED.
 promised_by: |

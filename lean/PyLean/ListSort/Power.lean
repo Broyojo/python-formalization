@@ -6,11 +6,11 @@ import PyLean.ListSort.Model
 `gq N L x = ⌊x * 2^L / (2N)⌋` is the integer formed by the first `L` bits of the
 binary expansion of `x / (2N)`. With `A = 2*s1 + n1` and `B = A + n1 + n2` (twice
 the midpoints of two adjacent runs), `powerloop` returns the first bit position
-at which `A/(2N)` and `B/(2N)` differ (`listsort.txt:382-393`):
+at which `A/(2N)` and `B/(2N)` differ (`listsort.txt:453-464`):
 `powerIter_spec` / `powerloop_spec`.
 
 The stack bound needs the powers stored on the stack to be strictly increasing
-towards the top (`listsort.txt:426-427`, the `assert` at `listobject.c:2739`).
+towards the top (`listsort.txt:497-498`, the `assert` at `listobject.c:2739`).
 That depends on history: a stored power belongs to the boundary between the
 last *original* run of a block and the first original run of the block above,
 and every boundary inside a block has a larger power than the block's stored
@@ -139,7 +139,7 @@ theorem lt_of_div_eq {x y d : Nat} (hxy : x ≤ y) (h : x / d = y / d) (hd : 0 <
 
 /-- `powerloop(s1, n1, n2, n)` is the first bit position `L >= 1` at which the
 binary expansions of `(s1 + n1/2)/n` and `(s1 + n1 + n2/2)/n` differ
-(`listsort.txt:382-393`); `2^L < 2n`; and when `n <= 2^62` no intermediate
+(`listsort.txt:453-464`); `2^L < 2n`; and when `n <= 2^62` no intermediate
 value leaves `Py_ssize_t`. -/
 theorem powerloop_spec (s1 n1 n2 n : Nat) (h1 : 0 < n1) (h2 : 0 < n2) (hn : s1 + n1 + n2 ≤ n) :
     1 ≤ powerloop s1 n1 n2 n ∧
