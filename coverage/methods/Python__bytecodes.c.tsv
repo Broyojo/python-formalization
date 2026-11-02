@@ -207,15 +207,15 @@ Python/bytecodes.c	2161	2161	opcode:_SPECIALIZE_STORE_ATTR	specializing op(_SPEC
 Python/bytecodes.c	2174	2174	opcode:_STORE_ATTR	op(_STORE_ATTR, (v, owner --)) {	modelled	bytecode-attr-dispatch	
 Python/bytecodes.c	2182	2182	opcode:STORE_ATTR	macro(STORE_ATTR) = _SPECIALIZE_STORE_ATTR + unused/3 + _STORE_ATTR;	modelled	bytecode-attr-dispatch	
 Python/bytecodes.c	2184	2184	opcode:DELETE_ATTR	inst(DELETE_ATTR, (owner --)) {	modelled	bytecode-attr-dispatch	
-Python/bytecodes.c	2191	2191	opcode:STORE_GLOBAL	inst(STORE_GLOBAL, (v --)) {	todo		
+Python/bytecodes.c	2191	2191	opcode:STORE_GLOBAL	inst(STORE_GLOBAL, (v --)) {	modelled	bytecode-global-roundtrip	
 Python/bytecodes.c	2198	2198	opcode:DELETE_GLOBAL	inst(DELETE_GLOBAL, (--)) {	todo		
 Python/bytecodes.c	2212	2212	opcode:LOAD_LOCALS	inst(LOAD_LOCALS, ( -- locals)) {	todo		
 Python/bytecodes.c	2222	2222	opcode:LOAD_FROM_DICT_OR_GLOBALS	inst(LOAD_FROM_DICT_OR_GLOBALS, (mod_or_class_dict -- v)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2244	2244	opcode:LOAD_NAME	inst(LOAD_NAME, (-- v)) {	todo		
 Python/bytecodes.c	2256	2256	opcode:_SPECIALIZE_LOAD_GLOBAL	specializing op(_SPECIALIZE_LOAD_GLOBAL, (counter/1 -- )) {	todo		changed-in-3.15:
-Python/bytecodes.c	2270	2270	opcode:_LOAD_GLOBAL	op(_LOAD_GLOBAL, ( -- res[1])) {	todo		
-Python/bytecodes.c	2277	2277	opcode:_PUSH_NULL_CONDITIONAL	op(_PUSH_NULL_CONDITIONAL, ( -- null[oparg & 1])) {	todo		
-Python/bytecodes.c	2283	2283	opcode:LOAD_GLOBAL	macro(LOAD_GLOBAL) =	todo		
+Python/bytecodes.c	2270	2270	opcode:_LOAD_GLOBAL	op(_LOAD_GLOBAL, ( -- res[1])) {	modelled	bytecode-load-global	
+Python/bytecodes.c	2277	2277	opcode:_PUSH_NULL_CONDITIONAL	op(_PUSH_NULL_CONDITIONAL, ( -- null[oparg & 1])) {	modelled	bytecode-load-global	
+Python/bytecodes.c	2283	2283	opcode:LOAD_GLOBAL	macro(LOAD_GLOBAL) =	modelled	bytecode-load-global	
 Python/bytecodes.c	2291	2291	opcode:_GUARD_GLOBALS_VERSION	op(_GUARD_GLOBALS_VERSION, (version/1 --)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2299	2299	opcode:_LOAD_GLOBAL_MODULE	op(_LOAD_GLOBAL_MODULE, (version/1, unused/1, index/1 -- res))	todo		changed-in-3.15:
 Python/bytecodes.c	2319	2319	opcode:_LOAD_GLOBAL_BUILTINS	op(_LOAD_GLOBAL_BUILTINS, (version/1, index/1 -- res))	todo		changed-in-3.15:

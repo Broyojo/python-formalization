@@ -1575,6 +1575,8 @@ gen-make-coro-kinds	proven	Objects/genobject.c	make_gen,_Py_MakeCoro
 gen-cr-origin-take	proven	Objects/genobject.c	_PyCoro_ComputeOrigin
 gen-awaitable-iter-result	proven	Objects/genobject.c	_PyCoro_GetAwaitableIter,gen_is_coroutine
 gen-finalize-branches	proven	Objects/genobject.c	gen_finalize
+bytecode-global-roundtrip	proven	Python/bytecodes.c	opcode:STORE_GLOBAL
+bytecode-load-global	proven	Python/bytecodes.c	opcode:LOAD_GLOBAL,opcode:_LOAD_GLOBAL,opcode:_PUSH_NULL_CONDITIONAL
 bytecode-attr-dispatch	proven	Python/bytecodes.c	opcode:STORE_ATTR,opcode:_STORE_ATTR,opcode:DELETE_ATTR,opcode:LOAD_ATTR,opcode:_LOAD_ATTR
 bytecode-dispatch	proven	Python/bytecodes.c	opcode:CONTAINS_OP,opcode:_CONTAINS_OP,opcode:STORE_SUBSCR,opcode:_STORE_SUBSCR,opcode:DELETE_SUBSCR
 bytecode-list-append	proven	Python/bytecodes.c	opcode:LIST_APPEND
