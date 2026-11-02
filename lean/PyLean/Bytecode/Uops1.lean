@@ -40,7 +40,7 @@ def asciiLimit : Nat := 128
 
 /-- `Python/bytecodes.c:148`. -/
 def NOP : M Unit := pure ()
-/-- `@3.14.7:153`. -/
+/-- `:156`. -/
 def NOT_TAKEN : M Unit := NOP
 /-- `@3.14.7:155`. Pending calls and signals are outside the model. -/
 def _CHECK_PERIODIC : M Unit := pure ()
@@ -67,7 +67,7 @@ def INSTRUMENTED_RESUME : M Unit := do
 
 /-! ### Lines 265-406: locals and constants -/
 
-/-- `@3.14.7:265`. -/
+/-- `:271`. -/
 def LOAD_FAST_CHECK (e : Env) : M Unit := stk 0 1 fun _ => do
   let v ← getLocal e.oparg
   if v == .null then
@@ -76,21 +76,21 @@ def LOAD_FAST_CHECK (e : Env) : M Unit := stk 0 1 fun _ => do
     (formatExcCheckArg "UnboundLocalError" (unboundLocalMsg n) : RM _)
   pure [v]
 
-/-- `@3.14.7:277`. -/
+/-- `:283`. -/
 def LOAD_FAST (e : Env) : M Unit := stk 0 1 fun _ => do pure [← getLocal e.oparg]
-/-- `@3.14.7:282`. A borrow is a copy once refcounts are gone. -/
+/-- `:288`. A borrow is a copy once refcounts are gone. -/
 def LOAD_FAST_BORROW (e : Env) : M Unit := stk 0 1 fun _ => do pure [← getLocal e.oparg]
-/-- `@3.14.7:287`. -/
+/-- `:293`. -/
 def LOAD_FAST_AND_CLEAR (e : Env) : M Unit := stk 0 1 fun _ => do
   let v ← getLocal e.oparg
   setLocal e.oparg .null
   pure [v]
-/-- `@3.14.7:292`. -/
+/-- `:298`. -/
 def LOAD_FAST_LOAD_FAST (e : Env) : M Unit := stk 0 2 fun _ => do
   let v1 ← getLocal (e.oparg >>> 4)
   let v2 ← getLocal (e.oparg &&& 15)
   pure [v1, v2]
-/-- `@3.14.7:299`. -/
+/-- `:305`. -/
 def LOAD_FAST_BORROW_LOAD_FAST_BORROW (e : Env) : M Unit := stk 0 2 fun _ => do
   let v1 ← getLocal (e.oparg >>> 4)
   let v2 ← getLocal (e.oparg &&& 15)
@@ -110,32 +110,32 @@ def getName (e : Env) (i : Nat) : BM String := do
   | some v => pure v
   | none => fault "name index out of range"
 
-/-- `@3.14.7:311`. -/
+/-- `:312`. -/
 def LOAD_CONST (e : Env) : M Unit := stk 0 1 fun _ => do pure [← getConst e]
-/-- `@3.14.7:344`. -/
+/-- `:317`. -/
 def LOAD_SMALL_INT (e : Env) : M Unit := stk 0 1 fun _ => pure [.int e.oparg]
 /-- `:323`. -/
 def STORE_FAST (e : Env) : M Unit := stk 1 0 fun
   | [v] => do setLocal e.oparg v; pure []
   | _ => fault "arity"
-/-- `@3.14.7:365`. -/
+/-- `:336`. -/
 def STORE_FAST_LOAD_FAST (e : Env) : M Unit := stk 1 1 fun
   | [v] => do
     setLocal (e.oparg >>> 4) v
     pure [← getLocal (e.oparg &&& 15)]
   | _ => fault "arity"
-/-- `@3.14.7:379`. -/
+/-- `:346`. -/
 def STORE_FAST_STORE_FAST (e : Env) : M Unit := stk 2 0 fun
   | [v2, v1] => do
     setLocal (e.oparg >>> 4) v1
     setLocal (e.oparg &&& 15) v2
     pure []
   | _ => fault "arity"
-/-- `@3.14.7:400`. -/
+/-- `:359`. -/
 def POP_TOP : M Unit := stk 1 0 fun _ => pure []
-/-- `@3.14.7:404`. -/
+/-- `:389`. -/
 def PUSH_NULL : M Unit := stk 0 1 fun _ => pure [.null]
-/-- `@3.14.7:408`. -/
+/-- `:393`. -/
 def END_FOR : M Unit := stk 1 0 fun _ => pure []
 /-- `:403`: `(iter, index_or_null -- )`. -/
 def POP_ITER : M Unit := stk 2 0 fun _ => pure []

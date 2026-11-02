@@ -120,7 +120,7 @@ def c_rows(path):
     return rows
 
 
-OPCODE = re.compile(r"^\s+(?:\w+(?:\(\d+\))?\s+)*(inst|op|macro)\((\w+)")
+OPCODE = re.compile(r"^\s+(?:\w+(?:\([\d:]+\))?\s+)*(inst|op|macro)\s*\((\w+)")
 
 
 def opcode_rows(path):

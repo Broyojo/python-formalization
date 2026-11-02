@@ -6,6 +6,7 @@ import PyLean.Bytecode.FrameProps
 import PyLean.Bytecode.StackEffect
 import PyLean.Bytecode.IterObj
 import PyLean.Bytecode.GenObj
+import PyLean.Bytecode.SpecLocals
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -21,6 +22,76 @@ open PyLean.Registry
 def op (n : String) : String := "opcode:" ++ n
 
 def entries : List Entry := GenObj.entries ++ [
+  { id := "bytecode-load-fast", pyFile := "Python/bytecodes.c"
+    pyFns := [op "LOAD_FAST", op "LOAD_FAST_BORROW"]
+    statement := "LOAD_FAST and LOAD_FAST_BORROW push the local and change nothing else, for every state."
+    source := "invariant: Python/bytecodes.c:283-291"
+    status := .proven, prop := ``LoadFastPushes, thm := some ``loadFastPushes_proven },
+  { id := "bytecode-load-fast-check", pyFile := "Python/bytecodes.c"
+    pyFns := [op "LOAD_FAST_CHECK"]
+    statement := "LOAD_FAST_CHECK is LOAD_FAST on a bound local, and on an unbound one raises UnboundLocalError naming the variable with the stack and locals unchanged."
+    source := "Python/bytecodes.c:271-281, UNBOUNDLOCAL_ERROR_MSG at Python/ceval_macros.h:399"
+    status := .proven, prop := ``LoadFastCheckRules, thm := some ``loadFastCheckRules_proven },
+  { id := "bytecode-load-clear-store", pyFile := "Python/bytecodes.c"
+    pyFns := [op "LOAD_FAST_AND_CLEAR", op "STORE_FAST"]
+    statement := "LOAD_FAST_AND_CLEAR pushes the local and unbinds it, and STORE_FAST then restores the state exactly, also for an unbound local."
+    source := "PEP 709: comprehension inlining saves and restores a name; Python/bytecodes.c:293-296, :323-330"
+    status := .proven, prop := ``LoadClearStoreRestores, thm := some ``loadClearStoreRestores_proven },
+  { id := "bytecode-store-fast", pyFile := "Python/bytecodes.c"
+    pyFns := [op "STORE_FAST"]
+    statement := "STORE_FAST moves the top of the stack into the local, and LOAD_FAST reads back what was stored."
+    source := "invariant: Python/bytecodes.c:323-330"
+    status := .proven, prop := ``StoreFastRules, thm := some ``storeFastRules_proven },
+  { id := "bytecode-load-superinstructions", pyFile := "Python/bytecodes.c"
+    pyFns := [op "LOAD_FAST_LOAD_FAST", op "LOAD_FAST_BORROW_LOAD_FAST_BORROW"]
+    statement := "A load superinstruction is the two loads it replaces, high nibble first."
+    source := "compiler contract: Python/flowgraph.c insert_superinstructions; Python/bytecodes.c:298-310"
+    status := .proven, prop := ``SuperinstructionsExpand, thm := some ``superinstructionsExpand_proven },
+  { id := "bytecode-store-superinstructions", pyFile := "Python/bytecodes.c"
+    pyFns := [op "STORE_FAST_STORE_FAST", op "STORE_FAST_LOAD_FAST"]
+    statement := "A store superinstruction is the store then the second operation it replaces, including when both operands name the same local."
+    source := "compiler contract: Python/bytecodes.c:336-357"
+    status := .proven, prop := ``StoreSuperExpand, thm := some ``storeSuperExpand_proven },
+  { id := "bytecode-delete-fast", pyFile := "Python/bytecodes.c"
+    pyFns := [op "DELETE_FAST"]
+    statement := "DELETE_FAST unbinds a bound local, and on an unbound one raises the same UnboundLocalError as LOAD_FAST_CHECK, with the stack unchanged."
+    source := "Python/bytecodes.c:2354-2362"
+    status := .proven, prop := ``DeleteFastRules, thm := some ``deleteFastRules_proven },
+  { id := "bytecode-load-const", pyFile := "Python/bytecodes.c"
+    pyFns := [op "LOAD_CONST", op "LOAD_SMALL_INT"]
+    statement := "LOAD_CONST pushes co_consts[oparg] and LOAD_SMALL_INT pushes the int oparg."
+    source := "Python/bytecodes.c:312-321"
+    status := .proven, prop := ``LoadConstRules, thm := some ``loadConstRules_proven },
+  { id := "bytecode-stack-drops", pyFile := "Python/bytecodes.c"
+    pyFns := [op "POP_TOP", op "END_FOR", op "POP_ITER", op "END_SEND", op "PUSH_NULL"]
+    statement := "POP_TOP, END_FOR and POP_ITER drop their operands, END_SEND keeps the value and drops what was below it, and PUSH_NULL then POP_TOP changes nothing."
+    source := "Python/bytecodes.c:359-361, :389-407, :428-434"
+    status := .proven, prop := ``StackDrops, thm := some ``stackDrops_proven },
+  { id := "bytecode-copy", pyFile := "Python/bytecodes.c"
+    pyFns := [op "COPY"]
+    statement := "COPY n pushes a duplicate of the nth item from the top and changes nothing else."
+    source := "Python/bytecodes.c:5906-5908"
+    status := .proven, prop := ``CopyRules, thm := some ``copyRules_proven },
+  { id := "bytecode-swap", pyFile := "Python/bytecodes.c"
+    pyFns := [op "SWAP"]
+    statement := "SWAP n exchanges the top with the nth item, and doing it twice changes nothing."
+    source := "Python/bytecodes.c:5942-5947"
+    status := .proven, prop := ``SwapRules, thm := some ``swapRules_proven },
+  { id := "bytecode-jumps", pyFile := "Python/bytecodes.c"
+    pyFns := [op "JUMP_FORWARD", op "JUMP_BACKWARD_NO_INTERRUPT", op "JUMP_BACKWARD"]
+    statement := "Jumps move next_instr by oparg and touch nothing else, and a jump forward then back returns to the start."
+    source := "Python/bytecodes.c:3494-3496, :3544-3550, :3656"
+    status := .proven, prop := ``JumpRules, thm := some ``jumpRules_proven },
+  { id := "bytecode-branches", pyFile := "Python/bytecodes.c"
+    pyFns := [op "POP_JUMP_IF_TRUE", op "POP_JUMP_IF_FALSE", op "POP_JUMP_IF_NONE", op "POP_JUMP_IF_NOT_NONE", op "_POP_JUMP_IF_TRUE", op "_POP_JUMP_IF_FALSE", op "_IS_NONE"]
+    statement := "Each conditional branch jumps exactly when its condition holds, skips a NOT_TAKEN on fall-through, and pops the value it tested."
+    source := "Python/bytecodes.c:3621-3654"
+    status := .proven, prop := ``BranchRules, thm := some ``branchRules_proven },
+  { id := "bytecode-unary-not", pyFile := "Python/bytecodes.c"
+    pyFns := [op "UNARY_NOT"]
+    statement := "UNARY_NOT flips a bool, and doing it twice changes nothing."
+    source := "Python/bytecodes.c:477"
+    status := .proven, prop := ``UnaryNotRules, thm := some ``unaryNotRules_proven },
   -- Specialized binary operators equal their generic form, over all stacks and all lawful models.
   { id := "bytecode-binary-op-add-int", pyFile := "Python/bytecodes.c"
     pyFns := [op "BINARY_OP_ADD_INT", op "_BINARY_OP_ADD_INT", op "_GUARD_TOS_INT", op "_GUARD_NOS_INT",
