@@ -3458,6 +3458,125 @@ class EtreeArea:
         return {"ok": {"kids": [num(k) for k in e], "out": out}}
 
 
+@area("etreepath", 5)
+class EtreePathArea:
+    """ElementPath compile and the C find fast path (EtreePath.lean)."""
+    PARTS = ["a", "b", "/", "//", ".", "..", "*", "[", "]", "@", "=", "!=", "(", ")", "()", "::", ":", "'v'", '"w"',
+             " ", "1", "-1", "0", "2", "last", "-", "{ns}", "{*}", "{}", "{", "}", "!", "x:y", "'", '"', "\t", "{x}b",
+             "a", "b", "/", "*", "[", "]", "@k", "text()", "١", "é", "　", "-2"]
+    TAGS = ["a", "b", "{ns}a", "{x}b", "", "a:b", "c d", "{ns}b", "{x}a"]
+    NS = [None, [], [["x", "ns"]], [["", "ns"]], [["x", "ns"], ["", "d"]], [["a", "u"]]]
+
+    @classmethod
+    def tree(cls, r, n=[0], depth=0):
+        n[0] += 1
+        return {"tag": cps(r.choice(cls.TAGS)), "text": cps("t%d" % n[0]) if r.random() < 0.8 else None,
+                "kids": [cls.tree(r, n, depth + 1) for _ in range(r.randint(0, 3 if depth < 2 else 0))]}
+
+    @classmethod
+    def gen(cls, r):
+        f = r.choice(["iterfind", "findall", "findall", "find", "findtext"])
+        path = "".join(r.choice(cls.PARTS) for _ in range(r.randint(0, 5)))
+        if r.random() < 0.25:
+            path = r.choice(cls.TAGS + ["a", "b", "x:y", "{*}a", "{ns}*", "{*}*", "{}*", "{}a", ".//{*}a", "a/", ""])
+        c = {"mod": "textlibs", "fn": "etreepath." + f, "impl": r.choice(["c", "py"]), "path": cps(path)}
+        ns = r.choice(cls.NS)
+        c["ns"] = None if ns is None else [[cps(k), cps(v)] for k, v in ns]
+        if f != "iterfind":
+            c["tree"] = cls.tree(r, [0])
+            if f == "findtext":
+                c["dflt"] = r.choice([None, cps("D")])
+        return c
+
+    @staticmethod
+    def enc_sel(f):
+        import inspect
+        q = f.__qualname__
+        owner, name = q.split(".<locals>.")[0], q.split(".")[-1]
+        out = {}
+        for k, v in inspect.getclosurevars(f).nonlocals.items():
+            if isinstance(v, str):
+                out[k] = cps(v)
+            elif isinstance(v, int) and not isinstance(v, bool):
+                out[k] = v
+            elif callable(v) and "<locals>" in getattr(v, "__qualname__", ""):
+                out[k] = EtreePathArea.enc_sel(v)
+        return [owner, name, out]
+
+    @classmethod
+    def compile(cls, path, ns):
+        """iterfind's own outcome, and whether its selectors include ones the model does not run."""
+        from xml.etree import ElementPath as EP
+        EP._cache.clear()
+        nsd = None if ns is None else dict(ns)
+        try:
+            it = EP.iterfind(cls.cmod.Element("r"), path, nsd)
+        except Exception as e:
+            return {"exc": type(e).__name__, "msg": str(e)}, False
+        if it is None:
+            return {"ok": {"none": True}}, False
+        p = path + "*" if path[-1:] == "/" else path
+        key = (p,) + (tuple(sorted(nsd.items())) if nsd else ())
+        sels = [cls.enc_sel(s) for s in EP._cache[key]]
+        unmodelled = any(s[0] in ("prepare_parent", "prepare_predicate") for s in sels)
+        return {"ok": {"sels": sels}}, unmodelled
+
+    @classmethod
+    def build(cls, mod, d):
+        e = mod.Element(txt(d["tag"]))
+        e.text = None if d["text"] is None else txt(d["text"])
+        for k in d["kids"]:
+            e.append(cls.build(mod, k))
+        return e
+
+    @classmethod
+    def run(cls, c):
+        from xml.etree import ElementPath as EP
+        if not hasattr(cls, "pymod"):
+            import xml.etree.ElementTree as cmod
+            from test.support import import_helper
+            cls.cmod = cmod
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                cls.pymod = import_helper.import_fresh_module("xml.etree.ElementTree", blocked=["_elementtree"])
+        path, ns = txt(c["path"]), c["ns"]
+        nsd = None if ns is None else {txt(k): txt(v) for k, v in ns}
+        nsl = None if ns is None else [(txt(k), txt(v)) for k, v in ns]
+        compiled, unmodelled = cls.compile(path, nsl)
+        f = c["fn"].split(".")[-1]
+        if f == "iterfind":
+            return compiled
+        mod = cls.cmod if c["impl"] == "c" else cls.pymod
+        root = cls.build(mod, c["tree"])
+        used = [False]
+        saved = {n: getattr(EP, n) for n in ("find", "findall", "findtext")}
+
+        def wrap(fn):
+            def w(*a, **k):
+                used[0] = True
+                return fn(*a, **k)
+            return w
+        for n, fn in saved.items():
+            setattr(EP, n, wrap(fn))
+        EP._cache.clear()
+        try:
+            def enc(e):
+                return [cps(e.tag), None if e.text is None else cps(e.text)]
+            if f == "findall":
+                res = common.py_result(lambda: [enc(x) for x in root.findall(path, nsd)])
+            elif f == "find":
+                res = common.py_result(lambda: (lambda x: None if x is None else enc(x))(root.find(path, nsd)))
+            else:
+                d = None if c.get("dflt") is None else txt(c["dflt"])
+                res = common.py_result(lambda: (lambda x: None if x is None else cps(x))(root.findtext(path, d, nsd)))
+        finally:
+            for n, fn in saved.items():
+                setattr(EP, n, fn)
+        if used[0] and unmodelled:
+            return {"ok": {"skip": True}}
+        return res
+
+
 only = os.environ.get("TEXTLIBS_ONLY")
 names = [n for n in AREAS if not only or n in only.split(",")]
 weights = [AREAS[n][1] for n in names]

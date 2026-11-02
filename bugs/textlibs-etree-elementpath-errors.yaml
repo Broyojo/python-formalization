@@ -1,0 +1,86 @@
+id: textlibs-etree-elementpath-errors
+title: "ElementPath leaks KeyError, TypeError and ValueError for invalid paths, and iterfind returns None for an empty one"
+priority: P3
+kind: internal-error-leak
+module: textlibs
+files: [Lib/xml/etree/ElementPath.py, Modules/_elementtree.c]
+functions: ["iterfind", "xpath_tokenizer", "prepare_predicate", "_prepare_tag"]
+summary: |
+  ElementPath answers most invalid paths with SyntaxError ("invalid path", "invalid predicate",
+  "invalid descendant", "prefix ... not found in prefix map"). Several are not caught:
+  - A step whose first token is not in the `ops` table raises KeyError from `ops[token[0]]`
+    (:391): e.findall('a/(b)') -> KeyError: '('. Any of (, ), (), ::, :, @, =, != or a quoted
+    string at the start of a step does this.
+  - An unterminated predicate makes prepare_predicate `return` None (:236), which iterfind
+    appends and then calls (:405): e.findall('a/b[') -> TypeError: 'NoneType' object is not
+    callable. The broken selector list is also stored in _cache.
+  - iterfind is a plain function; a path with no tokens ('' or '!') hits the bare `return` at
+    :387, so e.iterfind('') returns None (C and Python), and the pure-Python Element's
+    findall/find/findtext('') raise TypeError: 'NoneType' object is not iterable / not an
+    iterator, where the C fast path returns [] / None / default.
+  - [N] with more than 4300 digits raises ValueError from int() (:310); the [last()-N] form wraps
+    the same int() in try/except and raises SyntaxError.
+  - '{}*' raises IndexError from `el_tag[0]` (:127) when an element's tag is ''.
+  Separately, the C find/findall/findtext fast path (no XPath character per checkpath) matches the
+  string as a literal tag, while ElementPath tokenizes it: 'a:b', 'a b', '(a)' and 'a=b' find a
+  child of that tag in C and raise or find nothing through ElementPath. Recorded as context; the
+  twins are proven to agree on plain tag names (textlibs-elementpath-plain-tag-twins).
+likelihood: |
+  Low: these paths are malformed, but they reach the public API from the C accelerator
+  (Element.findall('a/(b)'), ElementTree.findall, iterparse users filtering with paths built
+  from input), and code that catches SyntaxError for bad user-supplied paths does not catch
+  KeyError or TypeError.
+maybe_intended: |
+  No. The module raises SyntaxError for the neighbouring cases, and the docs describe iterfind as
+  returning an iterable. The FIXME at :228 ("replace with real parser!!!") acknowledges the
+  parser is ad hoc.
+reproducer: |
+  import xml.etree.ElementTree as ET
+  e = ET.fromstring('<r><a><b/></a></r>')
+  seen = []
+  for p in ['a/(b)', 'a/b[', '*=']:
+      try:
+          e.findall(p)
+          seen.append((p, 'ok'))
+      except Exception as ex:
+          seen.append((p, type(ex).__name__))
+  it = e.iterfind('')
+  print(seen, 'iterfind("") ->', it)
+  if seen == [('a/(b)', 'KeyError'), ('a/b[', 'TypeError'), ('*=', 'KeyError')] and it is None:
+      print('REPRODUCED textlibs-etree-elementpath-errors')
+expected: |
+  SyntaxError for each invalid path, and an empty iterator from iterfind('').
+observed: |
+  python3 3.15.2: [('a/(b)', 'KeyError'), ('a/b[', 'TypeError'), ('*=', 'KeyError')],
+  iterfind('') -> None. REPRODUCED.
+  main (cpython-main/python.exe): identical.
+  A 300,000-path fuzz of ElementPath.iterfind found these outcomes besides iterators and
+  SyntaxError: KeyError, TypeError, None, and ValueError (4300-digit limit).
+promised_by: |
+  Doc/library/xml.etree.elementtree.rst, Element.iterfind: "Returns an iterable yielding all
+  matching elements in document order." Invariant: invalid input raises the module's
+  documented-in-code SyntaxError, not an internal error.
+cause: |
+  Lib/xml/etree/ElementPath.py:391 indexes `ops` without a KeyError handler; :236 returns None
+  from prepare_predicate, which :405 calls (the same bare return in prepare_descendant at :187 is
+  unreachable, because :369-370 append '*' to a trailing '/'); :387 returns None from a non-generator; :310 calls
+  int() without the ValueError handler used at :317-320; :127 indexes el_tag[0] without a length
+  check.
+possible_fix: |
+  Raise SyntaxError("invalid path") for an unknown token type and for an exhausted predicate
+  (or descendant); return iter(()) for an empty path; wrap int() at :310 like :317; use
+  el_tag[:1] != '{' at :127.
+duplicates:
+  issues: []
+  queries: ["ElementPath KeyError", "ElementPath KeyError invalid path", "findall KeyError parenthesis",
+            "xpath_tokenizer KeyError ops", "ElementPath iterfind empty path None",
+            "iterfind empty string returns None", "findall empty path TypeError NoneType",
+            "ElementPath predicate NoneType not callable", "ElementTree findall unterminated predicate",
+            "ElementTree invalid path error message", "etree find malformed xpath exception",
+            "ElementTree findall colon tag C accelerator", "_elementtree checkpath",
+            "bugforge README: no ElementPath entry"]
+  note: |
+    Queries run as separate unquoted terms.
+lean:
+  property: PyLean.TextLibs.Etree.ElementPathNoKeyError
+  theorem: PyLean.TextLibs.Etree.elementPathNoKeyError_refuted

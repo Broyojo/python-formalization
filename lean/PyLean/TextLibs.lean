@@ -13,6 +13,7 @@ import PyLean.TextLibs.HtmlProps
 import PyLean.TextLibs.DifflibHunks
 import PyLean.TextLibs.CsvSniffProps
 import PyLean.TextLibs.EtreeProps
+import PyLean.TextLibs.EtreePathProps
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1383,7 +1384,40 @@ def entries : List Entry := [
     pyFns := ["Element.__setitem__", "element_ass_subscr"]
     statement := "For a list or tuple of Elements and a slice that is not a backward step-1 slice, both twins leave the same children and raise the same exception."
     source := "narrows textlibs-etree-slice-store-twins", status := .proven
-    prop := ``Etree.SetSliceTwinsSeq, thm := some ``Etree.setSliceTwinsSeq_proven }
+    prop := ``Etree.SetSliceTwinsSeq, thm := some ``Etree.setSliceTwinsSeq_proven },
+  { id := "textlibs-elementpath-no-keyerror", pyFile := "Lib/xml/etree/ElementPath.py"
+    pyFns := ["iterfind", "xpath_tokenizer"]
+    statement := "For every str path and namespaces dict, iterfind returns an iterator or raises SyntaxError."
+    source := "invariant: no internal error leaking; ElementPath rejects other invalid paths with SyntaxError", status := .refuted
+    prop := ``Etree.ElementPathNoKeyError, thm := some ``Etree.elementPathNoKeyError_refuted
+    bug := some "textlibs-etree-elementpath-errors"
+    notes := "findall(')') raises KeyError: ')' from the ops table; so does any step starting with (, ), (), ::, :, @, =, != or a quoted string." },
+  { id := "textlibs-elementpath-no-none-step", pyFile := "Lib/xml/etree/ElementPath.py"
+    pyFns := ["iterfind", "xpath_tokenizer", "prepare_child", "prepare_predicate"]
+    statement := "No path leaves None in the compiled selector list."
+    source := "invariant: no internal error leaking", status := .refuted
+    prop := ``Etree.ElementPathNoNoneStep, thm := some ``Etree.elementPathNoNoneStep_refuted
+    bug := some "textlibs-etree-elementpath-errors"
+    notes := "a[ : prepare_predicate returns None at :236 and iterfind calls it, TypeError: 'NoneType' object is not callable; the broken selector list is cached." },
+  { id := "textlibs-elementpath-iterable", pyFile := "Lib/xml/etree/ElementPath.py"
+    pyFns := ["iterfind"]
+    statement := "iterfind returns an iterator for every path it does not reject."
+    source := "docs: Element.iterfind 'Returns an iterable yielding all matching elements in document order'", status := .refuted
+    prop := ``Etree.ElementPathIterable, thm := some ``Etree.elementPathIterable_refuted
+    bug := some "textlibs-etree-elementpath-errors"
+    notes := "iterfind is a plain function; its bare return at :387 gives None for a path with no tokens ('', '!')." },
+  { id := "textlibs-elementpath-plain-tag-twins", pyFile := "Lib/xml/etree/ElementPath.py"
+    pyFns := ["iterfind", "xpath_tokenizer", "prepare_child", "_is_wildcard_tag", "find", "findall", "findtext"]
+    statement := "For every tree and every nonempty tag name of characters other than whitespace and /[]()@!=.*:{}'\", findall, find and findtext without namespaces give the same result through the C fast path and through ElementPath."
+    source := "the implementation disagreeing with itself (C fast path against ElementPath)", status := .proven
+    prop := ``Etree.PlainTagTwins, thm := some ``Etree.plainTagTwins_proven },
+  { id := "textlibs-etree-find-fast-path", pyFile := "Modules/_elementtree.c"
+    pyFns := ["checkpath", "_elementtree_Element_find_impl", "_elementtree_Element_findtext_impl",
+      "_elementtree_Element_findall_impl"]
+    statement := "The same theorem, from the C side: checkpath is false on such names and the fast path's children scan equals the compiled child step."
+    source := "the implementation disagreeing with itself (C fast path against ElementPath)", status := .proven
+    prop := ``Etree.PlainTagTwins, thm := some ``Etree.plainTagTwins_proven
+    notes := "Outside plain names the two routes differ: 'a:b', 'a b' and '(a)' match a literal tag in C and raise or match nothing in ElementPath." }
 ]
 
 end PyLean.TextLibs
