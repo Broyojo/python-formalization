@@ -1,7 +1,7 @@
 import PyLean.DictSet.ODict
 
 /-!
-The pure-Python `OrderedDict` of `Lib/collections/__init__.py` (CPython 3.14.7), the twin of
+The pure-Python `OrderedDict` of `Lib/collections/__init__.py` (CPython 3.15.2), the twin of
 `Objects/odictobject.c`. Line numbers refer to that file. It is a dict plus `self.__map`
 (key to link) plus a circular doubly linked list of `_Link`s with a sentinel. Links are kept
 on a heap with explicit `prev`/`next`, because `popitem` and `clear` leave the removed links'

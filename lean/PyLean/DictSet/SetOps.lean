@@ -147,7 +147,7 @@ def setOr (self other : SetObj K) (id : Nat) : Py (SetObj K) :=
 def containsIn (s : SetObj K) (key : K) (hash : Int) : Py Bool :=
   (setContainsEntry P key hash s).1
 
-/-- The loop at :1733-1751: keep what `so` contains. -/
+/-- The loop at :1733-1488: keep what `so` contains. -/
 def interLoop (so : SetObj K) : List (K × Int) → SM K Unit
   | [] => pure ()
   | (key, hash) :: rest => do
@@ -421,10 +421,35 @@ def retryAsFrozen {α : Type} (setHash : K → Option Int) (key : K) (first : SM
     | some h, .typeError _ => retry h
     | _, _ => M.throw e
 
-/-- `set_contains_lock_held` (@3.14.7:2269-2286), `_PySet_Contains`, `set_contains`,
-`set.__contains__` (:2583-2593), `frozenset.__contains__` (:2605-2626). -/
-def setContains (setHash : K → Option Int) (key : K) : SM K Bool :=
-  retryAsFrozen setHash key (setContainsKey P key) (setContainsEntry P key)
+/-- The opening of `_PySet_Contains` (:2549-2562) and `frozenset___contains___impl` (:2609-2619):
+only a failed hash of a `set` is retried, with the hash of the equal frozenset, so unlike 3.14 a
+`TypeError` from `__eq__` is not. -/
+def containsHash (setHash : K → Option Int) (key : K) : Py Int :=
+  match P.hash key with
+  | .ok h => .ok h
+  | .error e =>
+    match setHash key, e with
+    | some h, .typeError _ => .ok h
+    | _, _ => .error (setUnhashableType P key e)
+
+/-- `_PySet_Contains` (:2544-2563), `set_contains`, `set.__contains__` (:2584-2593). -/
+def setContains (setHash : K → Option Int) (key : K) : SM K Bool := do
+  let hash ← M.lift (containsHash P setHash key)
+  setContainsEntry P key hash
+
+/-- `frozenset.__contains__` (:2606-2626): `set_compare_frozenset` on any `frozenset`, a subclass
+too, where `in` takes `set_lookkey` and so tests `PyFrozenSet_CheckExact`. -/
+def frozensetContains (setHash : K → Option Int) (key : K) : SM K Bool := do
+  let hash ← M.lift (containsHash P setHash key)
+  let so ← M.get
+  let u := toU64 hash
+  match ← lookOuter P true key hash so.mask (setProbeFuel so.mask) (u &&& so.mask) u with
+  | none => M.throw .modelFuel
+  | some s =>
+    let so' ← M.get
+    match so'.slot s with
+    | .null => return false
+    | _ => return true
 
 /-- `set_remove_impl` (:2640-2665). -/
 def setRemove (setHash : K → Option Int) (key : K) : SM K Unit := do
@@ -434,6 +459,21 @@ def setRemove (setHash : K → Option Int) (key : K) : SM K Unit := do
 /-- `set_discard_impl` (:2680-2700). -/
 def setDiscard (setHash : K → Option Int) (key : K) : SM K Unit := do
   let _ ← retryAsFrozen setHash key (setDiscardKey P key) (setDiscardEntry P key)
+
+/-- `PyErr_BadInternalCall()`. -/
+def setBadInternalCall : PyExc := systemError "~bad argument to internal function"
+
+/-- `PySet_Contains` (:3065-3080): no retry for a `set` key. -/
+def pySetContains (isAny : Bool) (key : K) : SM K Bool :=
+  if isAny then setContainsKey P key else M.throw setBadInternalCall
+
+/-- `PySet_Discard` (:3082-3095). -/
+def pySetDiscard (isSet : Bool) (key : K) : SM K Bool :=
+  if isSet then setDiscardKey P key else M.throw setBadInternalCall
+
+/-- `PySet_Add` (:3097-3123): a frozenset only while nothing else refers to it. -/
+def pySetAdd (isSet frozenUnique : Bool) (key : K) : SM K Unit :=
+  if isSet || frozenUnique then setAddKey P key else M.throw setBadInternalCall
 
 /-- `set_init` (:2752-2779), the fresh and the re-init branches. -/
 def setInit (args : List (SetArg K)) (hasKw : Bool) : SM K Unit := do

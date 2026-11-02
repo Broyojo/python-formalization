@@ -18,7 +18,6 @@ variable {P : Proto K (PyDict K V)} {hf : K → Int} {eqv : K → K → Bool}
 theorem hashKey_ok (H : Honest P hf eqv) (key : K) (s : PyDict K V) :
     hashKey P key s = (.ok (hf key), s) := by
   simp only [hashKey, H.hash_ok]
-  rfl
 
 /-- The read family. All of them agree with the list, and none changes the dict. -/
 theorem read_family (H : Honest P hf eqv) (d : PyDict K V) (hd : DictInv hf eqv P.isStr d) (key : K) :
@@ -96,8 +95,10 @@ theorem subscript_spec (H : Honest P hf eqv) (d : PyDict K V) (hd : DictInv hf e
     simp [hne]
 
 /-- `dict.pop` without a default, through every layer: `dict_pop_default`, `PyDict_Pop`,
-`pop_lock_held`, `_PyDict_Pop_KnownHash`. -/
-theorem pop_spec (H : Honest P hf eqv) (d : PyDict K V) (hd : DictInv hf eqv P.isStr d) (key : K) :
+`pop_lock_held`, `_PyDict_Pop_KnownHash`. `d.frozen = false` is the type of the receiver: what
+`pop_lock_held` does to a frozendict is in `DictChecks`. -/
+theorem pop_spec (H : Honest P hf eqv) (d : PyDict K V) (hd : DictInv hf eqv P.isStr d) (key : K)
+    (hfz : d.frozen = false) :
     (assocGet eqv (dictAssoc d) key = none ∧ pyDictPop P true key d = (.ok none, d)) ∨
     ∃ v d', assocGet eqv (dictAssoc d) key = some v ∧ pyDictPop P true key d = (.ok (some v), d') ∧
       DictInv hf eqv P.isStr d' ∧ dictAssoc d' = assocDel eqv (dictAssoc d) key := by
@@ -110,13 +111,13 @@ theorem pop_spec (H : Honest P hf eqv) (d : PyDict K V) (hd : DictInv hf eqv P.i
     have hget : assocGet eqv (dictAssoc d) key = none := by
       simp [ha, Keys.items, hnil, assocGet]
     refine ⟨hget, ?_⟩
-    simp [pyDictPop, h0]
+    simp [pyDictPop, h0, hfz]
   · cases hq : assocGet eqv (dictAssoc d) key with
     | none =>
       left
       refine ⟨rfl, ?_⟩
       rw [hq] at h1
-      simp [pyDictPop, dictPopKnownHash, h0, H.hash_ok, h1]
+      simp [pyDictPop, dictPopKnownHash, h0, H.hash_ok, h1, hfz]
     | some v =>
       right
       rcases dichotomy (eqv := eqv) k key with ⟨t, e, a, b⟩ | hno
@@ -133,7 +134,7 @@ theorem pop_spec (H : Honest P hf eqv) (d : PyDict K V) (hd : DictInv hf eqv P.i
         refine ⟨v, d', rfl, ?_, c2, by rw [ha]; exact c3⟩
         have hne2 : ((t : Int) == DKIX_EMPTY) = false := by
           simp [DKIX_EMPTY]
-        simp [pyDictPop, dictPopKnownHash, h0, H.hash_ok, hl, hne2, c1, hval]
+        simp [pyDictPop, dictPopKnownHash, h0, H.hash_ok, hl, hne2, c1, hval, hfz]
       · rw [ha] at hq
         simp only [assocGet, Option.map_eq_some_iff, Prod.exists] at hq
         obtain ⟨a, b, h5, _⟩ := hq
@@ -257,11 +258,11 @@ theorem subscriptSpec_proven : SubscriptSpec := fun _ _ _ _ _ _ H d hd key =>
 /-- `dict.pop`: removes what the list holds, and an absent key changes nothing. -/
 def PopSpec : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (hf : K → Int) (eqv : K → K → Bool),
-    Honest P hf eqv → ∀ (d : PyDict K V), DictInv hf eqv P.isStr d → ∀ key : K,
+    Honest P hf eqv → ∀ (d : PyDict K V), DictInv hf eqv P.isStr d → d.frozen = false → ∀ key : K,
       (assocGet eqv (dictAssoc d) key = none ∧ pyDictPop P true key d = (.ok none, d)) ∨
       ∃ v d', assocGet eqv (dictAssoc d) key = some v ∧ pyDictPop P true key d = (.ok (some v), d') ∧
         DictInv hf eqv P.isStr d' ∧ dictAssoc d' = assocDel eqv (dictAssoc d) key
-theorem popSpec_proven : PopSpec := fun _ _ _ _ _ _ H d hd key => pop_spec H d hd key
+theorem popSpec_proven : PopSpec := fun _ _ _ _ _ _ H d hd hfz key => pop_spec H d hd key hfz
 
 /-- `d.clear()`. -/
 def ClearSpec : Prop :=

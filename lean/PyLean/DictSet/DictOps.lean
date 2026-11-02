@@ -94,9 +94,7 @@ def dictLookupIndex (key : K) : DM K V Int := do
 /-- Key made from a C string (`PyUnicode_FromString`, which may fail), then an action:
 `_PyDict_GetItemStringWithError` (:2654-2665), `PyDict_GetItemStringRef` (:5523-5534),
 `PyDict_DelItemString` (:5551-5562), `PyDict_SetItemString` (:5536-5549),
-`PyDict_ContainsString` (:5258-5268), `_PyDict_GetItemIdWithError` (@3.14.7:2554-2564),
-`_PyDict_SetItemId` (@3.14.7:5074-5082), `_PyDict_DelItemId` (@3.14.7:5099-5106),
-`_PyDict_ContainsId` (@3.14.7:4884-4892). -/
+`PyDict_ContainsString` (:5258-5268). -/
 def withCKey {α : Type} (mk : Py K) (act : K → DM K V α) : DM K V α := do
   let k ← M.lift mk
   act k
@@ -112,12 +110,16 @@ def dictContainsKnownHash (key : K) (hash : Int) : DM K V Bool := do
   let r ← dictLookup P key hash
   return r.1 != DKIX_EMPTY && r.2.isSome
 
-/-- `PyDict_Contains` (@3.14.7:4835-4846), behind `dict.__contains__` (:4725-4737). -/
+/-- `dict_contains` (:5234-5244), behind `dict.__contains__` (:4725-4737). -/
 def pyDictContains (key : K) : DM K V Bool := do
   let hash ← hashKey P key
   dictContainsKnownHash P key hash
 
-/-- The branch of `dict_subscript` for a key that is not there (:3765-3780). `missing` is `none` for
+/-- `PyDict_Contains` (:5247-5256): the test `dict_contains` does not make. -/
+def pyDictContainsChecked (isAny : Bool) (key : K) : DM K V Bool :=
+  if isAny then pyDictContains P key else M.throw badInternalCall
+
+/-- The branch of `_PyDict_SubscriptKnownHash` for a key that is not there (:3765-3780). `missing` is `none` for
 an exact dict. Otherwise it is `_PyObject_LookupSpecial(mp, "__missing__")`, which may raise, with
 the method it finds; both may change the dict. -/
 def subscriptMissing (missing : Option (DM K V (Option (K → DM K V V)))) (key : K) : DM K V V :=
@@ -128,7 +130,7 @@ def subscriptMissing (missing : Option (DM K V (Option (K → DM K V V)))) (key 
     | some f => f key
     | none => M.throw (keyErr P key)
 
-/-- `dict_subscript` (@3.14.7:3504-3538). -/
+/-- `_PyDict_Subscript` (:3785-3794), `_PyDict_SubscriptKnownHash` (:3755-3783). -/
 def dictSubscript (missing : Option (DM K V (Option (K → DM K V V)))) (key : K) : DM K V V := do
   let hash ← hashKey P key
   let r ← dictLookup P key hash
@@ -136,7 +138,7 @@ def dictSubscript (missing : Option (DM K V (Option (K → DM K V V)))) (key : K
   | some v => if r.1 == DKIX_EMPTY then subscriptMissing P missing key else return v
   | none => subscriptMissing P missing key
 
-/-- `dict_ass_sub` (@3.14.7:3540-3547). -/
+/-- `_PyDict_StoreSubscript` (:3796-3803). -/
 def dictAssSub (key : K) (w : Option V) : DM K V Unit :=
   match w with
   | none => dictDelItem P key
@@ -181,12 +183,13 @@ def dictPopKnownHash (key : K) (hash : Int) : DM K V (Option V) := fun mp =>
 
 /-- `pop_lock_held` (:3277-3311), `PyDict_Pop` (:3313-3322). An empty dict answers before
 the key is hashed. -/
-def pyDictPop (isDict : Bool) (key : K) : DM K V (Option V) := fun mp =>
-  if !isDict then (.error badInternalCall, mp)
+def pyDictPop (isAny : Bool) (key : K) : DM K V (Option V) := fun mp =>
+  if !isAny then (.error badInternalCall, mp)
+  else if mp.frozen then (.error (frozendictNoSupport "deletion"), mp)
   else if mp.used == 0 then (.ok none, mp)
   else
     match P.hash key with
-    | .error e => (.error (dictUnhashableType P key e), mp)
+    | .error e => (.error (dictUnhashableType P mp.frozen key e), mp)
     | .ok hash => dictPopKnownHash P key hash mp
 
 /-- `dict_pop_default` (:3342-3354), `_PyDict_Pop`, `dict.pop`. -/
@@ -243,9 +246,11 @@ def dictSetdefaultRef (key : K) (dflt : V) (result incref : Bool) : DM K V (Nat 
     continueAt r.1 r.2
 
 /-- `dict_setdefault_ref_lock_held` with its `PyDict_Check` (:4775-4786). -/
-def dictSetdefaultRefChecked (isDict : Bool) (key : K) (dflt : V) (result incref : Bool) :
-    DM K V (Nat × Option V) :=
-  if isDict then dictSetdefaultRef P key dflt result incref else M.throw badInternalCall
+def dictSetdefaultRefChecked (isAny : Bool) (key : K) (dflt : V) (result incref : Bool) :
+    DM K V (Nat × Option V) := fun mp =>
+  if !isAny then (.error badInternalCall, mp)
+  else if mp.frozen then (.error (frozendictNoSupport "assignment"), mp)
+  else dictSetdefaultRef P key dflt result incref mp
 
 /-- `dict.setdefault` (`dict_setdefault_impl`, :4907-4915), `PyDict_SetDefaultRef`
 (:4873-4882). -/
@@ -322,7 +327,7 @@ def dictClear (mp : PyDict K V) : PyDict K V :=
       else
         { mp with used := 0, body := .combined emptyKeys }
 
-/-- `dict_dealloc` (:3605-3638). The `PyDict_EVENT_DEALLOCATED` watchers run on the live dict (@3.14.7:3370)
+/-- `dict_dealloc` (:3605-3638). The `PyDict_EVENT_DEALLOCATED` watchers run on the live dict (:3609)
 and may change it and keep a reference. `watch` is that run: whether the dict was resurrected, and the
 dict it left. Then `_PyObject_ResurrectEnd` (:3610) ends the function, leaving the dict as it is; the
 rest only drops references. The result is the dict that lives on, if any. -/
@@ -331,7 +336,7 @@ def dictDealloc (watch : PyDict K V → Bool × PyDict K V) (mp : PyDict K V) : 
   | (true, s) => some s
   | (false, _) => none
 
-/-- `clear_lock_held` returns at once on something that is not a dict (@3.14.7:2969-2970). -/
+/-- `clear_lock_held` returns at once on something that is not a dict (:3083-3085). -/
 def dictClearChecked (isDict : Bool) (mp : PyDict K V) : PyDict K V :=
   if isDict then dictClear mp else mp
 
@@ -339,12 +344,21 @@ def dictClearChecked (isDict : Bool) (mp : PyDict K V) : PyDict K V :=
 def copyValues (v : Values V) : Values V :=
   { v with embedded := false }
 
-/-- `clone_combined_dict_keys` (:987-1050): a bitwise copy of the keys object. -/
+/-- `clone_combined_dict_keys` (:987-1050): a bitwise copy of the keys object, but for `dk_version`
+(:1009-1011). -/
 def cloneCombinedDictKeys (id : Nat) (k : Keys K V) : Keys K V :=
-  { k with ident := id }
+  { k with ident := id, version := 0 }
 
 section Merge
 variable [DecidableEq K] (P : Proto K (PyDict K V))
+
+/-- Return value `-2` of `dict_merge`, with `*dupkey` set, which is no exception: the int status
+travels in the error channel so that every loop stops as it does in C, and
+`_PyEval_FormatKwargsError` (`Python/ceval.c:3415`) makes the `TypeError`. `dupkey` is non-`NULL` only
+from `_PyDict_MergeUniq`, the one caller with `override` 2, and every other caller passes `NULL` with
+`override` 0 or 1, so `override != 0` here stands for `dupkey != NULL` at :4236. -/
+def mergeDup (key : K) : DM K V Unit := fun mp =>
+  (.error mergeDupExc, { mp with dupkey := some key })
 
 /-- The body of the loop of `dict_dict_merge` (:4227-4243). -/
 def mergeStep (override : Nat) (key : K) (hash : Int) (value : V) : DM K V Unit :=
@@ -355,7 +369,7 @@ def mergeStep (override : Nat) (key : K) (hash : Int) (value : V) : DM K V Unit 
     if !err then
       insertDict P key hash value
     else if override != 0 then
-      M.throw (keyErr P key)
+      mergeDup key
 
 /-- The message of :4250-4251. -/
 def mergeMutated : PyExc := runtimeError "dict mutated during update"
@@ -423,7 +437,7 @@ def dictDictMerge (other : PyDict K V) (override : Nat) : DM K V Unit := fun mp 
 
 /-- The right operand of `dict_merge` (:4258-4354). -/
 inductive MergeArg (K V : Type) where
-  /-- `PyDict_Check(b) && Py_TYPE(b)->tp_iter == dict_iter`. -/
+  /-- `PyAnyDict_Check(b) && Py_TYPE(b)->tp_iter == dict_iter`. -/
   | dict (d : PyDict K V)
   /-- Otherwise: `PyMapping_Keys(b)` and `PyObject_GetItem`. Both run Python code, so both may
   raise and may change the receiver. The list is private to `dict_merge` once built, which is
@@ -439,8 +453,9 @@ def mergeGenericLoop (getitem : K → DM K V V) (override : Nat) : List K → DM
       if status then
         if override == 0 then
           pure true
-        else
-          M.throw (keyErr P key)
+        else do
+          mergeDup key
+          pure true
       else pure false
     else pure false)
     if !skip then
@@ -449,7 +464,7 @@ def mergeGenericLoop (getitem : K → DM K V V) (override : Nat) : List K → DM
     mergeGenericLoop getitem override rest
 
 /-- `dict_merge` (:4258-4354), behind `PyDict_Update` (override 1), `PyDict_Merge`
-(`override != 0`) and `_PyDict_MergeEx` (override as given). -/
+(`override != 0`) and `_PyDict_MergeUniq` (override 2). -/
 def dictMerge (b : MergeArg K V) (override : Nat) : DM K V Unit :=
   match b with
   | .dict other => dictDictMerge P other override
@@ -457,7 +472,7 @@ def dictMerge (b : MergeArg K V) (override : Nat) : DM K V Unit :=
     let ks ← keys
     mergeGenericLoop P getitem override ks
 
-/-- The right operand of `dict_merge` as an object: whether it passes the test at @3.14.7:4008, what it
+/-- The right operand of `dict_merge` as an object: whether it passes the test at :4267, what it
 holds as a dict, and how the slow path reads it. -/
 structure MergeObj (K V : Type) where
   isDict : Bool
@@ -467,15 +482,20 @@ structure MergeObj (K V : Type) where
   keys : DM K V (List K)
   getitem : K → DM K V V
 
-/-- The route `dict_merge` takes on it (@3.14.7:4008). -/
+/-- The route `dict_merge` takes on it (:4267). -/
 def MergeObj.route (b : MergeObj K V) : MergeArg K V :=
   if b.isDict && b.iterIsDict then .dict b.asDict else .mapping b.keys b.getitem
 
-/-- `dict_merge` (:4258-4354) with its entry test (@3.14.7:4002-4005), which only the C API can fail. -/
-def dictMergeChecked (aIsDict : Bool) (b : Option (MergeObj K V)) (override : Nat) : DM K V Unit :=
-  match aIsDict, b with
-  | true, some arg => dictMerge P arg.route override
-  | _, _ => M.throw badInternalCall
+/-- `dict_merge_api` (:4356-4377), the entry test `dict_merge` itself gave up, and `dict_merge`
+(:4258-4354). `dict_update_arg` and the copies call `dict_merge` directly. -/
+def dictMergeChecked (aIsAny : Bool) (b : Option (MergeObj K V)) (override : Nat) :
+    DM K V Unit := fun mp =>
+  if !aIsAny then (.error badInternalCall, mp)
+  else if mp.frozen then (.error (frozendictNoSupport "assignment"), mp)
+  else
+    match b with
+    | some arg => dictMerge P arg.route override mp
+    | none => (.error badInternalCall, mp)
 
 /-- One element of the iterable given to `dict.update`, after `PySequence_Fast`. -/
 inductive Seq2Item (K V : Type) where
@@ -511,7 +531,7 @@ def seq2Loop (override : Bool) : Nat → List (DM K V (Option (Seq2Item K V))) �
           let _ ← dictSetdefaultRef P k v false false
       seq2Loop override (i + 1) rest
 
-/-- `merge_from_seq2_lock_held` (:4051-4138), `PyDict_MergeFromSeq2` (@3.14.7:3880-3889). -/
+/-- `merge_from_seq2_lock_held` (:4051-4138), `dict_merge_from_seq2` (:4140-4149). -/
 def mergeFromSeq2 (seq2 : ReIter (PyDict K V) (Seq2Item K V)) (override : Bool) : DM K V Unit := do
   seq2.getIter
   seq2Loop P override 0 seq2.steps
@@ -524,6 +544,13 @@ inductive UpdateArg (K V : Type) where
   the sequence route. -/
   | other (hasKeys : DM K V Bool) (asMapping : MergeArg K V)
       (seq2 : ReIter (PyDict K V) (Seq2Item K V))
+
+/-- `PyDict_MergeFromSeq2` (:4151-4167). -/
+def pyDictMergeFromSeq2 (isAny : Bool) (seq2 : ReIter (PyDict K V) (Seq2Item K V)) (override : Bool) :
+    DM K V Unit := fun mp =>
+  if !isAny then (.error badInternalCall, mp)
+  else if mp.frozen then (.error (frozendictNoSupport "assignment"), mp)
+  else mergeFromSeq2 P seq2 override mp
 
 /-- `dict_update_arg` (:3990-4005). -/
 def dictUpdateArg (arg : UpdateArg K V) : DM K V Unit :=
@@ -553,7 +580,7 @@ def dictUpdateCommon (args : List (UpdateArg K V)) (kwds : Option (PyDict K V))
     else
       M.throw (.typeError "keywords must be strings")
 
-/-- `dict_vectorcall` (:5362-5392), after `dict_new` (@3.14.7:4913-4938) made the empty dict. -/
+/-- `dict_vectorcall` (:5362-5392), after `dict_new` (:5344-5354) made the empty dict. -/
 def dictVectorcall (args : List (UpdateArg K V)) (kw : List (K × V)) : DM K V Unit := do
   match args with
   | [] => pure ()
@@ -562,7 +589,7 @@ def dictVectorcall (args : List (UpdateArg K V)) (kw : List (K × V)) : DM K V U
   for (k, v) in kw do
     dictSetItem P k v
 
-/-- `copy_lock_held` (:4432-4546), `PyDict_Copy` (:4548-4605), `dict.copy`: the copy, as
+/-- `copy_lock_held_untracked` (:4432-4546), `PyDict_Copy` (:4548-4564), `dict.copy`: the copy, as
 a new object with identity `id`. `iterOverridden` is `Py_TYPE(mp)->tp_iter != dict_iter`,
 which sends the copy down `dict_merge`'s slow path through `as_`. -/
 def dictCopy (mp : PyDict K V) (id : Nat) (iterOverridden : Bool) (as_ : MergeArg K V) :
@@ -583,7 +610,12 @@ def dictCopy (mp : PyDict K V) (id : Nat) (iterOverridden : Bool) (as_ : MergeAr
           | (.ok _, d) => .ok d
           | (.error e, _) => .error e
 
-/-- `dict_or` (@3.14.7:4775-4790): `none` is `NotImplemented`. -/
+/-- `PyDict_Copy` (:4549-4564): a frozendict is refused here, unlike `anydict_copy_untracked`. -/
+def pyDictCopy (isDict : Bool) (mp : PyDict K V) (id : Nat) : Py (PyDict K V) :=
+  if isDict && !mp.frozen then dictCopy P mp id false (.dict mp) else .error badInternalCall
+
+/-- `_PyDict_Or` (:5150-5166): `none` is `NotImplemented`. The copy is a frozendict exactly when
+`self` is (`anydict_copy_untracked`, :4569-4583). -/
 def dictOr (self : PyDict K V) (id : Nat) (other : Option (PyDict K V))
     (otherArg : UpdateArg K V) : Py (Option (PyDict K V)) :=
   match other with
@@ -592,11 +624,43 @@ def dictOr (self : PyDict K V) (id : Nat) (other : Option (PyDict K V))
     match dictCopy P self id false (.dict self) with
     | .error e => .error e
     | .ok new =>
-      match dictUpdateArg P otherArg new with
+      match dictUpdateArg P otherArg { new with frozen := self.frozen } with
       | (.ok _, d) => .ok (some d)
       | (.error e, _) => .error e
 
-/-- `dict_ior` (:5168-5198). -/
+/-- `frozendict_or` (:5168-5188) for exact frozendict `self` and an exact dict or frozendict
+`other`: an empty side gives back the other object, without a copy. -/
+def frozendictOr (self other : PyDict K V) (id : Nat) (otherArg : UpdateArg K V) :
+    Py (Option (PyDict K V)) :=
+  if self.frozen && self.used == 0 && other.frozen then .ok (some other)
+  else if self.frozen && other.used == 0 then .ok (some self)
+  else dictOr P self id (some other) otherArg
+
+/-- `frozendict_vectorcall` (:5394-5436) with an exact `frozendict` type. `shell` is the empty
+object of `frozendict_new_untracked` (:8454-8466). -/
+def frozendictVectorcall (shell : PyDict K V) (args : List (UpdateArg K V)) (kw : List (K × V)) :
+    Py (PyDict K V) :=
+  let build : DM K V Unit := do
+    match args with
+    | [arg] => dictUpdateArg P arg
+    | _ => pure ()
+    for (k, v) in kw do
+      dictSetItem P k v
+  match args, kw with
+  | _ :: _ :: _, _ =>
+    .error (.typeError s!"frozendict expected at most 1 argument, got {args.length}")
+  | [.exact x], [] =>
+    if x.frozen then .ok x
+    else
+      match build shell with
+      | (.ok _, d) => .ok d
+      | (.error e, _) => .error e
+  | _, _ =>
+    match build shell with
+    | (.ok _, d) => .ok d
+    | (.error e, _) => .error e
+
+/-- `_PyDict_IOr` (:5190-5198). -/
 def dictIor (other : UpdateArg K V) : DM K V Unit := dictUpdateArg P other
 
 /-- The loop of `dict_dict_fromkeys` (:3380-3385) and `dict_set_fromkeys` (:3406-3411). -/
@@ -674,7 +738,7 @@ def dictRichcompare (veq : V → V → Py Bool) (a : PyDict K V) (ne : Bool) : D
 
 end Merge
 
-/-- `dict_repr_lock_held` (:3641-3724), `dict_repr`. `inRepr` is `Py_ReprEnter`
+/-- `anydict_repr_impl` (:3641-3724), behind `dict_repr` and `frozendict_repr`. `inRepr` is `Py_ReprEnter`
 reporting a cycle. A repr that mutates the dict is out of scope. -/
 def dictRepr (krepr : K → Py String) (vrepr : V → Py String) (inRepr : Bool)
     (mp : PyDict K V) : Py String :=
@@ -692,6 +756,57 @@ def dictRepr (krepr : K → Py String) (vrepr : V → Py String) (inRepr : Bool)
           | .error e => .error e
           | .ok vs => go rest false (acc ++ ks ++ ": " ++ vs)
     go (dictItems mp) true "{"
+
+/-- `frozendict_repr` (:8341-8359), for an exact frozendict. -/
+def frozendictRepr (krepr : K → Py String) (vrepr : V → Py String) (inRepr : Bool)
+    (mp : PyDict K V) : Py String :=
+  if mp.used == 0 then .ok "frozendict()"
+  else
+    match dictRepr krepr vrepr inRepr mp with
+    | .error e => .error e
+    | .ok r => .ok s!"frozendict({r})"
+
+/-- `_shuffle_bits` (:8362-8366), on `Py_uhash_t`. -/
+def frozendictShuffle (h : Nat) : Nat :=
+  (((h ^^^ 89869747) ^^^ ((h <<< 16) % 2 ^ 64)) * 3644798167) % 2 ^ 64
+
+/-- `_PyTuple_HASH_XXROTATE`. -/
+def xxRotate (x : Nat) : Nat := ((x <<< 31) % 2 ^ 64) ||| (x >>> 33)
+
+/-- `frozendict_pair_hash` (:8368-8398), once the value's hash is in hand: `hash((key, value))`. -/
+def frozendictPairHash (keyHash valueHash : Int) : Int :=
+  let p1 : Nat := 11400714785074694791
+  let p2 : Nat := 14029467366897019727
+  let p5 : Nat := 2870177450012600261
+  let m : Nat := 2 ^ 64
+  let lane (acc v : Nat) : Nat := (xxRotate ((acc + v * p2) % m) * p1) % m
+  let acc := lane (lane p5 (toU64 keyHash)) (toU64 valueHash)
+  let acc := (acc + (2 ^^^ (p5 ^^^ 3527539))) % m
+  if acc == m - 1 then 1546275796 else toI64 acc
+
+/-- The hash of the items of `frozendict_hash` (:8402-8449). `vhash` is `PyObject_Hash(value)`, a
+callback that may raise, `RecursionError` from the guard at :8419 included. -/
+def frozendictHashItems (vhash : V → Py Int) : Nat → List (K × V × Int) → Py Nat
+  | acc, [] => .ok acc
+  | acc, (_, v, kh) :: rest =>
+    match vhash v with
+    | .error e => .error e
+    | .ok h =>
+      frozendictHashItems vhash (acc ^^^ frozendictShuffle (toU64 (frozendictPairHash kh h))) rest
+
+/-- `frozendict_hash` (:8402-8449). The result is cached in `ma_hash`; a failure is not. -/
+def frozendictHash (vhash : V → Py Int) : DM K V Int := fun mp =>
+  if mp.fhash != -1 then (.ok mp.fhash, mp)
+  else
+    match frozendictHashItems vhash 0 (dictItems mp) with
+    | .error e => (.error e, mp)
+    | .ok h0 =>
+      let m : Nat := 2 ^ 64
+      let h1 := h0 ^^^ (((mp.used + 1) * 1927868237) % m)
+      let h2 := h1 ^^^ (h1 >>> 11) ^^^ (h1 >>> 25)
+      let h3 := (h2 * 69069 + 907133923) % m
+      let h4 := if h3 == m - 1 then 590923713 else h3
+      (.ok (toI64 h4), { mp with fhash := toI64 h4 })
 
 /-- `keys_lock_held` (:3811-3847), `PyDict_Keys`. -/
 def dictKeysList (mp : PyDict K V) : List K := (dictItems mp).map (·.1)
@@ -787,7 +902,7 @@ def scanDown (es : List (Option (Ent K V))) : Nat → Option (Nat × Ent K V)
     | _ => scanDown es i
 
 /-- `dictreviter_iter_lock_held` (:6217-6314), `dictreviter_iternext` (:6316-6331).
-Unlike the forward iterators, 3.14.7 has no `di->len == 0` check here. -/
+Since gh-158254 it has the `di->len == 0` test of the forward iterators (:6272-6277). -/
 def dictiterNextReverse (d : PyDict K V) (di : DictIter) : Py (Option (K × V)) × DictIter :=
   if !di.alive then (.ok none, di) else
   if di.used != d.used then
@@ -812,7 +927,11 @@ def dictiterNextReverse (d : PyDict K V) (di : DictIter) : Py (Option (K × V)) 
     match found with
     | none => (.ok none, dead)
     | some (j, key, value) =>
-      (.ok (some (key, value)), { di with pos := (j : Int) - 1, len := di.len - 1 })
+      -- We found an element, but did not expect it
+      if di.len == 0 then
+        (.error (runtimeError "dictionary keys changed during iteration"), dead)
+      else
+        (.ok (some (key, value)), { di with pos := (j : Int) - 1, len := di.len - 1 })
 
 def dictiterNext (d : PyDict K V) (di : DictIter) : Py (Option (K × V)) × DictIter :=
   if di.rev then dictiterNextReverse d di else dictiterNextForward d di
@@ -846,11 +965,11 @@ def dictiterToList (d : PyDict K V) (di : DictIter) : Py (List (K × V)) × Dict
   | .error e => (.error e, di)
   | .ok _ => dictiterDrain d (d.body.nentries + d.used + 2) di []
 
-/-- `dictiter_reduce` (:5932-5945): drain a copy, leaving `di` itself untouched. -/
+/-- `dictiter_reduce` (:6360-6373): drain a copy, leaving `di` itself untouched. -/
 def dictiterReduce (d : PyDict K V) (di : DictIter) : Py (List (K × V)) :=
   (dictiterToList d di).1
 
-/-- `_PyDict_NewPresized` and `dict_new_presized` (:2225-2258). -/
+/-- `_PyDict_NewPresized` and `dict_new_presized` (:2307-2339). -/
 def dictNewPresized (id minused : Nat) (unicode : Bool) : PyDict K V :=
   let log2MaxPresize := 17
   let maxPresize := 2 ^ log2MaxPresize
@@ -864,7 +983,7 @@ def dictNewPresized (id minused : Nat) (unicode : Bool) : PyDict K V :=
 section
 variable [DecidableEq K] (P : Proto K (PyDict K V))
 
-/-- `_PyDict_FromItems` (:2260-2297), the `BUILD_MAP` entry point. -/
+/-- `_PyDict_FromItems` (:2341-2377), the `BUILD_MAP` entry point. -/
 def dictFromItems (id : Nat) (items : List (K × V)) : Py (PyDict K V) :=
   let unicode := items.all fun i => P.isStr i.1
   let start : PyDict K V := dictNewPresized id items.length unicode
@@ -875,7 +994,7 @@ def dictFromItems (id : Nat) (items : List (K × V)) : Py (PyDict K V) :=
   | (.ok _, d) => .ok d
   | (.error e, _) => .error e
 
-/-- `_PyDict_LoadGlobal` (:2598-2621), `_PyDict_LoadGlobalStackRef` (:2623-2647):
+/-- `_PyDict_LoadGlobalStackRef` (:2667-2692):
 globals, then builtins. `none` is "not found, no exception" (a `NameError` in the caller). -/
 def dictLoadGlobal (globals builtins : PyDict K V) (key : K) : Py (Option V) :=
   match P.hash key with
@@ -890,7 +1009,7 @@ def dictLoadGlobal (globals builtins : PyDict K V) (key : K) : Py (Option V) :=
         | .error e => .error e
         | .ok (_, v) => .ok v
 
-/-- `_PyDict_GetMethodStackRef` (:1680-1724) in the GIL build. -/
+/-- `_PyDict_GetMethodStackRef` (:1751-1795) in the GIL build. -/
 def dictGetMethod (mp : PyDict K V) (key : K) (method : Option V) : Py (Bool × Option V) :=
   match P.hash key with
   | .error e => .error e
@@ -902,7 +1021,7 @@ def dictGetMethod (mp : PyDict K V) (key : K) (method : Option V) : Py (Bool × 
       | some o => if ix ≥ 0 then .ok (true, some o) else .ok (false, method)
       | none => .ok (false, method)
 
-/-- `_PyDict_LoadBuiltinsFromGlobals` (:2649-2681): `globals["__builtins__"]`, or the
+/-- `_PyDict_LoadBuiltinsFromGlobals` (:2694-2726): `globals["__builtins__"]`, or the
 frame's builtins; a module stands for its dict (`moduleDict`). -/
 def dictLoadBuiltinsFromGlobals (isDict : Bool) (globals : PyDict K V) (key : K) (hash : Int)
     (dflt : V) (moduleDict : V → Option V) : Py V :=
@@ -917,10 +1036,10 @@ def dictLoadBuiltinsFromGlobals (isDict : Bool) (globals : PyDict K V) (key : K)
 
 end
 
-/-- `_PyDictKeys_StringLookup` (:1198-1206): `DKIX_ERROR` is `none`. -/
+/-- `_PyDictKeys_StringLookup` (:1268-1276): `DKIX_ERROR` is `none`. -/
 def dictKeysStringLookup [DecidableEq K] (P : Proto K (PyDict K V)) {W : Type} (dk : Keys K W)
     (key : K) (hash : Int) : Py (Option Int) :=
-  -- check_keys_unicode (:1145-1149), hash_unicode_key (:1151-1161)
+  -- check_keys_unicode (:1215-1219), hash_unicode_key (:1221-1231)
   if !(P.isStr key && dk.kind != .general) then .ok none
   else
     match unicodekeysLookupUnicode P dk key hash with

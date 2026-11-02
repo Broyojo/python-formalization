@@ -16,13 +16,39 @@ Slots 0 and 1 keep their object; slot 2 receives results, so iterators stay vali
 import importlib.util
 import itertools
 import contextlib
+import ctypes
 import json
 import os
 import resource
 import sys
 from collections import OrderedDict
 
+import _testcapi as tc
+import _testlimitedcapi as tl
+
 import common
+
+
+def kwf(**kw):
+    """`f(**a, **b)` is DICT_MERGE, which is `_PyDict_MergeUniq`: override 2 with a dupkey."""
+    return kw
+
+
+class Refuses:
+    def __get__(self, obj, tp=None):
+        raise ValueError("look")
+
+
+def with_missing(base, how, v):
+    """A subclass of `base`, by what looking up and calling `__missing__` does."""
+    if how == 0:
+        return type("M", (base,), {})
+
+    def missing(self, k):
+        if how == 2:
+            raise ValueError("miss")
+        return v
+    return type("M", (base,), {"__missing__": Refuses() if how == 3 else missing})
 
 
 class S(str):
@@ -389,6 +415,97 @@ def dict_op2(rng, n, specs):
     return ["dict", 0, upd_arg(rng, n, False)]
 
 
+def fz_op(rng, n, specs):
+    """A frozendict into slot 2, and what can only be asked of one. Slot 2 is an argument of many
+    other operations, which is what reaches the `PyAnyDict_Check` tests."""
+    k = lambda: rng.randrange(n)
+    o = rng.random()
+    if o < 0.30:
+        strs = [s["u"] for s in specs if s["s"]]
+        kw = []
+        if strs and rng.random() < 0.3:
+            kw = [[x, k()] for x in rng.sample(strs, min(len(strs), rng.randint(1, 3)))]
+        return ["fz", upd_arg(rng, n, False), kw]
+    if o < 0.34:
+        return ["fz0"]
+    if o < 0.36:
+        return ["fz2", upd_arg(rng, n, False)]
+    if o < 0.46:
+        return ["f_or", rng.randrange(3)]
+    if o < 0.54:
+        return ["f_hash"]
+    if o < 0.60:
+        return ["repr", 2]
+    if o < 0.66:
+        src = rng.choice([["d", rng.randrange(3)], ["s", rng.randrange(3)],
+                          ["l", [k() for _ in range(rng.randint(0, 7))]],
+                          ["g", [k() for _ in range(rng.randint(0, 3))]], ["n"]])
+        return ["f_fromkeys", src, k()]
+    if o < 0.74:
+        return ["f_it", rng.choice("kvi"), rng.random() < 0.5]
+    if o < 0.84:
+        return [rng.choice(["get", "in"]), 2, k()]
+    if o < 0.89:
+        return ["getd", 2, k(), k()]
+    if o < 0.93:
+        return [rng.choice(["len", "keys", "values", "items"]), 2]
+    if o < 0.96:
+        return ["copy", 2]
+    if o < 0.98:
+        return ["eq", 2, rng.randrange(3), rng.random() < 0.3]
+    return ["m_get", rng.random() < 0.5, rng.randrange(3), k(), rng.randrange(4), k()]
+
+
+def capi_arg(rng, n):
+    k = lambda: rng.randrange(n)
+    o = rng.random()
+    if o < 0.6:
+        return ["d", rng.randrange(3)]
+    if o < 0.9:
+        ks = [k() for _ in range(rng.randint(0, 6))]
+        return ["m", ks, [[x, k()] for x in ks if rng.random() < 0.9]]
+    return ["n"]
+
+
+def capi_op(rng, n, specs):
+    """The entry points Python code cannot reach, on a dict, a frozendict or a list."""
+    k = lambda: rng.randrange(n)
+    t = rng.choice([0, 0, 1, 2, 2, -1])
+    o = rng.random()
+    if o < 0.20:
+        return ["c_set", t, k(), k()]
+    if o < 0.27:
+        return ["c_del", t, k()]
+    if o < 0.33:
+        return ["c_in", t, k()]
+    if o < 0.41:
+        return ["c_get", t, k()]
+    if o < 0.46:
+        return ["c_gete", t, k()]
+    if o < 0.51:
+        return ["c_getr", t, k()]
+    if o < 0.56:
+        return ["c_pop", t, k()]
+    if o < 0.62:
+        return [rng.choice(["c_sdef", "c_sdefr"]), t, k(), k()]
+    if o < 0.72:
+        return ["c_merge", t, capi_arg(rng, n), rng.choice([0, 1, 2])]
+    if o < 0.78:
+        items = [pair_item(rng, n) for _ in range(rng.randint(0, 5))]
+        return ["c_seq2", t, items, rng.random() < 0.5]
+    if o < 0.80:
+        return ["c_clear", t]
+    if o < 0.83:
+        return ["c_copy", t]
+    if o < 0.87:
+        return [rng.choice(["c_size", "c_keys", "c_values", "c_items"]), t]
+    if o < 0.92:
+        return ["c_kw", rng.randrange(3), rng.randrange(3)]
+    s = rng.choice([0, 0, 1, 2, -1])
+    return rng.choice([["c_sin", s, k()], ["c_sdisc", s, k()], ["c_sadd", s, k()], ["c_spop", s],
+                       ["c_ssize", s], ["c_sclear", s]])
+
+
 def set_arg(rng, n):
     k = lambda: rng.randrange(n)
     o = rng.random()
@@ -413,8 +530,10 @@ def set_op(rng, n):
         return ["sdisc", s, k()]
     if o < 0.46:
         return ["srem", s, k()]
-    if o < 0.50:
+    if o < 0.48:
         return ["sin", rng.randrange(3), k()]
+    if o < 0.50:
+        return ["fin", rng.randrange(3), k()]
     if o < 0.56:
         return ["spop", s]
     if o < 0.58:
@@ -499,6 +618,58 @@ def gen_dict(rng):
         if op is None:
             op = dict_op2(rng, n, pool.specs)
         ops.append(op)
+    return pool, ops
+
+
+def gen_frozen(rng):
+    pool = Pool()
+    mode = rng.random()
+    if mode < 0.3:
+        int_pool(pool, rng, rng.randint(4, 24), 64)
+    elif mode < 0.5:
+        str_pool(pool, rng, rng.randint(4, 16))
+    else:
+        mixed_pool(pool, rng)
+    n = len(pool.specs)
+    ops = []
+    for _ in range(rng.randint(2, 10)):
+        ops.append(["set", rng.randrange(2), rng.randrange(n), rng.randrange(n)])
+    for _ in range(rng.randint(5, 40)):
+        r = rng.random()
+        if r < 0.5:
+            ops.append(fz_op(rng, n, pool.specs))
+        elif r < 0.7:
+            ops.append(dict_op(rng, n) or dict_op2(rng, n, pool.specs))
+        elif r < 0.85:
+            ops.append(view_op(rng, n))
+        else:
+            ops.append(set_op(rng, n))
+    return pool, ops
+
+
+def gen_capi(rng):
+    pool = Pool()
+    mode = rng.random()
+    if mode < 0.2:
+        int_pool(pool, rng, rng.randint(4, 24), 64)
+    elif mode < 0.45:
+        str_pool(pool, rng, rng.randint(4, 16))
+    else:
+        mixed_pool(pool, rng)
+    n = len(pool.specs)
+    ops = []
+    for _ in range(rng.randint(2, 10)):
+        ops.append(["set", rng.randrange(2), rng.randrange(n), rng.randrange(n)])
+    for _ in range(rng.randint(1, 6)):
+        ops.append(["sadd", rng.randrange(2), rng.randrange(n)])
+    for _ in range(rng.randint(5, 40)):
+        r = rng.random()
+        if r < 0.75:
+            ops.append(capi_op(rng, n, pool.specs))
+        elif r < 0.9:
+            ops.append(fz_op(rng, n, pool.specs))
+        else:
+            ops.append(["fnew", 0, ["s", rng.randrange(2)]])
     return pool, ops
 
 
@@ -676,11 +847,12 @@ def pair_item(rng, n):
     return ["l", rng.choice([0, 1, 3])]
 
 
-def od_arg(rng, n):
+def od_arg(rng, n, twin=False):
+    """`twin`: the C OrderedDict, whose update has a test for an exact frozendict."""
     k = lambda: rng.randrange(n)
     r = rng.random()
     if r < 0.3:
-        return ["d", rng.randrange(2)]
+        return ["fd" if twin and rng.random() < 0.3 else "d", rng.randrange(2)]
     if r < 0.55:
         ks = [k() for _ in range(rng.randint(0, 6))]
         return ["m", ks, [[x, k()] for x in ks if rng.random() < 0.9]]
@@ -722,11 +894,11 @@ def od_ops(rng, n, p, specs):
         kw = []
         if strs and rng.random() < 0.3:
             kw = [[x, k()] for x in rng.sample(strs, min(len(strs), 2))]
-        return [p + "upd", i, od_arg(rng, n), kw]
+        return [p + "upd", i, od_arg(rng, n, p == "o_"), kw]
     if r < 0.90:
-        return [p + "ior", i, od_arg(rng, n)]
+        return [p + "ior", i, od_arg(rng, n, p == "o_")]
     if r < 0.92:
-        return [p + "or", i, ["d", rng.randrange(2)]]
+        return [p + "or", i, ["fd" if p == "o_" and rng.random() < 0.3 else "d", rng.randrange(2)]]
     if r < 0.96:
         return [p + "eq", i, rng.randrange(3), rng.random() < 0.3]
     return [p + "fromkeys", 0, [k() for _ in range(rng.randint(0, 6))], k()]
@@ -765,7 +937,8 @@ def gen_odict(rng):
             if not raw:
                 ops.append(["o_repr", rng.randrange(3)])
         elif r < 0.34:
-            ops.append(["o_eqd", rng.randrange(2), rng.randrange(2), rng.random() < 0.3])
+            ops.append(["o_eqd", rng.randrange(2), rng.randrange(2), rng.random() < 0.3,
+                        rng.random() < 0.3])
         elif raw and r < 0.45:
             i = rng.randrange(2)
             ops.append(rng.choice([["r_set", i, rng.randrange(n), rng.randrange(n)],
@@ -865,8 +1038,12 @@ def gen_case(rng):
     r = rng.random()
     target = None
     case = None
-    if r < 0.20:
+    if r < 0.15:
         pool, ops = gen_dict(rng)
+    elif r < 0.18:
+        pool, ops = gen_frozen(rng)
+    elif r < 0.20:
+        pool, ops = gen_capi(rng)
     elif r < 0.23:
         pool, ops = gen_growth(rng)
         case = {"every": 32}
@@ -914,6 +1091,7 @@ class Runner:
         self.C = type("C", (), {})
         self.objs = [None] * 3 if self.fn == "instances" else []
         self.touched = [False] * 3
+        self.unr = []
         POOL[0] = self.pool
         t = case.get("target")
         if t in ("d", "d0"):
@@ -952,6 +1130,9 @@ class Runner:
     def run_op(self, op):
         self.note = None
         res = common.py_result(lambda: self.step(op))
+        if res.get("exc") == "SystemError":
+            # The message has the C file and line; this is the form the model gives.
+            res["msg"] = "~" + res["msg"].split(": ", 1)[1]
         if self.note is not None:
             res["note"] = self.note
         return res
@@ -988,6 +1169,8 @@ class Runner:
         t = a[0]
         if t == "d":
             return self.ds[a[1]]
+        if t == "fd":
+            return frozendict(self.ds[a[1]])
         if t == "m":
             return Mapping([self.O(x) for x in a[1]], [(self.O(p[0]), self.O(p[1])) for p in a[2]])
         if t == "p":
@@ -1037,7 +1220,8 @@ class Runner:
         elif name == "eq":
             return (od != ods[op[2]]) if op[3] else (od == ods[op[2]])
         elif name == "eqd":
-            return (od != self.ds[op[2]]) if op[3] else (od == self.ds[op[2]])
+            o = frozendict(self.ds[op[2]]) if len(op) > 4 and op[4] else self.ds[op[2]]
+            return (od != o) if op[3] else (od == o)
         elif name == "fromkeys":
             ods[2] = Cls.fromkeys([P[x] for x in op[2]], P[op[3]])
         elif name == "repr":
@@ -1193,10 +1377,127 @@ class Runner:
             return self.ss[a[1]]
         return self.set_arg(a)
 
+    def c_target(self, t, slots):
+        return slots[t] if t >= 0 else []
+
+    def step_capi(self, op):
+        name = op[0]
+        P = self.pool
+        t = op[1]
+        d = self.c_target(t, self.ds)
+        s = self.c_target(t, self.ss)
+        E0 = lambda r: None if r is KeyError else self.E(r)
+        if name == "c_set":
+            tl.dict_setitem(d, P[op[2]], P[op[3]])
+        elif name == "c_del":
+            tl.dict_delitem(d, P[op[2]])
+        elif name == "c_in":
+            return bool(tl.dict_contains(d, P[op[2]]))
+        elif name == "c_get":
+            got = []
+            old = sys.unraisablehook
+            sys.unraisablehook = lambda u: got.append(u.exc_value)
+            try:
+                r = tl.dict_getitem(d, P[op[2]])
+            finally:
+                sys.unraisablehook = old
+            e = got[0] if got else None
+            return [E0(r), [type(e).__name__, str(e)] if e is not None else None]
+        elif name == "c_gete":
+            return E0(tl.dict_getitemwitherror(d, P[op[2]]))
+        elif name == "c_getr":
+            return E0(tc.dict_getitemref(d, P[op[2]]))
+        elif name == "c_pop":
+            r = tc.dict_pop(d, P[op[2]])
+            return [r[0], self.E(r[1]) if r[0] else None]
+        elif name == "c_sdef":
+            # `_testcapi.dict_setdefault` returns the borrowed reference of PyDict_SetDefault as if it
+            # were its own, so each call would take one reference from the value.
+            r = tc.dict_setdefault(d, P[op[2]], P[op[3]])
+            ctypes.pythonapi.Py_IncRef(ctypes.py_object(r))
+            return self.E(r)
+        elif name == "c_sdefr":
+            return self.E(tc.dict_setdefaultref(d, P[op[2]], P[op[3]]))
+        elif name == "c_merge":
+            a = op[2]
+            b = None if a[0] == "n" else self.ds[a[1]] if a[0] == "d" else self.upd_arg(a)
+            tl.dict_merge(d, b, op[3])
+        elif name == "c_seq2":
+            tl.dict_mergefromseq2(d, [self.seq2(x) for x in op[2]], int(op[3]))
+        elif name == "c_clear":
+            tl.dict_clear(d)
+        elif name == "c_copy":
+            self.ds[2] = tl.dict_copy(d)
+        elif name == "c_size":
+            return tl.dict_size(d)
+        elif name == "c_keys":
+            return self.Es(tl.dict_keys(d))
+        elif name == "c_values":
+            return self.Es(tl.dict_values(d))
+        elif name == "c_items":
+            return [self.E(x) for x in tl.dict_items(d)]
+        elif name == "c_kw":
+            try:
+                return ["ok", self.Es(kwf(**d, **self.ds[op[2]]))]
+            except TypeError as e:
+                m = str(e)
+                if "multiple values" in m:
+                    return ["dup", m.split("keyword argument ")[1]]
+                raise
+        elif name == "c_sin":
+            return bool(tl.set_contains(s, P[op[2]]))
+        elif name == "c_sdisc":
+            return bool(tl.set_discard(s, P[op[2]]))
+        elif name == "c_sadd":
+            tl.set_add(s, P[op[2]])
+        elif name == "c_spop":
+            return self.E(tl.set_pop(s))
+        elif name == "c_ssize":
+            return tl.set_size(s)
+        elif name == "c_sclear":
+            tl.set_clear(s)
+        else:
+            raise ValueError(name)
+        return None
+
+    def step_fz(self, op):
+        name = op[0]
+        P = self.pool
+        ds, ss = self.ds, self.ss
+        if name == "fz":
+            ds[2] = frozendict(self.upd_arg(op[1]), **{P[a]: P[b] for a, b in op[2]})
+        elif name == "fz0":
+            ds[2] = frozendict()
+        elif name == "fz2":
+            a = self.upd_arg(op[1])
+            ds[2] = frozendict(a, a)
+        elif name == "f_or":
+            ds[2] = ds[2] | ds[op[1]]
+        elif name == "f_hash":
+            return hash(ds[2])
+        elif name == "f_fromkeys":
+            t = op[1]
+            src = ds[t[1]] if t[0] == "d" else ss[t[1]] if t[0] == "s" else self.set_arg(t)
+            ds[2] = frozendict.fromkeys(src, P[op[2]])
+        elif name == "f_it":
+            d = ds[2]
+            view = {"k": d.keys, "v": d.values, "i": d.items}[op[1]]()
+            return [self.E(x) for x in (reversed(view) if op[2] else iter(view))]
+        elif name == "m_get":
+            cls = with_missing(frozendict if op[1] else dict, op[4], P[op[5]])
+            return self.E(cls(ds[op[2]])[P[op[3]]])
+        else:
+            raise ValueError(name)
+        return None
+
     def step(self, op):
         name = op[0]
         P = self.pool
         ds, ss = self.ds, self.ss
+        if name[:2] == "c_":
+            return self.step_capi(op)
+        if name[:2] == "f_" or name[:2] == "fz" or name == "m_get":
+            return self.step_fz(op)
         if name[:2] in ("o_", "p_", "r_"):
             return self.step_odx(op)
         if name[:2] == "i_":
@@ -1292,7 +1593,7 @@ class Runner:
         name = op[0]
         P = self.pool
         ss = self.ss
-        s = ss[op[1]] if name[0] == "s" and name != "sit_new" else None
+        s = ss[op[1]] if name[0] == "s" and name != "sit_new" or name == "fin" else None
         args = lambda: [self.set_arg(a) for a in op[2]]
         if name == "sadd":
             s.add(P[op[2]])
@@ -1302,6 +1603,8 @@ class Runner:
             s.discard(P[op[2]])
         elif name == "sin":
             return P[op[2]] in s
+        elif name == "fin":
+            return type(s).__contains__(s, P[op[2]])
         elif name == "spop":
             return self.E(s.pop())
         elif name == "sclear":

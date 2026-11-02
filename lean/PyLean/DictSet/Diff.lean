@@ -263,6 +263,215 @@ def takeNote (i : Nat) (p : Json × St) : Json × St :=
   let d := p.2.ds[i]!
   (withNote d.note p.1, { p.2 with ds := p.2.ds.set! i { d with note := none } })
 
+/-- `str(key)` of a pool object. -/
+def strOf : DObj → String
+  | .atom a =>
+    if a.isStrLike then (((a.rep.drop 1).dropEnd 1).copy) else a.rep
+  | x => x.reprStr
+
+/-- The right operand of a C API merge, by its tag. -/
+def mergeObj (st : St) (j : Json) : Except String (Option (MergeObj DObj DObj)) := do
+  let a ← j.getArr?
+  match ← (← arg a 0).getStr? with
+  | "d" =>
+    return some { isDict := true, iterIsDict := true, asDict := st.ds[← argN a 1]!,
+                  keys := pure [], getitem := fun _ => M.throw .modelFuel }
+  | "m" =>
+    match ← mapArg st (← arg a 1) (← arg a 2) with
+    | .mapping ks g => return some { isDict := false, iterIsDict := false, asDict := {}, keys := ks,
+                                     getitem := g }
+    | .dict _ => throw "merge arg"
+  | _ => return none
+
+/-- `['c_*', target, ...]`: the C API through `_testlimitedcapi` and `_testcapi`. `target` is a slot,
+or `-1` for a list. A slot is what the model runs on; nothing but a no-op or a refusal reaches it
+with `-1`. -/
+def stepC (st : St) (name : String) (a : Array Json) : Except String (Option (Json × St)) := do
+  if !name.startsWith "c_" then return none
+  let t ← (← arg a 1).getInt?
+  let isAny := decide (0 ≤ t)
+  let i := t.toNat
+  let k (n : Nat) : Except String DObj := do obj st (← arg a n)
+  let P := dProto
+  let S := sProto
+  let d := st.ds[i]!
+  let so := st.ss[i]!
+  match name with
+  | "c_set" => return some (resJ unitJ (withD st i (dictSetItemChecked P isAny (← k 2) (← k 3))))
+  | "c_del" => return some (resJ unitJ (withD st i (dictDelItemChecked P isAny (← k 2))))
+  | "c_in" => return some (resJ toJson (withD st i (pyDictContainsChecked P isAny (← k 2))))
+  | "c_get" =>
+    let (r, st') := withD st i (dictGetitemFull P isAny (← k 2))
+    let f : Option DObj × Option PyExc → Json := fun p =>
+      Json.arr #[match p.1 with
+        | some v => enc v
+        | none => Json.null,
+        match p.2 with
+        | some e => Json.arr #[toJson e.className, toJson e.message]
+        | none => Json.null]
+    return some (enc1 f r, st')
+  | "c_gete" =>
+    let enco : Option DObj → Json := fun o => match o with
+      | some v => enc v
+      | none => Json.null
+    return some (resJ enco (withD st i (pyDictGetItemWithError P isAny (← k 2))))
+  | "c_getr" =>
+    let enco : Option DObj → Json := fun o => match o with
+      | some v => enc v
+      | none => Json.null
+    return some (resJ enco (withD st i (pyDictGetItemRef P isAny (← k 2))))
+  | "c_pop" =>
+    let enco : Option DObj → Json := fun o => match o with
+      | some v => Json.arr #[toJson (1 : Nat), enc v]
+      | none => Json.arr #[toJson (0 : Nat), Json.null]
+    return some (resJ enco (withD st i (pyDictPop P isAny (← k 2))))
+  | "c_sdef" | "c_sdefr" =>
+    let incref := name == "c_sdefr"
+    let enco : Nat × Option DObj → Json := fun o => match o.2 with
+      | some v => enc v
+      | none => Json.null
+    return some (resJ enco (withD st i (dictSetdefaultRefChecked P isAny (← k 2) (← k 3) true incref)))
+  | "c_merge" =>
+    let ov ← argN a 3
+    let b ← mergeObj st (← arg a 2)
+    return some (resJ unitJ (withD st i (dictMergeChecked P isAny b (if ov != 0 then 1 else 0))))
+  | "c_seq2" =>
+    let items ← (← arrOf (← arg a 2)).mapM (seq2Item st)
+    let ov ← (← arg a 3).getBool?
+    return some (resJ unitJ (withD st i
+      (pyDictMergeFromSeq2 P isAny (ReIter.ofIterable { items }) ov)))
+  | "c_clear" =>
+    return some (okJ Json.null, { st with ds := st.ds.set! i (dictClearChecked (isAny && !d.frozen) d) })
+  | "c_copy" =>
+    let (id, st) := fresh st
+    return some (toDSlot2 st (pyDictCopy P isAny d id))
+  | "c_size" =>
+    return some ((if isAny then okJ (toJson d.used) else errJ badInternalCall), st)
+  | "c_keys" =>
+    return some ((if isAny then okJ (encs (dictKeysList d)) else errJ badInternalCall), st)
+  | "c_values" =>
+    return some ((if isAny then okJ (encs (dictValuesList d)) else errJ badInternalCall), st)
+  | "c_items" =>
+    return some ((if isAny then okJ (Json.arr ((dictItemsList d).map encPair).toArray)
+      else errJ badInternalCall), st)
+  | "c_kw" =>
+    let j ← argN a 2
+    let (r1, s1) := dictMerge P (.dict d) 2 ({ ident := 0 } : DD)
+    let (r2, s2) := match r1 with
+      | .ok _ => dictMerge P (.dict st.ds[j]!) 2 s1
+      | .error e => (.error e, s1)
+    match r2 with
+    | .ok _ =>
+      let ks := dictKeysList s2
+      if ks.all (fun x => dProto.isStrLike x) then
+        return some (okJ (Json.arr #[toJson "ok", encs ks]), st)
+      else return some (errJ (.typeError "keywords must be strings"), st)
+    | .error e =>
+      if e == mergeDupExc then
+        match s2.dupkey with
+        | some x => return some (okJ (Json.arr #[toJson "dup", toJson s!"'{strOf x}'"]), st)
+        | none => throw "dupkey"
+      else return some (errJ e, st)
+  | "c_sin" =>
+    return some (resJ toJson (withS st i (pySetContains S isAny (← k 2))))
+  | "c_sdisc" =>
+    return some (resJ toJson (withS st i (pySetDiscard S (isAny && !so.frozen) (← k 2))))
+  | "c_sadd" =>
+    return some (resJ unitJ (withS st i (pySetAdd S (isAny && !so.frozen) false (← k 2))))
+  | "c_spop" =>
+    if isAny && !so.frozen then return some (resJ enc (withS st i setPop))
+    else return some (errJ setBadInternalCall, st)
+  | "c_ssize" =>
+    return some ((if isAny then okJ (toJson so.used) else errJ setBadInternalCall), st)
+  | "c_sclear" =>
+    if isAny && !so.frozen then
+      return some (okJ Json.null, { st with ss := st.ss.set! i (setClearInternal so) })
+    else return some (errJ setBadInternalCall, st)
+  | _ => return none
+
+def encKV (kind : IterKind) (p : DObj × DObj) : Json :=
+  match kind.result p with
+  | .key k => enc k
+  | .value v => enc v
+  | .item k v => encPair (k, v)
+
+/-- `frozendict` operations on slot 2. -/
+def stepFz (st : St) (name : String) (a : Array Json) : Except String (Option (Json × St)) := do
+  let P := dProto
+  let d := st.ds[2]!
+  let kwOf (j : Json) : Except String (List (DObj × DObj)) := do
+    (← arrOf j).mapM fun p => do
+      let q ← p.getArr?
+      return ((← obj st (← arg q 0)), (← obj st (← arg q 1)))
+  let toSlot (r : Py DD) (st : St) : Json × St :=
+    match r with
+    | .ok x => (okJ Json.null, { st with ds := st.ds.set! 2 x })
+    | .error e => (errJ e, st)
+  match name with
+  | "fz" =>
+    let (id, st) := fresh st
+    let shell : DD := { ident := id, frozen := true }
+    let u ← updArg st (← arg a 1)
+    return some (toSlot (frozendictVectorcall P shell [u] (← kwOf (← arg a 2))) st)
+  | "fz0" =>
+    let (id, st) := fresh st
+    return some (toSlot (frozendictVectorcall P ({ ident := id, frozen := true } : DD) [] []) st)
+  | "fz2" =>
+    let u ← updArg st (← arg a 1)
+    return some (toSlot (frozendictVectorcall P ({ frozen := true } : DD) [u, u] []) st)
+  | "f_or" =>
+    let j ← argN a 1
+    let (id, st) := fresh st
+    let other := st.ds[j]!
+    match frozendictOr P d other id (.exact other) with
+    | .ok (some r) => return some (okJ Json.null, { st with ds := st.ds.set! 2 r })
+    | .ok none => throw "f_or"
+    | .error e => return some (errJ e, st)
+  | "f_hash" =>
+    if !d.frozen then return some (errJ (.typeError "unhashable type: 'dict'"), st)
+    let (r, d') := frozendictHash DObj.hash d
+    return some (enc1 toJson r, { st with ds := st.ds.set! 2 d' })
+  | "f_fromkeys" =>
+    let v ← obj st (← arg a 2)
+    let (id, st) := fresh st
+    let t ← (← arg a 1).getArr?
+    let tag ← (← arg t 0).getStr?
+    let src : FromKeysArg DObj DObj ← match tag with
+      | "d" => pure (.dict st.ds[← argN t 1]!)
+      | "s" =>
+        let s := st.ss[← argN t 1]!
+        pure (.set s.used (setEntries s))
+      | "l" => pure (.iter { items := ← objs st (← arg t 1) })
+      | "g" => pure (.iter { items := ← objs st (← arg t 1), stop := some (.valueError "stop") })
+      | _ => pure (.iter { getIter := some (.typeError "'int' object is not iterable"), items := [] })
+    let (r, x) := dictFromKeys P src v ({ ident := id, frozen := true } : DD)
+    match r with
+    | .ok _ => return some (okJ Json.null, { st with ds := st.ds.set! 2 x })
+    | .error e => return some (errJ e, st)
+  | "f_it" =>
+    let kind : IterKind ← match ← (← arg a 1).getStr? with
+      | "k" => pure .key
+      | "v" => pure .value
+      | _ => pure .item
+    let rev ← (← arg a 2).getBool?
+    let (r, _) := dictiterToList d (dictiterNew d kind rev)
+    return some (enc1 (fun l => Json.arr (l.map (encKV kind)).toArray) r, st)
+  | "m_get" =>
+    -- `['m_get', frozen, slot, key, how, value]`: a subclass of dict or frozendict, by `__missing__`.
+    let frozen ← (← arg a 1).getBool?
+    let slot ← argN a 2
+    let key ← obj st (← arg a 3)
+    let how ← argN a 4
+    let v ← obj st (← arg a 5)
+    let look : DM DObj DObj (Option (DObj → DM DObj DObj DObj)) := match how with
+      | 0 => pure none
+      | 1 => pure (some fun _ => pure v)
+      | 2 => pure (some fun _ => M.throw (.valueError "miss"))
+      | _ => M.throw (.valueError "look")
+    let (r, _) := dictSubscript P (some look) key { st.ds[slot]! with frozen }
+    return some (enc1 enc r, st)
+  | _ => return none
+
 def stepDict (st : St) (name : String) (a : Array Json) : Except String (Option (Json × St)) := do
   let i := (a[1]?.bind fun j => j.getNat?.toOption).getD 0
   let k (n : Nat) : Except String DObj := do obj st (← arg a n)
@@ -284,7 +493,9 @@ def stepDict (st : St) (name : String) (a : Array Json) : Except String (Option 
   | "items" => return some (okJ (Json.arr ((dictItemsList st.ds[i]!).map encPair).toArray), st)
   | "repr" =>
     let d := st.ds[i]!
-    return some (enc1 toJson (dictRepr (fun x => .ok x.reprStr) (fun x => .ok x.reprStr) false d), st)
+    let show1 : DObj → Py String := fun x => .ok x.reprStr
+    return some (enc1 toJson
+      ((if d.frozen then frozendictRepr else dictRepr) show1 show1 false d), st)
   | "upd" =>
     let u ← updArg st (← arg a 2)
     let kw ← (← arrOf (← arg a 3)).mapM fun p => do
@@ -311,6 +522,8 @@ def stepDict (st : St) (name : String) (a : Array Json) : Except String (Option 
   | "copy" =>
     let (id, st) := fresh st
     let d := st.ds[i]!
+    -- `frozendict_copy_impl` (:8520-8535): an exact frozendict is its own copy.
+    if d.frozen then return some (okJ Json.null, { st with ds := st.ds.set! 2 d })
     return some (toDSlot2 st (dictCopy P d id false (.dict d)))
   | "eq" =>
     let j ← argN a 2
@@ -348,12 +561,6 @@ def stepDict (st : St) (name : String) (a : Array Json) : Except String (Option 
     | .ok _ => return some (okJ Json.null, { st with ds := st.ds.set! 2 d })
     | .error e => return some (withNote d.note (errJ e), st)
   | _ => return none
-
-def encKV (kind : IterKind) (p : DObj × DObj) : Json :=
-  match kind.result p with
-  | .key k => enc k
-  | .value v => enc v
-  | .item k v => encPair (k, v)
 
 def stepIter (st : St) (name : String) (a : Array Json) : Except String (Option (Json × St)) := do
   let setIt (st : St) (n : Nat) (it : It) : St := { st with its := st.its.set! n (some it) }
@@ -429,6 +636,10 @@ def stepSet (st : St) (name : String) (a : Array Json) : Except String (Option (
   | "srem" => return some (resJ unitJ (withS st i (setRemove P sh (← k 2))))
   | "sdisc" => return some (resJ unitJ (withS st i (setDiscard P sh (← k 2))))
   | "sin" => return some (resJ toJson (withS st i (setContains P sh (← k 2))))
+  | "fin" =>
+    -- `type(s).__contains__(s, key)`.
+    if so.frozen then return some (resJ toJson (withS st i (frozensetContains P sh (← k 2))))
+    return some (resJ toJson (withS st i (setContains P sh (← k 2))))
   | "spop" => return some (resJ enc (withS st i setPop))
   | "sclear" => return some (okJ Json.null, { st with ss := st.ss.set! i (setClearInternal so) })
   | "slen" => return some (okJ (toJson so.used), st)
@@ -582,7 +793,7 @@ def odArg (twin : Bool) (st : St) (j : Json) : Except String (ODictArg DObj DObj
   let pitems (x : Json) : Except String (List (PairItem DObj DObj)) := do
     (← arrOf x).mapM (pairItem twin st)
   match tag with
-  | "d" => return .exact st.ds[← argN a 1]!
+  | "d" | "fd" => return .exact st.ds[← argN a 1]!
   | "m" =>
     let ks ← objs st (← arg a 1)
     let ps ← (← arrOf (← arg a 2)).mapM fun p => do
@@ -863,6 +1074,8 @@ def stepInst (st : St) (name : String) (a : Array Json) : Except String (Option 
 def step (st : St) (op : Json) : Except String (Json × St) := do
   let a ← op.getArr?
   let name ← (← arg a 0).getStr?
+  if let some r := ← stepC st name a then return r
+  if let some r := ← stepFz st name a then return r
   if let some r := ← stepDict st name a then return r
   if let some r := ← stepIter st name a then return r
   if let some r := ← stepSet st name a then return r

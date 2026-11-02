@@ -212,6 +212,25 @@ theorem setContains_spec (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K
   · simp [hn, any_keys_false so key hne]
   · simp [hs, any_keys_true so s k h key hs heq]
 
+/-- `key in s` and `s.__contains__(key)` on any well-formed table, by the hash of the key. -/
+theorem setContains_hash (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K) :
+    setContainsEntry P key (hf key) so = (.ok ((setKeys so).any (eqv · key)), so) := by
+  obtain ⟨s, h1, h2⟩ := setLookkey_spec H w key
+  simp only [setContainsEntry, M.bind_run, h1, M.get_run]
+  rcases h2 with ⟨hn, hne⟩ | ⟨k, h, hs, heq⟩
+  · simp [hn, any_keys_false so key hne]
+  · simp [hs, any_keys_true so s k h key hs heq]
+
+/-- `frozenset.__contains__`, which runs `set_compare_frozenset` even on a subclass. -/
+theorem frozensetContains_hash (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (setHash : K → Option Int)
+    (key : K) :
+    frozensetContains P setHash key so = (.ok ((setKeys so).any (eqv · key)), so) := by
+  obtain ⟨s, h1, h2⟩ := lookOuter_spec (P := P) H w true key
+  simp only [frozensetContains, containsHash, H.hash_ok, M.bind_run, M.lift_run, M.get_run, h1]
+  rcases h2 with ⟨hn, hne⟩ | ⟨k, h, hs, heq⟩
+  · simp [hn, any_keys_false so key hne]
+  · simp [hs, any_keys_true so s k h key hs heq]
+
 /-- `s.discard(key)`. -/
 theorem setDiscard_spec (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K) :
     ((setKeys so).any (eqv · key) = false ∧ setDiscardKey P key so = (.ok false, so)) ∨
@@ -653,8 +672,8 @@ variable (P : Proto K (SetObj K)) (key startkey : K) (hash : Int) (slot mask : N
 theorem lookStep_raises (hs : so.slot slot = .active startkey hash) (h1 : startkey ≠ key)
     (h2 : ¬ ((P.isStr startkey = true ∧ P.isStr key = true) ∧ P.strEq startkey key = true))
     (hq : P.eq startkey key so = (.error e, s')) :
-    lookStep P fr key hash slot mask so = (.error e, s') := by
-  simp [lookStep, M.bind_run, M.get_run, hs, h1, h2, hq]
+    lookStep P fr key hash slot so = (.error e, s') := by
+  cases fr <;> simp [lookStep, compareFrozen, compareLocked, M.bind_run, M.get_run, hs, h1, h2, hq]
 
 /-- With a set whose table `__eq__` changed, `set_lookkey` restarts, whatever `__eq__` answered, while
 a frozenset does not look: it cannot change. -/
@@ -662,11 +681,11 @@ theorem lookStep_changed (b : Bool) (hs : so.slot slot = .active startkey hash) 
     (h2 : ¬ ((P.isStr startkey = true ∧ P.isStr key = true) ∧ P.strEq startkey key = true))
     (hq : P.eq startkey key so = (.ok b, s'))
     (hch : setChanged s' so.tableId slot startkey = true) :
-    lookStep P false key hash slot mask so = (.ok (.inl .restart), s') := by
-  simp [lookStep, M.bind_run, M.get_run, hs, h1, h2, hq, hch]
+    lookStep P false key hash slot so = (.ok (.inl .restart), s') := by
+  simp [lookStep, compareLocked, M.bind_run, M.get_run, hs, h1, h2, hq, hch]
 
-/-- `set_add_entry` tests the answer first (:173-174) and the table after it (:177), the reverse of
-`set_lookkey` (:118, :120): an `__eq__` that answers yes and changes the table is believed. -/
+/-- `set_add_entry` tests the answer first (:290-291) and the table after it (:294), the reverse of
+`set_compare_entry_lock_held` (:159, :161): an `__eq__` that answers yes and changes the table is believed. -/
 theorem addStep_trusts_yes (fs : Option Nat) (hs : so.slot slot = .active startkey hash)
     (h1 : startkey ≠ key)
     (h2 : ¬ ((P.isStr startkey = true ∧ P.isStr key = true) ∧ P.strEq startkey key = true))
@@ -705,19 +724,73 @@ def SetProbeFailure : Prop :=
     so.slot slot = .active startkey hash → startkey ≠ key →
     ¬ ((P.isStr startkey = true ∧ P.isStr key = true) ∧ P.strEq startkey key = true) →
     (P.eq startkey key so = (.error e, s') →
-      (∀ fr, lookStep P fr key hash slot mask so = (.error e, s')) ∧
+      (∀ fr, lookStep P fr key hash slot so = (.error e, s')) ∧
       addStep P key hash slot mask fs so = (.error e, s')) ∧
     (setChanged s' so.tableId slot startkey = true →
       (∀ b, P.eq startkey key so = (.ok b, s') →
-        lookStep P false key hash slot mask so = (.ok (.inl .restart), s')) ∧
+        lookStep P false key hash slot so = (.ok (.inl .restart), s')) ∧
       (P.eq startkey key so = (.ok false, s') →
         addStep P key hash slot mask fs so = (.ok (.inl .restart), s')))
 theorem setProbeFailure_proven : SetProbeFailure := by
   intro K _ P key startkey hash slot mask so s' e fs hs h1 h2
-  refine ⟨fun hq => ⟨fun fr => lookStep_raises P key startkey hash slot mask so s' e fr hs h1 h2 hq,
+  refine ⟨fun hq => ⟨fun fr => lookStep_raises P key startkey hash slot so s' e fr hs h1 h2 hq,
     addStep_raises P key startkey hash slot mask so s' e fs hs h1 h2 hq⟩, fun hch => ⟨?_, ?_⟩⟩
-  · exact fun b hq => lookStep_changed P key startkey hash slot mask so s' b hs h1 h2 hq hch
+  · exact fun b hq => lookStep_changed P key startkey hash slot so s' b hs h1 h2 hq hch
   · exact fun hq => addStep_changed P key startkey hash slot mask so s' fs hs h1 h2 hq hch
+
+/-- `_PySet_Contains` and `frozenset.__contains__`, on every branch of the hash: a good hash is the
+list membership, whichever compare function the object takes, and a failed one is retried with the
+frozenset hash only for a `TypeError` from a `set`. A frozenset and a set answer alike here, where
+their compare functions differ. -/
+def SetContainsBody : Prop :=
+  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (hf : K → Int) (eqv : K → K → Bool),
+    HonestSet P hf eqv → ∀ (so : SetObj K) (key : K) (setHash : K → Option Int),
+      SetWF hf eqv so →
+      setContains P setHash key so = (.ok ((setKeys so).any (eqv · key)), so) ∧
+      frozensetContains P setHash key so = (.ok ((setKeys so).any (eqv · key)), so)
+theorem setContainsBody_proven : SetContainsBody := by
+  intro K _ P hf eqv H so key setHash w
+  refine ⟨?_, frozensetContains_hash H w setHash key⟩
+  simp only [setContains, containsHash, H.hash_ok, M.bind_run, M.lift_run]
+  exact setContains_hash H w key
+
+/-- The two compare functions differ on a key whose hash changed after it went in: `set_compare_frozenset`
+tests identity first (:180-182), so an exact frozenset finds the object at the slot, and
+`set_compare_entry_lock_held` tests the hash first (:144), so a set walks past it. Python shows it:
+`{x}` and `frozenset({x})` answer differently for `x in ...` once `x`'s hash has moved within the
+same slot. -/
+def FrozenIdentityFirst : Prop :=
+  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (so : SetObj K) (key : K) (h hash : Int)
+    (slot : Nat), so.slot slot = .active key h → h ≠ hash →
+    lookStep P true key hash slot so = (.ok (.inl (.found slot)), so) ∧
+    lookStep P false key hash slot so = (.ok (.inr ()), so)
+theorem frozenIdentityFirst_proven : FrozenIdentityFirst := by
+  intro K _ P so key h hash slot hs hn
+  constructor
+  · simp [lookStep, compareFrozen, M.bind_run, M.get_run, hs]
+  · simp [lookStep, compareLocked, M.bind_run, M.get_run, hs, hn]
+
+/-- What a failed hash does in `_PySet_Contains`, for every key protocol: a `TypeError` from a `set`
+is retried with the frozenset hash, and anything else goes through `set_unhashable_type`. -/
+def SetContainsRetry : Prop :=
+  ∀ (K : Type) [DecidableEq K] (P : Proto K (SetObj K)) (key : K) (e : PyExc) (so : SetObj K)
+    (h : Int) (setHash : K → Option Int), P.hash key = .error e →
+      (setHash key = some h → (∃ m, e = .typeError m) →
+        setContains P setHash key so = setContainsEntry P key h so) ∧
+      (setHash key = none → setContains P setHash key so = (.error (setUnhashableType P key e), so)) ∧
+      ((∀ m, e ≠ .typeError m) →
+        setContains P setHash key so = (.error (setUnhashableType P key e), so))
+theorem setContainsRetry_proven : SetContainsRetry := by
+  intro K _ P key e so h setHash hh
+  refine ⟨fun h1 ⟨m, hm⟩ => ?_, fun h1 => ?_, fun h1 => ?_⟩
+  · subst hm
+    simp [setContains, containsHash, hh, h1, M.bind_run, M.lift_run]
+  · simp [setContains, containsHash, hh, h1, M.bind_run, M.lift_run]
+  · cases e with
+    | typeError m => exact absurd rfl (h1 m)
+    | _ =>
+      cases hs : setHash key <;>
+        simp [setContains, containsHash, hh, hs, M.bind_run, M.lift_run]
 
 /-- `set_add_entry` and `set_lookkey` differ on an `__eq__` that answers yes and changes the table:
 the lookup goes round again, the add stops, believing it. -/
@@ -727,11 +800,11 @@ def SetAddTrustsYes : Prop :=
     so.slot slot = .active startkey hash → startkey ≠ key →
     ¬ ((P.isStr startkey = true ∧ P.isStr key = true) ∧ P.strEq startkey key = true) →
     P.eq startkey key so = (.ok true, s') → setChanged s' so.tableId slot startkey = true →
-    lookStep P false key hash slot mask so = (.ok (.inl .restart), s') ∧
+    lookStep P false key hash slot so = (.ok (.inl .restart), s') ∧
     addStep P key hash slot mask fs so = (.ok (.inl .active), s')
 theorem setAddTrustsYes_proven : SetAddTrustsYes := by
   intro K _ P key startkey hash slot mask so s' fs hs h1 h2 hq hch
-  exact ⟨lookStep_changed P key startkey hash slot mask so s' true hs h1 h2 hq hch,
+  exact ⟨lookStep_changed P key startkey hash slot so s' true hs h1 h2 hq hch,
     addStep_trusts_yes P key startkey hash slot mask so s' fs hs h1 h2 hq⟩
 
 /-- A failed hash, for every key protocol. -/

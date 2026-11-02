@@ -1,7 +1,7 @@
 import PyLean.DictSet.Views
 
 /-!
-`Objects/odictobject.c` (CPython 3.14.7): the doubly linked list of nodes on top of a dict,
+`Objects/odictobject.c` (CPython 3.15.2): the doubly linked list of nodes on top of a dict,
 `od_fast_nodes`, and the iterator. Line numbers refer to `Objects/odictobject.c`.
 
 The list is `nodes`, first to last; node pointers are `Node.id`. `od_fast_nodes` mirrors the

@@ -1,5 +1,6 @@
 import PyLean.DictSet.Props4
 import PyLean.DictSet.Split
+import PyLean.DictSet.Findings
 
 /-!
 The six dict iterators over an unchanged dict, both table forms, in both directions, and what each of
@@ -58,15 +59,15 @@ theorem scanDown_spec (es : List (Option (Ent K V))) :
 theorem reverse_drain (d : PyDict K V) (k : Keys K V) (hb : d.body = .combined k) :
     ∀ (fuel n : Nat) (di : DictIter) (acc : List (K × V)),
       di.alive = true → di.rev = true → di.used = d.used → di.pos = (n : Int) - 1 →
-      n ≤ k.nentries → n < fuel →
+      di.len = (((k.entries.take n).filterMap id).length : Int) → n ≤ k.nentries → n < fuel →
       (dictiterDrain d fuel di acc).1 =
         .ok (acc.reverse ++
           (((k.entries.take n).filterMap id).reverse.map fun e => (e.key, e.value))) := by
   intro fuel
   induction fuel with
-  | zero => intro _ _ _ _ _ _ _ _ h; omega
+  | zero => intro _ _ _ _ _ _ _ _ _ h; omega
   | succ fuel ih =>
-    intro n di acc ha hr hu hp hn hf
+    intro n di acc ha hr hu hp hl hn hf
     cases n with
     | zero =>
       have hx : dictiterNext d di = (.ok none, { di with alive := false }) := by
@@ -79,12 +80,18 @@ theorem reverse_drain (d : PyDict K V) (k : Keys K V) (hb : d.body = .combined k
       · have hx : dictiterNext d di = (.ok none, { di with alive := false }) := by
           simp [dictiterNext, hr, dictiterNextReverse, ha, hu, hpos, hb, h1, Nat.not_le.mpr hlt]
         simp [dictiterDrain, hx, h2]
-      · have hx : dictiterNext d di = (.ok (some (e.key, e.value)),
+      · have hlen : di.len = (((k.entries.take j).filterMap id).length : Int) + 1 := by
+          rw [hl, h2]
+          simp
+        have hl0 : (di.len == 0) = false := by
+          simp only [beq_eq_false_iff_ne, ne_eq]
+          omega
+        have hx : dictiterNext d di = (.ok (some (e.key, e.value)),
             { di with pos := (j : Int) - 1, len := di.len - 1 }) := by
-          simp [dictiterNext, hr, dictiterNextReverse, ha, hu, hpos, hb, h1, Nat.not_le.mpr hlt]
+          simp [dictiterNext, hr, dictiterNextReverse, ha, hu, hpos, hb, h1, Nat.not_le.mpr hlt, hl0]
         simp only [dictiterDrain, hx]
         rw [ih j { di with pos := (j : Int) - 1, len := di.len - 1 } ((e.key, e.value) :: acc)
-          ha hr hu rfl (by omega) (by omega)]
+          ha hr hu rfl (by simp only [hlen]; omega) (by omega) (by omega)]
         rw [h2]
         simp
 
@@ -142,15 +149,15 @@ theorem reverse_drain_split (d : PyDict K V) (k : Keys K Unit) (v : Values V)
     (hb : d.body = .split k v) (w : SplitWF hf eqv isStr k v d.used) :
     ∀ (fuel n : Nat) (di : DictIter) (acc : List (K × V)),
       di.alive = true → di.rev = true → di.used = d.used → di.pos = (n : Int) - 1 →
-      n ≤ d.used → n < fuel →
+      di.len = (n : Int) → n ≤ d.used → n < fuel →
       (dictiterDrain d fuel di acc).1 =
         .ok (acc.reverse ++
           (((v.order.take n).filterMap (slot k v)).reverse.map fun e => (e.key, e.value))) := by
   intro fuel
   induction fuel with
-  | zero => intro _ _ _ _ _ _ _ _ h; omega
+  | zero => intro _ _ _ _ _ _ _ _ _ h; omega
   | succ fuel ih =>
-    intro n di acc ha hr hu hp hn hf'
+    intro n di acc ha hr hu hp hl hn hf'
     cases n with
     | zero =>
       have hx : dictiterNext d di = (.ok none, { di with alive := false }) := by
@@ -163,13 +170,16 @@ theorem reverse_drain_split (d : PyDict K V) (k : Keys K Unit) (v : Values V)
       obtain ⟨e0, x, h1, h2, h3⟩ := slot_of_order w hmem
       have hidx : v.indexFromOrder m = v.order[m] := by
         simp [Values.indexFromOrder, List.getD, hlen]
+      have hl0 : (di.len == 0) = false := by
+        simp only [beq_eq_false_iff_ne, ne_eq]
+        omega
       have hx : dictiterNext d di = (.ok (some (e0.key, x)),
           { di with pos := (m : Int) - 1, len := di.len - 1 }) := by
         simp only [dictiterNext, hr, dictiterNextReverse]
-        simp [ha, hu, hb, hpos, hidx, h1, h2]
+        simp [ha, hu, hb, hpos, hidx, h1, h2, hl0]
       simp only [dictiterDrain, hx]
       rw [ih m { di with pos := (m : Int) - 1, len := di.len - 1 } ((e0.key, x) :: acc)
-        ha hr hu rfl (by omega) (by omega)]
+        ha hr hu rfl (by simp only [hl]; omega) (by omega) (by omega)]
       have ht : (v.order.take (m + 1)).filterMap (slot k v) =
           (v.order.take m).filterMap (slot k v) ++ [⟨e0.key, e0.hash, x⟩] := by
         rw [List.take_succ (i := m), List.getElem?_eq_getElem hlen]
@@ -244,6 +254,7 @@ theorem iter_toList (d : PyDict K V) (hd : DictInv hf eqv isStr d ∨ SplitInv h
         (dictiterNew d kind true) []
         rfl (by simp [dictiterNew]) (by simp [dictiterNew])
         (by simp [dictiterNew, Body.isSplit, Body.nentries, hb, Keys.nentries])
+        (by simp [dictiterNew, hu, liveEntries, Keys.nentries])
         (Nat.le_refl _) (by omega)
       have ht : k.entries.take k.nentries = k.entries := List.take_of_length_le (Nat.le_refl _)
       rw [ht] at this
@@ -266,7 +277,7 @@ theorem iter_toList (d : PyDict K V) (hd : DictInv hf eqv isStr d ∨ SplitInv h
       have := reverse_drain_split d k v hb w (d.body.nentries + d.used + 2) d.used
         (dictiterNew d kind true) []
         rfl (by simp [dictiterNew]) (by simp [dictiterNew])
-        (by simp [dictiterNew, Body.isSplit, hb]) (Nat.le_refl _) (by omega)
+        (by simp [dictiterNew, Body.isSplit, hb]) (by simp [dictiterNew]) (Nat.le_refl _) (by omega)
       rw [ht] at this
       simpa [dictAssoc, hb, hl, List.map_reverse] using this
 
@@ -312,8 +323,8 @@ theorem viewIterOrder_proven : ViewIterOrder := by
 
 /-- What an iterator does when it cannot go on, for any iterator and any dict. An exhausted one stays
 exhausted; a changed size raises and stays raised, because `di_used` is set to `-1` and `ma_used` is
-never that; and the forward iterators raise when they find an entry past the count they started
-with, which is how a change that kept the size shows. The reverse iterators lack that test. -/
+never that; and both directions raise when they find an entry past the count they started with,
+which is how a change that kept the size shows, and hand the entry back otherwise. -/
 def DictIterFailure : Prop :=
   ∀ (K V : Type) (d : PyDict K V) (di : DictIter),
     (di.alive = false → dictiterNext d di = (.ok none, di)) ∧
@@ -337,8 +348,11 @@ def DictIterFailure : Prop :=
     (di.alive = true → di.used = d.used → di.rev = true →
       ∀ (k : Keys K V) (j : Nat) (e : Ent K V), d.body = .combined k → 0 ≤ di.pos →
         di.pos < k.nentries → scanDown k.entries di.pos.toNat = some (j, e) →
-        dictiterNext d di =
-          (.ok (some (e.key, e.value)), { di with pos := (j : Int) - 1, len := di.len - 1 }))
+        (di.len = 0 → dictiterNext d di =
+          (.error (runtimeError "dictionary keys changed during iteration"),
+            { di with alive := false })) ∧
+        (di.len ≠ 0 → dictiterNext d di =
+          (.ok (some (e.key, e.value)), { di with pos := (j : Int) - 1, len := di.len - 1 })))
 theorem dictIterFailure_proven : DictIterFailure := by
   intro K V d di
   refine ⟨fun h => ?_, fun h hn => ?_, fun h hu hr hl k j e hb hs => ?_,
@@ -355,6 +369,81 @@ theorem dictIterFailure_proven : DictIterFailure := by
     simp [dictiterNext, dictiterNextForward, h, hr, hu, hl, hb, h1, h2, h3]
   · have h1 : ¬ di.pos < 0 := by omega
     have h2 : ¬ di.pos ≥ (k.nentries : Int) := by omega
-    simp [dictiterNext, dictiterNextReverse, h, hr, hu, hb, hs, h1, h2]
+    constructor
+    · intro hl
+      simp [dictiterNext, dictiterNextReverse, h, hr, hu, hb, hs, h1, h2, hl]
+    · intro hl
+      simp [dictiterNext, dictiterNextReverse, h, hr, hu, hb, hs, h1, h2, hl]
+
+section Hint
+variable {K V : Type} [DecidableEq K]
+
+/-- What a reverse iterator keeps through any program. -/
+def RevOK (di : DictIter) : Prop := di.rev = true ∧ 0 ≤ di.len ∧ di.len < 2 ^ 63
+
+omit [DecidableEq K] in
+theorem revOK_next (d : PyDict K V) (di : DictIter) (h : RevOK di) : RevOK (dictiterNext d di).2 := by
+  obtain ⟨hr, h0, h1⟩ := h
+  simp only [RevOK, dictiterNext, hr, if_true, dictiterNextReverse]
+  repeat' split
+  all_goals first
+    | exact ⟨hr, h0, h1⟩
+    | exact ⟨rfl, h0, h1⟩
+    | (refine ⟨rfl, ?_, ?_⟩ <;> simp_all <;> omega)
+
+theorem revRun_inv {P : Proto K (PyDict K V)} {hf : K → Int} {eqv : K → K → Bool}
+    (H : Honest P hf eqv) : ∀ (steps : List (RevStep K V)) (d : PyDict K V) (di : DictIter),
+      DictInv hf eqv P.isStr d → RevOK di → RevOK (revRun P steps d di).2 := by
+  intro steps
+  induction steps with
+  | nil => intro d di _ h; exact h
+  | cons s rest ih =>
+    intro d di hd h
+    cases s with
+    | set k v =>
+      simp only [revRun]
+      rcases setItemRefines_proven K V P hf eqv H d hd k v with ⟨_, h1⟩ | ⟨d', h1, h2, _⟩
+      · rw [h1]
+        exact ih d di hd h
+      · rw [h1]
+        exact ih d' di h2 h
+    | del k =>
+      simp only [revRun]
+      rcases delItemRefines_proven K V P hf eqv H d hd k with ⟨_, h1⟩ | ⟨_, d', h1, h2, _⟩
+      · rw [h1]
+        exact ih d di hd h
+      · rw [h1]
+        exact ih d' di h2 h
+    | start =>
+      simp only [revRun]
+      refine ih d _ hd ⟨rfl, ?_, ?_⟩
+      · simp [dictiterNew]
+      · have := dictInv_used_lt d hd
+        simp only [dictiterNew]
+        omega
+    | next =>
+      simp only [revRun]
+      exact ih d _ hd (revOK_next d di h)
+
+/-- `__length_hint__` of a reverse dict iterator is a valid `Py_ssize_t`, under any program: since
+gh-158254 `len` is decremented only after the test at :6273. -/
+theorem revIterLenNonneg_proven : RevIterLenNonneg := by
+  intro K V _ P hf eqv H steps r
+  have h0 : DictInv hf eqv P.isStr ({ ident := 1 } : PyDict K V) := dictInv_new hf eqv P.isStr 1 1
+  have hi : RevOK (dictiterNew ({ ident := 1 } : PyDict K V) .key true) := by
+    refine ⟨rfl, ?_, ?_⟩ <;> simp [dictiterNew]
+  have hok : RevOK r.2 := revRun_inv H steps _ _ h0 hi
+  obtain ⟨_, h1, h2⟩ := hok
+  have hint : toU64 r.2.len = r.2.len.toNat := by
+    simp only [toU64]
+    have : r.2.len % (2 ^ 64 : Int) = r.2.len := Int.emod_eq_of_lt h1 (by omega)
+    rw [this]
+  simp only [dictiterLen]
+  split
+  · rw [hint]
+    omega
+  · simp
+
+end Hint
 
 end PyLean.DictSet

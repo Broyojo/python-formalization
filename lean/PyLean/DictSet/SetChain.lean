@@ -121,50 +121,54 @@ def SStop (so : SetObj K) (eqv : K → K → Bool) (key : K) (s : Nat) : Prop :=
 
 theorem lookStep_stop (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (fr : Bool) (key : K) (slot : Nat)
     (hst : SStop so eqv key slot) :
-    lookStep P fr key (hf key) slot so.mask so = (.ok (.inl (.found slot)), so) := by
+    lookStep P fr key (hf key) slot so = (.ok (.inl (.found slot)), so) := by
   rcases hst with hn | ⟨k, h, hs, heq⟩
-  · simp [lookStep, M.bind_run, M.get_run, hn]
+  · cases fr <;> simp [lookStep, compareFrozen, compareLocked, M.bind_run, M.get_run, hn]
   · have hh : h = hf key := (w.hashes slot k h hs).trans (H.hash_cons _ _ heq)
     subst hh
     have hc := setChanged_same so slot k _ hs
     by_cases h1 : k = key
-    · simp [lookStep, M.bind_run, M.get_run, hs, h1]
+    · cases fr <;> simp [lookStep, compareFrozen, compareLocked, M.bind_run, M.get_run, hs, h1]
     · by_cases h2 : (P.isStr k = true ∧ P.isStr key = true) ∧ P.strEq k key = true
-      · simp [lookStep, M.bind_run, M.get_run, hs, h1, h2]
-      · cases fr <;> simp [lookStep, M.bind_run, M.get_run, hs, h1, h2, H.eq_ok, heq, hc]
+      · cases fr
+        · simp [lookStep, compareLocked, M.bind_run, M.get_run, hs, h1, h2]
+        · simp [lookStep, compareFrozen, M.bind_run, M.get_run, hs, h1, H.eq_ok, heq]
+      · cases fr <;> simp [lookStep, compareFrozen, compareLocked, M.bind_run, M.get_run, hs, h1, h2,
+          H.eq_ok, heq, hc]
 
 theorem lookStep_pass (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (fr : Bool) (key : K) (slot : Nat)
     (hst : ¬ SStop so eqv key slot) :
-    lookStep P fr key (hf key) slot so.mask so = (.ok (.inr so.mask), so) := by
+    lookStep P fr key (hf key) slot so = (.ok (.inr ()), so) := by
   cases hs : so.slot slot with
   | null => exact absurd (Or.inl hs) hst
-  | dummy => simp [lookStep, M.bind_run, M.get_run, hs]
+  | dummy => cases fr <;> simp [lookStep, compareFrozen, compareLocked, M.bind_run, M.get_run, hs]
   | active k h =>
     have hne : eqv k key = false := by
       cases hq : eqv k key with
       | false => rfl
       | true => exact absurd (Or.inr ⟨k, h, hs, hq⟩) hst
     have hc := setChanged_same so slot k h hs
+    have h1 : k ≠ key := by
+      intro he
+      rw [he, H.refl] at hne
+      simp at hne
     by_cases hh : h = hf key
-    · have h1 : k ≠ key := by
-        intro he
-        rw [he, H.refl] at hne
-        simp at hne
-      have h2 : ¬ ((P.isStr k = true ∧ P.isStr key = true) ∧ P.strEq k key = true) := by
+    · have h2 : ¬ ((P.isStr k = true ∧ P.isStr key = true) ∧ P.strEq k key = true) := by
         rintro ⟨⟨h3, h4⟩, h5⟩
         rw [H.str_eq _ _ h3 h4, hne] at h5
         simp at h5
-      cases fr <;> simp [lookStep, M.bind_run, M.get_run, hs, hh, h1, h2, H.eq_ok, hne, hc]
-    · simp [lookStep, M.bind_run, M.get_run, hs, hh]
+      cases fr <;> simp [lookStep, compareFrozen, compareLocked, M.bind_run, M.get_run, hs, hh, h1, h2,
+        H.eq_ok, hne, hc]
+    · cases fr <;> simp [lookStep, compareFrozen, compareLocked, M.bind_run, M.get_run, hs, hh, h1]
 
 open Classical in
 /-- One block of `set_lookkey`: it stops at the first stop in the block, or goes on. -/
 theorem lookScan_walk (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (fr : Bool) (key : K) :
     ∀ (p slot : Nat),
       (∃ j, j ≤ p ∧ SStop so eqv key (slot + j) ∧ (∀ j', j' < j → ¬ SStop so eqv key (slot + j')) ∧
-        lookScan P fr key (hf key) p slot so.mask so = (.ok (.found (slot + j)), so)) ∨
+        lookScan P fr key (hf key) p slot so = (.ok (.found (slot + j)), so)) ∨
       ((∀ j, j ≤ p → ¬ SStop so eqv key (slot + j)) ∧
-        lookScan P fr key (hf key) p slot so.mask so = (.ok (.next so.mask), so)) := by
+        lookScan P fr key (hf key) p slot so = (.ok .next, so)) := by
   intro p
   induction p with
   | zero =>
@@ -185,8 +189,8 @@ theorem lookScan_walk (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (fr : Bool)
     · left
       refine ⟨0, by omega, hs, fun j' h => by omega, ?_⟩
       simp [lookScan, M.bind_run, lookStep_stop H w fr key slot hs]
-    · have hstep : lookScan P fr key (hf key) (p + 1) slot so.mask so =
-          lookScan P fr key (hf key) p (slot + 1) so.mask so := by
+    · have hstep : lookScan P fr key (hf key) (p + 1) slot so =
+          lookScan P fr key (hf key) p (slot + 1) so := by
         simp [lookScan, M.bind_run, lookStep_pass H w fr key slot hs]
       have hshift : ∀ j, slot + 1 + j = slot + (j + 1) := fun j => by omega
       rcases ih (slot + 1) with ⟨j, h1, h2, h3, h4⟩ | ⟨h1, h2⟩
@@ -221,7 +225,7 @@ theorem lookOuter_walk (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (fr : Bool
         (∀ t'', t ≤ t'' → t'' < t' → ∀ j', j' ≤ linearProbes (spos so.mask u t'') so.mask →
           ¬ SStop so eqv key (spos so.mask u t'' + j')) ∧
         (∀ j', j' < j → ¬ SStop so eqv key (spos so.mask u t' + j')) ∧
-        lookOuter P fr key (hf key) fuel (spos so.mask u t) (probeState so.mask u t).2 so.mask so =
+        lookOuter P fr key (hf key) so.mask fuel (spos so.mask u t) (probeState so.mask u t).2 so =
           (.ok (some (spos so.mask u t' + j)), so) := by
   intro fuel
   induction fuel with
@@ -253,41 +257,41 @@ theorem lookOuter_walk (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (fr : Bool
             probeState so.mask u (t + 1) := by
           rw [setProbeStep_eq]
           rfl
-        have hg : lookOuter P fr key (hf key) (fuel + 1) (spos so.mask u t)
-            (probeState so.mask u t).2 so.mask so =
-            lookOuter P fr key (hf key) fuel (spos so.mask u (t + 1))
-              (probeState so.mask u (t + 1)).2 so.mask so := by
+        have hg : lookOuter P fr key (hf key) so.mask (fuel + 1) (spos so.mask u t)
+            (probeState so.mask u t).2 so =
+            lookOuter P fr key (hf key) so.mask fuel (spos so.mask u (t + 1))
+              (probeState so.mask u (t + 1)).2 so := by
           simp only [lookOuter, M.bind_run, h2]
-          show lookOuter P fr key (hf key) fuel
+          show lookOuter P fr key (hf key) so.mask fuel
             (setProbeStep so.mask (spos so.mask u t) (probeState so.mask u t).2).1
-            (setProbeStep so.mask (spos so.mask u t) (probeState so.mask u t).2).2 so.mask so = _
+            (setProbeStep so.mask (spos so.mask u t) (probeState so.mask u t).2).2 so = _
           rw [hn]
           rfl
         rw [hg]
         exact g
 
 theorem setLookkeyAux_ok (n : Nat) (so : SetObj K) (s : Nat) {key : K} {hash : Int}
-    (h : lookOuter P so.frozenExact key hash (setProbeFuel so.mask) (toU64 hash &&& so.mask) (toU64 hash)
-      so.mask so = (.ok (some s), so)) :
+    (h : lookOuter P so.frozenExact key hash so.mask (setProbeFuel so.mask) (toU64 hash &&& so.mask)
+      (toU64 hash) so = (.ok (some s), so)) :
     setLookkeyAux P key hash (n + 1) so = (.ok s, so) := by
   simp only [setLookkeyAux, M.bind_run, M.get_run]
   simp [h]
 
-/-- `set_lookkey`, in the three outcomes that matter: it changes nothing, and it stops at a NULL only
-when no equal key is in the table. -/
-theorem setLookkey_spec (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K) :
-    ∃ s, setLookkey P key (hf key) so = (.ok s, so) ∧
+/-- `set_do_lookup`, with either compare function, in the outcomes that matter: it changes nothing,
+and it stops at a NULL only when no equal key is in the table. -/
+theorem lookOuter_spec (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (fr : Bool) (key : K) :
+    ∃ s, lookOuter P fr key (hf key) so.mask (setProbeFuel so.mask) (toU64 (hf key) &&& so.mask)
+        (toU64 (hf key)) so = (.ok (some s), so) ∧
       ((so.slot s = .null ∧ ∀ s' k h, so.slot s' = .active k h → eqv k key = false) ∨
        ∃ k h, so.slot s = .active k h ∧ eqv k key = true) := by
   let u := toU64 (hf key)
   obtain ⟨t0, ht0, hn0⟩ := w.null_on_walk u (toU64_lt _)
-  obtain ⟨t, j, _, a, b, c, d, e, f⟩ := lookOuter_walk (P := P) H w so.frozenExact key u
+  obtain ⟨t, j, _, a, b, c, d, e, f⟩ := lookOuter_walk (P := P) H w fr key u
     (setProbeFuel so.mask) 0 ⟨t0, by omega, by omega, 0, by omega, Or.inl hn0⟩
-  have f' : lookOuter P so.frozenExact key (hf key) (setProbeFuel so.mask)
-      (toU64 (hf key) &&& so.mask) (toU64 (hf key)) so.mask so =
+  have f' : lookOuter P fr key (hf key) so.mask (setProbeFuel so.mask)
+      (toU64 (hf key) &&& so.mask) (toU64 (hf key)) so =
       (.ok (some (spos so.mask u t + j)), so) := f
-  refine ⟨spos so.mask u t + j, ?_, ?_⟩
-  · exact setLookkeyAux_ok 255 so _ f'
+  refine ⟨spos so.mask u t + j, f', ?_⟩
   · rcases c with hnull | ⟨k, h, hs, heq⟩
     · left
       refine ⟨hnull, ?_⟩
@@ -320,6 +324,14 @@ theorem setLookkey_spec (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K)
                 rw [hs'] at hnull
                 simp at hnull
     · exact Or.inr ⟨k, h, hs, heq⟩
+
+/-- `set_lookkey`: `set_do_lookup` with the compare function the object's type selects. -/
+theorem setLookkey_spec (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K) :
+    ∃ s, setLookkey P key (hf key) so = (.ok s, so) ∧
+      ((so.slot s = .null ∧ ∀ s' k h, so.slot s' = .active k h → eqv k key = false) ∨
+       ∃ k h, so.slot s = .active k h ∧ eqv k key = true) := by
+  obtain ⟨s, h1, h2⟩ := lookOuter_spec (P := P) H w so.frozenExact key
+  exact ⟨s, setLookkeyAux_ok 255 so _ h1, h2⟩
 
 end Look
 
