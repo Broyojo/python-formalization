@@ -46,7 +46,7 @@ Modules/_pickle.c	1514	1562	_Unpickler_ReadInto	_Unpickler_ReadInto(PickleState 
 Modules/_pickle.c	1585	1599	_Unpickler_CopyLine	_Unpickler_CopyLine(UnpicklerObject *self, char *line, Py_ssize_t len, char **result)	todo		
 Modules/_pickle.c	1606	1637	_Unpickler_Readline	_Unpickler_Readline(PickleState *state, UnpicklerObject *self, char **result)	todo		changed-in-3.15: the file input path of Unpickler.load is not modelled, only pickle.loads on bytes
 Modules/_pickle.c	1642	1659	_Unpickler_ResizeMemoList	_Unpickler_ResizeMemoList(UnpicklerObject *self, size_t new_size)	excluded		no-behaviour: allocation only; the sole visible outcome is MemoryError on allocator failure
-Modules/_pickle.c	1663	1692	_Unpickler_MemoGet	_Unpickler_MemoGet(PickleState *st, UnpicklerObject *self, size_t idx)	todo		
+Modules/_pickle.c	1663	1692	_Unpickler_MemoGet	_Unpickler_MemoGet(PickleState *st, UnpicklerObject *self, size_t idx)	todo		changed-in-3.15: only the not-found path is exercised, by the one witness of pickle-memoize-twins; missing a theorem over all states for the array hit, the dict lookup and the move from the dict into the array
 Modules/_pickle.c	1697	1736	_Unpickler_MemoPut	_Unpickler_MemoPut(UnpicklerObject *self, size_t idx, PyObject *value)	todo		
 Modules/_pickle.c	1739	1748	_Unpickler_NewMemo	_Unpickler_NewMemo(Py_ssize_t new_size)	excluded		no-behaviour: allocation only; the sole visible outcome is MemoryError on allocator failure
 Modules/_pickle.c	1752	1765	_Unpickler_MemoCleanup	_Unpickler_MemoCleanup(UnpicklerObject *self, PyObject **replacement)	excluded		no-behaviour: reference counting or GC support, no visible effect beyond object lifetime
@@ -136,7 +136,7 @@ Modules/_pickle.c	5737	5763	load_float	load_float(PickleState *state, UnpicklerO
 Modules/_pickle.c	5766	5784	load_binfloat	load_binfloat(PickleState *state, UnpicklerObject *self)	todo		
 Modules/_pickle.c	5787	5831	load_string	load_string(PickleState *st, UnpicklerObject *self)	todo		
 Modules/_pickle.c	5834	5867	load_counted_binstring	load_counted_binstring(PickleState *st, UnpicklerObject *self, int nbytes)	todo		
-Modules/_pickle.c	5870	5912	load_counted_binbytes	load_counted_binbytes(PickleState *state, UnpicklerObject *self, int nbytes)	todo		
+Modules/_pickle.c	5870	5912	load_counted_binbytes	load_counted_binbytes(PickleState *state, UnpicklerObject *self, int nbytes)	todo		changed-in-3.15: only the one 2 MiB witness of pickle-frame-chunk-twins runs this; missing a theorem over all sizes and frames, with the size overflow, truncation and frame-crossing failures
 Modules/_pickle.c	5915	5958	load_counted_bytearray	load_counted_bytearray(PickleState *state, UnpicklerObject *self)	todo		
 Modules/_pickle.c	5961	5980	load_next_buffer	load_next_buffer(PickleState *st, UnpicklerObject *self)	todo		
 Modules/_pickle.c	5983	6006	load_readonly_buffer	load_readonly_buffer(PickleState *state, UnpicklerObject *self)	todo		
@@ -163,11 +163,11 @@ Modules/_pickle.c	6487	6511	load_pop	load_pop(PickleState *state, UnpicklerObjec
 Modules/_pickle.c	6514	6523	load_pop_mark	load_pop_mark(PickleState *state, UnpicklerObject *self)	todo		
 Modules/_pickle.c	6526	6536	load_dup	load_dup(PickleState *state, UnpicklerObject *self)	todo		
 Modules/_pickle.c	6539	6567	load_get	load_get(PickleState *st, UnpicklerObject *self)	todo		
-Modules/_pickle.c	6570	6588	load_binget	load_binget(PickleState *st, UnpicklerObject *self)	todo		
+Modules/_pickle.c	6570	6588	load_binget	load_binget(PickleState *st, UnpicklerObject *self)	todo		changed-in-3.15: only the not-found path is exercised, by the one witness of pickle-memoize-twins; missing a theorem over all indices, with the found path and the read failure
 Modules/_pickle.c	6591	6609	load_long_binget	load_long_binget(PickleState *st, UnpicklerObject *self)	todo		
 Modules/_pickle.c	6615	6698	load_extension	load_extension(PickleState *st, UnpicklerObject *self, int nbytes)	todo		
 Modules/_pickle.c	6701	6729	load_put	load_put(PickleState *state, UnpicklerObject *self)	modelled	pickle-put-twins	
-Modules/_pickle.c	6732	6748	load_binput	load_binput(PickleState *state, UnpicklerObject *self)	todo		
+Modules/_pickle.c	6732	6748	load_binput	load_binput(PickleState *state, UnpicklerObject *self)	todo		changed-in-3.15: only the one witness of pickle-memoize-twins runs this; missing a theorem over all indices and stacks, with the read and stack underflow failures
 Modules/_pickle.c	6751	6772	load_long_binput	load_long_binput(PickleState *state, UnpicklerObject *self)	todo		
 Modules/_pickle.c	6775	6784	load_memoize	load_memoize(PickleState *state, UnpicklerObject *self)	todo		
 Modules/_pickle.c	6787	6857	do_append	do_append(PickleState *state, UnpicklerObject *self, Py_ssize_t x)	todo		

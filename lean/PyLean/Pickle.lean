@@ -152,7 +152,7 @@ def entries : List Entry := [
     bug := some "pickle-c-nul-in-text-args"
     notes := "I12\\0 as a whole stream. An empty APPENDS or ADDITEMS on the wrong target no longer differs: do_append and load_additems look the method up as Python does. The other text-opcode and memo divergences have their own entries." },
   { id := "pickle-memoize-twins", pyFile := "Modules/_pickle.c"
-    pyFns := ["load_memoize", "_Unpickler_MemoPut", "_Unpickler_MemoGet", "load_binput", "load_binget"]
+    pyFns := ["load_memoize", "_Unpickler_MemoPut"]
     statement := "After any BINPUT, MEMOIZE stores under the number of elements in the memo in both unpicklers, so a following BINGET finds the same object or fails in both."
     source := "Lib/pickletools.py:1874-1875 (MEMOIZE); invariant: C accelerator vs pure-Python twin", status := .refuted
     prop := ``MemoizeTwins, thm := some ``memoizeTwins_refuted
@@ -178,7 +178,7 @@ def entries : List Entry := [
     prop := ``FrameRead, thm := some ``frameRead_proven
     notes := "chunkedFileRead_run shows the chunk loop reads what one file_read would, on a BytesIO." },
   { id := "pickle-frame-chunk-twins", pyFile := "Modules/_pickle.c"
-    pyFns := ["load_counted_binbytes"]
+    pyFns := []
     statement := "A BINBYTES payload that runs past the end of its frame is rejected by both unpicklers, wherever the frame ends."
     source := "invariant: C accelerator vs pure-Python twin; the check in _Unpickler_ReadInto, Modules/_pickle.c:1514-1562; Lib/pickle.py:284-295", status := .refuted
     prop := ``FrameChunkTwins, thm := some ``frameChunkTwins_refuted
