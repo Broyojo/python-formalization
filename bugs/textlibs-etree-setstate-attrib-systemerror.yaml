@@ -1,0 +1,57 @@
+id: textlibs-etree-setstate-attrib-systemerror
+title: "Element.__setstate__ stores a non-dict attrib, after which get/set/keys/items raise SystemError"
+priority: P3
+kind: internal-error-leak
+module: textlibs
+files: [Modules/_elementtree.c]
+functions: ["element_setstate_from_attributes", "_elementtree_Element_get_impl", "_elementtree_Element_set_impl",
+            "_elementtree_Element_keys_impl", "_elementtree_Element_items_impl"]
+summary: |
+  3.15's Element() and attrib setter refuse an attrib that is not a dict or frozendict
+  ("attrib must be dict or frozendict, not ..."). __setstate__ does not: element_setstate_from_attributes
+  stores whatever 'attrib' holds (Py_XSETREF(self->extra->attrib, Py_XNewRef(attrib))). The dict
+  methods then hand that object to PyDict_GetItemWithError, PyDict_SetItem, PyDict_Keys and
+  PyDict_Items, which fail with SystemError: bad argument to internal function. The state reaches
+  __setstate__ from pickle.loads, so a pickle naming an Element with a non-dict attrib yields an
+  element whose get() raises SystemError.
+likelihood: |
+  Low: it needs a hand-made state or pickle. The fix is the one-line check the setter already has.
+maybe_intended: |
+  No. The setter's check (added for 3.15) states the invariant, and SystemError signals a C-API
+  misuse inside CPython.
+reproducer: |
+  import xml.etree.ElementTree as ET
+  e = ET.Element('r')
+  e.__setstate__({'tag': 'x', 'attrib': ()})
+  try:
+      e.get('k')
+      print('no error')
+  except SystemError as ex:
+      print('SystemError:', ex)
+      print('REPRODUCED textlibs-etree-setstate-attrib-systemerror')
+expected: |
+  __setstate__ raises TypeError("attrib must be dict or frozendict, not tuple"), as the setter does.
+observed: |
+  python3 3.15.2: SystemError: Objects/dictobject.c:2624: bad argument to internal function.
+  REPRODUCED. The same for attrib = None, 5, [], 'abc', frozenset(), and for set, keys, items.
+  main (cpython-main/python.exe): identical (dictobject.c:2619).
+promised_by: |
+  Invariant: no SystemError from public API; the attrib setter at Modules/_elementtree.c:2131-2136
+  documents what attrib may hold.
+cause: |
+  Modules/_elementtree.c:1129 stores attrib unchecked; :1453-1466 (get), :1754-1773 (set),
+  :1600-1621 (keys, items) assume a dict.
+possible_fix: |
+  In element_setstate_from_attributes, before any state changes, reject an attrib that is neither
+  NULL nor PyAnyDict_Check with the setter's TypeError.
+duplicates:
+  issues: []
+  queries: ["elementtree setstate attrib SystemError", "Element __setstate__ attrib not dict",
+            "_elementtree bad argument to internal function", "element_setstate_from_attributes attrib",
+            "ElementTree attrib must be dict or frozendict", "PRs: attrib must be dict or frozendict",
+            "bugforge README: no ElementTree entry"]
+  note: |
+    Queries run as separate unquoted terms.
+lean:
+  property: PyLean.TextLibs.Etree.SetstateKeepsAttrib
+  theorem: PyLean.TextLibs.Etree.setstateKeepsAttrib_refuted

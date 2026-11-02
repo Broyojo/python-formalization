@@ -3594,6 +3594,105 @@ class EtreePathArea:
         return res
 
 
+@area("etreeattrib", 3)
+class EtreeAttribArea:
+    """The C Element's attrib slot through init, the setter, __setstate__ and the dict methods."""
+    OTHERS = {"tuple": (), "int": 5, "NoneType": None, "list": [], "str": "abc"}
+
+    @classmethod
+    def aobj(cls, r):
+        k = r.choice(["dict", "dict", "frozen", "other"])
+        if k == "other":
+            return {"kind": "other", "type": r.choice(list(cls.OTHERS))}
+        return {"kind": k, "items": [[cps(a), cps(b)] for a, b in r.sample([("a", "1"), ("b", "2"), ("c", "")], r.randint(0, 3))]}
+
+    @classmethod
+    def gen(cls, r):
+        ops = []
+        for _ in range(r.randint(1, 6)):
+            o = r.choice(["setattr", "getattr", "get", "set", "items", "keys", "setstate", "setstate"])
+            d = {"op": o}
+            if o == "setattr":
+                d["v"] = cls.aobj(r)
+            elif o in ("get", "set"):
+                d["k"] = cps(r.choice(["a", "b", "z"]))
+                if o == "set":
+                    d["v"] = cps(r.choice(["9", ""]))
+                elif r.random() < 0.5:
+                    d["d"] = cps("D")
+            elif o == "setstate":
+                d["tag"] = r.random() < 0.9
+                d["extra"] = r.random() < 0.1
+                if r.random() < 0.7:
+                    d["attrib"] = cls.aobj(r)
+                if r.random() < 0.5:
+                    d["children"] = r.choice(["ok", "ok", "notlist", "bad"])
+            ops.append(d)
+        return {"mod": "textlibs", "fn": "etreeattrib.run", "init": cls.aobj(r) if r.random() < 0.6 else None, "ops": ops}
+
+    @classmethod
+    def obj(cls, a):
+        if a["kind"] == "other":
+            return cls.OTHERS[a["type"]]
+        items = {txt(k): txt(v) for k, v in a["items"]}
+        return items if a["kind"] == "dict" else frozendict(items)
+
+    @classmethod
+    def run(cls, c):
+        import xml.etree.ElementTree as ET
+        try:
+            e = ET.Element("r") if c["init"] is None else ET.Element("r", cls.obj(c["init"]))
+        except Exception as ex:
+            return {"exc": type(ex).__name__, "msg": str(ex)}
+
+        def enc_a(a):
+            if isinstance(a, frozendict):
+                return ["frozendict", [[cps(k), cps(v)] for k, v in a.items()]]
+            if type(a) is dict:
+                return ["dict", [[cps(k), cps(v)] for k, v in a.items()]]
+            return [type(a).__name__]
+
+        def one(d):
+            o = d["op"]
+            if o == "setattr":
+                e.attrib = cls.obj(d["v"])
+            elif o == "getattr":
+                return enc_a(e.attrib)
+            elif o == "get":
+                v = e.get(txt(d["k"]), txt(d["d"]) if "d" in d else None)
+                return None if v is None else cps(v)
+            elif o == "set":
+                e.set(txt(d["k"]), txt(d["v"]))
+            elif o == "items":
+                return [[cps(k), cps(v)] for k, v in e.items()]
+            elif o == "keys":
+                return [cps(k) for k in e.keys()]
+            else:
+                st = {}
+                if d["tag"]:
+                    st["tag"] = "x"
+                if "attrib" in d:
+                    st["attrib"] = cls.obj(d["attrib"])
+                if "children" in d:
+                    st["_children"] = {"ok": [ET.Element("k")], "notlist": 5, "bad": [ET.Element("k"), 5]}[d["children"]]
+                if d["extra"]:
+                    st["zz"] = 1
+                e.__setstate__(st)
+            return None
+        out = []
+        for d in c["ops"]:
+            res = common.py_result(lambda d=d: one(d))
+            if "exc" in res:  # messages the model renders as ~ placeholders
+                if res["exc"] == "SystemError" and "bad argument to internal function" in res["msg"]:
+                    res["msg"] = "~Objects/dictobject.c: bad argument to internal function"
+                elif "keyword argument" in res["msg"]:
+                    res["msg"] = "~invalid keyword argument"
+                elif res["msg"].startswith("expected an Element"):
+                    res["msg"] = "~expected an Element"
+            out.append(res)
+        return {"ok": out}
+
+
 only = os.environ.get("TEXTLIBS_ONLY")
 names = [n for n in AREAS if not only or n in only.split(",")]
 weights = [AREAS[n][1] for n in names]

@@ -15,6 +15,7 @@ import PyLean.TextLibs.CsvSniffProps
 import PyLean.TextLibs.EtreeProps
 import PyLean.TextLibs.EtreePathProps
 import PyLean.TextLibs.EtreeWriters
+import PyLean.TextLibs.EtreeAttrib
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1437,7 +1438,26 @@ def entries : List Entry := [
     source := "the implementation disagreeing with itself (C and Python twins)", status := .refuted
     prop := ``Etree.ExtendTwins, thm := some ``Etree.extendTwins_refuted
     bug := some "textlibs-etree-py-twin-setitem"
-    notes := "An iterator that yields two Elements and raises: C materialises it first and appends nothing, the twin has appended both." }
+    notes := "An iterator that yields two Elements and raises: C materialises it first and appends nothing, the twin has appended both." },
+  { id := "textlibs-etree-attrib-no-bad-call", pyFile := "Modules/_elementtree.c"
+    pyFns := ["_elementtree_Element_get_impl", "_elementtree_Element_set_impl", "_elementtree_Element_keys_impl",
+      "_elementtree_Element_items_impl", "element_get_attrib"]
+    statement := "While the attrib slot holds NULL, a dict or a frozendict, Element.get, set, keys and items never raise SystemError."
+    source := "invariant: no internal error leaking", status := .proven
+    prop := ``Etree.NoBadCall, thm := some ``Etree.noBadCall_proven },
+  { id := "textlibs-etree-attrib-invariant", pyFile := "Modules/_elementtree.c"
+    pyFns := ["element_attrib_setter", "element_attrib_getter"]
+    statement := "Element(tag, attrib), the attrib setter and getter, and set keep the attrib slot NULL, a dict or a frozendict."
+    source := "invariant: 3.15's setter and Element() refuse other objects", status := .proven
+    prop := ``Etree.AttribInvariant, thm := some ``Etree.attribInvariant_proven
+    notes := "element_init is not credited: its keyword-attribute path (get_attrib_from_keywords) is not modelled." },
+  { id := "textlibs-etree-setstate-attrib", pyFile := "Modules/_elementtree.c"
+    pyFns := ["_elementtree_Element___setstate___impl", "element_setstate_from_Python",
+      "element_setstate_from_attributes"]
+    statement := "Element.__setstate__ keeps the attrib slot NULL, a dict or a frozendict."
+    source := "invariant: the setter and Element() enforce it", status := .refuted
+    prop := ``Etree.SetstateKeepsAttrib, thm := some ``Etree.setstateKeepsAttrib_refuted
+    bug := some "textlibs-etree-setstate-attrib-systemerror" }
 ]
 
 end PyLean.TextLibs

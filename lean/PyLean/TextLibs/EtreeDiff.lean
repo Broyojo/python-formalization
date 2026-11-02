@@ -2,6 +2,7 @@ import PyLean.DiffCore
 import PyLean.TextLibs.EtreeModel
 import PyLean.TextLibs.EtreePath
 import PyLean.TextLibs.EtreeWriters
+import PyLean.TextLibs.EtreeAttrib
 
 /-! `etree.*` difftest cases; see `EtreeArea` in `difftest/textlibs_diff.py`. A child is a
 number: below 1000 an Element whose tag is `e<n>`, otherwise the int `n` (not an Element). -/
@@ -125,6 +126,66 @@ def pathRun (fn : String) (j : Json) : Except String Json := do
     return orSkip (fun (r : Option S) => match r with | some x => strJ x | none => Json.null)
       (if c then findtextC root path dflt ns else findtextPy root path dflt (ns.getD []))
   | _ => throw s!"unknown fn {fn}"
+
+/-! ### `etreeattrib.run`: a script of attrib operations on one C Element -/
+
+def pairsOf (j : Json) : Except String (List (S × S)) := do
+  (← j.getArr?).toList.mapM fun kv => do
+    match (← kv.getArr?).toList with
+    | [k, v] => return (← nats k, ← nats v)
+    | _ => throw "pair"
+
+def aobjOf (j : Json) : Except String AObj := do
+  match ← getStr j "kind" with
+  | "dict" => return .dict (← pairsOf (← field j "items"))
+  | "frozen" => return .frozen (← pairsOf (← field j "items"))
+  | _ => return .other (← getStr j "type")
+
+def pairsJ (l : List (S × S)) : Json := Json.arr (l.map fun (k, v) => Json.arr #[strJ k, strJ v]).toArray
+
+def aobjJ : AObj → Json
+  | .dict i => Json.arr #[toJson "dict", pairsJ i]
+  | .frozen i => Json.arr #[toJson "frozendict", pairsJ i]
+  | .other t => Json.arr #[toJson t]
+
+def attribStep (s : Slot) (op : Json) : Except String (Slot × Json) := do
+  match ← getStr op "op" with
+  | "setattr" =>
+    match setAttribC s (← aobjOf (← field op "v")) with
+    | .ok s' => return (s', encPy (fun (_ : Unit) => Json.null) (.ok ()))
+    | .error e => return (s, encPy (fun (_ : Unit) => Json.null) (.error e))
+  | "getattr" => let (s', a) := getAttribC s; return (s', encPy aobjJ (.ok a))
+  | "get" =>
+    let d ← match op.getObjVal? "d" with | .ok .null | .error _ => pure none | .ok v => some <$> nats v
+    return (s, encPy (fun (r : Option S) => match r with | some x => strJ x | none => Json.null)
+      (getC s (← nats (← field op "k")) d))
+  | "set" =>
+    let (s', r) := setC s (← nats (← field op "k")) (← nats (← field op "v"))
+    return (s', encPy (fun (_ : Unit) => Json.null) r)
+  | "items" => return (s, encPy pairsJ (itemsC s))
+  | "keys" => return (s, encPy (fun (l : List (S × S)) => Json.arr (l.map (strJ ·.1)).toArray) (itemsC s))
+  | "setstate" =>
+    let attrib ← match op.getObjVal? "attrib" with | .ok v => some <$> aobjOf v | .error _ => pure none
+    let children ← match op.getObjVal? "children" with
+      | .ok v => match ← v.getStr? with
+        | "ok" => pure (some ChildArg.ok) | "notlist" => pure (some .notList) | _ => pure (some .badItem)
+      | .error _ => pure none
+    let (s', r) := setstateC s ⟨← getBool op "tag", attrib, children, ← getBool op "extra"⟩
+    return (s', encPy (fun (_ : Unit) => Json.null) r)
+  | o => throw s!"op {o}"
+
+def attribRun (j : Json) : Except String Json := do
+  let init ← match ← field j "init" with | .null => pure none | v => some <$> aobjOf v
+  match initC init with
+  | .error e => return encPy (fun (_ : Unit) => Json.null) (.error e)
+  | .ok s0 =>
+    let mut s := s0
+    let mut out : Array Json := #[]
+    for op in (← (← field j "ops").getArr?) do
+      let (s', r) ← attribStep s op
+      s := s'
+      out := out.push r
+    return Json.mkObj [("ok", Json.arr out)]
 
 def run (fn : String) (j : Json) : Except String Json := do
   let kids ← nats (← field j "kids")
