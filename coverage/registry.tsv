@@ -2031,6 +2031,11 @@ textlibs-etree-item-store-order	refuted	Lib/xml/etree/ElementTree.py	Element.__s
 textlibs-etree-slice-read-twins	proven	Modules/_elementtree.c	element_subscr,Element.__getitem__
 textlibs-etree-slice-store-twins	refuted	Lib/xml/etree/ElementTree.py	Element.__setitem__,element_ass_subscr
 textlibs-etree-slice-store-twins-seq	proven	Lib/xml/etree/ElementTree.py	Element.__setitem__,element_ass_subscr
+textlibs-elementpath-no-keyerror	refuted	Lib/xml/etree/ElementPath.py	iterfind,xpath_tokenizer
+textlibs-elementpath-no-none-step	refuted	Lib/xml/etree/ElementPath.py	iterfind,xpath_tokenizer,prepare_child,prepare_predicate
+textlibs-elementpath-iterable	refuted	Lib/xml/etree/ElementPath.py	iterfind
+textlibs-elementpath-plain-tag-twins	proven	Lib/xml/etree/ElementPath.py	iterfind,xpath_tokenizer,prepare_child,_is_wildcard_tag,find,findall,findtext
+textlibs-etree-find-fast-path	proven	Modules/_elementtree.c	checkpath,_elementtree_Element_find_impl,_elementtree_Element_findtext_impl,_elementtree_Element_findall_impl
 coll-count-elements-twins	proven	Lib/collections/__init__.py	_count_elements
 coll-counter-update-fast-slow	proven	Lib/collections/__init__.py	Counter.update
 coll-counter-update-adds	proven	Lib/collections/__init__.py	Counter.update,Counter.__init__,Counter.__missing__,_count_elements

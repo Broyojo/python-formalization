@@ -1,16 +1,16 @@
 file	line	endline	name	signature	status	entry	note
-Lib/xml/etree/ElementPath.py	74	95	xpath_tokenizer	xpath_tokenizer(pattern, namespaces=None)	todo		
+Lib/xml/etree/ElementPath.py	74	95	xpath_tokenizer	xpath_tokenizer(pattern, namespaces=None)	modelled	textlibs-elementpath-no-keyerror,textlibs-elementpath-no-none-step,textlibs-elementpath-plain-tag-twins	
 Lib/xml/etree/ElementPath.py	98	105	get_parent_map	get_parent_map(context)	todo		
-Lib/xml/etree/ElementPath.py	108	109	_is_wildcard_tag	_is_wildcard_tag(tag)	todo		
+Lib/xml/etree/ElementPath.py	108	109	_is_wildcard_tag	_is_wildcard_tag(tag)	modelled	textlibs-elementpath-plain-tag-twins	
 Lib/xml/etree/ElementPath.py	112	150	_prepare_tag	_prepare_tag(tag)	todo		
-Lib/xml/etree/ElementPath.py	153	170	prepare_child	prepare_child(next, token)	todo		
+Lib/xml/etree/ElementPath.py	153	170	prepare_child	prepare_child(next, token)	modelled	textlibs-elementpath-no-none-step,textlibs-elementpath-plain-tag-twins	
 Lib/xml/etree/ElementPath.py	172	176	prepare_star	prepare_star(next, token)	todo		
 Lib/xml/etree/ElementPath.py	178	181	prepare_self	prepare_self(next, token)	todo		
 Lib/xml/etree/ElementPath.py	183	212	prepare_descendant	prepare_descendant(next, token)	todo		
 Lib/xml/etree/ElementPath.py	214	225	prepare_parent	prepare_parent(next, token)	todo		
-Lib/xml/etree/ElementPath.py	227	344	prepare_predicate	prepare_predicate(next, token)	todo		
+Lib/xml/etree/ElementPath.py	227	344	prepare_predicate	prepare_predicate(next, token)	modelled	textlibs-elementpath-no-none-step	
 Lib/xml/etree/ElementPath.py	359	360	_SelectorContext.__init__	__init__(self, root)	todo		
-Lib/xml/etree/ElementPath.py	367	406	iterfind	iterfind(elem, path, namespaces=None)	todo		
-Lib/xml/etree/ElementPath.py	411	412	find	find(elem, path, namespaces=None)	todo		candidates:strsearch-count-repeated-find,strsearch-find-extreme,strsearch-find-slice-literal,strsearch-find-str-bytes,strsearch-rfind-reverse
-Lib/xml/etree/ElementPath.py	417	418	findall	findall(elem, path, namespaces=None)	todo		
-Lib/xml/etree/ElementPath.py	423	430	findtext	findtext(elem, path, default=None, namespaces=None)	todo		
+Lib/xml/etree/ElementPath.py	367	406	iterfind	iterfind(elem, path, namespaces=None)	modelled	textlibs-elementpath-iterable,textlibs-elementpath-no-keyerror,textlibs-elementpath-no-none-step,textlibs-elementpath-plain-tag-twins	
+Lib/xml/etree/ElementPath.py	411	412	find	find(elem, path, namespaces=None)	modelled	textlibs-elementpath-plain-tag-twins	candidates:strsearch-count-repeated-find,strsearch-find-extreme,strsearch-find-slice-literal,strsearch-find-str-bytes,strsearch-rfind-reverse
+Lib/xml/etree/ElementPath.py	417	418	findall	findall(elem, path, namespaces=None)	modelled	textlibs-elementpath-plain-tag-twins	
+Lib/xml/etree/ElementPath.py	423	430	findtext	findtext(elem, path, default=None, namespaces=None)	modelled	textlibs-elementpath-plain-tag-twins	
