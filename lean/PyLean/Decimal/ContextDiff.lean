@@ -13,7 +13,7 @@ open Lean PyLean PyLean.Diff
 
 /-! ## The keyword form of `localcontext` in `_decimal` -/
 
-/-- `ctxmanager_new`'s keywords, _decimal.c@3.14.7:1926-1930: `PyArg_ParseTupleAndKeywords`
+/-- `_decimal.localcontext`'s keywords, _decimal.c:2051-2062: the clinic parser
 refuses an unknown keyword before any field is set. -/
 def cInitOfKwargs (kw : List (String × CtxArg)) : Py CtxInit := do
   if kw.any (fun p => !contextAttributes.contains p.1) then
@@ -44,12 +44,13 @@ def ctxArgOf (j : Json) : Except String CtxArg := do
     | "int" => return .int ((← (a[1]!).getStr?).toInt?.getD 0)
     | "str" => return .str (← (a[1]!).getStr?)
     | "list" => return .list (← (← (a[1]!).getArr?).toList.mapM sigKeyOf)
-    | "dict" =>
+    | "dict" | "frozendict" =>
       let pairs ← (← (a[1]!).getArr?).toList.mapM (fun p => do
         let q ← p.getArr?
         return ((← sigKeyOf q[0]!), (← (q[1]!).getBool?)))
       return .dict pairs
-    | "obj" => return .obj
+    | "frozendict_py" | "obj" => return .obj
+    | "idx" => return .int ((← (a[1]!).getStr?).toInt?.getD 0)
     | t => throw s!"bad ctx arg {t}"
 
 def ctxInitOf (j : Json) : Except String CtxInit := do

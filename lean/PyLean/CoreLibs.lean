@@ -10,7 +10,7 @@ import PyLean.CoreLibs.CalStat
 import PyLean.CoreLibs.Rand
 
 /-!
-Core libraries, CPython 3.14.7. One area per group of source files:
+Core libraries, CPython 3.15.2. One area per group of source files:
 * `Coll`: Lib/collections/__init__.py (everything except OrderedDict)
 * `CollAbc`: Lib/_collections_abc.py, Lib/collections/abc.py
 * `Functools`: Lib/functools.py, Modules/_functoolsmodule.c

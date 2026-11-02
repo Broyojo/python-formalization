@@ -11,7 +11,7 @@ import PyLean.LongObj.EntriesStr
 import PyLean.LongObj.Binop
 
 /-!
-All of `Objects/longobject.c`, `Objects/boolobject.c`, `Objects/complexobject.c`, CPython 3.14.7.
+All of `Objects/longobject.c`, `Objects/boolobject.c`, `Objects/complexobject.c`, CPython 3.15.2.
 
 Digit-level model: `LongObj/Digits.lean` (vectors, C widths, the sign-magnitude object),
 `AddSub`, `Mul`, `Karatsuba`, `Knuth`, `Div`, `DivOps`, `Shift`, `Bitwise`, `Pow`.

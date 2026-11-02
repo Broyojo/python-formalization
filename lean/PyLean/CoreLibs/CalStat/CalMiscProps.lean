@@ -69,7 +69,7 @@ theorem textMonthRow_range (m i k : Int) (hm : 1 ≤ m) (hi : 0 ≤ i) (hk : k �
 
 theorem yearRowHead_ok (y : Int) (months : List Int) (h : Str) (cw C L : Int) (hy : ReprOk y)
     (hm : ∀ k ∈ months, 1 ≤ k ∧ k ≤ 12) (hh : NoNL h) :
-    ∃ s, yearRowHead cNames y months h cw C L = .ok s ∧ s.count '\n' = 3 * L.toNat := by
+    ∃ s, yearRowHead months h cw C L (fun k => tFormatmonthname cNames y k cw false) = .ok s ∧ s.count '\n' = 3 * L.toNat := by
   obtain ⟨names, hn, -, hall⟩ := mapM_exists
     (fun k => tFormatmonthname cNames y k cw false) months NoNL
     (fun k hk => tFormatmonthname_ok y k cw (hm k hk) hy false)
@@ -82,7 +82,7 @@ theorem yearRowHead_ok (y : Int) (months : List Int) (h : Str) (cw C L : Int) (h
     simp only [List.mem_map] at hs
     obtain ⟨_, _, rfl⟩ := hs
     exact hh
-  have hres : yearRowHead cNames y months h cw C L = .ok (nl L ++ rstrip (formatstring names cw C) ++
+  have hres : yearRowHead months h cw C L (fun k => tFormatmonthname cNames y k cw false) = .ok (nl L ++ rstrip (formatstring names cw C) ++
       nl L ++ rstrip (formatstring (months.map (fun _ => h)) cw C) ++ nl L) := by
     simp only [yearRowHead, bind, Except.bind, hn, pure, Except.pure]
   refine ⟨_, hres, ?_⟩
@@ -123,7 +123,8 @@ theorem formatyearLines_proven : FormatyearLines := by
     rw [if_neg (by omega), if_neg (by omega)]
   generalize chunks m.toNat ms = rows at hrows
   have hbody := mapM_count
-    (yearRow cNames y m h ((max 2 w + 1) * 7 - 1) (max 2 cc) (max 1 l) (fun _ _ wk => tFormatweek wk (max 2 w)))
+    (yearRow m h ((max 2 w + 1) * 7 - 1) (max 2 cc) (max 1 l) (fun _ _ wk => tFormatweek wk (max 2 w))
+      (fun k => tFormatmonthname cNames y k ((max 2 w + 1) * 7 - 1) false))
     rows.zipIdx
     (fun p => (fun (r : List (List (List (Int × Int)))) => 3 + (r.map List.length).foldr max 0) p.1 * (max 1 l).toNat)
     '\n'
@@ -133,8 +134,9 @@ theorem formatyearLines_proven : FormatyearLines := by
         (fun k hk => textMonthRow_range m _ k hm (by omega) hk) hhn
       have hc2 := yearWeekLines_count p.1 ((max 2 w + 1) * 7 - 1) (max 2 cc) (max 1 l)
         (fun _ wk => tFormatweek wk (max 2 w)) (fun _ wk => noNL_tFormatweek wk _)
-      have hres : yearRow cNames y m h ((max 2 w + 1) * 7 - 1) (max 2 cc) (max 1 l)
-          (fun _ _ wk => tFormatweek wk (max 2 w)) p =
+      have hres : yearRow m h ((max 2 w + 1) * 7 - 1) (max 2 cc) (max 1 l)
+          (fun _ _ wk => tFormatweek wk (max 2 w))
+          (fun k => tFormatmonthname cNames y k ((max 2 w + 1) * 7 - 1) false) p =
           .ok (s ++ yearWeekLines p.1 ((max 2 w + 1) * 7 - 1) (max 2 cc) (max 1 l)
             (fun _ wk => tFormatweek wk (max 2 w))) := by
         simp only [yearRow, bind, Except.bind, hs, pure, Except.pure]
@@ -146,9 +148,10 @@ theorem formatyearLines_proven : FormatyearLines := by
       .ok (rstrip (center yr (((max 2 w + 1) * 7 - 1) * m + max 2 cc * (m - 1))) ++ nl (max 1 l) ++
         r.flatten) := by
     unfold tFormatyear tFormatyearWith
-    simp only [bind, Except.bind, hyr, hh, hrows, pure, Except.pure]
-    rw [show (rows.zipIdx.mapM (yearRow cNames y m h ((max 2 w + 1) * 7 - 1) (max 2 cc) (max 1 l)
-      fun _ _ wk => tFormatweek wk (max 2 w))) = .ok r from hr]
+    simp only [bind, Except.bind, hyr, hh, hrows, pure, Except.pure, id_eq]
+    rw [show (rows.zipIdx.mapM (yearRow m h ((max 2 w + 1) * 7 - 1) (max 2 cc) (max 1 l)
+      (fun _ _ wk => tFormatweek wk (max 2 w))
+      (fun k => tFormatmonthname cNames y k ((max 2 w + 1) * 7 - 1) false))) = .ok r from hr]
   refine ⟨_, rows, hres, hrows, ?_, hres⟩
   simp only [List.count_append, count_nl, count_noNL (noNL_rstrip (noNL_center hyn _)), hcount]
   rw [sum_mul_map]
@@ -192,8 +195,8 @@ theorem hFormatweekheader_ok (c : Calendar) :
 theorem hFormatmonthname_ok (y m : Int) (hm : 1 ≤ m ∧ m ≤ 12) (hy : ReprOk y) (withyear : Bool) :
     ∃ s, hFormatmonthname cNames y m withyear = .ok s ∧ NoNL s := by
   obtain ⟨yr, hyr, hn⟩ := reprInt_ok y hy
-  have hlen : ((localizedMonthList cNames.monthName).length : Int) = 13 := by decide
-  obtain ⟨x, hx, hi⟩ := pyIndex_ok (localizedMonthList cNames.monthName) m (by omega) (by omega)
+  have hlen : ((localizedMonthList cNames.standaloneName).length : Int) = 13 := by decide
+  obtain ⟨x, hx, hi⟩ := pyIndex_ok (localizedMonthList cNames.standaloneName) m (by omega) (by omega)
   have hxn : NoNL x := by
     simp only [localizedMonthList, List.mem_cons] at hx
     rcases hx with rfl | hx
@@ -338,7 +341,7 @@ theorem xmlcharrefAscii_proven : XmlcharrefAscii := by
       have := hs a (by simp)
       simp [encodeChar, Codec.limit, this]
   · intro N c y w css b h
-    unfold hFormatyearpage at h
+    unfold hFormatyearpage hFormatPage at h
     simp only [Option.getD_some, bind, Except.bind, codecOf_ascii, pure, Except.pure] at h
     split at h
     · cases h
@@ -438,48 +441,59 @@ theorem localeCalendarMethods_proven : LocaleCalendarMethods := by
 
 /-! ## `main` -/
 
-/-- The checks of `main`, in source order: `--locale` without `--encoding` and a month with
-`--type html` are `parser.error` exits, a bad month in text mode is `IllegalMonthError`. -/
+/-- The checks of `main`, in source order: `--locale` without `--encoding` is a `parser.error` exit, a bad month in text
+mode is `IllegalMonthError`, and in HTML mode a year and a month give the page of that month, whose own check of the
+month is `formatmonthname`'s. -/
 def MainChecks : Prop :=
   ∀ (A : Ansi) (N : Names) (today : Date) (o : Options),
     (strTruthy o.locale = true → strTruthy o.encoding = false →
       mainRun A N today o = .error (.named "SystemExit" "2")) ∧
-    (strTruthy o.locale = false → o.type = lit "html" → (∃ mo, o.month = some mo ∧ mo ≠ 0) →
-      mainRun A N today o = .error (.named "SystemExit" "2")) ∧
+    (strTruthy o.locale = false → o.type = lit "html" → ∀ y mo, o.year = some y → o.month = some mo → mo ≠ 0 →
+      mainRun A N today o = MainOut.bytes <$> hFormatmonthpage N ((Calendar.mk 0).setfirstweekday o.firstWeekday) y mo
+        (some o.css) (some (o.encoding.getD (lit "utf-8")))) ∧
+    (strTruthy o.locale = false → o.type = lit "html" → o.year = none →
+      mainRun A N today o = MainOut.bytes <$> hFormatyearpage N ((Calendar.mk 0).setfirstweekday o.firstWeekday)
+        today.1 3 (some o.css) (some (o.encoding.getD (lit "utf-8")))) ∧
     (strTruthy o.locale = false → o.type ≠ lit "html" → ∀ mo, o.month = some mo →
       ¬(1 ≤ mo ∧ mo ≤ 12) → mainRun A N today o = .error (illegalMonth mo))
 
 theorem mainChecks_proven : MainChecks := by
   intro A N today o
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
   · intro h1 h2
     simp [mainRun, h1, h2, parserError, bind, Except.bind, throw, throwThe, MonadExcept.throw]
     rfl
-  · rintro h1 h2 ⟨mo, h3, h4⟩
-    simp [mainRun, h1, h2, h3, h4, parserError, bind, Except.bind, throw, throwThe, MonadExcept.throw]
-    rfl
+  · intro h1 h2 y mo h3 h4 h5
+    simp only [mainRun, h1, h2, h3, h4, bind, Except.bind, Bool.false_and, Bool.false_eq_true, if_false, if_true]
+    have : (mo != 0) = true := by simpa using h5
+    simp only [this, if_true, pure, Except.pure]
+    cases hFormatmonthpage N _ y mo _ _ <;> rfl
+  · intro h1 h2 h3
+    simp only [mainRun, h1, h2, h3, bind, Except.bind, Bool.false_and, Bool.false_eq_true, if_false, if_true,
+      pure, Except.pure]
+    cases hFormatyearpage N _ _ _ _ _ <;> rfl
   · intro h1 h2 mo h3 h4
     simp [mainRun, h1, h2, h3, validateMonth_err mo h4, bind, Except.bind]
 
-/-- `python -m calendar YEAR MONTH` prints what `_CLIDemoCalendar.formatmonth` returns with the
-first weekday from `-f`; for a month other than today's, that is `TextCalendar.formatmonth`. -/
+/-- `python -m calendar YEAR MONTH` prints what `_CLIDemoCalendar.formatmonth` returns with the first weekday from `-f`;
+with colour off, that is `TextCalendar.formatmonth`. -/
 def MainMonthOutput : Prop :=
   ∀ (A : Ansi) (N : Names) (today : Date) (o : Options) (y mo : Int),
     o.locale = none → o.encoding = none → o.type ≠ lit "html" → o.year = some y → o.month = some mo →
     (1 ≤ mo ∧ mo ≤ 12) →
     (mainRun A N today o = (MainOut.text <$> dFormatmonth A N ⟨o.firstWeekday⟩ (some today) y mo o.width o.lines)) ∧
-    ((today.1 ≠ y ∨ today.2.1 ≠ mo) →
-      mainRun A N today o = (MainOut.text <$> tFormatmonth N ⟨o.firstWeekday⟩ y mo o.width o.lines))
+    (mainRun noColors N today o = (MainOut.text <$> tFormatmonth N ⟨o.firstWeekday⟩ y mo o.width o.lines))
 
 theorem mainMonthOutput_proven : MainMonthOutput := by
   intro A N today o y mo h1 h2 h3 h4 h5 h6
-  have key : mainRun A N today o =
+  have key : ∀ A : Ansi, mainRun A N today o =
       (MainOut.text <$> dFormatmonth A N ⟨o.firstWeekday⟩ (some today) y mo o.width o.lines) := by
+    intro A
     simp only [mainRun, h1, h2, h3, h4, h5, strTruthy, Bool.false_and, Bool.false_eq_true, if_false,
       Calendar.setfirstweekday, validateMonth_ok mo h6, bind, Except.bind, pure, Except.pure]
     cases dFormatmonth A N ⟨o.firstWeekday⟩ (some today) y mo o.width o.lines <;> rfl
-  refine ⟨key, fun h => ?_⟩
-  rw [key, demoIsText_proven.2.1 A N _ y mo _ _ today h]
+  refine ⟨key A, ?_⟩
+  rw [key noColors, (demoIsText_proven N _ (some today) y mo o.width o.lines 0 0).1]
 
 /-! ## Month names -/
 
@@ -490,8 +504,8 @@ def FormatmonthnameSpec : Prop :=
   ∀ (N : Names) (y m w : Int) (wy : Bool),
     (¬(1 ≤ m ∧ m ≤ 12) → tFormatmonthname N y m w wy = .error (illegalMonth m) ∧
       hFormatmonthname N y m wy = .error (illegalMonth m)) ∧
-    ((1 ≤ m ∧ m ≤ 12) → N.WellFormed → ∃ t ∈ N.monthName,
-      tFormatmonthname N y m w false = .ok (center t w))
+    ((1 ≤ m ∧ m ≤ 12) → N.WellFormed →
+      tFormatmonthname N y m w false = .ok (center (N.standaloneName.getD (m - 1).toNat []) w))
 
 theorem formatmonthnameSpec_proven : FormatmonthnameSpec := by
   intro N y m w wy
@@ -505,20 +519,21 @@ theorem formatmonthnameSpec_proven : FormatmonthnameSpec := by
       rw [validateMonth_err m h]
       rfl
   · intro hm hN
-    have hl : ((localizedMonthList N.monthName).length : Int) = 13 := by
-      have := hN.2.2
+    have hl : ((localizedMonthList N.standaloneName).length : Int) = 13 := by
+      have := hN.2.2.2
       simp [localizedMonthList, this]
     obtain ⟨k, hk⟩ : ∃ k, m.toNat = k + 1 := ⟨m.toNat - 1, by omega⟩
-    have hlt : k < N.monthName.length := by have := hN.2.2; omega
-    refine ⟨N.monthName[k], List.getElem_mem hlt, ?_⟩
-    have hi : pyIndex (localizedMonthList N.monthName) m = .ok N.monthName[k] := by
+    have hlt : k < N.standaloneName.length := by have := hN.2.2.2; omega
+    have hk2 : (m - 1).toNat = k := by omega
+    have hi : pyIndex (localizedMonthList N.standaloneName) m = .ok N.standaloneName[k] := by
       unfold pyIndex
       simp only
       rw [if_neg (by omega), if_neg (by omega), hk]
       simp only [localizedMonthList, List.getElem?_cons_succ]
       simp [hlt]
     unfold tFormatmonthname localizedGet
-    rw [validateMonth_ok m hm]
+    have hg : N.standaloneName.getD k [] = N.standaloneName[k] := by simp [List.getD_eq_getElem?_getD, hlt]
+    rw [validateMonth_ok m hm, hk2, hg]
     simp only [bind, Except.bind, hi, Bool.false_eq_true, if_false, pure, Except.pure]
 
 /-! ## Module odds and ends -/

@@ -234,4 +234,21 @@ theorem byteStringMeta_proven : ByteStringMeta := by
   intro name
   simp [byteStringMetaWarns]
 
+/-- `ByteString` is out of the module's globals until it is read: the first read warns and puts it back, and a read after
+that finds it with no warning. A warning turned into an exception leaves it out, so the next read warns again. Any other
+name is an `AttributeError`. -/
+def ModuleGetattrByteString : Prop :=
+  ∀ (w : Option PyExc) (e : PyExc) (l : Bool) (attr : String),
+    moduleGetattr none false "ByteString" = (true, .ok ()) ∧
+    moduleGetattr (some e) false "ByteString" = (false, .error e) ∧
+    moduleGetattr w true "ByteString" = (true, .ok ()) ∧
+    (attr ≠ "ByteString" →
+      moduleGetattr w l attr = (l, .error (.named "AttributeError" s!"module 'collections.abc' has no attribute '{attr}'")))
+
+theorem moduleGetattrByteString_proven : ModuleGetattrByteString := by
+  intro w e l attr
+  refine ⟨rfl, rfl, rfl, ?_⟩
+  intro h
+  simp [moduleGetattr, h]
+
 end PyLean.CoreLibs.CollAbc

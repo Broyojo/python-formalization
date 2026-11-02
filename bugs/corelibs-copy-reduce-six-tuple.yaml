@@ -43,6 +43,7 @@ expected: |
 observed: |
   python3 3.14.7: pickle gives state 5, copy.copy and copy.deepcopy raise TypeError. REPRODUCED.
   main (python.exe 3.16.0a1+dev): same, REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Doc/library/copy.rst:85: "Classes can use the same interfaces to control copying that they use to
   control pickling."

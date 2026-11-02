@@ -206,16 +206,17 @@ def _PyNumber_Index (E : Env R) (item : Obj R) : M Int :=
       | .long n =>
         if result.exact then pure n
         else do
-          warnDep E (s!"__index__ returned non-int (type {pct 200 result.ti.tpName}).  " ++
+          warnDep E (s!"{item.ti.fqName}.__index__() must return an int, not {result.ti.fqName}.  " ++
             "The ability to return an instance of a strict subclass of int " ++
             "is deprecated, and may be removed in a future version of Python.")
           pure n
       | _ => throw (.typeError
-          s!"__index__ returned non-int (type {pct 200 result.ti.tpName})")
+          s!"{item.ti.fqName}.__index__() must return an int, not {result.ti.fqName}")
 
-/-- `%.50s.__float__ returned non-float (type %.50s)`. -/
+/-- `%T.__float__() must return a float, not %T`, floatobject.c:285 and abstract.c:1622.
+`%T` is the fully qualified name, with no length limit. -/
 def nonFloatMsg (op res : Obj R) : String :=
-  s!"{pct 50 op.ti.tpName}.__float__ returned non-float (type {pct 50 res.ti.tpName})"
+  s!"{op.ti.fqName}.__float__() must return a float, not {res.ti.fqName}"
 
 /-- The longer message of the `__float__` deprecation. -/
 def nonFloatDep (op res : Obj R) : String :=
@@ -272,18 +273,18 @@ def PyNumber_Float (E : Env R) (o : Obj R) : M R :=
       | _ => throw (.typeError
           s!"float() argument must be a string or a real number, not '{pct 200 o.ti.tpName}'")
 
-/-- Lines 497-516: what `try_complex_special_method` does with the method's result. -/
-def complexResult (E : Env R) (res : Obj R) : M (Option (Cx R)) :=
+/-- Lines 513-532: what `try_complex_special_method` does with the method's result. -/
+def complexResult (E : Env R) (op res : Obj R) : M (Option (Cx R)) :=
   match res.val with
   | .cplx c =>
     if res.exact then pure (some c)
     else do
-      warnDep E (s!"__complex__ returned non-complex (type {pct 200 res.ti.tpName}).  " ++
+      warnDep E (s!"{op.ti.fqName}.__complex__() must return a complex, not {res.ti.fqName}.  " ++
         "The ability to return an instance of a strict subclass of complex " ++
         "is deprecated, and may be removed in a future version of Python.")
       pure (some c)
   | _ => throw (.typeError
-      s!"__complex__ returned non-complex (type {pct 200 res.ti.tpName})")
+      s!"{op.ti.fqName}.__complex__() must return a complex, not {res.ti.fqName}")
 
 /-- `try_complex_special_method`, lines 488-519. C returns `NULL` both when the
 method is absent and when it failed; here those are `none` and an exception. -/
@@ -292,7 +293,7 @@ def try_complex_special_method (E : Env R) (op : Obj R) : M (Option (Cx R)) :=
   | .absent => pure none
   | s => do
     let res ← callSlot "__complex__" s op
-    complexResult E res
+    complexResult E op res
 
 /-- `PyComplex_RealAsDouble`, lines 443-462. -/
 def PyComplex_RealAsDouble (E : Env R) (op : Obj R) : M R :=
@@ -462,9 +463,11 @@ def complex_neg (v : Cx R) : Cx R := ⟨⊖v.real, ⊖v.imag⟩
 def complex_pos (v : Obj R) (c : Cx R) : Made R :=
   if v.isComplexExact then ⟨.complex, c, true⟩ else PyComplex_FromCComplex c
 
-/-- `complex_abs`, lines 779-790. `errno` is the value left by whatever ran
-before: 3.14.7 does not clear it here. -/
-def complex_abs (L : Libm R) (v : Cx R) (errno : Errno) : Py R :=
+/-- `complex_abs`, complexobject.c:795-809. `stale` is the `errno` left by whatever ran
+before; line 801 (`errno = 0`) discards it, so the NaN path of `_Py_c_abs`, which keeps
+the `errno` it finds, sees 0. -/
+def complex_abs (L : Libm R) (v : Cx R) (_stale : Errno) : Py R :=
+  let errno := Errno.ok
   let (result, errno) := c_abs L v errno
   if errno = Errno.erange then .error (.overflowError "absolute value too large")
   else .ok result
@@ -500,7 +503,7 @@ def complex_conjugate_impl (self : Cx R) : Cx R := ⟨self.real, ⊖self.imag⟩
 def complex___getnewargs___impl (self : Cx R) : R × R := (self.real, self.imag)
 
 /-- `complex___format___impl`, lines 893-909, with the empty-spec test of
-`_PyComplex_FormatAdvancedWriter`, `Python/formatter_unicode.c@3.14.7:1691-1701`.
+`_PyComplex_FormatAdvancedWriter`, `Objects/unicode_formatter.c:1929-1938`.
 `advanced` stands for the rest of that function, which is outside this file. -/
 def complex___format___impl (ds : R → Bool → String)
     (advanced : Cx R → List Nat → Py String) (self : Cx R) (spec : List Nat) : Py String :=

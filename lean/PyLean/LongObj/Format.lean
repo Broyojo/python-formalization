@@ -1,7 +1,7 @@
 import PyLean.LongObj.Digits
 
 /-!
-`int` to string, `Objects/longobject.c` (CPython 3.14.7): the base-`10^9` loop of
+`int` to string, `Objects/longobject.c` (CPython 3.15.2): the base-`10^9` loop of
 `long_to_decimal_string_internal` with its pre-check and exact digit count, and
 the shift-and-mask loop of `long_format_binary`.
 
@@ -196,7 +196,7 @@ def pyLongFormatWith (pyl : Long → Py (List Char)) (lim : Nat) (x : Long) (bas
   if base = 10 then longToDecimalWith pyl lim x else longFormatBinary x base true
 
 /-- `_PyLong_FormatWriter(writer, obj, base, alternate)`, longobject.c:2517-2527,
-and `_PyLong_FormatBytesWriter(...)`, longobject.c@3.14.7:2449-2466: the same dispatch
+and `_PyLong_FormatBytesWriter(...)`, longobject.c:2530-2548: the same dispatch
 into a writer. -/
 def pyLongFormatWriterWith (pyl : Long → Py (List Char)) (lim : Nat) (x : Long) (base : Nat)
     (alternate : Bool) : Py (List Char) :=

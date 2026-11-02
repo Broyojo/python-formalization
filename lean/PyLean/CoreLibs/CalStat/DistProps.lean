@@ -211,9 +211,8 @@ theorem normalDistUndefined_proven : NormalDistUndefined := by
   intro L X Y b x p hz
   have hv := variance_zero X b hz
   have hsig : X.sigma.truthy = false := by rw [hz]; rfl
-  have hv' : (Flt.mul X.sigma X.sigma).truthy = false := hv
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
-  · simp only [ND.pdf, bind, Except.bind, hv', Bool.not_false, if_true]
+  · simp only [ND.pdf, bind, Except.bind, hsig, Bool.not_false, if_true]
     rfl
   · simp only [ND.cdf, bind, Except.bind, hsig, Bool.not_false, if_true]
     rfl
@@ -740,7 +739,7 @@ def GeometricChecks : Prop :=
     (∀ k : Nat, 0 < k → geometricMean L (fracs (List.replicate k 0)) = .ok Flt.pz) ∧
     (∀ (k : Nat) (a : Rat) (r : Flt) (rest : List PyN), a < 0 → ratToFlt a = .ok r →
       geometricMean L (fracs (List.replicate k 0) ++ (Val.frac a).toN :: rest) =
-        .error (.named "StatisticsError" "~('No negative inputs allowed', x)"))
+        .error (.named "StatisticsError" "~No negative inputs allowed: x"))
 
 theorem fracs_replicate (k : Nat) :
     (fracs (List.replicate k 0)).map (·.v) = List.replicate k (Val.frac 0) := by
@@ -782,7 +781,7 @@ theorem geometricChecks_proven : GeometricChecks := by
       rw [e2]
       simp [Functor.map, Except.map, e3]
     have hstep : ∀ st : GmSt, gmStep L st (.frac a) =
-        .error (.named "StatisticsError" "~('No negative inputs allowed', x)") := by
+        .error (.named "StatisticsError" "~No negative inputs allowed: x") := by
       intro st
       simp only [gmStep, bind, Except.bind, e1, e2', e4, Bool.false_eq_true, if_false, pure,
         Except.pure, Bool.false_or]

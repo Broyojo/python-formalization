@@ -3,7 +3,7 @@ import PyLean.Datetime.IsoPy
 import PyLean.StrSearch.Model
 
 /-!
-String to `int`, `Objects/longobject.c` (CPython 3.14.7).
+String to `int`, `Objects/longobject.c` (CPython 3.15.2).
 
 A C string is a `List Nat` of bytes that may hold NUL bytes of its own; a `const
 char *` into it is the suffix that starts there, and reading past the end reads
@@ -355,6 +355,10 @@ def pyLongFromBytes (pyl : List Nat → Py (List Nat)) (lim : Nat) (s : List Nat
   | some [], .ok v => .ok v
   | some _, _ => .error (invalidLiteral base (some (reprBytes (s.take 200))))
 
+/-- The zeros of the Unicode decimal digit runs, Unicode 17.0: the table of
+`Datetime.IsoPy` plus the run U+11DE0..U+11DE9 that 17.0 added. -/
+def decimalZeros17 : List Nat := 0x11de0 :: decimalZeros
+
 /-- `_PyUnicode_TransformDecimalAndSpaceToASCII(unicode)`, unicodeobject.c:9515-9558,
 over code points. On a character that is none of these, `'?'` ends the result. -/
 def transformLoop : List Nat → List Nat
@@ -362,7 +366,7 @@ def transformLoop : List Nat → List Nat
   | c :: r =>
     if c < 127 then c :: transformLoop r
     else if uniSpace c then 32 :: transformLoop r
-    else match decimalZeros.find? (fun z => z ≤ c && c < z + 10) with
+    else match decimalZeros17.find? (fun z => z ≤ c && c < z + 10) with
       | some z => (48 + (c - z)) :: transformLoop r
       | none => [63]
 

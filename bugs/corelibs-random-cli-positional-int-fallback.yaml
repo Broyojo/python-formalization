@@ -42,8 +42,9 @@ observed: |
   python3 3.14.7: main(['0']) returns 0.0, main(['-5']) a float in [-5, 0], and --integer 0 and
   --integer -5 both raise ValueError. REPRODUCED.
   main (python.exe 3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
-  Lib/random.py@3.14.7:1041 help text, "integer: same as --integer".
+  Lib/random.py:1041 help text, "integer: same as `--integer`".
 cause: |
   Lib/random.py:1067-1078: the try at :1067 covers both `val = int(val)` (:1069) and
   `return randint(1, val)` (:1070), and the handler at :1071 runs float(val) on the rebound int.

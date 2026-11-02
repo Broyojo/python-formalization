@@ -29,8 +29,9 @@ expected: |
 observed: |
   python3 3.14.7: TypeError "UserString.replace() got an unexpected keyword argument 'count'". REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
-  Doc/library/stdtypes.rst@3.14.7:2502-2503: "Changed in version 3.13: count is now supported as a keyword argument."
+  Doc/builtins/stdtypes.rst:2782-2783: "Changed in version 3.13: count is now supported as a keyword argument."
   Doc/library/collections.rst:1414: "Class that simulates a string object."
 cause: |
   Lib/collections/__init__.py:1613 `def replace(self, old, new, maxsplit=-1):`, unchanged when gh-106487

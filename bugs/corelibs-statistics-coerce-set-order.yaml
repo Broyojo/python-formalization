@@ -48,6 +48,7 @@ expected: |
 observed: |
   python3 3.14.7: ['A', 'B'] ['R', 'TypeError']. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Invariant: equal data in the same order should give the same result. The source's "Coerce types T
   and S to a common type, or raise TypeError" (statistics.py:1567).

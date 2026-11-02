@@ -67,11 +67,7 @@ theorem cIntArg_eq {x z : Int} (h : cIntArg x = .ok z) : z = x := by
   unfold cIntArg at h
   split at h
   · cases h
-  · split at h
-    · cases h
-    · split at h
-      · cases h
-      · cases h; rfl
+  · cases h; rfl
 
 theorem checkDate_eq {y m d : Int} {r : Date} (h : checkDate y m d = .ok r) :
     ValidDate y m d ∧ r = (y, m, d) := by

@@ -152,7 +152,7 @@ def parseTruth (j : Json) : Except String TruthObj := do
   | "booltrue" => pure (.bool (.ok true))
   | "boolfalse" => pure (.bool (.ok false))
   | "boolraise" => pure (.bool (.error (valueErr "bool")))
-  | "badbool" => pure (.badBool "int")
+  | "badbool" => pure (.badBool "T" "int")
   | "nonebool" => pure (.noneBool "T")
   | "len" => pure (.len (.ok (← getInt j "n")))
   | "lenraise" => pure (.len (.error (valueErr "len")))
@@ -239,7 +239,7 @@ def getHintObj (j : Json) : Except String HintObj := do
     | .str "raise" => pure (some (.error (valueErr "hint")))
     | .str "str" => pure (some (.ok (.other "str")))
     | v => do pure (some (.ok (.int (← v.getInt?))))
-  pure ⟨len, hint⟩
+  pure ⟨len, hint, "O"⟩
 
 def getDefault (j : Json) : Except String HintDefault := do
   match ← getStr j "dkind" with
@@ -325,6 +325,10 @@ def getCells (j : Json) : Except String (List Cell) := do
     | "method" => pure (.method 0 (← getNat c "self"))
     | "cls" => pure (.cls 0)
     | "meta" => pure (.metaCls 0)
+    | "fdict" =>
+      let ks ← getIntList c "items"
+      pure (.fdict ((ks.toArray.toList.zipIdx.filterMap fun p =>
+        if p.2 % 2 == 0 then some (p.1.toNat, (ks.getD (p.2 + 1) 0).toNat) else none)))
     | _ =>
       let tag ← getStr c "tag"
       let mk (k : String) : Except String (Option (Option PyExc)) := do
@@ -363,6 +367,9 @@ partial def render (h : Heap) (seen : List Nat) (x : Nat) : List Nat × Json :=
       | .dict items =>
         let (s, js) := many (items.flatMap fun p => [p.1, p.2])
         (s, toJson [toJson "dict", toJson js])
+      | .fdict items =>
+        let (s, js) := many (items.flatMap fun p => [p.1, p.2])
+        (s, toJson [toJson "fdict", toJson js])
       | .inst attrs =>
         let sorted := attrs.mergeSort (fun a b => decide (a.1 ≤ b.1))
         let (s, js) := many (sorted.map Prod.snd)
@@ -640,6 +647,11 @@ def run (fn : String) (j : Json) : Except String Json := do
         out := out ++ [encPy toJson r]
       | "isinst" =>
         let (r, s) := instanceCheck W 30 a (.ok b) b st
+        st := s
+        out := out ++ [encPy toJson r]
+      | "isinst_noclass" =>
+        let err : PyExc := if ← getBool op "attr" then .named "AttributeError" "no" else valueErr "no"
+        let (r, s) := instanceCheck W 30 a (.error err) b st
         st := s
         out := out ++ [encPy toJson r]
       | _ =>

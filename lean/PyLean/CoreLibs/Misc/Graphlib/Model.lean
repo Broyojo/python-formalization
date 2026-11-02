@@ -1,7 +1,7 @@
 import PyLean.Core
 
 /-!
-`Lib/graphlib.py`, CPython 3.14.7: `TopologicalSorter`.
+`Lib/graphlib.py`, CPython 3.15.2: `TopologicalSorter`.
 
 Nodes are an abstract type `α` with decidable equality, which stands for hashable objects whose
 `__eq__`/`__hash__` are lawful. `_node2info` is a Python dict, so it is an association list in

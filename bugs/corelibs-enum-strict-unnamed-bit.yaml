@@ -37,6 +37,7 @@ expected: |
 observed: |
   python3 3.14.7: F(2) is <F: 2>, F(3) and F(2) | F.A raise ValueError. REPRODUCED.
   main (python.exe 3.16.0a1+dev): same, REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   The docstring of FlagBoundary at Lib/enum.py:1417, "strict" -> error is raised, and the comment at
   Lib/enum.py:1488.

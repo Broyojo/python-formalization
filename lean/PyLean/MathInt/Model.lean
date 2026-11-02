@@ -2,10 +2,10 @@ import PyLean.Core
 import PyLean.MathInt.Tables
 
 /-!
-Model of the integer functions of `Modules/mathmodule.c` (CPython 3.14.7; the
-same code lives in `Modules/mathintegermodule.c` on main): `isqrt`, `comb`,
-`perm`, `factorial`, `gcd`, `lcm`, and `_PyLong_GCD` from
-`Objects/longobject.c`.
+Model of `Modules/mathintegermodule.c` (CPython 3.15.2), the `math.integer`
+module, which 3.15 split out of `Modules/mathmodule.c`: `isqrt`, `comb`, `perm`,
+`factorial`, `gcd`, `lcm`, and `_PyLong_GCD` from `Objects/longobject.c`. `math`
+re-exports the same six objects (mathmodule.c:3023-3036).
 
 Build assumptions (macOS arm64/x86-64, the interpreter we test against):
 `long` and `long long` are 64 bits (`LONG_MAX = LLONG_MAX = 2^63 - 1`) and
@@ -47,23 +47,23 @@ def ubError : PyExc := .named "CUndefinedBehavior" "~int64_t overflow"
 def floorDiv (x y : Int) : Int := Int.fdiv x y
 def floorMod (x y : Int) : Int := Int.fmod x y
 
-/-! ## `math.isqrt`, mathmodule.c@3.14.7:1676-1821 -/
+/-! ## `math.integer.isqrt`, mathintegermodule.c:336-481 -/
 
-/-- `_approximate_isqrt`, mathmodule.c@3.14.7:1676-1681. The caller guarantees
+/-- `_approximate_isqrt`, mathintegermodule.c:336-341. The caller guarantees
 `2^62 <= n < 2^64`; `u` is `uint32_t`. -/
 def approxIsqrt (n : Nat) : Nat :=
   let u := isqrtTab.getD ((n >>> 56) - 64) 0
   let u := u32 (u32 (u <<< 7) + u32 (n >>> 41) / u)
   u32 (u32 (u <<< 15) + u32 ((n >>> 17) / u))
 
-/-- The `c_bit_length` loop, mathmodule.c@3.14.7:1745-1748: starting from `k`,
+/-- The `c_bit_length` loop, mathintegermodule.c:405-408: starting from `k`,
 increment while `c >> k > 0`. The caller passes fuel `c + 1`, which is never
 exhausted since the loop stops at `c.bit_length() <= c`. -/
 def cBitLength (c : Nat) : Nat → Nat → Nat
   | 0, k => k
   | fuel + 1, k => if c >>> k > 0 then cBitLength c fuel (k + 1) else k
 
-/-- The Newton loop of the slow path, mathmodule.c@3.14.7:1764-1791, run for
+/-- The Newton loop of the slow path, mathintegermodule.c:424-451, run for
 `s = iters - 1, ..., 0`. -/
 def isqrtLoop (n c : Nat) : Nat → Nat → Nat → Nat
   | 0, _, a => a
@@ -74,7 +74,7 @@ def isqrtLoop (n c : Nat) : Nat → Nat → Nat → Nat
     let a := (a <<< (d - 1 - e)) + q
     isqrtLoop n c s d a
 
-/-- `math.isqrt(n)` for an int `n`, mathmodule.c@3.14.7:1693-1821. -/
+/-- `math.isqrt(n)` for an int `n`, mathintegermodule.c:353-481. -/
 def isqrt (n : Int) : Py Nat :=
   if n < 0 then .error (.valueError "isqrt() argument must be nonnegative")
   else if n = 0 then .ok 0
@@ -82,14 +82,14 @@ def isqrt (n : Int) : Py Nat :=
     let n := n.toNat
     let c := (bitLength n - 1) / 2
     if c ≤ 31 then
-      -- fast path, @3.14.7:1723-1735
+      -- fast path, :383-395
       let shift := 31 - c
       let m := n
       let u := approxIsqrt (u64 (m <<< (2 * shift))) >>> shift
       let u := if u * u > m then u - 1 else u
       .ok u
     else
-      -- slow path, @3.14.7:1740-1820
+      -- slow path, :400-480
       let cbl := cBitLength c (c + 1) 6
       let d := c >>> (cbl - 5)
       let b := n >>> (2 * c - 62)
@@ -100,10 +100,10 @@ def isqrt (n : Int) : Py Nat :=
         let a := isqrtLoop n c (cbl - 6 + 1) d u
         .ok (if n < a * a then a - 1 else a)
 
-/-! ## `math.comb` and `math.perm`, mathmodule.c@3.14.7:3557-3933 -/
+/-! ## `math.integer.comb` and `math.integer.perm`, mathintegermodule.c:854-1229 -/
 
 /-- The loop `for (i = 1; i < k;) { result *= --n; result /= ++i; }`,
-mathmodule.c@3.14.7:3603-3607 (`iscomb`), or without the division (@3.14.7:3630-3634).
+mathintegermodule.c:900-904 (`iscomb`), or without the division (:927-931).
 `rem` counts the iterations left. -/
 def smallLoop (iscomb : Bool) : Nat → Nat → Nat → Nat → Nat
   | 0, result, _, _ => result
@@ -114,7 +114,7 @@ def smallLoop (iscomb : Bool) : Nat → Nat → Nat → Nat → Nat
     let result := if iscomb then result / i else result
     smallLoop iscomb rem result n i
 
-/-- The fast paths of `perm_comb_small`, mathmodule.c@3.14.7:3563-3637: `some r` when
+/-- The fast paths of `perm_comb_small`, mathintegermodule.c:860-934: `some r` when
 one of them applies. -/
 def permCombFast (n k : Nat) (iscomb : Bool) : Option Nat :=
   if iscomb then
@@ -137,7 +137,7 @@ def permCombFast (n k : Nat) (iscomb : Bool) : Option Nat :=
       else some (smallLoop false (k - 1) n n 1)
     else none
 
-/-- `perm_comb_small(n, k, iscomb)`, mathmodule.c@3.14.7:3557-3669, for `n` and `k`
+/-- `perm_comb_small(n, k, iscomb)`, mathintegermodule.c:854-966, for `n` and `k`
 of type `unsigned long long`. `fuel` bounds the recursion depth. -/
 def permCombSmall : Nat → Nat → Nat → Bool → Py Nat
   | 0, _, _, _ => .error .modelFuel
@@ -154,7 +154,7 @@ def permCombSmall : Nat → Nat → Nat → Bool → Py Nat
         return a / b
       else return a
 
-/-- `perm_comb(n, k, iscomb)`, mathmodule.c@3.14.7:3676-3722, for a Python int `n`
+/-- `perm_comb(n, k, iscomb)`, mathintegermodule.c:973-1019, for a Python int `n`
 and `unsigned long long k`. -/
 def permComb : Nat → Nat → Nat → Bool → Py Nat
   | 0, _, _, _ => .error .modelFuel
@@ -175,20 +175,20 @@ def permComb : Nat → Nat → Nat → Bool → Py Nat
 /-- `math.factorial(n)` is defined below; `math.perm(n)` calls it. -/
 def llongMaxMsg (what : String) : String := s!"{what} must not exceed {llongMax}"
 
-/-! ## `math.factorial`, mathmodule.c@3.14.7:1484-2054 -/
+/-! ## `math.integer.factorial`, mathintegermodule.c:485-727 -/
 
-/-- `count_set_bits`, mathmodule.c@3.14.7:1484-1492. -/
+/-- `count_set_bits`, mathintegermodule.c:485-493. -/
 def countSetBits : Nat → Nat → Nat
   | 0, _ => 0
   | fuel + 1, n => if n ≠ 0 then countSetBits fuel (n &&& (n - 1)) + 1 else 0
 
 /-- The tight loop `for (total = start, j = start + 2; j < stop; j += 2) total *= j;`
-on `unsigned long`, mathmodule.c@3.14.7:1917-1918. `rem` bounds the iterations. -/
+on `unsigned long`, mathintegermodule.c:590-591. `rem` bounds the iterations. -/
 def fppLoop (stop : Nat) : Nat → Nat → Nat → Nat
   | 0, total, _ => total
   | rem + 1, total, j => if j < stop then fppLoop stop rem (u64 (total * j)) (j + 2) else total
 
-/-- `factorial_partial_product(start, stop, max_bits)`, mathmodule.c@3.14.7:1893-1941. -/
+/-- `factorial_partial_product(start, stop, max_bits)`, mathintegermodule.c:566-614. -/
 def factorialPartialProduct : Nat → Nat → Nat → Nat → Py Nat
   | 0, _, _, _ => .error .modelFuel
   | fuel + 1, start, stop, maxBits =>
@@ -201,7 +201,7 @@ def factorialPartialProduct : Nat → Nat → Nat → Nat → Py Nat
       let right ← factorialPartialProduct fuel midpoint stop maxBits
       return left * right
 
-/-- The loop of `factorial_odd_part`, mathmodule.c@3.14.7:1958-1986, for
+/-- The loop of `factorial_odd_part`, mathintegermodule.c:631-659, for
 `i = iters - 1, ..., 0`, carrying `(upper, inner, outer)`. -/
 def factorialOddPartLoop (n : Nat) : Nat → Nat → Nat → Nat → Py Nat
   | 0, _, _, outer => .ok outer
@@ -216,11 +216,11 @@ def factorialOddPartLoop (n : Nat) : Nat → Nat → Nat → Nat → Py Nat
       let outer := outer * inner
       factorialOddPartLoop n i upper inner outer
 
-/-- `factorial_odd_part(n)`, mathmodule.c@3.14.7:1946-1993. -/
+/-- `factorial_odd_part(n)`, mathintegermodule.c:619-666. -/
 def factorialOddPart (n : Nat) : Py Nat :=
   factorialOddPartLoop n (bitLength n - 2 + 1) 3 1 1
 
-/-- `math.factorial(x)` for an int `x`, mathmodule.c@3.14.7:2018-2054. -/
+/-- `math.factorial(x)` for an int `x`, mathintegermodule.c:691-727. -/
 def factorial (x : Int) : Py Nat :=
   if x > llongMax then
     .error (.overflowError s!"factorial() argument should not exceed {llongMax}")
@@ -234,7 +234,7 @@ def factorial (x : Int) : Py Nat :=
       let twoValuation := x - countSetBits 64 x
       return odd <<< twoValuation
 
-/-- `math.perm(n, k)`, mathmodule.c@3.14.7:3744-3815 (`k = None` is `factorial(n)`). -/
+/-- `math.perm(n, k)`, mathintegermodule.c:1041-1112 (`k = None` is `factorial(n)`). -/
 def perm (n : Int) (k : Option Int) : Py Nat :=
   match k with
   | none => factorial n
@@ -249,7 +249,7 @@ def perm (n : Int) (k : Option Int) : Py Nat :=
       if n ≤ llongMax ∧ k > 1 then permCombSmall (k + 1) n k false
       else permComb (k + 1) n k false
 
-/-- `math.comb(n, k)`, mathmodule.c@3.14.7:3839-3933. -/
+/-- `math.comb(n, k)`, mathintegermodule.c:1135-1229. -/
 def comb (n k : Int) : Py Nat :=
   if n < 0 then .error (.valueError "n must be a non-negative integer")
   else if k < 0 then .error (.valueError "k must be a non-negative integer")
@@ -367,9 +367,9 @@ def pyLongGCD (a b : Int) : Py Nat :=
     let (a', b') := if a' < b' then (b', a') else (a', b')
     lehmerOuter (a' + 1) a' b'
 
-/-! ## `math.gcd` and `math.lcm`, mathmodule.c@3.14.7:718-840 -/
+/-! ## `math.integer.gcd` and `math.integer.lcm`, mathintegermodule.c:30-152 -/
 
-/-- The loop of `math_gcd_impl`, mathmodule.c@3.14.7:742-758. -/
+/-- The loop of `math_integer_gcd_impl`, mathintegermodule.c:54-70. -/
 def gcdLoop (res : Int) : List Int → Py Int
   | [] => .ok res
   | x :: xs =>
@@ -378,7 +378,7 @@ def gcdLoop (res : Int) : List Int → Py Int
       let g ← pyLongGCD res x
       gcdLoop g xs
 
-/-- `math.gcd(*integers)`, mathmodule.c@3.14.7:718-761 (all arguments exact ints). -/
+/-- `math.gcd(*integers)`, mathintegermodule.c:30-73 (all arguments exact ints). -/
 def gcd (args : List Int) : Py Int :=
   match args with
   | [a, b] => do return ((← pyLongGCD a b) : Int)
@@ -386,7 +386,7 @@ def gcd (args : List Int) : Py Int :=
   | [a] => .ok (a.natAbs : Int)
   | a :: rest => gcdLoop a rest
 
-/-- `long_lcm(a, b)`, mathmodule.c@3.14.7:765-789. -/
+/-- `long_lcm(a, b)`, mathintegermodule.c:77-101. -/
 def longLcm (a b : Int) : Py Int :=
   if a = 0 ∨ b = 0 then .ok 0
   else do
@@ -395,7 +395,7 @@ def longLcm (a b : Int) : Py Int :=
     let m := f * b
     return (m.natAbs : Int)
 
-/-- The loop of `math_lcm_impl`, mathmodule.c@3.14.7:819-837. -/
+/-- The loop of `math_integer_lcm_impl`, mathintegermodule.c:131-149. -/
 def lcmLoop (res : Int) : List Int → Py Int
   | [] => .ok res
   | x :: xs =>
@@ -404,7 +404,7 @@ def lcmLoop (res : Int) : List Int → Py Int
       let r ← longLcm res x
       lcmLoop r xs
 
-/-- `math.lcm(*integers)`, mathmodule.c@3.14.7:801-840. -/
+/-- `math.lcm(*integers)`, mathintegermodule.c:113-152. -/
 def lcm (args : List Int) : Py Int :=
   match args with
   | [] => .ok 1

@@ -25,13 +25,13 @@ Lib/dataclasses.py	721	741	_frozen_set_del_attr	_frozen_set_del_attr(cls, fields
 Lib/dataclasses.py	744	746	_is_classvar	_is_classvar(a_type, typing)	todo		
 Lib/dataclasses.py	749	753	_is_initvar	_is_initvar(a_type, dataclasses)	todo		
 Lib/dataclasses.py	755	756	_is_kw_only	_is_kw_only(a_type, dataclasses)	todo		
-Lib/dataclasses.py	759	817	_get_type_from_annotation	_get_type_from_annotation(annotation, cls)	todo		changed-in-3.15: new function
-Lib/dataclasses.py	820	913	_get_field	_get_field(cls, a_name, a_type, default_kw_only)	todo		changed-in-3.15: was corelibs-dc-get-field
+Lib/dataclasses.py	759	817	_get_type_from_annotation	_get_type_from_annotation(annotation, cls)	modelled	corelibs-dc-annotation	
+Lib/dataclasses.py	820	913	_get_field	_get_field(cls, a_name, a_type, default_kw_only)	modelled	corelibs-dc-get-field	
 Lib/dataclasses.py	915	921	_set_new_attribute	_set_new_attribute(cls, name, value)	modelled	corelibs-dc-add-fns	
 Lib/dataclasses.py	929	934	_hash_set_none	_hash_set_none(cls, fields, func_builder)	todo		withdrawn: thin; the table is not the three action functions
 Lib/dataclasses.py	936	942	_hash_add	_hash_add(cls, fields, func_builder)	modelled	corelibs-dc-hash-fields	
 Lib/dataclasses.py	944	947	_hash_exception	_hash_exception(cls, fields, func_builder)	todo		withdrawn: thin; the table is not the three action functions
-Lib/dataclasses.py	983	997	_AutoDocstring.__get__	__get__(self, _obj, cls)	todo		changed-in-3.15: new function
+Lib/dataclasses.py	983	997	_AutoDocstring.__get__	__get__(self, _obj, cls)	modelled	corelibs-dc-auto-doc	
 Lib/dataclasses.py	1002	1250	_process_class	_process_class(cls, init, repr, eq, order, unsafe_hash, frozen, match_args, kw_only, slots, weakref_slot)	todo		changed-in-3.15:
 Lib/dataclasses.py	1258	1259	_dataclass_getstate	_dataclass_getstate(self)	todo		
 Lib/dataclasses.py	1262	1265	_dataclass_setstate	_dataclass_setstate(self, state)	todo		
@@ -44,9 +44,9 @@ Lib/dataclasses.py	1465	1480	fields	fields(class_or_instance)	todo		withdrawn: t
 Lib/dataclasses.py	1483	1485	_is_dataclass_instance	_is_dataclass_instance(obj)	todo		
 Lib/dataclasses.py	1488	1492	is_dataclass	is_dataclass(obj)	todo		
 Lib/dataclasses.py	1495	1517	asdict	asdict(obj, *, dict_factory=dict)	modelled	corelibs-dc-asdict-astuple	
-Lib/dataclasses.py	1520	1585	_asdict_inner	_asdict_inner(obj, dict_factory)	todo		changed-in-3.15: was corelibs-dc-asdict-astuple,corelibs-dc-twins,corelibs-dc-fast-slow,corelibs-dc-counter,corelibs-dc-asdict-where-astuple
+Lib/dataclasses.py	1520	1585	_asdict_inner	_asdict_inner(obj, dict_factory)	modelled	corelibs-dc-asdict-astuple,corelibs-dc-asdict-frozendict,corelibs-dc-asdict-where-astuple,corelibs-dc-counter,corelibs-dc-fast-slow,corelibs-dc-twins	
 Lib/dataclasses.py	1588	1610	astuple	astuple(obj, *, tuple_factory=tuple)	modelled	corelibs-dc-asdict-astuple	
-Lib/dataclasses.py	1613	1646	_astuple_inner	_astuple_inner(obj, tuple_factory)	todo		changed-in-3.15: was corelibs-dc-asdict-astuple,corelibs-dc-twins
+Lib/dataclasses.py	1613	1646	_astuple_inner	_astuple_inner(obj, tuple_factory)	modelled	corelibs-dc-asdict-astuple,corelibs-dc-asdict-frozendict,corelibs-dc-counter,corelibs-dc-twins	
 Lib/dataclasses.py	1649	1773	make_dataclass	make_dataclass(cls_name, fields, *, bases=(), namespace=None, init=True, repr=True, eq=True, order=False, unsafe_hash=False, frozen=False, match_args=True, kw_only=False, slots=False, weakref_slot=False, module=None, decorator=dataclass)	todo		
 Lib/dataclasses.py	1776	1792	replace	replace(obj, /, **changes)	modelled	corelibs-dc-replace-spec,corelibs-dc-replace-errors	
 Lib/dataclasses.py	1795	1826	_replace	_replace(self, /, **changes)	modelled	corelibs-dc-replace-spec,corelibs-dc-replace-errors	

@@ -45,7 +45,7 @@ def testEnv (cur user : String) : LocaleEnv where
   supported := fun l => l == "C" || l == "C.utf8"
   names := fun _ => cNames
 
-def testAnsi : Ansi := ⟨lit "\x1b[30m", lit "\x1b[43m", lit "\x1b[0m"⟩
+def testAnsi : Ansi := ⟨lit "\x1b[1m", lit "\x1b[30m\x1b[43m", lit "\x1b[36m", lit "\x1b[0m"⟩
 
 def getHl (j : Json) : Except String Highlight := do
   match j.getObjVal? "hl" with
@@ -148,6 +148,8 @@ def runCal (fn : String) (j : Json) : Option (Except String Json) :=
     return encPy encS (hFormatmonth cNames (← cal) (← getInt j "y") (← getInt j "m") (← getBool j "withyear"))
   | "h.formatyear" => some do
     return encPy encS (hFormatyear cNames (← cal) (← getInt j "y") (← getInt j "width"))
+  | "h.formatmonthpage" => some do
+    return encPy encBytes (hFormatmonthpage cNames (← cal) (← getInt j "y") (← getInt j "m") (← getOptS j "css") (← getOptS j "encoding"))
   | "h.formatyearpage" => some do
     return encPy encBytes (hFormatyearpage cNames (← cal) (← getInt j "y") (← getInt j "width") (← getOptS j "css") (← getOptS j "encoding"))
   | "l.default" => some do

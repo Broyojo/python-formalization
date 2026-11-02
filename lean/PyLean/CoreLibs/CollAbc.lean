@@ -7,7 +7,7 @@ import PyLean.CoreLibs.CollAbc.PropsMap
 import PyLean.CoreLibs.CollAbc.PropsHash
 import PyLean.CoreLibs.CollAbc.PropsFail
 
-/-! Registry for the `CollAbc` area of CoreLibs: Lib/_collections_abc.py, Lib/collections/abc.py, CPython 3.14.7. -/
+/-! Registry for the `CollAbc` area of CoreLibs: Lib/_collections_abc.py, Lib/collections/abc.py, CPython 3.15.2. -/
 
 namespace PyLean.CoreLibs.CollAbc
 
@@ -223,6 +223,14 @@ def entries : List Entry := [
     status := .proven
     prop := ``ByteStringMeta
     thm := some ``byteStringMeta_proven },
+  { id := "corelibs-collabc-module-getattr"
+    pyFile := file
+    pyFns := ["__getattr__"]
+    statement := "The first read of ByteString warns and puts it in the module's globals, a later one finds it silently, a warning made an exception leaves it out, and any other name is an AttributeError."
+    source := "Lib/_collections_abc.py:1175-1183"
+    status := .proven
+    prop := ``ModuleGetattrByteString
+    thm := some ``moduleGetattrByteString_proven },
   { id := "corelibs-collabc-throw-paths"
     pyFile := file
     pyFns := ["Coroutine.throw", "Generator.throw", "AsyncGenerator.athrow"]

@@ -3,7 +3,7 @@ import PyLean.RangeSlice.Model
 import PyLean.Sequences.Common
 
 /-!
-`collections.UserString`, Lib/collections/__init__.py:1418-1667 (CPython 3.14.7).
+`collections.UserString`, Lib/collections/__init__.py:1418-1667 (CPython 3.15.2).
 
 A `str` is its code points (`PyLean.StrSearch.Seq`). The search, split, strip, replace and pad
 methods use the mirrors of Objects/unicodeobject.c in `PyLean.StrSearch`. What depends on the
@@ -43,6 +43,11 @@ def SArg.ty : SArg → String
   | .user _ => "UserString"
   | .other ty _ => ty
 
+/-- `%T` of an argument: the fully qualified name of its type. -/
+def SArg.fullTy : SArg → String
+  | .user _ => "collections.UserString"
+  | a => a.ty
+
 /-- `if isinstance(x, UserString): x = x.data`. -/
 def unwrap : SArg → SArg
   | .user s => .str s
@@ -59,7 +64,7 @@ def SArg.wrap : SArg → SArg
 def needStr (a : SArg) : Py Seq :=
   match a with
   | .str s => .ok s
-  | a => .error (.typeError s!"must be str, not {a.ty}")
+  | a => .error (.typeError s!"must be str, not {a.fullTy}")
 
 /-- `sep` of `split`/`rsplit`: `None` or a `str`. -/
 def needSep : Option SArg → Py (Option Seq)
@@ -121,10 +126,13 @@ def strJoin (sep : Seq) (items : List SArg) : Py Seq :=
     let ts ← go 0 items
     return (ts.intersperse sep).flatten
 
-/-- `s * n`: `sequence_repeat` conversion, `unicode_repeat`, unicodeobject.c. -/
+/-- `s * n`: `sequence_repeat`, Objects/abstract.c:1157-1173, and `unicode_repeat`, Objects/unicodeobject.c:12561. The text
+of the `OverflowError` depends on how often this line has run: `sequence_repeat` says "cannot fit 'int' into an index-sized
+integer", and once `BINARY_OP` is specialized, `seq_int_multiply`, Python/specialize.c:2147-2154, says "Python int too large
+to convert to C ssize_t". So the message is left open. -/
 def strRepeat (s : Seq) (n : Int) : Py Seq := do
   if n < ssizeMin ∨ n > ssizeMax then
-    throw (.overflowError "cannot fit 'int' into an index-sized integer")
+    throw (.overflowError "~too large for a Py_ssize_t, in one of two wordings")
   if n ≤ 0 then return []
   if s.length = 0 then return []
   if n * s.length > ssizeMax then throw (.overflowError "repeated string is too long")
@@ -222,7 +230,7 @@ def usNew (cls : String) : SArg → US
   | .user s => ⟨cls, s⟩
   | .other _ text => ⟨cls, text⟩
 
-/-- `UserString.__str__`, @3.14.7:1373-1374. -/
+/-- `UserString.__str__`, Lib/collections/__init__.py:1428-1429. -/
 def usStr (u : US) : Seq := u.data
 
 /-- `UserString.__getnewargs__`, :1299-1300: `(self.data[:],)`. -/
@@ -309,7 +317,7 @@ def strRemovesuffixA (s : Seq) (a : SArg) : Py Seq := do
   let p ← needArg "removesuffix() argument" a
   return strRemovesuffix s p
 
-/-- `UserString.removeprefix`, @3.14.7:1468-1471. -/
+/-- `UserString.removeprefix`, Lib/collections/__init__.py:1523-1526. -/
 def usRemoveprefix (u : US) (a : SArg) : Py US := wrapIn u (strRemoveprefixA u.data (unwrap a))
 
 /-- `UserString.removesuffix`, :1381-1384. -/
@@ -329,10 +337,10 @@ def strEndswithA (s : Seq) (a : AffixArg) (st en : Option Int) : Py Bool := do
   let p ← needAffix "endswith" a
   return strEndswith s p st en
 
-/-- `UserString.endswith`, :1391-1392. No unwrapping on 3.14. -/
+/-- `UserString.endswith`, Lib/collections/__init__.py:1538-1539. No unwrapping. -/
 def usEndswith (u : US) (a : AffixArg) (st en : Option Int) : Py Bool := strEndswithA u.data a st en
 
-/-- `UserString.startswith`, :1501-1502. No unwrapping on 3.14. -/
+/-- `UserString.startswith`, Lib/collections/__init__.py:1648-1649. No unwrapping. -/
 def usStartswith (u : US) (a : AffixArg) (st en : Option Int) : Py Bool :=
   strStartswithA u.data a st en
 

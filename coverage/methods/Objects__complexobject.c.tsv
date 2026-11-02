@@ -6,10 +6,10 @@ Objects/complexobject.c	55	61	_Py_c_diff	_Py_c_diff(Py_complex a, Py_complex b)	
 Objects/complexobject.c	64	69	_Py_cr_diff	_Py_cr_diff(Py_complex a, double b)	modelled	complex-parts	
 Objects/complexobject.c	72	78	_Py_rc_diff	_Py_rc_diff(double a, Py_complex b)	modelled	complex-parts	
 Objects/complexobject.c	81	87	_Py_c_neg	_Py_c_neg(Py_complex a)	modelled	complex-parts	
-Objects/complexobject.c	90	148	_Py_c_prod	_Py_c_prod(Py_complex z, Py_complex w)	todo		changed-in-3.15: was complex-prod-shape
+Objects/complexobject.c	90	148	_Py_c_prod	_Py_c_prod(Py_complex z, Py_complex w)	modelled	complex-prod-shape	
 Objects/complexobject.c	151	157	_Py_cr_prod	_Py_cr_prod(Py_complex a, double b)	modelled	complex-prod-shape	
 Objects/complexobject.c	160	163	_Py_rc_prod	_Py_rc_prod(double a, Py_complex b)	modelled	complex-prod-shape	
-Objects/complexobject.c	170	246	_Py_c_quot	_Py_c_quot(Py_complex a, Py_complex b)	todo		changed-in-3.15: was complex-div-zero
+Objects/complexobject.c	170	246	_Py_c_quot	_Py_c_quot(Py_complex a, Py_complex b)	modelled	complex-div-zero	
 Objects/complexobject.c	249	261	_Py_cr_quot	_Py_cr_quot(Py_complex a, double b)	modelled	complex-div-zero	
 Objects/complexobject.c	265	304	_Py_rc_quot	_Py_rc_quot(double a, Py_complex b)	modelled	complex-div-zero	
 Objects/complexobject.c	310	339	_Py_c_pow	_Py_c_pow(Py_complex a, Py_complex b)	modelled	complex-pow-special,complex-pow-edom-only-for-zero	
@@ -23,16 +23,16 @@ Objects/complexobject.c	440	446	complex_subtype_from_doubles	complex_subtype_fro
 Objects/complexobject.c	449	455	PyComplex_FromDoubles	PyComplex_FromDoubles(double real, double imag)	excluded		no-behaviour: boxes two doubles in a new object; the value passes through unchanged
 Objects/complexobject.c	460	478	PyComplex_RealAsDouble	PyComplex_RealAsDouble(PyObject *op)	modelled	complex-accessors-agree	
 Objects/complexobject.c	481	502	PyComplex_ImagAsDouble	PyComplex_ImagAsDouble(PyObject *op)	modelled	complex-accessors-agree	
-Objects/complexobject.c	505	535	try_complex_special_method	try_complex_special_method(PyObject *op)	todo		changed-in-3.15: was complex-try-special-outcomes
+Objects/complexobject.c	505	535	try_complex_special_method	try_complex_special_method(PyObject *op)	modelled	complex-try-special-outcomes	
 Objects/complexobject.c	538	571	PyComplex_AsCComplex	PyComplex_AsCComplex(PyObject *op)	modelled	complex-accessors-agree,complex-from-number-matches-constructor	
 Objects/complexobject.c	574	628	complex_repr	complex_repr(PyObject *op)	modelled	complex-repr	
-Objects/complexobject.c	631	651	complex_hash	complex_hash(PyObject *op)	todo		changed-in-3.15: was complex-hash-composition
+Objects/complexobject.c	631	651	complex_hash	complex_hash(PyObject *op)	modelled	complex-hash-composition	
 Objects/complexobject.c	661	672	real_to_double	real_to_double(PyObject **pobj, double *dbl)	modelled	complex-real-operand	
 Objects/complexobject.c	675	679	real_to_complex	real_to_complex(PyObject **pobj, Py_complex *pc)	modelled	complex-real-operand	
 Objects/complexobject.c	740	773	complex_pow	complex_pow(PyObject *v, PyObject *w, PyObject *z)	modelled	complex-pow-special	
 Objects/complexobject.c	776	783	complex_neg	complex_neg(PyObject *op)	modelled	complex-parts	
 Objects/complexobject.c	786	793	complex_pos	complex_pos(PyObject *op)	modelled	complex-parts	
-Objects/complexobject.c	796	809	complex_abs	complex_abs(PyObject *op)	todo		changed-in-3.15: was complex-abs,complex-abs-nan-any-errno
+Objects/complexobject.c	796	809	complex_abs	complex_abs(PyObject *op)	modelled	complex-abs,complex-abs-nan-any-errno	
 Objects/complexobject.c	812	816	complex_bool	complex_bool(PyObject *op)	modelled	complex-bool	
 Objects/complexobject.c	819	872	complex_richcompare	complex_richcompare(PyObject *v, PyObject *w, int op)	modelled	complex-compare	
 Objects/complexobject.c	882	888	complex_conjugate_impl	complex_conjugate_impl(PyComplexObject *self) /*[clinic end generated code: output=5059ef162edfc68e input=71b8ab003e1cec95]*/	modelled	complex-parts	

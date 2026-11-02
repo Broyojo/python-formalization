@@ -27,8 +27,9 @@ expected: |
 observed: |
   python3 3.14.7: ('a', 1) and ('b', 2). REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): ('b', 2) from both. NOT REPRODUCED, fixed by GH-147958.
+  python3 3.15.2: NOT REPRODUCED: UserDict.popitem is self.data.popitem(), Lib/collections/__init__.py:1262-1270.
 promised_by: |
-  Doc/library/stdtypes.rst:5491: "Pairs are returned in LIFO (last-in, first-out) order."
+  Doc/builtins/stdtypes.rst:5818: "Pairs are returned in LIFO (last-in, first-out) order."
   Doc/library/collections.rst:1337: "Class that simulates a dictionary."
 cause: |
   Lib/_collections_abc.py:944-954.

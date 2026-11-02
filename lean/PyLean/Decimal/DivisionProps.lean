@@ -151,7 +151,47 @@ theorem invalid_run_ok {c : Ctx} {fl fl' : List Signal} {g : Dec → DM (Dec × 
   cases this
   exact ⟨rfl, hm⟩
 
-theorem divideCorrect_proven : DivideCorrect := by
+/-- What `_divide` returns once `_is_less_than_pow10a_use_str` has decided: the exact
+quotient and remainder, or `InvalidOperation`. The decision itself is the separate
+`DivideCorrect`, which is open: see its registry note. -/
+def DivideVerdict : Prop :=
+  ∀ (c : Ctx) (sa : Bool) (ca : Nat) (ea : Int) (sb : Bool) (cb : Nat) (eb : Int)
+    (fl fl' : List Signal) (q r : Dec),
+    ca ≠ 0 → cb ≠ 0 →
+    (divideD c (.fin sa ca ea) (.fin sb cb eb)).run fl = .ok ((q, r), fl') →
+    let X := (scaled ca ea cb eb).1
+    let Y := (scaled ca ea cb eb).2
+    ((adjustedD ca ea - adjustedD cb eb ≤ -2 ∨
+        ∃ s, isLessThanPow10aUseStr (X / Y) c.prec = .ok (true, s)) ∧
+      q = .fin (sa != sb) (X / Y) 0 ∧ r = .fin sa (X % Y) (min ea eb) ∧ fl' = fl) ∨
+    ((adjustedD ca ea - adjustedD cb eb > c.prec ∨
+        ∃ s, isLessThanPow10aUseStr (X / Y) c.prec = .ok (false, s)) ∧
+      q = .nan false false 0 ∧ r = .nan false false 0 ∧
+      Signal.invalidOperation ∈ fl')
+
+/-- In the band the float tests leave open, `_is_less_than_pow10a_use_str` is exact: it
+computes `str(q)` and compares lengths, and for `a >= 1` that is `q < 10**a`. -/
+def Pow10BandExact : Prop :=
+  ∀ q a : Nat, 0 < a → ∀ v, isLessThanPow10aUseStr q a = .ok (v, true) → (v = true ↔ q < 10 ^ a)
+
+theorem pow10BandExact_proven : Pow10BandExact := by
+  intro q a ha v h
+  unfold isLessThanPow10aUseStr at h
+  simp only at h
+  split at h
+  · cases h
+  · split at h
+    · cases h
+    · unfold strLimit at h
+      split at h
+      · cases h
+      · have h2 : decide (numDigits q ≤ a) = v := by
+          injection h with h1
+          injection h1
+        rw [← h2, decide_eq_true_eq]
+        exact numDigits_le_iff ha
+
+theorem divideVerdict_proven : DivideVerdict := by
   intro c sa ca ea sb cb eb fl fl' q r ha hb h X Y
   simp only [divideD, decBool, isZero_fin sa ca ea ha, isinfinity, expOf, Dec.adjusted, Dec.neg,
     Bool.not_false, Bool.not_true, ne_eq, not_true_eq_false, decide_false, Bool.false_or,
@@ -170,7 +210,7 @@ theorem divideCorrect_proven : DivideCorrect := by
     have h0 : X / Y = 0 := Nat.div_eq_of_lt hlt
     have hm : X % Y = X := Nat.mod_eq_of_lt hlt
     left
-    refine ⟨by rw [h0]; exact pow10_pos _, by rw [h0], ?_, rfl⟩
+    refine ⟨Or.inl h2, by rw [h0], ?_, rfl⟩
     rw [hm, scaled_at_min ca cb ea eb]
   · rename_i h2'
     have h2 : ¬(adjustedD ca ea - adjustedD cb eb ≤ -2) := fun hc => h2' (decide_eq_true hc)
@@ -180,23 +220,27 @@ theorem divideCorrect_proven : DivideCorrect := by
       obtain ⟨_, rfl⟩ := liftPy_ok h4
       obtain ⟨_, fl2, h6, h7⟩ := bind_ok h5
       obtain ⟨_, rfl⟩ := liftPy_ok h6
-      by_cases h8 : (scaled ca ea cb eb).1 / (scaled ca ea cb eb).2 < 10 ^ c.prec
-      · rw [if_pos h8] at h7
-        obtain ⟨_, fl3, h9, h10⟩ := bind_ok h7
-        obtain ⟨_, rfl⟩ := liftPy_ok h9
+      obtain ⟨⟨v, s⟩, fl3, h9, h10⟩ := bind_ok h7
+      obtain ⟨hv, rfl⟩ := liftPy_ok h9
+      cases v with
+      | true =>
+        simp only [↓reduceIte] at h10
         obtain ⟨_, fl4, h11, h12⟩ := bind_ok h10
         obtain ⟨_, rfl⟩ := liftPy_ok h11
-        have h13 := pure_ok h12
-        cases h13
-        exact Or.inl ⟨h8, rfl, rfl, rfl⟩
-      · rw [if_neg h8] at h7
-        obtain ⟨hr, hm⟩ := invalid_run_ok h7 (fun _ => rfl)
+        obtain ⟨_, fl5, h13, h14⟩ := bind_ok h12
+        obtain ⟨_, rfl⟩ := liftPy_ok h13
+        have h15 := pure_ok h14
+        cases h15
+        exact Or.inl ⟨Or.inr ⟨s, hv⟩, rfl, rfl, rfl⟩
+      | false =>
+        simp only [Bool.false_eq_true, ↓reduceIte] at h10
+        obtain ⟨hr, hm⟩ := invalid_run_ok h10 (fun _ => rfl)
         cases hr
-        exact Or.inr ⟨Nat.le_of_not_gt h8, rfl, rfl, hm⟩
+        exact Or.inr ⟨Or.inr ⟨s, hv⟩, rfl, rfl, hm⟩
     · rw [if_neg h3] at h
       obtain ⟨hr, hm⟩ := invalid_run_ok h (fun _ => rfl)
       cases hr
-      exact Or.inr ⟨scaled_big ca cb ea eb c.prec ha hb (by omega), rfl, rfl, hm⟩
+      exact Or.inr ⟨Or.inl (by omega), rfl, rfl, hm⟩
 
 /-- The special values of `/`, General Decimal Arithmetic, "divide": `x/0` is an infinity
 with DivisionByZero, `0/0` and `inf/inf` are NaN with InvalidOperation, `inf/x` is an
@@ -421,9 +465,9 @@ theorem floordivTwinsAgree_refuted : ¬FloordivTwinsAgree := by
   let c : Ctx := { prec := 28, emax := 10, emin := -10, traps := [] }
   have hv := h c (.fin false (10 ^ 20) 0) (.fin false 1 0) []
   have h1 : (floordivD c (.fin false (10 ^ 20) 0) (.fin false 1 0)).run [] =
-      .ok (.fin false (10 ^ 20) 0, []) := by decide
+      .ok (.fin false (10 ^ 20) 0, []) := by decide +kernel
   have h2 : (floordivC c (.fin false (10 ^ 20) 0) (.fin false 1 0)).run [] =
-      .ok (.inf false, [.overflow, .inexact, .rounded]) := by decide
+      .ok (.inf false, [.overflow, .inexact, .rounded]) := by decide +kernel
   rw [h1, h2] at hv
   cases hv
 

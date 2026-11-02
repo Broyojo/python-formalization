@@ -240,7 +240,7 @@ def fltDiv (x y : Flt) : Py Flt :=
   | .zero _ => .error (.zeroDivisionError "division by zero")
   | _ => .ok (Flt.div x y)
 
-/-! ## `math.fsum`, Modules/mathmodule.c@3.14.7:1363-1484 -/
+/-! ## `math.fsum`, Modules/mathmodule.c:1281-1396 -/
 
 /-- The partials loop for one `x`: returns the new partial list (in order) and the final `x`. -/
 def fsumInner : List Flt → Flt → List Flt → List Flt × Flt

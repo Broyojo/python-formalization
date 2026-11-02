@@ -1,7 +1,7 @@
 import PyLean.LongObj.FromString
 
 /-!
-`Lib/_pylong.py` (CPython 3.14.7), the Python half of the int/str conversions and
+`Lib/_pylong.py` (CPython 3.15.2), the Python half of the int/str conversions and
 of fast division, and the knots with the C code that calls it and that it calls.
 
 `decimal` is not modelled. The two functions that use it are mirrored over exact

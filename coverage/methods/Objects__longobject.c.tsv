@@ -8,25 +8,25 @@ Objects/longobject.c	159	197	long_alloc	long_alloc(Py_ssize_t size)	todo		change
 Objects/longobject.c	200	203	_PyLong_New	_PyLong_New(Py_ssize_t size)	todo		
 Objects/longobject.c	206	219	_PyLong_FromDigits	_PyLong_FromDigits(int negative, Py_ssize_t digit_count, digit *digits)	modelled	longobj-from-digits	
 Objects/longobject.c	222	248	_PyLong_Copy	_PyLong_Copy(PyLongObject *src)	todo		
-Objects/longobject.c	251	270	_PyLong_FromMedium	_PyLong_FromMedium(sdigit x)	todo		changed-in-3.15: was longobj-from-stwodigits
+Objects/longobject.c	251	270	_PyLong_FromMedium	_PyLong_FromMedium(sdigit x)	modelled	longobj-from-stwodigits	
 Objects/longobject.c	273	309	_PyLong_FromLarge	_PyLong_FromLarge(stwodigits ival)	modelled	longobj-from-stwodigits	
 Objects/longobject.c	313	323	_PyLong_FromSTwoDigits	_PyLong_FromSTwoDigits(stwodigits x)	modelled	longobj-from-stwodigits	
-Objects/longobject.c	328	350	medium_from_stwodigits	medium_from_stwodigits(stwodigits x)	todo		changed-in-3.15: new function
+Objects/longobject.c	328	350	medium_from_stwodigits	medium_from_stwodigits(stwodigits x)	modelled	longobj-compact-ops	
 Objects/longobject.c	355	368	_PyLong_Negate	Py_LOCAL_INLINE(void) _PyLong_Negate(PyLongObject **x_p)	modelled	longobj-mul	
 Objects/longobject.c	407	410	PyLong_FromLong	PyLong_FromLong(long ival)	modelled	longobj-from-c	
 Objects/longobject.c	445	448	PyLong_FromUnsignedLong	PyLong_FromUnsignedLong(unsigned long ival)	modelled	longobj-from-c	
 Objects/longobject.c	453	456	PyLong_FromUnsignedLongLong	PyLong_FromUnsignedLongLong(unsigned long long ival)	modelled	longobj-from-c	
 Objects/longobject.c	461	464	PyLong_FromSize_t	PyLong_FromSize_t(size_t ival)	modelled	longobj-from-c	
 Objects/longobject.c	469	521	PyLong_FromDouble	PyLong_FromDouble(double dval)	todo		
-Objects/longobject.c	536	557	unroll_digits_ulong	unroll_digits_ulong(PyLongObject *v, Py_ssize_t *iptr)	todo		changed-in-3.15: new function
-Objects/longobject.c	560	581	unroll_digits_size_t	unroll_digits_size_t(PyLongObject *v, Py_ssize_t *iptr)	todo		changed-in-3.15: new function
-Objects/longobject.c	593	667	PyLong_AsLongAndOverflow	PyLong_AsLongAndOverflow(PyObject *vv, int *overflow)	todo		changed-in-3.15: was longobj-index-conversions
+Objects/longobject.c	536	557	unroll_digits_ulong	unroll_digits_ulong(PyLongObject *v, Py_ssize_t *iptr)	modelled	longobj-index-conversions,longobj-require-int	
+Objects/longobject.c	560	581	unroll_digits_size_t	unroll_digits_size_t(PyLongObject *v, Py_ssize_t *iptr)	modelled	longobj-require-int	
+Objects/longobject.c	593	667	PyLong_AsLongAndOverflow	PyLong_AsLongAndOverflow(PyObject *vv, int *overflow)	modelled	longobj-index-conversions	
 Objects/longobject.c	673	684	PyLong_AsLong	PyLong_AsLong(PyObject *obj)	modelled	longobj-index-conversions	
 Objects/longobject.c	690	702	PyLong_AsInt	PyLong_AsInt(PyObject *obj)	modelled	longobj-index-conversions	
-Objects/longobject.c	708	751	PyLong_AsSsize_t	PyLong_AsSsize_t(PyObject *vv) {	todo		changed-in-3.15: was longobj-require-int
-Objects/longobject.c	757	804	PyLong_AsUnsignedLong	PyLong_AsUnsignedLong(PyObject *vv)	todo		changed-in-3.15: was longobj-require-int
-Objects/longobject.c	810	845	PyLong_AsSize_t	PyLong_AsSize_t(PyObject *vv)	todo		changed-in-3.15: was longobj-require-int
-Objects/longobject.c	851	875	_PyLong_AsUnsignedLongMask	_PyLong_AsUnsignedLongMask(PyObject *vv)	todo		changed-in-3.15: was longobj-as-mask
+Objects/longobject.c	708	751	PyLong_AsSsize_t	PyLong_AsSsize_t(PyObject *vv) {	modelled	longobj-require-int	
+Objects/longobject.c	757	804	PyLong_AsUnsignedLong	PyLong_AsUnsignedLong(PyObject *vv)	modelled	longobj-require-int	
+Objects/longobject.c	810	845	PyLong_AsSize_t	PyLong_AsSize_t(PyObject *vv)	modelled	longobj-require-int	
+Objects/longobject.c	851	875	_PyLong_AsUnsignedLongMask	_PyLong_AsUnsignedLongMask(PyObject *vv)	modelled	longobj-as-mask	
 Objects/longobject.c	878	899	PyLong_AsUnsignedLongMask	PyLong_AsUnsignedLongMask(PyObject *op)	modelled	longobj-index-conversions	
 Objects/longobject.c	902	910	PyLong_IsPositive	PyLong_IsPositive(PyObject *obj)	todo		
 Objects/longobject.c	913	921	PyLong_IsNegative	PyLong_IsNegative(PyObject *obj)	todo		
@@ -36,7 +36,7 @@ Objects/longobject.c	948	951	_PyLong_Sign	_PyLong_Sign(PyObject *vv)	modelled	lo
 Objects/longobject.c	954	963	PyLong_GetSign	PyLong_GetSign(PyObject *vv, int *sign)	todo		
 Objects/longobject.c	966	973	bit_length_digit	bit_length_digit(digit x)	todo		
 Objects/longobject.c	976	997	_PyLong_NumBits	_PyLong_NumBits(PyObject *vv)	modelled	longobj-native-bytes,longobj-num-bits	
-Objects/longobject.c	1000	1106	_PyLong_FromByteArray	_PyLong_FromByteArray(const unsigned char* bytes, size_t n, int little_endian, int is_signed)	todo		changed-in-3.15: was mathint-from-bytes-value
+Objects/longobject.c	1000	1106	_PyLong_FromByteArray	_PyLong_FromByteArray(const unsigned char* bytes, size_t n, int little_endian, int is_signed)	modelled	mathint-from-bytes-value	
 Objects/longobject.c	1109	1254	_PyLong_AsByteArray	_PyLong_AsByteArray(PyLongObject* v, unsigned char* bytes, size_t n, int little_endian, int is_signed, int with_exceptions)	modelled	mathint-to-bytes-exact	
 Objects/longobject.c	1258	1267	_fits_in_n_bits	_fits_in_n_bits(Py_ssize_t v, Py_ssize_t n)	modelled	longobj-native-bytes	
 Objects/longobject.c	1270	1279	_resolve_endianness	_resolve_endianness(int *endianness)	todo		
@@ -49,9 +49,9 @@ Objects/longobject.c	1566	1569	PyLong_FromLongLong	PyLong_FromLongLong(long long
 Objects/longobject.c	1574	1577	PyLong_FromSsize_t	PyLong_FromSsize_t(Py_ssize_t ival)	modelled	longobj-from-c	
 Objects/longobject.c	1583	1622	PyLong_AsLongLong	PyLong_AsLongLong(PyObject *vv)	modelled	longobj-index-conversions	
 Objects/longobject.c	1628	1669	PyLong_AsUnsignedLongLong	PyLong_AsUnsignedLongLong(PyObject *vv)	modelled	longobj-require-int	
-Objects/longobject.c	1675	1700	_PyLong_AsUnsignedLongLongMask	_PyLong_AsUnsignedLongLongMask(PyObject *vv)	todo		changed-in-3.15: was longobj-as-mask
+Objects/longobject.c	1675	1700	_PyLong_AsUnsignedLongLongMask	_PyLong_AsUnsignedLongLongMask(PyObject *vv)	modelled	longobj-as-mask	
 Objects/longobject.c	1703	1724	PyLong_AsUnsignedLongLongMask	PyLong_AsUnsignedLongLongMask(PyObject *op)	modelled	longobj-index-conversions	
-Objects/longobject.c	1737	1810	PyLong_AsLongLongAndOverflow	PyLong_AsLongLongAndOverflow(PyObject *vv, int *overflow)	todo		changed-in-3.15: was longobj-index-conversions
+Objects/longobject.c	1737	1810	PyLong_AsLongLongAndOverflow	PyLong_AsLongLongAndOverflow(PyObject *vv, int *overflow)	modelled	longobj-index-conversions	
 Objects/longobject.c	1854	1873	v_iadd	v_iadd(digit *x, Py_ssize_t m, digit *y, Py_ssize_t n)	modelled	longobj-vector-add-sub	
 Objects/longobject.c	1880	1899	v_isub	v_isub(digit *x, Py_ssize_t m, digit *y, Py_ssize_t n)	modelled	longobj-vector-add-sub	
 Objects/longobject.c	1905	1917	v_lshift	v_lshift(digit *z, digit *a, Py_ssize_t m, int d)	modelled	longobj-vector-shifts	
@@ -60,16 +60,16 @@ Objects/longobject.c	1960	1974	inplace_divrem1	inplace_divrem1(digit *pout, digi
 Objects/longobject.c	1982	1993	divrem1	divrem1(PyLongObject *a, digit n, digit *prem)	modelled	longobj-divrem-one-digit	
 Objects/longobject.c	1999	2007	inplace_rem1	inplace_rem1(digit *pin, Py_ssize_t size, digit n)	modelled	longobj-divrem-one-digit	
 Objects/longobject.c	2014	2022	rem1	rem1(PyLongObject *a, digit n)	modelled	longobj-divrem	
-Objects/longobject.c	2027	2088	pylong_int_to_decimal_string	pylong_int_to_decimal_string(PyObject *aa, PyObject **p_output, _PyUnicodeWriter *writer, PyBytesWriter *bytes_writer, char **bytes_str)	todo		changed-in-3.15: was longobj-str-round-trip
-Objects/longobject.c	2096	2318	long_to_decimal_string_internal	long_to_decimal_string_internal(PyObject *aa, PyObject **p_output, _PyUnicodeWriter *writer, PyBytesWriter *bytes_writer, char **bytes_str)	todo		changed-in-3.15: was longobj-str-round-trip
+Objects/longobject.c	2027	2088	pylong_int_to_decimal_string	pylong_int_to_decimal_string(PyObject *aa, PyObject **p_output, _PyUnicodeWriter *writer, PyBytesWriter *bytes_writer, char **bytes_str)	modelled	longobj-str-round-trip	
+Objects/longobject.c	2096	2318	long_to_decimal_string_internal	long_to_decimal_string_internal(PyObject *aa, PyObject **p_output, _PyUnicodeWriter *writer, PyBytesWriter *bytes_writer, char **bytes_str)	modelled	longobj-str-round-trip	
 Objects/longobject.c	2321	2327	long_to_decimal_string	long_to_decimal_string(PyObject *aa)	modelled	longobj-str-round-trip	
-Objects/longobject.c	2335	2500	long_format_binary	long_format_binary(PyObject *aa, int base, int alternate, PyObject **p_output, _PyUnicodeWriter *writer, PyBytesWriter *bytes_writer, char **bytes_str)	todo		changed-in-3.15: was longobj-format-binary
+Objects/longobject.c	2335	2500	long_format_binary	long_format_binary(PyObject *aa, int base, int alternate, PyObject **p_output, _PyUnicodeWriter *writer, PyBytesWriter *bytes_writer, char **bytes_str)	modelled	longobj-format-binary	
 Objects/longobject.c	2503	2514	_PyLong_Format	_PyLong_Format(PyObject *obj, int base)	todo		
 Objects/longobject.c	2517	2527	_PyLong_FormatWriter	_PyLong_FormatWriter(_PyUnicodeWriter *writer, PyObject *obj, int base, int alternate)	todo		
 Objects/longobject.c	2530	2547	_PyLong_FormatBytesWriter	_PyLong_FormatBytesWriter(PyBytesWriter *writer, char *str, PyObject *obj, int base, int alternate)	todo		changed-in-3.15:
 Objects/longobject.c	2589	2652	long_from_binary_base	long_from_binary_base(const char *start, const char *end, Py_ssize_t digits, int base, PyLongObject **res)	modelled	longobj-int-bytes-grammar	
 Objects/longobject.c	2657	2685	pylong_int_from_string	pylong_int_from_string(const char *start, const char *end, PyLongObject **res)	modelled	longobj-int-bytes-grammar	
-Objects/longobject.c	2829	2940	long_from_non_binary_base	long_from_non_binary_base(const char *start, const char *end, Py_ssize_t digits, int base, PyLongObject **res)	todo		changed-in-3.15: was longobj-int-bytes-grammar
+Objects/longobject.c	2829	2940	long_from_non_binary_base	long_from_non_binary_base(const char *start, const char *end, Py_ssize_t digits, int base, PyLongObject **res)	modelled	longobj-int-bytes-grammar	
 Objects/longobject.c	2962	3044	long_from_string_base	long_from_string_base(const char **str, int base, PyLongObject **res)	modelled	longobj-int-bytes-grammar	
 Objects/longobject.c	3055	3158	PyLong_FromString	PyLong_FromString(const char *str, char **pend, int base)	modelled	longobj-int-bytes-grammar	
 Objects/longobject.c	3166	3183	_PyLong_FromBytes	_PyLong_FromBytes(const char *s, Py_ssize_t len, int base)	modelled	longobj-int-bytes-grammar	
@@ -83,21 +83,21 @@ Objects/longobject.c	3605	3623	long_compare	long_compare(PyLongObject *a, PyLong
 Objects/longobject.c	3626	3635	long_richcompare	long_richcompare(PyObject *self, PyObject *other, int op)	modelled	listsort-long-compare	
 Objects/longobject.c	3638	3651	_PyLong_ExactDealloc	_PyLong_ExactDealloc(PyObject *self)	excluded		no-behaviour: returns memory to the freelist or allocator; immortal small ints are only re-marked
 Objects/longobject.c	3654	3671	long_dealloc	long_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the only effect is on freed memory and the freelist
-Objects/longobject.c	3674	3743	long_hash	long_hash(PyObject *obj)	todo		changed-in-3.15: was longobj-hash,typeobj-long-hash
+Objects/longobject.c	3674	3743	long_hash	long_hash(PyObject *obj)	modelled	longobj-hash,typeobj-long-hash	
 Objects/longobject.c	3749	3778	x_add	x_add(PyLongObject *a, PyLongObject *b)	modelled	longobj-x-add	
 Objects/longobject.c	3783	3834	x_sub	x_sub(PyLongObject *a, PyLongObject *b)	modelled	longobj-x-sub	
 Objects/longobject.c	3837	3867	long_add	long_add(PyLongObject *a, PyLongObject *b)	modelled	longobj-add-sub	
-Objects/longobject.c	3870	3875	_PyCompactLong_Add	_PyCompactLong_Add(PyLongObject *a, PyLongObject *b)	todo		changed-in-3.15: new function
+Objects/longobject.c	3870	3875	_PyCompactLong_Add	_PyCompactLong_Add(PyLongObject *a, PyLongObject *b)	modelled	longobj-compact-ops	
 Objects/longobject.c	3878	3882	long_add_method	long_add_method(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
 Objects/longobject.c	3886	3912	long_sub	long_sub(PyLongObject *a, PyLongObject *b)	modelled	longobj-add-sub	
-Objects/longobject.c	3915	3920	_PyCompactLong_Subtract	_PyCompactLong_Subtract(PyLongObject *a, PyLongObject *b)	todo		changed-in-3.15: new function
+Objects/longobject.c	3915	3920	_PyCompactLong_Subtract	_PyCompactLong_Subtract(PyLongObject *a, PyLongObject *b)	modelled	longobj-compact-ops	
 Objects/longobject.c	3923	3927	long_sub_method	long_sub_method(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
 Objects/longobject.c	3934	4029	x_mul	x_mul(PyLongObject *a, PyLongObject *b)	todo		
 Objects/longobject.c	4039	4064	kmul_split	kmul_split(PyLongObject *n, Py_ssize_t size, PyLongObject **high, PyLongObject **low)	modelled	longobj-k-mul	
-Objects/longobject.c	4073	4231	k_mul	k_mul(PyLongObject *a, PyLongObject *b)	todo		changed-in-3.15: was longobj-k-mul
+Objects/longobject.c	4073	4231	k_mul	k_mul(PyLongObject *a, PyLongObject *b)	modelled	longobj-k-mul	
 Objects/longobject.c	4287	4339	k_lopsided_mul	k_lopsided_mul(PyLongObject *a, PyLongObject *b)	modelled	longobj-k-mul	
 Objects/longobject.c	4343	4357	long_mul	long_mul(PyLongObject *a, PyLongObject *b)	modelled	longobj-mul	
-Objects/longobject.c	4362	4367	_PyCompactLong_Multiply	_PyCompactLong_Multiply(PyLongObject *a, PyLongObject *b)	todo		changed-in-3.15: new function
+Objects/longobject.c	4362	4367	_PyCompactLong_Multiply	_PyCompactLong_Multiply(PyLongObject *a, PyLongObject *b)	modelled	longobj-compact-ops	
 Objects/longobject.c	4370	4374	long_mul_method	long_mul_method(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
 Objects/longobject.c	4378	4396	fast_mod	fast_mod(PyLongObject *a, PyLongObject *b)	modelled	mathint-divmod-floor	
 Objects/longobject.c	4400	4418	fast_floor_div	fast_floor_div(PyLongObject *a, PyLongObject *b)	modelled	mathint-divmod-floor	
@@ -107,7 +107,7 @@ Objects/longobject.c	4560	4583	l_mod	l_mod(PyLongObject *v, PyLongObject *w, PyL
 Objects/longobject.c	4586	4599	long_div	long_div(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
 Objects/longobject.c	4607	4861	long_true_divide	long_true_divide(PyObject *v, PyObject *w)	todo		
 Objects/longobject.c	4864	4873	long_mod	long_mod(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
-Objects/longobject.c	4876	4885	long_divmod	long_divmod(PyObject *a, PyObject *b)	todo		changed-in-3.15: was longobj-binary-methods
+Objects/longobject.c	4876	4885	long_divmod	long_divmod(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
 Objects/longobject.c	4909	4965	long_invmod	long_invmod(PyLongObject *a, PyLongObject *n)	modelled	mathint-pow-neg-exp-inverse	
 Objects/longobject.c	4970	5248	long_pow	long_pow(PyObject *v, PyObject *w, PyObject *x)	modelled	mathint-pow-neg-exp-inverse	withdrawn: loops mirrored in LongObj/Pow.lean but MULT is total, so the goto Error paths are not expressed
 Objects/longobject.c	5251	5266	long_invert	long_invert(PyObject *self)	modelled	longobj-unary	
@@ -121,10 +121,10 @@ Objects/longobject.c	5400	5426	long_rshift	long_rshift(PyObject *a, PyObject *b)
 Objects/longobject.c	5430	5453	_PyLong_Rshift	_PyLong_Rshift(PyObject *a, int64_t shiftby)	modelled	longobj-rshift	
 Objects/longobject.c	5456	5494	long_lshift1	long_lshift1(PyLongObject *a, Py_ssize_t wordshift, digit remshift)	modelled	longobj-lshift	
 Objects/longobject.c	5498	5521	long_lshift_method	long_lshift_method(PyObject *aa, PyObject *bb)	modelled	longobj-binary-methods	
-Objects/longobject.c	5525	5544	long_lshift_int64	long_lshift_int64(PyLongObject *a, int64_t shiftby)	todo		changed-in-3.15: was longobj-lshift
+Objects/longobject.c	5525	5544	long_lshift_int64	long_lshift_int64(PyLongObject *a, int64_t shiftby)	modelled	longobj-lshift	
 Objects/longobject.c	5547	5550	_PyLong_Lshift	_PyLong_Lshift(PyObject *a, int64_t shiftby)	modelled	longobj-lshift	
 Objects/longobject.c	5558	5568	v_complement	v_complement(digit *z, digit *a, Py_ssize_t m)	modelled	longobj-v-complement	
-Objects/longobject.c	5573	5696	long_bitwise	long_bitwise(PyLongObject *a, char op, /* '&', '|', '^' */ PyLongObject *b)	todo		changed-in-3.15: was longobj-bitwise
+Objects/longobject.c	5573	5696	long_bitwise	long_bitwise(PyLongObject *a, char op, /* '&', '|', '^' */ PyLongObject *b)	modelled	longobj-bitwise	
 Objects/longobject.c	5699	5708	long_and	long_and(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
 Objects/longobject.c	5711	5720	long_xor	long_xor(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
 Objects/longobject.c	5723	5732	long_or	long_or(PyObject *a, PyObject *b)	modelled	longobj-binary-methods	
@@ -137,15 +137,15 @@ Objects/longobject.c	6066	6070	int___getnewargs___impl	int___getnewargs___impl(P
 Objects/longobject.c	6073	6076	long_get0	long_get0(PyObject *Py_UNUSED(self), void *Py_UNUSED(context))	todo		
 Objects/longobject.c	6079	6082	long_get1	long_get1(PyObject *Py_UNUSED(self), void *Py_UNUSED(ignored))	todo		
 Objects/longobject.c	6094	6110	int___format___impl	int___format___impl(PyObject *self, PyObject *format_spec) /*[clinic end generated code: output=b4929dee9ae18689 input=d5e1254a47e8d1dc]*/	todo		
-Objects/longobject.c	6118	6193	_PyLong_DivmodNear	_PyLong_DivmodNear(PyObject *a, PyObject *b)	todo		changed-in-3.15: was mathint-round-half-even
+Objects/longobject.c	6118	6193	_PyLong_DivmodNear	_PyLong_DivmodNear(PyObject *a, PyObject *b)	modelled	mathint-round-half-even	
 Objects/longobject.c	6207	6265	int___round___impl	int___round___impl(PyObject *self, PyObject *o_ndigits) /*[clinic end generated code: output=954fda6b18875998 input=30c2aec788263144]*/	modelled	mathint-round-half-even	
 Objects/longobject.c	6274	6281	int___sizeof___impl	int___sizeof___impl(PyObject *self) /*[clinic end generated code: output=3303f008eaa6a0a5 input=9b51620c76fc4507]*/	todo		
 Objects/longobject.c	6295	6302	int_bit_length_impl	int_bit_length_impl(PyObject *self) /*[clinic end generated code: output=fc1977c9353d6a59 input=e4eb7a587e849a32]*/	modelled	longobj-num-bits	
 Objects/longobject.c	6305	6311	popcount_digit	popcount_digit(digit d)	modelled	longobj-bit-count	
 Objects/longobject.c	6328	6343	int_bit_count_impl	int_bit_count_impl(PyObject *self) /*[clinic end generated code: output=2e571970daf1e5c3 input=f2510a306761db15]*/	modelled	longobj-bit-count	
 Objects/longobject.c	6361	6369	int_as_integer_ratio_impl	int_as_integer_ratio_impl(PyObject *self) /*[clinic end generated code: output=e60803ae1cc8621a input=384ff1766634bec2]*/	todo		changed-in-3.15:
-Objects/longobject.c	6395	6425	int_to_bytes_impl	int_to_bytes_impl(PyObject *self, Py_ssize_t length, PyObject *byteorder, int is_signed) /*[clinic end generated code: output=89c801df114050a3 input=c74a93c07b2f6526]*/	todo		changed-in-3.15: was mathint-bytes-arg-errors,mathint-bytes-roundtrip,mathint-to-bytes-exact
-Objects/longobject.c	6452	6504	int_from_bytes_impl	int_from_bytes_impl(PyTypeObject *type, PyObject *bytes_obj, PyObject *byteorder, int is_signed) /*[clinic end generated code: output=efc5d68e31f9314f input=95801e50b942e164]*/	todo		changed-in-3.15: was mathint-bytes-arg-errors,mathint-bytes-roundtrip,mathint-from-bytes-value
+Objects/longobject.c	6395	6425	int_to_bytes_impl	int_to_bytes_impl(PyObject *self, Py_ssize_t length, PyObject *byteorder, int is_signed) /*[clinic end generated code: output=89c801df114050a3 input=c74a93c07b2f6526]*/	modelled	mathint-bytes-arg-errors,mathint-bytes-roundtrip,mathint-to-bytes-exact	
+Objects/longobject.c	6452	6504	int_from_bytes_impl	int_from_bytes_impl(PyTypeObject *type, PyObject *bytes_obj, PyObject *byteorder, int is_signed) /*[clinic end generated code: output=efc5d68e31f9314f input=95801e50b942e164]*/	modelled	mathint-bytes-arg-errors,mathint-bytes-roundtrip,mathint-from-bytes-value	
 Objects/longobject.c	6507	6510	long_long_meth	long_long_meth(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		
 Objects/longobject.c	6513	6516	long_long_getter	long_long_getter(PyObject *self, void *Py_UNUSED(ignored))	todo		
 Objects/longobject.c	6526	6530	int_is_integer_impl	int_is_integer_impl(PyObject *self) /*[clinic end generated code: output=90f8e794ce5430ef input=aacf01a2c81c0244]*/	todo		
@@ -168,4 +168,4 @@ Objects/longobject.c	6883	6922	PyLong_Export	PyLong_Export(PyObject *obj, PyLong
 Objects/longobject.c	6926	6933	PyLong_FreeExport	PyLong_FreeExport(PyLongExport *export_long)	excluded		no-behaviour: drops the reference held by the export; no value is produced
 Objects/longobject.c	6939	6961	PyLongWriter_Create	PyLongWriter_Create(int negative, Py_ssize_t ndigits, void **digits)	modelled	longobj-export-writer	
 Objects/longobject.c	6965	6974	PyLongWriter_Discard	PyLongWriter_Discard(PyLongWriter *writer)	excluded		no-behaviour: frees an unfinished writer; no value is produced
-Objects/longobject.c	6978	7009	PyLongWriter_Finish	PyLongWriter_Finish(PyLongWriter *writer)	todo		changed-in-3.15: was longobj-export-writer
+Objects/longobject.c	6978	7009	PyLongWriter_Finish	PyLongWriter_Finish(PyLongWriter *writer)	modelled	longobj-export-writer	

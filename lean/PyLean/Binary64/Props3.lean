@@ -302,16 +302,22 @@ def FloatAsDouble : Prop :=
   (∀ x : F64, PyFloat_AsDouble (.float x) = .ok x) ∧
   (∀ (t : String) (x : F64), PyFloat_AsDouble (.floatSub t x) = .ok x) ∧
   (∀ n : Int, PyFloat_AsDouble (.int n) = PyLong_AsDouble n) ∧
-  (∀ (t : String) (i : Int), PyFloat_AsDouble (.other t none (some i)) = PyLong_AsDouble i) ∧
-  (∀ t : String, PyFloat_AsDouble (.other t none none) =
+  (∀ (t q : String) (i : Int), PyFloat_AsDouble (.other t none (some i) q) = PyLong_AsDouble i) ∧
+  (∀ t q : String, PyFloat_AsDouble (.other t none none q) =
     .error (.typeError s!"must be real number, not {t}")) ∧
-  (∀ (t : String) (x : F64) (i : Option Int), PyFloat_AsDouble (.other t (some (.float x)) i) = .ok x) ∧
-  (∀ (t : String) (n : Int) (i : Option Int), PyFloat_AsDouble (.other t (some (.int n)) i) =
-    .error (.typeError s!"{t}.__float__ returned non-float (type int)"))
+  (∀ (t q : String) (x : F64) (i : Option Int),
+    PyFloat_AsDouble (.other t (some (.float x)) i q) = .ok x) ∧
+  (∀ (t q s : String) (x : F64) (i : Option Int),
+    PyFloat_AsDouble (.other t (some (.floatSub s x)) i q) = .ok x) ∧
+  (∀ (t q : String) (n : Int) (i : Option Int), PyFloat_AsDouble (.other t (some (.int n)) i q) =
+    .error (.typeError s!"{q}.__float__() must return a float, not int")) ∧
+  (∀ (t q rt rq : String) (f : Option Obj) (j i : Option Int),
+    PyFloat_AsDouble (.other t (some (.other rt f j rq)) i q) =
+      .error (.typeError s!"{q}.__float__() must return a float, not {rq}"))
 
 theorem floatAsDouble_proven : FloatAsDouble :=
-  ⟨fun _ => rfl, fun _ _ => rfl, fun _ => rfl, fun _ _ => rfl, fun _ => rfl, fun _ _ _ => rfl,
-    fun _ _ _ => rfl⟩
+  ⟨fun _ => rfl, fun _ _ => rfl, fun _ => rfl, fun _ _ _ => rfl, fun _ _ => rfl, fun _ _ _ _ => rfl,
+    fun _ _ _ _ _ => rfl, fun _ _ _ _ => rfl, fun _ _ _ _ _ _ _ => rfl⟩
 
 /-- `float.__getformat__` answers for `'double'` and `'float'` and raises `ValueError`
 for anything else. -/

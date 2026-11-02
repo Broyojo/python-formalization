@@ -1,14 +1,14 @@
 /-!
-Lookup tables of `Modules/mathmodule.c` (CPython 3.14.7), copied by a script
+Lookup tables of `Modules/mathintegermodule.c` (CPython 3.15.2), copied by a script
 that parses the C initialisers (values in decimal).
 
-* `isqrtTab`: `_approximate_isqrt_tab`, mathmodule.c@3.14.7:1651-1668.
-* `reducedFactorialOddPart`: mathmodule.c@3.14.7:3445-3478.
-* `invertedFactorialOddPart`: mathmodule.c@3.14.7:3492-3525.
-* `factorialTrailingZeros`: mathmodule.c@3.14.7:3539-3548.
-* `fastCombLimits1`, `fastCombLimits2`, `fastPermLimits`: mathmodule.c@3.14.7:3567-3572,
-  @3.14.7:3597-3600, @3.14.7:3614-3618 (`ULLONG_MAX` is `2^64 - 1`).
-* `smallFactorials`: `SmallFactorials`, mathmodule.c@3.14.7:1998-2006 (LP64: 21 entries).
+* `isqrtTab`: `_approximate_isqrt_tab`, mathintegermodule.c:311-328.
+* `reducedFactorialOddPart`: mathintegermodule.c:742-775.
+* `invertedFactorialOddPart`: mathintegermodule.c:789-822.
+* `factorialTrailingZeros`: mathintegermodule.c:836-845.
+* `fastCombLimits1`, `fastCombLimits2`, `fastPermLimits`: mathintegermodule.c:864-869,
+  :894-897, :911-915 (`ULLONG_MAX` is `2^64 - 1`).
+* `smallFactorials`: `SmallFactorials`, mathintegermodule.c:671-679 (LP64: 21 entries).
 -/
 
 namespace PyLean.MathInt

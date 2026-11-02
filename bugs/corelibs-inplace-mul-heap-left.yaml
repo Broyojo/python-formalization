@@ -55,6 +55,7 @@ expected: |
 observed: |
   python3 3.14.7: [1, 1], then TypeError: unsupported operand type(s) for *=: 'I' and 'list'; also for IntEnum and
   operator.imul. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Language reference, augmented assignment; data model at __imul__: "if x is an instance of a class with an
   __iadd__ ... Otherwise, x.__add__(y) and y.__radd__(x) are considered, as with the evaluation of x + y".

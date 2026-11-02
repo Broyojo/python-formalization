@@ -1,8 +1,8 @@
 import PyLean.MathInt.Model
 
 /-!
-Model of the `int` operations of `Objects/longobject.c` (CPython 3.14.7) that
-the `math` integer functions lean on: three-argument `pow` with a negative
+Model of the `int` operations of `Objects/longobject.c` (CPython 3.15.2) that
+the `math.integer` functions lean on: three-argument `pow` with a negative
 exponent (`long_invmod`), `int.to_bytes` / `int.from_bytes`
 (`_PyLong_AsByteArray` / `_PyLong_FromByteArray`, digit by digit with
 `PyLong_SHIFT = 30`), `divmod` (`l_divmod`, including its single-digit fast
@@ -135,14 +135,25 @@ def asByteArray (v : Int) (n : Nat) (signed : Bool) : Py (List Nat) :=
         if signBitSet = twos then .ok st.out else overflow
       else fill st.out
 
-/-- `int.to_bytes(length, byteorder, *, signed)`, longobject.c:6395-6422,
-after Argument Clinic converts `length` to `Py_ssize_t`. Bytes are `0..255`. -/
+/-- `_PyBytesObject_SIZE` on LP64, pycore_bytesobject.h:74: the object header, the
+hash and the terminating NUL. -/
+def bytesObjectSize : Int := 33
+
+/-- `int.to_bytes(length, byteorder, *, signed)`. Argument Clinic rejects a negative
+`length` (`Py_ssize_t(allow_negative=False)`, clinic/longobject.c.h:332-349) before
+`int_to_bytes_impl` (longobject.c:6394-6425) looks at `byteorder`, so a bad length
+wins over a bad byteorder. `PyBytesWriter_Create(length)` reaches the limit check of
+`_PyBytes_FromSize` (bytesobject.c:101-105) through `byteswriter_resize`. An ordinary
+allocation failure (`MemoryError`) is out of scope, as everywhere in this project.
+Bytes are `0..255`. -/
 def toBytes (v : Int) (length : Int) (byteorder : String) (signed : Bool) : Py (List Nat) :=
   if length < ssizeMin ∨ length > ssizeMax then
     .error (.overflowError "Python int too large to convert to C ssize_t")
+  else if length < 0 then .error (.valueError "length cannot be negative")
   else if byteorder ≠ "little" ∧ byteorder ≠ "big" then
     .error (.valueError "byteorder must be either 'little' or 'big'")
-  else if length < 0 then .error (.valueError "length argument must be non-negative")
+  else if length > ssizeMax - bytesObjectSize then
+    .error (.overflowError "byte string is too large")
   else do
     let bs ← asByteArray v length.toNat signed
     return if byteorder = "little" then bs else bs.reverse
@@ -190,11 +201,35 @@ def fromByteArray (lsbFirst : List Nat) (signed : Bool) : Int :=
     let mag : Int := digitsValue digits
     if isSigned then -mag else mag
 
-/-- `int.from_bytes(bytes, byteorder, *, signed)`, longobject.c:6452-6503. -/
-def fromBytes (bs : List Nat) (byteorder : String) (signed : Bool) : Py Int :=
+/-- The three routes of `int_from_bytes_impl` to the bytes of its argument,
+longobject.c:6471-6497. `exact` is `PyBytes_CheckExact`. `buffer` is anything else
+with `PyObject_CheckBuffer`, including a `bytes` subclass: `PyObject_GetBuffer` with
+`PyBUF_SIMPLE` can fail, and `__bytes__` is not consulted. `other` is
+`PyObject_Bytes`, which runs `__bytes__` or iterates, and can fail. The payload is
+what that step yields. -/
+inductive BytesObj where
+  | exact (bs : List Nat)
+  | buffer (view : Py (List Nat))
+  | other (bytes : Py (List Nat))
+
+/-- `int_from_bytes_impl`, longobject.c:6452-6505, for the class whose constructor is
+`ctor`. `byteorder` is checked before the object is touched. `ctor` is the call of
+longobject.c:6499-6501 for a subclass (it returns an arbitrary object and can raise);
+for `int` itself it is `Except.ok`. -/
+def fromBytesImpl {α : Type} (ctor : Int → Py α) (obj : BytesObj) (byteorder : String)
+    (signed : Bool) : Py α :=
   if byteorder ≠ "little" ∧ byteorder ≠ "big" then
     .error (.valueError "byteorder must be either 'little' or 'big'")
-  else .ok (fromByteArray (if byteorder = "little" then bs else bs.reverse) signed)
+  else
+    let lsb (bs : List Nat) := if byteorder = "little" then bs else bs.reverse
+    match obj with
+    | .exact bs => ctor (fromByteArray (lsb bs) signed)
+    | .buffer view => do ctor (fromByteArray (lsb (← view)) signed)
+    | .other bytes => do ctor (fromByteArray (lsb (← bytes)) signed)
+
+/-- `int.from_bytes(bytes, byteorder, *, signed)` on an exact `bytes`. -/
+def fromBytes (bs : List Nat) (byteorder : String) (signed : Bool) : Py Int :=
+  fromBytesImpl .ok (.exact bs) byteorder signed
 
 /-! ## `divmod`, longobject.c:4378-4558 and Lib/_pylong.py:511-541 -/
 

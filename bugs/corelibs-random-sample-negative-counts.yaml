@@ -41,6 +41,7 @@ observed: |
   python3 3.14.7: counts=[3, -1], k=2 always gives ['a', 'a'], counts=[1, -1, 2], k=2 always gives
   ['c', 'c'], and counts=[-1, -1] raises ValueError. REPRODUCED.
   main (python.exe 3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   The message at Lib/random.py:430. Doc/library/random.rst:245-248 describes counts as a repeat count.
 cause: |

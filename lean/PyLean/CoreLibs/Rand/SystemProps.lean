@@ -20,7 +20,7 @@ theorem osUrandom_post {raw : Nat → RM σ (List Nat)} (hraw : RawValid raw) (n
   have hdef : osUrandom raw (.int n) =
       (if n > ssizeMax ∨ n < ssizeMin then
         RM.raise (.overflowError "Python int too large to convert to C ssize_t")
-       else if n < 0 then RM.raise (.valueError "negative argument not allowed")
+       else if n < 0 then RM.raise (.valueError "size cannot be negative")
        else raw n.toNat) := rfl
   rw [hdef]
   split
@@ -99,7 +99,7 @@ def SysRandbytes : Prop :=
   ∀ (σ : Type) (raw : Nat → RM σ (List Nat)), RawValid raw →
     (∀ n : Int, Post (sysRandbytes raw (.int n)) (fun b => b.length = n.toNat ∧ ∀ x ∈ b, x < 256)) ∧
     (∀ (n : Int) (s : σ), ssizeMin ≤ n → n < 0 → sysRandbytes raw (.int n) s =
-      (.error (.valueError "negative argument not allowed"), s))
+      (.error (.valueError "size cannot be negative"), s))
 
 theorem sysRandbytes_proven : SysRandbytes := by
   intro σ raw hraw
@@ -107,7 +107,7 @@ theorem sysRandbytes_proven : SysRandbytes := by
   have hdef : sysRandbytes raw (.int n) =
       (if n > ssizeMax ∨ n < ssizeMin then
         RM.raise (.overflowError "Python int too large to convert to C ssize_t")
-       else if n < 0 then RM.raise (.valueError "negative argument not allowed")
+       else if n < 0 then RM.raise (.valueError "size cannot be negative")
        else raw n.toNat) := rfl
   rw [hdef, if_neg (by simp only [ssizeMax, ssizeMin] at *; omega), if_pos h2]
   rfl
@@ -204,8 +204,8 @@ theorem randint_empty (below : Nat → RM σ Nat) (a b : Int) (h : b < a) (s : �
     · exact ⟨rb, by simp only [raiseValue, ha, hb, bind, Except.bind]⟩
   · exact ⟨ra, by simp only [raiseValue, ha, bind, Except.bind]⟩
 
-/-- The help text promises, for a positional argument, "integer: same as --integer"
-(Lib/random.py@3.14.7:1041). False for `N < 1`: `randint(1, N)` raises `ValueError`, and the
+/-- The help text promises, for a positional argument, "integer: same as `--integer`"
+(Lib/random.py:1041). False for `N < 1`: `randint(1, N)` raises `ValueError`, and the
 `except ValueError` at :1071 meant for `int(val)` catches it too, so
 `python -m random 0` prints `0.0` and `python -m random -5` a float in `(-5, 0]`,
 where `--integer` raises. -/

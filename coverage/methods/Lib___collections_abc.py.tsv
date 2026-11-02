@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Lib/_collections_abc.py	40	40	_f	_f()	todo		changed-in-3.15: was excluded: internal-bootstrap: throwaway function whose type is captured at import to name a builtin type, then deleted
+Lib/_collections_abc.py	40	40	_f	_f()	excluded		internal-bootstrap: throwaway function whose type is captured at import to name a builtin type, then deleted
 Lib/_collections_abc.py	88	89	_get_framelocalsproxy	_get_framelocalsproxy()	excluded		internal-bootstrap: called once at import to capture the frame locals proxy type, then deleted
 Lib/_collections_abc.py	94	94	_coro	_coro()	excluded		internal-bootstrap: throwaway coroutine used at import to capture the coroutine type, then deleted
 Lib/_collections_abc.py	100	100	_ag	_ag()	excluded		internal-bootstrap: throwaway async generator used at import to capture the type, then deleted
@@ -113,4 +113,4 @@ Lib/_collections_abc.py	1145	1151	MutableSequence.extend	extend(self, values)	mo
 Lib/_collections_abc.py	1153	1159	MutableSequence.pop	pop(self, index=-1)	modelled	corelibs-collabc-mseq-pop	
 Lib/_collections_abc.py	1161	1165	MutableSequence.remove	remove(self, value)	modelled	corelibs-collabc-mseq-paths	
 Lib/_collections_abc.py	1167	1169	MutableSequence.__iadd__	__iadd__(self, values)	modelled	corelibs-collabc-mseq-grow	
-Lib/_collections_abc.py	1177	1183	__getattr__	__getattr__(attr)	todo		changed-in-3.15: new function
+Lib/_collections_abc.py	1177	1183	__getattr__	__getattr__(attr)	modelled	corelibs-collabc-module-getattr	

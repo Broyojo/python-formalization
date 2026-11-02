@@ -45,6 +45,7 @@ expected: |
 observed: |
   python3 3.14.7: by_union stays on 'default' after Sized.register(C), by_class moves to 'sized'.
   REPRODUCED. main (python.exe 3.16.0a1+dev): same, REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Doc/library/functools.rst:526 and the lines before it accept union types in register, with no
   caveat. The cache_token logic, Lib/functools.py:921-926, exists so that ABC registrations invalidate

@@ -30,6 +30,7 @@ possible_fix: |
   Main applies the adjustment only when the operands are finite. That is the fix to
   backport to 3.14.
 tested:
+  python3 3.15.2: REPRODUCED
   python3 (3.14.7): REPRODUCED
   main (vendor/cpython-main/python.exe, 3.16.0a1+dev): NOT REPRODUCED (fixed by gh-156693)
 duplicates:

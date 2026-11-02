@@ -1,15 +1,15 @@
 import PyLean.Binary64.Model
 
 /-!
-`Objects/floatobject.c`, CPython 3.14.7, on top of the exact binary64 model:
+`Objects/floatobject.c`, CPython 3.15.2, on top of the exact binary64 model:
 arithmetic, comparison with exact ints, `hash`, `is_integer`, the integer
 conversions, `hex`, `fromhex`, `as_integer_ratio`, `pow`, `divmod`, `//`, `%`,
 `__getformat__` and the pack/unpack routines.
 
-The `unknown_format` branches of `PyFloat_Pack4/8` and `PyFloat_Unpack4/8` are not
-modelled: `_init_global_state` (floatobject.c@3.14.7:1891-1940) selects the IEEE branch
-on every IEEE 754 platform, and these models assume a little-endian one, like the
-machines they are tested on.
+3.15 dropped the `unknown_format` branches of `PyFloat_Pack4/8` and
+`PyFloat_Unpack4/8`, so the pack and unpack routines below are the whole bodies. The
+models assume a little-endian platform (`_PY_FLOAT_LITTLE_ENDIAN`), like the machines
+they are tested on.
 
 The decimal paths (`repr`, `float(str)`, `round(x, n)`) live in `Decimal.lean` and
 `Strtod.lean`, on top of the mirror of `Python/dtoa.c`.
@@ -25,9 +25,11 @@ inductive Obj where
   /-- A strict subclass of `float`, by type name. -/
   | floatSub (ty : String) (x : F64)
   | int (n : Int)
-  /-- Anything else: its type name, and what its `__float__` and `__index__`
-  return, when it defines them. -/
+  /-- Anything else: its `tp_name`, what its `__float__` and `__index__` return, when it
+  defines them, and its fully qualified name (what `%T` prints), which differs from
+  `tp_name` only for a class outside `builtins`. -/
   | other (ty : String) (dunderFloat : Option Obj) (dunderIndex : Option Int)
+      (fq : String := ty)
   deriving Repr, Inhabited
 
 /-! ## Constants -/
@@ -88,19 +90,19 @@ def convertToDouble (v : Obj) : Py (Option F64) :=
   | .int n => do return some (← PyLong_AsDouble n)
   | .other .. => .ok none
 
-/-- `PyFloat_AsDouble`, floatobject.c:246-303, for one level of `__float__`. The
+/-- `PyFloat_AsDouble`, floatobject.c:247-303, for one level of `__float__`. The
 `DeprecationWarning` for a strict subclass result does not change the value. -/
 def PyFloat_AsDouble (op : Obj) : Py F64 :=
   match op with
   | .float x | .floatSub _ x => .ok x
   | .int n => PyLong_AsDouble n
-  | .other _ none (some i) => PyLong_AsDouble i
-  | .other ty none none => .error (.typeError s!"must be real number, not {ty}")
-  | .other ty (some r) _ =>
+  | .other _ none (some i) _ => PyLong_AsDouble i
+  | .other ty none none _ => .error (.typeError s!"must be real number, not {ty}")
+  | .other _ (some r) _ fq =>
     match r with
     | .float x | .floatSub _ x => .ok x
-    | .int .. => .error (.typeError s!"{ty}.__float__ returned non-float (type int)")
-    | .other rty .. => .error (.typeError s!"{ty}.__float__ returned non-float (type {rty})")
+    | .int .. => .error (.typeError s!"{fq}.__float__() must return a float, not int")
+    | .other _ _ _ rfq => .error (.typeError s!"{fq}.__float__() must return a float, not {rfq}")
 
 /-! ## Comparison -/
 
@@ -186,7 +188,7 @@ def toSigned64 (x : Nat) : Int := if x < 2 ^ 63 then x else (x : Int) - 2 ^ 64
 def hashRotate (x n : Nat) : Nat :=
   (((x * 2 ^ n) % 2 ^ 64) &&& hashModulus) ||| (x / 2 ^ (hashBits - n))
 
-/-- The loop of `_Py_HashDouble`, pyhash.c@3.14.7:112-120: 28 bits at a time. -/
+/-- The loop of `_Py_HashDouble`, pyhash.c:112-120: 28 bits at a time. -/
 def hashLoop : Nat → F64 → Int → Nat → Int × Nat
   | 0, _, e, x => (e, x)
   | fuel + 1, m, e, x =>
@@ -686,7 +688,7 @@ def toFloat32Bits (x : F64) : Nat :=
     let q := x.toRat
     binary32.encode x.sign (roundPos binary32 q.num.natAbs q.den)
 
-/-- `PyFloat_Pack4`, floatobject.c:2002-2066 (the IEEE branch, @3.14.7:2180-2239). -/
+/-- `PyFloat_Pack4`, floatobject.c:2003-2066. -/
 def PyFloat_Pack4 (x : F64) (le : Bool) : Py (List Nat) :=
   let y := toFloat32Bits x
   let yIsInf := y % 2 ^ 31 == 0x7f800000
@@ -697,7 +699,7 @@ def PyFloat_Pack4 (x : F64) (le : Bool) : Py (List Nat) :=
       if x.isNaN && (x.bits / 2 ^ 51) % 2 == 0 && y % 2 ^ 22 != 0 then y - 2 ^ 22 else y
     .ok (layout 4 y' le)
 
-/-- `PyFloat_Pack8`, floatobject.c:2068-2087 (the IEEE branch, @3.14.7:2358-2375). -/
+/-- `PyFloat_Pack8`, floatobject.c:2069-2087. -/
 def PyFloat_Pack8 (x : F64) (le : Bool) : Py (List Nat) := .ok (layout 8 x.bits le)
 
 /-- `PyFloat_Unpack2`, floatobject.c:2089-2143. -/
@@ -730,7 +732,7 @@ def ofFloat32Bits (v : Nat) : F64 :=
     let q := dyadic m e
     if m == 0 then F64.zero neg else F64.ofRat (if neg then -q else q)
 
-/-- `PyFloat_Unpack4`, floatobject.c:2145-2201 (the IEEE branch, :2161-2198). -/
+/-- `PyFloat_Unpack4`, floatobject.c:2146-2201. -/
 def PyFloat_Unpack4 (data : List Nat) (le : Bool) : F64 :=
   let v := unlayout data le
   let y := ofFloat32Bits v
@@ -739,8 +741,14 @@ def PyFloat_Unpack4 (data : List Nat) (le : Bool) : F64 :=
     if (v / 2 ^ 22) % 2 == 0 then F64.ofBits (y.bits - 2 ^ 51) else y
   | _ => y
 
-/-- `PyFloat_Unpack8`, floatobject.c:2203-2224 (the IEEE branch, :2219-2221). -/
+/-- `PyFloat_Unpack8`, floatobject.c:2204-2224. -/
 def PyFloat_Unpack8 (data : List Nat) (le : Bool) : F64 :=
   F64.ofBits (unlayout data le)
+
+/-- `nu_float`, Modules/_struct.c:483-488: `(double)x`, with none of the signaling-NaN
+care of `PyFloat_Unpack4`. 3.15 removed the "Skip float and double" exception from
+`init_endian_tables` (_struct.c:1519-1558), so on a little-endian host `<f` and `=f`
+come here as well as native `f`, and only `>f` still calls `PyFloat_Unpack4`. -/
+def nu_float (data : List Nat) : F64 := ofFloat32Bits (unlayout data true)
 
 end PyLean.Binary64

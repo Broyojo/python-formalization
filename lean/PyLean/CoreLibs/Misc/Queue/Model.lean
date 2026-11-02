@@ -1,7 +1,7 @@
 import PyLean.CoreLibs.Misc.HeapP
 
 /-!
-`Lib/queue.py`, CPython 3.14.7, single-threaded outcomes.
+`Lib/queue.py`, CPython 3.15.2, single-threaded outcomes.
 
 `Queue` is generic in the representation `ρ` through `Impl`, which is the four override points
 `_init`, `_qsize`, `_put`, `_get` of Lib/queue.py:258-275. `Queue`, `PriorityQueue` and `LifoQueue`
@@ -224,9 +224,10 @@ def PySQ.put (q : PySQ α) (item : α) (_block : Bool := true) (_timeout : Optio
     PySQ α :=
   { q with queue := q.queue ++ [item], count := q.count + 1 }
 
-/-- `_PySimpleQueue.get`, Lib/queue.py:338-355. -/
+/-- `_PySimpleQueue.get`, Lib/queue.py:338-355. With `block` false the timeout is dropped first, :349-350. -/
 def PySQ.get (q : PySQ α) (block : Bool := true) (timeout : Option Int := none) :
     PySQ α × Py α :=
+  let timeout := if block then timeout else none
   if timeout.isSome ∧ (timeout.getD 0) < 0 then (q, .error negTimeout)
   else
     match semAcquire q.count q.now block timeout with

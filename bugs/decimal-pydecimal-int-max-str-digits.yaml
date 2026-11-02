@@ -91,6 +91,7 @@ possible_fix: |
   useful only if the multiplication facet were ever wanted, is to round the int product before
   converting it to a string.
 tested:
+  python3 3.15.2: REPRODUCED
   python3 (3.14.7, Linux, bundled libmpdec 2.5.1): REPRODUCED
   main (vendor/cpython-main/python.exe, 3.16.0a1+dev, bundled libmpdec 2.5.1): REPRODUCED
 duplicates:

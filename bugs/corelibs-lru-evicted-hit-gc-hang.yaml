@@ -61,6 +61,7 @@ expected: |
   gc.collect() returns.
 observed: |
   python3 3.14.7: gc.collect() does not return within 10 seconds. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   The undisputed invariant that no Python code hangs the collector, and the comment at Modules/_functoolsmodule.c:1512-1517 that
   every code path leaves the links in place.

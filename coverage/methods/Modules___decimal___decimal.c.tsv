@@ -18,7 +18,7 @@ Modules/_decimal/_decimal.c	448	478	flags_as_list	flags_as_list(decimal_state *s
 Modules/_decimal/_decimal.c	481	501	signals_as_list	signals_as_list(decimal_state *state, uint32_t flags)	todo		
 Modules/_decimal/_decimal.c	504	524	list_as_flags	list_as_flags(decimal_state *state, PyObject *list)	todo		
 Modules/_decimal/_decimal.c	527	546	flags_as_dict	flags_as_dict(decimal_state *state, uint32_t flags)	modelled	decimal-c-signaldict-eq-copy	
-Modules/_decimal/_decimal.c	549	589	dict_as_flags	dict_as_flags(decimal_state *state, PyObject *val)	todo		changed-in-3.15: was decimal-c-signaldict-eq-copy
+Modules/_decimal/_decimal.c	549	589	dict_as_flags	dict_as_flags(decimal_state *state, PyObject *val)	modelled	decimal-c-signaldict-eq-copy	
 Modules/_decimal/_decimal.c	593	607	long_as_flags	long_as_flags(PyObject *v)	excluded		platform: compiled only with EXTRA_FUNCTIONALITY, which CPython builds leave undefined (_decimal.c:591)
 Modules/_decimal/_decimal.c	611	639	dec_addstatus	dec_addstatus(PyObject *context, uint32_t status)	todo		
 Modules/_decimal/_decimal.c	642	659	getround	getround(decimal_state *state, PyObject *v)	todo		
@@ -29,7 +29,7 @@ Modules/_decimal/_decimal.c	702	716	signaldict_getitem	signaldict_getitem(PyObje
 Modules/_decimal/_decimal.c	719	751	signaldict_setitem	signaldict_setitem(PyObject *self, PyObject *key, PyObject *value)	modelled	decimal-c-signaldict-set-get	
 Modules/_decimal/_decimal.c	754	760	signaldict_dealloc	signaldict_dealloc(PyObject *self)	excluded		no-behaviour: GC traversal or deallocation, no Python-visible effect
 Modules/_decimal/_decimal.c	763	788	signaldict_repr	signaldict_repr(PyObject *self)	todo		
-Modules/_decimal/_decimal.c	791	824	signaldict_richcompare	signaldict_richcompare(PyObject *v, PyObject *w, int op)	todo		changed-in-3.15: was decimal-c-signaldict-eq-canonical,decimal-c-signaldict-eq-copy,decimal-c-signaldict-eq-items
+Modules/_decimal/_decimal.c	791	824	signaldict_richcompare	signaldict_richcompare(PyObject *v, PyObject *w, int op)	modelled	decimal-c-signaldict-eq-canonical,decimal-c-signaldict-eq-copy,decimal-c-signaldict-eq-items	
 Modules/_decimal/_decimal.c	827	834	signaldict_copy	signaldict_copy(PyObject *self, PyObject *Py_UNUSED(dummy))	todo		
 Modules/_decimal/_decimal.c	899	905	context_getround	context_getround(PyObject *self, void *Py_UNUSED(closure))	todo		
 Modules/_decimal/_decimal.c	908	911	context_getcapitals	context_getcapitals(PyObject *self, void *Py_UNUSED(closure))	todo		
@@ -60,7 +60,7 @@ Modules/_decimal/_decimal.c	1435	1486	context_new	context_new(PyTypeObject *type
 Modules/_decimal/_decimal.c	1489	1496	context_traverse	context_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or deallocation, no Python-visible effect
 Modules/_decimal/_decimal.c	1499	1519	context_clear	context_clear(PyObject *op)	todo		
 Modules/_decimal/_decimal.c	1522	1529	context_dealloc	context_dealloc(PyObject *self)	excluded		no-behaviour: GC traversal or deallocation, no Python-visible effect
-Modules/_decimal/_decimal.c	1557	1567	context_init_impl	context_init_impl(PyObject *self, PyObject *prec, PyObject *rounding, PyObject *emin, PyObject *emax, PyObject *capitals, PyObject *clamp, PyObject *status, PyObject *traps) /*[clinic end generated code: output=8bfdc59fbe862f44 input=45c704b93cd02959]*/	todo		changed-in-3.15: new function
+Modules/_decimal/_decimal.c	1557	1567	context_init_impl	context_init_impl(PyObject *self, PyObject *prec, PyObject *rounding, PyObject *emin, PyObject *emax, PyObject *capitals, PyObject *clamp, PyObject *status, PyObject *traps) /*[clinic end generated code: output=8bfdc59fbe862f44 input=45c704b93cd02959]*/	modelled	decimal-c-context-clean-template,decimal-c-context-clears-flags,decimal-c-context-copies-capitals	
 Modules/_decimal/_decimal.c	1570	1599	context_repr	context_repr(PyObject *self)	todo		
 Modules/_decimal/_decimal.c	1602	1612	init_basic_context	init_basic_context(PyObject *v)	todo		
 Modules/_decimal/_decimal.c	1615	1624	init_extended_context	init_extended_context(PyObject *v)	todo		
@@ -127,14 +127,14 @@ Modules/_decimal/_decimal.c	3645	3651	dec_replace_fillchar	dec_replace_fillchar(
 Modules/_decimal/_decimal.c	3656	3677	dotsep_as_utf8	dotsep_as_utf8(const char *s)	todo		
 Modules/_decimal/_decimal.c	3680	3702	dict_get_item_string	dict_get_item_string(PyObject *dict, const char *key, PyObject **valueobj, const char **valuestr)	todo		
 Modules/_decimal/_decimal.c	3710	3744	pydec_format	pydec_format(PyObject *dec, PyObject *context, PyObject *fmt, decimal_state *state)	todo		
-Modules/_decimal/_decimal.c	3761	3889	_decimal_Decimal___format___impl	_decimal_Decimal___format___impl(PyObject *dec, PyTypeObject *cls, PyObject *fmtarg, PyObject *override) /*[clinic end generated code: output=6d95f91bbb28b3ed input=2dbfaa0cbe243e9e]*/	todo		changed-in-3.15: new function
+Modules/_decimal/_decimal.c	3761	3889	_decimal_Decimal___format___impl	_decimal_Decimal___format___impl(PyObject *dec, PyTypeObject *cls, PyObject *fmtarg, PyObject *override) /*[clinic end generated code: output=6d95f91bbb28b3ed input=2dbfaa0cbe243e9e]*/	modelled	decimal-format-c-accepts-only-py,decimal-format-no-encode-error	
 Modules/_decimal/_decimal.c	3894	3976	dec_as_long	dec_as_long(PyObject *dec, PyObject *context, int round)	modelled	decimal-int-conversions-c	
-Modules/_decimal/_decimal.c	3991	4090	_decimal_Decimal_as_integer_ratio_impl	_decimal_Decimal_as_integer_ratio_impl(PyObject *self, PyTypeObject *cls) /*[clinic end generated code: output=eb49c512701f844b input=136f1dc585ca8d80]*/	todo		changed-in-3.15: new function
+Modules/_decimal/_decimal.c	3991	4090	_decimal_Decimal_as_integer_ratio_impl	_decimal_Decimal_as_integer_ratio_impl(PyObject *self, PyTypeObject *cls) /*[clinic end generated code: output=eb49c512701f844b input=136f1dc585ca8d80]*/	modelled	decimal-ratio-correct-c	
 Modules/_decimal/_decimal.c	4107	4142	_decimal_Decimal_to_integral_value_impl	_decimal_Decimal_to_integral_value_impl(PyObject *self, PyTypeObject *cls, PyObject *rounding, PyObject *context) /*[clinic end generated code: output=23047d848ef84db1 input=85aa9499a21ea8d7]*/	todo		changed-in-3.15: new function
 Modules/_decimal/_decimal.c	4154	4160	_decimal_Decimal_to_integral_impl	_decimal_Decimal_to_integral_impl(PyObject *self, PyTypeObject *cls, PyObject *rounding, PyObject *context) /*[clinic end generated code: output=5dac8f54c2a3ed26 input=709b54618ecd0d8b]*/	todo		changed-in-3.15: new function
 Modules/_decimal/_decimal.c	4174	4209	_decimal_Decimal_to_integral_exact_impl	_decimal_Decimal_to_integral_exact_impl(PyObject *self, PyTypeObject *cls, PyObject *rounding, PyObject *context) /*[clinic end generated code: output=543a39a02eea9917 input=d4d8abe543393de1]*/	todo		changed-in-3.15: new function
 Modules/_decimal/_decimal.c	4212	4241	PyDec_AsFloat	PyDec_AsFloat(PyObject *dec)	todo		
-Modules/_decimal/_decimal.c	4254	4295	_decimal_Decimal___round___impl	_decimal_Decimal___round___impl(PyObject *self, PyTypeObject *cls, PyObject *ndigits) /*[clinic end generated code: output=790c2c6bd57890e6 input=d69e7178a58a66b1]*/	todo		changed-in-3.15: new function
+Modules/_decimal/_decimal.c	4254	4295	_decimal_Decimal___round___impl	_decimal_Decimal___round___impl(PyObject *self, PyTypeObject *cls, PyObject *ndigits) /*[clinic end generated code: output=790c2c6bd57890e6 input=d69e7178a58a66b1]*/	modelled	decimal-int-conversions-c	
 Modules/_decimal/_decimal.c	4306	4398	_decimal_Decimal_as_tuple_impl	_decimal_Decimal_as_tuple_impl(PyObject *self, PyTypeObject *cls) /*[clinic end generated code: output=d68b967becee8ab9 input=bfa86d640224d9f5]*/	todo		changed-in-3.15: new function
 Modules/_decimal/_decimal.c	4612	4618	nm_dec_as_long	nm_dec_as_long(PyObject *dec)	todo		
 Modules/_decimal/_decimal.c	4621	4624	nm_nonzero	nm_nonzero(PyObject *v)	todo		
@@ -153,16 +153,16 @@ Modules/_decimal/_decimal.c	5433	5461	_decimal_Decimal_copy_sign_impl	_decimal_D
 Modules/_decimal/_decimal.c	5475	5491	_decimal_Decimal_same_quantum_impl	_decimal_Decimal_same_quantum_impl(PyObject *self, PyTypeObject *cls, PyObject *other, PyObject *context) /*[clinic end generated code: output=7c757edb0c263721 input=8339415fa359e7df]*/	todo		changed-in-3.15: new function
 Modules/_decimal/_decimal.c	5624	5666	_decimal_Decimal_quantize_impl	_decimal_Decimal_quantize_impl(PyObject *self, PyTypeObject *cls, PyObject *w, PyObject *rounding, PyObject *context) /*[clinic end generated code: output=fc51edf458559913 input=7838b0a5f684adb8]*/	todo		changed-in-3.15: new function
 Modules/_decimal/_decimal.c	5670	5726	dec_richcompare	dec_richcompare(PyObject *v, PyObject *w, int op)	todo		
-Modules/_decimal/_decimal.c	5737	5745	_decimal_Decimal___ceil___impl	_decimal_Decimal___ceil___impl(PyObject *self, PyTypeObject *cls) /*[clinic end generated code: output=d986ebf9aadbf9fe input=a8e0b87897706816]*/	todo		changed-in-3.15: new function
+Modules/_decimal/_decimal.c	5737	5745	_decimal_Decimal___ceil___impl	_decimal_Decimal___ceil___impl(PyObject *self, PyTypeObject *cls) /*[clinic end generated code: output=d986ebf9aadbf9fe input=a8e0b87897706816]*/	modelled	decimal-int-conversions-c	
 Modules/_decimal/_decimal.c	5754	5772	_decimal_Decimal___complex___impl	_decimal_Decimal___complex___impl(PyObject *self) /*[clinic end generated code: output=c9b5b4a9fdebc912 input=6b11c6f20af7061a]*/	todo		changed-in-3.15: new function
 Modules/_decimal/_decimal.c	5780	5784	_decimal_Decimal___copy___impl	_decimal_Decimal___copy___impl(PyObject *self) /*[clinic end generated code: output=8eb3656c0250762b input=3dfd30a3e1493c01]*/	todo		changed-in-3.15: new function
 Modules/_decimal/_decimal.c	5795	5799	_decimal_Decimal___deepcopy__	_decimal_Decimal___deepcopy__(PyObject *self, PyObject *memo) /*[clinic end generated code: output=988fb34e0136b376 input=f95598c6f43233aa]*/	todo		changed-in-3.15: new function
-Modules/_decimal/_decimal.c	5808	5816	_decimal_Decimal___floor___impl	_decimal_Decimal___floor___impl(PyObject *self, PyTypeObject *cls) /*[clinic end generated code: output=e239a2f7f6514c12 input=dcc37aeceb0efb8d]*/	todo		changed-in-3.15: new function
-Modules/_decimal/_decimal.c	5820	5932	_dec_hash	_dec_hash(PyDecObject *v)	todo		changed-in-3.15: was decimal-hash-consistent-c
+Modules/_decimal/_decimal.c	5808	5816	_decimal_Decimal___floor___impl	_decimal_Decimal___floor___impl(PyObject *self, PyTypeObject *cls) /*[clinic end generated code: output=e239a2f7f6514c12 input=dcc37aeceb0efb8d]*/	modelled	decimal-int-conversions-c	
+Modules/_decimal/_decimal.c	5820	5932	_dec_hash	_dec_hash(PyDecObject *v)	modelled	decimal-hash-consistent-c	
 Modules/_decimal/_decimal.c	5935	5943	dec_hash	dec_hash(PyObject *op)	todo		
 Modules/_decimal/_decimal.c	5952	5966	_decimal_Decimal___reduce___impl	_decimal_Decimal___reduce___impl(PyObject *self) /*[clinic end generated code: output=84fa6648a496a8d2 input=0345ea951d9b986f]*/	todo		changed-in-3.15: new function
 Modules/_decimal/_decimal.c	5977	5985	_decimal_Decimal___sizeof___impl	_decimal_Decimal___sizeof___impl(PyObject *v) /*[clinic end generated code: output=f16de05097c62b79 input=a557db538cfddbb7]*/	todo		changed-in-3.15: new function
-Modules/_decimal/_decimal.c	5994	6002	_decimal_Decimal___trunc___impl	_decimal_Decimal___trunc___impl(PyObject *self, PyTypeObject *cls) /*[clinic end generated code: output=7b3decc4b636ce32 input=9b3a3a85f63b0515]*/	todo		changed-in-3.15: new function
+Modules/_decimal/_decimal.c	5994	6002	_decimal_Decimal___trunc___impl	_decimal_Decimal___trunc___impl(PyObject *self, PyTypeObject *cls) /*[clinic end generated code: output=7b3decc4b636ce32 input=9b3a3a85f63b0515]*/	modelled	decimal-int-conversions-c	
 Modules/_decimal/_decimal.c	6006	6009	dec_real	dec_real(PyObject *self, void *Py_UNUSED(closure))	todo		
 Modules/_decimal/_decimal.c	6012	6024	dec_imag	dec_imag(PyObject *self, void *Py_UNUSED(closure))	todo		
 Modules/_decimal/_decimal.c	6690	6723	_decimal_Context_divmod_impl	_decimal_Context_divmod_impl(PyObject *context, PyObject *x, PyObject *y) /*[clinic end generated code: output=5dbf5410e3f302af input=4d8eee07823c752a]*/	todo		changed-in-3.15: new function

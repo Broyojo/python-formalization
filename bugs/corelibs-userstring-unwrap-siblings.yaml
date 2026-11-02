@@ -44,6 +44,7 @@ observed: |
   REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the ten still raise TypeError; startswith and endswith
   accept UserString. REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   No sentence; the sibling methods and gh-159868. Doc/library/collections.rst:1414: "Class that simulates a
   string object."

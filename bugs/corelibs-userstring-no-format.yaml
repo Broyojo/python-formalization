@@ -27,6 +27,7 @@ expected: |
 observed: |
   python3 3.14.7: TypeError "unsupported format string passed to UserString.__format__". REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Doc/library/collections.rst:1414: "Class that simulates a string object."
 cause: |

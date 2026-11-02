@@ -4,7 +4,7 @@ priority: P3
 kind: wrong-result
 module: decimal
 files: [Modules/_decimal/_decimal.c]
-functions: ["context_new", "context_init", "context_setattrs"]
+functions: ["context_new", "context_init_impl", "context_setattrs"]
 summary: |
   The Context constructor documents that with no flags argument all flags are cleared. In _decimal
   it starts from a copy of the whole DefaultContext template, status word included, and flags=None
@@ -54,6 +54,7 @@ cause: |
 possible_fix: |
   Add `ctx->status = 0;` after the template copy in context_new.
 tested:
+  python3 3.15.2: REPRODUCED
   python3 (3.14.7, Linux, bundled libmpdec 2.5.1): REPRODUCED
   main (vendor/cpython-main/python.exe, 3.16.0a1+dev, bundled libmpdec 2.5.1): REPRODUCED
 duplicates:

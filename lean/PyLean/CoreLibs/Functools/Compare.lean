@@ -49,7 +49,7 @@ inductive Shape where
   | andNe
   deriving Repr, DecidableEq
 
-/-- `_convert`, Lib/functools.py@3.14.7:173-186. -/
+/-- `_convert`, Lib/functools.py:173-186. -/
 def convert : OrdOp → List (OrdOp × Shape)
   | .lt => [(.gt, .notAndNe), (.le, .orEq), (.ge, .notOp)]
   | .le => [(.ge, .notOrEq), (.lt, .andNe), (.gt, .notOp)]

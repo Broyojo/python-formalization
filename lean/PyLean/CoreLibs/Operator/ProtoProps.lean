@@ -277,7 +277,7 @@ def TruthProtocol : Prop :=
     (truthOp (.len (.ok n)) = .ok (decide (n > 0)) ∨ n < 0 ∨ n > ssizeMax) ∧
     (n < 0 → (truthOp (.len (.ok n))).raises "ValueError") ∧
     (n > ssizeMax → (truthOp (.len (.ok n))).raises "OverflowError") ∧
-    (truthOp (.badBool tn)).raises "TypeError" ∧ (truthOp (.noneBool tn)).raises "TypeError" ∧
+    (truthOp (.badBool tn tn)).raises "TypeError" ∧ (truthOp (.noneBool tn)).raises "TypeError" ∧
     truthOp .plain = .ok true ∧ truthOp .none = .ok false
 
 theorem truthProtocol_proven : TruthProtocol := by
@@ -606,44 +606,62 @@ theorem callTwins_proven : CallTwins := fun _ _ _ _ _ _ => ⟨rfl, rfl, ⟨_, rf
 
 /-! ### `length_hint` -/
 
-/-- `length_hint` agrees between the twins for an `int` default and hint that fit in `Py_ssize_t`, and
-a hint that is not an `int`: the result, or the same exception class. Outside that range C raises
-`OverflowError` where Python returns the value, and C accepts an `__index__` default Python rejects;
-these follow from the C signature and are recorded here in the hypotheses. -/
+/-- `length_hint` agrees between the twins for an `int` default and hint that fit in `Py_ssize_t`, and a hint that is not
+an `int`: the result, or the same exception. A negative hint is a `ValueError` in both, but since 3.15 the two say it
+differently, and that is the only difference: Objects/abstract.c:147-148 against Lib/operator.py:228. Outside that range C
+raises `OverflowError` where Python returns the value, and C accepts an `__index__` default Python rejects; these follow
+from the C signature and are recorded here in the hypotheses. -/
 def LengthHintTwins : Prop :=
   ∀ (o : HintObj) (d : Int), ssizeMin ≤ d → d ≤ ssizeMax →
     (∀ h, o.hint = some h → ∀ v, h = .ok (.int v) → ssizeMin ≤ v ∧ v ≤ ssizeMax) →
     (∀ h, o.hint = some h → ∀ tn, h ≠ .ok (.other tn)) →
-    lengthHintC o (.int d) = lengthHintPy o (.int d)
+    ((∀ v, o.hint = some (.ok (.int v)) → 0 ≤ v) → lengthHintC o (.int d) = lengthHintPy o (.int d)) ∧
+    (∀ v e, o.hint = some (.ok (.int v)) → v < 0 → o.len = .error e → isTypeError e = true →
+      lengthHintC o (.int d) = .error (.valueError (negativeHintC o)) ∧
+      lengthHintPy o (.int d) = .error (.valueError negativeHint))
 
 theorem lengthHintTwins_proven : LengthHintTwins := by
   intro o d h1 h2 hr hn
   have hd : toSsize d = .ok d := by
     unfold toSsize ssizeMax ssizeMin at *
     rw [if_neg (by omega)]
-  simp only [lengthHintC, lengthHintPy, hd, bind, Except.bind, pure, Except.pure]
-  cases hl : o.len with
-  | ok n => rfl
-  | error e =>
-    cases ht : isTypeError e with
-    | false => simp [hl, ht, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw]
-    | true =>
-      simp only [ht, Bool.not_true, Bool.false_eq_true, ite_false]
-      cases hh : o.hint with
-      | none => rfl
-      | some h =>
-        cases h with
-        | error e2 => rfl
-        | ok v =>
-          cases v with
-          | notImplemented => rfl
-          | other tn => exact absurd rfl (hn _ hh tn)
-          | int v =>
-            have hv := hr _ hh v rfl
-            have : toSsize v = .ok v := by
-              unfold toSsize ssizeMax ssizeMin at *
-              rw [if_neg (by omega)]
-            simp [this, bind, Except.bind]
+  constructor
+  · intro hp
+    simp only [lengthHintC, lengthHintPy, hd, bind, Except.bind, pure, Except.pure]
+    cases hl : o.len with
+    | ok n => rfl
+    | error e =>
+      cases ht : isTypeError e with
+      | false => simp [hl, ht, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw]
+      | true =>
+        simp only [ht, Bool.not_true, Bool.false_eq_true, ite_false]
+        cases hh : o.hint with
+        | none => rfl
+        | some h =>
+          cases h with
+          | error e2 => rfl
+          | ok v =>
+            cases v with
+            | notImplemented => rfl
+            | other tn => exact absurd rfl (hn _ hh tn)
+            | int v =>
+              have hv := hr _ hh v rfl
+              have hp' := hp v hh
+              have : toSsize v = .ok v := by
+                unfold toSsize ssizeMax ssizeMin at *
+                rw [if_neg (by omega)]
+              have hn0 : ¬v < 0 := by omega
+              simp [this, hn0, bind, Except.bind]
+  · intro v e hh hlt hl ht
+    have hv := hr _ hh v rfl
+    have this : toSsize v = .ok v := by
+      unfold toSsize ssizeMax ssizeMin at *
+      rw [if_neg (by omega)]
+    constructor
+    · simp [lengthHintC, hd, hl, ht, hh, this, hlt, bind, Except.bind, pure, Except.pure, throw, throwThe,
+        MonadExcept.throw, MonadExceptOf.throw]
+    · simp [lengthHintPy, hl, ht, hh, hlt, bind, Except.bind, pure, Except.pure, throw, throwThe,
+        MonadExcept.throw, MonadExceptOf.throw]
 
 /-! ### `_compare_digest` -/
 
