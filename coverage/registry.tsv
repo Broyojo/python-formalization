@@ -2704,3 +2704,15 @@ rand-randbelow-without-huge	open	Lib/random.py	Random._randbelow_without_getrand
 rand-choices-index-in-range	open	Lib/random.py	Random.choices
 rand-uniform-range	open	Lib/random.py	Random.uniform
 rand-binomial-range	open	Lib/random.py	Random.binomialvariate
+warn-twins-narrow	proven	Python/_warnings.c	warn_explicit,get_filter,check_matched,already_warned,update_registry
+warn-twins-py	proven	Lib/_py_warnings.py	warn_explicit
+warn-twins-once	refuted	Python/_warnings.c	warn_explicit,get_filter,check_matched,already_warned,update_registry
+warn-twins-module	refuted	Lib/_py_warnings.py	warn_explicit
+warn-twins-valid-lines	refuted	Python/_warnings.c	warn_explicit,get_filter
+warn-twins-any-version	refuted	Python/_warnings.c	warn_explicit,already_warned
+warn-no-system-error	refuted	Python/_warnings.c	warn_explicit,already_warned
+warn-twins-raising	refuted	Python/_warnings.c	check_matched,get_filter
+warn-twins-none-module	refuted	Python/_warnings.c	warn_explicit
+warn-twins-any-line	refuted	Python/_warnings.c	warn_explicit
+warn-twins-unknown-action	refuted	Python/_warnings.c	warn_explicit
+warn-py-unknown-action	refuted	Lib/_py_warnings.py	warn_explicit
