@@ -19,7 +19,7 @@ Modules/_elementtree.c	417	469	element_init	element_init(PyObject *self, PyObjec
 Modules/_elementtree.c	472	527	element_resize	element_resize(ElementObject* self, Py_ssize_t extra)	todo		
 Modules/_elementtree.c	530	535	raise_type_error	raise_type_error(PyObject *element)	todo		
 Modules/_elementtree.c	538	555	element_add_subelement	element_add_subelement(elementtreestate *st, ElementObject *self, PyObject *element)	modelled	textlibs-etree-writers-twins	
-Modules/_elementtree.c	558	571	element_get_attrib	element_get_attrib(ElementObject* self)	todo		
+Modules/_elementtree.c	558	571	element_get_attrib	element_get_attrib(ElementObject* self)	modelled	textlibs-etree-attrib-no-bad-call	
 Modules/_elementtree.c	574	592	element_get_text	element_get_text(ElementObject* self)	todo		
 Modules/_elementtree.c	595	613	element_get_tail	element_get_tail(ElementObject* self)	todo		
 Modules/_elementtree.c	616	659	subelement	subelement(PyObject *self, PyObject *args, PyObject *kwds)	todo		
@@ -33,35 +33,35 @@ Modules/_elementtree.c	811	921	_elementtree_Element___deepcopy___impl	_elementtr
 Modules/_elementtree.c	924	973	deepcopy	deepcopy(elementtreestate *st, PyObject *object, PyObject *memo)	todo		
 Modules/_elementtree.c	982	993	_elementtree_Element___sizeof___impl	_elementtree_Element___sizeof___impl(ElementObject *self) /*[clinic end generated code: output=baae4e7ae9fe04ec input=54e298c501f3e0d0]*/	todo		
 Modules/_elementtree.c	1014	1046	_elementtree_Element___getstate___impl	_elementtree_Element___getstate___impl(ElementObject *self) /*[clinic end generated code: output=37279aeeb6bb5b04 input=f0d16d7ec2f7adc1]*/	todo		
-Modules/_elementtree.c	1049	1133	element_setstate_from_attributes	element_setstate_from_attributes(elementtreestate *st, ElementObject *self, PyObject *tag, PyObject *attrib, PyObject *text, PyObject *tail, PyObject *children)	todo		
-Modules/_elementtree.c	1140	1163	element_setstate_from_Python	element_setstate_from_Python(elementtreestate *st, ElementObject *self, PyObject *state)	todo		
-Modules/_elementtree.c	1175	1189	_elementtree_Element___setstate___impl	_elementtree_Element___setstate___impl(ElementObject *self, PyTypeObject *cls, PyObject *state) /*[clinic end generated code: output=598bfb5730f71509 input=13830488d35d51f7]*/	todo		
+Modules/_elementtree.c	1049	1133	element_setstate_from_attributes	element_setstate_from_attributes(elementtreestate *st, ElementObject *self, PyObject *tag, PyObject *attrib, PyObject *text, PyObject *tail, PyObject *children)	modelled	textlibs-etree-setstate-attrib	
+Modules/_elementtree.c	1140	1163	element_setstate_from_Python	element_setstate_from_Python(elementtreestate *st, ElementObject *self, PyObject *state)	modelled	textlibs-etree-setstate-attrib	
+Modules/_elementtree.c	1175	1189	_elementtree_Element___setstate___impl	_elementtree_Element___setstate___impl(ElementObject *self, PyTypeObject *cls, PyObject *state) /*[clinic end generated code: output=598bfb5730f71509 input=13830488d35d51f7]*/	modelled	textlibs-etree-setstate-attrib	
 Modules/_elementtree.c	1192	1244	checkpath	checkpath(PyObject* tag)	modelled	textlibs-etree-find-fast-path	
 Modules/_elementtree.c	1256	1282	_elementtree_Element_extend_impl	_elementtree_Element_extend_impl(ElementObject *self, PyTypeObject *cls, PyObject *elements) /*[clinic end generated code: output=3e86d37fac542216 input=6479b1b5379d09ae]*/	modelled	textlibs-etree-extend-iter-twins,textlibs-etree-writers-twins	
 Modules/_elementtree.c	1295	1324	_elementtree_Element_find_impl	_elementtree_Element_find_impl(ElementObject *self, PyTypeObject *cls, PyObject *path, PyObject *namespaces) /*[clinic end generated code: output=18f77d393c9fef1b input=94df8a83f956acc6]*/	modelled	textlibs-etree-find-fast-path	
 Modules/_elementtree.c	1338	1374	_elementtree_Element_findtext_impl	_elementtree_Element_findtext_impl(ElementObject *self, PyTypeObject *cls, PyObject *path, PyObject *default_value, PyObject *namespaces) /*[clinic end generated code: output=6af7a2d96aac32cb input=32f252099f62a3d2]*/	modelled	textlibs-etree-find-fast-path	
 Modules/_elementtree.c	1387	1420	_elementtree_Element_findall_impl	_elementtree_Element_findall_impl(ElementObject *self, PyTypeObject *cls, PyObject *path, PyObject *namespaces) /*[clinic end generated code: output=65e39a1208f3b59e input=7aa0db45673fc9a5]*/	modelled	textlibs-etree-find-fast-path	
 Modules/_elementtree.c	1433	1442	_elementtree_Element_iterfind_impl	_elementtree_Element_iterfind_impl(ElementObject *self, PyTypeObject *cls, PyObject *path, PyObject *namespaces) /*[clinic end generated code: output=be5c3f697a14e676 input=88766875a5c9a88b]*/	todo		
-Modules/_elementtree.c	1453	1467	_elementtree_Element_get_impl	_elementtree_Element_get_impl(ElementObject *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=523c614142595d75 input=ee153bbf8cdb246e]*/	todo		
+Modules/_elementtree.c	1453	1467	_elementtree_Element_get_impl	_elementtree_Element_get_impl(ElementObject *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=523c614142595d75 input=ee153bbf8cdb246e]*/	modelled	textlibs-etree-attrib-no-bad-call	
 Modules/_elementtree.c	1484	1499	_elementtree_Element_iter_impl	_elementtree_Element_iter_impl(ElementObject *self, PyTypeObject *cls, PyObject *tag) /*[clinic end generated code: output=bff29dc5d4566c68 input=f6944c48d3f84c58]*/	todo		
 Modules/_elementtree.c	1511	1516	_elementtree_Element_itertext_impl	_elementtree_Element_itertext_impl(ElementObject *self, PyTypeObject *cls) /*[clinic end generated code: output=fdeb2a3bca0ae063 input=a1ef1f0fc872a586]*/	todo		
 Modules/_elementtree.c	1520	1533	element_getitem	element_getitem(PyObject *op, Py_ssize_t index)	modelled	textlibs-etree-item-twins	
 Modules/_elementtree.c	1536	1550	element_bool	element_bool(PyObject *op)	todo		
 Modules/_elementtree.c	1562	1592	_elementtree_Element_insert_impl	_elementtree_Element_insert_impl(ElementObject *self, Py_ssize_t index, PyObject *subelement) /*[clinic end generated code: output=990adfef4d424c0b input=9530f4905aa401ca]*/	modelled	textlibs-etree-writers-twins	
-Modules/_elementtree.c	1600	1607	_elementtree_Element_items_impl	_elementtree_Element_items_impl(ElementObject *self) /*[clinic end generated code: output=6db2c778ce3f5a4d input=adbe09aaea474447]*/	todo		
-Modules/_elementtree.c	1615	1622	_elementtree_Element_keys_impl	_elementtree_Element_keys_impl(ElementObject *self) /*[clinic end generated code: output=bc5bfabbf20eeb3c input=f02caf5b496b5b0b]*/	todo		
+Modules/_elementtree.c	1600	1607	_elementtree_Element_items_impl	_elementtree_Element_items_impl(ElementObject *self) /*[clinic end generated code: output=6db2c778ce3f5a4d input=adbe09aaea474447]*/	modelled	textlibs-etree-attrib-no-bad-call	
+Modules/_elementtree.c	1615	1622	_elementtree_Element_keys_impl	_elementtree_Element_keys_impl(ElementObject *self) /*[clinic end generated code: output=bc5bfabbf20eeb3c input=f02caf5b496b5b0b]*/	modelled	textlibs-etree-attrib-no-bad-call	
 Modules/_elementtree.c	1625	1632	element_length	element_length(PyObject *op)	todo		
 Modules/_elementtree.c	1645	1661	_elementtree_Element_makeelement_impl	_elementtree_Element_makeelement_impl(ElementObject *self, PyTypeObject *cls, PyObject *tag, PyObject *attrib) /*[clinic end generated code: output=d50bb17a47077d47 input=589829dab92f26e8]*/	todo		
 Modules/_elementtree.c	1672	1720	_elementtree_Element_remove_impl	_elementtree_Element_remove_impl(ElementObject *self, PyObject *subelement) /*[clinic end generated code: output=38fe6c07d6d87d1f input=6133e1d05597d5ee]*/	todo		changed-in-3.15:
 Modules/_elementtree.c	1723	1742	element_repr	element_repr(PyObject *op)	todo		
-Modules/_elementtree.c	1754	1773	_elementtree_Element_set_impl	_elementtree_Element_set_impl(ElementObject *self, PyObject *key, PyObject *value) /*[clinic end generated code: output=fb938806be3c5656 input=1efe90f7d82b3fe9]*/	todo		
+Modules/_elementtree.c	1754	1773	_elementtree_Element_set_impl	_elementtree_Element_set_impl(ElementObject *self, PyObject *key, PyObject *value) /*[clinic end generated code: output=fb938806be3c5656 input=1efe90f7d82b3fe9]*/	modelled	textlibs-etree-attrib-no-bad-call	
 Modules/_elementtree.c	1776	1808	element_setitem	element_setitem(PyObject *op, Py_ssize_t index, PyObject* item)	modelled	textlibs-etree-item-store-order,textlibs-etree-item-twins	
 Modules/_elementtree.c	1811	1864	element_subscr	element_subscr(PyObject *op, PyObject *item)	modelled	textlibs-etree-item-twins,textlibs-etree-slice-read-twins	
 Modules/_elementtree.c	1867	2053	element_ass_subscr	element_ass_subscr(PyObject *op, PyObject *item, PyObject *value)	modelled	textlibs-etree-item-store-order,textlibs-etree-item-twins,textlibs-etree-slice-del,textlibs-etree-slice-store-forward,textlibs-etree-slice-store-list,textlibs-etree-slice-store-twins,textlibs-etree-slice-store-twins-seq	
 Modules/_elementtree.c	2056	2061	element_tag_getter	element_tag_getter(PyObject *op, void *closure)	todo		
 Modules/_elementtree.c	2064	2068	element_text_getter	element_text_getter(PyObject *op, void *closure)	todo		
 Modules/_elementtree.c	2071	2075	element_tail_getter	element_tail_getter(PyObject *op, void *closure)	todo		
-Modules/_elementtree.c	2078	2088	element_attrib_getter	element_attrib_getter(PyObject *op, void *closure)	todo		
+Modules/_elementtree.c	2078	2088	element_attrib_getter	element_attrib_getter(PyObject *op, void *closure)	modelled	textlibs-etree-attrib-invariant	
 Modules/_elementtree.c	2100	2106	element_tag_setter	element_tag_setter(PyObject *op, PyObject *value, void *closure)	todo		
 Modules/_elementtree.c	2109	2115	element_text_setter	element_text_setter(PyObject *op, PyObject *value, void *closure)	todo		
 Modules/_elementtree.c	2118	2124	element_tail_setter	element_tail_setter(PyObject *op, PyObject *value, void *closure)	todo		

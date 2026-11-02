@@ -2039,6 +2039,9 @@ textlibs-etree-find-fast-path	proven	Modules/_elementtree.c	checkpath,_elementtr
 textlibs-etree-writers-twins	proven	Modules/_elementtree.c	_elementtree_Element_append_impl,_elementtree_Element_extend_impl,_elementtree_Element_insert_impl,element_add_subelement
 textlibs-etree-writers-twins-py	proven	Lib/xml/etree/ElementTree.py	Element.append,Element.extend,Element.insert
 textlibs-etree-extend-iter-twins	refuted	Modules/_elementtree.c	_elementtree_Element_extend_impl,Element.extend
+textlibs-etree-attrib-no-bad-call	proven	Modules/_elementtree.c	_elementtree_Element_get_impl,_elementtree_Element_set_impl,_elementtree_Element_keys_impl,_elementtree_Element_items_impl,element_get_attrib
+textlibs-etree-attrib-invariant	proven	Modules/_elementtree.c	element_attrib_setter,element_attrib_getter
+textlibs-etree-setstate-attrib	refuted	Modules/_elementtree.c	_elementtree_Element___setstate___impl,element_setstate_from_Python,element_setstate_from_attributes
 coll-count-elements-twins	proven	Lib/collections/__init__.py	_count_elements
 coll-counter-update-fast-slow	proven	Lib/collections/__init__.py	Counter.update
 coll-counter-update-adds	proven	Lib/collections/__init__.py	Counter.update,Counter.__init__,Counter.__missing__,_count_elements
