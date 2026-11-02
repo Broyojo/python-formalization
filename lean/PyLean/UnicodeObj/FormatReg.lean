@@ -4,6 +4,7 @@ import PyLean.UnicodeObj.FormatFloat
 import PyLean.UnicodeObj.FormatPercentProps
 import PyLean.UnicodeObj.FormatStrProps
 import PyLean.UnicodeObj.StrFormatDoc
+import PyLean.UnicodeObj.IntFormatDoc
 
 /-! Registry entries of the formatting slice. -/
 
@@ -45,6 +46,12 @@ def formatEntries : List Entry := [
     source := "docs: Doc/library/string.rst, Format Specification Mini-Language (fill, align, width, precision for str)"
     status := .proven, prop := ``StrFormatDoc, thm := some ``strFormatDoc_proven
     notes := "Smoke-tested on 3.15.2 with 300k random strings, fills (digits and alignment characters included), widths and precisions; the model is the one the fmt_str difftest checks." },
+  { id := "unicodeobj-format-int-as-str", pyFile := "Objects/unicode_formatter.c"
+    pyFns := ["_PyLong_FormatAdvancedWriter", "format_long_internal"]
+    statement := "For every int within the 4300-digit limit, fill character, alignment <, > or ^ and width, format(n, fill + align + width + 'd') equals format(str(n), fill + align + width + 's'), the documented padding of str(n)."
+    source := "the implementation disagreeing with itself (int and str formatting of the same text)"
+    status := .proven, prop := ``IntFormatAsStr, thm := some ``intFormatAsStr_proven
+    notes := "Goes through the slow path of format_long_internal (a width is given), calc_number_widths and fill_number; smoke-tested on 3.15.2 with 200k ints including 4000-digit ones." },
   { id := "unicodeobj-format-group-loop", pyFile := "Objects/unicode_formatter.c"
     pyFns := ["_PyUnicode_InsertThousandsGrouping", "GroupGenerator_init", "GroupGenerator_next", "InsertThousandsGrouping_fill"]
     statement := "The rounds of the grouping loop are bounded by the number of digits."
