@@ -11,9 +11,12 @@ Three kinds of case, each run on one twin ("impl": "c" is `pickle.dumps` /
 * roundtrip: `loads(dumps(val, proto))` for every encoder/decoder pairing.
 * loads: hand-crafted streams made only of data opcodes. A scanner that
   follows both unpicklers' argument boundaries rejects any stream in which a
-  code-running opcode (GLOBAL, REDUCE, INST, ...) could be executed, or which
-  could make CPython allocate a huge buffer or memo. As a second line of
-  defence `__import__` is disabled while hand-crafted streams are loaded.
+  code-running opcode (GLOBAL, REDUCE, INST, ...) could be executed. Declared
+  lengths and memo indices need no limit since 3.15: payloads are read in
+  chunks and sparse memo keys go to a dict. As a second line of defence
+  `__import__` is disabled while hand-crafted streams are loaded. `memo_stream`
+  drives the memo array, its dict and MEMOIZE; `chunk_stream` drives the 1 MiB
+  chunks of BINBYTES and BYTEARRAY8 across the end of a frame.
 
 * genops, optimize, dis: `pickletools` over real pickles, hand-crafted streams,
   mutations of both and random bytes. Nothing here runs a stream: `genops` only
@@ -28,13 +31,13 @@ model can tell when a temporary the pickler creates is the same object.
 Exits non-zero on any mismatch. See difftest/common.py.
 """
 
+import _colorize
 import builtins
 import codecs
 import io
 import json
 import pickle
 import pickletools
-import re
 import struct
 import sys
 import warnings
@@ -320,10 +323,77 @@ def hand_op(rng):
                            b'\x96\x00\x00\x00\x00\x00\x00\x00\x80', b'\x96\x03\x00\x00\x00\x00\x00\x00\x00ab',
                            b'\x8a\x05ab', b'T\x05\x00\x00\x00ab', b'U\x04a'])
     if k == 28: return bytes([rng.choice([0x00, 0x03, 0x2f, 0x7e, 0xa0, 0xff, 0x27, 0x5c])])  # bad keys
+    if k == 29:  # declared lengths far past the data, and not past sys.maxsize
+        n = rng.choice([2**20 - 1, 2**20, 2**20 + 1, 2**31, 2**32 - 1, 2**40, 2**63 - 1])
+        return rng.choice([b'B' + u32(min(n, 2**32 - 1)), b'\x8e' + u64(n), b'\x96' + u64(n)]) + b'ab'
     return rng.choice([b'N', b'K\x01', b']', b'(', b'K\x02', b'}', b'\x8f', b'N', b'.'])
 
 
+MEMO_SMALL = [0, 1, 2, 3, 5, 31, 32, 33, 40, 62, 63, 64, 65, 100, 128, 200, 255]
+MEMO_BIG = [256, 1000, 65536, 2**20, 2**31 - 1, 2**31, 2**32 - 1]
+
+
+def memo_index(rng):
+    return rng.choice(MEMO_SMALL) if rng.random() < 0.85 else rng.choice(MEMO_BIG)
+
+
+def memo_put(rng, i):
+    forms = [b'r' + u32(i), b'p' + str(i).encode() + b'\n']
+    if i < 256:
+        forms.append(b'q' + bytes([i]))
+    return rng.choice(forms)
+
+
+def memo_get(rng, i):
+    forms = [b'j' + u32(i), b'g' + str(i).encode() + b'\n']
+    if i < 256:
+        forms.append(b'h' + bytes([i]))
+    return rng.choice(forms)
+
+
+def memo_stream(rng):
+    """Puts, gets and MEMOIZE around `_Unpickler_MemoPut`'s array and dict.
+
+    A dense prefix grows `memo_len`, so a later key can resize the array over keys
+    that went to the dict, which `_Unpickler_MemoGet` then moves into the array."""
+    s = b'N'
+    if rng.random() < 0.5:
+        for j in range(rng.choice([1, 5, 16, 20, 30, 31, 32, 33, 40, 64, 70])):
+            s += b'K' + bytes([j & 255]) + memo_put(rng, j) + b'0'
+    for _ in range(rng.randrange(1, 16)):
+        k = rng.randrange(8)
+        if k < 2:
+            s += rng.choice([b'N', b'K' + bytes([rng.randrange(256)]), b']', b'\x88'])
+        elif k < 4:
+            s += memo_put(rng, memo_index(rng))
+        elif k == 4:
+            s += b'\x94'
+        elif k < 7:
+            s += memo_get(rng, memo_index(rng))
+        else:
+            s += b'0'
+    return s + b'.'
+
+
+def chunk_stream(rng):
+    """A counted payload around the 1 MiB chunk size, with a frame ending inside it."""
+    K = 1 << 20
+    size = rng.choice([K - 1, K, K + 1, 2 * K - 1, 2 * K, 2 * K + 1, 3 * K])
+    head = rng.choice([b'B' + u32(size), b'\x8e' + u64(size), b'\x96' + u64(size)])
+    have = rng.choice([size, size, size, size - 1, K, K - 1, K + 1, 0])
+    have = min(have, size)
+    if rng.random() < 0.7:
+        cut = min(rng.choice([K, K, 2 * K, K - 1, K + 1, have]), have)
+        return b'\x95' + u64(len(head) + cut) + head + bytes(cut) + bytes(have - cut) + b'.'
+    return head + bytes(have) + b'.'
+
+
 def hand_stream(rng):
+    r = rng.random()
+    if r < 0.12:
+        return memo_stream(rng)
+    if r < 0.1205:
+        return chunk_stream(rng)
     s = b''.join(hand_op(rng) for _ in range(rng.randrange(0, 10)))
     r = rng.random()
     if r < 0.65:
@@ -360,12 +430,11 @@ ARGS.update({ord('K'): ('n', 1), ord('M'): ('n', 2), ord('J'): ('n', 4), ord('h'
              ord('B'): ('count', 4, False), 0x8e: ('count', 8, False), 0x96: ('count', 8, False),
              0x8c: ('count', 1, False), ord('X'): ('count', 4, False), 0x8d: ('count', 8, False),
              ord('U'): ('count', 1, False), ord('T'): ('count', 4, True), 0x95: 'frame'})
-ALLOC = {ord('C'), ord('B'), 0x8e, 0x96}  # counted opcodes that allocate the declared size
 BAD_KEYS = {0x00, 0x03, 0x2f, 0x7e, 0xa0, 0xff, 0x27, 0x5c}  # unused opcode bytes (invalid load key)
 
 
 def safe_stream(s):
-    """True if no code-running opcode can execute and nothing huge is allocated."""
+    """True if no code-running opcode can execute."""
     pos = 0
     while pos < len(s):
         op = s[pos]
@@ -379,12 +448,6 @@ def safe_stream(s):
         a = ARGS[op]
         if a == 'line':
             nl = s.find(b'\n', pos)
-            line = s[pos:] if nl < 0 else s[pos:nl]
-            if op == ord('p'):
-                for run in re.findall(rb'[0-9]+', line):
-                    run = run.lstrip(b'0')
-                    if len(run) <= 19 and 100000 < int(run or b'0') <= SSIZE_MAX:
-                        return False
             if nl < 0:
                 return True
             pos = nl + 1
@@ -393,8 +456,6 @@ def safe_stream(s):
                 return True
             pos += 8
         elif a[0] == 'n':
-            if op == ord('r') and pos + 4 <= len(s) and struct.unpack('<I', s[pos:pos + 4])[0] > 100000:
-                return False
             pos += a[1]
         else:
             k, signed = a[1], a[2]
@@ -404,8 +465,6 @@ def safe_stream(s):
             pos += k
             if n < 0:
                 return True
-            if op in ALLOC and len(s) - pos + 1024 < n <= SSIZE_MAX:
-                return False
             if n > SSIZE_MAX:
                 return True
             pos += n
@@ -523,7 +582,7 @@ def tool_case(rng):
         return None
     memo = [[rng.choice([0, 1, 2, 5]), rng.choice(['any', 'int', 'list'])] for _ in range(rng.choice([0, 0, 0, 1, 2]))]
     return {**c, "fn": "dis", "indent": rng.choice([4, 4, 0, 1, 7]), "annotate": rng.choice([0, 0, 1, 20, 40, 60]),
-            "memo": memo}
+            "memo": memo, "color": rng.random() < 0.25}
 
 
 def run_tool(c):
@@ -555,11 +614,19 @@ def run_tool(c):
         return common.py_result(lambda: list(pickletools.optimize(data)))
     out = io.StringIO()
     memo = {k: STACK_OBJECTS[n] for k, n in c["memo"]}
+    # With colour, `dis` measures each line through `decolor`. The model has no
+    # theme, so its text is compared with the output once the colours are removed.
+    plain = pickletools.get_theme
+    if c["color"]:
+        pickletools.get_theme = lambda **kw: plain(force_color=True)
     try:
-        pickletools.dis(src, out=out, memo=memo, indentlevel=c["indent"], annotate=c["annotate"])
+        try:
+            pickletools.dis(src, out=out, memo=memo, indentlevel=c["indent"], annotate=c["annotate"])
+        finally:
+            pickletools.get_theme = plain
     except Exception as e:
-        return {"exc": type(e).__name__, "msg": out.getvalue() + "\x00" + str(e)}
-    return {"ok": out.getvalue()}
+        return {"exc": type(e).__name__, "msg": _colorize.decolor(out.getvalue()) + "\x00" + str(e)}
+    return {"ok": _colorize.decolor(out.getvalue())}
 
 
 def gen_case(rng):

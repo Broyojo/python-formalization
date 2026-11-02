@@ -49,6 +49,9 @@ structure DR (p : PySt) (c : CSt) : Prop where
   stack : c.stack = p.stack ++ p.metastack.flatten
   marks : c.marks = marksOf p.metastack
   memo : p.memo = c.memo.map (fun kv => ((kv.1 : Int), kv.2))
+  /-- No key has gone to `memo_dict`, so `memo_len` is `len(memo)`. -/
+  memoDict : c.memoDict = []
+  memoLen : c.memoLen = p.memo.length
   heap : c.heap = p.heap
   proto : c.proto = p.proto
   /-- Type invariant: a `bytes` object has at most `sys.maxsize` bytes. -/
@@ -162,12 +165,87 @@ theorem fileRead_run (n : Nat) (p : PySt) :
       .ok ((p.inp.drop p.pos).take n,
         { p with pos := p.pos + ((p.inp.drop p.pos).take n).length }) := rfl
 
+theorem fileRead_append (inp : Bytes) (pos a b : Nat) :
+    (inp.drop pos).take a ++ (inp.drop (pos + ((inp.drop pos).take a).length)).take b =
+      (inp.drop pos).take (a + b) := by
+  rw [List.take_add]
+  congr 2
+  by_cases h : a ≤ (inp.drop pos).length
+  · rw [List.length_take_of_le h, List.drop_drop]
+  · have h' : (inp.drop pos).length ≤ a := by omega
+    rw [List.length_take, Nat.min_eq_right h', List.drop_of_length_le h', List.length_drop]
+    exact List.drop_of_length_le (by omega)
+
+theorem with_pos (p : PySt) (n : Nat) (h : p.pos = n) : { p with pos := n } = p := by
+  subst h; rfl
+
+/-- On the `BytesIO`, reading in chunks is reading once: the loop stops early only
+after a short read, and then nothing is left. -/
+theorem chunkedLoop_run (size : Nat) (fuel cursize : Nat) (p : PySt) (start : Nat) (b : Bytes)
+    (hb : b = (p.inp.drop start).take cursize) (hp : p.pos = start + b.length)
+    (hle : cursize ≤ size) (hfuel : size - cursize ≤ fuel) (hc : cursize = 0 → size = 0) :
+    (chunkedLoop fuel size cursize b).run p =
+      .ok ((p.inp.drop start).take size,
+        { p with pos := start + ((p.inp.drop start).take size).length }) := by
+  induction fuel generalizing cursize p b with
+  | zero =>
+    have e : cursize = size := by omega
+    subst e
+    subst hb
+    show Except.ok _ = _
+    rw [with_pos p _ hp]
+  | succ fuel ih =>
+    by_cases hcond : cursize < size ∧ b.length = cursize
+    · have hd : min cursize (size - cursize) ≠ 0 := by
+        have := hc
+        omega
+      generalize hdelta : min cursize (size - cursize) = delta at hd
+      have hstep : (chunkedLoop (fuel + 1) size cursize b).run p =
+          (do let d ← fileRead delta
+              chunkedLoop fuel size (cursize + delta) (b ++ d)).run p := by
+        simp only [chunkedLoop]
+        rw [if_pos hcond, hdelta]
+      rw [hstep, pyRun_bind, fileRead_run]
+      dsimp only
+      subst hb
+      have hkey := fileRead_append p.inp start cursize delta
+      rw [← hp] at hkey
+      exact ih (cursize + delta) { p with pos := p.pos + ((p.inp.drop p.pos).take delta).length } _
+        hkey (by show p.pos + _ = _; rw [List.length_append]; omega) (by omega) (by omega) (by omega)
+    · have hstep : (chunkedLoop (fuel + 1) size cursize b).run p = .ok (b, p) := by
+        simp only [chunkedLoop]
+        rw [if_neg hcond]
+        rfl
+      rw [hstep]
+      have hb2 : b = (p.inp.drop start).take size := by
+        by_cases hlt : cursize < size
+        · have hshort : b.length ≠ cursize := fun e => hcond ⟨hlt, e⟩
+          subst hb
+          have h1 : ((p.inp.drop start).take cursize).length < cursize := by
+            have := List.length_take_le cursize (p.inp.drop start)
+            omega
+          rw [List.length_take] at h1
+          rw [List.take_of_length_le (by omega), List.take_of_length_le (by omega)]
+        · have e : cursize = size := by omega
+          subst e
+          exact hb
+      rw [← hb2, with_pos p _ hp]
+
+theorem chunkedFileRead_run (n : Nat) (p : PySt) : (chunkedFileRead n).run p = (fileRead n).run p := by
+  have hstep : (chunkedFileRead n).run p =
+      (do let b ← fileRead (min n minReadBufSize)
+          chunkedLoop n n (min n minReadBufSize) b).run p := rfl
+  rw [hstep, pyRun_bind, fileRead_run, fileRead_run]
+  dsimp only
+  exact chunkedLoop_run n n _ { p with pos := p.pos + ((p.inp.drop p.pos).take (min n minReadBufSize)).length }
+    p.pos _ rfl rfl (by omega) (by omega) (by simp [minReadBufSize])
+
 theorem read_none (p : PySt) (h : p.frame = none) (n : Nat) :
     (pyRead n).run p = (fileRead n).run p := by
   obtain ⟨inp, pos, frame, stack, mt, memo, heap, proto⟩ := p
   simp only at h
   subst h
-  rfl
+  exact chunkedFileRead_run n _
 
 theorem read_frame_ok (p : PySt) (f : Bytes) (fp n : Nat) (h : p.frame = some (f, fp))
     (hl : ((f.drop fp).take n).length = n) :
@@ -255,25 +333,60 @@ def peekLine (p : PySt) : Option Bytes :=
   | .ok (l, _) => some l
   | .error _ => none
 
+/-- The `PUT` family stores at `idx`: the index `pyStep op` would use. -/
+def putIndex (op : UInt8) (p : PySt) : Option Nat :=
+  if op = oBINPUT then
+    match (pyRead 1).run p with
+    | .ok ([b], _) => some b.toNat
+    | _ => none
+  else if op = oLONG_BINPUT then
+    match (pyUnpack 4).run p with
+    | .ok (b, _) => some (leNat b)
+    | _ => none
+  else if op = oPUT then
+    match peekLine p with
+    | some l =>
+      match pyIntOfBytes l.dropLast with
+      | .ok v => if v ≥ 0 then some v.toNat else none
+      | .error _ => none
+    | none => none
+  else none
+
+/-- The bytes a `BINBYTES`, `BINBYTES8` or `BYTEARRAY8` opcode declares. -/
+def countedSize (op : UInt8) (p : PySt) : Option Nat :=
+  if op = oBINBYTES then
+    match (pyUnpack 4).run p with
+    | .ok (b, _) => some (leNat b)
+    | _ => none
+  else if op = oBINBYTES8 ∨ op = oBYTEARRAY8 then
+    match (pyUnpack 8).run p with
+    | .ok (b, _) => some (leNat b)
+    | _ => none
+  else none
+
 /-- The divergences on record, for opcode `op` about to run from `p`. Each is one
-refuted entry: an `INT` line as in `pickle-int-line-twins` and its two narrowings,
+refuted entry: an `INT` line as in `pickle-int-line-twins` and its narrowing,
 a line with NUL C accepts (`pickle-long-line-twins`), a `PUT` index above
-`sys.maxsize` (`pickle-put-twins`), an empty `APPENDS` or `ADDITEMS` batch on a
-target without the method (`pickle-loads-twins-accept`), a `FRAME` longer than the
-data (`pickle-frame-twins`). -/
+`sys.maxsize` (`pickle-put-twins`), a sparse `PUT` (`pickle-memoize-twins`), a
+counted payload that crosses the end of a frame after a whole 1 MiB chunk
+(`pickle-frame-chunk-straddle`).
+
+The last two are stated from Python's state, which is wider than the refuted
+cases: every `PUT` at or past 32 above twice `len(memo)`, which is every key C could
+send to `memo_dict`, and every payload of at least 1 MiB that does not fit in the
+frame. -/
 def Hazard (op : UInt8) (p : PySt) : Prop :=
   (op = oINT ∧ ∃ body, peekLine p = some (body ++ [nl]) ∧
-    (BoolSpelling body ∨ ((0 : UInt8) ∈ body ∧ isErr (cLoadIntLine (body ++ [nl])) = false) ∨
+    (((0 : UInt8) ∈ body ∧ isErr (cLoadIntLine (body ++ [nl])) = false) ∨
       FastOverLimit body)) ∨
   (op = oLONG ∧ ∃ body, peekLine p = some (body ++ [nl]) ∧ (0 : UInt8) ∈ body ∧
     isErr (cLoadLongLine (body ++ [nl])) = false) ∨
   ((op = oGET ∨ op = oPUT) ∧ ∃ body, peekLine p = some (body ++ [nl]) ∧ (0 : UInt8) ∈ body ∧
     isErr (cLongFromLine (body ++ [nl])) = false) ∨
   (op = oPUT ∧ ∃ body v, peekLine p = some (body ++ [nl]) ∧ pyIntOfBytes body = .ok v ∧ v > ssizeMax) ∨
-  (op = oAPPENDS ∧ p.stack = [] ∧ ∃ t r m, p.metastack = (t :: r) :: m ∧ hasExtend p.heap t = false) ∨
-  (op = oADDITEMS ∧ p.stack = [] ∧ ∃ t r m, p.metastack = (t :: r) :: m ∧ isSetRef p.heap t = false) ∨
-  (op = oFRAME ∧ ∃ b p', (pyUnpack 8).run p = .ok (b, p') ∧ leNat b ≤ ssizeMaxN ∧
-    p'.inp.length < p'.pos + leNat b)
+  (∃ idx, putIndex op p = some idx ∧ idx ≥ 32 ∧ idx > p.memo.length * 2) ∨
+  (∃ size f fp, countedSize op p = some size ∧ p.frame = some (f, fp) ∧
+    minReadBufSize ≤ size ∧ fp < f.length ∧ f.length < fp + size + 8)
 
 /-- No opcode of Python's run from `p` meets a `Hazard`. -/
 def HazFree : Nat → PySt → Prop
@@ -287,13 +400,160 @@ def HazFree : Nat → PySt → Prop
         | _ => True
     | _ => True
 
+/-- `FRAME n` at the start of a stream. With fewer than `n` bytes left, both
+unpicklers raise: `EOFError` from `_Unframer.load_frame`, and C's read of the whole
+frame fails. Otherwise both hold exactly the next `n` bytes as the frame and go on
+from its first byte. -/
+def FrameRead : Prop :=
+  ∀ (n : Nat) (body : Bytes), n ≤ ssizeMaxN →
+    let data := oFRAME :: leBytes n 8 ++ body
+    let p : PySt := { inp := data, pos := 1 }
+    let c : CSt := { inp := data, idx := 1, inputLen := data.length }
+    (body.length < n → pyLoadFrame.run p = .error (eofError "") ∧ ∃ e, cLoadFrame.run c = .error e) ∧
+    (n ≤ body.length →
+      pyLoadFrame.run p = .ok ((), { p with pos := 9 + n, frame := some (body.take n, 0) }) ∧
+      cLoadFrame.run c = .ok ((), { c with idx := 9, inputLen := 9 + n, frameEnd := some (9 + n),
+                                           savedInputLen := data.length }))
+
 /-- On every data-only stream whose run meets none of the divergences on record,
 `pickle.loads` and `pickle._loads` both raise or return equal objects. The
 hypotheses are the type invariant on `bytes`, the model's scope, and exactly the
-refuted cases. -/
+refuted cases. The hazards say which refuted cases those are. -/
 def LoadsTwinsNarrow : Prop :=
   ∀ data : Bytes, data.length ≤ ssizeMaxN → DataOnly data →
     HazFree (data.length + 1) { inp := data } →
     SameOutcome (resolved (cLoads data)) (resolved (pyLoads data))
+
+theorem cDiscard_run {α : Type} (m : CM α) (c : CSt) :
+    (discard m).run c = (m >>= fun _ => pure ()).run c := rfl
+
+theorem cLoadFrame_none (c : CSt) (h : c.frameEnd = none) (hf : c.idx + 8 ≤ c.inputLen) :
+    cLoadFrame.run c = (cOpenFrame ((c.inp.drop c.idx).take 8)).run { c with idx := c.idx + 8 } := by
+  have h2 : cLoadFrame = (cRead 8 >>= fun b => do
+      let s ← get
+      match s.frameEnd with
+      | some fe =>
+        if s.idx < fe then cThrow (unpicklingError "beginning of a new frame before end of current frame")
+        else
+          set { s with inputLen := s.savedInputLen, frameEnd := none }
+          cOpenFrame b
+      | none => cOpenFrame b) := rfl
+  rw [h2, cRun_bind, cRead_fast c 8 hf]
+  dsimp only
+  generalize (c.inp.drop c.idx).take 8 = b
+  cases c
+  simp only at h
+  subst h
+  rfl
+
+/-- The body of `cOpenFrame` after the size check. -/
+theorem cOpenFrame_some {b : Bytes} {n : Nat} (hb : calcBinsize b = some n) (c : CSt) :
+    (cOpenFrame b).run c = (discard (cRead n) >>= fun _ =>
+      modify fun (s : CSt) =>
+        let start := s.idx - n
+        { s with idx := start, frameEnd := some (start + n), savedInputLen := s.inputLen,
+                 inputLen := start + n }).run c := by
+  unfold cOpenFrame
+  rw [hb]
+
+theorem cOpenFrame_err {b : Bytes} {n : Nat} {c : CSt} {e : PyExc} (hb : calcBinsize b = some n)
+    (he : (cRead n).run c = .error e) : (cOpenFrame b).run c = .error e := by
+  rw [cOpenFrame_some hb, cRun_bind, cDiscard_run, cRun_bind, he]
+
+theorem cOpenFrame_ok {b : Bytes} {n : Nat} {c : CSt} (hb : calcBinsize b = some n)
+    (hf : c.idx + n ≤ c.inputLen) :
+    (cOpenFrame b).run c = .ok ((), { c with
+      idx := c.idx + n - n, frameEnd := some (c.idx + n - n + n), savedInputLen := c.inputLen,
+      inputLen := c.idx + n - n + n }) := by
+  rw [cOpenFrame_some hb, cRun_bind, cDiscard_run, cRun_bind, cRead_fast c n hf]
+  rfl
+
+theorem frameRead_proven : FrameRead := by
+  intro n body hn
+  dsimp only
+  generalize hdata : oFRAME :: leBytes n 8 ++ body = data
+  have hl8 : (leBytes n 8).length = 8 := leBytes_length n 8
+  have hlen : data.length = 9 + body.length := by
+    rw [← hdata]
+    simp only [List.length_cons, List.length_append, hl8]
+  have hhdr : (data.drop 1).take 8 = leBytes n 8 := by
+    rw [← hdata]
+    exact List.take_left' hl8
+  have hrest : data.drop 9 = body := by
+    rw [← hdata]
+    exact List.drop_left' (l₁ := oFRAME :: leBytes n 8) (by simp [hl8])
+  have hsz : leNat (leBytes n 8) = n := by
+    rw [leNat_leBytes]
+    exact Nat.mod_eq_of_lt (Nat.lt_of_le_of_lt hn (by decide))
+  have hmax : ¬ n > ssizeMaxN := by omega
+  -- Python, up to the read of the frame
+  have hunpack : (pyUnpack 8).run ({ inp := data, pos := 1 } : PySt) =
+      .ok (leBytes n 8, { inp := data, pos := 9 }) := by
+    have h1 : (pyRead 8).run ({ inp := data, pos := 1 } : PySt) =
+        .ok (leBytes n 8, { inp := data, pos := 9 }) := by
+      rw [read_none _ rfl, fileRead_run]
+      simp only [hhdr, hl8]
+    have h2 : (pyUnpack 8).run ({ inp := data, pos := 1 } : PySt) =
+        (do let d ← pyRead 8
+            if d.length = 8 then return d
+            else pyThrow (structError s!"unpack requires a buffer of {8} bytes")).run
+          ({ inp := data, pos := 1 } : PySt) := rfl
+    rw [h2, pyRun_bind, h1]
+    dsimp only
+    rw [if_pos hl8]
+    rfl
+  have hframe : pyLoadFrame.run ({ inp := data, pos := 1 } : PySt) =
+      (pyReadFrame n).run ({ inp := data, pos := 9 } : PySt) := by
+    have h2 : pyLoadFrame.run ({ inp := data, pos := 1 } : PySt) =
+        (pyUnpack 8 >>= fun d =>
+          if leNat d > ssizeMaxN then
+            pyThrow (.valueError s!"frame size > sys.maxsize: {leNat d}")
+          else pyStartFrame (leNat d)).run ({ inp := data, pos := 1 } : PySt) := rfl
+    rw [h2, pyRun_bind, hunpack]
+    dsimp only
+    rw [hsz, if_neg hmax]
+    rfl
+  have hread : (chunkedFileRead n).run ({ inp := data, pos := 9 } : PySt) =
+      .ok (body.take n, { inp := data, pos := 9 + (body.take n).length }) := by
+    rw [chunkedFileRead_run, fileRead_run]
+    simp only [hrest]
+  have hpy : (pyReadFrame n).run ({ inp := data, pos := 9 } : PySt) =
+      if (body.take n).length < n then .error (eofError "")
+      else .ok ((), { inp := data, pos := 9 + (body.take n).length,
+                      frame := some (body.take n, 0) }) := by
+    have h2 : (pyReadFrame n).run ({ inp := data, pos := 9 } : PySt) =
+        (do let d ← chunkedFileRead n
+            if d.length < n then pyThrow (eofError "")
+            else modify fun (s : PySt) => { s with frame := some (d, 0) }).run
+          ({ inp := data, pos := 9 } : PySt) := rfl
+    rw [h2, pyRun_bind, hread]
+    dsimp only
+    split <;> rfl
+  -- C, up to the read of the frame
+  have hc8 : 1 + 8 ≤ data.length := by omega
+  have h3 : calcBinsize (leBytes n 8) = some n := by
+    unfold calcBinsize
+    dsimp only
+    rw [hsz, if_neg hmax]
+  have hopen : cLoadFrame.run ({ inp := data, idx := 1, inputLen := data.length } : CSt) =
+      (cOpenFrame (leBytes n 8)).run ({ inp := data, idx := 9, inputLen := data.length } : CSt) := by
+    rw [cLoadFrame_none _ rfl hc8]
+    dsimp only
+    rw [hhdr]
+  constructor
+  · intro hshort
+    have hlt : (body.take n).length < n := by
+      rw [List.length_take]; omega
+    refine ⟨by rw [hframe, hpy, if_pos hlt], ?_⟩
+    obtain ⟨e, he⟩ := cRead_noframe ({ inp := data, idx := 9, inputLen := data.length } : CSt) n
+      (by dsimp only; omega) rfl
+    exact ⟨e, by rw [hopen, cOpenFrame_err h3 he]⟩
+  · intro hfull
+    have hl : (body.take n).length = n := by
+      rw [List.length_take]; omega
+    refine ⟨by rw [hframe, hpy, if_neg (by omega), hl], ?_⟩
+    rw [hopen, cOpenFrame_ok h3 (by dsimp only; omega)]
+    have e9 : 9 + n - n = 9 := by omega
+    simp only [e9]
 
 end PyLean.Pickle

@@ -198,12 +198,9 @@ theorem sameOutcome_of_sameB {α : Type} [DecidableEq α] {a b : Py α} (h : sam
     SameOutcome a b := by
   cases a <;> cases b <;> simp_all [sameB, SameOutcome]
 
-def boolB (a d : UInt8) : Bool :=
-  (d == 0x30 || d == 0x31) && (isSpace a || a == 0x2b || (a == 0x2d && d == 0x30))
-
-/-- The 3-byte lines ending in a digit: all that remains of the bool spellings. -/
+/-- The 3-byte lines ending in a digit: the only lines that can be bools. -/
 def checkAD (a k : Nat) : Bool :=
-  a == 0 || a == 10 || boolB a.toUInt8 (48 + k).toUInt8 ||
+  a == 0 || a == 10 ||
     sameB (cLoadIntLine [a.toUInt8, (48 + k).toUInt8, nl]) (pyLoadIntLine [a.toUInt8, (48 + k).toUInt8, nl])
 
 set_option maxRecDepth 100000 in
@@ -211,18 +208,13 @@ theorem two_byte_all : ∀ a < 256, ∀ k < 10, checkAD a k = true := by decide 
 
 /-- `IntLineTwinsNoNul` without lines of more than 4300 digits. -/
 def IntLineTwinsNarrow : Prop :=
-  ∀ body : Bytes, nl ∉ body → (0 : UInt8) ∉ body → ¬ BoolSpelling body →
+  ∀ body : Bytes, nl ∉ body → (0 : UInt8) ∉ body →
     (∀ x c, strtol (body ++ [nl]) = (x, c, false) →
       ((body ++ [nl]).getD c 0 = nl ∨ (body ++ [nl]).getD c 0 = 0) →
       (body.filter isDigit).length ≤ maxStrDigits) →
     SameOutcome (cLoadIntLine (body ++ [nl])) (pyLoadIntLine (body ++ [nl]))
 
-theorem boolSpelling_of_boolB {a d : UInt8} (h : boolB a d = true) : BoolSpelling [a, d] := by
-  simp only [boolB, Bool.and_eq_true, Bool.or_eq_true, beq_iff_eq] at h
-  exact ⟨a, d, rfl, h.1, by rcases h.2 with (h | h) | h <;> simp_all⟩
-
-theorem two_byte_case (a d : UInt8) (hd : isDigit d = true) (ha0 : a ≠ 0) (ha1 : a ≠ nl)
-    (hb : ¬ BoolSpelling [a, d]) :
+theorem two_byte_case (a d : UInt8) (hd : isDigit d = true) (ha0 : a ≠ 0) (ha1 : a ≠ nl) :
     SameOutcome (cLoadIntLine ([a, d] ++ [nl])) (pyLoadIntLine ([a, d] ++ [nl])) := by
   have hdn : 48 ≤ d.toNat ∧ d.toNat ≤ 57 := by
     simp only [isDigit, Bool.and_eq_true, decide_eq_true_eq] at hd
@@ -232,14 +224,13 @@ theorem two_byte_case (a d : UInt8) (hd : isDigit d = true) (ha0 : a ≠ 0) (ha1
   have e2 : (48 + (d.toNat - 48)).toUInt8 = d := by
     rw [show 48 + (d.toNat - 48) = d.toNat by omega]; simp
   simp only [checkAD, e1, e2, Bool.or_eq_true, beq_iff_eq] at hc
-  rcases hc with ((h | h) | h) | h
+  rcases hc with (h | h) | h
   · exact absurd (by simpa using UInt8.toNat_inj.mp (by simpa using h)) ha0
   · exact absurd (UInt8.toNat_inj.mp (by simpa [nl] using h)) ha1
-  · exact absurd (boolSpelling_of_boolB h) hb
   · exact sameOutcome_of_sameB h
 
 theorem intLineTwinsNarrow_proven : IntLineTwinsNarrow := by
-  intro body hnl hz hb hlim
+  intro body hnl hz hlim
   by_cases hne : body = []
   · subst hne
     exact sameOutcome_of_sameB (by decide +kernel)
@@ -272,7 +263,7 @@ theorem intLineTwinsNarrow_proven : IntLineTwinsNarrow := by
           rw [this]
           exact hdig _ (List.mem_append_right _ (List.mem_singleton.mpr rfl))
         exact two_byte_case a d hd (fun e => hz (e ▸ List.mem_cons_self))
-          (fun e => hnl (e ▸ List.mem_cons_self)) hb
+          (fun e => hnl (e ▸ List.mem_cons_self))
     · have hl3 : ¬ ((body ++ [nl]).length = 3) := by simp; omega
       have hp0 : ¬ (body ++ [nl] = [0x30, 0x30, nl]) := fun e => hl3 (by rw [e]; rfl)
       have hp1 : ¬ (body ++ [nl] = [0x30, 0x31, nl]) := fun e => hl3 (by rw [e]; rfl)

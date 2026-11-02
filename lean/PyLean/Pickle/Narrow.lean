@@ -44,16 +44,16 @@ def FastOverLimit (body : Bytes) : Prop :=
     ((body ++ [nl]).getD c 0 = nl ∨ (body ++ [nl]).getD c 0 = 0) ∧
     (body.filter isDigit).length > maxStrDigits
 
-/-- Every complete `INT` line outside the three refuted sets: bool spellings,
-lines with NUL that C accepts, and lines past the digit limit that C's strtol
-path accepts. Lines both twins reject stay in. -/
+/-- Every complete `INT` line outside the two refuted sets: lines with NUL that
+C accepts, and lines past the digit limit that C's strtol path accepts. Lines
+both twins reject stay in. -/
 def IntLineTwinsPrecise : Prop :=
-  ∀ body : Bytes, nl ∉ body → ¬ BoolSpelling body →
+  ∀ body : Bytes, nl ∉ body →
     ((0 : UInt8) ∈ body → isErr (cLoadIntLine (body ++ [nl])) = true) → ¬ FastOverLimit body →
     SameOutcome (cLoadIntLine (body ++ [nl])) (pyLoadIntLine (body ++ [nl]))
 
 theorem intLineTwinsPrecise_proven : IntLineTwinsPrecise := by
-  intro body hnl hb hc hf
+  intro body hnl hc hf
   by_cases hz : (0 : UInt8) ∈ body
   · have h1 := hc hz
     have hm : (0 : UInt8) ∈ body ++ [nl] := List.mem_append_left _ hz
@@ -70,7 +70,7 @@ theorem intLineTwinsPrecise_proven : IntLineTwinsPrecise := by
       cases hq : cLoadIntLine (body ++ [nl]) with
       | ok v => rw [hq] at h1; simp [isErr] at h1
       | error e' => exact trivial
-  · exact intLineTwinsNarrow_proven body hnl hz hb (fun x c h1 h2 => by
+  · exact intLineTwinsNarrow_proven body hnl hz (fun x c h1 h2 => by
       apply Nat.le_of_not_gt
       intro h3
       exact hf ⟨x, c, h1, h2, h3⟩)

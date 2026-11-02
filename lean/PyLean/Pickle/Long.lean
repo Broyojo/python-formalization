@@ -216,7 +216,7 @@ def pyLoadIntLine (data : Bytes) : Py IntVal :=
   else if data = [0x30, 0x31, nl] then .ok (.bool true)
   else .int <$> pyIntOfBytes data
 
-/-- `load_int` (`Modules/_pickle.c:5521-5562`) on a line returned by
+/-- `load_int` (`Modules/_pickle.c:5521-5561`) on a line returned by
 `_Unpickler_Readline` (which always ends in `\n`). -/
 def cLoadIntLine (s : Bytes) : Py IntVal :=
   if s.length < 2 then .error (unpicklingError "pickle data was truncated")
@@ -227,7 +227,8 @@ def cLoadIntLine (s : Bytes) : Py IntVal :=
       match cLongFromLine s with
       | .ok v => .ok (.int v)
       | .error _ => .error (.valueError "could not convert string to int")
-    else if s.length = 3 ∧ (x = 0 ∨ x = 1) then .ok (.bool (x = 1))
+    else if s.length = 3 ∧ s.getD 0 0 = 0x30 ∧ (s.getD 1 0 = 0x30 ∨ s.getD 1 0 = 0x31) then
+      .ok (.bool (x ≠ 0))
     else .ok (.int x)
 
 /-- `_Unpickler.load_long` after `readline()` (`Lib/pickle.py:1425-1430`). -/
