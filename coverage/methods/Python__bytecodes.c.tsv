@@ -54,7 +54,7 @@ Python/bytecodes.c	540	540	opcode:_GUARD_TOS_SLICE	op(_GUARD_TOS_SLICE, (tos -- 
 Python/bytecodes.c	545	545	opcode:TO_BOOL_LIST	macro(TO_BOOL_LIST) = _GUARD_TOS_LIST + unused/1 + unused/2 + _TO_BOOL_LIST + POP_TOP;	modelled	bytecode-to-bool-specialized	
 Python/bytecodes.c	547	547	opcode:_TO_BOOL_LIST	op(_TO_BOOL_LIST, (value -- res, v)) {	modelled	bytecode-to-bool-specialized	
 Python/bytecodes.c	556	556	opcode:TO_BOOL_NONE	inst(TO_BOOL_NONE, (unused/1, unused/2, value -- res)) {	modelled	bytecode-to-bool-specialized	
-Python/bytecodes.c	564	564	opcode:_GUARD_NOS_COMPACT_ASCII	op(_GUARD_NOS_COMPACT_ASCII, (nos, unused -- nos, unused)) {	todo		changed-in-3.15: new function
+Python/bytecodes.c	564	564	opcode:_GUARD_NOS_COMPACT_ASCII	op(_GUARD_NOS_COMPACT_ASCII, (nos, unused -- nos, unused)) {	modelled	bytecode-subscr-str-int	
 Python/bytecodes.c	570	570	opcode:_GUARD_NOS_UNICODE	op(_GUARD_NOS_UNICODE, (nos, unused -- nos, unused)) {	modelled	bytecode-binary-op-add-unicode	
 Python/bytecodes.c	575	575	opcode:_GUARD_TOS_UNICODE	op(_GUARD_TOS_UNICODE, (value -- value)) {	modelled	bytecode-binary-op-add-unicode	
 Python/bytecodes.c	580	580	opcode:_TO_BOOL_STR	op(_TO_BOOL_STR, (value -- res, v)) {	modelled	bytecode-to-bool-specialized	
@@ -115,15 +115,15 @@ Python/bytecodes.c	1134	1134	opcode:BINARY_OP_SUBSCR_LIST_INT	macro(BINARY_OP_SU
 Python/bytecodes.c	1137	1137	opcode:_BINARY_OP_SUBSCR_LIST_INT	op(_BINARY_OP_SUBSCR_LIST_INT, (list_st, sub_st -- res, ls, ss)) {	modelled	bytecode-binary-op-subscr-list-int	
 Python/bytecodes.c	1164	1164	opcode:BINARY_OP_SUBSCR_LIST_SLICE	macro(BINARY_OP_SUBSCR_LIST_SLICE) =	todo		changed-in-3.15:
 Python/bytecodes.c	1167	1167	opcode:_BINARY_OP_SUBSCR_LIST_SLICE	op(_BINARY_OP_SUBSCR_LIST_SLICE, (list_st, sub_st -- res, ls, ss)) {	todo		changed-in-3.15:
-Python/bytecodes.c	1185	1185	opcode:BINARY_OP_SUBSCR_STR_INT	macro(BINARY_OP_SUBSCR_STR_INT) =	todo		changed-in-3.15:
-Python/bytecodes.c	1188	1188	opcode:_BINARY_OP_SUBSCR_STR_INT	op(_BINARY_OP_SUBSCR_STR_INT, (str_st, sub_st -- res, s, i)) {	todo		changed-in-3.15:
-Python/bytecodes.c	1207	1207	opcode:BINARY_OP_SUBSCR_USTR_INT	macro(BINARY_OP_SUBSCR_USTR_INT) =	todo		changed-in-3.15: new function
-Python/bytecodes.c	1210	1210	opcode:_BINARY_OP_SUBSCR_USTR_INT	op(_BINARY_OP_SUBSCR_USTR_INT, (str_st, sub_st -- res, s, i)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	1230	1230	opcode:_GUARD_NOS_TUPLE	op(_GUARD_NOS_TUPLE, (nos, unused -- nos, unused)) {	todo		
+Python/bytecodes.c	1185	1185	opcode:BINARY_OP_SUBSCR_STR_INT	macro(BINARY_OP_SUBSCR_STR_INT) =	modelled	bytecode-subscr-str-int	
+Python/bytecodes.c	1188	1188	opcode:_BINARY_OP_SUBSCR_STR_INT	op(_BINARY_OP_SUBSCR_STR_INT, (str_st, sub_st -- res, s, i)) {	modelled	bytecode-subscr-str-int	
+Python/bytecodes.c	1207	1207	opcode:BINARY_OP_SUBSCR_USTR_INT	macro(BINARY_OP_SUBSCR_USTR_INT) =	modelled	bytecode-subscr-str-int	
+Python/bytecodes.c	1210	1210	opcode:_BINARY_OP_SUBSCR_USTR_INT	op(_BINARY_OP_SUBSCR_USTR_INT, (str_st, sub_st -- res, s, i)) {	modelled	bytecode-subscr-str-int	
+Python/bytecodes.c	1230	1230	opcode:_GUARD_NOS_TUPLE	op(_GUARD_NOS_TUPLE, (nos, unused -- nos, unused)) {	modelled	bytecode-subscr-tuple-int	
 Python/bytecodes.c	1235	1235	opcode:_GUARD_TOS_TUPLE	op(_GUARD_TOS_TUPLE, (tos -- tos)) {	todo		
-Python/bytecodes.c	1240	1240	opcode:BINARY_OP_SUBSCR_TUPLE_INT	macro(BINARY_OP_SUBSCR_TUPLE_INT) =	todo		changed-in-3.15:
-Python/bytecodes.c	1250	1250	opcode:_GUARD_BINARY_OP_SUBSCR_TUPLE_INT_BOUNDS	op(_GUARD_BINARY_OP_SUBSCR_TUPLE_INT_BOUNDS, (tuple_st, sub_st -- tuple_st, sub_st)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	1263	1263	opcode:_BINARY_OP_SUBSCR_TUPLE_INT	op(_BINARY_OP_SUBSCR_TUPLE_INT, (tuple_st, sub_st -- res, ts, ss)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1240	1240	opcode:BINARY_OP_SUBSCR_TUPLE_INT	macro(BINARY_OP_SUBSCR_TUPLE_INT) =	modelled	bytecode-subscr-tuple-int	
+Python/bytecodes.c	1250	1250	opcode:_GUARD_BINARY_OP_SUBSCR_TUPLE_INT_BOUNDS	op(_GUARD_BINARY_OP_SUBSCR_TUPLE_INT_BOUNDS, (tuple_st, sub_st -- tuple_st, sub_st)) {	modelled	bytecode-subscr-tuple-int	
+Python/bytecodes.c	1263	1263	opcode:_BINARY_OP_SUBSCR_TUPLE_INT	op(_BINARY_OP_SUBSCR_TUPLE_INT, (tuple_st, sub_st -- res, ts, ss)) {	modelled	bytecode-subscr-tuple-int	
 Python/bytecodes.c	1280	1280	opcode:_GUARD_NOS_DICT_SUBSCRIPT	op(_GUARD_NOS_DICT_SUBSCRIPT, (nos, unused -- nos, unused)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1286	1286	opcode:_GUARD_NOS_DICT_STORE_SUBSCRIPT	op(_GUARD_NOS_DICT_STORE_SUBSCRIPT, (unused, nos, unused -- unused, nos, unused)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1292	1292	opcode:_GUARD_TOS_ANY_DICT	op(_GUARD_TOS_ANY_DICT, (tos -- tos)) {	todo		changed-in-3.15: new function
