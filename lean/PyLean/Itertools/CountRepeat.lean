@@ -3,7 +3,7 @@ import PyLean.Itertools.Model
 /-!
 `itertools.count` (Modules/itertoolsmodule.c:3475-3721) and `itertools.repeat`
 (:3723-3851), driven by a sequence of operations (`next(it)`, `repr(it)`,
-`it.__length_hint__()`), and their doc equivalents (rst:325-331, :627-634).
+`it.__length_hint__()`), and their doc equivalents (rst:325-331, :631-638).
 
 `count` keeps a C `Py_ssize_t cnt` while in "fast mode" (int start that fits,
 step exactly 1) and otherwise, or at `PY_SSIZE_T_MAX`, adds Python objects. Its

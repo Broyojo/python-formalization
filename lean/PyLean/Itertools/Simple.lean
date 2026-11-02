@@ -137,7 +137,7 @@ def docBatched (iterable : Obj α) (n : Int) (strict : Bool) : Run (List α) :=
     | .error e => Run.err e
     | .ok ⟨l, err⟩ => docBatchedLoop n strict err (l.length + 2) l
 
-/-! ## chain, chain.from_iterable (:1888-2062; rst:195-198, :211-218) -/
+/-! ## chain, chain.from_iterable (:1888-2062; rst:195-198, :210-213) -/
 
 structure ChainState (α : Type) where
   source : Option (Src (Obj α))

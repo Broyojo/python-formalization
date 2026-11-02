@@ -2,7 +2,7 @@ import PyLean.Itertools.Model
 
 /-!
 `itertools.groupby` (Modules/itertoolsmodule.c:423-716) and `itertools.tee`
-(:718-1197) with their doc equivalents (rst:431-461, :688-719), driven by
+(:718-1197) with their doc equivalents (rst:431-461, :692-723), driven by
 interleaved operations on the returned iterators.
 
 groupby operations: `outer` is `next(groupby_obj)` (result: the key, the group
