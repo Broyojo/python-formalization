@@ -27,6 +27,7 @@ import PyLean.TextLibs.UrlLegacy
 import PyLean.TextLibs.TomlErr
 import PyLean.TextLibs.TomlStr
 import PyLean.TextLibs.TomlKey
+import PyLean.TextLibs.TomlNum
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1684,6 +1685,13 @@ def entries : List Entry := [
     source := "docs ('parsing TOML 1.1.0'); TOML 1.1 spec, Keys; comment at _parser.py:32-36 on MAX_KEY_PARTS", status := .proven
     prop := ``Toml.KeySpec, thm := some ``Toml.keySpec_proven
     notes := "A one-part key is never checked against MAX_KEY_PARTS (the check is in the loop), so MAX_KEY_PARTS = 0 still accepts 'a = 1'." }
+,
+  { id := "textlibs-toml-numbers", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["parse_value", "make_safe_parse_float", "match_to_number"]
+    statement := "For every number token TOML 1.1 allows (decimal integer without leading zero, 0x/0o/0b integer with leading zeros and either case, float with fraction and/or exponent, inf/nan with optional sign; single underscores between digits), followed by nothing, whitespace, a newline, ',', ']', '}' or '#', parse_value returns the position after it and: a decimal integer's signed value, or int()'s ValueError when it has more digits (not counting underscores) than sys.get_int_max_str_digits() allows; a prefixed integer's value with no limit; for floats, what parse_float returns when called with exactly the token's text, its exception, or ValueError 'parse_float must not return dicts or lists' when it returns a dict or list and is not float."
+    source := "docs of load/loads (parse_float 'will be called with the string of every TOML float'; 'must not return a dict or a list, else a ValueError is raised'; Integers: int max str digits); TOML 1.1 spec, Integer and Float", status := .proven
+    prop := ``Toml.NumberSpec, thm := some ``Toml.numberSpec_proven
+    notes := "RE_NUMBER, RE_DATETIME and RE_LOCALTIME are hand-written matchers; the theorem shows the date patterns never match a number token. parse_float is modelled as a function of its argument." }
 ]
 
 end PyLean.TextLibs
