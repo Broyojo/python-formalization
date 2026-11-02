@@ -8,8 +8,8 @@ Modules/mathmodule.c	172	180	tl_fma	tl_fma(double x, double y, TripleLength tota
 Modules/mathmodule.c	183	187	tl_to_d	tl_to_d(TripleLength total)	todo		
 Modules/mathmodule.c	223	254	m_sinpi	m_sinpi(double x)	todo		
 Modules/mathmodule.c	352	378	lanczos_sum	lanczos_sum(double x)	todo		
-Modules/mathmodule.c	382	475	m_tgamma	m_tgamma(double x)	todo		changed-in-3.15:
-Modules/mathmodule.c	483	524	m_lgamma	m_lgamma(double x)	todo		changed-in-3.15:
+Modules/mathmodule.c	382	475	m_tgamma	m_tgamma(double x)	todo		
+Modules/mathmodule.c	483	524	m_lgamma	m_lgamma(double x)	todo		
 Modules/mathmodule.c	531	618	m_remainder	m_remainder(double x, double y)	todo		
 Modules/mathmodule.c	629	648	m_log	m_log(double x)	todo		
 Modules/mathmodule.c	661	685	m_log2	m_log2(double x)	todo		
@@ -53,6 +53,6 @@ Modules/mathmodule.c	2588	2628	math_isclose_impl	math_isclose_impl(PyObject *mod
 Modules/mathmodule.c	2631	2678	_check_long_mult_overflow	_check_long_mult_overflow(long a, long b) {	todo		
 Modules/mathmodule.c	2698	2832	math_prod_impl	math_prod_impl(PyObject *module, PyObject *iterable, PyObject *start) /*[clinic end generated code: output=36153bedac74a198 input=4c5ab0682782ed54]*/	todo		
 Modules/mathmodule.c	2854	2965	math_nextafter_impl	math_nextafter_impl(PyObject *module, double x, double y, PyObject *steps) /*[clinic end generated code: output=cc6511f02afc099e input=3a9151e6b1e9f346]*/	todo		
-Modules/mathmodule.c	2978	2996	math_ulp_impl	math_ulp_impl(PyObject *module, double x) /*[clinic end generated code: output=f5207867a9384dd4 input=31f9bfbbe373fcaa]*/	todo		changed-in-3.15:
+Modules/mathmodule.c	2978	2996	math_ulp_impl	math_ulp_impl(PyObject *module, double x) /*[clinic end generated code: output=f5207867a9384dd4 input=31f9bfbbe373fcaa]*/	todo		
 Modules/mathmodule.c	2999	3045	math_exec	math_exec(PyObject *module)	todo		changed-in-3.15:
 Modules/mathmodule.c	3129	3132	PyInit_math	PyInit_math(void)	todo		

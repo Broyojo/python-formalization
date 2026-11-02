@@ -17,6 +17,10 @@ import PyLean.MathInt.FltFrexp
 import PyLean.MathInt.FltFloor
 import PyLean.MathInt.FltWrap
 import PyLean.MathInt.FltLogProps
+import PyLean.MathInt.FltNext
+import PyLean.MathInt.FltFma
+import PyLean.MathInt.FltHypot
+import PyLean.MathInt.FltGammaProps
 
 /-!
 Integer functions of `math.integer` (`Modules/mathintegermodule.c`, re-exported by
@@ -45,6 +49,36 @@ namespace PyLean.MathInt
 open PyLean.Registry
 
 def entries : List Entry := [
+  { id := "mathint-fma-doc", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math.fma"]
+    statement := "For every argument object, math.fma raises conversion errors in argument order; for finite x, y, z it returns the exact x*y + z rounded once (+0.0 for an exact zero unless the product and z are both negative zeros) or raises OverflowError('overflow in fma') when that rounds to infinity; a NaN argument gives a NaN and never raises; otherwise an invalid operation (0*inf, or inf - inf between the product and z) raises ValueError('invalid operation in fma') and anything else returns the infinity of the right sign."
+    source := "Doc/library/math.rst: fma (\"computed as though with infinite precision and range followed by a single round\"; fma(0, inf, nan) \"returns a NaN, and does not raise any exception\")", status := .proven
+    prop := ``FmaDoc, thm := some ``fmaDoc_proven
+    notes := "The C fma is the exact IEEE fusedMultiplyAdd (F64.fma)." },
+  { id := "mathint-hypot-dist", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math.hypot", "math.dist"]
+    statement := "dist(p, q) on float tuples of equal length equals hypot(*(px - qx for px, qx in zip(p, q))), for every vector_norm; points of different dimensions raise ValueError('both points must have the same number of dimensions') after an iteration error of p, then of q; hypot() is 0.0 and hypot(x) is abs(x) for non-NaN x; an infinite coordinate makes hypot inf even next to NaNs, and otherwise a NaN coordinate makes it NaN."
+    source := "Doc/library/math.rst: dist (\"Roughly equivalent to sqrt(sum((px - qx) ** 2.0 ...))\"), hypot; the math intro's exception hypot(float('nan'), float('inf'))", status := .proven
+    prop := ``HypotDist, thm := some ``hypotDist_proven
+    notes := "vector_norm's scaled, compensated core (mathmodule.c:1913-1944) is not pinned by this entry, so vector_norm is not listed." },
+  { id := "mathint-gamma-doc", pyFile := "Modules/mathmodule.c"
+    pyFns := ["m_tgamma", "m_lgamma", "math_1a"]
+    statement := "For every C library whose sin, cos, exp, log and pow report only range errors through errno: gamma(x) raises ValueError exactly when x is -inf or an integer <= 0, and lgamma(x) exactly when x is an integer <= 0; and for every C library: gamma(n) == (n-1)! for n = 1..23, gamma(x) raises OverflowError for every finite x > 200, NaN gives NaN, gamma(inf), lgamma(inf) and lgamma(-inf) are inf, lgamma(1.0) and lgamma(2.0) are 0.0, and conversion errors are raised unchanged."
+    source := "Doc/library/math.rst: gamma, lgamma; C99 Annex F (F.9.5.3, F.9.5.4); mathmodule.c:339-347 (gamma_integral)", status := .proven
+    prop := ``GammaDoc, thm := some ``gammaDoc_proven
+    notes := "The Lanczos branch (lanczos_sum, the reflection with m_sinpi) is covered only for its errno; its value depends on the C library and is checked by the difftest." },
+  { id := "mathint-nextafter-default-step", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math.nextafter"]
+    statement := "For all floats x and y, math.nextafter(x, y) and math.nextafter(x, y, steps=1) return the same float (equal bit patterns, or both NaN)."
+    source := "math.nextafter docstring: \"If steps is not specified or is None, it defaults to 1\"", status := .refuted
+    prop := ``NextafterDefaultStep, thm := some ``nextafterDefaultStep_refuted
+    bug := some "mathint-nextafter-steps-zero-sign"
+    notes := "nextafter(-5e-324, 0.0) is -0.0 (the C nextafter) but with steps=1 it is 0.0: the steps path returns y once ax + ay <= steps (mathmodule.c:2938-2939)." },
+  { id := "mathint-ulp-doc", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math.ulp"]
+    statement := "For every argument object, math.ulp raises the conversion error; returns a NaN argument unchanged and inf for an infinity; and for finite x returns the finite float 2**e where e is the exponent of the least significant bit of x (5e-324 for zeros and subnormals), with abs(x) + ulp(x) the next float above abs(x), and for the largest float abs(x) - ulp(x) the next float below it."
+    source := "Doc/library/math.rst: ulp (the six bullets)", status := .proven
+    prop := ``UlpDoc, thm := some ``ulpDoc_proven },
   { id := "mathint-classify", pyFile := "Modules/mathmodule.c"
     pyFns := ["math.isfinite", "math.isnan", "math.isinf", "math.isnormal", "math.issubnormal",
       "math.signbit"]

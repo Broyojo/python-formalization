@@ -83,60 +83,31 @@ def lanczos_sum (x : F64) : F64 :=
         (F64.add (F64.div nd.1 x) c.1, F64.add (F64.div nd.2 x) c.2)) (c0, c0)
   F64.div num den
 
-/-- A computation that reads and writes C `errno`. -/
-abbrev CM (α : Type) := StateM Errno α
-
-/-- Call a C library function: store its `errno` if nonzero. -/
-def call1 (f : CFun1) (x : F64) : CM F64 := do
-  let (r, e) := f x
-  modify (fun before => before.after e)
-  return r
-
-def call2 (f : CFun2) (x y : F64) : CM F64 := do
-  let (r, e) := f x y
-  modify (fun before => before.after e)
-  return r
-
 /-- `(int)round(v)` for `0 <= v <= 4`. -/
 def roundToInt (v : F64) : Int := (F64.roundAway v).truncInt
 
-/-- `m_sinpi`, mathmodule.c:222-254, for finite `x`. -/
-def m_sinpi (L : GammaLibm) (x : F64) : CM F64 := do
+/-- Call a C library function with `errno` at `e`: the result and `errno` afterwards (a call
+stores only a nonzero value). -/
+def call1 (f : CFun1) (x : F64) (e : Errno) : F64 × Errno := ((f x).1, e.after (f x).2)
+
+def call2 (f : CFun2) (x y : F64) (e : Errno) : F64 × Errno := ((f x y).1, e.after (f x y).2)
+
+/-- `m_sinpi`, mathmodule.c:222-254, for finite `x`, with `errno` at `e` on entry. -/
+def m_sinpi (L : GammaLibm) (x : F64) (e : Errno) : F64 × Errno :=
   let y := F64.fmod (F64.abs x) c2
   let n := roundToInt (F64.mul c2 y)
-  let r ← match n with
-    | 0 => call1 L.sin (F64.mul piG y)
-    | 1 => call1 L.cos (F64.mul piG (F64.sub y cHalf))
-    | 2 => call1 L.sin (F64.mul piG (F64.sub c1 y))
-    | 3 => do pure (F64.neg (← call1 L.cos (F64.mul piG (F64.sub y c1p5))))
-    | _ => call1 L.sin (F64.mul piG (F64.sub y c2))
-  return F64.mul (F64.copysign c1 x) r
+  let (r, e) :=
+    match n with
+    | 0 => call1 L.sin (F64.mul piG y) e
+    | 1 => call1 L.cos (F64.mul piG (F64.sub y cHalf)) e
+    | 2 => call1 L.sin (F64.mul piG (F64.sub c1 y)) e
+    | 3 => let (c, e) := call1 L.cos (F64.mul piG (F64.sub y c1p5)) e; (F64.neg c, e)
+    | _ => call1 L.sin (F64.mul piG (F64.sub y c2)) e
+  (F64.mul (F64.copysign c1 x) r, e)
 
-/-- `m_tgamma`, mathmodule.c:381-475. -/
-def m_tgammaM (L : GammaLibm) (x : F64) : CM F64 := do
-  if !x.isFinite then
-    if x.isNaN || F64.lt c0 x then return x
-    else set Errno.edom; return cNaN
-  if isZeroC x then
-    set Errno.edom
-    return F64.copysign cInf x
-  if F64.eq x (F64.floor x) then
-    if F64.lt x c0 then
-      set Errno.edom
-      return cNaN
-    if F64.le x NGAMMA_INTEGRAL then
-      return gamma_integral.getD (x.truncInt.toNat - 1) c0
-  let absx := F64.abs x
-  if F64.lt absx c1em20 then
-    let r := F64.div c1 x
-    if r.isInf then set Errno.erange
-    return r
-  if F64.lt c200 absx then
-    if F64.lt x c0 then
-      return F64.div c0 (← m_sinpi L x)
-    else
-      set Errno.erange
-      return cInf
+/-- The Lanczos part of `m_tgamma`, mathmodule.c:433-474, for `1e-20 <= absx <= 200` and
+`x` not an integer in `[1, 23]`. -/
+def tgammaLanczos (L : GammaLibm) (x absx : F64) : F64 × Errno :=
   let y := F64.add absx lanczos_g_minus_half
   let z0 :=
     if F64.lt lanczos_g_minus_half absx then
@@ -146,60 +117,78 @@ def m_tgammaM (L : GammaLibm) (x : F64) : CM F64 := do
       let q := F64.sub y lanczos_g_minus_half
       F64.sub q absx
   let z := F64.div (F64.mul z0 lanczos_g) y
-  let r ←
-    if F64.lt x c0 then do
-      let s ← m_sinpi L absx
-      let ey ← call1 L.exp y
+  let (r, e) :=
+    if F64.lt x c0 then
+      let (s, e) := m_sinpi L absx .zero
+      let (ey, e) := call1 L.exp y e
       let r := F64.div (F64.mul (F64.div (F64.div piG.neg s) absx) ey) (lanczos_sum absx)
       let r := F64.sub r (F64.mul z r)
       if F64.lt absx c140 then
-        pure (F64.div r (← call2 L.pow y (F64.sub absx cHalf)))
+        let (p, e) := call2 L.pow y (F64.sub absx cHalf) e
+        (F64.div r p, e)
       else
-        let sqrtpow ← call2 L.pow y (F64.sub (F64.div absx c2) c0p25)
-        pure (F64.div (F64.div r sqrtpow) sqrtpow)
-    else do
-      let ey ← call1 L.exp y
+        let (sqrtpow, e) := call2 L.pow y (F64.sub (F64.div absx c2) c0p25) e
+        (F64.div (F64.div r sqrtpow) sqrtpow, e)
+    else
+      let (ey, e) := call1 L.exp y .zero
       let r := F64.div (lanczos_sum absx) ey
       let r := F64.add r (F64.mul z r)
       if F64.lt absx c140 then
-        pure (F64.mul r (← call2 L.pow y (F64.sub absx cHalf)))
+        let (p, e) := call2 L.pow y (F64.sub absx cHalf) e
+        (F64.mul r p, e)
       else
-        let sqrtpow ← call2 L.pow y (F64.sub (F64.div absx c2) c0p25)
-        pure (F64.mul (F64.mul r sqrtpow) sqrtpow)
-  if r.isInf then set Errno.erange
-  return r
+        let (sqrtpow, e) := call2 L.pow y (F64.sub (F64.div absx c2) c0p25) e
+        (F64.mul (F64.mul r sqrtpow) sqrtpow, e)
+  (r, if r.isInf then .erange else e)
 
-/-- `m_tgamma` as a `CFun1`: called with `errno == 0`. -/
-def m_tgamma (L : GammaLibm) (x : F64) : F64 × Errno := (m_tgammaM L x).run .zero
-
-/-- `m_lgamma`, mathmodule.c:482-524. -/
-def m_lgammaM (L : GammaLibm) (x : F64) : CM F64 := do
+/-- `m_tgamma`, mathmodule.c:381-475, called with `errno == 0`: the result and `errno`. -/
+def m_tgamma (L : GammaLibm) (x : F64) : F64 × Errno :=
   if !x.isFinite then
-    if x.isNaN then return x
-    else return cInf
-  if F64.eq x (F64.floor x) && F64.le x c2 then
-    if F64.le x c0 then
-      set Errno.edom
-      return cInf
-    else return c0
-  let absx := F64.abs x
-  if F64.lt absx c1em20 then
-    return F64.neg (← call1 L.log absx)
-  let l1 ← call1 L.log (lanczos_sum absx)
-  let r := F64.sub l1 lanczos_g
-  let l2 ← call1 L.log (F64.sub (F64.add absx lanczos_g) cHalf)
-  let r := F64.add r (F64.mul (F64.sub absx cHalf) (F64.sub l2 c1))
-  let r ←
-    if F64.lt x c0 then do
-      let s ← m_sinpi L absx
-      let ls ← call1 L.log (F64.abs s)
-      let la ← call1 L.log absx
-      pure (F64.sub (F64.sub (F64.sub logpi ls) la) r)
-    else pure r
-  if r.isInf then set Errno.erange
-  return r
+    if x.isNaN || F64.lt c0 x then (x, .zero)
+    else (cNaN, .edom)
+  else if isZeroC x then (F64.copysign cInf x, .edom)
+  else if F64.eq x (F64.floor x) && F64.lt x c0 then (cNaN, .edom)
+  else if F64.eq x (F64.floor x) && F64.le x NGAMMA_INTEGRAL then
+    (gamma_integral.getD (x.truncInt.toNat - 1) c0, .zero)
+  else
+    let absx := F64.abs x
+    if F64.lt absx c1em20 then
+      let r := F64.div c1 x
+      (r, if r.isInf then .erange else .zero)
+    else if F64.lt c200 absx then
+      if F64.lt x c0 then
+        let (s, e) := m_sinpi L x .zero
+        (F64.div c0 s, e)
+      else (cInf, .erange)
+    else tgammaLanczos L x absx
 
-def m_lgamma (L : GammaLibm) (x : F64) : F64 × Errno := (m_lgammaM L x).run .zero
+/-- The Lanczos part of `m_lgamma`, mathmodule.c:516-523. -/
+def lgammaLanczos (L : GammaLibm) (x absx : F64) : F64 × Errno :=
+  let (l1, e) := call1 L.log (lanczos_sum absx) .zero
+  let r := F64.sub l1 lanczos_g
+  let (l2, e) := call1 L.log (F64.sub (F64.add absx lanczos_g) cHalf) e
+  let r := F64.add r (F64.mul (F64.sub absx cHalf) (F64.sub l2 c1))
+  let (r, e) :=
+    if F64.lt x c0 then
+      let (s, e) := m_sinpi L absx e
+      let (ls, e) := call1 L.log (F64.abs s) e
+      let (la, e) := call1 L.log absx e
+      (F64.sub (F64.sub (F64.sub logpi ls) la) r, e)
+    else (r, e)
+  (r, if r.isInf then .erange else e)
+
+/-- `m_lgamma`, mathmodule.c:482-524, called with `errno == 0`. -/
+def m_lgamma (L : GammaLibm) (x : F64) : F64 × Errno :=
+  if !x.isFinite then
+    if x.isNaN then (x, .zero) else (cInf, .zero)
+  else if F64.eq x (F64.floor x) && F64.le x c2 then
+    if F64.le x c0 then (cInf, .edom) else (c0, .zero)
+  else
+    let absx := F64.abs x
+    if F64.lt absx c1em20 then
+      let (l, e) := call1 L.log absx .zero
+      (F64.neg l, e)
+    else lgammaLanczos L x absx
 
 /-- `math.gamma`: `FUNC1AD(gamma, m_tgamma, ...)`, mathmodule.c:1118-1121. -/
 def math_gamma (L : GammaLibm) (o : Arg) : Py F64 :=

@@ -121,6 +121,51 @@ theorem longAsDouble_err {n : Int} {e : PyExc} (h : PyLong_AsDouble n = .error e
   · rw [if_pos hi] at h; cases h; rfl
   · rw [if_neg hi] at h; cases h
 
+theorem neg_inf (s : Bool) : (F64.inf s).neg = F64.inf (!s) := by cases s <;> decide +kernel
+
+theorem neg_num_den (q : Rat) : (-q).num.natAbs = q.num.natAbs ∧ (-q).den = q.den := by
+  refine ⟨?_, Rat.neg_den q⟩
+  rw [Rat.neg_num, Int.natAbs_neg]
+
+/-- Rounding is symmetric: `ofRat (-q)` is `ofRat q` with the sign flipped. -/
+theorem ofRat_neg {q : Rat} (hq : q ≠ 0) : ofRat (-q) = (ofRat q).neg := by
+  have hq' : -q ≠ 0 := by intro h; apply hq; grind
+  have hs : decide (-q < 0) = !decide (q < 0) := by
+    by_cases h : q < 0
+    · have : ¬ (-q < 0) := by grind
+      simp [h, this]
+    · have : -q < 0 := by have : q ≠ 0 := hq; grind
+      simp [h, this]
+  obtain ⟨hn, hd⟩ := neg_num_den q
+  rcases ofRat_cases hq with ⟨hge, hinf⟩ | ⟨m, e, hdec, hval, _⟩
+  · rcases ofRat_cases hq' with ⟨_, hinf'⟩ | ⟨m', e', hdec', _, _⟩
+    · rw [hinf, hinf', neg_inf, hs]
+    · exfalso
+      have : overflowLimit ≤ Rat.abs (-q) := by
+        rw [abs_neg, abs_eq_ite]; exact hge
+      have := (ofRat_isInf _).2 this
+      rw [isInf_false_of_finite hdec'.finite] at this; cases this
+  · rcases ofRat_cases hq' with ⟨hge', _⟩ | ⟨m', e', hdec', hval', _⟩
+    · exfalso
+      have : overflowLimit ≤ Rat.abs q := by
+        rw [← abs_neg, abs_eq_ite]; exact hge'
+      have := (ofRat_isInf _).2 this
+      rw [isInf_false_of_finite hdec.finite] at this; cases this
+    · rw [hn, hd] at hval'
+      have hv : (m' : Rat) * pw e' = (m : Rat) * pw e := by rw [hval', hval]
+      have hfn : (ofRat q).neg.isFinite = true := by rw [neg_isFinite]; exact hdec.finite
+      have ht : (ofRat (-q)).toRat = (ofRat q).neg.toRat := by
+        rw [toRat_neg, toRat_decoded hdec', toRat_decoded hdec, hv, hs]
+        cases decide (q < 0) <;> simp [Rat.neg_neg]
+      cases hz : (ofRat (-q)).isZero
+      · exact toRat_inj hdec'.finite hfn hz ht
+      · have hz2 : (ofRat q).neg.isZero = true := by
+          rw [neg_isZero]
+          have h0 := toRat_of_isZero hz
+          rw [ht, toRat_neg] at h0
+          exact (isZero_iff_toRat hdec.finite).2 (by grind)
+        rw [eq_zero_of_isZero hz, eq_zero_of_isZero hz2, hdec'.sign, (neg_fields _).1, hdec.sign, hs]
+
 /-- Rounding is monotone. -/
 theorem ofRat_mono {q1 q2 : Rat} (h : q1 ≤ q2) (h1 : (ofRat q1).isFinite = true)
     (h2 : (ofRat q2).isFinite = true) : (ofRat q1).toRat ≤ (ofRat q2).toRat := by

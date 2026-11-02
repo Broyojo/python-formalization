@@ -173,13 +173,24 @@ def vector_norm : Nat → List F64 → F64 → Bool → F64
             (F64.div max DBL_MIN) found_nan)
       else vectorNormCore vec max_e
 
+/-- One coordinate of the loop of `math_hypot_impl`, mathmodule.c:2084-2093. -/
+def hypotStep (s : List F64 × F64 × Bool) (item : Arg) : Py (List F64 × F64 × Bool) := do
+  let (coords, max, found_nan) := s
+  let x := F64.abs (← assignDouble item)
+  return (coords ++ [x], if F64.lt max x then x else max, found_nan || x.isNaN)
+
 /-- `math_hypot_impl`, mathmodule.c:2065-2105. -/
 def math_hypot (args : List Arg) : Py F64 := do
-  let (coords, max, found_nan) ← args.foldlM (fun (s : List F64 × F64 × Bool) item => do
-    let (coords, max, found_nan) := s
-    let x := F64.abs (← assignDouble item)
-    return (coords ++ [x], if F64.lt max x then x else max, found_nan || x.isNaN)) ([], c0, false)
+  let (coords, max, found_nan) ← args.foldlM hypotStep ([], c0, false)
   return vector_norm 1 coords max found_nan
+
+/-- One coordinate of the loop of `math_dist_impl`, mathmodule.c:2009-2020. -/
+def distStep (s : List F64 × F64 × Bool) (pq : Arg × Arg) : Py (List F64 × F64 × Bool) := do
+  let (diffs, max, found_nan) := s
+  let px ← assignDouble pq.1
+  let qx ← assignDouble pq.2
+  let x := F64.abs (F64.sub px qx)
+  return (diffs ++ [x], if F64.lt max x then x else max, found_nan || x.isNaN)
 
 /-- `math_dist_impl`, mathmodule.c:1965-2044. `PySequence_Tuple` iterates `p`, then `q`
 (:1977-1993); a tuple is an `It` that cannot fail. -/
@@ -189,12 +200,7 @@ def math_dist (pit qit : It) : Py F64 := do
   if p.length != q.length then
     .error (.valueError "both points must have the same number of dimensions")
   else
-    let (diffs, max, found_nan) ← (p.zip q).foldlM (fun (s : List F64 × F64 × Bool) pq => do
-      let (diffs, max, found_nan) := s
-      let px ← assignDouble pq.1
-      let qx ← assignDouble pq.2
-      let x := F64.abs (F64.sub px qx)
-      return (diffs ++ [x], if F64.lt max x then x else max, found_nan || x.isNaN)) ([], c0, false)
+    let (diffs, max, found_nan) ← (p.zip q).foldlM distStep ([], c0, false)
     return vector_norm 1 diffs max found_nan
 
 /-! ## `prod`, mathmodule.c:2630-2832 -/
