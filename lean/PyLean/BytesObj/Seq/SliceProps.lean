@@ -269,4 +269,154 @@ theorem sliceReads_proven : SliceReads := by
         · simp only [hs1, if_false, hr1]
           exact ⟨LObj.prealloc r, rfl, by simp⟩
 
+/-- `l[a:b]` under `BINARY_SLICE` (`_PyList_BinarySlice`) gives what `l[slice(a, b)]` gives, for every
+pair of indices of any size. -/
+def ListBinarySlice : Prop :=
+  ∀ (α : Type) (l : List α) (a b : Option Int),
+    listGetSlice l ⟨a, b, none⟩ = .ok (listBinarySlice l ⟨a, b, none⟩)
+
+theorem listBinarySlice_proven : ListBinarySlice := by
+  intro α l a b
+  generalize hs : (match a with | none => (0 : Int) | some v => RangeSlice.clampSsize v) = x
+  generalize ht : (match b with | none => ssizeMax | some v => RangeSlice.clampSsize v) = y
+  have hu : sliceUnpack (⟨a, b, none⟩ : Slice) = .ok (x, y, 1) := by
+    subst hs ht
+    cases a <;> cases b <;> simp [sliceUnpack, bind, Except.bind, pure, Except.pure]
+  have hi : unpackIndices (l.length : Int) (⟨a, b, none⟩ : Slice) =
+      ((adjustIndices (l.length : Int) x y 1).1, (adjustIndices (l.length : Int) x y 1).2.1) := by
+    subst hs ht
+    rfl
+  simp only [listGetSlice, hu, bind, Except.bind, listBinarySlice, hi, listSliceWrap]
+  have e := adjust_step_one (l.length : Int) x y
+  generalize hadj : adjustIndices (l.length : Int) x y 1 = adj at e ⊢
+  obtain ⟨st, sp, len⟩ := adj
+  simp only at e ⊢
+  by_cases h : len ≤ 0
+  · have hz : sp - st ≤ 0 := by
+      have h1 := congrArg (fun p => p.2.2) hadj
+      have h2 := congrArg (fun p => p.1) hadj
+      have h3 := congrArg (fun p => p.2.1) hadj
+      simp only [adjustIndices, show ¬ (1 : Int) < 0 by omega, if_false, Int.tdiv_one] at h1 h2 h3
+      split at h1
+      · omega
+      · omega
+    simp [h, listSliceLH, hz]
+  · simp [h]
+
+/-- `t[a:b]` under `BINARY_SLICE` (`_PyTuple_BinarySlice`) has the items of `t[slice(a, b)]`, for an
+exact tuple and every pair of indices of any size. The two paths differ only in the GC flag:
+`tuple_subscript` always tracks, and `PyTuple_FromArray` tracks by item. Hypothesis: the length of a
+tuple that exists. -/
+def TupleBinarySlice : Prop :=
+  ∀ (α : Type) (mt : α → Bool) (t : Tup α) (a b : Option Int), t.exact = true →
+    (t.items.length : Int) ≤ (ssizeMax - tupleBase) / 8 →
+    ∃ r r', tupleBinarySlice mt t ⟨a, b, none⟩ = .ok r ∧ tupleGetSlice t ⟨a, b, none⟩ = .ok r' ∧
+      r.items t.items [] = r'.items t.items []
+
+theorem map_some_inj {l m : List α} (h : l.map some = m.map some) : l = m := by
+  induction l generalizing m with
+  | nil => cases m <;> simp_all
+  | cons x xs ih =>
+    cases m with
+    | nil => simp at h
+    | cons y ys =>
+      simp only [List.map_cons, List.cons.injEq, Option.some.injEq] at h
+      rw [h.1, ih h.2]
+
+theorem tupleBinarySlice_items (mt : α → Bool) (t : Tup α) (s : Slice)
+    (hlen : (t.items.length : Int) ≤ (ssizeMax - tupleBase) / 8) :
+    ∃ r, tupleBinarySlice mt t s = .ok r ∧
+      r.items t.items [] = (listBinarySlice t.items s).items := by
+  have hmax : ssizeMax = 9223372036854775807 := by decide
+  cases hp : unpackIndices (t.items.length : Int) s with
+  | mk x y =>
+  have e1 : tupleBinarySlice mt t s = if x = 0 ∧ y = (t.items.length : Int) then .ok (.arg 0)
+      else tupleFromArray mt ((t.items.drop x.toNat).take ((if y < x then x else y) - x).toNat) := by
+    simp only [tupleBinarySlice, hp]
+  have e2 : listBinarySlice t.items s = listSliceLH t.items x y := by
+    simp only [listBinarySlice, hp]
+  rw [e1, e2]
+  by_cases h : x = 0 ∧ y = (t.items.length : Int)
+  · obtain ⟨rfl, rfl⟩ := h
+    refine ⟨.arg 0, by simp, ?_⟩
+    simp only [listSliceLH, TRes.items]
+    split
+    · have hz : t.items.length = 0 := by omega
+      simp [List.length_eq_zero_iff.mp hz, LObj.empty]
+    · rename_i hnz
+      have hne : t.items ≠ [] := by
+        intro e
+        rw [e] at hnz
+        simp at hnz
+      simp [LObj.prealloc, hne]
+  · rw [if_neg h]
+    by_cases hlt : y < x
+    · rw [if_pos hlt]
+      refine ⟨.empty, by simp [tupleFromArray], ?_⟩
+      simp [listSliceLH, TRes.items, show y - x ≤ 0 by omega, LObj.empty]
+    · rw [if_neg hlt]
+      generalize hsrc : (t.items.drop x.toNat).take (y - x).toNat = src
+      have hsl : (src.length : Int) ≤ t.items.length := by
+        rw [← hsrc]
+        simp only [List.length_take, List.length_drop]
+        omega
+      have ha : tupleAlloc (src.length : Int) = .ok () := by
+        unfold tupleAlloc
+        rw [if_neg (by omega), if_neg (by omega)]
+      by_cases he : src.length = 0
+      · refine ⟨.empty, by simp [tupleFromArray, he], ?_⟩
+        simp only [listSliceLH, TRes.items]
+        split
+        · rfl
+        · rw [hsrc]
+          simp [LObj.prealloc, LObj.empty, List.length_eq_zero_iff.mp he]
+      · refine ⟨.fresh { items := src, tracked := src.any mt }, by simp [tupleFromArray, he, ha], ?_⟩
+        simp only [listSliceLH, TRes.items]
+        split
+        · rename_i hle
+          have : (y - x).toNat = 0 := by omega
+          rw [this] at hsrc
+          simp at hsrc
+          simp [← hsrc] at he
+        · rw [hsrc]
+          have hne : src ≠ [] := fun e => he (by simp [e])
+          simp [LObj.prealloc, hne]
+
+theorem tupleBinarySlice_proven : TupleBinarySlice := by
+  intro α mt t a b _ hlen
+  obtain ⟨ps, _, _, ⟨r', h1, h2⟩, ⟨o, h3, h4⟩⟩ := sliceReads_proven α t ⟨a, b, none⟩ hlen (by simp)
+  obtain ⟨r, hr, he⟩ := tupleBinarySlice_items mt t ⟨a, b, none⟩ hlen
+  refine ⟨r, r', hr, h1, ?_⟩
+  have hl := listBinarySlice_proven α t.items a b
+  rw [h3] at hl
+  have ho := Except.ok.inj hl
+  rw [he, ← ho]
+  exact map_some_inj (h4.trans h2.symm)
+
+/-- `tuple_iteritem` and `list_iteritem` read what the iterators read, and stop at the same place. -/
+def IterItemAgrees : Prop :=
+  ∀ (α : Type) (l : List α) (i : Int), 0 ≤ i → i ≤ ssizeMax → (l.length : Int) ≤ ssizeMax →
+    ((tupleIterItem l i).1 = (tupleIterNext ⟨i, some l⟩).1) ∧
+    (i < l.length → (tupleIterItem l i).2 = i + 1) ∧ (i ≥ l.length → (tupleIterItem l i).2 = i) ∧
+    (listIterItem l i).1 = (tupleIterItem l i).1 ∧ (listIterItem l i).2 = i + 1
+
+theorem iterItemAgrees_proven : IterItemAgrees := by
+  intro α l i h0 h1 h2
+  have hv := validIndex_eq i l.length (by unfold ssizeMax at h1; omega) (by
+    have : ssizeMax < 2 ^ 63 := by decide
+    omega) (by omega) h2
+  by_cases h : i < l.length
+  · have h3 : ¬ (i ≥ l.length) := by omega
+    have h4 : validIndex i l.length = true := by rw [hv]; simp [h0, h]
+    refine ⟨?_, fun _ => ?_, fun h' => absurd h' h3, ?_, rfl⟩
+    · simp [tupleIterItem, tupleIterNext, h, h3]
+    · simp [tupleIterItem, h3]
+    · simp [listIterItem, tupleIterItem, listGetItemRef, h4, h3]
+  · have h3 : i ≥ l.length := by omega
+    have h4 : validIndex i l.length = false := by rw [hv]; simp; omega
+    refine ⟨?_, fun h' => absurd h' h, fun _ => ?_, ?_, rfl⟩
+    · simp [tupleIterItem, tupleIterNext, h, h3]
+    · simp [tupleIterItem, h3]
+    · simp [listIterItem, tupleIterItem, listGetItemRef, h4, h3]
+
 end PyLean.BytesObj.Seq

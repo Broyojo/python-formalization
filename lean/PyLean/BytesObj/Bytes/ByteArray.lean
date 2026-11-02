@@ -3,15 +3,14 @@ import PyLean.Sequences.ListModel
 
 /-!
 `bytearray`, Objects/bytearrayobject.c. The object keeps the C struct's state:
-`ob_alloc`, `ob_start - ob_bytes` (`offset`), `ob_exports` and the data.
+`ob_alloc`, the size of the `bytes` object `ob_bytes_object`, `ob_start - ob_bytes` (`offset`),
+`ob_exports` and the data.
 
 * `data` is a `List Int` of byte values. `uninit` (-1) marks a byte `malloc` or
   `realloc` handed out and nobody wrote yet, so reads of uninitialised memory are
   visible in the model.
 * `ob_alloc` is observable through `__alloc__()` and `__sizeof__()`, so the resize
-  strategy of `bytearray_resize_lock_held` is modelled exactly; the double
-  `alloc * 1.125` is exact below `2^49` and is `9 * alloc / 8` here (larger
-  allocations fail).
+  strategy of `bytearray_resize_lock_held` is modelled exactly (`baNewAlloc`).
 * Critical sections are no-ops without free-threading, so each `foo` and its
   `foo_lock_held` are one function.
 -/
@@ -39,10 +38,12 @@ def BA.size (b : BA) : Int := b.data.length
 
 def seqData (s : Seq) : List Int := s.map (fun (c : Nat) => (c : Int))
 
-/-- The buffer layout invariant: `ob_start + Py_SIZE + 1` (the data and its
-terminator) fits in `ob_alloc`; the empty object may have no buffer. -/
+/-- The buffer layout invariant: `ob_start + Py_SIZE` fits in `ob_alloc`, the bytes object's size;
+its own terminator comes after. -/
 def BA.WF (b : BA) : Prop :=
-  0 ≤ b.offset ∧ (b.alloc = 0 ∧ b.data = [] ∧ b.offset = 0 ∨ b.offset + b.size + 1 ≤ b.alloc)
+  0 ≤ b.offset ∧ b.offset + b.size ≤ b.alloc
+
+instance (b : BA) : Decidable b.WF := by unfold BA.WF; infer_instance
 
 /-- `_canresize`, bytearrayobject.c:127-136. -/
 def canResize (b : BA) : Py Unit :=
@@ -50,37 +51,43 @@ def canResize (b : BA) : Py Unit :=
     .error (bufferError "Existing exports of data: object cannot be re-sized")
   else .ok ()
 
-/-- `PyByteArray_FromStringAndSize(bytes, size)`, bytearrayobject.c:168-206. `bytes`
-is `none` for `NULL`: the result is then uninitialised. -/
+/-- `PyByteArray_FromStringAndSize(bytes, size)`, bytearrayobject.c:168-206, on
+`PyBytes_FromStringAndSize(NULL, size)`. `bytes` is `none` for `NULL`: the result is then
+uninitialised. -/
 def baFromStringAndSize (bytes : Option Seq) (size : Int) : Py BA :=
   if size < 0 then .error (systemError "Negative size passed to PyByteArray_FromStringAndSize")
-  else if size = ssizeMax then .error memoryError
-  else if size = 0 then .ok {}
-  else if mallocFails (size + 1) then .error memoryError
   else
-    let data := match bytes with
-      | some s => seqData (s.take size.toNat)
-      | none => List.replicate size.toNat uninit
-    .ok { data, alloc := size + 1 }
+    match bytesSizeCheck size with
+    | .error e => .error e
+    | .ok () =>
+      if size = 0 then .ok {}
+      else
+        let data := match bytes with
+          | some s => seqData (s.take size.toNat)
+          | none => List.replicate size.toNat uninit
+        .ok { data, alloc := size }
 
-/-- `bytearray_dealloc`, bytearrayobject.c:1277-1288: what it prints. It reports
-`ob_exports > 0`, which a real object cannot have here, because a view keeps its
-exporter alive. -/
+/-- `bytearray_dealloc`, bytearrayobject.c:1277-1288: what it prints. `ob_exports` is set before
+anything that can fail (:189), so it is the
+count of exports, which a view keeps from reaching this. -/
 def baDealloc (exports : Int) : List String :=
   if exports > 0 then ["SystemError: deallocated bytearray object has exported buffers"] else []
-
-/-- `PyByteArray_FromStringAndSize` with what it leaves on stderr.
-`garbage` is the uninitialised `ob_exports` of the memory `PyObject_New` returned:
-the field is set at @3.14.7:184, after the failing `PyMem_Malloc` at @3.14.7:172, and the
-`Py_DECREF(new)` at @3.14.7:174 runs `bytearray_dealloc`. -/
-def baFromSizeTrace (garbage : Int) (bytes : Option Seq) (size : Int) : Py BA × List String :=
-  if size ≥ 0 ∧ size ≠ ssizeMax ∧ size ≠ 0 ∧ mallocFails (size + 1) = true then
-    (.error memoryError, baDealloc garbage)
-  else (baFromStringAndSize bytes size, [])
 
 /-- The contents after a resize: the first `requested` bytes, then new bytes. -/
 def resizedData (data : List Int) (requested : Int) : List Int :=
   data.take requested.toNat ++ List.replicate (requested.toNat - data.length) uninit
+
+/-- `bytearray_resize_lock_held`, bytearrayobject.c:294-342, past the `_canresize`: the new
+`ob_alloc` and offset. A resize to 0 drops the storage. -/
+def baResizeAlloc (b : BA) (size : Int) : Py (Int × Int) :=
+  if size = 0 then .ok (0, 0)
+  else
+    match baNewAlloc b.alloc b.offset size with
+    | none => .ok (b.alloc, b.offset)
+    | some alloc =>
+      match baStorageCheck b.alloc alloc with
+      | .error e => .error e
+      | .ok () => .ok (alloc, 0)
 
 /-- `bytearray_resize_lock_held`, bytearrayobject.c:263-343, with
 `PyByteArray_Resize`, :345-353. New bytes are uninitialised. -/
@@ -89,19 +96,18 @@ def baResize (b : BA) (requested : Int) : Py BA := do
     throw (.valueError s!"Can only resize to positive sizes, got {requested}")
   if requested = b.size then return b
   canResize b
-  let size := requested
-  let fits := size + b.offset + 1 ≤ b.alloc
-  if fits ∧ ¬ (size < b.alloc / 2) then
-    -- Minor downsize; quick exit
-    return { b with data := resizedData b.data requested }
-  let alloc :=
-    if fits then size + 1 -- Major downsize; resize down to exact size
-    else if 8 * size ≤ 9 * b.alloc then
-      size + size / 8 + (if size < 9 then 3 else 6) -- Moderate upsize
-    else size + 1 -- Major upsize; resize up to exact size
-  if alloc > ssizeMax then throw memoryError
-  if mallocFails alloc then throw memoryError
-  return { b with data := resizedData b.data requested, alloc, offset := 0 }
+  let (alloc, offset) ← baResizeAlloc b requested
+  return { b with data := resizedData b.data requested, alloc, offset }
+
+/-- What a failed `baResize` leaves. `bytearray_resize_storage`, :236-258, has moved the data to the
+start of the allocation by the time `_PyBytes_ResizeKeepOnError` fails, so `offset` is 0 for a failure
+there; an earlier refusal changes nothing. -/
+def baResizeLeft (b : BA) (requested : Int) : BA :=
+  if requested < 0 ∨ requested = b.size ∨ b.exports > 0 ∨ requested = 0 then b
+  else
+    match baNewAlloc b.alloc b.offset requested with
+    | none => b
+    | some alloc => if alloc > baSizeMax then b else { b with offset := 0 }
 
 /-- `memmove(buf + dst, buf + src, cnt)` on the logical buffer, which ends at the
 terminator; `Sequences.memmove` checks the bounds (`cUB` on violation). -/
@@ -117,22 +123,13 @@ def setsliceShrinkMove (b : BA) (lo hi blen : Int) : Py BA := do
 def baCopyIn (b : BA) (lo : Int) (bytes : List Int) : BA :=
   { b with data := b.data.take lo.toNat ++ bytes ++ b.data.drop (lo + bytes.length).toNat }
 
-/-- The resize of the `lo == 0` shrink, bytearrayobject.c:637-638. `ob_start` has
-advanced already, but the size field still has the old value, so the resize is not the
-"same size" no-op; `b.data` is already the new contents. This is `baResize` from the
-`_canresize` on, with the allocation strategy only. -/
+/-- The resize of the `lo == 0` shrink, bytearrayobject.c:637-638. `ob_start` has advanced already,
+but the size field still has the old value, so the resize is not the "same size" no-op; `b.data` is
+already the new contents. -/
 def baResizeNoSize (b : BA) (requested : Int) : Py BA := do
   canResize b
-  let size := requested
-  let fits := size + b.offset + 1 ≤ b.alloc
-  if fits ∧ ¬ (size < b.alloc / 2) then return b
-  let alloc :=
-    if fits then size + 1
-    else if 8 * size ≤ 9 * b.alloc then size + size / 8 + (if size < 9 then 3 else 6)
-    else size + 1
-  if alloc > ssizeMax then throw memoryError
-  if mallocFails alloc then throw memoryError
-  return { b with alloc, offset := 0 }
+  let (alloc, offset) ← baResizeAlloc b requested
+  return { b with alloc, offset }
 
 /-- `growth < 0`, `lo == 0`: shrink the buffer by advancing its logical start,
 bytearrayobject.c:617-626 and :637. -/
@@ -140,6 +137,20 @@ def baShrinkStart (self : BA) (growth : Int) (bytes : List Int) : Py BA := do
   let s := { self with offset := self.offset - growth, data := self.data.drop (-growth).toNat }
   let r ← baResizeNoSize s s.size
   return baCopyIn r 0 bytes
+
+/-- What the shrink of `baShrinkStart` leaves when `_PyBytes_ResizeKeepOnError` fails in
+`bytearray_resize_storage`, which `mallocFails` cannot express for a shrink. `none` for the sizes that
+do not reach it. By then `ob_start == ob_bytes` (:246), and the failure path of
+`bytearray_setslice_linear` subtracts the shrink again (:649), so `ob_start` is before the buffer and
+`Py_SIZE` is the old size. -/
+def baShrinkStartFailure (self : BA) (growth : Int) : Option BA :=
+  let offset := self.offset - growth
+  let size := self.size + growth
+  if size = 0 then none
+  else
+    match baNewAlloc self.alloc offset size with
+    | none => none
+    | some _ => some { self with offset := 0 + growth }
 
 /-- `growth < 0`, `lo != 0`: `memmove` the tail down, then resize,
 bytearrayobject.c:627-638. -/
@@ -153,13 +164,14 @@ def baShrinkMove (self : BA) (lo hi growth : Int) (bytes : List Int) : Py BA := 
 bytearrayobject.c:659-679. -/
 def baGrow (self : BA) (lo hi growth : Int) (bytes : List Int) : Py BA := do
   let blen : Int := bytes.length
-  if self.size > ssizeMax - growth then throw memoryError
+  if self.size > baSizeMax - growth then throw memoryError
   let r ← baResize self (self.size + growth)
   let mem ← baMove r.data (lo + blen) hi (r.size - lo - blen)
   return baCopyIn { r with data := mem } lo bytes
 
-/-- `bytearray_setslice_linear`, bytearrayobject.c:601-684. Resize failures after a
-partial update cannot occur here: `realloc` to a smaller size succeeds. -/
+/-- `bytearray_setslice_linear`, bytearrayobject.c:601-684. `mallocFails` is a size limit, so the
+`realloc` to a smaller size at :637 does not fail here; `baShrinkStartFails` states what a real
+failure there leaves. -/
 def baSetsliceLinear (self : BA) (lo hi : Int) (bytes : List Int) : Py BA :=
   let growth := (bytes.length : Int) - (hi - lo)
   if growth < 0 then
@@ -179,23 +191,22 @@ structure SetVal where
   deriving Inhabited
 
 /-- `bytearray_setslice`, bytearrayobject.c:686-738. `lo` and `hi` were computed by
-the caller; the value's `__buffer__` runs between that and the clamps, and the clamps
-do not cover `lo > Py_SIZE(self)`. -/
+the caller; the value's `__buffer__` runs between that and the clamps, which cover both bounds
+(gh-153578). -/
 def baSetslice (self : BA) (lo hi : Int) (values : Option SetVal) : Py BA := do
   let (self, bytes) ← match values with
     | none => pure (self, [])
     | some v => do
       let self ← v.mutate self
       pure (self, seqData v.bytes)
-  let lo := if lo < 0 then 0 else lo
+  let lo := if lo < 0 then 0 else if lo > self.size then self.size else lo
   let hi := if hi < lo then lo else hi
   let hi := if hi > self.size then self.size else hi
   baSetsliceLinear self lo hi bytes
 
 /-- `bytearray.extend` with a buffer argument, bytearrayobject.c:2254-2260:
 `bytearray_setslice(self, size, size, x)`. If the argument's `__buffer__` shrinks
-`self`, `lo` is past the new end, and `baSetsliceLinear` runs with `avail < 0`: the
-bytes between the new end and `lo` are never written. -/
+`self`, the clamp puts `lo` at the new end. -/
 def baExtendBuffer (self : BA) (v : SetVal) : Py BA :=
   baSetslice self self.size self.size (some v)
 
@@ -343,7 +354,7 @@ def baAssSlice (self : BA) (sl : Slice) (values : Option Obj) : Py BA := do
 def baConcat (a b : Obj) : Py BA :=
   match a.buffer?, b.buffer? with
   | some va, some vb =>
-    if (va.length : Int) > ssizeMax - vb.length then .error memoryError
+    if (va.length : Int) > baSizeMax - vb.length then .error memoryError
     else baFromStringAndSize (some (va ++ vb)) (va.length + vb.length)
   | _, _ => .error (.typeError s!"can't concat {b.typeName} to {a.typeName}")
 
@@ -353,7 +364,7 @@ def baIConcat (self : BA) (other : Obj) : Py BA := do
     | some v => pure v
     | none => throw (.typeError s!"can't concat {other.typeName} to bytearray")
   let size := self.size
-  if size > ssizeMax - vo.length then throw memoryError
+  if size > baSizeMax - vo.length then throw memoryError
   let r ← baResize self (size + vo.length)
   return { r with data := r.data.take size.toNat ++ seqData vo }
 
@@ -361,7 +372,7 @@ def baIConcat (self : BA) (other : Obj) : Py BA := do
 def baRepeat (self : BA) (count : Int) : Py BA := do
   let count := if count < 0 then 0 else count
   let mysize := self.size
-  if count > 0 ∧ mysize > Int.tdiv ssizeMax count then throw memoryError
+  if count > 0 ∧ mysize > Int.tdiv baSizeMax count then throw memoryError
   let size := mysize * count
   let r ← baFromStringAndSize none size
   if size ≠ 0 then return { r with data := seqData (bytesRepeatFill size.toNat self.seq) }
@@ -372,12 +383,49 @@ def baIRepeat (self : BA) (count : Int) : Py BA := do
   let count := if count < 0 then 0 else count
   if count = 1 then return self
   let mysize := self.size
-  if count > 0 ∧ mysize > Int.tdiv ssizeMax count then throw memoryError
+  if count > 0 ∧ mysize > Int.tdiv baSizeMax count then throw memoryError
   let size := mysize * count
   let r ← baResize self size
   return { r with data := seqData (bytesRepeatFill size.toNat self.seq) }
 
 /-! ## Mutating methods -/
+
+/-- `PyNumber_AsSsize_t(n, PyExc_IndexError)` on an index object of value `v`. -/
+def takeCount (n : Obj) (v : Int) : Py Int :=
+  if ssizeMin ≤ v ∧ v ≤ ssizeMax then .ok v
+  else .error (.indexError s!"cannot fit '{n.typeName}' into an index-sized integer")
+
+/-- `bytearray.take_bytes` past the conversion of `n`, bytearrayobject.c:1650-1688: the bytes taken and
+the object left. The smaller part is copied: a small `to_take` moves `ob_start`, a large one leaves
+the rest in a new bytes object and hands over the old one. -/
+def baTakeCore (self : BA) (toTake : Int) : Py (Seq × BA) := do
+  let size := self.size
+  if toTake < 0 ∨ toTake > size then
+    throw (.indexError s!"can't take {toTake} bytes outside size {size}")
+  canResize self
+  if toTake = 0 ∨ size = 0 then return ([], self)
+  let remaining := size - toTake
+  let taken := (self.data.take toTake.toNat).map Int.toNat
+  let rest := self.data.drop toTake.toNat
+  if toTake < remaining then
+    bytesSizeCheck toTake
+    return (taken, { self with data := rest, offset := self.offset + toTake })
+  bytesSizeCheck remaining
+  bytesResizeCheck self.alloc toTake
+  return (taken, { self with data := rest, alloc := remaining, offset := 0 })
+
+/-- `bytearray.take_bytes(n)`, bytearrayobject.c:1614-1688. -/
+def baTakeBytes (self : BA) (n : Obj) : Py (Seq × BA) := do
+  let toTake : Int ← match n with
+    | .none => pure self.size
+    | _ =>
+      match n.index? with
+      | some (.ok v) =>
+        let t ← takeCount n v
+        pure (if t < 0 then t + self.size else t)
+      | some (.error e) => throw e
+      | none => throw (.typeError "n must be an integer or None")
+  baTakeCore self toTake
 
 /-- `bytearray.clear()`, bytearrayobject.c:1366-1373. -/
 def baClear (self : BA) : Py BA := baResize self 0
@@ -402,7 +450,6 @@ def baInsert (self : BA) (index : Int) (item : Obj) : Py BA := do
   let index ← Sequences.asSsize index
   let item ← getByteValue item
   let n := self.size
-  if n = ssizeMax then throw (.overflowError "cannot add more objects to bytearray")
   let r ← baResize self (n + 1)
   -- the same clamps as `ins1`, listobject.c:515-522
   return { r with data := Sequences.insAt self.data (Sequences.ins1Pos n index).toNat (item : Int) }
@@ -411,7 +458,6 @@ def baInsert (self : BA) (index : Int) (item : Obj) : Py BA := do
 def baAppend (self : BA) (item : Obj) : Py BA := do
   let item ← getByteValue item
   let n := self.size
-  if n = ssizeMax then throw (.overflowError "cannot add more objects to bytearray")
   let r ← baResize self (n + 1)
   return { r with data := self.data ++ [(item : Int)] }
 
@@ -461,9 +507,12 @@ def baInitLoop (self : BA) : List Obj → Py BA
 /-- The result of `__init__`: the object as it is left, and the exception if any. -/
 abbrev InitRes := BA × Option PyExc
 
-/-- The exact-list and exact-tuple fast path, bytearrayobject.c:1101-1128. The object
-was resized to `size` first, so a failure leaves the bytes after the bad item
-uninitialised. Returns `none` to go to the slow path (a non-`int` item). -/
+/-- `PyByteArray_Resize(self, 0)` on an object nothing exports, whatever its size. -/
+def baReset (b : BA) : BA := { b with data := [], alloc := 0, offset := 0 }
+
+/-- The exact-list and exact-tuple fast path, bytearrayobject.c:1101-1128. The object was resized to
+`size` first; a bad value resets it to empty (:1121-1122). Returns `.inr` to go to the slow path
+(a non-`int` item). -/
 def baInitFast (self : BA) (items : List Obj) : InitRes ⊕ Unit :=
   let rec go (i : Nat) (cur : BA) : List Obj → InitRes ⊕ Unit
     | [] => .inl (cur, none)
@@ -471,7 +520,7 @@ def baInitFast (self : BA) (items : List Obj) : InitRes ⊕ Unit :=
       match item with
       | .int v =>
         match getByteValue (.int v) with
-        | .error e => .inl (cur, some e)
+        | .error e => .inl (baReset cur, some e)
         | .ok value => go (i + 1) { cur with data := cur.data.set i (value : Int) } rest
       | _ => .inr ()
   go 0 self items
@@ -479,7 +528,7 @@ def baInitFast (self : BA) (items : List Obj) : InitRes ⊕ Unit :=
 /-- `bytearray___init___impl`, bytearrayobject.c:982-1182. Returns the object as it
 is afterwards (the C code mutates `self` before it can fail) and the exception. -/
 def baInit (self : BA) (arg : Option Obj) (encoding errors : Option String) : InitRes :=
-  match (if self.size ≠ 0 then baResize self 0 else .ok self) with
+  match (do canResize self; baResize self 0) with
   | .error e => (self, some e)
   | .ok self =>
     let fail (e : PyExc) : InitRes := (self, some e)
@@ -512,6 +561,8 @@ def baInit (self : BA) (arg : Option Obj) (encoding errors : Option String) : In
       | some enc =>
         match encodeStr cs enc with
         | .error e => fail e
+        -- taking over a unique `encoded` (:1031-1038) and `bytearray_iconcat` (:1040) leave the
+        -- same object here, because `self` is empty
         | .ok encoded => ofPy (baIConcat self (.bytes encoded))
     | some o =>
       if encoding.isSome then fail (.typeError "encoding without a string argument")
@@ -551,9 +602,12 @@ def baInit (self : BA) (arg : Option Obj) (encoding errors : Option String) : In
         | some (.error e) => if isTypeError e then notCount () else fail e
         | none => notCount ()
 
+/-- `bytearray_new`, bytearrayobject.c:959-971: empty, on the empty bytes object, with no exports. -/
+def baNewObject : BA := { data := [], alloc := 0, offset := 0, exports := 0 }
+
 /-- `bytearray(x)` for a fresh object. -/
 def baNew (arg : Option Obj) (encoding errors : Option String) : Py BA :=
-  match baInit {} arg encoding errors with
+  match baInit baNewObject arg encoding errors with
   | (b, none) => .ok b
   | (_, some e) => .error e
 
@@ -565,7 +619,7 @@ def baExtend (self : BA) (o : Obj) : Py BA := do
   | none =>
     let items ← getIterOr (.typeError s!"can't extend bytearray with {o.typeName}") o
     let bufSize ← lengthHint o 32
-    let _ ← baFromStringAndSize none bufSize
+    bytesSizeCheck bufSize
     let isStr : Bool := match o with | .str _ => true | _ => false
     let vals ← (items.mapM getByteValue).mapError fun e =>
       if isStr = true ∧ isTypeError e = true then .typeError "expected iterable of integers; got: 'str'"
@@ -642,10 +696,14 @@ def bytesBufferInfo (s : Seq) : Seq × Bool := (s, true)
 `bytearray_getbuffer`, bytearrayobject.c:69-96, writable. -/
 def baBufferInfo (b : BA) : (Seq × Bool) × BA := ((b.seq, false), baGetBuffer b)
 
-/-- `sizeof(PyByteArrayObject)` on LP64. -/
-def baBasicSize : Int := 56
+/-- `bytearray.__alloc__()`, bytearrayobject.c:2605-2612. -/
+def baAllocMethod (self : BA) : Int := if self.alloc > 0 then self.alloc + bytesObjectSize else 0
 
-/-- `bytearray.__sizeof__()`, bytearrayobject.c:2812-2823. -/
-def baSizeof (self : BA) : Int := baBasicSize + self.alloc
+/-- `sizeof(PyByteArrayObject)` on LP64. -/
+def baBasicSize : Int := 64
+
+/-- `bytearray.__sizeof__()`, bytearrayobject.c:2813-2820. -/
+def baSizeof (self : BA) : Int :=
+  if self.alloc > 0 then baBasicSize + bytesObjectSize + self.alloc else baBasicSize
 
 end PyLean.BytesObj.Bytes

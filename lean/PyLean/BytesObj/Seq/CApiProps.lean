@@ -98,7 +98,7 @@ theorem itemAccess_proven : ItemAccess := by
 /-- The constructors and slice getters of the C API, in full: `PyList_New` and
 `PyTuple_New` for every size (`SystemError` when negative, `NULL` slots otherwise);
 `_PyList_FromStackRefStealOnSuccess`; `_PyList_AsTupleAndClear`, which moves the items
-into a tracked tuple and leaves no array; `PyTuple_SetItem` on a uniquely referenced
+into a tracked tuple and leaves an empty list with its array; `PyTuple_SetItem` on a uniquely referenced
 tuple; `PyList_GetSlice` and `PyTuple_GetSlice`; and the argument checks of
 `list_vectorcall`, keywords first. -/
 def CApiConstruct : Prop :=
@@ -115,7 +115,7 @@ def CApiConstruct : Prop :=
     (o.hasItems = false → listAsTupleAndClear o = .ok (.empty, o)) ∧
     (o.hasItems = true → o.items ≠ [] → (o.items.length : Int) ≤ tupleLimit →
       listAsTupleAndClear o =
-        .ok (.fresh { items := o.items, tracked := true }, { o with items := [], hasItems := false })) ∧
+        .ok (.fresh { items := o.items, tracked := true }, { o with items := [] })) ∧
     (0 ≤ i → i < l.length → pyTupleSetItem (some l) true i v = .ok (l.set i.toNat v)) ∧
     ((i < 0 ∨ i ≥ l.length) →
       pyTupleSetItem (some l) true i v = .error (.indexError "tuple assignment index out of range")) ∧

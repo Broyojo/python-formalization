@@ -60,19 +60,12 @@ theorem resizeNoSize_data (b r : BA) (n : Int) (h : baResizeNoSize b n = .ok r) 
   have hc : canResize b = .ok () := by simp [canResize, hx]
   rw [hc] at h
   simp only at h
-  by_cases hf : n + b.offset + 1 ≤ b.alloc ∧ ¬ (n < b.alloc / 2)
-  · rw [if_pos hf] at h
+  cases hA : baResizeAlloc b n with
+  | error e => rw [hA] at h; simp at h
+  | ok p =>
+    rw [hA] at h
     simp only [Except.ok.injEq] at h
     rw [← h]
-  rw [if_neg hf] at h
-  generalize (if n + b.offset + 1 ≤ b.alloc then n + 1
-      else if 8 * n ≤ 9 * b.alloc then n + n / 8 + (if n < 9 then 3 else 6) else n + 1) = A at h
-  split at h
-  · simp at h
-  split at h
-  · simp at h
-  simp only [Except.ok.injEq] at h
-  rw [← h]
 
 theorem baCopyIn_data (self : BA) (l : Nat) (bytes : List Int) :
     (baCopyIn self l bytes).data =
@@ -213,5 +206,29 @@ theorem setsliceSpec_proven : SetsliceSpec := by
       rw [baCopyIn_data]
       have : lo + bytes.length = hi := by omega
       rw [this]
+
+theorem extendInitialised_proven : ExtendInitialised := by
+  refine ⟨?_, by decide⟩
+  intro self m r v mutate hm h
+  unfold baExtendBuffer baSetslice at h
+  simp only [bind, Except.bind, pure, Except.pure, hm] at h
+  have hs : self.size = (self.data.length : Int) := rfl
+  have hm2 : m.size = (m.data.length : Int) := rfl
+  have h1 : ¬ (self.size < 0) := by omega
+  rw [if_neg h1] at h
+  dsimp only
+  by_cases hc : self.size > m.size
+  · rw [if_pos hc] at h
+    have h2 : ¬ (self.size < m.size) := by omega
+    rw [if_neg h2, if_pos hc] at h
+    have e : (min self.size m.size).toNat = m.data.length := by omega
+    rw [e, hm2] at *
+    exact setsliceSpec_proven m r m.data.length m.data.length _ (by omega) (by omega) h
+  · rw [if_neg hc] at h
+    have h2 : ¬ (self.size < self.size) := by omega
+    rw [if_neg h2, if_neg hc] at h
+    have e : (min self.size m.size).toNat = self.data.length := by omega
+    rw [e, hs] at *
+    exact setsliceSpec_proven m r self.data.length self.data.length _ (by omega) (by omega) h
 
 end PyLean.BytesObj.Bytes

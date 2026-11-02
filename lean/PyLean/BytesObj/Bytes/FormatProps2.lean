@@ -2,7 +2,7 @@ import PyLean.BytesObj.Bytes.FormatProps
 
 /-!
 More properties of `_PyBytes_FormatEx`: literal text, argument accounting, the
-conversion helpers, and the three places where it misreports an error.
+conversion helpers, and what it reports for a bad conversion, a failed `%f` and a `*`.
 -/
 
 namespace PyLean.BytesObj.Bytes
@@ -15,9 +15,10 @@ open PyLean PyLean.StrSearch
 def literalOutcome (args : Obj) (fmt : Seq) : Py Seq :=
   match args with
   | .tuple [] => .ok fmt
-  | .tuple _ => .error (.typeError "not all arguments converted during bytes formatting")
+  | .tuple xs =>
+    .error (.typeError s!"not all arguments converted during bytes formatting (required 0, got {(xs.length : Int)})")
   | .dict _ | .list _ | .memview _ _ => .ok fmt
-  | _ => .error (.typeError "not all arguments converted during bytes formatting")
+  | _ => .error (.typeError "not all arguments converted during bytes formatting (required 0, got 1)")
 
 /-- For every format without `%` whose size an object can have (`len + 33 < 2^47`,
 so the writer's allocation succeeds): the bytes are copied, an empty tuple or a mapping
@@ -28,36 +29,55 @@ def FormatLiteral : Prop :=
     bytesFormatEx fmt args false = literalOutcome args fmt
 
 theorem ssizeMax_val : ssizeMax = 9223372036854775807 := by decide
-theorem small_val : smallBufferSize = 512 := rfl
+theorem small_val : smallBufferSize = 256 := rfl
 theorem objsize_val : bytesObjectSize = 33 := rfl
 
-theorem bytesFromSize_ok (n : Nat) (h0 : (n : Int) ≠ 0) (hs : (n : Int) + 33 < 2 ^ 47) :
+theorem bytesSizeCheck_ok (n : Int) (h0 : 0 ≤ n) (hs : n + 33 < 2 ^ 47) :
+    bytesSizeCheck n = .ok () := by
+  unfold bytesSizeCheck
+  have h4 : ¬ (n > ssizeMax - bytesObjectSize) := by rw [ssizeMax_val, objsize_val]; omega
+  have h5 : mallocFails (bytesObjectSize + n) = false := by
+    have : ¬ ((bytesObjectSize + n) ≥ 2 ^ 47) := by rw [objsize_val]; omega
+    simpa [mallocFails] using this
+  by_cases h : n = 0
+  · simp [h]
+  · rw [if_neg h, if_neg h4]
+    simp [h5]
+
+theorem bytesFromSize_ok (n : Nat) (hs : (n : Int) + 33 < 2 ^ 47) :
     bytesFromSize n = .ok (List.replicate n 0) := by
   unfold bytesFromSize
-  have h4 : ¬ ((n : Int) > ssizeMax - bytesObjectSize) := by rw [ssizeMax_val, objsize_val]; omega
-  have h5 : mallocFails (bytesObjectSize + (n : Int)) = false := by
-    have : ¬ ((bytesObjectSize + (n : Int)) ≥ 2 ^ 47) := by rw [objsize_val]; omega
-    simpa [mallocFails] using this
-  rw [if_neg h0, if_neg h4]
-  simp [h5]
+  rw [bytesSizeCheck_ok _ (by omega) hs]
+  simp
 
-theorem writerAlloc_ok (size : Nat) (hs : (size : Int) + 33 < 2 ^ 47) :
-    ∃ w, writerAlloc (writerInit false) size = .ok w := by
-  unfold writerAlloc writerInit writerPrepare
-  simp only [bind, Except.bind, pure, Except.pure, Int.zero_add]
-  by_cases h0 : (size : Int) = 0
-  · simp [h0]
-  · have h1 : ¬ ((0 : Int) > ssizeMax - size) := by rw [ssizeMax_val]; omega
-    simp only [h0, if_false, h1]
-    by_cases h2 : (size : Int) > smallBufferSize
-    · have hr : writerResize { allocated := smallBufferSize, useSmall := true } (size : Int) =
-          .ok { allocated := (size : Int), useSmall := false } := by
-        unfold writerResize writerResizeCheck
-        simp [bytesFromSize_ok size h0 hs, bind, Except.bind, pure, Except.pure, Except.map]
-      simp only [h2, if_true, hr]
-      exact ⟨_, rfl⟩
-    · simp only [h2, if_false]
-      exact ⟨_, rfl⟩
+/-- A writer for a format of a size an object can have: its size is that size, and it can be
+finished at that size. -/
+theorem writerCreate_ok (size : Nat) (hs : (size : Int) + 33 < 2 ^ 47) :
+    ∃ w, writerCreate size false = .ok w ∧ writerFinishSize w size = .ok () := by
+  unfold writerCreate
+  have h0 : ¬ ((size : Int) < 0) := by omega
+  simp only [if_neg h0]
+  by_cases h1 : (size : Int) ≥ 1
+  · simp only [if_pos h1]
+    by_cases h2 : (size : Int) ≤ smallBufferSize
+    · have hr : writerResizeRaw { useBytearray := false, overallocate := !false } (size : Int) false =
+          .ok { useBytearray := false, overallocate := !false } := by
+        simp only [writerResizeRaw, writerAllocated, h2, if_true]
+      rw [hr]
+      refine ⟨_, rfl, ?_⟩
+      have h3 : ¬ ((size : Int) = 0) := by omega
+      simp [writerFinishSize, bytesSizeCheck_ok _ (by omega) hs, h3]
+    · have hc := bytesSizeCheck_ok (size : Int) (by omega) hs
+      have hr : writerResizeRaw { useBytearray := false, overallocate := !false } (size : Int) false =
+          .ok { useBytearray := false, overallocate := !false, obj := some (size, size) } := by
+        simp [writerResizeRaw, writerAllocated, h2, writerObjResize, hc]
+      rw [hr]
+      refine ⟨_, rfl, ?_⟩
+      simp [writerFinishSize]
+  · have h3 : (size : Int) = 0 := by omega
+    simp only [if_neg h1]
+    refine ⟨_, rfl, ?_⟩
+    simp [writerFinishSize, h3]
 
 theorem findIdx_none_of_not_mem (l : Seq) (h : 37 ∉ l) : l.findIdx? (· == 37) = none := by
   rw [List.findIdx?_eq_none_iff]
@@ -82,13 +102,13 @@ theorem formatLoop_literal (fmt : Seq) (dict : Option Obj) (ba : Bool) (fuel : N
     (h : 37 ∉ fmt) (h1 : st.pos = 0) (h2 : st.cnt = fmt.length) (h3 : st.out = [])
     (hf : fmt.length + 1 ≤ fuel) :
     ∃ st', formatLoop fmt dict ba fuel st = .ok st' ∧ st'.out = fmt ∧ st'.argidx = st.argidx ∧
-      st'.arglen = st.arglen := by
+      st'.arglen = st.arglen ∧ st'.w = st.w := by
   cases hfmt : fmt with
   | nil =>
     subst hfmt
     obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by simp at hf; omega⟩
     have h0 : st.cnt = 0 := by simpa using h2
-    refine ⟨{ st with cnt := st.cnt - 1 }, ?_, by simpa using h3, rfl, rfl⟩
+    refine ⟨{ st with cnt := st.cnt - 1 }, ?_, by simpa using h3, rfl, rfl, rfl⟩
     rw [formatLoop]
     have : ¬ (st.cnt - 1 ≥ 0) := by omega
     simp only [if_neg this]
@@ -112,7 +132,7 @@ theorem formatLoop_literal (fmt : Seq) (dict : Option Obj) (ba : Bool) (fuel : N
     have hS : ¬ (S.cnt - 1 ≥ 0) := by
       show ¬ ((st.cnt - 1) - ((st.cnt - 1 + 1) - 1) - 1 ≥ 0)
       omega
-    refine ⟨{ S with cnt := S.cnt - 1 }, ?_, ?_, rfl, rfl⟩
+    refine ⟨{ S with cnt := S.cnt - 1 }, ?_, ?_, rfl, rfl, rfl⟩
     · rw [formatLoop]
       simp only [if_pos hnn]
       simp only [ne_eq]
@@ -128,136 +148,143 @@ theorem formatLoop_literal' (fmt : Seq) (dict : Option Obj) (ba : Bool) (fuel : 
     (r : Py FS) (hr : formatLoop fmt dict ba fuel st = r)
     (h : 37 ∉ fmt) (h1 : st.pos = 0) (h2 : st.cnt = fmt.length) (h3 : st.out = [])
     (hf : fmt.length + 1 ≤ fuel) :
-    ∃ st', r = .ok st' ∧ st'.out = fmt ∧ st'.argidx = st.argidx ∧ st'.arglen = st.arglen := by
+    ∃ st', r = .ok st' ∧ st'.out = fmt ∧ st'.argidx = st.argidx ∧ st'.arglen = st.arglen ∧
+      st'.w = st.w := by
   subst hr
   exact formatLoop_literal fmt dict ba fuel st h h1 h2 h3 hf
 
 /-- `bytesFormatEx` on a format without `%`. -/
 theorem formatLiteral_proven : FormatLiteral := by
   intro fmt args h hsize
-  obtain ⟨w, hw⟩ := writerAlloc_ok fmt.length hsize
+  obtain ⟨w, hw, hfin⟩ := writerCreate_ok fmt.length hsize
   unfold bytesFormatEx
-  simp only [bind, Except.bind, hw, pure, Except.pure]
+  simp only [bind, Except.bind, hw]
+  generalize hr : formatLoop fmt (asMapping args) false (fmt.length + 1) _ = r
+  obtain ⟨s2, rfl, h2, h3, h4, h5⟩ := formatLoop_literal' _ _ _ _ _ _ hr h rfl rfl rfl (Nat.le_refl _)
+  simp only [h2, h3, h4, h5, writerFinish, hfin]
   cases args
   case tuple xs =>
-    cases xs
-    all_goals
-      simp only
-      split
-      · rename_i e heq
-        obtain ⟨_, h1, _⟩ := formatLoop_literal' _ _ _ _ _ _ heq h rfl rfl rfl (Nat.le_refl _)
-        simp at h1
-      · rename_i st' heq
-        obtain ⟨s2, h1, h2, h3, h4⟩ := formatLoop_literal' _ _ _ _ _ _ heq h rfl rfl rfl (Nat.le_refl _)
-        simp only [Except.ok.injEq] at h1
-        subst h1
-        simp [h2, h3, h4, asMapping, literalOutcome, writerFinish]
-        try rfl
-  all_goals
-    simp only
-    split
-    · rename_i e heq
-      obtain ⟨_, h1, _⟩ := formatLoop_literal' _ _ _ _ _ _ heq h rfl rfl rfl (Nat.le_refl _)
-      simp at h1
-    · rename_i st' heq
-      obtain ⟨s2, h1, h2, h3, h4⟩ := formatLoop_literal' _ _ _ _ _ _ heq h rfl rfl rfl (Nat.le_refl _)
-      simp only [Except.ok.injEq] at h1
-      subst h1
-      simp [h2, h3, h4, asMapping, literalOutcome, writerFinish]
-      try rfl
+    cases xs with
+    | nil => simp [literalOutcome, asMapping, throw, throwThe, MonadExcept.throw, pure, Except.pure]
+    | cons x xs =>
+      have hlt : (0 : Int) < ((x :: xs).length : Int) := by simp only [List.length_cons]; omega
+      have hn : ¬ ((xs.length : Int) + 1 < 0) := by omega
+      simp [literalOutcome, asMapping, hlt, hn, throw, throwThe, MonadExcept.throw]
+      rfl
+  all_goals simp [literalOutcome, asMapping, throw, throwThe, MonadExcept.throw, pure, Except.pure]
+  all_goals rfl
 
 /-! ## `byte_converter` and `format_obj` -/
 
 /-- `%c`: an int (or index) is accepted exactly in `range(256)`, a bytes or bytearray
-exactly with length 1; `%b`: bytes, bytearray, `__bytes__` and buffers give their
-contents, in that order of preference. -/
+exactly with length 1, each refusal naming the argument through `FORMAT_ERROR`; `%b`: bytes,
+bytearray, `__bytes__` and buffers give their contents, in that order of preference. -/
 def ConvertersSpec : Prop :=
-  (∀ v : Int, byteConverter (.int v) =
-    if 0 ≤ v ∧ v ≤ 255 then .ok v.toNat else .error (.overflowError "%c arg not in range(256)")) ∧
-  (∀ s : Seq, s.length = 1 → byteConverter (.bytes s) = .ok (s.headD 0) ∧
-    byteConverter (.bytearray s) = .ok (s.headD 0)) ∧
-  (∀ s : Seq, formatObj (.bytes s) = .ok s ∧ formatObj (.bytearray s) = .ok s ∧
-    formatObj (.dunder (.bytes s)) = .ok s ∧ ∀ a, formatObj (.memview s a) = .ok s)
+  (∀ (st : FS) (v : Int), byteConverter st (.int v) =
+    if 0 ≤ v ∧ v ≤ 255 then .ok v.toNat
+    else .error (formatError .overflowError st "%c argument not in range(256)")) ∧
+  (∀ (st : FS) (s : Seq), s.length = 1 → byteConverter st (.bytes s) = .ok (s.headD 0) ∧
+    byteConverter st (.bytearray s) = .ok (s.headD 0)) ∧
+  (∀ (st : FS) (s : Seq), s.length ≠ 1 →
+    (byteConverter st (.bytes s) = .error (formatError .typeError st
+      s!"%c requires an integer in range(256) or a single byte, not a bytes object of length {s.length}")) ∧
+    (byteConverter st (.bytearray s) = .error (formatError .typeError st
+      s!"%c requires an integer in range(256) or a single byte, not a bytearray object of length {s.length}"))) ∧
+  (∀ (st : FS) (s : Seq), formatObj st (.bytes s) = .ok s ∧ formatObj st (.bytearray s) = .ok s ∧
+    formatObj st (.dunder (.bytes s)) = .ok s ∧ ∀ a, formatObj st (.memview s a) = .ok s)
 
 theorem convertersSpec_proven : ConvertersSpec := by
-  refine ⟨?_, ?_, ?_⟩
-  · intro v
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro st v
     by_cases h : 0 ≤ v ∧ v ≤ 255 <;> simp [byteConverter, Obj.index?, h]
-  · intro s h
+  · intro st s h
     simp [byteConverter, h]
-  · intro s
+  · intro st s h
+    simp [byteConverter, h]
+  · intro st s
     simp [formatObj, Obj.buffer?]
 
 /-- `formatlong` and `getnextarg`: an int subclass or number goes through its integer
 value; `o`, `x`, `X` refuse a float and everything else; `d` refuses a non-number; the
-argument cursor stops at the end of the tuple. -/
+argument cursor stops at the end of the tuple, a single argument serves one conversion, and a `*`
+cannot take a single argument. -/
 def FormatLongTypes : Prop :=
-  (∀ (b : Bool) (fl : Fl) (prec : Int) (t : Nat),
-    formatLong (.bool b) fl prec t = unicodeFormatLong (if b then 1 else 0) fl.alt prec t) ∧
-  (∀ (v : Int) (fl : Fl) (prec : Int) (t : Nat),
-    formatLong (.index v) fl prec t = unicodeFormatLong v fl.alt prec t) ∧
-  (∀ (f : Flt) (fl : Fl) (prec : Int) (t : Nat), (t = 111 ∨ t = 120 ∨ t = 88) →
-    ∃ m, formatLong (.float f) fl prec t = .error (.typeError m)) ∧
-  (∀ (s : Seq) (fl : Fl) (prec : Int) (t : Nat),
-    ∃ m, formatLong (.bytes s) fl prec t = .error (.typeError m)) ∧
-  (∀ st : FS, st.arglen ≥ 0 → st.argidx ≥ st.arglen →
-    getNextArg st = .error (.typeError "not enough arguments for format string"))
+  (∀ (st : FS) (b : Bool) (fl : Fl) (prec : Int) (t : Nat),
+    formatLong st (.bool b) fl prec t = unicodeFormatLong (if b then 1 else 0) fl.alt prec t) ∧
+  (∀ (st : FS) (v : Int) (fl : Fl) (prec : Int) (t : Nat),
+    formatLong st (.index v) fl prec t = unicodeFormatLong v fl.alt prec t) ∧
+  (∀ (st : FS) (f : Flt) (fl : Fl) (prec : Int) (t : Nat), (t = 111 ∨ t = 120 ∨ t = 88) →
+    formatLong st (.float f) fl prec t = .error
+      (formatError .typeError st (requiresMsg t "an integer" "float"))) ∧
+  (∀ (st : FS) (s : Seq) (fl : Fl) (prec : Int) (t : Nat), (t ≠ 111 ∧ t ≠ 120 ∧ t ≠ 88) →
+    formatLong st (.bytes s) fl prec t = .error
+      (formatError .typeError st (requiresMsg t "a real number" "bytes"))) ∧
+  (∀ (st : FS) (b : Bool), st.arglen ≥ 0 → st.argidx ≥ st.arglen →
+    getNextArg st b = .error (.typeError s!"not enough arguments for format string (got {st.arglen})")) ∧
+  (∀ (st : FS), st.arglen = -1 → st.argidx = -2 →
+    getNextArg st true = .ok (st.args, { st with argidx := -1 }) ∧
+    getNextArg st false = .error (.typeError "not enough arguments for format string (got 1)"))
 
 theorem formatLongTypes_proven : FormatLongTypes := by
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩
-  · intro b fl prec t
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro st b fl prec t
     simp [formatLong, Obj.longValue?]
-  · intro v fl prec t
+  · intro st v fl prec t
     by_cases h : t = 111 ∨ t = 120 ∨ t = 88 <;>
       simp [formatLong, Obj.longValue?, Obj.isNumber, Obj.index?, h, numberLong]
-  · intro f fl prec t h
-    simp [formatLong, Obj.longValue?, Obj.isNumber, Obj.index?, h, notInteger, PyExc.className, isTypeError, excMatches]
-  · intro s fl prec t
-    simp [formatLong, Obj.longValue?, Obj.isNumber]
+  · intro st f fl prec t h
+    simp [formatLong, Obj.longValue?, Obj.isNumber, Obj.index?, h, notInteger, PyExc.className,
+      isTypeError, excMatches, Obj.typeName]
+  · intro st s fl prec t h
+    have h2 : ¬ (t = 111 ∨ t = 120 ∨ t = 88) := by omega
+    simp [formatLong, Obj.longValue?, Obj.isNumber, h2, Obj.typeName]
+  · intro st b h1 h2
+    have h3 : ¬ (st.argidx < st.arglen) := by omega
+    have h4 : ¬ (st.arglen < 0) := by omega
+    simp [getNextArg, h3, h4]
   · intro st h1 h2
-    have : ¬ (st.argidx < st.arglen) := by omega
-    simp [getNextArg, this]
+    have h3 : st.argidx < st.arglen := by omega
+    have h4 : ¬ (st.arglen ≥ 0) := by omega
+    have h5 : st.arglen < 0 := by omega
+    constructor
+    · simp [getNextArg, h3, h4, h2]
+      omega
+    · simp only [getNextArg, h3, h4, h5, if_true, if_false, Bool.false_eq_true]
+      rfl
 
-/-! ## Wrong exceptions -/
-
-/-- `%` followed by a byte that is no conversion: is this the documented `ValueError`? -/
-def isValueErr (r : Py Seq) : Bool :=
-  match r with
-  | .error (.valueError _) => true
-  | _ => false
+/-! ## Refusals -/
 
 /-- Bytes that end a conversion specifier with an error: no flag, digit, `.`, `*`,
 length modifier, `(`, or conversion character. -/
 def badConv (b : Nat) : Bool :=
   !(asc "-+ #0123456789.*hlL(%diouxXeEfFgGcsbar").contains b
 
-/-- "An unknown conversion raises `ValueError`": `b'%\xff' % (1,)` should report an
-unsupported format character, as it does for every ASCII byte and as `str % args`
-does. -/
+/-- The `default:` case for every byte of a two-byte format: `b'%\xff' % (1,)` is a `ValueError` that
+names the byte and both positions, for a byte above 127 too, where `c` is negative. -/
 def BadConvIsValueError : Prop :=
-  ∀ b, b < 256 → badConv b = true → isValueErr (bytesMod [37, b] (.tuple [.int 1])) = true
-
-theorem badConvIsValueError_refuted : ¬ BadConvIsValueError := by
-  intro h
-  have := h 255 (by decide) (by decide)
-  revert this
-  decide
-
-/-- The narrowed statement: for an ASCII byte the `default:` case gives the
-`ValueError`. Above 127 `c` is a negative `int` and `PyErr_Format("%c")` fails first. -/
-def BadConvAsciiIsValueError : Prop :=
-  ∀ b, b < 128 → badConv b = true → isValueErr (bytesMod [37, b] (.tuple [.int 1])) = true
+  ∀ b, b < 256 → badConv b = true →
+    bytesMod [37, b] (.tuple [.int 1]) = .error (unsupportedChar (sgnChar b) 0 1)
 
 set_option maxRecDepth 100000 in
-theorem badConvAsciiIsValueError_proven : BadConvAsciiIsValueError := by
-  unfold BadConvAsciiIsValueError
+theorem badConvIsValueError_proven : BadConvIsValueError := by
+  unfold BadConvIsValueError
   decide
 
-/-- "`%f` reports the conversion failure": the exception of `PyFloat_AsDouble` reaches
-the caller, as in `str % args` (`formatfloat` in Objects/unicodeobject.c returns -1). -/
+/-- `%f` keeps the exception of `PyFloat_AsDouble`, as `str % args` does, and replaces only a
+`TypeError`, which is the message for a non-number. -/
 def FloatErrorPreserved : Prop :=
-  ∀ (v : Obj) (fl : Fl) (prec : Int) (e : PyExc), asDouble v = .error e →
-    formatFloatText v fl prec 102 = .error e
+  ∀ (st : FS) (v : Obj) (fl : Fl) (prec : Int) (t : Nat) (e : PyExc), asDouble v = .error e →
+    formatFloatText st v fl prec t = .error
+      (if isTypeError e then
+        formatError .typeError st (requiresMsg t "a real number" v.typeName)
+       else e)
+
+theorem floatErrorPreserved_proven : FloatErrorPreserved := by
+  intro st v fl prec t e h
+  unfold formatFloatText
+  rw [h]
+  simp only
+  split <;> rfl
 
 set_option exponentiation.threshold 3000 in
 set_option maxRecDepth 100000 in
@@ -265,44 +292,58 @@ theorem asDouble_huge : asDouble (.int (2 ^ 1024)) =
     .error (.overflowError "int too large to convert to float") := by
   decide
 
-set_option exponentiation.threshold 3000 in
-theorem floatErrorPreserved_refuted : ¬ FloatErrorPreserved := by
-  intro h
-  have hd := asDouble_huge
-  have := h (.int (2 ^ 1024)) {} (-1) _ hd
-  unfold formatFloatText at this
-  rw [hd] at this
-  exact absurd this (by intro e; cases e)
-
-/-- The narrowed statement: a non-number gets `TypeError`, for both types. -/
+/-- The two arms reached: a non-number is the `TypeError` of the conversion, and an int past the
+range of a double keeps the `OverflowError`. -/
 def FloatArgType : Prop :=
-  ∀ (s : Seq) (fl : Fl) (prec : Int) (t : Nat),
-    formatFloatText (.bytes s) fl prec t = .error (.typeError "float argument required, not bytes")
+  (∀ (st : FS) (s : Seq) (fl : Fl) (prec : Int) (t : Nat),
+    formatFloatText st (.bytes s) fl prec t =
+      .error (formatError .typeError st (requiresMsg t "a real number" "bytes"))) ∧
+  (∀ (st : FS) (fl : Fl) (prec : Int) (t : Nat),
+    formatFloatText st (.int (2 ^ 1024)) fl prec t =
+      .error (.overflowError "int too large to convert to float"))
 
+set_option exponentiation.threshold 3000 in
 theorem floatArgType_proven : FloatArgType := by
-  intro s fl prec t
-  simp [formatFloatText, asDouble, Obj.typeName]
-  decide
+  refine ⟨?_, ?_⟩
+  · intro st s fl prec t
+    simp [formatFloatText, asDouble, Obj.typeName, isTypeError, excMatches, PyExc.className]
+  · intro st fl prec t
+    have h : isTypeError (.overflowError "int too large to convert to float") = false := by decide
+    unfold formatFloatText
+    rw [asDouble_huge]
+    simp [h]
 
-/-- "A negative `*` width is a left-justified field of that absolute width": if
-`b'%*d' % (w, 1)` succeeds for `w < 0`, the result has at least `-w` bytes. -/
+/-- A `*` width (bytesobject.c:771-804). A negative width is a left-justified field of the absolute
+width, for all but `PY_SSIZE_T_MIN`, which has no negation and is refused, as a width outside
+`Py_ssize_t` is. `v` is the argument `getnextarg` gave. Hypothesis: no mapping key in force, the only
+case that gets to the argument. -/
 def NegStarWidth : Prop :=
-  ∀ (w : Int) (out : Seq), ssizeMin ≤ w → w < 0 →
-    bytesMod (asc "%*d") (.tuple [.int w, .int 1]) = .ok out → (out.length : Int) ≥ -w
+  ∀ (format : Seq) (at' : Int) (st st' : FS) (fl : Fl) (w : Int),
+    st.arglen ≥ -1 → getNextArg st false = .ok (.int w, st') →
+    (ssizeMin < w → w < 0 → ∃ st2 c, parseWidth format at' st fl 42 =
+      .ok (st2, { fl with ljust := true }, -w, c)) ∧
+    (0 ≤ w → w ≤ ssizeMax → ∃ st2 c, parseWidth format at' st fl 42 = .ok (st2, fl, w, c)) ∧
+    ((w ≤ ssizeMin ∨ w > ssizeMax) → parseWidth format at' st fl 42 =
+      .error (formatError .overflowError st' "too big for width"))
 
-theorem negStarWidth_refuted : ¬ NegStarWidth := by
-  intro h
-  have := h ssizeMin [49] (by decide) (by decide) (by decide)
-  revert this
-  decide
-
-/-- The narrowed statement: for every other negative width the negation is exact. -/
-def NegWrapExact : Prop := ∀ w : Int, ssizeMin < w → w < 0 → negWrap w = -w ∧ 0 < negWrap w
-
-theorem negWrapExact_proven : NegWrapExact := by
-  intro w h1 h2
-  have : w ≠ ssizeMin := by omega
-  simp [negWrap, this]
-  omega
+theorem negStarWidth_proven : NegStarWidth := by
+  intro format at' st st' fl w h1 h2
+  have hk : ¬ (st.arglen < -1) := by omega
+  have hc : (42 : Int) = 42 := rfl
+  unfold parseWidth
+  simp only [bind, Except.bind, pure, Except.pure, hk, if_false, if_true, h2]
+  refine ⟨?_, ?_, ?_⟩
+  · intro h3 h4
+    have hs : w ≤ ssizeMax := by unfold ssizeMax; omega
+    have h5 : ¬ (w ≤ ssizeMin ∨ w > ssizeMax) := by omega
+    simp [starWidth, Obj.longValue?, h5, h4]
+  · intro h3 h4
+    have h5 : ¬ (w ≤ ssizeMin ∨ w > ssizeMax) := by
+      have : ssizeMin < 0 := by decide
+      omega
+    have h6 : ¬ w < 0 := by omega
+    simp [starWidth, Obj.longValue?, h5, h6]
+  · intro h3
+    simp [starWidth, Obj.longValue?, h3]
 
 end PyLean.BytesObj.Bytes

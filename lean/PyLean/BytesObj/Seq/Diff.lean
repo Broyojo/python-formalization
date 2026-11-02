@@ -194,7 +194,7 @@ def jHint (j : Json) : Except String (Py Int) :=
     let h ← v.getInt?
     if h > ssizeMax then
       return .error (.overflowError "Python int too large to convert to C ssize_t")
-    if h < 0 then return .error (.valueError "__length_hint__() should return >= 0")
+    if h < 0 then return .error (.valueError "Hinted.__length_hint__() must return a non-negative int")
     return .ok h
 
 def jExt (j : Json) : Except String (ExtArg DEl) := do
@@ -251,6 +251,13 @@ def stepList (o : St) (op : Array Json) : Except String (Json × St) := do
   | "reverse" => return (okJ unitJ, listReverse o)
   | "getitem" => return (encPy enEl (listGetItem o.items (← (← argAt op 1).getInt?)), o)
   | "getslice" => return (encPy stateJ (listGetSlice o.items (← jSlice (← argAt op 1))), o)
+  | "binslice" =>
+    let arr ← (← argAt op 1).getArr?
+    let some a := arr[0]? | throw "binslice"
+    let some b := arr[1]? | throw "binslice"
+    return (okJ (stateJ (listBinarySlice o.items ⟨← jOptI a, ← jOptI b, none⟩)), o)
+  | "forloop" =>
+    return (okJ (enEls o.items), o)
   | "setitem" => return keep (listSetItem o (← (← argAt op 1).getInt?) (some (← jEl (← argAt op 2))))
   | "delitem" => return keep (listSetItem o (← (← argAt op 1).getInt?) none)
   | "setslice" =>
@@ -422,6 +429,9 @@ def runTuple (fn : String) (j : Json) : Except String Json := do
     let t' := match r1 with | .ok p => p.2 | .error _ => t
     let r2 := tupleHash (cntHash 2) t'
     return okJ (Json.arr #[encPy (fun p => toJson p.1) r1, encPy (fun p => toJson p.1) r2])
+  | "tuple.hashdeep" =>
+    let t ← jTup (← field j "t")
+    return encPy (fun p => toJson p.1) (tupleHashGuarded dHash t true)
   | "tuple.repr" =>
     return encPy toJson (tupleRepr dRepr false (← jEls (← field j "items")))
   | "tuple.getitem" =>
@@ -429,6 +439,13 @@ def runTuple (fn : String) (j : Json) : Except String Json := do
   | "tuple.getslice" =>
     let t ← jTup (← field j "t")
     return encPy (enTRes t noTup) (tupleGetSlice t (← jSlice (← field j "s")))
+  | "tuple.binslice" =>
+    let t ← jTup (← field j "t")
+    let s ← jSlice (← field j "s")
+    if t.exact then
+      return encPy (enTRes t noTup) (tupleBinarySlice mayTrack t ⟨s.start, s.stop, none⟩)
+    else
+      return encPy (enTRes t noTup) (tupleGetSlice t ⟨s.start, s.stop, none⟩)
   | "tuple.add" =>
     let a ← jTup (← field j "a")
     match j.getObjVal? "other" with

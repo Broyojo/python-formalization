@@ -29,7 +29,7 @@ open PyLean PyLean.StrSearch
 /-- ASCII text as byte values. -/
 def asc (s : String) : Seq := s.toList.map Char.toNat
 
-/-- `PyBytesObject_SIZE`, bytesobject.c@3.14.7:34: `offsetof(ob_sval) + 1` on LP64. -/
+/-- `PyBytesObject_SIZE`, Include/internal/pycore_bytesobject.h: `offsetof(ob_sval) + 1` on LP64. -/
 def bytesObjectSize : Int := 33
 
 /-- `malloc` failure, see the module docstring. -/
@@ -143,6 +143,10 @@ def Obj.isNumber : Obj → Bool
   | .bool _ | .int _ | .float _ | .index _ | .indexRaises _ => true
   | _ => false
 
+/-- `"%T.__bytes__() must return a bytes, not %T"`, bytesobject.c:585-587 and :2916-2918. -/
+def bytesDunderWrong (x r : Obj) : PyExc :=
+  .typeError s!"{x.typeName}.__bytes__() must return a bytes, not {r.typeName}"
+
 /-- `"a bytes-like object is required, not '%.100s'"`, `PyObject_GetBuffer`,
 Objects/abstract.c:440-444. -/
 def notBytesLike (o : Obj) : PyExc :=
@@ -165,11 +169,15 @@ def asSsizeClamp (o : Obj) : Py Int :=
   | some (.error e) => .error e
   | none => .error (notInteger o)
 
-/-! ## `repr` of bytes, bytesobject.c:1429-1507 -/
+/-! ## `repr` of bytes, bytesobject.c:1428-1507 -/
 
-/-- The sizing loop of `PyBytes_Repr`, bytesobject.c:1448-1463:
+/-- `"%s object is too large to make repr"`, bytesobject.c:1504-1505. -/
+def reprOverflow (classname : String) : PyExc :=
+  .overflowError s!"{classname} object is too large to make repr"
+
+/-- The sizing loop of `_Py_bytes_repr`, bytesobject.c:1445-1461:
 `(newsize, squotes, dquotes)`. -/
-def reprScan : Seq → Int → Int → Int → Py (Int × Int × Int)
+def reprScan (classname : String) : Seq → Int → Int → Int → Py (Int × Int × Int)
   | [], n, sq, dq => .ok (n, sq, dq)
   | c :: rest, n, sq, dq =>
     let (incr, sq, dq) : Int × Int × Int :=
@@ -178,13 +186,13 @@ def reprScan : Seq → Int → Int → Int → Py (Int × Int × Int)
       else if c = 92 ∨ c = 9 ∨ c = 10 ∨ c = 13 then (2, sq, dq)
       else if c < 32 ∨ c ≥ 127 then (4, sq, dq)
       else (1, sq, dq)
-    if n > ssizeMax - incr then .error (.overflowError "bytes object is too large to make repr")
-    else reprScan rest (n + incr) sq dq
+    if n > ssizeMax - incr then .error (reprOverflow classname)
+    else reprScan classname rest (n + incr) sq dq
 
 /-- `Py_hexdigits[d]`, lower case. -/
 def hexDigit (d : Nat) : Nat := if d < 10 then 48 + d else 87 + d
 
-/-- The writing loop of `PyBytes_Repr`, one byte, bytesobject.c@3.14.7:1390-1406. -/
+/-- The writing loop of `_Py_bytes_repr`, one byte, bytesobject.c:1479-1497. -/
 def reprByte (quote c : Nat) : Seq :=
   if c = quote ∨ c = 92 then [92, c]
   else if c = 9 then [92, 116]
@@ -196,42 +204,24 @@ def reprByte (quote c : Nat) : Seq :=
 /-- The body of a bytes literal. -/
 def reprBody (quote : Nat) (s : Seq) : Seq := s.flatMap (reprByte quote)
 
-/-- `PyBytes_Repr(obj, smartquotes)`, bytesobject.c:1429-1507. -/
-def bytesRepr (s : Seq) (smart : Bool) : Py Seq := do
-  let (newsize, squotes, dquotes) ← reprScan s 3 0 0
+/-- `_Py_bytes_repr(data, length, smartquotes, classname)`, bytesobject.c:1435-1507. -/
+def bytesReprAs (classname : String) (s : Seq) (smart : Bool) : Py Seq := do
+  let (newsize, squotes, dquotes) ← reprScan classname s 3 0 0
   let quote : Nat := if smart ∧ squotes ≠ 0 ∧ dquotes = 0 then 34 else 39
   if squotes ≠ 0 ∧ quote = 39 then
     if newsize > ssizeMax - squotes then
-      throw (.overflowError "bytes object is too large to make repr")
+      throw (reprOverflow classname)
   return [98, quote] ++ reprBody quote s ++ [quote]
+
+/-- `PyBytes_Repr(obj, smartquotes)`, bytesobject.c:1428-1433. -/
+def bytesRepr (s : Seq) (smart : Bool) : Py Seq := bytesReprAs "bytes" s smart
 
 /-! ## `repr` of bytearray, bytearrayobject.c:1185-1198 -/
 
-/-- The quote choice, bytearrayobject.c@3.14.7:1126-1135. -/
-def baQuote : Seq → Nat → Nat
-  | [], q => q
-  | c :: rest, q => if c = 34 then 39 else if c = 39 then baQuote rest 34 else baQuote rest q
-
-/-- One byte of `bytearray_repr_lock_held`, bytearrayobject.c@3.14.7:1149-1167. Unlike
-`PyBytes_Repr`, `'` is escaped whatever the quote is, and `c == 0` has its own
-branch with the same result as the general `\xHH` one. -/
-def baReprByte (c : Nat) : Seq :=
-  if c = 39 ∨ c = 92 then [92, c]
-  else if c = 9 then [92, 116]
-  else if c = 10 then [92, 110]
-  else if c = 13 then [92, 114]
-  else if c = 0 then [92, 120, 48, 48]
-  else if c < 32 ∨ c ≥ 127 then [92, 120, hexDigit (c / 16), hexDigit (c % 16)]
-  else [c]
-
-/-- `bytearray_repr_lock_held`, bytearrayobject.c:1185-1198. -/
-def bytearrayRepr (className : String) (s : Seq) : Py Seq :=
-  let newsize : Int := className.length
-  if (s.length : Int) > Int.tdiv (ssizeMax - 6 - newsize) 4 then
-    .error (.overflowError "bytearray object is too large to make repr")
-  else
-    let quote := baQuote s 39
-    .ok (asc className ++ asc "(b" ++ [quote] ++ s.flatMap baReprByte ++ [quote] ++ asc ")")
+/-- `bytearray_repr_lock_held`, bytearrayobject.c:1184-1198. -/
+def bytearrayRepr (className : String) (s : Seq) : Py Seq := do
+  let r ← bytesReprAs "bytearray" s true
+  return asc className ++ asc "(" ++ r ++ asc ")"
 
 /-! ## `ascii()` -/
 
@@ -413,7 +403,7 @@ def dtoa (x : Flt) (type : Nat) (prec : Nat) (alt : Bool) : Seq :=
 def digitsBase (base : Nat) (n : Nat) : Seq :=
   (Nat.toDigits base n).map Char.toNat
 
-/-- `PyNumber_ToBase(val, base)`, Objects/abstract.c:2901-2920 and
+/-- `PyNumber_ToBase(val, base)`, Objects/abstract.c:1661-1675 and
 `_PyLong_Format`: the base prefix, after the sign; the digit limit applies to
 base 10 only. -/
 def numberToBase (val : Int) (base : Nat) : Py Seq :=

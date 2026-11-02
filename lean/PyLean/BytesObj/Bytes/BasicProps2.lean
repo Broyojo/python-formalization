@@ -187,7 +187,7 @@ theorem from_string_ok (s : Seq) (hs : (s.length : Int) + 33 < 2 ^ 47) :
     · have : s = [] := List.length_eq_zero_iff.mp (by omega)
       simp [this]
     · simp only [h2, if_false]
-      simp [bytesFromSize_ok s.length h2 hs, bind, Except.bind, pure, Except.pure]
+      simp [bytesFromSize_ok s.length hs, bind, Except.bind, pure, Except.pure]
 
 theorem bytesResizeCheck_ok (old new : Nat) (hs : (new : Int) + 33 < 2 ^ 47) :
     bytesResizeCheck old new = .ok () := by
@@ -197,17 +197,13 @@ theorem bytesResizeCheck_ok (old new : Nat) (hs : (new : Int) + 33 < 2 ^ 47) :
   · rw [if_pos h1]
   rw [if_neg h1]
   by_cases h2 : (old : Int) = 0
-  · have hn : (new : Int) ≠ 0 := by omega
-    rw [if_pos h2]
-    simp [bytesFromSize_ok new hn hs, bind, Except.bind, pure, Except.pure]
+  · rw [if_pos h2]
+    exact bytesSizeCheck_ok _ (by omega) hs
   rw [if_neg h2]
   by_cases h3 : (new : Int) = 0
   · rw [if_pos h3]
   rw [if_neg h3]
-  have h5 : mallocFails (bytesObjectSize + (new : Int)) = false := by
-    have : ¬ ((bytesObjectSize + (new : Int)) ≥ 2 ^ 47) := by rw [objsize_val]; omega
-    simpa [mallocFails] using this
-  rw [if_neg (by simp [h5])]
+  exact bytesSizeCheck_ok _ (by omega) hs
 
 theorem bytesResize_grow (v : Seq) (n : Nat) (hn : v.length ≤ n) (hs : (n : Int) + 33 < 2 ^ 47) :
     ∃ o, bytesResize { data := v } n = .ok o ∧ o.data.take v.length = v := by

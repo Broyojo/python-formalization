@@ -239,7 +239,61 @@ def runBytes (m : String) (j : Json) : Except String Json := do
     return encPy toJson (Except.ok (privateBytesFind s (← getSeqK j "n") (← getInt j "off")) : Py Int)
   | other => throw s!"unknown bytes method {other}"
 
-def stJ (b : BA) : Json := Json.arr #[toJson b.data, toJson b.alloc]
+/-- A state machine over `_testcapi.PyBytesWriter`. Each op gives its result and `get_size()`. -/
+def runWriter (j : Json) : Except String Json := do
+  let ba ← getBool j "ba"
+  let known0 : Bool := ← getBool j "known"
+  match writerCreate (← getInt j "size") ba with
+  | .error e => return encPy (fun (_ : Unit) => Json.null) (.error e)
+  | .ok w0 =>
+    let mut w := w0
+    let mut data : Seq := []
+    let mut out : Array Json := #[]
+    let none' := Json.mkObj [("ok", Json.null)]
+    let err (e : PyExc) : Json := encPy (fun (_ : Unit) => Json.null) (.error e)
+    for op in ← (← field j "ops").getArr? do
+      let a ← op.getArr?
+      let name ← (a.getD 0 .null).getStr?
+      let arg (i : Nat) := a.getD i .null
+      let bytesAt (i : Nat) : Except String Seq := do (← (arg i).getArr?).toList.mapM (·.getNat?)
+      match name with
+      | "write" =>
+        match writerWriteBytes w data (← bytesAt 1) (← (arg 2).getInt?) with
+        | .ok (w', d') => w := w'; data := d'; out := out.push (Json.arr #[none', toJson w.size])
+        | .error e => out := out.push (Json.arr #[err e, toJson w.size])
+      | "grow" =>
+        let n ← (arg 1).getInt?
+        match writerGrow w n with
+        | .ok w' =>
+          w := w'
+          data := data.take w.size.toNat
+          out := out.push (Json.arr #[none', toJson w.size])
+        | .error e => out := out.push (Json.arr #[err e, toJson w.size])
+      | "resize" =>
+        match writerResize w (← (arg 1).getInt?) with
+        | .ok w' =>
+          w := w'
+          data := data.take w.size.toNat
+          out := out.push (Json.arr #[none', toJson w.size])
+        | .error e => out := out.push (Json.arr #[err e, toJson w.size])
+      | "fmti" | "fmts" =>
+        let carg : CArg ← if name == "fmti" then pure (.int (← (arg 2).getInt?)) else pure (.str (← bytesAt 2))
+        let (w', text, e) := writerFormat w (← bytesAt 1) [carg]
+        w := w'
+        data := data ++ text
+        out := out.push (Json.arr #[(match e with | some x => err x | none => none'), toJson w.size])
+      | "finish" =>
+        let k : Int := match (arg 1).getInt? with | .ok k => k | .error _ => w.size
+        match writerFinishSize w k with
+        | .ok () =>
+          let r : List Int := List.replicate k.toNat 0
+          out := out.push (Json.arr #[Json.mkObj [("ok", Json.arr #[toJson r.length, toJson ba,
+            if known0 then toJson (data.take k.toNat) else Json.null])], toJson (-1 : Int)])
+        | .error e => out := out.push (Json.arr #[err e, toJson (-1 : Int)])
+      | n => throw s!"writer op {n}"
+    return Json.mkObj [("ok", Json.arr out)]
+
+def stJ (b : BA) : Json := Json.arr #[toJson b.data, toJson (baAllocMethod b)]
 
 /-- One mutating or reading operation of the state-machine test. -/
 def stepBA (b : BA) (op : Json) : Except String (Json × BA) := do
@@ -259,7 +313,15 @@ def stepBA (b : BA) (op : Json) : Except String (Json × BA) := do
   | "clear" => return keep (baClear b)
   | "reverse" => return (Json.mkObj [("ok", Json.null)], baReverse b)
   | "extend" => return keep (baExtend b (← fieldObj op "x"))
-  | "resize" => return keep (baResizeMethod b (← getInt op "n"))
+  | "resize" =>
+    let n ← getInt op "n"
+    match baResizeMethod b n with
+    | .ok b' => return (Json.mkObj [("ok", Json.null)], b')
+    | .error e => return (encPy (fun (_ : Unit) => Json.null) (.error e), baResizeLeft b n)
+  | "take" =>
+    match baTakeBytes b (← fieldObj op "x") with
+    | .ok (t, b') => return (Json.mkObj [("ok", toJson t)], b')
+    | .error e => return (encPy (fun (_ : Unit) => Json.null) (.error e), b)
   | "setitem" => return keep (baAssIndex b (← getInt op "i") (some (← fieldObj op "x")))
   | "delitem" => return keep (baAssIndex b (← getInt op "i") none)
   | "setslice" => return keep (baAssSlice b (← getSlice op "sl") (some (← fieldObj op "x")))
@@ -269,7 +331,13 @@ def stepBA (b : BA) (op : Json) : Except String (Json × BA) := do
   | "imul" =>
     match Sequences.repeatCount (← getInt op "n") with
     | .error e => return (encPy (fun (_ : Unit) => Json.null) (.error e), b)
-    | .ok n => return keep (baIRepeat b n)
+    | .ok n =>
+      match baIRepeat b n with
+      | .ok b' => return (Json.mkObj [("ok", Json.null)], b')
+      | .error e =>
+        let n := if n < 0 then 0 else n
+        return (encPy (fun (_ : Unit) => Json.null) (.error e),
+          if n > 0 ∧ b.size > Int.tdiv baSizeMax n then b else baResizeLeft b (b.size * n))
   | "export" => return (Json.mkObj [("ok", Json.null)], baGetBuffer b)
   | "release" =>
     if b.exports > 0 then return (Json.mkObj [("ok", Json.null)], baReleaseBuffer b)
@@ -336,6 +404,7 @@ def runBA (m : String) (j : Json) : Except String Json := do
   if let some r ← runCommon wrap m s j then return r
   match m with
   | "repr" => return encPy jS (bytearrayRepr "bytearray" s)
+  | "reprsub" => return encPy jS (bytearrayRepr "BSub" s)
   | "bufinfo" =>
     let some b0 := (baNew (some (.bytes s)) none none).toOption | throw "init failed"
     let ((data, ro), _) := baBufferInfo b0
@@ -390,7 +459,8 @@ def runBA (m : String) (j : Json) : Except String Json := do
   | other => throw s!"unknown bytearray method {other}"
 
 def handler : Handler := fun fn j =>
-  if fn.startsWith "bytes." then some (runBytes (fn.drop 6).toString j)
+  if fn == "bytes.writer" then some (runWriter j)
+  else if fn.startsWith "bytes." then some (runBytes (fn.drop 6).toString j)
   else if fn.startsWith "bytearray." then some (runBA (fn.drop 10).toString j)
   else none
 

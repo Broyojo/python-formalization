@@ -149,31 +149,50 @@ theorem tree_ne_of_shape (m : Mem) (g h : Int → Item) (sh sh' : List Int) (hne
 
 /-! ## From memory to `==` -/
 
-/-- A live view of one native format with its arrays: what `tolist` works on. The itemsize is
-the format's, and the format is a C string, both type invariants of a buffer. -/
+/-- A live view of one native one-character format with its arrays: what `tolist` works on. The
+itemsize is the format's, and the format is a C string, both type invariants of a buffer. `Zf` and
+`Zd` are not covered: their items are compared in `ComplexCmp`. -/
 structure NativeView (st : St) (i : Nat) (c : Char) (sh strs : List Int) : Prop where
   live : baseInaccessible st i = false
   fmt : getNativeFmtchar ((st.mv i).view.format.getD []) = some (c, (st.mv i).view.itemsize)
+  notZ : c ≠ zfCode ∧ c ≠ zdCode
   cstr : '\x00' ∉ (st.mv i).view.format.getD []
   rank : sh.length = (st.mv i).view.ndim
   shape : sh ≠ [] → (st.mv i).view.shape = some sh
   strides : sh ≠ [] → (st.mv i).view.strides = some strs
   nonneg : ∀ x ∈ sh, 0 ≤ x
 
-/-- A format `get_native_fmtchar` accepts is one character, with or without `@`. -/
+theorem z_branch (f : List Char) (c : Char) (s : Int) (h4 : c ≠ zfCode) (h5 : c ≠ zdCode)
+    (h : (if cc f 1 = 'f' ∧ cc f 2 = '\x00' then some (zfCode, (8 : Int))
+          else if cc f 1 = 'd' ∧ cc f 2 = '\x00' then some (zdCode, 16) else none) = some (c, s)) : False := by
+  split at h
+  · simp only [Option.some.injEq, Prod.mk.injEq] at h
+    exact h4 h.1.symm
+  · split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h
+      exact h5 h.1.symm
+    · simp at h
+
+/-- A format `get_native_fmtchar` accepts is one character, with or without `@`, unless it is `Zf`
+or `Zd`. -/
 theorem native_shape (f : List Char) (c : Char) (s : Int) (h : getNativeFmtchar f = some (c, s))
-    (hz : '\x00' ∉ f) : (f = [c] ∨ f = ['@', c]) ∧ fmtSize c = s ∧ nativeChar c = true := by
-  have hn := nativeChar_of_fmtchar _ _ _ h
+    (hz : '\x00' ∉ f) (h4 : c ≠ zfCode) (h5 : c ≠ zdCode) :
+    (f = [c] ∨ f = ['@', c]) ∧ fmtSize c = s ∧ nativeChar c = true := by
+  have hn := nativeChar_of_fmtchar _ _ _ h h4 h5
   unfold getNativeFmtchar at h
   dsimp only at h
-  split at h
-  · rename_i hat
+  by_cases hat : cc f 0 = '@'
+  · rw [if_pos hat] at h
     match f, hat, hz with
     | [], hat, _ => simp [cc] at hat
     | a :: rest, hat, hz =>
       simp only [cc, List.getD_cons_zero] at hat
       subst hat
       simp only [List.drop_succ_cons, List.drop_zero] at h
+      by_cases hZ : cc rest 0 = 'Z'
+      · rw [if_pos hZ] at h
+        exact (z_branch _ _ _ h4 h5 h).elim
+      rw [if_neg hZ] at h
       split at h
       · rename_i hc
         simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -186,7 +205,12 @@ theorem native_shape (f : List Char) (c : Char) (s : Int) (h : getNativeFmtchar 
           subst this
           simp at hz
       · simp at h
-  · split at h
+  · rw [if_neg hat] at h
+    by_cases hZ : cc f 0 = 'Z'
+    · rw [if_pos hZ] at h
+      exact (z_branch _ _ _ h4 h5 h).elim
+    rw [if_neg hZ] at h
+    split at h
     · rename_i hc
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
@@ -214,8 +238,8 @@ theorem adjustFmt_native (v : Buf) (c : Char) (hn : nativeChar c = true)
   rcases h with h | h <;> rw [h] <;> simp [cc, h0, h1]
 
 macro "ni_tac" : tactic => `(tactic| first
-  | (simp [unpackRaw, cc, structItem, rdS, rdU, rdBytes_length, unpackToBool, decLE_one]; done)
-  | (simp [unpackRaw, cc, structItem, rdS, rdU, rdBytes, decLE, unpackToBool]; done))
+  | (simp [unpackRaw, cc, structItem, rdS, rdU, rdBytes_length, unpackToBool, decLE_one, zfCode, zdCode]; done)
+  | (simp [unpackRaw, cc, structItem, rdS, rdU, rdBytes, decLE, unpackToBool, zfCode, zdCode]; done))
 
 /-- One native code, compiled by `Struct` and read by `unpack_single`, is one item. -/
 theorem native_item (c : Char) (h : nativeChar c = true) :
@@ -260,7 +284,7 @@ def viewTree (m : Mem) (c : Char) (b : Buf) (sh strs : List Int) : Tree :=
 
 theorem tolist_viewTree (st : St) (i : Nat) (c : Char) (sh strs : List Int) (h : NativeView st i c sh strs) :
     memoryviewTolist i st = (.ok (viewTree st.mem c (st.mv i).view sh strs), st) := by
-  obtain ⟨hf, hs, hn⟩ := native_shape _ _ _ h.fmt h.cstr
+  obtain ⟨hf, hs, hn⟩ := native_shape _ _ _ h.fmt h.cstr h.notZ.1 h.notZ.2
   have ha := adjustFmt_native _ c hn hf
   obtain ⟨k, hk, -, -, -, -, hu⟩ := native_item c hn
   have hg : ∀ p, unpackRaw st.mem p [c] = .ok (itemOf st.mem c p) := fun p => by
@@ -364,8 +388,8 @@ theorem compareBufs_views (st : St) (v w : Nat) (cv cw : Char) (shv shw stv stw 
       .ok (treeEq (viewTree st.mem cv (st.mv v).view shv stv) (viewTree st.mem cw (st.mv w).view shw stw)) := by
   have hlen : shv.length = shw.length := by rw [hv.rank, hnd, hw.rank]
   have hes := equivShape_views st v w cv cw shv shw stv stw hv hw hnd
-  obtain ⟨hfv, hsv, hnv⟩ := native_shape _ _ _ hv.fmt hv.cstr
-  obtain ⟨hfw, hsw, hnw⟩ := native_shape _ _ _ hw.fmt hw.cstr
+  obtain ⟨hfv, hsv, hnv⟩ := native_shape _ _ _ hv.fmt hv.cstr hv.notZ.1 hv.notZ.2
+  obtain ⟨hfw, hsw, hnw⟩ := native_shape _ _ _ hw.fmt hw.cstr hw.notZ.1 hw.notZ.2
   cases hloop : shapeLoop shv shw with
   | false =>
     have hne : shv ≠ [] := by
@@ -431,6 +455,14 @@ def CmpIsTolist : Prop :=
       memoryRichcompare v (.view w) .eq st =
         (.ok (some ((st.mv v).view.ndim == (st.mv w).view.ndim && treeEq tv tw)), st)
 
+theorem selfEqual_no_float (o : Option (List Char)) (c : Char) (h : selfEqualFormat o = true)
+    (hf : o.getD [] = [c] ∨ o.getD [] = ['@', c]) : c ≠ 'f' ∧ c ≠ 'd' ∧ c ≠ 'e' := by
+  cases o with
+  | none => simp [selfEqualFormat] at h
+  | some l =>
+    simp only [Option.getD_some] at hf
+    refine ⟨?_, ?_, ?_⟩ <;> (rintro rfl; rcases hf with rfl | rfl <;> revert h <;> decide)
+
 theorem cmpIsTolist_proven : CmpIsTolist := by
   intro st v w cv cw shv shw stv stw hv hw hns
   refine ⟨_, _, tolist_viewTree st v cv shv stv hv, tolist_viewTree st w cw shw stw hw, ?_⟩
@@ -443,8 +475,26 @@ theorem cmpIsTolist_proven : CmpIsTolist := by
     · have : equivShape (st.mv v).view (st.mv w).view = false := by
         simp [equivShape, hnd]
       simp [compareBufs, this, hnd]
-  simp only [memoryRichcompare, memoryRichEqual, M.bind_app, M.get, hv.live, Bool.false_eq_true, ↓reduceIte,
-    reduceCtorEq, hw.live, M.lift, e, M.pure_app, Option.map_some]
+  by_cases hsame : w = v ∧ selfEqualFormat (st.mv v).view.format = true
+  · obtain ⟨rfl, hsf⟩ := hsame
+    obtain ⟨hf, -, -⟩ := native_shape _ _ _ hv.fmt hv.cstr hv.notZ.1 hv.notZ.2
+    obtain ⟨h1, h2, h3⟩ := selfEqual_no_float _ _ hsf hf
+    have hs : equivShape (st.mv w).view (st.mv w).view = true := by
+      rw [equivShape_views st w w cv cv shv shv stv stv hv hv rfl]
+      exact shapeLoop_refl _
+    have hr := compareBufs_refl st.mem st.noStruct _ cv _ hv.fmt h1 h2 h3 hv.notZ.1 hv.notZ.2 hs
+    have hx := Except.ok.inj (e.symm.trans hr)
+    rw [hx]
+    simp [memoryRichcompare, memoryRichEqual, M.bind_app, M.get, hv.live, hsf, M.pure_app]
+  · have hq : ((Obj.view w == Obj.view v) && selfEqualFormat (st.mv v).view.format) = false := by
+      by_cases h1 : w = v
+      · subst h1
+        have h2 : selfEqualFormat (st.mv w).view.format = false := by
+          simpa using fun h => hsame ⟨rfl, h⟩
+        simp [h2]
+      · simp [h1]
+    simp only [memoryRichcompare, memoryRichEqual, M.bind_app, M.get, hv.live, Bool.false_eq_true, ↓reduceIte,
+      reduceCtorEq, hw.live, M.lift, e, M.pure_app, Option.map_some, hq]
 
 /-! ## Formats that are not native -/
 
@@ -468,8 +518,8 @@ def unpackAt (m : Mem) (u : Unpacker) (p : Int) : List Item :=
   u.fmt.codes.flatMap (unpackCode u.fmt.big (rdBytes m p u.itemsize.toNat))
 
 /-- `memory_richcompare` on 1-D views when a format is not native, as `<i` or `2B`, or the two
-differ: `get_native_fmtchar` fails, so both go through `struct` (@3.14.7:3140-3158), and `v == w` is true
-exactly when each pair of unpacked items agrees under `struct_unpack_cmp`, @3.14.7:2931-2956, which
+differ: `get_native_fmtchar` fails, so both go through `struct` (:3267-3285), and `v == w` is true
+exactly when each pair of unpacked items agrees under `struct_unpack_cmp`, :3011-3036, which
 compares one-value tuples by that value and longer tuples as tuples. Hypotheses: the case; both
 formats compile, and each fits its itemsize, otherwise `unpack_from` raises. -/
 def CmpNonNative : Prop :=
@@ -509,7 +559,7 @@ theorem cmpNonNative_proven : CmpNonNative := by
 
 /-! ## `import struct` fails -/
 
-/-- `fix_struct_error_int`, @3.14.7:2917-2928: anything from `struct` itself means "not equal" and is
+/-- `fix_struct_error_int`, :2997-3008: anything from `struct` itself means "not equal" and is
 cleared; `ImportError`, `MemoryError` and their subclasses are real errors and pass through. -/
 def FixStructRules : Prop :=
   ∀ (msg : String),
@@ -526,9 +576,9 @@ theorem fixStructRules_proven : FixStructRules := by
   intro msg
   simp [fixStructError, structError, importStruct, excMatches, PyExc.className, excBases]
 
-/-- `memory_richcompare` with `sys.modules['struct'] = None`, @3.14.7:3144-3158: two views of the same native
+/-- `memory_richcompare` with `sys.modules['struct'] = None`, :3271-3285: two views of the same native
 format take the `switch` and never import `struct`, so `==` is unchanged; when the formats differ or
-one is not native, `struct_get_unpacker` fails, @3.14.7:2084-2086, and `fix_struct_error_int` lets the
+one is not native, `struct_get_unpacker` fails, :2160-2162, and `fix_struct_error_int` lets the
 `ModuleNotFoundError` out of `==`, where a bad format would be "not equal". Hypotheses: the shapes
 pass `equiv_shape`, the case. -/
 def CmpImportFails : Prop :=
@@ -618,7 +668,7 @@ theorem shapeLoop_iff (a b : List Int) (h : a.length = b.length) :
           simp only [List.take_succ_cons, List.cons.injEq] at h2
           exact hc h2.1
 
-/-- `equiv_structure`, @3.14.7:327-339, with `equiv_format`, @3.14.7:287-305, and `equiv_shape`, @3.14.7:307-323: the
+/-- `equiv_structure`, :327-339, with `equiv_format`, :287-305, and `equiv_shape`, :307-323: the
 assignment `dest[...] = src` goes ahead exactly if the formats are the same apart from a leading
 `@`, the item sizes are equal, the dimensions are equal, and the shapes are equal up to the first
 dimension of length 0, past which they can differ. Otherwise `ValueError`. Hypothesis: the shape
@@ -659,8 +709,8 @@ theorem equivRules_proven : EquivRules := by
       | true =>
         exact absurd (hb.1 (by simp [hf, hs])) h
 
-/-- `copy_single`, @3.14.7:404-432: `m[s] = x` re-checks the view after the Python code that got `x`'s
-buffer (`CHECK_RELEASED_INT_AGAIN`, @3.14.7:407), and refuses a source of another structure, in that
+/-- `copy_single`, :404-432: `m[s] = x` re-checks the view after the Python code that got `x`'s
+buffer (`CHECK_RELEASED_INT_AGAIN`, :407), and refuses a source of another structure, in that
 order, writing nothing. Hypothesis: the view or the structures are as the case says. -/
 def CopySingleRefuses : Prop :=
   ∀ (st : St) (self : Nat) (dest src : Buf),
@@ -677,15 +727,16 @@ theorem copySingleRefuses_proven : CopySingleRefuses := by
   · intro h1 h2
     simp [copySingle, M.bind_app, checkReleased_ok _ _ h1, M.lift, equivStructure, h2]
 
-/-- `adjust_fmt`, @3.14.7:2152-2164: the format after an optional `@` must be one character, which it
+/-- `adjust_fmt`, :2228-2242: the format after an optional `@` must be one character, which it
 returns, and anything else raises `NotImplementedError` naming the whole format. Formats are C
 strings here. Hypothesis: no NUL in the format, a type invariant. -/
 def AdjustFmtRules : Prop :=
   ∀ (v : Buf), '\x00' ∉ v.format.getD [] →
     let f := v.format.getD []
     let body := if f.head? = some '@' then f.drop 1 else f
-    (body.length = 1 → adjustFmt v = .ok body) ∧
-    (body.length ≠ 1 → adjustFmt v = .error (notImplError s!"memoryview: unsupported format {fmtText f}"))
+    ((body.length = 1 ∨ (body.length = 2 ∧ body.head? = some 'Z')) → adjustFmt v = .ok body) ∧
+    (¬ (body.length = 1 ∨ (body.length = 2 ∧ body.head? = some 'Z')) →
+      adjustFmt v = .error (notImplError s!"memoryview: unsupported format {fmtText f}"))
 
 theorem adjustFmtRules_proven : AdjustFmtRules := by
   intro v hz
@@ -709,12 +760,28 @@ theorem adjustFmtRules_proven : AdjustFmtRules := by
     · exact fun h => hz (List.mem_of_mem_drop h)
     · exact hz
   have hc := hn _ hsub
+  have hn2 : ∀ (b : List Char), '\x00' ∉ b →
+      ((cc b 0 = 'Z' ∧ cc b 1 ≠ '\x00' ∧ cc b 2 = '\x00') ↔ (b.length = 2 ∧ b.head? = some 'Z')) := by
+    intro b hb0
+    match b, hb0 with
+    | [], _ => simp [cc]
+    | [x], _ => simp [cc]
+    | [x, y], hb0 =>
+      have hy : y ≠ '\x00' := fun e => hb0 (by simp [e])
+      simp [cc, hy]
+    | x :: y :: z :: r, hb0 =>
+      have hz' : z ≠ '\x00' := fun e => hb0 (by simp [e])
+      simp [cc, hz']
+  have hc2 := hn2 _ hsub
   unfold adjustFmt
   simp only [hf, hb]
   constructor
   · intro h
-    rw [if_pos (hc.2 h)]
+    by_cases h2 : (if f.head? = some '@' then f.drop 1 else f).length = 2 ∧
+        (if f.head? = some '@' then f.drop 1 else f).head? = some 'Z'
+    · rw [if_pos (hc2.2 h2)]
+    · rw [if_neg (fun e => h2 (hc2.1 e)), if_pos (hc.2 (h.resolve_right h2))]
   · intro h
-    rw [if_neg (fun e => h (hc.1 e))]
+    rw [if_neg (fun e => h (Or.inr (hc2.1 e))), if_neg (fun e => h (Or.inl (hc.1 e)))]
 
 end PyLean.BytesObj.Mem

@@ -1,7 +1,7 @@
 import PyLean.BytesObj.Mem.State
 
 /-!
-The `memoryview` object, `Objects/memoryobject.c` (CPython 3.14.7), function by function
+The `memoryview` object, `Objects/memoryobject.c` (CPython 3.15.2), function by function
 in source order. Line numbers refer to that file unless stated otherwise.
 
 `Obj` is the Python object an operation receives. The constructors `index`, `floatLike`,
@@ -39,6 +39,8 @@ inductive Obj where
   | view (i : Nat)
   /-- A buffer exporter already laid out in the store. -/
   | exporter (b : Ret Buf) (rel : Option Nat)
+  /-- A `complex`, as two 64-bit IEEE patterns. -/
+  | complex (re im : Nat)
   /-- An object with `__index__`. -/
   | index (n : Ret Int) (rel : Option Nat)
   /-- An object with `__float__`. -/
@@ -55,6 +57,7 @@ def Obj.typeName : Obj → String
   | .int _ => "int"
   | .bool _ => "bool"
   | .float _ => "float"
+  | .complex _ _ => "complex"
   | .bytes _ => "bytes"
   | .str _ => "str"
   | .none => "NoneType"
@@ -156,7 +159,7 @@ def mbufRelease (k : Nat) : M Unit := fun st =>
   if x.released then (.ok (), st)
   else pyBufferRelease x.master (st.setMb k { x with released := true })
 
-/-- `mbuf_clear`, @3.14.7:138-145. -/
+/-- `mbuf_clear`, :138-145. -/
 def mbufClear (k : Nat) : M Unit := mbufRelease k
 
 /-! ## Release (:1176-1272) -/
@@ -193,7 +196,7 @@ def memoryDealloc (i : Nat) : M Unit := fun st =>
     | some t => if getExports s t = 0 then (memoryRelease t s) else (r, s)
     | none => (r, s)
 
-/-- `mbuf_dealloc`, @3.14.7:119-128: `mbuf_release` and the frees. A released managed buffer is
+/-- `mbuf_dealloc`, :119-128: `mbuf_release` and the frees. A released managed buffer is
 left alone, so this is the release of a buffer no view ever kept: :889-890, :918-919. -/
 def mbufDealloc (k : Nat) : M Unit := mbufRelease k
 
@@ -227,8 +230,8 @@ theorem Ret.get_state {α : Type} (w : String → PyExc) (r : Ret α) (st : St) 
 theorem Ret.get_val {α : Type} (w : String → PyExc) (a : α) (st : St) :
     (Ret.val a).get w st = (.ok a, st) := rfl
 
-/-- `__buffer__` returned something other than a memoryview, typeobject.c@3.14.7:10718-10719. -/
-def bufferWrong (_ : String) : PyExc := .typeError "__buffer__ returned non-memoryview object"
+/-- `__buffer__` returned something other than a memoryview, typeobject.c:11432-11433. -/
+def bufferWrong (t : String) : PyExc := .typeError s!"Exporter.__buffer__() must return a memoryview, not {t}"
 
 /-! ## Registering views -/
 
@@ -361,7 +364,7 @@ def getBufferFull (o : Obj) : M Buf :=
 
 /-! ## Constructors -/
 
-/-- `_PyManagedBuffer_FromObject`, @3.14.7:88-104, for an exporter described by `b`. -/
+/-- `_PyManagedBuffer_FromObject`, :88-104, for an exporter described by `b`. -/
 def managedBufferFromObject (b : Buf) (flags : Nat) : M Nat := do
   let k ← mbufAlloc
   let master ← M.lift (simpleGetbuffer b flags)
@@ -411,7 +414,7 @@ def bufferProc (proc : M Buf) : M Nat := do
 as the buffer proc. -/
 def memoryBufferProc (self : Nat) (flags : Nat) : M Nat := bufferProc (memoryGetbuf self flags)
 
-/-- `PyMemoryView_FromMemory`, @3.14.7:740-762, on `size` bytes at `mem`. `writable` is
+/-- `PyMemoryView_FromMemory`, :740-762, on `size` bytes at `mem`. `writable` is
 `flags == PyBUF_WRITE`. -/
 def memoryViewFromMemory (mem : Int) (size : Int) (writable : Bool) : M Nat := do
   let k ← mbufAlloc
@@ -502,7 +505,7 @@ def castTo1D (i : Nat) (format : List Char) : M Unit := do
   let view := x.view
   if format.any (fun c => c.toNat ≥ 128) then throw unicodeEncodeError
   let some (destchar, itemsize) := getNativeFmtchar format
-    | throw (.valueError "memoryview: destination format must be a native single character format prefixed with an optional '@'")
+    | throw (.valueError "memoryview: destination format must be a native format prefixed with an optional '@'")
   if !srcIsByte view && !isByteFormat destchar then
     throw (.typeError "memoryview: cannot cast between two non-byte formats")
   if view.len.tmod itemsize ≠ 0 then
@@ -634,10 +637,10 @@ def fixErrorInt (fmt : List Char) (e : PyExc) : PyExc :=
     fixErrorInt fmt (.overflowError m) = valueErrorInt fmt := by
   simp [fixErrorInt, excMatches, PyExc.className, excBases]
 
-/-- `__index__` returned a non-int, Objects/abstract.c@3.14.7:1423-1425. -/
-def indexWrong (t : String) : PyExc := .typeError s!"__index__ returned non-int (type {t})"
+/-- `__index__` returned a non-int, Objects/abstract.c:1433-1435. -/
+def indexWrong (t : String) : PyExc := .typeError s!"Idx.__index__() must return an int, not {t}"
 
-/-- `_PyNumber_Index(item)`, Objects/abstract.c:1412-1450, running `__index__`. -/
+/-- `_PyNumber_Index(item)`, Objects/abstract.c:1409-1449, running `__index__`. -/
 def numberIndex : Obj → M Int
   | .int n => pure n
   | .bool b => pure (if b then 1 else 0)
@@ -668,8 +671,8 @@ def pylongAsZd (item : Obj) : M Int := do M.lift (longAsSsize (← numberIndex i
 /-- `pylong_as_zu`, :1756-1769. -/
 def pylongAsZu (item : Obj) : M Int := do M.lift (asUnsignedLong (← numberIndex item))
 
-/-- `__float__` returned a non-float, Objects/floatobject.c@3.14.7:294-296. -/
-def floatWrong (t : String) : PyExc := .typeError s!"Flt.__float__ returned non-float (type {t})"
+/-- `__float__` returned a non-float, Objects/floatobject.c:284-286. -/
+def floatWrong (t : String) : PyExc := .typeError s!"Flt.__float__() must return a float, not {t}"
 
 /-- `PyFloat_AsDouble`, Objects/floatobject.c: `__float__`, then `__index__`. -/
 def floatAsDouble : Obj → M Nat
@@ -680,8 +683,8 @@ def floatAsDouble : Obj → M Nat
   | .index r rel => do fire rel; M.lift (longAsDouble (← r.get indexWrong))
   | o => throw (.typeError s!"must be real number, not {o.typeName}")
 
-/-- `__bool__` returned a non-bool, Objects/typeobject.c@3.14.7:10235-10238. -/
-def boolWrong (t : String) : PyExc := .typeError s!"__bool__ should return bool, returned {t}"
+/-- `__bool__` returned a non-bool, Objects/typeobject.c:10937-10940. -/
+def boolWrong (t : String) : PyExc := .typeError s!"Bln.__bool__() must return a bool, not {t}"
 
 /-- `__len__` returned a non-int: `PyNumber_AsSsize_t` of its result in `slot_sq_length`. -/
 def lenWrong (t : String) : PyExc := .typeError s!"'{t}' object cannot be interpreted as an integer"
@@ -697,6 +700,7 @@ def isTrue : Obj → M Bool
   | .none => pure false
   | .list n => pure (n != 0)
   | .boolLike r rel => do fire rel; r.get boolWrong
+  | .complex a b => pure (a % two63 != 0 || b % two63 != 0)
   | .lenLike r rel => do
     -- no `__bool__`: `slot_sq_length`, Objects/typeobject.c
     fire rel
@@ -711,6 +715,11 @@ def isTrue : Obj → M Bool
       throw (.typeError "0-dim memory has no length")
     return ((st.mv i).view.shape.getD []).getD 0 0 != 0
   | _ => pure true
+
+/-- `PyComplex_AsCComplex`, Objects/complexobject.c: a `complex`, or a real from `PyFloat_AsDouble`. -/
+def complexAsC : Obj → M (Nat × Nat)
+  | .complex a b => pure (a, b)
+  | o => do return (← floatAsDouble o, 0)
 
 /-- `PyLong_AsVoidPtr`, Objects/longobject.c: only a real `int`. -/
 def asVoidPtr (item : Obj) : Py Int :=
@@ -794,6 +803,17 @@ def packSingle (self : Nat) (ptr : Int) (item : Obj) (fmt : List Char) : M Unit 
     let p ← fixed (M.lift (asVoidPtr item))
     checkReleased self
     memWrite ptr (encInt p 8)
+  | 'Z' =>
+    match cc fmt 1 with
+    | 'd' => do
+      let (a, b) ← fixed (complexAsC item)
+      checkReleased self
+      memWrite ptr (encLE a 8 ++ encLE b 8)
+    | 'f' => do
+      let (a, b) ← fixed (complexAsC item)
+      checkReleased self
+      memWrite ptr (encLE (narrow32 a) 4 ++ encLE (narrow32 b) 4)
+    | _ => throw (notImplError s!"memoryview: format {fmtText fmt} not supported")
   | _ => throw (notImplError s!"memoryview: format {fmtText fmt} not supported")
 
 /-- `unpack_single`, :1850-1938. -/
@@ -807,7 +827,8 @@ unless a single character is left. -/
 def adjustFmt (v : Buf) : Py (List Char) :=
   let vf := v.format.getD []
   let fmt := if cc vf 0 = '@' then vf.drop 1 else vf
-  if cc fmt 0 ≠ '\x00' ∧ cc fmt 1 = '\x00' then .ok fmt
+  if cc fmt 0 = 'Z' ∧ cc fmt 1 ≠ '\x00' ∧ cc fmt 2 = '\x00' then .ok fmt
+  else if cc fmt 0 ≠ '\x00' ∧ cc fmt 1 = '\x00' then .ok fmt
   else .error (notImplError s!"memoryview: unsupported format {fmtText vf}")
 
 /-! ## Representations -/
@@ -867,7 +888,7 @@ def strhexSep (sep : Option Obj) (group : Int) : Py (Char × Int) :=
       else .error (.typeError "sep must be str or bytes.")
     | o => .error (.typeError s!"object of type '{o.typeName}' has no len()")
 
-/-- `_Py_strhex_with_sep`, Python/pystrhex.c@3.14.7:7-143 and @3.14.7:159-163. -/
+/-- `_Py_strhex_with_sep`, Python/pystrhex.c:115-253 and :268-274. -/
 def strhexWithSep (arg : List Nat) (sep : Option Obj) (bps : Int) : Py (List Char) := do
   let (c, group) ← strhexSep sep bps
   strhexBody arg c group
@@ -905,6 +926,12 @@ def memoryviewHex (self : Nat) (sep : Option Obj) (bps : Int) : M (List Char) :=
       (strhexWithSepM (fun s => (.ok (rdBytes s.mem src.buf src.len.toNat), s)) sep bps)
   let bytes ← M.lift (pyBufferToContiguous st.mem src src.len 'C')
   strhexWithSepM (pure bytes) sep bps
+
+/-- `memoryview.hex(sep, bytes_per_sep)`: the clinic `Py_ssize_t`, then `memoryview_hex_impl`. -/
+def memoryviewHexArgs (self : Nat) (sep : Option Obj) (bps : Int) : M (List Char) :=
+  if bps < ssizeMin ∨ bps > ssizeMax then
+    throw (.overflowError "Python int too large to convert to C ssize_t")
+  else memoryviewHex self sep bps
 
 /-- `memory_repr`, :2486-2494: the text before ` at 0x...`. -/
 def memoryRepr (self : Nat) : M String := fun st =>
@@ -1228,6 +1255,13 @@ def compareBufs (m : Mem) (noStruct : Bool) (vv ww : Buf) : Py Bool :=
         | .ok uq => run '_' (some (up, uq))
     else run vfmt Option.none
 
+/-- The test of :3232-3241: a format of one of these characters, after an optional `@`. -/
+def selfEqualFormat : Option (List Char) → Bool
+  | none => false
+  | some f =>
+    let g := if cc f 0 = '@' then f.drop 1 else f
+    cc g 0 != '\x00' && "bBchHiIlLnNqQ?".toList.contains (cc g 0) && cc g 1 == '\x00'
+
 /-- The part of `memory_richcompare` before the label `result:`, :3110-3181: `equal`,
 with `none` for `MV_COMPARE_NOT_IMPL`. The check of `v` at :3116 comes before
 `PyObject_GetBuffer(w)` at :3130, which runs Python code; nothing looks at `v` again. -/
@@ -1236,6 +1270,9 @@ def memoryRichEqual (v : Nat) (w : Obj) : M (Option Bool) := do
   if baseInaccessible st v then
     return some (w == .view v)
   let vv := (st.mv v).view
+  -- `v == w`: the same object, of a format with no NaN, :3222-3244
+  if w == .view v && selfEqualFormat vv.format then
+    return some true
   match w with
   | .view i =>
     if baseInaccessible st i then
@@ -1263,6 +1300,7 @@ def memoryRichcompare (v : Nat) (w : Obj) (op : CmpOp) : M (Option Bool) := do
 at a buffer: an item never equals an object of a type other than `int`, `bool`, `float`, `bytes`,
 except that a `bytes` item compares with a memoryview through `memory_richcompare`, in `itemEqM`. -/
 def itemEqObj (x : Item) : Obj → Bool
+  | .complex a b => itemEq x (.complex a b)
   | .int n => itemEq x (.int n)
   | .bool b => itemEq x (.bool b)
   | .float d => itemEq x (.float d)

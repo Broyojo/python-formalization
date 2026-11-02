@@ -2,7 +2,7 @@ import PyLean.RangeSlice.Model
 import PyLean.BytesObj.Seq.Elem
 
 /-!
-Model of `Objects/tupleobject.c`, CPython 3.14.7 (`Py_GIL_DISABLED` off, 64-bit).
+Model of `Objects/tupleobject.c`, CPython 3.15.2 (`Py_GIL_DISABLED` off, 64-bit).
 
 A tuple object is `Tup`: its items, whether its type is exactly `tuple`, the GC
 `tracked` flag (visible through `gc.is_tracked`) and the `ob_hash` cache. Objects
@@ -111,6 +111,14 @@ def tupleHash (hashE : α → Py Int) (t : Tup α) : Py (Int × Tup α) :=
       .ok (h, { t with hash := h })
     | .error e => .error e
 
+/-- `tuple_hash`, tupleobject.c:371-414, with the stack test: `stackFull` is
+`_Py_EnterRecursiveCall(" while hashing a tuple")` failing, which comes after the cache, so a cached
+tuple never fails it. Its text names the stack used. -/
+def tupleHashGuarded (hashE : α → Py Int) (t : Tup α) (stackFull : Bool) : Py (Int × Tup α) :=
+  if toUhash t.hash ≠ U64 - 1 then .ok (t.hash, t)
+  else if stackFull then .error (.named "RecursionError" "~Stack overflow while hashing a tuple")
+  else tupleHash hashE t
+
 /-! ## Item access -/
 
 /-- `tuple_length(self)`, tupleobject.c:416-421: `Py_SIZE`. -/
@@ -131,7 +139,7 @@ def tupleItem (a : List α) (i : Int) : Py α :=
     | some v => .ok v
     | none => .error (cUB "read outside the items array")
 
-/-- `_PyTuple_FromArray(src, n)`, tupleobject.c:445-469: untracked unless an item
+/-- `PyTuple_FromArray(src, n)`, tupleobject.c:445-469: untracked unless an item
 may be tracked (`maybe_tracked`, :165-169). -/
 def tupleFromArray (mayTrack : α → Bool) (src : List α) : Py (TRes α) :=
   if src.length = 0 then .ok .empty
@@ -159,6 +167,12 @@ def tuplePack (mayTrack : α → Bool) (n : Int) (args : List α) : Py (TRes α)
     match tupleAlloc n with
     | .ok () => .ok (.fresh { items := args, tracked := args.any mayTrack })
     | .error e => .error e
+
+/-- `_PyTuple_FromPairSteal(first, second)`, tupleobject.c:214-231, and `_PyTuple_FromPair`, :205-212. -/
+def tupleFromPair (mayTrack : α → Bool) (first second : α) : Py (TRes α) :=
+  match tupleAlloc 2 with
+  | .ok () => .ok (.fresh { items := [first, second], tracked := mayTrack first || mayTrack second })
+  | .error e => .error e
 
 /-- `_PyTuple_MaybeUntrack(op)`, tupleobject.c:137-157, run by the collector.
 `mayBeTracked` is `_PyObject_GC_MAY_BE_TRACKED`; `NULL` items are `none`. -/
@@ -188,7 +202,7 @@ inductive ConcatArg (α : Type) where
   | tuple (t : Tup α)
   | other (typeName : String)
 
-/-- `tuple_concat(aa, bb)`, tupleobject.c@3.14.7:485-530. -/
+/-- `_PyTuple_Concat(aa, bb)`, tupleobject.c:563-605. -/
 def tupleConcat (a : Tup α) (bb : ConcatArg α) : Py (TRes α) :=
   let exactB : Bool := match bb with | .tuple t => t.exact | .other _ => false
   if a.items.length = 0 ∧ exactB then .ok (.arg 1)
@@ -354,6 +368,27 @@ def tupleGetSlice (a : Tup α) (s : Slice) : Py (TRes α) := do
       | .error e => .error e
     | .error e => .error e
 
+/-- `_PyEval_UnpackIndices`, Python/ceval.c, for an exact list or tuple under `BINARY_SLICE`: each
+index through `_PyEval_SliceIndex`, which clamps, then `PySlice_AdjustIndices(len, ..., 1)`. -/
+def unpackIndices (len : Int) (s : Slice) : Int × Int :=
+  let a := match s.start with | none => 0 | some v => RangeSlice.clampSsize v
+  let b := match s.stop with | none => ssizeMax | some v => RangeSlice.clampSsize v
+  let (a, b, _) := adjustIndices len a b 1
+  (a, b)
+
+/-- `_PyTuple_BinarySlice(container, start, stop)`, tupleobject.c:534-549, for an exact tuple. -/
+def tupleBinarySlice (mayTrack : α → Bool) (t : Tup α) (s : Slice) : Py (TRes α) :=
+  let len : Int := t.items.length
+  let (istart, istop) := unpackIndices len s
+  if istart = 0 ∧ istop = len then .ok (.arg 0)
+  else
+    let istop := if istop < istart then istart else istop
+    tupleFromArray mayTrack ((t.items.drop istart.toNat).take (istop - istart).toNat)
+
+/-- `tuple_iteritem(obj, index)`, tupleobject.c:889-897: the `_tp_iteritem` of a `for` loop. -/
+def tupleIterItem (t : List α) (index : Int) : Option α × Int :=
+  if index ≥ t.length then (none, index) else (slot t index, index + 1)
+
 /-! ## C API -/
 
 /-- `PyTuple_New(size)`, tupleobject.c:74-90: `NULL` items, tracked. -/
@@ -391,23 +426,22 @@ def pyTupleSetItem (op : Option (List α)) (unique : Bool) (i : Int) (v : α) : 
     else .ok (a.set i.toNat v)
 
 /-- `_PyTuple_Resize(pv, newsize)`, tupleobject.c:1045-1123, on the items. The
-checks on line 964 fail with an internal error; `NULL` items pad a growing tuple
-(`memset`, :1118). A negative `newsize` runs the `Py_CLEAR` loop of :1097 from
-`ob_item[newsize]`, outside the object. -/
+checks at :1054-1055 fail with an internal error, and the size past what `tuple_alloc` can give with
+`MemoryError`; `NULL` items pad a growing tuple (`memset`). -/
 def tupleResize (v : Option (List (Option α))) (isExact unique : Bool) (newsize : Int) :
     Py (List (Option α)) :=
   match v with
   | none => .error systemError
   | some items =>
     let oldsize : Int := items.length
-    if !isExact || (oldsize ≠ 0 && !unique) then .error systemError
+    if !isExact || newsize < 0 || (oldsize ≠ 0 && !unique) then .error systemError
     else if oldsize = newsize then .ok items
     else if newsize = 0 then .ok []
     else if oldsize = 0 then
       match tupleAlloc newsize with
       | .ok () => .ok (List.replicate newsize.toNat none)
       | .error e => .error e
-    else if newsize < 0 then .error (cUB "_PyTuple_Resize with a negative size")
+    else if newsize > (ssizeMax - tupleBase) / 8 then .error memoryError
     else .ok (items.take newsize.toNat ++ List.replicate (newsize - oldsize).toNat none)
 
 /-! ## Iterator -/

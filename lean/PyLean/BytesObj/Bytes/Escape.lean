@@ -131,16 +131,13 @@ theorem hex_digit_roundtrip : ∀ c, c < 256 →
   decide
 
 /-- `repr` round trip: for every byte string and either quote, decoding the body
-of the literal `PyBytes_Repr` writes gives back the bytes, with no invalid escape.
-Reached through the `'` path of a `bytearray` repr too, whose body differs by the
-extra `\'`. -/
+of the literal `_Py_bytes_repr` writes gives back the bytes, with no invalid escape. A `bytearray`
+repr has the same body, because 3.15 writes it with the same function. -/
 def ReprDecodeRoundTrip : Prop :=
   ∀ (quote : Nat) (s : Seq), (quote = 39 ∨ quote = 34) → (∀ c ∈ s, c < 256) →
-    decodeEscape2 (reprBody quote s) none = .ok (s, none) ∧
-    decodeEscape2 (s.flatMap baReprByte) none = .ok (s, none)
+    decodeEscape2 (reprBody quote s) none = .ok (s, none)
 
-/-- The general step: an escaped form produced by `reprByte` or `baReprByte`
-decodes to one byte, whatever follows it. -/
+/-- The general step: an escaped form produced by `reprByte` decodes to one byte, whatever follows it. -/
 theorem decode_step (errors : Option String) (fuel pos : Nat) (t out : Seq) (fb : FirstBad)
     (c : Nat) (enc : Seq) (hc : c < 256)
     (henc : enc = [c] ∧ c ≠ 92 ∨
@@ -176,27 +173,6 @@ theorem reprByte_form (quote c : Nat) (hq : quote = 39 ∨ quote = 34) :
         · split
           · simp
           · rename_i h1 h2 h3 h4 h5; left; refine ⟨rfl, ?_⟩; omega
-
-theorem baReprByte_form (c : Nat) :
-    let enc := baReprByte c
-    enc = [c] ∧ c ≠ 92 ∨
-      enc = [92, c] ∧ (c = 39 ∨ c = 34 ∨ c = 92) ∨
-      enc = [92, 116] ∧ c = 9 ∨ enc = [92, 110] ∧ c = 10 ∨ enc = [92, 114] ∧ c = 13 ∨
-      enc = [92, 120, hexDigit (c / 16), hexDigit (c % 16)] := by
-  simp only [baReprByte]
-  split
-  · rename_i h; right; left; refine ⟨rfl, ?_⟩; omega
-  · split
-    · rename_i h2; subst h2; simp
-    · split
-      · rename_i h2; subst h2; simp
-      · split
-        · rename_i h2; subst h2; simp
-        · split
-          · rename_i h2; subst h2; simp [hexDigit]
-          · split
-            · simp
-            · rename_i h1 h2 h3 h4 h5 h6; left; refine ⟨rfl, ?_⟩; omega
 
 def EncForm (enc : Nat → Seq) : Prop :=
   ∀ c, c < 256 → (enc c = [c] ∧ c ≠ 92 ∨
@@ -238,15 +214,9 @@ theorem flat_length (enc : Nat → Seq) (hform : EncForm enc) (s : Seq) (hs : �
 theorem reprDecodeRoundTrip_proven : ReprDecodeRoundTrip := by
   intro quote s hq hs
   have f1 : EncForm (reprByte quote) := fun c _ => reprByte_form quote c hq
-  have f2 : EncForm baReprByte := fun c _ => baReprByte_form c
-  constructor
-  · have hl := flat_length _ f1 s hs
-    have := decode_flat (reprByte quote) f1 s hs
-      (2 * (s.flatMap (reprByte quote)).length + 2) 0 [] (by omega)
-    simpa [decodeEscape2, reprBody] using this
-  · have hl := flat_length _ f2 s hs
-    have := decode_flat baReprByte f2 s hs
-      (2 * (s.flatMap baReprByte).length + 2) 0 [] (by omega)
-    simpa [decodeEscape2] using this
+  have hl := flat_length _ f1 s hs
+  have := decode_flat (reprByte quote) f1 s hs
+    (2 * (s.flatMap (reprByte quote)).length + 2) 0 [] (by omega)
+  simpa [decodeEscape2, reprBody] using this
 
 end PyLean.BytesObj.Bytes

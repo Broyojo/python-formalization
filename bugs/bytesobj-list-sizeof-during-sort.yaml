@@ -37,7 +37,7 @@ reproducer: |
 expected: |
   At least the size of an empty list (40 bytes on 64-bit), as the method gives in every other state.
 observed: |
-  python3 3.14.7: during sort: 32, empty list: 40. REPRODUCED.
+  python3 3.15.2: during sort: 32, empty list: 40. REPRODUCED.
   main (python.exe 3.16.0a1+dev, ef1fce0): during sort: 32, empty list: 40. REPRODUCED.
 promised_by: |
   Doc/library/sys.rst:980-981 ("Return the size of an object in bytes ... All built-in objects will

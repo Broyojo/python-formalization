@@ -211,4 +211,13 @@ theorem tupleConstruct_proven : TupleConstruct := by
     simp only [h1, h2, h3, if_false]
     rw [if_pos ⟨trivial, trivial, he⟩]
 
+/-- `_PyTuple_FromPair` is `PyTuple_Pack(2, ...)`, which it replaced in `list_extend_dictitems`, GC
+flag included. -/
+def TupleFromPairIsPack : Prop :=
+  ∀ (α : Type) (mt : α → Bool) (a b : α), tupleFromPair mt a b = tuplePack mt 2 [a, b]
+
+theorem tupleFromPairIsPack_proven : TupleFromPairIsPack := by
+  intro α mt a b
+  simp [tupleFromPair, tuplePack]
+
 end PyLean.BytesObj.Seq

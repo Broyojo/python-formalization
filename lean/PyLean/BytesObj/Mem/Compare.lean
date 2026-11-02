@@ -59,7 +59,12 @@ def CmpSpecialCases : Prop :=
 theorem cmpSpecialCases_proven : CmpSpecialCases := by
   intro st v i
   refine ⟨fun h => ⟨?_, fun b r => ?_⟩, fun h1 h2 => ?_, fun h n => ⟨?_, ?_⟩⟩
-  all_goals simp [memoryRichEqual, M.bind_app, M.get, M.pure_app, *]
+  all_goals first
+    | (simp [memoryRichEqual, M.bind_app, M.get, M.pure_app, *]; done)
+    | (have hne : i ≠ v := by
+         rintro rfl
+         simp_all
+       simp [memoryRichEqual, M.bind_app, M.get, M.pure_app, *, hne])
 
 theorem unpackCmp_refl (m : Mem) (p : Int) (c : Char) (h : nativeChar c = true)
     (hf : c ≠ 'f' ∧ c ≠ 'd' ∧ c ≠ 'e') : unpackCmpNative m p p c = .ok true := by
@@ -105,12 +110,28 @@ theorem cmpRec_refl (m : Mem) (c : Char) (hc : ∀ p, unpackCmpNative m p p c = 
         (subTail subs) (adjustPtr m p' subs 0) (adjustPtr m q' subs 0)) (fun q => ih _ _ _) _ _
 
 theorem nativeChar_of_fmtchar (f : List Char) (c : Char) (size : Int)
-    (h : getNativeFmtchar f = some (c, size)) : nativeChar c = true := by
-  unfold getNativeFmtchar at h
-  split at h <;>
-    (simp at h; obtain ⟨⟨hp, -⟩, rfl, -⟩ := h; exact (fmtSize_pos_iff _).1 hp)
+    (h : getNativeFmtchar f = some (c, size)) (h4 : c ≠ zfCode) (h5 : c ≠ zdCode) :
+    nativeChar c = true := by
+  simp only [getNativeFmtchar] at h
+  generalize (if cc f 0 = '@' then f.drop 1 else f) = g at h
+  by_cases hz : cc g 0 = 'Z'
+  · rw [if_pos hz] at h
+    split at h
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h
+      exact absurd h.1.symm h4
+    · split at h
+      · simp only [Option.some.injEq, Prod.mk.injEq] at h
+        exact absurd h.1.symm h5
+      · simp at h
+  · rw [if_neg hz] at h
+    split at h
+    · rename_i hp
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, -⟩ := h
+      exact (fmtSize_pos_iff _).1 hp.1
+    · simp at h
 
-/-- `m == m` for every view of a native format other than `f`, `d`, `e`, of any shape,
+/-- `m == m` for every view of a native format other than `f`, `d`, `e`, `Zf`, `Zd`, of any shape,
 strides and suboffsets: `v == w` is "equal `tolist()`", and the floats are excepted because
 of NaN (Doc/library/stdtypes.rst, `memoryview.__eq__`). Hypotheses: a live view whose shape
 array has `ndim` entries. -/
@@ -118,38 +139,45 @@ def CmpReflexive : Prop :=
   ∀ (st : St) (self : Nat) (c : Char) (size : Int) (sh : List Int),
     baseInaccessible st self = false →
     getNativeFmtchar ((st.mv self).view.format.getD []) = some (c, size) →
-    c ≠ 'f' → c ≠ 'd' → c ≠ 'e' →
+    c ≠ 'f' → c ≠ 'd' → c ≠ 'e' → c ≠ zfCode → c ≠ zdCode →
     (st.mv self).view.shape.getD [] = sh → sh.length = (st.mv self).view.ndim →
     memoryRichcompare self (.view self) .eq st = (.ok (some true), st)
 
+/-- A view of a format with no NaN compares equal to itself, by the comparison proper. -/
+theorem compareBufs_refl (m : Mem) (ns : Bool) (v : Buf) (c : Char) (size : Int)
+    (hf : getNativeFmtchar (v.format.getD []) = some (c, size))
+    (h1 : c ≠ 'f') (h2 : c ≠ 'd') (h3 : c ≠ 'e') (h4 : c ≠ zfCode) (h5 : c ≠ zdCode)
+    (hs : equivShape v v = true) : compareBufs m ns v v = .ok true := by
+  have hnat := nativeChar_of_fmtchar _ _ _ hf h4 h5
+  have hc : ∀ p, unpackCmpNative m p p c = .ok true := fun p =>
+    unpackCmp_refl m p c hnat ⟨h1, h2, h3⟩
+  have h_ : c ≠ '_' := by
+    intro e
+    rw [e] at hnat
+    exact absurd hnat (by decide)
+  simp only [compareBufs, hs, Bool.not_true, Bool.false_eq_true, ↓reduceIte, hf]
+  simp only [h_, or_self, ne_eq, not_true_eq_false, ↓reduceIte]
+  split
+  · simp only [unpackCmp_none, hc]
+  · split
+    · exact cmpBase_refl _ _ _ _ hc _ _
+    · exact cmpRec_refl _ _ hc _ _ _ _
+
 theorem cmpReflexive_proven : CmpReflexive := by
-  intro st self c size sh hl hf h1 h2 h3 hsh hn
-  have hnat := nativeChar_of_fmtchar _ _ _ hf
-  have hc : ∀ p, unpackCmpNative st.mem p p c = .ok true := fun p =>
-    unpackCmp_refl st.mem p c hnat ⟨h1, h2, h3⟩
+  intro st self c size sh hl hf h1 h2 h3 h4 h5 hsh hn
   have hs : equivShape (st.mv self).view (st.mv self).view = true := by
     simp only [equivShape, beq_self_eq_true, Bool.true_and, hsh]
     rw [← hn, List.take_length]
     exact shapeLoop_refl sh
-  have hcmp : compareBufs st.mem st.noStruct (st.mv self).view (st.mv self).view = .ok true := by
-    have h_ : c ≠ '_' := by
-      intro e
-      rw [e] at hnat
-      exact absurd hnat (by decide)
-    simp only [compareBufs, hs, Bool.not_true, Bool.false_eq_true, ↓reduceIte, hf]
-    simp only [h_, or_self, ne_eq, not_true_eq_false, ↓reduceIte]
-    split
-    · simp only [unpackCmp_none, hc]
-    · split
-      · exact cmpBase_refl _ _ _ _ hc _ _
-      · exact cmpRec_refl _ _ hc _ _ _ _
-  simp only [memoryRichcompare, memoryRichEqual, M.bind_app, M.get, hl, Bool.false_eq_true, ↓reduceIte,
-    reduceCtorEq, M.lift, hcmp, M.pure_app, Option.map_some]
+  have hcmp := compareBufs_refl st.mem st.noStruct _ c size hf h1 h2 h3 h4 h5 hs
+  by_cases hsf : selfEqualFormat (st.mv self).view.format = true
+  · simp [memoryRichcompare, memoryRichEqual, M.bind_app, M.get, hl, hsf, M.pure_app]
+  · simp [memoryRichcompare, memoryRichEqual, M.bind_app, M.get, hl, hsf, M.lift, hcmp, M.pure_app]
 
 /-- The fast path of `unpack_cmp` gives what the `struct` path gives, for every native
 format and all memory: `Struct(c)` compiles, and comparing its unpacked values is the
-`switch` of `unpack_cmp` (@3.14.7:2979-3031). The source's only reason for having both is speed
-(the comment at @3.14.7:2958-2963). -/
+`switch` of `unpack_cmp` (:3059-3134). The source's only reason for having both is speed
+(the comment at :3038-3043). -/
 def CmpFastStruct : Prop :=
   ∀ (m : Mem) (p q : Int) (c : Char), nativeChar c = true →
     ∃ u, structGetUnpacker [c] (fmtSize c) = .ok u ∧
@@ -199,9 +227,10 @@ theorem decLE_one (m : Mem) (p : Int) : decLE (rdBytes m p 1) = rdByte m p := by
 
 macro "he_tac" : tactic => `(tactic| first
   | (simp [unpackCmpNative, structResultEq, structItem, itemEq, rdS, rdU, rdBytes_length, unpackToBool,
-       natCast_beq, decLE_one];
+       natCast_beq, decLE_one, zfCode, zdCode];
      done)
-  | (simp [unpackCmpNative, structResultEq, structItem, itemEq, rdS, rdU, rdBytes, decLE, unpackToBool];
+  | (simp [unpackCmpNative, structResultEq, structItem, itemEq, rdS, rdU, rdBytes, decLE, unpackToBool,
+       zfCode, zdCode];
      done))
 
 theorem cmpFastStruct_proven : CmpFastStruct := by

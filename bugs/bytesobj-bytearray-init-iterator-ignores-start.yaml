@@ -29,30 +29,30 @@ reproducer: |
           if not hasattr(self, 'alloc'):
               b.extend(b'x' * N)
               b[0:K] = b''
-              self.alloc = b.__alloc__()
+              self.alloc = b.__alloc__() - 33     # ob_alloc: __alloc__ adds the bytes header
               return 0x41
-          if K + len(b) + 1 > self.alloc:
+          if K + len(b) > self.alloc:
               raise StopIteration
           return 0x41
   it = It()
   b.__init__(it)
-  print('len', len(b), 'alloc', it.alloc, 'now', b.__alloc__(), 'offset', K)
-  # The terminator of the last append lands at offset + len. The loop stops one byte past the
-  # allocation, inside the allocator's rounding, so this reproducer does not corrupt the heap. If the
-  # allocation did not change, nothing moved the data, and that byte was written out of bounds.
-  if K + len(b) + 1 > it.alloc and b.__alloc__() == it.alloc:
+  print('len', len(b), 'alloc', it.alloc, 'now', b.__alloc__() - 33, 'offset', K)
+  # The terminator of the last append lands at offset + len. The loop stops one byte past the bytes
+  # object's own terminator, inside the allocator's rounding, so this reproducer does not corrupt the
+  # heap. If the allocation did not change, nothing moved the data, and that byte was written out of
+  # bounds.
+  if K + len(b) > it.alloc and b.__alloc__() - 33 == it.alloc:
       print('REPRODUCED bytesobj-bytearray-init-iterator-ignores-start')
 expected: |
   The append goes through PyByteArray_Resize and stays inside the allocation.
 observed: |
-  python3 3.14.7: the object grows to offset + len + 1 > ob_alloc with the allocation unchanged. REPRODUCED.
-  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same, Objects/bytearrayobject.c@3.14.7:1163 there still
-  has the test. REPRODUCED.
+  python3 3.15.2: len 251, ob_alloc 400, offset 150: the object reaches offset + len = 401 > ob_alloc with
+  the allocation unchanged. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
 promised_by: |
   Invariant: no write outside an allocation.
 cause: |
-  Objects/bytearrayobject.c:1165-1168: the test ignores `ob_start - ob_bytes`. Same test at
-  @3.14.7:1163 on main.
+  Objects/bytearrayobject.c:1165-1168: the test ignores `ob_start - ob_bytes`.
 possible_fix: |
   Compare with PyByteArray_AS_STRING/ob_alloc offset, or always call PyByteArray_Resize, which has the
   right test.

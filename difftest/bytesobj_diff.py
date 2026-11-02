@@ -230,6 +230,11 @@ def list_op(l, op, reg):
         return enc(operator.getitem(l, op[1]))
     if name == "getslice":
         return enc_state(operator.getitem(l, as_slice(op[1])))
+    if name == "binslice":
+        a, b = op[1]
+        return enc_state(l[a:b])
+    if name == "forloop":
+        return [enc_res(x) for x in l]
     if name == "setitem":
         return operator.setitem(l, op[1], reg.mk(op[2]))
     if name == "delitem":
@@ -271,7 +276,10 @@ def run_list_ops(c):
     elif how == "tuple":
         l = list(tuple(items))
     else:
-        l = list(x for x in items)
+        # In a variable: 3.15 compiles `list(<genexpr>)` to a loop of LIST_APPEND, so written inline
+        # it would not reach list_extend_iter_lock_held.
+        g = (x for x in items)
+        l = list(g)
     TARGET[0] = l
     out = []
     for op in c["ops"]:
@@ -442,6 +450,11 @@ def tuple_case(c):
     if fn == "tuple.hash2":
         t = mk_tuple(c["t"], reg)
         return {"ok": [common.py_result(lambda: hash(t)), common.py_result(lambda: hash(t))]}
+    if fn == "tuple.hashdeep":
+        t = ()
+        for _ in range(c["depth"]):
+            t = (t,)
+        return common.py_result(lambda: hash(t))
     if fn == "tuple.repr":
         t = tuple(items())
         return common.py_result(lambda: repr(t))
@@ -451,6 +464,10 @@ def tuple_case(c):
     if fn == "tuple.getslice":
         t = mk_tuple(c["t"], reg)
         return common.py_result(lambda: out_tuple(operator.getitem(t, as_slice(c["s"])), t))
+    if fn == "tuple.binslice":
+        t = mk_tuple(c["t"], reg)
+        a, b = c["s"][:2]
+        return common.py_result(lambda: out_tuple(t[a:b], t))
     if fn == "tuple.add":
         a = mk_tuple(c["a"], reg)
         if "other" in c:
@@ -730,7 +747,7 @@ def gen_list_op(rng, n):
     if k == 12:
         return ["getitem", seq_edge(rng, n)]
     if k == 13:
-        return ["getslice", seq_slice(rng, n)]
+        return rng.choice([["getslice", seq_slice(rng, n)], ["binslice", seq_slice(rng, n)[:2]]])
     if k == 14:
         return ["setitem", seq_edge(rng, n), e()]
     if k == 15:
@@ -893,6 +910,8 @@ def gen_seq(rng):
         keys = [[rng.randint(0, 3) for _ in range(rng.randint(1, 3))] for _ in range(rng.randint(0, 12))]
         return {**case, "fn": "list.tuple_sort", "keys": keys}
     if k == 26:
+        if rng.random() < 0.002:
+            return {**case, "fn": "tuple.hashdeep", "t": {"items": []}, "depth": 1000000}
         return {**case, "fn": "tuple.hash", "t": seq_tup(rng, 6, ("nan", "bad"))}
     if k == 27:
         items = [rng.randint(0, 3) for _ in range(rng.randint(0, 3))]
@@ -907,7 +926,7 @@ def gen_seq(rng):
         return {**case, "fn": "tuple.getitem", "items": items, "i": seq_edge(rng, len(items))}
     if k == 30:
         t = seq_tup(rng)
-        return {**case, "fn": "tuple.getslice", "t": t, "s": seq_slice(rng, len(t["items"]))}
+        return {**case, "fn": rng.choice(["tuple.getslice", "tuple.binslice"]) , "t": t, "s": seq_slice(rng, len(t["items"]))}
     if k == 31:
         if rng.random() < 0.1:
             return {**case, "fn": "tuple.add", "a": seq_tup(rng), "other": "list"}
@@ -1160,7 +1179,8 @@ def b_robj(rng, depth=2):
 
 B_EXC = [["TypeError", "boom"], ["ValueError", "boom"], ["OverflowError", "boom"], ["BBoom", "boom"],
          ["TSub", "boom"], ["VSub", "boom"]]
-B_HINT = [0, 1, 3, 64, 100, -1, -5, 2 ** 70, -2 ** 70]
+B_HINT = [0, 1, 3, 64, 100, 255, 256, 257, -1, -5, 2 ** 70, -2 ** 70, sys.maxsize, sys.maxsize - 32, sys.maxsize - 33,
+          2 ** 47]
 
 
 def b_rfail(rng):
@@ -1193,7 +1213,7 @@ def b_cap_stars(fmt, arg):
     OverflowError, as a width it pads to 1 TiB, which the model would build as a list.
     A bare `%` part before a `%.*` spec re-parses as `%%` and shifts every later
     argument by one, so a value generated as a precision can become a width. This
-    walks the format as `_PyBytes_FormatEx` does (bytesobject.c@3.14.7:672-823) to find what
+    walks the format as `_PyBytes_FormatEx` does (bytesobject.c:693-883) to find what
     each `*` takes. Only a tuple can get as far as allocating: a single argument is
     used up by the `*`, and the `getnextarg` at :823 then raises.
     """
@@ -1443,6 +1463,149 @@ def b_sweep():
 _B_SWEEP = None
 
 
+def b_rfmt_error(rng):
+    """Formats that reach each refusal of `_PyBytes_FormatEx`, at a position that varies."""
+    lead = bytes(rng.choice(b"xy%") for _ in range(rng.randint(0, 3))).replace(b"%", b"%%")
+    key = rng.choice([b"a", b"(x)", b"", b"it's", b'"', b"\xff", b"a\\b", b"it's\"", b"\n"])
+    bad = rng.choice(b"zQyZjw'\"\x00\x01\x1f\x7f\x80\xff\n !,:;<?@[]^_`{|}~")
+    k = rng.randrange(16)
+    d = ["dict", [[list(key), rng.choice([["int", 7], ["bytes", [97, 98]], ["str", [97]], ["none"], ["plain"], ["list", []],
+                                          ["dunder", ["int", 1]], b_bflt(1.5), ["int", 2 ** 70], ["int", 300]])]]]
+    one = rng.choice([["int", 5], ["bytes", [97]], ["none"], ["str", [97]], ["plain"], b_bflt(2.5), ["bool", True]])
+    two = ["tuple", [one, rng.choice([["int", 3], ["bytes", []], ["none"], ["int", 2 ** 64], ["int", -2 ** 63],
+                                      ["int", -2 ** 63 + 1], ["int", 2 ** 31], ["int", -2 ** 31 - 1]])]]
+    conv = bytes([rng.choice(b"dixoXucbsfeEgGar")])
+    flags = rng.choice([b"", b"-", b"+", b" ", b"#", b"0", b"5", b".2", b"-5.1"])
+    if k == 0:
+        return lead + b"%(" + key + b")" + flags + conv, d
+    if k == 1:
+        return lead + b"%(" + key + b")" + conv + rng.choice([b"%d", b" %s", b"%%", b"%%%d"]), d
+    if k == 2:
+        return lead + b"%(" + key + b")" + rng.choice([b"*d", b"-*d", b".*f", b"5.*f", b"*.*d"]), d
+    if k == 3:
+        return lead + b"%(" + rng.choice([b"", b"a", b"(a)", b"((a"]), d
+    if k == 4:
+        return lead + b"%(" + key + b")" + flags + conv, rng.choice([one, two, ["tuple", []]])
+    if k == 5:
+        return lead + b"%" + rng.choice([b"", b"-", b"5", b".", b".*", b"*", b"l", b"h", b"-5.2l", b"0"]), \
+            rng.choice([one, two, ["tuple", []]])
+    if k == 6:
+        return lead + b"%" + flags + bytes([bad]) + rng.choice([b"", b"x", b"%d"]), rng.choice([one, two])
+    if k == 7:
+        return lead + b"%" + rng.choice([b"*", b".*", b"*.*", b"-*", b"0*", b"*.2", b"5.*"]) + conv, \
+            rng.choice([one, two, ["tuple", [one]], ["tuple", [["int", 1], ["int", 2], one]]])
+    if k == 8:
+        return lead + b"%d" * rng.randint(0, 3), rng.choice([one, two, ["tuple", []], ["tuple", [["int", 1]] * 4]])
+    if k == 9:
+        return lead + b"%" + flags + conv, rng.choice([one, two, ["tuple", [["tuple", []]]], ["list", []]])
+    if k == 10:
+        return lead + b"%c", rng.choice([["int", -1], ["int", 256], ["int", 2 ** 70], ["int", -2 ** 70], ["bytes", []],
+                                         ["bytes", [97, 98]], ["bytearray", []], ["bytearray", [1, 2]], one])
+    if k == 11:
+        return lead + rng.choice([b"%%", b"x"]) * rng.randint(0, 2), rng.choice([one, two, ["tuple", []], d, ["list", []]])
+    if k == 12:
+        return lead + b"%%" + rng.choice([b"%s", b"%(a)s"]), rng.choice([one, d])
+    if k == 13:
+        return lead + b"%" + str(rng.choice([2 ** 63 - 1, 2 ** 63, 2 ** 63 + 7, 10 ** 30])).encode() + conv, one
+    if k == 14:
+        # no float conversion: a precision this large is a 2 GB result
+        return lead + b"%." + str(rng.choice([2 ** 31 - 1, 2 ** 31, 2 ** 31 + 7, 10 ** 30])).encode() + rng.choice(
+            [b"d", b"x", b"s", b"a"]), one
+    return lead + b"%" + rng.choice([b"", b"5", b".1"]) + rng.choice([b"h", b"l", b"L", b"ll", b"hh"]) + conv, one
+
+
+def b_gen_writer(rng):
+    """A session of `_testcapi.PyBytesWriter`: every function of the writer, and its limits."""
+    m = sys.maxsize
+    size = rng.choice([0, 0, 0, 0, 1, 5, 255, 256, 257, 300, -1, -5, m, m - 32, m - 33, m - 34, 2 ** 47])
+    known = size == 0
+    ops = []
+    grew = False
+    for _ in range(rng.randint(0, 6)):
+        k = rng.randrange(7)
+        if k <= 1:
+            b = bytes(rng.choice(b"ab\x00") for _ in range(rng.randint(0, 5)))
+            ops.append(["write", list(b), rng.choice([len(b), len(b), -1, 0, min(1, len(b))])])
+        elif k == 2:
+            n = rng.choice([0, 1, 3, 200, 300, -1, -3, -1000, m, m - 1, m - 32, m - 33, 2 ** 47, -m - 1])
+            grew = grew or n > 0
+            ops.append(["grow", n])
+        elif k == 3:
+            n = rng.choice([0, 1, 3, 200, 256, 257, 300, -1, m, m - 33, m - 32, 2 ** 47])
+            grew = True
+            ops.append(["resize", n])
+        elif k == 4:
+            f = rng.choice([b"%d", b"x%d", b"%5d", b"%i", b"%u", b"%x", b"%c", b"%%", b"plain", b"%ld", b"%zd", b"%zu", b"%q",
+                            b"", b"%"])
+            # an int passed for %ld or %zd: only its low half is defined
+            v = rng.choice([0, 1, -1, 65, 255, 256, 2 ** 31 - 1, -2 ** 31])
+            ops.append(["fmti", list(f), abs(v) % 2 ** 31 if b"l" in f or b"z" in f else v])
+        elif k == 5:
+            ops.append(["fmts", list(rng.choice([b"%s", b" %s!", b"%.2s", b"%.0s", b"%5s"])),
+                        list(rng.choice([b"", b"World", b"ab"]))])
+    if rng.random() < 0.7:
+        ops.append(["finish"] if rng.random() < 0.7 else ["finish", rng.choice([0, 1, -1, 5, 2 ** 40])])
+    return {"mod": "bytesobj", "fn": "bytes.writer", "size": size, "ba": rng.random() < 0.4,
+            "known": known and not grew, "ops": ops, "s": []}
+
+
+def b_run_writer(c):
+    import _testcapi
+    try:
+        w = _testcapi.PyBytesWriter(c["size"], 1 if c["ba"] else 0)
+    except Exception as e:
+        return {"exc": type(e).__name__, "msg": str(e)}
+    out = []
+    for op in c["ops"]:
+        name = op[0]
+        if name == "finish":
+            def fin():
+                r = w.finish() if len(op) == 1 else w.finish_with_size(op[1])
+                return [len(r), isinstance(r, bytearray), list(r) if c["known"] else None]
+            out.append([common.py_result(fin), -1])
+            continue
+        if name == "write":
+            r = common.py_result(lambda: w.write_bytes(bytes(op[1]), op[2]))
+        elif name == "grow":
+            r = common.py_result(lambda: w.grow(op[1]))
+        elif name == "resize":
+            r = common.py_result(lambda: w.resize(op[1]))
+        elif name == "fmti":
+            r = common.py_result(lambda: w.format_i(bytes(op[1]), op[2]))
+        else:
+            r = common.py_result(lambda: w.format_s(bytes(op[1]), bytes(op[2])))
+        out.append([r, w.get_size()])
+    return {"ok": out}
+
+
+def b_gen_315(rng):
+    """Cases that reach what changed in 3.15: the messages of the format loop, `Py_ssize_t`
+    separators, the common repr, and what follows a `fromhex` view."""
+    ty = rng.choice(["bytes", "bytearray"])
+    s = b_rbytes(rng)
+    c = {"mod": "bytesobj", "s": s}
+    k = rng.randrange(7)
+    if k <= 2:
+        fmt, arg = b_rfmt_error(rng)
+        c["fn"], c["s"], c["arg"] = ty + ".mod", list(fmt), b_noaddr(arg) if 97 in fmt or 114 in fmt else arg
+    elif k == 3:
+        c["fn"] = ty + ".hex"
+        c["sep"] = rng.choice([None, ["str", [58]], ["bytes", [32]]])
+        c["n"] = rng.choice([2 ** 31, 2 ** 40, sys.maxsize, -sys.maxsize - 1, 2 ** 63, -2 ** 63 - 1, len(s), len(s) - 1,
+                             len(s) + 1, -len(s), 1 - len(s)])
+    elif k == 4:
+        c["s"] = [rng.choice(list(b"'\"\\ab\t\n\r\x00\x7f\xff")) for _ in range(rng.randint(0, 6))]
+        c["fn"] = rng.choice(["bytes.repr", "bytearray.repr", "bytearray.reprsub"])
+    elif k == 5:
+        c["fn"] = ty + ".fromhex"
+        t = list(rng.choice([b"1", b"12 ", b"123", b" 1", b"1 ", b"12  ", b"   "]))
+        c["x"] = ["memview", t, [rng.choice(b"0123456789abcdefABCDEF \t\n"), 0]]
+    else:
+        c["fn"] = ty + ".new"
+        c["x"] = ["iterhint", b_rbyteobjs(rng), rng.choice(B_HINT)]
+    return c
+
+
 def b_gen_fail(rng):
     """Every C call that runs a callback, with a callback that raises."""
     ty = rng.choice(["bytes", "bytearray"])
@@ -1477,6 +1640,10 @@ def gen_bytes(rng):
         return _B_SWEEP.pop()
     if rng.random() < 0.08:
         return b_gen_fail(rng)
+    if rng.random() < 0.12:
+        return b_gen_315(rng)
+    if rng.random() < 0.04:
+        return b_gen_writer(rng)
     ty = rng.choice(["bytes", "bytes", "bytearray"])
     s = b_rbytes(rng)
     r = rng.random()
@@ -1644,6 +1811,13 @@ def b_rbaop(rng):
     def idx():
         return rng.choice([0, 1, -1, 2, -2, 5, -5, 40, -40, 2 ** 63, -2 ** 63 - 1, sys.maxsize, -sys.maxsize - 1])
 
+    if rng.random() < 0.08:
+        return {"m": "take", "x": rng.choice([["none"], ["none"], ["int", 0], ["int", 1], ["int", 2], ["int", 3], ["int", 5],
+                                              ["int", 20], ["int", 21], ["int", -1], ["int", -2], ["int", -20], ["int", -21],
+                                              ["int", 2 ** 63], ["int", -2 ** 63 - 1], ["int", sys.maxsize],
+                                              ["int", -sys.maxsize - 1], ["index", 1], ["index", -1], ["index", 2 ** 63],
+                                              ["bool", True], ["str", [97]], b_bflt(1.0), ["plain"], ["indexraises", ["ValueError", "boom"]],
+                                              ["indexraises", ["TypeError", "boom"]]])}
     if r < 0.05:
         return {"m": rng.choice(["iterstart", "iternext", "iternext", "iternext"])}
     if r < 0.12:
@@ -1661,7 +1835,8 @@ def b_rbaop(rng):
     if r < 0.44:
         return {"m": "extend", "x": src()}
     if r < 0.50:
-        return {"m": "resize", "n": rng.choice([0, 1, 2, 5, 9, 10, 16, 32, 33, 100, 200, -1, 2 ** 63, 2 ** 47])}
+        return {"m": "resize", "n": rng.choice([0, 1, 2, 5, 9, 10, 16, 32, 33, 100, 200, -1, 2 ** 63, 2 ** 47, sys.maxsize,
+                                                sys.maxsize - 33, sys.maxsize - 32, 2 ** 62])}
     if r < 0.55:
         return {"m": "setitem", "i": idx(), "x": bo()}
     if r < 0.59:
@@ -1675,7 +1850,7 @@ def b_rbaop(rng):
     if r < 0.83:
         return {"m": "iconcat", "x": src()}
     if r < 0.86:
-        return {"m": "imul", "n": rng.choice([0, 1, 2, 3, -1, 2 ** 63, sys.maxsize])}
+        return {"m": "imul", "n": rng.choice([0, 1, 2, 3, -1, 2 ** 63, sys.maxsize, 2 ** 47, 2 ** 58])}
     if r < 0.90:
         return {"m": rng.choice(["export", "export", "release"])}
     if r < 0.92:
@@ -1713,6 +1888,8 @@ def b_ba_step(b, views, op, tmp):
         return b.extend(b_build(op["x"]))
     if m == "resize":
         return b.resize(op["n"])
+    if m == "take":
+        return list(b.take_bytes(b_build(op["x"])))
     if m == "setitem":
         b[op["i"]] = b_build(op["x"])
         return None
@@ -1799,6 +1976,10 @@ def b_run_ba_ops(c):
     return {"ok": out}
 
 
+class BSub(bytearray):
+    pass
+
+
 class BClearingBuffer:
     def __init__(self, target, data):
         self.target, self.data = target, data
@@ -1876,6 +2057,8 @@ def b_run_capi(c, m):
 def run_bytes(case):
     c = case
     ty, m = c["fn"].split(".")
+    if m == "writer":
+        return b_run_writer(c)
     mk = bytes if ty == "bytes" else bytearray
 
     def go():
@@ -1904,6 +2087,8 @@ def run_bytes(case):
             return b_benc(s % b_build(c["arg"]))
         if m == "repr":
             return b_benc(repr(s))
+        if m == "reprsub":
+            return b_benc(repr(BSub(s)))
         if m == "bufinfo":
             v = memoryview(s)
             res = [list(v), v.readonly]
@@ -1933,7 +2118,9 @@ def run_bytes(case):
             r = getattr(s, "__" + c["op"] + "__")(b_build(c["other"]))
             return "NotImplemented" if r is NotImplemented else r
         if m == "mul":
-            return b_benc(s * c["n"])
+            # not `s * n`: a warm BINARY_OP site has another message for a huge n, see
+            # bugs/bytesobj-seq-repeat-specialized-overflow-message.yaml
+            return b_benc(operator.mul(s, c["n"]))
         if m == "getitem":
             return s[c["i"]]
         if m == "getslice":
@@ -2022,9 +2209,11 @@ except ImportError:
 _M = sys.maxsize
 _NATIVE = "cbBhHiIlLqQnNfde?P"
 _ND_FORMATS = list(_NATIVE) + ["@B", "@i", "@d", "<i", ">h", "=q", "!H", "<d", ">f", "<e", ">?",
-                               "2B", "<2h", "3s", "bB", "hb", "2x", "xB", "5p"]
+                               "2B", "<2h", "3s", "bB", "hb", "2x", "xB", "5p", "Zf", "Zd", "Zd", "@Zf", "@Zd", "<Zd",
+                               ">Zf", "2Zf", "ZdB"]
 _CAST_FORMATS = list(_NATIVE) * 2 + ["@B", "@i", "@c", "@", "", "x", "BB", "<i", "B\0x", "@B\0",
-                                     "\xe9", "s", " B"]
+                                     "\xe9", "s", " B", "Zf", "Zd", "Zf", "Zd", "@Zf", "@Zd", "Z", "Zq", "ZZ", "Zd\0",
+                                     "@Z"]
 _KEY_INTS = [0, 1, -1, 2, -2, 3, -3, 4, 7, -8, 100, -100, _M, -_M, -_M - 1, _M + 1, 2 ** 64,
              -2 ** 64, 2 ** 100]
 _VAL_INTS = [0, 1, -1, 2, 127, 128, -128, -129, 255, 256, 32767, 32768, -32768, -32769, 65535,
@@ -2246,6 +2435,8 @@ def _gen_obj(rng, n_exp):
         return {"bln": _gen_end(rng, rng.random() < 0.5), "rel": _gen_rel(rng)}
     if r < 0.5:
         return {"bool": rng.random() < 0.5}
+    if r < 0.55:
+        return {"complex": [_fbits(rng.choice(_FLOATS)), _fbits(rng.choice(_FLOATS))]}
     if r < 0.62:
         return {"float": _fbits(rng.choice(_FLOATS))}
     if r < 0.72:
@@ -2348,7 +2539,8 @@ def _gen_op(rng, specs):
         return [k, h, rng.choice([None, None, {"str": ":"}, {"str": "ab"}, {"str": "\xe9"}, {"str": "Δ"},
                                   {"str": ""}, {"bytes": [45]}, {"bytes": [200]}, {"bytes": [1, 2]},
                                   {"list": 1}, {"list": 2}, 5]),
-                rng.choice([None, 1, 2, 3, -1, -2, -3, 0, 100, -100, 2 ** 31 - 1, -2 ** 31])]
+                rng.choice([None, 1, 2, 3, -1, -2, -3, 0, 100, -100, 2 ** 31 - 1, -2 ** 31, 2 ** 31, 2 ** 40, _M, -_M - 1,
+                            2 ** 63, -2 ** 63 - 1])]
     if k == "cmp":
         return [k, h, _gen_obj(rng, n_exp), rng.choice(["eq", "eq", "ne", "lt"])]
     if k in ("count", "index"):
@@ -2607,8 +2799,32 @@ def _gen_nil(rng):
             "specs": [spec], "ops": ops}
 
 
+def _gen_complex(rng):
+    """Complex items: what 3.15 added to `get_native_fmtchar`, `unpack_single`, `pack_single`,
+    `unpack_cmp`, `adjust_fmt`, and the `v == v` shortcut for the formats that have one."""
+    n = rng.choice([8, 16, 32, 48])
+    spec = _spec_bytearray(rng, n)
+    fa, fb = rng.choice(["Zf", "Zd"]), rng.choice(["Zf", "Zd", "f", "d", "B", "q", "?", "e"])
+    view = ["view", {"exp": 0, "rel": None}]
+    obj = rng.choice([{"complex": [_fbits(rng.choice(_FLOATS)), _fbits(rng.choice(_FLOATS))]},
+                      {"float": _fbits(rng.choice(_FLOATS))}, 1, {"bool": True},
+                      {"flt": _gen_end(rng, _fbits(1.5)), "rel": None}, {"idx": 1, "rel": None}, {"str": "a"}, None,
+                      {"bytes": [1]}])
+    ops = [view, ["cast", 0, "B", None], ["cast", 0, fa, None], ["cast", 0, fb, None]]
+    tail = rng.choice([[["tolist", 2], ["tolist", 3]], [["get", 2, 0], ["get", 2, -1]], [["get", 3, 0]],
+                       [["set", 2, 0, obj], ["tobytes", 0, ""], ["get", 2, 0]],
+                       [["set", 3, 0, obj], ["tobytes", 0, ""]],
+                       [["cmp", 2, {"mv": 2}, "eq"], ["cmp", 2, {"mv": 3}, "eq"], ["cmp", 3, {"mv": 2}, "ne"]],
+                       [["cmp", 0, {"mv": 0}, "eq"], ["cmp", 1, {"mv": 1}, "eq"], ["cmp", 3, {"mv": 3}, "eq"]],
+                       [["hash", 2], ["hash", 3]], [["count", 2, obj], ["index", 2, obj, None, None]],
+                       [["tobytes", 2, "A"], ["hex", 2, None, None]]])
+    return _script_of(spec, ops + tail)
+
+
 def gen_mem(rng):
     r = rng.random()
+    if r < 0.04:
+        return _gen_complex(rng)
     if r < 0.15:
         return _gen_low(rng)
     if r < 0.2:
@@ -2623,6 +2839,8 @@ def _item_json(x):
         return x
     if isinstance(x, float):
         return {"float": _fbits(x)}
+    if isinstance(x, complex):
+        return {"complex": [_fbits(x.real), _fbits(x.imag)]}
     if isinstance(x, bytes):
         return {"bytes": list(x)}
     if isinstance(x, list):
@@ -2784,6 +3002,9 @@ class HookExporter(Exporter):
         view.release()
 
 
+HookExporter.__qualname__ = "Exporter"     # one name in the errors that print the class
+
+
 class Len:
     def __init__(self, n, fire):
         self.n, self.fire = n, fire
@@ -2871,6 +3092,8 @@ class _Script:
             return (j["bool"],)
         if "float" in j:
             return (_unfbits(j["float"]),)
+        if "complex" in j:
+            return (complex(_unfbits(j["complex"][0]), _unfbits(j["complex"][1])),)
         if "bytes" in j:
             return (bytes(j["bytes"]),)
         if "str" in j:
@@ -3190,9 +3413,9 @@ def run_mem(case):
 
 
 def _run_mem_fmt(fn, fmt):
-    """`get_native_fmtchar` and `get_native_fmtstr` as `cast` shows them; 2 bytes of an
-    8-byte buffer would fail on length, so the buffer has 8."""
-    m = memoryview(bytes(8))
+    """`get_native_fmtchar` and `get_native_fmtstr` as `cast` shows them; a length that does not
+    divide would fail, so the buffer has 16 bytes, the largest item."""
+    m = memoryview(bytes(16))
     try:
         c = m.cast(fmt)
     except (ValueError, UnicodeEncodeError):

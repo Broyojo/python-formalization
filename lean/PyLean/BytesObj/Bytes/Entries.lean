@@ -1,5 +1,5 @@
 import PyLean.Registry
-import PyLean.BytesObj.Bytes.Fallible
+import PyLean.BytesObj.Bytes.Specs4
 
 /-! Registry entries for bytes (Objects/bytesobject.c, Objects/bytes_methods.c) and
 bytearray (Objects/bytearrayobject.c). -/
@@ -59,7 +59,7 @@ def entries : List Entry := [
     prop := ``TailmatchTuple, thm := some ``tailmatchTuple_proven },
   { id := "bytesobj-bytes-capi", pyFile := "Objects/bytesobject.c"
     pyFns := ["bytes_get_empty", "_PyBytes_FromSize", "PyBytes_FromStringAndSize", "PyBytes_FromString",
-      "PyBytes_FromFormatV", "PyBytes_FromFormat", "PyBytes_Size", "PyBytes_AsString", "PyBytes_AsStringAndSize",
+      "PyBytes_FromFormatV", "bytes_fromformat", "PyBytes_FromFormat", "PyBytes_Size", "PyBytes_AsString", "PyBytes_AsStringAndSize",
       "bytes_length"]
     statement := "PyBytes_FromFormat copies a format with no conversion; PyBytes_Size, PyBytes_AsString and PyBytes_AsStringAndSize report TypeError for non-bytes; without a length pointer an embedded NUL is ValueError; PyBytes_FromStringAndSize copies and refuses a negative size; PyBytes_FromString stops at the first NUL."
     source := "Doc/c-api/bytes.rst", status := .proven
@@ -94,42 +94,29 @@ def entries : List Entry := [
     prop := ``ConvertersSpec, thm := some ``convertersSpec_proven },
   { id := "bytesobj-bytes-format-long-types", pyFile := "Objects/bytesobject.c"
     pyFns := ["formatlong", "getnextarg"]
-    statement := "bool and __index__ objects format as their integer value; %o %x %X refuse a float with TypeError; a bytes argument is a TypeError; getnextarg stops at the end of the tuple with 'not enough arguments for format string'."
+    statement := "bool and __index__ objects format as their integer value; %o %x %X refuse a float, and %d a bytes, with TypeError through FORMAT_ERROR; getnextarg stops at the end of the tuple, and a * cannot take a single argument."
     source := "Doc/library/stdtypes.rst, printf-style bytes formatting", status := .proven
     prop := ``FormatLongTypes, thm := some ``formatLongTypes_proven },
   { id := "bytesobj-bytes-format-bad-conv", pyFile := "Objects/bytesobject.c"
     pyFns := ["_PyBytes_FormatEx"]
-    statement := "A byte that is no conversion raises ValueError: refuted, because a byte above 127 is a negative c and PyErr_Format('%c') raises OverflowError instead."
-    source := "the ValueError of the default case, bytesobject.c:1007-1038", status := .refuted
-    prop := ``BadConvIsValueError, thm := some ``badConvIsValueError_refuted
-    bug := some "bytesobj-bytes-format-nonascii-conversion" },
-  { id := "bytesobj-bytes-format-bad-conv-ascii", pyFile := "Objects/bytesobject.c"
-    pyFns := ["_PyBytes_FormatEx"]
-    statement := "Every ASCII byte that is no conversion raises ValueError."
-    source := "narrowing of bytesobj-bytes-format-bad-conv", status := .proven
-    prop := ``BadConvAsciiIsValueError, thm := some ``badConvAsciiIsValueError_proven },
+    statement := "A byte that is no conversion raises the ValueError of the default case, with both positions, for a byte above 127 too."
+    source := "the default case, bytesobject.c:1007-1038", status := .proven
+    prop := ``BadConvIsValueError, thm := some ``badConvIsValueError_proven },
   { id := "bytesobj-bytes-format-float-error", pyFile := "Objects/bytesobject.c"
     pyFns := ["formatfloat"]
-    statement := "%f reports the failure of PyFloat_AsDouble: refuted, every failure becomes TypeError('float argument required'), also OverflowError for an int too large."
-    source := "twin: formatfloat in Objects/unicodeobject.c returns the original error", status := .refuted
-    prop := ``FloatErrorPreserved, thm := some ``floatErrorPreserved_refuted
-    bug := some "bytesobj-bytes-format-float-error-masked" },
+    statement := "%f keeps the exception of PyFloat_AsDouble, and replaces a TypeError by the format's message."
+    source := "twin: formatfloat in Objects/unicode_format.c; bytesobject.c:441-449", status := .proven
+    prop := ``FloatErrorPreserved, thm := some ``floatErrorPreserved_proven },
   { id := "bytesobj-bytes-format-float-type", pyFile := "Objects/bytesobject.c"
     pyFns := ["formatfloat"]
-    statement := "A non-number argument of a float conversion raises TypeError('float argument required, not ...')."
+    statement := "A bytes argument of a float conversion raises the TypeError through FORMAT_ERROR; 2**1024 keeps its OverflowError."
     source := "narrowing of bytesobj-bytes-format-float-error", status := .proven
     prop := ``FloatArgType, thm := some ``floatArgType_proven },
   { id := "bytesobj-bytes-format-star-min", pyFile := "Objects/bytesobject.c"
     pyFns := ["_PyBytes_FormatEx"]
-    statement := "A negative * width gives a field at least that wide when it succeeds: refuted at PY_SSIZE_T_MIN, whose negation wraps and drops the width."
-    source := "Doc/library/stdtypes.rst, printf-style formatting: '*' width; invariant: no signed overflow", status := .refuted
-    prop := ``NegStarWidth, thm := some ``negStarWidth_refuted
-    bug := some "bytesobj-bytes-format-star-width-min" },
-  { id := "bytesobj-bytes-format-star-other", pyFile := "Objects/bytesobject.c"
-    pyFns := ["_PyBytes_FormatEx"]
-    statement := "For every other negative width the negation is exact and positive."
-    source := "narrowing of bytesobj-bytes-format-star-min", status := .proven
-    prop := ``NegWrapExact, thm := some ``negWrapExact_proven },
+    statement := "A negative * width is a left-justified field of that absolute width; PY_SSIZE_T_MIN and a width outside Py_ssize_t are the OverflowError."
+    source := "Doc/library/stdtypes.rst, printf-style formatting: '*' width; bytesobject.c:771-804", status := .proven
+    prop := ``NegStarWidth, thm := some ``negStarWidth_proven },
   { id := "bytesobj-bytes-escape-roundtrip", pyFile := "Objects/bytesobject.c"
     pyFns := ["_PyBytes_DecodeEscape2", "PyBytes_DecodeEscape", "PyBytes_Repr", "bytes_repr", "bytes_str",
       "bytearray_repr", "bytearray_repr_lock_held", "bytearray_str"]
@@ -143,7 +130,7 @@ def entries : List Entry := [
     source := "Doc/whatsnew/3.12, invalid escape sequences", status := .proven
     prop := ``EscapeWarning, thm := some ``escapeWarning_proven },
   { id := "bytesobj-bytes-repr-size", pyFile := "Objects/bytesobject.c"
-    pyFns := ["PyBytes_Repr"]
+    pyFns := ["PyBytes_Repr", "_Py_bytes_repr"]
     statement := "The sizing loop of PyBytes_Repr and the squotes extra give exactly the length the writing loop produces, for every byte string and both smartquotes settings."
     source := "invariant: PyUnicode_New(newsize) must hold the writes, bytesobject.c:1473", status := .proven
     prop := ``ReprSizeExact, thm := some ``reprSizeExact_proven },
@@ -153,7 +140,7 @@ def entries : List Entry := [
     source := "comment bytesobject.c:1400", status := .proven
     prop := ``PrivateFindAgrees, thm := some ``privateFindAgrees_proven },
   { id := "bytesobj-bytes-concat", pyFile := "Objects/bytesobject.c"
-    pyFns := ["bytes_concat", "PyBytes_Concat", "PyBytes_ConcatAndDel"]
+    pyFns := ["_PyBytes_Concat", "PyBytes_Concat", "PyBytes_ConcatAndDel"]
     statement := "a + b for bytes-like operands is the concatenation, a TypeError naming both types otherwise, and the in-place and new-object branches of PyBytes_Concat give the same result for every operand."
     source := "fast path against slow path, bytesobject.c:3285-3320", status := .proven
     prop := ``ConcatSpec, thm := some ``concatSpec_proven },
@@ -218,19 +205,18 @@ def entries : List Entry := [
     prop := ``FromHexRoundTrip, thm := some ``fromHexRoundTrip_proven },
   { id := "bytesobj-bytes-fromhex-tail", pyFile := "Objects/bytesobject.c"
     pyFns := ["_PyBytes_FromHex"]
-    statement := "fromhex of a view does not depend on what follows it in memory: refuted, the digit after the view is read."
-    source := "invariant: a function reads only the buffer it was given", status := .refuted
-    prop := ``FromHexIgnoresTail, thm := some ``fromHexIgnoresTail_refuted
-    bug := some "bytesobj-bytes-fromhex-reads-past-view" },
+    statement := "fromhex of a view does not depend on what follows it in memory: the parser tests end before every read."
+    source := "invariant: a function reads only the buffer it was given", status := .proven
+    prop := ``FromHexIgnoresTail, thm := some ``fromHexIgnoresTail_proven },
   { id := "bytesobj-bytes-fromhex-terminated", pyFile := "Objects/bytesobject.c"
     pyFns := ["_PyBytes_FromHex"]
     statement := "For a NUL-terminated argument the odd digit is reported: one hex digit in bytes or bytearray raises ValueError."
-    source := "narrowing of bytesobj-bytes-fromhex-tail", status := .proven
+    source := "bytesobject.c:2703-2707", status := .proven
     prop := ``FromHexTerminated, thm := some ``fromHexTerminated_proven },
   { id := "bytesobj-bytes-hex-sep", pyFile := "Objects/bytesobject.c"
     pyFns := ["bytes_hex_impl", "bytearray_hex_impl"]
     statement := "hex(sep, k): dropping the separators gives the plain hex digits, whether the groups count from the left or the right, for every number of chunks."
-    source := "docstring, bytesobject.c@3.14.7:2636-2651", status := .proven
+    source := "docstring, bytesobject.c:2749-2763", status := .proven
     prop := ``HexSepFilter, thm := some ``hexSepFilter_proven },
   { id := "bytesobj-bytes-new", pyFile := "Objects/bytesobject.c"
     pyFns := ["bytes_new_impl", "_PyBytes_FromBuffer", "_PyBytes_FromList", "_PyBytes_FromTuple", "_PyBytes_FromIterator",
@@ -245,13 +231,50 @@ def entries : List Entry := [
     prop := ``BytesIterSpec, thm := some ``bytesIterSpec_proven
     notes := "bytes clamps a negative state to 0 and bytearray to -1, which means exhausted, as the list iterator does; recorded in the two models, not filed." },
   { id := "bytesobj-bytes-writer", pyFile := "Objects/bytesobject.c"
-    pyFns := ["_PyBytesWriter_Init", "_PyBytesWriter_AsString", "_PyBytesWriter_GetSize", "_PyBytesWriter_Resize",
-      "_PyBytesWriter_Prepare", "_PyBytesWriter_Alloc", "_PyBytesWriter_Finish", "_PyBytesWriter_WriteBytes"]
-    statement := "From any state with 0 <= min_size <= allocated: a successful Prepare raises min_size by exactly the request and keeps min_size <= allocated; Alloc establishes it; WriteBytes advances by the data's length."
-    source := "invariant: _PyBytesWriter_CheckConsistency, bytesobject.c@3.14.7:3495-3528", status := .proven
+    pyFns := ["byteswriter_allocated", "byteswriter_resize", "byteswriter_create", "PyBytesWriter_Create",
+      "_PyBytesWriter_CreateByteArray", "PyBytesWriter_Resize", "PyBytesWriter_Grow", "PyBytesWriter_WriteBytes",
+      "PyBytesWriter_GrowAndUpdatePointer", "_PyBytesWriter_ResizeAndUpdatePointer", "_PyBytesWriter_ResizeToAllocated"]
+    statement := "A successful Create, Resize or Grow leaves size where it was asked to be with room for it, from any writer with 0 <= size <= allocated; WriteBytes appends the data too."
+    source := "invariant: every *res++ of a caller stays inside the buffer; byteswriter_check_consistency, bytesobject.c:3696-3718", status := .proven
     prop := ``WriterInvariant, thm := some ``writerInvariant_proven },
+  { id := "bytesobj-bytes-writer-finish", pyFile := "Objects/bytesobject.c"
+    pyFns := ["PyBytesWriter_FinishWithSize", "PyBytesWriter_Finish", "PyBytesWriter_FinishWithPointer"]
+    statement := "Finishing refuses a negative size and one above size, succeeds at any size up to that of a writer as Create left it, for bytes and bytearray, and gives back what the caller wrote."
+    source := "bytesobject.c:3864-3937", status := .proven
+    prop := ``WriterFinish, thm := some ``writerFinish_proven },
+  { id := "bytesobj-bytes-writer-format", pyFile := "Objects/bytesobject.c"
+    pyFns := ["PyBytesWriter_Format"]
+    statement := "PyBytesWriter_Format adds what bytes_fromformat writes, and on an error leaves the size where it was and adds nothing."
+    source := "bytesobject.c:4063-4085", status := .proven
+    prop := ``WriterFormatRules, thm := some ``writerFormatRules_proven },
+  { id := "bytesobj-bytes-resize-rules", pyFile := "Objects/bytesobject.c"
+    pyFns := ["_PyBytes_ResizeKeepOnError", "bytes_resize_inplace", "_PyBytes_Resize"]
+    statement := "A negative size is refused, the same size and size 0 cannot fail, and otherwise resizing fails as _PyBytes_FromSize does."
+    source := "bytesobject.c:3358-3484", status := .proven
+    prop := ``BytesResizeRules, thm := some ``bytesResizeRules_proven },
+  { id := "bytesobj-bytes-mul-specialized", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_repeat"]
+    statement := "A specialized b * n behaves as the generic one: refuted for an int outside Py_ssize_t, whose OverflowError has another message."
+    source := "twin: sequence_repeat against seq_int_multiply; PEP 659", status := .refuted
+    prop := ``SpecializedRepeatAgrees, thm := some ``specializedRepeatAgrees_refuted
+    bug := some "bytesobj-seq-repeat-specialized-overflow-message" },
+  { id := "bytesobj-bytes-mul-specialized-range", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_repeat"]
+    statement := "For a count in Py_ssize_t the specialized * is the generic one."
+    source := "narrowing of bytesobj-bytes-mul-specialized", status := .proven
+    prop := ``SpecializedRepeatInRange, thm := some ``specializedRepeatInRange_proven },
+  { id := "bytesobj-bytes-iteritem", pyFile := "Objects/bytesobject.c"
+    pyFns := ["bytes_iteritem"]
+    statement := "bytes_iteritem gives what striter_next gives at each index, and stops at the end."
+    source := "twin: the two iteration paths of a for loop", status := .proven
+    prop := ``IterItemAgrees, thm := some ``iterItemAgrees_proven },
+  { id := "bytesobj-bytearray-take-bytes", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_take_bytes_impl"]
+    statement := "take_bytes(n) gives the first bytes and leaves the rest in a valid layout, with the refusals for a count out of range, an export, a non-integer and an int too large."
+    source := "Doc/library/stdtypes.rst, bytearray.take_bytes; bytearrayobject.c:1614-1688", status := .proven
+    prop := ``TakeBytesSpec, thm := some ``takeBytesSpec_proven },
   { id := "bytesobj-bytearray-resize-wf", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["bytearray_resize_lock_held", "PyByteArray_Resize", "bytearray_resize_impl", "PyByteArray_Size", "PyByteArray_AsString",
+    pyFns := ["bytearray_resize_lock_held", "bytearray_reinit_from_bytes", "PyByteArray_Resize", "bytearray_resize_impl", "PyByteArray_Size", "PyByteArray_AsString",
       "bytearray_length", "bytearray_alloc", "bytearray_sizeof_impl"]
     statement := "For every object with a valid layout and every request, a successful resize gives the requested size and a valid layout (data and terminator inside ob_alloc), keeps the common bytes and the export count."
     source := "invariant: bytearray_resize_lock_held; __alloc__ and __sizeof__ expose ob_alloc, which the difftest compares", status := .proven
@@ -263,22 +286,35 @@ def entries : List Entry := [
     prop := ``ExportRule, thm := some ``exportRule_proven },
   { id := "bytesobj-bytearray-init-initialised", pyFile := "Objects/bytearrayobject.c"
     pyFns := ["bytearray___init___impl"]
-    statement := "After any b.__init__(items) on a fresh object, also a failed one, every byte is a value: refuted by the list fast path."
-    source := "invariant: Python code cannot read uninitialized memory", status := .refuted
-    prop := ``InitInitialised, thm := some ``initInitialised_refuted
-    bug := some "bytesobj-bytearray-init-uninitialized" },
+    statement := "After any b.__init__(items) on a fresh object, also a failed one, every byte is a value; a refused int leaves the object empty, with the exception of the refusal."
+    source := "invariant: Python code cannot read uninitialized memory; bytearrayobject.c:1119-1124", status := .proven
+    prop := ``InitInitialised, thm := some ``initInitialised_proven },
   { id := "bytesobj-bytearray-extend-initialised", pyFile := "Objects/bytearrayobject.c"
     pyFns := ["bytearray_extend_impl", "bytearray_setslice"]
-    statement := "Whatever the __buffer__ of extend's argument does to self, the result has no uninitialized byte: refuted, lo is computed before PyObject_GetBuffer and not clamped after it."
-    source := "invariant: Python code cannot read uninitialized memory", status := .refuted
-    prop := ``ExtendInitialised, thm := some ``extendInitialised_refuted
-    bug := some "bytesobj-bytearray-extend-buffer-shrink" },
+    statement := "Whatever the __buffer__ of extend's argument does to self, the bytes go in at the old end clamped to the new one, so no gap is left."
+    source := "invariant: Python code cannot read uninitialized memory; gh-153578", status := .proven
+    prop := ``ExtendInitialised, thm := some ``extendInitialised_proven },
   { id := "bytesobj-bytearray-alloc-failure", pyFile := "Objects/bytearrayobject.c"
     pyFns := ["PyByteArray_FromStringAndSize", "bytearray_dealloc"]
-    statement := "An allocation failure in PyByteArray_FromStringAndSize is only a MemoryError: refuted, bytearray_dealloc reads ob_exports before it is set."
-    source := "invariant: no read of uninitialized memory", status := .refuted
-    prop := ``AllocFailureSilent, thm := some ``allocFailureSilent_refuted
-    bug := some "bytesobj-bytearray-alloc-failure-exports" },
+    statement := "A new bytearray has no exports, so bytearray_dealloc reports nothing; a success has the size asked for in a bytes object of that size; the failures are OverflowError above PyByteArray_SIZE_MAX and MemoryError."
+    source := "invariant: no read of uninitialized memory; bytearrayobject.c:184-189", status := .proven
+    prop := ``AllocFailureSilent, thm := some ``allocFailureSilent_proven },
+  { id := "bytesobj-bytearray-shrink-failure", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_setslice_linear", "bytearray_resize_storage"]
+    statement := "A failed del b[:k] leaves a valid layout: refuted, the failure path subtracts the shrink from an ob_start that bytearray_resize_storage already reset."
+    source := "invariant: every access stays inside the allocation; comment at bytearrayobject.c:639-647", status := .refuted
+    prop := ``ShrinkFailureKeepsLayout, thm := some ``shrinkFailureKeepsLayout_refuted
+    bug := some "bytesobj-bytearray-shrink-failure-start" },
+  { id := "bytesobj-bytearray-resize-failure", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_resize_lock_held", "bytearray_resize_storage"]
+    statement := "A failed resize keeps the contents and a valid layout, with the offset at 0 once the storage step has started."
+    source := "bytearrayobject.c:236-258", status := .proven
+    prop := ``ResizeFailureLayout, thm := some ``resizeFailureLayout_proven },
+  { id := "bytesobj-bytearray-alloc-sizeof", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_alloc", "bytearray_sizeof_impl"]
+    statement := "__alloc__ counts the bytes object when there is storage and __sizeof__ adds the object size."
+    source := "bytearrayobject.c:2605-2612 and :2813-2820", status := .proven
+    prop := ``AllocSizeofSpec, thm := some ``allocSizeofSpec_proven },
   { id := "bytesobj-bytearray-init-iterator", pyFile := "Objects/bytearrayobject.c"
     pyFns := ["bytearray___init___impl"]
     statement := "One append of the iterator loop of __init__ keeps a valid buffer layout: refuted, its capacity test ignores ob_start - ob_bytes, which an iterator can move."
@@ -330,7 +366,7 @@ def entries : List Entry := [
     source := "Doc/library/stdtypes.rst common and mutable sequence operations", status := .proven
     prop := ``ConcatSpec2, thm := some ``concatSpec2_proven },
   { id := "bytesobj-bytearray-init", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["bytearray___init___impl", "PyByteArray_FromObject", "_PyByteArray_FromBufferObject"]
+    pyFns := ["bytearray___init___impl", "bytearray_new", "PyByteArray_FromObject", "_PyByteArray_FromBufferObject"]
     statement := "bytearray(x) has the bytes of a buffer, n zeros for an int, nothing with no argument; argument errors match bytes(); a non-empty object with exports refuses __init__."
     source := "docstring, bytearrayobject.c:2954-2966", status := .proven
     prop := ``InitSpec, thm := some ``initSpec_proven },
@@ -401,7 +437,7 @@ def entries : List Entry := [
   { id := "bytesobj-bytes-hex-groups", pyFile := "Objects/bytesobject.c"
     pyFns := ["bytes_hex_impl", "bytearray_hex_impl"]
     statement := "hex(sep, n) puts sep between groups of |n| bytes counted from the left for n < 0 and from the right for n > 0, the odd group at the far end, and adds no separator with n = 0 or |n| at least the length."
-    source := "docstring, bytesobject.c@3.14.7:2636-2651", status := .proven
+    source := "docstring, bytesobject.c:2749-2763", status := .proven
     prop := ``HexGroups, thm := some ``hexGroups_proven },
   { id := "bytesobj-bytes-fromhex-spec", pyFile := "Objects/bytesobject.c"
     pyFns := ["_PyBytes_FromHex", "bytes_fromhex_impl", "bytearray_fromhex_impl"]
@@ -409,7 +445,7 @@ def entries : List Entry := [
     source := "docstring, bytesobject.c:2611-2614", status := .proven
     prop := ``FromHexSpec, thm := some ``fromHexSpec_proven },
   { id := "bytesobj-bytes-repr-spec", pyFile := "Objects/bytesobject.c"
-    pyFns := ["PyBytes_Repr"]
+    pyFns := ["PyBytes_Repr", "_Py_bytes_repr"]
     statement := "repr(b) uses \" only in smart mode for a body with ' and no \", its text is printable ASCII, printable bytes other than the quote and the backslash stand for themselves, and the quote appears only escaped."
     source := "Doc/library/functions.rst repr; Doc/library/stdtypes.rst bytes literals", status := .proven
     prop := ``ReprSpec, thm := some ``reprSpec_proven },
@@ -424,7 +460,7 @@ def entries : List Entry := [
     source := "Doc/library/stdtypes.rst bytes.translate", status := .proven
     prop := ``TranslateSpec, thm := some ``translateSpec_proven },
   { id := "bytesobj-bytes-concat-value", pyFile := "Objects/bytesobject.c"
-    pyFns := ["bytes_concat", "PyBytes_Concat"]
+    pyFns := ["_PyBytes_Concat", "PyBytes_Concat"]
     statement := "PyBytes_Concat gives the concatenation on both the in-place and the new-object path."
     source := "Doc/c-api/bytes.rst PyBytes_Concat", status := .proven
     prop := ``ConcatValue, thm := some ``concatValue_proven },
@@ -459,7 +495,7 @@ def entries : List Entry := [
   { id := "bytesobj-bytes-iter-raises", pyFile := "Objects/bytesobject.c"
     pyFns := ["_PyBytes_FromIterator", "PyBytes_FromObject", "PyBytes_Join", "bytearray_extend_impl"]
     statement := "bytes(it) and extend check items as they come, so a failing iterator's exception comes after good items and a bad item comes before it; join runs the iterator to its end first, so its exception wins over any item; extend writes nothing."
-    source := "the loops at bytesobject.c@3.14.7:2970-2998, bytearrayobject.c:2286-2324; PySequence_Fast", status := .proven
+    source := "the loops at bytesobject.c:3080-3108, bytearrayobject.c:2286-2324; PySequence_Fast", status := .proven
     prop := ``IterRaisesRules, thm := some ``iterRaisesRules_proven },
   { id := "bytesobj-bytes-hint-rules", pyFile := "Objects/bytesobject.c"
     pyFns := ["_PyBytes_FromIterator", "PyBytes_Join", "bytearray_extend_impl"]

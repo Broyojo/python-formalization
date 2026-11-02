@@ -310,8 +310,8 @@ def BufferKeepsItemsize : Prop :=
     getNativeFmtchar ((st'.mv i).view.format.getD []) = some (c, size)
 
 /-- `memoryview(array('i', [1])).__buffer__(0)` has format `B` and itemsize 4:
-`memory_getbuf` drops the format ("the buffer's data type has been cast to 'B'", @3.14.7:1548) and
-keeps the item size; `mbuf_add_view` then fills in `"B"` (@3.14.7:550). -/
+`memory_getbuf` drops the format ("the buffer's data type has been cast to 'B'", :1577) and
+keeps the item size; `mbuf_add_view` then fills in `"B"` (:550). -/
 theorem bufferKeepsItemsize_refuted : ¬ BufferKeepsItemsize := by
   intro h
   have := h (stateOf [1, 0, 0, 0] (fmtBuf 1 4 ['i'])) _ 0 0 1 'i' 4 rfl rfl
@@ -329,7 +329,7 @@ def SliceStrideExact : Prop :=
     initSlice v s 0 = .ok w → w.strides = some [d * step]
 
 /-- `memoryview(bytes(16)).cast('q')[::sys.maxsize].strides == (-8,)`: the product wraps
-(`base->strides[dim] * step` at @3.14.7:2532 is signed overflow). -/
+(`base->strides[dim] * step` at :2612 is signed overflow). -/
 theorem sliceStrideExact_refuted : ¬ SliceStrideExact := by
   intro h
   have := h (fmtBuf 2 8 ['q']) ⟨none, none, some ssizeMax⟩

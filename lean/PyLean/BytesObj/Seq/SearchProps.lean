@@ -240,7 +240,9 @@ theorem resizeTo_err (o : LObj α) (items : List α) (e : PyExc) (h : resizeTo o
     · dsimp only at hl
       split at hl
       · simp at hl
-      · simpa using hl.symm
+      · split at hl
+        · simp at hl
+        · simpa using hl.symm
 
 theorem listAssSlice_err (o : LObj α) (i j : Int) (v : Option (List α)) (e : PyExc)
     (h : listAssSlice o i j v = .error e) : e = memoryError := by

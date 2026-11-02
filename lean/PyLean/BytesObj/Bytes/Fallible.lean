@@ -41,7 +41,7 @@ conversions and the `o x X` conversions pass it on, unchanged. `in` loses it (th
 `bytes(x)` and `bytearray(x)` fall through to the next protocol on `TypeError` only; `%c` passes it on
 too, and only `%d` and its kin replace a `TypeError`, by the format's message. -/
 def IndexRaisesRules : Prop :=
-  ∀ (s : Seq) (e : PyExc) (st en : Option Int) (fwd : Bool) (fl : Fl) (prec : Int) (t : Nat),
+  ∀ (s : Seq) (e : PyExc) (st en : Option Int) (fwd : Bool) (fs : FS) (fl : Fl) (prec : Int) (t : Nat),
     let x := Obj.indexRaises e
     bytesFindObj s x st en fwd = .error e ∧ bytesIndexObj s x st en fwd = .error e ∧
     bytesCountObj s x st en = .error e ∧
@@ -51,13 +51,14 @@ def IndexRaisesRules : Prop :=
       .error (if isTypeError e then .typeError "cannot convert 'BIdxRaises' object to bytes" else e) ∧
     (baInit {} (some x) none none).2 =
       some (if isTypeError e then .typeError "cannot convert 'BIdxRaises' object to bytearray" else e) ∧
-    byteConverter x = .error e ∧
-    (isTypeError e = false → formatLong x fl prec t = .error e)
+    byteConverter fs x = .error e ∧
+    (isTypeError e = false → formatLong fs x fl prec t = .error e)
 
 theorem indexRaisesRules_proven : IndexRaisesRules := by
-  intro s e st en fwd fl prec t
+  intro s e st en fwd fs fl prec t
   dsimp only
-  have hz : ({} : BA).size = 0 := rfl
+  have hc0 : canResize ({} : BA) = .ok () := rfl
+  have hr0 : baResize {} 0 = .ok {} := rfl
   refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, ?_, ?_, rfl, fun h => ?_⟩
   · cases h : isTypeError e
     · simp [bytesNew, Obj.index?, h]
@@ -65,8 +66,9 @@ theorem indexRaisesRules_proven : IndexRaisesRules := by
         bind, Except.bind, pure, Except.pure]
       rfl
   · cases h : isTypeError e
-    · simp [baInit, hz, Obj.index?, h]
-    · simp [baInit, hz, Obj.index?, h, Obj.buffer?, getIterOr, iterItems?, Obj.typeName]
+    · simp [baInit, hc0, hr0, bind, Except.bind, Obj.index?, h]
+    · simp [baInit, hc0, hr0, bind, Except.bind, Obj.index?, h, Obj.buffer?, getIterOr, iterItems?,
+        Obj.typeName]
       rfl
   · simp only [formatLong, Obj.longValue?, Obj.isNumber]
     by_cases hc : t = 111 ∨ t = 120 ∨ t = 88
@@ -124,13 +126,14 @@ theorem iterRaisesRules_proven : IterRaisesRules := by
   dsimp only
   have hb : bytesFromItems (asItems vals) = .ok vals := items_ok vals hv
   have hba := asItems_mapM vals hv
-  have hbuf : baFromStringAndSize none 32 =
-      .ok { data := List.replicate 32 uninit, alloc := 33 } := by decide
+  have hbuf : bytesSizeCheck 32 = .ok () := by decide
+  have hw : writerCreate 64 false = .ok { overallocate := true, size := 64 } := by decide
   refine ⟨?_, fun sep bad => ?_, fun self => ?_, fun self v h1 h2 => ?_, fun v h1 h2 => ?_⟩
   · simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, iterItems?, hb, getIterOr, lengthHint,
-      iterFinish, mallocFails, bytesObjectSize, bind, Except.bind, pure, Except.pure]
-  · simp [pyBytesJoin, stringlibJoin, sequenceFast, getIterOr, iterItems?, lengthHint, iterFinish, bind,
-      Except.bind]
+      iterFinish, hw, bind, Except.bind, pure, Except.pure]
+  · have hm : mallocFails 64 = false := by decide
+    simp [pyBytesJoin, stringlibJoin, sequenceFast, getIterOr, iterItems?, lengthHint, iterFinish, hm,
+      bind, Except.bind]
   · simp [baExtend, Obj.buffer?, getIterOr, iterItems?, lengthHint, hbuf, hba, iterFinish, bind,
       Except.bind, Except.mapError]
   · have hg := getByte_bad v (Or.inl h1)
@@ -141,11 +144,12 @@ theorem iterRaisesRules_proven : IterRaisesRules := by
       simp [byteItem, asSsizeClamp, Obj.index?, hc, h1, bind, Except.bind, pure, Except.pure]
       rfl
     simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, iterItems?, getIterOr, lengthHint,
-      mallocFails, bytesObjectSize, bytesFromItems, hi, bind, Except.bind, pure, Except.pure]
+      hw, bytesFromItems, hi, bind, Except.bind, pure, Except.pure]
 
 /-- `__length_hint__`: `bytes(it)`, `extend` and `join` ask, before the first item, so a raising hint
 wins over a bad item; a `TypeError` from it is ignored and a negative value is `ValueError`; a good
-hint changes nothing. `bytearray(it)` does not ask. -/
+hint changes nothing, and one past what a bytes can hold is the writer's `OverflowError`.
+`bytearray(it)` does not ask. -/
 def HintRules : Prop :=
   ∀ (vals : Seq) (e : PyExc) (v : Int), (∀ c ∈ vals, c < 256) →
     let xs := asItems vals
@@ -157,17 +161,20 @@ def HintRules : Prop :=
       (∀ sep : Seq, pyBytesJoin (.bytes sep) (.iterHint bad (.error e)) = .error e)) ∧
     (ssizeMin ≤ v → v < 0 → ∀ bad : List Obj,
       bytesNew (some (.iterHint bad (.ok v))) none none =
-        .error (.valueError "__length_hint__() should return >= 0")) ∧
-    (0 ≤ v → v + 33 < 2 ^ 47 → bytesNew (some (.iterHint xs (.ok v))) none none = .ok vals)
+        .error (.valueError "BHint.__length_hint__() must return a non-negative int")) ∧
+    (0 ≤ v → v + 33 < 2 ^ 47 → bytesNew (some (.iterHint xs (.ok v))) none none = .ok vals) ∧
+    (baSizeMax < v → v ≤ ssizeMax → ∀ bad : List Obj, bytesNew (some (.iterHint bad (.ok v))) none none =
+      .error (.overflowError "byte string is too large"))
 
 theorem hintRules_proven : HintRules := by
   intro vals e v hv
   dsimp only
   have hb : bytesFromItems (asItems vals) = .ok vals := items_ok vals hv
-  have hm : mallocFails (bytesObjectSize + 64) = false := by decide
-  refine ⟨fun h => ?_, fun h bad => ⟨?_, fun self => ?_, fun sep => ?_⟩, fun h1 h2 bad => ?_, fun h1 h2 => ?_⟩
+  have hw : writerCreate 64 false = .ok { overallocate := true, size := 64 } := by decide
+  refine ⟨fun h => ?_, fun h bad => ⟨?_, fun self => ?_, fun sep => ?_⟩, fun h1 h2 bad => ?_, fun h1 h2 => ?_,
+    fun h1 h2 bad => ?_⟩
   · simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, iterItems?, hb, getIterOr, lengthHint, h,
-      iterFinish, hm, bind, Except.bind, pure, Except.pure]
+      iterFinish, hw, bind, Except.bind, pure, Except.pure]
   · simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, iterItems?, getIterOr, lengthHint, h, bind,
       Except.bind, pure, Except.pure]
   · simp [baExtend, Obj.buffer?, getIterOr, iterItems?, lengthHint, h, bind, Except.bind]
@@ -175,15 +182,32 @@ theorem hintRules_proven : HintRules := by
   · have h3 : ¬ (v < ssizeMin ∨ v > ssizeMax) := by unfold ssizeMax; omega
     simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, iterItems?, getIterOr, lengthHint, h3, h2,
       bind, Except.bind, pure, Except.pure]
+    rfl
   · have h3 : ¬ (v < ssizeMin ∨ v > ssizeMax) := by
       unfold ssizeMin ssizeMax
       omega
     have h4 : ¬ v < 0 := by omega
-    have hm2 : mallocFails (bytesObjectSize + v) = false := decide_eq_false (by
-      show ¬ ((33 : Int) + v ≥ 2 ^ 47)
-      omega)
+    obtain ⟨n, rfl⟩ : ∃ n : Nat, v = n := ⟨v.toNat, by omega⟩
+    obtain ⟨w, hw2, _⟩ := writerCreate_ok n h2
     simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, iterItems?, hb, getIterOr, lengthHint, h3, h4,
-      hm2, iterFinish, bind, Except.bind, pure, Except.pure]
+      hw2, iterFinish, bind, Except.bind, pure, Except.pure]
+  · have hmax : baSizeMax = 9223372036854775774 := by decide
+    have hmin : ssizeMin < 0 := by decide
+    have h3 : ¬ (v < ssizeMin ∨ v > ssizeMax) := by omega
+    have h4 : ¬ v < 0 := by omega
+    have hc : writerCreate v false = .error (.overflowError "byte string is too large") := by
+      have h5 : ¬ (v = 0) := by omega
+      have h6 : v > ssizeMax - bytesObjectSize := by
+        have : baSizeMax = ssizeMax - bytesObjectSize := rfl
+        omega
+      have h7 : ¬ (v ≤ smallBufferSize) := by rw [small_val]; omega
+      have h8 : bytesSizeCheck v = .error (.overflowError "byte string is too large") := by
+        unfold bytesSizeCheck
+        rw [if_neg h5, if_pos h6]
+      have h9 : v ≥ 1 := by omega
+      simp [writerCreate, h4, h9, writerResizeRaw, writerAllocated, h7, writerObjResize, h8]
+    simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, iterItems?, getIterOr, lengthHint, h3, h4,
+      hc, bind, Except.bind, pure, Except.pure]
 
 /-- `__iter__` raising: every caller keeps a non-`TypeError` and replaces a `TypeError` by its own
 message. `__bytes__` raising: `bytes(x)` and `%b` pass it on, and `bytearray(x)` never calls it. -/
@@ -198,14 +222,15 @@ def CallRaisesRules : Prop :=
     (baInit {} (some (.iterCallRaises e)) none none).2 =
       some (if isTypeError e then .typeError "cannot convert 'BIterCall' object to bytearray" else e) ∧
     bytesNew (some (.dunderRaises e)) none none = .error e ∧
-    formatObj (.dunderRaises e) = .error e ∧
+    (∀ fs : FS, formatObj fs (.dunderRaises e) = .error e) ∧
     (baInit {} (some (.dunderRaises e)) none none).2 =
       some (.typeError "cannot convert 'BDunRaises' object to bytearray")
 
 theorem callRaisesRules_proven : CallRaisesRules := by
   intro e sep self
-  have hz : ({} : BA).size = 0 := rfl
-  refine ⟨?_, ?_, ?_, ?_, rfl, rfl, ?_⟩
+  have hc0 : canResize ({} : BA) = .ok () := rfl
+  have hr0 : baResize {} 0 = .ok {} := rfl
+  refine ⟨?_, ?_, ?_, ?_, rfl, fun _ => rfl, ?_⟩
   · cases h : isTypeError e
     · simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, getIterOr, Obj.typeName, h, bind, Except.bind]
     · simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, getIterOr, Obj.typeName, h, bind, Except.bind]
@@ -216,10 +241,10 @@ theorem callRaisesRules_proven : CallRaisesRules := by
     · simp [baExtend, Obj.buffer?, getIterOr, Obj.typeName, h, bind, Except.bind]
       rfl
   · cases h : isTypeError e
-    · simp [baInit, hz, Obj.index?, Obj.buffer?, getIterOr, Obj.typeName, h]
-    · simp [baInit, hz, Obj.index?, Obj.buffer?, getIterOr, Obj.typeName, h]
+    · simp [baInit, hc0, hr0, bind, Except.bind, Obj.index?, Obj.buffer?, getIterOr, Obj.typeName, h]
+    · simp [baInit, hc0, hr0, bind, Except.bind, Obj.index?, Obj.buffer?, getIterOr, Obj.typeName, h]
       rfl
-  · simp [baInit, hz, Obj.index?, Obj.buffer?, getIterOr, iterItems?, Obj.typeName]
+  · simp [baInit, hc0, hr0, bind, Except.bind, Obj.index?, Obj.buffer?, getIterOr, iterItems?, Obj.typeName]
     rfl
 
 end PyLean.BytesObj.Bytes

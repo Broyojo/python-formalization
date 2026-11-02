@@ -30,7 +30,7 @@ reproducer: |
 expected: |
   A stride that is the product, or a defined clamp (a one-item view can have any stride).
 observed: |
-  python3 3.14.7: (1,) (-8,) [0]. REPRODUCED.
+  python3 3.15.2: (1,) (-8,) [0]. REPRODUCED.
   main (python.exe 3.16.0a1+dev): identical. REPRODUCED.
 promised_by: |
   invariant: no signed overflow in C; Doc/library/stdtypes.rst, memoryview.strides.

@@ -2,13 +2,11 @@ import PyLean.BytesObj.Bytes.Escape
 
 /-!
 `bytes.fromhex`/`bytearray.fromhex` (`_PyBytes_FromHex`, Objects/bytesobject.c:2628-2741)
-and `hex` (`_Py_strhex_impl`, Python/pystrhex.c@3.14.7:7-143).
+and `hex` (`_Py_strhex_impl`, Python/pystrhex.c:115-253).
 
-`_PyBytes_FromHex` walks a raw pointer. Its loop tests `str < end` only at the
-top, so it can read `*str` at `end`: harmless for a NUL-terminated `str`, `bytes`
-or `bytearray`, but for a buffer that is not NUL-terminated it reads whatever is
-stored after the view. The model therefore parses `mem = data ++ after`, where
-`after` is the memory that follows the data, and a read past `mem` is `cUB`.
+`_PyBytes_FromHex` walks a raw pointer and tests it against `end` before every read, so it does not
+depend on what follows the argument (gh-issue: the loop before 3.15 read `*str` at `end`). The model
+keeps the memory after the view, `mem = data ++ after`, to state that.
 -/
 
 namespace PyLean.BytesObj.Bytes
@@ -21,19 +19,36 @@ def memRead (mem : Seq) (i : Nat) : Py Nat :=
   | some c => .ok c
   | none => .error (Sequences.cUB "read past the buffer")
 
-/-- `do { str++; } while (Py_ISSPACE(*str));`, bytesobject.c:2689-2694. -/
-def skipSpaces (mem : Seq) : Nat → Nat → Py Nat
+/-- `do { str++; if (str >= end) goto done; } while (Py_ISSPACE(*str));`, bytesobject.c:2689-2694:
+`none` is `goto done`. -/
+def skipSpaces (mem : Seq) (len : Nat) : Nat → Nat → Py (Option Nat)
   | 0, _ => .error .modelFuel
   | fuel + 1, i =>
-    match memRead mem (i + 1) with
-    | .error e => .error e
-    | .ok c => if isSpaceC c then skipSpaces mem fuel (i + 1) else .ok (i + 1)
+    if i + 1 ≥ len then .ok none
+    else
+      match memRead mem (i + 1) with
+      | .error e => .error e
+      | .ok c => if isSpaceC c then skipSpaces mem len fuel (i + 1) else .ok (some (i + 1))
 
 def invalidAt (i : Nat) : PyExc :=
   .valueError s!"non-hexadecimal number found in fromhex() arg at position {i}"
 
 def oddDigits : PyExc :=
   .valueError "fromhex() arg must contain an even number of hexadecimal digits"
+
+/-- The loop of `_PyBytes_FromHex`, bytesobject.c:2686-2717, from a non-space at `i`. -/
+def fromHexDigits (mem : Seq) (len i : Nat) : Py (Option Nat) :=
+  match memRead mem i with
+  | .error e => .error e
+  | .ok t =>
+    if digitValue t ≥ 16 then .error (invalidAt i)
+    else if i + 1 ≥ len then .error oddDigits
+    else
+      match memRead mem (i + 1) with
+      | .error e => .error e
+      | .ok b =>
+        if digitValue b ≥ 16 then .error (invalidAt (i + 1))
+        else .ok (some (digitValue t * 16 + digitValue b))
 
 /-- The loop of `_PyBytes_FromHex`, bytesobject.c:2686-2717. `len` is `hexlen`,
 `i` is `str - start`. -/
@@ -44,25 +59,16 @@ def fromHexLoop (mem : Seq) (len : Nat) : Nat → Nat → Seq → Py Seq
       match memRead mem i with
       | .error e => .error e
       | .ok c =>
-        let afterSpace : Py Nat := if isSpaceC c then skipSpaces mem (mem.length + 1) i else .ok i
+        let afterSpace : Py (Option Nat) :=
+          if isSpaceC c then skipSpaces mem len (len + 1) i else .ok (some i)
         match afterSpace with
         | .error e => .error e
-        | .ok i =>
-          if i ≥ len ∧ isSpaceC c then .ok out
-          else
-            match memRead mem i with
-            | .error e => .error e
-            | .ok t =>
-              let top := digitValue t
-              if top ≥ 16 then .error (invalidAt i)
-              else
-                match memRead mem (i + 1) with
-                | .error e => .error e
-                | .ok b =>
-                  let bot := digitValue b
-                  if bot ≥ 16 then
-                    if i + 1 ≥ len then .error oddDigits else .error (invalidAt (i + 1))
-                  else fromHexLoop mem len fuel (i + 2) (out ++ [top * 16 + bot])
+        | .ok none => .ok out
+        | .ok (some i) =>
+          match fromHexDigits mem len i with
+          | .error e => .error e
+          | .ok none => .ok out
+          | .ok (some v) => fromHexLoop mem len fuel (i + 2) (out ++ [v])
     else .ok out
 
 /-- `_PyBytes_FromHex(string, use_bytearray)` on the input `mem`, whose first `len`
@@ -70,8 +76,7 @@ items are the argument. The allocation in the writer is `hexlen / 2`. -/
 def fromHexRaw (mem : Seq) (len : Nat) : Py Seq :=
   fromHexLoop mem len (len + 1) 0 []
 
-/-- `_PyBytes_FromHex`, bytesobject.c:2628-2741, on an object. A `str` and a
-`bytes`/`bytearray` are NUL-terminated; a memoryview is followed by `after`. -/
+/-- `_PyBytes_FromHex`, bytesobject.c:2628-2741, on an object. A memoryview is followed by `after`. -/
 def bytesFromHex (o : Obj) : Py Seq :=
   match o with
   | .str cs =>
@@ -108,7 +113,7 @@ def chunkRight (sep abs : Nat) : Nat → Seq → Seq
     chunkRight sep abs k (bs.take n) ++ [sep] ++ (bs.drop n).flatMap hexPair
 
 /-- `_Py_strhex_impl(argbuf, arglen, sep, bytes_per_sep_group, return_bytes)`,
-pystrhex.c@3.14.7:7-143. The second argument of `hex` is a C `int`. -/
+pystrhex.c:115-253. The second argument of `hex` is a `Py_ssize_t`. -/
 def strhexImpl (arg : Seq) (sep : Option Obj) (bytesPerSep : Int) (returnBytes : Bool) : Py Seq := do
   let parsed : Option Nat ←
     match sep with
@@ -139,10 +144,10 @@ def strhexImpl (arg : Seq) (sep : Option Obj) (bytesPerSep : Int) (returnBytes :
 
 /-- `bytes.hex(sep, bytes_per_sep)` (`bytes_hex_impl`, bytesobject.c:2766-2773) and
 `bytearray.hex` (`bytearray_hex_impl`, bytearrayobject.c:2733-2747): the argument
-clinic `int`, then `_Py_strhex_with_sep`. -/
+clinic `Py_ssize_t`, then `_Py_strhex_with_sep`. -/
 def bytesHex (s : Seq) (sep : Option Obj) (bytesPerSep : Int) : Py Seq :=
-  if bytesPerSep < -2147483648 ∨ bytesPerSep > 2147483647 then
-    .error (.overflowError "Python int too large to convert to C int")
+  if bytesPerSep < ssizeMin ∨ bytesPerSep > ssizeMax then
+    .error (.overflowError "Python int too large to convert to C ssize_t")
   else strhexImpl s sep bytesPerSep false
 
 /-! ## Properties -/
@@ -154,6 +159,101 @@ theorem hexPair_digits : ∀ c, c < 256 →
     isSpaceC (hexDigit (c / 16)) = false :=
   by decide
 
+/-- The parser reads only the first `len` items of the memory. -/
+theorem skipSpaces_congr (m1 m2 : Seq) (len : Nat) (h : ∀ i, i < len → m1[i]? = m2[i]?) :
+    ∀ (f : Nat) (i : Nat), skipSpaces m1 len f i = skipSpaces m2 len f i := by
+  intro f
+  induction f with
+  | zero => intro i; rfl
+  | succ f ih =>
+    intro i
+    simp only [skipSpaces]
+    split
+    · rfl
+    · rename_i hl
+      have e := h (i + 1) (by omega)
+      simp only [memRead, e]
+      split
+      · rfl
+      · simp only [ih]
+
+theorem fromHexDigits_congr (m1 m2 : Seq) (len i : Nat) (h : ∀ i, i < len → m1[i]? = m2[i]?)
+    (hi : i < len) : fromHexDigits m1 len i = fromHexDigits m2 len i := by
+  simp only [fromHexDigits, memRead, h i hi]
+  split
+  · rfl
+  · split
+    · rfl
+    · split
+      · rfl
+      · simp only [h (i + 1) (by omega)]
+
+theorem skipSpaces_lt (m : Seq) (len : Nat) : ∀ (f i j : Nat),
+    skipSpaces m len f i = .ok (some j) → j < len := by
+  intro f
+  induction f with
+  | zero => intro i j h; simp [skipSpaces] at h
+  | succ f ih =>
+    intro i j h
+    simp only [skipSpaces] at h
+    split at h
+    · simp at h
+    · rename_i hl
+      split at h
+      · simp at h
+      · split at h
+        · exact ih _ _ h
+        · simp only [Except.ok.injEq, Option.some.injEq] at h
+          omega
+
+theorem fromHexLoop_congr (m1 m2 : Seq) (len : Nat) (h : ∀ i, i < len → m1[i]? = m2[i]?) :
+    ∀ (f : Nat) (i : Nat) (out : Seq), fromHexLoop m1 len f i out = fromHexLoop m2 len f i out := by
+  intro f
+  induction f with
+  | zero => intro i out; rfl
+  | succ f ih =>
+    intro i out
+    simp only [fromHexLoop]
+    split
+    · rename_i hi
+      simp only [memRead, h i hi]
+      split
+      · rfl
+      · rename_i c hc
+        by_cases hs : isSpaceC c = true
+        · simp only [hs, if_true, ← skipSpaces_congr m1 m2 len h]
+          cases hk : skipSpaces m1 len (len + 1) i with
+          | error e => rfl
+          | ok r =>
+            cases r with
+            | none => rfl
+            | some j =>
+              simp only [fromHexDigits_congr m1 m2 len j h (skipSpaces_lt _ _ _ _ _ hk)]
+              split
+              · rfl
+              · rfl
+              · simp only [ih]
+        · simp only [hs, Bool.false_eq_true, if_false, fromHexDigits_congr m1 m2 len i h hi]
+          split
+          · rfl
+          · rfl
+          · simp only [ih]
+    · rfl
+
+/-- `_PyBytes_FromHex` does not depend on what follows the buffer: whatever is stored after a view,
+`fromhex` of the view is `fromhex` of the same bytes in a `bytes` object, because the parser tests
+`end` before every read. -/
+def FromHexIgnoresTail : Prop :=
+  ∀ s after : Seq, bytesFromHex (.memview s after) = bytesFromHex (.bytes s)
+
+theorem fromHexIgnoresTail_proven : FromHexIgnoresTail := by
+  intro s after
+  simp only [bytesFromHex, fromHexRaw]
+  apply fromHexLoop_congr
+  intro i hi
+  rw [List.getElem?_append_left hi, List.getElem?_append_left hi]
+
+/-- `fromhex` of what `hex` writes. -/
 theorem fromHex_flat (s : Seq) (hs : ∀ c ∈ s, c < 256) (mem : Seq) (len : Nat) (i : Nat)
     (out : Seq) (fuel : Nat) (hm : mem.drop i = (s.flatMap hexPair) ++ [0])
     (hlen : len = i + 2 * s.length) (hf : s.length < fuel) :
@@ -164,7 +264,6 @@ theorem fromHex_flat (s : Seq) (hs : ∀ c ∈ s, c < 256) (mem : Seq) (len : Na
     | zero => simp at hf
     | succ f => simp [fromHexLoop, hlen]
   | cons c rest ih =>
-    obtain ⟨d1, d2, hsp⟩ : ∃ a b, hexPair c = [a, b] ∧ True := ⟨_, _, rfl, trivial⟩
     have hc := hs c (by simp)
     obtain ⟨h1, h2, h3, h4⟩ := hexPair_digits c hc
     cases fuel with
@@ -181,44 +280,30 @@ theorem fromHex_flat (s : Seq) (hs : ∀ c ∈ s, c < 256) (mem : Seq) (len : Na
         have := congrArg (fun l => l.drop 2) hm
         simpa [List.drop_drop, Nat.add_comm] using this
       have hlt : i < len := by simp at hlen; omega
-      simp only [fromHexLoop, hlt, if_true, memRead, m0, h4, Bool.false_eq_true, if_false, m1]
-      have htop : ¬ (digitValue (hexDigit (c / 16)) ≥ 16) := by omega
-      have hbot : ¬ (digitValue (hexDigit (c % 16)) ≥ 16) := by omega
-      have hge : ¬ (i ≥ len ∧ False) := by simp
-      simp only [htop, hbot, if_false, h1, false_and]
+      have hd : fromHexDigits mem len i = .ok (some c) := by
+        have htop : ¬ (digitValue (hexDigit (c / 16)) ≥ 16) := by omega
+        have hbot : ¬ (digitValue (hexDigit (c % 16)) ≥ 16) := by omega
+        have hl : ¬ (i + 1 ≥ len) := by simp at hlen; omega
+        simp only [fromHexDigits, memRead, m0, m1, htop, hbot, hl, if_false, h1]
+      simp only [fromHexLoop, hlt, if_true, memRead, m0, h4, Bool.false_eq_true, if_false, hd]
       rw [ih (fun x hx => hs x (by simp [hx])) (i + 2) _ f mrest (by simp at hlen; omega) (by simp at hf; omega)]
       simp
 
-/-- `_PyBytes_FromHex` does not depend on what follows the buffer: whatever is
-stored after a view, `fromhex` of the view is `fromhex` of the same bytes in a
-`bytes` object. This is the property a `memoryview` slice breaks. -/
-def FromHexIgnoresTail : Prop :=
-  ∀ s after : Seq, bytesFromHex (.memview s after) = bytesFromHex (.bytes s) ∨
-    ∃ x, bytesFromHex (.memview s after) = .error x ∧ x = Sequences.cUB "read past the buffer"
-
-theorem fromHexIgnoresTail_refuted : ¬ FromHexIgnoresTail := by
-  intro h
-  have := h [49] [50]
-  simp [bytesFromHex, fromHexRaw, fromHexLoop, memRead, isSpaceC, byteSpace, digitValue, oddDigits] at this
-
-/-- For a NUL-terminated argument the parser never needs what follows: the input
-is a `str`, `bytes` or `bytearray` and there is no memory to depend on. A byte read
-at `end` is the NUL, which is neither a space nor a hex digit, so an odd digit count
-is reported; this is the case the code was written for. -/
+/-- A single hex digit is reported as an odd digit count, for a `bytes`, a `bytearray` and a view
+whatever follows it: the second digit is at `end` and is not read. -/
 def FromHexTerminated : Prop :=
-  ∀ c : Nat, c < 256 → digitValue c < 16 →
-    bytesFromHex (.bytes [c]) = .error oddDigits ∧ bytesFromHex (.bytearray [c]) = .error oddDigits
+  ∀ c : Nat, c < 256 → digitValue c < 16 → ∀ after : Seq,
+    bytesFromHex (.bytes [c]) = .error oddDigits ∧ bytesFromHex (.bytearray [c]) = .error oddDigits ∧
+    bytesFromHex (.memview [c] after) = .error oddDigits
 
 set_option maxRecDepth 100000 in
 theorem hexdigit_not_space : ∀ c, c < 256 → digitValue c < 16 → isSpaceC c = false := by
   decide
 
 theorem fromHexTerminated_proven : FromHexTerminated := by
-  intro c hc hd
+  intro c hc hd after
   have hs := hexdigit_not_space c hc hd
   have h0 : ¬ (digitValue c ≥ 16) := by omega
-  have hz : digitValue 0 = 37 := rfl
-  have hodd : ¬ (37 < 16) := by decide
-  simp [bytesFromHex, fromHexRaw, fromHexLoop, memRead, hs, h0, hz]
+  simp [bytesFromHex, fromHexRaw, fromHexLoop, fromHexDigits, memRead, hs, h0]
 
 end PyLean.BytesObj.Bytes
