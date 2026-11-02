@@ -1,4 +1,4 @@
 file	line	endline	name	signature	status	entry	note
-Python/emscripten_trampoline.c	57	83	getPyEMTrampolinePtr	function getPyEMTrampolinePtr() {	todo		
-Python/emscripten_trampoline.c	90	94	addOnPreRun	addOnPreRun(function setEmscriptenTrampoline() {	todo		
-Python/emscripten_trampoline.c	98	113	_PyEM_TrampolineCall	_PyEM_TrampolineCall(PyCFunctionWithKeywords func, PyObject* self, PyObject* args, PyObject* kw)	todo		
+Python/emscripten_trampoline.c	57	83	getPyEMTrampolinePtr	function getPyEMTrampolinePtr() {	excluded		platform: added to PLATFORM_OBJS only for Emscripten (configure.ac:5408)
+Python/emscripten_trampoline.c	90	94	addOnPreRun	addOnPreRun(function setEmscriptenTrampoline() {	excluded		platform: added to PLATFORM_OBJS only for Emscripten (configure.ac:5408)
+Python/emscripten_trampoline.c	98	113	_PyEM_TrampolineCall	_PyEM_TrampolineCall(PyCFunctionWithKeywords func, PyObject* self, PyObject* args, PyObject* kw)	excluded		platform: added to PLATFORM_OBJS only for Emscripten (configure.ac:5408)

@@ -1,2 +1,2 @@
 file	line	endline	name	signature	status	entry	note
-Python/emscripten_trampoline_inner.c	24	38	__attribute__	__attribute__((export_name(\"trampoline_call\"))) PyObject* trampoline_call(int* success, void* func, PyObject* self, PyObject* args, PyObject* kw)	todo		
+Python/emscripten_trampoline_inner.c	24	38	__attribute__	__attribute__((export_name(\"trampoline_call\"))) PyObject* trampoline_call(int* success, void* func, PyObject* self, PyObject* args, PyObject* kw)	excluded		platform: compiled to WebAssembly only for Emscripten (Makefile.pre.in:3225)

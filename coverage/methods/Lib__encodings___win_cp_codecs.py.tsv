@@ -1,2 +1,2 @@
 file	line	endline	name	signature	status	entry	note
-Lib/encodings/_win_cp_codecs.py	3	36	create_win32_code_page_codec	create_win32_code_page_codec(cp)	todo		
+Lib/encodings/_win_cp_codecs.py	3	36	create_win32_code_page_codec	create_win32_code_page_codec(cp)	excluded		platform: wraps codecs.code_page_encode/decode, which exist only on Windows (Lib/encodings/_win_cp_codecs.py:4)

@@ -1,7 +1,7 @@
 file	line	endline	name	signature	status	entry	note
-Python/emscripten_syscalls.c	22	24	__syscall_getuid32	int __syscall_getuid32(void) {	todo		
-Python/emscripten_syscalls.c	42	44	__syscall_umask	int __syscall_umask(int mask) {	todo		
-Python/emscripten_syscalls.c	132	134	__attribute__	__attribute__((constructor)) void _emscripten_promising_main(void) {	todo		
-Python/emscripten_syscalls.c	210	212	if	if (WebAssembly.Suspending) {	todo		
-Python/emscripten_syscalls.c	285	291	__syscall_poll	int __syscall_poll(intptr_t fds, int nfds, int timeout) {	todo		
-Python/emscripten_syscalls.c	299	323	__syscall_ioctl	int __syscall_ioctl(int fd, int request, void* varargs) {	todo		
+Python/emscripten_syscalls.c	22	24	__syscall_getuid32	int __syscall_getuid32(void) {	excluded		platform: added to PLATFORM_OBJS only for Emscripten (configure.ac:5408)
+Python/emscripten_syscalls.c	42	44	__syscall_umask	int __syscall_umask(int mask) {	excluded		platform: added to PLATFORM_OBJS only for Emscripten (configure.ac:5408)
+Python/emscripten_syscalls.c	132	134	__attribute__	__attribute__((constructor)) void _emscripten_promising_main(void) {	excluded		platform: added to PLATFORM_OBJS only for Emscripten (configure.ac:5408)
+Python/emscripten_syscalls.c	210	212	if	if (WebAssembly.Suspending) {	excluded		platform: added to PLATFORM_OBJS only for Emscripten (configure.ac:5408)
+Python/emscripten_syscalls.c	285	291	__syscall_poll	int __syscall_poll(intptr_t fds, int nfds, int timeout) {	excluded		platform: added to PLATFORM_OBJS only for Emscripten (configure.ac:5408)
+Python/emscripten_syscalls.c	299	323	__syscall_ioctl	int __syscall_ioctl(int fd, int request, void* varargs) {	excluded		platform: added to PLATFORM_OBJS only for Emscripten (configure.ac:5408)
