@@ -9,7 +9,7 @@ import PyLean.Ipaddress.Exploded
 import PyLean.Ipaddress.Parse4Props
 import PyLean.Ipaddress.Hosts
 import PyLean.Ipaddress.Mask4
-import PyLean.Ipaddress.Parse6
+import PyLean.Ipaddress.Parse6Props
 
 /-!
 `Lib/ipaddress.py`, CPython 3.15.2. The model covers the integer core of networks,
@@ -151,11 +151,13 @@ def entries : List Entry := [
     prop := ``MaskInt, thm := some ``maskInt_proven
     notes := "Smoke-tested: _make_netmask(-1), (0), (32), (33), (2**64)." },
   { id := "ipaddress-v6-text-roundtrip", pyFile := "Lib/ipaddress.py"
-    pyFns := []
+    pyFns := ["IPv6Address.__init__", "_BaseV6._ip_int_from_string", "_BaseV6._parse_hextet",
+      "_BaseV6._compress_hextets", "_BaseV6._string_from_ip_int", "_BaseV6._split_scope_id",
+      "IPv6Address.__str__", "IPv6Address._ipv4_mapped_ipv6_to_str", "IPv6Address.ipv4_mapped"]
     statement := "For every 128-bit int and every accepted scope id, IPv6Address(str(IPv6Address)) gives the same address and scope (what __reduce__ relies on)."
-    source := "IPv6Address docstring; __reduce__ pickles str(self)", status := .open
-    prop := ``V6RoundTrip
-    notes := "Model and difftest (v6init: parse, scope, str; ~18k cases over 3 seeds, 100%) done; the proof needs the run invariant of _compress_hextets and the parse of its four output shapes. Smoke: 400k random strings agree with glibc inet_pton." },
+    source := "IPv6Address docstring; __reduce__ pickles str(self)", status := .proven
+    prop := ``V6RoundTrip, thm := some ``v6RoundTrip_proven
+    notes := "Difftest fn v6init (parse, scope, str; ~18k cases over 3 seeds, 100%). The proof covers every _compress_hextets output shape (29) and the ::ffff:a.b.c.d form; the run it picks need not be the longest for the round trip, so that choice is not pinned here. Smoke: 400k random strings agree with glibc inet_pton." },
   { id := "ipaddress-v4-mask-doc-rule", pyFile := "Lib/ipaddress.py"
     pyFns := ["_IPAddressBase._prefix_from_ip_string", "_IPAddressBase._prefix_from_ip_int", "_BaseV4._make_netmask"]
     statement := "A dotted mask whose first field is non-zero is accepted only as a netmask, as the documentation's rule says."
