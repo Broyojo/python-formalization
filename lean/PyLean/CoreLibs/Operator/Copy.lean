@@ -1,7 +1,7 @@
 import PyLean.Core
 
 /-!
-`Lib/copy.py` (CPython 3.14.7), on a heap of objects, so that identity is a cell number and `memo` a real table.
+`Lib/copy.py` (CPython 3.15.2), on a heap of objects, so that identity is a cell number and `memo` a real table.
 `__copy__`, `__deepcopy__`, `__reduce_ex__`, the constructor in a reduce value, `__setstate__`, `append` and
 `__setitem__` can all fail, and `_reconstruct` is one function with the `deep` flag of the source.
 -/
@@ -36,6 +36,8 @@ inductive Cell where
   | list (items : List Nat)
   | tuple (items : List Nat)
   | dict (items : List (Nat × Nat))
+  /-- A `frozendict`: `copy` returns it, Lib/copy.py:103-104, and `deepcopy` builds a new one, :205-218. -/
+  | fdict (items : List (Nat × Nat))
   | inst (attrs : List (String × Nat))
   | method (func self : Nat)
   /-- A class whose type is `type`, which `deepcopy` returns at Lib/copy.py:118, before reading `memo`. -/
@@ -190,7 +192,7 @@ def uncopyable (deep : Bool) : PyExc :=
 /-- `copy(x)`, Lib/copy.py:62-100. `tuple` is atomic here and only here. -/
 def copyShallow (h : Heap) (x : Nat) : Py (Heap × Nat) :=
   match h.get x with
-  | .atom _ | .tuple _ | .cls _ | .metaCls _ => .ok (h, x)
+  | .atom _ | .tuple _ | .fdict _ | .cls _ | .metaCls _ => .ok (h, x)
   | .list l => let (h1, y) := h.alloc (.list l); .ok (h1, y)
   | .dict l => let (h1, y) := h.alloc (.dict l); .ok (h1, y)
   | .inst a => let (h1, y) := h.alloc (.inst a); .ok (h1, y)
@@ -240,6 +242,17 @@ mutual
             match deepPairs fuel h2 items with
             | .error e => .error e
             | .ok (h3, ys) => .ok (h3.set y (.dict ys), y)
+          | .fdict items =>
+            -- `_deepcopy_frozendict`, Lib/copy.py:205-218: nothing is in `memo` during the copies, and a recursive
+            -- structure may have put a copy there, which wins; the result is always a new object
+            match deepPairs fuel h items with
+            | .error e => .error e
+            | .ok (h1, ys) =>
+              match h1.memo.lookup x with
+              | some y => .ok (h1, y)
+              | none =>
+                let (h2, y) := h1.alloc (.fdict ys)
+                .ok (h2.remember x y, y)
           | .method f s =>
             match deepcopy fuel h s with
             | .error e => .error e

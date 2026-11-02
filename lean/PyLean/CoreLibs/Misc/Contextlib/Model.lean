@@ -78,8 +78,9 @@ def withStmt {R : Type} (cm : CM σ V) (body : V → St σ → St σ × Res R) (
 `AsyncContextDecorator._recreate_cm`, :124-127. -/
 def ContextDecorator.recreateCm {C : Type} (self : C) : C := self
 
-/-- `inner` of `ContextDecorator.__call__`, Lib/contextlib.py@3.14.7:81-86, and of
-`AsyncContextDecorator.__call__`, @3.14.7:97-102: `recreate` builds the context manager for this call. -/
+/-- `inner` of `ContextDecorator.__call__`, Lib/contextlib.py:113-116, and of `AsyncContextDecorator.__call__`, :160-163:
+the branch for a plain function; `recreate` builds the context manager for this call. The branches for generator,
+coroutine and async generator functions, new in 3.15, are not modelled. -/
 def ContextDecorator.call {R C : Type} (recreate : St σ → St σ × Res C) (toCM : C → CM σ V)
     (func : St σ → St σ × Res R) (s : St σ) : St σ × Res (Option R) :=
   match recreate s with
@@ -374,8 +375,8 @@ def suppressExit (cs : List String) (s : St σ) (handled : Option ExcId) (excins
 inductive Cb (F O A : Type) where
   /-- `exit` itself, pushed by `push` -/
   | raw (f : F)
-  /-- `_create_exit_wrapper`, Lib/contextlib.py@3.14.7:475-477, and `_create_async_exit_wrapper`, @3.14.7:644-646:
-  `MethodType(cm_exit, cm)` -/
+  /-- What `_lookup_special`, Lib/contextlib.py:534-542, gives for a function on the type: the method bound to `cm`. A
+  `staticmethod`, or an object with no `__get__`, comes back as itself, and that is `raw`. -/
   | bound (m : F) (cm : O)
   /-- `_create_cb_wrapper`, Lib/contextlib.py:551-555, and `_create_async_cb_wrapper`, :703-707: the
   callback with its arguments, whose result is dropped -/
@@ -420,29 +421,50 @@ def popAll (st : Stack F O A) : Stack F O A × Stack F O A := (st, [])
 def pushExitCallback (st : Stack F O A) (cb : Cb F O A) (isSync : Bool := true) : Stack F O A :=
   (isSync, cb) :: st
 
-/-- `_BaseExitStack._push_cm_exit`, Lib/contextlib.py@3.14.7:547-550. -/
-def pushCmExit (st : Stack F O A) (cm : O) (cmExit : F) : Stack F O A :=
-  pushExitCallback st (.bound cmExit cm) true
+/-- What `getattr_static(cls, name)` found on the type, sorted by the branches of `_descriptor_get`, Lib/inspect.py:2420-2426.
+`get` holds the outcome of calling `__get__`, which can raise. -/
+inductive Descr (T : Type) where
+  | isClass (v : T)
+  | noGet (v : T)
+  | get (r : Res T)
 
-/-- `AsyncExitStack._push_async_cm_exit`, Lib/contextlib.py@3.14.7:707-711. -/
-def pushAsyncCmExit (st : Stack F O A) (cm : O) (cmExit : F) : Stack F O A :=
-  pushExitCallback st (.bound cmExit cm) false
+/-- `_descriptor_get(descr, obj)`, Lib/inspect.py:2420-2426. -/
+def descriptorGet : Descr T → Res T
+  | .isClass v => .ok v
+  | .noGet v => .ok v
+  | .get r => r
 
-/-- `type(exit).__exit__` when it exists. -/
-abbrev ExitLookup (F O : Type) := O → Option F
+/-- `_lookup_special(obj, name, default)`, Lib/contextlib.py:534-542; `none` is the `AttributeError` of `getattr_static`.
+An exception from `__get__` is not caught. -/
+def lookupSpecial (d : Option (Descr T)) (default : T) : Res T :=
+  match d with
+  | none => .ok default
+  | some d => descriptorGet d
+
+/-- `_lookup_special(cm, name, _sentinel)`, Lib/contextlib.py:584, 589 with the sentinel as `none`. -/
+def lookupSentinel (d : Option (Descr T)) : Res (Option T) :=
+  match d with
+  | none => .ok none
+  | some d =>
+    match descriptorGet d with
+    | .error e => .error e
+    | .ok v => .ok (some v)
+
+/-- `getattr_static(type(obj), '__exit__')`, for one object. -/
+abbrev ExitLookup (F O A : Type) := O → Option (Descr (Cb F O A))
 
 /-- `_BaseExitStack.push`, Lib/contextlib.py:567-576: `asF exit` is `exit` as a plain callable. -/
-def push (lookup : ExitLookup F O) (asF : O → F) (st : Stack F O A) (exit : O) : Stack F O A :=
-  match lookup exit with
-  | none => pushExitCallback st (.raw (asF exit))
-  | some m => pushCmExit st exit m
+def push (lookup : ExitLookup F O A) (asF : O → F) (st : Stack F O A) (exit : O) : Stack F O A × Res Unit :=
+  match lookupSpecial (lookup exit) (.raw (asF exit)) with
+  | .ok cb => (pushExitCallback st cb, .ok ())
+  | .error e => (st, .error e)
 
 /-- `AsyncExitStack.push_async_exit`, Lib/contextlib.py:729-739. -/
-def pushAsyncExit (lookup : ExitLookup F O) (asF : O → F) (st : Stack F O A) (exit : O) :
-    Stack F O A :=
-  match lookup exit with
-  | none => pushExitCallback st (.raw (asF exit)) false
-  | some m => pushAsyncCmExit st exit m
+def pushAsyncExit (lookup : ExitLookup F O A) (asF : O → F) (st : Stack F O A) (exit : O) :
+    Stack F O A × Res Unit :=
+  match lookupSpecial (lookup exit) (.raw (asF exit)) with
+  | .ok cb => (pushExitCallback st cb false, .ok ())
+  | .error e => (st, .error e)
 
 /-- `_BaseExitStack.callback`, Lib/contextlib.py:598-609. -/
 def callback (st : Stack F O A) (f : F) (args : A) : Stack F O A :=
@@ -452,23 +474,27 @@ def callback (st : Stack F O A) (f : F) (args : A) : Stack F O A :=
 def pushAsyncCallback (st : Stack F O A) (f : F) (args : A) : Stack F O A :=
   pushExitCallback st (.wrapped f args) false
 
-/-- `_BaseExitStack.enter_context`, Lib/contextlib.py:578-596, and
-`AsyncExitStack.enter_async_context`, :709-727. `cm` has `__enter__` and `__exit__` when `methods` is
-`some`. `msg` is the formatted `TypeError` of the source, `attrMsg` the message of the
-`AttributeError` it replaces, which stays as `__context__` behind `from None`. -/
-def enterContext (methods : O → Option ((Xs σ F O A → Xs σ F O A × Res V) × F))
-    (msg attrMsg : String) (isSync : Bool) (x : Xs σ F O A) (cm : O) : Xs σ F O A × Res V :=
-  match methods cm with
-  | none =>
-    let (s, a) := x.1.raiseNew clsAttr attrMsg
-    let (s, e) := s.raiseNew clsType msg (some a)
+/-- `_BaseExitStack.enter_context`, Lib/contextlib.py:578-596, and `AsyncExitStack.enter_async_context`, :709-727. Both
+lookups run first, `__enter__` before `__exit__`, and a missing one is a `TypeError` with the source's message `msg`. The
+enter method runs only after both, and the exit is pushed only if it succeeded. -/
+def enterContext (enterOf : O → Option (Descr (Xs σ F O A → Xs σ F O A × Res V))) (exitOf : ExitLookup F O A)
+    (msg : String) (isSync : Bool) (x : Xs σ F O A) (cm : O) : Xs σ F O A × Res V :=
+  let refuse : Xs σ F O A × Res V :=
+    let (s, e) := x.1.raiseNew clsType msg
     ((s, x.2), .error e)
-  | some (enter, exit) =>
-    match enter x with
-    | (x, .error e) => (x, .error e)
-    | (x, .ok r) =>
-      let st := pushExitCallback x.2 (.bound exit cm) isSync
-      ((x.1, st), .ok r)
+  match lookupSentinel (enterOf cm) with
+  | .error e => (x, .error e)
+  | .ok none => refuse
+  | .ok (some enter) =>
+    match lookupSentinel (exitOf cm) with
+    | .error e => (x, .error e)
+    | .ok none => refuse
+    | .ok (some exit) =>
+      match enter x with
+      | (x, .error e) => (x, .error e)
+      | (x, .ok r) =>
+        let st := pushExitCallback x.2 exit isSync
+        ((x.1, st), .ok r)
 
 /-- `_fix_exception_context`, Lib/contextlib.py:637-649 and :768-780. `none` means the fuel ran out:
 the source loop is `while 1`, and a cycle in `__context__` that meets neither test never ends. -/

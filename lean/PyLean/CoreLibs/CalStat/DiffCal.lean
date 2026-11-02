@@ -45,7 +45,7 @@ def testEnv (cur user : String) : LocaleEnv where
   supported := fun l => l == "C" || l == "C.utf8"
   names := fun _ => cNames
 
-def testAnsi : Ansi := ⟨lit "\x1b[30m", lit "\x1b[43m", lit "\x1b[0m"⟩
+def testAnsi : Ansi := ⟨lit "\x1b[1m", lit "\x1b[30m\x1b[43m", lit "\x1b[36m", lit "\x1b[0m"⟩
 
 def getHl (j : Json) : Except String Highlight := do
   match j.getObjVal? "hl" with

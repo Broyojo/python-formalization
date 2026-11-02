@@ -43,6 +43,11 @@ def SArg.ty : SArg → String
   | .user _ => "UserString"
   | .other ty _ => ty
 
+/-- `%T` of an argument: the fully qualified name of its type. -/
+def SArg.fullTy : SArg → String
+  | .user _ => "collections.UserString"
+  | a => a.ty
+
 /-- `if isinstance(x, UserString): x = x.data`. -/
 def unwrap : SArg → SArg
   | .user s => .str s
@@ -59,7 +64,7 @@ def SArg.wrap : SArg → SArg
 def needStr (a : SArg) : Py Seq :=
   match a with
   | .str s => .ok s
-  | a => .error (.typeError s!"must be str, not {a.ty}")
+  | a => .error (.typeError s!"must be str, not {a.fullTy}")
 
 /-- `sep` of `split`/`rsplit`: `None` or a `str`. -/
 def needSep : Option SArg → Py (Option Seq)
@@ -121,10 +126,13 @@ def strJoin (sep : Seq) (items : List SArg) : Py Seq :=
     let ts ← go 0 items
     return (ts.intersperse sep).flatten
 
-/-- `s * n`: `sequence_repeat` conversion, `unicode_repeat`, unicodeobject.c. -/
+/-- `s * n`: `sequence_repeat`, Objects/abstract.c:1157-1173, and `unicode_repeat`, Objects/unicodeobject.c:12561. The text
+of the `OverflowError` depends on how often this line has run: `sequence_repeat` says "cannot fit 'int' into an index-sized
+integer", and once `BINARY_OP` is specialized, `seq_int_multiply`, Python/specialize.c:2147-2154, says "Python int too large
+to convert to C ssize_t". So the message is left open. -/
 def strRepeat (s : Seq) (n : Int) : Py Seq := do
   if n < ssizeMin ∨ n > ssizeMax then
-    throw (.overflowError "cannot fit 'int' into an index-sized integer")
+    throw (.overflowError "~too large for a Py_ssize_t, in one of two wordings")
   if n ≤ 0 then return []
   if s.length = 0 then return []
   if n * s.length > ssizeMax then throw (.overflowError "repeated string is too long")

@@ -337,25 +337,127 @@ theorem partialCallC_spec {α : Type} (func : Fn α) (pargs : List (PArg α)) (p
       have := cMerge_ok pargs args h1
       rw [this]
 
+theorem map_replace_absent {α : Type} (p : String × α) :
+    ∀ t : List (String × α), (∀ q ∈ t, q.1 ≠ p.1) → t.map (fun q => if q.1 == p.1 then p else q) = t
+  | [], _ => rfl
+  | q :: t, h => by
+    have h1 : (q.1 == p.1) = false := by simpa using h q (by simp)
+    simp only [List.map_cons, h1, Bool.false_eq_true, ite_false]
+    rw [map_replace_absent p t (fun r hr => h r (by simp [hr]))]
+
+theorem any_of_keys {α : Type} (A B : List (String × α)) (k : String) (h : A.map Prod.fst = B.map Prod.fst) :
+    A.any (fun q => q.1 == k) = B.any (fun q => q.1 == k) := by
+  have e : ∀ C : List (String × α), C.any (fun q => q.1 == k) = (C.map Prod.fst).any (· == k) := by
+    intro C
+    simp [List.any_map, Function.comp_def]
+  rw [e A, e B, h]
+
+theorem replace_keys {α : Type} (p : String × α) (A : List (String × α)) :
+    (A.map (fun q => if q.1 == p.1 then p else q)).map Prod.fst = A.map Prod.fst := by
+  induction A with
+  | nil => rfl
+  | cons q A ih =>
+    simp only [List.map_cons, ih, List.cons.injEq, and_true]
+    split
+    · next h => exact (beq_iff_eq.1 h).symm
+    · rfl
+
+/-- The loop of `partial_vectorcall`, with no Python code in its lookups, keeps the keys of the stored dict and leaves
+what `{**stored, **call}` gives. -/
+theorem vecKwLoop_plain {α : Type} (pkw : List (String × α)) : ∀ (kw : List (String × α))
+    (m : Option (List (String × α))) (t : List (String × α)),
+    (m.getD pkw).map Prod.fst = pkw.map Prod.fst →
+    (∀ p ∈ kw, ∀ q ∈ t, q.1 ≠ p.1) → (kw.map Prod.fst).Nodup →
+    ∃ m' t', vecKwLoop pkw m t (plainKw kw) = .ok (pkw, m', t') ∧
+      (m'.getD pkw).map Prod.fst = pkw.map Prod.fst ∧
+      (m'.getD pkw) ++ t' = kw.foldl mergeStep (m.getD pkw ++ t) := by
+  intro kw
+  induction kw with
+  | nil =>
+    intro m t hA _ _
+    exact ⟨m, t, rfl, hA, rfl⟩
+  | cons p kw ih =>
+    intro m t hA hd hn
+    obtain ⟨k, v⟩ := p
+    simp only [List.map_cons, List.nodup_cons] at hn
+    have hk : ∀ r ∈ kw, r.1 ≠ k := by
+      intro r hr e
+      exact hn.1 (by subst e; exact List.mem_map.2 ⟨r, hr, rfl⟩)
+    have ht : ∀ q ∈ t, q.1 ≠ k := fun q hq => hd (k, v) (by simp) q hq
+    have ha : (t.any (fun q => q.1 == k)) = false := by
+      rw [List.any_eq_false]
+      intro q hq
+      simpa using ht q hq
+    have hAny := any_of_keys (m.getD pkw) pkw k hA
+    by_cases hc : pkw.any (fun q => q.1 == k) = true
+    · have hk2 := replace_keys (k, v) (m.getD pkw)
+      obtain ⟨m', t', h1, h2, h3⟩ := ih (some ((m.getD pkw).map (fun q => if q.1 == k then (k, v) else q))) t
+        (by simpa [Option.getD] using hk2.trans hA) (fun r hr q hq => hd r (by simp [hr]) q hq) hn.2
+      refine ⟨m', t', ?_, h2, ?_⟩
+      · simpa [vecKwLoop, plainKw, hc] using h1
+      · have hs : mergeStep (m.getD pkw ++ t) (k, v) =
+            (m.getD pkw).map (fun q => if q.1 == k then (k, v) else q) ++ t := by
+          have hz := map_replace_absent (k, v) t ht
+          simp only [mergeStep, List.any_append, hAny, hc, ha, Bool.true_or, ite_true, List.map_append, hz]
+        simpa [List.foldl_cons, hs] using h3
+    · have hc' : pkw.any (fun q => q.1 == k) = false := by simpa only [Bool.not_eq_true] using hc
+      obtain ⟨m', t', h1, h2, h3⟩ := ih m (t ++ [(k, v)]) hA
+        (by
+          intro r hr q hq
+          rcases List.mem_append.1 hq with hq | hq
+          · exact hd r (by simp [hr]) q hq
+          · simp only [List.mem_singleton] at hq
+            subst hq
+            exact (hk r hr).symm) hn.2
+      refine ⟨m', t', ?_, h2, ?_⟩
+      · simpa [vecKwLoop, plainKw, hc'] using h1
+      · have hs : mergeStep (m.getD pkw ++ t) (k, v) = m.getD pkw ++ t ++ [(k, v)] := by
+          simp [mergeStep, List.any_append, hAny, hc', ha]
+        have e : m.getD pkw ++ t ++ [(k, v)] = m.getD pkw ++ (t ++ [(k, v)]) := by simp
+        simpa [List.foldl_cons, hs, e] using h3
+
+theorem vecKeywords_plain {α : Type} (pkw kw : List (String × α)) (hk : KwOk kw) :
+    vecKeywords pkw (plainKw kw) = .ok (if pkw.isEmpty then kw else mergeKw pkw kw) := by
+  cases hp : pkw with
+  | nil =>
+    simp [vecKeywords, plainKw, Function.comp_def]
+  | cons b bs =>
+    obtain ⟨m', t', h1, h2, h3⟩ := vecKwLoop_plain (b :: bs) kw none [] rfl (by simp) hk
+    have hl : (m'.getD (b :: bs)).length = (b :: bs).length := by
+      simpa using congrArg List.length h2
+    simp only [Option.getD_none, List.append_nil] at h3
+    have hf : List.foldl mergeStep (b :: bs) kw = mergeKw (b :: bs) kw := rfl
+    simp only [vecKeywords, List.isEmpty_cons, Bool.false_eq_true, ite_false, h1, vecKwFinish, hl]
+    simp [h3, hf]
+
+/-- With no Python code in the lookups, the keywords of `partial_vectorcall` are `{**stored, **call}`, stored first, and
+with none stored the ones of the call. Distinct keywords in a call are a type invariant. A key whose lookup raises stops
+the call with that exception, before anything is built. -/
+def VecKeywordsMerge : Prop :=
+  ∀ (α : Type) (pkw kw : List (String × α)) (a : String × α) (k : VecKw α) (rest : List (VecKw α)) (e : PyExc), KwOk kw →
+    vecKeywords pkw (plainKw kw) = .ok (if pkw.isEmpty then kw else mergeKw pkw kw) ∧
+    (k.onLookup (a :: pkw) = .error e → vecKeywords (a :: pkw) (k :: rest) = .error e)
+
+theorem vecKeywordsMerge_proven : VecKeywordsMerge := by
+  intro α pkw kw a k rest e hk
+  refine ⟨vecKeywords_plain pkw kw hk, ?_⟩
+  intro h
+  simp [vecKeywords, vecKwLoop, h]
+
 theorem partialVectorcall_spec {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw kw : List (String × α))
-    (ph : Nat) (args : List α) (hph : ph = phCount pargs) :
+    (ph : Nat) (args : List α) (hph : ph = phCount pargs) (hk : KwOk kw) :
     partialVectorcall func pargs pkw ph args kw = partialCallC func pargs pkw ph args kw := by
   rw [partialCallC_spec func pargs pkw kw ph args hph]
   subst hph
-  simp only [partialVectorcall]
-  by_cases he : pkw.isEmpty = true
-  · simp only [he, Bool.not_true, Bool.false_eq_true, ite_false, ite_true]
-    by_cases hl : args.length < phCount pargs
-    · simp [hl]
-    · have h1 : phCount pargs ≤ args.length := by omega
-      simp only [hl, ite_false]
-      by_cases h0 : phCount pargs = 0
-      · simp only [h0, ne_eq, not_true_eq_false, ite_false]
-        rw [fillCall_no_ph pargs args h0]
-      · simp only [h0, ne_eq, not_false_eq_true, ite_true, vecMerge_ok pargs args h1]
-  · simp only [he, Bool.not_false, ite_true, ite_false]
-    rw [partialCallC_spec func pargs pkw kw _ args rfl]
-    simp [he]
+  simp only [partialVectorcall, partialVectorcallKws, vecKeywords_plain pkw kw hk]
+  by_cases hl : args.length < phCount pargs
+  · simp [hl]
+  · have h1 : phCount pargs ≤ args.length := by omega
+    simp only [hl, ite_false]
+    by_cases h0 : phCount pargs = 0
+    · simp only [h0, ne_eq, not_true_eq_false, ite_false]
+      rw [fillCall_no_ph pargs args h0]
+    · simp only [h0, ne_eq, not_false_eq_true, ite_true, vecMerge_ok pargs args h1]
 
 /-- `_partial_prepare_merger`: `phcount` is the number of placeholders, there is a merger exactly when that is
 not zero, and running the merger on `args + new` puts `new` in the slots, or raises `IndexError` when `new` is
@@ -546,7 +648,7 @@ theorem partialCallTwins_proven : PartialCallTwins := by
     cases pkw with
     | nil => simp [mergeKw_nil kw hk]
     | cons _ _ => simp
-  refine ⟨?_, partialVectorcall_spec func pargs pkw kw ph args hph⟩
+  refine ⟨?_, partialVectorcall_spec func pargs pkw kw ph args hph hk⟩
   rw [partialCallPy_spec func pargs pkw kw ph args hph,
     partialCallC_spec func pargs pkw kw ph args hph, hmerge]
   by_cases h0 : ph = 0
@@ -927,6 +1029,41 @@ theorem partialVectorcallWritesInBounds_refuted : ¬PartialVectorcallWritesInBou
   revert this
   decide
 
+/-- A call of a well-formed `partial` writes only inside the tuple of keyword names and the stack it allocated. False:
+the sizes come from `PyDict_GET_SIZE(partial_keywords)` at Modules/_functoolsmodule.c:392, the lookup at :467 can run the
+`__eq__` of a `str` subclass, which can add to `p.keywords`, and the `PyDict_Next` loop at :508-513 then writes one item
+per key. -/
+def PartialVectorcallKwWritesInBounds : Prop :=
+  ∀ (func : Fn Nat) (pargs : List (PArg Nat)) (pkw : List (String × Nat)) (ph : Nat) (args : List Nat)
+    (kws : List (VecKw Nat)), ph = phCount pargs → partialVectorcallKws func pargs pkw ph args kws ≠ .error oobWrite
+
+theorem partialVectorcallKwWritesInBounds_refuted : ¬PartialVectorcallKwWritesInBounds := by
+  intro h
+  exact h (.base 0) [] [("a", 1)] 0 [] [⟨"b", 2, fun d => .ok (d ++ [("x", 0), ("y", 0)])⟩] rfl (by decide)
+
+/-- A call of a well-formed `partial` hands the callee a tuple of keyword names with every item set. False: a smaller dict
+at :508-513 leaves `NULL` in it. -/
+def PartialVectorcallKwNamesSet : Prop :=
+  ∀ (func : Fn Nat) (pargs : List (PArg Nat)) (pkw : List (String × Nat)) (ph : Nat) (args : List Nat)
+    (kws : List (VecKw Nat)), ph = phCount pargs → partialVectorcallKws func pargs pkw ph args kws ≠ .error nullKwName
+
+theorem partialVectorcallKwNamesSet_refuted : ¬PartialVectorcallKwNamesSet := by
+  intro h
+  exact h (.base 0) [] [("a", 1)] 0 [] [⟨"b", 2, fun _ => .ok []⟩] rfl (by decide)
+
+/-- Every keyword of a call reaches the wrapped function. False: when `__eq__` adds to `p.keywords` no more than the tuple
+has room for, the loop at :508-513 overwrites the tail, and the call goes ahead without the keyword. -/
+def PartialVectorcallKeepsCallKeywords : Prop :=
+  ∀ (pkw : List (String × Nat)) (kws : List (VecKw Nat)) (c : Called Nat),
+    partialVectorcallKws (.base 0) [] pkw 0 [] kws = .ok c → ∀ k ∈ kws, (k.key, k.val) ∈ c.kw
+
+theorem partialVectorcallKeepsCallKeywords_refuted : ¬PartialVectorcallKeepsCallKeywords := by
+  intro h
+  let k : VecKw Nat := ⟨"b", 2, fun d => .ok (d ++ [("z", 1)])⟩
+  have := h [("a", 1)] [k] ⟨0, [], [("a", 1), ("z", 1)]⟩ rfl k (by simp)
+  revert this
+  decide
+
 /-- The narrowed statement: without a tuple subclass in the state, a call of the result stays in bounds in
 both C paths. -/
 def PartialCallInBounds : Prop :=
@@ -941,7 +1078,7 @@ def PartialCallInBounds : Prop :=
 theorem partialCallInBounds_proven : PartialCallInBounds := by
   intro α st hs hk d f a k ph args hf h
   have hw := (partialStateTwins_proven α none st hs hk).2.2.2 d f a k ph h
-  have hv := partialVectorcall_spec f a k [] ph args hw.1
+  have hv := partialVectorcall_spec f a k [] ph args hw.1 (by simp [KwOk])
   rw [hv]
   have : partialCallC f a k ph args [] ≠ .error oobRead := by
     rw [partialCallC_spec f a k [] ph args hw.1]

@@ -725,10 +725,10 @@ theorem lruFailedStoreRecovers_refuted : ¬LruFailedStoreRecovers := by
 /-- `lru_cache` selects the same wrapper in both twins for every `maxsize` up to `sys.maxsize`, for
 `None`, and for the bare-decorator form, a negative `maxsize` being `0`, and rejects the same bad
 arguments, when the user function is callable. Twin property, narrowed to the `Py_ssize_t` range: see
-`LruMaxsizeTwinsAlways`, and to callables: see `LruAcceptsSameFunctions`. -/
+`LruMaxsizeTwinsAlways`. A user function that is not callable is `LruAcceptsSameFunctions`. -/
 def LruModeTwins : Prop :=
   ∀ a : MaxsizeArg, (∀ n, a = .int n → n ≤ ssizeMax) →
-    (do wrapperCMode true (← lruCacheArg a)) = (do wrapperPyMode (← lruCacheArg a))
+    (do wrapperCMode true (← lruCacheArg a)) = (do wrapperPyMode true (← lruCacheArg a))
 
 theorem lruModeTwins_proven : LruModeTwins := by
   intro a h
@@ -760,23 +760,22 @@ theorem lruModeTwins_proven : LruModeTwins := by
 /-- `lru_cache(maxsize=n)` selects the same wrapper in both twins for every `int`. False: the C
 wrapper converts `maxsize` to `Py_ssize_t` and raises `OverflowError` above `sys.maxsize`. -/
 def LruMaxsizeTwinsAlways : Prop :=
-  ∀ n : Int, wrapperCMode true (some n) = wrapperPyMode (some n)
+  ∀ n : Int, wrapperCMode true (some n) = wrapperPyMode true (some n)
 
 theorem lruMaxsizeTwinsAlways_refuted : ¬LruMaxsizeTwinsAlways := by
   intro h
   have := h (2 ^ 63)
   simp [wrapperCMode, wrapperPyMode, ssizeMax, ssizeMin] at this
 
-/-- Both wrappers accept the same user functions. False: the C wrapper checks `PyCallable_Check` when it is
-built, Modules/_functoolsmodule.c:1637-1641, and the Python one takes any object and fails at the call. -/
+/-- Both wrappers refuse a user function that is not callable, with one message and for every `maxsize`, before they
+look at `maxsize`: Lib/functools.py:605-606 and Modules/_functoolsmodule.c:1637-1641. -/
 def LruAcceptsSameFunctions : Prop :=
-  ∀ (callable : Bool) (m : Option Int),
-    (wrapperCMode callable m).toBool = (wrapperPyMode m).toBool
+  ∀ m : Option Int,
+    wrapperCMode false m = .error (.typeError "the first argument must be callable") ∧
+    wrapperPyMode false m = .error (.typeError "the first argument must be callable")
 
-theorem lruAcceptsSameFunctions_refuted : ¬LruAcceptsSameFunctions := by
-  intro h
-  have := h false none
-  revert this
-  decide
+theorem lruAcceptsSameFunctions_proven : LruAcceptsSameFunctions := by
+  intro m
+  exact ⟨rfl, rfl⟩
 
 end PyLean.CoreLibs.Functools

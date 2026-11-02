@@ -158,14 +158,9 @@ def userDictEntries : List Entry := [
     source := "invariant; Lib/collections/__init__.py:1216-1217"
     status := .proven, prop := ``UserDictClearRepr, thm := some ``userDictClearRepr_proven },
   { id := "coll-userdict-popitem-lifo", pyFile := file, pyFns := ["UserDict.popitem"]
-    statement := "UserDict.popitem removes the item dict.popitem removes. False on 3.14: it takes the first key, dict the last."
-    source := "Doc/library/stdtypes.rst, dict.popitem: 'LIFO order'; Doc/library/collections.rst, UserDict"
-    status := .refuted, prop := ``UserDictPopitemMatchesDict, thm := some ``userDictPopitemMatchesDict_refuted
-    bug := some "corelibs-userdict-popitem-fifo", notes := "Fixed on main; see the bug record." },
-  { id := "coll-userdict-popitem-narrow", pyFile := file, pyFns := ["UserDict.popitem"]
-    statement := "On a one-item UserDict popitem agrees with dict.popitem."
-    source := "narrowing of coll-userdict-popitem-lifo"
-    status := .proven, prop := ``UserDictPopitemNarrow, thm := some ``userDictPopitemNarrow_proven },
+    statement := "UserDict.popitem is dict.popitem on self.data: it removes the last item, and raises dict's KeyError on an empty one."
+    source := "Lib/collections/__init__.py:1260-1268; Doc/library/stdtypes.rst, dict.popitem: 'LIFO order'"
+    status := .proven, prop := ``UserDictPopitemMatchesDict, thm := some ``userDictPopitemMatchesDict_proven },
   { id := "coll-userdict-reversible", pyFile := file, pyFns := ["UserDict.__reversed__"]
     statement := "reversed(UserDict(d)) yields what reversed(d) yields. False: TypeError, Mapping.__reversed__ is None."
     source := "Doc/library/stdtypes.rst, dict: 'Dictionaries and dictionary views are reversible'; Doc/library/collections.rst, UserDict"

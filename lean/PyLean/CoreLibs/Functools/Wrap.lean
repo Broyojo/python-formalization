@@ -296,6 +296,8 @@ structure SdmFunc (α : Type) where
   dictOf : String → Py (Option (Attrs String))
   abstract : Py (Option α)
   impl : MKind α
+  /-- `isinstance(func, FunctionType)`. -/
+  isFunction : Bool
 
 /-- `singledispatchmethod(func)`. -/
 structure Sdm (α : Type) where
@@ -356,6 +358,14 @@ structure SdmGet (α : Type) where
   cls : α
   module : Option String
   doc : Option String
+  /-- `_dispatch_arg_index`, Lib/functools.py:1064-1066. -/
+  index : Nat
+
+/-- `1 if obj is None and isinstance(func, FunctionType) else 0`, Lib/functools.py:1066. -/
+def dispatchIndex {α : Type} (s : Sdm α) (obj : Option α) : Nat :=
+  match obj with
+  | none => if s.func.isFunction then 1 else 0
+  | some _ => 0
 
 /-- `singledispatchmethod.__get__`, :1037-1038, with `_singledispatchmethod_get.__init__`, :1055-1075. -/
 def sdmGet {α : Type} (s : Sdm α) (obj : Option α) (cls : α) : Py (SdmGet α) :=
@@ -364,7 +374,7 @@ def sdmGet {α : Type} (s : Sdm α) (obj : Option α) (cls : α) : Py (SdmGet α
   | .ok m =>
     match s.func.read "__doc__" with
     | .error e => .error e
-    | .ok d => .ok ⟨s, obj, cls, m, d⟩
+    | .ok d => .ok ⟨s, obj, cls, m, d, dispatchIndex s obj⟩
 
 /-- `_singledispatchmethod_get.__getattr__`, Lib/functools.py:1114-1120: a bare `AttributeError` outside the
 five names, and a read of the function inside them. -/
@@ -385,26 +395,35 @@ def sdmGetRepr {α : Type} (g : SdmGet α) (repr : α → Py String) : Py String
       | .error e => .error e
       | .ok r => .ok ("<bound single dispatch method " ++ n ++ " of " ++ r ++ ">")
 
-/-- `impl.__get__(obj, cls)(*args, **kwargs)`, the end of Lib/functools.py@3.14.7:1069. There is no fallback for an
-object without `__get__`, which `__init__` accepts when it is callable. -/
-def implCall {α : Type} (impl : MKind α) (obj : Option α) (cls : α) (args : List α)
+/-- `method.__get__(obj, cls)` and the call, Lib/functools.py:1098-1112. `index` is `_dispatch_arg_index`: when it is 1, a
+`staticmethod` and anything that comes back as a `MethodType` drop `args[0]`, and an object without `__get__` is called
+as it is. -/
+def implCall {α : Type} (impl : MKind α) (obj : Option α) (cls : α) (index : Nat) (args : List α)
     (kw : List (String × α)) : Py (Called α) :=
+  let rest := if index = 1 then args.drop 1 else args
   match impl with
   | .fn id =>
     match obj with
     | none => .ok ⟨id, args, kw⟩
-    | some o => .ok ⟨id, o :: args, kw⟩
-  | .classm id => .ok ⟨id, cls :: args, kw⟩
-  | .staticm id => .ok ⟨id, args, kw⟩
-  | .obj _ => .error (.named "AttributeError" "~object has no attribute '__get__'")
-  | .partialObj f => callFn (descrGet f obj) args kw
+    | some o => .ok ⟨id, o :: rest, kw⟩
+  | .classm id => .ok ⟨id, cls :: rest, kw⟩
+  | .staticm id => .ok ⟨id, rest, kw⟩
+  | .obj f => callFn f args kw
+  | .partialObj f =>
+    match obj with
+    | none => callFn f args kw
+    | some o => callFn (.bound f o) rest kw
   | .custom get _ call =>
     match get obj with
     | .error e => .error e
     | .ok none => callFn call args kw
-    | .ok (some nf) => callFn nf args kw
+    | .ok (some nf) =>
+      match nf with
+      | .bound .. => callFn nf rest kw
+      | _ => callFn nf args kw
 
-/-- `_singledispatchmethod_get.__call__`, Lib/functools.py@3.14.7:1063-1069. `classes` is `args[0].__class__`. -/
+/-- `_singledispatchmethod_get.__call__`, Lib/functools.py:1088-1112. `classOf` is `.__class__` of the dispatch
+argument. -/
 def sdmCall {α : Type} (W : World) (fuel tok : Nat) (g : SdmGet α) (classOf : α → Cls) (args : List α)
     (kw : List (String × α)) : Py (Called α) × Dispatcher (MKind α) :=
   let d := g.unbound.dispatcher
@@ -415,11 +434,14 @@ def sdmCall {α : Type} (W : World) (fuel tok : Nat) (g : SdmGet α) (classOf : 
     | .ok n =>
       (.error (.typeError ((n.getD "singledispatchmethod method") ++
         " requires at least 1 positional argument")), d)
-  | a :: _ =>
-    match dispatch W fuel tok d (classOf a) with
-    | (.error e, d) => (.error e, d)
-    | (.ok none, d) => (.error (.named "AttributeError" "'NoneType' object has no attribute '__get__'"), d)
-    | (.ok (some impl), d) => (implCall impl g.obj g.cls args kw, d)
+  | _ :: _ =>
+    match args[g.index]? with
+    | none => (.error (.indexError "tuple index out of range"), d)
+    | some a =>
+      match dispatch W fuel tok d (classOf a) with
+      | (.error e, d) => (.error e, d)
+      | (.ok none, d) => (.error (.typeError "'NoneType' object is not callable"), d)
+      | (.ok (some impl), d) => (implCall impl g.obj g.cls g.index args kw, d)
 
 /-- `_singledispatchmethod_get.__wrapped__`, :1122-1124. -/
 def sdmWrapped {α : Type} (g : SdmGet α) : SdmFunc α := g.unbound.func

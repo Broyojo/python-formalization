@@ -424,10 +424,12 @@ def setdefault (q : Eqv) (w : World) (d : WKD V) (key : PV) (default : V) : WKD 
     | some (_, v) => (d, .ok v)
     | none => (setRef q w d k default, .ok default)
 
-/-- `WeakKeyDictionary.update`, Lib/weakref.py@3.14.7:410-418. `kwargs` have `str` keys, and a `str`
-refuses `ref()`, so any keyword fails, after `dict` has been applied. -/
+/-- `WeakKeyDictionary.update`, Lib/weakref.py:410-420: any keyword is refused first, so `dict` is not applied. -/
 def update (q : Eqv) (w : World) (d : WKD V) (dict : Option (List (PV × V))) (kwargs : Bool := false) :
     WKD V × Py Unit :=
+  if kwargs then
+    (d, .error (.typeError "Keyword arguments are not supported: cannot create weak reference to 'str' object"))
+  else
   let step : WKD V × Py Unit → PV × V → WKD V × Py Unit := fun st kv =>
     match st with
     | (d, .error e) => (d, .error e)
@@ -435,11 +437,7 @@ def update (q : Eqv) (w : World) (d : WKD V) (dict : Option (List (PV × V))) (k
       match setitem q w d kv.1 kv.2 with
       | .error e => (d, .error e)
       | .ok d => (d, .ok ())
-  match (dict.getD []).foldl step (d, .ok ()) with
-  | (d, .error e) => (d, .error e)
-  | (d, .ok ()) =>
-    if kwargs then (d, .error (.typeError "cannot create weak reference to 'str' object"))
-    else (d, .ok ())
+  (dict.getD []).foldl step (d, .ok ())
 
 /-- `dict(pairs)` when the keys are objects: Lib/weakref.py:417-418. Equal keys collapse, and only
 hashable keys get here: an `int` is a key of the dict like any other. -/

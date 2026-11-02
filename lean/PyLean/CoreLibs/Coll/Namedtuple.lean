@@ -105,7 +105,7 @@ def compileNew (U : UniId) (names : List String) : Py (List String) :=
   | none =>
     match firstDup ["_cls"] args with
     | some a =>
-      .error (.named "SyntaxError" s!"duplicate argument '{a}' in function definition (<string>, line 1)")
+      .error (.named "SyntaxError" s!"duplicate parameter '{a}' in function definition (<string>, line 1)")
     | none => .ok args
 
 /-- `arg_list`, :433-435. -/

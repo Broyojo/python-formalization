@@ -41,6 +41,8 @@ structure Names where
   dayAbbr : List Str
   monthName : List Str
   monthAbbr : List Str
+  /-- `standalone_month_name`, Lib/calendar.py:143-159: `%OB` where the platform has it, or `month_name`. -/
+  standaloneName : List Str
   deriving Inhabited
 
 /-- The C locale. -/
@@ -51,6 +53,8 @@ def cNames : Names where
     "September", "October", "November", "December"].map String.toList
   monthAbbr := ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov",
     "Dec"].map String.toList
+  standaloneName := ["January", "February", "March", "April", "May", "June", "July", "August",
+    "September", "October", "November", "December"].map String.toList
 
 /-- `_localized_month._months` applied to the format: the entry at index 0 is the
 `lambda x: ""` inserted at calendar.py:100. -/
@@ -80,12 +84,9 @@ def leapdays (y1 y2 : Int) : Int :=
   let y2 := y2 - 1
   (y2 / 4 - y1 / 4) - (y2 / 100 - y1 / 100) + (y2 / 400 - y1 / 400)
 
-/-- Getargs format `i`, Python/getargs.c `convertsimple`: `PyLong_AsLong`, then the
-range check against C `int`. -/
+/-- The Argument Clinic conversion of `date_new`, Modules/clinic/_datetimemodule.c.h:173-181: `PyLong_AsInt`. -/
 def cIntArg (x : Int) : Py Int :=
-  if x ≥ 2 ^ 63 ∨ x < -(2 ^ 63) then .error (.overflowError "Python int too large to convert to C long")
-  else if x > 2 ^ 31 - 1 then .error (.overflowError "signed integer is greater than maximum")
-  else if x < -(2 ^ 31) then .error (.overflowError "signed integer is less than minimum")
+  if x > 2 ^ 31 - 1 ∨ x < -(2 ^ 31) then .error (.overflowError "Python int too large to convert to C int")
   else .ok x
 
 /-- A `date` value. -/

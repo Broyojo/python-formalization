@@ -24,7 +24,7 @@ def osUrandom (raw : Nat → RM σ (List Nat)) (size : IntArg) : RM σ (List Nat
   let n ← lift size.index
   if n > ssizeMax ∨ n < ssizeMin then
     raise (.overflowError "Python int too large to convert to C ssize_t")
-  else if n < 0 then raise (.valueError "negative argument not allowed")
+  else if n < 0 then raise (.valueError "size cannot be negative")
   else raw n.toNat
 
 /-- The contract of `os.urandom`: exactly `n` bytes. -/

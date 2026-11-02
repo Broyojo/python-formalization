@@ -397,7 +397,7 @@ def coll_run_ud(case):
             r = u.pop(k, d) if d is not None else u.pop(k)
             return [r, coll_enc_ud(u)]
         if op == "popitem":
-            r = coll_abc.MutableMapping.popitem(u)
+            r = u.popitem()
             return [list(r), coll_enc_ud(u)]
         if op == "setdefault":
             r = u.setdefault(k, 0 if d is None else d)
@@ -1124,6 +1124,14 @@ collabc_CoroC = collabc_scripted(collabc_A.Coroutine, StopIteration)
 collabc_AGenC = collabc_scripted(collabc_A.AsyncGenerator, StopAsyncIteration, async_=True)
 
 
+def collabc_bytestring():
+    """`ByteString` with the warning of the module's `__getattr__` out of the way: only the first read in a process gives it."""
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return collabc_A.ByteString
+
+
 def collabc_drive(coro):
     """Run a coroutine that never suspends."""
     try:
@@ -1254,9 +1262,12 @@ def collabc_gen(rng):
         return {"fn": "collabc.mseq_extend", "xs": xs, "fail": fail,
                 "vs": None if rng.random() < .3 else collabc_list(rng, 4)}
     if r == 16:
-        k = rng.randrange(0, 5)
+        k = rng.randrange(0, 6)
         if k == 0:
             return {"fn": "collabc.list_remove", "xs": xs, "v": v, "bad": bad}
+        if k == 5:
+            return {"fn": "collabc.module_getattr", "name": rng.choice(["ByteString", "ByteString", "Other"]),
+                    "error": rng.random() < .3}
         if k == 1:
             return {"fn": "collabc.bytestring_new",
                     "name": rng.choice(["ByteString", "Other", "bytestring"])}
@@ -1433,17 +1444,29 @@ def collabc_run(case):
                 return None
             return [e.v for e in ys]
         return py_result(f)
+    if fn == "module_getattr":
+        import warnings
+        g, B = vars(collabc_A), collabc_bytestring()
+        del g["ByteString"]
+        with warnings.catch_warnings():
+            warnings.simplefilter("error" if case["error"] else "ignore")
+            r = py_result(lambda: None if getattr(collabc_A, case["name"]) is B else "other")
+        loaded = "ByteString" in g
+        g["ByteString"] = B
+        return {"ok": [loaded, r]}
     if fn == "bytestring_new":
         import warnings
+        B = collabc_bytestring()
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            type(collabc_A.ByteString)(case["name"], (), {})
+            type(B)(case["name"], (), {})
         return {"ok": any(x.category is DeprecationWarning for x in w)}
     if fn == "bytestring_check":
         import warnings
+        B = collabc_bytestring()
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            a = isinstance(b"" if case["answer"] else 1, collabc_A.ByteString)
+            a = isinstance(b"" if case["answer"] else 1, B)
         return {"ok": [any(x.category is DeprecationWarning for x in w), a]}
     if fn == "view_repr":
         cls = getattr(collabc_A, case["cls"])
@@ -1738,6 +1761,41 @@ def functools_obj(m, p, more, morekw):
             "call": py_result(lambda: p(*more, **dict(morekw)))}
 
 
+def functools_run_kwhook(m, case):
+    def f(**k):
+        return [[str(x), y] for x, y in k.items()]
+    stored = case["stored"]
+    p = m.partial(f, **dict(stored))
+    first = stored[0][0]
+    armed = [False]
+
+    class S(str):
+        def __hash__(self):
+            return hash(first)
+
+        def __eq__(self, other):
+            if armed[0] and self.c is not None:
+                c, self.c = self.c, None
+                if c["hook"] == "raise":
+                    raise ValueError("eq")
+                if c["hook"] == "swap" and len(p.keywords) >= 2:
+                    del p.keywords[next(reversed(p.keywords))]
+                for i in range(c["n"]):
+                    p.keywords[c["k"] + "z%d" % i] = 0
+            return False
+        __ne__ = None
+
+    kw = {}
+    for c in case["call"]:
+        key = c["k"]
+        if c["hook"] != "none":
+            key = S(key)
+            key.c = c
+        kw[key] = c["v"]
+    armed[0] = True
+    return p(**kw)
+
+
 def functools_run_partial(case):
     m = functools_mod(case)
 
@@ -1906,6 +1964,44 @@ functools_SOURCES = [
 ]
 
 
+def functools_gen_kwhook(rng):
+    """Stored keywords, and call keywords whose `__eq__` may rewrite `p.keywords` inside `PyDict_Contains`, Modules/_functoolsmodule.c:467.
+    `functools_kw_crashes` leaves out what the corelibs-partial-vectorcall-stale-kw-count finding turns into a crash."""
+    stored = [[n, rng.randrange(0, 9)] for n in rng.sample(["a", "b", "c"], rng.randrange(1, 4))]
+    names = {n for n, _ in stored}
+    call = []
+    for i in range(rng.randrange(0, 5)):
+        hook = rng.choice(["none", "none", "add", "swap", "raise"])
+        name = "n%d" % i if hook != "none" or rng.random() < .5 else rng.choice(sorted(names))
+        if any(c["k"] == name for c in call):
+            name = "n%d" % i
+        call.append({"k": name, "v": rng.randrange(0, 9), "hook": hook, "n": rng.randrange(0, 3)})
+    if functools_kw_crashes(stored, call):
+        for c in call:
+            if c["hook"] in ("add", "swap"):
+                c["hook"] = "none"
+    return {"fn": "functools.partial_kwhook", "twin": "c", "stored": stored, "call": call}
+
+
+def functools_kw_crashes(stored, call):
+    d = [n for n, _ in stored]
+    merged, tail = None, 0
+    for c in call:
+        if c["hook"] == "raise":
+            return False
+        adds = [c["k"] + "z%d" % i for i in range(c["n"])]
+        if c["hook"] == "add":
+            d = d + adds
+        elif c["hook"] == "swap":
+            d = (d[:-1] if len(d) >= 2 else d) + adds
+        if c["k"] in d:
+            merged = list(d) if merged is None else merged
+        else:
+            tail += 1
+    n = len(merged if merged is not None else d)
+    return n > len(stored) + tail or n < len(stored)
+
+
 def functools_gen(rng):
     if rng.random() < .12:
         return functools_lru_ptr(rng, rng.choice(["c", "py"]))
@@ -2020,7 +2116,7 @@ def functools_gen(rng):
         return functools_dispatch_case(rng)
     if r == 25:
         return functools_register_case(rng)
-    k = rng.randrange(0, 19)
+    k = rng.randrange(0, 20)
     if k == 13:
         if rng.random() < .7:
             return functools_lru_ptr(rng, twin_pick(rng))
@@ -2041,6 +2137,8 @@ def functools_gen(rng):
         return {"fn": "functools.repr_read", "bad": rng.choice(["__module__", "__qualname__"])}
     if k == 18:
         return {"fn": "functools.pm_new_fail", "which": rng.choice(["get", "repr", "none"])}
+    if k == 19:
+        return functools_gen_kwhook(rng)
     if k == 9:
         return {"fn": "functools.make_key_meta", "n": rng.randrange(1, 3), "typed": rng.random() < .3,
                 "bad": rng.random() < .5}
@@ -2183,12 +2281,19 @@ def functools_register_case(rng):
 
 
 def functools_sdm_case(rng):
+    if rng.random() < .3:
+        # a real function underneath, so `_dispatch_arg_index`, Lib/functools.py:1066, can be 1
+        return {"fn": "functools.sdm", "tbl": [["__qualname__", "A.f"], ["__name__", "f"], ["__module__", "m"], ["__doc__", "d"]],
+                "callable": True, "hasget": True, "absbad": False, "isfunc": True,
+                "kind": rng.choice(["fn", "classm", "staticm", "obj", "partial"]),
+                "id": rng.randrange(1, 4), "obj": rng.choice([None, None, 501]), "what": "call", "name": "foo",
+                "more": rng.choice([[], [1], [1, 2], [1, 2, 3]]), "register": rng.random() < .5}
     tbl = [["__qualname__", rng.choice(["A.f", None, "RAISE"])],
            ["__name__", rng.choice(["f", None, None, "RAISE"])],
            ["__module__", rng.choice(["m", None, "RAISE"])],
            ["__doc__", rng.choice(["d", None])]]
     return {"fn": "functools.sdm", "tbl": tbl, "callable": rng.random() < .8, "hasget": rng.random() < .6,
-            "absbad": rng.random() < .2, "kind": rng.choice(["fn", "classm", "staticm", "obj", "partial"]),
+            "absbad": rng.random() < .2, "isfunc": False, "kind": rng.choice(["fn", "classm", "staticm", "obj", "partial"]),
             "id": rng.randrange(1, 4), "obj": rng.choice([None, 501, -1]),
             "what": rng.choice(["repr", "getrepr", "getattr", "call", "call", "abstract", "wrapped"]),
             "name": rng.choice(["__name__", "__qualname__", "__annotations__", "foo", "__wrapped2__"]),
@@ -2331,6 +2436,8 @@ def functools_run(case):
         if "exc" in r:
             r["msg"] = "~isinstance() arg 2 must be a type"
         return r
+    if fn == "partial_kwhook":
+        return py_result(lambda: functools_run_kwhook(m, case))
     if fn == "partial_duck":
         P = m.partial
         inner = functools_id(1)
@@ -3345,7 +3452,12 @@ def functools_sdm(case):
     if case["absbad"]:
         tbl["__isabstractmethod__"] = "RAISE"
     cls = functools_reader_cls(case["callable"], case["hasget"])
-    f = cls(tbl)
+    if case["isfunc"]:
+        def f(*a, **k):
+            raise AssertionError("the dispatcher has its own implementation")
+        f.__qualname__, f.__name__, f.__module__, f.__doc__ = tbl["__qualname__"], tbl["__name__"], tbl["__module__"], tbl["__doc__"]
+    else:
+        f = cls(tbl)
     what = case["what"]
     obj = case["obj"]
 
@@ -3581,7 +3693,7 @@ def operator_graph(rng):
     n = rng.randrange(1, 7)
     cells = []
     for i in range(n):
-        k = rng.choice(["atom", "atom", "list", "tuple", "dict", "inst", "method", "cls", "meta", "hooked"])
+        k = rng.choice(["atom", "atom", "list", "tuple", "dict", "fdict", "inst", "method", "cls", "meta", "hooked"])
         if k == "atom":
             cells.append({"k": k, "n": rng.randrange(0, 4)})
         elif k == "list":
@@ -3589,7 +3701,7 @@ def operator_graph(rng):
         elif k == "tuple":
             low = [j for j in range(i) if cells[j]["k"] != "tuple"] + list(range(i + 1, n))
             cells.append({"k": k, "items": rng.sample(low, min(len(low), rng.randrange(0, 3)))})
-        elif k == "dict":
+        elif k in ("dict", "fdict"):
             atoms = list({cells[j]["n"]: j for j in range(i) if cells[j]["k"] == "atom"}.values())
             items = []
             for key in rng.sample(atoms, min(len(atoms), 2)):
@@ -3620,10 +3732,17 @@ def operator_graph(rng):
                 cells[i] = {"k": "atom", "n": 0}
     for i, c in enumerate(cells):
         if c["k"] == "tuple":
-            c["items"] = [j for j in c["items"] if cells[j]["k"] not in ("tuple", "method")]
+            c["items"] = [j for j in c["items"] if cells[j]["k"] not in ("tuple", "method", "fdict")]
             # `()` is a singleton in CPython; the model's cells are distinct objects
             if not c["items"]:
                 cells[i] = {"k": "atom", "n": 0}
+    # a `frozendict` is built after the tuples, so its values are anything but another `frozendict` or a method
+    for c in cells:
+        if c["k"] == "fdict":
+            it = c["items"]
+            for v in range(1, len(it), 2):
+                if cells[it[v]]["k"] in ("fdict", "method"):
+                    it[v] = it[v - 1]
     # a method's self or a tuple item that loops through a hook has no answer to copy, so a hook's own
     # references go only to plain data
     for c in cells:
@@ -3764,6 +3883,10 @@ def operator_build_graph(cells):
         if c["k"] == "tuple":
             objs[i] = tuple(objs[j] for j in c["items"])
     for i, c in enumerate(cells):
+        if c["k"] == "fdict":
+            it = c["items"]
+            objs[i] = frozendict({objs[a]: objs[b] for a, b in zip(it[::2], it[1::2])})
+    for i, c in enumerate(cells):
         if c["k"] == "method":
             objs[i] = objs[c["self"]].operator_fn
     for i, c in enumerate(cells):
@@ -3806,7 +3929,7 @@ def operator_render(o, seen):
     for k, v in o.items():
         out.append(operator_render(k, seen))
         out.append(operator_render(v, seen))
-    return ["dict", out]
+    return ["fdict" if isinstance(o, frozendict) else "dict", out]
 
 
 class operator_hook_table:
@@ -6464,13 +6587,16 @@ def misc_gen_ctx(rng):
             if k < 0.25:
                 ops.append(["push_fn", i, beh(), asy])
             elif k < 0.5:
-                ops.append(["push_cm", i, beh(), asy])
+                ops.append([rng.choice(["push_cm", "push_cm", "push_static"]), i, beh(), asy,
+                            rng.choice(["static", "class", "noget"])])
+                if rng.random() < .1:
+                    ops.append(["push_descfail", asy])
             elif k < 0.75:
                 ops.append(["callback", i, beh(), asy])
             elif k < 0.9:
                 ops.append(["enter_ctx", i, beh(), rng.randint(0, 9), rng.random() < 0.2, a])
             else:
-                ops.append(["enter_bad", a])
+                ops.append(["enter_bad", a, rng.choice(["none", "noexit", "enterfail", "exitfail"])])
             if rng.random() < 0.1:
                 ops.append(["pop_all"])
         if rng.random() < 0.8:
@@ -6529,6 +6655,57 @@ def misc_tree_enc(e, orig):
 
 class MiscNoCM:
     pass
+
+
+class MiscRaisingDescr:
+    def __get__(self, o, t=None):
+        raise ValueError("descr")
+
+
+class MiscNoExit:
+    def __enter__(self):
+        raise AssertionError("not reached")
+
+    async def __aenter__(self):
+        raise AssertionError("not reached")
+
+
+class MiscEnterFail:
+    __enter__ = __aenter__ = MiscRaisingDescr()
+    __exit__ = __aexit__ = MiscRaisingDescr()
+
+
+class MiscExitFail:
+    def __enter__(self):
+        raise AssertionError("not reached")
+
+    async def __aenter__(self):
+        raise AssertionError("not reached")
+
+    __exit__ = __aexit__ = MiscRaisingDescr()
+
+
+class MiscPushFail:
+    __exit__ = __aexit__ = MiscRaisingDescr()
+
+
+def misc_raw_exit(f, kind):
+    """A class whose `__exit__` reaches `_descriptor_get` as a class, as an object with no `__get__`, or as a staticmethod."""
+    if kind == "class":
+        class Raw:
+            def __new__(cls, *a):
+                return f(*a)
+    elif kind == "noget":
+        class Call:
+            def __call__(self, *a):
+                return f(*a)
+        Raw = Call()
+    else:
+        Raw = staticmethod(f)
+
+    class S:
+        __exit__ = __aexit__ = Raw
+    return S
 
 
 def misc_stack_fn(run, log, tag, stack_ref):
@@ -6604,6 +6781,18 @@ def misc_run_stack(case):
         elif k == "push_cm":
             box[0].push_async_exit(acm(op[1], op[2])) if op[3] else box[0].push(cm(op[1], op[2]))
             out.append(op[1])
+        elif k == "push_static":
+            S = misc_raw_exit((afn if op[3] else fn)(op[1], op[2]), op[4])
+            if op[3]:
+                box[0].push_async_exit(S())
+            else:
+                box[0].push(S())
+            out.append(op[1])
+        elif k == "push_descfail":
+            if op[1]:
+                out.append(misc_cres(lambda: box[0].push_async_exit(MiscPushFail()) and None, labels))
+            else:
+                out.append(misc_cres(lambda: box[0].push(MiscPushFail()) and None, labels))
         elif k == "callback":
             if op[3]:
                 box[0].push_async_callback(afn(op[1], op[2]))
@@ -6619,10 +6808,11 @@ def misc_run_stack(case):
                 c = cm(i, b, v, fails)
                 out.append(misc_cres(lambda: box[0].enter_context(c), labels))
         elif k == "enter_bad":
+            bad = {"none": MiscNoCM, "noexit": MiscNoExit, "enterfail": MiscEnterFail, "exitfail": MiscExitFail}[op[2]]
             if op[1]:
-                out.append(misc_cres(lambda: misc_run_co(box[0].enter_async_context(MiscNoCM())), labels))
+                out.append(misc_cres(lambda: misc_run_co(box[0].enter_async_context(bad())), labels))
             else:
-                out.append(misc_cres(lambda: box[0].enter_context(MiscNoCM()), labels))
+                out.append(misc_cres(lambda: box[0].enter_context(bad()), labels))
         elif k == "pop_all":
             old = box[0]
             box[0] = old.pop_all()
@@ -7366,8 +7556,8 @@ import _colorize as calstat_colorize
 calstat_YEARS = [0, 1, 2, 3, 4, -1, -2, -3, -4, 100, 400, -100, -400, 399, 401, 1582, 1900, 1970,
                  2000, 2001, 2023, 2024, 2100, 2400, 9996, 9998, 9999, 10000, 10001, 10400,
                  2 ** 31, -2 ** 31, 2 ** 63, -2 ** 63, 2 ** 64, -2 ** 64, 10 ** 30]
-calstat_ANSI = calstat_types.SimpleNamespace(BLACK="\x1b[30m", BACKGROUND_YELLOW="\x1b[43m",
-                                             RESET="\x1b[0m")
+calstat_THEME = calstat_types.SimpleNamespace(calendar=calstat_types.SimpleNamespace(
+    header="\x1b[1m", highlight="\x1b[30m\x1b[43m", weekday="\x1b[36m", reset="\x1b[0m"))
 calstat_LOCALES = ["C", "C.utf8", "bogus_XX"]
 
 
@@ -7739,8 +7929,8 @@ def calstat_run_cal_inner(c, fn):
 
 def calstat_run_cal(c):
     fn = c["fn"].split(".", 1)[1]
-    saved = calstat_colorize.get_colors
-    calstat_colorize.get_colors = lambda **k: calstat_ANSI
+    saved = calstat_colorize.get_theme
+    calstat_colorize.get_theme = lambda **k: calstat_THEME
 
     def thunk():
         return calstat_lists(calstat_run_cal_inner(c, fn))
@@ -7749,7 +7939,7 @@ def calstat_run_cal(c):
     except BaseException:
         raise
     finally:
-        calstat_colorize.get_colors = saved
+        calstat_colorize.get_theme = saved
     if r.get("exc") == "calstat_Stop":
         r["exc"] = "SystemExit"
     return r

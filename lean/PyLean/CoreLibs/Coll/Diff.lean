@@ -434,15 +434,17 @@ def asciiFormatMap (s : Seq) (m : List (String × Int)) : Py Seq :=
 
 /-- `s % args` for a tuple of ints, `%d`, `%s`, `%%`. -/
 def asciiMod (s : Seq) (args : List Int) : Py Seq :=
+  let got := args.length
   let rec go (args : List Int) : Seq → Py Seq
     | [] => if args.isEmpty then .ok []
-      else .error (.typeError "not all arguments converted during string formatting")
+      else .error (.typeError
+        s!"not all arguments converted during string formatting (required {got - args.length}, got {got})")
     | 37 :: 37 :: r => do
       let t ← go args r
       return 37 :: t
     | 37 :: _ :: r =>
       match args with
-      | [] => .error (.typeError "not enough arguments for format string")
+      | [] => .error (.typeError s!"not enough arguments for format string (got {got})")
       | a :: rest => do
         let t ← go rest r
         return (toString a).toList.map Char.toNat ++ t
@@ -457,7 +459,7 @@ def asciiModUser (s self : Seq) : Py Seq :=
   let rec go (used : Bool) : Seq → Py Seq
     | [] => .ok []
     | 37 :: 115 :: r =>
-      if used then .error (.typeError "not enough arguments for format string")
+      if used then .error (.typeError "not enough arguments for format string (got 1)")
       else do
         let t ← go true r
         return self ++ t

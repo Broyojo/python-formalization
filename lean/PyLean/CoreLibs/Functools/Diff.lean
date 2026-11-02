@@ -333,7 +333,7 @@ def run (fn : String) (j : Json) : Except String Json := do
     let a2 ← getInt j "m2"
     let t1 ← getBool j "t1"
     let t2 ← getBool j "t2"
-    let mode : Option Int → Py LruMode := if c then wrapperCMode true else wrapperPyMode
+    let mode : Option Int → Py LruMode := if c then wrapperCMode true else wrapperPyMode true
     let none0 : Wrapped (LruAttr Bool) := ⟨fun _ => .ok none, fun _ => .ok (some [])⟩
     let paramsJ : Option (LruAttr Bool) → Json := fun x => match x with
       | some (.params m t) => toJson [toJson m, toJson t]
@@ -409,6 +409,22 @@ def run (fn : String) (j : Json) : Except String Json := do
           | .ph => toJson "PH"
           | .val v => toJson v)]
       | _ => Json.null) r)
+  | "partial_kwhook" =>
+    let stored : List (String × Int) ← (← getArr j "stored").mapM fun p => do
+      pure (← (← p.getArrVal? 0).getStr?, ← (← p.getArrVal? 1).getInt?)
+    let kws ← (← getArr j "call").mapM fun c => do
+      let k ← getStr c "k"
+      let v ← getInt c "v"
+      let n ← getNat c "n"
+      let adds : List (String × Int) := (List.range n).map fun i => (s!"{k}z{i}", 0)
+      let hook : List (String × Int) → Py (List (String × Int)) ← match ← getStr c "hook" with
+        | "raise" => pure fun _ => .error (.valueError "eq")
+        | "add" => pure fun d => .ok (d ++ adds)
+        | "swap" => pure fun d => .ok ((if d.length ≥ 2 then d.dropLast else d) ++ adds)
+        | _ => pure .ok
+      pure (⟨k, v, hook⟩ : VecKw Int)
+    -- the callee's `**k` is a dict: a name the lookups moved from the stored dict to the tail can come twice
+    pure (encPy (fun x => kwJ (mergeKw [] x.kw)) (partialVectorcallKws (.base 0) [] stored 0 [] kws))
   | "repr_mut" =>
     let vals ← getIntList j "vals"
     let mutAt ← getOptInt j "mut"
@@ -673,7 +689,7 @@ def run (fn : String) (j : Json) : Except String Json := do
     let typedB ← getBool j "typedbool"
     let typed := if (← getStr j "kind") == "callable" then false else typedB
     let fail : Option PyExc := if ← getBool j "fail" then some (.valueError "read") else none
-    let mode : Option Int → Py LruMode := if c then wrapperCMode user else wrapperPyMode
+    let mode : Option Int → Py LruMode := if c then wrapperCMode user else wrapperPyMode user
     let r := if ← getBool j "viacache" then cacheDecorate mode fail else lruDecorate mode arg typed fail
     pure (encPy (fun (x : LruRec) => toJson [
       (match x.mode with
@@ -798,7 +814,7 @@ def run (fn : String) (j : Json) : Except String Json := do
     let read := readerOf tbl
     let impl ← parseMKindI j
     let f : SdmFunc Int := ⟨← getBool j "callable", ← getBool j "hasget", read, fun _ => .ok none,
-      if (← getBool j "absbad") then .error (.valueError "read") else .ok none, impl⟩
+      if (← getBool j "absbad") then .error (.valueError "read") else .ok none, impl, ← getBool j "isfunc"⟩
     let objR ← getOptInt j "obj"
     let world : World := ⟨fun c => if c == 0 then [] else [0], fun c => if c == 0 then [0] else [c, 0],
       fun a b => .ok (a == b || b == 0), fun _ => false, fun _ => [], fun _ => true, fun _ => false⟩

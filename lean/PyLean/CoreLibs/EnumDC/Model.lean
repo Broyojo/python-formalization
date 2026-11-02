@@ -144,7 +144,9 @@ def FlagCls.missing (c : FlagCls) (value : Int) : Py FlagVal := do
           pure ((max (ab + 1) (2 ^ bitLength value.natAbs) : Nat) + value)
         else pure value
     else pure value
-  let v2 : Nat := (if v1 < 0 then abi + 1 + v1 else v1).toNat
+  let v2 : Nat := (if v1 < 0 then
+      (if c.boundary = .eject ∨ c.boundary = .keep then abi + 1 + v1 else (andMask v1 sm : Int))
+    else v1).toNat
   let unknown := notAnd fm v2
   let aliases := notAnd sm v2
   let memberValue := v2 &&& sm

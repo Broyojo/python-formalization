@@ -339,7 +339,7 @@ inductive TruthObj where
   /-- `nb_bool`, or a `__bool__` returning a `bool`, or raising. -/
   | bool (r : Py Bool)
   /-- A `__bool__` returning this type, which is not `bool`. -/
-  | badBool (tn : String)
+  | badBool (rn tn : String)
   /-- `__bool__ = None`. -/
   | noneBool (tn : String)
   /-- `__len__`, its result as an `int`. -/
@@ -361,7 +361,7 @@ def isTrue : TruthObj → Py Bool
   | .fals => .ok false
   | .none => .ok false
   | .bool r => r
-  | .badBool tn => .error (.typeError s!"__bool__ should return bool, returned {tn}")
+  | .badBool rn tn => .error (.typeError s!"{rn}.__bool__() must return a bool, not {tn}")
   | .noneBool tn => .error (.typeError s!"'{tn}' cannot be interpreted as a boolean")
   | .len r =>
     match sqLength r with
@@ -440,7 +440,7 @@ def indexC (o : IndexObj) : Py IndexRet :=
       match r with
       | .error e => .error e
       | .ok (.exact n) => .ok (.exact n)
-      | .ok (.other tn) => .error (.typeError s!"__index__ returned non-int (type {tn})")
+      | .ok (.other tn) => .error (.typeError s!"{o.tn}.__index__() must return an int, not {tn}")
       | .ok (.sub n) =>
         match o.warn with
         | some e => .error e
@@ -743,6 +743,8 @@ structure HintObj where
   len : Py Nat
   /-- `type(obj).__length_hint__`, called; `none` when there is none. -/
   hint : Option (Py HintRet)
+  /-- `%T` of the object. -/
+  tn : String := "O"
   deriving Repr
 
 /-- The `default` argument. -/
@@ -758,6 +760,9 @@ def isTypeError : PyExc → Bool
   | _ => false
 
 def negativeHint := "__length_hint__() should return >= 0"
+
+/-- The message of `PyObject_LengthHint`, Objects/abstract.c:147-148. -/
+def negativeHintC (o : HintObj) : String := s!"{o.tn}.__length_hint__() must return a non-negative int"
 
 /-- `length_hint`, Lib/operator.py:193-230. -/
 def lengthHintPy (o : HintObj) (default : HintDefault) : Py Int := do
@@ -800,10 +805,10 @@ def lengthHintC (o : HintObj) (default : HintDefault) : Py Int := do
     match h with
     | .error e => if isTypeError e then pure d else throw e
     | .ok .notImplemented => pure d
-    | .ok (.other tn) => throw (.typeError s!"__length_hint__ must be an integer, not {tn}")
+    | .ok (.other tn) => throw (.typeError s!"{o.tn}.__length_hint__() must return an int, not {tn}")
     | .ok (.int v) =>
       let r ← toSsize v
-      if r < 0 then throw (.valueError negativeHint) else pure r
+      if r < 0 then throw (.valueError (negativeHintC o)) else pure r
 
 /-! ### `_compare_digest` -/
 

@@ -236,6 +236,16 @@ theorem keeps_all (n : Nat) : ∀ fuel : Nat,
               have k2 := ih3 _ _ _ _ hk.1.1 e3
               cases e
               exact (hk.1.trans k2).trans (keeps_set n _ _ _ k2.1 hk.2)
+          · -- frozendict
+            split at e
+            · cases e
+            · next h1 ys e1 =>
+              have k1 := ih3 _ _ _ _ hn e1
+              split at e
+              · cases e
+                exact k1
+              · cases e
+                exact k1.trans (keeps_alloc_rem n h1 _ x k1.1).1
           · -- method
             split at e
             · cases e

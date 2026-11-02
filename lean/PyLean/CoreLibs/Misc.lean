@@ -180,11 +180,10 @@ def queueEntries : List Entry := [
     thm := some ``Queue.simpleQueueTwinsBlocking_proven },
   { id := "misc-simplequeue-twins", pyFile := "Lib/queue.py"
     pyFns := ["_PySimpleQueue.get"]
-    statement := "_PySimpleQueue.get and _queue.SimpleQueue.get agree for all arguments."
+    statement := "_PySimpleQueue.get and _queue.SimpleQueue.get agree for all arguments: with block false both ignore timeout."
     source := "docstring of _PySimpleQueue.get: timeout is ignored when block is false"
-    status := .refuted, prop := ``Queue.SimpleQueueGetTwins, thm := some ``Queue.simpleQueueGetTwins_refuted
-    bug := some "corelibs-pysimplequeue-nonblocking-timeout"
-    notes := "Duplicate of python/cpython#156476, fixed on main." }
+    status := .proven, prop := ``Queue.SimpleQueueGetTwins, thm := some ``Queue.simpleQueueGetTwins_proven
+    notes := "python/cpython#156476 is fixed in 3.15.2; the old record is corelibs-pysimplequeue-nonblocking-timeout." }
 ]
 
 def numbersEntries : List Entry := [
@@ -437,17 +436,22 @@ def contextlibEntries : List Entry := [
     notes := "A callback re-raising an exception that is in the chain of the current one: new_exc.__context__ = old_exc closes a cycle." },
   { id := "misc-ctx-stack-registration", pyFile := "Lib/contextlib.py"
     pyFns := ["_BaseExitStack.__init__", "_BaseExitStack.pop_all", "_BaseExitStack.push",
-              "_BaseExitStack.enter_context", "_BaseExitStack.callback", "_BaseExitStack._push_cm_exit",
+              "_BaseExitStack.enter_context", "_BaseExitStack.callback",
               "_BaseExitStack._push_exit_callback", "ExitStack.__enter__", "AsyncExitStack.__aenter__",
               "AsyncExitStack.enter_async_context", "AsyncExitStack.push_async_exit",
-              "AsyncExitStack.push_async_callback", "AsyncExitStack._push_async_cm_exit"]
-    statement := "push registers the bound __exit__ or the callable, callback a wrapper, enter_context pushes only after __enter__ succeeded, pop_all moves everything; async entries carry is_sync False."
+              "AsyncExitStack.push_async_callback"]
+    statement := "push registers what _lookup_special gives or the callable and registers nothing if __get__ raises, callback a wrapper, enter_context looks up __enter__ then __exit__ before running anything and pushes only after __enter__ succeeded, pop_all moves everything; async entries carry is_sync False."
     source := "docstrings of _BaseExitStack"
     status := .proven, prop := ``Contextlib.StackRegistration, thm := some ``Contextlib.stackRegistration_proven },
+  { id := "misc-ctx-lookup-special", pyFile := "Lib/contextlib.py"
+    pyFns := ["_lookup_special"]
+    statement := "_lookup_special gives the default when the type has no such attribute, the object itself for a class or an object with no __get__, and otherwise what __get__ gave, including its exception."
+    source := "Lib/contextlib.py:534-542; Lib/inspect.py:2420-2426"
+    status := .proven, prop := ``Contextlib.LookupSpecialFollowsDescriptor,
+    thm := some ``Contextlib.lookupSpecialFollowsDescriptor_proven },
   { id := "misc-ctx-callback-cannot-suppress", pyFile := "Lib/contextlib.py"
-    pyFns := ["_BaseExitStack._create_cb_wrapper", "_BaseExitStack._create_exit_wrapper",
-              "AsyncExitStack._create_async_cb_wrapper", "AsyncExitStack._create_async_exit_wrapper"]
-    statement := "The wrapper of callback ignores the exception details and returns false, so it cannot suppress; the wrapper of an exit method is the bound method."
+    pyFns := ["_BaseExitStack._create_cb_wrapper", "AsyncExitStack._create_async_cb_wrapper"]
+    statement := "The wrapper of callback ignores the exception details and returns false, so it cannot suppress."
     source := "docstring of callback"
     status := .proven, prop := ``Contextlib.CallbackCannotSuppress, thm := some ``Contextlib.callbackCannotSuppress_proven },
   { id := "misc-ctx-async-exit-matches", pyFile := "Lib/contextlib.py"

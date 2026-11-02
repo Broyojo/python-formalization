@@ -333,16 +333,16 @@ theorem lruOwnParams_refuted : ¬LruOwnParams := by
   intro h
   let user : Wrapped (LruAttr Bool) :=
     ⟨fun _ => .ok none, fun _ => .ok (some [("cache_parameters", .params (some 7) false)])⟩
-  have e : (match lruBuild false 2 wrapperPyMode (.int 5) true user (.other 0) with
+  have e : (match lruBuild false 2 (wrapperPyMode true) (.int 5) true user (.other 0) with
       | .ok (_, W) => W.dict.lookup "cache_parameters"
       | .error _ => none) = some (.params (some 7) false) := by decide +kernel
-  cases hb : lruBuild false 2 wrapperPyMode (.int 5) true user (.other 0) with
+  cases hb : lruBuild false 2 (wrapperPyMode true) (.int 5) true user (.other 0) with
   | error x =>
     rw [hb] at e
     cases e
   | ok r =>
     obtain ⟨w, W⟩ := r
-    have h1 := h Bool false 2 wrapperPyMode (.int 5) true (some 5) user (.other 0) w W rfl hb
+    have h1 := h Bool false 2 (wrapperPyMode true) (.int 5) true (some 5) user (.other 0) w W rfl hb
     rw [hb] at e
     simp only at e
     rw [h1] at e
@@ -393,13 +393,13 @@ theorem lruParamsFresh_proven : LruParamsFresh := by
 def LruDecorates : Prop :=
   ∀ (n : Int) (t : Bool) (e : PyExc), n < 0 →
     cacheDecorate (wrapperCMode true) none = .ok ⟨.infinite, none, false⟩ ∧
-    cacheDecorate wrapperPyMode none = .ok ⟨.infinite, none, false⟩ ∧
+    cacheDecorate (wrapperPyMode true) none = .ok ⟨.infinite, none, false⟩ ∧
     lruDecorate (wrapperCMode true) (.int n) t none = .ok ⟨.uncached, some 0, t⟩ ∧
-    lruDecorate wrapperPyMode (.int n) t none = .ok ⟨.uncached, some 0, t⟩ ∧
+    lruDecorate (wrapperPyMode true) (.int n) t none = .ok ⟨.uncached, some 0, t⟩ ∧
     lruDecorate (wrapperCMode true) (.callable true) t none = .ok ⟨.bounded 128, some 128, t⟩ ∧
-    lruDecorate wrapperPyMode (.callable true) t none = .ok ⟨.bounded 128, some 128, t⟩ ∧
+    lruDecorate (wrapperPyMode true) (.callable true) t none = .ok ⟨.bounded 128, some 128, t⟩ ∧
     lruDecorate (wrapperCMode true) .none t (some e) = .error e ∧
-    (lruDecorate wrapperPyMode (.callable false) t none).raises "TypeError"
+    (lruDecorate (wrapperPyMode true) (.callable false) t none).raises "TypeError"
 
 theorem lruDecorates_proven : LruDecorates := by
   intro n t e h
@@ -512,9 +512,9 @@ def SdmReprShape : Prop :=
   ∀ (α : Type) (s : Sdm α) (c o : α) (n r : String) (m d : Option String) (rep : α → Py String) (e : PyExc),
     nameOf s.func.read = .ok n →
     sdmRepr s = .ok ("<single dispatch method descriptor " ++ n ++ ">") ∧
-    (let g : SdmGet α := ⟨s, none, c, m, d⟩
+    (let g : SdmGet α := ⟨s, none, c, m, d, 0⟩
      sdmGetRepr g rep = .ok ("<single dispatch method " ++ n ++ ">")) ∧
-    (let g : SdmGet α := ⟨s, some o, c, m, d⟩
+    (let g : SdmGet α := ⟨s, some o, c, m, d, 0⟩
      (rep o = .ok r → sdmGetRepr g rep = .ok ("<bound single dispatch method " ++ n ++ " of " ++ r ++ ">")) ∧
      (rep o = .error e → sdmGetRepr g rep = .error e))
 
@@ -594,75 +594,86 @@ theorem sdmInit_proven : SdmInit := by
             cases h
             simp [hreg, List.lookup]
 
-/-- A call through `singledispatchmethod` runs the implementation for the class of the first argument, through
-its own `__get__`: a function bound to the instance, or plain through the class; a `classmethod` bound to the
-owner; a `staticmethod` with no binding; a `partial` as a method. All the arguments go through, the first one
-included. No positional argument is a `TypeError` naming the function, unless reading its name raises. -/
+/-- A call through `singledispatchmethod` runs the implementation for the class of the dispatch argument, through its
+own `__get__`, if it has one: a function bound to the instance, or plain through the class; a `classmethod` bound to the
+owner; a `staticmethod` with no binding; a `partial` as a method; and an object without `__get__` is called as it is,
+Lib/functools.py:1096-1112. Through the class, with a plain function underneath, the dispatch argument is the second one,
+:1064-1066, and a `classmethod` or a `staticmethod` implementation then drops the first argument, which it does not
+expect. No positional argument is a `TypeError` naming the function, unless reading its name raises, and one positional
+argument where two are needed is an `IndexError`. -/
 def SdmCallBinds : Prop :=
-  ∀ (α : Type) (W : World) (fuel tok : Nat) (s : Sdm α) (classOf : α → Cls) (id : Nat) (a o c : α)
-    (args : List α) (kw : List (String × α)) (m d : Option String) (e : PyExc),
+  ∀ (α : Type) (W : World) (fuel tok : Nat) (s : Sdm α) (classOf : α → Cls) (id : Nat) (a b o c : α)
+    (args : List α) (kw : List (String × α)) (m d : Option String) (e : PyExc) (f : Fn α),
     (∀ impl, s.dispatcher.cache.lookup (classOf a) = some (some impl) → s.dispatcher.token = none →
-      (sdmCall W fuel tok ⟨s, some o, c, m, d⟩ classOf (a :: args) kw).1 =
-        implCall impl (some o) c (a :: args) kw ∧
-      (sdmCall W fuel tok ⟨s, none, c, m, d⟩ classOf (a :: args) kw).1 =
-        implCall impl none c (a :: args) kw) ∧
-    implCall (.fn id) (some o) c (a :: args) kw = .ok ⟨id, o :: a :: args, kw⟩ ∧
-    implCall (.fn id) none c (a :: args) kw = .ok ⟨id, a :: args, kw⟩ ∧
-    implCall (.classm id) (some o) c (a :: args) kw = .ok ⟨id, c :: a :: args, kw⟩ ∧
-    implCall (.classm id) none c (a :: args) kw = .ok ⟨id, c :: a :: args, kw⟩ ∧
-    implCall (.staticm id) (some o) c (a :: args) kw = .ok ⟨id, a :: args, kw⟩ ∧
-    (∀ f : Fn α, implCall (.partialObj f) (some o) c (a :: args) kw = callFn f (o :: a :: args) kw) ∧
+      (sdmCall W fuel tok ⟨s, some o, c, m, d, 0⟩ classOf (a :: args) kw).1 =
+        implCall impl (some o) c 0 (a :: args) kw ∧
+      (sdmCall W fuel tok ⟨s, none, c, m, d, 0⟩ classOf (a :: args) kw).1 =
+        implCall impl none c 0 (a :: args) kw) ∧
+    (∀ impl, s.dispatcher.cache.lookup (classOf b) = some (some impl) → s.dispatcher.token = none →
+      (sdmCall W fuel tok ⟨s, none, c, m, d, 1⟩ classOf (a :: b :: args) kw).1 =
+        implCall impl none c 1 (a :: b :: args) kw) ∧
+    (sdmCall W fuel tok ⟨s, none, c, m, d, 1⟩ classOf [a] kw).1 = .error (.indexError "tuple index out of range") ∧
+    implCall (.fn id) (some o) c 0 (a :: args) kw = .ok ⟨id, o :: a :: args, kw⟩ ∧
+    implCall (.fn id) none c 1 (a :: args) kw = .ok ⟨id, a :: args, kw⟩ ∧
+    implCall (.classm id) (some o) c 0 (a :: args) kw = .ok ⟨id, c :: a :: args, kw⟩ ∧
+    implCall (.classm id) none c 1 (a :: args) kw = .ok ⟨id, c :: args, kw⟩ ∧
+    implCall (.staticm id) (some o) c 0 (a :: args) kw = .ok ⟨id, a :: args, kw⟩ ∧
+    implCall (.staticm id) none c 1 (a :: args) kw = .ok ⟨id, args, kw⟩ ∧
+    implCall (.obj f) (some o) c 0 (a :: args) kw = callFn f (a :: args) kw ∧
+    implCall (.partialObj f) (some o) c 0 (a :: args) kw = callFn f (o :: a :: args) kw ∧
     (s.func.read "__name__" = .error e →
-      (sdmCall W fuel tok ⟨s, some o, c, m, d⟩ classOf [] kw).1 = .error e) ∧
+      (sdmCall W fuel tok ⟨s, some o, c, m, d, 0⟩ classOf [] kw).1 = .error e) ∧
     (∀ n, s.func.read "__name__" = .ok n →
-      (sdmCall W fuel tok ⟨s, some o, c, m, d⟩ classOf [] kw).1.raises "TypeError")
+      (sdmCall W fuel tok ⟨s, some o, c, m, d, 0⟩ classOf [] kw).1.raises "TypeError")
 
 theorem sdmCallBinds_proven : SdmCallBinds := by
-  intro α W fuel tok s classOf id a o c args kw m d e
-  refine ⟨?_, rfl, rfl, rfl, rfl, rfl, ?_, ?_, ?_⟩
+  intro α W fuel tok s classOf id a b o c args kw m d e f
+  refine ⟨?_, ?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, ?_, ?_, ?_⟩
   · intro impl h1 h2
     simp [sdmCall, dispatch, tokenSync, h2, dispatchCached, h1]
-  · intro f
-    simp [implCall, descrGet, callFn]
+  · intro impl h1 h2
+    simp [sdmCall, dispatch, tokenSync, h2, dispatchCached, h1]
+  · simp [implCall]
+    cases f <;> rfl
   · intro h
     simp [sdmCall, h]
   · intro n h
     exact ⟨_, by simp [sdmCall, h]; rfl, rfl⟩
 
 /-- `register` then a call: through `singledispatchmethod.register` and through the bound object's `register`,
-the implementation of the registered class runs. -/
+the implementation of the registered class runs, whichever of the first two arguments is the dispatch argument. -/
 def SdmRegisterThenCall : Prop :=
-  ∀ (α : Type) (W : World) (fuel t tok : Nat) (s : Sdm α) (classOf : α → Cls) (impl : MKind α) (a c : α)
+  ∀ (α : Type) (W : World) (fuel t tok : Nat) (s : Sdm α) (classOf : α → Cls) (impl : MKind α) (a b c : α)
     (args : List α) (m d : Option String),
     ∃ s', sdmRegister W t s (.val (.cls (classOf a))) (some impl) = .ok (.func impl, s') ∧
-      (sdmCall W fuel tok ⟨s', none, c, m, d⟩ classOf (a :: args) []).1 = implCall impl none c (a :: args) [] ∧
-      sdmGetRegister W t ⟨s, none, c, m, d⟩ (.val (.cls (classOf a))) (some impl) = .ok (.func impl, s')
+      (sdmCall W fuel tok ⟨s', none, c, m, d, 0⟩ classOf (a :: args) []).1 = implCall impl none c 0 (a :: args) [] ∧
+      (sdmCall W fuel tok ⟨s', none, c, m, d, 1⟩ classOf (b :: a :: args) []).1 =
+        implCall impl none c 1 (b :: a :: args) [] ∧
+      sdmGetRegister W t ⟨s, none, c, m, d, 0⟩ (.val (.cls (classOf a))) (some impl) = .ok (.func impl, s')
 
 theorem sdmRegisterThenCall_proven : SdmRegisterThenCall := by
-  intro α W fuel t tok s classOf impl a c args m d
-  refine ⟨{ s with dispatcher := regStore W t s.dispatcher (.cls (classOf a)) impl }, rfl, ?_, rfl⟩
-  have h := (registerThenDispatch_proven (MKind α) W fuel t tok s.dispatcher impl (classOf a) []).1
-  simp only [sdmCall]
-  generalize dispatch W fuel tok (regStore W t s.dispatcher (.cls (classOf a)) impl) (classOf a) = q at h ⊢
-  obtain ⟨r, st⟩ := q
-  simp only at h
-  subst h
-  rfl
+  intro α W fuel t tok s classOf impl a b c args m d
+  refine ⟨{ s with dispatcher := regStore W t s.dispatcher (.cls (classOf a)) impl }, rfl, ?_, ?_, rfl⟩
+  all_goals
+    have h := (registerThenDispatch_proven (MKind α) W fuel t tok s.dispatcher impl (classOf a) []).1
+    simp only [sdmCall, List.getElem?_cons_zero, List.getElem?_cons_succ]
+    generalize dispatch W fuel tok (regStore W t s.dispatcher (.cls (classOf a)) impl) (classOf a) = q at h ⊢
+    obtain ⟨r, st⟩ := q
+    simp only at h
+    subst h
+    rfl
 
-/-- The class of the first argument picks the object `__get__` is called on, and that may not have one: a
-callable that passes `__init__` is usable. False: `__init__` accepts any callable, and the call at
-Lib/functools.py@3.14.7:1069 does `.__get__` with no fallback, so a callable without `__get__` raises `AttributeError`
-on the first call, where `partialmethod` treats it as an instance method. -/
+/-- A callable without `__get__`, which `__init__` accepts, is usable: it is called with the arguments as they are.
+This is what python/cpython#143535 changed: Lib/functools.py:1096-1112 calls the method even when it has no `__get__`. -/
 def SdmCallableUsable : Prop :=
-  ∀ (f : SdmFunc Nat) (s : Sdm Nat) (o : Nat), sdmNew 0 f = .ok s →
-    ¬(sdmCall world0 4 0 ⟨s, some o, 0, none, none⟩ (fun _ => 0) [o] []).1.raises "AttributeError"
+  ∀ (id o : Nat),
+    let f : SdmFunc Nat := ⟨true, false, fun _ => .ok none, fun _ => .ok none, .ok none, .obj (.base id), false⟩
+    (sdmCall world0 4 0 ⟨⟨newDispatcher 0 f.impl, f, { dict := [("__wrapped__", "<func>")] }⟩, some o, 0, none, none,
+      0⟩ (fun _ => 0) [o] []).1 = .ok ⟨id, [o], []⟩
 
-theorem sdmCallableUsable_refuted : ¬SdmCallableUsable := by
-  intro h
-  let f : SdmFunc Nat := ⟨true, false, fun _ => .ok none, fun _ => .ok none, .ok none, .obj (.base 1)⟩
-  have hs : sdmNew 0 f = .ok ⟨newDispatcher 0 f.impl, f, { dict := [("__wrapped__", "<func>")] }⟩ := rfl
-  apply h f _ 1 hs
-  exact ⟨_, rfl, rfl⟩
+theorem sdmCallableUsable_proven : SdmCallableUsable := by
+  intro id o
+  rfl
 
 /-- `_singledispatchmethod_get.__init__` reads `__module__` and `__doc__`, and skips only `AttributeError`. -/
 def SdmGetReads : Prop :=
@@ -670,13 +681,15 @@ def SdmGetReads : Prop :=
     (s.func.read "__module__" = .error e → sdmGet s obj c = .error e) ∧
     (s.func.read "__module__" = .ok m → s.func.read "__doc__" = .error e → sdmGet s obj c = .error e) ∧
     (s.func.read "__module__" = .ok m → s.func.read "__doc__" = .ok d →
-      sdmGet s obj c = .ok ⟨s, obj, c, m, d⟩)
+      sdmGet s obj c = .ok ⟨s, obj, c, m, d, dispatchIndex s obj⟩) ∧
+    (dispatchIndex s obj = if obj.isNone && s.func.isFunction then 1 else 0)
 
 theorem sdmGetReads_proven : SdmGetReads := by
   intro α s obj c m d e
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
   · intro h; simp [sdmGet, h]
   · intro h1 h2; simp [sdmGet, h1, h2]
   · intro h1 h2; simp [sdmGet, h1, h2]
+  · cases obj <;> simp [dispatchIndex]
 
 end PyLean.CoreLibs.Functools

@@ -307,11 +307,14 @@ def lruCacheArg : MaxsizeArg → Py (Option Int)
   | .none => .ok Option.none
   | .callable false | .other => .error (.typeError maxsizeErr)
 
-/-- The selection at Lib/functools.py:622-648. Any object is accepted as the user function. -/
-def wrapperPyMode : Option Int → Py LruMode
-  | Option.none => .ok .infinite
-  | some 0 => .ok .uncached
-  | some m => .ok (.bounded m)
+/-- `_lru_cache_wrapper`, Lib/functools.py:604-606, with the selection after it: the user function must be callable. -/
+def wrapperPyMode (callable : Bool) : Option Int → Py LruMode
+  | m =>
+    if !callable then .error (.typeError "the first argument must be callable") else
+    match m with
+    | Option.none => .ok .infinite
+    | some 0 => .ok .uncached
+    | some m => .ok (.bounded m)
 
 /-- `lru_cache_new`, Modules/_functoolsmodule.c:1637-1667: the user function must be callable, and
 `maxsize` must fit in `Py_ssize_t`. -/

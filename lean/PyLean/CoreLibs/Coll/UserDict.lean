@@ -120,15 +120,16 @@ def udPop (rk : κ → String) (miss : Option (κ → ν)) (u : UD κ ν) (k : �
     let u' ← udDelitem rk u k
     return (v, u')
 
-/-- `MutableMapping.popitem`, _collections_abc.py:945-955: the first key in iteration
-order. -/
-def udPopitem (rk : κ → String) (miss : Option (κ → ν)) (u : UD κ ν) : Py ((κ × ν) × UD κ ν) :=
-  match udIter u with
-  | [] => .error (.keyError "")
-  | key :: _ => do
-    let value ← udGetitem rk miss u key
-    let u' ← udDelitem rk u key
-    return ((key, value), u')
+/-- `dict.popitem()`. -/
+def dictPopitem (d : D κ ν) : Py ((κ × ν) × D κ ν) :=
+  match D.popitem? d with
+  | some r => .ok r
+  | none => .error (.keyError "'popitem(): dictionary is empty'")
+
+/-- `UserDict.popitem`, Lib/collections/__init__.py:1260-1268: `self.data.popitem()`, so last in, first out. It no longer
+reads `__getitem__` or `__delitem__`, so `__missing__` plays no part. -/
+def udPopitem (_rk : κ → String) (_miss : Option (κ → ν)) (u : UD κ ν) : Py ((κ × ν) × UD κ ν) :=
+  (dictPopitem u.data).map (fun r => (r.1, { u with data := r.2 }))
 
 /-- `MutableMapping.setdefault`, _collections_abc.py:986-992. -/
 def udSetdefault (rk : κ → String) (miss : Option (κ → ν)) (u : UD κ ν) (k : κ) (default : ν) :
@@ -183,12 +184,6 @@ def dictPop (rk : κ → String) (d : D κ ν) (k : κ) (default : Option ν) : 
   | some v, _ => .ok (v, D.del d k)
   | none, some x => .ok (x, d)
   | none, none => .error (.keyError (rk k))
-
-/-- `dict.popitem()`. -/
-def dictPopitem (d : D κ ν) : Py ((κ × ν) × D κ ν) :=
-  match D.popitem? d with
-  | some r => .ok r
-  | none => .error (.keyError "'popitem(): dictionary is empty'")
 
 /-- `dict.setdefault(k, default)`: does not consult `__missing__`. -/
 def dictSetdefault (d : D κ ν) (k : κ) (default : ν) : ν × D κ ν :=

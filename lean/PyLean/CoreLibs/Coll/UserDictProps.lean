@@ -3,7 +3,7 @@ import PyLean.CoreLibs.Coll.UserDict
 
 /-!
 Properties of `UserDict`: method-by-method comparison with `dict`. Without
-`__missing__` every method matches except `popitem`, and with `__missing__` the inherited
+`__missing__` every method matches, and with `__missing__` the inherited
 `pop`, `setdefault` and `items()` part from `dict` subclasses.
 -/
 
@@ -81,18 +81,22 @@ theorem userDictMatchesDict_proven : UserDictMatchesDict := by
     · simp [udSetdefault, h1, dictSetdefault, hg, udSetitem]
     · simp [udItemsContains, h1, dictItemsContains, hg]
 
-/-- `dict.popitem` removes the most recently inserted item ("LIFO order", guaranteed since
-3.7). `UserDict.popitem` should simulate that. False on 3.14: it inherits
-`MutableMapping.popitem`, which takes the first key. -/
+/-- `dict.popitem` removes the most recently inserted item, and `UserDict.popitem` is that method on `self.data`, for every
+`UserDict`, empty or not, and for any `__missing__`. It takes the last item, and on an empty one it raises `dict`'s
+`KeyError`. -/
 def UserDictPopitemMatchesDict : Prop :=
-  ∀ (κ ν : Type) [DecidableEq κ] (rk : κ → String) (u : UD κ ν), u.data ≠ [] →
-    udPopitem rk none u = (dictPopitem u.data).map (fun r => (r.1, { u with data := r.2 }))
+  ∀ (κ ν : Type) [DecidableEq κ] (rk : κ → String) (miss : Option (κ → ν)) (u : UD κ ν) (pre : D κ ν) (p : κ × ν),
+    udPopitem rk miss u = (dictPopitem u.data).map (fun r => (r.1, { u with data := r.2 })) ∧
+    (u.data = pre ++ [p] → udPopitem rk miss u = .ok (p, { u with data := pre })) ∧
+    (u.data = [] → udPopitem rk miss u = .error (.keyError "'popitem(): dictionary is empty'"))
 
-theorem userDictPopitemMatchesDict_refuted : ¬ UserDictPopitemMatchesDict := by
-  intro h
-  have := h Nat Nat (fun _ => "") ⟨"UserDict", [(1, 1), (2, 2)]⟩ (by simp)
-  simp [udPopitem, udIter, udGetitem, udDelitem, D.mem, D.get?, D.keys, D.del, dictPopitem, D.popitem?,
-    Except.map, bind, Except.bind, pure, Except.pure] at this
+theorem userDictPopitemMatchesDict_proven : UserDictPopitemMatchesDict := by
+  intro κ ν _ rk miss u pre p
+  refine ⟨rfl, ?_, ?_⟩
+  · intro h
+    simp [udPopitem, dictPopitem, D.popitem?, h, Except.map]
+  · intro h
+    simp [udPopitem, dictPopitem, D.popitem?, h, Except.map]
 
 /-- `reversed(d)` works on a `dict` since 3.8 and `UserDict` "simulates a dictionary". False:
 `Mapping.__reversed__ = None` makes `reversed(UserDict(...))` a `TypeError`. -/
@@ -131,18 +135,6 @@ theorem userDictSetDel_proven : UserDictSetDel := by
         have : ¬ k = x := fun e => hx e.symm
         simp [get?_del hw, this]
     · simp at h
-
-/-- Both orders remove an existing item; they differ only in which one is picked. A
-one-item `UserDict` agrees with `dict`. -/
-def UserDictPopitemNarrow : Prop :=
-  ∀ (κ ν : Type) [DecidableEq κ] (rk : κ → String) (cls : String) (k : κ) (v : ν),
-    udPopitem rk none ⟨cls, [(k, v)]⟩ =
-      (dictPopitem [(k, v)]).map (fun r => (r.1, ⟨cls, r.2⟩))
-
-theorem userDictPopitemNarrow_proven : UserDictPopitemNarrow := by
-  intro κ ν _ rk cls k v
-  simp [udPopitem, udIter, udGetitem, udDelitem, D.mem, D.get?, D.keys, D.del, dictPopitem, D.popitem?,
-    Except.map, bind, Except.bind, pure, Except.pure]
 
 /-- The comment at :1162-1163 says "Modify __contains__ and get() to work like dict does
 when __missing__ is present": a `UserDict` subclass with `__missing__` should
@@ -264,17 +256,29 @@ theorem clearLoop_nil (rk : κ → String) (miss : Option (κ → ν)) :
     intro u hw hl
     cases u with
     | mk c d =>
-      cases d with
-      | nil => simp [udClearLoop, udPopitem, udIter]
-      | cons p t =>
-        obtain ⟨a, b⟩ := p
-        have hw' : WF ((a, b) :: t) := hw
-        have hpi : udPopitem rk miss ⟨c, (a, b) :: t⟩ = .ok ((a, b), ⟨c, t⟩) := by
-          simp [udPopitem, udIter, udGetitem, udDelitem, D.mem, D.get?, D.keys, D.del,
-            bind, Except.bind, pure, Except.pure]
+      cases hd : d.getLast? with
+      | none =>
+        have : d = [] := List.getLast?_eq_none_iff.1 hd
+        subst this
+        simp [udClearLoop, udPopitem, dictPopitem, D.popitem?, Except.map]
+      | some p =>
+        have hpi : udPopitem rk miss ⟨c, d⟩ = .ok (p, ⟨c, d.dropLast⟩) := by
+          simp [udPopitem, dictPopitem, D.popitem?, hd, Except.map]
         simp only [udClearLoop, hpi]
-        have hlt : t.length < n := by simpa using hl
-        exact ih ⟨c, t⟩ (WF_of_cons hw') hlt
+        have hne : d ≠ [] := by
+          intro h
+          simp [h] at hd
+        have hlen : d.dropLast.length < n := by
+          have h0 : d.length < n + 1 := by simpa using hl
+          have h1 : d.length ≤ n := by omega
+          have h2 : 0 < d.length := List.length_pos_iff.2 hne
+          simp only [List.length_dropLast]
+          omega
+        have hw2 : WF d.dropLast := by
+          have h1 : WF d := hw
+          unfold WF keys at h1 ⊢
+          exact h1.sublist ((List.dropLast_sublist d).map _)
+        exact ih ⟨c, d.dropLast⟩ hw2 hlen
 
 theorem userDictClearRepr_proven : UserDictClearRepr := by
   intro κ ν _ rk rv miss u s hu hs

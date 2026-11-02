@@ -224,9 +224,10 @@ def PySQ.put (q : PySQ α) (item : α) (_block : Bool := true) (_timeout : Optio
     PySQ α :=
   { q with queue := q.queue ++ [item], count := q.count + 1 }
 
-/-- `_PySimpleQueue.get`, Lib/queue.py:338-355. -/
+/-- `_PySimpleQueue.get`, Lib/queue.py:338-355. With `block` false the timeout is dropped first, :349-350. -/
 def PySQ.get (q : PySQ α) (block : Bool := true) (timeout : Option Int := none) :
     PySQ α × Py α :=
+  let timeout := if block then timeout else none
   if timeout.isSome ∧ (timeout.getD 0) < 0 then (q, .error negTimeout)
   else
     match semAcquire q.count q.now block timeout with
