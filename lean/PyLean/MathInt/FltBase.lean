@@ -119,6 +119,15 @@ def _PyNumber_Index (o : Arg) : Py Int :=
       | r => .error (.typeError s!"{fq}.__index__() must return an int, not {r.fq}")
     | _ => .error (.typeError s!"'{o.tpName}' object cannot be interpreted as an integer")
 
+/-- The longest prefix of `cs` whose UTF-8 encoding fits in `n` bytes. -/
+def takeUtf8B : Nat → List Char → List Char
+  | _, [] => []
+  | n, c :: cs => if c.utf8Size ≤ n then c :: takeUtf8B (n - c.utf8Size) cs else []
+
+/-- `'%.<n>s'` of a `tp_name` in `PyErr_Format` (Objects/unicodeobject.c:2623-2661): the longest
+prefix of whole characters whose UTF-8 fits in `n` bytes (`tp_name` has no NUL or surrogate). -/
+def tpNameCut (n : Nat) (ty : String) : String := String.ofList (takeUtf8B n ty.toList)
+
 /-- `PyFloat_AsDouble`, floatobject.c:247-303. A `float` (or subclass) gives its value
 (:258-260); `int` and `bool` reach `long_float`, which is `PyLong_AsDouble`; a type with
 `__index__` but no `__float__` goes through `_PyNumber_Index` (:263-271); otherwise
@@ -131,7 +140,7 @@ def asDouble (o : Arg) : Py F64 :=
   | .other ty fq none di .. =>
     match di with
     | some _ => do PyLong_AsDouble (← _PyNumber_Index o)
-    | none => .error (.typeError s!"must be real number, not {ty}")
+    | none => .error (.typeError s!"must be real number, not {tpNameCut 50 ty}")
   | .other _ fq (some call) .. => do
     match ← call with
     | .float x | .floatSub _ x => .ok x

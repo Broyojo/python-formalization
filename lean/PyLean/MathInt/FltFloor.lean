@@ -57,7 +57,7 @@ def FloorCeilTrunc : Prop :=
     (ce = none → ∀ e, asDouble o = .error e → math_ceil o = .error e) ∧
     (fl = none → ∀ x, asDouble o = .ok x → math_floor o = math_floor (.float x)) ∧
     (ce = none → ∀ x, asDouble o = .ok x → math_ceil o = math_ceil (.float x)) ∧
-    (tr = none → math_trunc o = .error (.typeError s!"type {ty} doesn't define __trunc__ method")))
+    (tr = none → math_trunc o = .error (.typeError s!"type {tpNameCut 100 ty} doesn't define __trunc__ method")))
 
 theorem float_conv_spec (x : F64) (r : Py Int) (n : Int)
     (hfin : x.isFinite = true → r = .ok n)

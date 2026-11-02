@@ -315,7 +315,7 @@ def math_trunc (o : Arg) : Py Ret :=
   | _ =>
     match truncMethod o with
     | some r => r
-    | none => .error (.typeError s!"type {o.tpName} doesn't define __trunc__ method")
+    | none => .error (.typeError s!"type {tpNameCut 100 o.tpName} doesn't define __trunc__ method")
 
 /-! ## `degrees`, `radians` -/
 
