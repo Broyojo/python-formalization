@@ -1,6 +1,7 @@
 import PyLean.DiffCore
 import PyLean.ListSort.Model
 import PyLean.ListSort.Compare
+import PyLean.ListSort.Minrun
 
 /-!
 Differential-testing handler for `listsort` cases (`"mod": "listsort"`).
@@ -16,6 +17,11 @@ Differential-testing handler for `listsort` cases (`"mod": "listsort"`).
   (`"mode"`, `"m"`, see `evilLt`), which reaches the branches a consistent
   comparison cannot ("na == 0 is impossible now if the comparison function is
   consistent"). It backs the properties quantified over every comparison.
+* `fn = "runs"`: the length of every run the main loop pushes, for shuffled distinct
+  ints. Python reads them off the sequence of comparisons, so this observes
+  `minrun_next` directly in the real interpreter.
+* `fn = "objcmp"`: a two-item list of objects whose `__lt__` and `__gt__` answer as
+  `"lt"` and `"gt"` say, which is one call of `unsafe_object_compare`.
 * `fn = "minrun"`, `"powerloop"`: the helpers on their own (Python reimplements
   them line by line; they are not reachable from Python otherwise).
 -/
@@ -47,6 +53,38 @@ def getIntList (j : Json) (k : String) : Except String (List Int) := do
 
 def encList (l : List Int) : Json := Json.arr (l.map toJson).toArray
 
+/-- The lengths of the runs the main loop pushes, read off `sortStep`. -/
+def sortRuns {α : Type} (lt : α → α → Bool) (N : Nat) : Nat → Nat → Sorter α → List Nat
+  | 0, _, _ => []
+  | fuel + 1, pos, st =>
+    let (st, n) := sortStep lt N pos st
+    n :: (if pos + n < N ∧ n ≠ 0 then sortRuns lt N fuel (pos + n) st else [])
+
+/-- The `__lt__` or `__gt__` of `difftest/listsort_diff.py`: `RES` there. -/
+def richOf : String → Except String (Py (RichRes Bool))
+  | "true" => .ok (.ok (.bool true))
+  | "false" => .ok (.ok (.bool false))
+  | "notimpl" => .ok (.ok .notImplemented)
+  | "raise" => .ok (.error (.valueError "cmp"))
+  | "one" | "full" => .ok (.ok (.other true))
+  | "zero" | "empty" | "none" => .ok (.ok (.other false))
+  | "badbool" => .ok (.ok (.other false))
+  | m => .error s!"unknown compare result {m}"
+
+/-- `PyObject_IsTrue` on the objects of `richOf`: the only falsy-looking one that raises
+is `badbool`. -/
+def isTrueOf (mode : String) (o : Bool) : Py Bool :=
+  if mode == "badbool" then .error (.valueError "bool") else .ok o
+
+/-- `PyObject_RichCompareBool(v, w, Py_LT)` after `__lt__` said `NotImplemented`:
+`do_richcompare` tries the reflected `w.__gt__(v)`, then raises. -/
+def fallbackOf (gt : String) (rich : Py (RichRes Bool)) : Py Bool :=
+  match rich with
+  | .ok .notImplemented => .error (.typeError "'<' not supported between instances of 'O' and 'O'")
+  | .error e => .error e
+  | .ok (.bool b) => .ok b
+  | .ok (.other o) => isTrueOf gt o
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
   | "sort" | "plain" =>
@@ -68,9 +106,25 @@ def run (fn : String) (j : Json) : Except String Json := do
     let rev ← getBool j "reverse"
     let (r, c) := listSortCnt (evilLt mode m) a rev
     return Json.mkObj [("ok", Json.arr #[encList r, toJson c])]
+  | "runs" =>
+    let a ← getIntList j "a"
+    let N := a.length
+    let lt := fun x y : Int => decide (x < y)
+    let st : Sorter Int := { arr := a, ms := {}, stk := [], pushOk := true, mr := mergeInitMr N }
+    let rs := if N < 2 then [] else sortRuns lt N N 0 st
+    return Json.mkObj [("ok", Json.arr (rs.map toJson).toArray)]
+  | "objcmp" =>
+    let ltm ← getStr j "lt"
+    let gtm ← getStr j "gt"
+    let rich ← richOf ltm
+    let grich ← richOf gtm
+    return encPy (fun (r : List Int) => encList r)
+      ((fun b => listSort (fun _ _ : Int => b) [0, 1]) <$>
+        unsafeObjectCompare true rich (isTrueOf ltm) (fallbackOf gtm grich))
   | "minrun" =>
     let n ← getNat j "n"
-    return Json.mkObj [("ok", toJson (computeMinrun n))]
+    let k ← getNat j "k"
+    return Json.mkObj [("ok", Json.arr (((List.range k).map (minrunAt n)).map toJson).toArray)]
   | "powerloop" =>
     let s1 ← getNat j "s1"
     let n1 ← getNat j "n1"

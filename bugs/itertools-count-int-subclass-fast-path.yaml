@@ -33,7 +33,7 @@ expected: |
   True from next(count(True)), as from the doc code and from count(True, 2); and the subclass's
   __add__ used, giving 0, 2, 4.
 observed: |
-  python3 3.14.7 (Linux build pod): 1 True count(1) count(True, 2) [0, 1, 2]. REPRODUCED.
+  python3 3.15.2 (Linux build pod): 1 True count(1) count(True, 2) [0, 1, 2]. REPRODUCED.
   main (python.exe 3.16.0a1+dev ef1fce0): identical. REPRODUCED.
 promised_by: |
   Doc/library/itertools.rst:325-331, and the agreement of fast and slow paths.

@@ -335,7 +335,7 @@ theorem teeDocAgree_proven : TeeDocAgree := by
       | ok v =>
         have hv : v = n := by simp only [asSsize] at ha; split at ha <;> simp_all
         subst hv
-        exact ⟨.valueError "n must be >= 0", by simp [cTee, ha, hn]⟩
+        exact ⟨.valueError "n cannot be negative", by simp [cTee, ha, hn]⟩
     obtain ⟨e, he⟩ := hc
     rw [hd, he]
     trivial

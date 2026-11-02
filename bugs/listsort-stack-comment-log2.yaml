@@ -35,7 +35,7 @@ maybe_intended: |
   is touched for another reason.
 reproducer: |
   # Pending-stack depth cannot be observed from Python, so this is a line-for-line transcription of
-  # powerloop() and found_new_run() (Objects/listobject.c:2602-2667); it does not run list.sort.
+  # powerloop() and found_new_run() (Objects/listobject.c:2679-2749); it does not run list.sort.
   import math
   def powerloop(s1, n1, n2, n):
       result = 0
@@ -76,11 +76,11 @@ expected: |
   The comment states a correct bound, such as "at most ceil(log2(n)) + 1 entries", and says that 64 is
   exactly enough for arbitrary run lengths, and plenty only because runs are forced to minrun.
 observed: |
-  python3 3.14.7: depth 3 for [1, 1, 1] (comment allows 2), depth 4 for [2, 2, 1, 1] (comment allows
+  python3 3.15.2: depth 3 for [1, 1, 1] (comment allows 2), depth 4 for [2, 2, 1, 1] (comment allows
   3), depth 64 for the n = 3 * 2**61 structure. REPRODUCED.
   main: REPRODUCED with the same output. The transcription does not depend on the interpreter;
-  what matters is that main keeps the same comment (Objects/listobject.c:1840-1844), the same
-  powerloop and the same found_new_run. Only minrun changed on main (minrun_next, Pochmann's scheme),
+  what matters is that main keeps the same comment (Objects/listobject.c:1772-1776 there), the same
+  powerloop and the same found_new_run. 3.15 changed only minrun (minrun_next, Pochmann's scheme),
   and the bound for arbitrary runs covers that too.
 promised_by: |
   Objects/listobject.c:1739-1743 (comment on MAX_MERGE_PENDING). Added with the powersort change,

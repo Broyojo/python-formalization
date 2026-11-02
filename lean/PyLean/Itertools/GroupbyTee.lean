@@ -2,7 +2,7 @@ import PyLean.Itertools.Model
 
 /-!
 `itertools.groupby` (Modules/itertoolsmodule.c:423-716) and `itertools.tee`
-(:718-1197) with their doc equivalents (rst:426-456, :683-714), driven by
+(:718-1197) with their doc equivalents (rst:431-461, :688-719), driven by
 interleaved operations on the returned iterators.
 
 groupby operations: `outer` is `next(groupby_obj)` (result: the key, the group
@@ -136,7 +136,7 @@ structure DocGroupby (α κ : Type) where
   outer : GenPc
   groups : List (κ × GenPc)   -- `(target_key, frame state)` of each `_grouper`
 
-/-- `next()` on the `j`-th `_grouper(target_key)` generator (rst:431-439). -/
+/-- `next()` on the `j`-th `_grouper(target_key)` generator (rst:436-444). -/
 def docGrouperNext (key : α → κ) (d : DocGroupby α κ) (j : Nat) : Option α × DocGroupby α κ :=
   let (tk, pc) := d.groups.getD j (default, .done)
   let setPc (d : DocGroupby α κ) (pc : GenPc) := { d with groups := d.groups.set j (tk, pc) }
@@ -151,7 +151,7 @@ def docGrouperNext (key : α → κ) (d : DocGroupby α κ) (j : Nat) : Option �
       if d.currKey != tk then (none, setPc d .done)
       else (some d.currValue, d)
 
-/-- `for _ in curr_group: pass` (rst:455-456). -/
+/-- `for _ in curr_group: pass` (rst:460-461). -/
 def docExhaustGroup (key : α → κ) (d : DocGroupby α κ) (j : Nat) : Nat → DocGroupby α κ
   | 0 => d
   | fuel + 1 =>
@@ -159,14 +159,14 @@ def docExhaustGroup (key : α → κ) (d : DocGroupby α κ) (j : Nat) : Nat →
     | (none, d) => d
     | (some _, d) => docExhaustGroup key d j fuel
 
-/-- The `while not exhausted:` body up to its `yield` (rst:451-454). -/
+/-- The `while not exhausted:` body up to its `yield` (rst:456-459). -/
 def docGroupbyLoopHead (d : DocGroupby α κ) : Option κ × DocGroupby α κ :=
   if d.exhausted then (none, { d with outer := .done })
   else
     let d := { d with targetKey := d.currKey, groups := d.groups ++ [(d.currKey, GenPc.fresh)] }
     (some d.currKey, { d with outer := .suspended })
 
-/-- `next()` on the doc's `groupby` generator (rst:426-456). -/
+/-- `next()` on the doc's `groupby` generator (rst:431-461). -/
 def docGroupbyNext (key : α → κ) (d : DocGroupby α κ) : Option κ × DocGroupby α κ :=
   match d.outer with
   | .done => (none, d)
@@ -276,14 +276,15 @@ def cTeeOps : CTee α → List TeeOp → List (NextRes α) × CTee α
     else cTeeOps t ops
 
 /-- `itertools_tee_impl` (:1161-1196) on a non-tee input: `n` through the
-`Py_ssize_t` converter; `n == 0` returns `()` without touching the iterable;
+`Py_ssize_t(allow_negative=False)` converter (Modules/clinic/itertoolsmodule.c.h:338-352);
+`n == 0` returns `()` without touching the iterable;
 otherwise `PyObject_GetIter` and `tee_fromiterable` (:1051-1082). Results of the
 ops, then the number of items pulled from the input. -/
 def cTee (iterable : Obj α) (n : Int) (ops : List TeeOp) : Py (List (NextRes α) × Nat) :=
   match asSsize n with
   | .error e => .error e
   | .ok n =>
-    if n < 0 then .error (.valueError "n must be >= 0")
+    if n < 0 then .error (.valueError "n cannot be negative")
     else if !tupleNewOk n then .error memoryError
     else if n = 0 then .ok ([], 0)
     else match getIter iterable with
@@ -315,7 +316,7 @@ def cTeeDataNew (values : List α) (next : TeeNextArg) : Py (List α × Bool) :=
     | .none => .ok (values, false)
     | _ => invalid
 
-/-- The doc's `_tee` objects (rst:698-718) sharing one chain of
+/-- The doc's `_tee` objects (rst:703-723) sharing one chain of
 `[value, next]` links: link `c` is filled iff `c < values.length`; each tee
 holds its current link number. -/
 structure DocTee (α : Type) where
@@ -323,7 +324,7 @@ structure DocTee (α : Type) where
   values : List α
   tees : List Nat
 
-/-- `_tee.__next__` (rst:712-718). -/
+/-- `_tee.__next__` (rst:717-723). -/
 def docTeeNext (t : DocTee α) (k : Nat) : NextRes α × DocTee α :=
   let c := t.tees.getD k 0
   if c < t.values.length then
@@ -354,7 +355,7 @@ def docTeeOps : DocTee α → List TeeOp → List (NextRes α) × DocTee α
     if k < t.tees.length then docTeeOps { t with tees := t.tees ++ [t.tees.getD k 0] } ops
     else docTeeOps t ops
 
-/-- rst:687-696: bare `ValueError` for `n < 0`, `()` for `n == 0`. -/
+/-- rst:692-701: bare `ValueError` for `n < 0`, `()` for `n == 0`. -/
 def docTee (iterable : Obj α) (n : Int) (ops : List TeeOp) : Py (List (NextRes α) × Nat) :=
   if n < 0 then .error (.valueError "")
   else if n = 0 then .ok ([], 0)

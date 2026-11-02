@@ -5,7 +5,7 @@ import PyLean.ListSort.Perm
 
 * `stackInv_bound`: below the top entry there are `k` entries with `2^k < 2N`.
 * `policyRun`: the merge policy alone driven by an arbitrary list of positive
-  run lengths (the run structure `count_run`/`minrun` would produce is one of
+  run lengths (the run structure `count_run`/`minrun_next` would produce is one of
   them).
 * `sortCore_pushOk`: the full sort, for every comparison function, never
   violates `assert(ms.n < MAX_MERGE_PENDING)` when `N <= PY_SSIZE_T_MAX`.
@@ -27,7 +27,7 @@ theorem stackInv_bound {N pos : Nat} {t : Slice} {stk : List Slice}
       exact Nat.lt_of_le_of_lt (Nat.pow_le_pow_right (by decide) hl) hp
 
 /-- The powers of the entries below the top strictly decrease downwards and are
-`>= 1` (`listsort.txt:426-427`; `found_new_run`'s `assert`). -/
+`>= 1` (`listsort.txt:497-498`; `found_new_run`'s `assert`). -/
 def PowersStrict (stk : List Slice) : Prop :=
   Chn (fun e e' => e'.power < e.power) (stk.drop 1) ∧ ∀ e ∈ stk.drop 1, 1 ≤ e.power
 
@@ -188,10 +188,10 @@ theorem len_lt_64 {N k : Nat} (hN : N ≤ 2 ^ 63 - 1) (h : 2 ^ k < 2 * N) : k < 
   have : 2 * N < 2 ^ 64 := by omega
   exact (Nat.pow_lt_pow_iff_right (by decide)).1 (Nat.lt_trans h this)
 
-theorem sortStep_ok (lt : α → α → Bool) (xs : List α) (N minrun pos : Nat) (st : Sorter α)
+theorem sortStep_ok (lt : α → α → Bool) (xs : List α) (N pos : Nat) (st : Sorter α)
     (hNx : xs.length = N) (h : LoopOK xs N pos st) (hpos : pos < N) :
-    1 ≤ (sortStep lt N minrun pos st).2 ∧ pos + (sortStep lt N minrun pos st).2 ≤ N ∧
-      LoopOK xs N (pos + (sortStep lt N minrun pos st).2) (sortStep lt N minrun pos st).1 := by
+    1 ≤ (sortStep lt N pos st).2 ∧ pos + (sortStep lt N pos st).2 ≤ N ∧
+      LoopOK xs N (pos + (sortStep lt N pos st).2) (sortStep lt N pos st).1 := by
   obtain ⟨hperm, hstk, _, hok⟩ := h
   have hlen : st.arr.length = N := by rw [hperm.length_eq, hNx]
   have hdl : (st.arr.drop pos).length = N - pos := by simp [hlen]
@@ -203,6 +203,10 @@ theorem sortStep_ok (lt : α → α → Bool) (xs : List α) (N minrun pos : Nat
   obtain ⟨hp0, hn0, hn0'⟩ := hcr
   have hn0 := hn0 (by intro h; rw [h] at hdl; simp at hdl; omega)
   rw [hdl] at hn0'
+  -- any minrun will do: only `1 <= n <= nremaining` is used
+  generalize minrunNext st.mr = MR
+  obtain ⟨minrun, mr⟩ := MR
+  simp only
   -- the run after the optional binarysort
   have hrun : ∃ n rest ms, (if n0 < minrun then
       ((if N - pos ≤ minrun then N - pos else minrun),
@@ -241,18 +245,18 @@ theorem sortStep_ok (lt : α → α → Bool) (xs : List α) (N minrun pos : Nat
   simp only [hok hN, Bool.true_and, decide_eq_true_eq]
   exact len_lt_64 hN (stackInv_bound hinv)
 
-theorem sortLoop_ok (lt : α → α → Bool) (xs : List α) (N minrun : Nat) (hNx : xs.length = N) :
+theorem sortLoop_ok (lt : α → α → Bool) (xs : List α) (N : Nat) (hNx : xs.length = N) :
     ∀ (fuel pos : Nat) (st : Sorter α), LoopOK xs N pos st → pos < N → N ≤ pos + fuel →
-      LoopOK xs N N (sortLoop lt N minrun fuel pos st)
+      LoopOK xs N N (sortLoop lt N fuel pos st)
   | 0, pos, st, _, hpos, hf => by omega
   | fuel + 1, pos, st, h, hpos, hf => by
-    have hs := sortStep_ok lt xs N minrun pos st hNx h hpos
+    have hs := sortStep_ok lt xs N pos st hNx h hpos
     simp only [sortLoop]
-    generalize sortStep lt N minrun pos st = S at hs
+    generalize sortStep lt N pos st = S at hs
     obtain ⟨st', n⟩ := S
     simp only at hs ⊢
     split
-    · exact sortLoop_ok lt xs N minrun hNx fuel (pos + n) st' hs.2.2 (by omega) (by omega)
+    · exact sortLoop_ok lt xs N hNx fuel (pos + n) st' hs.2.2 (by omega) (by omega)
     · have : pos + n = N := by omega
       rw [this] at hs
       exact hs.2.2
@@ -266,11 +270,11 @@ theorem sortCore_ok (lt : α → α → Bool) (xs : List α) :
   dsimp only
   split
   · exact ⟨fun _ => rfl, List.Perm.refl _⟩
-  · have h0 : LoopOK xs xs.length 0 { arr := xs, ms := {}, stk := [], pushOk := true } :=
+  · have h0 : LoopOK xs xs.length 0
+        { arr := xs, ms := {}, stk := [], pushOk := true, mr := mergeInitMr xs.length } :=
       ⟨List.Perm.refl _, ⟨[], rfl, rfl⟩, by omega, fun _ => rfl⟩
-    have h := sortLoop_ok lt xs xs.length (computeMinrun xs.length) rfl xs.length 0 _ h0
-      (by omega) (by omega)
-    generalize sortLoop lt xs.length (computeMinrun xs.length) xs.length 0 _ = st at h ⊢
+    have h := sortLoop_ok lt xs xs.length rfl xs.length 0 _ h0 (by omega) (by omega)
+    generalize sortLoop lt xs.length xs.length 0 _ = st at h ⊢
     obtain ⟨hperm, _, _, hok⟩ := h
     have hfc := forceCollapse_pres (mergeAtArr lt) (fun s => s.1.Perm xs)
       (fun b na nb s hs => (mergeAtArr_perm lt b na nb s).trans hs) _ st.stk (st.arr, st.ms)

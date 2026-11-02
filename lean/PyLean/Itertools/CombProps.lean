@@ -366,8 +366,9 @@ theorem combAlloc_bad (o : Obj α) (e : PyExc) (he : tupleOf o = .error e) (r : 
   have hle := memNewOk_le hm
   have hmin : ssizeMin ≤ r := by rw [ssizeMin_eq]; omega
   refine ⟨?_, ?_, ?_, ?_⟩ <;> apply runAgree_of_eq
-  · simp [cCombinationsF, cCombinationsNew, asSsize_ok hmin hle, docCombinationsF, he, bind, Except.bind]
-  · simp [cCwrF, cCwrNew, asSsize_ok hmin hle, docCwrF, he, bind, Except.bind]
+  · simp [cCombinationsF, cCombinationsNew, asSsize_ok hmin hle, docCombinationsF, he, bind, Except.bind,
+      show ¬ r < 0 by omega]
+  · simp [cCwrF, cCwrNew, asSsize_ok hmin hle, docCwrF, he, bind, Except.bind, show ¬ r < 0 by omega]
   · simp [cPermutationsF, cPermutationsNew, docPermutationsF, he, bind, Except.bind]
   · simp [cPermutationsF, cPermutationsNew, docPermutationsF, he, bind, Except.bind]
 

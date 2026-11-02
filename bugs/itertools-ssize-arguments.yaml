@@ -40,15 +40,16 @@ expected: |
   Per the doc code: ['a', 'b', 'c'], [], [], 'x'. Per the C error messages (and gh-50554):
   exceptions, as observed.
 observed: |
-  python3 3.14.7 (macOS and the Linux build pod): ValueError, OverflowError, OverflowError, OverflowError. REPRODUCED.
+  python3 3.15.2 (Linux build pod): ValueError, OverflowError, OverflowError, OverflowError. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |
   Only the "Roughly equivalent to" code (Doc/library/itertools.rst); the islice messages state
   the limit.
 cause: |
   Argument Clinic Py_ssize_t converters and PyNumber_AsSsize_t/PyLong_AsSsize_t calls in the
-  constructors (e.g. :1621, :1633, :1637, :1657 for islice; clinic `r: Py_ssize_t` for
-  combinations; :2882 for permutations; format "n" in repeat_new :3755).
+  constructors (e.g. :1610, :1622, :1626, :1646 for islice; clinic
+  `r: Py_ssize_t(allow_negative=False)` for combinations; :2867 for permutations; format "n" in
+  repeat_new :3744).
 possible_fix: |
   None proposed (won't fix upstream).
 duplicates:

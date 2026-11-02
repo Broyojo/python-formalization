@@ -1,5 +1,6 @@
 import PyLean.Itertools.ProductSpec
 import PyLean.Itertools.Islice
+import PyLean.Itertools.TeeReentry
 
 /-!
 `__sizeof__` of the combinatoric iterators reports the object plus exactly the
@@ -18,17 +19,17 @@ theorem combNew_indices (o : Obj α) (r : Int) (s : CombState α) (h : cCombinat
   cases ha : asSsize r with
   | error e => simp [ha] at h
   | ok v =>
-    cases hp : tupleOf o with
-    | error e => simp [ha, hp] at h
-    | ok pool =>
-      simp only [ha, hp] at h
-      by_cases h0 : v < 0
-      · simp [h0, throw, throwThe, MonadExceptOf.throw, Except.bind] at h
-      · by_cases hm : memNewOk v = true
-        · simp [h0, hm, pure, Except.pure] at h
+    simp only [ha] at h
+    by_cases h0 : v < 0
+    · simp [h0, throw, throwThe, MonadExceptOf.throw, Except.bind] at h
+    · cases hp : tupleOf o with
+      | error e => simp [h0, hp, pure, Except.pure] at h
+      | ok pool =>
+        by_cases hm : memNewOk v = true
+        · simp [h0, hp, hm, pure, Except.pure] at h
           subst h
           simp
-        · simp [h0, hm, throw, throwThe, MonadExceptOf.throw] at h
+        · simp [h0, hp, hm, pure, Except.pure, throw, throwThe, MonadExceptOf.throw] at h
 
 theorem cwrNew_indices (o : Obj α) (r : Int) (s : CombState α) (h : cCwrNew o r = .ok s) :
     s.indices.length = s.r := by
@@ -36,17 +37,17 @@ theorem cwrNew_indices (o : Obj α) (r : Int) (s : CombState α) (h : cCwrNew o 
   cases ha : asSsize r with
   | error e => simp [ha] at h
   | ok v =>
-    cases hp : tupleOf o with
-    | error e => simp [ha, hp] at h
-    | ok pool =>
-      simp only [ha, hp] at h
-      by_cases h0 : v < 0
-      · simp [h0, throw, throwThe, MonadExceptOf.throw, Except.bind] at h
-      · by_cases hm : memNewOk v = true
-        · simp [h0, hm, pure, Except.pure] at h
+    simp only [ha] at h
+    by_cases h0 : v < 0
+    · simp [h0, throw, throwThe, MonadExceptOf.throw, Except.bind] at h
+    · cases hp : tupleOf o with
+      | error e => simp [h0, hp, pure, Except.pure] at h
+      | ok pool =>
+        by_cases hm : memNewOk v = true
+        · simp [h0, hp, hm, pure, Except.pure] at h
           subst h
           simp
-        · simp [h0, hm, throw, throwThe, MonadExceptOf.throw] at h
+        · simp [h0, hp, hm, pure, Except.pure, throw, throwThe, MonadExceptOf.throw] at h
 
 theorem permNew_arrays (o : Obj α) (robj : Option Int) (s : PermState α)
     (h : cPermutationsNew o robj = .ok s) :
@@ -185,17 +186,28 @@ theorem sizeofReportsArrays_proven : SizeofReportsArrays := by
 /-- The checks around the constructors' bodies, for all inputs: `islice`
 accepts exactly 2 to 4 positional arguments, and keywords only in a subclass
 defining `__init__`; a non-int `r` to `permutations` is rejected, but only after
-the iterable was read, so an error from the iterable wins. -/
+the iterable was read, so an error from the iterable wins. A negative `r` to
+`combinations` and `combinations_with_replacement` or `n` to `tee` is rejected by
+Argument Clinic, for every input, however it would have failed; `permutations` reads
+the iterable first, so there the iterable's error wins. -/
 def ArgChecks : Prop :=
   (∀ (n : Nat) (kw customInit : Bool), cIsliceArity n kw customInit = .ok () ↔
     ((kw = false ∨ customInit = true) ∧ 2 ≤ n ∧ n ≤ 4)) ∧
   (∀ (α : Type) [Inhabited α] (o : Obj α) (r : Option Int) (fuel : Nat),
     (∃ e, tupleOf o = .error e ∧ cPermutationsF fuel o r true = Run.err e) ∨
     (∃ l, tupleOf o = .ok l ∧
-      cPermutationsF fuel o r true = Run.err (.typeError "Expected int as r")))
+      cPermutationsF fuel o r true = Run.err (.typeError "Expected int as r"))) ∧
+  (∀ (α : Type) [Inhabited α] (o : Obj α) (r : Int), ssizeMin ≤ r → r < 0 →
+    cCombinationsNew o r = .error (.valueError "r cannot be negative") ∧
+    cCwrNew o r = .error (.valueError "r cannot be negative") ∧
+    (∀ e, tupleOf o = .error e → cPermutationsNew o (some r) = .error e)) ∧
+  (∀ (α : Type) [Inhabited α] (o : Obj α) (n : Int) (hooks : List (List TeeOp)) (ops : List TeeOp),
+    ssizeMin ≤ n → n < 0 →
+    cTee o n ops = .error (.valueError "n cannot be negative") ∧
+    cTeeR o n hooks ops = .error (.valueError "n cannot be negative"))
 
 theorem argChecks_proven : ArgChecks := by
-  refine ⟨?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
   · intro n kw customInit
     simp only [cIsliceArity]
     cases kw <;> cases customInit <;> simp only [Bool.true_and, Bool.false_and, Bool.not_true,
@@ -208,5 +220,16 @@ theorem argChecks_proven : ArgChecks := by
       exact Or.inr ⟨l, rfl, by
         simp [cPermutationsF, cPermutationsNew, h, bind, Except.bind, throw, throwThe,
           MonadExceptOf.throw]⟩
+  · intro α _ o r hmin h0
+    have hle : r ≤ ssizeMax := by rw [ssizeMax_eq]; omega
+    refine ⟨?_, ?_, fun e he => ?_⟩
+    · simp [cCombinationsNew, asSsize_ok hmin hle, h0, bind, Except.bind, throw, throwThe,
+        MonadExceptOf.throw]
+    · simp [cCwrNew, asSsize_ok hmin hle, h0, bind, Except.bind, throw, throwThe,
+        MonadExceptOf.throw]
+    · simp [cPermutationsNew, he, bind, Except.bind]
+  · intro α _ o n hooks ops hmin h0
+    have hle : n ≤ ssizeMax := by rw [ssizeMax_eq]; omega
+    exact ⟨by simp [cTee, asSsize_ok hmin hle, h0], by simp [cTeeR, asSsize_ok hmin hle, h0]⟩
 
 end PyLean.Itertools

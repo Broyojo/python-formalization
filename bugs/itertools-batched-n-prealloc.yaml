@@ -41,7 +41,7 @@ reproducer: |
 expected: |
   [('a', 'b', 'c')] and [] (the doc equivalent's output).
 observed: |
-  python3 3.14.7 (macOS and the Linux build pod): MemoryError for both. REPRODUCED.
+  python3 3.15.2 (Linux build pod): MemoryError for both. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |
   Doc/library/itertools.rst:150-180 ("The input is consumed lazily, just enough to fill a

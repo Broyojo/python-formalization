@@ -32,7 +32,7 @@ import common
 M = sys.maxsize
 
 # ---------------------------------------------------------------------------
-# Doc equivalents, Doc/library/itertools.rst (3.14).  islice is used by
+# Doc equivalents, Doc/library/itertools.rst (3.15).  islice is used by
 # batched exactly as in the docs (the C islice).
 
 def doc_accumulate(iterable, function=operator.add, *, initial=None):
@@ -434,6 +434,15 @@ class Raising:
         return "Raising()"
 
 
+class RaisingInt(int):
+    """An int, so `count` takes the fast path with it, whose addition raises."""
+
+    def __add__(self, other):
+        raise ValueError("add")
+
+    __radd__ = __add__
+
+
 class SubCount(itertools.count):
     pass
 
@@ -451,13 +460,13 @@ class SubIslice(itertools.islice):
 def dec_val(v):
     if isinstance(v, dict):
         return struct.unpack("<d", struct.pack("<Q", v["f"]))[0]
-    return {"bad": Raising, "str": lambda: "a"}[v]() if isinstance(v, str) else v
+    return {"bad": Raising, "str": lambda: "a", "badint": lambda: RaisingInt(1)}[v]() if isinstance(v, str) else v
 
 
 def enc_val(v):
     if isinstance(v, float):
         return "nan" if math.isnan(v) else {"f": struct.unpack("<Q", struct.pack("<d", v))[0]}
-    return "bad" if isinstance(v, Raising) else v
+    return "bad" if isinstance(v, Raising) else "badint" if isinstance(v, RaisingInt) else v
 
 
 def f_val(x):
@@ -544,7 +553,7 @@ def gen_case(rng):
         preds = ["lt5", "even", "pos", "nz", "r3"] + (["none"] if fn == "filterfalse" else [])
         c.update(obj=spec(rng, small_list(rng, span=rng.choice([4, 10]))), pred=rng.choice(preds))
     elif fn == "pairwise":
-        c.update(obj=spec(rng, small_list(rng)))
+        c.update(obj=spec(rng, small_list(rng)), hold=rng.randrange(3))
     elif fn == "pairwise_r":
         c.update(impl="c", obj=spec(rng, small_list(rng)), calls=rng.randrange(8),
                  hooks=[rng.randrange(5) for _ in range(rng.randrange(5))])
@@ -564,7 +573,8 @@ def gen_case(rng):
         npools = rng.randrange(4) if rep is None or not (0 < rep <= 3) else rng.randrange(3)
         if rep is not None and rep > 3 and impl == "doc":
             npools = 0 if rng.random() < 0.5 else npools  # [pools] * huge
-        c.update(objs=[spec(rng, small_list(rng, 3, span=3)) for _ in range(npools)], repeat=rep)
+        c.update(objs=[spec(rng, small_list(rng, 3, span=3)) for _ in range(npools)], repeat=rep,
+                 hold=rng.randrange(3))
     elif fn in ("combinations", "cwr", "permutations"):
         l = small_list(rng, 6, span=5)
         n = len(l)
@@ -576,7 +586,12 @@ def gen_case(rng):
             r = rng.choice([n + 3, 10**5, M, 2**63])  # the doc returns at once
         if fn == "cwr" and r is not None and 12 < r and n > 0:
             r = rng.choice([2**50, 2**60, M, 2**63, -1]) if impl == "c" else n + 1
-        c.update(obj=spec(rng, l), r=r)
+        c.update(obj=spec(rng, l), r=r, hold=rng.randrange(3))
+        if r is not None and r < 0 and rng.random() < 0.5:
+            # A negative r on an input whose own failure would otherwise win.
+            c.update(obj=rng.choice([{"bad": "int"}, {"l": l, "err": "boom"}]))
+        if fn != "permutations" and impl == "c" and rng.random() < 0.15:
+            c["index"] = True
         if fn == "permutations" and impl == "c" and rng.random() < 0.05:
             c["badr"] = True
     elif fn == "sizeof":
@@ -597,7 +612,7 @@ def gen_case(rng):
                 10**400, -10**400, 2**53, rng.randint(-10, 10)]
         floats = [f_val(x) for x in (0.5, -0.5, 1.0, 0.0, -0.0, 2.5, 0.1, 1e308, 1.7976931348623157e308,
                                      5e-324, 2.0**53, math.inf, -math.inf, math.nan)]
-        others = [True, False, "bad"] + (["str"] if impl == "c" else [])
+        others = [True, False, "bad", "badint"] + (["str"] if impl == "c" else [])
 
         def arg():
             return rng.choice(rng.choice([ints, floats, others]))
@@ -611,6 +626,9 @@ def gen_case(rng):
             c["start"] = arg()
         if rng.random() < 0.7:
             c["step"] = step()
+        if rng.random() < 0.15:
+            # Fast mode up to sys.maxsize, where count_nextlong switches and the add fails.
+            c.update(start=rng.choice([M, M - 1, M - 2]), step="badint", ops=ops + ["n", "r", "n"])
     elif fn == "repeat":
         times = rng.choice([None, None, 0, 1, 2, 3, -1, -5, M, -M - 1, M + 1, 2**64, -2**64])
         c.update(elem=rng.randint(-3, 3), ops=[rng.choice("nrh") for _ in range(rng.randrange(8))])
@@ -661,6 +679,8 @@ def gen_case(rng):
             else:
                 ops.append(["k", k])
         c.update(obj=spec(rng, list(range(L))), n=n, ops=ops)
+        if impl == "c" and rng.random() < 0.15:
+            c["index"] = True
         if impl == "c" and rng.random() < 0.3:
             c["hooks"] = [[[rng.choice("nnnc"), rng.randrange(4)] for _ in range(rng.randrange(1, 3))]
                           for _ in range(rng.randrange(1, 6))]
@@ -701,6 +721,29 @@ def drain(make, enc=lambda v: v, limit=None):
             items.append(enc(v))
             if limit is not None and len(items) >= limit:
                 break
+    except Exception as e:
+        return [items, enc_exc(e)]
+    return [items, None]
+
+
+def drain_tuples(make, hold):
+    """`drain` for an iterator that reuses its result tuple when it holds the only
+    reference: the C code then fills it in place, and copies it otherwise
+    (`_PyObject_IsUniquelyReferenced`, then `PyTuple_FromArray` or `_PyTuple_Recycle`).
+    hold 0 keeps the last tuple alive across next(), hold 1 keeps every tuple, hold 2
+    keeps none. The results must not depend on it."""
+    if hold == 0:
+        return drain(make, list)
+    items, kept = [], []
+    try:
+        it = make()
+        if hold == 1:
+            for v in it:
+                kept.append(v)
+                items.append(list(v))
+        else:
+            for v in map(list, it):
+                items.append(v)
     except Exception as e:
         return [items, enc_exc(e)]
     return [items, None]
@@ -792,7 +835,8 @@ def run_groupby(c):
 def run_tee(c, F):
     src = obj(c["obj"])
     try:
-        tees = [itertools._tee(src)] if c["fn"] == "tee_wrap" else list(F(src, c["n"]))
+        n = IntLike(c["n"]) if c.get("index") else c.get("n")
+        tees = [itertools._tee(src)] if c["fn"] == "tee_wrap" else list(F(src, n))
     except Exception as e:
         return {"exc": type(e).__name__, "msg": str(e)}
     out = []
@@ -919,16 +963,13 @@ def run_python(c):
     if fn in ("dropwhile", "takewhile", "filterfalse"):
         return {"ok": drain(lambda: F(PREDS[c["pred"]], obj(c["obj"])))}
     if fn == "pairwise":
-        return {"ok": drain(lambda: F(obj(c["obj"])), tup)}
+        return {"ok": drain_tuples(lambda: F(obj(c["obj"])), c["hold"])}
     if fn == "pairwise_r":
         return run_pairwise(c)
     if fn == "teeweak":
         return run_teeweak(c)
     if fn == "starmap":
-        r = drain(lambda: F(STARS[c["f"]], objobj(c["src"])))
-        if impl == "doc" and r[1] and "argument after *" in r[1][1]:
-            r[1][1] = "~argument after * must be an iterable"
-        return {"ok": r}
+        return {"ok": drain(lambda: F(STARS[c["f"]], objobj(c["src"])))}
     if fn == "zip_longest":
         kw = dict(c["kw"])
         if len(c["kw"]) == 2:
@@ -936,13 +977,14 @@ def run_python(c):
         return {"ok": drain(lambda: F(*[obj(o) for o in c["objs"]], **kw), tup)}
     if fn == "product":
         kw = {} if c["repeat"] is None else {"repeat": c["repeat"]}
-        return {"ok": drain(lambda: F(*[obj(o) for o in c["objs"]], **kw), tup)}
+        return {"ok": drain_tuples(lambda: F(*[obj(o) for o in c["objs"]], **kw), c["hold"])}
     if fn in ("combinations", "cwr"):
-        return {"ok": drain(lambda: F(obj(c["obj"]), c["r"]), tup)}
+        r = IntLike(c["r"]) if c.get("index") else c["r"]
+        return {"ok": drain_tuples(lambda: F(obj(c["obj"]), r), c["hold"])}
     if fn == "permutations":
         if c.get("badr"):
             return {"ok": drain(lambda: itertools.permutations(obj(c["obj"]), 1.5), tup)}
-        return {"ok": drain(lambda: F(obj(c["obj"]), c["r"]), tup)}
+        return {"ok": drain_tuples(lambda: F(obj(c["obj"]), c["r"]), c["hold"])}
     if fn == "sizeof":
         f = getattr(itertools, KIND[c["kind"]])
         try:

@@ -1,10 +1,14 @@
+import PyLean.Core
+
 /-!
 # The pre-sort compare selection for int keys
 
 For a list whose keys are all exact `int`s, `list_sort_impl` picks
 `unsafe_long_compare` when every key is compact (at most one 30-bit digit), and
-`unsafe_object_compare`, i.e. `long_richcompare`, otherwise
-(`listobject.c:3029-3124`). The model represents an int as in
+`unsafe_object_compare` over `long_richcompare` otherwise
+(`listobject.c:3029-3124`). `unsafeObjectCompare` mirrors that function for keys of
+any type; `difftest/listsort_diff.py` fn `"objcmp"` checks its branches on two-item
+lists. The model represents an int as in
 `Include/cpython/longintrepr.h`: a sign and little-endian base `2^30` digits with
 a non-zero top digit. `longCompare` mirrors `long_compare`
 (`Objects/longobject.c:3605-3623`) digit by digit, so the theorems here say the
@@ -12,6 +16,30 @@ fast path and the digit loop both agree with `<` on `Int`.
 -/
 
 namespace PyLean.ListSort
+
+open PyLean
+
+/-- What `tp_richcompare(v, w, Py_LT)` returns when it does not raise: `NotImplemented`,
+a `bool`, or any other object `o`. -/
+inductive RichRes (ρ : Type) where
+  | notImplemented
+  | bool (b : Bool)
+  | other (o : ρ)
+
+/-- `unsafe_object_compare(v, w, ms)` (`listobject.c:2799-2832`): `-1` with an exception
+set is `.error`. `sameSlot` is `Py_TYPE(v)->tp_richcompare == ms->key_richcompare`
+(:2804, re-checked because a comparison can reassign `__class__`), `rich` the slot's
+result, `isTrue` is `PyObject_IsTrue`, which can raise, and `fallback` is
+`PyObject_RichCompareBool(v, w, Py_LT)`. -/
+def unsafeObjectCompare {ρ : Type} (sameSlot : Bool) (rich : Py (RichRes ρ)) (isTrue : ρ → Py Bool)
+    (fallback : Py Bool) : Py Bool :=
+  if !sameSlot then fallback
+  else
+    match rich with
+    | .ok .notImplemented => fallback
+    | .error e => .error e
+    | .ok (.bool b) => .ok b
+    | .ok (.other o) => isTrue o
 
 /-- `1 << PyLong_SHIFT` (`longintrepr.h:47`). -/
 def digitBase : Nat := 2 ^ 30
@@ -64,10 +92,18 @@ def longRichLt (v w : PyLong) : Bool := decide (longCompare v w < 0)
 /-- `ints_are_bounded` over the keys (`listobject.c:3073-3078`, `:3094`). -/
 def allCompact (keys : List Int) : Bool := keys.all (fun k => (PyLong.ofInt k).isCompact)
 
+/-- `unsafe_object_compare` on exact ints: every key has `long_richcompare` as its
+slot, which answers with a `bool` and never raises. -/
+def longObjectCompare (v w : PyLong) : Bool :=
+  match unsafeObjectCompare (ρ := PUnit) true (.ok (.bool (longRichLt v w))) (fun _ => .ok false)
+      (.ok false) with
+  | .ok b => b
+  | .error _ => false
+
 /-- The compare chosen by the pre-sort check for all-int keys. -/
 def selectCompare (bounded : Bool) (x y : Int) : Bool :=
   if bounded then unsafeLongCompare (.ofInt x) (.ofInt y)
-  else longRichLt (.ofInt x) (.ofInt y)
+  else longObjectCompare (.ofInt x) (.ofInt y)
 
 /-! ## Digits -/
 
@@ -284,7 +320,8 @@ theorem selectCompare_eq (keys : List Int) (x y : Int) (hx : x ∈ keys) (hy : y
     have hall := List.all_eq_true.1 h
     unfold unsafeLongCompare
     rw [compactValue_eq x (hall x hx), compactValue_eq y (hall y hy)]
-  · unfold longRichLt
+  · show longRichLt (.ofInt x) (.ofInt y) = decide (x < y)
+    unfold longRichLt
     exact decide_eq_decide.2 (longCompare_lt x y)
 
 end PyLean.ListSort
