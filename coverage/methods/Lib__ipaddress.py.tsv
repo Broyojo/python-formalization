@@ -97,18 +97,18 @@ Lib/ipaddress.py	1480	1481	IPv4Interface.is_unspecified	is_unspecified(self)	mod
 Lib/ipaddress.py	1499	1549	IPv4Network.__init__	__init__(self, address, strict=True)	todo		
 Lib/ipaddress.py	1553	1563	IPv4Network.is_global	is_global(self)	todo		
 Lib/ipaddress.py	1629	1646	_BaseV6._make_netmask	_make_netmask(cls, arg)	todo		
-Lib/ipaddress.py	1649	1759	_BaseV6._ip_int_from_string	_ip_int_from_string(cls, ip_str)	todo		
-Lib/ipaddress.py	1762	1785	_BaseV6._parse_hextet	_parse_hextet(cls, hextet_str)	todo		
-Lib/ipaddress.py	1788	1833	_BaseV6._compress_hextets	_compress_hextets(cls, hextets)	todo		
-Lib/ipaddress.py	1836	1859	_BaseV6._string_from_ip_int	_string_from_ip_int(cls, ip_int=None)	todo		
+Lib/ipaddress.py	1649	1759	_BaseV6._ip_int_from_string	_ip_int_from_string(cls, ip_str)	modelled	ipaddress-v6-text-roundtrip	
+Lib/ipaddress.py	1762	1785	_BaseV6._parse_hextet	_parse_hextet(cls, hextet_str)	modelled	ipaddress-v6-text-roundtrip	
+Lib/ipaddress.py	1788	1833	_BaseV6._compress_hextets	_compress_hextets(cls, hextets)	modelled	ipaddress-v6-text-roundtrip	
+Lib/ipaddress.py	1836	1859	_BaseV6._string_from_ip_int	_string_from_ip_int(cls, ip_int=None)	modelled	ipaddress-v6-text-roundtrip	
 Lib/ipaddress.py	1861	1884	_BaseV6._explode_shorthand_ip_string	_explode_shorthand_ip_string(self)	modelled	ipaddress-exploded-by-case,ipaddress-exploded-hextets,ipaddress-exploded-keeps-suffix,ipaddress-exploded-total	
 Lib/ipaddress.py	1886	1893	_BaseV6._reverse_pointer	_reverse_pointer(self)	todo		
-Lib/ipaddress.py	1896	1913	_BaseV6._split_scope_id	_split_scope_id(ip_str)	todo		
-Lib/ipaddress.py	1921	1959	IPv6Address.__init__	__init__(self, address)	todo		
+Lib/ipaddress.py	1896	1913	_BaseV6._split_scope_id	_split_scope_id(ip_str)	modelled	ipaddress-v6-text-roundtrip	
+Lib/ipaddress.py	1921	1959	IPv6Address.__init__	__init__(self, address)	modelled	ipaddress-v6-text-roundtrip	
 Lib/ipaddress.py	1961	1967	IPv6Address._explode_shorthand_ip_string	_explode_shorthand_ip_string(self)	modelled	ipaddress-exploded-by-case,ipaddress-exploded-keeps-suffix	
 Lib/ipaddress.py	1969	1978	IPv6Address._reverse_pointer	_reverse_pointer(self)	todo		
-Lib/ipaddress.py	1980	1996	IPv6Address._ipv4_mapped_ipv6_to_str	_ipv4_mapped_ipv6_to_str(self)	todo		
-Lib/ipaddress.py	1998	2004	IPv6Address.__str__	__str__(self)	todo		
+Lib/ipaddress.py	1980	1996	IPv6Address._ipv4_mapped_ipv6_to_str	_ipv4_mapped_ipv6_to_str(self)	modelled	ipaddress-v6-text-roundtrip	
+Lib/ipaddress.py	1998	2004	IPv6Address.__str__	__str__(self)	modelled	ipaddress-v6-text-roundtrip	
 Lib/ipaddress.py	2006	2007	IPv6Address.__hash__	__hash__(self)	todo		
 Lib/ipaddress.py	2009	2015	IPv6Address.__eq__	__eq__(self, other)	todo		
 Lib/ipaddress.py	2017	2018	IPv6Address.__reduce__	__reduce__(self)	todo		
@@ -122,7 +122,7 @@ Lib/ipaddress.py	2094	2115	IPv6Address.is_private	is_private(self)	todo
 Lib/ipaddress.py	2118	2135	IPv6Address.is_global	is_global(self)	todo		
 Lib/ipaddress.py	2138	2149	IPv6Address.is_unspecified	is_unspecified(self)	todo		
 Lib/ipaddress.py	2152	2163	IPv6Address.is_loopback	is_loopback(self)	todo		
-Lib/ipaddress.py	2166	2176	IPv6Address.ipv4_mapped	ipv4_mapped(self)	todo		
+Lib/ipaddress.py	2166	2176	IPv6Address.ipv4_mapped	ipv4_mapped(self)	modelled	ipaddress-v6-text-roundtrip	
 Lib/ipaddress.py	2179	2191	IPv6Address.teredo	teredo(self)	todo		
 Lib/ipaddress.py	2194	2204	IPv6Address.sixtofour	sixtofour(self)	todo		
 Lib/ipaddress.py	2209	2215	IPv6Interface.__init__	__init__(self, address)	todo		
