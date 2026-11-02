@@ -3,7 +3,7 @@ import PyLean.Sequences.Insert
 
 /-!
 `Element.append`, `extend` and `insert`: the C accelerator (Modules/_elementtree.c) against the
-pure-Python twin (Lib/xml/etree/ElementTree.py:222-246), on the model of `EtreeModel.lean`.
+pure-Python twin (Lib/xml/etree/ElementTree.py:222-252), on the model of `EtreeModel.lean`.
 
 Argument Clinic checks `subelement: object(subclass_of=Element_Type)` and converts
 `index: Py_ssize_t` before the body runs, in parameter order; the Python twin checks the type
@@ -75,7 +75,7 @@ def addAllPy (T : Ty α) : List α → List α → Out α
   | kids, [] => (kids, .ok ())
   | kids, x :: xs => if !T.isElem x then (kids, .error (typeErrPy T x)) else addAllPy T (listAppend kids x) xs
 
-/-- `Element.extend`, ElementTree.py:232-240: check and append item by item as the iterable
+/-- `Element.extend`, ElementTree.py:233-241: check and append item by item as the iterable
 yields them. -/
 def extendPy (T : Ty α) (kids : List α) : Arg α → Out α
   | .notIter n => (kids, .error (.typeError s!"'{n}' object is not iterable"))
@@ -87,7 +87,7 @@ def extendPy (T : Ty α) (kids : List α) : Arg α → Out α
       | some e => (k, .error e)
       | none => (k, .ok ())
 
-/-- `Element.insert`, ElementTree.py:242-245. -/
+/-- `Element.insert`, ElementTree.py:243-246. -/
 def insertPy (T : Ty α) (kids : List α) (index : Int) (x : α) : Out α :=
   if !T.isElem x then (kids, .error (typeErrPy T x)) else ofList kids (listInsert kids index x)
 
@@ -181,5 +181,26 @@ theorem extendTwins_refuted : ¬ ExtendTwins := by
   have := h Nat caseTy [] (.iter [60, 61] (some (.valueError "boom")) id)
   revert this
   decide
+
+/-- A child that is not an Element is refused by both twins with `TypeError` and the children are
+left as they were: C through Argument Clinic's `subclass_of` check (for `insert`, after converting
+`index`), Python through `_assert_is_element` (ElementTree.py:248-252), for every non-Element value
+and every index that fits `Py_ssize_t`. -/
+def WritersRefuse : Prop :=
+  ∀ (α : Type) [Inhabited α] (T : Ty α) (kids : List α) (x : α) (i : Int),
+    T.isElem x = false → -ssizeMax - 1 ≤ i → i ≤ ssizeMax →
+    appendC T kids x = (kids, .error (clinicTypeErr T "append() argument 1" x)) ∧
+    appendPy T kids x = (kids, .error (typeErrPy T x)) ∧
+    insertC T kids i x = (kids, .error (clinicTypeErr T "insert() argument 2" x)) ∧
+    insertPy T kids i x = (kids, .error (typeErrPy T x))
+
+theorem writersRefuse_proven : WritersRefuse := by
+  intro α _ T kids x i hx h1 h2
+  have ha : asSsize i = .ok i := by
+    unfold ssizeMax at h1 h2
+    unfold asSsize ssizeMin ssizeMax
+    rw [if_pos (by omega)]
+  refine ⟨by simp [appendC, hx], by simp [appendPy, hx], ?_, by simp [insertPy, hx]⟩
+  simp [insertC, ha, hx]
 
 end PyLean.TextLibs.Etree

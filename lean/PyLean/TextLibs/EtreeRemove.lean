@@ -2,7 +2,7 @@ import PyLean.TextLibs.EtreeWriters
 
 /-!
 `Element.remove(subelement)`: the C accelerator (Modules/_elementtree.c:1663-1720) against the
-pure-Python twin (Lib/xml/etree/ElementTree.py:247-270), which calls `list.remove`
+pure-Python twin (Lib/xml/etree/ElementTree.py:254-274), which calls `list.remove`
 (`list_remove_impl`, Objects/listobject.c:3425-3444).
 
 Children are compared by identity (`DecidableEq`) and then with `==`. A child's `__eq__` is
@@ -72,7 +72,7 @@ def listRemoveM (cmp : Cmp α σ) (fuel : Nat) (s : σ) (l : List α) (x : α) :
   | (l, _, .ok none) => (l, .error (.valueError "list.remove(x): x not in list"))
   | (l, _, .ok (some i)) => (listAssSlice l (i : Int) ((i : Int) + 1) [], .ok ())
 
-/-- `Element.remove` in the twin, ElementTree.py:247-270: `list.remove` first; any `ValueError`,
+/-- `Element.remove` in the twin, ElementTree.py:254-274: `list.remove` first; any `ValueError`,
 one raised by an `__eq__` included, becomes `TypeError` when `x` is a class or has no `tag`
 (`iselement`, duck typing; `iselement` here is that test's result) and otherwise
 `ValueError(f"{subelement!r} not in {self!r}")`. -/

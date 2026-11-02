@@ -1436,6 +1436,12 @@ def entries : List Entry := [
     statement := "The same theorem, credited to the Python twin's methods."
     source := "the implementation disagreeing with itself (C and Python twins)", status := .proven
     prop := ``Etree.WritersTwins, thm := some ``Etree.writersTwins_proven },
+  { id := "textlibs-etree-writers-refuse", pyFile := "Lib/xml/etree/ElementTree.py"
+    pyFns := ["Element.append", "Element.insert", "Element._assert_is_element"]
+    statement := "append(x) and insert(i, x) with x not an Element raise TypeError and leave the children unchanged, in both twins, for every index that fits Py_ssize_t; the messages are Clinic's and _assert_is_element's."
+    source := "_assert_is_element, ElementTree.py:248-252; Clinic's subclass_of check on Element.append/insert", status := .proven
+    prop := ``Etree.WritersRefuse, thm := some ``Etree.writersRefuse_proven
+    notes := "Smoke-tested on 3.15.2: append(5), insert(0, 5), insert(-7, 'x'), append(Element) in both twins." },
   { id := "textlibs-etree-extend-iter-twins", pyFile := "Modules/_elementtree.c"
     pyFns := ["_elementtree_Element_extend_impl", "Element.extend"]
     statement := "extend leaves the same children in both twins for every iterable."
