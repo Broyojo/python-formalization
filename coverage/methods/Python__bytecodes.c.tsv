@@ -223,17 +223,17 @@ Python/bytecodes.c	2338	2338	opcode:_GUARD_BUILTINS_IS_CANONICAL	tier2 op(_GUARD
 Python/bytecodes.c	2342	2342	opcode:LOAD_GLOBAL_MODULE	macro(LOAD_GLOBAL_MODULE) =	todo		
 Python/bytecodes.c	2348	2348	opcode:LOAD_GLOBAL_BUILTIN	macro(LOAD_GLOBAL_BUILTIN) =	todo		
 Python/bytecodes.c	2354	2354	opcode:DELETE_FAST	inst(DELETE_FAST, (--)) {	modelled	bytecode-delete-fast	
-Python/bytecodes.c	2368	2368	opcode:MAKE_CELL	inst(MAKE_CELL, (--)) {	todo		
-Python/bytecodes.c	2381	2381	opcode:DELETE_DEREF	inst(DELETE_DEREF, (--)) {	todo		
+Python/bytecodes.c	2368	2368	opcode:MAKE_CELL	inst(MAKE_CELL, (--)) {	modelled	bytecode-make-cell	
+Python/bytecodes.c	2381	2381	opcode:DELETE_DEREF	inst(DELETE_DEREF, (--)) {	modelled	bytecode-cells	
 Python/bytecodes.c	2393	2393	opcode:LOAD_FROM_DICT_OR_DEREF	inst(LOAD_FROM_DICT_OR_DEREF, (class_dict_st -- value)) {	todo		changed-in-3.15:
-Python/bytecodes.c	2424	2424	opcode:LOAD_DEREF	inst(LOAD_DEREF, ( -- value)) {	todo		
-Python/bytecodes.c	2433	2433	opcode:STORE_DEREF	inst(STORE_DEREF, (v --)) {	todo		
+Python/bytecodes.c	2424	2424	opcode:LOAD_DEREF	inst(LOAD_DEREF, ( -- value)) {	modelled	bytecode-cells	
+Python/bytecodes.c	2433	2433	opcode:STORE_DEREF	inst(STORE_DEREF, (v --)) {	modelled	bytecode-cells	
 Python/bytecodes.c	2438	2438	opcode:COPY_FREE_VARS	inst(COPY_FREE_VARS, (--)) {	todo		
 Python/bytecodes.c	2452	2452	opcode:BUILD_STRING	inst(BUILD_STRING, (pieces[oparg] -- str)) {	todo		changed-in-3.15:
 Python/bytecodes.c	2459	2459	opcode:BUILD_INTERPOLATION	inst(BUILD_INTERPOLATION, (value, str, format[oparg & 1] -- interpolation)) {	todo		
 Python/bytecodes.c	2483	2483	opcode:BUILD_TEMPLATE	inst(BUILD_TEMPLATE, (strings, interpolations -- template)) {	todo		
-Python/bytecodes.c	2493	2493	opcode:BUILD_TUPLE	inst(BUILD_TUPLE, (values[oparg] -- tup)) {	todo		
-Python/bytecodes.c	2502	2502	opcode:BUILD_LIST	inst(BUILD_LIST, (values[oparg] -- list)) {	todo		
+Python/bytecodes.c	2493	2493	opcode:BUILD_TUPLE	inst(BUILD_TUPLE, (values[oparg] -- tup)) {	modelled	bytecode-build-seq	
+Python/bytecodes.c	2502	2502	opcode:BUILD_LIST	inst(BUILD_LIST, (values[oparg] -- list)) {	modelled	bytecode-build-seq	
 Python/bytecodes.c	2511	2511	opcode:_LIST_EXTEND	op(_LIST_EXTEND, (list_st, unused[oparg-1], iterable_st -- list_st, unused[oparg-1], i)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	2533	2533	opcode:LIST_EXTEND	macro(LIST_EXTEND) = _LIST_EXTEND + POP_TOP;	todo		changed-in-3.15:
 Python/bytecodes.c	2535	2535	opcode:_SET_UPDATE	op(_SET_UPDATE, (set, unused[oparg-1], iterable -- set, unused[oparg-1], i)) {	todo		changed-in-3.15: new function
