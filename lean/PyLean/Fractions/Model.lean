@@ -2,8 +2,7 @@ import PyLean.Core
 
 /-!
 Model of the exact (integer and rational) core of CPython `Lib/fractions.py`
-(3.14.7; the parts modelled here are identical on main): construction from
-ints, normalization, the arithmetic operators with `Fraction` and `int`
+(3.15.2): construction from ints, normalization, the arithmetic operators with `Fraction` and `int`
 operands, `**` with an int exponent, comparisons, `__floor__`, `__ceil__`,
 `__trunc__`, `__int__`, `__round__`, `__hash__` and `limit_denominator`.
 
@@ -309,7 +308,7 @@ def decimalHash (neg : Bool) (coeff : Nat) (exp : Int) : Int :=
   if ans = -1 then -2 else ans
 
 /-- `Fraction(Decimal((sign, digits, exponent)))` through
-`Decimal.as_integer_ratio()` (fractions.py@3.14.7:249-255), which returns the ratio in
+`Decimal.as_integer_ratio()` (fractions.py:245-250), which returns the ratio in
 lowest terms with a positive denominator, i.e. the normalized pair. -/
 def ofDecimal (neg : Bool) (coeff : Nat) (exp : Int) : Frac :=
   let n : Int := if neg then -(coeff : Int) else coeff

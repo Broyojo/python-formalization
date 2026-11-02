@@ -9,6 +9,7 @@ with Fraction(n, d). Ints of 1000+ digits travel as {"hex": hex(i)}, since
 json cannot print ints past the int string-conversion limit.
 """
 
+import numbers
 import sys
 from decimal import Decimal
 from fractions import Fraction
@@ -23,7 +24,7 @@ FNS_UNARY = ["str", "format", "format", "format", "format", "floor", "ceil", "tr
              "neg", "abs"]
 FNS_BINARY = ["add", "sub", "mul", "truediv", "floordiv", "mod", "divmod",
               "eq", "lt", "le", "gt", "ge"]
-FNS_OTHER = ["ctor", "parse", "parse", "parse", "decimal", "dechash"]
+FNS_OTHER = ["ctor", "ctor1", "ctor1", "parse", "parse", "parse", "decimal", "dechash"]
 
 
 def enc(i):
@@ -149,10 +150,144 @@ def rand_spec(rng):
     return s
 
 
+class Rat(numbers.Rational):
+    """A Rational that is not a Fraction, with no as_integer_ratio."""
+
+    def __init__(self, n, d):
+        self.n, self.d = n, d
+
+    numerator = property(lambda self: self.n)
+    denominator = property(lambda self: self.d)
+    __hash__ = None
+
+
+for _name in Rat.__abstractmethods__ - {"numerator", "denominator"}:
+    setattr(Rat, _name, lambda self, *a: NotImplemented)
+Rat.__abstractmethods__ = frozenset()
+
+
+class RatRatio(Rat):
+    """A Rational whose as_integer_ratio disagrees with numerator and denominator:
+    3.15 reads the method, 3.14 read the attributes."""
+
+    def __init__(self, n, d, a, b):
+        super().__init__(n, d)
+        self.a, self.b = a, b
+
+    def as_integer_ratio(self):
+        return self.a, self.b
+
+
+class IntNum(int):
+    """Overrides numerator, which 3.14 read and 3.15 no longer does."""
+
+    numerator = property(lambda self: int(self) + 1)
+
+
+class FracRatio(Fraction):
+    def as_integer_ratio(self):
+        return self.numerator + 1, self.denominator + 1
+
+
+class StrRational(str):
+    """A str registered as Rational: 3.14 read numerator, 3.15 parses it."""
+
+    numerator = 7
+    denominator = 9
+
+
+numbers.Rational.register(StrRational)
+
+
+class StrRatio(str):
+    def as_integer_ratio(self):
+        return 5, 6
+
+
+class HasRatio:
+    def __init__(self, r):
+        self.r = r
+
+    def as_integer_ratio(self):
+        if isinstance(self.r, str):
+            raise RuntimeError(self.r)
+        return self.r
+
+
+class RatioType:
+    """A class object has the attribute, but `isinstance(x, type)` keeps it out."""
+
+    def as_integer_ratio(self):
+        return 1, 2
+
+
+class RationalMeta(type):
+    numerator = 3
+    denominator = 4
+
+
+numbers.Rational.register(RationalMeta)
+
+
+class RationalType(metaclass=RationalMeta):
+    def as_integer_ratio(self):
+        return 1, 2
+
+
+def make_obj(sp):
+    k, a = sp[0], [dec(v) if isinstance(v, (int, dict)) else v for v in sp[1:]]
+    return {
+        "int": lambda: a[0], "bool": lambda: bool(a[0]), "intnum": lambda: IntNum(a[0]),
+        "float": lambda: float.fromhex(a[0]), "decimal": lambda: Decimal(a[0]),
+        "rat": lambda: Rat(a[0], a[1]), "ratratio": lambda: RatRatio(*a),
+        "frac": lambda: Fraction(a[0], a[1]), "fracratio": lambda: FracRatio(a[0], a[1]),
+        "str": lambda: a[0], "strrational": lambda: StrRational(a[0]), "strratio": lambda: StrRatio(a[0]),
+        "ratio": lambda: HasRatio(tuple(a)), "ratioraises": lambda: HasRatio(a[0]),
+        "ratiotype": lambda: RatioType, "rationaltype": lambda: RationalType, "inttype": lambda: int,
+        "none": lambda: None, "object": lambda: object(),
+    }[k]()
+
+
+def describe(x):
+    """What Fraction.__new__ asks of x, by the source's own tests."""
+    d = {"int": enc(x) if type(x) is int else None, "float": isinstance(x, float),
+         "type": isinstance(x, type), "ratio": None, "rational": None}
+    if hasattr(x, "as_integer_ratio") and not isinstance(x, type):
+        try:
+            n, m = x.as_integer_ratio()
+            d["ratio"] = [enc(n), enc(m)]
+        except Exception as e:
+            d["ratio"] = {"exc": type(e).__name__, "msg": str(e)}
+    elif hasattr(x, "as_integer_ratio"):
+        d["ratio"] = {"exc": "NotCalled", "msg": "x is a type"}
+    if isinstance(x, str):
+        d["str"] = str(x)
+    if isinstance(x, numbers.Rational):
+        d["rational"] = [enc(x.numerator), enc(x.denominator)]
+    return d
+
+
+def rand_ctor_obj(rng):
+    a, b, c, d = (edge_int(rng) for _ in range(4))
+    return rng.choice([
+        ["int", enc(a)], ["bool", rng.randrange(2)], ["intnum", enc(a)],
+        ["float", rng.choice([1.5, 0.1, -0.0, 2.0 ** 70, 2.0 ** -70, float(a % 1000), float("nan"),
+                              float("inf"), float("-inf")]).hex()],
+        ["decimal", rng.choice(["1.47", "-0", "1E+3", "NaN", "Infinity", str(a % 1000)])],
+        ["rat", enc(a), enc(b or 1)], ["ratratio", enc(a), enc(b or 1), enc(c), enc(d or 1)],
+        ["frac", enc(a), enc(b or 1)], ["fracratio", enc(a), enc(b or 1)],
+        ["str", rand_numstr(rng)], ["strrational", rand_numstr(rng)], ["strratio", rand_numstr(rng)],
+        ["ratio", enc(a), enc(b)], ["ratio", enc(a), enc(b), enc(c)], ["ratioraises", "from callback"],
+        ["ratiotype"], ["rationaltype"], ["inttype"], ["none"], ["object"]])
+
+
 def gen_case(rng):
     fn = rng.choice(FNS_UNARY + FNS_BINARY + FNS_OTHER)
     c = {"mod": "fractions", "fn": fn}
-    if fn == "ctor":
+    if fn == "ctor1":
+        sp = rand_ctor_obj(rng)
+        c.update(obj=sp, arg=describe(make_obj(sp)))
+    elif fn == "ctor":
         n, d = edge_int(rng, rng.random() < 0.1), edge_int(rng, rng.random() < 0.1)
         if rng.random() < 0.1:
             d = 0
@@ -197,6 +332,8 @@ def run_python(c):
     try:
         if fn == "ctor":
             v = enc_frac(Fraction(dec(c["n"]), dec(c["d"])))
+        elif fn == "ctor1":
+            v = enc_frac(Fraction(make_obj(c["obj"])))
         elif fn == "parse":
             v = enc_frac(Fraction(c["s"]))
         elif fn in ("decimal", "dechash"):

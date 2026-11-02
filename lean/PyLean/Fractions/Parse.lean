@@ -1,7 +1,7 @@
 import PyLean.Fractions.Model
 
 /-!
-`Fraction(string)`, fractions.py:56-68 (`_RATIONAL_FORMAT`) and :252-287.
+`Fraction(string)`, fractions.py:56-68 (`_RATIONAL_FORMAT`) and :252-278.
 
 The regex is matched by a hand-written scanner that follows the regex's
 backtracking to its unique outcome:
@@ -161,7 +161,7 @@ def pyIntOfDigits (cs : List Char) : Py Int :=
     let v : Int := digitsValue body
     .ok (if neg then -v else v)
 
-/-- `Fraction(s)` for a string `s`, fractions.py:252-287 then :302-311. -/
+/-- `Fraction(s)` for a string `s`, fractions.py:252-278 then :302-311. -/
 def parse (s : List Char) : Py Frac := do
   let some m := matchRational s
     | throw (.valueError "~Invalid literal for Fraction: <repr>")
