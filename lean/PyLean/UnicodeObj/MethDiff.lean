@@ -4,6 +4,7 @@ import PyLean.UnicodeObj.MethStrip
 import PyLean.UnicodeObj.MethPad
 import PyLean.UnicodeObj.MethTail
 import PyLean.UnicodeObj.MethSlice
+import PyLean.UnicodeObj.MethPartition
 
 /-! Difftest handler for the `str` method slice (`fn` names start with `meth_`). -/
 
@@ -103,6 +104,14 @@ def run (fn : String) (j : Json) : Except String Json := do
       | "index" => pure (unicodeSubscript s (.obj a))
       | f => throw s!"bad form {f}"
     return encPy encStr r
+  | "meth_partition" =>
+    let s ← getSeq j "s"
+    let sep ← decArg (← field j "sep")
+    let r ← match ← getStr j "op" with
+      | "partition" => pure (unicodePartition s sep)
+      | "rpartition" => pure (unicodeRPartition s sep)
+      | o => throw s!"bad op {o}"
+    return encPy (fun (t : Str × Str × Str) => Json.arr #[encStr t.1, encStr t.2.1, encStr t.2.2]) r
   | _ => throw s!"unknown fn {fn}"
 
 def handler : Handler := fun fn j =>

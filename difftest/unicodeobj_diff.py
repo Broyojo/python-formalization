@@ -2603,6 +2603,25 @@ def run_meth_slice(c):
     return cps_of(s[a])
 
 
+@gen("meth", 4)
+def gen_meth_partition(rng):
+    s = me_str(rng)
+    r = rng.random()
+    if r < 0.85:
+        sep = {"t": "str", "s": me_affix(rng, s)}
+    elif r < 0.92:
+        sep = {"t": "str", "s": s + me_str(rng, 2)}
+    else:
+        sep = rng.choice([{"t": "int", "v": 1}, {"t": "none"}, {"t": "other", "tp": "bytes"}])
+    return {"mod": "unicodeobj", "fn": "meth_partition", "s": s, "sep": sep,
+            "op": rng.choice(["partition", "rpartition"])}
+
+
+@run("meth_partition")
+def run_meth_partition(c):
+    return [cps_of(x) for x in getattr(s_of(c["s"]), c["op"])(me_obj(c["sep"]))]
+
+
 def me_width_value(a):
     if a["t"] == "int":
         return a["v"]

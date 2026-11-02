@@ -4,6 +4,7 @@ import PyLean.UnicodeObj.MethStripProps
 import PyLean.UnicodeObj.MethPadProps
 import PyLean.UnicodeObj.MethTailProps
 import PyLean.UnicodeObj.MethSliceProps
+import PyLean.UnicodeObj.MethPartition
 
 /-! Registry entries of the `str` method slice. -/
 
@@ -86,7 +87,14 @@ def methEntries : List Entry := [
     pyFns := ["unicode_subscript", "unicode_getitem"]
     statement := "For every string and object i, s[i] is the character at i (from the end when negative) for an index in [-len, len), IndexError for any other int, the __index__ exception when it raises, and TypeError for an object without __index__."
     source := "sequence indexing docs"
-    status := .proven, prop := ``IndexDoc, thm := some ``indexDoc_proven }
+    status := .proven, prop := ``IndexDoc, thm := some ``indexDoc_proven },
+  { id := "unicodeobj-meth-partition-doc", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["PyUnicode_Partition", "PyUnicode_RPartition", "unicode_partition",
+      "unicode_rpartition", "stringlib_partition", "stringlib_rpartition"]
+    statement := "For every string and separator object, partition/rpartition split at the first/last occurrence or return the string with two empty strings, raise ValueError for an empty separator and TypeError for a non-str; the shortcut for a separator of a wider kind or greater length (the length test new in 3.15) agrees with the general path."
+    source := "str.partition/rpartition docs; invariant: shortcut vs general path"
+    status := .proven, prop := ``PartitionDoc, thm := some ``partitionDoc_proven
+    notes := "FASTSEARCH is modelled by its result (StrSearch.findL/rfindL), the first/last occurrence." }
 ]
 
 end PyLean.UnicodeObj
