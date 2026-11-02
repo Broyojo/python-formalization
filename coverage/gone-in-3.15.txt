@@ -7,8 +7,6 @@ corelibs-lru-cache-noncallable
 corelibs-pysimplequeue-nonblocking-timeout
 corelibs-singledispatchmethod-callable-no-get
 corelibs-userdict-popitem-fifo
-dict-reviter-len
-dictset-reversed-iter-length-hint
 gen-athrow-error-clears-running
 gen-close-rejects-executing
 gen-throw-lookup-sees-executing
