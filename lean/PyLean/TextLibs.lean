@@ -23,6 +23,7 @@ import PyLean.TextLibs.SimpleQueueGet
 import PyLean.TextLibs.UrlQuery
 import PyLean.TextLibs.UrlBrackets
 import PyLean.TextLibs.UrlTwins
+import PyLean.TextLibs.UrlLegacy
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1615,7 +1616,13 @@ def entries : List Entry := [
     statement := "For every URL whose netloc has no brackets and every NFKC oracle, urlsplit accepts it exactly when the netloc is ASCII, or its NFKC form without '@:#?' is unchanged or contains none of '/?#@:'."
     source := "docs of urlsplit (characters that decompose under NFKC into / ? # @ : raise ValueError)", status := .proven
     prop := ``Url.NfkcCheck, thm := some ``Url.nfkcCheck_proven
-    notes := "unicodedata.normalize('NFKC', _) is the quantified oracle nfkc." }
+    notes := "unicodedata.normalize('NFKC', _) is the quantified oracle nfkc." },
+  { id := "textlibs-urllib-legacy-split", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["_splituser", "_splitpasswd", "_splitquery", "_splittag", "_splitvalue", "_splitattr", "_splitport",
+      "_splitnport"]
+    statement := "For every str, _splituser/_splitquery/_splittag cut at the last '@'/'?'/'#', _splitpasswd/_splitvalue at the first ':'/'=', _splitattr at every ';', and the parts with the delimiter give the input back; _splitport returns a non-empty run of ASCII digits after the last ':' or the input (less a trailing ':') and None; _splitnport reads that port as int(port)."
+    source := "docstrings of the helpers (e.g. splituser('user[:passwd]@host[:port]') --> 'user[:passwd]', 'host[:port]'); _splitnport against _splitport", status := .proven
+    prop := ``Url.LegacySplit, thm := some ``Url.legacySplit_proven }
 ]
 
 end PyLean.TextLibs
