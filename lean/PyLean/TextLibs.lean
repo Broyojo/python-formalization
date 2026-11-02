@@ -24,6 +24,8 @@ import PyLean.TextLibs.UrlQuery
 import PyLean.TextLibs.UrlBrackets
 import PyLean.TextLibs.UrlTwins
 import PyLean.TextLibs.UrlLegacy
+import PyLean.TextLibs.TomlErr
+import PyLean.TextLibs.TomlStr
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -39,6 +41,8 @@ modelled.
 `Lib/re/_parser.py` is in `TextLibs/ReParse.lean`, without `\\N{...}` and non-ASCII group names.
 `Lib/urllib/parse.py` is in `TextLibs/UrlModel.lean`, with `unicodedata.normalize` and
 `ipaddress.ip_address` as parameters.
+`Lib/tomllib/_parser.py` and `Lib/tomllib/_re.py` are in `TextLibs/TomlModel.lean`, with
+`parse_float`, `MAX_KEY_PARTS` and `sys.get_int_max_str_digits()` as parameters.
 -/
 
 namespace PyLean.TextLibs
@@ -55,6 +59,7 @@ open PyLean.TextLibs.Quopri
 open PyLean.TextLibs.Html
 open PyLean.TextLibs.Difflib
 open PyLean.TextLibs.Url
+open PyLean.TextLibs.Toml
 
 /-- The integer routines `IntCodesRoundTrip` drives through `runPack` and `runUnpack`. -/
 def structIntFns : List String :=
@@ -1654,7 +1659,23 @@ def entries : List Entry := [
       "_splitnport"]
     statement := "For every str, _splituser/_splitquery/_splittag cut at the last '@'/'?'/'#', _splitpasswd/_splitvalue at the first ':'/'=', _splitattr at every ';', and the parts with the delimiter give the input back; _splitport returns a non-empty run of ASCII digits after the last ':' or the input (less a trailing ':') and None; _splitnport reads that port as int(port)."
     source := "docstrings of the helpers (e.g. splituser('user[:passwd]@host[:port]') --> 'user[:passwd]', 'host[:port]'); _splitnport against _splitport", status := .proven
-    prop := ``Url.LegacySplit, thm := some ``Url.legacySplit_proven }
+    prop := ``Url.LegacySplit, thm := some ``Url.legacySplit_proven },
+  { id := "textlibs-toml-decode-error-coords", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["TOMLDecodeError.__init__"]
+    statement := "TOMLDecodeError(msg, doc, pos) with str msg and doc and int pos: for 0 <= pos <= len(doc), lineno and colno are the 1-based line and column of pos (counted from the last newline before pos) and str(e) is 'msg (at line L, column C)' or 'msg (at end of document)' when pos == len(doc); for every int pos it does not raise; any other call warns (DeprecationWarning, raised when warnings are errors) and passes the non-default arguments in order to ValueError.__init__."
+    source := "docs of TOMLDecodeError (lineno: 'The line corresponding to pos', colno: 'The column corresponding to pos'; free-form arguments deprecated)", status := .proven
+    prop := ``Toml.TdeCoords, thm := some ``Toml.tdeCoords_proven },
+  { id := "textlibs-toml-basic-str", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["parse_value", "parse_one_line_basic_str", "parse_basic_str", "parse_basic_str_escape",
+      "parse_hex_char", "is_unicode_scalar_value"]
+    statement := "For every list of characters each written as itself (not '\"', '\\' or a control character other than tab) or with any escape TOML 1.1 allows for it (\\b \\t \\n \\f \\r \\e \\\" \\\\, \\xHH below 256, \\uHHHH and \\UHHHHHHHH for Unicode scalar values, either case), parse_value on the quoted text returns that str and the position after the closing quote; a \\u or \\U escape of a surrogate or of a value above U+10FFFF raises TOMLDecodeError 'Escaped character is not a Unicode scalar value'; a raw control character other than tab raises 'Illegal character'."
+    source := "docs ('parsing TOML 1.1.0'); TOML 1.1 spec, String", status := .proven
+    prop := ``Toml.BasicStrRoundTrip, thm := some ``Toml.basicStrRoundTrip_proven },
+  { id := "textlibs-toml-literal-str", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["parse_value", "parse_literal_str", "skip_until"]
+    statement := "For every str without \"'\" and without control characters other than tab, parse_value on its single-quoted form returns it unchanged; a control character other than tab before the closing quote raises TOMLDecodeError 'Found invalid character' at that character; with no closing quote it raises 'Expected \"'\"' at the end of the document."
+    source := "docs ('parsing TOML 1.1.0'); TOML 1.1 spec, literal strings", status := .proven
+    prop := ``Toml.LiteralStrSpec, thm := some ``Toml.literalStrSpec_proven }
 ]
 
 end PyLean.TextLibs
