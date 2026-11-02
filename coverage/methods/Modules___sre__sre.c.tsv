@@ -94,6 +94,6 @@ Modules/_sre/sre.c	3114	3160	pattern_richcompare	pattern_richcompare(PyObject *l
 Modules/_sre/sre.c	3358	3369	sre_traverse	sre_traverse(PyObject *module, visitproc visit, void *arg)	todo		
 Modules/_sre/sre.c	3372	3383	sre_clear	sre_clear(PyObject *module)	todo		
 Modules/_sre/sre.c	3386	3389	sre_free	sre_free(void *module)	todo		
-Modules/_sre/sre.c	3409	3418	_assert_match_aliases_prefixmatch	_assert_match_aliases_prefixmatch(PyMethodDef *methods)	todo		changed-in-3.15: new function
-Modules/_sre/sre.c	3422	3457	sre_exec	sre_exec(PyObject *m)	todo		changed-in-3.15:
+Modules/_sre/sre.c	3409	3418	_assert_match_aliases_prefixmatch	_assert_match_aliases_prefixmatch(PyMethodDef *methods)	excluded		internal-bootstrap: compares method tables at import and aborts in a debug build only
+Modules/_sre/sre.c	3422	3457	sre_exec	sre_exec(PyObject *m)	excluded		internal-bootstrap: adds the module constants and types at import
 Modules/_sre/sre.c	3479	3482	PyInit__sre	PyInit__sre(void)	todo		

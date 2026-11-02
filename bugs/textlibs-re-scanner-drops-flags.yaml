@@ -31,13 +31,13 @@ reproducer: |
 expected: |
   A phrase matches in a Scanner what it matches in re.compile, as its name and code suggest.
 observed: |
-  python3 3.14.7: ([], 'é'), <re.Match span=(0, 1)>, ([], 'A'), (['A'], ''). REPRODUCED.
+  python3 3.15.2: ([], 'é'), <re.Match span=(0, 1)>, ([], 'A'), (['A'], ''). REPRODUCED.
   main 3.16.0a1+dev: the same. REPRODUCED.
 promised_by: |
   Nothing explicit: the class is undocumented. Doc/library/re.rst says str patterns are Unicode by
   default.
 cause: |
-  Lib/re/__init__.py@3.14.7:396-404: `s.flags = flags`, then each phrase runs `_parser.parse(phrase, flags)`
+  Lib/re/__init__.py:402-407: `s.flags = flags`, then each phrase runs `_parser.parse(phrase, flags)`
   in a state of its own, and `_compiler.compile(p)` takes the flags from `s`. `fix_flags` never runs
   on `s`, and the phrases' state flags are dropped.
 possible_fix: |

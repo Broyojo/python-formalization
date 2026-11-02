@@ -32,7 +32,7 @@ reproducer: |
 expected: |
   What is observed: both behaviours are the documented ones.
 observed: |
-  python3 3.14.7: ['ax'], field larger than field limit (131072). REPRODUCED.
+  python3 3.15.2: ['ax'], field larger than field limit (131072). REPRODUCED.
   main 3.16.0a1+dev: the same. REPRODUCED.
 promised_by: |
   docs of Dialect.lineterminator and csv.field_size_limit, which promise this behaviour.

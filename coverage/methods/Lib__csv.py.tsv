@@ -4,7 +4,7 @@ Lib/csv.py	109	114	Dialect._validate	_validate(self)	modelled	textlibs-csv-diale
 Lib/csv.py	143	152	DictReader.__init__	__init__(self, f, fieldnames=None, restkey=None, restval=None, dialect='excel', *args, **kwds)	modelled	textlibs-csv-dictreader-init	
 Lib/csv.py	154	155	DictReader.__iter__	__iter__(self)	todo		
 Lib/csv.py	158	165	DictReader.fieldnames	fieldnames(self)	modelled	textlibs-csv-dictreader-header	
-Lib/csv.py	168	169	DictReader.fieldnames	fieldnames(self, value)	todo		the setter has no mirror: DR.names is only set by the getter and __init__; candidates:textlibs-csv-dictreader-header
+Lib/csv.py	168	169	DictReader.fieldnames	fieldnames(self, value)	modelled	textlibs-csv-dictreader-header	
 Lib/csv.py	171	191	DictReader.__next__	__next__(self)	modelled	textlibs-csv-dictreader-blank,textlibs-csv-dictreader-header,textlibs-csv-dictrow	
 Lib/csv.py	197	208	DictWriter.__init__	__init__(self, f, fieldnames, restval='', extrasaction='raise', dialect='excel', *args, **kwds)	modelled	textlibs-csv-extrasaction	
 Lib/csv.py	210	212	DictWriter.writeheader	writeheader(self)	modelled	textlibs-csv-writeheader	
@@ -14,6 +14,6 @@ Lib/csv.py	225	226	DictWriter.writerows	writerows(self, rowdicts)	modelled	textl
 Lib/csv.py	236	238	Sniffer.__init__	__init__(self)	todo		
 Lib/csv.py	241	273	Sniffer.sniff	sniff(self, sample, delimiters=None)	modelled	textlibs-csv-sniff-usable,textlibs-csv-sniff-respects-delimiters	
 Lib/csv.py	276	358	Sniffer._guess_quote_and_delimiter	_guess_quote_and_delimiter(self, data, delimiters)	modelled	textlibs-csv-sniff-respects-delimiters	
-Lib/csv.py	361	463	Sniffer._guess_delimiter	_guess_delimiter(self, data, delimiters)	todo		changed-in-3.15: was textlibs-csv-sniff-usable,textlibs-csv-sniff-respects-delimiters
+Lib/csv.py	361	463	Sniffer._guess_delimiter	_guess_delimiter(self, data, delimiters)	modelled	textlibs-csv-sniff-usable,textlibs-csv-sniff-respects-delimiters	
 Lib/csv.py	466	527	Sniffer.has_header	has_header(self, sample)	todo		
-Lib/csv.py	530	536	__getattr__	__getattr__(name)	todo		changed-in-3.15: new function
+Lib/csv.py	530	536	__getattr__	__getattr__(name)	excluded		deprecated: module __getattr__ for csv.__version__, removed in 3.20; it warns, returns a constant and raises AttributeError for anything else

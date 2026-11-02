@@ -39,7 +39,7 @@ reproducer: |
 expected: |
   An AttributeError, or a default value, as a C function must not return NULL without an exception.
 observed: |
-  python3 3.14.7: ['error return without exception set']. REPRODUCED.
+  python3 3.15.2: ['error return without exception set']. REPRODUCED.
   main 3.16.0a1+dev: the same. REPRODUCED.
 promised_by: |
   The C API rule that a function returning NULL sets an exception.

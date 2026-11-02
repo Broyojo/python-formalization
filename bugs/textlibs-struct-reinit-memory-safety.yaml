@@ -11,22 +11,22 @@ summary: |
   conversion such as __index__ can do this in the middle of a method, and any code can do it between
   two next() calls of an iterator. This has one root cause and these consequences:
   1. s_pack_internal keeps walking the freed s_codes after the conversion returns (:2342, :2409).
-     This use-after-free segfaults with allocator churn on 3.14.7 and on main.
+     This use-after-free segfaults with allocator churn on 3.15.2 and on main.
   2. iter_unpack, after a larger format: unpackiter_iternext reads past the buffer, because the only
-     bound is an assert (:2245). This returns heap contents as bytes on 3.14.7 and on main.
-  3. iter_unpack, after a zero-sized format: unpackiter_len divides by zero (:2220). SIGFPE on
-     3.14.7 and on main. next() on such an iterator also never ends.
-  4. s_pack on 3.14.7 finishes with the new s_size (@3.14.7:2292), returning heap contents as bytes. Fixed
-     on main.
-  5. s_pack_into on 3.14.7 checks nargs before the offset's __index__ runs (@3.14.7:2316, @3.14.7:2340), so a longer
-     format makes s_pack_internal read past args. Fixed on main, which rechecks.
+     bound is an assert (:2243). This returns heap contents as bytes on 3.15.2 and on main.
+  3. iter_unpack, after a zero-sized format: unpackiter_len divides by zero (:2219). SIGFPE on
+     3.15.2 and on main. next() on such an iterator also never ends.
+  Struct.pack finishes with the new s_size (:2457), which 3.15.2 refuses for a larger format with
+  ValueError "size larger than allocated size", so that path no longer discloses memory. pack_into
+  converts the offset before it compares the count (Modules/clinic/_struct.c.h), so an offset can no
+  longer install a longer format; a packed value's __index__ still can, which is case 1.
 likelihood: |
-  Low in ordinary code: re-initialising a Struct in use is unusual, and main now warns about
-  re-initialisation. It is reachable from pure Python, though, and 2 and 4 disclose heap memory.
+  Low in ordinary code: re-initialising a Struct in use is unusual, and 3.15.2 warns about
+  re-initialisation. It is reachable from pure Python, though, and 2 discloses heap memory.
 maybe_intended: |
-  No for the memory errors. Main's FutureWarning shows re-initialisation is on its way out, and a
-  maintainer may prefer that to guards. It is only a warning on main, and 3.14 has no warning at all,
-  so the crashes remain until the feature is removed. Related reports were never judged on merit:
+  No for the memory errors. The FutureWarning shows re-initialisation is on its way out, and a
+  maintainer may prefer that to guards. It is only a warning, so the crashes remain until the feature
+  is removed. Related reports were never judged on merit:
   python/cpython#158695 was closed with a batch of tracker spam from an automated filer.
 reproducer: |
   import struct, subprocess, sys, warnings
@@ -52,16 +52,16 @@ reproducer: |
 expected: |
   An exception, or a Struct that cannot be changed while in use. No read outside the buffer, no crash.
 observed: |
-  python3 3.14.7: 64 bytes read from an 8-byte buffer, exit status -8 (SIGFPE). REPRODUCED.
+  python3 3.15.2: 64 bytes read from an 8-byte buffer, exit status -8 (SIGFPE). REPRODUCED.
   main 3.16.0a1+dev: the same. REPRODUCED.
 promised_by: |
   The undisputed invariant that Python code does not read freed memory or crash the interpreter.
 cause: |
   prepare_s frees s_codes at Modules/_struct.c:1787-1788 with no check that a method or iterator is
   using the object. s_pack_internal holds a pointer into it across e->pack (:2342, :2402, :2409).
-  unpackiter_iternext and unpackiter_len read so->s_size afresh (:2245-2249, :2220).
+  unpackiter_iternext and unpackiter_len read so->s_size afresh (:2243-2248, :2219).
 possible_fix: |
-  Refuse __init__ on an initialised Struct, as main's FutureWarning announces, and backport a guard.
+  Refuse __init__ on an initialised Struct, as the FutureWarning announces.
   Failing that: make the iterator keep its own copy of the size, and take a private reference to the
   codes in s_pack_internal.
 duplicates: |

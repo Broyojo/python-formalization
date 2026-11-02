@@ -2,9 +2,9 @@ file	line	endline	name	signature	status	entry	note
 Lib/posixpath.py	43	47	_get_sep	_get_sep(path)	todo		
 Lib/posixpath.py	54	56	normcase	normcase(s, /)	todo		changed-in-3.15:
 Lib/posixpath.py	62	66	isabs	isabs(s, /)	todo		changed-in-3.15:
-Lib/posixpath.py	73	93	join	join(a, /, *p)	todo		changed-in-3.15: was textlibs-path-p-join,textlibs-path-p-join-mix,textlibs-path-p-join-fspath-error,textlibs-path-p-join-other-errors
-Lib/posixpath.py	101	110	split	split(p, /)	todo		changed-in-3.15: was textlibs-path-p-split
-Lib/posixpath.py	118	126	splitext	splitext(p, /)	todo		changed-in-3.15: was textlibs-path-p-splitext
+Lib/posixpath.py	73	93	join	join(a, /, *p)	modelled	textlibs-path-p-join,textlibs-path-p-join-mix,textlibs-path-p-join-fspath-error,textlibs-path-p-join-other-errors	
+Lib/posixpath.py	101	110	split	split(p, /)	modelled	textlibs-path-p-split	
+Lib/posixpath.py	118	126	splitext	splitext(p, /)	modelled	textlibs-path-p-splitext	
 Lib/posixpath.py	132	136	splitdrive	splitdrive(p, /)	todo		changed-in-3.15:
 Lib/posixpath.py	167	172	basename	basename(p, /)	todo		changed-in-3.15:
 Lib/posixpath.py	177	185	dirname	dirname(p, /)	todo		changed-in-3.15:

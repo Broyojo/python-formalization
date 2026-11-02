@@ -7,17 +7,18 @@ files: [Modules/_struct.c, Objects/floatobject.c]
 functions: ["nu_float", "nu_float_complex", "lu_float", "bu_float_complex"]
 summary: |
   `nu_float` and `nu_float_complex` convert with a C cast, which quiets a signalling NaN, while
-  PyFloat_Unpack4 deliberately preserves one. On 3.14.7, unpacking 0100807f gives
-  000000200000f87f with `f` and 000000200000f07f with `<f`, although native and little-endian differ
-  only in alignment on this build. `F` and `<F` quiet while `>F` preserves, and
-  `pack('f', unpack('f', b))` changes the bytes while the `<f` round trip does not.
+  PyFloat_Unpack4 deliberately preserves one. On 3.15.2 `f`, `<f`, `F` and `<F` quiet while `>f` and
+  `>F` preserve: `init_endian_tables` swaps the native routines into the little-endian table, floats
+  included, so byte order decides whether the signal survives. Unpacking 0100807f gives
+  000000200000f87f with `<f` and 000000200000f07f with `>f` on its reversed bytes.
 likelihood: |
   Very low. Needs a signalling NaN in binary data, and only its quiet bit changes.
 maybe_intended: |
   Unclear. PyFloat_Unpack4's comment ("return sNaN double if x was sNaN float") shows that
   preserving it is deliberate there, and #130317 and #141042 fixed the same class of problem for
-  half floats. Main changed where the split falls rather than removing it, so byte order now
-  changes the result. A NaN-focused maintainer may care; most would not treat this as urgent.
+  half floats. The change that let `f` and `d` use the native routines in the little-endian table
+  moved the split rather than removing it, so byte order now changes the result. A NaN-focused
+  maintainer may care; most would not treat this as urgent.
 reproducer: |
   import struct
   sn = bytes.fromhex('0100807f')
@@ -32,16 +33,13 @@ reproducer: |
 expected: |
   Every mode either preserves a signalling NaN or quiets it, the same way.
 observed: |
-  python3 3.14.7: f 000000200000f87f, <f 000000200000f07f, F 000000200000f87f, >F 000000200000f07f.
-  REPRODUCED.
-  main 3.16.0a1+dev (ef1fce0): f and <f both 000000200000f87f, >f 000000200000f07f, F
-  000000200000f87f, >F 000000200000f07f. REPRODUCED through F against >F; `f` against `<f` no longer
-  differs.
+  python3 3.15.2: f and <f both 000000200000f87f, F 000000200000f87f, >F 000000200000f07f. REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED.
 promised_by: |
-  invariant: PyFloat_Unpack4 preserves signalling NaNs on purpose (Objects/floatobject.c@3.14.7:2509-2522).
+  invariant: PyFloat_Unpack4 preserves signalling NaNs on purpose (Objects/floatobject.c:2165-2199).
 cause: |
   Modules/_struct.c:483-488 (nu_float casts to double), :499-505 (nu_float_complex), and
-  @3.14.7:1537-1540, which keeps `f` out of the native swap but not `F`.
+  :1532-1553, which swaps both into the little-endian table.
 possible_fix: |
   Use PyFloat_Unpack4 in nu_float and nu_float_complex, or decide that NaN signalling is not
   preserved and drop the special case in PyFloat_Unpack4.

@@ -9,8 +9,9 @@ summary: |
   `struct.pack('>F', 1e300)` raises OverflowError, as do `f`, `<f` and `>f`, while
   `struct.pack('<F', 1e300)` and `struct.pack('F', 1e300)` return infinity bytes. Byte order
   changes whether a value can be packed. `init_endian_tables` swaps the native routines into
-  `lilendian_table` for every entry of matching size except `f`, `d` and `?`, so `<F` and `=F`
-  run `np_float_complex`, which casts with `(float)c.real` and never overflows.
+  `lilendian_table` for every entry of matching size except `?`, so `<F` and `=F` run
+  `np_float_complex`, which casts with `(float)c.real` and never overflows. `<f` raises because
+  `np_float` checks.
 likelihood: |
   Low to moderate. Needs a complex value above FLT_MAX packed with `F`, and the silent result
   is inf rather than an error.
@@ -31,19 +32,19 @@ reproducer: |
 expected: |
   Both byte orders raise OverflowError, matching `f`.
 observed: |
-  python3 3.14.7: `<F` gives 0000807f00000000, `>F` raises. REPRODUCED.
+  python3 3.15.2: `<F` gives 0000807f00000000, `>F` raises. REPRODUCED.
   main 3.16.0a1+dev (ef1fce0): both raise. NOT reproduced (fixed).
 promised_by: |
   invariant: byte order changes the bytes, not whether a value is representable; `f` raises.
 cause: |
   Modules/_struct.c:792-800 (np_float_complex casts) against :1131-1144 (bp_float_complex uses
-  PyFloat_Pack4, which detects overflow at Objects/floatobject.c@3.14.7:2184); the swap is at
-  Modules/_struct.c@3.14.7:1537-1545, which skips only `f`, `d` and `?`.
+  PyFloat_Pack4, which detects overflow at Objects/floatobject.c:2009-2013); the swap is at
+  Modules/_struct.c:1532-1553, which skips only `?`.
 possible_fix: |
   Use PyFloat_Pack4 in np_float_complex, as main does (Modules/_struct.c:801 on main).
 duplicates: |
-  Duplicate of python/cpython#156865, fixed on main by PR #156868. The 3.14.7 build still has
-  the bug, so at most this is a backport question for the 3.14 branch.
+  Duplicate of python/cpython#156865, fixed on main by PR #156868. 3.15.2 still has the bug, so
+  at most this is a backport question for the 3.15 branch.
   Not in the bugforge list.
   Queries: gh api search/issues q='repo:python/cpython struct complex format overflow "F"'
 lean: lean/PyLean/TextLibs/StructProps.lean (StdComplexOrderAgree, stdComplexOrderAgree_refuted)

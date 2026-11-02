@@ -2,10 +2,10 @@ file	line	endline	name	signature	status	entry	note
 Lib/ntpath.py	34	38	_get_bothseps	_get_bothseps(path)	todo		
 Lib/ntpath.py	50	67	normcase	normcase(s, /)	todo		changed-in-3.15:
 Lib/ntpath.py	80	95	isabs	isabs(s, /)	todo		changed-in-3.15:
-Lib/ntpath.py	99	140	join	join(path, /, *paths)	todo		changed-in-3.15: was textlibs-path-n-join-absolute
-Lib/ntpath.py	146	168	splitdrive	splitdrive(p, /)	todo		changed-in-3.15: was textlibs-path-n-splitroot
+Lib/ntpath.py	99	140	join	join(path, /, *paths)	modelled	textlibs-path-n-join-absolute	
+Lib/ntpath.py	146	168	splitdrive	splitdrive(p, /)	modelled	textlibs-path-n-splitroot	
 Lib/ntpath.py	224	237	split	split(p, /)	todo		changed-in-3.15: candidates:strsearch-split-char-fast-path,strsearch-split-rsplit-agree
-Lib/ntpath.py	245	250	splitext	splitext(p, /)	todo		changed-in-3.15: was textlibs-path-n-splitext
+Lib/ntpath.py	245	250	splitext	splitext(p, /)	modelled	textlibs-path-n-splitext	
 Lib/ntpath.py	256	258	basename	basename(p, /)	todo		changed-in-3.15:
 Lib/ntpath.py	263	265	dirname	dirname(p, /)	todo		changed-in-3.15:
 Lib/ntpath.py	282	299	ismount	ismount(path)	todo		

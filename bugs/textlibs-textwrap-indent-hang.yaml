@@ -33,7 +33,7 @@ reproducer: |
 expected: |
   A result, as the width < 1 guard in _handle_long_word intends.
 observed: |
-  python3 3.14.7: no result within 3 seconds. REPRODUCED.
+  python3 3.15.2: no result within 3 seconds. REPRODUCED.
   main 3.16.0a1+dev: no result within 3 seconds. REPRODUCED.
 promised_by: |
   The comment at Lib/textwrap.py:205-206: "make sure at least one character is stripped off on every

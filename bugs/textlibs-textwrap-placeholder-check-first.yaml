@@ -24,7 +24,7 @@ reproducer: |
 expected: |
   'ab'.
 observed: |
-  python3 3.14.7: ValueError. REPRODUCED.
+  python3 3.15.2: ValueError. REPRODUCED.
   main 3.16.0a1+dev: ValueError. REPRODUCED.
 promised_by: |
   Docstring of shorten, Lib/textwrap.py:398-411: "If it then fits in the *width*, it is returned as is."
