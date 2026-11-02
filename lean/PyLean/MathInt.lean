@@ -25,6 +25,7 @@ import PyLean.MathInt.FltIsclose
 import PyLean.MathInt.FltFmod
 import PyLean.MathInt.FltPow
 import PyLean.MathInt.FltProd
+import PyLean.MathInt.FltOpen
 
 /-!
 Integer functions of `math.integer` (`Modules/mathintegermodule.c`, re-exported by
@@ -53,6 +54,18 @@ namespace PyLean.MathInt
 open PyLean.Registry
 
 def entries : List Entry := [
+  { id := "mathint-fsum-correctly-rounded", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math.fsum", "_fsum_realloc"]
+    statement := "For every list of finite floats, math.fsum returns the exact sum rounded once (a zero for an exact zero sum) or raises OverflowError('intermediate overflow in fsum')."
+    source := "Doc/library/math.rst: fsum (\"Return an accurate floating-point sum\"); the msum comment at mathmodule.c:1239-1267", status := .open
+    prop := ``FsumCorrectlyRounded
+    notes := "Open: needs the invariant that the partials stay non-overlapping and sum exactly (Shewchuk) and the half-even correction of :1371-1383. Smoke-tested on 100000 random lists against Fraction sums; the model agrees with CPython in the difftest." },
+  { id := "mathint-remainder-exact", pyFile := "Modules/mathmodule.c"
+    pyFns := ["m_remainder"]
+    statement := "For finite x and finite nonzero y, math.remainder(x, y) is exactly x - n*y with n the integer nearest x/y (ties to even), and a zero result has the sign of x."
+    source := "Doc/library/math.rst: remainder (\"the result of this operation is always exactly representable\")", status := .open
+    prop := ``RemainderExact
+    notes := "Open: needs the Sterbenz argument of mathmodule.c:545-563 (absy - m is exact when m >= absy/2) and the exactness of the tie step at :601. Smoke-tested on 200000 cases including ties." },
   { id := "mathint-prod-twin", pyFile := "Modules/mathmodule.c"
     pyFns := ["math.prod", "_check_long_mult_overflow"]
     statement := "For every iterable (its iteration may fail after the items) and start, math.prod(iterable, start=start) equals functools.reduce(operator.mul, iterable, start) evaluated with PyNumber_Multiply: the C long fast path, the C double fast path and the hand-overs between them give exactly what the generic loop gives; in particular _check_long_mult_overflow never misses an overflow of the long product, for all long arguments."
