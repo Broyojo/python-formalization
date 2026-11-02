@@ -822,6 +822,7 @@ longobj-pylong-divmod	proven	Lib/_pylong.py	_divmod_pos,_div2n1n,_div3n2n,_int2d
 longobj-binary-methods	proven	Objects/longobject.c	long_add_method,long_sub_method,long_mul_method,long_div,long_mod,long_divmod,long_rshift,long_lshift_method,long_and,long_or,long_xor
 longobj-index-conversions	proven	Objects/longobject.c	PyLong_AsLongAndOverflow,PyLong_AsLongLongAndOverflow,PyLong_AsLong,PyLong_AsInt,PyLong_AsUnsignedLongMask,PyLong_AsUnsignedLongLongMask,PyLong_AsLongLong,unroll_digits_ulong
 longobj-require-int	proven	Objects/longobject.c	PyLong_AsSsize_t,PyLong_AsUnsignedLong,PyLong_AsSize_t,PyLong_AsUnsignedLongLong,unroll_digits_ulong,unroll_digits_size_t
+longobj-sign-api-agree	proven	Objects/longobject.c	PyLong_GetSign,PyLong_IsPositive,PyLong_IsNegative,PyLong_IsZero
 bytesobj-tuple-hash-empty	proven	Objects/tupleobject.c	tuple_hash,tuple_get_empty
 bytesobj-tuple-hash-not-minus-one	proven	Objects/tupleobject.c	tuple_hash
 bytesobj-tuple-hash-cached	proven	Objects/tupleobject.c	tuple_hash

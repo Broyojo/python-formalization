@@ -28,12 +28,12 @@ Objects/longobject.c	757	804	PyLong_AsUnsignedLong	PyLong_AsUnsignedLong(PyObjec
 Objects/longobject.c	810	845	PyLong_AsSize_t	PyLong_AsSize_t(PyObject *vv)	modelled	longobj-require-int	
 Objects/longobject.c	851	875	_PyLong_AsUnsignedLongMask	_PyLong_AsUnsignedLongMask(PyObject *vv)	modelled	longobj-as-mask	
 Objects/longobject.c	878	899	PyLong_AsUnsignedLongMask	PyLong_AsUnsignedLongMask(PyObject *op)	modelled	longobj-index-conversions	
-Objects/longobject.c	902	910	PyLong_IsPositive	PyLong_IsPositive(PyObject *obj)	todo		
-Objects/longobject.c	913	921	PyLong_IsNegative	PyLong_IsNegative(PyObject *obj)	todo		
-Objects/longobject.c	924	932	PyLong_IsZero	PyLong_IsZero(PyObject *obj)	todo		
+Objects/longobject.c	902	910	PyLong_IsPositive	PyLong_IsPositive(PyObject *obj)	modelled	longobj-sign-api-agree	
+Objects/longobject.c	913	921	PyLong_IsNegative	PyLong_IsNegative(PyObject *obj)	modelled	longobj-sign-api-agree	
+Objects/longobject.c	924	932	PyLong_IsZero	PyLong_IsZero(PyObject *obj)	modelled	longobj-sign-api-agree	
 Objects/longobject.c	935	945	long_sign	long_sign(PyObject *vv)	modelled	longobj-sign	
 Objects/longobject.c	948	951	_PyLong_Sign	_PyLong_Sign(PyObject *vv)	modelled	longobj-sign	
-Objects/longobject.c	954	963	PyLong_GetSign	PyLong_GetSign(PyObject *vv, int *sign)	todo		
+Objects/longobject.c	954	963	PyLong_GetSign	PyLong_GetSign(PyObject *vv, int *sign)	modelled	longobj-sign-api-agree	
 Objects/longobject.c	966	973	bit_length_digit	bit_length_digit(digit x)	todo		
 Objects/longobject.c	976	997	_PyLong_NumBits	_PyLong_NumBits(PyObject *vv)	modelled	longobj-native-bytes,longobj-num-bits	
 Objects/longobject.c	1000	1106	_PyLong_FromByteArray	_PyLong_FromByteArray(const unsigned char* bytes, size_t n, int little_endian, int is_signed)	modelled	mathint-from-bytes-value	
