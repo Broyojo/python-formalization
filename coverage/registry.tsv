@@ -1191,14 +1191,16 @@ unicodeobj-format-group-digits	proven	Objects/unicode_formatter.c	_PyUnicode_Ins
 unicodeobj-format-percent-int-fast-slow	proven	Objects/unicode_format.c	
 unicodeobj-format-percent-star-width	proven	Objects/unicode_format.c	
 unicodeobj-format-parse-number	proven	Objects/unicode_formatter.c	
-unicodeobj-format-float-internal	proven	Objects/unicode_formatter.c	
-unicodeobj-format-float-fast-slow	proven	Objects/unicode_formatter.c	
-unicodeobj-format-float-width	proven	Objects/unicode_formatter.c	calc_number_widths,fill_number
+unicodeobj-format-float-internal	proven	Objects/unicode_formatter.c	format_float_internal
+unicodeobj-format-float-fast-slow	proven	Objects/unicode_formatter.c	format_float_internal
+unicodeobj-format-float-width	proven	Objects/unicode_formatter.c	format_float_internal,calc_number_widths,fill_number
 unicodeobj-format-int-width	proven	Objects/unicode_formatter.c	calc_number_widths,fill_number
 unicodeobj-format-float-grouping	proven	Objects/unicode_formatter.c	_PyUnicode_InsertThousandsGrouping,InsertThousandsGrouping_fill,GroupGenerator_next
-unicodeobj-format-complex-internal	proven	Objects/unicode_formatter.c	
-unicodeobj-format-complex-repr	proven	Objects/unicode_formatter.c	
-unicodeobj-format-complex-width	proven	Objects/unicode_formatter.c	
+unicodeobj-format-complex-internal	proven	Objects/unicode_formatter.c	format_complex_internal
+unicodeobj-format-complex-repr	proven	Objects/unicode_formatter.c	format_complex_internal
+unicodeobj-format-complex-width	proven	Objects/unicode_formatter.c	format_complex_internal
+unicodeobj-format-float-complex-errors	proven	Objects/unicode_formatter.c	format_float_internal,format_complex_internal,_PyFloat_FormatAdvancedWriter,_PyComplex_FormatAdvancedWriter
+unicodeobj-format-float-nul-type	refuted	Objects/unicode_formatter.c	_PyFloat_FormatAdvancedWriter,_PyComplex_FormatAdvancedWriter
 unicodeobj-format-percent-float-errors	proven	Objects/unicode_format.c	formatfloat
 unicodeobj-format-percent-float	proven	Objects/unicode_format.c	formatfloat
 unicodeobj-format-str-builtin	proven	Objects/stringlib/unicode_format.h	do_string_format,build_string,do_markup,output_markup,MarkupIterator_next,parse_field,field_name_split,AutoNumber_Init
