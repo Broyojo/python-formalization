@@ -25,7 +25,7 @@ def withDeopt (m g : M Unit) : M Unit := fun s =>
   | .error .deopt _ => g s
   | r => r
 
-/-- The descriptors of `BINARY_OP_EXTEND`, `Python/specialize.c@3.14.7:2458-2530`. A cache
+/-- The descriptors of `BINARY_OP_EXTEND`, `Python/specialize.c:2282-2311`. A cache
 of `[.tagged k]` selects one. The guards are `compactlongs_guard` and
 `float_compactlong_guard`/`compactlong_float_guard`. -/
 def extendDescr (k : Nat) : ExtendDescr :=
@@ -50,6 +50,8 @@ def execOp (e : Env) : Op → M Unit
   | .NOT_TAKEN => NOT_TAKEN
   | .RESUME => RESUME
   | .RESUME_CHECK => RESUME_CHECK
+  | .RESUME_CHECK_JIT => RESUME_CHECK_JIT
+  | .TRACE_RECORD => TRACE_RECORD
   | .INSTRUMENTED_RESUME => INSTRUMENTED_RESUME
   | .LOAD_FAST_CHECK => LOAD_FAST_CHECK e
   | .LOAD_FAST => LOAD_FAST e
@@ -58,8 +60,6 @@ def execOp (e : Env) : Op → M Unit
   | .LOAD_FAST_LOAD_FAST => LOAD_FAST_LOAD_FAST e
   | .LOAD_FAST_BORROW_LOAD_FAST_BORROW => LOAD_FAST_BORROW_LOAD_FAST_BORROW e
   | .LOAD_CONST => LOAD_CONST e
-  | .LOAD_CONST_MORTAL => LOAD_CONST_MORTAL e
-  | .LOAD_CONST_IMMORTAL => LOAD_CONST_IMMORTAL e
   | .LOAD_SMALL_INT => LOAD_SMALL_INT e
   | .STORE_FAST => STORE_FAST e
   | .STORE_FAST_LOAD_FAST => STORE_FAST_LOAD_FAST e
@@ -96,6 +96,7 @@ def execOp (e : Env) : Op → M Unit
   | .BINARY_OP_SUBSCR_LIST_INT => withDeopt BINARY_OP_SUBSCR_LIST_INT (BINARY_OP e)
   | .BINARY_OP_SUBSCR_LIST_SLICE => withDeopt (BINARY_OP_SUBSCR_LIST_SLICE e) (BINARY_OP e)
   | .BINARY_OP_SUBSCR_STR_INT => withDeopt BINARY_OP_SUBSCR_STR_INT (BINARY_OP e)
+  | .BINARY_OP_SUBSCR_USTR_INT => withDeopt BINARY_OP_SUBSCR_USTR_INT (BINARY_OP e)
   | .BINARY_OP_SUBSCR_TUPLE_INT => withDeopt BINARY_OP_SUBSCR_TUPLE_INT (BINARY_OP e)
   | .BINARY_OP_SUBSCR_DICT => withDeopt (BINARY_OP_SUBSCR_DICT e) (BINARY_OP e)
   | .BINARY_OP_SUBSCR_GETITEM => withDeopt (BINARY_OP_SUBSCR_GETITEM e) (BINARY_OP e)
@@ -118,6 +119,8 @@ def execOp (e : Env) : Op → M Unit
   | .GET_AWAITABLE => GET_AWAITABLE e
   | .SEND => SEND e
   | .SEND_GEN => withDeopt (SEND_GEN e) (SEND e)
+  | .SEND_VIRTUAL => withDeopt (SEND_VIRTUAL e) (SEND e)
+  | .SEND_ASYNC_GEN => withDeopt SEND_ASYNC_GEN (SEND e)
   | .YIELD_VALUE => YIELD_VALUE e
   | .INSTRUMENTED_YIELD_VALUE => INSTRUMENTED_YIELD_VALUE e
   | .POP_EXCEPT => POP_EXCEPT
@@ -217,12 +220,14 @@ def execOp (e : Env) : Op → M Unit
   | .MATCH_SEQUENCE => MATCH_SEQUENCE e
   | .MATCH_KEYS => MATCH_KEYS e
   | .GET_ITER => GET_ITER e
-  | .GET_YIELD_FROM_ITER => GET_YIELD_FROM_ITER e
+  | .GET_ITER_SELF => withDeopt GET_ITER_SELF (GET_ITER e)
+  | .GET_ITER_VIRTUAL => withDeopt GET_ITER_VIRTUAL (GET_ITER e)
   | .FOR_ITER => FOR_ITER e
   | .FOR_ITER_LIST => withDeopt (FOR_ITER_LIST e) (FOR_ITER e)
   | .FOR_ITER_TUPLE => withDeopt (FOR_ITER_TUPLE e) (FOR_ITER e)
   | .FOR_ITER_RANGE => withDeopt (FOR_ITER_RANGE e) (FOR_ITER e)
   | .FOR_ITER_GEN => withDeopt (FOR_ITER_GEN e) (FOR_ITER e)
+  | .FOR_ITER_VIRTUAL => withDeopt (FOR_ITER_VIRTUAL e) (FOR_ITER e)
   | .INSTRUMENTED_FOR_ITER => INSTRUMENTED_FOR_ITER e
   | .LOAD_SPECIAL => LOAD_SPECIAL e
   | .WITH_EXCEPT_START => WITH_EXCEPT_START e
@@ -257,6 +262,8 @@ def execOp (e : Env) : Op → M Unit
   | .CALL_KW_BOUND_METHOD => withDeopt (CALL_KW_BOUND_METHOD e) (CALL_KW e)
   | .CALL_KW_NON_PY => withDeopt (CALL_KW_NON_PY e) (CALL_KW e)
   | .CALL_FUNCTION_EX => CALL_FUNCTION_EX e
+  | .CALL_EX_PY => withDeopt (CALL_EX_PY e) (CALL_FUNCTION_EX e)
+  | .CALL_EX_NON_PY_GENERAL => withDeopt (CALL_EX_NON_PY_GENERAL e) (CALL_FUNCTION_EX e)
   | .INSTRUMENTED_CALL_FUNCTION_EX => INSTRUMENTED_CALL_FUNCTION_EX e
   | .MAKE_FUNCTION => MAKE_FUNCTION e
   | .SET_FUNCTION_ATTRIBUTE => SET_FUNCTION_ATTRIBUTE e

@@ -22,15 +22,8 @@ theorem ChainFrom.setState {w : World Unit Unit} {r : Nat} (hc : ChainFrom w r) 
   exact hc q (by omega)
 
 /-- The frame of `noopHooks` re-raises what is thrown into it. -/
-theorem noop_throw (w : World Unit Unit) (r : Ref) (hs : (w.get r).state = .suspendedYieldFrom)
-    (e : Exc Unit) (c : Bool) :
-    genSendEx noopHooks w r (some .none) true (some e) c =
-      (clearGenFrame (w.setState r .executing) r, .err (some e)) := by
-  have hnc : ¬ ((w.get r).state = .created ∧ isNonNull (some Obj.none : Option (Obj Unit)) = true) := by
-    simp [isNonNull]
-  simp only [genSendEx]
-  rw [genSendEx2_live noopHooks w r (some .none) true (some e) c hnc (by simp [hs]) (by simp [hs])]
-  rfl
+theorem noop_throw (w : World Unit Unit) (r : Ref) (e : Exc Unit) :
+    genSendEx2 noopHooks w r (some .none) (some e) = (clearGenFrame w r, .err (some e)) := rfl
 
 /-- The `yield from` chain the recursion walks. -/
 def chainWorld : World Unit Unit :=
@@ -52,28 +45,25 @@ theorem close_chain (K : Nat) : ∀ (w : World Unit Unit) (r : Ref),
     have hsub := hc.setState FrameState.executing
     obtain ⟨hk1, -, -⟩ := hsub (r + 1) (Nat.le_refl _)
     obtain ⟨i1, i2⟩ := ih (w.setState r .executing) (r + 1) hsub (by simpa using hn)
-    have hd : closeDelegate noopHooks (genCloseF noopHooks K) w r =
-        (((genCloseF noopHooks K (w.setState r .executing) (r + 1)).1.setState r .suspendedYieldFrom),
-          .fail (some Exc.fuel)) := by
-      simp [closeDelegate, genYf, hs, ht, delegating, genCloseIter, genOrCoro?, hk1, i1]
+    have htop : ((w.setState r .executing).get r).stackTop = .gen (r + 1) := by
+      simpa [World.setState] using ht
+    have hd : closeDelegate noopHooks (genCloseF noopHooks K) (w.setState r .executing) r
+        .suspendedYieldFrom =
+        ((genCloseF noopHooks K (w.setState r .executing) (r + 1)).1, .fail (some Exc.fuel)) := by
+      simp [closeDelegate, htop, genCloseIter, genOrCoro?, hk1, i1]
     have hbody : genCloseF noopHooks (K + 1) w r =
-        genCloseFinish noopHooks
-          ((genCloseF noopHooks K (w.setState r .executing) (r + 1)).1.setState r .suspendedYieldFrom)
+        genCloseFinish noopHooks (genCloseF noopHooks K (w.setState r .executing) (r + 1)).1
           r (some Exc.fuel) := by
       simp only [genCloseF, hs, genCloseBody, hd]
       simp [i2, closePending]
     rw [hbody]
-    generalize hw : (genCloseF noopHooks K (w.setState r .executing) (r + 1)).1.setState r
-      .suspendedYieldFrom = w2
-    have hs2 : (w2.get r).state = .suspendedYieldFrom := by rw [← hw]; simp
-    have hn2 : w2.noUnwindTools = false := by rw [← hw]; simpa using i2
+    generalize (genCloseF noopHooks K (w.setState r .executing) (r + 1)).1 = w2 at i2
     have hfin : genCloseFinish noopHooks w2 r (some Exc.fuel) =
-        (clearGenFrame (w2.setState r .executing) r, .err (some Exc.fuel)) := by
-      simp only [genCloseFinish, noop_throw w2 r hs2]
-      simp [sendResultToRet, Exc.fuel, Exc.isGeneratorExit, fetchStopIterationValue,
-        Exc.isStopIteration]
+        (clearGenFrame w2 r, .err (some Exc.fuel)) := by
+      simp only [genCloseFinish, noop_throw w2 r]
+      simp [Exc.fuel, Exc.isGeneratorExit]
     rw [hfin]
-    exact ⟨rfl, by simpa [clearGenFrame] using hn2⟩
+    exact ⟨rfl, by simpa [clearGenFrame] using i2⟩
 
 /-- A fixed amount of C stack is enough to close any generator: there is a `K` such
 that `gen_close` never needs more than `K` nested C calls. This is what a stack
@@ -98,17 +88,19 @@ theorem throw_chain (typ : Obj Unit) (K : Nat) (htyp : givenMatchesGeneratorExit
     have hsub := hc.setState FrameState.executing
     obtain ⟨hk1, -, -⟩ := hc (r + 1) (Nat.le_succ r)
     have i1 := ih (w.setState r .executing) (r + 1) hsub
-    have hg : genOrCoro? w (Obj.gen (r + 1)) = some (r + 1) := by simp [genOrCoro?, hk1]
-    simp only [genThrowF, genYf, hs, ht, htyp]
-    simp only [if_true, hg, delegating]
+    have htop : ((w.setState r .executing).get r).stackTop = .gen (r + 1) := by
+      simpa [World.setState] using ht
+    have hg : genOrCoro? (w.setState r .executing) (Obj.gen (r + 1)) = some (r + 1) := by
+      have hne : r + 1 ≠ r := by omega
+      simp [genOrCoro?, get_setState_ne _ _ hne, hk1]
+    simp only [genThrowF, hs, htyp]
+    simp only [htop, hg]
+    simp only [reduceCtorEq, if_false, FrameState.finished, FrameState.toInt, if_true, Bool.false_eq_true, false_and]
     generalize hq : genThrowF noopHooks K (w.setState r .executing) (r + 1) true typ none none = q at i1
     obtain ⟨w', res⟩ := q
     simp only at i1
     subst i1
-    simp only [hs, afterDelegate]
-    generalize hw : w'.setState r .suspendedYieldFrom = w2
-    have hs2 : (w2.get r).state = .suspendedYieldFrom := by rw [← hw]; simp
-    simp [noop_throw w2 r hs2]
+    simp [afterDelegate, genThrowCurrent, noop_throw, sendResultToRet]
 
 /-- The same for `_gen_throw`, which recurses along the chain in the same way. -/
 def GenThrowStackBounded : Prop :=
@@ -142,20 +134,42 @@ theorem genThrowArity_proven : GenThrowArity := by
   · have : ¬ args.length < 1 := by omega
     simp [genThrow, checkPositional, h3, this, Exc.typeError]
 
-/-- Without a sub-iterator, `throw()` with something that cannot be raised is a
-`TypeError` and nothing changes. -/
+/-- Without a sub-iterator, `throw()` with something that cannot be raised changes nothing,
+on every state, and is a `TypeError`. Since 3.15 the state is looked at first, :628-645, so a
+running generator gets the `ValueError` and a finished coroutine the `RuntimeError` instead;
+on 3.14.7 the arguments came first and both were the `TypeError`. -/
 def GenThrowBadArgUndelegated : Prop :=
   ∀ (V X : Type) (h : Hooks V X) (fuel : Nat) (w : World V X) (r : Ref) (typ : Obj V),
     genYf (w.get r) = none → isThrowable typ = false →
     genThrow h (fuel + 1) w r [typ] =
-      (w, .err (some (Exc.typeError
-        ("exceptions must be classes or instances deriving from BaseException, not "
-          ++ h.typeName typ))))
+      if (w.get r).state = .executing then
+        (w, .err (some (Exc.valueError (alreadyExecutingMsg (w.get r).kind))))
+      else if (w.get r).state.finished = true ∧ (w.get r).kind = .coro then
+        (w, .err (some (Exc.runtimeError "cannot reuse already awaited coroutine")))
+      else
+        (w, .err (some (Exc.typeError
+          ("exceptions must be classes or instances deriving from BaseException, not "
+            ++ h.typeName typ))))
 
 theorem genThrowBadArgUndelegated_proven : GenThrowBadArgUndelegated := by
   intro V X h fuel w r typ hy ht
-  cases typ <;> simp_all [genThrow, checkPositional, unpackThrowArgs, genThrowF, throwHere,
-    isThrowable, badTraceback]
+  have hset : genSetException h typ none none = .error (Exc.typeError
+      ("exceptions must be classes or instances deriving from BaseException, not "
+        ++ h.typeName typ)) := by
+    cases typ <;> simp_all [genSetException, isThrowable, badTraceback]
+  have hna : ¬ ((w.get r).state = .suspendedYieldFrom) := by
+    intro c; simp [genYf, c] at hy
+  simp only [genThrow, checkPositional, unpackThrowArgs]
+  simp only [List.length_cons, List.length_nil]
+  simp only [genThrowF]
+  by_cases hx : (w.get r).state = .executing
+  · simp [hx]
+  by_cases hf : (w.get r).state.finished = true
+  · by_cases hc : (w.get r).kind = .coro
+    · simp [hx, hf, hc]
+    · simp [hx, hf, hc, hset]
+  · have h' : ¬ ((w.get r).state.finished = true ∧ (w.get r).kind = .coro) := fun c => hf c.1
+    simp [hx, hf, hna, throwHere, hset, setState_setState, setState_self]
 
 /-- With or without a sub-iterator, `throw()` with something that cannot be raised
 leaves the generator's state alone. False: a delegating generator gets the
@@ -179,20 +193,41 @@ theorem genThrowBadArgNoEffect_refuted : ¬ GenThrowBadArgNoEffect := by
   have := hp Unit Unit noopHooks 1 delegatingWorld 0 .none rfl
   exact absurd this (by decide)
 
-/-- `gen_throw` with no sub-iterator and a throwable class raises it into the frame:
-it is `gen_send_ex` with the normalized exception. -/
+/-- `_gen_throw` with no sub-iterator and an exception class: a running generator refuses, a
+finished one gets the normalized exception without running (a coroutine the `RuntimeError`),
+and otherwise it goes into the frame, with the generator `FRAME_EXECUTING`. -/
 def GenThrowNoDelegation : Prop :=
   ∀ (V X : Type) (h : Hooks V X) (fuel : Nat) (w : World V X) (r : Ref) (c : Bool)
     (k : ExcKind) (cls : String),
     genYf (w.get r) = none →
     genThrowF h (fuel + 1) w r c (.excClass k cls) none none =
-      genSendEx h w r (some .none) true (some (h.normalize (.excClass k cls) none)) false
+      if (w.get r).state = .executing then
+        (w, .err (some (Exc.valueError (alreadyExecutingMsg (w.get r).kind))))
+      else if (w.get r).state.finished = true then
+        if (w.get r).kind = .coro then
+          (w, .err (some (Exc.runtimeError "cannot reuse already awaited coroutine")))
+        else (w, .err (some (h.normalize (.excClass k cls) none)))
+      else
+        genThrowCurrent h (w.setState r .executing) r (some (h.normalize (.excClass k cls) none))
 
 theorem genThrowNoDelegation_proven : GenThrowNoDelegation := by
   intro V X h fuel w r c k cls hy
-  simp [genThrowF, hy, throwHere, badTraceback]
+  have hna : ¬ ((w.get r).state = .suspendedYieldFrom) := by
+    intro h'; simp [genYf, h'] at hy
+  have hset : genSetException h (.excClass k cls) none none =
+      .ok (h.normalize (.excClass k cls) none) := by
+    simp [genSetException, badTraceback]
+  simp only [genThrowF]
+  by_cases hx : (w.get r).state = .executing
+  · simp [hx]
+  by_cases hf : (w.get r).state.finished = true
+  · by_cases hc : (w.get r).kind = .coro
+    · simp [hx, hf, hc]
+    · simp [hx, hf, hc, hset]
+  · simp [hx, hf, hna, throwHere, hset]
 
-/-- `_PyGen_yf` is the stack top exactly while suspended in `yield from`. -/
+/-- The delegate is the receiver, `_PyFrame_StackPeek(frame, 2)`, exactly while suspended in
+`yield from`. -/
 def GenYfState : Prop :=
   ∀ (V : Type) (g : GenObj V),
     (g.state = .suspendedYieldFrom → genYf g = some g.stackTop ∧
@@ -223,31 +258,106 @@ def guardThrowLookup {V X : Type} (h : Hooks V X) (r : Ref)
     (bad : World V X × Except (Exc V) (Option (Obj V))) : Hooks V X :=
   { h with getThrow := fun w o => if (w.get r).state = .executing then h.getThrow w o else bad }
 
-/-- All Python code `_gen_throw` runs for a sub-iterator runs with the delegating
-generator marked `FRAME_EXECUTING`, like every other delegation bracket in the file.
-False on 3.14.7: `PyObject_GetOptionalAttr(yf, throw)` at :514 comes before the
-bracket at :526-529, so a `throw` property can resume or close the generator, and
-:523-531 then links the cleared frame into the thread's frame stack. -/
+section LookupGuard
+variable {V X : Type}
+
+theorem genCloseF_lookup (h : Hooks V X) (r bad) (n : Nat) :
+    ∀ (w : World V X) (q), genCloseF (guardThrowLookup h r bad) n w q = genCloseF h n w q := by
+  induction n with
+  | zero => intro w q; rfl
+  | succ n ih =>
+    intro w q
+    have hc : genCloseF (guardThrowLookup h r bad) n = genCloseF h n := by
+      funext w q; exact ih w q
+    simp only [genCloseF, hc]
+    rfl
+
+/-- Once `r` is marked, every lookup `_gen_throw` makes passes the guard. The marks of a
+delegation chain only ever add to it: an operation on `r` itself refuses at once, so the
+frame stays marked on the way down. -/
+theorem genThrowF_lookup (h : Hooks V X) (r bad) (n : Nat) :
+    ∀ (w : World V X) (q c typ val tb), (w.get r).state = .executing →
+      genThrowF (guardThrowLookup h r bad) n w q c typ val tb = genThrowF h n w q c typ val tb := by
+  induction n with
+  | zero => intro w q c typ val tb _; rfl
+  | succ n ih =>
+    intro w q c typ val tb hx
+    have hc : genCloseF (guardThrowLookup h r bad) n = genCloseF h n := by
+      funext w q; exact genCloseF_lookup h r bad n w q
+    have hse : genSetException (guardThrowLookup h r bad) typ val tb = genSetException h typ val tb := rfl
+    have hthrow : ∀ (w : World V X) q s, throwHere (guardThrowLookup h r bad) w q s typ val tb =
+        throwHere h w q s typ val tb := by intro w q s; rfl
+    have hafter : ∀ (w : World V X) q s (x : Ret V), afterDelegate (guardThrowLookup h r bad) w q s x =
+        afterDelegate h w q s x := by intro w q s x; rfl
+    simp only [genThrowF, hse, hc, hthrow, hafter]
+    split
+    · rfl
+    · rename_i h2
+      split
+      · rfl
+      · split
+        · have hmark : ((w.setState q .executing).get r).state = .executing := by
+            by_cases hqr : r = q
+            · subst hqr; simp
+            · rw [get_setState_ne _ _ hqr]; exact hx
+          split
+          · rfl
+          · split
+            · rename_i sub _
+              rw [ih (w.setState q .executing) sub c typ val tb hmark]
+            · have hl : (guardThrowLookup h r bad).getThrow (w.setState q .executing)
+                  ((w.setState q .executing).get q).stackTop =
+                  h.getThrow (w.setState q .executing) ((w.setState q .executing).get q).stackTop := by
+                simp only [guardThrowLookup, hmark, if_true]
+              rw [hl]
+              rfl
+        · rfl
+
+end LookupGuard
+
+/-- All Python code `_gen_throw` runs for a sub-iterator runs with the delegating generator
+marked `FRAME_EXECUTING`, the lookup of `throw` included. This was false on 3.14.7, where the
+lookup came before the bracket and a `throw` property could close the generator:
+`bytecode-gen-throw-attr-lookup-unguarded`. 3.15 marks the generator at :649, first of all,
+and no Python code runs between that write and the lookup. -/
 def GenThrowLookupSeesExecuting : Prop :=
   ∀ (V X : Type) (h : Hooks V X) (bad : World V X × Except (Exc V) (Option (Obj V))) (n : Nat)
     (w : World V X) (r : Ref) (c : Bool) (typ : Obj V) (val tb : Option (Obj V)),
     genThrowF (guardThrowLookup h r bad) n w r c typ val tb = genThrowF h n w r c typ val tb
 
-/-- Generator 0 delegates to an object that is not a generator. -/
-def foreignDelegateWorld : World Unit Unit :=
-  { gens := fun _ => { kind := .gen, state := .suspendedYieldFrom, stackTop := .other () }
-    asends := fun _ => {}
-    athrows := fun _ => {}
-    ext := () }
-
-theorem genThrowLookupSeesExecuting_refuted : ¬ GenThrowLookupSeesExecuting := by
-  intro hp
-  have := hp Unit Unit noopHooks (foreignDelegateWorld, .error Exc.fuel) 1 foreignDelegateWorld 0
-    false (.excClass .plain "ValueError") none none
-  have h2 := congrArg (fun p => match p.2 with
-    | Ret.err (some e) => e.kind
-    | _ => ExcKind.stopIteration) this
-  exact absurd h2 (by decide)
+theorem genThrowLookupSeesExecuting_proven : GenThrowLookupSeesExecuting := by
+  intro V X h bad n w r c typ val tb
+  cases n with
+  | zero => rfl
+  | succ n =>
+    by_cases hx : (w.get r).state = .executing
+    · exact genThrowF_lookup h r bad (n + 1) w r c typ val tb hx
+    · have hc : genCloseF (guardThrowLookup h r bad) n = genCloseF h n := by
+        funext w q; exact genCloseF_lookup h r bad n w q
+      have hse : genSetException (guardThrowLookup h r bad) typ val tb = genSetException h typ val tb := rfl
+      have hthrow : ∀ (w : World V X) q s, throwHere (guardThrowLookup h r bad) w q s typ val tb =
+          throwHere h w q s typ val tb := by intro w q s; rfl
+      have hafter : ∀ (w : World V X) q s (x : Ret V), afterDelegate (guardThrowLookup h r bad) w q s x =
+          afterDelegate h w q s x := by intro w q s x; rfl
+      have hmark : ((w.setState r .executing).get r).state = .executing := by simp
+      simp only [genThrowF, hse, hc, hthrow, hafter]
+      split
+      · rfl
+      · split
+        · rfl
+        · split
+          · split
+            · rfl
+            · split
+              · rename_i sub _
+                rw [genThrowF_lookup h r bad n (w.setState r .executing) sub c typ val tb hmark]
+              · have hl : (guardThrowLookup h r bad).getThrow (w.setState r .executing)
+                    ((w.setState r .executing).get r).stackTop =
+                    h.getThrow (w.setState r .executing) ((w.setState r .executing).get r).stackTop := by
+                  simp only [guardThrowLookup, hmark, if_true]
+                rw [hl]
+                rfl
+          · rfl
 
 /-! ## PEP 479 -/
 
@@ -556,9 +666,9 @@ theorem awaitableIterResult_proven : AwaitableIterResult := by
             simp at c1 c2
             exact ⟨c2, c1.1, c1.2⟩
 
-/-! ## `_PyGen_Finalize` -/
+/-! ## `gen_finalize` -/
 
-/-- `_PyGen_Finalize` does nothing to a finished generator; an unstarted coroutine
+/-- `gen_finalize` does nothing to a finished generator; an unstarted coroutine
 only warns and an async generator with a finalizer only gets it called, in both cases
 without ever resuming the frame. -/
 def GenFinalizeBranches : Prop :=

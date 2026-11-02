@@ -63,7 +63,7 @@ variable (regs : Regs) (rest : List Val)
 
 theorem guard_tos_int (r : Val) :
     _GUARD_TOS_INT ⟨regs, r :: rest⟩ =
-      if notInt r then .error .deopt ⟨regs, r :: rest⟩ else .ok () ⟨regs, r :: rest⟩ :=
+      if notCompactInt r then .error .deopt ⟨regs, r :: rest⟩ else .ok () ⟨regs, r :: rest⟩ :=
   guardTop_one regs rest _ r _ rfl
 
 theorem notList_list {a : Addr} {items : Array Val} (h : regs.rt.heap[a]? = some (.list items)) :
@@ -104,14 +104,6 @@ theorem notTuple_nonref (v : Val) (hv : ∀ a, v ≠ .ref a) : notTuple v regs =
 
 end Guards
 
-/-- Fail inside a `stk` body. -/
-theorem stk_deopt (p q : Nat) (f : List Val → BM (List Val)) (s : St) (hp : p ≤ s.stack.length)
-    (h : ∃ r', f (s.stack.take p).reverse s.regs = .error .deopt r') :
-    ∃ s', stk p q f s = .error .deopt s' := by
-  obtain ⟨r', hr⟩ := h
-  refine ⟨⟨r', s.stack.drop p⟩, ?_⟩
-  simp [stk, popN, hp, bind, EStateM.bind, BM.lift, hr]
-
 /-- `BINARY_OP_SUBSCR_LIST_INT`, `BINARY_OP_SUBSCR_TUPLE_INT` and `BINARY_OP_SUBSCR_STR_INT`
 agree with `BINARY_OP` for `[]`, on every stack. -/
 theorem subscrListInt_spec (e : Env) (hom : Lawful e.om) (hop : e.oparg = 26) (s : St)
@@ -121,11 +113,11 @@ theorem subscrListInt_spec (e : Env) (hom : Lawful e.om) (hop : e.oparg = 26) (s
   match stack, hs with
   | r :: l :: rest, _ =>
     refine guards_spec _ _ _ (BINARY_OP e) _ ?_
-    by_cases hr : notInt r = true
+    by_cases hr : notCompactInt r = true
     · left; rw [guard_tos_int]; simp [hr]
     · right
       refine ⟨by rw [guard_tos_int]; simp [hr], ?_⟩
-      obtain ⟨sub, rfl⟩ := notInt_false (by simpa using hr)
+      obtain ⟨sub, rfl, _⟩ := notCompactInt_false (by simpa using hr)
       -- what `l` is
       have hl : Live regs.rt l := hlive l (by simp)
       by_cases hlr : ∃ a, l = .ref a
@@ -135,38 +127,41 @@ theorem subscrListInt_spec (e : Env) (hom : Lawful e.om) (hop : e.oparg = 26) (s
         · obtain ⟨items, rfl⟩ := hlist
           right
           refine ⟨guardTop_two regs rest _ _ _ false (notList_list regs ho), ?_⟩
-          by_cases hc : isNonNegCompact sub = true
-          · by_cases hi : ∃ v, items[sub.toNat]? = some v
-            · obtain ⟨v, hv⟩ := hi
-              right
-              have hsub : 0 ≤ sub := by
-                simp [isNonNegCompact] at hc; omega
-              have hg : e.om.binaryOp e.ctx e.oparg (.ref a) (.int sub) regs.rt = .ok v regs.rt := by
-                rw [hop, hom.subscr]
-                have := hom.list_item e.ctx a items sub.toNat v regs.rt ho hv
-                rwa [Int.toNat_of_nonneg hsub] at this
-              rw [generic_binop e regs rest _ _ v hg]
-              apply fast_stk21
-              simp [bind, EStateM.bind, RM.lift, liftM, monadLift, MonadLift.monadLift, getObj, ho, hc,
-                hv, pure, EStateM.pure]
-            · left
-              apply stk_deopt
-              · simp
-              · have hnone : items[sub.toNat]? = none := by
-                  cases h : items[sub.toNat]? with
-                  | none => rfl
-                  | some v => exact absurd ⟨v, h⟩ hi
-                refine ⟨regs, ?_⟩
-                simp [bind, EStateM.bind, RM.lift, liftM, monadLift, MonadLift.monadLift, getObj, ho, hc,
-                  hnone, pure, EStateM.pure, throw, throwThe, MonadExcept.throw, EStateM.throw,
-                  MonadExceptOf.throw]
+          have hobj : ((getObj a : RM Obj) : BM Obj) regs = .ok (.list items) regs := by
+            simp [getObj, ho, RM.lift, liftM, monadLift, MonadLift.monadLift]
+          by_cases hneg : (if sub < 0 then sub + (items.size : Int) else sub) < 0
           · left
             apply stk_deopt
             · simp
             · refine ⟨regs, ?_⟩
-              simp at hc
-              simp [hc, bind, EStateM.bind, throw, throwThe, MonadExcept.throw, EStateM.throw,
-                MonadExceptOf.throw]
+              simp [bind, EStateM.bind, RM.lift, liftM, monadLift, MonadLift.monadLift, getObj, ho, hneg,
+                throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+          · by_cases hi : ∃ v, items[(if sub < 0 then sub + (items.size : Int) else sub).toNat]? = some v
+            · obtain ⟨v, hv⟩ := hi
+              right
+              have hg : e.om.binaryOp e.ctx e.oparg (.ref a) (.int sub) regs.rt = .ok v regs.rt := by
+                rw [hop, hom.subscr]
+                by_cases hs0 : sub < 0
+                · simp only [hs0, ↓reduceIte] at hv hneg
+                  exact hom.list_item_neg e.ctx a items sub v regs.rt ho hs0 hv (by omega)
+                · simp only [hs0, ↓reduceIte] at hv
+                  have := hom.list_item e.ctx a items sub.toNat v regs.rt ho hv
+                  rwa [Int.toNat_of_nonneg (by omega)] at this
+              rw [generic_binop e regs rest _ _ v hg]
+              apply fast_stk21
+              simp [bind, EStateM.bind, RM.lift, liftM, monadLift, MonadLift.monadLift, getObj, ho, hneg,
+                hv, pure, EStateM.pure]
+            · left
+              apply stk_deopt
+              · simp
+              · have hnone : items[(if sub < 0 then sub + (items.size : Int) else sub).toNat]? = none := by
+                  cases h : items[(if sub < 0 then sub + (items.size : Int) else sub).toNat]? with
+                  | none => rfl
+                  | some v => exact absurd ⟨v, h⟩ hi
+                refine ⟨regs, ?_⟩
+                simp [bind, EStateM.bind, RM.lift, liftM, monadLift, MonadLift.monadLift, getObj, ho, hneg,
+                  hnone, pure, EStateM.pure, throw, throwThe, MonadExcept.throw, EStateM.throw,
+                  MonadExceptOf.throw]
         · left
           have hn : ∀ i, o ≠ .list i := fun i hi => hlist ⟨i, hi⟩
           exact guardTop_two regs rest _ _ _ true (notList_other regs ho hn) |>.trans (by simp)

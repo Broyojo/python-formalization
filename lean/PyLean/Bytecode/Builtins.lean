@@ -29,8 +29,9 @@ def seqBinary (nb : Nat) (l r : Val) : RM (Option Val) := do
   | 0, .str a, .str b => pure (some (.str (a ++ b)))
   | 0, .bytes a, .bytes b => pure (some (.bytes (a ++ b)))
   | 6, .str a, _ =>
-    -- `PyUnicode_Format`, unicodeobject.c@3.14.7:15549,15583, for a template with no conversion
-    -- in it; a template with one is the named exclusion `str-percent-conversion`.
+    -- `PyUnicode_Format`, unicode_format.c:1031-1101, for a template with no conversion in it,
+    -- so `argidx` never moves; a template with one is the named exclusion
+    -- `str-percent-conversion`.
     if a.contains '%' then fault "str % with conversions is not modelled"
     else
       let isTuple ← match r with
@@ -41,9 +42,9 @@ def seqBinary (nb : Nat) (l r : Val) : RM (Option Val) := do
       let isStr := match r with | .str _ => true | _ => false
       let dict := (← hasSubscript r) && isTuple.isNone && !isStr
       if dict || isTuple == some 0 then pure (some (.str a))
-      else typeError "not all arguments converted during string formatting"
+      else typeError s!"not all arguments converted during string formatting (required 0, got {isTuple.getD 1})"
   | 6, .bytes a, _ =>
-    -- `_PyBytes_FormatEx`, bytesobject.c:655-656,1063, with the same named exclusion.
+    -- `_PyBytes_FormatEx`, bytesobject.c:618-1158, with the same named exclusion.
     if a.contains 37 then fault "bytes % with conversions is not modelled"
     else
       let isTuple ← match r with
@@ -54,7 +55,7 @@ def seqBinary (nb : Nat) (l r : Val) : RM (Option Val) := do
       let isBytesOrStr := match r with | .bytes _ | .str _ => true | _ => false
       let dict := (← hasSubscript r) && isTuple.isNone && !isBytesOrStr
       if dict || isTuple == some 0 then pure (some (.bytes a))
-      else typeError "not all arguments converted during bytes formatting"
+      else typeError s!"not all arguments converted during bytes formatting (required 0, got {isTuple.getD 1})"
   | 5, .bytes a, _ =>
     match intOf r with
     | some n => pure (some (.bytes (List.flatten (List.replicate n.toNat a))))
@@ -464,7 +465,8 @@ def reprImpl (v : Val) : RM Val := do
       | some r =>
         match r with
         | .str _ => pure r
-        | _ => typeError s!"__repr__ returned non-string (type {← tpName r})"
+        -- `PyObject_Repr`, `Objects/object.c:793`
+        | _ => typeError s!"{← tpName v}.__repr__() must return a str, not {← tpName r}"
       | none =>
         match i.exc with
         | some d =>
@@ -492,7 +494,8 @@ def strImpl (v : Val) : RM Val := do
         | some r =>
           match r with
           | .str _ => pure r
-          | _ => typeError s!"__str__ returned non-string (type {← tpName r})"
+          -- `PyObject_Str`, `Objects/object.c:835`
+          | _ => typeError s!"{← tpName v}.__str__() must return a str, not {← tpName r}"
         | none => om.repr ctx v
       | none =>
         match i.exc with
@@ -505,7 +508,13 @@ def strImpl (v : Val) : RM Val := do
           else om.repr ctx d.args
         | none =>
           if i.base != .null && (← userLookup i.cls "__repr__").isNone then om.str ctx i.base
-          else om.repr ctx v
+          else
+            -- `object_str` calls `tp_repr` itself, not `PyObject_Repr`, so a result that is
+            -- not a str fails the check of `PyObject_Str`
+            match ← callDunder om ctx v "__repr__" [] with
+            | some (.str s) => pure (.str s)
+            | some r => typeError s!"{← tpName v}.__str__() must return a str, not {← tpName r}"
+            | none => om.repr ctx v
     | _ => om.repr ctx v
   | _ => om.repr ctx v
 
@@ -515,10 +524,15 @@ def formatImpl (v spec : Val) : RM Val := do
   let s := match spec with
     | .str s => s
     | _ => ""
+  -- the check on the result, `PyObject_Format`, `Objects/abstract.c:900`
+  let checked (r : Val) : RM Val := do
+    match r with
+    | .str _ => pure r
+    | _ => typeError s!"{← tpName v}.__format__() must return a str, not {← tpName r}"
   if s == "" then
-    if let some r ← callDunder om ctx v "__format__" [.str ""] then return r
+    if let some r ← callDunder om ctx v "__format__" [.str ""] then return ← checked r
     return ← om.str ctx v
-  if let some r ← callDunder om ctx v "__format__" [spec] then return r
+  if let some r ← callDunder om ctx v "__format__" [spec] then return ← checked r
   let isNum := (match v with | .int _ | .float _ => true | _ => false)
   let body := strOf (← om.str ctx v)
   let cs := s.toList
@@ -682,7 +696,9 @@ def iterNextImpl (it : Val) : RM (Option Val) := do
         match ← callDunder om ctx it "__next__" [] with
         | some v => pure (some v)
         | none => pure none
-      | none => typeError s!"'{← tpName it}' object is not an iterator"
+      -- `_PyObject_NextNotImplemented`, `Objects/object.c`: `__next__` went away after the
+      -- iterator was made, and the slot it left behind says this
+      | none => typeError s!"'{← tpName it}' object is not iterable"
     | _ => typeError s!"'{← tpName it}' object is not an iterator"
   | _ => typeError s!"'{← tpName it}' object is not an iterator"
 
@@ -890,7 +906,10 @@ def indexOfEq (x : Val) : Nat → List Val → RM (Option Nat)
   | i, v :: r => do if ← eqBool om ctx v x then pure (some i) else indexOfEq x (i + 1) r
 
 /-- Builtin methods. `self` is the receiver. -/
-def callMethod (tp name : String) (self : Val) (args : List Val) (kw : List String) : RM Val := do
+def callMethod (tp name : String) (self0 : Val) (args : List Val) (kw : List String) : RM Val := do
+  -- the C methods read the base struct of a subclass instance, which here is its `base`
+  let self ← if ["list", "dict", "str", "tuple", "set", "frozenset"].contains tp
+    then payload self0 else pure self0
   match tp, name with
   | "list", "append" =>
     match args with
@@ -1122,7 +1141,7 @@ def callMethod (tp name : String) (self : Val) (args : List Val) (kw : List Stri
     | _ => pure self
   | "generator", "send" | "coroutine", "send" =>
     match self, args with
-    | .ref a, [v] => genSendEx ctx a (some v) none false
+    | .ref a, [v] => genSend ctx a (some v)
     | _, _ => typeError s!"generator.send() takes exactly one argument ({args.length} given)"
   | "generator", "close" | "coroutine", "close" =>
     match self with
@@ -1178,51 +1197,51 @@ def callMethod (tp name : String) (self : Val) (args : List Val) (kw : List Stri
   | _, _ => typeError s!"{tp}.{name}: not modelled"
 where
   /-- `_gen_throw` with `tb = NULL` and the one-argument `throw`,
-  `Objects/genobject.c:624-726`. -/
+  `Objects/genobject.c:624-726`. The generator is `FRAME_EXECUTING` from :649 on, through
+  every look at the sub-iterator. Only a successful call into it, the failed lookup of its
+  `throw` and a failed `gen_set_exception` write the old state back. -/
   genThrow : Nat → Addr → Val → RM Val
     | 0, _, _ => throw .fuel
     | fuel + 1, a, typ => do
       let g ← getGen a
+      let state := g.frameState
+      -- `gen_set_exception`, :546-601, with `val` and `tb` absent
+      let setException : RM Val := do
+        if ← isExcClass typ then om.call ctx typ [] []
+        else if ← isExcInstance typ then pure typ
+        else typeError s!"exceptions must be classes or instances deriving from BaseException, not {← tpName typ}"
+      if state == 4 then alreadyExecuting g.kind
+      if state == 5 then
+        if g.kind == .coro then runtimeError "cannot reuse already awaited coroutine"
+        throw (.exc (← tryExc setException fun e => pure e))
+      let restore : RM Unit := do
+        let g2 ← getGen a
+        setObj a (.gen { g2 with frameState := state })
       let throwHere : RM Val := do
-        let exc ← if ← isExcClass typ then om.call ctx typ [] []
-          else if ← isExcInstance typ then pure typ
-          else typeError s!"exceptions must be classes or instances deriving from BaseException, not {← tpName typ}"
-        genSendEx ctx a (some .none) (some exc) false
+        let exc ← tryExc setException fun e => do restore; throw (.exc e)
+        genThrowCurrent ctx a exc
+      setObj a (.gen { g with frameState := 4 })
       match genYf g with
       | none => throwHere
       | some yf =>
-        let state := g.frameState
-        let setState (st : Int) : RM Unit := do
-          let g2 ← getGen a
-          setObj a (.gen { g2 with frameState := st })
         if ← givenMatches typ 8 (.cls "GeneratorExit") then
-          setState 0
           let err ← tryExc (do genCloseIter P om ctx 32 yf; pure (Option.none)) fun e => pure (some e)
-          setState state
           match err with
-          | some e => return ← genSendEx ctx a (some .none) (some e) false
+          | some e => return ← genThrowCurrent ctx a e
           | none => return ← throwHere
+        let after (r : Except Val Val) : RM Val :=
+          match r with
+          | .ok v => do restore; pure v
+          | .error e => genThrowCurrent ctx a e
         match ← genKindOf yf with
         | some .gen | some .coro =>
           match yf with
-          | .ref y =>
-            setState 0
-            let r ← tryExc (Except.ok <$> genThrow fuel y typ) fun e => pure (Except.error e)
-            setState state
-            match r with
-            | .ok v => pure v
-            | .error e => genSendEx ctx a (some .none) (some e) false
+          | .ref y => after (← tryExc (Except.ok <$> genThrow fuel y typ) fun e => pure (Except.error e))
           | _ => throwHere
         | _ =>
-          match ← optAttr om ctx yf "throw" with
+          match ← tryExc (optAttr om ctx yf "throw") fun e => do restore; throw (.exc e) with
           | none => throwHere
-          | some m =>
-            setState 0
-            let r ← tryExc (Except.ok <$> call1 om ctx m [typ]) fun e => pure (Except.error e)
-            setState state
-            match r with
-            | .ok v => pure v
-            | .error e => genSendEx ctx a (some .none) (some e) false
+          | some m => after (← tryExc (Except.ok <$> call1 om ctx m [typ]) fun e => pure (Except.error e))
 
 /-- `min`/`max`. -/
 def minMax (name : String) (op : Nat) (args : List Val) (kw : List String) : RM Val := do
@@ -1654,17 +1673,18 @@ def intrinsic2Impl (_ : Frame) (n : Nat) (_ _ : Val) : RM Val := do
   | 0 => raiseS "SystemError" "invalid intrinsic function"
   | _ => fault "intrinsic not modelled"
 
-/-- `_PyCoro_GetAwaitableIter`, `Objects/genobject.c`. -/
+/-- `_PyCoro_GetAwaitableIter`, `Objects/genobject.c:1246-1287`. The coroutine test comes
+first. `%T` omits the module for `__main__` and `builtins`, the only modules here. -/
 def awaitableIter (o : Val) : RM Val := do
   match ← genKindOf o with
   | some .coro => pure o
   | _ =>
     match ← callDunder om ctx o "__await__" [] with
     | some r =>
-      if !(← om.isIterator r) then
-        typeError s!"__await__() returned non-iterator of type '{← tpName r}'"
       if (← genKindOf r) == some .coro then
-        typeError "__await__() returned a coroutine"
+        typeError s!"{← tpName o}.__await__() must return an iterator, not coroutine"
+      if !(← om.isIterator r) then
+        typeError s!"{← tpName o}.__await__() must return an iterator, not {← tpName r}"
       pure r
     | none => typeError s!"'{← tpName o}' object can't be awaited"
 

@@ -1,5 +1,5 @@
 /-!
-# `Objects/genobject.c` (CPython 3.14.7): generators and coroutines
+# `Objects/genobject.c` (CPython 3.15.2): generators and coroutines
 
 A standalone state machine, mirroring the C source branch by branch. Line numbers
 are those of `Objects/genobject.c` unless another file is named.
@@ -30,30 +30,31 @@ namespace PyLean.Bytecode.GenObj
 
 abbrev Ref := Nat
 
-/-- `PyFrameState`, `Include/internal/pycore_frame.h:47-54`. -/
+/-- `PyFrameState`, `Include/internal/pycore_frame.h:47-54`. `FRAME_COMPLETED` is gone in
+3.15, and `FRAME_SUSPENDED_YIELD_FROM_LOCKED` is only ever set on the free-threaded build
+(`Objects/genobject.c:40-58`), which is out of scope, so it has no constructor here. -/
 inductive FrameState where
-  | created | suspended | suspendedYieldFrom | executing | completed | cleared
+  | created | suspended | suspendedYieldFrom | executing | cleared
   deriving DecidableEq, Repr, Inhabited
 
-/-- The C enum values, `pycore_frame.h@3.14.7:47-52`. -/
+/-- The C enum values, `pycore_frame.h:47-54`. -/
 def FrameState.toInt : FrameState → Int
-  | .created => -3
-  | .suspended => -2
-  | .suspendedYieldFrom => -1
-  | .executing => 0
-  | .completed => 1
-  | .cleared => 4
+  | .created => 0
+  | .suspended => 1
+  | .suspendedYieldFrom => 2
+  | .executing => 4
+  | .cleared => 5
 
-/-- `FRAME_STATE_SUSPENDED(S)`, `pycore_frame.h@3.14.7:55`. -/
+/-- `FRAME_STATE_SUSPENDED(S)`, `pycore_frame.h:56`. -/
 def FrameState.isSuspended : FrameState → Bool
   | .suspended | .suspendedYieldFrom => true
   | _ => false
 
-/-- `FRAME_STATE_FINISHED(S)`, `pycore_frame.h@3.14.7:56`: `(S) >= FRAME_COMPLETED`. -/
-def FrameState.finished (s : FrameState) : Bool := decide (s.toInt ≥ 1)
+/-- `FRAME_STATE_FINISHED(S)`, `pycore_frame.h:57`: `(S) == FRAME_CLEARED`. -/
+def FrameState.finished (s : FrameState) : Bool := decide (s.toInt = 5)
 
-/-- `gi_frame_state = FRAME_SUSPENDED + oparg` (`YIELD_VALUE`,
-`Python/bytecodes.c@3.14.7:1379`); the oparg is 0 or 1. -/
+/-- `gi_frame_state = FRAME_SUSPENDED + oparg` (`_YIELD_VALUE`,
+`Python/bytecodes.c:1872`); the oparg is 0 or 1. -/
 def FrameState.ofOparg (oparg : Bool) : FrameState :=
   if oparg then .suspendedYieldFrom else .suspended
 
@@ -148,7 +149,7 @@ def Code.hasFlag (c : Code) (flag : Nat) : Bool := c.flags &&& flag != 0
 
 /-- Where `frame->instr_ptr` points, as far as `is_resume` (:353-362) and the
 `RESUME_OPARG_DEPTH1_MASK` test (:406-407) can tell. `is_resume` accepts `RESUME`,
-`RESUME_CHECK` and `INSTRUMENTED_RESUME`; `depth1` is the mask bit. -/
+`RESUME_CHECK`, `RESUME_CHECK_JIT` and `INSTRUMENTED_RESUME`; `depth1` is the mask bit. -/
 inductive InstrPtr where
   | resume (depth1 : Bool)
   | other
@@ -161,7 +162,8 @@ structure GenObj (V : Type) where
   state : FrameState := .cleared
   /-- `gi_iframe.instr_ptr` -/
   instr : InstrPtr := .other
-  /-- `_PyFrame_StackPeek(frame)`, meaningful when suspended in a `yield from`. -/
+  /-- `_PyFrame_StackPeek(frame, 2)`, meaningful when suspended in a `yield from`: the
+  receiver, which on 3.15 lies under `index_or_null`. -/
   stackTop : Obj V := .none
   /-- `gi_iframe.f_executable` -/
   code : Code := {}
@@ -194,8 +196,9 @@ structure ASend (V : Type) where
 /-- `PyAsyncGenAThrow`, :1444-1453. -/
 structure AThrow (V : Type) where
   gen : Ref := 0
-  /-- `agt_args`: `none` is NULL, the `aclose()` mode; otherwise the args tuple. -/
-  args : Option (List (Obj V)) := none
+  /-- `agt_typ`, `agt_val` and `agt_tb`: `none` is `agt_typ == NULL`, the `aclose()` mode.
+  3.15 unpacks the arguments when the awaitable is made, so a bad count cannot get here. -/
+  args : Option (Obj V × Option (Obj V) × Option (Obj V)) := none
   state : AwaitableState := .init
   deriving Inhabited
 
@@ -204,11 +207,11 @@ structure World (V X : Type) where
   gens : Ref → GenObj V
   asends : Ref → ASend V
   athrows : Ref → AThrow V
-  /-- `_PyEval_NoToolsForUnwind(tstate)`, `Python/ceval.c@3.14.7:2582-2584`. -/
+  /-- `_PyEval_NoToolsForUnwind(tstate, frame)`. -/
   noUnwindTools : Bool := true
   /-- `tstate->coroutine_origin_tracking_depth` -/
   originDepth : Nat := 0
-  /-- The Python call stack at `compute_cr_origin` time, innermost first. -/
+  /-- The Python call stack at `_PyCoro_ComputeOrigin` time, innermost first. -/
   callStack : List (String × Nat × String) := []
   /-- `tstate->async_gen_firstiter` -/
   firstiter : Option (Obj V) := none
@@ -256,7 +259,7 @@ theorem get_set (w : World V X) (r q : Ref) (g : GenObj V) :
 
 end World
 
-/-- What `_PyEval_EvalFrame` left behind (@3.14.7:259). For `yielded`, `oparg` is
+/-- What `_PyEval_EvalFrame` left behind (:281). For `yielded`, `oparg` is
 `YIELD_VALUE`'s oparg (`false` is 0: `FRAME_SUSPENDED`, `true` is 1:
 `FRAME_SUSPENDED_YIELD_FROM`), `depth1` is `RESUME_OPARG_DEPTH1_MASK` of the
 `RESUME` that follows it, and `top` is what `_PyFrame_StackPeek` then sees. -/
@@ -311,7 +314,7 @@ structure Hooks (V X : Type) where
   warnUnawaitedCoro : World V X → Ref → World V X
   /-- `_PyErr_WarnUnawaitedAgenMethod` (:2098, :2533). -/
   warnUnawaitedAgen : World V X → Ref → String → World V X
-  /-- `PyErr_NormalizeException(&typ, &val, &tb)` (@3.14.7:558) for a class `typ`. -/
+  /-- `PyErr_NormalizeException(&typ, &val, &tb)` (:488) for a class `typ`. -/
   normalize : Obj V → Option (Obj V) → Exc V
   /-- `Py_TYPE(o)->tp_name`. -/
   typeName : Obj V → String
@@ -328,18 +331,18 @@ variable {V X : Type}
 
 /-! ## `gen_send_ex2` and its callers -/
 
-/-- `arg && arg != Py_None` (@3.14.7:199). -/
+/-- `arg && arg != Py_None` (:335). -/
 def isNonNull : Option (Obj V) → Bool
   | none | some .none => false
   | some _ => true
 
-/-- @3.14.7:200-208. -/
+/-- :336-344. -/
 def cantSendMsg : GenKind → String
   | .gen => "can't send non-None value to a just-started generator"
   | .coro => "can't send non-None value to a just-started coroutine"
   | .asyncGen => "can't send non-None value to a just-started async generator"
 
-/-- @3.14.7:213-219. -/
+/-- `gen_raise_already_executing_error`, :241-252. -/
 def alreadyExecutingMsg : GenKind → String
   | .gen => "generator already executing"
   | .coro => "coroutine already executing"
@@ -355,15 +358,16 @@ generator as it returns or raises. -/
 def clearGenFrame (w : World V X) (r : Ref) : World V X :=
   w.setState r .cleared
 
-/-- What `YIELD_VALUE` does to its generator, `Python/bytecodes.c@3.14.7:1375-1379`. -/
+/-- What `_YIELD_VALUE` does to its generator, `Python/bytecodes.c:1856-1872`. -/
 def suspendFrame (w : World V X) (r : Ref) (oparg depth1 : Bool) (top : Obj V) : World V X :=
   w.set r { w.get r with
     state := FrameState.ofOparg oparg
     instr := .resume depth1
     stackTop := top }
 
-/-- The end of `gen_send_ex2`, :271-293, with the state write `YIELD_VALUE` or
-`clear_gen_frame` did before control came back. -/
+/-- The end of `gen_send_ex2`, :289-324, with the state write `_YIELD_VALUE` or
+`clear_gen_frame` did before control came back. `generator_return_kind` (:293) is which
+of the two ran, and is here the shape of the outcome. -/
 def finishResume (w : World V X) (r : Ref) (kind : GenKind) (arg : Option (Obj V)) :
     ResumeOutcome V → World V X × SendResult V
   | .yielded oparg v depth1 top => (suspendFrame w r oparg depth1 top, .next v)
@@ -374,45 +378,50 @@ def finishResume (w : World V X) (r : Ref) (kind : GenKind) (arg : Option (Obj V
       (clearGenFrame w r, .ret v)
   | .raised e => (clearGenFrame w r, .err (some e))
 
-/-- `gen_send_ex2`, :187-294. `exc`/`err` are the C `exc` flag and, when set, the
-pending exception. The checks are in source order; `resume` sees the world with
-`gi_frame_state == FRAME_EXECUTING` (:263) and `instr_ptr` still at the `RESUME` it
-was suspended on. -/
+/-- `gen_send_ex2`, :254-325. On 3.15 this has no state checks: the caller has already marked
+the generator `FRAME_EXECUTING`, and `exc` is the exception pending when `exc` is set. -/
 def genSendEx2 (h : Hooks V X) (w : World V X) (r : Ref) (arg : Option (Obj V))
-    (exc : Bool) (err : Option (Exc V)) (closing : Bool) : World V X × SendResult V :=
+    (exc : Option (Exc V)) : World V X × SendResult V :=
+  let res := h.resume w r (arg.getD .none) exc
+  finishResume res.1 r (w.get r).kind arg res.2
+
+/-- `gen_send_ex`, :327-370: the state checks in source order, then `gen_send_ex2` with the
+generator marked `FRAME_EXECUTING`. A coroutine that finished always raises here: the
+`closing` escape of 3.14 is gone, because `gen_close` no longer comes through this. -/
+def genSendEx (h : Hooks V X) (w : World V X) (r : Ref) (arg : Option (Obj V)) :
+    World V X × SendResult V :=
   let g := w.get r
   if g.state = .created ∧ isNonNull arg = true then
     (w, .err (some (Exc.typeError (cantSendMsg g.kind))))
   else if g.state = .executing then
     (w, .err (some (Exc.valueError (alreadyExecutingMsg g.kind))))
   else if g.state.finished = true then
-    if g.kind = .coro ∧ closing = false then
+    if g.kind = .coro then
       (w, .err (some (Exc.runtimeError "cannot reuse already awaited coroutine")))
-    else if arg.isSome = true ∧ exc = false then
+    else if arg.isSome = true then
       (w, .ret .none)
     else
-      (w, .err err)
+      (w, .err none)
   else
-    let res := h.resume (w.setState r .executing) r (arg.getD .none) (if exc then err else none)
-    finishResume res.1 r g.kind arg res.2
+    genSendEx2 h (w.setState r .executing) r arg none
 
-/-- `PyGen_am_send`, :296-301. -/
+/-- `PyGen_am_send`, :377-382. -/
 def pyGenAmSend (h : Hooks V X) (w : World V X) (r : Ref) (arg : Obj V) :
     World V X × SendResult V :=
-  genSendEx2 h w r (some arg) false none false
+  genSendEx h w r (some arg)
 
-/-- `_PyGen_SetStopIterationValue`, @3.14.7:651-668: a tuple value stays a tuple. -/
+/-- `_PyGen_SetStopIterationValue`, :782-799: a tuple value stays a tuple. -/
 def setStopIterationValue (value : Obj V) : Exc V :=
   ⟨.stopIteration, "StopIteration", "", value⟩
 
-/-- `_PyGen_FetchStopIterationValue`, :770-786. `.ok v` is the 0 return with
+/-- `_PyGen_FetchStopIterationValue`, :810-826. `.ok v` is the 0 return with
 `*pvalue = v`; `.err` keeps the pending exception, the -1 return. -/
 def fetchStopIterationValue (pending : Option (Exc V)) : Ret V :=
   match pending with
   | some e => if e.isStopIteration then .ok e.value else .err (some e)
   | none => .ok .none
 
-/-- `gen_send_ex`, @3.14.7:297-315, on the result of `gen_send_ex2`. -/
+/-- `gen_set_stop_iteration`, :384-399, on a `PYGEN_RETURN`. -/
 def sendResultToRet (kind : GenKind) : SendResult V → Ret V
   | .ret v =>
     if kind = .asyncGen then .err (some Exc.stopAsyncIteration)
@@ -421,19 +430,21 @@ def sendResultToRet (kind : GenKind) : SendResult V → Ret V
   | .next v => .ok v
   | .err e => .err e
 
-/-- `gen_send_ex`, @3.14.7:297-315. -/
-def genSendEx (h : Hooks V X) (w : World V X) (r : Ref) (arg : Option (Obj V))
-    (exc : Bool) (err : Option (Exc V)) (closing : Bool) : World V X × Ret V :=
-  let s := genSendEx2 h w r arg exc err closing
-  (s.1, sendResultToRet (w.get r).kind s.2)
-
-/-- `gen_send`, @3.14.7:321-325. `arg` is `none` for the `async_gen_asend_send` call with
+/-- `gen_send`, :405-414. `arg` is `none` for the `async_gen_asend_send` call with
 `ags_sendval == NULL`. -/
 def genSend (h : Hooks V X) (w : World V X) (r : Ref) (arg : Option (Obj V)) :
     World V X × Ret V :=
-  genSendEx h w r arg false none false
+  let s := genSendEx h w r arg
+  (s.1, sendResultToRet (w.get r).kind s.2)
 
-/-- `gen_iternext`, :661-675, on the result of `gen_send_ex2`. -/
+/-- `gen_throw_current_exception`, :603-612: throw the pending exception into a frame that
+is already `FRAME_EXECUTING`. -/
+def genThrowCurrent (h : Hooks V X) (w : World V X) (r : Ref) (e : Option (Exc V)) :
+    World V X × Ret V :=
+  let s := genSendEx2 h w r (some .none) e
+  (s.1, sendResultToRet (w.get r).kind s.2)
+
+/-- `gen_iternext`, :760-774, on the result of `gen_send_ex`. -/
 def iterResultToRet : SendResult V → Ret V
   | .ret v =>
     if v.isNone = true then .err none
@@ -441,9 +452,9 @@ def iterResultToRet : SendResult V → Ret V
   | .next v => .ok v
   | .err e => .err e
 
-/-- `gen_iternext`, :661-675. -/
+/-- `gen_iternext`, :760-774. -/
 def genIternext (h : Hooks V X) (w : World V X) (r : Ref) : World V X × Ret V :=
-  let s := genSendEx2 h w r none false none false
+  let s := genSendEx h w r none
   (s.1, iterResultToRet s.2)
 
 /-- `NULL` with no exception set means `StopIteration` to the caller of
@@ -458,29 +469,30 @@ def nextCall (h : Hooks V X) (w : World V X) (r : Ref) : World V X × Ret V :=
   let s := genIternext h w r
   (s.1, nullToStop s.2)
 
-/-! ## Delegation: `_PyGen_yf`, `gen_close`, `_gen_throw` -/
+/-! ## Delegation: `gen_close`, `_gen_throw` -/
 
-/-- `is_resume` (:429-438) followed by the mask test at :482-483. -/
+/-- `is_resume` (:451-461) followed by the mask test at :505. -/
 def InstrPtr.isResumeDepth1 : InstrPtr → Bool
   | .resume d => d
   | .other => false
 
-/-- `_PyGen_yf`, :440-451. -/
+/-- `frame_state == FRAME_SUSPENDED_YIELD_FROM` and `_PyFrame_StackPeek(frame, 2)`, which on
+3.15 stand where `_PyGen_yf` stood: :776-781 in `gen_getyieldfrom`. -/
 def genYf (g : GenObj V) : Option (Obj V) :=
   if g.state = .suspendedYieldFrom then some g.stackTop else none
 
-/-- `PyGen_CheckExact(yf) || PyCoro_CheckExact(yf)` (:407, :560). -/
+/-- `PyGen_CheckExact(yf) || PyCoro_CheckExact(yf)` (:429, :672). -/
 def genOrCoro? (w : World V X) : Obj V → Option Ref
   | .gen r => if (w.get r).kind = .asyncGen then none else some r
   | _ => none
 
-/-- `PyObject_GetOptionalAttr` failing is reported and ignored, :414-417. -/
+/-- `PyObject_GetOptionalAttr` failing is reported and ignored, :436-439. -/
 def closeMeth (h : Hooks V X) (w : World V X) :
     Except (Exc V) (Option (Obj V)) → World V X × Option (Obj V)
   | .error e => (h.unraisable w "Exception ignored while closing generator" e, none)
   | .ok mo => (w, mo)
 
-/-- :414-423, the non-generator path of `gen_close_iter`. -/
+/-- :435-445, the non-generator path of `gen_close_iter`. -/
 def genCloseIterForeign (h : Hooks V X) (w : World V X) (yf : Obj V) :
     World V X × CStatus V :=
   let a := h.getClose w yf
@@ -493,7 +505,7 @@ def genCloseIterForeign (h : Hooks V X) (w : World V X) (yf : Obj V) :
     | .ok _ => (c.1, .ok)
   | none => (m.1, .ok)
 
-/-- `gen_close_iter`, :402-427. `close` is `gen_close` at the next recursion depth. -/
+/-- `gen_close_iter`, :424-449. `close` is `gen_close` at the next recursion depth. -/
 def genCloseIter (h : Hooks V X) (close : World V X → Ref → World V X × Ret V)
     (w : World V X) (yf : Obj V) : World V X × CStatus V :=
   match genOrCoro? w yf with
@@ -504,132 +516,151 @@ def genCloseIter (h : Hooks V X) (close : World V X → Ref → World V X × Ret
     | .ok _ => (c.1, .ok)
   | none => genCloseIterForeign h w yf
 
-/-- @3.14.7:430-435. -/
+/-- :524-529. -/
 def ignoredExitMsg : GenKind → String
   | .gen => "generator ignored GeneratorExit"
   | .coro => "coroutine ignored GeneratorExit"
   | .asyncGen => "async generator ignored GeneratorExit"
 
-/-- `gen_clear_frame`, :145-156. -/
+/-- `gen_clear_frame`, :166-174: the state was written by the caller, and the frame's
+contents go. What this model holds of them is the stack. -/
 def genClearFrame (w : World V X) (r : Ref) : World V X :=
-  if (w.get r).state = .cleared then w else w.setState r .cleared
+  w.set r { w.get r with stackTop := .none }
 
-/-- :495-519, the end of `gen_close`: throw into the frame and interpret the result. -/
+/-- :517-540, the end of `gen_close`: throw into the frame and interpret the result. A
+value the frame returned is the result, and of the exceptions only `GeneratorExit` is
+swallowed. There is no `_PyGen_FetchStopIterationValue` here any more. -/
 def genCloseFinish (h : Hooks V X) (w : World V X) (r : Ref) (pending : Option (Exc V)) :
     World V X × Ret V :=
-  let s := genSendEx h w r (some .none) true pending true
+  let s := genSendEx2 h w r (some .none) pending
   match s.2 with
-  | .ok _ => (s.1, .err (some (Exc.runtimeError (ignoredExitMsg (w.get r).kind))))
+  | .ret v => (s.1, .ok v)
+  | .next _ => (s.1, .err (some (Exc.runtimeError (ignoredExitMsg (w.get r).kind))))
   | .err e =>
     match e with
-    | some x =>
-      if x.isGeneratorExit then (s.1, .ok .none)
-      else (s.1, fetchStopIterationValue e)
-    | none => (s.1, fetchStopIterationValue e)
+    | some x => if x.isGeneratorExit then (s.1, .ok .none) else (s.1, .err e)
+    | none => (s.1, .err none)
 
-/-- The bracket at :470-473, :549-552, :571-575 and :593-596: run `act` with the
-generator marked `FRAME_EXECUTING`, then write back the saved state. -/
-def delegating {α : Type} (w : World V X) (r : Ref) (act : World V X → World V X × α) :
-    World V X × α :=
-  let state := (w.get r).state
-  let p := act (w.setState r .executing)
-  (p.1.setState r state, p.2)
-
-/-- :467-475. -/
+/-- :493-497, on a generator already `FRAME_EXECUTING`; `state` is what it was before. -/
 def closeDelegate (h : Hooks V X) (close : World V X → Ref → World V X × Ret V)
-    (w : World V X) (r : Ref) : World V X × CStatus V :=
-  match genYf (w.get r) with
-  | some yf => delegating w r (fun w' => genCloseIter h close w' yf)
-  | none => (w, .ok)
+    (w : World V X) (r : Ref) (state : FrameState) : World V X × CStatus V :=
+  if state = .suspendedYieldFrom then genCloseIter h close w (w.get r).stackTop
+  else (w, .ok)
 
-/-- `if (err == 0) PyErr_SetNone(PyExc_GeneratorExit)`, :491-493. -/
+/-- `if (err == 0) PyErr_SetNone(PyExc_GeneratorExit)`, :513-515. -/
 def closePending : CStatus V → Option (Exc V)
   | .ok => some Exc.generatorExit
   | .fail e => e
 
-/-- :467-519 after the two early returns, with `close` the recursive `gen_close`.
-The test at :477-483 reads only the instruction, not the frame state. -/
+/-- :491-540, with `close` the recursive `gen_close`. The test at :499-505 reads only the
+instruction. `state` is the value of `frame_state` from before :489. -/
 def genCloseBody (h : Hooks V X) (close : World V X → Ref → World V X × Ret V)
-    (w : World V X) (r : Ref) : World V X × Ret V :=
-  let p := closeDelegate h close w r
+    (w : World V X) (r : Ref) (state : FrameState) : World V X × Ret V :=
+  let p := closeDelegate h close w r state
   if (p.1.get r).instr.isResumeDepth1 = true ∧ p.1.noUnwindTools = true then
-    (genClearFrame (p.1.setState r .completed) r, .ok .none)
+    (genClearFrame (p.1.setState r .cleared) r, .ok .none)
   else
     genCloseFinish h p.1 r (closePending p.2)
 
-/-- `gen_close`, :453-520, with fuel for the C recursion through `gen_close_iter`. -/
+/-- `gen_close`, :463-541, with fuel for the C recursion through `gen_close_iter`. The checks
+come first and the generator stays `FRAME_EXECUTING` from :489 on, so a running frame is
+refused and every reentrant call during the close sees it as running. -/
 def genCloseF (h : Hooks V X) : Nat → World V X → Ref → World V X × Ret V
   | 0, w, _ => (w, .err (some Exc.fuel))
   | n + 1, w, r =>
-    if (w.get r).state = .created then
-      (genClearFrame (w.setState r .completed) r, .ok .none)
-    else if (w.get r).state.finished = true then
+    let state := (w.get r).state
+    if state = .created then
+      (genClearFrame (w.setState r .cleared) r, .ok .none)
+    else if state.finished = true then
       (w, .ok .none)
+    else if state = .executing then
+      (w, .err (some (Exc.valueError (alreadyExecutingMsg (w.get r).kind))))
     else
-      genCloseBody h (genCloseF h n) w r
+      genCloseBody h (genCloseF h n) (w.setState r .executing) r state
 
-/-- `PyErr_GivenExceptionMatches(typ, PyExc_GeneratorExit)` (:542). -/
+/-- `PyErr_GivenExceptionMatches(typ, PyExc_GeneratorExit)` (:656). -/
 def givenMatchesGeneratorExit : Obj V → Bool
   | .excClass k _ | .excInst k _ _ _ => k == .generatorExit
   | _ => false
 
-/-- `tb != NULL && !PyTraceBack_Check(tb)` after `None` became NULL, :611-614. -/
+/-- `tb != NULL && !PyTraceBack_Check(tb)` after `None` became NULL, :550-558. -/
 def badTraceback : Option (Obj V) → Bool
   | none | some .none | some .traceback => false
   | some _ => true
 
-/-- `throw_here:`, :608-661. `tb == Py_None` becomes NULL, then the three shapes of
-`typ`. -/
-def throwHere (h : Hooks V X) (w : World V X) (r : Ref) (typ : Obj V)
-    (val tb : Option (Obj V)) : World V X × Ret V :=
+/-- `gen_set_exception`, :546-601: `.ok` with the exception it restored, or `.error` with
+the `TypeError` it set. -/
+def genSetException (h : Hooks V X) (typ : Obj V) (val tb : Option (Obj V)) :
+    Except (Exc V) (Exc V) :=
   if badTraceback tb then
-    (w, .err (some (Exc.typeError "throw() third argument must be a traceback object")))
+    .error (Exc.typeError "throw() third argument must be a traceback object")
   else
     match typ with
-    | .excClass _ _ =>
-      genSendEx h w r (some .none) true (some (h.normalize typ val)) false
+    | .excClass _ _ => .ok (h.normalize typ val)
     | .excInst k c m v =>
       if isNonNull val then
-        (w, .err (some (Exc.typeError "instance exception may not have a separate value")))
-      else
-        genSendEx h w r (some .none) true (some ⟨k, c, m, v⟩) false
+        .error (Exc.typeError "instance exception may not have a separate value")
+      else .ok ⟨k, c, m, v⟩
     | _ =>
-      (w, .err (some (Exc.typeError
+      .error (Exc.typeError
         ("exceptions must be classes or instances deriving from BaseException, not "
-          ++ h.typeName typ))))
+          ++ h.typeName typ))
 
-/-- :601-605: if delegation failed, the error goes into the delegating frame. -/
-def afterDelegate (h : Hooks V X) (w : World V X) (r : Ref) : Ret V → World V X × Ret V
-  | .ok v => (w, .ok v)
-  | .err e => genSendEx h w r (some .none) true e false
+/-- `throw_here:`, :719-725, on a generator `FRAME_EXECUTING`: bad arguments write the old
+state back. -/
+def throwHere (h : Hooks V X) (w : World V X) (r : Ref) (state : FrameState) (typ : Obj V)
+    (val tb : Option (Obj V)) : World V X × Ret V :=
+  match genSetException h typ val tb with
+  | .ok e => genThrowCurrent h w r (some e)
+  | .error e => (w.setState r state, .err (some e))
 
-/-- `_gen_throw`, :532-662, with fuel for the C recursion along the delegation
-chain. -/
+/-- :711-716: a value from the sub-iterator writes the old state back; if delegation
+failed, the error goes into the delegating frame. -/
+def afterDelegate (h : Hooks V X) (w : World V X) (r : Ref) (state : FrameState) :
+    Ret V → World V X × Ret V
+  | .ok v => (w.setState r state, .ok v)
+  | .err e => genThrowCurrent h w r e
+
+/-- `_gen_throw`, :624-726, with fuel for the C recursion along the delegation chain. The
+generator is `FRAME_EXECUTING` from :649 on, around everything it does with the
+sub-iterator, the lookup of `throw` included. -/
 def genThrowF (h : Hooks V X) : Nat → World V X → Ref → Bool → Obj V →
     Option (Obj V) → Option (Obj V) → World V X × Ret V
   | 0, w, _, _, _, _, _ => (w, .err (some Exc.fuel))
   | n + 1, w, r, closeOnGenExit, typ, val, tb =>
-    match genYf (w.get r) with
-    | none => throwHere h w r typ val tb
-    | some yf =>
-      if givenMatchesGeneratorExit typ = true ∧ closeOnGenExit = true then
-        let p := delegating w r (fun w' => genCloseIter h (genCloseF h n) w' yf)
-        match p.2 with
-        | .fail e => genSendEx h p.1 r (some .none) true e false
-        | .ok => throwHere h p.1 r typ val tb
+    let state := (w.get r).state
+    if state = .executing then
+      (w, .err (some (Exc.valueError (alreadyExecutingMsg (w.get r).kind))))
+    else if state.finished = true then
+      if (w.get r).kind = .coro then
+        (w, .err (some (Exc.runtimeError "cannot reuse already awaited coroutine")))
       else
-        match genOrCoro? w yf with
-        | some sub =>
-          let p := delegating w r (fun w' => genThrowF h n w' sub closeOnGenExit typ val tb)
-          afterDelegate h p.1 r p.2
-        | none =>
-          let q := h.getThrow w yf
-          match q.2 with
-          | .error e => (q.1, .err (some e))
-          | .ok none => throwHere h q.1 r typ val tb
-          | .ok (some meth) =>
-            let p := delegating q.1 r (fun w' => h.callThrow w' meth typ val tb)
-            afterDelegate h p.1 r p.2
+        match genSetException h typ val tb with
+        | .ok e | .error e => (w, .err (some e))
+    else
+      let w1 := w.setState r .executing
+      if state = .suspendedYieldFrom then
+        let yf := (w1.get r).stackTop
+        if givenMatchesGeneratorExit typ = true ∧ closeOnGenExit = true then
+          let p := genCloseIter h (genCloseF h n) w1 yf
+          match p.2 with
+          | .fail e => genThrowCurrent h p.1 r e
+          | .ok => throwHere h p.1 r state typ val tb
+        else
+          match genOrCoro? w1 yf with
+          | some sub =>
+            let p := genThrowF h n w1 sub closeOnGenExit typ val tb
+            afterDelegate h p.1 r state p.2
+          | none =>
+            let q := h.getThrow w1 yf
+            match q.2 with
+            | .error e => (q.1.setState r state, .err (some e))
+            | .ok none => throwHere h q.1 r state typ val tb
+            | .ok (some meth) =>
+              let p := h.callThrow q.1 meth typ val tb
+              afterDelegate h p.1 r state p.2
+      else
+        throwHere h w1 r state typ val tb
 
 /-- `_PyArg_CheckPositional`, `Python/getargs.c`. -/
 def checkPositional (name : String) (nargs lo hi : Nat) : Option (Exc V) :=
@@ -639,14 +670,14 @@ def checkPositional (name : String) (nargs lo hi : Nat) : Option (Exc V) :=
     some (Exc.typeError s!"{name} expected at most {hi} argument{if hi == 1 then "" else "s"}, got {nargs}")
   else none
 
-/-- The `(typ, val, tb)` slots of a checked argument list, :658-665. -/
+/-- The `(typ, val, tb)` slots of a checked argument list, :748-755. -/
 def unpackThrowArgs : List (Obj V) → Obj V × Option (Obj V) × Option (Obj V)
   | [typ] => (typ, none, none)
   | [typ, val] => (typ, some val, none)
   | typ :: val :: tb :: _ => (typ, some val, some tb)
   | [] => (.none, none, none)
 
-/-- `gen_throw`, :639-667. -/
+/-- `gen_throw`, :729-757. -/
 def genThrow (h : Hooks V X) (fuel : Nat) (w : World V X) (r : Ref) (args : List (Obj V)) :
     World V X × Ret V :=
   match checkPositional "throw" args.length 1 3 with
@@ -662,9 +693,9 @@ def genThrow (h : Hooks V X) (fuel : Nat) (w : World V X) (r : Ref) (args : List
       let tv := unpackThrowArgs args
       genThrowF h fuel warned.1 r true tv.1 tv.2.1 tv.2.2
 
-/-! ## `_PyGen_Finalize` -/
+/-! ## `gen_finalize` -/
 
-/-- `_PyGen_Finalize`, :93-184. -/
+/-- `gen_finalize`, :107-164, called `_PyGen_Finalize` before 3.15. -/
 def genFinalize (h : Hooks V X) (fuel : Nat) (w : World V X) (r : Ref) : World V X :=
   let g := w.get r
   if g.state.finished = true then w
@@ -688,34 +719,33 @@ def genFinalize (h : Hooks V X) (fuel : Nat) (w : World V X) (r : Ref) : World V
 
 /-! ## Getters and setters -/
 
-/-- `gen_get_name`, @3.14.7:705-710. -/
+/-- `gen_get_name`, :836-842. -/
 def genGetName (g : GenObj V) : Obj V := g.name
-/-- `gen_get_qualname`, :777-782. -/
+/-- `gen_get_qualname`, :863-869. -/
 def genGetQualname (g : GenObj V) : Obj V := g.qualname
 
-/-- `gen_set_name`, :762-775. `value` is `none` for `del gen.__name__`. -/
+/-- `gen_set_name`, :844-860. `value` is `none` for `del gen.__name__`. -/
 def genSetName (w : World V X) (r : Ref) (value : Option (Obj V)) : World V X × CStatus V :=
   match value with
   | some (.str s) => (w.set r { w.get r with name := .str s }, .ok)
   | _ => (w, .fail (some (Exc.typeError "__name__ must be set to a string object")))
 
-/-- `gen_set_qualname`, :784-806. -/
+/-- `gen_set_qualname`, :871-887. -/
 def genSetQualname (w : World V X) (r : Ref) (value : Option (Obj V)) : World V X × CStatus V :=
   match value with
   | some (.str s) => (w.set r { w.get r with qualname := .str s }, .ok)
   | _ => (w, .fail (some (Exc.typeError "__qualname__ must be set to a string object")))
 
-/-- `gen_getyieldfrom`, :808-816; `coro_get_cr_await`, :1213-1220 (also `ag_await`). -/
+/-- `gen_getyieldfrom`, :890-914, which on 3.15 is also `cr_await` and `ag_await`. -/
 def genGetYieldFrom (g : GenObj V) : Obj V := (genYf g).getD .none
 
-/-- `gen_getrunning`, @3.14.7:760-768; `cr_getrunning`, :1232-1240. -/
+/-- `gen_getrunning`, :917-923, also `cr_running` on 3.15. -/
 def genGetRunning (g : GenObj V) : Bool := decide (g.state = .executing)
 
-/-- `gen_getsuspended`, @3.14.7:770-775; `cr_getsuspended`, :1222-1230;
-`ag_getsuspended`, :1697-1705. -/
+/-- `gen_getsuspended`, :925-931, also `cr_suspended` and `ag_suspended` on 3.15. -/
 def genGetSuspended (g : GenObj V) : Bool := g.state.isSuspended
 
-/-- `_gen_getframe`, :845-855, for `gi_frame`, `cr_frame`, `ag_frame`. -/
+/-- `_gen_getframe`, :952-966, for `gi_frame`, `cr_frame`, `ag_frame`. -/
 def genGetFrame (h : Hooks V X) (w : World V X) (r : Ref) (name : String) : Ret V :=
   match h.audit w name with
   | some e => .err (some e)
@@ -731,7 +761,7 @@ def genGetCode (h : Hooks V X) (w : World V X) (r : Ref) (name : String) :
   | some e => .error e
   | none => .ok (w.get r).code
 
-/-- `gen_sizeof`, @3.14.7:830-839. `base` is
+/-- `gen_sizeof`, :985-994. `base` is
 `offsetof(PyGenObject, gi_iframe) + offsetof(_PyInterpreterFrame, localsplus)` and
 `_PyFrame_NumSlotsForCodeObject` is `co_nlocalsplus + co_stacksize`
 (`Include/internal/pycore_interpframe.h`). -/
@@ -755,7 +785,7 @@ copied in (`RETURN_GENERATOR` then sets `FRAME_CREATED`). -/
 def makeGen (kind : GenKind) (code : Code) (funcName funcQualname : Obj V) : GenObj V :=
   { kind := kind, state := .cleared, code := code, name := funcName, qualname := funcQualname }
 
-/-- The first loop of `compute_cr_origin`, :1400-1403: count up to `origin_depth`
+/-- The first loop of `_PyCoro_ComputeOrigin`, :1544-1549: count up to `origin_depth`
 frames. -/
 def crOriginCount (originDepth : Nat) :
     List (String × Nat × String) → Nat → Nat
@@ -764,7 +794,7 @@ def crOriginCount (originDepth : Nat) :
     if frameCount < originDepth then crOriginCount originDepth rest (frameCount + 1)
     else frameCount
 
-/-- The second loop, :1410-1422: collect `frame_count` frames. The loop bound is the
+/-- The second loop, :1555-1567: collect `frame_count` frames. The loop bound is the
 counter; the frame list cannot run out first because the first loop counted it. -/
 def crOriginCollect (frameCount : Nat) :
     List (String × Nat × String) → Nat → List (String × Nat × String)
@@ -772,7 +802,7 @@ def crOriginCollect (frameCount : Nat) :
   | f :: rest, i =>
     if i < frameCount then f :: crOriginCollect frameCount rest (i + 1) else []
 
-/-- `compute_cr_origin`, :1395-1425, frames innermost first. -/
+/-- `_PyCoro_ComputeOrigin`, :1540-1570, frames innermost first. -/
 def computeCrOrigin (originDepth : Nat) (frames : List (String × Nat × String)) :
     List (String × Nat × String) :=
   crOriginCollect (crOriginCount originDepth frames 0) frames 0
@@ -836,7 +866,8 @@ def isCoro (w : World V X) : Obj V → Bool
   | .gen r => (w.get r).kind = .coro
   | _ => false
 
-/-- `_PyCoro_GetAwaitableIter`, :1093-1132. -/
+/-- `_PyCoro_GetAwaitableIter`, :1245-1287. `%T` omits the module for `__main__` and
+`builtins`. -/
 def pyCoroGetAwaitableIter (h : Hooks V X) (w : World V X) (o : Obj V) : World V X × Ret V :=
   if isCoro w o = true ∨ genIsCoroutine w o = true then
     (w, .ok o)
@@ -844,10 +875,11 @@ def pyCoroGetAwaitableIter (h : Hooks V X) (w : World V X) (o : Obj V) : World V
     match h.amAwait w o with
     | some (w1, .ok res) =>
       if isCoro w1 res = true ∨ genIsCoroutine w1 res = true then
-        (w1, .err (some (Exc.typeError "__await__() returned a coroutine")))
+        (w1, .err (some (Exc.typeError
+          (h.typeName o ++ ".__await__() must return an iterator, not coroutine"))))
       else if h.isIter res = false then
         (w1, .err (some (Exc.typeError
-          ("__await__() returned non-iterator of type '" ++ h.typeName res ++ "'"))))
+          (h.typeName o ++ ".__await__() must return an iterator, not " ++ h.typeName res))))
       else
         (w1, .ok res)
     | some (w1, .err e) => (w1, .err e)

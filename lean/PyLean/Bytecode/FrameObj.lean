@@ -115,7 +115,8 @@ def markOne (o : Op) (oparg i nextI : Nat) (s : Int) (st : Stacks) : Stacks × B
   | .JUMP_BACKWARD | .JUMP_BACKWARD_NO_INTERRUPT =>
     let j := nextI - oparg
     (setS st j s, st.getD j UNINITIALIZED == UNINITIALIZED && j < i)
-  | .GET_ITER | .GET_AITER => cont (pushValue (popValue s) Iterator)
+  | .GET_ITER => cont (pushValue (pushValue (popValue s) Iterator) Iterator)
+  | .GET_AITER => cont (pushValue (popValue s) Iterator)
   | .FOR_ITER =>
     let target := pushValue s Object
     (setS (setS st nextI target) (oparg + 1 + 1 + i) target, false)

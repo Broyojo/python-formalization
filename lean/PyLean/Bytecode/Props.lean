@@ -45,7 +45,8 @@ def BinaryAddUnicode : Prop := ∀ (e : Env), Lawful e.om → ∀ s, Deep s 2 �
   execOp e .BINARY_OP_ADD_UNICODE s = execOp e .BINARY_OP s
 theorem binaryAddUnicode_proven : BinaryAddUnicode := fun e h s d o => binaryAddUnicode_spec e h s d o
 
-/-- `list[int]`: all stacks, all indices, including negative, too large and huge. -/
+/-- `list[int]`: all stacks, all indices, including negative, too large and huge. A negative
+index goes through the fast path since 3.15 and needs the law `list_item_neg`. -/
 def SubscrListInt : Prop := ∀ (e : Env), Lawful e.om → e.oparg = 26 → ∀ s, Deep s 2 →
   (∀ v ∈ s.stack, Live s.regs.rt v) →
   execOp e .BINARY_OP_SUBSCR_LIST_INT s = execOp e .BINARY_OP s
@@ -77,12 +78,12 @@ def completed {σ : Type} : EStateM.Result Err σ Unit → Bool
   | _ => false
 
 /-- A suspended generator at address 0. -/
-def susp : GenObj := { frameState := -2, frame := { code := 2 } }
+def susp : GenObj := { frameState := 1, frame := { code := 2 } }
 
 /-- `yield from` on it with the recursion budget spent. -/
 def recSt : St :=
   { regs := { rt := { heap := #[.gen susp], pyRecursionRemaining := 0 } },
-    stack := [.none, .ref 0] }
+    stack := [.none, .null, .ref 0] }
 
 def recEnv : Env :=
   { P := #[{}, {}, {}], om := Proto.mkOM #[] 0, ctx := ⟨fun _ _ => throw .fuel⟩,

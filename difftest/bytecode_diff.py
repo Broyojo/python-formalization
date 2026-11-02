@@ -396,10 +396,96 @@ def p_async(r):
         "async def f():\n    async with 1:\n        pass\n" + guarded("drive(f())"),
         "async def f():\n    return 1\nc = f()\ndrive(c)\n" + guarded("drive(c)"),
         "async def f():\n    await A()\nc = f()\nprint(c.send(None))\n" + guarded("c.close()\nprint('closed')") + "\n" + guarded("c.send(None)"),
+        # `_PyCoro_GetAwaitableIter`: the coroutine test comes first on 3.15
+        "async def co():\n    return 1\nclass R:\n    def __await__(self):\n        return co()\nasync def f():\n    await R()\n" + guarded("drive(f())"),
+        "class R:\n    def __await__(self):\n        return 1\nasync def f():\n    await R()\n" + guarded("drive(f())"),
+        "class R:\n    def __await__(self):\n        return iter([1, 2])\nasync def f():\n    return await R()\nprint(drive(f()))\n",
+        # `yield from` on a coroutine, and `await` on a coroutine that is already being awaited
+        "async def co():\n    return 1\ndef g():\n    yield from co()\n" + guarded("next(g())"),
+        "async def f():\n    await A()\nc = f()\nc.send(None)\nasync def g():\n    await c\n" + guarded("drive(g())") + "\n" + guarded("c.close()"),
     ])
 
 
-FAMILIES = [p_arith, p_seq, p_unpack, p_loops, p_calls, p_scope, p_exc, p_with, p_gen, p_class, p_comp, p_match, p_strs, p_async]
+def p_virtual(r):
+    """`GET_ITER` on 3.15: the sequence and a tagged index for exact list, tuple, str and bytes
+    (`_tp_iteritem`), the iterator and NULL for the rest, and the opcodes that read the two
+    slots. The loop runs twice, so that `quick` has seen one type when it meets the other."""
+    seqs = ["[1, 2, 3]", "(4, 5)", "'xé'", "b'ab'", "[]", "()", "''", "b''", "range(3)", "iter([1, 2])",
+            "L([7, 8])", "(i for i in [1, 2])", "{'k': 1}", "{1}", "map(str, [1])"]
+    a, b = r.choice(seqs), r.choice(seqs)
+    head = "class L(list):\n    pass\n"
+    k = r.random()
+    if k < 0.3:
+        return head + f"def f(s):\n    t = []\n    for x in s:\n        t.append(x)\n    return t\nprint(f({a}), f({b}), f({a}))\n"
+    if k < 0.6:
+        return (head + "def g(s):\n    r = yield from s\n    yield 'end', r\n"
+                + f"print(list(g({a})), list(g({b})))\n"
+                + guarded(f"x = g({a})\nprint(next(x))\nprint(x.send({r.choice(['None', '5'])}))\nprint(x.gi_yieldfrom is None, x.gi_running, x.gi_suspended)")
+                + "\n" + guarded(f"x = g({b})\nprint(next(x))\nprint(x.throw(ValueError('t')))")
+                + "\n" + guarded(f"x = g({a})\nprint(next(x))\nprint(x.close(), x.gi_suspended)")
+                + "\n" + guarded(f"x = g({b})\nprint(next(x))\nprint(x.throw(GeneratorExit))"))
+    if k < 0.8:
+        return ("l = [1, 2, 3, 4]\nfor x in l:\n    print(x)\n    if x == 1:\n        l.pop()\n    if x == 2:\n        l.append(9)\n"
+                "l = [1, 2]\nfor x in l:\n    l.clear()\n    print(x)\n"
+                "l = []\nfor x in l:\n    print(x)\nl.append(1)\nprint(list(l))\n"
+                "def g(l):\n    yield from l\nl = [1, 2, 3]\nx = g(l)\nprint(next(x))\nl.pop()\nl.pop()\nprint(list(x))\n"
+                "def h():\n    for a in [1, 2]:\n        for b in 'xy':\n            for c in (3,):\n                if b == 'y':\n                    break\n                yield a, b, c\nprint(list(h()))\n")
+    return ("class I:\n    def __iter__(self):\n        return self\n    def __next__(self):\n"
+            f"        {r.choice(['del I.__next__', 'I.__next__ = None', 'raise StopIteration'])}\n        return 1\n"
+            + guarded("for x in I():\n    print('item', x)")
+            + "\nclass J:\n    def __iter__(self):\n        return self\n    def __next__(self):\n        del J.__next__\n        return 1\n"
+            + "def g():\n    yield from J()\n" + guarded("print(list(g()))"))
+
+
+def p_fastpath(r):
+    """The specialized forms whose bodies changed on 3.15, on both sides of their guards. Each
+    runs twice with different operands, so `quick` deopts on the second."""
+    big = ["2**30-1", "2**30", "-(2**30)+1", "-(2**30)", "2**31", "1", "0", "-1", "2**62", "10**20", "True"]
+    a, b, c = r.choice(big), r.choice(big), r.choice(big)
+    idx = ["0", "1", "-1", "-3", "-4", "3", "2**30", "-(2**30)", "2**63", "True", "'a'"]
+    i, j = r.choice(idx), r.choice(idx)
+    op = r.choice(["+", "-", "*"])
+    s = r.choice(["'abc'", "'aé'", "'é'", "''"])
+    pool = [
+        f"def f(x, y):\n    return x {op} y\nprint(f({a}, {b}), f({b}, {c}), f({c}, {a}), f(1.5, 2.5), f(1, 2))\n",
+        f"def f(l, i):\n    return l[i]\n" + guarded(f"print(f([1, 2, 3], {i}))") + "\n" + guarded(f"print(f([1, 2, 3], {j}))")
+        + "\n" + guarded(f"print(f((1, 2), {i}))") + "\n" + guarded(f"print(f({s}, {j}))") + "\n" + guarded(f"print(f({s}, {i}))"),
+        f"def f():\n    s = {s}\n    t = s\n    for x in 'ab':\n        s += x\n        s = s + 'c'\n    return s, t\nprint(f())\n",
+        "def f(l, v):\n    l.append(v)\n    return l\nprint(f([], 1), f([1], 2), f(L(), 3))\n".replace("def f", "class L(list):\n    pass\ndef f", 1),
+        "def f(*a, **k):\n    return a, sorted(k.items())\ndef g(x, *a):\n    return f(x, *a), f(*a, **{'k': x})\n"
+        "print(g(1), g(1, 2), g(1, 2, 3), f(*(1, 2)), f(*[3], **{'z': 1}))\n"
+        + guarded("print(len(*[1, 2]))") + "\n" + guarded("print(f(**{'a': 1}, **{'a': 2}))"),
+        f"def f(o, c):\n    return isinstance(o, c)\nprint(f(1, int), f('a', int), f(1, (str, int)))\n" + guarded("print(f(1, 1))")
+        + "\nclass C:\n    def m(self, c):\n        return isinstance(self, c)\nprint(C().m(C), C.m(C(), int))\n",
+        "class P:\n    def __init__(self):\n        self.n = 0\n    @property\n    def p(self):\n        self.n += 1\n        return self.n\n"
+        "def f(o):\n    return o.p\nx = P()\nprint(f(x), f(x), f(x))\n"
+        "class Q:\n    def __getattribute__(self, n):\n        return 'ga:' + n\ndef g(o):\n    return o.p\nprint(g(Q()), g(Q()), g(x))\n",
+    ]
+    return r.choice(pool)
+
+
+def p_messages(r):
+    """Error messages that moved to the `%T...must return` form on 3.15, and the `**` and
+    `%` paths around them."""
+    bad = ["1", "None", "[]"]
+    v = r.choice(bad)
+    pool = [
+        f"class A:\n    def __str__(self):\n        return {v}\n" + guarded("print(str(A()))"),
+        f"class A:\n    def __repr__(self):\n        return {v}\n" + guarded("print(repr(A()))") + "\n" + guarded("print(str(A()))"),
+        f"class A:\n    def __index__(self):\n        return {r.choice(['None', '[]', chr(39) + 'a' + chr(39)])}\n" + guarded("print([1, 2][A()])"),
+        f"class A:\n    def __format__(self, s):\n        return {v}\n" + guarded("print(f'{A()}')") + "\n" + guarded("print(f'{A():>3}')") + "\n" + guarded("print(format(A()))"),
+        f"class A:\n    def __iter__(self):\n        return {v}\n" + guarded("print(list(A()))") + "\n" + guarded("for x in A():\n    pass"),
+        f"class A:\n    def __bool__(self):\n        return {v}\n" + guarded("print(not A())") + "\n" + guarded("print(bool(A()))"),
+        "class K:\n    def keys(self):\n        raise AttributeError('inner')\ndef f(**k):\n    return k\n" + guarded("print(f(**K()))") + "\n" + guarded("print(f(**1))") + "\n" + guarded("print(f(*1))"),
+        "class K:\n    @property\n    def keys(self):\n        raise AttributeError('p')\ndef f(**k):\n    return k\n" + guarded("print(f(**K()))"),
+        f"print('a' % ())\n" + guarded(f"print('a' % ({r.choice(['1', 'None', chr(39) + 'x' + chr(39)])}))") + "\n" + guarded("print('a' % (1, 2))") + "\n"
+        + guarded("print(b'a' % (1, 2, 3))") + "\n" + guarded("print(b'a' % 1)") + "\n" + guarded("print('a' % {})") + "\n" + guarded("print('a' % [])"),
+    ]
+    return r.choice(pool)
+
+
+FAMILIES = [p_arith, p_seq, p_unpack, p_loops, p_calls, p_scope, p_exc, p_with, p_gen, p_class, p_comp, p_match, p_strs, p_async,
+            p_virtual, p_fastpath, p_messages]
 
 
 def enc_const(c, table):

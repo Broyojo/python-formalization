@@ -139,14 +139,17 @@ def encStatus (w : W) : CStatus SV → W × Json
 /-- `yf`/`cr_await`/`ag_await`, or "None". -/
 def yfRender (g : GenObj SV) : String := renderObj (genGetYieldFrom g)
 
-/-- `inspect.getgeneratorstate` (`Lib/inspect.py`), and its two siblings. -/
+/-- `inspect.getgeneratorstate` and its two siblings, which on 3.15 read `gen_getstate`,
+`cr_getstate` and `ag_getstate` (`Objects/genobject.c:933-951`, :1318-1336, :1767-1785). So an
+async generator is `AGEN_RUNNING` by its frame state, whatever `ag_running_async` says. -/
 def stateName (w : W) (r : Ref) : String :=
   let g := w.get r
   let prefix_ := match g.kind with | .gen => "GEN" | .coro => "CORO" | .asyncGen => "AGEN"
-  if runningFlag w r then prefix_ ++ "_RUNNING"
-  else if genGetSuspended g then prefix_ ++ "_SUSPENDED"
-  else if g.state.finished then prefix_ ++ "_CLOSED"
-  else prefix_ ++ "_CREATED"
+  match g.state with
+  | .created => prefix_ ++ "_CREATED"
+  | .suspended | .suspendedYieldFrom => prefix_ ++ "_SUSPENDED"
+  | .executing => prefix_ ++ "_RUNNING"
+  | .cleared => prefix_ ++ "_CLOSED"
 
 def encFlags (w : W) (r : Ref) : Json :=
   let g := w.get r
@@ -274,7 +277,7 @@ where
   pyGenNewWithKind (kind : GenKind) (code : Code) : GenObj SV :=
     genNewWithQualname kind code (some (.str "f")) (some (.str "f"))
 
-/-- `compute_cr_origin` and `_Py_MakeCoro`'s use of it. The stack is `n` frames
+/-- `_PyCoro_ComputeOrigin` and `_Py_MakeCoro`'s use of it. The stack is `n` frames
 named `f`, then the thread's frames. -/
 def runOrigin (j : Json) : EJ Json := do
   let d ← getNat j "depth"

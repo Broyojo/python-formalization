@@ -135,6 +135,16 @@ def attr_raises(exc, msg):
     return property(get)
 
 
+def attr_reenters():
+    """An attribute whose lookup runs Python code on the delegating generator and then
+    says it is not there. On 3.15 the generator is FRAME_EXECUTING during the lookup."""
+    def get(self):
+        if self.reent is not None:
+            rop(REOPS[self.reent], C.top)
+        raise AttributeError("no")
+    return property(get)
+
+
 def make_it_class(has_send, throw_b, close_b):
     def __next__(self):
         log("f.next")
@@ -184,12 +194,16 @@ def make_it_class(has_send, throw_b, close_b):
         d["throw"] = attr_raises(ValueError, "attr")
     elif throw_b == 6:
         d["throw"] = attr_raises(AttributeError, "no")
+    elif throw_b == 7:
+        d["throw"] = attr_reenters()
     if close_b in (1, 2, 3):
         d["close"] = close
     elif close_b == 4:
         d["close"] = attr_raises(ValueError, "attr")
     elif close_b == 5:
         d["close"] = attr_raises(AttributeError, "no")
+    elif close_b == 6:
+        d["close"] = attr_reenters()
     return type("It", (), d)
 
 
@@ -560,7 +574,7 @@ def gen_foreign(rng, kind):
         reent = rng.choice({"gen": [0, 1, 2, 3, 4], "coro": [1, 2, 3, 4],
                             "agen": [4, 5, 6, 7]}[TOPKIND[0]])
     return ["f", rng.choice([0, 1, 1, 2, 3]), rng.choice([None, None, 7]), rng.random() < 0.7,
-            rng.choice([0, 1, 1, 2, 3, 4, 5, 6]), rng.choice([0, 1, 1, 2, 3, 4, 5]), reent]
+            rng.choice([0, 1, 1, 2, 3, 4, 5, 6, 7]), rng.choice([0, 1, 1, 2, 3, 4, 5, 6]), reent]
 
 
 def gen_reop(rng, kind, self_):

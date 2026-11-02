@@ -11,8 +11,8 @@ the `resume` argument for the difftest and the one place the `Hooks` knot is tie
 `hooksAt n` re-enters the model with `hooksAt (n - 1)`, so a body can call
 `next(self)`.
 
-The `yield from` loop mirrors `SEND` (`Python/bytecodes.c@3.14.7:1297-1343`) and
-`CLEANUP_THROW` (`@3.14.7:1470-1488`); `await` adds `_PyEval_GetAwaitable`
+The `yield from` loop mirrors `_SEND` (`Python/bytecodes.c:1676-1720`) and
+`CLEANUP_THROW` (`:1960-1978`); `await` adds `_PyEval_GetAwaitable`
 (`Python/ceval.c:3646-3667`).
 -/
 
@@ -36,9 +36,10 @@ abbrev O := Obj SV
 /-- A foreign iterator: yields `100, 101, ...`, then raises `StopIteration(retv)`.
 `throwB`: 0 no attribute, 1 reraise, 2 return 200, 3 `StopIteration(300)`, 4
 `RuntimeError("t")`, 5 attribute raises `ValueError("attr")`, 6 attribute raises
-`AttributeError`. `closeB`: 0 no attribute, 1 fine, 2 `ValueError("c")`, 3
-`StopIteration(301)`, 4 attribute raises `ValueError("attr")`, 5 attribute raises
-`AttributeError`. `reent` runs in `throw`/`close`, on the top object. -/
+`AttributeError`, 7 the lookup runs `reent` and then raises `AttributeError`. `closeB`: 0
+no attribute, 1 fine, 2 `ValueError("c")`, 3 `StopIteration(301)`, 4 attribute raises
+`ValueError("attr")`, 5 attribute raises `AttributeError`, 6 as `throwB` 7. `reent` runs in
+`throw`/`close`, on the top object. -/
 structure FSpec where
   items : Nat := 0
   retv : Option Int := none
@@ -309,16 +310,14 @@ def logReOp (h : H) (n : Nat) (w : W) (r : Ref) (op : ReOp) : W :=
   let (w1, res) := doReOp h n w r op
   log w1 ("re:" ++ opName op ++ ":" ++ retRender res ++ ":" ++ boolStr (runningFlag w1 r))
 
-/-- The receiver of `SEND`, `Python/bytecodes.c@3.14.7:1301-1326`. An exact generator or
-coroutine below `FRAME_EXECUTING` is resumed inline (same as `gen_send_ex2`);
-otherwise `tp_iternext` for `None` when there is one, else the `send` method. -/
+/-- The receiver of `_SEND`, `Python/bytecodes.c:1676-1720`. An exact generator or coroutine
+below `FRAME_EXECUTING` is resumed inline, which is what `gen_send_ex` does for it; one that
+is not goes through `PyIter_Send` to `am_send`, which is `gen_send_ex` as well. For anything
+else `PyIter_Send` (`Objects/abstract.c:2925-2953`) takes `tp_iternext` for `None` when there
+is one, else the `send` method. -/
 def doSend (h : H) (w : W) (recv : O) (v : O) : W × Ret SV :=
   match recv with
-  | .gen sub =>
-    let g := w.get sub
-    if g.state.toInt < 0 then genSend h w sub (some v)
-    else if v.isNone = true ∧ g.kind = .gen then genIternext h w sub
-    else genSend h w sub (some v)
+  | .gen sub => genSend h w sub (some v)
   | .other (.foreign id) =>
     if v.isNone = true then
       foreignNext (log w "f.next") id
@@ -458,7 +457,7 @@ def typeNameOf : O → String
   | .excInst _ c _ _ => c
   | .other (.int _) => "int"
   | .other (.foreign _) => "It"
-  | .other (.awaitable _ _) => "Aw"
+  | .other (.awaitable _ _) => "BadAw"
   | .other (.meth _ _) => "method"
   | .other (.junk t) => t
 
@@ -490,6 +489,10 @@ def scriptHooks (inner : H) (n : Nat) : H :=
         match (w.ext.foreign id).spec.closeB with
         | 0 | 5 => (w, .ok none)
         | 4 => (w, .error (raised "ValueError" "attr"))
+        | 6 =>
+          match (w.ext.foreign id).spec.reent with
+          | some op => (logReOp inner n w w.ext.top (foreignSpecReent op), .ok none)
+          | none => (w, .ok none)
         | _ => (w, .ok (some (.other (.meth id "close"))))
       | _ => (w, .ok none)
     getThrow := fun w o =>
@@ -498,6 +501,10 @@ def scriptHooks (inner : H) (n : Nat) : H :=
         match (w.ext.foreign id).spec.throwB with
         | 0 | 6 => (w, .ok none)
         | 5 => (w, .error (raised "ValueError" "attr"))
+        | 7 =>
+          match (w.ext.foreign id).spec.reent with
+          | some op => (logReOp inner n w w.ext.top (foreignSpecReent op), .ok none)
+          | none => (w, .ok none)
         | _ => (w, .ok (some (.other (.meth id "throw"))))
       | _ => (w, .ok none)
     callNoArgs := fun w m =>

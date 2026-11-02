@@ -18,134 +18,119 @@ def getRecursionRemaining : RM Int := fun rt => .ok rt.pyRecursionRemaining rt
 def decRecursionRemaining : RM Unit := fun rt =>
   .ok () { rt with pyRecursionRemaining := rt.pyRecursionRemaining - 1 }
 
-/-- `@3.14.7:3134`. -/
+/-- `:3798`. -/
 def _SPECIALIZE_FOR_ITER : M Unit := pure ()
 
-/-- `func(iter_o)` with the `_PyErr_Occurred`/`StopIteration` handling of
-`@3.14.7:3148-3172`: `none` means the iterator ended normally. -/
-def iterStep (e : Env) (it : Val) : RM (Option Val) := do
-  if !(← e.om.isIterator it) then
-    typeError s!"'{String.ofList ((← tpName it).toList.take 100)}' object is not an iterator"
-  tryExc (e.om.iterNext e.ctx it) fun exc => do
-    if ← givenMatches exc 8 (.cls "StopIteration") then pure none else throw (.exc exc)
-
-/-- `@3.14.7:3146`. -/
+/-- `:3810`: `(iter, null_or_index -- iter, null_or_index, next)`. On exhaustion both slots
+stay and the jump skips `END_FOR`, so the `POP_ITER` at the target takes them. -/
 def _FOR_ITER (e : Env) : M Unit := do
-  let ins ← peekN 1
-  let r ← BM.lift ((iterStep e (ins.headD .null) : RM _) : BM _)
-  match r with
-  | some v => pushAll [v]
-  | none =>
-    BM.lift (jumpBy (e.oparg + 1))
-    throw .dispatch
-/-- `@3.14.7:3205`. -/
+  let ins ← peekN 2
+  match ins with
+  | [iter, index] =>
+    match ← BM.lift ((virtualNext e iter index : RM _) : BM _) with
+    | some (v, index') =>
+      let _ ← popN 1
+      pushAll [index', v]
+    | none =>
+      BM.lift (jumpBy (e.oparg + 1))
+      throw .dispatch
+  | _ => fault "arity"
+/-- `:3823`. -/
 def FOR_ITER (e : Env) : M Unit := do _SPECIALIZE_FOR_ITER; _FOR_ITER e
-/-- `@3.14.7:3208`. -/
+/-- `:3913`. -/
 def INSTRUMENTED_FOR_ITER (e : Env) : M Unit := _FOR_ITER e
 
-/-- `@3.14.7:3241`. -/
-def _ITER_CHECK_LIST : M Unit := guardTop 1 fun
-  | [.ref a] => do
-    match ← (getObj a : RM Obj) with
-    | .listIter .. => pure false
-    | _ => pure true
-  | _ => pure true
-
-/-- `@3.14.7:3252`. -/
-def _ITER_JUMP_LIST (e : Env) : M Unit := do
-  let ins ← peekN 1
+/-- `:3868`. -/
+def _GUARD_TOS_NOT_NULL : M Unit := guardTop 1 fun
+  | [n] => pure (n == .null)
+  | _ => fault "arity"
+/-- `:3872`. The index stays out of `iterItem` until the end of the sequence. -/
+def _FOR_ITER_VIRTUAL (e : Env) : M Unit := do
+  let ins ← peekN 2
   match ins with
-  | [.ref a] =>
-    match ← BM.lift ((getObj a : RM Obj) : BM Obj) with
-    | .listIter seq index =>
-      let size ← match seq with
-        | some sq => BM.lift do
-          match ← (getObj sq : RM Obj) with
-          | .list items => pure items.size
-          | _ => fault "list iterator over a non-list"
-        | none => pure 0
-      if seq.isNone || index < 0 || size ≤ index.toNat then
-        BM.lift do
-          (setObj a (.listIter none (-1)) : RM Unit)
-          jumpBy (e.oparg + 1)
-        throw .dispatch
-    | _ => fault "not a list iterator"
-  | _ => fault "not a list iterator"
+  | [iter, .tagged i] =>
+    match ← BM.lift ((iterItem iter i : RM _) : BM _) with
+    | some (v, i') =>
+      let _ ← popN 1
+      pushAll [.tagged i', v]
+    | none =>
+      BM.lift (jumpBy (e.oparg + 1))
+      throw .dispatch
+  | _ => fault "FOR_ITER_VIRTUAL without a tagged index"
+/-- `:3890`. -/
+def FOR_ITER_VIRTUAL (e : Env) : M Unit := do _GUARD_TOS_NOT_NULL; _FOR_ITER_VIRTUAL e
 
-/-- `@3.14.7:3294`. -/
-def _ITER_NEXT_LIST : M Unit := stk 1 2 fun
-  | [.ref a] => do
+/-- The size of the exact sequence under `FOR_ITER_LIST`/`FOR_ITER_TUPLE`. -/
+def seqItems : Val → BM (Array Val)
+  | .ref a => do
     match ← (getObj a : RM Obj) with
-    | .listIter (some sq) index =>
-      match ← (getObj sq : RM Obj) with
-      | .list items =>
-        (setObj a (.listIter (some sq) (index + 1)) : RM Unit)
-        pure [.ref a, items.getD index.toNat .null]
-      | _ => fault "list iterator over a non-list"
-    | _ => fault "not a list iterator"
-  | _ => fault "not a list iterator"
+    | .list items | .tuple items => pure items
+    | _ => fault "not a sequence"
+  | _ => fault "not a sequence"
 
+/-- The tagged index the guards of these forms assert. -/
+def taggedIndex : Val → BM Nat
+  | .tagged i => pure i
+  | _ => fault "not a tagged index"
+
+/-- `:3927`: `Py_TYPE(iter_o) != &PyList_Type` deopts. -/
+def _ITER_CHECK_LIST : M Unit := guardTop 2 fun
+  | [it, _] => notList it
+  | _ => fault "arity"
+
+/-- `:3936` and `:4018`: at the end the slot becomes `PyStackRef_TagInt(-1)`, which only
+`POP_ITER` at the jump target sees, and it discards the slot, so the model leaves it alone. -/
+def iterJumpSeq (e : Env) : M Unit := do
+  let ins ← peekN 2
+  match ins with
+  | [iter, index] =>
+    let items ← BM.lift (seqItems iter)
+    let i ← BM.lift (taggedIndex index)
+    if items.size ≤ i then
+      BM.lift (jumpBy (e.oparg + 1))
+      throw .dispatch
+  | _ => fault "arity"
+
+/-- `:3964` and `:4038`: `(iter, null_or_index -- iter, null_or_index, next)`. -/
+def iterNextSeq : M Unit := stk 2 3 fun
+  | [iter, index] => do
+    let items ← seqItems iter
+    let i ← taggedIndex index
+    pure [iter, .tagged (i + 1), items.getD i .null]
+  | _ => fault "arity"
+
+/-- `:3936`. -/
+def _ITER_JUMP_LIST (e : Env) : M Unit := iterJumpSeq e
+/-- `:3964`. -/
+def _ITER_NEXT_LIST : M Unit := iterNextSeq
 /-- `:4006`. -/
 def FOR_ITER_LIST (e : Env) : M Unit := do _ITER_CHECK_LIST; _ITER_JUMP_LIST e; _ITER_NEXT_LIST
 
-/-- `@3.14.7:3355`. -/
-def _ITER_CHECK_TUPLE : M Unit := guardTop 1 fun
-  | [.ref a] => do
-    match ← (getObj a : RM Obj) with
-    | .tupleIter .. => pure false
-    | _ => pure true
-  | _ => pure true
-
-/-- `@3.14.7:3363`. -/
-def _ITER_JUMP_TUPLE (e : Env) : M Unit := do
-  let ins ← peekN 1
-  match ins with
-  | [.ref a] =>
-    match ← BM.lift ((getObj a : RM Obj) : BM Obj) with
-    | .tupleIter seq index =>
-      let size ← match seq with
-        | some sq => BM.lift do
-          match ← (getObj sq : RM Obj) with
-          | .tuple items => pure items.size
-          | _ => fault "tuple iterator over a non-tuple"
-        | none => pure 0
-      if seq.isNone || size ≤ index.toNat then
-        BM.lift do
-          (setObj a (.tupleIter none index) : RM Unit)
-          jumpBy (e.oparg + 1)
-        throw .dispatch
-    | _ => fault "not a tuple iterator"
-  | _ => fault "not a tuple iterator"
-
-/-- `@3.14.7:3399`. -/
-def _ITER_NEXT_TUPLE : M Unit := stk 1 2 fun
-  | [.ref a] => do
-    match ← (getObj a : RM Obj) with
-    | .tupleIter (some sq) index =>
-      match ← (getObj sq : RM Obj) with
-      | .tuple items =>
-        (setObj a (.tupleIter (some sq) (index + 1)) : RM Unit)
-        pure [.ref a, items.getD index.toNat .null]
-      | _ => fault "tuple iterator over a non-tuple"
-    | _ => fault "not a tuple iterator"
-  | _ => fault "not a tuple iterator"
-
+/-- `:4012`. -/
+def _ITER_CHECK_TUPLE : M Unit := guardTop 2 fun
+  | [it, _] => notTuple it
+  | _ => fault "arity"
+/-- `:4018`. -/
+def _ITER_JUMP_TUPLE (e : Env) : M Unit := iterJumpSeq e
+/-- `:4038`. -/
+def _ITER_NEXT_TUPLE : M Unit := iterNextSeq
 /-- `:4047`. -/
 def FOR_ITER_TUPLE (e : Env) : M Unit := do _ITER_CHECK_TUPLE; _ITER_JUMP_TUPLE e; _ITER_NEXT_TUPLE
 
-/-- `@3.14.7:3418`. -/
-def _ITER_CHECK_RANGE : M Unit := guardTop 1 fun
-  | [.ref a] => do
+/-- `:4053`. -/
+def _ITER_CHECK_RANGE : M Unit := guardTop 2 fun
+  | [.ref a, _] => do
     match ← (getObj a : RM Obj) with
     | .rangeIter .. => pure false
     | _ => pure true
-  | _ => pure true
+  | [_, _] => pure true
+  | _ => fault "arity"
 
-/-- `@3.14.7:3426`. -/
+/-- `:4061`. -/
 def _ITER_JUMP_RANGE (e : Env) : M Unit := do
-  let ins ← peekN 1
+  let ins ← peekN 2
   match ins with
-  | [.ref a] =>
+  | [.ref a, _] =>
     match ← BM.lift ((getObj a : RM Obj) : BM Obj) with
     | .rangeIter _ _ len =>
       if len ≤ 0 then
@@ -154,22 +139,22 @@ def _ITER_JUMP_RANGE (e : Env) : M Unit := do
     | _ => fault "not a range iterator"
   | _ => fault "not a range iterator"
 
-/-- `@3.14.7:3447`. -/
-def _ITER_NEXT_RANGE : M Unit := stk 1 2 fun
-  | [.ref a] => do
+/-- `:4082`. -/
+def _ITER_NEXT_RANGE : M Unit := stk 2 3 fun
+  | [.ref a, index] => do
     match ← (getObj a : RM Obj) with
     | .rangeIter start step len =>
       (setObj a (.rangeIter (start + step) step (len - 1)) : RM Unit)
-      pure [.ref a, .int start]
+      pure [.ref a, index, .int start]
     | _ => fault "not a range iterator"
   | _ => fault "not a range iterator"
 
 /-- `:4097`. -/
 def FOR_ITER_RANGE (e : Env) : M Unit := do _ITER_CHECK_RANGE; _ITER_JUMP_RANGE e; _ITER_NEXT_RANGE
 
-/-- `@3.14.7:3468`. -/
+/-- `:4103`: `(iter, null -- iter, null, gen_frame)`. -/
 def _FOR_ITER_GEN_FRAME (e : Env) : M Frame := do
-  let ins ← peekN 1
+  let ins ← peekN 2
   let r ← BM.lift ((resumableGen false (ins.headD .null) : RM _) : BM _)
   match r with
   | some (a, g) =>
@@ -538,24 +523,30 @@ def _CALL_TUPLE_1 (e : Env) : M Unit := stk 3 1 fun
 /-- `:4170`. -/
 def CALL_TUPLE_1 (e : Env) : M Unit := do _GUARD_NOS_NULL; _GUARD_CALLABLE_TUPLE_1; _CALL_TUPLE_1 e; _CHECK_PERIODIC
 
-/-- `:4178`: `(callable, self_or_null, args -- init, self, args)`. `cache[1]` is
-`cls->_spec_cache.init`. -/
-def _CHECK_AND_ALLOCATE_OBJECT (e : Env) : M Unit := stk (e.oparg + 2) (e.oparg + 2) fun
-  | c :: n :: args => do
-    if n != .null then throw .deopt
+/-- `:4758`: split off `_CHECK_AND_ALLOCATE_OBJECT` of 3.14, so that
+`_CHECK_RECURSION_REMAINING` can run before anything is allocated. -/
+def _CHECK_OBJECT (e : Env) : M Unit := guardTop (e.oparg + 2) fun
+  | c :: n :: _ => do
+    if n != .null then return true
     match ← (classVersion c : RM _) with
-    | none => throw .deopt
-    | some v =>
-      if v != cacheNat e 0 then throw .deopt
-      deoptIf !(← hasStackSpace)
-      let self ← (alloc (.inst { cls := c }) : RM Val)
-      pure ((e.cache[1]?).getD .null :: self :: args)
+    | none => pure true
+    | some v => pure (v != cacheNat e 0)
+  | _ => fault "arity"
+
+/-- `:4766`: `(callable, self_or_null, args -- init, self, args)`. `cache[1]` is
+`cls->_spec_cache.init`. Note that nothing here looks at `Py_TPFLAGS_IS_ABSTRACT`:
+`bytecode-call-alloc-abstract`. -/
+def _ALLOCATE_OBJECT (e : Env) : M Unit := stk (e.oparg + 2) (e.oparg + 2) fun
+  | c :: _ :: args => do
+    deoptIf !(← hasStackSpace)
+    let self ← (alloc (.inst { cls := c }) : RM Val)
+    pure ((e.cache[1]?).getD .null :: self :: args)
   | _ => fault "arity"
 
 /-- The `_Py_InitCleanup` shim of `Python/specialize.c`: reserved `Program` index 1. -/
 def initCleanupIdx : Nat := 1
 
-/-- `:4038`. -/
+/-- `:4790`. -/
 def _CREATE_INIT_FRAME (e : Env) : M Frame := do
   let ins ← popN (e.oparg + 2)
   match ins with
@@ -570,10 +561,12 @@ def _CREATE_INIT_FRAME (e : Env) : M Frame := do
     pure nf
   | _ => fault "arity"
 
-/-- `:4063`. -/
+/-- `:4815`. -/
 def CALL_ALLOC_AND_ENTER_INIT (e : Env) : M Unit := do
   _CHECK_PEP_523
-  _CHECK_AND_ALLOCATE_OBJECT e
+  _CHECK_OBJECT e
+  _CHECK_RECURSION_REMAINING
+  _ALLOCATE_OBJECT e
   let nf ← _CREATE_INIT_FRAME e
   _PUSH_FRAME nf
 
@@ -622,28 +615,33 @@ def _CALL_LEN (e : Env) : M Unit := stkK 3 1 fun
   | _ => fault "arity"
 /-- `:4218`. -/
 def CALL_LEN (e : Env) : M Unit := do _GUARD_NOS_NULL; _GUARD_CALLABLE_LEN; _CALL_LEN e
-/-- `:4251`. -/
+/-- `_GUARD_THIRD_NULL`: `(null, unused, unused -- ...)`. -/
+def _GUARD_THIRD_NULL : M Unit := guardTop 3 fun
+  | [n, _, _] => pure (n != .null)
+  | _ => fault "arity"
+/-- `:5022`. -/
+def _GUARD_CALLABLE_ISINSTANCE : M Unit := guardTop 4 fun
+  | [c, _, _, _] => pure (c != .builtin "isinstance")
+  | _ => fault "arity"
+/-- `:5028`: `(callable, null, instance, cls -- res)`. -/
+def _CALL_ISINSTANCE (e : Env) : M Unit := stkK 4 1 fun
+  | [_, _, i, c] => do pure [.bool (← e.om.isInstance e.ctx i c)]
+  | _ => fault "arity"
+/-- `:5046`. -/
 def CALL_ISINSTANCE (e : Env) : M Unit := do
-  builtinGuard e fun c args => pure (args.length != 2 || c != .builtin "isinstance")
-  stkK (e.oparg + 2) 1 fun
-    | _ :: s :: args => do
-      match withSelf s args with
-      | [i, c] => pure [.bool (← e.om.isInstance e.ctx i c)]
-      | _ => fault "arity"
-    | _ => fault "arity"
-/-- `:4277`. -/
+  _GUARD_THIRD_NULL; _GUARD_CALLABLE_ISINSTANCE; _CALL_ISINSTANCE e
+/-- `:5063`. -/
+def _GUARD_CALLABLE_LIST_APPEND : M Unit := guardCallable (.methDescr "list" "append")
+/-- `:5069`: `(callable, self, arg -- none, c, s)`, and the two `POP_TOP` of the macro. It
+leaves `None` for the `POP_TOP` that follows in the bytecode, which 3.14 skipped. -/
+def _CALL_LIST_APPEND : M Unit := stk 3 1 fun
+  | [_, s, a] => do
+    (listAppend s a : RM Unit)
+    pure [.none]
+  | _ => fault "arity"
+/-- `:5053`. -/
 def CALL_LIST_APPEND : M Unit := do
-  guardTop 3 fun
-    | [c, s, _] => do
-      if c != .methDescr "list" "append" || s == .null then pure true
-      else return !(← (isExactList s : RM Bool))
-    | _ => fault "arity"
-  stk 3 0 fun
-    | [_, s, a] => do
-      (listAppend s a : RM Unit)
-      jumpBy 1
-      pure []
-    | _ => fault "arity"
+  _GUARD_CALLABLE_LIST_APPEND; _GUARD_NOS_NOT_NULL; _GUARD_NOS_LIST; _CALL_LIST_APPEND
 
 /-- The receiver guard of `_CALL_METHOD_DESCRIPTOR_*`. -/
 def methDescrGuard (e : Env) (min : Nat) : M Unit :=
@@ -779,13 +777,12 @@ def CALL_KW_NON_PY (e : Env) : M Unit := do
 
 /-! ### Lines 4841-5087: `CALL_FUNCTION_EX`, functions, formatting -/
 
-/-- `_Py_Check_ArgsIterable`, `Python/ceval.c:3402-3412`. -/
-def checkArgsIterable (e : Env) (func args : Val) : RM Unit := do
+/-- `_Py_Check_ArgsIterable`, `Python/ceval.c:3402-3412`. `func` is unused since 3.15. -/
+def checkArgsIterable (e : Env) (_func args : Val) : RM Unit := do
   if !(← e.om.isIterable args) then
-    let fs ← functionStr e func
-    typeError s!"{fs} argument after * must be an iterable, not {trunc200 (← tpName args)}"
+    typeError s!"Value after * must be an iterable, not {trunc200 (← tpName args)}"
 
-/-- `:4882`. -/
+/-- `:5620`. -/
 def _MAKE_CALLARGS_A_TUPLE (e : Env) : M Unit := stkK 4 4 fun
   | [f, n, ca, kw] => do
     if ← (isExactTuple ca : RM Bool) then pure [f, n, ca, kw]
@@ -806,7 +803,7 @@ def unpackKwargs : Val → RM (List String × List Val)
       | _ => typeError "keywords must be strings"
     pure (names, d.entries.toList.map (·.value))
 
-/-- `:4836`. -/
+/-- `:5637`. -/
 def _DO_CALL_FUNCTION_EX (e : Env) : M Unit := do
   let ins ← peekN 4
   match ins with
@@ -817,7 +814,7 @@ def _DO_CALL_FUNCTION_EX (e : Env) : M Unit := do
         let (kw, kwvals) ← (unpackKwargs kwargs : RM _)
         let pos ← (tupleItems callargs : RM _)
         pushInit e func (pos.toList ++ kwvals) kw
-      BM.lift (setReturnOffset 1)
+      BM.lift (setReturnOffset (instrSize e.opcode))
       dispatchInlined nf
     else
       stk 4 1 fun _ => do
@@ -826,11 +823,47 @@ def _DO_CALL_FUNCTION_EX (e : Env) : M Unit := do
         pure [← e.om.call e.ctx func (pos.toList ++ kwvals) kw]
   | _ => fault "arity"
 
-/-- `:4915`. -/
+/-- `:5728`. -/
 def CALL_FUNCTION_EX (e : Env) : M Unit := do
   _MAKE_CALLARGS_A_TUPLE e; _DO_CALL_FUNCTION_EX e; _CHECK_PERIODIC
-/-- `:4920`. -/
+/-- `:5801`. -/
 def INSTRUMENTED_CALL_FUNCTION_EX (e : Env) : M Unit := CALL_FUNCTION_EX e
+/-- `:5734`. -/
+def _CHECK_IS_PY_CALLABLE_EX : M Unit := guardTop 4 fun
+  | [f, _, _, _] => do return !(← (isFunction f : RM Bool))
+  | _ => fault "arity"
+/-- `:5740`: `(func_st, null, callargs_st, kwargs_st -- ex_frame)`. -/
+def _PY_FRAME_EX (e : Env) : M Frame := do
+  let ins ← popN 4
+  match ins with
+  | [func, _, callargs, kwargs] => BM.lift do
+    let (kw, kwvals) ← (unpackKwargs kwargs : RM _)
+    let pos ← (tupleItems callargs : RM _)
+    pushInit e func (pos.toList ++ kwvals) kw
+  | _ => fault "arity"
+/-- `:5763`. No `_CHECK_RECURSION_REMAINING` here either: python/cpython#155151. -/
+def CALL_EX_PY (e : Env) : M Unit := do
+  _CHECK_PEP_523
+  _MAKE_CALLARGS_A_TUPLE e
+  _CHECK_IS_PY_CALLABLE_EX
+  let nf ← _PY_FRAME_EX e
+  BM.lift (_SAVE_RETURN_OFFSET e)
+  _PUSH_FRAME nf
+/-- `:5773`. -/
+def _CHECK_IS_NOT_PY_CALLABLE_EX : M Unit := guardTop 4 fun
+  | [f, _, _, _] => (isFunction f : RM Bool)
+  | _ => fault "arity"
+/-- `:5778`. -/
+def _CALL_FUNCTION_EX_NON_PY_GENERAL (e : Env) : M Unit := stk 4 1 fun
+  | [func, _, callargs, kwargs] => do
+    let (kw, kwvals) ← (unpackKwargs kwargs : RM _)
+    let pos ← (tupleItems callargs : RM _)
+    pure [← e.om.call e.ctx func (pos.toList ++ kwvals) kw]
+  | _ => fault "arity"
+/-- `:5794`. -/
+def CALL_EX_NON_PY_GENERAL (e : Env) : M Unit := do
+  _CHECK_IS_NOT_PY_CALLABLE_EX; _MAKE_CALLARGS_A_TUPLE e; _CALL_FUNCTION_EX_NON_PY_GENERAL e
+  _CHECK_PERIODIC
 
 /-- `:4925`. -/
 def MAKE_FUNCTION (e : Env) : M Unit := stk 1 1 fun
@@ -876,7 +909,7 @@ def RETURN_GENERATOR (e : Env) : M Unit := do
     match gv with
     | .ref a =>
       let gf := { f with instrPtr := f.instrPtr + 1, owner := .generator a, stack := s.stack }
-      (setObj a (.gen { kind := genKindOfFlags co.flags, frame := gf, frameState := -3,
+      (setObj a (.gen { kind := genKindOfFlags co.flags, frame := gf, frameState := 0,
                         name := func.name, qualname := func.qualname }) : RM Unit)
       pure gv
     | _ => fault "alloc"

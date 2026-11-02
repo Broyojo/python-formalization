@@ -90,22 +90,11 @@ theorem athrowIter_some_err (h : Hooks V X) (w : World V X) (a gen : Ref) (l) (a
     ((athrowIter h w a gen (some l) arg).1.get gen).agRunningAsync = false :=
   unwrap_err _ gen _ e he
 
-/-- A `genThrow`-sized argument list. -/
-def ValidArgs (args : List (Obj V)) : Prop := 1 ≤ args.length ∧ args.length ≤ 3
-
-theorem checkPositional_valid {args : List (Obj V)} (hv : ValidArgs args) (n : String) :
-    (checkPositional n args.length 1 3 : Option (Exc V)) = none := by
-  have h1 := hv.1
-  have h2 := hv.2
-  simp only [checkPositional]
-  rw [if_neg (by omega), if_neg (by omega)]
-
 theorem athrowStartArgs_err (h : Hooks V X) (fuel) (w : World V X) (a gen : Ref)
-    (args : List (Obj V)) (hv : ValidArgs args) (e)
-    (he : (athrowStartArgs h fuel w a gen args).2 = .err e) :
-    ((athrowStartArgs h fuel w a gen args).1.athrows a).state = .closed ∧
-      ((athrowStartArgs h fuel w a gen args).1.get gen).agRunningAsync = false := by
-  simp only [athrowStartArgs, checkPositional_valid hv] at he ⊢
+    (tv) (e) (he : (athrowStartArgs h fuel w a gen tv).2 = .err e) :
+    ((athrowStartArgs h fuel w a gen tv).1.athrows a).state = .closed ∧
+      ((athrowStartArgs h fuel w a gen tv).1.get gen).agRunningAsync = false := by
+  simp only [athrowStartArgs] at he ⊢
   generalize hu : asyncGenUnwrapValue _ gen _ = u at he ⊢
   obtain ⟨w', res⟩ := u
   cases res with
@@ -260,13 +249,13 @@ theorem acloseErrorCloses_proven : AcloseErrorCloses := by
         rw [hargs]
         exact (athrowIter_none_err h w a _ arg e he).1
 
-/-- The first step of `athrow()`/`aclose()` with a well-formed argument list closes
-the awaitable and clears `ag_running_async` whenever it raises. -/
+/-- The first step of `athrow()`/`aclose()` closes the awaitable and clears
+`ag_running_async` whenever it raises. Since 3.15 every `athrow()` awaitable has a
+well-formed argument list, so this needs no hypothesis on it. -/
 def AThrowStartErrorCloses : Prop :=
   ∀ (V X : Type) (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref) (arg : Obj V)
     (e : Option (Exc V)),
-    (w.athrows a).state = .init →
-    (∀ l, (w.athrows a).args = some l → ValidArgs l) → arg.isNone = true →
+    (w.athrows a).state = .init → arg.isNone = true →
     (w.get (w.athrows a).gen).state.finished = false →
     (w.get (w.athrows a).gen).agRunningAsync = false →
     (w.get (w.athrows a).gen).agClosed = false →
@@ -275,7 +264,7 @@ def AThrowStartErrorCloses : Prop :=
     ((asyncGenAthrowSend h fuel w a arg).1.get (w.athrows a).gen).agRunningAsync = false
 
 theorem aThrowStartErrorCloses_proven : AThrowStartErrorCloses := by
-  intro V X h fuel w a arg e hs hv harg hf hr hc he
+  intro V X h fuel w a arg e hs harg hf hr hc he
   simp only [asyncGenAthrowSend, hs, hf, hr, hc, harg] at he ⊢
   simp at he ⊢
   cases hargs : (w.athrows a).args with
@@ -284,11 +273,11 @@ theorem aThrowStartErrorCloses_proven : AThrowStartErrorCloses := by
     exact athrowStartAclose_err h fuel _ a _ e he
   | some l =>
     rw [hargs] at he
-    exact athrowStartArgs_err h fuel _ a _ l (hv l hargs) e he
+    exact athrowStartArgs_err h fuel _ a _ l e he
 
 /-- Stated over every state of the awaitable: an `athrow()` or `aclose()` awaitable
-that raises from `send(None)` is closed. False on 3.14.7: after the first step, the
-`athrow()` path at :2189-2190 returns without setting `AWAITABLE_STATE_CLOSED`. -/
+that raises from `send(None)` is closed. False: after the first step, the `athrow()` path
+at :2378-2380 returns without setting `AWAITABLE_STATE_CLOSED`. -/
 def AThrowErrorCloses : Prop :=
   ∀ (V X : Type) (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref) (arg : Obj V)
     (e : Option (Exc V)),
@@ -301,7 +290,7 @@ now yields a value. -/
 def athrowIterWorld : World Unit Unit :=
   { gens := fun _ => { kind := .asyncGen, state := .suspendedYieldFrom, agRunningAsync := true }
     asends := fun _ => {}
-    athrows := fun _ => { gen := 0, args := some [.none], state := .iter }
+    athrows := fun _ => { gen := 0, args := some (.none, none, none), state := .iter }
     ext := () }
 
 def yieldWrappedHooks : Hooks Unit Unit :=
@@ -313,8 +302,10 @@ theorem aThrowErrorCloses_refuted : ¬ AThrowErrorCloses := by
   exact absurd this (by decide)
 
 /-- An `athrow()`/`aclose()` awaitable that got past its state checks clears
-`ag_running_async` when `send(None)` raises. False on 3.14.7: `athrow()` with a bad
-argument count fails at :2169-2171 after the flag was set at :2149. -/
+`ag_running_async` when `send(None)` raises. This was false on 3.14.7, where `athrow()` with a
+bad argument count failed after the flag was set: `bytecode-gen-athrow-bad-args-stuck-running`.
+3.15 moved `PyArg_UnpackTuple` to `async_gen_athrow_new`, :2604-2606, so no such awaitable
+exists. -/
 def AThrowErrorClearsRunning : Prop :=
   ∀ (V X : Type) (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref) (arg : Obj V)
     (e : Option (Exc V)),
@@ -326,37 +317,11 @@ def AThrowErrorClearsRunning : Prop :=
     (asyncGenAthrowSend h fuel w a arg).2 = .err e →
     ((asyncGenAthrowSend h fuel w a arg).1.get (w.athrows a).gen).agRunningAsync = false
 
-def athrowBadArgsWorld : World Unit Unit :=
-  { gens := fun _ => { kind := .asyncGen, state := .suspended }
-    asends := fun _ => {}
-    athrows := fun _ => { gen := 0, args := some [], state := .init }
-    ext := () }
-
-theorem aThrowErrorClearsRunning_refuted : ¬ AThrowErrorClearsRunning := by
-  intro hp
-  have := hp Unit Unit noopHooks 0 athrowBadArgsWorld 0 .none _
-    (by decide) (by decide) (fun _ => ⟨rfl, rfl⟩) rfl rfl
-  exact absurd this (by decide)
-
-/-- The same statement for awaitables whose argument list is well-formed: the only
-way to leave the flag set is the bad argument count. -/
-def AThrowValidArgsClearsRunning : Prop :=
-  ∀ (V X : Type) (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref) (arg : Obj V)
-    (e : Option (Exc V)),
-    (w.athrows a).state ≠ .closed →
-    (w.get (w.athrows a).gen).state.finished = false →
-    ((w.athrows a).state = .init → (w.get (w.athrows a).gen).agRunningAsync = false ∧
-      (w.get (w.athrows a).gen).agClosed = false) →
-    (∀ l, (w.athrows a).args = some l → ValidArgs l) →
-    arg.isNone = true →
-    (asyncGenAthrowSend h fuel w a arg).2 = .err e →
-    ((asyncGenAthrowSend h fuel w a arg).1.get (w.athrows a).gen).agRunningAsync = false
-
-theorem aThrowValidArgsClearsRunning_proven : AThrowValidArgsClearsRunning := by
-  intro V X h fuel w a arg e h0 hf hi hv harg he
+theorem aThrowErrorClearsRunning_proven : AThrowErrorClearsRunning := by
+  intro V X h fuel w a arg e h0 hf hi harg he
   by_cases hinit : (w.athrows a).state = .init
   · obtain ⟨hr, hc⟩ := hi hinit
-    exact (aThrowStartErrorCloses_proven V X h fuel w a arg e hinit hv harg hf hr hc he).2
+    exact (aThrowStartErrorCloses_proven V X h fuel w a arg e hinit harg hf hr hc he).2
   · simp only [asyncGenAthrowSend, if_neg h0, hf, if_neg hinit] at he ⊢
     simp at he ⊢
     cases hargs : (w.athrows a).args with
@@ -366,6 +331,36 @@ theorem aThrowValidArgsClearsRunning_proven : AThrowValidArgsClearsRunning := by
     | some l =>
       try rw [hargs] at he
       exact athrowIter_some_err h w a _ l arg e he
+
+/-- `athrow` with the wrong number of arguments fails where the awaitable would be made,
+so no awaitable holds a bad list. This is what makes `AThrowErrorClearsRunning` hold. -/
+def AthrowBadArgsRejected : Prop :=
+  ∀ (V X : Type) (h : Hooks V X) (w : World V X) (r a : Ref) (args : List (Obj V)),
+    (args.length = 0 ∨ args.length > 3) → (asyncGenAthrow h w r a args).2 matches .fail _
+
+theorem athrowBadArgsRejected_proven : AthrowBadArgsRejected := by
+  intro V X h w r a args hb
+  simp only [asyncGenAthrow]
+  generalize (if args.length > 1 then _ else (w, none)) = q
+  obtain ⟨w0, warned⟩ := q
+  cases warned with
+  | some e => simp
+  | none =>
+    simp only
+    generalize asyncGenInitHooks h w0 r = p
+    obtain ⟨w1, st⟩ := p
+    cases st with
+    | fail e => simp
+    | ok =>
+      simp only
+      have hs : (checkPositional "athrow" args.length 1 3 : Option (Exc V)).isSome = true := by
+        rcases hb with h0 | h3
+        · simp [checkPositional, h0]
+        · have : ¬ args.length < 1 := by omega
+          simp [checkPositional, this, h3]
+      cases hc : (checkPositional "athrow" args.length 1 3 : Option (Exc V)) with
+      | none => simp [hc] at hs
+      | some e => simp
 
 /-- After `athrow`'s `throw` raises, the awaitable is closed and, if it got past its
 state checks, `ag_running_async` is cleared, in both modes. -/
@@ -554,7 +549,8 @@ theorem asyncGenHooksOnce_proven : AsyncGenHooksOnce := by
 
 /-- `anext`, `asend`, `aclose` and `athrow` create a fresh `AWAITABLE_STATE_INIT`
 awaitable holding exactly their argument (NULL for `anext` and `aclose`), after the
-hooks and, for `athrow`, the deprecation check. -/
+hooks and, for `athrow`, the deprecation check. And `athrow` with the wrong number of
+arguments is refused the same way. -/
 def AsyncGenMethodsCreate : Prop :=
   ∀ (V X : Type) (h : Hooks V X) (w : World V X) (r a : Ref) (arg : Obj V) (args : List (Obj V)),
     ((asyncGenAnext h w r a).2 matches .ok →
@@ -564,7 +560,8 @@ def AsyncGenMethodsCreate : Prop :=
     ((asyncGenAclose h w r a).2 matches .ok →
       (asyncGenAclose h w r a).1.athrows a = { gen := r, args := none, state := .init }) ∧
     ((asyncGenAthrow h w r a args).2 matches .ok →
-      (asyncGenAthrow h w r a args).1.athrows a = { gen := r, args := some args, state := .init })
+      (asyncGenAthrow h w r a args).1.athrows a =
+        { gen := r, args := some (unpackThrowArgs args), state := .init })
 
 theorem asyncGenMethodsCreate_proven : AsyncGenMethodsCreate := by
   intro V X h w r a arg args
@@ -590,7 +587,12 @@ theorem asyncGenMethodsCreate_proven : AsyncGenMethodsCreate := by
       simp only
       generalize asyncGenInitHooks h w0 r = p
       obtain ⟨w1, st⟩ := p
-      cases st <;> simp [asyncGenAthrowNew]
+      cases st with
+      | fail e => simp
+      | ok =>
+        simp only
+        cases hc : (checkPositional "athrow" args.length 1 3 : Option (Exc V)) <;>
+          simp [asyncGenAthrowNew]
 
 /-- The finalizers of the awaitables only ever warn, and only about an awaitable
 that was never started. -/

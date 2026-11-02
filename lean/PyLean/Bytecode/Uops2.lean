@@ -184,11 +184,15 @@ def functionStr (e : Env) (f : Val) : RM String := do
     | .str s => pure s
     | _ => pure ""
 
-/-- `_PyEval_FormatKwargsError`, `Python/ceval.c:3414-3446`. -/
-def formatKwargsError {α : Type} (e : Env) (func kwargs exc : Val) : RM α := do
+/-- `_PyEval_FormatKwargsError`, `Python/ceval.c:3414-3446`: since 3.15 an `AttributeError`
+is rewritten only when `kwargs` really has no `keys` attribute. The model's `dictMerge`
+reports a duplicate key as a `KeyError`, which is `dupkey != NULL` here. -/
+def formatKwargsError {α : Type} (e : Env) (kwargs exc : Val) (func : Val) : RM α := do
   if ← givenMatches exc 8 (.cls "AttributeError") then
-    let fs ← functionStr e func
-    typeError s!"{fs} argument after ** must be a mapping, not {trunc200 (← tpName kwargs)}"
+    let hasKeys ← tryExc (do let _ ← e.om.getAttr e.ctx kwargs "keys"; pure true) fun x => do
+      if ← givenMatches x 8 (.cls "AttributeError") then pure false else throw (.exc x)
+    if hasKeys then throw (.exc exc)
+    typeError s!"Value after ** must be a mapping, not {← tpName kwargs}"
   else if ← givenMatches exc 8 (.cls "KeyError") then
     let d ← excData exc
     let args ← tupleItems d.args
@@ -200,14 +204,14 @@ def formatKwargsError {α : Type} (e : Env) (func kwargs exc : Val) : RM α := d
     else throw (.exc exc)
   else throw (.exc exc)
 
-/-- `:2191`. -/
+/-- `:2654`. -/
 def DICT_MERGE (e : Env) : M Unit := stk (e.oparg + 4) (e.oparg + 3) fun ins => do
   let upd := ins.getLastD .null
   let rest := ins.dropLast
   let callable := rest.headD .null
   let d := rest.getD 3 .null
   let u : RM Unit := tryExc (e.om.dictMerge e.ctx d upd) fun exc =>
-    formatKwargsError e callable upd exc
+    formatKwargsError e upd exc callable
   u
   pure rest
 /-- `:2205`. -/
@@ -378,36 +382,46 @@ def LOAD_ATTR_CLASS (e : Env) : M Unit := do
 def LOAD_ATTR_CLASS_WITH_METACLASS_CHECK (e : Env) : M Unit := do
   _CHECK_ATTR_CLASS e; _LOAD_ATTR_CLASS e; _PUSH_NULL_CONDITIONAL e
 
-/-- `@3.14.7:2494`. -/
+/-- The function in a `descr/4` cache entry, under its version guard. In C the entry cannot
+dangle while the type version holds. The model's `quick` difftest rewrites a program from an
+earlier run, and the two runs allocate differently once they diverge, so the entry can
+name another object there: that reads as a failed version guard, not a model fault. -/
+def cachedFunc (f : Val) (version : Nat) : BM FuncObj := do
+  deoptIf !(← (isFunction f : RM Bool))
+  let func ← (getFunc f : RM _)
+  deoptIf (func.version != version)
+  pure func
+
+/-- `:3056`. On 3.15 the shape of the code object is the specializer's business, and at run
+time only the function's version is guarded. The cache holds `[type version, fget, func
+version]`. -/
 def _LOAD_ATTR_PROPERTY_FRAME (e : Env) : M Frame := do
   let fget := (e.cache[1]?).getD .null
   let (func, co) ← BM.lift do
-    let func ← (getFunc fget : RM _)
+    let func ← cachedFunc fget (cacheNat e 2)
     let co ← (getCodeR e.P func.code : RM _)
-    deoptIf (co.flags &&& (coVarkeywords ||| coVarargs ||| coOptimized) != coOptimized)
-    deoptIf (co.kwonlyargcount != 0)
-    deoptIf (co.argcount != 1)
     deoptIf !(← hasStackSpace)
     pure (func, co)
   let ins ← popN 1
   let nf := frameInitialize co func.code func fget .null
   pure { nf with fast := nf.fast.setIfInBounds 0 (ins.headD .null) }
 
-/-- `@3.14.7:2509`. -/
+/-- `:3070`. -/
 def LOAD_ATTR_PROPERTY (e : Env) : M Unit := do
-  _CHECK_PEP_523
   _GUARD_TYPE_VERSION e
+  _CHECK_PEP_523
   let nf ← _LOAD_ATTR_PROPERTY_FRAME e
   BM.lift (_SAVE_RETURN_OFFSET e)
   _PUSH_FRAME nf
 
-/-- `@3.14.7:2518`. -/
+/-- `:3098`. On 3.15 this ends in `_SAVE_RETURN_OFFSET + _PUSH_FRAME`, where 3.14 went through
+`DISPATCH_INLINED` and its `start_frame` recursion check. -/
 def LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN (e : Env) : M Unit := do
   _GUARD_TYPE_VERSION e
+  _CHECK_PEP_523
   let f := (e.cache[2]?).getD .null
   let (func, co) ← BM.lift do
-    let func ← (getFunc f : RM _)
-    deoptIf (func.version != cacheNat e 1)
+    let func ← cachedFunc f (cacheNat e 1)
     let co ← (getCodeR e.P func.code : RM _)
     deoptIf !(← hasStackSpace)
     pure (func, co)
@@ -415,8 +429,8 @@ def LOAD_ATTR_GETATTRIBUTE_OVERRIDDEN (e : Env) : M Unit := do
   let ins ← popN 1
   let nf := frameInitialize co func.code func f .null
   let nf := { nf with fast := (nf.fast.setIfInBounds 0 (ins.headD .null)).setIfInBounds 1 (.str name) }
-  BM.lift (setReturnOffset (instrSize e.opcode))
-  dispatchInlined nf
+  BM.lift (_SAVE_RETURN_OFFSET e)
+  _PUSH_FRAME nf
 
 /-- `@3.14.7:2547`. -/
 def _GUARD_DORV_NO_DICT : M Unit := pure ()
@@ -590,6 +604,8 @@ def JUMP_BACKWARD_NO_INTERRUPT (e : Env) : M Unit := BM.lift (jumpBy (-(e.oparg 
 def _SPECIALIZE_JUMP_BACKWARD : M Unit := pure ()
 /-- `:2934`: tier 2 is not built. -/
 def _JIT : M Unit := pure ()
+/-- `:6604`: only reached while tracing for the JIT, which is not built. -/
+def TRACE_RECORD : M Unit := fault "TRACE_RECORD without a JIT tracer"
 /-- `:2962`. -/
 def JUMP_BACKWARD (e : Env) : M Unit := do
   _SPECIALIZE_JUMP_BACKWARD; _CHECK_PERIODIC; JUMP_BACKWARD_NO_INTERRUPT e
@@ -658,10 +674,6 @@ def MATCH_SEQUENCE (e : Env) : M Unit := stk 1 2 fun
 def MATCH_KEYS (e : Env) : M Unit := stkK 2 3 fun
   | [s, k] => do pure [s, k, ← e.om.matchKeys e.ctx s k]
   | _ => fault "arity"
-/-- `:3114`. -/
-def GET_ITER (e : Env) : M Unit := stk 1 1 fun
-  | [o] => do pure [← e.om.getIter e.ctx o]
-  | _ => fault "arity"
 
 /-- `PyCoro_CheckExact`/`PyGen_CheckExact` of a value. -/
 def genKindOf : Val → RM (Option GenKind)
@@ -671,17 +683,66 @@ def genKindOf : Val → RM (Option GenKind)
     | _ => pure none
   | _ => pure none
 
-/-- `:3125`. -/
-def GET_YIELD_FROM_ITER (e : Env) : M Unit := stkK 1 1 fun
+/-- `GET_ITER_YIELD_FROM_NO_CHECK`, `Include/internal/pycore_opcode_utils.h:96`. -/
+def getIterYieldFromNoCheck : Nat := 2
+/-- `GET_ITER_YIELD_FROM_CORO_CHECK`, `Include/internal/pycore_opcode_utils.h:97`. -/
+def getIterYieldFromCoroCheck : Nat := 3
+
+/-- `fixup_getiter`, `Python/specialize.c:46-59`, which `_PyCode_Quicken` runs on every
+`GET_ITER`: a nonzero oparg becomes one of the two checked forms by the code's flags, so
+`types.coroutine` is seen after compilation. Idempotent. -/
+def fixupGetIter (oparg flags : Nat) : Nat :=
+  if oparg == 0 then 0
+  else if flagSet flags (coCoroutine ||| coIterableCoroutine) then getIterYieldFromNoCheck
+  else getIterYieldFromCoroCheck
+
+/-- `tp->tp_iter == PyObject_SelfIter`: the iterator types of the model and generators.
+An instance of a Python class has `slot_tp_iter` there, whatever its `__iter__` does. -/
+def isSelfIter : Val → RM Bool
+  | .ref a => do
+    match ← getObj a with
+    | .listIter .. | .tupleIter .. | .rangeIter .. | .strIter .. | .seqIter .. | .callIter ..
+    | .dictIter .. | .setIter .. | .enumerate .. | .zip .. | .map .. | .filter .. | .reversed .. =>
+      pure true
+    | .gen g => pure (g.kind == .gen)
+    | _ => pure false
+  | _ => pure false
+
+/-- `_PyEval_GetIter`, `Python/ceval.c:1131-1163`, without the failure of `PyStackRef_CLOSE`,
+which has none: `(iter, index_or_null)`. -/
+def getIterStack (e : Env) (co : Code) (iterable : Val) : RM (List Val) := do
+  if ← hasIterItem iterable then return [iterable, .tagged 0]
+  if ← isSelfIter iterable then return [iterable, .null]
+  let yieldFrom := fixupGetIter e.oparg co.flags
+  if yieldFrom != 0 && (← genKindOf iterable) == some .coro then
+    if yieldFrom == getIterYieldFromCoroCheck then
+      typeError "cannot 'yield from' a coroutine object in a non-coroutine generator"
+    return [iterable, .null]
+  return [← e.om.getIter e.ctx iterable, .null]
+
+/-- `:3736`: `(iterable -- iter, index_or_null)`. -/
+def _GET_ITER (e : Env) : M Unit := stk 1 2 fun
   | [o] => do
-    match ← (genKindOf o : RM _) with
-    | some .coro =>
-      let co ← getCode e.P
-      if !flagSet co.flags (coCoroutine ||| coIterableCoroutine) then
-        (typeError "cannot 'yield from' a coroutine object in a non-coroutine generator" : RM _)
-      pure [o]
-    | some .gen => pure [o]
-    | _ => pure [← e.om.getIter e.ctx o]
+    let co ← getCode e.P
+    (getIterStack e co o : RM _)
   | _ => fault "arity"
+/-- `:3724`. -/
+def _SPECIALIZE_GET_ITER : M Unit := pure ()
+/-- `:3743`. -/
+def GET_ITER (e : Env) : M Unit := do _SPECIALIZE_GET_ITER; _GET_ITER e
+/-- `:3748`. -/
+def _GUARD_ITERATOR : M Unit := guardTop 1 fun
+  | [o] => do return !(← (isSelfIter o : RM Bool))
+  | _ => fault "arity"
+/-- `:3754`. -/
+def GET_ITER_SELF : M Unit := do _GUARD_ITERATOR; PUSH_NULL
+/-- `:3760`. -/
+def _GUARD_ITER_VIRTUAL : M Unit := guardTop 1 fun
+  | [o] => do return !(← (hasIterItem o : RM Bool))
+  | _ => fault "arity"
+/-- `:3766`. -/
+def _PUSH_TAGGED_ZERO : M Unit := stk 0 1 fun _ => pure [.tagged 0]
+/-- `:3770`. -/
+def GET_ITER_VIRTUAL : M Unit := do _GUARD_ITER_VIRTUAL; _PUSH_TAGGED_ZERO
 
 end PyLean.Bytecode.Uop

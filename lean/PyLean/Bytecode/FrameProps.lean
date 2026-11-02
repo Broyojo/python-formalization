@@ -89,6 +89,50 @@ theorem jumpKeepsObjects_refuted : ¬JumpKeepsObjects := by
   · exact absurd h (by decide)
   · exact absurd h (by decide)
 
+/-- The body of `def victim(p=1, q=2):\n    x = [p,\n         q]\n    for i in x:\n
+y = i\n    return 1`, as compiled by 3.15.2: one unit for each code unit of `co_code`, so the
+inline caches are here as `CACHE`. -/
+def loopCode : Array Unit' := #[
+  ⟨.RESUME, 0⟩, ⟨.CACHE, 0⟩,
+  ⟨.LOAD_FAST_BORROW, 0⟩, ⟨.LOAD_FAST_BORROW, 1⟩, ⟨.BUILD_LIST, 2⟩, ⟨.STORE_FAST, 2⟩,
+  ⟨.LOAD_FAST, 2⟩, ⟨.GET_ITER, 0⟩, ⟨.CACHE, 0⟩,
+  ⟨.FOR_ITER, 5⟩, ⟨.CACHE, 0⟩, ⟨.STORE_FAST, 3⟩,
+  ⟨.LOAD_FAST, 3⟩, ⟨.STORE_FAST, 4⟩, ⟨.JUMP_BACKWARD, 7⟩, ⟨.CACHE, 0⟩,
+  ⟨.END_FOR, 0⟩, ⟨.POP_ITER, 0⟩, ⟨.LOAD_SMALL_INT, 1⟩, ⟨.RETURN_VALUE, 0⟩]
+
+/-- `marklines` on it, with the function on line 2. Line 3 starts twice: at `LOAD_FAST_BORROW p`
+with an empty stack, and at `BUILD_LIST`, where it resumes after the continuation line. -/
+def loopLines : Array Int := #[2, -1, 3, 4, 3, -1, 5, -1, -1, -1, -1, -1, 6, -1, -1, -1, 5, -1, 7, -1]
+
+/-- The second output of `GET_ITER` is not an object: `_PyEval_GetIter` stores a tagged int
+or `NULL` there (`Python/ceval.c:1136`, `:1139`). So no approved jump may keep that slot
+where the target needs an object. When `start ≤ best` the loop at `Objects/frameobject.c:1825`
+pops nothing, so the slots stay, and two `Iterator` entries on top are what `GET_ITER` leaves
+(`:1396-1400`), which no other opcode pushes. Hypotheses: none on the code; the statement is
+over every function, and `linenoDecide` is the decision `frame_lineno_set_impl` makes.
+False since 3.15: `mark_stacks` calls the slot `Iterator`, and `compatible_kind` lets `Iterator`
+flow into `Object`, so the jump below lands on `BUILD_LIST 2` with the iterable and the
+index as operands, and CPython segfaults in `_PyList_FromStackRefStealOnSuccess`. -/
+def JumpKeepsIterIndex : Prop :=
+  ∀ (code : Array Unit') (table : Array Nat) (lines : Array Int) (first value : Int)
+    (lasti addr : Nat) (best : Int),
+    linenoDecide code table lines first value lasti = .ok addr best →
+    let start := (markStacks code table).getD lasti UNINITIALIZED
+    start ≤ best → peek start 1 = Iterator → peek start 2 = Iterator → peek best 1 ≠ Object
+
+set_option maxRecDepth 100000 in
+/-- From `y = i`, unit 12, to line 3. CPython reports `f_lasti` 8 after this jump, unit 4. -/
+theorem loopJump : linenoDecide loopCode #[] loopLines 2 3 12 = .ok 4 27 := by decide
+
+set_option maxRecDepth 100000 in
+theorem loopStart : (markStacks loopCode #[]).getD 12 UNINITIALIZED = 9 := by decide
+
+theorem jumpKeepsIterIndex_refuted : ¬JumpKeepsIterIndex := by
+  intro h
+  have := h loopCode #[] loopLines 2 3 12 4 27 loopJump
+  simp only [loopStart] at this
+  exact absurd rfl (this (by decide) (by decide) (by decide))
+
 /-- `first_line_not_before` returns a line that is really in the table and not before
 the request, or `-1` when no such line exists. -/
 def FirstLine : Prop :=
