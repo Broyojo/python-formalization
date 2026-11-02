@@ -52,6 +52,12 @@ def formatEntries : List Entry := [
     source := "the implementation disagreeing with itself (int and str formatting of the same text)"
     status := .proven, prop := ``IntFormatAsStr, thm := some ``intFormatAsStr_proven
     notes := "Goes through the slow path of format_long_internal (a width is given), calc_number_widths and fill_number; smoke-tested on 3.15.2 with 200k ints including 4000-digit ones." },
+  { id := "unicodeobj-format-str-errors", pyFile := "Objects/unicode_formatter.c"
+    pyFns := ["unknown_presentation_type", "invalid_thousands_separator_type", "invalid_comma_and_underscore"]
+    statement := "format(s, t) for every string and every one-character type t that is not s or another mini-language field raises 'Unknown format code ...' (with \\x.. outside 33..127); ',' with '_' in either order, and ',' or '_' with the str type, raise their own messages."
+    source := "docs: the mini-language's presentation types for str; the messages as written"
+    status := .proven, prop := ``StrFormatErrors, thm := some ``strFormatErrors_proven
+    notes := "Checked on 3.15.2 for every code point below 0x30000 and 20000 above that satisfies the hypothesis." },
   { id := "unicodeobj-format-group-loop", pyFile := "Objects/unicode_formatter.c"
     pyFns := ["_PyUnicode_InsertThousandsGrouping", "GroupGenerator_init", "GroupGenerator_next", "InsertThousandsGrouping_fill"]
     statement := "The rounds of the grouping loop are bounded by the number of digits."

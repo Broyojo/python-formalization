@@ -167,4 +167,33 @@ theorem strFormatDoc_proven : StrFormatDoc := by
       (by intro q hq; cases hq; exact accum_mono _ 0 (Int.le_refl _)) halign
 
 
+/-! ## Errors -/
+
+/-- A one-character spec that is none of the mini-language's other fields. -/
+def PlainType (t : Nat) : Prop :=
+  isAlignmentToken t = false ∧ isSignElement t = false ∧ t ≠ 122 ∧ t ≠ 35 ∧ toDecimalDigit t < 0 ∧
+  t ≠ 44 ∧ t ≠ 95 ∧ t ≠ 46 ∧ t ≠ 115
+
+/-- `format(s, t)` with an unknown presentation type `t` raises "Unknown format code ..." (with
+`\x..` for a character outside 33..127), for every string; and the grouping options that strings
+refuse raise their messages: both `,` and `_`, or either alone (the default type is `s`). -/
+def StrFormatErrors : Prop :=
+  (∀ (s : Str) (t : Nat), PlainType t → formatStrAdvanced s [t] = .error (unknownPresentationType t "str")) ∧
+  (∀ s : Str, formatStrAdvanced s [44, 95] = .error invalidCommaAndUnderscore ∧
+    formatStrAdvanced s [95, 44] = .error invalidCommaAndUnderscore ∧
+    formatStrAdvanced s [44] = .error (invalidThousandsSeparatorType 44 115) ∧
+    formatStrAdvanced s [95] = .error (invalidThousandsSeparatorType 95 115) ∧
+    formatStrAdvanced s [44, 115] = .error (invalidThousandsSeparatorType 44 115) ∧
+    formatStrAdvanced s [95, 115] = .error (invalidThousandsSeparatorType 95 115))
+
+theorem strFormatErrors_proven : StrFormatErrors := by
+  refine ⟨fun s t ht => ?_, fun s => ?_⟩
+  · obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := ht
+    have g : getInteger [t] 0 0 = .ok (0, 0, [t]) := by simp [getInteger, h5]
+    have h48 : t ≠ 48 := by intro h; subst h; revert h5; decide
+    simp [formatStrAdvanced, parseFormatSpec, parseHead, parseAlign, h1, parseFlags, h2, headIs, h3, h4, h48,
+      parseTail, parseWidth, g, h6, h7, h8, parseType, validateSpec, LT_NO_LOCALE, h9, bind, Except.bind,
+      pure, Except.pure]
+  · refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩ <;> rfl
+
 end PyLean.UnicodeObj
