@@ -30,6 +30,18 @@ open PyLean.Registry
 def op (n : String) : String := "opcode:" ++ n
 
 def entries : List Entry := GenObj.entries ++ [
+  { id := "bytecode-load-name", pyFile := "Python/bytecodes.c"
+    pyFns := []
+    statement := "LOAD_NAME looks in the locals, then the globals, then the builtins, and pushes the value, or raises NameError naming it with the stack unchanged; for exact-dict namespaces."
+    source := "Python/bytecodes.c LOAD_NAME; _PyEval_LoadName, Python/ceval.c"
+    status := .proven, prop := ``LoadNameRules, thm := some ``loadNameRules_proven
+    notes := "Credits no row: the non-dict namespace path (a metaclass __prepare__ mapping) and the no-locals SystemError are part of the body and not stated yet." },
+  { id := "bytecode-name-roundtrip", pyFile := "Python/bytecodes.c"
+    pyFns := []
+    statement := "STORE_NAME name then LOAD_NAME name pushes the stored value, on exact-dict locals."
+    source := "invariant: Python/bytecodes.c STORE_NAME, LOAD_NAME"
+    status := .proven, prop := ``NameRoundTrip, thm := some ``nameRoundTrip_proven
+    notes := "Credits no row, for the same reason as bytecode-load-name." },
   { id := "bytecode-global-roundtrip", pyFile := "Python/bytecodes.c"
     pyFns := [op "STORE_GLOBAL"]
     statement := "STORE_GLOBAL name then LOAD_GLOBAL name pushes the stored value and nothing else, on exact-dict globals; every other name keeps its value."

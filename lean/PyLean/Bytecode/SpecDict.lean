@@ -288,4 +288,63 @@ theorem loadGlobalRules_proven : LoadGlobalRules := by
       EStateM.bind, BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift, pure, EStateM.pure, getName,
       getCode, hc, hn, getFrame, hg, hb, isExactDict, getObj, hdg, hdb, hgg, hgb, h0, h1, formatExcCheckArg, hx]
 
+/-- `LOAD_NAME` looks the name up in the frame's locals, then its globals, then its builtins, and
+pushes it; when none has it, it raises `NameError` naming it and leaves the stack alone. For a
+frame whose namespaces are exact dicts, as in a class body or at module level. -/
+def LoadNameRules : Prop := ∀ (e : Env) (s : St) (l g b : Addr) (dl dg db : DictObj) (c : Code)
+    (name : String),
+  s.regs.frame.locals = .ref l → s.regs.frame.globals = .ref g → s.regs.frame.builtins = .ref b →
+  s.regs.rt.heap[l]? = some (.dict dl) → s.regs.rt.heap[g]? = some (.dict dg) →
+  s.regs.rt.heap[b]? = some (.dict db) →
+  e.P[s.regs.frame.code]? = some c → c.names[e.oparg]? = some name →
+    (∀ v, (lookupStr dl name = some v ∨ (lookupStr dl name = none ∧ lookupStr dg name = some v) ∨
+        (lookupStr dl name = none ∧ lookupStr dg name = none ∧ lookupStr db name = some v)) →
+      execOp e .LOAD_NAME s = .ok () { s with stack := v :: s.stack }) ∧
+    (lookupStr dl name = none → lookupStr dg name = none → lookupStr db name = none → ∀ x rt,
+      (raiseS "NameError" (nameErrorMsg name) : RM Val) s.regs.rt = .error x rt →
+      execOp e .LOAD_NAME s = .error x { s with regs := { s.regs with rt := rt } })
+
+theorem loadNameRules_proven : LoadNameRules := by
+  intro e s l g b dl dg db c name hl hg hb hdl hdg hdb hc hn
+  obtain ⟨regs, stack⟩ := s
+  simp only at hl hg hb hdl hdg hdb hc ⊢
+  have hgl := dictGetStr_ref l dl name regs.rt hdl
+  have hgg := dictGetStr_ref g dg name regs.rt hdg
+  have hgb := dictGetStr_ref b db name regs.rt hdb
+  have hnn : (Val.ref l == Val.null) = false := rfl
+  constructor
+  · intro v hv
+    rcases hv with hv | ⟨h0, hv⟩ | ⟨h0, h1, hv⟩ <;>
+    simp [execOp, LOAD_NAME, loadName, optItem, stk, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+      monadLift, MonadLift.monadLift, pure, EStateM.pure, getName, getCode, hc, hn, getFrame, hl, hg, hb,
+      isExactDict, getObj, hdl, hdg, hdb, hgl, hgg, hgb, hv, hnn, *]
+  · intro h0 h1 h2 x rt hx
+    simp [execOp, LOAD_NAME, loadName, optItem, stk, popN, bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift,
+      MonadLift.monadLift, pure, EStateM.pure, getName, getCode, hc, hn, getFrame, hl, hg, hb, isExactDict,
+      getObj, hdl, hdg, hdb, hgl, hgg, hgb, h0, h1, h2, hnn, formatExcCheckArg, hx]
+
+/-- `STORE_NAME name` then `LOAD_NAME name` pushes the stored value, on a frame whose locals are an
+exact dict (a class body or module level). -/
+def NameRoundTrip : Prop := ∀ (e : Env) (s : St) (l : Addr) (dl : DictObj) (c : Code) (i : Nat)
+    (name : String) (v : Val) (rest : List Val),
+  s.regs.frame.locals = .ref l → s.regs.rt.heap[l]? = some (.dict dl) →
+  e.P[s.regs.frame.code]? = some c → c.names[i]? = some name → s.stack = v :: rest →
+    (execOp { e with oparg := i } .STORE_NAME *> execOp { e with oparg := i } .LOAD_NAME) s =
+      .ok () ⟨{ s.regs with rt := storedRt s.regs.rt l dl name v }, v :: rest⟩
+
+theorem nameRoundTrip_proven : NameRoundTrip := by
+  intro e s l dl c i name v rest hl hd hc hn hs
+  obtain ⟨regs, stack⟩ := s
+  simp only at hl hd hc hs
+  subst hs
+  have hset := dictSetStr_ref l dl name v regs.rt hd
+  have hheap := storedRt_heap regs.rt l dl name v hd
+  have hget : dictGetStr (.ref l) name (storedRt regs.rt l dl name v) =
+      .ok (some v) (storedRt regs.rt l dl name v) := by
+    rw [dictGetStr_ref l _ name _ hheap, lookup_store]; simp
+  have hnn : (Val.ref l == Val.null) = false := rfl
+  simp [SeqRight.seqRight, EStateM.seqRight, execOp, STORE_NAME, LOAD_NAME, loadName, optItem, stk, popN,
+    pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift, pure, EStateM.pure,
+    getName, getCode, hc, hn, getFrame, hl, hset, isExactDict, getObj, hd, hheap, hget, hnn]
+
 end PyLean.Bytecode
