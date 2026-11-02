@@ -9,7 +9,7 @@ Objects/structseq.c	132	150	structseq_dealloc	structseq_dealloc(PyObject *op)	to
 Objects/structseq.c	167	270	structseq_new_impl	structseq_new_impl(PyTypeObject *type, PyObject *arg, PyObject *dict) /*[clinic end generated code: output=baa082e788b171da input=90532511101aa3fb]*/	modelled	typeobj-structseq-reduce-round-trip	
 Objects/structseq.c	274	339	structseq_repr	structseq_repr(PyObject *op)	todo		
 Objects/structseq.c	343	385	structseq_reduce	structseq_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	typeobj-structseq-reduce-round-trip	
-Objects/structseq.c	389	458	structseq_replace	structseq_replace(PyObject *op, PyObject *args, PyObject *kwargs)	todo		
+Objects/structseq.c	389	458	structseq_replace	structseq_replace(PyObject *op, PyObject *args, PyObject *kwargs)	modelled	typeobj-structseq-replace	
 Objects/structseq.c	469	479	count_members	count_members(PyStructSequence_Desc *desc, Py_ssize_t *n_unnamed_members) {	todo		
 Objects/structseq.c	540	570	initialize_members	initialize_members(PyStructSequence_Desc *desc, Py_ssize_t n_members, Py_ssize_t n_unnamed_members)	todo		
 Objects/structseq.c	574	593	initialize_static_fields	initialize_static_fields(PyTypeObject *type, PyStructSequence_Desc *desc, PyMemberDef *tp_members, Py_ssize_t n_members, unsigned long tp_flags)	todo		

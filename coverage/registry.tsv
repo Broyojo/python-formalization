@@ -1464,6 +1464,7 @@ typeobj-reduce-getattr-descr	proven	Objects/descrobject.c	wrapper_reduce,descr_r
 typeobj-classmethod-bindings-agree	proven	Objects/funcobject.c	cm_descr_get
 typeobj-sequence-tuple	proven	Objects/abstract.c	PySequence_Tuple
 typeobj-structseq-reduce-round-trip	proven	Objects/structseq.c	structseq_new_impl,structseq_reduce
+typeobj-structseq-replace	proven	Objects/structseq.c	structseq_replace
 typeobj-exc-str-args	proven	Objects/exceptions.c	
 typeobj-exc-repr-args	proven	Objects/exceptions.c	
 typeobj-exc-keyerror-str	proven	Objects/exceptions.c	
