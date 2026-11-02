@@ -19,6 +19,12 @@ namespace PyLean.Bytecode
 
 open Uop
 
+/-- `float_richcompare` on two doubles, the `Compare:` block of `Objects/floatobject.c`. -/
+def floatTable (op : Nat) (x y : Binary64.F64) : Bool :=
+  match op with
+  | 0 => Binary64.F64.lt x y | 1 => Binary64.F64.le x y | 2 => Binary64.F64.eq x y
+  | 3 => Binary64.F64.ne x y | 4 => Binary64.F64.gt x y | _ => Binary64.F64.ge x y
+
 /-- What the builtin slots do on exact operands. -/
 structure Lawful (om : ObjModel) : Prop where
   /-- `bool_slot`: `PyObject_IsTrue` on singletons, ints, strs and lists. -/
@@ -73,6 +79,9 @@ structure Lawful (om : ObjModel) : Prop where
       .ok (.bool (match op with
         | 0 => decide (a < b) | 1 => decide (a ≤ b) | 2 => decide (a = b)
         | 3 => decide (a ≠ b) | 4 => decide (a > b) | _ => decide (a ≥ b))) rt
+  /-- `float_richcompare` gives a bool. -/
+  cmp_float : ∀ ctx a b op rt,
+    om.richCompare ctx (.float a) (.float b) op rt = .ok (.bool (floatTable op (toF a) (toF b))) rt
   cmp_str : ∀ ctx a b rt, om.richCompare ctx (.str a) (.str b) 2 rt = .ok (.bool (a == b)) rt
   cmp_str_ne : ∀ ctx a b rt, om.richCompare ctx (.str a) (.str b) 3 rt = .ok (.bool (a != b)) rt
 

@@ -125,6 +125,13 @@ theorem compare_int (a b : Int) (op : Nat) (rt : Rt) :
     richCompareImpl om ctx (.int a) (.int b) op rt = .ok (.bool (ordResult (compare a b) op)) rt := by
   simp [richCompareImpl, typeOf, immType, userLookup_cls, isSubtype, mroOf, payload, bind, EStateM.bind, pure, EStateM.pure, builtinCompare, intOf]
 
+theorem compare_float (a b : UInt64) (op : Nat) (rt : Rt) :
+    richCompareImpl om ctx (.float a) (.float b) op rt =
+      .ok (.bool (floatTable op (toF a) (toF b))) rt := by
+  simp [richCompareImpl, typeOf, immType, userLookup_cls, isSubtype, mroOf, payload, bind, EStateM.bind,
+    pure, EStateM.pure, builtinCompare, intOf]
+  rfl
+
 theorem compare_str (a b : String) (op : Nat) (rt : Rt) :
     richCompareImpl om ctx (.str a) (.str b) op rt = .ok (.bool (ordResult (compare a b) op)) rt := by
   simp [richCompareImpl, typeOf, immType, userLookup_cls, isSubtype, mroOf, payload, bind, EStateM.bind, pure, EStateM.pure, builtinCompare]
@@ -179,6 +186,7 @@ theorem lawfulBuiltin_proven : LawfulBuiltin := by
       show richCompareImpl (mkOM P 23) ctx (.int a) (.int b) op rt = _
       rw [compare_int, ordResult_int a b op hop]
       rfl
+    cmp_float := fun ctx a b op rt => compare_float (mkOM P 23) ctx a b op rt
     cmp_str := fun ctx a b rt => by
       show richCompareImpl (mkOM P 23) ctx (.str a) (.str b) 2 rt = _
       rw [compare_str]

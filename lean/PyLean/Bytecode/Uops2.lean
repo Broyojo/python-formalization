@@ -491,13 +491,11 @@ def _COMPARE_OP (e : Env) : M Unit := stk 2 1 fun
 /-- `:3251`. -/
 def COMPARE_OP (e : Env) : M Unit := do _SPECIALIZE_COMPARE_OP; _COMPARE_OP e
 
-/-- `dleft`/`dright` as C doubles. -/
-def flt (a : UInt64) : Float := Float.ofBits a
-
-/-- `:3262`. -/
+/-- `:3262`. `dleft >= dright` and `dleft <= dright` as C compares doubles: false when either
+is NaN, which leaves `sign_ish` at 1. -/
 def _COMPARE_OP_FLOAT (e : Env) : M Unit := stk 2 1 fun
   | [.float l, .float r] =>
-    let signIsh := comparisonBit (flt l >= flt r) (flt l <= flt r)
+    let signIsh := comparisonBit (Binary64.F64.ge (toF l) (toF r)) (Binary64.F64.le (toF l) (toF r))
     pure [.bool (signIsh &&& e.oparg != 0)]
   | _ => fault "not floats"
 /-- `:3280`. -/

@@ -10,6 +10,7 @@ import PyLean.Bytecode.SpecLocals
 import PyLean.Bytecode.SpecToBool
 import PyLean.Bytecode.SpecCompare
 import PyLean.Bytecode.LawfulBuiltin
+import PyLean.Bytecode.SpecCompareFloat
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -25,6 +26,11 @@ open PyLean.Registry
 def op (n : String) : String := "opcode:" ++ n
 
 def entries : List Entry := GenObj.entries ++ [
+  { id := "bytecode-compare-float", pyFile := "Python/bytecodes.c"
+    pyFns := [op "COMPARE_OP_FLOAT", op "_COMPARE_OP_FLOAT"]
+    statement := "COMPARE_OP_FLOAT equals COMPARE_OP on every stack for the operand the compiler emits, NaN, infinities and signed zeros included, given float_richcompare."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:3253, :3262-3278; COMPARISON_BIT, Include/internal/pycore_code.h:523"
+    status := .proven, prop := ``CompareFloat, thm := some ``compareFloat_proven },
   { id := "bytecode-compare-fused", pyFile := "Python/bytecodes.c"
     pyFns := [op "COMPARE_OP", op "_COMPARE_OP"]
     statement := "COMPARE_OP with the bool-coercion bit is COMPARE_OP without it followed by TO_BOOL, on every stack and for every object model, a raising __lt__ or __bool__ included."
