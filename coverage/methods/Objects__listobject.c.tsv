@@ -30,7 +30,7 @@ Objects/listobject.c	671	674	list_length	list_length(PyObject *a)	modelled	bytes
 Objects/listobject.c	677	693	list_contains	list_contains(PyObject *aa, PyObject *el)	modelled	bytesobj-contains-agree,bytesobj-list-search-reentrant	
 Objects/listobject.c	696	714	list_item	list_item(PyObject *aa, Py_ssize_t i)	modelled	bytesobj-item-access	
 Objects/listobject.c	717	738	list_slice_lock_held	list_slice_lock_held(PyListObject *a, Py_ssize_t ilow, Py_ssize_t ihigh)	modelled	bytesobj-slice-reads	
-Objects/listobject.c	741	762	_PyList_BinarySlice	_PyList_BinarySlice(PyObject *container, PyObject *start, PyObject *stop)	modelled	bytesobj-list-binary-slice	
+Objects/listobject.c	741	762	_PyList_BinarySlice	_PyList_BinarySlice(PyObject *container, PyObject *start, PyObject *stop)	todo		changed-in-3.15: held: models int and None indices only: _PyEval_SliceIndex also takes __index__ objects, which can raise, refuse a non-index, and mutate the list before the size is read
 Objects/listobject.c	765	788	PyList_GetSlice	PyList_GetSlice(PyObject *a, Py_ssize_t ilow, Py_ssize_t ihigh)	modelled	bytesobj-capi-construct	
 Objects/listobject.c	791	820	list_concat_lock_held	list_concat_lock_held(PyListObject *a, PyListObject *b)	modelled	bytesobj-list-contents	
 Objects/listobject.c	823	838	_PyList_Concat	_PyList_Concat(PyObject *aa, PyObject *bb)	modelled	bytesobj-list-contents	

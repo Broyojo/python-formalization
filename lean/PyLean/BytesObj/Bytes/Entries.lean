@@ -48,7 +48,7 @@ def entries : List Entry := [
     source := "Doc/library/stdtypes.rst bytes.find ('The subsequence to search for may be any bytes-like object or an integer in the range 0 to 255')", status := .proven
     prop := ``FindByteArg, thm := some ``findByteArg_proven },
   { id := "bytesobj-bytes-contains", pyFile := "Objects/bytes_methods.c"
-    pyFns := ["_Py_bytes_contains", "bytes_contains", "bytearray_contains"]
+    pyFns := ["_Py_bytes_contains", "bytes_contains"]
     statement := "x in b: an int in range(256) is byte membership and equals bytes([x]) in b; other ints raise ValueError; b'' is in every b."
     source := "Doc/library/stdtypes.rst common sequence 'x in s', bytes note", status := .proven
     prop := ``ContainsSpec, thm := some ``containsSpec_proven },
@@ -72,7 +72,7 @@ def entries : List Entry := [
     prop := ``BytesHashCache, thm := some ``bytesHashCache_proven
     notes := "Generic over the hash function: Py_HashBuffer lives in Python/pyhash.c and has a random seed." },
   { id := "bytesobj-bytes-format-field", pyFile := "Objects/bytesobject.c"
-    pyFns := ["_PyBytes_FormatEx", "bytes_mod", "bytearray_mod", "bytearray_mod_lock_held"]
+    pyFns := ["_PyBytes_FormatEx", "bytes_mod"]
     statement := "For every flag set, sign, width and length: the writes of a field produce exactly the alloc bytes reserved (the assert at bytesobject.c:1136), so the writer's buffer is neither overrun nor left with a gap."
     source := "bytesobject.c:1136 (assert); invariant", status := .proven
     prop := ``FieldAllocExact, thm := some ``fieldAllocExact_proven },
@@ -118,8 +118,7 @@ def entries : List Entry := [
     source := "Doc/library/stdtypes.rst, printf-style formatting: '*' width; bytesobject.c:771-804", status := .proven
     prop := ``NegStarWidth, thm := some ``negStarWidth_proven },
   { id := "bytesobj-bytes-escape-roundtrip", pyFile := "Objects/bytesobject.c"
-    pyFns := ["_PyBytes_DecodeEscape2", "PyBytes_DecodeEscape", "PyBytes_Repr", "bytes_repr", "bytes_str",
-      "bytearray_repr", "bytearray_repr_lock_held", "bytearray_str"]
+    pyFns := ["_PyBytes_DecodeEscape2", "PyBytes_DecodeEscape", "PyBytes_Repr", "bytes_repr", "bytes_str", "bytearray_repr", "bytearray_repr_lock_held"]
     statement := "For every byte string and either quote: decoding the body of the literal repr writes, for bytes and for bytearray, gives back the bytes with no invalid escape, so repr is an inverse of escape_decode."
     source := "repr of bytes is a literal, Doc/library/functions.rst repr", status := .proven
     prop := ``ReprDecodeRoundTrip, thm := some ``reprDecodeRoundTrip_proven
@@ -155,13 +154,12 @@ def entries : List Entry := [
     source := "Doc/library/stdtypes.rst common sequence s * n", status := .proven
     prop := ``BytesRepeatSpec, thm := some ``bytesRepeatSpec_proven },
   { id := "bytesobj-bytes-richcompare-twins", pyFile := "Objects/bytesobject.c"
-    pyFns := ["bytes_compare_eq", "bytes_richcompare", "bytearray_richcompare"]
+    pyFns := ["bytes_compare_eq", "bytes_richcompare"]
     statement := "bytes_richcompare, with its first-byte shortcuts, and bytearray_richcompare agree on every pair of byte strings and every operator; == is list equality and != its negation."
     source := "twins: both implement the comparison of sequences of ints", status := .proven
     prop := ``RichcompareTwins, thm := some ``richcompareTwins_proven },
   { id := "bytesobj-bytes-subscript-twins", pyFile := "Objects/bytesobject.c"
-    pyFns := ["bytes_item", "bytes_subscript", "bytearray_getitem", "bytearray_getitem_lock_held", "bytearray_subscript",
-      "bytearray_subscript_lock_held"]
+    pyFns := ["bytes_item", "bytes_subscript", "bytearray_getitem", "bytearray_getitem_lock_held"]
     statement := "bytes[slice] and bytearray[slice] hold the same bytes for every slice, in spite of the extra full-slice shortcut of bytes; an index reads the byte at the position and raises IndexError outside."
     source := "twins; Doc/library/stdtypes.rst common sequence operations", status := .proven
     prop := ``SubscriptTwins, thm := some ``subscriptTwins_proven },
@@ -172,18 +170,17 @@ def entries : List Entry := [
     source := "Doc/library/stdtypes.rst memoryview.readonly; PEP 3118", status := .proven
     prop := ``BufferSpec, thm := some ``bufferSpec_proven },
   { id := "bytesobj-bytes-join", pyFile := "Objects/bytesobject.c"
-    pyFns := ["bytes_join_impl", "PyBytes_Join", "bytearray_join_impl"]
+    pyFns := ["bytes_join_impl", "PyBytes_Join"]
     statement := "sep.join(items) is the items with sep between them for list, tuple and generator arguments; the first item that is no buffer gives a TypeError naming its position."
     source := "docstring, bytesobject.c:1973-1985", status := .proven
     prop := ``JoinSpec, thm := some ``joinSpec_proven },
   { id := "bytesobj-bytes-translate-twins", pyFile := "Objects/bytesobject.c"
-    pyFns := ["bytes_translate_impl", "bytearray_translate_impl"]
+    pyFns := ["bytes_translate_impl"]
     statement := "bytes.translate and bytearray.translate agree on every input, the no-delete fast loop equals the general loop, and with no table the result is the bytes outside delete."
     source := "twins; fast path against slow path, bytesobject.c:2326-2372", status := .proven
     prop := ``TranslateTwins, thm := some ``translateTwins_proven },
   { id := "bytesobj-bytes-strip-twins", pyFile := "Objects/bytesobject.c"
-    pyFns := ["do_xstrip", "do_strip", "do_argstrip", "bytes_lstrip_impl", "bytes_rstrip_impl", "bytearray_strip_impl_helper",
-      "bytearray_lstrip_impl", "bytearray_rstrip_impl"]
+    pyFns := ["do_xstrip", "do_strip", "do_argstrip", "bytes_lstrip_impl", "bytes_rstrip_impl"]
     statement := "bytes.strip and bytearray.strip strip the same bytes for every byte string and direction, with None (Py_ISSPACE against the six-byte string) and with an explicit set."
     source := "twins", status := .proven
     prop := ``StripTwins, thm := some ``stripTwins_proven },
@@ -193,13 +190,13 @@ def entries : List Entry := [
     source := "docstrings, bytesobject.c:2437-2441, :2369-2373", status := .proven
     prop := ``RemoveAffix, thm := some ``removeAffix_proven },
   { id := "bytesobj-bytes-decode", pyFile := "Objects/bytesobject.c"
-    pyFns := ["bytes_decode_impl", "bytearray_decode_impl"]
+    pyFns := ["bytes_decode_impl"]
     statement := "For every byte string, s.decode('latin-1') is the code points of the bytes and bytes(text, 'latin-1') inverts it; 'ascii' accepts exactly the strings below 128."
     source := "Doc/library/codecs.rst", status := .proven
     prop := ``DecodeRoundTrip, thm := some ``decodeRoundTrip_proven
     notes := "Two codecs stand for the codec registry, which is out of this module's scope; decode itself only forwards." },
   { id := "bytesobj-bytes-fromhex-roundtrip", pyFile := "Objects/bytesobject.c"
-    pyFns := ["_PyBytes_FromHex", "bytes_fromhex_impl", "bytes_hex_impl", "bytearray_fromhex_impl", "bytearray_hex_impl"]
+    pyFns := ["_PyBytes_FromHex", "bytes_fromhex_impl", "bytes_hex_impl"]
     statement := "bytes.fromhex(b.hex()) == b for every byte string."
     source := "docstrings, bytesobject.c:2611-2614, :2640-2651", status := .proven
     prop := ``FromHexRoundTrip, thm := some ``fromHexRoundTrip_proven },
@@ -214,13 +211,12 @@ def entries : List Entry := [
     source := "bytesobject.c:2703-2707", status := .proven
     prop := ``FromHexTerminated, thm := some ``fromHexTerminated_proven },
   { id := "bytesobj-bytes-hex-sep", pyFile := "Objects/bytesobject.c"
-    pyFns := ["bytes_hex_impl", "bytearray_hex_impl"]
+    pyFns := ["bytes_hex_impl"]
     statement := "hex(sep, k): dropping the separators gives the plain hex digits, whether the groups count from the left or the right, for every number of chunks."
     source := "docstring, bytesobject.c:2749-2763", status := .proven
     prop := ``HexSepFilter, thm := some ``hexSepFilter_proven },
   { id := "bytesobj-bytes-new", pyFile := "Objects/bytesobject.c"
-    pyFns := ["bytes_new_impl", "_PyBytes_FromBuffer", "_PyBytes_FromList", "_PyBytes_FromTuple", "_PyBytes_FromIterator",
-      "PyBytes_FromObject"]
+    pyFns := ["bytes_new_impl", "_PyBytes_FromBuffer", "_PyBytes_FromTuple", "_PyBytes_FromIterator", "PyBytes_FromObject"]
     statement := "bytes(x): a list, a tuple and a generator of ints in range(256) give those bytes (three C loops); an int n >= 0 gives n zero bytes and a negative one ValueError; a str without an encoding is TypeError; a buffer gives its contents; a bad item stops with ValueError."
     source := "docstring, bytesobject.c:3201-3212", status := .proven
     prop := ``BytesNewSpec, thm := some ``bytesNewSpec_proven },
@@ -274,7 +270,7 @@ def entries : List Entry := [
     source := "twin: the two iteration paths of a for loop", status := .proven
     prop := ``IterItemAgrees, thm := some ``iterItemAgrees_proven },
   { id := "bytesobj-bytearray-take-bytes", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["bytearray_take_bytes_impl"]
+    pyFns := []
     statement := "take_bytes(n) gives the first bytes and leaves the rest in a valid layout, with the refusals for a count out of range, an export, a non-integer and an int too large."
     source := "Doc/library/stdtypes.rst, bytearray.take_bytes; bytearrayobject.c:1614-1688", status := .proven
     prop := ``TakeBytesSpec, thm := some ``takeBytesSpec_proven },
@@ -290,12 +286,12 @@ def entries : List Entry := [
     source := "Doc/c-api/bytearray.rst; bytearrayobject.c:127-136", status := .proven
     prop := ``ExportRule, thm := some ``exportRule_proven },
   { id := "bytesobj-bytearray-init-initialised", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["bytearray___init___impl"]
+    pyFns := []
     statement := "After any b.__init__(items) on a fresh object, also a failed one, every byte is a value; a refused int leaves the object empty, with the exception of the refusal."
     source := "invariant: Python code cannot read uninitialized memory; bytearrayobject.c:1119-1124", status := .proven
     prop := ``InitInitialised, thm := some ``initInitialised_proven },
   { id := "bytesobj-bytearray-extend-initialised", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["bytearray_extend_impl", "bytearray_setslice"]
+    pyFns := []
     statement := "Whatever the __buffer__ of extend's argument does to self, the bytes go in at the old end clamped to the new one, so no gap is left."
     source := "invariant: Python code cannot read uninitialized memory; gh-153578", status := .proven
     prop := ``ExtendInitialised, thm := some ``extendInitialised_proven },
@@ -321,75 +317,70 @@ def entries : List Entry := [
     source := "bytearrayobject.c:2605-2612 and :2813-2820", status := .proven
     prop := ``AllocSizeofSpec, thm := some ``allocSizeofSpec_proven },
   { id := "bytesobj-bytearray-init-iterator", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["bytearray___init___impl"]
+    pyFns := []
     statement := "One append of the iterator loop of __init__ keeps a valid buffer layout: refuted, its capacity test ignores ob_start - ob_bytes, which an iterator can move."
     source := "invariant: every write stays inside the allocation", status := .refuted
     prop := ``InitLoopKeepsLayout, thm := some ``initLoopKeepsLayout_refuted
     bug := some "bytesobj-bytearray-init-iterator-ignores-start" },
   { id := "bytesobj-bytearray-init-fresh-layout", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["bytearray___init___impl"]
+    pyFns := []
     statement := "With ob_start == ob_bytes the same step keeps the layout, so the offset is the whole cause."
     source := "narrowing of bytesobj-bytearray-init-iterator", status := .proven
     prop := ``InitLoopFreshLayout, thm := some ``initLoopFreshLayout_proven },
   { id := "bytesobj-bytearray-setslice", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["bytearray_setslice_linear", "bytearray_setslice"]
+    pyFns := ["bytearray_setslice_linear"]
     statement := "For every object and valid range, a successful splice leaves data[:lo] + bytes + data[hi:], through the three branches (advance ob_start, memmove down, grow and memmove up)."
     source := "Doc/library/stdtypes.rst s[i:j] = t", status := .proven
     prop := ``SetsliceSpec, thm := some ``setsliceSpec_proven },
   { id := "bytesobj-bytearray-slice-agrees-list", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["bytearray_ass_subscript_lock_held", "bytearray_ass_subscript"]
+    pyFns := []
     statement := "b[s] = v succeeds only where list[s] = v does, with the same contents: refuted by an empty value on an extended slice, which deletes."
     source := "Doc/library/stdtypes.rst note: 'If k is not equal to 1, t must have the same length as the slice it is replacing'", status := .refuted
     prop := ``SliceAssignAgreesList, thm := some ``sliceAssignAgreesList_refuted
     bug := some "sequences-array-extended-slice-empty-deletes" },
   { id := "bytesobj-bytearray-slice-nonempty", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["bytearray_ass_subscript_lock_held", "bytearray_ass_subscript"]
+    pyFns := []
     statement := "With a non-empty value, every successful b[s] = v leaves the contents list[s] = v leaves, for all slices with int parts, extended ones included."
     source := "narrowing of bytesobj-bytearray-slice-agrees-list", status := .proven
     prop := ``SliceAssignAgreesNonempty, thm := some ``sliceAssignAgreesNonempty_proven },
   { id := "bytesobj-bytearray-slice-delete", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["bytearray_ass_subscript_lock_held", "bytearray_ass_subscript"]
+    pyFns := []
     statement := "Every successful del b[s] leaves the contents del list[s] leaves, for all slices with int parts."
     source := "same operation on two mutable sequences", status := .proven
     prop := ``SliceDeleteAgrees, thm := some ``sliceDeleteAgrees_proven
     notes := "bytearray refuses (BufferError) an extended deletion of an empty slice while exports exist, where del b[3:3] is accepted: _canresize comes before the slicelen == 0 return at bytearrayobject.c:887-892. Modelled; not filed." },
   { id := "bytesobj-bytearray-item", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["_getbytevalue", "bytearray_setitem", "bytearray_setitem_lock_held", "bytearray_ass_subscript_lock_held"]
+    pyFns := []
     statement := "b[i] = v for a byte value sets one position; del b[i] removes it; a value outside range(256) raises ValueError, also before the IndexError of a bad index, so a value checked first cannot be overtaken by a resize."
     source := "Doc/library/stdtypes.rst; GH-91153 comment, bytearrayobject.c:746-747", status := .proven
     prop := ``ItemSpec, thm := some ``itemSpec_proven },
   { id := "bytesobj-bytearray-mutators", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["bytearray_append_impl", "bytearray_insert_impl", "bytearray_pop_impl", "bytearray_remove_impl",
-      "bytearray_reverse_impl", "bytearray_clear_impl"]
+    pyFns := ["bytearray_pop_impl", "bytearray_reverse_impl", "bytearray_clear_impl"]
     statement := "append, insert, pop act on the contents as the list methods do, reverse is an involution, clear empties, and an item outside range(256) raises ValueError first."
     source := "Doc/library/stdtypes.rst mutable sequence operations", status := .proven
     prop := ``MutatorsSpec, thm := some ``mutatorsSpec_proven },
   { id := "bytesobj-bytearray-concat", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["PyByteArray_Concat", "bytearray_iconcat", "bytearray_iconcat_lock_held", "bytearray_irepeat",
-      "bytearray_irepeat_lock_held", "bytearray_extend_impl", "bytearray_copy_impl"]
+    pyFns := ["bytearray_irepeat", "bytearray_irepeat_lock_held", "bytearray_copy_impl"]
     statement := "a + b and a += b append the bytes of a buffer; a *= n repeats in place, refusing with exports exactly when the size changes; extend with a plain iterable appends the items; copy has the contents."
     source := "Doc/library/stdtypes.rst common and mutable sequence operations", status := .proven
     prop := ``ConcatSpec2, thm := some ``concatSpec2_proven },
   { id := "bytesobj-bytearray-init", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["bytearray___init___impl", "bytearray_new", "PyByteArray_FromObject", "_PyByteArray_FromBufferObject"]
+    pyFns := ["bytearray_new", "PyByteArray_FromObject", "_PyByteArray_FromBufferObject"]
     statement := "bytearray(x) has the bytes of a buffer, n zeros for an int, nothing with no argument; argument errors match bytes(); a non-empty object with exports refuses __init__."
     source := "docstring, bytearrayobject.c:2954-2966", status := .proven
     prop := ``InitSpec, thm := some ``initSpec_proven },
   { id := "bytesobj-bytearray-iter", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["bytearray_iter", "bytearrayiter_next", "bytearrayiter_length_hint", "bytearrayiter_reduce", "bytearrayiter_setstate"]
+    pyFns := ["bytearray_iter", "bytearrayiter_next", "bytearrayiter_length_hint", "bytearrayiter_setstate"]
     statement := "The iterator reads the current contents at its index, stops when past the end and then stays stopped whatever happens to the object; the length hint is never negative; __setstate__ clamps above."
     source := "iterator protocol; list iterator, Objects/listobject.c", status := .proven
     prop := ``BaIterSpec, thm := some ``baIterSpec_proven },
   { id := "bytesobj-bytearray-reduce", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["_common_reduce", "bytearray_reduce_impl", "bytearray_reduce_ex_impl"]
+    pyFns := []
     statement := "__reduce_ex__ gives constructor arguments that rebuild the bytes for every protocol: no argument for an empty object, (text, 'latin-1') below protocol 3, (bytes,) from 3 on."
     source := "pickling round trip", status := .proven
     prop := ``ReduceSpec, thm := some ``reduceSpec_proven },
   { id := "bytesobj-bytearray-read-wrappers", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["_bytearray_with_buffer", "bytearray_find_impl", "bytearray_count_impl", "bytearray_index_impl", "bytearray_rfind_impl",
-      "bytearray_rindex_impl", "bytearray_startswith_impl", "bytearray_endswith_impl", "bytearray_split_impl", "bytearray_rsplit_impl",
-      "bytearray_partition_impl", "bytearray_rpartition_impl", "bytearray_replace_impl", "bytearray_splitlines_impl",
-      "bytearray_center", "bytearray_ljust", "bytearray_rjust", "bytearray_zfill", "bytearray_expandtabs", "bytearray_strip_impl"]
+    pyFns := ["bytearray_replace_impl", "bytearray_splitlines_impl", "bytearray_center", "bytearray_ljust", "bytearray_rjust", "bytearray_zfill", "bytearray_expandtabs"]
     statement := "The read-only bytearray methods run the bytes code on the contents and leave ob_exports as it was; while they run ob_exports is raised, so any callback that tries to resize gets BufferError."
     source := "comment bytearrayobject.c:120; GH-143195 comment, :2627", status := .proven
     prop := ``ReadWrappers, thm := some ``readWrappers_proven
@@ -440,12 +431,12 @@ def entries : List Entry := [
     source := "Doc/library/stdtypes.rst common sequence operations", status := .proven
     prop := ``SubscriptSpec, thm := some ``subscriptSpec_proven },
   { id := "bytesobj-bytes-hex-groups", pyFile := "Objects/bytesobject.c"
-    pyFns := ["bytes_hex_impl", "bytearray_hex_impl"]
+    pyFns := ["bytes_hex_impl"]
     statement := "hex(sep, n) puts sep between groups of |n| bytes counted from the left for n < 0 and from the right for n > 0, the odd group at the far end, and adds no separator with n = 0 or |n| at least the length."
     source := "docstring, bytesobject.c:2749-2763", status := .proven
     prop := ``HexGroups, thm := some ``hexGroups_proven },
   { id := "bytesobj-bytes-fromhex-spec", pyFile := "Objects/bytesobject.c"
-    pyFns := ["_PyBytes_FromHex", "bytes_fromhex_impl", "bytearray_fromhex_impl"]
+    pyFns := ["_PyBytes_FromHex", "bytes_fromhex_impl"]
     statement := "fromhex of bytes, bytearray or ASCII str follows a position-by-position grammar: skip ASCII whitespace, two digits make a byte, the first offending position is reported, a lone last digit is the odd-count error; a non-ASCII str is refused at its first non-ASCII position."
     source := "docstring, bytesobject.c:2611-2614", status := .proven
     prop := ``FromHexSpec, thm := some ``fromHexSpec_proven },
@@ -486,29 +477,27 @@ def entries : List Entry := [
     prop := ``ContainsKeepsIndexError, thm := some ``containsKeepsIndexError_refuted
     bug := some "bytesobj-bytes-contains-index-error-masked" },
   { id := "bytesobj-bytes-index-raises", pyFile := "Objects/bytes_methods.c"
-    pyFns := ["parse_args_finds_byte", "_Py_bytes_contains", "_getbytevalue", "byte_converter", "formatlong", "bytes_new_impl",
-      "bytearray___init___impl"]
+    pyFns := ["parse_args_finds_byte", "_Py_bytes_contains", "byte_converter", "formatlong", "bytes_new_impl"]
     statement := "An exception from __index__ passes through find, index, count, the item conversions and the conversions of %; bytes(x) and bytearray(x) fall through on TypeError only; %c passes it on as well, and %d and its kin replace a TypeError by the format's message; in loses it."
     source := "the error paths at bytes_methods.c:418-421, :606-612, bytesobject.c:2931-2938, bytearrayobject.c:1058-1063", status := .proven
     prop := ``IndexRaisesRules, thm := some ``indexRaisesRules_proven },
   { id := "bytesobj-bytearray-index-raises", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["bytearray_append_impl", "bytearray_insert_impl", "bytearray_remove_impl", "bytearray_ass_subscript_lock_held",
-      "bytearray_setitem_lock_held"]
+    pyFns := []
     statement := "An exception from the item's __index__ is what append, insert, remove and item assignment raise, before any change to the object."
     source := "error paths of _getbytevalue, bytearrayobject.c:31-34", status := .proven
     prop := ``MutatorsIndexRaises, thm := some ``mutatorsIndexRaises_proven },
   { id := "bytesobj-bytes-iter-raises", pyFile := "Objects/bytesobject.c"
-    pyFns := ["_PyBytes_FromIterator", "PyBytes_FromObject", "PyBytes_Join", "bytearray_extend_impl"]
+    pyFns := ["_PyBytes_FromIterator", "PyBytes_FromObject", "PyBytes_Join"]
     statement := "bytes(it) and extend check items as they come, so a failing iterator's exception comes after good items and a bad item comes before it; join runs the iterator to its end first, so its exception wins over any item; extend writes nothing."
     source := "the loops at bytesobject.c:3080-3108, bytearrayobject.c:2286-2324; PySequence_Fast", status := .proven
     prop := ``IterRaisesRules, thm := some ``iterRaisesRules_proven },
   { id := "bytesobj-bytes-hint-rules", pyFile := "Objects/bytesobject.c"
-    pyFns := ["_PyBytes_FromIterator", "PyBytes_Join", "bytearray_extend_impl"]
+    pyFns := ["_PyBytes_FromIterator", "PyBytes_Join"]
     statement := "__length_hint__ runs before the first item: a TypeError from it is ignored, another exception wins over a bad item, a negative value is ValueError, and a good value does not change the result."
     source := "PyObject_LengthHint, Objects/abstract.c:95-152; bytesobject.c:3068-3070", status := .proven
     prop := ``HintRules, thm := some ``hintRules_proven },
   { id := "bytesobj-bytes-call-raises", pyFile := "Objects/bytesobject.c"
-    pyFns := ["PyBytes_FromObject", "PyBytes_Join", "bytearray_extend_impl", "bytes_new_impl", "format_obj", "bytearray___init___impl"]
+    pyFns := ["PyBytes_FromObject", "PyBytes_Join", "bytes_new_impl", "format_obj"]
     statement := "__iter__ raising: each caller keeps a non-TypeError and turns a TypeError into its own message. __bytes__ raising: bytes(x) and %b pass it on, and bytearray(x) never calls it."
     source := "bytesobject.c:3148-3163, :2798-2802, :561-568; bytearrayobject.c:1131-1138, :2155-2162", status := .proven
     prop := ``CallRaisesRules, thm := some ``callRaisesRules_proven }

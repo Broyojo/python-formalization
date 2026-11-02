@@ -68,7 +68,7 @@ Objects/bytesobject.c	2776	2780	bytes_getnewargs	bytes_getnewargs(PyObject *op, 
 Objects/bytesobject.c	2843	2850	bytes_mod	bytes_mod(PyObject *self, PyObject *arg)	modelled	bytesobj-bytes-format-field,bytesobj-bytes-format-literal	
 Objects/bytesobject.c	2873	2956	bytes_new_impl	bytes_new_impl(PyTypeObject *type, PyObject *x, const char *encoding, const char *errors) /*[clinic end generated code: output=1e0c471be311a425 input=f0a966d19b7262b4]*/	modelled	bytesobj-bytes-call-raises,bytesobj-bytes-index-raises,bytesobj-bytes-new	
 Objects/bytesobject.c	2959	2982	_PyBytes_FromBuffer	_PyBytes_FromBuffer(PyObject *x)	modelled	bytesobj-bytes-new	
-Objects/bytesobject.c	2985	3027	_PyBytes_FromList	_PyBytes_FromList(PyObject *x)	modelled	bytesobj-bytes-new	
+Objects/bytesobject.c	2985	3027	_PyBytes_FromList	_PyBytes_FromList(PyObject *x)	todo		changed-in-3.15: held: __index__ of an item can mutate the list, and the loop rereads PyList_GET_SIZE and the item at each step; bytesFromItems walks a fixed list
 Objects/bytesobject.c	3030	3060	_PyBytes_FromTuple	_PyBytes_FromTuple(PyObject *x)	modelled	bytesobj-bytes-new	
 Objects/bytesobject.c	3063	3122	_PyBytes_FromIterator	_PyBytes_FromIterator(PyObject *it, PyObject *x)	modelled	bytesobj-bytes-hint-rules,bytesobj-bytes-iter-raises,bytesobj-bytes-new	
 Objects/bytesobject.c	3125	3164	PyBytes_FromObject	PyBytes_FromObject(PyObject *x)	modelled	bytesobj-bytes-call-raises,bytesobj-bytes-iter-raises,bytesobj-bytes-new	

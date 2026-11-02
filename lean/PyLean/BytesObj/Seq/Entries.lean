@@ -196,11 +196,11 @@ def entries : List Entry := [
     statement := "The stack test of tuple_hash comes after the cache and leaves it alone; past it tuple_hash is the xxHash loop."
     source := "tupleobject.c:372-393", status := .proven
     prop := ``TupleHashGuard, thm := some ``tupleHashGuard_proven },
-  { id := "bytesobj-list-binary-slice", pyFile := "Objects/listobject.c", pyFns := ["_PyList_BinarySlice"]
+  { id := "bytesobj-list-binary-slice", pyFile := "Objects/listobject.c", pyFns := []
     statement := "l[a:b] under BINARY_SLICE gives what l[slice(a, b)] gives, for every pair of indices of any size."
     source := "twin: list_subscript", status := .proven
     prop := ``ListBinarySlice, thm := some ``listBinarySlice_proven },
-  { id := "bytesobj-tuple-binary-slice", pyFile := "Objects/tupleobject.c", pyFns := ["_PyTuple_BinarySlice"]
+  { id := "bytesobj-tuple-binary-slice", pyFile := "Objects/tupleobject.c", pyFns := []
     statement := "t[a:b] under BINARY_SLICE has the items of t[slice(a, b)], for an exact tuple and every pair of indices of any size."
     source := "twin: tuple_subscript", status := .proven
     prop := ``TupleBinarySlice, thm := some ``tupleBinarySlice_proven },

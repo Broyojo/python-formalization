@@ -21,7 +21,7 @@ Objects/tupleobject.c	446	469	PyTuple_FromArray	PyTuple_FromArray(PyObject *cons
 Objects/tupleobject.c	472	494	_PyTuple_FromStackRefStealOnSuccess	_PyTuple_FromStackRefStealOnSuccess(const _PyStackRef *src, Py_ssize_t n)	modelled	bytesobj-tuple-construct	
 Objects/tupleobject.c	497	516	_PyTuple_FromArraySteal	_PyTuple_FromArraySteal(PyObject *const *src, Py_ssize_t n)	modelled	bytesobj-tuple-construct	
 Objects/tupleobject.c	519	532	tuple_slice	tuple_slice(PyTupleObject *a, Py_ssize_t ilow, Py_ssize_t ihigh)	modelled	bytesobj-tuple-construct	
-Objects/tupleobject.c	535	551	_PyTuple_BinarySlice	_PyTuple_BinarySlice(PyObject *container, PyObject *start, PyObject *stop)	modelled	bytesobj-tuple-binary-slice	
+Objects/tupleobject.c	535	551	_PyTuple_BinarySlice	_PyTuple_BinarySlice(PyObject *container, PyObject *start, PyObject *stop)	todo		changed-in-3.15: held: models int and None indices only: _PyEval_UnpackIndices also takes __index__ objects, which can raise and refuse a non-index
 Objects/tupleobject.c	554	561	PyTuple_GetSlice	PyTuple_GetSlice(PyObject *op, Py_ssize_t i, Py_ssize_t j)	modelled	bytesobj-capi-construct	
 Objects/tupleobject.c	564	608	_PyTuple_Concat	_PyTuple_Concat(PyObject *aa, PyObject *bb)	modelled	bytesobj-tuple-concat	
 Objects/tupleobject.c	611	657	tuple_repeat	tuple_repeat(PyObject *self, Py_ssize_t n)	modelled	bytesobj-repeat	
