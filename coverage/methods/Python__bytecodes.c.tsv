@@ -364,11 +364,11 @@ Python/bytecodes.c	4018	4018	opcode:_ITER_JUMP_TUPLE	replaced op(_ITER_JUMP_TUPL
 Python/bytecodes.c	4032	4032	opcode:_GUARD_NOT_EXHAUSTED_TUPLE	op(_GUARD_NOT_EXHAUSTED_TUPLE, (iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15:
 Python/bytecodes.c	4038	4038	opcode:_ITER_NEXT_TUPLE	op(_ITER_NEXT_TUPLE, (iter, null_or_index -- iter, null_or_index, next)) {	modelled	bytecode-for-iter-seq	
 Python/bytecodes.c	4047	4047	opcode:FOR_ITER_TUPLE	macro(FOR_ITER_TUPLE) =	modelled	bytecode-for-iter-seq	
-Python/bytecodes.c	4053	4053	opcode:_ITER_CHECK_RANGE	op(_ITER_CHECK_RANGE, (iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15:
-Python/bytecodes.c	4061	4061	opcode:_ITER_JUMP_RANGE	replaced op(_ITER_JUMP_RANGE, (iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15:
+Python/bytecodes.c	4053	4053	opcode:_ITER_CHECK_RANGE	op(_ITER_CHECK_RANGE, (iter, null_or_index -- iter, null_or_index)) {	modelled	bytecode-for-iter-range	
+Python/bytecodes.c	4061	4061	opcode:_ITER_JUMP_RANGE	replaced op(_ITER_JUMP_RANGE, (iter, null_or_index -- iter, null_or_index)) {	modelled	bytecode-for-iter-range	
 Python/bytecodes.c	4076	4076	opcode:_GUARD_NOT_EXHAUSTED_RANGE	op(_GUARD_NOT_EXHAUSTED_RANGE, (iter, null_or_index -- iter, null_or_index)) {	todo		changed-in-3.15:
-Python/bytecodes.c	4082	4082	opcode:_ITER_NEXT_RANGE	op(_ITER_NEXT_RANGE, (iter, null_or_index -- iter, null_or_index, next)) {	todo		changed-in-3.15:
-Python/bytecodes.c	4097	4097	opcode:FOR_ITER_RANGE	macro(FOR_ITER_RANGE) =	todo		
+Python/bytecodes.c	4082	4082	opcode:_ITER_NEXT_RANGE	op(_ITER_NEXT_RANGE, (iter, null_or_index -- iter, null_or_index, next)) {	modelled	bytecode-for-iter-range	
+Python/bytecodes.c	4097	4097	opcode:FOR_ITER_RANGE	macro(FOR_ITER_RANGE) =	modelled	bytecode-for-iter-range	
 Python/bytecodes.c	4103	4103	opcode:_FOR_ITER_GEN_FRAME	op(_FOR_ITER_GEN_FRAME, (iter, null -- iter, null, gen_frame)) {	todo		changed-in-3.15:
 Python/bytecodes.c	4118	4118	opcode:FOR_ITER_GEN	macro(FOR_ITER_GEN) =	todo		changed-in-3.15:
 Python/bytecodes.c	4125	4125	opcode:_INSERT_NULL	op(_INSERT_NULL, (self -- method_and_self[2])) {	todo		
