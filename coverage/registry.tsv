@@ -17,6 +17,7 @@ ipaddress-iface-unspecified	proven	Lib/ipaddress.py	IPv4Interface.is_unspecified
 ipaddress-v4-text-roundtrip	proven	Lib/ipaddress.py	IPv4Address.__init__,_BaseV4._ip_int_from_string,_BaseV4._parse_octet,_BaseV4._string_from_ip_int,_BaseAddress.__str__
 ipaddress-v4-text-canonical	proven	Lib/ipaddress.py	IPv4Address.__init__,_BaseV4._ip_int_from_string,_BaseV4._parse_octet,_BaseV4._string_from_ip_int,_BaseAddress.__str__
 ipaddress-v4-init-int-bytes	proven	Lib/ipaddress.py	IPv4Address.__init__,_IPAddressBase._check_int_address,_IPAddressBase._check_packed_address
+ipaddress-hosts-doc	proven	Lib/ipaddress.py	_BaseNetwork.hosts,IPv6Network.hosts,_BaseNetwork.__iter__,_BaseNetwork.num_addresses,_BaseNetwork.broadcast_address
 datetime-ordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ymd2ord,_ord2ymd,_is_leap,_days_before_year,_days_in_month,_days_before_month,_check_date_fields,C datetime_date_fromordinal_impl,C date_toordinal,C ord_to_ymd,C ymd_to_ord,C is_leap,C days_in_month,C days_before_month,C days_before_year,C check_date_args
 datetime-toordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ord2ymd,_ymd2ord,C ord_to_ymd,C ymd_to_ord
 datetime-date-add-timedelta	proven	Lib/_pydatetime.py	date.__add__,_ymd2ord,_ord2ymd,_check_date_fields,C add_date_timedelta,C date_add,C normalize_y_m_d,C normalize_date,C ord_to_ymd,C ymd_to_ord

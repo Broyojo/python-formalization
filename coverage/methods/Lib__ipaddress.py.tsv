@@ -36,20 +36,20 @@ Lib/ipaddress.py	610	611	_BaseAddress.__reduce__	__reduce__(self)	todo
 Lib/ipaddress.py	613	660	_BaseAddress.__format__	__format__(self, fmt)	todo		candidates:coll-userstring-format-spec
 Lib/ipaddress.py	671	672	_BaseNetwork.__repr__	__repr__(self)	todo		
 Lib/ipaddress.py	674	675	_BaseNetwork.__str__	__str__(self)	todo		
-Lib/ipaddress.py	677	687	_BaseNetwork.hosts	hosts(self)	todo		
-Lib/ipaddress.py	689	693	_BaseNetwork.__iter__	__iter__(self)	todo		
+Lib/ipaddress.py	677	687	_BaseNetwork.hosts	hosts(self)	modelled	ipaddress-hosts-doc	
+Lib/ipaddress.py	689	693	_BaseNetwork.__iter__	__iter__(self)	modelled	ipaddress-hosts-doc	
 Lib/ipaddress.py	695	706	_BaseNetwork.__getitem__	__getitem__(self, n)	modelled	ipaddress-getitem-sequence	
 Lib/ipaddress.py	708	718	_BaseNetwork.__lt__	__lt__(self, other)	todo		
 Lib/ipaddress.py	720	726	_BaseNetwork.__eq__	__eq__(self, other)	todo		
 Lib/ipaddress.py	728	729	_BaseNetwork.__hash__	__hash__(self)	todo		
 Lib/ipaddress.py	731	741	_BaseNetwork.__contains__	__contains__(self, other)	modelled	ipaddress-contains-mem	
 Lib/ipaddress.py	743	748	_BaseNetwork.overlaps	overlaps(self, other)	modelled	ipaddress-overlaps-share	
-Lib/ipaddress.py	751	753	_BaseNetwork.broadcast_address	broadcast_address(self)	todo		
+Lib/ipaddress.py	751	753	_BaseNetwork.broadcast_address	broadcast_address(self)	modelled	ipaddress-hosts-doc	
 Lib/ipaddress.py	756	757	_BaseNetwork.hostmask	hostmask(self)	todo		
 Lib/ipaddress.py	760	761	_BaseNetwork.with_prefixlen	with_prefixlen(self)	todo		
 Lib/ipaddress.py	764	765	_BaseNetwork.with_netmask	with_netmask(self)	todo		
 Lib/ipaddress.py	768	769	_BaseNetwork.with_hostmask	with_hostmask(self)	todo		
-Lib/ipaddress.py	772	774	_BaseNetwork.num_addresses	num_addresses(self)	todo		
+Lib/ipaddress.py	772	774	_BaseNetwork.num_addresses	num_addresses(self)	modelled	ipaddress-hosts-doc	
 Lib/ipaddress.py	777	782	_BaseNetwork._address_class	_address_class(self)	todo		
 Lib/ipaddress.py	785	786	_BaseNetwork.prefixlen	prefixlen(self)	todo		
 Lib/ipaddress.py	788	861	_BaseNetwork.address_exclude	address_exclude(self, other)	modelled	ipaddress-address-exclude-partition	
@@ -138,6 +138,6 @@ Lib/ipaddress.py	2269	2271	IPv6Interface.with_hostmask	with_hostmask(self)	todo
 Lib/ipaddress.py	2274	2275	IPv6Interface.is_unspecified	is_unspecified(self)	modelled	ipaddress-iface-unspecified	
 Lib/ipaddress.py	2278	2279	IPv6Interface.is_loopback	is_loopback(self)	todo		
 Lib/ipaddress.py	2298	2344	IPv6Network.__init__	__init__(self, address, strict=True)	todo		
-Lib/ipaddress.py	2346	2356	IPv6Network.hosts	hosts(self)	todo		
+Lib/ipaddress.py	2346	2356	IPv6Network.hosts	hosts(self)	modelled	ipaddress-hosts-doc	
 Lib/ipaddress.py	2359	2371	IPv6Network.is_site_local	is_site_local(self)	todo		
 Lib/ipaddress.py	2425	2431	__getattr__	__getattr__(name)	todo		changed-in-3.15: new function. Ipaddress.moduleGetattr mirrors it and the difftest runs it, but it returns a constant, so a theorem would be rfl on a constant. Candidate for `deprecated:`
