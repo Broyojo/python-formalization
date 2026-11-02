@@ -1,7 +1,7 @@
 import PyLean.CoreLibs.Misc.Contextlib.Exc
 
 /-!
-`Lib/contextlib.py`, CPython 3.14.7.
+`Lib/contextlib.py`, CPython 3.15.2.
 
 A generator is whatever implements `GenOps`, a state machine over `St σ`: `next`, `throw` and
 `close` return the value yielded or the exception object raised. `_GeneratorContextManager` and its

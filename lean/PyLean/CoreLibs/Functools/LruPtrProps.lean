@@ -118,6 +118,36 @@ theorem lruRingCloses_refuted : ¬LruRingCloses := by
   revert this
   decide +kernel
 
+/-- The reproducer of `corelibs-lru-currsize-exceeds-maxsize`: size 2, keys `1` and `2` have equal hashes, and the third
+comparison, which is the store of key `2`, calls the wrapper with key `3`. -/
+def overCfg : PCfg Nat Int :=
+  ⟨2, fun k _ => .ret (k : Int), fun k => if k = 3 then 11802529618835948721 else 9693246245718318424,
+    .call 3 (fun _ => .ret 0), -1⟩
+
+/-- The dict never holds more than `maxsize` keys, for any calls and any `__eq__`, in either twin. Refuted: `[1, 2]`. Both twins
+find room before the store, Lib/functools.py:707-714 and Modules/_functoolsmodule.c, and do not look again, so the entry of
+the nested call and the outer one are both stored: three entries in a cache of two. Each later miss evicts one and adds
+one, so the third entry stays, which `[1, 2, 4, 5, 6]` shows for both. `LruBounded` holds with no comparison in the store. -/
+def LruNeverExceedsMaxsize : Prop :=
+  ∀ (cfg : PCfg Nat Int) (ks : List Nat) (t : Option Nat), 0 < cfg.maxsize →
+    (ptrSeq (callPtrC cfg 40) ks (LS.empty t)).2.size ≤ cfg.maxsize ∧
+    (ptrSeq (callPtrP cfg 40) ks (LS.empty t)).2.size ≤ cfg.maxsize
+
+theorem lruNeverExceedsMaxsize_refuted : ¬LruNeverExceedsMaxsize := by
+  intro h
+  have := h overCfg [1, 2] (some 3) (by decide)
+  revert this
+  decide +kernel
+
+/-- The excess stays, in both twins: after three more misses the cache of two still holds three keys. -/
+def LruExcessStays : Prop :=
+  (ptrSeq (callPtrC overCfg 40) [1, 2, 4, 5, 6] (LS.empty (some 3))).2.size = 3 ∧
+  (ptrSeq (callPtrP overCfg 40) [1, 2, 4, 5, 6] (LS.empty (some 3))).2.size = 3
+
+theorem lruExcessStays_proven : LruExcessStays := by
+  unfold LruExcessStays
+  decide +kernel
+
 section General
 variable {K V : Type} [DecidableEq K] [Inhabited V]
 

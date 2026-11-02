@@ -29,6 +29,7 @@ expected: |
 observed: |
   python3 3.14.7: [1, 1, 1], then ValueError. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   statistics.py:1224 raises for an unknown method; Doc/library/statistics.rst lists the two methods.
 cause: |

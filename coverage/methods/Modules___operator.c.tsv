@@ -65,7 +65,7 @@ Modules/_operator.c	1109	1118	itemgetter_call	itemgetter_call(PyObject *op, PyOb
 Modules/_operator.c	1121	1133	itemgetter_vectorcall	itemgetter_vectorcall(PyObject *op, PyObject *const *args, size_t nargsf, PyObject *kwnames)	modelled	corelibs-operator-getter-arity-exact,corelibs-operator-itemgetter-exact	
 Modules/_operator.c	1136	1169	itemgetter_call_impl	itemgetter_call_impl(itemgetterobject *ig, PyObject *obj)	modelled	corelibs-operator-itemgetter-exact	
 Modules/_operator.c	1172	1189	itemgetter_repr	itemgetter_repr(PyObject *op)	modelled	corelibs-operator-getter-repr-exact	
-Modules/_operator.c	1192	1198	itemgetter_reduce	itemgetter_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		changed-in-3.15:
+Modules/_operator.c	1192	1198	itemgetter_reduce	itemgetter_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
 Modules/_operator.c	1262	1367	attrgetter_new	attrgetter_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	corelibs-operator-getter-arity-exact,corelibs-operator-attr-name-exact,corelibs-operator-attr-call-exact	
 Modules/_operator.c	1370	1375	attrgetter_clear	attrgetter_clear(PyObject *op)	excluded		no-behaviour: GC clear of owned references
 Modules/_operator.c	1378	1385	attrgetter_dealloc	attrgetter_dealloc(PyObject *op)	excluded		no-behaviour: deallocation
@@ -81,7 +81,7 @@ Modules/_operator.c	1558	1565	attrgetter_reduce	attrgetter_reduce(PyObject *op, 
 Modules/_operator.c	1628	1646	methodcaller_vectorcall	methodcaller_vectorcall(PyObject *op, PyObject *const *args, size_t nargsf, PyObject* kwnames)	modelled	corelibs-operator-methodcaller-exact	
 Modules/_operator.c	1649	1686	_methodcaller_initialize_vectorcall	_methodcaller_initialize_vectorcall(methodcallerobject* mc)	modelled	corelibs-operator-methodcaller-exact	
 Modules/_operator.c	1690	1741	methodcaller_new	methodcaller_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	corelibs-operator-methodcaller-exact	
-Modules/_operator.c	1744	1753	methodcaller_clear	methodcaller_clear(PyObject *op)	todo		changed-in-3.15: was excluded: no-behaviour: GC clear of owned references
+Modules/_operator.c	1744	1753	methodcaller_clear	methodcaller_clear(PyObject *op)	excluded		no-behaviour: GC clear of owned references
 Modules/_operator.c	1756	1763	methodcaller_dealloc	methodcaller_dealloc(PyObject *op)	excluded		no-behaviour: deallocation
 Modules/_operator.c	1766	1776	methodcaller_traverse	methodcaller_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
 Modules/_operator.c	1779	1796	methodcaller_call	methodcaller_call(PyObject *op, PyObject *args, PyObject *kw)	modelled	corelibs-operator-getter-arity-exact,corelibs-operator-methodcaller-exact	

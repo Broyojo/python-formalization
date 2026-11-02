@@ -1,7 +1,7 @@
 import PyLean.Core
 
 /-!
-`Lib/numbers.py`, CPython 3.14.7.
+`Lib/numbers.py`, CPython 3.15.2.
 
 The classes are abstract: each method is either a stub or a mixin over primitives that a concrete
 subclass supplies. A stub is one line here, under the class and method name of the source, raising

@@ -37,6 +37,7 @@ expected: |
 observed: |
   python3 3.14.7: AttributeError, {'A': 'B'}. REPRODUCED.
   main (3.16.0a1+dev): same, REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Doc/library/enum.rst, EnumDict: "It is exposed to allow subclasses of EnumType with advanced behavior". update
   overrides the MutableMapping method, and no mapping should be read as an iterable of pairs.

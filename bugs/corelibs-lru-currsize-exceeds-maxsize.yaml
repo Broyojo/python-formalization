@@ -1,0 +1,68 @@
+id: corelibs-lru-currsize-exceeds-maxsize
+title: "lru_cache holds maxsize + 1 entries for good after a key's __eq__ re-enters the cache during the store"
+priority: P4
+kind: invariant
+module: corelibs
+files: [Lib/functools.py, Modules/_functoolsmodule.c]
+functions: ["_lru_cache_wrapper", "bounded_lru_cache_update_lock_held"]
+summary: |
+  Both twins decide whether the cache is full before the store and do not look again. The store compares a colliding key,
+  so a key's __eq__ can run a nested call of the cached function there. That call sees a cache with room and adds its own
+  entry. The outer store then adds a second one, and the cache holds maxsize + 1 entries. From then on each miss evicts one
+  entry and adds one, so currsize stays above maxsize for the life of the cache.
+likelihood: |
+  Very low: it needs two keys with one hash, whose __eq__ calls the cached function, in a cache one short of full. Each such
+  event adds one entry, so the excess is bounded by how often it happens, and nothing crashes.
+maybe_intended: |
+  Probably tolerated. Nothing goes wrong beyond the size, and a maintainer may well say that a re-entrant __eq__ gets what it
+  gets. It is on record because cache_info() reports a state the documentation rules out, and it was found by the
+  difftest of the pointer-level model.
+reproducer: |
+  import functools
+  box = {'n': 0, 'hook': None}
+  class K:
+      def __init__(self, v, h):
+          self.v, self.h = v, h
+      def __hash__(self):
+          return self.h
+      def __eq__(self, o):
+          box['n'] += 1
+          if box['n'] == 3 and box['hook']:
+              hook, box['hook'] = box['hook'], None
+              hook()
+          return self is o
+  f = functools.lru_cache(maxsize=2)(lambda k: k.v)
+  a, b, c = K(1, 0), K(2, 0), K(3, 1)
+  f(a)
+  box['hook'] = lambda: f(c)
+  box['n'] = 0
+  f(b)                       # lookup, lookup after the call, store: the third comparison is the store
+  sizes = [f.cache_info().currsize]
+  for i in range(10, 15):
+      f(K(i, i))
+      sizes.append(f.cache_info().currsize)
+  print(sizes, f.cache_info())
+  if sizes[0] > 2 and sizes[-1] > 2:
+      print('REPRODUCED corelibs-lru-currsize-exceeds-maxsize')
+expected: |
+  currsize is at most maxsize.
+observed: |
+  python3 3.15.2: [3, 3, 3, 3, 3, 3], in both twins. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Doc/library/functools.rst:152, "the maxsize most recent calls", and :179-180, "If maxsize is set to None, the LRU feature is
+  disabled and the cache can grow without bound", so that with a number it cannot. The model property LruBounded holds when no
+  comparison runs Python code.
+cause: |
+  Modules/_functoolsmodule.c:1479, bounded_lru_cache_update_lock_held: the test of PyDict_GET_SIZE against maxsize comes before
+  _PyDict_SetItem_KnownHash, which can run Python code. Lib/functools.py:707-714 has the same order, with `full` computed
+  after the store, but from the size that the nested call already raised.
+possible_fix: |
+  After the store, evict until the size is back at maxsize, or accept it and say so in the comment at
+  Modules/_functoolsmodule.c:1494-1498, which already lists what a re-entrant store can do to the links.
+duplicates:
+  issues: []
+  related: []
+  queries: ["gh search issues --repo python/cpython lru_cache maxsize exceeded currsize", "gh search issues --repo python/cpython lru_cache reentrant __eq__ cache size", "gh search issues --repo python/cpython lru_cache grows beyond maxsize", "bugforge README: no match for lru_cache or functools"]
+lean:
+  property: PyLean.CoreLibs.Functools.LruNeverExceedsMaxsize
+  theorem: PyLean.CoreLibs.Functools.lruNeverExceedsMaxsize_refuted

@@ -10,7 +10,7 @@ import PyLean.CoreLibs.Misc.Contextlib.Props
 import PyLean.CoreLibs.Misc.Contextlib.StackProps
 import PyLean.CoreLibs.Misc.Weakref.Props2
 
-/-! Registry for the `Misc` area of CoreLibs: Lib/contextlib.py, Lib/numbers.py, Lib/keyword.py, Lib/types.py, Lib/weakref.py, Lib/graphlib.py, Lib/sched.py, Lib/queue.py, CPython 3.14.7. -/
+/-! Registry for the `Misc` area of CoreLibs: Lib/contextlib.py, Lib/numbers.py, Lib/keyword.py, Lib/types.py, Lib/weakref.py, Lib/graphlib.py, Lib/sched.py, Lib/queue.py, CPython 3.15.2. -/
 
 namespace PyLean.CoreLibs.Misc
 
@@ -305,6 +305,11 @@ def typesEntries : List Entry := [
     statement := "For every wrapped object and operation sequence, results through _GeneratorWrapper are those of the object; __iter__ returns the generator exactly when it is a native one."
     source := "invariant"
     status := .proven, prop := ``Types.WrapperTransparent, thm := some ``Types.wrapperTransparent_proven },
+  { id := "misc-types-generator-states", pyFile := "Lib/types.py"
+    pyFns := ["_GeneratorWrapper.gi_state", "_GeneratorWrapper.cr_state"]
+    statement := "gi_state is the state of the wrapped object and cr_state the same state in a coroutine's names, and a read that raises raises through both."
+    source := "Lib/types.py:286-291"
+    status := .proven, prop := ``Types.WrapperStates, thm := some ``Types.wrapperStates_proven },
   { id := "misc-types-coroutine", pyFile := "Lib/types.py"
     pyFns := ["coroutine"]
     statement := "coroutine rejects non-callables, returns coroutine functions as they are, adds CO_ITERABLE_COROUTINE to generator functions, and wraps the rest."
@@ -331,9 +336,8 @@ def contextlibEntries : List Entry := [
     source := "Lib/_collections_abc.py:108-118"
     status := .proven, prop := ``Contextlib.SubclassHookNone, thm := some ``Contextlib.subclassHookNone_proven },
   { id := "misc-ctx-decorator", pyFile := "Lib/contextlib.py"
-    pyFns := ["ContextDecorator._recreate_cm", "ContextDecorator.__call__",
-              "AsyncContextDecorator._recreate_cm", "AsyncContextDecorator.__call__"]
-    statement := "_recreate_cm returns self and the decorated function is its body inside with self._recreate_cm(); a failing recreation does not run the function."
+    pyFns := ["ContextDecorator._recreate_cm", "AsyncContextDecorator._recreate_cm"]
+    statement := "_recreate_cm returns self and a decorated plain function is its body inside with self._recreate_cm(); a failing recreation does not run the function."
     source := "docstring of ContextDecorator"
     status := .proven, prop := ``Contextlib.DecoratorIsWith, thm := some ``Contextlib.decoratorIsWith_proven },
   { id := "misc-ctx-recreate", pyFile := "Lib/contextlib.py"

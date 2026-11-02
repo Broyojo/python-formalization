@@ -1,7 +1,7 @@
 import PyLean.Core
 
 /-!
-Model of `Modules/_randommodule.c` (CPython 3.14.7): the Mersenne Twister core.
+Model of `Modules/_randommodule.c` (CPython 3.15.2): the Mersenne Twister core.
 
 * `uint32_t` is Lean's `UInt32`, so `*`, `+`, `<<`, `-` wrap exactly as in C.
 * `uint32_t state[N]` is an `Array UInt32`; `rd`/`wr` are C's `mt[i]` read and

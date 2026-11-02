@@ -1,7 +1,7 @@
 import PyLean.CoreLibs.Coll.ChainMap
 
 /-!
-`collections.UserDict`, Lib/collections/__init__.py:1175-1278 (CPython 3.14.7), with
+`collections.UserDict`, Lib/collections/__init__.py:1175-1278 (CPython 3.15.2), with
 the methods it inherits from `MutableMapping`, Lib/_collections_abc.py:930-992. Those
 are copied here because `UserDict` differs from `dict` through them.
 
@@ -70,22 +70,23 @@ def udGet (rk : κ → String) (miss : Option (κ → ν)) (u : UD κ ν) (k : �
 /-- `UserDict.__repr__`, :1185-1186. -/
 def udRepr (rk : κ → String) (rv : ν → String) (u : UD κ ν) : String := reprD rk rv u.data
 
-/-- The right operand of `|`: a `UserDict`, a `dict`, or anything else. -/
+/-- The right operand of `|`: a `UserDict`, a `dict`, a `frozendict`, or anything else. -/
 inductive UOpnd (κ ν : Type) where
   | user (d : D κ ν)
   | dict (d : D κ ν)
+  | frozen (d : D κ ν)
   | other
   deriving Repr, DecidableEq
 
 /-- `UserDict.__or__`, :1188-1193; `none` is `NotImplemented`. `self.__class__(d)`
 copies `d` through `__init__`. -/
 def udOr (u : UD κ ν) : UOpnd κ ν → Option (UD κ ν)
-  | .user d | .dict d => some (udNew u.cls (some (D.or_ u.data d)) [])
+  | .user d | .dict d | .frozen d => some (udNew u.cls (some (D.or_ u.data d)) [])
   | .other => none
 
 /-- `UserDict.__ror__`, :1195-1200. -/
 def udRor (u : UD κ ν) : UOpnd κ ν → Option (UD κ ν)
-  | .user d | .dict d => some (udNew u.cls (some (D.or_ d u.data)) [])
+  | .user d | .dict d | .frozen d => some (udNew u.cls (some (D.or_ d u.data)) [])
   | .other => none
 
 /-- `UserDict.__ior__`, :1202-1207, on the pairs of `other`. -/

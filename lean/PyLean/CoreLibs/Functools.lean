@@ -6,7 +6,7 @@ import PyLean.CoreLibs.Functools.CompareProps
 import PyLean.CoreLibs.Functools.WrapProps
 import PyLean.CoreLibs.Functools.LruPtrProps
 
-/-! Registry for the `Functools` area of CoreLibs: Lib/functools.py, Modules/_functoolsmodule.c, CPython 3.14.7. -/
+/-! Registry for the `Functools` area of CoreLibs: Lib/functools.py, Modules/_functoolsmodule.c, CPython 3.15.2. -/
 
 namespace PyLean.CoreLibs.Functools
 
@@ -697,11 +697,36 @@ def entries : List Entry := [
   { id := "corelibs-functools-lru-bounded"
     pyFile := file
     pyFns := ["bounded_lru_cache_update_lock_held", "lru_cache_new"]
-    statement := "The cache never exceeds maxsize and holds each key once, under re-entrant user functions, a clear in a call, and failing lookups."
+    statement := "With no Python code in the dict's comparisons, the cache never exceeds maxsize and holds each key once, under re-entrant user functions, a clear in a call, and failing lookups."
     source := "lru_cache docs"
     status := .proven
     prop := ``LruBounded
     thm := some ``lruBounded_proven },
+  { id := "corelibs-functools-cache-builds"
+    pyFile := "Lib/functools.py"
+    pyFns := ["cache"]
+    statement := "cache refuses what is not callable, before update_wrapper; on a callable it is the unbounded wrapper with cache_parameters maxsize=None, typed=False, as update_wrapper leaves it, and a failure of update_wrapper comes out, in both twins."
+    source := "Lib/functools.py:747-749"
+    status := .proven
+    prop := ``CacheBuilds
+    thm := some ``cacheBuilds_proven },
+  { id := "corelibs-lru-never-exceeds-maxsize"
+    pyFile := "Lib/functools.py"
+    pyFns := ["_lru_cache_wrapper", "bounded_lru_cache_update_lock_held"]
+    statement := "The dict of the bounded wrapper never holds more than maxsize keys, for any calls and any __eq__, in either twin."
+    source := "lru_cache docs"
+    status := .refuted
+    prop := ``LruNeverExceedsMaxsize
+    thm := some ``lruNeverExceedsMaxsize_refuted
+    bug := some "corelibs-lru-currsize-exceeds-maxsize" },
+  { id := "corelibs-lru-excess-stays"
+    pyFile := "Lib/functools.py"
+    pyFns := ["_lru_cache_wrapper", "bounded_lru_cache_update_lock_held"]
+    statement := "An entry above maxsize stays: each later miss evicts one and adds one, in both twins."
+    source := "Lib/functools.py:685-705"
+    status := .proven
+    prop := ``LruExcessStays
+    thm := some ``lruExcessStays_proven },
   { id := "corelibs-functools-lru-recheck"
     pyFile := file
     pyFns := ["_lru_cache_wrapper.wrapper", "bounded_lru_cache_update_lock_held"]
@@ -744,7 +769,7 @@ def entries : List Entry := [
     thm := some ``lruModeTwins_proven },
   { id := "corelibs-functools-lru-decorates"
     pyFile := file
-    pyFns := ["lru_cache", "lru_cache.decorating_function", "cache"]
+    pyFns := ["lru_cache", "lru_cache.decorating_function"]
     statement := "cache is the unbounded wrapper with cache_parameters maxsize None and typed False; a negative maxsize is 0; the bare form takes 128; typed is kept; a failure of update_wrapper comes out."
     source := "lru_cache docs"
     status := .proven
@@ -988,7 +1013,7 @@ def entries : List Entry := [
     thm := some ``sdmCallBinds_proven },
   { id := "corelibs-functools-sdm-register"
     pyFile := file
-    pyFns := ["singledispatchmethod.register", "_singledispatchmethod_get.register"]
+    pyFns := ["singledispatchmethod.register"]
     statement := "register, on the descriptor or on the bound object, then a call runs that implementation."
     source := "singledispatchmethod docs"
     status := .proven

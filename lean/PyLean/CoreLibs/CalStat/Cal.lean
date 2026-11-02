@@ -1,7 +1,7 @@
 import PyLean.CoreLibs.CalStat.Text
 
 /-!
-Mirror of `Lib/calendar.py` (CPython 3.14.7), first part: the module functions and
+Mirror of `Lib/calendar.py` (CPython 3.15.2), first part: the module functions and
 the iterator methods of `Calendar`.
 
 Generators are modelled by the list `list(gen)` produces, so a generator that

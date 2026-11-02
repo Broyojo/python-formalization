@@ -489,6 +489,26 @@ theorem wrapperTransparent_proven : WrapperTransparent := by
   intro G V o g isgen n q ops
   exact ⟨wrapper_sim o ops _, rfl⟩
 
+/-- The two state reads of `_GeneratorWrapper`, new in 3.15: `gi_state` is the state of the wrapped object and `cr_state` the
+same one in the names of a coroutine, for every state a generator has; a read that raises raises through both. -/
+def WrapperStates : Prop :=
+  ∀ (G V : Type) (o : GenObj G V) (g : G) (isgen : Bool) (n q : Option String) (e : PyExc) (s c : String),
+    (Wrapper.init g isgen n q).giState o = o.giState g ∧
+    (o.giState g = .ok s → (s, c) ∈ [("GEN_CREATED", "CORO_CREATED"), ("GEN_RUNNING", "CORO_RUNNING"),
+      ("GEN_SUSPENDED", "CORO_SUSPENDED"), ("GEN_CLOSED", "CORO_CLOSED")] →
+      (Wrapper.init g isgen n q).crState o = .ok c) ∧
+    (o.giState g = .error e → (Wrapper.init g isgen n q).crState o = .error e)
+
+theorem wrapperStates_proven : WrapperStates := by
+  intro G V o g isgen n q e s c
+  refine ⟨rfl, ?_, ?_⟩
+  · intro h hm
+    simp only [Wrapper.crState, Wrapper.init, h]
+    simp only [List.mem_cons, List.not_mem_nil, or_false, Prod.mk.injEq] at hm
+    rcases hm with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> decide
+  · intro h
+    simp [Wrapper.crState, Wrapper.init, h]
+
 /-! ### `coroutine` -/
 
 /-- `coroutine` on its input: a non-callable is the `TypeError`; a plain function that already is a

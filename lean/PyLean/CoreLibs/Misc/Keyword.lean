@@ -1,7 +1,7 @@
 import PyLean.CoreLibs.Misc.Common
 
 /-!
-`Lib/keyword.py`, CPython 3.14.7. `iskeyword` and `issoftkeyword` are the `__contains__` of a
+`Lib/keyword.py`, CPython 3.15.2. `iskeyword` and `issoftkeyword` are the `__contains__` of a
 frozenset of a literal list (Lib/keyword.py:63-64).
 -/
 

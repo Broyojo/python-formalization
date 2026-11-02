@@ -1241,17 +1241,20 @@ def PlaceholderSingleton : Prop :=
     (placeholderNewPy (placeholderNewPy s).2).2 = (placeholderNewPy s).2 ∧
     placeholderNewC 0 s = .ok (placeholderNewPy s) ∧
     (n ≠ 0 → (placeholderNewC n s).raises "TypeError") ∧
-    (placeholderSubclassPy name).className = "TypeError" ∧
-    placeholderSubclassC.className = "TypeError"
+    placeholderSubclassPy name = .typeError ("type '" ++ name ++ "' is not an acceptable base type") ∧
+    placeholderSubclassC = .typeError "type 'functools._PlaceholderType' is not an acceptable base type" ∧
+    placeholderSubclassPy "Sub" ≠ placeholderSubclassC
 
 theorem placeholderSingleton_proven : PlaceholderSingleton := by
   intro s n name
-  refine ⟨?_, ?_, ?_, ?_, rfl, rfl⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, rfl, by decide⟩
   · cases h : s.inst <;> simp [placeholderNewPy, h]
   · cases h : s.inst <;> simp [placeholderNewPy, h]
   · cases h : s.inst <;> simp [placeholderNewC, placeholderNewPy, h]
   · intro hn
     exact ⟨_, by simp [placeholderNewC, hn]; rfl, rfl⟩
+  · simp [placeholderSubclassPy, String.append_assoc]
+    rfl
 
 /-! ### `_unwrap_partial` and `_unwrap_partialmethod` -/
 

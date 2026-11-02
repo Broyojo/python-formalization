@@ -189,21 +189,32 @@ def lruBuild {τ : Type} (py : Bool) (id : Nat) (mode : Option Int → Py LruMod
       | .error e => .error e
       | .ok r => .ok (w, r)
 
+/-- `cache(user_function)`, Lib/functools.py:747-749, with its user function and the real `update_wrapper`:
+`lru_cache(maxsize=None)(user_function)`, in the twin `py`, where `no` is `False`. -/
+def cacheBuild {τ : Type} (py : Bool) (id : Nat) (callable : Bool) (no : τ) (user : Wrapped (LruAttr τ))
+    (self : LruAttr τ) : Py (LruMode × Wrapper (LruAttr τ)) :=
+  lruBuild py id (if py then wrapperPyMode callable else wrapperCMode callable) .none no user self
+
 /-- A cached function as the thing being wrapped: `__dict__` is its table. -/
 def lruAsWrapped {τ : Type} (w : Wrapper (LruAttr τ)) : Wrapped (LruAttr τ) :=
   ⟨fun _ => .ok none, fun _ => .ok (some w.dict)⟩
 
 /-! ### `_warn_python_reduce_kwargs` -/
 
-/-- The `wrapper` of `_warn_python_reduce_kwargs`, Lib/functools.py:1184-1195. `warn` is `warnings.warn(...)`,
-which raises under `-W error`, and `call` is `py_reduce(*args, **kwargs)`, run after it. The second component
-says whether it warned. -/
-def reduceWarnWrapper {β : Type} (kwnames : List String) (warn : Py Unit) (call : Py β) : Py β × Bool :=
-  if kwnames.contains "function" || kwnames.contains "sequence" then
-    match warn with
-    | .error e => (.error e, true)
-    | .ok _ => (call, true)
-  else (call, false)
+/-- The text of the warning, Lib/functools.py:1188-1192. -/
+def reduceKwMessage : String :=
+  "Calling functools.reduce with keyword arguments \"function\" or \"sequence\" is deprecated in Python 3.14 and will be forbidden in Python 3.16."
+
+/-- The `wrapper` of `_warn_python_reduce_kwargs`, Lib/functools.py:1180-1195. `warn` is `warnings.warn(...)` with its
+text, which raises under `-W error`, and `pyReduce` is the function it wraps. The second component is what it warned with. -/
+def reduceWarnWrapper {α β : Type} (warn : String → Py Unit) (pyReduce : List α → List (String × α) → Py β)
+    (args : List α) (kw : List (String × α)) : Py β × Option String :=
+  let names := kw.map (·.1)
+  if names.contains "function" || names.contains "sequence" then
+    match warn reduceKwMessage with
+    | .error e => (.error e, some reduceKwMessage)
+    | .ok _ => (pyReduce args kw, some reduceKwMessage)
+  else (pyReduce args kw, none)
 
 /-! ### `cached_property` -/
 
@@ -291,13 +302,21 @@ def cachedGet {α : Type} (c : CachedProp α) (obj : Option (InstDict α)) : Py 
 `__doc__`, `__annotate__`, `__type_params__`, with `none` for `AttributeError`. -/
 structure SdmFunc (α : Type) where
   callable : Bool
-  hasGet : Bool
+  /-- `hasattr(func, "__get__")`, which any exception but `AttributeError` gets through. -/
+  hasGet : Py Bool
   read : String → Py (Option String)
   dictOf : String → Py (Option (Attrs String))
   abstract : Py (Option α)
   impl : MKind α
   /-- `isinstance(func, FunctionType)`. -/
   isFunction : Bool
+  /-- What `repr(func)` raises. -/
+  reprFail : Option PyExc
+  /-- `format(name)` in an f-string, for a value of `__qualname__` or `__name__`. `update_wrapper` keeps only a `str`, but
+  a subclass can have its own `__format__`, which can raise. -/
+  fmt : String → Py String
+  /-- `__annotations__` and `__type_params__`, which are not strings; `none` for `AttributeError`. -/
+  objAttr : String → Py (Option α)
 
 /-- `singledispatchmethod(func)`. -/
 structure Sdm (α : Type) where
@@ -315,12 +334,26 @@ def sdmDispatcher {α : Type} (object : Cls) (f : SdmFunc α) : Py (Dispatcher (
     | .error e => .error e
     | .ok w => .ok (d, w)
 
+/-- The test at Lib/functools.py:1024-1025: `hasattr` is read only for what is not callable, it can raise, and so can the
+`repr` in the message. -/
+def sdmCheck {α : Type} (f : SdmFunc α) : Py Unit :=
+  if f.callable then .ok () else
+  match f.hasGet with
+  | .error e => .error e
+  | .ok true => .ok ()
+  | .ok false =>
+    match f.reprFail with
+    | some e => .error e
+    | none => .error (.typeError "~is not callable or a descriptor")
+
 /-- `singledispatchmethod.__init__`, Lib/functools.py:1023-1028. -/
 def sdmNew {α : Type} (object : Cls) (f : SdmFunc α) : Py (Sdm α) :=
-  if !f.callable && !f.hasGet then .error (.typeError "~is not callable or a descriptor") else
-  match sdmDispatcher object f with
+  match sdmCheck f with
   | .error e => .error e
-  | .ok (d, w) => .ok ⟨d, f, w⟩
+  | .ok _ =>
+    match sdmDispatcher object f with
+    | .error e => .error e
+    | .ok (d, w) => .ok ⟨d, f, w⟩
 
 /-- `singledispatchmethod.register`, Lib/functools.py:1030-1035: `func=method`. -/
 def sdmRegister {α : Type} (W : World) (tok : Nat) (s : Sdm α) (cls : RegFirst (MKind α))
@@ -348,7 +381,10 @@ def nameOf (read : String → Py (Option String)) : Py String :=
 def sdmRepr {α : Type} (s : Sdm α) : Py String :=
   match nameOf s.func.read with
   | .error e => .error e
-  | .ok n => .ok ("<single dispatch method descriptor " ++ n ++ ">")
+  | .ok n =>
+    match s.func.fmt n with
+    | .error e => .error e
+    | .ok t => .ok ("<single dispatch method descriptor " ++ t ++ ">")
 
 /-- `_singledispatchmethod_get(unbound, obj, cls)`. `module` and `doc` are the instance attributes it sets,
 `none` when the read raised `AttributeError`. -/
@@ -383,17 +419,37 @@ def sdmGetattr {α : Type} (g : SdmGet α) (name : String) : Py (Option String) 
     .ok none
   else g.unbound.func.read name
 
+/-- `_singledispatchmethod_get.__getattr__`, Lib/functools.py:1114-1120, with what each of the five names holds: a name is
+a string, `__isabstractmethod__` is the attribute `singledispatchmethod.__isabstractmethod__` reads, and the other two are
+any object. -/
+def sdmGetattrAny {α : Type} (g : SdmGet α) (name : String) : Py (Option (String ⊕ α)) :=
+  if name = "__isabstractmethod__" then
+    match g.unbound.func.abstract with
+    | .error e => .error e
+    | .ok v => .ok (v.map .inr)
+  else if name = "__annotations__" ∨ name = "__type_params__" then
+    match g.unbound.func.objAttr name with
+    | .error e => .error e
+    | .ok v => .ok (v.map .inr)
+  else
+    match sdmGetattr g name with
+    | .error e => .error e
+    | .ok v => .ok (v.map .inl)
+
 /-- `_singledispatchmethod_get.__repr__`, Lib/functools.py:1077-1088. -/
 def sdmGetRepr {α : Type} (g : SdmGet α) (repr : α → Py String) : Py String :=
   match nameOf (sdmGetattr g) with
   | .error e => .error e
   | .ok n =>
-    match g.obj with
-    | none => .ok ("<single dispatch method " ++ n ++ ">")
-    | some o =>
-      match repr o with
-      | .error e => .error e
-      | .ok r => .ok ("<bound single dispatch method " ++ n ++ " of " ++ r ++ ">")
+    match g.unbound.func.fmt n with
+    | .error e => .error e
+    | .ok t =>
+      match g.obj with
+      | none => .ok ("<single dispatch method " ++ t ++ ">")
+      | some o =>
+        match repr o with
+        | .error e => .error e
+        | .ok r => .ok ("<bound single dispatch method " ++ t ++ " of " ++ r ++ ">")
 
 /-- `method.__get__(obj, cls)` and the call, Lib/functools.py:1098-1112. `index` is `_dispatch_arg_index`: when it is 1, a
 `staticmethod` and anything that comes back as a `MethodType` drop `args[0]`, and an object without `__get__` is called
@@ -422,9 +478,9 @@ def implCall {α : Type} (impl : MKind α) (obj : Option α) (cls : α) (index :
       | .bound .. => callFn nf rest kw
       | _ => callFn nf args kw
 
-/-- `_singledispatchmethod_get.__call__`, Lib/functools.py:1088-1112. `classOf` is `.__class__` of the dispatch
-argument. -/
-def sdmCall {α : Type} (W : World) (fuel tok : Nat) (g : SdmGet α) (classOf : α → Cls) (args : List α)
+/-- `_singledispatchmethod_get.__call__`, Lib/functools.py:1090-1112. `classOf` is `.__class__` of the dispatch
+argument, which may raise. -/
+def sdmCall {α : Type} (W : World) (fuel tok : Nat) (g : SdmGet α) (classOf : α → Py Cls) (args : List α)
     (kw : List (String × α)) : Py (Called α) × Dispatcher (MKind α) :=
   let d := g.unbound.dispatcher
   match args with
@@ -432,16 +488,20 @@ def sdmCall {α : Type} (W : World) (fuel tok : Nat) (g : SdmGet α) (classOf : 
     match g.unbound.func.read "__name__" with
     | .error e => (.error e, d)
     | .ok n =>
-      (.error (.typeError ((n.getD "singledispatchmethod method") ++
-        " requires at least 1 positional argument")), d)
+      match g.unbound.func.fmt (n.getD "singledispatchmethod method") with
+      | .error e => (.error e, d)
+      | .ok t => (.error (.typeError (t ++ " requires at least 1 positional argument")), d)
   | _ :: _ =>
     match args[g.index]? with
     | none => (.error (.indexError "tuple index out of range"), d)
     | some a =>
-      match dispatch W fuel tok d (classOf a) with
-      | (.error e, d) => (.error e, d)
-      | (.ok none, d) => (.error (.typeError "'NoneType' object is not callable"), d)
-      | (.ok (some impl), d) => (implCall impl g.obj g.cls g.index args kw, d)
+      match classOf a with
+      | .error e => (.error e, d)
+      | .ok k =>
+        match dispatch W fuel tok d k with
+        | (.error e, d) => (.error e, d)
+        | (.ok none, d) => (.error (.typeError "'NoneType' object is not callable"), d)
+        | (.ok (some impl), d) => (implCall impl g.obj g.cls g.index args kw, d)
 
 /-- `_singledispatchmethod_get.__wrapped__`, :1122-1124. -/
 def sdmWrapped {α : Type} (g : SdmGet α) : SdmFunc α := g.unbound.func

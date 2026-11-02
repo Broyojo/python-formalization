@@ -9,7 +9,7 @@ import PyLean.CoreLibs.Operator.CopyStrength
 import PyLean.CoreLibs.Operator.AbcStrength
 
 /-! Registry for the `Operator` area of CoreLibs: Lib/operator.py, Modules/_operator.c, Lib/copy.py, Lib/abc.py,
-CPython 3.14.7. -/
+CPython 3.15.2. -/
 
 namespace PyLean.CoreLibs.Operator
 
@@ -399,7 +399,7 @@ def entries : List Entry := [
     thm := some ``abcRegister_proven },
   { id := "corelibs-abc-instance-check"
     pyFile := abcFile
-    pyFns := ["ABCMeta.__instancecheck__"]
+    pyFns := ["ABCMeta.__instancecheck__", "_abc__abc_instancecheck_impl"]
     statement := "isinstance: a raising __class__, the caches, and for an object that lies, its __class__ and then its type."
     source := "Modules/_abc.c"
     status := .proven
@@ -589,6 +589,14 @@ def entries : List Entry := [
     status := .proven
     prop := ``DeepcopyTupleExact
     thm := some ``deepcopyTupleExact_proven },
+  { id := "corelibs-copy-frozendict"
+    pyFile := copyFile
+    pyFns := ["_deepcopy_frozendict"]
+    statement := "_deepcopy_frozendict copies keys and values in order, a copy already in memo wins, otherwise the result is a new frozendict of the copies, and the first failure stops it."
+    source := "Lib/copy.py:205-218"
+    status := .proven
+    prop := ``DeepcopyFrozendict
+    thm := some ``deepcopyFrozendict_proven },
   { id := "corelibs-copy-reconstruct-deep"
     pyFile := copyFile
     pyFns := ["_reconstruct"]

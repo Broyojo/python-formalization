@@ -1,7 +1,7 @@
 import PyLean.CoreLibs.CalStat.Stat
 
 /-!
-Mirror of `Lib/statistics.py` (CPython 3.14.7): `geometric_mean`, the kernels, `kde`, `kde_random`,
+Mirror of `Lib/statistics.py` (CPython 3.15.2): `geometric_mean`, the kernels, `kde`, `kde_random`,
 `NormalDist` and `_normal_dist_inv_cdf`.
 
 Everything libm computes inexactly is the parameter `L : Libm`: `exp`, `log`, the trigonometric
@@ -66,7 +66,7 @@ def mathErfc (L : Libm) (x : Flt) : Flt := L.erfc x
 def mathLogF (L : Libm) (x : Flt) : Py Flt :=
   math1 (mLog L) false "~expected a positive input" x
 
-/-- `loghelper`, Modules/mathmodule.c@3.14.7:2243-2276, `math.log(x)` for any real `x`. -/
+/-- `loghelper_int` and `loghelper`, Modules/mathmodule.c:1583-1639, `math.log(x)` for any real `x`. -/
 def mathLog (L : Libm) (v : Val) : Py Flt :=
   match v with
   | .int i =>

@@ -1,7 +1,7 @@
 import PyLean.Core
 
 /-!
-`Lib/enum.py` and `Lib/dataclasses.py` (CPython 3.14.7): a `Flag` class and a dataclass as data, and
+`Lib/enum.py` and `Lib/dataclasses.py` (CPython 3.15.2): a `Flag` class and a dataclass as data, and
 mirrors of the algorithms on them. Python's `&` with a non-negative mask on a possibly negative `int`
 is `andMask`. The metaclass machinery that builds the class object is not modelled here.
 -/

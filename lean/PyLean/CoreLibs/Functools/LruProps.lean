@@ -465,7 +465,8 @@ theorem lruTwinsFromEmpty_proven : LruTwinsFromEmpty := by
   refine ⟨h1, ?_⟩
   simp only [infoPy, infoC, h2.cache, h2.hits, h2.misses]
 
-/-- The cache never exceeds `maxsize` and holds each key once, under re-entrant user functions, a clear in the
+/-- With no Python code in the comparisons of the dict, which are `F.insert` and `F.evict` here (a key's `__eq__` is
+`LruNeverExceedsMaxsize`, which is refuted): the cache never exceeds `maxsize` and holds each key once, under re-entrant user functions, a clear in the
 middle of a call, and failing lookups: the invariant of the C wrapper, and of the Python one by `Rel`. -/
 def LruBounded : Prop :=
   ∀ (cfg : Cfg Nat Nat), 0 < cfg.maxsize → (∀ k ks, cfg.F.insert k ks = none) →

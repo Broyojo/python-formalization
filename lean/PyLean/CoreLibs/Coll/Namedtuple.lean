@@ -2,7 +2,7 @@ import PyLean.CoreLibs.Coll.ChainMap
 import PyLean.StrSearch.Model
 
 /-!
-`collections.namedtuple`, Lib/collections/__init__.py:361-533 (CPython 3.14.7).
+`collections.namedtuple`, Lib/collections/__init__.py:361-533 (CPython 3.15.2).
 
 `namedtuple` generates a class, and part of it by compiling source text:
 `eval(f'lambda _cls, {arg_list}: _tuple_new(_cls, ({arg_list}))')`, :446-447. So a class is
@@ -202,7 +202,7 @@ def replLoop (kwds : D String ν) : List String → List ν → List ν × D Str
     (x :: r, k)
   | _, _ => ([], kwds)
 
-/-- `_replace`, @3.14.7:463-467, also `__replace__`. `rk` is `repr` on the leftover list. -/
+/-- `_replace`, Lib/collections/__init__.py:463-467, also `__replace__`. `rk` is `repr` on the leftover list. -/
 def ntReplace (T : NT ν) (vals : List ν) (kwds : D String ν) : Py (List ν) := do
   let (r, left) := replLoop kwds T.fields vals
   let result ← ntMake T r

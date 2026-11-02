@@ -6,9 +6,9 @@ Lib/contextlib.py	55	57	AbstractAsyncContextManager.__aenter__	__aenter__(self)	
 Lib/contextlib.py	60	62	AbstractAsyncContextManager.__aexit__	__aexit__(self, exc_type, exc_value, traceback)	modelled	misc-ctx-abstract-bases	
 Lib/contextlib.py	65	69	AbstractAsyncContextManager.__subclasshook__	__subclasshook__(cls, C)	modelled	misc-ctx-abstract-bases,misc-ctx-subclasshook-none	
 Lib/contextlib.py	75	85	ContextDecorator._recreate_cm	_recreate_cm(self)	modelled	misc-ctx-decorator	
-Lib/contextlib.py	87	118	ContextDecorator.__call__	__call__(self, func)	todo		changed-in-3.15: was misc-ctx-decorator
+Lib/contextlib.py	87	118	ContextDecorator.__call__	__call__(self, func)	todo		changed-in-3.15: the plain-function branch is modelled (misc-ctx-decorator), the generator, coroutine and async generator branches new in 3.15 are not: a body that suspends inside a with needs a model of generators
 Lib/contextlib.py	124	127	AsyncContextDecorator._recreate_cm	_recreate_cm(self)	modelled	misc-ctx-decorator	
-Lib/contextlib.py	129	164	AsyncContextDecorator.__call__	__call__(self, func)	todo		changed-in-3.15: was misc-ctx-decorator
+Lib/contextlib.py	129	164	AsyncContextDecorator.__call__	__call__(self, func)	todo		changed-in-3.15: the plain-function branch is modelled (misc-ctx-decorator), the generator, coroutine and async generator branches new in 3.15 are not: a body that suspends inside a with needs a model of generators
 Lib/contextlib.py	170	177	_GeneratorContextManagerBase.__init__	__init__(self, func, args, kwds)	modelled	misc-ctx-recreate	
 Lib/contextlib.py	184	188	_GeneratorContextManagerBase._recreate_cm	_recreate_cm(self)	modelled	misc-ctx-recreate	
 Lib/contextlib.py	198	205	_GeneratorContextManager.__enter__	__enter__(self)	modelled	misc-ctx-enter,misc-ctx-try-finally	
@@ -29,20 +29,20 @@ Lib/contextlib.py	469	470	_RedirectStream.__exit__	__exit__(self, exctype, excin
 Lib/contextlib.py	506	507	suppress.__init__	__init__(self, *exceptions)	modelled	misc-ctx-suppress-plain	
 Lib/contextlib.py	509	510	suppress.__enter__	__enter__(self)	modelled	misc-ctx-suppress-plain	
 Lib/contextlib.py	512	531	suppress.__exit__	__exit__(self, exctype, excinst, exctb)	modelled	misc-ctx-suppress-group,misc-ctx-suppress-plain	
-Lib/contextlib.py	534	542	_lookup_special	_lookup_special(obj, name, default)	todo		changed-in-3.15: new function
+Lib/contextlib.py	534	542	_lookup_special	_lookup_special(obj, name, default)	todo		
 Lib/contextlib.py	552	555	_BaseExitStack._create_cb_wrapper	_create_cb_wrapper(callback, /, *args, **kwds)	modelled	misc-ctx-callback-cannot-suppress	
 Lib/contextlib.py	557	558	_BaseExitStack.__init__	__init__(self)	modelled	misc-ctx-stack-registration	
 Lib/contextlib.py	560	565	_BaseExitStack.pop_all	pop_all(self)	modelled	misc-ctx-stack-registration	
-Lib/contextlib.py	567	576	_BaseExitStack.push	push(self, exit)	todo		changed-in-3.15: was misc-ctx-stack-registration
-Lib/contextlib.py	578	596	_BaseExitStack.enter_context	enter_context(self, cm)	todo		changed-in-3.15: was misc-ctx-stack-registration
+Lib/contextlib.py	567	576	_BaseExitStack.push	push(self, exit)	todo		
+Lib/contextlib.py	578	596	_BaseExitStack.enter_context	enter_context(self, cm)	todo		
 Lib/contextlib.py	598	609	_BaseExitStack.callback	callback(self, callback, /, *args, **kwds)	modelled	misc-ctx-stack-registration	
 Lib/contextlib.py	611	612	_BaseExitStack._push_exit_callback	_push_exit_callback(self, callback, is_sync=True)	modelled	misc-ctx-stack-registration	
 Lib/contextlib.py	627	628	ExitStack.__enter__	__enter__(self)	modelled	misc-ctx-stack-registration	
 Lib/contextlib.py	630	682	ExitStack.__exit__	__exit__(self, *exc_details)	modelled	misc-ctx-exit-keeps-context-acyclic,misc-ctx-exit-lifo,misc-ctx-exit-matches-nested,misc-ctx-exit-terminates	
 Lib/contextlib.py	684	686	ExitStack.close	close(self)	modelled	misc-ctx-async-exit-matches	
 Lib/contextlib.py	704	707	AsyncExitStack._create_async_cb_wrapper	_create_async_cb_wrapper(callback, /, *args, **kwds)	modelled	misc-ctx-callback-cannot-suppress	
-Lib/contextlib.py	709	727	AsyncExitStack.enter_async_context	enter_async_context(self, cm)	todo		changed-in-3.15: was misc-ctx-stack-registration
-Lib/contextlib.py	729	739	AsyncExitStack.push_async_exit	push_async_exit(self, exit)	todo		changed-in-3.15: was misc-ctx-stack-registration
+Lib/contextlib.py	709	727	AsyncExitStack.enter_async_context	enter_async_context(self, cm)	todo		
+Lib/contextlib.py	729	739	AsyncExitStack.push_async_exit	push_async_exit(self, exit)	todo		
 Lib/contextlib.py	741	752	AsyncExitStack.push_async_callback	push_async_callback(self, callback, /, *args, **kwds)	modelled	misc-ctx-stack-registration	
 Lib/contextlib.py	754	756	AsyncExitStack.aclose	aclose(self)	modelled	misc-ctx-async-exit-matches	
 Lib/contextlib.py	758	759	AsyncExitStack.__aenter__	__aenter__(self)	modelled	misc-ctx-stack-registration	

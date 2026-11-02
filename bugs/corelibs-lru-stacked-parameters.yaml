@@ -36,6 +36,7 @@ expected: |
   {'maxsize': 5, 'typed': True}, and a cache_info with maxsize 5, on both twins.
 observed: |
   python3 3.14.7: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Doc/library/functools.rst: the decorated function has cache_parameters() for viewing the values of maxsize and typed.
 cause: |

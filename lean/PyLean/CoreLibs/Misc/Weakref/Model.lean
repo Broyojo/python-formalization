@@ -1,7 +1,7 @@
 import PyLean.Core
 
 /-!
-`Lib/weakref.py`, CPython 3.14.7.
+`Lib/weakref.py`, CPython 3.15.2.
 
 Object death is an explicit event. `World` is the set of dead object ids, and a weak reference holds
 the id of its referent, so `wr()` is `none` once the id is in the set. In this version

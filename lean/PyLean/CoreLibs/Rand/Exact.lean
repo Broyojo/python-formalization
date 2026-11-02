@@ -3,7 +3,7 @@ import PyLean.RangeSlice.Model
 import PyLean.Accel.Bisect
 
 /-!
-The integer and sequence layer of `Lib/random.py` (CPython 3.14.7), over any `Gen`.
+The integer and sequence layer of `Lib/random.py` (CPython 3.15.2), over any `Gen`.
 
 `below` in this file stands for `self._randbelow`, which `__init_subclass__`
 chooses per class (`randbelowWith` or `randbelowWithout`). Loops that wait for the

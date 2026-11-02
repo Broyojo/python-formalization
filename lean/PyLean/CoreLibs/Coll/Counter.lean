@@ -3,7 +3,7 @@ import PyLean.CoreLibs.Coll.Dict
 
 /-!
 `collections.Counter` and `_count_elements`, Lib/collections/__init__.py:540-1017 and
-Modules/_collectionsmodule.c:2544-2644 (CPython 3.14.7).
+Modules/_collectionsmodule.c:2544-2644 (CPython 3.15.2).
 
 Keys are abstract (see `Dict.lean`). Counts are Python ints; the docs allow any
 number, but only ints have exact arithmetic here, and the methods use nothing but
@@ -229,6 +229,16 @@ def andC (a b : Ctr κ) : Ctr κ :=
     let newcount := if count < other_count then count else other_count
     if newcount > 0 then some newcount else none) []
 
+/-- `abs` of an `int`. -/
+def absI (x : Int) : Int := if x < 0 then -x else x
+
+/-- `Counter.__xor__`, Lib/collections/__init__.py:910-935. -/
+def xorC (a b : Ctr κ) : Ctr κ :=
+  let r := loopInto a (fun e count =>
+    let newcount := absI (count - cGet b e)
+    if newcount ≠ 0 then some newcount else none) []
+  loopInto b (fun e count => if !D.mem a e && decide (count ≠ 0) then some (absI count) else none) r
+
 /-- `Counter.__pos__`, :907-913. -/
 def posC (a : Ctr κ) : Ctr κ := loopInto a (fun _ count => if count > 0 then some count else none) []
 
@@ -270,6 +280,21 @@ def iandC (a b : Ctr κ) : Ctr κ :=
   | .ok r => r
   | .error _ => a
 
+/-- `Counter.__ixor__`, Lib/collections/__init__.py:1019-1033. `other` is `other[elem]`, `items` is `other.items()`. The values
+of `self.items()` change as the first loop runs, but each one only after it was read. -/
+def ixorWith (a : Ctr κ) (other : κ → Py Int) (items : List (κ × Int)) : Py (Ctr κ) := do
+  let s ← a.foldlM (fun s p => do
+    let o ← other p.1
+    pure (D.set s p.1 (absI (p.2 - o)))) a
+  let s := items.foldl (fun s p => if D.mem s p.1 then s else D.set s p.1 (absI p.2)) s
+  return keepPositive s
+
+/-- `self ^= other` for a `Counter`: `other[elem]` cannot fail. -/
+def ixorC (a b : Ctr κ) : Ctr κ :=
+  match ixorWith a (fun e => .ok (cGet b e)) b with
+  | .ok r => r
+  | .error _ => a
+
 /-- The right operand of an in-place operator. These methods have no
 `isinstance` guard: a `Counter` and a plain `Mapping` both work, up to the
 missing-key behaviour of `other[elem]`, and anything else fails on `.items()`
@@ -303,6 +328,17 @@ def dunderIand (rk : κ → String) (a : Ctr κ) : IOpnd κ → Py (Ctr κ)
       | some n => .ok n
       | none => .error (.keyError (rk e)))
   | .nonmapping ty => iandWith a (fun _ => .error (.typeError s!"'{ty}' object is not subscriptable"))
+
+/-- `__ixor__`: a non-mapping fails on the subscript, or on `.items()` when the left operand is empty. -/
+def dunderIxor (rk : κ → String) (a : Ctr κ) : IOpnd κ → Py (Ctr κ)
+  | .ctr b => ixorWith a (fun e => .ok (cGet b e)) b
+  | .dict b => ixorWith a (fun e =>
+      match D.get? b e with
+      | some n => .ok n
+      | none => .error (.keyError (rk e))) b
+  | .nonmapping ty =>
+    if a.isEmpty then .error (noItems ty)
+    else ixorWith a (fun _ => .error (.typeError s!"'{ty}' object is not subscriptable")) []
 
 /-! ### Operands that are not `Counter`s -/
 

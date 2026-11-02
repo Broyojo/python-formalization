@@ -1,7 +1,7 @@
 import PyLean.Core
 
 /-!
-`Lib/operator.py` and `Modules/_operator.c`, the functions (CPython 3.14.7).
+`Lib/operator.py` and `Modules/_operator.c`, the functions (CPython 3.15.2).
 
 Nearly every function here is one line, and that line is an entry into the object protocols: `a + b` in
 Python reaches `PyNumber_Add` through `BINARY_OP`, and `_operator_add_impl` calls it directly. So the two twins

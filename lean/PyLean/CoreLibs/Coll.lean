@@ -1,12 +1,13 @@
 import PyLean.Registry
 import PyLean.CoreLibs.Coll.Diff
 import PyLean.CoreLibs.Coll.CounterMost
+import PyLean.CoreLibs.Coll.CounterXor
 import PyLean.CoreLibs.Coll.UserDictProps
 import PyLean.CoreLibs.Coll.UserListProps
 import PyLean.CoreLibs.Coll.UserStringProps
 import PyLean.CoreLibs.Coll.NamedtupleProps
 
-/-! Registry for the `Coll` area of CoreLibs: Lib/collections/__init__.py (everything except OrderedDict), CPython 3.14.7. -/
+/-! Registry for the `Coll` area of CoreLibs: Lib/collections/__init__.py (everything except OrderedDict), CPython 3.15.2. -/
 
 namespace PyLean.CoreLibs.Coll
 
@@ -81,6 +82,10 @@ def counterEntries : List Entry := [
     statement := "c += d, c -= d, c |= d, c &= d leave c equal to c + d, c - d, c | d, c & d, items and order, for all counters."
     source := "invariant: in-place and binary forms; docstrings, Lib/collections/__init__.py:964-1011"
     status := .proven, prop := ``InplaceAgreesBinary, thm := some ``inplaceAgreesBinary_proven },
+  { id := "coll-counter-xor", pyFile := file, pyFns := ["Counter.__xor__", "Counter.__ixor__"]
+    statement := "c ^ d is the absolute difference of counts, for all counters including zero and negative counts, equal to (c - d) | (d - c), with positive counts only, in the operators' key order; c ^= d gives the same items in the same order."
+    source := "docstrings, Lib/collections/__init__.py:910-935, :1019-1033"
+    status := .proven, prop := ``XorPointwise, thm := some ``xorPointwise_proven },
   { id := "coll-counter-keep-positive", pyFile := file, pyFns := ["Counter._keep_positive"]
     statement := "_keep_positive removes exactly the non-positive counts, in place order kept, and equals unary +."
     source := "docstring, Lib/collections/__init__.py:957"
@@ -159,11 +164,11 @@ def userDictEntries : List Entry := [
     status := .proven, prop := ``UserDictClearRepr, thm := some ``userDictClearRepr_proven },
   { id := "coll-userdict-popitem-lifo", pyFile := file, pyFns := ["UserDict.popitem"]
     statement := "UserDict.popitem is dict.popitem on self.data: it removes the last item, and raises dict's KeyError on an empty one."
-    source := "Lib/collections/__init__.py:1260-1268; Doc/library/stdtypes.rst, dict.popitem: 'LIFO order'"
+    source := "Lib/collections/__init__.py:1260-1268; Doc/builtins/stdtypes.rst, dict.popitem: 'LIFO order'"
     status := .proven, prop := ``UserDictPopitemMatchesDict, thm := some ``userDictPopitemMatchesDict_proven },
   { id := "coll-userdict-reversible", pyFile := file, pyFns := ["UserDict.__reversed__"]
     statement := "reversed(UserDict(d)) yields what reversed(d) yields. False: TypeError, Mapping.__reversed__ is None."
-    source := "Doc/library/stdtypes.rst, dict: 'Dictionaries and dictionary views are reversible'; Doc/library/collections.rst, UserDict"
+    source := "Doc/builtins/stdtypes.rst, dict: 'Dictionaries and dictionary views are reversible'; Doc/library/collections.rst, UserDict"
     status := .refuted, prop := ``UserDictReversible, thm := some ``userDictReversible_refuted
     bug := some "corelibs-userdict-not-reversible" },
   { id := "coll-userdict-missing-like-dict", pyFile := file, pyFns := ["UserDict.__getitem__", "UserDict.__contains__", "UserDict.get"]
@@ -254,7 +259,7 @@ def userStringEntries : List Entry := [
     notes := "Not filed: gh-76022 is open and the join case was deliberately left." },
   { id := "coll-userstring-replace-count", pyFile := file, pyFns := ["UserString.replace"]
     statement := "u.replace(old, new, count=n) does what str.replace does. False: the parameter is named maxsplit, TypeError."
-    source := "Doc/library/stdtypes.rst, str.replace: 'count is now supported as a keyword argument' (3.13)"
+    source := "Doc/builtins/stdtypes.rst, str.replace: 'count is now supported as a keyword argument' (3.13)"
     status := .refuted, prop := ``UserStringReplaceCountKeyword, thm := some ``userStringReplaceCountKeyword_refuted
     bug := some "corelibs-userstring-replace-count-keyword" },
   { id := "coll-userstring-format-spec", pyFile := file, pyFns := ["UserString.__format__"]
@@ -275,7 +280,7 @@ def userStringEntries : List Entry := [
     status := .proven, prop := ``UserStringConstructAdd, thm := some ``userStringConstructAdd_proven },
   { id := "coll-userstring-mul", pyFile := file, pyFns := ["UserString.__mul__"]
     statement := "u * n is empty for n <= 0 and has length n * len(u), keeping the class, when that fits Py_ssize_t."
-    source := "Doc/library/stdtypes.rst, common sequence operations"
+    source := "Doc/builtins/stdtypes.rst, common sequence operations"
     status := .proven, prop := ``UserStringMul, thm := some ``userStringMul_proven }
 ]
 

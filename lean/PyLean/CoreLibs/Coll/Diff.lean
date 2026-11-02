@@ -105,6 +105,8 @@ def runCtr (j : Json) : Except String Json := do
   | "sub" => binop j "-" subC
   | "or" => binop j "|" orC
   | "and" => binop j "&" andC
+  | "xor" => binop j "^" xorC
+  | "ixor" => return encPy encItems (dunderIxor rkStr (← getItems j "a") (← getIOpnd j))
   | "eq" => cmpop j "==" eqC
   | "ne" => cmpop j "!=" neC
   | "le" => cmpop j "<=" leC
@@ -197,6 +199,7 @@ def getUOpnd (j : Json) : Except String (UOpnd String Int) := do
   match ← getStr j "oty" with
   | "user" => return .user (← getItems j "o")
   | "dict" => return .dict (← getItems j "o")
+  | "frozen" => return .frozen (← getItems j "o")
   | _ => return .other
 
 def runUD (j : Json) : Except String Json := do

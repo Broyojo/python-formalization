@@ -148,6 +148,8 @@ def runCal (fn : String) (j : Json) : Option (Except String Json) :=
     return encPy encS (hFormatmonth cNames (← cal) (← getInt j "y") (← getInt j "m") (← getBool j "withyear"))
   | "h.formatyear" => some do
     return encPy encS (hFormatyear cNames (← cal) (← getInt j "y") (← getInt j "width"))
+  | "h.formatmonthpage" => some do
+    return encPy encBytes (hFormatmonthpage cNames (← cal) (← getInt j "y") (← getInt j "m") (← getOptS j "css") (← getOptS j "encoding"))
   | "h.formatyearpage" => some do
     return encPy encBytes (hFormatyearpage cNames (← cal) (← getInt j "y") (← getInt j "width") (← getOptS j "css") (← getOptS j "encoding"))
   | "l.default" => some do

@@ -1,5 +1,5 @@
 import PyLean.Registry
-import PyLean.CoreLibs.CalStat.CalMiscProps
+import PyLean.CoreLibs.CalStat.CalHtmlProps
 
 /-! Registry entries for `Lib/calendar.py`. -/
 
@@ -94,18 +94,44 @@ def calendarEntries : List Entry := [
   cal "formatyear-lines" ["TextCalendar.formatyear", "TextCalendar.pryear"]
     "For m >= 1, formatyear has a title block and, per month row, a blank block, a names line, a header line and height week lines, each followed by max(1, l) newlines; pryear prints the same."
     "docstring" ``FormatyearLines ``formatyearLines_proven,
-  cal "text-year-months" ["TextCalendar.formatyear", "_CLIDemoCalendar.formatyear"]
+  cal "text-year-months" ["TextCalendar.formatyear"]
     "For every m >= 1 the months computed for row i at calendar.py:441 are the months yeardays2calendar lays out in row i."
     "invariant" ``TextYearMonths ``textYearMonths_proven,
   cal "formatyear-month-count" ["TextCalendar.formatyear", "HTMLCalendar.formatyear"]
     "TextCalendar.formatyear with m == 0 raises the ValueError of range(); HTMLCalendar.formatyear with width <= 0 behaves as width 1."
     "calendar.py:561, :551; actual behaviour of the two clamps" ``FormatyearMonthCount
     ``formatyearMonthCount_proven,
+  cal "demo-colours" ["_CLIDemoCalendar.formatday", "_CLIDemoCalendar.formatweekheader",
+      "_CLIDemoCalendar.formatmonthname"]
+    "For any theme, the highlighted day is wrapped and no other; the week header is wrapped in weekday; a month name is wrapped in header, or for the highlighted month its stripped text in highlight, inside the padding; and the failure of the plain formatter is the outcome."
+    "Lib/calendar.py:693-742" ``DemoColours ``demoColours_proven,
+  cal "demo-week-exact" ["_CLIDemoCalendar.formatweek", "TextCalendar.formatday", "TextCalendar.formatweek"]
+    "A week of _CLIDemoCalendar is the cells of TextCalendar joined by one space, with the highlighted day wrapped and no other."
+    "Lib/calendar.py:361-375, :693-715" ``DemoWeekExact ``demoWeekExact_proven,
+  cal "text-weekday-exact" ["TextCalendar.formatweekday"]
+    "formatweekday is the full name when width holds the longest one, the abbreviation otherwise, cut to width and centred, for any table of seven names."
+    "Lib/calendar.py:377-385" ``TextWeekdayExact ``textWeekdayExact_proven,
+  cal "monthname-exact" ["TextCalendar.formatmonthname", "HTMLCalendar.formatmonthname"]
+    "Both formatmonthname use the standalone name of that month, with the year when asked; the text one centres it and the HTML one puts it in the month heading."
+    "Lib/calendar.py:393-402, :525-534" ``MonthNameExact ``monthNameExact_proven,
+  cal "html-cells-exact" ["HTMLCalendar.formatday", "HTMLCalendar.formatweek", "HTMLCalendar.formatweekday",
+      "HTMLCalendar.formatweekheader"]
+    "A day outside the month is the noday cell, a day is a cell with the class of its weekday and its number, a weekday past the table is an IndexError, a week is its cells in order and the header is the abbreviations in the order of iterweekdays."
+    "Lib/calendar.py:495-523" ``HtmlCellsExact ``htmlCellsExact_proven,
+  cal "html-month-exact" ["HTMLCalendar.formatmonth"]
+    "formatmonth is the table, its name row, its header row and the rows of monthdays2calendar, each on a line of its own, and the first failure in that order."
+    "Lib/calendar.py:536-553" ``HtmlMonthExact ``htmlMonthExact_proven,
+  cal "html-year-exact" ["HTMLCalendar.formatyear"]
+    "formatyear counts a width below one as one, its heading spans that many columns, and each row holds the month tables without the year."
+    "Lib/calendar.py:555-575" ``HtmlYearExact ``htmlYearExact_proven,
+  cal "html-page-exact" ["HTMLCalendar._format_html_page", "HTMLCalendar.formatyearpage", "HTMLCalendar.formatmonthpage"]
+    "The content sits in the body of the page, the stylesheet line is there exactly when css is given, None means UTF-8, an unknown encoding is a LookupError, and a failed content comes first."
+    "Lib/calendar.py:577-617" ``HtmlPageExact ``htmlPageExact_proven,
   cal "demo-is-text" ["_CLIDemoCalendar.__init__", "_CLIDemoCalendar.formatweek",
-      "_CLIDemoCalendar.formatmonth", "_CLIDemoCalendar.formatyear", "_CLIDemoLocaleCalendar.__init__"]
+      "_CLIDemoCalendar.formatmonth", "_CLIDemoLocaleCalendar.__init__"]
     "Without a highlighted day in view, or with colours off, _CLIDemoCalendar returns exactly what TextCalendar returns."
     "twin: subclass vs base class" ``DemoIsText ``demoIsText_proven,
-  cal "demo-year-column" ["_CLIDemoCalendar.formatyear"]
+  cal "demo-year-column" []
     "In a row of distinct months, formatweek gets the highlighted day exactly in the column of the highlighted month."
     "calendar.py:795-817" ``DemoYearColumn ``demoYearColumn_proven,
   cal "html-month-lines" ["HTMLCalendar.formatday", "HTMLCalendar.formatweek",

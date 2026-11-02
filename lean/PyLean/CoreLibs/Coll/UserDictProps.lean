@@ -194,8 +194,10 @@ def UserDictConstructorsUnion : Prop :=
     (cls : String) (it : List κ) (v : ν), WF u.data → WF o →
     udOr u (.dict o) = some ⟨u.cls, D.or_ u.data o⟩ ∧
     udOr u (.user o) = some ⟨u.cls, D.or_ u.data o⟩ ∧
+    udOr u (.frozen o) = some ⟨u.cls, D.or_ u.data o⟩ ∧
     udRor u (.dict o) = some ⟨u.cls, D.or_ o u.data⟩ ∧
     udRor u (.user o) = some ⟨u.cls, D.or_ o u.data⟩ ∧
+    udRor u (.frozen o) = some ⟨u.cls, D.or_ o u.data⟩ ∧
     udOr u .other = none ∧ udRor u .other = none ∧
     udIor u o = ⟨u.cls, D.or_ u.data o⟩ ∧
     (udFromkeys cls it v).data = D.fromkeys it v ∧
@@ -216,9 +218,11 @@ theorem userDictConstructorsUnion_proven : UserDictConstructorsUnion := by
   have hd : udCopyDunder u = u := by
     cases u with
     | mk c d => simp only [udCopyDunder]; congr 1; exact update_nil_WF hu
-  refine ⟨?_, ?_, ?_, ?_, rfl, rfl, rfl, ?_, ?_, ?_, hd⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, rfl, rfl, rfl, ?_, ?_, ?_, hd⟩
   · simp [udOr, udNew_some hor1]
   · simp [udOr, udNew_some hor1]
+  · simp [udOr, udNew_some hor1]
+  · simp [udRor, udNew_some hor2]
   · simp [udRor, udNew_some hor2]
   · simp [udRor, udNew_some hor2]
   · simp [udFromkeys, data_fromkeys, D.fromkeys]

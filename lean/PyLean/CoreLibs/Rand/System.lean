@@ -3,7 +3,7 @@ import PyLean.CoreLibs.Rand.Dist
 
 /-!
 `SystemRandom`, `Random.__init_subclass__` and the command-line `main` of
-`Lib/random.py` (CPython 3.14.7).
+`Lib/random.py` (CPython 3.15.2).
 
 `SystemRandom` draws from `os.urandom`. The bytes come from the operating system,
 so they are an abstract function `raw` with the contract `len(os.urandom(n)) == n`.

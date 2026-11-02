@@ -448,11 +448,11 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "reduce_wrapper" =>
     let names ← getStrList j "names"
     let warnE ← getBool j "werror"
-    let call : Py Int :=
-      if names.contains "function" && names.contains "sequence" then .ok 1
+    let f : List Int → List (String × Int) → Py Int := fun _ kw =>
+      if (kw.map (·.1)).contains "function" && (kw.map (·.1)).contains "sequence" then .ok 1
       else .error (.typeError "~reduce() missing")
-    let warn : Py Unit := if warnE then .error (.named "DeprecationWarning" "~reduce") else .ok ()
-    let (r, w) := reduceWarnWrapper names warn call
+    let warn : String → Py Unit := fun m => if warnE then .error (.named "DeprecationWarning" m) else .ok ()
+    let (r, w) := reduceWarnWrapper warn f [] (names.map (fun n => (n, (0 : Int))))
     pure (okJ (toJson [encPy toJson r, toJson w]))
   | "total_ordering" =>
     let roots ← (← getArr j "roots").mapM (fun x => do parseOp (← x.getStr?))
@@ -813,8 +813,16 @@ def run (fn : String) (j : Json) : Except String Json := do
     let tbl ← parseTable j "tbl"
     let read := readerOf tbl
     let impl ← parseMKindI j
-    let f : SdmFunc Int := ⟨← getBool j "callable", ← getBool j "hasget", read, fun _ => .ok none,
-      if (← getBool j "absbad") then .error (.valueError "read") else .ok none, impl, ← getBool j "isfunc"⟩
+    let hasGet : Py Bool := match j.getObjVal? "hasget" with
+      | .ok (.bool b) => .ok b
+      | _ => .error (.valueError "hasattr")
+    let reprFail : Option PyExc := if ← getBool j "reprbad" then some (.valueError "repr") else none
+    let f : SdmFunc Int := ⟨← getBool j "callable", hasGet, read, fun _ => .ok none,
+      if (← getBool j "absbad") then .error (.valueError "read") else .ok none, impl, ← getBool j "isfunc", reprFail,
+      fun n => if n == "FMT" then .error (.valueError "format") else .ok n,
+      fun n => match tbl.lookup n with
+        | some (.num m) => .ok (some (Int.ofNat m.mantissa.toNat))
+        | _ => .ok none⟩
     let objR ← getOptInt j "obj"
     let world : World := ⟨fun c => if c == 0 then [] else [0], fun c => if c == 0 then [0] else [c, 0],
       fun a b => .ok (a == b || b == 0), fun _ => false, fun _ => [], fun _ => true, fun _ => false⟩
@@ -824,6 +832,7 @@ def run (fn : String) (j : Json) : Except String Json := do
       if v == -1 then .error (.valueError "objrepr") else .ok (toString v)
     let nameA ← getStr j "name"
     let doReg ← getBool j "register"
+    let bad ← getBool j "badclass"
     let r : Py Json := do
       let s ← sdmNew 0 f
       match what with
@@ -833,14 +842,18 @@ def run (fn : String) (j : Json) : Except String Json := do
         let g ← sdmGet s objR 502
         match what with
         | "getrepr" => pure (toJson (← sdmGetRepr g reprO))
-        | "getattr" => pure (toJson (← sdmGetattr g nameA))
+        | "getattr" => pure (match ← sdmGetattrAny g nameA with
+            | some (.inl t) => toJson t
+            | some (.inr v) => toJson v
+            | none => Json.null)
         | "wrapped" => pure (toJson (decide ((sdmWrapped g).impl.isCallable = impl.isCallable)))
         | _ =>
           let s' ← if doReg then
               (sdmGetRegister world 0 g (.val (.cls 1)) (some impl)).map Prod.snd
             else pure s
           let g' := { g with unbound := s' }
-          let (r, _) := sdmCall world worldFuel 0 g' (fun _ => 1) more []
+          let (r, _) := sdmCall world worldFuel 0 g'
+            (fun _ => if bad then .error (.valueError "cls") else .ok 1) more []
           pure (calledJ (← r))
     pure (encPy id r)
   | "key_sig" => pure (okJ (toJson keyTextSignature))

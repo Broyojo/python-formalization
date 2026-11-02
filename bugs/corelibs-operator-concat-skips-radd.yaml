@@ -43,6 +43,7 @@ expected: |
 observed: |
   python3 3.14.7: a + b is [1, 2], Python concat is [1, 2], C concat raises TypeError. REPRODUCED.
   main (python.exe 3.16.0a1+dev): same, REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Docstrings at Modules/_operator.c:457 and Lib/operator.py:155, "Same as a + b, for a and b sequences".
 cause: |

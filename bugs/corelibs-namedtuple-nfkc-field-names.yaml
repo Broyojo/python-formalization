@@ -66,6 +66,7 @@ observed: |
   unexpected keyword argument 'ﬁ'"; AttributeError "'T' object has no attribute 'fi'". REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same, the SyntaxError now says "duplicate
   parameter". REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Doc/library/collections.rst:883-884: "If rename is true, invalid fieldnames are automatically replaced
   with positional names." Lib/collections/__init__.py:375-379, class docstring: `Point(**d)  # convert

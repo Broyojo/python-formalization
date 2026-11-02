@@ -224,30 +224,37 @@ def encodeChar (k : Codec) (c : Char) : List Nat :=
 
 def encodeXml (k : Codec) (s : Str) : List Nat := s.flatMap (encodeChar k)
 
-/-- `HTMLCalendar._format_html_page`, calendar.py:577-604. `encoding = None` becomes `'utf-8'`, and `content` was
-computed by the caller, so its exception comes first. -/
-def hFormatPage (theyear : Int) (content : Str) (css : Option Str) (encoding : Option Str) : Py (List Nat) := do
-  let encoding := encoding.getD (lit "utf-8")
-  let y ← reprInt theyear
-  let page := lit "<!DOCTYPE html>\n" ++ lit "<html lang=\"en\">\n" ++ lit "<head>\n" ++
+/-- What `_format_html_page` writes before the stylesheet line, Lib/calendar.py:584-595. -/
+def htmlPageHead (y encoding : Str) : Str :=
+  lit "<!DOCTYPE html>\n" ++ lit "<html lang=\"en\">\n" ++ lit "<head>\n" ++
     lit "<meta charset=\"" ++ encoding ++ lit "\">\n" ++
     lit "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n" ++
     lit "<title>Calendar for " ++ y ++ lit "</title>\n" ++ lit "<style>\n" ++
     lit ":root { color-scheme: light dark; }\n" ++ lit "table.year { border: solid; }\n" ++
-    lit "table.year > tbody > tr > td { border: solid; vertical-align: top; }\n" ++ lit "</style>\n" ++
+    lit "table.year > tbody > tr > td { border: solid; vertical-align: top; }\n" ++ lit "</style>\n"
+
+/-- The text of the page, Lib/calendar.py:584-602. -/
+def htmlPageText (y encoding : Str) (css : Option Str) (content : Str) : Str :=
+  htmlPageHead y encoding ++
     (match css with
      | some css => lit "<link rel=\"stylesheet\" href=\"" ++ css ++ lit "\">\n"
      | none => []) ++
     lit "</head>\n" ++ lit "<body>\n" ++ content ++ lit "</body>\n" ++ lit "</html>\n"
-  let k ← codecOf encoding
-  return encodeXml k page
 
-/-- `HTMLCalendar.formatyearpage`, calendar.py:606-611. -/
+/-- `HTMLCalendar._format_html_page`, Lib/calendar.py:577-603. `encoding = None` becomes `'utf-8'`, and `content` was
+computed by the caller, so its exception comes first. -/
+def hFormatPage (theyear : Int) (content : Str) (css : Option Str) (encoding : Option Str) : Py (List Nat) := do
+  let encoding := encoding.getD (lit "utf-8")
+  let y ← reprInt theyear
+  let k ← codecOf encoding
+  return encodeXml k (htmlPageText y encoding css content)
+
+/-- `HTMLCalendar.formatyearpage`, Lib/calendar.py:605-610. -/
 def hFormatyearpage (N : Names) (c : Calendar) (theyear width : Int) (css : Option Str)
     (encoding : Option Str) : Py (List Nat) := do
   hFormatPage theyear (← hFormatyear N c theyear width) css encoding
 
-/-- `HTMLCalendar.formatmonthpage`, calendar.py:613-618. -/
+/-- `HTMLCalendar.formatmonthpage`, Lib/calendar.py:612-617. -/
 def hFormatmonthpage (N : Names) (c : Calendar) (theyear themonth : Int) (css : Option Str)
     (encoding : Option Str) : Py (List Nat) := do
   hFormatPage theyear (← hFormatmonth N c theyear themonth true) css encoding

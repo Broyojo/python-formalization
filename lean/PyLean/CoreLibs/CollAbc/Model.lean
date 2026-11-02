@@ -1,7 +1,7 @@
 import PyLean.Core
 
 /-!
-`Lib/_collections_abc.py` (CPython 3.14.7), mirrored.
+`Lib/_collections_abc.py` (CPython 3.15.2), mirrored.
 
 Each mixin is a generic algorithm over the primitives a concrete subclass
 supplies, so the primitives are parameters: the structures `Seq`, `MSeq`, `SetV`,

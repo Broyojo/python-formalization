@@ -7,7 +7,7 @@ import PyLean.CoreLibs.CollAbc.PropsMap
 import PyLean.CoreLibs.CollAbc.PropsHash
 import PyLean.CoreLibs.CollAbc.PropsFail
 
-/-! Registry for the `CollAbc` area of CoreLibs: Lib/_collections_abc.py, Lib/collections/abc.py, CPython 3.14.7. -/
+/-! Registry for the `CollAbc` area of CoreLibs: Lib/_collections_abc.py, Lib/collections/abc.py, CPython 3.15.2. -/
 
 namespace PyLean.CoreLibs.CollAbc
 

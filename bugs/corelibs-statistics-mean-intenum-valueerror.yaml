@@ -35,6 +35,7 @@ expected: |
 observed: |
   python3 3.14.7: ValueError: Fraction(2, 1) is not a valid Level. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Doc/library/statistics.rst, mean(): "Return the sample arithmetic mean of data"; the function accepts
   int subclasses and documents no ValueError.

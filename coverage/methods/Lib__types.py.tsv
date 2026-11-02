@@ -20,8 +20,8 @@ Lib/types.py	275	276	_GeneratorWrapper.gi_frame	gi_frame(self)	modelled	misc-typ
 Lib/types.py	278	279	_GeneratorWrapper.gi_running	gi_running(self)	modelled	misc-types-generator-wrapper	
 Lib/types.py	281	282	_GeneratorWrapper.gi_yieldfrom	gi_yieldfrom(self)	modelled	misc-types-generator-wrapper	
 Lib/types.py	284	285	_GeneratorWrapper.gi_suspended	gi_suspended(self)	modelled	misc-types-generator-wrapper	
-Lib/types.py	287	288	_GeneratorWrapper.gi_state	gi_state(self)	todo		changed-in-3.15: new function
-Lib/types.py	290	291	_GeneratorWrapper.cr_state	cr_state(self)	todo		changed-in-3.15: new function
+Lib/types.py	287	288	_GeneratorWrapper.gi_state	gi_state(self)	todo		
+Lib/types.py	290	291	_GeneratorWrapper.cr_state	cr_state(self)	todo		
 Lib/types.py	297	298	_GeneratorWrapper.__next__	__next__(self)	modelled	misc-types-generator-wrapper	
 Lib/types.py	299	302	_GeneratorWrapper.__iter__	__iter__(self)	modelled	misc-types-generator-wrapper	
 Lib/types.py	305	353	coroutine	coroutine(func)	modelled	misc-types-coroutine,misc-types-coroutine-wrapped	

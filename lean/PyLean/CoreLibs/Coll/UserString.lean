@@ -3,7 +3,7 @@ import PyLean.RangeSlice.Model
 import PyLean.Sequences.Common
 
 /-!
-`collections.UserString`, Lib/collections/__init__.py:1418-1667 (CPython 3.14.7).
+`collections.UserString`, Lib/collections/__init__.py:1418-1667 (CPython 3.15.2).
 
 A `str` is its code points (`PyLean.StrSearch.Seq`). The search, split, strip, replace and pad
 methods use the mirrors of Objects/unicodeobject.c in `PyLean.StrSearch`. What depends on the
@@ -230,7 +230,7 @@ def usNew (cls : String) : SArg → US
   | .user s => ⟨cls, s⟩
   | .other _ text => ⟨cls, text⟩
 
-/-- `UserString.__str__`, @3.14.7:1373-1374. -/
+/-- `UserString.__str__`, Lib/collections/__init__.py:1428-1429. -/
 def usStr (u : US) : Seq := u.data
 
 /-- `UserString.__getnewargs__`, :1299-1300: `(self.data[:],)`. -/
@@ -317,7 +317,7 @@ def strRemovesuffixA (s : Seq) (a : SArg) : Py Seq := do
   let p ← needArg "removesuffix() argument" a
   return strRemovesuffix s p
 
-/-- `UserString.removeprefix`, @3.14.7:1468-1471. -/
+/-- `UserString.removeprefix`, Lib/collections/__init__.py:1523-1526. -/
 def usRemoveprefix (u : US) (a : SArg) : Py US := wrapIn u (strRemoveprefixA u.data (unwrap a))
 
 /-- `UserString.removesuffix`, :1381-1384. -/
@@ -337,10 +337,10 @@ def strEndswithA (s : Seq) (a : AffixArg) (st en : Option Int) : Py Bool := do
   let p ← needAffix "endswith" a
   return strEndswith s p st en
 
-/-- `UserString.endswith`, :1391-1392. No unwrapping on 3.14. -/
+/-- `UserString.endswith`, Lib/collections/__init__.py:1538-1539. No unwrapping. -/
 def usEndswith (u : US) (a : AffixArg) (st en : Option Int) : Py Bool := strEndswithA u.data a st en
 
-/-- `UserString.startswith`, :1501-1502. No unwrapping on 3.14. -/
+/-- `UserString.startswith`, Lib/collections/__init__.py:1648-1649. No unwrapping. -/
 def usStartswith (u : US) (a : AffixArg) (st en : Option Int) : Py Bool :=
   strStartswithA u.data a st en
 

@@ -1,7 +1,7 @@
 import PyLean.CoreLibs.Coll.Counter
 
 /-!
-`collections.ChainMap`, Lib/collections/__init__.py:1040-1168 (CPython 3.14.7).
+`collections.ChainMap`, Lib/collections/__init__.py:1040-1168 (CPython 3.15.2).
 
 Each underlying mapping is a plain dict over abstract keys and values. `self.maps` is
 a public list, so a `ChainMap` is its list of dicts, and the "at least one map"

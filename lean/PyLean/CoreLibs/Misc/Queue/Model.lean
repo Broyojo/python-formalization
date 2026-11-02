@@ -1,7 +1,7 @@
 import PyLean.CoreLibs.Misc.HeapP
 
 /-!
-`Lib/queue.py`, CPython 3.14.7, single-threaded outcomes.
+`Lib/queue.py`, CPython 3.15.2, single-threaded outcomes.
 
 `Queue` is generic in the representation `ρ` through `Impl`, which is the four override points
 `_init`, `_qsize`, `_put`, `_get` of Lib/queue.py:258-275. `Queue`, `PriorityQueue` and `LifoQueue`

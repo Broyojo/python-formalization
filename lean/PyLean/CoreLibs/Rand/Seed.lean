@@ -2,7 +2,7 @@ import PyLean.CoreLibs.Rand.Exact
 import PyLean.CoreLibs.Rand.Sha512
 
 /-!
-The stateful part of `class Random` in `Lib/random.py` (CPython 3.14.7): `__init__`,
+The stateful part of `class Random` in `Lib/random.py` (CPython 3.15.2): `__init__`,
 `seed`, `getstate`, `setstate` and pickling, on top of the C model in `Mt.lean`.
 -/
 

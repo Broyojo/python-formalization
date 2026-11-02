@@ -1,10 +1,10 @@
 import PyLean.CoreLibs.EnumDC.Model
 
 /-!
-`Lib/dataclasses.py` (CPython 3.14.7): `_get_field`, `_process_class` up to the point where methods are generated, what the
+`Lib/dataclasses.py` (CPython 3.15.2): `_get_field`, `_process_class` up to the point where methods are generated, what the
 generated `__init__`, `__eq__`, the ordering methods and the frozen `__setattr__` do, `replace`, `asdict`, `astuple` and
 the checks of `make_dataclass`. Values of fields are `int`s, except in `asdict` and `astuple`, which have a tree of their
-own. String annotations (`_is_type`), `__slots__` beyond its checks, `__doc__` and `__annotate__` are not mirrored.
+own. String annotations (`_get_type_from_annotation`, in DcAnnot.lean), `__slots__` beyond its checks, `__doc__` and `__annotate__` are not mirrored.
 -/
 
 namespace PyLean.CoreLibs.EnumDC
@@ -436,6 +436,8 @@ inductive DV where
   | tupleSub (l : List DV)
   | dictSub (ks vs : List DV)
   | defaultDict (ks vs : List DV)
+  /-- A `frozendict`, which `issubclass(obj_type, (dict, frozendict))` sends the way of `dict`. -/
+  | frozenDict (ks vs : List DV)
   | counter (ks vs : List DV)
   deriving Repr, BEq, Inhabited
 
@@ -445,6 +447,7 @@ mutual
     | .atom _ | .str _ | .copied _ => true
     | .tuple l | .named l | .tupleSub l => DV.allHashable l
     | .inst _ vals => DV.allHashable vals
+    | .frozenDict _ vs => DV.allHashable vs
     | _ => false
 
   def DV.allHashable : List DV → Bool
@@ -529,6 +532,11 @@ mutual
       | .ok k, .ok v => wrapDict .dictSub (dvPairs k v)
       | .error e, _ => .error e
       | _, .error e => .error e
+    | .frozenDict ks vs =>
+      match asdictL fact ks, asdictL fact vs with
+      | .ok k, .ok v => wrapDict .frozenDict (dvPairs k v)
+      | .error e, _ => .error e
+      | _, .error e => .error e
     | .counter ks vs =>
       match asdictL fact ks, asdictL fact vs with
       | .ok k, .ok v => dvCounter k v
@@ -603,6 +611,11 @@ mutual
     | .dictSub ks vs =>
       match astupleL fact ks, astupleL fact vs with
       | .ok k, .ok v => wrapDict .dictSub (dvPairs k v)
+      | .error e, _ => .error e
+      | _, .error e => .error e
+    | .frozenDict ks vs =>
+      match astupleL fact ks, astupleL fact vs with
+      | .ok k, .ok v => wrapDict .frozenDict (dvPairs k v)
       | .error e, _ => .error e
       | _, .error e => .error e
     | .counter ks vs =>

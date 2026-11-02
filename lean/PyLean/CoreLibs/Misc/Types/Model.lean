@@ -1,7 +1,7 @@
 import PyLean.Core
 
 /-!
-`Lib/types.py`, CPython 3.14.7, everything below the `_types` import fallback (lines 79-343).
+`Lib/types.py`, CPython 3.15.2, everything below the `_types` import fallback (lines 79-343).
 
 `O` is an abstract universe of Python objects and `Ops` the operations `types.py` applies to them
 (`isinstance(x, type)`, `type(x)`, `issubclass`, `hasattr(x, "__mro_entries__")`, ...), so class
@@ -289,6 +289,8 @@ structure GenObj (G V : Type) where
   giRunning : G → Py V
   giYieldfrom : G → Py V
   giSuspended : G → Py V
+  /-- `gi_state`, a `str` for a generator. -/
+  giState : G → Py String
 
 /-- A `_GeneratorWrapper`, Lib/types.py:260-264. `name` and `qualname` are the `getattr(gen, ...,
 None)` reads. -/
@@ -334,6 +336,20 @@ def Wrapper.giRunning (o : GenObj G V) (w : Wrapper G) : Py V := o.giRunning w.w
 def Wrapper.giYieldfrom (o : GenObj G V) (w : Wrapper G) : Py V := o.giYieldfrom w.wrapped
 /-- `_GeneratorWrapper.gi_suspended`, Lib/types.py:283-285. -/
 def Wrapper.giSuspended (o : GenObj G V) (w : Wrapper G) : Py V := o.giSuspended w.wrapped
+
+/-- `s.replace('GEN_', 'CORO_')`: from the left, on what is left after each match. -/
+def genToCoro : List Char → List Char
+  | 'G' :: 'E' :: 'N' :: '_' :: r => 'C' :: 'O' :: 'R' :: 'O' :: '_' :: genToCoro r
+  | c :: r => c :: genToCoro r
+  | [] => []
+
+/-- `_GeneratorWrapper.gi_state`, Lib/types.py:286-288. -/
+def Wrapper.giState (o : GenObj G V) (w : Wrapper G) : Py String := o.giState w.wrapped
+/-- `_GeneratorWrapper.cr_state`, Lib/types.py:289-291: read through `gi_state`. -/
+def Wrapper.crState (o : GenObj G V) (w : Wrapper G) : Py String :=
+  match o.giState w.wrapped with
+  | .error e => .error e
+  | .ok s => .ok (String.ofList (genToCoro s.toList))
 
 /-- `_GeneratorWrapper.__iter__`, Lib/types.py:299-302: `.inl` is `self.__wrapped`, `.inr` is
 `self`. -/
