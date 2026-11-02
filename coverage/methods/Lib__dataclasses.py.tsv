@@ -32,13 +32,13 @@ Lib/dataclasses.py	929	934	_hash_set_none	_hash_set_none(cls, fields, func_build
 Lib/dataclasses.py	936	942	_hash_add	_hash_add(cls, fields, func_builder)	modelled	corelibs-dc-hash-fields	
 Lib/dataclasses.py	944	947	_hash_exception	_hash_exception(cls, fields, func_builder)	todo		withdrawn: thin; the table is not the three action functions
 Lib/dataclasses.py	983	997	_AutoDocstring.__get__	__get__(self, _obj, cls)	todo		
-Lib/dataclasses.py	1002	1250	_process_class	_process_class(cls, init, repr, eq, order, unsafe_hash, frozen, match_args, kw_only, slots, weakref_slot)	todo		
+Lib/dataclasses.py	1002	1250	_process_class	_process_class(cls, init, repr, eq, order, unsafe_hash, frozen, match_args, kw_only, slots, weakref_slot)	todo		changed-in-3.15:
 Lib/dataclasses.py	1258	1259	_dataclass_getstate	_dataclass_getstate(self)	todo		
 Lib/dataclasses.py	1262	1265	_dataclass_setstate	_dataclass_setstate(self, state)	todo		
 Lib/dataclasses.py	1268	1288	_get_slots	_get_slots(cls)	todo		
 Lib/dataclasses.py	1291	1317	_update_func_cell_for__class__	_update_func_cell_for__class__(f, oldcls, newcls)	todo		
 Lib/dataclasses.py	1320	1342	_create_slots	_create_slots(defined_fields, inherited_slots, field_names, weakref_slot)	todo		
-Lib/dataclasses.py	1345	1431	_add_slots	_add_slots(cls, is_frozen, weakref_slot, defined_fields)	todo		
+Lib/dataclasses.py	1345	1431	_add_slots	_add_slots(cls, is_frozen, weakref_slot, defined_fields)	todo		changed-in-3.15:
 Lib/dataclasses.py	1434	1462	dataclass	dataclass(cls=None, /, *, init=True, repr=True, eq=True, order=False, unsafe_hash=False, frozen=False, match_args=True, kw_only=False, slots=False, weakref_slot=False)	todo		
 Lib/dataclasses.py	1465	1480	fields	fields(class_or_instance)	todo		withdrawn: thin; the table is not the three action functions
 Lib/dataclasses.py	1483	1485	_is_dataclass_instance	_is_dataclass_instance(obj)	todo		

@@ -82,7 +82,7 @@ def counterEntries : List Entry := [
     statement := "c += d, c -= d, c |= d, c &= d leave c equal to c + d, c - d, c | d, c & d, items and order, for all counters."
     source := "invariant: in-place and binary forms; docstrings, Lib/collections/__init__.py:964-1011"
     status := .proven, prop := ``InplaceAgreesBinary, thm := some ``inplaceAgreesBinary_proven },
-  { id := "coll-counter-xor", pyFile := file, pyFns := ["Counter.__xor__", "Counter.__ixor__"]
+  { id := "coll-counter-xor", pyFile := file, pyFns := []
     statement := "c ^ d is the absolute difference of counts, for all counters including zero and negative counts, equal to (c - d) | (d - c), with positive counts only, in the operators' key order; c ^= d gives the same items in the same order."
     source := "docstrings, Lib/collections/__init__.py:910-935, :1019-1033"
     status := .proven, prop := ``XorPointwise, thm := some ``xorPointwise_proven },

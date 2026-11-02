@@ -109,7 +109,7 @@ def calledJ (c : Called Int) : Json :=
 def callTop (c : Bool) (f : Fn Int) (more : List Int) (kw : List (String × Int)) : Py (Called Int) :=
   match f with
   | .pobj none _ g a k ph =>
-    if c then partialVectorcall g a k ph more kw else partialCallPy g a k ph more kw
+    if c then partialVectorcall (-1) true g a k ph more kw else partialCallPy g a k ph more kw
   | _ => callFn f more kw
 
 def objJ (c : Bool) (f : Fn Int) (more : List Int) (kw : List (String × Int)) : Json :=
@@ -424,7 +424,17 @@ def run (fn : String) (j : Json) : Except String Json := do
         | _ => pure .ok
       pure (⟨k, v, hook⟩ : VecKw Int)
     -- the callee's `**k` is a dict: a name the lookups moved from the stored dict to the tail can come twice
-    pure (encPy (fun x => kwJ (mergeKw [] x.kw)) (partialVectorcallKws (.base 0) [] stored 0 [] kws))
+    pure (encPy (fun x => kwJ (mergeKw [] x.kw)) (partialVectorcallKws (-1) true (.base 0) [] stored 0 [] kws))
+  | "partial_fast" =>
+    let raw ← (← getArr j "raw").mapM parsePArg
+    let items ← (← getArr j "items").mapM parsePArg
+    let more ← getIntList j "more"
+    let r : Py (Called Int) :=
+      match setstateC none (.four (.base 0) (.sub (.iterates raw (.ok items))) .none .none) with
+      | .ok (.pobj _ _ f a k ph) => partialVectorcall (-1) true f a k ph more []
+      | .ok _ => .error .modelFuel
+      | .error e => .error e
+    pure (encPy (fun x => toJson x.args) r)
   | "repr_mut" =>
     let vals ← getIntList j "vals"
     let mutAt ← getOptInt j "mut"

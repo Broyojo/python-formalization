@@ -335,13 +335,22 @@ def vecKeywords {α : Type} (pkw : List (String × α)) (kws : List (VecKw α)) 
     | .error e => .error e
     | .ok (d, merged, tail) => vecKwFinish pkw.length (merged.getD d) tail
 
+/-- A stored argument as the object it is: `phv` is the `Placeholder`. C passes the stored tuple on as it is, so with a
+`phcount` that does not describe it, which `__setstate__` allows, the callee gets the `Placeholder` itself. -/
+def rawArg {α : Type} (phv : α) : PArg α → α
+  | .ph => phv
+  | .val a => a
+
 /-- `partial_vectorcall`, Modules/_functoolsmodule.c:368-571, reached when the wrapped function supports vectorcall
-(`partial_setvectorcall`, :573-587). The check of `phcount`, then the keywords, then the positional arguments. The fast
-paths at :397-416, no arguments at all and one stored argument, give the same call on a well-formed object, where such
-a tuple has no placeholder. -/
-def partialVectorcallKws {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw : List (String × α))
-    (ph : Nat) (args : List α) (kws : List (VecKw α)) : Py (Called α) :=
+(`partial_setvectorcall`, :573-587). The check of `phcount`, then two fast paths when no keywords are stored, :397-416: a call
+with no arguments passes the stored tuple on, and with `PY_VECTORCALL_ARGUMENTS_OFFSET`, which is `offset`, one stored argument
+is put in front of the arguments of the call. Neither reads `phcount` again. Then the keywords, then the positional arguments. -/
+def partialVectorcallKws {α : Type} (phv : α) (offset : Bool) (func : Fn α) (pargs : List (PArg α))
+    (pkw : List (String × α)) (ph : Nat) (args : List α) (kws : List (VecKw α)) : Py (Called α) :=
   if args.length < ph then .error (.typeError (missingMsg ph args.length))
+  else if pkw.isEmpty && args.isEmpty && kws.isEmpty then callFn func (pargs.map (rawArg phv)) []
+  else if pkw.isEmpty && pargs.length == 1 && offset then
+    callFn func (pargs.map (rawArg phv) ++ args) (kws.map (fun k => (k.key, k.val)))
   else
     match vecKeywords pkw kws with
     | .error e => .error e
@@ -350,12 +359,12 @@ def partialVectorcallKws {α : Type} (func : Fn α) (pargs : List (PArg α)) (pk
         match vecMerge pargs ph args with
         | .error e => .error e
         | .ok tot => callFn func tot tot_kw
-      else callFn func (valsOf pargs ++ args) tot_kw
+      else callFn func (pargs.map (rawArg phv) ++ args) tot_kw
 
 /-- `partial_vectorcall` with keywords whose lookups run no Python code. -/
-def partialVectorcall {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw : List (String × α))
-    (ph : Nat) (args : List α) (kw : List (String × α)) : Py (Called α) :=
-  partialVectorcallKws func pargs pkw ph args (plainKw kw)
+def partialVectorcall {α : Type} (phv : α) (offset : Bool) (func : Fn α) (pargs : List (PArg α))
+    (pkw : List (String × α)) (ph : Nat) (args : List α) (kw : List (String × α)) : Py (Called α) :=
+  partialVectorcallKws phv offset func pargs pkw ph args (plainKw kw)
 
 /-- `partial.__get__`, Lib/functools.py:395-398, `partial_descr_get`, Modules/_functoolsmodule.c:360-366, and
 `lru_cache_descr_get`, :1754-1760: `None` gives the object itself, anything else a `MethodType`. -/

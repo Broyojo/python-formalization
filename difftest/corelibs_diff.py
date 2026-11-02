@@ -1765,6 +1765,32 @@ def functools_obj(m, p, more, morekw):
             "call": py_result(lambda: p(*more, **dict(morekw)))}
 
 
+def functools_run_fast(m, case):
+    PH = m.Placeholder
+
+    def conv(xs):
+        return [PH if x == "PH" else x for x in xs]
+    raw, items = tuple(conv(case["raw"])), conv(case["items"])
+
+    class T(tuple):
+        def __iter__(self):
+            return iter(items)
+
+    def f(*a):
+        return [-1 if x is PH else x for x in a]
+    p = m.partial(f)
+    p.__setstate__((f, T(raw), {}, None))
+    more = case["more"]
+    # plain calls: the interpreter passes PY_VECTORCALL_ARGUMENTS_OFFSET, which `p(*more)` does not
+    if len(more) == 0:
+        return p()
+    if len(more) == 1:
+        return p(more[0])
+    if len(more) == 2:
+        return p(more[0], more[1])
+    return p(more[0], more[1], more[2])
+
+
 def functools_run_kwhook(m, case):
     def f(**k):
         return [[str(x), y] for x, y in k.items()]
@@ -2121,7 +2147,7 @@ def functools_gen(rng):
         return functools_dispatch_case(rng)
     if r == 25:
         return functools_register_case(rng)
-    k = rng.randrange(0, 20)
+    k = rng.randrange(0, 21)
     if k == 13:
         if rng.random() < .7:
             return functools_lru_ptr(rng, twin_pick(rng))
@@ -2144,6 +2170,11 @@ def functools_gen(rng):
         return {"fn": "functools.pm_new_fail", "which": rng.choice(["get", "repr", "none"])}
     if k == 19:
         return functools_gen_kwhook(rng)
+    if k == 20:
+        # one stored argument after `__setstate__`, which a `phcount` from another tuple does not describe
+        raw, items = rng.choice([[["PH", 1], [1]], [[1], ["PH"]], [[1], [5]], [[2], [3]]])
+        return {"fn": "functools.partial_fast", "twin": "c", "raw": raw, "items": items,
+                "more": [10, 11, 12][:rng.randrange(0, 4)]}
     if k == 9:
         return {"fn": "functools.make_key_meta", "n": rng.randrange(1, 3), "typed": rng.random() < .3,
                 "bad": rng.random() < .5}
@@ -2454,6 +2485,8 @@ def functools_run(case):
         return r
     if fn == "partial_kwhook":
         return py_result(lambda: functools_run_kwhook(m, case))
+    if fn == "partial_fast":
+        return py_result(lambda: functools_run_fast(m, case))
     if fn == "partial_duck":
         P = m.partial
         inner = functools_id(1)

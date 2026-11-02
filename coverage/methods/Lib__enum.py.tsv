@@ -26,12 +26,12 @@ Lib/enum.py	343	443	EnumDict.__setitem__	__setitem__(self, key, value)	modelled	
 Lib/enum.py	446	447	EnumDict.member_names	member_names(self)	todo		
 Lib/enum.py	449	457	EnumDict.update	update(self, members, **more_members)	modelled	corelibs-enum-dict-update-keys	
 Lib/enum.py	468	479	EnumType.__prepare__	__prepare__(metacls, cls, bases, **kwds)	todo		
-Lib/enum.py	481	693	EnumType.__new__	__new__(metacls, cls, bases, classdict, *, boundary=None, _simple=False, **kwds)	todo		
+Lib/enum.py	481	693	EnumType.__new__	__new__(metacls, cls, bases, classdict, *, boundary=None, _simple=False, **kwds)	todo		changed-in-3.15:
 Lib/enum.py	695	699	EnumType.__bool__	__bool__(cls)	todo		
 Lib/enum.py	701	748	EnumType.__call__	__call__(cls, value, names=_not_given, *values, module=None, qualname=None, type=None, start=1, boundary=None)	modelled	corelibs-enum-call	
 Lib/enum.py	750	769	EnumType.__contains__	__contains__(cls, value)	modelled	corelibs-enum-round-trip,corelibs-enum-flag-class-contains	
 Lib/enum.py	771	776	EnumType.__delattr__	__delattr__(cls, attr)	modelled	corelibs-enum-attr-guards	
-Lib/enum.py	778	798	EnumType.__dir__	__dir__(cls)	todo		
+Lib/enum.py	778	798	EnumType.__dir__	__dir__(cls)	todo		changed-in-3.15:
 Lib/enum.py	800	804	EnumType.__getitem__	__getitem__(cls, name)	modelled	corelibs-enum-round-trip	
 Lib/enum.py	806	810	EnumType.__iter__	__iter__(cls)	modelled	corelibs-enum-round-trip	
 Lib/enum.py	812	816	EnumType.__len__	__len__(cls)	modelled	corelibs-enum-add-alias	

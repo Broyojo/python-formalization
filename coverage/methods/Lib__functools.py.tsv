@@ -51,7 +51,7 @@ Lib/functools.py	1077	1088	_singledispatchmethod_get.__repr__	__repr__(self)	tod
 Lib/functools.py	1090	1112	_singledispatchmethod_get.__call__	__call__(self, /, *args, **kwargs)	todo		
 Lib/functools.py	1114	1120	_singledispatchmethod_get.__getattr__	__getattr__(self, name)	todo		
 Lib/functools.py	1123	1124	_singledispatchmethod_get.__wrapped__	__wrapped__(self)	todo		
-Lib/functools.py	1127	1128	_singledispatchmethod_get.register	register(self)	excluded		trivial: returns the bound method self._unbound.register, with no branch; registration is singledispatchmethod.register
+Lib/functools.py	1127	1128	_singledispatchmethod_get.register	register(self)	todo		review: `sdmGetRegister` is an alias of `sdmRegister`, restated as a conjunct and proved by `rfl` on a one-liner, which AGENTS.md says is not coverage.
 Lib/functools.py	1138	1142	cached_property.__init__	__init__(self, func)	modelled	corelibs-functools-cached-property-init	
 Lib/functools.py	1144	1151	cached_property.__set_name__	__set_name__(self, owner, name)	modelled	corelibs-functools-cached-property	
 Lib/functools.py	1153	1178	cached_property.__get__	__get__(self, instance, owner=None)	modelled	corelibs-functools-cached-property	review: `InstDict` allows only a plain table with `frozen` giving TypeError, so `instance.__dict__` raising other than AttributeError at :1160, a failing `cache.get` at :1167 and a non-TypeError store at :1171 are absent, the `Py` result drops the dict when `func` raises, so the registry's \"stores nothing on failure\" is unstated and untrue for a function that wrote first, and `setAttr d'` ignores that `cache` keeps the old object if `func` rebinds `__dict__`.

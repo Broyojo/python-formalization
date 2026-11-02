@@ -65,7 +65,7 @@ Modules/_operator.c	1109	1118	itemgetter_call	itemgetter_call(PyObject *op, PyOb
 Modules/_operator.c	1121	1133	itemgetter_vectorcall	itemgetter_vectorcall(PyObject *op, PyObject *const *args, size_t nargsf, PyObject *kwnames)	modelled	corelibs-operator-getter-arity-exact,corelibs-operator-itemgetter-exact	
 Modules/_operator.c	1136	1169	itemgetter_call_impl	itemgetter_call_impl(itemgetterobject *ig, PyObject *obj)	modelled	corelibs-operator-itemgetter-exact	
 Modules/_operator.c	1172	1189	itemgetter_repr	itemgetter_repr(PyObject *op)	modelled	corelibs-operator-getter-repr-exact	
-Modules/_operator.c	1192	1198	itemgetter_reduce	itemgetter_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
+Modules/_operator.c	1192	1198	itemgetter_reduce	itemgetter_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		changed-in-3.15:
 Modules/_operator.c	1262	1367	attrgetter_new	attrgetter_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	corelibs-operator-getter-arity-exact,corelibs-operator-attr-name-exact,corelibs-operator-attr-call-exact	
 Modules/_operator.c	1370	1375	attrgetter_clear	attrgetter_clear(PyObject *op)	excluded		no-behaviour: GC clear of owned references
 Modules/_operator.c	1378	1385	attrgetter_dealloc	attrgetter_dealloc(PyObject *op)	excluded		no-behaviour: deallocation
