@@ -43,6 +43,7 @@ expected: |
   A TypeError, or `self` returned unbound, as a super subclass gets a clean exception.
 observed: |
   python3 3.14.7: both cases die with SIGSEGV (return code -11). REPRODUCED.
+  python3 (3.15.2): REPRODUCED by scripts/check_bugs.py
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): both cases SIGSEGV. REPRODUCED by
   scripts/check_bugs.py.
 promised_by: |

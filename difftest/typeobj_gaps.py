@@ -288,7 +288,8 @@ def main():
             example.setdefault(s, (source(c).split("\n")[-1], py[-1:]))
         else:
             cats["disagree"] += 1
-            bad.append(("disagree", source(c).split("\n")[-1], lean[-1:], py[-1:]))
+            i = next((i for i, (x, y) in enumerate(zip(lean, py)) if x != y), min(len(lean), len(py)))
+            bad.append(("disagree", source(c), lean[i:i + 2], py[i:i + 2]))
     known = static_sites()
     fired = {s[4:] for s in sites if s.startswith("GAP@")}
     print(f"cases {len(cases)}: {dict(cats)}")

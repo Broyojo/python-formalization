@@ -44,6 +44,7 @@ possible_fix: |
   (vendor/cpython-main/Objects/exceptions.c:1077).
 reproduces:
   python3 (3.14.7): REPRODUCED
+  python3 (3.15.2): does not reproduce; Objects/exceptions.c:1099 sizes args first. The entry typeobj-exc-eg-repr-in-bounds now proves the property.
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): does not reproduce (fixed)
 duplicates:
   issues:

@@ -75,6 +75,7 @@ possible_fix: |
   be by contents), or remove the field and document the behaviour in the `except*` section.
 reproduces:
   python3 (3.14.7): REPRODUCED
+  python3 (3.15.2): REPRODUCED by scripts/check_bugs.py
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
 duplicates:
   issues: []

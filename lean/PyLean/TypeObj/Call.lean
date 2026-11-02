@@ -1616,6 +1616,92 @@ def subtypeSetdict (rt : Rt) (obj : Val) (value : Option Val) : M Unit := do
       | some f => callDescrSet rt f descr obj value
   | none => objectSetDict obj value
 
+/-- The getters of `func_getsetlist`, `Objects/funcobject.c:1060`. The fields hold the objects that
+were assigned, and NULL reads as `None`, or `()` for `__type_params__`. -/
+def functionAttrGet (rt : Rt) (obj : Val) (f : FuncData) (n : Name) : M Val := do
+  if n == "__name__" then return f.nameObj.getD (.str f.name)
+  if n == "__qualname__" then return f.qualnameObj.getD (.str f.qualname)
+  if n == "__module__" then return f.module
+  if n == "__doc__" then return f.doc
+  if n == "__defaults__" then return f.defaultsObj.getD .none
+  if n == "__kwdefaults__" then return f.kwdefaultsObj.getD .none
+  if n == "__dict__" then return ← genericGetDict obj
+  if n == "__annotate__" then return f.annotate.getD .none
+  if n == "__annotations__" then
+    match obj with
+    | .obj fn => return ← funcGetAnnotations rt fn f
+    | _ => gap%
+  if n == "__type_params__" then return f.typeParams.getD (.tuple [])
+  gap%
+
+/-- The setters of `func_getsetlist`, `Objects/funcobject.c:1060`. -/
+def functionAttrSet (obj : Val) (a : Addr) (f : FuncData) (n : Name) (value : Option Val) :
+    M Unit := do
+  let w ← getW
+  let setF (g : FuncData) : M Unit := modObj a fun o => { o with body := .func g }
+  if n == "__name__" then
+    -- `func_set_name`, `Objects/funcobject.c:716`.
+    match value with
+    | some v =>
+      match strOf w v with
+      | some s => return ← setF { f with name := s, nameObj := some v }
+      | none => typeErr "__name__ must be set to a string object"
+    | none => typeErr "__name__ must be set to a string object"
+  if n == "__qualname__" then
+    -- `func_set_qualname`, `Objects/funcobject.c:743`.
+    match value with
+    | some v =>
+      match strOf w v with
+      | some s => return ← setF { f with qualname := s, qualnameObj := some v }
+      | none => typeErr "__qualname__ must be set to a string object"
+    | none => typeErr "__qualname__ must be set to a string object"
+  if n == "__module__" then return ← setF { f with module := value.getD .none }
+  if n == "__doc__" then return ← setF { f with doc := value.getD .none }
+  if n == "__defaults__" then
+    -- `func_set_defaults`, `Objects/funcobject.c:827`.
+    match value with
+    | none | some .none => return ← setF { f with defaults := [], defaultsObj := none }
+    | some v =>
+      match tupleOf w v with
+      | some xs => return ← setF { f with defaults := xs, defaultsObj := some v }
+      | none => typeErr "__defaults__ must be set to a tuple object"
+  if n == "__kwdefaults__" then
+    -- `func_set_kwdefaults`, `Objects/funcobject.c:875`.
+    match value with
+    | none | some .none => return ← setF { f with kwdefaultsObj := none }
+    | some v =>
+      match dictOf w v with
+      | some _ => return ← setF { f with kwdefaultsObj := some v }
+      | none => typeErr "__kwdefaults__ must be set to a dict object"
+  if n == "__annotate__" then
+    -- `function___annotate___set_impl`, `Objects/funcobject.c:934`.
+    match value with
+    | none => typeErr "__annotate__ cannot be deleted"
+    | some v =>
+      if v.is .none then return ← setF { f with annotate := some v }
+      if excCallableCheck w v then
+        return ← setF { f with annotate := some v, annotations := none }
+      typeErr "__annotate__ must be callable or None"
+  if n == "__annotations__" then
+    -- `function___annotations___set_impl`, `Objects/funcobject.c:989`.
+    let v := match value with
+      | some x => if x.is .none then none else some x
+      | none => none
+    match v with
+    | some x =>
+      if (dictOf w x).isNone then typeErr "__annotations__ must be set to a dict object"
+    | none => pure ()
+    return ← setF { f with annotations := v, annotate := none }
+  if n == "__type_params__" then
+    -- `function___type_params___set_impl`, `Objects/funcobject.c:1035`.
+    match value with
+    | some x =>
+      if (tupleOf w x).isNone then typeErr "__type_params__ must be set to a tuple"
+      return ← setF { f with typeParams := some x }
+    | none => typeErr "__type_params__ must be set to a tuple"
+  if n == "__dict__" then return ← genericSetDict obj value
+  gap%
+
 /-- Getter of the `PyGetSetDef`/`PyMemberDef` named `n` on static type `owner`. -/
 def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
   let w ← getW
@@ -1673,22 +1759,7 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
     gap%
   if owner == B.function then
     match payloadOf w obj with
-    | some (.func f) =>
-      if n == "__name__" then return f.nameObj.getD (.str f.name)
-      if n == "__qualname__" then return f.qualnameObj.getD (.str f.qualname)
-      if n == "__module__" then return f.module
-      if n == "__doc__" then return f.doc
-      if n == "__defaults__" then
-        return f.defaultsObj.getD .none
-      if n == "__kwdefaults__" then return f.kwdefaultsObj.getD .none
-      if n == "__dict__" then return ← genericGetDict obj
-      if n == "__annotate__" then return f.annotate.getD .none
-      if n == "__annotations__" then
-        match obj with
-        | .obj fn => return ← funcGetAnnotations rt fn f
-        | _ => gap%
-      if n == "__type_params__" then return f.typeParams.getD (.tuple [])
-      gap%
+    | some (.func f) => return ← functionAttrGet rt obj f n
     | _ => gap%
   if owner == B.method then
     match payloadOf w obj with
@@ -1885,66 +1956,7 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
     gap%
   if owner == B.function then
     match payloadOf w obj, obj with
-    | some (.func f), .obj a =>
-      let setF (g : FuncData) : M Unit := modObj a fun o => { o with body := .func g }
-      if n == "__name__" then
-        match value with
-        | some v =>
-          match strOf w v with
-          | some s => return ← setF { f with name := s, nameObj := some v }
-          | none => typeErr "__name__ must be set to a string object"
-        | none => typeErr "__name__ must be set to a string object"
-      if n == "__qualname__" then
-        match value with
-        | some v =>
-          match strOf w v with
-          | some s => return ← setF { f with qualname := s, qualnameObj := some v }
-          | none => typeErr "__qualname__ must be set to a string object"
-        | none => typeErr "__qualname__ must be set to a string object"
-      if n == "__module__" then return ← setF { f with module := value.getD .none }
-      if n == "__doc__" then return ← setF { f with doc := value.getD .none }
-      if n == "__defaults__" then
-        match value with
-        | none | some .none => return ← setF { f with defaults := [], defaultsObj := none }
-        | some v =>
-          match tupleOf w v with
-          | some xs => return ← setF { f with defaults := xs, defaultsObj := some v }
-          | none => typeErr "__defaults__ must be set to a tuple object"
-      if n == "__kwdefaults__" then
-        match value with
-        | none | some .none => return ← setF { f with kwdefaultsObj := none }
-        | some v =>
-          match dictOf w v with
-          | some _ => return ← setF { f with kwdefaultsObj := some v }
-          | none => typeErr "__kwdefaults__ must be set to a dict object"
-      if n == "__annotate__" then
-        -- `function___annotate___set_impl`, `Objects/funcobject.c:934`.
-        match value with
-        | none => typeErr "__annotate__ cannot be deleted"
-        | some v =>
-          if v.is .none then return ← setF { f with annotate := some v }
-          if excCallableCheck w v then
-            return ← setF { f with annotate := some v, annotations := none }
-          typeErr "__annotate__ must be callable or None"
-      if n == "__annotations__" then
-        -- `function___annotations___set_impl`, `Objects/funcobject.c:989`.
-        let v := match value with
-          | some x => if x.is .none then none else some x
-          | none => none
-        match v with
-        | some x =>
-          if (dictOf w x).isNone then typeErr "__annotations__ must be set to a dict object"
-        | none => pure ()
-        return ← setF { f with annotations := v, annotate := none }
-      if n == "__type_params__" then
-        -- `function___type_params___set_impl`, `Objects/funcobject.c:1035`.
-        match value with
-        | some x =>
-          if (tupleOf w x).isNone then typeErr "__type_params__ must be set to a tuple"
-          return ← setF { f with typeParams := some x }
-        | none => typeErr "__type_params__ must be set to a tuple"
-      if n == "__dict__" then return ← genericSetDict obj value
-      gap%
+    | some (.func f), .obj a => return ← functionAttrSet obj a f n value
     | _, _ => gap%
   if isSubtype w owner B.BaseException then return ← excGetsetSet rt owner n obj value
   if owner == B.property then

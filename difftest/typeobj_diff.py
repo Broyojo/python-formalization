@@ -2163,6 +2163,14 @@ def fam_repin(g):
             g.main.append(["assign", n, call(name("type"), lit(n), ["tuple", [name(b)]], ["dict", ns])] if b != "int" or not s
                           else ["assign", n, call(name("type"), lit(n), ["tuple", [name("object")]], ["dict", []])])
             names.append(n)
+        # A failure below a grandchild has to undo the MRO of the whole hierarchy.
+        g.main.append(["assign", "Z1", call(name("type"), lit("Z1"), ["tuple", [name("A")]], ["dict", []])])
+        g.main.append(["assign", "Z2", call(name("type"), lit("Z2"), ["tuple", [name("Z1")]], ["dict", []])])
+        g.main.append(["assign", "Y", call(name("type"), lit("Y"), ["tuple", []], ["dict", []])])
+        g.main.append(["assign", "Z3", call(name("type"), lit("Z3"), ["tuple", [name("Y"), name("Z2")]], ["dict", []])])
+        g.probes(["setattr", name("A"), "__bases__", ["tuple", [name("Y")]]])
+        for n in ["A", "Z1", "Z2", "Z3"]:
+            g.probe(attr(name(n), "__mro__"))
         for _ in range(10):
             x, y = r.choice(names), r.choice(names + ["object", "A", "ValueError", "list", "dict"])
             if r.random() < 0.5:

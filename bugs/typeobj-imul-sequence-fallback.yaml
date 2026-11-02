@@ -62,6 +62,7 @@ expected: |
   repeat slot, as it does for `n = 2`.
 observed: |
   python3 3.14.7: TypeError: unsupported operand type(s) for *=: 'Index' and 'list'. REPRODUCED.
+  python3 (3.15.2): REPRODUCED by scripts/check_bugs.py
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED by scripts/check_bugs.py.
 promised_by: |
   The twin PyNumber_Multiply (abstract.c:1166-1182); the comment at abstract.c:1337-1339;

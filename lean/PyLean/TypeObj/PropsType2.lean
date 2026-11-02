@@ -101,15 +101,21 @@ theorem wrapperDescrSelfChecked_proven : WrapperDescrSelfChecked := by
 /-- **`type.__new__` argument parsing**: the messages of `PyArg_ParseTuple(args, "UO!O")`
 and the check of the namespace, `Objects/typeobject.c:5125-5137`. -/
 def TypeNewArgs : Prop :=
-  ∀ (rt : Rt) (m : Addr) (a b c : Val) (args : List Val) (kw : Kw) (w : World),
+  ∀ (rt : Rt) (m : Addr) (a b c : Val) (args : List Val) (kw : Kw) (s : String) (bs : List Val)
+    (w : World),
     (args.length ≠ 3 → typeNew rt m args kw w =
       (typeErr s!"type.__new__() takes exactly 3 arguments ({args.length} given)" : M Val) w) ∧
     (strOf w a = none → typeNew rt m [a, b, c] kw w =
-      (typeErr s!"type.__new__() argument 1 must be str, not {typeName w a}" : M Val) w)
+      (typeErr s!"type.__new__() argument 1 must be str, not {typeName w a}" : M Val) w) ∧
+    (strOf w a = some s → tupleOf w b = none → typeNew rt m [a, b, c] kw w =
+      (typeErr s!"type.__new__() argument 2 must be tuple, not {typeName w b}" : M Val) w) ∧
+    (strOf w a = some s → tupleOf w b = some bs → anyDictOf w c = none →
+      typeNew rt m [a, b, c] kw w =
+        (typeErr s!"type.__new__() argument 3 must be dict or frozendict, not {objFQN w c}" : M Val) w)
 
 theorem typeNewArgs_proven : TypeNewArgs := by
-  intro rt m a b c args kw w
-  constructor
+  intro rt m a b c args kw s bs w
+  refine ⟨?_, ?_, ?_, ?_⟩
   · intro h
     match args, h with
     | [], _ => simp [typeNew]
@@ -119,6 +125,10 @@ theorem typeNewArgs_proven : TypeNewArgs := by
     | _ :: _ :: _ :: _ :: _, _ => simp [typeNew]
   · intro h
     simp [typeNew, h]
+  · intro h1 h2
+    simp [typeNew, h1, h2]
+  · intro h1 h2 h3
+    simp [typeNew, h1, h2, h3]
 
 /-- **Empty bases mean `object`**: `Objects/typeobject.c:5050-5058`. -/
 def TypeNewEmptyBases : Prop :=

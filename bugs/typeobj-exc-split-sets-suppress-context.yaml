@@ -68,6 +68,7 @@ possible_fix: |
   store the cause without going through `PyException_SetCause`.
 reproduces:
   python3 (3.14.7): REPRODUCED
+  python3 (3.15.2): REPRODUCED by scripts/check_bugs.py
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
 duplicates:
   issues: []

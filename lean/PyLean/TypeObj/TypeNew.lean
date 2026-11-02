@@ -741,6 +741,11 @@ def mroHierarchy (rt : Rt) : Nat → Addr → M (List (Addr × Option (List Addr
       acc := acc ++ more
     pure acc
 
+/-- A class and everything below it: what `mro_hierarchy_for_complete_type` puts in `temp`. -/
+def hierarchy (w : World) : Nat → Addr → List Addr
+  | 0, _ => []
+  | fuel + 1, t => t :: (tdata w t).subclasses.flatMap (hierarchy w fuel)
+
 /-- `type_check_new_bases` and `type_set_bases_unlocked`, `Objects/typeobject.c:1905`, `:1968`. A failure while recomputing
 restores `tp_bases`, `tp_base` and every MRO already changed (`undo`, `bail`). -/
 def typeSetBases (rt : Rt) (t : Addr) (value : Option Val) : M Unit := do
@@ -775,8 +780,8 @@ def typeSetBases (rt : Rt) (t : Addr) (value : Option Val) : M Unit := do
       modW fun w => updateAllSlots w t)
     fun e => do
       let wNow ← getW
-      for x in (tdata wNow t).subclasses ++ [t] do
-        modType x fun d => { d with mro := saved x }
+      for x in hierarchy wNow wNow.heap.size t do
+        if x < w.heap.size then modType x fun d => { d with mro := saved x }
       undoBases
       raise e
 
