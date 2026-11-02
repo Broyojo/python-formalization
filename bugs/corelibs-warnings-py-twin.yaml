@@ -1,5 +1,5 @@
 id: corelibs-warnings-py-twin
-title: "_py_warnings.warn_explicit differs from C: line-0 warnings vanish under 'module', UnboundLocalError for an unknown default action, and four smaller differences"
+title: "_py_warnings.warn_explicit differs from C: line-0 warnings vanish under 'module', UnboundLocalError for an unknown default action, and nine smaller differences"
 priority: P4
 kind: twin-divergence
 module: corelibs
@@ -23,6 +23,17 @@ summary: |
      Python's int(lineno) takes all three.
   6. An unrecognized action: C has already stored registry[key] = True when it raises RuntimeError,
      so the same call next time returns silently; Python raises again.
+  7. A filter whose pattern is a plain str (what C's own default filters hold, e.g. the '__main__'
+     module filter): C compares it with the module name; Python calls str.match: AttributeError.
+  8. A filters-list item that is a 5-element list: C raises ValueError ("isn't a 5-tuple"); Python
+     unpacks it. A non-str action: C TypeError; Python's unknown-action RuntimeError. A non-str
+     defaultaction: C TypeError; Python RuntimeError (or UnboundLocalError, see 2).
+  9. A registry that is neither dict nor None: C TypeError("'registry' must be a dict or None");
+     Python AttributeError from registry.get.
+  10. A message that cannot be built (category(message) raising): Python raises it first; C checks
+      module=None and the registry type before building it.
+  11. A registry 'version' of True: C treats it as stale (PyLong_CheckExact) and clears the
+      registry; Python compares with != and keeps it when the filters version is 1.
 likelihood: |
   Low. 1 needs lineno 0 (warn_explicit callers, frames without line numbers); 2 needs a bad
   defaultaction. The rest are edge cases of the Python fallback.
@@ -72,4 +83,7 @@ lean:
   theorem: PyLean.CoreLibs.Warn.warnTwinsModule_refuted
   also: [PyLean.CoreLibs.Warn.pyUnknownActionRaises_refuted, PyLean.CoreLibs.Warn.warnTwinsNoneModule_refuted,
          PyLean.CoreLibs.Warn.warnTwinsRaising_refuted, PyLean.CoreLibs.Warn.warnTwinsAnyLine_refuted,
-         PyLean.CoreLibs.Warn.warnTwinsUnknownAction_refuted]
+         PyLean.CoreLibs.Warn.warnTwinsUnknownAction_refuted, PyLean.CoreLibs.Warn.warnTwinsInexactVersion_refuted,
+         PyLean.CoreLibs.Warn.warnTwinsPlainFilter_refuted, PyLean.CoreLibs.Warn.warnTwinsItemShape_refuted,
+         PyLean.CoreLibs.Warn.warnTwinsModuleObj_refuted, PyLean.CoreLibs.Warn.warnTwinsRegObj_refuted,
+         PyLean.CoreLibs.Warn.warnTwinsMsgRaises_refuted, PyLean.CoreLibs.Warn.warnTwinsDfltType_refuted]

@@ -9646,8 +9646,14 @@ class warn_Odd(UserWarning, metaclass=warn_Meta):
     pass
 
 
+class warn_BadInit(UserWarning):
+    def __init__(self, *a):
+        raise ValueError("bad message")
+
+
 warn_W1.__name__ = "W1"
-warn_CATS = [Warning, UserWarning, warn_W1, DeprecationWarning, warn_Odd]
+warn_BadInit.__name__ = "BadInit"
+warn_CATS = [Warning, UserWarning, warn_W1, DeprecationWarning, warn_Odd, warn_BadInit]
 
 
 class warn_Bad:
@@ -9662,15 +9668,19 @@ warn_TEXTS = ["a", "ab", "b", "A", "xb"]
 def warn_gen(rng):
     def pat(mod):
         return rng.choice([None, None, "a", "ab", ".*b", "x"] + (["m"] if mod else []) +
-                          (["RAISE"] if rng.random() < .1 else []))
+                          (["RAISE"] if rng.random() < .1 else []) +
+                          ([rng.choice(["PLAIN:a", "PLAIN:m", "PLAIN:ab", "PLAIN:x.a"])] if rng.random() < .1 else []))
     fs = []
     for _ in range(rng.choice([0, 1, 1, 2, 3])):
-        fs.append([rng.choice(warn_ACTS + (["bogus"] if rng.random() < .05 else [])), pat(False),
+        fs.append([rng.choice(warn_ACTS + (["bogus"] if rng.random() < .05 else []) + ([5] if rng.random() < .03 else [])),
+                   pat(False),
                    rng.choice([0, 1, 1, 2, 3] + ([4] if rng.random() < .1 else [])), pat(True),
-                   rng.choice([0, 0, 0, 1, 2] + ([2**63, 2**64] if rng.random() < .05 else []))])
+                   rng.choice([0, 0, 0, 1, 2] + ([2**63, 2**64] if rng.random() < .05 else [])),
+                   rng.choice(["tuple"] * 30 + ["list", "short"])])
     text = rng.choice(warn_TEXTS)
-    cat = rng.choice([0, 1, 2, 3])
-    ln = rng.choice([0, 1, 1, 2, -1] + ([2**31, -2**31 - 1, 2**31 - 1] if rng.random() < .05 else []))
+    cat = rng.choice([0, 1, 2, 3] + ([5] if rng.random() < .05 else []))
+    ln = rng.choice([0, 1, 1, 2, -1] + ([2**31, -2**31 - 1, 2**31 - 1] if rng.random() < .05 else []) +
+                    ([["obj", rng.choice(["s5", "f", "x"])]] if rng.random() < .04 else []))
 
     def entries():
         es = []
@@ -9681,12 +9691,14 @@ def warn_gen(rng):
             es.append(["v", "stale"])
         elif k < .75:
             es.append(["v", rng.choice([2**64, -2**64, 2**63])])
+        elif k < .78:
+            es.append(["v", "true"])
         for _ in range(rng.choice([0, 0, 1, 2])):
             t = rng.choice([text, rng.choice(warn_TEXTS)])
             c = rng.choice([cat, rng.choice([0, 1, 2, 3])])
             v = rng.choice([1, 1, 0])
             if rng.random() < .5:
-                es.append(["t", t, c, rng.choice([ln, 0, 1]), v])
+                es.append(["t", t, c, rng.choice([ln if isinstance(ln, int) else 5, 0, 1]), v])
             else:
                 es.append(["p", t, c, v])
         # one entry per key, as a dict
@@ -9697,12 +9709,13 @@ def warn_gen(rng):
                 seen.add(key)
                 out.append(e)
         return out
-    reg = None if rng.random() < .25 else entries()
+    reg = None if rng.random() < .25 else ("obj" if rng.random() < .03 else entries())
     once = entries() if rng.random() < .5 else []
-    module = rng.choice([["omit"], ["omit"], ["none"], ["s", "a"], ["s", "m"], ["s", "x.a"], ["s", "b"]])
+    module = rng.choice([["omit"], ["omit"], ["none"], ["s", "a"], ["s", "m"], ["s", "x.a"], ["s", "b"]] +
+                        ([["obj"]] if rng.random() < .05 else []))
     return {"fn": "warn." + rng.choice(["c", "py"]), "filters": fs,
             "dflt": rng.choice(["default", "default", "always", "error", "ignore", "once", "module"] +
-                               (["bogus"] if rng.random() < .03 else [])),
+                               (["bogus"] if rng.random() < .03 else []) + ([5] if rng.random() < .02 else [])),
             "text": text, "cat": cat, "filename": rng.choice(["a.py", "m.py", "<s>", "", "pkg/a.py",
                                                               "x/__init__.py", "g", "b.py"]),
             "lineno": ln, "module": module, "reg": reg, "once": once,
@@ -9714,7 +9727,33 @@ def warn_pat(p, ci):
         return None
     if p == "RAISE":
         return warn_Bad()
+    if p.startswith("PLAIN:"):
+        return p[6:]
     return warn_re.compile(p, warn_re.I if ci else 0)
+
+
+def warn_item(f):
+    fields = (f[0], warn_pat(f[1], True), warn_CATS[f[2]], warn_pat(f[3], False), f[4])
+    if f[5] == "list":
+        return list(fields)
+    if f[5] == "short":
+        return fields[:3]
+    return fields
+
+
+warn_LINES = {"s5": "5", "f": 5.5, "x": "x"}
+
+
+def warn_norm(msg):
+    for prefix, rep in (("Can't compare", "~Can't compare str and object"),
+                        ("action must be a string", "~action must be a string"),
+                        ("warnings.defaultaction must be a string", "~warnings.defaultaction must be a string"),
+                        ("_warnings.defaultaction must be a string", "~warnings.defaultaction must be a string")):
+        if msg.startswith(prefix):
+            return rep
+    if msg.endswith("object has no attribute 'get'"):
+        return "~object has no attribute 'get'"
+    return msg
 
 
 def warn_key(e):
@@ -9730,7 +9769,7 @@ def warn_mkdict(es, cur):
     for e in es:
         if e[0] == "v":
             v = e[1]
-            d["version"] = cur if v == "cur" else cur - 1 if v == "stale" else v
+            d["version"] = cur if v == "cur" else cur - 1 if v == "stale" else True if v == "true" else v
         else:
             d[warn_key(e)] = e[-1]
     return d
@@ -9740,7 +9779,7 @@ def warn_enc(d, cur):
     out = []
     for k, v in d.items():
         if k == "version":
-            out.append(["v", "cur" if v == cur else "stale" if v == cur - 1 else v])
+            out.append(["v", "cur" if v == cur else "stale" if v == cur - 1 else int(v)])
         elif len(k) == 3:
             out.append(["t", k[0], warn_CATS.index(k[1]), k[2], int(v)])
         else:
@@ -9752,8 +9791,7 @@ def warn_run(case):
     twin = case["fn"].split(".")[1]
     mod = warn_c if twin == "c" else warn_py
     sys.modules['warnings'] = warn_c
-    items = [(f[0], warn_pat(f[1], True), warn_CATS[f[2]], warn_pat(f[3], False), f[4])
-             for f in case["filters"]]
+    items = [warn_item(f) for f in case["filters"]]
     mod.filters[:] = items
     mod._filters_mutated()
     if twin == "c":
@@ -9774,7 +9812,7 @@ def warn_run(case):
             raise ValueError("show failed")
         shown.append(m)
     mod._showwarnmsg = show
-    reg = None if case["reg"] is None else warn_mkdict(case["reg"], cur)
+    reg = None if case["reg"] is None else 5 if case["reg"] == "obj" else warn_mkdict(case["reg"], cur)
     mod.onceregistry.clear()
     mod.onceregistry.update(warn_mkdict(case["once"], cur))
     kw = {}
@@ -9782,10 +9820,15 @@ def warn_run(case):
         kw["module"] = None
     elif case["module"][0] == "s":
         kw["module"] = case["module"][1]
+    elif case["module"][0] == "obj":
+        kw["module"] = 5
     if reg is not None:
         kw["registry"] = reg
     try:
-        mod.warn_explicit(case["text"], warn_CATS[case["cat"]], case["filename"], case["lineno"], **kw)
+        ln = case["lineno"]
+        if isinstance(ln, list):
+            ln = warn_LINES[ln[1]]
+        mod.warn_explicit(case["text"], warn_CATS[case["cat"]], case["filename"], ln, **kw)
         out = ["ok", True]
     except Exception as e:
         msg = str(e)
@@ -9793,13 +9836,15 @@ def warn_run(case):
             msg = "~returned a result with an exception set"
         elif isinstance(e, RuntimeError) and msg.startswith("Unrecognized action"):
             msg = "~Unrecognized action in warnings.filters"
+        else:
+            msg = warn_norm(msg)
         out = ["exc", type(e).__name__, msg]
     if out[0] == "ok":
         out = ["ok", bool(shown)]
     once = warn_enc(mod.onceregistry, cur)
     mod.filters[:] = []
     mod.defaultaction = "default"
-    return {"ok": [out, None if reg is None else warn_enc(reg, cur), once]}
+    return {"ok": [out, None if not isinstance(reg, dict) else warn_enc(reg, cur), once]}
 
 
 def warn_warmup():
@@ -9808,8 +9853,8 @@ def warn_warmup():
     # (measured on 3.15.2). The model describes the steady state, so run those paths once here.
     base = {"fn": "warn.c", "dflt": "always", "text": "a", "cat": 1, "filename": "a.py", "lineno": 1,
             "once": [], "showraise": False, "module": ["s", "m"], "reg": [["v", 2**64]]}
-    for fs in ([["always", "RAISE", 1, None, 0]], [["always", None, 1, "RAISE", 0]],
-               [["always", None, 4, None, 0]]):
+    for fs in ([["always", "RAISE", 1, None, 0, "tuple"]], [["always", None, 1, "RAISE", 0, "tuple"]],
+               [["always", None, 4, None, 0, "tuple"]]):
         for module in (["s", "m"], ["omit"]):
             for _ in range(3):
                 warn_run(dict(base, filters=fs, module=module))

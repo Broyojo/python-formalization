@@ -11,332 +11,471 @@ open PyLean
 
 /-! ## Hypotheses -/
 
-/-- No callback raises: `issubclass`, `_match_filename` and every filter's patterns. -/
-def CallbacksTotal (E : Env) (fs : List Filter) : Prop :=
-  (∀ a b, ∃ x, E.isSub a b = .ok x) ∧ (∀ m s, ∃ x, E.matchFilename m s = .ok x) ∧
-  ∀ f ∈ fs, (∀ m, f.msg = .some m → ∀ s, ∃ x, m.call s = .ok x) ∧
-    (∀ m, f.mod = .some m → ∀ s, ∃ x, m.call s = .ok x)
-
 /-- The actions other than `once` and `module`. -/
 def Plain (a : String) : Prop :=
   a = "error" ∨ a = "ignore" ∨ a = "always" ∨ a = "all" ∨ a = "default"
 
-/-- `filterwarnings` and `simplefilter` accept any `lineno >= 0`. -/
-def LinesValid (fs : List Filter) : Prop := ∀ f ∈ fs, 0 ≤ f.ln
-def LinesFit (fs : List Filter) : Prop := ∀ f ∈ fs, 0 ≤ f.ln ∧ f.ln ≤ ssizeMax
+/-- A compiled pattern whose `match` does not raise. -/
+def TotalPat (p : Pat) : Prop := ∃ call cf e, p = .regex call cf e ∧ ∀ s, ∃ x, call s = .ok x
+/-- A compiled pattern. -/
+def AnyRegex (p : Pat) : Prop := ∃ call cf e, p = .regex call cf e
 
-def VersionFits (reg : Option Reg) : Prop :=
-  ∀ r, reg = .some r → ∀ v, regGet r .version = .some v → -longMax - 1 ≤ v ∧ v ≤ longMax
+/-- Every filters-list item has the given shape, action, patterns and line. -/
+def ItemsOkG (shapeOk : Item → Filter → Prop) (actOk : Option String → Prop) (patOk : Pat → Prop)
+    (lnOk : Int → Prop) (fs : List Item) : Prop :=
+  ∀ it ∈ fs, ∃ f, shapeOk it f ∧ actOk f.action ∧ (∀ p, f.msg = .some p → patOk p) ∧
+    (∀ p, f.mod = .some p → patOk p) ∧ lnOk f.ln
 
-def LineFits (c : Call) : Prop := -intMax - 1 ≤ c.lineno ∧ c.lineno ≤ intMax
+def IsTuple (it : Item) (f : Filter) : Prop := it = .tuple f
+def PlainAct (a : Option String) : Prop := ∃ s, a = .some s ∧ Plain s
+def LnFits (l : Int) : Prop := 0 ≤ l ∧ l ≤ ssizeMax
 
-def ModuleGiven (c : Call) : Prop := match c.module with | .none => False | _ => True
+/-- 5-tuples with a plain str action, compiled patterns that do not raise, lines that fit
+`Py_ssize_t`. -/
+def ItemsOk (fs : List Item) : Prop := ItemsOkG IsTuple PlainAct TotalPat LnFits fs
 
-def Twins (E : Env) (fs : List Filter) (dflt : String) (ver : Int) (c : Call) (reg : Option Reg)
+/-- `issubclass` and `_match_filename` do not raise. -/
+def EnvOk (E : Env) : Prop :=
+  (∀ a b, ∃ x, E.isSub a b = .ok x) ∧ (∀ m s, ∃ x, E.matchFilename m s = .ok x)
+
+/-- An int line that fits C `int`. -/
+def LineOk (c : Call) : Prop := ∃ v, c.lineno = .int v ∧ -intMax - 1 ≤ v ∧ v ≤ intMax
+/-- `module` omitted or a str. -/
+def ModOk (c : Call) : Prop := c.module = .omitted ∨ ∃ s, c.module = .some s
+/-- The message object can be built. -/
+def MsgOk (c : Call) : Prop := c.mkMsg = .ok ()
+/-- A dict (or `None`) whose `'version'`, if any, is an exact int within C long. -/
+def RegOk (reg : RegArg) : Prop :=
+  reg = .none ∨ ∃ r, reg = .dict r ∧
+    ∀ v, regGet r .version = .some v → v.exact = true ∧ -longMax - 1 ≤ v.n ∧ v.n ≤ longMax
+def DfltOk (d : Option String) : Prop := PlainAct d
+
+/-- Same result, and the same registry and once registry as `==` sees them. -/
+def Twins (E : Env) (fs : List Item) (dflt : Option String) (ver : Int) (c : Call) (reg : RegArg)
     (once : Reg) : Prop :=
-  cWarnExplicit E fs dflt ver c reg once = pyWarnExplicit E fs dflt ver c reg once
+  (cWarnExplicit E fs dflt ver c reg once).out = (pyWarnExplicit E fs dflt ver c reg once).out ∧
+  (cWarnExplicit E fs dflt ver c reg once).reg.map norm =
+    (pyWarnExplicit E fs dflt ver c reg once).reg.map norm ∧
+  norm (cWarnExplicit E fs dflt ver c reg once).once = norm (pyWarnExplicit E fs dflt ver c reg once).once
 
 /-! ## The proven agreement -/
 
-/-- For every set of callbacks that do not raise, every filters list whose actions are `error`,
-`ignore`, `always`, `all` or `default` and whose lines fit `Py_ssize_t`, the same default action,
-every call with a line that fits C `int` and a `module` that is not an explicit `None`, every
-registry (or none) whose `'version'` fits C long, and every filters version but 0 (the counter
-starts at 1), the C and Python `warn_explicit` give the same result and leave the same registry
-and once registry. -/
+/-- For every set of callbacks that do not raise, every filters list of 5-tuples whose actions are
+`error`, `ignore`, `always`, `all` or `default`, whose patterns are compiled regexes that do not
+raise and whose lines fit `Py_ssize_t`, the same such default action, every call with an int line
+that fits C `int`, a `module` omitted or a str and a message that can be built, every registry that
+is `None` or a dict whose `'version'` is an exact int within C long, and every filters version but 0
+(the counter starts at 1), the C and Python `warn_explicit` give the same result and leave the same
+registry and once registry. -/
 def WarnTwinsNarrow : Prop :=
   ∀ E fs dflt ver c reg once,
-    ver ≠ 0 → CallbacksTotal E fs → (∀ f ∈ fs, Plain f.action) → Plain dflt → LinesFit fs →
-    ModuleGiven c → LineFits c → VersionFits reg → Twins E fs dflt ver c reg once
+    ver ≠ 0 → EnvOk E → ItemsOk fs → DfltOk dflt → LineOk c → ModOk c → MsgOk c → RegOk reg →
+    Twins E fs dflt ver c reg once
 
-theorem filterMatches_eq (E : Env) (c : Call) (f : Filter) (hm : ModuleGiven c)
-    (hcb : (∀ a b, ∃ x, E.isSub a b = .ok x) ∧ (∀ m s, ∃ x, E.matchFilename m s = .ok x))
-    (hmsg : ∀ m, f.msg = .some m → ∀ s, ∃ x, m.call s = .ok x)
-    (hmod : ∀ m, f.mod = .some m → ∀ s, ∃ x, m.call s = .ok x)
-    (hln : 0 ≤ f.ln ∧ f.ln ≤ ssizeMax) :
-    cFilterMatches E false c (match c.module with | .some s => .some s | _ => .none) f =
-      pyFilterMatches E c f := by
-  obtain ⟨hs, hf⟩ := hcb
+theorem filterMatches_eq (E : Env) (c : Call) (ln : Int) (f : Filter) (hm : ModOk c) (he : EnvOk E)
+    (hmsg : ∀ p, f.msg = .some p → TotalPat p) (hmod : ∀ p, f.mod = .some p → TotalPat p)
+    (hln : LnFits f.ln) :
+    cFilterMatches E false c ln (modArg c) f = pyFilterMatches E c ln f := by
+  obtain ⟨hs, hf⟩ := he
   have ha : asSsize f.ln = .ok f.ln := by
-    unfold asSsize; rw [if_neg]; simp [ssizeMax] at hln ⊢; omega
+    unfold asSsize; rw [if_neg]; simp only [LnFits, ssizeMax] at hln ⊢; omega
   obtain ⟨gs, hgs⟩ := hs c.cat f.cat
-  have hM : ∃ gm, checkMatched E false f.msg (.some c.text) c.filename = .ok gm ∧ pyMsgOk c f = .ok gm := by
+  have hgs' : cIsSub E false c.cat f.cat = .ok gs := by simp [cIsSub, hgs]
+  have hM : ∃ gm, checkMatched E false f.msg (.str c.text) c.filename = .ok gm ∧ pyMsgOk c f = .ok gm := by
     unfold pyMsgOk
     cases h : f.msg with
     | none => exact ⟨true, rfl, rfl⟩
-    | some m => obtain ⟨x, hx⟩ := hmsg m h c.text; exact ⟨x, by simp [checkMatched, callPat, hx], hx⟩
-  have hD : ∃ gd, checkMatched E false f.mod (match c.module with | .some s => .some s | _ => .none)
-        c.filename = .ok gd ∧ pyModOk E c f = .ok gd := by
-    unfold pyModOk
+    | some p =>
+      obtain ⟨call, cf, e, rfl, ht⟩ := hmsg p h
+      obtain ⟨x, hx⟩ := ht c.text
+      exact ⟨x, by simp [checkMatched, callPat, hx], by simp [pyMatch, hx]⟩
+  have hD : ∃ gd, checkMatched E false f.mod (modArg c) c.filename = .ok gd ∧ pyModOk E c f = .ok gd := by
+    unfold pyModOk modArg
     cases h : f.mod with
     | none => exact ⟨true, rfl, rfl⟩
-    | some m =>
-      cases hc : c.module with
-      | omitted =>
-        obtain ⟨x, hx⟩ := hf m c.filename; exact ⟨x, by simp [checkMatched, hx], hx⟩
-      | none => simp [ModuleGiven, hc] at hm
-      | some s => obtain ⟨x, hx⟩ := hmod m h s; exact ⟨x, by simp [checkMatched, callPat, hx], hx⟩
+    | some p =>
+      obtain ⟨call, cf, e, rfl, ht⟩ := hmod p h
+      rcases hm with hc | ⟨s, hc⟩
+      · obtain ⟨x, hx⟩ := hf (.regex call cf e) c.filename
+        exact ⟨x, by simp [hc, checkMatched, hx], by simp [hc, hx]⟩
+      · obtain ⟨x, hx⟩ := ht s
+        exact ⟨x, by simp [hc, checkMatched, callPat, hx], by simp [hc, pyMatch, hx]⟩
   obtain ⟨gm, hm1, hm2⟩ := hM
   obtain ⟨gd, hd1, hd2⟩ := hD
-  have hgs' : cIsSub E false c.cat f.cat = .ok gs := by simp [cIsSub, hgs]
   unfold cFilterMatches pyFilterMatches
   rw [hm1, hd1, hgs', hgs, ha, hm2, hd2]
   cases gm <;> cases gs <;> cases gd <;>
-    by_cases hl : (f.ln == 0 || c.lineno == f.ln) = true <;>
+    by_cases hl : (f.ln == 0 || ln == f.ln) = true <;>
     simp [hl, bind, Except.bind, pure, Except.pure]
 
-theorem find_eq (E : Env) (c : Call) (fs : List Filter) (hm : ModuleGiven c)
-    (hcb : CallbacksTotal E fs) (hl : LinesFit fs) :
-    cFind E false c (match c.module with | .some s => .some s | _ => .none) fs = pyFind E c fs := by
+theorem find_eq (E : Env) (c : Call) (ln : Int) (fs : List Item) (hm : ModOk c) (he : EnvOk E)
+    (hi : ItemsOk fs) : ∀ i, cFind E false c ln (modArg c) i fs = pyFind E c ln fs := by
   induction fs with
-  | nil => rfl
-  | cons f fs ih =>
-    obtain ⟨h1, h2, h3⟩ := hcb
-    have e := filterMatches_eq E c f hm ⟨h1, h2⟩ (h3 f (by simp)).1 (h3 f (by simp)).2 (hl f (by simp))
-    have ih' := ih ⟨h1, h2, fun g hg => h3 g (by simp [hg])⟩ (fun g hg => hl g (by simp [hg]))
-    simp only [cFind, pyFind, e, ih']
+  | nil => intro i; rfl
+  | cons it its ih =>
+    intro i
+    obtain ⟨f, hshape, ⟨a, ha, _⟩, hmsg, hmod, hln⟩ := hi it (by simp)
+    have ih' := ih (fun g hg => hi g (by simp [hg]))
+    unfold IsTuple at hshape
+    subst hshape
+    have e := filterMatches_eq E c ln f hm he hmsg hmod hln
+    simp only [cFind, pyFind, ha, Option.isNone_some, Bool.false_eq_true, if_false, e, ih']
 
-/-- `already_warned` with a `'version'` that fits C long, against the Python check. -/
+/-- `already_warned` with an exact `'version'` within C long, against the Python check. -/
 theorem alreadyWarned_eq (ver : Int) (r : Reg) (k : Key) (hv : ver ≠ 0) (hk : k ≠ .version)
-    (hfit : ∀ v, regGet r .version = .some v → -longMax - 1 ≤ v ∧ v ≤ longMax) :
-    cAlreadyWarned ver r k false =
-      (false, truthy (regGet (pyRegPrep ver (.some r)) k), pyRegPrep ver (.some r)) := by
-  have hget : regGet (regSet [] .version ver) k = .none := by
+    (hfit : ∀ v, regGet r .version = .some v → v.exact = true ∧ -longMax - 1 ≤ v.n ∧ v.n ≤ longMax) :
+    cAlreadyWarned ver r k false = (false, truthy (regGet (pyRegPrep ver r) k), pyRegPrep ver r) := by
+  have hget : regGet (regSet [] .version (exactInt ver)) k = .none := by
     simp [regGet, regSet, Ne.symm hk]
   unfold cAlreadyWarned pyRegPrep
   cases h : regGet r .version with
-  | none =>
-    simp [h, Ne.symm hv, hget, truthy]
+  | none => simp [h, Ne.symm hv, hget, truthy]
   | some x =>
-    have hx := hfit x h
-    have hp : ¬ (x > longMax ∨ x < -longMax - 1) := by omega
-    by_cases hxv : x = ver
-    · subst hxv
-      cases ht : truthy (regGet r k) <;> simp [h, hp, ht]
-    · simp [h, hp, hxv, hget, truthy]
+    obtain ⟨hx, h1, h2⟩ := hfit x h
+    have hp : ¬ (x.n > longMax ∨ x.n < -longMax - 1) := by omega
+    by_cases hxv : x.n = ver
+    · have hp2 : ¬ (longMax < ver ∨ ver < -longMax - 1) := by omega
+      cases ht : truthy (regGet r k) <;> simp [h, hp, hp2, hx, hxv, ht]
+    · simp [h, hp, hx, hxv, hget, truthy]
 
-/-- The plain actions take the same steps in both twins. -/
-theorem action_eq (E : Env) (ver : Int) (c : Call) (a : String) (b : Bool) (reg : Option Reg)
-    (r1 once : Reg) (ha : Plain a) :
-    cAction E ver c a (reg.map (fun _ => r1)) once =
-      (false, (pyAction E c a b r1 once).1, reg.map (fun _ => (pyAction E c a b r1 once).2.1),
-        (pyAction E c a b r1 once).2.2) := by
-  rcases ha with h | h | h | h | h <;> subst h <;> cases reg <;> simp [cAction, pyAction]
+/-- The plain actions take the same steps in both twins, registries compared by `norm`. -/
+theorem action_eq (E : Env) (ver : Int) (c : Call) (ln : Int) (a : String) (b : Bool)
+    (reg : Option Reg) (r1 once : Reg) (ha : Plain a) :
+    (cAction E ver c ln a (reg.map (fun _ => r1)) once).1 = false ∧
+    (cAction E ver c ln a (reg.map (fun _ => r1)) once).2.1 = (pyAction E c ln (some a) b r1 once).1 ∧
+    (cAction E ver c ln a (reg.map (fun _ => r1)) once).2.2.1.map norm =
+      reg.map (fun _ => norm (pyAction E c ln (some a) b r1 once).2.1) ∧
+    norm (cAction E ver c ln a (reg.map (fun _ => r1)) once).2.2.2 =
+      norm (pyAction E c ln (some a) b r1 once).2.2 := by
+  rcases ha with h | h | h | h | h <;> subst h <;> cases reg <;>
+    simp [cAction, pyAction, norm, regSet, cTrue, one]
 
 theorem warnTwinsNarrow_proven : WarnTwinsNarrow := by
-  intro E fs dflt ver c reg once hv hcb hact hdflt hl hm hline hver
-  have hfind := find_eq E c fs hm hcb hl
-  have hline' : ¬ (c.lineno > intMax ∨ c.lineno < -intMax - 1) := by
-    simp only [LineFits] at hline; omega
-  have hkey : Key.tri c.text c.cat c.lineno ≠ .version := by simp
-  -- the chosen action is plain
-  have hplain : ∀ item, pyFind E c fs = .ok item → Plain (actionOf item dflt) := by
-    intro item hi
+  intro E fs dflt ver c reg once hv he hi hd hline hm hmsg hreg
+  obtain ⟨v, hl, hv1, hv2⟩ := hline
+  have hline' : ¬ (v > intMax ∨ v < -intMax - 1) := by omega
+  have hfind := find_eq E c v fs hm he hi 0
+  obtain ⟨a, rfl, hpa⟩ := hd
+  have hkey : Key.tri c.text c.cat v ≠ .version := by simp
+  -- the chosen action is plain and a str
+  have hplain : ∀ item, pyFind E c v fs = .ok item → ∃ s, actionOf item (some a) = some s ∧ Plain s := by
+    intro item hit
     cases item with
-    | none => exact hdflt
+    | none => exact ⟨a, rfl, hpa⟩
     | some f =>
-      have mem : ∀ fs' : List Filter, (∀ g ∈ fs', Plain g.action) →
-          pyFind E c fs' = .ok (.some f) → Plain f.action := by
+      have mem : ∀ fs' : List Item, ItemsOk fs' → pyFind E c v fs' = .ok (.some f) →
+          ∃ s, f.action = some s ∧ Plain s := by
         intro fs' hp hf'
         induction fs' with
         | nil => simp [pyFind, pure, Except.pure] at hf'
         | cons g gs ih =>
+          obtain ⟨g', hg', hact, _⟩ := hp g (by simp)
+          unfold IsTuple at hg'; subst hg'
           simp only [pyFind, bind, Except.bind] at hf'
           split at hf'
           · simp at hf'
-          · rename_i b _
-            cases b
-            · exact ih (fun g' hg' => hp g' (by simp [hg'])) hf'
-            · simp [pure, Except.pure] at hf'; subst hf'; exact hp g (by simp)
-      exact mem fs hact hi
+          · rename_i bb _
+            cases bb
+            · exact ih (fun g'' hg'' => hp g'' (by simp [hg''])) hf'
+            · simp [pure, Except.pure] at hf'; subst hf'; exact hact
+      exact mem fs hi hit
+  unfold MsgOk at hmsg
   unfold Twins cWarnExplicit pyWarnExplicit
+  simp only [hl, hmsg]
   rw [if_neg hline']
   cases hcm : c.module with
-  | none => simp [ModuleGiven, hcm] at hm
+  | none => simp [ModOk, hcm] at hm
+  | obj => simp [ModOk, hcm] at hm
   | omitted | some s =>
-    simp only [hcm] at hfind
     simp only
-    cases reg with
-    | none =>
-      have hk0 : truthy (regGet (pyRegPrep ver .none) (.tri c.text c.cat c.lineno)) = false := by
+    rcases hreg with rfl | ⟨r, rfl, hrv⟩
+    · simp only [hfind]
+      have hk0 : truthy (regGet (pyRegPrep ver []) (.tri c.text c.cat v)) = false := by
         simp [pyRegPrep, regGet, regSet, Ne.symm hv, truthy]
-      simp only [hk0, Bool.false_eq_true, if_false, hfind]
-      cases hpf : pyFind E c fs with
+      simp only [hk0, Bool.false_eq_true, if_false]
+      cases hpf : pyFind E c v fs with
       | error e => simp
       | ok item =>
-        have e := action_eq E ver c (actionOf item dflt) (item.isSome || !fs.isEmpty) .none
-          (pyRegPrep ver .none) once
-          (hplain item hpf)
-        simp only [Option.map] at e
-        simp [e, withPending]
-    | some r =>
-      have haw := alreadyWarned_eq ver r (.tri c.text c.cat c.lineno) hv hkey (hver r rfl)
+        obtain ⟨s', hs', hps⟩ := hplain item hpf
+        have e := action_eq E ver c v s' (item.isSome || !fs.isEmpty) .none (pyRegPrep ver []) once hps
+        obtain ⟨e1, e2, e3, e4⟩ := e
+        simp only [Option.map_none, Option.map_some] at e1 e2 e3 e4
+        simp only [hs']
+        simp only [withPending]
+        refine ⟨?_, ?_, e4⟩
+        · rw [Bool.false_or, e1]; simp only [Bool.false_eq_true, if_false]; exact e2
+        · simpa using e3
+    · have haw := alreadyWarned_eq ver r (.tri c.text c.cat v) hv hkey hrv
       simp only [haw, hfind]
-      by_cases hw : truthy (regGet (pyRegPrep ver (.some r)) (.tri c.text c.cat c.lineno)) = true
+      by_cases hw : truthy (regGet (pyRegPrep ver r) (.tri c.text c.cat v)) = true
       · simp [hw, withPending]
       · simp only [hw, Bool.false_eq_true, if_false]
-        cases hpf : pyFind E c fs with
+        cases hpf : pyFind E c v fs with
         | error e => simp
         | ok item =>
-          have e := action_eq E ver c (actionOf item dflt) (item.isSome || !fs.isEmpty) (.some r)
-            (pyRegPrep ver (.some r)) once
-            (hplain item hpf)
-          simp only [Option.map] at e
-          simp [e, withPending]
+          obtain ⟨s', hs', hps⟩ := hplain item hpf
+          have e := action_eq E ver c v s' (item.isSome || !fs.isEmpty) (.some r) (pyRegPrep ver r) once hps
+          obtain ⟨e1, e2, e3, e4⟩ := e
+          simp only [Option.map_none, Option.map_some] at e1 e2 e3 e4
+          simp only [hs']
+          simp only [withPending]
+          refine ⟨?_, ?_, e4⟩
+          · rw [Bool.false_or, e1]; simp only [Bool.false_eq_true, if_false]; exact e2
+          · simpa using e3
+
+/-! ## The cases left out, each refuted -/
 
 /-- Two computed results that differ refute an equation between them. -/
 theorem refute {α : Type} {a b x y : α} (h : a = b) (ha : a = x) (hb : b = y) (hxy : x ≠ y) :
     False := hxy (ha.symm.trans (h.trans hb))
 
-/-! ## The cases left out, each refuted -/
-
 /-- Callbacks that never raise and a trivial `_match_filename`. -/
 def E0 : Env := ⟨fun _ _ => .ok true, fun _ _ => false, fun _ _ => .ok true, .ok ()⟩
 
-def call0 (ln : Int) (m : ModArg) : Call := ⟨"x", 1, "a.py", ln, m⟩
+def call0 (ln : Int) (m : ModArg) : Call := ⟨"x", 1, "a.py", .int ln, m, .ok ()⟩
+
+def rx (b : Bool) : Pat := .regex (fun _ => .ok b) true (.typeError "~expected string")
+
+theorem envOk0 : EnvOk E0 := ⟨fun _ _ => ⟨true, rfl⟩, fun _ _ => ⟨true, rfl⟩⟩
+theorem lineOk0 (ln : Int) (m : ModArg) (h1 : -intMax - 1 ≤ ln) (h2 : ln ≤ intMax) :
+    LineOk (call0 ln m) := ⟨ln, rfl, h1, h2⟩
+theorem modOk0 : ModOk (call0 1 (.some "a")) := Or.inr ⟨"a", rfl⟩
+theorem msgOk0 (ln : Int) (m : ModArg) : MsgOk (call0 ln m) := rfl
+theorem regOk_dict_nil : RegOk (.dict []) := Or.inr ⟨[], rfl, by simp [regGet]⟩
 
 /-- `once` is in scope: the documented "print only the first occurrence of matching warnings,
 regardless of location" is what `_py_warnings` does with its global once registry, but the C code
-uses the caller's registry when there is one (python/cpython#159792). A warning already in the once
-registry is shown again by C. -/
+uses the caller's registry when there is one (python/cpython#159792). -/
 def WarnTwinsOnce : Prop :=
-  ∀ E fs ver c reg once,
-    ver ≠ 0 → CallbacksTotal E fs → (∀ f ∈ fs, Plain f.action ∨ f.action = "once") → LinesFit fs →
-    ModuleGiven c → LineFits c → VersionFits reg → Twins E fs "once" ver c reg once
+  ∀ E ver c reg once, ver ≠ 0 → EnvOk E → LineOk c → ModOk c → MsgOk c → RegOk reg →
+    Twins E [] (some "once") ver c reg once
 
 theorem warnTwinsOnce_refuted : ¬ WarnTwinsOnce := fun h =>
-  refute (congrArg Res.out (h E0 [] 1 (call0 1 (.some "a")) (.some []) [(.pair "x" 1, 1)]
-    (by decide) ⟨fun _ _ => ⟨true, rfl⟩, fun _ _ => ⟨true, rfl⟩, by simp⟩ (by simp) (by simp [LinesFit])
-    trivial (by simp [LineFits, call0, intMax]) (by simp [VersionFits, regGet])))
+  refute (h E0 1 (call0 1 (.some "a")) (.dict []) [(.pair "x" 1, one)] (by decide) envOk0
+    (lineOk0 _ _ (by decide) (by decide)) modOk0 (msgOk0 _ _) regOk_dict_nil).1
     (x := .ok true) (y := .ok false) (by rfl) (by rfl) (by simp)
 
 /-- `module` is in scope: Python marks "already shown in this module" with the key
-`(text, category, 0)`, which is also the key of the warning itself when its line is 0. So
-`_py_warnings` never shows a line-0 warning under `module`, while C, whose key is
-`(text, category)`, shows it once. -/
+`(text, category, 0)`, which is also the key of the warning itself when its line is 0. -/
 def WarnTwinsModule : Prop :=
-  ∀ E fs ver c reg once,
-    ver ≠ 0 → CallbacksTotal E fs → (∀ f ∈ fs, Plain f.action ∨ f.action = "module") →
-    LinesFit fs → ModuleGiven c → LineFits c → VersionFits reg → Twins E fs "module" ver c reg once
+  ∀ E ver c reg once, ver ≠ 0 → EnvOk E → LineOk c → ModOk c → MsgOk c → RegOk reg →
+    Twins E [] (some "module") ver c reg once
 
 theorem warnTwinsModule_refuted : ¬ WarnTwinsModule := fun h =>
-  refute (congrArg Res.out (h E0 [] 1 (call0 0 (.some "a")) (.some []) []
-    (by decide) ⟨fun _ _ => ⟨true, rfl⟩, fun _ _ => ⟨true, rfl⟩, by simp⟩ (by simp) (by simp [LinesFit])
-    trivial (by simp [LineFits, call0, intMax]) (by simp [VersionFits, regGet])))
+  refute (h E0 1 (call0 0 (.some "a")) (.dict []) [] (by decide) envOk0
+    (lineOk0 _ _ (by decide) (by decide)) (Or.inr ⟨"a", rfl⟩) (msgOk0 _ _) regOk_dict_nil).1
     (x := .ok true) (y := .ok false) (by rfl) (by rfl) (by simp)
 
-/-- Filter lines as `filterwarnings` accepts them (any int `>= 0`): a filter with
-`lineno=2**63` makes every C warning raise `OverflowError`; Python just never matches it. -/
+/-- Filter lines as `filterwarnings` accepts them (any int `>= 0`). -/
 def WarnTwinsValidLines : Prop :=
-  ∀ E fs dflt ver c reg once,
-    ver ≠ 0 → CallbacksTotal E fs → (∀ f ∈ fs, Plain f.action) → Plain dflt → LinesValid fs →
-    ModuleGiven c → LineFits c → VersionFits reg → Twins E fs dflt ver c reg once
+  ∀ E fs ver c reg once, ver ≠ 0 → EnvOk E → ItemsOkG IsTuple PlainAct TotalPat (0 ≤ ·) fs →
+    LineOk c → ModOk c → MsgOk c → RegOk reg → Twins E fs (some "default") ver c reg once
 
-def bigLine : Filter := ⟨"error", .none, 1, .none, 2 ^ 63⟩
+def bigLine : Item := .tuple ⟨some "error", .none, 1, .none, 2 ^ 63⟩
 
 theorem warnTwinsValidLines_refuted : ¬ WarnTwinsValidLines := fun h =>
-  refute (congrArg Res.out (h E0 [bigLine] "default" 1 (call0 1 (.some "a")) .none []
-    (by decide) ⟨fun _ _ => ⟨true, rfl⟩, fun _ _ => ⟨true, rfl⟩, by simp [bigLine]⟩
-    (by simp [bigLine, Plain]) (by simp [Plain]) (by simp [LinesValid, bigLine])
-    trivial (by simp [LineFits, call0, intMax]) (by simp [VersionFits])))
+  refute (h E0 [bigLine] 1 (call0 1 (.some "a")) .none [] (by decide) envOk0
+    (by
+      intro it hit; simp only [List.mem_singleton] at hit; subst hit
+      exact ⟨_, rfl, ⟨"error", rfl, Or.inl rfl⟩, by simp, by simp, by decide⟩)
+    (lineOk0 _ _ (by decide) (by decide)) modOk0 (msgOk0 _ _) (Or.inl rfl)).1
     (x := .error (.overflowError "Python int too large to convert to C ssize_t")) (y := .ok true)
     (by rfl) (by rfl) (by simp)
 
-/-- Any int as the registry's `'version'`: C reads it with `PyLong_AsLong` and does not check
-for an error, so `{'version': 2**64}` ends in `SystemError`; Python clears the registry and
-shows the warning. -/
+/-- Any exact int as the registry's `'version'`: C reads it with `PyLong_AsLong` and does not check
+for an error, so `{'version': 2**64}` ends in `SystemError`. -/
 def WarnTwinsAnyVersion : Prop :=
-  ∀ E fs dflt ver c reg once,
-    ver ≠ 0 → CallbacksTotal E fs → (∀ f ∈ fs, Plain f.action) → Plain dflt → LinesFit fs →
-    ModuleGiven c → LineFits c → Twins E fs dflt ver c reg once
+  ∀ E ver c r once, ver ≠ 0 → EnvOk E → LineOk c → ModOk c → MsgOk c →
+    Twins E [] (some "default") ver c (.dict r) once
 
 theorem warnTwinsAnyVersion_refuted : ¬ WarnTwinsAnyVersion := fun h =>
-  refute (congrArg Res.out (h E0 [] "default" 1 (call0 1 (.some "a")) (.some [(.version, 2 ^ 64)]) []
-    (by decide) ⟨fun _ _ => ⟨true, rfl⟩, fun _ _ => ⟨true, rfl⟩, by simp⟩ (by simp) (by simp [Plain])
-    (by simp [LinesFit]) trivial (by simp [LineFits, call0, intMax])))
+  refute (h E0 1 (call0 1 (.some "a")) [(.version, exactInt (2 ^ 64))] [] (by decide) envOk0
+    (lineOk0 _ _ (by decide) (by decide)) modOk0 (msgOk0 _ _)).1
     (x := .error leaked) (y := .ok true) (by rfl) (by rfl) (by simp)
 
-/-- The invariant on its own: C `warn_explicit` never leaks an internal error, for every registry
-of ints. -/
+/-- The invariant on its own: C `warn_explicit` never leaks an internal error. -/
 def NoSystemError : Prop :=
   ∀ E fs dflt ver c reg once, (cWarnExplicit E fs dflt ver c reg once).out ≠ .error leaked
 
 theorem noSystemError_refuted : ¬ NoSystemError := fun h =>
-  h E0 [] "default" 1 (call0 1 (.some "a")) (.some [(.version, 2 ^ 64)]) [] (by rfl)
+  h E0 [] (some "default") 1 (call0 1 (.some "a")) (.dict [(.version, exactInt (2 ^ 64))]) [] (by rfl)
+
+/-- A `'version'` that is not an exact int (`True`, an int subclass): C treats the registry as
+stale and clears it; Python compares with `!=`, so `True` passes for version 1. -/
+def WarnTwinsInexactVersion : Prop :=
+  ∀ E ver c r once, ver ≠ 0 → EnvOk E → LineOk c → ModOk c → MsgOk c →
+    (∀ v, regGet r .version = .some v → -longMax - 1 ≤ v.n ∧ v.n ≤ longMax) →
+    Twins E [] (some "default") ver c (.dict r) once
+
+theorem warnTwinsInexactVersion_refuted : ¬ WarnTwinsInexactVersion := fun h =>
+  refute (h E0 1 (call0 1 (.some "a")) [(.version, ⟨1, false⟩), (.tri "x" 1 1, one)] [] (by decide)
+    envOk0 (lineOk0 _ _ (by decide) (by decide)) modOk0 (msgOk0 _ _)
+    (by intro v hv; simp [regGet] at hv; subst hv; decide)).1
+    (x := .ok true) (y := .ok false) (by rfl) (by rfl) (by simp)
 
 /-- Callbacks that raise: C runs the message test, the module test and `issubclass` before it
-looks at any of them; Python stops at the first that fails. A filter whose message does not
-match but whose category's `__subclasscheck__` raises is skipped by Python and raises in C. -/
+looks at any of them; Python stops at the first that fails. -/
 def WarnTwinsRaising : Prop :=
-  ∀ E fs dflt ver c reg once,
-    ver ≠ 0 → (∀ f ∈ fs, Plain f.action) → Plain dflt → LinesFit fs → ModuleGiven c →
-    LineFits c → VersionFits reg → Twins E fs dflt ver c reg once
+  ∀ E fs ver c reg once, ver ≠ 0 → ItemsOkG IsTuple PlainAct AnyRegex LnFits fs → LineOk c → ModOk c →
+    MsgOk c → RegOk reg → Twins E fs (some "always") ver c reg once
 
 def Eraise : Env := ⟨fun _ _ => .error (.keyError "boom"), fun _ _ => true, fun _ _ => .ok true, .ok ()⟩
-def noMatch : Filter := ⟨"error", .some ⟨fun _ => .ok false, true⟩, 1, .none, 0⟩
+def noMatch : Item := .tuple ⟨some "error", .some (rx false), 1, .none, 0⟩
 
 theorem warnTwinsRaising_refuted : ¬ WarnTwinsRaising := fun h =>
-  refute (congrArg Res.out (h Eraise [noMatch] "always" 1 (call0 1 (.some "a")) .none []
-    (by decide) (by simp [noMatch, Plain]) (by simp [Plain]) (by simp [LinesFit, noMatch, ssizeMax])
-    trivial (by simp [LineFits, call0, intMax]) (by simp [VersionFits])))
+  refute (h Eraise [noMatch] 1 (call0 1 (.some "a")) .none [] (by decide)
+    (by
+      intro it hit; simp only [List.mem_singleton] at hit; subst hit
+      refine ⟨_, rfl, ⟨"error", rfl, Or.inl rfl⟩, ?_, by simp, by simp [LnFits, ssizeMax]⟩
+      intro p hp; simp at hp; subst hp; exact ⟨_, _, _, rfl⟩)
+    (lineOk0 _ _ (by decide) (by decide)) modOk0 (msgOk0 _ _) (Or.inl rfl)).1
     (x := .error (.keyError "boom")) (y := .ok true) (by rfl) (by rfl) (by simp)
 
-/-- `module=None` passed explicitly: C returns at once (`_warnings.c:812-813`, meant for
-interpreter shutdown); Python treats it as omitted and applies the filters, so an `error` filter
-raises in Python only. -/
+/-- A filter whose pattern is a plain str, as C's internal default filters are: C compares it
+with the module name; Python calls its `match` and raises `AttributeError`. -/
+def WarnTwinsPlainFilter : Prop :=
+  ∀ E fs ver c reg once, ver ≠ 0 → EnvOk E → ItemsOkG IsTuple PlainAct (fun _ => True) LnFits fs →
+    LineOk c → ModOk c → MsgOk c → RegOk reg → Twins E fs (some "always") ver c reg once
+
+def plainItem : Item := .tuple ⟨some "ignore", .none, 1, .some (.plain "a"), 0⟩
+
+theorem warnTwinsPlainFilter_refuted : ¬ WarnTwinsPlainFilter := fun h =>
+  refute (h E0 [plainItem] 1 (call0 1 (.some "a")) .none [] (by decide) envOk0
+    (by
+      intro it hit; simp only [List.mem_singleton] at hit; subst hit
+      exact ⟨_, rfl, ⟨"ignore", rfl, Or.inr (Or.inl rfl)⟩, by simp, by simp, by simp [LnFits, ssizeMax]⟩)
+    (lineOk0 _ _ (by decide) (by decide)) modOk0 (msgOk0 _ _) (Or.inl rfl)).1
+    (x := .ok false) (y := .error noMatchAttr) (by rfl) (by rfl) (by simp)
+
+/-- A filters-list item that is a 5-element list, or an action that is not a str: C refuses
+both (`ValueError`, `TypeError`); Python unpacks the list and treats the action as unknown. -/
+def WarnTwinsItemShape : Prop :=
+  ∀ E fs ver c reg once, ver ≠ 0 → EnvOk E →
+    ItemsOkG (fun it f => it = .tuple f ∨ it = .list5 f) (fun _ => True) TotalPat LnFits fs →
+    LineOk c → ModOk c → MsgOk c → RegOk reg → Twins E fs (some "always") ver c reg once
+
+def listItem : Item := .list5 ⟨some "always", .none, 1, .none, 0⟩
+def noStrAction : Item := .tuple ⟨none, .none, 1, .none, 0⟩
+
+theorem warnTwinsItemShape_refuted : ¬ WarnTwinsItemShape := fun h =>
+  refute (h E0 [listItem] 1 (call0 1 (.some "a")) .none [] (by decide) envOk0
+    (by
+      intro it hit; simp only [List.mem_singleton] at hit; subst hit
+      exact ⟨_, Or.inr rfl, trivial, by simp, by simp, by simp [LnFits, ssizeMax]⟩)
+    (lineOk0 _ _ (by decide) (by decide)) modOk0 (msgOk0 _ _) (Or.inl rfl)).1
+    (x := .error (notTuple 0)) (y := .ok true) (by rfl) (by rfl) (by simp [notTuple])
+
+theorem warnTwinsItemShape_refuted_action : ¬ WarnTwinsItemShape := fun h =>
+  refute (h E0 [noStrAction] 1 (call0 1 (.some "a")) .none [] (by decide) envOk0
+    (by
+      intro it hit; simp only [List.mem_singleton] at hit; subst hit
+      exact ⟨_, Or.inl rfl, trivial, by simp, by simp, by simp [LnFits, ssizeMax]⟩)
+    (lineOk0 _ _ (by decide) (by decide)) modOk0 (msgOk0 _ _) (Or.inl rfl)).1
+    (x := .error actionTypeErr) (y := .error unrecognized) (by rfl) (by rfl)
+    (by simp [actionTypeErr, unrecognized])
+
+/-- `module=None` passed explicitly: C returns at once (_warnings.c:812-813, meant for interpreter
+shutdown); Python treats it as omitted and applies the filters. -/
 def WarnTwinsNoneModule : Prop :=
-  ∀ E fs dflt ver c reg once,
-    ver ≠ 0 → CallbacksTotal E fs → (∀ f ∈ fs, Plain f.action) → Plain dflt → LinesFit fs →
-    LineFits c → VersionFits reg → Twins E fs dflt ver c reg once
+  ∀ E ver c reg once, ver ≠ 0 → EnvOk E → LineOk c → MsgOk c → RegOk reg →
+    Twins E [] (some "error") ver c reg once
 
 theorem warnTwinsNoneModule_refuted : ¬ WarnTwinsNoneModule := fun h =>
-  refute (congrArg Res.out (h E0 [] "error" 1 (call0 1 .none) .none []
-    (by decide) ⟨fun _ _ => ⟨true, rfl⟩, fun _ _ => ⟨true, rfl⟩, by simp⟩ (by simp) (by simp [Plain])
-    (by simp [LinesFit]) (by simp [LineFits, call0, intMax]) (by simp [VersionFits])))
+  refute (h E0 1 (call0 1 .none) .none [] (by decide) envOk0 (lineOk0 _ _ (by decide) (by decide))
+    (msgOk0 _ _) (Or.inl rfl)).1
     (x := .ok false) (y := .error (warnRaised (call0 1 .none))) (by rfl) (by rfl) (by simp)
 
-/-- A line outside C `int`: the clinic converter of C `warn_explicit` raises `OverflowError`;
-Python's `int(lineno)` takes it. -/
+/-- A `module` that is not a str: C calls the module pattern on it even when the message pattern
+did not match; Python never gets that far. -/
+def WarnTwinsModuleObj : Prop :=
+  ∀ E fs ver c reg once, ver ≠ 0 → EnvOk E → ItemsOkG IsTuple PlainAct AnyRegex LnFits fs →
+    LineOk c → MsgOk c → RegOk reg → c.module ≠ .none → Twins E fs (some "always") ver c reg once
+
+def objItem : Item := .tuple ⟨some "error", .some (rx false), 1, .some (rx true), 0⟩
+
+theorem warnTwinsModuleObj_refuted : ¬ WarnTwinsModuleObj := fun h =>
+  refute (h E0 [objItem] 1 (call0 1 .obj) .none [] (by decide) envOk0
+    (by
+      intro it hit; simp only [List.mem_singleton] at hit; subst hit
+      refine ⟨_, rfl, ⟨"error", rfl, Or.inl rfl⟩, ?_, ?_, by simp [LnFits, ssizeMax]⟩ <;>
+      · intro p hp; simp at hp; subst hp; exact ⟨_, _, _, rfl⟩)
+    (lineOk0 _ _ (by decide) (by decide)) (msgOk0 _ _) (Or.inl rfl) (by simp [call0])).1
+    (x := .error (.typeError "~expected string")) (y := .ok true) (by rfl) (by rfl) (by simp)
+
+/-- Any line: C's `int` converter refuses a line outside C `int` and anything that is not an int;
+Python's `int(lineno)` takes both. -/
 def WarnTwinsAnyLine : Prop :=
-  ∀ E fs dflt ver c reg once,
-    ver ≠ 0 → CallbacksTotal E fs → (∀ f ∈ fs, Plain f.action) → Plain dflt → LinesFit fs →
-    ModuleGiven c → VersionFits reg → Twins E fs dflt ver c reg once
+  ∀ E ver c reg once, ver ≠ 0 → EnvOk E → ModOk c → MsgOk c → RegOk reg →
+    Twins E [] (some "always") ver c reg once
 
 theorem warnTwinsAnyLine_refuted : ¬ WarnTwinsAnyLine := fun h =>
-  refute (congrArg Res.out (h E0 [] "always" 1 (call0 (2 ^ 31) (.some "a")) .none []
-    (by decide) ⟨fun _ _ => ⟨true, rfl⟩, fun _ _ => ⟨true, rfl⟩, by simp⟩ (by simp) (by simp [Plain])
-    (by simp [LinesFit]) trivial (by simp [VersionFits])))
+  refute (h E0 1 (call0 (2 ^ 31) (.some "a")) .none [] (by decide) envOk0 (Or.inr ⟨"a", rfl⟩)
+    (msgOk0 _ _) (Or.inl rfl)).1
     (x := .error (.overflowError "Python int too large to convert to C int")) (y := .ok true)
     (by rfl) (by rfl) (by simp)
 
-/-- An action that is no known action (put in `warnings.filters` by hand, or as
-`warnings.defaultaction`): both raise `RuntimeError`, but C has already stored the warning in the
-registry, so the next identical call returns silently in C and raises again in Python. -/
+def callObjLine : Call := ⟨"x", 1, "a.py", .obj (.ok 5) (.typeError "~an integer is required"), .some "a", .ok ()⟩
+
+theorem warnTwinsAnyLine_refuted_obj : ¬ WarnTwinsAnyLine := fun h =>
+  refute (h E0 1 callObjLine .none [] (by decide) envOk0 (Or.inr ⟨"a", rfl⟩) rfl (Or.inl rfl)).1
+    (x := .error (.typeError "~an integer is required")) (y := .ok true) (by rfl) (by rfl) (by simp)
+
+/-- A registry that is neither a dict nor `None`: C raises `TypeError`, Python `AttributeError`
+(from `registry.get`). -/
+def WarnTwinsRegObj : Prop :=
+  ∀ E ver c once, ver ≠ 0 → EnvOk E → LineOk c → ModOk c → MsgOk c →
+    Twins E [] (some "always") ver c .obj once
+
+theorem warnTwinsRegObj_refuted : ¬ WarnTwinsRegObj := fun h =>
+  refute (h E0 1 (call0 1 (.some "a")) [] (by decide) envOk0 (lineOk0 _ _ (by decide) (by decide))
+    modOk0 (msgOk0 _ _)).1
+    (x := .error regTypeErr) (y := .error noGetAttr) (by rfl) (by rfl) (by simp [regTypeErr, noGetAttr])
+
+/-- A message that cannot be built (`category(message)` or `str(message)` raising): Python builds it
+first; C checks `module` and the registry before. -/
+def WarnTwinsMsgRaises : Prop :=
+  ∀ E ver c reg once, ver ≠ 0 → EnvOk E → LineOk c → ModOk c → Twins E [] (some "always") ver c reg once
+
+def callBadMsg : Call := ⟨"x", 1, "a.py", .int 1, .some "a", .error (.valueError "bad message")⟩
+
+theorem warnTwinsMsgRaises_refuted : ¬ WarnTwinsMsgRaises := fun h =>
+  refute (h E0 1 callBadMsg .obj [] (by decide) envOk0 ⟨1, rfl, by decide, by decide⟩ (Or.inr ⟨"a", rfl⟩)).1
+    (x := .error regTypeErr) (y := .error (.valueError "bad message")) (by rfl) (by rfl)
+    (by simp [regTypeErr])
+
+/-- An action that is a str but no known action: both raise `RuntimeError`, but C has already
+stored the warning in the registry. -/
 def WarnTwinsUnknownAction : Prop :=
-  ∀ E fs dflt ver c reg once,
-    ver ≠ 0 → CallbacksTotal E fs → LinesFit fs → ModuleGiven c → LineFits c → VersionFits reg →
-    Twins E fs dflt ver c reg once
+  ∀ E ver c reg once, ver ≠ 0 → EnvOk E → LineOk c → ModOk c → MsgOk c → RegOk reg →
+    Twins E [] (some "bogus") ver c reg once
 
 theorem warnTwinsUnknownAction_refuted : ¬ WarnTwinsUnknownAction := fun h =>
-  refute (congrArg Res.reg (h E0 [] "bogus" 1 (call0 1 (.some "a")) (.some []) []
-    (by decide) ⟨fun _ _ => ⟨true, rfl⟩, fun _ _ => ⟨true, rfl⟩, by simp⟩ (by simp [LinesFit])
-    trivial (by simp [LineFits, call0, intMax]) (by simp [VersionFits, regGet])))
+  refute (h E0 1 (call0 1 (.some "a")) (.dict []) [] (by decide) envOk0
+    (lineOk0 _ _ (by decide) (by decide)) modOk0 (msgOk0 _ _) regOk_dict_nil).2.1
     (x := .some [(.tri "x" 1 1, 1), (.version, 1)]) (y := .some [(.version, 1)])
     (by rfl) (by rfl) (by simp)
 
-/-- An unknown action raises `RuntimeError` in `_py_warnings`, as it does in C, for every filters
-list. With no filters and an unknown `defaultaction` the message formats `item`, the loop variable
-that the empty loop never bound, and the call raises `UnboundLocalError` instead. -/
+/-- A `defaultaction` that is not a str: C raises `TypeError` naming it; Python reaches its
+unknown-action branch. -/
+def WarnTwinsDfltType : Prop :=
+  ∀ E ver c reg once, ver ≠ 0 → EnvOk E → LineOk c → ModOk c → MsgOk c → RegOk reg →
+    Twins E [] none ver c reg once
+
+theorem warnTwinsDfltType_refuted : ¬ WarnTwinsDfltType := fun h =>
+  refute (h E0 1 (call0 1 (.some "a")) .none [] (by decide) envOk0
+    (lineOk0 _ _ (by decide) (by decide)) modOk0 (msgOk0 _ _) (Or.inl rfl)).1
+    (x := .error dfltTypeErr) (y := .error unboundItem) (by rfl) (by rfl) (by simp [dfltTypeErr, unboundItem])
+
+/-- An unknown action raises `RuntimeError` in `_py_warnings`, as it does in C. With no filters
+the message formats `item`, which the empty loop never bound: `UnboundLocalError`. -/
 def PyUnknownActionRaises : Prop :=
-  ∀ E fs dflt ver c reg once, ver ≠ 0 → CallbacksTotal E fs → LinesFit fs →
-    (∀ f ∈ fs, f.action = dflt) → ¬ (Plain dflt ∨ dflt = "once" ∨ dflt = "module") →
-    (cWarnExplicit E fs dflt ver c reg once).out = .error unrecognized →
-    (pyWarnExplicit E fs dflt ver c reg once).out = .error unrecognized
+  ∀ E ver c reg once, ver ≠ 0 → EnvOk E → LineOk c → ModOk c → MsgOk c →
+    (cWarnExplicit E [] (some "bogus") ver c reg once).out = .error unrecognized →
+    (pyWarnExplicit E [] (some "bogus") ver c reg once).out = .error unrecognized
 
 theorem pyUnknownActionRaises_refuted : ¬ PyUnknownActionRaises := fun h =>
-  refute (h E0 [] "bogus" 1 (call0 1 (.some "a")) .none [] (by decide)
-    ⟨fun _ _ => ⟨true, rfl⟩, fun _ _ => ⟨true, rfl⟩, by simp⟩ (by simp [LinesFit]) (by simp)
-    (by simp [Plain]) (by rfl)) (y := .error unrecognized) (x := .error unboundItem) (by rfl) rfl
+  refute (h E0 1 (call0 1 (.some "a")) .none [] (by decide) envOk0 (lineOk0 _ _ (by decide) (by decide))
+    modOk0 (msgOk0 _ _) (by rfl)) (y := .error unrecognized) (x := .error unboundItem) (by rfl) rfl
     (by simp [unboundItem, unrecognized])
 
 end PyLean.CoreLibs.Warn
