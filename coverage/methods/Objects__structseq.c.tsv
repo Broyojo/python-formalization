@@ -6,7 +6,7 @@ Objects/structseq.c	91	101	PyStructSequence_SetItem	PyStructSequence_SetItem(PyO
 Objects/structseq.c	104	113	PyStructSequence_GetItem	PyStructSequence_GetItem(PyObject *op, Py_ssize_t index)	todo		
 Objects/structseq.c	117	129	structseq_traverse	structseq_traverse(PyObject *op, visitproc visit, void *arg)	todo		
 Objects/structseq.c	132	150	structseq_dealloc	structseq_dealloc(PyObject *op)	todo		
-Objects/structseq.c	167	270	structseq_new_impl	structseq_new_impl(PyTypeObject *type, PyObject *arg, PyObject *dict) /*[clinic end generated code: output=baa082e788b171da input=90532511101aa3fb]*/	todo		
+Objects/structseq.c	167	270	structseq_new_impl	structseq_new_impl(PyTypeObject *type, PyObject *arg, PyObject *dict) /*[clinic end generated code: output=baa082e788b171da input=90532511101aa3fb]*/	modelled	typeobj-structseq-reduce-round-trip	
 Objects/structseq.c	274	339	structseq_repr	structseq_repr(PyObject *op)	todo		
 Objects/structseq.c	343	385	structseq_reduce	structseq_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		changed-in-3.15:
 Objects/structseq.c	389	458	structseq_replace	structseq_replace(PyObject *op, PyObject *args, PyObject *kwargs)	todo		
