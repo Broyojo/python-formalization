@@ -1,0 +1,62 @@
+id: ipaddress-netmask-cache-history
+title: "ipaddress: whether IPv4Network(('10.0.0.0', 8.0)) works depends on earlier calls; otherwise it leaks AttributeError"
+priority: P3
+kind: wrong-exception
+module: ipaddress
+files: [Lib/ipaddress.py]
+functions: ["_BaseV4._make_netmask", "_BaseV6._make_netmask", "_IPAddressBase._prefix_from_prefix_string"]
+summary: |
+  _make_netmask looks up `arg in cls._netmask_cache` before it checks `isinstance(arg, int)`. The
+  cache is keyed by value, so 8.0, Decimal(8) and True find the entries stored for the ints 8 and
+  1. In a fresh interpreter IPv4Network(('10.0.0.0', 8.0)) reaches _prefix_from_prefix_string,
+  which calls 8.0.isascii() and leaks AttributeError: 'float' object has no attribute 'isascii'.
+  After any call that cached the int 8 (e.g. IPv4Network('10.0.0.0/8') or
+  IPv4Network(('10.0.0.0', 8))), the same call succeeds and returns 10.0.0.0/8. So the same
+  expression raises or succeeds depending on what ran before, and the failure is an internal
+  AttributeError rather than the documented NetmaskValueError/TypeError.
+likelihood: |
+  Low to moderate: a float prefix length comes from arithmetic (32 - math.log2(n)) or JSON. The
+  history dependence makes it hard to diagnose: tests pass or fail depending on order.
+maybe_intended: |
+  No. The docs allow an int prefix length or a str mask in the two-tuple form; the cache is an
+  optimisation and must not change the result.
+reproducer: |
+  import subprocess, sys
+  prog = (
+      "import ipaddress\n"
+      "def t():\n"
+      "    try: return str(ipaddress.IPv4Network(('10.0.0.0', 8.0)))\n"
+      "    except Exception as e: return type(e).__name__\n"
+      "first = t()\n"
+      "ipaddress.IPv4Network(('10.0.0.0', 8))\n"
+      "print(first, t())\n")
+  out = subprocess.run([sys.executable, '-c', prog], capture_output=True, text=True).stdout.split()
+  print(out)
+  if out == ['AttributeError', '10.0.0.0/8']:
+      print('REPRODUCED ipaddress-netmask-cache-history')
+expected: |
+  The same answer both times: a NetmaskValueError or TypeError for a non-int, non-str mask (or
+  acceptance both times if floats were meant to work).
+observed: |
+  python3 3.15.2: ['AttributeError', '10.0.0.0/8']. REPRODUCED.
+  main (cpython-main/python.exe): same. REPRODUCED.
+promised_by: |
+  Doc/library/ipaddress.rst, IPv4Network item 4: the netmask is "an integer representing the
+  prefix length ... or a string representing the prefix mask"; NetmaskValueError for an invalid
+  mask. A cache must not change results.
+cause: |
+  Lib/ipaddress.py:1162 (`if arg not in cls._netmask_cache:`) runs before the int check at :1163,
+  and :1169 hands a non-int to _prefix_from_prefix_string (:477), which calls str methods on it.
+  The IPv6 _make_netmask (:1637-1645) has the same order.
+possible_fix: |
+  Check the type before the cache lookup (or key the cache by (type(arg), arg)), and raise
+  TypeError / NetmaskValueError for anything that is neither int nor str.
+duplicates:
+  issues: []
+  queries: ["ipaddress _netmask_cache float", "ipaddress netmask cache", "IPv4Network float prefix AttributeError isascii",
+            "ipaddress prefix float", "_make_netmask cache", "bugforge README: no netmask cache entry"]
+  note: |
+    Queries run as separate unquoted terms. Lead from the review of the ipaddress rows.
+lean:
+  property: PyLean.Ipaddress.NetmaskCacheTransparent
+  theorem: PyLean.Ipaddress.netmaskCacheTransparent_refuted

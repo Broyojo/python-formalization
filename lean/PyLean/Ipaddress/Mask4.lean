@@ -90,4 +90,50 @@ theorem docMaskRule_refuted : ¬ DocMaskRule := by
   have := h 0x7fffffff 1 (by decide) (by decide) (by decide)
   revert this; decide
 
+/-! ## The cache -/
+
+/-- A mask argument: an int, a str, or another number equal to the int `v` (a float such as
+`8.0`, `Decimal(8)`), which `in` and dict lookup treat as `v`. -/
+inductive MaskArg where
+  | int (v : Int)
+  | str (s : List Char)
+  | numEq (v : Int) (tyName : String)
+
+/-- `_netmask_cache` as the prefix lengths it holds, keyed by the int value they were stored under
+(a str key is kept apart). -/
+abbrev NetmaskCache := List (Int × Nat)
+
+/-- `_BaseV4._make_netmask(arg)`, ipaddress.py:1154-1178: the cache is consulted first
+(`arg not in cls._netmask_cache`, :1162), and only a miss checks the type (:1163); a non-int,
+non-str argument reaches `_prefix_from_prefix_string`, whose `isascii()` call raises
+`AttributeError`. Returns the prefix length and the cache afterwards. -/
+def makeNetmaskCached (cache : NetmaskCache) (a : MaskArg) : Py Nat × NetmaskCache :=
+  match a with
+  | .str s => (makeNetmask4 s, cache)
+  | .int v =>
+    match cache.lookup v with
+    | some p => (.ok p, cache)
+    | none => match makeNetmask4Int v with
+      | .ok p => (.ok p, (v, p) :: cache)
+      | .error e => (.error e, cache)
+  | .numEq v ty =>
+    match cache.lookup v with
+    | some p => (.ok p, cache)
+    | none => (.error (.named "AttributeError" s!"'{ty}' object has no attribute 'isascii'"), cache)
+
+/-- The cache is an optimisation: the result of `_make_netmask(arg)` does not depend on what
+earlier calls stored. Refuted: `8.0` raises `AttributeError` with an empty cache and gives 8 once
+the int 8 is cached (bug ipaddress-netmask-cache-history). -/
+def NetmaskCacheTransparent : Prop :=
+  ∀ (c1 c2 : NetmaskCache) (a : MaskArg),
+    (∀ k p, c1.lookup k = some p → makeNetmask4Int k = .ok p) →
+    (∀ k p, c2.lookup k = some p → makeNetmask4Int k = .ok p) →
+    (makeNetmaskCached c1 a).1 = (makeNetmaskCached c2 a).1
+
+theorem netmaskCacheTransparent_refuted : ¬ NetmaskCacheTransparent := by
+  intro h
+  have := h [] [(8, 8)] (.numEq 8 "float") (by simp) (by
+    intro k p hk; simp [List.lookup] at hk; split at hk <;> simp_all [makeNetmask4Int])
+  simp [makeNetmaskCached, List.lookup] at this
+
 end PyLean.Ipaddress

@@ -159,6 +159,12 @@ def entries : List Entry := [
     source := "IPv6Address docstring; __reduce__ pickles str(self)", status := .proven
     prop := ``V6RoundTrip, thm := some ``v6RoundTrip_proven
     notes := "Difftest fn v6init (parse, scope, str; ~18k cases over 3 seeds, 100%). The proof covers every _compress_hextets output shape (29) and the ::ffff:a.b.c.d form; the run it picks need not be the longest for the round trip, so that choice is not pinned here. Smoke: 400k random strings agree with glibc inet_pton." },
+  { id := "ipaddress-v4-netmask-cache", pyFile := "Lib/ipaddress.py"
+    pyFns := ["_BaseV4._make_netmask"]
+    statement := "The result of _make_netmask(arg) does not depend on what earlier calls cached."
+    source := "invariant: a cache must not change results; docs: the mask is an int prefix length or a str", status := .refuted
+    prop := ``NetmaskCacheTransparent, thm := some ``netmaskCacheTransparent_refuted
+    bug := some "ipaddress-netmask-cache-history" },
   { id := "ipaddress-v4-mask-doc-rule", pyFile := "Lib/ipaddress.py"
     pyFns := ["_IPAddressBase._prefix_from_ip_string", "_IPAddressBase._prefix_from_ip_int", "_BaseV4._make_netmask"]
     statement := "A dotted mask whose first field is non-zero is accepted only as a netmask, as the documentation's rule says."
