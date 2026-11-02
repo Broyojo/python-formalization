@@ -12,10 +12,21 @@ import PyLean.MathInt.Isqrt
 import PyLean.MathInt.Bytes
 import PyLean.MathInt.Gcd
 import PyLean.MathInt.Lehmer
+import PyLean.MathInt.FltClassify
+import PyLean.MathInt.FltFrexp
+import PyLean.MathInt.FltFloor
+import PyLean.MathInt.FltWrap
+import PyLean.MathInt.FltLogProps
 
 /-!
 Integer functions of `math.integer` (`Modules/mathintegermodule.c`, re-exported by
 `math`) and the related `int` operations of `Objects/longobject.c`, CPython 3.15.2.
+
+The float functions of `Modules/mathmodule.c` are in `MathInt/Flt*.lean`: the model in
+`FltBase` (argument objects with fallible `__float__`/`__index__`, `errno`, `math_1`,
+`math_1a`, `math_2`), `FltFns`, `FltLog`, `FltGamma`, `FltSum`; properties in the other
+`Flt*` files. The transcendental C library functions are parameters of every property.
+Difftest: `difftest/mathint_float_diff.py`.
 
 Model: `MathInt/Model.lean` (isqrt, comb/perm, factorial, gcd/lcm with
 `_PyLong_GCD`) and `MathInt/IntOps.lean` (three-argument pow, to_bytes /
@@ -34,6 +45,51 @@ namespace PyLean.MathInt
 open PyLean.Registry
 
 def entries : List Entry := [
+  { id := "mathint-classify", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math.isfinite", "math.isnan", "math.isinf", "math.isnormal", "math.issubnormal",
+      "math.signbit"]
+    statement := "For every argument object, isfinite, isnan, isinf, isnormal, issubnormal and signbit raise the conversion error unchanged; otherwise, with x the converted float, isnan(x) is x != x, isinf(x) is x in (inf, -inf), isfinite(x) is neither, issubnormal(x) is finite, nonzero and abs(x) < 2**-1022, isnormal(x) is finite, nonzero and abs(x) >= 2**-1022, the C11 and C23 branches of issubnormal agree, and signbit(x) == (copysign(1.0, x) < 0)."
+    source := "Doc/library/math.rst: isfinite, isnormal (\"a finite nonzero number that is not a subnormal\"), issubnormal (\"a finite nonzero number with a magnitude smaller than sys.float_info.min\"), isinf, isnan, signbit", status := .proven
+    prop := ``MathClassify, thm := some ``mathClassify_proven },
+  { id := "mathint-frexp-ldexp", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math.frexp", "math.ldexp"]
+    statement := "For every argument object: a conversion error of x is raised by frexp and ldexp before i is examined; ldexp(x, i) for every int (or bool) i, however large, is x * 2**i rounded once (zeros, infinities and NaNs unchanged, OverflowError('math range error') when it rounds to infinity); any other i raises TypeError('Expected an int as second argument to ldexp.'); frexp(x) is (m, e) with 0.5 <= abs(m) < 1 and m * 2**e == x exactly for finite nonzero x, (x, 0) otherwise; and ldexp(*frexp(x)) is x bit for bit."
+    source := "Doc/library/math.rst: frexp, ldexp (\"Return x * (2**i). This is essentially the inverse of function frexp()\")", status := .proven
+    prop := ``FrexpLdexp, thm := some ``frexpLdexp_proven
+    notes := "Includes the replacement of out-of-range exponents by LONG_MIN/LONG_MAX (mathmodule.c:1486-1490) and the INT_MAX/INT_MIN guards (:1502-1509). The C frexp and ldexp are the exact IEEE operations." },
+  { id := "mathint-floor-ceil-trunc", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math.floor", "math.ceil", "math.trunc"]
+    statement := "For an exact float, or a float subclass that does not override the method, floor, ceil and trunc return the exact floor, ceiling and truncation as an int (ValueError for NaN, OverflowError for an infinity), the C fast path agreeing with float.__floor__/__ceil__/__trunc__; an overriding subclass or any object with __floor__/__ceil__/__trunc__ gets that method's result or exception; ints and bools come back exactly; floor and ceil of an object without the method use its __float__/__index__ conversion and raise its errors, and trunc of such an object raises TypeError."
+    source := "Doc/library/math.rst: ceil, floor, trunc (\"If x is not a float, delegates to x.__floor__\")", status := .proven
+    prop := ``FloorCeilTrunc, thm := some ``floorCeilTrunc_proven },
+  { id := "mathint-math1-rules", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math_1", "is_error"]
+    statement := "For every C function f, can_overflow flag, error message and argument object, math_1 raises conversion errors unchanged and otherwise never returns a NaN for a non-NaN argument nor an infinity for a finite one: a NaN result from a non-NaN argument is ValueError, an infinite result from a finite argument is OverflowError('math range error') when can_overflow and ValueError otherwise, a finite result with errno EDOM is ValueError('math domain error'), with ERANGE is returned when below 1.5 in magnitude (an underflow) and OverflowError otherwise, and anything else is f's result."
+    source := "mathmodule.c:757-785 (the comment above math_1) and :725-744 (is_error); Doc/library/math.rst: \"A NaN will not be returned from any of the functions above unless one or more of the input arguments was a NaN\"", status := .proven
+    prop := ``Math1Rules, thm := some ``math1Rules_proven },
+  { id := "mathint-math1a-rules", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math_1a", "is_error"]
+    statement := "For every C function f that sets errno, error message and argument object, math_1a raises conversion errors unchanged and otherwise returns f's result when errno is 0, raises ValueError (with the formatted message when there is one) on EDOM, and on ERANGE returns the result when below 1.5 in magnitude and raises OverflowError('math range error') otherwise."
+    source := "mathmodule.c:827-829 (\"to be used when the function being wrapped is known to set errno properly\") and :725-744 (is_error)", status := .proven
+    prop := ``Math1aRules, thm := some ``math1aRules_proven },
+  { id := "mathint-math2-rules", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math_2", "is_error"]
+    statement := "For every two-argument C function f, math_2 raises TypeError for a wrong number of arguments, then the conversion error of the first argument, then of the second; otherwise a NaN result is ValueError('math domain error') unless an argument is a NaN (then returned), an infinite result is OverflowError('math range error') unless an argument is infinite (then returned), a finite result with EDOM is ValueError, with ERANGE is returned below 1.5 in magnitude and OverflowError otherwise, and f's result otherwise."
+    source := "mathmodule.c:854-879 (the comment above math_2) and :725-744 (is_error)", status := .proven
+    prop := ``Math2Rules, thm := some ``math2Rules_proven },
+  { id := "mathint-log-twins", pyFile := "Modules/mathmodule.c"
+    pyFns := ["m_log", "m_log2", "m_log10", "loghelper_int", "loghelper", "math.log", "math.log2",
+      "math.log10"]
+    statement := "For every C logarithm that returns a finite value without errno on positive finite arguments, math.log (one argument), math.log2 and math.log10: agree on an int and its float conversion; never raise for a positive int however large; treat an object with __index__ (and no __float__) as the int it returns, including beyond the float range, and raise what __index__ raises; raise ValueError('expected a positive input') for ints <= 0 and ValueError for floats <= 0 (zeros and -inf included); return NaN for NaN and inf for inf; and return the C function's value for positive finite floats. math.log(x, base) is log(x) / log(base) as Python divides floats (ZeroDivisionError for base 1)."
+    source := "Doc/library/math.rst: log (\"calculated as log(x)/log(base)\"), log2, log10; mathmodule.c:1573-1580 (logs of ints beyond the float range); C99 Annex F special values", status := .proven
+    prop := ``LogTwins, thm := some ``logTwins_proven
+    notes := "Scope: __index__ is modelled as returning the same int each time it is called (loghelper calls it twice when the float conversion overflows)." },
+  { id := "mathint-log2-powers-of-two", pyFile := "Modules/mathmodule.c"
+    pyFns := ["m_log2", "loghelper_int", "loghelper", "math.log2"]
+    statement := "For a C log2 that is exact on the powers of two a double holds, math.log2(2**k) == k exactly for every k with k + 1 < 2**53, for an int and for an object whose __index__ returns 2**k; past 2**1023 this is the fma(log2(2.0), e, log2(0.5)) path of loghelper_int."
+    source := "mathmodule.c:650-658 (log2 \"should produce exact results for powers of 2\")", status := .proven
+    prop := ``Log2PowersOfTwo, thm := some ``log2PowersOfTwo_proven
+    notes := "The bound k + 1 < 2**53 is where (double)e in loghelper_int stops being exact; an int that large needs a petabyte of memory." },
   { id := "mathint-isqrt-floor-sqrt", pyFile := "Modules/mathintegermodule.c"
     pyFns := ["math.integer.isqrt", "_approximate_isqrt"]
     statement := "For every n >= 0, isqrt(n) returns r with r*r <= n < (r+1)*(r+1)."
