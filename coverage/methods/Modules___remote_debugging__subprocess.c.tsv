@@ -7,6 +7,6 @@ Modules/_remote_debugging/subprocess.c	101	145	find_children_bfs	find_children_b
 Modules/_remote_debugging/subprocess.c	155	202	get_ppid_linux	get_ppid_linux(pid_t pid)	todo		changed-in-3.15: new function
 Modules/_remote_debugging/subprocess.c	205	293	get_child_pids_platform	get_child_pids_platform(pid_t target_pid, int recursive, pid_array_t *result)	todo		changed-in-3.15: new function
 Modules/_remote_debugging/subprocess.c	307	370	get_child_pids_platform	get_child_pids_platform(pid_t target_pid, int recursive, pid_array_t *result)	todo		changed-in-3.15: new function
-Modules/_remote_debugging/subprocess.c	381	443	get_child_pids_platform	get_child_pids_platform(pid_t target_pid, int recursive, pid_array_t *result)	todo		changed-in-3.15: new function
+Modules/_remote_debugging/subprocess.c	381	443	get_child_pids_platform	get_child_pids_platform(pid_t target_pid, int recursive, pid_array_t *result)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/_remote_debugging/subprocess.c); not in the Linux build this project models
 Modules/_remote_debugging/subprocess.c	454	459	get_child_pids_platform	get_child_pids_platform(pid_t target_pid, int recursive, pid_array_t *result)	todo		changed-in-3.15: new function
 Modules/_remote_debugging/subprocess.c	468	500	enumerate_child_pids	enumerate_child_pids(pid_t target_pid, int recursive)	todo		changed-in-3.15: new function

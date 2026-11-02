@@ -8,7 +8,7 @@ Modules/signalmodule.c	188	192	double_from_timeval	Py_LOCAL_INLINE(double) doubl
 Modules/signalmodule.c	195	207	itimer_retval	itimer_retval(struct itimerval *iv)	todo		changed-in-3.15:
 Modules/signalmodule.c	222	228	signal_default_int_handler_impl	signal_default_int_handler_impl(PyObject *module, int signalnum, PyObject *frame) /*[clinic end generated code: output=bb11c2eb115ace4e input=efcd4a56a207acfd]*/	todo		
 Modules/signalmodule.c	232	243	report_wakeup_write_error	report_wakeup_write_error(void *data)	todo		
-Modules/signalmodule.c	247	260	report_wakeup_send_error	report_wakeup_send_error(void* data)	todo		
+Modules/signalmodule.c	247	260	report_wakeup_send_error	report_wakeup_send_error(void* data)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/signalmodule.c); not in the Linux build this project models
 Modules/signalmodule.c	264	336	trip_signal	trip_signal(int sig_num)	todo		
 Modules/signalmodule.c	339	369	signal_handler	signal_handler(int sig_num)	todo		
 Modules/signalmodule.c	384	389	signal_alarm_impl	signal_alarm_impl(PyObject *module, int seconds) /*[clinic end generated code: output=144232290814c298 input=0d5e97e0e6f39e86]*/	todo		
@@ -52,4 +52,4 @@ Modules/signalmodule.c	2028	2032	PyOS_InterruptOccurred	PyOS_InterruptOccurred(v
 Modules/signalmodule.c	2037	2047	_clear_pending_signals	_clear_pending_signals(void)	todo		
 Modules/signalmodule.c	2050	2056	_PySignal_AfterFork	_PySignal_AfterFork(void)	todo		
 Modules/signalmodule.c	2061	2065	_PyOS_IsMainThread	_PyOS_IsMainThread(void)	todo		
-Modules/signalmodule.c	2073	2077	_PyOS_SigintEvent	void *_PyOS_SigintEvent(void)	todo		
+Modules/signalmodule.c	2073	2077	_PyOS_SigintEvent	void *_PyOS_SigintEvent(void)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/signalmodule.c); not in the Linux build this project models

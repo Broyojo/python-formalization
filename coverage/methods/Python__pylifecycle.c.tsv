@@ -76,7 +76,7 @@ Python/pylifecycle.c	3314	3328	apple_log_write_impl	apple_log_write_impl(PyObjec
 Python/pylifecycle.c	3337	3372	init_apple_streams	init_apple_streams(PyThreadState *tstate)	todo		
 Python/pylifecycle.c	3378	3389	_Py_FatalError_DumpTracebacks	_Py_FatalError_DumpTracebacks(int fd, PyInterpreterState *interp, PyThreadState *tstate)	todo		changed-in-3.15:
 Python/pylifecycle.c	3400	3434	_Py_FatalError_PrintExc	_Py_FatalError_PrintExc(PyThreadState *tstate)	todo		changed-in-3.15:
-Python/pylifecycle.c	3440	3470	fatal_output_debug	fatal_output_debug(const char *msg)	todo		
+Python/pylifecycle.c	3440	3470	fatal_output_debug	fatal_output_debug(const char *msg)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/pylifecycle.c); not in the Linux build this project models
 Python/pylifecycle.c	3475	3500	fatal_error_dump_runtime	fatal_error_dump_runtime(int fd, _PyRuntimeState *runtime)	todo		changed-in-3.15:
 Python/pylifecycle.c	3504	3515	fatal_error_exit	fatal_error_exit(int status)	todo		changed-in-3.15:
 Python/pylifecycle.c	3518	3529	acquire_dict_lock_for_dump	acquire_dict_lock_for_dump(PyObject *obj)	todo		

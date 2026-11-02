@@ -28,7 +28,7 @@ Python/traceback.c	885	888	_Py_DumpHexadecimal	_Py_DumpHexadecimal(int fd, uintp
 Python/traceback.c	892	896	dump_pointer	dump_pointer(int fd, void *ptr)	todo		
 Python/traceback.c	900	904	dump_char	dump_char(int fd, char ch)	todo		
 Python/traceback.c	907	985	_Py_DumpASCII	_Py_DumpASCII(int fd, PyObject *text)	todo		
-Python/traceback.c	990	1029	_Py_DumpWideString	_Py_DumpWideString(int fd, wchar_t *str)	todo		
+Python/traceback.c	990	1029	_Py_DumpWideString	_Py_DumpWideString(int fd, wchar_t *str)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/traceback.c); not in the Linux build this project models
 Python/traceback.c	1040	1090	dump_frame	dump_frame(int fd, _PyInterpreterFrame *frame)	todo		
 Python/traceback.c	1093	1105	tstate_is_freed	tstate_is_freed(PyThreadState *tstate)	todo		
 Python/traceback.c	1109	1112	interp_is_freed	interp_is_freed(PyInterpreterState *interp)	todo		

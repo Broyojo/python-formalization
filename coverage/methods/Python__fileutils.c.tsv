@@ -26,12 +26,12 @@ Python/fileutils.c	977	987	_Py_LocaleUsesNonUnicodeWchar	_Py_LocaleUsesNonUnicod
 Python/fileutils.c	990	1030	_Py_ConvertWCharForm	_Py_ConvertWCharForm(const wchar_t *source, Py_ssize_t size, const char *tocode, const char *fromcode)	todo		
 Python/fileutils.c	1040	1043	_Py_DecodeNonUnicodeWchar	_Py_DecodeNonUnicodeWchar(const wchar_t *native, Py_ssize_t size)	todo		
 Python/fileutils.c	1058	1067	_Py_EncodeNonUnicodeWchar_InPlace	_Py_EncodeNonUnicodeWchar_InPlace(wchar_t *unicode, Py_ssize_t size)	todo		
-Python/fileutils.c	1074	1083	FILE_TIME_to_time_t_nsec	FILE_TIME_to_time_t_nsec(FILETIME *in_ptr, time_t *time_out, int* nsec_out)	todo		
-Python/fileutils.c	1086	1090	LARGE_INTEGER_to_time_t_nsec	LARGE_INTEGER_to_time_t_nsec(LARGE_INTEGER *in_ptr, time_t *time_out, int* nsec_out)	todo		
-Python/fileutils.c	1093	1100	_Py_time_t_to_FILE_TIME	_Py_time_t_to_FILE_TIME(time_t time_in, int nsec_in, FILETIME *out_ptr)	todo		
-Python/fileutils.c	1107	1119	attributes_to_mode	attributes_to_mode(DWORD attr)	todo		
-Python/fileutils.c	1132	1176	_Py_attribute_data_to_stat	_Py_attribute_data_to_stat(BY_HANDLE_FILE_INFORMATION *info, ULONG reparse_tag, FILE_BASIC_INFO *basic_info, FILE_ID_INFO *id_info, struct _Py_stat_struct *result)	todo		
-Python/fileutils.c	1179	1240	_Py_stat_basic_info_to_stat	_Py_stat_basic_info_to_stat(FILE_STAT_BASIC_INFORMATION *info, struct _Py_stat_struct *result)	todo		
+Python/fileutils.c	1074	1083	FILE_TIME_to_time_t_nsec	FILE_TIME_to_time_t_nsec(FILETIME *in_ptr, time_t *time_out, int* nsec_out)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/fileutils.c); not in the Linux build this project models
+Python/fileutils.c	1086	1090	LARGE_INTEGER_to_time_t_nsec	LARGE_INTEGER_to_time_t_nsec(LARGE_INTEGER *in_ptr, time_t *time_out, int* nsec_out)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/fileutils.c); not in the Linux build this project models
+Python/fileutils.c	1093	1100	_Py_time_t_to_FILE_TIME	_Py_time_t_to_FILE_TIME(time_t time_in, int nsec_in, FILETIME *out_ptr)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/fileutils.c); not in the Linux build this project models
+Python/fileutils.c	1107	1119	attributes_to_mode	attributes_to_mode(DWORD attr)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/fileutils.c); not in the Linux build this project models
+Python/fileutils.c	1132	1176	_Py_attribute_data_to_stat	_Py_attribute_data_to_stat(BY_HANDLE_FILE_INFORMATION *info, ULONG reparse_tag, FILE_BASIC_INFO *basic_info, FILE_ID_INFO *id_info, struct _Py_stat_struct *result)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/fileutils.c); not in the Linux build this project models
+Python/fileutils.c	1179	1240	_Py_stat_basic_info_to_stat	_Py_stat_basic_info_to_stat(FILE_STAT_BASIC_INFORMATION *info, struct _Py_stat_struct *result)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/fileutils.c); not in the Linux build this project models
 Python/fileutils.c	1257	1313	_Py_fstat_noraise	_Py_fstat_noraise(int fd, struct _Py_stat_struct *status)	todo		
 Python/fileutils.c	1331	1350	_Py_fstat	_Py_fstat(int fd, struct _Py_stat_struct *status)	todo		
 Python/fileutils.c	1354	1374	_Py_wstat	_Py_wstat(const wchar_t* path, struct stat *buf)	todo		
@@ -69,13 +69,13 @@ Python/fileutils.c	2654	2678	_Py_wgetcwd	_Py_wgetcwd(wchar_t *buf, size_t buflen
 Python/fileutils.c	2686	2749	_Py_dup	_Py_dup(int fd)	todo		
 Python/fileutils.c	2756	2768	_Py_get_blocking	_Py_get_blocking(int fd)	todo		
 Python/fileutils.c	2777	2810	_Py_set_blocking	_Py_set_blocking(int fd, int blocking)	todo		
-Python/fileutils.c	2817	2846	GetNamedPipeHandleStateW	GetNamedPipeHandleStateW(HANDLE hNamedPipe, LPDWORD lpState, LPDWORD lpCurInstances, LPDWORD lpMaxCollectionCount, LPDWORD lpCollectDataTimeout, LPWSTR lpUserName, DWORD nMaxUserNameSize)	todo		changed-in-3.15: new function
-Python/fileutils.c	2850	2872	_Py_get_blocking	_Py_get_blocking(int fd)	todo		
-Python/fileutils.c	2875	2905	_Py_set_blocking	_Py_set_blocking(int fd, int blocking)	todo		
-Python/fileutils.c	2908	2915	_Py_get_osfhandle_noraise	_Py_get_osfhandle_noraise(int fd)	todo		
-Python/fileutils.c	2918	2925	_Py_get_osfhandle	_Py_get_osfhandle(int fd)	todo		
-Python/fileutils.c	2928	2935	_Py_open_osfhandle_noraise	_Py_open_osfhandle_noraise(void *handle, int flags)	todo		
-Python/fileutils.c	2938	2945	_Py_open_osfhandle	_Py_open_osfhandle(void *handle, int flags)	todo		
+Python/fileutils.c	2817	2846	GetNamedPipeHandleStateW	GetNamedPipeHandleStateW(HANDLE hNamedPipe, LPDWORD lpState, LPDWORD lpCurInstances, LPDWORD lpMaxCollectionCount, LPDWORD lpCollectDataTimeout, LPWSTR lpUserName, DWORD nMaxUserNameSize)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/fileutils.c); not in the Linux build this project models
+Python/fileutils.c	2850	2872	_Py_get_blocking	_Py_get_blocking(int fd)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/fileutils.c); not in the Linux build this project models
+Python/fileutils.c	2875	2905	_Py_set_blocking	_Py_set_blocking(int fd, int blocking)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/fileutils.c); not in the Linux build this project models
+Python/fileutils.c	2908	2915	_Py_get_osfhandle_noraise	_Py_get_osfhandle_noraise(int fd)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/fileutils.c); not in the Linux build this project models
+Python/fileutils.c	2918	2925	_Py_get_osfhandle	_Py_get_osfhandle(int fd)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/fileutils.c); not in the Linux build this project models
+Python/fileutils.c	2928	2935	_Py_open_osfhandle_noraise	_Py_open_osfhandle_noraise(void *handle, int flags)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/fileutils.c); not in the Linux build this project models
+Python/fileutils.c	2938	2945	_Py_open_osfhandle	_Py_open_osfhandle(void *handle, int flags)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/fileutils.c); not in the Linux build this project models
 Python/fileutils.c	2949	3024	_Py_GetLocaleconvNumeric	_Py_GetLocaleconvNumeric(struct lconv *lc, PyObject **decimal_point, PyObject **thousands_sep)	todo		
 Python/fileutils.c	3047	3060	_fdwalk_close_func	_fdwalk_close_func(void *lohi, int fd)	todo		
 Python/fileutils.c	3065	3101	_Py_closerange	_Py_closerange(int first, int last)	todo		

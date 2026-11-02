@@ -14,8 +14,8 @@ Python/pytime.c	205	221	_PyLong_AsTime_t	_PyLong_AsTime_t(PyObject *obj)	todo
 Python/pytime.c	225	234	_PyLong_FromTime_t	_PyLong_FromTime_t(time_t t)	todo		
 Python/pytime.c	240	254	_PyTime_AsTime_t	_PyTime_AsTime_t(PyTime_t t, time_t *t2)	todo		
 Python/pytime.c	261	275	_PyTime_AsCLong	_PyTime_AsCLong(PyTime_t t, long *t2)	todo		
-Python/pytime.c	284	302	_PyTime_calc_yday	_PyTime_calc_yday(const SYSTEMTIME *st)	todo		changed-in-3.15: new function
-Python/pytime.c	309	362	_PyTime_windows_filetime	_PyTime_windows_filetime(time_t timer, struct tm *tm, int is_local)	todo		changed-in-3.15: new function
+Python/pytime.c	284	302	_PyTime_calc_yday	_PyTime_calc_yday(const SYSTEMTIME *st)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/pytime.c); not in the Linux build this project models
+Python/pytime.c	309	362	_PyTime_windows_filetime	_PyTime_windows_filetime(time_t timer, struct tm *tm, int is_local)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/pytime.c); not in the Linux build this project models
 Python/pytime.c	369	377	pytime_round_half_even	pytime_round_half_even(double x)	todo		
 Python/pytime.c	381	401	pytime_round	pytime_round(double x, _PyTime_round_t round)	todo		
 Python/pytime.c	405	449	pytime_double_to_denominator	pytime_double_to_denominator(double d, time_t *sec, long *numerator, long idenominator, _PyTime_round_t round)	todo		
@@ -38,7 +38,7 @@ Python/pytime.c	724	727	_PyTime_FromSecondsDouble	_PyTime_FromSecondsDouble(doub
 Python/pytime.c	731	752	pytime_divide_round_up	pytime_divide_round_up(const PyTime_t t, const PyTime_t k)	todo		
 Python/pytime.c	756	794	pytime_divide	pytime_divide(const PyTime_t t, const PyTime_t k, const _PyTime_round_t round)	todo		
 Python/pytime.c	802	822	pytime_divmod	pytime_divmod(const PyTime_t t, const PyTime_t k, PyTime_t *pq, PyTime_t *pr)	todo		
-Python/pytime.c	827	830	_PyTime_As100Nanoseconds	_PyTime_As100Nanoseconds(PyTime_t ns, _PyTime_round_t round)	todo		
+Python/pytime.c	827	830	_PyTime_As100Nanoseconds	_PyTime_As100Nanoseconds(PyTime_t ns, _PyTime_round_t round)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/pytime.c); not in the Linux build this project models
 Python/pytime.c	835	838	_PyTime_AsMicroseconds	_PyTime_AsMicroseconds(PyTime_t ns, _PyTime_round_t round)	todo		
 Python/pytime.c	842	845	_PyTime_AsMilliseconds	_PyTime_AsMilliseconds(PyTime_t ns, _PyTime_round_t round)	todo		
 Python/pytime.c	849	859	pytime_as_timeval	pytime_as_timeval(PyTime_t ns, PyTime_t *ptv_sec, int *ptv_usec, _PyTime_round_t round)	todo		
@@ -53,8 +53,8 @@ Python/pytime.c	957	1059	py_get_system_clock	py_get_system_clock(PyTime_t *tp, _
 Python/pytime.c	1063	1070	PyTime_Time	PyTime_Time(PyTime_t *result)	todo		
 Python/pytime.c	1074	1081	PyTime_TimeRaw	PyTime_TimeRaw(PyTime_t *result)	todo		
 Python/pytime.c	1085	1088	_PyTime_TimeWithInfo	_PyTime_TimeWithInfo(PyTime_t *t, _Py_clock_info_t *info)	todo		
-Python/pytime.c	1093	1114	py_win_perf_counter_frequency	py_win_perf_counter_frequency(_PyTimeFraction *base)	todo		
-Python/pytime.c	1119	1143	py_get_win_perf_counter	py_get_win_perf_counter(PyTime_t *tp, _Py_clock_info_t *info, int raise_exc)	todo		
+Python/pytime.c	1093	1114	py_win_perf_counter_frequency	py_win_perf_counter_frequency(_PyTimeFraction *base)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/pytime.c); not in the Linux build this project models
+Python/pytime.c	1119	1143	py_get_win_perf_counter	py_get_win_perf_counter(PyTime_t *tp, _Py_clock_info_t *info, int raise_exc)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/pytime.c); not in the Linux build this project models
 Python/pytime.c	1149	1174	py_mach_timebase_info	py_mach_timebase_info(_PyTimeFraction *base)	todo		
 Python/pytime.c	1178	1187	_PyTime_Init	_PyTime_Init(struct _Py_time_runtime_state *state)	todo		
 Python/pytime.c	1191	1273	py_get_monotonic_clock	py_get_monotonic_clock(PyTime_t *tp, _Py_clock_info_t *info, int raise_exc)	todo		

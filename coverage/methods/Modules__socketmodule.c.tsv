@@ -74,7 +74,7 @@ Modules/socketmodule.c	4919	4925	sock_sendmsg_impl	sock_sendmsg_impl(PySocketSoc
 Modules/socketmodule.c	5143	5300	sock_sendmsg_afalg	sock_sendmsg_afalg(PyObject *s, PyObject *args, PyObject *kwds)	todo		
 Modules/socketmodule.c	5313	5329	sock_shutdown	sock_shutdown(PyObject *self, PyObject *arg)	todo		
 Modules/socketmodule.c	5340	5386	sock_ioctl	sock_ioctl(PyObject *self, PyObject *arg)	todo		
-Modules/socketmodule.c	5398	5415	sock_share	sock_share(PyObject *self, PyObject *arg)	todo		
+Modules/socketmodule.c	5398	5415	sock_share	sock_share(PyObject *self, PyObject *arg)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/socketmodule.c); not in the Linux build this project models
 Modules/socketmodule.c	5526	5559	sock_finalize	sock_finalize(PyObject *self)	todo		
 Modules/socketmodule.c	5562	5571	sock_dealloc	sock_dealloc(PyObject *s)	todo		
 Modules/socketmodule.c	5575	5602	sock_repr	sock_repr(PyObject *self)	todo		
@@ -111,8 +111,8 @@ Modules/socketmodule.c	7313	7330	_socket_if_nametoindex_impl	_socket_if_nametoin
 Modules/socketmodule.c	7343	7354	_socket_if_indextoname_impl	_socket_if_indextoname_impl(PyObject *module, NET_IFINDEX index) /*[clinic end generated code: output=e48bc324993052e0 input=2a0026b271cd43ae]*/	todo		
 Modules/socketmodule.c	7363	7375	socket_CMSG_LEN	socket_CMSG_LEN(PyObject *self, PyObject *args)	todo		
 Modules/socketmodule.c	7393	7406	socket_CMSG_SPACE	socket_CMSG_SPACE(PyObject *self, PyObject *args)	todo		
-Modules/socketmodule.c	7516	7519	os_cleanup	os_cleanup(void)	todo		
-Modules/socketmodule.c	7522	7546	os_init	os_init(void)	todo		
+Modules/socketmodule.c	7516	7519	os_cleanup	os_cleanup(void)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/socketmodule.c); not in the Linux build this project models
+Modules/socketmodule.c	7522	7546	os_init	os_init(void)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/socketmodule.c); not in the Linux build this project models
 Modules/socketmodule.c	7554	7557	os_init	os_init(void)	todo		
 Modules/socketmodule.c	7561	7567	sock_capi_traverse	sock_capi_traverse(PyObject *capsule, visitproc visit, void *arg)	todo		
 Modules/socketmodule.c	7570	7576	sock_capi_clear	sock_capi_clear(PyObject *capsule)	todo		

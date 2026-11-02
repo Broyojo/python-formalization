@@ -32,9 +32,9 @@ Modules/posixmodule.c	1726	1733	PyLong_FromPy_off_t	PyLong_FromPy_off_t(Py_off_t
 Modules/posixmodule.c	1739	1793	_Py_Sigset_Converter	_Py_Sigset_Converter(PyObject *obj, void *addr)	todo		
 Modules/posixmodule.c	1809	1875	convertenviron	convertenviron(void)	todo		changed-in-3.15:
 Modules/posixmodule.c	1880	1883	posix_error	posix_error(void)	todo		
-Modules/posixmodule.c	1887	1899	win32_error	win32_error(const char* function, const char* filename)	todo		
-Modules/posixmodule.c	1902	1912	win32_error_object_err	win32_error_object_err(const char* function, PyObject* filename, DWORD err)	todo		
-Modules/posixmodule.c	1915	1919	win32_error_object	win32_error_object(const char* function, PyObject* filename)	todo		
+Modules/posixmodule.c	1887	1899	win32_error	win32_error(const char* function, const char* filename)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	1902	1912	win32_error_object_err	win32_error_object_err(const char* function, PyObject* filename, DWORD err)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	1915	1919	win32_error_object	win32_error_object(const char* function, PyObject* filename)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
 Modules/posixmodule.c	1924	1927	posix_path_object_error	posix_path_object_error(PyObject *path)	todo		
 Modules/posixmodule.c	1930	1938	path_object_error	path_object_error(PyObject *path)	todo		
 Modules/posixmodule.c	1941	1949	path_object_error2	path_object_error2(PyObject *path, PyObject *path2)	todo		
@@ -42,23 +42,23 @@ Modules/posixmodule.c	1952	1955	path_error	path_error(path_t *path)	todo
 Modules/posixmodule.c	1958	1961	posix_path_error	posix_path_error(path_t *path)	todo		
 Modules/posixmodule.c	1964	1967	path_error2	path_error2(path_t *path, path_t *path2)	todo		
 Modules/posixmodule.c	1973	1988	posix_fildes_fd	posix_fildes_fd(int fd, int (*func)(int))	todo		
-Modules/posixmodule.c	1998	2030	win32_wchdir	win32_wchdir(LPCWSTR path)	todo		
-Modules/posixmodule.c	2047	2050	is_extended_path	is_extended_path(const wchar_t *path)	todo		
-Modules/posixmodule.c	2053	2069	find_data_to_file_info	find_data_to_file_info(WIN32_FIND_DATAW *pFileData, BY_HANDLE_FILE_INFORMATION *info, ULONG *reparse_tag)	todo		
-Modules/posixmodule.c	2072	2105	attributes_from_dir	attributes_from_dir(LPCWSTR pszFile, BY_HANDLE_FILE_INFORMATION *info, ULONG *reparse_tag)	todo		
-Modules/posixmodule.c	2109	2137	update_st_mode_from_path	update_st_mode_from_path(const wchar_t *path, DWORD attr, struct _Py_stat_struct *result)	todo		changed-in-3.15:
-Modules/posixmodule.c	2141	2326	win32_xstat_slow_impl	win32_xstat_slow_impl(const wchar_t *path, struct _Py_stat_struct *result, BOOL traverse)	todo		
-Modules/posixmodule.c	2329	2359	win32_xstat_impl	win32_xstat_impl(const wchar_t *path, struct _Py_stat_struct *result, BOOL traverse)	todo		
-Modules/posixmodule.c	2362	2373	win32_xstat	win32_xstat(const wchar_t *path, struct _Py_stat_struct *result, BOOL traverse)	todo		
-Modules/posixmodule.c	2385	2388	win32_lstat	win32_lstat(const wchar_t* path, struct _Py_stat_struct *result)	todo		
-Modules/posixmodule.c	2391	2394	win32_stat	win32_stat(const wchar_t* path, struct _Py_stat_struct *result)	todo		
+Modules/posixmodule.c	1998	2030	win32_wchdir	win32_wchdir(LPCWSTR path)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	2047	2050	is_extended_path	is_extended_path(const wchar_t *path)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	2053	2069	find_data_to_file_info	find_data_to_file_info(WIN32_FIND_DATAW *pFileData, BY_HANDLE_FILE_INFORMATION *info, ULONG *reparse_tag)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	2072	2105	attributes_from_dir	attributes_from_dir(LPCWSTR pszFile, BY_HANDLE_FILE_INFORMATION *info, ULONG *reparse_tag)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	2109	2137	update_st_mode_from_path	update_st_mode_from_path(const wchar_t *path, DWORD attr, struct _Py_stat_struct *result)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	2141	2326	win32_xstat_slow_impl	win32_xstat_slow_impl(const wchar_t *path, struct _Py_stat_struct *result, BOOL traverse)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	2329	2359	win32_xstat_impl	win32_xstat_impl(const wchar_t *path, struct _Py_stat_struct *result, BOOL traverse)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	2362	2373	win32_xstat	win32_xstat(const wchar_t *path, struct _Py_stat_struct *result, BOOL traverse)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	2385	2388	win32_lstat	win32_lstat(const wchar_t* path, struct _Py_stat_struct *result)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	2391	2394	win32_stat	win32_stat(const wchar_t* path, struct _Py_stat_struct *result)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
 Modules/posixmodule.c	2584	2615	statresult_new	statresult_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
 Modules/posixmodule.c	2618	2643	_posix_clear	_posix_clear(PyObject *module)	todo		changed-in-3.15:
 Modules/posixmodule.c	2646	2671	_posix_traverse	_posix_traverse(PyObject *module, visitproc visit, void *arg)	todo		changed-in-3.15:
 Modules/posixmodule.c	2674	2677	_posix_free	_posix_free(void *module)	todo		
 Modules/posixmodule.c	2682	2715	stat_nanosecond_timestamp	stat_nanosecond_timestamp(_posixstate *state, time_t sec, unsigned long nsec)	todo		changed-in-3.15: new function
 Modules/posixmodule.c	2718	2750	fill_time	fill_time(_posixstate *state, PyObject *v, int s_index, int f_index, int ns_index, time_t sec, unsigned long nsec)	todo		changed-in-3.15:
-Modules/posixmodule.c	2755	2777	_pystat_l128_from_l64_l64	_pystat_l128_from_l64_l64(uint64_t low, uint64_t high)	todo		
+Modules/posixmodule.c	2755	2777	_pystat_l128_from_l64_l64	_pystat_l128_from_l64_l64(uint64_t low, uint64_t high)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
 Modules/posixmodule.c	2783	2903	_pystat_fromstructstat	_pystat_fromstructstat(PyObject *module, STRUCT_STAT *st)	todo		changed-in-3.15:
 Modules/posixmodule.c	2909	2972	posix_do_stat	posix_do_stat(PyObject *module, const char *function_name, path_t *path, int dir_fd, int follow_symlinks)	todo		changed-in-3.15:
 Modules/posixmodule.c	3337	3341	os_stat_impl	os_stat_impl(PyObject *module, path_t *path, int dir_fd, int follow_symlinks) /*[clinic end generated code: output=7d4976e6f18a59c5 input=01d362ebcc06996b]*/	todo		
@@ -73,9 +73,9 @@ Modules/posixmodule.c	3905	3926	os_ttyname_impl	os_ttyname_impl(PyObject *module
 Modules/posixmodule.c	3937	3951	os_ctermid_impl	os_ctermid_impl(PyObject *module) /*[clinic end generated code: output=02f017e6c9e620db input=3b87fdd52556382d]*/	todo		
 Modules/posixmodule.c	3968	3996	os_chdir_impl	os_chdir_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=3be6400eee26eaae input=64673c342e4369f1]*/	todo		changed-in-3.15:
 Modules/posixmodule.c	4013	4020	os_fchdir_impl	os_fchdir_impl(PyObject *module, int fd) /*[clinic end generated code: output=42e064ec4dc00ab0 input=18e816479a2fa985]*/	todo		
-Modules/posixmodule.c	4031	4044	win32_lchmod	win32_lchmod(LPCWSTR path, int mode)	todo		
-Modules/posixmodule.c	4047	4063	win32_hchmod	win32_hchmod(HANDLE hfile, int mode)	todo		
-Modules/posixmodule.c	4066	4074	win32_fchmod	win32_fchmod(int fd, int mode)	todo		
+Modules/posixmodule.c	4031	4044	win32_lchmod	win32_lchmod(LPCWSTR path, int mode)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	4047	4063	win32_hchmod	win32_hchmod(HANDLE hfile, int mode)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	4066	4074	win32_fchmod	win32_fchmod(int fd, int mode)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
 Modules/posixmodule.c	4116	4243	os_chmod_impl	os_chmod_impl(PyObject *module, path_t *path, int mode, int dir_fd, int follow_symlinks) /*[clinic end generated code: output=5cf6a94915cc7bff input=7b6e2eeadd8bf199]*/	todo		changed-in-3.15:
 Modules/posixmodule.c	4264	4293	os_fchmod_impl	os_fchmod_impl(PyObject *module, int fd, int mode) /*[clinic end generated code: output=afd9bc05b4e426b3 input=d24331f9fdc17f49]*/	todo		
 Modules/posixmodule.c	4312	4337	os_lchmod_impl	os_lchmod_impl(PyObject *module, path_t *path, int mode) /*[clinic end generated code: output=082344022b51a1d5 input=13110fb62911b015]*/	todo		
@@ -99,24 +99,24 @@ Modules/posixmodule.c	5195	5230	os_listdrives_impl	os_listdrives_impl(PyObject *
 Modules/posixmodule.c	5246	5295	os_listvolumes_impl	os_listvolumes_impl(PyObject *module) /*[clinic end generated code: output=534e10ea2bf9d386 input=f6e4e70371f11e99]*/	todo		
 Modules/posixmodule.c	5313	5378	os_listmounts_impl	os_listmounts_impl(PyObject *module, path_t *volume) /*[clinic end generated code: output=06da49679de4512e input=a8a27178e3f67845]*/	todo		
 Modules/posixmodule.c	5394	5470	os__path_isdevdrive_impl	os__path_isdevdrive_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=1f437ea6677433a2 input=ee83e4996a48e23d]*/	todo		
-Modules/posixmodule.c	5474	5512	_PyOS_getfullpathname	_PyOS_getfullpathname(const wchar_t *path, wchar_t **abspath_p)	todo		
-Modules/posixmodule.c	5525	5546	os__getfullpathname_impl	os__getfullpathname_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=bb8679d56845bc9b input=332ed537c29d0a3e]*/	todo		changed-in-3.15:
-Modules/posixmodule.c	5559	5625	os__getfinalpathname_impl	os__getfinalpathname_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=621a3c79bc29ebfa input=2b6b6c7cbad5fb84]*/	todo		
-Modules/posixmodule.c	5636	5657	os__findfirstfile_impl	os__findfirstfile_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=106dd3f0779c83dd input=48c319aaa48d05d4]*/	todo		changed-in-3.15:
-Modules/posixmodule.c	5669	5706	os__getvolumepathname_impl	os__getvolumepathname_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=804c63fd13a1330b input=722b40565fa21552]*/	todo		changed-in-3.15:
-Modules/posixmodule.c	5719	5753	os__path_splitroot_impl	os__path_splitroot_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=ab7f1a88b654581c input=d356de1edb6050a2]*/	todo		
-Modules/posixmodule.c	5764	5787	_testInfo	_testInfo(DWORD attributes, DWORD reparseTag, BOOL diskDevice, int testedType)	todo		
-Modules/posixmodule.c	5790	5811	_testFileTypeByHandle	_testFileTypeByHandle(HANDLE hfile, int testedType, BOOL diskOnly)	todo		
-Modules/posixmodule.c	5814	5875	_testFileTypeByName	_testFileTypeByName(LPCWSTR path, int testedType)	todo		
-Modules/posixmodule.c	5879	5932	_testFileExistsByName	_testFileExistsByName(LPCWSTR path, BOOL followLinks)	todo		
-Modules/posixmodule.c	5936	5958	_testFileExists	_testFileExists(path_t *path, BOOL followLinks)	todo		changed-in-3.15:
-Modules/posixmodule.c	5962	5982	_testFileType	_testFileType(path_t *path, int testedType)	todo		changed-in-3.15:
-Modules/posixmodule.c	5995	5999	os__path_exists_impl	os__path_exists_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=8da13acf666e16ba input=142beabfc66783eb]*/	todo		
-Modules/posixmodule.c	6012	6016	os__path_lexists_impl	os__path_lexists_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=e7240ed5fc45bff3 input=208205112a3cc1ed]*/	todo		
-Modules/posixmodule.c	6030	6034	os__path_isdir_impl	os__path_isdir_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=d5786196f9e2fa7a input=b15f9b697a7a759f]*/	todo		
-Modules/posixmodule.c	6047	6051	os__path_isfile_impl	os__path_isfile_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=5c3073bc212b9863 input=4ac1fd350b30a39e]*/	todo		
-Modules/posixmodule.c	6064	6068	os__path_islink_impl	os__path_islink_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=30da7bda8296adcc input=7510ce05b547debb]*/	todo		
-Modules/posixmodule.c	6081	6085	os__path_isjunction_impl	os__path_isjunction_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=e1d17a9dd18a9945 input=7dcb8bc4e972fcaf]*/	todo		
+Modules/posixmodule.c	5474	5512	_PyOS_getfullpathname	_PyOS_getfullpathname(const wchar_t *path, wchar_t **abspath_p)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	5525	5546	os__getfullpathname_impl	os__getfullpathname_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=bb8679d56845bc9b input=332ed537c29d0a3e]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	5559	5625	os__getfinalpathname_impl	os__getfinalpathname_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=621a3c79bc29ebfa input=2b6b6c7cbad5fb84]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	5636	5657	os__findfirstfile_impl	os__findfirstfile_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=106dd3f0779c83dd input=48c319aaa48d05d4]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	5669	5706	os__getvolumepathname_impl	os__getvolumepathname_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=804c63fd13a1330b input=722b40565fa21552]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	5719	5753	os__path_splitroot_impl	os__path_splitroot_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=ab7f1a88b654581c input=d356de1edb6050a2]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	5764	5787	_testInfo	_testInfo(DWORD attributes, DWORD reparseTag, BOOL diskDevice, int testedType)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	5790	5811	_testFileTypeByHandle	_testFileTypeByHandle(HANDLE hfile, int testedType, BOOL diskOnly)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	5814	5875	_testFileTypeByName	_testFileTypeByName(LPCWSTR path, int testedType)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	5879	5932	_testFileExistsByName	_testFileExistsByName(LPCWSTR path, BOOL followLinks)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	5936	5958	_testFileExists	_testFileExists(path_t *path, BOOL followLinks)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	5962	5982	_testFileType	_testFileType(path_t *path, int testedType)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	5995	5999	os__path_exists_impl	os__path_exists_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=8da13acf666e16ba input=142beabfc66783eb]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	6012	6016	os__path_lexists_impl	os__path_lexists_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=e7240ed5fc45bff3 input=208205112a3cc1ed]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	6030	6034	os__path_isdir_impl	os__path_isdir_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=d5786196f9e2fa7a input=b15f9b697a7a759f]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	6047	6051	os__path_isfile_impl	os__path_isfile_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=5c3073bc212b9863 input=4ac1fd350b30a39e]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	6064	6068	os__path_islink_impl	os__path_islink_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=30da7bda8296adcc input=7510ce05b547debb]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	6081	6085	os__path_isjunction_impl	os__path_isjunction_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=e1d17a9dd18a9945 input=7dcb8bc4e972fcaf]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
 Modules/posixmodule.c	6109	6150	os__path_splitroot_ex_impl	os__path_splitroot_ex_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=4b0072b6cdf4b611 input=012fbfad14888b2b]*/	todo		
 Modules/posixmodule.c	6162	6182	os__path_normpath_impl	os__path_normpath_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=d353e7ed9410c044 input=3d4ac23b06332dcb]*/	todo		
 Modules/posixmodule.c	6208	6294	os_mkdir_impl	os_mkdir_impl(PyObject *module, path_t *path, int mode, int dir_fd) /*[clinic end generated code: output=a70446903abe821f input=30270d369599634b]*/	todo		changed-in-3.15:
@@ -127,10 +127,10 @@ Modules/posixmodule.c	6394	6459	internal_rename	internal_rename(path_t *src, pat
 Modules/posixmodule.c	6482	6487	os_rename_impl	os_rename_impl(PyObject *module, path_t *src, path_t *dst, int src_dir_fd, int dst_dir_fd) /*[clinic end generated code: output=59e803072cf41230 input=7d320d687c715fd6]*/	todo		
 Modules/posixmodule.c	6504	6509	os_replace_impl	os_replace_impl(PyObject *module, path_t *src, path_t *dst, int src_dir_fd, int dst_dir_fd) /*[clinic end generated code: output=1968c02e7857422b input=44ed6b762d5953fc]*/	todo		
 Modules/posixmodule.c	6529	6572	os_rmdir_impl	os_rmdir_impl(PyObject *module, path_t *path, int dir_fd) /*[clinic end generated code: output=080eb54f506e8301 input=84325211e33a98e0]*/	todo		
-Modules/posixmodule.c	6586	6601	os_system_impl	os_system_impl(PyObject *module, const wchar_t *command) /*[clinic end generated code: output=dd528cbd5943a679 input=303f5ce97df606b0]*/	todo		
+Modules/posixmodule.c	6586	6601	os_system_impl	os_system_impl(PyObject *module, const wchar_t *command) /*[clinic end generated code: output=dd528cbd5943a679 input=303f5ce97df606b0]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
 Modules/posixmodule.c	6612	6626	os_system_impl	os_system_impl(PyObject *module, PyObject *command) /*[clinic end generated code: output=290fc437dd4f33a0 input=47c6f24b6dc92881]*/	todo		
 Modules/posixmodule.c	6642	6649	os_umask_impl	os_umask_impl(PyObject *module, int mask) /*[clinic end generated code: output=a2e33ce3bc1a6e33 input=ab6bfd9b24d8a7e8]*/	todo		
-Modules/posixmodule.c	6657	6688	Py_DeleteFileW	BOOL WINAPI Py_DeleteFileW(LPCWSTR lpFileName)	todo		
+Modules/posixmodule.c	6657	6688	Py_DeleteFileW	BOOL WINAPI Py_DeleteFileW(LPCWSTR lpFileName)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
 Modules/posixmodule.c	6710	6755	os_unlink_impl	os_unlink_impl(PyObject *module, path_t *path, int dir_fd) /*[clinic end generated code: output=621797807b9963b1 input=1a2ef2579207eab1]*/	todo		
 Modules/posixmodule.c	6771	6775	os_remove_impl	os_remove_impl(PyObject *module, path_t *path, int dir_fd) /*[clinic end generated code: output=a8535b28f0068883 input=9f6e66912126bd56]*/	todo		
 Modules/posixmodule.c	6814	6851	os_uname_impl	os_uname_impl(PyObject *module) /*[clinic end generated code: output=e6a49cf1a1508a19 input=e68bd246db3043ed]*/	todo		
@@ -190,8 +190,8 @@ Modules/posixmodule.c	9827	9872	os_getgroups_impl	os_getgroups_impl(PyObject *mo
 Modules/posixmodule.c	9934	9941	os_getpgid_impl	os_getpgid_impl(PyObject *module, pid_t pid) /*[clinic end generated code: output=1db95a97be205d18 input=39d710ae3baaf1c7]*/	todo		
 Modules/posixmodule.c	9953	9961	os_getpgrp_impl	os_getpgrp_impl(PyObject *module) /*[clinic end generated code: output=c4fc381e51103cf3 input=6846fb2bb9a3705e]*/	todo		
 Modules/posixmodule.c	9973	9983	os_setpgrp_impl	os_setpgrp_impl(PyObject *module) /*[clinic end generated code: output=2554735b0a60f0a0 input=1f0619fcb5731e7e]*/	todo		
-Modules/posixmodule.c	10013	10063	win32_getppid_fast	win32_getppid_fast(void)	todo		
-Modules/posixmodule.c	10066	10098	win32_getppid	win32_getppid(void)	todo		
+Modules/posixmodule.c	10013	10063	win32_getppid_fast	win32_getppid_fast(void)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	10066	10098	win32_getppid	win32_getppid(void)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
 Modules/posixmodule.c	10113	10121	os_getppid_impl	os_getppid_impl(PyObject *module) /*[clinic end generated code: output=43b2a946a8c603b4 input=e17c1de18f41316b]*/	todo		
 Modules/posixmodule.c	10133	10183	os_getlogin_impl	os_getlogin_impl(PyObject *module) /*[clinic end generated code: output=a32e66a7e5715dac input=2a21ab1e917163df]*/	todo		changed-in-3.15:
 Modules/posixmodule.c	10195	10199	os_getuid_impl	os_getuid_impl(PyObject *module) /*[clinic end generated code: output=415c0b401ebed11a input=b53c8b35f110a516]*/	todo		
@@ -216,10 +216,10 @@ Modules/posixmodule.c	10847	10855	os_pidfd_open_impl	os_pidfd_open_impl(PyObject
 Modules/posixmodule.c	10871	10885	os_setns_impl	os_setns_impl(PyObject *module, int fd, int nstype) /*[clinic end generated code: output=5dbd055bfb66ecd0 input=42787871226bf3ee]*/	todo		
 Modules/posixmodule.c	10899	10913	os_unshare_impl	os_unshare_impl(PyObject *module, int flags) /*[clinic end generated code: output=1b3177906dd237ee input=9e065db3232b8b1b]*/	todo		
 Modules/posixmodule.c	10936	11041	os_readlink_impl	os_readlink_impl(PyObject *module, path_t *path, int dir_fd) /*[clinic end generated code: output=d21b732a2e814030 input=03d10130870dbca8]*/	todo		
-Modules/posixmodule.c	11048	11064	_dirnameW	_dirnameW(WCHAR *path)	todo		
-Modules/posixmodule.c	11074	11078	_is_absW	_is_absW(const WCHAR *path)	todo		
-Modules/posixmodule.c	11082	11097	_joinW	_joinW(WCHAR *dest_path, const WCHAR *root, const WCHAR *rest)	todo		
-Modules/posixmodule.c	11101	11120	_check_dirW	_check_dirW(LPCWSTR src, LPCWSTR dest)	todo		
+Modules/posixmodule.c	11048	11064	_dirnameW	_dirnameW(WCHAR *path)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	11074	11078	_is_absW	_is_absW(const WCHAR *path)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	11082	11097	_joinW	_joinW(WCHAR *dest_path, const WCHAR *root, const WCHAR *rest)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	11101	11120	_check_dirW	_check_dirW(LPCWSTR src, LPCWSTR dest)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
 Modules/posixmodule.c	11148	11243	os_symlink_impl	os_symlink_impl(PyObject *module, path_t *src, path_t *dst, int target_is_directory, int dir_fd) /*[clinic end generated code: output=08ca9f3f3cf960f6 input=71b75467b31c45f7]*/	todo		
 Modules/posixmodule.c	11273	11301	build_times_result	build_times_result(PyObject *module, double user, double system, double children_user, double children_system, double elapsed)	todo		
 Modules/posixmodule.c	11315	11355	os_times_impl	os_times_impl(PyObject *module) /*[clinic end generated code: output=35f640503557d32a input=8dbfe33a2dcc3df3]*/	todo		
@@ -270,10 +270,10 @@ Modules/posixmodule.c	13456	13481	os_ftruncate_impl	os_ftruncate_impl(PyObject *
 Modules/posixmodule.c	13499	13535	os_truncate_impl	os_truncate_impl(PyObject *module, path_t *path, Py_off_t length) /*[clinic end generated code: output=43009c8df5c0a12b input=ce33fd7808a511c4]*/	todo		changed-in-3.15:
 Modules/posixmodule.c	13559	13584	os_posix_fallocate_impl	os_posix_fallocate_impl(PyObject *module, int fd, Py_off_t offset, Py_off_t length) /*[clinic end generated code: output=73f107139564aa9d input=c718971d18b96896]*/	todo		
 Modules/posixmodule.c	13610	13635	os_posix_fadvise_impl	os_posix_fadvise_impl(PyObject *module, int fd, Py_off_t offset, Py_off_t length, int advice) /*[clinic end generated code: output=412ef4aa70c98642 input=961b01a4518ef727]*/	todo		
-Modules/posixmodule.c	13641	13699	win32_putenv	win32_putenv(PyObject *name, PyObject *value)	todo		
-Modules/posixmodule.c	13715	13722	os_putenv_impl	os_putenv_impl(PyObject *module, PyObject *name, PyObject *value) /*[clinic end generated code: output=d29a567d6b2327d2 input=ba586581c2e6105f]*/	todo		
+Modules/posixmodule.c	13641	13699	win32_putenv	win32_putenv(PyObject *name, PyObject *value)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	13715	13722	os_putenv_impl	os_putenv_impl(PyObject *module, PyObject *name, PyObject *value) /*[clinic end generated code: output=d29a567d6b2327d2 input=ba586581c2e6105f]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
 Modules/posixmodule.c	13735	13754	os_putenv_impl	os_putenv_impl(PyObject *module, PyObject *name, PyObject *value) /*[clinic end generated code: output=d29a567d6b2327d2 input=84fcd30f873c8c45]*/	todo		
-Modules/posixmodule.c	13768	13775	os_unsetenv_impl	os_unsetenv_impl(PyObject *module, PyObject *name) /*[clinic end generated code: output=54c4137ab1834f02 input=4d6a1747cc526d2f]*/	todo		
+Modules/posixmodule.c	13768	13775	os_unsetenv_impl	os_unsetenv_impl(PyObject *module, PyObject *name) /*[clinic end generated code: output=54c4137ab1834f02 input=4d6a1747cc526d2f]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
 Modules/posixmodule.c	13786	13802	os_unsetenv_impl	os_unsetenv_impl(PyObject *module, PyObject *name) /*[clinic end generated code: output=54c4137ab1834f02 input=78ff12e505ade80a]*/	todo		
 Modules/posixmodule.c	13812	13825	os__clearenv_impl	os__clearenv_impl(PyObject *module) /*[clinic end generated code: output=2d6705d62c014b51 input=47d2fa7f323c43ca]*/	todo		changed-in-3.15: new function
 Modules/posixmodule.c	13839	13843	os_strerror_impl	os_strerror_impl(PyObject *module, int code) /*[clinic end generated code: output=baebf09fa02a78f2 input=75a8673d97915a91]*/	todo		changed-in-3.15:
@@ -289,7 +289,7 @@ Modules/posixmodule.c	14031	14074	_pystatvfs_fromstructstatfs	_pystatvfs_fromstr
 Modules/posixmodule.c	14081	14133	_pystatvfs_fromstructstatvfs	_pystatvfs_fromstructstatvfs(PyObject *module, struct statvfs st) {	todo		
 Modules/posixmodule.c	14149	14183	os_fstatvfs_impl	os_fstatvfs_impl(PyObject *module, int fd) /*[clinic end generated code: output=53547cf0cc55e6c5 input=d8122243ac50975e]*/	todo		
 Modules/posixmodule.c	14203	14247	os_statvfs_impl	os_statvfs_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=87106dd1beb8556e input=1cfd9a4fd36f7425]*/	todo		changed-in-3.15:
-Modules/posixmodule.c	14262	14300	os__getdiskusage_impl	os__getdiskusage_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=3bd3991f5e5c5dfb input=aee7e38bc3e7fb08]*/	todo		
+Modules/posixmodule.c	14262	14300	os__getdiskusage_impl	os__getdiskusage_impl(PyObject *module, path_t *path) /*[clinic end generated code: output=3bd3991f5e5c5dfb input=aee7e38bc3e7fb08]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
 Modules/posixmodule.c	14321	14353	conv_confname	conv_confname(PyObject *module, PyObject *arg, int *valuep, const char *tablename)	todo		
 Modules/posixmodule.c	14460	14471	os_fpathconf_impl	os_fpathconf_impl(PyObject *module, int fd, int name) /*[clinic end generated code: output=d5b7042425fc3e21 input=023d44589c9ed6aa]*/	todo		
 Modules/posixmodule.c	14490	14512	os_pathconf_impl	os_pathconf_impl(PyObject *module, path_t *path, int name) /*[clinic end generated code: output=5bedee35b293a089 input=e86f6eacfa006426]*/	todo		
@@ -298,8 +298,8 @@ Modules/posixmodule.c	15228	15238	os_sysconf_impl	os_sysconf_impl(PyObject *modu
 Modules/posixmodule.c	15243	15260	setup_confname_table	setup_confname_table(struct constdef *table, size_t tablesize, const char *tablename, PyObject *module)	todo		
 Modules/posixmodule.c	15264	15288	setup_confname_tables	setup_confname_tables(PyObject *module)	todo		
 Modules/posixmodule.c	15301	15313	os_abort_impl	os_abort_impl(PyObject *module) /*[clinic end generated code: output=dcf52586dad2467c input=ee8bd0ed690440ab]*/	todo		
-Modules/posixmodule.c	15321	15343	check_ShellExecute	check_ShellExecute(void)	todo		
-Modules/posixmodule.c	15383	15416	os_startfile_impl	os_startfile_impl(PyObject *module, path_t *filepath, const wchar_t *operation, const wchar_t *arguments, path_t *cwd, int show_cmd) /*[clinic end generated code: output=1c6f2f3340e31ffa input=8248997b80669622]*/	todo		
+Modules/posixmodule.c	15321	15343	check_ShellExecute	check_ShellExecute(void)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	15383	15416	os_startfile_impl	os_startfile_impl(PyObject *module, path_t *filepath, const wchar_t *operation, const wchar_t *arguments, path_t *cwd, int show_cmd) /*[clinic end generated code: output=1c6f2f3340e31ffa input=8248997b80669622]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
 Modules/posixmodule.c	15432	15441	os_getloadavg_impl	os_getloadavg_impl(PyObject *module) /*[clinic end generated code: output=9ad3a11bfb4f4bd2 input=3d6d826b76d8a34e]*/	todo		
 Modules/posixmodule.c	15456	15460	os_device_encoding_impl	os_device_encoding_impl(PyObject *module, int fd) /*[clinic end generated code: output=e0d294bbab7e8c2b input=9e1d4a42b66df312]*/	todo		
 Modules/posixmodule.c	15476	15482	os_setresuid_impl	os_setresuid_impl(PyObject *module, uid_t ruid, uid_t euid, uid_t suid) /*[clinic end generated code: output=834a641e15373e97 input=9e33cb79a82792f3]*/	todo		
@@ -318,8 +318,8 @@ Modules/posixmodule.c	16002	16071	os_get_terminal_size_impl	os_get_terminal_size
 Modules/posixmodule.c	16083	16125	os_cpu_count_impl	os_cpu_count_impl(PyObject *module) /*[clinic end generated code: output=5fc29463c3936a9c input=ba2f6f8980a0e2eb]*/	todo		
 Modules/posixmodule.c	16138	16146	os_get_inheritable_impl	os_get_inheritable_impl(PyObject *module, int fd) /*[clinic end generated code: output=0445e20e149aa5b8 input=89ac008dc9ab6b95]*/	todo		
 Modules/posixmodule.c	16159	16170	os_set_inheritable_impl	os_set_inheritable_impl(PyObject *module, int fd, int inheritable) /*[clinic end generated code: output=f1b1918a2f3c38c2 input=9ceaead87a1e2402]*/	todo		
-Modules/posixmodule.c	16187	16198	os_get_handle_inheritable_impl	os_get_handle_inheritable_impl(PyObject *module, intptr_t handle) /*[clinic end generated code: output=36be5afca6ea84d8 input=cfe99f9c05c70ad1]*/	todo		
-Modules/posixmodule.c	16211	16221	os_set_handle_inheritable_impl	os_set_handle_inheritable_impl(PyObject *module, intptr_t handle, int inheritable) /*[clinic end generated code: output=021d74fe6c96baa3 input=7a7641390d8364fc]*/	todo		
+Modules/posixmodule.c	16187	16198	os_get_handle_inheritable_impl	os_get_handle_inheritable_impl(PyObject *module, intptr_t handle) /*[clinic end generated code: output=36be5afca6ea84d8 input=cfe99f9c05c70ad1]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	16211	16221	os_set_handle_inheritable_impl	os_set_handle_inheritable_impl(PyObject *module, intptr_t handle, int inheritable) /*[clinic end generated code: output=021d74fe6c96baa3 input=7a7641390d8364fc]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
 Modules/posixmodule.c	16235	16244	os_get_blocking_impl	os_get_blocking_impl(PyObject *module, int fd) /*[clinic end generated code: output=336a12ad76a61482 input=f4afb59d51560179]*/	todo		
 Modules/posixmodule.c	16259	16270	os_set_blocking_impl	os_set_blocking_impl(PyObject *module, int fd, int blocking) /*[clinic end generated code: output=384eb43aa0762a9d input=7e9dfc9b14804dd4]*/	todo		
 Modules/posixmodule.c	16301	16312	DirEntry_dealloc	DirEntry_dealloc(PyObject *op)	todo		
@@ -334,12 +334,12 @@ Modules/posixmodule.c	16582	16587	os_DirEntry_is_file_impl	os_DirEntry_is_file_i
 Modules/posixmodule.c	16596	16629	os_DirEntry_inode_impl	os_DirEntry_inode_impl(DirEntry *self) /*[clinic end generated code: output=156bb3a72162440e input=3ee7b872ae8649f0]*/	todo		
 Modules/posixmodule.c	16632	16636	DirEntry_repr	DirEntry_repr(PyObject *op)	todo		
 Modules/posixmodule.c	16645	16649	os_DirEntry___fspath___impl	os_DirEntry___fspath___impl(DirEntry *self) /*[clinic end generated code: output=6dd7f7ef752e6f4f input=3c49d0cf38df4fac]*/	todo		
-Modules/posixmodule.c	16697	16751	join_path_filenameW	join_path_filenameW(const wchar_t *path_wide, const wchar_t *filename, int normalize)	todo		
-Modules/posixmodule.c	16754	16807	DirEntry_from_find_data	DirEntry_from_find_data(PyObject *module, path_t *path, WIN32_FIND_DATAW *dataW)	todo		
+Modules/posixmodule.c	16697	16751	join_path_filenameW	join_path_filenameW(const wchar_t *path_wide, const wchar_t *filename, int normalize)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	16754	16807	DirEntry_from_find_data	DirEntry_from_find_data(PyObject *module, path_t *path, WIN32_FIND_DATAW *dataW)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
 Modules/posixmodule.c	16812	16841	join_path_filename	join_path_filename(const char *path_narrow, const char* filename, Py_ssize_t filename_len)	todo		
-Modules/posixmodule.c	16936	16939	ScandirIterator_is_closed	ScandirIterator_is_closed(ScandirIterator *iterator)	todo		changed-in-3.15:
-Modules/posixmodule.c	16942	16959	ScandirIterator_closedir	ScandirIterator_closedir(ScandirIterator *iterator)	todo		changed-in-3.15:
-Modules/posixmodule.c	16962	17020	ScandirIterator_iternext	ScandirIterator_iternext(PyObject *op)	todo		changed-in-3.15:
+Modules/posixmodule.c	16936	16939	ScandirIterator_is_closed	ScandirIterator_is_closed(ScandirIterator *iterator)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	16942	16959	ScandirIterator_closedir	ScandirIterator_closedir(ScandirIterator *iterator)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
+Modules/posixmodule.c	16962	17020	ScandirIterator_iternext	ScandirIterator_iternext(PyObject *op)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/posixmodule.c); not in the Linux build this project models
 Modules/posixmodule.c	17025	17028	ScandirIterator_is_closed	ScandirIterator_is_closed(ScandirIterator *iterator)	todo		changed-in-3.15:
 Modules/posixmodule.c	17031	17053	ScandirIterator_closedir	ScandirIterator_closedir(ScandirIterator *iterator)	todo		changed-in-3.15:
 Modules/posixmodule.c	17056	17146	ScandirIterator_iternext	ScandirIterator_iternext(PyObject *op)	todo		changed-in-3.15:

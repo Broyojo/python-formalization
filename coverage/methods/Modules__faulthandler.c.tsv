@@ -8,8 +8,8 @@ Modules/faulthandler.c	311	327	faulthandler_dump_c_stack_py_impl	faulthandler_du
 Modules/faulthandler.c	330	340	faulthandler_disable_fatal_handler	faulthandler_disable_fatal_handler(fault_handler_t *handler)	todo		
 Modules/faulthandler.c	343	362	deduce_all_threads	deduce_all_threads(void)	todo		
 Modules/faulthandler.c	378	435	faulthandler_fatal_error	faulthandler_fatal_error(int signum)	todo		changed-in-3.15:
-Modules/faulthandler.c	439	453	faulthandler_ignore_exception	faulthandler_ignore_exception(DWORD code)	todo		
-Modules/faulthandler.c	456	501	faulthandler_exc_handler	faulthandler_exc_handler(struct _EXCEPTION_POINTERS *exc_info)	todo		changed-in-3.15:
+Modules/faulthandler.c	439	453	faulthandler_ignore_exception	faulthandler_ignore_exception(DWORD code)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/faulthandler.c); not in the Linux build this project models
+Modules/faulthandler.c	456	501	faulthandler_exc_handler	faulthandler_exc_handler(struct _EXCEPTION_POINTERS *exc_info)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/faulthandler.c); not in the Linux build this project models
 Modules/faulthandler.c	507	529	faulthandler_allocate_stack	faulthandler_allocate_stack(void)	todo		
 Modules/faulthandler.c	536	592	faulthandler_enable	faulthandler_enable(void)	todo		
 Modules/faulthandler.c	608	638	faulthandler_py_enable_impl	faulthandler_py_enable_impl(PyObject *module, PyObject *file, int all_threads, int c_stack, Py_ssize_t max_threads) /*[clinic end generated code: output=7ee655332317c47a input=e64759714f27b466]*/	todo		changed-in-3.15: new function
@@ -36,7 +36,7 @@ Modules/faulthandler.c	1262	1268	faulthandler__sigfpe_impl	faulthandler__sigfpe_
 Modules/faulthandler.c	1278	1284	faulthandler__sigabrt_impl	faulthandler__sigabrt_impl(PyObject *module) /*[clinic end generated code: output=58c1378a0c166682 input=be3e0ecefb8676b8]*/	todo		changed-in-3.15: new function
 Modules/faulthandler.c	1290	1304	stack_overflow	stack_overflow(uintptr_t min_sp, uintptr_t max_sp, size_t *depth)	todo		
 Modules/faulthandler.c	1314	1348	faulthandler__stack_overflow_impl	faulthandler__stack_overflow_impl(PyObject *module) /*[clinic end generated code: output=efffba4be522d8fb input=4291594a790b6c35]*/	todo		changed-in-3.15: new function
-Modules/faulthandler.c	1364	1371	faulthandler__raise_exception_impl	faulthandler__raise_exception_impl(PyObject *module, unsigned int code, unsigned int flags) /*[clinic end generated code: output=2346cf318eab10dc input=43a5ba0eb7794504]*/	todo		changed-in-3.15: new function
+Modules/faulthandler.c	1364	1371	faulthandler__raise_exception_impl	faulthandler__raise_exception_impl(PyObject *module, unsigned int code, unsigned int flags) /*[clinic end generated code: output=2346cf318eab10dc input=43a5ba0eb7794504]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/faulthandler.c); not in the Linux build this project models
 Modules/faulthandler.c	1403	1431	PyExec_faulthandler	PyExec_faulthandler(PyObject *module) {	todo		changed-in-3.15:
 Modules/faulthandler.c	1451	1454	PyInit_faulthandler	PyInit_faulthandler(void)	todo		
 Modules/faulthandler.c	1457	1472	faulthandler_init_enable	faulthandler_init_enable(void)	todo		

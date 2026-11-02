@@ -17,7 +17,7 @@ Modules/getpath.c	644	659	wchar_to_dict	wchar_to_dict(PyObject *dict, const char
 Modules/getpath.c	664	684	decode_to_dict	decode_to_dict(PyObject *dict, const char *key, const char *s)	todo		
 Modules/getpath.c	688	738	env_to_dict	env_to_dict(PyObject *dict, const char *key, int and_clear)	todo		
 Modules/getpath.c	743	754	int_to_dict	int_to_dict(PyObject *dict, const char *key, int v)	todo		
-Modules/getpath.c	759	774	winmodule_to_dict	winmodule_to_dict(PyObject *dict, const char *key, HMODULE mod)	todo		
+Modules/getpath.c	759	774	winmodule_to_dict	winmodule_to_dict(PyObject *dict, const char *key, HMODULE mod)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/getpath.c); not in the Linux build this project models
 Modules/getpath.c	780	808	progname_to_dict	progname_to_dict(PyObject *dict, const char *key)	todo		
 Modules/getpath.c	813	835	library_to_dict	library_to_dict(PyObject *dict, const char *key)	todo		
 Modules/getpath.c	839	843	_Py_Get_Getpath_CodeObject	_Py_Get_Getpath_CodeObject(void)	todo		

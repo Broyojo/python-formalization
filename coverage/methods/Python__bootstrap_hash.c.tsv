@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Python/bootstrap_hash.c	55	72	win32_urandom	win32_urandom(unsigned char *buffer, Py_ssize_t size, int raise)	todo		
+Python/bootstrap_hash.c	55	72	win32_urandom	win32_urandom(unsigned char *buffer, Py_ssize_t size, int raise)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Python/bootstrap_hash.c); not in the Linux build this project models
 Python/bootstrap_hash.c	92	186	py_getrandom	py_getrandom(void *buffer, Py_ssize_t size, int blocking, int raise)	todo		
 Python/bootstrap_hash.c	213	268	py_getentropy	py_getentropy(char *buffer, Py_ssize_t size, int raise)	todo		
 Python/bootstrap_hash.c	302	397	dev_urandom	dev_urandom(char *buffer, Py_ssize_t size, int raise)	todo		

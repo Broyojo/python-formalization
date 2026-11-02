@@ -1,6 +1,6 @@
 file	line	endline	name	signature	status	entry	note
-Modules/mmapmodule.c	48	53	my_getpagesize	my_getpagesize(void)	todo		
-Modules/mmapmodule.c	56	62	my_getallocationgranularity	my_getallocationgranularity (void)	todo		
+Modules/mmapmodule.c	48	53	my_getpagesize	my_getpagesize(void)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/mmapmodule.c); not in the Linux build this project models
+Modules/mmapmodule.c	56	62	my_getallocationgranularity	my_getallocationgranularity (void)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/mmapmodule.c); not in the Linux build this project models
 Modules/mmapmodule.c	72	75	my_getpagesize	my_getpagesize(void)	todo		
 Modules/mmapmodule.c	148	157	_As_Py_ssize_t	_As_Py_ssize_t(PyObject *arg) {	todo		
 Modules/mmapmodule.c	160	193	mmap_object_dealloc	mmap_object_dealloc(PyObject *op)	todo		
@@ -40,7 +40,7 @@ Modules/mmapmodule.c	1240	1246	mmap_mmap___enter___impl	mmap_mmap___enter___impl
 Modules/mmapmodule.c	1260	1265	mmap_mmap___exit___impl	mmap_mmap___exit___impl(mmap_object *self, PyObject *exc_type, PyObject *exc_value, PyObject *traceback) /*[clinic end generated code: output=bec7e3e319c1f07e input=5f28e91cf752bc64]*/	todo		
 Modules/mmapmodule.c	1268	1310	mmap__repr__method_lock_held	mmap__repr__method_lock_held(PyObject *op)	todo		
 Modules/mmapmodule.c	1313	1320	mmap__repr__method	mmap__repr__method(PyObject *op)	todo		
-Modules/mmapmodule.c	1330	1338	mmap_mmap___sizeof___impl	mmap_mmap___sizeof___impl(mmap_object *self) /*[clinic end generated code: output=1aed30daff807d09 input=8a648868a089553c]*/	todo		
+Modules/mmapmodule.c	1330	1338	mmap_mmap___sizeof___impl	mmap_mmap___sizeof___impl(mmap_object *self) /*[clinic end generated code: output=1aed30daff807d09 input=8a648868a089553c]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/mmapmodule.c); not in the Linux build this project models
 Modules/mmapmodule.c	1354	1370	mmap_mmap__protect_impl	mmap_mmap__protect_impl(mmap_object *self, unsigned int flNewProtect, Py_ssize_t start, Py_ssize_t length) /*[clinic end generated code: output=a87271a34d1ad6cf input=9170498c5e1482da]*/	todo		
 Modules/mmapmodule.c	1386	1426	mmap_mmap_madvise_impl	mmap_mmap_madvise_impl(mmap_object *self, int option, Py_ssize_t start, PyObject *length_obj) /*[clinic end generated code: output=816be656f08c0e3c input=2d37f7a4c87f1053]*/	todo		
 Modules/mmapmodule.c	1468	1477	mmap_buffer_getbuf_lock_held	mmap_buffer_getbuf_lock_held(PyObject *op, Py_buffer *view, int flags)	todo		
@@ -57,6 +57,6 @@ Modules/mmapmodule.c	1647	1654	mmap_ass_item	mmap_ass_item(PyObject *op, Py_ssiz
 Modules/mmapmodule.c	1657	1757	mmap_ass_subscript_lock_held	mmap_ass_subscript_lock_held(PyObject *op, PyObject *item, PyObject *value)	todo		changed-in-3.15:
 Modules/mmapmodule.c	1760	1767	mmap_ass_subscript	mmap_ass_subscript(PyObject *op, PyObject *item, PyObject *value)	todo		
 Modules/mmapmodule.c	1840	2016	new_mmap_object	new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)	todo		changed-in-3.15:
-Modules/mmapmodule.c	2027	2231	new_mmap_object	new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)	todo		changed-in-3.15:
+Modules/mmapmodule.c	2027	2231	new_mmap_object	new_mmap_object(PyTypeObject *type, PyObject *args, PyObject *kwdict)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/mmapmodule.c); not in the Linux build this project models
 Modules/mmapmodule.c	2235	2439	mmap_exec	mmap_exec(PyObject *module)	todo		changed-in-3.15:
 Modules/mmapmodule.c	2457	2460	PyInit_mmap	PyInit_mmap(void)	todo		

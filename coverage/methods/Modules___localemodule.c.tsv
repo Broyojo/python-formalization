@@ -1,8 +1,8 @@
 file	line	endline	name	signature	status	entry	note
 Modules/_localemodule.c	41	46	get_locale_state	get_locale_state(PyObject *m)	todo		
 Modules/_localemodule.c	59	88	copy_grouping	copy_grouping(const char* s)	todo		
-Modules/_localemodule.c	97	105	check_locale_name	check_locale_name(const char *locale, const char *end)	todo		
-Modules/_localemodule.c	108	122	check_locale_name_all	check_locale_name_all(const char *locale)	todo		
+Modules/_localemodule.c	97	105	check_locale_name	check_locale_name(const char *locale, const char *end)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/_localemodule.c); not in the Linux build this project models
+Modules/_localemodule.c	108	122	check_locale_name_all	check_locale_name_all(const char *locale)	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/_localemodule.c); not in the Linux build this project models
 Modules/_localemodule.c	136	186	_locale_setlocale_impl	_locale_setlocale_impl(PyObject *module, int category, const char *locale) /*[clinic end generated code: output=a0e777ae5d2ff117 input=b53449b63407179b]*/	todo		
 Modules/_localemodule.c	189	192	locale_is_ascii	locale_is_ascii(const char *str)	todo		
 Modules/_localemodule.c	195	203	is_all_ascii	is_all_ascii(const char *str)	todo		
@@ -10,7 +10,7 @@ Modules/_localemodule.c	206	283	locale_decode_monetary	locale_decode_monetary(Py
 Modules/_localemodule.c	292	391	_locale_localeconv_impl	_locale_localeconv_impl(PyObject *module) /*[clinic end generated code: output=43a54515e0a2aef5 input=f1132d15accf4444]*/	todo		
 Modules/_localemodule.c	406	426	_locale_strcoll_impl	_locale_strcoll_impl(PyObject *module, PyObject *os1, PyObject *os2) /*[clinic end generated code: output=82ddc6d62c76d618 input=693cd02bcbf38dd8]*/	todo		
 Modules/_localemodule.c	441	531	_locale_strxfrm_impl	_locale_strxfrm_impl(PyObject *module, PyObject *str) /*[clinic end generated code: output=3081866ebffc01af input=1378bbe6a88b4780]*/	todo		changed-in-3.15:
-Modules/_localemodule.c	542	563	_locale__getdefaultlocale_impl	_locale__getdefaultlocale_impl(PyObject *module) /*[clinic end generated code: output=e6254088579534c2 input=003ea41acd17f7c7]*/	todo		changed-in-3.15:
+Modules/_localemodule.c	542	563	_locale__getdefaultlocale_impl	_locale__getdefaultlocale_impl(PyObject *module) /*[clinic end generated code: output=e6254088579534c2 input=003ea41acd17f7c7]*/	excluded		platform: compiled only when MS_WINDOWS is defined (inside an MS_WINDOWS-only preprocessor branch of Modules/_localemodule.c); not in the Linux build this project models
 Modules/_localemodule.c	678	702	change_locale	change_locale(int category, char **oldloc)	todo		
 Modules/_localemodule.c	706	712	restore_locale	restore_locale(char *oldloc)	todo		
 Modules/_localemodule.c	717	741	decode_strings	decode_strings(const char *result, size_t max_count)	todo		
