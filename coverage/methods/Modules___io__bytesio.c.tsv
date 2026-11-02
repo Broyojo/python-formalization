@@ -3,7 +3,7 @@ Modules/_io/bytesio.c	48	55	check_closed	check_closed(bytesio *self)	modelled	py
 Modules/_io/bytesio.c	58	66	check_exports	check_exports(bytesio *self)	modelled	pyio-bytesio-twins-same-class-core,pyio-bytesio-twins-same-class-in-range	
 Modules/_io/bytesio.c	85	90	set_shared_buf	set_shared_buf(bytesio *self)	excluded		platform: sets a field that exists only under Py_GIL_DISABLED; empty on the default build
 Modules/_io/bytesio.c	93	98	clear_shared_buf	clear_shared_buf(bytesio *self)	excluded		platform: sets a field that exists only under Py_GIL_DISABLED; empty on the default build
-Modules/_io/bytesio.c	101	116	resize_unshared_buffer_lock_held	resize_unshared_buffer_lock_held(bytesio *self, Py_ssize_t size)	todo		
+Modules/_io/bytesio.c	101	116	resize_unshared_buffer_lock_held	resize_unshared_buffer_lock_held(bytesio *self, Py_ssize_t size)	modelled	pyio-bytesio-failed-write-keeps-state,pyio-bytesio-tell-after-write,pyio-bytesio-twins-same-class-no-export	
 Modules/_io/bytesio.c	123	153	scan_eol_lock_held	scan_eol_lock_held(bytesio *self, Py_ssize_t len)	modelled	pyio-bytesio-readlines-hint-doc,pyio-bytesio-twins-same-class-core	
 Modules/_io/bytesio.c	159	175	unshare_buffer_lock_held	unshare_buffer_lock_held(bytesio *self, size_t size)	modelled	pyio-bytesio-tell-after-write	
 Modules/_io/bytesio.c	181	229	resize_buffer_lock_held	resize_buffer_lock_held(bytesio *self, size_t size)	modelled	pyio-bytesio-tell-after-write	
@@ -22,8 +22,8 @@ Modules/_io/bytesio.c	509	525	_io_BytesIO_read_impl	_io_BytesIO_read_impl(bytesi
 Modules/_io/bytesio.c	541	545	_io_BytesIO_read1_impl	_io_BytesIO_read1_impl(bytesio *self, Py_ssize_t size) /*[clinic end generated code: output=d0f843285aa95f1c input=796ff4e0efccc4d9]*/	modelled	pyio-bytesio-twins-same-class-core	
 Modules/_io/bytesio.c	561	571	_io_BytesIO_readline_impl	_io_BytesIO_readline_impl(bytesio *self, Py_ssize_t size) /*[clinic end generated code: output=4bff3c251df8ffcd input=db09d47e23cf2c9e]*/	modelled	pyio-bytesio-twins-same-class-no-alloc-fail	
 Modules/_io/bytesio.c	587	637	_io_BytesIO_readlines_impl	_io_BytesIO_readlines_impl(bytesio *self, PyObject *arg) /*[clinic end generated code: output=09b8e34c880808ff input=5c57d7d78e409985]*/	modelled	pyio-bytesio-readlines-hint-doc	
-Modules/_io/bytesio.c	652	677	_io_BytesIO_readinto_impl	_io_BytesIO_readinto_impl(bytesio *self, Py_buffer *buffer) /*[clinic end generated code: output=a5d407217dcf0639 input=093a8d330de3fcd1]*/	todo		
-Modules/_io/bytesio.c	692	727	_io_BytesIO_truncate_impl	_io_BytesIO_truncate_impl(bytesio *self, PyObject *size) /*[clinic end generated code: output=ab42491b4824f384 input=b4acb5f80481c053]*/	todo		
+Modules/_io/bytesio.c	652	677	_io_BytesIO_readinto_impl	_io_BytesIO_readinto_impl(bytesio *self, Py_buffer *buffer) /*[clinic end generated code: output=a5d407217dcf0639 input=093a8d330de3fcd1]*/	modelled	pyio-bytesio-readinto-overlap,pyio-bytesio-twins-same-class-core	
+Modules/_io/bytesio.c	692	727	_io_BytesIO_truncate_impl	_io_BytesIO_truncate_impl(bytesio *self, PyObject *size) /*[clinic end generated code: output=ab42491b4824f384 input=b4acb5f80481c053]*/	modelled	pyio-bytesio-truncate-index-twins,pyio-bytesio-truncate-recheck,pyio-bytesio-twins-same-class-core,pyio-truncate-keeps-position,pyio-truncate-result	
 Modules/_io/bytesio.c	730	745	bytesio_iternext_lock_held	bytesio_iternext_lock_held(PyObject *op)	modelled	pyio-bytesio-twins-same-class-core	
 Modules/_io/bytesio.c	748	755	bytesio_iternext	bytesio_iternext(PyObject *op)	modelled	pyio-bytesio-twins-same-class-core	
 Modules/_io/bytesio.c	774	815	_io_BytesIO_seek_impl	_io_BytesIO_seek_impl(bytesio *self, Py_ssize_t pos, int whence) /*[clinic end generated code: output=c26204a68e9190e4 input=20f05ddf659255df]*/	modelled	pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class	
@@ -35,7 +35,7 @@ Modules/_io/bytesio.c	948	1023	bytesio_setstate_lock_held	bytesio_setstate_lock_
 Modules/_io/bytesio.c	1026	1033	bytesio_setstate	bytesio_setstate(PyObject *op, PyObject *state)	modelled	pyio-bytesio-pickle-roundtrip	
 Modules/_io/bytesio.c	1036	1051	bytesio_dealloc	bytesio_dealloc(PyObject *op)	todo		
 Modules/_io/bytesio.c	1054	1073	bytesio_new	bytesio_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		
-Modules/_io/bytesio.c	1084	1114	_io_BytesIO___init___impl	_io_BytesIO___init___impl(bytesio *self, PyObject *initvalue) /*[clinic end generated code: output=65c0c51e24c5b621 input=3da5a74ee4c4f1ac]*/	todo		
+Modules/_io/bytesio.c	1084	1114	_io_BytesIO___init___impl	_io_BytesIO___init___impl(bytesio *self, PyObject *initvalue) /*[clinic end generated code: output=65c0c51e24c5b621 input=3da5a74ee4c4f1ac]*/	modelled	pyio-bytesio-reinit,pyio-bytesio-twins-same-class-core	
 Modules/_io/bytesio.c	1117	1131	bytesio_sizeof_lock_held	bytesio_sizeof_lock_held(PyObject *op)	todo		
 Modules/_io/bytesio.c	1134	1141	bytesio_sizeof	bytesio_sizeof(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		
 Modules/_io/bytesio.c	1144	1151	bytesio_traverse	bytesio_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal/clear of object references, no Python-visible result
