@@ -21,6 +21,11 @@ summary: |
   search).
   The twin also checks the value before the index, so e[100] = 5 raises TypeError there and
   IndexError in C; that difference is cosmetic and is recorded only for completeness.
+  e.extend(e) never returns in the twin: Element has no __iter__, so the loop iterates e by index
+  while appending to it and grows without bound (list.extend special-cases its own list); C
+  takes a sequence snapshot and doubles the children. Likewise insert(2**63, 5) raises TypeError
+  in the twin and OverflowError in C, whose Argument Clinic converts the index first. (Found by
+  the second review pass of the etree rows; checked on 3.15.2.)
 likelihood: |
   Low. The pure-Python Element is used only when _elementtree is unavailable (some alternative
   builds, or tests that block it), but there it silently loses data.
