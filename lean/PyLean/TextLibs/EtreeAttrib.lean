@@ -168,4 +168,138 @@ theorem setstateKeepsAttrib_refuted : ¬ SetstateKeepsAttrib := by
 theorem setstate_then_get :
     getC (setstateC none ⟨true, some (.other "tuple"), none, false⟩).1 [107] none = .error badCall := rfl
 
+/-! ## Dictionary behaviour -/
+
+/-- The attributes as `items()` lists them. -/
+def slotItems (s : Slot) : List (S × S) :=
+  match s with
+  | some (some a) => a.items
+  | _ => []
+
+/-- The replacement step of `dictSet`. -/
+def repl (k v : S) (p : S × S) : S × S := if p.1 == k then (p.1, v) else p
+
+theorem dictSet_eq (items : List (S × S)) (k v : S) :
+    dictSet items k v = if items.any (·.1 == k) then items.map (repl k v) else items ++ [(k, v)] := by
+  unfold dictSet repl; congr 1
+
+theorem find_repl_self (k v : S) : ∀ ps : List (S × S), ps.any (·.1 == k) = true →
+    (ps.map (repl k v)).find? (·.1 == k) = some (k, v)
+  | [], h => by simp at h
+  | p :: ps, h => by
+    by_cases hak : p.1 = k
+    · have : repl k v p = (k, v) := by simp [repl, hak]
+      rw [List.map_cons, List.find?_cons, this]; simp
+    · have hr : repl k v p = p := by simp [repl, hak]
+      have hab : (p.1 == k) = false := by simpa using hak
+      have hps : ps.any (·.1 == k) = true := by
+        simp only [List.any_cons, hab, Bool.false_or] at h; exact h
+      rw [List.map_cons, List.find?_cons, hr]
+      simp only [hab]
+      exact find_repl_self k v ps hps
+
+theorem find_repl_other (k k' v : S) (hk : k' ≠ k) : ∀ ps : List (S × S),
+    (ps.map (repl k v)).find? (·.1 == k') = ps.find? (·.1 == k')
+  | [] => rfl
+  | p :: ps => by
+    have h1 : (repl k v p).1 = p.1 := by unfold repl; split <;> rfl
+    by_cases hp : p.1 = k'
+    · have hr : repl k v p = p := by
+        unfold repl; have : (p.1 == k) = false := by simp; rw [hp]; exact hk
+        simp [this]
+      rw [List.map_cons, List.find?_cons, List.find?_cons, hr]
+      have : (p.1 == k') = true := by simp [hp]
+      simp only [this]
+    · have : (p.1 == k') = false := by simpa using hp
+      have this' : ((repl k v p).1 == k') = false := by rw [h1]; exact this
+      rw [List.map_cons, List.find?_cons, List.find?_cons]
+      simp only [this, this']
+      exact find_repl_other k k' v hk ps
+
+theorem find_dictSet (items : List (S × S)) (k v : S) :
+    (dictSet items k v).find? (·.1 == k) = some (k, v) := by
+  rw [dictSet_eq]
+  split
+  · rename_i hany; exact find_repl_self k v items hany
+  · rename_i hany
+    rw [List.find?_append]
+    have : items.find? (·.1 == k) = none := by
+      rw [List.find?_eq_none]; intro x hx
+      simp only [Bool.not_eq_true, List.any_eq_false] at hany
+      simpa using hany x hx
+    simp [this]
+
+theorem find_dictSet_other (items : List (S × S)) (k k' v : S) (hk : k' ≠ k) :
+    (dictSet items k v).find? (·.1 == k') = items.find? (·.1 == k') := by
+  rw [dictSet_eq]
+  split
+  · exact find_repl_other k k' v hk items
+  · rw [List.find?_append]
+    cases h : items.find? (·.1 == k') with
+    | some x => simp
+    | none => simp [Ne.symm hk]
+
+/-- For every element whose attrib slot is NULL, a dict or a frozendict, and all keys and values:
+after a successful `set(k, v)`, `get(k)` returns `v`, `get` of any other key is unchanged and
+`keys()`/`items()` list the attributes with `k` set to `v` (in insertion order); `set` succeeds
+unless the slot holds a frozendict, where it raises `TypeError` and changes nothing; the `attrib`
+getter returns the object that is stored, and a second call returns the same object and slot;
+`items()` lists what the getter returns; and the setter stores exactly the dict or frozendict it is
+given. -/
+def AttribDict : Prop :=
+  ∀ (s : Slot) (k k' v : S) (d : Option S), SlotOk s →
+    ((setC s k v).2 = .ok () →
+      getC (setC s k v).1 k d = .ok (some v) ∧
+      (k' ≠ k → getC (setC s k v).1 k' d = getC s k' d) ∧
+      itemsC (setC s k v).1 = .ok (dictSet (slotItems s) k v)) ∧
+    ((∀ i, s ≠ some (some (.frozen i))) → (setC s k v).2 = .ok ()) ∧
+    (∀ i, s = some (some (.frozen i)) →
+      setC s k v = (s, .error (.typeError "frozendict object does not support item assignment"))) ∧
+    (getAttribC (getAttribC s).1 = getAttribC s) ∧
+    itemsC (getAttribC s).1 = .ok (getAttribC s).2.items ∧
+    (∀ a s', (∀ t, a ≠ .other t) → setAttribC s a = .ok s' → getAttribC s' = (s', a))
+
+theorem attribDict_proven : AttribDict := by
+  intro s k k' v d hs
+  have setter : ∀ (s : Slot) (a : AObj) s', (∀ t, a ≠ .other t) → setAttribC s a = .ok s' →
+      getAttribC s' = (s', a) := by
+    intro s a s' ha h
+    rcases a with ⟨j⟩ | ⟨j⟩ | ⟨t⟩
+    · simp [setAttribC] at h; subst h; rfl
+    · simp [setAttribC] at h; subst h; rfl
+    · exact absurd rfl (ha t)
+  rcases s with _ | _ | a
+  · refine ⟨fun _ => ⟨?_, ?_, ?_⟩, fun _ => ?_, fun j h => ?_, ?_, ?_, setter _⟩
+    · simp [setC, getAttribC, getC, AObj.items, find_dictSet]
+    · intro hk; simp [setC, getAttribC, getC, AObj.items, find_dictSet_other _ _ _ _ hk]
+    · simp [setC, getAttribC, itemsC, AObj.items, slotItems, dictSet]
+    · simp [setC, getAttribC]
+    · simp at h
+    · simp [getAttribC]
+    · simp [getAttribC, itemsC, AObj.items]
+  · refine ⟨fun _ => ⟨?_, ?_, ?_⟩, fun _ => ?_, fun j h => ?_, ?_, ?_, setter _⟩
+    · simp [setC, getAttribC, getC, AObj.items, find_dictSet]
+    · intro hk; simp [setC, getAttribC, getC, AObj.items, find_dictSet_other _ _ _ _ hk]
+    · simp [setC, getAttribC, itemsC, AObj.items, slotItems, dictSet]
+    · simp [setC, getAttribC]
+    · simp at h
+    · simp [getAttribC]
+    · simp [getAttribC, itemsC, AObj.items]
+  · rcases a with ⟨i⟩ | ⟨i⟩ | ⟨t⟩
+    · refine ⟨fun _ => ⟨?_, ?_, ?_⟩, fun _ => ?_, fun j h => ?_, ?_, ?_, setter _⟩
+      · simp [setC, getAttribC, getC, AObj.items, find_dictSet]
+      · intro hk; simp [setC, getAttribC, getC, AObj.items, find_dictSet_other _ _ _ _ hk]
+      · simp [setC, getAttribC, itemsC, AObj.items, slotItems]
+      · simp [setC, getAttribC]
+      · simp at h
+      · simp [getAttribC]
+      · simp [getAttribC, itemsC]
+    · refine ⟨fun h => ?_, fun h => ?_, fun j hj => ?_, ?_, ?_, setter _⟩
+      · simp [setC, getAttribC] at h
+      · exact absurd rfl (h i)
+      · simp at hj; subst hj; simp [setC, getAttribC]
+      · simp [getAttribC]
+      · simp [getAttribC, itemsC]
+    · simp [SlotOk] at hs
+
 end PyLean.TextLibs.Etree

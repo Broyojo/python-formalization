@@ -1461,6 +1461,14 @@ def entries : List Entry := [
     source := "invariant: 3.15's setter and Element() refuse other objects", status := .proven
     prop := ``Etree.AttribInvariant, thm := some ``Etree.attribInvariant_proven
     notes := "element_init is not credited: its keyword-attribute path (get_attrib_from_keywords) is not modelled." },
+  { id := "textlibs-etree-attrib-dict", pyFile := "Modules/_elementtree.c"
+    pyFns := ["element_get_attrib", "_elementtree_Element_get_impl", "_elementtree_Element_set_impl",
+      "_elementtree_Element_keys_impl", "_elementtree_Element_items_impl", "element_attrib_getter",
+      "element_attrib_setter"]
+    statement := "For str keys and values on an element whose attrib is NULL, a dict or a frozendict: after a successful set(k, v), get(k) is v, get of another key is unchanged, and keys()/items() list the attributes with k set to v in insertion order; set succeeds unless the attrib is a frozendict, where it raises TypeError and changes nothing; the attrib getter returns the stored object and a second call returns the same; items() lists what the getter returns; the setter stores exactly the dict or frozendict it is given."
+    source := "docs: Element.get/set/keys/items and attrib; dict semantics", status := .proven
+    prop := ``Etree.AttribDict, thm := some ``Etree.attribDict_proven
+    notes := "Smoke-tested on 3.15.2 with 20k random elements, frozendict attribs included. Keys are str: a key whose __hash__ or __eq__ raises is out of scope." },
   { id := "textlibs-etree-setstate-attrib", pyFile := "Modules/_elementtree.c"
     pyFns := ["_elementtree_Element___setstate___impl", "element_setstate_from_Python",
       "element_setstate_from_attributes"]
