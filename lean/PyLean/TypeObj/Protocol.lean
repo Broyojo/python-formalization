@@ -120,7 +120,7 @@ def strHash (t : String) : Int :=
 /-- The entries of the dict at `a`. -/
 def dictEntries (w : World) (a : Addr) : List (Val × Val) :=
   match (w.objAt a).body with
-  | .dict es => es
+  | .dict es | .frozen es => es
   | _ => []
 
 /-- `me_hash` of key `k` of the dict at `a`. A key with no record was stored by a C path of the
@@ -215,11 +215,21 @@ def callRichcompareEq (rt : Rt) (f : SlotFn) (a b : Val) (op : CmpOp) : M Val :=
     | _, _ => pure .notImpl
   | .c .method => methodRichcompare rt a b op
   | .c .mappingproxy =>
-    -- `mappingproxy_richcompare`, `Objects/descrobject.c:1233`.
-    let m ← proxyMapping a
-    rt.richCompare m b op
-  | .c .dict =>
-    match a, b, dictOf w a, dictOf w b with
+    -- `mappingproxy_richcompare`, `Objects/descrobject.c:1233`: an exact `dict` is only handed to
+    -- what cannot keep it, and anything else gets a copy.
+    if op == .eq || op == .ne then
+      let m ← proxyMapping a
+      let w ← getW
+      if typeOf w m == B.dict &&
+          !(typeOf w b == B.dict || typeOf w b == B.frozendict || typeOf w b == B.mappingproxy) then
+        let c ← allocCell (.val { (w.objAt (match m with
+          | .obj x => x
+          | _ => 0)) with cls := B.dict, dict := none, slotVals := [] })
+        rt.richCompare (.obj c) b op
+      else rt.richCompare m b op
+    else pure .notImpl
+  | .c .dict | .c .frozendict =>
+    match a, b, anyDictOf w a, anyDictOf w b with
     | .obj x, .obj y, some _, some _ => dictRichcompare rt x y op
     | _, _, _, _ => pure .notImpl
   | .c .float =>
@@ -521,14 +531,14 @@ def listReprLoop (rt : Rt) (v : Val) : Nat → Nat → List String → M (List S
       let r ← rt.repr item
       listReprLoop rt v fuel (i + 1) (r :: acc)
 
-/-- The loop of `dict_repr_lock_held`, `Objects/dictobject.c@3.14.7:3434`: `repr(key)`, then
+/-- The loop of `anydict_repr_impl`, `Objects/dictobject.c:3642`: `repr(key)`, then
 `repr(value)`, pair by pair, with the dict read again each time. A deletion during the loop is
 not exact: `_PyDict_Next` walks a table with dummy entries, and the model has a list. -/
 def dictReprLoop (rt : Rt) (v : Val) : Nat → Nat → List String → M (List String)
   | 0, _, _ => raise .fuel
   | fuel + 1, i, acc => do
     let w ← getW
-    match ((dictOf w v).getD [])[i]? with
+    match ((anyDictOf w v).getD [])[i]? with
     | none => pure acc.reverse
     | some (k, x) =>
       let kr ← rt.repr k
@@ -601,9 +611,10 @@ def builtinName (b : Builtin) : Option String :=
     let n := (builtinConv b).1
     if n == "" then none else some n
 
-/-- `descr_repr`, `Objects/descrobject.c@3.14.7:42`, with the format of its callers there. -/
+/-- `descr_repr`, `Objects/descrobject.c:42`. A descriptor of `object` names no owner. -/
 def descrRepr (w : World) (kind : String) (o : Addr) (n : Name) : String :=
-  s!"<{kind} '{n}' of '{tpName w o}' objects>"
+  if o == B.object then s!"<{kind} '{n}'>"
+  else s!"<{kind} '{n}' of '{tpName w o}' objects>"
 
 /-- Call the `tp_repr` function `f`. -/
 def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
@@ -639,7 +650,7 @@ def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
       let rs ← listReprLoop rt v iterFuel 0 []
       pure (.str ("[" ++ ", ".intercalate rs ++ "]"))
   | .c .dict =>
-    -- `dict_repr_lock_held`, `Objects/dictobject.c@3.14.7:3403`: the guard comes before the empty check.
+    -- `anydict_repr_impl`, `Objects/dictobject.c:3642`: the guard comes before the empty check.
     withRepr v "{...}" do
       let rs ← dictReprLoop rt v iterFuel 0 []
       pure (.str ("{" ++ ", ".intercalate rs ++ "}"))
@@ -729,6 +740,16 @@ def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
     -- `mappingproxy_repr`, `Objects/descrobject.c:1218`.
     let m ← proxyMapping v
     pure (.str s!"mappingproxy({← rt.repr m})")
+  | .c .frozendict =>
+    -- `frozendict_repr`, `Objects/dictobject.c:8342`, with `anydict_repr_impl`, `:3642`.
+    if ((anyDictOf w v).getD []).isEmpty then pure (.str s!"{tpName w (typeOf w v)}()")
+    else
+      let r ← withRepr v "{...}" do
+        let rs ← dictReprLoop rt v iterFuel 0 []
+        pure (.str ("{" ++ ", ".intercalate rs ++ "}"))
+      match r with
+      | .str s => pure (.str s!"{tpName w (typeOf w v)}({s})")
+      | _ => gap%
   | .c .dictKeys =>
     -- `dictview_repr`, `Objects/dictobject.c`: the guard, then the keys as a list.
     withRepr v "..." do
@@ -749,7 +770,7 @@ def pyRepr (rt : Rt) (v : Val) : M String := do
   let w ← getW
   match strOf w res with
   | some s => pure s
-  | none => typeErr s!"__repr__ returned non-string (type {trunc 200 (typeName w res)})"
+  | none => typeErr s!"{objFQN w v}.__repr__() must return a str, not {objFQN w res}"
 
 /-- Call the `tp_str` function `f`. -/
 def callStr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
@@ -784,7 +805,7 @@ def pyStr (rt : Rt) (v : Val) : M String := do
       let w ← getW
       match strOf w res with
       | some s => pure s
-      | none => typeErr s!"__str__ returned non-string (type {trunc 200 (typeName w res)})"
+      | none => typeErr s!"{objFQN w v}.__str__() must return a str, not {objFQN w res}"
 
 /-! ## Index conversion -/
 
@@ -843,7 +864,7 @@ def numberIndex (rt : Rt) (item : Val) : M Val := do
         let w ← getW
         match intOf w result with
         | some _ => pure result
-        | none => typeErr s!"__index__ returned non-int (type {trunc 200 (typeName w result)})"
+        | none => typeErr s!"{objFQN w item}.__index__() must return an int, not {objFQN w result}"
 
 /-- `PyNumber_Index`, `Objects/abstract.c:1456`: an exact `int`. -/
 def pyNumberIndex (rt : Rt) (item : Val) : M Int := do
@@ -947,10 +968,10 @@ def pyLengthHint (rt : Rt) (o : Val) (dflt : Int) : M Int := do
         let w ← getW
         match intOf w result with
         | none =>
-          typeErr s!"__length_hint__ must be an integer, not {trunc 100 (typeName w result)}"
+          typeErr s!"{objFQN w o}.__length_hint__() must return an int, not {objFQN w result}"
         | some i =>
           if !inSsize i then overflowErr "Python int too large to convert to C ssize_t"
-          else if i < 0 then valueErr "__length_hint__() should return >= 0"
+          else if i < 0 then valueErr s!"{objFQN w o}.__length_hint__() must return a non-negative int"
           else pure i
 
 /-- `slot_nb_bool`, `Objects/typeobject.c:10904`. -/
@@ -966,7 +987,7 @@ def slotNbBool (rt : Rt) (self : Val) : M Bool := do
   | .res value =>
     match value with
     | .bool b => pure b
-    | _ => typeErr s!"__bool__ should return bool, returned {typeName w value}"
+    | _ => typeErr s!"{objFQN w self}.__bool__() must return a bool, not {objFQN w value}"
 
 /-- `PyObject_IsTrue`, `Objects/object.c:2139`. -/
 def pyIsTrue (rt : Rt) (v : Val) : M Bool := do
@@ -1121,7 +1142,7 @@ def raiseWithNote {α : Type} (rt : Rt) (e : PyErr) (note : String) : M α := do
     | .exc c m _ => .exc c m (some x)
     | e => e)
 
-/-- `insertdict`, `Objects/dictobject.c@3.14.7:1891`, with a known hash: an existing entry keeps its key
+/-- `insertdict`, `Objects/dictobject.c:2001`, with a known hash: an existing entry keeps its key
 and takes the value; otherwise the pair goes at the end with its hash recorded. -/
 def dictInsert (rt : Rt) (addr : Addr) (k : Val) (h : Int) (v : Val) : M Unit := do
   match ← dictProbe rt addr k h iterFuel 0 with
@@ -1157,7 +1178,7 @@ def dictDictMergeLoop (rt : Rt) (addr other : Addr) (orig : Nat) : Nat → Nat �
       if (dictEntries w other).length != orig then runtimeErr "dict mutated during update"
       dictDictMergeLoop rt addr other orig fuel (i + 1)
 
-/-- `dict_dict_merge`, `Objects/dictobject.c@3.14.7:3892`. An empty target takes a clone of the table,
+/-- `dict_dict_merge`, `Objects/dictobject.c:4170`. An empty target takes a clone of the table,
 which C does only for a clean `other` (`:4187`); the model has no table to test that on, and the
 difference shows only for keys of equal hash. -/
 def dictDictMerge (rt : Rt) (addr other : Addr) : M Unit := do
@@ -1214,7 +1235,7 @@ def dictMergeLoop (rt : Rt) (addr : Addr) (b it : Val) : Nat → M Unit
       dictSetAt rt addr k v
       dictMergeLoop rt addr b it fuel
 
-/-- `dict_merge`, `Objects/dictobject.c@3.14.7:3991`, with `override` 1. -/
+/-- `dict_merge`, `Objects/dictobject.c:4259`, with `override` 1. -/
 def dictMerge (rt : Rt) (addr : Addr) (x : Val) : M Unit := do
   let w ← getW
   match x, dictOf w x, slotOf w (typeOf w x) .tp_iter == some (.c .dict) with
@@ -1229,7 +1250,7 @@ def dictMerge (rt : Rt) (addr : Addr) (x : Val) : M Unit := do
       let it ← tryM (rt.getIter out) fun e => do
         let w ← getW
         if excMatches w e B.TypeError then
-          typeErr s!"{trunc 200 (typeName w x)}.keys() returned a non-iterable (type {trunc 200 (typeName w out)})"
+          typeErr s!"{objFQN w x}.keys() must return an iterable, not {objFQN w out}"
         else raise e
       let xs ← rt.listItems it
       alloc B.list (.list xs)
@@ -1248,10 +1269,13 @@ def dictUpdateArg (rt : Rt) (addr : Addr) (x : Val) : M Unit := do
       let it ← rt.getIter x
       mergeSeq2Loop rt addr it iterFuel 0
 
-/-- `PyDict_Copy`, `Objects/dictobject.c:4549`: a fresh dict, filled by `dict_merge` when the type
-overrides `tp_iter` (`:4490`), so an override is seen. -/
+/-- `PyDict_Copy`, `Objects/dictobject.c:4549`, with `copy_lock_held_untracked`, `:4433`: an empty
+dict copies to a new one and runs nothing, whatever its type overrides. Otherwise a fresh dict is
+filled by `dict_merge`, which sees an overridden `tp_iter`. -/
 def dictCopy (rt : Rt) (x : Val) : M Addr := do
+  let w ← getW
   let d ← allocCell (.val { cls := B.dict, body := .dict [] })
+  if ((anyDictOf w x).getD []).isEmpty then return d
   dictMerge rt d x
   pure d
 
@@ -1331,9 +1355,12 @@ def callNbBinary (rt : Rt) (s : Slot) (f : SlotFn) (a b : Val) : M Val := do
       else if (slotIn w b .mp_subscript).isSome && (tupleOf w b).isNone && (strOf w b).isNone then
         pure (.str fmt)
       else
+        -- `Objects/unicode_format.c:1094`: `arglen` is `-1` when `b` is not a tuple.
         match tupleOf w b with
         | some [] => pure (.str fmt)
-        | _ => typeErr "not all arguments converted during string formatting"
+        | some xs =>
+          typeErr s!"not all arguments converted during string formatting (required 0, got {xs.length})"
+        | none => typeErr "not all arguments converted during string formatting (required 0, got 1)"
   | .c .dict =>
     -- `dict_or`, `Objects/dictobject.c`, through `dict_update_arg`: a non-exact dict is first
     -- asked for `keys`, then merged directly if it has `dict_iter`.
@@ -1578,7 +1605,7 @@ where
     match f, a with
     | .generic, _ => vectorcallMethod rt idunder [a, b]
     | .c .dict, .obj addr =>
-      -- `dict_ior`, `Objects/dictobject.c@3.14.7:4793`.
+      -- `_PyDict_IOr`, `Objects/dictobject.c:5192`.
       dictUpdateArg rt addr b
       pure a
     | .c .mappingproxy, _ =>
@@ -1773,7 +1800,7 @@ def pyNumberLong (rt : Rt) (o : Val) : M Val := do
       | _ =>
         match intOf w result with
         | some i => pure (.int i)
-        | none => typeErr s!"__int__ returned non-int (type {trunc 200 (typeName w result)})"
+        | none => typeErr s!"{objFQN w o}.__int__() must return an int, not {objFQN w result}"
     | none =>
       match slotIn w o .nb_index with
       | some _ => .int <$> pyNumberIndex rt o
@@ -1818,7 +1845,7 @@ def pyNumberFloat (rt : Rt) (o : Val) : M Val := do
         match floatOf w res with
         | some x => mkFloat x
         | none =>
-          typeErr s!"{trunc 50 (typeName w o)}.__float__ returned non-float (type {trunc 50 (typeName w res)})"
+          typeErr s!"{objFQN w o}.__float__() must return a float, not {objFQN w res}"
     | none =>
       match slotIn w o .nb_index with
       | some _ =>
@@ -1874,7 +1901,7 @@ def callMpSubscript (rt : Rt) (f : SlotFn) (o key : Val) : M Val := do
   | .c .tuple => bySeq f "tuple"
   | .c .str => bySeq f "str"
   | .c .dict =>
-    -- `dict_subscript`, `Objects/dictobject.c@3.14.7:3505`.
+    -- `_PyDict_Subscript`, `Objects/dictobject.c:3786`.
     let h ← dictHashKey rt key
     let found ← match o with
       | .obj a =>
@@ -1953,7 +1980,7 @@ def callAssSubscript (rt : Rt) (f : SlotFn) (o key : Val) (value : Option Val) :
     | none => let _ ← vectorcallMethod rt "__delitem__" [o, key]
     | some v => let _ ← vectorcallMethod rt "__setitem__" [o, key, v]
   | .c .dict =>
-    -- `dict_ass_sub`, `Objects/dictobject.c@3.14.7:3541`, then `insertdict` or `PyDict_DelItem`.
+    -- `_PyDict_StoreSubscript`, `Objects/dictobject.c:3797`, then `insertdict` or `PyDict_DelItem`.
     let h ← dictHashKey rt key
     match o with
     | .obj a =>
@@ -2095,7 +2122,7 @@ def pyGetIter (rt : Rt) (o : Val) : M Val := do
     let res ← callIter rt f o
     let w ← getW
     if pyIterCheck w res then pure res
-    else typeErr s!"iter() returned non-iterator of type '{trunc 100 (typeName w res)}'"
+    else typeErr s!"{objFQN w o}.__iter__() must return an iterator, not {objFQN w res}"
 
 /-- `iter_iternext`, `Objects/iterobject.c:53`. `none` is NULL with no exception. -/
 def seqIterNext (rt : Rt) (a : Addr) : M (Option Val) := do
@@ -2281,7 +2308,7 @@ def callContains (rt : Rt) (f : SlotFn) (seq ob : Val) : M Bool := do
   | .c .tuple => anyEq rt ob ((tupleOf w seq).getD [])
   | .c .list => anyEq rt ob ((listOf w seq).getD [])
   | .c .dict =>
-    -- `PyDict_Contains`, `Objects/dictobject.c@3.14.7:4837`.
+    -- `PyDict_Contains`, `Objects/dictobject.c:5248`.
     let h ← dictHashKey rt ob
     match seq with
     | .obj a => pure (← dictProbe rt a ob h iterFuel 0).isSome

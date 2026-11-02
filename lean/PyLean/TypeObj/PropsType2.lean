@@ -98,8 +98,8 @@ theorem wrapperDescrSelfChecked_proven : WrapperDescrSelfChecked := by
   intro rt o p f self rest kw w h
   simp [wrapperdescrCall, h, typeErr, raiseC]
 
-/-- **`type.__new__` argument parsing**: the messages of `PyArg_ParseTuple(args, "UO!O!")`,
-`Objects/typeobject.c@3.14.7:4774`. -/
+/-- **`type.__new__` argument parsing**: the messages of `PyArg_ParseTuple(args, "UO!O")`
+and the check of the namespace, `Objects/typeobject.c:5125-5137`. -/
 def TypeNewArgs : Prop :=
   ∀ (rt : Rt) (m : Addr) (a b c : Val) (args : List Val) (kw : Kw) (w : World),
     (args.length ≠ 3 → typeNew rt m args kw w =

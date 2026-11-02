@@ -156,7 +156,7 @@ def GetIterChecksResult : Prop :=
     callIter rt f o w = .ok r w1 →
     pyIterCheck w1 r = false →
     pyGetIter rt o w =
-      (typeErr s!"iter() returned non-iterator of type '{trunc 100 (typeName w1 r)}'" : M Val) w1
+      (typeErr s!"{objFQN w1 o}.__iter__() must return an iterator, not {objFQN w1 r}" : M Val) w1
 
 theorem getIterChecksResult_proven : GetIterChecksResult := by
   intro rt o r f w w1 hf hc hi

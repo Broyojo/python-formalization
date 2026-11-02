@@ -195,10 +195,9 @@ def excEntries : List Entry := [
   p "typeobj-exc-eg-init" ["BaseExceptionGroup_init"]
     "__init__ stores args only and leaves message and exceptions; a keyword is a TypeError."
     "exceptions.c:1031-1040" ``EgInitKeepsMembers ``egInitKeepsMembers_proven,
-  r "typeobj-exc-eg-repr-in-bounds" ["BaseExceptionGroup_repr"]
-    "repr(eg) reads args[1] in bounds after any assignment to args."
-    "invariant: no out-of-bounds read; self->args is writable (exceptions.c:359) and read with PyTuple_GET_ITEM at :1103" ``EgReprInBoundsAfterArgsSet ``egReprInBoundsAfterArgsSet_refuted
-    "typeobj-exc-eg-repr-args-oob" "Fixed after 3.14.7 by gh-146141; the model stops at the read, which is undefined behaviour.",
+  p "typeobj-exc-eg-repr-in-bounds" ["BaseExceptionGroup_repr"]
+    "repr(eg) reads args[1] only when args has two items; with any other args it shows eg.exceptions as a tuple."
+    "invariant: no out-of-bounds read; self->args is writable, and exceptions.c:1099 sizes it first" ``EgReprAnyArgs ``egReprAnyArgs_proven,
   p "typeobj-exc-eg-repr-after-new" ["BaseExceptionGroup_repr", "BaseExceptionGroup_new"]
     "Every group fresh from BaseExceptionGroup_new has two args, so the read is in bounds until args is replaced."
     "narrowing of typeobj-exc-eg-repr-in-bounds" ``EgReprInBoundsAfterNew ``egReprInBoundsAfterNew_proven,

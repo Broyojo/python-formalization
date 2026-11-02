@@ -81,26 +81,22 @@ def baseExceptionGroupStr (rt : Rt) (self : Val) : M Val := do
   let n := d.egExceptions.length
   pure (.str s!"{m} ({n} sub-exception{if n > 1 then "s" else ""})")
 
-/-- Does `BaseExceptionGroup_repr` read `args[1]` out of bounds? `self->args` is writable
-and `__init__` replaces it, but `@3.14.7:1103` indexes it with `PyTuple_GET_ITEM`. -/
-def egReprOutOfBounds (d : ExcData) : Bool :=
-  d.egExcsStr.isNone && decide (d.args.length < 2)
+/-- The test at `Objects/exceptions.c:1099`: `self->args` is writable and `__init__` replaces it,
+so it is sized before `args[1]` is read. -/
+def egArgsShowList (w : World) (d : ExcData) : Bool :=
+  d.args.length == 2 && (listOf w (d.args.getD 1 .none)).isSome
 
-/-- `BaseExceptionGroup_repr`, `Objects/exceptions.c:1080`. In 3.14.7 an out-of-bounds read
-at `@3.14.7:1103` is undefined behaviour (a crash in practice), which is not a Python outcome, so
-the model stops there: see `egReprOutOfBounds`. -/
+/-- `BaseExceptionGroup_repr`, `Objects/exceptions.c:1080`. -/
 def baseExceptionGroupRepr (rt : Rt) (self : Val) : M Val := do
   let w ← getW
   let d := excDataOf w self
   let exStr ← match d.egExcsStr with
     | some s => pure s
     | none =>
-      if egReprOutOfBounds d then raise .fuel
-      else
-        if (listOf w (d.args.getD 1 .none)).isSome then
-          let l ← alloc B.list (.list d.egExceptions)
-          rt.repr l
-        else rt.repr (.tuple d.egExceptions)
+      if egArgsShowList w d then
+        let l ← alloc B.list (.list d.egExceptions)
+        rt.repr l
+      else rt.repr (.tuple d.egExceptions)
   let w ← getW
   let m ← rt.repr (d.egMessage.getD .none)
   pure (.str s!"{pyTypeName w (typeOf w self)}({m}, {exStr})")

@@ -13,7 +13,7 @@ import PyLean.TypeObj.PropsMethods
 /-!
 The data model: `Objects/typeobject.c`, `Objects/object.c`, `Objects/abstract.c`,
 `Objects/descrobject.c`, `Objects/funcobject.c`, `Objects/methodobject.c`,
-`Objects/classobject.c`, `Objects/call.c`, `Objects/exceptions.c`, CPython 3.14.7.
+`Objects/classobject.c`, `Objects/call.c`, `Objects/exceptions.c`, CPython 3.15.2.
 
 `TypeObj/Model.lean` is the object model and its documented API. `Attr`, `Protocol`,
 `TypeNew`, `Call`, `Exceptions` mirror the C code; `Interp` ties the recursion;
@@ -143,13 +143,13 @@ def entries : List Entry := [
     "With suppress set, a missing name returns NULL with no exception."
     "object.c:1815"
     ``GenericGetattrMissingSuppressed ``genericGetattrMissingSuppressed_proven,
-  p "typeobj-type-getattro-meta-data" ty ["_Py_type_getattro_impl"]
+  p "typeobj-type-getattro-meta-data" ty ["_Py_type_getattro_impl", "_Py_type_getattro_stackref"]
     "A data descriptor on the metaclass wins over the class's own attributes."
-    "docs: Invoking Descriptors; typeobject.c@3.14.7:6132"
+    "docs: Invoking Descriptors; typeobject.c:6660"
     ``TypeGetattroMetaDataDescriptorFirst ``typeGetattroMetaDataDescriptorFirst_proven,
-  p "typeobj-type-getattro-class-attr" ty ["_Py_type_getattro_impl"]
+  p "typeobj-type-getattro-class-attr" ty ["_Py_type_getattro_impl", "_Py_type_getattro_stackref"]
     "Without a metaclass data descriptor, the class's own attribute is bound with obj = NULL."
-    "typeobject.c@3.14.7:6146-6160"
+    "typeobject.c:6672-6695"
     ``TypeGetattroClassAttrNext ``typeGetattroClassAttrNext_proven,
   p "typeobj-setattr-descr" ob []
     "If the type has a descriptor with tp_descr_set, generic setattr calls it, for every instance dict state."
@@ -443,7 +443,7 @@ def entries : List Entry := [
     ``SlotDescrSetDispatch ``slotDescrSetDispatch_proven,
   p "typeobj-slot-descr-get" ty []
     "__get__ receives None for a missing instance; a descriptor whose __get__ is gone returns itself."
-    "typeobject.c@3.14.7:10529-10543"
+    "typeobject.c:11231"
     ``SlotDescrGetArgs ``slotDescrGetArgs_proven,
   p "typeobj-slot-richcompare" ty []
     "A missing comparison method answers NotImplemented."
@@ -451,7 +451,7 @@ def entries : List Entry := [
     ``SlotRichcompareMissing ``slotRichcompareMissing_proven,
   p "typeobj-slot-new" ty []
     "__new__ is found with getattr on the class and called with the class first."
-    "typeobject.c@3.14.7:10592-10597"
+    "typeobject.c:11297"
     ``SlotNewPrependsType ``slotNewPrependsType_proven,
   p "typeobj-slot1bin-same-type" ty []
     "Same operand types: NotImplemented from __op__ is final, __rop__ does not run."
@@ -521,11 +521,11 @@ def entries : List Entry := [
     "PyVectorcall_NARGS clears PY_VECTORCALL_ARGUMENTS_OFFSET and keeps the count."
     "call.c:1105"
     ``VectorcallNargs ``vectorcallNargs_proven,
-  p "typeobj-best-base" ty ["best_base"]
+  p "typeobj-best-base" ty ["find_best_base"]
     "Under the subtype order, best_base returns one of the bases, whose solid base is a subclass of every base's solid base."
     "typeobject.c:3743-3744"
     ``BestBaseMostDerived ``bestBaseMostDerived_proven,
-  p "typeobj-best-base-final" ty ["best_base"]
+  p "typeobj-best-base-final" ty ["find_best_base"]
     "A base without Py_TPFLAGS_BASETYPE is refused."
     "typeobject.c:3771"
     ``BestBaseRefusesFinal ``bestBaseRefusesFinal_proven,
@@ -583,7 +583,7 @@ def entries : List Entry := [
     ``TypeCallTwoArgs ``typeCallTwoArgs_proven,
   p "typeobj-new-wrapper" ty []
     "X.__new__ needs a type as first argument."
-    "typeobject.c@3.14.7:9833-9846"
+    "typeobject.c:10513"
     ``NewWrapperChecks ``newWrapperChecks_proven,
   p "typeobj-descr-check" "Objects/descrobject.c" []
     "A descriptor of C refuses an object that is not a C."
@@ -760,7 +760,7 @@ def entries : List Entry := [
     ``CompatibleReflexive ``compatibleReflexive_proven,
   p "typeobj-special-attr-immutable" ty []
     "Special attributes of immutable types cannot be set."
-    "typeobject.c@3.14.7:1421"
+    "typeobject.c:1519"
     ``TypeDocSet ``typeDocSet_proven,
   p "typeobj-wrapper-arity0" ty []
     "Zero-argument wrappers called with arguments raise the exact TypeError."
@@ -792,7 +792,7 @@ def entries : List Entry := [
     ``WrapperDescrSelfChecked ``wrapperDescrSelfChecked_proven,
   p "typeobj-type-new-args" ty ["type_new"]
     "type.__new__ argument count and name type are checked with the exact messages."
-    "typeobject.c@3.14.7:4774"
+    "typeobject.c:5125-5137"
     ``TypeNewArgs ``typeNewArgs_proven,
   p "typeobj-type-new-empty-bases" ty []
     "Empty bases mean (object,)."
@@ -871,7 +871,7 @@ def entries : List Entry := [
     "If the slot loop of object_getstate_default completes, __slotnames__ has its original size, for every getter."
     "typeobject.c:8066"
     ``GetstateSlotsGuard ``getstateSlotsGuard_proven,
-  p "typeobj-best-base-decides" ty ["best_base"]
+  p "typeobj-best-base-decides" ty ["find_best_base"]
     "One acceptable base wins, an unacceptable base is the exact TypeError, and two unrelated solid bases are the layout conflict."
     "typeobject.c:3757-3795"
     ``BestBaseDecides ``bestBaseDecides_proven,
@@ -901,7 +901,7 @@ def entries : List Entry := [
     "A NaN compares unequal to every float object through do_richcompare, itself included."
     "floatobject.c:406; with PyObject_RichCompareBool's identity test, the rule for containers"
     ``NanNeverEqual ``nanNeverEqual_proven,
-  p "typeobj-super-skips" ty ["_super_lookup_descr", "do_super_lookup", "super_getattro"]
+  p "typeobj-super-skips" ty ["_PySuper_LookupDescr", "do_super_lookup", "super_getattro"]
     "super looks strictly after __thisclass__ in the MRO of the object's type."
     "docs: super"
     ``SuperSkipsThisClass ``superSkipsThisClass_proven,

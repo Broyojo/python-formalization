@@ -173,10 +173,10 @@ def excLengthHint (rt : Rt) (o : Val) (dflt : Int) : M Int := do
         let w ← getW
         match intOf w result with
         | none =>
-          typeErr s!"__length_hint__ must be an integer, not {trunc 100 (typeName w result)}"
+          typeErr s!"{objFQN w o}.__length_hint__() must return an int, not {objFQN w result}"
         | some i =>
           if !inSsize i then overflowErr "Python int too large to convert to C ssize_t"
-          else if i < 0 then valueErr "__length_hint__() should return >= 0"
+          else if i < 0 then valueErr s!"{objFQN w o}.__length_hint__() must return a non-negative int"
           else pure i
 
 /-- `PySequence_List`, `Objects/abstract.c:2081`, items only. -/
@@ -208,7 +208,7 @@ def excNumberIndex (rt : Rt) (item : Val) : M Int := do
       let w ← getW
       match intOf w r with
       | some i => pure i
-      | none => typeErr s!"__index__ returned non-int (type {trunc 200 (typeName w r)})"
+      | none => typeErr s!"{objFQN w item}.__index__() must return an int, not {objFQN w r}"
     | some _ => gap%
 
 /-- `PyNumber_AsSsize_t(item, PyExc_ValueError)`, `Objects/abstract.c:1468`. -/
@@ -284,7 +284,7 @@ def argUnexpectedKeyword (fname : String) (names : List Name) (kw : Kw) : M Unit
   | none => typeErr s!"invalid keyword argument for {fname}()"
 
 /-- `PyArg_ParseTupleAndKeywords(empty_tuple, kwds, "|$OO...:fname", names, ...)`:
-`vgetargskeywords`, `Python/getargs.c@3.14.7:1575`, for keyword-only objects. -/
+`vgetargskeywords`, `Python/getargs.c:2015`, for keyword-only objects. -/
 def argKeywordOnly (fname : String) (names : List Name) (kw : Kw) : M (Name → Option Val) := do
   if kw.length > names.length then
     let l := names.length
@@ -332,6 +332,31 @@ def baseExceptionRepr (rt : Rt) (v : Val) : M Val := do
   | xs =>
     let r ← rt.repr (.tuple xs)
     pure (.str (name ++ r))
+
+/-- `ImportError_repr`, `Objects/exceptions.c:1928`: the repr of the args, with its `)` dropped,
+then `name=` and `path=`. -/
+def importErrorRepr (rt : Rt) (v : Val) : M Val := do
+  let w ← getW
+  let d := excDataOf w v
+  let hasargs := !(excArgs w v).isEmpty
+  match memGet d "name", memGet d "path" with
+  | none, none => baseExceptionRepr rt v
+  | name, path =>
+    let r ← baseExceptionRepr rt v
+    let head := match r with
+      | .str s => String.ofList (s.toList.dropLast)
+      | _ => ""
+    let (s1, hasargs) ← match name with
+      | some n =>
+        let nr ← rt.repr n
+        pure (head ++ (if hasargs then ", " else "") ++ s!"name={nr}", true)
+      | none => pure (head, hasargs)
+    let s2 ← match path with
+      | some p =>
+        let pr ← rt.repr p
+        pure (s1 ++ (if hasargs then ", " else "") ++ s!"path={pr}")
+      | none => pure s1
+    pure (.str (s2 ++ ")"))
 
 /-- `BaseException___reduce___impl`, `Objects/exceptions.c:212`. -/
 def baseExceptionReduce (v : Val) : M Val := do

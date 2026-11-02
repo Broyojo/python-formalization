@@ -16,7 +16,7 @@ def ReprMustReturnStr : Prop :=
     slotOf w (typeOf w v) .tp_repr = some f →
     callRepr rt f v w = .ok r w1 → strOf w1 r = none →
     pyRepr rt v w =
-      (typeErr s!"__repr__ returned non-string (type {trunc 200 (typeName w1 r)})" : M String) w1
+      (typeErr s!"{objFQN w1 v}.__repr__() must return a str, not {objFQN w1 r}" : M String) w1
 
 theorem reprMustReturnStr_proven : ReprMustReturnStr := by
   intro rt v r f w w1 h1 h2 h3
@@ -27,7 +27,7 @@ def StrMustReturnStr : Prop :=
     (∀ s, v ≠ .str s) → slotOf w (typeOf w v) .tp_str = some f →
     callStr rt f v w = .ok r w1 → strOf w1 r = none →
     pyStr rt v w =
-      (typeErr s!"__str__ returned non-string (type {trunc 200 (typeName w1 r)})" : M String) w1
+      (typeErr s!"{objFQN w1 v}.__str__() must return a str, not {objFQN w1 r}" : M String) w1
 
 theorem strMustReturnStr_proven : StrMustReturnStr := by
   intro rt v r f w w1 h0 h1 h2 h3
@@ -106,16 +106,25 @@ theorem getMethodDescriptor_proven : GetMethodDescriptor := by
   · intro h; simp [pyGetMethod, h1, h2, h3, h]
   · intro h; simp [pyGetMethod, h1, h2, h3, h]
 
-/-- `__dict__` must be set to a dict, `Objects/typeobject.c:4062`. -/
+/-- `_PyObject_SetDict`, `Objects/typeobject.c:4060`: the value is checked first, then whether the
+object has a dict at all. -/
 def SetDictRequiresDict : Prop :=
   ∀ (obj v : Val) (w : World),
-    dictOf w v = none →
-    objectSetDict obj (some v) w =
-      (typeErr s!"__dict__ must be set to a dictionary, not a '{trunc 200 (typeName w v)}'" : M Unit) w
+    (dictOf w v = none →
+      objectSetDict obj (some v) w =
+        (typeErr s!"__dict__ must be set to a dictionary, not a '{trunc 200 (typeName w v)}'" : M Unit) w) ∧
+    ((dictOf w v).isSome = true → (tdata w (typeOf w obj)).dictoffset = 0 →
+      objectSetDict obj (some v) w = (attrErr "This object has no __dict__" : M Unit) w)
 
 theorem setDictRequiresDict_proven : SetDictRequiresDict := by
-  intro obj v w h
-  simp [objectSetDict, h]
+  intro obj v w
+  constructor
+  · intro h
+    simp [objectSetDict, h, typeErr, raiseC]
+  · intro h h0
+    cases hd : dictOf w v with
+    | none => simp [hd] at h
+    | some es => simp [objectSetDict, hd, h0, attrErr, raiseC]
 
 /-- `__dict__` access on an object with no dict raises, `Objects/dictobject.c:8067`. -/
 def GetDictRequiresDictPtr : Prop :=
@@ -245,7 +254,7 @@ def NumberLongChecks : Prop :=
       callUnaryNb rt .nb_int "__int__" f o w = .ok r w1 → intOf w1 r = none →
       (∀ j, r ≠ .int j) →
       pyNumberLong rt o w =
-        (typeErr s!"__int__ returned non-int (type {trunc 200 (typeName w1 r)})" : M Val) w1)
+        (typeErr s!"{objFQN w1 o}.__int__() must return an int, not {objFQN w1 r}" : M Val) w1)
 
 theorem numberLongChecks_proven : NumberLongChecks := by
   intro rt o r f i w w1
@@ -437,23 +446,30 @@ theorem superGetBound_proven : SuperGetBound := by
 /-- `__class__` assignment to the same class passes the layout test, for every class. -/
 def CompatibleReflexive : Prop :=
   ∀ (t : Addr) (attr : String) (w : World),
-    compatibleForAssignment t t attr w = .ok () w
+    compatibleForAssignment t t attr true w = .ok () w
 
 theorem compatibleReflexive_proven : CompatibleReflexive := by
   intro t attr w
-  simp [compatibleForAssignment]
+  simp [compatibleForAssignment, compatibleFlags]
 
-/-- `check_set_special_type_attr`: the special attributes of an immutable type cannot be
-set, `Objects/typeobject.c@3.14.7:1421`. -/
+/-- `check_set_special_type_attr`, `Objects/typeobject.c:1519`: deleting a special attribute fails
+on every class, which is checked first; setting one fails exactly on an immutable class. -/
 def TypeDocSet : Prop :=
-  ∀ (t : Addr) (v : Option Val) (name : String) (w : World),
-    (tdata w t).immutable = true →
-    checkSetSpecial t v name w =
-      (typeErr s!"cannot set '{name}' attribute of immutable type '{tpName w t}'" : M Unit) w
+  ∀ (t : Addr) (v : Val) (name : String) (w : World),
+    checkSetSpecial t none name w =
+      (typeErr s!"cannot delete '{name}' attribute of type '{tpName w t}'" : M Unit) w ∧
+    ((tdata w t).immutable = true → checkSetSpecial t (some v) name w =
+      (typeErr s!"cannot set '{name}' attribute of immutable type '{tpName w t}'" : M Unit) w) ∧
+    ((tdata w t).immutable = false → checkSetSpecial t (some v) name w = .ok () w)
 
 theorem typeDocSet_proven : TypeDocSet := by
-  intro t v name w h
-  simp [checkSetSpecial, h, typeErr, raiseC]
+  intro t v name w
+  refine ⟨?_, ?_, ?_⟩
+  · simp [checkSetSpecial, typeErr, raiseC]
+  · intro h
+    simp [checkSetSpecial, h, typeErr, raiseC]
+  · intro h
+    simp [checkSetSpecial, h]
 
 /-- `is_dunder_name` needs more than four characters and the double underscores. -/
 def IsDunderExamples : Prop :=

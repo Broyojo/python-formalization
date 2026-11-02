@@ -1,7 +1,7 @@
 import PyLean.TypeObj.Mro
 
 /-!
-Class creation: `mro_invoke`, `best_base`, `_PyType_CalculateMetaclass`, `type_new` and its
+Class creation: `mro_invoke`, `find_best_base`, `_PyType_CalculateMetaclass`, `type_new` and its
 helpers, `PyType_Ready` for heap types, `inherit_special`, `inherit_slots`,
 `type_new_set_names`, `type_new_init_subclass`, `__bases__` assignment and `__class__`
 assignment (`Objects/typeobject.c`).
@@ -73,10 +73,10 @@ def mroCheck (t : Addr) (mro : List Val) : M Unit := do
   let solid := solidBase w t
   for obj in mro do
     match asType w obj with
-    | none => typeErr s!"mro() returned a non-class ('{trunc 500 (typeName w obj)}')"
+    | none => typeErr s!"{typeFQN w t}.mro() returned a non-class ('{objFQN w obj}')"
     | some base =>
       unless isSubtype w solid (solidBase w base) do
-        typeErr s!"mro() returned base with unsuitable layout ('{trunc 500 (tpName w base)}')"
+        typeErr s!"{typeFQN w t}.mro() returned base with unsuitable layout ('{typeFQN w base}')"
 
 /-- `mro_invoke`, `Objects/typeobject.c:3631`. -/
 def mroInvoke (rt : Rt) (t : Addr) : M (List Addr) := do
@@ -94,7 +94,7 @@ def mroInvoke (rt : Rt) (t : Addr) : M (List Addr) := do
   let w ← getW
   pure (result.filterMap (asType w))
 
-/-- `mro_internal_unlocked`, `Objects/typeobject.c@3.14.7:3552`. Returns whether the new MRO was
+/-- `mro_internal`, `Objects/typeobject.c:3695`. Returns whether the new MRO was
 stored. The reentrancy test compares by value: the C test is on pointers, which differ
 in the same cases unless a custom `mro()` installs an equal MRO. -/
 def mroInternal (rt : Rt) (t : Addr) : M Bool := do
@@ -107,14 +107,14 @@ def mroInternal (rt : Rt) (t : Addr) : M Bool := do
     modType t fun d => { d with mro := some newMro }
     pure true
 
-/-- The loop of `best_base`, `Objects/typeobject.c:3757-3795`. `winner` is the most derived
+/-- The loop of `find_best_base`, `Objects/typeobject.c:3757-3795`. `winner` is the most derived
 solid base so far, `base` the base that provided it. -/
 def bestBaseLoop (w : World) : List Val → Option Addr → Option Addr → Except String Addr
   | [], _, some b => .ok b
   | [], _, none => .error "bases must be types"
   | bp :: rest, winner, base =>
     match asType w bp with
-    | none => .error "bases must be types"
+    | none => .error s!"bases must be types; got '{objFQN w bp}'"
     | some bi =>
       if !(tdata w bi).baseType then
         .error s!"type '{trunc 100 (tpName w bi)}' is not an acceptable base type"
@@ -127,7 +127,7 @@ def bestBaseLoop (w : World) : List Val → Option Addr → Option Addr → Exce
           else if isSubtype w candidate win then bestBaseLoop w rest (some candidate) (some bi)
           else .error "multiple bases have instance lay-out conflict"
 
-/-- `best_base`, `Objects/typeobject.c@3.14.7:3614`. -/
+/-- `find_best_base`, `Objects/typeobject.c:3747`. -/
 def bestBase (bases : List Val) : M Addr := do
   let w ← getW
   match bestBaseLoop w bases none none with
@@ -250,8 +250,6 @@ def typeNewSlotsBases (ctx : TypeNewCtx) : M TypeNewCtx := do
 def typeNewSlotsImpl (ctx : TypeNewCtx) (slots : List Val) (dict : NameDict) :
     M (TypeNewCtx × List Name) := do
   let w ← getW
-  if ctx.nslot > 0 && (tdata w ctx.base).itemsize != 0 then
-    typeErr s!"nonempty __slots__ not supported for subtype of '{tpName w ctx.base}'"
   let c ← typeNewVisitSlots ctx slots
   let names ← typeNewCopySlots c slots dict
   let c := { c with nslot := names.length }
@@ -265,10 +263,10 @@ def typeNewSlots (ctx : TypeNewCtx) (dict : NameDict) : M (TypeNewCtx × Option 
   let c := { ctx with
     addDict := false, addWeak := false,
     mayAddDict := d.dictoffset == 0,
-    mayAddWeak := d.weaklistoffset == 0 && d.itemsize == 0 }
+    mayAddWeak := d.weaklistoffset == 0 }
   match ctx.slots with
   | none =>
-    pure ({ c with addDict := c.mayAddDict, addWeak := c.mayAddWeak }, none)
+    pure ({ c with addDict := c.mayAddDict, addWeak := c.mayAddWeak && d.itemsize == 0 }, none)
   | some slots =>
     let (c, names) ← typeNewSlotsImpl c slots dict
     pure (c, some names)
@@ -284,8 +282,16 @@ def typeNewGetSlots (rt : Rt) (ctx : TypeNewCtx) (dict : NameDict) : M TypeNewCt
       | none => pySequenceTuple rt slots
     pure { ctx with slots := some items, nslot := items.length }
 
-/-- `PyStaticMethod_New`/`PyClassMethod_New`, `Objects/funcobject.c:1993`, `:1727`. -/
-def wrapInDict (dict : NameDict) (attr : Name) (cls : Addr) (mk : Val → Payload) :
+/-- `functools_wraps`, `Objects/funcobject.c:1391`, with `functools_copy_attr`. -/
+def functoolsWraps (rt : Rt) (wrapper wrapped : Val) : M Unit := do
+  for n in ["__module__", "__name__", "__qualname__", "__doc__"] do
+    match ← rt.getOptionalAttr wrapped n with
+    | some v => rt.setAttr wrapper n (some v)
+    | none => pure ()
+
+/-- `PyStaticMethod_New`/`PyClassMethod_New`, `Objects/funcobject.c:1993`, `:1727`. They go through
+`sm_set_callable` and `cm_set_callable`, so the wrapper has the attributes of the function. -/
+def wrapInDict (rt : Rt) (dict : NameDict) (attr : Name) (cls : Addr) (mk : Val → Payload) :
     M NameDict := do
   let w ← getW
   match NameDict.get? dict attr with
@@ -293,12 +299,13 @@ def wrapInDict (dict : NameDict) (attr : Name) (cls : Addr) (mk : Val → Payloa
     match payloadOf w f with
     | some (.func _) =>
       let s ← alloc cls (mk f)
+      functoolsWraps rt s f
       pure (NameDict.set dict attr s)
     | _ => pure dict
   | none => pure dict
 
 /-- `type_new_set_attrs`, `Objects/typeobject.c:4862`, on the dict, before descriptors. -/
-def typeNewSetAttrs (ctx : TypeNewCtx) (t : Addr) (dict0 : NameDict) : M NameDict := do
+def typeNewSetAttrs (rt : Rt) (ctx : TypeNewCtx) (t : Addr) (dict0 : NameDict) : M NameDict := do
   if ctx.name.contains (Char.ofNat 0) then
     valueErr "type name must not contain null characters"
   let w ← getW
@@ -315,23 +322,40 @@ def typeNewSetAttrs (ctx : TypeNewCtx) (t : Addr) (dict0 : NameDict) : M NameDic
       | some qs => pure (NameDict.erase dict "__qualname__", qs)
     | none => pure (dict, ctx.name)
   modType t fun d => { d with qualname := qual }
-  let dict ← wrapInDict dict "__new__" B.staticmethod .staticmethod
-  let dict ← wrapInDict dict "__init_subclass__" B.classmethod .classmethod
-  let dict ← wrapInDict dict "__class_getitem__" B.classmethod .classmethod
+  let dict ← wrapInDict rt dict "__new__" B.staticmethod .staticmethod
+  let dict ← wrapInDict rt dict "__init_subclass__" B.classmethod .classmethod
+  let dict ← wrapInDict rt dict "__class_getitem__" B.classmethod .classmethod
   pure dict
 
-/-- `type_new_descriptors`, `Objects/typeobject.c@3.14.7:4401`, and `type_new_set_slots`,
-`:4791`: sizes and offsets; returns the getset names of `subtype_getsets_*`. -/
-def typeNewDescriptors (ctx : TypeNewCtx) (t : Addr) (nslot : Nat) : M (List Name) := do
+/-- `type_add_common_descriptor`, `Objects/typeobject.c:4684`: the cached getset of `object`, and
+`PyDict_SetDefaultRef`, so a `__dict__` of the class body stays. -/
+def typeAddCommonDescriptor (isDict : Bool) (dict : NameDict) : M NameDict := do
+  let w ← getW
+  let n : Name := if isDict then "__dict__" else "__weakref__"
+  let descr ← match (if isDict then w.dictDescr else w.weakrefDescr) with
+    | some d => pure d
+    | none =>
+      let d ← alloc B.getsetDescr (.getsetDescr B.object n isDict)
+      modW fun w => if isDict then { w with dictDescr := some d } else { w with weakrefDescr := some d }
+      pure d
+  pure (if NameDict.contains dict n then dict else NameDict.set dict n descr)
+
+/-- `type_new_descriptors`, `Objects/typeobject.c:4711`, and `type_new_set_slots`, `:4791`: sizes,
+offsets, and the two common descriptors. -/
+def typeNewDescriptors (ctx : TypeNewCtx) (t : Addr) (nslot : Nat) (dict : NameDict) :
+    M NameDict := do
   let w ← getW
   let bd := tdata w ctx.base
+  if nslot > 0 && bd.itemsize != 0 && !isSubtype w ctx.base B.tuple then
+    typeErr s!"arbitrary __slots__ not supported for subtype of '{tpName w ctx.base}'"
   let basic := bd.basicsize + 8 * nslot
   modType t fun d => { d with
     weaklistoffset := if ctx.addWeak then -32 else d.weaklistoffset
     dictoffset := if ctx.addDict then -1 else d.dictoffset
     basicsize := basic
     itemsize := bd.itemsize }
-  pure ((if ctx.addDict then ["__dict__"] else []) ++ (if ctx.addWeak then ["__weakref__"] else []))
+  let dict ← if ctx.addDict then typeAddCommonDescriptor true dict else pure dict
+  if ctx.addWeak then typeAddCommonDescriptor false dict else pure dict
 
 /-- `type_new_set_classcell`/`type_new_set_classdictcell`, `Objects/typeobject.c:4810`,
 `:4836`. The dict cell receives the tp_dict proxy. -/
@@ -445,14 +469,11 @@ def dictSetDefault (t : Addr) (n : Name) (v : Val) : M Unit :=
 
 /-- `type_ready_fill_dict`, `Objects/typeobject.c:9238`, for a heap type: members from
 `__slots__`, the getsets of `subtype_getsets_*`, and `__doc__`. -/
-def typeReadyFillDict (t : Addr) (members getsets : List Name) : M Unit := do
+def typeReadyFillDict (t : Addr) (members : List Name) : M Unit := do
   addOperators t
   for m in members do
     let d ← alloc B.memberDescr (.memberDescr t m false)
     dictSetDefault t m d
-  for g in getsets do
-    let d ← alloc B.getsetDescr (.getsetDescr t g (g == "__dict__"))
-    dictSetDefault t g d
   dictSetDefault t "__doc__" .none
 
 /-- `type_ready_inherit`, `Objects/typeobject.c:9377`. -/
@@ -480,11 +501,11 @@ def addSubclass (b t : Addr) : M Unit :=
 def removeSubclass (b t : Addr) : M Unit :=
   modType b fun d => { d with subclasses := d.subclasses.filter (· != t) }
 
-/-- `type_ready`, `Objects/typeobject.c@3.14.7:8936`, for a heap type. -/
-def typeReady (rt : Rt) (t : Addr) (members getsets : List Name) : M Unit := do
+/-- `type_ready`, `Objects/typeobject.c:9584`, for a heap type. -/
+def typeReady (rt : Rt) (t : Addr) (members : List Name) : M Unit := do
   let _ ← mroInternal rt t
   typeReadySetNew t
-  typeReadyFillDict t members getsets
+  typeReadyFillDict t members
   typeReadyInherit t
   typeReadySetHash t
   let w ← getW
@@ -526,14 +547,15 @@ def typeNewImpl (rt : Rt) (ctx0 : TypeNewCtx) (orig : NameDict) : M Val := do
   let t ← allocCell (.ty ctx.metatype {
     name := ctx.name, qualname := ctx.name, base := some ctx.base, bases := baseAddrs,
     dict := orig, asNumber := true, asSequence := true, asMapping := true, asAsync := true,
-    asBuffer := true, heap := true, baseType := true, htSlots := names })
-  let dict ← typeNewSetAttrs ctx t orig
+    asBuffer := true, heap := true, baseType := true,
+    htSlots := names.bind fun n => if n.isEmpty then none else some n })
+  let dict ← typeNewSetAttrs rt ctx t orig
   let members := names.getD []
-  let getsets ← typeNewDescriptors ctx t ctx.nslot
+  let dict ← typeNewDescriptors ctx t ctx.nslot dict
   let dict ← typeNewSetCell "__classcell__" (.obj t) dict
   let dict ← typeNewSetCell "__classdictcell__" (.obj t) dict
   modType t fun d => { d with dict := dict }
-  typeReady rt t members getsets
+  typeReady rt t members
   modW fun w => fixupSlotDispatchers w t
   typeNewSetNames rt t
   typeNewInitSubclass rt t ctx.kwds
@@ -578,8 +600,8 @@ def typeNew (rt : Rt) (metatype : Addr) (args : List Val) (kwds : Kw) : M Val :=
       | typeErr s!"type.__new__() argument 1 must be str, not {typeName w nameV}"
     let some bases := tupleOf w basesV
       | typeErr s!"type.__new__() argument 2 must be tuple, not {typeName w basesV}"
-    let some es := dictOf w dictV
-      | typeErr s!"type.__new__() argument 3 must be dict, not {typeName w dictV}"
+    let some es := anyDictOf w dictV
+      | typeErr s!"type.__new__() argument 3 must be dict or frozendict, not {objFQN w dictV}"
     let orig : NameDict := es.filterMap fun p =>
       match p.1 with
       | .str k => some (k, p.2)
@@ -596,23 +618,20 @@ def typeNew (rt : Rt) (metatype : Addr) (args : List Val) (kwds : Kw) : M Val :=
 /-- `check_set_special_type_attr`, `Objects/typeobject.c:1519`. -/
 def checkSetSpecial (t : Addr) (value : Option Val) (name : String) : M Unit := do
   let w ← getW
+  if value.isNone then
+    typeErr s!"cannot delete '{name}' attribute of type '{tpName w t}'"
   if (tdata w t).immutable then
     typeErr s!"cannot set '{name}' attribute of immutable type '{tpName w t}'"
-  if value.isNone then
-    typeErr s!"cannot delete '{name}' attribute of immutable type '{tpName w t}'"
 
-/-- `compatible_with_tp_base`, `Objects/typeobject.c:7633`. Every heap type has
-`subtype_dealloc` and a GC flag equal to its heap parent's; a heap child of a non-GC
-static type adds GC and so is not compatible, which `gcFlag` encodes. -/
-def compatibleWithTpBase (gcFlag : Addr → Bool) (w : World) (child : Addr) : Bool :=
+/-- `compatible_with_tp_base`, `Objects/typeobject.c:7633`. Every heap type has `subtype_dealloc`;
+the static classes that can be a base and have the size of their parent inherit its `tp_dealloc`. -/
+def compatibleWithTpBase (w : World) (child : Addr) : Bool :=
   match (tdata w child).base with
   | none => false
   | some parent =>
     let c := tdata w child
     let p := tdata w parent
-    c.basicsize == p.basicsize && c.itemsize == p.itemsize &&
-      c.dictoffset == p.dictoffset && c.weaklistoffset == p.weaklistoffset &&
-      gcFlag child == gcFlag parent
+    c.basicsize == p.basicsize && c.itemsize == p.itemsize
 
 /-- `Py_TPFLAGS_HAVE_GC`: heap types always; among builtins, what the table records. A
 type's instances participate in GC when it is a heap type or one of these. -/
@@ -625,7 +644,7 @@ def hasGC (w : World) (t : Addr) : Bool :=
 def compatBase (w : World) : Nat → Addr → Addr
   | 0, t => t
   | fuel + 1, t =>
-    if compatibleWithTpBase (hasGC w) w t then
+    if compatibleWithTpBase w t then
       match (tdata w t).base with
       | some p => compatBase w fuel p
       | none => t
@@ -650,29 +669,35 @@ def sameSlotsAdded (w : World) (a b : Addr) : Bool :=
         size3 == da.basicsize && size3 == db.basicsize
     | _, _ => size2 == da.basicsize && size2 == db.basicsize
 
-/-- The instance-layout flags compared at `Objects/typeobject.c@3.14.7:7101-7111`. -/
-def inlineValuesFlag (w : World) (t : Addr) : Bool :=
+/-- `tp_flags & (Py_TPFLAGS_HAVE_GC | Py_TPFLAGS_INLINE_VALUES | Py_TPFLAGS_PREHEADER)`. -/
+def layoutFlags (w : World) (t : Addr) : List Bool :=
   let d := tdata w t
-  d.heap && d.dictoffset == -1 && d.itemsize == 0
+  [hasGC w t, d.heap && d.dictoffset == -1 && d.itemsize == 0, d.dictoffset == -1,
+    d.weaklistoffset == -32]
 
-/-- `tp_flags & Py_TPFLAGS_PREHEADER`: managed dict, managed weakref. -/
-def preheaderFlag (w : World) (t : Addr) : Bool × Bool :=
-  let d := tdata w t
-  (d.dictoffset == -1, d.weaklistoffset == -32)
+/-- `compatible_flags`, `Objects/typeobject.c:7673`: for `__class__` the flags are equal, for
+`__bases__` the new base may only have flags the class has. -/
+def compatibleFlags (setclass : Bool) (w : World) (origto newto : Addr) : Bool :=
+  if setclass then layoutFlags w origto == layoutFlags w newto
+  else ((layoutFlags w origto).zip (layoutFlags w newto)).all fun (o, n) => o || !n
 
-/-- `compatible_for_assignment`, `Objects/typeobject.c@3.14.7:7067`. `tp_free` is
-`PyObject_GC_Del` exactly for GC types among those modelled. -/
-def compatibleForAssignment (oldto newto : Addr) (attr : String) : M Unit := do
+/-- `compatible_for_assignment`, `Objects/typeobject.c:7684`. `tp_free` is `PyObject_GC_Del` exactly
+for GC types among those modelled. -/
+def compatibleForAssignment (origto newto : Addr) (attr : String) (setclass : Bool) : M Unit := do
   let w ← getW
-  if hasGC w newto != hasGC w oldto then
+  let oldto := if setclass then origto else (tdata w origto).base.getD B.object
+  if setclass && hasGC w newto != hasGC w oldto then
     typeErr s!"{attr} assignment: '{tpName w newto}' deallocator differs from '{tpName w oldto}'"
+  let o := tdata w origto
+  let n := tdata w newto
   let newbase := compatBase w w.heap.size newto
   let oldbase := compatBase w w.heap.size oldto
   let differs : Bool :=
+    !compatibleFlags setclass w origto newto ||
+    ((setclass || n.dictoffset != 0) && o.dictoffset != n.dictoffset) ||
+    ((setclass || n.weaklistoffset != 0) && o.weaklistoffset != n.weaklistoffset) ||
     (newbase != oldbase &&
-      ((tdata w newbase).base != (tdata w oldbase).base || !sameSlotsAdded w newbase oldbase)) ||
-    inlineValuesFlag w oldto != inlineValuesFlag w newto ||
-    preheaderFlag w oldto != preheaderFlag w newto
+      ((tdata w newbase).base != (tdata w oldbase).base || !sameSlotsAdded w newbase oldbase))
   if differs then
     typeErr s!"{attr} assignment: '{tpName w newto}' object layout differs from '{tpName w oldto}'"
 
@@ -690,7 +715,7 @@ def objectSetClass (self : Val) (value : Option Val) : M Unit := do
       let oldto := typeOf w self
       if (tdata w newto).immutable || (tdata w oldto).immutable then
         typeErr "__class__ assignment only supported for mutable types or ModuleType subclasses"
-      compatibleForAssignment oldto newto "__class__"
+      compatibleForAssignment oldto newto "__class__" true
       match self with
       | .obj a =>
         modW fun w =>
@@ -716,7 +741,7 @@ def mroHierarchy (rt : Rt) : Nat → Addr → M (List (Addr × Option (List Addr
       acc := acc ++ more
     pure acc
 
-/-- `type_set_bases_unlocked`, `Objects/typeobject.c@3.14.7:1792`. A failure while recomputing
+/-- `type_check_new_bases` and `type_set_bases_unlocked`, `Objects/typeobject.c:1905`, `:1968`. A failure while recomputing
 restores `tp_bases`, `tp_base` and every MRO already changed (`undo`, `bail`). -/
 def typeSetBases (rt : Rt) (t : Addr) (value : Option Val) : M Unit := do
   checkSetSpecial t value "__bases__"
@@ -737,7 +762,7 @@ def typeSetBases (rt : Rt) (t : Addr) (value : Option Val) : M Unit := do
   let w ← getW
   let oldBaseO := (tdata w t).base
   let oldBases := (tdata w t).bases
-  compatibleForAssignment (oldBaseO.getD B.object) newBase "__bases__"
+  compatibleForAssignment t newBase "__bases__" false
   let newAddrs := items.filterMap (asType w)
   modType t fun d => { d with bases := newAddrs, base := some newBase }
   let undoBases : M Unit :=
