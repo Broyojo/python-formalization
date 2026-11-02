@@ -138,14 +138,14 @@ Python/bytecodes.c	1366	1366	opcode:BINARY_OP_SUBSCR_GETITEM	macro(BINARY_OP_SUB
 Python/bytecodes.c	1374	1374	opcode:LIST_APPEND	inst(LIST_APPEND, (list, unused[oparg-1], v -- list, unused[oparg-1])) {	modelled	bytecode-list-append	
 Python/bytecodes.c	1380	1380	opcode:SET_ADD	inst(SET_ADD, (set, unused[oparg-1], v -- set, unused[oparg-1])) {	todo		changed-in-3.15:
 Python/bytecodes.c	1399	1399	opcode:_SPECIALIZE_STORE_SUBSCR	specializing op(_SPECIALIZE_STORE_SUBSCR, (counter/1, container, sub -- container, sub)) {	todo		changed-in-3.15:
-Python/bytecodes.c	1411	1411	opcode:_STORE_SUBSCR	op(_STORE_SUBSCR, (v, container, sub -- )) {	todo		
-Python/bytecodes.c	1418	1418	opcode:STORE_SUBSCR	macro(STORE_SUBSCR) = _SPECIALIZE_STORE_SUBSCR + _STORE_SUBSCR;	todo		
+Python/bytecodes.c	1411	1411	opcode:_STORE_SUBSCR	op(_STORE_SUBSCR, (v, container, sub -- )) {	modelled	bytecode-dispatch	
+Python/bytecodes.c	1418	1418	opcode:STORE_SUBSCR	macro(STORE_SUBSCR) = _SPECIALIZE_STORE_SUBSCR + _STORE_SUBSCR;	modelled	bytecode-dispatch	
 Python/bytecodes.c	1420	1420	opcode:STORE_SUBSCR_LIST_INT	macro(STORE_SUBSCR_LIST_INT) =	modelled	bytecode-store-subscr-list-int	
 Python/bytecodes.c	1423	1423	opcode:_STORE_SUBSCR_LIST_INT	op(_STORE_SUBSCR_LIST_INT, (value, list_st, sub_st -- ls, ss)) {	modelled	bytecode-store-subscr-list-int	
 Python/bytecodes.c	1454	1454	opcode:STORE_SUBSCR_DICT	macro(STORE_SUBSCR_DICT) =	todo		changed-in-3.15:
 Python/bytecodes.c	1458	1458	opcode:_STORE_SUBSCR_DICT	op(_STORE_SUBSCR_DICT, (value, dict_st, sub -- st)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1473	1473	opcode:_STORE_SUBSCR_DICT_KNOWN_HASH	tier2 op(_STORE_SUBSCR_DICT_KNOWN_HASH, (value, dict_st, sub, hash/4 -- st)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	1490	1490	opcode:DELETE_SUBSCR	inst(DELETE_SUBSCR, (container, sub --)) {	todo		
+Python/bytecodes.c	1490	1490	opcode:DELETE_SUBSCR	inst(DELETE_SUBSCR, (container, sub --)) {	modelled	bytecode-dispatch	
 Python/bytecodes.c	1498	1498	opcode:_CALL_INTRINSIC_1	op(_CALL_INTRINSIC_1, (value -- res, v)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	1509	1509	opcode:CALL_INTRINSIC_1	macro(CALL_INTRINSIC_1) = _CALL_INTRINSIC_1 + POP_TOP;	todo		changed-in-3.15:
 Python/bytecodes.c	1511	1511	opcode:_CALL_INTRINSIC_2	op(_CALL_INTRINSIC_2, (value2_st, value1_st -- res, vs1, vs2)) {	todo		changed-in-3.15: new function
@@ -297,9 +297,9 @@ Python/bytecodes.c	3280	3280	opcode:_COMPARE_OP_INT	op(_COMPARE_OP_INT, (left, r
 Python/bytecodes.c	3302	3302	opcode:_COMPARE_OP_STR	op(_COMPARE_OP_STR, (left, right -- res, l, r)) {	modelled	bytecode-compare-str	
 Python/bytecodes.c	3320	3320	opcode:IS_OP	macro(IS_OP) = _IS_OP + POP_TOP + POP_TOP;	todo		changed-in-3.15: the model compares immediates by value, but `is` on equal large ints or strs is False in CPython
 Python/bytecodes.c	3322	3322	opcode:_IS_OP	op(_IS_OP, (left, right -- b, l, r)) {	todo		changed-in-3.15: the model compares immediates by value, but `is` on equal large ints or strs is False in CPython
-Python/bytecodes.c	3335	3335	opcode:_CONTAINS_OP	op(_CONTAINS_OP, (left, right -- b, l, r)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3335	3335	opcode:_CONTAINS_OP	op(_CONTAINS_OP, (left, right -- b, l, r)) {	modelled	bytecode-dispatch	
 Python/bytecodes.c	3349	3349	opcode:_SPECIALIZE_CONTAINS_OP	specializing op(_SPECIALIZE_CONTAINS_OP, (counter/1, left, right -- left, right)) {	todo		changed-in-3.15:
-Python/bytecodes.c	3361	3361	opcode:CONTAINS_OP	macro(CONTAINS_OP) = _SPECIALIZE_CONTAINS_OP + _CONTAINS_OP + POP_TOP + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	3361	3361	opcode:CONTAINS_OP	macro(CONTAINS_OP) = _SPECIALIZE_CONTAINS_OP + _CONTAINS_OP + POP_TOP + POP_TOP;	modelled	bytecode-dispatch	
 Python/bytecodes.c	3363	3363	opcode:_GUARD_TOS_ANY_SET	op(_GUARD_TOS_ANY_SET, (tos -- tos)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3368	3368	opcode:_GUARD_TOS_SET	op(_GUARD_TOS_SET, (tos -- tos)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	3373	3373	opcode:_GUARD_TOS_FROZENSET	op(_GUARD_TOS_FROZENSET, (tos -- tos)) {	todo		changed-in-3.15: new function
