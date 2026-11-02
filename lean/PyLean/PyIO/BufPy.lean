@@ -33,7 +33,7 @@ def checkClosed (msg : String) : PM Unit := do
 
 def resetRead : PM Unit := SM.mod fun s => { s with readBuf := [], readPos := 0 }
 
-/-- `RawIOBase.read(n)` for `n >= 0`, _pyio.py@3.14.7:610-627. -/
+/-- `RawIOBase.read(n)` for `n >= 0`, _pyio.py:610-627. -/
 def rawRead (n : Nat) : PM (Option (List Nat)) := do
   let s ← SM.get
   let (r, res) := s.raw.readinto n
@@ -93,7 +93,7 @@ def readUnlocked (n : Int) : PM (Option (List Nat)) := do
       SM.mod fun s => { s with readBuf := out.drop k.toNat, readPos := 0 }
       if out ≠ [] then pure (some (out.take k.toNat)) else pure nodata
 
-/-- `_peek_unlocked`, _pyio.py:1131-1141. -/
+/-- `_peek_unlocked`, _pyio.py:1145-1154. -/
 def peekUnlocked (n : Nat) : PM (List Nat) := do
   let s ← SM.get
   let want := min n s.size
@@ -230,21 +230,24 @@ def readinto (len : Nat) (one : Bool) : PM Val := do
   let (w, out) ← readintoLoop len one (s.raw.rs.length + s.raw.data.length + len + 3) 0 []
   pure (.list [.int w, .bytes (out ++ List.replicate (len - out.length) 255)])
 
+/-- `nreadahead()` with `peek`, _pyio.py:525-532, with `len` bytes already in `res`. -/
+def nreadahead (size : Int) (len : Nat) (ra : List Nat) : Nat :=
+  if ra = [] then 1
+  else
+    let m := match findIdx? ra 10 with
+      | some i => i + 1
+      | none => ra.length
+    if size ≥ 0 then min m (size - len).toNat else m
+
 /-- `self.peek(1)` then `self.read(n)` in the loop of `IOBase.readline`,
-_pyio.py:525-532, @3.14.7:546-553. -/
+_pyio.py:525-532, :546-553. -/
 def readlineLoop (size : Int) : Nat → List Nat → PM (List Nat)
   | 0, _ => thr .modelFuel
   | fuel + 1, res => do
     if size < 0 ∨ (res.length : Int) < size then
       let r ← peek 1
       let ra := r.bytesOf
-      let n : Nat :=
-        if ra = [] then 1
-        else
-          let m := match findIdx? ra 10 with
-            | some i => i + 1
-            | none => ra.length
-          if size ≥ 0 then min m size.toNat else m
+      let n : Nat := nreadahead size res.length ra
       let b ← read (some n)
       let b := b.bytesOf
       if b = [] then pure res else

@@ -24,6 +24,8 @@ sys.unraisablehook = lambda u: None
 M = sys.maxsize
 MODS = {"c": io, "py": _pyio}
 EXC = [("ValueError", "boom"), ("OSError", "bad"), ("InterruptedError", "[Errno 4] x")]
+# sizes PyBytesWriter_Create refuses, on both sides of the "byte string is too large" bound
+HUGE = [M, M - 1, M - 32, M - 33, 2**62, 2**48]
 
 
 def raised(r):
@@ -211,8 +213,12 @@ def gen_case(rng):
             op["n"] = rng.choice([None, -1, -2, 0, 1, 2, 3, size, size + 1, 2 * size, 3 * size + 1, 30])
             if key == "c" and rng.random() < 0.05:
                 op["n"] = rng.choice([M + 1, -M - 2])
+            if key == "c" and k == "read" and rng.random() < 0.04:
+                op["n"] = rng.choice(HUGE)
         if k == "read1":
             op["n"] = rng.choice([-1, 0, 1, 2, size, 2 * size])
+            if key == "c" and rng.random() < 0.08:
+                op["n"] = rng.choice(HUGE)
         if k == "peek":
             op["n"] = rng.choice([0, 1, 2, size])
         if k in ("readinto", "readinto1"):
@@ -229,6 +235,9 @@ def gen_case(rng):
         ops.append({"op": "close"})
     if rng.random() < 0.3:
         ops += [{"op": rng.choice(["read", "tell", "flush", "peek", "write", "seek", "closed"]), "n": 1, "b": [97], "pos": 0, "whence": 0}]
+    if rng.random() < 0.15:
+        # a second close, and what is left to do after one that failed
+        ops += [{"op": "close"}, {"op": rng.choice(["close", "read1", "write", "flush", "closed"]), "n": rng.choice([0, 1]), "b": [97]}]
     if rng.random() < 0.12:
         ops.append({"op": "detach"})
     ops.append({"op": "closed"})

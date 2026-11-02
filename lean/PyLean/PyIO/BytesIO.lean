@@ -2,14 +2,19 @@ import PyLean.PyIO.Basic
 
 /-!
 `BytesIO`: the C implementation (`Modules/_io/bytesio.c`) and the pure-Python
-twin (`Lib/_pyio.py:876-1034`, plus the `IOBase`/`BufferedIOBase` methods it
-inherits, `Lib/_pyio.py:307-740`), CPython 3.14.7.
+twin (`Lib/_pyio.py:876-1036`, plus the `IOBase`/`BufferedIOBase` methods it
+inherits, `Lib/_pyio.py:307-740`), CPython 3.15.2.
 
 State: the buffer contents (`string_size` bytes in C, the `bytearray` in
 Python), the position, the closed flag and the number of live `getbuffer()`
 views. C's over-allocation, copy-on-write sharing and the free-threading
 critical sections are unobservable here and not modelled. C keeps
 `0 <= pos <= PY_SSIZE_T_MAX`; Python's position is an unbounded int.
+
+`_pyio.BytesIO` takes `self._lock` around its state in 3.15. An uncontended
+`Lock` changes nothing, and the only Python code that runs while it is held is
+`pos.__index__` in `truncate`, whose deadlock is modelled by `P.truncateObj`
+(`PyIO/BytesExtra.lean`). Threads are out of scope.
 -/
 
 namespace PyLean.PyIO
@@ -51,7 +56,7 @@ inductive BOp where
   deriving Repr, DecidableEq, Inhabited
 
 /-- `BytesIO(initial_bytes)`: both twins store the bytes and set the position to 0
-(bytesio.c:1084-1114, _pyio.py@3.14.7:884-889). -/
+(bytesio.c:1084-1114, _pyio.py:884-894). -/
 def bInit (init : List Nat) : BState := ⟨init, 0, false, 0, init.length ≤ 1⟩
 
 /-- `release`: drop one export (both twins: `memoryview.release()`). -/
@@ -63,7 +68,7 @@ namespace C
 
 def closedErr : PyExc := .valueError "I/O operation on closed file."
 
-/-- `scan_eol_lock_held`, bytesio.c:122-153. -/
+/-- `scan_eol_lock_held`, bytesio.c:123-153. -/
 def scanEol (s : BState) (len : Int) : Nat :=
   if s.pos ≥ s.buf.length then 0 else
   let maxlen : Nat := s.buf.length - s.pos
@@ -73,7 +78,7 @@ def scanEol (s : BState) (len : Int) : Nat :=
   | some i => i + 1
   | none => len
 
-/-- `read_bytes_lock_held`, bytesio.c:467-494 (`size <= string_size - pos`). -/
+/-- `read_bytes_lock_held`, bytesio.c:468-494 (`size <= string_size - pos`). -/
 def readBytes (s : BState) (size : Nat) : BState × List Nat :=
   ({ s with pos := s.pos + size }, slice s.buf s.pos size)
 
@@ -135,31 +140,28 @@ def readinto (s : BState) (n : Nat) : BState × Py Val :=
 `resize_buffer_lock_held` (:181-229) raises `OverflowError` above
 `PY_SSIZE_T_MAX`; for a request of exactly `PY_SSIZE_T_MAX` it computes
 `alloc = size + 1 = 2**63`, which becomes negative as a `Py_ssize_t`. A
-shared buffer is copied (`unshare_buffer_lock_held`, :159-175:
-`PyBytes_FromStringAndSize` fails, Objects/bytesobject.c:124-131, and the
-buffer survives); an unshared one is
-resized with `_PyBytes_Resize` (:86-101), which on failure frees the
-buffer and sets `self->buf = NULL` (Objects/bytesobject.c:3417-3484), so
-the stream is closed afterwards. -/
+shared buffer is copied (`unshare_buffer_lock_held`, :159-175, through
+`PyBytes_FromStringAndSize`, Objects/bytesobject.c:124-131); an unshared one is
+resized by `resize_unshared_buffer_lock_held` (:101-116) with
+`_PyBytes_ResizeKeepOnError` (Objects/bytesobject.c:3418-3472). The two differ
+only in the message for the negative size. Both then reject a size above
+`PY_SSIZE_T_MAX - PyBytesObject_SIZE` (33 on LP64, Objects/bytesobject.c:101-105,
+:3371-3375) before allocating, and neither touches the buffer when it fails, so
+every failed write leaves the state as it was. -/
 def write (s : BState) (b : List Nat) : BState × Py Val :=
   if s.closed then (s, .error closedErr) else
   if s.exports > 0 then (s, .error bufferError) else
   let len := b.length
   if len = 0 then (s, .ok (.int 0)) else
   let endpos := s.pos + len
-  let lost : BState := { s with closed := true, buf := [] }
   if endpos > s.buf.length ∧ (endpos : Int) > ssizeMax then
     (s, .error (.overflowError "new buffer size too large")) else
   if endpos > s.buf.length ∧ (endpos : Int) = ssizeMax then
-    if s.shared then (s, .error (.named "SystemError" "Negative size passed to PyBytes_FromStringAndSize"))
-    else (lost, .error (.named "SystemError" "Objects/bytesobject.c:3424: bad argument to internal function")) else
+    (s, .error (.named "SystemError" (if s.shared then "Negative size passed to PyBytes_FromStringAndSize"
+      else "Objects/bytesobject.c:3424: bad argument to internal function"))) else
   if endpos > s.buf.length ∧ endpos ≥ memLimit then
-    -- `_PyBytes_FromSize` (bytesobject.c:101-105) rejects sizes above
-    -- `PY_SSIZE_T_MAX - PyBytesObject_SIZE` (33 on LP64) before allocating
-    if s.shared then
-      (s, .error (if (endpos + 1 : Int) > ssizeMax - 33 then .overflowError "byte string is too large"
-                  else memoryError))
-    else (lost, .error memoryError) else
+    (s, .error (if (endpos + 1 : Int) > ssizeMax - 33 then .overflowError "byte string is too large"
+                else memoryError)) else
   ({ s with buf := writeAt s.buf s.pos b, pos := endpos, shared := false }, .ok (.int len))
 
 /-- `_io_BytesIO_seek_impl`, bytesio.c:774-815, after Argument Clinic
@@ -188,7 +190,11 @@ def seek (s : BState) (pos whence : Int) : BState × Py Val :=
     let pos := if pos < 0 then 0 else pos
     ({ s with pos := pos.toNat }, .ok (.int pos))
 
-/-- `_io_BytesIO_truncate_impl`, bytesio.c:692-727. -/
+/-- `_io_BytesIO_truncate_impl`, bytesio.c:692-727, for `None` or an `int`, which
+run no Python code: the re-checks at :713-714 can only pass here, and
+`C.truncateObj` (`PyIO/BytesExtra.lean`) models an `__index__` that makes them
+matter. A failed shrink restores `string_size` (:718-722), but a shrink only fails
+on allocation, which the model does not produce for a smaller size. -/
 def truncate (s : BState) (size : Option Int) : BState × Py Val :=
   if s.closed then (s, .error closedErr) else
   if s.exports > 0 then (s, .error bufferError) else
@@ -210,6 +216,14 @@ def next (s : BState) : BState × Py Val :=
   let (s', b) := readBytes s n
   (s', .ok (.bytes b))
 
+/-- `bytesiobuf_getbuffer_lock_held`, bytesio.c:1236-1254: the first view of a shared
+buffer unshares it with `unshare_buffer_lock_held(b, string_size)`. For `string_size`
+0 the copy is the immortal empty `bytes` (Objects/bytesobject.c:136-138), so the
+buffer of an empty stream stays shared. -/
+def takeView (s : BState) : BState :=
+  { s with exports := s.exports + 1
+           shared := if s.exports = 0 ∧ s.shared = true then s.buf.isEmpty else s.shared }
+
 def step (s : BState) : BOp → BState × Py Val
   | .read n | .read1 n => read s n
   | .readline n => readline s n
@@ -220,9 +234,7 @@ def step (s : BState) : BOp → BState × Py Val
   | .tell => if s.closed then (s, .error closedErr) else (s, .ok (.int s.pos))
   | .truncate n => truncate s n
   | .getvalue => if s.closed then (s, .error closedErr) else (s, .ok (.bytes s.buf))
-  | .getbuffer => if s.closed then (s, .error closedErr)
-      -- bytesiobuf_getbuffer_lock_held (bytesio.c:1236-1254) unshares first
-      else ({ s with exports := s.exports + 1, shared := false }, .ok .none)
+  | .getbuffer => if s.closed then (s, .error closedErr) else (takeView s, .ok .none)
   | .release => (bRelease s, .ok .none)
   | .close => if s.exports > 0 then (s, .error bufferError)
       else ({ s with closed := true, buf := [] }, .ok .none)
@@ -235,7 +247,7 @@ end C
 
 namespace P
 
-/-- `BytesIO.read`, _pyio.py@3.14.7:915-934 (`read1` calls it, :950-953). -/
+/-- `BytesIO.read`, _pyio.py:927-948 (`read1` calls it, :950-953). -/
 def readRaw (s : BState) (size : Option Int) : BState × Py (List Nat) :=
   if s.closed then (s, .error (.valueError "read from closed file")) else
   let size : Int := size.getD (-1)
@@ -248,7 +260,7 @@ def read (s : BState) (size : Option Int) : BState × Py Val :=
   let (s', r) := readRaw s size
   (s', r.map .bytes)
 
-/-- The loop of `IOBase.readline`, _pyio.py@3.14.7:545-553: `BytesIO` has no `peek`,
+/-- The loop of `IOBase.readline`, _pyio.py:546-553: `BytesIO` has no `peek`,
 so `nreadahead()` is 1 and the loop reads one byte at a time. -/
 def readlineLoop (size : Int) : BState → List Nat → Nat → BState × Py (List Nat)
   | s, _, 0 => (s, .error .modelFuel)
@@ -262,7 +274,7 @@ def readlineLoop (size : Int) : BState → List Nat → Nat → BState × Py (Li
         if res.getLast? = some 10 then (s', .ok res) else readlineLoop size s' res fuel
     else (s, .ok res)
 
-/-- `IOBase.readline`, _pyio.py@3.14.7:513-553. -/
+/-- `IOBase.readline`, _pyio.py:513-553. -/
 def readlineRaw (s : BState) (size : Option Int) : BState × Py (List Nat) :=
   readlineLoop (size.getD (-1)) s [] (s.buf.length - s.pos + 2)
 
@@ -306,7 +318,7 @@ def readinto (s : BState) (n : Nat) : BState × Py Val :=
   | (s', .error e) => (s', .error e)
   | (s', .ok d) => (s', .ok (.list [.int d.length, .bytes (d ++ List.replicate (n - d.length) 255)]))
 
-/-- `BytesIO.write`, _pyio.py@3.14.7:941-958. `bytearray.resize(pos)` converts `pos`
+/-- `BytesIO.write`, _pyio.py:955-973. `bytearray.resize(pos)` converts `pos`
 to `Py_ssize_t`, refuses to resize an exported buffer and allocates; the
 slice assignment does the same when it grows the buffer. -/
 def write (s : BState) (b : List Nat) : BState × Py Val :=

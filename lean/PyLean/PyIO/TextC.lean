@@ -5,7 +5,7 @@ import PyLean.PyIO.BufRaw
 import PyLean.PyIO.StringC
 
 /-!
-`Modules/_io/textio.c`: the C `TextIOWrapper` over a C `BytesIO`, CPython 3.14.7.
+`Modules/_io/textio.c`: the C `TextIOWrapper` over a C `BytesIO`, CPython 3.15.2.
 
 `TC` holds the fields of `textio` (textio.c:669-729). The encoders are the
 specialized ones of textio.c:806-882; decoding covers utf-8, ascii and latin-1
@@ -109,11 +109,12 @@ abbrev TM := SM TC
 
 namespace TCm
 
+/-- `CHECK_ATTACHED`, textio.c:1608-1614; `buffer_access_safe` (:740-758) raises the
+same two errors when it finds `self->buffer` NULL. -/
 def checkAttached : TM Unit := do
   let t ← SM.get
-  if !t.ok then
-    thr (.valueError (if t.detached then "underlying buffer has been detached"
-      else "I/O operation on uninitialized object"))
+  if !t.ok then thr (.valueError "I/O operation on uninitialized object")
+  if t.detached then thr (.valueError "underlying buffer has been detached")
 
 /-- `CHECK_CLOSED`, textio.c:1600-1610. -/
 def checkClosed : TM Unit := do
@@ -533,11 +534,11 @@ def close : TM Val := do
   | .ok _, .error e => thr e
   | .ok _, .ok _ => pure .none
 
-/-- `_io_TextIOWrapper_detach_impl`, textio.c:1634-1649. -/
+/-- `_io_TextIOWrapper_detach_impl`, textio.c:1634-1649: `_PyFile_Flush(self)` comes
+first, and `flush` is what raises on an unattached object. -/
 def detach : TM Val := do
-  checkAttached
   let _ ← flush
-  SM.mod fun t => { t with detached := true, ok := false }
+  SM.mod fun t => { t with detached := true }
   pure .none
 
 /-- `set_newline` and `_io_TextIOWrapper___init___impl`, textio.c:926-959, :1170-1335. -/

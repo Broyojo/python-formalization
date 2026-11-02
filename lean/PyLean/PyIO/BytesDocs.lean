@@ -75,10 +75,10 @@ theorem C_write_ok (s : BState) (b : List Nat) (v : Val) (h : (C.write s b).2 = 
   · rw [if_pos c1] at h; simp at h
   rw [if_neg c1] at h ⊢
   by_cases c2 : s.pos + b.length > s.buf.length ∧ ((s.pos + b.length : Nat) : Int) = ssizeMax
-  · rw [if_pos c2] at h; split at h <;> simp at h
+  · rw [if_pos c2] at h; simp at h
   rw [if_neg c2] at h ⊢
   by_cases c3 : s.pos + b.length > s.buf.length ∧ s.pos + b.length ≥ memLimit
-  · rw [if_pos c3] at h; split at h <;> simp at h
+  · rw [if_pos c3] at h; simp at h
   rw [if_neg c3] at h ⊢
   simp at h
   simp [hb']; exact h.symm

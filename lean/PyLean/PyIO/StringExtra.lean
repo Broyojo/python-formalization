@@ -12,12 +12,14 @@ namespace PyLean.PyIO
 
 open PyLean
 
-/-- `setstate v nl p` is `__setstate__((v, nl, p, None))`. -/
+/-- `setstate v nl p` is `__setstate__((v, nl, p, None))`; `truncateObj a` is
+`truncate` of an object that is not an `int`, on a realized stream. -/
 inductive SXOp where
   | readable | writable | seekable | flush | isatty | fileno | detach
   | encoding | errors | lineBuffering | name
   | getstate
   | setstate (v : Option (List Nat)) (nl : Option (List Nat)) (pos : Int)
+  | truncateObj (a : TArg)
   deriving Repr, DecidableEq, Inhabited
 
 namespace SC
@@ -35,6 +37,50 @@ def setstate (s : SCState) (v nl : Option (List Nat)) (pos : Int) : SCState × P
     | .ok p =>
       if p < 0 then (t, .error (.valueError "position value cannot be negative"))
       else ({ t with pos := p.toNat }, .ok .none)
+
+/-- One action of `__index__`; an exception it raises is swallowed. A `StringIO`
+has no `getbuffer`. -/
+def hookStep (s : SCState) : Hook → SCState
+  | .close => (step s .close).1
+  | .getbuffer => s
+  | .tell => s
+  | .seekAbs p => (step s (.seek p 0)).1
+  | .seekCur => (step s (.seek 0 1)).1
+  | .write b => (step s (.write b)).1
+
+/-- `string_size` once the hooks have run: `close` does not reset it (stringio.c:594-607),
+and nothing that follows `close` gets past `CHECK_CLOSED`. -/
+def sizeAfter : SCState → List Hook → Nat
+  | s, [] => s.buf.length
+  | s, .close :: _ => s.buf.length
+  | s, h :: t => sizeAfter (hookStep s h) t
+
+/-- The process dies: `PyUnicodeWriter_Finish(NULL)` dereferences its argument. -/
+def segv : PyExc := .named "SIGSEGV" ""
+
+/-- `_io_StringIO_truncate_impl`, stringio.c:461-491, for an object. `CHECK_CLOSED`
+(:465) runs before `PyLong_AsLong` (:472) calls `__index__`, and nothing re-checks it.
+`accum` says the stream is in `STATE_ACCUMULATING`: `close` (:601-602) then leaves
+`self->writer` NULL, and `ENSURE_REALIZED` (:484) passes it to `realize` (:155-185).
+`SCState` does not track that state (see `PyIO/StringC.lean`), so the difftest
+realizes the stream first and runs with `accum = false`. -/
+def truncateObj (accum : Bool) (s : SCState) (a : TArg) : SCState × Py Val :=
+  if s.closed then (s, .error closedErr) else
+  match a with
+  | .noIndex t _ => (s, .error (notIndexable t))
+  | .index hook r =>
+    let size0 := sizeAfter s hook
+    let s := hook.foldl hookStep s
+    match r with
+    | none => (s, .error boomErr)
+    | some v =>
+      match asLong v with
+      | .error e => (s, .error e)
+      | .ok n =>
+        if n < 0 then (s, .error (.valueError s!"negative pos value {n}")) else
+        if n < size0 ∧ s.closed ∧ accum then (s, .error segv) else
+        let s := if n < s.buf.length then { s with buf := s.buf.take n.toNat } else s
+        (s, .ok (.int n))
 
 /-- stringio.c:804-842 (`readable`..), :1022-1028 (`line_buffering`), :863-888
 (`__getstate__`); `flush` and `isatty` are `_IOBase`'s (iobase.c:172-185,
@@ -56,6 +102,7 @@ def xstep (s : SCState) : SXOp → SCState × Py Val
       | some n => .str n
       | none => .none), .int s.pos, .none]))
   | .setstate v nl p => setstate s v nl p
+  | .truncateObj a => truncateObj false s a
 
 end SC
 
@@ -78,7 +125,7 @@ def xstep (t : TState) : SXOp → TState × Py Val
   | .encoding | .errors => (t, .ok .none)
   | .lineBuffering => (t, .ok (.bool false))
   | .name => (t, .error (.named "AttributeError" "'BytesIO' object has no attribute 'name'"))
-  | .getstate | .setstate _ _ _ => (t, .ok .none)
+  | .getstate | .setstate _ _ _ | .truncateObj _ => (t, .ok .none)
 
 end TP
 

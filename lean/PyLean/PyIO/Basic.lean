@@ -2,7 +2,7 @@ import PyLean.Core
 
 /-!
 Shared vocabulary for the in-memory I/O models (`Modules/_io/bytesio.c`,
-`Modules/_io/stringio.c`, `Lib/_pyio.py`), CPython 3.14.7.
+`Modules/_io/stringio.c`, `Lib/_pyio.py`), CPython 3.15.2.
 
 Conventions:
 
@@ -66,6 +66,13 @@ def unicodeEncodeError : PyExc := .named "UnicodeEncodeError" "~utf-8 encode err
 /-- Allocation bound (bytes), see the module docstring. -/
 def memLimit : Nat := 2 ^ 48
 
+/-- `_PyBytes_FromSize`, Objects/bytesobject.c:101-105 and its allocation on LP64
+(`PyBytesObject_SIZE` is 33): every path that makes a `bytes` of `n` bytes ends here. -/
+def allocBytes (n : Int) : Py Unit :=
+  if n > ssizeMax - 33 then .error (.overflowError "byte string is too large")
+  else if n ≥ memLimit then .error memoryError
+  else .ok ()
+
 /-! ## C argument conversion (Argument Clinic), LP64 -/
 
 def intMin : Int := -(2 ^ 31)
@@ -96,6 +103,35 @@ def argCInt (v : Int) : Py Int :=
 /-- `PyLong_AsLong` (LP64: same range as `Py_ssize_t`). -/
 def asLong (v : Int) : Py Int :=
   if InSsize v then .ok v else .error (.overflowError "Python int too large to convert to C long")
+
+/-! ## The argument of `truncate` as an arbitrary object -/
+
+/-- One action of the `__index__` of an object passed to `truncate`, on the stream
+being truncated. `__index__` swallows every `Exception` such an action raises. -/
+inductive Hook where
+  | close
+  | getbuffer
+  | tell
+  /-- `seek(p)`. -/
+  | seekAbs (p : Nat)
+  /-- `seek(0, 1)`. -/
+  | seekCur
+  | write (b : List Nat)
+  deriving Repr, DecidableEq, Inhabited
+
+/-- The argument of `truncate` when it is not `None` or an `int`. -/
+inductive TArg where
+  /-- `__index__` runs `hook`, then returns `some v` or raises `ValueError('boom')`. -/
+  | index (hook : List Hook) (v : Option Int)
+  /-- An object with no `__index__`: its type name and `repr`. -/
+  | noIndex (typeName repr : String)
+  deriving Repr, DecidableEq, Inhabited
+
+def boomErr : PyExc := .valueError "boom"
+
+/-- `_PyNumber_Index` on an object with no `__index__`, Objects/abstract.c:1410-1424. -/
+def notIndexable (typeName : String) : PyExc :=
+  .typeError s!"'{typeName}' object cannot be interpreted as an integer"
 
 /-! ## List helpers -/
 

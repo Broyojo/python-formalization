@@ -18,7 +18,13 @@ def bufferedEntries : List Entry := [
     source := "invariant: C accelerator vs pure-Python twin"
     status := .refuted, prop := ``BufferedReaderReadintoTwins, thm := some ``bufferedReaderReadintoTwins_refuted
     bug := some "pyio-bufferedreader-readinto-valueerror"
-    notes := "BufferedReader(BytesIO(b'abcdefghij'), 3): read(1), readinto(bytearray(3)): C returns 3, _pyio raises ValueError because avail is bounded by len(buf) and not by the space left (_pyio.py:1194)." }
+    notes := "BufferedReader(BytesIO(b'abcdefghij'), 3): read(1), readinto(bytearray(3)): C returns 3, _pyio raises ValueError because avail is bounded by len(buf) and not by the space left (_pyio.py:1194)." },
+  { id := "pyio-bufferedreader-readline-bound", pyFile := "Lib/_pyio.py"
+    pyFns := ["IOBase.readline"]
+    statement := "readline(size) with size >= 0 on a _pyio.BufferedReader or BufferedRandom never returns more than size bytes, for every raw stream and every buffer state."
+    source := "Lib/_pyio.py:516 (IOBase.readline: 'at most size bytes will be read'); Doc/library/io.rst (IOBase.readline)"
+    status := .proven, prop := ``PyBufferedReadlineBound, thm := some ``pyBufferedReadlineBound_proven
+    notes := "Goes through the peek branch of nreadahead, which 3.15 bounded by size - len(res); with the 3.14.7 bound, size, it overshoots when a line is built over several peeks." }
 ]
 
 end PyLean.PyIO

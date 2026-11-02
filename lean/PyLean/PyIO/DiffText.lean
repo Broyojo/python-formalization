@@ -70,6 +70,7 @@ def getTXOp (j : Json) : Except String TXOp := do
   | "readable" => return .readable | "writable" => return .writable | "isatty" => return .isatty
   | "fileno" => return .fileno | "name" => return .name | "chunkget" => return .chunkGet
   | "chunkset" => return .chunkSet (← getInt j "v")
+  | "chunkdel" => return .chunkDel | "buffer" => return .buffer
   | "reconfigure" =>
     let nl : Option (Option (List Nat)) ← match j.getObjVal? "hasnl" with
       | .ok (.bool true) => pure (some (← getOptNats j "newline"))
@@ -87,6 +88,7 @@ def getSAny (j : Json) : Except String (SOp ⊕ SXOp) := do
   | "line_buffering" => return .inr .lineBuffering | "name" => return .inr .name
   | "getstate" => return .inr .getstate
   | "setstate" => return .inr (.setstate (← getOptNats j "v") (← getOptNats j "nl") (← getInt j "pos"))
+  | "truncobj" => return .inr (.truncateObj (← getTArg (← field j "a")))
   | _ => return .inl (← getSOp j)
 
 def runText (fn : String) (j : Json) : Option (Except String Json) :=
@@ -114,7 +116,10 @@ def runText (fn : String) (j : Json) : Option (Except String Json) :=
         (er == "surrogatepass") nl (← getBool j "lb") (← getBool j "wt") 8192
       match init with
       | .error e => return encPy (fun (_ : Unit) => Json.null) (.error e)
-      | .ok t => return Json.mkObj [("ok", Json.arr ((runOps TCm.stepOp t ops).2.map (encPy bVal)).toArray)]
+      | .ok t =>
+        -- `TextIOWrapper.__new__(TextIOWrapper)`: `__init__` never ran
+        let t := if (← getBool j "uninit") then { t with ok := false } else t
+        return Json.mkObj [("ok", Json.arr ((runOps TCm.stepOp t ops).2.map (encPy bVal)).toArray)]
     else
       match TP.initW data nl with
       | .error e => return encPy (fun (_ : Unit) => Json.null) (.error e)

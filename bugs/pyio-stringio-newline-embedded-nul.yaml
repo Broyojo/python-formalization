@@ -46,7 +46,7 @@ reproducer: |
 expected: |
   ValueError for every one of these values, as in _pyio.StringIO and io.TextIOWrapper.
 observed: |
-  python3 3.14.7: all six values accepted; '\x00' and '\x00\n' behave as newline='' (lines ['a\n',
+  python3 3.15.2: all six values accepted; '\x00' and '\x00\n' behave as newline='' (lines ['a\n',
   'b\r\n', 'c\r', 'd'], newlines reported), '\n\x00' as '\n', '\r\x00' and '\r\x00junk' as '\r',
   '\r\n\x00' as '\r\n'. _pyio.StringIO and io.TextIOWrapper raise ValueError for all six. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
