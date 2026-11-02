@@ -1483,6 +1483,11 @@ def entries : List Entry := [
     source := "invariant: the setter and Element() enforce it", status := .refuted
     prop := ``Etree.SetstateKeepsAttrib, thm := some ``Etree.setstateKeepsAttrib_refuted
     bug := some "textlibs-etree-setstate-attrib-systemerror" },
+  { id := "textlibs-etree-setstate-entry", pyFile := "Modules/_elementtree.c"
+    pyFns := ["_elementtree_Element___setstate___impl"]
+    statement := "Element.__setstate__ of anything but an exact dict raises TypeError and leaves the element unchanged; a dict holding only tag and attrib stores that attrib."
+    source := "_elementtree.c:1176-1188; the pickle protocol", status := .proven
+    prop := ``Etree.SetstateEntry, thm := some ``Etree.setstateEntry_proven },
   { id := "textlibs-etree-remove-twins", pyFile := "Modules/_elementtree.c"
     pyFns := ["_elementtree_Element_remove_impl"]
     statement := "For every child __eq__, however it raises or changes the children in place, Element.remove of an Element leaves the same children and raises the same exception class in C and in the Python twin (list.remove)."

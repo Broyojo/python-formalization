@@ -114,6 +114,17 @@ def setstateC (s : Slot) (st : State) : Slot × Py Unit :=
     | some .badItem, _ => (some (s.getD none), .error (.typeError "~expected an Element"))
     | _, a => (some a, .ok ())
 
+/-- The argument of `__setstate__`: an exact dict (its keys as `State`), or another object. -/
+inductive StateArg where
+  | dict (st : State)
+  | other
+
+/-- `_elementtree_Element___setstate___impl`, :1176-1188: anything but an exact dict is refused. -/
+def setstateEntryC (s : Slot) (a : StateArg) : Slot × Py Unit :=
+  match a with
+  | .other => (s, .error (.typeError "~Don't know how to unpickle as an Element"))
+  | .dict st => setstateC s st
+
 /-! ## Properties -/
 
 /-- The attrib slot holds NULL, a dict or a frozendict. -/
@@ -155,14 +166,14 @@ theorem attribInvariant_proven : AttribInvariant := by
     · cases a <;> simp_all [setC, getAttribC, SlotOk]
 
 /-- `__setstate__` keeps the invariant too. -/
-def SetstateKeepsAttrib : Prop := ∀ s st, SlotOk s → SlotOk (setstateC s st).1
+def SetstateKeepsAttrib : Prop := ∀ s st, SlotOk s → SlotOk (setstateEntryC s (.dict st)).1
 
 /-- `e.__setstate__({'tag': 'x', 'attrib': ()})` stores a tuple, after which `e.get('k')` raises
 `SystemError`. -/
 theorem setstateKeepsAttrib_refuted : ¬ SetstateKeepsAttrib := by
   intro h
   have := h none ⟨true, some (.other "tuple"), none, false⟩ trivial
-  simp [setstateC, SlotOk] at this
+  simp [setstateEntryC, setstateC, SlotOk] at this
 
 /-- And the failure that follows. -/
 theorem setstate_then_get :
@@ -301,5 +312,14 @@ theorem attribDict_proven : AttribDict := by
       · simp [getAttribC]
       · simp [getAttribC, itemsC]
     · simp [SlotOk] at hs
+
+/-- `__setstate__` of anything but an exact dict raises `TypeError` and changes nothing; on a dict
+whose keys are only `tag` (and `attrib`), it stores the given attrib. -/
+def SetstateEntry : Prop :=
+  (∀ s, setstateEntryC s .other = (s, .error (.typeError "~Don't know how to unpickle as an Element"))) ∧
+  (∀ s a, setstateEntryC s (.dict ⟨true, some a, none, false⟩) = (some (some a), .ok ()))
+
+theorem setstateEntry_proven : SetstateEntry :=
+  ⟨fun _ => rfl, fun _ _ => rfl⟩
 
 end PyLean.TextLibs.Etree
