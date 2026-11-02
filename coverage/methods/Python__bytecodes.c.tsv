@@ -289,10 +289,10 @@ Python/bytecodes.c	3207	3207	opcode:STORE_ATTR_SLOT	macro(STORE_ATTR_SLOT) =	tod
 Python/bytecodes.c	3220	3220	opcode:_SPECIALIZE_COMPARE_OP	specializing op(_SPECIALIZE_COMPARE_OP, (counter/1, left, right -- left, right)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3232	3232	opcode:_COMPARE_OP	op(_COMPARE_OP, (left, right -- res)) {	modelled	bytecode-compare-fused	
 Python/bytecodes.c	3251	3251	opcode:COMPARE_OP	macro(COMPARE_OP) = _SPECIALIZE_COMPARE_OP + _COMPARE_OP;	modelled	bytecode-compare-fused	
-Python/bytecodes.c	3253	3253	opcode:COMPARE_OP_FLOAT	macro(COMPARE_OP_FLOAT) =	todo		changed-in-3.15: the model compares with Lean Float, which no proof can evaluate; needs Binary64
+Python/bytecodes.c	3253	3253	opcode:COMPARE_OP_FLOAT	macro(COMPARE_OP_FLOAT) =	modelled	bytecode-compare-float	
 Python/bytecodes.c	3256	3256	opcode:COMPARE_OP_INT	macro(COMPARE_OP_INT) =	modelled	bytecode-compare-int	
 Python/bytecodes.c	3259	3259	opcode:COMPARE_OP_STR	macro(COMPARE_OP_STR) =	modelled	bytecode-compare-str	
-Python/bytecodes.c	3262	3262	opcode:_COMPARE_OP_FLOAT	op(_COMPARE_OP_FLOAT, (left, right -- res, l, r)) {	todo		changed-in-3.15: the model compares with Lean Float, which no proof can evaluate; needs Binary64
+Python/bytecodes.c	3262	3262	opcode:_COMPARE_OP_FLOAT	op(_COMPARE_OP_FLOAT, (left, right -- res, l, r)) {	modelled	bytecode-compare-float	
 Python/bytecodes.c	3280	3280	opcode:_COMPARE_OP_INT	op(_COMPARE_OP_INT, (left, right -- res, l, r)) {	modelled	bytecode-compare-int	
 Python/bytecodes.c	3302	3302	opcode:_COMPARE_OP_STR	op(_COMPARE_OP_STR, (left, right -- res, l, r)) {	modelled	bytecode-compare-str	
 Python/bytecodes.c	3320	3320	opcode:IS_OP	macro(IS_OP) = _IS_OP + POP_TOP + POP_TOP;	todo		changed-in-3.15: the model compares immediates by value, but `is` on equal large ints or strs is False in CPython

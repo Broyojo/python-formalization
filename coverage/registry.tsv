@@ -1575,6 +1575,7 @@ gen-make-coro-kinds	proven	Objects/genobject.c	make_gen,_Py_MakeCoro
 gen-cr-origin-take	proven	Objects/genobject.c	_PyCoro_ComputeOrigin
 gen-awaitable-iter-result	proven	Objects/genobject.c	_PyCoro_GetAwaitableIter,gen_is_coroutine
 gen-finalize-branches	proven	Objects/genobject.c	gen_finalize
+bytecode-compare-float	proven	Python/bytecodes.c	opcode:COMPARE_OP_FLOAT,opcode:_COMPARE_OP_FLOAT
 bytecode-compare-fused	proven	Python/bytecodes.c	opcode:COMPARE_OP,opcode:_COMPARE_OP
 bytecode-compare-int	proven	Python/bytecodes.c	opcode:COMPARE_OP_INT,opcode:_COMPARE_OP_INT
 bytecode-compare-str	proven	Python/bytecodes.c	opcode:COMPARE_OP_STR,opcode:_COMPARE_OP_STR
@@ -1631,7 +1632,7 @@ bytecode-enum-reduce	open	Objects/enumobject.c	enum_reduce
 bytecode-reversed-setstate	open	Objects/enumobject.c	reversed_setstate,reversed_len
 bytecode-yield-suspends	open	Python/bytecodes.c	opcode:YIELD_VALUE
 bytecode-frame-push-pop	open	Objects/frameobject.c	push_value,pop_value,top_of_stack
-bytecode-lawful-builtin	open	Python/bytecodes.c	
+bytecode-lawful-builtin	proven	Python/bytecodes.c	
 bytecode-gap-str-percent	open	Objects/unicodeobject.c	
 bytecode-gap-float-pow-complex	open	Objects/floatobject.c	
 bytecode-gap-huge-shift	open	Objects/longobject.c	
