@@ -1461,6 +1461,12 @@ def entries : List Entry := [
     source := "invariant: 3.15's setter and Element() refuse other objects", status := .proven
     prop := ``Etree.AttribInvariant, thm := some ``Etree.attribInvariant_proven
     notes := "element_init is not credited: its keyword-attribute path (get_attrib_from_keywords) is not modelled." },
+  { id := "textlibs-etree-copy-shallow", pyFile := "Modules/_elementtree.c"
+    pyFns := ["_elementtree_Element___copy___impl", "Element.__copy__", "Element.makeelement"]
+    statement := "copy.copy of an element, in either twin, has the original's tag, text, tail and children (the same elements, in order) and shows the original's attributes; the Python twin's copy keeps the class."
+    source := "copy module docs: a shallow copy; ElementTree.py:189-194; _elementtree.c:763-797", status := .proven
+    prop := ``Etree.CopyShallow, thm := some ``Etree.copyShallow_proven
+    notes := "Smoke-tested on 3.15.2: 5k elements per twin, subclasses included. That the C copy shares the attrib dict and drops the class is refuted separately (textlibs-etree-copy-shares-attrib)." },
   { id := "textlibs-etree-fast-path-sound", pyFile := "Modules/_elementtree.c"
     pyFns := ["checkpath", "_elementtree_Element_findall_impl"]
     statement := "Whenever checkpath finds no XPath character, the C fast path of findall gives what ElementPath (the Python twin) gives."
