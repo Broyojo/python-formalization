@@ -93,7 +93,7 @@ def internMortal (W : IWorld) (s : ObjId) : IWorld × ObjId := internCommon W s 
 /-- `_PyUnicode_InternImmortal`, which is `PyUnicode_InternImmortal`. -/
 def internImmortal (W : IWorld) (s : ObjId) : IWorld × ObjId := internCommon W s true
 
-/-- A new `str` with this text, as `unicode_result` leaves it: the singletons for the empty string
+/-- A new `str` with this text, as `_PyUnicode_Result` leaves it: the singletons for the empty string
 and for one character of the one-byte kind. -/
 def newStr (W : IWorld) (text : Str) : IWorld × ObjId :=
   match latin1Of text with

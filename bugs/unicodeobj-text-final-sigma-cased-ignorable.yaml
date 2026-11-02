@@ -28,7 +28,7 @@ expected: |
   'ʰς' and 'aσʰ', by the regular expression in the comment.
 observed: |
   'ʰσ' and 'aςʰ'.
-tested: "REPRODUCED on python3 3.14.7 and on main (3.16.0a1+dev) by scripts/check_bugs.py"
+tested: "REPRODUCED on python3 3.15.2 and on main (3.16.0a1+dev) by scripts/check_bugs.py"
 promised_by: |
   Comment at Objects/unicodeobject.c:9812-9816; The Unicode Standard, Table 3-17 (Final_Sigma).
 cause: |

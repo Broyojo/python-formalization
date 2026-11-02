@@ -39,7 +39,7 @@ expected: |
   The same span from both paths.
 observed: |
   (1, 2) inline and (0, 2) through the callback path, for ASCII, Latin-1 and UTF-8.
-tested: "REPRODUCED on python3 3.14.7 by scripts/check_bugs.py; same spans on main (3.16.0a1+dev) by hand"
+tested: "REPRODUCED on python3 3.15.2 by scripts/check_bugs.py; same spans on main (3.16.0a1+dev) by hand"
 promised_by: |
   Internal consistency only: no documentation fixes the span for this case.
 cause: |

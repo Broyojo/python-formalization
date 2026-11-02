@@ -66,8 +66,8 @@ reproducer: |
 expected: |
   Both commands run. A whitespace-only last line contributes nothing, as in textwrap.dedent.
 observed: |
-  3.14.7: the control exits 0 and the command without a final newline dies with SIGSEGV (-11).
-tested: "REPRODUCED on python3 3.14.7 and on main (3.16.0a1+dev) by scripts/check_bugs.py"
+  3.15.2: the control exits 0 and the command without a final newline dies with SIGSEGV (-11).
+tested: "REPRODUCED on python3 3.15.2 and on main (3.16.0a1+dev) by scripts/check_bugs.py"
 promised_by: |
   assert(new_line_len >= 0) at Objects/unicodeobject.c:13708; the comment at :13645-13649
   ("Behaviour is expected to be an exact match of `textwrap.dedent`").

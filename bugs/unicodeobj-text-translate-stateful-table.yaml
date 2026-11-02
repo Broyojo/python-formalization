@@ -39,7 +39,7 @@ expected: |
   No promise exists. If the fast path were fully transparent, 'xy' for the ASCII string.
 observed: |
   'xx' for the ASCII string, 'xyy' for the other.
-tested: "REPRODUCED on python3 3.14.7 by scripts/check_bugs.py; same results on main (3.16.0a1+dev) by hand"
+tested: "REPRODUCED on python3 3.15.2 by scripts/check_bugs.py; same results on main (3.16.0a1+dev) by hand"
 promised_by: |
   Nothing explicit: only the general expectation that a fast path is an optimisation.
 cause: |

@@ -42,12 +42,12 @@ theorem formatLoop_plain (fmtlen fuel : Nat) (s : Str) (ctx : FCtx) (out : Str)
       simp
 
 /-- A format with no `%` gives itself for an empty tuple, and raises `TypeError` for a
-non-empty one. For every such format and every tuple. -/
+non-empty one, saying none was required and how many came. For every such format and tuple. -/
 def PercentNoDirective : Prop :=
   ∀ (fmt : Str) (items : List FObj), (∀ c ∈ fmt, c ≠ 37) →
     pyUnicodeFormat fmt (.tuple items) =
       if items = [] then .ok fmt
-      else .error (.typeError "not all arguments converted during string formatting")
+      else .error (.typeError (notConvertedMsg 0 items.length))
 
 theorem percentNoDirective_proven : PercentNoDirective := by
   intro fmt items h
@@ -57,6 +57,7 @@ theorem percentNoDirective_proven : PercentNoDirective := by
   | nil => simp
   | cons x xs =>
     have : (0 : Int) < ((x :: xs).length : Int) := by simp
-    simp [this]
+    have hn : ¬((xs.length : Int) + 1 < 0) := by omega
+    simp [this, hn]
 
 end PyLean.UnicodeObj
