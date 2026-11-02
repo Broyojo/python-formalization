@@ -1,0 +1,61 @@
+id: textlibs-simplequeue-get-timeout
+title: "SimpleQueue.get(timeout=inf) raises OverflowError even with an item ready (C), and the twins disagree on NaN and tiny negative timeouts"
+priority: P3
+kind: twin-divergence
+module: textlibs
+files: [Modules/_queuemodule.c]
+functions: ["_queue_SimpleQueue_get_impl"]
+summary: |
+  The C SimpleQueue.get converts a blocking timeout with _PyTime_FromSecondsObject before it looks
+  at the queue. So q.put(1); q.get(timeout=float('inf')) raises OverflowError ("timestamp out of
+  range for C PyTime_t") although the item is there; so do 1e300 and 2**63, and NaN raises
+  ValueError. queue.Queue.get and the pure-Python queue._PySimpleQueue return the item in all four
+  cases. The conversion also rounds up: timeout=-1e-10 becomes 0 ns, so C returns the item where
+  the twin raises ValueError("'timeout' must be a non-negative number").
+likelihood: |
+  Moderate for timeout=float('inf') ("wait forever", a common idiom with queue.Queue, which
+  accepts it); low for the others.
+maybe_intended: |
+  Partly: threading.Lock.acquire documents OverflowError above TIMEOUT_MAX. But SimpleQueue's docs
+  say "If timeout is a positive number, it blocks at most timeout seconds", queue.Queue accepts the
+  same values, and the C code carries "XXX Use PyThread_ParseTimeoutArg()".
+reproducer: |
+  import math, queue
+  res = []
+  for Q in (queue.SimpleQueue, queue._PySimpleQueue):
+      out = []
+      for t in (math.inf, -1e-10):
+          q = Q(); q.put(1)
+          try:
+              out.append(q.get(timeout=t))
+          except Exception as e:
+              out.append(type(e).__name__)
+      res.append(out)
+  print('C', res[0], 'Py', res[1])
+  if res[0] == ['OverflowError', 1] and res[1] == [1, 'ValueError']:
+      print('REPRODUCED textlibs-simplequeue-get-timeout')
+expected: |
+  Both return 1 for inf (as queue.Queue does), and agree on -1e-10.
+observed: |
+  python3 3.15.2: C ['OverflowError', 1], Py [1, 'ValueError']. REPRODUCED.
+  main (cpython-main/python.exe): identical. REPRODUCED by check_bugs.py.
+promised_by: |
+  Doc/library/queue.rst, SimpleQueue.get: "If timeout is a positive number, it blocks at most
+  timeout seconds"; the twins (queue.SimpleQueue falls back to _PySimpleQueue) agreeing.
+cause: |
+  Modules/_queuemodule.c:377-400, _queue_SimpleQueue_get_impl: _PyTime_FromSecondsObject with
+  _PyTime_ROUND_CEILING runs first and its errors are returned before RingBuf_IsEmpty is checked;
+  ceiling rounding turns a tiny negative timeout into 0 before the sign test.
+possible_fix: |
+  Check the buffer before converting the timeout (or clamp to PY_TIMEOUT_MAX as
+  PyThread_ParseTimeoutArg does), and test the sign of the original object.
+duplicates:
+  issues: []
+  queries: ["SimpleQueue timeout OverflowError", "SimpleQueue get timeout nan",
+            "_queue SimpleQueue timeout too large", "SimpleQueue large timeout",
+            "bugforge README: no SimpleQueue entry"]
+  note: |
+    Queries run as separate unquoted terms.
+lean:
+  property: PyLean.TextLibs.SQ.GetTwins
+  theorem: PyLean.TextLibs.SQ.getTwins_refuted

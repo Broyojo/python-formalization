@@ -19,6 +19,7 @@ import PyLean.TextLibs.EtreeAttrib
 import PyLean.TextLibs.EtreeRemove
 import PyLean.TextLibs.EtreeCopy
 import PyLean.TextLibs.ZoneinfoBefore
+import PyLean.TextLibs.SimpleQueueGet
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1506,7 +1507,22 @@ def entries : List Entry := [
   { id := "textlibs-zoneinfo-before-twins-narrow", pyFile := "Lib/zoneinfo/_zoneinfo.py", pyFns := []
     statement := "They agree when some type is not DST or the first transition names type 0."
     source := "narrows textlibs-zoneinfo-before-twins", status := .proven
-    prop := ``Zoneinfo.BeforeTwinsNarrow, thm := some ``Zoneinfo.beforeTwinsNarrow_proven }
+    prop := ``Zoneinfo.BeforeTwinsNarrow, thm := some ``Zoneinfo.beforeTwinsNarrow_proven },
+  { id := "textlibs-simplequeue-get-twins", pyFile := "Modules/_queuemodule.c", pyFns := []
+    statement := "On a non-empty SimpleQueue, whenever the Python twin's get returns the waiting item, so does C's."
+    source := "the implementation disagreeing with itself (C and Python twins)", status := .refuted
+    prop := ``SQ.GetTwins, thm := some ``SQ.getTwins_refuted
+    bug := some "textlibs-simplequeue-get-timeout"
+    notes := "Models the non-empty path only (no waiting), so it credits no row." },
+  { id := "textlibs-simplequeue-get-tiny-negative", pyFile := "Modules/_queuemodule.c", pyFns := []
+    statement := "On a non-empty SimpleQueue, C and the twin give the same result for every finite blocking timeout."
+    source := "the implementation disagreeing with itself (C and Python twins)", status := .refuted
+    prop := ``SQ.GetTwinsTinyNegative, thm := some ``SQ.getTwinsTinyNegative_refuted
+    bug := some "textlibs-simplequeue-get-timeout" },
+  { id := "textlibs-simplequeue-get-finite", pyFile := "Modules/_queuemodule.c", pyFns := []
+    statement := "They agree for None and for finite timeouts within PyTime_t that are non-negative or at most -1 ns."
+    source := "narrows textlibs-simplequeue-get-tiny-negative", status := .proven
+    prop := ``SQ.GetTwinsFinite, thm := some ``SQ.getTwinsFinite_proven }
 ]
 
 end PyLean.TextLibs
