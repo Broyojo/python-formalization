@@ -1662,11 +1662,11 @@ textlibs-struct-bool-nonzero	proven	Modules/_struct.c	nu_bool,bu_bool
 textlibs-struct-s-pads	proven	Modules/_struct.c	s_pack_internal
 textlibs-struct-unpack-length	proven	Modules/_struct.c	Struct_unpack_impl,unpack_impl
 textlibs-struct-iter-zero-size	proven	Modules/_struct.c	Struct_iter_unpack_impl,iter_unpack_impl
-textlibs-struct-pack-count	proven	Modules/_struct.c	s_pack
-textlibs-struct-le-complex-float-overflow	refuted	Modules/_struct.c	np_float_complex,bp_float_complex,s_pack,pack
-textlibs-struct-bytes-format-nonascii-error	refuted	Modules/_struct.c	cache_struct_converter,Struct___init___impl,pack
+textlibs-struct-pack-count	proven	Modules/_struct.c	Struct_pack_impl
+textlibs-struct-le-complex-float-overflow	refuted	Modules/_struct.c	np_float_complex,bp_float_complex,Struct_pack_impl,pack_impl
+textlibs-struct-bytes-format-nonascii-error	proven	Modules/_struct.c	cache_struct_converter,set_format,pack_impl
 textlibs-struct-void-p-index-overflow	refuted	Modules/_struct.c	np_void_p,s_pack_internal
-textlibs-struct-pack-into-0p-outside-field	refuted	Modules/_struct.c	s_pack_internal,s_pack_into,pack_into
+textlibs-struct-pack-into-0p-outside-field	open	Modules/_struct.c	
 textlibs-struct-half-round-trip	open	Modules/_struct.c	unpack_halffloat,pack_halffloat,nu_halffloat,np_halffloat
 textlibs-struct-float-round-trip	open	Modules/_struct.c	unpack_float,lu_float,lp_float
 textlibs-struct-prepare-two-passes	proven	Modules/_struct.c	prepare_s,whichtable,getentry
@@ -1676,10 +1676,13 @@ textlibs-struct-scalar-byte-order	proven	Modules/_struct.c	unpack_halffloat,pack
 textlibs-struct-native-float-pack	proven	Modules/_struct.c	np_float
 textlibs-struct-complex-byte-order	proven	Modules/_struct.c	bu_double_complex,lu_double_complex,bp_double_complex,lp_double_complex,nu_double_complex,np_double_complex,lu_float_complex,lp_float_complex,bu_float_complex,bp_float_complex
 textlibs-struct-native-float-snan	refuted	Modules/_struct.c	nu_float
+textlibs-struct-little-is-native	proven	Modules/_struct.c	init_endian_tables
+textlibs-struct-z-codes	proven	Modules/_struct.c	format_equal,getentry,align
+textlibs-struct-life	proven	Modules/_struct.c	s_new,s_init,Struct_impl,set_format,same_format,Struct___init___impl
 textlibs-struct-native-complex-snan	refuted	Modules/_struct.c	nu_float_complex
 textlibs-struct-unpack-from-offsets	proven	Modules/_struct.c	Struct_unpack_from_impl,unpack_from_impl
 textlibs-struct-iter-length	proven	Modules/_struct.c	unpackiter_len,unpackiter_iternext
-textlibs-struct-accessors	proven	Modules/_struct.c	s_get_format,s_get_size,s_sizeof,calcsize_impl
+textlibs-struct-accessors	proven	Modules/_struct.c	Struct___sizeof___impl,calcsize_impl
 textlibs-struct-uninitialized	proven	Modules/_struct.c	s_new
 textlibs-struct-get-pylong	proven	Modules/_struct.c	get_pylong
 textlibs-struct-index-raises	proven	Modules/_struct.c	get_long,get_ulong,get_longlong,get_ulonglong,get_ssize_t,get_size_t
@@ -1688,21 +1691,21 @@ textlibs-struct-bool-raises	proven	Modules/_struct.c	np_bool,bp_bool
 textlibs-struct-float-replaced	proven	Modules/_struct.c	pack_halffloat,np_float,np_double,bp_float,bp_double,lp_float,lp_double
 textlibs-struct-float-order	proven	Modules/_struct.c	pack_halffloat,np_float,np_double
 textlibs-struct-complex-order	proven	Modules/_struct.c	np_float_complex,np_double_complex,bp_float_complex,bp_double_complex,lp_float_complex,lp_double_complex
-textlibs-struct-buffers	proven	Modules/_struct.c	s_pack_into,Struct_unpack_impl
-textlibs-struct-pack-into-order	proven	Modules/_struct.c	s_pack_into
-textlibs-struct-offset-laws	proven	Modules/_struct.c	s_pack_into,Struct_unpack_from_impl
-textlibs-struct-module-order	proven	Modules/_struct.c	unpack_impl,unpack_from_impl,iter_unpack_impl,pack,pack_into
+textlibs-struct-buffers	proven	Modules/_struct.c	Struct_pack_into_impl,Struct_unpack_impl
+textlibs-struct-pack-into-order	proven	Modules/_struct.c	Struct_pack_into_impl
+textlibs-struct-offset-laws	proven	Modules/_struct.c	Struct_pack_into_impl,Struct_unpack_from_impl
+textlibs-struct-module-order	proven	Modules/_struct.c	unpack_impl,unpack_from_impl,iter_unpack_impl,pack_impl,pack_into_impl
 textlibs-struct-unpack-buffer	proven	Modules/_struct.c	Struct_unpack_impl,Struct_unpack_from_impl
 textlibs-struct-iter-order	proven	Modules/_struct.c	Struct_iter_unpack_impl
 textlibs-struct-iter-drive	proven	Modules/_struct.c	unpackiter_iternext
 textlibs-struct-iter-len	proven	Modules/_struct.c	unpackiter_len
-textlibs-struct-reinit-pack	refuted	Modules/_struct.c	s_pack,s_pack_internal
-textlibs-struct-reinit-pack-into	refuted	Modules/_struct.c	s_pack_into,s_pack_internal
+textlibs-struct-reinit-pack	refuted	Modules/_struct.c	Struct_pack_impl,s_pack_internal
+textlibs-struct-reinit-pack-into	refuted	Modules/_struct.c	Struct_pack_into_impl,s_pack_internal
 textlibs-struct-reinit-iter	refuted	Modules/_struct.c	unpackiter_iternext
 textlibs-struct-reinit-iter-len	refuted	Modules/_struct.c	unpackiter_len
 textlibs-struct-range-error	proven	Modules/_struct.c	_range_error
 textlibs-struct-repr	proven	Modules/_struct.c	s_repr
-textlibs-binascii-base64-round-trip	proven	Modules/binascii.c	binascii_a2b_base64_impl,binascii_b2a_base64_impl
+textlibs-binascii-base64-round-trip	proven	Modules/binascii.c	binascii_a2b_base64_impl,binascii_b2a_base64_impl,base64_encode_trio,base64_encode_fast,base64_decode_quad,base64_decode_fast
 textlibs-binascii-base64-lenient-filter	proven	Modules/binascii.c	binascii_a2b_base64_impl
 textlibs-binascii-base64-strict-implies-lenient	proven	Modules/binascii.c	binascii_a2b_base64_impl
 textlibs-binascii-base64-length	proven	Modules/binascii.c	binascii_b2a_base64_impl
@@ -1727,14 +1730,20 @@ textlibs-binascii-flag-order	proven	Modules/binascii.c	binascii_b2a_base64_impl,
 textlibs-base64-decode-data	proven	Lib/base64.py	_bytes_from_decode_data
 textlibs-base64-b16-round-trip	proven	Lib/base64.py	b16encode,b16decode
 textlibs-base64-urlsafe-round-trip	proven	Lib/base64.py	urlsafe_b64encode,urlsafe_b64decode
-textlibs-base64-b85-round-trip	proven	Lib/base64.py	_85encode,b85encode,b85decode
+textlibs-base64-b85-round-trip	proven	Lib/base64.py	b85encode,b85decode
 textlibs-base64-z85-round-trip	proven	Lib/base64.py	z85encode,z85decode
-textlibs-base64-a85-round-trip	proven	Lib/base64.py	_85encode,a85encode,a85decode
+textlibs-base64-a85-round-trip	proven	Lib/base64.py	a85encode,a85decode
+textlibs-binascii-base32-round-trip	proven	Modules/binascii.c	binascii_a2b_base32_impl,binascii_b2a_base32_impl,base32_encode_quint,base32_encode_fast,base32_decode_octa,base32_decode_fast,get_reverse_table
+textlibs-binascii-base85-round-trip	proven	Modules/binascii.c	binascii_a2b_base85_impl,binascii_b2a_base85_impl,get_reverse_table
+textlibs-binascii-ascii85-round-trip	proven	Modules/binascii.c	binascii_a2b_ascii85_impl,binascii_b2a_ascii85_impl
+textlibs-binascii-reverse-tables	proven	Modules/binascii.c	_Py_ALIGNED_DEF
+textlibs-binascii-hex-ignorechars	proven	Modules/binascii.c	binascii_a2b_hex_impl,binascii_unhexlify_impl,ignorechar
+textlibs-binascii-wraplines	proven	Modules/binascii.c	wraplines
 textlibs-base64-a85-wrap-round-trip	open	Lib/base64.py	
-textlibs-base64-b32-round-trip	proven	Lib/base64.py	_b32encode,_b32decode,b32encode,b32decode,b32hexencode,b32hexdecode
-textlibs-base64-b32-option-law	proven	Lib/base64.py	_b32decode,b32decode
+textlibs-base64-b32-round-trip	proven	Lib/base64.py	b32encode,b32decode,b32hexencode,b32hexdecode
+textlibs-base64-b32-option-law	proven	Lib/base64.py	b32decode
 textlibs-base64-encodebytes-round-trip	proven	Lib/base64.py	encodebytes,decodebytes
-textlibs-base64-encodebytes-line-length	proven	Lib/base64.py	encodebytes
+textlibs-base64-encodebytes-line-length	proven	Lib/base64.py	encodebytes,wraplines
 textlibs-base64-encode-file-law	proven	Lib/base64.py	encode
 textlibs-base64-encode-file-agrees	proven	Lib/base64.py	encode
 textlibs-base64-encode-empty-read	proven	Lib/base64.py	encode
@@ -1930,6 +1939,7 @@ coll-counter-ops-pointwise	proven	Lib/collections/__init__.py	Counter.__add__,Co
 coll-counter-ops-contract	proven	Lib/collections/__init__.py	Counter.__add__,Counter.__sub__,Counter.__or__,Counter.__and__,Counter.__pos__,Counter.__neg__
 coll-counter-unary-binary	proven	Lib/collections/__init__.py	Counter.__pos__,Counter.__neg__
 coll-counter-inplace	proven	Lib/collections/__init__.py	Counter.__iadd__,Counter.__isub__,Counter.__ior__,Counter.__iand__,Counter._keep_positive
+coll-counter-xor	proven	Lib/collections/__init__.py	
 coll-counter-keep-positive	proven	Lib/collections/__init__.py	Counter._keep_positive
 coll-counter-set-correspondence	proven	Lib/collections/__init__.py	Counter.__add__,Counter.__sub__,Counter.__or__,Counter.__and__,Counter.__eq__,Counter.__ne__,Counter.__le__,Counter.__lt__,Counter.__ge__,Counter.__gt__
 coll-counter-most-common-prefix	proven	Lib/collections/__init__.py	Counter.most_common
@@ -1945,8 +1955,7 @@ coll-userdict-matches-dict	proven	Lib/collections/__init__.py	UserDict.__len__,U
 coll-userdict-set-del	proven	Lib/collections/__init__.py	UserDict.__setitem__,UserDict.__delitem__
 coll-userdict-constructors-union	proven	Lib/collections/__init__.py	UserDict.__init__,UserDict.__or__,UserDict.__ror__,UserDict.__ior__,UserDict.__copy__,UserDict.copy,UserDict.fromkeys
 coll-userdict-clear-repr	proven	Lib/collections/__init__.py	UserDict.__repr__
-coll-userdict-popitem-lifo	refuted	Lib/collections/__init__.py	UserDict.popitem
-coll-userdict-popitem-narrow	proven	Lib/collections/__init__.py	UserDict.popitem
+coll-userdict-popitem-lifo	proven	Lib/collections/__init__.py	UserDict.popitem
 coll-userdict-reversible	refuted	Lib/collections/__init__.py	UserDict.__reversed__
 coll-userdict-missing-like-dict	refuted	Lib/collections/__init__.py	UserDict.__getitem__,UserDict.__contains__,UserDict.get
 coll-userdict-missing-narrow	proven	Lib/collections/__init__.py	UserDict.__contains__,UserDict.get
@@ -1997,6 +2006,7 @@ corelibs-collabc-mapping-eq	proven	Lib/_collections_abc.py	Mapping.__eq__
 corelibs-collabc-mutablemapping	proven	Lib/_collections_abc.py	MutableMapping.pop,MutableMapping.popitem,MutableMapping.clear,MutableMapping.update,MutableMapping.setdefault
 corelibs-collabc-set-hash	proven	Lib/_collections_abc.py	Set._hash
 corelibs-collabc-bytestring-meta	proven	Lib/_collections_abc.py	
+corelibs-collabc-module-getattr	proven	Lib/_collections_abc.py	__getattr__
 corelibs-collabc-throw-paths	proven	Lib/_collections_abc.py	Coroutine.throw,Generator.throw,AsyncGenerator.athrow
 corelibs-collabc-mapping-paths	proven	Lib/_collections_abc.py	Mapping.get,Mapping.__contains__,ItemsView.__contains__
 corelibs-collabc-mmap-paths	proven	Lib/_collections_abc.py	MutableMapping.pop,MutableMapping.popitem,MutableMapping.setdefault,MutableMapping.update
@@ -2059,12 +2069,18 @@ corelibs-functools-partial-new-twins	proven	Lib/functools.py	_partial_new,partia
 corelibs-functools-partial-new-twins-always	refuted	Lib/functools.py	_partial_new,partial_new
 corelibs-functools-partial-calls-wrapped	refuted	Lib/functools.py	partial_new
 corelibs-functools-partial-nested-positional	proven	Lib/functools.py	_partial_new,partial.__call__
-corelibs-functools-partial-call-twins	proven	Lib/functools.py	partial.__call__,partial_call,partial_vectorcall,partial_vectorcall_fallback,partial_setvectorcall
+corelibs-functools-partial-call-twins	proven	Lib/functools.py	partial.__call__,partial_call,partial_vectorcall,partial_setvectorcall
 corelibs-functools-partial-get	proven	Lib/functools.py	partial.__get__,partial_descr_get,lru_cache_descr_get
 corelibs-functools-partial-state-twins	proven	Lib/functools.py	partial.__setstate__,partial_setstate
 corelibs-functools-partial-state-phcount	refuted	Lib/functools.py	partial_setstate
 corelibs-functools-partial-call-in-bounds-always	refuted	Lib/functools.py	partial_setstate,partial_call,partial_vectorcall
 corelibs-functools-partial-vectorcall-writes	refuted	Lib/functools.py	partial_setstate,partial_vectorcall
+corelibs-functools-partial-vectorcall-fast	proven	Lib/functools.py	partial_vectorcall
+corelibs-functools-partial-vectorcall-offset	proven	Lib/functools.py	partial_vectorcall
+corelibs-functools-partial-vectorcall-keywords	proven	Lib/functools.py	partial_vectorcall
+corelibs-functools-partial-vectorcall-kw-writes	refuted	Lib/functools.py	partial_vectorcall
+corelibs-functools-partial-vectorcall-kw-names	refuted	Lib/functools.py	partial_vectorcall
+corelibs-functools-partial-vectorcall-keeps-kw	refuted	Lib/functools.py	partial_vectorcall
 corelibs-functools-partial-call-in-bounds	proven	Lib/functools.py	partial_call,partial_vectorcall
 corelibs-functools-partial-reduce-round-trip	proven	Lib/functools.py	partial.__reduce__,partial_reduce
 corelibs-functools-partial-repr-twins	proven	Lib/functools.py	_partial_repr,partial_repr
@@ -2083,14 +2099,17 @@ corelibs-functools-lru-twins-empty	proven	Lib/functools.py	_lru_cache_wrapper.ca
 corelibs-functools-lru-failed-store	refuted	Lib/functools.py	_lru_cache_wrapper.wrapper,bounded_lru_cache_update_lock_held
 corelibs-functools-lru-evict-failure	proven	Lib/functools.py	lru_cache_prepend_link,bounded_lru_cache_update_lock_held
 corelibs-functools-lru-bounded	proven	Lib/functools.py	bounded_lru_cache_update_lock_held,lru_cache_new
+corelibs-functools-cache-builds	proven	Lib/functools.py	cache
+corelibs-lru-never-exceeds-maxsize	refuted	Lib/functools.py	_lru_cache_wrapper,bounded_lru_cache_update_lock_held
+corelibs-lru-excess-stays	proven	Lib/functools.py	_lru_cache_wrapper,bounded_lru_cache_update_lock_held
 corelibs-functools-lru-recheck	proven	Lib/functools.py	_lru_cache_wrapper.wrapper,bounded_lru_cache_update_lock_held
 corelibs-functools-lru-infinite	proven	Lib/functools.py	infinite_lru_cache_wrapper,_lru_cache_wrapper.wrapper
 corelibs-functools-lru-failure-not-cached	proven	Lib/functools.py	bounded_lru_cache_wrapper,infinite_lru_cache_wrapper
 corelibs-functools-lru-transparent	proven	Lib/functools.py	uncached_lru_cache_wrapper,infinite_lru_cache_wrapper,bounded_lru_cache_wrapper
 corelibs-functools-lru-mode-twins	proven	Lib/functools.py	lru_cache,lru_cache_new
-corelibs-functools-lru-decorates	proven	Lib/functools.py	lru_cache,lru_cache.decorating_function,cache
+corelibs-functools-lru-decorates	proven	Lib/functools.py	lru_cache,lru_cache.decorating_function
 corelibs-functools-lru-maxsize-overflow	refuted	Lib/functools.py	lru_cache_new
-corelibs-functools-lru-noncallable	refuted	Lib/functools.py	lru_cache_new
+corelibs-functools-lru-noncallable	proven	Lib/functools.py	lru_cache_new,_lru_cache_wrapper
 corelibs-functools-lru-recency	open	Lib/functools.py	
 corelibs-functools-c3-merge	proven	Lib/functools.py	_c3_merge
 corelibs-functools-c3-mro-abcs	proven	Lib/functools.py	_c3_mro
@@ -2118,8 +2137,8 @@ corelibs-functools-sdm-name	proven	Lib/functools.py	singledispatchmethod.__repr_
 corelibs-functools-sdm-repr-shape	proven	Lib/functools.py	singledispatchmethod.__repr__,_singledispatchmethod_get.__repr__
 corelibs-functools-sdm-getattr	proven	Lib/functools.py	_singledispatchmethod_get.__getattr__
 corelibs-functools-sdm-call	proven	Lib/functools.py	_singledispatchmethod_get.__call__
-corelibs-functools-sdm-register	proven	Lib/functools.py	singledispatchmethod.register,_singledispatchmethod_get.register
-corelibs-functools-sdm-callable	refuted	Lib/functools.py	singledispatchmethod.__init__,_singledispatchmethod_get.__call__
+corelibs-functools-sdm-register	proven	Lib/functools.py	singledispatchmethod.register
+corelibs-functools-sdm-callable	proven	Lib/functools.py	singledispatchmethod.__init__,_singledispatchmethod_get.__call__
 corelibs-functools-sdm-get	proven	Lib/functools.py	singledispatchmethod.__get__,_singledispatchmethod_get.__init__
 corelibs-lru-twins-reentrant-eq	refuted	Lib/functools.py	_lru_cache_wrapper,bounded_lru_cache_update_lock_held,bounded_lru_cache_wrapper
 corelibs-lru-orphan-reached	proven	Lib/functools.py	_lru_cache_wrapper,_functools__lru_cache_wrapper_cache_info_impl,lru_cache_append_link
@@ -2177,7 +2196,7 @@ corelibs-abc-check-order	proven	Lib/abc.py	ABCMeta.__subclasscheck__
 corelibs-abc-register-invalidates	proven	Lib/abc.py	ABCMeta.register
 corelibs-abc-second-check	proven	Lib/abc.py	ABCMeta.__subclasscheck__
 corelibs-abc-register	proven	Lib/abc.py	ABCMeta.register
-corelibs-abc-instance-check	proven	Lib/abc.py	ABCMeta.__instancecheck__
+corelibs-abc-instance-check	proven	Lib/abc.py	ABCMeta.__instancecheck__,_abc__abc_instancecheck_impl
 corelibs-abc-abstract-twins	proven	Lib/abc.py	ABCMeta.__new__,update_abstractmethods
 corelibs-abc-abstract-inherited	proven	Lib/abc.py	update_abstractmethods
 corelibs-operator-first-step-wins	proven	Lib/operator.py	add,mul,pow,_operator_add_impl,_operator_mul_impl,_operator_pow_impl
@@ -2201,6 +2220,7 @@ corelibs-copy-dict-exact	proven	Lib/copy.py	_deepcopy_dict,deepcopy
 corelibs-copy-order	proven	Lib/copy.py	_deepcopy_dict,_deepcopy_list,_reconstruct
 corelibs-copy-aliasing	proven	Lib/copy.py	_deepcopy_list,deepcopy
 corelibs-copy-tuple-exact	proven	Lib/copy.py	_deepcopy_tuple
+corelibs-copy-frozendict	proven	Lib/copy.py	_deepcopy_frozendict
 corelibs-copy-reconstruct-deep	proven	Lib/copy.py	_reconstruct
 corelibs-copy-reconstruct-memo-first	proven	Lib/copy.py	_reconstruct,deepcopy
 corelibs-copy-recon-rest	proven	Lib/copy.py	_reconstruct
@@ -2208,6 +2228,9 @@ corelibs-abc-fallthrough	proven	Lib/abc.py	ABCMeta.__subclasscheck__
 corelibs-abc-invalidation	proven	Lib/abc.py	ABCMeta.__subclasscheck__
 corelibs-abc-scan-exact	proven	Lib/abc.py	ABCMeta.__new__,update_abstractmethods
 corelibs-abc-abstract-exact	proven	Lib/abc.py	ABCMeta.__new__,update_abstractmethods
+corelibs-dc-annotation	proven	Lib/dataclasses.py	_get_type_from_annotation
+corelibs-dc-auto-doc	proven	Lib/dataclasses.py	_AutoDocstring.__get__
+corelibs-dc-asdict-frozendict	proven	Lib/dataclasses.py	_asdict_inner,_astuple_inner
 corelibs-dc-get-field	proven	Lib/dataclasses.py	_get_field,field
 corelibs-dc-fields-put	proven	Lib/dataclasses.py	
 corelibs-dc-init-check	proven	Lib/dataclasses.py	_init_fn
@@ -2307,7 +2330,7 @@ misc-queue-timeout-validation	proven	Lib/queue.py	Queue.put,Queue.get
 misc-queue-timed-outcome	proven	Lib/queue.py	Queue.put,Queue.get
 misc-queue-shutdown	proven	Lib/queue.py	Queue.shutdown
 misc-simplequeue-twins-blocking	proven	Lib/queue.py	_PySimpleQueue.__init__,_PySimpleQueue.put,_PySimpleQueue.get,_PySimpleQueue.put_nowait,_PySimpleQueue.get_nowait,_PySimpleQueue.empty,_PySimpleQueue.qsize
-misc-simplequeue-twins	refuted	Lib/queue.py	_PySimpleQueue.get
+misc-simplequeue-twins	proven	Lib/queue.py	_PySimpleQueue.get
 misc-numbers-sub-rsub	proven	Lib/numbers.py	Complex.__sub__,Complex.__rsub__
 misc-numbers-sub-neg-first	proven	Lib/numbers.py	Complex.__sub__,Complex.__rsub__
 misc-numbers-bool	proven	Lib/numbers.py	Complex.__bool__
@@ -2329,11 +2352,12 @@ misc-types-dca-accessors	proven	Lib/types.py	DynamicClassAttribute.__init__,Dyna
 misc-types-dca-doc	proven	Lib/types.py	DynamicClassAttribute.__init__,DynamicClassAttribute.getter
 misc-types-dca-descriptor	proven	Lib/types.py	DynamicClassAttribute.__get__,DynamicClassAttribute.__set__,DynamicClassAttribute.__delete__
 misc-types-generator-wrapper	proven	Lib/types.py	_GeneratorWrapper.__init__,_GeneratorWrapper.send,_GeneratorWrapper.throw,_GeneratorWrapper.close,_GeneratorWrapper.gi_code,_GeneratorWrapper.gi_frame,_GeneratorWrapper.gi_running,_GeneratorWrapper.gi_yieldfrom,_GeneratorWrapper.gi_suspended,_GeneratorWrapper.__next__,_GeneratorWrapper.__iter__
+misc-types-generator-states	proven	Lib/types.py	_GeneratorWrapper.gi_state,_GeneratorWrapper.cr_state
 misc-types-coroutine	proven	Lib/types.py	coroutine
 misc-types-coroutine-wrapped	proven	Lib/types.py	coroutine
 misc-ctx-abstract-bases	proven	Lib/contextlib.py	AbstractContextManager.__enter__,AbstractContextManager.__exit__,AbstractContextManager.__subclasshook__,AbstractAsyncContextManager.__aenter__,AbstractAsyncContextManager.__aexit__,AbstractAsyncContextManager.__subclasshook__
 misc-ctx-subclasshook-none	proven	Lib/contextlib.py	AbstractContextManager.__subclasshook__,AbstractAsyncContextManager.__subclasshook__
-misc-ctx-decorator	proven	Lib/contextlib.py	ContextDecorator._recreate_cm,ContextDecorator.__call__,AsyncContextDecorator._recreate_cm,AsyncContextDecorator.__call__
+misc-ctx-decorator	proven	Lib/contextlib.py	ContextDecorator._recreate_cm,AsyncContextDecorator._recreate_cm
 misc-ctx-recreate	proven	Lib/contextlib.py	_GeneratorContextManagerBase.__init__,_GeneratorContextManagerBase._recreate_cm,contextmanager,asynccontextmanager
 misc-ctx-enter	proven	Lib/contextlib.py	_GeneratorContextManager.__enter__,_AsyncGeneratorContextManager.__aenter__
 misc-ctx-exit-no-exception	proven	Lib/contextlib.py	_GeneratorContextManager.__exit__,_AsyncGeneratorContextManager.__aexit__
@@ -2351,8 +2375,9 @@ misc-ctx-exit-matches-nested	proven	Lib/contextlib.py	ExitStack.__exit__
 misc-ctx-exit-lifo	proven	Lib/contextlib.py	ExitStack.__exit__
 misc-ctx-exit-terminates	refuted	Lib/contextlib.py	ExitStack.__exit__,AsyncExitStack.__aexit__
 misc-ctx-exit-keeps-context-acyclic	refuted	Lib/contextlib.py	ExitStack.__exit__,AsyncExitStack.__aexit__
-misc-ctx-stack-registration	proven	Lib/contextlib.py	_BaseExitStack.__init__,_BaseExitStack.pop_all,_BaseExitStack.push,_BaseExitStack.enter_context,_BaseExitStack.callback,_BaseExitStack._push_cm_exit,_BaseExitStack._push_exit_callback,ExitStack.__enter__,AsyncExitStack.__aenter__,AsyncExitStack.enter_async_context,AsyncExitStack.push_async_exit,AsyncExitStack.push_async_callback,AsyncExitStack._push_async_cm_exit
-misc-ctx-callback-cannot-suppress	proven	Lib/contextlib.py	_BaseExitStack._create_cb_wrapper,_BaseExitStack._create_exit_wrapper,AsyncExitStack._create_async_cb_wrapper,AsyncExitStack._create_async_exit_wrapper
+misc-ctx-stack-registration	proven	Lib/contextlib.py	_BaseExitStack.__init__,_BaseExitStack.pop_all,_BaseExitStack.push,_BaseExitStack.enter_context,_BaseExitStack.callback,_BaseExitStack._push_exit_callback,ExitStack.__enter__,AsyncExitStack.__aenter__,AsyncExitStack.enter_async_context,AsyncExitStack.push_async_exit,AsyncExitStack.push_async_callback
+misc-ctx-lookup-special	proven	Lib/contextlib.py	_lookup_special
+misc-ctx-callback-cannot-suppress	proven	Lib/contextlib.py	_BaseExitStack._create_cb_wrapper,AsyncExitStack._create_async_cb_wrapper
 misc-ctx-async-exit-matches	proven	Lib/contextlib.py	AsyncExitStack.__aexit__,AsyncExitStack.aclose,ExitStack.close
 misc-wvd-reads	proven	Lib/weakref.py	WeakValueDictionary.__getitem__,WeakValueDictionary.__len__,WeakValueDictionary.__contains__,WeakValueDictionary.__repr__,WeakValueDictionary.get,WeakValueDictionary.items,WeakValueDictionary.keys,WeakValueDictionary.itervaluerefs,WeakValueDictionary.values,WeakValueDictionary.valuerefs
 misc-wvd-death	proven	Lib/weakref.py	WeakValueDictionary.__init__,KeyedRef.__new__,KeyedRef.__init__
@@ -2403,10 +2428,18 @@ calstat-calendar-formatstring-width	proven	calendar.py	formatstring,format
 calstat-calendar-formatmonth-lines	proven	calendar.py	TextCalendar.formatmonth,TextCalendar.prmonth
 calstat-calendar-formatmonthname	proven	calendar.py	TextCalendar.formatmonthname,HTMLCalendar.formatmonthname
 calstat-calendar-formatyear-lines	proven	calendar.py	TextCalendar.formatyear,TextCalendar.pryear
-calstat-calendar-text-year-months	proven	calendar.py	TextCalendar.formatyear,_CLIDemoCalendar.formatyear
+calstat-calendar-text-year-months	proven	calendar.py	TextCalendar.formatyear
 calstat-calendar-formatyear-month-count	proven	calendar.py	TextCalendar.formatyear,HTMLCalendar.formatyear
-calstat-calendar-demo-is-text	proven	calendar.py	_CLIDemoCalendar.__init__,_CLIDemoCalendar.formatweek,_CLIDemoCalendar.formatmonth,_CLIDemoCalendar.formatyear,_CLIDemoLocaleCalendar.__init__
-calstat-calendar-demo-year-column	proven	calendar.py	_CLIDemoCalendar.formatyear
+calstat-calendar-demo-colours	proven	calendar.py	_CLIDemoCalendar.formatday,_CLIDemoCalendar.formatweekheader,_CLIDemoCalendar.formatmonthname
+calstat-calendar-demo-week-exact	proven	calendar.py	_CLIDemoCalendar.formatweek,TextCalendar.formatday,TextCalendar.formatweek
+calstat-calendar-text-weekday-exact	proven	calendar.py	TextCalendar.formatweekday
+calstat-calendar-monthname-exact	proven	calendar.py	TextCalendar.formatmonthname,HTMLCalendar.formatmonthname
+calstat-calendar-html-cells-exact	proven	calendar.py	HTMLCalendar.formatday,HTMLCalendar.formatweek,HTMLCalendar.formatweekday,HTMLCalendar.formatweekheader
+calstat-calendar-html-month-exact	proven	calendar.py	HTMLCalendar.formatmonth
+calstat-calendar-html-year-exact	proven	calendar.py	HTMLCalendar.formatyear
+calstat-calendar-html-page-exact	proven	calendar.py	HTMLCalendar._format_html_page,HTMLCalendar.formatyearpage,HTMLCalendar.formatmonthpage
+calstat-calendar-demo-is-text	proven	calendar.py	_CLIDemoCalendar.__init__,_CLIDemoCalendar.formatweek,_CLIDemoCalendar.formatmonth,_CLIDemoLocaleCalendar.__init__
+calstat-calendar-demo-year-column	proven	calendar.py	
 calstat-calendar-html-month-lines	proven	calendar.py	HTMLCalendar.formatday,HTMLCalendar.formatweek,HTMLCalendar.formatweekday,HTMLCalendar.formatweekheader,HTMLCalendar.formatmonth
 calstat-calendar-html-year-months	proven	calendar.py	HTMLCalendar.formatyear
 calstat-calendar-xmlcharref-ascii	proven	calendar.py	HTMLCalendar.formatyearpage
@@ -2447,6 +2480,9 @@ calstat-statistics-quantiles-exclusive	proven	statistics.py	quantiles
 calstat-statistics-quantiles-shape	proven	statistics.py	quantiles
 calstat-statistics-quantiles-method	refuted	statistics.py	quantiles
 calstat-statistics-fmean-checks	proven	statistics.py	fmean
+calstat-statistics-fmean-exact	proven	statistics.py	fmean
+calstat-statistics-geometric-exact	proven	statistics.py	geometric_mean
+calstat-statistics-pdf-exact	proven	statistics.py	NormalDist.pdf
 calstat-statistics-geometric-checks	proven	statistics.py	geometric_mean
 calstat-statistics-two-input-checks	proven	statistics.py	covariance,correlation,linear_regression
 calstat-statistics-correlation-constant	refuted	statistics.py	correlation,linear_regression

@@ -30,7 +30,7 @@ Lib/collections/__init__.py	540	544	_count_elements	_count_elements(mapping, ite
 Lib/collections/__init__.py	605	617	Counter.__init__	__init__(self, iterable=None, /, **kwds)	modelled	coll-counter-first-seen-order,coll-counter-update-adds	withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
 Lib/collections/__init__.py	619	622	Counter.__missing__	__missing__(self, key)	modelled	coll-counter-update-adds	withdrawn: a hard-coded constant
 Lib/collections/__init__.py	624	626	Counter.total	total(self)	modelled	coll-counter-total	withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
-Lib/collections/__init__.py	628	640	Counter.most_common	most_common(self, n=None)	todo		
+Lib/collections/__init__.py	628	640	Counter.most_common	most_common(self, n=None)	modelled	coll-counter-most-common-prefix,coll-counter-most-common-sorted	
 Lib/collections/__init__.py	642	661	Counter.elements	elements(self)	modelled	coll-counter-elements	withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
 Lib/collections/__init__.py	666	675	Counter.fromkeys	fromkeys(cls, iterable, v=None)	todo		withdrawn: constant raise, rfl
 Lib/collections/__init__.py	677	709	Counter.update	update(self, iterable=None, /, **kwds)	modelled	coll-counter-subtract,coll-counter-update-adds,coll-counter-update-fast-slow	withdrawn: counts are Int and the iterable cannot fail, but the bodies do arithmetic and comparisons on any values, and __repr__'s except TypeError is unreachable
@@ -88,12 +88,12 @@ Lib/collections/__init__.py	1201	1202	UserDict.__iter__	__iter__(self)	modelled	
 Lib/collections/__init__.py	1206	1207	UserDict.__contains__	__contains__(self, key)	modelled	coll-userdict-matches-dict,coll-userdict-missing-like-dict,coll-userdict-missing-narrow	
 Lib/collections/__init__.py	1209	1212	UserDict.get	get(self, key, default=None)	modelled	coll-userdict-matches-dict,coll-userdict-missing-like-dict,coll-userdict-missing-narrow	
 Lib/collections/__init__.py	1216	1217	UserDict.__repr__	__repr__(self)	modelled	coll-userdict-clear-repr	
-Lib/collections/__init__.py	1219	1224	UserDict.__or__	__or__(self, other)	todo		
-Lib/collections/__init__.py	1226	1231	UserDict.__ror__	__ror__(self, other)	todo		
+Lib/collections/__init__.py	1219	1224	UserDict.__or__	__or__(self, other)	modelled	coll-userdict-constructors-union	
+Lib/collections/__init__.py	1226	1231	UserDict.__ror__	__ror__(self, other)	modelled	coll-userdict-constructors-union	
 Lib/collections/__init__.py	1233	1238	UserDict.__ior__	__ior__(self, other)	modelled	coll-userdict-constructors-union	
 Lib/collections/__init__.py	1240	1245	UserDict.__copy__	__copy__(self)	modelled	coll-userdict-constructors-union	withdrawn: = on a value structure: a copy returning self passes
-Lib/collections/__init__.py	1247	1257	UserDict.copy	copy(self)	todo		
-Lib/collections/__init__.py	1262	1270	UserDict.popitem	popitem(self)	todo		
+Lib/collections/__init__.py	1247	1257	UserDict.copy	copy(self)	modelled	coll-userdict-constructors-union	
+Lib/collections/__init__.py	1262	1270	UserDict.popitem	popitem(self)	modelled	coll-userdict-popitem-lifo	
 Lib/collections/__init__.py	1274	1278	UserDict.fromkeys	fromkeys(cls, iterable, value=None)	modelled	coll-userdict-constructors-union	
 Lib/collections/__init__.py	1288	1297	UserList.__init__	__init__(self, initlist=None)	modelled	coll-userlist-operands	
 Lib/collections/__init__.py	1299	1300	UserList.__repr__	__repr__(self)	modelled	coll-userlist-observers	

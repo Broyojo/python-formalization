@@ -113,4 +113,4 @@ Lib/_collections_abc.py	1145	1151	MutableSequence.extend	extend(self, values)	mo
 Lib/_collections_abc.py	1153	1159	MutableSequence.pop	pop(self, index=-1)	modelled	corelibs-collabc-mseq-pop	
 Lib/_collections_abc.py	1161	1165	MutableSequence.remove	remove(self, value)	modelled	corelibs-collabc-mseq-paths	
 Lib/_collections_abc.py	1167	1169	MutableSequence.__iadd__	__iadd__(self, values)	modelled	corelibs-collabc-mseq-grow	
-Lib/_collections_abc.py	1177	1183	__getattr__	__getattr__(attr)	todo		
+Lib/_collections_abc.py	1177	1183	__getattr__	__getattr__(attr)	modelled	corelibs-collabc-module-getattr	
