@@ -28,8 +28,6 @@ corelibs-lru-cache-noncallable
 corelibs-pysimplequeue-nonblocking-timeout
 corelibs-singledispatchmethod-callable-no-get
 corelibs-userdict-popitem-fifo
-datetime-date-fromiso-twins
-datetime-pydatetime-fromisoformat-int-leniency
 dict-reviter-len
 dictset-reversed-iter-length-hint
 dtoa-fixed-keeps-integer-part
@@ -50,8 +48,6 @@ pygrammar-lex-accepts-valid
 pygrammar-lex-debug-text
 pygrammar-lex-debug-text-escaped-quote
 pygrammar-lex-tokenize-memoryerror
-pyio-bytesio-twins-same-class-no-export
-pyio-bytesio-write-near-maxsize-systemerror
 pystrtod-e-format-digit-count
 textlibs-struct-bytes-format-nonascii-error
 textlibs-struct-pack-into-0p-outside-field
