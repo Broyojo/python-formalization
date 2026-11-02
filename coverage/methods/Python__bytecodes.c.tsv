@@ -140,8 +140,8 @@ Python/bytecodes.c	1380	1380	opcode:SET_ADD	inst(SET_ADD, (set, unused[oparg-1],
 Python/bytecodes.c	1399	1399	opcode:_SPECIALIZE_STORE_SUBSCR	specializing op(_SPECIALIZE_STORE_SUBSCR, (counter/1, container, sub -- container, sub)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1411	1411	opcode:_STORE_SUBSCR	op(_STORE_SUBSCR, (v, container, sub -- )) {	todo		
 Python/bytecodes.c	1418	1418	opcode:STORE_SUBSCR	macro(STORE_SUBSCR) = _SPECIALIZE_STORE_SUBSCR + _STORE_SUBSCR;	todo		
-Python/bytecodes.c	1420	1420	opcode:STORE_SUBSCR_LIST_INT	macro(STORE_SUBSCR_LIST_INT) =	todo		changed-in-3.15:
-Python/bytecodes.c	1423	1423	opcode:_STORE_SUBSCR_LIST_INT	op(_STORE_SUBSCR_LIST_INT, (value, list_st, sub_st -- ls, ss)) {	todo		changed-in-3.15:
+Python/bytecodes.c	1420	1420	opcode:STORE_SUBSCR_LIST_INT	macro(STORE_SUBSCR_LIST_INT) =	modelled	bytecode-store-subscr-list-int	
+Python/bytecodes.c	1423	1423	opcode:_STORE_SUBSCR_LIST_INT	op(_STORE_SUBSCR_LIST_INT, (value, list_st, sub_st -- ls, ss)) {	modelled	bytecode-store-subscr-list-int	
 Python/bytecodes.c	1454	1454	opcode:STORE_SUBSCR_DICT	macro(STORE_SUBSCR_DICT) =	todo		changed-in-3.15:
 Python/bytecodes.c	1458	1458	opcode:_STORE_SUBSCR_DICT	op(_STORE_SUBSCR_DICT, (value, dict_st, sub -- st)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1473	1473	opcode:_STORE_SUBSCR_DICT_KNOWN_HASH	tier2 op(_STORE_SUBSCR_DICT_KNOWN_HASH, (value, dict_st, sub, hash/4 -- st)) {	todo		changed-in-3.15: new function
