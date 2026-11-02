@@ -86,6 +86,12 @@ structure Lawful (om : ObjModel) : Prop where
     om.setItem ctx (.ref a) (.int i) v rt = .ok ()
       { rt with heap := (rt.heap.setIfInBounds a
           (.list (items.setIfInBounds (if i < 0 then i + items.size else i).toNat v))) }
+  /-- `rangeiter_next`: the next value and the iterator advanced, or the end. -/
+  range_next : ∀ ctx a start step len rt, rt.heap[a]? = some (.rangeIter start step len) →
+    om.iterNext ctx (.ref a) rt = if 0 < len then
+      .ok (some (.int start))
+        { rt with heap := (rt.heap.setIfInBounds a (.rangeIter (start + step) step (len - 1))) }
+    else .ok none rt
   /-- `float_richcompare` gives a bool. -/
   cmp_float : ∀ ctx a b op rt,
     om.richCompare ctx (.float a) (.float b) op rt = .ok (.bool (floatTable op (toF a) (toF b))) rt

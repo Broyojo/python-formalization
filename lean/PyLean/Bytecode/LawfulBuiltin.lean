@@ -144,6 +144,15 @@ theorem setItem_list (a : Addr) (items : Array Val) (i : Int) (v : Val) (rt : Rt
   simp [setItemImpl, getObj, h, asIndex, indexSsize, hx1, hx2, Int.not_lt.2 h0, Int.not_le.2 hlt,
     setObj, bind, EStateM.bind, pure, EStateM.pure]
 
+theorem iterNext_range (a : Addr) (start step len : Int) (rt : Rt)
+    (h : rt.heap[a]? = some (.rangeIter start step len)) :
+    iterNextImpl om ctx (.ref a) rt = if 0 < len then
+      .ok (some (.int start))
+        { rt with heap := (rt.heap.setIfInBounds a (.rangeIter (start + step) step (len - 1))) }
+    else .ok none rt := by
+  by_cases hl : 0 < len <;>
+  simp [iterNextImpl, getObj, h, hl, setObj, bind, EStateM.bind, pure, EStateM.pure]
+
 theorem compare_str (a b : String) (op : Nat) (rt : Rt) :
     richCompareImpl om ctx (.str a) (.str b) op rt = .ok (.bool (ordResult (compare a b) op)) rt := by
   simp [richCompareImpl, typeOf, immType, userLookup_cls, isSubtype, mroOf, payload, bind, EStateM.bind, pure, EStateM.pure, builtinCompare]
@@ -199,6 +208,7 @@ theorem lawfulBuiltin_proven : LawfulBuiltin := by
       rw [compare_int, ordResult_int a b op hop]
       rfl
     cmp_float := fun ctx a b op rt => compare_float (mkOM P 23) ctx a b op rt
+    range_next := fun ctx a start step len rt h => iterNext_range (mkOM P 23) ctx a start step len rt h
     store_list := fun ctx a items i v rt h h0 hlt hb1 hb2 =>
       setItem_list (mkOM P 23) ctx a items i v rt h h0 hlt hb1 hb2
     cmp_str := fun ctx a b rt => by

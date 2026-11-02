@@ -29,6 +29,11 @@ open PyLean.Registry
 def op (n : String) : String := "opcode:" ++ n
 
 def entries : List Entry := GenObj.entries ++ [
+  { id := "bytecode-for-iter-range", pyFile := "Python/bytecodes.c"
+    pyFns := [op "FOR_ITER_RANGE", op "_ITER_CHECK_RANGE", op "_ITER_JUMP_RANGE", op "_ITER_NEXT_RANGE"]
+    statement := "FOR_ITER_RANGE equals FOR_ITER on every live stack GET_ITER could have left, given rangeiter_next, value by value and at the end."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c _ITER_CHECK_RANGE .. _ITER_NEXT_RANGE; Objects/rangeobject.c rangeiter_next"
+    status := .proven, prop := ``ForIterRange, thm := some ``forIterRange_proven },
   { id := "bytecode-for-iter-seq", pyFile := "Python/bytecodes.c"
     pyFns := [op "FOR_ITER_LIST", op "_ITER_CHECK_LIST", op "_ITER_JUMP_LIST", op "_ITER_NEXT_LIST", op "FOR_ITER_TUPLE", op "_ITER_CHECK_TUPLE", op "_ITER_JUMP_TUPLE", op "_ITER_NEXT_TUPLE"]
     statement := "FOR_ITER_LIST and FOR_ITER_TUPLE equal FOR_ITER on every live stack GET_ITER could have left, item by item and at the end of the sequence."

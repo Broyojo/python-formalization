@@ -149,7 +149,7 @@ def _ITER_NEXT_RANGE : M Unit := stk 2 3 fun
     | _ => fault "not a range iterator"
   | _ => fault "not a range iterator"
 
-/-- `@3.14.7:3462`. -/
+/-- `:4097`. -/
 def FOR_ITER_RANGE (e : Env) : M Unit := do _ITER_CHECK_RANGE; _ITER_JUMP_RANGE e; _ITER_NEXT_RANGE
 
 /-- `:4103`: `(iter, null -- iter, null, gen_frame)`. -/

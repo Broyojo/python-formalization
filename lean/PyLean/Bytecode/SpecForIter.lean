@@ -100,4 +100,64 @@ theorem forIterSeq_proven : ForIterSeq := by
         have hn : ∀ a, iter ≠ .ref a := fun a ha => hir ⟨a, ha⟩
         exact guardTop_two regs rest _ _ _ true (notTuple_nonref regs iter hn)
 
+/-- What `GET_ITER` leaves for an iterator object: NULL in the index slot. -/
+def NullIter (s : St) : Prop := ∀ index a rest start step len, s.stack = index :: .ref a :: rest →
+  s.regs.rt.heap[a]? = some (.rangeIter start step len) → index = .null
+
+theorem range_body (e : Env) (hom : Lawful e.om) (regs : Regs) (a : Addr) (start step len : Int)
+    (rest : List Val) (h : regs.rt.heap[a]? = some (.rangeIter start step len)) :
+    (do _ITER_JUMP_RANGE e; _ITER_NEXT_RANGE) ⟨regs, .null :: .ref a :: rest⟩ =
+      FOR_ITER e ⟨regs, .null :: .ref a :: rest⟩ := by
+  have hn := hom.range_next e.ctx a start step len regs.rt h
+  by_cases hl : 0 < len
+  · simp only [hl, ite_true] at hn
+    have hle : ¬ len ≤ 0 := by omega
+    simp [_ITER_JUMP_RANGE, _ITER_NEXT_RANGE, FOR_ITER, _SPECIALIZE_FOR_ITER, _FOR_ITER, virtualNext,
+      iterStep, tryExc, hn, peekN, popN, stk, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift,
+      MonadLift.monadLift, getObj, h, hle, setObj, pure, EStateM.pure]
+  · simp only [hl, ite_false] at hn
+    have hle : len ≤ 0 := by omega
+    simp [_ITER_JUMP_RANGE, FOR_ITER, _SPECIALIZE_FOR_ITER, _FOR_ITER, virtualNext, iterStep, tryExc, hn,
+      peekN, popN, bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift, getObj, h, hle,
+      pure, EStateM.pure, jumpBy, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+
+/-- `FOR_ITER_RANGE` is `FOR_ITER` on every live stack `GET_ITER` could have left, given
+`rangeiter_next`. C also guards that the iterator is uniquely referenced; a shared one deopts to
+`FOR_ITER`, which gives the same result, so the model omits that guard. -/
+def ForIterRange : Prop := ∀ (e : Env), Lawful e.om → ∀ (s : St), 2 ≤ s.stack.length →
+  (∀ v ∈ s.stack, Live s.regs.rt v) → NullIter s → execOp e .FOR_ITER_RANGE s = execOp e .FOR_ITER s
+
+theorem forIterRange_proven : ForIterRange := by
+  intro e hom s hs hlive hnull
+  obtain ⟨regs, stack⟩ := s
+  match stack, hs with
+  | index :: iter :: rest, _ =>
+    have hl : Live regs.rt iter := hlive iter (by simp)
+    refine guard1_spec _ _ (FOR_ITER e) _ ?_
+    by_cases hir : ∃ a, iter = .ref a
+    · obtain ⟨a, rfl⟩ := hir
+      obtain ⟨o, ho⟩ := live_obj hl
+      by_cases hr : ∃ start step len, o = .rangeIter start step len
+      · obtain ⟨start, step, len, rfl⟩ := hr
+        have := hnull index a rest start step len rfl ho
+        subst this
+        right
+        refine ⟨?_, Or.inr (range_body e hom regs a start step len rest ho)⟩
+        simp [_ITER_CHECK_RANGE, guardTop, peekN, bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift,
+          MonadLift.monadLift, getObj, ho, deoptIf, pure, EStateM.pure]
+      · left
+        have hn : ∀ start step len, o ≠ .rangeIter start step len :=
+          fun a b c hc => hr ⟨a, b, c, hc⟩
+        cases o <;> first
+          | exact absurd rfl (hn _ _ _)
+          | simp [_ITER_CHECK_RANGE, guardTop, peekN, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+              monadLift, MonadLift.monadLift, getObj, ho, deoptIf, pure, EStateM.pure, throw, throwThe,
+              MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+    · left
+      have hn : ∀ a, iter ≠ .ref a := fun a ha => hir ⟨a, ha⟩
+      cases iter <;> first
+        | exact absurd rfl (hn _)
+        | simp [_ITER_CHECK_RANGE, guardTop, peekN, bind, EStateM.bind, BM.lift, deoptIf, pure,
+            EStateM.pure, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+
 end PyLean.Bytecode
