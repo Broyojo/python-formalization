@@ -26,16 +26,25 @@ theorem stdComplexOrderAgree_refuted : ¬StdComplexOrderAgree := by
   revert this
   decide
 
-/-- The module functions behave like `Struct(fmt)`: `pack(fmt, ...)` and
-`Struct(fmt).pack(...)` give the same result for every format object. -/
+/-- The module functions behave like `Struct(fmt)`: `pack(fmt, ...)` and `Struct(fmt).pack(...)` give the
+same result for every hashable format object. `bytes` go through the cache key and `Struct` through
+`set_format`, and both decode with `surrogateescape`. An unhashable format fails at the cache instead,
+with its own message, and a `__hash__` that raises fails there too, so those are outside the statement.
+A wrong `decodeSurrogate` on one path would fail this. -/
 def ModuleMatchesStruct : Prop :=
-  ∀ (f : FmtArg) (args : List SV), modPack f args = (do structPack (← structInit f) args)
+  ∀ (f : FmtArg) (args : List SV), (∀ t, f ≠ .other t false) → (∀ t e, f ≠ .hashRaises t e) →
+    modPack f args = (do structPack (← structInit f) args)
 
-theorem moduleMatchesStruct_refuted : ¬ModuleMatchesStruct := by
-  intro h
-  have := h (.bytes [0xff]) []
-  revert this
-  decide
+theorem moduleMatchesStruct_proven : ModuleMatchesStruct := by
+  intro f args h1 h2
+  cases f with
+  | str s => rfl
+  | bytes b => rfl
+  | other t k =>
+    cases k with
+    | true => rfl
+    | false => exact absurd rfl (h1 t)
+  | hashRaises t e => exact absurd rfl (h2 t e)
 
 /-- An `__index__` object packs like the int it stands for: same bytes or same error. -/
 def PIndexLikeInt : Prop :=
@@ -47,31 +56,26 @@ theorem pIndexLikeInt_refuted : ¬PIndexLikeInt := by
   revert this
   decide
 
-/-- `pack_into` changes no byte outside the `calcsize(fmt)` bytes at `offset`. -/
+/-- `pack_into` changes no byte outside the `calcsize(fmt)` bytes at `offset`. 3.14 wrote the count byte of
+a `0p` field past the end; the count is now written only when `n > 0`. -/
 def PackIntoStaysInside : Prop :=
   ∀ (f : FmtArg) (s : SObj) (buf out : List Nat) (o : Nat) (args : List SV),
     cacheStruct f = .ok s → modPackInto f buf o args = .ok out →
     out.drop (o + s.sSize) = buf.drop (o + s.sSize)
 
-theorem packIntoStaysInside_refuted : ¬PackIntoStaysInside := by
-  intro h
-  have := h (.str ['0'.toNat, 'p'.toNat]) ⟨[⟨⟨'p', 1, 0, .none, .none⟩, 0, 0, 1⟩], 0, 1,
-    ['0'.toNat, 'p'.toNat]⟩ [0xaa, 0xaa] [0, 0xaa] 0 [.bytes []] (by decide) (by decide)
-  revert this
-  decide
-
 /-! ### Proven: tables and layout -/
 
-/-- `init_endian_tables` swaps exactly the entries whose native size matches, except
-`f`, `d` and `?`, and changes no format, size or alignment. -/
+/-- `init_endian_tables` swaps exactly the entries whose native size matches, except `?`, and changes no
+format, size or alignment. -/
 def EndianTableSwap : Prop :=
   lilendianTable.map (fun e => (e.format, e.size, e.alignment))
       = lilendianTable0.map (fun e => (e.format, e.size, e.alignment)) ∧
-  (lilendianTable.filter (fun e => e.format = 'F' ∨ e.format = 'D')).map (·.pack)
-      = [.npFloatComplex, .npDoubleComplex] ∧
-  (lilendianTable.filter (fun e => e.format = 'f' ∨ e.format = 'd' ∨ e.format = '?')).map (·.pack)
-      = [.bpBool, .lpFloat, .lpDouble] ∧
-  (lilendianTable.filter (fun e => e.format = 'l' ∨ e.format = 'L')).map (·.pack)
+  (lilendianTable.filter (fun e => e.format = ['F'] ∨ e.format = ['D'] ∨ e.format = ['Z', 'f'] ∨
+      e.format = ['Z', 'd'])).map (·.pack)
+      = [.npFloatComplex, .npDoubleComplex, .npFloatComplex, .npDoubleComplex] ∧
+  (lilendianTable.filter (fun e => e.format = ['f'] ∨ e.format = ['d'] ∨ e.format = ['?'])).map (·.pack)
+      = [.bpBool, .npFloat, .npDouble] ∧
+  (lilendianTable.filter (fun e => e.format = ['l'] ∨ e.format = ['L'])).map (·.pack)
       = [.lpInt, .lpUint]
 
 theorem endianTableSwap_proven : EndianTableSwap := by
@@ -204,8 +208,8 @@ def PackSPads : Prop :=
 /-- `?` reads any non-zero byte as `True` in all three tables. -/
 def BoolAnyNonzero : Prop :=
   ∀ (b : Nat) (rest : List Nat),
-    (runUnpack ⟨'?', 1, 1, .nuBool, .npBool⟩ (b :: rest) = .ok (.bool (b != 0))) ∧
-    (runUnpack ⟨'?', 1, 0, .buBool, .bpBool⟩ (b :: rest) = .ok (.bool (b != 0)))
+    (runUnpack ⟨['?'], 1, 1, .nuBool, .npBool⟩ (b :: rest) = .ok (.bool (b != 0))) ∧
+    (runUnpack ⟨['?'], 1, 0, .buBool, .bpBool⟩ (b :: rest) = .ok (.bool (b != 0)))
 
 theorem packSPads_proven : PackSPads := by
   intro code p res hlen hz

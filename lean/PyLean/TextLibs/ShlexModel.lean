@@ -1,7 +1,7 @@
 import PyLean.Core
 
 /-!
-Model of `Lib/shlex.py`, CPython 3.14.7: `read_token`, `__next__`, `split`, `join` and `quote`.
+Model of `Lib/shlex.py`, CPython 3.15.2: `read_token`, `__next__`, `split`, `join` and `quote`.
 
 The stream is fallible: `failAt` is the number of calls of `read` and `readline` that succeed before
 one raises. `read_token` keeps its attributes in `Cfg`, so that a caller's settings reach every

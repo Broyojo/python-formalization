@@ -3,7 +3,7 @@ import PyLean.TextLibs.ReCasefix
 import PyLean.UnicodeObj.Ctype
 
 /-!
-Model of `Lib/re/_compiler.py`, CPython 3.14.7. The output is the list of code words, and the
+Model of `Lib/re/_compiler.py`, CPython 3.15.2. The output is the list of code words, and the
 difftest compares it with `re._compiler._code` word for word. `code[skip] = len(code) - skip` is
 computed from fragment lengths instead of patching a list.
 -/
@@ -66,10 +66,16 @@ def asciiIscased (c : Nat) : Bool := c < 128 && isLetter c
 def lowerAscii (c : Nat) : Nat := if 65 ≤ c ∧ c ≤ 90 then c + 32 else c
 
 /-- `sre_lower_unicode`, `Modules/_sre/sre.c:173-176`. -/
-def lowerUnicode (c : Nat) : Nat := PyLean.UnicodeObj.toLowercase c
+def lowerUnicode (c : Nat) : Nat :=
+  if c = 0xA7CE ∨ c = 0xA7D2 ∨ c = 0xA7D4 then c + 1
+  else if 0x16EA0 ≤ c ∧ c ≤ 0x16EB8 then c + 27
+  else PyLean.UnicodeObj.toLowercase c
 
 /-- `sre_upper_unicode`, `Modules/_sre/sre.c:178-181`. -/
-def upperUnicode (c : Nat) : Nat := PyLean.UnicodeObj.toUppercase c
+def upperUnicode (c : Nat) : Nat :=
+  if c = 0xA7CF ∨ c = 0xA7D3 ∨ c = 0xA7D5 then c - 1
+  else if 0x16EBB ≤ c ∧ c ≤ 0x16ED3 then c - 27
+  else PyLean.UnicodeObj.toUppercase c
 
 /-- `_sre.unicode_iscased`, `Modules/_sre/sre.c:453-454`. -/
 def unicodeIscased (c : Nat) : Bool := c != lowerUnicode c || c != upperUnicode c
@@ -268,7 +274,7 @@ def bytesToCodes (b : List Nat) : List Nat :=
       ((s.take 4).foldr (fun x acc => acc * 256 + x) 0) :: go fuel (s.drop 4)
   go b.length b
 
-/-- The chunking of a big charset, `@3.14.7:378-392`. -/
+/-- The chunking of a big charset, `Lib/re/_compiler.py:378-393`. -/
 def bigCharset (cm : Array Bool) : List Nat :=
   let bits := cm.toList
   let rec go2 : (i : Nat) → List Bool → List (List Bool × Nat) → List Nat → Nat → List Bool →

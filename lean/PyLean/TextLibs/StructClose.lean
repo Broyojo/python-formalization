@@ -38,8 +38,8 @@ theorem scan_agree : ∀ (s : List Char) (n num : Nat) (c : Char) (r : List Char
       obtain ⟨rfl, rfl, rfl⟩ := h
       rfl
 
-theorem getentry_mem {c : Char} : ∀ {tbl : List FormatDef} {e : FormatDef},
-    getentry c tbl = .ok e → e ∈ tbl ∧ e.format = c := by
+theorem getentry_mem {c : List Char} : ∀ {tbl : List FormatDef} {e : FormatDef},
+    getentry c tbl = .ok e → e ∈ tbl ∧ formatEqual e c = true := by
   intro tbl
   induction tbl with
   | nil => intro e h; cases h
@@ -54,28 +54,41 @@ theorem getentry_mem {c : Char} : ∀ {tbl : List FormatDef} {e : FormatDef},
 
 /-- `s`, `p` and `x` are one byte in every table, and no entry has size 0. -/
 theorem table_sizes : ∀ t : Tab, ∀ e ∈ t.table,
-    e.size ≠ 0 ∧ ((e.format = 's' ∨ e.format = 'p' ∨ e.format = 'x') → e.size = 1) := by
+    e.size ≠ 0 ∧ ((e.code = 's' ∨ e.code = 'p' ∨ e.code = 'x') → e.size = 1) ∧ e.format ≠ [] := by
   intro t
   cases t <;> decide +kernel
+
+/-- An entry that matches at `c :: r` starts with `c`. -/
+theorem code_of_equal {e : FormatDef} {c : Char} {r : List Char} (h : formatEqual e (c :: r) = true)
+    (hn : e.format ≠ []) : e.code = c := by
+  unfold formatEqual at h
+  unfold FormatDef.code
+  cases he : e.format with
+  | nil => exact absurd he hn
+  | cons x xs =>
+    rw [he] at h
+    simp only [List.isPrefixOf, Bool.and_eq_true, beq_iff_eq] at h
+    simpa using h.1
 
 /-- Agreement between a pass-1 state and a pass-2 accumulator. -/
 def Inv (st : Pass1) (acc : List Code × Nat) : Prop :=
   acc.2 = st.size ∧ sumRepeat acc.1 = st.len ∧ acc.1.length = st.ncodes
 
-theorem item_agree (t : Tab) (st st' : Pass1) (num : Nat) (c : Char) (acc : List Code × Nat)
-    (h : pass1Item t.table st num c = .ok st') (hi : Inv st acc) :
-    Inv st' (pass2Item t.table acc num c) := by
+theorem item_agree (t : Tab) (st st' : Pass1) (num : Nat) (c : Char) (r : List Char) (acc : List Code × Nat)
+    (h : pass1Item t.table st num c r = .ok st') (hi : Inv st acc) :
+    Inv st' (pass2Item t.table acc num c r) := by
   obtain ⟨codes, size⟩ := acc
   obtain ⟨hs, hl, hn⟩ := hi
   simp only at hs hl hn
   subst hs
   unfold pass1Item at h
   unfold pass2Item
-  cases hg : getentry c t.table with
+  cases hg : getentry (c :: r) t.table with
   | error e' => simp [hg, bind, Except.bind] at h
   | ok e =>
-    obtain ⟨hm, hf⟩ := getentry_mem hg
-    obtain ⟨_, hsz⟩ := table_sizes t e hm
+    obtain ⟨hm, hf0⟩ := getentry_mem hg
+    obtain ⟨_, hsz, hne⟩ := table_sizes t e hm
+    have hf : e.code = c := code_of_equal hf0 hne
     simp only [hg, bind, Except.bind] at h
     simp only [hg]
     by_cases hsp : c = 's' ∨ c = 'p'
@@ -162,17 +175,17 @@ theorem pass_agree (t : Tab) : ∀ (fuel : Nat) (s : List Char) (st st' : Pass1)
             | none => cases h
             | some c' =>
               rw [scan_agree _ _ _ _ _ hs1]
-              cases hit : pass1Item t.table st num c' with
+              cases hit : pass1Item t.table st num c' r with
               | error e => simp [hit, bind, Except.bind] at h
               | ok st2 =>
                 simp only [hit, bind, Except.bind] at h
-                exact ih _ _ _ _ h (item_agree t st st2 num c' acc hit hi)
+                exact ih _ _ _ _ h (item_agree t st st2 num c' r acc hit hi)
         · simp only [hd, Bool.false_eq_true, if_false] at h ⊢
-          cases hit : pass1Item t.table st 1 c with
+          cases hit : pass1Item t.table st 1 c s with
           | error e => simp [hit, bind, Except.bind] at h
           | ok st2 =>
             simp only [hit, bind, Except.bind] at h
-            exact ih _ _ _ _ h (item_agree t st st2 1 c acc hit hi)
+            exact ih _ _ _ _ h (item_agree t st st2 1 c s acc hit hi)
 
 /-- `prepare_s` runs two independent passes over the format: the first computes `s_size`,
 `s_len` and the code count with overflow checks, the second builds the codes. For every
@@ -190,6 +203,10 @@ def PrepareSAgree : Prop :=
 theorem prepareSAgree_proven : PrepareSAgree := by
   intro format s h
   unfold prepareS at h
+  by_cases h9 : (!format.all (· < 128)) = true
+  · rw [if_pos h9] at h
+    cases h
+  rw [if_neg h9] at h
   by_cases h0 : 0 ∈ format
   · rw [if_pos h0] at h
     cases h
@@ -216,7 +233,7 @@ theorem prepareSAgree_proven : PrepareSAgree := by
 
 /-! ### `c` and `?` -/
 
-def charEntries : List FormatDef := [⟨'c', 1, 0, .nuChar, .npChar⟩]
+def charEntries : List FormatDef := [⟨['c'], 1, 0, .nuChar, .npChar⟩]
 
 /-- `c` round-trips every byte and rejects everything but a length-1 `bytes`. -/
 def CharCode : Prop :=
@@ -241,8 +258,8 @@ theorem charCode_proven : CharCode := by
 /-- `?` stores the truth value of any object in one byte, and reads it back. The hypothesis is that
 `__bool__` did not raise; `BoolRaises` is the other case. -/
 def BoolCode : Prop :=
-  ∀ (v : SV) (b : Bool) (nat std : FormatDef), nat = ⟨'?', 1, 1, .nuBool, .npBool⟩ →
-    std = ⟨'?', 1, 0, .buBool, .bpBool⟩ → isTrue v = .ok b →
+  ∀ (v : SV) (b : Bool) (nat std : FormatDef), nat = ⟨['?'], 1, 1, .nuBool, .npBool⟩ →
+    std = ⟨['?'], 1, 0, .buBool, .bpBool⟩ → isTrue v = .ok b →
     (∃ w, runPack nat v = .ok w ∧ runUnpack nat w = .ok (.bool b)) ∧
     (∃ w, runPack std v = .ok w ∧ runUnpack std w = .ok (.bool b))
 
@@ -269,11 +286,11 @@ theorem ordered_rev (n v : Nat) : ordered true n v = (ordered false n v).reverse
 /-- Pairs of little- and big-endian entries, including the pre-swap routines and the
 native ones that replace them. -/
 def scalarPairs : List (FormatDef × FormatDef) :=
-  [(⟨'e', 2, 0, .luHalffloat, .lpHalffloat⟩, ⟨'e', 2, 0, .buHalffloat, .bpHalffloat⟩),
-   (⟨'e', 2, 0, .nuHalffloat, .npHalffloat⟩, ⟨'e', 2, 0, .buHalffloat, .bpHalffloat⟩),
-   (⟨'f', 4, 0, .luFloat, .lpFloat⟩, ⟨'f', 4, 0, .buFloat, .bpFloat⟩),
-   (⟨'d', 8, 0, .luDouble, .lpDouble⟩, ⟨'d', 8, 0, .buDouble, .bpDouble⟩),
-   (⟨'d', 8, 8, .nuDouble, .npDouble⟩, ⟨'d', 8, 0, .buDouble, .bpDouble⟩)]
+  [(⟨['e'], 2, 0, .luHalffloat, .lpHalffloat⟩, ⟨['e'], 2, 0, .buHalffloat, .bpHalffloat⟩),
+   (⟨['e'], 2, 0, .nuHalffloat, .npHalffloat⟩, ⟨['e'], 2, 0, .buHalffloat, .bpHalffloat⟩),
+   (⟨['f'], 4, 0, .luFloat, .lpFloat⟩, ⟨['f'], 4, 0, .buFloat, .bpFloat⟩),
+   (⟨['d'], 8, 0, .luDouble, .lpDouble⟩, ⟨['d'], 8, 0, .buDouble, .bpDouble⟩),
+   (⟨['d'], 8, 8, .nuDouble, .npDouble⟩, ⟨['d'], 8, 0, .buDouble, .bpDouble⟩)]
 
 /-- For every value, the little-endian bytes are the reverse of the big-endian bytes, or both
 raise the same error; and for every buffer of the right size, unpacking it little-endian equals
@@ -314,8 +331,8 @@ theorem scalarByteOrder_proven : ScalarByteOrder := by
 /-- Native `f` packs like `<f`, so its bytes are the reverse of `>f`'s for every value (native
 and standard differ on unpack only). -/
 def NativeFloatPack : Prop :=
-  ∀ v : SV, runPack ⟨'f', 4, 4, .nuFloat, .npFloat⟩ v
-    = (runPack ⟨'f', 4, 0, .buFloat, .bpFloat⟩ v).map List.reverse
+  ∀ v : SV, runPack ⟨['f'], 4, 4, .nuFloat, .npFloat⟩ v
+    = (runPack ⟨['f'], 4, 0, .buFloat, .bpFloat⟩ v).map List.reverse
 
 theorem nativeFloatPack_proven : NativeFloatPack := by
   intro v
@@ -340,9 +357,9 @@ theorem swapParts_ordered (n a b : Nat) :
 /-- `<D` and `>D`, and `<F` and `>F` through the pre-swap routines: each part is byte-reversed
 and the parts stay in order, for every value and every buffer of the right size. -/
 def complexPairs : List (FormatDef × FormatDef × Nat) :=
-  [(⟨'D', 16, 0, .luDoubleComplex, .lpDoubleComplex⟩, ⟨'D', 16, 0, .buDoubleComplex, .bpDoubleComplex⟩, 8),
-   (⟨'D', 16, 0, .nuDoubleComplex, .npDoubleComplex⟩, ⟨'D', 16, 0, .buDoubleComplex, .bpDoubleComplex⟩, 8),
-   (⟨'F', 8, 0, .luFloatComplex, .lpFloatComplex⟩, ⟨'F', 8, 0, .buFloatComplex, .bpFloatComplex⟩, 4)]
+  [(⟨['D'], 16, 0, .luDoubleComplex, .lpDoubleComplex⟩, ⟨['D'], 16, 0, .buDoubleComplex, .bpDoubleComplex⟩, 8),
+   (⟨['D'], 16, 0, .nuDoubleComplex, .npDoubleComplex⟩, ⟨['D'], 16, 0, .buDoubleComplex, .bpDoubleComplex⟩, 8),
+   (⟨['F'], 8, 0, .luFloatComplex, .lpFloatComplex⟩, ⟨['F'], 8, 0, .buFloatComplex, .bpFloatComplex⟩, 4)]
 
 def ComplexByteOrder : Prop :=
   ∀ q ∈ complexPairs,
@@ -376,7 +393,7 @@ theorem packDC_order (v : SV) : packDCStd v true = (packDCStd v false).map (swap
     obtain ⟨a, b⟩ := ab
     simp [Except.map, swapParts_ordered]
 
-theorem packDN_order (v : SV) : runPack ⟨'D', 16, 0, .nuDoubleComplex, .npDoubleComplex⟩ v
+theorem packDN_order (v : SV) : runPack ⟨['D'], 16, 0, .nuDoubleComplex, .npDoubleComplex⟩ v
     = (packDCStd v false).map (swapParts 8) := by
   simp only [runPack, packDCStd]
   cases asCComplex v with
@@ -416,13 +433,20 @@ theorem complexByteOrder_proven : ComplexByteOrder := by
 
 /-! ### Refuted: native `f` and `F` quiet a signalling NaN -/
 
-/-- `unpack('f', b)` and `unpack('<f', b)` agree on every 4-byte buffer: on a little-endian
-build, native and standard differ only in alignment. -/
+/-- `unpack('f', b)` and `unpack('<f', b)` agree on every 4-byte buffer: `init_endian_tables` gives `<f`
+the native routine on this build. -/
 def NativeFloatMatchesStd : Prop :=
-  ∀ b : List Nat, b.length = 4 →
-    modUnpack (.str ['f'.toNat]) b = modUnpack (.str ['<'.toNat, 'f'.toNat]) b
+  ∀ b : List Nat, modUnpack (.str ['f'.toNat]) b = modUnpack (.str ['<'.toNat, 'f'.toNat]) b
 
-theorem nativeFloatMatchesStd_refuted : ¬NativeFloatMatchesStd := by
+theorem nativeFloatMatchesStd_proven : NativeFloatMatchesStd := fun _ => rfl
+
+/-- `unpack('f', b)` and `unpack('>f', reversed b)` agree on every 4-byte buffer: byte order is the only
+difference. -/
+def NativeFloatMatchesBig : Prop :=
+  ∀ b : List Nat, b.length = 4 →
+    modUnpack (.str ['f'.toNat]) b = modUnpack (.str ['>'.toNat, 'f'.toNat]) b.reverse
+
+theorem nativeFloatMatchesBig_refuted : ¬NativeFloatMatchesBig := by
   intro h
   have := h [1, 0, 0x80, 0x7f] rfl
   revert this
@@ -547,36 +571,36 @@ theorem iterUnpackLength_proven : IterUnpackLength := by
 code plus the sentinel. -/
 def Accessors : Prop :=
   ∀ (cps : List Nat) (s : SObj), structInit (.str cps) = .ok s →
-    sGetFormat s = cps ∧ sGetSize (some s) = (s.sSize : Int) ∧
-    calcsize (.str cps) = .ok s.sSize ∧ sSizeof s = 56 + 32 * (s.codes.length + 1)
+    sGetFormat (some s) = .ok cps ∧ sGetSize (some s) = (s.sSize : Int) ∧
+    calcsize (.str cps) = .ok s.sSize ∧ sSizeof s = 64 + 32 * (s.codes.length + 1)
 
 theorem accessors_proven : Accessors := by
   intro cps s h
   have hc : cacheStruct (.str cps) = .ok s := h
   have hf : s.format = cps := by
-    simp only [structInit] at h
-    split at h
-    · obtain ⟨st, _, _, _, _, hf⟩ := prepareSAgree_proven cps s h
-      exact hf
-    · cases h
-  refine ⟨hf, rfl, ?_, ?_⟩
+    obtain ⟨st, _, _, _, _, hf⟩ := prepareSAgree_proven cps s h
+    exact hf
+  refine ⟨by rw [← hf]; rfl, rfl, ?_, ?_⟩
   · simp only [calcsize, hc, bind, Except.bind, pure, Except.pure]
   · simp only [sSizeof]
     omega
 
-/-- Before `__init__`, `.size` is -1, and every method raises `RuntimeError`. -/
+/-- `Struct.__new__(Struct)` with no format: `.size` is -1, `.format` is an `AttributeError`, and every
+method raises `RuntimeError`. -/
 def UninitStruct : Prop :=
-  sGetSize sNew = -1 ∧ ∀ (α : Type) (k : SObj → Py α),
+  sGetSize sNew = -1 ∧
+  sGetFormat sNew = .error (.named "AttributeError" "'_struct.Struct' object has no attribute 'format'") ∧
+  ∀ (α : Type) (k : SObj → Py α),
     (ensureReady sNew >>= k) = .error (.named "RuntimeError" "Struct object is not initialized")
 
-theorem uninitStruct_proven : UninitStruct := ⟨rfl, fun _ _ => rfl⟩
+theorem uninitStruct_proven : UninitStruct := ⟨rfl, rfl, fun _ _ => rfl⟩
 
 /-- `_range_error`'s message states the exact range of the entry, for every integer entry whose
 pack routine uses it. -/
 def RangeErrorBounds : Prop :=
-  ∀ e ∈ intEntries, e.format ≠ 'P' →
-    rangeError e (isUnsignedCode e.format)
-      = structErr s!"'{e.format}' format requires {loOf e} <= number <= {hiOf e}"
+  ∀ e ∈ intEntries, e.code ≠ 'P' →
+    rangeError e (isUnsignedCode e.code)
+      = structErr s!"'{e.name}' format requires {loOf e} <= number <= {hiOf e}"
 
 theorem rangeErrorBounds_proven : RangeErrorBounds := by
   unfold RangeErrorBounds

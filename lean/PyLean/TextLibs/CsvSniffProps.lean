@@ -270,30 +270,31 @@ theorem consistency_ok (dl : Option (List Nat)) (t : Nat) (m : List (Nat × (Nat
     · exact h
 
 theorem gdLoop_ok (dl : Option (List Nat)) (data : List (List Nat)) (chunk : Nat) :
-    ∀ (fuel it start stop : Nat) (cf : List (Nat × List (Nat × Nat))) (modes d : List (Nat × (Nat × Int))),
+    ∀ (fuel it nl start stop : Nat) (cf : List (Nat × List (Nat × Nat))) (modes d : List (Nat × (Nat × Int))),
     KeysOk dl d →
-    match gdLoop dl data chunk fuel it start stop cf modes d with
+    match gdLoop dl data chunk fuel it nl start stop cf modes d with
     | .inl x => allowed dl x.1 = true
     | .inr d => KeysOk dl d := by
   intro fuel
   induction fuel with
-  | zero => intro _ _ _ _ _ d h; exact h
+  | zero => intro _ _ _ _ _ _ d h; exact h
   | succ fuel ih =>
-    intro it start stop cf modes d h
+    intro it nl start stop cf modes d h
     by_cases hs : start < data.length
     · rw [gdLoop, if_pos hs]
       dsimp only
+      generalize ((data.drop start).take (stop - start)) = lines
       have h2 := consistency_ok dl (min (chunk * (it + 1)) data.length)
-        (updateModes modes (((data.drop start).take (stop - start)).foldl addLine cf)) consistencySteps d h
+        (updateModes (nl + lines.length) modes (lines.foldl addLine cf)) consistencySteps d h
       generalize consistencyLoop dl (min (chunk * (it + 1)) data.length)
-        (updateModes modes (((data.drop start).take (stop - start)).foldl addLine cf)) consistencySteps d = d2 at h2 ⊢
+        (updateModes (nl + lines.length) modes (lines.foldl addLine cf)) consistencySteps d = d2 at h2 ⊢
       match d2, h2 with
       | [(k, v)], h2 =>
         exact h2 k (by simp)
       | [], h2 =>
-        exact ih _ _ _ _ _ _ h2
+        exact ih _ _ _ _ _ _ _ h2
       | a :: b :: t, h2 =>
-        exact ih _ _ _ _ _ _ h2
+        exact ih _ _ _ _ _ _ _ h2
     · rw [gdLoop, if_neg hs]
       exact h
 
@@ -328,10 +329,10 @@ theorem guessDelimiter_ok (dl : Option (List Nat)) (s d : List Nat) (skip : Bool
   unfold guessDelimiter at h
   simp only at h
   generalize hd : (splitNL s).filter (!·.isEmpty) = data at h
-  have h0 := gdLoop_ok dl data (min 10 data.length) (data.length + 1) 0 0 (min 10 data.length)
-    ((List.range 127).map fun c => (c, ([] : List (Nat × Nat)))) [] [] (by simp [KeysOk])
-  generalize hr : gdLoop dl data (min 10 data.length) (data.length + 1) 0 0 (min 10 data.length)
-    ((List.range 127).map fun c => (c, ([] : List (Nat × Nat)))) [] [] = r at h h0
+  have h0 := gdLoop_ok dl data (min 10 data.length) (data.length + 1) 0 0 0 (min 10 data.length)
+    [] [] [] (by simp [KeysOk])
+  generalize hr : gdLoop dl data (min 10 data.length) (data.length + 1) 0 0 0 (min 10 data.length)
+    [] [] [] = r at h h0
   cases r with
   | inl x =>
     obtain ⟨k, sk⟩ := x

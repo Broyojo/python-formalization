@@ -1,7 +1,7 @@
 import PyLean.Core
 
 /-!
-`SequenceMatcher`, `Lib/difflib.py:45-664`, CPython 3.14.7. Scope limits, as stated rules for this file:
+`SequenceMatcher`, `Lib/difflib.py:45-664`, CPython 3.15.2. Scope limits, as stated rules for this file:
 elements are `int`s compared by value, the sequences are lists, positions passed to
 `find_longest_match` are not negative, and `n` of `get_grouped_opcodes` is not negative. `isjunk` is
 fallible, and it is called once for each distinct element, so a function of the element covers a
@@ -325,7 +325,7 @@ def countB : List Nat → List (Nat × Nat) → List (Nat × Nat)
     let c := (m.lookup e).getD 0
     countB r ((e, c + 1) :: m)
 
-/-- The `for` of `Lib/difflib.py@3.14.7:641-648`. `avail` is a map with the newest entry first, and goes
+/-- The `for` of `Lib/difflib.py:642-649`. `avail` is a map with the newest entry first, and goes
 below 0, as it does in the source. -/
 def quickLoop (full : List (Nat × Nat)) : List Nat → List (Nat × Int) → Nat → Nat
   | [], _, m => m

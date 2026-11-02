@@ -3,7 +3,7 @@ import PyLean.TextLibs.BinasciiCrcTable
 
 /-!
 The rest of `Modules/binascii.c` and `Lib/base64.py`: uu, quoted-printable, `crc_hqx`, the
-85-based codecs and the legacy interface, CPython 3.14.7.
+85-based codecs and the legacy interface, CPython 3.15.2.
 -/
 
 namespace PyLean.TextLibs.Binascii
@@ -80,7 +80,7 @@ def b2aUuLoop (backtick : Bool) : (fuel : Nat) → List Nat → (left bits : Nat
       let (out, bits') := uuDrain backtick left' 3 (bits + 8)
       out ++ b2aUuLoop backtick fuel (data.drop 1) left' bits'
 
-/-- `binascii_b2a_uu_impl`, `Modules/binascii.c:602-725`. -/
+/-- `binascii_b2a_uu_impl`, `Modules/binascii.c:602-660`. -/
 def b2aUu (data : List Nat) (backtick : Bool) : Py (List Nat) :=
   if data.length > 45 then .error (err "At most 45 bytes at once")
   else
@@ -238,7 +238,7 @@ def words4 : (fuel : Nat) → List Nat → List Nat
   | fuel + 1, s =>
     (s.take 4).foldl (fun x b => x * 256 + b) 0 :: words4 fuel (s.drop 4)
 
-/-- `_85encode`, `Lib/base64.py@3.14.7:299-321`. -/
+/-- `_85encode` (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def enc85 (b : List Nat) (chars : Nat → Nat) (pad foldnuls foldspaces : Bool) : List Nat :=
   let padding := (4 - b.length % 4) % 4
   let b' := b ++ List.replicate padding 0
@@ -256,13 +256,13 @@ def enc85 (b : List Nat) (chars : Nat → Nat) (pad foldnuls foldspaces : Bool) 
 
 def a85char (i : Nat) : Nat := 33 + i
 
-/-- Split into `wrapcol` pieces, `Lib/base64.py@3.14.7:356-357`. -/
+/-- Split into `wrapcol` pieces (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def chunksOf (n : Nat) : (fuel : Nat) → List Nat → List (List Nat)
   | 0, _ => []
   | _ + 1, [] => []
   | fuel + 1, s => s.take n :: chunksOf n fuel (s.drop n)
 
-/-- `a85encode`, `Lib/base64.py@3.14.7:323-365`; `wrapcol` is any int. -/
+/-- `a85encode` (a specification; `BinasciiC.lean` has the function of 3.15.2); `wrapcol` is any int. -/
 def a85encode (b : List Nat) (foldspaces : Bool) (wrapcol : Int) (pad adobe : Bool) : List Nat :=
   let result := enc85 b a85char pad true foldspaces
   let result := if adobe then [60, 126] ++ result else result
@@ -281,7 +281,7 @@ def a85encode (b : List Nat) (foldspaces : Bool) (wrapcol : Int) (pad adobe : Bo
 def packI (acc : Nat) : List Nat :=
   [acc / 2 ^ 24 % 256, acc / 2 ^ 16 % 256, acc / 2 ^ 8 % 256, acc % 256]
 
-/-- The `for x in b + b'u' * 4` loop, `Lib/base64.py@3.14.7:406-430`. `dec` is newest first. -/
+/-- The `for x in b + b'u' * 4` loop (a specification; `BinasciiC.lean` has the function of 3.15.2). `dec` is newest first. -/
 def a85Loop (foldspaces : Bool) (ignore : List Nat) :
     List Nat → (curr dec : List Nat) → Py (List Nat × List Nat)
   | [], curr, dec => .ok (curr, dec)
@@ -304,7 +304,7 @@ def a85Loop (foldspaces : Bool) (ignore : List Nat) :
 
 def defaultIgnore : List Nat := [32, 9, 10, 13, 11]
 
-/-- `a85decode`, `Lib/base64.py@3.14.7:367-437`. -/
+/-- `a85decode` (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def a85decode (b0 : Data) (foldspaces adobe : Bool) (ignore : List Nat) : Py (List Nat) := do
   let b ← bytesFromDecodeData b0
   let b ←
@@ -324,7 +324,7 @@ def b85alphabet : List Nat :=
 
 def b85char (i : Nat) : Nat := b85alphabet.getD i 0
 
-/-- `b85encode`, `Lib/base64.py@3.14.7:447-461`. -/
+/-- `b85encode` (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def b85encode (b : List Nat) (pad : Bool) : List Nat := enc85 b b85char pad false false
 
 /-- `_b85dec[c]`. -/
@@ -338,7 +338,7 @@ def b85Chunk : List Nat → (j acc : Nat) → Sum Nat Nat
     | none => .inl j
     | some v => b85Chunk cs (j + 1) (acc * 85 + v)
 
-/-- The `for i in range(0, len(b), 5)` loop, `Lib/base64.py@3.14.7:484-500`. -/
+/-- The `for i in range(0, len(b), 5)` loop (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def b85Loop : (fuel : Nat) → List Nat → (i : Nat) → Py (List Nat)
   | 0, _, _ => .ok []
   | _ + 1, [], _ => .ok []
@@ -351,7 +351,7 @@ def b85Loop : (fuel : Nat) → List Nat → (i : Nat) → Py (List Nat)
       else do
         return packI acc ++ (← b85Loop fuel (b.drop 5) (i + 5))
 
-/-- `b85decode` after `_bytes_from_decode_data`, `Lib/base64.py@3.14.7:479-505`. -/
+/-- `b85decode` after `_bytes_from_decode_data` (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def b85decodeBytes (b : List Nat) : Py (List Nat) := do
   let padding := (5 - b.length % 5) % 5
   let b' := b ++ List.replicate padding 126
@@ -363,10 +363,10 @@ def b85decode (b : Data) : Py (List Nat) := do b85decodeBytes (← bytesFromDeco
 def z85alphabet : List Nat :=
   ("0123456789abcdefghijklmnopqrstuvwxyz" ++ "ABCDEFGHIJKLMNOPQRSTUVWXYZ.-:+=^!/*?&<>()[]{}@%$#").toList.map Char.toNat
 
-/-- `z85encode`, `Lib/base64.py@3.14.7:518-520`. -/
+/-- `z85encode` (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def z85encode (s : List Nat) : List Nat := translate b85alphabet z85alphabet (b85encode s false)
 
-/-- `_z85_decode_translation`, `Lib/base64.py@3.14.7:512-515`. -/
+/-- `_z85_decode_translation` (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def z85DecodeMap (s : List Nat) : List Nat :=
   translate (z85alphabet ++ ";_`|~".toList.map Char.toNat) (b85alphabet ++ [0, 0, 0, 0, 0]) s
 
@@ -375,7 +375,7 @@ def z85Message : PyExc → PyExc
   | .valueError m => .valueError (m.replace "base85" "z85")
   | e => e
 
-/-- `z85decode`, `Lib/base64.py@3.14.7:522-532`. -/
+/-- `z85decode` (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def z85decode (s0 : Data) : Py (List Nat) := do
   let s ← bytesFromDecodeData s0
   match b85decode (.bytes (z85DecodeMap s)) with
@@ -449,7 +449,7 @@ def encodeFile : (fuel : Nat) → FileSim → FileSim × Py Unit
           | (f, .error e) => (f, .error e)
           | (f, .ok ()) => encodeFile fuel f
 
-/-- `encodebytes`, `Lib/base64.py@3.14.7:572-580`. -/
+/-- `encodebytes` (a specification; `BinasciiC.lean` has the function of 3.15.2). -/
 def encodebytes (s : List Nat) : List Nat := encodeStream (s.length + 1) s
 
 /-- `decodebytes`, `Lib/base64.py:456-459`. -/
@@ -524,8 +524,8 @@ def a2bBase64A (d : Data) (strict : Py Bool) : Py (List Nat) := do
 def b2aHexA (d : Data) (sep : SepArg) (group : Py Int) : Py (List Nat) := do
   let b ← bufData d
   let g ← group
-  if g < -(2 ^ 31) ∨ g > 2 ^ 31 - 1 then
-    throw (.overflowError "Python int too large to convert to C int")
+  if g < -(2 ^ 63) ∨ g > 2 ^ 63 - 1 then
+    throw (.overflowError "Python int too large to convert to C ssize_t")
   strhexBytes b sep g
 
 def a2bHexA (d : Data) : Py (List Nat) := a2bHex d

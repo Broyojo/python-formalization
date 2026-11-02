@@ -1,7 +1,7 @@
 import PyLean.TextLibs.ReCompile
 
 /-!
-Model of `Modules/_sre/sre_lib.h`, CPython 3.14.7: `SRE(at)`, `SRE(charset)`, `SRE(count)`,
+Model of `Modules/_sre/sre_lib.h`, CPython 3.15.2: `SRE(at)`, `SRE(charset)`, `SRE(count)`,
 `SRE(match)` and `SRE(search)`, run on the code words of `TextLibs/ReCompile.lean`.
 
 `SRE(match)` is one C function that fakes recursion with `DO_JUMP`. Here `DO_JUMP` is a recursive

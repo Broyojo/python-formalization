@@ -361,7 +361,7 @@ theorem setCharOrNone_get (name : String) (c dflt : Nat) :
   · simp [h, setCharOrNone, Obj.asStr]
 
 theorem attrs_of_dialect (t : TyName) (d : Dialect) :
-    dialectAttrs (.dialect t d) {} =
+    dialectAttrs (.dialect t d) {} = .ok
       { dialect := Option.none
         delimiter := some (getCharOrNone d.delimiter)
         doublequote := some (.bool d.doublequote)
@@ -378,7 +378,7 @@ through every getter, every conversion and every check. `d.delimiter` is a chara
 type invariant of a `str` of length one: `NOT_SET` is outside the range of code points. -/
 def DialectRebuild : Prop :=
   ∀ (a : DArgs) (d : Dialect) (t : TyName), dialectBuild a = .ok d → d.delimiter ≠ NOT_SET →
-    dialectBuild (dialectAttrs (.dialect t d) {}) = .ok d
+    (do dialectBuild (← dialectAttrs (.dialect t d) {})) = .ok d
 
 theorem dialectRebuild_proven : DialectRebuild := by
   intro a d t h hn
@@ -390,6 +390,7 @@ theorem dialectRebuild_proven : DialectRebuild := by
     · decide
     · exact checkQuoting_ok hq
   rw [attrs_of_dialect]
+  simp only [bind, Except.bind]
   have s1 : setChar "delimiter" (some (getCharOrNone d.delimiter)) 44 = .ok d.delimiter := by
     simp [getCharOrNone, hn, setChar, Obj.asStr]
   have s2 := setCharOrNone_get "escapechar" d.escapechar NOT_SET
@@ -420,7 +421,7 @@ theorem parse_one (o : Obj) : parseDialectArgs ⟨[o], []⟩ =
 its attributes. -/
 theorem new_other (r : Registry) (ty : TyName) (o : Obj) (h1 : o.asStr = Option.none)
     (h2 : o.asDialect = Option.none) :
-    dialectNew r ty ⟨[o], []⟩ = dialectFresh ty (dialectAttrs o { dialect := some o }) := by
+    dialectNew r ty ⟨[o], []⟩ = freshAttrs ty o { dialect := some o } := by
   cases o with
   | str s => cases h1
   | strSub t s k => cases h1
@@ -446,8 +447,8 @@ theorem new_pos (r : Registry) (ty : TyName) (o : Obj) (kw : List (List Nat × O
         a.lineterminator.isNone && a.quotechar.isNone && a.quoting.isNone &&
         a.skipinitialspace.isNone && a.strict.isNone
       match o.asDialect with
-      | some d => if noOverrides then .ok (.same o d) else dialectFresh ty (dialectAttrs o a)
-      | Option.none => dialectFresh ty (dialectAttrs o a) := by
+      | some d => if noOverrides then .ok (.same o d) else freshAttrs ty o a
+      | Option.none => freshAttrs ty o a := by
   simp only [dialectNew, hp, bind, Except.bind, hd, hs, pure, Except.pure]
   rfl
 
@@ -475,45 +476,55 @@ theorem dialectReuse_proven : DialectReuse := by
     simp [dialectNew, parse_one, argsOf, Obj.asStr, hg, h2, bind, Except.bind, pure, Except.pure,
       Functor.map, Except.map]
   · rw [new_other r ty o h1 h2] at h3
-    cases hb : dialectBuild (dialectAttrs o { dialect := some o }) with
-    | error e =>
-      simp [dialectFresh, hb, bind, Except.bind] at h3
-    | ok d =>
-      simp [dialectFresh, hb, bind, Except.bind, pure, Except.pure] at h3
-      exact ⟨_, _, _, h3.symm⟩
+    simp only [freshAttrs, bind, Except.bind] at h3
+    split at h3
+    · simp at h3
+    · rename_i x _
+      cases hb : dialectBuild x with
+      | error e =>
+        simp [dialectFresh, hb, bind, Except.bind] at h3
+      | ok d =>
+        simp [dialectFresh, hb, bind, Except.bind, pure, Except.pure] at h3
+        exact ⟨_, _, _, h3.symm⟩
 
-/-- `DIALECT_GETATTR` clears every failure, not only `AttributeError`, so an object whose attributes
-all raise gives the default dialect, and a fresh one. -/
+/-- `DIALECT_GETATTR` clears `AttributeError` and nothing else: an object whose attributes are all missing
+gives the default dialect, and a fresh one, and any other exception from an attribute passes through. -/
 def GetattrCleared : Prop :=
-  ∀ (r : Registry) (ty : TyName) (o : Obj),
-    o.asStr = Option.none → o.asDialect = Option.none → (∀ n, ∃ e, o.getattr n = .error e) →
+  (∀ (r : Registry) (ty : TyName) (o : Obj),
+    o.asStr = Option.none → o.asDialect = Option.none →
+    (∀ n, ∃ e, o.getattr n = .error e ∧ isAttrErr e = true) →
     dialectNew r ty ⟨[o], []⟩ =
-      .ok (.fresh ty ⟨true, false, false, QUOTE_MINIMAL, 44, 34, NOT_SET, [13, 10]⟩ (.str [13, 10]))
+      .ok (.fresh ty ⟨true, false, false, QUOTE_MINIMAL, 44, 34, NOT_SET, [13, 10]⟩ (.str [13, 10]))) ∧
+  (∀ (r : Registry) (ty : TyName) (o : Obj) (e : PyExc),
+    o.asStr = Option.none → o.asDialect = Option.none → o.getattr "delimiter" = .error e →
+    isAttrErr e = false → dialectNew r ty ⟨[o], []⟩ = .error e)
 
 theorem getattrCleared_proven : GetattrCleared := by
-  intro r ty o h1 h2 h3
-  have hg : ∀ n, getattrOr o Option.none n = Option.none := by
-    intro n
-    obtain ⟨e, he⟩ := h3 n
-    simp [getattrOr, he]
-  have hb : dialectBuild ({ dialect := some o } : DArgs) =
-      .ok ⟨true, false, false, QUOTE_MINIMAL, 44, 34, NOT_SET, [13, 10]⟩ := rfl
-  have ha : dialectAttrs o ({ dialect := some o } : DArgs) = { dialect := some o } := by
-    simp only [dialectAttrs, hg]
-  rw [new_other r ty o h1 h2, ha]
-  simp [dialectFresh, hb, ltObj, bind, Except.bind, pure, Except.pure]
+  refine ⟨fun r ty o h1 h2 h3 => ?_, fun r ty o e h1 h2 h3 h4 => ?_⟩
+  · have hg : ∀ n, getattrOr o Option.none n = .ok Option.none := by
+      intro n
+      obtain ⟨e, he, ha⟩ := h3 n
+      simp [getattrOr, he, ha]
+    have hb : dialectBuild ({ dialect := some o } : DArgs) =
+        .ok ⟨true, false, false, QUOTE_MINIMAL, 44, 34, NOT_SET, [13, 10]⟩ := rfl
+    have ha : dialectAttrs o ({ dialect := some o } : DArgs) = .ok { dialect := some o } := by
+      simp only [dialectAttrs, hg, bind, Except.bind, pure, Except.pure]
+    rw [new_other r ty o h1 h2]
+    simp [freshAttrs, ha, dialectFresh, hb, ltObj, bind, Except.bind, pure, Except.pure]
+  · rw [new_other r ty o h1 h2]
+    simp [freshAttrs, dialectAttrs, getattrOr, h3, h4, bind, Except.bind]
 
-/-- A keyword beats the attribute, `Modules/_csv.c@3.14.7:504-511`: `DIALECT_GETATTR` only fills what is
+/-- A keyword beats the attribute, `Modules/_csv.c:504-511`: `DIALECT_GETATTR` only fills what is
 still `NULL`. With a keyword present an object is not reused, even a `Dialect`, and the new object
 is built from the keywords and the attributes of the old one. -/
 def DialectKeywords : Prop :=
-  (∀ (o x : Obj) (n : String), getattrOr o (some x) n = some x) ∧
+  (∀ (o x : Obj) (n : String), getattrOr o (some x) n = .ok (some x)) ∧
   ∀ (r : Registry) (ty : TyName) (o : Obj) (kw : List (List Nat × Obj)) (vals : List (Option Obj)),
     o.asStr = Option.none → parseDialectArgs ⟨[o], kw⟩ = .ok vals → (argsOf vals).dialect = some o →
     ((argsOf vals).delimiter.isSome ∨ (argsOf vals).doublequote.isSome ∨ (argsOf vals).escapechar.isSome ∨
       (argsOf vals).lineterminator.isSome ∨ (argsOf vals).quotechar.isSome ∨ (argsOf vals).quoting.isSome ∨
       (argsOf vals).skipinitialspace.isSome ∨ (argsOf vals).strict.isSome) →
-    dialectNew r ty ⟨[o], kw⟩ = dialectFresh ty (dialectAttrs o (argsOf vals))
+    dialectNew r ty ⟨[o], kw⟩ = freshAttrs ty o (argsOf vals)
 
 theorem none_of_some {x : Option Obj} (h : x.isSome = true) : x.isNone = false := by
   cases x <;> simp_all
@@ -589,6 +600,16 @@ theorem fresh_inv {ty t : TyName} {b : DArgs} {d : Dialect} {l : Obj}
     subst h1 h2 h3
     exact ⟨rfl, b, hb, rfl⟩
 
+theorem freshAttrs_inv {ty t : TyName} {o : Obj} {a : DArgs} {d : Dialect} {l : Obj}
+    (h : freshAttrs ty o a = .ok (.fresh t d l)) : t = ty ∧ ∃ b', dialectBuild b' = .ok d ∧ l = ltObj b' := by
+  unfold freshAttrs at h
+  cases hb : dialectAttrs o a with
+  | error e => simp [hb, bind, Except.bind] at h
+  | ok x =>
+    simp only [hb, bind, Except.bind] at h
+    exact fresh_inv h
+
+
 theorem dialectNewValid_proven : DialectNewValid := by
   intro r ty t a d l h
   unfold dialectNew at h
@@ -618,38 +639,44 @@ theorem dialectNewValid_proven : DialectNewValid := by
           cases hd : q.asDialect with
           | none =>
             rw [hd] at h
-            exact fresh_inv h
+            exact freshAttrs_inv h
           | some z =>
             rw [hd] at h
             simp only at h
             split at h
             · cases h
-            · exact fresh_inv h
+            · exact freshAttrs_inv h
       | none =>
         simp only [hs] at h
         cases hd : o.asDialect with
         | none =>
           rw [hd] at h
-          exact fresh_inv h
+          exact freshAttrs_inv h
         | some z =>
           rw [hd] at h
           simp only at h
           split at h
           · cases h
-          · exact fresh_inv h
+          · exact freshAttrs_inv h
 
-/-- An attribute of a subclass shadows the C field, `Modules/_csv.c@3.14.7:507`: `DIALECT_GETATTR` reads what
-the instance's class says, and clears it if it raises. Without one it reads the getter. -/
+/-- An attribute of a subclass shadows the C field, `Modules/_csv.c:507`: `DIALECT_GETATTR` reads what
+the instance's class says, clears `AttributeError`, and passes anything else on. Without one it reads
+the getter. -/
 def SubclassAttrs : Prop :=
   ∀ (t : TyName) (d : Dialect) (l : Option Obj) (at_ : List (String × Except PyExc Obj))
     (i : Except PyExc Unit) (n : String),
-    (∀ x, at_.lookup n = some (.ok x) → getattrOr (.dialectX t d l at_ i) Option.none n = some x) ∧
-    (∀ e, at_.lookup n = some (.error e) → getattrOr (.dialectX t d l at_ i) Option.none n = Option.none) ∧
+    (∀ x, at_.lookup n = some (.ok x) → getattrOr (.dialectX t d l at_ i) Option.none n = .ok (some x)) ∧
+    (∀ e, at_.lookup n = some (.error e) → isAttrErr e = true →
+      getattrOr (.dialectX t d l at_ i) Option.none n = .ok Option.none) ∧
+    (∀ e, at_.lookup n = some (.error e) → isAttrErr e = false →
+      getattrOr (.dialectX t d l at_ i) Option.none n = .error e) ∧
     (at_.lookup n = Option.none → (.dialectX t d l at_ i : Obj).getattr n = dialectGetattr d l t n)
 
 theorem subclassAttrs_proven : SubclassAttrs := by
   intro t d l a i n
-  refine ⟨fun x h => ?_, fun e h => ?_, fun h => ?_⟩ <;> simp [getattrOr, Obj.getattr, h]
+  refine ⟨fun x h => ?_, fun e h h2 => ?_, fun e h h2 => ?_, fun h => ?_⟩ <;>
+    simp [getattrOr, Obj.getattr, h]
+  all_goals simp [h2]
 
 /-- `Dialect_get_lineterminator` returns the object in the slot, not a copy of its text: a `str`
 subclass stays one, and a keyword's object is what is stored. A slot `_set_str` has not filled gives
@@ -689,7 +716,7 @@ def CallDialectLaw : Prop :=
   (∀ (r : Registry) (o : Obj) (kw : List (List Nat × Obj)) (vals : List (Option Obj)),
     o.asStr = Option.none → parseDialectArgs ⟨[o], kw⟩ = .ok vals → (argsOf vals).dialect = some o →
     (argsOf vals).delimiter.isSome = true →
-    callDialect r (some o) kw = dialectFresh dialectTy (dialectAttrs o (argsOf vals))) ∧
+    callDialect r (some o) kw = freshAttrs dialectTy o (argsOf vals)) ∧
   (∀ (r : Registry) (kw : List (List Nat × Obj)) (x : Dialect) (l : Obj),
     dialectNew r dialectTy ⟨[], kw⟩ = .ok (.fresh dialectTy x l) →
     callDialect r Option.none kw = .ok (.fresh dialectTy x l)) ∧
@@ -705,6 +732,12 @@ theorem dialectFresh_tp (ty : TyName) (a : DArgs) : (do tpInit (← dialectFresh
   unfold dialectFresh
   cases dialectBuild a <;> rfl
 
+theorem freshAttrs_tp (ty : TyName) (o : Obj) (a : DArgs) : (do tpInit (← freshAttrs ty o a)) = freshAttrs ty o a := by
+  unfold freshAttrs
+  cases dialectAttrs o a with
+  | error e => rfl
+  | ok x => exact dialectFresh_tp ty x
+
 theorem callDialectLaw_proven : CallDialectLaw := by
   have hr : ∀ (r : Registry) (o : Obj) (d : Dialect), o.asDialect = some d →
       callDialect r (some o) [] = tpInit (.same o d) := by
@@ -718,7 +751,7 @@ theorem callDialectLaw_proven : CallDialectLaw := by
   · exact ⟨.same (.dialect t d) d, by rw [hr r _ d rfl]; rfl, rfl⟩
   · have hn := dialectKeywords_proven.2 r dialectTy o kw vals h1 h2 h3 (.inl h4)
     simp only [callDialect, typeCall, hn]
-    exact dialectFresh_tp _ _
+    exact freshAttrs_tp _ _ _
   · simp [callDialect, typeCall, h, bind, Except.bind, tpInit]
   · exact ⟨_, rfl, rfl⟩
 
