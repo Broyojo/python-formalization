@@ -58,6 +58,7 @@ possible_fix: |
   Spell the keywords with explicit ASCII classes ([Ii][Nn][Ff]...) and drop re.IGNORECASE, keeping
   `\d` Unicode-aware; or check `.isascii()` on the keyword part. `[eE]` covers the exponent marker.
 tested:
+  python3 3.15.2: REPRODUCED
   python3 (3.14.7, Linux, bundled libmpdec 2.5.1): REPRODUCED
   main (vendor/cpython-main/python.exe, 3.16.0a1+dev, bundled libmpdec 2.5.1): REPRODUCED
 duplicates:

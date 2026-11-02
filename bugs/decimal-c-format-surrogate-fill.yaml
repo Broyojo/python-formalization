@@ -4,9 +4,9 @@ priority: P4
 kind: wrong-exception
 module: decimal
 files: [Modules/_decimal/_decimal.c]
-functions: ["dec_format"]
+functions: ["_decimal_Decimal___format___impl"]
 summary: |
-  dec_format encodes the whole spec as UTF-8 before parsing it, so a spec containing a lone
+  _decimal_Decimal___format___impl encodes the whole spec as UTF-8 before parsing it, so a spec containing a lone
   surrogate raises UnicodeEncodeError, whether or not the surrogate would be valid there:
     format(_decimal.Decimal('1.5'), '\ud800<5')   -> UnicodeEncodeError
     format(_pydecimal.Decimal('-0.5'), '\ud800<5') -> '-0.5\ud800'
@@ -42,12 +42,13 @@ expected: |
 promised_by: |
   Twin agreement. Doc/library/string.rst:342: the fill is a "character that can be any character".
 cause: |
-  Modules/_decimal/_decimal.c@3.14.7:3562 `fmt = (char *)PyUnicode_AsUTF8AndSize(fmtarg, &size);` and the
-  NULL return at @3.14.7:3563-3565. Same on main at :4051.
+  Modules/_decimal/_decimal.c:3778 `fmt = (char *)PyUnicode_AsUTF8AndSize(fmtarg, &size);` and the
+  NULL return at :3779-3781. Same on main at :4051.
 possible_fix: |
   On a UnicodeEncodeError from that call, clear it and take the existing pydec_format path, which
   handles any str.
 tested:
+  python3 3.15.2: REPRODUCED
   python3 (3.14.7, Linux, bundled libmpdec 2.5.1): REPRODUCED
   main (vendor/cpython-main/python.exe, 3.16.0a1+dev, bundled libmpdec 2.5.1): REPRODUCED
 duplicates:

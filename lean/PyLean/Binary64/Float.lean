@@ -747,7 +747,7 @@ def PyFloat_Unpack8 (data : List Nat) (le : Bool) : F64 :=
 
 /-- `nu_float`, Modules/_struct.c:483-488: `(double)x`, with none of the signaling-NaN
 care of `PyFloat_Unpack4`. 3.15 removed the "Skip float and double" exception from
-`init_endian_tables` (_struct.c:1525-1558), so on a little-endian host `<f` and `=f`
+`init_endian_tables` (_struct.c:1519-1558), so on a little-endian host `<f` and `=f`
 come here as well as native `f`, and only `>f` still calls `PyFloat_Unpack4`. -/
 def nu_float (data : List Nat) : F64 := ofFloat32Bits (unlayout data true)
 

@@ -1,16 +1,16 @@
 file	line	endline	name	signature	status	entry	note
-Modules/mathintegermodule.c	30	73	math_integer_gcd_impl	math_integer_gcd_impl(PyObject *module, PyObject * const *args, Py_ssize_t args_length) /*[clinic end generated code: output=8e9c5bab06bea203 input=a90cde2ac5281551]*/	todo		changed-in-3.15: new function
+Modules/mathintegermodule.c	30	73	math_integer_gcd_impl	math_integer_gcd_impl(PyObject *module, PyObject * const *args, Py_ssize_t args_length) /*[clinic end generated code: output=8e9c5bab06bea203 input=a90cde2ac5281551]*/	modelled	mathint-gcd-general,mathint-gcd-small	
 Modules/mathintegermodule.c	77	101	long_lcm	long_lcm(PyObject *a, PyObject *b)	modelled	mathint-lcm-general,mathint-lcm-small	
-Modules/mathintegermodule.c	113	152	math_integer_lcm_impl	math_integer_lcm_impl(PyObject *module, PyObject * const *args, Py_ssize_t args_length) /*[clinic end generated code: output=3e88889b866ccc28 input=261bddc85a136bdf]*/	todo		changed-in-3.15: new function
+Modules/mathintegermodule.c	113	152	math_integer_lcm_impl	math_integer_lcm_impl(PyObject *module, PyObject * const *args, Py_ssize_t args_length) /*[clinic end generated code: output=3e88889b866ccc28 input=261bddc85a136bdf]*/	modelled	mathint-lcm-general,mathint-lcm-small	
 Modules/mathintegermodule.c	336	341	_approximate_isqrt	_approximate_isqrt(uint64_t n)	modelled	mathint-isqrt-floor-sqrt	
-Modules/mathintegermodule.c	353	481	math_integer_isqrt	math_integer_isqrt(PyObject *module, PyObject *n) /*[clinic end generated code: output=551031e41a0f5d9e input=921ddd9853133d8d]*/	todo		changed-in-3.15: new function
+Modules/mathintegermodule.c	353	481	math_integer_isqrt	math_integer_isqrt(PyObject *module, PyObject *n) /*[clinic end generated code: output=551031e41a0f5d9e input=921ddd9853133d8d]*/	modelled	mathint-isqrt-floor-sqrt,mathint-isqrt-negative	
 Modules/mathintegermodule.c	485	493	count_set_bits	count_set_bits(unsigned long n)	modelled	mathint-factorial-exact	
 Modules/mathintegermodule.c	566	614	factorial_partial_product	factorial_partial_product(unsigned long start, unsigned long stop, unsigned long max_bits)	modelled	mathint-factorial-exact	
 Modules/mathintegermodule.c	619	666	factorial_odd_part	factorial_odd_part(unsigned long n)	modelled	mathint-factorial-exact	
-Modules/mathintegermodule.c	691	727	math_integer_factorial	math_integer_factorial(PyObject *module, PyObject *arg) /*[clinic end generated code: output=131c23fd48650414 input=742f4dfa490a1b07]*/	todo		changed-in-3.15: new function
+Modules/mathintegermodule.c	691	727	math_integer_factorial	math_integer_factorial(PyObject *module, PyObject *arg) /*[clinic end generated code: output=131c23fd48650414 input=742f4dfa490a1b07]*/	modelled	mathint-factorial-arg-errors,mathint-factorial-exact	
 Modules/mathintegermodule.c	854	966	perm_comb_small	perm_comb_small(unsigned long long n, unsigned long long k, int iscomb)	modelled	mathint-comb-formula,mathint-perm-formula	
 Modules/mathintegermodule.c	973	1019	perm_comb	perm_comb(PyObject *n, unsigned long long k, int iscomb)	modelled	mathint-comb-formula,mathint-perm-formula	
-Modules/mathintegermodule.c	1041	1112	math_integer_perm_impl	math_integer_perm_impl(PyObject *module, PyObject *n, PyObject *k) /*[clinic end generated code: output=9f9b96cd73a94de4 input=fd627e5a09dd5116]*/	todo		changed-in-3.15: new function
-Modules/mathintegermodule.c	1135	1229	math_integer_comb_impl	math_integer_comb_impl(PyObject *module, PyObject *n, PyObject *k) /*[clinic end generated code: output=c2c9cdfe0d5dd43f input=8cc12726b682c4a5]*/	todo		changed-in-3.15: new function
+Modules/mathintegermodule.c	1041	1112	math_integer_perm_impl	math_integer_perm_impl(PyObject *module, PyObject *n, PyObject *k) /*[clinic end generated code: output=9f9b96cd73a94de4 input=fd627e5a09dd5116]*/	modelled	mathint-comb-perm-negative,mathint-comb-perm-zero-above,mathint-factorial-exact,mathint-perm-formula	
+Modules/mathintegermodule.c	1135	1229	math_integer_comb_impl	math_integer_comb_impl(PyObject *module, PyObject *n, PyObject *k) /*[clinic end generated code: output=c2c9cdfe0d5dd43f input=8cc12726b682c4a5]*/	modelled	mathint-comb-formula,mathint-comb-perm-negative,mathint-comb-perm-zero-above	
 Modules/mathintegermodule.c	1243	1271	math_integer_exec	math_integer_exec(PyObject *module)	todo		changed-in-3.15: new function
 Modules/mathintegermodule.c	1294	1297	PyInit__math_integer	PyInit__math_integer(void)	todo		changed-in-3.15: new function

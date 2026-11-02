@@ -55,6 +55,7 @@ cause: |
 possible_fix: |
   Apply _fix to the quotient in __floordiv__ and __divmod__, as to every other result.
 tested:
+  python3 3.15.2: REPRODUCED
   python3 (3.14.7, Linux, bundled libmpdec 2.5.1): REPRODUCED
   main (vendor/cpython-main/python.exe, 3.16.0a1+dev, bundled libmpdec 2.5.1): REPRODUCED
 duplicates:

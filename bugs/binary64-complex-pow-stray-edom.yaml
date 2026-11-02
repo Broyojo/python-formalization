@@ -36,6 +36,7 @@ cause: |
 possible_fix: |
   Already done upstream by gh-156886.
 tested: |
+  python3 3.15.2: REPRODUCED
   python3 3.14.7: REPRODUCED. main: not reproduced, gives (nan+nanj).
 duplicates:
   issues:

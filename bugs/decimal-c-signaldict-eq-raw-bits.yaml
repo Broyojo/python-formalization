@@ -63,6 +63,7 @@ possible_fix: |
   python/cpython#158063, concerns the same function: it reads SdFlagAddr(w) before checking that w is a
   SignalDict. A fix to one should look at the other.
 tested:
+  python3 3.15.2: REPRODUCED
   python3 (3.14.7, Linux, bundled libmpdec 2.5.1): REPRODUCED
   main (vendor/cpython-main/python.exe, 3.16.0a1+dev, bundled libmpdec 2.5.1): REPRODUCED
 duplicates:
