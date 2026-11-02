@@ -1,0 +1,59 @@
+id: textlibs-etree-py-twin-setitem
+title: "Pure-Python Element.__setitem__ consumes an iterator before storing it, so slice assignment from a generator inserts nothing"
+priority: P3
+kind: twin-divergence
+module: textlibs
+files: [Lib/xml/etree/ElementTree.py]
+functions: ["Element.__setitem__", "Element._assert_is_element"]
+summary: |
+  Element.__setitem__ checks a slice value with `for elt in element: self._assert_is_element(elt)`
+  and then runs `self._children[index] = element`, which iterates the value a second time. A
+  generator or any other one-shot iterator is exhausted by the first loop, so
+  e[1:1] = (x for x in new) inserts nothing, and e[:] = iter(new) empties the element. The C
+  accelerator calls PySequence_Fast once and stores every item.
+  The twin also checks the value before the index, so e[100] = 5 raises TypeError there and
+  IndexError in C; that difference is cosmetic and is recorded only for completeness.
+likelihood: |
+  Low. The pure-Python Element is used only when _elementtree is unavailable (some alternative
+  builds, or tests that block it), but there it silently loses data.
+maybe_intended: |
+  No for the iterator case: the C accelerator and Element.extend (which loops once) both accept an
+  iterator, and the docs present the two implementations as interchangeable.
+reproducer: |
+  import xml.etree.ElementTree as cmod
+  from test.support import import_helper
+  pymod = import_helper.import_fresh_module('xml.etree.ElementTree', blocked=['_elementtree'])
+  def run(mod):
+      e = mod.Element('r')
+      e.extend([mod.Element('a%d' % i) for i in range(3)])
+      new = [mod.Element('X0'), mod.Element('X1')]
+      e[1:1] = (x for x in new)
+      return [c.tag for c in e]
+  c, py = run(cmod), run(pymod)
+  print('C ', c)
+  print('Py', py)
+  if c == ['a0', 'X0', 'X1', 'a1', 'a2'] and py == ['a0', 'a1', 'a2']:
+      print('REPRODUCED textlibs-etree-py-twin-setitem')
+expected: |
+  Both: ['a0', 'X0', 'X1', 'a1', 'a2'].
+observed: |
+  python3 3.15.2: C ['a0', 'X0', 'X1', 'a1', 'a2'], Py ['a0', 'a1', 'a2']. REPRODUCED.
+  main (cpython-main/python.exe, 3.16.0a1+dev): identical. REPRODUCED by check_bugs.py.
+promised_by: |
+  Lib/xml/etree/ElementTree.py:2088-2096 replaces the Python Element with the C one whenever
+  _elementtree imports, so the two are meant to be interchangeable. Invariant: the twins agree.
+cause: |
+  Lib/xml/etree/ElementTree.py:212-217: the type-check loop at :213-214 iterates `element`, and
+  :217 passes the same, now exhausted, iterator to list.__setitem__.
+possible_fix: |
+  Materialise the value once: `element = list(element)` before the check loop when index is a
+  slice.
+duplicates:
+  issues: []
+  queries: ["ElementTree pure python setitem generator", "xml etree Element slice assignment iterator exhausted",
+            "_assert_is_element iterator consumed", "bugforge README: no ElementTree entry"]
+  note: |
+    Queries run as separate unquoted terms.
+lean:
+  property: PyLean.TextLibs.Etree.SetSliceTwins
+  theorem: PyLean.TextLibs.Etree.setSliceTwins_refuted

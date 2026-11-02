@@ -1,0 +1,80 @@
+id: textlibs-etree-slice-backward-dup
+title: "Element slice assignment with step 1 and start > stop duplicates a child without a reference and drops another (use-after-free)"
+priority: P1
+kind: memory-safety
+module: textlibs
+files: [Modules/_elementtree.c]
+functions: ["element_ass_subscr"]
+summary: |
+  For e[i:j] = seq with step 1, element_ass_subscr uses the start and stop that
+  PySlice_AdjustIndices returns without clipping stop up to start, as list_ass_subscript does
+  (adjust_slice_indexes). When the clipped start lies past the clipped stop (e[5:2] = [x]),
+  slicelen is 0, so the insert branch shifts children[stop:length] right by len(seq), and the
+  replace loop then writes seq at start. The child at stop..start-1 that was shifted stays in
+  its old slot as well, and the child that sat at start is overwritten. The duplicate gets no
+  Py_INCREF, so the element holds two slots for one reference, and the overwritten child's
+  reference leaks. When the element is released, the duplicated child is decref'd twice and freed
+  while other references to it remain.
+likelihood: |
+  Low. Assigning to a backward step-1 slice is unusual, though it is legal Python with a defined
+  meaning for every other mutable sequence (insert at start). No threads, reentrancy or C code
+  are needed: plain Python on the default build corrupts the element deterministically, and the
+  stale reference is reachable from any list that still holds the child.
+maybe_intended: |
+  No. Every other path in the function and the pure-Python twin (which stores through list)
+  give list semantics; the result here is not a permutation of the old and new children.
+reproducer: |
+  import sys
+  import xml.etree.ElementTree as ET
+  kids = [ET.Element('a%d' % i) for i in range(7)]
+  e = ET.Element('r')
+  e[:] = kids
+  before = sys.getrefcount(kids[2])
+  e[5:2] = [ET.Element('X')]
+  tags = [c.tag for c in e]
+  print(tags, 'refcount change of a2:', sys.getrefcount(kids[2]) - before)
+  # list semantics: ['a0', 'a1', 'a2', 'a3', 'a4', 'X', 'a5', 'a6']
+  if tags.count('a2') == 2 and 'a4' not in tags and sys.getrefcount(kids[2]) == before:
+      print('REPRODUCED textlibs-etree-slice-backward-dup')
+expected: |
+  ['a0', 'a1', 'a2', 'a3', 'a4', 'X', 'a5', 'a6'], as for a list and for the pure-Python
+  Element (xml.etree.ElementTree imported with _elementtree blocked).
+observed: |
+  python3 3.15.2: ['a0', 'a1', 'a2', 'a2', 'a3', 'X', 'a5', 'a6'], a2 in two slots with an
+  unchanged refcount. REPRODUCED.
+  main (cpython-main/python.exe): identical. REPRODUCED.
+  Use after free, run once to rate severity and not developed further: keeping `kids`, then
+  `del e` and allocating 100 new Elements, makes kids[2].tag read 'z0' (the freed object's memory
+  now holds a new Element) on both 3.15.2 and main, with -X dev and no crash.
+  A 200,000-case comparison of the C and pure-Python Element over random slices, steps and
+  lengths found no other disagreement in slice assignment or deletion.
+promised_by: |
+  Doc/library/stdtypes.rst, mutable sequence operations: s[i:j] = t replaces the slice of s from
+  i to j by t; Element supports the sequence protocol (Doc/library/xml.etree.elementtree.rst,
+  "Element objects ... also support the following sequence type methods"). Invariant: no
+  reference-count corruption.
+cause: |
+  Modules/_elementtree.c:1976-1977 computes slicelen with PySlice_AdjustIndices, which for
+  step > 0 and start > stop leaves stop < start (Objects/sliceobject.c:264-304). The insert loop
+  at :2026-2030 then runs `for (i = length-1; i >= stop; i--)` from stop, and the replace loop at
+  :2033-2037 writes from start. list_ass_subscript avoids this through adjust_slice_indexes
+  (Objects/listobject.c), which sets stop = start for such slices.
+possible_fix: |
+  After PySlice_AdjustIndices at :1976, clip as list does: `if (step > 0 && stop < start) stop =
+  start;` (and the mirror for step < 0, which is harmless here because step != 1 requires
+  newlen == slicelen). The deletion path is unaffected because it returns when slicelen <= 0.
+duplicates:
+  issues:
+    - {number: 143200, state: closed, relation: "nearby, not this bug: NULL dereference through re-entrant slice assignment"}
+    - {number: 157094, state: closed, relation: "nearby, not this bug: free-threaded races on a shared input list"}
+    - {number: 157091, state: closed, relation: "nearby, not this bug: free-threaded races between structural writers"}
+    - {number: 149965, state: open, relation: "nearby, not this bug: thread-safety of element_ass_subscr"}
+  queries: ["elementtree slice assignment", "element_ass_subscr", "Element slice start stop assign",
+            "elementtree slice refcount", "_elementtree slice assignment negative",
+            "Element setitem slice duplicate child", "elementtree extended slice assignment stop start",
+            "PRs: element_ass_subscr", "bugforge README: no ElementTree entry"]
+  note: |
+    Queries run as separate unquoted terms.
+lean:
+  property: PyLean.TextLibs.Etree.SetSliceCIsList
+  theorem: PyLean.TextLibs.Etree.setSliceCIsList_refuted

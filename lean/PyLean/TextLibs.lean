@@ -12,6 +12,7 @@ import PyLean.TextLibs.QuopriProps
 import PyLean.TextLibs.HtmlProps
 import PyLean.TextLibs.DifflibHunks
 import PyLean.TextLibs.CsvSniffProps
+import PyLean.TextLibs.EtreeProps
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1333,7 +1334,56 @@ def entries : List Entry := [
   { id := "textlibs-difflib-context-sides", pyFile := "Lib/difflib.py", pyFns := ["context_diff"]
     statement := "The two sides of a hunk of context_diff, without their prefixes, are the slices of a and b the group covers."
     source := "docstring of context_diff", status := .proven
-    prop := ``ContextSides, thm := some ``contextSides_proven }
+    prop := ``ContextSides, thm := some ``contextSides_proven },
+  { id := "textlibs-etree-slice-store-list", pyFile := "Modules/_elementtree.c"
+    pyFns := ["element_ass_subscr"]
+    statement := "e[s] = xs, for a list or tuple xs of Elements and every slice with int/None parts, leaves the children l[s] = xs leaves in a list and raises what it raises."
+    source := "the implementation disagreeing with itself (the pure-Python twin stores through list)", status := .refuted
+    prop := ``Etree.SetSliceCIsList, thm := some ``Etree.setSliceCIsList_refuted
+    bug := some "textlibs-etree-slice-backward-dup"
+    notes := "e[5:2] = [X] on a0..a6 gives a0 a1 a2 a2 a3 X a5 a6: a2 sits in two slots with one reference, a4 is dropped." },
+  { id := "textlibs-etree-slice-store-forward", pyFile := "Modules/_elementtree.c"
+    pyFns := ["element_ass_subscr"]
+    statement := "The same holds for every slice that is not a backward step-1 slice: the resize, the shift loops, the replace loop and the extended-slice size check agree with list_ass_subscript."
+    source := "narrows textlibs-etree-slice-store-list", status := .proven
+    prop := ``Etree.SetSliceCForwardIsList, thm := some ``Etree.setSliceCForwardIsList_proven },
+  { id := "textlibs-etree-slice-del", pyFile := "Modules/_elementtree.c"
+    pyFns := ["element_ass_subscr", "Element.__delitem__"]
+    statement := "del e[s] leaves the same children and raises the same exception in the C accelerator and the Python twin, for every slice with int/None parts, step 1 included."
+    source := "the implementation disagreeing with itself (C and Python twins)", status := .proven
+    prop := ``Etree.DelSliceCIsList, thm := some ``Etree.delSliceCIsList_proven
+    notes := "C runs the extended-slice compaction loop for step 1 as well; with step 1 every num_moved is 0." },
+  { id := "textlibs-etree-item-twins", pyFile := "Modules/_elementtree.c"
+    pyFns := ["element_subscr", "element_getitem", "element_ass_subscr", "element_setitem",
+      "Element.__getitem__", "Element.__setitem__", "Element.__delitem__"]
+    statement := "e[i], del e[i] and e[i] = x for an Element x give the same value or children and the same exception class in both twins, for every int i."
+    source := "the implementation disagreeing with itself (C and Python twins)", status := .proven
+    prop := ``Etree.ItemTwins, thm := some ``Etree.itemTwins_proven
+    notes := "Messages differ: C says 'child index out of range', the twin 'list index out of range'." },
+  { id := "textlibs-etree-item-store-order", pyFile := "Lib/xml/etree/ElementTree.py"
+    pyFns := ["Element.__setitem__", "Element._assert_is_element", "element_ass_subscr", "element_setitem"]
+    statement := "e[i] = x raises the same exception class in both twins for every int i and every object x."
+    source := "the implementation disagreeing with itself (C and Python twins)", status := .refuted
+    prop := ``Etree.ItemStoreTwins, thm := some ``Etree.itemStoreTwins_refuted
+    bug := some "textlibs-etree-py-twin-setitem"
+    notes := "C checks the index before the type, the twin the type before the index." },
+  { id := "textlibs-etree-slice-read-twins", pyFile := "Modules/_elementtree.c"
+    pyFns := ["element_subscr", "Element.__getitem__"]
+    statement := "e[s] gives the same children or the same exception in both twins for every slice with int/None parts."
+    source := "the implementation disagreeing with itself (C and Python twins)", status := .proven
+    prop := ``Etree.GetSliceTwins, thm := some ``Etree.getSliceTwins_proven },
+  { id := "textlibs-etree-slice-store-twins", pyFile := "Lib/xml/etree/ElementTree.py"
+    pyFns := ["Element.__setitem__", "element_ass_subscr"]
+    statement := "e[s] = value leaves the same children in both twins for every slice and every iterable value."
+    source := "the implementation disagreeing with itself (C and Python twins)", status := .refuted
+    prop := ``Etree.SetSliceTwins, thm := some ``Etree.setSliceTwins_refuted
+    bug := some "textlibs-etree-py-twin-setitem"
+    notes := "The twin's type-check loop exhausts a generator before list.__setitem__ iterates it again, so nothing is inserted." },
+  { id := "textlibs-etree-slice-store-twins-seq", pyFile := "Lib/xml/etree/ElementTree.py"
+    pyFns := ["Element.__setitem__", "element_ass_subscr"]
+    statement := "For a list or tuple of Elements and a slice that is not a backward step-1 slice, both twins leave the same children and raise the same exception."
+    source := "narrows textlibs-etree-slice-store-twins", status := .proven
+    prop := ``Etree.SetSliceTwinsSeq, thm := some ``Etree.setSliceTwinsSeq_proven }
 ]
 
 end PyLean.TextLibs

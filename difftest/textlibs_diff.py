@@ -3371,6 +3371,93 @@ class DifflibArea:
         return common.py_result(body)
 
 
+@area("etree", 4)
+class EtreeArea:
+    """Element children as a sequence, C accelerator vs pure-Python twin (EtreeModel.lean)."""
+    VALS = [None, 0, 1, 2, -1, -2, 3, 4, 5, 7, 8, 9, 10, -8, -9, -10, 100, -100,
+            2**63 - 1, 2**63, -2**63, -2**63 - 1, 2**64]
+    STEPS = [None, 1, 1, 1, 2, 3, -1, -1, -2, -3, 0, 5, -7, 2**63, -2**63, 2**63 - 1]
+
+    @classmethod
+    def gen(cls, r):
+        f = r.choice(["get", "set", "set", "set", "del"])
+        c = {"mod": "textlibs", "fn": "etree." + f, "impl": r.choice(["c", "py"]),
+             "kids": list(range(r.randint(0, 9)))}
+        if r.random() < 0.3:
+            c["idx"] = r.choice(cls.VALS[1:])
+            if f == "set":
+                c["obj"] = r.choice([60, 61, 1000])
+        else:
+            c["slice"] = [r.choice(cls.VALS), r.choice(cls.VALS), r.choice(cls.STEPS)]
+            if f == "set":
+                xs = [60 + i for i in range(r.randint(0, 5))]
+                if xs and r.random() < 0.1:
+                    xs[r.randrange(len(xs))] = 1000
+                c["arg"] = {"kind": r.choice(["seq", "seq", "iter", "noniter"]), "xs": xs,
+                            "raise": r.random() < 0.2, "eff": r.choice([0, 0, 1, 2, 3])}
+        return c
+
+    @classmethod
+    def run(cls, c):
+        if not hasattr(cls, "pymod"):
+            # import_fresh_module rebinds xml.etree.ElementTree on the package, so take the
+            # C-accelerated module first and keep both.
+            import xml.etree.ElementTree as cmod
+            from test.support import import_helper
+            cls.cmod = cmod
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                cls.pymod = import_helper.import_fresh_module("xml.etree.ElementTree", blocked=["_elementtree"])
+            assert cls.cmod.Element is not cls.pymod.Element and cls.cmod.Element.__module__ == "xml.etree.ElementTree"
+            import _elementtree
+            assert cls.cmod.Element is _elementtree.Element
+        mod = cls.cmod if c["impl"] == "c" else cls.pymod
+        e = mod.Element("r")
+        e.extend([mod.Element("e%d" % n) for n in c["kids"]])
+
+        def num(k):
+            return int(k.tag[1:])
+
+        def mk(n):
+            return mod.Element("e%d" % n) if n < 1000 else n
+
+        key = c["idx"] if "idx" in c else slice(*c["slice"])
+        f = c["fn"].split(".")[1]
+        if f == "get":
+            return common.py_result(lambda: [num(k) for k in e[key]] if isinstance(key, slice) else num(e[key]))
+
+        def arg():
+            a = c["arg"]
+            items = [mk(n) for n in a["xs"]]
+            if a["kind"] == "seq":
+                return items
+            if a["kind"] == "noniter":
+                return 1000
+
+            def g():
+                eff = a["eff"]
+                if eff == 1:
+                    e.clear()
+                elif eff == 2:
+                    e.append(mod.Element("e50"))
+                elif eff == 3 and len(e):
+                    del e[-1]
+                yield from items
+                if a["raise"]:
+                    raise ValueError("boom")
+            return g()
+
+        def body():
+            if f == "del":
+                del e[key]
+            elif "idx" in c:
+                e[key] = mk(c["obj"])
+            else:
+                e[key] = arg()
+        out = common.py_result(lambda: (body(), None)[1])
+        return {"ok": {"kids": [num(k) for k in e], "out": out}}
+
+
 only = os.environ.get("TEXTLIBS_ONLY")
 names = [n for n in AREAS if not only or n in only.split(",")]
 weights = [AREAS[n][1] for n in names]
