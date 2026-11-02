@@ -2,6 +2,7 @@ import PyLean.DiffCore
 import PyLean.Ipaddress.Model
 import PyLean.Ipaddress.Exploded
 import PyLean.Ipaddress.Parse4
+import PyLean.Ipaddress.Hosts
 
 /-! Differential-testing handler for `ipaddress`. A network is `[addr, prefixlen]`. -/
 
@@ -69,6 +70,9 @@ def run (fn : String) (j : Json) : Except String Json := do
     let a ← getNet j bits "a"
     let b ← getNet j bits "b"
     return encPy (fun ns => Json.arr (ns.map encNet).toArray) (addressExclude a b)
+  | "hosts" =>
+    let n ← getNet j bits "net"
+    return encPy toJson (.ok (Json.arr #[toJson (iterList n), toJson (hostsList n), toJson n.numAddresses]) : Py Json)
   | "v4init" =>
     let arg ← j.getObjVal? "arg"
     let kind ← (← arg.getArrVal? 0).getStr?

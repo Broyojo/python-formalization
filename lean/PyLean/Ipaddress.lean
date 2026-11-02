@@ -7,6 +7,7 @@ import PyLean.Ipaddress.Summarize
 import PyLean.Ipaddress.Subnets
 import PyLean.Ipaddress.Exploded
 import PyLean.Ipaddress.Parse4Props
+import PyLean.Ipaddress.Hosts
 
 /-!
 `Lib/ipaddress.py`, CPython 3.15.2. The model covers the integer core of networks,
@@ -126,7 +127,14 @@ def entries : List Entry := [
     pyFns := ["IPv4Address.__init__", "_IPAddressBase._check_int_address", "_IPAddressBase._check_packed_address"]
     statement := "IPv4Address(int) accepts exactly [0, 2**32) and stores the int; four big-endian bytes give the int back, any other length raises AddressValueError."
     source := "IPv4Address docstring, ipaddress.py:1271-1284; _check_int_address and _check_packed_address", status := .proven
-    prop := ``V4InitIntBytes, thm := some ``v4InitIntBytes_proven }
+    prop := ``V4InitIntBytes, thm := some ``v4InitIntBytes_proven },
+  { id := "ipaddress-hosts-doc", pyFile := "Lib/ipaddress.py"
+    pyFns := ["_BaseNetwork.hosts", "IPv6Network.hosts", "_BaseNetwork.__iter__", "_BaseNetwork.num_addresses",
+      "_BaseNetwork.broadcast_address"]
+    statement := "For every valid IPv4 or IPv6 network, list(net) is every address from the network address up, num_addresses counts them, and list(net.hosts()) is that list minus exactly what the documentation excludes (IPv4: network and broadcast below /31; IPv6: the Subnet-Router anycast address below /127)."
+    source := "Doc/library/ipaddress.rst, hosts() for IPv4Network and IPv6Network", status := .proven
+    prop := ``HostsDoc, thm := some ``hostsDoc_proven
+    notes := "Difftest fn hosts (list, hosts, num_addresses on prefixes within 10 of the maximum): ~9.5k cases over 3 seeds, 100%." }
 ]
 
 end PyLean.Ipaddress

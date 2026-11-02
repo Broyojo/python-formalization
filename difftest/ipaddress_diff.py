@@ -65,6 +65,11 @@ def gen_v4(rng):
 def gen_case(rng):
     if rng.random() < 0.3:
         return {"mod": "ipaddress", "fn": "v4init", "bits": 32, "arg": gen_v4(rng)}
+    if rng.random() < 0.15:
+        bits = rng.choice([32, 128])
+        p = bits - rng.choice([0, 0, 1, 1, 2, 3, 4, 7, 10])
+        a = edge_addr(rng, bits) & (((1 << bits) - 1) ^ ((1 << (bits - p)) - 1))
+        return {"mod": "ipaddress", "fn": "hosts", "bits": bits, "net": [a, p]}
     bits = rng.choice([32, 128])
     fn = rng.choice(["summarize", "mknet", "subnets", "supernet", "getitem",
                      "contains", "overlaps", "subnet_of", "address_exclude",
@@ -146,6 +151,9 @@ def run_python(c):
     mk = lambda t: Net(tuple(t))
     try:
         fn = c["fn"]
+        if fn == "hosts":
+            net = NET[bits](tuple(c["net"]))
+            return {"ok": [[int(x) for x in net], [int(x) for x in net.hosts()], net.num_addresses]}
         if fn == "v4init":
             kind, val = c["arg"]
             a = ipaddress.IPv4Address(bytes(val) if kind == "bytes" else val)

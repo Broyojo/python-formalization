@@ -34,12 +34,12 @@ private theorem or_two_pow_sub_one_of_mod (a k : Nat) (h : a % 2 ^ k = 0) :
   rw [ha, ← Nat.shiftLeft_add_eq_or_of_lt hlt]
 
 /-- The broadcast address of a valid net is `addr + size - 1`. -/
-private theorem Net.broadcast_eq (n : Net) (h : n.Valid) : n.broadcast = n.addr + (n.size - 1) := by
+theorem Net.broadcast_eq (n : Net) (h : n.Valid) : n.broadcast = n.addr + (n.size - 1) := by
   unfold Net.broadcast
   rw [Net.hostmask_eq, or_two_pow_sub_one_of_mod _ _ h.2.2]
   rfl
 
-private theorem Net.size_pos (n : Net) : 0 < n.size := Nat.two_pow_pos _
+theorem Net.size_pos (n : Net) : 0 < n.size := Nat.two_pow_pos _
 
 /-- A valid net lies within the address space. -/
 private theorem Net.addr_add_size_le (n : Net) (h : n.Valid) : n.addr + n.size ≤ 2 ^ n.bits := by
