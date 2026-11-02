@@ -1462,6 +1462,7 @@ typeobj-reduce-getattr-method	proven	Objects/classobject.c	method___reduce___imp
 typeobj-reduce-getattr-cfunction	proven	Objects/methodobject.c	meth_reduce
 typeobj-reduce-getattr-descr	proven	Objects/descrobject.c	wrapper_reduce,descr_reduce
 typeobj-classmethod-bindings-agree	proven	Objects/funcobject.c	cm_descr_get
+typeobj-sequence-tuple	proven	Objects/abstract.c	PySequence_Tuple
 typeobj-exc-str-args	proven	Objects/exceptions.c	
 typeobj-exc-repr-args	proven	Objects/exceptions.c	
 typeobj-exc-keyerror-str	proven	Objects/exceptions.c	

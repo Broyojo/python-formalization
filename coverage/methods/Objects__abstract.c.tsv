@@ -70,7 +70,7 @@ Objects/abstract.c	1893	1923	PySequence_SetItem	PySequence_SetItem(PyObject *s, 
 Objects/abstract.c	1926	1956	PySequence_DelItem	PySequence_DelItem(PyObject *s, Py_ssize_t i)	modelled	typeobj-seq-setitem-negative	
 Objects/abstract.c	1959	1979	PySequence_SetSlice	PySequence_SetSlice(PyObject *s, Py_ssize_t i1, Py_ssize_t i2, PyObject *o)	todo		
 Objects/abstract.c	1982	2002	PySequence_DelSlice	PySequence_DelSlice(PyObject *s, Py_ssize_t i1, Py_ssize_t i2)	todo		
-Objects/abstract.c	2005	2078	PySequence_Tuple	PySequence_Tuple(PyObject *v)	todo		
+Objects/abstract.c	2005	2078	PySequence_Tuple	PySequence_Tuple(PyObject *v)	modelled	typeobj-sequence-tuple	
 Objects/abstract.c	2081	2101	PySequence_List	PySequence_List(PyObject *v)	todo		
 Objects/abstract.c	2104	2129	PySequence_Fast	PySequence_Fast(PyObject *v, const char *m)	todo		
 Objects/abstract.c	2138	2227	_PySequence_IterSearch	_PySequence_IterSearch(PyObject *seq, PyObject *obj, int operation)	modelled	typeobj-itersearch-identity	
