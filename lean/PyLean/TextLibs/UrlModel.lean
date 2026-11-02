@@ -305,13 +305,15 @@ def stripC0 (s : Str) : Str := rstripBy isC0Space (s.dropWhile isC0Space)
 def isSchemeChar (c : Nat) : Bool :=
   isAsciiAlpha c || isAsciiDigit c || c == 43 || c == 45 || c == 46
 
+/-- `if wdelim >= 0: delim = min(delim, wdelim)`, :505-506. -/
+def minFound (d : Nat) : Option Nat → Nat
+  | some w => min d w
+  | none => d
+
 /-- `_splitnetloc`, :501-507. -/
 def splitnetloc (url : Str) (start : Nat) : Str × Str :=
   let findFrom (c : Nat) : Option Nat := ((url.drop start).findIdx? (· == c)).map (· + start)
-  let delim := [47, 63, 35].foldl
-    (fun d c => match findFrom c with
-      | some w => min d w
-      | none => d) url.length
+  let delim := [47, 63, 35].foldl (fun d c => minFound d (findFrom c)) url.length
   ((url.take delim).drop start, url.drop delim)
 
 /-- The regular expression `\A[vV][a-fA-F0-9]+\..+\z` of :548 (`.` does not match a newline). -/
@@ -366,6 +368,34 @@ def checknetloc (nfkc : Str → Str) (netloc : Option Str) : Py Unit :=
 /-- The components of `_urlsplit`: scheme, netloc, path, query, fragment. -/
 abbrev Split := Option Str × Option Str × Str × Option Str × Option Str
 
+/-- The scheme of `_urlsplit`, :606-612: `url[:i].lower()` and `url[i+1:]` when `url[:i]` is a
+scheme. -/
+def schemeStage (url : Str) (scheme : Option Str) : Py (Option Str × Str) :=
+  match url.findIdx? (· == 58) with
+  | some i =>
+    if i > 0 && isAsciiAlpha (url.headD 0) && (url.take i).all isSchemeChar then
+      (UnicodeObj.unicodeLower (url.take i)).map (fun l => (some l, url.drop (i + 1)))
+    else .ok (scheme, url)
+  | none => .ok (scheme, url)
+
+/-- The netloc of `_urlsplit`, :613-619. -/
+def netlocStage (ipk : Str → Option Bool) (url : Str) : Py (Option Str × Str) :=
+  if url.take 2 == [47, 47] then
+    let (n, rest) := splitnetloc url 2
+    if (n.contains 91 && !n.contains 93) || (n.contains 93 && !n.contains 91) then
+      .error (.valueError "Invalid IPv6 URL")
+    else if n.contains 91 && n.contains 93 then
+      (checkBracketedNetloc ipk n).map (fun _ => (some n, rest))
+    else .ok (some n, rest)
+  else .ok (none, url)
+
+/-- The fragment and the query of `_urlsplit`, :620-623. -/
+def fragStage (allowFrag : Bool) (url : Str) : Str × Option Str :=
+  if allowFrag && url.contains 35 then part 35 url else (url, none)
+
+def queryStage (url : Str) : Str × Option Str :=
+  if url.contains 63 then part 63 url else (url, none)
+
 /-- `_urlsplit`, :593-625. `url` is never `None` here. -/
 def urlsplitCore (nfkc : Str → Str) (ipk : Str → Option Bool) (url : V) (scheme : Option V)
     (allowFrag : Bool) : Py Split := do
@@ -376,22 +406,10 @@ def urlsplitCore (nfkc : Str → Str) (ipk : Str → Option Bool) (url : V) (sch
     | none => pure none
     | some (.s x) => pure (some (removeUnsafe (stripC0 x)))
     | some (.b _ _) => throw (.typeError "a bytes-like object is required, not 'str'")
-  let (scheme, url) ← match url.findIdx? (· == 58) with
-    | some i =>
-      if i > 0 && isAsciiAlpha (url.headD 0) && (url.take i).all isSchemeChar then do
-        let l ← UnicodeObj.unicodeLower (url.take i)
-        pure (some l, url.drop (i + 1))
-      else pure (scheme, url)
-    | none => pure (scheme, url)
-  let (netloc, url) ← if url.take 2 == [47, 47] then do
-      let (n, rest) := splitnetloc url 2
-      if (n.contains 91 && !n.contains 93) || (n.contains 93 && !n.contains 91) then
-        throw (.valueError "Invalid IPv6 URL")
-      if n.contains 91 && n.contains 93 then checkBracketedNetloc ipk n
-      pure (some n, rest)
-    else pure (none, url)
-  let (url, fragment) := if allowFrag && url.contains 35 then part 35 url else (url, none)
-  let (url, query) := if url.contains 63 then part 63 url else (url, none)
+  let (scheme, url) ← schemeStage url scheme
+  let (netloc, url) ← netlocStage ipk url
+  let (url, fragment) := fragStage allowFrag url
+  let (url, query) := queryStage url
   checknetloc nfkc netloc
   pure (scheme, netloc, url, query, fragment)
 
@@ -417,12 +435,13 @@ def urlsplit (nfkc : Str → Str) (ipk : Str → Option Bool) (url scheme : Arg)
   mkRes isB [f scheme, f netloc, some path, f query, f fragment] missingAsNone
 
 /-- `_splitparams(url, missing_as_none=True)`, :492-499, as `_urlparse` calls it. -/
+def rfindSlash (url : Str) : Nat := ((rpart 47 url).1.map (·.length)).getD 0
+
 def splitparams (url : Str) : Str × Option Str :=
   if url.contains 47 then
-    let r := (rpart 47 url).1.map (·.length) |>.getD 0
-    match (url.drop r).findIdx? (· == 59) with
+    match (url.drop (rfindSlash url)).findIdx? (· == 59) with
     | none => (url, none)
-    | some j => (url.take (r + j), some (url.drop (r + j + 1)))
+    | some j => (url.take (rfindSlash url + j), some (url.drop (rfindSlash url + j + 1)))
   else
     match url.findIdx? (· == 59) with
     | some i => (url.take i, some (url.drop (i + 1)))

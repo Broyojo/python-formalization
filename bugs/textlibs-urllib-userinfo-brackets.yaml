@@ -1,0 +1,63 @@
+id: textlibs-urllib-userinfo-brackets
+title: "DUPLICATE of #77523: urlsplit rejects brackets in the userinfo by validating the plain host as an IP literal"
+priority: P3
+kind: wrong-exception
+module: textlibs
+files: [Lib/urllib/parse.py]
+functions: ["urlsplit", "_urlsplit", "_check_bracketed_netloc", "_check_bracketed_host"]
+summary: |
+  `_urlsplit` runs `_check_bracketed_netloc` whenever the netloc contains both `[` and `]`, even
+  when they are in the userinfo. Since the CVE-2025-0938 fix the check looks only at the part
+  after the last `@`; when that part has no `[` it still calls `_check_bracketed_host` on the
+  plain host, so `urlsplit('http://user:p[ss]@example.com/')` raises "'example.com' does not
+  appear to be an IPv4 or IPv6 address", and `urlsplit('http://[a]@1.2.3.4/')` raises "An IPv4
+  address cannot be in brackets" for an address that is not in brackets. Database URLs with
+  brackets in the password (the case reported in #105704 and #77523) still fail on 3.15.2, now
+  with a misleading message.
+likelihood: |
+  Moderate: passwords with brackets in connection URLs (postgres, redis) are common, as the
+  #105704 thread reports. RFC 3986 requires them percent-encoded, which is why maintainers called
+  the rejection arguably correct in #77523.
+maybe_intended: |
+  Partly: RFC 3986 does not allow '[' or ']' in the userinfo, and urlsplit may reject it. But the
+  error blames the host, and the check was meant to mirror _hostinfo (comment at :528-529), which
+  ignores brackets outside the host.
+reproducer: |
+  from urllib.parse import urlsplit
+  res = []
+  for u in ('http://user:p[ss]@example.com/', 'http://[a]@1.2.3.4/', 'http://u[x]@h:80/'):
+      try:
+          res.append(urlsplit(u).netloc)
+      except ValueError as e:
+          res.append('ValueError: ' + str(e))
+  print(res)
+  if all(x.startswith('ValueError') for x in res):
+      print('REPRODUCED textlibs-urllib-userinfo-brackets')
+expected: |
+  The netlocs 'user:p[ss]@example.com', '[a]@1.2.3.4', 'u[x]@h:80' (or an error naming the
+  userinfo), since the host parts contain no brackets.
+observed: |
+  python3 3.15.2: ["ValueError: 'example.com' does not appear to be an IPv4 or IPv6 address",
+  'ValueError: An IPv4 address cannot be in brackets', "ValueError: 'h' does not appear to be an
+  IPv4 or IPv6 address"]. REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Lib/urllib/parse.py:528-529: "this function must mirror the splitting done in
+  NetlocResultMixins._hostinfo()"; Doc/library/urllib.parse.rst only promises ValueError for
+  unmatched brackets.
+cause: |
+  Lib/urllib/parse.py:618-619 test for brackets in the whole netloc, and :540-542 call
+  _check_bracketed_host on the plain host when the part after the last '@' has no '['.
+possible_fix: |
+  Run the check only when `netloc.rpartition('@')[2]` contains '[' or ']', or in
+  _check_bracketed_netloc skip _check_bracketed_host when no '[' was found.
+duplicates: |
+  DUPLICATE of #77523 (open, "urllib IPv6 parsing fails with special characters in passwords");
+  also raised in the closed #105704 (CVE-2025-0938), whose fix changed the message but not the
+  rejection. Do not file separately; a comment on #77523 could note the 3.15 behaviour.
+  Queries: gh search issues --repo python/cpython urlsplit brackets password; urlparse password
+  brackets; brackets userinfo; urlsplit userinfo; password bracket url; urlsplit bracket;
+  _check_bracketed_netloc; "does not appear to be an IPv4 or IPv6 address" urlsplit. Not in the
+  bugforge list.
+lean: lean/PyLean/TextLibs/UrlBrackets.lean (BracketsOnlyInUserinfo, bracketsOnlyInUserinfo_refuted);
+  the twin property BracketedHostValid is proven there.

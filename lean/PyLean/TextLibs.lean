@@ -21,6 +21,7 @@ import PyLean.TextLibs.EtreeCopy
 import PyLean.TextLibs.ZoneinfoBefore
 import PyLean.TextLibs.SimpleQueueGet
 import PyLean.TextLibs.UrlQuery
+import PyLean.TextLibs.UrlBrackets
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1554,7 +1555,43 @@ def entries : List Entry := [
     pyFns := ["urlencode", "parse_qsl"]
     statement := "parse_qsl(urlencode(pairs), keep_blank_values=True) == pairs for every list of str pairs without surrogates (as 2-tuples or as a mapping), and for every list of bytes pairs read back from urlencode(pairs).encode('ascii')."
     source := "round trip; docs of urlencode and parse_qsl", status := .proven
-    prop := ``Url.QslRoundTrip, thm := some ``Url.qslRoundTrip_proven }
+    prop := ``Url.QslRoundTrip, thm := some ``Url.qslRoundTrip_proven },
+  { id := "textlibs-urllib-split-round-trip", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["urlsplit", "_urlsplit", "_splitnetloc", "urlunsplit", "_urlunsplit", "_SplitResultBase.geturl",
+      "_coerce_args", "_noop"]
+    statement := "For every str URL accepted by urlsplit(url, missing_as_none=True), urlunsplit of the result (keep_empty unspecified or true) and geturl() give back the URL with leading C0/space stripped, tab/CR/LF removed and the scheme lower-cased; the scheme is None only when the URL does not start with an RFC 3986 scheme and ':'; the netloc has no '/', '?', '#', the path no '?', '#', the query no '#'."
+    source := "docs of urlunsplit (keep_empty 'allows rebuilding a URL that was parsed with option missing_as_none=True') and urlsplit", status := .proven
+    prop := ``Url.SplitRoundTrip, thm := some ``Url.splitRoundTrip_proven
+    notes := "allow_fragments=True; the general statement is refuted by textlibs-urllib-split-round-trip-all. unicodedata.normalize and ipaddress.ip_address are quantified oracles." },
+  { id := "textlibs-urllib-split-round-trip-all", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["urlsplit", "_urlsplit", "_splitnetloc", "urlunsplit", "_urlunsplit", "_SplitResultBase.geturl"]
+    statement := "The round trip of textlibs-urllib-split-round-trip holds for every value of allow_fragments."
+    source := "docs of urlunsplit (keep_empty) and SplitResult.geturl", status := .refuted
+    prop := ``Url.SplitRoundTripAll, thm := some ``Url.splitRoundTripAll_refuted
+    bug := some "textlibs-urllib-nofrag-slash"
+    notes := "urlsplit('http://h#x', allow_fragments=False) has path '#x' after the netloc, and _urlunsplit inserts '/'." },
+  { id := "textlibs-urllib-parse-round-trip", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["urlparse", "_urlparse", "_splitparams", "urlunparse", "_ParseResultBase.geturl"]
+    statement := "For every str URL accepted by urlparse(url, missing_as_none=True), urlunparse of the result and geturl() give back the URL normalized as for urlsplit, and urlparse's fields are urlsplit's with the path split into path and params."
+    source := "docs of urlunparse (keep_empty) and urlparse ('similar to urlsplit(), but additionally splits the path component on path and params')", status := .proven
+    prop := ``Url.ParseRoundTrip, thm := some ``Url.parseRoundTrip_proven },
+  { id := "textlibs-urllib-defrag-round-trip", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["urldefrag", "_DefragResultBase.geturl"]
+    statement := "For every str URL accepted by urldefrag(url, missing_as_none=True): without '#' it returns (url, None) and geturl() is url; with '#' the url part has no '#', the fragment is a string, and geturl() is the URL normalized as for urlsplit."
+    source := "docs of urldefrag and geturl()", status := .proven
+    prop := ``Url.DefragRoundTrip, thm := some ``Url.defragRoundTrip_proven },
+  { id := "textlibs-urllib-bracketed-host", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["_check_bracketed_netloc", "_check_bracketed_host", "_NetlocResultMixinStr._hostinfo"]
+    statement := "Whenever urlsplit (any allow_fragments, any missing_as_none) accepts a str URL whose netloc contains '[', the hostname _hostinfo reads from it passes _check_bracketed_host: an IPv6 address (per ip_address) or an IPvFuture literal."
+    source := "the implementation disagreeing with itself: comment at Lib/urllib/parse.py:528-529, the check must mirror _hostinfo", status := .proven
+    prop := ``Url.BracketedHostValid, thm := some ``Url.bracketedHostValid_proven },
+  { id := "textlibs-urllib-userinfo-brackets", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["_check_bracketed_netloc", "_check_bracketed_host"]
+    statement := "urlsplit accepts every URL whose ASCII netloc has matched '[' ']' only in the userinfo, before the last '@'."
+    source := "comment at Lib/urllib/parse.py:528-529; python/cpython#105704 and #77523", status := .refuted
+    prop := ``Url.BracketsOnlyInUserinfo, thm := some ``Url.bracketsOnlyInUserinfo_refuted
+    bug := some "textlibs-urllib-userinfo-brackets"
+    notes := "Duplicate of the open #77523; refuted with the oracle ip_address('example.com') raising, as CPython does." }
 ]
 
 end PyLean.TextLibs
