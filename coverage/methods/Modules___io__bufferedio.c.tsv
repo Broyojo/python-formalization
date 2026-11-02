@@ -52,7 +52,7 @@ Modules/_io/bufferedio.c	1623	1670	_bufferedreader_raw_read	_bufferedreader_raw_
 Modules/_io/bufferedio.c	1673	1687	_bufferedreader_fill_buffer	_bufferedreader_fill_buffer(buffered *self)	modelled	pyio-bufferedreader-readinto-twins	
 Modules/_io/bufferedio.c	1690	1777	_bufferedreader_read_all	_bufferedreader_read_all(buffered *self)	todo		
 Modules/_io/bufferedio.c	1782	1795	_bufferedreader_read_fast	_bufferedreader_read_fast(buffered *self, Py_ssize_t n)	modelled	pyio-bufferedreader-readinto-twins	
-Modules/_io/bufferedio.c	1801	1891	_bufferedreader_read_generic	_bufferedreader_read_generic(buffered *self, Py_ssize_t n)	todo		changed-in-3.15: was pyio-bufferedreader-readinto-twins
+Modules/_io/bufferedio.c	1801	1891	_bufferedreader_read_generic	_bufferedreader_read_generic(buffered *self, Py_ssize_t n)	todo		
 Modules/_io/bufferedio.c	1894	1918	_bufferedreader_peek_unlocked	_bufferedreader_peek_unlocked(buffered *self)	todo		
 Modules/_io/bufferedio.c	1925	1929	_bufferedwriter_reset_buf	_bufferedwriter_reset_buf(buffered *self)	todo		
 Modules/_io/bufferedio.c	1944	1974	_io_BufferedWriter___init___impl	_io_BufferedWriter___init___impl(buffered *self, PyObject *raw, Py_ssize_t buffer_size) /*[clinic end generated code: output=c8942a020c0dee64 input=914be9b95e16007b]*/	todo		

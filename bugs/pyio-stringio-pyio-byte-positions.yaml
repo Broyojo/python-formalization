@@ -36,7 +36,7 @@ reproducer: |
 expected: |
   'xa', as in io.StringIO.
 observed: |
-  python3 3.14.7: io 'xa'; _pyio UnicodeDecodeError ('utf-8' codec can't decode byte 0xa9 in position
+  python3 3.15.2: io 'xa'; _pyio UnicodeDecodeError ('utf-8' codec can't decode byte 0xa9 in position
   1: invalid start byte). REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |

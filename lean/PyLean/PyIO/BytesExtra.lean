@@ -11,12 +11,21 @@ open PyLean
 
 /-- `readable`..`isatty` take no argument; `writelines ls` passes a list of
 bytes; `getstate` is `__getstate__()` (the dict slot is `None`);
-`setstate b p` is `__setstate__((b, p, None))`. -/
+`setstate b p` is `__setstate__((b, p, None))` in C and
+`__setstate__({'_buffer': bytearray(b), '_pos': p})` in Python, for `p >= 0`;
+`readintoSelf off n` is `readinto` of `getbuffer()[off:off+n]`, a view of the
+stream's own buffer; `reinit b` calls `__init__` again, with `b` or no argument;
+`reinitObj b` calls it with `bytearray(b)`, or with the int 1 for `none`;
+`truncateObj a` is `truncate` of an object that is not an `int`. -/
 inductive XOp where
   | readable | writable | seekable | flush | isatty
   | writelines (ls : List (List Nat))
   | getstate
   | setstate (b : List Nat) (pos : Int)
+  | readintoSelf (off n : Nat)
+  | reinit (b : Option (List Nat))
+  | reinitObj (b : Option (List Nat))
+  | truncateObj (a : TArg)
   deriving Repr, DecidableEq, Inhabited
 
 namespace C
@@ -44,6 +53,77 @@ def setstate (s : BState) (b : List Nat) (pos : Int) : BState × Py Val :=
       if p < 0 then (s', .error (.valueError "position value cannot be negative"))
       else ({ s' with pos := p.toNat }, .ok .none)
 
+/-- `buf` overwritten from `off` by `d`, which fits. -/
+def overwrite (buf : List Nat) (off : Nat) (d : List Nat) : List Nat :=
+  if d = [] then buf else writeAt buf off d
+
+/-- `readinto` of `getbuffer()[off:off+n]`: taking the view may unshare the buffer
+(`takeView`), then `_io_BytesIO_readinto_impl` (:652-677) copies with `memmove` from
+the old contents into the part of the view that exists. The view is released
+afterwards, so only the sharing outlasts it. -/
+def readintoSelf (s : BState) (off n : Nat) : BState × Py Val :=
+  if s.closed then (s, .error closedErr) else
+  let s := { s with shared := (takeView s).shared }
+  let w : Nat := min n (s.buf.length - off)
+  let avail : Int := (s.buf.length : Int) - s.pos
+  let len : Int := if (w : Int) > avail then avail else w
+  if len < 0 then (s, .ok (.int 0)) else
+  ({ s with buf := overwrite s.buf off (slice s.buf s.pos len.toNat), pos := s.pos + len.toNat }, .ok (.int len))
+
+/-- `_io_BytesIO___init___impl`, bytesio.c:1084-1114, called again: exports are
+checked before anything changes (:1087-1091). An `initvalue` replaces the buffer,
+which also reopens a closed stream; without one `self->buf` stays, so a closed
+stream stays closed. -/
+def reinit (s : BState) (b : Option (List Nat)) : BState × Py Val :=
+  if s.exports > 0 then (s, .error bufferError) else
+  match b with
+  | some b => ({ s with buf := b, pos := 0, closed := false, shared := decide (b.length ≤ 1) }, .ok .none)
+  | none => ({ s with buf := [], pos := 0 }, .ok .none)
+
+/-- `__init__` with anything but an exact `bytes`: the size and position are reset
+(:1094-1095) before `_io_BytesIO_write_impl` (:1105) can fail, so a failure leaves
+an empty stream, and a closed stream raises even for an empty value. -/
+def reinitObj (s : BState) (b : Option (List Nat)) : BState × Py Val :=
+  if s.exports > 0 then (s, .error bufferError) else
+  let s := { s with buf := [], pos := 0 }
+  match b with
+  | none => (s, .error (.typeError "a bytes-like object is required, not 'int'"))
+  | some d =>
+    match write s d with
+    | (s', .error e) => (s', .error e)
+    | (s', .ok _) => ({ s' with pos := 0 }, .ok .none)
+
+/-- One action of `__index__`; an exception it raises is swallowed. -/
+def hookStep (s : BState) : Hook → BState
+  | .close => (step s .close).1
+  | .getbuffer => (step s .getbuffer).1
+  | .tell => s
+  | .seekAbs p => (step s (.seek p 0)).1
+  | .seekCur => (step s (.seek 0 1)).1
+  | .write b => (step s (.write b)).1
+
+/-- `_io_BytesIO_truncate_impl`, bytesio.c:692-727, for an object: `PyLong_AsLong`
+(:704) calls `__index__`, which can close the stream or take a view, so
+`CHECK_CLOSED` and `CHECK_EXPORTS` run again (:713-714) before the buffer is used. -/
+def truncateObj (s : BState) (a : TArg) : BState × Py Val :=
+  if s.closed then (s, .error closedErr) else
+  if s.exports > 0 then (s, .error bufferError) else
+  match a with
+  | .noIndex t _ => (s, .error (notIndexable t))
+  | .index hook r =>
+    let s := hook.foldl hookStep s
+    match r with
+    | none => (s, .error boomErr)
+    | some v =>
+      match asLong v with
+      | .error e => (s, .error e)
+      | .ok n =>
+        if n < 0 then (s, .error (.valueError s!"negative size value {n}")) else
+        if s.closed then (s, .error closedErr) else
+        if s.exports > 0 then (s, .error bufferError) else
+        let s := if n < s.buf.length then { s with buf := s.buf.take n.toNat } else s
+        (s, .ok (.int n))
+
 /-- bytesio.c:323-328, :338-343, :353-358, :368-373, :445-450, :850-876,
 :938-945, :948-1023. -/
 def xstep (s : BState) : XOp → BState × Py Val
@@ -56,6 +136,10 @@ def xstep (s : BState) : XOp → BState × Py Val
     if s.closed then (s, .error closedErr)
     else (s, .ok (.list [.bytes s.buf, .int s.pos, .none]))
   | .setstate b p => setstate s b p
+  | .readintoSelf off n => readintoSelf s off n
+  | .reinit b => reinit s b
+  | .reinitObj b => reinitObj s b
+  | .truncateObj a => truncateObj s a
 
 end C
 
@@ -71,10 +155,71 @@ def writelinesLoop : BState → List (List Nat) → BState × Py Val
     | (s', .error e) => (s', .error e)
     | (s', .ok _) => writelinesLoop s' ls
 
+/-- `readinto` of `getbuffer()[off:off+n]`: `BufferedIOBase._readinto`
+(_pyio.py:727-740) reads a copy and assigns it into the view. -/
+def readintoSelf (s : BState) (off n : Nat) : BState × Py Val :=
+  if s.closed then (s, .error (.valueError "getbuffer on closed file")) else
+  match readRaw s (some (min n (s.buf.length - off) : Nat)) with
+  | (s', .error e) => (s', .error e)
+  | (s', .ok d) => ({ s' with buf := C.overwrite s'.buf off d }, .ok (.int d.length))
+
+/-- `BytesIO.__init__`, _pyio.py:884-894, called again: it replaces `_buffer`, so a
+view of the old buffer no longer counts, and `IOBase`'s closed flag stays. -/
+def reinit (s : BState) (b : Option (List Nat)) : BState × Py Val :=
+  ({ s with buf := b.getD [], pos := 0, exports := 0 }, .ok .none)
+
+/-- `BytesIO.__setstate__`, _pyio.py:904-906: the dict replaces `_buffer` and `_pos`
+with no check, on an open or a closed stream. -/
+def setstate (s : BState) (b : List Nat) (pos : Int) : BState × Py Val :=
+  ({ s with buf := b, pos := pos.toNat, exports := 0 }, .ok .none)
+
+/-- What the thread would do forever: `__index__` runs under `self._lock`, which is
+not re-entrant. -/
+def deadlock : PyExc := .named "Deadlock" ""
+
+/-- One action of `__index__` while `self._lock` is held: the new state, and whether
+the action blocks on the lock. An exception it raises first is swallowed. `tell`,
+`getbuffer`, `close` and `seek(p)` do not take the lock (_pyio.py:915-925, :982-987,
+:998-1001); `seek(0, 1)` (:988-990) and a non-empty `write` (:966) do. -/
+def hookStep (s : BState) : Hook → BState × Bool
+  | .close => ((close s).1, false)
+  | .getbuffer => ((step s .getbuffer).1, false)
+  | .tell => (s, false)
+  | .seekAbs p => ((seek s p 0).1, false)
+  | .seekCur => (s, !s.closed)
+  | .write b => (s, !s.closed && !b.isEmpty)
+
+/-- Run the actions until one blocks. -/
+def runHooks (s : BState) : List Hook → BState × Bool
+  | [] => (s, false)
+  | h :: t =>
+    match hookStep s h with
+    | (s, true) => (s, true)
+    | (s, false) => runHooks s t
+
+/-- `BytesIO.truncate`, _pyio.py:1003-1020, for an object: `pos.__index__()` runs
+with `self._lock` held, and nothing re-checks `closed` afterwards. -/
+def truncateObj (s : BState) (a : TArg) : BState × Py Val :=
+  if s.closed then (s, .error (.valueError "truncate on closed file")) else
+  match a with
+  | .noIndex _ r => (s, .error (.typeError s!"{r} is not an integer"))
+  | .index hook r =>
+    match runHooks s hook with
+    | (s, true) => (s, .error deadlock)
+    | (s, false) =>
+      match r with
+      | none => (s, .error boomErr)
+      | some v =>
+        if v < 0 then (s, .error (.valueError s!"negative truncate position {v}")) else
+        if v < s.buf.length then
+          if s.exports > 0 then (s, .error bufferError)
+          else ({ s with buf := s.buf.take v.toNat }, .ok (.int v))
+        else (s, .ok (.int v))
+
 /-- `BytesIO.readable/writable/seekable` (_pyio.py:1022-1035), `IOBase.flush`
 (:380-386), `IOBase.isatty` (:503-509), `IOBase.writelines` (:583-590),
-`BytesIO.__getstate__` (@3.14.7:891-894, the instance dict as `[buffer, pos]`).
-`__setstate__` does not exist in `_pyio`. -/
+`BytesIO.__getstate__` (:896-902, the instance dict without `_lock`, as
+`[buffer, pos]`). -/
 def xstep (s : BState) : XOp → BState × Py Val
   | .readable | .writable | .seekable =>
     if s.closed then (s, .error closedDot) else (s, .ok (.bool true))
@@ -84,7 +229,13 @@ def xstep (s : BState) : XOp → BState × Py Val
   | .getstate =>
     if s.closed then (s, .error (.valueError "__getstate__ on closed file"))
     else (s, .ok (.list [.bytes s.buf, .int s.pos]))
-  | .setstate _ _ => (s, .ok .none)
+  | .setstate b p => setstate s b p
+  | .readintoSelf off n => readintoSelf s off n
+  | .reinit b => reinit s b
+  | .reinitObj (some d) => reinit s (some d)
+  -- `buf += initial_bytes` fails before `_buffer` is replaced
+  | .reinitObj none => (s, .error (.typeError "can't concat int to bytearray"))
+  | .truncateObj a => truncateObj s a
 
 end P
 
@@ -168,15 +319,19 @@ theorem bytesIOWritelines_proven : BytesIOWritelines := by
   · intro h; simp only [C.xstep, hc, Bool.false_eq_true, ite_false]; rw [C_writelines_ok ls s h]; simp
   · intro h; simp only [P.xstep, hc, Bool.false_eq_true, ite_false]; rw [P_writelines_ok ls s h]; simp
 
-/-- Pickling round trip (C): the state of an open BytesIO, restored into any
-open BytesIO without exports, reproduces contents and position. Hypotheses:
-the position fits `Py_ssize_t` (a type invariant of the C object) and the
-contents are below the allocation bound. -/
+/-- Pickling round trip: the state of an open BytesIO, restored into any open
+BytesIO without exports, reproduces contents and position (C). Hypotheses: the
+position fits `Py_ssize_t` (a type invariant of the C object) and the contents
+are below the allocation bound. `_pyio`'s `__getstate__` and `__setstate__` round
+trip on every open stream, with `_lock` left out of the state and a fresh one made. -/
 def BytesIOPickleRoundTrip : Prop := ∀ (s t : BState),
   s.closed = false → t.closed = false → t.exports = 0 → (s.pos : Int) ≤ ssizeMax → s.buf.length < memLimit →
   (C.xstep s .getstate).2 = .ok (.list [.bytes s.buf, .int s.pos, .none]) ∧
   (C.xstep t (.setstate s.buf s.pos)).2 = .ok .none ∧
-  (C.xstep t (.setstate s.buf s.pos)).1.buf = s.buf ∧ (C.xstep t (.setstate s.buf s.pos)).1.pos = s.pos
+  (C.xstep t (.setstate s.buf s.pos)).1.buf = s.buf ∧ (C.xstep t (.setstate s.buf s.pos)).1.pos = s.pos ∧
+  (P.xstep s .getstate).2 = .ok (.list [.bytes s.buf, .int s.pos]) ∧
+  (P.xstep t (.setstate s.buf s.pos)).2 = .ok .none ∧
+  (P.xstep t (.setstate s.buf s.pos)).1.buf = s.buf ∧ (P.xstep t (.setstate s.buf s.pos)).1.pos = s.pos
 
 theorem bytesIOPickleRoundTrip_proven : BytesIOPickleRoundTrip := by
   intro s t hs ht he hp hm
@@ -200,9 +355,15 @@ theorem bytesIOPickleRoundTrip_proven : BytesIOPickleRoundTrip := by
       simp [writeAt]
   have hpn : ¬ (s.pos : Int) < 0 := by omega
   rw [he] at hw
-  refine ⟨by simp [C.xstep, hs], ?_⟩
-  simp only [C.xstep, C.setstate, he, Nat.lt_irrefl, gt_iff_lt, Nat.not_lt_zero, ite_false, hw, argSsize, hsz, ite_true, hpn]
-  by_cases hb : s.buf = [] <;> simp [hb] at hw ⊢ <;> simp [hw]
+  have hP : (P.xstep s .getstate).2 = .ok (.list [.bytes s.buf, .int s.pos]) ∧
+      (P.xstep t (.setstate s.buf s.pos)).2 = .ok .none ∧
+      (P.xstep t (.setstate s.buf s.pos)).1.buf = s.buf ∧ (P.xstep t (.setstate s.buf s.pos)).1.pos = s.pos := by
+    simp [P.xstep, P.setstate, hs]
+  have hC : (C.xstep t (.setstate s.buf s.pos)).2 = .ok .none ∧
+      (C.xstep t (.setstate s.buf s.pos)).1.buf = s.buf ∧ (C.xstep t (.setstate s.buf s.pos)).1.pos = s.pos := by
+    simp only [C.xstep, C.setstate, he, Nat.lt_irrefl, gt_iff_lt, Nat.not_lt_zero, ite_false, hw, argSsize, hsz, ite_true, hpn]
+    by_cases hb : s.buf = [] <;> simp [hb] at hw ⊢ <;> simp [hw]
+  exact ⟨by simp [C.xstep, hs], hC.1, hC.2.1, hC.2.2, hP⟩
 
 /-- `getbuffer()` followed by releasing the view restores the export count, so
 a resize is possible again (C `bytesiobuf_getbuffer`/`releasebuffer`, Python
@@ -218,6 +379,6 @@ theorem bytesIOReleaseExports_proven : BytesIOReleaseExports := by
   intro s hc
   obtain ⟨buf, pos, cl, ex, sh⟩ := s
   simp only at hc; subst hc
-  simp [C.step, P.step, bRelease]
+  simp [C.step, P.step, bRelease, C.takeView]
 
 end PyLean.PyIO

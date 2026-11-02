@@ -110,7 +110,30 @@ def getUObj (j : Json) : Except String (UObj × List UOp) := do
   let raw ← getBool j "raw"
   let peek ← getBool j "peek"
   let ops ← (← (← field j "ops").getArr?).toList.mapM getUOp
-  return (⟨"S", reads, if peek then some peeks else none, intos, writes, flushes, raw, false, []⟩, ops)
+  let keep ← getBool j "keep"
+  return (⟨"S", reads, if peek then some peeks else none, intos, writes, flushes, raw, false, [], keep⟩, ops)
+
+def getHook (j : Json) : Except String Hook := do
+  match ← getStr j "h" with
+  | "close" => return .close | "getbuffer" => return .getbuffer | "tell" => return .tell
+  | "seekabs" => return .seekAbs (← getNat j "p")
+  | "seekcur" => return .seekCur
+  | "write" => return .write (← bNats (← field j "b"))
+  | o => throw s!"unknown hook {o}"
+
+/-- `{"kind": "index", "hook": [...], "v": n or null}`, or `{"kind": "str" | "float"}`. -/
+def getTArg (j : Json) : Except String TArg := do
+  match ← getStr j "kind" with
+  | "index" =>
+    return .index (← (← (← field j "hook").getArr?).toList.mapM getHook) (← getOptInt j "v")
+  | "str" => return .noIndex "str" "'a'"
+  | "float" => return .noIndex "float" "1.5"
+  | o => throw s!"unknown kind {o}"
+
+def getOptBytes (j : Json) (key : String) : Except String (Option (List Nat)) :=
+  match j.getObjVal? key with
+  | .ok .null | .error _ => .ok none
+  | .ok v => some <$> bNats v
 
 def getXOp (j : Json) : Except String (BOp ⊕ XOp) := do
   match ← getStr j "op" with
@@ -119,6 +142,10 @@ def getXOp (j : Json) : Except String (BOp ⊕ XOp) := do
   | "writelines" => return .inr (.writelines (← (← (← field j "ls").getArr?).toList.mapM bNats))
   | "getstate" => return .inr .getstate
   | "setstate" => return .inr (.setstate (← bNats (← field j "b")) (← getInt j "pos"))
+  | "readinto_self" => return .inr (.readintoSelf (← getNat j "off") (← getNat j "n"))
+  | "reinit" => return .inr (.reinit (← getOptBytes j "b"))
+  | "reinit_obj" => return .inr (.reinitObj (← getOptBytes j "b"))
+  | "truncobj" => return .inr (.truncateObj (← getTArg (← field j "a")))
   | "read" => return .inl (.read (← getOptInt j "n"))
   | "read1" => return .inl (.read1 (← getOptInt j "n"))
   | "readline" => return .inl (.readline (← getOptInt j "n"))

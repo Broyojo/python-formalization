@@ -12,7 +12,9 @@ inductive TXOp where
   | write (s : List Nat) | seek (p w : Int) | tell | seekTell | truncate (n : Option Int)
   | flush | close | detach | closed | encoding | errors | newlines
   | lineBuffering | writeThrough | seekable | readable | writable | isatty | fileno | name
-  | chunkGet | chunkSet (v : Int)
+  | chunkGet | chunkSet (v : Int) | chunkDel
+  /-- `f.buffer is b`. -/
+  | buffer
   /-- `reconfigure(line_buffering=lb, write_through=wt)`, with `newline=nl` when `some`. -/
   | reconfigure (nl : Option (Option (List Nat))) (lb wt : Option Bool)
   | bufvalue
@@ -88,7 +90,10 @@ def stepOp (t : TC) : TXOp → TC × Py Val
   | .flush => flush t
   | .close => close t
   | .detach => detach t
-  | .closed => (do checkAttached; let t ← SM.get; pure (Val.bool t.b.closed)) t
+  -- textio.c:3351-3365: an uninitialized object reports closed
+  | .closed =>
+    if !t.ok then (t, .ok (.bool true)) else
+    (do checkAttached; let t ← SM.get; pure (Val.bool t.b.closed)) t
   | .encoding => (do checkAttached; let t ← SM.get; pure (Val.str t.encName)) t
   | .errors => (do checkAttached; let t ← SM.get; pure (Val.str t.errName)) t
   | .newlines =>
@@ -118,6 +123,11 @@ def stepOp (t : TC) : TXOp → TC × Py Val
         if v ≤ 0 then thr (.valueError "a strictly positive integer is required")
         SM.mod fun t => { t with chunk := v.toNat }
         pure Val.none) t
+  -- the setter generated in clinic/textio.c.h:1324-1333, before any attachment check
+  | .chunkDel =>
+    (t, .error (.named "AttributeError" "attribute '_CHUNK_SIZE' of '_io.TextIOWrapper' objects cannot be deleted"))
+  -- `_io_TextIOWrapper_buffer_get_impl`, textio.c:3446-3450
+  | .buffer => (do checkAttached; pure (Val.bool true)) t
   | .reconfigure nl lb wt => (do checkAttached; reconfigure nl lb wt) t
   | .bufvalue =>
     if t.b.closed then (t, .error (.valueError "I/O operation on closed file.")) else (t, .ok (.bytes t.b.buf))
@@ -172,6 +182,9 @@ def stepW (t : TState) : TXOp → TState × Py Val
   | .name => xstep t .name
   | .chunkGet => (t, .ok (.int 2048))
   | .chunkSet _ => (t, .ok .none)
+  -- `_CHUNK_SIZE` is a class attribute, _pyio.py:2081
+  | .chunkDel => (t, .error (.named "AttributeError" "'TextIOWrapper' object has no attribute '_CHUNK_SIZE'"))
+  | .buffer => (t, .ok (.bool true))
   | .reconfigure _ _ _ => (t, .ok .none)
   | .bufvalue =>
     if t.b.closed then (t, .error (.valueError "getvalue on closed file")) else (t, .ok (.bytes t.b.buf))

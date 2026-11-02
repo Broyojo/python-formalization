@@ -48,7 +48,7 @@ reproducer: |
 expected: |
   tell() returns the position after a completed readlines() call, as io.StringIO does.
 observed: |
-  python3 3.14.7: io.StringIO tell() == 2; _pyio.StringIO and io.TextIOWrapper raise OSError after
+  python3 3.15.2: io.StringIO tell() == 2; _pyio.StringIO and io.TextIOWrapper raise OSError after
   readlines(1); _pyio.StringIO after readlines(1), getvalue(): AssertionError: pending decoded text.
   REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.

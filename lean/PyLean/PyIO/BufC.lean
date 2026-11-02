@@ -2,7 +2,7 @@ import PyLean.PyIO.BufRaw
 
 /-!
 `Modules/_io/bufferedio.c`: `BufferedReader`, `BufferedWriter`, `BufferedRandom`
-over the scripted `Raw`, CPython 3.14.7. `BufS` holds the fields of `buffered`
+over the scripted `Raw`, CPython 3.15.2. `BufS` holds the fields of `buffered`
 (bufferedio.c:221-263); positions are `Py_off_t`. The lock is not modelled
 (single-threaded use has no re-entrant call from these raws).
 -/
@@ -36,14 +36,14 @@ namespace BC2
 def validRead (s : BufS) : Bool := s.readable && s.readEnd != -1
 def validWrite (s : BufS) : Bool := s.writable && s.writeEnd != -1
 
-/-- `READAHEAD`, bufferedio.c:386-388. -/
+/-- `READAHEAD`, bufferedio.c:397-399. -/
 def readahead (s : BufS) : Int := if validRead s then s.readEnd - s.pos else 0
 
-/-- `RAW_OFFSET`, bufferedio.c:390-392. -/
+/-- `RAW_OFFSET`, bufferedio.c:401-403. -/
 def rawOffset (s : BufS) : Int :=
   if (validRead s || validWrite s) && decide (s.rawPos ≥ 0) then s.rawPos - s.pos else 0
 
-/-- `ADJUST_POSITION`, bufferedio.c@3.14.7:370-375. -/
+/-- `ADJUST_POSITION`, bufferedio.c:390-395. -/
 def adjust (s : BufS) (n : Int) : BufS :=
   let s := { s with pos := n }
   if validRead s && decide (s.readEnd < s.pos) then { s with readEnd := s.pos } else s
@@ -55,10 +55,11 @@ def checkInit : BM Unit := do
     thr (.valueError (if s.detached then "raw stream has been detached"
       else "I/O operation on uninitialized object"))
 
-/-- `IS_CLOSED`, bufferedio.c:352-356. -/
+/-- `IS_CLOSED`, bufferedio.c:364-368. `raw.closed` is a plain attribute here, so
+the failure of `buffered_closed` (:372-375) does not arise. -/
 def isClosed (s : BufS) : Bool := !s.hasBuf || s.raw.closed
 
-/-- `CHECK_CLOSED`, bufferedio.c:358-362. -/
+/-- `CHECK_CLOSED`, bufferedio.c:370-382. -/
 def checkClosed (msg : String) : BM Unit := do
   let s ← SM.get
   if isClosed s && decide (readahead s = 0) then thr (.valueError msg)
@@ -255,6 +256,13 @@ def genericFill : Nat → Int → List Nat → BM Val
         if remaining = 0 then pure (.bytes out) else genericFill fuel remaining out
     else pure (.bytes out)
 
+/-- `PyBytesWriter_Create(n)`, Objects/bytesobject.c:3802-3842: a `bytes` of `n`
+bytes, or the exception of `allocBytes`. -/
+def newWriter (n : Int) : BM Unit :=
+  match allocBytes n with
+  | .error e => thr e
+  | .ok () => pure ()
+
 /-- `_bufferedreader_read_generic`, bufferedio.c:1801-1891. -/
 def readGeneric (n : Int) : BM Val := do
   let s ← SM.get
@@ -263,6 +271,7 @@ def readGeneric (n : Int) : BM Val := do
     let r ← readFast n
     pure (.bytes (r.getD []))
   else
+    newWriter n
     let out0 : List Nat := if cur > 0 then slice s.buffer s.pos.toNat cur.toNat else []
     let rem0 : Int := if cur > 0 then n - cur else n
     if cur > 0 then SM.mod fun s => { s with pos := s.pos + cur }
@@ -341,6 +350,7 @@ def read1 (n : Int) : BM Val := do
   else
     if s.writable then flushRewind
     resetRead
+    newWriter n
     let s ← SM.get
     let (r, d) ← rawRead n (fuelR s)
     pure (.bytes (if r = -2 then [] else d))
@@ -525,7 +535,7 @@ def truncate (p : Option Int) : BM Val := do
 def close : BM Val := do
   checkInit
   let s ← SM.get
-  if s.raw.closed then pure .none else
+  if isClosed s then pure .none else
   let fl ← SM.attempt flushMethod
   let s ← SM.get
   let (r, res) := s.raw.close

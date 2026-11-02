@@ -6,7 +6,8 @@ A case builds a subclass of IOBase/RawIOBase/BufferedIOBase/TextIOBase whose
 read, peek, readinto, write and flush replay a script and log their arguments.
 Every operation's result and the final call log are compared against the Lean
 model (`base_c`/`base_py`), which tests what the base classes do with those
-callbacks. Also covers the remaining BytesIO methods (`bytesx_c`/`bytesx_py`).
+callbacks. Also covers the remaining BytesIO methods (`bytesx_c`/`bytesx_py`),
+including `truncate` of an object whose `__index__` acts on the stream.
 """
 
 import builtins
@@ -49,6 +50,7 @@ class Mix:
     def setup(self, c):
         self.reads, self.intos = list(c["reads"]), list(c["intos"])
         self.writes, self.flushes, self.calls = list(c["writes"]), list(c["flushes"]), []
+        self.keep, self.views = c["keep"], []
 
     def flush(self):
         self.calls.append(["flush"])
@@ -83,6 +85,8 @@ class PeekMix:
 class IntoMix:
     def readinto(self, b):
         self.calls.append(["readinto", len(b)])
+        if self.keep:
+            self.views.append(memoryview(b))
         if not self.intos:
             return 0
         d, r = self.intos.pop(0)
@@ -131,14 +135,22 @@ def gen_case(rng):
         c = {"mod": "pyio", "fn": fn}
         c.update(pyio_diff.gen_bytesio(rng, fn))
         for _ in range(rng.randint(1, 6)):
-            k = rng.choice(["readable", "writable", "seekable", "flush", "isatty", "writelines", "getstate", "setstate"])
+            k = rng.choice(["readable", "writable", "seekable", "flush", "isatty", "writelines", "getstate", "setstate",
+                            "getstate", "setstate", "readinto_self", "readinto_self", "reinit", "reinit",
+                            "reinit_obj", "truncobj", "truncobj", "truncobj"])
             op = {"op": k}
             if k == "writelines":
                 op["ls"] = [pyio_diff.gen_bytes(rng) for _ in range(rng.randint(0, 4))]
             if k == "setstate":
-                if fn == "bytesx_py":
-                    continue
-                op.update(b=pyio_diff.gen_bytes(rng), pos=pyio_diff.an_int(rng))
+                # _pyio.BytesIO keeps whatever it is given: only a position it could hold
+                op.update(b=pyio_diff.gen_bytes(rng),
+                          pos=rng.randint(0, 12) if fn == "bytesx_py" else pyio_diff.an_int(rng))
+            if k == "readinto_self":
+                op.update(off=rng.randint(0, 8), n=rng.randint(0, 8))
+            if k in ("reinit", "reinit_obj"):
+                op["b"] = None if rng.random() < 0.3 else pyio_diff.gen_bytes(rng)
+            if k == "truncobj":
+                op["a"] = pyio_diff.gen_targ(rng, 8)
             c["ops"].insert(rng.randint(0, len(c["ops"])), op)
         return c
     fn = rng.choice(["base_c", "base_py"])
@@ -150,7 +162,8 @@ def gen_case(rng):
          "peeks": [script_ret(rng) for _ in range(rng.randint(0, 8))],
          "intos": [[rbytes(rng), script_ret(rng)] for _ in range(rng.randint(0, 5))],
          "writes": [script_ret(rng) for _ in range(rng.randint(0, 3))],
-         "flushes": [rng.choice([None, script_ret(rng)]) for _ in range(rng.randint(0, 2))]}
+         "flushes": [rng.choice([None, script_ret(rng)]) for _ in range(rng.randint(0, 2))],
+         "keep": rng.random() < 0.06}
     names = ["seek", "tell", "truncate", "flush", "close", "closed", "seekable", "readable", "writable",
              "checkClosed", "checkSeekable", "checkReadable", "checkWritable", "enter", "exit", "fileno",
              "isatty", "readline", "readline", "readline", "iter", "next", "next", "readlines", "writelines", "del"]
@@ -244,7 +257,14 @@ def run_base(c):
             out.append(pyio_diff.norm(e))
     calls = list(f.calls)
     f.flushes = []
+    for v in f.views:
+        v.release()
     return {"ok": out, "log": calls}
+
+
+def readinto_self(f, op):
+    with f.getbuffer() as v, v[op["off"]:op["off"] + op["n"]] as w:
+        return f.readinto(w)
 
 
 def run_extra(c):
@@ -259,10 +279,24 @@ def run_extra(c):
                 v = f.writelines([bytes(x) for x in op["ls"]])
             elif k == "getstate":
                 st = f.__getstate__()
+                if key == "py":
+                    assert set(st) == {"_buffer", "_pos"}, st
                 v = [st[0], st[1], st[2]] if key == "c" else [bytes(st["_buffer"]), st["_pos"]]
                 st = None
             elif k == "setstate":
-                v = f.__setstate__((bytes(op["b"]), op["pos"], None))
+                st = (bytes(op["b"]), op["pos"], None) if key == "c" else {"_buffer": bytearray(op["b"]), "_pos": op["pos"]}
+                v = f.__setstate__(st)
+                st = None
+            elif k == "readinto_self":
+                v = readinto_self(f, op)
+            elif k == "reinit":
+                v = f.__init__() if op["b"] is None else f.__init__(bytes(op["b"]))
+            elif k == "reinit_obj":
+                v = f.__init__(1 if op["b"] is None else bytearray(op["b"]))
+            elif k == "truncobj":
+                if key == "py":
+                    f._lock = pyio_diff.WatchLock()
+                v = f.truncate(pyio_diff.make_targ(f, op["a"], views))
             elif k in ("readable", "writable", "seekable", "flush", "isatty"):
                 v = getattr(f, k)()
             else:
@@ -271,6 +305,8 @@ def run_extra(c):
             v = None  # a live getvalue() result would keep the buffer shared
         except StopIteration:
             out.append({"exc": "StopIteration", "msg": ""})
+        except pyio_diff.Deadlock:
+            out.append({"exc": "Deadlock", "msg": ""})
         except Exception as e:
             out.append(pyio_diff.norm(e))
     for v in views:
