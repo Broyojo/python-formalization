@@ -218,7 +218,7 @@ theorem dequeIRepeatChecked_proven : DequeIRepeatChecked := by
     rw [length_rep, Int.natCast_mul, hlen, show ((k.toNat : Nat) : Int) = k by omega, Int.mul_comm]
     exact hmk
 
-/-- `l *= n` and `l * n` (note (2) of Doc/library/stdtypes.rst@3.14.7:1263-1275 and
+/-- `l *= n` and `l * n` (note (2) of Doc/builtins/stdtypes.rst:1539-1552 and
 the `s * n` row of the common-sequence table): for every list of ints and
 every int `n`: outside `Py_ssize_t` both raise `OverflowError`; `n <= 0`
 gives `[]`; otherwise the result is `l` repeated `n` times, and `MemoryError`
@@ -276,19 +276,21 @@ theorem listRepeat_proven : ListRepeat := by
       · omega),
       iteT (show ((l.length : Int) > ssizeMax / n) from (hdiv h).mpr hgt)]; rfl
 
-/-- `d.copy()`, `d + other`: for every deque (type invariant `WF`) and every other
-deque, `copy()` has the same items, `maxlen` and type, and `d + other` holds the last
-`d.maxlen` items of `list(d) + list(other)` with `d`'s `maxlen` and type
-(Doc/library/collections.rst:507-511, 599-600); all results keep the invariant.
-`__copy__` is the same function. -/
+/-- `d.copy()`, `d + other`: for every deque (type invariants: `WF`, and `maxlen` a
+`Py_ssize_t`) and every other deque, `copy()` has the same items, `maxlen` and type, and
+`d + other` holds the last `d.maxlen` items of `list(d) + list(other)` with `d`'s `maxlen`
+and type (Doc/library/collections.rst:507-511, 599-600); all results keep the invariant.
+`__copy__` is the same function. On 3.14.7 this failed for a subclass with a `maxlen` above
+`2**31`, which the `"i"` format truncated; 3.15 reads it with `"n"`. -/
 def DequeCopyConcat : Prop :=
-  ∀ (α : Type) [Inhabited α] (d : Deque α), d.WF → ∀ (other : Deque α),
+  ∀ (α : Type) [Inhabited α] (d : Deque α), d.WF → d.maxlen ≤ ssizeMax → ∀ (other : Deque α),
     ∃ c, d.copy = .ok c ∧ c.WF ∧ c.items = d.items ∧ c.maxlen = d.maxlen ∧ c.tname = d.tname ∧
       ∃ n, d.concat (.inl other) = .ok n ∧ n.WF ∧ n.items = keepLast d.maxlen (d.items ++ other.items) ∧
         n.maxlen = d.maxlen ∧ n.tname = d.tname
 
 /-- The same for the exact type, and for a subclass whose `maxlen` is unbounded or
-below `2**31` (the `"i"` format of the subclass path of `deque_copy_impl`). -/
+below `2**31`, the narrowing the 3.14.7 `"i"` format needed. `DequeCopyConcat` now covers
+it. -/
 def DequeCopyConcatChecked : Prop :=
   ∀ (α : Type) [Inhabited α] (d : Deque α), d.WF → (d.tname = "deque" ∨ d.maxlen < 2147483648) →
     ∀ (other : Deque α),
@@ -329,10 +331,7 @@ theorem copyExact_spec (d : Deque α) (h : d.WF) :
     have : d.items = [] := List.eq_nil_of_length_eq_zero (by rw [Deque.size_eq] at hs; omega)
     refine ⟨new_wf "deque" d.maxlen (by rcases h.2 with h2 | h2 <;> omega), by simp [Deque.new, this], rfl, rfl⟩
 
-theorem wrap32_of_lt (m : Int) (h0 : 0 ≤ m) (h1 : m < 2147483648) : wrap32 m = m := by
-  unfold wrap32; rw [iteF (by omega)]; omega
-
-theorem copy_spec (d : Deque α) (h : d.WF) (hc : d.tname = "deque" ∨ d.maxlen < 2147483648) :
+theorem copy_spec (d : Deque α) (h : d.WF) (hc : d.tname = "deque" ∨ d.maxlen ≤ ssizeMax) :
     ∃ c, d.copy = .ok c ∧ c.WF ∧ c.items = d.items ∧ c.maxlen = d.maxlen ∧ c.tname = d.tname := by
   have hmx := maxOk_le d h
   unfold Deque.copy
@@ -349,30 +348,17 @@ theorem copy_spec (d : Deque α) (h : d.WF) (hc : d.tname = "deque" ∨ d.maxlen
     obtain ⟨a, b, c⟩ := Deque.extend_spec { Deque.new d.tname with maxlen := -1 } d.items (new_wf _ (-1) (Or.inl rfl))
     refine ⟨_, rfl, a, ?_, by rw [c, hm], extend_tname _ _⟩
     rw [b]; simp [Deque.new, keepLast]
-  · rw [iteF hneg, wrap32_of_lt _ (by omega) hlt,
-      makeOf_int _ _ _ (by omega) (by unfold ssizeMax; omega)]
+  · rw [iteF hneg, makeOf_int _ _ _ (by omega) hlt]
     obtain ⟨a, b, c⟩ := Deque.extend_spec { Deque.new d.tname with maxlen := d.maxlen } d.items
       (new_wf _ _ (Or.inr (by omega)))
     refine ⟨_, rfl, a, ?_, c, extend_tname _ _⟩
     rw [b]; simp only [Deque.new, List.nil_append]; exact keepLast_of_le _ _ hmx
 
-/-- A subclass of `deque` with `maxlen=2**32`. -/
-def dBig : Deque Int := ⟨1, 1, [1], 4294967296, 1, "D"⟩
-
-theorem dequeCopyConcat_refuted : ¬ DequeCopyConcat := by
-  intro h
-  have hw : dBig.WF := by
-    refine ⟨?_, ?_⟩
-    · rw [Deque.layout_iff]; decide
-    · rw [Deque.maxOk_iff]; decide
-  obtain ⟨c, h1, _, h3, _⟩ := h Int dBig hw dBig
-  have e : dBig.copy = .ok ⟨32, 31, [], 0, 0, "D"⟩ := by decide
-  rw [e] at h1
-  cases h1
-  exact nomatch h3
-
-theorem dequeCopyConcatChecked_proven : DequeCopyConcatChecked := by
-  intro α _ d h hc other
+theorem copy_concat_of (d : Deque α) (h : d.WF) (hc : d.tname = "deque" ∨ d.maxlen ≤ ssizeMax)
+    (other : Deque α) :
+    ∃ c, d.copy = .ok c ∧ c.WF ∧ c.items = d.items ∧ c.maxlen = d.maxlen ∧ c.tname = d.tname ∧
+      ∃ n, d.concat (.inl other) = .ok n ∧ n.WF ∧ n.items = keepLast d.maxlen (d.items ++ other.items) ∧
+        n.maxlen = d.maxlen ∧ n.tname = d.tname := by
   obtain ⟨c, h1, w, i, m, t⟩ := copy_spec d h hc
   obtain ⟨w2, i2, m2⟩ := Deque.extend_spec c other.items w
   refine ⟨c, h1, w, i, m, t, c.extend other.items, ?_, w2, ?_, ?_, ?_⟩
@@ -380,5 +366,12 @@ theorem dequeCopyConcatChecked_proven : DequeCopyConcatChecked := by
   · rw [i2, m, i]
   · rw [m2, m]
   · rw [extend_tname, t]
+
+theorem dequeCopyConcat_proven : DequeCopyConcat :=
+  fun _ _ d h hm other => copy_concat_of d h (Or.inr hm) other
+
+theorem dequeCopyConcatChecked_proven : DequeCopyConcatChecked :=
+  fun _ _ d h hc other => copy_concat_of d h
+    (hc.imp_right (fun hl => by unfold ssizeMax; omega)) other
 
 end PyLean.Sequences

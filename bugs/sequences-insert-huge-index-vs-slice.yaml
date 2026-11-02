@@ -7,7 +7,7 @@ files: [Objects/listobject.c, Objects/clinic/listobject.c.h, Modules/arraymodule
 functions: ["list_insert_impl", "ins1", "list_ass_subscript_lock_held", "array_array_insert_impl"]
 summary: |
   The docs define sequence.insert(index, value) as "equivalent to writing
-  sequence[index:index] = [value]" (Doc/library/stdtypes.rst@3.14.7:1336-1343). Slice bounds are
+  sequence[index:index] = [value]" (Doc/builtins/stdtypes.rst:1612-1615). Slice bounds are
   clipped for any int (PySlice_Unpack saturates to Py_ssize_t), so l[2**63:2**63] = [9]
   appends and l[-2**63-1:-2**63-1] = [9] prepends. list.insert converts its index with the
   Argument Clinic Py_ssize_t converter and raises "OverflowError: Python int too large to
@@ -53,18 +53,18 @@ expected: |
   l.insert(2**63, 9) appends (as l[2**63:2**63] = [9] does) or the docs mention the
   Py_ssize_t limit.
 observed: |
-  python3 3.14.7: insert raises "OverflowError: Python int too large to convert to C ssize_t"
+  python3 3.15.2: insert raises "OverflowError: Python int too large to convert to C ssize_t"
   (list, array and deque alike); the slice assignments append / prepend. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |
-  Doc/library/stdtypes.rst@3.14.7:1336-1343 ("This is equivalent to writing
+  Doc/builtins/stdtypes.rst:1612-1615 ("This is equivalent to writing
   sequence[index:index] = [value]").
 cause: |
   Objects/clinic/listobject.c.h (list.insert: `index: Py_ssize_t`, PyLong_AsSsize_t raises
-  OverflowError) before list_insert_impl / ins1 (Objects/listobject.c:1204-1211, 476-499);
+  OverflowError) before list_insert_impl / ins1 (Objects/listobject.c:1204-1211, 503-528);
   slice assignment goes through PySlice_Unpack (Objects/sliceobject.c), which saturates with
   PyNumber_AsSsize_t(v, NULL), then the same clipping (list_ass_subscript_lock_held,
-  Objects/listobject.c:3753-3912).
+  Objects/listobject.c:3753-3916).
 possible_fix: |
   Either document that the index must fit in Py_ssize_t, or convert the index with
   `slice_index`/_PyEval_SliceIndex (saturating, as list.index already does for start/stop).

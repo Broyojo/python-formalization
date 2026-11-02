@@ -1,7 +1,7 @@
 import PyLean.Sequences.Common
 
 /-!
-Model of the mutating `list` methods of `Objects/listobject.c` (CPython 3.14.7),
+Model of the mutating `list` methods of `Objects/listobject.c` (CPython 3.15.2),
 the reference the `deque` and `array` methods are compared with. A list is its
 contents, a `List α` for an abstract element type; `len(l) <= sys.maxsize` is a
 type invariant that properties assume where needed. `f item x` stands for
@@ -16,7 +16,7 @@ open PyLean.RangeSlice (Slice sliceUnpack adjustIndices toU)
 
 variable {α : Type} [Inhabited α]
 
-/-- `ins1`, listobject.c:502-526 (the `list_resize` failure path is out of
+/-- `ins1`, listobject.c:503-528 (the `list_resize` failure path is out of
 scope): clip `where` into `[0, n]` (adding `n` to a negative index) and
 insert. -/
 def ins1Pos (n where_ : Int) : Int :=
@@ -27,16 +27,17 @@ def listIns1 (l : List α) (where_ : Int) (v : α) : List α :=
   insAt l (ins1Pos l.length where_).toNat v
 
 /-- `l.insert(index, object)`: Argument Clinic `Py_ssize_t` conversion of
-`index`, then `list_insert_impl` (listobject.c:1203-1211). -/
+`index`, then `list_insert_impl` (listobject.c:1204-1211). -/
 def listInsert (l : List α) (index : Int) (v : α) : Py (List α) := do
   let i ← asSsize index
   return listIns1 l i v
 
-/-- `l.append(x)`, `list_append_impl` (listobject.c:1252-1260). -/
+/-- `l.append(x)`, `list_append_impl` (listobject.c:1253-1260). -/
 def listAppend (l : List α) (v : α) : List α := l ++ [v]
 
 /-- `l.pop([index])`: `index` defaults to `-1` (clinic), `list_pop_impl`
-(listobject.c:1606-1638). -/
+(listobject.c:1607-1638). Since 3.15 the shrink cannot fail, so there is no restoring
+path. -/
 def popArg : Option Int → Py Int
   | none => pure (-1)
   | some i => asSsize i
@@ -51,7 +52,7 @@ def listPopK (l : List α) (index : Int) : Py (α × List α) := do
 def listPop (l : List α) (index : Option Int) : Py (α × List α) :=
   popArg index >>= listPopK l
 
-/-- The search loop of `list_index_impl` (listobject.c:3364-3376):
+/-- The search loop of `list_index_impl` (listobject.c:3360-3372):
 `for (i = start; i < stop; i++)`, stopping at the end of the list. `fuel`
 bounds the iterations (`len(l) + 1` is enough since `start >= 0`). -/
 def listIndexLoop (f : α → α → Bool) (l : List α) (x : α) (stop : Int) : Int → Nat → Option Int
@@ -63,7 +64,7 @@ def listIndexLoop (f : α → α → Bool) (l : List α) (x : α) (stop : Int) :
     else none
 
 /-- `l.index(x[, start[, stop]])`: `slice_index(accept={int})` arguments
-(saturating), `list_index_impl` (listobject.c:3345-3379). -/
+(saturating), `list_index_impl` (listobject.c:3346-3375). -/
 def listIndexBy (f : α → α → Bool) (l : List α) (x : α) (start stop : Option Int) : Py Int :=
   let n : Int := l.length
   let start := sliceIndex (start.getD 0)
@@ -74,10 +75,10 @@ def listIndexBy (f : α → α → Bool) (l : List α) (x : α) (start stop : Op
   | some i => .ok i
   | none => .error (.valueError "list.index(x): x not in list")
 
-/-- `l.count(x)`, `list_count_impl` (listobject.c:3386-3409). -/
+/-- `l.count(x)`, `list_count_impl` (listobject.c:3387-3410). -/
 def listCountBy (f : α → α → Bool) (l : List α) (x : α) : Int := (l.filter (f · x)).length
 
-/-- `l.remove(x)`, `list_remove_impl` (listobject.c:3424-3445): the first
+/-- `l.remove(x)`, `list_remove_impl` (listobject.c:3425-3445): the first
 match is deleted with `list_ass_slice(self, i, i+1, NULL)`. -/
 def listRemoveBy (f : α → α → Bool) (l : List α) (x : α) : Py (List α) :=
   match firstFrom (f · x) l 0 l.length with
@@ -92,8 +93,8 @@ def listCount (l : List Int) (x : Int) : Int := listCountBy (· == ·) l x
 
 def listRemove (l : List Int) (x : Int) : Py (List Int) := listRemoveBy (· == ·) l x
 
-/-- `l[i]` for an int `i`: `list_subscript` (listobject.c:3711-3721) and
-`list_item` (:695-714). -/
+/-- `l[i]` for an int `i`: `list_subscript` (listobject.c:3712-3722) and
+`list_item` (:696-714). -/
 def listGetItem (l : List α) (i : Int) : Py α := do
   let i ← subIndex i
   let i := if i < 0 then i + l.length else i
@@ -101,7 +102,7 @@ def listGetItem (l : List α) (i : Int) : Py α := do
   return ix l i
 
 /-- `l[i] = v` / `del l[i]` for an int `i`: `list_ass_subscript_lock_held`
-(listobject.c:3757-3764) and `list_ass_item_lock_held` (:1158-1179). -/
+(listobject.c:3758-3765) and `list_ass_item_lock_held` (:1159-1179). -/
 def listAssItem (l : List α) (i : Int) (v : Option α) : Py (List α) := do
   let i ← subIndex i
   let i := if i < 0 then i + l.length else i
@@ -110,7 +111,7 @@ def listAssItem (l : List α) (i : Int) (v : Option α) : Py (List α) := do
   | none => return l.eraseIdx i.toNat
   | some v => return l.set i.toNat v
 
-/-- `list_ass_slice_lock_held(a, ilow, ihigh, v)` (listobject.c:970-1059):
+/-- `list_ass_slice_lock_held(a, ilow, ihigh, v)` (listobject.c:971-1059):
 clip `ilow` into `[0, n]` and `ihigh` into `[ilow, n]`, then replace
 `a[ilow:ihigh]` by `v` (`[]` for `v == NULL`). -/
 def listAssSlice (a : List α) (ilow ihigh : Int) (v : List α) : List α :=
@@ -119,7 +120,7 @@ def listAssSlice (a : List α) (ilow ihigh : Int) (v : List α) : List α :=
   let ihigh := if ihigh < ilow then ilow else if ihigh > n then n else ihigh
   a.take ilow.toNat ++ v ++ a.drop ihigh.toNat
 
-/-- `PySlice_Unpack` then `adjust_slice_indexes` (listobject.c:3735-3750):
+/-- `PySlice_Unpack` then `adjust_slice_indexes` (listobject.c:3736-3750):
 `(start, stop, step, slicelength)` with `stop` moved to `start` when the
 slice runs backwards. -/
 def adjustSlice (n : Int) (s : Slice) : Py (Int × Int × Int × Int) := do
@@ -129,7 +130,7 @@ def adjustSlice (n : Int) (s : Slice) : Py (Int × Int × Int × Int) := do
   return (start, stop, step, len)
 
 /-- The compaction loop shared by `list_ass_subscript_lock_held`
-(listobject.c@3.14.7:3739-3756) and `array_ass_subscr` (Modules/arraymodule.c:2912-2923):
+(listobject.c:3808-3821) and `array_ass_subscr` (Modules/arraymodule.c:2912-2921):
 `for (cur = start, i = 0; cur < stop; cur += step, i++)`, moving the `lim`
 items after each deleted one down by `i + 1`. All `size_t`, `step > 0`. -/
 def delLoop (size step stop : Int) : Nat → List α → Int → Int → Py (List α)
@@ -143,7 +144,7 @@ def delLoop (size step stop : Int) : Nat → List α → Int → Int → Py (Lis
     else .ok mem
 
 /-- Extended-slice deletion after `adjust_slice_indexes`, for `step != 1`
-and `slicelength > 0`: listobject.c:3785-3829 (and arraymodule.c:2906-2929,
+and `slicelength > 0`: listobject.c:3789-3829 (and arraymodule.c:2905-2929,
 which runs the same code). The buffer then shrinks to `size - slicelength`. -/
 def delExtended (mem : List α) (start stop step len : Int) : Py (List α) := do
   let size : Int := mem.length
@@ -157,7 +158,7 @@ def delExtended (mem : List α) (start stop step len : Int) : Py (List α) := do
   let mem ← if cur < size then memmove mem (cur - len) cur (size - cur) else pure mem
   return mem.take (size - len).toNat
 
-/-- The extended-slice store loop (listobject.c@3.14.7:3830-3835): positions
+/-- The extended-slice store loop (listobject.c:3893-3898): positions
 `start + i*step` for `i < slicelength`, as a `size_t` cursor. -/
 def storeLoop (mem : List α) (start step : Int) (seq : List α) : List α :=
   (List.range seq.length).foldl
@@ -165,7 +166,7 @@ def storeLoop (mem : List α) (start step : Int) (seq : List α) : List α :=
 
 /-- `l[s] = seq` (`value = some seq`) or `del l[s]` (`value = none`) for a
 slice `s` with int/None parts: `list_ass_subscript_lock_held`,
-listobject.c:3765-3912. `seq` is the assigned iterable's items
+listobject.c:3766-3909. `seq` is the assigned iterable's items
 (`PySequence_Fast`; for `l[s] = l` the list's own copy). -/
 def listAssSubscript (l : List α) (s : Slice) (value : Option (List α)) : Py (List α) := do
   let (start, stop, step, len) ← adjustSlice l.length s
@@ -182,7 +183,7 @@ def listAssSubscript (l : List α) (s : Slice) (value : Option (List α)) : Py (
     return storeLoop l start step seq
 
 /-- `l *= n`: `sequence_repeat` conversion, then `list_inplace_repeat_lock_held`
-(listobject.c:1101-1140). -/
+(listobject.c:1102-1140). -/
 def listIRepeat (l : List α) (n : Int) : Py (List α) := do
   let n ← repeatCount n
   let size : Int := l.length
@@ -191,7 +192,7 @@ def listIRepeat (l : List α) (n : Int) : Py (List α) := do
   if size > ssizeMax / n then throw memoryError
   return (List.replicate n.toNat l).flatten
 
-/-- `l * n`: `list_repeat_lock_held` (listobject.c:840-880). -/
+/-- `l * n`: `list_repeat_lock_held` (listobject.c:841-880). -/
 def listRepeat (l : List α) (n : Int) : Py (List α) := do
   let n ← repeatCount n
   let size : Int := l.length
@@ -199,7 +200,7 @@ def listRepeat (l : List α) (n : Int) : Py (List α) := do
   if size > ssizeMax / n then throw memoryError
   return (List.replicate n.toNat l).flatten
 
-/-- `l.__init__(iterable)`: `list___init___impl` (listobject.c:3543-3565)
+/-- `l.__init__(iterable)`: `list___init___impl` (listobject.c:3544-3565)
 clears the list, then extends it with the iterable; `items` is what the
 iterable yields *after* the clear (so `l.__init__(l)` sees `[]`). -/
 def listInit (_l : List α) (items : List α) : List α := [] ++ items

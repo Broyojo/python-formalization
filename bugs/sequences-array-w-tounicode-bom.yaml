@@ -40,7 +40,7 @@ reproducer: |
 expected: |
   '\ufeffabc', and repr(array('w', '\ufeffabc')) evaluating to an equal array.
 observed: |
-  python3 3.14.7: 'abc'; array('w', 'abc'); UnicodeDecodeError from tounicode and repr on
+  python3 3.15.2: 'abc'; array('w', 'abc'); UnicodeDecodeError from tounicode and repr on
   '\ud800'. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |

@@ -2,22 +2,25 @@ import PyLean.Sequences.ListModel
 import PyLean.Sequences.Values
 
 /-!
-Model of `array.array` (`Modules/arraymodule.c`, CPython 3.14.7), all fourteen
+Model of `array.array` (`Modules/arraymodule.c`, CPython 3.15.2), all seventeen
 typecodes, LP64 (see `Values.lean`).
 
 An array keeps the fields of `arrayobject` that have a visible effect: the
 descriptor (`tc`), the items, `allocated`, whether `ob_item` is NULL, and
 `ob_exports`, plus the type's name (`"array"` or a subclass that does not override
 `__new__`). `items` holds the C value of each element: the signed or unsigned
-integer, the `wchar_t` (signed) or `Py_UCS4` for `u`/`w`, and the IEEE bit pattern
-for `f`/`d`. Reading the buffer as bytes is `itemBytes`. Items past the size
-that `array_resize` exposes are 0 in the model; every caller overwrites them
-before they can be read.
+integer, the `wchar_t` (signed) or `Py_UCS4` for `u`/`w`, the IEEE bit pattern for
+`e`/`f`/`d`, and for `Zf`/`Zd` the two parts' patterns as one little-endian number
+(real part in the low half). Reading the buffer as bytes is `itemBytes`. Items past
+the size that `array_resize` exposes are 0 in the model. Every caller overwrites them
+before they can be read, with one exception: `ins1` on an `e` array whose second
+`setitem` fails leaves the new slot as it is, uninitialised memory in CPython and 0
+here (`arrIns1S`, bugs/sequences-array-e-ins1-overflow-keeps-slot.yaml).
 
 The element comparison `PyObject_RichCompareBool(item, v, Py_EQ)` of `count`,
 `index`, `remove` and `in` is a parameter `eqv : PyVal → Py Bool` (the object `v`
 is closed over, and may raise). A `v` that mutates the array during comparison
-is out of scope; `pvEq` is the comparison for ints, floats and strs.
+is out of scope; `pvEq` is the comparison for ints, floats, complex numbers and strs.
 -/
 
 namespace PyLean.Sequences
@@ -26,27 +29,29 @@ open PyLean
 open PyLean.RangeSlice (Slice sliceUnpack adjustIndices toU wrap)
 
 inductive TC where
-  | b | B | u | w | h | H | i | I | l | L | q | Q | f | d
+  | b | B | u | w | h | H | i | I | l | L | q | Q | e | f | d | Zf | Zd
   deriving Repr, DecidableEq, Inhabited
 
-/-- The `descriptors` table, in order (arraymodule.c:770-790). -/
-def TC.all : List TC := [.b, .B, .u, .w, .h, .H, .i, .I, .l, .L, .q, .Q, .f, .d]
+/-- The `descriptors` table, in order (arraymodule.c:770-789). -/
+def TC.all : List TC := [.b, .B, .u, .w, .h, .H, .i, .I, .l, .L, .q, .Q, .e, .f, .d, .Zf, .Zd]
 
-/-- `descr->typecode`. -/
-def TC.code : TC → Char
-  | .b => 'b' | .B => 'B' | .u => 'u' | .w => 'w' | .h => 'h' | .H => 'H' | .i => 'i'
-  | .I => 'I' | .l => 'l' | .L => 'L' | .q => 'q' | .Q => 'Q' | .f => 'f' | .d => 'd'
+/-- `descr->typecode`, a string since 3.15. -/
+def TC.code : TC → String
+  | .b => "b" | .B => "B" | .u => "u" | .w => "w" | .h => "h" | .H => "H" | .i => "i"
+  | .I => "I" | .l => "l" | .L => "L" | .q => "q" | .Q => "Q" | .e => "e" | .f => "f"
+  | .d => "d" | .Zf => "Zf" | .Zd => "Zd"
 
 /-- `descr->itemsize`. -/
 def TC.itemsize : TC → Int
   | .b | .B => 1
-  | .h | .H => 2
+  | .h | .H | .e => 2
   | .u | .w | .i | .I | .f => 4
-  | .l | .L | .q | .Q | .d => 8
+  | .l | .L | .q | .Q | .d | .Zf => 8
+  | .Zd => 16
 
 /-- `descr->is_integer_type`. -/
 def TC.isInteger : TC → Bool
-  | .u | .w | .f | .d => false
+  | .u | .w | .e | .f | .d | .Zf | .Zd => false
   | _ => true
 
 /-- `descr->is_signed`. -/
@@ -56,23 +61,25 @@ def TC.isSigned : TC → Bool
 
 /-- `descr->compareitems != NULL`. -/
 def TC.hasCompare : TC → Bool
-  | .f | .d => false
+  | .e | .f | .d | .Zf | .Zd => false
   | _ => true
 
-/-- `descr->formats`, as `array_buffer_getbuf` exports it (`u` is `w`, @3.14.7:2774-2780). -/
+/-- `view->format` of `array_buffer_getbuf`: the typecode, except that `u` is `w` because
+`sizeof(wchar_t) >= 4` here (arraymodule.c:2984-2989). -/
 def TC.format : TC → String
   | .u => "w"
-  | t => t.code.toString
+  | t => t.code
 
 /-- The range of the C element. -/
 def TC.lo : TC → Int
   | .b => -128 | .h => -32768 | .i | .u => -2147483648 | .l | .q => -9223372036854775808
   | _ => 0
 def TC.hi : TC → Int
-  | .b => 127 | .B => 255 | .h => 32767 | .H => 65535 | .i | .u => 2147483647
+  | .b => 127 | .B => 255 | .h => 32767 | .H | .e => 65535 | .i | .u => 2147483647
   | .I | .w | .f => 4294967295
   | .l | .q => 9223372036854775807
-  | .L | .Q | .d => 18446744073709551615
+  | .L | .Q | .d | .Zf => 18446744073709551615
+  | .Zd => 340282366920938463463374607431768211455
 
 structure Arr where
   tc : TC
@@ -94,7 +101,7 @@ def bufferErr : PyExc := .named "BufferError" "cannot resize an array that is ex
 def resized (l : List Int) (n : Int) : List Int :=
   if n ≤ l.length then l.take n.toNat else l ++ List.replicate (n - l.length).toNat 0
 
-/-- `array_resize` (arraymodule.c:139-196). -/
+/-- `array_resize` (arraymodule.c:140-199). -/
 def arrResize (a : Arr) (newsize : Int) : Py Arr :=
   let size : Int := a.items.length
   if a.exports > 0 ∧ newsize ≠ size then .error bufferErr
@@ -109,23 +116,28 @@ def arrResize (a : Arr) (newsize : Int) : Py Arr :=
 
 /-! ### Items -/
 
-/-- The `*_getitem` functions (arraymodule.c:240-245, 270-275, 292-296, 335-339,
-365-370, 387-391, 419-423, 440-445, 487-491, 507-511, 545-549, 565-570, 604-608,
-624-628). The character types go through `PyUnicode_FromOrdinal`, whose argument
-is a C `int` (Objects/unicodeobject.c:3436-3445). -/
+/-- The `*_getitem` functions (arraymodule.c:241-245, 275-279, 297-300, 340-343,
+370-373, 392-395, 424-427, 445-449, 495-498, 515-518, 556-559, 576-580, 618-624,
+644-647, 664-667, 684-690, 713-719). The character types go through
+`PyUnicode_FromOrdinal`, whose argument is a C `int` (Objects/unicodeobject.c:3436-3445). -/
 def tcGetitem (tc : TC) (x : Int) : Py PyVal :=
   match tc with
   | .u | .w =>
     if x < 0 ∨ x > 1114111 then .error (.valueError "chr() arg not in range(0x110000)")
     else .ok (.str [x.toNat])
+  | .e => .ok (.float (halfToDouble x.toNat))
   | .f => .ok (.float (floatToDouble x.toNat))
   | .d => .ok (.float x.toNat)
+  | .Zf => .ok (.complex (floatToDouble (x.toNat % 4294967296)) (floatToDouble (x.toNat / 4294967296)))
+  | .Zd => .ok (.complex (x.toNat % 18446744073709551616) (x.toNat / 18446744073709551616))
   | _ => .ok (.int x)
 
-/-- The conversion of `b_setitem` (arraymodule.c:247-272), ... `d_setitem`
-(:669-681): `PyArg_Parse` with the setitem's format (Python/getargs.c:723-904),
-`CHECK_ARRAY_BOUNDS`, the setitem's own range check. Returns the C value. `idxOk`
-is the bounds check's outcome, true except when `__index__` shrinks the array. -/
+/-- The conversion of `b_setitem` (arraymodule.c:248-272), ... `cd_setitem`
+(:722-739) at an index `i >= 0`: `PyArg_Parse` with the setitem's format
+(Python/getargs.c:723-951), `CHECK_ARRAY_BOUNDS`, the setitem's own range check. Returns
+the C value. `idxOk` is the bounds check's outcome, true except when `__index__` shrinks
+the array. `II_setitem`, `LL_setitem` and `QQ_setitem` hold a reference to `v` across
+`__index__` since 3.15, which matters only to an `__index__` that frees `v`. -/
 def tcSetitem (tc : TC) (idxOk : Bool) (v : PyVal) : Py Int := do
   let boundsErr : PyExc := .indexError "array assignment index out of range"
   match tc with
@@ -200,7 +212,7 @@ def tcSetitem (tc : TC) (idxOk : Bool) (v : PyVal) : Py Int := do
     if !idxOk then throw boundsErr
     return x
   | .u | .w =>
-    -- u_setitem (:304-367), w_setitem (:375-397); wchar_t holds any code point here
+    -- u_setitem (:303-337), w_setitem (:346-367); wchar_t holds any code point here
     match v with
     | .str [c] =>
       if !idxOk then throw boundsErr
@@ -209,23 +221,54 @@ def tcSetitem (tc : TC) (idxOk : Bool) (v : PyVal) : Py Int := do
       throw (.typeError s!"array item must be a unicode character, not a string of length {cs.length}")
     | v => throw (.typeError s!"array item must be a unicode character, not {v.typeName}")
   | .f =>
-    -- PyArg_Parse(v, "f;..."): (float)PyFloat_AsDouble(v), Python/getargs.c
+    -- PyArg_Parse(v, "f;..."): (float)PyFloat_AsDouble(v), Python/getargs.c:922-930
     let x ← asDouble v
     if !idxOk then throw boundsErr
     return (doubleToFloat x : Int)
+  | .e =>
+    -- e_setitem (:627-641): the `float` x, promoted to double for PyFloat_Pack2
+    let x ← asDouble v
+    if !idxOk then throw boundsErr
+    let h ← packHalf (floatToDouble (doubleToFloat x))
+    return (h : Int)
   | .d =>
     let x ← asDouble v
     if !idxOk then throw boundsErr
     return (x : Int)
+  | .Zf =>
+    -- cf_setitem (:693-710): PyArg_Parse(v, "D;..."), then (float) of each part
+    let (re, im) ← asComplex v
+    if !idxOk then throw boundsErr
+    return ((doubleToFloat re + 4294967296 * doubleToFloat im : Nat) : Int)
+  | .Zd =>
+    -- cd_setitem (:722-739)
+    let (re, im) ← asComplex v
+    if !idxOk then throw boundsErr
+    return ((re + 18446744073709551616 * im : Nat) : Int)
 
-/-- `getarrayitem` (arraymodule.c:848-859). `array_item` (:1023-1031) adds the range
+/-- `setitem(self, -1, v)`, the check `ins1` runs first (`CHECK_ARRAY_BOUNDS` passes for a
+negative index). It is `tcSetitem` for every typecode but `e`: `e_setitem` calls
+`PyFloat_Pack2` only under `if (i >= 0)` (arraymodule.c:636-640), so the value's range is
+not checked here. -/
+def tcCheck (tc : TC) (v : PyVal) : Py Unit :=
+  match tc with
+  | .e =>
+    match asDouble v with
+    | .ok _ => .ok ()
+    | .error e => .error e
+  | tc =>
+    match tcSetitem tc true v with
+    | .ok _ => .ok ()
+    | .error e => .error e
+
+/-- `getarrayitem` (arraymodule.c:849-859). `array_item` (:1024-1031) adds the range
 check. -/
 def Arr.get (a : Arr) (i : Int) : Py PyVal := tcGetitem a.tc (ix a.items i)
 
 /-- `len(a)` (`array_length`, arraymodule.c:1018-1021). -/
 def arrLength (a : Arr) : Int := a.items.length
 
-/-- `array_item` (arraymodule.c:1023-1031), the `sq_item` slot: `PySequence_GetItem`
+/-- `array_item` (arraymodule.c:1024-1031), the `sq_item` slot: `PySequence_GetItem`
 has added `len` to a negative index. -/
 def arrItem (a : Arr) (i : Int) : Py PyVal :=
   if i < 0 ∨ i ≥ a.items.length then .error (.indexError "array index out of range")
@@ -235,14 +278,14 @@ def arrItem (a : Arr) (i : Int) : Py PyVal :=
 def memcpy (l : List Int) (start : Int) (src : List Int) : List Int :=
   l.take start.toNat ++ src ++ l.drop (start + src.length).toNat
 
-/-- `newarrayobject_untracked` (arraymodule.c:799-836), with `newarrayobject`
-(:838-846): `size` zeroed items of descriptor `tc`, `allocated == size`, `ob_item`
+/-- `newarrayobject_untracked` (arraymodule.c:800-836), with `newarrayobject`
+(:839-846): `size` zeroed items of descriptor `tc`, `allocated == size`, `ob_item`
 NULL for size 0. -/
 def newArr (tname : String) (tc : TC) (size : Int) : Py Arr :=
   if size > ssizeMax / tc.itemsize then .error memoryError
   else .ok ⟨tc, List.replicate size.toNat 0, size, decide (size > 0), 0, tname⟩
 
-/-- `array_slice` (arraymodule.c:1034-1059): a new `array.array` (never a subclass). -/
+/-- `array_slice` (arraymodule.c:1034-1058): a new `array.array` (never a subclass). -/
 def arrSlice (a : Arr) (ilow ihigh : Int) : Py Arr := do
   let n : Int := a.items.length
   let ilow := if ilow < 0 then 0 else if ilow > n then n else ilow
@@ -256,27 +299,53 @@ def arrSlice (a : Arr) (ilow ihigh : Int) : Py Arr := do
 /-- `a.clear()` (`array_array_clear_impl`, arraymodule.c:1067-1074). -/
 def arrClear (a : Arr) : Py Arr := arrResize a 0
 
-/-- `a.__copy__()`, `a.__deepcopy__(memo)` (arraymodule.c:1083-1102). -/
+/-- `a.__copy__()`, `a.__deepcopy__(memo)` (arraymodule.c:1083-1087, 1099-1103). -/
 def arrCopy (a : Arr) : Py Arr := arrSlice a 0 a.items.length
 
-/-- `ins1` (arraymodule.c:861-889): check the value with `setitem(self, -1, v)`,
-grow, clip `where` like `list.insert`, shift, store. -/
-def arrIns1 (a : Arr) (where_ : Int) (v : PyVal) : Py Arr := do
+/-- `ins1` (arraymodule.c:862-889): check the value with `setitem(self, -1, v)`,
+grow, clip `where` like `list.insert`, shift, store. The array reached, and the error:
+`return (*self->ob_descr->setitem)(self, where, v)` fails after the array has grown and
+shifted when the first check let through what the store refuses, which `tcCheck` shows
+only `e` does. The new slot is then what `where` left it: the old item for `where < n`,
+uninitialised memory (0 here) for `where == n`. -/
+def arrIns1S (a : Arr) (where_ : Int) (v : PyVal) : Arr × Option PyExc :=
   let n : Int := a.items.length
-  let _ ← tcSetitem a.tc true v
-  let a ← arrResize a (n + 1)
-  let w := ins1Pos n where_
-  let items ← if w ≠ n then memmove a.items (w + 1) w (n - w) else pure a.items
-  let x ← tcSetitem a.tc true v
-  return { a with items := items.set w.toNat x }
+  match tcCheck a.tc v with
+  | .error e => (a, some e)
+  | .ok () =>
+    match arrResize a (n + 1) with
+    | .error e => (a, some e)
+    | .ok a1 =>
+      let w := ins1Pos n where_
+      match (if w ≠ n then memmove a1.items (w + 1) w (n - w) else .ok a1.items : Py (List Int)) with
+      | .error e => (a1, some e)
+      | .ok items =>
+        match tcSetitem a.tc true v with
+        | .error e => ({ a1 with items }, some e)
+        | .ok x => ({ a1 with items := items.set w.toNat x }, none)
+
+/-- `ins1` as a `Py` value, without the state a failure leaves. -/
+def arrIns1 (a : Arr) (where_ : Int) (v : PyVal) : Py Arr :=
+  match arrIns1S a where_ v with
+  | (a', none) => .ok a'
+  | (_, some e) => .error e
 
 /-- `a.append(v)` (`ins(self, Py_SIZE(self), v)`, arraymodule.c:1585-1589). -/
 def arrAppend (a : Arr) (v : PyVal) : Py Arr := arrIns1 a a.items.length v
 
-/-- `a.insert(i, v)` (`ins`, :1331-1337, `array_array_insert_impl`, :1542-1546). -/
+/-- `a.append(v)` with the state a failure leaves. -/
+def arrAppendS (a : Arr) (v : PyVal) : Arr × Option PyExc := arrIns1S a a.items.length v
+
+/-- `a.insert(i, v)` (`ins`, :1331-1336, `array_array_insert_impl`, :1542-1546). -/
 def arrInsert (a : Arr) (i : Int) (v : PyVal) : Py Arr := do
   let i ← asSsize i
   arrIns1 a i v
+
+/-- `a.insert(i, v)` with the state a failure leaves. -/
+def arrInsertS (a : Arr) (i : Int) (v : PyVal) : Arr × Option PyExc :=
+  match asSsize i with
+  | .error e => (a, some e)
+  | .ok i => arrIns1S a i v
 
 /-- `array_del_slice` (arraymodule.c:1173-1205). -/
 def arrDelSlice (a : Arr) (ilow ihigh : Int) : Py Arr := do
@@ -301,25 +370,41 @@ def arrAssItem (a : Arr) (i : Int) (v : Option PyVal) : Py Arr := do
     let x ← tcSetitem a.tc true v
     return { a with items := a.items.set i.toNat x }
 
-/-- `array(c, initial)` from the arguments of `PyArg_ParseTuple("C|O:array")`
-(Python/getargs.c `C` format): the typecode must be a string of length 1. -/
-def arrCtorCheck (typecode : PyVal) : Py Char :=
+/-- The `s` format on a str (Python/getargs.c:1105-1113) and the same code in Argument
+Clinic's `str` converter: `PyUnicode_AsUTF8AndSize` refuses a surrogate, then an embedded
+NUL is refused. The result stands for the UTF-8 bytes `strcmp` compares. -/
+def strArgOk (cs : List Nat) : Py String :=
+  if cs.any (fun c => decide (55296 ≤ c ∧ c ≤ 57343)) then
+    .error (.named "UnicodeEncodeError" "~utf-8")
+  else if cs.contains 0 then .error (.valueError "embedded null character")
+  else .ok (String.ofList (cs.map Char.ofNat))
+
+/-- `array(s, initial)` from the arguments of `PyArg_ParseTuple("s|O:array")`
+(arraymodule.c:3015): the typecode must be a str. -/
+def arrCtorCheck (typecode : PyVal) : Py String :=
   match typecode with
-  | .str [c] => .ok (Char.ofNat c)
-  | .str cs => .error (.typeError
-      s!"array() argument 1 must be a unicode character, not a string of length {cs.length}")
+  | .str cs => strArgOk cs
   | v =>
     let t := if v == .obj "NoneType" none then "None" else v.typeName
-    .error (.typeError s!"array() argument 1 must be a unicode character, not {t}")
+    .error (.typeError s!"array() argument 1 must be str, not {t}")
+
+/-- The second argument of `array._array_reconstructor`
+(Modules/clinic/arraymodule.c.h:672-684). -/
+def reconstructArg (typecode : PyVal) : Py String :=
+  match typecode with
+  | .str cs => strArgOk cs
+  | v =>
+    let t := if v == .obj "NoneType" none then "None" else v.typeName
+    .error (.typeError s!"_array_reconstructor() argument 2 must be str, not {t}")
 
 /-- `array_iter_extend` (arraymodule.c:1232-1252): `ins1` per item, so a failing
 item leaves the earlier ones appended. The array reached, and the error. -/
 def arrIterItems (a : Arr) : List PyVal → Arr × Option PyExc
   | [] => (a, none)
   | v :: vs =>
-    match arrIns1 a a.items.length v with
-    | .ok a' => arrIterItems a' vs
-    | .error e => (a, some e)
+    match arrIns1S a a.items.length v with
+    | (a', none) => arrIterItems a' vs
+    | (a', some e) => (a', some e)
 
 def arrIterExtend (a : Arr) (src : PyIterable PyVal) : Arr × Option PyExc :=
   match src with
@@ -342,7 +427,7 @@ def arrDoExtendArr (a b : Arr) : Py Arr := do
   if sb > 0 then return { a' with items := memcpy a'.items sa b.items }
   else return a'
 
-/-- `a.extend(x)` (`array_array_extend_impl`, arraymodule.c:1521-1528). -/
+/-- `a.extend(x)` (`array_array_extend_impl`, arraymodule.c:1521-1529). -/
 def arrExtend (a : Arr) (x : Arr ⊕ PyIterable PyVal) : Arr × Option PyExc :=
   match x with
   | .inl b =>
@@ -383,7 +468,7 @@ def arrRepeat (a : Arr) (n : Int) : Py Arr := do
   let n ← repeatCount n
   arrRepeatC a n
 
-/-- `a *= n` (`array_inplace_repeat`, arraymodule.c:1305-1328). -/
+/-- `a *= n` (`array_inplace_repeat`, arraymodule.c:1305-1327). -/
 def arrIRepeatC (a : Arr) (n : Int) : Py Arr := do
   let size : Int := a.items.length
   if size > 0 ∧ n ≠ 1 then
@@ -402,7 +487,7 @@ def arrIRepeat (a : Arr) (n : Int) : Py Arr := do
 
 /-! ### Searching -/
 
-/-- `a.count(v)` (`array_array_count_impl`, arraymodule.c:1348-1367). -/
+/-- `a.count(v)` (`array_array_count_impl`, arraymodule.c:1348-1369). -/
 def arrCountLoop (a : Arr) (eqv : PyVal → Py Bool) : Nat → Int → Int → Py Int
   | 0, _, c => .ok c
   | n + 1, i, c =>
@@ -446,7 +531,7 @@ def arrIndex (a : Arr) (eqv : PyVal → Py Bool) (start stop : Option Int) : Py 
   | .ok (some i) => .ok i
   | .ok none => .error (.valueError "array.index(x): x not in array")
 
-/-- `v in a` (`array_contains`, arraymodule.c:1421-1433). -/
+/-- `v in a` (`array_contains`, arraymodule.c:1421-1434). -/
 def arrContains (a : Arr) (eqv : PyVal → Py Bool) : Py Bool :=
   match arrScan a eqv a.items.length (a.items.length + 1) 0 with
   | .error e => .error e
@@ -460,7 +545,7 @@ def arrRemove (a : Arr) (eqv : PyVal → Py Bool) : Py Arr :=
   | .ok (some i) => arrDelSlice a i (i + 1)
   | .ok none => .error (.valueError "array.remove(x): x not in array")
 
-/-- The body of `array_array_pop_impl` (arraymodule.c:1484-1507). -/
+/-- The body of `array_array_pop_impl` (arraymodule.c:1484-1508). -/
 def arrPopK (a : Arr) (i : Int) : Py (PyVal × Arr) := do
   let n : Int := a.items.length
   if n = 0 then throw (.indexError "pop from empty array")
@@ -502,7 +587,7 @@ inductive SliceVal where
   | other (tname : String)
 
 /-- The compaction loop of the extended-slice deletion in `array_ass_subscr`
-(arraymodule.c:2912-2923): `for (cur = start, i = 0; i < slicelength; cur += step, i++)`,
+(arraymodule.c:2912-2921): `for (cur = start, i = 0; i < slicelength; cur += step, i++)`,
 moving the `lim` items after each deleted one down by `i + 1`. -/
 def arrDelLoop (size step len : Int) : Nat → List Int → Int → Int → Py (List Int)
   | 0, mem, _, _ => .ok mem
@@ -535,7 +620,7 @@ def arrAssCore (a : Arr) (start stop step len : Int) (other : Option (List Int))
     if needed > 0 then return { a with items := memcpy a.items start src }
     return a
   else if needed = 0 then
-    -- "Delete slice", :2902-2930 (also taken for `a[::k] = array()`)
+    -- "Delete slice", :2902-2929 (also taken for `a[::k] = array()`)
     let (start, step) :=
       if step < 0 then
         let stop' := start + 1
@@ -652,7 +737,7 @@ def chunks (n : Nat) (bs : List Nat) (fuel : Nat) : List (List Nat) :=
 /-- `a.tobytes()` (`array_array_tobytes_impl`, arraymodule.c:1974-1983): the buffer. -/
 def arrToBytes (a : Arr) : List Nat := a.items.flatMap (itemBytes a.tc)
 
-/-- `frombytes` (arraymodule.c:1914-1945): `bufItemsize` is the buffer's `itemsize`. -/
+/-- `frombytes` (arraymodule.c:1914-1947): `bufItemsize` is the buffer's `itemsize`. -/
 def arrFromBytes (a : Arr) (bs : List Nat) (bufItemsize : Int) : Py Arr := do
   let itemsize := a.tc.itemsize
   if bufItemsize ≠ 1 then throw (.typeError "a bytes-like object is required")
@@ -673,13 +758,15 @@ inductive ReadResult where
   | notBytes
   | raises (e : PyExc)
 
-/-- `a.fromfile(f, n)` (`array_array_fromfile_impl`, arraymodule.c:1745-1789): `read`
-is `f.read`. The items read are kept when `EOFError` is raised. -/
+/-- `a.fromfile(f, n)` (`array_array_fromfile_impl`, arraymodule.c:1745-1791): `read`
+is `f.read`. The negative count is refused by the clinic wrapper since 3.15
+(Modules/clinic/arraymodule.c.h:423-427). The items read are kept when `EOFError` is
+raised. -/
 def arrFromFile (a : Arr) (read : Int → ReadResult) (n : Int) : Py Unit × Arr :=
   match asSsize n with
   | .error e => (.error e, a)
   | .ok n =>
-    if n < 0 then (.error (.valueError "negative count"), a)
+    if n < 0 then (.error (.valueError "n cannot be negative"), a)
     else if n > ssizeMax / a.tc.itemsize then (.error memoryError, a)
     else
       let nbytes := n * a.tc.itemsize
@@ -695,7 +782,7 @@ def arrFromFile (a : Arr) (read : Int → ReadResult) (n : Int) : Py Unit × Arr
           else (.ok (), a')
 
 /-- The arguments of the `f.write` calls of `a.tofile(f)`
-(`array_array_tofile_impl`, arraymodule.c:1804-1838): 64 KiB blocks. -/
+(`array_array_tofile_impl`, arraymodule.c:1804-1840): 64 KiB blocks. -/
 def arrToFile (a : Arr) : List (List Nat) :=
   let bytes := arrToBytes a
   let nbytes : Int := bytes.length
@@ -715,7 +802,7 @@ def fromListLoop (tc : TC) : List PyVal → Int → List Int → Py (List Int)
     | .error e => .error e
     | .ok x => fromListLoop tc vs (pos + 1) (items.set pos.toNat x)
 
-/-- `a.fromlist(list)` (`array_array_fromlist_impl`, arraymodule.c:1852-1880): all or
+/-- `a.fromlist(list)` (`array_array_fromlist_impl`, arraymodule.c:1852-1883): all or
 nothing, but a failure leaves the `allocated` of the first resize behind. `.inr t`
 is an argument of another type. The size-changed check needs `__index__` to mutate
 the list. -/
@@ -740,7 +827,7 @@ def arrFromList (a : Arr) (list : List PyVal ⊕ String) : Py Unit × Arr :=
 /-- `a.tolist()` (`array_array_tolist_impl`, arraymodule.c:1892-1911). -/
 def arrToList (a : Arr) : Py (List PyVal) := a.items.mapM (tcGetitem a.tc)
 
-/-- `a.fromunicode(ustr)` (`array_array_fromunicode_impl`, arraymodule.c:1999-2046). -/
+/-- `a.fromunicode(ustr)` (`array_array_fromunicode_impl`, arraymodule.c:1999-2045). -/
 def arrFromUnicode (a : Arr) (ustr : List Nat) : Py Arr := do
   if a.tc ≠ .u ∧ a.tc ≠ .w then
     throw (.valueError "fromunicode() may only be called on unicode type arrays ('u' or 'w')")
@@ -802,12 +889,20 @@ def arrToUnicode (a : Arr) : Py (List Nat) := do
 `_PyObject_SIZE(type)` plus the allocated items. -/
 def arrSizeof (a : Arr) (basicsize : Int) : Int := basicsize + a.allocated * a.tc.itemsize
 
-/-- `a.byteswap()` (`array_array_byteswap_impl`, arraymodule.c:1602-1696): every item
-with its bytes reversed. -/
-def arrByteswap (a : Arr) : Arr :=
-  { a with items := a.items.map (fun x => itemOfBytes a.tc (itemBytes a.tc x).reverse) }
+/-- The bytes of an item after `byteswap`: reversed, but for a complex each part on its
+own, which keeps the real part first (arraymodule.c:1628-1690). -/
+def swapBytes (tc : TC) (bs : List Nat) : List Nat :=
+  match tc with
+  | .Zf => (bs.take 4).reverse ++ (bs.drop 4).reverse
+  | .Zd => (bs.take 8).reverse ++ (bs.drop 8).reverse
+  | _ => bs.reverse
 
-/-- `a.reverse()` (`array_array_reverse_impl`, arraymodule.c:1706-1727): swap with
+/-- `a.byteswap()` (`array_array_byteswap_impl`, arraymodule.c:1602-1697). The `default:`
+branch (`RuntimeError`) is unreachable: every itemsize is 1, 2, 4, 8 or 16. -/
+def arrByteswap (a : Arr) : Arr :=
+  { a with items := a.items.map (fun x => itemOfBytes a.tc (swapBytes a.tc (itemBytes a.tc x))) }
+
+/-- `a.reverse()` (`array_array_reverse_impl`, arraymodule.c:1706-1730): swap with
 two cursors. -/
 def arrReverseLoop : Nat → List Int → Int → Int → List Int
   | 0, l, _, _ => l
@@ -823,11 +918,12 @@ def arrReverse (a : Arr) : Arr :=
 
 /-! ### Machine formats, pickling -/
 
-/-- `typecode_to_mformat_code` (arraymodule.c@3.14.7:2002-2093) on a little-endian machine. -/
+/-- `typecode_to_mformat_code` (arraymodule.c:2138-2233) on a little-endian machine. -/
 def mformatOf : TC → Int
   | .b => 1 | .B => 0
   | .u | .w => 20
-  | .f => 14 | .d => 16
+  | .e => 26 | .f => 14 | .d => 16
+  | .Zf => 22 | .Zd => 24
   | .h => 4 | .H => 2
   | .i => 8 | .I => 6
   | .l | .q => 12 | .L | .Q => 10
@@ -847,6 +943,9 @@ def mformatDescr (c : Int) : Nat × Bool × Bool :=
   | 16 => (8, false, false) | 17 => (8, false, true)
   | 18 => (4, false, false) | 19 => (4, false, true)
   | 20 => (8, false, false) | 21 => (8, false, true)
+  | 22 => (8, false, false) | 23 => (8, false, true)
+  | 24 => (16, false, false) | 25 => (16, false, true)
+  | 26 => (2, false, false) | 27 => (2, false, true)
   | _ => (0, false, false)
 
 /-- `iter(a)` as an iterable: an unreadable item ends it with its exception. -/
@@ -875,32 +974,34 @@ inductive Init where
   | arr (a : Arr)
   | iter (src : PyIterable PyVal)
 
-/-- `array_new` (arraymodule.c:3003-3178) once `PyArg_ParseTuple("C|O:array")` has given
-the typecode character `c`. `tname` is the type being instantiated. -/
-def arrNew (tname : String) (c : Char) (initial : Init) : Py Arr :=
-  let isUnicode := c == 'u' || c == 'w'
-  let bad : Py Unit :=
-    if isUnicode then .ok ()
-    else match initial with
-      | .str _ => .error (.typeError s!"cannot use a str to initialize an array with typecode '{c}'")
-      | .arr o =>
-        if o.tc == .u || o.tc == .w then
-          .error (.typeError s!"cannot use a unicode array to initialize an array with typecode '{c}'")
-        else .ok ()
-      | _ => .ok ()
-  match bad with
+/-- The check of the initialiser in `array_new` (arraymodule.c:3032-3048), which runs
+before the typecode is looked up: `s` is any string, not only a valid typecode. -/
+def arrNewBad (s : String) (initial : Init) : Py Unit :=
+  if s == "u" || s == "w" then .ok ()
+  else match initial with
+    | .str _ => .error (.typeError s!"cannot use a str to initialize an array with typecode '{s}'")
+    | .arr o =>
+      if o.tc == .u || o.tc == .w then
+        .error (.typeError s!"cannot use a unicode array to initialize an array with typecode '{s}'")
+      else .ok ()
+    | _ => .ok ()
+
+/-- `array_new` (arraymodule.c:3003-3178) once `PyArg_ParseTuple("s|O:array")` has given
+the typecode string `s`. `tname` is the type being instantiated. -/
+def arrNew (tname : String) (s : String) (initial : Init) : Py Arr :=
+  match arrNewBad s initial with
   | .error e => .error e
   | .ok () =>
     -- which initialisers go through `PyObject_GetIter`
     let viaIter : Option (PyIterable PyVal) := match initial with
       | .iter src => some src
-      | .arr o => if c == o.tc.code then none else some (arrItems o)
+      | .arr o => if s == o.tc.code then none else some (arrItems o)
       | _ => none
     match viaIter with
     | some (.notIterable t) => .error (notIterableErr t)
     | it =>
-      match TC.all.find? (fun t => t.code == c) with
-      | none => .error (.valueError "bad typecode (must be b, B, u, w, h, H, i, I, l, L, q, Q, f or d)")
+      match TC.all.find? (fun t => t.code == s) with
+      | none => .error (.valueError "bad typecode (must be b, B, u, w, h, H, i, I, l, L, q, Q, e, f, d, Zf or Zd)")
       | some tc =>
         let init' := if it.isSome then Init.none else initial
         let len : Int := match init' with
@@ -917,7 +1018,7 @@ def arrNew (tname : String) (c : Char) (initial : Init) : Py Arr :=
               | .error e => .error e
             | .bytes bs => arrFromBytes a bs 1
             | .str cps =>
-              if c == 'u' then
+              if s == "u" then
                 if cps.length > 0 then
                   .ok { a with items := cps.map (fun (c : Nat) => (c : Int)), hasBuf := true, allocated := cps.length }
                 else .ok a
@@ -932,8 +1033,8 @@ def arrNew (tname : String) (c : Char) (initial : Init) : Py Arr :=
             | (_, some e) => .error e
           | .ok a, none => .ok a
 
-/-- `make_array` (arraymodule.c@3.14.7:2110-2137): `array_new(arraytype, (typecode, items))`. -/
-def makeArray (tname : String) (c : Char) (items : Init) : Py Arr := arrNew tname c items
+/-- `make_array` (arraymodule.c:2250-2274): `array_new(arraytype, (typecode, items))`. -/
+def makeArray (tname : String) (s : String) (items : Init) : Py Arr := arrNew tname s items
 
 /-- `big` endian bytes to code points for the slow path of the reconstructor. -/
 def utf32Units (bs : List Nat) (big : Bool) : List Nat :=
@@ -977,24 +1078,38 @@ def decodeUTF16 (bs : List Nat) (big : Bool) : Py (List Nat) :=
 (`array__array_reconstructor_impl`, arraymodule.c:2293-2558), with `items` bytes and
 `arraytype` a subclass of `array.array` named `tname`. The checks of `arraytype` and
 of `items` being bytes are the arguments' types here. -/
-def reconstruct (tname : String) (typecode : Char) (mformat : Int) (items : List Nat) : Py Arr :=
+def reconstruct (tname : String) (typecode : String) (mformat : Int) (items : List Nat) : Py Arr :=
   match TC.all.find? (fun t => t.code == typecode) with
   | none => .error (.valueError "second argument must be a valid type code")
   | some tc =>
-    if mformat < 0 ∨ mformat > 21 then
+    if mformat < 0 ∨ mformat > 27 then
       .error (.valueError "third argument must be a valid machine format code.")
     else if mformat = mformatOf tc then makeArray tname typecode (.bytes items)
     else
       let (msize, msigned, mbig) := mformatDescr mformat
       if items.length % msize ≠ 0 then
         .error (.valueError "string length not a multiple of item size")
+      else if mformat = 26 ∨ mformat = 27 then
+        let vals := (chunks 2 items items.length).map (fun c =>
+          PyVal.float (halfToDouble (leValue (if mformat = 27 then c.reverse else c))))
+        makeArray tname typecode (.list vals)
       else if mformat = 14 ∨ mformat = 15 then
         let vals := (chunks 4 items items.length).map (fun c =>
-          PyVal.float (floatToDouble (leValue (if mformat = 15 then c.reverse else c))))
+          PyVal.float (unpack4 (leValue (if mformat = 15 then c.reverse else c))))
         makeArray tname typecode (.list vals)
       else if mformat = 16 ∨ mformat = 17 then
         let vals := (chunks 8 items items.length).map (fun c =>
           PyVal.float (leValue (if mformat = 17 then c.reverse else c)))
+        makeArray tname typecode (.list vals)
+      else if mformat = 22 ∨ mformat = 23 then
+        let part (c : List Nat) := unpack4 (leValue (if mformat = 23 then c.reverse else c))
+        let vals := (chunks 8 items items.length).map (fun c =>
+          PyVal.complex (part (c.take 4)) (part (c.drop 4)))
+        makeArray tname typecode (.list vals)
+      else if mformat = 24 ∨ mformat = 25 then
+        let part (c : List Nat) := leValue (if mformat = 25 then c.reverse else c)
+        let vals := (chunks 16 items items.length).map (fun c =>
+          PyVal.complex (part (c.take 8)) (part (c.drop 8)))
         makeArray tname typecode (.list vals)
       else if mformat = 18 ∨ mformat = 19 then
         match decodeUTF16 items (mformat = 19) with
@@ -1017,9 +1132,9 @@ def reconstruct (tname : String) (typecode : Char) (mformat : Int) (items : List
 arraymodule.c:2571-2647), without the `__dict__`. -/
 inductive Reduced where
   /-- `(type(a), (typecode, list), dict)`. -/
-  | asList (tname : String) (c : Char) (items : List PyVal)
+  | asList (tname : String) (s : String) (items : List PyVal)
   /-- `(_array_reconstructor, (type(a), typecode, mformat_code, bytes), dict)`. -/
-  | asBytes (tname : String) (c : Char) (mformat : Int) (bytes : List Nat)
+  | asBytes (tname : String) (s : String) (mformat : Int) (bytes : List Nat)
 
 def arrReduceEx (a : Arr) (protocol : PyVal) : Py Reduced :=
   match protocol with
@@ -1038,6 +1153,7 @@ def arrReduceEx (a : Arr) (protocol : PyVal) : Py Reduced :=
 float (the shortest round-trip digits belong to `Binary64`). -/
 def pvRepr (frepr : Nat → String) : PyVal → String
   | .float b => frepr b
+  | .complex re im => s!"<complex {frepr re} {frepr im}>"
   | .int n => toString n
   | v => v.typeName
 
@@ -1052,7 +1168,7 @@ def arrRepr (frepr : Nat → String) (srepr : List Nat → String) (a : Arr) : P
   let body := ", ".intercalate (vs.map (pvRepr frepr))
   return s!"{a.tname}('{c}', [{body}])"
 
-/-- The fields of `memoryview(a)` (`array_buffer_getbuf`, arraymodule.c:2957-2992):
+/-- The fields of `memoryview(a)` (`array_buffer_getbuf`, arraymodule.c:2957-2993):
 format, itemsize, length in items, nbytes; the array gains an export. -/
 def arrGetBuf (a : Arr) : (String × Int × Int × Int) × Arr :=
   let n : Int := a.items.length
@@ -1073,7 +1189,7 @@ structure ArrIter where
   live : Bool
   deriving Repr, DecidableEq
 
-/-- `array_iter` (arraymodule.c:3310-3329). -/
+/-- `array_iter` (arraymodule.c:3310-3330). -/
 def arrIter : ArrIter := ⟨0, true⟩
 
 /-- `arrayiter_next` (arraymodule.c:3333-3354). -/
@@ -1085,12 +1201,12 @@ def arrIterNext (a : Arr) (it : ArrIter) : Py (Option PyVal) × ArrIter :=
     | .error e => (.error e, { it with index := it.index + 1 })
   else (.ok none, { it with live := false })
 
-/-- `it.__reduce__()` (`array_arrayiterator___reduce___impl`, arraymodule.c:3386-3396):
+/-- `it.__reduce__()` (`array_arrayiterator___reduce___impl`, arraymodule.c:3386-3397):
 `(iter, ((),))` once exhausted, else `(iter, (a,), index)`. -/
 def arrIterReduce (it : ArrIter) : Option Int := if it.live then some it.index else none
 
 /-- `it.__setstate__(state)` (`array_arrayiterator___setstate___impl`,
-arraymodule.c:3408-3425). -/
+arraymodule.c:3409-3426). -/
 def arrIterSetstate (a : Arr) (it : ArrIter) (state : Int) : Py ArrIter := do
   let index ← asSsize state
   if it.live then
