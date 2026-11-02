@@ -24,11 +24,12 @@ theorem hashKey_run {β : Type} (P : Proto K (PyDict K V)) (key : K) (f : Int �
     (hashKey P key >>= f) mp =
       match P.hash key with
       | .ok h => f h mp
-      | .error e => (.error (dictUnhashableType P key e), mp) := by
+      | .error e => (.error (dictUnhashableType P mp.frozen key e), mp) := by
+  rw [M.bind_run]
   unfold hashKey
   cases P.hash key with
-  | ok h => simp [M.bind_run]
-  | error e => simp [M.bind_run]
+  | ok h => rfl
+  | error e => rfl
 
 section Wrap
 variable (P : Proto K (PyDict K V)) (key : K) (hash : Int) (mp : PyDict K V)
@@ -66,7 +67,7 @@ variable (P : Proto K (PyDict K V)) (key : K) (mp : PyDict K V)
 theorem getItemRef_wrap :
     pyDictGetItemRef P true key mp =
       match P.hash key with
-      | .error e => (.error (dictUnhashableType P key e), mp)
+      | .error e => (.error (dictUnhashableType P mp.frozen key e), mp)
       | .ok h => dictGetItemRefKnownHash P key h mp := by
   cases hh : P.hash key with
   | error e =>
@@ -81,7 +82,7 @@ including NULL as not-found, and never consults `ix`. -/
 theorem getItemWithError_wrap :
     pyDictGetItemWithError P true key mp =
       match P.hash key with
-      | .error e => (.error (dictUnhashableType P key e), mp)
+      | .error e => (.error (dictUnhashableType P mp.frozen key e), mp)
       | .ok h =>
         match dictLookup P key h mp with
         | (.ok r, s) => (.ok r.2, s)
@@ -96,11 +97,11 @@ theorem getItemWithError_wrap :
     rcases hl : dictLookup P key h mp with ⟨a, s⟩
     rcases a with e | ⟨ix, v⟩ <;> rfl
 
-/-- `PyDict_Contains` (@3.14.7:4835-4846), behind `key in d`. -/
+/-- `dict_contains` (:5234-5244), behind `key in d`. -/
 theorem contains_wrap :
     pyDictContains P key mp =
       match P.hash key with
-      | .error e => (.error (dictUnhashableType P key e), mp)
+      | .error e => (.error (dictUnhashableType P mp.frozen key e), mp)
       | .ok h =>
         match dictLookup P key h mp with
         | (.ok r, s) => (.ok (r.1 != DKIX_EMPTY && r.2.isSome), s)
@@ -113,12 +114,12 @@ theorem contains_wrap :
     rcases hl : dictLookup P key h mp with ⟨a, s⟩
     rcases a with e | ⟨ix, v⟩ <;> rfl
 
-/-- `dict_subscript` (@3.14.7:3504-3538) on an exact dict (`missing = none`): the value when the slot
+/-- `_PyDict_Subscript` (:3785-3794), `_PyDict_SubscriptKnownHash` (:3755-3783) on an exact dict (`missing = none`): the value when the slot
 holds one, else `KeyError`. A NULL value raises `KeyError` too. -/
 theorem subscript_wrap :
     dictSubscript P none key mp =
       match P.hash key with
-      | .error e => (.error (dictUnhashableType P key e), mp)
+      | .error e => (.error (dictUnhashableType P mp.frozen key e), mp)
       | .ok h =>
         match dictLookup P key h mp with
         | (.ok r, s) =>
@@ -143,7 +144,7 @@ default, and `ix == DKIX_EMPTY` is the default. -/
 theorem get_wrap (dflt : V) :
     dictGet P key dflt mp =
       match P.hash key with
-      | .error e => (.error (dictUnhashableType P key e), mp)
+      | .error e => (.error (dictUnhashableType P mp.frozen key e), mp)
       | .ok h =>
         match dictLookup P key h mp with
         | (.ok r, s) =>
@@ -174,11 +175,11 @@ def ReadersFaithful : Prop :=
     pyDictGetItemWithError P false key mp = (.error badInternalCall, mp) ∧
     -- a raising hash: every reader raises the rewritten exception, dict unchanged
     (∀ e, P.hash key = .error e →
-      pyDictGetItemRef P true key mp = (.error (dictUnhashableType P key e), mp) ∧
-      pyDictGetItemWithError P true key mp = (.error (dictUnhashableType P key e), mp) ∧
-      pyDictContains P key mp = (.error (dictUnhashableType P key e), mp) ∧
-      dictSubscript P none key mp = (.error (dictUnhashableType P key e), mp) ∧
-      ∀ dflt, dictGet P key dflt mp = (.error (dictUnhashableType P key e), mp)) ∧
+      pyDictGetItemRef P true key mp = (.error (dictUnhashableType P mp.frozen key e), mp) ∧
+      pyDictGetItemWithError P true key mp = (.error (dictUnhashableType P mp.frozen key e), mp) ∧
+      pyDictContains P key mp = (.error (dictUnhashableType P mp.frozen key e), mp) ∧
+      dictSubscript P none key mp = (.error (dictUnhashableType P mp.frozen key e), mp) ∧
+      ∀ dflt, dictGet P key dflt mp = (.error (dictUnhashableType P mp.frozen key e), mp)) ∧
     -- a raising lookup: every reader raises what it raised, in the state it left
     (∀ h e s, P.hash key = .ok h → dictLookup P key h mp = (.error e, s) →
       pyDictGetItemRef P true key mp = (.error e, s) ∧

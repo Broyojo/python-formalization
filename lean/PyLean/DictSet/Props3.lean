@@ -18,7 +18,7 @@ variable {P : Proto K (PyDict K V)} {hf : K → Int} {eqv : K → K → Bool}
 
 /-- `dict.pop(key, default)`: `dict_pop_default`. -/
 theorem popDefault_spec (H : Honest P hf eqv) (d : PyDict K V) (hd : DictInv hf eqv P.isStr d)
-    (key : K) (dflt : Option V) :
+    (hfz : d.frozen = false) (key : K) (dflt : Option V) :
     (assocGet eqv (dictAssoc d) key = none ∧
       dictPopDefault P key dflt d =
         (match dflt with
@@ -26,7 +26,7 @@ theorem popDefault_spec (H : Honest P hf eqv) (d : PyDict K V) (hd : DictInv hf 
          | none => (.error (keyErr P key), d))) ∨
     ∃ v d', assocGet eqv (dictAssoc d) key = some v ∧ dictPopDefault P key dflt d = (.ok v, d') ∧
       DictInv hf eqv P.isStr d' ∧ dictAssoc d' = assocDel eqv (dictAssoc d) key := by
-  rcases pop_spec H d hd key with ⟨h1, h2⟩ | ⟨v, d', h1, h2, h3, h4⟩
+  rcases pop_spec H d hd key hfz with ⟨h1, h2⟩ | ⟨v, d', h1, h2, h3, h4⟩
   · left
     refine ⟨h1, ?_⟩
     simp only [dictPopDefault, M.bind_run, h2]
@@ -36,7 +36,7 @@ theorem popDefault_spec (H : Honest P hf eqv) (d : PyDict K V) (hd : DictInv hf 
     simp only [dictPopDefault, M.bind_run, h2]
     rfl
 
-/-- `dict_ass_sub`: `d[key] = v` and `del d[key]`, through one entry point. -/
+/-- `_PyDict_StoreSubscript`: `d[key] = v` and `del d[key]`, through one entry point. -/
 theorem assSub_spec (d : PyDict K V) (key : K) (w : Option V) :
     dictAssSub P key w d =
       match w with
@@ -395,7 +395,8 @@ theorem updateArgRoutes_proven : UpdateArgRoutes := by
 /-- `dict.pop`, with and without a default. -/
 def PopDefaultSpec : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (hf : K → Int) (eqv : K → K → Bool),
-    Honest P hf eqv → ∀ (d : PyDict K V), DictInv hf eqv P.isStr d → ∀ (key : K) (dflt : Option V),
+    Honest P hf eqv → ∀ (d : PyDict K V), DictInv hf eqv P.isStr d → d.frozen = false →
+    ∀ (key : K) (dflt : Option V),
       (assocGet eqv (dictAssoc d) key = none ∧
         dictPopDefault P key dflt d =
           (match dflt with
@@ -403,8 +404,8 @@ def PopDefaultSpec : Prop :=
            | none => (.error (keyErr P key), d))) ∨
       ∃ v d', assocGet eqv (dictAssoc d) key = some v ∧ dictPopDefault P key dflt d = (.ok v, d') ∧
         DictInv hf eqv P.isStr d' ∧ dictAssoc d' = assocDel eqv (dictAssoc d) key
-theorem popDefaultSpec_proven : PopDefaultSpec := fun _ _ _ _ _ _ H d hd key dflt =>
-  popDefault_spec H d hd key dflt
+theorem popDefaultSpec_proven : PopDefaultSpec := fun _ _ _ _ _ _ H d hd hfz key dflt =>
+  popDefault_spec H d hd hfz key dflt
 
 /-- `d[k] = v` and `del d[k]` through `mp_ass_subscript`. -/
 def AssSubDispatch : Prop :=

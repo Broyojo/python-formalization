@@ -16,30 +16,43 @@ open PyLean
 
 variable {K : Type}
 
-/-- An exact dict as `setobject.c` sees it: its size, `_PyDict_Next`, and
-`_PyDict_Contains_KnownHash`. -/
+/-- An exact dict or frozendict as `setobject.c` sees it: its size, the walk of `_PyDict_Next`, and
+`_PyDict_Contains_KnownHash`. The walk is a script of actions, so a comparison that changed the dict
+under it, or the set, is a script like any other. -/
 structure DictArg (K : Type) where
   size : Nat
-  items : List (K × Int)
-  contains : K → Int → Py Bool
+  walk : List (SM K (Option (K × Int)))
+  contains : K → Int → SM K Bool
+  /-- The keys, for the routes that take `PyObject_GetIter(dict)`. -/
+  keys : List K
 
 /-- The non-self argument of a set method, by the branch it selects. -/
 inductive SetArg (K : Type) where
   /-- `PyAnySet_Check(other)`. -/
   | set (s : SetObj K)
-  /-- `PyDict_CheckExact(other)`. -/
+  /-- `PyAnyDict_CheckExact(other)`. -/
   | dict (d : DictArg K)
-  /-- Any other iterable. -/
+  /-- Any other iterable, with no callback of its own. -/
   | iter (it : Iterable K)
+  /-- Any other iterable, whose `__iter__` and `__next__` run Python code. -/
+  | live (it : ReIter (SetObj K) K)
 
 /-- `PyObject_GetIter(other)` for any argument. -/
+def SetArg.toReIter : SetArg K → ReIter (SetObj K) K
+  | .set s => ReIter.ofIterable { items := (setEntries s).map (·.1) }
+  | .dict d => ReIter.ofIterable { items := d.keys }
+  | .iter it => ReIter.ofIterable it
+  | .live it => it
+
+/-- The argument as a plain iterable, for the view operations, which run no callback of their own. -/
 def SetArg.toIterable : SetArg K → Iterable K
   | .set s => { items := (setEntries s).map (·.1) }
-  | .dict d => { items := d.items.map (·.1) }
+  | .dict d => { items := d.keys }
   | .iter it => it
+  | .live _ => { items := [] }
 
-/-- `make_new_set_basetype(Py_TYPE(so), NULL)` (:1388-1408). -/
-def newBasetype (so : SetObj K) (id : Nat) : SetObj K :=
+/-- `make_new_set_basetype(Py_TYPE(so), NULL)` (:1400-1408). -/
+def newBasetype (so : SetBody K) (id : Nat) : SetObj K :=
   { ident := id, frozen := so.frozen, tname := if so.frozen then "frozenset" else "set" }
 
 /-- `set_swap_bodies` (:1511-1568), seen from `a`: `b` is about to be dropped. -/
@@ -49,44 +62,144 @@ def setSwapBodies (a b : SetObj K) : SetObj K :=
     tableId := b.tableId
     hash := if a.frozen && b.frozen then b.hash else -1 }
 
+namespace SetObj
+
+/-- The set with this identity as it stands now: the focus, or a peer. -/
+def live (so : SetObj K) (id : Nat) : SetBody K :=
+  if so.ident == id then so.toSetBody
+  else (so.peers.find? (·.ident == id)).getD so.toSetBody
+
+/-- Make the set with this identity the focus. The old focus takes its place among the peers. -/
+def swapIn (so : SetObj K) (id : Nat) : SetObj K :=
+  if so.ident == id then so
+  else
+    match so.peers.find? (·.ident == id) with
+    | none => so
+    | some b =>
+      { toSetBody := b
+        peers := so.peers.map fun p => if p.ident == id then so.toSetBody else p }
+
+end SetObj
+
+/-- Run an operation of the set with this identity: `set_contains_entry(other, ...)` while `result` is
+in hand. -/
+def onSet {α : Type} (id : Nat) (m : SM K α) : SM K α := fun so =>
+  match m (so.swapIn id) with
+  | (r, s) => (r, s.swapIn so.ident)
+
+/-- Keep `o` reachable while `m` runs. A set already in the state stays where it is, and one that was
+not goes away after, since nothing else can reach it. -/
+def withPeer {α : Type} (o : SetObj K) (m : SM K α) : SM K α := fun so =>
+  if so.ident == o.ident || so.peers.any (·.ident == o.ident) then m so
+  else
+    match m { so with peers := so.peers ++ [o.toSetBody] } with
+    | (r, s) => (r, { s with peers := s.peers.dropLast })
+
+/-- Run `m` on a new object `r`, with the current set among the peers, and hand `r` back. What `m`
+leaves in the current set stands, success or not. -/
+def onResult {α : Type} (r : SetObj K) (m : SM K α) : SM K (α × SetObj K) := fun so =>
+  match m { r with peers := so.toSetBody :: so.peers } with
+  | (res, s) =>
+    let so' : SetObj K :=
+      match s.peers with
+      | b :: rest => { toSetBody := b, peers := rest }
+      | [] => so
+    match res with
+    | .ok a => (.ok (a, { s with peers := [] }), so')
+    | .error e => (.error e, so')
+
+/-- The identity of a temporary set made while `id` is in hand: C objects have different addresses. -/
+def tempId (id : Nat) : Nat := id + 2 ^ 32
+
+/-- Enough turns of a `set_next` loop, however the set changes under it within reason. -/
+def setLoopFuel (so : SetObj K) (id : Nat) : Nat := 4 * ((so.live id).mask + 1) + 64
+
 section
 variable [DecidableEq K] (P : Proto K (SetObj K))
 
-/-- `set_merge_lock_held` (:828-898). -/
-def setMerge (other : SetObj K) : SM K Unit := do
+/-- `while ((key = PyIter_Next(it)) != NULL) { ... }`: the body answers whether to stop, and so does
+the loop, `false` on exhaustion. A step that raises is the `PyErr_Occurred()` after the loop. -/
+def forIter (body : K → SM K Bool) : List (SM K (Option K)) → SM K Bool
+  | [] => pure false
+  | step :: rest => do
+    match ← step with
+    | none => return false
+    | some key =>
+      if ← body key then return true
+      forIter body rest
+
+/-- `while (set_next(id, &pos, &entry)) { ... }` (:709-731) with the body's answer as in `forIter`.
+Each turn reads the table and mask of the set as they stand, since the body may have changed them. -/
+def forNext (id : Nat) (body : K → Int → SM K Bool) : Nat → Nat → SM K Bool
+  | 0, _ => M.throw .modelFuel
+  | fuel + 1, pos => do
+    let so ← M.get
+    let o := so.live id
+    match setNext o.table o.mask (o.mask + 2) pos with
+    | none => return false
+    | some (pos', key, hash) =>
+      if ← body key hash then return true
+      forNext id body fuel pos'
+
+/-- The last loop of `set_merge_lock_held` (:883-890): `other->mask` and `other->table` again at each
+turn. -/
+def setMergeLoop (id : Nat) : Nat → Nat → SM K Unit
+  | 0, _ => M.throw .modelFuel
+  | fuel + 1, i => do
+    let so ← M.get
+    let o := so.live id
+    if i > o.mask then return ()
+    match o.table.getD i .null with
+    | .active key hash =>
+      setAddEntry P key hash
+      setMergeLoop id fuel (i + 1)
+    | _ => setMergeLoop id fuel (i + 1)
+
+/-- What comes after the one big resize of `set_merge_lock_held` (:853-897). -/
+def setMergeRest (o : SetBody K) : SM K Unit := do
   let so ← M.get
-  if other.ident == so.ident || other.used == 0 then return ()
-  if (so.fill + other.used) * 5 ≥ so.mask * 3 then
-    setTableResize ((so.used + other.used) * 2)
-  let so ← M.get
-  if so.fill == 0 && so.mask == other.mask && other.fill == other.used then
-    M.put { so with table := other.table, fill := other.fill, used := other.used }
+  if so.fill == 0 && so.mask == o.mask && o.fill == o.used then
+    M.put { so with table := o.table, fill := o.fill, used := o.used }
     return ()
   if so.fill == 0 then
-    let t ← M.lift (reinsertAll so.mask so.table other.table)
-    M.put { so with table := t, fill := other.used, used := other.used }
+    let t ← M.lift (reinsertAll so.mask so.table o.table)
+    M.put { so with table := t, fill := o.used, used := o.used }
     return ()
-  for (key, hash) in setEntries other do
-    setAddEntry P key hash
+  setMergeLoop P o.ident (setLoopFuel so o.ident) 0
+
+/-- `set_merge_lock_held` (:828-898) from the set with this identity. -/
+def setMergeIn (id : Nat) : SM K Unit := do
+  let so ← M.get
+  let o := so.live id
+  if o.ident == so.ident || o.used == 0 then return ()
+  if (so.fill + o.used) * 5 ≥ so.mask * 3 then
+    setTableResize ((so.used + o.used) * 2)
+  setMergeRest P o
+
+/-- `set_merge_lock_held`. -/
+def setMerge (other : SetObj K) : SM K Unit := withPeer other (setMergeIn P other.ident)
+
+/-- The walk of `_PyDict_Next` with the body at :1214 or :2241-2251. -/
+def forWalk (body : K → Int → SM K Unit) : List (SM K (Option (K × Int))) → SM K Unit
+  | [] => pure ()
+  | step :: rest => do
+    match ← step with
+    | none => pure ()
+    | some (key, hash) =>
+      body key hash
+      forWalk body rest
 
 /-- `set_update_dict_lock_held` (:1186-1219). -/
 def setUpdateDict (other : DictArg K) : SM K Unit := do
   let so ← M.get
   if (so.fill + other.size) * 5 ≥ so.mask * 3 then
     setTableResize ((so.used + other.size) * 2)
-  for (key, hash) in other.items do
-    setAddEntry P key hash
+  forWalk (setAddEntry P) other.walk
 
 /-- `set_update_iterable_lock_held` (:1221-1244). -/
-def setUpdateIterable (it : Iterable K) : SM K Unit := do
-  match it.getIter with
-  | some e => M.throw e
-  | none =>
-    for key in it.items do
-      setAddKey P key
-    match it.stop with
-    | some e => M.throw e
-    | none => pure ()
+def setUpdateIterable (it : ReIter (SetObj K) K) : SM K Unit := do
+  it.getIter
+  let _ ← forIter (fun key => do setAddKey P key; return false) it.steps
 
 /-- `set_update_lock_held` (:1246-1256), `set_update_local` (:1259-1281),
 `set_update_internal` (:1283-1317), `_PySet_Update` (:3168-3176). -/
@@ -94,7 +207,8 @@ def setUpdate (other : SetArg K) : SM K Unit :=
   match other with
   | .set o => setMerge P o
   | .dict d => setUpdateDict P d
-  | .iter it => setUpdateIterable P it
+  | .iter it => setUpdateIterable P (ReIter.ofIterable it)
+  | .live it => setUpdateIterable P it
 
 /-- `set.update` (`set_update_impl`, :1327-1340). -/
 def setUpdateMulti : List (SetArg K) → SM K Unit
@@ -109,145 +223,167 @@ def runNew (m : SM K Unit) (s : SetObj K) : Py (SetObj K) :=
   | (.ok _, s') => .ok s'
   | (.error e, _) => .error e
 
-/-- `make_new_set` (:1350-1386): a new object of the given shape filled from `iterable`. -/
+/-- `make_new_set` (:1378-1386): a new object of the given shape filled from `iterable`. -/
 def makeNewSet (shell : SetObj K) (iterable : Option (SetArg K)) : Py (SetObj K) :=
   match iterable with
   | none => .ok shell
   | some it => runNew (setUpdate P it) shell
 
-/-- `set_copy_untracked_lock_held` (:1570-1583), `set_copy_impl` (:1593-1602). -/
-def setCopy (so : SetObj K) (id : Nat) : Py (SetObj K) :=
-  runNew (setMerge P so) (newBasetype so id)
+/-- `set_copy_untracked_lock_held` (:1570-1583), `set_copy_impl` (:1593-1602), of the current set. -/
+def setCopy (id : Nat) : SM K (SetObj K) := do
+  let so ← M.get
+  let r ← onResult (newBasetype so.toSetBody id) (setMerge P so)
+  return r.2
 
 /-- `frozenset_copy_impl` (:1612-1620): an exact frozenset is its own copy. -/
-def frozensetCopy (so : SetObj K) (id : Nat) : Py (SetObj K) :=
-  if so.frozenExact then .ok so else setCopy P so id
+def frozensetCopy (id : Nat) : SM K (SetObj K) := do
+  let so ← M.get
+  if so.frozenExact then return { so with peers := [] }
+  setCopy P id
 
 /-- `set_union_impl` (:1646-1671). -/
-def setUnion (so : SetObj K) (others : List (SetArg K)) (id : Nat) : Py (SetObj K) :=
-  match makeNewSet P (newBasetype so id) (some (.set so)) with
-  | .error e => .error e
-  | .ok r =>
-    runNew (do
-      for other in others do
-        let same := match other with
-          | .set o => o.ident == so.ident
-          | _ => false
-        if !same then setUpdate P other) r
+def setUnion (others : List (SetArg K)) (id : Nat) : SM K (SetObj K) := do
+  let so ← M.get
+  let r ← setCopy P id
+  let r ← others.foldlM (fun r other => do
+    let same := match other with
+      | .set o => o.ident == so.ident
+      | _ => false
+    if same then return r
+    let x ← onResult r (setUpdate P other)
+    return x.2) r
+  return r
 
 /-- `set_or` (:1673-1693) on two sets (otherwise `NotImplemented`). -/
-def setOr (self other : SetObj K) (id : Nat) : Py (SetObj K) :=
-  match setCopy P self id with
-  | .error e => .error e
-  | .ok r =>
-    if self.ident == other.ident then .ok r
-    else runNew (setUpdate P (.set other)) r
+def setOr (other : SetObj K) (id : Nat) : SM K (SetObj K) := do
+  let so ← M.get
+  let r ← setCopy P id
+  if so.ident == other.ident then return r
+  let x ← onResult r (setUpdate P (.set other))
+  return x.2
 
-/-- A lookup in a set that is not the state of the running computation. -/
-def containsIn (s : SetObj K) (key : K) (hash : Int) : Py Bool :=
-  (setContainsEntry P key hash s).1
-
-/-- The loop at :1733-1751: keep what `so` contains. -/
-def interLoop (so : SetObj K) : List (K × Int) → SM K Unit
-  | [] => pure ()
-  | (key, hash) :: rest => do
-    let rv ← M.lift (containsIn P so key hash)
+/-- The loop of `set_intersection` over two sets (:1733-1751), with the result in focus. -/
+def setInterLoop (a b : Nat) : SM K Bool := do
+  let s ← M.get
+  forNext b (fun key hash => do
+    let rv ← onSet a (setContainsEntry P key hash)
     if rv then setAddEntry P key hash
-    interLoop so rest
+    return false) (setLoopFuel s b) 0
 
-/-- The generic loop at :1762-1778, which stops early once `result` is as large as `so`:
-a later bad element is then never hashed, and an `__iter__` that would raise is not
-reached. -/
-def interIterLoop (so : SetObj K) : List K → Option PyExc → SM K Unit
-  | [], stop =>
-    match stop with
-    | some e => M.throw e
-    | none => pure ()
-  | key :: rest, stop => do
-    let hash ← M.lift (P.hash key)
-    let rv ← M.lift (containsIn P so key hash)
-    if rv then
-      setAddEntry P key hash
-      let r ← M.get
-      if r.used ≥ so.used then return ()
-    interIterLoop so rest stop
+/-- One turn of the generic loop of `set_intersection` (:1763-1777), with the result in focus: a key
+that makes the result as large as `so` stops the loop, so a later bad element is never hashed. -/
+def interIterStep (soId : Nat) (key : K) : SM K Bool := do
+  let hash ← M.lift (P.hash key)
+  let rv ← onSet soId (setContainsEntry P key hash)
+  if rv then
+    setAddEntry P key hash
+    let s ← M.get
+    if s.used ≥ (s.live soId).used then return true
+  return false
 
-/-- `set_intersection` (:1708-1791). -/
-def setIntersection (so : SetObj K) (other : SetArg K) (id : Nat) : Py (SetObj K) :=
+/-- The branch of `set_intersection` for two sets (:1723-1755). The swap at :1727-1731 happens once,
+on the sizes as they are then. -/
+def setIntersectionSets (o : SetObj K) (id : Nat) : SM K (SetObj K) := do
+  let so ← M.get
+  let o' := so.live o.ident
+  let a := if o'.used > so.used then o'.ident else so.ident
+  let b := if o'.used > so.used then so.ident else o'.ident
+  let r ← onResult (newBasetype so.toSetBody id) (setInterLoop P a b)
+  return r.2
+
+/-- `set_intersection` (:1708-1791). The result takes the focus while the loops run. -/
+def setIntersection (other : SetArg K) (id : Nat) : SM K (SetObj K) := do
+  let so ← M.get
   match other with
   | .set o =>
-    if o.ident == so.ident then setCopy P so id
-    else
-      let result := newBasetype so id
-      let (a, b) := if o.used > so.used then (o, so) else (so, o)
-      runNew (interLoop P a (setEntries b)) result
+    if o.ident == so.ident then setCopy P id
+    else withPeer o (setIntersectionSets P o id)
   | _ =>
-    let result := newBasetype so id
-    let it := other.toIterable
-    match it.getIter with
-    | some e => .error e
-    | none => runNew (interIterLoop P so it.items it.stop) result
+    let it := other.toReIter
+    let r ← onResult (newBasetype so.toSetBody id) (do
+      it.getIter
+      forIter (interIterStep P so.ident) it.steps)
+    return r.2
 
 /-- `set_intersection_multi_impl` (:1801-1826). -/
-def setIntersectionMulti (so : SetObj K) (others : List (SetArg K)) (id : Nat) : Py (SetObj K) :=
+def setIntersectionMulti (others : List (SetArg K)) (id : Nat) : SM K (SetObj K) := do
   match others with
-  | [] => setCopy P so id
-  | _ =>
-    others.foldlM (fun r other => setIntersection P r other id) so
+  | [] => setCopy P id
+  | first :: rest =>
+    let r ← setIntersection P first id
+    let rec go : List (SetArg K) → Nat → SetObj K → SM K (SetObj K)
+      | [], _, r => pure r
+      | other :: t, id', r => do
+        let x ← onResult r (setIntersection P other (tempId id'))
+        go t (tempId id') x.1
+    go rest id r
 
 /-- `set_intersection_update` (:1828-1839), `set_iand` (:1881-1898). -/
 def setIntersectionUpdate (other : SetArg K) (id : Nat) : SM K Unit := do
-  let so ← M.get
-  let tmp ← M.lift (setIntersection P so other id)
-  M.put (setSwapBodies so tmp)
+  let tmp ← setIntersection P other id
+  M.modify fun so => setSwapBodies so tmp
 
 /-- `set_intersection_update_multi_impl` (:1849-1864). -/
 def setIntersectionUpdateMulti (others : List (SetArg K)) (id : Nat) : SM K Unit := do
+  let tmp ← setIntersectionMulti P others id
+  M.modify fun so => setSwapBodies so tmp
+
+/-- The branch of `set_isdisjoint_impl` for an exact set (:1924-1946). -/
+def setDisjointSets (o : SetObj K) : SM K Bool := do
   let so ← M.get
-  let tmp ← M.lift (setIntersectionMulti P so others id)
-  M.put (setSwapBodies so tmp)
+  let o' := so.live o.ident
+  let a := if o'.used > so.used then o'.ident else so.ident
+  let b := if o'.used > so.used then so.ident else o'.ident
+  let hit ← forNext b (fun key hash => onSet a (setContainsEntry P key hash)) (setLoopFuel so b) 0
+  return !hit
 
 /-- `set_isdisjoint_impl` (:1910-1968). `PyAnySet_CheckExact` here, not `PyAnySet_Check`. -/
-def setIsdisjoint (so : SetObj K) (other : SetArg K) : Py Bool :=
+def setIsdisjoint (other : SetArg K) : SM K Bool := do
+  let so ← M.get
   let same := match other with
     | .set o => o.ident == so.ident
     | _ => false
-  if same then .ok (so.used == 0)
-  else
-    let fast := match other with
-      | .set o => if o.exact then some o else none
-      | _ => none
-    match fast with
-    | some o =>
-      let (a, b) := if o.used > so.used then (o, so) else (so, o)
-      let rec go : List (K × Int) → Py Bool
-        | [] => .ok true
-        | (key, hash) :: rest =>
-          match containsIn P a key hash with
-          | .error e => .error e
-          | .ok rv => if rv then .ok false else go rest
-      go (setEntries b)
-    | none =>
-      let it := other.toIterable
-      match it.getIter with
-      | some e => .error e
-      | none =>
-        let rec goIter : List K → Py Bool
-          | [] =>
-            match it.stop with
-            | some e => .error e
-            | none => .ok true
-          | key :: rest =>
-            match (setContainsKey P key so).1 with
-            | .error e => .error e
-            | .ok rv => if rv then .ok false else goIter rest
-        goIter it.items
+  if same then return so.used == 0
+  let fast := match other with
+    | .set o => if o.exact then some o else none
+    | _ => none
+  match fast with
+  | some o => withPeer o (setDisjointSets P o)
+  | none =>
+    let it := other.toReIter
+    it.getIter
+    let hit ← forIter (setContainsKey P) it.steps
+    return !hit
 
 /-- The tail of `set_difference_update_internal` (:2025-2028): more than a quarter dummies. -/
 def setPurgeDummies : SM K Unit := do
   let so ← M.get
   if so.fill - so.used ≤ so.mask / 4 then return ()
   setGrow
+
+/-- `set_discard_entry` over the entries of a set nothing else can reach (:1995-2004). -/
+def discardList : List (K × Int) → SM K Unit
+  | [] => pure ()
+  | (k, h) :: rest => do
+    let _ ← setDiscardEntry P k h
+    discardList rest
+
+/-- The set branch of `set_difference_update_internal` (:1995-2004). -/
+def setDiscardLoop (id : Nat) : SM K Bool := do
+  let s ← M.get
+  forNext id (fun key hash => do
+    let _ ← setDiscardEntry P key hash
+    return false) (setLoopFuel s id) 0
+
+/-- The branch of `set_difference_update_internal` for a set (:1979-2006). -/
+def setDiffUpdateSets (o : SetObj K) (id : Nat) : SM K Unit := do
+  let so ← M.get
+  let o' := so.live o.ident
+  if o'.used >>> 3 > so.used then
+    let tmp ← setIntersection P (.set o) id
+    discardList P (setEntries tmp)
+  else
+    let _ ← setDiscardLoop P o.ident
 
 /-- `set_difference_update_internal` (:1970-2029). -/
 def setDifferenceUpdateInternal (other : SetArg K) (id : Nat) : SM K Unit := do
@@ -259,20 +395,13 @@ def setDifferenceUpdateInternal (other : SetArg K) (id : Nat) : SM K Unit := do
     M.put (setClearInternal so)
     return ()
   match other with
-  | .set o =>
-    let o' ← (if o.used >>> 3 > so.used then M.lift (setIntersection P so (.set o) id) else pure o)
-    for (key, hash) in setEntries o' do
-      let _ ← setDiscardEntry P key hash
+  | .set o => withPeer o (setDiffUpdateSets P o id)
   | _ =>
-    let it := other.toIterable
-    match it.getIter with
-    | some e => M.throw e
-    | none =>
-      for key in it.items do
-        let _ ← setDiscardKey P key
-      match it.stop with
-      | some e => M.throw e
-      | none => pure ()
+    let it := other.toReIter
+    it.getIter
+    let _ ← forIter (fun key => do
+      let _ ← setDiscardKey P key
+      return false) it.steps
   setPurgeDummies
 
 /-- `set_difference_update_impl` (:2039-2057). -/
@@ -281,56 +410,81 @@ def setDifferenceUpdateMulti (others : List (SetArg K)) (id : Nat) : SM K Unit :
     setDifferenceUpdateInternal P o id
 
 /-- `set_copy_and_difference_untracked` (:2059-2071). -/
-def setCopyAndDifference (so : SetObj K) (other : SetArg K) (id : Nat) : Py (SetObj K) :=
-  match setCopy P so id with
-  | .error e => .error e
-  | .ok r => runNew (setDifferenceUpdateInternal P other id) r
+def setCopyAndDifference (other : SetArg K) (id : Nat) : SM K (SetObj K) := do
+  let r ← setCopy P id
+  let x ← onResult r (setDifferenceUpdateInternal P other (tempId id))
+  return x.2
+
+/-- The loop of `set_difference_untracked` over two sets (:2127-2145), with the result in focus: what
+`id` holds of the set `src` that `o` does not. -/
+def setDiffLoop (o src : Nat) : SM K Bool := do
+  let s ← M.get
+  forNext src (fun key hash => do
+    let rv ← onSet o (setContainsEntry P key hash)
+    if !rv then setAddEntry P key hash
+    return false) (setLoopFuel s src) 0
+
+/-- That branch of `set_difference_untracked`. -/
+def setDifferenceSets (o : SetObj K) (id : Nat) : SM K (SetObj K) := do
+  let so ← M.get
+  let r ← onResult (newBasetype so.toSetBody id) (setDiffLoop P o.ident so.ident)
+  return r.2
 
 /-- `set_difference_untracked` (:2073-2147). -/
-def setDifference (so : SetObj K) (other : SetArg K) (id : Nat) : Py (SetObj K) :=
+def setDifference (other : SetArg K) (id : Nat) : SM K (SetObj K) := do
+  let so ← M.get
   let otherSize : Option Nat := match other with
     | .set o => some o.used
     | .dict d => some d.size
-    | .iter _ => none
+    | _ => none
   match otherSize with
-  | none => setCopyAndDifference P so other id
+  | none => setCopyAndDifference P other id
   | some sz =>
-    if so.used >>> 2 > sz then setCopyAndDifference P so other id
+    if so.used >>> 2 > sz then setCopyAndDifference P other id
     else
-      let result := newBasetype so id
+      let result := newBasetype so.toSetBody id
       match other with
       | .dict d =>
-        runNew (do
-          for (key, hash) in setEntries so do
-            let rv ← M.lift (d.contains key hash)
-            if !rv then setAddEntry P key hash) result
-      | .set o =>
-        runNew (do
-          for (key, hash) in setEntries so do
-            let rv ← M.lift (containsIn P o key hash)
-            if !rv then setAddEntry P key hash) result
-      | .iter _ => setCopyAndDifference P so other id
+        let r ← onResult result (do
+          let s ← M.get
+          forNext so.ident (fun key hash => do
+            let rv ← d.contains key hash
+            if !rv then setAddEntry P key hash
+            return false) (setLoopFuel s so.ident) 0)
+        return r.2
+      | .set o => withPeer o (setDifferenceSets P o id)
+      | _ => setCopyAndDifference P other id
 
-/-- `set_difference_multi_impl` (:2159-2190). -/
-def setDifferenceMulti (so : SetObj K) (others : List (SetArg K)) (id : Nat) : Py (SetObj K) :=
+/-- `set_difference_multi_impl` (:2158-2190). -/
+def setDifferenceMulti (others : List (SetArg K)) (id : Nat) : SM K (SetObj K) := do
   match others with
-  | [] => setCopy P so id
+  | [] => setCopy P id
   | o :: rest =>
-    match setDifference P so o id with
-    | .error e => .error e
-    | .ok r =>
-      runNew (do
-        for x in rest do
-          setDifferenceUpdateInternal P x id) r
+    let r ← setDifference P o id
+    let x ← onResult r (do
+      for y in rest do
+        setDifferenceUpdateInternal P y (tempId id))
+    return x.2
 
-/-- `set_symmetric_difference_update_dict` (:2226-2255) and
-`set_symmetric_difference_update_set` (:2257-2282): one loop over `(key, hash)`. -/
-def symDiffLoop : List (K × Int) → SM K Unit
+/-- The body of `set_symmetric_difference_update_dict` (:2241-2251) and of
+`set_symmetric_difference_update_set` (:2268-2278). -/
+def symDiffStep (key : K) (hash : Int) : SM K Unit := do
+  let found ← setDiscardEntry P key hash
+  if !found then setAddEntry P key hash
+
+/-- That body over the entries of a set nothing else can reach. -/
+def symList : List (K × Int) → SM K Unit
   | [] => pure ()
-  | (key, hash) :: rest => do
-    let found ← setDiscardEntry P key hash
-    if !found then setAddEntry P key hash
-    symDiffLoop rest
+  | (k, h) :: rest => do
+    symDiffStep P k h
+    symList rest
+
+/-- `set_symmetric_difference_update_set` (:2257-2282). -/
+def symDiffSet (id : Nat) : SM K Unit := do
+  let s ← M.get
+  let _ ← forNext id (fun key hash => do
+    symDiffStep P key hash
+    return false) (setLoopFuel s id) 0
 
 /-- `set_symmetric_difference_update_impl` (:2294-2334), `set_ixor` (:2377-2391). -/
 def setSymmetricDifferenceUpdate (other : SetArg K) (id : Nat) : SM K Unit := do
@@ -340,55 +494,52 @@ def setSymmetricDifferenceUpdate (other : SetArg K) (id : Nat) : SM K Unit := do
     if o.ident == so.ident then
       M.put (setClearInternal so)
     else
-      symDiffLoop P (setEntries o)
-  | .dict d => symDiffLoop P d.items
-  | .iter it =>
-    let otherset ← M.lift (makeNewSet P (newBasetype so id) (some (.iter it)))
-    symDiffLoop P (setEntries otherset)
+      withPeer o (symDiffSet P o.ident)
+  | .dict d => forWalk (symDiffStep P) d.walk
+  | _ =>
+    let x ← onResult (newBasetype so.toSetBody id) (setUpdate P other)
+    symList P (setEntries x.2)
 
 /-- `set_symmetric_difference_impl` (:2347-2366), `set_xor` (:2368-2375). -/
-def setSymmetricDifference (so : SetObj K) (other : SetArg K) (id : Nat) : Py (SetObj K) :=
-  runNew (do
+def setSymmetricDifference (other : SetArg K) (id : Nat) : SM K (SetObj K) := do
+  let so ← M.get
+  let x ← onResult (newBasetype so.toSetBody id) (do
     setUpdate P other
-    symDiffLoop P (setEntries so)) (newBasetype so id)
+    symDiffSet P so.ident)
+  return x.2
+
+/-- The branch of `set_issubset_impl` for a set (:2420-2435). -/
+def setSubsetSets (o : SetObj K) : SM K Bool := do
+  let so ← M.get
+  let o' := so.live o.ident
+  if so.used > o'.used then return false
+  let miss ← forNext so.ident (fun key hash => do
+    let rv ← onSet o.ident (setContainsEntry P key hash)
+    return !rv) (setLoopFuel so so.ident) 0
+  return !miss
 
 /-- `set_issubset_impl` (:2403-2436). -/
-def setIssubset (so : SetObj K) (other : SetArg K) (id : Nat) : Py Bool :=
+def setIssubset (other : SetArg K) (id : Nat) : SM K Bool := do
+  let so ← M.get
   match other with
-  | .set o =>
-    if so.used > o.used then .ok false
-    else
-      let rec go : List (K × Int) → Py Bool
-        | [] => .ok true
-        | (key, hash) :: rest =>
-          match containsIn P o key hash with
-          | .error e => .error e
-          | .ok rv => if rv then go rest else .ok false
-      go (setEntries so)
+  | .set o => withPeer o (setSubsetSets P o)
   | _ =>
-    match setIntersection P so other id with
-    | .error e => .error e
-    | .ok tmp => .ok (tmp.used == so.used)
+    let tmp ← setIntersection P other id
+    let so' ← M.get
+    return tmp.used == so'.used
 
 /-- `set_issuperset_impl` (:2448-2477). -/
-def setIssuperset (so : SetObj K) (other : SetArg K) (id : Nat) : Py Bool :=
+def setIssuperset (other : SetArg K) (id : Nat) : SM K Bool := do
+  let so ← M.get
   match other with
-  | .set o => setIssubset P o (.set so) id
+  | .set o => withPeer o (onSet o.ident (setIssubset P (.set so) id))
   | _ =>
-    let it := other.toIterable
-    match it.getIter with
-    | some e => .error e
-    | none =>
-      let rec go : List K → Py Bool
-        | [] =>
-          match it.stop with
-          | some e => .error e
-          | none => .ok true
-        | key :: rest =>
-          match (setContainsKey P key so).1 with
-          | .error e => .error e
-          | .ok rv => if rv then go rest else .ok false
-      go it.items
+    let it := other.toReIter
+    it.getIter
+    let miss ← forIter (fun key => do
+      let rv ← setContainsKey P key
+      return !rv) it.steps
+    return !miss
 
 /-- Comparison operators. -/
 inductive CmpOp where
@@ -396,21 +547,21 @@ inductive CmpOp where
   deriving DecidableEq, Repr, Inhabited
 
 /-- `set_richcompare` (:2479-2521) on two sets (otherwise `NotImplemented`). -/
-def setRichcompare (v w : SetObj K) (op : CmpOp) (id : Nat) : Py Bool :=
-  let eq : Py Bool :=
-    if v.used != w.used then .ok false
-    else if v.hash != -1 && w.hash != -1 && v.hash != w.hash then .ok false
-    else setIssubset P v (.set w) id
+def setRichcompare (w : SetObj K) (op : CmpOp) (id : Nat) : SM K Bool := do
+  let v ← M.get
+  let eq : SM K Bool :=
+    if v.used != w.used then pure false
+    else if v.hash != -1 && w.hash != -1 && v.hash != w.hash then pure false
+    else setIssubset P (.set w) id
   match op with
   | .eq => eq
   | .ne =>
-    match eq with
-    | .error e => .error e
-    | .ok r => .ok (!r)
-  | .le => setIssubset P v (.set w) id
-  | .ge => setIssuperset P v (.set w) id
-  | .lt => if v.used ≥ w.used then .ok false else setIssubset P v (.set w) id
-  | .gt => if v.used ≤ w.used then .ok false else setIssuperset P v (.set w) id
+    let r ← eq
+    return !r
+  | .le => setIssubset P (.set w) id
+  | .ge => setIssuperset P (.set w) id
+  | .lt => if v.used ≥ w.used then return false else setIssubset P (.set w) id
+  | .gt => if v.used ≤ w.used then return false else setIssuperset P (.set w) id
 
 /-- Retry with the frozenset hash when `key` is a `set`: `setHash key` is
 `PySet_Check(key) ? some (frozenset_hash_impl(key)) : none`. -/
@@ -421,10 +572,35 @@ def retryAsFrozen {α : Type} (setHash : K → Option Int) (key : K) (first : SM
     | some h, .typeError _ => retry h
     | _, _ => M.throw e
 
-/-- `set_contains_lock_held` (@3.14.7:2269-2286), `_PySet_Contains`, `set_contains`,
-`set.__contains__` (:2583-2593), `frozenset.__contains__` (:2605-2626). -/
-def setContains (setHash : K → Option Int) (key : K) : SM K Bool :=
-  retryAsFrozen setHash key (setContainsKey P key) (setContainsEntry P key)
+/-- The opening of `_PySet_Contains` (:2549-2562) and `frozenset___contains___impl` (:2609-2619):
+only a failed hash of a `set` is retried, with the hash of the equal frozenset, so unlike 3.14 a
+`TypeError` from `__eq__` is not. -/
+def containsHash (setHash : K → Option Int) (key : K) : Py Int :=
+  match P.hash key with
+  | .ok h => .ok h
+  | .error e =>
+    match setHash key, e with
+    | some h, .typeError _ => .ok h
+    | _, _ => .error (setUnhashableType P key e)
+
+/-- `_PySet_Contains` (:2544-2563), `set_contains`, `set.__contains__` (:2584-2593). -/
+def setContains (setHash : K → Option Int) (key : K) : SM K Bool := do
+  let hash ← M.lift (containsHash P setHash key)
+  setContainsEntry P key hash
+
+/-- `frozenset.__contains__` (:2606-2626): `set_compare_frozenset` on any `frozenset`, a subclass
+too, where `in` takes `set_lookkey` and so tests `PyFrozenSet_CheckExact`. -/
+def frozensetContains (setHash : K → Option Int) (key : K) : SM K Bool := do
+  let hash ← M.lift (containsHash P setHash key)
+  let so ← M.get
+  let u := toU64 hash
+  match ← lookOuter P true key hash so.mask (setProbeFuel so.mask) (u &&& so.mask) u with
+  | none => M.throw .modelFuel
+  | some s =>
+    let so' ← M.get
+    match so'.slot s with
+    | .null => return false
+    | _ => return true
 
 /-- `set_remove_impl` (:2640-2665). -/
 def setRemove (setHash : K → Option Int) (key : K) : SM K Unit := do
@@ -434,6 +610,21 @@ def setRemove (setHash : K → Option Int) (key : K) : SM K Unit := do
 /-- `set_discard_impl` (:2680-2700). -/
 def setDiscard (setHash : K → Option Int) (key : K) : SM K Unit := do
   let _ ← retryAsFrozen setHash key (setDiscardKey P key) (setDiscardEntry P key)
+
+/-- `PyErr_BadInternalCall()`. -/
+def setBadInternalCall : PyExc := systemError "~bad argument to internal function"
+
+/-- `PySet_Contains` (:3065-3080): no retry for a `set` key. -/
+def pySetContains (isAny : Bool) (key : K) : SM K Bool :=
+  if isAny then setContainsKey P key else M.throw setBadInternalCall
+
+/-- `PySet_Discard` (:3082-3095). -/
+def pySetDiscard (isSet : Bool) (key : K) : SM K Bool :=
+  if isSet then setDiscardKey P key else M.throw setBadInternalCall
+
+/-- `PySet_Add` (:3097-3123): a frozenset only while nothing else refers to it. -/
+def pySetAdd (isSet frozenUnique : Bool) (key : K) : SM K Unit :=
+  if isSet || frozenUnique then setAddKey P key else M.throw setBadInternalCall
 
 /-- `set_init` (:2752-2779), the fresh and the re-init branches. -/
 def setInit (args : List (SetArg K)) (hasKw : Bool) : SM K Unit := do

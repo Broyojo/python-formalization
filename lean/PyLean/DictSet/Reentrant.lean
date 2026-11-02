@@ -7,7 +7,7 @@ Nothing about the answers can survive: such a comparison can make a lookup miss 
 and a lying one can put two equal keys in a table. What survives is what memory safety rests on.
 
 `_Py_dict_lookup` re-checks `dk == mp->ma_keys && ep->me_key == startkey` after every comparison
-(`dictobject.c:1142`, `:1198`). The first theorem here is what that check buys: an index the lookup
+(`dictobject.c:1062`, `:1198`). The first theorem here is what that check buys: an index the lookup
 reports is one the table has when the lookup returns, for every key protocol, with no hypothesis.
 The second is that the table's structure, `Chain` and its counts, survives `insertdict` and delete
 when every comparison may run any mutation that keeps it, which is what the operations themselves do.

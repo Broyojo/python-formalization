@@ -254,7 +254,7 @@ def genericGetAttr [DecidableEq K] (P : Proto K (PyDict K V)) (name : K) : IM K 
     | none => viaDict
   else viaDict
 
-/-- `_PyObject_IsInstanceDictEmpty` (:7339-7371), for a type with inline values. -/
+/-- `_PyObject_IsInstanceDictEmpty` (:7669-7701), for a type with inline values. -/
 def isInstanceDictEmpty (s : ObjSt K V) : Bool :=
   let values := s.inst.values
   if values.valid then
@@ -264,7 +264,7 @@ def isInstanceDictEmpty (s : ObjSt K V) : Bool :=
     | none => true
     | some d => d.used == 0
 
-/-- `detach_dict_from_object` (:7579-7609), `_PyDict_DetachFromObject` (:7657-7663). -/
+/-- `detach_dict_from_object` (:7909-7939), `_PyDict_DetachFromObject` (:7986-7992). -/
 def detachDictFromObject (s : ObjSt K V) (d : PyDict K V) : ObjSt K V × PyDict K V :=
   if !isInlineDict d then (s, d)
   else
@@ -274,12 +274,12 @@ def detachDictFromObject (s : ObjSt K V) (d : PyDict K V) : ObjSt K V × PyDict 
       ({ s with inst := { s.inst with inlineV := invalidateInline v, dict := some d' } }, d')
     | .combined _ => (s, d)
 
-/-- `set_dict_inline_values` (:7409-7420). -/
+/-- `set_dict_inline_values` (:7739-7750). -/
 def setDictInlineValues (s : ObjSt K V) (new : Option (PyDict K V)) : ObjSt K V :=
   let v := s.inst.inlineV
   { s with inst := { inlineV := if v.valid then invalidateInline v else v, dict := new } }
 
-/-- `_PyObject_SetManagedDict` (:7497-7577), the GIL inline-values branch: `o.__dict__ = new`,
+/-- `_PyObject_SetManagedDict` (:7827-7907), the GIL inline-values branch: `o.__dict__ = new`,
 `del o.__dict__`. -/
 def setManagedDict (s : ObjSt K V) (new : Option (PyDict K V)) : ObjSt K V :=
   match s.inst.dict with
@@ -288,7 +288,7 @@ def setManagedDict (s : ObjSt K V) (new : Option (PyDict K V)) : ObjSt K V :=
     let (s', _) := detachDictFromObject s d
     { s' with inst := { s'.inst with dict := new } }
 
-/-- `PyObject_ClearManagedDict` (:7612-7655), run when the instance dies: the dict, if anyone
+/-- `PyObject_ClearManagedDict` (:7942-7984), run when the instance dies: the dict, if anyone
 else holds it, keeps its contents, detached. -/
 def clearManagedDict (s : ObjSt K V) : ObjSt K V × Option (PyDict K V) :=
   match s.inst.dict with

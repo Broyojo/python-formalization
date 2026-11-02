@@ -36,7 +36,7 @@ theorem dictGetitemSuppress_total (P : Proto K (PyDict K V)) (isDict : Bool) (ke
 leaves the dict alone: an exact `TypeError` is rewritten, anything else passes through. -/
 theorem hash_failure (P : Proto K (PyDict K V)) (key : K) (e : PyExc) (hh : P.hash key = .error e)
     (d : PyDict K V) (v : V) :
-    let err := dictUnhashableType P key e
+    let err := dictUnhashableType P d.frozen key e
     dictSetItem P key v d = (.error err, d) ∧
     dictDelItem P key d = (.error err, d) ∧
     pyDictContains P key d = (.error err, d) ∧
@@ -67,14 +67,14 @@ theorem hash_failure (P : Proto K (PyDict K V)) (key : K) (e : PyExc) (hh : P.ha
 /-- On an empty dict `pop` answers before hashing, so an unhashable key is not an error there, while
 on any non-empty dict it is. Both halves are reachable: `{}.pop([], 1)` returns 1. -/
 theorem pop_hash_order (P : Proto K (PyDict K V)) (key : K) (e : PyExc) (hh : P.hash key = .error e)
-    (d : PyDict K V) :
+    (d : PyDict K V) (hfz : d.frozen = false) :
     (d.used = 0 → pyDictPop P true key d = (.ok none, d)) ∧
-    (d.used ≠ 0 → pyDictPop P true key d = (.error (dictUnhashableType P key e), d)) := by
+    (d.used ≠ 0 → pyDictPop P true key d = (.error (dictUnhashableType P d.frozen key e), d)) := by
   constructor
   · intro h
-    simp [pyDictPop, h]
+    simp [pyDictPop, h, hfz]
   · intro h
-    simp [pyDictPop, h, hh]
+    simp [pyDictPop, h, hh, hfz]
 
 /-- A comparison that raises on the first entry the search compares ends the search with that
 exception, and whatever the comparison had done to the state stands. -/
@@ -133,7 +133,7 @@ theorem getItemSuppressed_proven : GetItemSuppressed := fun _ _ _ P isDict key d
 def HashFailureFamily : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (key : K) (e : PyExc), P.hash key = .error e →
     ∀ (d : PyDict K V) (v : V),
-      let err := dictUnhashableType P key e
+      let err := dictUnhashableType P d.frozen key e
       dictSetItem P key v d = (.error err, d) ∧
       dictDelItem P key d = (.error err, d) ∧
       pyDictContains P key d = (.error err, d) ∧
@@ -147,10 +147,11 @@ theorem hashFailureFamily_proven : HashFailureFamily := fun _ _ _ P key e hh d v
 /-- `dict.pop` on an empty dict does not hash the key; on a non-empty one it does. -/
 def PopHashOrder : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (key : K) (e : PyExc), P.hash key = .error e →
-    ∀ d : PyDict K V,
+    ∀ d : PyDict K V, d.frozen = false →
       (d.used = 0 → pyDictPop P true key d = (.ok none, d)) ∧
-      (d.used ≠ 0 → pyDictPop P true key d = (.error (dictUnhashableType P key e), d))
-theorem popHashOrder_proven : PopHashOrder := fun _ _ _ P key e hh d => pop_hash_order P key e hh d
+      (d.used ≠ 0 → pyDictPop P true key d = (.error (dictUnhashableType P d.frozen key e), d))
+theorem popHashOrder_proven : PopHashOrder := fun _ _ _ P key e hh d hfz =>
+  pop_hash_order P key e hh d hfz
 
 /-- `compare_generic`, the paths `Honest` rules out: a raising `__eq__`, and one that changes the table. -/
 def CompareGenericFailure : Prop :=

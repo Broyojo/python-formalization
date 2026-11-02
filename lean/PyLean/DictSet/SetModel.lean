@@ -1,7 +1,7 @@
 import PyLean.DictSet.Common
 
 /-!
-The hash table of `Objects/setobject.c` (CPython 3.14.7): linear probes, the perturbed
+The hash table of `Objects/setobject.c` (CPython 3.15.2): linear probes, the perturbed
 recurrence, dummies, `set_table_resize`, `pop`'s finger, iteration, the frozenset hash.
 Line numbers refer to `Objects/setobject.c`.
 -/
@@ -20,7 +20,7 @@ inductive Slot (K : Type) where
 /-- `PySetObject`. `tableId` stands for the pointer `so->table`: 0 is `so->smalltable`,
 which is exactly the case `mask == 7`. `ident` is the object's address. `frozen` is
 `PyFrozenSet_Check`, `exact` is `PyAnySet_CheckExact`, `tname` is `tp_name`. -/
-structure SetObj (K : Type) where
+structure SetBody (K : Type) where
   ident : Nat := 0
   fill : Nat := 0
   used : Nat := 0
@@ -33,6 +33,13 @@ structure SetObj (K : Type) where
   frozen : Bool := false
   exact : Bool := true
   tname : String := "set"
+  deriving Repr, Inhabited
+
+/-- The set a primitive works on, and the others a callback can reach while it does: `__eq__` and an
+iterator run Python code, so an operation on two sets has both in its state, and `set_add_entry` on a
+new result has the operands too. The field has no counterpart in C. -/
+structure SetObj (K : Type) extends SetBody K where
+  peers : List (SetBody K) := []
   deriving Repr, Inhabited
 
 def LINEAR_PROBES : Nat := 9
@@ -59,78 +66,98 @@ def setProbeStep (mask i perturb : Nat) : Nat × Nat :=
 /-- `probes = (i + LINEAR_PROBES <= mask) ? LINEAR_PROBES : 0` (:232). -/
 def linearProbes (i mask : Nat) : Nat := if i + LINEAR_PROBES ≤ mask then LINEAR_PROBES else 0
 
-/-- What one `do { ... } while (probes--)` block of `set_lookkey` ends with. -/
+/-- What one `do { ... } while (probes--)` block of `set_do_lookup` ends with. -/
 inductive LookScan where
   | found (slot : Nat)
+  /-- `SET_LOOKKEY_CHANGED`. -/
   | restart
-  | next (mask : Nat)
+  | next
   deriving Repr, Inhabited
 
 section Look
 variable [DecidableEq K] (P : Proto K (SetObj K))
 
 /-- Is the entry still what it was before the comparison?
-`table != so->table || entry->key != startkey` (@3.14.7:118). -/
+`table != so->table || entry->key != startkey` (:159). -/
 def setChanged (so : SetObj K) (table slot : Nat) (startkey : K) : Bool :=
   decide (table ≠ so.tableId) ||
     match so.slot slot with
     | .active k _ => decide (k ≠ startkey)
     | _ => true
 
-/-- One pass of the body of the `do` loop of `set_lookkey` (@3.14.7:95-125): `.inl` ends the block, `.inr`
-carries on at the next entry with this `mask`. -/
-def lookStep (frozen : Bool) (key : K) (hash : Int) (slot mask : Nat) : SM K (LookScan ⊕ Nat) := do
+/-- `set_compare_entry_lock_held` (:137-165): `.inl` ends the block, `.inr ()` carries on at the next
+entry. `SET_LOOKKEY_EMPTY` and `SET_LOOKKEY_FOUND` both end it at this slot. -/
+def compareLocked (key : K) (hash : Int) (slot : Nat) : SM K (LookScan ⊕ Unit) := do
   let so ← M.get
   match so.slot slot with
   | .null => return .inl (.found slot)
-  | .dummy => return .inr mask
+  | .dummy => return .inr ()
   | .active startkey h =>
     if h = hash then
       if startkey = key then return .inl (.found slot)
       if P.isStr startkey && P.isStr key && P.strEq startkey key then return .inl (.found slot)
       let table := so.tableId
       let cmp ← P.eq startkey key
-      if !frozen then
-        let so' ← M.get
-        if setChanged so' table slot startkey then return .inl .restart
-      if cmp then return .inl (.found slot)
       let so' ← M.get
-      return .inr so'.mask
-    else return .inr mask
+      if setChanged so' table slot startkey then return .inl .restart
+      if cmp then return .inl (.found slot)
+      return .inr ()
+    else return .inr ()
 
-/-- The inner loop of `set_lookkey` (:233-243): `do { ... } while (probes--)`. -/
-def lookScan (frozen : Bool) (key : K) (hash : Int) : Nat → Nat → Nat → SM K LookScan
-  | 0, slot, mask => do
-    match ← lookStep P frozen key hash slot mask with
-    | .inl r => return r
-    | .inr m => return .next m
-  | p + 1, slot, mask => do
-    match ← lookStep P frozen key hash slot mask with
-    | .inl r => return r
-    | .inr m => lookScan frozen key hash p (slot + 1) m
+/-- `set_compare_frozenset` (:171-192): no check for a change, no shortcut for `str`, and the
+identity test comes before the hash test, so a key found by identity need not have kept its hash. -/
+def compareFrozen (key : K) (hash : Int) (slot : Nat) : SM K (LookScan ⊕ Unit) := do
+  let so ← M.get
+  match so.slot slot with
+  | .null => return .inl (.found slot)
+  | .dummy => return .inr ()
+  | .active startkey h =>
+    if startkey = key then return .inl (.found slot)
+    if h = hash then
+      let cmp ← P.eq startkey key
+      if cmp then return .inl (.found slot)
+      return .inr ()
+    else return .inr ()
 
-/-- The outer loop of `set_lookkey` (:230-246). -/
-def lookOuter (frozen : Bool) (key : K) (hash : Int) : Nat → Nat → Nat → Nat → SM K (Option Nat)
-  | 0, _, _, _ => M.throw .modelFuel
-  | fuel + 1, i, perturb, mask => do
-    let r ← lookScan P frozen key hash (linearProbes i mask) i mask
+/-- The `compare_func` passed to `set_do_lookup`. -/
+def lookStep (frozen : Bool) (key : K) (hash : Int) (slot : Nat) : SM K (LookScan ⊕ Unit) :=
+  if frozen then compareFrozen P key hash slot else compareLocked P key hash slot
+
+/-- The inner loop of `set_do_lookup` (:233-243): `do { ... } while (probes--)`. -/
+def lookScan (frozen : Bool) (key : K) (hash : Int) : Nat → Nat → SM K LookScan
+  | 0, slot => do
+    match ← lookStep P frozen key hash slot with
+    | .inl r => return r
+    | .inr _ => return .next
+  | p + 1, slot => do
+    match ← lookStep P frozen key hash slot with
+    | .inl r => return r
+    | .inr _ => lookScan frozen key hash p (slot + 1)
+
+/-- The outer loop of `set_do_lookup` (:220-248). `mask` is the argument, fixed for the whole search:
+a table that was replaced comes back as `SET_LOOKKEY_CHANGED`. -/
+def lookOuter (frozen : Bool) (key : K) (hash : Int) (mask : Nat) :
+    Nat → Nat → Nat → SM K (Option Nat)
+  | 0, _, _ => M.throw .modelFuel
+  | fuel + 1, i, perturb => do
+    let r ← lookScan P frozen key hash (linearProbes i mask) i
     match r with
     | .found s => return some s
     | .restart => return none
-    | .next mask' =>
-      let n := setProbeStep mask' i perturb
-      lookOuter frozen key hash fuel n.1 n.2 mask'
+    | .next =>
+      let n := setProbeStep mask i perturb
+      lookOuter frozen key hash mask fuel n.1 n.2
 
 def setProbeFuel (mask : Nat) : Nat := mask + 15
 
-/-- `set_lookkey` (@3.14.7:78-130): the slot where the search stopped; an exception is the NULL
-return. A restart is the recursive call at @3.14.7:119. -/
+/-- `set_lookkey` (:413-433): the slot where the search stopped, whose key says whether it was
+found; an exception is `SET_LOOKKEY_ERROR`. A restart is the `do ... while` at :423-426. -/
 def setLookkeyAux (key : K) (hash : Int) : Nat → SM K Nat
   | 0 => M.throw .modelFuel
   | restarts + 1 => do
     let so ← M.get
     let u := toU64 hash
-    let r ← lookOuter P so.frozenExact key hash (setProbeFuel so.mask) (u &&& so.mask) u so.mask
+    let r ← lookOuter P so.frozenExact key hash so.mask (setProbeFuel so.mask) (u &&& so.mask) u
     match r with
     | some s => return s
     | none => setLookkeyAux key hash restarts
@@ -403,7 +430,7 @@ def Slot.hashU : Slot K → Nat
   | .dummy => toU64 (-1)
   | .active _ h => toU64 h
 
-/-- `frozenset_hash_impl` (:972-1012). It runs on sets too (`set_contains_lock_held`). -/
+/-- `frozenset_hash_impl` (:972-1012). It runs on sets too (`_PySet_Contains`). -/
 def frozensetHashImpl (so : SetObj K) : Int :=
   let h0 := so.table.foldl (fun h s => h ^^^ shuffleBits s.hashU) 0
   let h1 := if (so.mask + 1 - so.fill) % 2 == 1 then h0 ^^^ shuffleBits 0 else h0
@@ -432,7 +459,7 @@ structure SetIter where
 /-- `set_iter` (:1171-1184). -/
 def setIterNew (so : SetObj K) : SetIter := { used := so.used, len := so.used }
 
-/-- `setiter_len` (:1057-1065): `PyLong_FromSsize_t(len)`; 3.14.7 can return a negative
+/-- `setiter_len` (:1057-1065): `PyLong_FromSsize_t(len)`; 3.15.2 can return a negative
 number here, see `setIterLenNonneg`. -/
 def setiterLen (so : SetObj K) (si : SetIter) : Int :=
   if si.alive && decide (si.used = so.used) then si.len else 0
@@ -451,7 +478,7 @@ def setiterNext (so : SetObj K) (si : SetIter) : Py (Option K) × SetIter :=
 hint raises `ValueError`. -/
 def setiterLengthHint (so : SetObj K) (si : SetIter) : Py Nat :=
   let h := setiterLen so si
-  if h < 0 then .error (.valueError "__length_hint__() should return >= 0")
+  if h < 0 then .error (.valueError "set_iterator.__length_hint__() must return a non-negative int")
   else .ok h.toNat
 
 def setiterDrain (so : SetObj K) : Nat → SetIter → List K → Py (List K) × SetIter
@@ -468,10 +495,10 @@ def setiterToList (so : SetObj K) (si : SetIter) : Py (List K) × SetIter :=
   | .error e => (.error e, si)
   | .ok _ => setiterDrain so (so.mask + 3) si []
 
-/-- `setiter_reduce` (@3.14.7:875-891): drain a copy. -/
+/-- `setiter_reduce` (:1070-1085): drain a copy. -/
 def setiterReduce (so : SetObj K) (si : SetIter) : Py (List K) := (setiterToList so si).1
 
-/-- `set_repr_lock_held` (@3.14.7:565-617), `set_repr`. -/
+/-- `set_repr_lock_held` (:757-808), `set_repr`. -/
 def setRepr (krepr : K → Py String) (inRepr : Bool) (so : SetObj K) : Py String :=
   if inRepr then .ok s!"{so.tname}(...)"
   else if so.used == 0 then .ok s!"{so.tname}()"

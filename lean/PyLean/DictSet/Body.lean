@@ -185,7 +185,7 @@ theorem delKnownHashBody_proven : DelKnownHashBody := by
   · have e1 : (ix == DKIX_EMPTY) = false := by simpa using hne
     simp [dictDelItemKnownHash, h, e1]
 
-/-- `dict_subscript` on every branch, for any `__missing__`: a good slot gives its value, whatever
+/-- `_PyDict_SubscriptKnownHash` on every branch, for any `__missing__`: a good slot gives its value, whatever
 `missing` is; and with no value, an exact dict raises `KeyError`, while a subclass runs the special
 lookup, whose failure is the result, and calls what it finds on the state it left, which either may
 have changed. With nothing found the result is `KeyError`. -/
@@ -236,20 +236,47 @@ theorem subscriptBody_proven : SubscriptBody := by
   · simp [subscriptMissing, M.bind_run, he]
   · simp [subscriptMissing, M.bind_run, he]
 
-/-- The `PyDict_Check` of `_PyDict_DelItem_KnownHash_LockHeld`, `clear_lock_held` and
-`dict_setdefault_ref_lock_held`: something that is not a dict gets a `SystemError` from the first
-and last, and nothing at all from the second, and a dict goes on to the body. -/
+/-- The opening tests of the writers: something that is neither a dict nor a frozendict gets a
+`SystemError`, a frozendict gets the `TypeError` of `frozendict_does_not_support`, and a dict goes on
+to the body; `clear_lock_held` does nothing to either of the first two (`isDict` there is
+`PyDict_Check`), and `PyDict_Contains` lets a frozendict through. -/
 def DictChecks : Prop :=
-  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (key : K) (hash : Int) (dflt : V)
+  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (key : K) (hash : Int) (value dflt : V)
     (r i : Bool) (d : PyDict K V),
     dictDelItemKnownHashChecked P false key hash d = (.error badInternalCall, d) ∧
-    dictDelItemKnownHashChecked P true key hash d = dictDelItemKnownHash P key hash d ∧
     dictClearChecked false d = d ∧ dictClearChecked true d = dictClear d ∧
     dictSetdefaultRefChecked P false key dflt r i d = (.error badInternalCall, d) ∧
-    dictSetdefaultRefChecked P true key dflt r i d = dictSetdefaultRef P key dflt r i d
+    pyDictPop P false key d = (.error badInternalCall, d) ∧
+    dictSetItemChecked P false key value d = (.error badInternalCall, d) ∧
+    pyDictContainsChecked P false key d = (.error badInternalCall, d) ∧
+    pyDictContainsChecked P true key d = pyDictContains P key d ∧
+    (d.frozen = true →
+      dictDelItemKnownHashChecked P true key hash d =
+        (.error (frozendictNoSupport "deletion"), d) ∧
+      pyDictPop P true key d = (.error (frozendictNoSupport "deletion"), d) ∧
+      dictSetdefaultRefChecked P true key dflt r i d =
+        (.error (frozendictNoSupport "assignment"), d) ∧
+      dictSetItemChecked P true key value d = (.error (frozendictNoSupport "assignment"), d)) ∧
+    (d.frozen = false →
+      dictDelItemKnownHashChecked P true key hash d = dictDelItemKnownHash P key hash d ∧
+      dictSetdefaultRefChecked P true key dflt r i d = dictSetdefaultRef P key dflt r i d ∧
+      dictSetItemChecked P true key value d = dictSetItem P key value d)
 theorem dictChecks_proven : DictChecks := by
-  intro K V _ P key hash dflt r i d
-  exact ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩
+  intro K V _ P key hash value dflt r i d
+  refine ⟨?_, rfl, rfl, ?_, ?_, ?_, ?_, ?_, fun h => ⟨?_, ?_, ?_, ?_⟩, fun h => ⟨?_, ?_, ?_⟩⟩
+  · simp [dictDelItemKnownHashChecked, badInternalCall]
+  · simp [dictSetdefaultRefChecked]
+  · simp [pyDictPop]
+  · simp [dictSetItemChecked, badInternalCall]
+  · rfl
+  · rfl
+  · simp [dictDelItemKnownHashChecked, h]
+  · simp [pyDictPop, h]
+  · simp [dictSetdefaultRefChecked, h]
+  · simp [dictSetItemChecked, h]
+  · simp [dictDelItemKnownHashChecked, h]
+  · simp [dictSetdefaultRefChecked, h]
+  · simp [dictSetItemChecked, h]
 
 /-- What `dictresize` makes of the flag it is given (:2082-2084, :2093). -/
 theorem dictResize_kind {mp s : PyDict K V} {l : Nat} {u : Bool} {k' : Keys K V}

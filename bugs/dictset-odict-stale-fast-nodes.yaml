@@ -54,7 +54,7 @@ expected: |
   od.popitem() raises KeyError or returns an item, and iterating od ends after finitely many
   items, whatever state the dict and list are in.
 observed: |
-  python3 3.14.7: od.popitem() and od.pop('b') exit -11; od.pop('b', 7) returns 7. After two
+  python3 3.15.2: od.popitem() and od.pop('b') exit -11; od.pop('b', 7) returns 7. After two
   dict.popitem(od), list(od) never returned: a watchdog found it inside list() with the list
   growing, and islice(od, 100) yields 100 items from an OrderedDict with 3 nodes. REPRODUCED.
   main (3.16.0a1+dev, ef1fce0): identical. REPRODUCED by check_bugs.py.
@@ -64,13 +64,13 @@ promised_by: |
 cause: |
   Objects/odictobject.c:548-550 returns keys->dk_nentries for DKIX_EMPTY; it was correct as "index
   of new entry" only while nothing but odict code shrinks dk_nentries, and dict_popitem_impl does
-  (Objects/dictobject.c:5041). _odict_find_node_hash (:669) and _odict_find_node (:688) trust
+  (Objects/dictobject.c:5041). _odict_find_node_hash (:630) and _odict_find_node (:649) trust
   od_fast_nodes[index] without checking that the node's key is the key looked up.
-  :1176-1179 `if (_PyDict_Pop_KnownHash(...) == 0) value = Py_NewRef(failobj);` with failobj NULL
-  from OrderedDict_popitem_impl (:1251) or OrderedDict_pop_impl with no default.
-  :1847-1865 advances from whichever node that lookup returned.
+  :1096-1098 `if (_PyDict_Pop_KnownHash(...) == 0) value = Py_NewRef(failobj);` with failobj NULL
+  from OrderedDict_popitem_impl (:1172) or OrderedDict_pop_impl with no default (:1138).
+  :1765-1783 advances from whichever node that lookup returned.
 possible_fix: |
-  Crash: test failobj at :1178 and raise KeyError, which is what open PR gh-154818 does.
+  Crash: test failobj at :1097 and raise KeyError, which is what open PR gh-154818 does.
   Hang: _odict_find_node* could return NULL when ix == DKIX_EMPTY instead of consulting
   od_fast_nodes; _odict_add_new_node, the one caller that wants the "new entry" index, can keep
   using _odict_get_index directly. That also closes the stale-node path behind the crash.

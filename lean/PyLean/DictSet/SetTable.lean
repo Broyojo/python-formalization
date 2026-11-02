@@ -693,7 +693,8 @@ theorem setTableResize_spec (hsym : ∀ a b, eqv a b = eqv b a) (so : SetObj K)
     (w : SetCore hf eqv so) (minused : Nat) (hmin : so.used * 2 ≤ minused) :
     (SetResizeRefused minused ∧ setTableResize minused so = (.error memoryError, so)) ∨
     ∃ so', setTableResize minused so = (.ok (), so') ∧ SetWF hf eqv so' ∧
-      (setEntries so').Perm (setEntries so) := by
+      (setEntries so').Perm (setEntries so) ∧ so'.peers = so.peers ∧ so'.ident = so.ident ∧
+      minused ≤ so'.mask := by
   let r := setNewSize minused 64 PySet_MINSIZE
   obtain ⟨hstop, k, hk⟩ := setNewSize_stop minused 64 PySet_MINSIZE (by decide)
   have hr : setNewSize minused 64 PySet_MINSIZE = r := rfl
@@ -714,7 +715,7 @@ theorem setTableResize_spec (hsym : ∀ a b, eqv a b = eqv b a) (so : SetObj K)
       · omega
       · rw [h1, h8] at a
         omega
-    refine ⟨so, ?_, { toSetCore := w, load := by omega }, List.Perm.refl _⟩
+    refine ⟨so, ?_, { toSetCore := w, load := by omega }, List.Perm.refl _, rfl, rfl, by omega⟩
     simp [setTableResize, M.bind_run, M.get_run, hr, hno]
   · by_cases hbig : 576460752303423487 < r
     · left
@@ -789,13 +790,15 @@ theorem setTableResize_spec (hsym : ∀ a b, eqv a b = eqv b a) (so : SetObj K)
         mask := m, table := t, fill := so.used
         tableId := if r == PySet_MINSIZE then 0 else so.nextId
         nextId := so.nextId + 1 }
-      refine ⟨so', ?_, ?_, r3⟩
+      refine ⟨so', ?_, ?_, r3, rfl, rfl, ?_⟩
       · have hr1 : reinsertAll (r - 1) (List.replicate r Slot.null) so.table = .ok t := r1
         simp [setTableResize, M.bind_run, M.get_run, M.lift_run, hr, hno, hbig, hr1, so', m]
       · exact { toSetCore := r2.of_fields rfl rfl rfl rfl
                 load := by
                   show so.used * 5 < m * 3
                   omega }
+      · show minused ≤ m
+        omega
 
 end Resize
 

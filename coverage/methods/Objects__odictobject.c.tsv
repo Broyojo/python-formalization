@@ -20,7 +20,7 @@ Objects/odictobject.c	989	1022	OrderedDict___reduce___impl	OrderedDict___reduce_
 Objects/odictobject.c	1041	1075	OrderedDict_setdefault_impl	OrderedDict_setdefault_impl(PyODictObject *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=97537cb7c28464b6 input=d7b93e92734f99b5]*/	todo		
 Objects/odictobject.c	1080	1113	_odict_popkey_hash	_odict_popkey_hash(PyObject *od, PyObject *key, PyObject *failobj, Py_hash_t hash)	modelled	odict-no-stale-node	
 Objects/odictobject.c	1131	1139	OrderedDict_pop_impl	OrderedDict_pop_impl(PyODictObject *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=7a6447d104e7494b input=0742e3c9bf076a72]*/	todo		
-Objects/odictobject.c	1157	1178	OrderedDict_popitem_impl	OrderedDict_popitem_impl(PyODictObject *self, int last) /*[clinic end generated code: output=98e7d986690d49eb input=ebf1cc91579c9e54]*/	todo		changed-in-3.15: was odict-no-stale-node
+Objects/odictobject.c	1157	1178	OrderedDict_popitem_impl	OrderedDict_popitem_impl(PyODictObject *self, int last) /*[clinic end generated code: output=98e7d986690d49eb input=ebf1cc91579c9e54]*/	modelled	odict-no-stale-node	
 Objects/odictobject.c	1222	1228	OrderedDict_clear_impl	OrderedDict_clear_impl(PyODictObject *self) /*[clinic end generated code: output=a1a76d1322f556c5 input=08b12322e74c535c]*/	todo		
 Objects/odictobject.c	1241	1303	OrderedDict_copy_impl	OrderedDict_copy_impl(PyObject *od) /*[clinic end generated code: output=9cdbe7394aecc576 input=e329951ae617ed48]*/	todo		
 Objects/odictobject.c	1318	1322	odict_reversed	odict_reversed(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		withdrawn: theorem is rfl on a thin definition
@@ -43,7 +43,7 @@ Objects/odictobject.c	1715	1725	odictiter_dealloc	odictiter_dealloc(PyObject *op
 Objects/odictobject.c	1728	1735	odictiter_traverse	odictiter_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or GC clear hook, no effect on the object's Python-level behaviour
 Objects/odictobject.c	1740	1790	odictiter_nextkey_lock_held	odictiter_nextkey_lock_held(odictiterobject *di)	modelled	odict-iter-bounded	
 Objects/odictobject.c	1794	1805	odictiter_nextkey	odictiter_nextkey(odictiterobject *di)	todo		
-Objects/odictobject.c	1808	1863	odictiter_iternext_lock_held	odictiter_iternext_lock_held(PyObject *op)	todo		changed-in-3.15: was odict-iter-bounded
+Objects/odictobject.c	1808	1863	odictiter_iternext_lock_held	odictiter_iternext_lock_held(PyObject *op)	modelled	odict-iter-bounded	
 Objects/odictobject.c	1866	1873	odictiter_iternext	odictiter_iternext(PyObject *op)	todo		
 Objects/odictobject.c	1881	1898	odictiter_reduce	odictiter_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
 Objects/odictobject.c	1939	1968	odictiter_new	odictiter_new(PyODictObject *od, int kind)	todo		changed-in-3.15: withdrawn: theorem is rfl on a thin definition

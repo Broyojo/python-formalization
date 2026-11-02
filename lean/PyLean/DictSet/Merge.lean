@@ -180,7 +180,7 @@ def MergeStepBody : Prop :=
         mergeStep P ov key hash value d = insertDict P key hash value s) ∧
       (dictContainsKnownHash P key hash d = (.ok true, s) →
         (ov = 0 → mergeStep P ov key hash value d = (.ok (), s)) ∧
-        (ov ≠ 0 → mergeStep P ov key hash value d = (.error (keyErr P key), s))))
+        (ov ≠ 0 → mergeStep P ov key hash value d = mergeDup key s)))
 theorem mergeStepBody_proven : MergeStepBody := by
   intro K V _ P key hash value ov d s e
   refine ⟨by simp [mergeStep], fun hov => ?_⟩
@@ -267,8 +267,10 @@ theorem generic_present_skip (h : pyDictContains P key d = (.ok true, s)) :
   simp [mergeGenericLoop, M.bind_run, h]
 
 theorem generic_present_raise (h : pyDictContains P key d = (.ok true, s)) :
-    mergeGenericLoop P g 2 (key :: rest) d = (.error (keyErr P key), s) := by
-  simp [mergeGenericLoop, M.bind_run, h]
+    mergeGenericLoop P g 2 (key :: rest) d = mergeDup key s := by
+  have hd : ∀ t : PyDict K V, mergeDup key t = (.error mergeDupExc, { t with dupkey := some key }) :=
+    fun _ => rfl
+  simp [mergeGenericLoop, M.bind_run, h, hd]
 
 theorem generic_contains_raises (ov : Nat) (hov : ov ≠ 1) (e : PyExc)
     (h : pyDictContains P key d = (.error e, s)) :
@@ -296,16 +298,18 @@ def MergeGeneric : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (g : K → DM K V V) (keys : DM K V (List K))
     (key : K) (rest : List K) (ov : Nat) (d s : PyDict K V) (b : Option (MergeObj K V)),
     dictMergeChecked P false b ov d = (.error badInternalCall, d) ∧
-    dictMergeChecked P true none ov d = (.error badInternalCall, d) ∧
-    (∀ o : MergeObj K V, (o.isDict && o.iterIsDict) = true →
+    (d.frozen = true → dictMergeChecked P true b ov d =
+      (.error (frozendictNoSupport "assignment"), d)) ∧
+    (d.frozen = false → dictMergeChecked P true none ov d = (.error badInternalCall, d)) ∧
+    (d.frozen = false → ∀ o : MergeObj K V, (o.isDict && o.iterIsDict) = true →
       dictMergeChecked P true (some o) ov d = dictDictMerge P o.asDict ov d) ∧
-    (∀ o : MergeObj K V, (o.isDict && o.iterIsDict) = false →
+    (d.frozen = false → ∀ o : MergeObj K V, (o.isDict && o.iterIsDict) = false →
       dictMergeChecked P true (some o) ov d = dictMerge P (.mapping o.keys o.getitem) ov d) ∧
     (∀ e, keys d = (.error e, s) → dictMerge P (.mapping keys g) ov d = (.error e, s)) ∧
     (∀ ks, keys d = (.ok ks, s) → dictMerge P (.mapping keys g) ov d = mergeGenericLoop P g ov ks s) ∧
     (pyDictContains P key d = (.ok true, s) →
       mergeGenericLoop P g 0 (key :: rest) d = mergeGenericLoop P g 0 rest s ∧
-      mergeGenericLoop P g 2 (key :: rest) d = (.error (keyErr P key), s)) ∧
+      mergeGenericLoop P g 2 (key :: rest) d = mergeDup key s) ∧
     (ov ≠ 1 → ∀ e, pyDictContains P key d = (.error e, s) →
       mergeGenericLoop P g ov (key :: rest) d = (.error e, s)) ∧
     (ov ≠ 1 → pyDictContains P key d = (.ok false, s) →
@@ -315,12 +319,16 @@ def MergeGeneric : Prop :=
       (g key >>= fun v => dictSetItem P key v >>= fun _ => mergeGenericLoop P g 1 rest) d
 theorem mergeGeneric_proven : MergeGeneric := by
   intro K V _ P g keys key rest ov d s b
-  refine ⟨?_, rfl, ?_, ?_, ?_, ?_, ?_, ?_, ?_, generic_override1 P g key rest d⟩
-  · cases b <;> rfl
-  · intro o h
-    simp [dictMergeChecked, MergeObj.route, h, dictMerge]
-  · intro o h
-    simp [dictMergeChecked, MergeObj.route, h]
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, generic_override1 P g key rest d⟩
+  · simp [dictMergeChecked]
+  · intro hf
+    simp [dictMergeChecked, hf]
+  · intro hf
+    simp [dictMergeChecked, hf]
+  · intro hf o h
+    simp [dictMergeChecked, MergeObj.route, h, dictMerge, hf]
+  · intro hf o h
+    simp [dictMergeChecked, MergeObj.route, h, hf]
   · intro e h
     simp [dictMerge, M.bind_run, h]
   · intro ks h

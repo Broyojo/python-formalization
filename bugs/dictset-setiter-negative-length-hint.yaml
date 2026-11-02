@@ -40,7 +40,8 @@ expected: |
   __length_hint__() is never negative. Raising RuntimeError on the unexpected element, as dict's
   iterators do, would also be acceptable.
 observed: |
-  python3 3.14.7: 3 -1, then ValueError: __length_hint__() should return >= 0. REPRODUCED.
+  python3 3.15.2: 3 -1, then ValueError: set_iterator.__length_hint__() must return a non-negative
+  int. REPRODUCED.
   main (3.16.0a1+dev, ef1fce0): 3 -1, then ValueError: set_iterator.__length_hint__() must
   return a non-negative int. REPRODUCED by check_bugs.py.
 promised_by: |
@@ -50,7 +51,7 @@ cause: |
   Objects/setobject.c:1134 `si->len--` has no guard; :1062-1064 hands it to PyLong_FromSsize_t.
   Compare Objects/dictobject.c:5722-5726.
 possible_fix: |
-  Before :1021, `if (si->len == 0) { raise RuntimeError "Set changed during iteration"; }`, or
+  Before :1134, `if (si->len == 0) { raise RuntimeError "Set changed during iteration"; }`, or
   clamp at 0 in setiter_len.
 duplicates:
   issues:
