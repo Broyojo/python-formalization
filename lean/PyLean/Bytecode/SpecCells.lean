@@ -204,4 +204,108 @@ theorem unaryRules_proven : UnaryRules := by
     · simp [execOp, UNARY_NEGATIVE, stk, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM,
         monadLift, MonadLift.monadLift, pure, EStateM.pure, hn]
 
+/-- `LIST_APPEND n` appends the top of the stack to the list `n` below it and pops only the value:
+the comprehension accumulator stays where it was. -/
+def ListAppendRules : Prop := ∀ (e : Env) (regs : Regs) (v : Val) (mid rest : List Val) (a : Addr)
+    (items : Array Val), mid.length + 1 = e.oparg → regs.rt.heap[a]? = some (.list items) →
+    execOp e .LIST_APPEND ⟨regs, v :: mid ++ .ref a :: rest⟩ = .ok ()
+      ⟨{ regs with rt := { regs.rt with heap := regs.rt.heap.setIfInBounds a (.list (items.push v)) } },
+        mid ++ .ref a :: rest⟩
+
+theorem listAppendRules_proven : ListAppendRules := by
+  intro e regs v mid rest a items hn ha
+  show stk _ _ _ _ = _
+  have ht : ((v :: mid ++ .ref a :: rest).take (e.oparg + 1)).reverse = .ref a :: mid.reverse ++ [v] := by
+    rw [← hn]; have := take_app (v :: mid) (.ref a) rest; simp only [List.cons_append, List.length_cons] at this ⊢
+    simp [this]
+  have hd : (v :: mid ++ .ref a :: rest).drop (e.oparg + 1) = rest := by
+    rw [← hn]; have := drop_app (v :: mid) (.ref a) rest; simpa using this
+  refine (stk_ok (outs := .ref a :: mid.reverse)
+    (r := { regs with rt := { regs.rt with heap := regs.rt.heap.setIfInBounds a (.list (items.push v)) } })
+    (by simp; omega) ?_ (by simp; omega)).trans ?_
+  · have hdl : (Val.ref a :: (mid.reverse ++ [v])).dropLast = Val.ref a :: mid.reverse := by
+      rw [← List.cons_append, List.dropLast_concat]
+    have hgl : (Val.ref a :: (mid.reverse ++ [v])).getLastD .null = v := by
+      rw [← List.cons_append, List.getLastD_eq_getLast?, List.getLast?_concat]; rfl
+    dsimp only
+    rw [ht]
+    show ((do liftM (listAppend (((Val.ref a :: (mid.reverse ++ [v])).dropLast).headD .null)
+      ((Val.ref a :: (mid.reverse ++ [v])).getLastD .null)); pure (Val.ref a :: (mid.reverse ++ [v])).dropLast :
+        BM (List Val)) regs) = _
+    rw [hdl, hgl]
+    simp [bind, EStateM.bind, listAppend, getObj, ha, setObj, RM.lift, liftM, monadLift, MonadLift.monadLift,
+      pure, EStateM.pure]
+  · have hd2 : (mid ++ Val.ref a :: rest).drop e.oparg = rest := by rw [← hn, drop_app]
+    simp [hd2]
+
+/-- `BUILD_SLICE 2` and `BUILD_SLICE 3` push a new slice of their operands in order, the step
+`None` when there are two. -/
+def BuildSliceRules : Prop := ∀ (e : Env) (regs : Regs) (a b c : Val) (rest : List Val),
+    (e.oparg = 2 → execOp e .BUILD_SLICE ⟨regs, b :: a :: rest⟩ = .ok ()
+      ⟨{ regs with rt := { regs.rt with heap := regs.rt.heap.push (.slice a b .none) } },
+        .ref regs.rt.heap.size :: rest⟩) ∧
+    (e.oparg = 3 → execOp e .BUILD_SLICE ⟨regs, c :: b :: a :: rest⟩ = .ok ()
+      ⟨{ regs with rt := { regs.rt with heap := regs.rt.heap.push (.slice a b c) } },
+        .ref regs.rt.heap.size :: rest⟩)
+
+theorem buildSliceRules_proven : BuildSliceRules := by
+  intro e regs a b c rest
+  constructor
+  · intro h
+    show stk _ 1 _ _ = _
+    simp [stk, popN, h, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift,
+      MonadLift.monadLift, alloc, pure, EStateM.pure]
+  · intro h
+    show stk _ 1 _ _ = _
+    simp [stk, popN, h, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift,
+      MonadLift.monadLift, alloc, pure, EStateM.pure]
+
+/-- `BUILD_STRING n` on `n` strings pushes their concatenation in the order they were pushed.
+The compiler only emits it over the results of `FORMAT_SIMPLE`/`FORMAT_WITH_SPEC`, which are
+strs. -/
+def BuildStringRules : Prop := ∀ (e : Env) (regs : Regs) (pieces : List String) (rest : List Val),
+  pieces.length = e.oparg →
+    execOp e .BUILD_STRING ⟨regs, (pieces.map Val.str).reverse ++ rest⟩ =
+      .ok () ⟨regs, .str (String.join pieces) :: rest⟩
+
+theorem buildStringRules_proven : BuildStringRules := by
+  intro e regs pieces rest hn
+  show stk _ 1 _ _ = _
+  have hlen : (pieces.map Val.str).reverse.length = e.oparg := by simp [hn]
+  have ht : (((pieces.map Val.str).reverse ++ rest).take e.oparg).reverse = pieces.map Val.str := by
+    rw [← hlen, List.take_left]; simp
+  have hd : ((pieces.map Val.str).reverse ++ rest).drop e.oparg = rest := by
+    rw [← hlen, List.drop_left]
+  refine (stk_ok (outs := [.str (String.join pieces)]) (r := regs) (by simp; omega) ?_ rfl).trans ?_
+  · simp only [ht]
+    have hj : ∀ ps : List String,
+        (ps.map Val.str).map (fun | .str s => s | _ => "") = ps := by
+      intro ps
+      induction ps with
+      | nil => rfl
+      | cons x xs ih => simp only [List.map_cons, ih]
+    show ((pure [Val.str (String.join ((pieces.map Val.str).map (fun | .str s => s | _ => "")))] :
+      BM (List Val)) regs) = _
+    rw [hj]
+    rfl
+  · simp [hd]
+
+/-- `GET_LEN` pushes `len(o)` above `o` and keeps `o`; when `__len__` raises, nothing is popped
+(`ERROR_NO_POP`), for any object model. -/
+def GetLenRules : Prop := ∀ (e : Env) (regs : Regs) (o : Val) (rest : List Val),
+    (∀ n rt, e.om.length e.ctx o regs.rt = .ok n rt →
+      execOp e .GET_LEN ⟨regs, o :: rest⟩ = .ok () ⟨{ regs with rt := rt }, .int n :: o :: rest⟩) ∧
+    (∀ x rt, e.om.length e.ctx o regs.rt = .error x rt →
+      execOp e .GET_LEN ⟨regs, o :: rest⟩ = .error x ⟨{ regs with rt := rt }, o :: rest⟩)
+
+theorem getLenRules_proven : GetLenRules := by
+  intro e regs o rest
+  constructor
+  · intro n rt h
+    simp [execOp, GET_LEN, stkK, peekN, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+      monadLift, MonadLift.monadLift, pure, EStateM.pure, h]
+  · intro x rt h
+    simp [execOp, GET_LEN, stkK, peekN, bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift,
+      MonadLift.monadLift, pure, EStateM.pure, h]
+
 end PyLean.Bytecode

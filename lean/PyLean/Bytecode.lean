@@ -29,6 +29,26 @@ open PyLean.Registry
 def op (n : String) : String := "opcode:" ++ n
 
 def entries : List Entry := GenObj.entries ++ [
+  { id := "bytecode-list-append", pyFile := "Python/bytecodes.c"
+    pyFns := [op "LIST_APPEND"]
+    statement := "LIST_APPEND n appends the top of the stack to the list n below it and pops only the value."
+    source := "Python/bytecodes.c LIST_APPEND"
+    status := .proven, prop := ``ListAppendRules, thm := some ``listAppendRules_proven },
+  { id := "bytecode-build-slice", pyFile := "Python/bytecodes.c"
+    pyFns := [op "BUILD_SLICE"]
+    statement := "BUILD_SLICE 2 and 3 push a new slice of their operands in order, with step None for two."
+    source := "Python/bytecodes.c BUILD_SLICE"
+    status := .proven, prop := ``BuildSliceRules, thm := some ``buildSliceRules_proven },
+  { id := "bytecode-build-string", pyFile := "Python/bytecodes.c"
+    pyFns := [op "BUILD_STRING"]
+    statement := "BUILD_STRING n on n strings pushes their concatenation in push order."
+    source := "Python/bytecodes.c BUILD_STRING"
+    status := .proven, prop := ``BuildStringRules, thm := some ``buildStringRules_proven },
+  { id := "bytecode-get-len", pyFile := "Python/bytecodes.c"
+    pyFns := [op "GET_LEN"]
+    statement := "GET_LEN pushes len(o) above o and keeps o; when __len__ raises nothing is popped, for any object model."
+    source := "Python/bytecodes.c GET_LEN"
+    status := .proven, prop := ``GetLenRules, thm := some ``getLenRules_proven },
   { id := "bytecode-unary", pyFile := "Python/bytecodes.c"
     pyFns := [op "UNARY_NEGATIVE", op "UNARY_INVERT"]
     statement := "UNARY_NEGATIVE and UNARY_INVERT push what __neg__ and __invert__ return or pop and propagate their exception, for any object model; on an int ~x is -(x+1), as the language reference states."
