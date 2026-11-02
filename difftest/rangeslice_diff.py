@@ -89,8 +89,11 @@ def rand_slice(rng, length):
 
 def gen_case(rng):
     fn = rng.choice(["new", "len", "getitem", "slice", "contains", "index", "count", "eq",
-                     "iter", "iterfor", "reversed", "setstate", "setstate_obj", "indices", "listslice"])
+                     "iter", "iterfor", "reversed", "setstate", "setstate_obj", "indices", "listslice", "slicehash"])
     c = {"mod": "rangeslice", "fn": fn}
+    if fn == "slicehash":
+        c.update(parts=[edge_int(rng) if rng.random() < 0.7 else rng.choice([-1, -2, 0, 1, 2**61 - 1, 2**61 - 2, -(2**61 - 1)]) for _ in range(3)])
+        return c
     if fn == "indices":
         n = rng.choice([0, 1, 5, edge_int(rng), abs(edge_int(rng)), rng.randrange(100)])
         c.update(s=rand_slice(rng, abs(n)), n=n)
@@ -203,6 +206,8 @@ def run_python(c):
             return {"ok": list(slice(*c["s"]).indices(c["n"]))}
         if fn == "listslice":
             return {"ok": list(range(c["n"]))[slice(*c["s"])]}
+        if fn == "slicehash":
+            return {"ok": hash(slice(*c["parts"]))}
         r = make_range(c["r"], c["nargs"])
         if fn == "new":
             v = enc_range(r)

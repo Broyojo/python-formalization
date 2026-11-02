@@ -7,6 +7,7 @@ import PyLean.RangeSlice.Index
 import PyLean.RangeSlice.Slice
 import PyLean.RangeSlice.Iter
 import PyLean.RangeSlice.CApi
+import PyLean.RangeSlice.SliceHash
 
 /-!
 `range` and `slice`: `Objects/rangeobject.c`, `Objects/sliceobject.c`, CPython 3.15.2
@@ -122,7 +123,12 @@ def entries : List Entry := [
     statement := "PySlice_GetIndices returns -1 whenever it leaves an exception set."
     source := "Doc/c-api/slice.rst:32-40", status := .refuted
     prop := ``GetIndicesContract, thm := some ``getIndicesContract_refuted
-    bug := some "rangeslice-pyslice-getindices-success-with-exception" }
+    bug := some "rangeslice-pyslice-getindices-success-with-exception" },
+  { id := "rangeslice-slice-hash-eq", pyFile := "Objects/sliceobject.c", pyFns := ["slice_hash", "slice_richcompare"]
+    statement := "If the parts' __hash__ agrees with == (equal parts hash alike), equal slices have equal hashes, and a part whose hash raises makes both raise alike."
+    source := "invariant: the __hash__/__eq__ contract (Doc/reference/datamodel.rst, object.__hash__)", status := .proven
+    prop := ``SliceHash.SliceHashEq, thm := some ``SliceHash.sliceHashEq_proven
+    notes := "sliceHash is checked against hash(slice(a, b, c)) for int parts by the rangeslice difftest; sliceHashEq_needs_precondition shows the assumption is needed." }
 ]
 
 end PyLean.RangeSlice

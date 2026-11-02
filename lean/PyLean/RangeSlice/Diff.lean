@@ -1,5 +1,6 @@
 import PyLean.DiffCore
 import PyLean.RangeSlice.Model
+import PyLean.RangeSlice.SliceHash
 
 /-! Differential-testing handler for `rangeslice` cases (`"mod": "rangeslice"`).
 A range is `"r": [start, stop, step|null]` with `"nargs"` 1, 2 or 3; a slice is
@@ -73,8 +74,21 @@ def encIterRun (it : RIter) (k : Nat) : Except String Json := do
     | .error _ => throw "lastK failed"
   return Json.arr #[toJson it.typeName, toJson xs, toJson it'.lengthHint, encRange red, toJson tail]
 
+/-- `hash(n)` for an int: reduction modulo `2**61 - 1` with the sign kept, `-1` becoming `-2`
+(Objects/longobject.c `long_hash`). Only used to feed `sliceHash` in the difftest. -/
+def intHash (n : Int) : Int :=
+  let p : Int := 2 ^ 61 - 1
+  let h := if n ≥ 0 then n % p else -((-n) % p)
+  if h = -1 then -2 else h
+
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
+  | "slicehash" =>
+    let ps ← (← (← field j "parts").getArr?).toList.mapM Json.getInt?
+    match ps with
+    | [a, b, c] => return encPy toJson (SliceHash.sliceHash (fun n => .ok (intHash n)) ⟨0, a, b, c⟩)
+    | _ => throw "parts"
   | "indices" =>
     let s ← getSlice j
     return encPy encTriple (sliceIndices s (← getInt j "n"))
