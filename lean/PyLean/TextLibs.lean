@@ -20,6 +20,7 @@ import PyLean.TextLibs.EtreeRemove
 import PyLean.TextLibs.EtreeCopy
 import PyLean.TextLibs.ZoneinfoBefore
 import PyLean.TextLibs.SimpleQueueGet
+import PyLean.TextLibs.UrlQuery
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -33,6 +34,8 @@ so only the proofs reach them, not the difftest.
 `Lib/csv.py` are in `TextLibs/CsvModel.lean`, over fallible and re-entrant objects; `Sniffer` is not
 modelled.
 `Lib/re/_parser.py` is in `TextLibs/ReParse.lean`, without `\\N{...}` and non-ASCII group names.
+`Lib/urllib/parse.py` is in `TextLibs/UrlModel.lean`, with `unicodedata.normalize` and
+`ipaddress.ip_address` as parameters.
 -/
 
 namespace PyLean.TextLibs
@@ -48,6 +51,7 @@ open PyLean.TextLibs.Shlex
 open PyLean.TextLibs.Quopri
 open PyLean.TextLibs.Html
 open PyLean.TextLibs.Difflib
+open PyLean.TextLibs.Url
 
 /-- The integer routines `IntCodesRoundTrip` drives through `runPack` and `runUnpack`. -/
 def structIntFns : List String :=
@@ -1522,7 +1526,35 @@ def entries : List Entry := [
   { id := "textlibs-simplequeue-get-finite", pyFile := "Modules/_queuemodule.c", pyFns := []
     statement := "They agree for None and for finite timeouts within PyTime_t that are non-negative or at most -1 ns."
     source := "narrows textlibs-simplequeue-get-tiny-negative", status := .proven
-    prop := ``SQ.GetTwinsFinite, thm := some ``SQ.getTwinsFinite_proven }
+    prop := ``SQ.GetTwinsFinite, thm := some ``SQ.getTwinsFinite_proven },
+  { id := "textlibs-urllib-quote-from-bytes-paths", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["quote_from_bytes", "_byte_quoter_factory", "_Quoter.__init__", "_Quoter.__missing__"]
+    statement := "For every bytes or bytearray and every str or bytes safe, quote_from_bytes's three paths (all bytes safe: bs.decode(); below 200,000 bytes; chunks of isqrt(len)) all return each byte as itself when it is always safe or in safe's ASCII part, and as %XX otherwise; any other first argument raises TypeError."
+    source := "the implementation disagreeing with itself (fast, plain and chunked paths); quote's docstring", status := .proven
+    prop := ``Url.QuoteFromBytesPaths, thm := some ``Url.quoteFromBytesPaths_proven
+    notes := "_byte_quoter_factory's lru_cache and the _Quoter dict only memoize __missing__, so quoteByte stands for _Quoter(safe).__getitem__." },
+  { id := "textlibs-urllib-quote-bytes-round-trip", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["quote_from_bytes", "unquote_to_bytes", "_unquote_impl"]
+    statement := "unquote_to_bytes(quote_from_bytes(b, safe)) == b for every bytes b and every safe without '%'."
+    source := "round trip; docstrings of quote_from_bytes and unquote_to_bytes", status := .proven
+    prop := ``Url.QuoteBytesRoundTrip, thm := some ``Url.quoteBytesRoundTrip_proven
+    notes := "unquote_to_bytes gets a str, so it runs the UTF-8 encode and the split on b'%'; _unquote_impl is shown equal to a left-to-right scan (joinBits_split)." },
+  { id := "textlibs-urllib-quote-round-trip", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["quote", "unquote", "_generate_unquoted_parts", "_unquote_impl"]
+    statement := "For every str the encoding (None, utf-8, ascii, latin-1) can write, every str or bytes safe and all error handlers, quote %-escapes exactly the bytes of s.encode(encoding) that are neither always safe nor in safe, and when safe has no '%', unquote(quote(s, safe, encoding, errors), encoding, errors2) == s."
+    source := "round trip; docstrings of quote and unquote", status := .proven
+    prop := ``Url.QuoteStrRoundTrip, thm := some ``Url.quoteStrRoundTrip_proven
+    notes := "Uses the UTF-8, ASCII and Latin-1 codecs of PyLean.UnicodeObj; namereplace is out of scope for ascii/latin-1." },
+  { id := "textlibs-urllib-quote-plus-round-trip", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["quote_plus", "unquote_plus"]
+    statement := "For every str the encoding can write, every safe and all error handlers, quote_plus is quote(s, safe) without spaces and quote(s, safe + ' ') with spaces turned to '+', and when safe has neither '%' nor '+', unquote_plus(quote_plus(s, ...), encoding, errors2) == s."
+    source := "round trip; docstrings of quote_plus and unquote_plus", status := .proven
+    prop := ``Url.QuotePlusRoundTrip, thm := some ``Url.quotePlusRoundTrip_proven },
+  { id := "textlibs-urllib-qsl-round-trip", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["urlencode", "parse_qsl"]
+    statement := "parse_qsl(urlencode(pairs), keep_blank_values=True) == pairs for every list of str pairs without surrogates (as 2-tuples or as a mapping), and for every list of bytes pairs read back from urlencode(pairs).encode('ascii')."
+    source := "round trip; docs of urlencode and parse_qsl", status := .proven
+    prop := ``Url.QslRoundTrip, thm := some ``Url.qslRoundTrip_proven }
 ]
 
 end PyLean.TextLibs
