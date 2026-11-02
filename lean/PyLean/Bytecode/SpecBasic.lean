@@ -57,15 +57,15 @@ structure Lawful (om : ObjModel) : Prop where
   /-- `list_subscript`, `tuplesubscript`, `unicode_subscript` at an in-range
   non-negative int. -/
   list_item : ∀ ctx a items (i : Nat) v rt, rt.heap[a]? = some (.list items) → items[i]? = some v →
-    om.getItem ctx (.ref a) (.int i) rt = .ok v rt
+    (i : Int) ≤ PyLean.ssizeMax → om.getItem ctx (.ref a) (.int i) rt = .ok v rt
   /-- `list_subscript` at a negative int, which counts from the end. The fast path of
   `BINARY_OP_SUBSCR_LIST_INT` relies on this since 3.15. -/
   list_item_neg : ∀ ctx a items (i : Int) v rt, rt.heap[a]? = some (.list items) → i < 0 →
-    items[(i + items.size).toNat]? = some v → 0 ≤ i + items.size →
+    items[(i + items.size).toNat]? = some v → 0 ≤ i + items.size → PyLean.ssizeMin ≤ i →
     om.getItem ctx (.ref a) (.int i) rt = .ok v rt
   tuple_item : ∀ ctx a items (i : Nat) v rt, rt.heap[a]? = some (.tuple items) → items[i]? = some v →
-    om.getItem ctx (.ref a) (.int i) rt = .ok v rt
-  str_item : ∀ ctx s (i : Nat) c rt, s.toList[i]? = some c →
+    (i : Int) ≤ PyLean.ssizeMax → om.getItem ctx (.ref a) (.int i) rt = .ok v rt
+  str_item : ∀ ctx s (i : Nat) c rt, s.toList[i]? = some c → (i : Int) ≤ PyLean.ssizeMax →
     om.getItem ctx (.str s) (.int i) rt = .ok (.str (String.singleton c)) rt
   /-- `long_richcompare` and `unicode_compare_eq` give a bool. -/
   cmp_int : ∀ ctx a b op rt, op < 6 →

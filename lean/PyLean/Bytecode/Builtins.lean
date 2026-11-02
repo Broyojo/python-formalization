@@ -243,7 +243,8 @@ def mulSeqFallback (inplace : Bool) (l r : Val) : RM (Option Val) := do
 /-- `_PyEval_BinaryOps[nb]`: `binary_op1` with the reflected protocol, the
 in-place slot first for `NB_INPLACE_*`, and `PyObject_GetItem` for `NB_SUBSCR`. -/
 def binaryOpImpl (nb : Nat) (l r : Val) : RM Val := do
-  if nb == 26 then return ← om.getItem ctx l r
+  -- `_PyEval_BinaryOps[NB_SUBSCR]` is `PyObject_GetItem` itself, at this same depth.
+  if nb == 26 then return ← getItemImpl om ctx l r
   let inplace := nb ≥ 13
   let base := if inplace then nb - 13 else nb
   let name := opDunder base

@@ -9,6 +9,7 @@ import PyLean.Bytecode.GenObj
 import PyLean.Bytecode.SpecLocals
 import PyLean.Bytecode.SpecToBool
 import PyLean.Bytecode.SpecCompare
+import PyLean.Bytecode.LawfulBuiltin
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -332,10 +333,10 @@ def entries : List Entry := GenObj.entries ++ [
     notes := "Proof did not survive: needs the shift arithmetic of push_value below the overflow threshold in core Lean." },
   { id := "bytecode-lawful-builtin", pyFile := "Python/bytecodes.c"
     pyFns := []
-    statement := "The concrete object model satisfies Lawful, the laws every bytecode specialization theorem assumes."
-    source := "the hypothesis of bytecode-binary-op-* and bytecode-binary-op-subscr-list-int"
-    status := .open, prop := ``LawfulBuiltin
-    notes := "Not discharged: those eight theorems are conditional on it, and nothing here shows Lawful is satisfiable. The law subscr compares two fuel levels in the fuel-indexed model, so it may need restating. The difftest's quick mode tests specialized forms against CPython, which is evidence and not a proof." },
+    statement := "The concrete object model satisfies Lawful, the laws every bytecode specialization theorem assumes, so those theorems hold of the model the difftest runs."
+    source := "the hypothesis of bytecode-binary-op-*, bytecode-to-bool-specialized and bytecode-compare-*; Objects/abstract.c, Objects/longobject.c, Objects/floatobject.c, Objects/unicodeobject.c"
+    status := .proven, prop := ``LawfulBuiltin, thm := some ``lawfulBuiltin_proven
+    notes := "Two laws were restated to make them true: subscr needed the model's generic subscript to call PyObject_GetItem at the same depth, as _PyEval_BinaryOps[NB_SUBSCR] does, and the indexing laws now require the index to fit a Py_ssize_t, as indexSsize does." },
   { id := "bytecode-gap-str-percent", pyFile := "Objects/unicodeobject.c"
     pyFns := []
     statement := "str % args and bytes % args with a conversion in the template format their arguments."

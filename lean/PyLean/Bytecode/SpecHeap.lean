@@ -117,7 +117,11 @@ theorem subscrListInt_spec (e : Env) (hom : Lawful e.om) (hop : e.oparg = 26) (s
     · left; rw [guard_tos_int]; simp [hr]
     · right
       refine ⟨by rw [guard_tos_int]; simp [hr], ?_⟩
-      obtain ⟨sub, rfl, _⟩ := notCompactInt_false (by simpa using hr)
+      obtain ⟨sub, rfl, hcmp⟩ := notCompactInt_false (by simpa using hr)
+      have hsmall : PyLean.ssizeMin ≤ sub ∧ sub ≤ PyLean.ssizeMax := by
+        simp [isCompact] at hcmp
+        unfold PyLean.ssizeMin PyLean.ssizeMax
+        omega
       -- what `l` is
       have hl : Live regs.rt l := hlive l (by simp)
       by_cases hlr : ∃ a, l = .ref a
@@ -143,9 +147,9 @@ theorem subscrListInt_spec (e : Env) (hom : Lawful e.om) (hop : e.oparg = 26) (s
                 rw [hop, hom.subscr]
                 by_cases hs0 : sub < 0
                 · simp only [hs0, ↓reduceIte] at hv hneg
-                  exact hom.list_item_neg e.ctx a items sub v regs.rt ho hs0 hv (by omega)
+                  exact hom.list_item_neg e.ctx a items sub v regs.rt ho hs0 hv (by omega) hsmall.1
                 · simp only [hs0, ↓reduceIte] at hv
-                  have := hom.list_item e.ctx a items sub.toNat v regs.rt ho hv
+                  have := hom.list_item e.ctx a items sub.toNat v regs.rt ho hv (by omega)
                   rwa [Int.toNat_of_nonneg (by omega)] at this
               rw [generic_binop e regs rest _ _ v hg]
               apply fast_stk21
