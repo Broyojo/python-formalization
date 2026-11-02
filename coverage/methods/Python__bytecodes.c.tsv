@@ -135,7 +135,7 @@ Python/bytecodes.c	1326	1326	opcode:_BINARY_OP_SUBSCR_DICT	op(_BINARY_OP_SUBSCR_
 Python/bytecodes.c	1341	1341	opcode:_BINARY_OP_SUBSCR_CHECK_FUNC	op(_BINARY_OP_SUBSCR_CHECK_FUNC, (container, unused -- container, unused, getitem)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1356	1356	opcode:_BINARY_OP_SUBSCR_INIT_CALL	op(_BINARY_OP_SUBSCR_INIT_CALL, (container, sub, getitem -- new_frame)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1366	1366	opcode:BINARY_OP_SUBSCR_GETITEM	macro(BINARY_OP_SUBSCR_GETITEM) =	todo		changed-in-3.15:
-Python/bytecodes.c	1374	1374	opcode:LIST_APPEND	inst(LIST_APPEND, (list, unused[oparg-1], v -- list, unused[oparg-1])) {	todo		
+Python/bytecodes.c	1374	1374	opcode:LIST_APPEND	inst(LIST_APPEND, (list, unused[oparg-1], v -- list, unused[oparg-1])) {	modelled	bytecode-list-append	
 Python/bytecodes.c	1380	1380	opcode:SET_ADD	inst(SET_ADD, (set, unused[oparg-1], v -- set, unused[oparg-1])) {	todo		changed-in-3.15:
 Python/bytecodes.c	1399	1399	opcode:_SPECIALIZE_STORE_SUBSCR	specializing op(_SPECIALIZE_STORE_SUBSCR, (counter/1, container, sub -- container, sub)) {	todo		changed-in-3.15:
 Python/bytecodes.c	1411	1411	opcode:_STORE_SUBSCR	op(_STORE_SUBSCR, (v, container, sub -- )) {	todo		
@@ -229,7 +229,7 @@ Python/bytecodes.c	2393	2393	opcode:LOAD_FROM_DICT_OR_DEREF	inst(LOAD_FROM_DICT_
 Python/bytecodes.c	2424	2424	opcode:LOAD_DEREF	inst(LOAD_DEREF, ( -- value)) {	modelled	bytecode-cells	
 Python/bytecodes.c	2433	2433	opcode:STORE_DEREF	inst(STORE_DEREF, (v --)) {	modelled	bytecode-cells	
 Python/bytecodes.c	2438	2438	opcode:COPY_FREE_VARS	inst(COPY_FREE_VARS, (--)) {	todo		
-Python/bytecodes.c	2452	2452	opcode:BUILD_STRING	inst(BUILD_STRING, (pieces[oparg] -- str)) {	todo		changed-in-3.15:
+Python/bytecodes.c	2452	2452	opcode:BUILD_STRING	inst(BUILD_STRING, (pieces[oparg] -- str)) {	modelled	bytecode-build-string	
 Python/bytecodes.c	2459	2459	opcode:BUILD_INTERPOLATION	inst(BUILD_INTERPOLATION, (value, str, format[oparg & 1] -- interpolation)) {	todo		
 Python/bytecodes.c	2483	2483	opcode:BUILD_TEMPLATE	inst(BUILD_TEMPLATE, (strings, interpolations -- template)) {	todo		
 Python/bytecodes.c	2493	2493	opcode:BUILD_TUPLE	inst(BUILD_TUPLE, (values[oparg] -- tup)) {	modelled	bytecode-build-seq	
@@ -326,7 +326,7 @@ Python/bytecodes.c	3650	3650	opcode:POP_JUMP_IF_FALSE	macro(POP_JUMP_IF_FALSE) =
 Python/bytecodes.c	3652	3652	opcode:POP_JUMP_IF_NONE	macro(POP_JUMP_IF_NONE) = unused/1 + _IS_NONE + _POP_JUMP_IF_TRUE;	modelled	bytecode-branches	
 Python/bytecodes.c	3654	3654	opcode:POP_JUMP_IF_NOT_NONE	macro(POP_JUMP_IF_NOT_NONE) = unused/1 + _IS_NONE + _POP_JUMP_IF_FALSE;	modelled	bytecode-branches	
 Python/bytecodes.c	3656	3656	opcode:JUMP_BACKWARD_NO_INTERRUPT	replaced inst(JUMP_BACKWARD_NO_INTERRUPT, (--)) {	modelled	bytecode-jumps	
-Python/bytecodes.c	3666	3666	opcode:GET_LEN	inst(GET_LEN, (obj -- obj, len)) {	todo		
+Python/bytecodes.c	3666	3666	opcode:GET_LEN	inst(GET_LEN, (obj -- obj, len)) {	modelled	bytecode-get-len	
 Python/bytecodes.c	3675	3675	opcode:_MATCH_CLASS	op(_MATCH_CLASS, (subject, type, names -- attrs, s, tp, n)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	3699	3699	opcode:MATCH_CLASS	macro(MATCH_CLASS) = _MATCH_CLASS + POP_TOP + POP_TOP + POP_TOP;	todo		changed-in-3.15:
 Python/bytecodes.c	3701	3701	opcode:MATCH_MAPPING	inst(MATCH_MAPPING, (subject -- subject, res)) {	todo		
@@ -499,7 +499,7 @@ Python/bytecodes.c	5807	5807	opcode:_MAKE_FUNCTION	op(_MAKE_FUNCTION, (codeobj_s
 Python/bytecodes.c	5824	5824	opcode:MAKE_FUNCTION	macro(MAKE_FUNCTION) = _MAKE_FUNCTION + POP_TOP;	todo		changed-in-3.15:
 Python/bytecodes.c	5826	5826	opcode:SET_FUNCTION_ATTRIBUTE	inst(SET_FUNCTION_ATTRIBUTE, (attr_st, func_in -- func_out)) {	todo		changed-in-3.15:
 Python/bytecodes.c	5839	5839	opcode:RETURN_GENERATOR	inst(RETURN_GENERATOR, (-- res)) {	todo		changed-in-3.15:
-Python/bytecodes.c	5863	5863	opcode:BUILD_SLICE	inst(BUILD_SLICE, (args[oparg] -- slice)) {	todo		
+Python/bytecodes.c	5863	5863	opcode:BUILD_SLICE	inst(BUILD_SLICE, (args[oparg] -- slice)) {	modelled	bytecode-build-slice	
 Python/bytecodes.c	5873	5873	opcode:CONVERT_VALUE	inst(CONVERT_VALUE, (value -- result)) {	todo		
 Python/bytecodes.c	5883	5883	opcode:FORMAT_SIMPLE	inst(FORMAT_SIMPLE, (value -- res)) {	todo		
 Python/bytecodes.c	5899	5899	opcode:FORMAT_WITH_SPEC	inst(FORMAT_WITH_SPEC, (value, fmt_spec -- res)) {	todo		changed-in-3.15:
