@@ -350,4 +350,61 @@ theorem dispatchRules_proven : DispatchRules := by
     simp [execOp, DELETE_SUBSCR, stk, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM,
       monadLift, MonadLift.monadLift, pure, EStateM.pure, hs]
 
+/-- The attribute opcodes take the name from `co_names`: `STORE_ATTR` and `DELETE_ATTR` at
+`oparg`, `LOAD_ATTR` at `oparg >> 1`. `STORE_ATTR` calls `PyObject_SetAttr(owner, name, v)` and
+`DELETE_ATTR` `PyObject_DelAttr(owner, name)`, popping their operands either way. `LOAD_ATTR`
+pushes `getattr(owner, name)`, or with the low bit set the method form `attr, self_or_null` that
+`CALL` expects, with `self_or_null` on top; a failure pops `owner`. For any object model. -/
+def AttrRules : Prop := ∀ (e : Env) (regs : Regs) (c : Code) (owner v : Val) (rest : List Val),
+  e.P[regs.frame.code]? = some c →
+    (∀ name r, c.names[e.oparg]? = some name → e.om.setAttr e.ctx owner name v regs.rt = r →
+      execOp e .STORE_ATTR ⟨regs, owner :: v :: rest⟩ = match r with
+        | .ok _ rt => .ok () ⟨{ regs with rt := rt }, rest⟩
+        | .error y rt => .error y ⟨{ regs with rt := rt }, rest⟩) ∧
+    (∀ name r, c.names[e.oparg]? = some name → e.om.delAttr e.ctx owner name regs.rt = r →
+      execOp e .DELETE_ATTR ⟨regs, owner :: rest⟩ = match r with
+        | .ok _ rt => .ok () ⟨{ regs with rt := rt }, rest⟩
+        | .error y rt => .error y ⟨{ regs with rt := rt }, rest⟩) ∧
+    (∀ name r, c.names[e.oparg >>> 1]? = some name → e.oparg &&& 1 = 0 →
+      e.om.getAttr e.ctx owner name regs.rt = r →
+      execOp e .LOAD_ATTR ⟨regs, owner :: rest⟩ = match r with
+        | .ok a rt => .ok () ⟨{ regs with rt := rt }, a :: rest⟩
+        | .error y rt => .error y ⟨{ regs with rt := rt }, rest⟩) ∧
+    (∀ name r, c.names[e.oparg >>> 1]? = some name → e.oparg &&& 1 = 1 →
+      e.om.getMethod e.ctx owner name regs.rt = r →
+      execOp e .LOAD_ATTR ⟨regs, owner :: rest⟩ = match r with
+        | .ok (a, slf) rt => .ok () ⟨{ regs with rt := rt }, slf :: a :: rest⟩
+        | .error y rt => .error y ⟨{ regs with rt := rt }, rest⟩)
+
+theorem attrRules_proven : AttrRules := by
+  intro e regs c owner v rest hc
+  have hco := getCode_ok (P := e.P) (r := regs) hc
+  have nm : ∀ i name, c.names[i]? = some name → getName e i regs = .ok name regs := by
+    intro i name h
+    simp [getName, bind, EStateM.bind, hco, h, pure, EStateM.pure]
+  refine ⟨fun name r hn h => ?_, fun name r hn h => ?_, fun name r hn h0 h => ?_, fun name r hn h1 h => ?_⟩
+  · subst h
+    cases hs : e.om.setAttr e.ctx owner name v regs.rt <;>
+    simp [execOp, STORE_ATTR, _SPECIALIZE_STORE_ATTR, _STORE_ATTR, stk, popN, pushAll, bind, EStateM.bind,
+      BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift, pure, EStateM.pure, nm _ _ hn, hs]
+  · subst h
+    cases hs : e.om.delAttr e.ctx owner name regs.rt <;>
+    simp [execOp, DELETE_ATTR, stk, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift,
+      MonadLift.monadLift, pure, EStateM.pure, nm _ _ hn, hs]
+  · subst h
+    have hb : (e.oparg &&& 1 != 0) = false := by simp [h0]
+    cases hs : e.om.getAttr e.ctx owner name regs.rt <;>
+    simp [execOp, LOAD_ATTR, _SPECIALIZE_LOAD_ATTR, _LOAD_ATTR, stk, popN, pushAll, bind, EStateM.bind,
+      BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift, pure, EStateM.pure, nm _ _ hn, hs, hb, h0]
+  · subst h
+    have hb : (e.oparg &&& 1 != 0) = true := by simp [h1]
+    cases hs : e.om.getMethod e.ctx owner name regs.rt with
+    | ok p rt =>
+      obtain ⟨a, slf⟩ := p
+      simp [execOp, LOAD_ATTR, _SPECIALIZE_LOAD_ATTR, _LOAD_ATTR, stk, popN, pushAll, bind, EStateM.bind,
+        BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift, pure, EStateM.pure, nm _ _ hn, hs, hb, h1]
+    | error y rt =>
+      simp [execOp, LOAD_ATTR, _SPECIALIZE_LOAD_ATTR, _LOAD_ATTR, stk, popN, pushAll, bind, EStateM.bind,
+        BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift, pure, EStateM.pure, nm _ _ hn, hs, hb, h1]
+
 end PyLean.Bytecode

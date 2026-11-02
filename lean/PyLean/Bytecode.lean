@@ -29,6 +29,11 @@ open PyLean.Registry
 def op (n : String) : String := "opcode:" ++ n
 
 def entries : List Entry := GenObj.entries ++ [
+  { id := "bytecode-attr-dispatch", pyFile := "Python/bytecodes.c"
+    pyFns := [op "STORE_ATTR", op "_STORE_ATTR", op "DELETE_ATTR", op "LOAD_ATTR", op "_LOAD_ATTR"]
+    statement := "STORE_ATTR, DELETE_ATTR and LOAD_ATTR take the name from co_names, call PyObject_SetAttr, PyObject_DelAttr and getattr (or the method form with self_or_null on top), and pop their operands on success and failure, for any object model."
+    source := "Python/bytecodes.c _STORE_ATTR, DELETE_ATTR, _LOAD_ATTR"
+    status := .proven, prop := ``AttrRules, thm := some ``attrRules_proven },
   { id := "bytecode-dispatch", pyFile := "Python/bytecodes.c"
     pyFns := [op "CONTAINS_OP", op "_CONTAINS_OP", op "STORE_SUBSCR", op "_STORE_SUBSCR", op "DELETE_SUBSCR"]
     statement := "CONTAINS_OP asks the container (PySequence_Contains(c, x)) and inverts for not in, keeping both operands when the lookup raises; STORE_SUBSCR and DELETE_SUBSCR call PyObject_SetItem(c, k, v) and PyObject_DelItem(c, k) and pop their operands either way; for any object model."
