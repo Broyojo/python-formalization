@@ -3,7 +3,8 @@ import PyLean.MathInt.FltSum
 /-!
 # Open properties of `Modules/mathmodule.c`
 
-Stated, smoke-tested against CPython 3.15.2, checked by the difftest, not yet proven.
+Stated, smoke-tested against CPython 3.15.2 and checked by the difftest. `FsumCorrectlyRounded` is
+still open; `RemainderExact` is proven in `FltRemainder`.
 -/
 
 namespace PyLean.MathInt
@@ -30,7 +31,7 @@ def FsumCorrectlyRounded : Prop :=
 /-- `math.remainder(x, y)` for finite `x` and finite nonzero `y` is exactly `x - n*y` with `n`
 the integer nearest `x / y`, ties to even, and a zero result has the sign of `x`
 (Doc/library/math.rst, "remainder": "the result of this operation is always exactly
-representable"). The proof needs the Sterbenz argument of the comment at
+representable"). Proven in `FltRemainder` by the argument of the comment at
 mathmodule.c:545-563. -/
 def RemainderExact : Prop :=
   ∀ x y : F64, x.isFinite = true → y.isFinite = true → y.isZero = false →

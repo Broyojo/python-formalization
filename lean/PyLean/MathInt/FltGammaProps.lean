@@ -249,7 +249,7 @@ theorem math1a_valueError_iff (f : CFun1) (msg : String) (x : F64)
     (h : RangeE (f x).2 ∨ (f x).2 = .edom) :
     (math_1a (.float x) f (some msg)).raises "ValueError" ↔ (f x).2 = .edom := by
   obtain ⟨_, rules⟩ := math1aRules_proven f (some msg) (.float x)
-  obtain ⟨hz, hd, hr⟩ := rules x rfl
+  obtain ⟨hz, hd, hr, _⟩ := rules x rfl
   constructor
   · intro hv
     rcases h with (h | h) | h
@@ -356,7 +356,7 @@ theorem gammaDoc_proven : GammaDoc := by
       rw [lt_of_finite hf h20.1]; simp; grind
     have hm : m_tgamma L x = (cInf, .erange) := by
       simp [m_tgamma, hf, hz, hneg, hle, habs, hsmall, hgt]
-    have := ((math1aRules_proven (m_tgamma L) (some gmsg) (.float x)).2 _ rfl).2.2
+    have := ((math1aRules_proven (m_tgamma L) (some gmsg) (.float x)).2 _ rfl).2.2.1
     rw [hm] at this
     unfold math_gamma
     rw [this rfl]

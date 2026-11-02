@@ -190,7 +190,7 @@ theorem math1_wrap {w f : CFun1} (hw : WrapSpec w f) (hs : SaneLog f) {o : Arg} 
     (x.isNaN = true → math_1 o w false msg = .ok x) ∧
     (x = F64.inf false → math_1 o w false msg = .ok x) := by
   have rules := (math1Rules_proven w false msg o).2 x hx
-  obtain ⟨_, hnan, hinf, _, _, hok⟩ := rules
+  obtain ⟨_, hnan, hinf, _, _, hok, _⟩ := rules
   refine ⟨fun hf hp => ?_, fun hn hle => ?_, fun hn => ?_, fun he => ?_⟩
   · rw [hw.pos x hf hp] at hok
     obtain ⟨h1, h2⟩ := hs x hf hp
