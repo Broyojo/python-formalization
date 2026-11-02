@@ -1673,24 +1673,30 @@ def intrinsic2Impl (_ : Frame) (n : Nat) (_ _ : Val) : RM Val := do
   | 0 => raiseS "SystemError" "invalid intrinsic function"
   | _ => fault "intrinsic not modelled"
 
+/-- `PyCoro_CheckExact(o) || gen_is_coroutine(o)`, `Objects/genobject.c:1225-1235`: a coroutine,
+or a plain generator whose code has `CO_ITERABLE_COROUTINE`, as `types.coroutine` sets it. -/
+def isCoroutineLike (o : Val) : RM Bool := do
+  match ← genKindOf o, o with
+  | some .coro, _ => pure true
+  | some .gen, .ref a => pure (flagSet (← getCodeR P (← getGen a).frame.code).flags coIterableCoroutine)
+  | _, _ => pure false
+
 /-- `_PyCoro_GetAwaitableIter`, `Objects/genobject.c:1245-1284`. The coroutine test comes
 first. `%T` omits the module for `__main__` and `builtins`, the only modules here. -/
 def awaitableIter (o : Val) : RM Val := do
-  match ← genKindOf o with
-  | some .coro => pure o
-  | _ =>
-    match ← callDunder om ctx o "__await__" [] with
-    | some r =>
-      if (← genKindOf r) == some .coro then
-        typeError s!"{← tpName o}.__await__() must return an iterator, not coroutine"
-      if !(← om.isIterator r) then
-        typeError s!"{← tpName o}.__await__() must return an iterator, not {← tpName r}"
-      pure r
-    | none => typeError s!"'{← tpName o}' object can't be awaited"
+  if ← isCoroutineLike P o then return o
+  match ← callDunder om ctx o "__await__" [] with
+  | some r =>
+    if ← isCoroutineLike P r then
+      typeError s!"{← tpName o}.__await__() must return an iterator, not coroutine"
+    if !(← om.isIterator r) then
+      typeError s!"{← tpName o}.__await__() must return an iterator, not {← tpName r}"
+    pure r
+  | none => typeError s!"'{← tpName o}' object can't be awaited"
 
 /-- `_PyEval_GetAwaitable`, `Python/ceval.c:3645-3667`. -/
 def getAwaitableImpl (o : Val) (oparg : Nat) : RM Val := do
-  let r ← tryExc (awaitableIter om ctx o) fun e => do
+  let r ← tryExc (awaitableIter P om ctx o) fun e => do
     if (← userLookup (← typeOf o) "__await__").isNone && (← genKindOf o) != some .coro then
       let t ← tpName o
       if oparg == 1 then
@@ -1720,7 +1726,7 @@ def getANextImpl (o : Val) : RM Val := do
   | none =>
     typeError s!"'async for' requires an iterator with __anext__ method, got {← tpName o}"
   | some n =>
-    tryExc (awaitableIter om ctx n) fun e => do
+    tryExc (awaitableIter P om ctx n) fun e => do
       if ← givenMatches e 8 (.cls "TypeError") then
         let err ← newExc (.cls "TypeError")
           [.str s!"'async for' received an invalid object from __anext__: {← tpName n}"]
@@ -1890,8 +1896,8 @@ def mkOM (P : Program) : Nat → ObjModel
       isMapping := fun v => isMappingImpl v
       isSequence := fun v => isSequenceImpl v
       getAIter := fun ctx o => getAIterImpl om ctx o
-      getANext := fun ctx o => getANextImpl om ctx o
-      getAwaitable := fun ctx o n => getAwaitableImpl om ctx o n
+      getANext := fun ctx o => getANextImpl P om ctx o
+      getAwaitable := fun ctx o n => getAwaitableImpl P om ctx o n
       dictUpdate := fun ctx d o => dictMergeImpl om ctx 1 d o
       dictMerge := fun ctx d o => dictMergeImpl om ctx 2 d o
       listExtend := fun ctx l o => do

@@ -420,6 +420,16 @@ def p_virtual(r):
     if k < 0.6:
         return (head + "def g(s):\n    r = yield from s\n    yield 'end', r\n"
                 + f"print(list(g({a})), list(g({b})))\n"
+                # what the exhausted path leaves on the stack shows only with values below it
+                + "def h(s):\n    for n in [1, 2]:\n        yield from s\n        yield n\n    t = [0, (yield from s), 1]\n    yield t\n    yield [(yield from s), (yield from s)]\n"
+                + f"print(list(h({a})), list(h({b})))\n"
+                # a sub-iterator that ends on a throw: `CLEANUP_THROW` takes the value out of the `StopIteration`
+                + "def inner():\n    try:\n        yield 1\n    except ValueError:\n        return 5\n"
+                + "class T:\n    def __iter__(self):\n        return self\n    def __next__(self):\n        return 1\n    def throw(self, *a):\n        raise StopIteration(7)\n"
+                + "def w(s):\n    q = [0, (yield from s), 2]\n    yield q\n"
+                + guarded("x = w(inner())\nprint(next(x))\nprint(x.throw(ValueError('t')))") + "\n"
+                + guarded("x = w(T())\nprint(next(x))\nprint(x.throw(ValueError('t')))") + "\n"
+                + guarded("x = w(T())\nprint(next(x))\nprint(x.throw(KeyError('k')))") + "\n"
                 + guarded(f"x = g({a})\nprint(next(x))\nprint(x.send({r.choice(['None', '5'])}))\nprint(x.gi_yieldfrom is None, x.gi_running, x.gi_suspended)")
                 + "\n" + guarded(f"x = g({b})\nprint(next(x))\nprint(x.throw(ValueError('t')))")
                 + "\n" + guarded(f"x = g({a})\nprint(next(x))\nprint(x.close(), x.gi_suspended)")
@@ -472,6 +482,16 @@ def p_fastpath(r):
         "def t(o):\n    return 1 if o else 0\nclass E:\n    def __len__(self):\n        return 0\nprint(t(M()), t(M()), t(E()))\n"
         "b = M().m\nprint(b(1), b(1, 2), b(a=1), b(1, b=3))\n"
         "M.__len__ = lambda self: 0\nprint(t(M()))\n",
+        # `fixup_getiter`: a coroutine is fine in an iterable coroutine and refused in a plain generator
+        "async def c():\n    return 1\ndef itercoro_g(x):\n    r = yield from x\n    yield r\ndef plain(x):\n    r = yield from x\n    yield r\n"
+        + guarded("print(list(itercoro_g(c())))") + "\n" + guarded("print(list(plain(c())))") + "\n" + guarded("print(list(itercoro_g([1, 2])))") + "\n"
+        + "def drive(o):\n    out = []\n    try:\n        while True:\n            out.append(o.send(None))\n    except StopIteration as e:\n        return out, e.value\n"
+        + "def itercoro_h():\n    yield 7\n    return 8\nasync def a():\n    return await itercoro_h()\n" + guarded("print(drive(a()))") + "\n",
+        # `LOAD_COMMON_CONSTANT` only feeds the `is` test that picks the inlined call for a
+        # generator argument, so a wrong constant shows only with the name rebound
+        "def f(x):\n    return set(i for i in x), list(i for i in x), tuple(i for i in x), all(i for i in x), any(i for i in x)\n"
+        "a, *c = f([1, 1, 0])\nprint(sorted(a), c)\n"
+        "set = list\nlist = tuple\ntuple = sorted\nall = any\nany = len\n" + guarded("print(f([1, 1, 0]))") + "\n",
     ]
     return r.choice(pool)
 
@@ -556,6 +576,14 @@ def dump(co, table):
     return idx
 
 
+def mark_iterable_coroutines(co):
+    """Set `CO_ITERABLE_COROUTINE` on every function named `itercoro_*`, as `types.coroutine`
+    does: these programs cannot import. Both sides run the marked code."""
+    consts = tuple(mark_iterable_coroutines(c) if isinstance(c, types.CodeType) else c for c in co.co_consts)
+    flags = co.co_flags | 0x100 if co.co_name.startswith("itercoro_") else co.co_flags
+    return co.replace(co_consts=consts, co_flags=flags)
+
+
 def gen_case(rng):
     fam = rng.choice(FAMILIES)
     src = fam(rng)
@@ -563,7 +591,7 @@ def gen_case(rng):
         import warnings
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            co = compile(src, "<prog>", "exec")
+            co = mark_iterable_coroutines(compile(src, "<prog>", "exec"))
     except SyntaxError:
         exclude("syntax-error")
         return None
@@ -580,7 +608,7 @@ def run_python(case):
     g = {"__name__": "__main__"}
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        co = compile(case["src"], "<prog>", "exec")
+        co = mark_iterable_coroutines(compile(case["src"], "<prog>", "exec"))
         with contextlib.redirect_stdout(buf):
             try:
                 exec(co, g)
