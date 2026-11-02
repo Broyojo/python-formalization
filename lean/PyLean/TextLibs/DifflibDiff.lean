@@ -1,5 +1,5 @@
 import PyLean.DiffCore
-import PyLean.TextLibs.DifflibModel
+import PyLean.TextLibs.DifflibObj
 
 /-! `difflib.*` difftest cases; see `difftest/textlibs_diff.py`. -/
 
@@ -61,8 +61,91 @@ def step (s : SM) (c : Json) : Except String (SM × Json) := do
     | (s, .error e) => return (s, excJ e)
   | _ => throw s!"unknown op {op}"
 
+/-- An element of `difflib.obj`: its value, its `__hash__`, which raises if `none`, and the elements its
+`__eq__` raises on. An element is its index in the table, so `is` is equality of indices. -/
+structure El where
+  v : Nat
+  h : Option Nat
+  bad : List Nat
+
+def elOps (t : Array El) : Ops Nat where
+  hash i :=
+    match (t.getD i ⟨0, none, []⟩).h with
+    | some h => .ok h
+    | none => .error (.valueError s!"hash {i}")
+  eq i j :=
+    let x := t.getD i ⟨0, none, []⟩
+    if x.bad.contains j then .error (.valueError s!"eq {i} {j}")
+    else .ok (x.v == (t.getD j ⟨0, none, []⟩).v)
+  same i j := i == j
+
+def stepO (o : Ops Nat) (s : SMO Nat) (c : Json) : Except String (SMO Nat × Json) := do
+  let op ← getStr c "op"
+  match op with
+  | "blocks" =>
+    match getBlocksO o s with
+    | .ok (s, r) => return (s, Json.arr (r.map tJ).toArray)
+    | .error e => return (s, excJ e)
+  | "opcodes" =>
+    match getOpcodesO o s with
+    | (s, .ok r) => return (s, Json.arr (r.map opJ).toArray)
+    | (s, .error e) => return (s, excJ e)
+  | "grouped" =>
+    match getGroupedO o s (← getNat c "n") with
+    | (s, .ok r) => return (s, Json.arr (r.map fun g => Json.arr (g.map opJ).toArray).toArray)
+    | (s, .error e) => return (s, excJ e)
+  | "ratio" =>
+    match ratioPairO o s with
+    | .ok (s, m, l) => return (s, Json.arr #[toJson m, toJson l])
+    | .error e => return (s, excJ e)
+  | "quick" =>
+    match quickPairO o s with
+    | (s, .ok (m, l)) => return (s, Json.arr #[toJson m, toJson l])
+    | (s, .error e) => return (s, excJ e)
+  | "real" => return (s, Json.arr #[toJson (min s.a.length s.b.length), toJson (s.a.length + s.b.length)])
+  | "longest" =>
+    match findLongestO o s (← getNat c "alo") (← getNat c "ahi") (← getNat c "blo") (← getNat c "bhi") with
+    | .ok r => return (s, tJ r)
+    | .error e => return (s, excJ e)
+  | "seq1" => return (setSeq1O s (← nats (← field c "x")) (← getBool c "same"), Json.null)
+  | "seq2" =>
+    match setSeq2O o s (← nats (← field c "x")) (← getBool c "same") with
+    | (s, .ok ()) => return (s, Json.null)
+    | (s, .error e) => return (s, excJ e)
+  | "seqs" =>
+    match setSeqsO o s (← nats (← field c "x")) (← nats (← field c "y")) (← getBool c "same") (← getBool c "same2") with
+    | (s, .ok ()) => return (s, Json.null)
+    | (s, .error e) => return (s, excJ e)
+  | _ => throw s!"unknown op {op}"
+
+def elOf (j : Json) : Except String El := do
+  let v ← getNat j "v"
+  let h : Option Nat ← match j.getObjVal? "h" with
+    | .ok Json.null => pure none
+    | .ok x => pure (some (← x.getNat?))
+    | .error _ => pure none
+  return ⟨v, h, ← nats (← field j "bad")⟩
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
+  | "difflib.obj" =>
+    let t ← ((← (← field j "elems").getArr?).mapM elOf)
+    let o := elOps t
+    let junk ← nats (← field j "junk")
+    let boom ← nats (← field j "boom")
+    let f : Nat → Py Bool := fun x =>
+      if boom.contains x then .error (.valueError "boom") else .ok (junk.contains (t.getD x ⟨0, none, []⟩).v)
+    let isjunk := if ← getBool j "hasjunk" then some f else none
+    match makeO o isjunk (← nats (← field j "a")) (← nats (← field j "b")) (← getBool j "auto") with
+    | .error e => return encPy (fun (x : Json) => x) (.error e)
+    | .ok s =>
+      let mut s := s
+      let mut out : Array Json := #[]
+      for c in (← (← field j "ops").getArr?) do
+        let (s', r) ← stepO o s c
+        s := s'
+        out := out.push r
+      return encPy (fun (x : Json) => x) (.ok (Json.arr out))
   | "difflib.seq" =>
     let junk ← nats (← field j "junk")
     let boom ← nats (← field j "boom")

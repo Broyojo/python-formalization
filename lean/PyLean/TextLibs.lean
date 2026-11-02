@@ -10,8 +10,7 @@ import PyLean.TextLibs.ShlexProps
 import PyLean.TextLibs.TextwrapProps
 import PyLean.TextLibs.QuopriProps
 import PyLean.TextLibs.HtmlProps
-import PyLean.TextLibs.DifflibQuick
-import PyLean.TextLibs.DifflibLongest
+import PyLean.TextLibs.DifflibObjLaws
 import PyLean.TextLibs.CsvSniffProps
 
 /-!
@@ -1249,40 +1248,58 @@ def entries : List Entry := [
     source := "comment at Lib/html/__init__.py:110", status := .proven
     prop := ``NamedLongest, thm := some ``namedLongest_proven },
   { id := "textlibs-difflib-find-longest", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.find_longest_match", "SequenceMatcher.__chain_b"]
-    statement := "With no junk and nothing popular, the result is a longest match in the box, the earliest in a of those, the earliest in b of those, for every box in range."
+    statement := "For any lawful elements, with no junk and nothing popular, the result is a longest match in the box under __eq__, the earliest in a of those, the earliest in b of those, for every box in range."
     source := "docstring of find_longest_match", status := .proven
-    prop := ``FindLongestDoc, thm := some ``findLongestDoc_proven },
+    prop := ``FindLongestDocO, thm := some ``findLongestDocO_proven },
   { id := "textlibs-difflib-blocks", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.get_matching_blocks", "SequenceMatcher.find_longest_match", "SequenceMatcher.__chain_b"]
-    statement := "The blocks are real matches, in order in both sequences, do not touch, and end with the sentinel, for any isjunk."
+    statement := "For any lawful elements and any isjunk, the blocks are real matches under __eq__, in order in both sequences, do not touch, and end with the sentinel."
     source := "docstring of get_matching_blocks", status := .proven
-    prop := ``BlocksLaw, thm := some ``blocksLaw_proven },
+    prop := ``BlocksLawO, thm := some ``blocksLawO_proven },
   { id := "textlibs-difflib-opcodes", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.get_opcodes"]
-    statement := "The opcodes run from 0 to the ends of both sequences with no gap, and each tag means what it says, for any isjunk."
+    statement := "For any lawful elements and any isjunk, the opcodes run from 0 to the ends of both sequences with no gap, and each tag means what it says."
     source := "docstring of get_opcodes", status := .proven
-    prop := ``OpcodesLaw, thm := some ``opcodesLaw_proven },
+    prop := ``OpcodesLawO, thm := some ``opcodesLawO_proven },
   { id := "textlibs-difflib-grouped", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.get_grouped_opcodes"]
-    statement := "On a new matcher, every change is in a group, in order, and no equal in a group exceeds 2n."
+    statement := "On a new matcher over lawful elements, every change is in a group, in order, and no equal in a group exceeds 2n."
     source := "docstring of get_grouped_opcodes", status := .proven
-    prop := ``GroupedLaw, thm := some ``groupedLaw_proven },
+    prop := ``GroupedLawO, thm := some ``groupedLawO_proven },
   { id := "textlibs-difflib-grouped-cache", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.get_grouped_opcodes", "SequenceMatcher.get_opcodes"]
     statement := "get_grouped_opcodes does not change what get_opcodes returns."
     source := "docstring of get_opcodes", status := .refuted
     prop := ``GroupedKeepsOpcodes, thm := some ``groupedKeepsOpcodes_refuted
     bug := some "textlibs-difflib-grouped-opcodes-mutates-cache" },
   { id := "textlibs-difflib-ratio-bound", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.ratio", "SequenceMatcher.real_quick_ratio"]
-    statement := "The matches of ratio number at most the shorter length, which real_quick_ratio uses."
+    statement := "For lawful elements, the matches of ratio number at most the shorter length, which real_quick_ratio uses."
     source := "docstring of real_quick_ratio", status := .proven
-    prop := ``RatioBound, thm := some ``ratioBound_proven
+    prop := ``RatioBoundO, thm := some ``ratioBoundO_proven
     notes := "Counts of matches, not the float, which the difftest compares." },
   { id := "textlibs-difflib-quick-bound", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.quick_ratio"]
-    statement := "The matches of quick_ratio are at least those of ratio."
+    statement := "For lawful elements, the matches of quick_ratio are at least those of ratio."
     source := "docstring of quick_ratio", status := .proven
-    prop := ``QuickBound, thm := some ``quickBound_proven
+    prop := ``QuickBoundO, thm := some ``quickBoundO_proven
     notes := "Counts of matches, not the float, which the difftest compares." },
   { id := "textlibs-difflib-set-seqs", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.__init__", "SequenceMatcher.set_seqs", "SequenceMatcher.set_seq1", "SequenceMatcher.set_seq2"]
-    statement := "set_seqs with new objects leaves what __init__ would on those sequences, or raises what it would."
+    statement := "For any elements at all, set_seqs with new objects leaves what __init__ would on those sequences, or raises what it would."
     source := "the implementation disagreeing with itself", status := .proven
-    prop := ``SetSeqsFresh, thm := some ``setSeqsFresh_proven }
+    prop := ``SetSeqsFreshO, thm := some ``setSeqsFreshO_proven },
+  { id := "textlibs-difflib-chain-hash-fail", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.__chain_b", "SequenceMatcher.set_seq2"]
+    statement := "When __hash__ of an element of b raises after lawful elements, the exception comes out, and b is set, the caches cleared, bjunk and bpopular the old ones, and b2j has exactly the indices before it."
+    source := "Lib/difflib.py:278-283: b2j is assigned before its loop", status := .proven
+    prop := ``ChainHashFail, thm := some ``chainHashFail_proven },
+  { id := "textlibs-difflib-longest-eq-fail", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.find_longest_match"]
+    statement := "What == raises in the first extension loop comes out of find_longest_match."
+    source := "invariant: failures pass through", status := .proven
+    prop := ``LongestEqFail, thm := some ``longestEqFail_proven },
+  { id := "textlibs-difflib-longest-hash-fail", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.find_longest_match"]
+    statement := "The first element of the box in a whose __hash__ raises decides the exception of find_longest_match, whatever follows it."
+    source := "invariant: failures pass through, in order", status := .proven
+    prop := ``LongestHashFail, thm := some ``longestHashFail_proven },
+  { id := "textlibs-difflib-get-opcodes-empty-cache", pyFile := "Lib/difflib.py", pyFns := ["SequenceMatcher.get_opcodes"]
+    statement := "A second get_opcodes after one that raised raises the same exception."
+    source := "the docstring of get_opcodes, and get_matching_blocks, which does", status := .refuted
+    prop := ``OpcodesFailAgain, thm := some ``opcodesFailAgain_refuted
+    bug := some "textlibs-difflib-get-opcodes-empty-cache"
+    notes := "self.opcodes = answer = [] runs ahead of get_matching_blocks, so the second call returns []." }
 ]
 
 end PyLean.TextLibs

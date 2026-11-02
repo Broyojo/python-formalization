@@ -434,7 +434,7 @@ theorem make_plain (a b : List Nat) (auto : Bool) (s : SM) (hp : auto = false �
     · have : ¬ b.length ≥ 200 := by omega
       simp [this]
   have h' := make_ok _ _ _ _ _ h
-  simp only [chainB, hc, Bool.false_eq_true, if_false, Prod.mk.injEq, and_true] at h'
+  simp only [chainB, junkStep, hc, Bool.false_eq_true, if_false, Prod.mk.injEq, and_true] at h'
   subst h'
   simp
 

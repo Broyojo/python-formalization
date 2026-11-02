@@ -2159,7 +2159,7 @@ class ReArea:
             if roll < 0.45:
                 parts.append(r.choice(cls.CHARS))
             elif roll < 0.75:
-                a = r.choice([0x30, 0x41, 0x61, 0xc0, 0x100, 0x370, 0x400, 0x4e00, 0xfb00, 0xff00, 0xffe0, 0x10400, 0x1f600])
+                a = r.choice([0x30, 0x41, 0x61, 0xc0, 0x100, 0x370, 0x400, 0x4e00, 0xa7c0, 0xfb00, 0xff00, 0xffe0, 0x10400, 0x16ea0, 0x1f600])
                 # only ranges that start near the top of the BMP may cross it: one starting low
                 # costs 65536 table lookups and reaches no other branch
                 b = a + r.choice([0, 1, 2, 5, 25, 26, 100, 300] + ([70000] if a >= 0xff00 else []))
@@ -3021,7 +3021,144 @@ class DifflibArea:
         return [r.randrange(m) for _ in range(r.randint(0, 14))]
 
     @classmethod
+    def gen_ops(cls, r, a, b, seq):
+        ops = []
+        for _ in range(r.randint(1, 6)):
+            k = r.random()
+            if k < 0.25:
+                ops.append({"op": "opcodes"})
+            elif k < 0.4:
+                ops.append({"op": "blocks"})
+            elif k < 0.55:
+                ops.append({"op": "grouped", "n": r.choice([0, 1, 2, 3])})
+            elif k < 0.7:
+                ops.append({"op": r.choice(["ratio", "quick", "real"])})
+            elif k < 0.87:
+                la, lb = len(a), len(b)
+                x = sorted([r.randint(0, la), r.randint(0, la)])
+                y = sorted([r.randint(0, lb), r.randint(0, lb)])
+                ops.append({"op": "longest", "alo": x[0], "ahi": x[1], "blo": y[0], "bhi": y[1]})
+            elif k < 0.93:
+                ops.append({"op": "seqs", "x": seq(), "y": seq(), "same": r.random() < 0.3, "same2": r.random() < 0.3})
+            else:
+                ops.append({"op": r.choice(["seq1", "seq2"]), "x": seq(), "same": r.random() < 0.3})
+        return ops
+
+    @classmethod
+    def gen_obj(cls, r):
+        """Objects of a class of ours: equal objects that are not identical, hash collisions, a __hash__ or
+        __eq__ that raises, and the same object in several places."""
+        kinds = r.choice(["lawful", "lawful", "collide", "hashraise", "eqraise", "unlawful"])
+        n = r.randint(1, 8)
+        elems = []
+        for i in range(n):
+            v = r.randrange(5)
+            if kinds == "collide":
+                h = r.choice([1, 2, 9])
+            elif kinds == "unlawful":
+                h = r.randrange(6)
+            else:
+                h = v % 3 + 1 if r.random() < 0.5 else v + 8
+            if kinds != "unlawful":
+                h = v + 8 if kinds != "collide" else h
+            e = {"v": v, "h": h, "bad": []}
+            elems.append(e)
+        if kinds == "collide":
+            for e in elems:
+                e["h"] = e["v"] % 2 + 1
+        if kinds == "hashraise":
+            for _ in range(r.randint(1, 2)):
+                elems[r.randrange(n)]["h"] = None
+        if kinds == "eqraise":
+            for _ in range(r.randint(1, 3)):
+                e = elems[r.randrange(n)]
+                e["bad"].append(r.randrange(n))
+                if r.random() < 0.5:
+                    e["h"] = 1
+                    elems[r.randrange(n)]["h"] = 1
+
+        def seq():
+            return [r.randrange(n) for _ in range(r.randint(0, 9))]
+        a, b = seq(), seq()
+        if r.random() < 0.3:
+            b = list(a)
+        if r.random() < 0.05:
+            b = [r.randrange(n) for _ in range(r.choice([199, 200, 201, 300]))]
+        return {"mod": "textlibs", "fn": "difflib.obj", "elems": elems, "a": a, "b": b, "auto": r.random() < 0.6,
+                "hasjunk": r.random() < 0.3, "junk": [r.randrange(5) for _ in range(r.randint(0, 2))],
+                "boom": [r.randrange(n)] if r.random() < 0.2 else [], "ops": cls.gen_ops(r, a, b, seq)}
+
+    @classmethod
+    def run_obj(cls, c):
+        import difflib
+
+        class El:
+            __slots__ = ("i", "v", "h", "bad")
+
+            def __init__(self, i, d):
+                self.i, self.v, self.h, self.bad = i, d["v"], d["h"], d["bad"]
+
+            def __hash__(self):
+                if self.h is None:
+                    raise ValueError(f"hash {self.i}")
+                return self.h
+
+            def __eq__(self, o):
+                if o.i in self.bad:
+                    raise ValueError(f"eq {self.i} {o.i}")
+                return self.v == o.v
+
+        els = [El(i, d) for i, d in enumerate(c["elems"])]
+
+        def junk(x):
+            if x.i in c["boom"]:
+                raise ValueError("boom")
+            return x.v in c["junk"]
+
+        def conv(l):
+            return [els[i] for i in l]
+
+        def body():
+            s = difflib.SequenceMatcher(junk if c["hasjunk"] else None, conv(c["a"]), conv(c["b"]), c["auto"])
+            out = []
+            for o in c["ops"]:
+                try:
+                    out.append(cls.op(s, o, conv))
+                except Exception as e:
+                    out.append(["exc", {"exc": type(e).__name__, "msg": str(e)}])
+            return out
+        return common.py_result(body)
+
+    @classmethod
+    def op(cls, s, o, conv):
+        k = o["op"]
+        if k == "blocks":
+            return [list(t) for t in s.get_matching_blocks()]
+        if k == "opcodes":
+            return [list(t) for t in s.get_opcodes()]
+        if k == "grouped":
+            return [[list(t) for t in g] for g in s.get_grouped_opcodes(o["n"])]
+        if k in ("ratio", "quick", "real"):
+            f = {"ratio": s.ratio, "quick": s.quick_ratio, "real": s.real_quick_ratio}[k]()
+            length = len(s.a) + len(s.b)
+            if length == 0:
+                return [0, 0] if f == 1.0 else ["bad", f]
+            m = round(f * length / 2)
+            return [m, length] if 2.0 * m / length == f else ["bad", f]
+        if k == "longest":
+            return list(s.find_longest_match(o["alo"], o["ahi"], o["blo"], o["bhi"]))
+        if k == "seqs":
+            s.set_seqs(s.a if o["same"] else conv(o["x"]), s.b if o["same2"] else conv(o["y"]))
+            return None
+        f = s.set_seq1 if k == "seq1" else s.set_seq2
+        cur = s.a if k == "seq1" else s.b
+        f(cur if o["same"] else conv(o["x"]))
+        return None
+
+    @classmethod
     def gen(cls, r):
+        if r.random() < 0.5:
+            return cls.gen_obj(r)
         a, b = cls.seq(r), cls.seq(r)
         if r.random() < 0.3:
             b = list(a)
@@ -3059,43 +3196,20 @@ class DifflibArea:
     @classmethod
     def run(cls, c):
         import difflib
+        if c["fn"] == "difflib.obj":
+            return cls.run_obj(c)
 
         def junk(x):
             if x in c["boom"]:
                 raise ValueError("boom")
             return x in c["junk"]
 
-        def op(s, o):
-            k = o["op"]
-            if k == "blocks":
-                return [list(t) for t in s.get_matching_blocks()]
-            if k == "opcodes":
-                return [list(t) for t in s.get_opcodes()]
-            if k == "grouped":
-                return [[list(t) for t in g] for g in s.get_grouped_opcodes(o["n"])]
-            if k in ("ratio", "quick", "real"):
-                f = {"ratio": s.ratio, "quick": s.quick_ratio, "real": s.real_quick_ratio}[k]()
-                length = len(s.a) + len(s.b)
-                if length == 0:
-                    return [0, 0] if f == 1.0 else ["bad", f]
-                m = round(f * length / 2)
-                return [m, length] if 2.0 * m / length == f else ["bad", f]
-            if k == "longest":
-                return list(s.find_longest_match(o["alo"], o["ahi"], o["blo"], o["bhi"]))
-            if k == "seqs":
-                s.set_seqs(s.a if o["same"] else list(o["x"]), s.b if o["same2"] else list(o["y"]))
-                return None
-            f = s.set_seq1 if k == "seq1" else s.set_seq2
-            cur = s.a if k == "seq1" else s.b
-            f(cur if o["same"] else list(o["x"]))
-            return None
-
         def body():
             s = difflib.SequenceMatcher(junk if c["hasjunk"] else None, list(c["a"]), list(c["b"]), c["auto"])
             out = []
             for o in c["ops"]:
                 try:
-                    out.append(op(s, o))
+                    out.append(cls.op(s, o, list))
                 except Exception as e:
                     out.append(["exc", {"exc": type(e).__name__, "msg": str(e)}])
             return out
