@@ -166,4 +166,144 @@ theorem reduceRoundTrip_proven : ReduceRoundTrip := by
     simp only [List.getD_eq_getElem?_getD] at hrebuild
     simpa using hrebuild
 
+/-! ## `__replace__` (`copy.replace`), :389-458 -/
+
+/-- `PyDict_PopString(kwargs, name)`: the value, if present, and the dict without it. -/
+def popName (kws : List (String × Option α)) (name : String) : Option (Option α) × List (String × Option α) :=
+  match kws.find? (·.1 == name) with
+  | some (_, v) => (some v, kws.filter (·.1 != name))
+  | none => (none, kws)
+
+/-- The field loop, :421-431: field `i` takes the popped value or keeps its own. -/
+def replaceLoop (names : List String) : List (Option α) → List (String × Option α) → List (Option α) × List (String × Option α)
+  | [], kws => ([], kws)
+  | v :: vs, kws =>
+    let (got, kws) := popName kws (names.headD "")
+    let (rest, kws) := replaceLoop names.tail vs kws
+    (got.getD v :: rest, kws)
+
+/-- `structseq_replace(self, *args, **kwargs)`: positional arguments are refused, types with
+unnamed fields refused, then each field is taken from `kwargs` if named there; names left over
+raise `TypeError`. -/
+def structseqReplace (t : SType) (s : List (Option α)) (nargs : Nat) (kws : List (String × Option α)) :
+    Py (List (Option α)) :=
+  if nargs ≠ 0 then .error (.typeError "__replace__() takes no positional arguments")
+  else if t.nUnnamed > 0 then
+    .error (.typeError s!"__replace__() is not supported for {t.tpName} because it has unnamed field(s)")
+  else
+    let (res, left) := replaceLoop t.names s kws
+    if left ≠ [] then .error (.typeError "~Got unexpected field name(s): %R") else .ok res
+
+/-- The value `kws` holds for `n`. -/
+def kwLookup (kws : List (String × Option α)) (n : String) : Option (Option α) :=
+  (kws.find? (·.1 == n)).map (·.2)
+
+/-- `copy.replace(s, **kws)` on a type without unnamed fields (distinct field names): every field
+named in `kws` takes that value and every other field keeps its own; and a keyword that names no
+field raises `TypeError`. -/
+def ReplaceSpec : Prop :=
+  ∀ (α : Type) (t : SType) (s : List (Option α)) (kws : List (String × Option α)),
+    t.nUnnamed = 0 → t.names.length = s.length → t.names.Nodup →
+    (kws.all (fun kv => t.names.contains kv.1) →
+      structseqReplace t s 0 kws = .ok ((t.names.zip s).map fun (n, v) => (kwLookup kws n).getD v)) ∧
+    (kws.any (fun kv => !t.names.contains kv.1) → ∃ e, structseqReplace t s 0 kws = .error e ∧ e.className = "TypeError")
+
+theorem popName_eq (kws : List (String × Option α)) (n : String) :
+    popName kws n = (kwLookup kws n, kws.filter (·.1 != n)) := by
+  unfold popName kwLookup
+  cases h : kws.find? (·.1 == n) with
+  | some kv => simp
+  | none =>
+    simp only [Option.map_none, Prod.mk.injEq, true_and]
+    symm
+    rw [List.filter_eq_self]
+    intro kv hkv
+    have := List.find?_eq_none.mp h kv hkv
+    simpa using this
+
+theorem find?_filter_of_imp {β : Type} (p q : β → Bool) (l : List β) (h : ∀ x, p x = true → q x = true) :
+    (l.filter q).find? p = l.find? p := by
+  induction l with
+  | nil => rfl
+  | cons a l ih =>
+    by_cases hq : q a = true
+    · simp only [List.filter_cons, hq, ite_true, List.find?_cons]
+      split <;> simp_all
+    · have hp : p a = false := by
+        cases hpa : p a
+        · rfl
+        · exact absurd (h a hpa) hq
+      simp only [List.filter_cons, hq, List.find?_cons, hp]
+      simp [ih]
+
+theorem kwLookup_filter (kws : List (String × Option α)) (m n : String) (h : m ≠ n) :
+    kwLookup (kws.filter (·.1 != m)) n = kwLookup kws n := by
+  unfold kwLookup
+  rw [find?_filter_of_imp]
+  intro x hx
+  simp only [beq_iff_eq] at hx
+  simp only [bne_iff_ne, ne_eq]
+  rw [hx]; exact Ne.symm h
+
+theorem replaceLoop_spec (names : List String) (s : List (Option α)) (kws : List (String × Option α))
+    (hlen : names.length = s.length) (hnd : names.Nodup) :
+    replaceLoop names s kws = ((names.zip s).map (fun (n, v) => (kwLookup kws n).getD v),
+      kws.filter (fun kv => !names.contains kv.1)) := by
+  induction s generalizing names kws with
+  | nil =>
+    cases names with
+    | nil =>
+      simp only [replaceLoop, List.zip_nil_left, List.map_nil, Prod.mk.injEq, true_and]
+      exact (List.filter_eq_self.mpr (fun _ _ => by simp)).symm
+    | cons _ _ => simp at hlen
+  | cons v vs ih =>
+    cases names with
+    | nil => simp at hlen
+    | cons n ns =>
+      simp only [List.length_cons, Nat.add_right_cancel_iff] at hlen
+      rw [List.nodup_cons] at hnd
+      unfold replaceLoop
+      simp only [List.headD_cons, List.tail_cons, popName_eq]
+      rw [ih ns _ hlen hnd.2]
+      simp only [List.zip_cons_cons, List.map_cons, Prod.mk.injEq, List.cons.injEq, true_and]
+      refine ⟨List.map_congr_left ?_, ?_⟩
+      · intro ⟨m, w⟩ hm
+        have hmn : n ≠ m := by
+          intro he; subst he; exact hnd.1 (List.of_mem_zip hm).1
+        simp only
+        rw [kwLookup_filter kws n m hmn]
+      · rw [List.filter_filter]
+        apply List.filter_congr
+        intro kv _
+        by_cases h : kv.1 = n <;> simp [h, List.contains_cons]
+
+theorem replaceSpec_proven : ReplaceSpec := by
+  intro α t s kws hu hlen hnd
+  have hloop := replaceLoop_spec t.names s kws hlen hnd
+  constructor
+  · intro hall
+    have hmem : ∀ a b, (a, b) ∈ kws → a ∈ t.names := fun a b h =>
+      List.mem_of_elem_eq_true (List.all_eq_true.mp hall (a, b) h)
+    have hleft : kws.filter (fun kv => !t.names.contains kv.1) = [] := by
+      rw [List.filter_eq_nil_iff]
+      intro kv hkv
+      have := List.all_eq_true.mp hall kv hkv
+      simp only [Bool.not_eq_true', Bool.not_eq_false', Bool.not_eq_eq_eq_not, Bool.not_true]
+      simpa using this
+    unfold structseqReplace
+    rw [hloop]
+    simp only [hleft]
+    simp [hu]
+  · intro hany
+    obtain ⟨kv, hkv, hn⟩ := List.any_eq_true.mp hany
+    have hleft : kws.filter (fun kv => !t.names.contains kv.1) ≠ [] := by
+      intro h
+      have := List.filter_eq_nil_iff.mp h kv hkv
+      simp_all
+    refine ⟨.typeError "~Got unexpected field name(s): %R", ?_, rfl⟩
+    unfold structseqReplace
+    rw [hloop]
+    simp only [show (0 : Nat) ≠ 0 ↔ False by simp, hu, show ¬ (0 : Nat) > 0 by omega, if_false, ite_false]
+    simp only [ne_eq, hleft, not_false_eq_true, if_true, ite_true]
+
 end PyLean.TypeObj.StructSeq

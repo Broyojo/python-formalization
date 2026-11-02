@@ -957,6 +957,10 @@ def entries : List Entry := [
   p "typeobj-structseq-reduce-round-trip" "Objects/structseq.c" ["structseq_new_impl", "structseq_reduce"]
     "For every struct sequence type (hidden fields after visible ones, unnamed fields visible, distinct hidden names) and every value, type(*s.__reduce__()[1]) rebuilds every field, hidden ones included."
     "invariant: pickling round-trips" ``StructSeq.ReduceRoundTrip ``StructSeq.reduceRoundTrip_proven
-    "The constructor's checks (sequence, dict, the three length messages, unexpected names) are mirrored and were checked on 3.15.2 with os.stat_result and time.struct_time." ] ++ excEntries
+    "The constructor's checks (sequence, dict, the three length messages, unexpected names) are mirrored and were checked on 3.15.2 with os.stat_result and time.struct_time.",
+  p "typeobj-structseq-replace" "Objects/structseq.c" ["structseq_replace"]
+    "copy.replace(s, **kws) on a struct sequence type without unnamed fields gives every named field its new value and keeps every other field, hidden ones included; a name that is not a field raises TypeError."
+    "docs: copy.replace (Doc/library/copy.rst) and struct sequences supporting it" ``StructSeq.ReplaceSpec ``StructSeq.replaceSpec_proven
+    "Positional arguments and types with unnamed fields (os.stat_result) are refused as in the source; checked on 3.15.2." ] ++ excEntries
 
 end PyLean.TypeObj
