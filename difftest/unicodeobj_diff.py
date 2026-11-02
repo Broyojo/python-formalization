@@ -1227,6 +1227,58 @@ def run_codec_utf8_writer(c):
     return [{"ok": None} if "ok" in res else res, n.value, cps_of(r), k[0], k[1]]
 
 
+ESC_PIECES = [b"a", b"abc", b"\\n", b"\\\\", b"\\'", b'\\"', b"\\\n", b"\\a", b"\\b", b"\\f", b"\\t", b"\\r", b"\\v",
+              b"\\x41", b"\\xe9", b"\\u20ac", b"\\U0001f600", b"\\101", b"\\0", b"\\12", b"\\377", b"\\400", b"\\777", b"\\4001",
+              b"\\q", b"\\8", b"\\9", b"\\ ", b"\\Z", b"\\\xff", b"\\\x80", b"\xff", b"\\", b"\\x", b"\\x4", b"\\xg", b"\\u12",
+              b"\\u12g", b"\\U0011", b"\\U00110000", b"\\Uffffffff", b"\\N", b"\\Nq", b"\\N{", b"\\N{}", b"\\N{NOPE}", b"\\N{NOPE"]
+
+
+def esc_input(rng):
+    return list(b"".join(rng.choice(ESC_PIECES) for _ in range(rng.randint(0, 4))))
+
+
+@gen("codec", 4)
+def gen_codec_esc_warn(rng):
+    c = {"mod": "unicodeobj", "fn": "codec_esc_warn", "b": esc_input(rng), "final": rng.random() < 0.7,
+         "warn": rng.random() < 0.6}
+    u8_handler(rng, c)
+    return c
+
+
+@run("codec_esc_warn")
+def run_codec_esc_warn(c):
+    import codecs
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("error" if c["warn"] else "ignore", DeprecationWarning)
+        s, n = codecs.unicode_escape_decode(bytes(c["b"]), u8_errors(c).decode(), c["final"])
+    return [cps_of(s), n]
+
+
+@gen("codec", 3)
+def gen_codec_esc_internal(rng):
+    c = {"mod": "unicodeobj", "fn": "codec_esc_internal", "b": esc_input(rng), "final": rng.random() < 0.7}
+    u8_handler(rng, c)
+    return c
+
+
+@run("codec_esc_internal")
+def run_codec_esc_internal(c):
+    import ctypes
+    f = ctypes.pythonapi._PyUnicode_DecodeUnicodeEscapeInternal2
+    f.restype = ctypes.py_object
+    f.argtypes = [ctypes.c_void_p, ctypes.c_ssize_t, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
+    b = bytes(c["b"])
+    buf = ctypes.create_string_buffer(b, len(b) + 1)
+    n = ctypes.c_ssize_t(len(b))
+    first = ctypes.c_int(7)
+    ptr = ctypes.c_void_p(1)
+    r = f(ctypes.addressof(buf), len(b), u8_errors(c), None if c["final"] else ctypes.addressof(n),
+          ctypes.addressof(first), ctypes.addressof(ptr))
+    return [cps_of(r), 0 if c["final"] else n.value, first.value,
+            None if ptr.value is None else ptr.value - ctypes.addressof(buf)]
+
+
 CHUNK_ALPHA = {
     "utf-8": [0x41, 0x80, 0x90, 0x9f, 0xa0, 0xbf, 0xc0, 0xc2, 0xdf, 0xe0, 0xe1, 0xed, 0xef, 0xf0, 0xf1, 0xf4, 0xf5, 0xff],
     "utf-16-le": [0x00, 0x41, 0xd7, 0xd8, 0xdb, 0xdc, 0xdf, 0xe0, 0xff],

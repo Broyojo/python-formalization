@@ -4,6 +4,7 @@ import PyLean.UnicodeObj.CodecProps
 import PyLean.UnicodeObj.CodecCharmap
 import PyLean.UnicodeObj.CodecCallback
 import PyLean.UnicodeObj.ObjectAscii
+import PyLean.UnicodeObj.ObjectEscape
 
 /-! Difftest handler for the codecs slice (`fn` names start with `codec_`). -/
 
@@ -203,6 +204,17 @@ def run (fn : String) (j : Json) : Except String Json := do
     return encPy (fun (x : Json) => x) (.ok (Json.arr #[encPy (fun (_ : Nat) => Json.null) r,
       toJson (match r with | .ok n => n | .error _ => 0), toJson text, toJson kind.width,
       toJson (kind == .ascii)]))
+  | "codec_esc_warn" =>
+    return encPy encPair (unicodeEscapeStateful (← getSeq j "b") (← getDHX j) (fun _ => none)
+      (← getBool j "final") (← getBool j "warn") cbFuel)
+  | "codec_esc_internal" =>
+    let final ← getBool j "final"
+    let enc (r : Str × Nat × EscInfo) : Json :=
+      Json.arr #[toJson r.1, toJson (if final then 0 else r.2.1), toJson r.2.2.char,
+        match r.2.2.pos with
+        | some p => toJson p
+        | none => Json.null]
+    return encPy enc (escInternal (← getSeq j "b") (← getDHX j) (fun _ => none) final cbFuel)
   | "codec_chunks" =>
     let b ← getSeq j "b"
     let k ← getNat j "k"
