@@ -10,7 +10,7 @@ import PyLean.TextLibs.ShlexProps
 import PyLean.TextLibs.TextwrapProps
 import PyLean.TextLibs.QuopriProps
 import PyLean.TextLibs.HtmlProps
-import PyLean.TextLibs.DifflibObjLaws
+import PyLean.TextLibs.DifflibTextProps
 import PyLean.TextLibs.CsvSniffProps
 
 /-!
@@ -1299,7 +1299,32 @@ def entries : List Entry := [
     source := "the docstring of get_opcodes, and get_matching_blocks, which does", status := .refuted
     prop := ``OpcodesFailAgain, thm := some ``opcodesFailAgain_refuted
     bug := some "textlibs-difflib-get-opcodes-empty-cache"
-    notes := "self.opcodes = answer = [] runs ahead of get_matching_blocks, so the second call returns []." }
+    notes := "self.opcodes = answer = [] runs ahead of get_matching_blocks, so the second call returns []." },
+  { id := "textlibs-difflib-restore", pyFile := "Lib/difflib.py"
+    pyFns := ["restore", "ndiff", "Differ.compare", "Differ._dump", "Differ._plain_replace", "Differ._fancy_replace", "Differ._fancy_helper", "Differ._qformat"]
+    statement := "restore(ndiff(a, b), 1) == a and restore(ndiff(a, b), 2) == b, for all lists of str and any linejunk and charjunk, when ndiff runs to its end."
+    source := "docstring of restore", status := .proven
+    prop := ``RestoreRoundTrip, thm := some ``restoreRoundTrip_proven
+    notes := "Holds whatever synch pair _fancy_replace picks, so the ratios and the cutoff are checked by the difftest, on exact doubles, not by this theorem." },
+  { id := "textlibs-difflib-detects", pyFile := "Lib/difflib.py", pyFns := ["unified_diff", "context_diff"]
+    statement := "unified_diff and context_diff yield something for any two different lists of str, for every n."
+    source := "docstrings of unified_diff and context_diff", status := .proven
+    prop := ``DiffDetects, thm := some ``diffDetects_proven },
+  { id := "textlibs-difflib-same-lines", pyFile := "Lib/difflib.py", pyFns := []
+    statement := "unified_diff yields nothing for two equal lists of str, popular lines included."
+    source := "docstring of unified_diff", status := .open
+    prop := ``SameLinesNoDiff
+    notes := "Holds on CPython. A proof has to show that every box on the diagonal keeps to it, which FindLongestDocO does not give when lines are popular." },
+  { id := "textlibs-difflib-twins-refuse", pyFile := "Lib/difflib.py", pyFns := ["unified_diff", "context_diff", "_check_types"]
+    statement := "unified_diff raises whenever context_diff raises."
+    source := "the comment in _check_types, and the twin", status := .refuted
+    prop := ``DiffTwinsRefuse, thm := some ``diffTwinsRefuse_refuted
+    bug := some "textlibs-difflib-unified-diff-nonstr-lines"
+    notes := "A bytes line after a str first line. The f-strings of 3.15 format it, and '- ' + line raises." },
+  { id := "textlibs-difflib-is-line-junk", pyFile := "Lib/difflib.py", pyFns := ["IS_LINE_JUNK"]
+    statement := "IS_LINE_JUNK(line) with no pat holds exactly when, white space aside, the line is empty or a single '#'."
+    source := "docstring of IS_LINE_JUNK", status := .proven
+    prop := ``IsLineJunkDoc, thm := some ``isLineJunkDoc_proven }
 ]
 
 end PyLean.TextLibs

@@ -1,5 +1,5 @@
 import PyLean.DiffCore
-import PyLean.TextLibs.DifflibObj
+import PyLean.TextLibs.DifflibText
 
 /-! `difflib.*` difftest cases; see `difftest/textlibs_diff.py`. -/
 
@@ -126,8 +126,86 @@ def elOf (j : Json) : Except String El := do
     | .error _ => pure none
   return ⟨v, h, ← nats (← field j "bad")⟩
 
+/-- The objects `difflib.text` puts among its lines. -/
+def otherLine : Nat → LineO
+  | 0 => .other "int" (toStr "1") true
+  | 1 => .other "bytes" (toStr "b'x'") true
+  | 2 => .other "NoneType" (toStr "None") true
+  | _ => .other "list" (toStr "[1]") false
+
+def lineOf (j : Json) : Except String LineO := do
+  match j.getObjVal? "o" with
+  | .ok k => return otherLine (← k.getNat?)
+  | .error _ => return .str (← nats j)
+
+def seqOf (j : Json) : Except String SeqArg := do
+  match j.getObjVal? "str" with
+  | .ok x => return .str (← nats x)
+  | .error _ => return .lines ((← (← j.getArr?).mapM lineOf).toList)
+
+def textArg (j : Json) (k : String) : Except String TextArg := do
+  let x ← field j k
+  match x.getObjVal? "bad" with
+  | .ok _ => return .other "b'x'"
+  | .error _ => return .str (← nats x)
+
+def strsJ (l : List Str) : Json := Json.arr (l.map fun s => Json.arr (s.map toJson).toArray).toArray
+
+def emitJ (e : Emit) : Json :=
+  match e.2 with
+  | .ok () => Json.arr #[strsJ e.1, Json.null]
+  | .error x => Json.arr #[strsJ e.1, excJ x]
+
+def strsOf (j : Json) : Except String (List Str) := do
+  return (← (← j.getArr?).mapM nats).toList
+
+/-- `null`, or the junk and the raising items of a callback. -/
+def lineFn (j : Json) : Except String (Option (Str → Py Bool)) := do
+  if j.isNull then return none
+  let junk ← strsOf (← field j "junk")
+  let boom ← strsOf (← field j "boom")
+  return some fun x => if boom.contains x then .error (.valueError "boom") else .ok (junk.contains x)
+
+def charFn (j : Json) : Except String (Option (Nat → Py Bool)) := do
+  if j.isNull then return none
+  match j.getStr? with
+  | .ok _ => return some fun c => .ok (isCharJunk c)
+  | .error _ =>
+    let junk ← nats (← field j "junk")
+    let boom ← nats (← field j "boom")
+    return some fun x => if boom.contains x then .error (.valueError "boom") else .ok (junk.contains x)
+
+def runText (j : Json) : Except String Json := do
+  let op ← getStr j "op"
+  match op with
+  | "unified" =>
+    let r := unifiedDiff (← seqOf (← field j "a")) (← seqOf (← field j "b")) (← textArg j "f") (← textArg j "t")
+      (← textArg j "fd") (← textArg j "td") (← getNat j "n") (← textArg j "lt")
+    return encPy strsJ r
+  | "context" =>
+    let r := contextDiff (← seqOf (← field j "a")) (← seqOf (← field j "b")) (← textArg j "f") (← textArg j "t")
+      (← textArg j "fd") (← textArg j "td") (← getNat j "n") (← textArg j "lt")
+    return encPy (fun (x : Json) => x) (.ok (emitJ r))
+  | "ndiff" =>
+    let e := compareO (← lineFn (← field j "lj")) (← charFn (← field j "cj")) (← strsOf (← field j "a")) (← strsOf (← field j "b"))
+    let r1 := if e.2 matches .ok () then restoreO e.1 1 else .ok []
+    let r2 := if e.2 matches .ok () then restoreO e.1 2 else .ok []
+    return encPy (fun (x : Json) => x) (.ok (Json.arr #[emitJ e, encPy strsJ r1, encPy strsJ r2]))
+  | "restore" => return encPy strsJ (restoreO (← strsOf (← field j "d")) (← getInt j "which"))
+  | "range" =>
+    return encPy (fun (x : Json) => x) (.ok (strsJ [fmtRangeU (← getNat j "s") (← getNat j "e"), fmtRangeC (← getNat j "s") (← getNat j "e")]))
+  | "junk" =>
+    let l ← nats (← field j "s")
+    return encPy (fun (x : Json) => x) (.ok (Json.arr #[toJson (isLineJunk l), toJson (l.map isCharJunk)]))
+  | "keepws" =>
+    return encPy strsJ (.ok [keepWs (← nats (← field j "s")) (← nats (← field j "tags"))])
+  | "close" =>
+    return encPy strsJ (closeMatches (← nats (← field j "w")) (← strsOf (← field j "ps")) (← getInt j "n") (PyLean.Binary64.F64.ofBits (← getNat j "cut")))
+  | _ => throw s!"unknown op {op}"
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
+  | "difflib.text" => runText j
   | "difflib.obj" =>
     let t ← ((← (← field j "elems").getArr?).mapM elOf)
     let o := elOps t

@@ -35,7 +35,7 @@ reproducer: |
 expected: |
   The second call raises the same TypeError, as `get_matching_blocks()` and `ratio()` do.
 observed: |
-  python3 3.15.2: "unhashable type: 'list'" then []. REPRODUCED.
+  python3 3.15.2: "cannot use 'list' as a dict key (unhashable type: 'list')", then []. REPRODUCED.
   main 3.16.0a1+dev: the same. REPRODUCED.
 promised_by: |
   Lib/difflib.py:496-498: the first tuple has i1 == j1 == 0 and the tuples describe how to turn a into b.

@@ -1,0 +1,53 @@
+id: textlibs-difflib-unified-diff-nonstr-lines
+title: "difflib.unified_diff formats non-str lines since the f-strings of color, the garbling _check_types exists to stop"
+priority: P3
+kind: regression
+module: textlibs
+files: [Lib/difflib.py]
+functions: ["unified_diff", "context_diff", "_check_types"]
+summary: |
+  `_check_types` looks only at `a[0]` and `b[0]`, and relies on the later `'-' + line` to raise for the
+  rest. The `color` change replaced those concatenations in `unified_diff` with f-strings, which format
+  any object. So `unified_diff(['a', b'x'], ['a', b'y'], lineterm='')` now yields `-b'x'` and `+b'y'`,
+  and a line that is an int or None is formatted too. `context_diff`, which still concatenates, raises
+  TypeError for the same arguments. 3.14 raises TypeError from `unified_diff` as well. The comment in
+  `_check_types` names this outcome as what it is there to prevent: "the alternative is garbled output
+  when someone passes mixed bytes and str".
+likelihood: |
+  Low to moderate. It takes lines of mixed types with a str first, such as bytes read after a decoded
+  header. The output looks like a diff and no error says otherwise.
+maybe_intended: |
+  No. The change was about colour, and the test for bytes input only needs `a[0]`, so nothing noticed.
+  A maintainer could reply that `_check_types` only ever promised the first line, but the two functions
+  now differ, and 3.14 raised.
+reproducer: |
+  import difflib
+  a, b = ['a', b'x'], ['a', b'y']
+  u = list(difflib.unified_diff(a, b, lineterm=''))
+  try:
+      list(difflib.context_diff(a, b, lineterm=''))
+      c = None
+  except TypeError as e:
+      c = str(e)
+  print(u, c)
+  if "-b'x'" in u and c is not None:
+      print('REPRODUCED textlibs-difflib-unified-diff-nonstr-lines')
+expected: |
+  TypeError from `unified_diff`, as from `context_diff` and from `unified_diff` on 3.14.
+observed: |
+  python3 3.15.2: ['--- ', '+++ ', '@@ -1,2 +1,2 @@', ' a', "-b'x'", "+b'y'"], and context_diff raises
+  TypeError. REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED.
+  python3 3.14.7: `yield '-' + line` raises TypeError, so unified_diff does too. NOT reproduced.
+promised_by: |
+  The comment at Lib/difflib.py:1272-1277, and the twin context_diff.
+cause: |
+  Lib/difflib.py:1171-1179 yield f-strings where 3.14 concatenated; Lib/difflib.py:1278-1283 check only
+  the first line of each sequence.
+possible_fix: |
+  Check every line in `_check_types`, or `t.removed + '-' + line + t.reset` in `unified_diff`.
+duplicates: |
+  None found. #61647 (closed) is about bytes in Differ. Not in the bugforge list.
+  Queries, unquoted words: gh search issues --repo python/cpython unified_diff non-str; unified_diff
+  bytes lines; unified_diff color TypeError; difflib unified_diff color f-string.
+lean: lean/PyLean/TextLibs/DifflibTextProps.lean (DiffTwinsRefuse, diffTwinsRefuse_refuted)

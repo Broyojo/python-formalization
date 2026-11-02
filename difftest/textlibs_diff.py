@@ -3155,9 +3155,162 @@ class DifflibArea:
         f(cur if o["same"] else conv(o["x"]))
         return None
 
+    LINES = ["a\n", "b\n", "abc\n", "abd\n", "  x\n", "\n", "#\n", " # \n", "hello world\n", "hello wurld\n", "abcdefghij\n",
+             "abcdefghix\n", "\tab\n", "ab \n", "one two three\n", "one tree three\n", "x", "", "- y\n", "? z\n", "+ q\n", "  w\n"]
+    OBJS = [1, b"x", None, [1]]
+
+    @classmethod
+    def txt(cls, r):
+        return r.choice(cls.LINES)
+
+    @classmethod
+    def strs(cls, r, m=8):
+        return [[ord(c) for c in cls.txt(r)] for _ in range(r.randint(0, m))]
+
+    @classmethod
+    def gen_text(cls, r):
+        k = r.choice(["unified", "unified", "context", "context", "ndiff", "ndiff", "ndiff", "restore", "range", "junk", "keepws", "close"])
+        c = {"mod": "textlibs", "fn": "difflib.text", "op": k}
+
+        def seq():
+            base = cls.strs(r)
+            if r.random() < 0.3:
+                # close to another sequence, so the matcher finds something
+                base = [[ord(ch) for ch in cls.LINES[i % 6]] for i in range(r.randint(0, 12))]
+            return base
+
+        def edited(a):
+            b = list(a)
+            for _ in range(r.randint(0, 3)):
+                if b:
+                    i = r.randrange(len(b))
+                    b[i] = [ord(ch) for ch in cls.txt(r)]
+            if r.random() < 0.3:
+                b.insert(r.randint(0, len(b)), [ord(ch) for ch in cls.txt(r)])
+            return b
+
+        if k in ("unified", "context"):
+            a = seq()
+            b = edited(a) if r.random() < 0.6 else seq()
+            bad = r.random() < 0.2
+
+            def wrap(l):
+                x = list(l)
+                if bad and r.random() < 0.7:
+                    x.insert(r.randint(0, len(x)), {"o": r.randrange(4)})
+                if r.random() < 0.03:
+                    return {"str": [97, 10]}
+                return x
+
+            def text(v):
+                if r.random() < 0.03:
+                    return {"bad": 1}
+                return [ord(ch) for ch in v]
+            c.update({"a": wrap(a), "b": wrap(b), "f": text(r.choice(["", "x.py"])), "t": text(r.choice(["", "y.py"])),
+                      "fd": text(r.choice(["", "2026"])), "td": text(r.choice(["", "2027"])), "n": r.choice([0, 1, 2, 3, 3, 5]),
+                      "lt": text(r.choice(["\n", "", "\r\n"]))})
+        elif k == "ndiff":
+            a = seq()
+            b = edited(a) if r.random() < 0.7 else seq()
+            lj, cj = None, "default"
+            if r.random() < 0.3:
+                lj = {"junk": cls.strs(r, 2), "boom": cls.strs(r, 1) if r.random() < 0.3 else []}
+            x = r.random()
+            if x < 0.2:
+                cj = None
+            elif x < 0.4:
+                cj = {"junk": [32], "boom": [r.choice([97, 98, 104, 120])] if r.random() < 0.5 else []}
+            c.update({"a": a, "b": b, "lj": lj, "cj": cj})
+        elif k == "restore":
+            c.update({"d": cls.strs(r), "which": r.choice([1, 2, 2, 1, 0, 3, -1])})
+        elif k == "range":
+            s = r.randint(0, 5)
+            c.update({"s": s, "e": s + r.choice([0, 0, 1, 1, 2, 3, 10])})
+        elif k == "junk":
+            c["s"] = [ord(ch) for ch in r.choice(cls.LINES + [" \t", "##", "#x", "\u00a0#\u2003"])]
+        elif k == "keepws":
+            c.update({"s": [ord(ch) for ch in cls.txt(r)], "tags": [r.choice([32, 94, 45, 43]) for _ in range(r.randint(0, 12))]})
+        else:
+            import struct
+            cut = r.choice([0.0, 0.3, 0.5, 0.6, 0.75, 0.8, 1.0, -0.1, 1.5, float("nan")])
+            c.update({"w": [ord(ch) for ch in cls.txt(r)], "ps": cls.strs(r, 6), "n": r.choice([1, 2, 3, 10, 0, -1]),
+                      "cut": struct.unpack(">Q", struct.pack(">d", cut))[0]})
+        return c
+
+    @classmethod
+    def run_text(cls, c):
+        import difflib
+        import struct
+
+        def s(l):
+            return "".join(map(chr, l))
+
+        def lines(a):
+            if isinstance(a, dict):
+                return s(a["str"])
+            return [cls.OBJS[x["o"]] if isinstance(x, dict) else s(x) for x in a]
+
+        def text(v):
+            return b"x" if isinstance(v, dict) else s(v)
+
+        def nats(l):
+            return [[ord(ch) for ch in x] for x in l]
+
+        def drain(g):
+            out = []
+            try:
+                for x in g:
+                    out.append(x)
+            except Exception as e:
+                return out, ["exc", {"exc": type(e).__name__, "msg": str(e)}]
+            return out, None
+
+        k = c["op"]
+
+        def body():
+            if k in ("unified", "context"):
+                f = difflib.unified_diff if k == "unified" else difflib.context_diff
+                g = f(lines(c["a"]), lines(c["b"]), text(c["f"]), text(c["t"]), text(c["fd"]), text(c["td"]), c["n"], text(c["lt"]))
+                if k == "unified":
+                    return nats(list(g))
+                out, e = drain(g)
+                return [nats(out), e]
+            if k == "ndiff":
+                def lj(x):
+                    if [ord(ch) for ch in x] in c["lj"]["boom"]:
+                        raise ValueError("boom")
+                    return [ord(ch) for ch in x] in c["lj"]["junk"]
+
+                def cj(x):
+                    if ord(x) in c["cj"]["boom"]:
+                        raise ValueError("boom")
+                    return ord(x) in c["cj"]["junk"]
+                cjf = None if c["cj"] is None else difflib.IS_CHARACTER_JUNK if isinstance(c["cj"], str) else cj
+                a, b = [s(x) for x in c["a"]], [s(x) for x in c["b"]]
+                out, e = drain(difflib.ndiff(a, b, lj if c["lj"] is not None else None, cjf))
+                r1 = r2 = []
+                if e is None:
+                    r1, r2 = list(difflib.restore(out, 1)), list(difflib.restore(out, 2))
+                return [[nats(out), e], {"ok": nats(r1)}, {"ok": nats(r2)}]
+            if k == "restore":
+                return nats(list(difflib.restore([s(x) for x in c["d"]], c["which"])))
+            if k == "range":
+                return nats([difflib._format_range_unified(c["s"], c["e"]), difflib._format_range_context(c["s"], c["e"])])
+            if k == "junk":
+                x = s(c["s"])
+                return [difflib.IS_LINE_JUNK(x), [difflib.IS_CHARACTER_JUNK(ch) for ch in x]]
+            if k == "keepws":
+                return nats([difflib._keep_original_ws(s(c["s"]), s(c["tags"]))])
+            cut = struct.unpack(">d", struct.pack(">Q", c["cut"]))[0]
+            return nats(difflib.get_close_matches(s(c["w"]), [s(x) for x in c["ps"]], c["n"], cut))
+        return common.py_result(body)
+
     @classmethod
     def gen(cls, r):
-        if r.random() < 0.5:
+        x = r.random()
+        if x < 0.35:
+            return cls.gen_text(r)
+        if x < 0.7:
             return cls.gen_obj(r)
         a, b = cls.seq(r), cls.seq(r)
         if r.random() < 0.3:
@@ -3198,6 +3351,8 @@ class DifflibArea:
         import difflib
         if c["fn"] == "difflib.obj":
             return cls.run_obj(c)
+        if c["fn"] == "difflib.text":
+            return cls.run_text(c)
 
         def junk(x):
             if x in c["boom"]:
