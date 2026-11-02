@@ -3,9 +3,9 @@ Objects/unicode_formatter.c	22	27	GroupGenerator_init	GroupGenerator_init(GroupG
 Objects/unicode_formatter.c	32	51	GroupGenerator_next	GroupGenerator_next(GroupGenerator *self)	modelled	unicodeobj-format-group-loop,unicodeobj-format-float-grouping	
 Objects/unicode_formatter.c	57	108	InsertThousandsGrouping_fill	InsertThousandsGrouping_fill(_PyUnicodeWriter *writer, Py_ssize_t *buffer_pos, PyObject *digits, Py_ssize_t *digits_pos, Py_ssize_t n_chars, Py_ssize_t n_zeros, PyObject *thousands_sep, Py_ssize_t thousands_sep_len, Py_UCS4 *maxchar, int forward)	modelled	unicodeobj-format-group-loop,unicodeobj-format-float-grouping	
 Objects/unicode_formatter.c	135	243	_PyUnicode_InsertThousandsGrouping	_PyUnicode_InsertThousandsGrouping( _PyUnicodeWriter *writer, Py_ssize_t n_buffer, PyObject *digits, Py_ssize_t d_pos, Py_ssize_t n_digits, Py_ssize_t min_width, const char *grouping, PyObject *thousands_sep, Py_UCS4 *maxchar, int forward)	modelled	unicodeobj-format-group-loop,unicodeobj-format-group-digits,unicodeobj-format-float-grouping	
-Objects/unicode_formatter.c	250	266	unknown_presentation_type	unknown_presentation_type(Py_UCS4 presentation_type, const char* type_name)	todo		
-Objects/unicode_formatter.c	269	280	invalid_thousands_separator_type	invalid_thousands_separator_type(char specifier, Py_UCS4 presentation_type)	todo		
-Objects/unicode_formatter.c	283	286	invalid_comma_and_underscore	invalid_comma_and_underscore(void)	todo		
+Objects/unicode_formatter.c	250	266	unknown_presentation_type	unknown_presentation_type(Py_UCS4 presentation_type, const char* type_name)	modelled	unicodeobj-format-str-errors	
+Objects/unicode_formatter.c	269	280	invalid_thousands_separator_type	invalid_thousands_separator_type(char specifier, Py_UCS4 presentation_type)	modelled	unicodeobj-format-str-errors	
+Objects/unicode_formatter.c	283	286	invalid_comma_and_underscore	invalid_comma_and_underscore(void)	modelled	unicodeobj-format-str-errors	
 Objects/unicode_formatter.c	296	326	get_integer	get_integer(PyObject *str, Py_ssize_t *ppos, Py_ssize_t end, Py_ssize_t *result)	modelled	unicodeobj-format-str-doc	
 Objects/unicode_formatter.c	333	342	is_alignment_token	Py_LOCAL_INLINE(int) is_alignment_token(Py_UCS4 c)	modelled	unicodeobj-format-str-doc	
 Objects/unicode_formatter.c	345	354	is_sign_element	Py_LOCAL_INLINE(int) is_sign_element(Py_UCS4 c)	modelled	unicodeobj-format-str-doc	
