@@ -308,4 +308,46 @@ theorem getLenRules_proven : GetLenRules := by
     simp [execOp, GET_LEN, stkK, peekN, bind, EStateM.bind, BM.lift, RM.lift, liftM, monadLift,
       MonadLift.monadLift, pure, EStateM.pure, h]
 
+/-- `x in c` asks the container, not the element: `CONTAINS_OP` calls `PySequence_Contains(c, x)`
+and pushes the answer, inverted for `not in`; when the lookup raises it keeps both operands
+(`ERROR_NO_POP`). `STORE_SUBSCR` and `DELETE_SUBSCR` call `PyObject_SetItem(c, k, v)` and
+`PyObject_DelItem(c, k)` and pop their operands on success and failure alike. All for any object
+model. -/
+def DispatchRules : Prop := ∀ (e : Env) (regs : Regs) (c x k v : Val) (rest : List Val),
+    (∀ b rt, e.om.contains e.ctx c x regs.rt = .ok b rt →
+      (e.oparg = 0 → execOp e .CONTAINS_OP ⟨regs, c :: x :: rest⟩ =
+        .ok () ⟨{ regs with rt := rt }, .bool b :: rest⟩) ∧
+      (e.oparg = 1 → execOp e .CONTAINS_OP ⟨regs, c :: x :: rest⟩ =
+        .ok () ⟨{ regs with rt := rt }, .bool (!b) :: rest⟩)) ∧
+    (∀ y rt, e.om.contains e.ctx c x regs.rt = .error y rt →
+      execOp e .CONTAINS_OP ⟨regs, c :: x :: rest⟩ = .error y ⟨{ regs with rt := rt }, c :: x :: rest⟩) ∧
+    (∀ r, e.om.setItem e.ctx c k v regs.rt = r →
+      execOp e .STORE_SUBSCR ⟨regs, k :: c :: v :: rest⟩ = match r with
+        | .ok _ rt => .ok () ⟨{ regs with rt := rt }, rest⟩
+        | .error y rt => .error y ⟨{ regs with rt := rt }, rest⟩) ∧
+    (∀ r, e.om.delItem e.ctx c k regs.rt = r →
+      execOp e .DELETE_SUBSCR ⟨regs, k :: c :: rest⟩ = match r with
+        | .ok _ rt => .ok () ⟨{ regs with rt := rt }, rest⟩
+        | .error y rt => .error y ⟨{ regs with rt := rt }, rest⟩)
+
+theorem dispatchRules_proven : DispatchRules := by
+  intro e regs c x k v rest
+  refine ⟨fun b rt h => ⟨fun h0 => ?_, fun h1 => ?_⟩, fun y rt h => ?_, fun r h => ?_, fun r h => ?_⟩
+  · cases b <;>
+    simp [execOp, CONTAINS_OP, _SPECIALIZE_CONTAINS_OP, _CONTAINS_OP, stkK, peekN, popN, pushAll, bind,
+      EStateM.bind, BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift, pure, EStateM.pure, h, h0]
+  · cases b <;>
+    simp [execOp, CONTAINS_OP, _SPECIALIZE_CONTAINS_OP, _CONTAINS_OP, stkK, peekN, popN, pushAll, bind,
+      EStateM.bind, BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift, pure, EStateM.pure, h, h1]
+  · simp [execOp, CONTAINS_OP, _SPECIALIZE_CONTAINS_OP, _CONTAINS_OP, stkK, peekN, bind, EStateM.bind,
+      BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift, pure, EStateM.pure, h]
+  · subst h
+    cases hs : e.om.setItem e.ctx c k v regs.rt <;>
+    simp [execOp, STORE_SUBSCR, _SPECIALIZE_STORE_SUBSCR, _STORE_SUBSCR, stk, popN, pushAll, bind,
+      EStateM.bind, BM.lift, RM.lift, liftM, monadLift, MonadLift.monadLift, pure, EStateM.pure, hs]
+  · subst h
+    cases hs : e.om.delItem e.ctx c k regs.rt <;>
+    simp [execOp, DELETE_SUBSCR, stk, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+      monadLift, MonadLift.monadLift, pure, EStateM.pure, hs]
+
 end PyLean.Bytecode

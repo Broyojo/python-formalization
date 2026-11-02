@@ -29,6 +29,11 @@ open PyLean.Registry
 def op (n : String) : String := "opcode:" ++ n
 
 def entries : List Entry := GenObj.entries ++ [
+  { id := "bytecode-dispatch", pyFile := "Python/bytecodes.c"
+    pyFns := [op "CONTAINS_OP", op "_CONTAINS_OP", op "STORE_SUBSCR", op "_STORE_SUBSCR", op "DELETE_SUBSCR"]
+    statement := "CONTAINS_OP asks the container (PySequence_Contains(c, x)) and inverts for not in, keeping both operands when the lookup raises; STORE_SUBSCR and DELETE_SUBSCR call PyObject_SetItem(c, k, v) and PyObject_DelItem(c, k) and pop their operands either way; for any object model."
+    source := "Python/bytecodes.c _CONTAINS_OP (ERROR_NO_POP), _STORE_SUBSCR, DELETE_SUBSCR"
+    status := .proven, prop := ``DispatchRules, thm := some ``dispatchRules_proven },
   { id := "bytecode-list-append", pyFile := "Python/bytecodes.c"
     pyFns := [op "LIST_APPEND"]
     statement := "LIST_APPEND n appends the top of the stack to the list n below it and pops only the value."

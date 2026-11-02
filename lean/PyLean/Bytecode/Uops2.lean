@@ -524,12 +524,13 @@ def IS_OP (e : Env) : M Unit := stk 2 1 fun
   | [l, r] => pure [.bool (((if l == r then 1 else 0) ^^^ e.oparg) != 0)]
   | _ => fault "arity"
 /-- `:3335`. -/
-def _CONTAINS_OP (e : Env) : M Unit := stk 2 1 fun
+def _CONTAINS_OP (e : Env) : M Unit := stkK 2 1 fun
   | [l, r] => do
     let res ← e.om.contains e.ctx r l
     pure [.bool (((if res then 1 else 0) ^^^ e.oparg) != 0)]
   | _ => fault "arity"
-/-- `:3349`. -/
+/-- `:3349`. The three `_CONTAINS_OP` forms leave their operands on the stack when the lookup
+raises (`ERROR_NO_POP`), so they are `stkK`. -/
 def _SPECIALIZE_CONTAINS_OP : M Unit := pure ()
 /-- `:3361`. -/
 def CONTAINS_OP (e : Env) : M Unit := do _SPECIALIZE_CONTAINS_OP; _CONTAINS_OP e
@@ -547,7 +548,7 @@ def _GUARD_TOS_ANY_SET : M Unit := guardTop 1 fun
   | [o] => notAnySet o
   | _ => fault "arity"
 /-- `:3380`. -/
-def _CONTAINS_OP_SET (e : Env) : M Unit := stk 2 1 fun
+def _CONTAINS_OP_SET (e : Env) : M Unit := stkK 2 1 fun
   | [l, r] => do
     let res ← (setContains e.om e.ctx r l : RM Bool)
     pure [.bool (((if res then 1 else 0) ^^^ e.oparg) != 0)]
@@ -555,7 +556,7 @@ def _CONTAINS_OP_SET (e : Env) : M Unit := stk 2 1 fun
 /-- `:3378`. -/
 def CONTAINS_OP_SET (e : Env) : M Unit := do _GUARD_TOS_ANY_SET; _CONTAINS_OP_SET e
 /-- `:3399`. -/
-def _CONTAINS_OP_DICT (e : Env) : M Unit := stk 2 1 fun
+def _CONTAINS_OP_DICT (e : Env) : M Unit := stkK 2 1 fun
   | [l, r] => do
     let res ← (dictContains e.om e.ctx r l : RM Bool)
     pure [.bool (((if res then 1 else 0) ^^^ e.oparg) != 0)]
