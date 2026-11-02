@@ -2,8 +2,8 @@ file	line	endline	name	signature	status	entry	note
 Objects/rangeobject.c	47	61	validate_step	validate_step(PyObject *step)	modelled	rangeslice-new-length	
 Objects/rangeobject.c	67	88	make_range_object	make_range_object(PyTypeObject *type, PyObject *start, PyObject *stop, PyObject *step)	modelled	rangeslice-new-length	
 Objects/rangeobject.c	96	151	range_from_array	range_from_array(PyTypeObject *type, PyObject *const *args, Py_ssize_t num_args)	modelled	rangeslice-new-length	
-Objects/rangeobject.c	154	160	range_new	range_new(PyTypeObject *type, PyObject *args, PyObject *kw)	todo		
-Objects/rangeobject.c	164	172	range_vectorcall	range_vectorcall(PyObject *rangetype, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
+Objects/rangeobject.c	154	160	range_new	range_new(PyTypeObject *type, PyObject *args, PyObject *kw)	modelled	rangeslice-range-reduce-round-trip	
+Objects/rangeobject.c	164	172	range_vectorcall	range_vectorcall(PyObject *rangetype, PyObject *const *args, size_t nargsf, PyObject *kwnames)	modelled	rangeslice-range-reduce-round-trip	
 Objects/rangeobject.c	185	193	range_dealloc	range_dealloc(PyObject *op)	todo		
 Objects/rangeobject.c	243	323	compute_range_length	compute_range_length(PyObject *start, PyObject *stop, PyObject *step)	modelled	rangeslice-len-fast-slow	
 Objects/rangeobject.c	326	330	range_length	range_length(PyObject *op)	modelled	rangeslice-len-overflow	
@@ -19,9 +19,9 @@ Objects/rangeobject.c	594	628	range_hash	range_hash(PyObject *op)	modelled	range
 Objects/rangeobject.c	631	646	range_count	range_count(PyObject *self, PyObject *ob)	modelled	rangeslice-index-count	
 Objects/rangeobject.c	649	685	range_index	range_index(PyObject *self, PyObject *ob)	modelled	rangeslice-index-count	
 Objects/rangeobject.c	699	717	range_repr	range_repr(PyObject *op)	todo		
-Objects/rangeobject.c	721	726	range_reduce	range_reduce(PyObject *op, PyObject *args)	todo		
+Objects/rangeobject.c	721	726	range_reduce	range_reduce(PyObject *op, PyObject *args)	modelled	rangeslice-range-reduce-round-trip	
 Objects/rangeobject.c	729	748	range_subscript	range_subscript(PyObject *op, PyObject *item)	modelled	rangeslice-getitem	
-Objects/rangeobject.c	758	762	range_bool	range_bool(PyObject *op)	todo		
+Objects/rangeobject.c	758	762	range_bool	range_bool(PyObject *op)	modelled	rangeslice-range-bool	
 Objects/rangeobject.c	846	859	rangeiter_next	rangeiter_next(PyObject *op)	modelled	rangeslice-iter,rangeslice-reversed	
 Objects/rangeobject.c	870	874	range_iterator___length_hint___impl	range_iterator___length_hint___impl(_PyRangeIterObject *r) /*[clinic end generated code: output=9ba6f22b1fc23dcc input=e3eb311e99d76e43]*/	modelled	rangeslice-iter-reduce	
 Objects/rangeobject.c	885	913	range_iterator___reduce___impl	range_iterator___reduce___impl(_PyRangeIterObject *r) /*[clinic end generated code: output=c44d53750c388415 input=75a25b7076dc2c54]*/	modelled	rangeslice-iter-reduce	
