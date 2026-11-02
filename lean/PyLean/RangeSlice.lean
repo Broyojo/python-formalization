@@ -8,6 +8,7 @@ import PyLean.RangeSlice.Slice
 import PyLean.RangeSlice.Iter
 import PyLean.RangeSlice.CApi
 import PyLean.RangeSlice.SliceHash
+import PyLean.RangeSlice.RangeMisc
 
 /-!
 `range` and `slice`: `Objects/rangeobject.c`, `Objects/sliceobject.c`, CPython 3.15.2
@@ -128,7 +129,16 @@ def entries : List Entry := [
     statement := "If the parts' __hash__ agrees with == (equal parts hash alike), equal slices have equal hashes, and a part whose hash raises makes both raise alike."
     source := "invariant: the __hash__/__eq__ contract (Doc/reference/datamodel.rst, object.__hash__)", status := .proven
     prop := ``SliceHash.SliceHashEq, thm := some ``SliceHash.sliceHashEq_proven
-    notes := "sliceHash is checked against hash(slice(a, b, c)) for int parts by the rangeslice difftest; sliceHashEq_needs_precondition shows the assumption is needed." }
+    notes := "sliceHash is checked against hash(slice(a, b, c)) for int parts by the rangeslice difftest; sliceHashEq_needs_precondition shows the assumption is needed." },
+  { id := "rangeslice-range-bool", pyFile := "Objects/rangeobject.c", pyFns := ["range_bool"]
+    statement := "bool(r) is true exactly when the range has a first element, for every range object, without raising even when len(r) overflows."
+    source := "invariant: truth of a sequence is non-emptiness (Doc/library/stdtypes.rst, truth value testing)", status := .proven
+    prop := ``RangeBoolNonEmpty, thm := some ``rangeBoolNonEmpty_proven },
+  { id := "rangeslice-range-reduce-round-trip", pyFile := "Objects/rangeobject.c", pyFns := ["range_reduce", "range_new", "range_vectorcall"]
+    statement := "Calling range with r.__reduce__()'s arguments (no keywords) rebuilds a range object equal to r, field for field, for every range object."
+    source := "invariant: pickling round-trips", status := .proven
+    prop := ``RangeReduceRoundTrip, thm := some ``rangeReduceRoundTrip_proven
+    notes := "rangeCall mirrors the keyword refusal and range_from_array's argument-count messages, checked on 3.15.2." }
 ]
 
 end PyLean.RangeSlice
