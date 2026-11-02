@@ -56,8 +56,9 @@ structure Env (K V : Type) where
 /-- An exact dict as `SetArg` sees it. -/
 def dictAsArg [DecidableEq K] (E : Env K V) (d : PyDict K V) : DictArg K :=
   { size := d.used
-    items := (dictItems d).map fun e => (e.1, e.2.2)
-    contains := fun k h => (dictContainsKnownHash E.D k h d).1 }
+    walk := ((dictItems d).map fun e => (pure (some (e.1, e.2.2)) : SM K (Option (K × Int))))
+    contains := fun k h => M.lift (dictContainsKnownHash E.D k h d).1
+    keys := (dictItems d).map (·.1) }
 
 /-- The items a view yields under iteration, as objects. -/
 def viewItems (E : Env K V) (v : View K V) : List K :=
@@ -98,7 +99,7 @@ def dictviewsToSet (self : ViewArg K V) (id : Nat) : Py (SetObj K) :=
 def dictviewsSub (self other : ViewArg K V) (id : Nat) : Py (SetObj K) :=
   match dictviewsToSet E self id with
   | .error e => .error e
-  | .ok r => runNew (setDifferenceUpdateMulti E.S [other.toSetArg E] id) r
+  | .ok r => runNew (setDifferenceUpdateMulti E.S [other.toSetArg E] (tempId id)) r
 
 /-- `dictviews_or` (:6745-6758). -/
 def dictviewsOr (self other : ViewArg K V) (id : Nat) : Py (SetObj K) :=
@@ -143,7 +144,7 @@ def dictviewIntersect (self : View K V) (other : ViewArg K V) (id : Nat) : Py (S
     | .set s => if s.exact && !s.frozen && decide (dictviewLen self ≤ s.used) then some s else none
     | _ => none
   match viaSet with
-  | some s => setIntersection E.S s (.iter (viewIterable E self)) id
+  | some s => (setIntersection E.S (.iter (viewIterable E self)) id s).1
   | none =>
     let (self', other') : View K V × ViewArg K V :=
       match other with
@@ -182,8 +183,8 @@ def dictitemsXor (d1 d2 : PyDict K V) (id : Nat) : Py (SetObj K) :=
     match go (dictItems d2) temp { ident := id } with
     | .error e => .error e
     | .ok (t, r) =>
-      runNew (setUpdateIterable E.S
-        { items := (dictItemsList t).map fun p => E.pair p.1 p.2 }) r
+      runNew (setUpdateIterable E.S (ReIter.ofIterable
+        { items := (dictItemsList t).map fun p => E.pair p.1 p.2 })) r
 
 /-- `dictviews_xor` (:6862-6882). -/
 def dictviewsXor (self other : ViewArg K V) (id : Nat) : Py (SetObj K) :=
@@ -193,11 +194,11 @@ def dictviewsXor (self other : ViewArg K V) (id : Nat) : Py (SetObj K) :=
     else
       match dictviewsToSet E self id with
       | .error e => .error e
-      | .ok r => runNew (setSymmetricDifferenceUpdate E.S (other.toSetArg E) id) r
+      | .ok r => runNew (setSymmetricDifferenceUpdate E.S (other.toSetArg E) (tempId id)) r
   | _, _ =>
     match dictviewsToSet E self id with
     | .error e => .error e
-    | .ok r => runNew (setSymmetricDifferenceUpdate E.S (other.toSetArg E) id) r
+    | .ok r => runNew (setSymmetricDifferenceUpdate E.S (other.toSetArg E) (tempId id)) r
 
 /-- `PySequence_Contains(set_or_view, x)`. -/
 def argContains (a : ViewArg K V) (x : K) : Py Bool :=
@@ -208,8 +209,9 @@ def argContains (a : ViewArg K V) (x : K) : Py Bool :=
   | .other (.dict d) =>
     match E.S.hash x with
     | .error e => .error e
-    | .ok h => d.contains x h
+    | .ok h => (d.contains x h default).1
   | .other (.iter it) => .ok (it.items.any fun y => (E.S.eq x y default).1 == .ok true)
+  | .other (.live _) => .ok false
 
 /-- `all_contained_in` (:6482-6504). -/
 def allContainedIn (self other : ViewArg K V) : Py Bool :=
@@ -232,6 +234,7 @@ def argLen : ViewArg K V → Nat
   | .other (.set s) => s.used
   | .other (.dict d) => d.size
   | .other (.iter it) => it.items.length
+  | .other (.live _) => 0
 
 /-- `dictview_richcompare` (:6506-6563): `other` must be a set or a view (otherwise
 `NotImplemented`). -/

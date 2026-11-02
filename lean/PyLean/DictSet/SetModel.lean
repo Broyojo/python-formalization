@@ -20,7 +20,7 @@ inductive Slot (K : Type) where
 /-- `PySetObject`. `tableId` stands for the pointer `so->table`: 0 is `so->smalltable`,
 which is exactly the case `mask == 7`. `ident` is the object's address. `frozen` is
 `PyFrozenSet_Check`, `exact` is `PyAnySet_CheckExact`, `tname` is `tp_name`. -/
-structure SetObj (K : Type) where
+structure SetBody (K : Type) where
   ident : Nat := 0
   fill : Nat := 0
   used : Nat := 0
@@ -33,6 +33,13 @@ structure SetObj (K : Type) where
   frozen : Bool := false
   exact : Bool := true
   tname : String := "set"
+  deriving Repr, Inhabited
+
+/-- The set a primitive works on, and the others a callback can reach while it does: `__eq__` and an
+iterator run Python code, so an operation on two sets has both in its state, and `set_add_entry` on a
+new result has the operands too. The field has no counterpart in C. -/
+structure SetObj (K : Type) extends SetBody K where
+  peers : List (SetBody K) := []
   deriving Repr, Inhabited
 
 def LINEAR_PROBES : Nat := 9

@@ -126,7 +126,8 @@ theorem setAddEntry_spec (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K
     ((setKeys so).any (eqv · key) = false ∧
       ((SetTooBig (so.used + 1) ∧ ∃ s, setAddEntry P key (hf key) so = (.error memoryError, s)) ∨
        ∃ so', setAddEntry P key (hf key) so = (.ok (), so') ∧ SetWF hf eqv so' ∧
-         (setEntries so').Perm ((key, hf key) :: setEntries so))) := by
+         (setEntries so').Perm ((key, hf key) :: setEntries so) ∧
+         so'.peers = so.peers ∧ so'.ident = so.ident)) := by
   let u := toU64 (hf key)
   obtain ⟨t0, ht0, hn0⟩ := w.null_on_walk u (toU64_lt _)
   obtain ⟨t, j, _, a, b, c, d0, e, f⟩ := addOuter_walk (P := P) H w key u
@@ -160,17 +161,17 @@ theorem setAddEntry_spec (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K
       by_cases hl : so1.fill * 5 < so.mask * 3
       · right
         rw [if_pos hl] at hrun
-        exact ⟨so1, hrun, { toSetCore := g1, load := hl }, g2⟩
+        exact ⟨so1, hrun, { toSetCore := g1, load := hl }, g2, rfl, rfl⟩
       · rw [if_neg hl] at hrun
         have hgrow : setGrow so1 =
             setTableResize (if so1.used > 50000 then so1.used * 2 else so1.used * 4) so1 := rfl
         rcases setTableResize_spec hsym so1 g1
             (if so1.used > 50000 then so1.used * 2 else so1.used * 4)
-            (by split <;> omega) with h1 | ⟨so2, h1, h2, h3⟩
+            (by split <;> omega) with h1 | ⟨so2, h1, h2, h3, h4, h5, _⟩
         · left
           exact ⟨h1.1, so1, by rw [hrun, hgrow, h1.2]⟩
         · right
-          exact ⟨so2, by rw [hrun, hgrow, h1], h2, h3.trans g2⟩
+          exact ⟨so2, by rw [hrun, hgrow, h1], h2, h3.trans g2, h4, h5⟩
     · obtain ⟨rfl⟩ : fs = some (spos so.mask u t1 + j1) := g3
       have hnn : NoNull so u t1 j1 := noNull_first d e g2
       have hj1 : j1 ≤ linearProbes (spos so.mask u t1) so.mask := by
@@ -184,7 +185,7 @@ theorem setAddEntry_spec (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K
       obtain ⟨h1, h2⟩ := setCore_ins hsym w.toSetCore key t1 j1 ht1 hj1 hnn (by rw [g4]) hne so.fill
         (by rw [hcount, w.fill])
       right
-      exact ⟨_, addAux_dummy 255 so f3 g4, { toSetCore := h1, load := w.load }, h2⟩
+      exact ⟨_, addAux_dummy 255 so f3 g4, { toSetCore := h1, load := w.load }, h2, rfl, rfl⟩
 
 end Add
 
@@ -234,8 +235,10 @@ theorem frozensetContains_hash (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (s
 /-- `s.discard(key)`. -/
 theorem setDiscard_spec (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K) :
     ((setKeys so).any (eqv · key) = false ∧ setDiscardKey P key so = (.ok false, so)) ∨
+    ((setKeys so).any (eqv · key) = true ∧
     ∃ so', setDiscardKey P key so = (.ok true, so') ∧ SetWF hf eqv so' ∧
-      (setKeys so').Perm ((setKeys so).filter fun x => !eqv x key) := by
+      (setKeys so').Perm ((setKeys so).filter fun x => !eqv x key) ∧
+      so'.peers = so.peers ∧ so'.ident = so.ident) := by
   obtain ⟨s, h1, h2⟩ := setLookkey_spec H w key
   rcases h2 with ⟨hn, hne⟩ | ⟨k, h, hs, heq⟩
   · left
@@ -244,7 +247,7 @@ theorem setDiscard_spec (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K)
     simp [hn]
   · right
     obtain ⟨g1, g2⟩ := setCore_del w.toSetCore s k h hs
-    refine ⟨_, ?_, { toSetCore := g1, load := w.load }, ?_⟩
+    refine ⟨any_keys_true so s k h key hs heq, _, ?_, { toSetCore := g1, load := w.load }, ?_, rfl, rfl⟩
     · simp only [setDiscardKey, setHashKey_bind H, setDiscardEntry, M.bind_run, h1, M.get_run]
       simp [hs, M.bind_run, M.put_run]
     · have hmap := g2.map (·.1)
@@ -280,16 +283,16 @@ theorem setAddKey_spec (H : HonestSet P hf eqv) (w : SetWF hf eqv so) (key : K) 
     ((setKeys so).any (eqv · key) = false ∧
       ((SetTooBig (so.used + 1) ∧ ∃ s, setAddKey P key so = (.error memoryError, s)) ∨
        ∃ so', setAddKey P key so = (.ok (), so') ∧ SetWF hf eqv so' ∧
-         (setKeys so').Perm (key :: setKeys so))) := by
+         (setKeys so').Perm (key :: setKeys so) ∧ so'.peers = so.peers ∧ so'.ident = so.ident)) := by
   have hunf : setAddKey P key so = setAddEntry P key (hf key) so := setHashKey_bind H key _ so
   rw [hunf]
   rcases setAddEntry_spec H w key with h | ⟨h1, h2⟩
   · exact Or.inl h
   · right
     refine ⟨h1, ?_⟩
-    rcases h2 with h | ⟨so', a, b, c⟩
+    rcases h2 with h | ⟨so', a, b, c, d, e⟩
     · exact Or.inl h
-    · exact Or.inr ⟨so', a, b, by simpa [setKeys] using c.map Prod.fst⟩
+    · exact Or.inr ⟨so', a, b, by simpa [setKeys] using c.map Prod.fst, d, e⟩
 
 /-- `set_clear_internal`. -/
 theorem setClear_spec (w : SetWF hf eqv so) :
@@ -397,7 +400,7 @@ theorem setOpsRun_spec (H : HonestSet P hf eqv) :
         · exact Or.inl ⟨g1, n, by simp only [List.length_cons]; omega, g3⟩
         · exact Or.inr g
       · simp only [h1, Bool.false_eq_true, if_false]
-        rcases h3 with ⟨hb, s, h3⟩ | ⟨so', a, b, c⟩
+        rcases h3 with ⟨hb, s, h3⟩ | ⟨so', a, b, c, _, _⟩
         · left
           exact ⟨by simp [h3], so.used + 1, by simp, hb⟩
         · simp only [a]
@@ -413,7 +416,7 @@ theorem setOpsRun_spec (H : HonestSet P hf eqv) :
           · exact Or.inr g
     | discard k =>
       simp only [setOpsRun, setAbs]
-      rcases setDiscard_spec H w k with ⟨h1, h2⟩ | ⟨so', a, b, c⟩
+      rcases setDiscard_spec H w k with ⟨h1, h2⟩ | ⟨_, so', a, b, c, _, _⟩
       · simp only [h2]
         have hall : ∀ x ∈ l, (!eqv x k) = true := by
           intro x hx

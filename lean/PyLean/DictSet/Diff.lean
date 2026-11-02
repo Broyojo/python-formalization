@@ -41,6 +41,8 @@ structure St where
   names : List DObj := []
   /-- The dict slot that a mutating `__eq__` acts on, when the test names one. -/
   tgt : Option Nat := none
+  /-- The set slot that a mutating `__eq__` acts on. -/
+  stgt : Option Nat := none
   deriving Inhabited
 
 def enc : DObj → Json
@@ -109,6 +111,22 @@ def setArg (st : St) (j : Json) : Except String (SetArg DObj) := do
   | "s" => return .set st.ss[← argN a 1]!
   | "d" => return .dict (dictAsArg dEnv st.ds[← argN a 1]!)
   | "l" => return .iter { items := ← objs st (← arg a 1) }
+  | "h" =>
+    -- `['h', items, hook, act, stop]`: a generator that does `act` to the target set before it
+    -- yields element `hook`.
+    let items ← objs st (← arg a 1)
+    let hook ← argN a 2
+    let act ← argN a 3
+    let stop ← (← arg a 4).getBool?
+    let tid := match st.stgt with
+      | some t => st.ss[t]!.ident
+      | none => 0
+    let steps : List (SM DObj (Option DObj)) := items.zipIdx.map fun (x, i) s =>
+      (.ok (some x),
+       if i == hook && (s.ident == tid || s.peers.any (·.ident == tid)) then
+         (evilSet st.pool act (s.swapIn tid)).swapIn s.ident
+       else s)
+    return .live { steps := steps ++ if stop then [M.throw (.valueError "stop")] else [] }
   | "g" => return .iter { items := ← objs st (← arg a 1), stop := some (.valueError "stop") }
   | "n" => return .iter { getIter := some (.typeError "'int' object is not iterable"), items := [] }
   | t => throw s!"set arg {t}"
@@ -223,9 +241,21 @@ def withD {α : Type} (st : St) (i : Nat) (m : DM DObj DObj α) : Py α × St :=
     let (r, d) := m st.ds[i]!
     (r, { st with ds := st.ds.set! i { d with peer := none } })
 
+/-- Run on set slot `i`. A target in another slot is lent to the state and taken back. -/
 def withS {α : Type} (st : St) (i : Nat) (m : SM DObj α) : Py α × St :=
-  let (r, s) := m st.ss[i]!
-  (r, { st with ss := st.ss.set! i s })
+  match st.stgt with
+  | some t =>
+    if i == t then
+      let (r, s) := m st.ss[i]!
+      (r, { st with ss := st.ss.set! i { s with peers := [] } })
+    else
+      let tb := st.ss[t]!
+      let (r, s) := m { st.ss[i]! with peers := [tb.toSetBody] }
+      let tb' : DS := { toSetBody := s.live tb.ident }
+      (r, { st with ss := (st.ss.set! i { s with peers := [] }).set! t tb' })
+  | none =>
+    let (r, s) := m st.ss[i]!
+    (r, { st with ss := st.ss.set! i s })
 
 def fresh (st : St) : Nat × St := (st.next, { st with next := st.next + 1 })
 
@@ -234,6 +264,11 @@ def toSlot2 (st : St) (r : Py DS) : Json × St :=
   match r with
   | .ok s => (okJ Json.null, { st with ss := st.ss.set! 2 s })
   | .error e => (errJ e, st)
+
+/-- Run on set slot `i` and store the new set in slot 2. -/
+def toSlot2S (st : St) (i : Nat) (m : SM DObj DS) : Json × St :=
+  let (r, st') := withS st i m
+  toSlot2 st' r
 
 def toDSlot2 (st : St) (r : Py DD) : Json × St :=
   match r with
@@ -626,7 +661,9 @@ def stepIter (st : St) (name : String) (a : Array Json) : Except String (Option 
 def stepSet (st : St) (name : String) (a : Array Json) : Except String (Option (Json × St)) := do
   let i := (a[1]?.bind fun j => j.getNat?.toOption).getD 0
   let k (n : Nat) : Except String DObj := do obj st (← arg a n)
-  let P := sProto
+  let P := match st.stgt with
+    | some t => sProtoAt st.pool st.ss[t]!.ident
+    | none => sProto
   let sh := DObj.setHash
   let argsAt (n : Nat) : Except String (List (SetArg DObj)) := do
     (← arrOf (← arg a n)).mapM (setArg st)
@@ -650,19 +687,19 @@ def stepSet (st : St) (name : String) (a : Array Json) : Except String (Option (
   | "supd" => return some (resJ unitJ (withS st i (setUpdateMulti P (← argsAt 2))))
   | "sunion" =>
     let (id, st) := fresh st
-    return some (toSlot2 st (setUnion P so (← argsAt 2) id))
+    return some (toSlot2S st i (setUnion P (← argsAt 2) id))
   | "sinter" =>
     let (id, st) := fresh st
-    return some (toSlot2 st (setIntersectionMulti P so (← argsAt 2) id))
+    return some (toSlot2S st i (setIntersectionMulti P (← argsAt 2) id))
   | "sdiff" =>
     let (id, st) := fresh st
-    return some (toSlot2 st (setDifferenceMulti P so (← argsAt 2) id))
+    return some (toSlot2S st i (setDifferenceMulti P (← argsAt 2) id))
   | "ssym" =>
     let (id, st) := fresh st
-    return some (toSlot2 st (setSymmetricDifference P so (← setArg st (← arg a 2)) id))
+    return some (toSlot2S st i (setSymmetricDifference P (← setArg st (← arg a 2)) id))
   | "scopy" =>
     let (id, st) := fresh st
-    return some (toSlot2 st (setCopy P so id))
+    return some (toSlot2S st i (setCopy P id))
   | "sinterupd" =>
     let (id, st) := fresh st
     return some (resJ unitJ (withS st i (setIntersectionUpdateMulti P (← argsAt 2) id)))
@@ -672,33 +709,33 @@ def stepSet (st : St) (name : String) (a : Array Json) : Except String (Option (
   | "ssymupd" =>
     let (id, st) := fresh st
     return some (resJ unitJ (withS st i (setSymmetricDifferenceUpdate P (← setArg st (← arg a 2)) id)))
-  | "sdisj" => return some (enc1 toJson (setIsdisjoint P so (← setArg st (← arg a 2))), st)
+  | "sdisj" => return some (resJ toJson (withS st i (setIsdisjoint P (← setArg st (← arg a 2)))))
   | "ssubset" =>
     let (id, st) := fresh st
-    return some (enc1 toJson (setIssubset P so (← setArg st (← arg a 2)) id), st)
+    return some (resJ toJson (withS st i (setIssubset P (← setArg st (← arg a 2)) id)))
   | "ssuper" =>
     let (id, st) := fresh st
-    return some (enc1 toJson (setIssuperset P so (← setArg st (← arg a 2)) id), st)
+    return some (resJ toJson (withS st i (setIssuperset P (← setArg st (← arg a 2)) id)))
   | "scmp" =>
     let j ← argN a 2
     let (id, st) := fresh st
-    return some (enc1 toJson (setRichcompare P so st.ss[j]! (← cmpOf (← (← arg a 3).getStr?)) id), st)
+    return some (resJ toJson (withS st i (setRichcompare P st.ss[j]! (← cmpOf (← (← arg a 3).getStr?)) id)))
   | "sor" =>
     let j ← argN a 2
     let (id, st) := fresh st
-    return some (toSlot2 st (setOr P so st.ss[j]! id))
+    return some (toSlot2S st i (setOr P st.ss[j]! id))
   | "sand" =>
     let j ← argN a 2
     let (id, st) := fresh st
-    return some (toSlot2 st (setIntersection P so (.set st.ss[j]!) id))
+    return some (toSlot2S st i (setIntersection P (.set st.ss[j]!) id))
   | "ssub" =>
     let j ← argN a 2
     let (id, st) := fresh st
-    return some (toSlot2 st (setDifference P so (.set st.ss[j]!) id))
+    return some (toSlot2S st i (setDifference P (.set st.ss[j]!) id))
   | "sxor" =>
     let j ← argN a 2
     let (id, st) := fresh st
-    return some (toSlot2 st (setSymmetricDifference P so (.set st.ss[j]!) id))
+    return some (toSlot2S st i (setSymmetricDifference P (.set st.ss[j]!) id))
   | "sior" =>
     let j ← argN a 2
     return some (resJ unitJ (withS st i (setUpdate P (.set st.ss[j]!))))
@@ -1169,7 +1206,12 @@ def run (fn : String) (j : Json) : Except String Json := do
     | some "d0" => some 0
     | some "d1" => some 1
     | _ => none
-  let st := { initSt poolA [] with tgt }
+  let stgt : Option Nat := match (j.getObjValAs? String "target").toOption with
+    | some "s" => some 0
+    | some "s0" => some 0
+    | some "s1" => some 1
+    | _ => none
+  let st := { initSt poolA [] with tgt, stgt }
   let ops ← arrOf (← field j "ops")
   let every := (j.getObjValAs? Nat "every").toOption.getD 1
   let runOps := fun st => runOps every st ops 0 #[]

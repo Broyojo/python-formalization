@@ -12,6 +12,8 @@ import PyLean.DictSet.SetRefine
 import PyLean.DictSet.Findings
 import PyLean.DictSet.Body
 import PyLean.DictSet.Iter
+import PyLean.DictSet.SetHash
+import PyLean.DictSet.SetAlgebra
 
 /-!
 `Objects/dictobject.c`, `Objects/setobject.c`, `Objects/odictobject.c`, CPython 3.15.2.
@@ -315,6 +317,41 @@ def entries : List Entry := [
     statement := "For every key protocol, a failed hash in _PySet_Contains is retried with the frozenset hash only for a TypeError from a set, and otherwise goes through set_unhashable_type."
     source := "setobject.c:2549-2562", status := .proven
     prop := ``SetContainsRetry, thm := some ``setContainsRetry_proven },
+  { id := "set-merge-refines", pyFile := "Objects/setobject.c",
+    pyFns := ["set_merge_lock_held"]
+    statement := "set_merge_lock_held from another well-formed set, for an honest protocol: on all three paths, the copy of an equal-sized table, the clean reinsertion into an empty one, and the loop, the result holds what the receiver held and the source's keys it did not; the one way to fail is a table PyMem_NEW refuses. From itself it does nothing."
+    source := "setobject.c:828-898", status := .proven
+    prop := ``SetMergeRefines, thm := some ``setMergeRefines_proven },
+  { id := "set-copy-refines", pyFile := "Objects/setobject.c",
+    pyFns := ["set_copy_impl", "set_copy_untracked_lock_held"]
+    statement := "A copy of a well-formed set is a new well-formed set with the same entries, and the original is unchanged; the one way to fail is a table PyMem_NEW refuses."
+    source := "setobject.c:1570-1602", status := .proven
+    prop := ``SetCopyRefines, thm := some ``setCopyRefines_proven },
+  { id := "set-inter-refines", pyFile := "Objects/setobject.c", pyFns := []
+    statement := "set_intersection of two sets, for an honest protocol: the entries of the one walked, which is the smaller, that the other holds, so the result's objects come from the smaller; the original sets are unchanged."
+    source := "setobject.c:1723-1755", status := .proven
+    prop := ``SetInterRefines, thm := some ``setInterRefines_proven
+    notes := "The set branch only; the row stays todo until the iterable branch has a theorem." },
+  { id := "set-diff-update-refines", pyFile := "Objects/setobject.c", pyFns := []
+    statement := "set_difference_update_internal from another set, for an honest protocol: what equals a key of the other goes, on the loop and on the route through set_intersection; the one way to fail is a table too big."
+    source := "setobject.c:1970-2029", status := .proven
+    prop := ``SetDiffUpdateRefines, thm := some ``setDiffUpdateRefines_proven
+    notes := "The set branch only; the row stays todo until the iterable branch has a theorem." },
+  { id := "set-sym-update-refines", pyFile := "Objects/setobject.c",
+    pyFns := ["set_symmetric_difference_update_set"]
+    statement := "set_symmetric_difference_update from another set, for an honest protocol: what the two share goes and what only the other has comes in; the one way to fail is a table too big. From itself it clears."
+    source := "setobject.c:2257-2282, :2295-2334", status := .proven
+    prop := ``SetSymUpdateRefines, thm := some ``setSymUpdateRefines_proven },
+  { id := "set-subset-refines", pyFile := "Objects/setobject.c", pyFns := []
+    statement := "set_issubset from another set, for an honest protocol: the list answer, on the size shortcut as well as through the loop, and neither set changes."
+    source := "setobject.c:2420-2435", status := .proven
+    prop := ``SetSubsetRefines, thm := some ``setSubsetRefines_proven
+    notes := "The set branch only; the row stays todo until the other branch has a theorem." },
+  { id := "set-disjoint-refines", pyFile := "Objects/setobject.c", pyFns := []
+    statement := "set_isdisjoint with an exact set, for an honest protocol: the list answer, whichever of the two it walks, and neither set changes."
+    source := "setobject.c:1924-1946", status := .proven
+    prop := ``SetDisjointRefines, thm := some ``setDisjointRefines_proven
+    notes := "The exact-set branch only; the row stays todo until the iterator branch has a theorem." },
   { id := "set-add-trusts-yes", pyFile := "Objects/setobject.c", pyFns := []
     statement := "set_add_entry and set_lookkey differ on an __eq__ that answers yes and changes the table: the lookup restarts, the add stops and treats the key as present."
     source := "setobject.c:159-162 against :290-295", status := .proven
@@ -491,6 +528,20 @@ def entries : List Entry := [
     statement := "Two tables whose slots are a permutation of each other, with the same mask, fill and used, have the same frozenset hash."
     source := "setobject.c:979-987: a frozenset hash should be independent of order", status := .proven
     prop := ``FrozensetHashOrderFree, thm := some ``frozensetHashOrderFree_proven },
+  { id := "set-frozenset-hash-active", pyFile := "Objects/setobject.c",
+    pyFns := ["frozenset_hash_impl", "_shuffle_bits"]
+    statement := "For a table with the counts it keeps, whatever NULLs and dummies it holds, the frozenset hash is a function of the stored hashes of the active entries alone: the corrections for NULL and dummy slots cancel exactly."
+    source := "setobject.c:979-998: the final hash depends only on active entries", status := .proven
+    prop := ``FrozensetHashActive, thm := some ``frozensetHashActive_proven },
+  { id := "set-frozenset-hash-equal", pyFile := "Objects/setobject.c",
+    pyFns := ["frozenset_hash_impl"]
+    statement := "Two well-formed tables with the same active (key, hash) entries in any order have the same frozenset hash, whatever their sizes and dummies."
+    source := "setobject.c:979-987", status := .proven
+    prop := ``FrozensetHashEqual, thm := some ``frozensetHashEqual_proven },
+  { id := "set-frozenset-hash-cached", pyFile := "Objects/setobject.c", pyFns := ["frozenset_hash"]
+    statement := "frozenset_hash answers a stored hash without looking at the table, and otherwise computes the hash, stores it, and answers the same next time."
+    source := "setobject.c:1014-1027", status := .proven
+    prop := ``FrozensetHashCached, thm := some ``frozensetHashCached_proven },
   { id := "set-frozenset-hash-not-minus-one", pyFile := "Objects/setobject.c",
     pyFns := []
     statement := "The frozenset hash is never -1, the error value of tp_hash."

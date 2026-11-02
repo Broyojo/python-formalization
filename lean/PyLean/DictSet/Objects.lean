@@ -177,6 +177,10 @@ def peerProto (pool : Array DObj) : Proto DObj DD :=
          | some p => { s with peer := some (evilAct pool n p.toDict).toPeer }
          | none => s) }
 
+/-- A comparison with no side effect, for the insertion inside `evilSet`. -/
+def plainSet : Proto DObj DS :=
+  { dKeyOps with eq := fun a b s => (DObj.eq a b, s) }
+
 def sProto : Proto DObj DS :=
   { dKeyOps with
     eq := fun a b s =>
@@ -186,6 +190,29 @@ def sProto : Proto DObj DS :=
         match setPop s with
         | (_, s') => (.ok false, s')
       | _ => (DObj.eq a b, s) }
+
+/-- What `evil_act` in the test does to a set. -/
+def evilSet (pool : Array DObj) (n : Nat) (t : DS) : DS :=
+  match n with
+  | 0 => t
+  | 1 => setClearInternal t
+  | 2 => (setPop t).2
+  | n =>
+    match setPop t with
+    | (.ok _, t') => (setAddKey plainSet pool[n - 10]! t').2
+    | (.error _, t') => t'
+
+/-- `__eq__` acting on the set with this identity, wherever it is in the state. -/
+def sProtoAt (pool : Array DObj) (id : Nat) : Proto DObj DS :=
+  { dKeyOps with
+    eq := fun a b s =>
+      match DObj.action a b with
+      | 0 => (DObj.eq a b, s)
+      | n =>
+        (evilAnswer a b,
+         if s.ident == id || s.peers.any (·.ident == id) then
+           (evilSet pool n (s.swapIn id)).swapIn s.ident
+         else s) }
 
 def dEnv : Env DObj DObj :=
   { D := dProto

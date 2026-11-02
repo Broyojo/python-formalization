@@ -97,6 +97,12 @@ def evil_act(t, n):
             t.popitem() if isinstance(t, dict) else t.pop()
         except KeyError:
             pass
+    elif isinstance(t, set):
+        try:
+            t.pop()
+        except KeyError:
+            return
+        t.add(POOL[0][n - 10])
     else:
         try:
             v = t.popitem()[1]
@@ -838,6 +844,56 @@ def gen_merge(rng):
     return pool, ops, target
 
 
+def set_evil_arg(rng, n):
+    """The other operand of an operation with a key whose `__eq__` changes a set."""
+    k = lambda: rng.randrange(n)
+    o = rng.random()
+    if o < 0.6:
+        return ["s", rng.randrange(2)]
+    if o < 0.75:
+        return ["l", [k() for _ in range(rng.randint(0, 8))]]
+    if o < 0.9:
+        items = [k() for _ in range(rng.randint(0, 6))]
+        return ["h", items, rng.randint(0, 6), rng.choice([1, 2]), rng.random() < 0.2]
+    return ["g", [k() for _ in range(rng.randint(0, 4))]]
+
+
+def gen_set_evil(rng):
+    """The set algebra with a key whose `__eq__` changes an operand: a pool sharing a hash, so that
+    a probe compares them. Slot 0 is the receiver, and the target is either set."""
+    pool = Pool()
+    h = rng.choice([0, 1, 8, 16])
+    for i in range(rng.randint(2, 7)):
+        pool.add("K", [i, h if rng.random() < 0.8 else i], ("K", i))
+    fresh = pool.add("K", [50, 1000 + rng.randrange(1000)], ("K", 50))
+    target = rng.choice(["s0", "s1", "s1"])
+    act = rng.choice([1, 2, 2, 10 + fresh])
+    rs = rng.random() < 0.2
+    for i in range(rng.randint(1, 3)):
+        pool.add("Kev", [100 + i, h, act, rs], ("Kev", i), a=act, r=rs)
+    int_pool(pool, rng, 3, 8)
+    n = len(pool.specs)
+    ops = []
+    for _ in range(rng.randint(2, 12)):
+        ops.append(["sadd", rng.randrange(2), rng.randrange(n)])
+    for _ in range(rng.randint(2, 10)):
+        o = rng.random()
+        if o < 0.5:
+            name = rng.choice(["supd", "sunion", "sinter", "sdiff", "sinterupd", "sdiffupd"])
+            ops.append([name, 0, [set_evil_arg(rng, n) for _ in range(rng.randint(1, 2))]])
+        elif o < 0.7:
+            ops.append([rng.choice(["ssym", "ssymupd", "sdisj", "ssubset", "ssuper"]), 0,
+                        set_evil_arg(rng, n)])
+        elif o < 0.85:
+            ops.append([rng.choice(["sor", "sand", "ssub", "sxor", "sior", "siand", "sisub", "sixor"]),
+                        0, 1])
+        elif o < 0.92:
+            ops.append(["scmp", 0, 1, rng.choice(["lt", "le", "eq", "ne", "gt", "ge"])])
+        else:
+            ops.append(["sadd", rng.randrange(2), rng.randrange(n)])
+    return pool, ops, target
+
+
 def pair_item(rng, n):
     r = rng.random()
     if r < 0.9:
@@ -1058,8 +1114,10 @@ def gen_case(rng):
         pool, ops = gen_iters(rng)
     elif r < 0.66:
         pool, ops, target = gen_evil(rng)
-    elif r < 0.72:
+    elif r < 0.70:
         pool, ops, target = gen_merge(rng)
+    elif r < 0.72:
+        pool, ops, target = gen_set_evil(rng)
     elif r < 0.81:
         pool, ops = gen_odict(rng)
         case = {"fn": "odict", "fork": True}
@@ -1098,8 +1156,10 @@ class Runner:
             TARGET[0] = self.ds[0]
         elif t == "d1":
             TARGET[0] = self.ds[1]
-        elif t == "s":
+        elif t in ("s", "s0"):
             TARGET[0] = self.ss[0]
+        elif t == "s1":
+            TARGET[0] = self.ss[1]
 
     def E(self, x):
         if isinstance(x, tuple):
@@ -1316,6 +1376,17 @@ class Runner:
                 yield from items
                 raise ValueError("stop")
             return gen()
+        if t == "h":
+            items = [self.O(x) for x in a[1]]
+
+            def hooked():
+                for i, x in enumerate(items):
+                    if i == a[2]:
+                        evil_act(TARGET[0], a[3])
+                    yield x
+                if a[4]:
+                    raise ValueError("stop")
+            return hooked()
         return 5
 
     def seq2(self, it):
