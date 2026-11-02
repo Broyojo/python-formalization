@@ -203,6 +203,99 @@ theorem writerFormatRules_proven : WriterFormatRules := by
         obtain ⟨rfl, rfl, rfl⟩ := h
         exact ⟨by simp, fun _ => ⟨rfl, rfl⟩⟩
 
+/-- What `WriterInvariant` leaves open: a writer does not fail below what memory can give, from any
+state, for either result type, and its refusals are these. Hypothesis of the first two: a size of
+at most `2^46`, so that the over-allocation stays below the limit of `mallocFails`. -/
+def WriterGrowth : Prop :=
+  (∀ (w : Writer) (grow : Int), 0 ≤ w.size → 0 ≤ grow → w.size + grow < 2 ^ 46 →
+    ∃ w', writerGrow w grow = .ok w') ∧
+  (∀ (w : Writer) (size : Int), 0 ≤ size → size < 2 ^ 46 → ∃ w', writerResize w size = .ok w') ∧
+  (∀ (size : Int) (b : Bool), size < 0 → writerCreate size b = .error (.valueError "size must be >= 0")) ∧
+  (∀ (w : Writer) (size : Int), size < 0 → writerResize w size = .error (.valueError "size must be >= 0")) ∧
+  (∀ (w : Writer) (grow : Int), grow < 0 → w.size + grow < 0 →
+    writerGrow w grow = .error (.valueError "invalid size")) ∧
+  (∀ (w : Writer) (grow : Int), grow > 0 → grow > ssizeMax - w.size → writerGrow w grow = .error memoryError)
+
+theorem writerObjResize_ok (w : Writer) (n : Int) (h0 : 0 ≤ n) (h : n < 2 ^ 46 + 2 ^ 44) :
+    ∃ o, writerObjResize w n = .ok o := by
+  have hc := bytesSizeCheck_ok n h0 (by omega)
+  have hn8 : n / 8 ≤ n := Int.ediv_le_self _ h0
+  unfold writerObjResize
+  split
+  · rename_i o n' a heq
+    split
+    · cases hna : baNewAlloc a 0 n with
+      | none => exact ⟨_, rfl⟩
+      | some x =>
+        have h1 := baNewAlloc_ge _ _ _ _ h0 hna
+        have h2 := baNewAlloc_le _ _ _ _ h0 hna
+        have h3 : ¬ (x > baSizeMax) := by
+          unfold baSizeMax
+          rw [ssizeMax_val, objsize_val]
+          omega
+        have h4 : baStorageCheck a x = .ok () := by
+          unfold baStorageCheck
+          rw [if_neg h3]
+          exact bytesResizeCheck_small _ _ (by omega) (by omega)
+        simp only [h4]
+        exact ⟨_, rfl⟩
+    · simp only [bytesResizeCheck_small n' n h0 (by omega)]
+      exact ⟨_, rfl⟩
+  · simp only [hc]
+    exact ⟨_, rfl⟩
+
+theorem writerResizeRaw_ok (w : Writer) (size : Int) (b : Bool) (h0 : 0 ≤ size) (h : size < 2 ^ 46) :
+    ∃ w', writerResizeRaw w size b = .ok w' := by
+  unfold writerResizeRaw
+  split
+  · exact ⟨_, rfl⟩
+  · simp only
+    have hq : size / overallocateFactor ≤ size / 4 := Int.le_refl _
+    have hq2 : size / 4 ≥ 0 := Int.ediv_nonneg h0 (by decide)
+    have hq3 : size / 4 ≤ size := Int.ediv_le_self _ h0
+    have hq4 : size / 4 < 2 ^ 44 := by omega
+    have hg : ∃ o, writerObjResize w
+        (if b = true ∧ w.overallocate = true ∧ size ≤ ssizeMax - size / overallocateFactor then
+          size + size / overallocateFactor else size) = .ok o := by
+      apply writerObjResize_ok
+      · split <;> (try simp only [overallocateFactor]) <;> omega
+      · split <;> (try simp only [overallocateFactor]) <;> omega
+    obtain ⟨o, ho⟩ := hg
+    rw [ho]
+    exact ⟨_, rfl⟩
+
+theorem writerGrowth_proven : WriterGrowth := by
+  have hmax := ssizeMax_val
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro w grow h0 h1 h2
+    obtain ⟨w1, hr⟩ := writerResizeRaw_ok w (w.size + grow) true (by omega) h2
+    unfold writerGrow
+    split
+    · exact ⟨_, rfl⟩
+    · rw [if_neg (by omega), if_neg (by omega)]
+      simp only [hr]
+      exact ⟨_, rfl⟩
+  · intro w size h0 h1
+    obtain ⟨w1, hr⟩ := writerResizeRaw_ok w size true h0 h1
+    unfold writerResize
+    rw [if_neg (by omega)]
+    split
+    · simp only [hr]
+      exact ⟨_, rfl⟩
+    · exact ⟨_, rfl⟩
+  · intro size b h
+    simp [writerCreate, h]
+  · intro w size h
+    simp [writerResize, h]
+  · intro w grow h1 h2
+    have h3 : ¬ (grow = 0) := by omega
+    have h4 : ¬ (grow ≥ 0 ∧ grow > ssizeMax - w.size) := by omega
+    simp [writerGrow, h3, h4, h1, h2]
+  · intro w grow h1 h2
+    have h3 : ¬ (grow = 0) := by omega
+    have h4 : grow ≥ 0 ∧ grow > ssizeMax - w.size := by omega
+    simp only [writerGrow, h3, if_false, h4, and_self, if_true]
+
 /-! ## `_PyBytes_ResizeKeepOnError` -/
 
 /-- `_PyBytes_ResizeKeepOnError`: a negative size is refused, the same size and an empty result cannot

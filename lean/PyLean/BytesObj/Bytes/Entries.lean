@@ -66,7 +66,7 @@ def entries : List Entry := [
     prop := ``CApiSpec, thm := some ``cApiSpec_proven
     notes := "The difftest calls the real functions through ctypes.pythonapi, including conversions in PyBytes_FromFormat." },
   { id := "bytesobj-bytes-hash-cache", pyFile := "Objects/bytesobject.c"
-    pyFns := ["set_ob_shash", "get_ob_shash", "bytes_hash", "bytes_subtype_new", "bytes_alloc", "_PyBytes_Resize"]
+    pyFns := ["set_ob_shash", "bytes_hash", "bytes_subtype_new", "bytes_alloc", "_PyBytes_Resize"]
     statement := "For any Py_HashBuffer that never returns -1: hash(b) is the hash of the contents whether or not the cache was filled, a second call hits the cache, a subclass copy keeps the cache, and a resize that changes the size invalidates it."
     source := "invariant of ob_shash, Include/cpython/bytesobject.h; bytesobject.c:3404-3414", status := .proven
     prop := ``BytesHashCache, thm := some ``bytesHashCache_proven
@@ -242,6 +242,11 @@ def entries : List Entry := [
     statement := "Finishing refuses a negative size and one above size, succeeds at any size up to that of a writer as Create left it, for bytes and bytearray, and gives back what the caller wrote."
     source := "bytesobject.c:3864-3937", status := .proven
     prop := ``WriterFinish, thm := some ``writerFinish_proven },
+  { id := "bytesobj-bytes-writer-growth", pyFile := "Objects/bytesobject.c"
+    pyFns := ["byteswriter_resize", "byteswriter_create", "PyBytesWriter_Create", "PyBytesWriter_Resize", "PyBytesWriter_Grow"]
+    statement := "A writer does not fail below 2^46 bytes from any state, for bytes or bytearray, and refuses a negative size, a shrink past 0 and a grow past PY_SSIZE_T_MAX."
+    source := "bytesobject.c:3730-3835, :3958-4023", status := .proven
+    prop := ``WriterGrowth, thm := some ``writerGrowth_proven },
   { id := "bytesobj-bytes-writer-format", pyFile := "Objects/bytesobject.c"
     pyFns := ["PyBytesWriter_Format"]
     statement := "PyBytesWriter_Format adds what bytes_fromformat writes, and on an error leaves the size where it was and adds nothing."

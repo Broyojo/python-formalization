@@ -1,7 +1,7 @@
 file	line	endline	name	signature	status	entry	note
 Objects/bytearrayobject.c	26	44	_getbytevalue	_getbytevalue(PyObject* arg, int *value)	modelled	bytesobj-bytearray-item,bytesobj-bytes-index-raises	
-Objects/bytearrayobject.c	47	52	bytearray_write_trailing_null_byte	bytearray_write_trailing_null_byte(PyByteArrayObject *self)	todo		changed-in-3.15: new function
-Objects/bytearrayobject.c	56	67	bytearray_reinit_from_bytes	bytearray_reinit_from_bytes(PyByteArrayObject *self, Py_ssize_t size)	todo		changed-in-3.15: new function
+Objects/bytearrayobject.c	47	52	bytearray_write_trailing_null_byte	bytearray_write_trailing_null_byte(PyByteArrayObject *self)	excluded		no-behaviour: the byte past the data, which no Python operation reads; the model contents stop at Py_SIZE
+Objects/bytearrayobject.c	56	67	bytearray_reinit_from_bytes	bytearray_reinit_from_bytes(PyByteArrayObject *self, Py_ssize_t size)	modelled	bytesobj-bytearray-resize-wf	
 Objects/bytearrayobject.c	70	86	bytearray_getbuffer_lock_held	bytearray_getbuffer_lock_held(PyObject *self, Py_buffer *view, int flags)	modelled	bytesobj-bytes-buffer	
 Objects/bytearrayobject.c	89	96	bytearray_getbuffer	bytearray_getbuffer(PyObject *self, Py_buffer *view, int flags)	modelled	bytesobj-bytes-buffer	
 Objects/bytearrayobject.c	99	106	bytearray_releasebuffer	bytearray_releasebuffer(PyObject *self, Py_buffer *view)	modelled	bytesobj-bytes-buffer	
@@ -9,37 +9,37 @@ Objects/bytearrayobject.c	113	125	_bytearray_with_buffer	_bytearray_with_buffer(
 Objects/bytearrayobject.c	128	136	_canresize	_canresize(PyByteArrayObject *self)	modelled	bytesobj-bytearray-export-rule	
 Objects/bytearrayobject.c	143	146	PyByteArray_FromObject	PyByteArray_FromObject(PyObject *input)	modelled	bytesobj-bytearray-init	
 Objects/bytearrayobject.c	149	166	_PyByteArray_FromBufferObject	_PyByteArray_FromBufferObject(PyObject *obj)	modelled	bytesobj-bytearray-init	
-Objects/bytearrayobject.c	169	206	PyByteArray_FromStringAndSize	PyByteArray_FromStringAndSize(const char *bytes, Py_ssize_t size)	todo		changed-in-3.15: was bytesobj-bytearray-alloc-failure
+Objects/bytearrayobject.c	169	206	PyByteArray_FromStringAndSize	PyByteArray_FromStringAndSize(const char *bytes, Py_ssize_t size)	modelled	bytesobj-bytearray-alloc-failure	
 Objects/bytearrayobject.c	209	215	PyByteArray_Size	PyByteArray_Size(PyObject *self)	modelled	bytesobj-bytearray-resize-wf	
 Objects/bytearrayobject.c	218	224	PyByteArray_AsString	PyByteArray_AsString(PyObject *self)	modelled	bytesobj-bytearray-resize-wf	
-Objects/bytearrayobject.c	228	260	bytearray_resize_storage	bytearray_resize_storage(PyByteArrayObject *self, Py_ssize_t new_size, Py_ssize_t alloc)	todo		changed-in-3.15: new function
-Objects/bytearrayobject.c	264	343	bytearray_resize_lock_held	bytearray_resize_lock_held(PyObject *self, Py_ssize_t requested_size)	todo		changed-in-3.15: was bytesobj-bytearray-export-rule,bytesobj-bytearray-resize-wf
+Objects/bytearrayobject.c	228	260	bytearray_resize_storage	bytearray_resize_storage(PyByteArrayObject *self, Py_ssize_t new_size, Py_ssize_t alloc)	modelled	bytesobj-bytearray-resize-failure,bytesobj-bytearray-shrink-failure	
+Objects/bytearrayobject.c	264	343	bytearray_resize_lock_held	bytearray_resize_lock_held(PyObject *self, Py_ssize_t requested_size)	modelled	bytesobj-bytearray-export-rule,bytesobj-bytearray-resize-failure,bytesobj-bytearray-resize-wf	
 Objects/bytearrayobject.c	346	353	PyByteArray_Resize	PyByteArray_Resize(PyObject *self, Py_ssize_t requested_size)	modelled	bytesobj-bytearray-resize-wf	
-Objects/bytearrayobject.c	356	390	PyByteArray_Concat	PyByteArray_Concat(PyObject *a, PyObject *b)	todo		changed-in-3.15: was bytesobj-bytearray-concat
+Objects/bytearrayobject.c	356	390	PyByteArray_Concat	PyByteArray_Concat(PyObject *a, PyObject *b)	modelled	bytesobj-bytearray-concat	
 Objects/bytearrayobject.c	395	398	bytearray_length	bytearray_length(PyObject *op)	modelled	bytesobj-bytearray-resize-wf	
-Objects/bytearrayobject.c	401	427	bytearray_iconcat_lock_held	bytearray_iconcat_lock_held(PyObject *op, PyObject *other)	todo		changed-in-3.15: was bytesobj-bytearray-concat
+Objects/bytearrayobject.c	401	427	bytearray_iconcat_lock_held	bytearray_iconcat_lock_held(PyObject *op, PyObject *other)	modelled	bytesobj-bytearray-concat	
 Objects/bytearrayobject.c	430	437	bytearray_iconcat	bytearray_iconcat(PyObject *op, PyObject *other)	modelled	bytesobj-bytearray-concat	
-Objects/bytearrayobject.c	440	459	bytearray_repeat_lock_held	bytearray_repeat_lock_held(PyObject *op, Py_ssize_t count)	todo		changed-in-3.15: was bytesobj-bytes-repeat-fill
+Objects/bytearrayobject.c	440	459	bytearray_repeat_lock_held	bytearray_repeat_lock_held(PyObject *op, Py_ssize_t count)	modelled	bytesobj-bytes-repeat-fill	
 Objects/bytearrayobject.c	462	469	bytearray_repeat	bytearray_repeat(PyObject *op, Py_ssize_t count)	modelled	bytesobj-bytes-repeat-fill	
-Objects/bytearrayobject.c	472	496	bytearray_irepeat_lock_held	bytearray_irepeat_lock_held(PyObject *op, Py_ssize_t count)	todo		changed-in-3.15: was bytesobj-bytearray-concat
+Objects/bytearrayobject.c	472	496	bytearray_irepeat_lock_held	bytearray_irepeat_lock_held(PyObject *op, Py_ssize_t count)	modelled	bytesobj-bytearray-concat	
 Objects/bytearrayobject.c	499	506	bytearray_irepeat	bytearray_irepeat(PyObject *op, Py_ssize_t count)	modelled	bytesobj-bytearray-concat	
 Objects/bytearrayobject.c	509	518	bytearray_getitem_lock_held	bytearray_getitem_lock_held(PyObject *op, Py_ssize_t i)	modelled	bytesobj-bytes-subscript-twins	
 Objects/bytearrayobject.c	521	528	bytearray_getitem	bytearray_getitem(PyObject *op, Py_ssize_t i)	modelled	bytesobj-bytes-subscript-twins	
 Objects/bytearrayobject.c	531	588	bytearray_subscript_lock_held	bytearray_subscript_lock_held(PyObject *op, PyObject *index)	modelled	bytesobj-bytes-subscript-twins	
 Objects/bytearrayobject.c	591	599	bytearray_subscript	bytearray_subscript(PyObject *op, PyObject *index)	modelled	bytesobj-bytes-subscript-twins	
-Objects/bytearrayobject.c	602	684	bytearray_setslice_linear	bytearray_setslice_linear(PyByteArrayObject *self, Py_ssize_t lo, Py_ssize_t hi, char *bytes, Py_ssize_t bytes_len)	todo		changed-in-3.15: was bytesobj-bytearray-setslice
-Objects/bytearrayobject.c	687	738	bytearray_setslice	bytearray_setslice(PyByteArrayObject *self, Py_ssize_t lo, Py_ssize_t hi, PyObject *values)	todo		changed-in-3.15: was bytesobj-bytearray-extend-initialised,bytesobj-bytearray-setslice
+Objects/bytearrayobject.c	602	684	bytearray_setslice_linear	bytearray_setslice_linear(PyByteArrayObject *self, Py_ssize_t lo, Py_ssize_t hi, char *bytes, Py_ssize_t bytes_len)	modelled	bytesobj-bytearray-setslice,bytesobj-bytearray-shrink-failure	
+Objects/bytearrayobject.c	687	738	bytearray_setslice	bytearray_setslice(PyByteArrayObject *self, Py_ssize_t lo, Py_ssize_t hi, PyObject *values)	modelled	bytesobj-bytearray-extend-initialised,bytesobj-bytearray-setslice	
 Objects/bytearrayobject.c	741	769	bytearray_setitem_lock_held	bytearray_setitem_lock_held(PyObject *op, Py_ssize_t i, PyObject *value)	modelled	bytesobj-bytearray-index-raises,bytesobj-bytearray-item	
 Objects/bytearrayobject.c	772	779	bytearray_setitem	bytearray_setitem(PyObject *op, Py_ssize_t i, PyObject *value)	modelled	bytesobj-bytearray-item	
 Objects/bytearrayobject.c	782	940	bytearray_ass_subscript_lock_held	bytearray_ass_subscript_lock_held(PyObject *op, PyObject *index, PyObject *values)	modelled	bytesobj-bytearray-index-raises,bytesobj-bytearray-item,bytesobj-bytearray-slice-agrees-list,bytesobj-bytearray-slice-delete,bytesobj-bytearray-slice-nonempty	
 Objects/bytearrayobject.c	943	957	bytearray_ass_subscript	bytearray_ass_subscript(PyObject *op, PyObject *index, PyObject *values)	modelled	bytesobj-bytearray-slice-agrees-list,bytesobj-bytearray-slice-delete,bytesobj-bytearray-slice-nonempty	
-Objects/bytearrayobject.c	960	971	bytearray_new	bytearray_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		changed-in-3.15: new function
-Objects/bytearrayobject.c	983	1182	bytearray___init___impl	bytearray___init___impl(PyByteArrayObject *self, PyObject *arg, const char *encoding, const char *errors) /*[clinic end generated code: output=4ce1304649c2f8b3 input=1141a7122eefd7b9]*/	todo		changed-in-3.15: was bytesobj-bytearray-init,bytesobj-bytearray-init-fresh-layout,bytesobj-bytearray-init-initialised,bytesobj-bytearray-init-iterator,bytesobj-bytes-call-raises,bytesobj-bytes-index-raises
-Objects/bytearrayobject.c	1185	1198	bytearray_repr_lock_held	bytearray_repr_lock_held(PyObject *op)	todo		changed-in-3.15: was bytesobj-bytes-escape-roundtrip
+Objects/bytearrayobject.c	960	971	bytearray_new	bytearray_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	bytesobj-bytearray-init	
+Objects/bytearrayobject.c	983	1182	bytearray___init___impl	bytearray___init___impl(PyByteArrayObject *self, PyObject *arg, const char *encoding, const char *errors) /*[clinic end generated code: output=4ce1304649c2f8b3 input=1141a7122eefd7b9]*/	modelled	bytesobj-bytearray-init,bytesobj-bytearray-init-fresh-layout,bytesobj-bytearray-init-initialised,bytesobj-bytearray-init-iterator,bytesobj-bytes-call-raises,bytesobj-bytes-index-raises	
+Objects/bytearrayobject.c	1185	1198	bytearray_repr_lock_held	bytearray_repr_lock_held(PyObject *op)	modelled	bytesobj-bytes-escape-roundtrip	
 Objects/bytearrayobject.c	1201	1208	bytearray_repr	bytearray_repr(PyObject *op)	modelled	bytesobj-bytes-escape-roundtrip	
 Objects/bytearrayobject.c	1211	1220	bytearray_str	bytearray_str(PyObject *op)	modelled	bytesobj-bytes-escape-roundtrip	
 Objects/bytearrayobject.c	1223	1275	bytearray_richcompare	bytearray_richcompare(PyObject *self, PyObject *other, int op)	modelled	bytesobj-bytes-richcompare-twins	
-Objects/bytearrayobject.c	1278	1288	bytearray_dealloc	bytearray_dealloc(PyObject *op)	todo		changed-in-3.15: was bytesobj-bytearray-alloc-failure
+Objects/bytearrayobject.c	1278	1288	bytearray_dealloc	bytearray_dealloc(PyObject *op)	modelled	bytesobj-bytearray-alloc-failure	
 Objects/bytearrayobject.c	1337	1342	bytearray_find_impl	bytearray_find_impl(PyByteArrayObject *self, PyObject *sub, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=413e1cab2ae87da0 input=df3aa94840d893a7]*/	modelled	bytesobj-bytearray-read-wrappers	
 Objects/bytearrayobject.c	1353	1358	bytearray_count_impl	bytearray_count_impl(PyByteArrayObject *self, PyObject *sub, Py_ssize_t start, Py_ssize_t end) /*[clinic end generated code: output=a21ee2692e4f1233 input=e8fcdca8272857e0]*/	modelled	bytesobj-bytearray-read-wrappers	
 Objects/bytearrayobject.c	1367	1373	bytearray_clear_impl	bytearray_clear_impl(PyByteArrayObject *self) /*[clinic end generated code: output=85c2fe6aede0956c input=ed6edae9de447ac4]*/	modelled	bytesobj-bytearray-mutators	
@@ -53,7 +53,7 @@ Objects/bytearrayobject.c	1504	1509	bytearray_endswith_impl	bytearray_endswith_i
 Objects/bytearrayobject.c	1526	1542	bytearray_removeprefix_impl	bytearray_removeprefix_impl(PyByteArrayObject *self, Py_buffer *prefix) /*[clinic end generated code: output=6cabc585e7f502e0 input=4323ba6d275fe7a8]*/	modelled	bytesobj-bytes-remove-affix	
 Objects/bytearrayobject.c	1559	1576	bytearray_removesuffix_impl	bytearray_removesuffix_impl(PyByteArrayObject *self, Py_buffer *suffix) /*[clinic end generated code: output=2bc8cfb79de793d3 input=f71ba2e1a40c47dd]*/	modelled	bytesobj-bytes-remove-affix	
 Objects/bytearrayobject.c	1589	1602	bytearray_resize_impl	bytearray_resize_impl(PyByteArrayObject *self, Py_ssize_t size) /*[clinic end generated code: output=f73524922990b2d9 input=116046316a2b5cfc]*/	modelled	bytesobj-bytearray-resize-wf	
-Objects/bytearrayobject.c	1615	1689	bytearray_take_bytes_impl	bytearray_take_bytes_impl(PyByteArrayObject *self, PyObject *n) /*[clinic end generated code: output=3147fbc0bbbe8d94 input=b15b5172cdc6deda]*/	todo		changed-in-3.15: new function
+Objects/bytearrayobject.c	1615	1689	bytearray_take_bytes_impl	bytearray_take_bytes_impl(PyByteArrayObject *self, PyObject *n) /*[clinic end generated code: output=3147fbc0bbbe8d94 input=b15b5172cdc6deda]*/	modelled	bytesobj-bytearray-take-bytes	
 Objects/bytearrayobject.c	1710	1796	bytearray_translate_impl	bytearray_translate_impl(PyByteArrayObject *self, PyObject *table, PyObject *deletechars) /*[clinic end generated code: output=b6a8f01c2a74e446 input=e30d2ae004365ed9]*/	modelled	bytesobj-bytes-translate-twins	
 Objects/bytearrayobject.c	1818	1822	bytearray_maketrans_impl	bytearray_maketrans_impl(Py_buffer *frm, Py_buffer *to) /*[clinic end generated code: output=1df267d99f56b15e input=c2f5f6e7e6b0221d]*/	modelled	bytesobj-bytes-maketrans	
 Objects/bytearrayobject.c	1843	1850	bytearray_replace_impl	bytearray_replace_impl(PyByteArrayObject *self, Py_buffer *old, Py_buffer *new, Py_ssize_t count) /*[clinic end generated code: output=d39884c4dc59412a input=e2591806f954aec3]*/	modelled	bytesobj-bytearray-read-wrappers	
@@ -62,7 +62,7 @@ Objects/bytearrayobject.c	1921	1939	bytearray_partition_impl	bytearray_partition
 Objects/bytearrayobject.c	1961	1979	bytearray_rpartition_impl	bytearray_rpartition_impl(PyByteArrayObject *self, PyObject *sep) /*[clinic end generated code: output=0186ce7b1ef61289 input=b9216a2074174a36]*/	modelled	bytesobj-bytearray-read-wrappers	
 Objects/bytearrayobject.c	1993	2024	bytearray_rsplit_impl	bytearray_rsplit_impl(PyByteArrayObject *self, PyObject *sep, Py_ssize_t maxsplit) /*[clinic end generated code: output=a55e0b5a03cb6190 input=e201671c9a0c19ee]*/	modelled	bytesobj-bytearray-read-wrappers	
 Objects/bytearrayobject.c	2034	2050	bytearray_reverse_impl	bytearray_reverse_impl(PyByteArrayObject *self) /*[clinic end generated code: output=9f7616f29ab309d3 input=2f3d5ce3180ffc53]*/	modelled	bytesobj-bytearray-mutators	
-Objects/bytearrayobject.c	2075	2096	bytearray_insert_impl	bytearray_insert_impl(PyByteArrayObject *self, Py_ssize_t index, int item) /*[clinic end generated code: output=76c775a70e7b07b7 input=b3e14ede546dd8cc]*/	todo		changed-in-3.15: was bytesobj-bytearray-index-raises,bytesobj-bytearray-mutators
+Objects/bytearrayobject.c	2075	2096	bytearray_insert_impl	bytearray_insert_impl(PyByteArrayObject *self, Py_ssize_t index, int item) /*[clinic end generated code: output=76c775a70e7b07b7 input=b3e14ede546dd8cc]*/	modelled	bytesobj-bytearray-index-raises,bytesobj-bytearray-mutators	
 Objects/bytearrayobject.c	2099	2106	bytearray_isalnum	bytearray_isalnum(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-bytes-class-shortcut	
 Objects/bytearrayobject.c	2109	2116	bytearray_isalpha	bytearray_isalpha(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-bytes-class-shortcut	
 Objects/bytearrayobject.c	2119	2126	bytearray_isascii	bytearray_isascii(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-bytes-isascii	
@@ -71,11 +71,11 @@ Objects/bytearrayobject.c	2139	2146	bytearray_islower	bytearray_islower(PyObject
 Objects/bytearrayobject.c	2149	2156	bytearray_isspace	bytearray_isspace(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-bytes-class-shortcut	
 Objects/bytearrayobject.c	2159	2166	bytearray_istitle	bytearray_istitle(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-bytes-title	
 Objects/bytearrayobject.c	2169	2176	bytearray_isupper	bytearray_isupper(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-bytes-cased	
-Objects/bytearrayobject.c	2190	2201	bytearray_append_impl	bytearray_append_impl(PyByteArrayObject *self, int item) /*[clinic end generated code: output=a154e19ed1886cb6 input=a874689bac8bd352]*/	todo		changed-in-3.15: was bytesobj-bytearray-index-raises,bytesobj-bytearray-mutators
+Objects/bytearrayobject.c	2190	2201	bytearray_append_impl	bytearray_append_impl(PyByteArrayObject *self, int item) /*[clinic end generated code: output=a154e19ed1886cb6 input=a874689bac8bd352]*/	modelled	bytesobj-bytearray-index-raises,bytesobj-bytearray-mutators	
 Objects/bytearrayobject.c	2204	2211	bytearray_capitalize	bytearray_capitalize(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-bytes-case-maps	
 Objects/bytearrayobject.c	2214	2221	bytearray_center	bytearray_center(PyObject *self, PyObject *const *args, Py_ssize_t nargs)	modelled	bytesobj-bytearray-read-wrappers	
 Objects/bytearrayobject.c	2224	2231	bytearray_expandtabs	bytearray_expandtabs(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames)	modelled	bytesobj-bytearray-read-wrappers	
-Objects/bytearrayobject.c	2246	2343	bytearray_extend_impl	bytearray_extend_impl(PyByteArrayObject *self, PyObject *iterable_of_ints) /*[clinic end generated code: output=2f25e0ce72b98748 input=aeed44b025146632]*/	todo		changed-in-3.15: was bytesobj-bytearray-concat,bytesobj-bytearray-extend-initialised,bytesobj-bytes-call-raises,bytesobj-bytes-hint-rules,bytesobj-bytes-iter-raises
+Objects/bytearrayobject.c	2246	2343	bytearray_extend_impl	bytearray_extend_impl(PyByteArrayObject *self, PyObject *iterable_of_ints) /*[clinic end generated code: output=2f25e0ce72b98748 input=aeed44b025146632]*/	modelled	bytesobj-bytearray-concat,bytesobj-bytearray-extend-initialised,bytesobj-bytes-call-raises,bytesobj-bytes-hint-rules,bytesobj-bytes-iter-raises	
 Objects/bytearrayobject.c	2360	2388	bytearray_pop_impl	bytearray_pop_impl(PyByteArrayObject *self, Py_ssize_t index) /*[clinic end generated code: output=e0ccd401f8021da8 input=fc0fd8de4f97661c]*/	modelled	bytesobj-bytearray-mutators	
 Objects/bytearrayobject.c	2402	2421	bytearray_remove_impl	bytearray_remove_impl(PyByteArrayObject *self, int value) /*[clinic end generated code: output=d659e37866709c13 input=797588bc77f86afb]*/	modelled	bytesobj-bytearray-index-raises,bytesobj-bytearray-mutators	
 Objects/bytearrayobject.c	2428	2463	bytearray_strip_impl_helper	bytearray_strip_impl_helper(PyByteArrayObject* self, PyObject* bytes, int striptype)	modelled	bytesobj-bytes-strip-twins	
@@ -88,17 +88,17 @@ Objects/bytearrayobject.c	2526	2533	bytearray_zfill	bytearray_zfill(PyObject *se
 Objects/bytearrayobject.c	2548	2552	bytearray_lstrip_impl	bytearray_lstrip_impl(PyByteArrayObject *self, PyObject *bytes) /*[clinic end generated code: output=d005c9d0ab909e66 input=ed86e00eb2023625]*/	modelled	bytesobj-bytes-strip-twins	
 Objects/bytearrayobject.c	2567	2571	bytearray_rstrip_impl	bytearray_rstrip_impl(PyByteArrayObject *self, PyObject *bytes) /*[clinic end generated code: output=030e2fbd2f7276bd input=d9ca66cf20fe7649]*/	modelled	bytesobj-bytes-strip-twins	
 Objects/bytearrayobject.c	2590	2597	bytearray_decode_impl	bytearray_decode_impl(PyByteArrayObject *self, const char *encoding, const char *errors) /*[clinic end generated code: output=f57d43f4a00b42c5 input=e51ce9b82b51e2ca]*/	modelled	bytesobj-bytes-decode	
-Objects/bytearrayobject.c	2605	2613	bytearray_alloc	bytearray_alloc(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		changed-in-3.15: was bytesobj-bytearray-resize-wf
+Objects/bytearrayobject.c	2605	2613	bytearray_alloc	bytearray_alloc(PyObject *op, PyObject *Py_UNUSED(ignored))	modelled	bytesobj-bytearray-alloc-sizeof,bytesobj-bytearray-resize-wf	
 Objects/bytearrayobject.c	2631	2639	bytearray_join_impl	bytearray_join_impl(PyByteArrayObject *self, PyObject *iterable_of_bytes) /*[clinic end generated code: output=0ced382b5846a7ee input=0a31db349efcd7fa]*/	modelled	bytesobj-bytes-join	
 Objects/bytearrayobject.c	2642	2649	bytearray_ljust	bytearray_ljust(PyObject *self, PyObject *const *args, Py_ssize_t nargs)	modelled	bytesobj-bytearray-read-wrappers	
 Objects/bytearrayobject.c	2652	2659	bytearray_rjust	bytearray_rjust(PyObject *self, PyObject *const *args, Py_ssize_t nargs)	modelled	bytesobj-bytearray-read-wrappers	
 Objects/bytearrayobject.c	2675	2682	bytearray_splitlines_impl	bytearray_splitlines_impl(PyByteArrayObject *self, int keepends) /*[clinic end generated code: output=4223c94b895f6ad9 input=cc2bb740eed19f27]*/	modelled	bytesobj-bytearray-read-wrappers	
 Objects/bytearrayobject.c	2699	2707	bytearray_fromhex_impl	bytearray_fromhex_impl(PyTypeObject *type, PyObject *string) /*[clinic end generated code: output=8f0f0b6d30fb3ba0 input=2243a8b0b9e66cd5]*/	modelled	bytesobj-bytes-fromhex-roundtrip,bytesobj-bytes-fromhex-spec	
-Objects/bytearrayobject.c	2734	2747	bytearray_hex_impl	bytearray_hex_impl(PyByteArrayObject *self, PyObject *sep, Py_ssize_t bytes_per_sep) /*[clinic end generated code: output=c9563921aff1262b input=9ed746203691e894]*/	todo		changed-in-3.15: was bytesobj-bytes-fromhex-roundtrip,bytesobj-bytes-hex-groups,bytesobj-bytes-hex-sep
+Objects/bytearrayobject.c	2734	2747	bytearray_hex_impl	bytearray_hex_impl(PyByteArrayObject *self, PyObject *sep, Py_ssize_t bytes_per_sep) /*[clinic end generated code: output=c9563921aff1262b input=9ed746203691e894]*/	modelled	bytesobj-bytes-fromhex-roundtrip,bytesobj-bytes-hex-groups,bytesobj-bytes-hex-sep	
 Objects/bytearrayobject.c	2750	2773	_common_reduce	_common_reduce(PyByteArrayObject *self, int proto)	modelled	bytesobj-bytearray-reduce	
 Objects/bytearrayobject.c	2783	2787	bytearray_reduce_impl	bytearray_reduce_impl(PyByteArrayObject *self) /*[clinic end generated code: output=52bf304086464cab input=0fac78e4b7d84dd2]*/	modelled	bytesobj-bytearray-reduce	
 Objects/bytearrayobject.c	2800	2804	bytearray_reduce_ex_impl	bytearray_reduce_ex_impl(PyByteArrayObject *self, int proto) /*[clinic end generated code: output=52eac33377197520 input=751718f477033a29]*/	modelled	bytesobj-bytearray-reduce	
-Objects/bytearrayobject.c	2813	2823	bytearray_sizeof_impl	bytearray_sizeof_impl(PyByteArrayObject *self) /*[clinic end generated code: output=738abdd17951c427 input=e27320fd98a4bc5a]*/	todo		changed-in-3.15: was bytesobj-bytearray-resize-wf
+Objects/bytearrayobject.c	2813	2823	bytearray_sizeof_impl	bytearray_sizeof_impl(PyByteArrayObject *self) /*[clinic end generated code: output=738abdd17951c427 input=e27320fd98a4bc5a]*/	modelled	bytesobj-bytearray-alloc-sizeof,bytesobj-bytearray-resize-wf	
 Objects/bytearrayobject.c	2914	2928	bytearray_mod_lock_held	bytearray_mod_lock_held(PyObject *v, PyObject *w)	modelled	bytesobj-bytes-format-field	
 Objects/bytearrayobject.c	2931	2945	bytearray_mod	bytearray_mod(PyObject *v, PyObject *w)	modelled	bytesobj-bytes-format-field	
 Objects/bytearrayobject.c	3026	3032	bytearrayiter_dealloc	bytearrayiter_dealloc(PyObject *self)	excluded		no-behaviour: reference counting and GC untracking of the iterator

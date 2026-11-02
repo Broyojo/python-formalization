@@ -11,7 +11,7 @@ Objects/bytes_methods.c	267	274	_Py_bytes_upper	_Py_bytes_upper(char *result, co
 Objects/bytes_methods.c	284	303	_Py_bytes_title	_Py_bytes_title(char *result, const char *s, Py_ssize_t len)	modelled	bytesobj-bytes-case-laws,bytesobj-bytes-title	
 Objects/bytes_methods.c	313	319	_Py_bytes_capitalize	_Py_bytes_capitalize(char *result, const char *s, Py_ssize_t len)	modelled	bytesobj-bytes-case-maps	
 Objects/bytes_methods.c	329	345	_Py_bytes_swapcase	_Py_bytes_swapcase(char *result, const char *s, Py_ssize_t len)	modelled	bytesobj-bytes-case-laws,bytesobj-bytes-case-maps	
-Objects/bytes_methods.c	357	377	_Py_bytes_maketrans	_Py_bytes_maketrans(Py_buffer *frm, Py_buffer *to)	todo		changed-in-3.15: was bytesobj-bytes-maketrans,bytesobj-bytes-maketrans-hit
+Objects/bytes_methods.c	357	377	_Py_bytes_maketrans	_Py_bytes_maketrans(Py_buffer *frm, Py_buffer *to)	modelled	bytesobj-bytes-maketrans,bytesobj-bytes-maketrans-hit	
 Objects/bytes_methods.c	403	430	parse_args_finds_byte	Py_LOCAL_INLINE(int) parse_args_finds_byte(const char *function_name, PyObject **subobj, char *byte)	modelled	bytesobj-bytes-count-spec,bytesobj-bytes-find-byte-arg,bytesobj-bytes-find-extreme,bytesobj-bytes-index-raises	
 Objects/bytes_methods.c	452	510	find_internal	Py_LOCAL_INLINE(Py_ssize_t) find_internal(const char *str, Py_ssize_t len, const char *function_name, PyObject *subobj, Py_ssize_t start, Py_ssize_t end, int dir)	modelled	bytesobj-bytes-find-byte-arg,bytesobj-bytes-find-extreme	
 Objects/bytes_methods.c	513	520	_Py_bytes_find	_Py_bytes_find(const char *str, Py_ssize_t len, PyObject *sub, Py_ssize_t start, Py_ssize_t end)	modelled	bytesobj-bytes-find-byte-arg,bytesobj-bytes-find-extreme	
