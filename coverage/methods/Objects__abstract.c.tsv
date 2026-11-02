@@ -103,7 +103,7 @@ Objects/abstract.c	2732	2788	object_issubclass	object_issubclass(PyThreadState *
 Objects/abstract.c	2792	2796	PyObject_IsSubclass	PyObject_IsSubclass(PyObject *derived, PyObject *cls)	todo		
 Objects/abstract.c	2800	2803	_PyObject_RealIsInstance	_PyObject_RealIsInstance(PyObject *inst, PyObject *cls)	todo		
 Objects/abstract.c	2806	2809	_PyObject_RealIsSubclass	_PyObject_RealIsSubclass(PyObject *derived, PyObject *cls)	todo		
-Objects/abstract.c	2813	2834	PyObject_GetIter	PyObject_GetIter(PyObject *o)	todo		changed-in-3.15: was typeobj-iter-checks,typeobj-iter-seq-fallback
+Objects/abstract.c	2813	2834	PyObject_GetIter	PyObject_GetIter(PyObject *o)	modelled	typeobj-iter-checks,typeobj-iter-seq-fallback	
 Objects/abstract.c	2837	2853	PyObject_GetAIter	PyObject_GetAIter(PyObject *o) {	todo		changed-in-3.15:
 Objects/abstract.c	2856	2861	PyIter_Check	PyIter_Check(PyObject *obj)	todo		
 Objects/abstract.c	2864	2870	PyAIter_Check	PyAIter_Check(PyObject *obj)	todo		

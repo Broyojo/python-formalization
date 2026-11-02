@@ -60,7 +60,7 @@ Objects/funcobject.c	1442	1472	descriptor_set_wrapped_attribute	descriptor_set_w
 Objects/funcobject.c	1506	1513	cm_dealloc	cm_dealloc(PyObject *self)	excluded		no-behaviour: deallocation and reference counting
 Objects/funcobject.c	1516	1522	cm_traverse	cm_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
 Objects/funcobject.c	1525	1531	cm_clear	cm_clear(PyObject *self)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
-Objects/funcobject.c	1535	1541	cm_descr_get	cm_descr_get(PyObject *self, PyObject *obj, PyObject *type)	todo		changed-in-3.15: was typeobj-classmethod-bindings-agree
+Objects/funcobject.c	1535	1541	cm_descr_get	cm_descr_get(PyObject *self, PyObject *obj, PyObject *type)	modelled	typeobj-classmethod-bindings-agree	
 Objects/funcobject.c	1544	1554	cm_set_callable	cm_set_callable(classmethod *cm, PyObject *callable)	todo		changed-in-3.15: new function
 Objects/funcobject.c	1557	1577	cm_new	cm_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		changed-in-3.15:
 Objects/funcobject.c	1580	1592	cm_init	cm_init(PyObject *self, PyObject *args, PyObject *kwds)	todo		changed-in-3.15:

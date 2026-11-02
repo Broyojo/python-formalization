@@ -364,7 +364,7 @@ Objects/typeobject.c	10761	10788	slot_sq_ass_item	slot_sq_ass_item(PyObject *sel
 Objects/typeobject.c	10791	10811	slot_sq_contains	slot_sq_contains(PyObject *self, PyObject *value)	modelled	typeobj-contains-none	
 Objects/typeobject.c	10818	10837	slot_mp_ass_subscript	slot_mp_ass_subscript(PyObject *self, PyObject *key, PyObject *value)	todo		
 Objects/typeobject.c	10851	10897	slot_nb_power	slot_nb_power(PyObject *self, PyObject *other, PyObject *modulus)	todo		
-Objects/typeobject.c	10904	10944	slot_nb_bool	slot_nb_bool(PyObject *self)	todo		changed-in-3.15: was typeobj-nb-bool-type
+Objects/typeobject.c	10904	10944	slot_nb_bool	slot_nb_bool(PyObject *self)	modelled	typeobj-nb-bool-type	
 Objects/typeobject.c	10948	10952	slot_nb_index	slot_nb_index(PyObject *self)	modelled	typeobj-index-result-int	
 Objects/typeobject.c	10971	10975	slot_nb_inplace_power	slot_nb_inplace_power(PyObject *self, PyObject * arg1, PyObject *arg2)	modelled	typeobj-inplace-pow	
 Objects/typeobject.c	10988	10999	slot_tp_repr	slot_tp_repr(PyObject *self)	todo		
