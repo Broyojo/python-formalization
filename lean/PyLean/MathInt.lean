@@ -24,6 +24,7 @@ import PyLean.MathInt.FltGammaProps
 import PyLean.MathInt.FltIsclose
 import PyLean.MathInt.FltFmod
 import PyLean.MathInt.FltPow
+import PyLean.MathInt.FltProd
 
 /-!
 Integer functions of `math.integer` (`Modules/mathintegermodule.c`, re-exported by
@@ -52,6 +53,12 @@ namespace PyLean.MathInt
 open PyLean.Registry
 
 def entries : List Entry := [
+  { id := "mathint-prod-twin", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math.prod", "_check_long_mult_overflow"]
+    statement := "For every iterable (its iteration may fail after the items) and start, math.prod(iterable, start=start) equals functools.reduce(operator.mul, iterable, start) evaluated with PyNumber_Multiply: the C long fast path, the C double fast path and the hand-overs between them give exactly what the generic loop gives; in particular _check_long_mult_overflow never misses an overflow of the long product, for all long arguments."
+    source := "Doc/library/math.rst: prod (\"Calculate the product of all the elements in the input iterable. The default start value for the product is 1.\"); the fast-path comments at mathmodule.c:2714-2717, :2764-2767", status := .proven
+    prop := ``ProdTwin, thm := some ``prodTwin_proven
+    notes := "Scope: items and start are ints, bools, floats, float subclasses, or objects without __mul__ (TypeError). The overflow check is proven sound with relative rounding-error bounds: whenever the long product wraps, the double product and the wrapped product differ by at least a quarter of the product, so 32*|diff| > |prod|." },
   { id := "mathint-pow-twin", pyFile := "Modules/mathmodule.c"
     pyFns := ["math.pow"]
     statement := "For every C library pow that follows C99 Annex F on finite arguments (pow(1, y) = pow(x, ±0) = 1, the zero-base rules, no NaN and only range errno for a positive base, pow(-x, n) = ±pow(x, n) for integer n, NaN for a negative base and non-integer exponent) and all floats x, y: where x ** y returns a float, math.pow(x, y) returns the same float (or a NaN where that is a NaN); where x ** y returns a complex number or raises ZeroDivisionError, math.pow raises ValueError; where x ** y raises OverflowError, so does math.pow."
