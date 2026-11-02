@@ -295,6 +295,9 @@ def run (fn : String) (j : Json) : Except String Json := do
     return encPy (fun (x : Json) => x)
       (.ok (Json.arr #[Json.arr (rs.map (encPy (fun (_ : Unit) => Json.null))).toArray,
         Json.arr (hs.map show1).toArray]))
+  | "fmt_unicode_char" =>
+    return encPy (fun (r : Str × Kind) => Json.arr #[toJson r.1, toJson r.2.width, toJson (r.2 == .ascii)])
+      (unicodeCharChecked (← getNat j "ch"))
   | "fmt_iter" =>
     let ops ← (← (← field j "ops").getArr?).toList.mapM getIOp
     let it0 := unicodeIter (← getSeq j "s") (← (← field j "exact").getBool?)

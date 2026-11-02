@@ -11,7 +11,8 @@ summary: |
   YYYYWwwD and the rest is dropped: date.fromisoformat('2020010112') == date(2020, 1, 1)
   and '2020W011xy' == date(2019, 12, 30), in both twins. The C version takes the length
   in UTF-8 bytes, so it also accepts '20040509٠' (9 characters, 10 bytes), which
-  Python rejects as non-ASCII. Still present on main. DUPLICATE of gh-158500 (open;
+  Python rejects as non-ASCII: that is the witness of the C/Python twin property too, now
+  that '2020-+1-01' is gone. Still present on main. DUPLICATE of gh-158500 (open;
   PR gh-160737 open, gh-158557 closed).
 likelihood: A 10-digit YYYYMMDDHH stamp silently parses as a date.
 maybe_intended: No.
@@ -29,12 +30,12 @@ reproducer: |
 expected: ValueError('Invalid isoformat string: ...').
 promised_by: date.fromisoformat docs ("any valid ISO 8601 format").
 cause: |
-  Lib/_pydatetime.py:366-404 and Modules/_datetimemodule.c:942-1012 do not check that the
-  parse ended at the end of the string; C date_fromisoformat (:3405-3462) checks the
-  UTF-8 byte length.
+  Lib/_pydatetime.py:366-403 and Modules/_datetimemodule.c:942-1012 do not check that the
+  parse ended at the end of the string; C datetime_date_fromisoformat_impl (:3432-3461) checks
+  the UTF-8 byte length.
 possible_fix: Require the parse to consume the whole input (see PR gh-160737).
 reproduces:
-  python3 (3.14.7): REPRODUCED
+  python3 (3.15.2): REPRODUCED
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
 duplicates:
   issues:

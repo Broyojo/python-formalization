@@ -47,7 +47,7 @@ possible_fix: |
   `incomplete` so the escape is retried with the next chunk.
 lean: |
   Refuted by unicodeEscapeChunks_refuted (lean/PyLean/UnicodeObj/CodecEscapeProps.lean).
-tested: "REPRODUCED on python3 3.14.7 and on main (3.16.0a1+dev) by scripts/check_bugs.py"
+tested: "REPRODUCED on python3 3.15.2 and on main (3.16.0a1+dev) by scripts/check_bugs.py"
 duplicates:
   issues:
     - {number: 64331, state: open, relation: related, reason: "'Many incremental codecs don't handle fragmented data' is about the bytes-to-bytes codecs and does not mention octal escapes"}

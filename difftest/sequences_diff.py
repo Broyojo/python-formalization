@@ -13,7 +13,14 @@ over-allocation are checked, not only the contents. Exceptions compare exactly
 
 Deque elements include objects whose `__eq__` raises (`B`) or mutates the deque
 under test (`M<k>`), which reach the exception and mutation checks of the search
-loops. Array items are compared through `tobytes()`, floats as bit patterns.
+loops. Array items are compared through `tobytes()`, floats and the parts of complex
+numbers as bit patterns.
+
+One state is not deterministic: `ins1` on an `e` array can raise after growing the array
+(bugs/sequences-array-e-ins1-overflow-keeps-slot.yaml), which leaves the new last item
+uninitialised. The harness stores 0.0 there, the model's value for such a slot, right after
+the failing call and only for that slot; the length, `allocated`, the exception and the
+slots that were shifted are still compared.
 
 Results that would need gigabytes of memory are never requested: repeat counts are
 steered to small values unless the C code's explicit overflow check rejects them
@@ -149,10 +156,20 @@ class ABomb:
     __hash__ = None
 
 
+def to_float(bits):
+    return struct.unpack("<d", bits.to_bytes(8, "little"))[0]
+
+
+def float_bits(x):
+    return int.from_bytes(struct.pack("<d", x), "little")
+
+
 def to_val(j):
     if isinstance(j, dict):
         if "f" in j:
-            return struct.unpack("<d", j["f"].to_bytes(8, "little"))[0]
+            return to_float(j["f"])
+        if "c" in j:
+            return complex(to_float(j["c"][0]), to_float(j["c"][1]))
         if "s" in j:
             return "".join(map(chr, j["s"]))
         o = j["o"]
@@ -166,7 +183,9 @@ def to_val(j):
 
 def from_val(x):
     if isinstance(x, float):
-        return {"f": int.from_bytes(struct.pack("<d", x), "little")}
+        return {"f": float_bits(x)}
+    if isinstance(x, complex):
+        return {"c": [float_bits(x.real), float_bits(x.imag)]}
     if isinstance(x, str):
         return {"s": [ord(c) for c in x]}
     return x
@@ -346,8 +365,31 @@ def fbits(rng):
                        & 0x800fffffffffffff | (rng.randrange(860, 1160) << 52)])
 
 
+def half_bits(rng):
+    """The binary64 pattern of a value `PyFloat_Pack2` takes."""
+    h = rng.choice([0, 0x8000, 1, 0x8001, 0x3ff, 0x400, 0x401, 0x7bff, 0xfbff, 0x7c00, 0xfc00, 0x7e00,
+                    0x7c01, 0x7e01, 0xfe00, rng.getrandbits(16), rng.getrandbits(16)])
+    return float_bits(struct.unpack("<e", h.to_bytes(2, "little"))[0])
+
+
+def half_edge(rng):
+    """Doubles around every branch of `PyFloat_Pack2`."""
+    return float_bits(rng.choice([65504.0, 65505.0, 65519.0, 65519.999, 65520.0, 65536.0, 1e5, 1e6, 1e38,
+                                  -65504.0, -65520.0, -1e5, 2.0 ** -14, 2.0 ** -15, 2.0 ** -24, 2.0 ** -25,
+                                  2.0 ** -26, 1.5 * 2.0 ** -25, 3.0 * 2.0 ** -25, 3.0 * 2.0 ** -26,
+                                  (2.0 ** 10 - 0.5) * 2.0 ** -24, 1.0 + 2.0 ** -11, 1.0 + 3 * 2.0 ** -11,
+                                  1.0 + 2.0 ** -10 + 2.0 ** -11, 2.0 - 2.0 ** -11, 2.0 ** -14 - 2.0 ** -25,
+                                  1e-300, 5e-324, -5e-324, rng.uniform(-70000.0, 70000.0),
+                                  rng.uniform(-1.0, 1.0), rng.uniform(-1e-4, 1e-4)]))
+
+
 def good_val(rng, tc):
     """A value that fits typecode tc."""
+    if tc == "e":
+        return {"f": half_bits(rng)}
+    if tc in ("Zf", "Zd"):
+        return rng.choice([{"c": [fbits(rng), fbits(rng)]}, {"c": [fbits(rng), fbits(rng)]},
+                           {"c": [fbits(rng), 0]}, {"f": fbits(rng)}, 1, rng.randint(-5, 5)])
     if tc in INT_RANGE:
         lo, hi = INT_RANGE[tc]
         return rng.choice([lo, hi, lo + 1, hi - 1, 0, 1, 2, 3, max(lo, 0) + 5, rng.randint(lo, hi)])
@@ -364,8 +406,23 @@ def any_val(rng, tc):
         return rng.choice([128, -129, 256, -1, 2 ** 15, 2 ** 16, -2 ** 15 - 1, 2 ** 31, -2 ** 31 - 1, 2 ** 32,
                            2 ** 63, -2 ** 63 - 1, 2 ** 64, -2 ** 64, 2 ** 70, 2 ** 53 + 1, 3 ** 40, 2 ** 1024,
                            2 ** 1024 - 2 ** 970, 2 ** 1024 - 2 ** 971])
+    if tc == "e" and r < 0.9:
+        return {"f": half_edge(rng)}
     return rng.choice([{"f": fbits(rng)}, {"s": []}, {"s": [97]}, {"s": [97, 98]}, {"o": "NoneType"},
-                       {"o": "Idx", "i": 5}, {"o": "Idx", "i": 2 ** 70}, {"o": "list"}])
+                       {"o": "Idx", "i": 5}, {"o": "Idx", "i": 2 ** 70}, {"o": "list"},
+                       {"c": [fbits(rng), fbits(rng)]}])
+
+
+def store_val(rng, tc):
+    """A value to store, with more of what 3.15 changed: values `PyFloat_Pack2` refuses after
+    `ins1` has grown the array, and `__index__` objects for `II_setitem`, `LL_setitem` and
+    `QQ_setitem`, which now hold a reference to the object across the call."""
+    if tc == "e" and rng.random() < 0.3:
+        return {"f": half_edge(rng)}
+    if tc in ("I", "L", "Q") and rng.random() < 0.2:
+        lo, hi = INT_RANGE[tc]
+        return {"o": "Idx", "i": rng.choice([lo, hi, lo - 1, hi + 1, 2 ** 64, -2 ** 64, 5])}
+    return any_val(rng, tc)
 
 
 def gen_array_op(rng, a):
@@ -384,7 +441,7 @@ def gen_array_op(rng, a):
     def good(k):
         return [good_val(rng, tc) for _ in range(k)]
     if op == "append":
-        return [op, any_val(rng, tc)]
+        return [op, store_val(rng, tc)]
     if op in ("count", "contains", "remove", "index"):
         v = rng.choice([good_val(rng, tc), any_val(rng, tc), {"o": "Bomb"}])
         if n and rng.random() < 0.5:
@@ -396,7 +453,7 @@ def gen_array_op(rng, a):
             return [op, v] + [edge_index(rng, n) for _ in range(rng.choice([0, 1, 2]))]
         return [op, v]
     if op == "insert":
-        return [op, edge_index(rng, n), any_val(rng, tc)]
+        return [op, edge_index(rng, n), store_val(rng, tc)]
     if op == "pop":
         return [op] if rng.random() < 0.3 else [op, edge_index(rng, n)]
     if op == "getitem" or op == "delitem":
@@ -406,9 +463,9 @@ def gen_array_op(rng, a):
     if op in ("sqitem", "sqdelitem"):
         return [op, rng.randint(-n - 2, n + 2)]
     if op == "setitem":
-        return [op, edge_index(rng, n), any_val(rng, tc)]
+        return [op, edge_index(rng, n), store_val(rng, tc)]
     if op == "sqsetitem":
-        return [op, rng.randint(-n - 2, n + 2), any_val(rng, tc)]
+        return [op, rng.randint(-n - 2, n + 2), store_val(rng, tc)]
     if op == "getslice" or op == "delslice" or op == "setslice_self" or op == "setslice_bad":
         return [op, rand_slice(rng, n)]
     if op in ("setslice", "setslice_other"):
@@ -483,8 +540,9 @@ def make(c):
 
 
 def gen_array_new(rng):
-    tc = rng.choice(list(TYPECODES) * 3 + ["x", "", "ab", 5, None])
-    good = tc if isinstance(tc, str) and len(tc) == 1 and tc in TYPECODES else "i"
+    tc = rng.choice(list(TYPECODES) * 3 + ["x", "", "ab", 5, None, "Z", "ZZ", "Zdd", "dZ", "Zf ", "a\0", "\0",
+                                           "Zf\0", "\udc80", "\udc80\0", "\u00e9", "\U00010000"])
+    good = tc if tc in TYPECODES else "i"
     typecode = {"s": [ord(c) for c in tc]} if isinstance(tc, str) else ({"o": "NoneType"} if tc is None else tc)
     k = rng.choice(["none", "list", "list", "tuple", "bytes", "bytearray", "str", "iter", "iter_raise", "bad", "array"])
     n = rng.choice([0, 1, 2, 3, 8])
@@ -497,25 +555,43 @@ def gen_array_new(rng):
         init["v"] = [rng.choice([97, 0xe9, 0xfeff, 0xd800, 0x10ffff]) for _ in range(n)]
     elif k == "array":
         tc2 = rng.choice([good, good, rng.choice(TYPECODES)])
-        init["tc"] = ord(tc2)
+        init["tc"] = tc2
         init["v"] = [good_val(rng, tc2) for _ in range(n)]
     return {"mod": "sequences", "fn": "array_new", "typecode": typecode, "init": init,
             "tname": rng.choice(["array", "array", "A"])}
 
 
 def gen_reconstruct(rng):
-    mformat = rng.choice(list(range(22)) * 2 + [-1, 22, 100])
-    tc = rng.choice(list(TYPECODES) * 2 + ["x"])
+    mformat = rng.choice(list(range(28)) * 2 + [-1, 22, 28, 100])
+    tc = rng.choice(list(TYPECODES) * 2 + ["x", "", "Z", "Zdd", "a\0", "\udc80", 5, None])
     size = {0: 1, 1: 1, 2: 2, 3: 2, 4: 2, 5: 2, 6: 4, 7: 4, 8: 4, 9: 4, 10: 8, 11: 8, 12: 8, 13: 8, 14: 4,
-            15: 4, 16: 8, 17: 8, 18: 2, 19: 2, 20: 4, 21: 4}.get(mformat, 1)
+            15: 4, 16: 8, 17: 8, 18: 2, 19: 2, 20: 4, 21: 4, 22: 8, 23: 8, 24: 16, 25: 16, 26: 2, 27: 2}.get(mformat, 1)
     n = rng.choice([0, 1, 2, 3, 4, 5, 8])
     items = [rng.randrange(256) for _ in range(n * size + rng.choice([0, 0, 0, 1]))]
+    if mformat in (14, 15, 16, 17, 22, 23, 24, 25, 26, 27) and rng.random() < 0.7:
+        # NaNs, infinities and subnormals, in the byte order of the format, into an array
+        # that can hold what the format decodes to
+        if rng.random() < 0.8:
+            tc = rng.choice(["e", "f", "d", "Zf", "Zd"])
+        big = mformat % 2 == 1
+        part = {14: 4, 15: 4, 16: 8, 17: 8, 22: 4, 23: 4, 24: 8, 25: 8, 26: 2, 27: 2}[mformat]
+        out = []
+        for _ in range(len(items) // part):
+            pat = rng.choice({2: [0x7c00, 0xfc00, 0x7c01, 0x7dff, 0x7e00, 0x7fff, 0xfc01, 1, 0x3ff, 0x400],
+                              4: [0x7f800000, 0xff800000, 0x7f800001, 0x7fbfffff, 0x7fc00000, 0x7fffffff,
+                                  0xff800001, 1, 0x7fffff, 0x800000],
+                              8: [0x7ff0000000000000, 0xfff0000000000000, 0x7ff0000000000001, 0x7ff7ffffffffffff,
+                                  0x7ff8000000000000, 0xfff0000000000001, 1, 2 ** 52 - 1]}[part]
+                             + [rng.getrandbits(8 * part)])
+            out += pat.to_bytes(part, "big" if big else "little")
+        items = out + items[len(out):]
     if mformat in (18, 19, 20, 21) and rng.random() < 0.8:
         s = "".join(rng.choice("abé€\U00010000\U0010ffff") for _ in range(n))
         enc = {18: "utf-16-le", 19: "utf-16-be", 20: "utf-32-le", 21: "utf-32-be"}[mformat]
         items = list(s.encode(enc))
         tc = rng.choice("uw" * 3 + "b")
-    return {"mod": "sequences", "fn": "reconstruct", "typecode": ord(tc), "mformat": mformat, "items": items,
+    typecode = {"s": [ord(c) for c in tc]} if isinstance(tc, str) else ({"o": "NoneType"} if tc is None else tc)
+    return {"mod": "sequences", "fn": "reconstruct", "typecode": typecode, "mformat": mformat, "items": items,
             "tname": rng.choice(["array", "A"])}
 
 
@@ -525,12 +601,13 @@ def gen_defdict(rng):
     ops = []
     for _ in range(rng.randint(1, 6)):
         op = rng.choice(["getitem", "getitem", "missing", "copy", "reduce", "repr", "repr_nested", "or_dict",
-                         "ror_dict", "or_dd", "or_bad", "init", "init_toomany", "set"])
+                         "ror_dict", "or_dd", "or_bad", "init", "init_toomany", "set", "or_frozen",
+                         "ror_frozen"])
         if op in ("getitem", "missing"):
             ops.append([op, rng.choice([1, rng.randint(0, 7)])])
         elif op in ("copy", "reduce", "repr", "or_bad", "repr_nested"):
             ops.append([op])
-        elif op in ("or_dict", "ror_dict"):
+        elif op in ("or_dict", "ror_dict", "or_frozen", "ror_frozen"):
             ops.append([op, items()])
         elif op == "or_dd":
             ops.append([op, items(), rng.choice(["null", "none", "F0"])])
@@ -644,10 +721,15 @@ def arr_repr(a):
         s = a.tounicode()
         assert r == f"{name}('{tc}', {s!r})"
         return f"{name}('{tc}', <str {[ord(c) for c in s]}>)"
-    if tc in "fd":
+    if tc in ("e", "f", "d"):
         xs = list(a)
         assert r == f"{name}('{tc}', {xs!r})"
         body = ", ".join("<float %d>" % from_val(x)["f"] for x in xs)
+        return f"{name}('{tc}', [{body}])"
+    if tc in ("Zf", "Zd"):
+        xs = list(a)
+        assert r == f"{name}('{tc}', {xs!r})"
+        body = ", ".join("<complex <float %d> <float %d>>" % tuple(from_val(x)["c"]) for x in xs)
         return f"{name}('{tc}', [{body}])"
     return r
 
@@ -786,13 +868,38 @@ def run_deque_op(d, op, extra):
     raise AssertionError(name)
 
 
+E_PACK_ERROR = "float too large to pack with e format"
+
+
+def scrub_slot(a, exc, last):
+    """After `ins1` failed in `e_setitem`, the new last slot is uninitialised memory when
+    `last` says it was the insertion point: store the model's value there."""
+    if a.typecode == "e" and last and str(exc) == E_PACK_ERROR:
+        a[len(a) - 1] = 0.0
+
+
+def ins_at_end(a, i):
+    """Whether `ins1(a, i, v)` writes the slot past the old end."""
+    n = len(a)
+    return i >= n or (n == 0 and i < 0)
+
+
 def run_array_op(a, op, c, extra):
     name, args = op[0], op[1:]
     its = extra["its"]
     if name == "append":
-        return a.append(to_val(args[0]))
+        try:
+            return a.append(to_val(args[0]))
+        except OverflowError as e:
+            scrub_slot(a, e, True)
+            raise
     if name == "insert":
-        return a.insert(args[0], to_val(args[1]))
+        end = ins_at_end(a, args[0])
+        try:
+            return a.insert(args[0], to_val(args[1]))
+        except OverflowError as e:
+            scrub_slot(a, e, end)
+            raise
     if name == "pop":
         return from_val(a.pop(*args))
     if name == "index":
@@ -852,9 +959,17 @@ def run_array_op(a, op, c, extra):
         a.__iadd__(a)
         return None
     if name == "extend":
-        return a.extend([to_val(v) for v in args[0]])
+        try:
+            return a.extend([to_val(v) for v in args[0]])
+        except OverflowError as e:
+            scrub_slot(a, e, True)
+            raise
     if name == "extend_raise":
-        return a.extend(RaisingIter([to_val(v) for v in args[0]], ValueError("iter")))
+        try:
+            return a.extend(RaisingIter([to_val(v) for v in args[0]], ValueError("iter")))
+        except OverflowError as e:
+            scrub_slot(a, e, True)
+            raise
     if name == "extend_bad":
         return a.extend(5)
     if name == "extend_arr":
@@ -1069,6 +1184,11 @@ def run_dd_op(dd, op):
         o = defaultdict() if args[1] == "null" else defaultdict(fac_of(args[1]))
         o.update(dict(args[0]))
         return dd_j(dd | o)
+    if name == "or_frozen":
+        return dd_j(dd | frozendict(args[0]))
+    if name == "ror_frozen":
+        # `frozendict | dd` is frozendict_or's: this slot is reached only by name
+        return dd_j(dd.__ror__(frozendict(args[0])))
     if name == "or_bad":
         return "NI" if dd.__or__(5) is NotImplemented else None
     if name == "init":
@@ -1129,7 +1249,7 @@ def run_array_new(c):
     if k == "none":
         return py_res(lambda: arr_j(cls(tc)))
     if k == "array":
-        initial = array(chr(i["tc"]), [to_val(v) for v in i["v"]])
+        initial = array(i["tc"], [to_val(v) for v in i["v"]])
     elif k == "bad":
         initial = 5
     else:
@@ -1144,7 +1264,7 @@ def run_reconstruct(c):
     cls = A if c["tname"] == "A" else array
 
     def go():
-        a = array_mod._array_reconstructor(cls, chr(c["typecode"]), c["mformat"], bytes(c["items"]))
+        a = array_mod._array_reconstructor(cls, to_val(c["typecode"]), c["mformat"], bytes(c["items"]))
         return [a.typecode, list(a.tobytes())]
     return py_res(go)
 

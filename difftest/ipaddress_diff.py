@@ -6,6 +6,7 @@ Exits non-zero on any mismatch. See difftest/common.py.
 """
 
 import ipaddress
+import warnings
 
 import common
 
@@ -40,9 +41,24 @@ def edge_int(rng, lo, hi):
 def gen_case(rng):
     bits = rng.choice([32, 128])
     fn = rng.choice(["summarize", "mknet", "subnets", "supernet", "getitem",
-                     "contains", "overlaps", "subnet_of", "address_exclude"])
+                     "contains", "overlaps", "subnet_of", "address_exclude",
+                     "exploded", "iface_unspecified", "getattr"])
     c = {"mod": "ipaddress", "fn": fn, "bits": bits}
-    if fn == "summarize":
+    if fn == "exploded":
+        ip = rng.choice([edge_addr(rng, 128), 0, 1, rand_net(rng, 128)[0],
+                         0xffff00000000 | rng.randrange(1 << 32), 0xffff00000000])
+        p = edge_prefix(rng, 128)
+        kind = rng.choice(["address", "interface", "network"])
+        if kind == "network":
+            ip, p = rand_net(rng, 128) if rng.random() < 0.8 else ((0xffff00000000 | rng.randrange(1 << 32)), 128)
+        c.update(bits=128, kind=kind, ip=ip, prefixlen=p,
+                 scope=rng.choice([None, None, "eth0", "1", "a.b", "z"]))
+    elif fn == "iface_unspecified":
+        p = edge_prefix(rng, bits)
+        c.update(ip=rng.choice([0, 0, edge_addr(rng, bits)]), prefixlen=p)
+    elif fn == "getattr":
+        c.update(name=rng.choice(["__version__", "__version__", "foo", "_nope", "__all__x"]))
+    elif fn == "summarize":
         a, b = edge_addr(rng, bits), edge_addr(rng, bits)
         if rng.random() < 0.8:
             a, b = min(a, b), max(a, b)
@@ -82,13 +98,36 @@ def enc_net(n):
     return [int(n.network_address), n.prefixlen]
 
 
+def make_v6(c):
+    text = str(ipaddress.IPv6Address(c["ip"]))
+    if c["scope"]:
+        text += "%" + c["scope"]
+    if c["kind"] == "address":
+        return ipaddress.IPv6Address(text)
+    return {"interface": ipaddress.IPv6Interface, "network": ipaddress.IPv6Network}[c["kind"]](
+        f"{text}/{c['prefixlen']}")
+
+
+def module_attr(name):
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        return getattr(ipaddress, name)
+
+
 def run_python(c):
     bits = c["bits"]
     Net = NET[bits]
     mk = lambda t: Net(tuple(t))
     try:
         fn = c["fn"]
-        if fn == "summarize":
+        if fn == "exploded":
+            v = make_v6(c).exploded
+        elif fn == "iface_unspecified":
+            cls = {32: ipaddress.IPv4Interface, 128: ipaddress.IPv6Interface}[bits]
+            v = cls((c["ip"], c["prefixlen"])).is_unspecified
+        elif fn == "getattr":
+            v = module_attr(c["name"])
+        elif fn == "summarize":
             v = [enc_net(n) for n in ipaddress.summarize_address_range(
                 ADDR[bits](c["first"]), ADDR[bits](c["last"]))]
         elif fn == "mknet":

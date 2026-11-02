@@ -90,6 +90,26 @@ def fileRead (n : Nat) : PyM Bytes := do
   set { s with pos := s.pos + d.length }
   return d
 
+/-- `_MIN_READ_BUF_SIZE` (`Lib/pickle.py:194`). -/
+def minReadBufSize : Nat := 1 <<< 20
+
+/-- The `while` of `_Unframer._chunked_file_read` (`Lib/pickle.py:313-316`). The
+fuel is `size`: every round adds at least one byte to `cursize`. -/
+def chunkedLoop : Nat → Nat → Nat → Bytes → PyM Bytes
+  | 0, _, _, b => return b
+  | fuel + 1, size, cursize, b =>
+    if cursize < size ∧ b.length = cursize then do
+      let delta := min cursize (size - cursize)
+      let d ← fileRead delta
+      chunkedLoop fuel size (cursize + delta) (b ++ d)
+    else return b
+
+/-- `_Unframer._chunked_file_read(size)` (`Lib/pickle.py:310-317`). -/
+def chunkedFileRead (size : Nat) : PyM Bytes := do
+  let cursize := min size minReadBufSize
+  let b ← fileRead cursize
+  chunkedLoop size size cursize b
+
 /-- `self._file_readline()`: up to and including the next newline. -/
 def fileReadline : PyM Bytes := do
   let s ← get
@@ -100,7 +120,8 @@ def fileReadline : PyM Bytes := do
   set { s with pos := s.pos + line.length }
   return line
 
-/-- `_Unframer.read` (`Lib/pickle.py@3.14.7:280-291`). -/
+/-- `_Unframer.read` (`Lib/pickle.py:284-295`). The frame branch keeps
+`file_read`; only the branch without a frame reads in chunks. -/
 def pyRead (n : Nat) : PyM Bytes := do
   let s ← get
   match s.frame with
@@ -112,7 +133,7 @@ def pyRead (n : Nat) : PyM Bytes := do
       fileRead n
     else if data.length < n then pyThrow (unpicklingError "pickle exhausted before end of frame")
     else return data
-  | Option.none => fileRead n
+  | Option.none => chunkedFileRead n
 
 /-- `_Unframer.readline` (`Lib/pickle.py:297-308`). -/
 def pyReadline : PyM Bytes := do
@@ -131,9 +152,9 @@ def pyReadline : PyM Bytes := do
     else return data
   | Option.none => fileReadline
 
-/-- `_Unframer.readinto(buf)` with `len(buf) = n`, returning the new buffer
-contents (`buf[:] = ...` may shorten it) (`Lib/pickle.py:267-282`). -/
-def pyReadinto (n : Nat) : PyM Bytes := do
+/-- `_Unframer.readinto(buf)` with `len(buf) = n`: the new buffer contents
+(`buf[:] = ...` may shorten it) and the int it returns (`Lib/pickle.py:267-282`). -/
+def pyReadinto (n : Nat) : PyM (Bytes × Nat) := do
   let s ← get
   match s.frame with
   | some (f, fp) =>
@@ -141,10 +162,10 @@ def pyReadinto (n : Nat) : PyM Bytes := do
     set { s with frame := some (f, fp + data.length) }
     if data.length = 0 ∧ n ≠ 0 then
       modify fun s => { s with frame := Option.none }
-      fileRead n
+      return (← fileRead n, n)
     else if data.length < n then pyThrow (unpicklingError "pickle exhausted before end of frame")
-    else return data
-  | Option.none => fileRead n
+    else return (data, data.length)
+  | Option.none => return (← fileRead n, n)
 
 def push (v : DV) : PyM Unit := modify fun s => { s with stack := v :: s.stack }
 
@@ -209,19 +230,22 @@ def pyLoadProto : PyM Unit := do
   if p ≤ 5 then modify fun s => { s with proto := p }
   else pyThrow (.valueError s!"unsupported pickle protocol: {p}")
 
-/-- The tail of `load_frame` once the size is read: `_Unframer.load_frame`, @3.14.7:306-310. -/
+/-- `data = self._chunked_file_read(frame_size)` and what follows it in
+`_Unframer.load_frame`, `Lib/pickle.py:323-326`: a short read is `EOFError`. -/
+def pyReadFrame (size : Nat) : PyM Unit := do
+  let data ← chunkedFileRead size
+  if data.length < size then pyThrow (eofError "")
+  else modify fun s => { s with frame := some (data, 0) }
+
+/-- The tail of `load_frame` once the size is read: `_Unframer.load_frame`, :319-326. -/
 def pyStartFrame (size : Nat) : PyM Unit := do
   let s ← get
   match s.frame with
   | some (f, fp) =>
     set { s with frame := some (f, f.length) }
     if fp < f.length then pyThrow (unpicklingError "beginning of a new frame before end of current frame")
-    else
-      let data ← fileRead size
-      modify fun s => { s with frame := some (data, 0) }
-  | Option.none =>
-    let data ← fileRead size
-    modify fun s => { s with frame := some (data, 0) }
+    else pyReadFrame size
+  | Option.none => pyReadFrame size
 
 /-- `load_frame`, :1369-1373. -/
 def pyLoadFrame : PyM Unit := do
@@ -291,12 +315,25 @@ def pyLoadBinbytes8 : PyM Unit := do
   if n > ssizeMaxN then pyThrow (unpicklingError s!"BINBYTES8 exceeds system's maximum size of {ssizeMaxN} bytes")
   else push (.bytes (← pyRead n))
 
-/-- `load_bytearray8`, :1519-1532. -/
+/-- The `while` of `load_bytearray8`, :1527-1530. As in `chunkedLoop`, the fuel
+is `size`. -/
+def bytearrayLoop : Nat → Nat → Nat → Bytes → PyM Bytes
+  | 0, _, _, b => return b
+  | fuel + 1, size, cursize, b =>
+    if cursize < size ∧ b.length = cursize then do
+      let delta := min cursize (size - cursize)
+      let d ← pyRead delta
+      bytearrayLoop fuel size (cursize + delta) (b ++ d)
+    else return b
+
+/-- `load_bytearray8`, :1519-1531. -/
 def pyLoadBytearray8 : PyM Unit := do
-  let n := leNat (← pyUnpack 8)
-  if n > ssizeMaxN then pyThrow (unpicklingError s!"BYTEARRAY8 exceeds system's maximum size of {ssizeMaxN} bytes")
+  let size := leNat (← pyUnpack 8)
+  if size > ssizeMaxN then pyThrow (unpicklingError s!"BYTEARRAY8 exceeds system's maximum size of {ssizeMaxN} bytes")
   else
-    let b ← pyReadinto n
+    let cursize := min size minReadBufSize
+    let (b, r) ← pyReadinto cursize
+    let b ← if r = cursize then bytearrayLoop size size cursize b else pure b
     push (← pyAlloc (.bytearray b))
 
 def pyLoadUnicode : PyM Unit := do push (.str (← pyLift (decodeRUE (← pyReadline).dropLast)))

@@ -434,7 +434,7 @@ theorem isliceDocAgreeNoWrap_proven : IsliceDocAgreeNoWrap := by
     obtain ⟨e2, he2, hc2⟩ := doc_args_err args hok hr
     simp [isliceAgree, cIslice, cIsliceNew, docIslice, he1, he2, Run.err, hc1, hc2]
 
-/-- rst:498-500: "fully consuming the islice advances the input iterator by
+/-- rst:503-505: "fully consuming the islice advances the input iterator by
 max(start, stop) steps regardless of the step value" (at most `len` for a
 finite input). For the C object, for every `Py_ssize_t` `start` and `stop`. -/
 def IsliceConsumesMaxStartStop : Prop :=

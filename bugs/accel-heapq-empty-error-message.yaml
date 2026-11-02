@@ -39,7 +39,7 @@ reproducer: |
 expected: |
   The same IndexError message from both twins.
 observed: |
-  python3 3.14.7: heappop/heappop_max: 'index out of range' vs 'pop from empty list';
+  python3 3.15.2: heappop/heappop_max: 'index out of range' vs 'pop from empty list';
   heapreplace/heapreplace_max: 'index out of range' vs 'list index out of range'. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |

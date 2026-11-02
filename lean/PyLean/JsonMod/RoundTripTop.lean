@@ -18,7 +18,7 @@ theorem dumpsC_eq (cfg : ECfg) (hc : cfg.customEnc = none) (v : EVal) :
   | _ => rfl
 
 theorem DCfg.Rec.real {dcfg : DCfg} (h : dcfg.Rec) : dcfg.Real :=
-  ⟨fun a => by rw [h.fin]; simp [fuelOut], h.flt,
+  ⟨fun a => by rw [h.fin]; simp [fuelOut], fun a => by rw [h.arr]; simp [fuelOut], h.flt,
    fun g hg t => by obtain ⟨j, e⟩ := h.int g hg t; rw [e]; simp [fuelOut], h.con⟩
 
 /-- `loads` from the result of the C scanner at index 0 (no white space first). -/

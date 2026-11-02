@@ -142,34 +142,6 @@ theorem pyInt_dec_nl (x : Int) (hlen : (decDigits x.natAbs).length ≤ maxStrDig
   rw [takeWhile_ne_zero_of_not_mem hz, pyLongFromString_append_space _ isSpace_nl, pyLong_dec x hlen]
   simp
 
-theorem dec_not_bool (x : Int) : ¬ BoolSpelling (decInt x) := by
-  rintro ⟨a, d, hb, hd, ha⟩
-  by_cases hx : x < 0
-  · have h1 : decInt x = 0x2d :: decDigits x.natAbs := by unfold decInt; rw [if_pos hx]
-    rw [h1] at hb
-    simp only [List.cons.injEq] at hb
-    obtain ⟨ha2, hds⟩ := hb
-    obtain ⟨_, _, h3⟩ := decDigits_spec x.natAbs
-    rw [hds] at h3
-    have hd0 : d.toNat - 48 ≠ 0 := by
-      intro h
-      simp [digitsVal, h] at h3
-      omega
-    rcases hd with rfl | rfl
-    · simp at hd0
-    · rcases ha with h | h | ⟨_, h⟩
-      · subst ha2; revert h; decide
-      · subst ha2; revert h; decide
-      · revert h; decide
-  · have hneg : decInt x = decDigits x.natAbs := by unfold decInt; rw [if_neg hx]
-    obtain ⟨_, h2, _⟩ := decDigits_spec x.natAbs
-    have hdig : isDigit a = true := h2 a (by rw [← hneg, hb]; simp)
-    obtain ⟨_, _, h3, h4, _⟩ := digit_ne hdig
-    rcases ha with h | h | ⟨h, _⟩
-    · rw [digit_not_space hdig] at h; simp at h
-    · exact h3 h
-    · exact h4 h
-
 /-- For every int with at most 4300 decimal digits (beyond which `repr` raises),
 the lines `save_long` writes for protocols 0 and 1, `I<x>` and `L<x>L`, read
 back as the int `x` in both unpicklers. -/
@@ -221,7 +193,7 @@ theorem textIntRoundtrip_proven : TextIntRoundtrip := by
     simp only [List.dropLast_concat]
     exact pyInt_dec x hlen
   refine ⟨hpy, ?_, hlong, ?_⟩
-  · have := intLineTwinsNarrow_proven (decInt x) (dec_no_nl x) (dec_no_zero x) (dec_not_bool x)
+  · have := intLineTwinsNarrow_proven (decInt x) (dec_no_nl x) (dec_no_zero x)
       (fun _ _ _ _ => Nat.le_trans (dec_filter x) hlen)
     rw [hpy] at this
     cases hc : cLoadIntLine (decInt x ++ [nl]) with

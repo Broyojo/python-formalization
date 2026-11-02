@@ -535,10 +535,14 @@ theorem sim_bytearrayobj (p : Nat) (o : Oid) (b : Bytes) :
   · rw [if_neg h, if_neg h]
     exact sim_bind (sim_bytearraydata b) (sim_memoize p o)
 
-theorem batchLen_ne_one (n i : Nat) (hi : i < n) (h : n % 1000 ≠ 1) : batchLen n i ≠ 1 := by
+/-- At item `i < n`: the batch that holds it has one item exactly when `i` starts
+a batch and is the last item, which is `list_size - total == 1` in C. -/
+theorem batchLen_eq_one_iff (n i : Nat) (hi : i < n) :
+    batchLen n i = 1 ↔ (i % batchSize = 0 ∧ n - i = 1) ∨ (i % batchSize ≠ 0 ∧ batchLen n i = 1) := by
   simp only [batchLen, batchSize]; omega
 
-theorem batchLen_one : batchLen 1 0 = 1 := rfl
+theorem batchLen_mid (n i : Nat) (hi : i < n) (h : i % batchSize ≠ 0) : batchLen n i ≠ 1 := by
+  simp only [batchLen, batchSize] at h ⊢; omega
 
 mutual
 /-- No int in `x` is `long4Edge`, the one int only the Python pickler encodes. -/
@@ -568,27 +572,34 @@ theorem sim_emptyop (p : Nat) (e o : UInt8) : Sim base (pyEmptyOp p e o) (cEmpty
   · rw [if_neg (by omega), if_neg (by simp [h])]; exact sim_wr _
   · rw [if_pos (by omega), if_pos h]; exact sim_wr _
 
-theorem sim_batchStep (p n i : Nat) (hc : p = 0 ∨ n ≤ 1 ∨ n % 1000 ≠ 1) (hi : i < n)
+theorem sim_batchStep (p n i : Nat) (hi : i < n)
     {it it' : EncM Unit} (h : Sim base it it') (one many : UInt8) :
     Sim base (pyBatchStep p n i it one many) (cBatchStep p n i it' one many) := by
   unfold pyBatchStep cBatchStep
   by_cases h0 : p = 0
   · rw [if_pos h0, if_pos h0]; exact sim_bind h (sim_wr _)
   rw [if_neg h0, if_neg h0]
-  by_cases h1 : n = 1
-  · subst h1
-    have hi0 : i = 0 := by omega
-    subst hi0
-    rw [if_pos rfl]
-    have e1 : optWr (0 % batchSize = 0 ∧ batchLen 1 0 ≠ 1) [oMARK] = pure () := by
-      unfold optWr; rw [if_neg (by simp [batchLen_one])]
-    have e2 : optWr ((0 + 1) % batchSize = 0 ∨ 0 + 1 = 1) [if batchLen 1 0 ≠ 1 then many else one] =
+  by_cases h1 : i % batchSize = 0 ∧ n - i = 1
+  · have hbl : batchLen n i = 1 := by
+      have h2 := h1.1
+      have h3 := h1.2
+      simp only [batchLen, batchSize] at h2 ⊢
+      omega
+    rw [if_pos h1]
+    have e1 : optWr (i % batchSize = 0 ∧ batchLen n i ≠ 1) [oMARK] = pure () := by
+      unfold optWr; rw [if_neg (by simp [hbl])]
+    have e2 : optWr ((i + 1) % batchSize = 0 ∨ i + 1 = n) [if batchLen n i ≠ 1 then many else one] =
         wr [one] := by
-      unfold optWr; rw [if_pos (Or.inr rfl), if_neg (by simp [batchLen_one])]
+      unfold optWr; rw [if_pos (Or.inr (by omega)), if_neg (by simp [hbl])]
     rw [e1, e2, pure_bind]
     exact sim_bind h (sim_wr _)
   · rw [if_neg h1]
-    have hbl := batchLen_ne_one n i hi (by omega)
+    have hbl : batchLen n i ≠ 1 := by
+      by_cases h2 : i % batchSize = 0
+      · have h3 : n - i ≠ 1 := fun e => h1 ⟨h2, e⟩
+        simp only [batchLen, batchSize] at h2 ⊢
+        omega
+      · exact batchLen_mid n i hi h2
     have e2 : (if batchLen n i ≠ 1 then many else one) = many := if_pos hbl
     rw [e2]
     exact sim_bind (sim_opt (by simp [hbl]) _) (sim_bind h (sim_opt Iff.rfl _))
@@ -607,42 +618,38 @@ theorem sim_listwith (p n : Nat) (o : Oid) {it it' : EncM Unit} (h : Sim base it
 
 mutual
 theorem simSave (base : List Event) (p : Nat) (hp : p ≤ 5) :
-    (x : PV) → BatchOk p x → IntsOk x → Sim base (pySave p x) (cSave p x)
-  | .none, _, _ => by
+    (x : PV) → IntsOk x → Sim base (pySave p x) (cSave p x)
+  | .none, _ => by
     rw [pySave, cSave]; exact sim_bind (sim_emit _ trivial) (sim_wr _)
-  | .bool b, _, _ => by
+  | .bool b, _ => by
     rw [pySave, cSave]
     exact sim_bind (sim_emit _ trivial) (by split <;> exact sim_wr _)
-  | .int i, _, hi => by
+  | .int i, hi => by
     rw [pySave, cSave]
     have hsame := saveLongSameOutcome_proven p i hp hi
     refine sim_bind (sim_emit _ trivial) (sim_lift ?_ (fun v => sim_wr v))
     cases ha : pySaveLong p i <;> cases hb : cSaveLong p i <;>
       simp_all [SameOutcome]
-  | .str o s, _, _ => by rw [pySave, cSave]; exact sim_strobj p o s
-  | .bytes o b, _, _ => by rw [pySave, cSave]; exact sim_bytesobj p o b
-  | .bytearray o b, _, _ => by rw [pySave, cSave]; exact sim_bytearrayobj p o b
-  | .tuple o xs, h1, h2 => by
+  | .str o s, _ => by rw [pySave, cSave]; exact sim_strobj p o s
+  | .bytes o b, _ => by rw [pySave, cSave]; exact sim_bytesobj p o b
+  | .bytearray o b, _ => by rw [pySave, cSave]; exact sim_bytearrayobj p o b
+  | .tuple o xs, h2 => by
     rw [pySave, cSave]
-    exact sim_tupleobj p xs.length o (simElems base p hp xs (by simpa [BatchOk] using h1) (by simpa [IntsOk] using h2))
-  | .list o xs, h1, h2 => by
+    exact sim_tupleobj p xs.length o (simElems base p hp xs (by simpa [IntsOk] using h2))
+  | .list o xs, h2 => by
     rw [pySave, cSave]
-    rw [BatchOk] at h1
     rw [IntsOk] at h2
-    have h3 := h1.1
     refine sim_bind (sim_emit _ trivial) (sim_memo o (sim_get_or ?_))
     refine sim_listwith p xs.length o
-      (simAppends base p hp xs.length (by omega) xs 0 (by omega) h1.2 h2) ?_
+      (simAppends base p hp xs.length xs 0 (by omega) h2) ?_
     intro hn
     have hx : xs = [] := List.length_eq_zero_iff.mp hn
     subst hx
     rw [pyAppends]
     exact sim_pure
-  | .dict o kvs, h1, h2 => by
+  | .dict o kvs, h2 => by
     rw [pySave, cSave]
-    rw [BatchOk] at h1
     rw [IntsOk] at h2
-    have h3 := h1.1
     refine sim_bind (sim_emit _ trivial) (sim_memo o (sim_get_or ?_))
     refine sim_bind (sim_emptyop p _ _) (sim_bind (sim_memoize p o) ?_)
     by_cases hn : kvs.length = 0
@@ -651,26 +658,22 @@ theorem simSave (base : List Event) (p : Nat) (hp : p ≤ 5) :
       rw [pySetitems]
       exact sim_pure
     · rw [if_pos hn]
-      exact simSetitems base p hp kvs.length (by omega) (by omega) (by omega) kvs 0 (by omega) h1.2 h2
-  | .set o xs, h1, h2 => by
+      exact simSetitems base p hp kvs.length kvs 0 (by omega) h2
+  | .set o xs, h2 => by
     rw [pySave, cSave]
-    rw [BatchOk] at h1
     rw [IntsOk] at h2
-    have h3 := h1.1
     refine sim_bind (sim_emit _ trivial) (sim_memo o (sim_get_or ?_))
     by_cases h4 : p < 4
     · rw [if_pos h4, if_pos h4]
-      rw [if_neg (by omega)] at h3
       refine sim_reduce p o .set (sim_tupleobj p 1 _ (sim_bind (sim_emit _ trivial) ?_))
       refine sim_listwith p xs.length _
-        (simAppends base p hp xs.length (by omega) xs 0 (by omega) h1.2 h2) ?_
+        (simAppends base p hp xs.length xs 0 (by omega) h2) ?_
       intro hn
       have hx : xs = [] := List.length_eq_zero_iff.mp hn
       subst hx
       rw [pyAppends]
       exact sim_pure
     · rw [if_neg h4, if_neg h4]
-      rw [if_pos (by omega)] at h3
       refine sim_bind (sim_wr _) (sim_bind (sim_memoize p o) ?_)
       by_cases hn : xs.length = 0
       · have hx : xs = [] := List.length_eq_zero_iff.mp hn
@@ -678,75 +681,69 @@ theorem simSave (base : List Event) (p : Nat) (hp : p ≤ 5) :
         rw [pyAdditems]
         exact sim_pure
       · rw [if_pos hn]
-        exact simAdditems base p hp xs.length (by omega) xs 0 (by omega) h1.2 h2
-  | .frozenset o xs, h1, h2 => by
+        exact simAdditems base p hp xs.length xs 0 (by omega) h2
+  | .frozenset o xs, h2 => by
     rw [pySave, cSave]
-    rw [BatchOk] at h1
     rw [IntsOk] at h2
-    have h3 := h1.1
     refine sim_bind (sim_emit _ trivial) (sim_memo o (sim_get_or ?_))
     by_cases h4 : p < 4
     · rw [if_pos h4, if_pos h4]
-      have h5 := h3 h4
       refine sim_reduce p o .frozenset (sim_tupleobj p 1 _ (sim_bind (sim_emit _ trivial) ?_))
       refine sim_listwith p xs.length _
-        (simAppends base p hp xs.length (by omega) xs 0 (by omega) h1.2 h2) ?_
+        (simAppends base p hp xs.length xs 0 (by omega) h2) ?_
       intro hn
       have hx : xs = [] := List.length_eq_zero_iff.mp hn
       subst hx
       rw [pyAppends]
       exact sim_pure
     · rw [if_neg h4, if_neg h4]
-      refine sim_bind (sim_wr _) (sim_bind (simElems base p hp xs h1.2 h2) (sim_memo o ?_))
+      refine sim_bind (sim_wr _) (sim_bind (simElems base p hp xs h2) (sim_memo o ?_))
       intro v
       cases v with
       | some i => exact sim_op_get p i oPOP_MARK
       | none => exact sim_bind (sim_wr _) (sim_memoize p o)
 
 theorem simElems (base : List Event) (p : Nat) (hp : p ≤ 5) :
-    (xs : List PV) → BatchOkList p xs → IntsOkList xs → Sim base (pySaveElems p xs) (cSaveElems p xs)
-  | [], _, _ => by rw [pySaveElems, cSaveElems]; exact sim_pure
-  | x :: xs, h1, h2 => by
+    (xs : List PV) → IntsOkList xs → Sim base (pySaveElems p xs) (cSaveElems p xs)
+  | [], _ => by rw [pySaveElems, cSaveElems]; exact sim_pure
+  | x :: xs, h2 => by
     rw [pySaveElems, cSaveElems]
-    exact sim_bind (simSave base p hp x h1.1 h2.1) (simElems base p hp xs h1.2 h2.2)
+    exact sim_bind (simSave base p hp x h2.1) (simElems base p hp xs h2.2)
 
-theorem simAppends (base : List Event) (p : Nat) (hp : p ≤ 5) (n : Nat)
-    (hc : p = 0 ∨ n ≤ 1 ∨ n % 1000 ≠ 1) :
-    (xs : List PV) → (i : Nat) → i + xs.length = n → BatchOkList p xs → IntsOkList xs →
+theorem simAppends (base : List Event) (p : Nat) (hp : p ≤ 5) (n : Nat) :
+    (xs : List PV) → (i : Nat) → i + xs.length = n → IntsOkList xs →
       Sim base (pyAppends p n i xs) (cAppends p n i xs)
-  | [], _, _, _, _ => by rw [pyAppends, cAppends]; exact sim_pure
-  | x :: xs, i, hl, h1, h2 => by
+  | [], _, _, _ => by rw [pyAppends, cAppends]; exact sim_pure
+  | x :: xs, i, hl, h2 => by
     simp only [List.length_cons] at hl
     rw [pyAppends, cAppends]
-    exact sim_bind (sim_batchStep p n i hc (by omega) (simSave base p hp x h1.1 h2.1) _ _)
-      (simAppends base p hp n hc xs (i + 1) (by omega) h1.2 h2.2)
+    exact sim_bind (sim_batchStep p n i (by omega) (simSave base p hp x h2.1) _ _)
+      (simAppends base p hp n xs (i + 1) (by omega) h2.2)
 
-theorem simSetitems (base : List Event) (p : Nat) (hp : p ≤ 5) (n : Nat)
-    (hc : p = 0 ∨ n ≤ 1 ∨ n % 1000 ≠ 1) (hn0 : n ≠ 0) (hc2 : p = 0 ∨ n ≤ 1 ∨ n % 1000 ≠ 0) :
-    (kvs : List (PV × PV)) → (i : Nat) → i + kvs.length = n → BatchOkPairs p kvs → IntsOkPairs kvs →
+theorem simSetitems (base : List Event) (p : Nat) (hp : p ≤ 5) (n : Nat) :
+    (kvs : List (PV × PV)) → (i : Nat) → i + kvs.length = n → IntsOkPairs kvs →
       Sim base (pySetitems p n i kvs) (cSetitems p n i kvs)
-  | [], _, _, _, _ => by
-    rw [pySetitems, cSetitems, if_neg (by simp only [batchSize]; omega)]
+  | [], _, _, _ => by
+    rw [pySetitems, cSetitems]
     exact sim_pure
-  | (k, v) :: kvs, i, hl, h1, h2 => by
+  | (k, v) :: kvs, i, hl, h2 => by
     simp only [List.length_cons] at hl
     rw [pySetitems, cSetitems]
-    exact sim_bind (sim_batchStep p n i hc (by omega)
-        (sim_bind (simSave base p hp k h1.1 h2.1) (simSave base p hp v h1.2.1 h2.2.1)) _ _)
-      (simSetitems base p hp n hc hn0 hc2 kvs (i + 1) (by omega) h1.2.2 h2.2.2)
+    exact sim_bind (sim_batchStep p n i (by omega)
+        (sim_bind (simSave base p hp k h2.1) (simSave base p hp v h2.2.1)) _ _)
+      (simSetitems base p hp n kvs (i + 1) (by omega) h2.2.2)
 
-theorem simAdditems (base : List Event) (p : Nat) (hp : p ≤ 5) (n : Nat)
-    (hc : n % 1000 ≠ 0) :
-    (xs : List PV) → (i : Nat) → i + xs.length = n → BatchOkList p xs → IntsOkList xs →
+theorem simAdditems (base : List Event) (p : Nat) (hp : p ≤ 5) (n : Nat) :
+    (xs : List PV) → (i : Nat) → i + xs.length = n → IntsOkList xs →
       Sim base (pyAdditems p n i xs) (cAdditems p n i xs)
-  | [], _, _, _, _ => by
-    rw [pyAdditems, cAdditems, if_neg (by simp only [batchSize]; omega)]
+  | [], _, _, _ => by
+    rw [pyAdditems, cAdditems]
     exact sim_pure
-  | x :: xs, i, hl, h1, h2 => by
+  | x :: xs, i, hl, h2 => by
     simp only [List.length_cons] at hl
     rw [pyAdditems, cAdditems]
-    exact sim_bind (sim_addStep n i (simSave base p hp x h1.1 h2.1))
-      (simAdditems base p hp n hc xs (i + 1) (by omega) h1.2 h2.2)
+    exact sim_bind (sim_addStep n i (simSave base p hp x h2.1))
+      (simAdditems base p hp n xs (i + 1) (by omega) h2.2)
 end
 
 end PyLean.Pickle

@@ -22,7 +22,7 @@ def assignAt (l : List α) (ps : List Int) (t : List α) : List α :=
 
 /-- `s[i:j:k] = t` as the language reference and the mutable-sequence table
 describe it (Doc/reference/simple_stmts.rst "If the target is a slicing",
-Doc/library/stdtypes.rst@3.14.7:1244-1269 with note (1)): with
+Doc/builtins/stdtypes.rst:1520-1546 with note (1)): with
 `(a, b, c) = slice.indices(len(s))` and `L = len(range(a, b, c))`, a step of 1
 replaces `s[a:max(a, b)]` by `t` (changing the length), any other step needs
 `len(t) == L` (else `ValueError`) and replaces `s[a + k*c]` by `t[k]`. -/

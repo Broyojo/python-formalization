@@ -12,6 +12,8 @@ Differential-testing handler for `accel` cases (`"mod": "accel"`).
 * `"max": true` selects the `*_max` heap variant.
 * Heap results are `[returned item or null, final list]`; insort results are the
   final list.
+* `"size"` is the outcome of `len(iterable)` in `nsmallest`/`nlargest`: a count, or
+  `{"exc": class, "msg": message}` when it raises.
 -/
 
 namespace PyLean.Accel
@@ -35,6 +37,17 @@ def encList (l : List Int) : Json := Json.arr (l.map toJson).toArray
 
 def encHeap (r : Option Int × List Int) : Json :=
   Json.arr #[match r.1 with | some v => toJson v | none => Json.null, encList r.2]
+
+/-- The outcome of `len(iterable)` as `(sized, size, lenRaises)` for `nsmallest`. -/
+def getSize (j : Json) (it : List Int) : Except String (Bool × Int × Option PyExc) := do
+  let v ← field j "size"
+  match v.getInt? with
+  | .ok n => return (true, n, none)
+  | .error _ =>
+    let cls ← (← v.getObjVal? "exc").getStr?
+    let msg ← (← v.getObjVal? "msg").getStr?
+    if cls = "TypeError" ∨ cls = "AttributeError" then return (false, it.length, none)
+    return (true, it.length, some (.named cls msg))
 
 def run (fn : String) (j : Json) : Except String Json := do
   let key ← keyFn ((getStr j "key").toOption.getD "none")
@@ -74,9 +87,9 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "nsmallest" | "nlargest" =>
     let n ← getInt j "n"
     let it ← getIntList j "it"
-    let sized ← getBool j "sized"
-    let f := if fn == "nsmallest" then nsmallest else nlargest
-    return encPy encList (f n it sized key)
+    let (sized, size, lenRaises) ← getSize j it
+    return encPy encList (if fn == "nsmallest" then nsmallest n it sized key size lenRaises
+      else nlargest n it sized key size lenRaises)
   | "merge" =>
     let its ← (← (← field j "its").getArr?).toList.mapM (fun v => do
       (← v.getArr?).toList.mapM (·.getInt?))

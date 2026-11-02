@@ -2,8 +2,8 @@ import PyLean.Datetime.IsoPy
 
 /-!
 `isoformat()` for `date`, `time` and `datetime` (`Lib/_pydatetime.py`; the C
-`date_isoformat`, `time_isoformat`, `datetime_isoformat` and `format_utcoffset`
-produce the same text, which the differential test checks against both).
+`date_isoformat`, `datetime_time_isoformat_impl`, `datetime_datetime_isoformat_impl` and
+`format_utcoffset` produce the same text, which the differential test checks against both).
 -/
 
 namespace PyLean.Datetime
@@ -14,8 +14,20 @@ inductive TimeSpec where
   | auto | hours | minutes | seconds | milliseconds | microseconds
   deriving Repr, DecidableEq, Inhabited
 
-/-- `_format_time`, _pydatetime.py:163-185 (an unknown `timespec` string is
-rejected before this is reached, with `ValueError('Unknown timespec value')`). -/
+/-- The `timespec` string: `specs[timespec]` and its `KeyError` handler in `_format_time`,
+_pydatetime.py:181-184, and the search of `specs` in `datetime_time_isoformat_impl`
+(:4916-4941) and `datetime_datetime_isoformat_impl` (:6466-6491). Both raise before they
+format anything. -/
+def parseTimespec : String → Py TimeSpec
+  | "auto" => .ok .auto
+  | "hours" => .ok .hours
+  | "minutes" => .ok .minutes
+  | "seconds" => .ok .seconds
+  | "milliseconds" => .ok .milliseconds
+  | "microseconds" => .ok .microseconds
+  | _ => .error (.valueError "Unknown timespec value")
+
+/-- `_format_time`, _pydatetime.py:166-185, after `parseTimespec`. -/
 def formatTime (hh mm ss us : Int) (spec : TimeSpec) : List Char :=
   let spec : TimeSpec := match spec with
     | .auto => if us ≠ 0 then .microseconds else .seconds
@@ -28,7 +40,7 @@ def formatTime (hh mm ss us : Int) (spec : TimeSpec) : List Char :=
   | .microseconds => padInt 2 hh ++ [':'] ++ padInt 2 mm ++ [':'] ++ padInt 2 ss ++ ['.'] ++ padInt 6 us
 
 /-- `_format_offset(off, sep)`, _pydatetime.py:187-203, for an offset of `off`
-microseconds with `|off| < 24h` (C `format_utcoffset`, :1767-1813). -/
+microseconds with `|off| < 24h` (C `format_utcoffset`, :1731-1776). -/
 def formatOffsetSep (sep : List Char) : Option Int → List Char
   | none => []
   | some off =>

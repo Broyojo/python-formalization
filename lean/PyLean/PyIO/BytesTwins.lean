@@ -53,11 +53,10 @@ def BytesIOTwinsSameClassNoExport : Prop :=
   ∀ init ops, (∀ o ∈ ops, BOp.InRange o ∧ BOp.NoExport o) →
     AllSameClass (runBC init ops) (runBPy init ops)
 
-/-- 3.14.7: `seek(sys.maxsize - 1); write(b'x')` on a BytesIO with a private
-buffer asks `resize_buffer_lock_held` for `PY_SSIZE_T_MAX` bytes; its
-`alloc = size + 1` is negative as a `Py_ssize_t`, `_PyBytes_Resize` raises
-`SystemError` and frees the buffer, closing the stream. Python raises
-`MemoryError` and stays open. -/
+/-- `seek(sys.maxsize - 1); write(b'x')` on a BytesIO with a private buffer asks
+`resize_buffer_lock_held` for `PY_SSIZE_T_MAX` bytes; its `alloc = size + 1` is
+negative as a `Py_ssize_t`, so `_PyBytes_ResizeKeepOnError` raises `SystemError`.
+Python raises `MemoryError`. Both streams stay open. -/
 theorem bytesIOTwinsSameClassNoExport_refuted : ¬BytesIOTwinsSameClassNoExport := by
   intro h
   have := h [97, 98] [.seek (2 ^ 63 - 2) 0, .write [120], .closed] (by decide)

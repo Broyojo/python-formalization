@@ -1,8 +1,8 @@
 file	line	endline	name	signature	status	entry	note
 Objects/stringlib/unicode_format.h	48	52	AutoNumber_Init	AutoNumber_Init(AutoNumber *auto_number)	modelled	unicodeobj-format-str-builtin	
 Objects/stringlib/unicode_format.h	55	61	SubString_init	Py_LOCAL_INLINE(void) SubString_init(SubString *str, PyObject *s, Py_ssize_t start, Py_ssize_t end)	excluded		no-behaviour: sets three fields; in the model a SubString is the list itself
-Objects/stringlib/unicode_format.h	64	70	SubString_new_object	Py_LOCAL_INLINE(PyObject *) SubString_new_object(SubString *str)	todo		
-Objects/stringlib/unicode_format.h	73	80	SubString_new_object_or_empty	Py_LOCAL_INLINE(PyObject *) SubString_new_object_or_empty(SubString *str)	todo		
+Objects/stringlib/unicode_format.h	64	70	SubString_new_object	Py_LOCAL_INLINE(PyObject *) SubString_new_object(SubString *str)	modelled	unicodeobj-format-str-parser-reads	
+Objects/stringlib/unicode_format.h	73	80	SubString_new_object_or_empty	Py_LOCAL_INLINE(PyObject *) SubString_new_object_or_empty(SubString *str)	modelled	unicodeobj-format-str-parser-reads	
 Objects/stringlib/unicode_format.h	86	105	autonumber_state_error	autonumber_state_error(AutoNumberState state, int field_name_is_empty)	todo		
 Objects/stringlib/unicode_format.h	113	141	get_integer	get_integer(const SubString *str)	modelled	unicodeobj-format-str-get-integer	
 Objects/stringlib/unicode_format.h	149	158	getattr	getattr(PyObject *obj, SubString *name)	todo		

@@ -2,7 +2,7 @@ import PyLean.Itertools.Model
 
 /-!
 `itertools.islice`: the C object (Modules/itertoolsmodule.c:1576-1734) and the
-doc equivalent (Doc/library/itertools.rst:464-506).
+doc equivalent (Doc/library/itertools.rst:469-511).
 
 Arguments after the iterable are `args : List (Option Int)` of length 1 to 3
 (`none` is `None`), i.e. `islice(it, stop)` or `islice(it, start, stop[, step])`.
@@ -40,7 +40,7 @@ structure IsliceState (α : Type) where
   step : Int
   cnt : Int
 
-/-- `islice_new` (:1601-1685): validated `(start, stop, step)`, with
+/-- `islice_new` (:1590-1674): validated `(start, stop, step)`, with
 `stop = -1` for `None`. -/
 def cIsliceArgs (args : List (Option Int)) : Py (Int × Int × Int) :=
   let (a1, a2, a3) : Option Int × Option Int × Option (Option Int) :=
@@ -88,7 +88,7 @@ def cIsliceEnded (s : IsliceState α) (err : Option PyExc) (cnt : Int) : Step (I
   | none => .stop { s with it := none, cnt := cnt }
   | some e => .raise e { s with it := none, cnt := cnt }
 
-/-- `islice_next` (:1708-1745). The step is added in `size_t` and converted
+/-- `islice_next` (:1697-1734). The step is added in `size_t` and converted
 back (:1734-1739), i.e. with two's complement wraparound. -/
 def cIsliceNext (s : IsliceState α) : Step (IsliceState α) α :=
   match s.it with
@@ -139,7 +139,7 @@ def cIslice (seq : Obj α) (args : List (Option Int)) : Run α × Int :=
 
 /-! ### Doc equivalent -/
 
-/-- `slice(*args)` then the defaults and the check of rst:484-489: `(start,
+/-- `slice(*args)` then the defaults and the check of rst:489-494: `(start,
 stop, step)` with `stop = none` for `None`. The doc raises a bare
 `ValueError`. -/
 def docIsliceArgs (args : List (Option Int)) : Py (Int × Option Int × Int) :=
@@ -159,7 +159,7 @@ def pastBound : Option Int → Int → Bool
   | some m, i => decide (m ≤ i)
   | none, _ => false
 
-/-- The `for i, element in zip(indices, iterable)` loop (rst:491-496):
+/-- The `for i, element in zip(indices, iterable)` loop (rst:496-501):
 `indices` is `range(bound)` (`some bound`) or `count()` (`none`); `zip` pulls
 the index first, so an exhausted `range` stops without touching the input.
 Returns the yielded items, the number of input items consumed, and the

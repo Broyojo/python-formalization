@@ -21,7 +21,7 @@ Lib/_pyio.py	482	485	IOBase.__enter__	__enter__(self)	modelled	pyio-base-closed-
 Lib/_pyio.py	487	489	IOBase.__exit__	__exit__(self, *args)	todo		
 Lib/_pyio.py	495	501	IOBase.fileno	fileno(self)	modelled	pyio-base-unsupported-ops	
 Lib/_pyio.py	503	509	IOBase.isatty	isatty(self)	modelled	pyio-base-closed-protocol,pyio-bytesio-inquiries	
-Lib/_pyio.py	513	553	IOBase.readline	readline(self, size=-1)	todo		changed-in-3.15: was pyio-bytesio-twins-same-class-no-alloc-fail
+Lib/_pyio.py	513	553	IOBase.readline	readline(self, size=-1)	modelled	pyio-bufferedreader-readline-bound,pyio-bytesio-readlines-hint-doc,pyio-bytesio-twins-same-class-core,pyio-bytesio-twins-same-class-no-alloc-fail,pyio-iobase-readline-readahead	
 Lib/_pyio.py	555	557	IOBase.__iter__	__iter__(self)	modelled	pyio-base-closed-protocol,pyio-bytesio-readlines-hint-doc,pyio-bytesio-twins-same-class-core	
 Lib/_pyio.py	559	563	IOBase.__next__	__next__(self)	modelled	pyio-bytesio-readlines-hint-doc,pyio-bytesio-twins-same-class-core	
 Lib/_pyio.py	565	581	IOBase.readlines	readlines(self, hint=None)	modelled	pyio-stringio-tell-after-reads	
@@ -54,18 +54,18 @@ Lib/_pyio.py	853	861	_BufferedIOMixin.__repr__	__repr__(self)	todo
 Lib/_pyio.py	863	865	_BufferedIOMixin._dealloc_warn	_dealloc_warn(self, source)	todo		
 Lib/_pyio.py	869	870	_BufferedIOMixin.fileno	fileno(self)	todo		
 Lib/_pyio.py	872	873	_BufferedIOMixin.isatty	isatty(self)	todo		
-Lib/_pyio.py	884	894	BytesIO.__init__	__init__(self, initial_bytes=None)	todo		changed-in-3.15: was pyio-bytesio-twins-same-class-core
-Lib/_pyio.py	896	902	BytesIO.__getstate__	__getstate__(self)	todo		changed-in-3.15: was pyio-bytesio-pickle-roundtrip
-Lib/_pyio.py	904	906	BytesIO.__setstate__	__setstate__(self, state)	todo		changed-in-3.15: new function
+Lib/_pyio.py	884	894	BytesIO.__init__	__init__(self, initial_bytes=None)	modelled	pyio-bytesio-reinit,pyio-bytesio-twins-same-class-core	
+Lib/_pyio.py	896	902	BytesIO.__getstate__	__getstate__(self)	modelled	pyio-bytesio-pickle-roundtrip	
+Lib/_pyio.py	904	906	BytesIO.__setstate__	__setstate__(self, state)	modelled	pyio-bytesio-pickle-roundtrip	
 Lib/_pyio.py	908	913	BytesIO.getvalue	getvalue(self)	modelled	pyio-bytesio-getvalue-zero-fill,pyio-bytesio-twins-same-class-core,pyio-bytesio-writes-concat	candidates:pyio-bytesio-getvalue-zero-fill,pyio-bytesio-writes-concat,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none
 Lib/_pyio.py	915	920	BytesIO.getbuffer	getbuffer(self)	modelled	pyio-bytesio-twins-same-class-in-range	
 Lib/_pyio.py	922	925	BytesIO.close	close(self)	modelled	pyio-bytesio-twins-agree,pyio-bytesio-twins-same-class-core,pyio-bytesio-twins-same-class-no-alloc-fail	
-Lib/_pyio.py	927	948	BytesIO.read	read(self, size=-1)	todo		changed-in-3.15: was pyio-bytesio-read-after-seek,pyio-bytesio-twins-agree,pyio-bytesio-twins-same-class-core
+Lib/_pyio.py	927	948	BytesIO.read	read(self, size=-1)	modelled	pyio-bytesio-read-after-seek,pyio-bytesio-twins-agree,pyio-bytesio-twins-same-class-core	
 Lib/_pyio.py	950	953	BytesIO.read1	read1(self, size=-1)	modelled	pyio-bytesio-twins-same-class-core	
-Lib/_pyio.py	955	973	BytesIO.write	write(self, b)	todo		changed-in-3.15: was pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-twins-same-class-core,pyio-bytesio-twins-same-class-in-range,pyio-bytesio-twins-same-class-no-export,pyio-bytesio-writes-concat
-Lib/_pyio.py	975	996	BytesIO.seek	seek(self, pos, whence=0)	todo		changed-in-3.15: was pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class,pyio-bytesio-twins-same-class-core,pyio-bytesio-twins-same-class-no-export
+Lib/_pyio.py	955	973	BytesIO.write	write(self, b)	modelled	pyio-bytesio-getvalue-zero-fill,pyio-bytesio-tell-after-write,pyio-bytesio-twins-same-class-core,pyio-bytesio-twins-same-class-in-range,pyio-bytesio-twins-same-class-no-export,pyio-bytesio-writes-concat	
+Lib/_pyio.py	975	996	BytesIO.seek	seek(self, pos, whence=0)	modelled	pyio-bytesio-read-after-seek,pyio-bytesio-twins-same-class,pyio-bytesio-twins-same-class-core,pyio-bytesio-twins-same-class-no-export	
 Lib/_pyio.py	998	1001	BytesIO.tell	tell(self)	modelled	pyio-bytesio-twins-same-class-core	
-Lib/_pyio.py	1003	1020	BytesIO.truncate	truncate(self, pos=None)	todo		changed-in-3.15: was pyio-bytesio-twins-same-class-core,pyio-truncate-keeps-position
+Lib/_pyio.py	1003	1020	BytesIO.truncate	truncate(self, pos=None)	modelled	pyio-bytesio-truncate-index-twins,pyio-bytesio-twins-same-class-core,pyio-truncate-keeps-position,pyio-truncate-result	
 Lib/_pyio.py	1022	1025	BytesIO.readable	readable(self)	modelled	pyio-bytesio-inquiries	
 Lib/_pyio.py	1027	1030	BytesIO.writable	writable(self)	modelled	pyio-bytesio-inquiries	
 Lib/_pyio.py	1032	1035	BytesIO.seekable	seekable(self)	modelled	pyio-bytesio-inquiries	

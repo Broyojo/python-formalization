@@ -136,10 +136,11 @@ def decInt (dcfg : DCfg) (n : Int) : JVal :=
   | .error _ => .null
 
 /-- Callbacks that leave the JSON structure alone: objects come back as their
-items (no `object_hook`, and `object_pairs_hook` absent or keeping the pairs),
-`parse_int` does not raise, and the other callbacks are Python callables. -/
+items (no `object_hook`, `object_pairs_hook` absent or keeping the pairs, and
+`array_hook` absent or keeping the list), `parse_int` does not raise, and the other callbacks are Python callables. -/
 structure DCfg.Rec (dcfg : DCfg) : Prop where
   fin : ∀ acc, cFinish dcfg acc = .ok (.obj acc)
+  arr : ∀ xs, mkArr dcfg xs = .ok (.arr xs)
   int : ∀ h, dcfg.parseIntFn = some h → ∀ t, ∃ j, h t = .ok j
   flt : ∀ t, dcfg.parseFloat t ≠ fuelOut
   con : ∀ t, dcfg.parseConstant t ≠ fuelOut

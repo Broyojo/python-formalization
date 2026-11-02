@@ -105,6 +105,13 @@ def gen_case(rng):
         c["new"] = gen_sub(rng, alph, s) if rng.random() < 0.7 else rand_seq(rng, alph, rng.randrange(4))
         if rng.random() < 0.6:
             c["count"] = edge_count(rng)
+        if rng.random() < 0.15:
+            # Replacing all of s by nothing: new_size == 0, the branch of `replace` whose
+            # body changed in 3.15 (`_PyUnicode_GetEmpty()`).
+            old = rand_seq(rng, alph, rng.randint(1, 3))
+            k = rng.randint(1, 5)
+            s[:] = old * k
+            c.update(old=old, new=[], count=rng.choice([-1, k, k + 1, M]))
     elif fn in ("split", "rsplit"):
         c["sep"] = None if rng.random() < 0.4 else gen_sub(rng, alph, s)
         if rng.random() < 0.6:

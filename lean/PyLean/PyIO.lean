@@ -8,12 +8,13 @@ import PyLean.PyIO.StringTwins
 import PyLean.PyIO.StringProps
 import PyLean.PyIO.BytesExtra
 import PyLean.PyIO.StringExtra
+import PyLean.PyIO.Reentry
 import PyLean.PyIO.RegText
 import PyLean.PyIO.RegBuffered
 import PyLean.PyIO.RegFile
 
 /-!
-`Lib/_pyio.py` vs `Modules/_io/` (BytesIO, StringIO), CPython 3.14.7.
+`Lib/_pyio.py` vs `Modules/_io/` (BytesIO, StringIO), CPython 3.15.2.
 
 Models: `PyIO/BytesIO.lean` (both `BytesIO` twins), `PyIO/StringC.lean`
 (`Modules/_io/stringio.c`), `PyIO/StringPy.lean` (`_pyio.StringIO`, a
@@ -61,7 +62,7 @@ def coreEntries : List Entry := [
     source := "invariant: C accelerator vs pure-Python twin"
     status := .refuted, prop := ``BytesIOTwinsSameClassNoExport, thm := some ``bytesIOTwinsSameClassNoExport_refuted
     bug := some "pyio-bytesio-write-near-maxsize-systemerror"
-    notes := "seek(sys.maxsize - 1); write(b'x'): SystemError and the stream is closed (3.14.7); fixed on main (gh-160781, gh-157242)." },
+    notes := "seek(sys.maxsize - 1); write(b'x'): C SystemError, Python MemoryError, both streams still open (3.15.2); fixed on main (gh-160781)." },
   { id := "pyio-bytesio-twins-same-class-no-alloc-fail", pyFile := "Lib/_pyio.py"
     pyFns := ["IOBase.readline", "_io_BytesIO_readline_impl", "BytesIO.close", "_io_BytesIO_close_impl"]
     statement := "In range, without getbuffer() and without allocation failure (positions and write extents below the allocation bound), the twins agree on every value and exception class."
@@ -98,15 +99,15 @@ def coreEntries : List Entry := [
     source := "Doc/library/io.rst:400 (IOBase.seek) and BufferedIOBase.read"
     status := .proven, prop := ``ReadAfterSeek, thm := some ``readAfterSeek_proven },
   { id := "pyio-truncate-keeps-position", pyFile := "Modules/_io/bytesio.c"
-    pyFns := ["_io_BytesIO_truncate_impl", "BytesIO.truncate", "_io_StringIO_truncate_impl",
-      "resize_buffer"]
+    pyFns := ["_io_BytesIO_truncate_impl", "BytesIO.truncate", "_io_StringIO_truncate_impl"]
     statement := "truncate(size) never moves the stream position, for every state and argument and whatever the outcome (C and Python BytesIO, C StringIO)."
     source := "Doc/library/io.rst:431-434 (IOBase.truncate: 'The current stream position isn't changed')"
-    status := .proven, prop := ``TruncateKeepsPosition, thm := some ``truncateKeepsPosition_proven },
+    status := .proven, prop := ``TruncateKeepsPosition, thm := some ``truncateKeepsPosition_proven
+    notes := "The argument here is None or an int. An __index__ that seeks moves the position by itself; truncate of such an object is in pyio-bytesio-truncate-recheck." },
   { id := "pyio-bytesio-getvalue-zero-fill", pyFile := "Modules/_io/bytesio.c"
     pyFns := ["write_bytes_lock_held", "BytesIO.write", "_io_BytesIO_getvalue_impl", "BytesIO.getvalue"]
     statement := "After a successful non-empty write(b) on an open BytesIO, getvalue() is the old contents overwritten by b at the old position, with every byte between the old end and that position zero, and length max(old length, pos + len(b)); an empty write changes nothing (both twins)."
-    source := "Code comments, not docs: bytesio.c:272 'In case of overseek, pad with null bytes', _pyio.py@3.14.7:954 'Pad buffer to pos with null bytes'; Doc/library/io.rst:437 only says this of truncate extending a file"
+    source := "Code comments, not docs: bytesio.c:272 'In case of overseek, pad with null bytes', _pyio.py:969 'Pad buffer to pos with null bytes'; Doc/library/io.rst:437 only says this of truncate extending a file"
     status := .proven, prop := ``GetvalueZeroFill, thm := some ``getvalueZeroFill_proven },
   { id := "pyio-bytesio-writes-concat", pyFile := "Modules/_io/bytesio.c"
     pyFns := ["_io_BytesIO_write_impl", "write_bytes_lock_held", "BytesIO.write",
@@ -215,11 +216,12 @@ def coreEntries : List Entry := [
     source := "Doc/library/io.rst (IOBase.writelines: 'equivalent to calling write() for each element'); bytesio.c:846-847"
     status := .proven, prop := ``BytesIOWritelines, thm := some ``bytesIOWritelines_proven },
   { id := "pyio-bytesio-pickle-roundtrip", pyFile := "Modules/_io/bytesio.c"
-    pyFns := ["bytesio_getstate", "bytesio_setstate", "bytesio_setstate_lock_held", "BytesIO.__getstate__"]
-    statement := "For a C BytesIO, __setstate__(__getstate__()) restores contents and position verbatim: with the position in Py_ssize_t and contents below the allocation bound, setstate into any open export-free BytesIO reproduces buf and pos."
+    pyFns := ["bytesio_getstate", "bytesio_setstate", "bytesio_setstate_lock_held", "BytesIO.__getstate__",
+      "BytesIO.__setstate__"]
+    statement := "__setstate__(__getstate__()) restores contents and position verbatim, in both twins: for a C BytesIO with the position in Py_ssize_t and contents below the allocation bound, setstate into any open export-free BytesIO reproduces buf and pos; for _pyio the state is the instance dict without _lock, and setstate reproduces them on every open stream."
     source := "invariant: pickle round trip (__reduce__/__setstate__)"
     status := .proven, prop := ``BytesIOPickleRoundTrip, thm := some ``bytesIOPickleRoundTrip_proven
-    notes := "Hypotheses are C type invariants: pos fits Py_ssize_t, buffer below the allocation bound. _pyio BytesIO has no __setstate__, so this is the C object only." },
+    notes := "Hypotheses are C type invariants: pos fits Py_ssize_t, buffer below the allocation bound. The model of _pyio's __setstate__ is the state a pickle gives it, a fresh bytearray; called directly with another stream's state, it shares that stream's _buffer." },
   { id := "pyio-bytesio-release-exports", pyFile := "Modules/_io/bytesio.c"
     pyFns := ["bytesiobuf_getbuffer", "bytesiobuf_getbuffer_lock_held", "bytesiobuf_releasebuffer"]
     statement := "getbuffer() raises the export count above zero (blocking resizes); releasing the view restores the previous count and leaves contents and position unchanged, so resizing is possible again (C object; _pyio memoryview over the bytearray)."
@@ -244,7 +246,57 @@ def coreEntries : List Entry := [
     pyFns := ["_io_StringIO___getstate___impl", "_io_StringIO___setstate___impl", "_io_StringIO___init___impl"]
     statement := "For a C StringIO, whenever __init__ accepts the saved value and newline, __setstate__(__getstate__()) restores contents and position verbatim, applying no newline translation a second time (position in Py_ssize_t)."
     source := "invariant: pickle round trip"
-    status := .proven, prop := ``StringIOPickleRoundTrip, thm := some ``stringIOPickleRoundTrip_proven }
+    status := .proven, prop := ``StringIOPickleRoundTrip, thm := some ``stringIOPickleRoundTrip_proven },
+  -- What 3.15 changed: failed writes, truncate with Python code in the middle, __init__ again
+  { id := "pyio-bytesio-failed-write-keeps-state", pyFile := "Modules/_io/bytesio.c"
+    pyFns := ["resize_unshared_buffer_lock_held", "resize_buffer_lock_held", "unshare_buffer_lock_held",
+      "write_bytes_lock_held", "_io_BytesIO_write_impl"]
+    statement := "On an open io.BytesIO with no views, a non-empty write succeeds while its end fits the buffer or the allocation bound; beyond them it fails and the stream is unchanged, still open, with the same contents."
+    source := "invariant: a failed write loses nothing; changed in 3.15 (_PyBytes_ResizeKeepOnError, gh-157242)"
+    status := .proven, prop := ``BytesIOWriteFailureKeeps, thm := some ``bytesIOWriteFailureKeeps_proven
+    notes := "Failed in 3.14.7, where an unshared buffer was freed and the stream closed." },
+  { id := "pyio-truncate-result", pyFile := "Modules/_io/stringio.c"
+    pyFns := ["_io_StringIO_truncate_impl", "_io_BytesIO_truncate_impl", "BytesIO.truncate"]
+    statement := "On an open stream, truncate(v) with an int v >= 0 cuts the contents to v and returns v (C and Python BytesIO with no views, C StringIO). On a closed C stream it raises the closed-file ValueError whatever the int."
+    source := "Doc/library/io.rst:431-434 (IOBase.truncate: 'Resize the stream to the given size in bytes ... The new file size is returned'); stringio.c:464-465 check closed before converting the argument"
+    status := .proven, prop := ``TruncateResult, thm := some ``truncateResult_proven
+    notes := "Hypotheses: an int in C range, and no views for BytesIO, where views are the documented refusal (getbuffer note). Truncate never extends these streams." },
+  { id := "pyio-bytesio-truncate-recheck", pyFile := "Modules/_io/bytesio.c"
+    pyFns := ["_io_BytesIO_truncate_impl"]
+    statement := "With an argument whose __index__ runs arbitrary stream operations and returns an int in C range and >= 0, io.BytesIO.truncate raises the closed-file ValueError if they closed the stream, BufferError if they left a view alive, and otherwise cuts the contents the operations left. With no operations it is truncate(v)."
+    source := "invariant: no operation on a closed or exported buffer; bytesio.c:713-714 re-check after PyLong_AsLong"
+    status := .proven, prop := ``BytesIOTruncateRecheck, thm := some ``bytesIOTruncateRecheck_proven
+    notes := "The stream operations are the Hook type: close, getbuffer, tell, seek and write, in any order. The failure paths before the re-check are mirrored in C.truncateObj and compared by the difftest." },
+  { id := "pyio-bytesio-truncate-index-twins", pyFile := "Lib/_pyio.py"
+    pyFns := ["BytesIO.truncate", "_io_BytesIO_truncate_impl"]
+    statement := "For every stream and every argument of truncate, io.BytesIO and _pyio.BytesIO agree on the value or the exception class."
+    source := "invariant: C accelerator vs pure-Python twin; no hang"
+    status := .refuted, prop := ``BytesIOTruncateIndexTwins, thm := some ``bytesIOTruncateIndexTwins_refuted
+    bug := some "pyio-bytesio-truncate-index-deadlock"
+    notes := "__index__ calling seek(0, 1): C returns, _pyio deadlocks, since BytesIO.truncate holds self._lock across pos.__index__()." },
+  { id := "pyio-stringio-truncate-no-crash", pyFile := "Modules/_io/stringio.c"
+    pyFns := ["_io_StringIO_truncate_impl"]
+    statement := "truncate of any object on a C StringIO, with __index__ free to act on the stream, does not kill the process."
+    source := "invariant: no crash"
+    status := .refuted, prop := ``StringIOTruncateNoCrash, thm := some ``stringIOTruncateNoCrash_refuted
+    bug := some "pyio-stringio-truncate-index-close-crash"
+    notes := "f = io.StringIO(); f.write('a'); f.truncate(x), where x.__index__ closes f: SIGSEGV on 3.15.2, fixed on main. The model takes STATE_ACCUMULATING as a parameter; SCState does not track it." },
+  { id := "pyio-stringio-truncate-realized", pyFile := "Modules/_io/stringio.c"
+    pyFns := ["_io_StringIO_truncate_impl"]
+    statement := "On a realized C StringIO, truncate of any object ends in a value or an exception, and with no operations in __index__ it is truncate(v)."
+    source := "invariant: no crash; the hypothesis is exactly the refutation above"
+    status := .proven, prop := ``StringIOTruncateRealized, thm := some ``stringIOTruncateRealized_proven },
+  { id := "pyio-bytesio-reinit", pyFile := "Modules/_io/bytesio.c"
+    pyFns := ["_io_BytesIO___init___impl", "BytesIO.__init__"]
+    statement := "__init__ called again on an io.BytesIO with a live view raises BufferError and changes nothing; with no views an initial value replaces the contents, rewinds and reopens the stream, and no initial value resets contents and position. _pyio.BytesIO.__init__ always succeeds with a new buffer and leaves the closed flag alone."
+    source := "bytesio.c:1087-1091 check exports before anything changes; changed in 3.15"
+    status := .proven, prop := ``BytesIOReinit, thm := some ``bytesIOReinit_proven
+    notes := "3.14.7 reset the size and position before refusing. The twins differ on purpose here: this entry states each, it does not claim they agree." },
+  { id := "pyio-bytesio-readinto-overlap", pyFile := "Modules/_io/bytesio.c"
+    pyFns := ["_io_BytesIO_readinto_impl", "BufferedIOBase.readinto", "BufferedIOBase._readinto"]
+    statement := "readinto of a view of the stream's own buffer, for every position, offset and length, including overlapping ranges: both twins return the same count, end at the same position and leave the same contents, the old bytes at the read position copied to the view."
+    source := "invariant: C accelerator vs pure-Python twin; bytesio.c:673 uses memmove since 3.15"
+    status := .proven, prop := ``BytesIOReadintoOverlap, thm := some ``bytesIOReadintoOverlap_proven }
 ]
 
 def entries : List Entry := coreEntries ++ textEntries ++ bufferedEntries ++ fileEntries

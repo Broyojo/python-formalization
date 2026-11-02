@@ -7,16 +7,16 @@ Modules/_collectionsmodule.c	192	200	freeblock	freeblock(dequeobject *deque, blo
 Modules/_collectionsmodule.c	203	233	deque_new	deque_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	sequences-deque-construct	
 Modules/_collectionsmodule.c	245	278	deque_pop_impl	deque_pop_impl(dequeobject *deque) /*[clinic end generated code: output=2e5f7890c4251f07 input=55c5b6a8ad51d72f]*/	modelled	sequences-deque-ends-evict,sequences-pop-remove-count-agree	
 Modules/_collectionsmodule.c	290	324	deque_popleft_impl	deque_popleft_impl(dequeobject *deque) /*[clinic end generated code: output=62b154897097ff68 input=1571ce88fe3053de]*/	modelled	sequences-deque-ends-evict,sequences-pop-remove-count-agree	
-Modules/_collectionsmodule.c	341	366	deque_append_lock_held	deque_append_lock_held(dequeobject *deque, PyObject *item, Py_ssize_t maxlen)	todo		changed-in-3.15: was sequences-deque-ends-evict
+Modules/_collectionsmodule.c	341	366	deque_append_lock_held	deque_append_lock_held(dequeobject *deque, PyObject *item, Py_ssize_t maxlen)	modelled	sequences-deque-ends-evict	
 Modules/_collectionsmodule.c	380	386	deque_append_impl	deque_append_impl(dequeobject *deque, PyObject *item) /*[clinic end generated code: output=9c7bcb8b599c6362 input=b0eeeb09b9f5cf18]*/	modelled	sequences-deque-ends-evict	
-Modules/_collectionsmodule.c	389	415	deque_appendleft_lock_held	deque_appendleft_lock_held(dequeobject *deque, PyObject *item, Py_ssize_t maxlen)	todo		changed-in-3.15: was sequences-deque-ends-evict
+Modules/_collectionsmodule.c	389	415	deque_appendleft_lock_held	deque_appendleft_lock_held(dequeobject *deque, PyObject *item, Py_ssize_t maxlen)	modelled	sequences-deque-ends-evict	
 Modules/_collectionsmodule.c	429	435	deque_appendleft_impl	deque_appendleft_impl(dequeobject *deque, PyObject *item) /*[clinic end generated code: output=9a192edbcd0f20db input=236c2fbceaf08e14]*/	modelled	sequences-deque-ends-evict	
 Modules/_collectionsmodule.c	438	450	finalize_iterator	finalize_iterator(PyObject *it)	modelled	sequences-deque-ends-evict	
 Modules/_collectionsmodule.c	455	465	consume_iterator	consume_iterator(PyObject *it)	modelled	sequences-deque-ends-evict	
 Modules/_collectionsmodule.c	479	520	deque_extend_impl	deque_extend_impl(dequeobject *deque, PyObject *iterable) /*[clinic end generated code: output=8b5ffa57ce82d980 input=85861954127c81da]*/	modelled	sequences-deque-ends-evict	
-Modules/_collectionsmodule.c	534	575	deque_extendleft_impl	deque_extendleft_impl(dequeobject *deque, PyObject *iterable) /*[clinic end generated code: output=ba44191aa8e35a26 input=640dabd086115689]*/	todo		changed-in-3.15: was sequences-deque-ends-evict
+Modules/_collectionsmodule.c	534	575	deque_extendleft_impl	deque_extendleft_impl(dequeobject *deque, PyObject *iterable) /*[clinic end generated code: output=ba44191aa8e35a26 input=640dabd086115689]*/	modelled	sequences-deque-ends-evict	
 Modules/_collectionsmodule.c	578	590	deque_inplace_concat	deque_inplace_concat(PyObject *self, PyObject *other)	modelled	sequences-deque-ends-evict	
-Modules/_collectionsmodule.c	602	661	deque_copy_impl	deque_copy_impl(dequeobject *deque) /*[clinic end generated code: output=6409b3d1ad2898b5 input=51d2ed1a23bab5e2]*/	todo		changed-in-3.15: was sequences-deque-copy-concat
+Modules/_collectionsmodule.c	602	661	deque_copy_impl	deque_copy_impl(dequeobject *deque) /*[clinic end generated code: output=6409b3d1ad2898b5 input=51d2ed1a23bab5e2]*/	modelled	sequences-deque-copy-concat,sequences-deque-copy-concat-checked	
 Modules/_collectionsmodule.c	671	675	deque___copy___impl	deque___copy___impl(dequeobject *deque) /*[clinic end generated code: output=7c5821504342bf23 input=f5464036f9686a55]*/	modelled	sequences-deque-copy-concat-checked	
 Modules/_collectionsmodule.c	678	707	deque_concat_lock_held	deque_concat_lock_held(dequeobject *deque, PyObject *other)	modelled	sequences-deque-copy-concat-checked	
 Modules/_collectionsmodule.c	710	718	deque_concat	deque_concat(PyObject *self, PyObject *other)	modelled	sequences-deque-copy-concat-checked	
@@ -69,7 +69,7 @@ Modules/_collectionsmodule.c	2269	2276	defdict_copy	defdict_copy(PyObject *op, P
 Modules/_collectionsmodule.c	2279	2332	defdict_reduce	defdict_reduce(PyObject *op, PyObject *Py_UNUSED(dummy))	modelled	sequences-defdict-copy-reduce	
 Modules/_collectionsmodule.c	2362	2371	defdict_dealloc	defdict_dealloc(PyObject *op)	excluded		no-behaviour: frees the factory, then dict dealloc
 Modules/_collectionsmodule.c	2374	2410	defdict_repr	defdict_repr(PyObject *op)	modelled	sequences-defdict-repr-init-or	
-Modules/_collectionsmodule.c	2413	2444	defdict_or	defdict_or(PyObject* left, PyObject* right)	todo		changed-in-3.15: was sequences-defdict-repr-init-or
+Modules/_collectionsmodule.c	2413	2444	defdict_or	defdict_or(PyObject* left, PyObject* right)	modelled	sequences-defdict-repr-init-or	
 Modules/_collectionsmodule.c	2447	2453	defdict_traverse	defdict_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
 Modules/_collectionsmodule.c	2456	2461	defdict_tp_clear	defdict_tp_clear(PyObject *op)	excluded		no-behaviour: GC clear
 Modules/_collectionsmodule.c	2464	2492	defdict_init	defdict_init(PyObject *self, PyObject *args, PyObject *kwds)	modelled	sequences-defdict-repr-init-or	

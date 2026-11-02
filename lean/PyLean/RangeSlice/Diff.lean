@@ -45,6 +45,25 @@ def lastK (r : Range) (k : Nat) : Py (List Int) := do
   let r' ← computeSlice r ⟨some (-(k : Int)), none, none⟩
   return (List.range r'.length.toNat).map (fun (i : Nat) => r'.start + (i : Int) * r'.step)
 
+/-- The `__setstate__` argument: an int, or `{"kind": "subclass", "v": .., "tp": ..}`,
+`{"kind": "index", "v": .., "tp": ..}`, `{"kind": "raises", "exc": .., "msg": .., "tp": ..}`,
+`{"kind": "other", "tp": ..}`. -/
+def getState (j : Json) : Except String StateArg := do
+  let v ← j.getObjVal? "state"
+  match v.getInt? with
+  | .ok i => return .exact i
+  | .error _ =>
+    let tp ← getStr v "tp"
+    match ← getStr v "kind" with
+    | "subclass" => return .subclass (← getInt v "v") tp
+    | "index" => return .index (.ok (← getInt v "v")) tp
+    | "other" => return .other tp
+    | "raises" =>
+      let e ← getStr v "exc"
+      let m ← getStr v "msg"
+      return .index (.error (if e = "TypeError" then .typeError m else .named e m)) tp
+    | k => throw s!"unknown state kind {k}"
+
 /-- `[type name, first k values, __length_hint__(), reduced range, its last k values]`. -/
 def encIterRun (it : RIter) (k : Nat) : Except String Json := do
   let (xs, it') := iterTake k it
@@ -88,11 +107,11 @@ def run (fn : String) (j : Json) : Except String Json := do
       let a ← r; let b ← r2
       let e := rangeEquals a b
       return [e, e && rangeHashKey a == rangeHashKey b])
-  | "iter" | "reversed" =>
+  | "iter" | "iterfor" | "reversed" =>
     let k ← getNat j "k"
     match r with
     | .error e => return encPy id (.error e : Py Json)
-    | .ok r => return encPy id (.ok (← encIterRun (if fn = "iter" then rangeIter r else rangeReverse r) k) : Py Json)
+    | .ok r => return encPy id (.ok (← encIterRun (if fn = "reversed" then rangeReverse r else rangeIter r) k) : Py Json)
   | "setstate" =>
     let k ← getNat j "k"
     let rev ← getBool j "rev"
@@ -102,6 +121,18 @@ def run (fn : String) (j : Json) : Except String Json := do
       let it ← iterSetstate (if rev then rangeReverse r else rangeIter r) st
       let (xs, it') := iterTake k it
       return Json.arr #[toJson it.typeName, toJson xs, toJson it'.lengthHint])
+  | "setstate_obj" =>
+    let k ← getNat j "k"
+    let k0 ← getNat j "k0"
+    let rev ← getBool j "rev"
+    let st ← getState j
+    return encPy id (do
+      let r ← r
+      let (_, it) := iterTake k0 (if rev then rangeReverse r else rangeIter r)
+      let it ← iterSetstateObj it st
+      let (xs, it') := iterTake k it
+      let red := iterReduce it'
+      return Json.arr #[toJson it.typeName, toJson xs, toJson it'.lengthHint, encRange red])
   | other => throw s!"unknown fn {other}"
 
 def handler : Handler := fun fn j => some (run fn j)

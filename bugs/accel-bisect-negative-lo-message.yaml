@@ -1,0 +1,66 @@
+id: accel-bisect-negative-lo-message
+title: "bisect: a negative lo raises ValueError with different messages in C and in bisect.py since 3.15"
+priority: P4
+kind: twin-mismatch
+module: accel
+files: [Modules/_bisectmodule.c, Modules/clinic/_bisectmodule.c.h, Lib/bisect.py]
+functions: ["bisect_left", "bisect_right", "insort_left", "insort_right"]
+summary: |
+  gh-135763 (PR #138394) moved the negative-lo check of `_bisect` out of internal_bisect_left
+  and internal_bisect_right and into Argument Clinic, as `lo: Py_ssize_t(allow_negative=False)`.
+  The generated message is "lo cannot be negative", while Lib/bisect.py still says
+  "lo must be non-negative". On 3.14.7 the twins agreed exactly for every lo and hi in
+  Py_ssize_t range except hi=-1; that agreement is now false for every negative lo. For
+  lo >= 0 it still holds (Lean: accel-bisect-twins-agree-nonneg-lo), and both twins still
+  raise ValueError for every negative lo that fits Py_ssize_t (Lean:
+  accel-bisect-negative-lo-raises). The move has one further effect, an improvement: C now
+  refuses lo while parsing it, before converting hi, so bisect_left(a, x, -1, 2**64) gives
+  ValueError in both twins where 3.14.7 gave OverflowError in C.
+likelihood: |
+  Any negative lo hits it, but only code that inspects the message notices. test_bisect
+  checks only the exception class.
+maybe_intended: |
+  A side effect of a mechanical clinic conversion across CPython, not a decision about bisect.
+  Cosmetic. A maintainer might take a one-line change to Lib/bisect.py, or not care.
+reproducer: |
+  from test.support.import_helper import import_fresh_module
+  cb = import_fresh_module('bisect', fresh=['_bisect'])
+  pb = import_fresh_module('bisect', blocked=['_bisect'])
+  def run(f, *args):
+      try:
+          return f([1, 2, 3], 2, *args)
+      except Exception as e:
+          return type(e).__name__, str(e)
+  rows = [(args, run(cb.bisect_left, *args), run(pb.bisect_left, *args))
+          for args in [(-1,), (-1, 2**64)]]
+  for args, c, p in rows:
+      print('bisect_left(a, 2, *%r): C %r | Python %r' % (args, c, p))
+  if all(c == ('ValueError', 'lo cannot be negative') and
+         p == ('ValueError', 'lo must be non-negative') for _, c, p in rows):
+      print('REPRODUCED accel-bisect-negative-lo-message')
+expected: |
+  The twins raise the same message, as they did on 3.14.7.
+observed: |
+  python3 3.15.2: lo=-1 -> C ValueError('lo cannot be negative') / Python ValueError('lo must
+  be non-negative'); the same with hi=2**64. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+  python3 3.14.7: both 'lo must be non-negative' for lo=-1, and for hi=2**64 C raises
+  OverflowError. Not reproduced: this is new in 3.15.
+promised_by: |
+  No documentation; the invariant is that `_bisect` is a drop-in replacement for bisect.py
+  (Modules/_bisectmodule.c:1 "Drop in replacement for bisect.py").
+cause: |
+  Modules/_bisectmodule.c:152 (`lo: Py_ssize_t(allow_negative=False) = 0`) generates the check
+  at Modules/clinic/_bisectmodule.c.h:96-100; Lib/bisect.py:34-35 and :87-88 keep the old text.
+possible_fix: |
+  Change the two messages in Lib/bisect.py to 'lo cannot be negative'.
+duplicates:
+  issues:
+    - {number: 135763, state: closed, relation: "cause (PR #138394)"}
+    - {number: 47551, state: closed, relation: "origin of the check, unrelated to the message"}
+  queries: ["bisect lo negative message", "bisect allow_negative", "bisect lo cannot be negative",
+            "Py_ssize_t allow_negative"]
+  bugforge: "no match in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Accel.BisectTwinsAgreeInRange
+  theorem: PyLean.Accel.bisectTwinsAgreeInRange_refuted

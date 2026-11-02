@@ -1,0 +1,57 @@
+id: pyio-bytesio-truncate-index-deadlock
+title: "_pyio.BytesIO.truncate deadlocks when __index__ touches the stream, because it holds self._lock across the call"
+priority: P4
+kind: hang
+module: pyio
+files: [Lib/_pyio.py]
+functions: ["BytesIO.truncate"]
+summary: |
+  3.15 gave _pyio.BytesIO a threading.Lock around its state. In read, write and seek the argument
+  is converted before the lock is taken, but truncate converts it inside `with self._lock:`, so
+  `pos.__index__()` runs with the lock held. The lock is not re-entrant: an __index__ that calls
+  seek(0, 1), seek(0, 2), read, a non-empty write or truncate on the same stream blocks the thread
+  forever. io.BytesIO runs the same __index__ and returns. Separately, truncate does not look at
+  the stream again afterwards, so an __index__ that closes the stream makes truncate return
+  normally on a closed stream, where io.BytesIO raises ValueError.
+likelihood: |
+  Very low. It needs _pyio and an __index__ that uses the stream it is sizing.
+maybe_intended: |
+  No: the other methods convert before locking, so this looks like an oversight of the mechanical
+  change. It is a corner of a corner, and a maintainer may not think it worth a change.
+reproducer: |
+  import _pyio, io, threading
+  class Seeks:
+      def __init__(self, f):
+          self.f = f
+      def __index__(self):
+          self.f.seek(0, 1)
+          return 1
+  def finishes(m):
+      f = m.BytesIO(b'abc')
+      t = threading.Thread(target=f.truncate, args=(Seeks(f),), daemon=True)
+      t.start()
+      t.join(3)
+      return not t.is_alive()
+  c, p = finishes(io), finishes(_pyio)
+  print('io finishes:', c, ' _pyio finishes:', p)
+  if c and not p:
+      print('REPRODUCED pyio-bytesio-truncate-index-deadlock')
+expected: |
+  truncate returns, as in io.BytesIO.
+observed: |
+  python3 3.15.2: io finishes, the _pyio thread is still blocked after 3 s. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): identical. REPRODUCED.
+promised_by: |
+  Invariant: no hang; C accelerator vs pure-Python twin.
+cause: |
+  Lib/_pyio.py:1007 takes the lock before :1016 `pos = pos_index()`. Compare :938 and :983, which
+  convert before taking it.
+possible_fix: |
+  Convert `pos` before `with self._lock:`, as read and seek do.
+duplicates:
+  issues: []
+  queries: ["_pyio BytesIO lock deadlock", "_pyio BytesIO truncate __index__", "_pyio BytesIO thread safe lock",
+            "_pyio BytesIO Lock (PRs)", "commits touching Lib/_pyio.py (gh api)", "bugforge README: no io entries"]
+lean:
+  property: PyLean.PyIO.BytesIOTruncateIndexTwins
+  theorem: PyLean.PyIO.bytesIOTruncateIndexTwins_refuted

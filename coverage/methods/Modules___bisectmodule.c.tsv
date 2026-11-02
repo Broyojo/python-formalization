@@ -1,10 +1,10 @@
 file	line	endline	name	signature	status	entry	note
 Modules/_bisectmodule.c	25	30	get_bisect_state	get_bisect_state(PyObject *module)	todo		
 Modules/_bisectmodule.c	33	50	get_sq_item	get_sq_item(PyObject *s)	todo		
-Modules/_bisectmodule.c	53	145	internal_bisect_right	internal_bisect_right(PyObject *list, PyObject *item, Py_ssize_t lo, Py_ssize_t hi, PyObject* key)	todo		changed-in-3.15:
+Modules/_bisectmodule.c	53	145	internal_bisect_right	internal_bisect_right(PyObject *list, PyObject *item, Py_ssize_t lo, Py_ssize_t hi, PyObject* key)	todo		changed-in-3.15: only the lo check left, into the clinic converter. Accel.cInternalRight mirrors the new body and the difftest runs it, but over ints with pure keys: no raising comparison or key, no generic element, so the row stays uncredited as it was on 3.14.7
 Modules/_bisectmodule.c	170	175	_bisect_bisect_right_impl	_bisect_bisect_right_impl(PyObject *module, PyObject *a, PyObject *x, Py_ssize_t lo, Py_ssize_t hi, PyObject *key) /*[clinic end generated code: output=3a4bc09cc7c8a73d input=27717afe1a61bfaa]*/	todo		
 Modules/_bisectmodule.c	198	230	_bisect_insort_right_impl	_bisect_insort_right_impl(PyObject *module, PyObject *a, PyObject *x, Py_ssize_t lo, Py_ssize_t hi, PyObject *key) /*[clinic end generated code: output=ac3bf26d07aedda2 input=f2caa8abec0763e8]*/	todo		
-Modules/_bisectmodule.c	233	325	internal_bisect_left	internal_bisect_left(PyObject *list, PyObject *item, Py_ssize_t lo, Py_ssize_t hi, PyObject *key)	todo		changed-in-3.15:
+Modules/_bisectmodule.c	233	325	internal_bisect_left	internal_bisect_left(PyObject *list, PyObject *item, Py_ssize_t lo, Py_ssize_t hi, PyObject *key)	todo		changed-in-3.15: only the lo check left, into the clinic converter. Accel.cInternalLeft mirrors the new body and the difftest runs it, but over ints with pure keys: no raising comparison or key, no generic element, so the row stays uncredited as it was on 3.14.7
 Modules/_bisectmodule.c	351	356	_bisect_bisect_left_impl	_bisect_bisect_left_impl(PyObject *module, PyObject *a, PyObject *x, Py_ssize_t lo, Py_ssize_t hi, PyObject *key) /*[clinic end generated code: output=70749d6e5cae9284 input=259fedbe35e882e1]*/	todo		
 Modules/_bisectmodule.c	380	411	_bisect_insort_left_impl	_bisect_insort_left_impl(PyObject *module, PyObject *a, PyObject *x, Py_ssize_t lo, Py_ssize_t hi, PyObject *key) /*[clinic end generated code: output=b1d33e5e7ffff11e input=ff85a79826e22f31]*/	todo		
 Modules/_bisectmodule.c	430	435	bisect_clear	bisect_clear(PyObject *module)	todo		

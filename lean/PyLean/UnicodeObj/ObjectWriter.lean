@@ -2,7 +2,7 @@ import PyLean.UnicodeObj.FormatStr
 import PyLean.UnicodeObj.CodecProps
 
 /-!
-`PyUnicodeWriter`, the public API over `_PyUnicodeWriter`: Objects/unicodeobject.c@3.14.7:13723-14262.
+`PyUnicodeWriter`, the public API over `_PyUnicodeWriter`: Objects/unicode_writer.c:66-633.
 
 The state is what can be observed: the text up to `pos`, and `writer->maxchar`, the capacity of the
 buffer's kind. Capacity is separate from the text because it does not shrink: a rollback of `pos`
@@ -40,7 +40,7 @@ def prepareCap (cap m : Nat) : Nat :=
   if max m 127 > cap then capOf (kindOfMax (max m 127)) else cap
 
 /-- What `PyUnicodeWriter_Finish` returns, with its kind: `_PyUnicodeWriter_Finish`,
-unicodeobject.c@3.14.7:14210-14239, then `unicode_result`, unicodeobject.c@3.14.7:807-835. Neither looks at the
+unicode_writer.c:587-616, then `_PyUnicode_Result`, unicodeobject.c:718-746. Neither looks at the
 characters, so the kind is the buffer's, except that one character of a one-byte buffer becomes the
 `LATIN1` singleton, and nothing at all becomes the empty string. -/
 def UWriter.finish (w : UWriter) : Str × Kind :=
@@ -101,7 +101,7 @@ def decodeRest (w : UWriter) (cap : Nat) (b pre : Bytes) (h : ErrHandler) (consu
   | .ok n => ({ text := w.text ++ out, cap := cap' }, .ok n)
   | .error e => ({ w with cap := cap' }, .error e)
 
-/-- `unicode_decode_utf8_writer`, unicodeobject.c@3.14.7:5523-5559: `Prepare(size, 127)`, then, in a
+/-- `_PyUnicode_DecodeUTF8Writer`, unicodeobject.c:5404-5441: `Prepare(size, 127)`, then, in a
 one-byte buffer, the ASCII fast path, which may finish the job. -/
 def decodeWriter (w : UWriter) (b : Bytes) (h : ErrHandler) (consumed : Bool) : UWriter × Py Nat :=
   if b.isEmpty then (w, .ok 0)
@@ -131,18 +131,18 @@ inductive WOp where
   is what makes the decoder stop at an incomplete sequence. -/
   | decode (b : Bytes) (size : Int) (h : ErrHandler) (consumed : Bool)
 
-/-- `_PyUnicodeWriter_WriteStr`, unicodeobject.c@3.14.7:13942-13969, for an exact `str`: its kind decides,
+/-- `_PyUnicodeWriter_WriteStr`, unicode_writer.c:280-309, for an exact `str`: its kind decides,
 not its characters. -/
 def writeText (w : UWriter) (s : Str) : UWriter :=
   if s.isEmpty then w
   else { text := w.text ++ s, cap := prepareCap w.cap (capOf (canonicalKind s)) }
 
-/-- `_PyUnicodeWriter_WriteASCIIString`, unicodeobject.c@3.14.7:14073-14134, and what
+/-- `_PyUnicodeWriter_WriteASCIIString`, unicode_writer.c:415-478, and what
 `_PyLong_FormatWriter` does to the buffer. -/
 def writeAsciiText (w : UWriter) (s : Str) : UWriter :=
   if s.isEmpty then w else { text := w.text ++ s, cap := prepareCap w.cap 127 }
 
-/-- `_PyUnicodeWriter_WriteSubstring`, unicodeobject.c@3.14.7:14017-14047: the characters are scanned only
+/-- `_PyUnicodeWriter_WriteSubstring`, unicode_writer.c:358-389: the characters are scanned only
 if the kind of the whole string does not fit. -/
 def writeSubstring (w : UWriter) (s : Str) (start stop : Nat) : UWriter :=
   if start = 0 ∧ stop = s.length then writeText w s
@@ -177,14 +177,15 @@ def noConsumed (r : UWriter × Py Nat) : UWriter × Py Nat :=
   (r.1, r.2.map fun _ => 0)
 
 /-- `*consumed` after `PyUnicodeWriter_DecodeUTF8Stateful`: `unicode_decode_utf8_impl` sets it on
-success, and unicodeobject.c@3.14.7:14187-14189 resets it on failure. -/
+success, and unicode_writer.c:532-534 resets it on failure. -/
 def consumedOut : Py Nat → Nat
   | .ok n => n
   | .error _ => 0
 
 /-- `PyUnicodeWriter_WriteUCS4`, unicodeobject.c:2271-2330. `ucs4lib_find_max_char` rounds to
-the limit of a kind, which `prepareCap` does too. Unlike `WriteWideChar` nothing checks the range;
-CPython's own test marks an out of range character as `# CRASHES`, on a debug build. -/
+the limit of a kind, which `prepareCap` does too. Unlike `WriteWideChar` nothing checks the range in a
+release build, on purpose, gh-158445: only a `Py_DEBUG` build scans for it and raises `SystemError`.
+This is the release build. -/
 def writeUCS4 (w : UWriter) (s : Str) (size : Int) : UWriter × Py Nat :=
   if size < 0 then (w, .error (.valueError "size must be positive"))
   else
@@ -201,7 +202,7 @@ def writeWide (w : UWriter) (s : Str) (size : Int) : UWriter × Py Nat :=
     | .error e => (w, .error e)
     | .ok m => ({ text := w.text ++ t, cap := prepareCap w.cap m }, .ok 0)
 
-/-- `PyUnicodeWriter_WriteSubstring`, unicodeobject.c@3.14.7:14051-14069. -/
+/-- `PyUnicodeWriter_WriteSubstring`, unicode_writer.c:393-411. -/
 def writeSubOp (w : UWriter) (o : GObj) (start stop : Int) : UWriter × Py Nat :=
   match o with
   | .str s =>
@@ -210,7 +211,7 @@ def writeSubOp (w : UWriter) (o : GObj) (start stop : Int) : UWriter × Py Nat :
     else (writeSubstring w s start.toNat stop.toNat, .ok 0)
   | o => (w, .error (.typeError s!"expect str, not {o.tpName}"))
 
-/-- `PyUnicodeWriter_WriteStr`, unicodeobject.c@3.14.7:13972-13991. -/
+/-- `PyUnicodeWriter_WriteStr`, unicode_writer.c:313-332. -/
 def writeStrOp (w : UWriter) (o : GObj) : UWriter × Py Nat :=
   match o with
   | .str s => (writeText w s, .ok 0)
@@ -223,7 +224,7 @@ def writeStrOp (w : UWriter) (o : GObj) : UWriter × Py Nat :=
     | .ok s => (writeText w s, .ok 0)
     | .error e => (w, .error e)
 
-/-- `PyUnicodeWriter_WriteRepr`, unicodeobject.c@3.14.7:13995-14013. -/
+/-- `PyUnicodeWriter_WriteRepr`, unicode_writer.c:336-354. -/
 def writeReprOp (w : UWriter) : Option GObj → UWriter × Py Nat
   | none => (writeAsciiText w (lit "<NULL>"), .ok 0)
   | some (.int v) =>
@@ -258,7 +259,7 @@ def runOps : UWriter → List WOp → UWriter × List (Py Nat)
     let rest := runOps r.1 t
     (rest.1, r.2 :: rest.2)
 
-/-- `PyUnicodeWriter_Create`, unicodeobject.c@3.14.7:13762-13789. `Prepare` does nothing for length 0, so
+/-- `PyUnicodeWriter_Create`, unicode_writer.c:105-132. `Prepare` does nothing for length 0, so
 that writer has no buffer yet. -/
 def writerCreate (length : Int) : Py UWriter :=
   if length < 0 then .error (.valueError "length must be positive")

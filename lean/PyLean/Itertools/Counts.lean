@@ -49,7 +49,7 @@ theorem choose_fact : ∀ n r, r ≤ n → choose n r * fact r * fact (n - r) = 
 
 /-- `perm` is `n!/(n-r)!`, `choose` is `n!/r!/(n-r)!`, and the
 `combinations_with_replacement` count is `(n+r-1)!/r!/(n-1)!`
-(rst:219-223, :263-265, :536-539), written without division. -/
+(rst:224-228, :268-270, :541-544), written without division. -/
 def CountFormulas : Prop :=
   (∀ n r, r ≤ n → perm n r * fact (n - r) = fact n) ∧
   (∀ n r, r ≤ n → choose n r * fact r * fact (n - r) = fact n) ∧

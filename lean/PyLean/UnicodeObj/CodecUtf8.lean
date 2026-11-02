@@ -2,7 +2,7 @@ import PyLean.UnicodeObj.CodecHandlers
 
 /-!
 UTF-8: `STRINGLIB(utf8_decode)` and `STRINGLIB(utf8_encoder)`,
-Objects/stringlib/codecs.h:22-252 and @3.14.7:260-470, driven by `unicode_decode_utf8_impl`,
+Objects/stringlib/codecs.h:22-252 and codecs.h:259-482, driven by `unicode_decode_utf8_impl`,
 Objects/unicodeobject.c:5187-5306.
 
 The four instantiations of `utf8_decode` differ in `STRINGLIB_MAX_CHAR`, and the

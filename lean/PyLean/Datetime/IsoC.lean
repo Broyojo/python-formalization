@@ -1,9 +1,10 @@
 import PyLean.Datetime.IsoPy
 
 /-!
-The C ISO 8601 parsers of `Modules/_datetimemodule.c` (CPython 3.14.7):
-`date_fromisoformat`, `time_fromisoformat`, `datetime_fromisoformat` and their
-helpers.
+The C ISO 8601 parsers of `Modules/_datetimemodule.c` (CPython 3.15.2):
+`datetime_date_fromisoformat_impl`, `datetime_time_fromisoformat_impl`,
+`datetime_datetime_fromisoformat_impl` and their helpers. The `string: unicode`
+conversion of the clinic wrappers is outside this model: arguments are strings here.
 
 The C code works on the UTF-8 encoding of the argument
 (`PyUnicode_AsUTF8AndSize`) through `const char *` pointers. A pointer is an
@@ -32,10 +33,10 @@ def utf8 (s : List Char) : List Nat := s.flatMap utf8Char
 /-- `*p` for `p = b + i`: the NUL terminator at and after the end. -/
 def byteAt (b : List Nat) (i : Nat) : Nat := b.getD i 0
 
-/-- `is_digit`, :922-925 (`char` arithmetic; bytes `>= 0x80` are not digits). -/
+/-- `is_digit`, :923-925 (`char` arithmetic; bytes `>= 0x80` are not digits). -/
 def isDigitC (c : Nat) : Bool := 48 ≤ c && c ≤ 57
 
-/-- `parse_digits`, :927-940, with the target initialised to 0 by every
+/-- `parse_digits`, :928-940, with the target initialised to 0 by every
 caller: the value and the new pointer, or `none` (`NULL`). -/
 def parseDigitsC (b : List Nat) (p : Nat) : Nat → Option (Nat × Nat)
   | 0 => some (0, p)
@@ -47,7 +48,7 @@ def parseDigitsC (b : List Nat) (p : Nat) : Nat → Option (Nat × Nat)
       | none => none
     else none
 
-/-- `parse_isoformat_date`, :942-1012: the date fields or the negative return
+/-- `parse_isoformat_date`, :943-1012: the date fields or the negative return
 code. `len` is a `size_t`. -/
 def parseIsoDateC (b : List Nat) (len : Nat) : Except Int (Int × Int × Int) :=
   match parseDigitsC b 0 4 with
@@ -128,7 +129,7 @@ def hhStep (b : List Nat) (pEnd i p : Nat) (hasSep : Bool) : HHStep :=
     if i = 2 then .frac (p - 1) else .next (p - 1) hasSep
   else .ret (-4)
 
-/-- `parse_hh_mm_ss_ff`, :1014-1089, on the bytes `[p, pEnd)` of `b`. The loop
+/-- `parse_hh_mm_ss_ff`, :1015-1089, on the bytes `[p, pEnd)` of `b`. The loop
 over `i = 0, 1, 2` is unrolled; when it ends without returning, the fraction
 is parsed. -/
 def parseHHMMSSFFC (b : List Nat) (p pEnd : Nat) : HHRes :=
@@ -162,6 +163,8 @@ structure TimeRes where
   tzoffset : Int
   tzus : Int
   rv : Int
+  /-- The exception `check_time_args` set; present exactly when `rv` is `-6`. -/
+  err : Option PyExc
   deriving Repr, DecidableEq, Inhabited
 
 def isTzDesignator (c : Nat) : Bool := c = 90 || c = 43 || c = 45  -- 'Z' '+' '-'
@@ -174,12 +177,15 @@ def tzScan (b : List Nat) (p pEnd : Nat) : Nat :=
   | some i => p + i
   | none => max (p + 1) pEnd
 
-/-- `parse_isoformat_time`, :1091-1160, on `dtlen` bytes from `p`. -/
+/-- `parse_isoformat_time`, :1092-1160, on `dtlen` bytes from `p`. The range check runs
+even when the offset failed to parse (`r2.rv < 0`), so `+99x` raises the hour's message,
+not `Invalid isoformat string`. A field `parse_digits` left half-read is one digit, or at
+most six fraction digits, hence in range: the zeros of `HHRes` do not change this check. -/
 def parseIsoTimeC (b : List Nat) (p dtlen : Nat) : TimeRes :=
   let pEnd := p + dtlen
   let tzPos := tzScan b p pEnd
   let r := parseHHMMSSFFC b p tzPos
-  let base : TimeRes := ⟨r.h, r.mi, r.s, r.us, 0, 0, 0⟩
+  let base : TimeRes := ⟨r.h, r.mi, r.s, r.us, 0, 0, 0, none⟩
   if r.rv < 0 then { base with rv := r.rv }
   else if tzPos = pEnd then { base with rv := if r.rv = 1 then -5 else 0 }
   else if byteAt b tzPos = 90 then  -- 'Z'
@@ -187,17 +193,20 @@ def parseIsoTimeC (b : List Nat) (p dtlen : Nat) : TimeRes :=
   else
     let tzsign : Int := if byteAt b tzPos = 45 then -1 else 1
     let r2 := parseHHMMSSFFC b (tzPos + 1) pEnd
-    { base with tzoffset := tzsign * (r2.h * 3600 + r2.mi * 60 + r2.s), tzus := r2.us * tzsign,
-                rv := if r2.rv ≠ 0 then -5 else 1 }
+    match checkTime r2.h r2.mi r2.s r2.us with
+    | .error e => { base with rv := -6, err := some e }
+    | .ok _ =>
+      { base with tzoffset := tzsign * (r2.h * 3600 + r2.mi * 60 + r2.s), tzus := r2.us * tzsign,
+                  rv := if r2.rv ≠ 0 then -5 else 1 }
 
-/-- `new_timezone(delta, NULL)`, :1458-1479, as an offset in microseconds. -/
+/-- `new_timezone(delta, NULL)`, :1459-1479, as an offset in microseconds. -/
 def newTimezoneC (off : Delta) : Py Int :=
   if off.toUs = 0 then .ok 0
   else if (off.days = -1 ∧ off.seconds = 0 ∧ off.us < 1) ∨ off.days < -1 ∨ off.days ≥ 1 then
     .error (.valueError "~offset must be a timedelta strictly between -timedelta(hours=24) and timedelta(hours=24)")
   else .ok off.toUs
 
-/-- `tzinfo_from_isoformat_results`, :1671-1693. -/
+/-- `tzinfo_from_isoformat_results`, :1672-1693. -/
 def tzinfoFromIsoResults (rv tzoffset tzus : Int) : Py (Option Int) :=
   if rv = 1 then
     if tzoffset = 0 ∧ tzus = 0 then .ok (some 0)
@@ -206,7 +215,7 @@ def tzinfoFromIsoResults (rv tzoffset tzus : Int) : Py (Option Int) :=
 
 /-! ### `fromisoformat` -/
 
-/-- `date.fromisoformat`, C `date_fromisoformat`, :3405-3461. -/
+/-- `date.fromisoformat`, `datetime_date_fromisoformat_impl`, :3432-3461. -/
 def dateFromIsoC (s : List Char) : Py (Int × Int × Int) :=
   let b := utf8 s
   let len := b.length
@@ -215,12 +224,19 @@ def dateFromIsoC (s : List Char) : Py (Int × Int × Int) :=
   | .error _ => .error (.valueError "~Invalid isoformat string")
   | .ok (y, m, d) => checkDate y m d
 
-/-- `time.fromisoformat`, C `time_fromisoformat`, @3.14.7:5060-5127. -/
+/-- `rv < 0` after `parse_isoformat_time`: `-6` keeps the exception `check_time_args` set
+(`goto error`, :5216-5218 and :6141-6143), anything else is `invalid_string_error`. -/
+def timeResError (r : TimeRes) : PyExc :=
+  match r.err with
+  | some e => e
+  | none => .valueError "~Invalid isoformat string"
+
+/-- `time.fromisoformat`, `datetime_time_fromisoformat_impl`, :5191-5258. -/
 def timeFromIsoC (s : List Char) : Py TimeV := do
   let b := utf8 s
   let (p, len) := if byteAt b 0 = 84 then (1, b.length - 1) else (0, b.length)  -- 'T'
   let r := parseIsoTimeC b p len
-  if r.rv < 0 then throw (.valueError "~Invalid isoformat string")
+  if r.rv < 0 then throw (timeResError r)
   let hour ← if r.h = 24 then
       if r.mi = 0 ∧ r.s = 0 ∧ r.us = 0 then pure 0
       else throw (.valueError "minute, second, and microsecond must be 0 when hour is 24")
@@ -229,7 +245,7 @@ def timeFromIsoC (s : List Char) : Py TimeV := do
   let _ ← checkTime hour r.mi r.s r.us
   return ⟨hour, r.mi, r.s, r.us, tz⟩
 
-/-- `_find_isoformat_datetime_separator`, :5969-6066 (on bytes; `-1` is an
+/-- `_find_isoformat_datetime_separator`, :5970-6066 (on bytes; `-1` is an
 error). Its caller only uses it for strings of at least 7 code points. -/
 def findSepC (b : List Nat) : Int :=
   let len := b.length
@@ -250,14 +266,14 @@ def findSepC (b : List Nat) : Int :=
   else 8
 
 /-- Bytes taken by the UTF-8 character whose lead byte is `c`, as the
-separator skip in `datetime_fromisoformat` (:6119-6135) computes it. -/
+separator skip in `datetime_datetime_fromisoformat_impl` (:6119-6136) computes it. -/
 def utf8SkipC (c : Nat) : Nat :=
   if c % 256 < 0x80 then 1
   else if c % 256 / 16 = 0xe then 3
   else if c % 256 / 16 = 0xf then 4
   else 2
 
-/-- `datetime.fromisoformat`, C `datetime_fromisoformat`, @3.14.7:5909-6029. -/
+/-- `datetime.fromisoformat`, `datetime_datetime_fromisoformat_impl`, :6079-6194. -/
 def datetimeFromIsoC (s : List Char) : Py DateTimeV := do
   if s.length < 7 then throw (.valueError "~Invalid isoformat string")
   let b := utf8 s
@@ -272,8 +288,8 @@ def datetimeFromIsoC (s : List Char) : Py DateTimeV := do
       if len > sepLoc then
         let p := sepLoc.toNat + utf8SkipC (byteAt b sepLoc.toNat)
         pure (ymd, parseIsoTimeC b p (len - p).toNat)
-      else pure (ymd, (⟨0, 0, 0, 0, 0, 0, 0⟩ : TimeRes))
-  if r.rv < 0 then throw (.valueError "~Invalid isoformat string")
+      else pure (ymd, (⟨0, 0, 0, 0, 0, 0, 0, none⟩ : TimeRes))
+  if r.rv < 0 then throw (timeResError r)
   let tz ← tzinfoFromIsoResults r.rv r.tzoffset r.tzus
   let (y, m, d) := ymd
   let (y, m, d, hour) ← if r.h = 24 ∧ 1 ≤ m ∧ m ≤ 12 then

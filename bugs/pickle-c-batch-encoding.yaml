@@ -36,6 +36,7 @@ reproducer: |
 expected: |
   Identical bytes from both picklers: the Python pickler's batches, which are also the shorter ones.
 observed: |
+  python3 3.15.2: NOT REPRODUCED: gh-144162 shipped in 3.15, and pickle-dumps-twins-narrow now covers every batch size. This record is the 3.14.7 behaviour.
   python3 3.14.7: all four shapes differ; a 1001-item list ends `e.` in C and `a.` in Python, a 1000-item dict ends `u(u.` in C and `u.` in Python. REPRODUCED.
   main (python.exe 3.16.0a1+dev): NOT REPRODUCED: gh-144162 changed the C batch loops; the twins emit identical bytes.
 promised_by: |
@@ -55,5 +56,5 @@ duplicates:
             "pickle batch", "pickle SETITEMS", "pickle ADDITEMS"]
   bugforge: "no pickle entries in vendor/bugforge-results/README.md"
 lean:
-  property: PyLean.Pickle.DumpsTwinsAgree
-  theorem: PyLean.Pickle.dumpsTwinsAgree_refuted
+  property: PyLean.Pickle.DumpsTwinsNarrow
+  theorem: PyLean.Pickle.dumpsTwinsNarrow_proven

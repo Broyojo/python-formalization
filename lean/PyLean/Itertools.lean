@@ -18,7 +18,7 @@ import PyLean.Itertools.PairwiseReentry
 import PyLean.Itertools.CountFloat
 
 /-!
-`Modules/itertoolsmodule.c` vs the equivalents in `Doc/library/itertools.rst`, CPython 3.14.7.
+`Modules/itertoolsmodule.c` vs the equivalents in `Doc/library/itertools.rst`, CPython 3.15.2.
 -/
 
 namespace PyLean.Itertools
@@ -95,9 +95,9 @@ def entries : List Entry := [
     source := "invariant: argument checks run at construction, in source order", status := .proven
     prop := ``CtorErrors, thm := some ``ctorErrors_proven },
   { id := "itertools-arg-checks", pyFile := "Modules/itertoolsmodule.c"
-    pyFns := ["islice_new", "itertools_permutations_impl"]
-    statement := "islice accepts exactly 2 to 4 positional arguments, and keywords only in a subclass defining __init__; permutations with a non-int r fails with TypeError('Expected int as r') for every input, but only after the iterable was read, so the iterable's error wins."
-    source := "invariant: argument checks in source order", status := .proven
+    pyFns := ["islice_new", "itertools_permutations_impl", "itertools_combinations_impl", "itertools_combinations_with_replacement_impl", "itertools_tee_impl"]
+    statement := "islice accepts exactly 2 to 4 positional arguments, and keywords only in a subclass defining __init__; permutations with a non-int r fails with TypeError('Expected int as r') for every input, but only after the iterable was read, so the iterable's error wins. A negative r in Py_ssize_t range to combinations or combinations_with_replacement, or n to tee, raises ValueError('r cannot be negative') or ValueError('n cannot be negative') for every input, without reading it; permutations reads the iterable first, so there the iterable's error wins."
+    source := "invariant: argument checks in source order; Modules/clinic/itertoolsmodule.c.h:347-352, :577-582, :656-661", status := .proven
     prop := ``ArgChecks, thm := some ``argChecks_proven },
   { id := "itertools-sizeof", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["product_sizeof", "combinations_sizeof", "cwr_sizeof", "permutations_sizeof"]
@@ -155,8 +155,8 @@ def entries : List Entry := [
     notes := "The two hypotheses exclude exactly the two refuted cases above." },
   { id := "itertools-count-failed-add", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["count_next", "count_nextlong"]
-    statement := "For every number type and slow-mode state, when adding the step to the current value fails, next() raises that exception and leaves the state as it was."
-    source := "invariant: long_cnt is assigned only after PyNumber_Add succeeded (:3643-3646)", status := .proven
+    statement := "For every number type and slow-mode state, when adding the step to the current value fails, next() raises that exception and leaves the state as it was. On the call that leaves fast mode at sys.maxsize, long_cnt keeps PY_SSIZE_T_MAX, otherwise the same, and repr does not change."
+    source := "invariant: the sum is stored only after PyNumber_Add succeeded (:3635-3639); the switch to slow mode at :3622-3628", status := .proven
     prop := ``CountFailedAddRaisesFirst, thm := some ``countFailedAddRaisesFirst_proven },
   { id := "itertools-count-float", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["itertools_count_impl", "count_next", "count_nextlong"]

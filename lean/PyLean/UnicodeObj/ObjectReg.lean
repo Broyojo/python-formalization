@@ -52,11 +52,11 @@ def objectEntries : List Entry := [
     source := "implementation against itself: inline handlers against Python/codecs.c, unicodeobject.c:7504-7538"
     status := .proven, prop := ``AsciiDecodeSpec, thm := some ``asciiDecodeSpec_proven },
   { id := "unicodeobj-writer-decode-any-handler", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["unicode_decode_utf8_writer"]
+    pyFns := ["_PyUnicode_DecodeUTF8Writer"]
     statement := "Decoding into a writer, with any handler, adds what bytes.decode gives, or raises the same exception with none of the text kept; a success keeps the capacity what the text needs."
     source := "implementation against itself: the writer entry against unicode_decode_utf8_impl"
     status := .proven, prop := ``WriterDecodeX, thm := some ``writerDecodeX_proven },
-  { id := "unicodeobj-writer-decode-stateful-any-handler", pyFile := "Objects/unicodeobject.c"
+  { id := "unicodeobj-writer-decode-stateful-any-handler", pyFile := "Objects/unicode_writer.c"
     pyFns := ["PyUnicodeWriter_DecodeUTF8Stateful"]
     statement := "PyUnicodeWriter_DecodeUTF8Stateful, for any size and handler, gives the text of the decoder and sets *consumed, and on a failure rolls the text back and sets *consumed to 0."
     source := "Doc/c-api/unicode.rst: PyUnicodeWriter_DecodeUTF8Stateful"
@@ -121,6 +121,11 @@ def objectEntries : List Entry := [
     statement := "PyUnicode_InternFromString raises what the strict decode raises, and otherwise gives an interned string of the decoded text, the same object each time."
     source := "implementation against itself: the C string path against intern_common"
     status := .proven, prop := ``InternFromStringSpec, thm := some ``internFromStringSpec_proven },
+  { id := "unicodeobj-unicode-char-spec", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicode_char"]
+    statement := "unicode_char gives the character in its canonical kind for every code point, and SystemError for every Py_UCS4 above U+10FFFF."
+    source := "unicodeobject.c:1838-1841; invariant: the maximum character of a str"
+    status := .proven, prop := ``UnicodeCharSpec, thm := some ``unicodeCharSpec_proven },
   { id := "unicodeobj-iter-drains", pyFile := "Objects/unicodeobject.c"
     pyFns := ["unicodeiter_next", "unicode_ascii_iter_next", "unicode_char", "unicode_iter"]
     statement := "list(iter(s)) is the characters of s, each a one-character string of the canonical kind, for both iterator types and for a subclass of str, and the iterator ends."
@@ -194,7 +199,7 @@ def objectEntries : List Entry := [
     source := "invariant: round trip through %%"
     status := .proven, prop := ``FromFormatEscape, thm := some ``fromFormatEscape_proven },
   { id := "unicodeobj-writer-format-appends", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["PyUnicodeWriter_Format"]
+    pyFns := ["PyUnicodeWriter_Format", "_PyUnicodeWriter_FormatV"]
     statement := "PyUnicodeWriter_Format is PyUnicode_FromFormat appended to what the writer holds: same exception, same text, for every writer, or no text on failure."
     source := "implementation against itself: the writer path against the object path"
     status := .proven, prop := ``WriterFormatAppends, thm := some ``writerFormatAppends_proven },
@@ -204,7 +209,7 @@ def objectEntries : List Entry := [
     source := "Doc/c-api/unicode.rst: On error, set an exception, leave the writer unchanged"
     status := .refuted, prop := ``WriterFormatUnobservable, thm := some ``writerFormatUnobservable_refuted
     bug := some "unicodeobj-writer-rollback-noncanonical" },
-  { id := "unicodeobj-writer-text", pyFile := "Objects/unicodeobject.c"
+  { id := "unicodeobj-writer-text", pyFile := "Objects/unicode_writer.c"
     pyFns := ["PyUnicodeWriter_WriteStr", "PyUnicodeWriter_WriteRepr", "PyUnicodeWriter_WriteASCII", "PyUnicodeWriter_WriteWideChar", "find_maxchar_surrogates", "PyUnicodeWriter_WriteUTF8"]
     statement := "For every script of writer operations, the text is what the successful ones wrote, in order: WriteStr is str(), WriteRepr is repr(), a decode is bytes.decode, each raises what they raise, and a failed operation leaves no characters."
     source := "implementation against itself: the exact-str and exact-int fast paths and the writer's decoder against the object-level functions; Doc/c-api/unicode.rst"
@@ -215,22 +220,22 @@ def objectEntries : List Entry := [
     source := "implementation against itself: the writer path against the stateful decoder; Doc/c-api/unicode.rst"
     status := .proven, prop := ``WriterConsumed, thm := some ``writerConsumed_proven },
   { id := "unicodeobj-writer-finish-one-byte", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["unicode_result"]
+    pyFns := ["_PyUnicode_Result"]
     statement := "A one-byte buffer holding at most one character finishes with the canonical kind, whatever the writer has been through."
-    source := "invariant: _PyUnicode_CheckConsistency; the LATIN1 singleton of unicode_result"
+    source := "invariant: _PyUnicode_CheckConsistency; the LATIN1 singleton of _PyUnicode_Result"
     status := .proven, prop := ``WriterFinishOneByte, thm := some ``writerFinishOneByte_proven },
   { id := "unicodeobj-writer-consumed-failure", pyFile := "Objects/unicodeobject.c"
     pyFns := []
     statement := "When the stateful decoder raises, PyUnicodeWriter_DecodeUTF8Stateful raises the same exception, keeps no text, and sets *consumed to 0, for every built-in handler."
-    source := "implementation against itself: the writer path against the stateful decoder; unicodeobject.c@3.14.7:14185-14190"
+    source := "implementation against itself: the writer path against the stateful decoder; unicode_writer.c:530-535"
     status := .proven, prop := ``WriterConsumedFailure, thm := some ``writerConsumedFailure_proven },
   { id := "unicodeobj-writer-cap-value", pyFile := "Objects/unicodeobject.c"
     pyFns := []
     statement := "writer->maxchar stays the limit of a kind through every operation, failed ones included."
     source := "invariant: _PyUnicodeWriter_Update"
     status := .proven, prop := ``WriterCapValue, thm := some ``writerCapValue_proven },
-  { id := "unicodeobj-writer-finish-canonical", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["PyUnicodeWriter_Finish", "unicode_result"]
+  { id := "unicodeobj-writer-finish-canonical", pyFile := "Objects/unicode_writer.c"
+    pyFns := ["PyUnicodeWriter_Finish", "_PyUnicode_Result"]
     statement := "Unless a decode fails, the str that PyUnicodeWriter_Finish returns has the canonical kind, for every script from any PyUnicodeWriter_Create."
     source := "invariant: _PyUnicode_CheckConsistency"
     status := .proven, prop := ``WriterFinishCanonical, thm := some ``writerFinishCanonical_proven },
@@ -251,12 +256,12 @@ def objectEntries : List Entry := [
     source := "Doc/c-api/unicode.rst: On error, set an exception, leave the writer unchanged"
     status := .refuted, prop := ``WriterFailureUnobservable, thm := some ``writerFailureUnobservable_refuted
     bug := some "unicodeobj-writer-rollback-noncanonical" },
-  { id := "unicodeobj-writer-paths-agree", pyFile := "Objects/unicodeobject.c"
-    pyFns := ["PyUnicodeWriter_WriteChar", "_PyUnicodeWriter_WriteChar", "_PyUnicodeWriter_WriteCharInline", "PyUnicodeWriter_WriteUCS4"]
+  { id := "unicodeobj-writer-paths-agree", pyFile := "Objects/unicode_writer.c"
+    pyFns := ["PyUnicodeWriter_WriteChar", "_PyUnicodeWriter_WriteChar", "PyUnicodeWriter_WriteUCS4"]
     statement := "WriteStr, WriteUCS4, WriteWideChar, WriteSubstring of all of it, WriteChar for each character, and WriteUTF8 or DecodeUTF8Stateful of its encoding leave the same writer, from every writer."
     source := "implementation against itself: six ways to write one string"
     status := .proven, prop := ``WriterPathsAgree, thm := some ``writerPathsAgree_proven },
-  { id := "unicodeobj-writer-substring-slice", pyFile := "Objects/unicodeobject.c"
+  { id := "unicodeobj-writer-substring-slice", pyFile := "Objects/unicode_writer.c"
     pyFns := ["PyUnicodeWriter_WriteSubstring", "_PyUnicodeWriter_WriteSubstring"]
     statement := "WriteSubstring(s, a, b) is WriteStr(s[a:b]) for every in-range slice and every writer, whichever way the kind check goes."
     source := "implementation against itself: the scan skipped when the whole string's kind fits"

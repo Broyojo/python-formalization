@@ -34,6 +34,7 @@ reproducer: |
 expected: |
   ValueError, as for every other sanity check `dis` makes.
 observed: |
+  python3 3.15.2: REPRODUCED.
   python3 3.14.7: REPRODUCED.
   main (python.exe 3.16.0a1+dev): REPRODUCED.
 promised_by: |

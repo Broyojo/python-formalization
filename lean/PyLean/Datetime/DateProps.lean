@@ -256,7 +256,8 @@ theorem dateCtorInt_proven : DateCtorInt := by
     simp [dateNewPy, stateOf, pyIndex, bind, Except.bind]
   refine ⟨?_, fun hv => by rw [e]; exact checkDate_ok y m d hv⟩
   rw [e]
-  simp [dateNewC, stateOf, parseI, h1, h2, h3, bind, Except.bind]
+  simp [dateNewC, datetimeDateClinicC, datetimeDateImplC, clinicArity, stateOf, parseI_int, h1, h2, h3, bind,
+    Except.bind, pure, Except.pure]
 
 /-- `IsoCalendarDate`: `year`, `week`, `weekday` are the three items of the tuple,
 `__reduce__` gives a plain tuple, and `repr` names the fields in each twin. -/

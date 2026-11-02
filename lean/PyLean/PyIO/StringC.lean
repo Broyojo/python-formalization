@@ -1,13 +1,14 @@
 import PyLean.PyIO.Text
 
 /-!
-The C `io.StringIO` (`Modules/_io/stringio.c`), CPython 3.14.7, plus the
+The C `io.StringIO` (`Modules/_io/stringio.c`), CPython 3.15.2, plus the
 inherited `_io._IOBase.readlines` (`Modules/_io/iobase.c:718-778`) and the
 line search `_PyIO_find_line_ending` (`Modules/_io/textio.c:2204-2287`).
 
 The buffer is a list of code points (`Py_UCS4`). The accumulating
 (`_PyUnicodeWriter`) and realized states hold the same text and are not
-distinguished. The embedded `IncrementalNewlineDecoder` is always called
+distinguished, except by `SC.truncateObj`, which takes the state as an
+argument. The embedded `IncrementalNewlineDecoder` is always called
 with `final=1` (stringio.c:199-200), so its `pendingcr` stays clear; only
 `seennl` and `translate` are kept.
 -/
@@ -200,12 +201,16 @@ def step (s : SCState) : SOp → SCState × Py Val
   | .seek pos whence => seek s pos whence
   | .tell => if s.closed then (s, .error closedErr) else (s, .ok (.int s.pos))
   | .truncate size =>
-    -- stringio.c@3.14.7:461-481; `None` means the current position
-    match optSsize s.pos size with
+    -- stringio.c:461-491: the argument is converted after `CHECK_CLOSED`, and
+    -- `None` means the current position
+    if s.closed then (s, .error closedErr) else
+    let r : Py Int := match size with
+      | none => .ok s.pos
+      | some v => asLong v
+    match r with
     | .error e => (s, .error e)
     | .ok size =>
-      if s.closed then (s, .error closedErr) else
-      if size < 0 then (s, .error (.valueError s!"Negative size value {size}")) else
+      if size < 0 then (s, .error (.valueError s!"negative pos value {size}")) else
       let s := if size < s.buf.length then { s with buf := s.buf.take size.toNat } else s
       (s, .ok (.int size))
   | .getvalue => if s.closed then (s, .error closedErr) else (s, .ok (.str s.buf))

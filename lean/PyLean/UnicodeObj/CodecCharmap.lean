@@ -214,7 +214,7 @@ def charmapEncodingError (input : Str) (mapping : EncMap) (h : ErrHandler)
     | .bytes b => .ok (b, newpos)
     | .str r => .ok (← charmapWriteAll mapping bad r, newpos)
 
-/-- The `while (inpos<size)` of `_PyUnicode_EncodeCharmap`, unicodeobject.c@3.14.7:9150-9166. -/
+/-- The `while (inpos<size)` of `_PyUnicode_EncodeCharmap`, unicodeobject.c:9050-9069. -/
 def charmapEncodeLoop (input : Str) (mapping : EncMap) (h : ErrHandler)
     (nameOf : Nat → Option Str) : Nat → Nat → List Nat → Bytes → Py Bytes
   | 0, _, _, _ => .error .modelFuel

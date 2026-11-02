@@ -19,7 +19,7 @@ summary: |
 likelihood: |
   Needs C code passing a computed precision that goes negative, to a conversion taking an object,
   for example `PyErr_Format(exc, "%.*U", n - skip, name)`. No call in Objects, Python, Modules or
-  Parser of 3.14 uses `.*` with these conversions, so the standard library does not reach it, and
+  Parser of 3.15 uses `.*` with these conversions, so the standard library does not reach it, and
   nothing in pure Python does. The effect when it happens is memory corruption, not an exception.
   Present since `*` was added in 3.12 by gh-98836 (PR gh-98838).
 maybe_intended: |
@@ -52,13 +52,13 @@ expected: |
   '[abc]', as for %.*d and as C's printf does with a negative precision. Or, if a negative precision
   is to be an error, an exception. Not a crash.
 observed: |
-  python3 3.14.7 on Linux: the process dies with SIGSEGV. Before it does, the call often returns,
+  python3 3.15.2 on Linux: the process dies with SIGSEGV. Before it does, the call often returns,
   and what it returns matches the arithmetic of the cause. For "[%.*U]" the writer writes '[' (pos 1),
   fills `width - length` = -1 + 2 = 1 space (pos 2), then `pos += -2` gives 0, so ']' lands at index 0
   and the result is ']', of length 1. With width 5 the fill is 7 and the length is 7. Other runs gave
   '獹' for an empty string and '\U616d0000', above the Unicode range. "%.*s" gives '[]' and
   "%.*d" gives '[7]', with no crash.
-tested: "REPRODUCED on python3 3.14.7 (SIGSEGV on Linux). REPRODUCED on main (3.16.0a1+dev) (SIGBUS on macOS arm64); the same lines are there, Objects/unicodeobject.c:2504 on main."
+tested: "REPRODUCED on python3 3.15.2 (SIGSEGV on Linux). REPRODUCED on main (3.16.0a1+dev) (SIGBUS on macOS arm64); the same lines are there, Objects/unicodeobject.c:2504 on main."
 promised_by: |
   Invariant: no crash, and no copy with a negative count. Objects/unicodeobject.c:1393 asserts
   `0 <= how_many`, so a debug build aborts there. Doc/c-api/unicode.rst:479-482 documents `*` as an

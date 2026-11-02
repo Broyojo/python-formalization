@@ -12,7 +12,7 @@ summary: |
   So an invalid date becomes a valid one: '2020-01-00T24:00' parses as 2020-01-01 00:00,
   and '0000-12-31T24:00' (year 0) parses as 0001-01-01 00:00, while '2020-01-00',
   '2020-01-00T00:00' and '0000-12-31T00:00' all raise ValueError. Both the C and the
-  pure-Python implementation behave this way, on 3.14.7 and on main.
+  pure-Python implementation behave this way, on 3.15.2 and on main.
 likelihood: |
   Needs a malformed date combined with the rare 24:00 form, e.g. a producer that writes
   day 00 or year 0000 as a sentinel. The result is a plausible, silently wrong timestamp
@@ -54,7 +54,7 @@ possible_fix: |
   Validate the parsed date before the rollover (or require `day >= 1` and
   MINYEAR <= year in the guard), so the 24:00 path is only taken for an existing date.
 reproduces:
-  python3 (3.14.7): REPRODUCED
+  python3 (3.15.2): REPRODUCED
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
 duplicates:
   issues:

@@ -1,7 +1,7 @@
 import PyLean.Core
 
 /-!
-Shared vocabulary for the `json` models (CPython 3.14.7).
+Shared vocabulary for the `json` models (CPython 3.15.2).
 
 * A Python `str` is a list of code points (`PStr`). Lone surrogates are
   ordinary code points here, as in CPython, which a Lean `String` could not hold.
@@ -10,7 +10,7 @@ Shared vocabulary for the `json` models (CPython 3.14.7).
   and slicing follow Python's rules for negative and out-of-range indices.
 * The decoder's callbacks are abstract functions (`DCfg`): `object_hook`,
   `object_pairs_hook`, `parse_float`, `parse_int` and `parse_constant` may return
-  any value or raise. The default `parse_int` is `int`, exact with the 4300-digit
+  any value or raise, and so may `array_hook`. The default `parse_int` is `int`, exact with the 4300-digit
   limit. The default `parse_float`, `float`, is abstract too: it records the text
   it receives (`JVal.hook`), until the binary64 model exists; the default
   `parse_constant` likewise.
@@ -201,12 +201,22 @@ structure DCfg where
   objectHook : Option (List (PStr × JVal) → DR JVal) := none
   /-- `object_pairs_hook`, called with the list of pairs; it takes priority. -/
   pairsHook : Option (List (PStr × JVal) → DR JVal) := none
+  /-- `array_hook`, called with the `list`. -/
+  arrayHook : Option (List JVal → DR JVal) := none
   /-- `parse_float`: `float` unless given. -/
   parseFloat : PStr → DR JVal := fun t => .ok (.hook .float t)
   /-- `parse_int`: `int` when `none`. -/
   parseIntFn : Option (PStr → DR JVal) := none
   /-- `parse_constant`: `_CONSTANTS.__getitem__` unless given. -/
   parseConstant : PStr → DR JVal := fun t => .ok (.hook .const t)
+
+/-- `array_hook(values)` when it is given: `JSONArray`, decoder.py:230-231, :261-262,
+and `_parse_array_unicode`, Modules/_json.c:945-950. An exception of the hook
+propagates. -/
+def mkArr (cfg : DCfg) (xs : List JVal) : DR JVal :=
+  match cfg.arrayHook with
+  | some h => h xs
+  | none => .ok (.arr xs)
 
 /-- `sys.get_int_max_str_digits()` default. -/
 def maxStrDigits : Nat := 4300

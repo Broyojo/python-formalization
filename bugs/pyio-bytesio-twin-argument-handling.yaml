@@ -60,7 +60,7 @@ reproducer: |
 expected: |
   The twins agree, or the differences are accepted as implementation details.
 observed: |
-  python3 3.14.7: all eight cases differ as listed in the summary. REPRODUCED.
+  python3 3.15.2: all eight cases differ as listed in the summary. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): all eight still differ; truncate(2**63)'s message is now "cannot fit 'int' into an
   index-sized integer" (gh-160781). REPRODUCED.
 promised_by: |

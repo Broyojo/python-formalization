@@ -34,7 +34,7 @@ expected: |
   A message naming the limit, e.g. "Step for islice() must be a positive integer or None:
   1 <= x <= sys.maxsize."
 observed: |
-  python3 3.14.7 (macOS and the Linux build pod): "Step for islice() must be a positive integer or None." for step = 2**63.
+  python3 3.15.2 (Linux build pod): "Step for islice() must be a positive integer or None." for step = 2**63.
   REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |

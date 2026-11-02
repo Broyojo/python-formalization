@@ -183,7 +183,7 @@ def Tz.repr (env : TzEnv) (tz : Tz) : String :=
   | .custom i => env.repr i
 
 /-- `tz.utcoffset(dt)` without the check on the result: `timezone.utcoffset`,
-_pydatetime.py:2524-2528 (C `timezone_utcoffset`, :4480-4487), or a subclass method.
+_pydatetime.py:2524-2528 (C `timezone_utcoffset`, :4488-4495), or a subclass method.
 The arguments here are always a `datetime` or `None`. -/
 def tzUtcoffsetRaw (env : TzEnv) (tz : Tz) (arg : Option DT) : Py OffRet :=
   match tz.kind with
@@ -203,7 +203,7 @@ def tzTznameRawPy (env : TzEnv) (tz : Tz) (arg : Option DT) : Py NameRet :=
   | .timezone offset name => .ok (.str (timezoneStrPy offset name))
   | .custom i => env.tzname i arg
 
-/-- `tz.tzname(dt)` in C: `timezone_tzname`, :4471-4477. -/
+/-- `tz.tzname(dt)` in C: `timezone_tzname`, :4479-4485. -/
 def tzTznameRawC (env : TzEnv) (tz : Tz) (arg : Option DT) : Py NameRet :=
   match tz.kind with
   | .timezone offset name => .ok (.str (timezoneStrC tz.oid offset name))
@@ -245,7 +245,7 @@ def DT.utcoffsetPy (env : TzEnv) (dt : DT) : Py (Option Delta) :=
   | none => .ok none
   | some tz => do checkUtcOffset "utcoffset" (← tzUtcoffsetRaw env tz (some dt))
 
-/-- `call_utcoffset(tzinfo, dt)` (:1593-1596) for `datetime_utcoffset`, :6106-6109. -/
+/-- `call_utcoffset(tzinfo, dt)` (:1593-1596) for `datetime_utcoffset`, :6216-6219. -/
 def DT.utcoffsetC (env : TzEnv) (dt : DT) : Py (Option Delta) :=
   match dt.tz with
   | none => .ok none
@@ -257,7 +257,7 @@ def DT.dstPy (env : TzEnv) (dt : DT) : Py (Option Delta) :=
   | none => .ok none
   | some tz => do checkUtcOffset "dst" (← tzDstRaw env tz (some dt))
 
-/-- `call_dst` (:1607-1610) for `datetime_dst`, :6112-6115. -/
+/-- `call_dst` (:1607-1610) for `datetime_dst`, :6222-6225. -/
 def DT.dstC (env : TzEnv) (dt : DT) : Py (Option Delta) :=
   match dt.tz with
   | none => .ok none
@@ -269,7 +269,7 @@ def DT.tznamePy (env : TzEnv) (dt : DT) : Py (Option String) :=
   | none => .ok none
   | some tz => do checkTzname (← tzTznameRawPy env tz (some dt))
 
-/-- `call_tzname` for `datetime_tzname`, :6118-6121. -/
+/-- `call_tzname` for `datetime_tzname`, :6228-6231. -/
 def DT.tznameC (env : TzEnv) (dt : DT) : Py (Option String) :=
   match dt.tz with
   | none => .ok none
@@ -281,7 +281,7 @@ def TM.utcoffsetPy (env : TzEnv) (t : TM) : Py (Option Delta) :=
   | none => .ok none
   | some tz => do checkUtcOffset "utcoffset" (← tzUtcoffsetRaw env tz none)
 
-/-- `time_utcoffset`, :4804-4807. -/
+/-- `time_utcoffset`, :4830-4833. -/
 def TM.utcoffsetC (env : TzEnv) (t : TM) : Py (Option Delta) :=
   match t.tz with
   | none => .ok none
@@ -293,7 +293,7 @@ def TM.dstPy (env : TzEnv) (t : TM) : Py (Option Delta) :=
   | none => .ok none
   | some tz => do checkUtcOffset "dst" (← tzDstRaw env tz none)
 
-/-- `time_dst`, :4810-4813. -/
+/-- `time_dst`, :4836-4839. -/
 def TM.dstC (env : TzEnv) (t : TM) : Py (Option Delta) :=
   match t.tz with
   | none => .ok none
@@ -305,7 +305,7 @@ def TM.tznamePy (env : TzEnv) (t : TM) : Py (Option String) :=
   | none => .ok none
   | some tz => do checkTzname (← tzTznameRawPy env tz none)
 
-/-- `time_tzname`, :4816-4819. -/
+/-- `time_tzname`, :4842-4845. -/
 def TM.tznameC (env : TzEnv) (t : TM) : Py (Option String) :=
   match t.tz with
   | none => .ok none

@@ -8,8 +8,9 @@ buffer and there is no file `read`, so running out of data is
 
 The C stack is one flat array with a separate mark stack (`marks`); `fence`
 is the position of the topmost mark. The memo is an array indexed by memo
-index; it is modelled as a finite map (array growth and `MemoryError` are not
-modelled).
+index with a dict for sparse keys, each modelled as a finite map; the array
+keeps its capacity `memoSize` and its count `memoLen`, which decide where a key
+goes and which index `MEMOIZE` uses. `MemoryError` is not modelled.
 -/
 
 namespace PyLean.Pickle
@@ -29,7 +30,15 @@ structure CSt where
   stack : List DV := []
   /-- `self->marks`, top first: stack sizes. -/
   marks : List Nat := []
+  /-- The cells of `self->memo` that are not NULL. -/
   memo : List (Nat × DV) := []
+  /-- `self->memo_size`, `MEMO_SIZE` at first (`_Unpickler_New`, `Modules/_pickle.c:1770`). -/
+  memoSize : Nat := 32
+  /-- `self->memo_len`. Only `_Unpickler_MemoPut` counts: a key in the dict is
+  not counted, nor is one `_Unpickler_MemoGet` moves into the array. -/
+  memoLen : Nat := 0
+  /-- `self->memo_dict`, the backup for sparse keys. -/
+  memoDict : List (Nat × DV) := []
   heap : Heap := []
   proto : Nat := 0
 
@@ -66,7 +75,7 @@ def cRead (n : Nat) : CM Bytes := do
       else cThrow truncated
     | none => cThrow truncated
 
-/-- `_Unpickler_ReadInto` (`Modules/_pickle.c:1514-1574`) for in-memory input. -/
+/-- `_Unpickler_ReadInto` (`Modules/_pickle.c:1514-1562`) for in-memory input. -/
 def cReadInto (n : Nat) : CM Bytes := do
   let s ← get
   let inBuffer := s.inputLen - s.idx
@@ -85,6 +94,20 @@ def cReadInto (n : Nat) : CM Bytes := do
       if more.length = rest then return first ++ more
     cThrow truncated
   | none => cThrow truncated
+
+/-- `MIN_READ_BUF_SIZE` (`Modules/_pickle.c:162`). -/
+def cMinReadBufSize : Nat := 1 <<< 20
+
+/-- The `while (1)` of `load_counted_binbytes` (`Modules/_pickle.c:5887-5908`)
+and `load_counted_bytearray` (:5933-5954): the buffer doubles and each round
+is its own `_Unpickler_ReadInto`, so the frame check runs once per chunk. The
+fuel is `size + 1`: every round but the last adds at least one byte to `cursize`. -/
+def cReadChunks : Nat → Nat → Nat → Nat → Bytes → CM Bytes
+  | 0, _, _, _, _ => cThrow .modelFuel
+  | fuel + 1, size, cursize, prevsize, acc => do
+    let d ← cReadInto (cursize - prevsize)
+    if cursize ≥ size then return acc ++ d
+    else cReadChunks fuel size (cursize + min cursize (size - cursize)) cursize (acc ++ d)
 
 /-- `_Unpickler_Readline` (`Modules/_pickle.c:1606-1639`). -/
 def cReadline : CM Bytes := do
@@ -153,15 +176,35 @@ def cAlloc (o : HObj) : CM DV := do
 
 def cSetHeap (h : Heap) : CM Unit := modify fun s => { s with heap := h }
 
-def cMemoGetD (idx : Nat) (shown : Int) : CM Unit := do
-  match (← get).memo.lookup idx with
-  | some v => cPush v
-  | none => cThrow (unpicklingError s!"Memo value not found at index {shown}")
+/-- Store `v` at `idx`, as `memoPutPy` stores in Python's dict. -/
+def memoCell (m : List (Nat × DV)) (idx : Nat) (v : DV) : List (Nat × DV) :=
+  if m.any (·.1 == idx) then m.map (fun p => if p.1 == idx then (idx, v) else p)
+  else m ++ [(idx, v)]
 
-/-- `_Unpickler_MemoPut` (`Modules/_pickle.c:1697-1736`). -/
+/-- `_Unpickler_MemoGet` and the push of its callers
+(`Modules/_pickle.c:1663-1692`). A dict key the array can now hold moves into
+the array, without changing `memo_len`. -/
+def cMemoGetD (idx : Nat) (shown : Int) : CM Unit := do
+  let s ← get
+  match (if idx < s.memoSize then s.memo.lookup idx else none) with
+  | some v => cPush v
+  | none =>
+    match s.memoDict.lookup idx with
+    | none => cThrow (unpicklingError s!"Memo value not found at index {shown}")
+    | some v =>
+      if idx < s.memoSize then
+        set { s with memoDict := s.memoDict.filter (·.1 != idx), memo := memoCell s.memo idx v }
+      cPush v
+
+/-- `_Unpickler_MemoPut` (`Modules/_pickle.c:1697-1736`): a key past the array
+and past twice `memo_len` goes to the dict; `_Unpickler_ResizeMemoList` (:1642-1659)
+grows the array to `idx * 2` for the others. -/
 def cMemoPutD (idx : Nat) (v : DV) : CM Unit := modify fun s =>
-  { s with memo := if s.memo.any (·.1 == idx) then s.memo.map (fun p => if p.1 == idx then (idx, v) else p)
-                   else s.memo ++ [(idx, v)] }
+  if idx ≥ s.memoSize ∧ idx > s.memoLen * 2 then { s with memoDict := memoCell s.memoDict idx v }
+  else
+    { s with memoSize := if idx ≥ s.memoSize then idx * 2 else s.memoSize
+             memo := memoCell s.memo idx v
+             memoLen := if s.memo.any (·.1 == idx) then s.memoLen else s.memoLen + 1 }
 
 /-- `calc_binint` (`Modules/_pickle.c:5607-5626`): 1 and 2 bytes unsigned,
 4 bytes signed. -/
@@ -191,7 +234,6 @@ def cDoAppend (x : Int) : CM Unit := do
   let s ← get
   let len := s.stack.length
   if x > len ∨ x ≤ cFence s then cUnderflow
-  else if x = len then pure ()
   else
     let x := x.toNat
     let lst := s.stack.getD (len - x) .none
@@ -214,7 +256,6 @@ def cDoSetitems (x : Int) : CM Unit := do
   let s ← get
   let len := s.stack.length
   if x > len ∨ x ≤ cFence s then cUnderflow
-  else if x = len then pure ()
   else
     let x := x.toNat
     if (len - x) % 2 ≠ 0 then cThrow (unpicklingError "odd number of items for SETITEMS")
@@ -238,7 +279,7 @@ def cLoadBinint : CM Unit := do cPush (.int (calcBinint (← cRead 4)))
 def cLoadBinint1 : CM Unit := do cPush (.int (calcBinint (← cRead 1)))
 def cLoadBinint2 : CM Unit := do cPush (.int (calcBinint (← cRead 2)))
 
-/-- `load_int`, :5521-5562. -/
+/-- `load_int`, :5521-5561. -/
 def cLoadInt : CM Unit := do
   match ← cLift (cLoadIntLine (← cReadline)) with
   | .int v => cPush (.int v)
@@ -257,13 +298,15 @@ def cLoadCountedLong (nb : Nat) : CM Unit := do
 def cLoadCountedBinbytes (nb : Nat) : CM Unit := do
   match calcBinsize (← cRead nb) with
   | none => cThrow (.overflowError s!"BINBYTES exceeds system's maximum size of {ssizeMaxN} bytes")
-  | some size => cPush (.bytes (← cReadInto size))
+  | some size =>
+    cPush (.bytes (← cReadChunks (size + 1) size (min size cMinReadBufSize) 0 []))
 
 /-- `load_counted_bytearray`, :5915-5958. -/
 def cLoadCountedBytearray : CM Unit := do
   match calcBinsize (← cRead 8) with
   | none => cThrow (.overflowError s!"BYTEARRAY8 exceeds system's maximum size of {ssizeMaxN} bytes")
-  | some size => cPush (← cAlloc (.bytearray (← cReadInto size)))
+  | some size =>
+    cPush (← cAlloc (.bytearray (← cReadChunks (size + 1) size (min size cMinReadBufSize) 0 [])))
 
 /-- `load_counted_binstring`, :5834-5867. -/
 def cLoadCountedBinstring (nb : Nat) : CM Unit := do
@@ -331,7 +374,6 @@ def cLoadAdditems : CM Unit := do
   let s ← get
   let len := s.stack.length
   if mark > len ∨ mark ≤ cFence s then cUnderflow
-  else if mark = len then pure ()
   else
     let so := s.stack.getD (len - mark) .none
     if isSetRef s.heap so then
@@ -402,9 +444,11 @@ def cLoadPut : CM Unit := do
     if idx < 0 then cThrow (.valueError "negative PUT argument")
     else cMemoPutD idx.toNat v
 
+/-- `load_memoize`, :6775-6784: the index is `memo_len`, which counts neither
+dict keys nor keys moved from the dict. -/
 def cLoadMemoize : CM Unit := do
   let v ← cTopChecked
-  cMemoPutD (← get).memo.length v
+  cMemoPutD (← get).memoLen v
 
 /-- `load_pop`, :6487-6511. -/
 def cLoadPop : CM Unit := do
@@ -476,7 +520,7 @@ def cLoadStackGlobal : CM Unit := do
   | .str m, .str n => cPush (.glob (← cLift (findGlob (← get).proto m n)))
   | _, _ => cThrow (unpicklingError "STACK_GLOBAL requires str")
 
-/-- `load_reduce`, :7119-7143. -/
+/-- `load_reduce`, :7119-7140. -/
 def cLoadReduce : CM Unit := do
   let args ← cPop
   let func ← cPop

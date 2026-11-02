@@ -1,6 +1,6 @@
 file	line	endline	name	signature	status	entry	note
 Objects/unicode_format.c	97	114	unicode_format_getnextarg	unicode_format_getnextarg(struct unicode_formatter_t *ctx, int allowone)	todo		changed-in-3.15: new function
-Objects/unicode_format.c	124	171	formatfloat	formatfloat(PyObject *v, struct unicode_formatter_t *ctx, struct unicode_format_arg_t *arg, PyObject **p_output, _PyUnicodeWriter *writer)	todo		changed-in-3.15: new function
+Objects/unicode_format.c	124	171	formatfloat	formatfloat(PyObject *v, struct unicode_formatter_t *ctx, struct unicode_format_arg_t *arg, PyObject **p_output, _PyUnicodeWriter *writer)	modelled	unicodeobj-format-percent-float,unicodeobj-format-percent-float-errors	
 Objects/unicode_format.c	193	315	_PyUnicode_FormatLong	_PyUnicode_FormatLong(PyObject *val, int alt, int prec, int type)	todo		changed-in-3.15: new function
 Objects/unicode_format.c	323	413	mainformatlong	mainformatlong(PyObject *v, struct unicode_formatter_t *ctx, struct unicode_format_arg_t *arg, PyObject **p_output, _PyUnicodeWriter *writer)	todo		changed-in-3.15: new function
 Objects/unicode_format.c	417	454	formatchar	formatchar(PyObject *v, struct unicode_formatter_t *ctx, struct unicode_format_arg_t *arg)	todo		changed-in-3.15: new function

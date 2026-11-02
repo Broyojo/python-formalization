@@ -151,6 +151,18 @@ def getEncMap (j : Json) : Except String EncMap := do
 
 def encPair (p : Str × Nat) : Json := Json.arr #[toJson p.1, toJson p.2]
 
+/-- What `Chunked` compares, as far as the first and second chunk got, with the values consumed. -/
+def chunkView (dec : Bytes → Bool → Py (Str × Nat)) (b : Bytes) (k : Nat) : Json :=
+  let whole : Json := match dec b true with
+    | .ok (s, n) => Json.arr #[toJson s, toJson n]
+    | .error _ => Json.null
+  match dec (b.take k) false with
+  | .error _ => Json.arr #["first", whole]
+  | .ok (s1, n) =>
+    match dec (b.drop n) true with
+    | .error _ => Json.arr #["second", toJson s1, toJson n, whole]
+    | .ok (s2, m) => Json.arr #["both", toJson s1, toJson n, toJson s2, toJson m, whole]
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
   | "codec_utf8_decode" =>
@@ -191,6 +203,20 @@ def run (fn : String) (j : Json) : Except String Json := do
     return encPy (fun (x : Json) => x) (.ok (Json.arr #[encPy (fun (_ : Nat) => Json.null) r,
       toJson (match r with | .ok n => n | .error _ => 0), toJson text, toJson kind.width,
       toJson (kind == .ascii)]))
+  | "codec_chunks" =>
+    let b ← getSeq j "b"
+    let k ← getNat j "k"
+    let h ← getHandler j
+    let dec : Bytes → Bool → Py (Str × Nat) ← match ← getStr j "codec" with
+      | "utf-8" => pure fun x final => utf8DecodeLoop x h (!final) (x.length + 1) 0 x []
+      | "utf-16-le" => pure fun x final => utf16DecodeFull x (-1) h final
+      | "utf-16-be" => pure fun x final => utf16DecodeFull x 1 h final
+      | "utf-32-le" => pure fun x final => utf32DecodeFull x (-1) h final
+      | "utf-32-be" => pure fun x final => utf32DecodeFull x 1 h final
+      | "raw_unicode_escape" => pure fun x final => rawEscapeDecode x h final
+      | "unicode_escape" => pure fun x final => unicodeEscapeDecode x h (fun _ => none) final
+      | c => throw s!"bad codec {c}"
+    return encPy (fun (x : Json) => x) (.ok (chunkView dec b k))
   | "codec_ascii_obj" =>
     let b ← getSeq j "b"
     let enc (r : Str × Kind) : Json :=

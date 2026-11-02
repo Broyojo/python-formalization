@@ -46,8 +46,168 @@ structure ECfg.Ok (cfg : ECfg) : Prop where
   cst : cfg.customEnc = none
   dfl : ∀ n t v', cfg.dflt n t = .ok v' → v'.ok = true
 
+/-- When no character needs escaping, the size is `len + 2` and the escaped text
+is the string in quotes; otherwise some character adds to the size. So the
+branch of `write_escaped_ascii` never changes what is written. -/
+theorem sum_map_ge_length (d : Nat → Nat) (h1 : ∀ c, 1 ≤ d c) (s : PStr) :
+    s.length ≤ (s.map d).sum := by
+  induction s with
+  | nil => simp
+  | cons c t ih =>
+    have := h1 c
+    simp only [List.map_cons, List.sum_cons, List.length_cons]
+    omega
+
+theorem all_one_of_sum (d : Nat → Nat) (h1 : ∀ c, 1 ≤ d c) (s : PStr)
+    (h : (s.map d).sum = s.length) : ∀ c ∈ s, d c = 1 := by
+  induction s with
+  | nil => simp
+  | cons c t ih =>
+    have hc := h1 c
+    have ht := sum_map_ge_length d h1 t
+    simp only [List.map_cons, List.sum_cons, List.length_cons] at h
+    intro x hx
+    rcases List.mem_cons.mp hx with rfl | hx
+    · omega
+    · exact ih (by omega) x hx
+
+theorem asciiEscD_pos (c : Nat) : 1 ≤ asciiEscD c := by
+  unfold asciiEscD
+  split
+  · omega
+  · split
+    · omega
+    · split <;> omega
+
+theorem escD_pos (c : Nat) : 1 ≤ escD c := by
+  unfold escD
+  split
+  · omega
+  · split <;> omega
+
+theorem flatMap_id {f : Nat → PStr} {s : PStr} (h : ∀ c ∈ s, f c = [c]) : s.flatMap f = s := by
+  induction s with
+  | nil => rfl
+  | cons c t ih =>
+    have := ih (fun x hx => h x (List.mem_cons_of_mem _ hx))
+    simp [List.flatMap_cons, h c List.mem_cons_self, this]
+
+theorem sum_of_all_one (d : Nat → Nat) (s : PStr) (h : ∀ c ∈ s, d c = 1) :
+    (s.map d).sum = s.length := by
+  induction s with
+  | nil => rfl
+  | cons c t ih =>
+    have h1 := h c List.mem_cons_self
+    have h2 := ih (fun x hx => h x (List.mem_cons_of_mem _ hx))
+    simp only [List.map_cons, List.sum_cons, List.length_cons, h1, h2]
+    omega
+
+theorem asciiEscD_one_iff (c : Nat) : asciiEscD c = 1 ↔ sChar c = true := by
+  unfold asciiEscD
+  by_cases hsc : sChar c = true
+  · simp [hsc]
+  · rw [if_neg hsc]
+    constructor
+    · intro h1
+      split at h1
+      · omega
+      · split at h1 <;> omega
+    · intro h
+      exact absurd h hsc
+
+theorem escD_one_iff (c : Nat) : escD c = 1 ↔ cEscapeChar c = [c] := by
+  unfold escD cEscapeChar
+  by_cases h1 : c = 92
+  · subst h1; simp
+  by_cases h2 : c = 34
+  · subst h2; simp
+  by_cases h3 : c = 8
+  · subst h3; simp
+  by_cases h4 : c = 12
+  · subst h4; simp
+  by_cases h5 : c = 10
+  · subst h5; simp
+  by_cases h6 : c = 13
+  · subst h6; simp
+  by_cases h7 : c = 9
+  · subst h7; simp
+  by_cases h8 : c ≤ 0x1f
+  · simp [h1, h2, h3, h4, h5, h6, h7, h8]
+  · simp [h1, h2, h3, h4, h5, h6, h7, h8]
+
+theorem writeEscapedAscii_eq (s : PStr) : writeEscapedAscii s = cAsciiEscape s := by
+  unfold writeEscapedAscii
+  split
+  · rename_i h
+    have hs : (s.map asciiEscD).sum = s.length := by unfold asciiEscapeSize at h; omega
+    have hall := all_one_of_sum _ asciiEscD_pos s hs
+    unfold cAsciiEscape
+    rw [flatMap_id]
+    intro c hc
+    have h1 := hall c hc
+    unfold asciiEscD at h1
+    by_cases hsc : sChar c = true
+    · simp [hsc]
+    · rw [if_neg hsc] at h1
+      split at h1
+      · omega
+      · split at h1 <;> omega
+  · rfl
+
+theorem writeEscapedUnicode_eq (s : PStr) : writeEscapedUnicode s = cEscape s := by
+  unfold writeEscapedUnicode
+  split
+  · rename_i h
+    have hs : (s.map escD).sum = s.length := by unfold escapeSize at h; omega
+    have hall := all_one_of_sum _ escD_pos s hs
+    unfold cEscape
+    rw [flatMap_id]
+    intro c hc
+    have h1 := hall c hc
+    unfold escD at h1
+    unfold cEscapeChar
+    split at h1
+    · omega
+    · split at h1
+      · omega
+      · rename_i h2 h3
+        simp only [not_or] at h2
+        obtain ⟨a, b, c1, d, e, f, g⟩ := h2
+        simp [a, b, c1, d, e, f, g, h3]
+  · rfl
+
+/-- `write_escaped_ascii` and `write_escaped_unicode` write what `ascii_escape_unicode`
+and `escape_unicode` return, for every `str`: the direct path, taken on
+`output_size == input_chars + 2`, is taken exactly when no character needs
+escaping. -/
+def WriteEscaped : Prop :=
+  ∀ s : PStr,
+    writeEscapedAscii s = cAsciiEscape s ∧ writeEscapedUnicode s = cEscape s ∧
+    (asciiEscapeSize s = s.length + 2 ↔ ∀ c ∈ s, sChar c = true) ∧
+    (escapeSize s = s.length + 2 ↔ ∀ c ∈ s, cEscapeChar c = [c])
+
+theorem writeEscaped_proven : WriteEscaped := by
+  intro s
+  refine ⟨writeEscapedAscii_eq s, writeEscapedUnicode_eq s, ⟨fun h => ?_, fun h => ?_⟩, ⟨fun h => ?_, fun h => ?_⟩⟩
+  · have hs : (s.map asciiEscD).sum = s.length := by unfold asciiEscapeSize at h; omega
+    exact fun c hc => (asciiEscD_one_iff c).mp (all_one_of_sum _ asciiEscD_pos s hs c hc)
+  · have := sum_of_all_one asciiEscD s (fun c hc => (asciiEscD_one_iff c).mpr (h c hc))
+    unfold asciiEscapeSize
+    omega
+  · have hs : (s.map escD).sum = s.length := by unfold escapeSize at h; omega
+    exact fun c hc => (escD_one_iff c).mp (all_one_of_sum _ escD_pos s hs c hc)
+  · have := sum_of_all_one escD s (fun c hc => (escD_one_iff c).mpr (h c hc))
+    unfold escapeSize
+    omega
+
+theorem cFastEncode_eq (cfg : ECfg) (s : PStr) : cFastEncode cfg s = cStrEnc cfg s := by
+  unfold cFastEncode cStrEnc
+  split
+  · exact writeEscapedAscii_eq s
+  · exact writeEscapedUnicode_eq s
+
 theorem cEncStr_std {cfg : ECfg} (h : cfg.customEnc = none) (s : PStr) : cEncStr cfg s = .ok (cStrEnc cfg s) := by
-  simp [cEncStr, h]
+  simp [cEncStr, h, cFastEncode_eq]
 
 theorem and_0xf (x : Nat) : x &&& 0xf = x % 16 := Nat.and_two_pow_sub_one_eq_mod x 4
 

@@ -50,7 +50,7 @@ expected: |
   getvalue() does not depend on how the text was split into writes: 'a\nb' in both cases, as in
   _pyio.StringIO and in a text file read with newline=None.
 observed: |
-  python3 3.14.7: io two writes 'a\n\nb' (lines ['a\n', '\n', 'b'], newlines ('\r', '\n')), one write
+  python3 3.15.2: io two writes 'a\n\nb' (lines ['a\n', '\n', 'b'], newlines ('\r', '\n')), one write
   'a\nb'; _pyio 'a\nb' for both; the two-piece file reads back as 'a\nb'. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |

@@ -34,7 +34,7 @@ expected: |
   ValueError: Unknown conversion specifier \x0
 observed: |
   '1'
-tested: "REPRODUCED on python3 3.14.7 by scripts/check_bugs.py; '1' on main (3.16.0a1+dev) by hand"
+tested: "REPRODUCED on python3 3.15.2 by scripts/check_bugs.py; '1' on main (3.16.0a1+dev) by hand"
 promised_by: |
   Doc/library/string.rst: conversion is one of r, s or a.
 cause: |

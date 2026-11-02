@@ -1,31 +1,31 @@
 file	line	endline	name	signature	status	entry	note
 Modules/_json.c	126	159	ascii_escape_unichar	ascii_escape_unichar(Py_UCS4 c, unsigned char *output, Py_ssize_t chars)	modelled	json-c-encode-basestring,json-dumps-twins,json-ensure-ascii-output	
-Modules/_json.c	162	191	ascii_escape_size	ascii_escape_size(const void *input, int kind, Py_ssize_t input_chars)	todo		changed-in-3.15: new function
-Modules/_json.c	194	222	ascii_escape_unicode_and_size	ascii_escape_unicode_and_size(const void *input, int kind, Py_ssize_t input_chars, Py_ssize_t output_size)	todo		changed-in-3.15: new function
-Modules/_json.c	225	238	ascii_escape_unicode	ascii_escape_unicode(PyObject *pystr)	todo		changed-in-3.15: was json-dumps-twins,json-ensure-ascii-output
-Modules/_json.c	241	276	write_escaped_ascii	write_escaped_ascii(PyUnicodeWriter *writer, PyObject *pystr)	todo		changed-in-3.15: new function
-Modules/_json.c	279	307	escape_size	escape_size(const void *input, int kind, Py_ssize_t input_chars)	todo		changed-in-3.15: new function
-Modules/_json.c	310	368	escape_unicode_and_size	escape_unicode_and_size(const void *input, int kind, Py_UCS4 maxchar, Py_ssize_t input_chars, Py_ssize_t output_size)	todo		changed-in-3.15: new function
-Modules/_json.c	371	385	escape_unicode	escape_unicode(PyObject *pystr)	todo		changed-in-3.15: was json-dumps-twins
-Modules/_json.c	388	419	write_escaped_unicode	write_escaped_unicode(PyUnicodeWriter *writer, PyObject *pystr)	todo		changed-in-3.15: new function
+Modules/_json.c	162	191	ascii_escape_size	ascii_escape_size(const void *input, int kind, Py_ssize_t input_chars)	modelled	json-dumps-twins,json-write-escaped	
+Modules/_json.c	194	222	ascii_escape_unicode_and_size	ascii_escape_unicode_and_size(const void *input, int kind, Py_ssize_t input_chars, Py_ssize_t output_size)	modelled	json-c-encode-basestring,json-dumps-twins	
+Modules/_json.c	225	238	ascii_escape_unicode	ascii_escape_unicode(PyObject *pystr)	modelled	json-c-encode-basestring,json-dumps-twins,json-ensure-ascii-output,json-roundtrip-str	
+Modules/_json.c	241	276	write_escaped_ascii	write_escaped_ascii(PyUnicodeWriter *writer, PyObject *pystr)	modelled	json-dumps-twins,json-write-escaped	
+Modules/_json.c	279	307	escape_size	escape_size(const void *input, int kind, Py_ssize_t input_chars)	modelled	json-dumps-twins,json-write-escaped	
+Modules/_json.c	310	368	escape_unicode_and_size	escape_unicode_and_size(const void *input, int kind, Py_UCS4 maxchar, Py_ssize_t input_chars, Py_ssize_t output_size)	modelled	json-c-encode-basestring,json-dumps-twins	
+Modules/_json.c	371	385	escape_unicode	escape_unicode(PyObject *pystr)	modelled	json-c-encode-basestring,json-dumps-twins	
+Modules/_json.c	388	419	write_escaped_unicode	write_escaped_unicode(PyUnicodeWriter *writer, PyObject *pystr)	modelled	json-dumps-twins,json-write-escaped	
 Modules/_json.c	422	440	raise_errmsg	raise_errmsg(const char *msg, PyObject *s, Py_ssize_t end)	modelled	json-decode-error-reduce,json-loads-twins,json-loads-twins-scan	
 Modules/_json.c	443	450	raise_stop_iteration	raise_stop_iteration(Py_ssize_t idx)	modelled	json-loads-twins-scan,json-scanner-call-raw	
-Modules/_json.c	453	468	_build_rval_index_tuple	_build_rval_index_tuple(PyObject *rval, Py_ssize_t idx) {	todo		changed-in-3.15: was json-c-scanstring,json-raw-decode-twins-in-range,json-scanner-call-raw
-Modules/_json.c	471	644	scanstring_unicode	scanstring_unicode(PyObject *pystr, Py_ssize_t end, int strict, Py_ssize_t *next_end_ptr)	todo		changed-in-3.15: was json-loads-twins-pos,json-loads-twins-scan,json-strict-literal,json-strict-only-control
-Modules/_json.c	665	672	py_scanstring_impl	py_scanstring_impl(PyObject *module, PyObject *pystr, Py_ssize_t end, int strict) /*[clinic end generated code: output=961740cfae07cdb3 input=6d5abb5947ccc297]*/	todo		changed-in-3.15: new function
-Modules/_json.c	683	687	py_encode_basestring_ascii_impl	py_encode_basestring_ascii_impl(PyObject *module, PyObject *pystr) /*[clinic end generated code: output=7b3841287cf211df input=4f3609498aff2de5]*/	todo		changed-in-3.15: new function
-Modules/_json.c	698	702	py_encode_basestring_impl	py_encode_basestring_impl(PyObject *module, PyObject *pystr) /*[clinic end generated code: output=900950f95df3f1c9 input=d42ef714b2c07386]*/	todo		changed-in-3.15: new function
+Modules/_json.c	453	468	_build_rval_index_tuple	_build_rval_index_tuple(PyObject *rval, Py_ssize_t idx) {	modelled	json-c-scanstring,json-raw-decode-twins-in-range,json-scanner-call-raw	
+Modules/_json.c	471	644	scanstring_unicode	scanstring_unicode(PyObject *pystr, Py_ssize_t end, int strict, Py_ssize_t *next_end_ptr)	modelled	json-c-scanstring,json-loads-twins,json-loads-twins-pos,json-loads-twins-scan,json-roundtrip-str,json-strict-literal,json-strict-only-control	
+Modules/_json.c	665	672	py_scanstring_impl	py_scanstring_impl(PyObject *module, PyObject *pystr, Py_ssize_t end, int strict) /*[clinic end generated code: output=961740cfae07cdb3 input=6d5abb5947ccc297]*/	modelled	json-c-scanstring	
+Modules/_json.c	683	687	py_encode_basestring_ascii_impl	py_encode_basestring_ascii_impl(PyObject *module, PyObject *pystr) /*[clinic end generated code: output=7b3841287cf211df input=4f3609498aff2de5]*/	modelled	json-c-encode-basestring	
+Modules/_json.c	698	702	py_encode_basestring_impl	py_encode_basestring_impl(PyObject *module, PyObject *pystr) /*[clinic end generated code: output=900950f95df3f1c9 input=d42ef714b2c07386]*/	modelled	json-c-encode-basestring	
 Modules/_json.c	705	713	scanner_dealloc	scanner_dealloc(PyObject *self)	excluded		no-behaviour: tp_dealloc slot of the scanner; frees the object and its references
-Modules/_json.c	716	727	scanner_traverse	scanner_traverse(PyObject *op, visitproc visit, void *arg)	todo		changed-in-3.15: was excluded: no-behaviour: GC tp_traverse slot of the scanner
-Modules/_json.c	730	740	scanner_clear	scanner_clear(PyObject *op)	todo		changed-in-3.15: was excluded: no-behaviour: GC tp_clear slot of the scanner; drops references
-Modules/_json.c	743	871	_parse_object_unicode	_parse_object_unicode(PyScannerObject *s, PyObject *memo, PyObject *pystr, Py_ssize_t idx, Py_ssize_t *next_idx_ptr)	todo		changed-in-3.15: was json-loads-twins-scan
-Modules/_json.c	874	956	_parse_array_unicode	_parse_array_unicode(PyScannerObject *s, PyObject *memo, PyObject *pystr, Py_ssize_t idx, Py_ssize_t *next_idx_ptr) {	todo		changed-in-3.15: was json-loads-twins-scan
+Modules/_json.c	716	727	scanner_traverse	scanner_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse slot of the scanner
+Modules/_json.c	730	740	scanner_clear	scanner_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear slot of the scanner; drops references
+Modules/_json.c	743	871	_parse_object_unicode	_parse_object_unicode(PyScannerObject *s, PyObject *memo, PyObject *pystr, Py_ssize_t idx, Py_ssize_t *next_idx_ptr)	modelled	json-loads-twins-scan,json-pairs-hook-priority,json-raw-decode-twins-in-range	
+Modules/_json.c	874	956	_parse_array_unicode	_parse_array_unicode(PyScannerObject *s, PyObject *memo, PyObject *pystr, Py_ssize_t idx, Py_ssize_t *next_idx_ptr) {	modelled	json-array-hook,json-loads-twins-scan,json-raw-decode-twins-in-range	
 Modules/_json.c	959	982	_parse_constant	_parse_constant(PyScannerObject *s, const char *constant, Py_ssize_t idx, Py_ssize_t *next_idx_ptr) {	modelled	json-loads-twins-scan	
 Modules/_json.c	985	1096	_match_number_unicode	_match_number_unicode(PyScannerObject *s, PyObject *pystr, Py_ssize_t start, Py_ssize_t *next_idx_ptr) {	modelled	json-int-literal,json-loads-twins-scan	
 Modules/_json.c	1099	1205	scan_once_unicode	scan_once_unicode(PyScannerObject *s, PyObject *memo, PyObject *pystr, Py_ssize_t idx, Py_ssize_t *next_idx_ptr)	modelled	json-decode-terminates,json-loads-twins,json-raw-decode-twins-in-range	
 Modules/_json.c	1208	1236	scanner_call	scanner_call(PyObject *self, PyObject *args, PyObject *kwds)	modelled	json-raw-decode-twins	
-Modules/_json.c	1239	1287	scanner_new	scanner_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		changed-in-3.15: was json-scanner-new
-Modules/_json.c	1311	1359	encoder_new	encoder_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		changed-in-3.15: was json-encoder-new
+Modules/_json.c	1239	1287	scanner_new	scanner_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	json-scanner-new	
+Modules/_json.c	1311	1359	encoder_new	encoder_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	json-encoder-new	
 Modules/_json.c	1373	1390	create_indent_cache	create_indent_cache(PyEncoderObject *s, Py_ssize_t indent_level)	modelled	json-indent-cache	
 Modules/_json.c	1396	1422	update_indent_cache	update_indent_cache(PyEncoderObject *s, Py_ssize_t indent_level, PyObject *indent_cache)	modelled	json-indent-cache,json-indent-cache-size	
 Modules/_json.c	1425	1436	get_item_separator	get_item_separator(PyEncoderObject *s, Py_ssize_t indent_level, PyObject *indent_cache)	modelled	json-indent-cache	
@@ -33,15 +33,15 @@ Modules/_json.c	1439	1444	write_newline_indent	write_newline_indent(PyUnicodeWri
 Modules/_json.c	1448	1488	encoder_call	encoder_call(PyObject *op, PyObject *args, PyObject *kwds)	modelled	json-encoder-call	
 Modules/_json.c	1491	1507	_encoded_const	_encoded_const(PyObject *obj)	modelled	json-dumps-twins	
 Modules/_json.c	1510	1534	encoder_encode_float	encoder_encode_float(PyEncoderObject *s, PyObject *obj)	modelled	json-allow-nan,json-dumps-twins	
-Modules/_json.c	1537	1557	encoder_write_string	encoder_write_string(PyEncoderObject *s, PyUnicodeWriter *writer, PyObject *obj)	todo		changed-in-3.15: new function
+Modules/_json.c	1537	1557	encoder_write_string	encoder_write_string(PyEncoderObject *s, PyUnicodeWriter *writer, PyObject *obj)	modelled	json-dumps-twins,json-encoder-string	
 Modules/_json.c	1560	1566	_steal_accumulate	_steal_accumulate(PyUnicodeWriter *writer, PyObject *stolen)	modelled	json-dumps-twins	
-Modules/_json.c	1569	1667	encoder_listencode_obj	encoder_listencode_obj(PyEncoderObject *s, PyUnicodeWriter *writer, PyObject *obj, Py_ssize_t indent_level, PyObject *indent_cache)	todo		changed-in-3.15: was json-dumps-accepted,json-dumps-twins,json-roundtrip
-Modules/_json.c	1670	1736	encoder_encode_key_value	encoder_encode_key_value(PyEncoderObject *s, PyUnicodeWriter *writer, bool *first, PyObject *dct, PyObject *key, PyObject *value, Py_ssize_t indent_level, PyObject *indent_cache, PyObject *item_separator)	todo		changed-in-3.15: was json-dumps-twins
-Modules/_json.c	1739	1769	_encoder_iterate_mapping_lock_held	_encoder_iterate_mapping_lock_held(PyEncoderObject *s, PyUnicodeWriter *writer, bool *first, PyObject *dct, PyObject *items, Py_ssize_t indent_level, PyObject *indent_cache, PyObject *separator)	todo		changed-in-3.15: new function
-Modules/_json.c	1772	1795	_encoder_iterate_dict_lock_held	_encoder_iterate_dict_lock_held(PyEncoderObject *s, PyUnicodeWriter *writer, bool *first, PyObject *dct, Py_ssize_t indent_level, PyObject *indent_cache, PyObject *separator)	todo		changed-in-3.15: new function
-Modules/_json.c	1798	1887	encoder_listencode_dict	encoder_listencode_dict(PyEncoderObject *s, PyUnicodeWriter *writer, PyObject *dct, Py_ssize_t indent_level, PyObject *indent_cache)	todo		changed-in-3.15: was json-dumps-twins,json-roundtrip
-Modules/_json.c	1890	1913	_encoder_iterate_fast_seq_lock_held	_encoder_iterate_fast_seq_lock_held(PyEncoderObject *s, PyUnicodeWriter *writer, PyObject *seq, PyObject *s_fast, Py_ssize_t indent_level, PyObject *indent_cache, PyObject *separator)	todo		changed-in-3.15: new function
-Modules/_json.c	1916	1992	encoder_listencode_list	encoder_listencode_list(PyEncoderObject *s, PyUnicodeWriter *writer, PyObject *seq, Py_ssize_t indent_level, PyObject *indent_cache)	todo		changed-in-3.15: was json-dumps-twins,json-roundtrip
+Modules/_json.c	1569	1667	encoder_listencode_obj	encoder_listencode_obj(PyEncoderObject *s, PyUnicodeWriter *writer, PyObject *obj, Py_ssize_t indent_level, PyObject *indent_cache)	modelled	json-dumps-accepted,json-dumps-twins,json-roundtrip	
+Modules/_json.c	1670	1736	encoder_encode_key_value	encoder_encode_key_value(PyEncoderObject *s, PyUnicodeWriter *writer, bool *first, PyObject *dct, PyObject *key, PyObject *value, Py_ssize_t indent_level, PyObject *indent_cache, PyObject *item_separator)	modelled	json-dumps-twins	
+Modules/_json.c	1739	1769	_encoder_iterate_mapping_lock_held	_encoder_iterate_mapping_lock_held(PyEncoderObject *s, PyUnicodeWriter *writer, bool *first, PyObject *dct, PyObject *items, Py_ssize_t indent_level, PyObject *indent_cache, PyObject *separator)	todo		changed-in-3.15: missing dict subclasses, whose items() can be anything, the ValueError 'items must return 2-tuples' path, and mutation of the items list from default (gh-142831); cEncItems sees only exact dicts
+Modules/_json.c	1772	1795	_encoder_iterate_dict_lock_held	_encoder_iterate_dict_lock_held(PyEncoderObject *s, PyUnicodeWriter *writer, bool *first, PyObject *dct, Py_ssize_t indent_level, PyObject *indent_cache, PyObject *separator)	todo		changed-in-3.15: missing mutation of the dict from default during PyDict_Next (gh-145244); cEncItems walks a fixed list of pairs
+Modules/_json.c	1798	1887	encoder_listencode_dict	encoder_listencode_dict(PyEncoderObject *s, PyUnicodeWriter *writer, PyObject *dct, Py_ssize_t indent_level, PyObject *indent_cache)	modelled	json-dumps-twins,json-roundtrip	
+Modules/_json.c	1890	1913	_encoder_iterate_fast_seq_lock_held	_encoder_iterate_fast_seq_lock_held(PyEncoderObject *s, PyUnicodeWriter *writer, PyObject *seq, PyObject *s_fast, Py_ssize_t indent_level, PyObject *indent_cache, PyObject *separator)	todo		changed-in-3.15: missing mutation of the list from default during the loop (gh-142831) and list and tuple subclasses; cEncList walks a fixed list
+Modules/_json.c	1916	1992	encoder_listencode_list	encoder_listencode_list(PyEncoderObject *s, PyUnicodeWriter *writer, PyObject *seq, Py_ssize_t indent_level, PyObject *indent_cache)	modelled	json-dumps-twins,json-roundtrip	
 Modules/_json.c	1995	2003	encoder_dealloc	encoder_dealloc(PyObject *self)	excluded		no-behaviour: tp_dealloc slot of the encoder; frees the object and its references
 Modules/_json.c	2006	2017	encoder_traverse	encoder_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse slot of the encoder
 Modules/_json.c	2020	2031	encoder_clear	encoder_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear slot of the encoder; drops references

@@ -3,7 +3,7 @@ import PyLean.UnicodeObj.CodecCallback
 
 /-!
 The UTF-8 decoder with any error handler, as C runs it: into a writer, with its fast paths.
-Objects/unicodeobject.c:5187-5453 and 14171-14192.
+Objects/unicodeobject.c:5187-5441 and Objects/unicode_writer.c:515-537.
 
 `utf8DecodeLoopX` is `unicode_decode_utf8_impl` with custom handlers. Here it is run the way C runs
 it, with what was written before a failure, since those characters decide how wide the buffer got.
@@ -59,7 +59,7 @@ def decodeRestX (w : UWriter) (cap : Nat) (b pre : Bytes) (H : DH) (consumed : B
   | .ok n => ({ text := w.text ++ out, cap := cap' }, .ok n)
   | .error e => ({ w with cap := cap' }, .error e)
 
-/-- `unicode_decode_utf8_writer`, unicodeobject.c@3.14.7:5523-5559, with the put back of `pos` that its
+/-- `_PyUnicode_DecodeUTF8Writer`, unicodeobject.c:5404-5441, with the put back of `pos` that its
 callers do. -/
 def decodeWriterX (w : UWriter) (b : Bytes) (H : DH) (consumed : Bool) (fuel : Nat) :
     UWriter × Py Nat :=
@@ -72,7 +72,7 @@ def decodeWriterX (w : UWriter) (b : Bytes) (H : DH) (consumed : Bool) (fuel : N
       else decodeRestX w cap b pre H consumed fuel
     else decodeRestX w cap b [] H consumed fuel
 
-/-- `PyUnicodeWriter_DecodeUTF8Stateful`, unicodeobject.c@3.14.7:14171-14192. `consumed` is whether
+/-- `PyUnicodeWriter_DecodeUTF8Stateful`, unicode_writer.c:515-537. `consumed` is whether
 `*consumed` was passed. The result is the value of `*consumed`, which is 0 if it was not. -/
 def writerDecodeStateful (w : UWriter) (b : Bytes) (size : Int) (H : DH) (consumed : Bool)
     (fuel : Nat) : UWriter × Py Nat :=

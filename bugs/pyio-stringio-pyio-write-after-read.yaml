@@ -40,7 +40,7 @@ expected: |
   The write overwrites at the position returned by tell() ('aXcdef'), and read() after truncate(2)
   stops at the new end, as in io.StringIO.
 observed: |
-  python3 3.14.7: write: io 'aXcdef', _pyio 'abcdefX'; truncate: io ('b', 'ab'), _pyio ('bcdef', 'ab').
+  python3 3.15.2: write: io 'aXcdef', _pyio 'abcdefX'; truncate: io ('b', 'ab'), _pyio ('bcdef', 'ab').
   REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |

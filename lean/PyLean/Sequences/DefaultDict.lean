@@ -2,7 +2,7 @@ import PyLean.Sequences.Common
 
 /-!
 `collections.defaultdict`, the `_count_elements` helper of `Counter` and
-`_tuplegetter` (`Modules/_collectionsmodule.c`, CPython 3.14.7).
+`_tuplegetter` (`Modules/_collectionsmodule.c`, CPython 3.15.2).
 
 `dict` itself belongs to `Objects/dictobject.c`; here a dict is its items in
 insertion order, over key and value types `κ`, `ν`, where `κ` has decidable
@@ -124,12 +124,15 @@ def init (dd : DefDict κ ν) (first : FactoryArg κ ν) (rest : Py (PyDict κ �
 inductive Operand (κ ν : Type) where
   | dd (d : DefDict κ ν)
   | plain (items : PyDict κ ν)
+  /-- A `frozendict`, new in 3.15: `PyAnyDict_Check` accepts it. -/
+  | frozen (items : PyDict κ ν)
   | notDict
 
 /-- The items of an operand, if it is a dict. -/
 def Operand.items? : Operand κ ν → Option (PyDict κ ν)
   | .dd d => some d.items
   | .plain i => some i
+  | .frozen i => some i
   | .notDict => Option.none
 
 /-- `left | right` (`defdict_or`, _collectionsmodule.c:2413-2444): `none` is

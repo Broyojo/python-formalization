@@ -58,11 +58,11 @@ expected: |
   ValueError("attempt to assign array of size 0 to extended slice of size 3"), as for any other
   length mismatch and as list does.
 observed: |
-  python3 3.14.7: array('b', [2, 4]); list raises ValueError; the length-1 array raises
+  python3 3.15.2: array('b', [2, 4]); list raises ValueError; the length-1 array raises
   ValueError; bytearray(b'\x02\x04'). REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |
-  Doc/library/stdtypes.rst@3.14.7:1252-1269, mutable sequence table row `s[i:j:k] = t` with note (1)
+  Doc/builtins/stdtypes.rst:1528-1546, mutable sequence table row `s[i:j:k] = t` with note (1)
   "If k is not equal to 1, t must have the same length as the slice it is replacing";
   Doc/reference/simple_stmts.rst (slice assignment); Doc/library/array.rst (arrays "behave very
   much like lists").

@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Modules/_io/stringio.c	81	130	resize_buffer	resize_buffer(stringio *self, size_t size)	todo		changed-in-3.15: was pyio-stringio-writes-twins-not-none,pyio-truncate-keeps-position
+Modules/_io/stringio.c	81	130	resize_buffer	resize_buffer(stringio *self, size_t size)	modelled	pyio-stringio-writes-twins-not-none	
 Modules/_io/stringio.c	133	152	make_intermediate	make_intermediate(stringio *self)	todo		
 Modules/_io/stringio.c	155	185	realize	realize(stringio *self)	todo		
 Modules/_io/stringio.c	190	277	write_str	write_str(stringio *self, PyObject *obj)	modelled	pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none	
@@ -9,7 +9,7 @@ Modules/_io/stringio.c	327	355	_io_StringIO_read_impl	_io_StringIO_read_impl(str
 Modules/_io/stringio.c	359	385	_stringio_readline	_stringio_readline(stringio *self, Py_ssize_t limit)	modelled	pyio-stringio-c-readlines-hint-doc	
 Modules/_io/stringio.c	399	407	_io_StringIO_readline_impl	_io_StringIO_readline_impl(stringio *self, Py_ssize_t size) /*[clinic end generated code: output=cabd6452f1b7e85d input=4d14b8495dea1d98]*/	todo		
 Modules/_io/stringio.c	410	445	stringio_iternext	stringio_iternext(PyObject *op)	modelled	pyio-stringio-c-readlines-hint-doc	
-Modules/_io/stringio.c	461	491	_io_StringIO_truncate_impl	_io_StringIO_truncate_impl(stringio *self, PyObject *pos) /*[clinic end generated code: output=c76c43b5ecfaf4e2 input=d59fd2ee49757ae6]*/	todo		changed-in-3.15: was pyio-truncate-keeps-position
+Modules/_io/stringio.c	461	491	_io_StringIO_truncate_impl	_io_StringIO_truncate_impl(stringio *self, PyObject *pos) /*[clinic end generated code: output=c76c43b5ecfaf4e2 input=d59fd2ee49757ae6]*/	modelled	pyio-stringio-truncate-no-crash,pyio-stringio-truncate-realized,pyio-truncate-keeps-position,pyio-truncate-result	
 Modules/_io/stringio.c	511	546	_io_StringIO_seek_impl	_io_StringIO_seek_impl(stringio *self, Py_ssize_t pos, int whence) /*[clinic end generated code: output=e9e0ac9a8ae71c25 input=ffef24668fd71a5d]*/	modelled	pyio-bytesio-read-after-seek	
 Modules/_io/stringio.c	561	579	_io_StringIO_write_impl	_io_StringIO_write_impl(stringio *self, PyObject *obj) /*[clinic end generated code: output=d53b1d841d7db288 input=1561272c0da4651f]*/	modelled	pyio-stringio-read-write-twins,pyio-stringio-writes-twins,pyio-stringio-writes-twins-not-none	
 Modules/_io/stringio.c	594	607	_io_StringIO_close_impl	_io_StringIO_close_impl(stringio *self) /*[clinic end generated code: output=04399355cbe518f1 input=305d19aa29cc40b9]*/	todo		

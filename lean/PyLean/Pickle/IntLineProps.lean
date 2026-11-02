@@ -25,47 +25,28 @@ agreement. -/
 def IntLineTwins : Prop :=
   ∀ body : Bytes, nl ∉ body → SameOutcome (cLoadIntLine (body ++ [nl])) (pyLoadIntLine (body ++ [nl]))
 
-theorem cLoadInt_sp1 : cLoadIntLine [0x20, 0x31, nl] = .ok (.bool true) := by decide +kernel
+/-- `I 1\n` was `True` in C through 3.14 (python/cpython#135241). `load_int` now
+tests the spelling, as Python does: this line is the int 1 in both. -/
+theorem cLoadInt_sp1 : cLoadIntLine [0x20, 0x31, nl] = .ok (.int 1) := by decide +kernel
 theorem pyLoadInt_sp1 : pyLoadIntLine [0x20, 0x31, nl] = .ok (.int 1) := by decide +kernel
-
-/-- `I 1\n` is `True` in C (strtol reads 1 from a 3-byte line) and `1` in
-Python, which only treats `00`/`01` as bools. python/cpython#135241 (fixed on
-main). -/
-theorem intLineTwins_refuted : ¬ IntLineTwins := by
-  intro h
-  have := h [0x20, 0x31] (by decide)
-  simp only [List.cons_append, List.nil_append] at this
-  rw [cLoadInt_sp1, pyLoadInt_sp1] at this
-  simp [SameOutcome] at this
-
-/-- The 3-byte lines that C's strtol reads as 0 or 1 but are not `00`/`01`:
-an optional space or sign before the digit (`-1` is -1, not a bool). -/
-def BoolSpelling (body : Bytes) : Prop :=
-  ∃ a d, body = [a, d] ∧ (d = 0x30 ∨ d = 0x31) ∧ (isSpace a = true ∨ a = 0x2b ∨ (a = 0x2d ∧ d = 0x30))
-
-/-- `IntLineTwins` without the bool spellings. -/
-def IntLineTwinsNoBoolSpelling : Prop :=
-  ∀ body : Bytes, nl ∉ body → ¬ BoolSpelling body →
-    SameOutcome (cLoadIntLine (body ++ [nl])) (pyLoadIntLine (body ++ [nl]))
 
 theorem cLoadInt_nul : cLoadIntLine [0x31, 0x32, 0, nl] = .ok (.int 12) := by decide +kernel
 theorem pyLoadInt_nul_err : ∃ e, pyLoadIntLine [0x31, 0x32, 0, nl] = .error e := ⟨_, rfl⟩
 
 /-- `I12\0\n`: C's strtol stops at the NUL that ends its C string and returns
 12; `int(b'12\x00\n')` raises. python/cpython#126996 (open). -/
-theorem intLineTwinsNoBoolSpelling_refuted : ¬ IntLineTwinsNoBoolSpelling := by
+theorem intLineTwins_refuted : ¬ IntLineTwins := by
   intro h
-  have := h [0x31, 0x32, 0] (by decide) (by
-    rintro ⟨a, d, hb, _⟩; simp at hb)
+  have := h [0x31, 0x32, 0] (by decide)
   simp only [List.cons_append, List.nil_append] at this
   rw [cLoadInt_nul] at this
   obtain ⟨e, he⟩ := pyLoadInt_nul_err
   rw [he] at this
   simp [SameOutcome] at this
 
-/-- `IntLineTwinsNoBoolSpelling` without NUL bytes in the line. -/
+/-- `IntLineTwins` without NUL bytes in the line. -/
 def IntLineTwinsNoNul : Prop :=
-  ∀ body : Bytes, nl ∉ body → (0 : UInt8) ∉ body → ¬ BoolSpelling body →
+  ∀ body : Bytes, nl ∉ body → (0 : UInt8) ∉ body →
     SameOutcome (cLoadIntLine (body ++ [nl])) (pyLoadIntLine (body ++ [nl]))
 
 def zeros5000one : Bytes := List.replicate 5000 0x30 ++ [0x31]
@@ -89,19 +70,13 @@ theorem zeros5000one_no_nl : nl ∉ zeros5000one := by
   simp only [zeros5000one, List.mem_append, List.mem_replicate, List.mem_singleton]; decide
 theorem zeros5000one_no_nul : (0 : UInt8) ∉ zeros5000one := by
   simp only [zeros5000one, List.mem_append, List.mem_replicate, List.mem_singleton]; decide
-theorem zeros5000one_not_bool : ¬ BoolSpelling zeros5000one := by
-  rintro ⟨a, d, hb, _⟩
-  have := congrArg List.length hb
-  simp only [zeros5000one, List.length_append, List.length_replicate, List.length_cons,
-    List.length_nil] at this
-  omega
 
 set_option maxRecDepth 200000 in
 /-- `I` + 5000 zeros + `1`: C's strtol fast path returns 1 without the
 4300-digit limit of `int()`, which the Python twin enforces. -/
 theorem intLineTwinsNoNul_refuted : ¬ IntLineTwinsNoNul := by
   intro h
-  have := h zeros5000one zeros5000one_no_nl zeros5000one_no_nul zeros5000one_not_bool
+  have := h zeros5000one zeros5000one_no_nl zeros5000one_no_nul
   rw [cLoadInt_limit] at this
   obtain ⟨e, he⟩ := pyLoadInt_limit_err
   rw [he] at this

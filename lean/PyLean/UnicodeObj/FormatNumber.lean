@@ -3,7 +3,7 @@ import PyLean.Binary64.Complex
 
 /-!
 `format()` of a `float` or `complex`: `format_float_internal` and
-`format_complex_internal`, Python/formatter_unicode.c@3.14.7:1137-1540, over the exact binary64
+`format_complex_internal`, Objects/unicode_formatter.c:1375-1778, over the exact binary64
 model of `lean/PyLean/Binary64/`.
 
 `calc_number_widths` and `fill_number` are mirrored here with the decimal point, the
@@ -29,7 +29,7 @@ def parseRest (rest : List Nat) : Bool × Nat × Nat :=
   let r := if hasDecimal then rest.tail else rest
   (hasDecimal, (r.takeWhile pyDigit).length, (r.dropWhile pyDigit).length)
 
-/-- `parse_number`, formatter_unicode.c@3.14.7:489-516: the digits before the point,
+/-- `parse_number`, unicode_formatter.c:724-751: the digits before the point,
 `has_decimal`, `n_frac`, `n_remainder`. -/
 def parseNumber (s : Str) : Nat × Bool × Nat × Nat :=
   ((s.takeWhile pyDigit).length, parseRest (s.dropWhile pyDigit))
@@ -52,7 +52,7 @@ structure LocaleFull where
   grouping : List Nat
   deriving Repr, DecidableEq
 
-/-- `get_locale_info`, formatter_unicode.c@3.14.7:786-846, in the C locale. A fraction
+/-- `get_locale_info`, unicode_formatter.c:1021-1081, in the C locale. A fraction
 separator turns grouping on when the integer part has none: `no_grouping` is the
 `LT_NO_LOCALE` case. -/
 def localeInfoFull (type fracType : Nat) : LocaleFull :=
@@ -64,7 +64,7 @@ def localeInfoFull (type fracType : Nat) : LocaleFull :=
 
 /-! ## Forward grouping -/
 
-/-- One call of `InsertThousandsGrouping_fill` with `forward` set, localeutil.h@3.14.7:45-97:
+/-- One call of `InsertThousandsGrouping_fill` with `forward` set, unicode_formatter.c:56-108:
 separator, digits, zeros, after what is already there. -/
 def groupPieceFwd (sep : Str) (useSep : Bool) (nChars nZeros : Nat) (digits out : Str) :
     Str × Str :=
@@ -72,7 +72,7 @@ def groupPieceFwd (sep : Str) (useSep : Bool) (nChars nZeros : Nat) (digits out 
    out ++ (if useSep then sep else []) ++ digits.take nChars ++ List.replicate nZeros 48)
 
 /-- The `while` loop of `_PyUnicode_InsertThousandsGrouping` with `forward` set,
-unicodeobject.c@3.14.7:9849-9890. -/
+unicode_formatter.c:193-234. -/
 def groupLoopFwd (grouping : List Nat) (sep : Str) :
     Nat → Nat → Nat → Bool → Int → Int → Str → Nat → Str → Py (Nat × Str)
   | 0, _, _, _, _, _, _, _, _ => .error .modelFuel
@@ -118,14 +118,14 @@ structure NumFields where
   rpad : Nat
   deriving Repr, DecidableEq
 
-/-- The `switch (format->sign)` of `calc_number_widths`, formatter_unicode.c@3.14.7:565-580. -/
+/-- The `switch (format->sign)` of `calc_number_widths`, unicode_formatter.c:800-815. -/
 def signField (sign signChar : Nat) : Option Nat :=
   if sign == 43 then some (if signChar == 45 then 45 else 43)
   else if sign == 32 then some (if signChar == 45 then 45 else 32)
   else if signChar == 45 then some 45
   else none
 
-/-- The `switch (format->align)` of `calc_number_widths`, formatter_unicode.c@3.14.7:636-655:
+/-- The `switch (format->align)` of `calc_number_widths`, unicode_formatter.c:871-890:
 `n_lpadding`, `n_spadding`, `n_rpadding` from `n_padding`. -/
 def padFields (nPadding : Int) (align : Nat) : Nat × Nat × Nat :=
   if nPadding > 0 then
@@ -136,27 +136,27 @@ def padFields (nPadding : Int) (align : Nat) : Nat × Nat × Nat :=
     else (p, 0, 0)
   else (0, 0, 0)
 
-/-- The fraction digits, formatter_unicode.c@3.14.7:584-595. -/
+/-- The fraction digits, unicode_formatter.c:819-830. -/
 def groupedFrac (frac : Str) (loc : LocaleFull) : Py (Nat × Str) :=
   if frac.length = 0 then pure (0, [])
   else insertGroupingFwd frac frac.length loc.grouping loc.fracSep
 
-/-- The integer digits, formatter_unicode.c@3.14.7:607-621. No digit at all happens for `inf` and
+/-- The integer digits, unicode_formatter.c:842-856. No digit at all happens for `inf` and
 `nan`, whose text is the remainder. -/
 def groupedDigits (digits : Str) (minWidth : Int) (loc : LocaleFull) : Py (Nat × Str × Nat) :=
   if digits.length = 0 then pure (0, [], 0)
   else insertThousandsGrouping digits minWidth loc.grouping loc.sep
 
-/-- `n_non_digit_non_padding`, formatter_unicode.c@3.14.7:597-599. -/
+/-- `n_non_digit_non_padding`, unicode_formatter.c:832-834. -/
 def nonDigitOf (sign : Option Nat) (decimal frac remainder : Str) : Int :=
   sign.toList.length + decimal.length + frac.length + remainder.length
 
-/-- `n_min_width`, formatter_unicode.c@3.14.7:601-606. It is what is left for the integer digits
+/-- `n_min_width`, unicode_formatter.c:836-841. It is what is left for the integer digits
 when a `0=` fill turns the padding into digits. -/
 def minWidthOf (f : FormatSpec) (nonDigit : Int) (nFrac nFracGrouped : Nat) : Int :=
   if f.fillChar == 48 && f.align == 61 then f.width - nonDigit + nFrac - nFracGrouped else 0
 
-/-- `calc_number_widths`, formatter_unicode.c@3.14.7:524-668, for `n_prefix == 0`, which is
+/-- `calc_number_widths`, unicode_formatter.c:759-903, for `n_prefix == 0`, which is
 every float and complex call. -/
 def calcNumberWidthsFull (signChar : Nat) (digits : Str) (hasDecimal : Bool) (frac remainder : Str)
     (loc : LocaleFull) (f : FormatSpec) : Py NumFields := do
@@ -169,7 +169,7 @@ def calcNumberWidthsFull (signChar : Nat) (digits : Str) (hasDecimal : Bool) (fr
   let (l, s, r) := padFields (f.width - (nonDigit + nGrouped + nFracGrouped - frac.length)) f.align
   .ok { lpad := l, sign, spad := s, grouped, decimal, fracGrouped, remainder, rpad := r }
 
-/-- `fill_number`, formatter_unicode.c@3.14.7:672-777, for `n_prefix == 0`, `toupper == 0`. -/
+/-- `fill_number`, unicode_formatter.c:907-1012, for `n_prefix == 0`, `toupper == 0`. -/
 def fillNumberFull (n : NumFields) (fill : Nat) : Str :=
   List.replicate n.lpad fill ++ n.sign.toList ++ List.replicate n.spad fill ++ n.grouped ++
     n.decimal ++ n.fracGrouped ++ n.remainder ++ List.replicate n.rpad fill
@@ -182,12 +182,12 @@ def doubleToString (x : F64) (code : Nat) (prec : Int) (fl : DtsFlags) : Py Str 
   | none => .error .modelFuel
   | some r => .ok (render r.1)
 
-/-- The sign of a buffer and what follows it, formatter_unicode.c@3.14.7:1240-1244. -/
+/-- The sign of a buffer and what follows it, unicode_formatter.c:1478-1482. -/
 def splitSign (buf : Str) : Nat × Str :=
   if buf.headD 0 == 45 then (45, buf.tail) else (0, buf)
 
 /-- A buffer from `PyOS_double_to_string` laid out by the spec: the part of
-`format_float_internal` after the fast path, formatter_unicode.c@3.14.7:1232-1279. -/
+`format_float_internal` after the fast path, unicode_formatter.c:1470-1517. -/
 def formatFloatSlow (buf : Str) (f : FormatSpec) : Py Str := do
   let (signChar, body) := splitSign buf
   let (digits, hasDecimal, frac, remainder) := splitNumber body
@@ -196,12 +196,12 @@ def formatFloatSlow (buf : Str) (f : FormatSpec) : Py Str := do
   let n ← calcNumberWidthsFull signChar digits hasDecimal frac remainder loc f
   .ok (fillNumberFull n f.fillChar)
 
-/-- The test of the fast path, formatter_unicode.c@3.14.7:1222-1225. -/
+/-- The test of the fast path, unicode_formatter.c:1460-1463. -/
 def floatFastPath (f : FormatSpec) : Bool :=
   f.sign != 43 && f.sign != 32 && f.width == -1 && f.type != 110 &&
     f.thousands == LT_NO_LOCALE && f.fracThousands == LT_NO_LOCALE
 
-/-- `format_float_internal` up to the fast path test, formatter_unicode.c@3.14.7:1173-1220: the
+/-- `format_float_internal` up to the fast path test, unicode_formatter.c:1411-1458: the
 buffer from `PyOS_double_to_string`, with the `%` of the `'%'` type. -/
 def floatBuf (val0 : F64) (f : FormatSpec) : Py Str := do
   let flags0 : DtsFlags := { alt := f.alternate, no_neg_0 := f.noNeg0 }
@@ -216,7 +216,7 @@ def floatBuf (val0 : F64) (f : FormatSpec) : Py Str := do
   let buf0 ← doubleToString val type3 precision flags
   .ok (if addPct then buf0 ++ [37] else buf0)
 
-/-- `format_float_internal`, formatter_unicode.c@3.14.7:1138-1285. -/
+/-- `format_float_internal`, unicode_formatter.c:1376-1523. -/
 def formatFloatInternal (val0 : F64) (f : FormatSpec) : Py Str := do
   if f.precision > 2 ^ 31 - 1 then .error (.valueError "precision too big")
   else
@@ -224,12 +224,12 @@ def formatFloatInternal (val0 : F64) (f : FormatSpec) : Py Str := do
     if floatFastPath f then .ok buf else formatFloatSlow buf f
 
 /-- The `float` branch of `_PyLong_FormatAdvancedWriter` after `PyNumber_Float`,
-formatter_unicode.c@3.14.7:1630-1640: `formatLongAdvanced` stops with `none` here. -/
+unicode_formatter.c:1868-1878: `formatLongAdvanced` stops with `none` here. -/
 def formatLongAsFloat (v : Int) (spec : Str) (name : String) : Py Str := do
   let f ← parseFormatSpec name spec 100 62
   formatFloatInternal (F64.ofInt v) f
 
-/-- `_PyFloat_FormatAdvancedWriter`, formatter_unicode.c@3.14.7:1652-1688. The empty spec is
+/-- `_PyFloat_FormatAdvancedWriter`, unicode_formatter.c:1890-1926. The empty spec is
 `str(obj)`. -/
 def formatFloatAdvanced (val : F64) (spec : Str) : Py Str := do
   match ← formatFloatDispatch spec with
@@ -241,7 +241,7 @@ def formatFloatAdvanced (val : F64) (spec : Str) : Py Str := do
 
 /-! ## `format_complex_internal` -/
 
-/-- What `format_complex_internal` does with its two buffers, formatter_unicode.c@3.14.7:1420-1524.
+/-- What `format_complex_internal` does with its two buffers, unicode_formatter.c:1658-1762.
 `formatFloatSlow` is the `parse_number`, `calc_number_widths` and `fill_number` it runs on each
 part, with padding off (`tmp_format`), in that order; `fill_number` cannot fail on the sizes
 `calc_number_widths` returned, so writing the parts after both are measured changes nothing. -/
@@ -254,7 +254,7 @@ def complexRest (reBuf imBuf : Str) (f : FormatSpec) (skipRe addParens : Bool) :
   let (l, r, _) := calcPadding content.length f.width f.align
   .ok (fillPadding content f.fillChar l r)
 
-/-- `format_complex_internal`, formatter_unicode.c@3.14.7:1291-1534. -/
+/-- `format_complex_internal`, unicode_formatter.c:1529-1772. -/
 def formatComplexInternal (re im : F64) (f : FormatSpec) : Py Str := do
   if f.precision > 2 ^ 31 - 1 then .error (.valueError "precision too big")
   else if f.fillChar == 48 then
@@ -274,7 +274,7 @@ def formatComplexInternal (re im : F64) (f : FormatSpec) : Py Str := do
     let imBuf ← doubleToString im type2 precision flags
     complexRest reBuf imBuf f skipRe addParens
 
-/-- `_PyComplex_FormatAdvancedWriter`, formatter_unicode.c@3.14.7:1691-1726. The empty spec is
+/-- `_PyComplex_FormatAdvancedWriter`, unicode_formatter.c:1929-1964. The empty spec is
 `str(obj)`. -/
 def formatComplexAdvanced (re im : F64) (spec : Str) : Py Str := do
   match ← formatComplexDispatch spec with

@@ -23,7 +23,7 @@ theorem fits_ssize (a : Arr) (n : Int) (h : a.Fits n) : n ≤ ssizeMax := by
 
 theorem fits_zero (a : Arr) : a.Fits 0 := by
   unfold Arr.Fits
-  rcases itemsize_cases a.tc with h | h | h | h <;> rw [h] <;> decide
+  rcases itemsize_cases a.tc with h | h | h | h | h <;> rw [h] <;> decide
 
 theorem resized_same (l : List Int) : resized l l.length = l := by
   rw [resized_le _ _ (by omega) (by omega), show ((l.length : Int)).toNat = l.length by omega,
@@ -93,7 +93,7 @@ theorem arrayConcat_proven : ArrayConcat := by
     refine ⟨⟨_, e2, rfl⟩, ⟨.typeError "can only extend with array of same kind", by simp only [arrIConcat, e1], rfl⟩, ?_⟩
     simp only [arrExtend, e1]
 
-/-- What `ins1` stores of `vs`, up to the first refused item. -/
+/-- What `extend` was expected to store of `vs`: the items up to the first refused one. -/
 def storeAll (tc : TC) : List PyVal → List Int × Option PyExc
   | [] => ([], none)
   | v :: vs =>
@@ -101,47 +101,96 @@ def storeAll (tc : TC) : List PyVal → List Int × Option PyExc
     | .error e => ([], some e)
     | .ok x => let r := storeAll tc vs; (x :: r.1, r.2)
 
-theorem arrIns1_end (a : Arr) (v : PyVal) (x : Int) (hx : a.exports = 0)
-    (hs : tcSetitem a.tc true v = .ok x) (hn : a.Fits (a.items.length + 1)) :
-    ∃ a', arrIns1 a a.items.length v = .ok a' ∧ a'.items = a.items ++ [x] ∧ a'.tc = a.tc ∧
+/-- What `ins1` leaves of `vs`: the same, except that an item which passes
+`setitem(self, -1, v)` and is refused by the store leaves its slot behind (`[0]`, the
+model's value for uninitialised memory). Only `e` does that. -/
+def storeAllS (tc : TC) : List PyVal → List Int × Option PyExc
+  | [] => ([], none)
+  | v :: vs =>
+    match tcCheck tc v with
+    | .error e => ([], some e)
+    | .ok () =>
+      match tcSetitem tc true v with
+      | .error e => ([0], some e)
+      | .ok x => let r := storeAllS tc vs; (x :: r.1, r.2)
+
+theorem storeAllS_eq (tc : TC) (ht : tc ≠ .e) : ∀ vs : List PyVal, storeAllS tc vs = storeAll tc vs
+  | [] => rfl
+  | v :: vs => by
+    simp only [storeAllS, storeAll]
+    cases hs : tcSetitem tc true v with
+    | error e => simp only [tcCheck_err _ _ _ ht hs]
+    | ok x => simp only [tcCheck_of_set _ _ _ hs, storeAllS_eq tc ht vs]
+
+theorem arrResize_end (a : Arr) (hx : a.exports = 0) (hn : a.Fits (a.items.length + 1)) :
+    ∃ a1, arrResize a (a.items.length + 1) = .ok a1 ∧ a1.items = a.items ++ [0] ∧ a1.tc = a.tc ∧
+      a1.exports = 0 ∧ a1.tname = a.tname := by
+  obtain ⟨a1, hr, hi, ht, he, htn⟩ := arrResize_ok a (a.items.length + 1) hx (by omega) hn
+  refine ⟨a1, hr, ?_, ht, he, htn⟩
+  rw [hi, resized_gt _ _ (by omega), show ((a.items.length : Int) + 1 - a.items.length).toNat = 1 by omega]
+  rfl
+
+theorem ins1Pos_end (n : Int) (h : 0 ≤ n) : ins1Pos n n = n := by
+  unfold ins1Pos; dsimp only; split <;> (try split) <;> (try split) <;> omega
+
+/-- The second `setitem` of `ins1` fails at the end of the array: the array has grown. -/
+theorem arrIns1S_store_err (a : Arr) (v : PyVal) (e : PyExc) (hx : a.exports = 0)
+    (hc : tcCheck a.tc v = .ok ()) (hs : tcSetitem a.tc true v = .error e)
+    (hn : a.Fits (a.items.length + 1)) :
+    ∃ a', arrIns1S a a.items.length v = (a', some e) ∧ a'.items = a.items ++ [0] ∧ a'.tc = a.tc ∧
       a'.exports = 0 ∧ a'.tname = a.tname := by
-  obtain ⟨a', h1, h2, h3⟩ := arrIns1_ok a a.items.length v x hx hs hn
+  obtain ⟨a1, hr, hi, ht, he, htn⟩ := arrResize_end a hx hn
+  unfold arrIns1S
+  simp only [hc, hr, ins1Pos_end (a.items.length : Int) (by omega), ne_eq, not_true_eq_false, ite_false, hs]
+  exact ⟨_, rfl, hi, ht, he, htn⟩
+
+theorem arrIns1S_end (a : Arr) (v : PyVal) (x : Int) (hx : a.exports = 0)
+    (hs : tcSetitem a.tc true v = .ok x) (hn : a.Fits (a.items.length + 1)) :
+    ∃ a', arrIns1S a a.items.length v = (a', none) ∧ a'.items = a.items ++ [x] ∧ a'.tc = a.tc ∧
+      a'.exports = 0 ∧ a'.tname = a.tname := by
+  obtain ⟨a', h1, h2, h3⟩ := arrIns1S_ok a a.items.length v x hx hs hn
   refine ⟨a', h1, ?_, h3⟩
   rw [h2]
-  have hb : ins1Pos a.items.length a.items.length = a.items.length := by
-    unfold ins1Pos; dsimp only; split <;> (try split) <;> (try split) <;> omega
-  rw [hb, show ((a.items.length : Int)).toNat = a.items.length by omega]
+  rw [ins1Pos_end _ (by omega), show ((a.items.length : Int)).toNat = a.items.length by omega]
   unfold insAt
   simp [List.take_length, List.drop_length]
 
 theorem arrIterItems_spec (vs : List PyVal) : ∀ a : Arr, a.exports = 0 →
     a.Fits (a.items.length + vs.length) →
-    (arrIterItems a vs).1.items = a.items ++ (storeAll a.tc vs).1 ∧
-      (arrIterItems a vs).2 = (storeAll a.tc vs).2 := by
+    (arrIterItems a vs).1.items = a.items ++ (storeAllS a.tc vs).1 ∧
+      (arrIterItems a vs).2 = (storeAllS a.tc vs).2 := by
   induction vs with
-  | nil => intro a _ _; simp [arrIterItems, storeAll]
+  | nil => intro a _ _; simp [arrIterItems, storeAllS]
   | cons v vs ih =>
     intro a hx hf
     simp only [List.length_cons] at hf
-    cases hs : tcSetitem a.tc true v with
+    have hf1 := fits_shrink a _ _ (show (a.items.length : Int) + 1 ≤ _ by omega) hf
+    cases hc : tcCheck a.tc v with
     | error e =>
-      simp only [arrIterItems, arrIns1_err a _ v e hs, storeAll, hs, List.append_nil, and_self]
-    | ok x =>
-      obtain ⟨a', h1, h2, h3, h4, _⟩ := arrIns1_end a v x hx hs (fits_shrink a _ _ (by omega) hf)
-      have hf' : a'.Fits (a'.items.length + vs.length) := by
-        unfold Arr.Fits at *
-        rw [h3, h2]
-        simp only [List.length_append, List.length_cons, List.length_nil]
-        omega
-      obtain ⟨h5, h6⟩ := ih a' h4 hf'
-      simp only [arrIterItems, h1, storeAll, hs]
-      rw [h5, h6, h2, h3]
-      simp
+      simp only [arrIterItems, arrIns1S_err a _ v e hc, storeAllS, hc, List.append_nil, and_self]
+    | ok u =>
+      cases hs : tcSetitem a.tc true v with
+      | error e =>
+        obtain ⟨a', h1, h2, _⟩ := arrIns1S_store_err a v e hx hc hs hf1
+        simp only [arrIterItems, h1, storeAllS, hc, hs, h2, and_self]
+      | ok x =>
+        obtain ⟨a', h1, h2, h3, h4, _⟩ := arrIns1S_end a v x hx hs hf1
+        have hf' : a'.Fits (a'.items.length + vs.length) := by
+          unfold Arr.Fits at *
+          rw [h3, h2]
+          simp only [List.length_append, List.length_cons, List.length_nil]
+          omega
+        obtain ⟨h5, h6⟩ := ih a' h4 hf'
+        simp only [arrIterItems, h1, storeAllS, hc, hs]
+        rw [h5, h6, h2, h3]
+        simp
 
 /-- `a.extend(iterable)`, `array_iter_extend`, for every array without exported buffers
 (all the items fit) and every iterable: items are stored one by one, so a refused item
 leaves the earlier ones appended and raises its exception, and so does an iterator
-that raises. A non-iterable raises `TypeError` and changes nothing. -/
+that raises. A non-iterable raises `TypeError` and changes nothing. Refuted on 3.15.2: an
+`e` array whose item is finite but too large for binary16 keeps a slot for the refused
+item (bugs/sequences-array-e-ins1-overflow-keeps-slot.yaml). -/
 def ArrayIterExtend : Prop :=
   ∀ (a : Arr) (vs : List PyVal) (e : Option PyExc), a.exports = 0 → a.Fits (a.items.length + vs.length) →
     (arrExtend a (.inr (.iter vs e))).1.items = a.items ++ (storeAll a.tc vs).1 ∧
@@ -151,10 +200,35 @@ def ArrayIterExtend : Prop :=
        | none => if e = some .stopIteration then none else e) ∧
     ∀ t, arrExtend a (.inr (.notIterable t)) = (a, some (notIterableErr t))
 
-theorem arrayIterExtend_proven : ArrayIterExtend := by
+/-- An empty `e` array and the item `65536.0`. -/
+def eEmpty : Arr := ⟨.e, [], 0, false, 0, "array"⟩
+def tooBigForE : PyVal := .float 4679240012837945344
+
+theorem arrayIterExtend_refuted : ¬ ArrayIterExtend := by
+  intro h
+  have h1 := (h eEmpty [tooBigForE] none rfl (by unfold Arr.Fits ssizeMax; decide)).1
+  have e1 : (arrExtend eEmpty (.inr (.iter [tooBigForE] none))).1.items = [0] := by decide
+  have e2 : (storeAll eEmpty.tc [tooBigForE]).1 = [] := by decide
+  rw [e1, e2] at h1
+  simp [eEmpty] at h1
+
+/-- `a.extend(iterable)` exactly, for every typecode and every array without exported
+buffers (all the items fit): the items of `storeAllS`, which are those of `storeAll` for
+every typecode but `e`. A non-iterable raises `TypeError` and changes nothing. -/
+def ArrayIterExtendExact : Prop :=
+  ∀ (a : Arr) (vs : List PyVal) (e : Option PyExc), a.exports = 0 → a.Fits (a.items.length + vs.length) →
+    (arrExtend a (.inr (.iter vs e))).1.items = a.items ++ (storeAllS a.tc vs).1 ∧
+    (arrExtend a (.inr (.iter vs e))).2 =
+      (match (storeAllS a.tc vs).2 with
+       | some err => some err
+       | none => if e = some .stopIteration then none else e) ∧
+    (a.tc ≠ .e → storeAllS a.tc vs = storeAll a.tc vs) ∧
+    ∀ t, arrExtend a (.inr (.notIterable t)) = (a, some (notIterableErr t))
+
+theorem arrayIterExtendExact_proven : ArrayIterExtendExact := by
   intro a vs e hx hf
   obtain ⟨h1, h2⟩ := arrIterItems_spec vs a hx hf
-  refine ⟨?_, ?_, fun t => rfl⟩
+  refine ⟨?_, ?_, fun ht => storeAllS_eq _ ht vs, fun t => rfl⟩
   · simp only [arrExtend, arrIterExtend]
     cases h : arrIterItems a vs with
     | mk a' err =>
@@ -179,6 +253,50 @@ theorem arrayIterExtend_proven : ArrayIterExtend := by
         cases e with
         | none => rfl
         | some x => cases x <;> rfl
+
+/-- `a.append(v)` and `a.insert(i, v)` leave `a` as it was when they raise, for every array
+without exported buffers (the new item fits). Refuted on 3.15.2 by an `e` array and a
+finite value too large for binary16: `ins1` checks with `setitem(self, -1, v)`, which
+packs nothing, then grows, shifts and stores, and the store raises `OverflowError`. -/
+def ArrayIns1Atomic : Prop :=
+  ∀ (a a' : Arr) (i : Int) (v : PyVal) (e : PyExc), a.exports = 0 → a.Fits (a.items.length + 1) →
+    (arrAppendS a v = (a', some e) → a' = a) ∧ (arrInsertS a i v = (a', some e) → a' = a)
+
+theorem arrayIns1Atomic_refuted : ¬ ArrayIns1Atomic := by
+  intro h
+  have e1 : arrAppendS eEmpty tooBigForE = (⟨.e, [0], 3 + 1, true, 0, "array"⟩, some packHalfErr) := by decide
+  have := (h eEmpty _ 0 tooBigForE packHalfErr rfl (by unfold Arr.Fits ssizeMax; decide)).1 e1
+  simp [eEmpty] at this
+
+/-- What is true instead. For every array without exported buffers (the new item fits) and
+every value the store refuses with `e`: for every typecode but `e`, `append` and `insert`
+(any `i` in `Py_ssize_t`) raise `e` and leave the array as it was. A value that passes the
+first check is an `e` item, and `append` then raises `e` with a new last slot (0 here,
+uninitialised memory in CPython). -/
+def ArrayIns1Failure : Prop :=
+  ∀ (a : Arr) (v : PyVal) (e : PyExc), a.exports = 0 → a.Fits (a.items.length + 1) →
+    tcSetitem a.tc true v = .error e →
+    (a.tc ≠ .e → arrAppendS a v = (a, some e) ∧
+      ∀ i, ssizeMin ≤ i → i ≤ ssizeMax → arrInsertS a i v = (a, some e)) ∧
+    (tcCheck a.tc v = .ok () → a.tc = .e ∧ (arrAppendS a v).2 = some e ∧
+      (arrAppendS a v).1.items = a.items ++ [0])
+
+theorem arrayIns1Failure_proven : ArrayIns1Failure := by
+  intro a v e hx hf hs
+  refine ⟨fun ht => ?_, fun hc => ?_⟩
+  · have hc := arrIns1S_err a a.items.length v e (tcCheck_err _ _ _ ht hs)
+    refine ⟨hc, fun i h0 h1 => ?_⟩
+    have hi : asSsize i = .ok i := by unfold asSsize; rw [iteT ⟨h0, h1⟩]
+    simp only [arrInsertS, hi]
+    exact arrIns1S_err a i v e (tcCheck_err _ _ _ ht hs)
+  · have ht : a.tc = .e := by
+      by_cases ht : a.tc = .e
+      · exact ht
+      · rw [tcCheck_err _ _ _ ht hs] at hc
+        exact absurd hc (by simp)
+    obtain ⟨a', h1, h2, _⟩ := arrIns1S_store_err a v e hx hc hs hf
+    simp only [arrAppendS, h1]
+    exact ⟨ht, trivial, h2⟩
 
 /-! ### Repetition -/
 
@@ -630,7 +748,7 @@ theorem arrayAttrs_proven : ArrayAttrs := by
     unfold arrLength
     rw [hl, Int.natCast_mul]
     congr 1
-    rcases itemsize_cases a.tc with h | h | h | h <;> rw [h] <;> rfl
+    rcases itemsize_cases a.tc with h | h | h | h | h <;> rw [h] <;> rfl
 
 /-! ### The buffer protocol -/
 
@@ -661,7 +779,7 @@ theorem arrayBuffer_proven : ArrayBuffer := by
       dsimp only
       rw [iteT ⟨by omega, hn⟩]
     refine ⟨hr, fun v x hs => ?_, fun hne => ?_, fun lo hi h0 h1 h2 => ?_⟩
-    · simp only [arrAppend, arrIns1, hs, bind, Except.bind]
+    · simp only [arrAppend, arrIns1, arrIns1S, tcCheck_of_set _ _ _ hs]
       rw [hr _ (by omega)]
     · exact hr _ (fun h => hne (List.eq_nil_of_length_eq_zero (by omega)))
     · unfold arrDelSlice

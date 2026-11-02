@@ -105,11 +105,14 @@ def iso_string(rng):
             sg = rng.choice("+-")
             ts += rng.choice(["Z", "z", f"{sg}{oh}", f"{sg}{oh}:{om}", f"{sg}{oh}{om}", f"{sg}{oh}:{om}:{os_}",
                               f"{sg}{oh}{om}{os_}", f"{sg}{oh}:{om}:{os_}.{ofr}", f"{sg}{oh}{om}{os_}.{ofr}",
-                              f"{sg}{oh}:{om}.{ofr}", "+", "-", "Z0", "Z\x00x", "+00:00\x00"])
+                              f"{sg}{oh}:{om}.{ofr}", "+", "-", "Z0", "Z\x00x", "+00:00\x00",
+                              # the range check of parse_isoformat_time runs even if the offset failed to parse
+                              f"{sg}{oh}x", f"{sg}{oh}:{om}x", f"{sg}{oh}:{om}:{os_}x", f"{sg}{oh}{om}x",
+                              f"{sg}{oh}:{om}:{os_}.{ofr}x", f"{sg}{oh}:", f"{sg}{oh}:{om}:", f"{sg}9", f"{sg}{oh}:9"])
         if rng.random() < 0.1:
             ts += rng.choice(["\x00", "\x00junk", "x", " "])
         sep = rng.choice(["T", "T", " ", "t", "x", "5", "-", "W", "é", "€", "\U0001f600", "\x00"])
-        s = ds + sep + ts if rng.random() < 0.9 else ts
+        s = ds + sep + ts if rng.random() < 0.9 else rng.choice([ts, ts, "T" + ts])
     if rng.random() < 0.25:
         s = list(s)
         for _ in range(rng.randint(1, 3)):
@@ -282,7 +285,8 @@ def rand_arg(rng, n):
 
 
 def small_field(rng):
-    return rng.choice([None, None, None, 0, 1, 2, 12, 13, 23, 24, 31, 59, 60, -1, 1999, 9999, 10000, 999999, 10**6])
+    return rng.choice([None, None, None, 0, 1, 2, 12, 13, 23, 24, 31, 59, 60, -1, 1999, 9999, 10000, 999999, 10**6,
+                       2**31 - 1, 2**31, -2**31, -2**31 - 1])
 
 
 def rand_delta_small(rng):
@@ -290,8 +294,8 @@ def rand_delta_small(rng):
                        [rng.randint(-4000000, 4000000), rng.randrange(86400), rng.randrange(10**6)]])
 
 
-MORE_FNS = {"td_str2", "tz_new", "tz_cmp", "utc_seconds", "mktime", "strp_pattern", "strp_core", "strp_date", "strp_time",
-            "strp_dt", "strp_julian", "strp_findall", "strp_seq"}
+MORE_FNS = {"td_str2", "tz_new", "tz_cmp", "utc_seconds", "mktime", "strp_pattern", "strp_core", "strp_tail", "strp_date",
+            "strp_time", "strp_dt", "strp_julian", "strp_findall", "strp_seq"}
 OPS2 = ["lt", "le", "eq", "ne", "gt", "ge"]
 OBJ_FNS = ["td_cmp", "td_bool", "td_pos", "td_rsub", "td_hash", "td_state", "date_cmp", "date_hash", "date_weekday",
            "date_sub_date", "date_sub_delta", "date_replace", "date_timetuple", "date_ctime", "date_repr", "date_state",
@@ -311,13 +315,20 @@ def locale_json():
 
 LOCALE = locale_json()
 STRP = ["%Y", "%y", "%m", "%d", "%H", "%I", "%p", "%M", "%S", "%f", "%a", "%A", "%b", "%B", "%j", "%U", "%W", "%w", "%u",
-        "%G", "%V", "%z", "%Z", "%%", "%e", "%k", "%l", "%D", "%T", "%R", "%c", "%x", "%X", "%r", "%C", "%Oy", "%Od", "%OH"]
+        "%G", "%V", "%z", "%Z", "%%", "%e", "%k", "%l", "%D", "%T", "%R", "%c", "%x", "%X", "%r", "%C", "%Oy", "%Od", "%OH",
+        "%:z", "%n", "%t", "%F", "%P", "%Oe"]
+# The year and day directives alone, so that the checks of TimeRE.pattern see every combination.
+STRP_YD = ["%d", "%e", "%Y", "%y", "%G", "%Oy", "%Od", "%Oe", "%D", "%F", "%c", "%x", "%m", "%H"]
 SEPS = ["", " ", "-", ":", "/", "T", ".", "  ", "\t", "(", "'", "+"]
 
 
 def strp_format(rng):
     n = rng.randint(1, 7)
     return "".join(rng.choice(STRP) + rng.choice(SEPS) for _ in range(n))
+
+
+def strp_format_yd(rng):
+    return " ".join(rng.choice(STRP_YD) for _ in range(rng.randint(1, 3)))
 
 
 def strp_input(rng, fmt):
@@ -338,6 +349,9 @@ def gen_strptime(rng):
     k = rng.random()
     if k < 0.15:
         fmt = strp_format(rng) if rng.random() < 0.5 else rng.choice(["%", "% d", "%Q", "%E", "%Ez", "%-d", "%\\", "a%", "%%%", "%5Y", "%_d", "%^a"])
+        if rng.random() < 0.4:
+            fmt = rng.choice([strp_format_yd(rng), "%:", "%:x", "%::z", "%E:z", "%O:z", "%:%", "%-5Y", "%0d", "%#d",
+                              "%:\\", "%\\:", "%-:z", "%Y%", "%n%t", "% n", "%\n", "%d\n%Y", "%Y %-"])
         c.update(fn="strp_pattern", format=fmt)
         return c
     if k < 0.2:
@@ -352,6 +366,8 @@ def gen_strptime(rng):
     if k < 0.3:
         c.update(fn="strp_seq", xs=[rng.choice(["", "a", "abc", "a.b", "x y", "bb", "q-r"]) for _ in range(rng.randint(0, 5))], d="X")
         return c
+    if k < 0.45:
+        return gen_strp_tail(rng, c)
     # A real match, so that `found` is what `re` produces.
     for _ in range(50):
         fmt = strp_format(rng)
@@ -367,6 +383,28 @@ def gen_strptime(rng):
             gd = found.groupdict()
             c.update(fn=rng.choice(["strp_core", "strp_core", "strp_date", "strp_time", "strp_dt"]), format=fmt, data=s,
                      found=[[k, v] for k, v in gd.items()])
+            return c
+    return None
+
+
+def gen_strp_tail(rng, c):
+    """A match that may stop short of the end of the string, for the check on `found.end()`."""
+    for _ in range(50):
+        fmt = rng.choice(["%Y", "%Y-%m-%d", "%H:%M", strp_format(rng)]) + rng.choice(["%:z", "%:z", "%z", " %:z", ""])
+        s = strp_input(rng, fmt) + rng.choice(["", "x", ":", ":30", "00", " ", "+05", "Z", "é", "+05:30", ":x"])
+        if rng.random() < 0.3:
+            s = rng.choice(["2020", "2020-01-02", "12:30", "2020+05:30", "2020+05:3000", "2020Z", "2020Zx"]) + \
+                rng.choice(["", "00", ":", ":00", " +05:30", "x"])
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                rx = _strptime._TimeRE_cache.compile(fmt)
+        except Exception:
+            continue
+        found = rx.match(s)
+        if found:
+            c.update(fn="strp_tail", format=fmt, s=s, data=[ord(x) for x in s], end=found.end(),
+                     found=[[k, v] for k, v in found.groupdict().items()])
             return c
     return None
 
@@ -431,18 +469,20 @@ def gen_obj_case(rng):
     elif fn in ("tm_hash", "tm_repr", "tm_state"):
         c.update(a=rand_tm(rng), proto=rng.choice([2, 3, 4, 5]))
     elif fn == "tm_iso":
-        c.update(a=rand_tm(rng), spec=rng.choice(["auto", "hours", "minutes", "seconds", "milliseconds", "microseconds"]))
+        c.update(a=rand_tm(rng), spec=rng.choice(["auto", "hours", "minutes", "seconds", "milliseconds", "microseconds",
+                                                  "", "Auto", "minute", "bogus"]))
     elif fn == "tm_strftime":
         c.update(a=rand_tm(rng), f=[ord(x) for x in strf_format(rng)])
     elif fn == "tm_replace":
         c.update(a=rand_tm(rng), nh=small_field(rng), nmi=small_field(rng), ns=small_field(rng), nus=small_field(rng),
-                 nfold=rng.choice([None, None, 0, 1, 2]))
+                 nfold=rng.choice([None, None, 0, 1, 2, 2**31]))
         if rng.random() < 0.3:
             c["tzarg"] = rand_tz_spec(rng, 2)
     elif fn in ("dt_hash", "dt_repr", "dt_ctime", "dt_timetuple", "dt_utctimetuple", "dt_parts", "dt_state"):
         c.update(a=rand_dt(rng), proto=rng.choice([2, 3, 4, 5]))
     elif fn == "dt_iso":
-        c.update(a=rand_dt(rng), spec=rng.choice(["auto", "hours", "minutes", "seconds", "milliseconds", "microseconds"]),
+        c.update(a=rand_dt(rng), spec=rng.choice(["auto", "hours", "minutes", "seconds", "milliseconds", "microseconds",
+                                                  "", "Auto", "minute", "bogus"]),
                  sep=ord(rng.choice("T x")))
     elif fn in ("dt_add", "dt_sub_delta"):
         c.update(a=rand_dt(rng), td=rand_delta_small(rng))
@@ -452,7 +492,7 @@ def gen_obj_case(rng):
             c["tzarg"] = rand_tz_spec(rng, 2)
     elif fn == "dt_replace":
         c.update(a=rand_dt(rng), ny=small_field(rng), nm=small_field(rng), nd=small_field(rng), nh=small_field(rng),
-                 nmi=small_field(rng), ns=small_field(rng), nus=small_field(rng), nfold=rng.choice([None, None, 0, 1, 2]))
+                 nmi=small_field(rng), ns=small_field(rng), nus=small_field(rng), nfold=rng.choice([None, None, 0, 1, 2, 2**31]))
         if rng.random() < 0.3:
             c["tzarg"] = rand_tz_spec(rng, 2)
     elif fn == "dt_fromutc":
@@ -471,16 +511,17 @@ def gen_obj_case(rng):
         d = rng.choice([rand_date(rng), [rng.randint(1, 1100), rng.randint(1, 12), 1]])
         c.update(a=d + rand_dt(rng)[3:], f=[ord(x) for x in strf_format(rng)])
     elif fn == "ctor_date":
-        n = rng.choice([1, 1, 3, 3, 2])
+        # 0 and 4 reach the arity checks of the clinic wrapper
+        n = rng.choice([1, 1, 3, 3, 2, 0, 4])
         c.update(args=[rand_arg(rng, 4) for _ in range(n)])
         if n == 3 and rng.random() < 0.5:
             c["args"] = [["i", x] for x in rand_date(rng)]
     elif fn == "ctor_time":
-        n = rng.choice([0, 1, 1, 2, 2, 4, 5])
-        c.update(args=[rand_arg(rng, 6) for _ in range(n)], fold=rng.choice([0, 0, 1, 2]))
+        n = rng.choice([0, 1, 1, 2, 2, 4, 5, 6])
+        c.update(args=[rand_arg(rng, 6) for _ in range(n)], fold=rng.choice([0, 0, 1, 2, 2**31]))
     else:
-        n = rng.choice([1, 1, 2, 2, 3, 3, 7, 8])
-        c.update(args=[rand_arg(rng, 10) for _ in range(n)], fold=rng.choice([0, 0, 1, 2]))
+        n = rng.choice([1, 1, 2, 2, 3, 3, 7, 8, 0, 9])
+        c.update(args=[rand_arg(rng, 10) for _ in range(n)], fold=rng.choice([0, 0, 1, 2, 2**31]))
         if n >= 3 and rng.random() < 0.5:
             c["args"][:3] = [["i", x] for x in rand_date(rng)]
     return c
@@ -537,6 +578,9 @@ def run_more(c):
             warnings.simplefilter("ignore")
             if fn == "strp_core":
                 tt, fr, gf = _strptime._strptime(c["data"], c["format"])
+                return [list(tt), fr, gf]
+            if fn == "strp_tail":
+                tt, fr, gf = _strptime._strptime(c["s"], c["format"])
                 return [list(tt), fr, gf]
             if fn == "strp_date":
                 v = _strptime._strptime_datetime_date(_datetime.date, c["data"], c["format"])

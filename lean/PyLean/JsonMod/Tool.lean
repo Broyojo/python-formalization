@@ -21,7 +21,7 @@ inductive CGroup where
   | key | string | number | boolean | null
   deriving DecidableEq, Repr
 
-/-- `_group_to_theme_color`, tool.py@3.14.7:25-31. -/
+/-- `_group_to_theme_color`, tool.py:25-31. -/
 def groupColor : CGroup → String
   | .key => "definition"
   | .string => "string"
@@ -94,7 +94,7 @@ inductive ToolIndent where
   | tab
   | none
 
-/-- `parser.parse_args()`, tool.py@3.14.7:47-73. -/
+/-- `parser.parse_args()`, tool.py:47-74. -/
 structure ToolOpts where
   sortKeys : Bool := false
   ensureAscii : Bool := true

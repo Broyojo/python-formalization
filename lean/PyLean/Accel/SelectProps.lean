@@ -19,7 +19,9 @@ def SortedRevBy (key : Option (Int → Int)) (a : List Int) : Prop :=
 /-- `nsmallest` docstring, Lib/heapq.py:477-481 and Doc/library/heapq.rst:183-188:
 "Equivalent to: `sorted(iterable, key=key)[:n]`", for every count `n >= 0`
 (negative `n` has no meaning, python/cpython#57483), sized or not, with or
-without key, including the order of items with equal keys. -/
+without key, including the order of items with equal keys. `nsmallest` here takes
+its default `size`, the true item count: a `__len__` that says otherwise is
+`NsmallestAnyLen`, which is false on 3.15. -/
 def NsmallestIsSortedPrefix : Prop :=
   ∀ (n : Int) (it : List Int) (sized : Bool) (key : Option (Int → Int)), 0 ≤ n →
     nsmallest n it sized key = .ok (sliceTo (pySorted key it) n)
@@ -29,6 +31,34 @@ def NsmallestIsSortedPrefix : Prop :=
 def NlargestIsSortedPrefix : Prop :=
   ∀ (n : Int) (it : List Int) (sized : Bool) (key : Option (Int → Int)), 0 ≤ n →
     nlargest n it sized key = .ok (sliceTo (pySortedRev key it) n)
+
+/-- The docstring's equivalence for every `__len__` result. It held on 3.14.7,
+where `sorted(iterable, key=key)[:n]` was what the shortcut returned. -/
+def NsmallestAnyLen : Prop :=
+  ∀ (n : Int) (it : List Int) (size : Nat) (key : Option (Int → Int)), 0 ≤ n →
+    nsmallest n it true key size = .ok (sliceTo (pySorted key it) n)
+
+/-- As `NsmallestAnyLen`, for `nlargest`. -/
+def NlargestAnyLen : Prop :=
+  ∀ (n : Int) (it : List Int) (size : Nat) (key : Option (Int → Int)), 0 ≤ n →
+    nlargest n it true key size = .ok (sliceTo (pySortedRev key it) n)
+
+/-- `nsmallest(2, it)` for an `it` that yields `3, 1, 2` and reports `len(it) == 0`
+returns all three items. -/
+theorem nsmallestAnyLen_refuted : ¬NsmallestAnyLen := by
+  intro h
+  have h1 : Except.ok (pySorted none [3, 1, 2]) = Except.ok (sliceTo (pySorted none [3, 1, 2]) 2) :=
+    h 2 [3, 1, 2] 0 none (by decide)
+  have h2 := congrArg List.length (Except.ok.inj h1)
+  simp [pySorted, sliceTo] at h2
+
+/-- `nlargest(2, it)` for the same `it` returns all three items. -/
+theorem nlargestAnyLen_refuted : ¬NlargestAnyLen := by
+  intro h
+  have h1 : Except.ok (pySortedRev none [3, 1, 2]) = Except.ok (sliceTo (pySortedRev none [3, 1, 2]) 2) :=
+    h 2 [3, 1, 2] 0 none (by decide)
+  have h2 := congrArg List.length (Except.ok.inj h1)
+  simp [pySortedRev, sliceTo] at h2
 
 /-- `merge` docstring, Lib/heapq.py:330-346 and Doc/library/heapq.rst:149-171:
 for inputs each sorted by key (descending when `reverse=True`), the output is
@@ -243,6 +273,13 @@ theorem pySortedRev_eq (key : Option (Int → Int)) (l : List Int) :
   funext a b
   apply decide_eq_decide.2; omega
 
+/-- With the true count, the shortcut fires only when `n` is at least that count, so
+3.14's `[:n]` would have changed nothing. -/
+theorem sliceTo_full {γ : Type} (l : List γ) (n : Int) (h : (l.length : Int) ≤ n) :
+    sliceTo l n = l := by
+  rw [sliceTo_nonneg l n (by omega)]
+  exact List.take_of_length_le (by omega)
+
 theorem nsmallestIsSortedPrefix_proven : NsmallestIsSortedPrefix := by
   intro n it sized key hn
   have hsl := sliceTo_nonneg (pySorted key it) n hn
@@ -254,7 +291,9 @@ theorem nsmallestIsSortedPrefix_proven : NsmallestIsSortedPrefix := by
     exact congrArg Except.ok (take_one_head _)
   · rw [if_neg h1]
     by_cases h2 : sized = true ∧ n ≥ it.length
-    · rw [if_pos h2]; rfl
+    · have hl : (pySorted key it).length = it.length := by simp [pySorted]
+      rw [if_pos h2, sliceTo_full _ _ (by rw [hl]; exact h2.2)]
+      rfl
     · rw [if_neg h2, hsl]
       cases key with
       | none =>
@@ -280,7 +319,9 @@ theorem nlargestIsSortedPrefix_proven : NlargestIsSortedPrefix := by
     exact congrArg Except.ok (take_one_head _)
   · rw [if_neg h1]
     by_cases h2 : sized = true ∧ n ≥ it.length
-    · rw [if_pos h2]; rfl
+    · have hl : (pySortedRev key it).length = it.length := by simp [pySortedRev]
+      rw [if_pos h2, sliceTo_full _ _ (by rw [hl]; exact h2.2)]
+      rfl
     · rw [if_neg h2, hsl, pySortedRev_eq]
       cases key with
       | none =>

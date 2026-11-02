@@ -50,7 +50,7 @@ expected: |
   deque([1, 2], maxlen=3) *= 2**62 leaves the last three items of [1, 2] * 2**62, i.e.
   deque([2, 1, 2], maxlen=3), exactly as for small even factors.
 observed: |
-  python3 3.14.7: one-item deque -> deque([1, 1, 1], maxlen=3); two-item deque *= and * ->
+  python3 3.15.2: one-item deque -> deque([1, 1, 1], maxlen=3); two-item deque *= and * ->
   MemoryError. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical (the same code is at
   Modules/_collectionsmodule.c:886-896 on main). REPRODUCED.

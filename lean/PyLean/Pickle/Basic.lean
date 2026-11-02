@@ -1,7 +1,7 @@
 import PyLean.Core
 
 /-!
-Byte-level vocabulary shared by the pickle models (CPython 3.14.7).
+Byte-level vocabulary shared by the pickle models (CPython 3.15.2).
 
 * A pickle stream is `Bytes := List UInt8`.
 * A Python `str` is a list of code points (`List Nat`, each `< 0x110000`,

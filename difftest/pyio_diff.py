@@ -105,6 +105,14 @@ def gen_bytesio(rng, fn):
             ops.append({"op": k})
     ops += [{"op": "release"}] * views
     ops += [{"op": "getvalue"}, {"op": "tell"}, {"op": "closed"}]
+    if rng.random() < 0.06:
+        # a write that cannot fit, on a buffer shared or private, and what survives it
+        pos = rng.choice([M, M - 1, M - 2, M - 33, M - 34, M - 35, 2**62, 2**62 + 1])
+        # a view unshares the buffer, unless the stream is empty
+        ops = [{"op": "write", "b": [97, 98, 99]}] * rng.randint(0, 1) + \
+            [{"op": "getbuffer"}, {"op": "release"}] * rng.randint(0, 1) + [
+            {"op": "seek", "pos": pos, "whence": 0}, {"op": "write", "b": [120]}, {"op": "closed"},
+            {"op": "getvalue"}, {"op": "tell"}, {"op": "seek", "pos": 0, "whence": 0}] + ops
     return {"init": init, "ops": ops}
 
 
@@ -207,6 +215,84 @@ def apply(f, op, fn, views):
     if k == "closed":
         return f.closed
     return getattr(f, k)() if k != "newlines" else f.newlines
+
+
+class Deadlock(BaseException):
+    """Blocking forever on `_pyio.BytesIO._lock`, which is not re-entrant."""
+
+
+class WatchLock:
+    """Stands in for the stream's `Lock` around a re-entrant call: where the real
+    lock would block this thread forever, it raises instead."""
+
+    def __init__(self):
+        self.held = False
+
+    def __enter__(self):
+        if self.held:
+            raise Deadlock
+        self.held = True
+
+    def __exit__(self, *exc):
+        self.held = False
+
+
+def run_hook(f, h, views):
+    k = h["h"]
+    if k == "close":
+        f.close()
+    elif k == "getbuffer":
+        views.append(f.getbuffer())
+    elif k == "tell":
+        f.tell()
+    elif k == "seekabs":
+        f.seek(h["p"])
+    elif k == "seekcur":
+        f.seek(0, 1)
+    else:
+        f.write(bytes(h["b"]) if isinstance(f, (io.BytesIO, _pyio.BytesIO)) else "".join(map(chr, h["b"])))
+
+
+class Idx:
+    """The argument of `truncate`: `__index__` acts on the stream, swallowing what
+    those actions raise, then returns `v` or raises."""
+
+    def __init__(self, f, a, views):
+        self.f, self.a, self.views = f, a, views
+
+    def __index__(self):
+        for h in self.a["hook"]:
+            try:
+                run_hook(self.f, h, self.views)
+            except Exception:
+                pass
+        if self.a["v"] is None:
+            raise ValueError("boom")
+        return self.a["v"]
+
+
+def gen_hook(rng):
+    k = rng.choice(["close", "getbuffer", "tell", "seekabs", "seekcur", "write"])
+    h = {"h": k}
+    if k == "seekabs":
+        h["p"] = rng.randint(0, 8)
+    if k == "write":
+        h["b"] = rng.choice([[], [97], [97, 98, 10]])
+    return h
+
+
+def gen_targ(rng, n):
+    r = rng.random()
+    if r < 0.1:
+        return {"kind": "str"}
+    if r < 0.2:
+        return {"kind": "float"}
+    return {"kind": "index", "hook": [gen_hook(rng) for _ in range(rng.choice([0, 0, 1, 1, 2]))],
+            "v": None if rng.random() < 0.1 else an_int(rng, n)}
+
+
+def make_targ(f, a, views):
+    return {"str": "a", "float": 1.5}[a["kind"]] if a["kind"] != "index" else Idx(f, a, views)
 
 
 def run_python(c):

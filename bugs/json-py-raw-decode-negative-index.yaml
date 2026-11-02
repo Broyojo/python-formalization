@@ -59,6 +59,7 @@ reproducer: |
 expected: |
   ValueError('idx cannot be negative') from both twins for every idx < 0.
 observed: |
+  python3 3.15.2: REPRODUCED.
   python3 3.14.7 and main: raw_decode('12', -1) -> C ValueError / Python (12, 2);
   raw_decode('{}x', -3) -> C ValueError / Python ({}, -1); raw_decode('null ', -5) -> C
   ValueError / Python (None, -1); raw_decode('[1, 2]', -1) -> Python JSONDecodeError at

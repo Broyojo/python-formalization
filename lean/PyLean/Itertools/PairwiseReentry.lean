@@ -62,7 +62,7 @@ def pwSecond (run : Nat → PwS α → PwS α) (old : α) (s : PwS α) : NextRes
   | (.fail e, s) => (.exc e, { s with live := false, old := none })
   | (.item new, s) => (.val (old, new), { s with old := some new })
 
-/-- `pairwise_next` (:346-399). -/
+/-- `pairwise_next` (:347-399). -/
 def pwNext (run : Nat → PwS α → PwS α) (s : PwS α) : NextRes (α × α) × PwS α :=
   if !s.live then (.stop, s)
   else

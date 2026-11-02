@@ -51,6 +51,8 @@ structure UObj where
   rawRead : Bool
   isClosed : Bool
   log : List Call
+  /-- `readinto` keeps a `memoryview` of the buffer it was given. -/
+  keepView : Bool
   deriving Repr, DecidableEq, Inhabited
 
 def excOf (cls msg : String) : PyExc := .named cls msg
@@ -130,7 +132,8 @@ def close (u : UObj) : UObj × Py Val :=
   let (u', r) := flush u
   ({ u' with isClosed := true }, r.map (fun _ => .none))
 
-/-- `_io__RawIOBase_read_impl`, iobase.c:923-961, for `n >= 0`. -/
+/-- `_io__RawIOBase_read_impl`, iobase.c:923-961, for `n >= 0`: `PyByteArray_Resize`
+(:953) and `take_bytes` (:956) each refuse while a view of the bytearray is alive. -/
 def rawReadN (u : UObj) (n : Nat) : UObj × Py Val :=
   match u.callInto n with
   | (u, (_, .raise c m)) => (u, .error (excOf c m))
@@ -139,6 +142,7 @@ def rawReadN (u : UObj) (n : Nat) : UObj × Py Val :=
     if !InSsize k then (u, .error (.valueError "cannot fit 'int' into an index-sized integer"))
     else if k < 0 ∨ k > n then
       (u, .error (.valueError s!"readinto returned {k} outside buffer size {n}"))
+    else if u.keepView then (u, .error bufferError)
     else (u, .ok (.bytes ((d.take n ++ List.replicate (n - (d.take n).length) 0).take k.toNat)))
   | (u, (_, .bytes _)) =>
     (u, .error (.typeError "'bytes' object cannot be interpreted as an integer"))
@@ -154,15 +158,16 @@ def readCall (u : UObj) (n : Nat) : UObj × Ret :=
     | (u, .ok v) => (u, .bytes v.bytesOf)
   else u.callRead n
 
-/-- The peek step of `_io__IOBase_readline_impl`, iobase.c:582-615. -/
-def readahead (limit : Int) (r : List Nat) : Nat :=
+/-- The `do` loop of `_io__IOBase_readline_impl`, iobase.c:613-618. -/
+def scanNl (remaining : Int) (n : Nat) : List Nat → Nat
+  | [] => n
+  | x :: xs => if (n : Int) ≥ remaining then n else if x = 10 then n + 1 else scanNl remaining (n + 1) xs
+
+/-- The peek step of `_io__IOBase_readline_impl`, iobase.c:582-630, with `len` bytes
+already in `buffer`: `remaining = limit - len`, iobase.c:612. -/
+def readahead (limit : Int) (len : Nat) (r : List Nat) : Nat :=
   if r.length > 0 then
-    if limit ≥ 0 then
-      let rec go (n : Nat) (l : List Nat) : Nat :=
-        match l with
-        | [] => n
-        | x :: xs => if (n : Int) ≥ limit then n else if x = 10 then n + 1 else go (n + 1) xs
-      go 0 r
+    if limit ≥ 0 then scanNl (limit - len) 0 r
     else nlPrefix r
   else 1
 
@@ -174,7 +179,7 @@ def readlineLoop (limit : Int) : UObj → List Nat → Nat → UObj × Py (List 
       let pk : UObj × Py (Option Nat) :=
         if u.peeks.isSome then
           match u.callPeek 1 with
-          | (u, .bytes r) => (u, .ok (some (readahead limit r)))
+          | (u, .bytes r) => (u, .ok (some (readahead limit res.length r)))
           | (u, .raise c m) =>
             if trapEintr c then (u, .ok none) else (u, .error (excOf c m))
           | (u, r) => (u, .error (osError s!"peek() should have returned a bytes object, not '{r.typeName}'"))
@@ -295,8 +300,11 @@ def step (u : UObj) : UOp → UObj × Py Val
     let n := n.getD (-1)
     if !InSsize n then (u, .error (.overflowError "Python int too large to convert to C ssize_t"))
     else if n < 0 then readallLoop u [] false (u.intos.length + u.reads.length + 2)
-    else if n ≥ memLimit then (u, .error memoryError)
-    else rawReadN u n.toNat
+    else
+      -- `PyByteArray_FromStringAndSize` makes a `bytes`, Objects/bytearrayobject.c:195
+      match allocBytes n with
+      | .error e => (u, .error e)
+      | .ok () => rawReadN u n.toNat
   | .rawReadall => readallLoop u [] false (u.intos.length + u.reads.length + 2)
   | .rawReadinto => (u, .error (.named "NotImplementedError" ""))
   | .rawWrite => (u, .error (.named "NotImplementedError" ""))
@@ -337,7 +345,8 @@ def close (u : UObj) : UObj × Py Val :=
   let (u', r) := flush u
   ({ u' with isClosed := true }, r.map (fun _ => .none))
 
-/-- `RawIOBase.read`, _pyio.py@3.14.7:610-627, for `size >= 0`. -/
+/-- `RawIOBase.read`, _pyio.py:610-627, for `size >= 0`: `del b[n:]` and
+`b.take_bytes()` each refuse while a view of `b` is alive. -/
 def rawReadN (u : UObj) (n : Nat) : UObj × Py Val :=
   match u.callInto n with
   | (u, (_, .raise c m)) => (u, .error (excOf c m))
@@ -345,6 +354,7 @@ def rawReadN (u : UObj) (n : Nat) : UObj × Py Val :=
   | (u, (d, .int k)) =>
     if k < 0 ∨ k > n then
       (u, .error (.valueError s!"readinto returned {k} outside buffer size {n}"))
+    else if u.keepView then (u, .error bufferError)
     else (u, .ok (.bytes ((d.take n ++ List.replicate (n - (d.take n).length) 0).take k.toNat)))
   | (u, (_, .bytes _)) =>
     (u, .error (.typeError "'<' not supported between instances of 'bytes' and 'int'"))
@@ -360,17 +370,17 @@ def readCall (u : UObj) (n : Nat) : UObj × Ret :=
     | (u, .ok v) => (u, .bytes v.bytesOf)
   else u.callRead n
 
-/-- `nreadahead` with `peek`, _pyio.py:525-532. -/
-def nreadahead (size : Int) (r : Ret) : Py Nat :=
+/-- `nreadahead` with `peek`, _pyio.py:525-532, with `len` bytes already in `res`. -/
+def nreadahead (size : Int) (len : Nat) (r : Ret) : Py Nat :=
   match r with
   | .bytes [] | .none | .int 0 => .ok 1
   | .bytes b =>
     let n := nlPrefix b
-    .ok (if size ≥ 0 then min n size.toNat else n)
+    .ok (if size ≥ 0 then min n (size - len).toNat else n)
   | .int _ => .error (.named "AttributeError" "'int' object has no attribute 'find'")
   | .raise c m => .error (excOf c m)
 
-/-- The loop of `IOBase.readline`, _pyio.py@3.14.7:546-553. -/
+/-- The loop of `IOBase.readline`, _pyio.py:546-553. -/
 def readlineLoop (size : Int) : UObj → List Nat → Nat → UObj × Py (List Nat)
   | u, _, 0 => (u, .error .modelFuel)
   | u, res, fuel + 1 =>
@@ -378,7 +388,7 @@ def readlineLoop (size : Int) : UObj → List Nat → Nat → UObj × Py (List N
       let pk : UObj × Py Nat :=
         if u.peeks.isSome then
           let (u, r) := u.callPeek 1
-          (u, nreadahead size r)
+          (u, nreadahead size res.length r)
         else (u, .ok 1)
       match pk with
       | (u, .error e) => (u, .error e)
@@ -392,7 +402,7 @@ def readlineLoop (size : Int) : UObj → List Nat → Nat → UObj × Py (List N
           if res.getLast? = some 10 then (u, .ok res) else readlineLoop size u res fuel
     else (u, .ok res)
 
-/-- `IOBase.readline`, _pyio.py@3.14.7:513-553. -/
+/-- `IOBase.readline`, _pyio.py:513-553. -/
 def readline (u : UObj) (size : Option Int) : UObj × Py Val :=
   match readlineLoop (size.getD (-1)) u [] (BC.fuelOf u) with
   | (u, .error e) => (u, .error e)
