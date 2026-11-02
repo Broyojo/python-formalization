@@ -1183,6 +1183,7 @@ unicodeobj-format-nul-int-str	proven	Objects/unicode_formatter.c
 unicodeobj-format-parse-asserts	proven	Objects/unicode_formatter.c	
 unicodeobj-format-str-shape	proven	Objects/unicode_formatter.c	
 unicodeobj-format-int-fast-slow	proven	Objects/unicode_formatter.c	
+unicodeobj-format-str-doc	proven	Objects/unicode_formatter.c	_PyUnicode_FormatAdvancedWriter,parse_internal_render_format_spec,get_integer,is_alignment_token,is_sign_element,calc_padding,fill_padding,format_string_internal
 unicodeobj-format-group-loop	refuted	Objects/unicode_formatter.c	_PyUnicode_InsertThousandsGrouping,GroupGenerator_init,GroupGenerator_next,InsertThousandsGrouping_fill
 unicodeobj-format-group-digits	proven	Objects/unicode_formatter.c	_PyUnicode_InsertThousandsGrouping
 unicodeobj-format-percent-int-fast-slow	proven	Objects/unicode_format.c	
