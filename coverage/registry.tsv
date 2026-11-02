@@ -155,6 +155,26 @@ rangeslice-getindices-contract	refuted	Objects/sliceobject.c	PySlice_GetIndices
 rangeslice-slice-hash-eq	proven	Objects/sliceobject.c	slice_hash,slice_richcompare
 rangeslice-range-bool	proven	Objects/rangeobject.c	range_bool
 rangeslice-range-reduce-round-trip	proven	Objects/rangeobject.c	range_reduce,range_new,range_vectorcall
+mathint-fsum-correctly-rounded	open	Modules/mathmodule.c	math.fsum,_fsum_realloc
+mathint-remainder-exact	open	Modules/mathmodule.c	m_remainder
+mathint-prod-twin	proven	Modules/mathmodule.c	math.prod,_check_long_mult_overflow
+mathint-pow-twin	proven	Modules/mathmodule.c	math.pow
+mathint-isclose-doc	proven	Modules/mathmodule.c	math.isclose
+mathint-fmod-doc	proven	Modules/mathmodule.c	math.fmod
+mathint-modf-doc	proven	Modules/mathmodule.c	math.modf
+mathint-fma-doc	proven	Modules/mathmodule.c	math.fma
+mathint-hypot-dist	proven	Modules/mathmodule.c	math.hypot,math.dist
+mathint-gamma-doc	proven	Modules/mathmodule.c	m_tgamma,m_lgamma,math_1a
+mathint-nextafter-default-step	refuted	Modules/mathmodule.c	math.nextafter
+mathint-ulp-doc	proven	Modules/mathmodule.c	math.ulp
+mathint-classify	proven	Modules/mathmodule.c	math.isfinite,math.isnan,math.isinf,math.isnormal,math.issubnormal,math.signbit
+mathint-frexp-ldexp	proven	Modules/mathmodule.c	math.frexp,math.ldexp
+mathint-floor-ceil-trunc	proven	Modules/mathmodule.c	math.floor,math.ceil,math.trunc
+mathint-math1-rules	proven	Modules/mathmodule.c	math_1,is_error
+mathint-math1a-rules	proven	Modules/mathmodule.c	math_1a,is_error
+mathint-math2-rules	proven	Modules/mathmodule.c	math_2,is_error
+mathint-log-twins	proven	Modules/mathmodule.c	m_log,m_log2,m_log10,loghelper_int,loghelper,math.log,math.log2,math.log10
+mathint-log2-powers-of-two	proven	Modules/mathmodule.c	m_log2,loghelper_int,loghelper,math.log2
 mathint-isqrt-floor-sqrt	proven	Modules/mathintegermodule.c	math.integer.isqrt,_approximate_isqrt
 mathint-comb-formula	proven	Modules/mathintegermodule.c	math.integer.comb,perm_comb_small,perm_comb
 mathint-perm-formula	proven	Modules/mathintegermodule.c	math.integer.perm,perm_comb_small,perm_comb
@@ -1191,19 +1211,27 @@ unicodeobj-format-nul-int-str	proven	Objects/unicode_formatter.c
 unicodeobj-format-parse-asserts	proven	Objects/unicode_formatter.c	
 unicodeobj-format-str-shape	proven	Objects/unicode_formatter.c	
 unicodeobj-format-int-fast-slow	proven	Objects/unicode_formatter.c	
-unicodeobj-format-str-doc	proven	Objects/unicode_formatter.c	_PyUnicode_FormatAdvancedWriter,parse_internal_render_format_spec,get_integer,is_alignment_token,is_sign_element,calc_padding,fill_padding,format_string_internal
-unicodeobj-format-int-as-str	proven	Objects/unicode_formatter.c	_PyLong_FormatAdvancedWriter,format_long_internal
-unicodeobj-format-str-errors	proven	Objects/unicode_formatter.c	unknown_presentation_type,invalid_thousands_separator_type,invalid_comma_and_underscore
-unicodeobj-format-group-loop	refuted	Objects/unicode_formatter.c	_PyUnicode_InsertThousandsGrouping,GroupGenerator_init,GroupGenerator_next,InsertThousandsGrouping_fill
-unicodeobj-format-group-digits	proven	Objects/unicode_formatter.c	_PyUnicode_InsertThousandsGrouping
+unicodeobj-format-str-doc	proven	Objects/unicode_formatter.c	_PyUnicode_FormatAdvancedWriter,format_obj,format_string_internal,calc_padding,fill_padding,unknown_presentation_type
+unicodeobj-format-parse-doc	proven	Objects/unicode_formatter.c	parse_internal_render_format_spec,get_integer,is_alignment_token,is_sign_element,invalid_thousands_separator_type,invalid_comma_and_underscore
+unicodeobj-format-int-as-str	proven	Objects/unicode_formatter.c	
+unicodeobj-format-int-doc	proven	Objects/unicode_formatter.c	format_long_internal,calc_number_widths,fill_number,get_locale_info
+unicodeobj-format-long-entry	proven	Objects/unicode_formatter.c	_PyLong_FormatAdvancedWriter,format_obj
+unicodeobj-format-str-errors	proven	Objects/unicode_formatter.c	
+unicodeobj-format-frac-separator-unchecked	refuted	Objects/unicode_formatter.c	parse_internal_render_format_spec
+unicodeobj-format-group-digits	proven	Objects/unicode_formatter.c	_PyUnicode_InsertThousandsGrouping,GroupGenerator_init,GroupGenerator_next,InsertThousandsGrouping_fill
+unicodeobj-format-group-fraction	proven	Objects/unicode_formatter.c	_PyUnicode_InsertThousandsGrouping,GroupGenerator_init,GroupGenerator_next,InsertThousandsGrouping_fill
 unicodeobj-format-percent-int-fast-slow	proven	Objects/unicode_format.c	
 unicodeobj-format-percent-star-width	proven	Objects/unicode_format.c	
 unicodeobj-format-parse-number	proven	Objects/unicode_formatter.c	
-unicodeobj-format-float-internal	proven	Objects/unicode_formatter.c	format_float_internal
-unicodeobj-format-float-fast-slow	proven	Objects/unicode_formatter.c	format_float_internal
-unicodeobj-format-float-width	proven	Objects/unicode_formatter.c	format_float_internal,calc_number_widths,fill_number
-unicodeobj-format-int-width	proven	Objects/unicode_formatter.c	calc_number_widths,fill_number
-unicodeobj-format-float-grouping	proven	Objects/unicode_formatter.c	_PyUnicode_InsertThousandsGrouping,InsertThousandsGrouping_fill,GroupGenerator_next
+unicodeobj-format-float-internal	proven	Objects/unicode_formatter.c	
+unicodeobj-format-float-buf	proven	Objects/unicode_formatter.c	format_float_internal
+unicodeobj-format-float-doc	proven	Objects/unicode_formatter.c	format_float_internal,calc_number_widths,fill_number,parse_number,get_locale_info,_PyUnicode_InsertThousandsGrouping,InsertThousandsGrouping_fill,GroupGenerator_init,GroupGenerator_next
+unicodeobj-format-float-entry	proven	Objects/unicode_formatter.c	_PyFloat_FormatAdvancedWriter,format_obj
+unicodeobj-format-complex-entry	proven	Objects/unicode_formatter.c	_PyComplex_FormatAdvancedWriter,format_obj
+unicodeobj-format-float-fast-slow	proven	Objects/unicode_formatter.c	
+unicodeobj-format-float-width	proven	Objects/unicode_formatter.c	
+unicodeobj-format-int-width	proven	Objects/unicode_formatter.c	
+unicodeobj-format-float-grouping	proven	Objects/unicode_formatter.c	
 unicodeobj-format-complex-internal	proven	Objects/unicode_formatter.c	format_complex_internal
 unicodeobj-format-complex-repr	proven	Objects/unicode_formatter.c	format_complex_internal
 unicodeobj-format-complex-width	proven	Objects/unicode_formatter.c	format_complex_internal
