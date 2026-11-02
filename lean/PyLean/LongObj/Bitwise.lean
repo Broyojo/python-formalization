@@ -193,7 +193,7 @@ def bwFinish (negz : Bool) (z : List Nat) : Py Long :=
     | .error e => .error e
   else .ok ⟨false, normalize z⟩
 
-/-- Lines 5620-5696 of `long_bitwise`, once both operands are in two's complement and
+/-- Lines 5621-5696 of `long_bitwise`, once both operands are in two's complement and
 `x` is the longer: choose the size and sign of `z`, return 0 when `z` would have no
 digits and no sign digit (:5645-5649), else combine and complement back. -/
 def bwCore (op : BitOp) (x y : List Nat) (nx ny : Bool) : Py Long :=
@@ -203,7 +203,7 @@ def bwCore (op : BitOp) (x y : List Nat) (nx ny : Bool) : Py Long :=
     longAlloc sizeZ
     bwFinish (op.bool nx ny) (zOf op x y ny)
 
-/-- If negative, replace by the two's complement, longobject.c:5596-5618. -/
+/-- If negative, replace by the two's complement, longobject.c:5597-5619. -/
 def twosOf (neg : Bool) (ds : List Nat) : Py (List Nat) :=
   if neg then
     match longAlloc ds.length, vComplGo ds 1 with
@@ -220,7 +220,7 @@ def bwOrdered (a : Long) (op : BitOp) (b : Long) : Py Long :=
   | _, .error e => .error e
 
 /-- `long_bitwise(a, op, b)`, longobject.c:5573-5696. 3.15 swaps the operands first, on
-their digit counts (:5590-5594), and only then takes the two's complements. -/
+their digit counts (:5591-5595), and only then takes the two's complements. -/
 def longBitwise (a : Long) (op : BitOp) (b : Long) : Py Long :=
   if a.ds.length < b.ds.length then bwOrdered b op a else bwOrdered a op b
 
