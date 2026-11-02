@@ -208,6 +208,8 @@ theorem lawfulBuiltin_proven : LawfulBuiltin := by
       rw [compare_int, ordResult_int a b op hop]
       rfl
     cmp_float := fun ctx a b op rt => compare_float (mkOM P 23) ctx a b op rt
+    neg_int := fun _ _ _ => rfl
+    invert_int := fun _ _ _ => rfl
     range_next := fun ctx a start step len rt h => iterNext_range (mkOM P 23) ctx a start step len rt h
     store_list := fun ctx a items i v rt h h0 hlt hb1 hb2 =>
       setItem_list (mkOM P 23) ctx a items i v rt h h0 hlt hb1 hb2

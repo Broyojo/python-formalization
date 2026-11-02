@@ -165,4 +165,43 @@ theorem buildRules_proven : BuildRules := by
         EStateM.pure]
     · simp [hd]
 
+/-- `UNARY_NEGATIVE` and `UNARY_INVERT` push the result of `__neg__` and `__invert__`, and when
+that raises they pop the operand and propagate the exception, for any object model. On an int
+with the builtin slots `~x` is `-(x+1)`, as the language reference states (`Doc/reference/
+expressions.rst`, "The bitwise inversion of x is defined as -(x+1)"). -/
+def UnaryRules : Prop := ∀ (e : Env) (regs : Regs) (v : Val) (rest : List Val),
+    (∀ r rt, e.om.negative e.ctx v regs.rt = .ok r rt →
+      execOp e .UNARY_NEGATIVE ⟨regs, v :: rest⟩ = .ok () ⟨{ regs with rt := rt }, r :: rest⟩) ∧
+    (∀ x rt, e.om.negative e.ctx v regs.rt = .error x rt →
+      execOp e .UNARY_NEGATIVE ⟨regs, v :: rest⟩ = .error x ⟨{ regs with rt := rt }, rest⟩) ∧
+    (∀ r rt, e.om.invert e.ctx v regs.rt = .ok r rt →
+      execOp e .UNARY_INVERT ⟨regs, v :: rest⟩ = .ok () ⟨{ regs with rt := rt }, r :: rest⟩) ∧
+    (∀ x rt, e.om.invert e.ctx v regs.rt = .error x rt →
+      execOp e .UNARY_INVERT ⟨regs, v :: rest⟩ = .error x ⟨{ regs with rt := rt }, rest⟩) ∧
+    (Lawful e.om → ∀ i : Int, v = .int i →
+      execOp e .UNARY_INVERT ⟨regs, v :: rest⟩ = .ok () ⟨regs, .int (-(i + 1)) :: rest⟩ ∧
+      execOp e .UNARY_NEGATIVE ⟨regs, v :: rest⟩ = .ok () ⟨regs, .int (-i) :: rest⟩)
+
+theorem unaryRules_proven : UnaryRules := by
+  intro e regs v rest
+  refine ⟨fun r rt h => ?_, fun x rt h => ?_, fun r rt h => ?_, fun x rt h => ?_, fun hom i hv => ?_⟩
+  · simp [execOp, UNARY_NEGATIVE, stk, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+      monadLift, MonadLift.monadLift, pure, EStateM.pure, h]
+  · simp [execOp, UNARY_NEGATIVE, stk, popN, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+      monadLift, MonadLift.monadLift, pure, EStateM.pure, h]
+  · simp [execOp, UNARY_INVERT, stk, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+      monadLift, MonadLift.monadLift, pure, EStateM.pure, h]
+  · simp [execOp, UNARY_INVERT, stk, popN, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+      monadLift, MonadLift.monadLift, pure, EStateM.pure, h]
+  · subst hv
+    have hi := hom.invert_int e.ctx i regs.rt
+    have hn := hom.neg_int e.ctx i regs.rt
+    have e1 : -i - 1 = -(i + 1) := by omega
+    rw [e1] at hi
+    constructor
+    · simp [execOp, UNARY_INVERT, stk, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+        monadLift, MonadLift.monadLift, pure, EStateM.pure, hi]
+    · simp [execOp, UNARY_NEGATIVE, stk, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift, liftM,
+        monadLift, MonadLift.monadLift, pure, EStateM.pure, hn]
+
 end PyLean.Bytecode

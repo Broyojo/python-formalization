@@ -92,6 +92,9 @@ structure Lawful (om : ObjModel) : Prop where
       .ok (some (.int start))
         { rt with heap := (rt.heap.setIfInBounds a (.rangeIter (start + step) step (len - 1))) }
     else .ok none rt
+  /-- `long_neg` and `long_invert`. -/
+  neg_int : ∀ ctx i rt, om.negative ctx (.int i) rt = .ok (.int (-i)) rt
+  invert_int : ∀ ctx i rt, om.invert ctx (.int i) rt = .ok (.int (-i - 1)) rt
   /-- `float_richcompare` gives a bool. -/
   cmp_float : ∀ ctx a b op rt,
     om.richCompare ctx (.float a) (.float b) op rt = .ok (.bool (floatTable op (toF a) (toF b))) rt

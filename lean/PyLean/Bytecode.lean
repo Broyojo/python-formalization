@@ -29,6 +29,11 @@ open PyLean.Registry
 def op (n : String) : String := "opcode:" ++ n
 
 def entries : List Entry := GenObj.entries ++ [
+  { id := "bytecode-unary", pyFile := "Python/bytecodes.c"
+    pyFns := [op "UNARY_NEGATIVE", op "UNARY_INVERT"]
+    statement := "UNARY_NEGATIVE and UNARY_INVERT push what __neg__ and __invert__ return or pop and propagate their exception, for any object model; on an int ~x is -(x+1), as the language reference states."
+    source := "Python/bytecodes.c UNARY_NEGATIVE, UNARY_INVERT; Doc/reference/expressions.rst (bitwise inversion of x is -(x+1))"
+    status := .proven, prop := ``UnaryRules, thm := some ``unaryRules_proven },
   { id := "bytecode-for-iter-range", pyFile := "Python/bytecodes.c"
     pyFns := [op "FOR_ITER_RANGE", op "_ITER_CHECK_RANGE", op "_ITER_JUMP_RANGE", op "_ITER_NEXT_RANGE"]
     statement := "FOR_ITER_RANGE equals FOR_ITER on every live stack GET_ITER could have left, given rangeiter_next, value by value and at the end."
