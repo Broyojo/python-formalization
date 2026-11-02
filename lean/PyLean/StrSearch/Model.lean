@@ -2,7 +2,7 @@ import PyLean.Core
 
 /-!
 Model of the search, split and pad methods of `str`, `bytes` and `bytearray`
-in CPython 3.14.7 (`Objects/unicodeobject.c`, `Objects/bytes_methods.c`,
+in CPython 3.15.2 (`Objects/unicodeobject.c`, `Objects/bytes_methods.c`,
 `Objects/bytesobject.c`, `Objects/bytearrayobject.c`, `Objects/stringlib/*.h`).
 
 A `str` is the list of its code points and a `bytes`/`bytearray` the list of
@@ -302,7 +302,7 @@ def bytesTailmatch (s sub : Seq) (start «end» : Int) (forward : Bool) : Bool :
       else matchAt s sub start
 
 /-- The tuple loop of `unicode_startswith_impl`/`unicode_endswith_impl`
-(unicodeobject.c@3.14.7:13627-13723) and `_Py_bytes_tailmatch` (bytes_methods.c:686-716). -/
+(unicodeobject.c:13381-13474) and `_Py_bytes_tailmatch` (bytes_methods.c:686-716). -/
 def affixMatch (tm : Seq → Bool) : Affix → Bool
   | .one p => tm p
   | .tuple ps => ps.any tm
@@ -630,9 +630,10 @@ def interleave (new : Seq) : Nat → Seq → Seq
   | 0, rest => rest
   | n + 1, rest => new ++ (if n = 0 then rest else rest.take 1 ++ interleave new n (rest.drop 1))
 
-/-- `str.replace`: `replace`, unicodeobject.c:10577-10833. The
-`if (str1 == str2) goto nothing` identity shortcut (:10601) is omitted:
-replacing a string by an equal one yields the same value. -/
+/-- `str.replace`: `replace`, unicodeobject.c:10577-10853. The
+`if (str1 == str2) goto nothing` identity shortcut (:10602) is omitted:
+replacing a string by an equal one yields the same value. The empty result at
+`new_size == 0` (:10744-10747) is `_PyUnicode_GetEmpty()`, the `""` singleton. -/
 def strReplace (s old new : Seq) (count : Int) : Py Seq := do
   let maxcount ← argSsize count
   let slen := s.length
