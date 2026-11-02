@@ -142,7 +142,7 @@ Objects/typeobject.c	3575	3584	type_mro_impl	type_mro_impl(PyTypeObject *self) /
 Objects/typeobject.c	3587	3614	mro_check	mro_check(PyTypeObject *type, PyObject *mro)	todo		changed-in-3.15:
 Objects/typeobject.c	3631	3670	mro_invoke	mro_invoke(PyTypeObject *type)	todo		
 Objects/typeobject.c	3695	3741	mro_internal	mro_internal(PyTypeObject *type, int initial, PyObject **p_old_mro)	todo		changed-in-3.15:
-Objects/typeobject.c	3747	3799	find_best_base	find_best_base(PyObject *bases)	todo		changed-in-3.15: new function
+Objects/typeobject.c	3747	3799	find_best_base	find_best_base(PyObject *bases)	modelled	typeobj-best-base,typeobj-best-base-decides,typeobj-best-base-final	
 Objects/typeobject.c	3802	3808	shape_differs	shape_differs(PyTypeObject *t1, PyTypeObject *t2)	todo		
 Objects/typeobject.c	3811	3827	solid_base	solid_base(PyTypeObject *type)	todo		
 Objects/typeobject.c	3876	3886	slot_update_new_chunk	slot_update_new_chunk(void)	todo		changed-in-3.15: new function
@@ -232,9 +232,9 @@ Objects/typeobject.c	6501	6510	_PyType_SetFlags	_PyType_SetFlags(PyTypeObject *s
 Objects/typeobject.c	6513	6528	_PyType_Validate	_PyType_Validate(PyTypeObject *ty, _py_validate_type validate, unsigned int *tp_version)	todo		
 Objects/typeobject.c	6531	6551	set_flags_recursive	set_flags_recursive(PyTypeObject *self, unsigned long mask, unsigned long flags)	todo		
 Objects/typeobject.c	6554	6576	_PyType_SetFlagsRecursive	_PyType_SetFlagsRecursive(PyTypeObject *self, unsigned long mask, unsigned long flags)	todo		changed-in-3.15:
-Objects/typeobject.c	6591	6598	_Py_type_getattro_impl	_Py_type_getattro_impl(PyTypeObject *type, PyObject *name, int *suppress_missing_attribute)	todo		changed-in-3.15: was typeobj-type-getattro-class-attr,typeobj-type-getattro-meta-data
+Objects/typeobject.c	6591	6598	_Py_type_getattro_impl	_Py_type_getattro_impl(PyTypeObject *type, PyObject *name, int *suppress_missing_attribute)	modelled	typeobj-type-getattro-class-attr,typeobj-type-getattro-meta-data	
 Objects/typeobject.c	6603	6607	_Py_type_getattro	_Py_type_getattro(PyObject *tp, PyObject *name)	todo		
-Objects/typeobject.c	6620	6738	_Py_type_getattro_stackref	_Py_type_getattro_stackref(PyTypeObject *type, PyObject *name, int *suppress_missing_attribute)	todo		changed-in-3.15: new function
+Objects/typeobject.c	6620	6738	_Py_type_getattro_stackref	_Py_type_getattro_stackref(PyTypeObject *type, PyObject *name, int *suppress_missing_attribute)	modelled	typeobj-type-getattro-class-attr,typeobj-type-getattro-meta-data	
 Objects/typeobject.c	6743	6772	type_update_dict	type_update_dict(PyTypeObject *type, PyDictObject *dict, PyObject *name, PyObject *value, PyObject **old_value)	todo		changed-in-3.15:
 Objects/typeobject.c	6775	6801	update_slot_after_setattr	update_slot_after_setattr(PyTypeObject *type, PyObject *name)	todo		changed-in-3.15: new function
 Objects/typeobject.c	6804	6899	type_setattro	type_setattro(PyObject *self, PyObject *name, PyObject *value)	todo		changed-in-3.15:
