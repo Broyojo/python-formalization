@@ -43,22 +43,22 @@ Python/bytecodes.c	453	453	opcode:_UNARY_NEGATIVE	op(_UNARY_NEGATIVE, (value -- 
 Python/bytecodes.c	465	465	opcode:_UNARY_NEGATIVE_FLOAT_INPLACE	tier2 op(_UNARY_NEGATIVE_FLOAT_INPLACE, (value -- res, v)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	477	477	opcode:UNARY_NOT	inst(UNARY_NOT, (value -- res)) {	modelled	bytecode-unary-not	
 Python/bytecodes.c	493	493	opcode:_SPECIALIZE_TO_BOOL	specializing op(_SPECIALIZE_TO_BOOL, (counter/1, value -- value)) {	todo		changed-in-3.15:
-Python/bytecodes.c	505	505	opcode:_TO_BOOL	op(_TO_BOOL, (value -- res)) {	todo		
-Python/bytecodes.c	512	512	opcode:TO_BOOL	macro(TO_BOOL) = _SPECIALIZE_TO_BOOL + unused/2 + _TO_BOOL;	todo		
-Python/bytecodes.c	514	514	opcode:TO_BOOL_BOOL	inst(TO_BOOL_BOOL, (unused/1, unused/2, value -- value)) {	todo		
-Python/bytecodes.c	519	519	opcode:_TO_BOOL_INT	op(_TO_BOOL_INT, (value -- res, v)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	527	527	opcode:TO_BOOL_INT	macro(TO_BOOL_INT) =	todo		changed-in-3.15:
+Python/bytecodes.c	505	505	opcode:_TO_BOOL	op(_TO_BOOL, (value -- res)) {	modelled	bytecode-to-bool-generic	
+Python/bytecodes.c	512	512	opcode:TO_BOOL	macro(TO_BOOL) = _SPECIALIZE_TO_BOOL + unused/2 + _TO_BOOL;	modelled	bytecode-to-bool-generic	
+Python/bytecodes.c	514	514	opcode:TO_BOOL_BOOL	inst(TO_BOOL_BOOL, (unused/1, unused/2, value -- value)) {	modelled	bytecode-to-bool-specialized	
+Python/bytecodes.c	519	519	opcode:_TO_BOOL_INT	op(_TO_BOOL_INT, (value -- res, v)) {	modelled	bytecode-to-bool-specialized	
+Python/bytecodes.c	527	527	opcode:TO_BOOL_INT	macro(TO_BOOL_INT) =	modelled	bytecode-to-bool-specialized	
 Python/bytecodes.c	530	530	opcode:_GUARD_NOS_LIST	op(_GUARD_NOS_LIST, (nos, unused -- nos, unused)) {	todo		
-Python/bytecodes.c	535	535	opcode:_GUARD_TOS_LIST	op(_GUARD_TOS_LIST, (tos -- tos)) {	todo		
+Python/bytecodes.c	535	535	opcode:_GUARD_TOS_LIST	op(_GUARD_TOS_LIST, (tos -- tos)) {	modelled	bytecode-to-bool-specialized	
 Python/bytecodes.c	540	540	opcode:_GUARD_TOS_SLICE	op(_GUARD_TOS_SLICE, (tos -- tos)) {	todo		
-Python/bytecodes.c	545	545	opcode:TO_BOOL_LIST	macro(TO_BOOL_LIST) = _GUARD_TOS_LIST + unused/1 + unused/2 + _TO_BOOL_LIST + POP_TOP;	todo		changed-in-3.15:
-Python/bytecodes.c	547	547	opcode:_TO_BOOL_LIST	op(_TO_BOOL_LIST, (value -- res, v)) {	todo		changed-in-3.15:
-Python/bytecodes.c	556	556	opcode:TO_BOOL_NONE	inst(TO_BOOL_NONE, (unused/1, unused/2, value -- res)) {	todo		
+Python/bytecodes.c	545	545	opcode:TO_BOOL_LIST	macro(TO_BOOL_LIST) = _GUARD_TOS_LIST + unused/1 + unused/2 + _TO_BOOL_LIST + POP_TOP;	modelled	bytecode-to-bool-specialized	
+Python/bytecodes.c	547	547	opcode:_TO_BOOL_LIST	op(_TO_BOOL_LIST, (value -- res, v)) {	modelled	bytecode-to-bool-specialized	
+Python/bytecodes.c	556	556	opcode:TO_BOOL_NONE	inst(TO_BOOL_NONE, (unused/1, unused/2, value -- res)) {	modelled	bytecode-to-bool-specialized	
 Python/bytecodes.c	564	564	opcode:_GUARD_NOS_COMPACT_ASCII	op(_GUARD_NOS_COMPACT_ASCII, (nos, unused -- nos, unused)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	570	570	opcode:_GUARD_NOS_UNICODE	op(_GUARD_NOS_UNICODE, (nos, unused -- nos, unused)) {	modelled	bytecode-binary-op-add-unicode	
 Python/bytecodes.c	575	575	opcode:_GUARD_TOS_UNICODE	op(_GUARD_TOS_UNICODE, (value -- value)) {	modelled	bytecode-binary-op-add-unicode	
-Python/bytecodes.c	580	580	opcode:_TO_BOOL_STR	op(_TO_BOOL_STR, (value -- res, v)) {	todo		changed-in-3.15:
-Python/bytecodes.c	588	588	opcode:TO_BOOL_STR	macro(TO_BOOL_STR) =	todo		changed-in-3.15:
+Python/bytecodes.c	580	580	opcode:_TO_BOOL_STR	op(_TO_BOOL_STR, (value -- res, v)) {	modelled	bytecode-to-bool-specialized	
+Python/bytecodes.c	588	588	opcode:TO_BOOL_STR	macro(TO_BOOL_STR) =	modelled	bytecode-to-bool-specialized	
 Python/bytecodes.c	591	591	opcode:_REPLACE_WITH_TRUE	op(_REPLACE_WITH_TRUE, (value -- res, v)) {	todo		changed-in-3.15:
 Python/bytecodes.c	597	597	opcode:TO_BOOL_ALWAYS_TRUE	macro(TO_BOOL_ALWAYS_TRUE) =	todo		changed-in-3.15:
 Python/bytecodes.c	604	604	opcode:UNARY_INVERT	macro(UNARY_INVERT) = _UNARY_INVERT + POP_TOP;	todo		changed-in-3.15:

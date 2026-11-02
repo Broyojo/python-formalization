@@ -1575,6 +1575,8 @@ gen-make-coro-kinds	proven	Objects/genobject.c	make_gen,_Py_MakeCoro
 gen-cr-origin-take	proven	Objects/genobject.c	_PyCoro_ComputeOrigin
 gen-awaitable-iter-result	proven	Objects/genobject.c	_PyCoro_GetAwaitableIter,gen_is_coroutine
 gen-finalize-branches	proven	Objects/genobject.c	gen_finalize
+bytecode-to-bool-generic	proven	Python/bytecodes.c	opcode:TO_BOOL,opcode:_TO_BOOL
+bytecode-to-bool-specialized	proven	Python/bytecodes.c	opcode:TO_BOOL_BOOL,opcode:TO_BOOL_INT,opcode:_TO_BOOL_INT,opcode:TO_BOOL_NONE,opcode:TO_BOOL_STR,opcode:_TO_BOOL_STR,opcode:TO_BOOL_LIST,opcode:_TO_BOOL_LIST,opcode:_GUARD_TOS_LIST
 bytecode-load-fast	proven	Python/bytecodes.c	opcode:LOAD_FAST,opcode:LOAD_FAST_BORROW
 bytecode-load-fast-check	proven	Python/bytecodes.c	opcode:LOAD_FAST_CHECK
 bytecode-load-clear-store	proven	Python/bytecodes.c	opcode:LOAD_FAST_AND_CLEAR,opcode:STORE_FAST
