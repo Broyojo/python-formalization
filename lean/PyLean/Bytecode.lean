@@ -12,6 +12,7 @@ import PyLean.Bytecode.SpecCompare
 import PyLean.Bytecode.LawfulBuiltin
 import PyLean.Bytecode.SpecCompareFloat
 import PyLean.Bytecode.SpecSubscr
+import PyLean.Bytecode.SpecCells
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -27,6 +28,21 @@ open PyLean.Registry
 def op (n : String) : String := "opcode:" ++ n
 
 def entries : List Entry := GenObj.entries ++ [
+  { id := "bytecode-cells", pyFile := "Python/bytecodes.c"
+    pyFns := [op "LOAD_DEREF", op "STORE_DEREF", op "DELETE_DEREF"]
+    statement := "STORE_DEREF writes the cell and LOAD_DEREF reads back what was stored; DELETE_DEREF empties a bound cell; on an empty cell LOAD_DEREF and DELETE_DEREF raise the same exception with the stack and cell unchanged."
+    source := "invariant: Python/bytecodes.c LOAD_DEREF, STORE_DEREF, DELETE_DEREF; _PyEval_FormatExcUnbound"
+    status := .proven, prop := ``CellRules, thm := some ``cellRules_proven },
+  { id := "bytecode-make-cell", pyFile := "Python/bytecodes.c"
+    pyFns := [op "MAKE_CELL"]
+    statement := "MAKE_CELL replaces the local with a new cell holding its value, which a following LOAD_DEREF reads back."
+    source := "Python/bytecodes.c MAKE_CELL"
+    status := .proven, prop := ``MakeCellRules, thm := some ``makeCellRules_proven },
+  { id := "bytecode-build-seq", pyFile := "Python/bytecodes.c"
+    pyFns := [op "BUILD_TUPLE", op "BUILD_LIST"]
+    statement := "BUILD_TUPLE n and BUILD_LIST n pop their operands and push one new object holding them in push order, leaving the rest of the stack alone."
+    source := "Python/bytecodes.c BUILD_TUPLE, BUILD_LIST"
+    status := .proven, prop := ``BuildRules, thm := some ``buildRules_proven },
   { id := "bytecode-store-subscr-list-int", pyFile := "Python/bytecodes.c"
     pyFns := [op "STORE_SUBSCR_LIST_INT", op "_STORE_SUBSCR_LIST_INT"]
     statement := "STORE_SUBSCR_LIST_INT equals STORE_SUBSCR on every live stack, negative indices included, given list_ass_subscript."

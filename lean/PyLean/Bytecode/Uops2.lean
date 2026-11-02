@@ -37,14 +37,14 @@ def cellSet (c v : Val) : RM Unit :=
   | .ref a => setObj a (.cell v)
   | _ => fault "not a cell"
 
-/-- `@3.14.7:1862`. -/
+/-- `:2368`. -/
 def MAKE_CELL (e : Env) : M Unit := stk 0 0 fun _ => do
   let initial ← getLocal e.oparg
   let c ← (cellNew initial : RM Val)
   setLocal e.oparg c
   pure []
 
-/-- `@3.14.7:1875`. -/
+/-- `:2381`. -/
 def DELETE_DEREF (e : Env) : M Unit := stk 0 0 fun _ => do
   let c ← getLocal e.oparg
   let old ← (cellGet c : RM Val)
@@ -68,7 +68,7 @@ def LOAD_FROM_DICT_OR_DEREF (e : Env) : M Unit := stkK 1 1 fun
       pure [v]
   | _ => fault "arity"
 
-/-- `@3.14.7:1911`. -/
+/-- `:2424`. -/
 def LOAD_DEREF (e : Env) : M Unit := stk 0 1 fun _ => do
   let c ← getLocal e.oparg
   let v ← (cellGet c : RM Val)
@@ -77,7 +77,7 @@ def LOAD_DEREF (e : Env) : M Unit := stk 0 1 fun _ => do
     (formatExcUnbound co e.oparg : RM _)
   pure [v]
 
-/-- `@3.14.7:1920`. -/
+/-- `:2433`. -/
 def STORE_DEREF (e : Env) : M Unit := stk 1 0 fun
   | [v] => do
     let c ← getLocal e.oparg
@@ -114,9 +114,9 @@ def BUILD_INTERPOLATION (e : Env) : M Unit := stk (2 + (e.oparg &&& 1)) 1 fun
 def BUILD_TEMPLATE (e : Env) : M Unit := stk 2 1 fun
   | [a, b] => do pure [← e.om.buildTemplate e.ctx a b]
   | _ => fault "arity"
-/-- `@3.14.7:1986`. -/
+/-- `:2493`. -/
 def BUILD_TUPLE (e : Env) : M Unit := stk e.oparg 1 fun vs => do pure [← (mkTuple vs : RM Val)]
-/-- `@3.14.7:1995`. -/
+/-- `:2502`. -/
 def BUILD_LIST (e : Env) : M Unit := stk e.oparg 1 fun vs => do pure [← (mkList vs : RM Val)]
 /-- `:2533`. -/
 def LIST_EXTEND (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
