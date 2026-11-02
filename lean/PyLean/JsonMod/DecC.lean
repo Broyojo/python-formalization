@@ -2,7 +2,7 @@ import PyLean.JsonMod.Basic
 import PyLean.JsonMod.DecPy
 
 /-!
-The C decoder of CPython 3.14.7, Modules/_json.c: `scanstring_unicode`,
+The C decoder of CPython 3.15.2, Modules/_json.c: `scanstring_unicode`,
 `_parse_object_unicode`, `_parse_array_unicode`, `_match_number_unicode`,
 `scan_once_unicode` and `scanner_call`.
 
@@ -203,10 +203,10 @@ def cScanOnce (cfg : DCfg) (s : PStr) : Nat → Nat → DR (JVal × Nat)
           else cObjBody cfg s n idx []
         else (cFinish cfg []).map (·, idx + 1)
       else if c = 91 then
-        -- `_parse_array_unicode`, :898-942
+        -- `_parse_array_unicode`, :879-950
         let idx := wsEnd s (idx + 1)
         if idx ≥ s.length ∨ s.getD idx 0 ≠ 93 then cArrLoop cfg s n idx []
-        else .ok (.arr [], idx + 1)
+        else (mkArr cfg []).map (·, idx + 1)
       else if c = 110 ∧ litAt s idx "null" then .ok (.null, idx + 4)
       else if c = 116 ∧ litAt s idx "true" then .ok (.bool true, idx + 4)
       else if c = 102 ∧ litAt s idx "false" then .ok (.bool false, idx + 5)
@@ -215,7 +215,7 @@ def cScanOnce (cfg : DCfg) (s : PStr) : Nat → Nat → DR (JVal × Nat)
       else if c = 45 ∧ litAt s idx "-Infinity" then cConst cfg "-Infinity" idx
       else cMatchNumber cfg s idx
 
-/-- The `while (1)` loop of `_parse_array_unicode`, :903-936. -/
+/-- The `while (1)` loop of `_parse_array_unicode` and its end, :903-950. -/
 def cArrLoop (cfg : DCfg) (s : PStr) : Nat → Nat → List JVal → DR (JVal × Nat)
   | 0, _, _ => fuelOut
   | n + 1, idx, acc =>
@@ -226,7 +226,7 @@ def cArrLoop (cfg : DCfg) (s : PStr) : Nat → Nat → List JVal → DR (JVal ×
       | .close i =>
         -- the check `idx > end_idx || PyUnicode_READ(...) != ']'` at :939-942
         -- cannot fail after `break`
-        .ok (.arr (acc ++ [v]), i.toNat)
+        (mkArr cfg (acc ++ [v])).map (·, i.toNat)
       | .err err => .error err
       | .next i => cArrLoop cfg s n i.toNat (acc ++ [v])
 

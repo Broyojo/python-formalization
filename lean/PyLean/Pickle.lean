@@ -10,10 +10,10 @@ import PyLean.Pickle.EncProps
 import PyLean.Pickle.EncFrame
 import PyLean.Pickle.DecProps
 import PyLean.Pickle.ToolsGen
-import PyLean.Pickle.DecSim
+import PyLean.Pickle.DecChunk
 
 /-!
-`Lib/pickle.py` vs `Modules/_pickle.c`, CPython 3.14.7, on plain data: None,
+`Lib/pickle.py` vs `Modules/_pickle.c`, CPython 3.15.2, on plain data: None,
 bool, int, str, bytes, bytearray, tuple, list, dict, set and frozenset, under
 protocols 0-5. Floats, custom classes, reduce and anything that runs code are
 out of scope. The memo is modelled with object identity; cyclic objects are
@@ -65,28 +65,21 @@ def entries : List Entry := [
     statement := "For every complete INT line, the C and Python unpicklers accept the same lines and return the same value, including int vs bool."
     source := "invariant: C accelerator vs pure-Python twin", status := .refuted
     prop := ``IntLineTwins, thm := some ``intLineTwins_refuted
-    bug := some "pickle-c-int-bool-spelling"
-    notes := "I 1 is True in C and 1 in Python. python/cpython#135241, fixed on main." },
-  { id := "pickle-int-line-twins-no-bool-spelling", pyFile := "Modules/_pickle.c"
-    pyFns := ["load_int"]
-    statement := "The same, for lines other than an optional space or sign before 0 or 1."
-    source := "invariant: C accelerator vs pure-Python twin", status := .refuted
-    prop := ``IntLineTwinsNoBoolSpelling, thm := some ``intLineTwinsNoBoolSpelling_refuted
     bug := some "pickle-c-nul-in-text-args"
-    notes := "I12\\0 is 12 in C and ValueError in Python. python/cpython#126996, open." },
+    notes := "I12\\0 is 12 in C and ValueError in Python. python/cpython#126996, open. The bool spellings of 3.14 are gone: load_int now tests for 00 and 01 as Python does." },
   { id := "pickle-int-line-twins-no-nul", pyFile := "Modules/_pickle.c"
     pyFns := ["load_int"]
-    statement := "The same, also for lines without NUL bytes."
+    statement := "The same, for lines without NUL bytes."
     source := "invariant: C accelerator vs pure-Python twin", status := .refuted
     prop := ``IntLineTwinsNoNul, thm := some ``intLineTwinsNoNul_refuted
     bug := some "pickle-c-int-digit-limit"
     notes := "5000 zeros and a 1 are 1 through strtol in C and over the digit limit in Python." },
   { id := "pickle-int-line-twins-narrow", pyFile := "Modules/_pickle.c"
     pyFns := ["load_int", "_Unpickler.load_int"]
-    statement := "For every complete INT line that is not a bool spelling, not a line with NUL that C accepts, and not a line past the digit limit that C's strtol path accepts, the C strtol fast path, its PyLong_FromString fallback and Python's int() accept the same lines and return the same value, including the bools I00 and I01."
+    statement := "For every complete INT line that is not a line with NUL that C accepts, and not a line past the digit limit that C's strtol path accepts, the C strtol fast path, its PyLong_FromString fallback and Python's int() accept the same lines and return the same value, including the bools I00 and I01."
     source := "invariant: C accelerator vs pure-Python twin", status := .proven
     prop := ``IntLineTwinsPrecise, thm := some ``intLineTwinsPrecise_proven
-    notes := "The hypotheses are exactly the three refutations above; lines both twins reject stay in the statement. Exception classes can differ (an empty line is UnpicklingError in C, ValueError in Python)." },
+    notes := "The hypotheses are exactly the two refutations above; lines both twins reject stay in the statement. Exception classes can differ (an empty line is UnpicklingError in C, ValueError in Python)." },
   { id := "pickle-long-line-twins", pyFile := "Modules/_pickle.c"
     pyFns := ["load_long"]
     statement := "For every complete LONG line, the C and Python unpicklers accept the same lines and return the same value."
@@ -105,20 +98,13 @@ def entries : List Entry := [
     statement := "For every plain value and protocol argument, pickle.dumps and pickle._dumps produce the same bytes or the same exception."
     source := "invariant: C accelerator vs pure-Python twin", status := .refuted
     prop := ``DumpsTwinsAgree, thm := some ``dumpsTwinsAgree_refuted
-    bug := some "pickle-c-batch-encoding"
-    notes := "A list of 1001 items ends MARK item APPENDS in C and item APPEND in Python. Fixed on main." },
-  { id := "pickle-dumps-twins-batch-ok", pyFile := "Modules/_pickle.c"
-    pyFns := ["_pickle_dumps_impl", "_dumps"]
-    statement := "The same, for values without the batch shapes where the twins differ."
-    source := "invariant: C accelerator vs pure-Python twin", status := .refuted
-    prop := ``DumpsTwinsAgreeBatchOk, thm := some ``dumpsTwinsAgreeBatchOk_refuted
     bug := some "pickle-protocol-long-overflow"
-    notes := "protocol=-2**63-1 is OverflowError in C and the highest protocol in Python." },
-  { id := "pickle-dumps-twins-batch-ok-long", pyFile := "Modules/_pickle.c"
+    notes := "protocol=-2**63-1 is OverflowError in C and the highest protocol in Python. The batch shapes of 3.14 are gone: pickle-dumps-twins-narrow covers every batch size." },
+  { id := "pickle-dumps-twins-long", pyFile := "Modules/_pickle.c"
     pyFns := ["_pickle_dumps_impl", "_dumps"]
-    statement := "The same, also for protocol arguments within C long."
+    statement := "The same, for protocol arguments within C long."
     source := "invariant: C accelerator vs pure-Python twin", status := .refuted
-    prop := ``DumpsTwinsAgreeBatchOkLong, thm := some ``dumpsTwinsAgreeBatchOkLong_refuted
+    prop := ``DumpsTwinsAgreeLong, thm := some ``dumpsTwinsAgreeLong_refuted
     bug := some "pickle-py-oversize-struct-error"
     notes := "bytes(2**32) at protocol 3: OverflowError in C, struct.error in Python." },
   { id := "pickle-dumps-twins-narrow", pyFile := "Modules/_pickle.c"
@@ -135,10 +121,10 @@ def entries : List Entry := [
       "_Pickler._batch_appends", "_Pickler.save_dict", "_Pickler._batch_setitems", "_Pickler.save_set",
       "_Pickler.save_frozenset", "_Framer.__init__", "_Framer.start_framing", "_Framer.end_framing",
       "_Framer.commit_frame", "_Framer.write", "_Framer.write_large_bytes", "encode_long"]
-    statement := "For every plain value without the batch shapes, whose ints pass C's LONG4 size check, and every protocol within C long, pickle.dumps and pickle._dumps both raise, or both return the same bytes: memoization, framing at protocol 4+, opcode choice and the reduce paths for bytes, bytearray, set and frozenset included."
+    statement := "For every plain value whose ints pass C's LONG4 size check, and every protocol within C long, pickle.dumps and pickle._dumps both raise, or both return the same bytes: memoization, framing at protocol 4+, opcode choice, every batch size of list, dict and set, and the reduce paths for bytes, bytearray, set and frozenset included."
     source := "invariant: C accelerator vs pure-Python twin", status := .proven
     prop := ``DumpsTwinsNarrow, thm := some ``dumpsTwinsNarrow_proven
-    notes := "Each hypothesis is one refutation above. Exception classes may differ when both raise: on record in pickle-dumps-twins-batch-ok-long, exact equality is the open pickle-dumps-twins-exact-sized. Values are acyclic by construction; object identity is arbitrary, so sharing is covered. save_reduce and save_global are mirrored for the five globals only, so they are not claimed here." },
+    notes := "Each hypothesis is one refutation above. Exception classes may differ when both raise: on record in pickle-dumps-twins-long, exact equality is the open pickle-dumps-twins-exact-sized. Values are acyclic by construction; object identity is arbitrary, so sharing is covered. save_reduce and save_global are mirrored for the five globals only, so they are not claimed here." },
   { id := "pickle-dumps-twins-exact-sized", pyFile := "Modules/_pickle.c"
     pyFns := ["_pickle_dumps_impl", "_dumps"]
     statement := "With no str or bytes payload over 4 GiB below protocol 4, and fewer than 2**32 memoized objects, pickle.dumps and pickle._dumps produce the same bytes or the same exception, class and message."
@@ -163,11 +149,18 @@ def entries : List Entry := [
     statement := "pickle.loads and pickle._loads accept the same data-only streams and return equal objects."
     source := "invariant: C accelerator vs pure-Python twin", status := .refuted
     prop := ``LoadsTwinsAccept, thm := some ``loadsTwinsAccept_refuted
-    bug := some "pickle-c-empty-batch-no-type-check"
-    notes := "APPENDS with no items on None. The text-opcode and frame divergences have their own entries." },
+    bug := some "pickle-c-nul-in-text-args"
+    notes := "I12\\0 as a whole stream. An empty APPENDS or ADDITEMS on the wrong target no longer differs: do_append and load_additems look the method up as Python does. The other text-opcode and memo divergences have their own entries." },
+  { id := "pickle-memoize-twins", pyFile := "Modules/_pickle.c"
+    pyFns := []
+    statement := "After any BINPUT, MEMOIZE stores under the number of elements in the memo in both unpicklers, so a following BINGET finds the same object or fails in both."
+    source := "Lib/pickletools.py:1874-1875 (MEMOIZE); invariant: C accelerator vs pure-Python twin", status := .refuted
+    prop := ``MemoizeTwins, thm := some ``memoizeTwins_refuted
+    bug := some "pickle-c-memo-dict-unsynced"
+    notes := "BINPUT 200 sends the key to memo_dict without counting it, so MEMOIZE writes index 0 in C and index 1 in Python: new in 3.15." },
   { id := "pickle-loads-twins-narrow", pyFile := "Modules/_pickle.c"
     pyFns := ["_pickle_loads_impl", "_loads"]
-    statement := "On every data-only stream whose run meets none of the divergences on record (INT spellings and digit limit, NUL in text arguments, PUT index above sys.maxsize, an empty APPENDS or ADDITEMS batch on the wrong target, a FRAME longer than the data), pickle.loads and pickle._loads both raise or return equal objects."
+    statement := "On every data-only stream whose run meets none of the divergences on record (the INT digit limit, NUL in text arguments, PUT index above sys.maxsize, a PUT index that C may keep in memo_dict, a payload of at least 1 MiB that overruns its frame), pickle.loads and pickle._loads both raise or return equal objects."
     source := "invariant: C accelerator vs pure-Python twin", status := .open
     prop := ``LoadsTwinsNarrow
     notes := "Open: DecSim.lean has the state relation, the sequencing rule with Python's doomed runs, and how each reader computes. Still missing: the read, readline and readinto simulations, one lemma per handler over the tables, and the loop. This would settle most load_* rows." },
@@ -176,8 +169,21 @@ def entries : List Entry := [
     statement := "For a stream starting with a FRAME of any length, the two unpicklers accept the same streams and return equal objects."
     source := "PEP 3154; invariant: C accelerator vs pure-Python twin", status := .refuted
     prop := ``FrameTwins, thm := some ``frameTwins_refuted
-    bug := some "pickle-py-truncated-frame"
-    notes := "A frame longer than the data: C reports truncation, Python returns the object. python/cpython#128853; main rejects." },
+    bug := some "pickle-c-nul-in-text-args"
+    notes := "A frame around I12\\0: the body is unconstrained, so a divergence outside a frame is one inside it. A frame longer than the data no longer differs: pickle-frame-read." },
+  { id := "pickle-frame-read", pyFile := "Lib/pickle.py"
+    pyFns := ["_Unframer.load_frame", "_Unframer._chunked_file_read", "_Unpickler.load_frame", "load_frame"]
+    statement := "FRAME n at the start of a stream, for every n up to sys.maxsize: with fewer than n bytes left both unpicklers raise, EOFError in Python; otherwise both hold exactly the next n bytes as the frame and continue at its first byte."
+    source := "PEP 3154: a frame of the stated length; python/cpython#128853", status := .proven
+    prop := ``FrameRead, thm := some ``frameRead_proven
+    notes := "chunkedFileRead_run shows the chunk loop reads what one file_read would, on a BytesIO." },
+  { id := "pickle-frame-chunk-twins", pyFile := "Modules/_pickle.c"
+    pyFns := []
+    statement := "A BINBYTES payload that runs past the end of its frame is rejected by both unpicklers, wherever the frame ends."
+    source := "invariant: C accelerator vs pure-Python twin; the check in _Unpickler_ReadInto, Modules/_pickle.c:1514-1562; Lib/pickle.py:284-295", status := .refuted
+    prop := ``FrameChunkTwins, thm := some ``frameChunkTwins_refuted
+    bug := some "pickle-c-frame-chunk-straddle"
+    notes := "A frame ending 1 MiB into a 2 MiB payload: the chunked read of 3.15 leaves the frame without an error; Python raises. C rejects every other frame end. BYTEARRAY8 is accepted by both twins at such a frame end, so it is not a twin difference." },
   { id := "pickle-put-twins", pyFile := "Modules/_pickle.c"
     pyFns := ["load_put"]
     statement := "For every decimal PUT index, the two unpicklers accept the same stream and return equal objects."

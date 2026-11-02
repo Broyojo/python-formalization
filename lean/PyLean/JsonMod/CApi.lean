@@ -1,8 +1,9 @@
 import PyLean.JsonMod.Api
 
 /-!
-The Python-callable surface of `Modules/_json.c`: `py_scanstring`,
-`py_encode_basestring(_ascii)`, the scanner type (`scanner_new`, `scanner_call`)
+The Python-callable surface of `Modules/_json.c`: `py_scanstring_impl`,
+`py_encode_basestring(_ascii)_impl` behind their Argument Clinic wrappers
+(`Modules/clinic/_json.c.h`), the scanner type (`scanner_new`, `scanner_call`)
 and the encoder type (`encoder_new`, `encoder_call`), with the indent cache.
 
 These wrappers see any Python object, so a `str` argument is a `StrArg`. An
@@ -29,6 +30,11 @@ inductive StrArg where
 def firstArgErr (t : String) : PyExc :=
   .typeError s!"first argument must be a string, not {truncName 80 t}"
 
+/-- `_PyArg_BadArgument`, Python/getargs.c:662-670: `%.50s` of the type name,
+and `None` for the `None` object. -/
+def badArgErr (fname display t : String) : PyExc :=
+  .typeError s!"{fname}() {display} must be str, not {truncName 50 (if t = "NoneType" then "None" else t)}"
+
 /-- The `n` conversion, Python/getargs.c: `PyLong_AsSsize_t`. -/
 def ssizeErr : PyExc := .overflowError "Python int too large to convert to C ssize_t"
 
@@ -40,33 +46,36 @@ scanner `end` is an index plus one, so `pyScanstring` is what it reaches. -/
 def pyScanstringCall (s : PStr) (e : Int) (strict : Bool) : DR (PStr × Int) :=
   if outOfSsize e then .error (.exc ssizeErr) else pyScanstring s e strict
 
-/-- `py_scanstring`, Modules/_json.c:664-672, with the check of
-`scanstring_unicode` on a negative `end` (:494-496). -/
+/-- `scanstring(pystr, end, strict)`: the clinic wrapper `py_scanstring`
+(`Modules/clinic/_json.c.h:30-70`) checks `pystr` before it converts `end`, then
+`py_scanstring_impl`, Modules/_json.c:665-672, with the check of
+`scanstring_unicode` on a negative `end` (:494-497). -/
 def cPyScanstring (x : StrArg) (e : Int) (strict : Bool) : DR (PStr × Int) :=
-  if outOfSsize e then .error (.exc ssizeErr)
-  else
-    match x with
-    | .other t => .error (.exc (firstArgErr t))
-    | .str s =>
-      if e < 0 then .error (.exc (.valueError "end is out of bounds"))
-      else
-        match cScanstring s e.toNat strict with
-        | .ok (v, n) => .ok (v, (n : Int))
-        | .error err => .error err
+  match x with
+  | .other t => .error (.exc (badArgErr "scanstring" "argument 1" t))
+  | .str s =>
+    if outOfSsize e then .error (.exc ssizeErr)
+    else if e < 0 then .error (.exc (.valueError "end is out of bounds"))
+    else
+      match cScanstring s e.toNat strict with
+      | .ok (v, n) => .ok (v, (n : Int))
+      | .error err => .error err
 
-/-- `py_encode_basestring_ascii`, :682-687. -/
+/-- `encode_basestring_ascii(pystr)`: the clinic wrapper
+(`Modules/clinic/_json.c.h:86-98`), then `py_encode_basestring_ascii_impl`, :683-687. -/
 def cPyEncodeBasestringAscii : StrArg → ER
   | .str s => .ok (cAsciiEscape s)
-  | .other t => .error (firstArgErr t)
+  | .other t => .error (badArgErr "encode_basestring_ascii" "argument" t)
 
-/-- `py_encode_basestring`, :697-702. -/
+/-- `encode_basestring(pystr)`: the clinic wrapper
+(`Modules/clinic/_json.c.h:115-127`), then `py_encode_basestring_impl`, :698-702. -/
 def cPyEncodeBasestring : StrArg → ER
   | .str s => .ok (cEscape s)
-  | .other t => .error (firstArgErr t)
+  | .other t => .error (badArgErr "encode_basestring" "argument" t)
 
 /-! ### The scanner -/
 
-/-- `scanner_call`, :1207-1236: `StopIteration(idx)` when nothing is found. -/
+/-- `scanner_call`, :1208-1236: `StopIteration(idx)` when nothing is found. -/
 def cScannerCall (cfg : DCfg) (x : StrArg) (idx : Int) : DR (JVal × Int) :=
   if outOfSsize idx then .error (.exc ssizeErr)
   else
@@ -92,9 +101,9 @@ def attrErr (t a : String) : PyExc := .named "AttributeError" s!"'{t}' object ha
 
 /-- The attributes after `strict`, in the order of `scanner_new`, :1262-1280. -/
 def scannerAttrs : List String :=
-  ["object_hook", "object_pairs_hook", "parse_float", "parse_int", "parse_constant"]
+  ["object_hook", "object_pairs_hook", "array_hook", "parse_float", "parse_int", "parse_constant"]
 
-/-- `scanner_new`, :1238-1287, with the attribute values already in `cfg`. -/
+/-- `scanner_new`, :1239-1287, with the attribute values already in `cfg`. -/
 def scannerNew (ctx : ScanCtx) (cfg : DCfg) : Except PyExc DCfg :=
   if !ctx.attrs.contains "strict" then .error (attrErr ctx.tp "strict")
   else
@@ -113,13 +122,14 @@ inductive MarkersArg where
   | dict
   | other (t : String)
 
-/-- The `encoder` argument: `fast_encode` is set for the two C functions (:1348-1356). -/
+/-- The `encoder` argument: `fast_encode` is set for the two C functions (:1348-1356),
+which are then `write_escaped_ascii` and `write_escaped_unicode`. -/
 inductive EncoderArg where
   | cAscii
   | cPlain
   | custom (g : PStr → Except PyExc EncOut)
 
-/-- `encoder_new`, :1310-1359. The `U` conversions run before the `markers` check. -/
+/-- `encoder_new`, :1311-1359. The `U` conversions run before the `markers` check. -/
 def encoderNew (markers : MarkersArg) (dflt : Nat → String → Except PyExc EVal) (dfltDepth : Nat)
     (encoder : EncoderArg) (indent : Option PStr) (keySep itemSep : StrArg)
     (sortKeys skipKeys allowNan : Bool) : Except PyExc ECfg :=

@@ -547,14 +547,15 @@ def cEmptyOp (proto : Nat) (empty op : UInt8) : EncM Unit :=
   if proto ≠ 0 then wr [empty] else wr [oMARK, op]
 
 /-- One item of `batch_list`/`batch_dict` at protocol 0 and of
-`batch_list_exact`/`batch_dict_exact_impl`, unrolled: a one-item container
-writes the single-item opcode, otherwise a batch of any size is `MARK ...
-many`. -/
+`batch_list_exact`/`batch_dict_exact_impl`, unrolled. The test at the top of
+their `do` loops, `list_size - total == 1`, runs at the start of each batch,
+so a last batch of one item writes the single-item opcode; a batch of any
+other size is `MARK ... many`. -/
 def cBatchStep (proto n i : Nat) (item : EncM Unit) (one many : UInt8) : EncM Unit :=
   if proto = 0 then do
     item
     wr [one]
-  else if n = 1 then do
+  else if i % batchSize = 0 ∧ n - i = 1 then do
     item
     wr [one]
   else do
@@ -639,8 +640,8 @@ def cSaveElems (proto : Nat) : List PV → EncM Unit
   | x :: xs => do cSave proto x; cSaveElems proto xs
 
 /-- `batch_list` for protocol 0 (`Modules/_pickle.c:3154-3173`) and
-`batch_list_exact` (`:3263-3328`): a one-item list is `item APPEND`;
-otherwise `do { MARK, up to 1000 items, APPENDS } while (total < size)`. -/
+`batch_list_exact` (`:3263-3328`): `do { a last item alone is item APPEND;
+MARK, up to 1000 items, APPENDS } while (total < size)`. -/
 def cAppends (proto : Nat) (n i : Nat) : List PV → EncM Unit
   | [] => pure ()
   | x :: xs => do
@@ -648,19 +649,19 @@ def cAppends (proto : Nat) (n i : Nat) : List PV → EncM Unit
     cAppends proto n (i + 1) xs
 
 /-- `batch_dict` for protocol 0 (`Modules/_pickle.c:3416-3448`) and
-`batch_dict_exact_impl` (`:3552-3625`): a one-item dict is `k v SETITEM`;
-otherwise `do { MARK, up to 1000 pairs, SETITEMS } while (i == BATCHSIZE)`,
-so a size that is a multiple of 1000 ends with an empty `MARK SETITEMS`. -/
+`batch_dict_exact_impl` (`:3552-3623`): `do { a last pair alone is k v SETITEM;
+MARK, up to 1000 pairs, SETITEMS } while (total < dict_size)`, so no batch is
+ever empty. -/
 def cSetitems (proto : Nat) (n i : Nat) : List (PV × PV) → EncM Unit
-  | [] => if proto ≠ 0 ∧ n ≠ 1 ∧ n % batchSize = 0 then wr [oMARK, oSETITEMS] else pure ()
+  | [] => pure ()
   | (k, v) :: kvs => do
     cBatchStep proto n i (do cSave proto k; cSave proto v) oSETITEM oSETITEMS
     cSetitems proto n (i + 1) kvs
 
-/-- The batch loop of `save_set` (`Modules/_pickle.c@3.14.7:3640-3676`):
-`do { MARK, up to 1000 items, ADDITEMS } while (i == BATCHSIZE)`. -/
+/-- The batch loop of `save_set` (`Modules/_pickle.c:3746-3778`):
+`do { MARK, up to 1000 items, ADDITEMS } while (total < set_size)`. -/
 def cAdditems (proto : Nat) (n i : Nat) : List PV → EncM Unit
-  | [] => if n % batchSize = 0 then wr [oMARK, oADDITEMS] else pure ()
+  | [] => pure ()
   | x :: xs => do
     addStep n i (cSave proto x)
     cAdditems proto n (i + 1) xs
@@ -769,7 +770,7 @@ def pyDumps (x : PV) (protocol : Int) : Py Bytes := do
   let (_, st) ← (pyBody proto x).run {}
   return pyFrame st.ev.reverse
 
-/-- `dump` (`Modules/_pickle.c:4869-4931`). -/
+/-- `dump` (`Modules/_pickle.c:4869-4927`). -/
 def cBody (proto : Nat) (x : PV) : EncM Unit := do
   if proto ≥ 2 then wr [oPROTO, proto.toUInt8]
   if proto ≥ 4 then emit .start
@@ -777,7 +778,7 @@ def cBody (proto : Nat) (x : PV) : EncM Unit := do
   wr [oSTOP]
   emit .finish
 
-/-- `pickle.dumps(obj, protocol)` (`_pickle_dumps_impl`, `Modules/_pickle.c:8122-8158`). -/
+/-- `pickle.dumps(obj, protocol)` (`_pickle_dumps_impl`, `Modules/_pickle.c:8122-8149`). -/
 def cDumps (x : PV) (protocol : Int) : Py Bytes := do
   let proto ← cProtocol protocol
   let (_, st) ← (cBody proto x).run {}

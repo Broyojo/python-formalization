@@ -1,7 +1,7 @@
 import PyLean.Pickle.Basic
 
 /-!
-`opcodes` of `Lib/pickletools.py:1155-2242`, generated from the 3.14.7 source:
+`opcodes` of `Lib/pickletools.py:1155-2196`, generated from the 3.14.7 source and unchanged in 3.15.2:
 code, name, argument descriptor (`""` for none), protocol, the names of
 `stack_before` and `stack_after`, and the first line of `doc`.
 -/

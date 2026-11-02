@@ -242,19 +242,17 @@ theorem preEv_FR (p : Nat) :
   by_cases h2 : p ≥ 2 <;> by_cases h4 : p ≥ 4 <;>
     simp [preEv, h2, h4, FR, PyFramer.step, CFramer.step, CFramer.write]
 
-/-- The picklers agree, exception class aside, on every plain value without the
-batch shapes of `BatchOk` and without `long4Edge`, for every protocol within C
-`long`. Each hypothesis is one of the refutations above. Both raise for
-oversized objects; that the classes then differ is on record in
-`pickle-dumps-twins-batch-ok-long`, and exact equality below that size is the
-open `pickle-dumps-twins-exact-sized`. -/
+/-- The picklers agree, exception class aside, on every plain value without
+`long4Edge`, for every protocol within C `long`, at every batch boundary. Each
+hypothesis is one of the refutations above. Both raise for oversized objects;
+that the classes then differ is on record in `pickle-dumps-twins-long`, and exact
+equality below that size is the open `pickle-dumps-twins-exact-sized`. -/
 def DumpsTwinsNarrow : Prop :=
-  ∀ (x : PV) (protocol : Int), longMin ≤ protocol → protocol ≤ longMax →
-    BatchOk (effProto protocol) x → IntsOk x →
+  ∀ (x : PV) (protocol : Int), longMin ≤ protocol → protocol ≤ longMax → IntsOk x →
     SameOutcome (cDumps x protocol) (pyDumps x protocol)
 
 theorem dumpsTwinsNarrow_proven : DumpsTwinsNarrow := by
-  intro x protocol hlo hhi hb hi
+  intro x protocol hlo hhi hi
   by_cases h5 : protocol > 5
   · have hc : cProtocol protocol = .error (.valueError "pickle protocol must be <= 5") := by
       unfold cProtocol
@@ -281,7 +279,7 @@ theorem dumpsTwinsNarrow_proven : DumpsTwinsNarrow := by
   let s0 : EncSt := { memo := [], ev := preEv p }
   have hrel : Rel (preEv p) s0 s0 :=
     ⟨rfl, [], [], rfl, rfl, rfl, by simp, by simp⟩
-  have hsim := simSave (preEv p) p hp5 x hb hi s0 s0 hrel
+  have hsim := simSave (preEv p) p hp5 x hi s0 s0 hrel
   have e1 := pyBody_eq p x
   have e2 := cBody_eq p x
   cases hm : pySave p x s0 with

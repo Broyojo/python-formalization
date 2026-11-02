@@ -1,0 +1,72 @@
+id: pickle-c-frame-chunk-straddle
+title: "pickle: a BINBYTES or BYTEARRAY8 payload may run past its frame when the frame ends on a chunk boundary, unlike Python for BINBYTES (new in 3.15)"
+priority: P4
+kind: twin-mismatch
+module: pickle
+files: [Modules/_pickle.c, Lib/pickle.py]
+functions: [load_counted_binbytes, load_counted_bytearray, _Unpickler_ReadInto, _Unpickler.load_bytearray8]
+summary: |
+  `load_counted_binbytes` and `load_counted_bytearray` now read a payload above 1 MiB in doubling chunks,
+  each its own `_Unpickler_ReadInto`. That function refuses a read that crosses the end of a frame only
+  if the frame still held data when the read began. So a frame that ends exactly at a chunk boundary (1,
+  2, 4 ... MiB into the payload) is left silently, and the payload goes on outside it. With the frame
+  ending anywhere else C raises "pickle exhausted before end of frame". For BINBYTES and BINBYTES8
+  Python raises at every frame end, so the twins differ. `_Unpickler.load_bytearray8` has the same
+  chunks, through `_Unframer.read`, so for BYTEARRAY8 both twins accept.
+likelihood: |
+  Only hand-made streams: the pickler writes large payloads outside frames. The unpicklers disagree on
+  the same bytes only for BINBYTES and BINBYTES8, at sizes above 1 MiB.
+maybe_intended: |
+  No. `_Unpickler_ReadInto` calls `_Unpickler_LeaveFrame(state, self, in_buffer > 0)` to reject exactly
+  this crossing, and its comment says so. Splitting one read into several hides the crossing from it.
+reproducer: |
+  import pickle, struct
+  K = 1 << 20
+  def stream(op, cut):
+      head = op + (struct.pack('<I', 2 * K) if op == b'B' else struct.pack('<Q', 2 * K))
+      body = head + b'a' * cut
+      return b'\x95' + struct.pack('<Q', len(body)) + body + b'b' * (2 * K - cut) + b'.'
+  def r(f, s):
+      try: return ('ok', len(f(s)))
+      except Exception as e: return (type(e).__name__, str(e))
+  results = []
+  for op in (b'B', b'\x8e', b'\x96'):
+      for cut in (K, K + 5):
+          s = stream(op, cut)
+          results.append((op, cut, r(pickle.loads, s), r(pickle._loads, s)))
+          print(*results[-1])
+  exhausted = ('UnpicklingError', 'pickle exhausted before end of frame')
+  done = ('ok', 2 * K)
+  on_chunk = [x for x in results if x[1] == K]
+  off_chunk = [x for x in results if x[1] != K]
+  if (all(x[2] == done and x[3] == (done if x[0] == b'\x96' else exhausted) for x in on_chunk)
+          and all(x[2] == exhausted and x[3] == exhausted for x in off_chunk)):
+      print('REPRODUCED pickle-c-frame-chunk-straddle')
+expected: |
+  Both unpicklers reject a payload that runs past the end of its frame, wherever the frame ends.
+observed: |
+  python3 3.15.2: at a frame end of 1 MiB, C returns the 2 MiB object for all three opcodes and Python
+  raises for BINBYTES and BINBYTES8 only; at 1 MiB + 5 both raise for all three. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): REPRODUCED, same behaviour.
+promised_by: |
+  The check itself, Modules/_pickle.c:1536; Lib/pickle.py:284-295 (`_Unframer.read`), :267-282
+  (`_Unframer.readinto`). Through 3.14 C rejected these streams.
+cause: |
+  Modules/_pickle.c:5887-5908 (`load_counted_binbytes`) and :5933-5954 (`load_counted_bytearray`) loop
+  over `_Unpickler_ReadInto`. :1514-1562: when the first chunk used up the frame, the next call starts
+  with `in_buffer == 0`, so `_Unpickler_LeaveFrame(state, self, 0)` ends the frame without an error.
+  Lib/pickle.py:1519-1531: `readinto` takes the first chunk, and `_Unframer.read` (:284-295) then finds
+  the frame empty and goes to the file.
+possible_fix: |
+  Check the whole size against `frame_end` before the first chunk, or read from the frame in one call.
+  The same in `load_bytearray8`.
+duplicates:
+  issues:
+    - {number: 115952, state: closed, relation: related, reason: "the change that added the chunked reads (PR 119204)"}
+    - {number: 154848, state: open, relation: related, reason: "the C unpickler not enforcing frame ends, seen against pickletools; same concern, another path. Here pickletools agrees with C, which also ignores the frame, and only Python rejects"}
+    - {number: 128853, state: closed, relation: related, reason: "frame longer than the data; fixed by the same change"}
+  queries: ["pickle frame chunk BINBYTES", "pickle overallocation read chunks", "pickle FRAME", "pickle frame shorter"]
+  bugforge: "no pickle entries in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Pickle.FrameChunkTwins
+  theorem: PyLean.Pickle.frameChunkTwins_refuted

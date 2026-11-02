@@ -33,6 +33,7 @@ reproducer: |
 expected: |
   INT behaves as `int(line)`: ValueError past the limit in both twins.
 observed: |
+  python3 3.15.2: REPRODUCED.
   python3 3.14.7: INT: C 1, Python ValueError (digit limit); LONG: C ValueError. REPRODUCED.
   main (python.exe 3.16.0a1+dev): REPRODUCED, same behaviour.
 promised_by: |

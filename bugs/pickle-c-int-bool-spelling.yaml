@@ -24,6 +24,7 @@ reproducer: |
 expected: |
   Only `00` and `01` are bools, in both twins.
 observed: |
+  python3 3.15.2: NOT REPRODUCED: `load_int` now tests for `00` and `01` as Python does. This record is the 3.14.7 behaviour.
   python3 3.14.7: `I 1\n.`: C True, Python 1. REPRODUCED.
   main (python.exe 3.16.0a1+dev): NOT REPRODUCED: fixed by gh-135242; `I 1` loads as the int 1 in C.
 promised_by: |
@@ -39,5 +40,5 @@ duplicates:
   queries: ["pickle INT opcode", "load_int", "pickle bool INT", "pickle I01"]
   bugforge: "no pickle entries in vendor/bugforge-results/README.md"
 lean:
-  property: PyLean.Pickle.IntLineTwins
-  theorem: PyLean.Pickle.intLineTwins_refuted
+  property: PyLean.Pickle.IntLineTwinsPrecise
+  theorem: PyLean.Pickle.intLineTwinsPrecise_proven

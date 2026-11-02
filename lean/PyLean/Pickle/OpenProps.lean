@@ -121,7 +121,7 @@ different classes. A bound on the node count keeps memo indices below 2**32
 (each node memoizes at most a few objects). -/
 def DumpsTwinsExactSized : Prop :=
   ∀ (x : PV) (protocol : Int), longMin ≤ protocol → protocol ≤ longMax →
-    BatchOk (effProto protocol) x → IntsOk x → SizeOk (effProto protocol) x →
+    IntsOk x → SizeOk (effProto protocol) x →
     (nodes x).length * 16 + 64 < 2 ^ 32 →
     cDumps x protocol = pyDumps x protocol
 

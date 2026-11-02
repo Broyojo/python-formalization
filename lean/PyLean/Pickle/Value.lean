@@ -79,9 +79,15 @@ def latin1StrOid (o : Oid) (b : Bytes) : Oid :=
   | [c] => .str1 c.toNat
   | _ => .tmp o 1
 
-/-- The id of `bytes(ba)` for a `bytearray` `o`: always a new object, since
-`_PyBytes_FromBuffer` allocates with `PyBytes_FromStringAndSize(NULL, n)`, which
-bypasses the one-byte cache. -/
-def bytesCopyOid (o : Oid) (_b : Bytes) : Oid := .tmp o 1
+/-- The id of `bytes(ba)` for a `bytearray` `o`: a new object, except that one
+byte is the cached `bytes`. `_PyBytes_FromBuffer`
+(`Objects/bytesobject.c:2958-2979`) copies into a `PyBytesWriter`, whose
+`PyBytesWriter_FinishWithSize` (:3865-3923) ends a short result in
+`PyBytes_FromStringAndSize(small_buffer, size)`, which returns the cached
+object for size 1. -/
+def bytesCopyOid (o : Oid) (b : Bytes) : Oid :=
+  match b with
+  | [c] => .bytes1 c.toNat
+  | _ => .tmp o 1
 
 end PyLean.Pickle

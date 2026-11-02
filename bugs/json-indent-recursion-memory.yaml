@@ -55,6 +55,7 @@ expected: |
   RecursionError, at a cost comparable to the same call without an indent or to the pure-Python
   encoder.
 observed: |
+  python3 3.15.2: REPRODUCED.
   On the Linux build pod with an 8 MB stack and a 6 GB address-space cap (peak RSS, time):
   python3 3.14.7, maximum list depth 51,755: no indent 22 MB 0.03 s, indent=0 26 MB 0.03 s,
   indent=1 3927 MB 1.63 s, indent=4 MemoryError at 5899 MB after 2.34 s.

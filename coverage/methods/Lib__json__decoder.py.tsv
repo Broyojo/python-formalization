@@ -4,7 +4,7 @@ Lib/json/decoder.py	42	43	JSONDecodeError.__reduce__	__reduce__(self)	modelled	j
 Lib/json/decoder.py	60	68	_decode_uXXXX	_decode_uXXXX(s, pos, _m=HEXDIGITS.match)	modelled	json-decode-uxxxx,json-loads-twins-scan	
 Lib/json/decoder.py	70	127	py_scanstring	py_scanstring(s, end, strict=True, _b=BACKSLASH, _m=STRINGCHUNK.match)	modelled	json-loads-twins,json-loads-twins-pos,json-loads-twins-scan,json-strict-literal,json-strict-only-control	
 Lib/json/decoder.py	137	219	JSONObject	JSONObject(s_and_end, strict, scan_once, object_hook, object_pairs_hook, memo=None, _w=WHITESPACE.match, _ws=WHITESPACE_STR)	modelled	json-loads-twins-scan,json-raw-decode-twins-in-range	
-Lib/json/decoder.py	221	263	JSONArray	JSONArray(s_and_end, scan_once, array_hook, _w=WHITESPACE.match, _ws=WHITESPACE_STR)	todo		changed-in-3.15: was json-loads-twins-scan,json-raw-decode-twins-in-range
-Lib/json/decoder.py	296	350	JSONDecoder.__init__	__init__(self, *, object_hook=None, parse_float=None, parse_int=None, parse_constant=None, strict=True, object_pairs_hook=None, array_hook=None)	todo		changed-in-3.15: was json-decoder-init,json-loads-fast-path,json-pairs-hook-priority,json-strict-only-control
+Lib/json/decoder.py	221	263	JSONArray	JSONArray(s_and_end, scan_once, array_hook, _w=WHITESPACE.match, _ws=WHITESPACE_STR)	todo		
+Lib/json/decoder.py	296	350	JSONDecoder.__init__	__init__(self, *, object_hook=None, parse_float=None, parse_int=None, parse_constant=None, strict=True, object_pairs_hook=None, array_hook=None)	todo		
 Lib/json/decoder.py	353	362	JSONDecoder.decode	decode(self, s, _w=WHITESPACE.match)	modelled	json-loads-twins,json-loads-twins-pos,json-loads-twins-scan	
 Lib/json/decoder.py	364	377	JSONDecoder.raw_decode	raw_decode(self, s, idx=0)	modelled	json-decode-terminates,json-raw-decode-twins,json-raw-decode-twins-in-range	
