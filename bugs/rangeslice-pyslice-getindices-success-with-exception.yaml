@@ -70,7 +70,7 @@ expected: |
   -1 with OverflowError set for both calls (the documented error return), never 0 with an
   exception pending.
 observed: |
-  python3 3.14.7:      (0, 'OverflowError', 9, -1, -1) and (0, 'OverflowError', 9, 5, 1). REPRODUCED.
+  python3 3.15.2:      (0, 'OverflowError', 9, -1, -1) and (0, 'OverflowError', 9, 5, 1). REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0, assertions enabled): same output from the compiled helper; REPRODUCED.
   Also on main: _testlimitedcapi.slice_getindices(slice(None, None, 2**64), 10) aborts with
   "Assertion failed: (!PyErr_Occurred()), function slice_getindices, file slice.c, line 56".

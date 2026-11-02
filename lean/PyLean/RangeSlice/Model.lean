@@ -2,11 +2,10 @@ import PyLean.Core
 
 /-!
 Model of the C builtins `range` (`Objects/rangeobject.c`) and `slice`
-(`Objects/sliceobject.c`) of CPython 3.14.7, plus the two `listobject.c`
-functions that consume `PySlice_Unpack`/`PySlice_AdjustIndices`. Line numbers
-refer to the 3.14 sources; on `main` the range code differs only by Argument
-Clinic wrappers and critical sections, the slice code only by the
-`_PyBuildSlice_ConsumeRefs` refactor and `__class_getitem__`.
+(`Objects/sliceobject.c`) of CPython 3.15.2, plus the two `listobject.c`
+functions that consume `PySlice_Unpack`/`PySlice_AdjustIndices`. The critical
+sections 3.15 put around the iterator methods do not change what one thread sees,
+and free-threaded builds are out of scope.
 
 Scope and conventions:
 
@@ -272,7 +271,7 @@ def rangeHashKey (r : Range) : Int × Option Int × Option Int :=
 /-! ## Iterators -/
 
 /-- `range_iterator` (`_PyRangeIterObject`, C longs, Include/internal/pycore_range.h)
-and `longrange_iterator` (`longrangeiterobject`, PyLongs, rangeobject.c@3.14.7:997-1002). -/
+and `longrange_iterator` (`longrangeiterobject`, PyLongs, rangeobject.c:12-17). -/
 inductive RIter where
   | fast (start step len : Int)
   | long (start step len : Int)
@@ -284,8 +283,9 @@ def RIter.typeName : RIter → String
   | .long .. => "longrange_iterator"
 
 /-- `rangeiter_next` (rangeobject.c:845-859; same as `_ITER_NEXT_RANGE`,
-Python/bytecodes.c@3.14.7:3447-3459) and `longrangeiter_next` (:1433-1457).
-`result + r->step` is signed `long` arithmetic. -/
+Python/bytecodes.c:4082-4095) and `longrangeiter_next` (:1183-1191), which locks and
+calls `longrangeiter_next_lock_held` (:1161-1181). `result + r->step` is signed
+`long` arithmetic. -/
 def iterNext : RIter → Option (Int × RIter)
   | .fast start step len =>
     if len > 0 then some (start, .fast (wrap (start + step)) step (len - 1)) else none
@@ -301,12 +301,14 @@ def iterTake : Nat → RIter → List Int × RIter
     | none => ([], it)
     | some (x, it') => let (xs, it'') := iterTake n it'; (x :: xs, it'')
 
-/-- `it.__length_hint__()`, rangeobject.c:869-874 and :1044-1050. -/
+/-- `it.__length_hint__()`: `range_iterator___length_hint___impl`, rangeobject.c:869-874,
+and `longrange_iterator___length_hint___impl`, :1044-1050. -/
 def RIter.lengthHint : RIter → Int
   | .fast _ _ len | .long _ _ len => len
 
-/-- The range inside `it.__reduce__()`, rangeobject.c:884-913
-(`r->start + r->len * r->step` in signed `long`) and :1060-1087. -/
+/-- The range inside `it.__reduce__()`: `range_iterator___reduce___impl`,
+rangeobject.c:884-913 (`r->start + r->len * r->step` in signed `long`), and
+`longrange_iterator___reduce___impl`, :1060-1087. -/
 def iterReduce : RIter → Range
   | .fast start step len => makeRangeObject start (wrap (start + wrap (len * step))) step
   | .long start step len => makeRangeObject start (start + len * step) step
@@ -314,9 +316,9 @@ def iterReduce : RIter → Range
 /-- `C long` conversion failure message (`PyLong_AsLong`). -/
 def longOverflow : PyExc := .overflowError "Python int too large to convert to C long"
 
-/-- `it.__setstate__(state)` for an exact int `state`: `rangeiter_setstate`
-(rangeobject.c:925-940, `PyLong_AsLong` then clip) and
-`longrangeiter_setstate` (:1099-1142, clip in PyLong). -/
+/-- `it.__setstate__(state)` for an exact int `state`:
+`range_iterator___setstate___impl` (rangeobject.c:925-940, `PyLong_AsLong` then
+clip) and `longrange_iterator___setstate___impl` (:1099-1142, clip in PyLong). -/
 def iterSetstate (it : RIter) (state : Int) : Py RIter :=
   match it with
   | .fast start step len =>
@@ -328,6 +330,46 @@ def iterSetstate (it : RIter) (state : Int) : Py RIter :=
   | .long start step len =>
     let st := if state < 0 then 0 else if len < state then len else state
     .ok (.long (start + st * step) step (len - st))
+
+/-- The object passed to `it.__setstate__`. -/
+inductive StateArg where
+  /-- An object whose type is exactly `int`. -/
+  | exact (v : Int)
+  /-- An instance of a proper subclass `tp` of `int`, such as `bool`. -/
+  | subclass (v : Int) (tp : String)
+  /-- Not an `int`; its type `tp` defines `__index__`, which is a callback, with this
+  outcome. An `__index__` that returns a non-int is a `TypeError` outcome. -/
+  | index (r : Py Int) (tp : String)
+  /-- Not an `int`, and its type `tp` has no `__index__`. -/
+  | other (tp : String)
+  deriving Inhabited
+
+/-- `Py_TYPE(state)` as `%T` and `%.200s` print it. -/
+def StateArg.typeName : StateArg → String
+  | .exact _ => "int"
+  | .subclass _ tp | .index _ tp | .other tp => tp
+
+/-- `PyLong_AsLong(state)`, Objects/longobject.c:672-684, through
+`PyLong_AsLongAndOverflow` (:593-667): an `int` of any subclass is read directly,
+anything else goes through `_PyNumber_Index` (Objects/abstract.c:1410-1448). -/
+def stateAsLong (s : StateArg) : Py Int :=
+  let ofInt (v : Int) : Py Int := match asLong v with
+    | some i => .ok i
+    | none => .error longOverflow
+  match s with
+  | .exact v | .subclass v _ => ofInt v
+  | .index r _ => r >>= ofInt
+  | .other tp => .error (.typeError s!"'{tp}' object cannot be interpreted as an integer")
+
+/-- `it.__setstate__(state)` for any object. The two iterators disagree on what they
+accept: `range_iterator___setstate___impl` reads it with `PyLong_AsLong`
+(rangeobject.c:929-931), so it takes `bool` and `__index__`, while
+`longrange_iterator___setstate___impl` starts with `PyLong_CheckExact` (:1103-1106). -/
+def iterSetstateObj (it : RIter) (state : StateArg) : Py RIter :=
+  match it, state with
+  | .fast .., _ => stateAsLong state >>= iterSetstate it
+  | .long .., .exact v => iterSetstate it v
+  | .long .., _ => .error (.typeError s!"state must be an int, not {state.typeName}")
 
 /-- `iter(r)`: `range_iter`, rangeobject.c:1226-1279. -/
 def rangeIter (r : Range) : RIter :=

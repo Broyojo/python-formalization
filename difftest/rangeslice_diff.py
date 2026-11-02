@@ -23,7 +23,9 @@ LIST_MAX = 70  # list lengths for `listslice`
 def edge_int(rng):
     """0, +-1, and values at and around every C boundary (2**31, 2**62,
     2**63, 2**64), plus huge and random ints."""
-    b = rng.choice([0, 1, 2, 3, 31, 32, 62, 63, 63, 63, 64, 64, 65, 100])
+    # 30, 60 and 90 are PyLong digit boundaries, where 3.15's rewritten
+    # PyLong_AsLongAndOverflow (unroll_digits_ulong) changes loop.
+    b = rng.choice([0, 1, 2, 3, 30, 31, 32, 60, 61, 62, 63, 63, 63, 64, 64, 65, 90, 91, 100])
     v = rng.choice([0, 1, 2, 3, 2 ** b, 2 ** b - 1, 2 ** b + 1, 2 ** b - 2, 2 ** b + 2,
                     rng.randrange(2 ** b + 1), M, M - 1, M + 1, M + 2, rng.randrange(20)])
     return v if rng.random() < 0.5 else -v
@@ -87,7 +89,7 @@ def rand_slice(rng, length):
 
 def gen_case(rng):
     fn = rng.choice(["new", "len", "getitem", "slice", "contains", "index", "count", "eq",
-                     "iter", "reversed", "setstate", "indices", "listslice"])
+                     "iter", "iterfor", "reversed", "setstate", "setstate_obj", "indices", "listslice"])
     c = {"mod": "rangeslice", "fn": fn}
     if fn == "indices":
         n = rng.choice([0, 1, 5, edge_int(rng), abs(edge_int(rng)), rng.randrange(100)])
@@ -122,13 +124,72 @@ def gen_case(rng):
                 s2 = rand_step(rng) or 1
             r2 = [elem(0), near(rng, elem(L)) if rng.random() < 0.7 else elem(L) + rng.randint(-3, 3) * s2, s2]
         c.update(r2=r2, nargs2=n2)
-    elif fn in ("iter", "reversed"):
+    elif fn in ("iter", "iterfor", "reversed"):
         c["k"] = rng.choice([0, 1, 2, 3, 5])
     elif fn == "setstate":
         c["k"] = rng.choice([0, 1, 3])
         c["rev"] = rng.random() < 0.5
         c["state"] = rng.choice([0, 1, -1, L, L + 1, L - 1, edge_int(rng), rng.randint(-2, L + 2)])
+    elif fn == "setstate_obj":
+        c.update(k=rng.choice([0, 1, 3]), k0=rng.choice([0, 0, 1, 2]), rev=rng.random() < 0.5)
+        v = rng.choice([0, 1, -1, L, L + 1, L - 1, edge_int(rng), rng.randint(-2, L + 2)])
+        c["state"] = rng.choice([
+            v, {"kind": "subclass", "tp": "bool", "v": rng.choice([0, 1])},
+            {"kind": "subclass", "tp": "IntSub", "v": v},
+            {"kind": "index", "tp": "Idx", "v": v},
+            {"kind": "raises", "tp": "IdxRaises", "exc": "RuntimeError", "msg": "from __index__"},
+            {"kind": "raises", "tp": "IdxBad", "exc": "TypeError",
+             "msg": "IdxBad.__index__() must return an int, not str"},
+            {"kind": "other", "tp": rng.choice(["float", "str", "NoneType", "list"])}])
     return c
+
+
+class IntSub(int):
+    pass
+
+
+class Idx:
+    def __init__(self, v):
+        self.v = v
+
+    def __index__(self):
+        return self.v
+
+
+class IdxRaises:
+    def __index__(self):
+        raise RuntimeError("from __index__")
+
+
+class IdxBad:
+    def __index__(self):
+        return "x"
+
+
+def make_state(st):
+    if isinstance(st, int):
+        return st
+    tp = st["tp"]
+    if tp == "bool":
+        return bool(st["v"])
+    if tp == "IntSub":
+        return IntSub(st["v"])
+    if tp == "Idx":
+        return Idx(st["v"])
+    return {"IdxRaises": IdxRaises, "IdxBad": IdxBad, "float": lambda: 1.5, "str": lambda: "x",
+            "NoneType": lambda: None, "list": list}[tp]()
+
+
+def drive_for(it, k):
+    """`next()` by a `for` loop: once this function is warm, FOR_ITER_RANGE specialises
+    and `_ITER_NEXT_RANGE` runs in place of `rangeiter_next`."""
+    xs = []
+    if k:
+        for x in it:
+            xs.append(x)
+            if len(xs) == k:
+                break
+    return xs
 
 
 def enc_range(r):
@@ -161,10 +222,10 @@ def run_python(c):
             r2 = make_range(c["r2"], c["nargs2"])
             e = r == r2
             v = [e, e and hash(r) == hash(r2)]
-        elif fn in ("iter", "reversed"):
-            it = iter(r) if fn == "iter" else reversed(r)
+        elif fn in ("iter", "iterfor", "reversed"):
+            it = reversed(r) if fn == "reversed" else iter(r)
             name = type(it).__name__
-            xs = list(itertools.islice(it, c["k"]))
+            xs = drive_for(it, c["k"]) if fn == "iterfor" else list(itertools.islice(it, c["k"]))
             red = it.__reduce__()[1][0]
             tail = list(red[-c["k"]:]) if c["k"] else []
             v = [name, xs, it.__length_hint__(), enc_range(red), tail]
@@ -174,6 +235,13 @@ def run_python(c):
             it.__setstate__(c["state"])
             xs = list(itertools.islice(it, c["k"]))
             v = [name, xs, it.__length_hint__()]
+        elif fn == "setstate_obj":
+            it = reversed(r) if c["rev"] else iter(r)
+            name = type(it).__name__
+            list(itertools.islice(it, c["k0"]))
+            it.__setstate__(make_state(c["state"]))
+            xs = list(itertools.islice(it, c["k"]))
+            v = [name, xs, it.__length_hint__(), enc_range(it.__reduce__()[1][0])]
         res = {"ok": v}
     except Exception as e:
         res = {"exc": type(e).__name__, "msg": str(e)}
@@ -231,9 +299,9 @@ def oracle(c, res):
         sa, sb, ss = res["ok"]
         SL, se = seq(sa, sb, ss)
         return SL == math_len(ia, ib, ic) and all(se(k) == e(ia + k * ic) for k in (0, 1, SL - 1) if 0 <= k < SL)
-    if fn in ("iter", "reversed"):
+    if fn in ("iter", "iterfor", "reversed"):
         name, xs, hint, red, tail = res["ok"]
-        f = e if fn == "iter" else (lambda k: e(L - 1 - k))
+        f = (lambda k: e(L - 1 - k)) if fn == "reversed" else e
         j = min(c["k"], L)
         RL, re_ = seq(*red)
         return (xs == [f(k) for k in range(j)] and hint == L - j and RL == L - j

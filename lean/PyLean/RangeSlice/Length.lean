@@ -179,7 +179,7 @@ theorem rangeNewLength_proven : RangeNewLength := by
 /-- `len(r)` returns the mathematical length `L` when `L <= sys.maxsize` and
 raises `OverflowError` otherwise ("Ranges containing absolute values larger
 than sys.maxsize are permitted but some features (such as len()) may raise
-OverflowError", Doc/library/stdtypes.rst). `r.WF` is the type invariant. -/
+OverflowError", Doc/builtins/stdtypes.rst:1817-1819). `r.WF` is the type invariant. -/
 def LenOverflow : Prop :=
   ∀ (r : Range) (L : Int), r.WF → r.Len L →
     rangeLength r = if L ≤ ssizeMax then .ok L else .error ssizeOverflow
