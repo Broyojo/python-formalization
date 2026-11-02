@@ -1,7 +1,7 @@
 import PyLean.JsonMod.Enc
 
 /-!
-`_make_iterencode` as the generator it is (Lib/json/encoder.py@3.14.7:265-461), for
+`_make_iterencode` as the generator it is (Lib/json/encoder.py:265-459), for
 `JSONEncoder.iterencode` and `json.dump`, which use the pure-Python generators
 even when `_json` is present (`c_make_encoder` is taken only with `_one_shot`,
 encoder.py:253).

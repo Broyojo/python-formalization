@@ -10,17 +10,19 @@ import PyLean.JsonMod.HookProps
 import PyLean.JsonMod.ToolProps
 
 /-!
-`Lib/json/` against `Modules/_json.c`, CPython 3.14.7.
+`Lib/json/` against `Modules/_json.c`, CPython 3.15.2.
 
 The model covers the whole package. Both decoders (`py_scanstring`, `JSONObject`,
 `JSONArray`, `py_make_scanner`, `NUMBER_RE` against `scanstring_unicode`,
 `_parse_object_unicode`, `_parse_array_unicode`, `_match_number_unicode`,
-`scan_once_unicode`), with every hook as an arbitrary function, exact
+`scan_once_unicode`), with every hook as an arbitrary function, `array_hook`
+included, exact
 `JSONDecodeError` messages and positions, Python's negative-index semantics in
 `raw_decode`, and the 4300-digit int limit. Both encoders
 (`py_encode_basestring(_ascii)`, `_make_iterencode`, as chunks too, against
 `c_encode_basestring(_ascii)`, `c_make_encoder`), with `allow_nan`, `default`,
-`check_circular`, `sort_keys`, `skipkeys`, non-str keys, `indent` and separators.
+`check_circular`, `sort_keys`, `skipkeys`, non-str keys, `indent` and separators;
+a `frozendict` is encoded as a `dict`.
 The public layer (`loads`, `load`, `dumps`, `dump`, `detect_encoding`,
 `JSONDecoder.__init__`, `JSONEncoder.__init__`, `JSONDecodeError`), the Python
 surface of `_json` (`make_scanner`, `make_encoder`, the indent cache) and
@@ -29,7 +31,8 @@ surface of `_json` (`make_scanner`, `make_encoder`, the indent cache) and
 A float value is its IEEE-754 bits, which decide every branch, and the text of
 `float.__repr__`, which is data: `float()` and `repr()` belong to the binary64
 model, and what depends on them stays open. Recursion limits, `cls=`, and
-container subclasses are out of scope.
+container subclasses are out of scope, as is mutating a container from `default`
+or a hook while it is being encoded.
 -/
 
 namespace PyLean.JsonMod
@@ -52,8 +55,8 @@ def entries : List Entry := [
     bug := some "json-scanstring-error-twins"
     notes := "Witness '\"\\\\x\"': C reports the backslash (pos 1), Python the escaped character (pos 2)." },
   { id := "json-loads-twins-scan", pyFile := "Lib/json/decoder.py"
-    pyFns := ["JSONDecoder.decode", "JSONDecoder.raw_decode", "py_scanstring", "_decode_uXXXX", "JSONObject", "JSONArray", "py_make_scanner", "scanstring_unicode", "_parse_object_unicode", "_parse_array_unicode", "_parse_constant", "_match_number_unicode", "scan_once_unicode", "scanner_call", "raise_errmsg", "raise_stop_iteration", "_PyUnicodeWriter_IsEmpty"]
-    statement := "For every str s (len(s) <= sys.maxsize) and every decoder setting, for arbitrary object_hook, object_pairs_hook, parse_float, parse_int and parse_constant, JSONDecoder.decode(s) agrees exactly (value, or exception class, msg, pos, lineno, colno) between the twins, except that an invalid control character is reported with a different message at the same position, and an invalid escape \\c at backslash q is reported by C at q and by Python at q+1 with a different message."
+    pyFns := ["JSONDecoder.decode", "JSONDecoder.raw_decode", "py_scanstring", "_decode_uXXXX", "JSONObject", "JSONArray", "py_make_scanner", "scanstring_unicode", "_parse_object_unicode", "_parse_array_unicode", "_parse_constant", "_match_number_unicode", "scan_once_unicode", "scanner_call", "raise_errmsg", "raise_stop_iteration"]
+    statement := "For every str s (len(s) <= sys.maxsize) and every decoder setting, for arbitrary object_hook, object_pairs_hook, array_hook, parse_float, parse_int and parse_constant, JSONDecoder.decode(s) agrees exactly (value, or exception class, msg, pos, lineno, colno) between the twins, except that an invalid control character is reported with a different message at the same position, and an invalid escape \\c at backslash q is reported by C at q and by Python at q+1 with a different message."
     source := "invariant: C/Python twins", status := .proven
     prop := ``LoadsTwinsScan, thm := some ``loadsTwinsScan_proven
     notes := "Covers NUMBER_RE vs _match_number_unicode (leading zeros, '-', exponents and backtracking, the 4300-digit limit), NaN/Infinity/-Infinity, white space, surrogate pairs (valid, lone, reversed, truncated, C's `end + 6 < len`), every error position, duplicate keys, hooks that raise (StopIteration included), and C's fast path for a string without escapes (_PyUnicodeWriter_IsEmpty, cScanLoop_none)." },
@@ -71,8 +74,8 @@ def entries : List Entry := [
     prop := ``RawDecodeTwinsInRange, thm := some ``rawDecodeTwinsInRange_proven
     notes := "The bounds on idx are exactly the refuted cases of json-raw-decode-twins." },
   { id := "json-dumps-twins", pyFile := "Lib/json/encoder.py"
-    pyFns := ["JSONEncoder.encode", "JSONEncoder.iterencode", "_make_iterencode", "py_encode_basestring", "py_encode_basestring_ascii", "ascii_escape_unicode", "ascii_escape_unichar", "escape_unicode", "encoder_listencode_obj", "encoder_listencode_list", "encoder_listencode_dict", "encoder_encode_key_value", "encoder_encode_float", "encoder_encode_string", "_encoded_const", "_steal_accumulate"]
-    statement := "For every value built from None, bool, int, float, str (code points <= 0x10FFFF), list, dict with str/int/float/bool/None/tuple keys, reference cycles and unknown objects, every default() returning such values, and every ensure_ascii, check_circular, allow_nan, sort_keys, skipkeys, indent and separators, JSONEncoder.encode with c_make_encoder and with _make_iterencode return the same text or raise the same exception."
+    pyFns := ["JSONEncoder.encode", "JSONEncoder.iterencode", "_make_iterencode", "py_encode_basestring", "py_encode_basestring_ascii", "ascii_escape_unicode", "ascii_escape_unichar", "escape_unicode", "encoder_listencode_obj", "encoder_listencode_list", "encoder_listencode_dict", "encoder_encode_key_value", "encoder_encode_float", "encoder_write_string", "_encoded_const", "_steal_accumulate", "_encoder_iterate_mapping_lock_held", "_encoder_iterate_dict_lock_held", "_encoder_iterate_fast_seq_lock_held", "write_escaped_ascii", "write_escaped_unicode", "ascii_escape_size", "escape_size", "ascii_escape_unicode_and_size", "escape_unicode_and_size"]
+    statement := "For every value built from None, bool, int, float, str (code points <= 0x10FFFF), list, dict or frozendict with str/int/float/bool/None/tuple keys, reference cycles and unknown objects, every default() returning such values, and every ensure_ascii, check_circular, allow_nan, sort_keys, skipkeys, indent and separators, JSONEncoder.encode with c_make_encoder and with _make_iterencode return the same text or raise the same exception."
     source := "invariant: C accelerator vs pure-Python twin", status := .proven
     prop := ``DumpsTwins, thm := some ``dumpsTwins_proven
     notes := "Exception messages agree exactly except TypeError from sort_keys with mixed key types, which both take from list.sort (modelled with '~'). The text of float.__repr__ is a parameter (ASCII, a type invariant); NaN keys with sort_keys are out of scope because the order then depends on the sort." },
@@ -124,11 +127,17 @@ def entries : List Entry := [
     source := "invariant: C/Python twins", status := .proven
     prop := ``EncodeBasestringTwins, thm := some ``encodeBasestringTwins_proven },
   { id := "json-c-encode-basestring", pyFile := "Modules/_json.c"
-    pyFns := ["py_encode_basestring", "py_encode_basestring_ascii", "ascii_escape_unichar", "ascii_escape_unicode", "escape_unicode"]
-    statement := "As json-encode-basestring-twins, for the C wrappers."
+    pyFns := ["py_encode_basestring_impl", "py_encode_basestring_ascii_impl", "ascii_escape_unichar", "ascii_escape_unicode", "ascii_escape_unicode_and_size", "escape_unicode", "escape_unicode_and_size"]
+    statement := "As json-encode-basestring-twins, for the C wrappers, with the type check and message of their Argument Clinic signature."
     source := "invariant: C/Python twins", status := .proven
     prop := ``EncodeBasestringTwins, thm := some ``encodeBasestringTwins_proven
     notes := "The OverflowError for a string too long to escape needs more than 2^59 code points and is not modelled." },
+  { id := "json-write-escaped", pyFile := "Modules/_json.c"
+    pyFns := ["write_escaped_ascii", "write_escaped_unicode", "ascii_escape_size", "escape_size"]
+    statement := "write_escaped_ascii and write_escaped_unicode write what ascii_escape_unicode and escape_unicode return, for every str: their direct path, taken on output_size == input_chars + 2, is taken exactly when no character needs escaping."
+    source := "invariant: the two paths of write_escaped_*, Modules/_json.c:241-276, :388-419", status := .proven
+    prop := ``WriteEscaped, thm := some ``writeEscaped_proven
+    notes := "str subclasses take these paths too, without str() (gh-148241); the difftest runs them with a __str__ that would show." },
   { id := "json-roundtrip-str", pyFile := "Lib/json/encoder.py"
     pyFns := ["py_encode_basestring_ascii", "ascii_escape_unicode", "scanstring_unicode"]
     statement := "For every str t, json.loads(json.dumps(t, ...)) == t, for every ensure_ascii setting, both encoders and both decoders."
@@ -223,7 +232,7 @@ def entries : List Entry := [
     prop := ``DecodeUXXXX, thm := some ``decodeUXXXX_proven },
   { id := "json-decoder-init", pyFile := "Lib/json/decoder.py"
     pyFns := ["JSONDecoder.__init__"]
-    statement := "JSONDecoder.__init__: the defaults give the default decoder, a false parse_float, parse_int or parse_constant behaves as if it were not given, and an unknown keyword raises TypeError."
+    statement := "JSONDecoder.__init__: the defaults give the default decoder, a false parse_float, parse_int or parse_constant behaves as if it were not given, object_hook, object_pairs_hook and array_hook are kept as given, and an unknown keyword raises TypeError."
     source := "Lib/json/decoder.py:339-350", status := .proven
     prop := ``DecoderInit, thm := some ``decoderInit_proven
     notes := "The false-callable behaviour is `parse_float or float`; bugforge reported it as cpython#158729, closed." },
@@ -232,6 +241,12 @@ def entries : List Entry := [
     statement := "When object_pairs_hook is given, object_hook is never called: for every document, setting object_hook changes nothing, in both twins."
     source := "JSONDecoder.__init__ docstring, Lib/json/decoder.py:304-309", status := .proven
     prop := ``PairsHookPriority, thm := some ``pairsHookPriority_proven },
+  { id := "json-array-hook", pyFile := "Lib/json/decoder.py"
+    pyFns := ["JSONArray", "_parse_array_unicode", "JSONDecoder.__init__", "py_make_scanner"]
+    statement := "array_hook replaces the list: one that gives its list back changes nothing, for every document and option, in both twins; on [] the result is what the hook returns or raises, StopIteration becoming JSONDecodeError at raw_decode."
+    source := "JSONDecoder.__init__ docstring, Lib/json/decoder.py:311-317", status := .proven
+    prop := ``ArrayHook, thm := some ``arrayHook_proven
+    notes := "Agreement of the twins for an arbitrary hook on every document is json-loads-twins-scan." },
   { id := "json-scanstring-twins", pyFile := "Lib/json/decoder.py"
     pyFns := ["py_scanstring"]
     statement := "scanstring(s, end, strict): the C function and py_scanstring agree up to the two string-error differences, for every int end."
@@ -246,7 +261,7 @@ def entries : List Entry := [
     prop := ``ScanstringTwinsInRange, thm := some ``scanstringTwinsInRange_proven
     notes := "The bounds on end are exactly the refuted cases of json-scanstring-twins." },
   { id := "json-c-scanstring", pyFile := "Modules/_json.c"
-    pyFns := ["py_scanstring", "scanstring_unicode", "_build_rval_index_tuple"]
+    pyFns := ["py_scanstring_impl", "scanstring_unicode", "_build_rval_index_tuple"]
     statement := "As json-scanstring-twins-in-range, for the C wrapper."
     source := "invariant: C/Python twins", status := .proven
     prop := ``ScanstringTwinsInRange, thm := some ``scanstringTwinsInRange_proven },
@@ -257,8 +272,8 @@ def entries : List Entry := [
     prop := ``ScannerCallRaw, thm := some ``scannerCallRaw_proven },
   { id := "json-scanner-new", pyFile := "Modules/_json.c"
     pyFns := ["scanner_new"]
-    statement := "make_scanner accepts an object with the six attributes, reading strict by truth value, and one without strict raises AttributeError naming it."
-    source := "Modules/_json.c:1254-1280", status := .proven
+    statement := "make_scanner accepts an object with the seven attributes, reading strict by truth value, and one without strict raises AttributeError naming it."
+    source := "Modules/_json.c:1255-1280", status := .proven
     prop := ``ScannerNew, thm := some ``scannerNew_proven },
   { id := "json-encoder-new", pyFile := "Modules/_json.c"
     pyFns := ["encoder_new"]
@@ -271,9 +286,9 @@ def entries : List Entry := [
     source := "invariant; Lib/json/encoder.py:202-205", status := .proven
     prop := ``EncoderCallDumps, thm := some ``encoderCallDumps_proven },
   { id := "json-encoder-string", pyFile := "Modules/_json.c"
-    pyFns := ["encoder_encode_string"]
-    statement := "encoder_encode_string: with fast_encode the C function; otherwise the result of encoder, which must be a str, and its exception propagates."
-    source := "Modules/_json.c@3.14.7:1449-1467", status := .proven
+    pyFns := ["encoder_write_string"]
+    statement := "encoder_write_string: with fast_encode what the C escape returns; otherwise the result of encoder, which must be a str, and its exception propagates."
+    source := "Modules/_json.c:1537-1557", status := .proven
     prop := ``EncoderString, thm := some ``encoderString_proven },
   { id := "json-indent-cache", pyFile := "Modules/_json.c"
     pyFns := ["create_indent_cache", "update_indent_cache", "get_item_separator", "write_newline_indent"]

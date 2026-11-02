@@ -98,8 +98,8 @@ def cReadInto (n : Nat) : CM Bytes := do
 /-- `MIN_READ_BUF_SIZE` (`Modules/_pickle.c:162`). -/
 def cMinReadBufSize : Nat := 1 <<< 20
 
-/-- The `while (1)` of `load_counted_binbytes` (`Modules/_pickle.c:5889-5908`)
-and `load_counted_bytearray` (:5935-5954): the buffer doubles and each round
+/-- The `while (1)` of `load_counted_binbytes` (`Modules/_pickle.c:5887-5908`)
+and `load_counted_bytearray` (:5933-5954): the buffer doubles and each round
 is its own `_Unpickler_ReadInto`, so the frame check runs once per chunk. The
 fuel is `size + 1`: every round but the last adds at least one byte to `cursize`. -/
 def cReadChunks : Nat → Nat → Nat → Nat → Bytes → CM Bytes

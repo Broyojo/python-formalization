@@ -416,8 +416,8 @@ def EncodeBasestringTwins : Prop :=
   (∀ s : PStr, strOk s = true →
     cPyEncodeBasestringAscii (.str s) = .ok (pyEncodeBasestringAscii s) ∧
     cPyEncodeBasestring (.str s) = .ok (pyEncodeBasestring s)) ∧
-  (∀ t, cPyEncodeBasestringAscii (.other t) = .error (firstArgErr t) ∧
-    cPyEncodeBasestring (.other t) = .error (firstArgErr t))
+  (∀ t, cPyEncodeBasestringAscii (.other t) = .error (badArgErr "encode_basestring_ascii" "argument" t) ∧
+    cPyEncodeBasestring (.other t) = .error (badArgErr "encode_basestring" "argument" t))
 
 theorem encodeBasestringTwins_proven : EncodeBasestringTwins := by
   refine ⟨fun s h => ⟨?_, ?_⟩, fun _ => ⟨rfl, rfl⟩⟩

@@ -10,8 +10,10 @@ the `api_*` cases, which call `json.loads` as is and compare a `float` result
 only as being a float (`float()` is not modelled). The other cases call
 `json.dumps`, `dump`, `load`, `detect_encoding`, `JSONDecodeError`, `iterencode`,
 `scanstring`, `encode_basestring(_ascii)`, the C `make_encoder` and `make_scanner`
-directly, and `json.tool.main` with patched streams. Exits non-zero on any
-mismatch. See difftest/common.py.
+directly, and `json.tool.main` with patched streams. Decoders also run with an
+`array_hook`; encoders get `frozendict`s, and `str` subclasses whose `__str__`
+would show if a writer called it. Exits non-zero on any mismatch. See
+difftest/common.py.
 """
 
 import io
@@ -37,6 +39,13 @@ assert pyjson.encoder.c_make_encoder is None
 assert json.scanner.make_scanner is not json.scanner.py_make_scanner
 
 IMPL = {"py": pyjson, "c": json}
+
+
+class StrSub(str):
+    """Encoded by its characters: `write_escaped_*` must not call `str()` (gh-148241)."""
+
+    def __str__(self):
+        return "WRONG"
 
 
 class Hook:
@@ -180,6 +189,16 @@ def gen_idx(rng, s):
 # encoder values
 
 KEY_STRS = ["", "a", "b", "é", "\ud834", "\U0001d11e", '"', "\\", "\x00", "\n", "aa", "B", "true", "1"]
+PLAIN_CH = ["a", "Z", "0", " ", "~", "é", "€", "\U0001d11e", "\x7f"]  # needs no escape, or only with ensure_ascii
+
+
+def maybe_sub(rng, s):
+    return StrSub(s) if rng.random() < 0.15 else s
+
+
+def enc_text(rng):
+    ch = PLAIN_CH if rng.random() < 0.4 else STR_CH
+    return "".join(rng.choice(ch) for _ in range(rng.randint(0, 5)))
 FLOATS = [0.0, -0.0, 1.0, -1.5, 0.1, 1e22, 1e16, 1e-5, 1.7976931348623157e308, 5e-324, 2.5, 1e300,
           math.inf, -math.inf, math.nan, -math.nan]
 
@@ -220,7 +239,7 @@ BOOM = object()
 def rand_key(rng):
     r = rng.random()
     if r < 0.6:
-        return rng.choice(KEY_STRS) if rng.random() < 0.7 else rand_text(rng, 2)
+        return maybe_sub(rng, rng.choice(KEY_STRS) if rng.random() < 0.7 else rand_text(rng, 2))
     if r < 0.75:
         return rng.choice([0, 1, -1, 2, 10**20, -(10**20), 7])
     if r < 0.82:
@@ -241,7 +260,7 @@ def rand_val(rng, depth, ancestors):
     if depth > 3 or k < 0.5:
         r = rng.random()
         if r < 0.3:
-            return "".join(rng.choice(STR_CH) for _ in range(rng.randint(0, 5)))
+            return maybe_sub(rng, enc_text(rng))
         if r < 0.55:
             return rng.choice([0, 1, -1, 2**63, -2**63, 2**64, 10**30, 123, -7])
         if r < 0.57:
@@ -261,6 +280,8 @@ def rand_val(rng, depth, ancestors):
     d = {}
     for _ in range(rng.randint(0, 4)):
         d[rand_key(rng)] = rand_val(rng, depth + 1, ancestors + [d])
+    if rng.random() < 0.3 and not has_cycle(d):
+        return frozendict(d)
     return d
 
 
@@ -280,7 +301,7 @@ def enc_key(k):
         return {"b": k}
     if type(k) is int:
         return {"i": istr(k)}
-    if type(k) is str:
+    if isinstance(k, str):
         return {"s": cps(k)}
     if type(k) is tuple:
         return {"t": str(k[0])}
@@ -297,7 +318,7 @@ def enc_val(v, ancestors):
         return v
     if type(v) is int:
         return {"i": istr(v)}
-    if type(v) is str:
+    if isinstance(v, str):
         return {"s": cps(v)}
     if type(v) is float:
         return {"f": str(fbits(v)), "r": cps(repr(v))}
@@ -307,7 +328,7 @@ def enc_val(v, ancestors):
         return {"other": v.n, "t": "Obj"}
     if type(v) is list:
         return {"l": [enc_val(x, ancestors + [v]) for x in v]}
-    if type(v) is dict:
+    if type(v) in (dict, frozendict):
         return {"d": [[enc_key(k), enc_val(x, ancestors + [v])] for k, x in v.items()]}
     raise AssertionError(type(v))
 
@@ -335,7 +356,7 @@ def objs_of(v, seen=None):
         elif type(x) is list:
             for y in x:
                 go(y)
-        elif type(x) is dict:
+        elif type(x) in (dict, frozendict):
             for y in x.values():
                 go(y)
 
@@ -368,7 +389,7 @@ def has_cycle(v):
             return x.ret is not BOOM and go(x.ret, path | {id(x)})
         if type(x) is list:
             return any(go(y, path | {id(x)}) for y in x)
-        if type(x) is dict:
+        if type(x) in (dict, frozendict):
             return any(go(y, path | {id(x)}) for y in x.values())
         return False
 
@@ -447,9 +468,12 @@ def load_arg(rng):
     return {"other": rng.choice(["int", "NoneType", "list", "float"])}
 
 
+LONG_TYPE = "L" * 60  # `_PyArg_BadArgument` prints 50 characters of the type name
+
+
 def gen_scan_arg(rng):
     if rng.random() < 0.05:
-        return {"other": rng.choice(["int", "bytes", "NoneType"])}, ""
+        return {"other": rng.choice(["int", "bytes", "NoneType", LONG_TYPE])}, ""
     s = gen_doc(rng)
     return {"s": cps(s)}, s
 
@@ -487,7 +511,7 @@ def float_table(text):
     return [[cps(t), str(fbits(x)), cps(repr(x))] for t, x in seen.items()]
 
 
-CTX_ATTRS = ["strict", "object_hook", "object_pairs_hook", "parse_float", "parse_int", "parse_constant"]
+CTX_ATTRS = ["strict", "object_hook", "object_pairs_hook", "array_hook", "parse_float", "parse_int", "parse_constant"]
 
 
 def gen_case(rng):
@@ -498,7 +522,7 @@ def gen_case(rng):
         c = {"mod": "json", "s": cps(s), "strict": rng.random() < 0.7,
              "ohook": rng.choice([0, 0, 1, 2, 3]), "phook": rng.choice([0, 0, 0, 1, 2, 3]),
              "pint": rng.choice([0, 0, 0, 1, 2, 3]), "pfloat": rng.choice([0, 0, 0, 2, 3]),
-             "pconst": rng.choice([0, 0, 0, 2, 3])}
+             "pconst": rng.choice([0, 0, 0, 2, 3]), "ahook": rng.choice([0, 0, 1, 1, 2, 3])}
         if rng.random() < 0.7:
             c["fn"] = f"loads_{impl}"
         else:
@@ -544,6 +568,7 @@ def gen_case(rng):
              "ohook": rng.choice([0, 0, 0, 1, 2]), "phook": rng.choice([0, 0, 0, 1, 2]),
              "pfloat": rng.choice([0, 0, 0, 1, 2, 4]), "pint": rng.choice([0, 0, 0, 1, 2, 4]),
              "pconst": rng.choice([0, 0, 0, 1, 2, 4]), "strict": rng.choice([None, None, True, False]),
+             "ahook": rng.choice([0, 0, 0, 1, 2, 3]),
              "kw": ["frob"] if rng.random() < 0.03 else [], "read_fail": int(rng.random() < 0.05)}
         return c
     if r < 0.84:
@@ -559,7 +584,7 @@ def gen_case(rng):
         strict = rng.random() < 0.7
         if rng.random() < 0.5:
             s = '"' + rand_text(rng, rng.randint(0, 5)) + rng.choice(['"', "", '"x'])
-            x = {"s": cps(s)}
+            x = {"s": cps(s), "sub": rng.random() < 0.2}
         n = len(s)
         e = rng.choice([1, 1, 1, 0, n, n - 1, n + 1, -1, 2**63 - 1, 2**63, -2**63 - 1, rng.randint(0, n + 1)])
         if impl == "py":
@@ -567,14 +592,16 @@ def gen_case(rng):
         return {"mod": "json", "fn": "scanstr_c", "x": x, "end": str(e), "strict": strict}
     if r < 0.93:
         ascii_ = rng.random() < 0.5
-        s = rand_text(rng, rng.randint(0, 6))
+        s = rand_text(rng, rng.randint(0, 6)) if rng.random() < 0.6 else enc_text(rng)
         if impl == "py" or rng.random() < 0.9:
-            return {"mod": "json", "fn": f"encstr_{impl}", "ascii": ascii_, "s": cps(s), "x": {"s": cps(s)}}
-        return {"mod": "json", "fn": "encstr_c", "ascii": ascii_, "x": {"other": rng.choice(["int", "bytes"])}}
+            return {"mod": "json", "fn": f"encstr_{impl}", "ascii": ascii_, "s": cps(s),
+                    "x": {"s": cps(s), "sub": rng.random() < 0.3}}
+        return {"mod": "json", "fn": "encstr_c", "ascii": ascii_,
+                "x": {"other": rng.choice(["int", "bytes", "NoneType", LONG_TYPE])}}
     if r < 0.95:
         x, s = gen_scan_arg(rng)
         return {"mod": "json", "fn": "scan_once", "x": x, "idx": str(gen_idx(rng, s)), "strict": rng.random() < 0.7,
-                "pfloat": 0, "pconst": 0}
+                "pfloat": 0, "pconst": 0, "ahook": rng.choice([0, 0, 1, 2, 3])}
     if r < 0.96:
         attrs = [a for a in CTX_ATTRS if rng.random() < 0.9]
         return {"mod": "json", "fn": "scanner_new", "tp": "Ctx", "attrs": attrs, "strict_mode": rng.choice([0, 1, 2])}
@@ -721,7 +748,8 @@ def dec_of(m, c):
                          parse_constant=text_hook(c.get("pconst", 0), "const", True),
                          parse_int=text_hook(c.get("pint", 0), "int", False),
                          object_hook=obj_hook(c.get("ohook", 0), lambda d: ["H", d]),
-                         object_pairs_hook=obj_hook(c.get("phook", 0), Pairs))
+                         object_pairs_hook=obj_hook(c.get("phook", 0), Pairs),
+                         array_hook=obj_hook(c.get("ahook", 0), lambda x: ["A", x]))
 
 
 def decode_arg(c):
@@ -735,6 +763,7 @@ def decode_arg(c):
 
 def load_kw(c):
     kw = dict(object_hook=obj_hook(c["ohook"], lambda d: ["H", d]), object_pairs_hook=obj_hook(c["phook"], Pairs),
+              array_hook=obj_hook(c["ahook"], lambda x: ["A", x]),
               parse_float=py_hook(c["pfloat"], "F"), parse_int=py_hook(c["pint"], "I"),
               parse_constant=py_hook(c["pconst"], "C"))
     if c["strict"] is not None:
@@ -748,8 +777,14 @@ def yield_result(chunks, exc):
     return {"ok": {"chunks": [cps(x) for x in chunks], "exc": exc}}
 
 
+LONG_OBJ = type(LONG_TYPE, (), {})()
+
+
 def str_arg(x):
-    return "".join(map(chr, x["s"])) if "s" in x else {"int": 1, "bytes": b"", "NoneType": None}[x["other"]]
+    if "s" in x:
+        s = "".join(map(chr, x["s"]))
+        return StrSub(s) if x.get("sub") else s
+    return {"int": 1, "bytes": b"", "NoneType": None, LONG_TYPE: LONG_OBJ}[x["other"]]
 
 
 def run_python(c):

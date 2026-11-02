@@ -157,6 +157,7 @@ abbrev HookArg := Option (Bool × (PStr → DR JVal))
 structure DecArgs where
   objectHook : Option (List (PStr × JVal) → DR JVal) := none
   objectPairsHook : Option (List (PStr × JVal) → DR JVal) := none
+  arrayHook : Option (List JVal → DR JVal) := none
   parseFloat : HookArg := none
   parseInt : HookArg := none
   parseConstant : HookArg := none
@@ -174,6 +175,7 @@ def decoderInit (a : DecArgs) : Except PyExc DCfg :=
     .ok { strict := a.strict.getD true
           objectHook := a.objectHook
           pairsHook := a.objectPairsHook
+          arrayHook := a.arrayHook
           parseFloat := match a.parseFloat with
             | some (true, h) => h
             | _ => d.parseFloat
@@ -194,12 +196,12 @@ inductive LoadArg where
   /-- Any other object, by type name. -/
   | other (t : String)
 
-/-- The condition of the fast path, Lib/json/__init__.py@3.14.7:349-351. -/
+/-- The condition of the fast path, Lib/json/__init__.py:367-370. -/
 def loadsFast (a : DecArgs) : Bool :=
   a.objectHook.isNone && a.parseInt.isNone && a.parseFloat.isNone && a.parseConstant.isNone &&
-    a.objectPairsHook.isNone && a.strict.isNone && a.kw.isEmpty
+    a.objectPairsHook.isNone && a.arrayHook.isNone && a.strict.isNone && a.kw.isEmpty
 
-/-- `_default_decoder.decode(s)` or `cls(**kw).decode(s)`, __init__.py:349-365. -/
+/-- `_default_decoder.decode(s)` or `cls(**kw).decode(s)`, __init__.py:367-386. -/
 def loadsDecode (decode : DCfg → PStr → DR JVal) (a : DecArgs) (s : PStr) : Except PyExc JVal :=
   let cfg : Except PyExc DCfg := if loadsFast a then .ok {} else decoderInit a
   match cfg with
@@ -221,7 +223,7 @@ def jsonLoads (decode : DCfg → PStr → DR JVal) (a : DecArgs) : LoadArg → E
     | .ok s => loadsDecode decode a s
   | .other t => .error (.typeError s!"the JSON object must be str, bytes or bytearray, not {t}")
 
-/-- `json.load(fp, ...)`, __init__.py:278-301: `fp.read()` is `rd`. -/
+/-- `json.load(fp, ...)`, __init__.py:277-310: `fp.read()` is `rd`. -/
 def jsonLoad (decode : DCfg → PStr → DR JVal) (a : DecArgs) (rd : Except PyExc LoadArg) : Except PyExc JVal :=
   match rd with
   | .error e => .error e

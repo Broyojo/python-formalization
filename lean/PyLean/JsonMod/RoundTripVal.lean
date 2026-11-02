@@ -182,7 +182,7 @@ theorem scanOnce_arr (cfg : DCfg) (n : Nat) {s : PStr} {p : Nat} {R : PStr} (hs 
     cScanOnce cfg s (n + 1) p =
       if wsEnd s (p + 1) ≥ s.length ∨ s.getD (wsEnd s (p + 1)) 0 ≠ 93 then
         cArrLoop cfg s n (wsEnd s (p + 1)) []
-      else .ok (.arr [], wsEnd s (p + 1) + 1) := by
+      else (mkArr cfg []).map (·, wsEnd s (p + 1) + 1) := by
   obtain ⟨h1, _, h3⟩ := char_at hs
   have hl : ¬ p ≥ s.length := by omega
   simp only [cScanOnce, hl, ↓reduceIte, h3, Nat.reduceEqDiff]
@@ -286,7 +286,7 @@ theorem cEnc_head {cfg : ECfg} (hL : Layout cfg) : ∀ {f lvl : Nat} {seen : Lis
       exact ⟨c, r, h1, h2⟩
     | flt b r => simp [EVal.okJ] at hok
     | str x =>
-      simp only [cEnc, cEncStr, hL.cst, Except.ok.injEq] at h
+      simp only [cEnc, cEncStr_std hL.cst, Except.ok.injEq] at h
       obtain ⟨r, hr⟩ := cStrEnc_head cfg x
       exact ⟨34, r, by rw [← h, hr], by simp [ValHead]⟩
     | list xs =>

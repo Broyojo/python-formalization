@@ -29,6 +29,7 @@ theorem Good.mono {α : Type} {e e' : Nat} {r : DR (α × Nat)} (h : Good e' r) 
 /-- The callbacks are Python callables: they return or raise. -/
 structure DCfg.Real (cfg : DCfg) : Prop where
   fin : ∀ a, cFinish cfg a ≠ fuelOut
+  arr : ∀ a, mkArr cfg a ≠ fuelOut
   flt : ∀ t, cfg.parseFloat t ≠ fuelOut
   int : ∀ h, cfg.parseIntFn = some h → ∀ t, h t ≠ fuelOut
   con : ∀ t, cfg.parseConstant t ≠ fuelOut
@@ -265,7 +266,7 @@ theorem nofuel (cfg : DCfg) (hR : cfg.Real) (s : PStr) : ∀ n : Nat,
           · split
             · split
               · exact (ihA _ _ (by omega)).mono (by omega)
-              · exact Good.ok' _ (by omega)
+              · exact map_good (hR.arr _) (by omega)
             · split
               · exact Good.ok' _ (by omega)
               · split
@@ -292,7 +293,7 @@ theorem nofuel (cfg : DCfg) (hR : cfg.Real) (s : PStr) : ∀ n : Nat,
         cases ha : cArrAfter s k with
         | close i =>
           obtain ⟨m, rfl, hm⟩ := cArrAfter_close' ha
-          exact Good.ok' _ (by simp; omega)
+          exact map_good (hR.arr _) (by simp; omega)
         | err x =>
           apply Good.err
           intro hx

@@ -28,6 +28,7 @@ reproducer: |
 expected: |
   Both twins reject the stream.
 observed: |
+  python3 3.15.2: NOT REPRODUCED: Python raises EOFError, C UnpicklingError; both reject. This record is the 3.14.7 behaviour.
   python3 3.14.7: C UnpicklingError 'pickle data was truncated'; Python returns None. REPRODUCED.
   main (python.exe 3.16.0a1+dev): NOT REPRODUCED: Python now raises EOFError (C still UnpicklingError; both reject).
 promised_by: |
@@ -44,5 +45,5 @@ duplicates:
   queries: ["pickle FRAME", "Unframer", "pickle frame shorter", "pickle frame truncated", "BINBYTES"]
   bugforge: "no pickle entries in vendor/bugforge-results/README.md"
 lean:
-  property: PyLean.Pickle.FrameTwins
-  theorem: PyLean.Pickle.frameTwins_refuted
+  property: PyLean.Pickle.FrameRead
+  theorem: PyLean.Pickle.frameRead_proven

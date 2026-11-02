@@ -453,22 +453,10 @@ def strRepr (asciiOnly : Bool) (s : List Nat) : Py String := do
   let parts ← s.mapM (strReprCP asciiOnly q)
   return charOf q ++ String.join parts ++ charOf q
 
-/-- One byte of `repr(bytearray)`. Unlike `bytes`, `'` is escaped under either
-quote. -/
-def bytearrayReprByte (c : UInt8) : String :=
-  let n := c.toNat
-  if n == 0x27 || n == 0x5c then "\\" ++ charOf n
-  else if n == 0x09 then "\\t"
-  else if n == 0x0a then "\\n"
-  else if n == 0x0d then "\\r"
-  else if n < 0x20 || n ≥ 0x7f then "\\x" ++ hexN 2 n
-  else charOf n
-
 /-- `repr(bytearray)`, `bytearray_repr_lock_held` in `Objects/bytearrayobject.c:1185-1198`:
-`"` only when there is a `'` and no `"`. -/
-def bytearrayRepr (b : Bytes) : String :=
-  let quote := if b.contains 0x27 && !b.contains 0x22 then "\"" else "'"
-  "bytearray(b" ++ quote ++ String.join (b.map bytearrayReprByte) ++ quote ++ ")"
+since 3.15 the text of `bytes` (`_Py_bytes_repr`, `Objects/bytesobject.c:1436`) inside
+`bytearray(...)`, so `'` is escaped only under single quotes. -/
+def bytearrayRepr (b : Bytes) : String := "bytearray(" ++ bytesRepr b ++ ")"
 
 /-- `repr(arg)`. -/
 def tvRepr : TV → Py String

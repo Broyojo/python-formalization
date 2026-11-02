@@ -1,7 +1,7 @@
 import PyLean.JsonMod.Basic
 
 /-!
-The two encoders of CPython 3.14.7: `py_encode_basestring(_ascii)` and
+The two encoders of CPython 3.15.2: `py_encode_basestring(_ascii)` and
 `_make_iterencode` (Lib/json/encoder.py) and `c_make_encoder`,
 `c_encode_basestring(_ascii)` (Modules/_json.c), both reached through
 `JSONEncoder.encode` (`json.dumps`).
@@ -206,11 +206,29 @@ def cAsciiEscapeChar (c : Nat) : PStr :=
       cU (0xd800 - (0x10000 >>> 10) + (c >>> 10)) ++ [92] ++ cU (0xdc00 + (c &&& 0x3ff))
     else cU c)
 
-/-- `ascii_escape_unicode`, Modules/_json.c@3.14.7:149-210. -/
+/-- `ascii_escape_unicode`, Modules/_json.c:225-238, with the output loop of
+`ascii_escape_unicode_and_size`, :194-222. -/
 def cAsciiEscape (s : PStr) : PStr :=
   [34] ++ s.flatMap (fun c => if sChar c then [c] else cAsciiEscapeChar c) ++ [34]
 
-/-- `escape_unicode`, Modules/_json.c:224-368 (`ENCODE_OUTPUT`). -/
+/-- The `d` of one character in `ascii_escape_size`, Modules/_json.c:169-182. The
+`OverflowError` of :183-186 needs more than 2^59 code points and is not modelled. -/
+def asciiEscD (c : Nat) : Nat :=
+  if sChar c then 1
+  else if c = 92 ∨ c = 34 ∨ c = 8 ∨ c = 12 ∨ c = 10 ∨ c = 13 ∨ c = 9 then 2
+  else if c ≥ 0x10000 then 12
+  else 6
+
+/-- `ascii_escape_size`, Modules/_json.c:162-191. -/
+def asciiEscapeSize (s : PStr) : Nat := 2 + (s.map asciiEscD).sum
+
+/-- `write_escaped_ascii`, Modules/_json.c:241-276: a string with nothing to escape
+is written directly, without `str()` on a subclass (gh-148241). -/
+def writeEscapedAscii (s : PStr) : PStr :=
+  if asciiEscapeSize s = s.length + 2 then [34] ++ s ++ [34] else cAsciiEscape s
+
+/-- `escape_unicode`, Modules/_json.c:371-385, with the output loop of
+`escape_unicode_and_size`, :310-368 (`ENCODE_OUTPUT`). -/
 def cEscapeChar (c : Nat) : PStr :=
   if c = 92 then [92, 92] else if c = 34 then [92, 34] else if c = 8 then [92, 98]
   else if c = 12 then [92, 102] else if c = 10 then [92, 110] else if c = 13 then [92, 114]
@@ -219,6 +237,19 @@ def cEscapeChar (c : Nat) : PStr :=
   else [c]
 
 def cEscape (s : PStr) : PStr := [34] ++ s.flatMap cEscapeChar ++ [34]
+
+/-- The `d` of one character in `escape_size`, Modules/_json.c:286-298. -/
+def escD (c : Nat) : Nat :=
+  if c = 92 ∨ c = 34 ∨ c = 8 ∨ c = 12 ∨ c = 10 ∨ c = 13 ∨ c = 9 then 2
+  else if c ≤ 0x1f then 6
+  else 1
+
+/-- `escape_size`, Modules/_json.c:279-307. -/
+def escapeSize (s : PStr) : Nat := 2 + (s.map escD).sum
+
+/-- `write_escaped_unicode`, Modules/_json.c:388-419. -/
+def writeEscapedUnicode (s : PStr) : PStr :=
+  if escapeSize s = s.length + 2 then [34] ++ s ++ [34] else cEscape s
 
 /-! ### Keys and sorting -/
 
@@ -268,7 +299,7 @@ def insertItem (p : EKey × EVal) : List (EKey × EVal) → List (EKey × EVal)
   | [] => [p]
   | q :: t => if p.1.lt q.1 then p :: q :: t else q :: insertItem p t
 
-/-- `sorted(dct.items())` (encoder.py:347) and `PyList_Sort(items)` (_json.c@3.14.7:1700):
+/-- `sorted(dct.items())` (encoder.py:347) and `PyList_Sort(items)` (_json.c:1841):
 the keys of a dict are distinct, so tuples compare by key alone. When keys of
 two classes are present some comparison between them raises; which one depends
 on the sort, so the message is not modelled. -/
@@ -293,7 +324,10 @@ def rep (t : PStr) : Nat → PStr
   | 0 => []
   | k + 1 => t ++ rep t k
 
-/-! ### Pure-Python encoder: `_make_iterencode`, encoder.py@3.14.7:265-461 -/
+/-! ### Pure-Python encoder: `_make_iterencode`, encoder.py:265-459
+
+`isinstance(o, (dict, frozendict))` (encoder.py:311, :398, :432) and `PyAnyDict_Check`
+(_json.c:1612) treat the two alike, so `EVal.dict` stands for either. -/
 
 def pyStrEnc (cfg : ECfg) (s : PStr) : PStr :=
   if cfg.ensureAscii then pyEncodeBasestringAscii s else pyEncodeBasestring s
@@ -397,30 +431,34 @@ def pyEncItems (cfg : ECfg) : Nat → Nat → List Nat → Option PStr → PStr 
 termination_by f _ _ _ _ _ items => (f, sizeOf items)
 end
 
-/-! ### C encoder: `encoder_listencode_obj` and friends, Modules/_json.c:1568-1994 -/
+/-! ### C encoder: `encoder_listencode_obj` and friends, Modules/_json.c:1569-1992 -/
 
-/-- `encoder_encode_string` with `fast_encode` (@3.14.7:1449-1467). -/
+/-- The text `fast_encode` writes, as the two escapes compute it. -/
 def cStrEnc (cfg : ECfg) (s : PStr) : PStr :=
   if cfg.ensureAscii then cAsciiEscape s else cEscape s
 
-/-- `encoder_encode_string` with a custom `encoder` (@3.14.7:1456-1466), or with
-`fast_encode`. -/
+/-- `s->fast_encode(writer, obj)`: `write_escaped_ascii` or `write_escaped_unicode`. -/
+def cFastEncode (cfg : ECfg) (s : PStr) : PStr :=
+  if cfg.ensureAscii then writeEscapedAscii s else writeEscapedUnicode s
+
+/-- `encoder_write_string`, Modules/_json.c:1537-1557, returning the text it writes:
+`fast_encode`, or a custom `encoder`, whose result must be a `str`. -/
 def cEncStr (cfg : ECfg) (s : PStr) : ER :=
   match cfg.customEnc with
-  | none => .ok (cStrEnc cfg s)
+  | none => .ok (cFastEncode cfg s)
   | some g =>
     match g s with
     | .error e => .error e
     | .ok (.str t) => .ok t
     | .ok (.nonstr t) => .error (.typeError s!"encoder() must return a string, not {(String.ofList (t.toList.take 80))}")
 
-/-- `_encoded_const`, :1490-1507: `None`, `True`, `False` as text. -/
+/-- `_encoded_const`, :1491-1507: `None`, `True`, `False` as text. -/
 def encodedConst : Option Bool → PStr
   | none => cs "null"
   | some true => cs "true"
   | some false => cs "false"
 
-/-- The key conversion of `encoder_encode_key_value`, :1677-1700. -/
+/-- The key conversion of `encoder_encode_key_value`, :1678-1720. -/
 def cKeyStr (cfg : ECfg) : EKey → Except PyExc (Option PStr)
   | .str s => .ok (some s)
   | .flt b r => (cEncodeFloat cfg b r).map some
@@ -435,7 +473,7 @@ def cNewlineIndent (ind : PStr) (k : Nat) : PStr := [10] ++ rep ind k
 def cSepIndent (cfg : ECfg) (ind : PStr) (k : Nat) : PStr := cfg.itemSep ++ cNewlineIndent ind k
 
 mutual
-/-- `encoder_listencode_obj`, :1568-1668. -/
+/-- `encoder_listencode_obj`, :1569-1667. -/
 def cEnc (cfg : ECfg) : Nat → Nat → List Nat → EVal → ER
   | 0, _, _, _ => .error .modelFuel
   | f + 1, lvl, seen, v =>
@@ -446,7 +484,7 @@ def cEnc (cfg : ECfg) : Nat → Nat → List Nat → EVal → ER
     | .int n => intRepr n
     | .flt b r => cEncodeFloat cfg b r
     | .list xs =>
-      -- `encoder_listencode_list`, :1915-1994
+      -- `encoder_listencode_list`, :1916-1992
       if xs.length = 0 then .ok (cs "[]")
       else
         let (lvl, pre, sep) : Nat × PStr × PStr :=
@@ -461,7 +499,7 @@ def cEnc (cfg : ECfg) : Nat → Nat → List Nat → EVal → ER
             | none => []
           .ok ([91] ++ pre ++ body ++ post ++ [93])
     | .dict kvs =>
-      -- `encoder_listencode_dict`, :1797-1887
+      -- `encoder_listencode_dict`, :1798-1887
       if kvs.length = 0 then .ok (cs "{}")
       else
         let (lvl, sep) : Nat × PStr :=
@@ -489,7 +527,8 @@ def cEnc (cfg : ECfg) : Nat → Nat → List Nat → EVal → ER
         | .ok v' => cEnc cfg f lvl (n :: seen) v'
 termination_by f _ _ v => (f, sizeOf v)
 
-/-- The item loop of `encoder_listencode_list`, @3.14.7:1817-1832. -/
+/-- The item loop of `encoder_listencode_list`: `_encoder_iterate_fast_seq_lock_held`,
+:1890-1913. -/
 def cEncList (cfg : ECfg) : Nat → Nat → List Nat → PStr → Nat → List EVal → ER
   | _, _, _, _, _, [] => .ok []
   | f, lvl, seen, sep, i, x :: xs =>
@@ -502,8 +541,11 @@ def cEncList (cfg : ECfg) : Nat → Nat → List Nat → PStr → Nat → List E
       | .ok rest => .ok (pre ++ t ++ rest)
 termination_by f _ _ _ _ xs => (f, sizeOf xs)
 
-/-- The item loop of `encoder_listencode_dict` with `encoder_encode_key_value`
-(:1669-1736); also returns `first`. -/
+/-- The item loop of `encoder_listencode_dict`: `_encoder_iterate_mapping_lock_held`
+(:1739-1769) over sorted items and `_encoder_iterate_dict_lock_held` (:1772-1795)
+otherwise, with `encoder_encode_key_value` (:1670-1736); also returns `first`. An
+exact dict has no `items()` to return anything but 2-tuples, and the model's
+`default` cannot mutate the container being encoded. -/
 def cEncItems (cfg : ECfg) : Nat → Nat → List Nat → PStr → Bool → List (EKey × EVal) → Except PyExc (PStr × Bool)
   | _, _, _, _, first, [] => .ok ([], first)
   | f, lvl, seen, sep, first, (k, x) :: xs =>

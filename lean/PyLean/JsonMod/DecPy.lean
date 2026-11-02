@@ -1,7 +1,7 @@
 import PyLean.JsonMod.Basic
 
 /-!
-The pure-Python decoder of CPython 3.14.7: `py_scanstring`, `JSONObject` and
+The pure-Python decoder of CPython 3.15.2: `py_scanstring`, `JSONObject` and
 `JSONArray` (Lib/json/decoder.py), `py_make_scanner` (Lib/json/scanner.py) and
 `JSONDecoder.decode`/`raw_decode`, as obtained with
 `import_fresh_module('json', blocked=['_json'])`.
@@ -259,20 +259,20 @@ def pyScanOnce (cfg : DCfg) (s : PStr) : Nat → Int → DR (JVal × Int)
           else pyObjLoop cfg s n (e + 1) []
         else pyObjLoop cfg s n (e + 1) []
       else if c = 91 then
-        -- `JSONArray((string, idx + 1), _scan_once)`, decoder.py@3.14.7:221-231
+        -- `JSONArray((string, idx + 1), _scan_once, array_hook)`, decoder.py:221-232
         let e := idx + 1
         let nc := pySlice s e (e + 1)
         let (e, nc) : Int × PStr :=
           if inWsSlice nc then (wsEndPy s (e + 1), pySlice s (wsEndPy s (e + 1)) (wsEndPy s (e + 1) + 1))
           else (e, nc)
-        if nc = [93] then .ok (.arr [], e + 1)
+        if nc = [93] then (mkArr cfg []).map (·, e + 1)
         else pyArrLoop cfg s n e []
       else if c = 110 ∧ pySlice s idx (idx + 4) = cs "null" then .ok (.null, idx + 4)
       else if c = 116 ∧ pySlice s idx (idx + 4) = cs "true" then .ok (.bool true, idx + 4)
       else if c = 102 ∧ pySlice s idx (idx + 5) = cs "false" then .ok (.bool false, idx + 5)
       else pyScanNumber cfg s idx c
 
-/-- The `while True` loop of `JSONArray`, decoder.py:234-259. -/
+/-- The `while True` loop of `JSONArray` and its end, decoder.py:234-263. -/
 def pyArrLoop (cfg : DCfg) (s : PStr) : Nat → Int → List JVal → DR (JVal × Int)
   | 0, _, _ => fuelOut
   | n + 1, e, acc =>
@@ -281,7 +281,7 @@ def pyArrLoop (cfg : DCfg) (s : PStr) : Nat → Int → List JVal → DR (JVal �
     | .error err => .error err
     | .ok (v, e) =>
       match pyArrAfter s e with
-      | .close e => .ok (.arr (acc ++ [v]), e)
+      | .close e => (mkArr cfg (acc ++ [v])).map (·, e)
       | .err err => .error err
       | .next e => pyArrLoop cfg s n e (acc ++ [v])
 

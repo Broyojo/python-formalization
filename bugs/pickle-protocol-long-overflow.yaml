@@ -33,6 +33,7 @@ expected: |
   Both twins treat every negative int as the highest protocol, and raise ValueError for every int
   above 5.
 observed: |
+  python3 3.15.2: REPRODUCED.
   python3 3.14.7: -2**63-1: C OverflowError, Python ok. 2**63: C OverflowError, Python ValueError. REPRODUCED.
   main (python.exe 3.16.0a1+dev): REPRODUCED, same behaviour.
 promised_by: |
@@ -49,5 +50,5 @@ duplicates:
   queries: ["pickle protocol OverflowError", "pickle protocol argument", "pickle negative protocol"]
   bugforge: "no pickle entries in vendor/bugforge-results/README.md"
 lean:
-  property: PyLean.Pickle.DumpsTwinsAgreeBatchOk
-  theorem: PyLean.Pickle.dumpsTwinsAgreeBatchOk_refuted
+  property: PyLean.Pickle.DumpsTwinsAgree
+  theorem: PyLean.Pickle.dumpsTwinsAgree_refuted

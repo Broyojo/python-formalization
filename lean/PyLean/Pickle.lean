@@ -10,7 +10,7 @@ import PyLean.Pickle.EncProps
 import PyLean.Pickle.EncFrame
 import PyLean.Pickle.DecProps
 import PyLean.Pickle.ToolsGen
-import PyLean.Pickle.DecSim
+import PyLean.Pickle.DecChunk
 
 /-!
 `Lib/pickle.py` vs `Modules/_pickle.c`, CPython 3.15.2, on plain data: None,
@@ -156,7 +156,7 @@ def entries : List Entry := [
     statement := "After any BINPUT, MEMOIZE stores under the number of elements in the memo in both unpicklers, so a following BINGET finds the same object or fails in both."
     source := "Lib/pickletools.py:1874-1875 (MEMOIZE); invariant: C accelerator vs pure-Python twin", status := .refuted
     prop := ``MemoizeTwins, thm := some ``memoizeTwins_refuted
-    bug := some "pickle-c-memo-len-sparse"
+    bug := some "pickle-c-memo-dict-unsynced"
     notes := "BINPUT 200 sends the key to memo_dict without counting it, so MEMOIZE writes index 0 in C and index 1 in Python: new in 3.15." },
   { id := "pickle-loads-twins-narrow", pyFile := "Modules/_pickle.c"
     pyFns := ["_pickle_loads_impl", "_loads"]
@@ -177,6 +177,13 @@ def entries : List Entry := [
     source := "PEP 3154: a frame of the stated length; python/cpython#128853", status := .proven
     prop := ``FrameRead, thm := some ``frameRead_proven
     notes := "chunkedFileRead_run shows the chunk loop reads what one file_read would, on a BytesIO." },
+  { id := "pickle-frame-chunk-twins", pyFile := "Modules/_pickle.c"
+    pyFns := ["load_counted_binbytes"]
+    statement := "A BINBYTES payload that runs past the end of its frame is rejected by both unpicklers, wherever the frame ends."
+    source := "invariant: C accelerator vs pure-Python twin; the check in _Unpickler_ReadInto, Modules/_pickle.c:1514-1562; Lib/pickle.py:284-295", status := .refuted
+    prop := ``FrameChunkTwins, thm := some ``frameChunkTwins_refuted
+    bug := some "pickle-c-frame-chunk-straddle"
+    notes := "A frame ending 1 MiB into a 2 MiB payload: the chunked read of 3.15 leaves the frame without an error; Python raises. C rejects every other frame end. BYTEARRAY8 is accepted by both twins at such a frame end, so it is not a twin difference." },
   { id := "pickle-put-twins", pyFile := "Modules/_pickle.c"
     pyFns := ["load_put"]
     statement := "For every decimal PUT index, the two unpicklers accept the same stream and return equal objects."

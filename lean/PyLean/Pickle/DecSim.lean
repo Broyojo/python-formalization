@@ -369,12 +369,12 @@ refuted entry: an `INT` line as in `pickle-int-line-twins` and its narrowing,
 a line with NUL C accepts (`pickle-long-line-twins`), a `PUT` index above
 `sys.maxsize` (`pickle-put-twins`), a sparse `PUT` (`pickle-memoize-twins`), a
 counted payload that crosses the end of a frame after a whole 1 MiB chunk
-(`pickle-frame-chunk-straddle`).
+(`pickle-frame-chunk-twins`).
 
 The last two are stated from Python's state, which is wider than the refuted
 cases: every `PUT` at or past 32 above twice `len(memo)`, which is every key C could
 send to `memo_dict`, and every payload of at least 1 MiB that does not fit in the
-frame. -/
+frame, `BYTEARRAY8` too, although Python accepts what C accepts there. -/
 def Hazard (op : UInt8) (p : PySt) : Prop :=
   (op = oINT ∧ ∃ body, peekLine p = some (body ++ [nl]) ∧
     (((0 : UInt8) ∈ body ∧ isErr (cLoadIntLine (body ++ [nl])) = false) ∨
