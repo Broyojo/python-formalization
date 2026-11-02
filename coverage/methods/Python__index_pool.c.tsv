@@ -1,14 +1,14 @@
 file	line	endline	name	signature	status	entry	note
-Python/index_pool.c	11	16	swap	swap(int32_t *values, Py_ssize_t i, Py_ssize_t j)	todo		
-Python/index_pool.c	19	37	heap_try_swap	heap_try_swap(_PyIndexHeap *heap, Py_ssize_t i, Py_ssize_t j)	todo		
-Python/index_pool.c	40	43	parent	parent(Py_ssize_t i)	todo		
-Python/index_pool.c	46	49	left_child	left_child(Py_ssize_t i)	todo		
-Python/index_pool.c	52	55	right_child	right_child(Py_ssize_t i)	todo		
-Python/index_pool.c	58	70	heap_add	heap_add(_PyIndexHeap *heap, int32_t val)	todo		
-Python/index_pool.c	73	87	heap_min_child	heap_min_child(_PyIndexHeap *heap, Py_ssize_t i)	todo		
-Python/index_pool.c	90	108	heap_pop	heap_pop(_PyIndexHeap *heap)	todo		
-Python/index_pool.c	111	135	heap_ensure_capacity	heap_ensure_capacity(_PyIndexHeap *heap, Py_ssize_t limit)	todo		
-Python/index_pool.c	138	146	heap_fini	heap_fini(_PyIndexHeap *heap)	todo		
-Python/index_pool.c	152	180	_PyIndexPool_AllocIndex	_PyIndexPool_AllocIndex(_PyIndexPool *pool)	todo		
-Python/index_pool.c	183	189	_PyIndexPool_FreeIndex	_PyIndexPool_FreeIndex(_PyIndexPool *pool, int32_t index)	todo		
-Python/index_pool.c	192	195	_PyIndexPool_Fini	_PyIndexPool_Fini(_PyIndexPool *pool)	todo		
+Python/index_pool.c	11	16	swap	swap(int32_t *values, Py_ssize_t i, Py_ssize_t j)	excluded		platform: inside #ifdef Py_GIL_DISABLED (Python/index_pool.c:8-197); free-threaded build only
+Python/index_pool.c	19	37	heap_try_swap	heap_try_swap(_PyIndexHeap *heap, Py_ssize_t i, Py_ssize_t j)	excluded		platform: inside #ifdef Py_GIL_DISABLED (Python/index_pool.c:8-197); free-threaded build only
+Python/index_pool.c	40	43	parent	parent(Py_ssize_t i)	excluded		platform: inside #ifdef Py_GIL_DISABLED (Python/index_pool.c:8-197); free-threaded build only
+Python/index_pool.c	46	49	left_child	left_child(Py_ssize_t i)	excluded		platform: inside #ifdef Py_GIL_DISABLED (Python/index_pool.c:8-197); free-threaded build only
+Python/index_pool.c	52	55	right_child	right_child(Py_ssize_t i)	excluded		platform: inside #ifdef Py_GIL_DISABLED (Python/index_pool.c:8-197); free-threaded build only
+Python/index_pool.c	58	70	heap_add	heap_add(_PyIndexHeap *heap, int32_t val)	excluded		platform: inside #ifdef Py_GIL_DISABLED (Python/index_pool.c:8-197); free-threaded build only
+Python/index_pool.c	73	87	heap_min_child	heap_min_child(_PyIndexHeap *heap, Py_ssize_t i)	excluded		platform: inside #ifdef Py_GIL_DISABLED (Python/index_pool.c:8-197); free-threaded build only
+Python/index_pool.c	90	108	heap_pop	heap_pop(_PyIndexHeap *heap)	excluded		platform: inside #ifdef Py_GIL_DISABLED (Python/index_pool.c:8-197); free-threaded build only
+Python/index_pool.c	111	135	heap_ensure_capacity	heap_ensure_capacity(_PyIndexHeap *heap, Py_ssize_t limit)	excluded		platform: inside #ifdef Py_GIL_DISABLED (Python/index_pool.c:8-197); free-threaded build only
+Python/index_pool.c	138	146	heap_fini	heap_fini(_PyIndexHeap *heap)	excluded		platform: inside #ifdef Py_GIL_DISABLED (Python/index_pool.c:8-197); free-threaded build only
+Python/index_pool.c	152	180	_PyIndexPool_AllocIndex	_PyIndexPool_AllocIndex(_PyIndexPool *pool)	excluded		platform: inside #ifdef Py_GIL_DISABLED (Python/index_pool.c:8-197); free-threaded build only
+Python/index_pool.c	183	189	_PyIndexPool_FreeIndex	_PyIndexPool_FreeIndex(_PyIndexPool *pool, int32_t index)	excluded		platform: inside #ifdef Py_GIL_DISABLED (Python/index_pool.c:8-197); free-threaded build only
+Python/index_pool.c	192	195	_PyIndexPool_Fini	_PyIndexPool_Fini(_PyIndexPool *pool)	excluded		platform: inside #ifdef Py_GIL_DISABLED (Python/index_pool.c:8-197); free-threaded build only

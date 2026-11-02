@@ -1,11 +1,11 @@
 file	line	endline	name	signature	status	entry	note
-Python/uniqueid.c	24	51	resize_interp_type_id_pool	resize_interp_type_id_pool(struct _Py_unique_id_pool *pool)	todo		
-Python/uniqueid.c	54	77	resize_local_refcounts	resize_local_refcounts(_PyThreadStateImpl *tstate)	todo		
-Python/uniqueid.c	80	102	_PyObject_AssignUniqueId	_PyObject_AssignUniqueId(PyObject *obj)	todo		
-Python/uniqueid.c	105	117	_PyObject_ReleaseUniqueId	_PyObject_ReleaseUniqueId(Py_ssize_t unique_id)	todo		
-Python/uniqueid.c	120	141	clear_unique_id	clear_unique_id(PyObject *obj)	todo		
-Python/uniqueid.c	144	150	_PyObject_DisablePerThreadRefcounting	_PyObject_DisablePerThreadRefcounting(PyObject *obj)	todo		
-Python/uniqueid.c	153	168	_PyObject_ThreadIncrefSlow	_PyObject_ThreadIncrefSlow(PyObject *obj, size_t idx)	todo		
-Python/uniqueid.c	171	190	_PyObject_MergePerThreadRefcounts	_PyObject_MergePerThreadRefcounts(_PyThreadStateImpl *tstate)	todo		
-Python/uniqueid.c	193	201	_PyObject_FinalizePerThreadRefcounts	_PyObject_FinalizePerThreadRefcounts(_PyThreadStateImpl *tstate)	todo		
-Python/uniqueid.c	204	230	_PyObject_FinalizeUniqueIdPool	_PyObject_FinalizeUniqueIdPool(PyInterpreterState *interp)	todo		
+Python/uniqueid.c	24	51	resize_interp_type_id_pool	resize_interp_type_id_pool(struct _Py_unique_id_pool *pool)	excluded		platform: per-object unique ids for free-threaded refcounting, inside #ifdef Py_GIL_DISABLED (Python/uniqueid.c:16-232)
+Python/uniqueid.c	54	77	resize_local_refcounts	resize_local_refcounts(_PyThreadStateImpl *tstate)	excluded		platform: per-object unique ids for free-threaded refcounting, inside #ifdef Py_GIL_DISABLED (Python/uniqueid.c:16-232)
+Python/uniqueid.c	80	102	_PyObject_AssignUniqueId	_PyObject_AssignUniqueId(PyObject *obj)	excluded		platform: per-object unique ids for free-threaded refcounting, inside #ifdef Py_GIL_DISABLED (Python/uniqueid.c:16-232)
+Python/uniqueid.c	105	117	_PyObject_ReleaseUniqueId	_PyObject_ReleaseUniqueId(Py_ssize_t unique_id)	excluded		platform: per-object unique ids for free-threaded refcounting, inside #ifdef Py_GIL_DISABLED (Python/uniqueid.c:16-232)
+Python/uniqueid.c	120	141	clear_unique_id	clear_unique_id(PyObject *obj)	excluded		platform: per-object unique ids for free-threaded refcounting, inside #ifdef Py_GIL_DISABLED (Python/uniqueid.c:16-232)
+Python/uniqueid.c	144	150	_PyObject_DisablePerThreadRefcounting	_PyObject_DisablePerThreadRefcounting(PyObject *obj)	excluded		platform: per-object unique ids for free-threaded refcounting, inside #ifdef Py_GIL_DISABLED (Python/uniqueid.c:16-232)
+Python/uniqueid.c	153	168	_PyObject_ThreadIncrefSlow	_PyObject_ThreadIncrefSlow(PyObject *obj, size_t idx)	excluded		platform: per-object unique ids for free-threaded refcounting, inside #ifdef Py_GIL_DISABLED (Python/uniqueid.c:16-232)
+Python/uniqueid.c	171	190	_PyObject_MergePerThreadRefcounts	_PyObject_MergePerThreadRefcounts(_PyThreadStateImpl *tstate)	excluded		platform: per-object unique ids for free-threaded refcounting, inside #ifdef Py_GIL_DISABLED (Python/uniqueid.c:16-232)
+Python/uniqueid.c	193	201	_PyObject_FinalizePerThreadRefcounts	_PyObject_FinalizePerThreadRefcounts(_PyThreadStateImpl *tstate)	excluded		platform: per-object unique ids for free-threaded refcounting, inside #ifdef Py_GIL_DISABLED (Python/uniqueid.c:16-232)
+Python/uniqueid.c	204	230	_PyObject_FinalizeUniqueIdPool	_PyObject_FinalizeUniqueIdPool(PyInterpreterState *interp)	excluded		platform: per-object unique ids for free-threaded refcounting, inside #ifdef Py_GIL_DISABLED (Python/uniqueid.c:16-232)
