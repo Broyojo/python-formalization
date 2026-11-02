@@ -39,10 +39,6 @@ misc-simplequeue-twins
 pickle-c-batch-encoding
 pickle-c-empty-batch-no-type-check
 pickle-c-int-bool-spelling
-pickle-dumps-twins
-pickle-frame-twins
-pickle-int-line-twins
-pickle-loads-twins-accept
 pickle-py-truncated-frame
 pygrammar-lex-accepts-valid
 pygrammar-lex-debug-text
@@ -52,4 +48,3 @@ pystrtod-e-format-digit-count
 textlibs-struct-bytes-format-nonascii-error
 textlibs-struct-pack-into-0p-outside-field
 typeobj-exc-eg-repr-args-oob
-unicodeobj-format-percent-star-width

@@ -5,12 +5,9 @@ bytecode_gen_diff.py
 bytesobj_diff.py
 corelibs_diff.py
 dictset_diff.py
-json_diff.py
 longobj_complex_diff.py
 mathint_diff.py
-pickle_diff.py
 pygrammar_diff.py
 textlibs_diff.py
 typeobj_diff.py
 typeobj_exc_diff.py
-unicodeobj_diff.py
