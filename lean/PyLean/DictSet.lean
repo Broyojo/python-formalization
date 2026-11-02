@@ -13,7 +13,7 @@ import PyLean.DictSet.Findings
 import PyLean.DictSet.Body
 import PyLean.DictSet.Iter
 import PyLean.DictSet.SetHash
-import PyLean.DictSet.SetAlgebra
+import PyLean.DictSet.SetBranches
 
 /-!
 `Objects/dictobject.c`, `Objects/setobject.c`, `Objects/odictobject.c`, CPython 3.15.2.
@@ -327,11 +327,25 @@ def entries : List Entry := [
     statement := "A copy of a well-formed set is a new well-formed set with the same entries, and the original is unchanged; the one way to fail is a table PyMem_NEW refuses."
     source := "setobject.c:1570-1602", status := .proven
     prop := ``SetCopyRefines, thm := some ``setCopyRefines_proven },
-  { id := "set-inter-refines", pyFile := "Objects/setobject.c", pyFns := []
+  { id := "set-for-iter-body", pyFile := "Objects/setobject.c",
+    pyFns := ["set_update_iterable_lock_held", "set_intersection", "set_isdisjoint_impl"]
+    statement := "The PyIter_Next loop of the set methods, turn by turn, for any iterator: exhaustion stops it, an exception from the step or the body is the result in the state it left, the body can stop it, and the next step runs on the state this turn left."
+    source := "setobject.c:1232-1243, :1762-1778, :1952-1967", status := .proven
+    prop := ``ForIterBody, thm := some ``forIterBody_proven },
+  { id := "set-inter-iter-body", pyFile := "Objects/setobject.c", pyFns := ["set_intersection"]
+    statement := "One turn of the generic loop of set_intersection, for every key protocol: a failed hash or lookup is the result, a key so does not hold does nothing, and a key it holds goes in and stops the loop when the result has caught up with so as so is now."
+    source := "setobject.c:1763-1777", status := .proven
+    prop := ``InterIterBody, thm := some ``interIterBody_proven },
+  { id := "set-iter-routes", pyFile := "Objects/setobject.c",
+    pyFns := ["set_update_iterable_lock_held", "set_isdisjoint_impl"]
+    statement := "The routes of the set methods on what is not a set, for every key protocol and iterator: a failed PyObject_GetIter is the result, and otherwise each runs its loop on the state __iter__ left."
+    source := "setobject.c:1226-1229, :1948-1950, :2009-2011, :2456-2459", status := .proven
+    prop := ``SetIterRoutes, thm := some ``setIterRoutes_proven },
+  { id := "set-inter-refines", pyFile := "Objects/setobject.c", pyFns := ["set_intersection"]
     statement := "set_intersection of two sets, for an honest protocol: the entries of the one walked, which is the smaller, that the other holds, so the result's objects come from the smaller; the original sets are unchanged."
     source := "setobject.c:1723-1755", status := .proven
     prop := ``SetInterRefines, thm := some ``setInterRefines_proven
-    notes := "The set branch only; the row stays todo until the iterable branch has a theorem." },
+    notes := "The set branch; set-inter-iter-body has the other, turn by turn." },
   { id := "set-diff-update-refines", pyFile := "Objects/setobject.c", pyFns := []
     statement := "set_difference_update_internal from another set, for an honest protocol: what equals a key of the other goes, on the loop and on the route through set_intersection; the one way to fail is a table too big."
     source := "setobject.c:1970-2029", status := .proven
@@ -347,11 +361,11 @@ def entries : List Entry := [
     source := "setobject.c:2420-2435", status := .proven
     prop := ``SetSubsetRefines, thm := some ``setSubsetRefines_proven
     notes := "The set branch only; the row stays todo until the other branch has a theorem." },
-  { id := "set-disjoint-refines", pyFile := "Objects/setobject.c", pyFns := []
+  { id := "set-disjoint-refines", pyFile := "Objects/setobject.c", pyFns := ["set_isdisjoint_impl"]
     statement := "set_isdisjoint with an exact set, for an honest protocol: the list answer, whichever of the two it walks, and neither set changes."
     source := "setobject.c:1924-1946", status := .proven
     prop := ``SetDisjointRefines, thm := some ``setDisjointRefines_proven
-    notes := "The exact-set branch only; the row stays todo until the iterator branch has a theorem." },
+    notes := "The exact-set branch; set-iter-routes has the other." },
   { id := "set-add-trusts-yes", pyFile := "Objects/setobject.c", pyFns := []
     statement := "set_add_entry and set_lookkey differ on an __eq__ that answers yes and changes the table: the lookup restarts, the add stops and treats the key as present."
     source := "setobject.c:159-162 against :290-295", status := .proven

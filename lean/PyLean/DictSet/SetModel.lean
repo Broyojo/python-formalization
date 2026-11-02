@@ -478,7 +478,7 @@ def setiterNext (so : SetObj K) (si : SetIter) : Py (Option K) × SetIter :=
 hint raises `ValueError`. -/
 def setiterLengthHint (so : SetObj K) (si : SetIter) : Py Nat :=
   let h := setiterLen so si
-  if h < 0 then .error (.valueError "__length_hint__() should return >= 0")
+  if h < 0 then .error (.valueError "set_iterator.__length_hint__() must return a non-negative int")
   else .ok h.toNat
 
 def setiterDrain (so : SetObj K) : Nat → SetIter → List K → Py (List K) × SetIter

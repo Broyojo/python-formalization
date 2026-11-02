@@ -39,7 +39,7 @@ Objects/setobject.c	1070	1085	setiter_reduce	setiter_reduce(PyObject *op, PyObje
 Objects/setobject.c	1095	1136	setiter_iternext	static PyObject *setiter_iternext(PyObject *self)	modelled	set-iter-len	
 Objects/setobject.c	1172	1184	set_iter	set_iter(PyObject *so)	modelled	set-iter-len	
 Objects/setobject.c	1187	1219	set_update_dict_lock_held	set_update_dict_lock_held(PySetObject *so, PyObject *other)	todo		changed-in-3.15:
-Objects/setobject.c	1222	1244	set_update_iterable_lock_held	set_update_iterable_lock_held(PySetObject *so, PyObject *other)	todo		
+Objects/setobject.c	1222	1244	set_update_iterable_lock_held	set_update_iterable_lock_held(PySetObject *so, PyObject *other)	modelled	set-for-iter-body,set-iter-routes	
 Objects/setobject.c	1247	1256	set_update_lock_held	set_update_lock_held(PySetObject *so, PyObject *other)	todo		changed-in-3.15:
 Objects/setobject.c	1260	1281	set_update_local	set_update_local(PySetObject *so, PyObject *other)	todo		changed-in-3.15:
 Objects/setobject.c	1284	1317	set_update_internal	set_update_internal(PySetObject *so, PyObject *other)	todo		changed-in-3.15:
@@ -62,13 +62,13 @@ Objects/setobject.c	1631	1636	set_clear_impl	set_clear_impl(PySetObject *so) /*[
 Objects/setobject.c	1647	1671	set_union_impl	set_union_impl(PySetObject *so, PyObject * const *others, Py_ssize_t others_length) /*[clinic end generated code: output=b1bfa3d74065f27e input=55a2e81db6347a4f]*/	todo		
 Objects/setobject.c	1674	1693	set_or	set_or(PyObject *self, PyObject *other)	todo		
 Objects/setobject.c	1696	1706	set_ior	set_ior(PyObject *self, PyObject *other)	todo		
-Objects/setobject.c	1709	1791	set_intersection	set_intersection(PySetObject *so, PyObject *other)	todo		
+Objects/setobject.c	1709	1791	set_intersection	set_intersection(PySetObject *so, PyObject *other)	modelled	set-for-iter-body,set-inter-iter-body,set-inter-refines	
 Objects/setobject.c	1802	1826	set_intersection_multi_impl	set_intersection_multi_impl(PySetObject *so, PyObject * const *others, Py_ssize_t others_length) /*[clinic end generated code: output=db9ff9f875132b6b input=36c7b615694cadae]*/	todo		
 Objects/setobject.c	1829	1839	set_intersection_update	set_intersection_update(PySetObject *so, PyObject *other)	todo		
 Objects/setobject.c	1850	1864	set_intersection_update_multi_impl	set_intersection_update_multi_impl(PySetObject *so, PyObject * const *others, Py_ssize_t others_length) /*[clinic end generated code: output=d768b5584675b48d input=782e422fc370e4fc]*/	todo		
 Objects/setobject.c	1867	1879	set_and	set_and(PyObject *self, PyObject *other)	todo		
 Objects/setobject.c	1882	1898	set_iand	set_iand(PyObject *self, PyObject *other)	todo		
-Objects/setobject.c	1911	1968	set_isdisjoint_impl	set_isdisjoint_impl(PySetObject *so, PyObject *other) /*[clinic end generated code: output=273493f2d57c565e input=32f8dcab5e0fc7d6]*/	todo		
+Objects/setobject.c	1911	1968	set_isdisjoint_impl	set_isdisjoint_impl(PySetObject *so, PyObject *other) /*[clinic end generated code: output=273493f2d57c565e input=32f8dcab5e0fc7d6]*/	modelled	set-disjoint-refines,set-for-iter-body,set-iter-routes	
 Objects/setobject.c	1971	2029	set_difference_update_internal	set_difference_update_internal(PySetObject *so, PyObject *other)	todo		
 Objects/setobject.c	2040	2057	set_difference_update_impl	set_difference_update_impl(PySetObject *so, PyObject * const *others, Py_ssize_t others_length) /*[clinic end generated code: output=04a22179b322cfe6 input=93ac28ba5b233696]*/	todo		
 Objects/setobject.c	2060	2071	set_copy_and_difference_untracked	set_copy_and_difference_untracked(PySetObject *so, PyObject *other)	todo		

@@ -270,6 +270,17 @@ def setInterLoop (a b : Nat) : SM K Bool := do
     if rv then setAddEntry P key hash
     return false) (setLoopFuel s b) 0
 
+/-- One turn of the generic loop of `set_intersection` (:1763-1777), with the result in focus: a key
+that makes the result as large as `so` stops the loop, so a later bad element is never hashed. -/
+def interIterStep (soId : Nat) (key : K) : SM K Bool := do
+  let hash ← M.lift (P.hash key)
+  let rv ← onSet soId (setContainsEntry P key hash)
+  if rv then
+    setAddEntry P key hash
+    let s ← M.get
+    if s.used ≥ (s.live soId).used then return true
+  return false
+
 /-- The branch of `set_intersection` for two sets (:1723-1755). The swap at :1727-1731 happens once,
 on the sizes as they are then. -/
 def setIntersectionSets (o : SetObj K) (id : Nat) : SM K (SetObj K) := do
@@ -291,14 +302,7 @@ def setIntersection (other : SetArg K) (id : Nat) : SM K (SetObj K) := do
     let it := other.toReIter
     let r ← onResult (newBasetype so.toSetBody id) (do
       it.getIter
-      forIter (fun key => do
-        let hash ← M.lift (P.hash key)
-        let rv ← onSet so.ident (setContainsEntry P key hash)
-        if rv then
-          setAddEntry P key hash
-          let s ← M.get
-          if s.used ≥ (s.live so.ident).used then return true
-        return false) it.steps)
+      forIter (interIterStep P so.ident) it.steps)
     return r.2
 
 /-- `set_intersection_multi_impl` (:1801-1826). -/
