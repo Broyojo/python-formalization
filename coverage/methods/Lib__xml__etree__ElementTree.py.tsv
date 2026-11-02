@@ -6,13 +6,13 @@ Lib/xml/etree/ElementTree.py	178	187	Element.makeelement	makeelement(self, tag, 
 Lib/xml/etree/ElementTree.py	189	194	Element.__copy__	__copy__(self)	todo		
 Lib/xml/etree/ElementTree.py	196	197	Element.__len__	__len__(self)	todo		
 Lib/xml/etree/ElementTree.py	199	206	Element.__bool__	__bool__(self)	todo		
-Lib/xml/etree/ElementTree.py	208	209	Element.__getitem__	__getitem__(self, index)	todo		
-Lib/xml/etree/ElementTree.py	211	217	Element.__setitem__	__setitem__(self, index, element)	todo		
-Lib/xml/etree/ElementTree.py	219	220	Element.__delitem__	__delitem__(self, index)	todo		
+Lib/xml/etree/ElementTree.py	208	209	Element.__getitem__	__getitem__(self, index)	modelled	textlibs-etree-item-twins,textlibs-etree-slice-read-twins	
+Lib/xml/etree/ElementTree.py	211	217	Element.__setitem__	__setitem__(self, index, element)	modelled	textlibs-etree-item-store-order,textlibs-etree-item-twins,textlibs-etree-slice-store-twins,textlibs-etree-slice-store-twins-seq	
+Lib/xml/etree/ElementTree.py	219	220	Element.__delitem__	__delitem__(self, index)	modelled	textlibs-etree-item-twins,textlibs-etree-slice-del	
 Lib/xml/etree/ElementTree.py	222	231	Element.append	append(self, subelement)	todo		
 Lib/xml/etree/ElementTree.py	233	241	Element.extend	extend(self, elements)	todo		
 Lib/xml/etree/ElementTree.py	243	246	Element.insert	insert(self, index, subelement)	todo		
-Lib/xml/etree/ElementTree.py	248	252	Element._assert_is_element	_assert_is_element(self, e)	todo		
+Lib/xml/etree/ElementTree.py	248	252	Element._assert_is_element	_assert_is_element(self, e)	modelled	textlibs-etree-item-store-order	
 Lib/xml/etree/ElementTree.py	254	274	Element.remove	remove(self, subelement)	todo		changed-in-3.15:
 Lib/xml/etree/ElementTree.py	276	286	Element.find	find(self, path, namespaces=None)	todo		candidates:strsearch-count-repeated-find,strsearch-find-extreme,strsearch-find-slice-literal,strsearch-find-str-bytes,strsearch-rfind-reverse
 Lib/xml/etree/ElementTree.py	288	301	Element.findtext	findtext(self, path, default=None, namespaces=None)	todo		

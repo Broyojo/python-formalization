@@ -2023,6 +2023,14 @@ textlibs-difflib-twins-refuse	refuted	Lib/difflib.py	unified_diff,context_diff,_
 textlibs-difflib-is-line-junk	proven	Lib/difflib.py	IS_LINE_JUNK
 textlibs-difflib-hunk-sides	proven	Lib/difflib.py	unified_diff
 textlibs-difflib-context-sides	proven	Lib/difflib.py	context_diff
+textlibs-etree-slice-store-list	refuted	Modules/_elementtree.c	element_ass_subscr
+textlibs-etree-slice-store-forward	proven	Modules/_elementtree.c	element_ass_subscr
+textlibs-etree-slice-del	proven	Modules/_elementtree.c	element_ass_subscr,Element.__delitem__
+textlibs-etree-item-twins	proven	Modules/_elementtree.c	element_subscr,element_getitem,element_ass_subscr,element_setitem,Element.__getitem__,Element.__setitem__,Element.__delitem__
+textlibs-etree-item-store-order	refuted	Lib/xml/etree/ElementTree.py	Element.__setitem__,Element._assert_is_element,element_ass_subscr,element_setitem
+textlibs-etree-slice-read-twins	proven	Modules/_elementtree.c	element_subscr,Element.__getitem__
+textlibs-etree-slice-store-twins	refuted	Lib/xml/etree/ElementTree.py	Element.__setitem__,element_ass_subscr
+textlibs-etree-slice-store-twins-seq	proven	Lib/xml/etree/ElementTree.py	Element.__setitem__,element_ass_subscr
 coll-count-elements-twins	proven	Lib/collections/__init__.py	_count_elements
 coll-counter-update-fast-slow	proven	Lib/collections/__init__.py	Counter.update
 coll-counter-update-adds	proven	Lib/collections/__init__.py	Counter.update,Counter.__init__,Counter.__missing__,_count_elements
