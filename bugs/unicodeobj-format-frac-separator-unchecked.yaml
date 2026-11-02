@@ -1,0 +1,71 @@
+id: unicodeobj-format-frac-separator-unchecked
+title: "A separator after the precision is silently ignored by str and the integer types, which refuse it after the width"
+priority: P4
+kind: missing-validation
+module: unicodeobj
+files: [Objects/unicode_formatter.c]
+functions: ["parse_internal_render_format_spec"]
+summary: |
+  Since 3.14 a ',' or '_' may follow the precision, to group the digits of the fractional part.
+  parse_internal_render_format_spec validates the separator after the width against the type
+  (unicode_formatter.c:566-594: "Cannot specify ',' with 's'." and so on), but the separator after
+  the precision only against 'n' (:596-602). Every other type takes it and ignores it:
+  format('abc', '.,') == 'abc', format('abc', '.2_s') == 'ab', format(255, '.,x') == 'ff',
+  format(65, '._c') == 'A', format(1234, '.,') == '1234', while format('abc', ',') and
+  format(255, ',x') raise ValueError. For the integer types the '.' also slips past "Precision not
+  allowed in integer format specifier", because a '.' followed only by a separator leaves the
+  precision at -1 (:501-520). Fraction and _pydecimal refuse '.,s' as an invalid format string.
+likelihood: |
+  Low. It needs a spec with a separator after the precision on a str or an int, which is most
+  likely a typo (',.2f' written as '.2,' on the wrong value). The effect is that the typo is
+  accepted silently instead of being reported.
+maybe_intended: |
+  Unlikely. The docs say the separator after the precision is for "the fractional part of a
+  number", and that ',' and '_' are supported for 'd' and the float types only ("For other
+  presentation types, this option is not supported"); the same option after the width is refused
+  for those types. The 3.14 change (gh-87790, PR #125304) added the 'n' check and nothing else.
+reproducer: |
+  def f(x, s):
+      try:
+          return format(x, s)
+      except ValueError:
+          return 'ValueError'
+  got = (f('abc', ','), f('abc', '.,'), f('abc', '.2_s'), f(255, ',x'), f(255, '.,x'),
+         f(65, ',c'), f(65, '._c'), f(1.5, '.,n'))
+  print(ascii(got))
+  if got == ('ValueError', 'abc', 'ab', 'ValueError', 'ff', 'ValueError', 'A', 'ValueError'):
+      print('REPRODUCED unicodeobj-format-frac-separator-unchecked')
+expected: |
+  ValueError("Cannot specify ',' with 's'.") for format('abc', '.,'), and the same message as the
+  separator after the width gives for 'c', 'b', 'o', 'x', 'X' (and for '_' with 's' and 'c').
+observed: |
+  python3 3.15.2: ('ValueError', 'abc', 'ab', 'ValueError', 'ff', 'ValueError', 'A', 'ValueError').
+  REPRODUCED.
+  main (cpython-main/python.exe, 3.16.0a1+dev): identical, REPRODUCED.
+tested: "REPRODUCED on python3 3.15.2 and on main (3.16.0a1+dev)"
+promised_by: |
+  Doc/library/string.rst, Format Specification Mini-Language, the grouping table: ',' and '_' insert
+  separators "for integer presentation type 'd' and floating-point presentation types ... For other
+  presentation types, this option is not supported", and "The grouping option after width and
+  precision fields specifies a digit group separator for the integral and fractional parts of a
+  number respectively". Twin: the separator after the width is refused for the same types.
+cause: |
+  Objects/unicode_formatter.c:596-602 checks format->frac_thousands_separator only for type 'n';
+  :566-594 is the full check, applied to format->thousands_separators only.
+possible_fix: |
+  Validate frac_thousands_separator like thousands_separators: allow it for the float types
+  (e, f, g, E, F, G, %, and no type) and refuse it with invalid_thousands_separator_type otherwise
+  (the str writer passes default type 's', so '.,' alone would be refused for str).
+duplicates:
+  issues: []
+  queries: ["fractional grouping format string", "fractional separator ignored",
+            "fractional grouping integer presentation", "precision grouping str format spec",
+            "format precision underscore string accepted", "Cannot specify with format",
+            "frac_thousands_separator"]
+  note: |
+    Queries run with gh search issues --repo python/cpython, separate unquoted terms. Related but
+    different: gh-130664 (undocumented separator handling with alignment and zero padding for floats),
+    gh-144325 (error message escaping), gh-87790 (the feature itself). bugforge README: no entry.
+lean:
+  property: PyLean.UnicodeObj.FracSeparatorChecked
+  theorem: PyLean.UnicodeObj.fracSeparatorChecked_refuted

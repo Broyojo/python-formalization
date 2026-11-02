@@ -1959,28 +1959,100 @@ def run_fmt_percent(c):
     return cps_of(s_of(c["fmt"]) % args)
 
 
+# Subclasses of str, int, float and complex: the type name shows in the errors (cut to 200 bytes of
+# UTF-8), an empty spec goes through str(obj), and float(obj) of an int subclass through __float__.
+SUB_NAMES = ["S", "MyNumber", "\xdcn\xefc\xf6d\xe9", "A" * 250, "\xe9" * 150, "a" + "\xe9" * 150,
+             "€" * 70, "b" + "\U0001f600" * 60]
+SUB_STR = [None, None, {"k": "ok", "s": "S!"}, {"k": "ok", "s": ""}, {"k": "raise"}]
+SUB_FLT = [None, None, {"k": "ok", "x": 2.5}, {"k": "ok", "x": -0.0}, {"k": "raise"}, {"k": "int"}]
+
+
+def sub_enc(o):
+    if o is None:
+        return None
+    if o["k"] == "ok" and "s" in o:
+        return {"k": "ok", "s": cps_of(o["s"])}
+    if o["k"] == "ok":
+        return {"k": "ok", "x": format(float_bits(o["x"]), "x")}
+    return o
+
+
+@gen("format", 4)
+def gen_fmt_sub(rng):
+    kind = rng.choice(["str", "int", "float", "complex"])
+    spec = "" if rng.random() < 0.3 else (fmt_spec(rng) if kind in ("str", "int") else float_spec(rng))
+    c = {"mod": "unicodeobj", "spec": cps_of(spec), "tn": rng.choice(SUB_NAMES),
+         "str": sub_enc(rng.choice(SUB_STR))}
+    if kind == "str":
+        c.update(fn="fmt_str", s=cps_of(rng.choice(["", "abc", "\xe9t\xe9", "\U0001f600x"])))
+    elif kind == "int":
+        v = rng.choice(FMT_INTS) if rng.random() < 0.5 else rng.randint(-10 ** 6, 10 ** 6)
+        c.update(fn="fmt_int", v=hex_of(v), name="int", flt=sub_enc(rng.choice(SUB_FLT)))
+    elif kind == "float":
+        c.update(fn="fmt_float", x=format(float_bits(rand_float(rng)), "x"))
+    else:
+        c.update(fn="fmt_complex", re=format(float_bits(rand_float(rng)), "x"),
+                 im=format(float_bits(rand_float(rng)), "x"))
+    return c
+
+
+def sub_value(c, base, value):
+    """`value` as an instance of a subclass of `base` named c['tn'], with the case's __str__ and
+    __float__."""
+    if "tn" not in c:
+        return value
+    ns = {}
+    st = c.get("str")
+    if st is not None:
+        if st["k"] == "raise":
+            def __str__(self):
+                raise ValueError("boom")
+        else:
+            text = s_of(st["s"])
+
+            def __str__(self):
+                return text
+        ns["__str__"] = __str__
+    fl = c.get("flt")
+    if fl is not None:
+        if fl["k"] == "raise":
+            def __float__(self):
+                raise ValueError("boom")
+        elif fl["k"] == "int":
+            def __float__(self):
+                return 1
+        else:
+            x = float_of(fl["x"])
+
+            def __float__(self):
+                return x
+        ns["__float__"] = __float__
+    return type(c["tn"], (base,), ns)(value)
+
+
 @run("fmt_int")
 def run_fmt_int(c):
     s = c["v"]
     v = -int(s[1:], 16) if s.startswith("-") else int(s, 16)
     if c["name"] == "bool":
         v = bool(v)
-    return cps_of(format(v, s_of(c["spec"])))
+    return cps_of(format(sub_value(c, int, v), s_of(c["spec"])))
 
 
 @run("fmt_str")
 def run_fmt_str(c):
-    return cps_of(format(s_of(c["s"]), s_of(c["spec"])))
+    return cps_of(format(sub_value(c, str, s_of(c["s"])), s_of(c["spec"])))
 
 
 @run("fmt_float")
 def run_fmt_float(c):
-    return cps_of(format(float_of(c["x"]), s_of(c["spec"])))
+    return cps_of(format(sub_value(c, float, float_of(c["x"])), s_of(c["spec"])))
 
 
 @run("fmt_complex")
 def run_fmt_complex(c):
-    return cps_of(format(complex(float_of(c["re"]), float_of(c["im"])), s_of(c["spec"])))
+    return cps_of(format(sub_value(c, complex, complex(float_of(c["re"]), float_of(c["im"]))),
+                         s_of(c["spec"])))
 
 # ==== end format slice ====
 

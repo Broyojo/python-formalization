@@ -1,4 +1,5 @@
 import PyLean.UnicodeObj.FormatSpec
+import PyLean.UnicodeObj.FormatParseDoc
 
 /-!
 `format(s, spec)` for a `str` against the format-specification mini-language
@@ -142,7 +143,7 @@ theorem strFormatDoc_proven : StrFormatDoc := by
   obtain ⟨d, ds, rfl⟩ : ∃ d ds, wd = d :: ds := by cases wd with | nil => exact absurd rfl hwne | cons d ds => exact ⟨d, ds, rfl⟩
   have hd := hwd d (by simp)
   have hhead := parseHead_spec fill align d (asciiDigits ds ++ ((match pd with | some p => 46 :: asciiDigits p | none => []) ++ [115])) hal hd
-  unfold formatStrAdvanced parseFormatSpec
+  unfold formatStrAdvanced formatStrAdvancedObj parseFormatSpec
   simp only [asciiDigits, List.map_cons, List.cons_append, List.nil_append, List.singleton_append, List.append_assoc] at hhead ⊢
   rw [hhead]
   have hstop : ∀ x ∈ ((match pd with | some p => 46 :: asciiDigits p | none => []) ++ [115]).head?,
@@ -167,6 +168,145 @@ theorem strFormatDoc_proven : StrFormatDoc := by
       (by intro q hq; cases hq; exact accum_mono _ 0 (Int.le_refl _)) halign
 
 
+/-! ## Every spec -/
+
+/-- `format(s, spec)` for a parsed spec as the docs describe it: a sign, `z`, `#` or `=` is refused
+with its message (in the order unicode_formatter.c:1109-1144 tests them), and otherwise the text is
+cut to the precision and padded to the width with the fill, on the right for `<`, the left for `>`,
+around for `^` (the odd one on the right). No width means no padding. -/
+def docStr (value : Str) (f : FormatSpec) : Py Str :=
+  if f.sign ≠ 0 then
+    .error (.valueError (if f.sign = 32 then "Space not allowed in string format specifier"
+      else "Sign not allowed in string format specifier"))
+  else if f.noNeg0 then
+    .error (.valueError "Negative zero coercion (z) not allowed in string format specifier")
+  else if f.alternate then
+    .error (.valueError "Alternate form (#) not allowed in string format specifier")
+  else if f.align = 61 then .error (.valueError "'=' alignment not allowed in string format specifier")
+  else .ok (docFormat value f.fillChar f.align f.width (if 0 ≤ f.precision then some f.precision else none))
+
+/-- `format_string_internal` with `calc_padding` and `fill_padding` against the docs, for every
+string and every spec the parser can return (`SpecInv`). -/
+def StrInternalDoc : Prop :=
+  ∀ (value : Str) (f : FormatSpec), SpecInv f → formatStringInternal value f = docStr value f
+
+theorem strInternalDoc_proven : StrInternalDoc := by
+  intro value f hf
+  have hal := hf.align
+  have hw := hf.width
+  have hp := hf.precision
+  unfold formatStringInternal docStr
+  by_cases hs : f.sign = 0
+  · simp only [hs, bne_self_eq_false, Bool.false_eq_true, if_false, ne_eq, not_true_eq_false]
+    by_cases hz : f.noNeg0 = true
+    · simp [hz]
+    · simp only [hz, Bool.false_eq_true, if_false]
+      by_cases ha : f.alternate = true
+      · simp [ha]
+      · simp only [ha, Bool.false_eq_true, if_false]
+        by_cases h61 : f.align = 61
+        · simp [h61]
+        · have h61' : (f.align == 61) = false := by simpa using h61
+          simp only [h61', Bool.false_eq_true, if_false, h61]
+          unfold docFormat keptText
+          split
+          · rename_i hfast
+            simp only [beq_iff_eq] at hfast
+            have hkeep : (match (if 0 ≤ f.precision then some f.precision else none) with
+                | some p => value.take p.toNat | none => value) = value := by
+              split
+              · rename_i p hpp
+                split at hpp
+                · cases hpp; exact List.take_of_length_le (by omega)
+                · cases hpp
+              · rfl
+            rw [hkeep]
+            have hpad : f.width.toNat - value.length = 0 := by omega
+            simp only [hpad]
+            rcases hal with h | h | h | h <;> simp [h] <;> omega
+          · rename_i hslow
+            have hkeep : (if f.precision ≥ 0 ∧ (value.length : Int) ≥ f.precision
+                then value.take f.precision.toNat else value) =
+                (match (if 0 ≤ f.precision then some f.precision else none) with
+                  | some p => value.take p.toNat | none => value) := by
+              by_cases h0 : 0 ≤ f.precision
+              · have hm : (match (if 0 ≤ f.precision then some f.precision else none) with
+                    | some p => value.take p.toNat | none => value) = value.take f.precision.toNat := by
+                  simp [h0]
+                rw [hm]
+                by_cases h1 : (value.length : Int) ≥ f.precision
+                · rw [if_pos ⟨h0, h1⟩]
+                · rw [if_neg (by omega), List.take_of_length_le (by omega)]
+              · have hm : (match (if 0 ≤ f.precision then some f.precision else none) with
+                    | some p => value.take p.toNat | none => value) = value := by
+                  simp [h0]
+                rw [hm, if_neg (by omega)]
+            rw [hkeep]
+            generalize (match (if 0 ≤ f.precision then some f.precision else none) with
+                  | some p => value.take p.toNat | none => value) = t
+            unfold calcPadding fillPadding
+            have htot : (if f.width ≥ 0 then (if (t.length : Int) > f.width then t.length else f.width.toNat)
+                else t.length) - t.length = f.width.toNat - t.length := by
+              split
+              · split <;> omega
+              · omega
+            rcases hal with h | h | h | h
+            · simp [h, htot]
+            · simp [h, htot]
+            · omega
+            · simp [h, htot]
+  · have hs' : (f.sign != 0) = true := by simpa using hs
+    simp only [hs', if_true, hs, ne_eq, not_false_eq_true]
+    by_cases h32 : f.sign = 32 <;> simp [h32]
+
+/-- The message of `unknown_presentation_type` as written at unicode_formatter.c:254-265, with the
+type name shown as `'%.200s'` shows `tp_name`. -/
+def unknownTypeMessage (t : Nat) (tpName : String) : PyExc :=
+  if 32 < t ∧ t < 128 then
+    .valueError ("Unknown format code '" ++ String.singleton (Char.ofNat t) ++
+      "' for object of type '" ++ tpNameShown tpName ++ "'")
+  else
+    .valueError ("Unknown format code '\\x" ++ String.ofList (Nat.toDigits 16 t) ++
+      "' for object of type '" ++ tpNameShown tpName ++ "'")
+
+theorem unknownTypeMessage_eq (t : Nat) (tn : String) :
+    unknownPresentationType t tn = unknownTypeMessage t tn := by
+  unfold unknownPresentationType unknownTypeMessage hexPlain
+  split <;> rfl
+
+/-- `format(s, spec)` for every `str` or subclass instance and every spec the grammar describes:
+an empty spec gives the string itself for an exact `str` and `str(obj)` (its `__str__`, which can
+raise) for a subclass; otherwise the documented reading of the spec, then the documented layout
+for the `s` type, and "Unknown format code" with the object's type name for any other type. -/
+def StrFormatSpecDoc : Prop :=
+  ∀ (tpName : String) (exact : Bool) (strObj : Py Str) (value : Str) (d : SpecFields), d.WF →
+    formatStrAdvancedObj tpName exact strObj value (renderSpec d) =
+      if renderSpec d = [] then (if exact then .ok value else strObj)
+      else docParse tpName d 115 60 >>= fun f =>
+        if f.type = 115 then docStr value f else .error (unknownTypeMessage f.type tpName)
+
+theorem strFormatSpecDoc_proven : StrFormatSpecDoc := by
+  intro tn exact strObj value d hd
+  unfold formatStrAdvancedObj formatObj
+  by_cases he : renderSpec d = []
+  · simp [he]
+  · have hne : (renderSpec d).isEmpty = false := by
+      cases h : renderSpec d with
+      | nil => exact absurd h he
+      | cons _ _ => rfl
+    simp only [hne, Bool.false_eq_true, if_false, he]
+    have hp := parseDoc_proven tn d 115 60 hd
+    rw [hp]
+    cases hq : docParse tn d 115 60 with
+    | error e => rfl
+    | ok f =>
+      have hi : SpecInv f := parse_inv (t := tn) (spec := renderSpec d) (dt := 115) (da := 60) (by rfl) (by rw [hp, hq])
+      simp only [bind, Except.bind]
+      by_cases ht : f.type = 115
+      · simp [ht, strInternalDoc_proven value f hi]
+      · have ht' : (f.type == 115) = false := by simpa using ht
+        simp [ht, ht', unknownTypeMessage_eq]
+
 /-! ## Errors -/
 
 /-- A one-character spec that is none of the mini-language's other fields. -/
@@ -174,26 +314,54 @@ def PlainType (t : Nat) : Prop :=
   isAlignmentToken t = false ∧ isSignElement t = false ∧ t ≠ 122 ∧ t ≠ 35 ∧ toDecimalDigit t < 0 ∧
   t ≠ 44 ∧ t ≠ 95 ∧ t ≠ 46 ∧ t ≠ 115
 
-/-- `format(s, t)` with an unknown presentation type `t` raises "Unknown format code ..." (with
-`\x..` for a character outside 33..127), for every string; and the grouping options that strings
-refuse raise their messages: both `,` and `_`, or either alone (the default type is `s`). -/
+/-- The refusals of `format(s, spec)` with the messages written out: an unknown presentation type
+`t` (as itself between 33 and 127, else in hex), for every string and type name; both `,` and `_`,
+in either order, after the width or after the precision; and `,` or `_` with the `s` type. -/
 def StrFormatErrors : Prop :=
-  (∀ (s : Str) (t : Nat), PlainType t → formatStrAdvanced s [t] = .error (unknownPresentationType t "str")) ∧
-  (∀ s : Str, formatStrAdvanced s [44, 95] = .error invalidCommaAndUnderscore ∧
-    formatStrAdvanced s [95, 44] = .error invalidCommaAndUnderscore ∧
-    formatStrAdvanced s [44] = .error (invalidThousandsSeparatorType 44 115) ∧
-    formatStrAdvanced s [95] = .error (invalidThousandsSeparatorType 95 115) ∧
-    formatStrAdvanced s [44, 115] = .error (invalidThousandsSeparatorType 44 115) ∧
-    formatStrAdvanced s [95, 115] = .error (invalidThousandsSeparatorType 95 115))
+  (∀ (tn : String) (exact : Bool) (strObj : Py Str) (s : Str) (t : Nat), PlainType t →
+    formatStrAdvancedObj tn exact strObj s [t] =
+      .error (if 32 < t ∧ t < 128 then
+        .valueError ("Unknown format code '" ++ String.singleton (Char.ofNat t) ++
+          "' for object of type '" ++ tpNameShown tn ++ "'")
+      else .valueError ("Unknown format code '\\x" ++ String.ofList (Nat.toDigits 16 t) ++
+          "' for object of type '" ++ tpNameShown tn ++ "'"))) ∧
+  (∀ s : Str, formatStrAdvanced s [44, 95] = .error (.valueError "Cannot specify both ',' and '_'.") ∧
+    formatStrAdvanced s [95, 44] = .error (.valueError "Cannot specify both ',' and '_'.") ∧
+    formatStrAdvanced s [46, 49, 44, 95] = .error (.valueError "Cannot specify both ',' and '_'.") ∧
+    formatStrAdvanced s [46, 95, 44] = .error (.valueError "Cannot specify both ',' and '_'.") ∧
+    formatStrAdvanced s [44] = .error (.valueError "Cannot specify ',' with 's'.") ∧
+    formatStrAdvanced s [95, 115] = .error (.valueError "Cannot specify '_' with 's'.") ∧
+    formatStrAdvanced s [44, 1] = .error (.valueError "Cannot specify ',' with '\\x1'."))
 
 theorem strFormatErrors_proven : StrFormatErrors := by
-  refine ⟨fun s t ht => ?_, fun s => ?_⟩
+  refine ⟨fun tn exact strObj s t ht => ?_, fun s => ?_⟩
   · obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := ht
     have g : getInteger [t] 0 0 = .ok (0, 0, [t]) := by simp [getInteger, h5]
     have h48 : t ≠ 48 := by intro h; subst h; revert h5; decide
-    simp [formatStrAdvanced, parseFormatSpec, parseHead, parseAlign, h1, parseFlags, h2, headIs, h3, h4, h48,
-      parseTail, parseWidth, g, h6, h7, h8, parseType, validateSpec, LT_NO_LOCALE, h9, bind, Except.bind,
-      pure, Except.pure]
-  · refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩ <;> rfl
+    rw [← unknownTypeMessage.eq_1, ← unknownTypeMessage_eq]
+    simp [formatStrAdvancedObj, parseFormatSpec, parseHead, parseAlign, h1, parseFlags, h2, headIs, h3,
+      h4, h48, parseTail, parseWidth, g, h6, h7, h8, parseType, validateSpec, LT_NO_LOCALE, h9, bind,
+      Except.bind, pure, Except.pure]
+  · refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> rfl
+
+/-! ## The separator after the precision -/
+
+/-- The docs give `,` and `_` to `d` and the float types only ("For other presentation types,
+this option is not supported"), and `parse_internal_render_format_spec` refuses a separator after
+the width for `s` ("Cannot specify ',' with 's'."). The separator after the precision, for the
+fractional part (new in 3.14), should be refused for `s` the same way. It is checked only against
+`n` (unicode_formatter.c:596-602), so `format('abc', '.,') == 'abc'`: refuted at `'abc'`, `,`.
+The same holds for the integer types: `format(255, '.,x') == 'ff'`. -/
+def FracSeparatorChecked : Prop :=
+  ∀ (tn : String) (exact : Bool) (strObj : Py Str) (s : Str) (c : Nat), (c = 44 ∨ c = 95) →
+    ∃ e, formatStrAdvancedObj tn exact strObj s [46, c] = .error e
+
+theorem fracSeparatorChecked_refuted : ¬ FracSeparatorChecked := by
+  intro h
+  obtain ⟨e, he⟩ := h "str" true (.ok [97, 98, 99]) [97, 98, 99] 44 (Or.inl rfl)
+  have : formatStrAdvancedObj "str" true (.ok [97, 98, 99]) [97, 98, 99] [46, 44] = .ok [97, 98, 99] := by
+    decide
+  rw [this] at he
+  cases he
 
 end PyLean.UnicodeObj

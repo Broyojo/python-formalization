@@ -49,7 +49,7 @@ theorem formatNulIntStr_proven : FormatNulIntStr := by
       Except.bind, ht]
     rw [if_neg (by decide), if_neg (by decide)]
   · intro hp ht hs s
-    simp only [formatStrAdvanced, hne spec hs, Bool.false_eq_true, if_false, hp, bind,
+    simp only [formatStrAdvanced, formatStrAdvancedObj, hne spec hs, Bool.false_eq_true, if_false, hp, bind,
       Except.bind, ht]
     rw [if_neg (by decide)]
 
@@ -311,21 +311,6 @@ theorem intFastSlow_proven : IntFastSlow := by
     simp [hv, ha, hd45', fun a b => calcNW a b (d :: t) f hd h1 h2 h3, fillNumber, hxf]
 
 /-! ## Grouping -/
-
-/-- The rounds of the grouping loop are bounded by the digits, not by the width. -/
-def GroupLoopLinear : Prop :=
-  ∀ (ds : Str) (w : Int) (n it : Nat) (o : List Nat),
-    insertThousandsGrouping ds w [3] [44] = .ok (n, o, it) → it ≤ ds.length + 1
-
-/-- One digit padded to width 40: thirteen rounds of `min_width` bookkeeping. -/
-theorem groupLoopLinear_refuted : ¬ GroupLoopLinear := by
-  intro h
-  have e : ∃ n o it, insertThousandsGrouping [49] 40 [3] [44] = .ok (n, o, it) ∧ 2 < it :=
-    ⟨_, _, _, rfl, by decide⟩
-  obtain ⟨n, o, it, h1, h2⟩ := e
-  have := h _ _ _ _ _ h1
-  simp only [List.length_cons, List.length_nil] at this
-  omega
 
 /-- With no padding, the grouped text is the digits with separators between them:
 dropping the separator gives the digits back, and the count is the text's length. -/

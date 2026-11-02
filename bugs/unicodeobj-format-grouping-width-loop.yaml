@@ -47,8 +47,14 @@ possible_fix: |
   Check the padded size against PY_SSIZE_T_MAX, or compute the count in closed form when `grouping`
   repeats, before entering the loop.
 lean: |
-  Refuted by groupLoopLinear_refuted (lean/PyLean/UnicodeObj/FormatProps.lean): the loop makes more
-  rounds than there are digits, because the count follows min_width.
+  No Lean statement. The model has no allocator and no KeyboardInterrupt, so "refused before work
+  that grows with the width" cannot be stated in it. An earlier refutation (groupLoopLinear_refuted,
+  "the rounds of the grouping loop are bounded by the digits") was withdrawn: CPython never promises
+  that bound, and a zero-padded grouped field of width 40 legitimately needs about 13 rounds. What
+  the loop does write is pinned by groupingPlacement_proven (lean/PyLean/UnicodeObj/FormatGroupDoc.lean,
+  registry id unicodeobj-format-group-digits): the digits zero padded to min_width and grouped from
+  the right; the defect is only that the counting call does this work, one round per group of the
+  requested width, before an allocation that cannot succeed, with no size or signal check.
 duplicates:
   issues: []
   queries: ["format width comma hang", "thousands separator width slow", "InsertThousandsGrouping",
