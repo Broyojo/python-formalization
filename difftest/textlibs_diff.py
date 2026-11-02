@@ -4232,6 +4232,407 @@ class UrlArea:
                        "unwrap": cps(UP.unwrap(s)), "tobytes": tb}}
 
 
+# ---- tomllib -----------------------------------------------------------------
+
+import datetime as _dt  # noqa: E402
+import io as _io  # noqa: E402
+import tomllib  # noqa: E402
+import tomllib._parser as TP  # noqa: E402
+
+
+class TomlTag:
+    """What the `tag` parse_float returns: an object that is neither dict nor list."""
+    __slots__ = ("s",)
+
+    def __init__(self, s):
+        self.s = s
+
+
+def toml_pf(name):
+    if name == "float":
+        return float
+    if name == "tag":
+        return TomlTag
+    if name == "raise_e":
+        def f(s):
+            if "e" in s or "E" in s:
+                raise ValueError("pf-raise")
+            return TomlTag(s)
+        return f
+    if name == "list_dot":
+        return lambda s: [] if "." in s else TomlTag(s)
+    return lambda s: {} if "i" in s else TomlTag(s)
+
+
+def toml_enc(v):
+    if isinstance(v, bool):
+        return {"b": v}
+    if isinstance(v, int):
+        return {"i": format(v, "x")}
+    if isinstance(v, TomlTag):
+        return {"f": cps(v.s)}
+    if isinstance(v, str):
+        return {"s": cps(v)}
+    if isinstance(v, _dt.datetime):
+        if v.tzinfo is None:
+            tz = None
+        else:
+            assert type(v.tzinfo) is _dt.timezone
+            tz = v.utcoffset() // _dt.timedelta(minutes=1)
+        return {"dt": [v.year, v.month, v.day, v.hour, v.minute, v.second, v.microsecond], "tz": tz}
+    if isinstance(v, _dt.date):
+        return {"d": [v.year, v.month, v.day]}
+    if isinstance(v, _dt.time):
+        assert v.tzinfo is None
+        return {"t": [v.hour, v.minute, v.second, v.microsecond]}
+    if isinstance(v, list):
+        return {"a": [toml_enc(x) for x in v]}
+    if isinstance(v, dict):
+        return {"o": [[cps(k), toml_enc(x)] for k, x in v.items()]}
+    raise AssertionError(type(v))
+
+
+def toml_same(a, b):
+    """`a` from parse_float=float, `b` from parse_float=TomlTag."""
+    if isinstance(b, TomlTag):
+        return type(a) is float and repr(float(b.s)) == repr(a)
+    if isinstance(b, list):
+        return isinstance(a, list) and len(a) == len(b) and all(map(toml_same, a, b))
+    if isinstance(b, dict):
+        return isinstance(a, dict) and list(a) == list(b) and all(toml_same(a[k], b[k]) for k in b)
+    return type(a) is type(b) and a == b
+
+
+TOML_BARE = ["a", "b", "c", "a", "b", "x1", "A-b", "_", "-", "1", "0", "true", "inf", "nan", "ab_c", "1979-05-27"]
+TOML_SAFE = list("abcxyz019 ._-=#[]{},:+") + ["é", "€", "\U0001F600", "　", "\xa0", "'"]
+TOML_RISKY = ['"', "\\", "\n", "\r", "\x00", "\x1f", "\x7f", "\x08", "\t", "\ud800", "\x85", " "]
+TOML_ESC = ["\\b", "\\t", "\\n", "\\f", "\\r", "\\e", '\\"', "\\\\", "\\x41", "\\xff", "\\x00", "\\xg1", "\\x4",
+            "\\u00e9", "\\uD800", "\\udfff", "\\uE000", "\\U0001F600", "\\U00110000", "\\U0010FFFF", "\\U0000d800",
+            "\\a", "\\ ", "\\", "\\u12", "\\0", "\\E", "\\X41"]
+
+
+@area("toml", 10)
+class TomlArea:
+    """tomllib (TomlModel.lean). Documents travel as code points; see TomlDiff.lean."""
+
+    @staticmethod
+    def chars(r, n, risky=0.1, pool=None):
+        pool = pool or TOML_SAFE
+        return "".join(r.choice(TOML_RISKY) if r.random() < risky else r.choice(pool)
+                       for _ in range(r.randint(0, n)))
+
+    @classmethod
+    def basic(cls, r, n=5):
+        out = []
+        for _ in range(r.randint(0, n)):
+            k = r.random()
+            out.append(r.choice(TOML_ESC) if k < 0.3 else r.choice(TOML_RISKY) if k < 0.38 else r.choice(TOML_SAFE))
+        return "".join(out)
+
+    @classmethod
+    def string(cls, r):
+        k = r.random()
+        if k < 0.35:
+            return '"' + cls.basic(r).replace('"', '\\"' if r.random() < 0.9 else '"') + '"'
+        if k < 0.6:
+            return "'" + cls.chars(r, 6, 0.06).replace("'", "" if r.random() < 0.9 else "'") + "'"
+        if k < 0.82:
+            body = cls.basic(r, 7)
+            if r.random() < 0.4:
+                body += r.choice(["\\\n", "\\  \n  ", "\\\t\n\n x", "\\ x", "\\  ", "\\\r\n y"])
+            return '"""' + r.choice(["", "\n", "\r\n"]) + body + r.choice(['"""', '""""', '"""""', '""""""', '"'])
+        body = cls.chars(r, 7, 0.08).replace("'''", "''")
+        return "'''" + r.choice(["", "\n"]) + body + r.choice(["'''", "''''", "'''''", "''''''", "''"])
+
+    @staticmethod
+    def number(r):
+        k = r.random()
+        if k < 0.3:
+            n = r.choice([0, 1, -1, 7, 2**63, -2**63, 2**63 - 1, 2**64, r.randint(-10**6, 10**6), r.randint(0, 10**30)])
+            s = str(abs(n))
+            if r.random() < 0.3 and len(s) > 1:
+                i = r.randrange(1, len(s))
+                s = s[:i] + "_" + s[i:]
+            return ("-" if n < 0 else r.choice(["", "", "+"])) + s
+        if k < 0.45:
+            v = r.randint(0, 2**70)
+            f = r.choice(["x", "o", "b"])
+            s = format(v, f)
+            if f == "x" and r.random() < 0.5:
+                s = s.upper()
+            if r.random() < 0.3 and len(s) > 1:
+                i = r.randrange(1, len(s))
+                s = s[:i] + "_" + s[i:]
+            return "0" + f + s
+        if k < 0.55:
+            return r.choice(["9" * 640, "9" * 641, "1" * 4300, "1" * 4301, "-" + "7" * 4301, "1_" * 700 + "1",
+                             "0x" + "f" * 5000, "0b" + "1" * 9000, "1" * 4301 + ".5", "1e" + "1" * 5000])
+        if k < 0.8:
+            return r.choice(["1.5", "-0.0", "+0.0", "1e10", "1E+1_0", "6.626e-34", "1e400", "-1e-400", "3.14_15",
+                             "0.1", "0e0", "1_0.0_1e1_0", "224_617.445_991_228", "5e+22", "-2E-2", "1.0e-07"])
+        return r.choice(["1.", ".5", "1.5e", "1e_1", "1__0", "_1", "1_", "00", "01", "0x", "0x_1", "0X1", "0o8",
+                         "0b2", "0b", "+0x1", "-0b1", "1.e5", "1e", "1e+", "e5", "+", "-", "0.", "1_e1",
+                         "inf", "-inf", "+inf", "nan", "-nan", "+nan", "infinity", "NaN", "Inf", "+i", "-na",
+                         "0", "-0", "+0", "1_000", "0xDEAD_beef", "0o777", "0b1010_1010", "1.5_", "1._5",
+                         "true", "false", "tru", "fals", "truex", "falsee", "t", "f"])
+
+    @staticmethod
+    def datetime(r):
+        y = r.choice([0, 1, 1979, 2000, 1900, 2024, 2023, 9999, r.randint(0, 9999)])
+        mo = r.choice([1, 2, 2, 4, 12, r.randint(1, 12), 0, 13])
+        d = r.choice([1, 28, 29, 30, 31, r.randint(1, 31), 0, 32])
+        s = "%04d-%02d-%02d" % (y, mo, d)
+        if r.random() < 0.08:
+            s = r.choice(["1979-5-27", "79-05-27", "1979-05-7", "1979/05/27", "19790-05-27"])
+        if r.random() < 0.65:
+            s += r.choice(["T", "t", " ", " ", "T", "_", "TT"]) + TomlArea.time(r)
+            if r.random() < 0.6:
+                s += r.choice(["Z", "z", "+00:00", "-00:00", "+05:30", "-08:00", "+23:59", "-23:59", "+24:00",
+                               "+05:60", "+5:30", "+0530", "+05", "Zz", "-"])
+        return s
+
+    @staticmethod
+    def time(r):
+        h = r.choice([0, 7, 9, 19, 20, 23, 24, 29, r.randint(0, 23)])
+        mi = r.choice([0, 32, 59, 60, r.randint(0, 59)])
+        s = "%02d:%02d" % (h, mi)
+        if r.random() < 0.1:
+            s = r.choice(["7:32", "07:3", "07-32", "07:32:", "007:32"])
+        if r.random() < 0.7:
+            s += ":%02d" % r.choice([0, 1, 59, 60, 61, r.randint(0, 59)])
+            if r.random() < 0.4:
+                s += "." + "".join(r.choice("0123456789") for _ in range(r.randint(0, 10)))
+        return s
+
+    @classmethod
+    def sep(cls, r, nl=True):
+        """Whitespace, newlines and comments between array or inline-table items."""
+        out = []
+        for _ in range(r.randint(0, 2)):
+            k = r.random()
+            if k < 0.5:
+                out.append(r.choice([" ", "\t", "  "]))
+            elif nl and k < 0.75:
+                out.append(r.choice(["\n", "\r\n", "\n\n"]))
+            elif nl:
+                out.append("#" + cls.chars(r, 4, 0.05) + "\n")
+        return "".join(out)
+
+    @classmethod
+    def key_part(cls, r):
+        k = r.random()
+        if k < 0.65:
+            return r.choice(TOML_BARE)
+        if k < 0.85:
+            return '"' + cls.basic(r, 3).replace('"', '\\"') + '"'
+        return "'" + cls.chars(r, 3, 0.03).replace("'", "") + "'"
+
+    @classmethod
+    def key(cls, r):
+        n = r.choice([1, 1, 1, 2, 2, 3, 4])
+        return r.choice([".", " . ", ".\t", ". ", " ."]).join(cls.key_part(r) for _ in range(n))
+
+    @classmethod
+    def value(cls, r, depth=0):
+        k = r.random()
+        if depth < 4 and k < 0.15:
+            items = [cls.value(r, depth + 1) for _ in range(r.randint(0, 3))]
+            body = cls.sep(r) + ("," + cls.sep(r)).join(items)
+            if items and r.random() < 0.3:
+                body += "," + cls.sep(r)
+            if r.random() < 0.05:
+                body += ",,"
+            return "[" + body + cls.sep(r) + r.choice(["]", "]", "]", "]", "", "}"])
+        if depth < 4 and k < 0.3:
+            nl = r.random() < 0.5
+            items = [cls.key(r) + r.choice([" = ", "=", " =  "]) + cls.value(r, depth + 1)
+                     for _ in range(r.randint(0, 3))]
+            body = cls.sep(r, nl) + ("," + cls.sep(r, nl)).join(items)
+            if items and r.random() < 0.3:
+                body += "," + cls.sep(r, nl)
+            return "{" + body + cls.sep(r, nl) + r.choice(["}", "}", "}", "}", "", "]"])
+        if k < 0.5:
+            return cls.string(r)
+        if k < 0.75:
+            return cls.number(r)
+        if k < 0.9:
+            return cls.datetime(r)
+        return cls.time(r)
+
+    @classmethod
+    def stmt(cls, r):
+        k = r.random()
+        if k < 0.55:
+            s = cls.key(r) + r.choice([" = ", "=", " =", "= ", "\t=\t", " "]) + cls.value(r)
+        elif k < 0.72:
+            s = "[" + r.choice(["", " "]) + cls.key(r) + r.choice(["", " "]) + r.choice(["]", "]", "]]", ""])
+        elif k < 0.85:
+            s = "[[" + r.choice(["", " "]) + cls.key(r) + r.choice(["", " "]) + r.choice(["]]", "]]", "]", "] ]"])
+        elif k < 0.93:
+            s = "#" + cls.chars(r, 6, 0.08)
+        else:
+            s = r.choice(["", " ", "\t", "=", "a", "]", "1 = 2", "a.b", "[]", "[[]]", "[a]x", "a = 1 b = 2"])
+        if r.random() < 0.15:
+            s = " " * r.randint(1, 3) + s
+        if r.random() < 0.15:
+            s += r.choice([" # c", "#", " ", "\t# \x7f", " #\x00"])
+        return s
+
+    @classmethod
+    def doc(cls, r):
+        if r.random() < 0.25:
+            # header-heavy documents: table and array-of-tables redefinition rules
+            ks = ["a", "a.b", "a.b.c", "b", "a . b", '"a"', "a.c", "b.c", "c", "b.a"]
+            lines = []
+            for _ in range(r.randint(1, 7)):
+                kk = r.random()
+                if kk < 0.3:
+                    lines.append("[" + r.choice(ks) + "]")
+                elif kk < 0.55:
+                    lines.append("[[" + r.choice(ks) + "]]")
+                else:
+                    lines.append(r.choice(ks) + " = " + r.choice(["1", "[]", "{}", "[{}]", "{x = 1}", "{b = 1}",
+                                                                  "{b.c = 1, b.d = 2}", "{b = 1, b = 2}",
+                                                                  "{b = {}, b.c = 1}", "{b.c = 1, b = 2}",
+                                                                  "{b = [], c = 1,}", "[{b = 1}, {}]"]))
+            return "\n".join(lines)
+        lines = [cls.stmt(r) for _ in range(r.randint(0, 6))]
+        s = r.choice(["\n", "\n", "\r\n", "\n\n"]).join(lines)
+        if r.random() < 0.3:
+            s += r.choice(["\n", "\r\n", "\r", " ", "\n\n"])
+        if r.random() < 0.15:
+            s = list(s)
+            for _ in range(r.randint(1, 3)):
+                i = r.randint(0, len(s))
+                op = r.random()
+                if op < 0.4 and s and i < len(s):
+                    del s[i]
+                else:
+                    s.insert(i, r.choice(list("[]{},.=\"'\\\n #\t\r0x_e+-:Tz") + ["\x00", "\x7f", "\ud800"]))
+            s = "".join(s)
+        return s
+
+    @classmethod
+    def earg(cls, r, doc_len):
+        k = r.random()
+        if k < 0.15:
+            return None
+        if k < 0.5:
+            return {"s": cps(cls.chars(r, 6, 0.0, list("ab\n\n c")))}
+        if k < 0.9:
+            return {"i": r.randint(-doc_len - 3, doc_len + 3)}
+        return {"o": cps(r.choice(["None", "1.5"]))}
+
+    @classmethod
+    def gen(cls, r):
+        fn = r.choice(["loads"] * 12 + ["load", "err"])
+        c = {"mod": "textlibs", "fn": "toml." + fn}
+        if fn == "err":
+            d = cls.chars(r, 8, 0.0, list("ab\n\n c"))
+            c.update(msg={"s": cps(r.choice(["m", "", "Invalid value"]))}, doc={"s": cps(d)},
+                     pos={"i": r.randint(-2, len(d) + 2)}, args=[], werr=r.random() < 0.15)
+            if r.random() < 0.4:
+                c["msg"], c["doc"], c["pos"] = (cls.earg(r, len(d)) for _ in range(3))
+            if r.random() < 0.15:
+                c["args"] = [cls.earg(r, len(d)) for _ in range(r.randint(1, 2))]
+            return c
+        c.update(pf=r.choice(["float", "float", "float", "tag", "raise_e", "list_dot", "dict_inf"]),
+                 maxk=r.choice([1000, 1000, 1000, 2, 3]), maxd=r.choice([4300, 4300, 0, 640, 700]))
+        if fn == "loads" and r.random() < 0.02:
+            c["type"] = r.choice(["bytes", "int", "NoneType", "bytearray"])
+            return c
+        s = cls.doc(r)
+        if fn == "load":
+            if r.random() < 0.1:
+                c["text"] = cps(s)
+                return c
+            b = s.encode("utf-8", "surrogatepass")
+            if r.random() < 0.2:
+                b = bytearray(b)
+                i = r.randint(0, len(b))
+                b[i:i] = r.choice([b"\xff", b"\xc3", b"\xe2\x82", b"\xed\xa0\x80", b"\xef\xbb\xbf"])
+                b = bytes(b)
+            c["bytes"] = list(b)
+            return c
+        c["doc"] = cps(s)
+        return c
+
+    @staticmethod
+    def _earg_obj(a):
+        if a is None:
+            return TP.DEPRECATED_DEFAULT
+        if "s" in a:
+            return txt(a["s"])
+        if "i" in a:
+            return a["i"]
+        return {"None": None, "1.5": 1.5}[txt(a["o"])]
+
+    @staticmethod
+    def _earg_enc(x):
+        if x is TP.DEPRECATED_DEFAULT:  # kept in *args; only msg, doc and pos are filtered
+            return None
+        if isinstance(x, str):
+            return {"s": cps(x)}
+        if isinstance(x, int) and not isinstance(x, bool):
+            return {"i": x}
+        return {"o": cps(repr(x))}
+
+    @classmethod
+    def run(cls, c):
+        fn = c["fn"][5:]
+        if fn == "err":
+            args = [cls._earg_obj(a) for a in (c["msg"], c["doc"], c["pos"])] + [cls._earg_obj(a) for a in c["args"]]
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("error" if c["werr"] else "always")
+                try:
+                    e = tomllib.TOMLDecodeError(*args)
+                except Exception as ex:
+                    return {"exc": type(ex).__name__, "msg": str(ex)}
+            if not hasattr(e, "msg"):
+                if not any(issubclass(x.category, DeprecationWarning) for x in w):
+                    return {"exc": "HarnessNoWarning", "msg": ""}
+                return {"ok": {"legacy": [cls._earg_enc(x) for x in e.args]}}
+            return {"ok": {"errmsg": cps(str(e)), "msg": cps(e.msg), "doc": cps(e.doc), "pos": e.pos,
+                           "lineno": e.lineno, "colno": e.colno}}
+        old_k, old_d = TP.MAX_KEY_PARTS, sys.get_int_max_str_digits()
+        TP.MAX_KEY_PARTS = c["maxk"]
+        sys.set_int_max_str_digits(c["maxd"])
+        try:
+            if fn == "load":
+                if "bytes" in c:
+                    def go(pf):
+                        return tomllib.load(_io.BytesIO(bytes(c["bytes"])), parse_float=pf)
+                else:
+                    def go(pf):
+                        return tomllib.load(_io.StringIO(txt(c["text"])), parse_float=pf)
+            elif "type" in c:
+                arg = {"bytes": b"a = 1", "int": 1, "NoneType": None, "bytearray": bytearray(b"a")}[c["type"]]
+                def go(pf):
+                    return tomllib.loads(arg, parse_float=pf)
+            else:
+                doc = txt(c["doc"])
+                def go(pf):
+                    return tomllib.loads(doc, parse_float=pf)
+            name = c["pf"]
+            r1 = common.py_result(lambda: go(toml_pf(name)))
+            if name == "float":
+                r2 = common.py_result(lambda: go(TomlTag))
+                if ("ok" in r1) != ("ok" in r2):
+                    return {"exc": "HarnessFloatMismatch", "msg": repr((r1, r2))}
+                if "ok" in r1:
+                    if not toml_same(r1["ok"], r2["ok"]):
+                        return {"exc": "HarnessFloatMismatch", "msg": "values"}
+                    r1 = r2
+                elif r1 != r2:
+                    return {"exc": "HarnessFloatMismatch", "msg": repr((r1, r2))}
+            if "ok" in r1:
+                r1["ok"] = toml_enc(r1["ok"])
+            return r1
+        finally:
+            TP.MAX_KEY_PARTS = old_k
+            sys.set_int_max_str_digits(old_d)
+
+
 only = os.environ.get("TEXTLIBS_ONLY")
 names = [n for n in AREAS if not only or n in only.split(",")]
 weights = [AREAS[n][1] for n in names]
