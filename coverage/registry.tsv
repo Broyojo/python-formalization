@@ -2092,6 +2092,22 @@ textlibs-zoneinfo-before-twins-narrow	proven	Lib/zoneinfo/_zoneinfo.py
 textlibs-simplequeue-get-twins	refuted	Modules/_queuemodule.c	
 textlibs-simplequeue-get-tiny-negative	refuted	Modules/_queuemodule.c	
 textlibs-simplequeue-get-finite	proven	Modules/_queuemodule.c	
+textlibs-urllib-quote-from-bytes-paths	proven	Lib/urllib/parse.py	quote_from_bytes,_byte_quoter_factory,_Quoter.__init__,_Quoter.__missing__
+textlibs-urllib-quote-bytes-round-trip	proven	Lib/urllib/parse.py	quote_from_bytes,unquote_to_bytes,_unquote_impl
+textlibs-urllib-quote-round-trip	proven	Lib/urllib/parse.py	quote,unquote,_generate_unquoted_parts,_unquote_impl
+textlibs-urllib-quote-plus-round-trip	proven	Lib/urllib/parse.py	quote_plus,unquote_plus
+textlibs-urllib-qsl-round-trip	proven	Lib/urllib/parse.py	urlencode,parse_qsl
+textlibs-urllib-split-round-trip	proven	Lib/urllib/parse.py	urlsplit,_urlsplit,_splitnetloc,urlunsplit,_urlunsplit,_SplitResultBase.geturl,_coerce_args,_noop
+textlibs-urllib-split-round-trip-all	refuted	Lib/urllib/parse.py	urlsplit,_urlsplit,_splitnetloc,urlunsplit,_urlunsplit,_SplitResultBase.geturl
+textlibs-urllib-parse-round-trip	proven	Lib/urllib/parse.py	urlparse,_urlparse,_splitparams,urlunparse,_ParseResultBase.geturl
+textlibs-urllib-defrag-round-trip	proven	Lib/urllib/parse.py	urldefrag,_DefragResultBase.geturl
+textlibs-urllib-bracketed-host	proven	Lib/urllib/parse.py	_check_bracketed_netloc,_check_bracketed_host,_NetlocResultMixinStr._hostinfo
+textlibs-urllib-userinfo-brackets	refuted	Lib/urllib/parse.py	_check_bracketed_netloc,_check_bracketed_host
+textlibs-urllib-netloc-twin	proven	Lib/urllib/parse.py	_NetlocResultMixinStr._userinfo,_NetlocResultMixinBytes._userinfo,_NetlocResultMixinStr._hostinfo,_NetlocResultMixinBytes._hostinfo,_NetlocResultMixinBase.username,_NetlocResultMixinBase.password,_NetlocResultMixinBase.hostname
+textlibs-urllib-port	proven	Lib/urllib/parse.py	_NetlocResultMixinBase.port
+textlibs-urllib-bytes-twin	proven	Lib/urllib/parse.py	_decode_args,_encode_result,_ResultMixinStr.encode,_ResultMixinBytes.decode
+textlibs-urllib-nfkc-check	proven	Lib/urllib/parse.py	_checknetloc
+textlibs-urllib-legacy-split	proven	Lib/urllib/parse.py	_splituser,_splitpasswd,_splitquery,_splittag,_splitvalue,_splitattr,_splitport,_splitnport
 coll-count-elements-twins	proven	Lib/collections/__init__.py	_count_elements
 coll-counter-update-fast-slow	proven	Lib/collections/__init__.py	Counter.update
 coll-counter-update-adds	proven	Lib/collections/__init__.py	Counter.update,Counter.__init__,Counter.__missing__,_count_elements
