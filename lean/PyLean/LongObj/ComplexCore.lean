@@ -1,7 +1,7 @@
 import PyLean.Core
 
 /-!
-The arithmetic of `Objects/complexobject.c` (CPython 3.14.7), lines 27-397,
+The arithmetic of `Objects/complexobject.c` (CPython 3.15.2), lines 27-397,
 mirrored over an abstract C `double`.
 
 `CDouble R` lists exactly the C operations on `double` that the file uses.

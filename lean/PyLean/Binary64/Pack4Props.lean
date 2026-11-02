@@ -413,4 +413,19 @@ theorem pack4RoundTrip_proven : Pack4RoundTrip := by
         · simp only [h, decide_false, Bool.false_eq_true, ↓reduceIte]; omega
       exact pack4_finite hb (by omega) hbe hv (by omega) (by omega) (Or.inl (by omega)) le
 
+/-- The struct docs give `<` and `>` the same standard float format: on a little-endian
+host `struct.unpack('<f', b)` and `struct.unpack('>f', b[::-1])` read the same binary32.
+`nu_float` is what `<f` reaches on such a host since 3.15 and `PyFloat_Unpack4 _ false` is
+what `>f` reaches. -/
+def StructFloatOrdersAgree : Prop :=
+  ∀ b : List Nat, b.length = 4 → (∀ x ∈ b, x < 256) →
+    (nu_float b).bits = (PyFloat_Unpack4 b.reverse false).bits
+
+/-- The signaling NaN `0x7f89b33c`: `<f` gives it back quieted, `>f` keeps it signaling. -/
+theorem structFloatOrdersAgree_refuted : ¬ StructFloatOrdersAgree := by
+  intro h
+  have := h [60, 179, 137, 127] rfl (by decide)
+  revert this
+  decide +kernel
+
 end PyLean.Binary64

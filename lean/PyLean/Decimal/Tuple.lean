@@ -154,7 +154,7 @@ def cFromTuple (s : PyVal) (digits : Option (List PyVal)) (e : PyVal) : Py Dec :
     if InCLimits d then return d else throw invalidOp
 
 /-- `Decimal.as_tuple()` of `_pydecimal` (_pydecimal.py:1014-1019) and of
-`_decimal` (`PyDec_AsTuple`, _decimal.c@3.14.7:4038-4129): sign, coefficient
+`_decimal` (`_decimal_Decimal_as_tuple_impl`, _decimal.c:4305-4398): sign, coefficient
 digits (`(0,)` for an infinity, `()` for a NaN without payload) and the
 exponent or code. -/
 def asTuple (d : Dec) : PyVal × List PyVal × PyVal :=

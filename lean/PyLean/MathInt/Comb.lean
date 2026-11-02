@@ -17,7 +17,7 @@ theorem u64_pred {n : Nat} (h1 : 1 ≤ n) (h2 : n ≤ 2 ^ 64) : u64 (n + 2 ^ 64 
   rw [show n + 2 ^ 64 - 1 = (n - 1) + 2 ^ 64 by omega, Nat.add_mod_right]
   exact Nat.mod_eq_of_lt (by omega)
 
-/-- The `C(n, k) = C(n, k-1) * (n-k+1) / k` loop, mathmodule.c@3.14.7:3603-3607,
+/-- The `C(n, k) = C(n, k-1) * (n-k+1) / k` loop, mathintegermodule.c:900-904,
 when `C(n0, K) * K < 2^64` and `2K <= n0`. -/
 theorem smallLoop_comb (n0 K : Nat) (hK : 2 * K ≤ n0) (hb : choose n0 K * K < 2 ^ 64) :
     ∀ rem t, t + 1 + rem = K →
@@ -40,7 +40,7 @@ theorem smallLoop_comb (n0 K : Nat) (hK : 2 * K ≤ n0) (hb : choose n0 K * K < 
       show t + 1 + 1 = (t + 1) + 1 from rfl]
     exact ih (t + 1) (by omega)
 
-/-- The `P(n, k) = P(n, k-1) * (n-k+1)` loop, mathmodule.c@3.14.7:3630-3634, when
+/-- The `P(n, k) = P(n, k-1) * (n-k+1)` loop, mathintegermodule.c:927-931, when
 `P(n0, K) < 2^64` and `K <= n0`. -/
 theorem smallLoop_perm (n0 K : Nat) (hK : K ≤ n0) (hb : descFact n0 K < 2 ^ 64) :
     ∀ rem t, t + 1 + rem = K →
@@ -226,7 +226,7 @@ theorem permComb_spec :
 
 /-- `math.comb` docstring: "Evaluates to n! / (k! * (n - k)!) when k <= n".
 The result is exact for every size of `n`; the only exception is the
-`OverflowError` of mathmodule.c@3.14.7:3912-3917 when `min(k, n - k)` exceeds
+`OverflowError` of mathintegermodule.c:1208-1213 when `min(k, n - k)` exceeds
 `LLONG_MAX` (a result with more than `2^63` factors). -/
 def CombFormula : Prop :=
   ∀ n k : Int, 0 ≤ k → k ≤ n →
@@ -275,7 +275,7 @@ theorem combFormula_proven : CombFormula := by
       exact ⟨_, rfl, rfl⟩
 
 /-- `math.perm` docstring: "Evaluates to n! / (n - k)! when k <= n". Exact
-for every `n`; `k > LLONG_MAX` raises `OverflowError` (mathmodule.c@3.14.7:3784-3790). -/
+for every `n`; `k > LLONG_MAX` raises `OverflowError` (mathintegermodule.c:1081-1087). -/
 def PermFormula : Prop :=
   ∀ n k : Int, 0 ≤ k → k ≤ n →
     (k ≤ llongMax → perm n (some k) = .ok (fact n.toNat / fact (n - k).toNat)) ∧

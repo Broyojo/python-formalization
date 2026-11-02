@@ -15,6 +15,8 @@ import random
 import struct
 import sys
 
+import _testcapi
+
 import common
 
 
@@ -273,12 +275,48 @@ def enc_obj(rng, ints=True):
     return {"o": "str"}
 
 
+class FloatSub(float):
+    pass
+
+
+def make_class(o):
+    """A class named as the case says, with the `__float__` and `__index__` it states."""
+    ns = {"__module__": "m"}
+    if "ff" in o:
+        result = py_obj(o["ff"])
+        ns["__float__"] = lambda self: result
+    if "ix" in o:
+        ns["__index__"] = lambda self: o["ix"]
+    return type(o["o"], (), ns)()
+
+
 def py_obj(o):
     if "f" in o:
-        return of_bits(o["f"])
+        return FloatSub(of_bits(o["f"])) if "sub" in o else of_bits(o["f"])
     if "i" in o:
         return o["i"]
+    if "fq" in o:
+        return make_class(o)
     return "text"
+
+
+def enc_asdouble_obj(rng):
+    """An argument of PyFloat_AsDouble: each of its branches, floatobject.c:247-303."""
+    k = rng.randrange(7)
+    if k == 0:
+        return {"f": edge_float(rng), "sub": "FloatSub"}
+    obj = {"o": "C", "fq": "m.C"}
+    if k == 1:  # no __float__ and no __index__
+        return obj
+    if k == 2:
+        return {**obj, "ix": edge_int(rng)}
+    if k == 3:
+        return {**obj, "ff": {"f": edge_float(rng)}}
+    if k == 4:  # a strict subclass of float: deprecated, still used
+        return {**obj, "ff": {"f": edge_float(rng), "sub": "FloatSub"}}
+    if k == 5:
+        return {**obj, "ff": {"i": edge_int(rng)}}
+    return {**obj, "ff": {"o": "R", "fq": "m.R"}}
 
 
 def enc_any(r):
@@ -400,7 +438,7 @@ def decimal_string(rng):
                            "1e-4294967297", "1e0000000000000000000000000000001"])
     return rng.choice(["inf", "-inf", "+INF", "infinity", "Infinity", "nan", "-nan", "+NaN", "in",
                        "infinit", "infinityx", "nanx", "1_000", "1__0", "_1", "1_", "1_.5", "1._5",
-                       "1.5_5", "1e1_0", "1_e5", "1e_5", "١٢٣", "1٢", "１２", "\xa01\xa0", " 1",
+                       "1.5_5", "1e1_0", "1_e5", "1e_5", "١٢٣", "1٢", "１２", "\U00011de1", "1\U00011de9", "\xa01\xa0", " 1",
                        "1\x00", "\x001", "1\x00_", "é", "1é", "  1  ", "\t1\n", " ", "", "\x0b1",
                        "1 2", "0x10", "١_٢", "1_٢", "\x1f1", "\x851", "1\x7f", "١\x7f"])
 
@@ -441,14 +479,26 @@ def run_float(c):
     if fn in ("pack2", "pack4", "pack8"):
         code = {"pack2": "e", "pack4": "f", "pack8": "d"}[fn]
         e = "<" if c["le"] else ">"
-        return common.py_result(lambda: list(struct.pack(e + code, x)))
+        r = common.py_result(lambda: list(struct.pack(e + code, x)))
+        # The C API is the function modelled; struct must not differ from it.
+        size = int(fn[-1])
+        capi = common.py_result(lambda: list(_testcapi.float_pack(size, x, 0 if not c["le"] else 1)))
+        return r if r == capi else {"ok": ["struct and PyFloat_Pack differ", r, capi]}
     if fn in ("unpack2", "unpack4", "unpack8"):
-        code = {"unpack2": "e", "unpack4": "f", "unpack8": "d"}[fn]
-        e = "<" if c["le"] else ">"
-        r = struct.unpack(e + code, bytes(c["b"]))[0]
-        return {"ok": to_bits(r)}
+        # Since 3.15 a little-endian struct goes to nu_float and nu_double for its own
+        # byte order and never reaches PyFloat_Unpack4/8 (see st_unpack below), so
+        # these call the C API that the model mirrors.
+        return {"ok": to_bits(_testcapi.float_unpack(bytes(c["b"]), 1 if c["le"] else 0))}
+    if fn == "st_unpack":
+        return {"ok": to_bits(struct.unpack(c["fmt"], bytes(c["b"]))[0])}
     if fn == "repr":
         return {"ok": repr(x)}
+    if fn == "fmt_big":
+        # Only past the guard: below it the answer is a 2 GiB string.
+        spec = f".{c['p']}{chr(c['code'])}"
+        if c["via"] == "format":
+            return common.py_result(lambda: format(x, spec))
+        return common.py_result(lambda: ("%" + spec) % x)
     if fn == "fmt":
         code = chr(c["code"])
         if c["z"]:
@@ -536,7 +586,15 @@ def gen_float_case(rng):
         le = rng.random() < .5
         if le:
             b.reverse()
+        if n > 2 and rng.random() < 0.4:
+            order = rng.choice("<=@>!") if le else rng.choice(">!")
+            return {**m, "fn": "st_unpack", "b": b, "fmt": order + {4: "f", 8: "d"}[n]}
         return {**m, "fn": f"unpack{n}", "b": b, "le": le}
+    if k < 0.67:
+        limit = 2147483647 - 1024
+        return {**m, "fn": "fmt_big", "x": edge_float(rng), "code": rng.choice([101, 69, 102, 70, 103, 71]),
+                "p": rng.choice([limit + 1, limit + 2, 2147483646, 2147483647]),
+                "via": rng.choice(["format", "percent"])}
     if k < 0.8:
         code = rng.choice([101, 69, 102, 70, 103, 71])
         p = rng.choice([0, 1, 2, 3, 5, 6, 12, 14, 15, 16, 17, 18, 20, 30, 100, 350, 1100,
@@ -577,6 +635,8 @@ def gen_float_case(rng):
         return {**m, "fn": "getformat", "t": rng.choice(["double", "float", "x", ""])}
     if k < 0.99:
         return {**m, "fn": "info"}
+    if rng.random() < 0.7:
+        return {**m, "fn": "asdouble", "v": enc_asdouble_obj(rng)}
     return {**m, "fn": "asdouble", "v": enc_obj(rng)}
 
 

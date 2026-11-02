@@ -10,7 +10,7 @@ import PyLean.LongObj.ComplexParseWrap
 import PyLean.LongObj.ComplexStrtodSpec
 
 /-!
-Registry entries for `Objects/complexobject.c`, CPython 3.14.7.
+Registry entries for `Objects/complexobject.c`, CPython 3.15.2.
 
 The arithmetic has three layers. Ring and field theorems show the branch structure
 computes the intended function over exact arithmetic; `CProdBranchOrder` and
@@ -108,7 +108,7 @@ def entriesComplex : List Entry := [
     source := "complexobject.c:318-320 and 746-749"
     status := .refuted, prop := ``CPowEdomNeedsZeroBase, thm := some ``cPowEdomNeedsZeroBase_refuted
     bug := some "longobj-complex-pow-infinite-phase-edom"
-    notes := "(1+1j) ** float('inf'): cos of an infinite phase sets EDOM. Fixed on main (gh-156886); still in 3.14.7." },
+    notes := "(1+1j) ** float('inf'): cos of an infinite phase sets EDOM. Fixed on main (gh-156886); still in 3.15.2." },
   { id := "complex-cpow-branches", pyFile := complexFile
     pyFns := ["_Py_c_pow"]
     statement := "For every CDouble instance and libm, _Py_c_pow with a zero exponent returns 1 before looking at the base, and a zero base with a nonzero exponent returns 0, with EDOM exactly when the exponent has a nonzero imaginary part or a negative real part."
@@ -120,7 +120,7 @@ def entriesComplex : List Entry := [
     source := "invariant; float('inf') ** 1 returns inf"
     status := .refuted, prop := ``PowOneNeverRaises, thm := some ``powOneNeverRaises_refuted
     bug := some "longobj-complex-pow-infinite-base-overflow"
-    notes := "complex('inf') ** 1: _Py_ADJUST_ERANGE2 reads an infinite result as an overflow even when the base was infinite. Fixed on main (gh-156693); still in 3.14.7." },
+    notes := "complex('inf') ** 1: _Py_ADJUST_ERANGE2 reads an infinite result as an overflow even when the base was infinite. Fixed on main (gh-156693); still in 3.15.2." },
   { id := "complex-pow-modulo-order", pyFile := complexFile
     pyFns := ["complex_pow", "real_to_complex", "real_to_double"]
     statement := "complex_pow converts both operands first: NotImplemented and the int-overflow error come before 'complex modulo', which is raised for any non-None third argument once they convert."
@@ -140,15 +140,14 @@ def entriesComplex : List Entry := [
   { id := "complex-abs-ignores-stale-errno", pyFile := complexFile
     pyFns := ["complex_abs", "_Py_c_abs"]
     statement := "abs(z) does not depend on the errno left by the previous C call."
-    source := "complexobject.c:370 (\"sets errno = ERANGE on overflow;  otherwise errno = 0\")"
-    status := .refuted, prop := ``ComplexAbsIgnoresStaleErrno
-    thm := some ``complexAbsIgnoresStaleErrno_refuted
-    bug := some "longobj-complex-abs-stale-errno"
-    notes := "The NaN branch does not set errno and complex_abs does not clear it, so a stale ERANGE raises OverflowError. Fixed on main (gh-155526); still in 3.14.7." },
+    source := "complexobject.c:370 (\"sets errno = ERANGE on overflow;  otherwise errno = 0\"), :801"
+    status := .proven, prop := ``ComplexAbsIgnoresStaleErrno
+    thm := some ``complexAbsIgnoresStaleErrno_proven
+    notes := "Refuted on 3.14.7 (bugs/longobj-complex-abs-stale-errno.yaml): the NaN branch of _Py_c_abs keeps errno, and complex_abs read a stale ERANGE. 3.15 sets errno = 0 at complexobject.c:801 (gh-155526)." },
   { id := "complex-abs-clean-errno", pyFile := complexFile
     pyFns := ["complex_abs", "_Py_c_abs"]
-    statement := "With no stale ERANGE on entry, abs of a value with a NaN part and no infinite part is NaN and does not raise."
-    source := "complexobject.c:387-389"
+    statement := "Whatever errno held on entry, abs of a value with a NaN part and no infinite part is NaN and does not raise."
+    source := "complexobject.c:387-389, :801"
     status := .proven, prop := ``ComplexAbsCleanErrno, thm := some ``complexAbsCleanErrno_proven },
   { id := "complex-abs-infinity", pyFile := complexFile
     pyFns := ["_Py_c_abs"]
@@ -188,7 +187,7 @@ def entriesComplex : List Entry := [
   { id := "complex-repr-structure", pyFile := complexFile
     pyFns := ["complex_repr", "complex___format___impl"]
     statement := "repr leaves out a +0 real part, without parentheses, and otherwise prints the real part and a signed imaginary part in parentheses; format(z, '') is repr(z) and any other spec goes to the format engine."
-    source := "complexobject.c:592-622; Python/formatter_unicode.c@3.14.7:1698-1701"
+    source := "complexobject.c:592-622; Objects/unicode_formatter.c:1935-1938"
     status := .proven, prop := ``ReprStructure, thm := some ``reprStructure_proven },
   { id := "complex-repr-round-trip", pyFile := complexFile
     pyFns := ["complex_repr", "complex_from_string_inner", "complex_subtype_from_string"]
@@ -246,7 +245,7 @@ def entriesComplex : List Entry := [
   { id := "complex-one-arg-matches-two-arg", pyFile := complexFile
     pyFns := ["actual_complex_new", "complex_new_impl"]
     statement := "complex(x) and complex(x, 0) take the same real part from a float instance."
-    source := "Doc/library/functions.rst@3.14.7:426-431 (\"complex(x) delegates to x.__complex__() ... falls back to __float__()\"); 3.13 behaviour"
+    source := "Doc/builtins/functions.rst:454-459 (\"complex(x) delegates to x.__complex__() ... falls back to __float__()\"); 3.13 behaviour"
     status := .refuted, prop := ``OneArgMatchesTwoArgOnFloats
     thm := some ``oneArgMatchesTwoArgOnFloats_refuted
     bug := some "longobj-complex-float-subclass-dunder-float"
@@ -270,7 +269,7 @@ def entriesComplex : List Entry := [
   { id := "complex-from-number-matches-constructor", pyFile := complexFile
     pyFns := ["complex_from_number_impl", "actual_complex_new", "PyComplex_AsCComplex"]
     statement := "complex.from_number(x) is x itself on an exact complex, and on an object that is neither a complex nor a string instance and has __complex__, __float__ or __index__, it computes the same value as complex(x)."
-    source := "Doc/library/stdtypes.rst@3.14.7:746-752"
+    source := "Doc/builtins/stdtypes.rst:746-752"
     status := .proven, prop := ``FromNumberMatchesConstructor
     thm := some ``fromNumberMatchesConstructor_proven
     notes := "A complex subclass overriding __complex__ is excluded: from_number reads its value, complex(x) calls the method." },

@@ -197,12 +197,13 @@ def entriesBinop : List Entry := [
     notes := "`checkBinop_other` gives NotImplemented for any non-int operand. MemoryError is not modelled." },
   { id := "longobj-index-conversions", pyFile := "Objects/longobject.c"
     pyFns := ["PyLong_AsLongAndOverflow", "PyLong_AsLongLongAndOverflow", "PyLong_AsLong", "PyLong_AsInt",
-      "PyLong_AsUnsignedLongMask", "PyLong_AsUnsignedLongLongMask", "PyLong_AsLongLong"]
+      "PyLong_AsUnsignedLongMask", "PyLong_AsUnsignedLongLongMask", "PyLong_AsLongLong", "unroll_digits_ulong"]
     statement := "A non-int goes through __index__, an arbitrary fallible function: its value converts exactly as an int does, and its exception passes through."
     source := "C API docs: Integer Objects", status := .proven
     prop := ``IndexConversionsExact, thm := some ``indexConversionsExact_proven },
   { id := "longobj-require-int", pyFile := "Objects/longobject.c"
-    pyFns := ["PyLong_AsSsize_t", "PyLong_AsUnsignedLong", "PyLong_AsSize_t", "PyLong_AsUnsignedLongLong"]
+    pyFns := ["PyLong_AsSsize_t", "PyLong_AsUnsignedLong", "PyLong_AsSize_t", "PyLong_AsUnsignedLongLong",
+      "unroll_digits_ulong", "unroll_digits_size_t"]
     statement := "These conversions raise TypeError for a non-int and are exact, or raise OverflowError, for an int."
     source := "longobject.c:717-720 and copies", status := .proven
     prop := ``RequireIntExact, thm := some ``requireIntExact_proven }

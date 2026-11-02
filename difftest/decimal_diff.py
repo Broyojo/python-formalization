@@ -27,7 +27,7 @@ ROUNDINGS = ["ROUND_UP", "ROUND_DOWN", "ROUND_CEILING", "ROUND_FLOOR", "ROUND_HA
              "ROUND_HALF_DOWN", "ROUND_HALF_EVEN", "ROUND_05UP"]
 SIGNALS = ["Clamped", "InvalidOperation", "DivisionByZero", "Inexact", "Rounded",
            "Subnormal", "Overflow", "Underflow"]
-ND_ZEROS = [0x30, 0x660, 0x6f0, 0x966, 0xff10, 0x1d7ce, 0x104a0, 0x1e950]
+ND_ZEROS = [0x30, 0x660, 0x6f0, 0x966, 0xff10, 0x1d7ce, 0x104a0, 0x1e950, 0x11de0]  # 0x11de0: Unicode 17
 SPACES = [0x20, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x1c, 0x1f, 0x85, 0xa0, 0x1680, 0x2000,
           0x200a, 0x2028, 0x2029, 0x202f, 0x205f, 0x3000]
 FOLDS = {"i": ["I", "İ", "ı"], "s": ["S", "ſ"]}
@@ -353,6 +353,25 @@ def gen_cm(rng):
             "a": a, "b": b, "t": t}
 
 
+def gen_div_band(rng):
+    """Both sides of 10**prec, for _is_less_than_pow10a_use_str: at small precisions, and past
+    the 4300-digit limit, where its str(q) raises in the band it cannot decide."""
+    ctx = gen_ctx(rng)
+    ctx.update(emin=-999999, emax=999999)
+    if rng.random() < 0.4:
+        ctx["prec"] = rng.choice([4299, 4300, 4301, 4302, 5000, 6000, 9000])
+        coeff = rng.choice(["1", "2", "5", "9", "99", "101", "999"])
+        a = ["F", False, coeff, ctx["prec"] + rng.randrange(-3, 3) - len(coeff) + 1]
+    else:
+        a = ["F", False, str(max(10 ** ctx["prec"] + rng.randrange(-3, 4), 1)), 0]
+    b = ["F", False, "1", 0]
+    impl = rng.choice(["py", "c"])
+    # The model has no C remainder of its own: past the limit it would apply _pydecimal's.
+    names = ["divide_int", "divmod", "remainder"] if impl == "py" or ctx["prec"] < 4000 else ["divide_int", "divmod"]
+    return {"mod": "decimal", "fn": "cm", "m": rng.choice(names), "impl": impl, "ctx": ctx,
+            "a": ["dec", a], "b": ["dec", b], "t": ["dec", b]}
+
+
 def gen_rop(rng):
     return {"mod": "decimal", "fn": "rop", "m": rng.choice(ROPS), "impl": rng.choice(["py", "c"]),
             "ctx": gen_ctx(rng), "a": gen_dec(rng, wide=True), "b": gen_arg(rng)}
@@ -395,6 +414,11 @@ def gen_sig_dict(rng):
     return ["dict", [[k, rng.random() < 0.3] for k in keys]]
 
 
+def frozen(v, impl):
+    """A signal dict as a frozendict: dict_as_flags takes one since 3.15, `_pydecimal` does not."""
+    return ["frozendict" if impl == "c" else "frozendict_py", v[1]]
+
+
 def gen_attr(rng, name):
     r = rng.random()
     if name in ("prec", "Emin", "Emax", "capitals", "clamp"):
@@ -418,12 +442,17 @@ def gen_ctxobj(rng):
         for n in ["prec", "rounding", "Emin", "Emax", "capitals", "clamp", "flags", "traps"]:
             if rng.random() < 0.3:
                 init[n] = gen_attr(rng, n)
+        for n, v in list(init.items()):
+            if n in ("flags", "traps") and v[0] == "dict" and rng.random() < 0.3:
+                init[n] = frozen(v, impl)
         return {"mod": "decimal", "fn": "ctxnew", "impl": impl, "tmpl": gen_tmpl(rng), "init": init}
     if k < 0.5:
         name = rng.choice(["prec", "rounding", "Emin", "Emax", "capitals", "clamp", "flags", "traps", "nope"])
         val = gen_attr(rng, name) if name != "nope" else ["int", "1"]
         if name in ("flags", "traps") and val[0] == "list":
             val = gen_sig_dict(rng)
+        if val[0] == "dict" and rng.random() < 0.3:
+            val = frozen(val, impl)
         return {"mod": "decimal", "fn": "ctxset", "impl": impl, "tmpl": gen_tmpl(rng), "name": name, "val": val}
     if k < 0.55:
         return {"mod": "decimal", "fn": "ctxdel", "impl": impl,
@@ -436,10 +465,15 @@ def gen_ctxobj(rng):
                 "acts2": [rng.choice(ACTS) for _ in range(rng.choice([0, 1, 2]))],
                 "op": rng.choice(["len", "iter", "get", "set", "clear", "del", "repr", "copy", "eq", "ne"]),
                 "key": rng.choice(ALL_SIGNALS + ["other"]), "bound": rng.random() < 0.9,
-                "w": rng.choice(["copy", "self", "unbound", "other_ctx", "bad_dict", "none"])}
+                "w": rng.choice(["copy", "copy_frozen", "self", "unbound", "other_ctx", "bad_dict",
+                                 "bad_frozen", "none"])}
     if k < 0.92:
         bits = rng.choice([0, 32, 64, 128, 160, 256, 512, 544, 33, -32, 1024, 2 ** 31, 2 ** 63])
-        return {"mod": "decimal", "fn": "ieee", "impl": impl, "tmpl": gen_tmpl(rng), "bits": ["int", str(bits)]}
+        arg = ["int", str(bits)]
+        if impl == "c":
+            # The clinic Py_ssize_t converter of 3.15: __index__ and its refusals.
+            arg = rng.choice([arg, arg, ["idx", str(bits)], ["str", "x"], ["obj"]])
+        return {"mod": "decimal", "fn": "ieee", "impl": impl, "tmpl": gen_tmpl(rng), "bits": arg}
     kw = []
     for n in rng.sample(["prec", "rounding", "Emin", "Emax", "capitals", "clamp", "flags", "traps", "nope"],
                         rng.choice([0, 1, 1, 2, 3])):
@@ -477,6 +511,11 @@ def gen_case(rng):
 
 
 def gen_case1(rng):
+    if rng.random() < 0.04:
+        return gen_div_band(rng)
+    if rng.random() < 0.01:
+        # The clinic `unicode` converter of Decimal.__format__, new in 3.15.
+        return {"mod": "decimal", "fn": "fmtarg_c", "arg": rng.choice(["int", "NoneType", "float", "bytes"])}
     r = rng.random()
     if r < 0.25:
         return gen_method(rng)
@@ -646,7 +685,19 @@ def ctx_val(M, v):
         return [key_obj(M, k) for k in v[1]]
     if t == "dict":
         return {key_obj(M, k): b for k, b in v[1]}
+    if t in ("frozendict", "frozendict_py"):
+        return frozendict({key_obj(M, k): b for k, b in v[1]})
+    if t == "idx":
+        return Idx(int(v[1]))
     return object()
+
+
+class Idx:
+    def __init__(self, v):
+        self.v = v
+
+    def __index__(self):
+        return self.v
 
 
 def enc_ctx(M, c):
@@ -724,6 +775,8 @@ def run_sd(case):
     w = case["w"]
     other = {"copy": lambda: sd.copy(), "self": lambda: sd, "unbound": lambda: type(ctx.flags)(),
              "other_ctx": lambda: ctx2.flags, "bad_dict": lambda: {5: True},
+             "copy_frozen": lambda: frozendict(ctx.flags.copy()),
+             "bad_frozen": lambda: frozendict({5: True}),
              "none": lambda: 7}[w]()
     r = sd.__eq__(other) if op == "eq" else sd.__ne__(other)
     return "NotImplemented" if r is NotImplemented else r
@@ -855,7 +908,9 @@ def run_python(case):
             return run_sd(case)
         if fn == "ieee":
             M = MODS[case["impl"]]
-            return enc_ctx(M, with_template(M, case["tmpl"], lambda: M.IEEEContext(int(case["bits"][1]))))
+            return enc_ctx(M, with_template(M, case["tmpl"], lambda: M.IEEEContext(ctx_val(M, case["bits"]))))
+        if fn == "fmtarg_c":
+            return C.Decimal(1).__format__({"int": 5, "NoneType": None, "float": 1.5, "bytes": b"f"}[case["arg"]])
         if fn == "local":
             return run_local(MODS[case["impl"]], case)
         raise SystemExit("unknown fn " + fn)

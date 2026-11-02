@@ -38,6 +38,18 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "add" => encResult encCanon (longAdd (← getLong j "a") (← getLong j "b"))
   | "sub" => encResult encCanon (longSub (← getLong j "a") (← getLong j "b"))
   | "mul" => encResult encCanon (longMul false (← getLong j "a") (← getLong j "b"))
+  | "compact" =>
+    -- What a specialized BINARY_OP does: the compact function, and the generic slot
+    -- when that declines.
+    let a ← getLong j "a"
+    let b ← getLong j "b"
+    let (fast, slow) := match (← getStr j "op") with
+      | "add" => (compactAdd a b, longAdd a b)
+      | "sub" => (compactSub a b, longSub a b)
+      | _ => (compactMul a b, longMul false a b)
+    match fast with
+    | some r => encResult encCanon (.ok r)
+    | none => encResult encCanon slow
   | "square" =>
     let a ← getLong j "a"
     encResult encCanon (longMul true a a)

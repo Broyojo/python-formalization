@@ -538,7 +538,7 @@ def pyRatio : Dec → Py (Int × Int)
         (co / g, 10 ^ e.natAbs / g)
     return (if neg then -(n : Int) else n, d)
 
-/-- `_decimal`'s `as_integer_ratio` (`dec_as_integer_ratio`, _decimal.c@3.14.7:3770-3870): numerator and
+/-- `_decimal`'s `as_integer_ratio` (`_decimal_Decimal_as_integer_ratio_impl`, _decimal.c:3990-4090): numerator and
 `10^-exp` reduced by their gcd, via libmpdec. -/
 def cRatio : Dec → Py (Int × Int)
   | .nan _ _ _ => .error (.valueError "cannot convert NaN to integer ratio")

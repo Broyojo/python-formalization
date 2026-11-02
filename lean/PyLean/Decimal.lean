@@ -11,7 +11,7 @@ import PyLean.Decimal.OpenProps
 import PyLean.Decimal.DivisionProps
 
 /-!
-`Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.14.7.
+`Lib/_pydecimal.py` vs `Modules/_decimal/` (libmpdec), CPython 3.15.2.
 
 Both twins are modelled side by side where their code differs (string and
 tuple constructors, `__format__` spec handling, `hash`, integer conversions,
@@ -86,7 +86,8 @@ def entries : List Entry := [
     notes := "hash(Decimal(10**4300)): __hash__ evaluates int(self._int)." },
   { id := "decimal-int-conversions-py", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.__floor__", "Decimal.__ceil__", "Decimal.__round__", "Decimal._rescale", "Decimal.__int__",
-              "dec_as_long", "dec_floor", "dec_ceil", "PyDec_Round"]
+              "dec_as_long", "_decimal_Decimal___floor___impl", "_decimal_Decimal___ceil___impl",
+              "_decimal_Decimal___round___impl"]
     statement := "For every finite decimal, math.floor, math.ceil and round() of a _pydecimal.Decimal return the correctly rounded int (the one _decimal returns)."
     source := "__floor__/__ceil__/__round__ docstrings, _pydecimal.py:1883-1973"
     status := .refuted, prop := ``IntConversionsPy, thm := some ``intConversionsPy_refuted
@@ -144,7 +145,7 @@ def entries : List Entry := [
     status := .open, prop := ``ParseConverse
     notes := "Missing: inverting mpd_qset_string's scanner into the regex's accepted shape, the mirror image of ParseAgree.lean. The difftest finds no counterexample." },
   { id := "decimal-as-tuple-roundtrip", pyFile := "Lib/_pydecimal.py"
-    pyFns := ["Decimal.as_tuple", "PyDec_AsTuple", "dectuple_as_str"]
+    pyFns := ["Decimal.as_tuple", "_decimal_Decimal_as_tuple_impl", "dectuple_as_str"]
     statement := "For every decimal d within the C limits, Decimal(d.as_tuple()) returns d in _decimal: sign, coefficient, exponent, NaN kind and payload."
     source := "as_tuple docs and the Decimal constructor's tuple form (Doc/library/decimal.rst:387-389)"
     status := .open, prop := ``AsTupleRoundTrip
@@ -212,14 +213,14 @@ def entries : List Entry := [
     source := "Python data model, reflected operators"
     status := .proven, prop := ``ReflectedOperators, thm := some ``reflectedOperators_proven },
   { id := "decimal-c-context-clears-flags", pyFile := "Modules/_decimal/_decimal.c"
-    pyFns := ["context_new", "context_init"]
+    pyFns := ["context_new", "context_init_impl"]
     statement := "For every state of DefaultContext, _decimal's Context() with no flags argument has all flags clear."
     source := "Doc/library/decimal.rst:1110-1111: 'If the flags field is not specified or is None, all flags are cleared.'"
     status := .refuted, prop := ``ContextNewClearsFlagsC, thm := some ``contextNewClearsFlagsC_refuted
     bug := some "decimal-c-context-inherits-flags"
     notes := "After DefaultContext.divide(Decimal(1), Decimal(3)), Context().flags[Inexact] is True: context_new copies the template's status word." },
   { id := "decimal-c-context-copies-capitals", pyFile := "Modules/_decimal/_decimal.c"
-    pyFns := ["context_new", "context_init"]
+    pyFns := ["context_new", "context_init_impl"]
     statement := "_decimal's Context() with no capitals argument takes capitals from DefaultContext."
     source := "Doc/library/decimal.rst:1109-1110: 'If a field is not specified or is None, the default values are copied from the DefaultContext.'"
     status := .refuted, prop := ``ContextNewCopiesCapitalsC, thm := some ``contextNewCopiesCapitalsC_refuted
@@ -231,7 +232,7 @@ def entries : List Entry := [
     source := "Doc/library/decimal.rst:1110-1111"
     status := .proven, prop := ``ContextNewClearsFlagsPy, thm := some ``contextNewClearsFlagsPy_proven },
   { id := "decimal-c-context-clean-template", pyFile := "Modules/_decimal/_decimal.c"
-    pyFns := ["context_new", "context_init"]
+    pyFns := ["context_new", "context_init_impl"]
     statement := "For a template whose flags are clear and whose capitals is 1, the state DefaultContext starts in, _decimal's Context() equals the template in every field."
     source := "narrowed version of decimal-c-context-clears-flags and decimal-c-context-copies-capitals"
     status := .proven, prop := ``ContextNewCleanTemplate, thm := some ``contextNewCleanTemplate_proven },
@@ -266,11 +267,23 @@ def entries : List Entry := [
     statement := "ctx.flags[s] = v then ctx.flags[s] gives v, whichever bits were set before, and no other signal changes."
     source := "Mapping contract; invariant"
     status := .proven, prop := ``SignalDictSetGet, thm := some ``signalDictSetGet_proven },
+  { id := "decimal-divide-verdict", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["Decimal._divide", "Decimal._rescale", "_WorkRep.__init__", "_is_less_than_pow10a_use_str"]
+    statement := "For finite non-zero operands, a returning _divide gives the exact integer quotient and remainder of the operands scaled to their lower exponent, when the operand gap is small or _is_less_than_pow10a_use_str says the quotient fits, and otherwise InvalidOperation."
+    source := "Doc/library/decimal.rst:441: 'the usual identity x == (x // y) * y + x % y'; _pydecimal.py:1452-1459"
+    status := .proven, prop := ``DivideVerdict, thm := some ``divideVerdict_proven
+    notes := "The conclusion names the decision instead of q < 10**prec, because 3.15 replaced that comparison with float tests; decimal-divide-correct keeps the stronger statement, open." },
+  { id := "decimal-pow10-band-exact", pyFile := "Lib/_pydecimal.py"
+    pyFns := ["_is_less_than_pow10a_use_str"]
+    statement := "In the band the two float tests leave open, _is_less_than_pow10a_use_str(q, a) is q < 10**a, for every q and a >= 1."
+    source := "Docstring of _is_less_than_pow10a_use_str, _pydecimal.py:471-476"
+    status := .proven, prop := ``Pow10BandExact, thm := some ``pow10BandExact_proven },
   { id := "decimal-divide-correct", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal._divide", "Decimal._rescale", "_WorkRep.__init__"]
     statement := "For finite non-zero operands, a returning _divide gives the integer quotient and remainder of the operands scaled to their lower exponent, the quotient at exponent 0 with the sign of the product and the remainder at min(ea, eb) with the sign of the dividend, or NaN for both with InvalidOperation exactly when the quotient has more than prec digits."
     source := "Doc/library/decimal.rst:441: 'the usual identity x == (x // y) * y + x % y'; General Decimal Arithmetic, 'divide-integer' and 'remainder'"
-    status := .proven, prop := ``DivideCorrect, thm := some ``divideCorrect_proven },
+    status := .open, prop := ``DivideCorrect
+    notes := "Proven on 3.14.7. It now depends on the float tests of _is_less_than_pow10a_use_str, whose comments ignore the rounding of a * _LOG_10_BASE_2_HI. Checked numerically, not in Lean: with a = 727115501 and q = 2**2415425411 the second test answers False though q < 10**a, so this statement looks false at that precision. Refuting it needs a certified bound on log2(10) past what the kernel can compute with 10**a directly; proving a bounded version needs a Diophantine argument over all smaller a. Neither was cheap." },
   { id := "decimal-truediv-specials", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.__truediv__"]
     statement := "x/0 is a signed infinity with DivisionByZero, 0/0 and inf/inf are NaN with InvalidOperation, inf/x is a signed infinity with no flag, and x/inf is a signed zero at Etiny with Clamped."
@@ -314,14 +327,14 @@ def entries : List Entry := [
     status := .proven, prop := ``TupleTwinsAgreeDigits, thm := some ``tupleTwinsAgreeDigits_proven
     notes := "The excluded cases are bool digits and out-of-range digits under 'F', both recorded by the refuted entry." },
   { id := "decimal-format-c-accepts-only-py", pyFile := "Modules/_decimal/_decimal.c"
-    pyFns := ["dec_format"]
+    pyFns := ["_decimal_Decimal___format___impl"]
     statement := "For every format spec not ending in the C-only deprecated type 'N', if format(_decimal.Decimal(x), spec) accepts the spec, so does _pydecimal."
     source := "twin agreement; format spec mini-language (int, str and Fraction reject these specs; float rejects all but a single trailing NUL)"
     status := .refuted, prop := ``FormatCAcceptsOnlyPy, thm := some ``formatCAcceptsOnlyPy_refuted
     bug := some "decimal-c-format-spec-nul"
-    notes := "format(Decimal('1234.5'), '10\\x00xyz') == '    1234.5': dec_format passes the UTF-8 buffer to libmpdec as a C string, which ends at the embedded NUL." },
+    notes := "format(Decimal('1234.5'), '10\\x00xyz') == '    1234.5': _decimal_Decimal___format___impl passes the UTF-8 buffer to libmpdec as a C string, which ends at the embedded NUL." },
   { id := "decimal-format-no-encode-error", pyFile := "Modules/_decimal/_decimal.c"
-    pyFns := ["dec_format"]
+    pyFns := ["_decimal_Decimal___format___impl"]
     statement := "format(_decimal.Decimal(x), spec) never raises UnicodeEncodeError."
     source := "invariant; twin agreement (_pydecimal, float, int and Fraction accept a lone surrogate fill)"
     status := .refuted, prop := ``FormatNoEncodeError, thm := some ``formatNoEncodeError_refuted
@@ -346,7 +359,7 @@ def entries : List Entry := [
     statement := "For every context with prec >= 1, rounding mode and finite operands, when quantize returns: if the correctly rounded (or zero-padded) coefficient q' at the target exponent fits (target in [Etiny, Emax], q' has at most prec digits, its adjusted exponent is at most Emax), the result is q' at that exponent (folded down to Etop under clamp, same value) and Inexact is set exactly when non-zero digits were dropped; otherwise the result is NaN with InvalidOperation set."
     source := "decimal docs, quantize: 'Return a value equal to the first operand after rounding and having the exponent of the second operand'; 'if the length of the coefficient after the quantize operation would be greater than precision, then an InvalidOperation is signaled'"
     status := .proven, prop := ``QuantizeCorrect, thm := some ``quantizeCorrect_proven
-    notes := "round(d, n) is quantize(Decimal((0, (1,), -n))) by definition (_pydecimal.py:1934-1935, _decimal.c PyDec_Round), so this covers it for |n| < 2**63. Beyond that _decimal raises OverflowError and _pydecimal does not: a discrepancy deccheck.py already lists (SkipHandler.__round__), not recorded as a bug here. Conditional on returning: a trapped signal or the int-limit ValueError raises instead. Under clamp=1 the result's exponent can be below the operand's (the fold-down keeps the value), so the docs' 'the quantized exponent is always equal to that of the right-hand operand' holds only for clamp=0, in both twins." },
+    notes := "round(d, n) is quantize(Decimal((0, (1,), -n))) by definition (_pydecimal.py:1934-1935, _decimal.c _decimal_Decimal___round___impl, formerly PyDec_Round), so this covers it for |n| < 2**63. Beyond that _decimal raises OverflowError and _pydecimal does not: a discrepancy deccheck.py already lists (SkipHandler.__round__), not recorded as a bug here. Conditional on returning: a trapped signal or the int-limit ValueError raises instead. Under clamp=1 the result's exponent can be below the operand's (the fold-down keeps the value), so the docs' 'the quantized exponent is always equal to that of the right-hand operand' holds only for clamp=0, in both twins." },
   { id := "decimal-mul-correctly-rounded", pyFile := "Lib/_pydecimal.py"
     pyFns := ["Decimal.__mul__", "Decimal._fix", "_WorkRep.__init__", "Context.Etiny", "Context.Etop", "Context._raise_error"]
     statement := "For every context with prec >= 1, all 8 rounding modes and all finite non-zero operands, when * returns a value in the normal range (no subnormal result, no overflow after rounding), that value is the exact product correctly rounded to prec digits, including the carry from 99...9 to 100...0 (folded down under clamp when nothing was rounded), Inexact is set exactly when non-zero digits were dropped, and Rounded exactly when any digits were dropped."
@@ -359,7 +372,8 @@ def entries : List Entry := [
     source := "decimal docs: 'signaling Inexact or Rounded as appropriate if rounding occurs' (Doc/library/decimal.rst:921-922)"
     status := .proven, prop := ``ToIntegralExactCorrect, thm := some ``toIntegralExactCorrect_proven },
   { id := "decimal-int-conversions-c", pyFile := "Modules/_decimal/_decimal.c"
-    pyFns := ["dec_as_long", "PyDec_Round", "dec_floor", "dec_ceil", "dec_trunc"]
+    pyFns := ["dec_as_long", "_decimal_Decimal___round___impl", "_decimal_Decimal___floor___impl",
+      "_decimal_Decimal___ceil___impl", "_decimal_Decimal___trunc___impl"]
     statement := "For every finite decimal and rounding mode, _decimal's int()/math.floor/math.ceil/round() return the signed integer whose magnitude the mode prescribes (exact for exponents >= 0)."
     source := "__floor__/__ceil__/__round__/__int__ docs"
     status := .proven, prop := ``IntConversionsC, thm := some ``intConversionsC_proven },
@@ -375,7 +389,7 @@ def entries : List Entry := [
     status := .proven, prop := ``HashConsistentC, thm := some ``hashConsistentC_proven
     notes := "Reuses PyLean.Fractions.hashMatchesDecimal_proven / hashMatchesInt_proven. The C constant inv10_p equals pow(10, P-2, P) (tenInv_eq)." },
   { id := "decimal-ratio-correct-c", pyFile := "Modules/_decimal/_decimal.c"
-    pyFns := ["dec_as_integer_ratio"]
+    pyFns := ["_decimal_Decimal_as_integer_ratio_impl"]
     statement := "For every finite Decimal, as_integer_ratio() returns (n, d) with d > 0, n and d coprime, and n/d exactly the value."
     source := "as_integer_ratio docstring, _pydecimal.py:1021-1033"
     status := .proven, prop := ``RatioCorrectC, thm := some ``ratioCorrectC_proven },
