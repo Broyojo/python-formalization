@@ -2048,6 +2048,8 @@ textlibs-etree-remove-twins-all	refuted	Lib/xml/etree/ElementTree.py	Element.rem
 textlibs-etree-copy-independent	refuted	Modules/_elementtree.c	_elementtree_Element___copy___impl,create_new_element
 textlibs-etree-copy-class	refuted	Modules/_elementtree.c	_elementtree_Element___copy___impl,create_new_element
 textlibs-etree-copy-independent-py	proven	Lib/xml/etree/ElementTree.py	Element.__copy__,Element.makeelement
+textlibs-zoneinfo-before-twins	refuted	Lib/zoneinfo/_zoneinfo.py	
+textlibs-zoneinfo-before-twins-narrow	proven	Lib/zoneinfo/_zoneinfo.py	
 coll-count-elements-twins	proven	Lib/collections/__init__.py	_count_elements
 coll-counter-update-fast-slow	proven	Lib/collections/__init__.py	Counter.update
 coll-counter-update-adds	proven	Lib/collections/__init__.py	Counter.update,Counter.__init__,Counter.__missing__,_count_elements
