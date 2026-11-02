@@ -1,0 +1,2 @@
+file	line	name	verdict	mirror	property	settled	reason
+Lib/_py_warnings.py	556	warn_explicit	HOLLOW	no	yes	yes	pyWarnExplicit omits the failure paths at the head of the body: int(lineno) on a non-int (:559), str(message) and category(message) raising (:560-565, a callback C runs later and only when module is not None), and registry.get on a non-dict registry; linecache.getlines and WarningMessage(...) are folded into the show callback.
