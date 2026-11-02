@@ -2036,6 +2036,9 @@ textlibs-elementpath-no-none-step	refuted	Lib/xml/etree/ElementPath.py	iterfind,
 textlibs-elementpath-iterable	refuted	Lib/xml/etree/ElementPath.py	iterfind
 textlibs-elementpath-plain-tag-twins	proven	Lib/xml/etree/ElementPath.py	iterfind,xpath_tokenizer,prepare_child,_is_wildcard_tag,find,findall,findtext
 textlibs-etree-find-fast-path	proven	Modules/_elementtree.c	checkpath,_elementtree_Element_find_impl,_elementtree_Element_findtext_impl,_elementtree_Element_findall_impl
+textlibs-etree-writers-twins	proven	Modules/_elementtree.c	_elementtree_Element_append_impl,_elementtree_Element_extend_impl,_elementtree_Element_insert_impl,element_add_subelement
+textlibs-etree-writers-twins-py	proven	Lib/xml/etree/ElementTree.py	Element.append,Element.extend,Element.insert
+textlibs-etree-extend-iter-twins	refuted	Modules/_elementtree.c	_elementtree_Element_extend_impl,Element.extend
 coll-count-elements-twins	proven	Lib/collections/__init__.py	_count_elements
 coll-counter-update-fast-slow	proven	Lib/collections/__init__.py	Counter.update
 coll-counter-update-adds	proven	Lib/collections/__init__.py	Counter.update,Counter.__init__,Counter.__missing__,_count_elements
