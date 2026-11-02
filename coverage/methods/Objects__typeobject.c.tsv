@@ -265,10 +265,10 @@ Objects/typeobject.c	7621	7624	_Py_BaseObject_RichCompare	_Py_BaseObject_RichCom
 Objects/typeobject.c	7627	7630	object_get_class	object_get_class(PyObject *self, void *closure)	todo		
 Objects/typeobject.c	7633	7641	compatible_with_tp_base	compatible_with_tp_base(PyTypeObject *child)	todo		changed-in-3.15:
 Objects/typeobject.c	7644	7670	same_slots_added	same_slots_added(PyTypeObject *a, PyTypeObject *b)	todo		
-Objects/typeobject.c	7673	7681	compatible_flags	compatible_flags(int setclass, PyTypeObject *origto, PyTypeObject *newto, unsigned long flags)	todo		changed-in-3.15: new function
-Objects/typeobject.c	7684	7751	compatible_for_assignment	compatible_for_assignment(PyTypeObject *origto, PyTypeObject *newto, const char *attr, int setclass)	todo		changed-in-3.15:
-Objects/typeobject.c	7756	7853	object_set_class_world_stopped	object_set_class_world_stopped(PyObject *self, PyTypeObject *newto)	todo		changed-in-3.15: was typeobj-set-class-immutable
-Objects/typeobject.c	7856	7895	object_set_class	object_set_class(PyObject *self, PyObject *value, void *closure)	todo		changed-in-3.15: was typeobj-set-class-checks
+Objects/typeobject.c	7673	7681	compatible_flags	compatible_flags(int setclass, PyTypeObject *origto, PyTypeObject *newto, unsigned long flags)	todo		
+Objects/typeobject.c	7684	7751	compatible_for_assignment	compatible_for_assignment(PyTypeObject *origto, PyTypeObject *newto, const char *attr, int setclass)	todo		
+Objects/typeobject.c	7756	7853	object_set_class_world_stopped	object_set_class_world_stopped(PyObject *self, PyTypeObject *newto)	modelled	typeobj-set-class-immutable	
+Objects/typeobject.c	7856	7895	object_set_class	object_set_class(PyObject *self, PyObject *value, void *closure)	modelled	typeobj-set-class-checks	
 Objects/typeobject.c	7912	7927	import_copyreg	import_copyreg(void)	todo		
 Objects/typeobject.c	7930	7976	_PyType_GetSlotNames	_PyType_GetSlotNames(PyTypeObject *cls)	modelled	typeobj-slotnames-typed	
 Objects/typeobject.c	7979	8101	object_getstate_default	object_getstate_default(PyObject *obj, int required)	modelled	typeobj-getstate-guard	
