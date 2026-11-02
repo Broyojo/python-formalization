@@ -132,6 +132,18 @@ theorem compare_float (a b : UInt64) (op : Nat) (rt : Rt) :
     pure, EStateM.pure, builtinCompare, intOf]
   rfl
 
+theorem setItem_list (a : Addr) (items : Array Val) (i : Int) (v : Val) (rt : Rt)
+    (h : rt.heap[a]? = some (.list items))
+    (h0 : 0 ≤ (if i < 0 then i + items.size else i)) (hlt : (if i < 0 then i + items.size else i) < items.size)
+    (hb1 : PyLean.ssizeMin ≤ i) (hb2 : i ≤ PyLean.ssizeMax) :
+    setItemImpl om ctx (.ref a) (.int i) v rt = .ok ()
+      { rt with heap := (rt.heap.setIfInBounds a
+          (.list (items.setIfInBounds (if i < 0 then i + items.size else i).toNat v))) } := by
+  have hx1 : ¬ i > PyLean.ssizeMax := by omega
+  have hx2 : ¬ i < PyLean.ssizeMin := by omega
+  simp [setItemImpl, getObj, h, asIndex, indexSsize, hx1, hx2, Int.not_lt.2 h0, Int.not_le.2 hlt,
+    setObj, bind, EStateM.bind, pure, EStateM.pure]
+
 theorem compare_str (a b : String) (op : Nat) (rt : Rt) :
     richCompareImpl om ctx (.str a) (.str b) op rt = .ok (.bool (ordResult (compare a b) op)) rt := by
   simp [richCompareImpl, typeOf, immType, userLookup_cls, isSubtype, mroOf, payload, bind, EStateM.bind, pure, EStateM.pure, builtinCompare]
@@ -187,6 +199,8 @@ theorem lawfulBuiltin_proven : LawfulBuiltin := by
       rw [compare_int, ordResult_int a b op hop]
       rfl
     cmp_float := fun ctx a b op rt => compare_float (mkOM P 23) ctx a b op rt
+    store_list := fun ctx a items i v rt h h0 hlt hb1 hb2 =>
+      setItem_list (mkOM P 23) ctx a items i v rt h h0 hlt hb1 hb2
     cmp_str := fun ctx a b rt => by
       show richCompareImpl (mkOM P 23) ctx (.str a) (.str b) 2 rt = _
       rw [compare_str]

@@ -27,6 +27,11 @@ open PyLean.Registry
 def op (n : String) : String := "opcode:" ++ n
 
 def entries : List Entry := GenObj.entries ++ [
+  { id := "bytecode-store-subscr-list-int", pyFile := "Python/bytecodes.c"
+    pyFns := [op "STORE_SUBSCR_LIST_INT", op "_STORE_SUBSCR_LIST_INT"]
+    statement := "STORE_SUBSCR_LIST_INT equals STORE_SUBSCR on every live stack, negative indices included, given list_ass_subscript."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c STORE_SUBSCR_LIST_INT (3.15 counts a negative index from the end)"
+    status := .proven, prop := ``StoreSubscrListInt, thm := some ``storeSubscrListInt_proven },
   { id := "bytecode-subscr-tuple-int", pyFile := "Python/bytecodes.c"
     pyFns := [op "BINARY_OP_SUBSCR_TUPLE_INT", op "_BINARY_OP_SUBSCR_TUPLE_INT", op "_GUARD_BINARY_OP_SUBSCR_TUPLE_INT_BOUNDS", op "_GUARD_NOS_TUPLE"]
     statement := "BINARY_OP_SUBSCR_TUPLE_INT equals BINARY_OP for [] on every live stack, given tuplesubscript."

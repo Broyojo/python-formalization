@@ -676,11 +676,12 @@ def STORE_SUBSCR (e : Env) : M Unit := do _SPECIALIZE_STORE_SUBSCR; _STORE_SUBSC
 /-- `:1423`. -/
 def _STORE_SUBSCR_LIST_INT : M Unit := stk 3 0 fun
   | [v, .ref a, .int sub] => do
-    if !isNonNegCompact sub then throw .deopt
     match ← (getObj a : RM Obj) with
     | .list items =>
-      if items.size ≤ sub.toNat then throw .deopt
-      (setObj a (.list (items.setIfInBounds sub.toNat v)) : RM Unit)
+      -- 3.15 counts a negative index from the end, as `list_ass_subscript` does.
+      let index := if sub < 0 then sub + items.size else sub
+      if index < 0 || items.size ≤ index then throw .deopt
+      (setObj a (.list (items.setIfInBounds index.toNat v)) : RM Unit)
       pure []
     | _ => fault "not a list"
   | _ => fault "not list[int]"

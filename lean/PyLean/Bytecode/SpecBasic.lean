@@ -79,6 +79,13 @@ structure Lawful (om : ObjModel) : Prop where
       .ok (.bool (match op with
         | 0 => decide (a < b) | 1 => decide (a ≤ b) | 2 => decide (a = b)
         | 3 => decide (a ≠ b) | 4 => decide (a > b) | _ => decide (a ≥ b))) rt
+  /-- `list_ass_subscript` at an in-range int, negative ones counting from the end. -/
+  store_list : ∀ ctx a items (i : Int) v rt, rt.heap[a]? = some (.list items) →
+    0 ≤ (if i < 0 then i + items.size else i) → (if i < 0 then i + items.size else i) < items.size →
+    PyLean.ssizeMin ≤ i → i ≤ PyLean.ssizeMax →
+    om.setItem ctx (.ref a) (.int i) v rt = .ok ()
+      { rt with heap := (rt.heap.setIfInBounds a
+          (.list (items.setIfInBounds (if i < 0 then i + items.size else i).toNat v))) }
   /-- `float_richcompare` gives a bool. -/
   cmp_float : ∀ ctx a b op rt,
     om.richCompare ctx (.float a) (.float b) op rt = .ok (.bool (floatTable op (toF a) (toF b))) rt

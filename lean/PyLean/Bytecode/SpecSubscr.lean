@@ -167,6 +167,71 @@ theorem subscrStrInt_spec (e : Env) (hom : Lawful e.om) (hop : e.oparg = 26) (s 
           left
           exact (strKind.nos_eval regs rest _ (.int sub)).trans (by simp [strKind, notStr])
 
+theorem generic_store (e : Env) (regs : Regs) (rest : List Val) (v c k : Val) (rt : Rt)
+    (h : e.om.setItem e.ctx c k v regs.rt = .ok () rt) :
+    STORE_SUBSCR e ⟨regs, k :: c :: v :: rest⟩ = .ok () ⟨{ regs with rt := rt }, rest⟩ := by
+  simp [STORE_SUBSCR, _SPECIALIZE_STORE_SUBSCR, _STORE_SUBSCR, stk, popN, pushAll, bind, EStateM.bind,
+    BM.lift, RM.lift, pure, EStateM.pure, h, monadLift, liftM, MonadLift.monadLift]
+
+/-- `STORE_SUBSCR_LIST_INT` is `STORE_SUBSCR` on every live stack, a negative index included. -/
+theorem storeSubscrListInt_spec (e : Env) (hom : Lawful e.om) (s : St) (hs : 3 ≤ s.stack.length)
+    (hlive : ∀ v ∈ s.stack, Live s.regs.rt v) :
+    execOp e .STORE_SUBSCR_LIST_INT s = execOp e .STORE_SUBSCR s := by
+  obtain ⟨regs, stack⟩ := s
+  match stack, hs with
+  | k :: c :: v :: rest, _ =>
+    refine guards_spec _ _ _ (STORE_SUBSCR e) _ ?_
+    by_cases hr : notCompactInt k = true
+    · left; rw [guard_tos_int]; simp [hr]
+    · right
+      refine ⟨by rw [guard_tos_int]; simp [hr], ?_⟩
+      obtain ⟨sub, rfl, hcmp⟩ := notCompactInt_false (by simpa using hr)
+      have hsm : PyLean.ssizeMin ≤ sub ∧ sub ≤ PyLean.ssizeMax := by
+        simp [isCompact] at hcmp; unfold PyLean.ssizeMin PyLean.ssizeMax; omega
+      have hl : Live regs.rt c := hlive c (by simp)
+      by_cases hcr : ∃ a, c = .ref a
+      · obtain ⟨a, rfl⟩ := hcr
+        obtain ⟨o, ho⟩ := live_obj hl
+        by_cases hlist : ∃ items, o = .list items
+        · obtain ⟨items, rfl⟩ := hlist
+          right
+          refine ⟨(guardTop_two regs (v :: rest) _ _ _ false (notList_list regs ho)), ?_⟩
+          by_cases hin : 0 ≤ (if sub < 0 then sub + (items.size : Int) else sub) ∧
+              (if sub < 0 then sub + (items.size : Int) else sub) < items.size
+          · right
+            rw [generic_store e regs rest v (.ref a) (.int sub) _
+              (hom.store_list e.ctx a items sub v regs.rt ho hin.1 hin.2 hsm.1 hsm.2)]
+            have hn1 : ¬ (if sub < 0 then sub + (items.size : Int) else sub) < 0 := by omega
+            have hn2 : ¬ (items.size : Int) ≤ (if sub < 0 then sub + (items.size : Int) else sub) := by omega
+            simp [_STORE_SUBSCR_LIST_INT, stk, popN, pushAll, bind, EStateM.bind, BM.lift, RM.lift,
+              liftM, monadLift, MonadLift.monadLift, getObj, ho, hn1, hn2, setObj, pure, EStateM.pure]
+          · left
+            apply stk_deopt
+            · simp
+            · refine ⟨regs, ?_⟩
+              by_cases hneg : sub < 0
+              · simp only [hneg, ite_true] at hin
+                by_cases h1 : sub + (items.size : Int) < 0
+                · simp [bind, EStateM.bind, RM.lift, liftM, monadLift, MonadLift.monadLift, getObj, ho, hneg, h1, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+                · have h2 : (items.size : Int) ≤ sub + items.size := by omega
+                  simp [bind, EStateM.bind, RM.lift, liftM, monadLift, MonadLift.monadLift, getObj, ho, hneg, h1, h2, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+              · simp only [hneg, ite_false] at hin
+                have h1 : ¬ sub < 0 := hneg
+                have h2 : (items.size : Int) ≤ sub := by omega
+                simp [bind, EStateM.bind, RM.lift, liftM, monadLift, MonadLift.monadLift, getObj, ho, hneg, h2, throw, throwThe, MonadExcept.throw, EStateM.throw, MonadExceptOf.throw]
+        · left
+          have hn : ∀ i, o ≠ .list i := fun i hi => hlist ⟨i, hi⟩
+          exact guardTop_two regs (v :: rest) _ _ _ true (notList_other regs ho hn) |>.trans (by simp)
+      · left
+        have hn : ∀ a, c ≠ .ref a := fun a ha => hcr ⟨a, ha⟩
+        exact guardTop_two regs (v :: rest) _ _ _ true (notList_nonref regs c hn) |>.trans (by simp)
+
+/-- Registry form of `storeSubscrListInt_spec`. -/
+def StoreSubscrListInt : Prop := ∀ (e : Env), Lawful e.om → ∀ (s : St), 3 ≤ s.stack.length →
+  (∀ v ∈ s.stack, Live s.regs.rt v) → execOp e .STORE_SUBSCR_LIST_INT s = execOp e .STORE_SUBSCR s
+theorem storeSubscrListInt_proven : StoreSubscrListInt :=
+  fun e hom s hs hl => storeSubscrListInt_spec e hom s hs hl
+
 /-- Registry form of `subscrTupleInt_spec`. -/
 def SubscrTupleInt : Prop := ∀ (e : Env), Lawful e.om → e.oparg = 26 → ∀ (s : St), 2 ≤ s.stack.length →
   (∀ v ∈ s.stack, Live s.regs.rt v) → execOp e .BINARY_OP_SUBSCR_TUPLE_INT s = execOp e .BINARY_OP s
