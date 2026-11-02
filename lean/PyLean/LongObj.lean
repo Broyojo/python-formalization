@@ -9,6 +9,7 @@ import PyLean.LongObj.EntriesComplex
 import PyLean.LongObj.LongFloat
 import PyLean.LongObj.EntriesStr
 import PyLean.LongObj.Binop
+import PyLean.LongObj.SignApi
 
 /-!
 All of `Objects/longobject.c`, `Objects/boolobject.c`, `Objects/complexobject.c`, CPython 3.15.2.
@@ -25,6 +26,16 @@ namespace PyLean.LongObj
 
 open PyLean.Registry
 
-def entries : List Entry := entriesArith ++ entriesConv ++ entriesMethods ++ entriesConv2 ++ entriesIntNew ++ entriesComplex ++ entriesFloat ++ entriesStr ++ entriesBinop
+
+def entriesSign : List Entry := [
+  { id := "longobj-sign-api-agree", pyFile := "Objects/longobject.c"
+    pyFns := ["PyLong_GetSign", "PyLong_IsPositive", "PyLong_IsNegative", "PyLong_IsZero"]
+    statement := "PyLong_GetSign gives the sign of the value and PyLong_IsPositive/IsNegative/IsZero agree with it for every int; every other object makes all four raise TypeError."
+    source := "the implementation disagreeing with itself (method vs equivalent method)", status := .proven
+    prop := ``SignApi.SignApiAgree, thm := some ``SignApi.signApiAgree_proven
+    notes := "Checked through _testcapi.pylong_* on 3.15.2. PyLong_GetSign's message says 'expect int', the others 'expected int'." }
+]
+
+def entries : List Entry := entriesArith ++ entriesConv ++ entriesMethods ++ entriesConv2 ++ entriesIntNew ++ entriesComplex ++ entriesFloat ++ entriesStr ++ entriesBinop ++ entriesSign
 
 end PyLean.LongObj
