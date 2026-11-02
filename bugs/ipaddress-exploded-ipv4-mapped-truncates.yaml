@@ -1,0 +1,56 @@
+id: ipaddress-exploded-ipv4-mapped-truncates
+title: "ipaddress: exploded of an IPv4-mapped IPv6 address or interface loses the scope id and the prefix"
+priority: P3
+kind: wrong-result
+module: ipaddress
+files: [Lib/ipaddress.py]
+functions: ["IPv6Address._explode_shorthand_ip_string", "_BaseV6._explode_shorthand_ip_string"]
+summary: |
+  IPv6Address._explode_shorthand_ip_string formats an IPv4-mapped address by keeping the first
+  30 characters of the base method's result and appending the dotted quad. That was written for
+  a base result of exactly 39 characters. IPv6Interface inherits the method, and its base result
+  ends in /prefixlen, so IPv6Interface('::ffff:1.2.3.4/64').exploded is
+  '0000:0000:0000:0000:0000:ffff:1.2.3.4', with no /64. Since gh-88178 the base result of a scoped
+  address ends in %scope, so IPv6Address('::ffff:1.2.3.4%eth0').exploded loses its scope id too,
+  which is the one thing that fix set out to keep. str() and compressed show both. exploded of
+  every address and interface outside ::ffff:0:0/96 keeps them (Lean: ipaddress-exploded-by-case).
+likelihood: |
+  Low: IPv4-mapped interfaces are rare, and scoped mapped addresses rarer. But the result is a
+  silently different network, and `IPv6Interface(x.exploded)` gives a /128.
+maybe_intended: |
+  No. The two call paths were not considered. Nothing in the tests covers either case.
+reproducer: |
+  import ipaddress
+  i = ipaddress.IPv6Interface('::ffff:1.2.3.4/64')
+  a = ipaddress.IPv6Address('::ffff:1.2.3.4%eth0')
+  print(i.compressed, '->', i.exploded)
+  print(a.compressed, '->', a.exploded)
+  print('round trip:', ipaddress.IPv6Interface(i.exploded), 'vs', i)
+  if not i.exploded.endswith('/64') and 'eth0' not in a.exploded:
+      print('REPRODUCED ipaddress-exploded-ipv4-mapped-truncates')
+expected: |
+  0000:0000:0000:0000:0000:ffff:1.2.3.4/64 and 0000:0000:0000:0000:0000:ffff:1.2.3.4%eth0.
+observed: |
+  python3 3.15.2: both results are 0000:0000:0000:0000:0000:ffff:1.2.3.4. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
+  python3 3.14.7: the reproducer stops at a.exploded, which raises there (gh-88178). The interface
+  half predates 3.15: the prefix is cut by the same code; the scope half is new.
+promised_by: |
+  Lib/ipaddress.py:386-389, "Return the longhand version of the IP address as a string.";
+  compressed, on the same objects, keeps both suffixes.
+cause: |
+  Lib/ipaddress.py:1965-1967: `raw_exploded_str[:prefix_len]` with prefix_len = 30 discards what
+  :1880-1883 appended.
+possible_fix: |
+  Replace the last two groups only, or build the mapped form before the scope id and prefix are
+  appended at :1880-1883.
+duplicates:
+  issues:
+    - {number: 88178, state: closed, relation: "added the scope id that this path drops (PR #25824)"}
+    - {number: 87799, state: closed, relation: "added the IPv4-mapped text form (PR #29345)"}
+    - {number: 155836, state: open, relation: "same family: reverse_pointer of a scoped address"}
+  queries: ["ipv4_mapped exploded", "IPv6Interface exploded prefix", "ipaddress scope_id exploded mapped"]
+  bugforge: "no match in vendor/bugforge-results/README.md"
+lean:
+  property: PyLean.Ipaddress.ExplodedKeepsSuffix
+  theorem: PyLean.Ipaddress.explodedKeepsSuffix_refuted

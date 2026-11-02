@@ -1,5 +1,6 @@
 import PyLean.DiffCore
 import PyLean.Ipaddress.Model
+import PyLean.Ipaddress.Exploded
 
 /-! Differential-testing handler for `ipaddress`. A network is `[addr, prefixlen]`. -/
 
@@ -18,6 +19,19 @@ def getNet (j : Json) (bits : Nat) (key : String) : Except String Net := do
 def run (fn : String) (j : Json) : Except String Json := do
   let bits ← (← j.getObjVal? "bits").getNat?
   match fn with
+  | "exploded" =>
+    let kind ← match ← getStr j "kind" with
+      | "address" => pure V6Kind.address
+      | "interface" => pure V6Kind.interface
+      | "network" => pure V6Kind.network
+      | k => throw s!"unknown kind {k}"
+    let scope := (getStr j "scope").toOption.map String.toList
+    return encPy (fun cs => toJson (String.ofList cs))
+      (explode kind (← getNat j "ip") (← getNat j "prefixlen") scope)
+  | "iface_unspecified" =>
+    return encPy toJson (.ok (ifaceIsUnspecified bits (← getNat j "ip") (← getNat j "prefixlen")) : Py Bool)
+  | "getattr" =>
+    return encPy toJson (moduleGetattr (← getStr j "name"))
   | "summarize" =>
     let first ← (← j.getObjVal? "first").getNat?
     let last ← (← j.getObjVal? "last").getNat?

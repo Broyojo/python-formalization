@@ -38,7 +38,7 @@ promised_by: |
   subnets docstring, Lib/ipaddress.py:940-946 ("Raises: ValueError: The prefixlen_diff is
   too small or too large. OR ... new_prefix is a smaller number than the current prefix").
 cause: |
-  Lib/ipaddress.py:949-951 returns before the argument checks at :953-964.
+  Lib/ipaddress.py:947-949 returns before the argument checks at :951-966.
 possible_fix: |
   Move the `if self._prefixlen == self.max_prefixlen` early return below the argument
   validation (and treat new_prefix == max_prefixlen / prefixlen_diff == 0 as valid there).

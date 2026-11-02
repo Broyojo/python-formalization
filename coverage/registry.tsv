@@ -9,6 +9,11 @@ ipaddress-summarize-reversed	proven	Lib/ipaddress.py	summarize_address_range
 ipaddress-subnets-partition	proven	Lib/ipaddress.py	_BaseNetwork.subnets
 ipaddress-supernet-contains	proven	Lib/ipaddress.py	_BaseNetwork.supernet
 ipaddress-address-exclude-partition	proven	Lib/ipaddress.py	_BaseNetwork.address_exclude
+ipaddress-exploded-total	refuted	Lib/ipaddress.py	_BaseV6._explode_shorthand_ip_string
+ipaddress-exploded-keeps-suffix	refuted	Lib/ipaddress.py	IPv6Address._explode_shorthand_ip_string,_BaseV6._explode_shorthand_ip_string
+ipaddress-exploded-by-case	proven	Lib/ipaddress.py	IPv6Address._explode_shorthand_ip_string,_BaseV6._explode_shorthand_ip_string
+ipaddress-exploded-hextets	proven	Lib/ipaddress.py	_BaseV6._explode_shorthand_ip_string
+ipaddress-iface-unspecified	proven	Lib/ipaddress.py	IPv4Interface.is_unspecified,IPv6Interface.is_unspecified
 datetime-ordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ymd2ord,_ord2ymd,_is_leap,_days_before_year,_days_in_month,_days_before_month,_check_date_fields,C date_fromordinal,C date_toordinal,C ord_to_ymd,C ymd_to_ord,C is_leap,C days_in_month,C days_before_month,C days_before_year,C check_date_args
 datetime-toordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ord2ymd,_ymd2ord,C ord_to_ymd,C ymd_to_ord
 datetime-date-add-timedelta	proven	Lib/_pydatetime.py	date.__add__,_ymd2ord,_ord2ymd,_check_date_fields,C add_date_timedelta,C date_add,C normalize_y_m_d,C normalize_date,C ord_to_ymd,C ymd_to_ord
@@ -95,6 +100,7 @@ datetime-astimezone-to-timezone	open	Lib/_pydatetime.py	datetime.astimezone,time
 datetime-tzinfo-fromutc	open	Lib/_pydatetime.py	tzinfo.fromutc,C tzinfo_fromutc
 datetime-timedelta-str-repr	open	Lib/_pydatetime.py	timedelta.__str__,timedelta.__repr__,C delta_str,C delta_repr
 fractions-ctor-normalizes	proven	Lib/fractions.py	Fraction.__new__
+fractions-ctor-one-arg	proven	Lib/fractions.py	Fraction.__new__
 fractions-ctor-zero-denominator	refuted	Lib/fractions.py	Fraction.__new__
 fractions-arith-exact	proven	Lib/fractions.py	Fraction._add,Fraction._sub,Fraction._mul,Fraction._div,_operator_fallbacks
 fractions-pow-exact	proven	Lib/fractions.py	Fraction.__pow__
@@ -122,10 +128,12 @@ rangeslice-indices-in-bounds	proven	Objects/sliceobject.c	slice_indices,_PySlice
 rangeslice-slice-errors	proven	Objects/sliceobject.c	slice_indices,PySlice_Unpack,compute_slice
 rangeslice-list-slice-indices	proven	Objects/sliceobject.c	PySlice_Unpack,PySlice_AdjustIndices,list_slice_wrap,list_slice_step_lock_held
 rangeslice-range-slice	proven	Objects/rangeobject.c	compute_slice,_PySlice_GetLongIndices
-rangeslice-iter	proven	Objects/rangeobject.c	range_iter,fast_range_iter,rangeiter_next,longrangeiter_next
-rangeslice-reversed	proven	Objects/rangeobject.c	range_reverse,fast_range_iter,rangeiter_next,longrangeiter_next
-rangeslice-iter-reduce	proven	Objects/rangeobject.c	rangeiter_reduce,longrangeiter_reduce,rangeiter_len,longrangeiter_len
-rangeslice-setstate-clips	refuted	Objects/rangeobject.c	rangeiter_setstate,longrangeiter_setstate
+rangeslice-iter	proven	Objects/rangeobject.c	range_iter,fast_range_iter,rangeiter_next,longrangeiter_next,longrangeiter_next_lock_held
+rangeslice-reversed	proven	Objects/rangeobject.c	range_reverse,fast_range_iter,rangeiter_next,longrangeiter_next,longrangeiter_next_lock_held
+rangeslice-iter-reduce	proven	Objects/rangeobject.c	range_iterator___reduce___impl,longrange_iterator___reduce___impl,range_iterator___length_hint___impl,longrange_iterator___length_hint___impl
+rangeslice-setstate-clips	refuted	Objects/rangeobject.c	range_iterator___setstate___impl
+rangeslice-setstate-skips	proven	Objects/rangeobject.c	range_iterator___setstate___impl,longrange_iterator___setstate___impl
+rangeslice-setstate-state-types	proven	Objects/rangeobject.c	range_iterator___setstate___impl,longrange_iterator___setstate___impl
 rangeslice-getindices-contract	refuted	Objects/sliceobject.c	PySlice_GetIndices
 mathint-isqrt-floor-sqrt	proven	Modules/mathmodule.c	math.isqrt,_approximate_isqrt
 mathint-comb-formula	proven	Modules/mathmodule.c	math.comb,perm_comb_small,perm_comb
@@ -166,7 +174,9 @@ strsearch-replace-str-bytes	proven	Objects/stringlib/transmogrify.h	str.replace,
 strsearch-split-rsplit-agree	proven	Objects/stringlib/split.h	str.split,str.rsplit,bytes.split,bytes.rsplit
 accel-bisect-twins-agree	refuted	Modules/_bisectmodule.c	bisect_left,bisect_right,insort_left,insort_right
 accel-bisect-twins-agree-hi-not-minus-one	refuted	Modules/_bisectmodule.c	bisect_left,bisect_right,insort_left,insort_right
-accel-bisect-twins-agree-in-range	proven	Modules/_bisectmodule.c	bisect_left,bisect_right,insort_left,insort_right
+accel-bisect-twins-agree-in-range	refuted	Modules/_bisectmodule.c	bisect_left
+accel-bisect-twins-agree-nonneg-lo	proven	Modules/_bisectmodule.c	bisect_left,bisect_right,insort_left,insort_right
+accel-bisect-negative-lo-raises	proven	Modules/_bisectmodule.c	bisect_left,bisect_right,insort_left,insort_right
 accel-bisect-left-partition	proven	Lib/bisect.py	bisect_left
 accel-bisect-right-partition	proven	Lib/bisect.py	bisect_right
 accel-bisect-doc-partition	refuted	Lib/bisect.py	bisect_left,bisect_right
@@ -178,7 +188,9 @@ accel-heapify-twins-agree	proven	Modules/_heapqmodule.c	heapify,heapify_max,cach
 accel-heap-ops-invariant	proven	Lib/heapq.py	heappush,heappop,heapreplace,heappushpop,heappush_max,heappop_max,heapreplace_max,heappushpop_max
 accel-heapify-makes-heap	proven	Lib/heapq.py	heapify,heapify_max
 accel-nsmallest-sorted-prefix	proven	Lib/heapq.py	nsmallest
+accel-nsmallest-any-len	refuted	Lib/heapq.py	nsmallest
 accel-nlargest-sorted-prefix	proven	Lib/heapq.py	nlargest
+accel-nlargest-any-len	refuted	Lib/heapq.py	nlargest
 accel-merge-sorted	proven	Lib/heapq.py	merge
 decimal-parse-c-accepts-py	refuted	Modules/_decimal/_decimal.c	Decimal.__new__,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii
 decimal-parse-c-accepts-py-casefree	proven	Modules/_decimal/_decimal.c	Decimal.__new__,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii
