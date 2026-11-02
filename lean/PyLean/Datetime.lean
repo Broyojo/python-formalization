@@ -191,13 +191,27 @@ def entries : List Entry := [
     statement := "time(h, m, s, us, tz, fold=f) with C-int fields agrees between the twins."
     source := "C/Python twins", status := .proven
     prop := ``TimeCtorInt, thm := some ``timeCtorInt_proven
-    notes := "Fields outside int: OverflowError versus ValueError is the rejected class of gh-158778." },
+    notes := "Fields outside int: OverflowError versus ValueError is the rejected class of gh-158778. fold is on record as datetime-time-ctor-fold-twins." },
+  { id := "datetime-time-ctor-fold-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["time.__new__", "_check_time_fields", "C time_new"]
+    statement := "time(h, m, s, us, tz, fold=f) with C-int h, m, s, us and any int fold agrees between the twins."
+    source := "C/Python twins", status := .refuted
+    prop := ``TimeCtorFoldTwins, thm := some ``timeCtorFoldTwins_refuted
+    bug := some "datetime-ctor-fold-overflow-class"
+    notes := "fold=2**31: OverflowError from the clinic conversion in C, ValueError in Python. Only the exception class differs." },
   { id := "datetime-datetime-ctor", pyFile := "Lib/_pydatetime.py"
     pyFns := ["datetime.__new__", "_check_date_fields", "_check_time_fields", "_check_tzinfo_arg", "C datetime_new", "C datetime_datetime_impl", "C new_datetime_ex2", "C check_date_args", "C check_time_args", "C check_tzinfo_subclass"]
     statement := "datetime(y, m, d, h, mi, s, us, tz, fold=f) with C-int fields agrees between the twins."
     source := "C/Python twins", status := .proven
     prop := ``DatetimeCtorInt, thm := some ``datetimeCtorInt_proven
-    notes := "Fields outside int: gh-158778." },
+    notes := "Fields outside int: gh-158778. fold is on record as datetime-datetime-ctor-fold-twins." },
+  { id := "datetime-datetime-ctor-fold-twins", pyFile := "Lib/_pydatetime.py"
+    pyFns := ["datetime.__new__", "_check_date_fields", "_check_time_fields", "C datetime_new"]
+    statement := "datetime(y, m, d, h, mi, s, us, tz, fold=f) with C-int fields and any int fold agrees between the twins."
+    source := "C/Python twins", status := .refuted
+    prop := ``DatetimeCtorFoldTwins, thm := some ``datetimeCtorFoldTwins_refuted
+    bug := some "datetime-ctor-fold-overflow-class"
+    notes := "fold=2**31: OverflowError from the clinic conversion in C, ValueError in Python. Only the exception class differs." },
   { id := "datetime-time-compare-base", pyFile := "Lib/_pydatetime.py"
     pyFns := ["time.__eq__", "time.__le__", "time.__lt__", "time.__ge__", "time.__gt__", "time._cmp", "_cmp", "C time_richcompare", "C diff_to_bool"]
     statement := "time comparison with the same tzinfo object agrees between the twins, field by field."

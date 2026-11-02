@@ -1,0 +1,51 @@
+id: datetime-ctor-fold-overflow-class
+title: "time() and datetime() raise OverflowError in C and ValueError in Python for fold outside C int"
+priority: P5
+kind: twin-mismatch
+module: datetime
+files: [Modules/clinic/_datetimemodule.c.h, Lib/_pydatetime.py]
+functions: ["C time_new", "C datetime_new", "time.__new__", "datetime.__new__", "_check_time_fields"]
+summary: |
+  With every other field a C int, time(fold=2**31) and datetime(1, 1, 1, fold=2**31) raise
+  OverflowError('Python int too large to convert to C int') in C and ValueError('fold must be
+  either 0 or 1, not 2147483648') in _pydatetime. fold has only two valid values, and both twins
+  refuse the argument, so the only difference is which exception class the caller gets. C
+  converts fold to int before any field is checked, so time(25, fold=2**31) is OverflowError in
+  C too, where Python raises ValueError for the hour.
+likelihood: Negligible. It takes a fold beyond 2**31, which is an error in both twins anyway.
+maybe_intended: |
+  Not stated as deliberate for fold: unlike date.fromisocalendar there is no NEWS entry, and
+  no test covers fold outside C int (Lib/test/datetimetester.py:2484-2486 only try -1 and 2). It
+  is not new in 3.15 either: the "$i" conversion of the 3.14 source raises the same class. The
+  nearest decision is gh-158778, the same class of difference for year, closed as not planned
+  with no comment. So it is accepted by precedent rather than designed. Not worth filing.
+reproducer: |
+  import datetime, _pydatetime
+  def outcome(f, *a, **k):
+      try:
+          return repr(f(*a, **k))
+      except Exception as e:
+          return type(e).__name__
+  c = outcome(datetime.time, fold=2**31), outcome(datetime.datetime, 1, 1, 1, fold=2**31)
+  py = outcome(_pydatetime.time, fold=2**31), outcome(_pydatetime.datetime, 1, 1, 1, fold=2**31)
+  print('C:', c, ' Python:', py)
+  if c == ('OverflowError', 'OverflowError') and py == ('ValueError', 'ValueError'):
+      print('REPRODUCED datetime-ctor-fold-overflow-class')
+expected: The same exception class from both implementations, if the twins are to agree here.
+promised_by: C/Python twin agreement; the docs give no class for a fold outside int.
+cause: |
+  Modules/clinic/_datetimemodule.c.h:841-844 and the same step of datetime_datetime convert fold
+  with PyLong_AsInt, ahead of check_time_args. Lib/_pydatetime.py:604-605 compares the Python int
+  with (0, 1), so it never overflows.
+possible_fix: None needed.
+reproduces:
+  python3 (3.15.2): REPRODUCED
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
+duplicates:
+  issues:
+    - {number: 158778, state: closed, relation: "same class of difference, for year (not planned)"}
+  queries: ["datetime fold OverflowError", "datetime fold large int", "time fold ValueError OverflowError",
+            "datetime constructor OverflowError ValueError"]
+lean:
+  property: PyLean.Datetime.TimeCtorFoldTwins
+  theorem: PyLean.Datetime.timeCtorFoldTwins_refuted

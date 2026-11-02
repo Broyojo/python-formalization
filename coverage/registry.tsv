@@ -40,7 +40,9 @@ datetime-replace-combine	proven	Lib/_pydatetime.py	time.replace,datetime.replace
 datetime-time-pickle	proven	Lib/_pydatetime.py	time._getstate,time.__setstate,time.__reduce_ex__,time.__reduce__,C time_getstate,C time_from_pickle,C datetime_time___reduce_ex___impl,C datetime_time___reduce___impl
 datetime-datetime-pickle	proven	Lib/_pydatetime.py	datetime._getstate,datetime.__setstate,datetime.__reduce_ex__,datetime.__reduce__,C datetime_getstate,C datetime_from_pickle,C datetime_datetime___reduce_ex___impl,C datetime_datetime___reduce___impl
 datetime-time-ctor	proven	Lib/_pydatetime.py	time.__new__,_check_time_fields,_check_tzinfo_arg,C time_new,C datetime_time_impl,C new_time_ex2,C check_time_args,C check_tzinfo_subclass
+datetime-time-ctor-fold-twins	refuted	Lib/_pydatetime.py	time.__new__,_check_time_fields,C time_new
 datetime-datetime-ctor	proven	Lib/_pydatetime.py	datetime.__new__,_check_date_fields,_check_time_fields,_check_tzinfo_arg,C datetime_new,C datetime_datetime_impl,C new_datetime_ex2,C check_date_args,C check_time_args,C check_tzinfo_subclass
+datetime-datetime-ctor-fold-twins	refuted	Lib/_pydatetime.py	datetime.__new__,_check_date_fields,_check_time_fields,C datetime_new
 datetime-time-compare-base	proven	Lib/_pydatetime.py	time.__eq__,time.__le__,time.__lt__,time.__ge__,time.__gt__,time._cmp,_cmp,C time_richcompare,C diff_to_bool
 datetime-time-compare-twins	refuted	Lib/_pydatetime.py	time.__eq__,time._cmp,C time_richcompare
 datetime-time-hash-total	refuted	Lib/_pydatetime.py	time.__hash__

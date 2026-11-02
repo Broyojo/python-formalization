@@ -21,8 +21,8 @@ Lib/_pydatetime.py	453	519	_parse_isoformat_time	_parse_isoformat_time(tstr)	mod
 Lib/_pydatetime.py	522	551	_isoweek_to_gregorian	_isoweek_to_gregorian(year, week, day)	modelled	datetime-fromisocalendar-exact,datetime-fromisocalendar-twins,datetime-fromisocalendar-twins-cint,datetime-isocalendar-roundtrip	
 Lib/_pydatetime.py	555	558	_check_tzname	_check_tzname(name)	modelled	datetime-tzname-twins	
 Lib/_pydatetime.py	566	576	_check_utc_offset	_check_utc_offset(name, offset)	modelled	datetime-datetime-offsets,datetime-time-offsets	
-Lib/_pydatetime.py	578	589	_check_date_fields	_check_date_fields(year, month, day)	modelled	datetime-date-add-timedelta,datetime-date-ctor,datetime-datetime-ctor,datetime-ordinal-roundtrip	
-Lib/_pydatetime.py	591	606	_check_time_fields	_check_time_fields(hour, minute, second, microsecond, fold)	modelled	datetime-datetime-ctor,datetime-fromiso-offset-range,datetime-time-ctor	
+Lib/_pydatetime.py	578	589	_check_date_fields	_check_date_fields(year, month, day)	modelled	datetime-date-add-timedelta,datetime-date-ctor,datetime-datetime-ctor,datetime-datetime-ctor-fold-twins,datetime-ordinal-roundtrip	
+Lib/_pydatetime.py	591	606	_check_time_fields	_check_time_fields(hour, minute, second, microsecond, fold)	modelled	datetime-datetime-ctor,datetime-datetime-ctor-fold-twins,datetime-fromiso-offset-range,datetime-time-ctor,datetime-time-ctor-fold-twins	
 Lib/_pydatetime.py	608	613	_check_tzinfo_arg	_check_tzinfo_arg(tz)	modelled	datetime-datetime-ctor,datetime-time-ctor	
 Lib/_pydatetime.py	615	632	_divide_and_round	_divide_and_round(a, b)	modelled	datetime-timedelta-ops-twins	
 Lib/_pydatetime.py	657	768	timedelta.__new__	__new__(cls, days=0, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0)	modelled	datetime-timedelta-ctor-exact,datetime-timedelta-ctor-twins	
@@ -98,7 +98,7 @@ Lib/_pydatetime.py	1389	1390	IsoCalendarDate.week	week(self)	modelled	datetime-i
 Lib/_pydatetime.py	1393	1394	IsoCalendarDate.weekday	weekday(self)	modelled	datetime-isocalendardate	
 Lib/_pydatetime.py	1396	1399	IsoCalendarDate.__reduce__	__reduce__(self)	todo		
 Lib/_pydatetime.py	1401	1403	IsoCalendarDate.__repr__	__repr__(self)	modelled	datetime-isocalendardate	
-Lib/_pydatetime.py	1436	1473	time.__new__	__new__(cls, hour=0, minute=0, second=0, microsecond=0, tzinfo=None, *, fold=0)	modelled	datetime-time-ctor,datetime-time-pickle-ctor-twins	
+Lib/_pydatetime.py	1436	1473	time.__new__	__new__(cls, hour=0, minute=0, second=0, microsecond=0, tzinfo=None, *, fold=0)	modelled	datetime-time-ctor,datetime-time-ctor-fold-twins,datetime-time-pickle-ctor-twins	
 Lib/_pydatetime.py	1477	1484	time.strptime	strptime(cls, date_string, format)	modelled	datetime-strptime-wrappers	
 Lib/_pydatetime.py	1488	1490	time.hour	hour(self)	modelled	datetime-packed-accessors	
 Lib/_pydatetime.py	1493	1495	time.minute	minute(self)	modelled	datetime-packed-accessors	
@@ -127,7 +127,7 @@ Lib/_pydatetime.py	1753	1764	time._getstate	_getstate(self, protocol=3)	modelled
 Lib/_pydatetime.py	1766	1777	time.__setstate	__setstate(self, string, tzinfo)	modelled	datetime-time-pickle	
 Lib/_pydatetime.py	1779	1780	time.__reduce_ex__	__reduce_ex__(self, protocol)	modelled	datetime-time-pickle	
 Lib/_pydatetime.py	1782	1783	time.__reduce__	__reduce__(self)	modelled	datetime-time-pickle	
-Lib/_pydatetime.py	1800	1833	datetime.__new__	__new__(cls, year, month=None, day=None, hour=0, minute=0, second=0, microsecond=0, tzinfo=None, *, fold=0)	modelled	datetime-datetime-ctor	
+Lib/_pydatetime.py	1800	1833	datetime.__new__	__new__(cls, year, month=None, day=None, hour=0, minute=0, second=0, microsecond=0, tzinfo=None, *, fold=0)	modelled	datetime-datetime-ctor,datetime-datetime-ctor-fold-twins	
 Lib/_pydatetime.py	1837	1839	datetime.hour	hour(self)	modelled	datetime-packed-accessors	
 Lib/_pydatetime.py	1842	1844	datetime.minute	minute(self)	modelled	datetime-packed-accessors	
 Lib/_pydatetime.py	1847	1849	datetime.second	second(self)	modelled	datetime-packed-accessors	

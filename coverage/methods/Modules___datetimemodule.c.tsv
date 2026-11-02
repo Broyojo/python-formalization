@@ -160,7 +160,7 @@ Modules/_datetimemodule.c	4642	4646	time_microsecond	time_microsecond(PyObject *
 Modules/_datetimemodule.c	4649	4654	time_tzinfo	time_tzinfo(PyObject *op, void *Py_UNUSED(closure))	todo		
 Modules/_datetimemodule.c	4657	4661	time_fold	time_fold(PyObject *op, void *Py_UNUSED(closure))	todo		
 Modules/_datetimemodule.c	4678	4707	time_from_pickle	time_from_pickle(PyTypeObject *type, PyObject *state, PyObject *tzinfo)	modelled	datetime-time-pickle	
-Modules/_datetimemodule.c	4710	4749	time_new	time_new(PyTypeObject *type, PyObject *args, PyObject *kw)	modelled	datetime-time-ctor,datetime-time-pickle-ctor-twins	
+Modules/_datetimemodule.c	4710	4749	time_new	time_new(PyTypeObject *type, PyObject *args, PyObject *kw)	modelled	datetime-time-ctor,datetime-time-ctor-fold-twins,datetime-time-pickle-ctor-twins	
 Modules/_datetimemodule.c	4770	4775	datetime_time_impl	datetime_time_impl(PyTypeObject *type, int hour, int minute, int second, int microsecond, PyObject *tzinfo, int fold) /*[clinic end generated code: output=f06bb4315225e7f6 input=0148df5e8138fe7b]*/	modelled	datetime-time-ctor	
 Modules/_datetimemodule.c	4793	4808	datetime_time_strptime_impl	datetime_time_strptime_impl(PyTypeObject *type, PyObject *string, PyObject *format) /*[clinic end generated code: output=ae05a9bc0241d3bf input=f01d0b9eb5383da5]*/	modelled	strptime-methods	
 Modules/_datetimemodule.c	4815	4822	time_dealloc	time_dealloc(PyObject *op)	excluded		no-behaviour: allocation, reference counting and GC traversal, with no Python-visible effect
@@ -186,7 +186,7 @@ Modules/_datetimemodule.c	5419	5423	datetime_microsecond	datetime_microsecond(Py
 Modules/_datetimemodule.c	5426	5431	datetime_tzinfo	datetime_tzinfo(PyObject *op, void *Py_UNUSED(closure))	todo		
 Modules/_datetimemodule.c	5434	5438	datetime_fold	datetime_fold(PyObject *op, void *Py_UNUSED(closure))	todo		
 Modules/_datetimemodule.c	5455	5484	datetime_from_pickle	datetime_from_pickle(PyTypeObject *type, PyObject *state, PyObject *tzinfo)	modelled	datetime-datetime-pickle	
-Modules/_datetimemodule.c	5487	5526	datetime_new	datetime_new(PyTypeObject *type, PyObject *args, PyObject *kw)	modelled	datetime-datetime-ctor	
+Modules/_datetimemodule.c	5487	5526	datetime_new	datetime_new(PyTypeObject *type, PyObject *args, PyObject *kw)	modelled	datetime-datetime-ctor,datetime-datetime-ctor-fold-twins	
 Modules/_datetimemodule.c	5550	5558	datetime_datetime_impl	datetime_datetime_impl(PyTypeObject *type, int year, int month, int day, int hour, int minute, int second, int microsecond, PyObject *tzinfo, int fold) /*[clinic end generated code: output=47983ddb47d36037 input=c7fd85dcf6fe9691]*/	modelled	datetime-datetime-ctor	
 Modules/_datetimemodule.c	5571	5585	utc_to_seconds	utc_to_seconds(int year, int month, int day, int hour, int minute, int second)	modelled	datetime-utc-to-seconds	
 Modules/_datetimemodule.c	5588	5607	local	local(long long u)	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
