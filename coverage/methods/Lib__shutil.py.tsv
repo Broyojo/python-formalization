@@ -46,7 +46,7 @@ Lib/shutil.py	1335	1347	_unpack_tarfile	_unpack_tarfile(filename, extract_dir, *
 Lib/shutil.py	1375	1380	_find_unpack_format	_find_unpack_format(filename)	todo		
 Lib/shutil.py	1382	1428	unpack_archive	unpack_archive(filename, extract_dir=None, format=None, *, filter=None)	todo		
 Lib/shutil.py	1439	1449	disk_usage	disk_usage(path)	todo		
-Lib/shutil.py	1456	1464	disk_usage	disk_usage(path)	todo		
+Lib/shutil.py	1456	1464	disk_usage	disk_usage(path)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/shutil.py; never defined on the Linux build this project models
 Lib/shutil.py	1467	1505	chown	chown(path, user=None, group=None, *, dir_fd=None, follow_symlinks=True)	todo		
 Lib/shutil.py	1507	1550	get_terminal_size	get_terminal_size(fallback=(80, 24))	todo		
 Lib/shutil.py	1556	1558	_access_check	_access_check(fn, mode)	todo		

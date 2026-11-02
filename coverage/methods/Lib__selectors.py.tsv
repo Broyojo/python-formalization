@@ -24,7 +24,7 @@ Lib/selectors.py	276	277	_BaseSelectorImpl.get_map	get_map(self)	todo
 Lib/selectors.py	284	287	SelectSelector.__init__	__init__(self)	todo		
 Lib/selectors.py	289	295	SelectSelector.register	register(self, fileobj, events, data=None)	todo		candidates:calstat-statistics-kernels-centred
 Lib/selectors.py	297	301	SelectSelector.unregister	unregister(self, fileobj)	todo		
-Lib/selectors.py	304	306	SelectSelector._select	_select(self, r, w, _, timeout=None)	todo		
+Lib/selectors.py	304	306	SelectSelector._select	_select(self, r, w, _, timeout=None)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/selectors.py; never defined on the Linux build this project models
 Lib/selectors.py	310	327	SelectSelector.select	select(self, timeout=None)	todo		
 Lib/selectors.py	336	338	_PollLikeSelector.__init__	__init__(self)	todo		
 Lib/selectors.py	340	349	_PollLikeSelector.register	register(self, fileobj, events, data=None)	todo		candidates:calstat-statistics-kernels-centred

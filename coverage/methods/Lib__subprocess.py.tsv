@@ -7,13 +7,13 @@ Lib/subprocess.py	176	180	TimeoutExpired.__init__	__init__(self, cmd, timeout, o
 Lib/subprocess.py	182	184	TimeoutExpired.__str__	__str__(self)	todo		
 Lib/subprocess.py	187	188	TimeoutExpired.stdout	stdout(self)	todo		
 Lib/subprocess.py	191	194	TimeoutExpired.stdout	stdout(self, value)	todo		
-Lib/subprocess.py	199	206	STARTUPINFO.__init__	__init__(self, *, dwFlags=0, hStdInput=None, hStdOutput=None, hStdError=None, wShowWindow=0, lpAttributeList=None)	todo		
-Lib/subprocess.py	208	218	STARTUPINFO.copy	copy(self)	todo		
-Lib/subprocess.py	224	227	Handle.Close	Close(self, CloseHandle=_winapi.CloseHandle)	todo		
-Lib/subprocess.py	229	233	Handle.Detach	Detach(self)	todo		
-Lib/subprocess.py	235	236	Handle.__repr__	__repr__(self)	todo		
+Lib/subprocess.py	199	206	STARTUPINFO.__init__	__init__(self, *, dwFlags=0, hStdInput=None, hStdOutput=None, hStdError=None, wShowWindow=0, lpAttributeList=None)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/subprocess.py; never defined on the Linux build this project models
+Lib/subprocess.py	208	218	STARTUPINFO.copy	copy(self)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/subprocess.py; never defined on the Linux build this project models
+Lib/subprocess.py	224	227	Handle.Close	Close(self, CloseHandle=_winapi.CloseHandle)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/subprocess.py; never defined on the Linux build this project models
+Lib/subprocess.py	229	233	Handle.Detach	Detach(self)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/subprocess.py; never defined on the Linux build this project models
+Lib/subprocess.py	235	236	Handle.__repr__	__repr__(self)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/subprocess.py; never defined on the Linux build this project models
 Lib/subprocess.py	253	327	_communicate_io_posix	_communicate_io_posix(selector, stdin, input_view, input_offset, output_buffers, endtime, *, close_on_eof=False)	todo		changed-in-3.15: new function
-Lib/subprocess.py	341	342	_cleanup	_cleanup()	todo		
+Lib/subprocess.py	341	342	_cleanup	_cleanup()	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/subprocess.py; never defined on the Linux build this project models
 Lib/subprocess.py	350	361	_cleanup	_cleanup()	todo		
 Lib/subprocess.py	368	372	_deadline_remaining	_deadline_remaining(endtime)	todo		changed-in-3.15: new function
 Lib/subprocess.py	375	384	_flush_stdin	_flush_stdin(stdin)	todo		changed-in-3.15: new function
@@ -51,17 +51,17 @@ Lib/subprocess.py	1428	1437	Popen._check_timeout	_check_timeout(self, endtime, o
 Lib/subprocess.py	1440	1461	Popen.wait	wait(self, timeout=None)	todo		changed-in-3.15:
 Lib/subprocess.py	1463	1490	Popen._close_pipe_fds	_close_pipe_fds(self, p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite)	todo		
 Lib/subprocess.py	1493	1510	Popen._on_error_fd_closer	_on_error_fd_closer(self)	todo		
-Lib/subprocess.py	1516	1592	Popen._get_handles	_get_handles(self, stdin, stdout, stderr)	todo		
-Lib/subprocess.py	1595	1601	Popen._make_inheritable	_make_inheritable(self, handle)	todo		
-Lib/subprocess.py	1604	1614	Popen._filter_handle_list	_filter_handle_list(self, handle_list)	todo		
-Lib/subprocess.py	1617	1742	Popen._execute_child	_execute_child(self, args, executable, preexec_fn, close_fds, pass_fds, cwd, env, startupinfo, creationflags, shell, p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite, unused_restore_signals, unused_gid, unused_gids, unused_uid, unused_umask, unused_start_new_session, unused_process_group)	todo		
-Lib/subprocess.py	1744	1758	Popen._internal_poll	_internal_poll(self, _deadstate=None, _WaitForSingleObject=_winapi.WaitForSingleObject, _WAIT_OBJECT_0=_winapi.WAIT_OBJECT_0, _GetExitCodeProcess=_winapi.GetExitCodeProcess)	todo		
-Lib/subprocess.py	1761	1776	Popen._wait	_wait(self, timeout)	todo		
-Lib/subprocess.py	1779	1781	Popen._readerthread	_readerthread(self, fh, buffer)	todo		
-Lib/subprocess.py	1784	1785	Popen._writerthread	_writerthread(self, input)	todo		
-Lib/subprocess.py	1788	1851	Popen._communicate	_communicate(self, input, endtime, orig_timeout)	todo		changed-in-3.15:
-Lib/subprocess.py	1853	1865	Popen.send_signal	send_signal(self, sig)	todo		
-Lib/subprocess.py	1867	1880	Popen.terminate	terminate(self)	todo		
+Lib/subprocess.py	1516	1592	Popen._get_handles	_get_handles(self, stdin, stdout, stderr)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/subprocess.py; never defined on the Linux build this project models
+Lib/subprocess.py	1595	1601	Popen._make_inheritable	_make_inheritable(self, handle)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/subprocess.py; never defined on the Linux build this project models
+Lib/subprocess.py	1604	1614	Popen._filter_handle_list	_filter_handle_list(self, handle_list)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/subprocess.py; never defined on the Linux build this project models
+Lib/subprocess.py	1617	1742	Popen._execute_child	_execute_child(self, args, executable, preexec_fn, close_fds, pass_fds, cwd, env, startupinfo, creationflags, shell, p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite, unused_restore_signals, unused_gid, unused_gids, unused_uid, unused_umask, unused_start_new_session, unused_process_group)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/subprocess.py; never defined on the Linux build this project models
+Lib/subprocess.py	1744	1758	Popen._internal_poll	_internal_poll(self, _deadstate=None, _WaitForSingleObject=_winapi.WaitForSingleObject, _WAIT_OBJECT_0=_winapi.WAIT_OBJECT_0, _GetExitCodeProcess=_winapi.GetExitCodeProcess)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/subprocess.py; never defined on the Linux build this project models
+Lib/subprocess.py	1761	1776	Popen._wait	_wait(self, timeout)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/subprocess.py; never defined on the Linux build this project models
+Lib/subprocess.py	1779	1781	Popen._readerthread	_readerthread(self, fh, buffer)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/subprocess.py; never defined on the Linux build this project models
+Lib/subprocess.py	1784	1785	Popen._writerthread	_writerthread(self, input)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/subprocess.py; never defined on the Linux build this project models
+Lib/subprocess.py	1788	1851	Popen._communicate	_communicate(self, input, endtime, orig_timeout)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/subprocess.py; never defined on the Linux build this project models
+Lib/subprocess.py	1853	1865	Popen.send_signal	send_signal(self, sig)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/subprocess.py; never defined on the Linux build this project models
+Lib/subprocess.py	1867	1880	Popen.terminate	terminate(self)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/subprocess.py; never defined on the Linux build this project models
 Lib/subprocess.py	1888	1949	Popen._get_handles	_get_handles(self, stdin, stdout, stderr)	todo		
 Lib/subprocess.py	1952	1990	Popen._posix_spawn	_posix_spawn(self, args, executable, env, restore_signals, close_fds, p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite)	todo		
 Lib/subprocess.py	1992	2159	Popen._execute_child	_execute_child(self, args, executable, preexec_fn, close_fds, pass_fds, cwd, env, startupinfo, creationflags, shell, p2cread, p2cwrite, c2pread, c2pwrite, errread, errwrite, restore_signals, gid, gids, uid, umask, start_new_session, process_group)	todo		

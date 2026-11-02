@@ -20,8 +20,8 @@ Lib/socket.py	516	520	socket.close	close(self)	todo
 Lib/socket.py	522	530	socket.detach	detach(self)	todo		
 Lib/socket.py	533	536	socket.family	family(self)	todo		
 Lib/socket.py	539	542	socket.type	type(self)	todo		
-Lib/socket.py	545	546	socket.get_inheritable	get_inheritable(self)	todo		
-Lib/socket.py	547	548	socket.set_inheritable	set_inheritable(self, inheritable)	todo		
+Lib/socket.py	545	546	socket.get_inheritable	get_inheritable(self)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/socket.py; never defined on the Linux build this project models
+Lib/socket.py	547	548	socket.set_inheritable	set_inheritable(self, inheritable)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/socket.py; never defined on the Linux build this project models
 Lib/socket.py	550	551	socket.get_inheritable	get_inheritable(self)	todo		
 Lib/socket.py	552	553	socket.set_inheritable	set_inheritable(self, inheritable)	todo		
 Lib/socket.py	557	564	fromfd	fromfd(fd, family, type, proto=0)	todo		

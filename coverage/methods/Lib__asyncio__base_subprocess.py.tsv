@@ -11,9 +11,9 @@ Lib/asyncio/base_subprocess.py	137	138	BaseSubprocessTransport.get_pid	get_pid(s
 Lib/asyncio/base_subprocess.py	140	141	BaseSubprocessTransport.get_returncode	get_returncode(self)	todo		
 Lib/asyncio/base_subprocess.py	143	147	BaseSubprocessTransport.get_pipe_transport	get_pipe_transport(self, fd)	todo		
 Lib/asyncio/base_subprocess.py	149	151	BaseSubprocessTransport._check_proc	_check_proc(self)	todo		
-Lib/asyncio/base_subprocess.py	154	156	BaseSubprocessTransport.send_signal	send_signal(self, signal)	todo		
-Lib/asyncio/base_subprocess.py	158	160	BaseSubprocessTransport.terminate	terminate(self)	todo		
-Lib/asyncio/base_subprocess.py	162	164	BaseSubprocessTransport.kill	kill(self)	todo		
+Lib/asyncio/base_subprocess.py	154	156	BaseSubprocessTransport.send_signal	send_signal(self, signal)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/asyncio/base_subprocess.py; never defined on the Linux build this project models
+Lib/asyncio/base_subprocess.py	158	160	BaseSubprocessTransport.terminate	terminate(self)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/asyncio/base_subprocess.py; never defined on the Linux build this project models
+Lib/asyncio/base_subprocess.py	162	164	BaseSubprocessTransport.kill	kill(self)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/asyncio/base_subprocess.py; never defined on the Linux build this project models
 Lib/asyncio/base_subprocess.py	166	174	BaseSubprocessTransport.send_signal	send_signal(self, signal)	todo		
 Lib/asyncio/base_subprocess.py	176	177	BaseSubprocessTransport.terminate	terminate(self)	todo		
 Lib/asyncio/base_subprocess.py	179	180	BaseSubprocessTransport.kill	kill(self)	todo		

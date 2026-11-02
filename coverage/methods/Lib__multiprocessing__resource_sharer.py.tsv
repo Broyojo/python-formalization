@@ -1,6 +1,6 @@
 file	line	endline	name	signature	status	entry	note
-Lib/multiprocessing/resource_sharer.py	29	34	DupSocket.__init__	__init__(self, sock)	todo		
-Lib/multiprocessing/resource_sharer.py	36	40	DupSocket.detach	detach(self)	todo		
+Lib/multiprocessing/resource_sharer.py	29	34	DupSocket.__init__	__init__(self, sock)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/multiprocessing/resource_sharer.py; never defined on the Linux build this project models
+Lib/multiprocessing/resource_sharer.py	36	40	DupSocket.detach	detach(self)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/multiprocessing/resource_sharer.py; never defined on the Linux build this project models
 Lib/multiprocessing/resource_sharer.py	47	53	DupFd.__init__	__init__(self, fd)	todo		
 Lib/multiprocessing/resource_sharer.py	55	58	DupFd.detach	detach(self)	todo		
 Lib/multiprocessing/resource_sharer.py	63	70	_ResourceSharer.__init__	__init__(self)	todo		

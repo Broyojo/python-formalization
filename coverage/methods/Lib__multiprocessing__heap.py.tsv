@@ -1,7 +1,7 @@
 file	line	endline	name	signature	status	entry	note
-Lib/multiprocessing/heap.py	38	51	Arena.__init__	__init__(self, size)	todo		
-Lib/multiprocessing/heap.py	53	55	Arena.__getstate__	__getstate__(self)	todo		
-Lib/multiprocessing/heap.py	57	60	Arena.__setstate__	__setstate__(self, state)	todo		
+Lib/multiprocessing/heap.py	38	51	Arena.__init__	__init__(self, size)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/multiprocessing/heap.py; never defined on the Linux build this project models
+Lib/multiprocessing/heap.py	53	55	Arena.__getstate__	__getstate__(self)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/multiprocessing/heap.py; never defined on the Linux build this project models
+Lib/multiprocessing/heap.py	57	60	Arena.__setstate__	__setstate__(self, state)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/multiprocessing/heap.py; never defined on the Linux build this project models
 Lib/multiprocessing/heap.py	77	89	Arena.__init__	__init__(self, size, fd=-1)	todo		
 Lib/multiprocessing/heap.py	91	98	Arena._choose_dir	_choose_dir(self, size)	todo		
 Lib/multiprocessing/heap.py	100	104	reduce_arena	reduce_arena(a)	todo		

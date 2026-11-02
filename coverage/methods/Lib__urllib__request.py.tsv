@@ -117,7 +117,7 @@ Lib/urllib/request.py	2051	2053	proxy_bypass_macosx_sysconf	proxy_bypass_macosx_
 Lib/urllib/request.py	2055	2061	getproxies_macosx_sysconf	getproxies_macosx_sysconf()	todo		
 Lib/urllib/request.py	2065	2076	proxy_bypass	proxy_bypass(host)	todo		
 Lib/urllib/request.py	2078	2079	getproxies	getproxies()	todo		
-Lib/urllib/request.py	2083	2130	getproxies_registry	getproxies_registry()	todo		
-Lib/urllib/request.py	2132	2139	getproxies	getproxies()	todo		
-Lib/urllib/request.py	2141	2159	proxy_bypass_registry	proxy_bypass_registry(host)	todo		
-Lib/urllib/request.py	2161	2172	proxy_bypass	proxy_bypass(host)	todo		
+Lib/urllib/request.py	2083	2130	getproxies_registry	getproxies_registry()	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/urllib/request.py; never defined on the Linux build this project models
+Lib/urllib/request.py	2132	2139	getproxies	getproxies()	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/urllib/request.py; never defined on the Linux build this project models
+Lib/urllib/request.py	2141	2159	proxy_bypass_registry	proxy_bypass_registry(host)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/urllib/request.py; never defined on the Linux build this project models
+Lib/urllib/request.py	2161	2172	proxy_bypass	proxy_bypass(host)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/urllib/request.py; never defined on the Linux build this project models

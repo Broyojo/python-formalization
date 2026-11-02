@@ -50,11 +50,11 @@ Lib/multiprocessing/connection.py	643	666	SocketListener.__init__	__init__(self,
 Lib/multiprocessing/connection.py	668	671	SocketListener.accept	accept(self)	todo		
 Lib/multiprocessing/connection.py	673	680	SocketListener.close	close(self)	todo		
 Lib/multiprocessing/connection.py	683	691	SocketClient	SocketClient(address)	todo		
-Lib/multiprocessing/connection.py	703	712	PipeListener.__init__	__init__(self, address, backlog=None)	todo		
-Lib/multiprocessing/connection.py	714	724	PipeListener._new_handle	_new_handle(self, first=False)	todo		
-Lib/multiprocessing/connection.py	726	746	PipeListener.accept	accept(self)	todo		changed-in-3.15:
-Lib/multiprocessing/connection.py	749	752	PipeListener._finalize_pipe_listener	_finalize_pipe_listener(queue, address)	todo		
-Lib/multiprocessing/connection.py	754	779	PipeClient	PipeClient(address)	todo		
+Lib/multiprocessing/connection.py	703	712	PipeListener.__init__	__init__(self, address, backlog=None)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/multiprocessing/connection.py; never defined on the Linux build this project models
+Lib/multiprocessing/connection.py	714	724	PipeListener._new_handle	_new_handle(self, first=False)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/multiprocessing/connection.py; never defined on the Linux build this project models
+Lib/multiprocessing/connection.py	726	746	PipeListener.accept	accept(self)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/multiprocessing/connection.py; never defined on the Linux build this project models
+Lib/multiprocessing/connection.py	749	752	PipeListener._finalize_pipe_listener	_finalize_pipe_listener(queue, address)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/multiprocessing/connection.py; never defined on the Linux build this project models
+Lib/multiprocessing/connection.py	754	779	PipeClient	PipeClient(address)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/multiprocessing/connection.py; never defined on the Linux build this project models
 Lib/multiprocessing/connection.py	891	914	_get_digest_name_and_payload	_get_digest_name_and_payload(message)	todo		
 Lib/multiprocessing/connection.py	917	942	_create_response	_create_response(authkey, message)	todo		
 Lib/multiprocessing/connection.py	945	967	_verify_challenge	_verify_challenge(authkey, message, response)	todo		
@@ -67,12 +67,12 @@ Lib/multiprocessing/connection.py	1027	1028	_xml_dumps	_xml_dumps(obj)	todo
 Lib/multiprocessing/connection.py	1030	1032	_xml_loads	_xml_loads(s)	todo		
 Lib/multiprocessing/connection.py	1035	1039	XmlListener.accept	accept(self)	todo		
 Lib/multiprocessing/connection.py	1041	1044	XmlClient	XmlClient(*args, **kwds)	todo		
-Lib/multiprocessing/connection.py	1052	1082	_exhaustive_wait	_exhaustive_wait(handles, timeout)	todo		
-Lib/multiprocessing/connection.py	1086	1170	wait	wait(object_list, timeout=None)	todo		changed-in-3.15:
+Lib/multiprocessing/connection.py	1052	1082	_exhaustive_wait	_exhaustive_wait(handles, timeout)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/multiprocessing/connection.py; never defined on the Linux build this project models
+Lib/multiprocessing/connection.py	1086	1170	wait	wait(object_list, timeout=None)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/multiprocessing/connection.py; never defined on the Linux build this project models
 Lib/multiprocessing/connection.py	1184	1205	wait	wait(object_list, timeout=None)	todo		
-Lib/multiprocessing/connection.py	1212	1217	reduce_connection	reduce_connection(conn)	todo		
-Lib/multiprocessing/connection.py	1218	1220	rebuild_connection	rebuild_connection(ds, readable, writable)	todo		
-Lib/multiprocessing/connection.py	1223	1227	reduce_pipe_connection	reduce_pipe_connection(conn)	todo		
-Lib/multiprocessing/connection.py	1228	1230	rebuild_pipe_connection	rebuild_pipe_connection(dh, readable, writable)	todo		
+Lib/multiprocessing/connection.py	1212	1217	reduce_connection	reduce_connection(conn)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/multiprocessing/connection.py; never defined on the Linux build this project models
+Lib/multiprocessing/connection.py	1218	1220	rebuild_connection	rebuild_connection(ds, readable, writable)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/multiprocessing/connection.py; never defined on the Linux build this project models
+Lib/multiprocessing/connection.py	1223	1227	reduce_pipe_connection	reduce_pipe_connection(conn)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/multiprocessing/connection.py; never defined on the Linux build this project models
+Lib/multiprocessing/connection.py	1228	1230	rebuild_pipe_connection	rebuild_pipe_connection(dh, readable, writable)	excluded		platform: defined only under a Windows-only branch (if _mswindows / os.name == 'nt' / sys.platform == 'win32') in Lib/multiprocessing/connection.py; never defined on the Linux build this project models
 Lib/multiprocessing/connection.py	1234	1236	reduce_connection	reduce_connection(conn)	todo		
 Lib/multiprocessing/connection.py	1237	1239	rebuild_connection	rebuild_connection(df, readable, writable)	todo		
