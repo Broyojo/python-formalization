@@ -1,7 +1,7 @@
 import PyLean.Sequences.ListModel
 
 /-!
-Model of `collections.deque` (`Modules/_collectionsmodule.c`, CPython 3.14.7).
+Model of `collections.deque` (`Modules/_collectionsmodule.c`, CPython 3.15.2).
 
 ## Representation of the block structure
 
@@ -76,10 +76,6 @@ abbrev Cmp (α : Type) := Deque α → α → α → Py Bool × Deque α
 
 /-- A pure `__eq__` that returns a truth value. -/
 def pureCmp {α : Type} (f : α → α → Bool) : Cmp α := fun d a b => (.ok (f a b), d)
-
-/-- `(int)x` as `va_arg(int)` reads a `Py_ssize_t`: the low 32 bits, signed. -/
-def wrap32 (x : Int) : Int :=
-  if x % 4294967296 ≥ 2147483648 then x % 4294967296 - 4294967296 else x % 4294967296
 
 namespace Deque
 
@@ -260,14 +256,14 @@ def makeOf (tname : String) (xs : List α) (maxlen : MaxlenArg) : Py (Deque α) 
 def make (xs : List α) (maxlen : MaxlenArg) : Py (Deque α) := makeOf "deque" xs maxlen
 
 /-- `deque_copy_impl` (_collectionsmodule.c:602-661): the exact type fills a new
-deque; a subclass calls `type(d)(d)` or `PyObject_CallFunction(type(d), "Oi", d,
-d.maxlen)`, where the `"i"` format reads the `Py_ssize_t` `maxlen` as a C `int`
-(@3.14.7:648-649). `d.__copy__()` (`deque___copy___impl`, :671-675) is the same. The
-"must return a deque" check (:653-659) needs a subclass with its own `__new__`. -/
+deque; a subclass calls `type(d)(d)` or `PyObject_CallFunction(type(d), "On", d,
+d.maxlen)` (:648-652), which reads the whole `Py_ssize_t`. `d.__copy__()`
+(`deque___copy___impl`, :671-675) is the same. The "must return a deque" check (:653-659)
+needs a subclass with its own `__new__`. -/
 def copy (d : Deque α) : Py (Deque α) :=
   if d.tname = "deque" then .ok d.copyExact
   else if d.maxlen < 0 then makeOf d.tname d.items .absent
-  else makeOf d.tname d.items (.int (wrap32 d.maxlen))
+  else makeOf d.tname d.items (.int d.maxlen)
 
 /-- `d + other` (`deque_concat_lock_held`, _collectionsmodule.c:678-707; `other`
 is a deque, or `.inr` the type name of anything else): copy, then

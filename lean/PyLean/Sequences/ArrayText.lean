@@ -269,20 +269,12 @@ theorem arrFromBytes_keeps (a a' : Arr) (bs : List Nat) (w : Int) (h : arrFromBy
 theorem arrNew_bytes (t : String) (tc : TC) (bs : List Nat) :
     arrNew t tc.code (.bytes bs) = arrFromBytes ⟨tc, [], 0, false, 0, t⟩ bs 1 := by
   unfold arrNew
-  have hb : (if (tc.code == 'u' || tc.code == 'w') then (.ok () : Py Unit) else
-      match Init.bytes bs with
-      | .str _ => .error (.typeError s!"cannot use a str to initialize an array with typecode '{tc.code}'")
-      | .arr o =>
-        if o.tc == .u || o.tc == .w then
-          .error (.typeError s!"cannot use a unicode array to initialize an array with typecode '{tc.code}'")
-        else .ok ()
-      | _ => .ok ()) = .ok () := by split <;> rfl
-  simp only [hb, find_code, Option.isSome_none, Bool.false_eq_true, ite_false]
+  simp only [arrNewBad_bytes, find_code, Option.isSome_none, Bool.false_eq_true, ite_false]
   rw [show newArr t tc 0 = .ok ⟨tc, [], 0, false, 0, t⟩ from newArr_ok t tc 0 (fits_zero ⟨tc, [], 0, false, 0, t⟩)]
   simp only
   cases arrFromBytes ⟨tc, [], 0, false, 0, t⟩ bs 1 <;> rfl
 
-theorem mformat_range (tc : TC) : ¬ (mformatOf tc < 0 ∨ mformatOf tc > 21) := by cases tc <;> decide
+theorem mformat_range (tc : TC) : ¬ (mformatOf tc < 0 ∨ mformatOf tc > 27) := by cases tc <;> decide
 
 theorem mapM_set_int (tc : TC) (hi : tc.isInteger = true) (l : List Int) (h : ∀ x ∈ l, tc.lo ≤ x ∧ x ≤ tc.hi) :
     (l.map PyVal.int).mapM (tcSetitem tc true) = .ok l := by
@@ -386,12 +378,12 @@ for every string without surrogates: the path pickles take across byte orders. R
 odd-length string fails with `ValueError: string length not a multiple of item size`. -/
 def ArrayReconstructUTF : Prop :=
   ∀ cps : List Nat, (∀ c ∈ cps, c ≤ 1114111 ∧ ¬ (55296 ≤ c ∧ c ≤ 57343)) →
-    ∃ b, reconstruct "array" 'w' 21 (utf32be cps) = .ok b ∧ b.items = cps.map (fun c : Nat => (c : Int))
+    ∃ b, reconstruct "array" "w" 21 (utf32be cps) = .ok b ∧ b.items = cps.map (fun c : Nat => (c : Int))
 
 theorem arrayReconstructUTF_refuted : ¬ ArrayReconstructUTF := by
   intro h
   obtain ⟨b, h1, _⟩ := h [97] (by intro c hc; simp at hc; subst hc; decide)
-  have e : reconstruct "array" 'w' 21 (utf32be [97]) =
+  have e : reconstruct "array" "w" 21 (utf32be [97]) =
       .error (.valueError "string length not a multiple of item size") := by decide
   rw [e] at h1
   simp at h1

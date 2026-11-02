@@ -29,7 +29,8 @@ macro "list_ext" : tactic => `(tactic| (
     | (rw [List.getElem?_eq_none (by omega), List.getElem?_eq_none (by omega)])
     | skip))
 
-theorem itemsize_cases (tc : TC) : tc.itemsize = 1 ∨ tc.itemsize = 2 ∨ tc.itemsize = 4 ∨ tc.itemsize = 8 := by
+theorem itemsize_cases (tc : TC) :
+    tc.itemsize = 1 ∨ tc.itemsize = 2 ∨ tc.itemsize = 4 ∨ tc.itemsize = 8 ∨ tc.itemsize = 16 := by
   cases tc <;> simp [TC.itemsize]
 
 /-- The array fits: `n` items of this typecode are below `sys.maxsize` bytes. -/
@@ -73,7 +74,7 @@ theorem arrResize_ok (a : Arr) (n : Int) (hx : a.exports = 0) (h0 : 0 ≤ n) (hn
     · have hc := itemsize_cases a.tc
       unfold ssizeMax at hn
       have : n / 16 + (if (a.items.length : Int) < 8 then 3 else 7) + n ≤ 18446744073709551615 / a.tc.itemsize := by
-        rcases hc with h | h | h | h <;> rw [h] at hn ⊢ <;> split <;> omega
+        rcases hc with h | h | h | h | h <;> rw [h] at hn ⊢ <;> split <;> omega
       rw [iteT this]
       exact ⟨_, rfl, rfl, rfl, hx, rfl⟩
 
@@ -153,9 +154,32 @@ theorem ins_memmove (l : List Int) (w : Nat) (x : Int) (h : w < l.length) :
   unfold insAt
   list_ext
 
-theorem arrIns1_ok (a : Arr) (where_ : Int) (v : PyVal) (x : Int) (hx : a.exports = 0)
+/-- A value `setitem` stores at an index also passes `setitem(self, -1, v)`. -/
+theorem tcCheck_of_set (tc : TC) (v : PyVal) (x : Int) (h : tcSetitem tc true v = .ok x) :
+    tcCheck tc v = .ok () := by
+  cases tc
+  case e =>
+    simp only [tcCheck]
+    cases hd : asDouble v with
+    | ok b => rfl
+    | error e => simp [tcSetitem, hd, bind, Except.bind] at h
+  all_goals simp only [tcCheck, h]
+
+/-- Only `e` refuses more at an index than at `-1`. -/
+theorem tcCheck_err (tc : TC) (v : PyVal) (e : PyExc) (ht : tc ≠ .e) (h : tcSetitem tc true v = .error e) :
+    tcCheck tc v = .error e := by
+  cases tc
+  case e => exact absurd rfl ht
+  all_goals simp only [tcCheck, h]
+
+theorem arrIns1S_err (a : Arr) (w : Int) (v : PyVal) (e : PyExc) (h : tcCheck a.tc v = .error e) :
+    arrIns1S a w v = (a, some e) := by
+  unfold arrIns1S
+  simp only [h]
+
+theorem arrIns1S_ok (a : Arr) (where_ : Int) (v : PyVal) (x : Int) (hx : a.exports = 0)
     (hs : tcSetitem a.tc true v = .ok x) (hn : a.Fits (a.items.length + 1)) :
-    ∃ a', arrIns1 a where_ v = .ok a' ∧ a'.items = insAt a.items (ins1Pos a.items.length where_).toNat x ∧
+    ∃ a', arrIns1S a where_ v = (a', none) ∧ a'.items = insAt a.items (ins1Pos a.items.length where_).toNat x ∧
       a'.tc = a.tc ∧ a'.exports = 0 ∧ a'.tname = a.tname := by
   obtain ⟨a1, hr, hi, ht, he, htn⟩ := arrResize_ok a (a.items.length + 1) hx (by omega) hn
   have hres : a1.items = a.items ++ [0] := by
@@ -163,11 +187,11 @@ theorem arrIns1_ok (a : Arr) (where_ : Int) (v : PyVal) (x : Int) (hx : a.export
     rfl
   have hb := ins1Pos_bounds a.items.length where_ (by omega)
   generalize hw : ins1Pos a.items.length where_ = w at hb
-  unfold arrIns1
-  simp only [hs, hr, hw, bind, Except.bind, pure, Except.pure]
+  unfold arrIns1S
+  simp only [tcCheck_of_set _ _ _ hs, hr, hw, hs]
   by_cases hend : w = a.items.length
-  · simp only [hend, ne_eq, not_true_eq_false, ite_false, ht, hs]
-    refine ⟨_, rfl, ?_, rfl, he, htn⟩
+  · simp only [hend, ne_eq, not_true_eq_false, ite_false]
+    refine ⟨_, rfl, ?_, ht, he, htn⟩
     show a1.items.set _ x = _
     rw [hres]
     unfold insAt
@@ -175,12 +199,19 @@ theorem arrIns1_ok (a : Arr) (where_ : Int) (v : PyVal) (x : Int) (hx : a.export
     list_ext
   · have hlen : (a1.items.length : Int) = a.items.length + 1 := by rw [hres]; simp
     rw [iteT hend, memmove_ok _ _ _ _ (by omega) (by omega) (by omega) (by omega) (by omega)]
-    simp only [ht, hs]
-    refine ⟨_, rfl, ?_, rfl, he, htn⟩
+    simp only
+    refine ⟨_, rfl, ?_, ht, he, htn⟩
     show List.set _ _ x = _
     rw [hres, show (w + 1).toNat = w.toNat + 1 by omega, show (a.items.length - w : Int).toNat = a.items.length - w.toNat by omega,
       show (w + 1 + ((a.items.length : Int) - w)).toNat = a.items.length + 1 by omega]
     exact ins_memmove a.items w.toNat x (by omega)
+
+theorem arrIns1_ok (a : Arr) (where_ : Int) (v : PyVal) (x : Int) (hx : a.exports = 0)
+    (hs : tcSetitem a.tc true v = .ok x) (hn : a.Fits (a.items.length + 1)) :
+    ∃ a', arrIns1 a where_ v = .ok a' ∧ a'.items = insAt a.items (ins1Pos a.items.length where_).toNat x ∧
+      a'.tc = a.tc ∧ a'.exports = 0 ∧ a'.tname = a.tname := by
+  obtain ⟨a', h1, h2⟩ := arrIns1S_ok a where_ v x hx hs hn
+  exact ⟨a', by simp only [arrIns1, h1], h2⟩
 
 /-! ### `array_del_slice` -/
 

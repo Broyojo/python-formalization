@@ -139,7 +139,8 @@ the factory is being printed. `dd.__init__`: a first argument that is neither ca
 `None` raises `TypeError` and changes nothing; otherwise the factory is replaced before
 `dict.__init__` runs, so it stays replaced when that raises. `left | right` for two
 dict operands has the items of `left` updated by `right`, and the type and factory of the
-defaultdict operand (the left one if both are); a non-dict operand gives `NotImplemented`. -/
+defaultdict operand (the left one if both are); a `frozendict` operand counts as a dict
+since 3.15, and anything else gives `NotImplemented`. -/
 def DefDictReprInitOr : Prop :=
   ∀ (κ ν : Type) [DecidableEq κ] (dd : DefDict κ ν) (base : PyDict κ ν → String),
     (∀ r run, dd.factory = .call r run →
@@ -158,12 +159,14 @@ def DefDictReprInitOr : Prop :=
           items := dictUpdate (dd.newFrom dd.items).items i }) ∧
     (∀ l : PyDict κ ν, DefDict.orOp (.plain l) (.dd dd) = some { dd.newFrom l with
           items := dictUpdate (dd.newFrom l).items dd.items }) ∧
+    (∀ l : PyDict κ ν, DefDict.orOp (.frozen l) (.dd dd) = some { dd.newFrom l with
+          items := dictUpdate (dd.newFrom l).items dd.items }) ∧
     DefDict.orOp (.dd dd) .notDict = none ∧ DefDict.orOp .notDict (.dd dd) = none
 
 theorem defDictReprInitOr_proven : DefDictReprInitOr := by
   intro κ ν _ dd base
   refine ⟨fun r run hf => ?_, fun hn => ?_, fun rest => rfl, fun f e => rfl, fun f kvs => rfl, fun kvs => rfl,
-    fun r _ i hi => ?_, fun l => rfl, rfl, rfl⟩
+    fun r _ i hi => ?_, fun l => rfl, fun l => rfl, rfl, rfl⟩
   · simp [DefDict.repr, hf]
   · simp only [DefDict.repr]
     cases hf : dd.factory with
@@ -176,6 +179,10 @@ theorem defDictReprInitOr_proven : DefDictReprInitOr := by
       subst hi
       rfl
     | plain p =>
+      simp only [DefDict.Operand.items?, Option.some.injEq] at hi
+      subst hi
+      rfl
+    | frozen p =>
       simp only [DefDict.Operand.items?, Option.some.injEq] at hi
       subst hi
       rfl

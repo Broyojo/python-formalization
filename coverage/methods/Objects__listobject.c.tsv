@@ -19,7 +19,7 @@ Objects/listobject.c	427	440	PyList_GetItemRef	PyList_GetItemRef(PyObject *op, P
 Objects/listobject.c	443	446	_PyList_GetItemRef	_PyList_GetItemRef(PyListObject *list, Py_ssize_t i)	modelled	bytesobj-contains-agree	
 Objects/listobject.c	450	471	_PyList_GetItemRefNoLock	_PyList_GetItemRefNoLock(PyListObject *list, Py_ssize_t i, _PyStackRef *result)	excluded		platform: compiled only under Py_GIL_DISABLED; the model is of the default build
 Objects/listobject.c	475	500	PyList_SetItem	PyList_SetItem(PyObject *op, Py_ssize_t i, PyObject *newitem)	modelled	bytesobj-capi-agree	
-Objects/listobject.c	503	528	ins1	ins1(PyListObject *self, Py_ssize_t where, PyObject *v)	todo		changed-in-3.15: was sequences-insert-agree
+Objects/listobject.c	503	528	ins1	ins1(PyListObject *self, Py_ssize_t where, PyObject *v)	todo		
 Objects/listobject.c	531	543	PyList_Insert	PyList_Insert(PyObject *op, Py_ssize_t where, PyObject *newitem)	modelled	bytesobj-capi-agree,bytesobj-list-contents	
 Objects/listobject.c	547	557	_PyList_AppendTakeRefListResize	_PyList_AppendTakeRefListResize(PyListObject *self, PyObject *newitem)	modelled	bytesobj-list-growth-pattern	
 Objects/listobject.c	560	571	PyList_Append	PyList_Append(PyObject *op, PyObject *newitem)	modelled	bytesobj-capi-agree	
@@ -40,12 +40,12 @@ Objects/listobject.c	894	921	list_clear_impl	list_clear_impl(PyListObject *a, bo
 Objects/listobject.c	924	927	list_clear	list_clear(PyListObject *a)	modelled	bytesobj-list-ops-wf	
 Objects/listobject.c	930	934	list_clear_slot	list_clear_slot(PyObject *self)	modelled	bytesobj-list-ops-wf	
 Objects/listobject.c	939	962	ptr_wise_atomic_memmove	ptr_wise_atomic_memmove(PyListObject *a, PyObject **dest, PyObject **src, Py_ssize_t n)	todo		changed-in-3.15: new function
-Objects/listobject.c	971	1059	list_ass_slice_lock_held	list_ass_slice_lock_held(PyListObject *a, Py_ssize_t ilow, Py_ssize_t ihigh, PyObject *v)	todo		changed-in-3.15: was sequences-list-slice-assign
+Objects/listobject.c	971	1059	list_ass_slice_lock_held	list_ass_slice_lock_held(PyListObject *a, Py_ssize_t ilow, Py_ssize_t ihigh, PyObject *v)	todo		
 Objects/listobject.c	1062	1089	list_ass_slice	list_ass_slice(PyListObject *a, Py_ssize_t ilow, Py_ssize_t ihigh, PyObject *v)	modelled	bytesobj-capi-agree,bytesobj-list-ops-wf	
 Objects/listobject.c	1092	1099	PyList_SetSlice	PyList_SetSlice(PyObject *a, Py_ssize_t ilow, Py_ssize_t ihigh, PyObject *v)	modelled	bytesobj-capi-agree	
 Objects/listobject.c	1102	1140	list_inplace_repeat_lock_held	list_inplace_repeat_lock_held(PyListObject *self, Py_ssize_t n)	todo		changed-in-3.15: was bytesobj-list-contents,sequences-list-repeat
 Objects/listobject.c	1143	1156	list_inplace_repeat	list_inplace_repeat(PyObject *_self, Py_ssize_t n)	modelled	bytesobj-list-contents,bytesobj-list-ops-wf	
-Objects/listobject.c	1159	1179	list_ass_item_lock_held	list_ass_item_lock_held(PyListObject *a, Py_ssize_t i, PyObject *v)	todo		changed-in-3.15: was sequences-subscript-agree
+Objects/listobject.c	1159	1179	list_ass_item_lock_held	list_ass_item_lock_held(PyListObject *a, Py_ssize_t i, PyObject *v)	todo		
 Objects/listobject.c	1182	1190	list_ass_item	list_ass_item(PyObject *aa, Py_ssize_t i, PyObject *v)	modelled	bytesobj-list-del-keeps-allocation,bytesobj-list-ops-wf	
 Objects/listobject.c	1204	1211	list_insert_impl	list_insert_impl(PyListObject *self, Py_ssize_t index, PyObject *object) /*[clinic end generated code: output=7f35e32f60c8cb78 input=b1987ca998a4ae2d]*/	modelled	sequences-insert-agree,sequences-insert-is-slice-assign,sequences-insert-is-slice-assign-ssize	
 Objects/listobject.c	1221	1226	py_list_clear_impl	py_list_clear_impl(PyListObject *self) /*[clinic end generated code: output=83726743807e3518 input=e285b7f09051a9ba]*/	modelled	bytesobj-list-ops-wf	
@@ -63,7 +63,7 @@ Objects/listobject.c	1554	1557	_PyList_Extend	_PyList_Extend(PyListObject *self,
 Objects/listobject.c	1560	1567	PyList_Extend	PyList_Extend(PyObject *self, PyObject *iterable)	modelled	bytesobj-capi-agree	
 Objects/listobject.c	1571	1581	PyList_Clear	PyList_Clear(PyObject *self)	modelled	bytesobj-capi-agree,bytesobj-list-ops-wf	
 Objects/listobject.c	1585	1592	list_inplace_concat	list_inplace_concat(PyObject *_self, PyObject *other)	modelled	bytesobj-list-contents	
-Objects/listobject.c	1607	1638	list_pop_impl	list_pop_impl(PyListObject *self, Py_ssize_t index) /*[clinic end generated code: output=6bd69dcb3f17eca8 input=c269141068ae4b8f]*/	todo		changed-in-3.15: was sequences-pop-remove-count-agree
+Objects/listobject.c	1607	1638	list_pop_impl	list_pop_impl(PyListObject *self, Py_ssize_t index) /*[clinic end generated code: output=6bd69dcb3f17eca8 input=c269141068ae4b8f]*/	todo		
 Objects/listobject.c	1642	1654	reverse_slice	reverse_slice(PyObject **lo, PyObject **hi)	todo		changed-in-3.15: was bytesobj-list-contents,bytesobj-list-ops-wf
 Objects/listobject.c	1674	1680	sortslice_copy	Py_LOCAL_INLINE(void) sortslice_copy(sortslice *s1, Py_ssize_t i, sortslice *s2, Py_ssize_t j)	modelled	bytesobj-sortslice-parallel	
 Objects/listobject.c	1682	1688	sortslice_copy_incr	Py_LOCAL_INLINE(void) sortslice_copy_incr(sortslice *dst, sortslice *src)	modelled	bytesobj-sortslice-parallel	
@@ -114,7 +114,7 @@ Objects/listobject.c	3694	3703	list_slice_subscript	list_slice_subscript(PyObjec
 Objects/listobject.c	3706	3709	_PyList_SliceSubscript	_PyList_SliceSubscript(PyObject* _self, PyObject* item)	modelled	bytesobj-slice-reads	
 Objects/listobject.c	3712	3733	list_subscript	list_subscript(PyObject* _self, PyObject* item)	modelled	sequences-subscript-agree	
 Objects/listobject.c	3736	3750	adjust_slice_indexes	adjust_slice_indexes(PyListObject *lst, Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t step)	modelled	sequences-list-slice-assign	
-Objects/listobject.c	3753	3916	list_ass_subscript_lock_held	list_ass_subscript_lock_held(PyObject *_self, PyObject *item, PyObject *value)	todo		changed-in-3.15: was sequences-insert-is-slice-assign,sequences-insert-is-slice-assign-ssize,sequences-list-slice-assign
+Objects/listobject.c	3753	3916	list_ass_subscript_lock_held	list_ass_subscript_lock_held(PyObject *_self, PyObject *item, PyObject *value)	todo		
 Objects/listobject.c	3919	3934	list_ass_subscript	list_ass_subscript(PyObject *self, PyObject *item, PyObject *value)	todo		
 Objects/listobject.c	3937	3941	list_iteritem	list_iteritem(PyObject *obj, Py_ssize_t index)	todo		changed-in-3.15: new function
 Objects/listobject.c	4052	4069	list_iter	list_iter(PyObject *seq)	modelled	bytesobj-list-iter-safe,bytesobj-list-iter-yields	

@@ -273,21 +273,27 @@ def stepDeque (s : DState) (op : Array Json) : Except String (Json × DState) :=
 def PyVal.toJ : PyVal → Json
   | .int n => toJson n
   | .float b => Json.mkObj [("f", toJson b)]
+  | .complex re im => Json.mkObj [("c", toJson [re, im])]
   | .str c => Json.mkObj [("s", toJson c)]
   | .obj t _ => Json.mkObj [("o", toJson t)]
 
 def jVal (j : Json) : Except String PyVal :=
   match j with
   | .obj _ =>
-    match j.getObjVal? "f", j.getObjVal? "s", j.getObjVal? "o" with
-    | .ok b, _, _ => PyVal.float <$> b.getNat?
-    | _, .ok c, _ => do
+    match j.getObjVal? "f", j.getObjVal? "s", j.getObjVal? "o", j.getObjVal? "c" with
+    | .ok b, _, _, _ => PyVal.float <$> b.getNat?
+    | _, .ok c, _, _ => do
       let arr ← c.getArr?
       return .str (← arr.toList.mapM (·.getNat?))
-    | _, _, .ok t => do
+    | _, _, .ok t, _ => do
       let i ← jOptInt ((j.getObjVal? "i").toOption.getD .null)
       return .obj (← t.getStr?) i
-    | _, _, _ => .error "value"
+    | _, _, _, .ok c => do
+      let arr ← c.getArr?
+      let some re := arr[0]? | throw "complex"
+      let some im := arr[1]? | throw "complex"
+      return .complex (← re.getNat?) (← im.getNat?)
+    | _, _, _, _ => .error "value"
   | v => PyVal.int <$> v.getInt?
 
 def jVals (j : Json) : Except String (List PyVal) := do
@@ -300,7 +306,7 @@ def jNats (j : Json) : Except String (List Nat) := do
 
 def jTC (j : Json) : Except String TC := do
   let s ← j.getStr?
-  match TC.all.find? (fun t => t.code.toString == s) with
+  match TC.all.find? (fun t => t.code == s) with
   | some t => pure t
   | none => throw s!"typecode {s}"
 
@@ -323,8 +329,8 @@ def arrOf (tc : TC) (vs : List PyVal) : Except String Arr :=
   | .error _ => .error "bad array operand"
 
 def reducedJ : Reduced → Json
-  | .asList t c vs => Json.arr #[toJson t, toJson c.toString, toJson (vs.map PyVal.toJ)]
-  | .asBytes t c m b => Json.arr #[toJson t, toJson c.toString, toJson m, natsJ b]
+  | .asList t c vs => Json.arr #[toJson t, toJson c, toJson (vs.map PyVal.toJ)]
+  | .asBytes t c m b => Json.arr #[toJson t, toJson c, toJson m, natsJ b]
 
 structure AState where
   a : Arr
@@ -345,8 +351,8 @@ def stepArr (s : AState) (op : Array Json) : Except String (Json × AState) := d
     | some v => .ok v
     | none => .error "iterator"
   match name with
-  | "append" => return keep (arrAppend a (← jVal (← arg op 1))) (fun _ => unitJ) id
-  | "insert" => return keep (arrInsert a (← jInt (← arg op 1)) (← jVal (← arg op 2))) (fun _ => unitJ) id
+  | "append" => return optE (arrAppendS a (← jVal (← arg op 1)))
+  | "insert" => return optE (arrInsertS a (← jInt (← arg op 1)) (← jVal (← arg op 2)))
   | "pop" => return keep (arrPop a (← optArg op 1)) (fun p => p.1.toJ) (·.2)
   | "index" => return same (pyJ toJson (arrIndex a (eqOf (← jVal (← arg op 1))) (← optArg op 2) (← optArg op 3)))
   | "count" => return same (pyJ toJson (arrCount a (eqOf (← jVal (← arg op 1)))))
@@ -414,7 +420,7 @@ def stepArr (s : AState) (op : Array Json) : Except String (Json × AState) := d
   | "buffer_info" =>
     let (nz, n) := arrBufferInfo a
     return same (okJ (Json.arr #[toJson nz, toJson n]))
-  | "typecode" => return same (okJ (toJson a.tc.code.toString))
+  | "typecode" => return same (okJ (toJson a.tc.code))
   | "itemsize" => return same (okJ (toJson a.tc.itemsize))
   | "len" => return same (okJ (toJson (arrLength a)))
   | "reduce_ex" => return same (pyJ reducedJ (arrReduceEx a (← jVal (← arg op 1))))
@@ -455,7 +461,7 @@ def jInit (j : Json) : Except String Init := do
   | "iter_raise" => return .iter (.iter (← jVals (← field j "v")) (some (.valueError "iter")))
   | "bad" => return .iter (.notIterable "int")
   | "array" =>
-    match arrNew "array" (Char.ofNat (← (← field j "tc").getNat?)) (.list (← jVals (← field j "v"))) with
+    match arrNew "array" (← getStr j "tc") (.list (← jVals (← field j "v"))) with
     | .ok a => return .arr a
     | .error _ => throw "init array"
   | k => throw s!"init {k}"
@@ -511,6 +517,12 @@ def stepDD (dd : DefDict Int Int) (op : Array Json) : Except String (Json × Def
   | "or_dd" =>
     let o : DefDict Int Int := ⟨dictUpdate [] (← jItems (← arg op 1)), facOf (← (← arg op 2).getStr?), "defaultdict"⟩
     let r := DefDict.orOp (.dd dd) (.dd o)
+    return (okJ (match r with | some x => dj x | none => toJson "NI"), dd)
+  | "or_frozen" =>
+    let r := DefDict.orOp (.dd dd) (.frozen (dictUpdate [] (← jItems (← arg op 1))))
+    return (okJ (match r with | some x => dj x | none => toJson "NI"), dd)
+  | "ror_frozen" =>
+    let r := DefDict.orOp (.frozen (dictUpdate [] (← jItems (← arg op 1)))) (.dd dd)
     return (okJ (match r with | some x => dj x | none => toJson "NI"), dd)
   | "or_bad" =>
     let r := DefDict.orOp (.dd dd) .notDict
@@ -629,9 +641,12 @@ def run (fn : String) (j : Json) : Except String Json := do
     let i ← jInit (← field j "init")
     return pyJ arrJ (arrCtorCheck c >>= (fun ch => arrNew tn ch i))
   | "reconstruct" =>
-    let tc ← (← field j "typecode").getNat?
-    let r := reconstruct (← getStr j "tname") (Char.ofNat tc) (← getInt j "mformat") (← jNats (← field j "items"))
-    return pyJ (fun a => Json.arr #[toJson a.tc.code.toString, natsJ (arrToBytes a)]) r
+    let tc ← jVal (← field j "typecode")
+    let tn ← getStr j "tname"
+    let m ← getInt j "mformat"
+    let items ← jNats (← field j "items")
+    let r := reconstructArg tc >>= (fun s => reconstruct tn s m items)
+    return pyJ (fun a => Json.arr #[toJson a.tc.code, natsJ (arrToBytes a)]) r
   | _ => pure ()
   let ops := (← (← field j "ops").getArr?).toList
   match fn with
