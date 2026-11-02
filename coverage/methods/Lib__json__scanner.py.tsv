@@ -1,2 +1,2 @@
 file	line	endline	name	signature	status	entry	note
-Lib/json/scanner.py	15	72	py_make_scanner	py_make_scanner(context)	todo		
+Lib/json/scanner.py	15	72	py_make_scanner	py_make_scanner(context)	modelled	json-array-hook,json-decode-terminates,json-int-literal,json-loads-twins,json-loads-twins-scan,json-raw-decode-twins,json-raw-decode-twins-in-range	

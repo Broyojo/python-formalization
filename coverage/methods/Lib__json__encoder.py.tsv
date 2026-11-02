@@ -5,4 +5,4 @@ Lib/json/encoder.py	105	161	JSONEncoder.__init__	__init__(self, *, skipkeys=Fals
 Lib/json/encoder.py	163	183	JSONEncoder.default	default(self, o)	modelled	json-default-typeerror	
 Lib/json/encoder.py	185	205	JSONEncoder.encode	encode(self, o)	modelled	json-dumps-accepted,json-dumps-twins,json-ensure-ascii-output,json-roundtrip	
 Lib/json/encoder.py	207	263	JSONEncoder.iterencode	iterencode(self, o, _one_shot=False)	modelled	json-allow-nan,json-dump-is-dumps,json-dumps-twins,json-iterencode-join	
-Lib/json/encoder.py	265	459	_make_iterencode	_make_iterencode(markers, _default, _encoder, _indent, _floatstr, _key_separator, _item_separator, _sort_keys, _skipkeys, _one_shot)	todo		
+Lib/json/encoder.py	265	459	_make_iterencode	_make_iterencode(markers, _default, _encoder, _indent, _floatstr, _key_separator, _item_separator, _sort_keys, _skipkeys, _one_shot)	modelled	json-dump-is-dumps,json-dumps-twins,json-iterencode-join	

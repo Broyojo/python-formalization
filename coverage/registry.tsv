@@ -301,10 +301,10 @@ pyio-base-closed-protocol	proven	Modules/_io/iobase.c	iobase_is_closed,iobase_cl
 pyio-iobase-readline-readahead	proven	Lib/_pyio.py	IOBase.readline
 json-loads-twins	refuted	Lib/json/decoder.py	JSONDecoder.decode,JSONDecoder.raw_decode,py_make_scanner,py_scanstring,scanstring_unicode,scan_once_unicode,scanner_call,raise_errmsg
 json-loads-twins-pos	refuted	Lib/json/decoder.py	JSONDecoder.decode,JSONDecoder.raw_decode,py_scanstring,scanstring_unicode,scan_once_unicode
-json-loads-twins-scan	proven	Lib/json/decoder.py	JSONDecoder.decode,JSONDecoder.raw_decode,py_scanstring,_decode_uXXXX,JSONObject,JSONArray,py_make_scanner,scanstring_unicode,_parse_object_unicode,_parse_array_unicode,_parse_constant,_match_number_unicode,scan_once_unicode,scanner_call,raise_errmsg,raise_stop_iteration,_PyUnicodeWriter_IsEmpty
+json-loads-twins-scan	proven	Lib/json/decoder.py	JSONDecoder.decode,JSONDecoder.raw_decode,py_scanstring,_decode_uXXXX,JSONObject,JSONArray,py_make_scanner,scanstring_unicode,_parse_object_unicode,_parse_array_unicode,_parse_constant,_match_number_unicode,scan_once_unicode,scanner_call,raise_errmsg,raise_stop_iteration
 json-raw-decode-twins	refuted	Lib/json/scanner.py	JSONDecoder.raw_decode,py_make_scanner,scan_once_unicode,scanner_call
 json-raw-decode-twins-in-range	proven	Lib/json/scanner.py	JSONDecoder.raw_decode,py_make_scanner,JSONObject,JSONArray,scan_once_unicode,scanner_call,_build_rval_index_tuple,_parse_object_unicode,_parse_array_unicode,_match_number_unicode
-json-dumps-twins	proven	Lib/json/encoder.py	JSONEncoder.encode,JSONEncoder.iterencode,_make_iterencode,py_encode_basestring,py_encode_basestring_ascii,ascii_escape_unicode,ascii_escape_unichar,escape_unicode,encoder_listencode_obj,encoder_listencode_list,encoder_listencode_dict,encoder_encode_key_value,encoder_encode_float,encoder_encode_string,_encoded_const,_steal_accumulate
+json-dumps-twins	proven	Lib/json/encoder.py	JSONEncoder.encode,JSONEncoder.iterencode,_make_iterencode,py_encode_basestring,py_encode_basestring_ascii,ascii_escape_unicode,ascii_escape_unichar,escape_unicode,encoder_listencode_obj,encoder_listencode_list,encoder_listencode_dict,encoder_encode_key_value,encoder_encode_float,encoder_write_string,_encoded_const,_steal_accumulate,write_escaped_ascii,write_escaped_unicode,ascii_escape_size,escape_size,ascii_escape_unicode_and_size,escape_unicode_and_size
 json-dumps-api-twins	proven	Lib/json/__init__.py	dumps
 json-dumps-fast-path	proven	Lib/json/__init__.py	dumps,dump,JSONEncoder.__init__
 json-dump-is-dumps	proven	Lib/json/__init__.py	dump,dumps,_make_iterencode,JSONEncoder.iterencode
@@ -314,7 +314,8 @@ json-allow-nan	proven	Lib/json/encoder.py	JSONEncoder.iterencode,encoder_encode_
 json-default-typeerror	proven	Lib/json/encoder.py	JSONEncoder.default
 json-default-separators	proven	Lib/json/encoder.py	JSONEncoder.__init__
 json-encode-basestring-twins	proven	Lib/json/encoder.py	py_encode_basestring,py_encode_basestring_ascii
-json-c-encode-basestring	proven	Modules/_json.c	py_encode_basestring,py_encode_basestring_ascii,ascii_escape_unichar,ascii_escape_unicode,escape_unicode
+json-c-encode-basestring	proven	Modules/_json.c	py_encode_basestring_impl,py_encode_basestring_ascii_impl,ascii_escape_unichar,ascii_escape_unicode,ascii_escape_unicode_and_size,escape_unicode,escape_unicode_and_size
+json-write-escaped	proven	Modules/_json.c	write_escaped_ascii,write_escaped_unicode,ascii_escape_size,escape_size
 json-roundtrip-str	refuted	Lib/json/encoder.py	py_encode_basestring_ascii,ascii_escape_unicode,scanstring_unicode
 json-roundtrip	proven	Lib/json/encoder.py	JSONEncoder.encode,encoder_listencode_obj,encoder_listencode_list,encoder_listencode_dict,JSONObject,JSONArray,scan_once_unicode
 json-dumps-accepted	proven	Lib/json/encoder.py	JSONEncoder.encode,encoder_listencode_obj,scan_once_unicode
@@ -334,14 +335,15 @@ json-decode-error-reduce	proven	Lib/json/decoder.py	JSONDecodeError.__init__,JSO
 json-decode-uxxxx	proven	Lib/json/decoder.py	_decode_uXXXX
 json-decoder-init	proven	Lib/json/decoder.py	JSONDecoder.__init__
 json-pairs-hook-priority	proven	Lib/json/decoder.py	JSONObject,_parse_object_unicode,JSONDecoder.__init__
+json-array-hook	proven	Lib/json/decoder.py	JSONArray,_parse_array_unicode,JSONDecoder.__init__,py_make_scanner
 json-scanstring-twins	refuted	Lib/json/decoder.py	py_scanstring
 json-scanstring-twins-in-range	proven	Lib/json/decoder.py	py_scanstring
-json-c-scanstring	proven	Modules/_json.c	py_scanstring,scanstring_unicode,_build_rval_index_tuple
+json-c-scanstring	proven	Modules/_json.c	py_scanstring_impl,scanstring_unicode,_build_rval_index_tuple
 json-scanner-call-raw	proven	Modules/_json.c	scanner_call,raise_stop_iteration,_build_rval_index_tuple
 json-scanner-new	proven	Modules/_json.c	scanner_new
 json-encoder-new	proven	Modules/_json.c	encoder_new
 json-encoder-call	proven	Modules/_json.c	encoder_call
-json-encoder-string	proven	Modules/_json.c	encoder_encode_string
+json-encoder-string	proven	Modules/_json.c	encoder_write_string
 json-indent-cache	proven	Modules/_json.c	create_indent_cache,update_indent_cache,get_item_separator,write_newline_indent
 json-indent-cache-size	proven	Modules/_json.c	update_indent_cache
 json-tool-colorize	proven	Lib/json/tool.py	_colorize_json
@@ -358,21 +360,22 @@ pickle-save-long-twins	refuted	Modules/_pickle.c	save_long
 pickle-save-long-same-outcome	proven	Modules/_pickle.c	save_long,_Pickler.save_long,encode_long
 pickle-save-long-twins-sized	proven	Modules/_pickle.c	save_long,_Pickler.save_long,encode_long
 pickle-int-line-twins	refuted	Modules/_pickle.c	load_int
-pickle-int-line-twins-no-bool-spelling	refuted	Modules/_pickle.c	load_int
 pickle-int-line-twins-no-nul	refuted	Modules/_pickle.c	load_int
 pickle-int-line-twins-narrow	proven	Modules/_pickle.c	load_int,_Unpickler.load_int
 pickle-long-line-twins	refuted	Modules/_pickle.c	load_long
 pickle-long-line-twins-no-nul	proven	Modules/_pickle.c	load_long,_Unpickler.load_long
 pickle-dumps-twins	refuted	Modules/_pickle.c	_pickle_dumps_impl,_dumps
-pickle-dumps-twins-batch-ok	refuted	Modules/_pickle.c	_pickle_dumps_impl,_dumps
-pickle-dumps-twins-batch-ok-long	refuted	Modules/_pickle.c	_pickle_dumps_impl,_dumps
+pickle-dumps-twins-long	refuted	Modules/_pickle.c	_pickle_dumps_impl,_dumps
 pickle-dumps-twins-narrow	proven	Modules/_pickle.c	dump,_pickle_dumps_impl,save,save_none,save_bool,save_long,save_bytes,_save_bytes_data,save_bytearray,_save_bytearray_data,_Pickler_write_bytes,save_unicode,write_unicode_binary,raw_unicode_escape,store_tuple_elements,save_tuple,save_list,batch_list,batch_list_exact,save_dict,batch_dict,batch_dict_exact_impl,batch_dict_exact,save_set,save_frozenset_impl,save_frozenset,memo_get,memo_put,_Pickler_Write,_Pickler_OpcodeBoundary,_Pickler_CommitFrame,_Pickler_SetProtocol,_write_size64,_Pickler.dump,_dumps,_Pickler.__init__,_Pickler.memoize,_Pickler.put,_Pickler.get,_Pickler.save,_Pickler.save_none,_Pickler.save_bool,_Pickler.save_long,_Pickler._save_bytes_no_memo,_Pickler.save_bytes,_Pickler._save_bytearray_no_memo,_Pickler.save_bytearray,_Pickler.save_str,_Pickler.save_tuple,_Pickler.save_list,_Pickler._batch_appends,_Pickler.save_dict,_Pickler._batch_setitems,_Pickler.save_set,_Pickler.save_frozenset,_Framer.__init__,_Framer.start_framing,_Framer.end_framing,_Framer.commit_frame,_Framer.write,_Framer.write_large_bytes,encode_long
 pickle-dumps-twins-exact-sized	open	Modules/_pickle.c	_pickle_dumps_impl,_dumps
 pickle-roundtrip	open	Lib/pickle.py	_dumps,_loads,_pickle_dumps_impl,_pickle_loads_impl
 pickle-loads-twins-exact	refuted	Modules/_pickle.c	_pickle_loads_impl,_loads
 pickle-loads-twins-accept	refuted	Modules/_pickle.c	_pickle_loads_impl,_loads
+pickle-memoize-twins	refuted	Modules/_pickle.c	
 pickle-loads-twins-narrow	open	Modules/_pickle.c	_pickle_loads_impl,_loads
 pickle-frame-twins	refuted	Lib/pickle.py	_Unframer.load_frame,load_frame
+pickle-frame-read	proven	Lib/pickle.py	_Unframer.load_frame,_Unframer._chunked_file_read,_Unpickler.load_frame,load_frame
+pickle-frame-chunk-twins	refuted	Modules/_pickle.c	
 pickle-put-twins	refuted	Modules/_pickle.c	load_put
 pickletools-read-uint-exact	proven	Lib/pickletools.py	read_uint1,read_uint2,read_uint4,read_uint8
 pickletools-read-int4-roundtrip	proven	Lib/pickletools.py	read_int4
@@ -1048,8 +1051,8 @@ unicodeobj-codec-raw-escape-chunks	proven	Objects/unicodeobject.c
 unicodeobj-codec-unicode-escape-chunks-narrow	proven	Objects/unicodeobject.c	
 unicodeobj-utf8-std-is-callback	proven	Objects/unicodeobject.c	unicode_decode_utf8_impl
 unicodeobj-ascii-decode-spec	proven	Objects/unicodeobject.c	PyUnicode_DecodeASCII
-unicodeobj-writer-decode-any-handler	proven	Objects/unicodeobject.c	unicode_decode_utf8_writer
-unicodeobj-writer-decode-stateful-any-handler	proven	Objects/unicodeobject.c	PyUnicodeWriter_DecodeUTF8Stateful
+unicodeobj-writer-decode-any-handler	proven	Objects/unicodeobject.c	_PyUnicode_DecodeUTF8Writer
+unicodeobj-writer-decode-stateful-any-handler	proven	Objects/unicode_writer.c	PyUnicodeWriter_DecodeUTF8Stateful
 unicodeobj-decode-utf8-spec	proven	Objects/unicodeobject.c	unicode_decode_utf8,PyUnicode_DecodeUTF8Stateful,PyUnicode_DecodeUTF8
 unicodeobj-join-spec	proven	Objects/unicodeobject.c	_PyUnicode_JoinArray
 unicodeobj-join-errors	proven	Objects/unicodeobject.c	_PyUnicode_JoinArray
@@ -1062,6 +1065,7 @@ unicodeobj-intern-spec	proven	Objects/unicodeobject.c	intern_common,immortalize_
 unicodeobj-intern-idempotent	proven	Objects/unicodeobject.c	
 unicodeobj-intern-mortality	proven	Objects/unicodeobject.c	_PyUnicode_InternMortal,_PyUnicode_InternImmortal,PyUnicode_InternInPlace,PyUnicode_InternImmortal
 unicodeobj-intern-from-string	proven	Objects/unicodeobject.c	PyUnicode_InternFromString
+unicodeobj-unicode-char-spec	proven	Objects/unicodeobject.c	unicode_char
 unicodeobj-iter-drains	proven	Objects/unicodeobject.c	unicodeiter_next,unicode_ascii_iter_next,unicode_char,unicode_iter
 unicodeobj-iter-ascii-twin	proven	Objects/unicodeobject.c	unicode_ascii_iter_next
 unicodeobj-iter-hint-exact	proven	Objects/unicodeobject.c	unicodeiter_len
@@ -1076,19 +1080,19 @@ unicodeobj-fromformat-canonical	proven	Objects/unicodeobject.c
 unicodeobj-fromformat-v-twins	proven	Objects/unicodeobject.c	
 unicodeobj-fromformat-int-matches-percent	proven	Objects/unicodeobject.c	
 unicodeobj-fromformat-escape	proven	Objects/unicodeobject.c	
-unicodeobj-writer-format-appends	proven	Objects/unicodeobject.c	PyUnicodeWriter_Format
+unicodeobj-writer-format-appends	proven	Objects/unicodeobject.c	PyUnicodeWriter_Format,_PyUnicodeWriter_FormatV
 unicodeobj-writer-format-unobservable	refuted	Objects/unicodeobject.c	
-unicodeobj-writer-text	proven	Objects/unicodeobject.c	PyUnicodeWriter_WriteStr,PyUnicodeWriter_WriteRepr,PyUnicodeWriter_WriteASCII,PyUnicodeWriter_WriteWideChar,find_maxchar_surrogates,PyUnicodeWriter_WriteUTF8
+unicodeobj-writer-text	proven	Objects/unicode_writer.c	PyUnicodeWriter_WriteStr,PyUnicodeWriter_WriteRepr,PyUnicodeWriter_WriteASCII,PyUnicodeWriter_WriteWideChar,find_maxchar_surrogates,PyUnicodeWriter_WriteUTF8
 unicodeobj-writer-consumed	proven	Objects/unicodeobject.c	
-unicodeobj-writer-finish-one-byte	proven	Objects/unicodeobject.c	unicode_result
+unicodeobj-writer-finish-one-byte	proven	Objects/unicodeobject.c	_PyUnicode_Result
 unicodeobj-writer-consumed-failure	proven	Objects/unicodeobject.c	
 unicodeobj-writer-cap-value	proven	Objects/unicodeobject.c	
-unicodeobj-writer-finish-canonical	proven	Objects/unicodeobject.c	PyUnicodeWriter_Finish,unicode_result
+unicodeobj-writer-finish-canonical	proven	Objects/unicode_writer.c	PyUnicodeWriter_Finish,_PyUnicode_Result
 unicodeobj-writer-always-canonical	refuted	Objects/unicodeobject.c	
 unicodeobj-writer-failure-keeps-state	proven	Objects/unicodeobject.c	
 unicodeobj-writer-failure-unobservable	refuted	Objects/unicodeobject.c	
-unicodeobj-writer-paths-agree	proven	Objects/unicodeobject.c	PyUnicodeWriter_WriteChar,_PyUnicodeWriter_WriteChar,_PyUnicodeWriter_WriteCharInline,PyUnicodeWriter_WriteUCS4
-unicodeobj-writer-substring-slice	proven	Objects/unicodeobject.c	PyUnicodeWriter_WriteSubstring,_PyUnicodeWriter_WriteSubstring
+unicodeobj-writer-paths-agree	proven	Objects/unicode_writer.c	PyUnicodeWriter_WriteChar,_PyUnicodeWriter_WriteChar,PyUnicodeWriter_WriteUCS4
+unicodeobj-writer-substring-slice	proven	Objects/unicode_writer.c	PyUnicodeWriter_WriteSubstring,_PyUnicodeWriter_WriteSubstring
 unicodeobj-object-isascii-kind	proven	Objects/unicodeobject.c	
 unicodeobj-object-concat-kind	proven	Objects/unicodeobject.c	
 unicodeobj-object-slice-kind	proven	Objects/unicodeobject.c	kind_maxchar_limit
@@ -1122,25 +1126,26 @@ unicodeobj-codec-wide-std-callback	proven	Objects/unicodeobject.c	PyUnicode_Deco
 unicodeobj-codec-ascii-constant-handler	proven	Objects/unicodeobject.c	unicode_decode_call_errorhandler_writer
 unicodeobj-codec-ucs1-inline-callback	proven	Objects/unicodeobject.c	unicode_encode_ucs1,unicode_encode_call_errorhandler
 unicodeobj-codec-surrogateescape-error-span	refuted	Objects/unicodeobject.c	unicode_encode_ucs1
-unicodeobj-format-nul-presentation-type	refuted	Python/formatter_unicode.c	
-unicodeobj-format-nul-int-str	proven	Python/formatter_unicode.c	
-unicodeobj-format-parse-asserts	proven	Python/formatter_unicode.c	
-unicodeobj-format-str-shape	proven	Python/formatter_unicode.c	
-unicodeobj-format-int-fast-slow	proven	Python/formatter_unicode.c	
-unicodeobj-format-group-loop	refuted	Objects/unicodeobject.c	_PyUnicode_InsertThousandsGrouping,GroupGenerator_init,GroupGenerator_next,InsertThousandsGrouping_fill
-unicodeobj-format-group-digits	proven	Objects/unicodeobject.c	_PyUnicode_InsertThousandsGrouping
-unicodeobj-format-percent-int-fast-slow	proven	Objects/unicodeobject.c	
-unicodeobj-format-percent-star-width	refuted	Objects/unicodeobject.c	
-unicodeobj-format-parse-number	proven	Python/formatter_unicode.c	
-unicodeobj-format-float-internal	proven	Python/formatter_unicode.c	
-unicodeobj-format-float-fast-slow	proven	Python/formatter_unicode.c	
-unicodeobj-format-float-width	proven	Python/formatter_unicode.c	calc_number_widths,fill_number
-unicodeobj-format-int-width	proven	Python/formatter_unicode.c	calc_number_widths,fill_number
-unicodeobj-format-float-grouping	proven	Python/formatter_unicode.c	_PyUnicode_InsertThousandsGrouping,InsertThousandsGrouping_fill,GroupGenerator_next
-unicodeobj-format-complex-internal	proven	Python/formatter_unicode.c	
-unicodeobj-format-complex-repr	proven	Python/formatter_unicode.c	
-unicodeobj-format-complex-width	proven	Python/formatter_unicode.c	
-unicodeobj-format-percent-float	proven	Objects/unicodeobject.c	formatfloat
+unicodeobj-format-nul-presentation-type	refuted	Objects/unicode_formatter.c	
+unicodeobj-format-nul-int-str	proven	Objects/unicode_formatter.c	
+unicodeobj-format-parse-asserts	proven	Objects/unicode_formatter.c	
+unicodeobj-format-str-shape	proven	Objects/unicode_formatter.c	
+unicodeobj-format-int-fast-slow	proven	Objects/unicode_formatter.c	
+unicodeobj-format-group-loop	refuted	Objects/unicode_formatter.c	_PyUnicode_InsertThousandsGrouping,GroupGenerator_init,GroupGenerator_next,InsertThousandsGrouping_fill
+unicodeobj-format-group-digits	proven	Objects/unicode_formatter.c	_PyUnicode_InsertThousandsGrouping
+unicodeobj-format-percent-int-fast-slow	proven	Objects/unicode_format.c	
+unicodeobj-format-percent-star-width	proven	Objects/unicode_format.c	
+unicodeobj-format-parse-number	proven	Objects/unicode_formatter.c	
+unicodeobj-format-float-internal	proven	Objects/unicode_formatter.c	
+unicodeobj-format-float-fast-slow	proven	Objects/unicode_formatter.c	
+unicodeobj-format-float-width	proven	Objects/unicode_formatter.c	calc_number_widths,fill_number
+unicodeobj-format-int-width	proven	Objects/unicode_formatter.c	calc_number_widths,fill_number
+unicodeobj-format-float-grouping	proven	Objects/unicode_formatter.c	_PyUnicode_InsertThousandsGrouping,InsertThousandsGrouping_fill,GroupGenerator_next
+unicodeobj-format-complex-internal	proven	Objects/unicode_formatter.c	
+unicodeobj-format-complex-repr	proven	Objects/unicode_formatter.c	
+unicodeobj-format-complex-width	proven	Objects/unicode_formatter.c	
+unicodeobj-format-percent-float-errors	proven	Objects/unicode_format.c	formatfloat
+unicodeobj-format-percent-float	proven	Objects/unicode_format.c	formatfloat
 unicodeobj-format-str-builtin	proven	Objects/stringlib/unicode_format.h	do_string_format,build_string,do_markup,output_markup,MarkupIterator_next,parse_field,field_name_split,AutoNumber_Init
 unicodeobj-format-str-render-field	proven	Objects/stringlib/unicode_format.h	render_field
 unicodeobj-format-str-autonumber	proven	Objects/stringlib/unicode_format.h	field_name_split
@@ -1150,13 +1155,13 @@ unicodeobj-format-nul-conversion	refuted	Objects/stringlib/unicode_format.h	pars
 unicodeobj-format-str-escape	proven	Objects/stringlib/unicode_format.h	MarkupIterator_next,do_markup
 unicodeobj-format-str-format-map	proven	Objects/stringlib/unicode_format.h	
 unicodeobj-format-str-parser-accepts	proven	Objects/stringlib/unicode_format.h	MarkupIterator_next
-unicodeobj-format-str-parser-reads	proven	Objects/stringlib/unicode_format.h	
+unicodeobj-format-str-parser-reads	proven	Objects/stringlib/unicode_format.h	SubString_new_object,SubString_new_object_or_empty
 unicodeobj-format-str-field-name	proven	Objects/stringlib/unicode_format.h	
 unicodeobj-format-str-nested-spec	proven	Objects/stringlib/unicode_format.h	output_markup,build_string
 unicodeobj-format-str-nested-auto	proven	Objects/stringlib/unicode_format.h	output_markup,field_name_split
 unicodeobj-format-str-recursion-limit	proven	Objects/stringlib/unicode_format.h	build_string,output_markup
 unicodeobj-format-str-many-fields	proven	Objects/stringlib/unicode_format.h	do_markup,MarkupIterator_next,field_name_split
-unicodeobj-format-percent-no-directive	proven	Objects/unicodeobject.c	
+unicodeobj-format-percent-no-directive	proven	Objects/unicode_format.c	
 unicodeobj-text-ctype-ascii	proven	Objects/unicodectype.c	
 unicodeobj-text-case-ascii-fast-path	proven	Objects/unicodeobject.c	ascii_upper_or_lower,do_upper,do_lower,do_upper_or_lower,do_casefold
 unicodeobj-text-case-output-bound	proven	Objects/unicodeobject.c	do_upper,do_lower,do_casefold,lower_ucs4

@@ -31,6 +31,6 @@ Lib/pickletools.py	2252	2288	assure_pickle_consistency	assure_pickle_consistency
 Lib/pickletools.py	2296	2326	_genops	_genops(data, yield_end_pos=False)	modelled	pickletools-dis-follows-genops,pickletools-genops-fuel,pickletools-genops-wellformed,pickletools-optimize-raw-copy	
 Lib/pickletools.py	2328	2351	genops	genops(pickle)	modelled	pickletools-dis-follows-genops,pickletools-genops-fuel,pickletools-genops-wellformed	
 Lib/pickletools.py	2356	2418	optimize	optimize(p)	modelled	pickletools-optimize-raw-copy	
-Lib/pickletools.py	2423	2592	dis	dis(pickle, out=None, memo=None, indentlevel=4, annotate=0)	todo		
+Lib/pickletools.py	2423	2592	dis	dis(pickle, out=None, memo=None, indentlevel=4, annotate=0)	modelled	pickletools-dis-follows-genops,pickletools-dis-no-indexerror	
 Lib/pickletools.py	2596	2597	_Example.__init__	__init__(self, value)	excluded		test-support: helper of the module doctests
 Lib/pickletools.py	2888	2930	_main	_main(args=None)	todo		changed-in-3.15: new function, argparse front end, not modelled
