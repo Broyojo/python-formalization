@@ -18,11 +18,11 @@ Objects/unicode_formatter.c	907	1012	fill_number	fill_number(_PyUnicodeWriter *w
 Objects/unicode_formatter.c	1021	1081	get_locale_info	get_locale_info(enum LocaleType type, enum LocaleType frac_type, LocaleInfo *locale_info)	todo		
 Objects/unicode_formatter.c	1084	1090	free_locale_info	free_locale_info(LocaleInfo *locale_info)	excluded		no-behaviour: releases the references held by LocaleInfo
 Objects/unicode_formatter.c	1097	1187	format_string_internal	format_string_internal(PyObject *value, const InternalFormatSpec *format, _PyUnicodeWriter *writer)	modelled	unicodeobj-format-str-doc	
-Objects/unicode_formatter.c	1195	1368	format_long_internal	format_long_internal(PyObject *value, const InternalFormatSpec *format, _PyUnicodeWriter *writer)	todo		changed-in-3.15: new function
+Objects/unicode_formatter.c	1195	1368	format_long_internal	format_long_internal(PyObject *value, const InternalFormatSpec *format, _PyUnicodeWriter *writer)	modelled	unicodeobj-format-int-as-str	
 Objects/unicode_formatter.c	1376	1522	format_float_internal	format_float_internal(PyObject *value, const InternalFormatSpec *format, _PyUnicodeWriter *writer)	todo		
 Objects/unicode_formatter.c	1529	1772	format_complex_internal	format_complex_internal(PyObject *value, const InternalFormatSpec *format, _PyUnicodeWriter *writer)	todo		
 Objects/unicode_formatter.c	1778	1789	format_obj	format_obj(PyObject *obj, _PyUnicodeWriter *writer)	todo		
 Objects/unicode_formatter.c	1792	1825	_PyUnicode_FormatAdvancedWriter	_PyUnicode_FormatAdvancedWriter(_PyUnicodeWriter *writer, PyObject *obj, PyObject *format_spec, Py_ssize_t start, Py_ssize_t end)	modelled	unicodeobj-format-str-doc	
-Objects/unicode_formatter.c	1828	1887	_PyLong_FormatAdvancedWriter	_PyLong_FormatAdvancedWriter(_PyUnicodeWriter *writer, PyObject *obj, PyObject *format_spec, Py_ssize_t start, Py_ssize_t end)	todo		
+Objects/unicode_formatter.c	1828	1887	_PyLong_FormatAdvancedWriter	_PyLong_FormatAdvancedWriter(_PyUnicodeWriter *writer, PyObject *obj, PyObject *format_spec, Py_ssize_t start, Py_ssize_t end)	modelled	unicodeobj-format-int-as-str	
 Objects/unicode_formatter.c	1890	1926	_PyFloat_FormatAdvancedWriter	_PyFloat_FormatAdvancedWriter(_PyUnicodeWriter *writer, PyObject *obj, PyObject *format_spec, Py_ssize_t start, Py_ssize_t end)	todo		
 Objects/unicode_formatter.c	1929	1964	_PyComplex_FormatAdvancedWriter	_PyComplex_FormatAdvancedWriter(_PyUnicodeWriter *writer, PyObject *obj, PyObject *format_spec, Py_ssize_t start, Py_ssize_t end)	todo		
