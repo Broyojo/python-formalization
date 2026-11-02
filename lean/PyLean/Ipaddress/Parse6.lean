@@ -181,19 +181,16 @@ def ipv6InitStr (s : List Char) : Py (Nat × Option (List Char)) := do
 parsing `str()` of the address gives the address and the scope back. `__reduce__` pickles an
 IPv6Address as `str(self)`, so this is what makes pickling exact.
 
-Open. Plan: (1) for `k < 16`, `hd k` is a hex digit worth `k` and not `:`, `.`, `%` or `/`
-(`decide`); for `v < 2**16`, `parseHextet (hexStr v) = .ok v`, `hexStr v` is non-empty with at
-most 4 such characters, and `hexStr v = ['0'] ↔ v = 0`. (2) The fold of `compressHextets` over
-`zipIdx` keeps the invariant "the best run `[bs, bs + bl)` and the current run `[ds, k)` hold only
-`'0'` hextets, and `bs + bl ≤ k`", so the output is either the eight hextets (`bl ≤ 1`) or
-`pre ++ H.take bs ++ [[]] ++ post` with `pre = [[]]` iff `bs = 0` and `post = [[]]` if
-`bs + bl = 8`, else `H.drop (bs + bl)`, where every hextet in the run is 0. (3) `splitMax ':' 9`
-of `joinOn1 ':' parts` is `parts` when no part holds `:` and there are at most 10 parts (as
-`split_join` for IPv4). (4) On that shape the parse finds the one inner empty part at
-`|pre| + bs`, `hi = bs`, `lo = 8 - (bs + bl)`, `skipped = bl`, and `combine` gives back the value
-(`fromBytes` of 8 base-65536 digits, with zeros in the run). (5) The IPv4-mapped form is
-`"::ffff:" ++ ipv4Str low`, whose last part goes through `ipv4Init` (`v4RoundTrip_proven`).
-(6) The scope suffix: no `%` or `/` before it, so `partitionPct` splits there. -/
+Proven in `Parse6Props.lean` (`v6RoundTrip_proven`): (1) for `k < 16`, `hd k` is a hex digit
+worth `k`; for `v < 2**16`, `parseHextet (hexStr v) = .ok v`, `hexStr v` is non-empty with at most
+4 hex digits, and `hexStr v = ['0'] → v = 0`. (2) The fold of `compressHextets` keeps the invariant
+"the best run `[bs, bs + bl)` and the current run `[ds, k)` hold only `'0'` hextets", so the output
+is the eight hextets or `pre ++ H.take bs ++ [[]] ++ post` (`pre = [[]]` iff `bs = 0`, `post = [[]]`
+if `bs + bl = 8`, else `H.drop (bs + bl)`). (3) `splitMax ':' 9` of `joinOn1 ':' parts` is `parts`
+when no part holds `:` and there are at most 10 parts. (4) Each of the 29 shapes parses back, and
+`combine` gives the value (zeros in the run). (5) The IPv4-mapped form is `"::ffff:" ++ ipv4Str low`,
+whose last part goes through `ipv4Init` (`v4RoundTrip_proven`). (6) No `%` or `/` before the scope
+suffix, so `partitionPct` splits there. -/
 def V6RoundTrip : Prop :=
   ∀ (n : Nat) (sc : Option (List Char)), n < 2 ^ 128 →
     (∀ x, sc = some x → x ≠ [] ∧ '%' ∉ x ∧ '/' ∉ x) →
