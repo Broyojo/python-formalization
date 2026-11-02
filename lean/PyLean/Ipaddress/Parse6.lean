@@ -52,8 +52,15 @@ def splitMax (sep : Char) : Nat → List Char → List (List Char)
       | p :: ps => (c :: p) :: ps
       | [] => [[c]]
 
-/-- `'%x' % v`. -/
-def hexStr (v : Nat) : List Char := (Nat.toDigits 16 v)
+/-- One lowercase hex digit. -/
+def hd (k : Nat) : Char := Char.ofNat (if k < 10 then 48 + k else 87 + k)
+
+/-- `'%x' % v` for `v < 2**16`, the only values the model formats: lowercase, no leading zeros. -/
+def hexStr (v : Nat) : List Char :=
+  if v < 16 then [hd v]
+  else if v < 256 then [hd (v / 16), hd (v % 16)]
+  else if v < 4096 then [hd (v / 256), hd (v / 16 % 16), hd (v % 16)]
+  else [hd (v / 4096), hd (v / 256 % 16), hd (v / 16 % 16), hd (v % 16)]
 
 def avMsg (pre : String) (s : List Char) : PyExc := avErr ((reprPlain s).map (pre ++ ·))
 
@@ -172,9 +179,21 @@ def ipv6InitStr (s : List Char) : Py (Nat × Option (List Char)) := do
 
 /-- For every 128-bit int and every scope that `IPv6Address` accepts (non-empty, no `%`, no `/`),
 parsing `str()` of the address gives the address and the scope back. `__reduce__` pickles an
-IPv6Address as `str(self)`, so this is what makes pickling exact. Open: the proof needs the
-invariant of `_compress_hextets`'s run search (the chosen run is a run of `'0'` hextets of length
-at least 2) and the parse of each of the four shapes the compression produces. -/
+IPv6Address as `str(self)`, so this is what makes pickling exact.
+
+Open. Plan: (1) for `k < 16`, `hd k` is a hex digit worth `k` and not `:`, `.`, `%` or `/`
+(`decide`); for `v < 2**16`, `parseHextet (hexStr v) = .ok v`, `hexStr v` is non-empty with at
+most 4 such characters, and `hexStr v = ['0'] ↔ v = 0`. (2) The fold of `compressHextets` over
+`zipIdx` keeps the invariant "the best run `[bs, bs + bl)` and the current run `[ds, k)` hold only
+`'0'` hextets, and `bs + bl ≤ k`", so the output is either the eight hextets (`bl ≤ 1`) or
+`pre ++ H.take bs ++ [[]] ++ post` with `pre = [[]]` iff `bs = 0` and `post = [[]]` if
+`bs + bl = 8`, else `H.drop (bs + bl)`, where every hextet in the run is 0. (3) `splitMax ':' 9`
+of `joinOn1 ':' parts` is `parts` when no part holds `:` and there are at most 10 parts (as
+`split_join` for IPv4). (4) On that shape the parse finds the one inner empty part at
+`|pre| + bs`, `hi = bs`, `lo = 8 - (bs + bl)`, `skipped = bl`, and `combine` gives back the value
+(`fromBytes` of 8 base-65536 digits, with zeros in the run). (5) The IPv4-mapped form is
+`"::ffff:" ++ ipv4Str low`, whose last part goes through `ipv4Init` (`v4RoundTrip_proven`).
+(6) The scope suffix: no `%` or `/` before it, so `partitionPct` splits there. -/
 def V6RoundTrip : Prop :=
   ∀ (n : Nat) (sc : Option (List Char)), n < 2 ^ 128 →
     (∀ x, sc = some x → x ≠ [] ∧ '%' ∉ x ∧ '/' ∉ x) →
