@@ -31,6 +31,7 @@ def skipJ : Json := Json.mkObj [("skip", toJson true)]
 def bytesJ (l : List Nat) : Json := Json.mkObj [("bytes", toJson l)]
 
 def itemJ : Item → Json
+  | .complex a b => Json.mkObj [("complex", Json.arr #[toJson a, toJson b])]
   | .int n => toJson n
   | .bool b => Json.mkObj [("bool", toJson b)]
   | .float d => Json.mkObj [("float", toJson d)]
@@ -104,6 +105,9 @@ def jObj (d : DS) (j : Json) : Except String (Option Obj) := do
   | .obj _ =>
     if let .ok v := j.getObjVal? "bool" then return some (.bool (← v.getBool?))
     if let .ok v := j.getObjVal? "float" then return some (.float (← v.getNat?))
+    if let .ok v := j.getObjVal? "complex" then
+      let a ← v.getArr?
+      return some (.complex (← (a.getD 0 Json.null).getNat?) (← (a.getD 1 Json.null).getNat?))
     if let .ok v := j.getObjVal? "bytes" then return some (.bytes (← jNats v))
     if let .ok v := j.getObjVal? "str" then return some (.str (← jChars v))
     if let .ok v := j.getObjVal? "list" then return some (.list (← v.getNat?))
@@ -149,7 +153,7 @@ def jKeyElem (d : DS) (j : Json) : Except String (Option KeyElem) := do
           | p => throw s!"slice part {p}"
         let how ← match f.getObjVal? "notindex" with
           | .ok _ => pure (Ret.raises (.typeError
-              "slice indices must be integers or None or have an __index__ method"))
+              "slice indices must be integers or have an __index__ method"))
           | .error _ => jRet (.ok ()) f
         pure (some { part := part, how := how : SliceFail })
       | .error _ => pure none
@@ -271,7 +275,7 @@ def stepOp (d : DS) (op : Array Json) : Except String (Json × DS) := do
       let bps ← match optArg op 3 with
         | .null => pure 1
         | j => j.getInt?
-      return runM d (memoryviewHex i sep bps) (plain fun s => toJson (String.ofList s))
+      return runM d (memoryviewHexArgs i sep bps) (plain fun s => toJson (String.ofList s))
   | "cast" => withH fun i => do
       let sh ← match optArg op 3 with
         | .null => pure none
@@ -430,7 +434,9 @@ def single (fn : String) (j : Json) : Except String Json := do
     let r := getNativeFmtchar (← getStr j "fmt").toList
     return okJ (match r with
       | none => Json.null
-      | some (c, n) => Json.arr #[toJson (String.singleton c), toJson n])
+      | some (c, n) =>
+        let text := if c = zfCode then "Zf" else if c = zdCode then "Zd" else String.singleton c
+        Json.arr #[toJson text, toJson n])
   | "mem.fmtstr" =>
     let r := getNativeFmtstr (← getStr j "fmt").toList
     return okJ (match r with

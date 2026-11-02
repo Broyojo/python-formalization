@@ -102,7 +102,7 @@ def privateBytesRFind (hay needle : Seq) (offset : Int) : Int :=
 
 /-! ## Concatenation and repetition -/
 
-/-- `bytes_concat`, bytesobject.c@3.14.7:1444-1486. -/
+/-- `_PyBytes_Concat`, bytesobject.c:1535-1577. -/
 def bytesConcat (a b : Obj) : Py Seq :=
   match a.buffer?, b.buffer? with
   | some va, some vb =>
@@ -126,6 +126,13 @@ def bytesRepeat (s : Seq) (n : Int) : Py Seq :=
 `PyNumber_AsSsize_t(n, PyExc_OverflowError)`. -/
 def bytesMul (s : Seq) (n : Int) : Py Seq := do
   bytesRepeat s (← Sequences.repeatCount n)
+
+/-- `b * n` at a specialized `BINARY_OP_EXTEND`, `seq_int_multiply`, Python/specialize.c:2147-2155: the
+count goes through `PyLong_AsSsize_t`. -/
+def bytesMulSpecialized (s : Seq) (n : Int) : Py Seq :=
+  if n < ssizeMin ∨ n > ssizeMax then
+    .error (.overflowError "Python int too large to convert to C ssize_t")
+  else bytesRepeat s n
 
 /-! ## Comparison -/
 
@@ -184,7 +191,7 @@ def bytesRichcompareObj (a b : Obj) (op : CmpOp) : Option Bool :=
 /-! ## Hash -/
 
 /-- A `bytes` object: its contents and the cached hash, `ob_shash`
-(`set_ob_shash`/`get_ob_shash`, bytesobject.c@3.14.7:56-80). `-1` means not computed. -/
+(`set_ob_shash`, bytesobject.c:53-60, `_PyBytes_GET_CACHED_HASH`). `-1` means not computed. -/
 structure BytesSt where
   data : Seq
   shash : Int := -1
@@ -273,18 +280,20 @@ def lengthHint (o : Obj) (d : Int) : Py Int :=
   | .iterHint _ (.ok v) =>
     if v < ssizeMin ∨ v > ssizeMax then
       .error (.overflowError "Python int too large to convert to C ssize_t")
-    else if v < 0 then .error (.valueError "__length_hint__() should return >= 0")
+    else if v < 0 then .error (.valueError s!"{o.typeName}.__length_hint__() must return a non-negative int")
     else .ok v
   | _ => .ok d
 
 /-- `PySequence_Fast(o, msg)`, Objects/abstract.c:2104-2129: an exact list or tuple as it
-is, anything else through `PySequence_List`, which runs the iterator to its end first. -/
+is, anything else through `PySequence_List`, which runs the iterator to its end first, after
+`list_preallocate_exact` of the hint (listobject.c:218-249: an even count of pointers). -/
 def sequenceFast (msg : PyExc) (o : Obj) : Py (List Obj) :=
   match o with
   | .list xs | .tuple xs => .ok xs
   | _ => do
     let xs ← getIterOr msg o
-    let _ ← lengthHint o 8
+    let n ← lengthHint o 8
+    if n ≠ 0 ∧ mallocFails (8 * (n + n % 2)) then throw memoryError
     iterFinish o
     return xs
 
@@ -515,7 +524,7 @@ def cStringPrec (p : Seq) (prec : Int) : Seq :=
   let z := p.takeWhile (· != 0)
   if prec ≤ 0 then z else z.take prec.toNat
 
-/-- The loop of `PyBytes_FromFormatV`, bytesobject.c:218-352. -/
+/-- The loop of `bytes_fromformat`, bytesobject.c:218-352. -/
 def fromFormatLoop (f : Seq) : Nat → Nat → List CArg → Seq → Py Seq
   | 0, _, _, _ => .error .modelFuel
   | fuel + 1, i, args, out =>
@@ -564,9 +573,24 @@ def fromFormatLoop (f : Seq) : Nat → Nat → List CArg → Seq → Py Seq
         -- invalid format string: copy unformatted string and exit
         .ok (out ++ (f.drop p).takeWhile (· != 0))
 
-/-- `PyBytes_FromFormatV`, bytesobject.c@3.14.7:199-388, and `PyBytes_FromFormat`, :380-390.
-`format` is a C string. -/
+/-- `PyBytes_FromFormatV`, bytesobject.c:361-377, and `PyBytes_FromFormat`, :380-390, on
+`bytes_fromformat`, :187-358. `format` is a C string. -/
 def bytesFromFormat (format : Seq) (args : List CArg) : Py Seq :=
   fromFormatLoop format (format.length + 1) 0 args []
+
+/-- `PyBytesWriter_Format(writer, format, ...)`, bytesobject.c:4063-4085: the text written and the
+writer left, and the exception. On an error of `bytes_fromformat` the size goes back to where it was;
+the allocation stays. The `Grow` of each `WRITE_BYTES` is the one `Resize` here, which differs from C
+only in how much is allocated. -/
+def writerFormat (w : Writer) (format : Seq) (args : List CArg) : Writer × Seq × Option PyExc :=
+  match writerGrow w format.length with
+  | .error e => (w, [], some e)
+  | .ok w1 =>
+    match bytesFromFormat (format.takeWhile (· != 0)) args with
+    | .error e => ({ w1 with size := w.size }, [], some e)
+    | .ok text =>
+      match writerResize w1 (w.size + text.length) with
+      | .ok w2 => (w2, text, none)
+      | .error e => ({ w1 with size := w.size }, [], some e)
 
 end PyLean.BytesObj.Bytes

@@ -148,15 +148,16 @@ theorem bytesNewSpec_proven : BytesNewSpec := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro vals h
     have := items_ok vals h
+    have hw : writerCreate 64 false = .ok { overallocate := true, size := 64 } := by decide
     simp only
     refine ⟨?_, ?_, ?_⟩ <;>
       simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, iterItems?, this, getIterOr, lengthHint,
-        iterFinish, mallocFails, bytesObjectSize, bind, Except.bind, pure, Except.pure]
+        iterFinish, hw, bind, Except.bind, pure, Except.pure]
   · intro n h0 hs
     have h1 : ssizeMin ≤ (n : Int) ∧ (n : Int) ≤ ssizeMax := by
       rw [ssizeMax_val, show ssizeMin = -9223372036854775808 by decide]; omega
     have h2 : ¬ ((n : Int) < 0) := by omega
-    simp [bytesNew, Obj.index?, countOf, h1, h2, bytesFromSize_ok n h0 hs]
+    simp [bytesNew, Obj.index?, countOf, h1, h2, bytesFromSize_ok n hs]
   · intro v h1 h2
     have h3 : ssizeMin ≤ v ∧ v ≤ ssizeMax := by
       rw [ssizeMax_val]; omega

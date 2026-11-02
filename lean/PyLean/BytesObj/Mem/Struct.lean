@@ -3,7 +3,7 @@ import PyLean.BytesObj.Mem.Base
 /-!
 The part of `struct.Struct` that `memoryview` comparison reaches through
 `struct_get_unpacker` (memoryobject.c:2151-2200): format parsing (`whichtable`,
-`prepare_s`, Modules/_struct.c:1561-1583, :1644-1745) and `unpack_from`
+`prepare_s`, Modules/_struct.c:1640-1800, :1644-1745) and `unpack_from`
 (`s_unpack_internal`). Formats reach it as C strings from a buffer exporter.
 -/
 
@@ -28,6 +28,19 @@ def standardSize : Char → Option Nat
   | 'q' | 'Q' | 'd' => some 8
   | _ => none
 
+/-- `getentry`, Modules/_struct.c:1603-1613: the table entry at `c :: cs`, as its code, size,
+alignment, and the text after it. A table entry can be two characters, `Zf` and `Zd`. -/
+def entryAt (native : Bool) (c : Char) (cs : List Char) : Option (Char × Nat × Nat × List Char) :=
+  if c = 'Z' then
+    match cs with
+    | 'f' :: r => some (zfCode, 8, if native then 4 else 0, r)
+    | 'd' :: r => some (zdCode, 16, if native then 8 else 0, r)
+    | _ => none
+  else
+    match (if native then nativeSize c else standardSize c) with
+    | none => none
+    | some n => some (c, n, if native then n else 0, cs)
+
 /-- A compiled `Struct`: `(format, repeat, item size, offset)` per code. -/
 structure SFmt where
   big : Bool
@@ -43,7 +56,7 @@ def spanDigits : List Char → Nat → Nat × List Char
   | c :: cs, n => if isDigit c then spanDigits cs (10 * n + (c.toNat - 48)) else (n, c :: cs)
   | [], n => (n, [])
 
-/-- `align`, Modules/_struct.c@3.14.7:1600-1612. -/
+/-- `align`, Modules/_struct.c:1618-1632. -/
 def alignTo (size a : Nat) : Nat :=
   if a > 0 ∧ size > 0 then size + ((a - 1) - (size - 1) % a) else size
 
@@ -69,10 +82,10 @@ def parseCodes (native : Bool) : Nat → List Char → Nat → List (Char × Nat
       if (num : Int) > ssizeMax then .error sizeTooLong
       else if bad then .error (structError "repeat count given without format specifier")
       else
-        match (if native then nativeSize c else standardSize c) with
+        match entryAt native c cs with
         | none => .error (structError "bad char in struct format")
-        | some itemsize =>
-          let size := alignTo size (if native then itemsize else 0)
+        | some (c, itemsize, alignment, cs) =>
+          let size := alignTo size alignment
           if (size : Int) > ssizeMax then .error sizeTooLong
           else if (num : Int) > Int.tdiv (ssizeMax - size) itemsize then .error sizeTooLong
           else
@@ -109,6 +122,12 @@ def structParse (fmt : List Char) : Py SFmt :=
 /-- One item of format `c` from its bytes in memory order, `big` selecting the order. -/
 def structItem (big : Bool) (c : Char) (bs : List Nat) : Item :=
   let n := decLE (if big then bs.reverse else bs)
+  let half (o k : Nat) : Nat :=
+    let part := (bs.drop o).take k
+    decLE (if big then part.reverse else part)
+  if c = zfCode then .complex (widen32 (half 0 4)) (widen32 (half 4 4))
+  else if c = zdCode then .complex (half 0 8) (half 8 8)
+  else
   match c with
   | 'c' => .bytes bs
   | '?' => .bool (n != 0)

@@ -5,7 +5,7 @@ Object state of the `memoryview` model: `Py_buffer`, `_PyManagedBufferObject`,
 `PyMemoryViewObject`, the iterator, and the state monad that threads them, plus the
 functions of memoryobject.c that only compute on buffers (contiguity, stride
 initialisation, the copy routines). Line numbers refer to `Objects/memoryobject.c`,
-CPython 3.14.7, unless stated otherwise.
+CPython 3.15.2, unless stated otherwise.
 -/
 
 namespace PyLean.BytesObj.Mem
@@ -176,7 +176,7 @@ def cLoop (shape strides : List Int) : Nat → Int → Bool
     let dim := shape.getD i 0
     if dim > 1 ∧ strides.getD i 0 ≠ sd then false else cLoop shape strides i (sd * dim)
 
-/-- `_IsCContiguous`, abstract.c:490-515. -/
+/-- `_IsCContiguous`, abstract.c:500-525. -/
 def isCContiguous (v : Buf) : Bool :=
   if v.len = 0 then true
   else
@@ -191,7 +191,7 @@ def fLoop : List Int → List Int → Int → Bool
     if dim > 1 ∧ s ≠ sd then false else fLoop shape strides (sd * dim)
   | dim :: shape, [], sd => if dim > 1 ∧ 0 ≠ sd then false else fLoop shape [] (sd * dim)
 
-/-- `_IsFortranContiguous`, abstract.c:450-487. -/
+/-- `_IsFortranContiguous`, abstract.c:460-498. -/
 def isFortranContiguous (v : Buf) : Bool :=
   if v.len = 0 then true
   else
@@ -201,7 +201,7 @@ def isFortranContiguous (v : Buf) : Bool :=
       else ((v.shape.getD []).filter (· > 1)).length ≤ 1
     | some st => fLoop (v.shape.getD []) st v.itemsize
 
-/-- `PyBuffer_IsContiguous`, abstract.c:517-530. -/
+/-- `PyBuffer_IsContiguous`, abstract.c:527-540. -/
 def pyBufferIsContiguous (v : Buf) (order : Char) : Bool :=
   if v.suboffsets.isSome then false
   else if order = 'C' then isCContiguous v
@@ -434,6 +434,11 @@ def unpackRaw (m : Mem) (ptr : Int) (fmt : List Char) : Py Item :=
   | 'e' => .ok (.float (unpack2 (rdU m ptr 2)))
   | 'c' => .ok (.bytes [rdByte m ptr])
   | 'P' => .ok (.int (rdU m ptr 8))
+  | 'Z' =>
+    match cc fmt 1 with
+    | 'f' => .ok (.complex (unpack4 (rdU m ptr 4)) (unpack4 (rdU m (ptr + 4) 4)))
+    | 'd' => .ok (.complex (rdU m ptr 8) (rdU m (ptr + 8) 8))
+    | _ => .error (notImplError s!"memoryview: format {fmtText fmt} not supported")
   | _ => .error (notImplError s!"memoryview: format {fmtText fmt} not supported")
 
 /-- `unpack_cmp`, :2987-3051, for `fmt != '_'`. `CMP_SINGLE` compares C values, which
@@ -459,7 +464,13 @@ def unpackCmpNative (m : Mem) (p q : Int) (fmt : Char) : Py Bool :=
   | 'e' => .ok (dEq (unpack2 (rdU m p 2)) (unpack2 (rdU m q 2)))
   | 'c' => .ok (rdByte m p == rdByte m q)
   | 'P' => .ok (rdU m p 8 == rdU m q 8)
-  | _ => .error (runtimeError "memoryview: internal error in richcompare")
+  | c =>
+    if c = zfCode then
+      .ok (dEq (widen32 (rdU m p 4)) (widen32 (rdU m q 4)) &&
+        dEq (widen32 (rdU m (p + 4) 4)) (widen32 (rdU m (q + 4) 4)))
+    else if c = zdCode then
+      .ok (dEq (rdU m p 8) (rdU m q 8) && dEq (rdU m (p + 8) 8) (rdU m (q + 8) 8))
+    else .error (runtimeError "memoryview: internal error in richcompare")
 
 /-- `unpack_cmp`, with `unp = some (unpack_p, unpack_q)` for `fmt == '_'`. -/
 def unpackCmp (m : Mem) (p q : Int) (fmt : Char) (unp : Option (Unpacker × Unpacker)) : Py Bool :=
@@ -543,7 +554,7 @@ def hexRight (sep : Char) (k : Nat) : Nat → List Nat → List Char
   | 0, rl => rl.reverse.flatMap hexPair
   | c + 1, rl => hexRight sep k c (rl.drop k) ++ sep :: (rl.take k).reverse.flatMap hexPair
 
-/-- `_Py_strhex_impl` after the separator checks, pystrhex.c@3.14.7:45-134. `group` is
+/-- `_Py_strhex_impl` after the separator checks, pystrhex.c:154-245. `group` is
 `bytes_per_sep_group`, `0` when there is no separator. -/
 def strhexBody (arg : List Nat) (sep : Char) (group : Int) : Py (List Char) :=
   let arglen : Int := arg.length

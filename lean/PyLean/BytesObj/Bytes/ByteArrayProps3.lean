@@ -20,9 +20,9 @@ theorem getByte_bad (v : Int) (h : v < 0 ∨ v ≥ 256) :
     getByteValue (.int v) = .error (.valueError "byte must be in range(0, 256)") := by
   simp [getByteValue, Obj.index?, h]
 
-theorem resize_small (b : BA) (n : Int) (h0 : 0 ≤ n) (hE : b.exports = 0) (h1 : n < 2 ^ 46)
-    (h2 : b.alloc < 2 ^ 46) : ∃ r, baResize b n = .ok r := by
-  obtain ⟨r, hr, _⟩ := exportRule_proven.2.2.2 b n h0 hE h1 h2
+theorem resize_small (b : BA) (n : Int) (h0 : 0 ≤ n) (hE : b.exports = 0) (h1 : n < 2 ^ 46) :
+    ∃ r, baResize b n = .ok r := by
+  obtain ⟨r, hr, _⟩ := exportRule_proven.2.2.2 b n h0 hE h1
   exact ⟨r, hr⟩
 
 /-- `append`, `insert` and `pop` act on the contents as the `list` methods do (the object
@@ -30,9 +30,9 @@ has no exports, and fits in memory; an argument byte in `range(256)`): the bound
 `insert` and `pop` is the list's for every int index. An item outside `range(256)` raises
 `ValueError` first. `reverse` is an involution and `clear` empties. -/
 def MutatorsSpec : Prop :=
-  (∀ (b : BA) (c : Nat), c < 256 → b.exports = 0 → b.size < 2 ^ 45 → b.alloc < 2 ^ 45 →
+  (∀ (b : BA) (c : Nat), c < 256 → b.exports = 0 → b.size < 2 ^ 45 →
     ∃ r, baAppend b (.int c) = .ok r ∧ r.data = Sequences.listAppend b.data c) ∧
-  (∀ (b : BA) (i : Int) (c : Nat), c < 256 → b.exports = 0 → b.size < 2 ^ 45 → b.alloc < 2 ^ 45 →
+  (∀ (b : BA) (i : Int) (c : Nat), c < 256 → b.exports = 0 → b.size < 2 ^ 45 →
     ssizeMin ≤ i → i ≤ ssizeMax →
     ∃ r, baInsert b i (.int c) = .ok r ∧ Sequences.listInsert b.data i c = .ok r.data) ∧
   (∀ (b r : BA) (i : Option Int) (v : Int), baPop b i = .ok (v, r) →
@@ -79,20 +79,16 @@ theorem baPop_list (b r : BA) (i : Option Int) (v : Int) (h : baPop b i = .ok (v
 
 theorem mutatorsSpec_proven : MutatorsSpec := by
   refine ⟨?_, ?_, baPop_list, ?_, ?_, ?_⟩
-  · intro b c hc hE hs ha
-    obtain ⟨r, hr⟩ := resize_small b (b.size + 1) (by simp only [BA.size]; omega) hE (by omega) (by omega)
+  · intro b c hc hE hs
+    obtain ⟨r, hr⟩ := resize_small b (b.size + 1) (by simp only [BA.size]; omega) hE (by omega)
     refine ⟨{ r with data := b.data ++ [(c : Int)] }, ?_, rfl⟩
-    have hne : ¬ (b.size = ssizeMax) := by
-      rw [ssizeMax_val]; omega
-    simp [baAppend, getByte_ok c hc, hne, hr, bind, Except.bind, pure, Except.pure]
-  · intro b i c hc hE hs ha h1 h2
-    obtain ⟨r, hr⟩ := resize_small b (b.size + 1) (by simp only [BA.size]; omega) hE (by omega) (by omega)
-    have hne : ¬ (b.size = ssizeMax) := by
-      rw [ssizeMax_val]; omega
+    simp [baAppend, getByte_ok c hc, hr, bind, Except.bind, pure, Except.pure]
+  · intro b i c hc hE hs h1 h2
+    obtain ⟨r, hr⟩ := resize_small b (b.size + 1) (by simp only [BA.size]; omega) hE (by omega)
     have hi : Sequences.asSsize i = .ok i := by
       simp [Sequences.asSsize, h1, h2]
     refine ⟨{ r with data := Sequences.insAt b.data (Sequences.ins1Pos b.size i).toNat (c : Int) }, ?_, ?_⟩
-    · simp only [baInsert, hi, getByte_ok c hc, hne, if_false, hr, bind, Except.bind, pure, Except.pure]
+    · simp only [baInsert, hi, getByte_ok c hc, hr, bind, Except.bind, pure, Except.pure]
     · simp only [Sequences.listInsert, hi, bind, Except.bind, pure, Except.pure, Sequences.listIns1]
       rfl
   · intro b v h
@@ -117,10 +113,10 @@ def InitLoopKeepsLayout : Prop :=
 
 theorem initLoopKeepsLayout_refuted : ¬ InitLoopKeepsLayout := by
   intro h
-  have hw : BA.WF { data := [1], alloc := 5, offset := 3 } := by
+  have hw : BA.WF { data := [1], alloc := 5, offset := 4 } := by
     simp [BA.WF, BA.size]
-  have hr : baInitLoop { data := [1], alloc := 5, offset := 3 } [.int 65] =
-      .ok { data := [1, 65], alloc := 5, offset := 3 } := by
+  have hr : baInitLoop { data := [1], alloc := 5, offset := 4 } [.int 65] =
+      .ok { data := [1, 65], alloc := 5, offset := 4 } := by
     decide
   have := h _ _ _ hw hr
   simp [BA.WF, BA.size] at this
@@ -142,7 +138,7 @@ theorem initLoopFreshLayout_proven : InitLoopFreshLayout := by
     · rw [if_pos hc] at h
       simp only [Except.ok.injEq] at h
       subst h
-      refine ⟨by simpa using hw.1, Or.inr ?_⟩
+      refine ⟨by simpa using hw.1, ?_⟩
       simp only [BA.size, List.length_append, List.length_cons, List.length_nil]
       simp only [h0]
       omega
@@ -153,15 +149,11 @@ theorem initLoopFreshLayout_proven : InitLoopFreshLayout := by
       simp only [Except.ok.injEq] at h
       subst h
       obtain ⟨hw2, hs2, _, _⟩ := resizeWF_proven b r' _ hw hr
-      refine ⟨hw2.1, Or.inr ?_⟩
-      simp only [BA.size] at hs2 ⊢
+      refine ⟨hw2.1, ?_⟩
+      have h3 := hw2.2
+      simp only [BA.size] at hs2 h3 ⊢
       simp only [List.length_append, List.length_cons, List.length_nil]
-      rcases hw2.2 with ⟨_, h2, _⟩ | h2
-      · rw [h2] at hs2
-        simp at hs2
-        omega
-      · simp only [BA.size, hs2] at h2
-        omega
+      omega
 
 /-! ## Slice assignment against `list` -/
 
@@ -175,7 +167,7 @@ def SliceAssignAgreesList : Prop :=
 theorem sliceAssignAgreesList_refuted : ¬ SliceAssignAgreesList := by
   intro h
   have hr : baAssSlice (baOf [1, 2, 3]) ⟨none, none, some 2⟩ (some (.bytes [])) =
-      .ok { data := [2], alloc := 2, offset := 0, exports := 0 } := by
+      .ok { data := [2], alloc := 1, offset := 0, exports := 0 } := by
     decide
   have := h _ _ _ _ hr
   revert this

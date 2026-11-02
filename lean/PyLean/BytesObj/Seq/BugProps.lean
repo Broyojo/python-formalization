@@ -1,9 +1,8 @@
 import PyLean.BytesObj.Seq.AllocProps
 
 /-!
-Three things that are not so, each with the version that is. The Python reproducers
-are in `bugs/`. `ListDelLikePop` is the behaviour of gh-158592, on record here because
-the model mirrors 3.14.7, which still has it; it is fixed on main.
+Things that are not so, each with the version that is, and the allocation of `del`. The Python
+reproducers are in `bugs/`.
 -/
 
 namespace PyLean.BytesObj.Seq
@@ -78,42 +77,90 @@ theorem listHintIgnoredWhenOverflowing_proven : ListHintIgnoredWhenOverflowing :
   rw [hroom]
   simp [h2, h3, extendDrain]
 
-/-- `del l[i]` and `l.pop(i)` remove the same item, so they should leave the list with
-the same allocation. On 3.14.7 they do not: `list_ass_item_lock_held` deletes without
-calling `list_resize`, so the array never shrinks however many items go. gh-158592,
-closed; `list_ass_item_impl` on main calls `list_resize`. -/
+/-- `del l[-1]` and `l.pop()` remove the same item and leave the same list, allocation included,
+because both call `list_resize`. A list of one item is the exception `list_pop_impl` makes itself
+(listobject.c:1626-1630): `pop` clears it and gives the array back, and `del` keeps a small array.
+Hypothesis: a valid list object. -/
 def ListDelLikePop : Prop :=
   ∀ (α : Type) (o o1 o2 : LObj α) (v : α), o.WF →
     listSetItem o (-1) none = .ok o1 → listPop o none = .ok (v, o2) →
-      o1.allocated = o2.allocated
+      (2 ≤ o.items.length → o1 = o2) ∧ (o.items.length = 1 → o1.items = [] ∧ o2.allocated = 0)
 
-theorem listDelLikePop_refuted : ¬ ListDelLikePop := by
-  intro h
-  let o : LObj Unit := { items := List.replicate 5 (), allocated := 16, hasItems := true }
-  have hw : o.WF := ⟨by decide, by decide, fun _ => rfl, by decide⟩
-  have := h Unit o { o with items := List.replicate 4 () }
-    { items := List.replicate 4 (), allocated := 8, hasItems := true } () hw (by decide) (by decide)
-  revert this
-  decide
+theorem listDelLikePop_proven : ListDelLikePop := by
+  intro α o o1 o2 v hw h1 h2
+  have hs : PyLean.Sequences.subIndex (-1) = .ok (-1) := by decide
+  have h1' : listAssItem o (-1 + (o.items.length : Int)) none = .ok o1 := by
+    simpa [listSetItem, hs, bind, Except.bind] using h1
+  by_cases h0 : o.items.length = 0
+  · simp [listPop, listPopK, h0] at h2
+  have hne : ¬ (o.items.length : Int) = 0 := by omega
+  have hlt : (o.items.length : Int) < 2 ^ 63 := by
+    have h3 := hw.covers
+    have h4 := hw.bytes
+    unfold ssizeMax at h4
+    have h8 : (2 : Int) ^ 63 = 9223372036854775808 := by decide
+    rw [h8]
+    omega
+  have hv : validIndex (-1 + (o.items.length : Int)) (o.items.length : Int) = true := by
+    have h2 : (2 : Int) ^ 64 = 18446744073709551616 := by decide
+    have h8 : (2 : Int) ^ 63 = 9223372036854775808 := by decide
+    rw [h8] at hlt
+    unfold validIndex
+    rw [h2, Int.emod_eq_of_lt (a := -1 + (o.items.length : Int)) (by omega) (by omega),
+      Int.emod_eq_of_lt (a := (o.items.length : Int)) (by omega) (by omega)]
+    exact decide_eq_true (by omega)
+  have hneg : (-1 : Int) < 0 := by decide
+  simp only [listAssItem, hv, Bool.not_true, Bool.false_eq_true, if_false] at h1'
+  simp only [listPop, listPopK, hne, if_false, hneg, if_true, hv, Bool.not_true, Bool.false_eq_true] at h2
+  constructor
+  · intro h2le
+    have hn1 : ¬ ((o.items.length : Int) - 1 = 0) := by omega
+    split at h2
+    · simp at h2
+    · simp only [hn1, if_false] at h2
+      rw [h1'] at h2
+      simp only [Except.ok.injEq, Prod.mk.injEq] at h2
+      exact h2.2
+  · intro h1e
+    have hn1 : ((o.items.length : Int) - 1 = 0) := by omega
+    constructor
+    · have hr := (resizeTo_wf hw h1').2
+      rw [hr]
+      apply List.length_eq_zero_iff.mp
+      rw [List.length_eraseIdx]
+      split <;> omega
+    · split at h2
+      · simp at h2
+      · simp only [hn1, if_true, Except.ok.injEq, Prod.mk.injEq] at h2
+        rw [← h2.2]
+        have hhas : o.hasItems = true := hw.array (by have := hw.covers; omega)
+        simp [listClear, hhas]
 
-/-- What 3.14.7 does: `del l[i]` and `l[i] = x` leave `allocated` and `ob_item` alone. -/
-def ListAssItemKeepsAllocation : Prop :=
+/-- `l[i] = x` leaves the array alone, and `del l[i]` is `list_resize` to one item less. -/
+def ListAssItemAllocation : Prop :=
   ∀ (α : Type) (o o' : LObj α) (i : Int) (v : Option α), listAssItem o i v = .ok o' →
-    o'.allocated = o.allocated ∧ o'.hasItems = o.hasItems
+    (v.isSome → o'.allocated = o.allocated ∧ o'.hasItems = o.hasItems) ∧
+    (v = none → ∃ (a : Int) (h : Bool),
+      listResize o.allocated o.hasItems o.items.length o'.items.length = .ok (a, h) ∧
+      o'.allocated = a ∧ o'.hasItems = h)
 
-theorem listAssItemKeepsAllocation_proven : ListAssItemKeepsAllocation := by
+theorem listAssItemAllocation_proven : ListAssItemAllocation := by
   intro α o o' i v h
   unfold listAssItem at h
   split at h
   · simp at h
   · cases v with
     | none =>
-      simp only [Except.ok.injEq] at h
-      rw [← h]
-      exact ⟨rfl, rfl⟩
+      simp only [resizeTo] at h
+      split at h
+      · rename_i a b hr
+        simp only [Except.ok.injEq] at h
+        subst h
+        refine ⟨by simp, fun _ => ⟨a, b, hr, rfl, rfl⟩⟩
+      · simp at h
     | some x =>
       simp only [Except.ok.injEq] at h
       rw [← h]
-      exact ⟨rfl, rfl⟩
+      exact ⟨fun _ => ⟨rfl, rfl⟩, by simp⟩
 
 end PyLean.BytesObj.Seq

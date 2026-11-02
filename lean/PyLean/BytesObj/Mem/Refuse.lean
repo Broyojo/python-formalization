@@ -202,7 +202,7 @@ def Cast1DRefusals : Prop :=
     (format.any (fun c => c.toNat ≥ 128) = true → castTo1D i format st = (.error unicodeEncodeError, st)) ∧
     (format.any (fun c => c.toNat ≥ 128) = false → getNativeFmtchar format = none →
       castTo1D i format st = (.error (.valueError
-        "memoryview: destination format must be a native single character format prefixed with an optional '@'"), st)) ∧
+        "memoryview: destination format must be a native format prefixed with an optional '@'"), st)) ∧
     (∀ c size, format.any (fun c => c.toNat ≥ 128) = false → getNativeFmtchar format = some (c, size) →
       srcIsByte view = false → isByteFormat c = false →
       castTo1D i format st = (.error (.typeError "memoryview: cannot cast between two non-byte formats"), st)) ∧
@@ -548,10 +548,14 @@ theorem structSizeTooLong_proven : StructSizeTooLong := by
   · simp only [List.cons_append]
     rw [hmain]
     have h3 : ¬ ((num : Int) > ssizeMax) := by omega
+    have hcZ : c ≠ 'Z' := by
+      rintro rfl
+      simp [nativeSize] at hz
+    have he : entryAt true c rest = some (c, z, z, rest) := by simp [entryAt, hcZ, hz]
     have h4 : alignTo 0 z = 0 := by simp [alignTo]
     have h5 : ¬ (((0 : Nat) : Int) > ssizeMax) := by unfold ssizeMax; omega
     have h6 : (num : Int) > Int.tdiv (ssizeMax - ((0 : Nat) : Int)) z := by simpa using h2
-    simp only [parseCodes, n6, Bool.false_eq_true, ↓reduceIte, hd, hsp, h3, hz, h4, h5, h6]
+    simp only [parseCodes, n6, Bool.false_eq_true, ↓reduceIte, hd, hsp, h3, he, h4, h5, h6]
   · simp [fixStructError, sizeTooLong, structError, excMatches, PyExc.className, excBases]
 
 /-- An item too large to allocate is `MemoryError`, after the format is accepted, and
@@ -629,7 +633,8 @@ theorem rich_bytes (st : St) (j : Nat) (b : List Nat) (hl : baseInaccessible st 
       rw [M.bind_app, gb]
       rfl
     simp [tryCatch, MonadExcept.tryCatch, hm]
-  simp only [memoryRichEqual, M.bind_app, M.get, hl, Bool.false_eq_true, ↓reduceIte, tc]
+  have hq : ((Obj.bytes b == Obj.view j) && selfEqualFormat (st.mv j).view.format) = false := by simp
+  simp only [memoryRichEqual, M.bind_app, M.get, hl, Bool.false_eq_true, ↓reduceIte, hq, tc]
   rcases hr : pyBufferRelease (bytesView st.mem.length b) { st with mem := st.mem ++ b } with ⟨r0, s⟩
   have hok := pyBufferRelease_ok (bytesView st.mem.length b) { st with mem := st.mem ++ b }
   rw [hr] at hok

@@ -43,7 +43,7 @@ expected: |
   An empty view is contiguous whatever its stride: m[1:1:2].contiguous is True and the three
   calls behave as for m[1:1].
 observed: |
-  python3 3.14.7: contiguous True False; cast '0' vs TypeError; join b'' vs TypeError. REPRODUCED.
+  python3 3.15.2: contiguous True False; cast '0' vs TypeError; join b'' vs TypeError. REPRODUCED.
   main (python.exe 3.16.0a1+dev): identical. REPRODUCED.
 promised_by: |
   Objects/abstract.c:468-469 and :508-509 ("len = 0 <==> exists i: shape[i] = 0", then "if

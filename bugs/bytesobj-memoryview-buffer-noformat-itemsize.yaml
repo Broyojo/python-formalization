@@ -38,10 +38,10 @@ expected: |
   A view whose elements are what its format says: format 'B', itemsize 1, shape (12,), or the
   original format.
 observed: |
-  python3 3.14.7: B 4 (3,) 12 [0, 2, 3]. REPRODUCED.
+  python3 3.15.2: B 4 (3,) 12 [0, 2, 3]. REPRODUCED.
   main (python.exe 3.16.0a1+dev): identical. REPRODUCED.
 promised_by: |
-  Doc/library/stdtypes.rst@3.14.7:5016, memoryview.itemsize (the example struct.calcsize('H') ==
+  Doc/library/stdtypes.rst, memoryview.itemsize (the example struct.calcsize('H') ==
   m.itemsize); PEP 3118 and Doc/c-api/buffer.rst, itemsize.
 cause: |
   Objects/memoryobject.c:1576-1583 (memory_getbuf drops the format, keeps itemsize), :550

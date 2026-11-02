@@ -85,21 +85,24 @@ theorem itemSpec_proven : ItemSpec := by
 operations say, for buffers and iterables; `*=` refuses with exports when the size changes
 and accepts `n = 1`; a value that is no buffer is a `TypeError`. -/
 def ConcatSpec2 : Prop :=
-  (∀ (a b : Seq), (a.length : Int) + b.length + 1 < 2 ^ 47 → a ++ b ≠ [] →
+  (∀ (a b : Seq), (a.length : Int) + b.length + 33 < 2 ^ 47 → a ++ b ≠ [] →
     ∃ r, baConcat (.bytearray a) (.bytes b) = .ok r ∧ r.data = seqData (a ++ b)) ∧
   (∀ (b r : BA) (o : Obj) (v : Seq), o.buffer? = some v → baIConcat b o = .ok r →
     r.data = b.data ++ seqData v) ∧
   (∀ (b : BA) (o : Obj), o.buffer? = none → ∃ m, baIConcat b o = .error (.typeError m)) ∧
   (∀ b : BA, baIRepeat b 1 = .ok b) ∧
-  (∀ (b : BA) (n : Int), 1 < n → b.size ≠ 0 → b.size ≤ Int.tdiv ssizeMax n → b.exports > 0 →
+  (∀ (b : BA) (n : Int), 1 < n → b.size ≠ 0 → b.size ≤ Int.tdiv baSizeMax n → b.exports > 0 →
     baIRepeat b n = .error (bufferError "Existing exports of data: object cannot be re-sized")) ∧
-  (∀ (b r : BA) (v : Seq), b.seq = v → (v.length : Int) + 1 < 2 ^ 47 → v ≠ [] → baCopy b = .ok r →
+  (∀ (b r : BA) (v : Seq), b.seq = v → (v.length : Int) + 33 < 2 ^ 47 → v ≠ [] → baCopy b = .ok r →
     r.data = seqData v)
 
 theorem concatSpec2_proven : ConcatSpec2 := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro a b h hne
-    have h1 : ¬ ((a.length : Int) > ssizeMax - b.length) := by rw [ssizeMax_val]; omega
+    have h1 : ¬ ((a.length : Int) > baSizeMax - b.length) := by
+      unfold baSizeMax
+      rw [ssizeMax_val, objsize_val]
+      omega
     have hne2 : ¬ ((a.length : Int) + b.length = 0) := by
       intro e
       apply hne
@@ -107,13 +110,10 @@ theorem concatSpec2_proven : ConcatSpec2 := by
       have hb : b.length = 0 := by omega
       simp [List.length_eq_zero_iff.mp ha, List.length_eq_zero_iff.mp hb]
     have h3 : ¬ ((a.length : Int) + b.length < 0) := by omega
-    have h4 : ¬ ((a.length : Int) + b.length = ssizeMax) := by rw [ssizeMax_val]; omega
-    have h5 : mallocFails ((a.length : Int) + b.length + 1) = false := by
-      simpa [mallocFails] using (show ¬ ((a.length : Int) + b.length + 1 ≥ 2 ^ 47) by omega)
+    have h4 := bytesSizeCheck_ok ((a.length : Int) + b.length) (by omega) h
     refine ⟨{ data := seqData ((a ++ b).take ((a.length : Int) + b.length).toNat),
-              alloc := (a.length : Int) + b.length + 1 }, ?_, ?_⟩
-    · simp only [baConcat, Obj.buffer?, h1, if_false, baFromStringAndSize, h3, h4, hne2, h5,
-        Bool.false_eq_true]
+              alloc := (a.length : Int) + b.length }, ?_, ?_⟩
+    · simp only [baConcat, Obj.buffer?, h1, if_false, baFromStringAndSize, h3, h4, hne2]
     · simp only
       have e : ((a.length : Int) + b.length).toNat = (a ++ b).length := by simp; omega
       rw [e, List.take_length]
@@ -147,7 +147,7 @@ theorem concatSpec2_proven : ConcatSpec2 := by
     have hp : 0 < b.size := by simp only [BA.size] at h2 ⊢; omega
     have h5 : ¬ (n < 0) := by omega
     have h6 : ¬ (n = 1) := by omega
-    have h7 : ¬ (n > 0 ∧ b.size > Int.tdiv ssizeMax n) := by omega
+    have h7 : ¬ (n > 0 ∧ b.size > Int.tdiv baSizeMax n) := by omega
     have hmul : b.size * n ≠ b.size := by
       intro e
       have : b.size * n > b.size * 1 := Int.mul_lt_mul_of_pos_left (by omega) hp
@@ -166,10 +166,8 @@ theorem concatSpec2_proven : ConcatSpec2 := by
       have : b.data.length = 0 := by omega
       simp [BA.seq, List.length_eq_zero_iff.mp this]
     have h3 : ¬ (b.size < 0) := by omega
-    have h4 : ¬ (b.size = ssizeMax) := by rw [ssizeMax_val]; omega
-    have h5 : mallocFails (b.size + 1) = false := by
-      simpa [mallocFails] using (show ¬ (b.size + 1 ≥ 2 ^ 47) by omega)
-    simp only [baFromStringAndSize, h3, h4, h0, h5, if_false, Bool.false_eq_true, Except.ok.injEq] at h
+    have h4 := bytesSizeCheck_ok b.size (by omega) (by omega)
+    simp only [baFromStringAndSize, h3, h4, h0, if_false, Except.ok.injEq] at h
     subst h
     simp only
     have e : b.size.toNat = b.seq.length := by omega
@@ -190,7 +188,7 @@ def InitSpec : Prop :=
     baNew (some (.int v)) none none = .error (.valueError "negative count")) ∧
   baNew none none none = .ok {} ∧
   (∀ cs : Seq, baNew (some (.str cs)) none none = bytesNewError cs) ∧
-  (∀ (b : BA) (arg : Option Obj), b.size ≠ 0 → b.exports > 0 →
+  (∀ (b : BA) (arg : Option Obj), b.exports > 0 →
     (baInit b arg none none).2 = some (bufferError "Existing exports of data: object cannot be re-sized"))
 where
   /-- The `TypeError` `bytes()` gives for a `str` without an encoding. -/
@@ -198,9 +196,13 @@ where
 
 theorem resize_empty (n : Nat) (h0 : n ≠ 0) (hs : (n : Int) + 1 < 2 ^ 46) :
     ∃ r, baResize {} (n : Int) = .ok r := by
-  have := exportRule_proven.2.2.2 {} (n : Int) (by omega) rfl (by omega) (by decide)
+  have := exportRule_proven.2.2.2 {} (n : Int) (by omega) rfl (by omega)
   obtain ⟨r, hr, _⟩ := this
   exact ⟨r, hr⟩
+
+theorem baNewObject_eq : baNewObject = {} := rfl
+
+theorem init_fresh : (do canResize ({} : BA); baResize {} 0 : Py BA) = .ok {} := rfl
 
 theorem initSpec_proven : InitSpec := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
@@ -215,7 +217,7 @@ theorem initSpec_proven : InitSpec := by
       obtain ⟨r, hr⟩ := resize_empty s.length hne (by omega)
       refine ⟨{ r with data := seqData s }, ?_, rfl⟩
       have hz : ({} : BA).size = 0 := rfl
-      simp [baNew, baInit, hz, Obj.index?, Obj.buffer?, hr]
+      simp [baNew, baNewObject_eq, baInit, init_fresh, hz, Obj.index?, Obj.buffer?, hr]
   · intro n h0 h
     obtain ⟨r, hr⟩ := resize_empty n h0 (by omega)
     have h1 : ssizeMin ≤ (n : Int) ∧ (n : Int) ≤ ssizeMax := by
@@ -225,18 +227,17 @@ theorem initSpec_proven : InitSpec := by
     refine ⟨{ r with data := List.replicate n 0 }, ?_, ?_⟩
     · have hz : ({} : BA).size = 0 := rfl
       have h3' : 0 < n := by omega
-      simp [baNew, baInit, hz, Obj.index?, countOf, h1, h2, h3', hr]
+      simp [baNew, baNewObject_eq, baInit, init_fresh, hz, Obj.index?, countOf, h1, h2, h3', hr]
     · rfl
   · intro v h1 h2
     have h3 : ssizeMin ≤ v ∧ v ≤ ssizeMax := by rw [ssizeMax_val]; omega
     have hz : ({} : BA).size = 0 := rfl
-    simp [baNew, baInit, hz, Obj.index?, countOf, h3, h1]
+    simp [baNew, baNewObject_eq, baInit, init_fresh, hz, Obj.index?, countOf, h3, h1]
   · rfl
   · intro cs
     rfl
-  · intro b arg h1 h2
-    have hr := exportRule_proven.2.1 b 0 (by omega) (by omega) h2
-    simp [baInit, h1, hr]
+  · intro b arg h2
+    simp [baInit, canResize, h2, bind, Except.bind]
 
 /-! ## The iterator -/
 
@@ -315,9 +316,15 @@ theorem reduceSpec_proven : ReduceSpec := by
       have hf := findIdx_none_lt s 256 hs
       have e1 : encodeStr s "latin-1" = .ok s := by simp [encodeStr, hf]
       have hz : ({} : BA).size = 0 := rfl
-      have h5 : ¬ ((0 : Int) > ssizeMax - s.length) := by rw [ssizeMax_val]; omega
+      have h5 : ¬ ((0 : Int) > baSizeMax - s.length) := by
+        unfold baSizeMax
+        rw [ssizeMax_val, objsize_val]
+        omega
       refine ⟨{ r with data := r.data.take (0 : Int).toNat ++ seqData s }, ?_, by simp⟩
-      simp [baNew, baInit, hz, e1, baIConcat, Obj.buffer?, h5, hr, bind, Except.bind, pure, Except.pure]
+      have hc0 : canResize ({} : BA) = .ok () := rfl
+      have hr0 : baResize {} 0 = .ok {} := rfl
+      have h6 : ¬ (baSizeMax - (s.length : Int) < 0) := by omega
+      simp [baNew, baNewObject_eq, baInit, hc0, hr0, hz, e1, baIConcat, Obj.buffer?, h6, hr, bind, Except.bind, pure, Except.pure]
     · simp only [Bool.false_eq_true, if_false, hp]
       obtain ⟨r, h1, h2⟩ := initSpec_proven.1 s (by omega)
       exact ⟨by omega, r, h1, h2⟩
@@ -365,7 +372,7 @@ def EscapeWarning : Prop :=
 theorem escapeWarning_proven : EscapeWarning := by
   constructor
   · intro s hs
-    have := (reprDecodeRoundTrip_proven 39 s (Or.inl rfl) hs).1
+    have := reprDecodeRoundTrip_proven 39 s (Or.inl rfl) hs
     simp [bytesDecodeEscape, this, bind, Except.bind, escapeWarning, pure, Except.pure]
   · exact ⟨_, rfl⟩
 

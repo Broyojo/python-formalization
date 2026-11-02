@@ -41,7 +41,7 @@ reproducer: |
 expected: |
   KeyError, as for b.find.
 observed: |
-  python3 3.14.7: in: TypeError, find: KeyError. REPRODUCED.
+  python3 3.15.2: in: TypeError, find: KeyError. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): in: TypeError, find: KeyError. REPRODUCED.
 promised_by: |
   Twin behaviour: find and in search for the same argument, and parse_args_finds_byte, which serves

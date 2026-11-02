@@ -288,4 +288,21 @@ theorem tupleHashOneLane_proven : TupleHashOneLane := by
     · simp only [if_neg h1, if_neg h2] at h
       exact absurd h hr
 
+/-- The stack test of `tuple_hash`: it comes after the cache, and a tuple that passes it hashes as
+`tupleHash` does; otherwise the `RecursionError` leaves the cache alone, so a later call can succeed. -/
+def TupleHashGuard : Prop :=
+  ∀ (α : Type) (hashE : α → Py Int) (t : Tup α),
+    tupleHashGuarded hashE t false = tupleHash hashE t ∧
+    (toUhash t.hash ≠ U64 - 1 → tupleHashGuarded hashE t true = .ok (t.hash, t)) ∧
+    (toUhash t.hash = U64 - 1 → tupleHashGuarded hashE t true =
+      .error (.named "RecursionError" "~Stack overflow while hashing a tuple"))
+
+theorem tupleHashGuard_proven : TupleHashGuard := by
+  intro α hashE t
+  refine ⟨?_, fun h => ?_, fun h => ?_⟩
+  · unfold tupleHashGuarded tupleHash
+    split <;> simp
+  · simp [tupleHashGuarded, h]
+  · simp [tupleHashGuarded, h]
+
 end PyLean.BytesObj.Seq

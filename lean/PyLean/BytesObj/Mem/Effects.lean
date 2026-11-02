@@ -549,7 +549,9 @@ theorem compareReleases_proven : CompareReleases := by
   have hok := pyBufferRelease_ok b st
   have e : memoryRichEqual v (.exporter (.val b) none) st =
       (some <$> compareBufs st.mem st.noStruct (st.mv v).view b, (pyBufferRelease b st).2) := by
-    simp only [memoryRichEqual, M.bind_app, M.get, hl, Bool.false_eq_true, ↓reduceIte, tc]
+    have hq : ((Obj.exporter (Ret.val b) none == Obj.view v) && selfEqualFormat (st.mv v).view.format) = false := by
+      simp
+    simp only [memoryRichEqual, M.bind_app, M.get, hl, Bool.false_eq_true, ↓reduceIte, hq, tc]
     rcases hr : pyBufferRelease b st with ⟨r0, s⟩
     rw [hr] at hok
     simp only at hok

@@ -6,6 +6,7 @@ import PyLean.BytesObj.Mem.NDim
 import PyLean.BytesObj.Mem.Fortran
 import PyLean.BytesObj.Mem.Contig
 import PyLean.BytesObj.Mem.Refuse
+import PyLean.BytesObj.Mem.Complex
 
 /-! Registry entries for memoryview (Objects/memoryobject.c). -/
 
@@ -153,7 +154,7 @@ def entries : List Entry := [
     prop := ``TupleFailures, thm := some ``tupleFailures_proven },
   { id := "bytesobj-memoryview-buffer-failures", pyFile := "Objects/memoryobject.c", pyFns := ["memoryview_impl", "PyMemoryView_FromObject", "PyMemoryView_FromObjectAndFlags", "memoryview__from_flags_impl", "_PyManagedBuffer_FromObject"]
     statement := "A __buffer__ that raises or returns a non-memoryview makes memoryview(x), memoryview._from_flags(x, flags) and PyObject_GetBuffer raise that failure, after its callback ran, leaving the byte store alone."
-    source := "memoryobject.c:801-825; Objects/typeobject.c@3.14.7:10718-10719", status := .proven
+    source := "memoryobject.c:801-825; Objects/typeobject.c:11432-11433", status := .proven
     prop := ``BufferFailures, thm := some ``bufferFailures_proven },
   { id := "bytesobj-memoryview-format-native", pyFile := memFile
     pyFns := ["get_native_fmtchar", "get_native_fmtstr", "memoryview_cast_impl"]
@@ -163,7 +164,7 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-cast-format-embedded-nul", pyFile := memFile
     pyFns := ["cast_to_1D", "get_native_fmtchar", "get_native_fmtstr"]
     statement := "memoryview.cast accepts only a format of the form [@]c."
-    source := "error message at memoryobject.c@3.14.7:1297", status := .refuted
+    source := "error message at memoryobject.c:1326", status := .refuted
     prop := ``CastWholeFormat, thm := some ``castWholeFormat_refuted
     bug := some "bytesobj-memoryview-cast-format-embedded-nul" },
   { id := "bytesobj-memoryview-cast-1d", pyFile := memFile
@@ -299,6 +300,21 @@ def entries : List Entry := [
     statement := "A released view compares by identity, and a non-exporter gives NotImplemented."
     source := "memoryobject.c:3216-3257", status := .proven
     prop := ``CmpSpecialCases, thm := some ``cmpSpecialCases_proven },
+  { id := "bytesobj-memoryview-complex-cmp", pyFile := "Objects/memoryobject.c"
+    pyFns := ["unpack_cmp", "unpack_single"]
+    statement := "unpack_cmp on Zd and Zf is == on the items tolist gives, part by part, whatever the bits; the signalling NaN that PyFloat_Unpack4 keeps does not change the outcome."
+    source := "twin: unpack_single against unpack_cmp, memoryobject.c:1856-1868 and :3101-3120", status := .proven
+    prop := ``ComplexCmp, thm := some ``complexCmp_proven },
+  { id := "bytesobj-memoryview-pack-unpack-complex", pyFile := "Objects/memoryobject.c"
+    pyFns := ["pack_single", "unpack_single"]
+    statement := "pack_single then unpack_single on Zd stores both parts exactly, and on Zf reads back what (float) stored, through PyFloat_Unpack4."
+    source := "round trip, memoryobject.c:2036-2058 and :1856-1868", status := .proven
+    prop := ``PackUnpackComplex, thm := some ``packUnpackComplex_proven },
+  { id := "bytesobj-memoryview-self-equal", pyFile := "Objects/memoryobject.c"
+    pyFns := ["memory_richcompare"]
+    statement := "v == v is true for a live view of a format with no float, by the test alone; P, the float and complex formats go on to the comparison."
+    source := "comment at memoryobject.c:3222-3244", status := .proven
+    prop := ``SelfEqualShortcut, thm := some ``selfEqualShortcut_proven },
   { id := "bytesobj-memoryview-cmp-reflexive", pyFile := memFile
     pyFns := ["memory_richcompare", "unpack_cmp", "cmp_base", "cmp_rec", "equiv_shape", "get_native_fmtchar"]
     statement := "m == m for every view of a native format other than f, d, e, of any shape, strides and suboffsets."

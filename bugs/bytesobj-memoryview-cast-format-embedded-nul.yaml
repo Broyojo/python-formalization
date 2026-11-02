@@ -33,12 +33,12 @@ expected: |
   ValueError("memoryview: destination format must be a native single character format prefixed
   with an optional '@'").
 observed: |
-  python3 3.14.7: 'B' 1; without the NUL: ValueError. REPRODUCED.
+  python3 3.15.2: 'B' 1; without the NUL: ValueError. REPRODUCED.
   main (python.exe 3.16.0a1+dev): identical. REPRODUCED.
 promised_by: |
-  The error message at Objects/memoryobject.c@3.14.7:1297; Doc/library/stdtypes.rst, memoryview.cast.
+  The error message at Objects/memoryobject.c:1326; Doc/library/stdtypes.rst, memoryview.cast.
 cause: |
-  Objects/memoryobject.c@3.14.7:1290-1294 and :1343: the length of asciifmt is never compared with
+  Objects/memoryobject.c:1319-1323 and :1343: the length of asciifmt is never compared with
   strlen(PyBytes_AS_STRING(asciifmt)).
 possible_fix: |
   In cast_to_1D, raise the same ValueError when strlen(PyBytes_AS_STRING(asciifmt)) !=

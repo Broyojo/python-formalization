@@ -70,11 +70,11 @@ theorem strhex_eval (s : Seq) (c : Nat) (n : Int) (o : Obj) (ho : o = .str [c] �
 /-- `b.hex(sep, n)`: without a group (or with `|n|` at least the length) all hex pairs; with
 `n < 0` the bytes in groups of `|n|` from the left, the last one short; with `n > 0` the same from the
 right, the first one short; `sep` stands between groups and nowhere else. Hypotheses: `sep` is one
-ASCII character, `n` fits the C `int` (the other cases are `OverflowError` and `ValueError`, and
+ASCII character, `n` fits a `Py_ssize_t` (the other cases are `OverflowError` and `ValueError`, and
 `bytesHex` mirrors them), and the output fits, that is `3 * len(b) < sys.maxsize / 2`. -/
 def HexGroups : Prop :=
   ∀ (s : Seq) (c : Nat) (n : Int) (o : Obj), (o = .str [c] ∨ o = .bytes [c]) → c < 128 →
-    -2147483648 ≤ n → n ≤ 2147483647 → (s.length : Int) * 2 + 1 < 2 ^ 62 →
+    ssizeMin ≤ n → n ≤ ssizeMax → (s.length : Int) * 2 + 1 < 2 ^ 62 →
     ∃ r, bytesHex s (some o) n = .ok r ∧
       (((n.natAbs : Int) ≥ s.length ∨ n = 0) → r = s.flatMap hexPair) ∧
       (n < 0 → (n.natAbs : Int) < s.length → ∃ gs : List Seq, s = gs.flatten ∧
@@ -86,7 +86,7 @@ def HexGroups : Prop :=
 
 theorem hexGroups_proven : HexGroups := by
   intro s c n o ho hc h1 h2 hlen
-  have hnot : ¬ (n < -2147483648 ∨ n > 2147483647) := by omega
+  have hnot : ¬ (n < ssizeMin ∨ n > ssizeMax) := by omega
   have he : bytesHex s (some o) n = strhexImpl s (some o) n false := by
     simp only [bytesHex]
     rw [if_neg hnot]
@@ -144,63 +144,56 @@ theorem drop_next {mem : Seq} {j x : Nat} {tl : Seq} (h : mem.drop j = x :: tl) 
   have := congrArg (fun l => l.drop 1) h
   simpa [List.drop_drop, Nat.add_comm] using this
 
-theorem skip_spec (mem : Seq) : ∀ (t : Seq) (i fuel : Nat), mem.drop (i + 1) = t ++ [0] →
-    t.length < fuel → ∃ k, k ≤ t.length ∧ skipSpaces mem fuel i = .ok (i + 1 + k) ∧
-      hexSpec (i + 1) t = hexSpec (i + 1 + k) (t.drop k) ∧
-      (∀ c, (t.drop k).head? = some c → isSpaceC c = false) := by
+theorem skip_spec (mem : Seq) (len : Nat) : ∀ (t : Seq) (i fuel : Nat), mem.drop (i + 1) = t ++ [0] →
+    t.length < fuel → len = i + 1 + t.length →
+    ∃ k, k ≤ t.length ∧ hexSpec (i + 1) t = hexSpec (i + 1 + k) (t.drop k) ∧
+      (∀ c, (t.drop k).head? = some c → isSpaceC c = false) ∧
+      skipSpaces mem len fuel i = .ok (if k = t.length then none else some (i + 1 + k)) := by
   intro t
   induction t with
   | nil =>
-    intro i fuel hm hf
+    intro i fuel hm hf hl
     cases fuel with
     | zero => omega
     | succ f =>
-      have hr := read_cons (by simpa using hm : mem.drop (i + 1) = 0 :: [])
-      refine ⟨0, by simp, ?_, rfl, by simp⟩
-      have h0 : isSpaceC 0 = false := rfl
-      simp only [skipSpaces, hr, h0, Bool.false_eq_true, ↓reduceIte]
+      refine ⟨0, by simp, rfl, by simp, ?_⟩
+      have hge : i + 1 ≥ len := by simp at hl; omega
+      simp [skipSpaces, hge]
   | cons d t' ih =>
-    intro i fuel hm hf
+    intro i fuel hm hf hl
     cases fuel with
     | zero => simp at hf
     | succ f =>
       have hm' : mem.drop (i + 1) = d :: (t' ++ [0]) := by simpa using hm
       have hr := read_cons hm'
+      have hlt : ¬ (i + 1 ≥ len) := by simp at hl; omega
       cases hd : isSpaceC d with
       | false =>
-        refine ⟨0, by simp, ?_, rfl, ?_⟩
-        · simp only [skipSpaces, hr, hd, Bool.false_eq_true, ↓reduceIte]
+        refine ⟨0, by simp, rfl, ?_, ?_⟩
         · intro c hc
           simp only [List.drop_zero, List.head?_cons, Option.some.injEq] at hc
           subst hc
           exact hd
+        · simp [skipSpaces, hr, hd, hlt]
       | true =>
-        obtain ⟨k, k1, k2, k3, k4⟩ := ih (i + 1) f (drop_next hm') (by simpa using hf)
-        refine ⟨k + 1, by simpa using k1, ?_, ?_, ?_⟩
-        · simp only [skipSpaces, hr, hd, ↓reduceIte, k2]
-          congr 1
-          omega
+        obtain ⟨k, k1, k3, k4, k2⟩ := ih (i + 1) f (drop_next hm') (by simpa using hf)
+          (by simp at hl; omega)
+        refine ⟨k + 1, by simpa using k1, ?_, by simpa using k4, ?_⟩
         · rw [hexSpec_space _ _ _ hd, k3]
           have e : i + 1 + 1 + k = i + 1 + (k + 1) := by omega
           rw [e]
           simp
-        · simpa using k4
+        · simp only [skipSpaces, hlt, if_false, hr, hd, ↓reduceIte, k2]
+          simp only [List.length_cons, Nat.add_right_cancel_iff]
+          have e : i + 1 + 1 + k = i + 1 + (k + 1) := by omega
+          rw [e]
 
-/-- The part of the loop of `_PyBytes_FromHex` after the whitespace, bytesobject.c:2695-2712. -/
+/-- The part of the loop of `_PyBytes_FromHex` after the whitespace, bytesobject.c:2697-2716. -/
 def hexBody (mem : Seq) (len fuel j : Nat) (out : Seq) : Py Seq :=
-  match memRead mem j with
+  match fromHexDigits mem len j with
   | .error e => .error e
-  | .ok t =>
-    let top := digitValue t
-    if top ≥ 16 then .error (invalidAt j)
-    else
-      match memRead mem (j + 1) with
-      | .error e => .error e
-      | .ok b =>
-        let bot := digitValue b
-        if bot ≥ 16 then
-          if j + 1 ≥ len then .error oddDigits else .error (invalidAt (j + 1))
-        else fromHexLoop mem len fuel (j + 2) (out ++ [top * 16 + bot])
+  | .ok none => .ok out
+  | .ok (some v) => fromHexLoop mem len fuel (j + 2) (out ++ [v])
 
 theorem loop_unfold (mem : Seq) (len f i : Nat) (out : Seq) :
     fromHexLoop mem len (f + 1) i out =
@@ -208,9 +201,10 @@ theorem loop_unfold (mem : Seq) (len f i : Nat) (out : Seq) :
         match memRead mem i with
         | .error e => .error e
         | .ok c =>
-          match (if isSpaceC c then skipSpaces mem (mem.length + 1) i else .ok i : Py Nat) with
+          match (if isSpaceC c then skipSpaces mem len (len + 1) i else .ok (some i) : Py (Option Nat)) with
           | .error e => .error e
-          | .ok j => if j ≥ len ∧ isSpaceC c then .ok out else hexBody mem len f j out
+          | .ok none => .ok out
+          | .ok (some j) => hexBody mem len f j out
       else .ok out := rfl
 
 theorem except_map_append (x : Py Seq) (out : Seq) (d : Nat) :
@@ -243,22 +237,21 @@ theorem fromHexLoop_spec (mem : Seq) (len : Nat) : ∀ (n : Nat) (rest : Seq) (i
       have hm2 := drop_next hm1
       cases t1 with
       | nil =>
-        have h1 := read_cons (by simpa using hm2 : mem.drop (j + 1) = 0 :: [])
-        have hz : digitValue 0 = 37 := rfl
         have hge : j + 1 ≥ len := by simp at hl0; omega
         by_cases hd : digitValue t0 ≥ 16
-        · simp [hexBody, h0, hd, hexSpec, hsp, Except.map]
-        · simp [hexBody, h0, hd, h1, hz, hge, hexSpec, hsp, Except.map]
+        · simp [hexBody, fromHexDigits, h0, hd, hexSpec, hsp, Except.map]
+        · simp [hexBody, fromHexDigits, h0, hd, hge, hexSpec, hsp, Except.map]
       | cons d r =>
         have hm3 : mem.drop (j + 1) = d :: (r ++ [0]) := by simpa using hm2
         have h1 := read_cons hm3
         have hm4 := drop_next hm3
+        have hge : ¬ j + 1 ≥ len := by simp at hl0; omega
         by_cases hd : digitValue t0 ≥ 16
-        · simp [hexBody, h0, hd, hexSpec, hsp, Except.map]
+        · simp [hexBody, fromHexDigits, h0, hd, hexSpec, hsp, Except.map]
         · by_cases he : digitValue d ≥ 16
-          · have hge : ¬ j + 1 ≥ len := by simp at hl0; omega
-            simp [hexBody, h0, hd, h1, he, hge, hexSpec, hsp, Except.map]
-          · simp only [hexBody, h0, hd, h1, he, if_false, hexSpec, hsp, Bool.false_eq_true]
+          · simp [hexBody, fromHexDigits, h0, hd, h1, he, hge, hexSpec, hsp, Except.map]
+          · simp only [hexBody, fromHexDigits, h0, hd, h1, he, hge, if_false, hexSpec, hsp,
+              Bool.false_eq_true]
             rw [ih r (j + 2) f _ (by simp at hn0; omega) hm4 (by simp at hl0; omega)
               (by simp at hf0; omega)]
             exact except_map_append _ _ _
@@ -271,36 +264,34 @@ theorem fromHexLoop_spec (mem : Seq) (len : Nat) : ∀ (n : Nat) (rest : Seq) (i
       rw [loop_unfold, if_pos hlt, h0]
       cases hc : isSpaceC c with
       | false =>
-        simp only [hc, Bool.false_eq_true, ↓reduceIte, and_false]
+        simp only [hc, Bool.false_eq_true, ↓reduceIte]
         exact body i c t (by simp) hm (by simp at hl; omega) hn (by simp at hf; omega) hc
       | true =>
-        have hml : t.length < mem.length + 1 := by
-          have h1 : (mem.drop i).length = t.length + 2 := by rw [hm]; simp
-          have h2 : (mem.drop i).length ≤ mem.length := by simp
-          omega
-        obtain ⟨k, k1, k2, k3, k4⟩ := skip_spec mem t i (mem.length + 1) (drop_next hm1) hml
-        simp only [hc, ↓reduceIte, k2, and_true]
+        obtain ⟨k, k1, k3, k4, k2⟩ := skip_spec mem len t i (len + 1) (drop_next hm1)
+          (by simp at hl; omega) (by simp at hl; omega)
+        simp only [hc, ↓reduceIte, k2]
         rw [hexSpec_space _ _ _ hc, k3]
         have hdk : mem.drop (i + 1 + k) = t.drop k ++ [0] := by
           rw [← List.drop_append_of_le_length k1, ← drop_next hm1, List.drop_drop]
         have hul : (t.drop k).length = t.length - k := by simp
         simp only [List.length_cons] at hl hn hf
-        generalize t.drop k = u at hdk hul k4 ⊢
-        cases u with
-        | nil =>
-          have hge : i + 1 + k ≥ len := by simp at hul; omega
-          simp [hge, hexSpec, Except.map]
-        | cons t0 t1 =>
-          simp only [List.length_cons] at hul
-          have hnge : ¬ i + 1 + k ≥ len := by omega
-          rw [if_neg hnge]
-          exact body (i + 1 + k) t0 t1 (by simp) hdk (by omega) (by omega) (by omega) (k4 t0 rfl)
+        by_cases hk : k = t.length
+        · have hnil : t.drop k = [] := by rw [hk]; simp
+          simp [hk, hexSpec, Except.map]
+        · rw [if_neg hk]
+          generalize t.drop k = u at hdk hul k4 ⊢
+          cases u with
+          | nil => simp at hul; omega
+          | cons t0 t1 =>
+            simp only [List.length_cons] at hul
+            exact body (i + 1 + k) t0 t1 (by simp) hdk (by omega) (by omega) (by omega) (k4 t0 rfl)
 
-/-- `bytes.fromhex` is the grammar `hexSpec` for every `bytes` and `bytearray`, embedded NUL and all,
-and for every ASCII `str`; a non-ASCII `str` is refused at its first non-ASCII position. The pointer
-loop's reads past the end are not visible for these arguments. -/
+/-- `bytes.fromhex` is the grammar `hexSpec` for every `bytes`, `bytearray` and view, embedded NUL and
+all, whatever follows a view, and for every ASCII `str`; a non-ASCII `str` is refused at its first
+non-ASCII position. -/
 def FromHexSpec : Prop :=
   ∀ s : Seq, bytesFromHex (.bytes s) = hexSpec 0 s ∧ bytesFromHex (.bytearray s) = hexSpec 0 s ∧
+    (∀ after, bytesFromHex (.memview s after) = hexSpec 0 s) ∧
     ((∀ c ∈ s, c < 128) → bytesFromHex (.str s) = hexSpec 0 s) ∧
     (∀ i, s.findIdx? (fun c => decide (c ≥ 128)) = some i → bytesFromHex (.str s) = .error (invalidAt i))
 
@@ -310,7 +301,9 @@ theorem fromHexSpec_proven : FromHexSpec := by
     unfold fromHexRaw
     rw [fromHexLoop_spec _ _ s.length s 0 _ _ (Nat.le_refl _) (by simp) (by simp) (by omega)]
     cases hexSpec 0 s <;> simp [Except.map]
-  refine ⟨h, h, fun ha => ?_, fun i hi => ?_⟩
+  refine ⟨h, h, fun after => ?_, fun ha => ?_, fun i hi => ?_⟩
+  · rw [fromHexIgnoresTail_proven s after]
+    exact h
   · have hn : s.findIdx? (fun c => decide (c ≥ 128)) = none := by
       rw [List.findIdx?_eq_none_iff]
       intro c hc
@@ -322,8 +315,8 @@ theorem fromHexSpec_proven : FromHexSpec := by
 
 /-! ## `repr` -/
 
-theorem reprScan_ok : ∀ (s : Seq) (n sq dq : Int), n + 4 * s.length ≤ ssizeMax →
-    ∃ n', n' ≤ n + 4 * s.length ∧ reprScan s n sq dq = .ok (n', sq + s.count 39, dq + s.count 34) := by
+theorem reprScan_ok (cn : String) : ∀ (s : Seq) (n sq dq : Int), n + 4 * s.length ≤ ssizeMax →
+    ∃ n', n' ≤ n + 4 * s.length ∧ reprScan cn s n sq dq = .ok (n', sq + s.count 39, dq + s.count 34) := by
   intro s
   induction s with
   | nil =>
@@ -384,27 +377,29 @@ theorem reprByte_print (q c : Nat) (hq : q = 39 ∨ q = 34) (hc : c < 256) :
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
     omega
 
-/-- `repr(b)`: the quote is `"` only in smart mode for a body with `'` and no `"`; the text is
+/-- `repr(b)`, of a `bytes` or (the same function, smart quotes on) of a `bytearray` inside its class
+name: the quote is `"` only in smart mode for a body with `'` and no `"`; the text is
 printable ASCII; printable bytes other than the quote and the backslash stand for themselves, and
 the quote appears only escaped. With `ReprDecodeRoundTrip`, which undoes the body, this pins `repr`
 up to the choice of escape. Hypotheses: bytes, and `repr` fits. -/
 def ReprSpec : Prop :=
-  ∀ (s : Seq) (smart : Bool), (∀ c ∈ s, c < 256) → (s.length : Int) * 5 + 3 ≤ ssizeMax →
+  ∀ (cn : String) (s : Seq) (smart : Bool), (∀ c ∈ s, c < 256) → (s.length : Int) * 5 + 3 ≤ ssizeMax →
     let q : Nat := if smart = true ∧ 39 ∈ s ∧ 34 ∉ s then 34 else 39
-    bytesRepr s smart = .ok ([98, q] ++ reprBody q s ++ [q]) ∧
+    bytesReprAs cn s smart = .ok ([98, q] ++ reprBody q s ++ [q]) ∧
+    (smart = true → bytearrayRepr cn s = .ok (asc cn ++ asc "(" ++ ([98, q] ++ reprBody q s ++ [q]) ++ asc ")")) ∧
     (∀ x ∈ reprBody q s, 32 ≤ x ∧ x < 127) ∧
     (∀ c ∈ s, 32 ≤ c → c < 127 → c ≠ q → c ≠ 92 → reprByte q c = [c]) ∧
     (reprByte q q = [92, q])
 
 theorem reprSpec_proven : ReprSpec := by
-  intro s smart hs hl
+  intro cn s smart hs hl
   dsimp only
   have hqq : (if smart = true ∧ 39 ∈ s ∧ 34 ∉ s then 34 else 39) = 39 ∨
       (if smart = true ∧ 39 ∈ s ∧ 34 ∉ s then 34 else 39) = 34 := by
     split
     · exact Or.inr rfl
     · exact Or.inl rfl
-  obtain ⟨n', h1, h2⟩ := reprScan_ok s 3 0 0 (by omega)
+  obtain ⟨n', h1, h2⟩ := reprScan_ok cn s 3 0 0 (by omega)
   have hsq : (((0 : Int) + (s.count 39 : Nat)) ≠ 0) ↔ 39 ∈ s := by
     rw [← List.count_pos_iff]
     omega
@@ -412,11 +407,25 @@ theorem reprSpec_proven : ReprSpec := by
     rw [← List.count_pos_iff]
     omega
   have hcl : (s.count 39 : Int) ≤ s.length := by exact_mod_cast List.count_le_length
-  refine ⟨?_, ?_, ?_, ?_⟩
-  · have hno : ¬ (n' > ssizeMax - ((0 : Int) + (s.count 39 : Nat))) := by
+  have main : bytesReprAs cn s smart = .ok ([98, (if smart = true ∧ 39 ∈ s ∧ 34 ∉ s then 34 else 39)] ++
+      reprBody (if smart = true ∧ 39 ∈ s ∧ 34 ∉ s then 34 else 39) s ++
+      [(if smart = true ∧ 39 ∈ s ∧ 34 ∉ s then 34 else 39)]) := by
+    have hno : ¬ (n' > ssizeMax - ((0 : Int) + (s.count 39 : Nat))) := by
       unfold ssizeMax at hl ⊢
       omega
-    simp only [bytesRepr, bind, Except.bind, h2, pure, Except.pure, hsq, hdq, hno, ↓reduceIte, ite_self]
+    simp only [bytesReprAs, bind, Except.bind, h2, pure, Except.pure, hsq, hdq, hno, ↓reduceIte, ite_self]
+  refine ⟨main, ?_, ?_, ?_, ?_⟩
+  · intro ht
+    subst ht
+    have hm2 : bytesReprAs "bytearray" s true = .ok ([98, (if true = true ∧ 39 ∈ s ∧ 34 ∉ s then 34 else 39)] ++
+        reprBody (if true = true ∧ 39 ∈ s ∧ 34 ∉ s then 34 else 39) s ++
+        [(if true = true ∧ 39 ∈ s ∧ 34 ∉ s then 34 else 39)]) := by
+      obtain ⟨n2, h3, h4⟩ := reprScan_ok "bytearray" s 3 0 0 (by omega)
+      have hno : ¬ (n2 > ssizeMax - ((0 : Int) + (s.count 39 : Nat))) := by
+        unfold ssizeMax at hl ⊢
+        omega
+      simp only [bytesReprAs, bind, Except.bind, h4, pure, Except.pure, hsq, hdq, hno, ↓reduceIte, ite_self]
+    simp only [bytearrayRepr, bind, Except.bind, hm2, pure, Except.pure]
   · intro x hx
     simp only [reprBody, List.mem_flatMap] at hx
     obtain ⟨c, hc, hxc⟩ := hx

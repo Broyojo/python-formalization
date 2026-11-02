@@ -1,0 +1,58 @@
+id: bytesobj-seq-repeat-specialized-overflow-message
+title: "bytes, tuple and str times a huge int change their OverflowError message once the BINARY_OP site is specialized"
+priority: P5
+kind: wrong-exception
+module: bytesobj
+files: [Python/specialize.c]
+functions: ["seq_int_multiply", "bytes_int_multiply", "tuple_int_multiply", "str_int_multiply"]
+summary: |
+  3.15 specializes sequence * int to BINARY_OP_EXTEND. Its helper seq_int_multiply converts the count
+  with PyLong_AsSsize_t, where the generic path, sequence_repeat, uses PyNumber_AsSsize_t(n,
+  PyExc_OverflowError). The guard only checks the two types, so an int outside Py_ssize_t reaches the
+  helper. The same expression then raises OverflowError("cannot fit 'int' into an index-sized integer")
+  while the site is cold and OverflowError("Python int too large to convert to C ssize_t") once it is
+  hot. list and bytearray have no such specialization and keep the first message.
+  Lean: SpecializedRepeatAgrees, the helper against bytesMul, is refuted at 2**63.
+likelihood: |
+  Very low impact: the class is the same and only the text differs. It does make the message of one
+  expression depend on how many times it ran, which a test comparing messages sees as flakiness.
+maybe_intended: |
+  Possibly accepted: the comment says the helper bypasses the dispatch overhead, and nothing suggests
+  the message was considered. Maintainers may not care about the text.
+reproducer: |
+  def f(s, n):
+      return s * n
+
+  def msg(s, n):
+      try:
+          f(s, n)
+      except OverflowError as e:
+          return str(e)
+
+  cold = msg(b'ab', 2 ** 63)
+  for _ in range(5000):
+      f(b'ab', 2)
+  hot = msg(b'ab', 2 ** 63)
+  print('cold:', cold)
+  print('hot: ', hot)
+  if cold != hot:
+      print('REPRODUCED bytesobj-seq-repeat-specialized-overflow-message')
+expected: |
+  The same message at every call.
+observed: |
+  python3 3.15.2: cold "cannot fit 'int' into an index-sized integer", hot "Python int too large to
+  convert to C ssize_t". REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Twin behaviour: a specialized instruction must behave as the generic one; PEP 659 calls this out.
+cause: |
+  Python/specialize.c:2147-2155, seq_int_multiply, against sequence_repeat, Objects/abstract.c:1157-1172.
+possible_fix: |
+  Add a compact-int guard to the descriptors, so the huge count falls back to the generic path, or use
+  PyNumber_AsSsize_t(n, PyExc_OverflowError) in the helper.
+duplicates:
+  issues: []
+  queries: ["BINARY_OP_EXTEND OverflowError message", "specialized str multiply error message", "seq_int_multiply", "bytes multiply OverflowError index-sized integer specialize", "bugforge README: no match"]
+lean:
+  property: PyLean.BytesObj.Bytes.SpecializedRepeatAgrees
+  theorem: PyLean.BytesObj.Bytes.specializedRepeatAgrees_refuted

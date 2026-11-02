@@ -10,7 +10,7 @@ namespace PyLean.BytesObj.Bytes
 open PyLean PyLean.StrSearch
 
 /-- One item of the three loops `_PyBytes_FromList`, `_PyBytes_FromTuple`,
-`_PyBytes_FromIterator`, bytesobject.c@3.14.7:2890-2899, :3044-3052, :3093-3103. -/
+`_PyBytes_FromIterator`, bytesobject.c:3000-3009, :3044-3052, :3093-3103. -/
 def byteItem (item : Obj) : Py Nat := do
   let value ← asSsizeClamp item
   if value < 0 ∨ value ≥ 256 then throw (.valueError "bytes must be in range(0, 256)")
@@ -42,7 +42,7 @@ def bytesFromObject (x : Obj) : Py Seq :=
         let items ← getIterOr cannot x
         -- `_PyBytes_FromIterator`, bytesobject.c:3068-3074: the hint, then the allocation.
         let size ← lengthHint x 64
-        if mallocFails (bytesObjectSize + size) then throw memoryError
+        let _ ← writerCreate size false
         let vals ← bytesFromItems items
         iterFinish x
         return vals
@@ -77,7 +77,7 @@ def bytesNew (x : Option Obj) (encoding errors : Option String) : Py Seq :=
         | .dunder r =>
           match r with
           | .bytes s => .ok s
-          | _ => .error (.typeError s!"__bytes__ returned non-bytes (type {r.typeName})")
+          | _ => .error (bytesDunderWrong x r)
         | .bytes s => .ok s  -- bytes.__bytes__
         | .str _ => .error (.typeError "string argument without an encoding")
         | _ =>

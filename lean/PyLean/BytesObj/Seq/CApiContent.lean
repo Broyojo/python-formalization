@@ -80,8 +80,11 @@ def CApiAgree : Prop :=
     pyListAsTuple mt (none : Option (List α)) = .error systemError ∧
     (∀ r, pyListExtend (some o) (.fast l) = ((o', none), r) → o'.items = o.items ++ l) ∧
     pyTupleSetItem (some l) false i v = .error systemError ∧
-    (∀ (n : Int), 0 < n → t ≠ [] →
-      tupleResize (some t) true true n = .ok (t.take n.toNat ++ List.replicate (n - t.length).toNat none))
+    (∀ (n : Int), 0 < n → t ≠ [] → n ≤ tupleLimit →
+      tupleResize (some t) true true n = .ok (t.take n.toNat ++ List.replicate (n - t.length).toNat none)) ∧
+    (∀ (n : Int), n > tupleLimit → t ≠ [] → (t.length : Int) ≠ n →
+      tupleResize (some t) true true n = .error memoryError) ∧
+    (∀ (n : Int), n < 0 → tupleResize (some t) true true n = .error systemError)
 
 theorem cApiAgree_proven : CApiAgree := by
   intro α l o o' t i j k v w mt hw hl hol hi0 hi1
@@ -101,7 +104,8 @@ theorem cApiAgree_proven : CApiAgree := by
   have hl0 : (0 : Int) ≤ l.length := by omega
   refine ⟨⟨rfl, rfl⟩, ⟨rfl, rfl⟩, fun h0 h1 => ?_, fun h => ?_, ⟨rfl, rfl, rfl⟩, fun h0 h1 => ?_, fun h => ?_,
     fun h => c2 h, rfl, fun h => c1 h, rfl, fun h0 h1 h2 => ⟨fun h => ?_, fun h => ?_⟩, fun h => ?_, fun h => ?_,
-    fun h0 h1 => ?_, rfl, fun r h => ?_, rfl, fun n h0 hnil => ?_⟩
+    fun h0 h1 => ?_, rfl, fun r h => ?_, rfl, fun n h0 hnil hlim => ?_, fun n h1 hnil hne => ?_,
+    fun n h => ?_⟩
   · have hlt : i.toNat < l.length := by omega
     have hs : slot l i = some l[i.toNat] := by simp [slot, h0, hlt]
     have hb : validIndex i l.length = true := by
@@ -153,16 +157,27 @@ theorem cApiAgree_proven : CApiAgree := by
       rw [← h1.1]
       exact hE o2 hr
   · have hlen : t.length ≠ 0 := fun h => hnil (List.length_eq_zero_iff.mp h)
-    unfold tupleResize
-    simp only [Bool.not_true, Bool.false_eq_true, Bool.false_or, Bool.and_false, if_false]
     have hn0 : ¬ n = 0 := by omega
     have ho0 : ¬ (t.length : Int) = 0 := by omega
     have hneg : ¬ n < 0 := by omega
+    unfold tupleResize
+    simp only [Bool.not_true, Bool.false_eq_true, Bool.false_or, Bool.and_false, Bool.or_false,
+      hneg, decide_false, if_false]
     by_cases heq : (t.length : Int) = n
     · rw [if_pos heq]
       have h1 : n.toNat = t.length := by omega
       have h2 : (n - (t.length : Int)).toNat = 0 := by omega
       simp [h1, h2]
-    · rw [if_neg heq, if_neg hn0, if_neg ho0, if_neg hneg]
+    · rw [if_neg heq, if_neg hn0, if_neg ho0, if_neg (by unfold tupleLimit at hlim; omega)]
+  · have hlen : t.length ≠ 0 := fun h => hnil (List.length_eq_zero_iff.mp h)
+    have hpos : 0 < tupleLimit := by decide
+    have hn0 : ¬ n = 0 := by omega
+    have ho0 : ¬ (t.length : Int) = 0 := by omega
+    have hneg : ¬ n < 0 := by omega
+    unfold tupleResize
+    simp only [Bool.not_true, Bool.false_eq_true, Bool.false_or, Bool.and_false, Bool.or_false,
+      hneg, decide_false, if_false]
+    rw [if_neg hne, if_neg hn0, if_neg ho0, if_pos (by unfold tupleLimit at h1; omega)]
+  · simp [tupleResize, h]
 
 end PyLean.BytesObj.Seq

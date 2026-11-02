@@ -8,22 +8,22 @@ Objects/tupleobject.c	118	135	PyTuple_SetItem	PyTuple_SetItem(PyObject *op, Py_s
 Objects/tupleobject.c	138	157	_PyTuple_MaybeUntrack	_PyTuple_MaybeUntrack(PyObject *op)	modelled	bytesobj-tuple-construct	
 Objects/tupleobject.c	166	169	maybe_tracked	maybe_tracked(PyObject *ob)	modelled	bytesobj-tuple-construct	
 Objects/tupleobject.c	172	203	PyTuple_Pack	PyTuple_Pack(Py_ssize_t n, ...)	modelled	bytesobj-tuple-construct	
-Objects/tupleobject.c	206	212	_PyTuple_FromPair	_PyTuple_FromPair(PyObject *first, PyObject *second)	todo		changed-in-3.15: new function
-Objects/tupleobject.c	215	233	_PyTuple_FromPairSteal	_PyTuple_FromPairSteal(PyObject *first, PyObject *second)	todo		changed-in-3.15: new function
-Objects/tupleobject.c	242	252	_PyStolenTuple_Free	_PyStolenTuple_Free(PyObject *obj)	todo		changed-in-3.15: new function
+Objects/tupleobject.c	206	212	_PyTuple_FromPair	_PyTuple_FromPair(PyObject *first, PyObject *second)	modelled	bytesobj-tuple-from-pair	
+Objects/tupleobject.c	215	233	_PyTuple_FromPairSteal	_PyTuple_FromPairSteal(PyObject *first, PyObject *second)	modelled	bytesobj-tuple-from-pair	
+Objects/tupleobject.c	242	252	_PyStolenTuple_Free	_PyStolenTuple_Free(PyObject *obj)	excluded		no-behaviour: frees a tuple whose items were taken
 Objects/tupleobject.c	255	283	tuple_dealloc	tuple_dealloc(PyObject *self)	modelled	bytesobj-release-order	
 Objects/tupleobject.c	286	353	tuple_repr	tuple_repr(PyObject *self)	modelled	bytesobj-repr-shape,bytesobj-repr-terminates	
-Objects/tupleobject.c	372	414	tuple_hash	tuple_hash(PyObject *op)	todo		changed-in-3.15: was bytesobj-tuple-hash-cached,bytesobj-tuple-hash-empty,bytesobj-tuple-hash-not-minus-one,bytesobj-tuple-hash-one-lane
+Objects/tupleobject.c	372	414	tuple_hash	tuple_hash(PyObject *op)	modelled	bytesobj-tuple-hash-cached,bytesobj-tuple-hash-empty,bytesobj-tuple-hash-guard,bytesobj-tuple-hash-not-minus-one,bytesobj-tuple-hash-one-lane	
 Objects/tupleobject.c	417	421	tuple_length	tuple_length(PyObject *self)	modelled	bytesobj-item-access	
 Objects/tupleobject.c	424	432	tuple_contains	tuple_contains(PyObject *self, PyObject *el)	modelled	bytesobj-contains-agree,bytesobj-contains-identity	
 Objects/tupleobject.c	435	443	tuple_item	tuple_item(PyObject *op, Py_ssize_t i)	modelled	bytesobj-item-access	
-Objects/tupleobject.c	446	469	PyTuple_FromArray	PyTuple_FromArray(PyObject *const *src, Py_ssize_t n)	todo		changed-in-3.15: new function
+Objects/tupleobject.c	446	469	PyTuple_FromArray	PyTuple_FromArray(PyObject *const *src, Py_ssize_t n)	modelled	bytesobj-tuple-construct	
 Objects/tupleobject.c	472	494	_PyTuple_FromStackRefStealOnSuccess	_PyTuple_FromStackRefStealOnSuccess(const _PyStackRef *src, Py_ssize_t n)	modelled	bytesobj-tuple-construct	
 Objects/tupleobject.c	497	516	_PyTuple_FromArraySteal	_PyTuple_FromArraySteal(PyObject *const *src, Py_ssize_t n)	modelled	bytesobj-tuple-construct	
-Objects/tupleobject.c	519	532	tuple_slice	tuple_slice(PyTupleObject *a, Py_ssize_t ilow, Py_ssize_t ihigh)	todo		changed-in-3.15: was bytesobj-tuple-construct
-Objects/tupleobject.c	535	551	_PyTuple_BinarySlice	_PyTuple_BinarySlice(PyObject *container, PyObject *start, PyObject *stop)	todo		changed-in-3.15: new function
+Objects/tupleobject.c	519	532	tuple_slice	tuple_slice(PyTupleObject *a, Py_ssize_t ilow, Py_ssize_t ihigh)	modelled	bytesobj-tuple-construct	
+Objects/tupleobject.c	535	551	_PyTuple_BinarySlice	_PyTuple_BinarySlice(PyObject *container, PyObject *start, PyObject *stop)	todo		changed-in-3.15: held: models int and None indices only: _PyEval_UnpackIndices also takes __index__ objects, which can raise and refuse a non-index
 Objects/tupleobject.c	554	561	PyTuple_GetSlice	PyTuple_GetSlice(PyObject *op, Py_ssize_t i, Py_ssize_t j)	modelled	bytesobj-capi-construct	
-Objects/tupleobject.c	564	608	_PyTuple_Concat	_PyTuple_Concat(PyObject *aa, PyObject *bb)	todo		changed-in-3.15: new function
+Objects/tupleobject.c	564	608	_PyTuple_Concat	_PyTuple_Concat(PyObject *aa, PyObject *bb)	modelled	bytesobj-tuple-concat	
 Objects/tupleobject.c	611	657	tuple_repeat	tuple_repeat(PyObject *self, Py_ssize_t n)	modelled	bytesobj-repeat	
 Objects/tupleobject.c	673	699	tuple_index_impl	tuple_index_impl(PyTupleObject *self, PyObject *value, Py_ssize_t start, Py_ssize_t stop) /*[clinic end generated code: output=07b6f9f3cb5c33eb input=fb39e9874a21fe3f]*/	modelled	bytesobj-index-agree	
 Objects/tupleobject.c	711	725	tuple_count_impl	tuple_count_impl(PyTupleObject *self, PyObject *value) /*[clinic end generated code: output=cf02888d4bc15d7a input=531721aff65bd772]*/	modelled	bytesobj-count-agree	
@@ -32,10 +32,10 @@ Objects/tupleobject.c	738	788	tuple_richcompare	tuple_richcompare(PyObject *v, P
 Objects/tupleobject.c	808	820	tuple_new_impl	tuple_new_impl(PyTypeObject *type, PyObject *iterable) /*[clinic end generated code: output=4546d9f0d469bce7 input=86963bcde633b5a2]*/	modelled	bytesobj-tuple-construct	
 Objects/tupleobject.c	823	841	tuple_vectorcall	tuple_vectorcall(PyObject *type, PyObject * const*args, size_t nargsf, PyObject *kwnames)	modelled	bytesobj-tuple-construct	
 Objects/tupleobject.c	844	876	tuple_subtype_new	tuple_subtype_new(PyTypeObject *type, PyObject *iterable)	modelled	bytesobj-tuple-construct	
-Objects/tupleobject.c	890	898	tuple_iteritem	tuple_iteritem(PyObject *obj, Py_ssize_t index)	todo		changed-in-3.15: new function
+Objects/tupleobject.c	890	898	tuple_iteritem	tuple_iteritem(PyObject *obj, Py_ssize_t index)	modelled	bytesobj-iteritem-agrees	
 Objects/tupleobject.c	901	954	tuple_subscript	tuple_subscript(PyObject *op, PyObject* item)	modelled	bytesobj-item-access,bytesobj-slice-reads	
 Objects/tupleobject.c	961	965	tuple___getnewargs___impl	tuple___getnewargs___impl(PyTupleObject *self) /*[clinic end generated code: output=25e06e3ee56027e2 input=1aeb4b286a21639a]*/	modelled	bytesobj-tuple-construct	
-Objects/tupleobject.c	1046	1123	_PyTuple_Resize	_PyTuple_Resize(PyObject **pv, Py_ssize_t newsize)	todo		changed-in-3.15: was bytesobj-capi-agree
+Objects/tupleobject.c	1046	1123	_PyTuple_Resize	_PyTuple_Resize(PyObject **pv, Py_ssize_t newsize)	modelled	bytesobj-capi-agree	
 Objects/tupleobject.c	1130	1137	tupleiter_dealloc	tupleiter_dealloc(PyObject *self)	excluded		no-behaviour: drops the iterator's single reference and frees it; there is no order to observe, and object lifetime is outside the model
 Objects/tupleobject.c	1140	1145	tupleiter_traverse	tupleiter_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: tp_traverse, excluded by the GC traversal policy
 Objects/tupleobject.c	1148	1174	tupleiter_next	tupleiter_next(PyObject *self)	modelled	bytesobj-tuple-iter-yields	
@@ -44,4 +44,4 @@ Objects/tupleobject.c	1196	1214	tupleiter_reduce	tupleiter_reduce(PyObject *self
 Objects/tupleobject.c	1217	1231	tupleiter_setstate	tupleiter_setstate(PyObject *self, PyObject *state)	modelled	bytesobj-tuple-iter-reduce	
 Objects/tupleobject.c	1277	1293	tuple_iter	tuple_iter(PyObject *seq)	modelled	bytesobj-tuple-iter-yields	
 Objects/tupleobject.c	1301	1311	maybe_freelist_push	maybe_freelist_push(PyTupleObject *op)	excluded		no-behaviour: keeps a dead tuple on a free list; visible only through the id() of an object that no longer exists, which Python code cannot rely on
-Objects/tupleobject.c	1315	1325	_PyTuple_DebugMallocStats	_PyTuple_DebugMallocStats(FILE *out)	todo		changed-in-3.15: was excluded: no-behaviour: allocator statistics printed by sys._debugmallocstats for debugging; no effect on any object
+Objects/tupleobject.c	1315	1325	_PyTuple_DebugMallocStats	_PyTuple_DebugMallocStats(FILE *out)	excluded		no-behaviour: allocator statistics printed by sys._debugmallocstats

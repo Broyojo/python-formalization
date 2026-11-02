@@ -24,8 +24,8 @@ def countOfByte (x : Nat) : Seq → Int
   | [] => 0
   | c :: rest => (if c = x then 1 else 0) + countOfByte x rest
 
-theorem reprScan_spec (s : Seq) (n sq dq n' sq' dq' : Int)
-    (h : reprScan s n sq dq = .ok (n', sq', dq')) :
+theorem reprScan_spec (cn : String) (s : Seq) (n sq dq n' sq' dq' : Int)
+    (h : reprScan cn s n sq dq = .ok (n', sq', dq')) :
     n' = n + reprBase s ∧ sq' = sq + countOfByte 39 s ∧ dq' = dq + countOfByte 34 s := by
   induction s generalizing n sq dq with
   | nil =>
@@ -104,19 +104,19 @@ theorem reprBody_length (quote : Nat) (hq : quote = 39 ∨ quote = 34) (s : Seq)
               all_goals omega
     omega
 
-/-- The exact-size allocation of `PyBytes_Repr`: the sizing loop and the optional
-`squotes` extra give exactly the length the writing loop produces, for every byte string
-and both `smartquotes` settings, so the `PyUnicode_New(newsize)` buffer is never overrun
+/-- The exact-size allocation of `_Py_bytes_repr`: the sizing loop and the optional
+`squotes` extra give exactly the length the writing loop produces, for every byte string, either
+class and both `smartquotes` settings, so the `PyUnicode_New(newsize)` buffer is never overrun
 or left with a gap. -/
 def ReprSizeExact : Prop :=
-  ∀ (s : Seq) (smart : Bool) (n sq dq : Int) (r : Seq),
-    reprScan s 3 0 0 = .ok (n, sq, dq) → bytesRepr s smart = .ok r →
+  ∀ (cn : String) (s : Seq) (smart : Bool) (n sq dq : Int) (r : Seq),
+    reprScan cn s 3 0 0 = .ok (n, sq, dq) → bytesReprAs cn s smart = .ok r →
     (r.length : Int) = n + (if smart = true ∧ sq ≠ 0 ∧ dq = 0 then 0 else sq)
 
 theorem reprSizeExact_proven : ReprSizeExact := by
-  intro s smart n sq dq r hs h
-  obtain ⟨hn, hsq, hdq⟩ := reprScan_spec s 3 0 0 n sq dq hs
-  simp only [bytesRepr, bind, Except.bind, hs, pure, Except.pure] at h
+  intro cn s smart n sq dq r hs h
+  obtain ⟨hn, hsq, hdq⟩ := reprScan_spec cn s 3 0 0 n sq dq hs
+  simp only [bytesReprAs, bind, Except.bind, hs, pure, Except.pure] at h
   have L39 := reprBody_length 39 (Or.inl rfl) s
   have L34 := reprBody_length 34 (Or.inr rfl) s
   by_cases c1 : smart = true ∧ sq ≠ 0 ∧ dq = 0
@@ -183,7 +183,7 @@ def FromHexRoundTrip : Prop :=
 theorem fromHexRoundTrip_proven : FromHexRoundTrip := by
   intro s hs hl
   refine ⟨s.flatMap hexPair, ?_, ?_⟩
-  · have h1 : ¬ ((1 : Int) < -2147483648 ∨ (1 : Int) > 2147483647) := by decide
+  · have h1 : ¬ ((1 : Int) < ssizeMin ∨ (1 : Int) > ssizeMax) := by decide
     simp only [bytesHex, h1, if_false, strhex_plain s 1 hl]
   · have hf := findIdx_none_lt _ 128 (hexflat_lt s hs)
     have hlen := hexflat_length s

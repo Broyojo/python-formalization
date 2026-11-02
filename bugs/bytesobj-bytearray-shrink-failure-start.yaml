@@ -1,0 +1,62 @@
+id: bytesobj-bytearray-shrink-failure-start
+title: "del b[:k] whose shrinking realloc fails leaves ob_start before the buffer: MemoryError, then out-of-bounds reads and writes"
+priority: P3
+kind: duplicate-open-upstream
+module: bytesobj
+files: [Objects/bytearrayobject.c]
+functions: ["bytearray_setslice_linear", "bytearray_resize_storage"]
+summary: |
+  A front deletion that drops below half the allocation goes through bytearray_setslice_linear with
+  lo == 0: it advances ob_start by the deleted count, then bytearray_resize_lock_held takes the major
+  downsize and calls bytearray_resize_storage. That function moves the data to ob_bytes and sets
+  ob_start = ob_bytes before _PyBytes_ResizeKeepOnError. If the resize fails, the failure path of
+  bytearray_setslice_linear undoes the advance with ob_start += growth, written for an ob_start that
+  had not moved. ob_start is now k bytes before the allocation and Py_SIZE is the old size, so every
+  later read or write of the object is out of bounds. On the way, the "move remaining bytes" memmove
+  reads k bytes past the logical end of the data.
+  Lean: ShrinkFailureKeepsLayout, the BA.WF invariant after that failure, is refuted.
+likelihood: |
+  Low: it needs the shrinking realloc to fail, which takes a failing allocator or real memory pressure
+  on a large object. Severity is high once it does: the object can then read and overwrite the heap
+  from pure Python, and the MemoryError looks recoverable.
+maybe_intended: |
+  No. The comment at the failure path says the bytearray is restored to its previous state.
+reproducer: |
+  import _testcapi
+  found = False
+  for fail_at in range(0, 6):
+      b = bytearray(b'A' * 2000)
+      try:
+          _testcapi.set_nomemory(fail_at, fail_at + 1)
+          del b[:1500]
+      except MemoryError:
+          _testcapi.remove_mem_hooks()
+          data = bytes(b)
+          print('fail_at', fail_at, 'len', len(b), 'bytes that are still A:', data.count(b'A'))
+          found = found or (len(b) == 2000 and data != b'A' * 2000)
+      finally:
+          _testcapi.remove_mem_hooks()
+  if found:
+      print('REPRODUCED bytesobj-bytearray-shrink-failure-start')
+expected: |
+  The MemoryError leaves the object as it was: 2000 bytes 'A'.
+observed: |
+  python3 3.15.2: fail_at 0 and 1: MemoryError, len 2000, 500 and 1000 of the bytes are still 'A', the
+  rest is what precedes the buffer on the heap. REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Invariant: no read or write outside an allocation; the comment at Objects/bytearrayobject.c:639-647.
+cause: |
+  Objects/bytearrayobject.c:246 sets ob_start = ob_bytes, and :648-650 then adds growth to that; :254
+  reads `remaining` bytes from old_start + moved, which ends k bytes past the data.
+possible_fix: |
+  Restore the object inside bytearray_resize_storage, or have the lo == 0 path keep the old offset and
+  reinstate it, moving the bytes back, on failure.
+duplicates:
+  issues:
+    - {number: 160303, state: open, relation: "same bug, reported upstream; PR gh-160304 is open"}
+    - {number: 63767, state: closed, relation: "the older failure-path fix this code comes from, gh-19578"}
+  queries: ["bytearray ob_start MemoryError", "bytearray_resize_storage", "bytearray setslice_linear realloc failure", "bytearray del slice MemoryError ob_start", "bytearray shrink memory error use after", "bytearray_setslice_linear", "bugforge README: no match"]
+lean:
+  property: PyLean.BytesObj.Bytes.ShrinkFailureKeepsLayout
+  theorem: PyLean.BytesObj.Bytes.shrinkFailureKeepsLayout_refuted

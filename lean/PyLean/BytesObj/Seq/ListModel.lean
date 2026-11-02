@@ -2,7 +2,7 @@ import PyLean.RangeSlice.Model
 import PyLean.BytesObj.Seq.TupleModel
 
 /-!
-Model of `Objects/listobject.c` outside `list.sort`, CPython 3.14.7
+Model of `Objects/listobject.c` outside `list.sort`, CPython 3.15.2
 (`Py_GIL_DISABLED` off, 64-bit), over an abstract element type.
 
 `LObj` keeps the fields of a `PyListObject` that Python can see: the items,
@@ -53,20 +53,27 @@ def listSizeof (o : LObj α) : Int := (40 + toU o.allocated * 8) % (2 ^ 64 : Int
 /-- `((size_t)newsize + (newsize >> 3) + 6) & ~(size_t)3`, listobject.c:148. -/
 def overalloc (newsize : Int) : Int := ((newsize + newsize / 8 + 6) / 4) * 4
 
-/-- The `new_allocated` computation of `list_resize`, listobject.c:148-156. The
+/-- The `new_allocated` computation of `py_list_resize`, listobject.c:148-156. The
 cast `(Py_ssize_t)(new_allocated - newsize)` is exact: see `overalloc_ge`. -/
 def newAllocated (size newsize : Int) : Int :=
   let na := overalloc newsize
   let na := if newsize - size > na - newsize then ((newsize + 3) / 4) * 4 else na
   if newsize = 0 then 0 else na
 
-/-- `list_resize(self, newsize)`, listobject.c@3.14.7:107-189, on `(allocated, hasItems)`,
-with `size` the `Py_SIZE(self)` at the call. -/
+/-- `LIST_SMALL_ALLOCATED`, listobject.c:94. -/
+def listSmallAllocated : Int := 32
+
+/-- `list_resize(self, newsize)`, listobject.c:110-129, and `py_list_resize`, :133-216, on
+`(allocated, hasItems)`, with `size` the `Py_SIZE(self)` at the call. A small list does not shrink
+(gh-158592), and a failed allocation for a smaller size keeps the array. -/
 def listResize (allocated : Int) (hasItems : Bool) (size newsize : Int) : Py (Int × Bool) :=
-  if allocated ≥ newsize ∧ newsize ≥ allocated / 2 then .ok (allocated, hasItems)
+  if allocated ≥ newsize ∧ (newsize ≥ allocated / 2 ∨ allocated ≤ listSmallAllocated) then
+    .ok (allocated, hasItems)
   else
     let na := newAllocated size newsize
-    if na ≤ ssizeMax / 8 then .ok (na, true) else .error memoryError
+    if na ≤ ssizeMax / 8 then .ok (na, true)
+    else if newsize < allocated then .ok (allocated, hasItems)
+    else .error memoryError
 
 /-- `list_resize` then setting the contents: the new slots are filled by the caller. -/
 def resizeTo (o : LObj α) (items : List α) : Py (LObj α) :=
@@ -154,10 +161,20 @@ def listGetSlice (a : List α) (s : Slice) : Py (LObj α) := do
   let (start, stop, step) ← sliceUnpack s
   listSliceWrap a start stop step
 
+/-- `_PyList_BinarySlice(container, start, stop)`, listobject.c, for an exact list. -/
+def listBinarySlice (a : List α) (s : Slice) : LObj α :=
+  let (istart, istop) := unpackIndices a.length s
+  listSliceLH a istart istop
+
+/-- `list_iteritem(obj, index)`, listobject.c, the `_tp_iteritem` of a `for` loop: the size is read at
+each step, and the index advances past the end too. -/
+def listIterItem (l : List α) (index : Int) : Option α × Int :=
+  (listGetItemRef l index, index + 1)
+
 /-- `a + b`, `list_concat_lock_held`, listobject.c:790-820. -/
 def listConcat (a b : List α) : LObj α := LObj.prealloc (a ++ b)
 
-/-- `a + other`, `list_concat`, listobject.c@3.14.7:771-787. -/
+/-- `a + other`, `_PyList_Concat`, listobject.c:822-838. -/
 def listConcatAny (a : List α) (bb : Sum (List α) String) : Py (LObj α) :=
   match bb with
   | .inl b => .ok (listConcat a b)
@@ -210,13 +227,12 @@ def listIMul (self : LObj α) (n : Int) : Py (LObj α) := do
   let n ← PyLean.Sequences.repeatCount n
   listInplaceRepeat self n
 
-/-- `list_ass_item_lock_held(a, i, v)`, listobject.c:1158-1179. A deletion moves
-the tail down and sets the size; unlike every other shrinking path it does not
-call `list_resize`, so `allocated` stays. -/
+/-- `list_ass_item_lock_held(a, i, v)`, listobject.c:1159-1179. A deletion moves the tail down and
+calls `list_resize`, like every other shrinking path. -/
 def listAssItem (a : LObj α) (i : Int) (v : Option α) : Py (LObj α) :=
   if !validIndex i a.items.length then .error (.indexError "list assignment index out of range")
   else match v with
-    | none => .ok { a with items := a.items.eraseIdx i.toNat }
+    | none => resizeTo a (a.items.eraseIdx i.toNat)
     | some v => .ok { a with items := a.items.set i.toNat v }
 
 /-- `l[i] = v` / `del l[i]`, the int branch of `list_ass_subscript_lock_held`,
@@ -809,12 +825,12 @@ def pyListExtend (op : Option (LObj α)) (arg : ExtArg α) : LRes α × Option U
   | some a => (listExtend a arg, some ())
 
 /-- `_PyList_AsTupleAndClear(self)`, listobject.c:3295-3310, for `PySequence_Tuple`:
-the array moves into a tuple, always tracked, and the list ends with no array. -/
+the items move into a tuple, always tracked, and the list ends empty, with its array. -/
 def listAsTupleAndClear (self : LObj α) : Py (TRes α × LObj α) :=
   if !self.hasItems then .ok (.empty, self)
   else
     match tupleFromArraySteal self.items with
-    | .ok r => .ok (r, { self with items := [], hasItems := false })
+    | .ok r => .ok (r, { self with items := [] })
     | .error e => .error e
 
 /-- The list while `list.sort` runs, listobject.c:2989-2994: size 0, no array,

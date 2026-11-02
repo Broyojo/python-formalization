@@ -58,7 +58,7 @@ reproducer: |
 expected: |
   m == W() is False: a released view is equal only to itself. The buffer is never read.
 observed: |
-  python3 3.14.7: True for the small case; SIGSEGV (status -11) for a 128 MB buffer freed in
+  python3 3.15.2: True for the small case; SIGSEGV (status -11) for a 128 MB buffer freed in
   __buffer__. REPRODUCED.
   main (python.exe 3.16.0a1+dev): identical, SIGSEGV included. REPRODUCED.
 promised_by: |

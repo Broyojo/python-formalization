@@ -100,7 +100,7 @@ def entries : List Entry := [
     source := "Doc/library/stdtypes.rst common sequence operations, note (5)", status := .proven
     prop := ``SliceReads, thm := some ``sliceReads_proven
     notes := "Bounds are derived from RangeSlice.IndicesInBounds, not assumed." },
-  { id := "bytesobj-list-resize", pyFile := "Objects/listobject.c", pyFns := ["list_resize"]
+  { id := "bytesobj-list-resize", pyFile := "Objects/listobject.c", pyFns := ["list_resize", "py_list_resize"]
     statement := "list_resize's fast path changes nothing; the over-allocation is a multiple of 4, at most 9/8 of the size plus 6, and below 2^64 for every size up to PY_SSIZE_T_MAX, as the note at listobject.c:145-146 says."
     source := "listobject.c:115-153", status := .proven
     prop := ``ListResizeSpec, thm := some ``listResizeSpec_proven },
@@ -112,7 +112,7 @@ def entries : List Entry := [
     statement := "Every mutating list method keeps the invariant: allocated covers the items, an array exists when anything is allocated, and its byte size fits Py_ssize_t."
     source := "invariant of PyListObject, Include/cpython/listobject.h", status := .proven
     prop := ``ListOpsWF, thm := some ``listOpsWF_proven },
-  { id := "bytesobj-tuple-concat", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_concat", "tuple_alloc", "tuple_get_empty"]
+  { id := "bytesobj-tuple-concat", pyFile := "Objects/tupleobject.c", pyFns := ["_PyTuple_Concat", "tuple_alloc", "tuple_get_empty"]
     statement := "a + b on tuples is a's items then b's for every pair that fits, returns an argument in the two sharing cases, and raises TypeError with the source's message for a non-tuple."
     source := "common sequence s + t, Doc/library/stdtypes.rst", status := .proven
     prop := ``TupleConcatSpec, thm := some ``tupleConcatSpec_proven },
@@ -120,7 +120,7 @@ def entries : List Entry := [
     statement := "t * n and l * n: the sharing cases, the empty cases, n copies of the items, and MemoryError exactly when the result cannot be allocated, for every Py_ssize_t count."
     source := "common sequence s * n, Doc/library/stdtypes.rst", status := .proven
     prop := ``RepeatSpec, thm := some ``repeatSpec_proven },
-  { id := "bytesobj-tuple-construct", pyFile := "Objects/tupleobject.c", pyFns := ["maybe_tracked", "_PyTuple_FromArray", "_PyTuple_FromStackRefStealOnSuccess", "_PyTuple_FromArraySteal", "PyTuple_Pack", "_PyTuple_MaybeUntrack", "tuple_new_impl", "tuple_vectorcall", "tuple_subtype_new", "tuple___getnewargs___impl", "tuple_slice"]
+  { id := "bytesobj-tuple-construct", pyFile := "Objects/tupleobject.c", pyFns := ["maybe_tracked", "PyTuple_FromArray", "_PyTuple_FromStackRefStealOnSuccess", "_PyTuple_FromArraySteal", "PyTuple_Pack", "_PyTuple_MaybeUntrack", "tuple_new_impl", "tuple_vectorcall", "tuple_subtype_new", "tuple___getnewargs___impl", "tuple_slice"]
     statement := "The tuple construction paths and their GC tracking decisions, as gc.is_tracked shows them; tuple(t) is t for an exact tuple; a subclass instance starts with no cached hash; keyword arguments are rejected first."
     source := "tupleobject.c:445-516; Doc/library/gc.rst (is_tracked)", status := .proven
     prop := ``TupleConstruct, thm := some ``tupleConstruct_proven },
@@ -136,7 +136,7 @@ def entries : List Entry := [
     statement := "The C API constructors and slice getters for every argument: PyList_New and PyTuple_New for every size, the stack-reference and tuple-and-clear paths, PyTuple_SetItem on a uniquely referenced tuple, PyList_GetSlice, PyTuple_GetSlice, and list_vectorcall's argument checks."
     source := "Doc/c-api/list.rst, Doc/c-api/tuple.rst", status := .proven
     prop := ``CApiConstruct, thm := some ``cApiConstruct_proven },
-  { id := "bytesobj-list-contents", pyFile := "Objects/listobject.c", pyFns := ["list_append_impl", "PyList_Insert", "list_clear_impl", "reverse_slice", "list_reverse_impl", "PyList_Reverse", "list_extend_fast", "list_extend_set", "list_extend_dict", "list_extend_dictitems", "_list_extend", "list_extend_impl", "_PyList_Extend", "list_inplace_concat", "list_concat_lock_held", "list_concat", "list_copy_impl", "list___init___impl", "list_inplace_repeat", "list_inplace_repeat_lock_held"]
+  { id := "bytesobj-list-contents", pyFile := "Objects/listobject.c", pyFns := ["list_append_impl", "PyList_Insert", "list_clear_impl", "reverse_slice", "list_reverse_impl", "PyList_Reverse", "list_extend_fast", "list_extend_set", "list_extend_dict", "list_extend_dictitems", "_list_extend", "list_extend_impl", "_PyList_Extend", "list_inplace_concat", "list_concat_lock_held", "_PyList_Concat", "list_copy_impl", "list___init___impl", "list_inplace_repeat", "list_inplace_repeat_lock_held"]
     statement := "What the list methods do to the contents, for every element type and argument, including that __init__ drops the old contents before it looks at the iterable."
     source := "Doc/library/stdtypes.rst, mutable sequence types", status := .proven
     prop := ``ListContents, thm := some ``listContents_proven },
@@ -188,14 +188,34 @@ def entries : List Entry := [
     statement := "The same maximal hint is ignored for a one-item list, because m > PY_SSIZE_T_MAX - n skips the allocation."
     source := "listobject.c:1317-1322", status := .proven
     prop := ``ListHintIgnoredWhenOverflowing, thm := some ``listHintIgnoredWhenOverflowing_proven },
-  { id := "bytesobj-list-del-like-pop", pyFile := "Objects/listobject.c", pyFns := ["list_ass_item", "list_pop_impl"]
-    statement := "del l[i] and l.pop(i) leave a list with the same allocation. False on 3.14.7: del never shrinks the array. Duplicate of gh-158592, fixed on main."
-    source := "listobject.c:115-120 (shrinking policy); gh-158592", status := .refuted
-    prop := ``ListDelLikePop, thm := some ``listDelLikePop_refuted, bug := some "bytesobj-list-del-item-never-shrinks" },
-  { id := "bytesobj-list-del-keeps-allocation", pyFile := "Objects/listobject.c", pyFns := ["list_ass_item"]
-    statement := "On 3.14.7, del l[i] and l[i] = x leave allocated and ob_item unchanged."
-    source := "listobject.c:1158-1179", status := .proven
-    prop := ``ListAssItemKeepsAllocation, thm := some ``listAssItemKeepsAllocation_proven }
+  { id := "bytesobj-tuple-from-pair", pyFile := "Objects/tupleobject.c", pyFns := ["_PyTuple_FromPair", "_PyTuple_FromPairSteal"]
+    statement := "_PyTuple_FromPair is PyTuple_Pack of two items, GC flag included."
+    source := "twin: PyTuple_Pack, which it replaced in list_extend_dictitems", status := .proven
+    prop := ``TupleFromPairIsPack, thm := some ``tupleFromPairIsPack_proven },
+  { id := "bytesobj-tuple-hash-guard", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_hash"]
+    statement := "The stack test of tuple_hash comes after the cache and leaves it alone; past it tuple_hash is the xxHash loop."
+    source := "tupleobject.c:372-393", status := .proven
+    prop := ``TupleHashGuard, thm := some ``tupleHashGuard_proven },
+  { id := "bytesobj-list-binary-slice", pyFile := "Objects/listobject.c", pyFns := []
+    statement := "l[a:b] under BINARY_SLICE gives what l[slice(a, b)] gives, for every pair of indices of any size."
+    source := "twin: list_subscript", status := .proven
+    prop := ``ListBinarySlice, thm := some ``listBinarySlice_proven },
+  { id := "bytesobj-tuple-binary-slice", pyFile := "Objects/tupleobject.c", pyFns := []
+    statement := "t[a:b] under BINARY_SLICE has the items of t[slice(a, b)], for an exact tuple and every pair of indices of any size."
+    source := "twin: tuple_subscript", status := .proven
+    prop := ``TupleBinarySlice, thm := some ``tupleBinarySlice_proven },
+  { id := "bytesobj-iteritem-agrees", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_iteritem", "list_iteritem"]
+    statement := "tuple_iteritem and list_iteritem read what the iterators read and stop at the same place."
+    source := "twin: the two iteration paths of a for loop", status := .proven
+    prop := ``IterItemAgrees, thm := some ``iterItemAgrees_proven },
+  { id := "bytesobj-list-del-like-pop", pyFile := "Objects/listobject.c", pyFns := ["list_ass_item_lock_held", "list_pop_impl"]
+    statement := "del l[-1] and l.pop() leave the same list, allocation included, except for a list of one item, which pop clears."
+    source := "listobject.c:1172, :1626-1630, :1636 (gh-158592)", status := .proven
+    prop := ``ListDelLikePop, thm := some ``listDelLikePop_proven },
+  { id := "bytesobj-list-ass-item-allocation", pyFile := "Objects/listobject.c", pyFns := ["list_ass_item_lock_held"]
+    statement := "l[i] = x leaves the array alone, and del l[i] is list_resize to one item less."
+    source := "listobject.c:1159-1179", status := .proven
+    prop := ``ListAssItemAllocation, thm := some ``listAssItemAllocation_proven }
 ]
 
 end PyLean.BytesObj.Seq

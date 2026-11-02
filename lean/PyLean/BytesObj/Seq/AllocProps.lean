@@ -55,17 +55,22 @@ theorem listResize_spec (allocated : Int) (hasItems : Bool) (size newsize a : In
       obtain ⟨rfl, rfl⟩ := hr
       have := newAllocated_ge size newsize hn
       exact ⟨this, by omega, hsize, fun _ => rfl⟩
-    · simp at hr
+    · split at hr
+      · rename_i hless
+        simp only [Except.ok.injEq, Prod.mk.injEq] at hr
+        obtain ⟨rfl, rfl⟩ := hr
+        exact ⟨by omega, ha, hb, harr⟩
+      · simp at hr
 
 /-- `list_resize`, for every state and size: a successful resize leaves room for
-`newsize`; the fast path of line 117 changes nothing, and the fast path is taken
-exactly when `allocated >> 1 <= newsize <= allocated`. The over-allocation is a
+`newsize`; the fast path of line 121 changes nothing, and it is taken when `newsize <= allocated`
+and either `allocated >> 1 <= newsize` or the list is small. The over-allocation is a
 multiple of 4 for a non-zero size. The note at lines 130-131 of listobject.c holds:
 `new_allocated` is below `2^64` for all `newsize <= PY_SSIZE_T_MAX`, so it cannot
 overflow `size_t`, and it is at most `newsize * 9/8 + 6`. -/
 def ListResizeSpec : Prop :=
   (∀ (allocated : Int) (h : Bool) (size newsize : Int),
-    allocated ≥ newsize → newsize ≥ allocated / 2 →
+    allocated ≥ newsize → (newsize ≥ allocated / 2 ∨ allocated ≤ 32) →
       listResize allocated h size newsize = .ok (allocated, h)) ∧
   (∀ (n : Int), 0 ≤ n → n ≤ ssizeMax →
     overalloc n % 4 = 0 ∧ n ≤ overalloc n ∧ overalloc n ≤ n + n / 8 + 6 ∧ overalloc n < 2 ^ 64) ∧
@@ -269,14 +274,7 @@ theorem listOpsWF_proven : ListOpsWF := by
     split at h
     · simp at h
     · cases v with
-      | none =>
-        simp only [Except.ok.injEq] at h
-        subst h
-        refine ⟨hw.nonneg, ?_, hw.array, hw.bytes⟩
-        have := hw.covers
-        have hle := List.length_eraseIdx_le o.items i.toNat
-        simp only
-        omega
+      | none => exact (resizeTo_wf hw h).1
       | some v =>
         simp only [Except.ok.injEq] at h
         subst h

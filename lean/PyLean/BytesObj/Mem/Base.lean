@@ -2,7 +2,7 @@ import PyLean.BytesObj.Exc
 import PyLean.RangeSlice.Model
 
 /-!
-Vocabulary of the `memoryview` model (`Objects/memoryobject.c`, CPython 3.14.7, 64-bit
+Vocabulary of the `memoryview` model (`Objects/memoryobject.c`, CPython 3.15.2, 64-bit
 little-endian build): exceptions, native format characters, raw byte access and the
 exact IEEE conversions behind the formats `f`, `d` and `e`.
 
@@ -46,6 +46,12 @@ def fmtText (s : List Char) : String := String.ofList s
 
 /-! ## Native format characters -/
 
+/-- What `get_native_fmtchar` hands back is a pointer to the format, compared with `strcmp`. A format
+of one character is that character here, and the two of two characters, `Zf` and `Zd`, have a code
+each, in the private use area, so no format text can collide with them. -/
+def zfCode : Char := '\uE000'
+def zdCode : Char := '\uE001'
+
 /-- The `switch` of `get_native_fmtchar`, memoryobject.c:1210-1233 (`-1`: unknown). -/
 def fmtSize : Char → Int
   | 'c' | 'b' | 'B' => 1
@@ -65,8 +71,13 @@ def fmtSize : Char → Int
 Skips one leading `@`, then requires `fmt[0]` known and `fmt[1] == '\0'`. -/
 def getNativeFmtchar (fmt : List Char) : Option (Char × Int) :=
   let fmt := if cc fmt 0 = '@' then fmt.drop 1 else fmt
-  let size := fmtSize (cc fmt 0)
-  if size > 0 ∧ cc fmt 1 = '\x00' then some (cc fmt 0, size) else none
+  if cc fmt 0 = 'Z' then
+    if cc fmt 1 = 'f' ∧ cc fmt 2 = '\x00' then some (zfCode, 8)
+    else if cc fmt 1 = 'd' ∧ cc fmt 2 = '\x00' then some (zdCode, 16)
+    else none
+  else
+    let size := fmtSize (cc fmt 0)
+    if size > 0 ∧ cc fmt 1 = '\x00' then some (cc fmt 0, size) else none
 
 /-- The `switch` of `get_native_fmtstr`, memoryobject.c:1268-1294. -/
 def nativeChar : Char → Bool
@@ -78,11 +89,17 @@ def nativeChar : Char → Bool
 def getNativeFmtstr (fmt : List Char) : Option (List Char) :=
   let at_ := cc fmt 0 = '@'
   let fmt := if at_ then fmt.drop 1 else fmt
-  if cc fmt 0 = '\x00' ∨ cc fmt 1 ≠ '\x00' then none
+  if cc fmt 0 = '\x00' then none
+  else if cc fmt 0 = 'Z' then
+    if cc fmt 1 = '\x00' ∨ cc fmt 2 ≠ '\x00' then none
+    else if cc fmt 1 = 'f' ∨ cc fmt 1 = 'd' then
+      some (if at_ then ['@', 'Z', cc fmt 1] else ['Z', cc fmt 1])
+    else none
+  else if cc fmt 1 ≠ '\x00' then none
   else if nativeChar (cc fmt 0) then some (if at_ then ['@', cc fmt 0] else [cc fmt 0])
   else none
 
-/-- `IS_BYTE_FORMAT`, memoryobject.c@3.14.7:1200. -/
+/-- `IS_BYTE_FORMAT`, memoryobject.c:1200. -/
 def isByteFormat (f : Char) : Bool := f == 'b' || f == 'B' || f == 'c'
 
 /-! ## The byte store -/
@@ -156,7 +173,7 @@ def dMant (d : Nat) : Nat × Int :=
   if e = 0 then (f, -1074) else (f + 2 ^ 52, (e : Int) - 1075)
 
 /-- `double` value of the 32-bit float pattern `x` (`dest = x` in `UNPACK_SINGLE(d, ptr,
-float)`, memoryobject.c@3.14.7:1822): exact, a signalling NaN comes back quiet. -/
+float)`, memoryobject.c:1851): exact, a signalling NaN comes back quiet. -/
 def widen32 (x : Nat) : Nat :=
   let s := x / 2 ^ 31 % 2
   let e := x / 2 ^ 23 % 2 ^ 8
@@ -171,6 +188,12 @@ def widen32 (x : Nat) : Nat :=
       let l := Nat.log2 f
       sgn + (l + 874) * 2 ^ 52 + (f - 2 ^ l) * 2 ^ (52 - l)
   else sgn + (e + 896) * 2 ^ 52 + f * 2 ^ 29
+
+/-- `PyFloat_Unpack4`, Objects/floatobject.c, on this byte order: `widen32`, except that a signalling
+NaN stays signalling, by clearing the quiet bit of the double. `Zf` items read through it. -/
+def unpack4 (x : Nat) : Nat :=
+  if x / 2 ^ 23 % 2 ^ 8 = 255 ∧ x % 2 ^ 23 ≠ 0 ∧ x / 2 ^ 22 % 2 = 0 then widen32 x - 2 ^ 51
+  else widen32 x
 
 /-- `(float)d`, `PACK_SINGLE(ptr, d, float)` (memoryobject.c:2023): to nearest, ties to
 even; too large a value becomes an infinity, with no error. -/
@@ -264,6 +287,8 @@ inductive Item where
   /-- 64-bit IEEE pattern. -/
   | float (bits : Nat)
   | bytes (b : List Nat)
+  /-- Real and imaginary part, as 64-bit IEEE patterns. -/
+  | complex (re im : Nat)
   deriving Repr, DecidableEq, Inhabited
 
 /-- `v == w` for two unpacked values (`PyObject_RichCompareBool(v, w, Py_EQ)`). `bool`
@@ -276,6 +301,10 @@ def itemEq : Item → Item → Bool
   | .float a, .int b | .int b, .float a => dEqInt a b
   | .float a, .bool b | .bool b, .float a => dEqInt a (if b then 1 else 0)
   | .bytes a, .bytes b => a == b
+  | .complex a b, .complex c d => dEq a c && dEq b d
+  | .complex a b, .int n | .int n, .complex a b => dEq b 0 && dEqInt a n
+  | .complex a b, .bool c | .bool c, .complex a b => dEq b 0 && dEqInt a (if c then 1 else 0)
+  | .complex a b, .float c | .float c, .complex a b => dEq b 0 && dEq a c
   | _, _ => false
 
 end PyLean.BytesObj.Mem

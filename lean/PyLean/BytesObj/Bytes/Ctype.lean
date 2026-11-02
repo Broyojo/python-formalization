@@ -1,7 +1,7 @@
 import PyLean.StrSearch.Model
 
 /-!
-`Objects/bytes_methods.c` (CPython 3.14.7): classification, case mapping and
+`Objects/bytes_methods.c` (CPython 3.15.2): classification, case mapping and
 `maketrans`. The search and tailmatch helpers of that file live in
 `PyLean.StrSearch.Model`; `Basic.lean` adds the object-level argument parsing.
 

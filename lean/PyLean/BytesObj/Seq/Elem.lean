@@ -3,7 +3,7 @@ import PyLean.RangeSlice.Model
 import PyLean.Sequences.Common
 
 /-!
-Shared vocabulary for the `tuple` and `list` models, CPython 3.14.7.
+Shared vocabulary for the `tuple` and `list` models, CPython 3.15.2.
 
 The element type is abstract, as the C code is: `tuple` and `list` never look
 inside an element except through `PyObject_RichCompare`, `PyObject_Hash` and

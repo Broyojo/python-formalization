@@ -12,10 +12,10 @@ open PyLean PyLean.StrSearch
 /-! ## The field writer is exact -/
 
 /-- The `assert((res - before) == alloc)` of bytesobject.c:1136, for every flag
-combination, sign, width and length: the writes of lines 988-1040 produce exactly the
-`alloc` bytes reserved at lines 970-983, so the preallocation can neither overflow
+combination, sign, width and length: the writes of lines 1071-1123 produce exactly the
+`alloc` bytes reserved at lines 1053-1058, so the preallocation can neither overflow
 nor leave a gap. Hypotheses are the invariants at that point: `len` bytes are
-available in `pbuf`, `width ≥ len` (line 971), the fill is a space or `0`, and when the
+available in `pbuf`, `width ≥ len` (line 1053), the fill is a space or `0`, and when the
 `0x` prefix is written the field has at least the two prefix bytes
 (`_PyUnicode_FormatLong` keeps them under `F_ALT`). -/
 def FieldAllocExact : Prop :=
@@ -79,7 +79,7 @@ theorem digits_head (b n : Nat) (hb : 1 < b) (hb2 : b ≤ 16) :
 
 /-! ## Fast path and slow path -/
 
-/-- Lines 958-1040 for the text of an int, `width = -1`. -/
+/-- Lines 1041-1123 for the text of an int, `width = -1`. -/
 def renderLong (fl : Fl) (c : Int) (temp : Seq) : Seq :=
   let (sign, pbuf, len) := signStep true fl temp temp.length
   let width : Int := if (-1 : Int) < len then len else -1
@@ -87,7 +87,7 @@ def renderLong (fl : Fl) (c : Int) (temp : Seq) : Seq :=
 
 /-- The slow path for an int with no flag but `#`: `formatlong`, then the field. -/
 def slowLong (v : Int) (c : Int) (alt : Bool) : Py Seq := do
-  let temp ← formatLong (.int v) { alt } (-1) c.toNat
+  let temp ← formatLong default (.int v) { alt } (-1) c.toNat
   return renderLong { alt } c temp
 
 /-- Fast path against slow path. `%d %i %u %o %x` of an exact int with no width,
