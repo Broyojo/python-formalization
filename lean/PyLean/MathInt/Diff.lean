@@ -1,6 +1,7 @@
 import PyLean.DiffCore
 import PyLean.MathInt.Model
 import PyLean.MathInt.IntOps
+import PyLean.MathInt.FltDiff
 
 /-! Differential-testing handler for `mathint` cases (`"mod": "mathint"`). -/
 
@@ -64,7 +65,8 @@ def run (fn : String) (j : Json) : Except String Json := do
       (← getBool j "signed"))
   | "divmod" => return encPy encPair (divmod (← getInt j "a") (← getInt j "b"))
   | "round" => return encPy encInt (.ok (roundInt (← getInt j "x") (← getOptInt j "nd")) : Py Int)
-  | other => throw s!"unknown fn {other}"
+  | other =>
+    if other.startsWith "m." then runFlt (other.drop 2).toString j else throw s!"unknown fn {other}"
 
 def handler : Handler := fun fn j => some (run fn j)
 
