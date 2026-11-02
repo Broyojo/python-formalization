@@ -10,7 +10,7 @@ import PyLean.TextLibs.ShlexProps
 import PyLean.TextLibs.TextwrapProps
 import PyLean.TextLibs.QuopriProps
 import PyLean.TextLibs.HtmlProps
-import PyLean.TextLibs.DifflibTextProps
+import PyLean.TextLibs.DifflibHunks
 import PyLean.TextLibs.CsvSniffProps
 
 /-!
@@ -1324,7 +1324,16 @@ def entries : List Entry := [
   { id := "textlibs-difflib-is-line-junk", pyFile := "Lib/difflib.py", pyFns := ["IS_LINE_JUNK"]
     statement := "IS_LINE_JUNK(line) with no pat holds exactly when, white space aside, the line is empty or a single '#'."
     source := "docstring of IS_LINE_JUNK", status := .proven
-    prop := ``IsLineJunkDoc, thm := some ``isLineJunkDoc_proven }
+    prop := ``IsLineJunkDoc, thm := some ``isLineJunkDoc_proven },
+  { id := "textlibs-difflib-hunk-sides", pyFile := "Lib/difflib.py", pyFns := ["unified_diff"]
+    statement := "Each hunk of unified_diff, for any two lists of str and any n: its context and removed lines are a[i1:i2], and its context and added lines b[j1:j2], from the first and last opcodes of the group."
+    source := "docstring of unified_diff: a diff is a patch", status := .proven
+    prop := ``HunkSides, thm := some ``hunkSides_proven
+    notes := "With textlibs-difflib-grouped, no change is left out of a hunk. The range text of the @@ line is checked by the difftest." },
+  { id := "textlibs-difflib-context-sides", pyFile := "Lib/difflib.py", pyFns := ["context_diff"]
+    statement := "The two sides of a hunk of context_diff, without their prefixes, are the slices of a and b the group covers."
+    source := "docstring of context_diff", status := .proven
+    prop := ``ContextSides, thm := some ``contextSides_proven }
 ]
 
 end PyLean.TextLibs
