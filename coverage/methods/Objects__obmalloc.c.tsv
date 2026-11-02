@@ -1,117 +1,117 @@
 file	line	endline	name	signature	status	entry	note
-Objects/obmalloc.c	58	67	_PyMem_RawMalloc	_PyMem_RawMalloc(void *Py_UNUSED(ctx), size_t size)	todo		
-Objects/obmalloc.c	70	81	_PyMem_RawCalloc	_PyMem_RawCalloc(void *Py_UNUSED(ctx), size_t nelem, size_t elsize)	todo		
-Objects/obmalloc.c	84	89	_PyMem_RawRealloc	_PyMem_RawRealloc(void *Py_UNUSED(ctx), void *ptr, size_t size)	todo		
-Objects/obmalloc.c	92	95	_PyMem_RawFree	_PyMem_RawFree(void *Py_UNUSED(ctx), void *ptr)	todo		
-Objects/obmalloc.c	100	109	_PyMem_mi_page_clear_qsbr	_PyMem_mi_page_clear_qsbr(mi_page_t *page)	todo		
-Objects/obmalloc.c	113	128	_PyMem_mi_page_is_safe_to_free	_PyMem_mi_page_is_safe_to_free(mi_page_t *page)	todo		
-Objects/obmalloc.c	140	154	should_advance_qsbr_for_page	should_advance_qsbr_for_page(struct _qsbr_thread_state *qsbr, mi_page_t *page)	todo		
-Objects/obmalloc.c	157	160	tstate_from_heap	tstate_from_heap(mi_heap_t *heap)	todo		
-Objects/obmalloc.c	164	204	_PyMem_mi_page_maybe_free	_PyMem_mi_page_maybe_free(mi_page_t *page, mi_page_queue_t *pq, bool force)	todo		
-Objects/obmalloc.c	207	224	_PyMem_mi_page_reclaimed	_PyMem_mi_page_reclaimed(mi_page_t *page)	todo		
-Objects/obmalloc.c	227	257	_PyMem_mi_heap_collect_qsbr	_PyMem_mi_heap_collect_qsbr(mi_heap_t *heap)	todo		
-Objects/obmalloc.c	260	269	_PyMem_MiMalloc	_PyMem_MiMalloc(void *ctx, size_t size)	todo		
-Objects/obmalloc.c	272	281	_PyMem_MiCalloc	_PyMem_MiCalloc(void *ctx, size_t nelem, size_t elsize)	todo		
-Objects/obmalloc.c	284	293	_PyMem_MiRealloc	_PyMem_MiRealloc(void *ctx, void *ptr, size_t size)	todo		
-Objects/obmalloc.c	296	299	_PyMem_MiFree	_PyMem_MiFree(void *ctx, void *ptr)	todo		
-Objects/obmalloc.c	302	311	_PyObject_MiMalloc	_PyObject_MiMalloc(void *ctx, size_t nbytes)	todo		
-Objects/obmalloc.c	314	323	_PyObject_MiCalloc	_PyObject_MiCalloc(void *ctx, size_t nelem, size_t elsize)	todo		
-Objects/obmalloc.c	327	376	_PyObject_MiRealloc	_PyObject_MiRealloc(void *ctx, void *ptr, size_t nbytes)	todo		changed-in-3.15:
-Objects/obmalloc.c	379	382	_PyObject_MiFree	_PyObject_MiFree(void *ctx, void *ptr)	todo		
-Objects/obmalloc.c	385	388	_PyMem_MiRawMalloc	_PyMem_MiRawMalloc(void *ctx, size_t size)	todo		changed-in-3.15: new function
-Objects/obmalloc.c	391	394	_PyMem_MiRawCalloc	_PyMem_MiRawCalloc(void *ctx, size_t nelem, size_t elsize)	todo		changed-in-3.15: new function
-Objects/obmalloc.c	397	400	_PyMem_MiRawRealloc	_PyMem_MiRawRealloc(void *ctx, void *ptr, size_t size)	todo		changed-in-3.15: new function
-Objects/obmalloc.c	403	406	_PyMem_MiRawFree	_PyMem_MiRawFree(void *ctx, void *ptr)	todo		changed-in-3.15: new function
-Objects/obmalloc.c	471	478	_PyMem_DefaultRawMalloc	_PyMem_DefaultRawMalloc(size_t size)	todo		
-Objects/obmalloc.c	481	488	_PyMem_DefaultRawCalloc	_PyMem_DefaultRawCalloc(size_t nelem, size_t elsize)	todo		
-Objects/obmalloc.c	491	498	_PyMem_DefaultRawRealloc	_PyMem_DefaultRawRealloc(void *ptr, size_t size)	todo		
-Objects/obmalloc.c	501	508	_PyMem_DefaultRawFree	_PyMem_DefaultRawFree(void *ptr)	todo		
-Objects/obmalloc.c	511	528	_PyMem_DefaultRawWcsdup	_PyMem_DefaultRawWcsdup(const wchar_t *str)	todo		
-Objects/obmalloc.c	550	576	_pymalloc_system_hugepage_size	_pymalloc_system_hugepage_size(void)	todo		changed-in-3.15: new function
-Objects/obmalloc.c	582	598	_pymalloc_round_up_to_multiple	_pymalloc_round_up_to_multiple(size_t size, size_t multiple)	todo		changed-in-3.15: new function
-Objects/obmalloc.c	602	620	_pymalloc_virtual_alloc_size	_pymalloc_virtual_alloc_size(size_t size)	todo		changed-in-3.15: new function
-Objects/obmalloc.c	623	679	_PyMem_ArenaAlloc	_PyMem_ArenaAlloc(void *Py_UNUSED(ctx), size_t size)	todo		changed-in-3.15:
-Objects/obmalloc.c	729	758	set_default_allocator_unlocked	set_default_allocator_unlocked(PyMemAllocatorDomain domain, int debug, PyMemAllocatorEx *old_alloc)	todo		
-Objects/obmalloc.c	768	810	_PyMem_GetAllocatorName	_PyMem_GetAllocatorName(const char *name, PyMemAllocatorName *allocator)	todo		
-Objects/obmalloc.c	814	899	set_up_allocators_unlocked	set_up_allocators_unlocked(PyMemAllocatorName allocator)	todo		changed-in-3.15:
-Objects/obmalloc.c	902	908	_PyMem_SetupAllocators	_PyMem_SetupAllocators(PyMemAllocatorName allocator)	todo		
-Objects/obmalloc.c	912	915	pymemallocator_eq	pymemallocator_eq(PyMemAllocatorEx *a, PyMemAllocatorEx *b)	todo		
+Objects/obmalloc.c	58	67	_PyMem_RawMalloc	_PyMem_RawMalloc(void *Py_UNUSED(ctx), size_t size)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	70	81	_PyMem_RawCalloc	_PyMem_RawCalloc(void *Py_UNUSED(ctx), size_t nelem, size_t elsize)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	84	89	_PyMem_RawRealloc	_PyMem_RawRealloc(void *Py_UNUSED(ctx), void *ptr, size_t size)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	92	95	_PyMem_RawFree	_PyMem_RawFree(void *Py_UNUSED(ctx), void *ptr)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	100	109	_PyMem_mi_page_clear_qsbr	_PyMem_mi_page_clear_qsbr(mi_page_t *page)	excluded		platform: the mimalloc allocator, used only with PYTHONMALLOC=mimalloc or the free-threaded build, not the default build this project models
+Objects/obmalloc.c	113	128	_PyMem_mi_page_is_safe_to_free	_PyMem_mi_page_is_safe_to_free(mi_page_t *page)	excluded		platform: the mimalloc allocator, used only with PYTHONMALLOC=mimalloc or the free-threaded build, not the default build this project models
+Objects/obmalloc.c	140	154	should_advance_qsbr_for_page	should_advance_qsbr_for_page(struct _qsbr_thread_state *qsbr, mi_page_t *page)	excluded		platform: defined only under #ifdef Py_GIL_DISABLED (Objects/obmalloc.c:130-161, 1399-1432, 1524-1547); absent from the default build
+Objects/obmalloc.c	157	160	tstate_from_heap	tstate_from_heap(mi_heap_t *heap)	excluded		platform: defined only under #ifdef Py_GIL_DISABLED (Objects/obmalloc.c:130-161, 1399-1432, 1524-1547); absent from the default build
+Objects/obmalloc.c	164	204	_PyMem_mi_page_maybe_free	_PyMem_mi_page_maybe_free(mi_page_t *page, mi_page_queue_t *pq, bool force)	excluded		platform: the mimalloc allocator, used only with PYTHONMALLOC=mimalloc or the free-threaded build, not the default build this project models
+Objects/obmalloc.c	207	224	_PyMem_mi_page_reclaimed	_PyMem_mi_page_reclaimed(mi_page_t *page)	excluded		platform: the mimalloc allocator, used only with PYTHONMALLOC=mimalloc or the free-threaded build, not the default build this project models
+Objects/obmalloc.c	227	257	_PyMem_mi_heap_collect_qsbr	_PyMem_mi_heap_collect_qsbr(mi_heap_t *heap)	excluded		platform: the mimalloc allocator, used only with PYTHONMALLOC=mimalloc or the free-threaded build, not the default build this project models
+Objects/obmalloc.c	260	269	_PyMem_MiMalloc	_PyMem_MiMalloc(void *ctx, size_t size)	excluded		platform: the mimalloc allocator, used only with PYTHONMALLOC=mimalloc or the free-threaded build, not the default build this project models
+Objects/obmalloc.c	272	281	_PyMem_MiCalloc	_PyMem_MiCalloc(void *ctx, size_t nelem, size_t elsize)	excluded		platform: the mimalloc allocator, used only with PYTHONMALLOC=mimalloc or the free-threaded build, not the default build this project models
+Objects/obmalloc.c	284	293	_PyMem_MiRealloc	_PyMem_MiRealloc(void *ctx, void *ptr, size_t size)	excluded		platform: the mimalloc allocator, used only with PYTHONMALLOC=mimalloc or the free-threaded build, not the default build this project models
+Objects/obmalloc.c	296	299	_PyMem_MiFree	_PyMem_MiFree(void *ctx, void *ptr)	excluded		platform: the mimalloc allocator, used only with PYTHONMALLOC=mimalloc or the free-threaded build, not the default build this project models
+Objects/obmalloc.c	302	311	_PyObject_MiMalloc	_PyObject_MiMalloc(void *ctx, size_t nbytes)	excluded		platform: the mimalloc allocator, used only with PYTHONMALLOC=mimalloc or the free-threaded build, not the default build this project models
+Objects/obmalloc.c	314	323	_PyObject_MiCalloc	_PyObject_MiCalloc(void *ctx, size_t nelem, size_t elsize)	excluded		platform: the mimalloc allocator, used only with PYTHONMALLOC=mimalloc or the free-threaded build, not the default build this project models
+Objects/obmalloc.c	327	376	_PyObject_MiRealloc	_PyObject_MiRealloc(void *ctx, void *ptr, size_t nbytes)	excluded		platform: the mimalloc allocator, used only with PYTHONMALLOC=mimalloc or the free-threaded build, not the default build this project models
+Objects/obmalloc.c	379	382	_PyObject_MiFree	_PyObject_MiFree(void *ctx, void *ptr)	excluded		platform: the mimalloc allocator, used only with PYTHONMALLOC=mimalloc or the free-threaded build, not the default build this project models
+Objects/obmalloc.c	385	388	_PyMem_MiRawMalloc	_PyMem_MiRawMalloc(void *ctx, size_t size)	excluded		platform: the mimalloc allocator, used only with PYTHONMALLOC=mimalloc or the free-threaded build, not the default build this project models
+Objects/obmalloc.c	391	394	_PyMem_MiRawCalloc	_PyMem_MiRawCalloc(void *ctx, size_t nelem, size_t elsize)	excluded		platform: the mimalloc allocator, used only with PYTHONMALLOC=mimalloc or the free-threaded build, not the default build this project models
+Objects/obmalloc.c	397	400	_PyMem_MiRawRealloc	_PyMem_MiRawRealloc(void *ctx, void *ptr, size_t size)	excluded		platform: the mimalloc allocator, used only with PYTHONMALLOC=mimalloc or the free-threaded build, not the default build this project models
+Objects/obmalloc.c	403	406	_PyMem_MiRawFree	_PyMem_MiRawFree(void *ctx, void *ptr)	excluded		platform: the mimalloc allocator, used only with PYTHONMALLOC=mimalloc or the free-threaded build, not the default build this project models
+Objects/obmalloc.c	471	478	_PyMem_DefaultRawMalloc	_PyMem_DefaultRawMalloc(size_t size)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	481	488	_PyMem_DefaultRawCalloc	_PyMem_DefaultRawCalloc(size_t nelem, size_t elsize)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	491	498	_PyMem_DefaultRawRealloc	_PyMem_DefaultRawRealloc(void *ptr, size_t size)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	501	508	_PyMem_DefaultRawFree	_PyMem_DefaultRawFree(void *ptr)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	511	528	_PyMem_DefaultRawWcsdup	_PyMem_DefaultRawWcsdup(const wchar_t *str)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	550	576	_pymalloc_system_hugepage_size	_pymalloc_system_hugepage_size(void)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	582	598	_pymalloc_round_up_to_multiple	_pymalloc_round_up_to_multiple(size_t size, size_t multiple)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	602	620	_pymalloc_virtual_alloc_size	_pymalloc_virtual_alloc_size(size_t size)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	623	679	_PyMem_ArenaAlloc	_PyMem_ArenaAlloc(void *Py_UNUSED(ctx), size_t size)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	729	758	set_default_allocator_unlocked	set_default_allocator_unlocked(PyMemAllocatorDomain domain, int debug, PyMemAllocatorEx *old_alloc)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	768	810	_PyMem_GetAllocatorName	_PyMem_GetAllocatorName(const char *name, PyMemAllocatorName *allocator)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	814	899	set_up_allocators_unlocked	set_up_allocators_unlocked(PyMemAllocatorName allocator)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	902	908	_PyMem_SetupAllocators	_PyMem_SetupAllocators(PyMemAllocatorName allocator)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	912	915	pymemallocator_eq	pymemallocator_eq(PyMemAllocatorEx *a, PyMemAllocatorEx *b)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
 Objects/obmalloc.c	919	987	get_current_allocator_name_unlocked	get_current_allocator_name_unlocked(void)	todo		changed-in-3.15:
 Objects/obmalloc.c	990	996	_PyMem_GetCurrentAllocatorName	_PyMem_GetCurrentAllocatorName(void)	todo		
-Objects/obmalloc.c	1000	1003	_PyMem_DebugEnabled	_PyMem_DebugEnabled(void)	todo		
-Objects/obmalloc.c	1007	1015	_PyMem_PymallocEnabled	_PyMem_PymallocEnabled(void)	todo		
-Objects/obmalloc.c	1019	1031	_PyMem_MimallocEnabled	_PyMem_MimallocEnabled(void)	todo		
-Objects/obmalloc.c	1038	1081	set_up_debug_hooks_domain_unlocked	set_up_debug_hooks_domain_unlocked(PyMemAllocatorDomain domain)	todo		
-Objects/obmalloc.c	1085	1091	set_up_debug_hooks_unlocked	set_up_debug_hooks_unlocked(void)	todo		
-Objects/obmalloc.c	1094	1099	PyMem_SetupDebugHooks	PyMem_SetupDebugHooks(void)	todo		
-Objects/obmalloc.c	1102	1117	get_allocator_unlocked	get_allocator_unlocked(PyMemAllocatorDomain domain, PyMemAllocatorEx *allocator)	todo		
-Objects/obmalloc.c	1120	1129	set_allocator_unlocked	set_allocator_unlocked(PyMemAllocatorDomain domain, PyMemAllocatorEx *allocator)	todo		
-Objects/obmalloc.c	1132	1137	PyMem_GetAllocator	PyMem_GetAllocator(PyMemAllocatorDomain domain, PyMemAllocatorEx *allocator)	todo		
-Objects/obmalloc.c	1140	1145	PyMem_SetAllocator	PyMem_SetAllocator(PyMemAllocatorDomain domain, PyMemAllocatorEx *allocator)	todo		
-Objects/obmalloc.c	1148	1153	PyObject_GetArenaAllocator	PyObject_GetArenaAllocator(PyObjectArenaAllocator *allocator)	todo		
-Objects/obmalloc.c	1156	1161	PyObject_SetArenaAllocator	PyObject_SetArenaAllocator(PyObjectArenaAllocator *allocator)	todo		
-Objects/obmalloc.c	1183	1190	_PyObject_VirtualAlloc	_PyObject_VirtualAlloc(size_t size)	todo		changed-in-3.15:
-Objects/obmalloc.c	1193	1198	_PyObject_VirtualFree	_PyObject_VirtualFree(void *obj, size_t size)	todo		changed-in-3.15:
-Objects/obmalloc.c	1206	1217	PyMem_RawMalloc	PyMem_RawMalloc(size_t size)	todo		
-Objects/obmalloc.c	1220	1226	PyMem_RawCalloc	PyMem_RawCalloc(size_t nelem, size_t elsize)	todo		
-Objects/obmalloc.c	1229	1235	PyMem_RawRealloc	PyMem_RawRealloc(void *ptr, size_t new_size)	todo		
-Objects/obmalloc.c	1237	1240	PyMem_RawFree	void PyMem_RawFree(void *ptr)	todo		
-Objects/obmalloc.c	1248	1258	PyMem_Malloc	PyMem_Malloc(size_t size)	todo		
-Objects/obmalloc.c	1261	1271	PyMem_Calloc	PyMem_Calloc(size_t nelem, size_t elsize)	todo		
-Objects/obmalloc.c	1274	1280	PyMem_Realloc	PyMem_Realloc(void *ptr, size_t new_size)	todo		
-Objects/obmalloc.c	1283	1287	PyMem_Free	PyMem_Free(void *ptr)	todo		
-Objects/obmalloc.c	1295	1312	_PyMem_RawWcsdup	_PyMem_RawWcsdup(const wchar_t *str)	todo		
-Objects/obmalloc.c	1315	1325	_PyMem_RawStrdup	_PyMem_RawStrdup(const char *str)	todo		
-Objects/obmalloc.c	1328	1338	_PyMem_Strdup	_PyMem_Strdup(const char *str)	todo		
-Objects/obmalloc.c	1364	1367	work_item_should_decref	work_item_should_decref(uintptr_t ptr)	todo		
-Objects/obmalloc.c	1370	1396	free_work_item	free_work_item(uintptr_t ptr, delayed_dealloc_cb cb, void *state)	todo		changed-in-3.15:
-Objects/obmalloc.c	1413	1431	should_advance_qsbr_for_free	should_advance_qsbr_for_free(struct _qsbr_thread_state *qsbr, size_t size)	todo		
-Objects/obmalloc.c	1435	1513	free_delayed	free_delayed(uintptr_t ptr, size_t size)	todo		changed-in-3.15:
-Objects/obmalloc.c	1516	1522	_PyMem_FreeDelayed	_PyMem_FreeDelayed(void *ptr, size_t size)	todo		
-Objects/obmalloc.c	1526	1535	_PyObject_XDecRefDelayed	_PyObject_XDecRefDelayed(PyObject *ptr)	todo		changed-in-3.15:
-Objects/obmalloc.c	1540	1545	_PyObject_XSetRefDelayed	_PyObject_XSetRefDelayed(PyObject **ptr, PyObject *value)	todo		changed-in-3.15: new function
-Objects/obmalloc.c	1549	1552	work_queue_first	work_queue_first(struct llist_node *head)	todo		
-Objects/obmalloc.c	1555	1583	process_queue	process_queue(struct llist_node *head, _PyThreadStateImpl *tstate, bool keep_empty, delayed_dealloc_cb cb, void *state)	todo		
-Objects/obmalloc.c	1586	1595	process_interp_queue	process_interp_queue(struct _Py_mem_interp_free_queue *queue, _PyThreadStateImpl *tstate, delayed_dealloc_cb cb, void *state)	todo		
-Objects/obmalloc.c	1598	1611	maybe_process_interp_queue	maybe_process_interp_queue(struct _Py_mem_interp_free_queue *queue, _PyThreadStateImpl *tstate, delayed_dealloc_cb cb, void *state)	todo		
-Objects/obmalloc.c	1614	1626	_PyMem_ProcessDelayed	_PyMem_ProcessDelayed(PyThreadState *tstate)	todo		
-Objects/obmalloc.c	1629	1639	_PyMem_ProcessDelayedNoDealloc	_PyMem_ProcessDelayedNoDealloc(PyThreadState *tstate, delayed_dealloc_cb cb, void *state)	todo		
-Objects/obmalloc.c	1642	1672	_PyMem_AbandonDelayed	_PyMem_AbandonDelayed(PyThreadState *tstate)	todo		
-Objects/obmalloc.c	1675	1694	_PyMem_FiniDelayed	_PyMem_FiniDelayed(PyInterpreterState *interp)	todo		
-Objects/obmalloc.c	1701	1711	PyObject_Malloc	PyObject_Malloc(size_t size)	todo		
-Objects/obmalloc.c	1714	1724	PyObject_Calloc	PyObject_Calloc(size_t nelem, size_t elsize)	todo		
-Objects/obmalloc.c	1727	1733	PyObject_Realloc	PyObject_Realloc(void *ptr, size_t new_size)	todo		
-Objects/obmalloc.c	1736	1740	PyObject_Free	PyObject_Free(void *ptr)	todo		
+Objects/obmalloc.c	1000	1003	_PyMem_DebugEnabled	_PyMem_DebugEnabled(void)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	1007	1015	_PyMem_PymallocEnabled	_PyMem_PymallocEnabled(void)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	1019	1031	_PyMem_MimallocEnabled	_PyMem_MimallocEnabled(void)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	1038	1081	set_up_debug_hooks_domain_unlocked	set_up_debug_hooks_domain_unlocked(PyMemAllocatorDomain domain)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	1085	1091	set_up_debug_hooks_unlocked	set_up_debug_hooks_unlocked(void)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	1094	1099	PyMem_SetupDebugHooks	PyMem_SetupDebugHooks(void)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	1102	1117	get_allocator_unlocked	get_allocator_unlocked(PyMemAllocatorDomain domain, PyMemAllocatorEx *allocator)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	1120	1129	set_allocator_unlocked	set_allocator_unlocked(PyMemAllocatorDomain domain, PyMemAllocatorEx *allocator)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	1132	1137	PyMem_GetAllocator	PyMem_GetAllocator(PyMemAllocatorDomain domain, PyMemAllocatorEx *allocator)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	1140	1145	PyMem_SetAllocator	PyMem_SetAllocator(PyMemAllocatorDomain domain, PyMemAllocatorEx *allocator)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	1148	1153	PyObject_GetArenaAllocator	PyObject_GetArenaAllocator(PyObjectArenaAllocator *allocator)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	1156	1161	PyObject_SetArenaAllocator	PyObject_SetArenaAllocator(PyObjectArenaAllocator *allocator)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	1183	1190	_PyObject_VirtualAlloc	_PyObject_VirtualAlloc(size_t size)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	1193	1198	_PyObject_VirtualFree	_PyObject_VirtualFree(void *obj, size_t size)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	1206	1217	PyMem_RawMalloc	PyMem_RawMalloc(size_t size)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	1220	1226	PyMem_RawCalloc	PyMem_RawCalloc(size_t nelem, size_t elsize)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	1229	1235	PyMem_RawRealloc	PyMem_RawRealloc(void *ptr, size_t new_size)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	1237	1240	PyMem_RawFree	void PyMem_RawFree(void *ptr)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	1248	1258	PyMem_Malloc	PyMem_Malloc(size_t size)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	1261	1271	PyMem_Calloc	PyMem_Calloc(size_t nelem, size_t elsize)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	1274	1280	PyMem_Realloc	PyMem_Realloc(void *ptr, size_t new_size)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	1283	1287	PyMem_Free	PyMem_Free(void *ptr)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	1295	1312	_PyMem_RawWcsdup	_PyMem_RawWcsdup(const wchar_t *str)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	1315	1325	_PyMem_RawStrdup	_PyMem_RawStrdup(const char *str)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	1328	1338	_PyMem_Strdup	_PyMem_Strdup(const char *str)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	1364	1367	work_item_should_decref	work_item_should_decref(uintptr_t ptr)	excluded		no-behaviour: in the default build free_delayed calls free_work_item at once (Objects/obmalloc.c:1437-1438), which PyMem_Frees a buffer or Py_DECREFs a tagged object; dropping a reference is excluded under the finalization scope limit
+Objects/obmalloc.c	1370	1396	free_work_item	free_work_item(uintptr_t ptr, delayed_dealloc_cb cb, void *state)	excluded		no-behaviour: in the default build free_delayed calls free_work_item at once (Objects/obmalloc.c:1437-1438), which PyMem_Frees a buffer or Py_DECREFs a tagged object; dropping a reference is excluded under the finalization scope limit
+Objects/obmalloc.c	1413	1431	should_advance_qsbr_for_free	should_advance_qsbr_for_free(struct _qsbr_thread_state *qsbr, size_t size)	excluded		platform: defined only under #ifdef Py_GIL_DISABLED (Objects/obmalloc.c:130-161, 1399-1432, 1524-1547); absent from the default build
+Objects/obmalloc.c	1435	1513	free_delayed	free_delayed(uintptr_t ptr, size_t size)	excluded		no-behaviour: in the default build free_delayed calls free_work_item at once (Objects/obmalloc.c:1437-1438), which PyMem_Frees a buffer or Py_DECREFs a tagged object; dropping a reference is excluded under the finalization scope limit
+Objects/obmalloc.c	1516	1522	_PyMem_FreeDelayed	_PyMem_FreeDelayed(void *ptr, size_t size)	excluded		no-behaviour: in the default build free_delayed calls free_work_item at once (Objects/obmalloc.c:1437-1438), which PyMem_Frees a buffer or Py_DECREFs a tagged object; dropping a reference is excluded under the finalization scope limit
+Objects/obmalloc.c	1526	1535	_PyObject_XDecRefDelayed	_PyObject_XDecRefDelayed(PyObject *ptr)	excluded		platform: defined only under #ifdef Py_GIL_DISABLED (Objects/obmalloc.c:130-161, 1399-1432, 1524-1547); absent from the default build
+Objects/obmalloc.c	1540	1545	_PyObject_XSetRefDelayed	_PyObject_XSetRefDelayed(PyObject **ptr, PyObject *value)	excluded		platform: defined only under #ifdef Py_GIL_DISABLED (Objects/obmalloc.c:130-161, 1399-1432, 1524-1547); absent from the default build
+Objects/obmalloc.c	1549	1552	work_queue_first	work_queue_first(struct llist_node *head)	excluded		no-behaviour: in the default build free_delayed never enqueues (Objects/obmalloc.c:1437-1438), so these walk and free empty per-thread and per-interpreter queues
+Objects/obmalloc.c	1555	1583	process_queue	process_queue(struct llist_node *head, _PyThreadStateImpl *tstate, bool keep_empty, delayed_dealloc_cb cb, void *state)	excluded		no-behaviour: in the default build free_delayed never enqueues (Objects/obmalloc.c:1437-1438), so these walk and free empty per-thread and per-interpreter queues
+Objects/obmalloc.c	1586	1595	process_interp_queue	process_interp_queue(struct _Py_mem_interp_free_queue *queue, _PyThreadStateImpl *tstate, delayed_dealloc_cb cb, void *state)	excluded		no-behaviour: in the default build free_delayed never enqueues (Objects/obmalloc.c:1437-1438), so these walk and free empty per-thread and per-interpreter queues
+Objects/obmalloc.c	1598	1611	maybe_process_interp_queue	maybe_process_interp_queue(struct _Py_mem_interp_free_queue *queue, _PyThreadStateImpl *tstate, delayed_dealloc_cb cb, void *state)	excluded		no-behaviour: in the default build free_delayed never enqueues (Objects/obmalloc.c:1437-1438), so these walk and free empty per-thread and per-interpreter queues
+Objects/obmalloc.c	1614	1626	_PyMem_ProcessDelayed	_PyMem_ProcessDelayed(PyThreadState *tstate)	excluded		no-behaviour: in the default build free_delayed never enqueues (Objects/obmalloc.c:1437-1438), so these walk and free empty per-thread and per-interpreter queues
+Objects/obmalloc.c	1629	1639	_PyMem_ProcessDelayedNoDealloc	_PyMem_ProcessDelayedNoDealloc(PyThreadState *tstate, delayed_dealloc_cb cb, void *state)	excluded		no-behaviour: in the default build free_delayed never enqueues (Objects/obmalloc.c:1437-1438), so these walk and free empty per-thread and per-interpreter queues
+Objects/obmalloc.c	1642	1672	_PyMem_AbandonDelayed	_PyMem_AbandonDelayed(PyThreadState *tstate)	excluded		no-behaviour: in the default build free_delayed never enqueues (Objects/obmalloc.c:1437-1438), so these walk and free empty per-thread and per-interpreter queues
+Objects/obmalloc.c	1675	1694	_PyMem_FiniDelayed	_PyMem_FiniDelayed(PyInterpreterState *interp)	excluded		no-behaviour: in the default build free_delayed never enqueues (Objects/obmalloc.c:1437-1438), so these walk and free empty per-thread and per-interpreter queues
+Objects/obmalloc.c	1701	1711	PyObject_Malloc	PyObject_Malloc(size_t size)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	1714	1724	PyObject_Calloc	PyObject_Calloc(size_t nelem, size_t elsize)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	1727	1733	PyObject_Realloc	PyObject_Realloc(void *ptr, size_t new_size)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	1736	1740	PyObject_Free	PyObject_Free(void *ptr)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
 Objects/obmalloc.c	1772	1777	has_own_state	has_own_state(PyInterpreterState *interp)	todo		
 Objects/obmalloc.c	1780	1785	get_state	get_state(void)	todo		
 Objects/obmalloc.c	1800	1806	count_blocks	static bool count_blocks( const mi_heap_t* heap, const mi_heap_area_t* area, void* block, size_t block_size, void* allocated_blocks)	todo		
 Objects/obmalloc.c	1809	1832	get_mimalloc_allocated_blocks	get_mimalloc_allocated_blocks(PyInterpreterState *interp)	todo		changed-in-3.15:
 Objects/obmalloc.c	1836	1876	_PyInterpreterState_GetAllocatedBlocks	_PyInterpreterState_GetAllocatedBlocks(PyInterpreterState *interp)	todo		
-Objects/obmalloc.c	1881	1905	_PyInterpreterState_FinalizeAllocatedBlocks	_PyInterpreterState_FinalizeAllocatedBlocks(PyInterpreterState *interp)	todo		
-Objects/obmalloc.c	1916	1920	_Py_FinalizeAllocatedBlocks	_Py_FinalizeAllocatedBlocks(_PyRuntimeState *runtime)	todo		
+Objects/obmalloc.c	1881	1905	_PyInterpreterState_FinalizeAllocatedBlocks	_PyInterpreterState_FinalizeAllocatedBlocks(PyInterpreterState *interp)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	1916	1920	_Py_FinalizeAllocatedBlocks	_Py_FinalizeAllocatedBlocks(_PyRuntimeState *runtime)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
 Objects/obmalloc.c	1923	1971	get_num_global_allocated_blocks	get_num_global_allocated_blocks(_PyRuntimeState *runtime)	todo		
 Objects/obmalloc.c	1974	1977	_Py_GetGlobalAllocatedBlocks	_Py_GetGlobalAllocatedBlocks(void)	todo		
-Objects/obmalloc.c	1992	2025	arena_map_get	arena_map_get(OMState *state, pymem_block *p, int create)	todo		
-Objects/obmalloc.c	2053	2094	arena_map_mark_used	arena_map_mark_used(OMState *state, uintptr_t arena_base, int is_used)	todo		
-Objects/obmalloc.c	2099	2111	arena_map_is_used	arena_map_is_used(OMState *state, pymem_block *p)	todo		
-Objects/obmalloc.c	2124	2224	new_arena	new_arena(OMState *state)	todo		
-Objects/obmalloc.c	2233	2236	address_in_range	address_in_range(OMState *state, void *p, poolp Py_UNUSED(pool))	todo		
-Objects/obmalloc.c	2316	2327	address_in_range	address_in_range(OMState *state, void *p, poolp pool)	todo		
-Objects/obmalloc.c	2336	2352	pymalloc_pool_extend	pymalloc_pool_extend(poolp pool, uint size)	todo		
-Objects/obmalloc.c	2358	2483	allocate_from_new_pool	allocate_from_new_pool(OMState *state, uint size)	todo		
-Objects/obmalloc.c	2494	2538	pymalloc_alloc	pymalloc_alloc(OMState *state, void *Py_UNUSED(ctx), size_t nbytes)	todo		
-Objects/obmalloc.c	2542	2555	_PyObject_Malloc	_PyObject_Malloc(void *ctx, size_t nbytes)	todo		
-Objects/obmalloc.c	2559	2576	_PyObject_Calloc	_PyObject_Calloc(void *ctx, size_t nelem, size_t elsize)	todo		
-Objects/obmalloc.c	2580	2593	insert_to_usedpool	insert_to_usedpool(OMState *state, poolp pool)	todo		
-Objects/obmalloc.c	2596	2760	insert_to_freepool	insert_to_freepool(OMState *state, poolp pool)	todo		
-Objects/obmalloc.c	2766	2820	pymalloc_free	pymalloc_free(OMState *state, void *Py_UNUSED(ctx), void *p)	todo		
-Objects/obmalloc.c	2824	2837	_PyObject_Free	_PyObject_Free(void *ctx, void *p)	todo		
-Objects/obmalloc.c	2850	2908	pymalloc_realloc	pymalloc_realloc(OMState *state, void *ctx, void **newptr_p, void *p, size_t nbytes)	todo		
-Objects/obmalloc.c	2912	2926	_PyObject_Realloc	_PyObject_Realloc(void *ctx, void *ptr, size_t nbytes)	todo		
+Objects/obmalloc.c	1992	2025	arena_map_get	arena_map_get(OMState *state, pymem_block *p, int create)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	2053	2094	arena_map_mark_used	arena_map_mark_used(OMState *state, uintptr_t arena_base, int is_used)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	2099	2111	arena_map_is_used	arena_map_is_used(OMState *state, pymem_block *p)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	2124	2224	new_arena	new_arena(OMState *state)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	2233	2236	address_in_range	address_in_range(OMState *state, void *p, poolp Py_UNUSED(pool))	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	2316	2327	address_in_range	address_in_range(OMState *state, void *p, poolp pool)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	2336	2352	pymalloc_pool_extend	pymalloc_pool_extend(poolp pool, uint size)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	2358	2483	allocate_from_new_pool	allocate_from_new_pool(OMState *state, uint size)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	2494	2538	pymalloc_alloc	pymalloc_alloc(OMState *state, void *Py_UNUSED(ctx), size_t nbytes)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	2542	2555	_PyObject_Malloc	_PyObject_Malloc(void *ctx, size_t nbytes)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	2559	2576	_PyObject_Calloc	_PyObject_Calloc(void *ctx, size_t nelem, size_t elsize)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	2580	2593	insert_to_usedpool	insert_to_usedpool(OMState *state, poolp pool)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	2596	2760	insert_to_freepool	insert_to_freepool(OMState *state, poolp pool)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	2766	2820	pymalloc_free	pymalloc_free(OMState *state, void *Py_UNUSED(ctx), void *p)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	2824	2837	_PyObject_Free	_PyObject_Free(void *ctx, void *p)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	2850	2908	pymalloc_realloc	pymalloc_realloc(OMState *state, void *ctx, void **newptr_p, void *p, size_t nbytes)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
+Objects/obmalloc.c	2912	2926	_PyObject_Realloc	_PyObject_Realloc(void *ctx, void *ptr, size_t nbytes)	excluded		no-behaviour: allocator plumbing that allocates, resizes or frees raw memory; the only Python-visible outcome is a NULL that the caller turns into MemoryError, and the caller's row models that
 Objects/obmalloc.c	2935	2938	_PyInterpreterState_GetAllocatedBlocks	_PyInterpreterState_GetAllocatedBlocks(PyInterpreterState *Py_UNUSED(interp))	todo		
 Objects/obmalloc.c	2941	2944	_Py_GetGlobalAllocatedBlocks	_Py_GetGlobalAllocatedBlocks(void)	todo		
-Objects/obmalloc.c	2947	2950	_PyInterpreterState_FinalizeAllocatedBlocks	_PyInterpreterState_FinalizeAllocatedBlocks(PyInterpreterState *Py_UNUSED(interp))	todo		
-Objects/obmalloc.c	2953	2956	_Py_FinalizeAllocatedBlocks	_Py_FinalizeAllocatedBlocks(_PyRuntimeState *Py_UNUSED(runtime))	todo		
+Objects/obmalloc.c	2947	2950	_PyInterpreterState_FinalizeAllocatedBlocks	_PyInterpreterState_FinalizeAllocatedBlocks(PyInterpreterState *Py_UNUSED(interp))	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	2953	2956	_Py_FinalizeAllocatedBlocks	_Py_FinalizeAllocatedBlocks(_PyRuntimeState *Py_UNUSED(runtime))	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
 Objects/obmalloc.c	2976	2979	bumpserialno	bumpserialno(void)	todo		
 Objects/obmalloc.c	2992	3001	read_size_t	read_size_t(const void *p)	todo		
 Objects/obmalloc.c	3007	3016	write_size_t	write_size_t(void *p, size_t n)	todo		
@@ -130,10 +130,10 @@ Objects/obmalloc.c	3334	3373	_PyMem_DebugCheckAddress	_PyMem_DebugCheckAddress(c
 Objects/obmalloc.c	3377	3482	_PyObject_DebugDumpAddress	_PyObject_DebugDumpAddress(const void *p)	todo		
 Objects/obmalloc.c	3486	3519	printone	printone(FILE *out, const char* msg, size_t value)	todo		
 Objects/obmalloc.c	3522	3533	_PyDebugAllocatorStats	_PyDebugAllocatorStats(FILE *out, const char *block_name, int num_blocks, size_t sizeof_block)	todo		
-Objects/obmalloc.c	3543	3550	_PyMem_obmalloc_state_on_heap	bool _PyMem_obmalloc_state_on_heap(PyInterpreterState *interp)	todo		
-Objects/obmalloc.c	3554	3561	init_obmalloc_pools	init_obmalloc_pools(PyInterpreterState *interp)	todo		
-Objects/obmalloc.c	3564	3586	_PyMem_init_obmalloc	int _PyMem_init_obmalloc(PyInterpreterState *interp)	todo		
-Objects/obmalloc.c	3592	3623	free_obmalloc_arenas	free_obmalloc_arenas(PyInterpreterState *interp)	todo		
+Objects/obmalloc.c	3543	3550	_PyMem_obmalloc_state_on_heap	bool _PyMem_obmalloc_state_on_heap(PyInterpreterState *interp)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	3554	3561	init_obmalloc_pools	init_obmalloc_pools(PyInterpreterState *interp)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	3564	3586	_PyMem_init_obmalloc	int _PyMem_init_obmalloc(PyInterpreterState *interp)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
+Objects/obmalloc.c	3592	3623	free_obmalloc_arenas	free_obmalloc_arenas(PyInterpreterState *interp)	excluded		internal-bootstrap: allocator selection or arena setup and teardown at startup and finalization (PYTHONMALLOC); no Python operation reaches it
 Objects/obmalloc.c	3631	3643	pool_is_in_list	pool_is_in_list(const poolp target, poolp list)	todo		
 Objects/obmalloc.c	3655	3666	_collect_alloc_stats	static bool _collect_alloc_stats( const mi_heap_t* heap, const mi_heap_area_t* area, void* block, size_t block_size, void* arg)	todo		
 Objects/obmalloc.c	3669	3688	py_mimalloc_print_stats	py_mimalloc_print_stats(FILE *out)	todo		
