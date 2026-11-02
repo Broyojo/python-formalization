@@ -8,6 +8,7 @@ import PyLean.Bytecode.IterObj
 import PyLean.Bytecode.GenObj
 import PyLean.Bytecode.SpecLocals
 import PyLean.Bytecode.SpecToBool
+import PyLean.Bytecode.SpecCompare
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -23,6 +24,21 @@ open PyLean.Registry
 def op (n : String) : String := "opcode:" ++ n
 
 def entries : List Entry := GenObj.entries ++ [
+  { id := "bytecode-compare-fused", pyFile := "Python/bytecodes.c"
+    pyFns := [op "COMPARE_OP", op "_COMPARE_OP"]
+    statement := "COMPARE_OP with the bool-coercion bit is COMPARE_OP without it followed by TO_BOOL, on every stack and for every object model, a raising __lt__ or __bool__ included."
+    source := "compiler contract: COMPARE_OP fuses TO_BOOL (oparg & 16); Python/bytecodes.c:3232-3249"
+    status := .proven, prop := ``CompareFused, thm := some ``compareFused_proven },
+  { id := "bytecode-compare-int", pyFile := "Python/bytecodes.c"
+    pyFns := [op "COMPARE_OP_INT", op "_COMPARE_OP_INT"]
+    statement := "COMPARE_OP_INT equals COMPARE_OP on every stack for the operand the compiler emits, given long_richcompare."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:3256, :3280-3300"
+    status := .proven, prop := ``CompareInt, thm := some ``compareInt_proven },
+  { id := "bytecode-compare-str", pyFile := "Python/bytecodes.c"
+    pyFns := [op "COMPARE_OP_STR", op "_COMPARE_OP_STR"]
+    statement := "COMPARE_OP_STR equals COMPARE_OP for == and != on every stack, given unicode_compare_eq."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c:3259, :3302-3318"
+    status := .proven, prop := ``CompareStr, thm := some ``compareStr_proven },
   { id := "bytecode-to-bool-generic", pyFile := "Python/bytecodes.c"
     pyFns := [op "TO_BOOL", op "_TO_BOOL"]
     statement := "Generic TO_BOOL pushes the truth value __bool__ or __len__ gives, and when either raises it pops the value and propagates the exception, for any object model."
