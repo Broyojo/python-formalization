@@ -156,7 +156,7 @@ def DT.resize (t : DT K) : DT K :=
   ⟨log2, table, live.map some, (size * 2) / 3 - t.used, t.used, t.gen + 1⟩
 
 /-- `insertdict` after its lookup, which gave `slot`: an existing key keeps its entry; otherwise
-`insert_combined_dict`, @3.14.7:1788-1826. -/
+`insert_combined_dict`, Objects/dictobject.c:1868-1909. -/
 def DT.storeAt (t : DT K) (slot : Option Nat) (key : K) (h l : Nat) : DT K :=
   match slot with
   | some i => { t with ents := t.ents.set (t.ixAt i) (some (key, h, l)) }

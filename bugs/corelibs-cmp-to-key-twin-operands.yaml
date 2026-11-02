@@ -46,6 +46,7 @@ expected: |
   The same outcome in both twins.
 observed: |
   python3 3.14.7: C: TypeError ne, Python: True True. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Nothing explicit: the docs only say the key must compare with other keys.
 cause: |

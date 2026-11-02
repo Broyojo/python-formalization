@@ -231,6 +231,7 @@ def miniObj : GenObj MiniGen Int where
   giRunning := fun _ => .ok 0
   giYieldfrom := fun _ => .ok 0
   giSuspended := fun g => .ok (if g.started && !g.closed then 1 else 0)
+  giState := fun g => .ok (if g.closed then "GEN_CLOSED" else if g.started then "GEN_SUSPENDED" else "GEN_CREATED")
 
 def runWrapper (j : Json) : Except String Json := do
   let items ← (field j "items") >>= jIntList
@@ -259,7 +260,8 @@ def runWrapper (j : Json) : Except String Json := do
     | "attrs" =>
       out := out.push (Json.arr #[encR jInt (w.giCode miniObj), encR jInt (w.giFrame miniObj),
         encR jInt (w.giRunning miniObj), encR jInt (w.giYieldfrom miniObj),
-        encR jInt (w.giSuspended miniObj), jOptS w.name, jOptS w.qualname])
+        encR jInt (w.giSuspended miniObj), jOptS w.name, jOptS w.qualname,
+        encR (fun s => toJson s) (w.giState miniObj), encR (fun s => toJson s) (w.crState miniObj)])
     | "iter" =>
       out := out.push (jStr (match w.iter with
         | .inl _ => "wrapped"

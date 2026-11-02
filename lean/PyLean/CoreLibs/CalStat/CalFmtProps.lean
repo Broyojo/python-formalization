@@ -85,7 +85,7 @@ theorem iterweekdays_length (c : Calendar) : c.iterweekdays.length = 7 := by
 
 /-- The weekday tables of a locale: seven names, as `strftime` gives. -/
 def Names.WellFormed (N : Names) : Prop :=
-  N.dayName.length = 7 ∧ N.dayAbbr.length = 7 ∧ N.monthName.length = 12
+  N.dayName.length = 7 ∧ N.dayAbbr.length = 7 ∧ N.monthName.length = 12 ∧ N.standaloneName.length = 12
 
 theorem cNames_wf : cNames.WellFormed := by
   unfold Names.WellFormed; decide
@@ -135,11 +135,12 @@ theorem textWeekWidth_proven : TextWeekWidth := by
 theorem tFormatweekday_ok (N : Names) (hN : N.WellFormed) (i w : Int) (h0 : 0 ≤ i) (h1 : i ≤ 6)
     (hw : 0 ≤ w) : ∃ s, tFormatweekday N i w = .ok s ∧ s.length = w.toNat ∧
       ∃ t, (t ∈ N.dayName ∨ t ∈ N.dayAbbr) ∧ s = center (sliceTo t w) w := by
-  have hlen : (if w ≥ 9 then N.dayName else N.dayAbbr).length = 7 := by
+  have hlen : (if w ≥ (N.dayName.map (fun s => (s.length : Int))).foldr max 0 then N.dayName else N.dayAbbr).length = 7 := by
     split
     · exact hN.1
     · exact hN.2.1
-  obtain ⟨x, hx, hi⟩ := pyIndex_ok (if w ≥ 9 then N.dayName else N.dayAbbr) i h0 (by omega)
+  obtain ⟨x, hx, hi⟩ := pyIndex_ok (if w ≥ (N.dayName.map (fun s => (s.length : Int))).foldr max 0 then N.dayName else N.dayAbbr)
+    i h0 (by omega)
   refine ⟨center (sliceTo x w) w, ?_, ?_, x, ?_, rfl⟩
   · unfold tFormatweekday localizedGet
     simp only [bind, Except.bind, hi, pure, Except.pure]
@@ -150,7 +151,7 @@ theorem tFormatweekday_ok (N : Names) (hN : N.WellFormed) (i w : Int) (h0 : 0 �
       rw [if_neg (by omega)]
       omega
     omega
-  · by_cases h9 : w ≥ 9
+  · by_cases h9 : w ≥ (N.dayName.map (fun s => (s.length : Int))).foldr max 0
     · rw [if_pos h9] at hx; exact Or.inl hx
     · rw [if_neg h9] at hx; exact Or.inr hx
 
@@ -313,7 +314,7 @@ theorem reprInt_ok (y : Int) (h : ReprOk y) : ∃ s, reprInt y = .ok s ∧ NoNL 
     · unfold NoNL; simp
 
 theorem cNames_noNL : (∀ t ∈ cNames.dayName, NoNL t) ∧ (∀ t ∈ cNames.dayAbbr, NoNL t) ∧
-    (∀ t ∈ cNames.monthName, NoNL t) := by
+    (∀ t ∈ cNames.standaloneName, NoNL t) := by
   unfold NoNL; decide
 
 theorem noNL_sliceTo {s : Str} (h : NoNL s) (w : Int) : NoNL (sliceTo s w) := by
@@ -324,8 +325,8 @@ theorem noNL_sliceTo {s : Str} (h : NoNL s) (w : Int) : NoNL (sliceTo s w) := by
 theorem tFormatmonthname_ok (y m w : Int) (hm : 1 ≤ m ∧ m ≤ 12) (hy : ReprOk y) (withyear : Bool) :
     ∃ s, tFormatmonthname cNames y m w withyear = .ok s ∧ NoNL s := by
   obtain ⟨yr, hyr, hn⟩ := reprInt_ok y hy
-  have hlen : ((localizedMonthList cNames.monthName).length : Int) = 13 := by decide
-  obtain ⟨x, hx, hi⟩ := pyIndex_ok (localizedMonthList cNames.monthName) m (by omega) (by omega)
+  have hlen : ((localizedMonthList cNames.standaloneName).length : Int) = 13 := by decide
+  obtain ⟨x, hx, hi⟩ := pyIndex_ok (localizedMonthList cNames.standaloneName) m (by omega) (by omega)
   have hxn : NoNL x := by
     simp only [localizedMonthList, List.mem_cons] at hx
     rcases hx with rfl | hx
@@ -391,58 +392,105 @@ theorem formatmonthLines_proven : FormatmonthLines := by
 
 /-! ## `_CLIDemoCalendar` -/
 
-/-- The empty colour set of `NO_COLOR` (`_colorize.get_colors` with colour off). -/
-def noColors : Ansi := ⟨[], [], []⟩
+/-- The empty theme, `_colorize.theme_no_color`, which `get_theme` gives when the output cannot be coloured. -/
+def noColors : Ansi := ⟨[], [], [], []⟩
 
-theorem dFormatweek_none (A : Ansi) (week : List (Int × Int)) (w : Int) :
-    dFormatweek A week w none = tFormatweek week w := by
-  simp [dFormatweek, tFormatweek]
+theorem stripParts_eq (s : Str) : (stripParts s).1 ++ (stripParts s).2.1 ++ (stripParts s).2.2 = s := by
+  simp only [stripParts]
+  have h : rstrip (s.dropWhile isSpaceChar) <+: s.dropWhile isSpaceChar := by
+    unfold rstrip
+    have e := congrArg List.reverse
+      (List.takeWhile_append_dropWhile (p := isSpaceChar) (l := (s.dropWhile isSpaceChar).reverse))
+    simp only [List.reverse_append, List.reverse_reverse] at e
+    exact ⟨_, e⟩
+  rw [List.append_assoc]
+  exact (congrArg (s.takeWhile isSpaceChar ++ ·) (List.prefix_iff_eq_append.1 h)).trans List.takeWhile_append_dropWhile
+
+theorem dFormatday_noColors (d wd w : Int) (hd : Option Int) :
+    dFormatday noColors d wd w hd = tFormatday d wd w := by
+  simp [dFormatday, noColors]
 
 theorem dFormatweek_noColors (week : List (Int × Int)) (w : Int) (hd : Option Int) :
     dFormatweek noColors week w hd = tFormatweek week w := by
-  simp only [dFormatweek, tFormatweek, noColors]
-  congr 1
-  apply List.map_congr_left
-  intro p _
-  by_cases h : some p.1 = hd <;> simp [h]
+  simp only [dFormatweek, tFormatweek, dFormatday_noColors]
 
-/-- The demo subclass is `TextCalendar` plus colour and nothing else: without a highlighted
-day in view, or with colours off, `formatweek`, `formatmonth` and `formatyear` of
-`_CLIDemoCalendar` return exactly what `TextCalendar` returns. -/
+theorem dFormatweekheader_noColors (N : Names) (c : Calendar) (w : Int) :
+    dFormatweekheader noColors N c w = tFormatweekheader N c w := by
+  simp only [dFormatweekheader, bind, Except.bind, pure, Except.pure, noColors, List.nil_append, List.append_nil]
+  cases tFormatweekheader N c w <;> rfl
+
+theorem dFormatmonthname_noColors (N : Names) (hl : Highlight) (y m w : Int) (wy : Bool) :
+    dFormatmonthname noColors N hl y m w wy = tFormatmonthname N y m w wy := by
+  simp only [dFormatmonthname, bind, Except.bind, pure, Except.pure]
+  cases hn : tFormatmonthname N y m w wy with
+  | error e => rfl
+  | ok name =>
+    simp only
+    split
+    · have h := stripParts_eq name
+      cases hs : stripParts name with
+      | mk lead r =>
+        cases r with
+        | mk core trail =>
+          rw [hs] at h
+          simp only at h
+          by_cases hc : core.isEmpty = true
+          · simp [hc, noColors]
+          · simp [hc, noColors, h]
+    · simp [noColors]
+
+/-- With colour off, which is what `get_theme` gives when stdout is not a terminal, the demo subclass prints what
+`TextCalendar` prints. -/
 def DemoIsText : Prop :=
-  (∀ (A : Ansi) (N : Names) (c : Calendar) (y m w l cc mm : Int),
-    dFormatmonth A N c none y m w l = tFormatmonth N c y m w l ∧
-    dFormatyear A N c none y w l cc mm = tFormatyear N c y w l cc mm) ∧
-  (∀ (A : Ansi) (N : Names) (c : Calendar) (y m w l : Int) (d : Date), (d.1 ≠ y ∨ d.2.1 ≠ m) →
-    dFormatmonth A N c (some d) y m w l = tFormatmonth N c y m w l) ∧
-  (∀ (N : Names) (c : Calendar) (hl : Highlight) (y m w l cc mm : Int),
+  ∀ (N : Names) (c : Calendar) (hl : Highlight) (y m w l cc mm : Int),
     dFormatmonth noColors N c hl y m w l = tFormatmonth N c y m w l ∧
-    dFormatyear noColors N c hl y w l cc mm = tFormatyear N c y w l cc mm)
-
-theorem dFormatmonth_of (A : Ansi) (N : Names) (c : Calendar) (hl : Highlight) (y m w l : Int)
-    (h : ∀ wk ww, dFormatweek A wk ww (monthHighlight hl y m) = tFormatweek wk ww) :
-    dFormatmonth A N c hl y m w l = tFormatmonth N c y m w l := by
-  unfold dFormatmonth tFormatmonth
-  simp only [h]
+    dFormatyear noColors N c hl y w l cc mm = tFormatyear N c y w l cc mm
 
 theorem demoIsText_proven : DemoIsText := by
-  refine ⟨?_, ?_, ?_⟩
-  · intro A N c y m w l cc mm
-    refine ⟨dFormatmonth_of A N c none y m w l (fun wk ww => dFormatweek_none A wk ww), ?_⟩
-    unfold dFormatyear tFormatyear
-    simp only [dYearDay, dFormatweek_none]
-  · rintro A N c y m w l ⟨a, b, d⟩ h
-    apply dFormatmonth_of
-    intro wk ww
-    have : ¬(a = y ∧ b = m) := by
-      simp only at h
-      omega
-    simp only [monthHighlight, this, if_false]
-    exact dFormatweek_none A wk ww
-  · intro N c hl y m w l cc mm
-    refine ⟨dFormatmonth_of noColors N c hl y m w l (fun wk ww => dFormatweek_noColors wk ww _), ?_⟩
-    unfold dFormatyear tFormatyear
-    simp only [dFormatweek_noColors]
+  intro N c hl y m w l cc mm
+  refine ⟨?_, ?_⟩
+  · unfold dFormatmonth tFormatmonth
+    simp only [dFormatmonthname_noColors, dFormatweekheader_noColors, dFormatweek_noColors]
+  · have e1 : (fun cw k => dFormatmonthname noColors N hl y k cw false) =
+        (fun cw k => tFormatmonthname N y k cw false) := by
+      funext cw k
+      exact dFormatmonthname_noColors N hl y k cw false
+    have e2 : (fun year : Str => noColors.header ++ year ++ noColors.reset) = id := by
+      funext s
+      simp [noColors]
+    have e3 : (fun header : Str => noColors.weekday ++ header ++ noColors.reset) = id := by
+      funext s
+      simp [noColors]
+    simp only [dFormatyear, tFormatyear, e1, e2, e3, dFormatweek_noColors]
+
+/-- What colour adds, for any theme. The highlighted day is wrapped and no other; the week header is wrapped in
+`weekday`; a month name is wrapped in `header`, or for the highlighted month its stripped text in `highlight`, inside the
+padding; and the failure of the plain formatter is the outcome. -/
+def DemoColours : Prop :=
+  ∀ (A : Ansi) (N : Names) (c : Calendar) (d wd w y m : Int) (wy : Bool) (hd : Option Int) (s : Str) (e : PyExc)
+    (dd : Int),
+    dFormatday A d wd w (some d) = A.highlight ++ tFormatday d wd w ++ A.reset ∧
+    (some d ≠ hd → dFormatday A d wd w hd = tFormatday d wd w) ∧
+    (tFormatweekheader N c w = .ok s → dFormatweekheader A N c w = .ok (A.weekday ++ s ++ A.reset)) ∧
+    (tFormatmonthname N y m w wy = .ok s → dFormatmonthname A N none y m w wy = .ok (A.header ++ s ++ A.reset)) ∧
+    (tFormatmonthname N y m w wy = .ok s → (stripParts s).2.1 ≠ [] →
+      dFormatmonthname A N (some (y, m, dd)) y m w wy =
+        .ok ((stripParts s).1 ++ A.highlight ++ (stripParts s).2.1 ++ A.reset ++ (stripParts s).2.2)) ∧
+    (tFormatmonthname N y m w wy = .error e → dFormatmonthname A N (some (y, m, dd)) y m w wy = .error e)
+
+theorem demoColours_proven : DemoColours := by
+  intro A N c d wd w y m wy hd s e dd
+  refine ⟨by simp [dFormatday], ?_, ?_, ?_, ?_, ?_⟩
+  · intro h; simp [dFormatday, h]
+  · intro h; simp [dFormatweekheader, h, bind, Except.bind, pure, Except.pure]
+  · intro h; simp [dFormatmonthname, h, bind, Except.bind, pure, Except.pure]
+  · intro h h2
+    have : (stripParts s).2.1.isEmpty = false := by
+      cases hq : (stripParts s).2.1 with
+      | nil => exact absurd hq h2
+      | cons _ _ => rfl
+    simp [dFormatmonthname, h, this, bind, Except.bind, pure, Except.pure]
+  · intro h; simp [dFormatmonthname, h, bind, Except.bind]
 
 /-- In the year view exactly the column of the highlighted month is highlighted: for a
 row of distinct months, `formatweek` receives the day only in the column holding that month. -/
@@ -568,7 +616,7 @@ theorem formatyearMonthCount_proven : FormatyearMonthCount := by
     obtain ⟨h, hh, -⟩ := tFormatweekheader_noNL c (max 2 w) (by omega)
     obtain ⟨ms, hms⟩ := yeardays2_ok c y
     unfold tFormatyear tFormatyearWith Calendar.yeardays2calendar
-    simp only [bind, Except.bind, hyr, hh, hms]
+    simp only [bind, Except.bind, hyr, hh, hms, id_eq]
     rfl
   · intro N c y width hw
     unfold hFormatyear

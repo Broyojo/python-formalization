@@ -1,7 +1,7 @@
 import PyLean.Core
 
 /-!
-`Lib/functools.py` and `Modules/_functoolsmodule.c` (CPython 3.14.7): `reduce` and the cache keys of
+`Lib/functools.py` and `Modules/_functoolsmodule.c` (CPython 3.15.2): `reduce` and the cache keys of
 `lru_cache`. The other parts are in Compare.lean, Lru.lean, Partial.lean, Dispatch.lean and Wrap.lean.
 -/
 

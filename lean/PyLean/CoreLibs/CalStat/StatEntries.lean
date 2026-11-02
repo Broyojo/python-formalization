@@ -1,5 +1,6 @@
 import PyLean.Registry
 import PyLean.CoreLibs.CalStat.StatSqrt
+import PyLean.CoreLibs.CalStat.StatExact
 
 /-! Registry entries for `Lib/statistics.py`. -/
 
@@ -109,6 +110,15 @@ def statisticsEntries : List Entry := [
   st "fmean-checks" ["fmean"]
     "fmean raises for empty data without weights, for a length mismatch, and for zero total weight."
     "docstring" ``FmeanChecks ``fmeanChecks_proven,
+  st "fmean-exact" ["fmean"]
+    "fmean is fsum over the count, and with weights sumprod over the sum of the weights; each step's exception comes out, and sumprod's ValueError becomes the length message."
+    "Lib/statistics.py:182-222" ``FmeanExact ``fmeanExact_proven,
+  st "geometric-exact" ["geometric_mean"]
+    "After its scan geometric_mean is exp of the mean of the logarithms; a NaN total is NaN, a zero gives 0.0 or NaN with an infinity, and a failure comes out."
+    "Lib/statistics.py:225-262" ``GeometricExact ``geometricExact_proven,
+  st "pdf-exact" ["NormalDist.pdf"]
+    "pdf of a float is exp(-0.5 * z * z) / (sqrt(tau) * sigma) for every non-zero sigma, including one whose square underflows."
+    "Lib/statistics.py:1259-1265" ``PdfExact ``pdfExact_proven,
   st "geometric-checks" ["geometric_mean"]
     "geometric_mean raises for empty data, gives 0.0 for zeros, and a negative value after a zero still raises."
     "docstring" ``GeometricChecks ``geometricChecks_proven,
@@ -158,7 +168,7 @@ def statisticsEntries : List Entry := [
   st "normaldist-undefined" ["NormalDist.pdf", "NormalDist.cdf", "NormalDist.zscore",
       "NormalDist.overlap", "NormalDist.inv_cdf"]
     "With sigma == 0, pdf, cdf, zscore and overlap raise StatisticsError; p outside 0 < p < 1 raises in inv_cdf."
-    "docstrings; statistics.py@3.14.7:1261-1339" ``NormalDistUndefined ``normalDistUndefined_proven,
+    "docstrings; Lib/statistics.py:1259-1339" ``NormalDistUndefined ``normalDistUndefined_proven,
   st "inv-cdf-centre" ["NormalDist.inv_cdf", "NormalDist.quantiles", "NormalDist.samples",
       "_normal_dist_inv_cdf"]
     "inv_cdf(0.5) == mu for finite mu and sigma; quantiles(n) gives n - 1 values and samples one value per draw when they succeed."

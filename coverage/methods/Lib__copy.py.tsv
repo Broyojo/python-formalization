@@ -1,11 +1,11 @@
 file	line	endline	name	signature	status	entry	note
 Lib/copy.py	62	100	copy	copy(x)	modelled	corelibs-copy-pickle-reduce,corelibs-copy-shallow	
-Lib/copy.py	110	162	deepcopy	deepcopy(x, memo=None)	todo		changed-in-3.15: was corelibs-copy-list-exact,corelibs-copy-dict-exact,corelibs-copy-aliasing,corelibs-copy-reconstruct-memo-first
+Lib/copy.py	110	162	deepcopy	deepcopy(x, memo=None)	todo		
 Lib/copy.py	171	177	_deepcopy_list	_deepcopy_list(x, memo, deepcopy=deepcopy)	modelled	corelibs-copy-list-exact,corelibs-copy-order,corelibs-copy-aliasing	
 Lib/copy.py	180	194	_deepcopy_tuple	_deepcopy_tuple(x, memo, deepcopy=deepcopy)	modelled	corelibs-copy-tuple-exact	
 Lib/copy.py	197	202	_deepcopy_dict	_deepcopy_dict(x, memo, deepcopy=deepcopy)	modelled	corelibs-copy-dict-exact,corelibs-copy-order	
-Lib/copy.py	205	217	_deepcopy_frozendict	_deepcopy_frozendict(x, memo, deepcopy=deepcopy)	todo		changed-in-3.15: new function
+Lib/copy.py	205	217	_deepcopy_frozendict	_deepcopy_frozendict(x, memo, deepcopy=deepcopy)	todo		
 Lib/copy.py	220	221	_deepcopy_method	_deepcopy_method(x, memo)	modelled	corelibs-copy-keeps-source,corelibs-copy-method-replace	
 Lib/copy.py	226	240	_keep_alive	_keep_alive(x, memo)	excluded		no-behaviour: lifetime helper; it appends x to a list in the memo so that ids stay valid, and the copy does not depend on it
-Lib/copy.py	242	285	_reconstruct	_reconstruct(x, memo, func, args, state=None, listiter=None, dictiter=None, *, deepcopy=deepcopy)	todo		changed-in-3.15: was corelibs-copy-order,corelibs-copy-reconstruct-deep,corelibs-copy-reconstruct-memo-first,corelibs-copy-recon-rest
+Lib/copy.py	242	285	_reconstruct	_reconstruct(x, memo, func, args, state=None, listiter=None, dictiter=None, *, deepcopy=deepcopy)	todo		
 Lib/copy.py	290	300	replace	replace(obj, /, **changes)	modelled	corelibs-copy-method-replace	

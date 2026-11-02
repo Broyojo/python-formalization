@@ -551,8 +551,8 @@ def WkdOr : Prop :=
     let objs := items.map (fun kv => (PV.obj kv.1, kv.2))
     d.or_ q w none = none ∧ d.ror q w none = none ∧
     d.ior q w objs = d.update q w (some objs) ∧
-    (d.update q w (some objs) true).2 =
-      .error (.typeError "cannot create weak reference to 'str' object") ∧
+    d.update q w (some objs) true =
+      (d, .error (.typeError "Keyword arguments are not supported: cannot create weak reference to 'str' object")) ∧
     (∃ c, d.or_ q w (some objs) = some (.ok c) ∧ valOf q w c a = ovrQ q items (valOf q w d a) a) ∧
     (∃ c, d.ror q w (some objs) = some (.ok c) ∧
       valOf q w c a = ovrQ q (livePairs w d) (ovrQ q items none a) a)
@@ -562,14 +562,7 @@ theorem wkdOr_proven : WkdOr := by
   have hal := livePairs_alive w d
   have hcopy := (wkdCopy_proven V id q w d a hq ha hu).1
   refine ⟨rfl, rfl, rfl, ?_, ?_, ?_⟩
-  · have := update_objs q w d items
-    simp only [update] at this ⊢
-    simp only [Bool.false_eq_true, if_false] at this
-    generalize List.foldl _ _ _ = r at this ⊢
-    obtain ⟨d', x⟩ := r
-    cases x with
-    | error e => simp at this
-    | ok u => rfl
+  · rfl
   · have hc : d.copy q w = .ok ((livePairs w d).foldl (fun d kv => setRef q w d kv.1 kv.2) empty) := by
       simp only [copy, liveItems_eq]
       exact foldM_objs q w (fun v : V => v) (livePairs w d) empty

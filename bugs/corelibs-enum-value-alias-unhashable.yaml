@@ -46,6 +46,7 @@ expected: |
 observed: |
   python3 3.14.7: TypeError, ValueError, no error. REPRODUCED.
   main (3.16.0a1+dev): same, REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Doc/library/enum.rst, Enum._add_value_alias_: "Raises a ValueError if the value is already linked with a different
   member."

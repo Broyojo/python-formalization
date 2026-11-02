@@ -121,12 +121,13 @@ theorem abcRegister_proven : AbcRegister := by
     refine ⟨rfl, rfl, ?_⟩
     simp [AbcState.put, AbcState.get, List.lookup]
 
-/-- `isinstance(obj, cls)`: an `__class__` that raises propagates; the positive cache answers; for an object whose
-`__class__` is its type, the valid negative cache answers, else `__subclasscheck__`; for an object that lies, its
-`__class__` is checked first and then its real type. -/
+/-- `isinstance(obj, cls)`: an `__class__` that raises propagates, unless it is an `AttributeError`, which means the object's
+type; the positive cache answers; for an object whose `__class__` is its type, the valid negative cache answers, else
+`__subclasscheck__`; for an object that lies, its `__class__` is checked first and then its real type. -/
 def AbcInstanceCheck : Prop :=
   ∀ (W : AbcWorld) (fuel cls k t : Nat) (s : AbcState) (e : PyExc),
-    instanceCheck W fuel cls (.error e) t s = (.error e, s) ∧
+    (isAttributeError e = false → instanceCheck W fuel cls (.error e) t s = (.error e, s)) ∧
+    (isAttributeError e = true → instanceCheck W fuel cls (.error e) t s = instanceCheck W fuel cls (.ok t) t s) ∧
     (k ∈ (s.get cls).cache → instanceCheck W fuel cls (.ok k) t s = (.ok true, s)) ∧
     (k ∉ (s.get cls).cache → instanceCheck W fuel cls (.ok k) k s =
       if (s.get cls).version = s.counter ∧ k ∈ (s.get cls).neg then (.ok false, s)
@@ -136,11 +137,13 @@ def AbcInstanceCheck : Prop :=
 
 theorem abcInstanceCheck_proven : AbcInstanceCheck := by
   intro W fuel cls k t s e
-  refine ⟨rfl, ?_, ?_, ?_⟩
-  · intro h; simp [instanceCheck, h]
-  · intro h; simp [instanceCheck, h]
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  · intro h; simp [instanceCheck, classRead, h]
+  · intro h; simp [instanceCheck, classRead, h]
+  · intro h; simp [instanceCheck, classRead, h]
+  · intro h; simp [instanceCheck, classRead, h]
   · intro h1 h2 h3
-    simp only [instanceCheck, h1, ite_false, h2]
+    simp only [instanceCheck, classRead, h1, ite_false, h2]
     generalize subCheck W fuel cls k s = r at h3
     obtain ⟨a, b⟩ := r
     simp only at h3

@@ -1,7 +1,7 @@
 import PyLean.Core
 
 /-!
-`Lib/abc.py` (CPython 3.14.7), which is a thin class over `Modules/_abc.c`: `ABCMeta.__new__`, `register`,
+`Lib/abc.py` (CPython 3.15.2), which is a thin class over `Modules/_abc.c`: `ABCMeta.__new__`, `register`,
 `__instancecheck__` and `__subclasscheck__` each make one call into C. The C functions are mirrored, with the
 three weak sets and the global invalidation counter, and with hooks that can raise.
 -/
@@ -127,11 +127,21 @@ def register (W : AbcWorld) (fuel cls : Nat) (sub : Option Nat) (s : AbcState) :
         let d := s.get cls
         (.ok c, { s.put cls { d with registry := c :: d.registry } with counter := s.counter + 1 })
 
+/-- What `PyObject_GetOptionalAttr` swallows. -/
+def isAttributeError (e : PyExc) : Bool := e.className == "AttributeError"
+
+/-- `instance.__class__`, Modules/_abc.c:628-636 and Lib/_py_abc.py:95-100: `type(instance)` when it is an
+`AttributeError`, and any other exception goes out. -/
+def classRead (klass : Py Nat) (subtype : Nat) : Py Nat :=
+  match klass with
+  | .error e => if isAttributeError e then .ok subtype else .error e
+  | .ok k => .ok k
+
 /-- `_abc__abc_instancecheck_impl`, Modules/_abc.c:622-703. `klass` is `instance.__class__`, which may raise, and
 `subtype` is `type(instance)`. -/
 def instanceCheck (W : AbcWorld) (fuel cls : Nat) (klass : Py Nat) (subtype : Nat) (s : AbcState) :
     Py Bool × AbcState :=
-  match klass with
+  match classRead klass subtype with
   | .error e => (.error e, s)
   | .ok k =>
     let d := s.get cls

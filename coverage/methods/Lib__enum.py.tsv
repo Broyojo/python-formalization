@@ -70,7 +70,7 @@ Lib/enum.py	1410	1412	pickle_by_enum_name	pickle_by_enum_name(self, proto)	todo
 Lib/enum.py	1437	1453	Flag._generate_next_value_	_generate_next_value_(name, start, count, last_values)	modelled	corelibs-enum-flag-generate	
 Lib/enum.py	1456	1461	Flag._iter_member_by_value_	_iter_member_by_value_(cls, value)	modelled	corelibs-enum-len-iter	
 Lib/enum.py	1466	1473	Flag._iter_member_by_def_	_iter_member_by_def_(cls, value)	todo		withdrawn: holds of any function, or a refutation that does not run it
-Lib/enum.py	1476	1569	Flag._missing_	_missing_(cls, value)	todo		changed-in-3.15: was corelibs-enum-conform,corelibs-enum-strict-named
+Lib/enum.py	1476	1569	Flag._missing_	_missing_(cls, value)	todo		
 Lib/enum.py	1571	1579	Flag.__contains__	__contains__(self, other)	modelled	corelibs-enum-flag-operands	
 Lib/enum.py	1581	1585	Flag.__iter__	__iter__(self)	modelled	corelibs-enum-len-iter	
 Lib/enum.py	1587	1588	Flag.__len__	__len__(self)	modelled	corelibs-enum-len-iter	

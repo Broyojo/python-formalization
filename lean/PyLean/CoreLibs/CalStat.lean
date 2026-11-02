@@ -3,7 +3,7 @@ import PyLean.CoreLibs.CalStat.Diff
 import PyLean.CoreLibs.CalStat.CalEntries
 import PyLean.CoreLibs.CalStat.StatEntries
 
-/-! Registry for the `CalStat` area of CoreLibs: Lib/calendar.py, Lib/statistics.py, CPython 3.14.7. -/
+/-! Registry for the `CalStat` area of CoreLibs: Lib/calendar.py, Lib/statistics.py, CPython 3.15.2. -/
 
 namespace PyLean.CoreLibs.CalStat
 

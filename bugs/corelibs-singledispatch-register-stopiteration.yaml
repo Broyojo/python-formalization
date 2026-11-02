@@ -38,6 +38,7 @@ expected: |
   TypeError, as for a function with no annotations.
 observed: |
   python3 3.14.7: StopIteration. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   No internal exception leaking; the TypeError branch just above covers the same user error.
 cause: |

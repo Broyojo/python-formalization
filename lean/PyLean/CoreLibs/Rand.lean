@@ -8,7 +8,7 @@ import PyLean.CoreLibs.Rand.DistProps
 import PyLean.CoreLibs.Rand.SystemProps
 import PyLean.CoreLibs.Rand.OpenProps
 
-/-! Registry for the `Rand` area of CoreLibs: Lib/random.py, Modules/_randommodule.c, CPython 3.14.7. -/
+/-! Registry for the `Rand` area of CoreLibs: Lib/random.py, Modules/_randommodule.c, CPython 3.15.2. -/
 
 namespace PyLean.CoreLibs.Rand
 
@@ -326,7 +326,7 @@ def entries : List Entry := [
   { id := "rand-main-positional-matches-option", pyFile := "Lib/random.py"
     pyFns := ["main"]
     statement := "python -m random N behaves as python -m random --integer N for every integer N."
-    source := "help text, Lib/random.py@3.14.7:1041 'integer: same as --integer'", status := .refuted
+    source := "help text, Lib/random.py:1041 'integer: same as `--integer`'", status := .refuted
     prop := ``MainPositionalMatchesOption, thm := some ``mainPositionalMatchesOption_refuted
     bug := some "corelibs-random-cli-positional-int-fallback"
     notes := "N < 1: the except ValueError meant for int(val) also catches randint's, and float(val) runs on the int." },

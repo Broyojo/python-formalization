@@ -1,7 +1,7 @@
 file	line	endline	name	signature	status	entry	note
 Lib/statistics.py	159	179	mean	mean(data)	modelled	calstat-statistics-mean-floats,calstat-statistics-mean-fractions,calstat-statistics-mean-int-subclass,calstat-statistics-mean-ints	
-Lib/statistics.py	182	222	fmean	fmean(data, weights=None)	todo		changed-in-3.15: withdrawn: only input checks: an always-raising or constant result passes
-Lib/statistics.py	225	262	geometric_mean	geometric_mean(data)	todo		changed-in-3.15: withdrawn: only input checks: an always-raising or constant result passes
+Lib/statistics.py	182	222	fmean	fmean(data, weights=None)	todo		
+Lib/statistics.py	225	262	geometric_mean	geometric_mean(data)	todo		
 Lib/statistics.py	265	325	harmonic_mean	harmonic_mean(data, weights=None)	modelled	calstat-statistics-harmonic-early-out,calstat-statistics-harmonic-exact	
 Lib/statistics.py	328	349	median	median(data)	modelled	calstat-statistics-median-order	
 Lib/statistics.py	352	374	median_low	median_low(data)	modelled	calstat-statistics-median-order	
@@ -35,7 +35,7 @@ Lib/statistics.py	1176	1224	quantiles	quantiles(data, *, n=4, method='exclusive'
 Lib/statistics.py	1239	1244	NormalDist.__init__	__init__(self, mu=0.0, sigma=1.0)	modelled	calstat-statistics-normaldist-init	
 Lib/statistics.py	1247	1249	NormalDist.from_samples	from_samples(cls, data)	todo		withdrawn: only input checks: an always-raising or constant result passes
 Lib/statistics.py	1251	1257	NormalDist.samples	samples(self, n, *, seed=None)	todo		withdrawn: the sigma-zero error or a length, no value: an always-raising method passes
-Lib/statistics.py	1259	1265	NormalDist.pdf	pdf(self, x)	todo		changed-in-3.15: withdrawn: the sigma-zero error or a length, no value: an always-raising method passes
+Lib/statistics.py	1259	1265	NormalDist.pdf	pdf(self, x)	todo		
 Lib/statistics.py	1267	1271	NormalDist.cdf	cdf(self, x)	todo		withdrawn: the sigma-zero error or a length, no value: an always-raising method passes
 Lib/statistics.py	1273	1285	NormalDist.inv_cdf	inv_cdf(self, p)	todo		withdrawn: the sigma-zero error or a length, no value: an always-raising method passes
 Lib/statistics.py	1287	1296	NormalDist.quantiles	quantiles(self, n=4)	todo		withdrawn: the sigma-zero error or a length, no value: an always-raising method passes

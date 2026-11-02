@@ -33,6 +33,7 @@ expected: |
   A dict result, or a documented restriction.
 observed: |
   python3 3.14.7: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Doc/library/dataclasses.rst: dicts are recursed into.
 cause: |

@@ -1,7 +1,7 @@
 import PyLean.Core
 
 /-!
-`Lib/_collections_abc.py` (CPython 3.14.7), mirrored.
+`Lib/_collections_abc.py` (CPython 3.15.2), mirrored.
 
 Each mixin is a generic algorithm over the primitives a concrete subclass
 supplies, so the primitives are parameters: the structures `Seq`, `MSeq`, `SetV`,
@@ -998,5 +998,21 @@ def byteStringMetaWarns (name : String) : Bool := name != "ByteString"
 /-- `_DeprecateByteStringMeta.__instancecheck__`, Lib/_collections_abc.py:1080-1087:
 always warns, then the `ABCMeta` answer. -/
 def byteStringInstanceCheck (abcAnswer : Bool) : Bool × Bool := (true, abcAnswer)
+
+/-- `warnings._deprecated("collections.abc.ByteString", remove=(3, 17))`, Lib/_py_warnings.py:876-893, on 3.15. -/
+def byteStringDeprecated : String :=
+  "'collections.abc.ByteString' is deprecated and slated for removal in Python 3.17"
+
+/-- Reading an attribute of the module, Lib/_collections_abc.py:1177-1183: `loaded` says that `ByteString` is in the
+module's globals, where the normal lookup finds it and `__getattr__` is not called. `warn` is the exception of the warning
+under a filter that makes it one; the name is put back only after the warning. `attr` is a name with no quote in it. -/
+def moduleGetattr (warn : Option PyExc) (loaded : Bool) (attr : String) : Bool × Py Unit :=
+  if attr == "ByteString" then
+    if loaded then (true, .ok ())
+    else
+      match warn with
+      | some e => (false, .error e)
+      | none => (true, .ok ())
+  else (loaded, .error (.named "AttributeError" s!"module 'collections.abc' has no attribute '{attr}'"))
 
 end PyLean.CoreLibs.CollAbc

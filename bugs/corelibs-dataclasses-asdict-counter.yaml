@@ -28,6 +28,7 @@ expected: |
   Counter({'a': 2, 'b': 1}).
 observed: |
   python3 3.14.7: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Doc/library/dataclasses.rst: dataclasses, dicts, lists and tuples are recursed into.
 cause: |

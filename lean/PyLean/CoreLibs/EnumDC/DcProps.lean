@@ -1196,7 +1196,7 @@ mutual
   def DV.plain : DV → Bool
     | .inst _ _ => false
     | .list l | .tuple l | .named l | .listSub l | .tupleSub l => DV.plainL l
-    | .dict k v | .dictSub k v | .defaultDict k v | .counter k v => DV.plainL k && DV.plainL v
+    | .dict k v | .dictSub k v | .defaultDict k v | .frozenDict k v | .counter k v => DV.plainL k && DV.plainL v
     | _ => true
 
   def DV.plainL : List DV → Bool
@@ -1232,6 +1232,9 @@ mutual
       have h' : DV.plainL k = true ∧ DV.plainL v = true := by simpa [DV.plain] using h
       simp only [asdictV, astupleV, twinL fa ft k h'.1, twinL fa ft v h'.2]
     | .dictSub k v, h => by
+      have h' : DV.plainL k = true ∧ DV.plainL v = true := by simpa [DV.plain] using h
+      simp only [asdictV, astupleV, twinL fa ft k h'.1, twinL fa ft v h'.2]
+    | .frozenDict k v, h => by
       have h' : DV.plainL k = true ∧ DV.plainL v = true := by simpa [DV.plain] using h
       simp only [asdictV, astupleV, twinL fa ft k h'.1, twinL fa ft v h'.2]
     | .defaultDict k v, h => by
@@ -1274,6 +1277,7 @@ mutual
     | .inst _ _, h => by simp [DV.tree] at h
     | .dict _ _, h => by simp [DV.tree] at h
     | .dictSub _ _, h => by simp [DV.tree] at h
+    | .frozenDict _ _, h => by simp [DV.tree] at h
     | .defaultDict _ _, h => by simp [DV.tree] at h
     | .counter _ _, h => by simp [DV.tree] at h
 
@@ -1298,6 +1302,7 @@ mutual
     | .inst _ _, h => by simp [DV.tree] at h
     | .dict _ _, h => by simp [DV.tree] at h
     | .dictSub _ _, h => by simp [DV.tree] at h
+    | .frozenDict _ _, h => by simp [DV.tree] at h
     | .defaultDict _ _, h => by simp [DV.tree] at h
     | .counter _ _, h => by simp [DV.tree] at h
 
@@ -1349,6 +1354,7 @@ mutual
     | .tupleSub l => by simp only [asdictV, fastSlowL l]
     | .dict k v => by simp only [asdictV, fastSlowL k, fastSlowL v]
     | .dictSub k v => by simp only [asdictV, fastSlowL k, fastSlowL v]
+    | .frozenDict k v => by simp only [asdictV, fastSlowL k, fastSlowL v]
     | .defaultDict k v => by simp only [asdictV, fastSlowL k, fastSlowL v]
     | .counter k v => by simp only [asdictV, fastSlowL k, fastSlowL v]
 

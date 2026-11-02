@@ -51,6 +51,7 @@ expected: |
   20, the result of the function for that key, or a fresh call of it.
 observed: |
   python3 3.14.7: 20 None. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   The docs of lru_cache: the function is memoized, so a call returns what the function returned.
 cause: |

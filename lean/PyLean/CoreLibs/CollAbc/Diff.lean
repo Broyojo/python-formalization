@@ -247,6 +247,12 @@ def run (fn : String) (j : Json) : Except String Json := do
     pure (encPy (fun o => toJson o) r)
   | "bytestring_new" =>
     pure (Json.mkObj [("ok", toJson (byteStringMetaWarns (← getStr j "name")))])
+  | "module_getattr" =>
+    let w : Option PyExc := if ← getBool j "error"
+      then some (.named "DeprecationWarning" byteStringDeprecated) else none
+    let name ← getStr j "name"
+    let (loaded, r) := moduleGetattr w false name
+    pure (Json.mkObj [("ok", toJson [toJson loaded, encPy (fun _ => Json.null) r])])
   | "bytestring_check" =>
     let (w, a) := byteStringInstanceCheck (← getBool j "answer")
     pure (Json.mkObj [("ok", toJson [w, a])])

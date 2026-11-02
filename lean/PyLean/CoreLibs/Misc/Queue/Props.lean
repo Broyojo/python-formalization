@@ -468,19 +468,6 @@ theorem failedPutKeepsItem_proven : FailedPutKeepsItem := by
 /-- A `_PySimpleQueue` holding `c`: the semaphore count equals the length, its invariant. -/
 def pysq (c : List α) : PySQ α := { queue := c, count := c.length, now := 0 }
 
-/-- The pure-Python queue and the C queue agree on `get`, for every state and arguments. Refuted:
-with `block=False`, the C queue ignores `timeout` as the shared docstring says, and `_PySimpleQueue`
-passes it to `Semaphore.acquire`, which raises `ValueError`. Reported as python/cpython#156476 and
-fixed on main. -/
-def SimpleQueueGetTwins : Prop :=
-  ∀ (α : Type) (c : List α) (block : Bool) (timeout : Option Int),
-    (PySQ.get (pysq c) block timeout).2 = (cGet c block timeout).2
-
-theorem simpleQueueGetTwins_refuted : ¬SimpleQueueGetTwins := by
-  intro h
-  have := h Nat [1] false (some 1)
-  simp [PySQ.get, pysq, semAcquire, cGet] at this
-
 /-- The two `SimpleQueue`s agree when no timeout is combined with `block=False`: `put`, `get`,
 `put_nowait`, `get_nowait`, `empty` and `qsize` give the same results and keep the same contents,
 for a queue whose semaphore count equals its length, which every operation preserves. -/
@@ -528,6 +515,24 @@ theorem pysq_get_blocking (c : List α) (block : Bool) (timeout : Option Int) (q
       by_cases ht : t < 0
       · simp [PySQ.get, cGet, ht, h1, h2]
       · simp [PySQ.get, semAcquire, cGet, ht, hc, hc', h1]
+
+/-- `_PySimpleQueue.get` and `_queue.SimpleQueue.get` give the same outcome for all arguments, for a queue whose
+semaphore count is its length. With `block=False` both ignore `timeout`, as the shared docstring says: the Python twin
+drops it at Lib/queue.py:349-350, which is the fix of python/cpython#156476. -/
+def SimpleQueueGetTwins : Prop :=
+  ∀ (α : Type) (c : List α) (block : Bool) (timeout : Option Int),
+    (PySQ.get (pysq c) block timeout).2 = (cGet c block timeout).2
+
+theorem simpleQueueGetTwins_proven : SimpleQueueGetTwins := by
+  intro α c block timeout
+  cases block with
+  | true => exact (pysq_get_blocking c true timeout (pysq c) rfl rfl (.inl rfl)).1
+  | false =>
+    have h := (pysq_get_blocking c false none (pysq c) rfl rfl (.inr rfl)).1
+    have a : PySQ.get (pysq c) false timeout = PySQ.get (pysq c) false none := by simp [PySQ.get]
+    have b : cGet c false timeout = cGet c false none := by simp [cGet]
+    rw [a, b]
+    exact h
 
 theorem simpleQueueTwinsBlocking_proven : SimpleQueueTwinsBlocking := by
   intro α c x block timeout q h1 h2 hb

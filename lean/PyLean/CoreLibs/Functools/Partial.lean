@@ -272,8 +272,8 @@ def partialCallC {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw : List
 /-- A `memcpy` past the end of the stack array, which C does not check. -/
 def oobWrite : PyExc := .named "SIGABRT" "write past the end of the stack array"
 
-/-- The merge of `partial_vectorcall`, :535-548. The stack holds `pto_nargs + nargs - phcount` items, sized by
-`phcount`, and the `memcpy` at @3.14.7:460-462 copies `nargs - j` items after the stored ones, so it stays inside only
+/-- The merge of `partial_vectorcall`, :533-549. The stack holds `pto_nargs + nargs - phcount` items, sized by
+`phcount`, and the `memcpy` at :546-548 copies `nargs - j` items after the stored ones, so it stays inside only
 when `j` is `phcount`. -/
 def vecMerge {α : Type} (pargs : List (PArg α)) (ph : Nat) (args : List α) : Py (List α) :=
   match cMergeLoop args pargs 0 with
@@ -285,19 +285,86 @@ def vecMerge {α : Type} (pargs : List (PArg α)) (ph : Nat) (args : List α) : 
       | none => .error oobRead
       | some tot => .ok tot
 
-/-- `partial_vectorcall`, Modules/_functoolsmodule.c:369-571, reached when the wrapped function
-supports vectorcall (`partial_setvectorcall`, :575-587); `partial_vectorcall_fallback`, @3.14.7:374-383,
-sends a `partial` with stored keywords to `partial_call`. The fast path for a one-element tuple, @3.14.7:419-428,
-gives the same call on a well-formed object, where such a tuple has no placeholder. -/
-def partialVectorcall {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw : List (String × α))
-    (ph : Nat) (args : List α) (kw : List (String × α)) : Py (Called α) :=
-  if !pkw.isEmpty then partialCallC func pargs pkw ph args kw
-  else if args.length < ph then .error (.typeError (missingMsg ph args.length))
-  else if ph ≠ 0 then
-    match vecMerge pargs ph args with
+/-- `NULL` left in the tuple of keyword names, which the callee reads. -/
+def nullKwName : PyExc := .named "SIGSEGV" "NULL in the tuple of keyword names"
+
+/-- A keyword of the call. `onLookup` is what `__hash__` or `__eq__` of the key does to the stored keywords inside
+`PyDict_Contains(partial_keywords, key)`, Modules/_functoolsmodule.c:467: `partial_keywords` is the same dict as
+`p.keywords`, so a `str` subclass can rewrite it there, or raise. -/
+structure VecKw (α : Type) where
+  key : String
+  val : α
+  onLookup : List (String × α) → Py (List (String × α))
+
+/-- A keyword whose lookup runs no Python code. -/
+def plainKw {α : Type} (kw : List (String × α)) : List (VecKw α) := kw.map (fun p => ⟨p.1, p.2, .ok⟩)
+
+/-- `PyDict_SetItem(pto_kw_merged, key, val)` on a key that is there, and the step of `{**a, **b}` for one. -/
+def mergeStep {α : Type} (acc : List (String × α)) (p : String × α) : List (String × α) :=
+  if acc.any (fun q => q.1 == p.1) then acc.map (fun q => if q.1 == p.1 then p else q)
+  else acc ++ [p]
+
+/-- The loop at Modules/_functoolsmodule.c:464-489: `d` is `partial_keywords` as it now is, `merged` is `pto_kw_merged`, a copy
+taken at the first key that is there, and `tail` holds the new keywords. -/
+def vecKwLoop {α : Type} (d : List (String × α)) (merged : Option (List (String × α))) (tail : List (String × α)) :
+    List (VecKw α) → Py (List (String × α) × Option (List (String × α)) × List (String × α))
+  | [] => .ok (d, merged, tail)
+  | k :: rest =>
+    match k.onLookup d with
     | .error e => .error e
-    | .ok tot => callFn func tot kw
-  else callFn func (valsOf pargs ++ args) kw
+    | .ok d =>
+      if d.any (fun q => q.1 == k.key) then
+        vecKwLoop d (some ((merged.getD d).map (fun q => if q.1 == k.key then (k.key, k.val) else q))) tail rest
+      else vecKwLoop d merged (tail ++ [(k.key, k.val)]) rest
+
+/-- :490-516. `tot_kwnames` has `pto_nkwds + n_tail` items, with the tail at `pto_nkwds` and on, and the `PyDict_Next` loop
+writes each item of the dict at its own index, with no bound in a release build: `assert(i == pto_nkwds)` at :515 is all
+there is. More than the tuple holds is a write past its end; fewer than `pto_nkwds` leave `NULL` in it; and any number in
+between overwrites the first of the tail. -/
+def vecKwFinish {α : Type} (ptoN : Nat) (items tail : List (String × α)) : Py (List (String × α)) :=
+  if items.length > ptoN + tail.length then .error oobWrite
+  else if items.length < ptoN then .error nullKwName
+  else .ok (items ++ tail.drop (items.length - ptoN))
+
+/-- The keywords of `partial_vectorcall`, :449-530: with none stored, the ones of the call as they are, :450-456, and no
+lookup runs; `pto_nkwds` is read at :392, before any of the lookups. -/
+def vecKeywords {α : Type} (pkw : List (String × α)) (kws : List (VecKw α)) : Py (List (String × α)) :=
+  if pkw.isEmpty then .ok (kws.map (fun k => (k.key, k.val)))
+  else
+    match vecKwLoop pkw none [] kws with
+    | .error e => .error e
+    | .ok (d, merged, tail) => vecKwFinish pkw.length (merged.getD d) tail
+
+/-- A stored argument as the object it is: `phv` is the `Placeholder`. C passes the stored tuple on as it is, so with a
+`phcount` that does not describe it, which `__setstate__` allows, the callee gets the `Placeholder` itself. -/
+def rawArg {α : Type} (phv : α) : PArg α → α
+  | .ph => phv
+  | .val a => a
+
+/-- `partial_vectorcall`, Modules/_functoolsmodule.c:368-571, reached when the wrapped function supports vectorcall
+(`partial_setvectorcall`, :573-587). The check of `phcount`, then two fast paths when no keywords are stored, :397-416: a call
+with no arguments passes the stored tuple on, and with `PY_VECTORCALL_ARGUMENTS_OFFSET`, which is `offset`, one stored argument
+is put in front of the arguments of the call. Neither reads `phcount` again. Then the keywords, then the positional arguments. -/
+def partialVectorcallKws {α : Type} (phv : α) (offset : Bool) (func : Fn α) (pargs : List (PArg α))
+    (pkw : List (String × α)) (ph : Nat) (args : List α) (kws : List (VecKw α)) : Py (Called α) :=
+  if args.length < ph then .error (.typeError (missingMsg ph args.length))
+  else if pkw.isEmpty && args.isEmpty && kws.isEmpty then callFn func (pargs.map (rawArg phv)) []
+  else if pkw.isEmpty && pargs.length == 1 && offset then
+    callFn func (pargs.map (rawArg phv) ++ args) (kws.map (fun k => (k.key, k.val)))
+  else
+    match vecKeywords pkw kws with
+    | .error e => .error e
+    | .ok tot_kw =>
+      if ph ≠ 0 then
+        match vecMerge pargs ph args with
+        | .error e => .error e
+        | .ok tot => callFn func tot tot_kw
+      else callFn func (pargs.map (rawArg phv) ++ args) tot_kw
+
+/-- `partial_vectorcall` with keywords whose lookups run no Python code. -/
+def partialVectorcall {α : Type} (phv : α) (offset : Bool) (func : Fn α) (pargs : List (PArg α))
+    (pkw : List (String × α)) (ph : Nat) (args : List α) (kw : List (String × α)) : Py (Called α) :=
+  partialVectorcallKws phv offset func pargs pkw ph args (plainKw kw)
 
 /-- `partial.__get__`, Lib/functools.py:395-398, `partial_descr_get`, Modules/_functoolsmodule.c:360-366, and
 `lru_cache_descr_get`, :1754-1760: `None` gives the object itself, anything else a `MethodType`. -/

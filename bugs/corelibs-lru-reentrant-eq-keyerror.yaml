@@ -55,6 +55,7 @@ expected: |
   The same results from both twins, and no KeyError from a call whose key and function are fine.
 observed: |
   python3 3.14.7: [0, 30, 40, 50, 60] and [0, 30, 40, 50, KeyError]. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Nothing explicit. The two twins disagreeing, and the C comment that treats this state as one to survive.
 cause: |

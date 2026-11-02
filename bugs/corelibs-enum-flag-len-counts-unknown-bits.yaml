@@ -30,6 +30,7 @@ expected: |
 observed: |
   python3 3.14.7: len(Perm(12)) is 2 and list(Perm(12)) is [Perm.R]. REPRODUCED.
   main (python.exe 3.16.0a1+dev): same, REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Doc/library/enum.rst:645, "Returns number of members in flag".
 cause: |

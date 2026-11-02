@@ -47,9 +47,10 @@ expected: |
 observed: |
   python3 3.14.7: builtin close returns 7, the mixin returns None. REPRODUCED.
   main (python.exe 3.16.0a1+dev): same. REPRODUCED. Its Lib/_collections_abc.py has the same close.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
-  Doc/reference/expressions.rst@3.14.7:849-850: "If the generator function catches the exception and
-  returns a value, this value is returned from close()." That sentence is about generators; the
+  Doc/builtins/stdtypes.rst:1110-1111: "If a generator returns a value upon being closed, that value is returned
+  by close()." That sentence is about generators; the
   mixin's own docstring promises less. Doc/library/collections.abc.rst:249-254 describes Generator
   as the ABC for classes implementing the PEP 342 protocol, send, throw and close.
 cause: |

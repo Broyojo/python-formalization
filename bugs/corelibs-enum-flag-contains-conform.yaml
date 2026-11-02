@@ -28,6 +28,7 @@ expected: |
 observed: |
   python3 3.14.7: True F(0) 0. REPRODUCED.
   main (3.16.0a1+dev): same, REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   The docstring of EnumType.__contains__ at Lib/enum.py:753-756: `value` is in `cls` if it is a member, the value of
   a member, or a pseudo-member.

@@ -39,6 +39,7 @@ observed: |
   python3 3.14.7: Sub(target, 1)(2) runs the override, partial(Sub(target, 1), 2)() runs target, and
   outer.func is target. REPRODUCED, and the pure-Python twin does the same.
   main (python.exe 3.16.0a1+dev): same, REPRODUCED.
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
 promised_by: |
   Doc/library/functools.rst:344-353: "which when called will behave like *func* called with the
   positional arguments *args*", with an equivalent closure that calls func, so the object's __call__.
