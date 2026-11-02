@@ -38,7 +38,7 @@ Python/bytecodes.c	409	409	opcode:INSTRUMENTED_END_FOR	no_save_ip tier1 inst(INS
 Python/bytecodes.c	421	421	opcode:INSTRUMENTED_POP_ITER	tier1 inst(INSTRUMENTED_POP_ITER, (iter, index_or_null -- )) {	todo		changed-in-3.15:
 Python/bytecodes.c	428	428	opcode:END_SEND	pure inst(END_SEND, (receiver, index_or_null, value -- val)) {	modelled	bytecode-stack-drops	
 Python/bytecodes.c	436	436	opcode:INSTRUMENTED_END_SEND	tier1 inst(INSTRUMENTED_END_SEND, (receiver, index_or_null, value -- val)) {	todo		changed-in-3.15:
-Python/bytecodes.c	451	451	opcode:UNARY_NEGATIVE	macro(UNARY_NEGATIVE) = _UNARY_NEGATIVE + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	451	451	opcode:UNARY_NEGATIVE	macro(UNARY_NEGATIVE) = _UNARY_NEGATIVE + POP_TOP;	modelled	bytecode-unary	
 Python/bytecodes.c	453	453	opcode:_UNARY_NEGATIVE	op(_UNARY_NEGATIVE, (value -- res, v)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	465	465	opcode:_UNARY_NEGATIVE_FLOAT_INPLACE	tier2 op(_UNARY_NEGATIVE_FLOAT_INPLACE, (value -- res, v)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	477	477	opcode:UNARY_NOT	inst(UNARY_NOT, (value -- res)) {	modelled	bytecode-unary-not	
@@ -61,7 +61,7 @@ Python/bytecodes.c	580	580	opcode:_TO_BOOL_STR	op(_TO_BOOL_STR, (value -- res, v
 Python/bytecodes.c	588	588	opcode:TO_BOOL_STR	macro(TO_BOOL_STR) =	modelled	bytecode-to-bool-specialized	
 Python/bytecodes.c	591	591	opcode:_REPLACE_WITH_TRUE	op(_REPLACE_WITH_TRUE, (value -- res, v)) {	todo		changed-in-3.15:
 Python/bytecodes.c	597	597	opcode:TO_BOOL_ALWAYS_TRUE	macro(TO_BOOL_ALWAYS_TRUE) =	todo		changed-in-3.15:
-Python/bytecodes.c	604	604	opcode:UNARY_INVERT	macro(UNARY_INVERT) = _UNARY_INVERT + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	604	604	opcode:UNARY_INVERT	macro(UNARY_INVERT) = _UNARY_INVERT + POP_TOP;	modelled	bytecode-unary	
 Python/bytecodes.c	606	606	opcode:_UNARY_INVERT	op(_UNARY_INVERT, (value -- res, v)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	635	635	opcode:_GUARD_NOS_INT	op(_GUARD_NOS_INT, (left, unused -- left, unused)) {	modelled	bytecode-binary-op-add-int	
 Python/bytecodes.c	640	640	opcode:_GUARD_TOS_INT	op(_GUARD_TOS_INT, (value -- value)) {	modelled	bytecode-binary-op-add-int	

@@ -1575,6 +1575,7 @@ gen-make-coro-kinds	proven	Objects/genobject.c	make_gen,_Py_MakeCoro
 gen-cr-origin-take	proven	Objects/genobject.c	_PyCoro_ComputeOrigin
 gen-awaitable-iter-result	proven	Objects/genobject.c	_PyCoro_GetAwaitableIter,gen_is_coroutine
 gen-finalize-branches	proven	Objects/genobject.c	gen_finalize
+bytecode-unary	proven	Python/bytecodes.c	opcode:UNARY_NEGATIVE,opcode:UNARY_INVERT
 bytecode-for-iter-range	proven	Python/bytecodes.c	opcode:FOR_ITER_RANGE,opcode:_ITER_CHECK_RANGE,opcode:_ITER_JUMP_RANGE,opcode:_ITER_NEXT_RANGE
 bytecode-for-iter-seq	proven	Python/bytecodes.c	opcode:FOR_ITER_LIST,opcode:_ITER_CHECK_LIST,opcode:_ITER_JUMP_LIST,opcode:_ITER_NEXT_LIST,opcode:FOR_ITER_TUPLE,opcode:_ITER_CHECK_TUPLE,opcode:_ITER_JUMP_TUPLE,opcode:_ITER_NEXT_TUPLE
 bytecode-cells	proven	Python/bytecodes.c	opcode:LOAD_DEREF,opcode:STORE_DEREF,opcode:DELETE_DEREF
