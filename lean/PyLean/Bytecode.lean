@@ -11,6 +11,7 @@ import PyLean.Bytecode.SpecToBool
 import PyLean.Bytecode.SpecCompare
 import PyLean.Bytecode.LawfulBuiltin
 import PyLean.Bytecode.SpecCompareFloat
+import PyLean.Bytecode.SpecSubscr
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -26,6 +27,16 @@ open PyLean.Registry
 def op (n : String) : String := "opcode:" ++ n
 
 def entries : List Entry := GenObj.entries ++ [
+  { id := "bytecode-subscr-tuple-int", pyFile := "Python/bytecodes.c"
+    pyFns := [op "BINARY_OP_SUBSCR_TUPLE_INT", op "_BINARY_OP_SUBSCR_TUPLE_INT", op "_GUARD_BINARY_OP_SUBSCR_TUPLE_INT_BOUNDS", op "_GUARD_NOS_TUPLE"]
+    statement := "BINARY_OP_SUBSCR_TUPLE_INT equals BINARY_OP for [] on every live stack, given tuplesubscript."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c BINARY_OP_SUBSCR_TUPLE_INT"
+    status := .proven, prop := ``SubscrTupleInt, thm := some ``subscrTupleInt_proven },
+  { id := "bytecode-subscr-str-int", pyFile := "Python/bytecodes.c"
+    pyFns := [op "BINARY_OP_SUBSCR_STR_INT", op "_BINARY_OP_SUBSCR_STR_INT", op "_GUARD_NOS_COMPACT_ASCII", op "BINARY_OP_SUBSCR_USTR_INT", op "_BINARY_OP_SUBSCR_USTR_INT"]
+    statement := "BINARY_OP_SUBSCR_STR_INT and the 3.15 BINARY_OP_SUBSCR_USTR_INT equal BINARY_OP for [] on every stack, given unicode_subscript."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c BINARY_OP_SUBSCR_STR_INT, _USTR_INT"
+    status := .proven, prop := ``SubscrStrInt, thm := some ``subscrStrInt_proven },
   { id := "bytecode-compare-float", pyFile := "Python/bytecodes.c"
     pyFns := [op "COMPARE_OP_FLOAT", op "_COMPARE_OP_FLOAT"]
     statement := "COMPARE_OP_FLOAT equals COMPARE_OP on every stack for the operand the compiler emits, NaN, infinities and signed zeros included, given float_richcompare."
