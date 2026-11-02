@@ -232,4 +232,24 @@ theorem plainTagTwins_proven : PlainTagTwins := by
   · rw [find_head]
     cases root.kids.filter (·.tag == p) <;> first | rfl | trivial
 
+/-! ## The fast path's soundness -/
+
+def okList : Option (Py (List Elem)) → Bool
+  | some (.ok _) => true
+  | _ => false
+
+/-- Whenever `checkpath` finds no XPath character, the C fast path of `findall` gives what
+ElementPath gives: the condition under which skipping ElementPath is meant to be safe. `checkpath`
+looks for `/ * [ @ .` only, while ElementPath's tokenizer also treats `( ) : ! =` and whitespace
+as syntax, so `findall('a(b)')` finds a child tagged `a(b)` in C and raises `KeyError` in Python
+(recorded with the other ElementPath findings). -/
+def FastPathSound : Prop :=
+  ∀ (root : Elem) (p : S), checkpath p = false → findallC root p none = findallPy root p []
+
+theorem fastPathSound_refuted : ¬ FastPathSound := by
+  intro h
+  have e := congrArg okList (h (.mk (lit "r") none [.mk (lit "a(b)") none []]) (lit "a(b)") (by decide))
+  revert e
+  decide
+
 end PyLean.TextLibs.Etree

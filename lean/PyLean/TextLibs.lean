@@ -1461,6 +1461,13 @@ def entries : List Entry := [
     source := "invariant: 3.15's setter and Element() refuse other objects", status := .proven
     prop := ``Etree.AttribInvariant, thm := some ``Etree.attribInvariant_proven
     notes := "element_init is not credited: its keyword-attribute path (get_attrib_from_keywords) is not modelled." },
+  { id := "textlibs-etree-fast-path-sound", pyFile := "Modules/_elementtree.c"
+    pyFns := ["checkpath", "_elementtree_Element_findall_impl"]
+    statement := "Whenever checkpath finds no XPath character, the C fast path of findall gives what ElementPath (the Python twin) gives."
+    source := "the implementation disagreeing with itself (C fast path against the twin)", status := .refuted
+    prop := ``Etree.FastPathSound, thm := some ``Etree.fastPathSound_refuted
+    bug := some "textlibs-etree-elementpath-errors"
+    notes := "Counterexample findall('a(b)'): C finds the child, Python raises KeyError. Tags are str in the model; checkpath's bytes and other-type branches are not modelled." },
   { id := "textlibs-etree-attrib-dict", pyFile := "Modules/_elementtree.c"
     pyFns := ["element_get_attrib", "_elementtree_Element_get_impl", "_elementtree_Element_set_impl",
       "_elementtree_Element_keys_impl", "_elementtree_Element_items_impl", "element_attrib_getter",
