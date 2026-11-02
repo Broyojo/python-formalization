@@ -143,7 +143,7 @@ def readBytes1 : TM Bytes := do
   let data ← tRead n
   needBytes n "bytes1" data
 
-/-- The bound checks of `:517-518` and `:552-553`. -/
+/-- The bound checks of `@3.14.7:515-516` and `@3.14.7:550-551`. -/
 def readCounted (n : Nat) (name : String) : TM Bytes :=
   if n > ssizeMaxN then tThrow (.valueError s!"{name} byte count > sys.maxsize: {n}")
   else do
@@ -283,7 +283,7 @@ def readArg (info : OpInfo) : TM (Option TV) :=
   | some r => do return some (← r)
   | none => pure none
 
-/-- One round of the loop of `_genops`, `:2305-2323`. -/
+/-- One round of the loop of `_genops`, `@3.14.7:2277-2295`. -/
 def genopStep (hasTell : Bool) : TM GenOp := do
   let pos ← getPos hasTell
   let code ← tRead 1
@@ -331,7 +331,7 @@ inductive OptOp where
   | raw (pos endPos : Nat)
   deriving Repr, DecidableEq
 
-/-- The state of the first loop of `optimize`, `:2359-2387`. -/
+/-- The state of the first loop of `optimize`, `@3.14.7:2331-2359`. -/
 structure OptSt where
   oldids : List Int := []
   /-- `newids`, most recently written first. -/
@@ -349,7 +349,7 @@ nothing there, since no id has been assigned yet. -/
 def addNew (s : List (Int × Option Nat)) (a : Int) : List (Int × Option Nat) :=
   if (s.lookup a).isSome then s else (a, none) :: s
 
-/-- The body of the first loop of `optimize`, `:2365-2387`. -/
+/-- The body of the first loop of `optimize`, `@3.14.7:2337-2359`. -/
 def optStep (p : Bytes) (s : OptSt) (op : GenOp) : OptSt :=
   let name := op.info.name
   let pos := op.pos.getD 0
@@ -378,7 +378,7 @@ def optGet (proto : Nat) : Option Nat → Py Bytes
       .error (.typeError "'<' not supported between instances of 'NoneType' and 'int'")
     else .ok (oGET :: [0x4e, 0x6f, 0x6e, 0x65] ++ [nl])
 
-/-- The state of the second loop of `optimize`, `:2399-2416`. -/
+/-- The state of the second loop of `optimize`, `@3.14.7:2371-2388`. -/
 structure OptOut where
   newids : List (Int × Option Nat)
   idx : Nat := 0
@@ -391,7 +391,7 @@ by `file_write` is `_Framer.write_large_bytes` with an empty header. -/
 def optWrite (s : OptOut) (data : Bytes) : OptOut :=
   { s with ev := .w data :: .boundary :: s.ev }
 
-/-- The body of the second loop of `optimize`, `:2400-2416`. -/
+/-- The body of the second loop of `optimize`, `@3.14.7:2372-2388`. -/
 def optEmit (proto : Nat) (p : Bytes) (s : OptOut) : OptOp → Py OptOut
   | .put arg =>
     if (s.newids.lookup arg).isNone then .ok s

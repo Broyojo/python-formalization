@@ -148,7 +148,7 @@ def chainNewInternal (source : Src (Obj α)) : ChainState α := { source := some
 
 /-- `chain_new` (:1905-1920): the source is an iterator over `args`. Keywords are
 rejected only for `chain` itself and subclasses that inherit its `tp_init`
-(:1921); `customInit` is a subclass defining `__init__`, which sees them. -/
+(:1911); `customInit` is a subclass defining `__init__`, which sees them. -/
 def cChainNew (args : List (Obj α)) (hasKw : Bool) (customInit : Bool := false) : Py (ChainState α) :=
   if hasKw && !customInit then .error (.typeError "chain() takes no keyword arguments")
   else .ok (chainNewInternal ⟨args, none⟩)
@@ -160,7 +160,7 @@ def cChainFromIterable (arg : Obj (Obj α)) : Py (ChainState α) :=
   | .ok source => .ok (chainNewInternal source)
 
 /-- The `while (lz->source != NULL)` loop of `chain_next_lock_held`
-(:1976-2012) from "`active` is `NULL`", by recursion on the remaining sources.
+(:1967-2003) from "`active` is `NULL`", by recursion on the remaining sources.
 A failed pull or `PyObject_GetIter` clears `source`. -/
 def cChainPull (serr : Option PyExc) : List (Obj α) → Step (ChainState α) α
   | [] =>
@@ -301,7 +301,7 @@ def cCycleNew (iterable : Obj α) : Py (CycleState α) :=
   | .error e => .error e
   | .ok it => .ok { it := some it, saved := [], index := -1 }
 
-/-- The part of `cycle_next` after the first pass (:1307-1321). -/
+/-- The part of `cycle_next` after the first pass (@3.14.7:1302-1316). -/
 def cCycleSaved [Inhabited α] (s : CycleState α) : Step (CycleState α) α :=
   if s.saved.length = 0 then .stop s
   else
@@ -351,12 +351,12 @@ def docCycle (iterable : Obj α) (k : Nat) : Run α :=
       | some e => (first, some e)
       | none => Run.ok (first ++ docCycleSaved l (k - first.length) [])
 
-/-! ## dropwhile, takewhile, filterfalse (:1345-1584, :3367-3487) -/
+/-! ## dropwhile, takewhile, filterfalse (:1333-1573, @3.14.7:3362-3482) -/
 
 /-- The constructors share one shape: `PyObject_GetIter(seq)`, then the flag
-(`itertools_dropwhile_impl`, :1368-1390; `itertools_takewhile_impl`,
-:1490-1512; `itertools_filterfalse_impl`, :3389-3410; `itertools_starmap_impl`,
-:1799-1820). -/
+(`itertools_dropwhile_impl`, :1356-1378; `itertools_takewhile_impl`,
+:1479-1501; `itertools_filterfalse_impl`, :3374-3395; `itertools_starmap_impl`,
+:1789-1810). -/
 def cIterNew (iterable : Obj α) : Py (Src α) := getIter iterable
 
 /-- `dropwhile_next` (:1403-1434); the flag is `lz->start`. -/
@@ -572,7 +572,7 @@ def RowRes.cons (v : Option α) (it : Option (Src α)) : RowRes α → RowRes α
   | .row r its na => .row (v :: r) (it :: its) na
   | r => r
 
-/-- `kwds`: `fillvalue` alone, or `TypeError` (:3887-3898). -/
+/-- `kwds`: `fillvalue` alone, or `TypeError` (:3876-3887). -/
 def zipFill (kw : List (String × Option α)) : Py (Option α) :=
   match kw with
   | [] => .ok none
@@ -589,7 +589,7 @@ def cZipLongestNew (args : List (Obj α)) (kw : List (String × Option α)) : Py
     | .ok its => .ok { its := its.map some, numactive := args.length, fill := fill }
 
 /-- The per-iterator loop of `zip_longest_next_lock_held` (both copies of the
-loop, :3970-4039): `stop` is the "all exhausted" `return NULL`, `raise` the
+loop, :3959-4028): `stop` is the "all exhausted" `return NULL`, `raise` the
 "`PyErr_Occurred()`" one. -/
 def cZipLongestRow (fill : Option α) : List (Option (Src α)) → Nat → RowRes α
   | [], numactive => .row [] [] numactive

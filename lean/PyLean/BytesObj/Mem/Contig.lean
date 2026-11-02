@@ -10,7 +10,7 @@ namespace PyLean.BytesObj.Mem
 open PyLean
 
 /-- A format `struct` rejects compares unequal, with no exception (`fix_struct_error_int`,
-:2916-2928, reached at :3152-3160): "StructError: invalid or unknown format -> not equal".
+@3.14.7:2916-2928, reached at @3.14.7:3152-3160): "StructError: invalid or unknown format -> not equal".
 Hypotheses: the shapes are equivalent, or the earlier exit is taken; the format is not native. -/
 def CmpBadFormat : Prop :=
   ∀ (m : Mem) (vv ww : Buf) (msg : String),
@@ -155,7 +155,7 @@ theorem memoryDealloc_ok (i : Nat) (st : St) : (memoryDealloc i st).1 = .ok () :
     · rfl
   · rfl
 
-/-- `PyMemoryView_GetContiguous` for a source of any shape (:965-1001): a write request on a
+/-- `PyMemoryView_GetContiguous` for a source of any shape (@3.14.7:965-1001): a write request on a
 read-only view and a write request on a non-contiguous view raise `BufferError`, and a view already
 contiguous in the requested order comes back on the same memory. `GetContiguousCopy` is the
 remaining exit. Hypotheses: a live, unrestricted view. -/
@@ -213,11 +213,11 @@ theorem getContiguousRules_proven : GetContiguousRules := by
       Bool.false_eq_true, ↓reduceIte, hc]
     exact thrown _ _
 
-/-- `memory_from_contiguous_copy` in order `'C'` for a view with full information (:888-946,
+/-- `memory_from_contiguous_copy` in order `'C'` for a view with full information (@3.14.7:888-946,
 reached by `PyMemoryView_GetContiguous` for a read request on a non-contiguous view): a new
 view over a new bytes object, with the shape and format of the source (`mbuf_copy_format`), C
 strides and no suboffsets, holding the source's items in row-major order. `tolist(input) ==
-tolist(output)`, as the comment at :950-953 says. `m` is the store including the new bytes.
+tolist(output)`, as the comment at @3.14.7:950-953 says. `m` is the store including the new bytes.
 Hypotheses: the type invariants of a buffer. -/
 def FromContigCopy : Prop :=
   ∀ (st : St) (src : Buf) (sh strs : List Int) (f : List Char), src.shape = some sh →
@@ -380,7 +380,7 @@ theorem fromContigCopy_proven : FromContigCopy := by
 
 /-- `PyMemoryView_FromBuffer` on a `Py_buffer` that has only `buf`, `len` and `itemsize`, the case
 its comment singles out ("init_shape_strides() must be able to reconstruct missing values",
-:764-768): a 1-D view of `len / itemsize` items with stride `itemsize`, format `B`, and no
+@3.14.7:764-768): a 1-D view of `len / itemsize` items with stride `itemsize`, format `B`, and no
 exporter (`mbuf_add_view`, `init_shape_strides`, `init_shared_values`). Hypothesis: `ndim == 1`,
 the only way to pass a NULL shape. -/
 def FromBufferReconstructs : Prop :=
@@ -425,7 +425,7 @@ theorem fromBufferReconstructs_proven : FromBufferReconstructs := by
   rw [hvc]
   exact ⟨h2, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
-/-- The `order` argument of `tobytes` (:2286-2300): `None` and `'C'` are the same, and anything
+/-- The `order` argument of `tobytes` (@3.14.7:2286-2300): `None` and `'C'` are the same, and anything
 but `'C'`, `'F'`, `'A'` raises `ValueError`. Hypothesis: a live view. -/
 def TobytesOrderArg : Prop :=
   ∀ (st : St) (self : Nat) (o : List Char), baseInaccessible st self = false →

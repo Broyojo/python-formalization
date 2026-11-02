@@ -90,7 +90,7 @@ def calendarEntries : List Entry := [
     "docstring" ``FormatmonthLines ``formatmonthLines_proven,
   cal "formatmonthname" ["TextCalendar.formatmonthname", "HTMLCalendar.formatmonthname"]
     "Both formatmonthname raise IllegalMonthError for a month outside 1..12, including 0; a valid month gives the centred name."
-    "calendar.py:397, :511" ``FormatmonthnameSpec ``formatmonthnameSpec_proven,
+    "calendar.py:397, :529" ``FormatmonthnameSpec ``formatmonthnameSpec_proven,
   cal "formatyear-lines" ["TextCalendar.formatyear", "TextCalendar.pryear"]
     "For m >= 1, formatyear has a title block and, per month row, a blank block, a names line, a header line and height week lines, each followed by max(1, l) newlines; pryear prints the same."
     "docstring" ``FormatyearLines ``formatyearLines_proven,
@@ -99,7 +99,7 @@ def calendarEntries : List Entry := [
     "invariant" ``TextYearMonths ``textYearMonths_proven,
   cal "formatyear-month-count" ["TextCalendar.formatyear", "HTMLCalendar.formatyear"]
     "TextCalendar.formatyear with m == 0 raises the ValueError of range(); HTMLCalendar.formatyear with width <= 0 behaves as width 1."
-    "calendar.py:561, :551; actual behaviour of the two clamps" ``FormatyearMonthCount
+    "calendar.py:561, :565; actual behaviour of the two clamps" ``FormatyearMonthCount
     ``formatyearMonthCount_proven,
   cal "demo-colours" ["_CLIDemoCalendar.formatday", "_CLIDemoCalendar.formatweekheader",
       "_CLIDemoCalendar.formatmonthname"]

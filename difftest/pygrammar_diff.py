@@ -445,7 +445,18 @@ def mutate(src, rng):
     return out
 
 
-NAME_RE = re.compile(r"[^\W\d]\w*")
+def source_names(src):
+    """Runs of identifier characters in `src`. `\\w` will not do: an identifier may
+    hold combining marks, which are XID_Continue but not alphanumeric."""
+    run = ""
+    for c in src + " ":
+        if ("a" + c).isidentifier():
+            run += c
+        else:
+            word = run.lstrip("0123456789")
+            if word:
+                yield word
+            run = ""
 
 
 def oracle_tables(src):
@@ -458,8 +469,7 @@ def oracle_tables(src):
         except (KeyError, TypeError):
             pass
     nfkc = []
-    for m in NAME_RE.finditer(src):
-        w = m.group(0)
+    for w in source_names(src):
         if not w.isascii():
             n = unicodedata.normalize("NFKC", w)
             if n != w:

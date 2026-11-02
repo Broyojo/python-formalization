@@ -81,7 +81,7 @@ def entries : List Entry := [
   { id := "float-int-conversions", pyFile := floatFile
     pyFns := ["float___trunc___impl", "float___floor___impl", "float___ceil___impl"]
     statement := "math.floor and math.ceil of a finite float are its exact floor and ceiling, int(x) truncates toward zero, a NaN raises ValueError and an infinity raises OverflowError."
-    source := "float.__trunc__, __floor__, __ceil__ docstrings (floatobject.c:858, :881, :895)"
+    source := "float.__trunc__, __floor__, __ceil__ docstrings (floatobject.c:858, :871, :885)"
     status := .proven, prop := ``FloatIntConversions, thm := some ``floatIntConversions_proven },
   { id := "float-is-integer", pyFile := floatFile, pyFns := ["float_is_integer_impl"]
     statement := "x.is_integer() is true exactly when x is finite with an integer value."
@@ -90,12 +90,12 @@ def entries : List Entry := [
   { id := "float-divmod-twins", pyFile := floatFile
     pyFns := ["float_rem", "_float_div_mod", "float_divmod", "float_floor_div"]
     statement := "For every x and nonzero y, x % y equals divmod(x, y)[1], and x // y equals divmod(x, y)[0], including NaN and infinite operands."
-    source := "The two copies of the remainder logic at floatobject.c:593-611 and :628-648 must agree; divmod docs"
+    source := "The two copies of the remainder logic at floatobject.c:593-611 and :618-638 must agree; divmod docs"
     status := .proven, prop := ``DivmodTwins, thm := some ``divmodTwins_proven },
   { id := "float-divmod-zero", pyFile := floatFile
     pyFns := ["float_rem", "float_divmod", "float_floor_div"]
     statement := "%, // and divmod raise ZeroDivisionError for a zero divisor, whatever the dividend."
-    source := "floatobject.c:593, :669, :684"
+    source := "floatobject.c:593, :659, :674"
     status := .proven, prop := ``DivmodZero, thm := some ``divmodZero_proven },
   { id := "float-floordiv-exact-floor", pyFile := floatFile
     pyFns := ["_float_div_mod", "float_floor_div"]
@@ -129,7 +129,7 @@ def entries : List Entry := [
       "float___getnewargs___impl", "float_from_number_impl", "float_new_impl",
       "float_subtype_new", "float_vectorcall"]
     statement := "conjugate, real, __float__, __getnewargs__, from_number, float(x) and its subclass path keep a float's value, imag is 0.0, and float() is 0.0."
-    source := "docstrings; floatobject.c:1068-1090, :1574-1593, :1740-1750"
+    source := "docstrings; floatobject.c:1068-1090, :1566-1585, :1703-1713"
     status := .proven, prop := ``FloatIdentities, thm := some ``floatIdentities_proven },
   { id := "float-getformat", pyFile := floatFile, pyFns := ["float___getformat___impl"]
     statement := "float.__getformat__ answers for 'double' and 'float' and raises ValueError for any other string."
@@ -244,7 +244,7 @@ def entries : List Entry := [
     status := .proven, prop := ``DshiftSpec, thm := some ``dshiftSpec_proven },
   { id := "dtoa-ulp", pyFile := dtoaFile, pyFns := ["ulp", "sulp"]
     statement := "For a positive float with biased exponent at least 53, ulp is the gap 2**lsb above it, and sulp without scaling agrees."
-    source := "Comments at dtoa.c:908-909 and :1205-1209"
+    source := "Comments at dtoa.c:908-909 and :1207-1211"
     status := .proven, prop := ``UlpSpec, thm := some ``ulpSpec_proven },
   { id := "dtoa-sd2b", pyFile := dtoaFile, pyFns := ["sd2b"]
     statement := "With scale 0, sd2b reads a positive finite float as its mantissa and exponent, for subnormals too."
@@ -260,7 +260,7 @@ def entries : List Entry := [
     status := .proven, prop := ``StrtodNoNumber, thm := some ``strtodNoNumber_proven },
   { id := "dtoa-strtod-sign", pyFile := dtoaFile, pyFns := ["_Py_dg_strtod"]
     statement := "The sign only negates the result, at every magnitude, so a negative parse is the negation of the positive one with the same errno."
-    source := "dtoa.c:2078, :2089, :2097"
+    source := "dtoa.c:2078, :2091, :2099"
     status := .proven, prop := ``StrtodSign, thm := some ``strtodSign_proven },
   { id := "dtoa-strtod-fast-path", pyFile := dtoaFile, pyFns := ["_Py_dg_strtod"]
     statement := "For a significand below 10**15 and an exponent up to 22 in size, the fast path gives the correctly rounded value of n * 10**e."
@@ -354,7 +354,7 @@ def entries : List Entry := [
   { id := "complex-div-zero", pyFile := complexFile
     pyFns := ["_Py_c_quot", "_Py_cr_quot", "_Py_rc_quot"]
     statement := "Dividing by a complex or real zero, of any signs, sets EDOM, so complex division raises ZeroDivisionError for every dividend."
-    source := "complexobject.c:200-203, :257-258, :272-274, :710-713"
+    source := "complexobject.c:200-203, :257-258, :272-274, :726-729"
     status := .proven, prop := ``ComplexDivZero, thm := some ``complexDivZero_proven },
   { id := "complex-abs", pyFile := complexFile, pyFns := ["_Py_c_abs", "complex_abs"]
     statement := "abs(z) is infinite when a part is infinite, even with a NaN in the other, and for finite parts is hypot, with OverflowError exactly when hypot is not finite. Holds for any C library and any errno on entry."
@@ -371,7 +371,7 @@ def entries : List Entry := [
   { id := "complex-pow-special", pyFile := complexFile
     pyFns := ["_Py_c_pow", "c_powu", "c_powi", "complex_pow"]
     statement := "z ** 0 is 1 for every z, _Py_c_pow answers 1 for a zero exponent, and a zero base with a nonzero imaginary exponent sets EDOM. Holds for any C library."
-    source := "complexobject.c:314-323, :738-749"
+    source := "complexobject.c:314-323, :754-765"
     status := .proven, prop := ``ComplexPowSpecial, thm := some ``complexPowSpecial_proven },
   { id := "complex-abs-nan-any-errno", pyFile := complexFile, pyFns := ["_Py_c_abs", "complex_abs"]
     statement := "abs(z) is a NaN for a NaN real part and finite imaginary part, whatever errno held before the call."

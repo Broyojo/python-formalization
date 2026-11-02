@@ -292,7 +292,7 @@ def tellW : PM Val := do
   let s ← SM.get
   pure (.int (t + s.writeBuf.length))
 
-/-- `tell`: :1223-1225, :1317-1318, :1447-1451. -/
+/-- `tell`: :1223-1225, @3.14.7:1298-1299, @3.14.7:1428-1432. -/
 def tell : PM Val := do
   let s ← SM.get
   if s.kind = 0 then tellR else if s.kind = 1 then tellW

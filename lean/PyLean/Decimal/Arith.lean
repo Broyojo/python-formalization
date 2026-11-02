@@ -523,7 +523,7 @@ def cHash : Dec → Py (Option Int)
   | .fin neg co e => .ok (some (hashFinite neg co e))
 
 /-- `as_integer_ratio`, _pydecimal.py:1021-1069. The source strips factors of 5 and
-of 2 from `n` and `10^-exp` in turn (:1052-1065), which yields the fraction in
+of 2 from `n` and `10^-exp` in turn (:984-997), which yields the fraction in
 lowest terms; the model writes that fraction with a gcd. -/
 def pyRatio : Dec → Py (Int × Int)
   | .nan _ _ _ => .error (.valueError "cannot convert NaN to integer ratio")

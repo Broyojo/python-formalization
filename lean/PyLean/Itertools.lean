@@ -60,7 +60,7 @@ def entries : List Entry := [
   { id := "itertools-combinatorics-doc-agree", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["itertools_combinations_impl"]
     statement := "For every element type, every input object and every int r (and r=None for permutations) the C combinations, combinations_with_replacement and permutations yield the same tuples as their doc equivalents and raise in the same cases."
-    source := "Doc/library/itertools.rst:237-259, :275-294, :548-576 (Roughly equivalent to)", status := .refuted
+    source := "Doc/library/itertools.rst:237-259, :280-299, :553-581 (Roughly equivalent to)", status := .refuted
     prop := ``CombDocAgree, thm := some ``combDocAgree_refuted
     bug := some "itertools-doc-combinatorics-negative-r"
     notes := "r = -1: C raises ValueError, the doc code yields [()] (and [('a', 'b')] for permutations)." },
@@ -74,7 +74,7 @@ def entries : List Entry := [
   { id := "itertools-combinatorics-doc-agree-ssize", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["itertools_combinations_impl"]
     statement := "The same for every 0 <= r <= sys.maxsize."
-    source := "Doc/library/itertools.rst:224-228, :536-539 (zero when r > n)", status := .refuted
+    source := "Doc/library/itertools.rst:224-228, :541-544 (zero when r > n)", status := .refuted
     prop := ``CombDocAgreeSsize, thm := some ``combDocAgreeSsize_refuted
     bug := some "itertools-combinatorics-r-prealloc"
     notes := "r = sys.maxsize: C allocates r indices before noticing r > n and raises MemoryError; the documented result is empty." },
@@ -219,7 +219,7 @@ def entries : List Entry := [
   { id := "itertools-count-formulas", pyFile := "Doc/library/itertools.rst"
     pyFns := []
     statement := "The counts in the three specs above are the documented factorial formulas: n!/(n-r)!, n!/r!/(n-r)! for r <= n, and (n+r-1)!/r!/(n-1)! for n > 0, written without division."
-    source := "Doc/library/itertools.rst:224-228, :263-265, :536-539", status := .proven
+    source := "Doc/library/itertools.rst:224-228, :268-270, :541-544", status := .proven
     prop := ``CountFormulas, thm := some ``countFormulas_proven },
   { id := "itertools-groupby-doc-agree", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["itertools_groupby_impl", "groupby_next", "Py_LOCAL_INLINE", "_grouper_next", "_grouper_create"]
@@ -288,7 +288,7 @@ def entries : List Entry := [
   { id := "itertools-tee-clear", pyFile := "Modules/itertoolsmodule.c"
     pyFns := ["tee_clear", "tee_dealloc"]
     statement := "For references created in any order and callbacks that may raise, destroying a tee runs each callback once, newest first, whether or not the others raised; nothing raises out of it; dataobj and the list end up cleared; and a second tee_clear runs nothing."
-    source := "invariant: the Doc/library/weakref.rst callback contract, and Objects/weakrefobject.c:392-399, :1056-1082", status := .proven
+    source := "invariant: the Doc/library/weakref.rst callback contract, and Objects/weakrefobject.c:392-399, :1085-1111", status := .proven
     prop := ``TeeClearCallbacks, thm := some ``teeClearCallbacks_proven
     notes := "Proxies are not modelled. A reference dropped before the tee is simply not in the list." },
   { id := "itertools-pairwise-doc-agree", pyFile := "Modules/itertoolsmodule.c"

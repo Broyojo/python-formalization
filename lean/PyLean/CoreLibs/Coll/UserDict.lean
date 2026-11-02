@@ -27,7 +27,7 @@ through `__setitem__`. -/
 def udUpdate (u : UD κ ν) (src : List (κ × ν)) (kwds : D κ ν) : UD κ ν :=
   { u with data := D.update (D.update u.data src) kwds }
 
-/-- `UserDict.__init__`, :1137-1142. -/
+/-- `UserDict.__init__`, :1178-1183. -/
 def udNew (cls : String) (src : Option (List (κ × ν))) (kwargs : D κ ν) : UD κ ν :=
   let u : UD κ ν := ⟨cls, []⟩
   let u := match src with
@@ -35,10 +35,10 @@ def udNew (cls : String) (src : Option (List (κ × ν))) (kwargs : D κ ν) : U
     | none => u
   if kwargs.isEmpty then u else udUpdate u kwargs []
 
-/-- `UserDict.__len__`, :1144-1145. -/
+/-- `UserDict.__len__`, :1185-1186. -/
 def udLen (u : UD κ ν) : Nat := u.data.length
 
-/-- `UserDict.__getitem__`, :1147-1152. -/
+/-- `UserDict.__getitem__`, :1188-1193. -/
 def udGetitem (rk : κ → String) (miss : Option (κ → ν)) (u : UD κ ν) (k : κ) : Py ν :=
   if D.mem u.data k then
     match D.get? u.data k with
@@ -49,25 +49,25 @@ def udGetitem (rk : κ → String) (miss : Option (κ → ν)) (u : UD κ ν) (k
     | some f => .ok (f k)
     | none => .error (.keyError (rk k))
 
-/-- `UserDict.__setitem__`, :1154-1155. -/
+/-- `UserDict.__setitem__`, :1195-1196. -/
 def udSetitem (u : UD κ ν) (k : κ) (v : ν) : UD κ ν := { u with data := D.set u.data k v }
 
-/-- `UserDict.__delitem__`, :1157-1158: `del self.data[key]`. -/
+/-- `UserDict.__delitem__`, :1198-1199: `del self.data[key]`. -/
 def udDelitem (rk : κ → String) (u : UD κ ν) (k : κ) : Py (UD κ ν) :=
   if D.mem u.data k then .ok { u with data := D.del u.data k } else .error (.keyError (rk k))
 
-/-- `list(u)`, `UserDict.__iter__`, :1160-1161. -/
+/-- `list(u)`, `UserDict.__iter__`, :1201-1202. -/
 def udIter (u : UD κ ν) : List κ := D.keys u.data
 
-/-- `UserDict.__contains__`, :1165-1166. -/
+/-- `UserDict.__contains__`, :1206-1207. -/
 def udContains (u : UD κ ν) (k : κ) : Bool := D.mem u.data k
 
-/-- `UserDict.get`, :1168-1171. -/
+/-- `UserDict.get`, @3.14.7:1167-1170. -/
 def udGet (rk : κ → String) (miss : Option (κ → ν)) (u : UD κ ν) (k : κ) (default : Option ν) :
     Py (Option ν) :=
   if udContains u k then (udGetitem rk miss u k).map some else .ok default
 
-/-- `UserDict.__repr__`, :1185-1186. -/
+/-- `UserDict.__repr__`, :1216-1217. -/
 def udRepr (rk : κ → String) (rv : ν → String) (u : UD κ ν) : String := reprD rk rv u.data
 
 /-- The right operand of `|`: a `UserDict`, a `dict`, a `frozendict`, or anything else. -/
@@ -78,31 +78,31 @@ inductive UOpnd (κ ν : Type) where
   | other
   deriving Repr, DecidableEq
 
-/-- `UserDict.__or__`, :1188-1193; `none` is `NotImplemented`. `self.__class__(d)`
+/-- `UserDict.__or__`, :1219-1224; `none` is `NotImplemented`. `self.__class__(d)`
 copies `d` through `__init__`. -/
 def udOr (u : UD κ ν) : UOpnd κ ν → Option (UD κ ν)
   | .user d | .dict d | .frozen d => some (udNew u.cls (some (D.or_ u.data d)) [])
   | .other => none
 
-/-- `UserDict.__ror__`, :1195-1200. -/
+/-- `UserDict.__ror__`, :1226-1231. -/
 def udRor (u : UD κ ν) : UOpnd κ ν → Option (UD κ ν)
   | .user d | .dict d | .frozen d => some (udNew u.cls (some (D.or_ d u.data)) [])
   | .other => none
 
-/-- `UserDict.__ior__`, :1202-1207, on the pairs of `other`. -/
+/-- `UserDict.__ior__`, :1233-1238, on the pairs of `other`. -/
 def udIor (u : UD κ ν) (other : List (κ × ν)) : UD κ ν := { u with data := D.update u.data other }
 
-/-- `UserDict.__copy__`, :1209-1214, and `UserDict.copy`, :1216-1227, which go through
+/-- `UserDict.__copy__`, :1240-1245, and `UserDict.copy`, :1247-1257, which go through
 different code for subclasses and agree on `data` and the class. -/
 def udCopyDunder (u : UD κ ν) : UD κ ν := { u with data := D.update [] u.data }
 
-/-- `UserDict.copy`, :1216-1227. On `UserDict` itself: `UserDict(self.data.copy())`. On
+/-- `UserDict.copy`, :1247-1257. On `UserDict` itself: `UserDict(self.data.copy())`. On
 a subclass: `copy.copy` of the object with `data` swapped for `{}`, then `c.update(self)`. -/
 def udCopy (u : UD κ ν) : UD κ ν :=
   if u.cls = "UserDict" then udNew "UserDict" (some u.data) []
   else udUpdate (udCopyDunder { u with data := [] }) u.data []
 
-/-- `UserDict.fromkeys`, :1229-1234. -/
+/-- `UserDict.fromkeys`, :1273-1278. -/
 def udFromkeys (cls : String) (it : List κ) (value : ν) : UD κ ν :=
   it.foldl (fun d k => udSetitem d k value) ⟨cls, []⟩
 

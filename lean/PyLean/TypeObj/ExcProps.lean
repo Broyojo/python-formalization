@@ -48,7 +48,7 @@ def excEntries : List Entry := [
     "exceptions.c:243-266" ``BaseExceptionSetstateChecks ``baseExceptionSetstateChecks_proven,
   p "typeobj-exc-traceback-setter" ["BaseException___traceback___set_impl", "BaseException_with_traceback_impl"]
     "__traceback__ accepts only a traceback or None (TypeError otherwise, world unchanged), cannot be deleted, and with_traceback returns self."
-    "exceptions.c:279-286, :398-418" ``TracebackSetterChecks ``tracebackSetterChecks_proven,
+    "exceptions.c:279-286, @3.14.7:398-418" ``TracebackSetterChecks ``tracebackSetterChecks_proven,
   p "typeobj-exc-cause-suppress" ["BaseException___cause___set_impl", "PyException_SetCause"]
     "Every successful assignment to __cause__, None included, stores the value and sets __suppress_context__."
     "docs (Built-in Exceptions: raising and handling) and exceptions.c:551-558" ``CauseSetsSuppressContext ``causeSetsSuppressContext_proven,
@@ -70,7 +70,7 @@ def excEntries : List Entry := [
     "exceptions.c:518-596" ``PyExceptionApiRoundTrip ``pyExceptionApiRoundTrip_proven,
   p "typeobj-exc-capi-misc" []
     "_PyException_AddNote rejects a non-exception with TypeError before calling add_note; PyExceptionClass_Name is tp_name."
-    "exceptions.c:599-603, :4574-4586" ``PyExceptionMiscApi ``pyExceptionMiscApi_proven,
+    "exceptions.c:599-603, @3.14.7:4574-4586" ``PyExceptionMiscApi ``pyExceptionMiscApi_proven,
   -- StopIteration, SystemExit
   p "typeobj-exc-stopiteration-value" ["StopIteration_init"]
     "After StopIteration.__init__, value is args[0], or None with no args, on every call."
@@ -82,10 +82,10 @@ def excEntries : List Entry := [
   -- ImportError, NameError, AttributeError
   p "typeobj-exc-importerror-msg" ["ImportError_init", "ImportError_str"]
     "ImportError(m) sets msg to m; str(e) is msg when msg is an exact str, BaseException_str otherwise."
-    "exceptions.c:1810-1843, :1876-1883" ``ImportErrorMsgStr ``importErrorMsgStr_proven,
+    "exceptions.c:1810-1843, @3.14.7:1876-1883" ``ImportErrorMsgStr ``importErrorMsgStr_proven,
   p "typeobj-exc-reduce-keeps-name" ["ImportError_getstate", "ImportError_reduce", "AttributeError_getstate", "AttributeError_reduce"]
     "The state dict of ImportError.__reduce__ and AttributeError.__reduce__ holds a set name; AttributeError's also holds args."
-    "exceptions.c:1886-1931, :2643-2683" ``ReduceKeepsNameImportAttr ``reduceKeepsNameImportAttr_proven,
+    "exceptions.c:1886-1931, @3.14.7:2643-2683" ``ReduceKeepsNameImportAttr ``reduceKeepsNameImportAttr_proven,
   r "typeobj-exc-nameerror-reduce" ["BaseException___reduce___impl"]
     "For NameError, as for ImportError and AttributeError, a set name is carried by __reduce__."
     "implementation disagreeing with itself: the three classes with a name member" ``NameErrorReduceKeepsName ``nameErrorReduceKeepsName_refuted
@@ -112,7 +112,7 @@ def excEntries : List Entry := [
     "oserror_parse_args, exceptions.c:1997-2051" ``OsErrorParsePositions ``osErrorParsePositions_proven,
   p "typeobj-exc-oserror-reduce" []
     "When args has two items and filename is set, parsing the reduced arguments recovers errno, strerror, filename and filename2."
-    "comment at exceptions.c:2329-2330, :2342-2346" ``OsErrorReduceRoundTrip ``osErrorReduceRoundTrip_proven,
+    "comment at exceptions.c:2329-2330, @3.14.7:2342-2346" ``OsErrorReduceRoundTrip ``osErrorReduceRoundTrip_proven,
   p "typeobj-exc-oserror-str" ["OSError_str"]
     "With no filename and errno or strerror unset, str(e) is BaseException_str."
     "exceptions.c:2316-2319" ``OsErrorStrFallback ``osErrorStrFallback_proven,
@@ -141,7 +141,7 @@ def excEntries : List Entry := [
     "comment at exceptions.c:3277-3304" ``UnicodeGetParamsInRange ``unicodeGetParamsInRange_proven,
   p "typeobj-exc-unicode-str-bounds" ["UnicodeEncodeError_str", "UnicodeDecodeError_str", "UnicodeTranslateError_str"]
     "The guard of all three __str__ methods implies 0 <= start < len, so the read of one character or byte is in bounds for every assigned start and end."
-    "exceptions.c:3693, :3816, :3915" ``UnicodeStrReadInBounds ``unicodeStrReadInBounds_proven,
+    "exceptions.c:3693, @3.14.7:3816, @3.14.7:3915" ``UnicodeStrReadInBounds ``unicodeStrReadInBounds_proven,
   p "typeobj-exc-unicode-str-unset" ["UnicodeEncodeError_str", "UnicodeDecodeError_str", "UnicodeTranslateError_str"]
     "With object NULL, all three __str__ methods return '' without reading reason."
     "exceptions.c:3671-3674" ``UnicodeStrUninitialized ``unicodeStrUninitialized_proven,
@@ -150,31 +150,31 @@ def excEntries : List Entry := [
     "exceptions.c:2988-3021" ``UnicodeAttributeCheck ``unicodeAttributeCheck_proven,
   p "typeobj-exc-unicode-capi" ["check_unicode_error_type", "unicode_error_set_start_impl", "unicode_error_set_end_impl", "unicode_error_get_start_impl", "unicode_error_get_end_impl"]
     "SetStart and SetEnd store the raw value, GetParams returns it clipped, for every kind of error; a non-UnicodeError is a TypeError."
-    "exceptions.c:3131-3152, :3411-3535" ``UnicodeCapiStartEnd ``unicodeCapiStartEnd_proven
+    "exceptions.c:3131-3152, @3.14.7:3411-3535" ``UnicodeCapiStartEnd ``unicodeCapiStartEnd_proven
     "All kinds share these helpers; UKind carries the name and as_bytes.",
   p "typeobj-exc-unicode-capi-attrs" ["unicode_error_get_encoding_impl", "unicode_error_get_object_impl", "unicode_error_get_reason_impl", "unicode_error_set_reason_impl"]
     "The getters reject a non-UnicodeError with TypeError, and SetReason stores the reason."
-    "exceptions.c:3073-3122, :3360-3587" ``UnicodeCapiAttributes ``unicodeCapiAttributes_proven,
+    "exceptions.c:3073-3122, @3.14.7:3360-3587" ``UnicodeCapiAttributes ``unicodeCapiAttributes_proven,
   p "typeobj-exc-unicode-init-encode" ["UnicodeEncodeError_init"]
     "UnicodeEncodeError.__init__ stores args before it parses them, so a failed parse leaves the new args in place."
     "exceptions.c:3641-3652" ``UnicodeInitArgsFirst ``unicodeInitArgsFirst_proven,
   p "typeobj-exc-unicode-init-others" ["UnicodeDecodeError_init", "UnicodeTranslateError_init"]
     "The same for UnicodeDecodeError and UnicodeTranslateError."
-    "exceptions.c:3748-3759, :3870-3879" ``UnicodeInitArgsFirstOthers ``unicodeInitArgsFirstOthers_proven,
+    "exceptions.c:3748-3759, @3.14.7:3870-3879" ``UnicodeInitArgsFirstOthers ``unicodeInitArgsFirstOthers_proven,
   p "typeobj-exc-unicode-create" ["PyUnicodeDecodeError_Create", "_PyUnicodeTranslateError_Create"]
     "The two creators call the class with the formatted arguments, so the constructor's checks apply."
-    "exceptions.c:3854-3860, :3960-3966" ``UnicodeCreateCallsClass ``unicodeCreateCallsClass_proven,
+    "exceptions.c:3854-3860, @3.14.7:3960-3966" ``UnicodeCreateCallsClass ``unicodeCreateCallsClass_proven,
   -- MemoryError
   p "typeobj-exc-memoryerror-freelist-bound" ["MemoryError_dealloc", "preallocate_memerrors", "free_preallocated_memerrors", "_PyErr_NoMemory", "get_memory_error"]
     "MemoryError_dealloc keeps the freelist within MEMERRORS_SAVE and ignores subclasses, preallocate_memerrors fills it, teardown empties it, and an empty list with allocation forbidden gives the last-resort error."
-    "exceptions.c:4024, :4077-4150" ``MemoryErrorFreelistBound ``memoryErrorFreelistBound_proven,
+    "exceptions.c:4024, @3.14.7:4077-4150" ``MemoryErrorFreelistBound ``memoryErrorFreelistBound_proven,
   r "typeobj-exc-memoryerror-freelist-fresh" ["MemoryError_dealloc", "get_memory_error", "BaseException_clear", "MemoryError_new"]
     "A MemoryError taken from the freelist has __suppress_context__ False, like any new exception."
     "invariant: an object from a freelist is indistinguishable from a fresh one" ``MemoryErrorFreelistFresh ``memoryErrorFreelistFresh_refuted
     "typeobj-exc-memoryerror-freelist-state",
   r "typeobj-exc-memoryerror-new-args" ["MemoryError_new", "get_memory_error"]
     "MemoryError.__new__(MemoryError, *args) keeps args, as BaseException.__new__ and MemoryError subclasses do."
-    "implementation disagreeing with itself: the freelist and allocation paths of get_memory_error (exceptions.c:4047, :4062)" ``MemoryErrorNewKeepsArgs ``memoryErrorNewKeepsArgs_refuted
+    "implementation disagreeing with itself: the freelist and allocation paths of get_memory_error (exceptions.c:4047, @3.14.7:4062)" ``MemoryErrorNewKeepsArgs ``memoryErrorNewKeepsArgs_refuted
     "typeobj-exc-memoryerror-freelist-state",
   -- BaseExceptionGroup
   p "typeobj-exc-eg-rejects-non-exception" ["BaseExceptionGroup_new"]
@@ -203,10 +203,10 @@ def excEntries : List Entry := [
     "narrowing of typeobj-exc-eg-repr-in-bounds" ``EgReprInBoundsAfterNew ``egReprInBoundsAfterNew_proven,
   p "typeobj-exc-eg-repr-saved" ["BaseExceptionGroup_repr"]
     "A saved exceptions_str is used as is."
-    "comment at exceptions.c:1092, :910" ``EgReprSavedString ``egReprSavedString_proven,
+    "comment at exceptions.c:1092, @3.14.7:910" ``EgReprSavedString ``egReprSavedString_proven,
   p "typeobj-exc-eg-created-through-class" ["BaseExceptionGroup_derive_impl", "_PyExc_CreateExceptionGroup"]
     "derive and _PyExc_CreateExceptionGroup both call BaseExceptionGroup."
-    "exceptions.c:1014-1028, :1140-1152" ``EgCreatedThroughClass ``egCreatedThroughClass_proven,
+    "exceptions.c:1014-1028, @3.14.7:1140-1152" ``EgCreatedThroughClass ``egCreatedThroughClass_proven,
   p "typeobj-exc-eg-bases" []
     "ExceptionGroup has the bases (BaseExceptionGroup, Exception), both in its MRO."
     "exceptions.c:1774-1789" ``ExceptionGroupBases ``exceptionGroupBases_proven,

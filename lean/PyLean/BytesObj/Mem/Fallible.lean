@@ -165,7 +165,7 @@ theorem mapErr_err {α : Type} (f : PyExc → PyExc) (x : M α) (st st' : St) (e
 written, the callback's effects stay, and the error is the one `fix_error_int` makes of
 it, so a `Boom` keeps its class while a `ValueError` becomes `memoryview: invalid value
 for format`. The `?` arm is different on purpose: `PyObject_IsTrue` failing returns at
-once, with the comment `preserve original error` (:1988-1989), so a raising `__bool__`
+once, with the comment `preserve original error` (:2127-2128), so a raising `__bool__`
 keeps even a `ValueError`. The float arms rewrite like the integer ones. -/
 def PackFailures : Prop :=
   ∀ (self : Nat) (ptr : Int) (r : Option Nat) (e : PyExc) (t : String) (st st' : St),
@@ -222,7 +222,7 @@ theorem packFailures_proven : PackFailures := by
 /-- A failing `__index__` in a subscript, for a live view that is not 0-dimensional:
 `m[k]` and `m[k] = v` raise what `__index__` raised, or the `TypeError` for a non-int,
 and `m[k] = v` writes nothing. The key is converted before the item is looked up, so
-this is the failure at :2608-2609 and :2686-2687. -/
+this is the failure at :2748-2749 and @3.14.7:2686-2687. -/
 def KeyFailures : Prop :=
   ∀ (self : Nat) (r : Option Nat) (e : PyExc) (t : String) (v : Obj) (st st' : St),
     baseInaccessible st self = false → (st.mv self).view.ndim ≠ 0 →
@@ -251,8 +251,8 @@ theorem keyFailures_proven : KeyFailures := by
     exact fire_mem r st st' hf
 
 /-- `ptr_from_tuple`, and `memory_item_multi` through it: a tuple longer than `ndim` is the
-`TypeError` of :2430-2435 before any `__index__` runs, and a raising `__index__` in the
-first position is the failure at :2441-2442. -/
+`TypeError` of :2570-2575 before any `__index__` runs, and a raising `__index__` in the
+first position is the failure at :2581-2582. -/
 def TupleFailures : Prop :=
   ∀ (v : Buf) (tup : List KeyElem) (r : Option Nat) (e : PyExc) (rest : List KeyElem) (st st' : St),
     (tup.length > v.ndim →

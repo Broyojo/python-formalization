@@ -289,7 +289,7 @@ def entries : List Entry := [
   { id := "pickletools-dis-stack-repr", pyFile := "Lib/pickletools.py"
     pyFns := ["StackObject.__repr__"]
     statement := "The 'stack not empty after STOP' error names what is left, bottom first, in list repr with each StackObject shown by name."
-    source := "Lib/pickletools.py:976-977, :2545-2546", status := .proven
+    source := "Lib/pickletools.py:976-977, :2591-2592", status := .proven
     prop := ``DisStackRepr, thm := some ``disStackRepr_proven },
   { id := "pickletools-optimize-raw-copy", pyFile := "Lib/pickletools.py"
     pyFns := ["optimize", "_genops"]

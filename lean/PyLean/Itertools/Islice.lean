@@ -32,7 +32,7 @@ def asSsizeOrMinus1 (x : Int) : Int :=
   | .ok v => v
   | .error _ => -1
 
-/-- `isliceobject` (:1589-1596); `it = none` after `Py_CLEAR(lz->it)`. -/
+/-- `isliceobject` (:1578-1585); `it = none` after `Py_CLEAR(lz->it)`. -/
 structure IsliceState (α : Type) where
   it : Option (Src α)
   next : Int
@@ -49,7 +49,7 @@ def cIsliceArgs (args : List (Option Int)) : Py (Int × Int × Int) :=
     | [a1, a2] => (a1, a2, none)
     | a1 :: a2 :: a3 :: _ => (a1, a2, some a3)
     | [] => (none, none, none)
-  -- (start, stop) after :1618-1646
+  -- (start, stop) after :1607-1635
   let startStop : Py (Int × Int) :=
     if args.length = 1 then
       -- numargs == 2: islice(seq, stop)
@@ -68,20 +68,20 @@ def cIsliceArgs (args : List (Option Int)) : Py (Int × Int × Int) :=
   match startStop with
   | .error e => .error e
   | .ok (start, stop) =>
-    -- :1648-1653
+    -- @3.14.7:1643-1648
     if start < 0 ∨ stop < -1 then .error (.valueError isliceIdxMsg)
     else
-      -- :1655-1664
+      -- @3.14.7:1650-1659
       let step := match a3 with | some (some v) => asSsizeOrMinus1 v | _ => 1
       if step < 1 then .error (.valueError isliceStepMsg) else .ok (start, stop, step)
 
-/-- The `while (lz->cnt < lz->next)` skip loop (:1721-1727): `none` when the
+/-- The `while (lz->cnt < lz->next)` skip loop (:1710-1716): `none` when the
 input ran out (`goto empty`). Each iteration consumes one item. -/
 def cIsliceSkip (next : Int) : List α → Int → Option (List α) × Int
   | [], cnt => if cnt < next then (none, cnt) else (some [], cnt)
   | x :: rest, cnt => if cnt < next then cIsliceSkip next rest (cnt + 1) else (some (x :: rest), cnt)
 
-/-- `goto empty` (:1742-1744) after `iternext` returned `NULL`: `it` is cleared
+/-- `goto empty` (:1731-1733) after `iternext` returned `NULL`: `it` is cleared
 and the error, if any, stays set. -/
 def cIsliceEnded (s : IsliceState α) (err : Option PyExc) (cnt : Int) : Step (IsliceState α) α :=
   match err with
@@ -89,7 +89,7 @@ def cIsliceEnded (s : IsliceState α) (err : Option PyExc) (cnt : Int) : Step (I
   | some e => .raise e { s with it := none, cnt := cnt }
 
 /-- `islice_next` (:1697-1734). The step is added in `size_t` and converted
-back (:1734-1739), i.e. with two's complement wraparound. -/
+back (:1723-1728), i.e. with two's complement wraparound. -/
 def cIsliceNext (s : IsliceState α) : Step (IsliceState α) α :=
   match s.it with
   | none => .stop s
@@ -107,8 +107,8 @@ def cIsliceNext (s : IsliceState α) : Step (IsliceState α) α :=
           let next := if next < oldnext || (s.stop != -1 && next > s.stop) then s.stop else next
           .yield item { it := some ⟨rest, err⟩, next := next, stop := s.stop, step := s.step, cnt := cnt }
 
-/-- `PyArg_UnpackTuple(args, "islice", 2, 4, ...)` (:1615) and the keyword
-check (:1611-1613), before `cIsliceArgs`; `nargs` counts the iterable too.
+/-- `PyArg_UnpackTuple(args, "islice", 2, 4, ...)` (:1604) and the keyword
+check (:1600-1602), before `cIsliceArgs`; `nargs` counts the iterable too.
 Keywords are rejected only for `islice` itself and subclasses that inherit its
 `tp_init`; `customInit` is a subclass defining `__init__`. -/
 def cIsliceArity (nargs : Nat) (hasKw : Bool) (customInit : Bool := false) : Py Unit :=
@@ -117,7 +117,7 @@ def cIsliceArity (nargs : Nat) (hasKw : Bool) (customInit : Bool := false) : Py 
   else if nargs > 4 then .error (.typeError s!"islice expected at most 4 arguments, got {nargs}")
   else .ok ()
 
-/-- The body of `islice_new` after unpacking (:1618-1684): the arguments are
+/-- The body of `islice_new` after unpacking (:1607-1673): the arguments are
 checked first, then `PyObject_GetIter(seq)`. -/
 def cIsliceNew (seq : Obj α) (args : List (Option Int)) : Py (IsliceState α) :=
   match cIsliceArgs args with

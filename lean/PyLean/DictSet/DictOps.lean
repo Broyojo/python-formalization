@@ -31,7 +31,7 @@ def dictGetitemSuppress (isDict : Bool) (key : K) : DM K V (Option V) :=
       return r.2) (fun _ => pure none)
 
 /-- `dict_getitem` with what it reports: `(value, unraisable)`, the second being the exception
-passed to `PyErr_FormatUnraisable` (:2399, :2425). A `KeyError` from the lookup is dropped without
+passed to `PyErr_FormatUnraisable` (:2399, @3.14.7:2336). A `KeyError` from the lookup is dropped without
 a report (:2424). -/
 def dictGetitemFull (isDict : Bool) (key : K) : DM K V (Option V × Option PyExc) :=
   if !isDict then pure (none, none) else
@@ -268,7 +268,7 @@ def pyDictSetDefault (key : K) (dflt : V) : DM K V (Option V) := do
 
 end
 
-/-- The backwards scan of `dict_popitem_impl` (:5003-5006, :5018-5021): the last live
+/-- The backwards scan of `dict_popitem_impl` (:5003-5006, @3.14.7:4652-4655): the last live
 entry below `i`. -/
 def lastLive (es : List (Option (Ent K V))) : Nat → Option (Nat × Ent K V)
   | 0 => none

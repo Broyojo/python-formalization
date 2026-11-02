@@ -133,7 +133,7 @@ def storedHash (w : World) (a : Addr) (k : Val) : Int :=
 
 /-- `_Py_dict_lookup`, `Objects/dictobject.c:1328`, through `compare_generic`, `:1182`: identity,
 then the stored hash, then `PyObject_RichCompareBool(startkey, key, Py_EQ)`, and a restart when
-the entry changed under the comparison (`:1198`). `some i` is the index of the entry.
+the entry changed under the comparison (`:1121`). `some i` is the index of the entry.
 
 The model has no hash table, so it visits entries in insertion order. Only entries of equal hash
 can be compared, and those share a probe sequence in the same order, unless a deletion left a slot

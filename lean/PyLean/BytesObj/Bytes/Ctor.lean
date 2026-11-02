@@ -18,7 +18,7 @@ def byteItem (item : Obj) : Py Nat := do
 
 /-- The shared loop body: items in order, stopping at the first error.
 `_PyBytes_FromList`, bytesobject.c:2984-3027; `_PyBytes_FromTuple`, :3029-3060;
-`_PyBytes_FromIterator`, :3062-3122 (for a generator, without a length hint). -/
+`_PyBytes_FromIterator`, :3068-3128 (for a generator, without a length hint). -/
 def bytesFromItems : List Obj → Py Seq
   | [] => .ok []
   | item :: rest => do

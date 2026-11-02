@@ -20,7 +20,7 @@ def MAXYEAR : Int := 9999
 /-- `date.max.toordinal()`, `_MAXORDINAL` (_pydatetime.py:20), C `MAXORDINAL`. -/
 def MAXORDINAL : Int := 3652059
 
-/-- `_is_leap`, _pydatetime.py:47-49; C `is_leap` (:430-440) casts to
+/-- `_is_leap`, _pydatetime.py:47-49; C `is_leap` (:425-435) casts to
 `unsigned int` first, which agrees for the non-negative years it is given. -/
 def isLeap (y : Int) : Bool := y % 4 == 0 && (y % 100 != 0 || y % 400 == 0)
 
@@ -218,7 +218,7 @@ def dateAddC (y m d : Int) (t : Delta) : Py (Int × Int × Int) := do
 /-! ### ISO calendar -/
 
 /-- `_isoweek1monday`, _pydatetime.py:2444-2452; C `iso_week1_monday`,
-:602-614 (same arithmetic; C uses `%` on a positive left operand). -/
+:586-598 (same arithmetic; C uses `%` on a positive left operand). -/
 def isoWeek1Monday (year : Int) : Int :=
   let firstday := ymd2ord year 1 1
   let firstweekday := (firstday + 6) % 7
@@ -226,7 +226,7 @@ def isoWeek1Monday (year : Int) : Int :=
   if firstweekday > 3 then week1monday + 7 else week1monday
 
 /-- `date.isocalendar()`, _pydatetime.py:1270-1296; C `date_isocalendar`,
-:3852-3885 (its `divmod` helper rounds towards minus infinity, like Python). -/
+:3878-3911 (its `divmod` helper rounds towards minus infinity, like Python). -/
 def isocalendar (y m d : Int) : Int × Int × Int :=
   let week1monday := isoWeek1Monday y
   let today := ymd2ord y m d

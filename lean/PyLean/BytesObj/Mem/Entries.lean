@@ -20,7 +20,7 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-struct-no-memory", pyFile := memFile
     pyFns := ["struct_get_unpacker", "fix_struct_error_int"]
     statement := "An item too large to allocate is MemoryError after the format is accepted, and fix_struct_error_int lets it out of ==."
-    source := "memoryobject.c:2176-2180, :2917-2928", status := .proven
+    source := "memoryobject.c:2176-2180, :2997-3008", status := .proven
     prop := ``StructNoMemory, thm := some ``structNoMemory_proven },
   { id := "bytesobj-memoryview-item-eq-view", pyFile := memFile
     pyFns := ["memoryview_count_impl", "memoryview_index_impl"]
@@ -75,7 +75,7 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-restricted-refuses", pyFile := memFile
     pyFns := ["PyMemoryView_FromObjectAndFlags", "memoryview_cast_impl", "memoryview_toreadonly_impl", "memory_getbuf", "memory_subscript"]
     statement := "A restricted view makes no new reference to the buffer: memoryview(m), cast, toreadonly, m[a:b] and __buffer__ raise ValueError and change nothing, while len(m) works."
-    source := "memoryobject.c:198-210, :808, :1456, :1512, :1536, :2613", status := .proven
+    source := "memoryobject.c:198-210, :808, :1485, :1541, :1565, :2693", status := .proven
     prop := ``RestrictedRefuses, thm := some ``restrictedRefuses_proven },
   { id := "bytesobj-memoryview-restricted-made", pyFile := memFile
     pyFns := ["PyMemoryView_FromObjectAndFlags"]
@@ -120,7 +120,7 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-struct-too-long", pyFile := memFile
     pyFns := ["struct_get_unpacker", "fix_struct_error_int"]
     statement := "A repeat count past PY_SSIZE_T_MAX, or one whose item size takes the struct past it, is struct.error, which == reads as not equal."
-    source := "Modules/_struct.c:1678-1683, :1703-1705, :1769-1772", status := .proven
+    source := "Modules/_struct.c:1678-1683, :1728-1730, :1796-1799", status := .proven
     prop := ``StructSizeTooLong, thm := some ``structSizeTooLong_proven },
   { id := "bytesobj-memoryview-reentrant-release", pyFile := memFile
     pyFns := ["mbuf_release", "_memory_release", "memory_releasebuf"]
@@ -146,7 +146,7 @@ def entries : List Entry := [
     prop := ``PackFailures, thm := some ``packFailures_proven },
   { id := "bytesobj-memoryview-key-failures", pyFile := "Objects/memoryobject.c", pyFns := ["memory_subscript", "memory_ass_sub"]
     statement := "A failing __index__ in m[k] or m[k] = v, on a live view that is not 0-dimensional, raises that failure, and the assignment writes nothing."
-    source := "memoryobject.c:2686-2689, :2684-2687", status := .proven
+    source := "memoryobject.c:2686-2689, :2764-2767", status := .proven
     prop := ``KeyFailures, thm := some ``keyFailures_proven },
   { id := "bytesobj-memoryview-tuple-failures", pyFile := "Objects/memoryobject.c", pyFns := ["ptr_from_tuple"]
     statement := "ptr_from_tuple rejects a tuple longer than ndim before any __index__ runs, and passes up a raising __index__."
@@ -192,7 +192,7 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-pack-type-errors", pyFile := memFile
     pyFns := ["pack_single", "type_error_int", "value_error_int", "fix_error_int"]
     statement := "pack_single on a str in an integer format, on a non-bytes in format c, and on bytes of another length in format c raises the documented TypeError or ValueError and writes nothing."
-    source := "memoryobject.c:1657-1662, :1995-1999", status := .proven
+    source := "memoryobject.c:1657-1662, :2071-2075", status := .proven
     prop := ``PackTypeErrors, thm := some ``packTypeErrors_proven },
   { id := "bytesobj-memoryview-setitem-c-released", pyFile := memFile
     pyFns := ["pack_single", "memory_ass_sub"]
@@ -272,7 +272,7 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-key-rejections", pyFile := memFile
     pyFns := ["memory_subscript", "is_multislice", "is_multiindex", "memory_item_multi", "memory_item"]
     statement := "A 0-dim view takes only () and ...; m[i] on two or more dimensions, a tuple of slices, a short tuple of indices, and a key that is neither index nor slice are refused with their exact messages."
-    source := "memoryobject.c:2653-2658, :2588-2639", status := .proven
+    source := "memoryobject.c:2653-2658, :2668-2719", status := .proven
     prop := ``KeyRejections, thm := some ``keyRejections_proven },
   { id := "bytesobj-memoryview-tobytes-c", pyFile := memFile
     pyFns := ["buffer_to_contiguous", "copy_buffer", "copy_rec", "copy_base", "equiv_structure", "equiv_format",
@@ -293,7 +293,7 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-cmp-eq-ne", pyFile := memFile
     pyFns := ["memory_richcompare"]
     statement := "!= is the negation of == in every state, with the same effects; an ordering is NotImplemented with no effect."
-    source := "Doc/reference/datamodel.rst __ne__; memoryobject.c:3212-3213, :3180-3190", status := .proven
+    source := "Doc/reference/datamodel.rst __ne__; memoryobject.c:3212-3213, :3307-3317", status := .proven
     prop := ``CmpEqNe, thm := some ``cmpEqNe_proven },
   { id := "bytesobj-memoryview-cmp-special", pyFile := memFile
     pyFns := ["memory_richcompare"]
@@ -471,12 +471,12 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-eq-failures", pyFile := memFile
     pyFns := ["memoryview_count_impl", "memoryview_index_impl"]
     statement := "An exception from __eq__ passes out of count and index at once; an __eq__ that calls self.release() succeeds, and the next step raises the released error, except on a view of one item, where count returns."
-    source := "memoryobject.c:2877-2896, :2872-2895", status := .proven
+    source := "memoryobject.c:2877-2896, :2952-2975", status := .proven
     prop := ``EqFailures, thm := some ``eqFailures_proven },
   { id := "bytesobj-memoryview-slice-tolist", pyFile := memFile
     pyFns := ["memory_subscript", "init_slice", "init_len"]
     statement := "m[s].tolist() is m.tolist()[s] for a view of any number of dimensions, native format, strides and suboffsets, and every slice with a non-zero step."
-    source := "Doc/library/stdtypes.rst memoryview; memoryobject.c:2589-2610, :2614-2628", status := .proven
+    source := "Doc/library/stdtypes.rst memoryview; memoryobject.c:2589-2610, :2694-2708", status := .proven
     prop := ``SliceTolist, thm := some ``sliceTolist_proven },
   { id := "bytesobj-memoryview-tuple-refusals", pyFile := memFile
     pyFns := ["ptr_from_tuple", "memory_item_multi", "lookup_dimension"]
@@ -486,7 +486,7 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-zero-dim", pyFile := memFile
     pyFns := ["memoryview_tolist_impl", "memory_subscript"]
     statement := "On a 0-dim view m.tolist() is one item and not a list, and m[()] is that same item, the native item at buf."
-    source := "memoryobject.c:2326-2328, :2592-2596", status := .proven
+    source := "memoryobject.c:2326-2328, :2672-2676", status := .proven
     prop := ``ZeroDimItem, thm := some ``zeroDimItem_proven },
   { id := "bytesobj-memoryview-hash-view-exporter", pyFile := memFile
     pyFns := ["memory_hash"]
@@ -496,7 +496,7 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-cast-shape", pyFile := memFile
     pyFns := ["memoryview_cast_impl", "cast_to_ND", "cast_to_1D"]
     statement := "memoryview.cast(format, shape) gives a new view of the same buffer and byte size, with ndim == len(shape), the given shape, the new format and C strides, and m unchanged."
-    source := "memoryobject.c:1406-1440, :1447-1499", status := .proven
+    source := "memoryobject.c:1406-1440, :1476-1528", status := .proven
     prop := ``CastShapeSpec, thm := some ``castShapeSpec_proven },
   { id := "bytesobj-memoryview-context", pyFile := memFile
     pyFns := ["memory_enter", "memory_exit"]
@@ -541,7 +541,7 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-tobytes-orders", pyFile := memFile
     pyFns := ["memoryview_tobytes_impl", "PyBuffer_ToContiguous"]
     statement := "m.tobytes(order) for every live view of any shape: C and no order are row-major, F is column-major, A is the memory if it is contiguous in either order and row-major otherwise, and any other length is refused."
-    source := "memoryobject.c:1048-1087, :2278-2312", status := .proven
+    source := "memoryobject.c:1048-1087, :2356-2391", status := .proven
     prop := ``TobytesOrders, thm := some ``tobytesOrders_proven },
   { id := "bytesobj-memoryview-from-contig-copy-f", pyFile := memFile
     pyFns := ["memory_from_contiguous_copy"]
@@ -566,7 +566,7 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-pack-unpack-other", pyFile := memFile
     pyFns := ["pack_single", "unpack_single"]
     statement := "For the formats other than the integers, pack then unpack: ? gives the truth of the item, c the byte, P the pointer, d the double exactly, f and e the pattern they stored; a released view refuses to unpack."
-    source := "memoryobject.c:1805-1912, :1875-2026", status := .proven
+    source := "memoryobject.c:1805-1912, :1924-2102", status := .proven
     prop := ``PackUnpackOther, thm := some ``packUnpackOther_proven },
   { id := "bytesobj-memoryview-fix-struct", pyFile := memFile
     pyFns := ["fix_struct_error_int"]
@@ -576,12 +576,12 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-cmp-import", pyFile := memFile
     pyFns := ["struct_get_unpacker", "fix_struct_error_int", "memory_richcompare"]
     statement := "With struct not importable, two views of one native format still compare by the switch, and any comparison needing struct raises ModuleNotFoundError out of ==."
-    source := "memoryobject.c:2160-2162, :3144-3158", status := .proven
+    source := "memoryobject.c:2160-2162, @3.14.7:3144-3158", status := .proven
     prop := ``CmpImportFails, thm := some ``cmpImportFails_proven },
   { id := "bytesobj-memoryview-rank-rules", pyFile := memFile
     pyFns := ["memory_length", "memory_iter", "memory_item", "memoryview_count_impl", "memoryview_index_impl"]
     statement := "len(m) is shape[0] on every view with dimensions. A 0-dim view has no length, iterator, items or lookup, and a view of two or more dimensions refuses iteration, count, index and m[i] as not implemented, each with the source's message."
-    source := "memoryobject.c:2546-2558, :2746-2756, :2847-2850, :2900-2903, :3529-3537", status := .proven
+    source := "memoryobject.c:2546-2558, :2826-2836, :2927-2930, :2980-2983, :3656-3664", status := .proven
     prop := ``RankRules, thm := some ``rankRules_proven },
   { id := "bytesobj-memoryview-iter-null", pyFile := memFile
     pyFns := ["memoryiter_next"]
@@ -596,7 +596,7 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-slice-cleanup", pyFile := memFile
     pyFns := ["memory_subscript", "memory_ass_sub"]
     statement := "When a slice key fails, m[s] raises and gives back the export the sliced view took on the managed buffer, and m[s] = x raises and gives back x's buffer, running __release_buffer__."
-    source := "memoryobject.c:2696-2703, :2699-2718", status := .proven
+    source := "memoryobject.c:2696-2703, :2779-2798", status := .proven
     prop := ``SliceCleanup, thm := some ``sliceCleanup_proven },
   { id := "bytesobj-memoryview-cmp-is-tolist", pyFile := memFile
     pyFns := ["memory_richcompare", "cmp_base", "cmp_rec", "unpack_cmp", "struct_unpack_cmp", "struct_unpack_single"]
@@ -606,7 +606,7 @@ def entries : List Entry := [
   { id := "bytesobj-memoryview-cmp-non-native", pyFile := memFile
     pyFns := ["memory_richcompare", "cmp_base", "struct_unpack_cmp", "struct_unpack_single"]
     statement := "With a format that is not native, 1-D views are equal exactly when every pair of items agrees under struct_unpack_cmp, which compares one-value tuples by that value and longer tuples as tuples."
-    source := "memoryobject.c:2204-2220, :2931-2956, :3140-3158", status := .proven
+    source := "memoryobject.c:2204-2220, :3011-3036, :3267-3285", status := .proven
     prop := ``CmpNonNative, thm := some ``cmpNonNative_proven },
   { id := "bytesobj-memoryview-equiv-rules", pyFile := memFile
     pyFns := ["equiv_format", "equiv_shape", "equiv_structure"]

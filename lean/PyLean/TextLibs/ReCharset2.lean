@@ -210,7 +210,7 @@ theorem rangeMark_none : ∀ (n i : Nat) (cm : Array Bool),
       rw [e]
       exact ⟨rfl, fun _ h => h, fun _ h => .inl h, by simp⟩
 
-/-- The range's `try`, `:269-284`, with its fallbacks. -/
+/-- The range's `try`, `@3.14.7:269-284`, with its fallbacks. -/
 theorem doRange_none {wd : OSt → OSt} (hw : WdOk wd) (flags : Nat) (st : OSt) (lo hi : Nat)
     (hs : SizeOk st.cm) :
     StepOk flags st (doRangeW wd none st lo hi) (fun c => decide (lo ≤ c) && decide (c ≤ hi)) := by

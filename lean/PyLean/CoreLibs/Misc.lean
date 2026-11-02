@@ -344,7 +344,7 @@ def contextlibEntries : List Entry := [
     pyFns := ["_GeneratorContextManagerBase.__init__", "_GeneratorContextManagerBase._recreate_cm",
               "contextmanager", "asynccontextmanager"]
     statement := "_recreate_cm makes a fresh manager while func is there and raises AttributeError after __enter__; __doc__ comes from func, else from the class."
-    source := "comments Lib/contextlib.py:173, :123-125"
+    source := "comments Lib/contextlib.py:173, :185-187"
     status := .proven, prop := ``Contextlib.RecreateFresh, thm := some ``Contextlib.recreateFresh_proven },
   { id := "misc-ctx-enter", pyFile := "Lib/contextlib.py"
     pyFns := ["_GeneratorContextManager.__enter__", "_AsyncGeneratorContextManager.__aenter__"]
@@ -414,7 +414,7 @@ def contextlibEntries : List Entry := [
   { id := "misc-ctx-exit-matches-nested", pyFile := "Lib/contextlib.py"
     pyFns := ["ExitStack.__exit__"]
     statement := "For every stack and behaviour of the callbacks, the exception leaving a with ExitStack() block is the one leaving the equivalent nested with statements."
-    source := "comment Lib/contextlib.py:634-635, :592-593"
+    source := "comment Lib/contextlib.py:634-635, :651-652"
     status := .proven, prop := ``Contextlib.ExitMatchesNested, thm := some ``Contextlib.exitMatchesNested_proven
     notes := "__context__ is outside the statement: it differs in the open python/cpython#102201." },
   { id := "misc-ctx-exit-lifo", pyFile := "Lib/contextlib.py"

@@ -79,7 +79,7 @@ theorem any_keys_false (so : SetObj K) (key : K)
   rw [hne s e.1 e.2 hs] at hq
   simp at hq
 
-/-- What `set_add_entry` asks of `set_table_resize` for a table of `used` keys (:206-208). -/
+/-- What `set_add_entry` asks of `set_table_resize` for a table of `used` keys (@3.14.7:206-208). -/
 def setGrowMin (used : Nat) : Nat := if used > 50000 then used * 2 else used * 4
 
 /-- A set of `used` keys that would have to grow past what `PyMem_NEW` can give, the one reason an
@@ -703,7 +703,7 @@ theorem addStep_raises (fs : Option Nat) (hs : so.slot slot = .active startkey h
     addStep P key hash slot mask fs so = (.error e, s') := by
   simp [addStep, M.bind_run, M.get_run, hs, h1, h2, hq]
 
-/-- `set_add_entry` on an answer of no, and a changed table: it restarts (:177-178). -/
+/-- `set_add_entry` on an answer of no, and a changed table: it restarts (@3.14.7:177-178). -/
 theorem addStep_changed (fs : Option Nat) (hs : so.slot slot = .active startkey hash)
     (h1 : startkey ≠ key)
     (h2 : ¬ ((P.isStr startkey = true ∧ P.isStr key = true) ∧ P.strEq startkey key = true))

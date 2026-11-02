@@ -58,7 +58,7 @@ section Null
 variable {hf : K → Int} {eqv : K → K → Bool}
 
 /-- A table with fewer filled slots than slots has a NULL one, which is what ends a failing search
-(:334-335). -/
+(@3.14.7:334-335). -/
 theorem SetCore.exists_null {so : SetObj K} (w : SetCore hf eqv so) (hfree : so.fill ≤ so.mask) :
     ∃ s, s ≤ so.mask ∧ so.slot s = .null := by
   apply Classical.byContradiction

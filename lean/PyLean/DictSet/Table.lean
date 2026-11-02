@@ -385,7 +385,7 @@ def lookdictIndex {W : Type} (k : Keys K W) (hash : Int) (index : Nat) : Py Int 
   lookdictIndexLoop k.indices k.mask index (probeFuel k.log2Size) (u &&& k.mask) u
 
 /-- The loop of `find_empty_slot` (:1853-1857) and of `build_indices_*` (:2107-2110,
-:2073-2076): walk the probe sequence until `stop (slot)`. -/
+@3.14.7:2032-2035): walk the probe sequence until `stop (slot)`. -/
 def probeUntil (stop : Int → Bool) (indices : List Int) (mask : Nat) : Nat → Nat → Nat → Py Nat
   | 0, _, _ => .error .modelFuel
   | fuel + 1, i, perturb =>
@@ -451,7 +451,7 @@ def dictResize (log2New : Nat) (unicode : Bool) : DM K V Unit := fun mp =>
 def insertionResize (unicode : Bool) : DM K V Unit := fun mp =>
   dictResize (calculateLog2Keysize (growthRate mp.used)) unicode mp
 
-/-- The body of `insert_combined_dict` after any resize (:1847-1867). -/
+/-- The body of `insert_combined_dict` after any resize (@3.14.7:1806-1826). -/
 def appendEntry (k : Keys K V) (key : K) (hash : Int) (value : V) : Py (Keys K V) :=
   match findEmptySlot k hash with
   | .ok hashpos =>
@@ -506,7 +506,7 @@ def insertSplitValue (value : V) (ix : Nat) : DM K V Unit := do
       M.put { mp with body := .split k (v.set ix (some value)) }
   | .combined _ => M.unreachable
 
-/-- Overwrite the value at `ix` (:1972-1988). -/
+/-- Overwrite the value at `ix` (@3.14.7:1931-1947). -/
 def storeValue (value : V) (ix : Nat) : DM K V Unit := fun mp =>
   match mp.body with
   | .split k v => (.ok (), { mp with body := .split k (v.set ix (some value)) })

@@ -74,7 +74,7 @@ theorem length_atIndices (c : Ctr κ) (l : List Int) (hl : ∀ i ∈ l, ∃ p, c
 
 /-- `most_common(n)` is the prefix of `most_common()` for every `n >= 0`: the heap
 path of `heapq.nlargest`, the `n == 1` path through `max` and the `sorted` path all
-pick the same items, in the same order, ties included. The docstring (:629)
+pick the same items, in the same order, ties included. The docstring (:633)
 promises the `n` most common from the most common to the least; `Accel`'s
 `NlargestIsSortedPrefix` is the `heapq` half. A negative `n` gives `[]`. -/
 def MostCommonPrefix : Prop :=

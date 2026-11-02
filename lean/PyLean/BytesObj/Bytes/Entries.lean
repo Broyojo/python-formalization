@@ -187,7 +187,7 @@ def entries : List Entry := [
   { id := "bytesobj-bytes-remove-affix", pyFile := "Objects/bytesobject.c"
     pyFns := ["bytes_removeprefix_impl", "bytes_removesuffix_impl", "bytearray_removeprefix_impl", "bytearray_removesuffix_impl"]
     statement := "With a non-empty matching affix, the affix and the result rebuild the original; otherwise the original comes back."
-    source := "docstrings, bytesobject.c:2437-2441, :2369-2373", status := .proven
+    source := "docstrings, bytesobject.c:2437-2441, :2475-2479", status := .proven
     prop := ``RemoveAffix, thm := some ``removeAffix_proven },
   { id := "bytesobj-bytes-decode", pyFile := "Objects/bytesobject.c"
     pyFns := ["bytes_decode_impl"]
@@ -198,7 +198,7 @@ def entries : List Entry := [
   { id := "bytesobj-bytes-fromhex-roundtrip", pyFile := "Objects/bytesobject.c"
     pyFns := ["_PyBytes_FromHex", "bytes_fromhex_impl", "bytes_hex_impl"]
     statement := "bytes.fromhex(b.hex()) == b for every byte string."
-    source := "docstrings, bytesobject.c:2611-2614, :2640-2651", status := .proven
+    source := "docstrings, bytesobject.c:2611-2614, :2752-2763", status := .proven
     prop := ``FromHexRoundTrip, thm := some ``fromHexRoundTrip_proven },
   { id := "bytesobj-bytes-fromhex-tail", pyFile := "Objects/bytesobject.c"
     pyFns := ["_PyBytes_FromHex"]
@@ -479,7 +479,7 @@ def entries : List Entry := [
   { id := "bytesobj-bytes-index-raises", pyFile := "Objects/bytes_methods.c"
     pyFns := ["parse_args_finds_byte", "_Py_bytes_contains", "byte_converter", "formatlong", "bytes_new_impl"]
     statement := "An exception from __index__ passes through find, index, count, the item conversions and the conversions of %; bytes(x) and bytearray(x) fall through on TypeError only; %c passes it on as well, and %d and its kin replace a TypeError by the format's message; in loses it."
-    source := "the error paths at bytes_methods.c:418-421, :606-612, bytesobject.c:2931-2938, bytearrayobject.c:1058-1063", status := .proven
+    source := "the error paths at bytes_methods.c:418-421, :604-610, bytesobject.c:2931-2938, bytearrayobject.c:1058-1063", status := .proven
     prop := ``IndexRaisesRules, thm := some ``indexRaisesRules_proven },
   { id := "bytesobj-bytearray-index-raises", pyFile := "Objects/bytearrayobject.c"
     pyFns := []
@@ -499,7 +499,7 @@ def entries : List Entry := [
   { id := "bytesobj-bytes-call-raises", pyFile := "Objects/bytesobject.c"
     pyFns := ["PyBytes_FromObject", "PyBytes_Join", "bytes_new_impl", "format_obj"]
     statement := "__iter__ raising: each caller keeps a non-TypeError and turns a TypeError into its own message. __bytes__ raising: bytes(x) and %b pass it on, and bytearray(x) never calls it."
-    source := "bytesobject.c:3148-3163, :2798-2802, :561-568; bytearrayobject.c:1131-1138, :2155-2162", status := .proven
+    source := "bytesobject.c:3148-3163, :2910-2914, :577-584; bytearrayobject.c:1131-1138, :2262-2269", status := .proven
     prop := ``CallRaisesRules, thm := some ``callRaisesRules_proven }
 ]
 

@@ -493,7 +493,7 @@ theorem growth_room (used : Nat) :
   omega
 
 /-- `insertion_resize` of a table with `used` items would need `2 ** 64` slots or more, which
-`dictresize` refuses (:2083-2086). This is the only way a store can fail. -/
+`dictresize` refuses (@3.14.7:2083-2086). This is the only way a store can fail. -/
 def TooBig (used : Nat) : Prop := 64 ≤ calculateLog2Keysize (growthRate used)
 
 /-- `insertion_resize`: `MemoryError` with nothing changed, only when the table would be too big,

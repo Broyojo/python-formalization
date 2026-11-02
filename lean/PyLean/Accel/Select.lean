@@ -185,7 +185,7 @@ structure MEntry where
 def entLt (a b : MEntry) : Bool := lt2 (a.kv, a.order) (b.kv, b.order)
 
 /-- The `while len(h) > 1` loop with its inner `while True`, :370-378 and
-:394-404. The inner loop only replaces the top entry, so `len(h)` is
+@3.14.7:394-404. The inner loop only replaces the top entry, so `len(h)` is
 unchanged and checking `len(h) > 1` before every step is the same control
 flow. `fuel` is the total number of items plus one. -/
 def mergeLoop (lt : MEntry → MEntry → Bool) (key : Int → Int) :

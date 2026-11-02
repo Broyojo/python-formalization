@@ -63,7 +63,7 @@ observed: |
   aclose()/athrow(). NOT REPRODUCED.
   3.14 branch tip on 2026-11-01 (gh api contents, ref=3.14): this code was unchanged from 3.14.7.
 promised_by: |
-  The error message itself, and the sibling paths at :2003-2005 and :2459-2462.
+  The error message itself, and the sibling paths at :2003-2005 and @3.14.7:2269-2272.
 cause: |
   Objects/genobject.c:2379-2380 return without the two lines the throw path has at :2459-2462.
 possible_fix: |

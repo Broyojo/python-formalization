@@ -136,7 +136,7 @@ def wrapsCall {α : Type} (p : Fn (WArg α)) (w : Wrapper α) : Py (Wrapper α) 
 /-- What `lru_cache(...)(f)` builds. -/
 structure LruRec where
   mode : LruMode
-  /-- `wrapper.cache_parameters()`, :599 and :590. -/
+  /-- `wrapper.cache_parameters()`, :599 and @3.14.7:587. -/
   maxsize : Option Int
   typed : Bool
   deriving Repr, DecidableEq

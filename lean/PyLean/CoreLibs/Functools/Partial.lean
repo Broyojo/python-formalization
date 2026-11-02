@@ -239,7 +239,7 @@ def partialCallPy {α : Type} (func : Fn α) (pargs : List (PArg α)) (pkw : Lis
 def oobRead : PyExc := .named "SIGSEGV" "read past the end of the call arguments"
 
 /-- The first loop of the merge in `partial_call`, Modules/_functoolsmodule.c:645-653, and of
-`partial_vectorcall`, :535-543: `none` when `args[j]` is past the end. -/
+`partial_vectorcall`, :450-458: `none` when `args[j]` is past the end. -/
 def cMergeLoop {α : Type} (args : List α) : List (PArg α) → Nat → Option (List α × Nat)
   | [], j => some ([], j)
   | .ph :: rest, j =>
@@ -463,7 +463,7 @@ def partialReprFullC {α : Type} (E : ReprEnv α) (grows : α → Bool) (extra :
   let f ← func
   pure (cls ++ "(" ++ f ++ l ++ ")")
 
-/-- `recursive_repr()` around `_partial_repr`, Lib/reprlib.py:12-29, and `Py_ReprEnter`, :619-625:
+/-- `recursive_repr()` around `_partial_repr`, Lib/reprlib.py:12-29, and `Py_ReprEnter`, :714-720:
 `running` says the object is already being repr'd on this thread. `partialmethod.__repr__` has no guard,
 Lib/functools.py:451. -/
 def reprGuard (running : Bool) (body : Py String) : Py String :=
@@ -554,7 +554,7 @@ def pyHead {α : Type} (t : TupSub α) : Py (List (PArg α) × Nat) :=
     | .ok true => .error (.typeError trailingMsg)
     | .ok false =>
       if !b then
-        -- the only iteration is the one at :419
+        -- the only iteration is the one at @3.14.7:419
         match t.iter1 with
         | .error e => .error e
         | .ok it => .ok (it, 0)
@@ -912,7 +912,7 @@ def stripMethods : Nat → UObj → Py (UObj × Bool)
       else .ok (f, false)
     | _ => .ok (f, false)
 
-/-- The inner loop at :511-512. -/
+/-- The inner loop at @3.14.7:511-512. -/
 def stripPms : Nat → UObj → UObj × Bool
   | 0, f => (f, false)
   | fuel + 1, f =>

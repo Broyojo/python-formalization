@@ -118,7 +118,7 @@ def entries : List Entry := [
   { id := "accel-heapify-makes-heap", pyFile := "Lib/heapq.py"
     pyFns := ["heapify", "heapify_max"]
     statement := "heapify and heapify_max turn any int list into a min-heap / max-heap with the same items."
-    source := "Lib/heapq.py:171-180, :211-215; Doc/library/heapq.rst:56-58, :104-106", status := .proven
+    source := "Lib/heapq.py:171-180, :211-215; Doc/library/heapq.rst:56-58, :99-101", status := .proven
     prop := ``HeapifyMakesHeap, thm := some ``heapifyMakesHeap_proven },
   { id := "accel-nsmallest-sorted-prefix", pyFile := "Lib/heapq.py"
     pyFns := ["nsmallest"]

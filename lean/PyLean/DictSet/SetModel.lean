@@ -228,7 +228,7 @@ def setTableResize (minused : Nat) : SM K Unit := do
     nextId := so.nextId + 1 }
 
 /-- The resize at the end of `set_add_entry_takeref` (:324-326) and of
-`set_difference_update_internal` (:2028). -/
+`set_difference_update_internal` (@3.14.7:1765). -/
 def setGrow : SM K Unit := do
   let so ← M.get
   setTableResize (if so.used > 50000 then so.used * 2 else so.used * 4)
@@ -244,7 +244,7 @@ inductive AddScan where
 section Add
 variable [DecidableEq K] (P : Proto K (SetObj K))
 
-/-- One pass of the body of the `do` loop of `set_add_entry_takeref` (:275-302). -/
+/-- One pass of the body of the `do` loop of `set_add_entry_takeref` (@3.14.7:157-184). -/
 def addStep (key : K) (hash : Int) (slot mask : Nat) (freeslot : Option Nat) :
     SM K (AddScan ⊕ (Nat × Option Nat)) := do
   let so ← M.get
@@ -265,7 +265,7 @@ def addStep (key : K) (hash : Int) (slot mask : Nat) (freeslot : Option Nat) :
       return .inr (so'.mask, freeslot)
     else return .inr (mask, freeslot)
 
-/-- The inner loop of `set_add_entry_takeref` (:274-303). -/
+/-- The inner loop of `set_add_entry_takeref` (@3.14.7:156-185). -/
 def addScan (key : K) (hash : Int) : Nat → Nat → Nat → Option Nat → SM K AddScan
   | 0, slot, mask, freeslot => do
     match ← addStep P key hash slot mask freeslot with

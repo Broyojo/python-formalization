@@ -103,7 +103,7 @@ def iterNextSeq : M Unit := stk 2 3 fun
 def _ITER_JUMP_LIST (e : Env) : M Unit := iterJumpSeq e
 /-- `:3964`. -/
 def _ITER_NEXT_LIST : M Unit := iterNextSeq
-/-- `:4006`. -/
+/-- `@3.14.7:3349`. -/
 def FOR_ITER_LIST (e : Env) : M Unit := do _ITER_CHECK_LIST; _ITER_JUMP_LIST e; _ITER_NEXT_LIST
 
 /-- `:4012`. -/
@@ -112,9 +112,9 @@ def _ITER_CHECK_TUPLE : M Unit := guardTop 2 fun
   | _ => fault "arity"
 /-- `:4018`. -/
 def _ITER_JUMP_TUPLE (e : Env) : M Unit := iterJumpSeq e
-/-- `:4038`. -/
+/-- `@3.14.7:4161`. -/
 def _ITER_NEXT_TUPLE : M Unit := iterNextSeq
-/-- `:4047`. -/
+/-- `@3.14.7:3412`. -/
 def FOR_ITER_TUPLE (e : Env) : M Unit := do _ITER_CHECK_TUPLE; _ITER_JUMP_TUPLE e; _ITER_NEXT_TUPLE
 
 /-- `:4053`. -/
@@ -139,7 +139,7 @@ def _ITER_JUMP_RANGE (e : Env) : M Unit := do
     | _ => fault "not a range iterator"
   | _ => fault "not a range iterator"
 
-/-- `:4082`. -/
+/-- `:4659`. -/
 def _ITER_NEXT_RANGE : M Unit := stk 2 3 fun
   | [.ref a, index] => do
     match ← (getObj a : RM Obj) with
@@ -149,7 +149,7 @@ def _ITER_NEXT_RANGE : M Unit := stk 2 3 fun
     | _ => fault "not a range iterator"
   | _ => fault "not a range iterator"
 
-/-- `:4097`. -/
+/-- `@3.14.7:3462`. -/
 def FOR_ITER_RANGE (e : Env) : M Unit := do _ITER_CHECK_RANGE; _ITER_JUMP_RANGE e; _ITER_NEXT_RANGE
 
 /-- `:4103`: `(iter, null -- iter, null, gen_frame)`. -/
@@ -164,7 +164,7 @@ def _FOR_ITER_GEN_FRAME (e : Env) : M Frame := do
       pure gf
   | none => throw .deopt
 
-/-- `:4118`. -/
+/-- `@3.14.7:3490`. -/
 def FOR_ITER_GEN (e : Env) : M Unit := do
   _CHECK_PEP_523
   let gf ← _FOR_ITER_GEN_FRAME e
@@ -314,7 +314,7 @@ def _MAYBE_EXPAND_METHOD (e : Env) : M Unit := stk (e.oparg + 2) (e.oparg + 2) f
     | none => pure (callable :: self :: args)
   | _ => fault "arity"
 
-/-- `self_or_null` + args as one array, `:3792-3797`. -/
+/-- `self_or_null` + args as one array, `:4390-4395`. -/
 def withSelf (self : Val) (args : List Val) : List Val :=
   if self != .null then self :: args else args
 
@@ -420,7 +420,7 @@ def _CHECK_IS_NOT_PY_CALLABLE (e : Env) : M Unit := guardTop (e.oparg + 2) fun
     else return (← (methodParts c : RM _)).isSome
   | _ => fault "arity"
 
-/-- The common shape of every non-Python call: `:3965`, and the `_CALL_BUILTIN_*`
+/-- The common shape of every non-Python call: `:4547`, and the `_CALL_BUILTIN_*`
 and `_CALL_METHOD_DESCRIPTOR_*` bodies once the guards have passed. -/
 def callNonPy (e : Env) : M Unit := stk (e.oparg + 2) 1 fun
   | callable :: self :: args => do
@@ -498,7 +498,7 @@ def _GUARD_NOS_NULL : M Unit := guardTop 2 fun
 def guardCallable (w : Val) : M Unit := guardTop 3 fun
   | [c, _, _] => pure (c != w)
   | _ => fault "arity"
-/-- `:4679`. -/
+/-- `:5585`. -/
 def _GUARD_CALLABLE_TYPE_1 : M Unit := guardCallable (.cls "type")
 /-- `:4684`. -/
 def _CALL_TYPE_1 : M Unit := stk 3 1 fun
@@ -655,7 +655,7 @@ def methDescrGuard (e : Env) (min : Nat) : M Unit :=
 def _CALL_METHOD_DESCRIPTOR_O (e : Env) : M Unit := do methDescrGuard e 2; callNonPy e
 /-- `:5153`. -/
 def CALL_METHOD_DESCRIPTOR_O (e : Env) : M Unit := do _CALL_METHOD_DESCRIPTOR_O e; _CHECK_PERIODIC
-/-- `:5181`. -/
+/-- `:5839`. -/
 def _CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS (e : Env) : M Unit := do methDescrGuard e 1; callNonPy e
 /-- `:5229`. -/
 def CALL_METHOD_DESCRIPTOR_FAST_WITH_KEYWORDS (e : Env) : M Unit := do

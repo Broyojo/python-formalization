@@ -52,7 +52,7 @@ structure WF (hf : K → Int) (eqv : K → K → Bool) (isStr : K → Bool) (k :
   load : (k.filled : Int) + k.usable ≤ usableFraction k.size
   nent : (k.nentries : Int) + k.usable ≤ usableFraction k.size
   usableNN : 0 ≤ k.usable
-  /-- `dictresize` and `insertion_resize` refuse `log2_newsize >= SIZEOF_SIZE_T*8` (:2073), which is
+  /-- `dictresize` and `insertion_resize` refuse `log2_newsize >= SIZEOF_SIZE_T*8` (:2164), which is
   what keeps `ma_used` a `Py_ssize_t`. -/
   small : k.log2Size < 64
 

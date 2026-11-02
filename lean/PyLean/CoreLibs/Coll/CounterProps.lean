@@ -160,7 +160,7 @@ theorem cGet_update (c : Ctr κ) (s : Src κ) (k : List (κ × Int)) (hs : SrcWF
 /-- `Counter.update` adds counts: for every counter (zero and negative counts
 included), every source and every keyword dict, the count of `x` afterwards is its count
 before plus what the sources bring. `Counter(src, **kw)` is the case of an
-empty counter, `self[x]` for a missing `x` being 0. Docstrings at :605-615, :678. -/
+empty counter, `self[x]` for a missing `x` being 0. Docstrings at :605-615, @3.14.7:683. -/
 def UpdateAddsCounts : Prop :=
   ∀ (κ : Type) [DecidableEq κ] (c : Ctr κ) (s : Src κ) (k : List (κ × Int)) (x : κ),
     SrcWF s → WF k →
@@ -249,7 +249,7 @@ theorem cGet_subtract (c : Ctr κ) (s : Src κ) (k : List (κ × Int)) (hs : Src
     rfl
 
 /-- `subtract` undoes `update`: "Like dict.update() but subtracts counts instead
-of replacing them", :721. The result can hold zero counts for new keys, and is `==`
+of replacing them", :712. The result can hold zero counts for new keys, and is `==`
 to the original, since `Counter.__eq__` treats missing as zero. -/
 def SubtractUndoesUpdate : Prop :=
   ∀ (κ : Type) [DecidableEq κ] (c : Ctr κ) (s : Src κ) (k : List (κ × Int)) (x : κ),
@@ -343,7 +343,7 @@ theorem copyReduceFaithful_proven : CopyReduceFaithful := by
 /-! ### `__delitem__` -/
 
 /-- `del c[e]` is total, unlike on a plain dict, and removes exactly `e`
-(docstring :755). -/
+(docstring :746). -/
 def DelitemTotal : Prop :=
   ∀ (κ : Type) [DecidableEq κ] (c : Ctr κ) (e : κ), WF c →
     WF (delitem c e) ∧ e ∉ keys (delitem c e) ∧
@@ -425,7 +425,7 @@ theorem neC_iff (a b : Ctr κ) : neC a b = true ↔ ∃ x, cGet a x ≠ cGet b x
   simp
 
 /-- The six comparisons are the pointwise orders of the count functions, with
-missing as zero. Docstrings at :805-835: "True if all counts agree", "a subset",
+missing as zero. Docstrings at :800-830: "True if all counts agree", "a subset",
 "a proper subset", "a superset", "a proper superset". They hold for every pair of
 counters, whatever their keys and order, negative counts included. -/
 def ComparisonsPointwise : Prop :=

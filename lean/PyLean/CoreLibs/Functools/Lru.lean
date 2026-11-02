@@ -125,7 +125,7 @@ mutual
             match cfg.F.recheck key s.cache with
             | some e => (.error e, s)
             | none =>
-              if key ∈ s.cache then (.ok result, s)   -- :674-679
+              if key ∈ s.cache then (.ok result, s)   -- @3.14.7:661-666
               else if s.full then
                 match s.ring with
                 | _ :: some old :: rest =>

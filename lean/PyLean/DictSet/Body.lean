@@ -97,7 +97,7 @@ theorem keysizeSmallest_proven : KeysizeSmallest := by
     have : 2 ^ r ≤ 2 ^ 2 := Nat.pow_le_pow_right (by omega) (by omega)
     omega
 
-/-- `estimate_log2_keysize` is the reverse of `USABLE_FRACTION` (:568-572): the smallest table of at
+/-- `estimate_log2_keysize` is the reverse of `USABLE_FRACTION` (@3.14.7:568-572): the smallest table of at
 least 8 slots whose usable fraction holds `n` entries. -/
 def EstimateSmallest : Prop :=
   ∀ n : Nat, let r := estimateLog2Keysize n
@@ -165,8 +165,8 @@ theorem getitemLink_proven : GetitemLink := by
           simp [dictGetitemFull, dictGetitemSuppress, hh, hl, M.tryCatch, M.bind_run, Except.map]
 
 /-- `_PyDict_DelItem_KnownHash_LockHeld` after its check, for every key protocol: a failed lookup is
-the result, in the state it left (:2864-2865); no slot, or a slot with no value, is `KeyError`
-(:2866-2869); and a value goes to `delitem_common` on that state (:2873). -/
+the result, in the state it left (@3.14.7:2864-2865); no slot, or a slot with no value, is `KeyError`
+(@3.14.7:2866-2869); and a value goes to `delitem_common` on that state (@3.14.7:2873). -/
 def DelKnownHashBody : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (key : K) (hash : Int)
     (d s : PyDict K V) (e : PyExc) (ix : Int) (old : Option V),
@@ -278,7 +278,7 @@ theorem dictChecks_proven : DictChecks := by
   · simp [dictSetdefaultRefChecked, h]
   · simp [dictSetItemChecked, h]
 
-/-- What `dictresize` makes of the flag it is given (:2082-2084, :2093). -/
+/-- What `dictresize` makes of the flag it is given (@3.14.7:2082-2084, @3.14.7:2093). -/
 theorem dictResize_kind {mp s : PyDict K V} {l : Nat} {u : Bool} {k' : Keys K V}
     (h : dictResize l u mp = (.ok (), s)) (hs : s.body = .combined k') :
     k'.kind = if (if mp.body.isUnicode then u else false) then .unicode else .general := by
@@ -329,7 +329,7 @@ theorem dictResizeRefines_proven : DictResizeRefines := by
   · obtain ⟨k', h1, h2, h3, h4, h5, _⟩ := dictResize_split H mp k v hb w log2New hlt hroom unicode
     exact ⟨k', h1, h2, h3, h4, h5, dictResize_kind h1 rfl⟩
 
-/-- `dictresize` leaving the split form of an instance's dict, `:2138-2142`: the inline values are
+/-- `dictresize` leaving the split form of an instance's dict, `@3.14.7:2138-2142`: the inline values are
 invalidated and emptied, in the same number of slots, and the dict is the one that now answers. -/
 def ResizeInvalidatesInline : Prop :=
   ∀ (K V : Type) (d : PyDict K V) (k : Keys K V) (s : ObjSt K V), d.body = .combined k →

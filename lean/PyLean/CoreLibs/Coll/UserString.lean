@@ -224,7 +224,7 @@ structure UniOps where
 /-- `self.__class__(...)` on a `str`. -/
 def wrapIn (u : US) (r : Py Seq) : Py US := r.map (fun d => ⟨u.cls, d⟩)
 
-/-- `UserString.__init__`, :1273-1279. -/
+/-- `UserString.__init__`, :1420-1426. -/
 def usNew (cls : String) : SArg → US
   | .str s => ⟨cls, s⟩
   | .user s => ⟨cls, s⟩
@@ -233,51 +233,51 @@ def usNew (cls : String) : SArg → US
 /-- `UserString.__str__`, Lib/collections/__init__.py:1428-1429. -/
 def usStr (u : US) : Seq := u.data
 
-/-- `UserString.__getnewargs__`, :1299-1300: `(self.data[:],)`. -/
+/-- `UserString.__getnewargs__`, :1446-1447: `(self.data[:],)`. -/
 def usGetnewargs (u : US) : Seq := u.data
 
-/-- `UserString.__eq__`, ..., `__ge__`, :1302-1325. -/
+/-- `UserString.__eq__`, ..., `__ge__`, :1449-1472. -/
 def usRich (op : SOp) (u : US) (a : SArg) : Py Bool := strRich op u.data (unwrap a)
 
-/-- `UserString.__contains__`, :1327-1330. -/
+/-- `UserString.__contains__`, :1474-1477. -/
 def usContains (u : US) (a : SArg) : Py Bool := strContains u.data (unwrap a)
 
-/-- `UserString.__getitem__`, :1335-1336, int index. -/
+/-- `UserString.__getitem__`, :1482-1483, int index. -/
 def usGetitem (u : US) (i : Int) : Py US := wrapIn u (strGetItem u.data i)
 
 /-- `UserString.__getitem__`, slice. -/
 def usGetslice (u : US) (s : Slice) : Py US := wrapIn u (strGetSlice u.data s)
 
-/-- `UserString.__add__`, :1338-1343. -/
+/-- `UserString.__add__`, :1485-1490. -/
 def usAdd (u : US) : SArg → US
   | .user t => ⟨u.cls, u.data ++ t⟩
   | .str t => ⟨u.cls, u.data ++ t⟩
   | .other _ text => ⟨u.cls, u.data ++ text⟩
 
-/-- `UserString.__radd__`, :1345-1348. `str(other)` of a `UserString` is its data. -/
+/-- `UserString.__radd__`, :1492-1495. `str(other)` of a `UserString` is its data. -/
 def usRadd (u : US) : SArg → US
   | .str t => ⟨u.cls, t ++ u.data⟩
   | .user t => ⟨u.cls, t ++ u.data⟩
   | .other _ text => ⟨u.cls, text ++ u.data⟩
 
-/-- `UserString.__mul__`, :1350-1351; `__rmul__` is the same function, :1353. -/
+/-- `UserString.__mul__`, :1497-1498; `__rmul__` is the same function, :1500. -/
 def usMul (u : US) (n : Int) : Py US := wrapIn u (strRepeat u.data n)
 
-/-- `UserString.__mod__`, :1355-1356. -/
+/-- `UserString.__mod__`, :1502-1503. -/
 def usMod (ops : UniOps) (u : US) (args : List Int) : Py US := wrapIn u (ops.mod u.data args)
 
-/-- `UserString.__rmod__`, :1358-1359: `self.__class__(str(template) % self)`. -/
+/-- `UserString.__rmod__`, :1505-1506: `self.__class__(str(template) % self)`. -/
 def usRmod (ops : UniOps) (u : US) (template : Seq) : Py US := wrapIn u (ops.modUser template u.data)
 
-/-- `UserString.center`, :1368-1369. -/
+/-- `UserString.center`, :1515-1516. -/
 def usCenter (u : US) (w : Int) (fill : Option SArg) : Py US :=
   wrapIn u (do let f ← needFill fill; strCenter u.data w f)
 
-/-- `UserString.ljust`, :1452-1453. -/
+/-- `UserString.ljust`, :1599-1600. -/
 def usLjust (u : US) (w : Int) (fill : Option SArg) : Py US :=
   wrapIn u (do let f ← needFill fill; strLjust u.data w f)
 
-/-- `UserString.rjust`, :1483-1484. -/
+/-- `UserString.rjust`, :1630-1631. -/
 def usRjust (u : US) (w : Int) (fill : Option SArg) : Py US :=
   wrapIn u (do let f ← needFill fill; strRjust u.data w f)
 
@@ -296,14 +296,14 @@ def strIndexA (s : Seq) (a : SArg) (st en : Option Int) (fwd : Bool) : Py Int :=
   let t ← needArg (if fwd then "index() argument 1" else "rindex() argument 1") a
   strIndex s t st en fwd
 
-/-- `UserString.count`, :1371-1374. -/
+/-- `UserString.count`, :1518-1521. -/
 def usCount (u : US) (a : SArg) (st en : Option Int) : Py Int := strCountA u.data (unwrap a) st en
 
-/-- `UserString.find`, :1397-1400, and `rfind`, :1473-1476. -/
+/-- `UserString.find`, :1544-1547, and `rfind`, :1620-1623. -/
 def usFind (u : US) (a : SArg) (st en : Option Int) (fwd : Bool) : Py Int :=
   strFindA u.data (unwrap a) st en fwd
 
-/-- `UserString.index`, :1408-1411, and `rindex`, :1478-1481. -/
+/-- `UserString.index`, :1555-1558, and `rindex`, :1625-1628. -/
 def usIndex (u : US) (a : SArg) (st en : Option Int) (fwd : Bool) : Py Int :=
   strIndexA u.data (unwrap a) st en fwd
 
@@ -320,10 +320,10 @@ def strRemovesuffixA (s : Seq) (a : SArg) : Py Seq := do
 /-- `UserString.removeprefix`, Lib/collections/__init__.py:1523-1526. -/
 def usRemoveprefix (u : US) (a : SArg) : Py US := wrapIn u (strRemoveprefixA u.data (unwrap a))
 
-/-- `UserString.removesuffix`, :1381-1384. -/
+/-- `UserString.removesuffix`, :1528-1531. -/
 def usRemovesuffix (u : US) (a : SArg) : Py US := wrapIn u (strRemovesuffixA u.data (unwrap a))
 
-/-- `UserString.encode`, :1386-1389: `None` means the defaults. -/
+/-- `UserString.encode`, :1533-1536: `None` means the defaults. -/
 def usEncode (ops : UniOps) (u : US) (encoding errors : Option String) : Py (List Nat) :=
   ops.encode u.data (encoding.getD "utf-8") (errors.getD "strict")
 
@@ -344,16 +344,16 @@ def usEndswith (u : US) (a : AffixArg) (st en : Option Int) : Py Bool := strEnds
 def usStartswith (u : US) (a : AffixArg) (st en : Option Int) : Py Bool :=
   strStartswithA u.data a st en
 
-/-- `UserString.expandtabs`, :1394-1395. -/
+/-- `UserString.expandtabs`, :1541-1542. -/
 def usExpandtabs (u : US) (t : Int) : Py US := wrapIn u (strExpandtabs u.data t)
 
-/-- `UserString.format`, :1402-1403. Returns a plain `str`. -/
+/-- `UserString.format`, :1549-1550. Returns a plain `str`. -/
 def usFormat (ops : UniOps) (u : US) (args : List Int) : Py Seq := ops.format u.data args
 
-/-- `UserString.format_map`, :1405-1406. Returns a plain `str`. -/
+/-- `UserString.format_map`, :1552-1553. Returns a plain `str`. -/
 def usFormatMap (ops : UniOps) (u : US) (m : List (String × Int)) : Py Seq := ops.formatMap u.data m
 
-/-- `UserString.join`, :1449-1450. Returns a plain `str`; the items are not unwrapped. -/
+/-- `UserString.join`, :1596-1597. Returns a plain `str`; the items are not unwrapped. -/
 def usJoin (u : US) (items : List SArg) : Py Seq := strJoin u.data items
 
 /-- `str.partition`. -/
@@ -366,10 +366,10 @@ def strRPartitionA (s : Seq) (a : SArg) : Py (Seq × Seq × Seq) := do
   let t ← needStr a
   strRPartition s t
 
-/-- `UserString.partition`, :1463-1464. -/
+/-- `UserString.partition`, :1610-1611. -/
 def usPartition (u : US) (a : SArg) : Py (Seq × Seq × Seq) := strPartitionA u.data a
 
-/-- `UserString.rpartition`, :1486-1487. -/
+/-- `UserString.rpartition`, :1633-1634. -/
 def usRPartition (u : US) (a : SArg) : Py (Seq × Seq × Seq) := strRPartitionA u.data a
 
 /-- `str.replace(old, new, count)`. -/
@@ -378,7 +378,7 @@ def strReplaceA (s : Seq) (o n : SArg) (count : Int) : Py Seq := do
   let n ← needArg "replace() argument 2" n
   strReplace s o n count
 
-/-- `UserString.replace`, :1466-1471. -/
+/-- `UserString.replace`, :1613-1618. -/
 def usReplace (u : US) (o n : SArg) (count : Int) : Py US :=
   wrapIn u (strReplaceA u.data (unwrap o) (unwrap n) count)
 
@@ -392,13 +392,13 @@ def strRSplitA (s : Seq) (sep : Option SArg) (m : Int) : Py (List Seq) := do
   let t ← needSep sep
   strRSplit s t m
 
-/-- `UserString.split`, :1492-1493. -/
+/-- `UserString.split`, :1639-1640. -/
 def usSplit (u : US) (sep : Option SArg) (m : Int) : Py (List Seq) := strSplitA u.data sep m
 
-/-- `UserString.rsplit`, :1495-1496. -/
+/-- `UserString.rsplit`, :1642-1643. -/
 def usRSplit (u : US) (sep : Option SArg) (m : Int) : Py (List Seq) := strRSplitA u.data sep m
 
-/-- `UserString.splitlines`, :1498-1499. -/
+/-- `UserString.splitlines`, :1645-1646. -/
 def usSplitlines (u : US) (keep : Bool) : List Seq := strSplitlines u.data keep
 
 /-- `str.strip`, `lstrip`, `rstrip`. -/
@@ -410,15 +410,15 @@ def strStripA (s : Seq) (chars : Option SArg) (t : StripType) : Py Seq := do
   let cs ← needChars name chars
   return strStrip s cs t
 
-/-- `UserString.strip`, :1504-1505, `lstrip`, :1458-1459, `rstrip`, :1489-1490. -/
+/-- `UserString.strip`, :1651-1652, `lstrip`, :1605-1606, `rstrip`, :1636-1637. -/
 def usStrip (u : US) (chars : Option SArg) (t : StripType) : Py US :=
   wrapIn u (strStripA u.data chars t)
 
-/-- `UserString.translate`, :1513-1514. -/
+/-- `UserString.translate`, :1660-1661. -/
 def usTranslate (ops : UniOps) (u : US) (table : List (Nat × Option Nat)) : Py US :=
   wrapIn u (ops.translate u.data table)
 
-/-- `UserString.zfill`, :1519-1520. -/
+/-- `UserString.zfill`, :1666-1667. -/
 def usZfill (u : US) (w : Int) : Py US := wrapIn u (strZfill u.data w)
 
 /-! ### All calls, as data -/
@@ -627,7 +627,7 @@ def strReplaceKw (s : Seq) (o n : SArg) (kw : String) (v : Int) : Py Seq :=
   if kw = "count" then strReplaceA s o n v
   else .error (.typeError s!"replace() got an unexpected keyword argument '{kw}'")
 
-/-- `UserString.replace(old, new, maxsplit=n)`: the parameter is named `maxsplit`, :1466. -/
+/-- `UserString.replace(old, new, maxsplit=n)`: the parameter is named `maxsplit`, :1613. -/
 def usReplaceKw (u : US) (o n : SArg) (kw : String) (v : Int) : Py US :=
   if kw = "maxsplit" then usReplace u o n v
   else .error (.typeError s!"UserString.replace() got an unexpected keyword argument '{kw}'")

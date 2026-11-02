@@ -43,27 +43,27 @@ weeks)` with int arguments, _pydatetime.py:657-767. The float branches are not
 taken; `round(microseconds + usdouble)` (:742) is the identity because
 `usdouble == 0.0` and `|microseconds| < 10**6` there. -/
 def deltaPy (days seconds microseconds milliseconds minutes hours weeks : Int) : Py Delta :=
-  -- :681-687
+  -- @3.14.7:662-668
   let days := days + weeks * 7
   let seconds := seconds + minutes * 60 + hours * 3600
   let microseconds := microseconds + milliseconds * 1000
-  -- :701-702 (int branch)
+  -- @3.14.7:682-683 (int branch)
   let d := days
   let s : Int := 0
-  -- :718-721
+  -- @3.14.7:699-702
   let d := d + seconds / 86400
   let s := s + seconds % 86400
-  -- :736-742 (int branch)
+  -- @3.14.7:717-723 (int branch)
   let sec2 := microseconds / 1000000
   let microseconds := microseconds % 1000000
   let d := d + sec2 / 86400
   let s := s + sec2 % 86400
-  -- :750-754
+  -- @3.14.7:731-735
   let s := s + microseconds / 1000000
   let us := microseconds % 1000000
   let d := d + s / 86400
   let s := s % 86400
-  -- :760-761
+  -- @3.14.7:741-742
   if d.natAbs > 999999999 then .error (.overflowError s!"timedelta # of days is too large: {d}")
   else .ok ⟨d, s, us⟩
 

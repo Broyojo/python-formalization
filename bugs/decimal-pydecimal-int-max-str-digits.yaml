@@ -81,7 +81,7 @@ cause: |
   :603 for NaN payloads); :622 `self._int = str(abs(value))`; :1010 `int(self._int)` in __hash__;
   :1046 in as_integer_ratio; :1943, :1958, :1973 `int(self._rescale(0, ...))` after _rescale pads
   the coefficient with zeros; :5710 `self.int = int(value._int)` in _WorkRep (used by +, -, *);
-  :5740 `len(str(tmp.int))` in _normalize; :637 `str(value.int)`; :1363
+  :5710 `len(str(tmp.int))` in _normalize; :637 `str(value.int)`; :1363
   `str(op1.int * op2.int)` in __mul__; :2707 and :1768 `str(int(coeff)+1)` when rounding up.
   On main the same lines exist (constructor at :688).
 possible_fix: |

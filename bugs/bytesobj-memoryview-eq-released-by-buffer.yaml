@@ -16,7 +16,7 @@ summary: |
       m == W()
   With a large buffer the process dies with SIGSEGV. With a small buffer that is not freed, the
   released view compares by content and gives True, where a released view compares by identity
-  (:3216-3219).
+  (@3.14.7:3113-3116).
   Lean: CmpReleasedIdentity is refuted on a 1-byte view; CmpSpecialCases (a view already
   released on entry compares by identity, for all states) is proven.
   The difftest met this independently, without a crash: for a view from

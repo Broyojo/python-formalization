@@ -111,7 +111,7 @@ def isSubclass (W : AbcWorld) (fuel a b : Nat) (s : AbcState) : Py Bool × AbcSt
   if W.isAbc b then subCheck W fuel b a s else (.ok (decide (b ∈ W.mro a)), s)
 
 /-- `_abc__abc_register_impl`, Modules/_abc.c:558-608, and `ABCMeta.register`, Lib/abc.py:110-115. The result is
-the subclass, as a class decorator wants. The `Py_TPFLAGS_SEQUENCE` copy at :590-598 only affects `match`. -/
+the subclass, as a class decorator wants. The `Py_TPFLAGS_SEQUENCE` copy at :592-600 only affects `match`. -/
 def register (W : AbcWorld) (fuel cls : Nat) (sub : Option Nat) (s : AbcState) : Py Nat × AbcState :=
   match sub with
   | none => (.error (.typeError "Can only register classes"), s)

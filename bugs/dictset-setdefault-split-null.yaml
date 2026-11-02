@@ -76,7 +76,7 @@ cause: |
 possible_fix: |
   Treat a NULL value as absent: `if (ix == DKIX_EMPTY || value == NULL)` at :4843.
   insert_combined_dict already converts a split table when the key is not an exact str, so the
-  insertion that follows is correct (insertdict relies on this at :2025-2035).
+  insertion that follows is correct (insertdict relies on this at @3.14.7:1915-1925).
 duplicates:
   issues:
     - {number: 143189, state: closed, relation: "nearby, not this bug: assertion in insertdict with a str subclass on a split table, under threads"}

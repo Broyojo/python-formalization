@@ -68,7 +68,7 @@ cause: |
   `codecs.escape_decode` on the line. `read_stringnl_noescape_pair` (:388-395) inherits it.
 possible_fix: |
   Decode without escape processing: read the line with `decode=False, stripquotes=False` and call
-  `.decode('utf-8')`. The doctest at :391 has no backslashes, so it keeps passing.
+  `.decode('utf-8')`. The doctest at :405 has no backslashes, so it keeps passing.
 duplicates:
   issues:
     - {number: 126997, state: closed, relation: related, reason: "same reader, non-ASCII arguments only; fixed by #127062, which did not touch escapes"}

@@ -191,7 +191,7 @@ def tzUtcoffsetRaw (env : TzEnv) (tz : Tz) (arg : Option DT) : Py OffRet :=
   | .custom i => env.utcoffset i arg
 
 /-- `tz.dst(dt)`: `timezone.dst`, _pydatetime.py:2538-2542 (C `timezone_dst`,
-:4490-4496), or a subclass method. -/
+:4498-4504), or a subclass method. -/
 def tzDstRaw (env : TzEnv) (tz : Tz) (arg : Option DT) : Py OffRet :=
   match tz.kind with
   | .timezone _ _ => .ok .none

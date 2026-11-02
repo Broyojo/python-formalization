@@ -147,8 +147,8 @@ structure Code where
 
 def Code.hasFlag (c : Code) (flag : Nat) : Bool := c.flags &&& flag != 0
 
-/-- Where `frame->instr_ptr` points, as far as `is_resume` (:353-362) and the
-`RESUME_OPARG_DEPTH1_MASK` test (:406-407) can tell. `is_resume` accepts `RESUME`,
+/-- Where `frame->instr_ptr` points, as far as `is_resume` (:451-461) and the
+`RESUME_OPARG_DEPTH1_MASK` test (:504-505) can tell. `is_resume` accepts `RESUME`,
 `RESUME_CHECK`, `RESUME_CHECK_JIT` and `INSTRUMENTED_RESUME`; `depth1` is the mask bit. -/
 inductive InstrPtr where
   | resume (depth1 : Bool)
@@ -180,12 +180,12 @@ structure GenObj (V : Type) where
   agRunningAsync : Bool := false
   deriving Inhabited
 
-/-- `AwaitableState`, :1422-1426. -/
+/-- `AwaitableState`, :1601-1605. -/
 inductive AwaitableState where
   | init | iter | closed
   deriving DecidableEq, Repr, Inhabited
 
-/-- `PyAsyncGenASend`, :1429-1438. -/
+/-- `PyAsyncGenASend`, :1608-1617. -/
 structure ASend (V : Type) where
   gen : Ref := 0
   /-- `ags_sendval`: `none` is NULL, the `__anext__()` mode. -/
@@ -193,7 +193,7 @@ structure ASend (V : Type) where
   state : AwaitableState := .init
   deriving Inhabited
 
-/-- `PyAsyncGenAThrow`, :1444-1453. -/
+/-- `PyAsyncGenAThrow`, :1623-1634. -/
 structure AThrow (V : Type) where
   gen : Ref := 0
   /-- `agt_typ`, `agt_val` and `agt_tb`: `none` is `agt_typ == NULL`, the `aclose()` mode.
@@ -301,24 +301,24 @@ structure Hooks (V X : Type) where
   getThrow : World V X → Obj V → World V X × Except (Exc V) (Option (Obj V))
   /-- `_PyObject_CallNoArgs(meth)` (:441). -/
   callNoArgs : World V X → Obj V → World V X × Ret V
-  /-- `PyObject_CallOneArg` (:124, :1693). -/
+  /-- `PyObject_CallOneArg` (:124, @3.14.7:1521). -/
   callOneArg : World V X → Obj V → Obj V → World V X × Ret V
   /-- `PyObject_CallFunctionObjArgs(meth, typ, val, tb, NULL)` (:705). -/
   callThrow : World V X → Obj V → Obj V → Option (Obj V) → Option (Obj V) → World V X × Ret V
-  /-- `PyErr_FormatUnraisable` (:126, :153, :437). -/
+  /-- `PyErr_FormatUnraisable` (:126, @3.14.7:132, @3.14.7:348). -/
   unraisable : World V X → String → Exc V → World V X
-  /-- `PyErr_WarnEx(PyExc_DeprecationWarning, msg, 1)` (:741, :1742): an exception
+  /-- `PyErr_WarnEx(PyExc_DeprecationWarning, msg, 1)` (:741, @3.14.7:1570): an exception
   when warnings are errors. -/
   warn : World V X → String → World V X × Option (Exc V)
   /-- `_PyErr_WarnUnawaitedCoroutine` (:147). -/
   warnUnawaitedCoro : World V X → Ref → World V X
-  /-- `_PyErr_WarnUnawaitedAgenMethod` (:2098, :2533). -/
+  /-- `_PyErr_WarnUnawaitedAgenMethod` (:2098, @3.14.7:2343). -/
   warnUnawaitedAgen : World V X → Ref → String → World V X
   /-- `PyErr_NormalizeException(&typ, &val, &tb)` (:488) for a class `typ`. -/
   normalize : Obj V → Option (Obj V) → Exc V
   /-- `Py_TYPE(o)->tp_name`. -/
   typeName : Obj V → String
-  /-- `PySys_Audit("object.__getattr__", "Os", gen, name)` (:956, :977). -/
+  /-- `PySys_Audit("object.__getattr__", "Os", gen, name)` (:956, @3.14.7:799). -/
   audit : World V X → String → Option (Exc V)
   /-- `_PyFrame_GetFrameObject` (:964). -/
   frameObject : World V X → Ref → Obj V
@@ -754,7 +754,7 @@ def genGetFrame (h : Hooks V X) (w : World V X) (r : Ref) (name : String) : Ret 
     else .ok (h.frameObject w r)
 
 /-- `_gen_getcode`, :974-981, for `gi_code`, `cr_code`, `ag_code`: `_PyGen_GetCode`
-(:47-50) and `PyGen_GetCode` (:52-58) are this read of `f_executable`. -/
+(:68-71) and `PyGen_GetCode` (:73-79) are this read of `f_executable`. -/
 def genGetCode (h : Hooks V X) (w : World V X) (r : Ref) (name : String) :
     Except (Exc V) Code :=
   match h.audit w name with
@@ -908,7 +908,7 @@ def coroWrapperClose (h : Hooks V X) (fuel : Nat) (w : World V X) (cw : Ref) : W
 
 /-- `stopiteration_error`, `Python/intrinsics.c:141-182`: the handler the compiler
 wraps every generator body in. A frame's `raised` outcome has been through this,
-which is why `gen_send_ex2` may assert no `StopIteration` comes out (:277-279). -/
+which is why `gen_send_ex2` may assert no `StopIteration` comes out (:318-320). -/
 def stopIterationError (kind : GenKind) (e : Exc V) : Exc V :=
   if e.isStopIteration then
     match kind with

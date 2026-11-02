@@ -129,7 +129,7 @@ theorem isC_contig (v : Buf) (h : (initFlags v).isC = true) (hs : v.suboffsets =
   · simpa [pyBufferIsContiguous, hs] using h
 
 /-- `m.hex(sep, n)` is `m.tobytes().hex(sep, n)`, for every view with no suboffsets or with
-them, contiguous or not: the two paths of `memoryview_hex_impl` (:2348-2356, :2358-2372) are
+them, contiguous or not: the two paths of `memoryview_hex_impl` (@3.14.7:2348-2356, @3.14.7:2358-2372) are
 one behaviour. Hypotheses: `self` is live, its flags are those `init_flags` computes, and a
 0-dim view has no suboffsets (type invariants, restated because the model keeps the fields
 apart). -/

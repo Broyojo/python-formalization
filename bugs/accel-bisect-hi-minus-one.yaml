@@ -48,14 +48,14 @@ observed: |
   python3 3.15.2: C 2 / Python 0; C [1, 2, 3, 3, 4, 5] / Python [3, 1, 2, 3, 4, 5]. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |
-  Doc/library/bisect.rst:48-51 (bisect_left partition) and :71-74 (bisect_right); the twin
+  Doc/library/bisect.rst:48-51 (bisect_left partition) and :74-77 (bisect_right); the twin
   relation between Modules/_bisectmodule.c and Lib/bisect.py (bisect.py:110-114 replaces the
   Python functions with the C ones when available).
 cause: |
   Modules/_bisectmodule.c:153 (`hi: Py_ssize_t(c_default='-1', accept={int, NoneType}) = None`)
   makes -1 the "None" sentinel, and :60-64 / :240-244 replace hi == -1 by PySequence_Size(list).
   Lib/bisect.py:36-37 / :89-90 only replace `hi is None`. Neither twin validates negative hi
-  (only lo, :60-63 / bisect.py:34-35).
+  (only lo, @3.14.7:60-63 / bisect.py:34-35).
 possible_fix: |
   Use a sentinel that cannot be passed explicitly (e.g. clinic `hi: object = None` converted in
   C), or reject negative hi in both twins as for lo. Maintainers have declined both (#125889).

@@ -25,8 +25,8 @@ maybe_intended: |
   Probably intended for the common case, and a maintainer may well decline this. Failing fast on a
   huge length is relied on: Lib/test/test_list.py:41 asserts MemoryError from
   list(range(sys.maxsize // 2)), where the length is accurate, and iterating first would fill
-  memory instead. The comment at :1260-1262 does consider a lying hint, though only for the overflow
-  branch. The strongest part of this report is the narrow one: the signed overflow at :203 is
+  memory instead. The comment at :1318-1320 does consider a lying hint, though only for the overflow
+  branch. The strongest part of this report is the narrow one: the signed overflow at :230 is
   undefined behaviour however the MemoryError question is settled, and `size / 2`-style rounding or a
   range check would remove it.
 reproducer: |
@@ -56,7 +56,7 @@ expected: |
 observed: |
   python3 3.15.2: list(x): MemoryError, [].extend(x): MemoryError, [0].extend(x): ok. REPRODUCED.
   main (python.exe 3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
-  The signed overflow at :203 comes from reading the source. It has not been observed under UBSan:
+  The signed overflow at @3.14.7:203 comes from reading the source. It has not been observed under UBSan:
   no sanitizer build was run.
 promised_by: |
   Doc/reference/datamodel.rst:3258-3263: "Should return an estimated length for the object (which may

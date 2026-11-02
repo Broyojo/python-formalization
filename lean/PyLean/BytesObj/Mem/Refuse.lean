@@ -13,7 +13,7 @@ open PyLean
 /-! ## `memory_getbuf` -/
 
 /-- `memory_getbuf` on the view's own description, for every flag set: each refusal with its
-message, in the order of :1538-1599, and when none applies the copy with the fields the flags ask
+message, in the order of @3.14.7:1538-1599, and when none applies the copy with the fields the flags ask
 for. PyBUF_SIMPLE on a C-contiguous view succeeds with no format, no strides and no shape;
 PyBUF_FULL_RO on any view succeeds unless nothing else does. -/
 def GetbufOrder : Prop :=
@@ -224,7 +224,7 @@ theorem cast1DRefusals_proven : Cast1DRefusals := by
 
 /-! ## `memory_ass_sub` -/
 
-/-- `m[key] = value` and `del m[key]`, for every live view and key, in the order of :2642-2743: a
+/-- `m[key] = value` and `del m[key]`, for every live view and key, in the order of @3.14.7:2642-2743: a
 format that is not one character, then read-only memory, then a deletion, then the shape of the key.
 Each refusal leaves the state alone. A 0-dim view stores through `...` and `()` and nothing else; a
 view of more dimensions stores through a full tuple of indices; `...` is refused there. -/
@@ -689,7 +689,7 @@ theorem eqTruth_proven : EqTruth := by
 
 /-- Storing through `?` an object with `__len__` and no `__bool__`: `PyObject_IsTrue` calls it, so 0
 stores 0 and a positive length stores 1; a negative one and an exception raise, write nothing, and
-keep their class (the `preserve original error` of :1988-1989). Hypotheses: a live view, and the
+keep their class (the `preserve original error` of @3.14.7:1988-1989). Hypotheses: a live view, and the
 item's byte is in the store. -/
 def PackBoolLen : Prop :=
   ∀ (st : St) (self : Nat) (ptr : Int) (n : Int) (e : PyExc), baseInaccessible st self = false →

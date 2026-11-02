@@ -12,7 +12,7 @@ open PyLean.Bytecode
 
 /-! ### Lines 1848-1937: cells -/
 
-/-- `:2354`. -/
+/-- `@3.14.7:1848`. -/
 def DELETE_FAST (e : Env) : M Unit := stk 0 0 fun _ => do
   let v ← getLocal e.oparg
   if v == .null then
@@ -37,14 +37,14 @@ def cellSet (c v : Val) : RM Unit :=
   | .ref a => setObj a (.cell v)
   | _ => fault "not a cell"
 
-/-- `:2368`. -/
+/-- `@3.14.7:1862`. -/
 def MAKE_CELL (e : Env) : M Unit := stk 0 0 fun _ => do
   let initial ← getLocal e.oparg
   let c ← (cellNew initial : RM Val)
   setLocal e.oparg c
   pure []
 
-/-- `:2381`. -/
+/-- `@3.14.7:1875`. -/
 def DELETE_DEREF (e : Env) : M Unit := stk 0 0 fun _ => do
   let c ← getLocal e.oparg
   let old ← (cellGet c : RM Val)
@@ -54,7 +54,7 @@ def DELETE_DEREF (e : Env) : M Unit := stk 0 0 fun _ => do
   (cellSet c .null : RM Unit)
   pure []
 
-/-- `:2393`. -/
+/-- `@3.14.7:1887`. -/
 def LOAD_FROM_DICT_OR_DEREF (e : Env) : M Unit := stkK 1 1 fun
   | [cd] => do
     let co ← getCode e.P
@@ -68,7 +68,7 @@ def LOAD_FROM_DICT_OR_DEREF (e : Env) : M Unit := stkK 1 1 fun
       pure [v]
   | _ => fault "arity"
 
-/-- `:2424`. -/
+/-- `@3.14.7:1911`. -/
 def LOAD_DEREF (e : Env) : M Unit := stk 0 1 fun _ => do
   let c ← getLocal e.oparg
   let v ← (cellGet c : RM Val)
@@ -77,7 +77,7 @@ def LOAD_DEREF (e : Env) : M Unit := stk 0 1 fun _ => do
     (formatExcUnbound co e.oparg : RM _)
   pure [v]
 
-/-- `:2433`. -/
+/-- `@3.14.7:1920`. -/
 def STORE_DEREF (e : Env) : M Unit := stk 1 0 fun
   | [v] => do
     let c ← getLocal e.oparg
@@ -85,7 +85,7 @@ def STORE_DEREF (e : Env) : M Unit := stk 1 0 fun
     pure []
   | _ => fault "arity"
 
-/-- `:2438`. -/
+/-- `@3.14.7:1925`. -/
 def COPY_FREE_VARS (e : Env) : M Unit := stk 0 0 fun _ => do
   let f ← getFrame
   let co ← getCode e.P
@@ -98,25 +98,25 @@ def COPY_FREE_VARS (e : Env) : M Unit := stk 0 0 fun _ => do
 
 /-! ### Lines 1939-2147: builders -/
 
-/-- `:2452`. -/
+/-- `@3.14.7:1939`. -/
 def BUILD_STRING (e : Env) : M Unit := stk e.oparg 1 fun pieces => do
   let strs := pieces.map fun
     | .str s => s
     | _ => ""
   pure [.str (String.join strs)]
-/-- `:2459`. -/
+/-- `@3.14.7:1952`. -/
 def BUILD_INTERPOLATION (e : Env) : M Unit := stk (2 + (e.oparg &&& 1)) 1 fun
   | v :: s :: rest => do
     let fmt := if e.oparg &&& 1 != 0 then rest.headD .null else .str ""
     pure [← e.om.buildInterpolation e.ctx v s (e.oparg >>> 2) fmt]
   | _ => fault "arity"
-/-- `:2483`. -/
+/-- `@3.14.7:1976`. -/
 def BUILD_TEMPLATE (e : Env) : M Unit := stk 2 1 fun
   | [a, b] => do pure [← e.om.buildTemplate e.ctx a b]
   | _ => fault "arity"
-/-- `:2493`. -/
+/-- `@3.14.7:1986`. -/
 def BUILD_TUPLE (e : Env) : M Unit := stk e.oparg 1 fun vs => do pure [← (mkTuple vs : RM Val)]
-/-- `:2502`. -/
+/-- `@3.14.7:1995`. -/
 def BUILD_LIST (e : Env) : M Unit := stk e.oparg 1 fun vs => do pure [← (mkList vs : RM Val)]
 /-- `:2533`. -/
 def LIST_EXTEND (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
@@ -134,7 +134,7 @@ def SET_UPDATE (e : Env) : M Unit := stk (e.oparg + 1) e.oparg fun ins => do
   let rest := ins.dropLast
   e.om.setUpdate e.ctx (rest.headD .null) it
   pure rest
-/-- `:2547`. -/
+/-- `@3.14.7:2033`. -/
 def BUILD_SET (e : Env) : M Unit := stk e.oparg 1 fun vs => do
   let s ← (alloc (.set false #[]) : RM Val)
   for v in vs do
@@ -144,12 +144,12 @@ def BUILD_SET (e : Env) : M Unit := stk e.oparg 1 fun vs => do
 def dictFromItems (e : Env) : List Val → Val → RM Unit
   | k :: v :: rest, d => do dictSet e.om e.ctx d k v; dictFromItems e rest d
   | _, _ => pure ()
-/-- `:2575`. -/
+/-- `@3.14.7:2061`. -/
 def BUILD_MAP (e : Env) : M Unit := stk (e.oparg * 2) 1 fun vs => do
   let d ← (mkDict : RM Val)
   (dictFromItems e vs d : RM Unit)
   pure [d]
-/-- `:2583`. -/
+/-- `@3.14.7:2077`. -/
 def SETUP_ANNOTATIONS (e : Env) : M Unit := stk 0 0 fun _ => do
   let l := (← getFrame).locals
   if l == .null then (raiseS "SystemError" "no locals found when setting up annotations" : RM _)
@@ -296,7 +296,7 @@ def instOf : Val → RM (Option (Addr × InstObj))
     | _ => pure none
   | _ => pure none
 
-/-- `_CHECK_MANAGED_OBJECT_HAS_VALUES`, `:2301`. The model stores every instance
+/-- `_CHECK_MANAGED_OBJECT_HAS_VALUES`, `:2883`. The model stores every instance
 attribute in a dict; "inline values valid" is "the dict has been materialized". -/
 def _CHECK_MANAGED_OBJECT_HAS_VALUES : M Unit := guardTop 1 fun
   | [o] => do

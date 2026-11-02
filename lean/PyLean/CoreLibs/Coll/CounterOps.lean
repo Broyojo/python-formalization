@@ -328,7 +328,7 @@ theorem cGet_negC {a : Ctr κ} (ha : WF a) (x : κ) : cGet (negC a) x = max (0 -
   · have h0 := cGet_eq_zero hxa
     simp [hxa, h0]
 
-/-- The operators are the multiset operations of their docstrings (:837-924),
+/-- The operators are the multiset operations of their docstrings (@3.14.7:837-924),
 computed pointwise on counts with missing as zero and the result clipped at
 zero: `+` adds, `-` subtracts, `|` takes the maximum, `&` the minimum, unary `+`
 and `-` keep the positive part of the count and of its negation. This holds for all
@@ -355,7 +355,7 @@ def OutputContract (r a b : Ctr κ) : Prop :=
 theorem contract_of {g h : κ → Int → Option Int} {a b : Ctr κ} (hok : OpOk g h a b) :
     OutputContract (res g h a b) a b := ⟨res_WF hok, res_pos hok, res_keys hok⟩
 
-/-- Comments at :770 and :775-777: "Outputs guaranteed to only include positive
+/-- Comments at @3.14.7:770 and @3.14.7:775-777: "Outputs guaranteed to only include positive
 counts", and "Results are ordered according to when an element is first encountered
 in the left operand and then by the order encountered in the right operand." -/
 def OperatorsOutputContract : Prop :=
@@ -370,8 +370,8 @@ theorem operatorsOutputContract_proven : OperatorsOutputContract := by
   exact ⟨contract_of (okAdd ha hb), contract_of (okSub ha hb), contract_of (okOr ha hb),
     contract_of (okAnd ha hb), contract_of (okPos ha), contract_of (okNeg ha)⟩
 
-/-- `__pos__` "Adds an empty counter" (:912), `__neg__` "Subtracts from an empty
-counter" (:920), and `Counter()`-operand forms agree with the unary operators
+/-- `__pos__` "Adds an empty counter" (@3.14.7:912), `__neg__` "Subtracts from an empty
+counter" (@3.14.7:920), and `Counter()`-operand forms agree with the unary operators
 item for item, in order. -/
 def UnaryAreBinary : Prop :=
   ∀ (κ : Type) [DecidableEq κ] (a : Ctr κ), WF a → posC a = addC a [] ∧ negC a = subC [] a
@@ -575,7 +575,7 @@ def InplaceAgreesBinary : Prop :=
 theorem inplaceAgreesBinary_proven : InplaceAgreesBinary :=
   fun _ _ _ _ ha hb => ⟨iaddC_eq ha hb, isubC_eq ha hb, iorC_eq ha hb, iandC_eq ha⟩
 
-/-- `_keep_positive` (:930-935) removes exactly the non-positive counts and keeps the rest
+/-- `_keep_positive` (@3.14.7:930-935) removes exactly the non-positive counts and keeps the rest
 in place, which is unary `+` computed in place. -/
 def KeepPositiveFilters : Prop :=
   ∀ (κ : Type) [DecidableEq κ] (c : Ctr κ), WF c →
@@ -591,7 +591,7 @@ theorem keepPositiveFilters_proven : KeepPositiveFilters := by
     by_cases hp : p.2 > 0 <;> simp [gPos, hp])
   simpa using this
 
-/-! ### The correspondence with sets, comment at :779-798 -/
+/-! ### The correspondence with sets, comment at @3.14.7:779-798 -/
 
 theorem mem_keys_iff_pos {r : Ctr κ} (hw : WF r) (hp : ∀ p ∈ r, p.2 > 0) (x : κ) :
     x ∈ keys r ↔ cGet r x > 0 := by
@@ -619,7 +619,7 @@ theorem zeroOne_get {c : Ctr κ} (hw : WF c) (h : ZeroOne c) (x : κ) : cGet c x
     exact h q hq
   · exact Or.inl (cGet_eq_zero hx)
 
-/-- The comment at :779-798: "When the multiplicities are all zero or one,
+/-- The comment at @3.14.7:779-798: "When the multiplicities are all zero or one,
 multiset operations are guaranteed to be equivalent to the corresponding operations
 for regular sets", with the set of a counter being the elements of count one.
 `set(r)` for a result `r` is its keys. -/

@@ -37,7 +37,7 @@ def entries : List Entry := [
     notes := "Quantifies over arbitrary run structures, not only those count_run/minrun produce. The proof keeps, per stack entry, a ghost list of the original runs merged into it." },
   { id := "listsort-stack-bound", pyFile := "Objects/listobject.c", pyFns := ["found_new_run", "list_sort_impl"]
     statement := "For every N <= PY_SSIZE_T_MAX and every non-empty sequence of positive run lengths summing to at most N, after each push the pending stack holds s entries with 2^s < 4N (s <= ceil(log2 N) + 1), and assert(ms.n < MAX_MERGE_PENDING) holds before every push."
-    source := "invariant: ms->pending has MAX_MERGE_PENDING = 64 slots (listobject.c:1744, :1733); assert at :3100", status := .proven
+    source := "invariant: ms->pending has MAX_MERGE_PENDING = 64 slots (listobject.c:1744, :1796); assert at :3100", status := .proven
     prop := ``PolicyStackBound, thm := some ``policyStackBound_proven },
   { id := "listsort-stack-bound-tight", pyFile := "Objects/listobject.c", pyFns := ["found_new_run"]
     statement := "The bound is attained: for N = 3 * 2**61 <= PY_SSIZE_T_MAX the runs [2**61, 2**61, 2**60, ..., 2, 1, 1] fill all 64 pending slots (and the assert still holds)."
@@ -62,7 +62,7 @@ def entries : List Entry := [
     notes := "Replaces the 3.14 merge_compute_minrun. Also discharges binarysort's assert n <= MAX_MINRUN at :1843 (force <= minrun). Only the mr_* fields of merge_init are covered here. N <= 2**62 is the bound listsort-powerloop-no-overflow uses: real lists have at most 2**60 - 1 items. The run lengths are difftested against the interpreter (fn \"runs\"); that a real sort draws these values in this order is the model's sortStep, not a separate theorem." },
   { id := "listsort-gallop", pyFile := "Objects/listobject.c", pyFns := ["gallop_left", "gallop_right"]
     statement := "On every sorted vector a[0:n] and every 0 <= hint < n, gallop_left returns the number of items < key (a[k-1] < key <= a[k]) and gallop_right the number of items <= key (a[k-1] <= key < a[k])."
-    source := "docstrings at listobject.c:2066-2086 and :2094-2102", status := .proven
+    source := "docstrings at listobject.c:2066-2086 and :2162-2170", status := .proven
     prop := ``GallopSpec, thm := some ``gallopSpec_proven },
   { id := "listsort-binarysort", pyFile := "Objects/listobject.c", pyFns := ["binarysort"]
     statement := "binarysort(a, n, ok) with a[:max(ok,1)] sorted and max(ok,1) <= n leaves the stable sort of a[:n] followed by a[n:]."
@@ -70,11 +70,11 @@ def entries : List Entry := [
     prop := ``BinarysortStable, thm := some ``binarysortStable_proven },
   { id := "listsort-count-run", pyFile := "Objects/listobject.c", pyFns := ["count_run"]
     statement := "count_run on a non-empty slice returns 1 <= n <= len and replaces the first n items by their stable sort (ascending runs, descending runs whose all-equal groups keep their order, plus the ascending extension), leaving the rest untouched."
-    source := "comments at listobject.c:1963-1970, :1937-1949, :1958-1961", status := .proven
+    source := "comments at listobject.c:1963-1970, :2005-2017, :2026-2029", status := .proven
     prop := ``CountRunSpec, thm := some ``countRunSpec_proven },
   { id := "listsort-merge-at", pyFile := "Objects/listobject.c", pyFns := ["merge_at", "merge_lo", "merge_hi"]
     statement := "merge_at on two sorted non-empty adjacent runs produces the stable sort of their concatenation, through merge_lo or merge_hi, galloping or not, for every min_gallop."
-    source := "comments at listobject.c:2341-2346, :2397-2402, :2539-2541", status := .proven
+    source := "comments at listobject.c:2341-2346, :2473-2478, :2615-2617", status := .proven
     prop := ``MergeAtStable, thm := some ``mergeAtStable_proven
     notes := "merge_lo/merge_hi are proven under the preconditions merge_at establishes (B[0] < A[0], A[-1] > all of B)." },
   { id := "listsort-perm-any-compare", pyFile := "Objects/listobject.c", pyFns := ["list_sort_impl"]
@@ -92,7 +92,7 @@ def entries : List Entry := [
     prop := ``IntSortStable, thm := some ``intSortStable_proven },
   { id := "listsort-reverse-stable", pyFile := "Objects/listobject.c", pyFns := ["list.sort"]
     statement := "list.sort(reverse=True) equals reversing, stably sorting and reversing back, which is the stable sort by descending key (equal keys keep their original order)."
-    source := "listobject.c:3132-3138, :3136-3137; Doc/howto/sorting.rst (\"The reverse parameter still maintains sort stability\")", status := .proven
+    source := "listobject.c:3132-3138, :3201-3202; Doc/howto/sorting.rst (\"The reverse parameter still maintains sort stability\")", status := .proven
     prop := ``ReverseStable, thm := some ``reverseStable_proven },
   { id := "listsort-key", pyFile := "Objects/listobject.c", pyFns := ["list.sort"]
     statement := "list.sort(key=f, reverse=r) with integer keys computed once per item sorts the items stably by f (by descending f when r), the items moving in lockstep with their keys."

@@ -21,7 +21,7 @@ likelihood: |
   Medium-low. `__missing__` on a UserDict subclass is the documented hook, and pop with a default is
   common on such a class. It fails loudly (KeyError) for pop and silently for setdefault.
 maybe_intended: |
-  No: the comment at :1163 states the goal and gh-83445 fixed the sibling. It is a gap left by that fix.
+  No: the comment at @3.14.7:1162 states the goal and gh-83445 fixed the sibling. It is a gap left by that fix.
   ChainMap has a __missing__ hook as well: its pop does not consult it, but setdefault and
   (k, v) in items() act as above.
 reproducer: |

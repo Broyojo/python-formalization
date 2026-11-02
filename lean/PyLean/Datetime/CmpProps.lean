@@ -71,7 +71,7 @@ theorem diffToBool_congr (x y : Int) (op : CmpOp) (h1 : x < 0 ↔ y < 0) (h2 : x
 `utcoffset` does not raise on the operands with `fold` flipped. That hypothesis is
 needed because `datetime._cmp` asks for the flipped offsets up front
 (_pydatetime.py:2311-2318, PEP 495), while C asks only once the operands are otherwise
-equal (:6433-6459): a method raising there is an exception in one twin only. -/
+equal (@3.14.7:6378-6404): a method raising there is an exception in one twin only. -/
 def DatetimeCompareTwins : Prop :=
   ∀ (env : TzEnv) (op : CmpOp) (a b : DT), env.Valid → a.Valid → b.Valid →
     (∃ o, a.flipFold.utcoffsetPy env = .ok o) → (∃ o, b.flipFold.utcoffsetPy env = .ok o) →

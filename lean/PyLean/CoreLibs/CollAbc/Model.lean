@@ -111,29 +111,29 @@ inductive Stub where
 
 /-- The body of each abstract method, by inventory name. -/
 def stubBody : String → Option Stub
-  | "Hashable.__hash__" => some (.returnsInt 0)                -- :126
-  | "Sized.__len__" => some (.returnsInt 0)                    -- :409
-  | "Container.__contains__" => some (.returnsBool false)      -- :424
-  | "Callable.__call__" => some (.returnsBool false)           -- :535
-  | "Awaitable.__await__" => some (.yieldsNones 1)             -- :141
-  | "Iterable.__iter__" => some (.yieldsNones 0)               -- :289-290
-  | "Reversible.__reversed__" => some (.yieldsNones 0)         -- :342-343
-  | "Iterator.__next__" => some (.raises "StopIteration")      -- :308
-  | "Generator.send" => some (.raises "StopIteration")         -- :367
-  | "Coroutine.send" => some (.raises "StopIteration")         -- :161
-  | "AsyncIterator.__anext__" => some (.raises "StopAsyncIteration")  -- :220
-  | "AsyncGenerator.asend" => some (.raises "StopAsyncIteration")     -- :247
+  | "Hashable.__hash__" => some (.returnsInt 0)                -- @3.14.7:126
+  | "Sized.__len__" => some (.returnsInt 0)                    -- @3.14.7:409
+  | "Container.__contains__" => some (.returnsBool false)      -- @3.14.7:424
+  | "Callable.__call__" => some (.returnsBool false)           -- @3.14.7:535
+  | "Awaitable.__await__" => some (.yieldsNones 1)             -- @3.14.7:141
+  | "Iterable.__iter__" => some (.yieldsNones 0)               -- @3.14.7:289-290
+  | "Reversible.__reversed__" => some (.yieldsNones 0)         -- @3.14.7:342-343
+  | "Iterator.__next__" => some (.raises "StopIteration")      -- @3.14.7:308
+  | "Generator.send" => some (.raises "StopIteration")         -- @3.14.7:367
+  | "Coroutine.send" => some (.raises "StopIteration")         -- @3.14.7:161
+  | "AsyncIterator.__anext__" => some (.raises "StopAsyncIteration")  -- @3.14.7:220
+  | "AsyncGenerator.asend" => some (.raises "StopAsyncIteration")     -- @3.14.7:247
   | "AsyncIterable.__aiter__" => some (.raises "TypeError")    -- :202, AsyncIterator() is abstract
-  | "Buffer.__buffer__" => some (.raises "NotImplementedError")  -- :452
-  | "MutableSet.add" => some (.raises "NotImplementedError")     -- :707
-  | "MutableSet.discard" => some (.raises "NotImplementedError") -- :712
-  | "Mapping.__getitem__" => some (.raises "KeyError")           -- :790
-  | "MutableMapping.__setitem__" => some (.raises "KeyError")    -- :922
-  | "MutableMapping.__delitem__" => some (.raises "KeyError")    -- :926
-  | "Sequence.__getitem__" => some (.raises "IndexError")        -- :1014
-  | "MutableSequence.__setitem__" => some (.raises "IndexError") -- :1116
-  | "MutableSequence.__delitem__" => some (.raises "IndexError") -- :1120
-  | "MutableSequence.insert" => some (.raises "IndexError")      -- :1125
+  | "Buffer.__buffer__" => some (.raises "NotImplementedError")  -- @3.14.7:452
+  | "MutableSet.add" => some (.raises "NotImplementedError")     -- @3.14.7:707
+  | "MutableSet.discard" => some (.raises "NotImplementedError") -- @3.14.7:712
+  | "Mapping.__getitem__" => some (.raises "KeyError")           -- @3.14.7:790
+  | "MutableMapping.__setitem__" => some (.raises "KeyError")    -- @3.14.7:921
+  | "MutableMapping.__delitem__" => some (.raises "KeyError")    -- @3.14.7:925
+  | "Sequence.__getitem__" => some (.raises "IndexError")        -- @3.14.7:1013
+  | "MutableSequence.__setitem__" => some (.raises "IndexError") -- @3.14.7:1115
+  | "MutableSequence.__delitem__" => some (.raises "IndexError") -- @3.14.7:1119
+  | "MutableSequence.insert" => some (.raises "IndexError")      -- @3.14.7:1124
   | _ => none
 
 /-! ### Generator, Coroutine, AsyncGenerator mixins -/

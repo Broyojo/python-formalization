@@ -118,7 +118,7 @@ def cmSetitem (c : CMap κ ν) (k : κ) (v : ν) : Py (CMap κ ν) :=
   | [] => .error noMap
   | m :: t => .ok ⟨D.set m k v :: t⟩
 
-/-- The `KeyError` of `__delitem__` and `pop`, :1131, :1145. -/
+/-- The `KeyError` of `__delitem__` and `pop`, :1131, @3.14.7:1103. -/
 def notInFirst (rk : κ → String) (k : κ) : PyExc :=
   keyErrorStr ("Key not found in the first mapping: " ++ rk k)
 

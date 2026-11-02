@@ -363,7 +363,7 @@ theorem genThrowLookupSeesExecuting_proven : GenThrowLookupSeesExecuting := by
 
 /-- `stopiteration_error` leaves no `StopIteration` (in an async generator, no
 `StopAsyncIteration`) and passes every other exception through unchanged. This is
-what the asserts at :279-281 rely on. -/
+what the asserts at @3.14.7:279-281 rely on. -/
 def Pep479Conversion : Prop :=
   ∀ (V : Type) (k : GenKind) (e : Exc V),
     (stopIterationError k e).isStopIteration = false ∧
@@ -383,7 +383,7 @@ theorem pep479Conversion_proven : Pep479Conversion := by
     | (split <;> simp_all [Exc.isStopIteration, Exc.isStopAsyncIteration])
     | skip
 
-/-- The asserts at :279-281 applied to the frames the difftest validated: a frame
+/-- The asserts at @3.14.7:279-281 applied to the frames the difftest validated: a frame
 never ends by raising `StopIteration`. False: an exception thrown into a
 `FRAME_CREATED` frame is raised at the first `RESUME`, outside the handler that
 performs PEP 479's conversion. -/
@@ -440,7 +440,7 @@ theorem genFlagGetters_proven : GenFlagGetters := by
     constructor <;> intro hf <;> simp [genGetFrame, ha, hf]
 
 /-- `gi_code` does not depend on the frame state: it is still there after the frame
-is cleared (:76-79), so the code is the one the object was made with. -/
+is cleared (@3.14.7:76-79), so the code is the one the object was made with. -/
 def GenCodeStable : Prop :=
   ∀ (V X : Type) (h : Hooks V X) (w : World V X) (r : Ref) (n : String) (s : FrameState),
     h.audit (w.setState r s) n = h.audit w n →

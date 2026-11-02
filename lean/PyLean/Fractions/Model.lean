@@ -55,7 +55,7 @@ def limitToStrMsg : String :=
   "Exceeds the limit (4300 digits) for integer string conversion; use sys.set_int_max_str_digits() to increase the limit"
 
 /-- `str(i)` for an int, Objects/longobject.c:2116-2216: the pre-check at
-:2125-2134 only fires for values that also fail the exact check at
+:2149-2158 only fires for values that also fail the exact check at
 :2207-2216, which compares the digit count without the sign to the limit. -/
 def strInt (i : Int) : Py (List Char) :=
   if numDigits i.natAbs > maxStrDigits then .error (.valueError limitToStrMsg)

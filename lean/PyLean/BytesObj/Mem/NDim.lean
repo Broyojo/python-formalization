@@ -47,7 +47,7 @@ theorem foldl_prod (l : List Int) : l.foldl (· * ·) 1 = prod l := by
     simp only [List.foldl_cons, Int.one_mul, prod]
     rw [foldl_mul_one, ih, Int.mul_comm]
 
-/-- `init_len`, :597-606: the product of the shape times `itemsize`. -/
+/-- `init_len`, @3.14.7:597-606: the product of the shape times `itemsize`. -/
 theorem initLen_prod (l : List Int) (it : Int) : initLen l it = prod l * it := by
   simp only [initLen, foldl_prod]
 
@@ -125,7 +125,7 @@ theorem sliceTolist_proven : SliceTolist := by
     rw [Int.toNat_of_nonneg h5, Int.mul_comm (wst.getD 0 0) (k : Int), h7]
 
 /-- A 0-dim view: `m.tolist()` is one item and not a list, `m[()]` is that item, and it is the
-native item at `buf` (`memoryview_tolist_impl`, :2248-2250, `memory_subscript`, :2592-2596).
+native item at `buf` (`memoryview_tolist_impl`, @3.14.7:2248-2250, `memory_subscript`, @3.14.7:2592-2596).
 Hypotheses: a live 0-dim view of a native format. -/
 def ZeroDimItem : Prop :=
   ∀ (st : St) (self : Nat) (c : Char), baseInaccessible st self = false →

@@ -146,7 +146,7 @@ def slotFree (table : List Int) (mask : Nat) : Nat → Nat → Nat → Nat
       let n := nextProbe mask i perturb
       slotFree table mask fuel n.1 n.2
 
-/-- `dictresize` with `GROWTH_RATE`, :628 and :585-598: the live entries in order, in a fresh table. -/
+/-- `dictresize` with `GROWTH_RATE`, :628 and @3.14.7:547-560: the live entries in order, in a fresh table. -/
 def DT.resize (t : DT K) : DT K :=
   let log2 := bitLength (max (t.used * 3) 8 - 1)
   let live := t.ents.filterMap id
@@ -250,7 +250,7 @@ mutual
       | (.ok slot, s) =>
         match slot.bind s.cache.linkAt with
         | some l =>
-          -- :659-668
+          -- @3.14.7:648-657
           let L := s.link l
           let s := s.setNext L.prev L.next
           let s := s.setPrev L.next L.prev
@@ -276,7 +276,7 @@ mutual
       | (.ok (some _), s) => (.ok result, s)
       | (.ok none, s) =>
         if s.full then
-          -- :683-704
+          -- @3.14.7:669-687
           let oldroot := s.root
           let s := s.setKV oldroot (some key) (some result)
           let s := { s with root := (s.link oldroot).next }

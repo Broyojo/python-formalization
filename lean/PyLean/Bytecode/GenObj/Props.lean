@@ -263,7 +263,7 @@ theorem genSendStateEdges_proven : GenSendStateEdges := by
 
 /-- `next(gen)` and `gen.send(None)` are the same operation: same result, same
 world, for every state and frame outcome, on the two types with `tp_iternext`
-(`gen_iternext` asserts this type at :632). -/
+(`gen_iternext` asserts this type at @3.14.7:632). -/
 def GenIternextVsSendNone : Prop :=
   ∀ (V X : Type) (h : Hooks V X) (w : World V X) (r : Ref),
     (w.get r).kind ≠ .asyncGen →
@@ -321,7 +321,7 @@ theorem genSendVsAmSend_proven : GenSendVsAmSend := by
       Exc.stopIterationNone, Exc.isStopIteration, setStopIterationValue]
 
 /-- `_PyGen_SetStopIterationValue` and `_PyGen_FetchStopIterationValue` round-trip
-every value, tuples included (the comment at :655-659), and the fetch leaves any
+every value, tuples included (the comment at @3.14.7:655-659), and the fetch leaves any
 other exception pending. -/
 def StopIterationValueRoundTrip : Prop :=
   ∀ (V : Type) (v : Obj V) (e : Exc V),

@@ -414,7 +414,7 @@ structure ODictIter (K : Type) where
   deriving Repr, Inhabited
 
 /-- `odictiter_new` (:1938-1968), `odict_iter`, `odict_reversed`, and the views'
-`__iter__`/`__reversed__` (:1972-1992, :2041-2061, :2110-2130). -/
+`__iter__`/`__reversed__` (:1972-1992, @3.14.7:2046-2066, @3.14.7:2115-2135). -/
 def odictiterNew (od : ODict K V) (kind : IterKind) (rev : Bool) : ODictIter K :=
   { kind, rev
     current := (if rev then od.nodes.getLast? else od.nodes.head?).map (·.key)

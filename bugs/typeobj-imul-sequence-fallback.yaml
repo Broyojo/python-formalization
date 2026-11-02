@@ -11,7 +11,7 @@ summary: |
   `n` with `__index__`. `PyNumber_InPlaceMultiply` is meant to do the same, and its comment
   says so ("the right hand operand should not be mutated in this case so sq_inplace_repeat
   is not used"), but it writes the test as `if (mv != NULL) { ... } else if (mw != NULL)`
-  (abstract.c:1329, :1346). `mv` is `Py_TYPE(v)->tp_as_sequence`, and `type_new_alloc` sets
+  (abstract.c:1329, @3.14.7:1336). `mv` is `Py_TYPE(v)->tp_as_sequence`, and `type_new_alloc` sets
   that pointer on every heap type (typeobject.c:4488). So for an instance of any Python
   class, including a subclass of int, the right operand is never consulted:
 
@@ -72,7 +72,7 @@ cause: |
   Objects/abstract.c:1339 and :1346: the `else if (mw != NULL)` branch is reachable only when
   `mv == NULL`. Objects/typeobject.c:4488 makes `mv` non-NULL for every heap type, so a left
   operand with an empty as_sequence struct skips the fallback and falls to binop_type_error
-  at :1443.
+  at :1353.
 possible_fix: |
   Test the slot, not the struct:
 

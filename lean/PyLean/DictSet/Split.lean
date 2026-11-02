@@ -39,7 +39,7 @@ structure SplitWF (hf : K → Int) (eqv : K → K → Bool) (isStr : K → Bool)
   small : k.log2Size < 64
   /-- Shared keys are never deleted. -/
   entries : ∀ ix, ix < k.nentries → ∃ e, k.entry ix = some e
-  /-- `shared_keys_usable_size` of the keys does not exceed the array, which is why :1857's
+  /-- `shared_keys_usable_size` of the keys does not exceed the array, which is why @3.14.7:1857's
   assertion `ix < SHARED_KEYS_MAX_SIZE` is not what keeps the store inside it. -/
   cap : (k.nentries : Int) + k.usable ≤ v.capacity
   nent : (k.nentries : Int) + k.usable ≤ usableFraction k.size
@@ -1517,7 +1517,7 @@ theorem newValues_wf {k : Keys K Unit} (w : SharedOK hf eqv isStr k) :
     high := fun j _ => newValues_get _ j
     used := by simp [Values.new] }
 
-/-- The empty table `_PyDict_NewKeysForClass` starts from (:6792-6802). -/
+/-- The empty table `_PyDict_NewKeysForClass` starts from (@3.14.7:6792-6802). -/
 def sharedKeys0 (K : Type) : Keys K Unit :=
   { (newKeysObject 1 NEXT_LOG2_SHARED_KEYS_MAX_SIZE true : Keys K Unit) with
     usable := SHARED_KEYS_MAX_SIZE, kind := .split }
@@ -1606,7 +1606,7 @@ theorem sharedOK_insert (H : Honest P hf eqv) {k k' : Keys K Unit} (w : SharedOK
             have := w.nent
             omega }
 
-/-- `_PyDict_NewKeysForClass`'s loop over the class's attributes (:6806-6815). -/
+/-- `_PyDict_NewKeysForClass`'s loop over the class's attributes (@3.14.7:6806-6815). -/
 theorem sharedOK_go (H : Honest P hf eqv) : ∀ (attrs : List K) (k : Keys K Unit),
     SharedOK hf eqv P.isStr k → SharedOK hf eqv P.isStr (dictNewKeysForClass.go P attrs k) := by
   intro attrs

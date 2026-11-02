@@ -407,7 +407,7 @@ def entries : List Entry := [
     ``LookupMethodDescriptorUnbound ``lookupMethodDescriptorUnbound_proven,
   p "typeobj-missing-method" ty []
     "A missing method raises AttributeError(name) through lookup_method and gives NotImplemented through vectorcall_maybe."
-    "typeobject.c:3043-3045, :3050"
+    "typeobject.c:3043-3045, :3190"
     ``MissingMethodOutcomes ``missingMethodOutcomes_proven,
   p "typeobj-maybe-call-none" ty []
     "A special method set to None reads as defined-None for callers that pass attr_is_none."
@@ -543,7 +543,7 @@ def entries : List Entry := [
     ``SlotDictTwiceRejected ``slotDictTwiceRejected_proven,
   p "typeobj-wrap-new-function" ty ["type_new_staticmethod", "type_new_classmethod"]
     "Only plain functions are wrapped."
-    "typeobject.c:4638, :4381"
+    "typeobject.c:4638, :4665"
     ``WrapInDictOnlyFunctions ``wrapInDictOnlyFunctions_proven,
   p "typeobj-ready-new" ty []
     "An existing tp_new is kept."
@@ -603,7 +603,7 @@ def entries : List Entry := [
     ``FillStridesContiguous ``fillStridesContiguous_proven,
   p "typeobj-buffer-is-contiguous" ab ["PyBuffer_IsContiguous"]
     "A view with suboffsets is not contiguous, nor is one asked about an unknown order."
-    "abstract.c:521, :529"
+    "abstract.c:521, @3.14.7:529"
     ``IsContiguousGuards ``isContiguousGuards_proven,
   p "typeobj-buffer-odometer-range" ab ["_Py_add_one_to_index_F", "_Py_add_one_to_index_C"]
     "The index odometer keeps every digit within the shape."
@@ -664,7 +664,7 @@ def entries : List Entry := [
     ``ObjectSizeOrder ``objectSizeOrder_proven,
   p "typeobj-size-protocols" ab []
     "PySequence_Size refuses a pure mapping and PyMapping_Size a pure sequence."
-    "abstract.c:1695, :2281"
+    "abstract.c:1695, @3.14.7:2281"
     ``SizeProtocolsDistinct ``sizeProtocolsDistinct_proven,
   p "typeobj-length-hint-default" ab ["PyObject_LengthHint"]
     "With no __len__ and no __length_hint__ the default is returned."
@@ -696,7 +696,7 @@ def entries : List Entry := [
     ``InplacePowerTwoArgs ``inplacePowerTwoArgs_proven,
   p "typeobj-number-long" ab ["PyNumber_Long"]
     "An exact int is returned; a non-int __int__ result raises the exact TypeError."
-    "abstract.c:1519, :1532"
+    "abstract.c:1519, @3.14.7:1532"
     ``NumberLongChecks ``numberLongChecks_proven,
   p "typeobj-number-check" ab []
     "PyNumber_Check tests the three conversion slots."
@@ -716,7 +716,7 @@ def entries : List Entry := [
     ``TupleOfTuple ``tupleOfTuple_proven,
   p "typeobj-abstract-issubclass" ab ["abstract_issubclass", "abstract_get_bases"]
     "A class is a subclass of itself; a class without __bases__ of nothing else."
-    "abstract.c:2536, :2546"
+    "abstract.c:2536, @3.14.7:2546"
     ``AbstractIssubclass ``abstractIssubclass_proven,
   p "typeobj-isinstance-empty-tuple" ab ["object_recursive_isinstance"]
     "isinstance(x, ()) is False."
@@ -780,7 +780,7 @@ def entries : List Entry := [
     ``WrapInitReturnsNone ``wrapInitReturnsNone_proven,
   p "typeobj-wrap-len-hash" ty []
     "__len__ and __hash__ wrappers return the slot result as an int."
-    "typeobject.c:9967, :9637"
+    "typeobject.c:9967, :10329"
     ``WrapLenHash ``wrapLenHash_proven,
   p "typeobj-wrap-richcmp" ty []
     "__eq__ and friends apply tp_richcompare with their op."
@@ -812,7 +812,7 @@ def entries : List Entry := [
     ``TypeGetters ``typeGetters_proven,
   p "typeobj-type-name-getters" ty []
     "__name__ and __qualname__ of a heap type are ht_name and ht_qualname."
-    "typeobject.c:1560, :1473"
+    "typeobject.c:1560, :1573"
     ``TypeNameGetters ``typeNameGetters_proven,
   p "typeobj-object-get-class" ty []
     "obj.__class__ through the descriptor is type(obj)."
@@ -907,7 +907,7 @@ def entries : List Entry := [
     ``SuperSkipsThisClass ``superSkipsThisClass_proven,
   p "typeobj-method-eq-by-binding" co ["method_richcompare", "method_hash"]
     "Binding one function to one object twice gives methods that compare equal and hash equal; bound to different objects they compare unequal."
-    "data model: __hash__, equal objects hash equal; classobject.c:225, :266"
+    "data model: __hash__, equal objects hash equal; classobject.c:225, :281"
     ``BoundMethodEqualityByBinding ``boundMethodEqualityByBinding_proven,
   p "typeobj-func-descr-get-binds" fu ["func_descr_get"]
     "f.__get__(x) builds what types.MethodType(f, x) builds, and with no instance or None it returns f."
@@ -932,7 +932,7 @@ def entries : List Entry := [
     "descrobject.c:138" ``CFunctionEqualityByBinding ``cFunctionEqualityByBinding_proven,
   p "typeobj-wrapper-eq-by-binding" de ["wrapper_richcompare", "wrapper_hash", "wrapperdescr_get"]
     "Two method-wrappers are equal exactly when they wrap one descriptor on one object, and then their hashes agree."
-    "descrobject.c:1344, :1346" ``WrapperEqualityByBinding ``wrapperEqualityByBinding_proven,
+    "descrobject.c:1344, :1370" ``WrapperEqualityByBinding ``wrapperEqualityByBinding_proven,
   p "typeobj-descr-gets-share-guard" de ["descr_check", "method_get", "wrapperdescr_get"]
     "With no instance the binding descriptors return themselves and do nothing; given an instance of the wrong type all four raise the same TypeError."
     "descrobject.c:80" ``DescrGetsShareGuard ``descrGetsShareGuard_proven,
@@ -944,7 +944,7 @@ def entries : List Entry := [
     "methodobject.c:192" ``ReduceIsGetattr ``reduceIsGetattr_proven,
   p "typeobj-reduce-getattr-descr" de ["wrapper_reduce", "descr_reduce"]
     "__reduce__ of a method-wrapper or a descriptor applied to itself is getattr of the object or class and the name."
-    "descrobject.c:630, :1369" ``ReduceIsGetattr ``reduceIsGetattr_proven,
+    "descrobject.c:630, :1393" ``ReduceIsGetattr ``reduceIsGetattr_proven,
   p "typeobj-classmethod-bindings-agree" fu ["cm_descr_get"]
     "cm.__get__(o), cm.__get__(o, type(o)) and cm.__get__(None, type(o)) build methods that compare equal."
     "funcobject.c:1535" ``ClassmethodBindingsAgree ``classmethodBindingsAgree_proven ] ++ excEntries

@@ -45,7 +45,7 @@ promised_by: |
   Invariant: no internal error from a valid call; Doc/library/array.rst:222 fromunicode.
 cause: |
   Modules/arraymodule.c:2038-2039: the call is not guarded by ustr_length > 0, as the
-  'u' branch at :2011-2023 is, and `assert(u != NULL)` is compiled out. main has it at :2117.
+  'u' branch at :2011-2023 is, and `assert(u != NULL)` is compiled out. main has it at :1852.
 possible_fix: |
   `if (ustr_length > 0) { ... }` around PyUnicode_AsUCS4, as the 'u' branch does.
 duplicates:

@@ -39,7 +39,7 @@ def entriesArith : List Entry := [
     notes := "These replace _PyLong_Add, _PyLong_Subtract and _PyLong_Multiply of 3.14. The difftest reaches them through a specialized BINARY_OP, checked with dis." },
   { id := "longobj-vector-add-sub", pyFile := "Objects/longobject.c", pyFns := ["v_iadd", "v_isub"]
     statement := "v_iadd and v_isub are exact modulo the width of x, returning a carry or borrow of 0 or 1."
-    source := "comments at longobject.c:1849-1852, :1800-1803", status := .proven
+    source := "comments at longobject.c:1849-1852, :1875-1878", status := .proven
     prop := ``VectorAddSub, thm := some ``vectorAddSub_proven },
   { id := "longobj-k-mul", pyFile := "Objects/longobject.c"
     pyFns := ["k_mul", "k_lopsided_mul", "kmul_split"]
@@ -53,12 +53,12 @@ def entriesArith : List Entry := [
     prop := ``LongMulExact, thm := some ``longMulExact_proven },
   { id := "longobj-vector-shifts", pyFile := "Objects/longobject.c", pyFns := ["v_lshift", "v_rshift"]
     statement := "v_lshift and v_rshift by d < PyLong_SHIFT are exact and return the bits shifted out."
-    source := "comments at longobject.c:1901-1903, :1844-1846", status := .proven
+    source := "comments at longobject.c:1901-1903, :1919-1921", status := .proven
     prop := ``VectorShifts, thm := some ``vectorShifts_proven },
   { id := "longobj-divrem-one-digit", pyFile := "Objects/longobject.c"
     pyFns := ["inplace_divrem1", "divrem1", "inplace_rem1"]
     statement := "Division of a digit vector by a non-zero digit gives the exact quotient and remainder; inplace_rem1 agrees with inplace_divrem1."
-    source := "comments at longobject.c:1938-1942, :1920-1921", status := .proven
+    source := "comments at longobject.c:1938-1942, :1995-1996", status := .proven
     prop := ``DivremOneDigit, thm := some ``divremOneDigit_proven },
   { id := "longobj-knuth-digit", pyFile := "Objects/longobject.c", pyFns := []
     statement := "One digit of Algorithm D: with wm1 >= BASE/2 and V < BASE*W the estimate, its corrections and the add-back give the true digit and remainder, with q <= BASE after the loop and no overflow."

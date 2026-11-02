@@ -28,7 +28,7 @@ the 4300-digit limit.
 (:2271-2322) strips Unicode whitespace, drops `_`, keeps ASCII, maps other
 whitespace to `' '` and `Nd` digits to ASCII, and rejects anything else; then
 `mpd_qset_string` (libmpdec/io.c:200-328) under `mpd_maxcontext`, and any
-Inexact/Rounded/Clamped becomes InvalidOperation (:2241-2244).
+Inexact/Rounded/Clamped becomes InvalidOperation (:2368-2371).
 -/
 
 namespace PyLean.Decimal

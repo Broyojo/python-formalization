@@ -182,7 +182,7 @@ def mpdParseFmt (lib : LibMpdec) (s : List Nat) : Option Nat := do
   let (sep, r) := match r with
     | c :: r' => if c == cp ',' then (true, r') else (false, r)
     | [] => (false, [])
-  -- precision (:874-884)
+  -- precision (@3.14.7:874-884)
   let r ← match r with
     | c :: r' =>
       if c == cp '.' then

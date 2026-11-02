@@ -136,7 +136,7 @@ theorem userDictSetDel_proven : UserDictSetDel := by
         simp [get?_del hw, this]
     · simp at h
 
-/-- The comment at :1162-1163 says "Modify __contains__ and get() to work like dict does
+/-- The comment at @3.14.7:1162-1163 says "Modify __contains__ and get() to work like dict does
 when __missing__ is present": a `UserDict` subclass with `__missing__` should
 act as a `dict` subclass with `__missing__`, where only `d[k]` consults it. For
 `pop(k, default)`, `setdefault` and `(k, v) in .items()` this is false: the inherited

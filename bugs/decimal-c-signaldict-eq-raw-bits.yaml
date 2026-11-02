@@ -54,8 +54,8 @@ cause: |
   Modules/_decimal/_decimal.c signaldict_richcompare, :791-824: `SdFlags(v)==SdFlags(w)` and
   `SdFlags(v)==flags` compare whole words. dict_as_flags (:549-589) sets `cm->flag`, which for
   InvalidOperation is MPD_IEEE_Invalid_operation (Modules/_decimal/libmpdec/mpdecimal.h:274-280), while
-  an operation sets a single condition bit such as MPD_Division_undefined. flags_as_dict (:516-535) and
-  signaldict_getitem (:691-705) already treat any of those bits as the one signal, so the mapping view
+  an operation sets a single condition bit such as MPD_Division_undefined. flags_as_dict (:527-546) and
+  signaldict_getitem (:702-716) already treat any of those bits as the one signal, so the mapping view
   and the comparison disagree. Same on main.
 possible_fix: |
   Compare per signal: normalize each word with a helper that maps any bit of

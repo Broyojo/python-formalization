@@ -13,7 +13,7 @@ namespace PyLean.DictSet
 
 open PyLean
 
-/-- `_Link` (:66). `key` is `none` on the sentinel, `prev`/`next` are `none` once cleared. -/
+/-- `_Link` (@3.14.7:66). `key` is `none` on the sentinel, `prev`/`next` are `none` once cleared. -/
 structure Link (K : Type) where
   key : Option K
   prev : Option Nat
@@ -90,7 +90,7 @@ def pyodSetItem (key : K) (value : V) : PM K V Unit := do
   onD (dictSetItem P key value)
 
 /-- Remove the link of `key` from `__map` and unlink it, clearing its pointers
-(:138-144, :252-258). -/
+(:138-144, @3.14.7:253-259). -/
 def pyodDropLink (key : K) : PM K V Unit := do
   let id ← onMap (dictPopDefault Q key none)
   let o ← M.get
@@ -151,7 +151,7 @@ def pyodPop (key : K) (dflt : Option V) : PM K V V := do
     | some d => return d
     | none => M.throw (keyErr P key)
 
-/-- `OrderedDict.setdefault` (:267-275). -/
+/-- `OrderedDict.setdefault` (:268-276). -/
 def pyodSetdefault (key : K) (dflt : V) : PM K V V := do
   let inSelf ← onD (pyDictContains P key)
   if inSelf then onD (dictSubscript P none key)
@@ -209,14 +209,14 @@ def pyodUpdate (arg : Option (ODictArg K V)) (kwargs : List (K × V)) : PM K V U
   for (k, v) in kwargs do
     pyodSetItem P Q k v
 
-/-- `OrderedDict.__ior__` (:326-328). -/
+/-- `OrderedDict.__ior__` (:325-327). -/
 def pyodIor (other : ODictArg K V) : PM K V Unit := pyodUpdateArg P Q other
 
 /-- A new empty instance (`__new__`, :104-111). -/
 def pyodNew (ident : Nat) : PyOD K V := { d := { ident }, map := { ident := ident + 1 } }
 
 /-- `OrderedDict.copy` (:304-306), `self.__class__(self)`, the left half of `__or__`
-(:330-335): keys in link order, values through `__getitem__`. -/
+(:329-334): keys in link order, values through `__getitem__`. -/
 def pyodCopyInto (o : PyOD K V) : PM K V Unit :=
   pyodKeysLoop P Q (fun k => (dictSubscript P none k o.d).1) o.keysList none
 
@@ -225,7 +225,7 @@ def pyodCopy (o : PyOD K V) (id : Nat) : Py (PyOD K V) :=
   | (.ok _, r) => .ok r
   | (.error e, _) => .error e
 
-/-- `OrderedDict.__or__` (:330-335). -/
+/-- `OrderedDict.__or__` (:329-334). -/
 def pyodOr (o : PyOD K V) (id : Nat) (other : ODictArg K V) : Py (PyOD K V) :=
   match (do pyodCopyInto P Q o; pyodUpdateArg P Q other : PM K V Unit) (pyodNew id) with
   | (.ok _, r) => .ok r
@@ -247,7 +247,7 @@ def pyodEq (veq : V → V → Py Bool) (plainEq : K → K → Py Bool) (a b : Py
       | _, _ => .ok true
     go a.keysList b.keysList
 
-/-- `OrderedDict.fromkeys` (:309-315). -/
+/-- `OrderedDict.fromkeys` (:308-314). -/
 def pyodFromkeys (id : Nat) (it : Iterable K) (value : V) : Py (PyOD K V) :=
   let run : PM K V Unit := do
     match it.getIter with

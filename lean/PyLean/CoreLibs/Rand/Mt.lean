@@ -221,7 +221,7 @@ def keyWords (n used : Nat) : Array UInt32 :=
 /-- The non-`None` part of `random_seed`: `n`, the unsigned value to split,
 _randommodule.c:316-333. -/
 def seedValue : CArg → Py Nat
-  | .null | .none => .ok 0  -- not reached: handled by the caller at :303
+  | .null | .none => .ok 0  -- not reached: handled by the caller at @3.14.7:303
   | .exactInt n | .intSubclass n => .ok n.natAbs
   | .hashable h => .ok (h % (2 ^ 64)).toNat
   | .unhashable ty => .error (.typeError s!"unhashable type: '{ty}'")

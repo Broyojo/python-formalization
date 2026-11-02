@@ -71,7 +71,7 @@ def prodPools (args : List (List α)) (rep : Int) : List (List α) :=
 
 /-- `product_new` (:2069-2149). `rep? = none` is "no keyword" (repeat 1). -/
 def cProductNew (args : List (Obj α)) (rep? : Option Int) : Py (ProductState α) :=
-  -- :2086-2102
+  -- :2077-2093
   let parsed : Py Int :=
     match rep? with
     | none => .ok 1
@@ -83,24 +83,24 @@ def cProductNew (args : List (Obj α)) (rep? : Option Int) : Py (ProductState α
   match parsed with
   | .error e => .error e
   | .ok rep =>
-    -- :2104-2114
+    -- :2095-2105
     let nargs : Int := if rep = 0 then 0 else args.length
     if rep ≠ 0 ∧ nargs > ssizeMax / 8 / rep then
       .error (.overflowError "repeat argument too large")
     else
       let npools := nargs * rep
-      -- :2116-2124
+      -- :2107-2115
       if !memNewOk npools then .error memoryError
       else if !tupleNewOk npools then .error memoryError
       else
-        -- :2125-2132: with `repeat == 0` no argument is touched (`nargs` is 0)
+        -- :2116-2123: with `repeat == 0` no argument is touched (`nargs` is 0)
         match (if rep = 0 then .ok [] else args.mapM tupleOf) with
         | .error e => .error e
         | .ok ls =>
           .ok { pools := prodPools ls rep, indices := List.replicate npools.toNat 0,
                 started := false, stopped := false }
 
-/-- The right-to-left odometer loop of `product_next_lock_held` (:2246-2267),
+/-- The right-to-left odometer loop of `product_next_lock_held` (:2237-2258),
 by recursion on `i + 1`: `none` is "`i` went negative". -/
 def cProductAdvance (pools : List (List α)) : Nat → List Nat → Option (List Nat)
   | 0, _ => none
@@ -171,13 +171,13 @@ def cCombinationsNew (iterable : Obj α) (r : Int) : Py (CombState α) := do
   return { pool := pool, indices := List.range r.toNat, r := r.toNat, started := false,
            stopped := decide (r > pool.length) }
 
-/-- `for (i=r-1 ; i >= 0 && indices[i] == i+n-r ; i--)` (:2488-2489), by
+/-- `for (i=r-1 ; i >= 0 && indices[i] == i+n-r ; i--)` (:2475-2476), by
 recursion on `i + 1`; `none` is `i < 0`. -/
 def cCombScan (n r : Nat) (idx : List Nat) : Nat → Option Nat
   | 0 => none
   | i + 1 => if ix idx i = i + n - r then cCombScan n r idx i else some i
 
-/-- `for (j=i+1 ; j<r ; j++) indices[j] = indices[j-1] + 1;` (:2501-2502),
+/-- `for (j=i+1 ; j<r ; j++) indices[j] = indices[j-1] + 1;` (:2488-2489),
 with `k = r - j` iterations left. -/
 def cCombFill (j : Nat) : Nat → List Nat → List Nat
   | 0, idx => idx
@@ -257,12 +257,12 @@ def cCwrNew (iterable : Obj α) (r : Int) : Py (CombState α) := do
   return { pool := pool, indices := List.replicate r.toNat 0, r := r.toNat, started := false,
            stopped := pool.length == 0 && r != 0 }
 
-/-- `for (i=r-1 ; i >= 0 && indices[i] == n-1; i--)` (:2742-2743). -/
+/-- `for (i=r-1 ; i >= 0 && indices[i] == n-1; i--)` (:2727-2728). -/
 def cCwrScan (n : Nat) (idx : List Nat) : Nat → Option Nat
   | 0 => none
   | i + 1 => if (ix idx i : Int) = (n : Int) - 1 then cCwrScan n idx i else some i
 
-/-- `for ( ; i<r ; i++) indices[i] = index;` (:2755-2761). -/
+/-- `for ( ; i<r ; i++) indices[i] = index;` (:2740-2746). -/
 def cCwrFill (v : Nat) (i : Nat) : Nat → List Nat → List Nat
   | 0, idx => idx
   | k + 1, idx => cCwrFill v (i + 1) k (idx.set i v)
@@ -350,7 +350,7 @@ def cPermutationsNew (iterable : Obj α) (robj : Option Int) (badR : Bool := fal
            started := false, stopped := decide (r > n) }
 
 /-- The rotation `indices[i:] = indices[i+1:] + indices[i:i+1]` as the C loop
-(:3014-3018): shift `indices[i+1..n)` left by one, put the old `indices[i]` last. -/
+(:2999-3003): shift `indices[i+1..n)` left by one, put the old `indices[i]` last. -/
 def cPermRotate (n i : Nat) (idx : List Nat) : List Nat :=
   let index := ix idx i
   let idx := go i (n - 1 - i) idx
@@ -361,7 +361,7 @@ where
     | j, k + 1, idx => go (j + 1) k (idx.set j (ix idx (j + 1)))
 
 /-- The `for (i=r-1 ; i>=0 ; i--)` loop of `permutations_next_lock_held`
-(:3011-3041), by recursion on `i + 1`; `none` is "`i` went negative". -/
+(:2996-3026), by recursion on `i + 1`; `none` is "`i` went negative". -/
 def cPermLoop (n : Nat) : Nat → List Nat → List Int → Option (List Nat × List Int) ⊕ (List Nat × List Int)
   | 0, idx, cyc => .inr (idx, cyc)
   | i + 1, idx, cyc =>

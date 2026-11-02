@@ -141,12 +141,12 @@ def asyncGenAsendThrow (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref)
     let res := genThrow h fuel w1 o.gen args
     asendThrowFinish res.1 a o.gen res.2
 
-/-- The exception a `close()` of an awaitable passes on, :2078-2082 and :2511-2515. -/
+/-- The exception a `close()` of an awaitable passes on, :2078-2082 and @3.14.7:2321-2325. -/
 def swallowedByClose : Option (Exc V) → Bool
   | some e => e.isStopIteration || e.isStopAsyncIteration || e.isGeneratorExit
   | none => false
 
-/-- :2077-2090 and :2510-2523. -/
+/-- :2077-2090 and @3.14.7:2320-2333. -/
 def closeResult (res : Ret V) : Ret V :=
   match res with
   | .err e => if swallowedByClose e then .ok .none else .err e
@@ -191,7 +191,7 @@ def athrowRunningMsg : Option (Obj V × Option (Obj V) × Option (Obj V)) → St
 
 def nonInitCoroMsg : String := "can't send non-None value to a just-started coroutine"
 
-/-- :2359-2362 and :2382-2394: what `aclose()` mode does with a result. -/
+/-- :2359-2362 and @3.14.7:2192-2204: what `aclose()` mode does with a result. -/
 def acloseTail (w : World V X) (a gen : Ref) : Ret V → World V X × Ret V
   | .ok (.wrapped _) => athrowYieldClose w a gen
   | .ok v => (w, .ok v)

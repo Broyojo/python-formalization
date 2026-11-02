@@ -57,7 +57,7 @@ theorem hash_cached (s : St) (self : Nat) (b : List Nat) (h : (s.mv self).hash =
   unfold memoryHash
   simp only [memoryHashF, M.bind_app, M.get, h, M.pure_app]
 
-/-- Refusals of `hash`: a writable view, then a non-byte format (:3217-3227). -/
+/-- Refusals of `hash`: a writable view, then a non-byte format (@3.14.7:3217-3227). -/
 def HashRejections : Prop :=
   ∀ (st : St) (self : Nat), baseInaccessible st self = false → (st.mv self).hash = none →
     ((st.mv self).view.readonly = false →
@@ -85,7 +85,7 @@ theorem hashRejections_proven : HashRejections := by
 /-- `memory_getbuf`: a failed request changes nothing; a successful one adds one export and
 hands out the view with `obj` set to the memoryview and the same memory; without
 `PyBUF_FORMAT` the format is NULL and without `PyBUF_ND` the buffer is 1-D with no shape
-(:1529-1606). A request for writing a read-only view is refused first. `memory_releasebuf`
+(@3.14.7:1529-1606). A request for writing a read-only view is refused first. `memory_releasebuf`
 takes the export back. Hypotheses: a live, unrestricted view. -/
 def GetbufRules : Prop :=
   ∀ (st : St) (self flags : Nat), self < st.mvs.length →
@@ -202,8 +202,8 @@ theorem getbufRules_proven : GetbufRules := by
 /-- `memoryview(x)` of an exporter of any number of dimensions, with or without suboffsets: a new
 managed buffer with one registered view, whose master is what the exporter gave, and whose view
 is the exporter's buffer (`mbuf_alloc`, `_PyManagedBuffer_FromObject`,
-`PyMemoryView_FromObjectAndFlags`, `PyMemoryView_FromObject`, `memoryview_impl`, :71-104, :800-857,
-:1013-1018). A failing `__buffer__` is `BufferFailures`, too many dimensions `MbufDeallocOnFail`.
+`PyMemoryView_FromObjectAndFlags`, `PyMemoryView_FromObject`, `memoryview_impl`, @3.14.7:71-104, @3.14.7:800-857,
+@3.14.7:1013-1018). A failing `__buffer__` is `BufferFailures`, too many dimensions `MbufDeallocOnFail`.
 Hypotheses: the exporter's buffer has full information, and at most 64 dimensions. -/
 def NewFromExporter : Prop :=
   ∀ (st : St) (b : Buf), Full b → b.ndim ≤ 64 →
@@ -281,7 +281,7 @@ theorem newFromExporter_proven : NewFromExporter := by
   · rw [hA.mem, hmem]
 
 /-- `PyMemoryView_FromMemory`: a byte view with no exporter, read-only or writable as asked,
-contiguous; `PyMemoryView_FromBuffer` refuses a NULL `buf` (:740-794). -/
+contiguous; `PyMemoryView_FromBuffer` refuses a NULL `buf` (@3.14.7:740-794). -/
 def FromMemorySpec : Prop :=
   ∀ (st : St) (mem size : Int) (w : Bool) (info : Buf),
     (let r := memoryViewFromMemory mem size w st

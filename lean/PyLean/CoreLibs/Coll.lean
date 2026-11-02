@@ -27,7 +27,7 @@ def counterEntries : List Entry := [
   { id := "coll-counter-update-adds", pyFile := file
     pyFns := ["Counter.update", "Counter.__init__", "Counter.__missing__", "_count_elements"]
     statement := "After update(src, **kw) the count of x is its old count plus the source's and the keywords' contribution, for every counter; Counter(src, **kw) is the empty-counter case, and a missing element counts zero."
-    source := "docstrings, Lib/collections/__init__.py:606-615, :683"
+    source := "docstrings, Lib/collections/__init__.py:606-615, :678"
     status := .proven, prop := ``UpdateAddsCounts, thm := some ``updateAddsCounts_proven },
   { id := "coll-counter-first-seen-order", pyFile := file, pyFns := ["Counter.__init__", "_count_elements"]
     statement := "Counter(iterable) holds its elements in the order of dict.fromkeys(iterable)."
@@ -71,11 +71,11 @@ def counterEntries : List Entry := [
   { id := "coll-counter-ops-contract", pyFile := file
     pyFns := ["Counter.__add__", "Counter.__sub__", "Counter.__or__", "Counter.__and__", "Counter.__pos__", "Counter.__neg__"]
     statement := "Operator results hold only positive counts, and keys appear in left-operand order, then right-operand order."
-    source := "comments, Lib/collections/__init__.py:765, :775-777"
+    source := "comments, Lib/collections/__init__.py:765, :770-772"
     status := .proven, prop := ``OperatorsOutputContract, thm := some ``operatorsOutputContract_proven },
   { id := "coll-counter-unary-binary", pyFile := file, pyFns := ["Counter.__pos__", "Counter.__neg__"]
     statement := "+c equals c + Counter() and -c equals Counter() - c, items and order."
-    source := "docstrings, Lib/collections/__init__.py:938, :920"
+    source := "docstrings, Lib/collections/__init__.py:938, :946"
     status := .proven, prop := ``UnaryAreBinary, thm := some ``unaryAreBinary_proven },
   { id := "coll-counter-inplace", pyFile := file
     pyFns := ["Counter.__iadd__", "Counter.__isub__", "Counter.__ior__", "Counter.__iand__", "Counter._keep_positive"]
@@ -134,7 +134,7 @@ def chainMapEntries : List Entry := [
   { id := "coll-chainmap-child-parents", pyFile := file
     pyFns := ["ChainMap.__init__", "ChainMap.new_child", "ChainMap.parents", "ChainMap.fromkeys"]
     statement := "__init__ always leaves at least one map, new_child and parents are inverse on the map list, and fromkeys reads like dict.fromkeys."
-    source := "docstrings and comment, Lib/collections/__init__.py:1055-1059, :1057, :1067-1079"
+    source := "docstrings and comment, Lib/collections/__init__.py:1055-1059, :1099, :1109-1121"
     status := .proven, prop := ``ChainMapChildParents, thm := some ``chainMapChildParents_proven },
   { id := "coll-chainmap-repr", pyFile := file, pyFns := ["ChainMap.__repr__"]
     statement := "repr shows the maps in order, so new_child prepends the child's repr, and ChainMap() prints its empty dict."
@@ -276,7 +276,7 @@ def userStringEntries : List Entry := [
     pyFns := ["UserString.__init__", "UserString.__str__", "UserString.__int__", "UserString.__float__", "UserString.__complex__",
       "UserString.__getnewargs__", "UserString.__add__", "UserString.__radd__", "UserString.__rmod__", "UserString.encode"]
     statement := "__init__ reads a str, a UserString and str(obj) alike; __getnewargs__ and __str__ rebuild the object; + and radd concatenate with the same str(other) and keep the class; __rmod__ keeps the class; encode(None, None) means the defaults."
-    source := "Lib/collections/__init__.py:1420-1426, :1430-1451, :1478-1481"
+    source := "Lib/collections/__init__.py:1420-1426, :1485-1506, :1533-1536"
     status := .proven, prop := ``UserStringConstructAdd, thm := some ``userStringConstructAdd_proven },
   { id := "coll-userstring-mul", pyFile := file, pyFns := ["UserString.__mul__"]
     statement := "u * n is empty for n <= 0 and has length n * len(u), keeping the class, when that fits Py_ssize_t."

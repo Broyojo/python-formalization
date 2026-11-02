@@ -48,7 +48,7 @@ def entries : List Entry := [
   { id := "bytesobj-list-search-reentrant", pyFile := "Objects/listobject.c"
     pyFns := ["list_contains", "list_index_impl", "list_count_impl", "list_remove_impl", "list_richcompare_impl"]
     statement := "x in l, l.index, l.count, l.remove and the search of l == r read no slot outside the list, whatever a comparison does to it, however often."
-    source := "listobject.c:676-693, :3297-3309, :3323-3382, :3416-3432", status := .proven
+    source := "listobject.c:676-693, :3360-3372, :3386-3445, :3479-3495", status := .proven
     prop := ``ListSearchSafe, thm := some ``listSearchSafe_proven },
   { id := "bytesobj-index-agree", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_index_impl", "list_index_impl"]
     statement := "list.index and tuple.index run the same search for every element type, every comparison (including raising ones) and every int start and stop: their different clipping of stop never shows."
@@ -150,7 +150,7 @@ def entries : List Entry := [
     prop := ``SortsliceParallel, thm := some ``sortsliceParallel_proven },
   { id := "bytesobj-merge-mem", pyFile := "Objects/listobject.c", pyFns := ["merge_init", "merge_getmem"]
     statement := "merge_init sizes the stack area as documented, and merge_getmem provides at least need slots, its overflow check not firing below the limit."
-    source := "listobject.c:2258-2269, :2247", status := .proven
+    source := "listobject.c:2258-2269, :2323", status := .proven
     prop := ``MergeMemSpec, thm := some ``mergeMemSpec_proven },
   { id := "bytesobj-sort-compare-agree", pyFile := "Objects/listobject.c", pyFns := ["safe_object_compare", "unsafe_latin_compare", "unsafe_tuple_compare", "PyList_Sort"]
     statement := "The compares list.sort selects agree with the generic path: unsafe_latin_compare is str.__lt__ on all byte strings, unsafe_tuple_compare is tuple.__lt__ for every comparison including raising ones, and PyList_Sort rejects a non-list and is otherwise list.sort."

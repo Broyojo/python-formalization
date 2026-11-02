@@ -42,7 +42,7 @@ cause: |
   trailing characters is at :1439-1442, after `finished:`.
 possible_fix: |
   Validate the whole string before computing the value: finish the grammar scan (the
-  trailing whitespace loop and `s != s_end`) right after the exponent at :1355, then turn
+  trailing whitespace loop and `s != s_end`) right after the exponent at @3.14.7:1365, then turn
   the `goto overflow_error` paths back on. The `finished:` path can then drop its check.
 tested: |
   python3 3.15.2: REPRODUCED

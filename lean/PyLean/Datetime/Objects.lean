@@ -432,7 +432,7 @@ def dtTime (dt : DT) : TM := ⟨dt.h, dt.mi, dt.s, dt.us, dt.fold, none⟩
 def dtTimetz (dt : DT) : TM := ⟨dt.h, dt.mi, dt.s, dt.us, dt.fold, dt.tz⟩
 
 /-- The fold check at the end of `_check_time_fields`, Py:591-606, and
-`check_time_args`, :703-707. -/
+`check_time_args`, :706-710. -/
 def checkFold (fold : Int) : Py Unit :=
   if fold = 0 ∨ fold = 1 then .ok ()
   else .error (.valueError s!"fold must be either 0 or 1, not {fold}")
