@@ -58,6 +58,11 @@ structure Lawful (om : ObjModel) : Prop where
   non-negative int. -/
   list_item : ∀ ctx a items (i : Nat) v rt, rt.heap[a]? = some (.list items) → items[i]? = some v →
     om.getItem ctx (.ref a) (.int i) rt = .ok v rt
+  /-- `list_subscript` at a negative int, which counts from the end. The fast path of
+  `BINARY_OP_SUBSCR_LIST_INT` relies on this since 3.15. -/
+  list_item_neg : ∀ ctx a items (i : Int) v rt, rt.heap[a]? = some (.list items) → i < 0 →
+    items[(i + items.size).toNat]? = some v → 0 ≤ i + items.size →
+    om.getItem ctx (.ref a) (.int i) rt = .ok v rt
   tuple_item : ∀ ctx a items (i : Nat) v rt, rt.heap[a]? = some (.tuple items) → items[i]? = some v →
     om.getItem ctx (.ref a) (.int i) rt = .ok v rt
   str_item : ∀ ctx s (i : Nat) c rt, s.toList[i]? = some c →
@@ -134,7 +139,7 @@ structure Kind where
     if bad x then .error .deopt ⟨regs, y :: x :: rest⟩ else .ok () ⟨regs, y :: x :: rest⟩
 
 def intKind : Kind where
-  bad := notInt
+  bad := notCompactInt
   tos := _GUARD_TOS_INT
   nos := _GUARD_NOS_INT
   tos_eval := fun regs rest x => guardTop_one regs rest _ x _ rfl
@@ -155,10 +160,11 @@ def strKind : Kind where
   nos_eval := fun regs rest x y => guardTop_two regs rest _ x y _ rfl
 
 /-- The shape of every two-guard specialization: when both guards pass the fast
-path equals the generic form, and when one fails it deopts. -/
+path deopts or equals the generic form, and when one fails it deopts. -/
 theorem two_guard_spec (K : Kind) (fast g : M Unit) (s : St) (hs : 2 ≤ s.stack.length)
     (h : ∀ regs l r rest, K.bad r = false → K.bad l = false →
-      fast ⟨regs, r :: l :: rest⟩ = g ⟨regs, r :: l :: rest⟩) :
+      (∃ s', fast ⟨regs, r :: l :: rest⟩ = .error .deopt s') ∨
+        fast ⟨regs, r :: l :: rest⟩ = g ⟨regs, r :: l :: rest⟩) :
     withDeopt (do K.tos; K.nos; fast) g s = g s := by
   obtain ⟨regs, stack⟩ := s
   match stack, hs with
@@ -172,13 +178,21 @@ theorem two_guard_spec (K : Kind) (fast g : M Unit) (s : St) (hs : 2 ≤ s.stack
       · left
         refine ⟨⟨regs, r :: l :: rest⟩, ?_⟩
         simp [bind, EStateM.bind, K.tos_eval, K.nos_eval, hr, hl]
-      · right
-        simp only [Bool.not_eq_true] at hr hl
-        simp [bind, EStateM.bind, K.tos_eval, K.nos_eval, hr, hl]
-        exact h regs l r rest hr hl
+      · simp only [Bool.not_eq_true] at hr hl
+        rcases h regs l r rest hr hl with ⟨s', hd⟩ | he
+        · left
+          exact ⟨s', by simp [bind, EStateM.bind, K.tos_eval, K.nos_eval, hr, hl, hd]⟩
+        · right
+          simp [bind, EStateM.bind, K.tos_eval, K.nos_eval, hr, hl]
+          exact he
 
 theorem notInt_false {v : Val} (h : notInt v = false) : ∃ i, v = .int i := by
   cases v <;> simp_all [notInt]
+
+/-- A value that passes `_GUARD_TOS_INT` or `_GUARD_NOS_INT` is a compact int. -/
+theorem notCompactInt_false {v : Val} (h : notCompactInt v = false) :
+    ∃ i, v = .int i ∧ isCompact i = true := by
+  cases v <;> simp_all [notCompactInt]
 
 theorem notFloat_false {v : Val} (h : notFloat v = false) : ∃ i, v = .float i := by
   cases v <;> simp_all [notFloat]
@@ -199,6 +213,31 @@ theorem fast_stk21 (f : List Val → BM (List Val)) (regs : Regs) (rest : List V
     stk 2 1 f ⟨regs, r :: l :: rest⟩ = .ok () ⟨regs, res :: rest⟩ := by
   simp [stk, popN, pushAll, bind, EStateM.bind, BM.lift, pure, EStateM.pure, h]
 
+/-- Fail inside a `stk` body. -/
+theorem stk_deopt (p q : Nat) (f : List Val → BM (List Val)) (s : St) (hp : p ≤ s.stack.length)
+    (h : ∃ r', f (s.stack.take p).reverse s.regs = .error .deopt r') :
+    ∃ s', stk p q f s = .error .deopt s' := by
+  obtain ⟨r', hr⟩ := h
+  refine ⟨⟨r', s.stack.drop p⟩, ?_⟩
+  simp [stk, popN, hp, bind, EStateM.bind, BM.lift, hr]
+
+/-- A compact fast path on two compact operands: its result is the generic one when it fits
+one digit, and otherwise `EXIT_IF(PyStackRef_IsNull(res))` deopts. -/
+theorem compact_fast (e : Env) (regs : Regs) (rest : List Val) (a b x : Int)
+    (hg : e.om.binaryOp e.ctx e.oparg (.int a) (.int b) regs.rt = .ok (.int x) regs.rt)
+    (f : List Val → BM (List Val)) (hf : f [.int a, .int b] = compactResult x) :
+    (∃ s', stk 2 1 f ⟨regs, .int b :: .int a :: rest⟩ = .error .deopt s') ∨
+      stk 2 1 f ⟨regs, .int b :: .int a :: rest⟩ = BINARY_OP e ⟨regs, .int b :: .int a :: rest⟩ := by
+  by_cases hc : isCompact x = true
+  · right
+    rw [generic_binop e regs rest _ _ (.int x) hg]
+    apply fast_stk21
+    simp [hf, compactResult, hc, pure, EStateM.pure]
+  · left
+    refine stk_deopt 2 1 f _ (by simp) ⟨regs, ?_⟩
+    simp [hf, compactResult, hc, throw, throwThe, MonadExcept.throw, EStateM.throw,
+      MonadExceptOf.throw]
+
 section Int
 variable (e : Env) (hom : Lawful e.om) (s : St) (hs : 2 ≤ s.stack.length)
 include hom hs
@@ -207,26 +246,23 @@ include hom hs
 theorem binaryAddInt_spec (hop : e.oparg = 0 ∨ e.oparg = 13) :
     execOp e .BINARY_OP_ADD_INT s = execOp e .BINARY_OP s := by
   refine two_guard_spec intKind _ (BINARY_OP e) s hs fun regs l r rest hr hl => ?_
-  obtain ⟨a, rfl⟩ := notInt_false hl
-  obtain ⟨b, rfl⟩ := notInt_false hr
-  rw [generic_binop e regs rest _ _ (.int (a + b)) (hom.add_int _ _ _ _ _ hop)]
-  exact fast_stk21 _ regs rest _ _ _ rfl
+  obtain ⟨a, rfl, _⟩ := notCompactInt_false hl
+  obtain ⟨b, rfl, _⟩ := notCompactInt_false hr
+  exact compact_fast e regs rest a b (a + b) (hom.add_int _ _ _ _ _ hop) _ rfl
 
 theorem binarySubInt_spec (hop : e.oparg = 10 ∨ e.oparg = 23) :
     execOp e .BINARY_OP_SUBTRACT_INT s = execOp e .BINARY_OP s := by
   refine two_guard_spec intKind _ (BINARY_OP e) s hs fun regs l r rest hr hl => ?_
-  obtain ⟨a, rfl⟩ := notInt_false hl
-  obtain ⟨b, rfl⟩ := notInt_false hr
-  rw [generic_binop e regs rest _ _ (.int (a - b)) (hom.sub_int _ _ _ _ _ hop)]
-  exact fast_stk21 _ regs rest _ _ _ rfl
+  obtain ⟨a, rfl, _⟩ := notCompactInt_false hl
+  obtain ⟨b, rfl, _⟩ := notCompactInt_false hr
+  exact compact_fast e regs rest a b (a - b) (hom.sub_int _ _ _ _ _ hop) _ rfl
 
 theorem binaryMulInt_spec (hop : e.oparg = 5 ∨ e.oparg = 18) :
     execOp e .BINARY_OP_MULTIPLY_INT s = execOp e .BINARY_OP s := by
   refine two_guard_spec intKind _ (BINARY_OP e) s hs fun regs l r rest hr hl => ?_
-  obtain ⟨a, rfl⟩ := notInt_false hl
-  obtain ⟨b, rfl⟩ := notInt_false hr
-  rw [generic_binop e regs rest _ _ (.int (a * b)) (hom.mul_int _ _ _ _ _ hop)]
-  exact fast_stk21 _ regs rest _ _ _ rfl
+  obtain ⟨a, rfl, _⟩ := notCompactInt_false hl
+  obtain ⟨b, rfl, _⟩ := notCompactInt_false hr
+  exact compact_fast e regs rest a b (a * b) (hom.mul_int _ _ _ _ _ hop) _ rfl
 
 theorem binaryAddFloat_spec (hop : e.oparg = 0 ∨ e.oparg = 13) :
     execOp e .BINARY_OP_ADD_FLOAT s = execOp e .BINARY_OP s := by
@@ -234,7 +270,7 @@ theorem binaryAddFloat_spec (hop : e.oparg = 0 ∨ e.oparg = 13) :
   obtain ⟨a, rfl⟩ := notFloat_false hl
   obtain ⟨b, rfl⟩ := notFloat_false hr
   rw [generic_binop e regs rest _ _ (.float (fadd a b)) (hom.add_float _ _ _ _ _ hop)]
-  exact fast_stk21 _ regs rest _ _ _ rfl
+  exact Or.inr (fast_stk21 _ regs rest _ _ _ rfl)
 
 theorem binarySubFloat_spec (hop : e.oparg = 10 ∨ e.oparg = 23) :
     execOp e .BINARY_OP_SUBTRACT_FLOAT s = execOp e .BINARY_OP s := by
@@ -242,7 +278,7 @@ theorem binarySubFloat_spec (hop : e.oparg = 10 ∨ e.oparg = 23) :
   obtain ⟨a, rfl⟩ := notFloat_false hl
   obtain ⟨b, rfl⟩ := notFloat_false hr
   rw [generic_binop e regs rest _ _ (.float (fsub a b)) (hom.sub_float _ _ _ _ _ hop)]
-  exact fast_stk21 _ regs rest _ _ _ rfl
+  exact Or.inr (fast_stk21 _ regs rest _ _ _ rfl)
 
 theorem binaryMulFloat_spec (hop : e.oparg = 5 ∨ e.oparg = 18) :
     execOp e .BINARY_OP_MULTIPLY_FLOAT s = execOp e .BINARY_OP s := by
@@ -250,7 +286,7 @@ theorem binaryMulFloat_spec (hop : e.oparg = 5 ∨ e.oparg = 18) :
   obtain ⟨a, rfl⟩ := notFloat_false hl
   obtain ⟨b, rfl⟩ := notFloat_false hr
   rw [generic_binop e regs rest _ _ (.float (fmul a b)) (hom.mul_float _ _ _ _ _ hop)]
-  exact fast_stk21 _ regs rest _ _ _ rfl
+  exact Or.inr (fast_stk21 _ regs rest _ _ _ rfl)
 
 theorem binaryAddUnicode_spec (hop : e.oparg = 0 ∨ e.oparg = 13) :
     execOp e .BINARY_OP_ADD_UNICODE s = execOp e .BINARY_OP s := by
@@ -258,7 +294,7 @@ theorem binaryAddUnicode_spec (hop : e.oparg = 0 ∨ e.oparg = 13) :
   obtain ⟨a, rfl⟩ := notStr_false hl
   obtain ⟨b, rfl⟩ := notStr_false hr
   rw [generic_binop e regs rest _ _ (.str (a ++ b)) (hom.add_str _ _ _ _ _ hop)]
-  exact fast_stk21 _ regs rest _ _ _ rfl
+  exact Or.inr (fast_stk21 _ regs rest _ _ _ rfl)
 
 end Int
 

@@ -124,30 +124,33 @@ theorem excInfoNests_proven : ExcInfoNests := by
       BM.lift, RM.lift, getExcInfoTop, setExcInfoTop, pure, EStateM.pure, monadLift, liftM,
       MonadLift.monadLift, ht, hn]
 
-/-- `FOR_ITER` on an exhausted iterator jumps over `END_FOR` with only the iterator
-on the stack, which is the `(iter -- iter, next)` signature with the `END_FOR` that
-would have popped `next` already applied: the `POP_ITER` at the target is correct. -/
+/-- `FOR_ITER` on an exhausted iterator jumps over `END_FOR` with `iter` and `index_or_null`
+left on the stack, which is the `(iter, null_or_index -- iter, null_or_index, next)` signature
+with the `END_FOR` that would have popped `next` already applied: the `POP_ITER` at the target
+takes the two slots. This holds for both forms of the slot, the tagged index and `NULL`. -/
 def ForIterExhausted : Prop :=
-  ∀ (e : Env) (regs : Regs) (it : Val) (rest : List Val),
-    iterStep e it regs.rt = .ok none regs.rt →
-    FOR_ITER e ⟨regs, it :: rest⟩ =
-      .error .dispatch ⟨{ regs with next := (regs.next + ((e.oparg : Int) + 1)).toNat }, it :: rest⟩
+  ∀ (e : Env) (regs : Regs) (it index : Val) (rest : List Val),
+    virtualNext e it index regs.rt = .ok none regs.rt →
+    FOR_ITER e ⟨regs, index :: it :: rest⟩ =
+      .error .dispatch
+        ⟨{ regs with next := (regs.next + ((e.oparg : Int) + 1)).toNat }, index :: it :: rest⟩
 
 theorem forIterExhausted_proven : ForIterExhausted := by
-  intro e regs it rest h
+  intro e regs it index rest h
   simp [FOR_ITER, _SPECIALIZE_FOR_ITER, _FOR_ITER, peekN, bind, EStateM.bind, BM.lift, RM.lift, h,
     jumpBy, pure, EStateM.pure, throw, throwThe, MonadExcept.throw, EStateM.throw,
     MonadExceptOf.throw, monadLift, liftM, MonadLift.monadLift]
 
-/-- `FOR_ITER` with a next item pushes it above the iterator. -/
+/-- `FOR_ITER` with a next item writes the new `index_or_null` back to its slot and pushes
+the item above it. -/
 def ForIterNext : Prop :=
-  ∀ (e : Env) (regs : Regs) (it v : Val) (rest : List Val),
-    iterStep e it regs.rt = .ok (some v) regs.rt →
-    FOR_ITER e ⟨regs, it :: rest⟩ = .ok () ⟨regs, v :: it :: rest⟩
+  ∀ (e : Env) (regs : Regs) (it index index' v : Val) (rest : List Val),
+    virtualNext e it index regs.rt = .ok (some (v, index')) regs.rt →
+    FOR_ITER e ⟨regs, index :: it :: rest⟩ = .ok () ⟨regs, v :: index' :: it :: rest⟩
 
 theorem forIterNext_proven : ForIterNext := by
-  intro e regs it v rest h
-  simp [FOR_ITER, _SPECIALIZE_FOR_ITER, _FOR_ITER, peekN, pushAll, bind, EStateM.bind, BM.lift,
+  intro e regs it index index' v rest h
+  simp [FOR_ITER, _SPECIALIZE_FOR_ITER, _FOR_ITER, peekN, popN, pushAll, bind, EStateM.bind, BM.lift,
     RM.lift, h, pure, EStateM.pure, monadLift, liftM, MonadLift.monadLift]
 
 /-- `YIELD_VALUE` suspends: the generator records `FRAME_SUSPENDED + oparg`, the frame
@@ -163,7 +166,7 @@ def YieldSuspends : Prop :=
       s'.stack = v :: caller.stack ∧ s'.regs.next = caller.instrPtr + 2 ∧
       s'.regs.rt.excInfo = chain ∧ s'.regs.frame = caller ∧
       s'.regs.rt.heap[a]? = some (.gen { g with
-        frameState := -2 + (e.oparg : Int), excValue := ev,
+        frameState := 1 + (e.oparg : Int), excValue := ev,
         frame := { regs.frame with instrPtr := regs.frame.instrPtr + 1, stack := rest } })
 
 end PyLean.Bytecode

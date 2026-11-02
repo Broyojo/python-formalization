@@ -2,7 +2,7 @@ import PyLean.Core
 import PyLean.Bytecode.Opcode
 
 /-!
-State of the abstract machine for `Python/bytecodes.c` (CPython 3.14.7).
+State of the abstract machine for `Python/bytecodes.c` (CPython 3.15.2).
 
 Three nested state monads keep the layers honest **by type**:
 
@@ -43,7 +43,8 @@ inductive Val where
   | str (s : String)
   /-- An exact `bytes`. -/
   | bytes (b : List UInt8)
-  /-- `PyStackRef_TagInt`: not an object, only `lasti` slots hold one. -/
+  /-- `PyStackRef_TagInt`: not an object. `lasti` slots hold one, and so does the
+  `index_or_null` slot of a virtual iterator (`Python/ceval.c:1136`). -/
   | tagged (n : Nat)
   /-- A builtin type object, by `tp_name`. -/
   | cls (name : String)
@@ -138,11 +139,14 @@ inductive GenKind where
   | gen | coro | asyncGen
   deriving DecidableEq, Inhabited, Repr
 
-/-- `PyGenObject`. `gi_frame_state` as the enum values of `pycore_frame.h`. -/
+/-- `PyGenObject`. `gi_frame_state` as the enum values of `pycore_frame.h:47-54`:
+`FRAME_CREATED` 0, `FRAME_SUSPENDED` 1, `FRAME_SUSPENDED_YIELD_FROM` 2,
+`FRAME_SUSPENDED_YIELD_FROM_LOCKED` 3 (free-threaded only), `FRAME_EXECUTING` 4,
+`FRAME_CLEARED` 5. -/
 structure GenObj where
   kind : GenKind := .gen
   frame : Frame := {}
-  frameState : Int := -3
+  frameState : Int := 0
   /-- `gi_exc_state.exc_value`. -/
   excValue : Val := .null
   name : String := ""

@@ -13,11 +13,10 @@ namespace PyLean.Bytecode.GenObj
 section Basic
 variable {V X : Type}
 
-theorem finished_iff (s : FrameState) : s.finished = true ↔ s = .completed ∨ s = .cleared := by
+theorem finished_iff (s : FrameState) : s.finished = true ↔ s = .cleared := by
   cases s <;> decide
 
 @[simp] theorem finished_cleared : FrameState.cleared.finished = true := by decide
-@[simp] theorem finished_completed : FrameState.completed.finished = true := by decide
 @[simp] theorem finished_created : FrameState.created.finished = false := by decide
 @[simp] theorem finished_suspended : FrameState.suspended.finished = false := by decide
 @[simp] theorem finished_yf : FrameState.suspendedYieldFrom.finished = false := by decide
@@ -41,6 +40,26 @@ theorem finished_iff (s : FrameState) : s.finished = true ↔ s = .completed ∨
 theorem get_setState_ne (w : World V X) {r q : Ref} (s : FrameState) (h : q ≠ r) :
     (w.setState r s).get q = w.get q := by
   simp [World.setState, h]
+
+/-- Writing back the state a generator already has changes nothing. -/
+theorem setState_self (w : World V X) (r : Ref) : w.setState r (w.get r).state = w := by
+  cases w with
+  | mk gens asends athrows nu od cs fi fh ext =>
+    simp only [World.setState, World.set, World.get, World.mk.injEq, true_and, and_true]
+    funext q
+    by_cases h : q = r
+    · subst h; simp
+    · simp [h]
+
+/-- The second of two writes of a state wins. -/
+theorem setState_setState (w : World V X) (r : Ref) (s t : FrameState) :
+    (w.setState r s).setState r t = w.setState r t := by
+  simp only [World.setState, World.set, World.get]
+  congr 1
+  funext q
+  by_cases h : q = r
+  · subst h; simp
+  · simp [h]
 
 @[simp] theorem noUnwind_setState (w : World V X) (r : Ref) (s : FrameState) :
     (w.setState r s).noUnwindTools = w.noUnwindTools := rfl
@@ -97,36 +116,34 @@ theorem state_setState_any (w : World V X) (r q : Ref) (s : FrameState) :
 @[simp] theorem setRunning_setAthrow_get (w : World V X) (a r q : Ref) (s : AwaitableState) (b : Bool) :
     (((w.setRunning r b).setAthrowState a s).get q) = (w.setRunning r b).get q := rfl
 
-/-- `gen_send_ex2` rejects the call before touching the frame: :199, :212, :223. -/
+/-- `gen_send_ex` rejects the call before touching the frame: :335, :349, :353. -/
 def SendRejected (g : GenObj V) (arg : Option (Obj V)) : Prop :=
   (g.state = .created ∧ isNonNull arg = true) ∨ g.state = .executing ∨ g.state.finished = true
 
-theorem genSendEx2_executing (h : Hooks V X) (w : World V X) (r : Ref) (arg exc err closing)
+theorem genSendEx_executing (h : Hooks V X) (w : World V X) (r : Ref) (arg)
     (hs : (w.get r).state = .executing) :
-    genSendEx2 h w r arg exc err closing =
+    genSendEx h w r arg =
       (w, .err (some (Exc.valueError (alreadyExecutingMsg (w.get r).kind)))) := by
-  simp [genSendEx2, hs]
+  simp [genSendEx, hs]
 
-theorem genSendEx2_finished (h : Hooks V X) (w : World V X) (r : Ref) (arg exc err closing)
+theorem genSendEx_finished (h : Hooks V X) (w : World V X) (r : Ref) (arg)
     (hs : (w.get r).state.finished = true) (hnc : ¬ ((w.get r).state = .created ∧ isNonNull arg = true)) :
-    genSendEx2 h w r arg exc err closing =
-      if (w.get r).kind = .coro ∧ closing = false then
+    genSendEx h w r arg =
+      if (w.get r).kind = .coro then
         (w, .err (some (Exc.runtimeError "cannot reuse already awaited coroutine")))
-      else if arg.isSome = true ∧ exc = false then (w, .ret .none)
-      else (w, .err err) := by
+      else if arg.isSome = true then (w, .ret .none)
+      else (w, .err none) := by
   have h2 : (w.get r).state ≠ .executing := by
     intro e; rw [e] at hs; simp at hs
-  simp only [genSendEx2]
+  simp only [genSendEx]
   rw [if_neg hnc, if_neg h2, if_pos hs]
 
 /-- Reaching the frame. -/
-theorem genSendEx2_live (h : Hooks V X) (w : World V X) (r : Ref) (arg exc err closing)
+theorem genSendEx_live (h : Hooks V X) (w : World V X) (r : Ref) (arg)
     (h1 : ¬ ((w.get r).state = .created ∧ isNonNull arg = true))
     (h2 : (w.get r).state ≠ .executing) (h3 : (w.get r).state.finished = false) :
-    genSendEx2 h w r arg exc err closing =
-      let res := h.resume (w.setState r .executing) r (arg.getD .none) (if exc then err else none)
-      finishResume res.1 r (w.get r).kind arg res.2 := by
-  simp only [genSendEx2]
+    genSendEx h w r arg = genSendEx2 h (w.setState r .executing) r arg none := by
+  simp only [genSendEx]
   rw [if_neg h1, if_neg h2, if_neg (by simp [h3])]
 
 theorem finishResume_state (w : World V X) (r : Ref) (k : GenKind) (arg : Option (Obj V))
@@ -142,43 +159,39 @@ theorem finishResume_state (w : World V X) (r : Ref) (k : GenKind) (arg : Option
 
 end Basic
 
-/-! ## `gen_send_ex2` -/
+/-! ## `gen_send_ex` -/
 
-/-- A call `gen_send_ex2` rejects (non-None to a just-started generator, already
+/-- A call `gen_send_ex` rejects (non-None to a just-started generator, already
 executing, finished) changes nothing and does not depend on the frame evaluator at
 all, so a finished or running frame is never resumed and every state check comes
 before any effect. -/
 def GenSendRejectedNoEffect : Prop :=
-  ∀ (V X : Type) (h h' : Hooks V X) (w : World V X) (r : Ref) (arg : Option (Obj V))
-    (exc : Bool) (err : Option (Exc V)) (closing : Bool),
+  ∀ (V X : Type) (h h' : Hooks V X) (w : World V X) (r : Ref) (arg : Option (Obj V)),
     SendRejected (w.get r) arg →
-    (genSendEx2 h w r arg exc err closing).1 = w ∧
-      genSendEx2 h' w r arg exc err closing = genSendEx2 h w r arg exc err closing
+    (genSendEx h w r arg).1 = w ∧ genSendEx h' w r arg = genSendEx h w r arg
 
 theorem genSendRejectedNoEffect_proven : GenSendRejectedNoEffect := by
-  intro V X h h' w r arg exc err closing hr
+  intro V X h h' w r arg hr
   rcases hr with ⟨h1, h2⟩ | h1 | h1
-  · simp [genSendEx2, h1, h2]
-  · simp [genSendEx2, h1]
+  · simp [genSendEx, h1, h2]
+  · simp [genSendEx, h1]
   · have hnc : ¬ ((w.get r).state = .created ∧ isNonNull arg = true) := by
       rintro ⟨c, -⟩; rw [c] at h1; simp at h1
-    rw [genSendEx2_finished h w r arg exc err closing h1 hnc,
-      genSendEx2_finished h' w r arg exc err closing h1 hnc]
+    rw [genSendEx_finished h w r arg h1 hnc, genSendEx_finished h' w r arg h1 hnc]
     split
     · exact ⟨rfl, rfl⟩
     · split <;> exact ⟨rfl, rfl⟩
 
-/-- `gen_send_ex2` raises `ValueError` with the type's "already executing" message
+/-- `gen_send_ex` raises `ValueError` with the type's "already executing" message
 whenever `gi_frame_state == FRAME_EXECUTING`, for all arguments. -/
 def GenAlreadyExecuting : Prop :=
-  ∀ (V X : Type) (h : Hooks V X) (w : World V X) (r : Ref) (arg : Option (Obj V))
-    (exc : Bool) (err : Option (Exc V)) (closing : Bool),
+  ∀ (V X : Type) (h : Hooks V X) (w : World V X) (r : Ref) (arg : Option (Obj V)),
     (w.get r).state = .executing →
-    genSendEx2 h w r arg exc err closing =
+    genSendEx h w r arg =
       (w, .err (some (Exc.valueError (alreadyExecutingMsg (w.get r).kind))))
 
 theorem genAlreadyExecuting_proven : GenAlreadyExecuting :=
-  fun _ _ h w r arg exc err closing hs => genSendEx2_executing h w r arg exc err closing hs
+  fun _ _ h w r arg hs => genSendEx_executing h w r arg hs
 
 /-- A resume that returns `bad` unless the frame is `FRAME_EXECUTING`. -/
 def guardResume {V X : Type} (h : Hooks V X) (bad : World V X × ResumeOutcome V) : Hooks V X :=
@@ -187,84 +200,19 @@ def guardResume {V X : Type} (h : Hooks V X) (bad : World V X × ResumeOutcome V
 section Guard
 variable {V X : Type}
 
-theorem genSendEx2_guard (h : Hooks V X) (bad) (w : World V X) (r arg exc err closing) :
-    genSendEx2 (guardResume h bad) w r arg exc err closing = genSendEx2 h w r arg exc err closing := by
-  simp [genSendEx2, guardResume]
+theorem genSendEx_guard (h : Hooks V X) (bad) (w : World V X) (r arg) :
+    genSendEx (guardResume h bad) w r arg = genSendEx h w r arg := by
+  simp [genSendEx, genSendEx2, guardResume]
 
-theorem genSendEx_guard (h : Hooks V X) (bad) (w : World V X) (r arg exc err closing) :
-    genSendEx (guardResume h bad) w r arg exc err closing = genSendEx h w r arg exc err closing := by
-  simp [genSendEx, genSendEx2_guard]
-
-theorem genCloseFinish_guard (h : Hooks V X) (bad) (w : World V X) (r p) :
-    genCloseFinish (guardResume h bad) w r p = genCloseFinish h w r p := by
-  simp [genCloseFinish, genSendEx_guard]
-
-theorem genCloseIter_guard (h : Hooks V X) (bad) (c) (w : World V X) (yf) :
-    genCloseIter (guardResume h bad) c w yf = genCloseIter h c w yf := rfl
-
-theorem genCloseBody_guard (h : Hooks V X) (bad) (c) (w : World V X) (r) :
-    genCloseBody (guardResume h bad) c w r = genCloseBody h c w r := by
-  have hd : closeDelegate (guardResume h bad) c w r = closeDelegate h c w r := rfl
-  simp only [genCloseBody, hd, genCloseFinish_guard]
-
-theorem genCloseF_guard (h : Hooks V X) (bad) (n : Nat) :
-    ∀ (w : World V X) (r), genCloseF (guardResume h bad) n w r = genCloseF h n w r := by
-  induction n with
-  | zero => intro w r; rfl
-  | succ n ih =>
-    intro w r
-    have hc : genCloseF (guardResume h bad) n = genCloseF h n := by
-      funext w r; exact ih w r
-    simp only [genCloseF, hc, genCloseBody_guard]
-
-theorem throwHere_guard (h : Hooks V X) (bad) (w : World V X) (r typ val tb) :
-    throwHere (guardResume h bad) w r typ val tb = throwHere h w r typ val tb := by
-  unfold throwHere
-  simp only [genSendEx_guard]
-  rfl
-
-theorem afterDelegate_guard (h : Hooks V X) (bad) (w : World V X) (r) (x : Ret V) :
-    afterDelegate (guardResume h bad) w r x = afterDelegate h w r x := by
-  cases x <;> simp [afterDelegate, genSendEx_guard]
-
-theorem genThrowF_guard (h : Hooks V X) (bad) (n : Nat) :
-    ∀ (w : World V X) (r c typ val tb),
-      genThrowF (guardResume h bad) n w r c typ val tb = genThrowF h n w r c typ val tb := by
-  induction n with
-  | zero => intro w r c typ val tb; rfl
-  | succ n ih =>
-    intro w r c typ val tb
-    have hc : genCloseF (guardResume h bad) n = genCloseF h n := by
-      funext w r; exact genCloseF_guard h bad n w r
-    have ht : ∀ sub, (fun w' => genThrowF (guardResume h bad) n w' sub c typ val tb)
-        = (fun w' => genThrowF h n w' sub c typ val tb) := by
-      intro sub; funext w'; exact ih w' sub c typ val tb
-    simp only [genThrowF, throwHere_guard, afterDelegate_guard, genSendEx_guard, hc, ht,
-      genCloseIter_guard]
-    rfl
+theorem genSendEx2_guard (h : Hooks V X) (bad) (w : World V X) (r arg e)
+    (hs : (w.get r).state = .executing) :
+    genSendEx2 (guardResume h bad) w r arg e = genSendEx2 h w r arg e := by
+  simp [genSendEx2, guardResume, hs]
 
 end Guard
 
-/-- Every resume, through `gen_send_ex2`, `gen_close` or `_gen_throw` at any
-delegation depth, sees the frame marked `FRAME_EXECUTING`: replacing `resume` by
-anything at all on other states changes nothing, so a `CLEARED` frame is never
-resumed. -/
-def GenResumeSeesExecuting : Prop :=
-  ∀ (V X : Type) (h : Hooks V X) (bad : World V X × ResumeOutcome V) (n : Nat) (w : World V X)
-    (r : Ref) (arg : Option (Obj V)) (exc : Bool) (err : Option (Exc V)) (closing : Bool)
-    (c : Bool) (typ : Obj V) (val tb : Option (Obj V)),
-    genSendEx2 (guardResume h bad) w r arg exc err closing = genSendEx2 h w r arg exc err closing ∧
-    genCloseF (guardResume h bad) n w r = genCloseF h n w r ∧
-    genThrowF (guardResume h bad) n w r c typ val tb = genThrowF h n w r c typ val tb
-
-theorem genResumeSeesExecuting_proven : GenResumeSeesExecuting :=
-  fun _ _ h bad n w r arg exc err closing c typ val tb =>
-    ⟨genSendEx2_guard h bad w r arg exc err closing, genCloseF_guard h bad n w r,
-     genThrowF_guard h bad n w r c typ val tb⟩
-
-/-- The legal `gi_frame_state` edges as seen between two model calls. `completed`
-is transient: `gen_close` sets it and `gen_clear_frame` replaces it at once. A
-generator that is really executing stays so through nested calls. -/
+/-- The legal `gi_frame_state` edges as seen between two model calls. A generator that
+is really executing stays so through nested calls. -/
 def legalEdge : FrameState → FrameState → Bool
   | .created, .created | .created, .suspended | .created, .suspendedYieldFrom
   | .created, .cleared => true
@@ -272,7 +220,6 @@ def legalEdge : FrameState → FrameState → Bool
   | .suspendedYieldFrom, .suspended | .suspendedYieldFrom, .suspendedYieldFrom
   | .suspendedYieldFrom, .cleared => true
   | .executing, .executing => true
-  | .completed, .completed | .completed, .cleared => true
   | .cleared, .cleared => true
   | _, _ => false
 
@@ -282,34 +229,34 @@ theorem legalEdge_trans {a b c : FrameState} (h1 : legalEdge a b = true)
     (h2 : legalEdge b c = true) : legalEdge a c = true := by
   cases a <;> cases b <;> cases c <;> first | rfl | (exact absurd h1 (by decide)) | (exact absurd h2 (by decide))
 
-/-- For every generator, argument, and every outcome of the frame, `gen_send_ex2`
+/-- For every generator, argument, and every outcome of the frame, `gen_send_ex`
 moves `gi_frame_state` along a legal edge. -/
 def GenSendStateEdges : Prop :=
-  ∀ (V X : Type) (h : Hooks V X) (w : World V X) (r : Ref) (arg : Option (Obj V))
-    (exc : Bool) (err : Option (Exc V)) (closing : Bool),
-    legalEdge (w.get r).state ((genSendEx2 h w r arg exc err closing).1.get r).state = true
+  ∀ (V X : Type) (h : Hooks V X) (w : World V X) (r : Ref) (arg : Option (Obj V)),
+    legalEdge (w.get r).state ((genSendEx h w r arg).1.get r).state = true
 
 theorem genSendStateEdges_proven : GenSendStateEdges := by
-  intro V X h w r arg exc err closing
+  intro V X h w r arg
   by_cases h1 : (w.get r).state = .created ∧ isNonNull arg = true
   · have : SendRejected (w.get r) arg := Or.inl h1
-    rw [(genSendRejectedNoEffect_proven V X h h w r arg exc err closing this).1]
+    rw [(genSendRejectedNoEffect_proven V X h h w r arg this).1]
     exact legalEdge_refl _
   by_cases h2 : (w.get r).state = .executing
   · have : SendRejected (w.get r) arg := Or.inr (Or.inl h2)
-    rw [(genSendRejectedNoEffect_proven V X h h w r arg exc err closing this).1]
+    rw [(genSendRejectedNoEffect_proven V X h h w r arg this).1]
     exact legalEdge_refl _
   cases h3 : (w.get r).state.finished with
   | true =>
     have : SendRejected (w.get r) arg := Or.inr (Or.inr h3)
-    rw [(genSendRejectedNoEffect_proven V X h h w r arg exc err closing this).1]
+    rw [(genSendRejectedNoEffect_proven V X h h w r arg this).1]
     exact legalEdge_refl _
   | false =>
-    rw [genSendEx2_live h w r arg exc err closing h1 h2 h3]
+    rw [genSendEx_live h w r arg h1 h2 h3]
+    simp only [genSendEx2]
     have hst := finishResume_state
-      (h.resume (w.setState r .executing) r (arg.getD .none) (if exc then err else none)).1 r
-      (w.get r).kind arg
-      (h.resume (w.setState r .executing) r (arg.getD .none) (if exc then err else none)).2
+      (h.resume (w.setState r .executing) r (arg.getD .none) none).1 r
+      ((w.setState r .executing).get r).kind arg
+      (h.resume (w.setState r .executing) r (arg.getD .none) none).2
     generalize hs : (w.get r).state = s at *
     generalize ((finishResume _ r _ arg _).1.get r).state = s' at hst ⊢
     cases s <;> simp_all <;> cases s' <;> simp_all [legalEdge, FrameState.isSuspended]
@@ -324,24 +271,22 @@ def GenIternextVsSendNone : Prop :=
 
 theorem genIternextVsSendNone_proven : GenIternextVsSendNone := by
   intro V X h w r hk
-  simp only [nextCall, genIternext, genSend, genSendEx]
+  simp only [nextCall, genIternext, genSend]
   by_cases h2 : (w.get r).state = .executing
-  · simp [genSendEx2_executing, h2, iterResultToRet, sendResultToRet, nullToStop]
+  · simp [genSendEx_executing, h2, iterResultToRet, sendResultToRet, nullToStop]
+  have hnc1 : ¬ ((w.get r).state = .created ∧ isNonNull (none : Option (Obj V)) = true) := by
+    simp [isNonNull]
+  have hnc2 : ¬ ((w.get r).state = .created ∧ isNonNull (some Obj.none : Option (Obj V)) = true) := by
+    simp [isNonNull]
   cases h3 : (w.get r).state.finished with
   | true =>
-    have hnc1 : ¬ ((w.get r).state = .created ∧ isNonNull (none : Option (Obj V)) = true) := by simp [isNonNull]
-    have hnc2 : ¬ ((w.get r).state = .created ∧ isNonNull (some Obj.none : Option (Obj V)) = true) := by simp [isNonNull]
-    rw [genSendEx2_finished h w r none false none false h3 hnc1,
-        genSendEx2_finished h w r (some .none) false none false h3 hnc2]
+    rw [genSendEx_finished h w r none h3 hnc1, genSendEx_finished h w r (some .none) h3 hnc2]
     by_cases hc : (w.get r).kind = .coro
     · simp [hc, iterResultToRet, sendResultToRet, nullToStop]
     · simp [hc, iterResultToRet, sendResultToRet, nullToStop, Obj.isNone, hk]
   | false =>
-    have hnc1 : ¬ ((w.get r).state = .created ∧ isNonNull (none : Option (Obj V)) = true) := by simp [isNonNull]
-    have hnc2 : ¬ ((w.get r).state = .created ∧ isNonNull (some Obj.none : Option (Obj V)) = true) := by simp [isNonNull]
-    rw [genSendEx2_live h w r none false none false hnc1 h2 h3,
-        genSendEx2_live h w r (some .none) false none false hnc2 h2 h3]
-    simp only [Option.getD, Bool.false_eq_true, if_false]
+    rw [genSendEx_live h w r none hnc1 h2 h3, genSendEx_live h w r (some .none) hnc2 h2 h3]
+    simp only [genSendEx2, Option.getD]
     generalize h.resume (w.setState r .executing) r Obj.none none = res
     obtain ⟨w', o⟩ := res
     cases o with
@@ -350,7 +295,7 @@ theorem genIternextVsSendNone_proven : GenIternextVsSendNone := by
     | returned v =>
       cases v <;> simp [finishResume, iterResultToRet, sendResultToRet, nullToStop, Obj.isNone, hk]
 
-/-- `gen.send(arg)` is `PyGen_am_send` plus the conversion at :301-313: a returned
+/-- `gen.send(arg)` is `PyGen_am_send` plus `gen_set_stop_iteration`, :384-399: a returned
 value `v` becomes `StopIteration` carrying exactly `v`, on generators and coroutines. -/
 def GenSendVsAmSend : Prop :=
   ∀ (V X : Type) (h : Hooks V X) (w : World V X) (r : Ref) (arg : Obj V),
@@ -366,8 +311,8 @@ def GenSendVsAmSend : Prop :=
 
 theorem genSendVsAmSend_proven : GenSendVsAmSend := by
   intro V X h w r arg hk
-  simp only [genSend, genSendEx, pyGenAmSend, true_and]
-  generalize (genSendEx2 h w r (some arg) false none false).2 = s
+  simp only [genSend, pyGenAmSend, true_and]
+  generalize (genSendEx h w r (some arg)).2 = s
   cases s with
   | next v => rfl
   | err e => rfl
@@ -394,67 +339,25 @@ theorem stopIterationValueRoundTrip_proven : StopIterationValueRoundTrip := by
 section Close
 variable {V X : Type}
 
-/-- What the throw at :428 can do: yield, finish the generator, or fail on a running
-frame with a plain `ValueError`. -/
-theorem genSendEx_close_cases (h : Hooks V X) (w : World V X) (r : Ref) (p : Option (Exc V)) :
-    let s := genSendEx h w r (some .none) true p true
-    (∃ v, s.2 = .ok v) ∨ (s.1.get r).state.finished = true ∨
-      s.2 = .err (some (Exc.valueError (alreadyExecutingMsg (w.get r).kind))) := by
-  intro s
-  by_cases h2 : (w.get r).state = .executing
-  · right; right
-    simp [s, genSendEx, genSendEx2_executing, h2, sendResultToRet]
-  have hnc : ¬ ((w.get r).state = .created ∧ isNonNull (some Obj.none : Option (Obj V)) = true) := by
-    simp [isNonNull]
-  cases h3 : (w.get r).state.finished with
-  | true =>
-    right; left
-    simp only [s, genSendEx]
-    rw [genSendEx2_finished h w r (some .none) true p true h3 hnc]
-    simp [h3]
-  | false =>
-    simp only [s, genSendEx]
-    rw [genSendEx2_live h w r (some .none) true p true hnc h2 h3]
-    simp only
-    generalize h.resume (w.setState r .executing) r _ _ = res
-    obtain ⟨w', o⟩ := res
-    cases o with
-    | yielded oparg v d top =>
-      left; exact ⟨v, by simp [finishResume, sendResultToRet]⟩
-    | raised e => right; left; simp [finishResume, clearGenFrame]
-    | returned v =>
-      right; left
-      simp [finishResume, clearGenFrame, Option.isNone]
-
+/-- What the throw at :518 leaves: a yield is not `.ok`, and everything else cleared the
+frame. -/
 theorem genCloseFinish_ok (h : Hooks V X) (w : World V X) (r : Ref) (p : Option (Exc V)) (v : Obj V)
     (hok : (genCloseFinish h w r p).2 = .ok v) :
     ((genCloseFinish h w r p).1.get r).state.finished = true := by
-  have hc := genSendEx_close_cases h w r p
-  simp only at hc
   revert hok
-  simp only [genCloseFinish]
-  generalize hs : genSendEx h w r (some .none) true p true = s at hc
-  obtain ⟨w', res⟩ := s
-  rcases hc with ⟨x, hx⟩ | hf | he
-  · simp at hx; subst hx; simp
-  · simp at hf
-    cases res with
-    | ok x => simp
-    | err e =>
-      cases e with
-      | none => simp [hf]
-      | some x =>
-        simp only
-        split <;> simp [hf]
-  · simp at he; subst he
-    simp [Exc.valueError, Exc.isGeneratorExit, fetchStopIterationValue, Exc.isStopIteration]
+  simp only [genCloseFinish, genSendEx2]
+  generalize h.resume w r _ p = res
+  obtain ⟨w', o⟩ := res
+  cases o with
+  | yielded oparg x d top => simp [finishResume]
+  | returned x => simp [finishResume, clearGenFrame, Option.isNone]
+  | raised e =>
+    simp only [finishResume]
+    split <;> simp [clearGenFrame]
 
 theorem genClearFrame_state (w : World V X) (r : Ref) :
-    ((genClearFrame w r).get r).state = .cleared := by
-  unfold genClearFrame
-  split
-  · assumption
-  · simp
+    ((genClearFrame w r).get r).state = (w.get r).state := by
+  simp [genClearFrame]
 
 end Close
 
@@ -478,32 +381,39 @@ theorem genCloseIdempotent_proven : GenCloseIdempotent := by
       · have := congrArg Prod.fst hc
         simp only at this
         rw [← this]; assumption
-      · simp only [genCloseBody] at hc
-        split at hc
-        · have := congrArg Prod.fst hc
-          simp only at this
-          rw [← this, genClearFrame_state]; simp
-        · have h1 := congrArg Prod.fst hc
-          have h2 := congrArg Prod.snd hc
-          simp only at h1 h2
-          rw [← h1]
-          exact genCloseFinish_ok h _ r _ v h2
+      · split at hc
+        · simp at hc
+        · simp only [genCloseBody] at hc
+          split at hc
+          · have := congrArg Prod.fst hc
+            simp only at this
+            rw [← this, genClearFrame_state]; simp
+          · have h1 := congrArg Prod.fst hc
+            have h2 := congrArg Prod.snd hc
+            simp only at h1 h2
+            rw [← h1]
+            exact genCloseFinish_ok h _ r _ v h2
   refine ⟨hf, ?_⟩
   have hnc : (w'.get r).state ≠ .created := by
     intro e; rw [e] at hf; simp at hf
   simp [genCloseF, hnc, hf]
 
 /-- `gen_close` on a generator that is running raises the "already executing"
-`ValueError` and changes nothing. -/
+`ValueError` and changes nothing. This was false on 3.14.7, where the check sat in
+`gen_send_ex2`, behind the fast path that cleared the frame: `bytecode-gen-close-clears-running-frame`.
+3.15 moved it to the top of `gen_close`, :483-486. -/
 def GenCloseRejectsExecuting : Prop :=
   ∀ (V X : Type) (h : Hooks V X) (n : Nat) (w : World V X) (r : Ref),
     (w.get r).state = .executing →
     genCloseF h (n + 1) w r =
       (w, .err (some (Exc.valueError (alreadyExecutingMsg (w.get r).kind))))
 
-/-- The same with the instruction pointer anywhere but at a depth-1 `RESUME`: the
-case left over by `GenCloseRejectsExecuting`'s refutation, which is what main's
-reordered `gen_close` makes unconditional. -/
+theorem genCloseRejectsExecuting_proven : GenCloseRejectsExecuting := by
+  intro V X h n w r hs
+  simp [genCloseF, hs]
+
+/-- The same with the instruction pointer anywhere but at a depth-1 `RESUME`, the case
+that was all there was on 3.14.7. On 3.15 it follows from the unconditional statement. -/
 def GenCloseRejectsExecutingPastResume : Prop :=
   ∀ (V X : Type) (h : Hooks V X) (n : Nat) (w : World V X) (r : Ref),
     (w.get r).state = .executing →
@@ -511,19 +421,8 @@ def GenCloseRejectsExecutingPastResume : Prop :=
     genCloseF h (n + 1) w r =
       (w, .err (some (Exc.valueError (alreadyExecutingMsg (w.get r).kind))))
 
-theorem genCloseRejectsExecutingPastResume_proven : GenCloseRejectsExecutingPastResume := by
-  intro V X h n w r hs hi
-  simp only [genCloseF, genCloseBody, closeDelegate, genYf, hs]
-  simp [hi, genCloseFinish, genSendEx, genSendEx2_executing, hs, sendResultToRet,
-    Exc.valueError, Exc.isGeneratorExit, fetchStopIterationValue, Exc.isStopIteration]
-
-/-- The window: a frame just resumed, still at a depth-1 `RESUME`. Reached by
-`gen_send_ex2`, which hands `resume` the frame in this state. -/
-def executingAtResume : World Unit Unit :=
-  { gens := fun _ => { kind := .gen, state := .executing, instr := .resume true }
-    asends := fun _ => {}
-    athrows := fun _ => {}
-    ext := () }
+theorem genCloseRejectsExecutingPastResume_proven : GenCloseRejectsExecutingPastResume :=
+  fun V X h n w r hs _ => genCloseRejectsExecuting_proven V X h n w r hs
 
 def noopHooks : Hooks Unit Unit where
   resume w _ _ e := (w, .raised (e.getD Exc.fuel))
@@ -543,20 +442,13 @@ def noopHooks : Hooks Unit Unit where
   isIter _ := false
   amAwait _ _ := none
 
-theorem genCloseRejectsExecuting_refuted : ¬ GenCloseRejectsExecuting := by
-  intro hp
-  have := hp Unit Unit noopHooks 0 executingAtResume 0 rfl
-  have h2 := congrArg Prod.snd this
-  simp [genCloseF, genCloseBody, closeDelegate, genYf, executingAtResume, World.get,
-    FrameState.finished, FrameState.toInt, InstrPtr.isResumeDepth1, genClearFrame, World.setState,
-    World.set] at h2
-
-/-- `gen_close`'s fast path (:410-422) agrees with the slow path on a frame the slow
+/-- `gen_close`'s fast path (:499-512) agrees with the slow path on a frame the slow
 path would simply unwind: if throwing `GeneratorExit` at the suspended depth-1
 `RESUME` makes the frame raise it unchanged, then the world with unwinding tools
 (`_PyEval_NoToolsForUnwind` false) takes the slow path to the same result and final
-state as the fast path. The hypothesis is what a depth-1 frame does: no handler but
-the outermost, whose `stopiteration_error` passes `GeneratorExit` through. -/
+state as the fast path, and the fast path drops the frame's stack (`gen_clear_frame`).
+The hypothesis is what a depth-1 frame does: no handler but the outermost, whose
+`stopiteration_error` passes `GeneratorExit` through. -/
 def GenCloseFastSlowAgree : Prop :=
   ∀ (V X : Type) (h : Hooks V X) (n : Nat) (w : World V X) (r : Ref),
     (w.get r).state = .suspended → (w.get r).instr = .resume true → w.noUnwindTools = false →
@@ -565,32 +457,33 @@ def GenCloseFastSlowAgree : Prop :=
     let fast := genCloseF h (n + 1) { w with noUnwindTools := true } r
     let slow := genCloseF h (n + 1) w r
     fast.2 = .ok .none ∧ slow.2 = .ok .none ∧
-      (fast.1.get r).state = .cleared ∧ (slow.1.get r).state = .cleared
+      (fast.1.get r).state = .cleared ∧ (slow.1.get r).state = .cleared ∧
+      (fast.1.get r).stackTop = .none
 
 theorem genCloseFastSlowAgree_proven : GenCloseFastSlowAgree := by
   intro V X h n w r hs hi hu hr
   have g1 : ({ w with noUnwindTools := true } : World V X).get r = w.get r := rfl
-  have hnc : ¬ ((w.get r).state = .created ∧ isNonNull (some Obj.none : Option (Obj V)) = true) := by
-    simp [isNonNull]
-  have hslow : genSendEx2 h w r (some .none) true (some Exc.generatorExit) true =
+  have hfast : genCloseF h (n + 1) { w with noUnwindTools := true } r =
+      (genClearFrame ((({ w with noUnwindTools := true } : World V X).setState r .executing).setState r .cleared) r,
+       .ok .none) := by
+    simp [genCloseF, g1, hs, genCloseBody, closeDelegate, hi, InstrPtr.isResumeDepth1]
+  have hsl : genCloseF h (n + 1) w r =
+      genCloseFinish h (w.setState r .executing) r (some Exc.generatorExit) := by
+    simp [genCloseF, hs, genCloseBody, closeDelegate, hi, hu, closePending]
+  have hslow : genSendEx2 h (w.setState r .executing) r (some .none) (some Exc.generatorExit) =
       (clearGenFrame (h.resume (w.setState r .executing) r .none (some Exc.generatorExit)).1 r,
        .err (some Exc.generatorExit)) := by
-    rw [genSendEx2_live h w r (some .none) true (some Exc.generatorExit) true hnc
-      (by simp [hs]) (by simp [hs])]
     show finishResume _ r _ _ (h.resume (w.setState r .executing) r .none (some Exc.generatorExit)).2 = _
     rw [hr .none]
     rfl
-  have hfast : genCloseF h (n + 1) { w with noUnwindTools := true } r =
-      (genClearFrame (({ w with noUnwindTools := true } : World V X).setState r .completed) r, .ok .none) := by
-    simp [genCloseF, g1, hs, genCloseBody, closeDelegate, genYf, hi, InstrPtr.isResumeDepth1]
-  have hsl : genCloseF h (n + 1) w r = genCloseFinish h w r (some Exc.generatorExit) := by
-    simp [genCloseF, hs, genCloseBody, closeDelegate, genYf, hi, hu, closePending]
   dsimp only
   rw [hfast, hsl]
-  refine ⟨rfl, ?_, genClearFrame_state _ _, ?_⟩
-  · simp only [genCloseFinish, genSendEx, hslow]
-    simp [sendResultToRet, Exc.generatorExit, Exc.isGeneratorExit]
-  · simp only [genCloseFinish, genSendEx, hslow]
-    simp [sendResultToRet, clearGenFrame, Exc.generatorExit, Exc.isGeneratorExit]
+  refine ⟨rfl, ?_, ?_, ?_, ?_⟩
+  · simp only [genCloseFinish, hslow]
+    simp [Exc.generatorExit, Exc.isGeneratorExit]
+  · simp [genClearFrame_state]
+  · simp only [genCloseFinish, hslow]
+    simp [clearGenFrame, Exc.generatorExit, Exc.isGeneratorExit]
+  · simp [genClearFrame]
 
 end PyLean.Bytecode.GenObj

@@ -33,8 +33,10 @@ def asyncGenAsendNew (w : World V X) (a r : Ref) (sendval : Option (Obj V)) : Wo
   { w with asends := fun q => if q = a then { gen := r, sendval := sendval, state := .init }
                               else w.asends q }
 
-/-- `async_gen_athrow_new`, :2598-2621. -/
-def asyncGenAthrowNew (w : World V X) (a r : Ref) (args : Option (List (Obj V))) : World V X :=
+/-- `async_gen_athrow_new`, :2598-2621, past the `PyArg_UnpackTuple` that `asyncGenAthrow`
+does: `args` is what it unpacked. -/
+def asyncGenAthrowNew (w : World V X) (a r : Ref)
+    (args : Option (Obj V × Option (Obj V) × Option (Obj V))) : World V X :=
   { w with athrows := fun q => if q = a then { gen := r, args := args, state := .init }
                                else w.athrows q }
 
@@ -57,8 +59,9 @@ def asyncGenAclose (h : Hooks V X) (w : World V X) (r a : Ref) : World V X × CS
   | (w1, .fail e) => (w1, .fail e)
   | (w1, .ok) => (asyncGenAthrowNew w1 a r none, .ok)
 
-/-- `async_gen_athrow`, :1737-1753. The argument count is not checked here on 3.14:
-that happens at the first `send`, after the state has moved (@3.14.7:2169). -/
+/-- `async_gen_athrow`, :1737-1753, and `PyArg_UnpackTuple` at the top of
+`async_gen_athrow_new`, :2604-2606: since 3.15 a wrong argument count fails here, after the
+hooks ran and before any awaitable exists, not at the first `send`. -/
 def asyncGenAthrow (h : Hooks V X) (w : World V X) (r a : Ref) (args : List (Obj V)) :
     World V X × CStatus V :=
   let (w1, warned) : World V X × Option (Exc V) :=
@@ -70,7 +73,10 @@ def asyncGenAthrow (h : Hooks V X) (w : World V X) (r a : Ref) (args : List (Obj
   | none =>
     match asyncGenInitHooks h w1 r with
     | (w2, .fail e) => (w2, .fail e)
-    | (w2, .ok) => (asyncGenAthrowNew w2 a r (some args), .ok)
+    | (w2, .ok) =>
+      match checkPositional "athrow" args.length 1 3 with
+      | some e => (w2, .fail (some e))
+      | none => (asyncGenAthrowNew w2 a r (some (unpackThrowArgs args)), .ok)
 
 /-- `async_gen_unwrap_value`, :1911-1938. -/
 def asyncGenUnwrapValue (w : World V X) (r : Ref) : Ret V → World V X × Ret V
@@ -178,8 +184,8 @@ def athrowCheckError (w : World V X) (a gen : Ref) (acloseMode : Bool) (e : Opti
     (w1, .err (some Exc.stopIterationNone))
   else (w1, .err e)
 
-/-- @3.14.7:2124-2133 and @3.14.7:2249-2258. -/
-def athrowRunningMsg : Option (List (Obj V)) → String
+/-- :2323-2332 and :2439-2448. -/
+def athrowRunningMsg : Option (Obj V × Option (Obj V) × Option (Obj V)) → String
   | none => "aclose(): asynchronous generator is already running"
   | some _ => "athrow(): asynchronous generator is already running"
 
@@ -191,33 +197,27 @@ def acloseTail (w : World V X) (a gen : Ref) : Ret V → World V X × Ret V
   | .ok v => (w, .ok v)
   | .err e => athrowCheckError w a gen true e
 
-/-- @3.14.7:2151-2163: `aclose()` mode, first step. -/
+/-- :2350-2362: `aclose()` mode, first step. -/
 def athrowStartAclose (h : Hooks V X) (fuel : Nat) (w : World V X) (a gen : Ref) :
     World V X × Ret V :=
   let t := genThrowF h fuel (w.setClosed gen) gen false
     (.excClass .generatorExit "GeneratorExit") none none
   acloseTail t.1 a gen t.2
 
-/-- :2363-2373: `athrow()` mode, first step. On 3.14.7 the argument count is only
-checked here, after `agt_state` and `ag_running_async` were set at :2347-2348, and
-the failed check returns without undoing them. -/
+/-- :2363-2369: `athrow()` mode, first step. -/
 def athrowStartArgs (h : Hooks V X) (fuel : Nat) (w : World V X) (a gen : Ref)
-    (args : List (Obj V)) : World V X × Ret V :=
-  match checkPositional "athrow" args.length 1 3 with
-  | some e => (w, .err (some e))
-  | none =>
-    let tv := unpackThrowArgs args
-    let t := genThrowF h fuel w gen false tv.1 tv.2.1 tv.2.2
-    let u := asyncGenUnwrapValue t.1 gen t.2
-    match u.2 with
-    | .ok v => (u.1, .ok v)
-    | .err e => athrowCheckError u.1 a gen false e
+    (tv : Obj V × Option (Obj V) × Option (Obj V)) : World V X × Ret V :=
+  let t := genThrowF h fuel w gen false tv.1 tv.2.1 tv.2.2
+  let u := asyncGenUnwrapValue t.1 gen t.2
+  match u.2 with
+  | .ok v => (u.1, .ok v)
+  | .err e => athrowCheckError u.1 a gen false e
 
 /-- :2378-2395: later steps. In `athrow()` mode the result goes through
 `async_gen_unwrap_value` and is returned at once, so `agt_state` stays
 `AWAITABLE_STATE_ITER` even when the awaitable is finished. -/
-def athrowIter (h : Hooks V X) (w : World V X) (a gen : Ref) (args : Option (List (Obj V)))
-    (arg : Obj V) : World V X × Ret V :=
+def athrowIter (h : Hooks V X) (w : World V X) (a gen : Ref)
+    (args : Option (Obj V × Option (Obj V) × Option (Obj V))) (arg : Obj V) : World V X × Ret V :=
   let t := genSend h w gen (some arg)
   match args with
   | some _ => asyncGenUnwrapValue t.1 gen t.2
@@ -251,8 +251,9 @@ def asyncGenAthrowIternext (h : Hooks V X) (fuel : Nat) (w : World V X) (a : Ref
     World V X × Ret V :=
   asyncGenAthrowSend h fuel w a .none
 
-/-- @3.14.7:2267-2300. -/
-def athrowThrowFinish (w : World V X) (a gen : Ref) (args : Option (List (Obj V))) (res : Ret V) :
+/-- :2456-2490. -/
+def athrowThrowFinish (w : World V X) (a gen : Ref)
+    (args : Option (Obj V × Option (Obj V) × Option (Obj V))) (res : Ret V) :
     World V X × Ret V :=
   match args with
   | some _ =>

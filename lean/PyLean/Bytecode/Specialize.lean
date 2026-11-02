@@ -49,6 +49,15 @@ def simpleFunction (c : Code) : Bool :=
   c.flags &&& (coVarkeywords ||| coVarargs) == 0 && c.kwonlyargcount == 0 &&
     c.flags &&& coOptimized != 0
 
+/-- The class record of an instance, if the type is a Python class. -/
+def heapClass (v : Val) : RM (Option ClassObj) := do
+  match ← typeOf v with
+  | .ref a =>
+    match ← getObj a with
+    | .cls c => pure (some c)
+    | _ => pure none
+  | _ => pure none
+
 /-- `_Py_Specialize_BinaryOp`. -/
 def suggestBinaryOp (P : Program) (i : Instr) (next? : Option Instr) (f : Frame) :
     Tops → RM (Option Instr)
@@ -56,7 +65,8 @@ def suggestBinaryOp (P : Program) (i : Instr) (next? : Option Instr) (f : Frame)
     match i.arg with
     | 0 | 13 =>
       match l, r with
-      | .int _, .int _ => pure (specInstr i .BINARY_OP_ADD_INT)
+      | .int a, .int b =>
+        pure (if isCompact a && isCompact b then specInstr i .BINARY_OP_ADD_INT else none)
       | .float _, .float _ => pure (specInstr i .BINARY_OP_ADD_FLOAT)
       | .str _, .str _ =>
         match next? with
@@ -68,12 +78,14 @@ def suggestBinaryOp (P : Program) (i : Instr) (next? : Option Instr) (f : Frame)
       | _, _ => pure none
     | 10 | 23 =>
       match l, r with
-      | .int _, .int _ => pure (specInstr i .BINARY_OP_SUBTRACT_INT)
+      | .int a, .int b =>
+        pure (if isCompact a && isCompact b then specInstr i .BINARY_OP_SUBTRACT_INT else none)
       | .float _, .float _ => pure (specInstr i .BINARY_OP_SUBTRACT_FLOAT)
       | _, _ => pure none
     | 5 | 18 =>
       match l, r with
-      | .int _, .int _ => pure (specInstr i .BINARY_OP_MULTIPLY_INT)
+      | .int a, .int b =>
+        pure (if isCompact a && isCompact b then specInstr i .BINARY_OP_MULTIPLY_INT else none)
       | .float _, .float _ => pure (specInstr i .BINARY_OP_MULTIPLY_FLOAT)
       | _, _ => pure none
     | 7 | 20 => pure (specInstr i .BINARY_OP_EXTEND [.tagged 0])
@@ -81,17 +93,24 @@ def suggestBinaryOp (P : Program) (i : Instr) (next? : Option Instr) (f : Frame)
     | 12 | 25 => pure (specInstr i .BINARY_OP_EXTEND [.tagged 2])
     | 26 =>
       match l, r with
-      | .str _, .int _ => pure (specInstr i .BINARY_OP_SUBSCR_STR_INT)
+      | .str s, .int k =>
+        if isNonNegCompact k then
+          if s.toList.any (fun c => asciiLimit ≤ c.toNat) then
+            pure (specInstr i .BINARY_OP_SUBSCR_USTR_INT)
+          else pure (specInstr i .BINARY_OP_SUBSCR_STR_INT)
+        else pure none
       | _, _ =>
         if ← isDict l then pure (specInstr i .BINARY_OP_SUBSCR_DICT)
         else if ← isList l then
           match r with
-          | .int _ => pure (specInstr i .BINARY_OP_SUBSCR_LIST_INT)
+          | .int k =>
+            pure (if isNonNegCompact k then specInstr i .BINARY_OP_SUBSCR_LIST_INT else none)
           | _ =>
             if ← isSlice r then pure (specInstr i .BINARY_OP_SUBSCR_LIST_SLICE) else pure none
         else if ← isTuple l then
           match r with
-          | .int _ => pure (specInstr i .BINARY_OP_SUBSCR_TUPLE_INT)
+          | .int k =>
+            pure (if isNonNegCompact k then specInstr i .BINARY_OP_SUBSCR_TUPLE_INT else none)
           | _ => pure none
         else
           match l with
@@ -104,7 +123,8 @@ def suggestBinaryOp (P : Program) (i : Instr) (next? : Option Instr) (f : Frame)
                   let fo ← getFunc g
                   let co ← getCodeR P fo.code
                   if simpleFunction co && co.argcount == 2 then
-                    pure (specInstr i .BINARY_OP_SUBSCR_GETITEM [.tagged fo.version, g])
+                    let tv := ((← heapClass l).map (·.version)).getD 0
+                    pure (specInstr i .BINARY_OP_SUBSCR_GETITEM [.tagged fo.version, g, .tagged tv])
                   else pure none
                 else pure none
               | none => pure none
@@ -157,23 +177,46 @@ def suggestContains (i : Instr) : Tops → RM (Option Instr)
     else pure none
   | _ => pure none
 
-/-- `_Py_Specialize_ForIter`. -/
+/-- `_Py_Specialize_ForIter`, `Python/specialize.c:2710-2769`. -/
 def suggestForIter (i : Instr) : Tops → RM (Option Instr)
-  | .ref a :: _ => do
+  | .null :: .ref a :: _ => do
     match ← getObj a with
-    | .listIter .. => pure (specInstr i .FOR_ITER_LIST)
-    | .tupleIter .. => pure (specInstr i .FOR_ITER_TUPLE)
     | .rangeIter .. => pure (specInstr i .FOR_ITER_RANGE)
     | .gen g => pure (if g.kind == .gen then specInstr i .FOR_ITER_GEN else none)
     | _ => pure none
+  | .null :: _ => pure none
+  | _ :: it :: _ => do
+    if ← isList it then pure (specInstr i .FOR_ITER_LIST)
+    else if ← isTuple it then pure (specInstr i .FOR_ITER_TUPLE)
+    else pure (specInstr i .FOR_ITER_VIRTUAL)
   | _ => pure none
 
-/-- `_Py_Specialize_Send`. -/
+/-- `_Py_Specialize_Send`, `Python/specialize.c:2771-2800`. The third operand from the top is
+the receiver. -/
 def suggestSend (i : Instr) : Tops → RM (Option Instr)
-  | _ :: .ref a :: _ => do
-    match ← getObj a with
-    | .gen g => pure (if g.kind != .asyncGen then specInstr i .SEND_GEN else none)
+  | _ :: _ :: r :: _ => do
+    if ← hasIterItem r then return specInstr i .SEND_VIRTUAL
+    match r with
+    | .ref a =>
+      match ← getObj a with
+      | .gen g => pure (if g.kind != .asyncGen then specInstr i .SEND_GEN else none)
+      | _ => pure none
     | _ => pure none
+  | _ => pure none
+
+/-- `_Py_Specialize_GetIter`, `Python/specialize.c:2966-2982`. -/
+def suggestGetIter (i : Instr) : Tops → RM (Option Instr)
+  | v :: _ => do
+    if ← hasIterItem v then pure (specInstr i .GET_ITER_VIRTUAL)
+    else if ← isSelfIter v then pure (specInstr i .GET_ITER_SELF)
+    else pure none
+  | _ => pure none
+
+/-- `_Py_Specialize_CallFunctionEx`, `Python/specialize.c:2802-2822`. -/
+def suggestCallEx (i : Instr) : Tops → RM (Option Instr)
+  | _ :: _ :: _ :: f :: _ => do
+    if ← isFunction f then pure (specInstr i .CALL_EX_PY)
+    else pure (specInstr i .CALL_EX_NON_PY_GENERAL)
   | _ => pure none
 
 /-- `_Py_Specialize_UnpackSequence`. -/
@@ -212,15 +255,6 @@ def suggestLoadGlobal (i : Instr) (co : Code) (f : Frame) : RM (Option Instr) :=
     | some ix =>
       pure (specInstr i .LOAD_GLOBAL_BUILTIN [.tagged gd.version, .tagged bd.version, .tagged ix])
     | none => pure none
-
-/-- The class record of an instance, if the type is a Python class. -/
-def heapClass (v : Val) : RM (Option ClassObj) := do
-  match ← typeOf v with
-  | .ref a =>
-    match ← getObj a with
-    | .cls c => pure (some c)
-    | _ => pure none
-  | _ => pure none
 
 /-- A plain Python class of instances, with no attribute hooks. -/
 def plainAttr (t : Val) : RM Bool := do
@@ -264,7 +298,10 @@ def suggestLoadAttr (P : Program) (i : Instr) (co : Code) : Tops → RM (Option 
             if let .property fget .. ← getObj da then
               if wantMethod || fget == .null then return none
               if ← isFunction fget then
-                return specInstr i .LOAD_ATTR_PROPERTY [.tagged c.version, fget]
+                let fo ← getFunc fget
+                let cg ← getCodeR P fo.code
+                if simpleFunction cg && cg.argcount == 1 then
+                  return specInstr i .LOAD_ATTR_PROPERTY [.tagged c.version, fget, .tagged fo.version]
               return none
         if dataDescr then return none
         if c.slots.contains name then return none
@@ -324,7 +361,7 @@ def suggestStoreAttr (i : Instr) (co : Code) : Tops → RM (Option Instr)
   | _ => pure none
 
 /-- `_Py_Specialize_Call`. -/
-def suggestCall (P : Program) (i : Instr) (next? : Option Instr) : Tops → RM (Option Instr)
+def suggestCall (P : Program) (i : Instr) : Tops → RM (Option Instr)
   | tops => do
     let a := i.arg
     let args := tops.take a
@@ -350,15 +387,12 @@ def suggestCall (P : Program) (i : Instr) (next? : Option Instr) : Tops → RM (
       if a == 1 && selfOrNull == .null then pure (specInstr i .CALL_LEN)
       else pure (specInstr i .CALL_BUILTIN_O)
     | .builtin "isinstance" =>
-      if total == 2 then pure (specInstr i .CALL_ISINSTANCE)
+      if total == 2 && a == 2 then pure (specInstr i .CALL_ISINSTANCE)
       else pure (specInstr i .CALL_BUILTIN_FAST_WITH_KEYWORDS)
     | .builtin _ => pure (specInstr i .CALL_BUILTIN_FAST_WITH_KEYWORDS)
     | .methDescr "list" "append" =>
-      match next? with
-      | some n =>
-        if a == 1 && n.op == .POP_TOP then pure (specInstr i .CALL_LIST_APPEND)
-        else pure (specInstr i .CALL_METHOD_DESCRIPTOR_O)
-      | none => pure (specInstr i .CALL_METHOD_DESCRIPTOR_O)
+      if a == 1 && (← isList selfOrNull) then pure (specInstr i .CALL_LIST_APPEND)
+      else pure (specInstr i .CALL_METHOD_DESCRIPTOR_O)
     | .methDescr .. => pure (specInstr i .CALL_METHOD_DESCRIPTOR_FAST)
     | .ref c =>
       match ← getObj c with
@@ -412,6 +446,7 @@ def suggest (P : Program) (co : Code) (i : Instr) (next? : Option Instr) (f : Fr
   | .TO_BOOL => suggestToBool i tops
   | .COMPARE_OP => suggestCompare i tops
   | .CONTAINS_OP => suggestContains i tops
+  | .GET_ITER => suggestGetIter i tops
   | .FOR_ITER => suggestForIter i tops
   | .SEND => suggestSend i tops
   | .UNPACK_SEQUENCE => suggestUnpack i tops
@@ -419,11 +454,11 @@ def suggest (P : Program) (co : Code) (i : Instr) (next? : Option Instr) (f : Fr
   | .LOAD_GLOBAL => suggestLoadGlobal i co f
   | .LOAD_ATTR => suggestLoadAttr P i co tops
   | .STORE_ATTR => suggestStoreAttr i co tops
-  | .CALL => suggestCall P i next? tops
+  | .CALL => suggestCall P i tops
   | .CALL_KW => suggestCallKw i tops
+  | .CALL_FUNCTION_EX => suggestCallEx i tops
   | .LOAD_SUPER_ATTR =>
     pure (specInstr i (if i.arg &&& 1 != 0 then .LOAD_SUPER_ATTR_METHOD else .LOAD_SUPER_ATTR_ATTR))
-  | .LOAD_CONST => pure (specInstr i .LOAD_CONST_MORTAL)
   | .RESUME => pure (specInstr i .RESUME_CHECK)
   | .JUMP_BACKWARD => pure (specInstr i .JUMP_BACKWARD_NO_JIT)
   | _ => pure none

@@ -385,6 +385,10 @@ def excAttr (o : Val) (name : String) : RM (Option Val) := do
   | "value" => if ← isSubtype (← typeOf o) (.cls "StopIteration") then pure (some d.value) else pure none
   | _ => pure none
 
+/-- `gen_getyieldfrom`, `Objects/genobject.c:890-914`. -/
+def genYfGet (g : GenObj) : Val :=
+  if g.frameState == 2 then g.frame.stack.getD 1 .none else .none
+
 /-- `slot_tp_getattr_hook` and the special members of builtin objects. -/
 def getAttrImpl (o : Val) (name : String) : RM Val := do
   if name == "__class__" then return ← typeOf o
@@ -416,10 +420,10 @@ def getAttrImpl (o : Val) (name : String) : RM Val := do
       let pre := match g.kind with | .coro => "cr_" | _ => "gi_"
       if name == "__name__" then return .str g.name
       if name == "__qualname__" then return .str g.qualname
-      if name == pre ++ "running" then return .bool (g.frameState == 0)
-      if name == pre ++ "suspended" then return .bool (g.frameState == -2 || g.frameState == -1)
+      if name == pre ++ "running" then return .bool (g.frameState == 4)
+      if name == pre ++ "suspended" then return .bool (g.frameState == 1 || g.frameState == 2)
       if name == (match g.kind with | .coro => "cr_await" | _ => "gi_yieldfrom") then
-        return (if g.frameState == -1 then g.frame.stack.headD .none else .none)
+        return (genYfGet g)
     | .method f s =>
       match name with
       | "__self__" => return s
@@ -757,7 +761,8 @@ def isTrueImpl (v : Val) : RM Bool := do
       | some _ =>
         match ← callDunder om ctx v "__bool__" [] with
         | some (.bool b) => pure b
-        | some x => typeError s!"__bool__ should return bool, returned {← tpName x}"
+        -- `slot_nb_bool`, `Objects/typeobject.c:10938`
+        | some x => typeError s!"{← tpName v}.__bool__() must return a bool, not {← tpName x}"
         | none => pure true
       | none =>
         if (← userLookup i.cls "__len__").isSome then return (← om.length ctx v) != 0
@@ -826,7 +831,8 @@ def asIndex (i : Val) : RM (Option Int) := do
       match ← callDunder om ctx i "__index__" [] with
       | some (.int n) => pure (some n)
       | some (.bool b) => pure (some (if b then 1 else 0))
-      | some x => typeError s!"__index__ returned non-int (type {← tpName x})"
+      -- `_PyNumber_Index`, `Objects/abstract.c:1434`
+      | some x => typeError s!"{← tpName i}.__index__() must return an int, not {← tpName x}"
       | none => pure none
     | none =>
       match ← payload i with
@@ -1020,7 +1026,8 @@ def getIterImpl (v : Val) : RM Val := do
         let b ← descrBind om ctx f v i.cls
         let r ← call1 om ctx b []
         if !(← om.isIterator r) then
-          typeError s!"iter() returned non-iterator of type '{← tpName r}'"
+          -- `PyObject_GetIter`, `Objects/abstract.c:2828`
+          typeError s!"{← tpName v}.__iter__() must return an iterator, not {← tpName r}"
         pure r
       | none =>
         if (← userLookup i.cls "__getitem__").isSome then alloc (.seqIter v 0)
@@ -1029,9 +1036,12 @@ def getIterImpl (v : Val) : RM Val := do
     | _ => notIter
   | _ => notIter
 
-/-- Exact generator `yf`, `_PyGen_yf`, `Objects/genobject.c@3.14.7:373-384`. -/
+/-- The object a generator is suspended on: `_PyFrame_StackPeek(frame, 2)` under
+`frame_state == FRAME_SUSPENDED_YIELD_FROM`, `Objects/genobject.c:493-494`, :651-653 and
+:779-781. `_PyGen_yf` is gone in 3.15. The top of a suspended `yield from` is
+`index_or_null`, and the receiver is under it. -/
 def genYf (g : GenObj) : Option Val :=
-  if g.frameState == -1 then g.frame.stack.head? else none
+  if g.frameState == 2 then g.frame.stack[1]? else none
 
 /-- What `gen_send_ex2` hands back. -/
 inductive Send where
@@ -1040,49 +1050,57 @@ inductive Send where
   /-- `PYGEN_ERROR` with no exception set: an exhausted `next()`. -/
   | none
 
-/-- `gen_send_ex2`, `Objects/genobject.c@3.14.7:191-288`. `exc` is the exception being
-thrown in, if any. -/
-def genSendEx2 (a : Addr) (arg : Option Val) (exc : Option Val) (closing : Bool) : RM Send := do
+/-- `gen_raise_already_executing_error`, `Objects/genobject.c:241-252`. -/
+def alreadyExecuting {α : Type} (k : GenKind) : RM α :=
+  valueError (match k with
+    | .coro => "coroutine already executing"
+    | .asyncGen => "async generator already executing"
+    | .gen => "generator already executing")
+
+/-- `gen_send_ex2`, `Objects/genobject.c:259-325`: the generator is already marked
+`FRAME_EXECUTING`. `exc` is the exception being thrown in, if any. `generator_return_kind`
+(:289-302) reads the same as "the frame state is suspended" on one thread, which is what the
+3.14 code tested and what the model tests. -/
+def genSendEx2 (a : Addr) (arg : Option Val) (exc : Option Val) : RM Send := do
   let g ← getGen a
-  if g.frameState == -3 && (arg.isSome && arg != some .none) then
-    typeError (match g.kind with
-      | .coro => "can't send non-None value to a just-started coroutine"
-      | .asyncGen => "can't send non-None value to a just-started async generator"
-      | .gen => "can't send non-None value to a just-started generator")
-  if g.frameState == 0 then
-    valueError (match g.kind with
-      | .coro => "coroutine already executing"
-      | .asyncGen => "async generator already executing"
-      | .gen => "generator already executing")
-  if g.frameState ≥ 1 then
-    if g.kind == .coro && !closing then
-      runtimeError "cannot reuse already awaited coroutine"
-    else if arg.isSome && exc.isNone then return .ret .none
-    match exc with
-    | some e => throw (.exc e)
-    | none => return .none
   let gf := { g.frame with stack := arg.getD .none :: g.frame.stack }
   pushExcState g
   if let some e := exc then
     -- `_PyErr_ChainStackItem`, `Python/errors.c`
     if g.excValue != .null && g.excValue != .none && g.excValue != e then
       setContext e g.excValue
-  setObj a (.gen { g with frameState := 0, frame := gf })
+  setObj a (.gen { g with frame := gf })
   let result ← ctx.evalFrame gf exc
   let g' ← getGen a
-  if g'.frameState == -2 || g'.frameState == -1 then return .next result
+  if g'.frameState == 1 || g'.frameState == 2 then return .next result
   if result == .none && g'.kind != .asyncGen && arg.isNone then return .none
   return .ret result
+
+/-- `gen_send_ex`, `Objects/genobject.c:329-370`: the state checks, then `gen_send_ex2`. -/
+def genSendExChecked (a : Addr) (arg : Option Val) : RM Send := do
+  let g ← getGen a
+  if g.frameState == 0 && (arg.isSome && arg != some .none) then
+    typeError (match g.kind with
+      | .coro => "can't send non-None value to a just-started coroutine"
+      | .asyncGen => "can't send non-None value to a just-started async generator"
+      | .gen => "can't send non-None value to a just-started generator")
+  if g.frameState == 4 then alreadyExecuting g.kind
+  if g.frameState == 5 then
+    if g.kind == .coro then
+      runtimeError "cannot reuse already awaited coroutine"
+    else if arg.isSome then return .ret .none
+    return .none
+  setObj a (.gen { g with frameState := 4 })
+  genSendEx2 ctx a arg none
 
 /-- `_PyGen_SetStopIterationValue`, `Objects/genobject.c:782-799`. -/
 def stopIter {α : Type} (v : Val) : RM α := do
   throw (.exc (← newExc (.cls "StopIteration") (if v == .none then [] else [v])))
 
-/-- `gen_send_ex`, `Objects/genobject.c:384-399`. -/
-def genSendEx (a : Addr) (arg : Option Val) (exc : Option Val) (closing : Bool) : RM Val := do
-  match ← genSendEx2 ctx a arg exc closing with
+/-- `gen_set_stop_iteration`, `Objects/genobject.c:384-399`, on what came back. -/
+def sendToVal (a : Addr) : Send → RM Val
   | .next v => pure v
-  | .ret v =>
+  | .ret v => do
     let g ← getGen a
     if g.kind == .asyncGen then throw (.exc (← newExc (.cls "StopAsyncIteration") []))
     else stopIter v
@@ -1090,14 +1108,22 @@ def genSendEx (a : Addr) (arg : Option Val) (exc : Option Val) (closing : Bool) 
     -- NULL with no exception: only `gen_iternext` reaches this
     stopIter .none
 
-/-- `gen_clear_frame`, `Objects/genobject.c`. -/
+/-- `gen_send`, `Objects/genobject.c:405-414`. -/
+def genSend (a : Addr) (arg : Option Val) : RM Val := do
+  sendToVal a (← genSendExChecked ctx a arg)
+
+/-- `gen_throw_current_exception`, `Objects/genobject.c:603-612`. -/
+def genThrowCurrent (a : Addr) (exc : Val) : RM Val := do
+  sendToVal a (← genSendEx2 ctx a (some .none) (some exc))
+
+/-- `gen_clear_frame`, `Objects/genobject.c:166-174`. -/
 def genClearFrame (a : Addr) : RM Unit := do
   let g ← getGen a
   setObj a (.gen { g with excValue := .null, frame := { g.frame with fast := #[], stack := [] } })
 
 /-- `gen_iternext`, `Objects/genobject.c:760-774`. -/
 def genIterNext (a : Addr) : RM (Option Val) := do
-  match ← genSendEx2 ctx a none none false with
+  match ← genSendExChecked ctx a none with
   | .next v => pure (some v)
   | .ret v => if v != .none then stopIter v else pure none
   | .none => pure none
@@ -1119,47 +1145,47 @@ def genCloseIter (n : Nat) (yf : Val) : RM Unit := do
       | some m => let _ ← call1 om ctx m []; pure ()
       | none => pure ()
 
-/-- `gen_close`, `Objects/genobject.c:463-601`. -/
+/-- `gen_close`, `Objects/genobject.c:463-541`. The state check comes first, the generator
+stays `FRAME_EXECUTING` from there on, and a running frame is refused. -/
 def genClose (n : Nat) (a : Addr) : RM Val := do
   match n with
   | 0 => throw .fuel
   | n + 1 =>
     let g ← getGen a
-    if g.frameState == -3 then
-      setObj a (.gen { g with frameState := 1 })
+    if g.frameState == 0 then
+      setObj a (.gen { g with frameState := 5 })
       genClearFrame a
       return .none
-    if g.frameState ≥ 1 then return .none
+    if g.frameState == 5 then return .none
+    if g.frameState == 4 then alreadyExecuting g.kind
+    setObj a (.gen { g with frameState := 4 })
     -- an error of closing `yf` replaces the `GeneratorExit` below
     let err ← match genYf g with
-      | some yf =>
-        setObj a (.gen { g with frameState := 0 })
-        let r ← tryExc (do genCloseIter n yf; pure (Option.none)) fun e => pure (some e)
-        let g2 ← getGen a
-        setObj a (.gen { g2 with frameState := g.frameState })
-        pure r
+      | some yf => tryExc (do genCloseIter n yf; pure (Option.none)) fun e => pure (some e)
       | none => pure none
     let g ← getGen a
     let code ← getCodeR P g.frame.code
     let ins := code.instrs[g.frame.instrPtr]?
     if let some i := ins then
-      if i.op == .RESUME || i.op == .RESUME_CHECK || i.op == .INSTRUMENTED_RESUME then
-        if i.arg &&& 4 != 0 then
-          setObj a (.gen { g with frameState := 1 })
+      -- `is_resume`, :451-461, and `RESUME_OPARG_DEPTH1_MASK`, 8 on 3.15
+      if i.op == .RESUME || i.op == .RESUME_CHECK || i.op == .RESUME_CHECK_JIT ||
+          i.op == .INSTRUMENTED_RESUME then
+        if i.arg &&& 8 != 0 then
+          setObj a (.gen { g with frameState := 5 })
           genClearFrame a
           return .none
     let e ← match err with
       | some e => pure e
       | none => newExc (.cls "GeneratorExit") []
-    -- lines 428-452: a yield is an error, `GeneratorExit` is swallowed, and a
-    -- `StopIteration` carries the value `return` gave
-    let r : RM (Except Val Val) := tryExc (Except.ok <$> genSendEx ctx a (some .none) (some e) true)
+    -- lines 517-540: a return value is the result, a yield is an error, and of the
+    -- exceptions only `GeneratorExit` is swallowed
+    let r : RM (Except Val Send) := tryExc (Except.ok <$> genSendEx2 ctx a (some .none) (some e))
       fun x => do
         if ← givenMatches x 8 (.cls "GeneratorExit") then pure (.error .none)
-        else if ← givenMatches x 8 (.cls "StopIteration") then pure (.error (← excData x).value)
         else throw (.exc x)
     match ← r with
     | .error v => return v
+    | .ok (.ret v) => return v
     | .ok _ =>
       runtimeError (match g.kind with
         | .coro => "coroutine ignored GeneratorExit"

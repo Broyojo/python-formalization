@@ -10,7 +10,7 @@ import PyLean.Bytecode.GenObj
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
 `Objects/genobject.c`, `Objects/frameobject.c`, `Objects/iterobject.c`, `Objects/enumobject.c`,
-`Objects/cellobject.c`, CPython 3.14.7.
+`Objects/cellobject.c`, CPython 3.15.2.
 -/
 
 namespace PyLean.Bytecode
@@ -78,7 +78,7 @@ def entries : List Entry := GenObj.entries ++ [
     bug := some "bytecode-push-frame-gen-recursion" }
   ,
   { id := "bytecode-call-alloc-abstract", pyFile := "Python/bytecodes.c"
-    pyFns := [op "CALL_ALLOC_AND_ENTER_INIT", op "_CHECK_AND_ALLOCATE_OBJECT", op "_CREATE_INIT_FRAME"]
+    pyFns := [op "CALL_ALLOC_AND_ENTER_INIT", op "_CHECK_OBJECT", op "_ALLOCATE_OBJECT", op "_CREATE_INIT_FRAME"]
     statement := "Calling a class with a non-empty __abstractmethods__ always raises TypeError without allocating. It does not once specialized to CALL_ALLOC_AND_ENTER_INIT, which allocates with PyType_GenericAlloc and skips object_new's abstract-class check."
     source := "invariant: the specialized call refines the generic one, which reaches object_new"
     status := .refuted, prop := ``AbstractNeverAllocates, thm := some ``abstractNeverAllocates_refuted
@@ -86,7 +86,7 @@ def entries : List Entry := GenObj.entries ++ [
   { id := "bytecode-flineno-stack-swap", pyFile := "Objects/frameobject.c"
     pyFns := ["stack_swap", "mark_stacks", "compatible_stack", "frame_lineno_set_impl", "push_value",
               "pop_value", "top_of_stack", "peek", "pop_to_level", "compatible_kind"]
-    statement := "mark_stacks's stack_swap computes a 64-bit stack. It does not: stack_swap is declared to return Kind (32-bit), truncating the stack, so a f_lineno jump analysed over a >32-bit stack (deep nesting with a SWAP) is approved wrongly and the interpreter resumes with a corrupt stack (TypeError on 3.14.7, segfault on main)."
+    statement := "mark_stacks's stack_swap computes a 64-bit stack. It does not: stack_swap is declared to return Kind (32-bit), truncating the stack, so a f_lineno jump analysed over a >32-bit stack (deep nesting with a SWAP) is approved wrongly and the interpreter resumes with a corrupt stack."
     source := "invariant: f_lineno from a trace function must not corrupt the interpreter"
     status := .refuted, prop := ``FrameObj.StackSwapKeepsStack, thm := some ``FrameObj.stackSwapKeepsStack_refuted
     bug := some "bytecode-flineno-stack-swap-truncation" },
@@ -98,14 +98,21 @@ def entries : List Entry := GenObj.entries ++ [
     bug := some "bytecode-flineno-stack-swap-truncation" },
   { id := "bytecode-flineno-null-on-stack", pyFile := "Objects/frameobject.c"
     pyFns := ["mark_stacks", "compatible_stack", "frame_lineno_set_impl"]
-    statement := "The jump analysis never lets a jump land where a NULL on the eval stack is required to be an object. It does: LOAD_SPECIAL's self_or_null slot is modelled as Object, so a jump into a `with` body is approved and the interpreter reads a NULL as an object (segfault on 3.14.7 and main)."
+    statement := "The jump analysis never lets a jump land where a NULL on the eval stack is required to be an object. It does: LOAD_SPECIAL's self_or_null slot is modelled as Object, so a jump into a `with` body is approved and the interpreter reads a NULL as an object (segfault on 3.15.2 and main)."
     source := "invariant: f_lineno from a trace function must not corrupt the interpreter"
     status := .refuted, prop := ``FrameObj.JumpKeepsObjects, thm := some ``FrameObj.jumpKeepsObjects_refuted
     bug := some "bytecode-flineno-null-on-stack" },
+  { id := "bytecode-flineno-iter-index-as-object", pyFile := "Objects/frameobject.c"
+    pyFns := ["mark_stacks", "compatible_kind", "compatible_stack", "first_line_not_before",
+              "frame_lineno_set_impl", "push_value", "pop_value", "top_of_stack", "peek"]
+    statement := "No approved f_lineno jump keeps the second output of GET_ITER in a slot the target needs to be an object, for every function. It does: that slot holds a tagged index or NULL (Python/ceval.c:1136, :1139), mark_stacks gives it the kind Iterator, and compatible_kind lets Iterator flow into Object, so a jump from a for body to a line that resumes mid-expression lands on BUILD_LIST with the index as an operand (segfault on 3.15.2 and main; 3.14.7 had one slot there and rejected that target)."
+    source := "invariant: f_lineno from a trace function must not corrupt the interpreter"
+    status := .refuted, prop := ``FrameObj.JumpKeepsIterIndex, thm := some ``FrameObj.jumpKeepsIterIndex_refuted
+    bug := some "bytecode-flineno-iter-index-as-object" },
   { id := "bytecode-anext-default-restarts-await", pyFile := "Objects/iterobject.c"
     pyFns := ["anextawaitable_getiter", "anextawaitable_iternext", "PyAnextAwaitable_New",
               "anextawaitable_proxy", "PyCallIter_New"]
-    statement := "await anext(a, default) awaits a.__anext__() once, like await a.__anext__(). It does not when __anext__ returns a non-coroutine awaitable: anextawaitable_iternext rebuilds the iterator via __await__ on every resume, so a multi-step __await__ never finishes (3.14.7; fixed on main)."
+    statement := "await anext(a, default) awaits a.__anext__() once, like await a.__anext__(). It does not when __anext__ returns a non-coroutine awaitable: anextawaitable_iternext rebuilds the iterator via __await__ on every resume, so a multi-step __await__ never finishes."
     source := "Doc/library/functions.rst: anext returns the next item, or default if exhausted"
     status := .refuted, prop := ``IterObj.AnextAwaitsOnce, thm := some ``IterObj.anextAwaitsOnce_refuted
     bug := some "bytecode-anext-default-restarts-await" },
@@ -138,14 +145,14 @@ def entries : List Entry := GenObj.entries ++ [
     status := .proven, prop := ``IterObj.CellNew, thm := some ``IterObj.cellNew_proven },
   -- Frame-switching and unwinding invariants.
   { id := "bytecode-return-value", pyFile := "Python/bytecodes.c"
-    pyFns := [op "RETURN_VALUE"]
+    pyFns := [op "RETURN_VALUE", op "_RETURN_VALUE"]
     statement := "RETURN_VALUE pops the frame, restores the Python recursion budget, and resumes the caller at instr_ptr + return_offset with the returned value on top, for every caller stack."
-    source := "RETURN_VALUE, Python/bytecodes.c@3.14.7:1202-1217"
+    source := "RETURN_VALUE, Python/bytecodes.c:1573-1593"
     status := .proven, prop := ``ReturnValue, thm := some ``returnValue_proven },
   { id := "bytecode-unwind-to-handler", pyFile := "Python/bytecodes.c"
     pyFns := [op "RAISE_VARARGS", "get_exception_handler", "scan_back_to_entry_start", "skip_to_next_entry"]
     statement := "exception_unwind truncates the stack to the handler's recorded depth, pushes lasti if the entry says so, pushes the exception, and jumps to the handler; every value below the recorded level survives."
-    source := "exception_unwind, Python/bytecodes.c:6485-6524; get_exception_handler, Python/ceval.c@3.14.7:1630-1678"
+    source := "exception_unwind, Python/bytecodes.c:6485-6524; get_exception_handler, Python/ceval.h:457-510"
     status := .proven, prop := ``UnwindToHandler, thm := some ``unwindToHandler_proven },
   { id := "bytecode-unwind-no-handler", pyFile := "Python/bytecodes.c"
     pyFns := ["_PyEval_FrameClearAndPop", "clear_thread_frame"]
@@ -164,13 +171,13 @@ def entries : List Entry := GenObj.entries ++ [
     status := .proven, prop := ``ExcInfoNests, thm := some ``excInfoNests_proven },
   { id := "bytecode-for-iter-exhausted", pyFile := "Python/bytecodes.c"
     pyFns := [op "FOR_ITER", op "_FOR_ITER", op "_SPECIALIZE_FOR_ITER"]
-    statement := "FOR_ITER on an exhausted iterator jumps over END_FOR with only the iterator left on the stack (the folded END_FOR/POP_ITER), for every iterator."
-    source := "_FOR_ITER, Python/bytecodes.c@3.14.7:3146-3175"
+    statement := "FOR_ITER on an exhausted iterator jumps over END_FOR with iter and index_or_null left on the stack for the POP_ITER at the target, for every iterator and both forms of the slot."
+    source := "_FOR_ITER, Python/bytecodes.c:3810-3821"
     status := .proven, prop := ``ForIterExhausted, thm := some ``forIterExhausted_proven },
   { id := "bytecode-for-iter-next", pyFile := "Python/bytecodes.c"
     pyFns := [op "FOR_ITER"]
-    statement := "FOR_ITER with a next item pushes it above the iterator, for every iterator."
-    source := "_FOR_ITER, Python/bytecodes.c@3.14.7:3146-3175"
+    statement := "FOR_ITER with a next item writes the new index_or_null back to its slot and pushes the item above it, for every iterator."
+    source := "_FOR_ITER, Python/bytecodes.c:3810-3821; _PyForIter_VirtualIteratorNext, Python/ceval.c:3709-3739"
     status := .proven, prop := ``ForIterNext, thm := some ``forIterNext_proven },
   { id := "bytecode-frame-swap-shallow", pyFile := "Objects/frameobject.c"
     pyFns := ["stack_swap", "peek"]
@@ -215,7 +222,7 @@ def entries : List Entry := GenObj.entries ++ [
   { id := "bytecode-yield-suspends", pyFile := "Python/bytecodes.c"
     pyFns := [op "YIELD_VALUE"]
     statement := "YIELD_VALUE sets gi_frame_state to FRAME_SUSPENDED + oparg, stores the frame with instr_ptr advanced and its stack saved, resumes the caller after the SEND/FOR_ITER, and moves the generator's handled exception back into the generator, for every state."
-    source := "YIELD_VALUE, Python/bytecodes.c@3.14.7:1370-1402"
+    source := "YIELD_VALUE, Python/bytecodes.c:1851-1891"
     status := .open, prop := ``YieldSuspends
     notes := "Proof did not survive: excInfo and prev are projections of regs, so they cannot be substituted; needs rewriting with the hypotheses instead." },
   -- frameobject stack analysis facts.,
@@ -234,7 +241,7 @@ def entries : List Entry := GenObj.entries ++ [
   { id := "bytecode-gap-str-percent", pyFile := "Objects/unicodeobject.c"
     pyFns := []
     statement := "str % args and bytes % args with a conversion in the template format their arguments."
-    source := "PyUnicode_Format, unicodeobject.c@3.14.7:15549; _PyBytes_FormatEx, bytesobject.c:655"
+    source := "PyUnicode_Format, unicode_format.c:1031; _PyBytes_FormatEx, bytesobject.c:618"
     status := .open, prop := ``FormatRuns
     notes := "The model has no conversions and faults. bytecode_diff.py exclusion: str-percent-conversion. Not started." },
   { id := "bytecode-gap-float-pow-complex", pyFile := "Objects/floatobject.c"

@@ -113,7 +113,10 @@ def readsBack (b : UInt64) (digits p : Nat) (e : Int) : Bool :=
   ofRat (digits * a) c == b
 
 /-- `repr(float)`: the shortest digit string that round-trips, in the layout of
-`float_repr_style = 'short'` (`format_float_short`, decpt in `(-4, 16]`). -/
+`float_repr_style = 'short'` (`format_float_short`, decpt in `(-4, 16]`). The nearest string of
+`p` digits can miss when the rounding interval is uneven, at a power of two: `2.0 ** -24` is
+`5.9604644775390625e-08`, whose nearest 16 digits end in `062` and fall outside the short lower
+half of the interval, while `063` reads back. So both neighbours are tried before adding a digit. -/
 def repr (b : UInt64) : String :=
   if isNan b then "nan"
   else
@@ -130,7 +133,10 @@ def repr (b : UInt64) : String :=
           | 0, p => let (q, e) := sigDigits abs d p; (q, p, e)
           | k + 1, p =>
             let (q, e) := sigDigits abs d p
-            if readsBack pos q p e then (q, p, e) else search k (p + 1)
+            if readsBack pos q p e then (q, p, e)
+            else if q + 1 < 10 ^ p && readsBack pos (q + 1) p e then (q + 1, p, e)
+            else if 10 ^ (p - 1) < q && readsBack pos (q - 1) p e then (q - 1, p, e)
+            else search k (p + 1)
         let (q, p, e) := search 16 1
         -- strip trailing zeros
         let rec strip : Nat → Nat → Nat → Nat × Nat

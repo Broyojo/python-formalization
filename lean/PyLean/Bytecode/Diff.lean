@@ -110,13 +110,13 @@ def trampolineCode : Code :=
   { name := "<trampoline>", instrs := #[
       { op := .NOP, arg := 0 }, { op := .INTERPRETER_EXIT, arg := 0 },
       { op := .NOP, arg := 0 }, { op := .INTERPRETER_EXIT, arg := 0 },
-      { op := .RESUME, arg := 4 }] }
+      { op := .RESUME, arg := 8 }, { op := .CACHE, arg := 0 }] }
 
-/-- `_Py_InitCleanup`, `Python/specialize.c`. -/
+/-- `_Py_InitCleanup`, `Python/specialize.c:3085-3109`. -/
 def initCleanupCode : Code :=
   { name := "__init__", flags := coOptimized, stacksize := 2, instrs := #[
       { op := .EXIT_INIT_CHECK, arg := 0 }, { op := .RETURN_VALUE, arg := 0 },
-      { op := .RESUME, arg := 0 }] }
+      { op := .RESUME, arg := 0 }, { op := .CACHE, arg := 0 }] }
 
 /-- Builtin functions visible in `builtins` in the model. -/
 def builtinFunctions : List String :=

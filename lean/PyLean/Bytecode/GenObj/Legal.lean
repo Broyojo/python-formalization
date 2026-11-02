@@ -31,48 +31,36 @@ theorem Mono.trans {a b c : World V X} (h1 : Mono a b) (h2 : Mono b c) : Mono a 
   ⟨fun q => legalEdge_trans (h1.st q) (h2.st q), fun q h => h2.closed q (h1.closed q h),
    fun q => Nat.le_trans (h1.asend q) (h2.asend q), fun q => Nat.le_trans (h1.athrow q) (h2.athrow q)⟩
 
-/-- No frame that is executing, or suspended in `yield from`, sits at a depth-1
-`RESUME`. The compiler guarantees the `yield from` half (the `RESUME` of a delegation
-loop is inside its `SETUP_FINALLY`); the executing half fails only in the window of
-`GenCloseRejectsExecuting`'s refutation, so assuming it here is on record there. -/
-def Inv (w : World V X) : Prop :=
-  ∀ q, ((w.get q).state = .executing ∨ (w.get q).state = .suspendedYieldFrom) →
-    (w.get q).instr.isResumeDepth1 = false
-
-/-- `Inv` for every frame but `r`, the one being resumed. -/
-def InvExcept (r : Ref) (w : World V X) : Prop :=
-  ∀ q, q ≠ r → ((w.get q).state = .executing ∨ (w.get q).state = .suspendedYieldFrom) →
-    (w.get q).instr.isResumeDepth1 = false
-
 /-- What is assumed of the interpreter. Python code run by a hook acts on these
-objects only through the model's own operations, so it preserves `Mono` and `Inv`;
-`YIELD_VALUE 1` is followed by a `RESUME` without the depth-1 bit (the compiler's
-`SETUP_FINALLY`); and looking up `throw` on a sub-iterator does not touch frame states
-(the case excluded here is `GenThrowLookupSeesExecuting`'s refutation). -/
+objects only through the model's own operations, so it preserves `Mono`. That is all: on
+3.15 nothing else is needed, because every operation on a `FRAME_EXECUTING` generator is
+refused before it touches the frame, and because `_gen_throw` marks the generator before
+it looks up `throw`. -/
 structure HooksLegal (h : Hooks V X) : Prop where
-  resume : ∀ w r a e, InvExcept r w →
-    Mono w (h.resume w r a e).1 ∧ InvExcept r (h.resume w r a e).1
-  resumeYf : ∀ w r a e v d top, (h.resume w r a e).2 = .yielded true v d top → d = false
-  getClose : ∀ w o, Inv w → Mono w (h.getClose w o).1 ∧ Inv (h.getClose w o).1
-  getThrow : ∀ w o, Inv w → Mono w (h.getThrow w o).1 ∧ Inv (h.getThrow w o).1
-  getThrowFrames : ∀ w o q, ((h.getThrow w o).1.get q).state = (w.get q).state
-  callNoArgs : ∀ w m, Inv w → Mono w (h.callNoArgs w m).1 ∧ Inv (h.callNoArgs w m).1
-  callThrow : ∀ w m a b c, Inv w →
-    Mono w (h.callThrow w m a b c).1 ∧ Inv (h.callThrow w m a b c).1
-  unraisable : ∀ w m e, Inv w → Mono w (h.unraisable w m e) ∧ Inv (h.unraisable w m e)
-  warn : ∀ w m, Inv w → Mono w (h.warn w m).1 ∧ Inv (h.warn w m).1
+  resume : ∀ w r a e, Mono w (h.resume w r a e).1
+  getClose : ∀ w o, Mono w (h.getClose w o).1
+  getThrow : ∀ w o, Mono w (h.getThrow w o).1
+  callNoArgs : ∀ w m, Mono w (h.callNoArgs w m).1
+  callThrow : ∀ w m a b c, Mono w (h.callThrow w m a b c).1
+  unraisable : ∀ w m e, Mono w (h.unraisable w m e)
+  warn : ∀ w m, Mono w (h.warn w m).1
 
 /-- `HooksLegal` can be met: a frame that re-raises what is thrown and touches nothing. -/
 theorem noopHooks_legal : HooksLegal noopHooks where
-  resume _ _ _ _ hi := ⟨Mono.refl _, hi⟩
-  resumeYf := by intro w r a e v d top h; exact absurd h (by simp [noopHooks])
-  getClose _ _ hi := ⟨Mono.refl _, hi⟩
-  getThrow _ _ hi := ⟨Mono.refl _, hi⟩
-  getThrowFrames _ _ _ := rfl
-  callNoArgs _ _ hi := ⟨Mono.refl _, hi⟩
-  callThrow _ _ _ _ _ hi := ⟨Mono.refl _, hi⟩
-  unraisable _ _ _ hi := ⟨Mono.refl _, hi⟩
-  warn _ _ hi := ⟨Mono.refl _, hi⟩
+  resume _ _ _ _ := Mono.refl _
+  getClose _ _ := Mono.refl _
+  getThrow _ _ := Mono.refl _
+  callNoArgs _ _ := Mono.refl _
+  callThrow _ _ _ _ _ := Mono.refl _
+  unraisable _ _ _ := Mono.refl _
+  warn _ _ := Mono.refl _
+
+/-- A frame marked `FRAME_EXECUTING` stays so across anything that preserves `Mono`. -/
+theorem Mono.executing {a b : World V X} (m : Mono a b) {r : Ref}
+    (hs : (a.get r).state = .executing) : (b.get r).state = .executing := by
+  have := m.st r
+  rw [hs] at this
+  cases hk : (b.get r).state <;> rw [hk] at this <;> first | rfl | exact absurd this (by decide)
 
 /-- Writing a frame's state, as the model does on every path. -/
 theorem mono_write {w w2 w3 : World V X} {r : Ref} {s : FrameState}
@@ -99,12 +87,6 @@ theorem mono_write {w w2 w3 : World V X} {r : Ref} {s : FrameState}
   · intro a; rw [hs]; exact m.asend a
   · intro a; rw [ht]; exact m.athrow a
 
-theorem Inv.except {w : World V X} (hi : Inv w) (r : Ref) (s : FrameState) :
-    InvExcept r (w.setState r s) := by
-  intro q hq hst
-  rw [get_setState_ne _ _ hq] at hst ⊢
-  exact hi q hst
-
 theorem legal_to_cleared (s : FrameState) (h : s ≠ .executing) : legalEdge s .cleared = true := by
   cases s <;> first | rfl | exact absurd rfl h
 
@@ -112,350 +94,395 @@ theorem legal_to_oparg (s : FrameState) (b : Bool)
     (h1 : s ≠ .executing) (h2 : s.finished = false) : legalEdge s (FrameState.ofOparg b) = true := by
   cases s <;> cases b <;> first | rfl | exact absurd rfl h1 | (simp at h2)
 
-theorem genYf_some {g : GenObj V} {yf} (hy : genYf g = some yf) :
-    g.state = .suspendedYieldFrom := by
-  unfold genYf at hy
-  split at hy
-  · assumption
-  · simp at hy
-
 section Send
 variable {h : Hooks V X}
 
 theorem get_clear_ne (w : World V X) {r q : Ref} (hq : q ≠ r) :
     (clearGenFrame w r).get q = w.get q := get_setState_ne _ _ hq
 
-theorem genSendEx2_legal (hh : HooksLegal h) (w : World V X) (r arg exc err closing) (hi : Inv w) :
-    Mono w (genSendEx2 h w r arg exc err closing).1 ∧ Inv (genSendEx2 h w r arg exc err closing).1 := by
+/-- `gen_send_ex2` on a generator that was in state `(w0.get r).state` and has been marked
+`FRAME_EXECUTING`, then went through anything legal. -/
+theorem genSendEx2_legal (hh : HooksLegal h) {w0 w : World V X} {r : Ref} (arg e)
+    (h2 : (w0.get r).state ≠ .executing) (h3 : (w0.get r).state.finished = false)
+    (m0 : Mono (w0.setState r .executing) w) : Mono w0 (genSendEx2 h w r arg e).1 := by
+  simp only [genSendEx2]
+  have m1 := m0.trans (hh.resume w r (arg.getD .none) e)
+  generalize h.resume w r (arg.getD .none) e = res at m1
+  obtain ⟨w2, o⟩ := res
+  simp only at m1 ⊢
+  have hcl : Mono w0 (clearGenFrame w2 r) := by
+    apply mono_write m1
+    · intro q hq; exact get_clear_ne _ hq
+    · simpa [clearGenFrame] using legal_to_cleared _ h2
+    · simp [clearGenFrame, World.setState]
+    · rfl
+    · rfl
+  cases o with
+  | yielded oparg v d top =>
+    simp only [finishResume]
+    apply mono_write m1
+    · intro q hq; simp [suspendFrame, hq]
+    · simpa [suspendFrame] using legal_to_oparg _ oparg h2 h3
+    · simp [suspendFrame]
+    · rfl
+    · rfl
+  | raised e => simpa only [finishResume] using hcl
+  | returned v =>
+    simp only [finishResume]
+    split <;> exact hcl
+
+theorem genSendEx_legal (hh : HooksLegal h) (w : World V X) (r arg) :
+    Mono w (genSendEx h w r arg).1 := by
   by_cases hrej : SendRejected (w.get r) arg
-  · rw [(genSendRejectedNoEffect_proven V X h h w r arg exc err closing hrej).1]
-    exact ⟨Mono.refl w, hi⟩
+  · rw [(genSendRejectedNoEffect_proven V X h h w r arg hrej).1]
+    exact Mono.refl w
   have h1 : ¬ ((w.get r).state = .created ∧ isNonNull arg = true) := fun c => hrej (Or.inl c)
   have h2 : (w.get r).state ≠ .executing := fun c => hrej (Or.inr (Or.inl c))
   have h3 : (w.get r).state.finished = false := by
     cases hf : (w.get r).state.finished with
     | false => rfl
     | true => exact absurd (Or.inr (Or.inr hf)) hrej
-  rw [genSendEx2_live h w r arg exc err closing h1 h2 h3]
-  have hres := hh.resume (w.setState r .executing) r (arg.getD .none) (if exc then err else none)
-    (hi.except r _)
-  have hyf := fun v d top => hh.resumeYf (w.setState r .executing) r (arg.getD .none)
-    (if exc then err else none) v d top
-  simp only
-  generalize h.resume (w.setState r .executing) r (arg.getD .none) (if exc then err else none) = res
-    at hres hyf
-  obtain ⟨w2, o⟩ := res
-  obtain ⟨m, ie⟩ := hres
-  simp only at m ie hyf ⊢
-  cases o with
-  | yielded oparg v d top =>
-    simp only [finishResume]
-    constructor
-    · apply mono_write m
-      · intro q hq; simp [suspendFrame, hq]
-      · simpa [suspendFrame] using legal_to_oparg _ oparg h2 h3
-      · simp [suspendFrame]
-      · rfl
-      · rfl
-    · intro q hst
-      by_cases hq : q = r
-      · subst hq
-        cases oparg with
-        | false => simp [suspendFrame, FrameState.ofOparg] at hst
-        | true =>
-          have := hyf v d top rfl
-          simp [suspendFrame, InstrPtr.isResumeDepth1, this]
-      · simp only [suspendFrame, World.get_set_ne _ _ hq] at hst ⊢
-        exact ie q hq hst
-  | raised e =>
-    simp only [finishResume]
-    constructor
-    · apply mono_write m
-      · intro q hq; exact get_clear_ne _ hq
-      · simpa [clearGenFrame] using legal_to_cleared _ h2
-      · simp [clearGenFrame, World.setState]
-      · rfl
-      · rfl
-    · intro q hst
-      by_cases hq : q = r
-      · subst hq; simp [clearGenFrame] at hst
-      · rw [get_clear_ne _ hq] at hst ⊢
-        exact ie q hq hst
-  | returned v =>
-    have hgoal : Mono w (clearGenFrame w2 r) ∧ Inv (clearGenFrame w2 r) := by
-      constructor
-      · apply mono_write m
-        · intro q hq; exact get_clear_ne _ hq
-        · simpa [clearGenFrame] using legal_to_cleared _ h2
-        · simp [clearGenFrame, World.setState]
-        · rfl
-        · rfl
-      · intro q hst
-        by_cases hq : q = r
-        · subst hq; simp [clearGenFrame] at hst
-        · rw [get_clear_ne _ hq] at hst ⊢
-          exact ie q hq hst
-    simp only [finishResume]
-    split <;> exact hgoal
-
-theorem genSendEx_legal (hh : HooksLegal h) (w : World V X) (r arg exc err closing) (hi : Inv w) :
-    Mono w (genSendEx h w r arg exc err closing).1 ∧ Inv (genSendEx h w r arg exc err closing).1 :=
-  genSendEx2_legal hh w r arg exc err closing hi
+  rw [genSendEx_live h w r arg h1 h2 h3]
+  exact genSendEx2_legal hh arg none h2 h3 (Mono.refl _)
 
 theorem genCloseFinish_fst (w : World V X) (r p) :
-    (genCloseFinish h w r p).1 = (genSendEx h w r (some .none) true p true).1 := by
+    (genCloseFinish h w r p).1 = (genSendEx2 h w r (some .none) p).1 := by
   simp only [genCloseFinish]
-  generalize (genSendEx h w r (some .none) true p true) = s
+  generalize (genSendEx2 h w r (some .none) p) = s
   obtain ⟨w', res⟩ := s
   cases res with
-  | ok v => rfl
+  | next v => rfl
+  | ret v => rfl
   | err e =>
     cases e with
     | none => rfl
     | some x => simp only; split <;> rfl
 
-/-- `delegating` keeps the invariants when `act` does. -/
-theorem delegating_legal {α : Type} (w : World V X) (r : Ref) (act : World V X → World V X × α)
-    (hact : ∀ w', Inv w' → Mono w' (act w').1 ∧ Inv (act w').1) (hi : Inv w)
-    (hs : (w.get r).state = .suspendedYieldFrom) :
-    Mono w (delegating w r act).1 ∧ Inv (delegating w r act).1 := by
-  have hi1 : Inv (w.setState r .executing) := by
-    intro q hst
-    by_cases hq : q = r
-    · subst hq
-      simpa using hi q (Or.inr hs)
-    · rw [get_setState_ne _ _ hq] at hst ⊢
-      exact hi q hst
-  obtain ⟨m, i2⟩ := hact _ hi1
-  simp only [delegating]
-  generalize act (w.setState r .executing) = p at m i2
-  obtain ⟨w2, a⟩ := p
-  simp only at m i2 ⊢
-  have hexec : (w2.get r).state = .executing := by
-    have := m.st r
-    simp only [state_setState] at this
-    cases hk : (w2.get r).state <;> rw [hk] at this <;> first | rfl | exact absurd this (by decide)
-  constructor
-  · apply mono_write m
-    · intro q hq; exact get_setState_ne _ _ hq
-    · simpa [hs] using legalEdge_refl .suspendedYieldFrom
-    · simp [World.setState]
-    · rfl
-    · rfl
-  · intro q hst
-    by_cases hq : q = r
-    · subst hq
-      simpa using i2 q (Or.inl hexec)
-    · rw [get_setState_ne _ _ hq] at hst ⊢
-      exact i2 q hst
+theorem genThrowCurrent_legal (hh : HooksLegal h) {w0 w : World V X} {r : Ref} (e)
+    (h2 : (w0.get r).state ≠ .executing) (h3 : (w0.get r).state.finished = false)
+    (m0 : Mono (w0.setState r .executing) w) : Mono w0 (genThrowCurrent h w r e).1 :=
+  genSendEx2_legal hh _ e h2 h3 m0
 
 theorem genCloseIter_legal (hh : HooksLegal h) (c : World V X → Ref → World V X × Ret V)
-    (hc : ∀ w r, Inv w → Mono w (c w r).1 ∧ Inv (c w r).1) (w : World V X) (yf) (hi : Inv w) :
-    Mono w (genCloseIter h c w yf).1 ∧ Inv (genCloseIter h c w yf).1 := by
+    (hc : ∀ w r, Mono w (c w r).1) (w : World V X) (yf) :
+    Mono w (genCloseIter h c w yf).1 := by
   simp only [genCloseIter]
   split
   · rename_i r _
-    have := hc w r hi
+    have := hc w r
     generalize c w r = p at this
     obtain ⟨w', res⟩ := p
     cases res <;> exact this
   · simp only [genCloseIterForeign]
-    obtain ⟨m1, i1⟩ := hh.getClose w yf hi
-    generalize h.getClose w yf = a at m1 i1
+    have m1 := hh.getClose w yf
+    generalize h.getClose w yf = a at m1
     obtain ⟨wa, ra⟩ := a
-    simp only at m1 i1 ⊢
-    have hmeth : Mono wa (closeMeth h wa ra).1 ∧ Inv (closeMeth h wa ra).1 := by
+    simp only at m1 ⊢
+    have hmeth : Mono wa (closeMeth h wa ra).1 := by
       cases ra with
-      | error e => exact hh.unraisable wa _ e i1
-      | ok mo => exact ⟨Mono.refl _, i1⟩
+      | error e => exact hh.unraisable wa _ e
+      | ok mo => exact Mono.refl _
     generalize closeMeth h wa ra = m at hmeth
     obtain ⟨wm, mo⟩ := m
     simp only at hmeth ⊢
     cases mo with
-    | none => exact ⟨m1.trans hmeth.1, hmeth.2⟩
+    | none => exact m1.trans hmeth
     | some mt =>
       simp only
-      obtain ⟨m3, i3⟩ := hh.callNoArgs wm mt hmeth.2
-      generalize h.callNoArgs wm mt = c3 at m3 i3
+      have m3 := hh.callNoArgs wm mt
+      generalize h.callNoArgs wm mt = c3 at m3
       obtain ⟨w3, r3⟩ := c3
-      cases r3 <;> exact ⟨(m1.trans hmeth.1).trans m3, i3⟩
+      cases r3 <;> exact (m1.trans hmeth).trans m3
 
 theorem closeDelegate_legal (hh : HooksLegal h) (c : World V X → Ref → World V X × Ret V)
-    (hc : ∀ w r, Inv w → Mono w (c w r).1 ∧ Inv (c w r).1) (w : World V X) (r) (hi : Inv w) :
-    Mono w (closeDelegate h c w r).1 ∧ Inv (closeDelegate h c w r).1 := by
+    (hc : ∀ w r, Mono w (c w r).1) (w : World V X) (r s) :
+    Mono w (closeDelegate h c w r s).1 := by
   simp only [closeDelegate]
-  cases hy : genYf (w.get r) with
-  | none => exact ⟨Mono.refl w, hi⟩
-  | some yf =>
-    dsimp only
-    exact delegating_legal w r _ (fun w' i' => genCloseIter_legal hh c hc w' yf i') hi
-      (genYf_some hy)
+  split
+  · exact genCloseIter_legal hh c hc w _
+  · exact Mono.refl w
 
-/-- `genClearFrame (setState completed)`, the write of :392-393 and :419-420. -/
-theorem clearCompleted_spec (w : World V X) (r : Ref) (hs : (w.get r).state ≠ .executing)
-    (hi : Inv w) :
-    Mono w (genClearFrame (w.setState r .completed) r) ∧
-      Inv (genClearFrame (w.setState r .completed) r) := by
-  have hg : genClearFrame (w.setState r .completed) r =
-      (w.setState r .completed).setState r .cleared := by
-    simp [genClearFrame]
-  rw [hg]
-  have hne : ∀ q, q ≠ r → ((w.setState r .completed).setState r .cleared).get q = w.get q := by
-    intro q hq
-    rw [get_setState_ne _ _ hq, get_setState_ne _ _ hq]
-  constructor
-  · refine ⟨?_, ?_, fun _ => Nat.le_refl _, fun _ => Nat.le_refl _⟩
-    · intro q
-      by_cases hq : q = r
-      · subst hq; simpa using legal_to_cleared _ hs
-      · rw [hne q hq]; exact legalEdge_refl _
-    · intro q hc
-      by_cases hq : q = r
-      · subst hq; simpa [World.setState] using hc
-      · rw [hne q hq]; exact hc
-  · intro q hst
-    by_cases hq : q = r
-    · subst hq; simp at hst
-    · rw [hne q hq] at hst ⊢; exact hi q hst
+/-- `FRAME_CLEARED` and `gen_clear_frame`, the writes of :472-475 and :508-509. -/
+theorem clear_legal {w0 w : World V X} {r : Ref} {s : FrameState} (hs : (w0.get r).state ≠ .executing)
+    (m : Mono (w0.setState r s) w) : Mono w0 (genClearFrame (w.setState r .cleared) r) := by
+  apply mono_write m
+  · intro q hq
+    simp only [genClearFrame]
+    rw [World.get_set_ne _ _ hq, get_setState_ne _ _ hq]
+  · simpa [genClearFrame] using legal_to_cleared _ hs
+  · simp [genClearFrame, World.setState]
+  · rfl
+  · rfl
 
 theorem genCloseF_legal (hh : HooksLegal h) (n : Nat) :
-    ∀ (w : World V X) (r), Inv w →
-      Mono w (genCloseF h n w r).1 ∧ Inv (genCloseF h n w r).1 := by
+    ∀ (w : World V X) (r), Mono w (genCloseF h n w r).1 := by
   induction n with
-  | zero => intro w r hi; exact ⟨Mono.refl w, hi⟩
+  | zero => intro w r; exact Mono.refl w
   | succ n ih =>
-    intro w r hi
+    intro w r
     simp only [genCloseF]
     split
     · rename_i hc
-      exact clearCompleted_spec w r (by simp [hc]) hi
-    · split
-      · exact ⟨Mono.refl w, hi⟩
-      · simp only [genCloseBody]
-        obtain ⟨m, i⟩ := closeDelegate_legal hh (genCloseF h n) ih w r hi
-        generalize closeDelegate h (genCloseF h n) w r = p at m i
-        obtain ⟨w1, st⟩ := p
-        simp only at m i ⊢
+      have m0 : Mono (w.setState r (w.get r).state) w := by rw [setState_self]; exact Mono.refl w
+      exact clear_legal (by simp [hc]) m0
+    · rename_i hc0
+      split
+      · exact Mono.refl w
+      · rename_i hf0
+        have h3 : (w.get r).state.finished = false := by simpa using hf0
         split
-        · rename_i hf
-          have hne : (w1.get r).state ≠ .executing := by
-            intro e
-            have := i r (Or.inl e)
-            rw [hf.1] at this
-            exact absurd this (by decide)
-          obtain ⟨m2, i2⟩ := clearCompleted_spec w1 r hne i
-          exact ⟨m.trans m2, i2⟩
-        · rw [genCloseFinish_fst]
-          obtain ⟨m2, i2⟩ := genSendEx_legal hh w1 r (some .none) true (closePending st) true i
-          exact ⟨m.trans m2, i2⟩
+        · exact Mono.refl w
+        · rename_i hx
+          simp only [genCloseBody]
+          have m := closeDelegate_legal hh (genCloseF h n) ih (w.setState r .executing) r (w.get r).state
+          generalize closeDelegate h (genCloseF h n) (w.setState r .executing) r (w.get r).state = p at m
+          obtain ⟨w1, st⟩ := p
+          simp only at m ⊢
+          split
+          · exact clear_legal hx m
+          · rw [genCloseFinish_fst]
+            exact genSendEx2_legal hh _ _ hx h3 m
 
-theorem throwHere_legal (hh : HooksLegal h) (w : World V X) (r typ val tb) (hi : Inv w) :
-    Mono w (throwHere h w r typ val tb).1 ∧ Inv (throwHere h w r typ val tb).1 := by
+theorem throwHere_legal (hh : HooksLegal h) {w0 w : World V X} {r : Ref} (typ val tb)
+    (h2 : (w0.get r).state ≠ .executing) (h3 : (w0.get r).state.finished = false)
+    (m : Mono (w0.setState r .executing) w) :
+    Mono w0 (throwHere h w r (w0.get r).state typ val tb).1 := by
   simp only [throwHere]
   split
-  · exact ⟨Mono.refl w, hi⟩
-  · cases typ
-    case excClass k c => exact genSendEx_legal hh w r _ _ _ _ hi
-    case excInst k c m v =>
-      dsimp only
-      split
-      · exact ⟨Mono.refl w, hi⟩
-      · exact genSendEx_legal hh w r _ _ _ _ hi
-    all_goals exact ⟨Mono.refl w, hi⟩
+  · exact genThrowCurrent_legal hh _ h2 h3 m
+  · simp only
+    apply mono_write m
+    · intro q hq; exact get_setState_ne _ _ hq
+    · simpa using legalEdge_refl _
+    · simp [World.setState]
+    · rfl
+    · rfl
 
-theorem afterDelegate_legal (hh : HooksLegal h) (w : World V X) (r) (x : Ret V) (hi : Inv w) :
-    Mono w (afterDelegate h w r x).1 ∧ Inv (afterDelegate h w r x).1 := by
+theorem afterDelegate_legal (hh : HooksLegal h) {w0 w : World V X} {r : Ref} (x : Ret V)
+    (h2 : (w0.get r).state ≠ .executing) (h3 : (w0.get r).state.finished = false)
+    (m : Mono (w0.setState r .executing) w) :
+    Mono w0 (afterDelegate h w r (w0.get r).state x).1 := by
   cases x with
-  | ok v => exact ⟨Mono.refl w, hi⟩
-  | err e => exact genSendEx_legal hh w r _ _ _ _ hi
+  | ok v =>
+    simp only [afterDelegate]
+    apply mono_write m
+    · intro q hq; exact get_setState_ne _ _ hq
+    · simpa using legalEdge_refl _
+    · simp [World.setState]
+    · rfl
+    · rfl
+  | err e => exact genThrowCurrent_legal hh _ h2 h3 m
 
 theorem genThrowF_legal (hh : HooksLegal h) (n : Nat) :
-    ∀ (w : World V X) (r c typ val tb), Inv w →
-      Mono w (genThrowF h n w r c typ val tb).1 ∧ Inv (genThrowF h n w r c typ val tb).1 := by
+    ∀ (w : World V X) (r c typ val tb), Mono w (genThrowF h n w r c typ val tb).1 := by
   induction n with
-  | zero => intro w r c typ val tb hi; exact ⟨Mono.refl w, hi⟩
+  | zero => intro w r c typ val tb; exact Mono.refl w
   | succ n ih =>
-    intro w r c typ val tb hi
+    intro w r c typ val tb
     simp only [genThrowF]
-    cases hy : genYf (w.get r) with
-    | none => exact throwHere_legal hh w r typ val tb hi
-    | some yf =>
-      have hs := genYf_some hy
-      simp only
+    split
+    · exact Mono.refl w
+    · rename_i h2
       split
-      · have hd := delegating_legal w r (fun w' => genCloseIter h (genCloseF h n) w' yf)
-          (fun w' i' => genCloseIter_legal hh _ (genCloseF_legal hh n) w' yf i') hi hs
-        generalize delegating w r (fun w' => genCloseIter h (genCloseF h n) w' yf) = p at hd
-        obtain ⟨w1, st⟩ := p
-        obtain ⟨m, i⟩ := hd
-        simp only at m i ⊢
-        cases st with
-        | fail e =>
-          obtain ⟨m2, i2⟩ := genSendEx_legal hh w1 r (some .none) true e false i
-          exact ⟨m.trans m2, i2⟩
-        | ok =>
-          obtain ⟨m2, i2⟩ := throwHere_legal hh w1 r typ val tb i
-          exact ⟨m.trans m2, i2⟩
       · split
-        · rename_i sub _
-          have hd := delegating_legal w r (fun w' => genThrowF h n w' sub c typ val tb)
-            (fun w' i' => ih w' sub c typ val tb i') hi hs
-          generalize delegating w r (fun w' => genThrowF h n w' sub c typ val tb) = p at hd
-          obtain ⟨w1, res⟩ := p
-          obtain ⟨m, i⟩ := hd
-          obtain ⟨m2, i2⟩ := afterDelegate_legal hh w1 r res i
-          exact ⟨m.trans m2, i2⟩
-        · obtain ⟨m1, i1⟩ := hh.getThrow w yf hi
-          have hfr := hh.getThrowFrames w yf r
-          generalize hq : h.getThrow w yf = q at m1 i1 hfr
-          obtain ⟨w1, res⟩ := q
-          simp only at m1 i1 hfr ⊢
-          cases res with
-          | error e => exact ⟨m1, i1⟩
-          | ok mo =>
-            cases mo with
-            | none =>
-              obtain ⟨m2, i2⟩ := throwHere_legal hh w1 r typ val tb i1
-              exact ⟨m1.trans m2, i2⟩
-            | some meth =>
-              simp only
-              have hd := delegating_legal w1 r (fun w' => h.callThrow w' meth typ val tb)
-                (fun w' i' => hh.callThrow w' meth typ val tb i') i1 (hfr.trans hs)
-              generalize delegating w1 r (fun w' => h.callThrow w' meth typ val tb) = p at hd
-              obtain ⟨w2, res⟩ := p
-              obtain ⟨m2, i2⟩ := hd
-              obtain ⟨m3, i3⟩ := afterDelegate_legal hh w2 r res i2
-              exact ⟨(m1.trans m2).trans m3, i3⟩
+        · exact Mono.refl w
+        · split <;> exact Mono.refl w
+      · rename_i hf0
+        have h3 : (w.get r).state.finished = false := by simpa using hf0
+        have m0 := Mono.refl (w.setState r .executing)
+        split
+        · split
+          · have m := genCloseIter_legal hh (genCloseF h n) (genCloseF_legal hh n)
+              (w.setState r .executing) ((w.setState r .executing).get r).stackTop
+            generalize genCloseIter h (genCloseF h n) (w.setState r .executing) _ = p at m
+            obtain ⟨w1, st⟩ := p
+            simp only at m ⊢
+            cases st with
+            | fail e => exact genThrowCurrent_legal hh _ h2 h3 m
+            | ok => exact throwHere_legal hh typ val tb h2 h3 m
+          · split
+            · rename_i sub _
+              have m := ih (w.setState r .executing) sub c typ val tb
+              generalize genThrowF h n (w.setState r .executing) sub c typ val tb = p at m
+              obtain ⟨w1, res⟩ := p
+              exact afterDelegate_legal hh res h2 h3 m
+            · have m1 := hh.getThrow (w.setState r .executing) ((w.setState r .executing).get r).stackTop
+              generalize h.getThrow (w.setState r .executing) _ = q at m1
+              obtain ⟨w1, res⟩ := q
+              simp only at m1 ⊢
+              cases res with
+              | error e =>
+                simp only
+                apply mono_write m1
+                · intro q hq; exact get_setState_ne _ _ hq
+                · simpa using legalEdge_refl _
+                · simp [World.setState]
+                · rfl
+                · rfl
+              | ok mo =>
+                cases mo with
+                | none => exact throwHere_legal hh typ val tb h2 h3 m1
+                | some meth =>
+                  simp only
+                  have m2 := m1.trans (hh.callThrow w1 meth typ val tb)
+                  generalize h.callThrow w1 meth typ val tb = p at m2
+                  obtain ⟨w2, res⟩ := p
+                  exact afterDelegate_legal hh res h2 h3 m2
+        · exact throwHere_legal hh typ val tb h2 h3 m0
 
-theorem genThrow_legal (hh : HooksLegal h) (fuel) (w : World V X) (r args) (hi : Inv w) :
-    Mono w (genThrow h fuel w r args).1 ∧ Inv (genThrow h fuel w r args).1 := by
+theorem genThrow_legal (hh : HooksLegal h) (fuel) (w : World V X) (r args) :
+    Mono w (genThrow h fuel w r args).1 := by
   simp only [genThrow]
   cases hc : (checkPositional "throw" args.length 1 3 : Option (Exc V)) with
-  | some e => exact ⟨Mono.refl w, hi⟩
+  | some e => exact Mono.refl w
   | none =>
     simp only
     have hw : Mono w (if args.length > 1 then
         h.warn w "the (type, exc, tb) signature of throw() is deprecated, use the single-arg signature instead."
-        else (w, none)).1 ∧ Inv (if args.length > 1 then
-        h.warn w "the (type, exc, tb) signature of throw() is deprecated, use the single-arg signature instead."
         else (w, none)).1 := by
       split
-      · exact hh.warn w _ hi
-      · exact ⟨Mono.refl w, hi⟩
+      · exact hh.warn w _
+      · exact Mono.refl w
     generalize (if args.length > 1 then
         h.warn w "the (type, exc, tb) signature of throw() is deprecated, use the single-arg signature instead."
         else (w, none)) = q at hw
     obtain ⟨w1, warned⟩ := q
-    obtain ⟨m, i⟩ := hw
-    simp only at m i ⊢
+    simp only at hw ⊢
     cases warned with
-    | some e => exact ⟨m, i⟩
-    | none =>
-      obtain ⟨m2, i2⟩ := genThrowF_legal hh fuel w1 r true (unpackThrowArgs args).1
-        (unpackThrowArgs args).2.1 (unpackThrowArgs args).2.2 i
-      exact ⟨m.trans m2, i2⟩
+    | some e => exact hw
+    | none => exact hw.trans (genThrowF_legal hh fuel w1 r true _ _ _)
+
+/-- `gen_close` with a resume that is `bad` off `FRAME_EXECUTING`. On 3.15 `gen_close` does
+not re-check the state after `gen_close_iter` ran Python code, so what keeps a `CLEARED`
+frame from being resumed is that this code cannot move a frame out of `FRAME_EXECUTING`:
+`HooksLegal`. -/
+theorem genCloseF_guard (hh : HooksLegal h) (bad) (n : Nat) :
+    ∀ (w : World V X) (r), genCloseF (guardResume h bad) n w r = genCloseF h n w r := by
+  induction n with
+  | zero => intro w r; rfl
+  | succ n ih =>
+    intro w r
+    have hc : genCloseF (guardResume h bad) n = genCloseF h n := by
+      funext w r; exact ih w r
+    simp only [genCloseF, hc]
+    split
+    · rfl
+    · split
+      · rfl
+      · split
+        · rfl
+        · simp only [genCloseBody]
+          have hd : closeDelegate (guardResume h bad) (genCloseF h n) (w.setState r .executing) r
+              (w.get r).state = closeDelegate h (genCloseF h n) (w.setState r .executing) r (w.get r).state := rfl
+          rw [hd]
+          have m := closeDelegate_legal hh (genCloseF h n) (genCloseF_legal hh n)
+            (w.setState r .executing) r (w.get r).state
+          generalize closeDelegate h (genCloseF h n) (w.setState r .executing) r (w.get r).state = p at m
+          obtain ⟨w1, st⟩ := p
+          simp only at m ⊢
+          have hx : (w1.get r).state = .executing := m.executing (by simp)
+          split
+          · rfl
+          · simp only [genCloseFinish, genSendEx2_guard h bad w1 r _ _ hx]
+
+theorem genThrowCurrent_guard (bad) (w : World V X) (r e) (hs : (w.get r).state = .executing) :
+    genThrowCurrent (guardResume h bad) w r e = genThrowCurrent h w r e := by
+  simp only [genThrowCurrent, genSendEx2_guard h bad w r _ _ hs]
+
+theorem throwHere_guard (bad) (w : World V X) (r s typ val tb) (hs : (w.get r).state = .executing) :
+    throwHere (guardResume h bad) w r s typ val tb = throwHere h w r s typ val tb := by
+  have hse : genSetException (guardResume h bad) typ val tb = genSetException h typ val tb := rfl
+  simp only [throwHere, hse]
+  split
+  · exact genThrowCurrent_guard bad w r _ hs
+  · rfl
+
+theorem afterDelegate_guard (bad) (w : World V X) (r s) (x : Ret V) (hs : (w.get r).state = .executing) :
+    afterDelegate (guardResume h bad) w r s x = afterDelegate h w r s x := by
+  cases x with
+  | ok v => rfl
+  | err e => exact genThrowCurrent_guard bad w r e hs
+
+theorem genThrowF_guard (hh : HooksLegal h) (bad) (n : Nat) :
+    ∀ (w : World V X) (r c typ val tb),
+      genThrowF (guardResume h bad) n w r c typ val tb = genThrowF h n w r c typ val tb := by
+  induction n with
+  | zero => intro w r c typ val tb; rfl
+  | succ n ih =>
+    intro w r c typ val tb
+    have hc : genCloseF (guardResume h bad) n = genCloseF h n := by
+      funext w r; exact genCloseF_guard hh bad n w r
+    have hse : genSetException (guardResume h bad) typ val tb = genSetException h typ val tb := rfl
+    have hx0 : ((w.setState r .executing).get r).state = .executing := by simp
+    simp only [genThrowF, hse, hc, ih]
+    split
+    · rfl
+    · split
+      · rfl
+      · split
+        · split
+          · have hi : genCloseIter (guardResume h bad) (genCloseF h n) (w.setState r .executing)
+                ((w.setState r .executing).get r).stackTop =
+                genCloseIter h (genCloseF h n) (w.setState r .executing)
+                ((w.setState r .executing).get r).stackTop := rfl
+            rw [hi]
+            have m := genCloseIter_legal hh (genCloseF h n) (genCloseF_legal hh n)
+              (w.setState r .executing) ((w.setState r .executing).get r).stackTop
+            generalize genCloseIter h (genCloseF h n) (w.setState r .executing) _ = p at m
+            obtain ⟨w1, st⟩ := p
+            have hx : (w1.get r).state = .executing := m.executing hx0
+            cases st with
+            | fail e => exact genThrowCurrent_guard bad w1 r e hx
+            | ok => exact throwHere_guard bad w1 r _ typ val tb hx
+          · split
+            · rename_i sub _
+              have m := genThrowF_legal hh n (w.setState r .executing) sub c typ val tb
+              generalize genThrowF h n (w.setState r .executing) sub c typ val tb = p at m
+              obtain ⟨w1, res⟩ := p
+              exact afterDelegate_guard bad w1 r _ res (m.executing hx0)
+            · have hg : (guardResume h bad).getThrow = h.getThrow := rfl
+              rw [hg]
+              have m1 := hh.getThrow (w.setState r .executing) ((w.setState r .executing).get r).stackTop
+              generalize h.getThrow (w.setState r .executing) _ = q at m1
+              obtain ⟨w1, res⟩ := q
+              simp only at m1 ⊢
+              have hx1 := m1.executing hx0
+              cases res with
+              | error e => rfl
+              | ok mo =>
+                cases mo with
+                | none => exact throwHere_guard bad w1 r _ typ val tb hx1
+                | some meth =>
+                  simp only
+                  have hcl : (guardResume h bad).callThrow = h.callThrow := rfl
+                  rw [hcl]
+                  have m2 := m1.trans (hh.callThrow w1 meth typ val tb)
+                  generalize h.callThrow w1 meth typ val tb = p at m2
+                  obtain ⟨w2, res⟩ := p
+                  exact afterDelegate_guard bad w2 r _ res (m2.executing hx0)
+        · exact throwHere_guard bad _ r _ typ val tb hx0
 
 end Send
+
+/-- Every resume, through `gen_send_ex`, `gen_close` or `_gen_throw` at any delegation
+depth, sees the frame marked `FRAME_EXECUTING`: replacing `resume` by anything at all on
+other states changes nothing, so a `CLEARED` frame is never resumed. Hypothesis:
+`HooksLegal`. `gen_send_ex` needs no hypothesis, since it writes the state itself just before
+the resume. `gen_close` and `_gen_throw` run Python code between their write and the
+resume and do not look again, which is sound because that code cannot change a
+`FRAME_EXECUTING` state through the model's operations, each of which refuses it. -/
+def GenResumeSeesExecuting : Prop :=
+  ∀ (V X : Type) (h : Hooks V X) (bad : World V X × ResumeOutcome V), HooksLegal h →
+  ∀ (n : Nat) (w : World V X) (r : Ref) (arg : Option (Obj V))
+    (c : Bool) (typ : Obj V) (val tb : Option (Obj V)),
+    genSendEx (guardResume h bad) w r arg = genSendEx h w r arg ∧
+    genCloseF (guardResume h bad) n w r = genCloseF h n w r ∧
+    genThrowF (guardResume h bad) n w r c typ val tb = genThrowF h n w r c typ val tb
+
+theorem genResumeSeesExecuting_proven : GenResumeSeesExecuting :=
+  fun _ _ h bad hh n w r arg c typ val tb =>
+    ⟨genSendEx_guard h bad w r arg, genCloseF_guard hh bad n w r,
+     genThrowF_guard hh bad n w r c typ val tb⟩
 
 section Async
 variable {h : Hooks V X}
@@ -478,25 +505,6 @@ theorem Mono.setClosed {w w' : World V X} (m : Mono w w') (r : Ref) :
     · subst hq; simp [World.setClosed]
     · simpa [World.setClosed, hq] using m.closed q hc
 
-theorem Inv.setRunning {w : World V X} (hi : Inv w) (r : Ref) (b : Bool) :
-    Inv (w.setRunning r b) := by
-  intro q hst
-  by_cases hq : q = r
-  · subst hq
-    simp only [state_setRunning] at hst
-    simpa [World.setRunning] using hi q hst
-  · simp only [state_setRunning] at hst
-    simpa [World.setRunning, hq] using hi q hst
-
-theorem Inv.setClosed {w : World V X} (hi : Inv w) (r : Ref) : Inv (w.setClosed r) := by
-  intro q hst
-  by_cases hq : q = r
-  · subst hq
-    simp only [state_setClosed] at hst
-    simpa [World.setClosed] using hi q hst
-  · simp only [state_setClosed] at hst
-    simpa [World.setClosed, hq] using hi q hst
-
 theorem Mono.setAthrowClosed {w w' : World V X} (m : Mono w w') (a : Ref) :
     Mono w (w'.setAthrowState a .closed) := by
   refine ⟨m.st, m.closed, m.asend, ?_⟩
@@ -517,18 +525,18 @@ theorem Mono.setAsendClosed {w w' : World V X} (m : Mono w w') (a : Ref) :
     cases (w.asends q).state <;> decide
   · simpa [World.setAsendState, hq] using m.asend q
 
-theorem unwrap_legal (w : World V X) (r) (res : Ret V) (hi : Inv w) :
-    Mono w (asyncGenUnwrapValue w r res).1 ∧ Inv (asyncGenUnwrapValue w r res).1 := by
+theorem unwrap_legal (w : World V X) (r) (res : Ret V) :
+    Mono w (asyncGenUnwrapValue w r res).1 := by
   cases res with
   | err e =>
     simp only [asyncGenUnwrapValue]
     split
-    · exact ⟨((Mono.refl w).setClosed r).setRunning r false, (hi.setClosed r).setRunning r false⟩
-    · exact ⟨(Mono.refl w).setRunning r false, hi.setRunning r false⟩
+    · exact ((Mono.refl w).setClosed r).setRunning r false
+    · exact (Mono.refl w).setRunning r false
   | ok v =>
     cases v
-    case wrapped o => exact ⟨(Mono.refl w).setRunning r false, hi.setRunning r false⟩
-    all_goals exact ⟨Mono.refl w, hi⟩
+    case wrapped o => exact (Mono.refl w).setRunning r false
+    all_goals exact Mono.refl w
 
 theorem Mono.setAsendIter {w : World V X} (a : Ref) (hs : (w.asends a).state = .init) :
     Mono w (w.setAsendState a .iter) := by
@@ -546,229 +554,199 @@ theorem Mono.setAthrowIter {w : World V X} (a : Ref) (hs : (w.athrows a).state =
   · subst hq; simp [World.setAthrowState, hs, AwaitableState.rank]
   · simp [World.setAthrowState, hq]
 
-theorem Inv.setAsend {w : World V X} (hi : Inv w) (a s) : Inv (w.setAsendState a s) := hi
-theorem Inv.setAthrow {w : World V X} (hi : Inv w) (a s) : Inv (w.setAthrowState a s) := hi
+theorem genSend_legal (hh : HooksLegal h) (w : World V X) (r arg) :
+    Mono w (genSend h w r arg).1 := genSendEx_legal hh w r arg
 
-theorem asyncGenAsendSend_legal (hh : HooksLegal h) (w : World V X) (a arg) (hi : Inv w) :
-    Mono w (asyncGenAsendSend h w a arg).1 ∧ Inv (asyncGenAsendSend h w a arg).1 := by
+theorem asyncGenAsendSend_legal (hh : HooksLegal h) (w : World V X) (a arg) :
+    Mono w (asyncGenAsendSend h w a arg).1 := by
   simp only [asyncGenAsendSend]
   split
-  · exact ⟨Mono.refl w, hi⟩
+  · exact Mono.refl w
   split
-  · exact ⟨(Mono.refl w).setAsendClosed a, hi⟩
-  have hw1 : Mono w (if (w.asends a).state = .init then w.setAsendState a .iter else w) ∧
-      Inv (if (w.asends a).state = .init then w.setAsendState a .iter else w) := by
+  · exact (Mono.refl w).setAsendClosed a
+  have hw1 : Mono w (if (w.asends a).state = .init then w.setAsendState a .iter else w) := by
     split
-    · rename_i hs; exact ⟨Mono.setAsendIter a hs, hi⟩
-    · exact ⟨Mono.refl w, hi⟩
+    · rename_i hs; exact Mono.setAsendIter a hs
+    · exact Mono.refl w
   generalize (if (w.asends a).state = .init then w.setAsendState a .iter else w) = w1 at hw1 ⊢
-  obtain ⟨m1, i1⟩ := hw1
-  have m2 := m1.setRunning (w.asends a).gen true
-  have i2 := i1.setRunning (w.asends a).gen true
-  generalize hg : w1.setRunning (w.asends a).gen true = w2 at m2 i2 ⊢
-  obtain ⟨m3, i3⟩ := genSendEx_legal hh w2 (w.asends a).gen
+  have m2 := hw1.setRunning (w.asends a).gen true
+  generalize hg : w1.setRunning (w.asends a).gen true = w2 at m2 ⊢
+  have m3 := genSend_legal hh w2 (w.asends a).gen
     (if (w.asends a).state = .init ∧ isNullOrNone arg = true then (w.asends a).sendval else arg)
-    false none false i2
-  simp only [genSend]
-  generalize genSendEx h w2 (w.asends a).gen _ false none false = s at m3 i3
+  generalize genSend h w2 (w.asends a).gen _ = s at m3
   obtain ⟨w3, res⟩ := s
-  simp only at m3 i3 ⊢
+  simp only at m3 ⊢
   simp only [asendFinish]
-  obtain ⟨m4, i4⟩ := unwrap_legal w3 (w.asends a).gen res i3
-  generalize asyncGenUnwrapValue w3 (w.asends a).gen res = u at m4 i4
+  have m4 := unwrap_legal w3 (w.asends a).gen res
+  generalize asyncGenUnwrapValue w3 (w.asends a).gen res = u at m4
   obtain ⟨w4, r4⟩ := u
-  simp only at m4 i4 ⊢
+  simp only at m4 ⊢
   cases r4 with
-  | ok v => exact ⟨(m2.trans m3).trans m4, i4⟩
-  | err e => exact ⟨((m2.trans m3).trans m4).setAsendClosed a, i4⟩
+  | ok v => exact (m2.trans m3).trans m4
+  | err e => exact ((m2.trans m3).trans m4).setAsendClosed a
 
-theorem asyncGenAsendThrow_legal (hh : HooksLegal h) (fuel) (w : World V X) (a args) (hi : Inv w) :
-    Mono w (asyncGenAsendThrow h fuel w a args).1 ∧ Inv (asyncGenAsendThrow h fuel w a args).1 := by
+theorem asyncGenAsendThrow_legal (hh : HooksLegal h) (fuel) (w : World V X) (a args) :
+    Mono w (asyncGenAsendThrow h fuel w a args).1 := by
   simp only [asyncGenAsendThrow]
   split
-  · exact ⟨Mono.refl w, hi⟩
+  · exact Mono.refl w
   split
-  · exact ⟨(Mono.refl w).setAsendClosed a, hi⟩
+  · exact (Mono.refl w).setAsendClosed a
   have hw1 : Mono w (if (w.asends a).state = .init then
-        (w.setAsendState a .iter).setRunning (w.asends a).gen true else w) ∧
-      Inv (if (w.asends a).state = .init then
         (w.setAsendState a .iter).setRunning (w.asends a).gen true else w) := by
     split
     · rename_i hs
-      exact ⟨(Mono.setAsendIter a hs).setRunning _ true, (hi.setAsend a _).setRunning _ true⟩
-    · exact ⟨Mono.refl w, hi⟩
+      exact (Mono.setAsendIter a hs).setRunning _ true
+    · exact Mono.refl w
   generalize (if (w.asends a).state = .init then
         (w.setAsendState a .iter).setRunning (w.asends a).gen true else w) = w1 at hw1 ⊢
-  obtain ⟨m1, i1⟩ := hw1
-  obtain ⟨m3, i3⟩ := genThrow_legal hh fuel w1 (w.asends a).gen args i1
-  generalize genThrow h fuel w1 (w.asends a).gen args = s at m3 i3
+  have m3 := genThrow_legal hh fuel w1 (w.asends a).gen args
+  generalize genThrow h fuel w1 (w.asends a).gen args = s at m3
   obtain ⟨w3, res⟩ := s
-  simp only at m3 i3 ⊢
+  simp only at m3 ⊢
   simp only [asendThrowFinish]
-  obtain ⟨m4, i4⟩ := unwrap_legal w3 (w.asends a).gen res i3
-  generalize asyncGenUnwrapValue w3 (w.asends a).gen res = u at m4 i4
+  have m4 := unwrap_legal w3 (w.asends a).gen res
+  generalize asyncGenUnwrapValue w3 (w.asends a).gen res = u at m4
   obtain ⟨w4, r4⟩ := u
-  simp only at m4 i4 ⊢
+  simp only at m4 ⊢
   cases r4 with
-  | ok v => exact ⟨(m1.trans m3).trans m4, i4⟩
-  | err e =>
-    exact ⟨(((m1.trans m3).trans m4).setRunning _ false).setAsendClosed a, i4.setRunning _ false⟩
+  | ok v => exact (hw1.trans m3).trans m4
+  | err e => exact (((hw1.trans m3).trans m4).setRunning _ false).setAsendClosed a
 
-theorem athrowCheckError_legal {w0 w : World V X} (m : Mono w0 w) (hi : Inv w) (a gen acl e) :
-    Mono w0 (athrowCheckError w a gen acl e).1 ∧ Inv (athrowCheckError w a gen acl e).1 := by
+theorem athrowCheckError_legal {w0 w : World V X} (m : Mono w0 w) (a gen acl e) :
+    Mono w0 (athrowCheckError w a gen acl e).1 := by
   simp only [athrowCheckError]
-  split <;> exact ⟨(m.setRunning gen false).setAthrowClosed a, hi.setRunning gen false⟩
+  split <;> exact (m.setRunning gen false).setAthrowClosed a
 
-theorem acloseTail_legal {w0 w : World V X} (m : Mono w0 w) (hi : Inv w) (a gen) (t : Ret V) :
-    Mono w0 (acloseTail w a gen t).1 ∧ Inv (acloseTail w a gen t).1 := by
+theorem acloseTail_legal {w0 w : World V X} (m : Mono w0 w) (a gen) (t : Ret V) :
+    Mono w0 (acloseTail w a gen t).1 := by
   cases t with
-  | err e => exact athrowCheckError_legal m hi a gen true e
+  | err e => exact athrowCheckError_legal m a gen true e
   | ok v =>
     cases v
-    case wrapped o => exact ⟨(m.setRunning gen false).setAthrowClosed a, hi.setRunning gen false⟩
-    all_goals exact ⟨m, hi⟩
+    case wrapped o => exact (m.setRunning gen false).setAthrowClosed a
+    all_goals exact m
 
-theorem athrowStartAclose_legal (hh : HooksLegal h) (fuel) (w : World V X) (a gen) (hi : Inv w) :
-    Mono w (athrowStartAclose h fuel w a gen).1 ∧ Inv (athrowStartAclose h fuel w a gen).1 := by
+theorem athrowStartAclose_legal (hh : HooksLegal h) (fuel) (w : World V X) (a gen) :
+    Mono w (athrowStartAclose h fuel w a gen).1 := by
   simp only [athrowStartAclose]
   have m1 := (Mono.refl w).setClosed gen
-  have i1 := hi.setClosed gen
-  obtain ⟨m2, i2⟩ := genThrowF_legal hh fuel (w.setClosed gen) gen false
-    (.excClass .generatorExit "GeneratorExit") none none i1
-  exact acloseTail_legal (m1.trans m2) i2 a gen _
+  have m2 := genThrowF_legal hh fuel (w.setClosed gen) gen false
+    (.excClass .generatorExit "GeneratorExit") none none
+  exact acloseTail_legal (m1.trans m2) a gen _
 
-theorem athrowStartArgs_legal (hh : HooksLegal h) (fuel) (w : World V X) (a gen args) (hi : Inv w) :
-    Mono w (athrowStartArgs h fuel w a gen args).1 ∧ Inv (athrowStartArgs h fuel w a gen args).1 := by
+theorem athrowStartArgs_legal (hh : HooksLegal h) (fuel) (w : World V X) (a gen tv) :
+    Mono w (athrowStartArgs h fuel w a gen tv).1 := by
   simp only [athrowStartArgs]
-  cases hc : (checkPositional "athrow" args.length 1 3 : Option (Exc V)) with
-  | some e => exact ⟨Mono.refl w, hi⟩
-  | none =>
-    simp only
-    obtain ⟨m2, i2⟩ := genThrowF_legal hh fuel w gen false (unpackThrowArgs args).1
-      (unpackThrowArgs args).2.1 (unpackThrowArgs args).2.2 hi
-    generalize genThrowF h fuel w gen false _ _ _ = t at m2 i2
-    obtain ⟨w2, res⟩ := t
-    simp only at m2 i2 ⊢
-    obtain ⟨m3, i3⟩ := unwrap_legal w2 gen res i2
-    generalize asyncGenUnwrapValue w2 gen res = u at m3 i3
-    obtain ⟨w3, r3⟩ := u
-    simp only at m3 i3 ⊢
-    cases r3 with
-    | ok v => exact ⟨m2.trans m3, i3⟩
-    | err e => exact athrowCheckError_legal (m2.trans m3) i3 a gen false e
-
-theorem athrowIter_legal (hh : HooksLegal h) (w : World V X) (a gen args arg) (hi : Inv w) :
-    Mono w (athrowIter h w a gen args arg).1 ∧ Inv (athrowIter h w a gen args arg).1 := by
-  simp only [athrowIter]
-  obtain ⟨m2, i2⟩ := genSendEx_legal hh w gen (some arg) false none false hi
-  simp only [genSend]
-  generalize genSendEx h w gen (some arg) false none false = t at m2 i2
+  have m2 := genThrowF_legal hh fuel w gen false tv.1 tv.2.1 tv.2.2
+  generalize genThrowF h fuel w gen false _ _ _ = t at m2
   obtain ⟨w2, res⟩ := t
-  simp only at m2 i2 ⊢
-  cases args with
-  | some l =>
-    obtain ⟨m3, i3⟩ := unwrap_legal w2 gen res i2
-    exact ⟨m2.trans m3, i3⟩
-  | none => exact acloseTail_legal m2 i2 a gen res
+  simp only at m2 ⊢
+  have m3 := unwrap_legal w2 gen res
+  generalize asyncGenUnwrapValue w2 gen res = u at m3
+  obtain ⟨w3, r3⟩ := u
+  simp only at m3 ⊢
+  cases r3 with
+  | ok v => exact m2.trans m3
+  | err e => exact athrowCheckError_legal (m2.trans m3) a gen false e
 
-theorem asyncGenAthrowSend_legal (hh : HooksLegal h) (fuel) (w : World V X) (a arg) (hi : Inv w) :
-    Mono w (asyncGenAthrowSend h fuel w a arg).1 ∧ Inv (asyncGenAthrowSend h fuel w a arg).1 := by
+theorem athrowIter_legal (hh : HooksLegal h) (w : World V X) (a gen args arg) :
+    Mono w (athrowIter h w a gen args arg).1 := by
+  simp only [athrowIter]
+  have m2 := genSend_legal hh w gen (some arg)
+  generalize genSend h w gen (some arg) = t at m2
+  obtain ⟨w2, res⟩ := t
+  simp only at m2 ⊢
+  cases args with
+  | some l => exact m2.trans (unwrap_legal w2 gen res)
+  | none => exact acloseTail_legal m2 a gen res
+
+theorem asyncGenAthrowSend_legal (hh : HooksLegal h) (fuel) (w : World V X) (a arg) :
+    Mono w (asyncGenAthrowSend h fuel w a arg).1 := by
   simp only [asyncGenAthrowSend]
   split
-  · exact ⟨Mono.refl w, hi⟩
+  · exact Mono.refl w
   split
-  · exact ⟨(Mono.refl w).setAthrowClosed a, hi⟩
+  · exact (Mono.refl w).setAthrowClosed a
   split
   · rename_i hs
     split
-    · exact ⟨(Mono.refl w).setAthrowClosed a, hi⟩
+    · exact (Mono.refl w).setAthrowClosed a
     split
-    · exact ⟨(Mono.refl w).setAthrowClosed a, hi⟩
+    · exact (Mono.refl w).setAthrowClosed a
     split
-    · exact ⟨Mono.refl w, hi⟩
+    · exact Mono.refl w
     have m1 := (Mono.setAthrowIter a hs).setRunning (w.athrows a).gen true
-    have i1 := (hi.setAthrow a .iter).setRunning (w.athrows a).gen true
     split
-    · rename_i hargs
-      obtain ⟨m2, i2⟩ := athrowStartAclose_legal hh fuel _ a (w.athrows a).gen i1
-      exact ⟨m1.trans m2, i2⟩
-    · rename_i hargs
-      obtain ⟨m2, i2⟩ := athrowStartArgs_legal hh fuel _ a (w.athrows a).gen _ i1
-      exact ⟨m1.trans m2, i2⟩
-  · exact athrowIter_legal hh w a _ _ arg hi
+    · exact m1.trans (athrowStartAclose_legal hh fuel _ a (w.athrows a).gen)
+    · exact m1.trans (athrowStartArgs_legal hh fuel _ a (w.athrows a).gen _)
+  · exact athrowIter_legal hh w a _ _ arg
 
-theorem athrowThrowFinish_legal {w0 w : World V X} (m : Mono w0 w) (hi : Inv w) (a gen args)
-    (res : Ret V) :
-    Mono w0 (athrowThrowFinish w a gen args res).1 ∧ Inv (athrowThrowFinish w a gen args res).1 := by
+theorem athrowThrowFinish_legal {w0 w : World V X} (m : Mono w0 w) (a gen args) (res : Ret V) :
+    Mono w0 (athrowThrowFinish w a gen args res).1 := by
   cases args with
   | some l =>
     simp only [athrowThrowFinish]
-    obtain ⟨m3, i3⟩ := unwrap_legal w gen res hi
-    generalize asyncGenUnwrapValue w gen res = u at m3 i3
+    have m3 := unwrap_legal w gen res
+    generalize asyncGenUnwrapValue w gen res = u at m3
     obtain ⟨w3, r3⟩ := u
-    simp only at m3 i3 ⊢
+    simp only at m3 ⊢
     cases r3 with
-    | ok v => exact ⟨m.trans m3, i3⟩
-    | err e =>
-      exact ⟨((m.trans m3).setRunning gen false).setAthrowClosed a, i3.setRunning gen false⟩
+    | ok v => exact m.trans m3
+    | err e => exact ((m.trans m3).setRunning gen false).setAthrowClosed a
   | none =>
     cases res with
     | err e =>
       simp only [athrowThrowFinish]
-      split <;> exact ⟨(m.setRunning gen false).setAthrowClosed a, hi.setRunning gen false⟩
+      split <;> exact (m.setRunning gen false).setAthrowClosed a
     | ok v =>
       cases v
-      case wrapped o => exact ⟨(m.setRunning gen false).setAthrowClosed a, hi.setRunning gen false⟩
-      all_goals exact ⟨m, hi⟩
+      case wrapped o => exact (m.setRunning gen false).setAthrowClosed a
+      all_goals exact m
 
-theorem asyncGenAthrowThrow_legal (hh : HooksLegal h) (fuel) (w : World V X) (a args) (hi : Inv w) :
-    Mono w (asyncGenAthrowThrow h fuel w a args).1 ∧ Inv (asyncGenAthrowThrow h fuel w a args).1 := by
+theorem asyncGenAthrowThrow_legal (hh : HooksLegal h) (fuel) (w : World V X) (a args) :
+    Mono w (asyncGenAthrowThrow h fuel w a args).1 := by
   simp only [asyncGenAthrowThrow]
   split
-  · exact ⟨Mono.refl w, hi⟩
+  · exact Mono.refl w
   split
-  · exact ⟨(Mono.refl w).setAthrowClosed a, hi⟩
+  · exact (Mono.refl w).setAthrowClosed a
   have hw1 : Mono w (if (w.athrows a).state = .init then
-        (w.setAthrowState a .iter).setRunning (w.athrows a).gen true else w) ∧
-      Inv (if (w.athrows a).state = .init then
         (w.setAthrowState a .iter).setRunning (w.athrows a).gen true else w) := by
     split
     · rename_i hs
-      exact ⟨(Mono.setAthrowIter a hs).setRunning _ true, (hi.setAthrow a _).setRunning _ true⟩
-    · exact ⟨Mono.refl w, hi⟩
+      exact (Mono.setAthrowIter a hs).setRunning _ true
+    · exact Mono.refl w
   generalize (if (w.athrows a).state = .init then
         (w.setAthrowState a .iter).setRunning (w.athrows a).gen true else w) = w1 at hw1 ⊢
-  obtain ⟨m1, i1⟩ := hw1
-  obtain ⟨m3, i3⟩ := genThrow_legal hh fuel w1 (w.athrows a).gen args i1
-  exact athrowThrowFinish_legal (m1.trans m3) i3 a _ _ _
+  exact athrowThrowFinish_legal (hw1.trans (genThrow_legal hh fuel w1 (w.athrows a).gen args)) a _ _ _
 
 end Async
 
 /-- `gen_close` and `gen_throw` move every generator in the world only along legal
-edges, restore the state they bracket with `FRAME_EXECUTING`, and leave `ag_closed`
-and the awaitables monotone, for all arguments, all frame outcomes and every
-reentrant use of the model from the hooks. Hypotheses: `HooksLegal` and `Inv`. -/
+edges, write back the state they hold `FRAME_EXECUTING` over whenever the frame did not run,
+and leave `ag_closed` and the awaitables monotone, for all arguments, all frame outcomes and
+every reentrant use of the model from the hooks. Hypothesis: `HooksLegal`. -/
 def GenOpsStateEdges : Prop :=
   ∀ (V X : Type) (h : Hooks V X), HooksLegal h →
-  ∀ (fuel : Nat) (w : World V X) (r : Ref) (args : List (Obj V)), Inv w →
+  ∀ (fuel : Nat) (w : World V X) (r : Ref) (args : List (Obj V)),
     Mono w (genCloseF h fuel w r).1 ∧ Mono w (genThrow h fuel w r args).1
 
 theorem genOpsStateEdges_proven : GenOpsStateEdges :=
-  fun _ _ _ hh fuel w r args hi =>
-    ⟨(genCloseF_legal hh fuel w r hi).1, (genThrow_legal hh fuel w r args hi).1⟩
+  fun _ _ _ hh fuel w r args => ⟨genCloseF_legal hh fuel w r, genThrow_legal hh fuel w r args⟩
 
 /-- The same for the awaitables' `send` and `throw`: `init -> iter -> closed` only,
 frame states along legal edges, `ag_closed` only set. -/
 def AsyncOpsStateEdges : Prop :=
   ∀ (V X : Type) (h : Hooks V X), HooksLegal h →
   ∀ (fuel : Nat) (w : World V X) (a : Ref) (arg : Option (Obj V)) (arg' : Obj V)
-    (args : List (Obj V)), Inv w →
+    (args : List (Obj V)),
     Mono w (asyncGenAsendSend h w a arg).1 ∧ Mono w (asyncGenAsendThrow h fuel w a args).1 ∧
     Mono w (asyncGenAthrowSend h fuel w a arg').1 ∧ Mono w (asyncGenAthrowThrow h fuel w a args).1
 
 theorem asyncOpsStateEdges_proven : AsyncOpsStateEdges :=
-  fun _ _ _ hh fuel w a arg arg' args hi =>
-    ⟨(asyncGenAsendSend_legal hh w a arg hi).1, (asyncGenAsendThrow_legal hh fuel w a args hi).1,
-     (asyncGenAthrowSend_legal hh fuel w a arg' hi).1, (asyncGenAthrowThrow_legal hh fuel w a args hi).1⟩
+  fun _ _ _ hh fuel w a arg arg' args =>
+    ⟨asyncGenAsendSend_legal hh w a arg, asyncGenAsendThrow_legal hh fuel w a args,
+     asyncGenAthrowSend_legal hh fuel w a arg', asyncGenAthrowThrow_legal hh fuel w a args⟩
 
 end PyLean.Bytecode.GenObj
