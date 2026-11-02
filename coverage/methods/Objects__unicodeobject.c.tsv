@@ -152,13 +152,13 @@ Objects/unicodeobject.c	6176	6328	PyUnicode_DecodeUTF16Stateful	PyUnicode_Decode
 Objects/unicodeobject.c	6331	6494	_PyUnicode_EncodeUTF16	_PyUnicode_EncodeUTF16(PyObject *str, const char *errors, int byteorder)	todo		changed-in-3.15:
 Objects/unicodeobject.c	6497	6500	PyUnicode_AsUTF16String	PyUnicode_AsUTF16String(PyObject *unicode)	todo		
 Objects/unicodeobject.c	6503	6517	_PyUnicode_GetNameCAPI	_PyUnicode_GetNameCAPI(void)	todo		
-Objects/unicodeobject.c	6522	6769	_PyUnicode_DecodeUnicodeEscapeInternal2	_PyUnicode_DecodeUnicodeEscapeInternal2(const char *s, Py_ssize_t size, const char *errors, Py_ssize_t *consumed, int *first_invalid_escape_char, const char **first_invalid_escape_ptr)	todo		
-Objects/unicodeobject.c	6772	6808	_PyUnicode_DecodeUnicodeEscapeStateful	_PyUnicode_DecodeUnicodeEscapeStateful(const char *s, Py_ssize_t size, const char *errors, Py_ssize_t *consumed)	todo		
-Objects/unicodeobject.c	6811	6816	PyUnicode_DecodeUnicodeEscape	PyUnicode_DecodeUnicodeEscape(const char *s, Py_ssize_t size, const char *errors)	todo		
-Objects/unicodeobject.c	6821	6919	PyUnicode_AsUnicodeEscapeString	PyUnicode_AsUnicodeEscapeString(PyObject *unicode)	todo		changed-in-3.15:
-Objects/unicodeobject.c	6924	7057	_PyUnicode_DecodeRawUnicodeEscapeStateful	_PyUnicode_DecodeRawUnicodeEscapeStateful(const char *s, Py_ssize_t size, const char *errors, Py_ssize_t *consumed)	todo		
-Objects/unicodeobject.c	7060	7065	PyUnicode_DecodeRawUnicodeEscape	PyUnicode_DecodeRawUnicodeEscape(const char *s, Py_ssize_t size, const char *errors)	todo		
-Objects/unicodeobject.c	7069	7131	PyUnicode_AsRawUnicodeEscapeString	PyUnicode_AsRawUnicodeEscapeString(PyObject *unicode)	todo		changed-in-3.15:
+Objects/unicodeobject.c	6522	6769	_PyUnicode_DecodeUnicodeEscapeInternal2	_PyUnicode_DecodeUnicodeEscapeInternal2(const char *s, Py_ssize_t size, const char *errors, Py_ssize_t *consumed, int *first_invalid_escape_char, const char **first_invalid_escape_ptr)	modelled	unicodeobj-escape-warns,unicodeobj-escape-fails-at,unicodeobj-escape-failures	
+Objects/unicodeobject.c	6772	6808	_PyUnicode_DecodeUnicodeEscapeStateful	_PyUnicode_DecodeUnicodeEscapeStateful(const char *s, Py_ssize_t size, const char *errors, Py_ssize_t *consumed)	modelled	unicodeobj-escape-warns,unicodeobj-escape-clean	
+Objects/unicodeobject.c	6811	6816	PyUnicode_DecodeUnicodeEscape	PyUnicode_DecodeUnicodeEscape(const char *s, Py_ssize_t size, const char *errors)	modelled	unicodeobj-escape-warns	
+Objects/unicodeobject.c	6821	6919	PyUnicode_AsUnicodeEscapeString	PyUnicode_AsUnicodeEscapeString(PyObject *unicode)	modelled	unicodeobj-escape-printable,unicodeobj-escape-clean	
+Objects/unicodeobject.c	6924	7057	_PyUnicode_DecodeRawUnicodeEscapeStateful	_PyUnicode_DecodeRawUnicodeEscapeStateful(const char *s, Py_ssize_t size, const char *errors, Py_ssize_t *consumed)	modelled	unicodeobj-raw-escape-fails-at,unicodeobj-raw-escape-failures	
+Objects/unicodeobject.c	7060	7065	PyUnicode_DecodeRawUnicodeEscape	PyUnicode_DecodeRawUnicodeEscape(const char *s, Py_ssize_t size, const char *errors)	modelled	unicodeobj-raw-escape-fails-at	
+Objects/unicodeobject.c	7069	7131	PyUnicode_AsRawUnicodeEscapeString	PyUnicode_AsRawUnicodeEscapeString(PyObject *unicode)	modelled	unicodeobj-raw-escape-encode-spec	
 Objects/unicodeobject.c	7136	7142	PyUnicode_DecodeLatin1	PyUnicode_DecodeLatin1(const char *s, Py_ssize_t size, const char *errors)	todo		
 Objects/unicodeobject.c	7146	7168	make_encode_exception	make_encode_exception(PyObject **exceptionObject, const char *encoding, PyObject *unicode, Py_ssize_t startpos, Py_ssize_t endpos, const char *reason)	modelled	unicodeobj-codec-callback-encode-position	
 Objects/unicodeobject.c	7172	7182	raise_encode_exception	raise_encode_exception(PyObject **exceptionObject, const char *encoding, PyObject *unicode, Py_ssize_t startpos, Py_ssize_t endpos, const char *reason)	modelled	unicodeobj-codec-ucs1-strict-error	

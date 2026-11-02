@@ -8,6 +8,7 @@ import PyLean.UnicodeObj.ObjectInternProps
 import PyLean.UnicodeObj.ObjectJoinProps
 import PyLean.UnicodeObj.ObjectAscii
 import PyLean.UnicodeObj.ObjectChunksUtf8
+import PyLean.UnicodeObj.ObjectEscapeErrors
 
 /-! Registry entries of the object slice. -/
 
@@ -16,6 +17,46 @@ namespace PyLean.UnicodeObj
 open PyLean.Registry
 
 def objectEntries : List Entry := [
+  { id := "unicodeobj-escape-warns", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["_PyUnicode_DecodeUnicodeEscapeInternal2", "_PyUnicode_DecodeUnicodeEscapeStateful", "PyUnicode_DecodeUnicodeEscape"]
+    statement := "The first invalid escape after any encoder text is what the decoder reports, with its position, whatever follows and whatever a handler does; it is a DeprecationWarning, an exception only if warnings are errors, and it never changes the text or replaces a failure of the decode."
+    source := "unicodeobject.c:6733-6741, 6833-6840 and 6892-6913"
+    status := .proven, prop := ``UnicodeEscapeWarns, thm := some ``unicodeEscapeWarns_proven },
+  { id := "unicodeobj-escape-clean", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["_PyUnicode_DecodeUnicodeEscapeStateful", "PyUnicode_AsUnicodeEscapeString"]
+    statement := "Text from s.encode('unicode_escape') decodes back with no warning, even when warnings are errors, for any handler."
+    source := "implementation against itself: the encoder against the warning of the decoder"
+    status := .proven, prop := ``UnicodeEscapeClean, thm := some ``unicodeEscapeClean_proven },
+  { id := "unicodeobj-escape-fails-at", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["_PyUnicode_DecodeUnicodeEscapeInternal2"]
+    statement := "A strict unicode_escape decode raises at the first escape that fails, with that escape's span and reason measured in the whole input."
+    source := "invariant: exact error positions"
+    status := .proven, prop := ``UnicodeEscapeFailsAt, thm := some ``unicodeEscapeFailsAt_proven },
+  { id := "unicodeobj-escape-failures", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["_PyUnicode_DecodeUnicodeEscapeInternal2"]
+    statement := "Each form of unicode_escape that cannot be read fails with its own reason and span: truncated \\x, \\u and \\U, a backslash at the end, a malformed or unknown \\N, and a value above U+10FFFF."
+    source := "unicodeobject.c:6696-6831"
+    status := .proven, prop := ``UnicodeEscapeFailures, thm := some ``unicodeEscapeFailures_proven },
+  { id := "unicodeobj-raw-escape-fails-at", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["_PyUnicode_DecodeRawUnicodeEscapeStateful", "PyUnicode_DecodeRawUnicodeEscape"]
+    statement := "A strict raw_unicode_escape decode raises at the first escape that fails, with that escape's span and reason measured in the whole input."
+    source := "invariant: exact error positions"
+    status := .proven, prop := ``RawEscapeFailsAt, thm := some ``rawEscapeFailsAt_proven },
+  { id := "unicodeobj-raw-escape-failures", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["_PyUnicode_DecodeRawUnicodeEscapeStateful"]
+    statement := "In raw_unicode_escape a backslash at the very end is itself, before anything but u or U it is itself and that byte, and truncated \\u and \\U and a value above U+10FFFF fail with their own reasons."
+    source := "unicodeobject.c:6971-7025"
+    status := .proven, prop := ``RawEscapeFailures, thm := some ``rawEscapeFailures_proven },
+  { id := "unicodeobj-escape-printable", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["PyUnicode_AsUnicodeEscapeString"]
+    statement := "Every byte of s.encode('unicode_escape') is printable ASCII, for every string."
+    source := "Doc/library/codecs.rst: unicode_escape is ASCII-encoded source text"
+    status := .proven, prop := ``UnicodeEscapePrintable, thm := some ``unicodeEscapePrintable_proven },
+  { id := "unicodeobj-raw-escape-encode-spec", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["PyUnicode_AsRawUnicodeEscapeString"]
+    statement := "raw_unicode_escape copies Latin-1 text unchanged, and writes every other character as printable ASCII."
+    source := "unicodeobject.c:7081-7127"
+    status := .proven, prop := ``RawEscapeEncodeSpec, thm := some ``rawEscapeEncodeSpec_proven },
   { id := "unicodeobj-codec-utf8-chunks", pyFile := "Objects/unicodeobject.c"
     pyFns := ["unicode_decode_utf8_impl"]
     statement := "Decoding UTF-8 in two chunks through consumed gives what decoding at once gives, wherever the input is cut, for every standard handler, surrogatepass and the truncated surrogate case included."
