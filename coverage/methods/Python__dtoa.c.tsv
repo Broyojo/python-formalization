@@ -24,7 +24,7 @@ Python/dtoa.c	1142	1205	quorem	quorem(Bigint *b, Bigint *S)	todo		open entry dto
 Python/dtoa.c	1214	1228	sulp	sulp(U *x, BCinfo *bc)	modelled	dtoa-ulp	
 Python/dtoa.c	1277	1384	bigcomp	bigcomp(U *rv, const char *s0, BCinfo *bc)	modelled	dtoa-bigcomp-choice	
 Python/dtoa.c	1388	2110	_Py_dg_strtod	_Py_dg_strtod(const char *s00, char **se)	modelled	dtoa-strtod-no-number,dtoa-strtod-sign,dtoa-strtod-fast-path	
-Python/dtoa.c	2113	2128	rv_alloc	rv_alloc(int i)	todo		changed-in-3.15: was excluded: no-behaviour: allocates the digit buffer
+Python/dtoa.c	2113	2128	rv_alloc	rv_alloc(int i)	excluded		no-behaviour: allocates the digit buffer
 Python/dtoa.c	2131	2143	nrv_alloc	nrv_alloc(const char *s, char **rve, int n)	excluded		no-behaviour: copies a constant string into the digit buffer; the strings are in the DtoaSpecial results
 Python/dtoa.c	2152	2157	_Py_dg_freedtoa	_Py_dg_freedtoa(char *s)	excluded		no-behaviour: frees the digit buffer
 Python/dtoa.c	2198	2814	_Py_dg_dtoa	_Py_dg_dtoa(double dd, int mode, int ndigits, int *decpt, int *sign, char **rve)	modelled	dtoa-mode3-no-wrap,dtoa-special-values	

@@ -6,7 +6,7 @@ Objects/genobject.c	82	105	gen_traverse	gen_traverse(PyObject *self, visitproc v
 Objects/genobject.c	108	164	gen_finalize	gen_finalize(PyObject *self)	modelled	gen-finalize-branches	
 Objects/genobject.c	167	175	gen_clear_frame	gen_clear_frame(PyGenObject *gen)	modelled	gen-close-fast-slow-agree,gen-close-idempotent	
 Objects/genobject.c	178	203	_PyGen_ClearFrame	_PyGen_ClearFrame(PyGenObject *gen)	todo		changed-in-3.15: new function
-Objects/genobject.c	206	239	gen_dealloc	gen_dealloc(PyObject *self)	todo		changed-in-3.15: was excluded: no-behaviour: memory release; its one visible step, the finalizer call, is _PyGen_Finalize, which is modelled
+Objects/genobject.c	206	239	gen_dealloc	gen_dealloc(PyObject *self)	excluded		no-behaviour: memory release; its one visible step, the finalizer call, is _PyGen_Finalize, which is modelled
 Objects/genobject.c	242	252	gen_raise_already_executing_error	gen_raise_already_executing_error(PyGenObject *gen)	modelled	gen-already-executing	
 Objects/genobject.c	260	325	gen_send_ex2	gen_send_ex2(PyGenObject *gen, PyObject *arg, PyObject **presult, int exc)	modelled	gen-close-fast-slow-agree,gen-resume-sees-executing,gen-send-state-edges	
 Objects/genobject.c	330	375	gen_send_ex	gen_send_ex(PyGenObject *gen, PyObject *arg, PyObject **presult)	modelled	gen-already-executing,gen-iternext-vs-send-none,gen-resume-sees-executing,gen-send-rejected-no-effect,gen-send-state-edges,gen-send-vs-am-send	
@@ -81,8 +81,8 @@ Objects/genobject.c	2161	2177	async_gen_asend_new	async_gen_asend_new(PyAsyncGen
 Objects/genobject.c	2184	2190	async_gen_wrapped_val_dealloc	async_gen_wrapped_val_dealloc(PyObject *self)	excluded		no-behaviour: memory release and freelist
 Objects/genobject.c	2194	2199	async_gen_wrapped_val_traverse	async_gen_wrapped_val_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
 Objects/genobject.c	2246	2262	_PyAsyncGenValueWrapperNew	_PyAsyncGenValueWrapperNew(PyThreadState *tstate, PyObject *val)	modelled	gen-async-unwrap-value	
-Objects/genobject.c	2272	2285	async_gen_athrow_dealloc	async_gen_athrow_dealloc(PyObject *self)	todo		changed-in-3.15: was excluded: no-behaviour: memory release; the finalizer call is async_gen_athrow_finalize, which is modelled
-Objects/genobject.c	2289	2297	async_gen_athrow_traverse	async_gen_athrow_traverse(PyObject *self, visitproc visit, void *arg)	todo		changed-in-3.15: was excluded: no-behaviour: GC traversal
+Objects/genobject.c	2272	2285	async_gen_athrow_dealloc	async_gen_athrow_dealloc(PyObject *self)	excluded		no-behaviour: memory release; the finalizer call is async_gen_athrow_finalize, which is modelled
+Objects/genobject.c	2289	2297	async_gen_athrow_traverse	async_gen_athrow_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal
 Objects/genobject.c	2301	2421	async_gen_athrow_send	async_gen_athrow_send(PyObject *self, PyObject *arg)	modelled	gen-aclose-error-closes,gen-async-ops-state-edges,gen-athrow-error-closes,gen-athrow-on-closed,gen-athrow-on-finished,gen-athrow-start-error-closes,gen-awaitable-closed-terminal,gen-awaitable-running-exclusion	
 Objects/genobject.c	2425	2491	async_gen_athrow_throw	async_gen_athrow_throw(PyObject *self, PyObject *const *args, Py_ssize_t nargs)	modelled	gen-async-ops-state-edges,gen-athrow-throw-error-closes,gen-awaitable-closed-terminal,gen-awaitable-running-exclusion	
 Objects/genobject.c	2495	2498	async_gen_athrow_iternext	async_gen_athrow_iternext(PyObject *agt)	modelled	gen-async-ops-state-edges,gen-aclose-error-closes,gen-awaitable-closed-terminal,gen-athrow-on-finished	

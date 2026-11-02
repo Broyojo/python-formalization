@@ -92,4 +92,4 @@ Objects/descrobject.c	1939	1951	property_get__name__	property_get__name__(PyObje
 Objects/descrobject.c	1954	1959	property_set__name__	property_set__name__(PyObject *op, PyObject *value, void *Py_UNUSED(ignored))	todo		
 Objects/descrobject.c	1962	1989	property_get___isabstractmethod__	property_get___isabstractmethod__(PyObject *op, void *closure)	todo		
 Objects/descrobject.c	2000	2009	property_traverse	property_traverse(PyObject *self, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
-Objects/descrobject.c	2012	2021	property_clear	property_clear(PyObject *self)	todo		changed-in-3.15: was excluded: no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have
+Objects/descrobject.c	2012	2021	property_clear	property_clear(PyObject *self)	excluded		no-behaviour: GC traversal or clearing, no Python-visible effect beyond collection timing, which the model does not have

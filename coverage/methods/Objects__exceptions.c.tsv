@@ -69,7 +69,7 @@ Objects/exceptions.c	1851	1856	ImportError_dealloc	ImportError_dealloc(PyObject 
 Objects/exceptions.c	1859	1867	ImportError_traverse	ImportError_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
 Objects/exceptions.c	1870	1877	ImportError_str	ImportError_str(PyObject *op)	modelled	typeobj-exc-importerror-msg	
 Objects/exceptions.c	1880	1908	ImportError_getstate	ImportError_getstate(PyObject *op)	modelled	typeobj-exc-reduce-keeps-name	
-Objects/exceptions.c	1912	1925	ImportError_reduce	ImportError_reduce(PyObject *self, PyObject *Py_UNUSED(ignored))	todo		changed-in-3.15: was typeobj-exc-reduce-keeps-name
+Objects/exceptions.c	1912	1925	ImportError_reduce	ImportError_reduce(PyObject *self, PyObject *Py_UNUSED(ignored))	modelled	typeobj-exc-reduce-keeps-name	
 Objects/exceptions.c	1928	1981	ImportError_repr	ImportError_repr(PyObject *self)	todo		changed-in-3.15: new function
 Objects/exceptions.c	2039	2043	PyOSErrorObject_CAST	PyOSErrorObject_CAST(PyObject *self)	excluded		no-behaviour: pointer cast with a debug assert
 Objects/exceptions.c	2184	2201	oserror_use_init	oserror_use_init(PyTypeObject *type)	modelled	typeobj-exc-oserror-parsed-once	

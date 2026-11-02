@@ -17,7 +17,7 @@ Objects/complexobject.c	342	355	c_powu	c_powu(Py_complex x, long n)	modelled	com
 Objects/complexobject.c	358	365	c_powi	c_powi(Py_complex x, long n)	modelled	complex-pow-special	
 Objects/complexobject.c	368	397	_Py_c_abs	_Py_c_abs(Py_complex z)	modelled	complex-abs	
 Objects/complexobject.c	400	408	complex_subtype_from_c_complex	complex_subtype_from_c_complex(PyTypeObject *type, Py_complex cval)	excluded		no-behaviour: boxes a Py_complex in a new object; the value passes through unchanged
-Objects/complexobject.c	411	425	PyComplex_FromCComplex	PyComplex_FromCComplex(Py_complex cval)	todo		changed-in-3.15: was excluded: no-behaviour: boxes a Py_complex in a new object; the value passes through unchanged
+Objects/complexobject.c	411	425	PyComplex_FromCComplex	PyComplex_FromCComplex(Py_complex cval)	excluded		no-behaviour: boxes a Py_complex in a new object; the value passes through unchanged
 Objects/complexobject.c	428	437	complex_dealloc	complex_dealloc(PyObject *op)	todo		changed-in-3.15: new function
 Objects/complexobject.c	440	446	complex_subtype_from_doubles	complex_subtype_from_doubles(PyTypeObject *type, double real, double imag)	excluded		no-behaviour: boxes two doubles in a new object; the value passes through unchanged
 Objects/complexobject.c	449	455	PyComplex_FromDoubles	PyComplex_FromDoubles(double real, double imag)	excluded		no-behaviour: boxes two doubles in a new object; the value passes through unchanged

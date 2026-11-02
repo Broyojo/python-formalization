@@ -28,7 +28,7 @@ Objects/abstract.c	576	589	_Py_add_one_to_index_C	_Py_add_one_to_index_C(int nd,
 Objects/abstract.c	592	624	PyBuffer_SizeFromFormat	PyBuffer_SizeFromFormat(const char *format)	todo		
 Objects/abstract.c	627	677	PyBuffer_FromContiguous	PyBuffer_FromContiguous(const Py_buffer *view, const void *buf, Py_ssize_t len, char order)	todo		changed-in-3.15:
 Objects/abstract.c	679	747	PyObject_CopyData	int PyObject_CopyData(PyObject *dest, PyObject *src)	modelled	typeobj-copydata-bounds	
-Objects/abstract.c	750	771	PyBuffer_FillContiguousStrides	PyBuffer_FillContiguousStrides(int nd, Py_ssize_t *shape, Py_ssize_t *strides, int itemsize, char order)	todo		changed-in-3.15: was typeobj-buffer-fill-strides
+Objects/abstract.c	750	771	PyBuffer_FillContiguousStrides	PyBuffer_FillContiguousStrides(int nd, Py_ssize_t *shape, Py_ssize_t *strides, int itemsize, char order)	modelled	typeobj-buffer-fill-strides	
 Objects/abstract.c	774	814	PyBuffer_FillInfo	PyBuffer_FillInfo(Py_buffer *view, PyObject *obj, void *buf, Py_ssize_t len, int readonly, int flags)	todo		
 Objects/abstract.c	817	829	PyBuffer_Release	PyBuffer_Release(Py_buffer *view)	todo		
 Objects/abstract.c	832	836	_buffer_release_call	_buffer_release_call(void *arg)	excluded		no-behaviour: thin interpreter-state wrapper around PyBuffer_Release

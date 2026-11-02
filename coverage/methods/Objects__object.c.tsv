@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Objects/object.c	50	69	_PyObject_CheckConsistency	_PyObject_CheckConsistency(PyObject *op, int check_content)	todo		changed-in-3.15: was excluded: test-support: debug-build diagnostic, not reachable from Python
+Objects/object.c	50	69	_PyObject_CheckConsistency	_PyObject_CheckConsistency(PyObject *op, int check_content)	excluded		test-support: debug-build diagnostic, not reachable from Python
 Objects/object.c	77	80	get_legacy_reftotal	get_legacy_reftotal(void)	excluded		no-behaviour: reference count bookkeeping
 Objects/object.c	89	99	reftotal_add	reftotal_add(PyThreadState *tstate, Py_ssize_t n)	excluded		no-behaviour: reference count bookkeeping
 Objects/object.c	110	114	_Py_FinalizeRefTotal	_Py_FinalizeRefTotal(_PyRuntimeState *runtime)	excluded		no-behaviour: reference count bookkeeping
@@ -8,7 +8,7 @@ Objects/object.c	124	137	get_reftotal	get_reftotal(PyInterpreterState *interp)	e
 Objects/object.c	140	158	get_global_reftotal	get_global_reftotal(_PyRuntimeState *runtime)	excluded		no-behaviour: reference count bookkeeping
 Objects/object.c	163	170	_PyDebug_PrintTotalRefs	_PyDebug_PrintTotalRefs(void) {	excluded		no-behaviour: reference count bookkeeping
 Objects/object.c	183	190	has_own_refchain	has_own_refchain(PyInterpreterState *interp)	excluded		no-behaviour: reference count bookkeeping
-Objects/object.c	193	214	refchain_init	refchain_init(PyInterpreterState *interp)	todo		changed-in-3.15: was excluded: no-behaviour: reference count bookkeeping
+Objects/object.c	193	214	refchain_init	refchain_init(PyInterpreterState *interp)	excluded		no-behaviour: reference count bookkeeping
 Objects/object.c	217	223	refchain_fini	refchain_fini(PyInterpreterState *interp)	excluded		no-behaviour: reference count bookkeeping
 Objects/object.c	226	229	_PyRefchain_IsTraced	_PyRefchain_IsTraced(PyInterpreterState *interp, PyObject *obj)	excluded		no-behaviour: reference count bookkeeping
 Objects/object.c	233	240	_PyRefchain_Trace	_PyRefchain_Trace(PyInterpreterState *interp, PyObject *obj)	excluded		no-behaviour: reference count bookkeeping
@@ -50,7 +50,7 @@ Objects/object.c	844	868	PyObject_ASCII	PyObject_ASCII(PyObject *v)	todo
 Objects/object.c	871	900	PyObject_Bytes	PyObject_Bytes(PyObject *v)	todo		changed-in-3.15:
 Objects/object.c	903	915	clear_freelist	clear_freelist(struct _Py_freelist *freelist, int is_finalization, freefunc dofree)	excluded		no-behaviour: object allocator or free list
 Objects/object.c	918	924	free_object	free_object(void *obj)	excluded		no-behaviour: object allocator or free list
-Objects/object.c	927	959	_PyObject_ClearFreeLists	_PyObject_ClearFreeLists(struct _Py_freelists *freelists, int is_finalization)	todo		changed-in-3.15: was excluded: no-behaviour: object allocator or free list
+Objects/object.c	927	959	_PyObject_ClearFreeLists	_PyObject_ClearFreeLists(struct _Py_freelists *freelists, int is_finalization)	excluded		no-behaviour: object allocator or free list
 Objects/object.c	962	1009	_PyObject_FunctionStr	def _PyObject_FunctionStr(x): try: qualname = x.__qualname__ except AttributeError: return str(x) try: mod = x.__module__ if mod is not None and mod != 'builtins': return f\"{x.__module__}.{qualname}()\" except AttributeError: pass return qualname */ PyObject * _PyObject_FunctionStr(PyObject *x)	todo		
 Objects/object.c	1049	1094	do_richcompare	do_richcompare(PyThreadState *tstate, PyObject *v, PyObject *w, int op)	modelled	typeobj-richcompare-defaults,typeobj-richcompare-left-first,typeobj-richcompare-subclass-first	
 Objects/object.c	1100	1117	PyObject_RichCompare	PyObject_RichCompare(PyObject *v, PyObject *w, int op)	modelled	typeobj-richcompare-subclass-first	
@@ -102,8 +102,8 @@ Objects/object.c	2433	2440	notimplemented_dealloc	notimplemented_dealloc(PyObjec
 Objects/object.c	2443	2448	notimplemented_bool	notimplemented_bool(PyObject *v)	todo		
 Objects/object.c	2504	2512	_PyObject_InitState	_PyObject_InitState(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
 Objects/object.c	2515	2520	_PyObject_FiniState	_PyObject_FiniState(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
-Objects/object.c	2670	2702	_PyTypes_InitTypes	_PyTypes_InitTypes(PyInterpreterState *interp)	todo		changed-in-3.15: was excluded: internal-bootstrap: interpreter start-up and shutdown of static types
-Objects/object.c	2712	2723	_PyTypes_FiniTypes	_PyTypes_FiniTypes(PyInterpreterState *interp)	todo		changed-in-3.15: was excluded: internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/object.c	2670	2702	_PyTypes_InitTypes	_PyTypes_InitTypes(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
+Objects/object.c	2712	2723	_PyTypes_FiniTypes	_PyTypes_FiniTypes(PyInterpreterState *interp)	excluded		internal-bootstrap: interpreter start-up and shutdown of static types
 Objects/object.c	2727	2757	new_reference	new_reference(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
 Objects/object.c	2760	2766	_Py_NewReference	_Py_NewReference(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
 Objects/object.c	2769	2772	_Py_NewReferenceNoTotal	_Py_NewReferenceNoTotal(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
@@ -127,8 +127,8 @@ Objects/object.c	3087	3093	_PyObject_DebugTypeStats	_PyObject_DebugTypeStats(FIL
 Objects/object.c	3108	3139	Py_ReprEnter	Py_ReprEnter(PyObject *obj)	todo		changed-in-3.15:
 Objects/object.c	3142	3170	Py_ReprLeave	Py_ReprLeave(PyObject *obj)	todo		
 Objects/object.c	3179	3198	_PyTrash_thread_deposit_object	_PyTrash_thread_deposit_object(PyThreadState *tstate, PyObject *op)	excluded		no-behaviour: object allocator or free list
-Objects/object.c	3203	3234	_PyTrash_thread_destroy_chain	_PyTrash_thread_destroy_chain(PyThreadState *tstate)	todo		changed-in-3.15: was excluded: no-behaviour: object allocator or free list
-Objects/object.c	3237	3284	_PyObject_AssertFailed	_PyObject_AssertFailed(PyObject *obj, const char *expr, const char *msg, const char *file, int line, const char *function)	todo		changed-in-3.15: was excluded: test-support: debug-build diagnostic, not reachable from Python
+Objects/object.c	3203	3234	_PyTrash_thread_destroy_chain	_PyTrash_thread_destroy_chain(PyThreadState *tstate)	excluded		no-behaviour: object allocator or free list
+Objects/object.c	3237	3284	_PyObject_AssertFailed	_PyObject_AssertFailed(PyObject *obj, const char *expr, const char *msg, const char *file, int line, const char *function)	excluded		test-support: debug-build diagnostic, not reachable from Python
 Objects/object.c	3295	3351	_Py_Dealloc	_Py_Dealloc(PyObject *op)	excluded		no-behaviour: reference count bookkeeping
 Objects/object.c	3355	3358	PyObject_GET_WEAKREFS_LISTPTR	PyObject_GET_WEAKREFS_LISTPTR(PyObject *op)	todo		
 Objects/object.c	3366	3369	Py_NewRef	Py_NewRef(PyObject *obj)	excluded		no-behaviour: reference count bookkeeping
