@@ -119,37 +119,31 @@ theorem egInitKeepsMembers_proven : EgInitKeepsMembers := by
 
 /-! ## `repr` -/
 
-/-- **`BaseExceptionGroup_repr` never reads past `args`.** After any assignment to `args`, a
-group whose `exceptions` argument was a list or tuple can be passed to `repr`. FALSE on 3.14.7:
-`eg.args = ()` then `repr(eg)` reads `args[1]` of an empty tuple. -/
-def EgReprInBoundsAfterArgsSet : Prop :=
-  ∀ (rt : Rt) (a : Addr) (d : ExcData) (value : Val) (w w' : World), IsExc w a d →
-    d.egExcsStr = none → d.args.length = 2 →
-    baseExceptionArgsSet rt (.obj a) (some value) w = .ok () w' →
-    egReprOutOfBounds (excDataOf w' (.obj a)) = false
+/-- **`BaseExceptionGroup_repr` looks at `args[1]` only when there are two `args`.** `args` is
+writable and `__init__` replaces it, so `eg.args = ()` leaves a group with any `args`. Then `repr`
+is the tuple form of `eg.exceptions`, for every `args` that is not two items long. -/
+def EgReprAnyArgs : Prop :=
+  ∀ (rt : Rt) (self : Val) (r m : String) (w w1 w2 : World),
+    (excDataOf w self).egExcsStr = none → (excDataOf w self).args.length ≠ 2 →
+    rt.repr (.tuple (excDataOf w self).egExceptions) w = .ok r w1 →
+    rt.repr ((excDataOf w self).egMessage.getD .none) w1 = .ok m w2 →
+    baseExceptionGroupRepr rt self w =
+      .ok (.str s!"{pyTypeName w1 (typeOf w1 self)}({m}, {r})") w2
 
-theorem egReprInBoundsAfterArgsSet_refuted : ¬EgReprInBoundsAfterArgsSet := by
-  intro h
-  let d : ExcData := { args := [.int 1, .int 2] }
-  let c : Cell := .val { body := .exc d }
-  let w : World := { heap := #[c] }
-  have hx : IsExc w 0 d := by
-    constructor
-    · simp [w]
-    · simp [payloadOf, World.get, w, c]
-  have hset : baseExceptionArgsSet default (.obj 0) (some (.tuple [])) w =
-      .ok () (excUpdW w 0 (fun e => { e with args := [] })) := by
-    simp [baseExceptionArgsSet, excSeqTuple, excUpdate_app]
-  have := h default 0 d (.tuple []) w _ hx rfl rfl hset
-  rw [excUpdW_data hx] at this
-  simp [egReprOutOfBounds, d] at this
+theorem egReprAnyArgs_proven : EgReprAnyArgs := by
+  intro rt self r m w w1 w2 h1 h2 h3 h4
+  have hl : egArgsShowList w (excDataOf w self) = false := by
+    simp [egArgsShowList, h2]
+  simp only [baseExceptionGroupRepr, M.bind_app, getW_app, h1, hl, Bool.false_eq_true, if_false,
+    h3, h4]
+  rfl
 
-/-- The narrowed statement: without an assignment, `__new__` leaves two `args`, so the read
-is in bounds for every group fresh from `BaseExceptionGroup_new`. -/
+/-- `__new__` leaves two `args`, so the list test looks at the second for every group fresh from
+`BaseExceptionGroup_new`. -/
 def EgReprInBoundsAfterNew : Prop :=
   ∀ (rt : Rt) (t : Addr) (args : List Val) (v : Val) (w w' : World),
     baseExceptionGroupNew rt t args w = .ok v w' →
-    args.length = 2 ∧ egReprOutOfBounds (excDataOf w' v) = false
+    args.length = 2 ∧ (excDataOf w' v).args.length = 2
 
 theorem argCount_ok (f : Option String) (min max n : Nat) (u : Unit) (w w' : World)
     (h : argCount f min max n w = .ok u w') : min ≤ n ∧ n ≤ max ∧ w' = w := by
@@ -184,7 +178,7 @@ theorem egReprInBoundsAfterNew_proven : EgReprInBoundsAfterNew := by
     subst h1 h2
     refine ⟨hl, ?_⟩
     rw [(isExc_alloc w1 cls _).data]
-    simp [egReprOutOfBounds, hl]
+    simp [hl]
 
 /-! ## `exceptiongroup_subset` -/
 

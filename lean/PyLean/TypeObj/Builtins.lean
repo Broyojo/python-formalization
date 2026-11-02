@@ -39,6 +39,7 @@ def familyOf (a : Addr) : CFn :=
   | 105 => .listIter
   | 106 => .dictKeys
   | 107 => .strIter
+  | 109 => .frozendict
   | _ => .exception
 
 /-- Sequence types answer `__add__` and friends with `sq_*` slots. -/

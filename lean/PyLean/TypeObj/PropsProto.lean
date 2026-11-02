@@ -227,7 +227,8 @@ def NbBoolMustReturnBool : Prop :=
   ∀ (rt : Rt) (self v : Val) (w w' : World),
     maybeCallSpecial rt self "__bool__" [] true w = .ok (.res v) w' →
     (∀ b, v ≠ .bool b) →
-    slotNbBool rt self w = (typeErr s!"__bool__ should return bool, returned {typeName w' v}" : M Bool) w'
+    slotNbBool rt self w =
+      (typeErr s!"{objFQN w' self}.__bool__() must return a bool, not {objFQN w' v}" : M Bool) w'
 
 theorem nbBoolMustReturnBool_proven : NbBoolMustReturnBool := by
   intro rt self v w w' h hb

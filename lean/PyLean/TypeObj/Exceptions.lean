@@ -35,6 +35,7 @@ def excCallStr (rt : Rt) (f : CFn) (v : Val) : M Val :=
 def excCallRepr (rt : Rt) (f : CFn) (v : Val) : M Val :=
   match f with
   | .exceptionGroup => baseExceptionGroupRepr rt v
+  | .importError => importErrorRepr rt v
   | _ => baseExceptionRepr rt v
 
 /-- `tp_new` of the exception families. `kwds` matters only to `OSError_new`. -/

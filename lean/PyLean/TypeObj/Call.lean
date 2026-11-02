@@ -377,10 +377,10 @@ def listInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
     listExtend rt self a x
   | _, _ => gap%
 
-/-- `dict_init` through `dict_update_common`, `Objects/dictobject.c:4008`: the argument, then the
-keywords, are merged into `self`, which keeps what it held. -/
-def dictInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
-  unpackTuple "dict" 0 1 args.length
+/-- `dict_update_common`, `Objects/dictobject.c:4008`: the argument, then the keywords, are merged
+into `self`, which keeps what it held. -/
+def dictUpdateCommon (rt : Rt) (self : Val) (args : List Val) (kw : Kw) (name : String) : M Unit := do
+  unpackTuple name 0 1 args.length
   match self with
   | .obj a =>
     match args with
@@ -388,6 +388,23 @@ def dictInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := do
     | x :: _ => dictUpdateArg rt a x
     for (k, v) in kw do
       dictInsert rt a (.str k) (strHash k) v
+  | _ => gap%
+
+/-- `dict_init`. -/
+def dictInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit :=
+  dictUpdateCommon rt self args kw "dict"
+
+/-- `frozendict_new`, `Objects/dictobject.c:8469`: the update runs on an object nothing else can
+see yet, here a `dict` that then changes its payload. -/
+def frozendictNew (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
+  let d ← alloc B.dict (.dict [])
+  dictUpdateCommon rt d args kw "frozendict"
+  match d with
+  | .obj a =>
+    modObj a fun o => { o with cls := t, body := .frozen ((match o.body with
+      | .dict es => es
+      | _ => [])) }
+    pure d
   | _ => gap%
 
 /-- `property_init_impl`, `Objects/descrobject.c:1861`, with the clinic argument
@@ -554,6 +571,7 @@ def callTpNew (rt : Rt) (f : SlotFn) (t : Addr) (args : List Val) (kw : Kw) : M 
         isSubtype w (typeOf w m) B.tuple then
       typeErr s!"mappingproxy() argument must be a mapping, not {typeName w m}"
     alloc B.mappingproxy (.proxy m)
+  | .c .frozendict => frozendictNew rt t args kw
   | .c .list | .c .dict | .c .property | .c .classmethod | .c .staticmethod | .c .super =>
     alloc t (freshBody w t)
   | .c .none =>
@@ -908,7 +926,7 @@ def pyFormat (rt : Rt) (obj : Val) (spec : Option Val) : M Val := do
     let w ← getW
     match strOf w r with
     | some _ => pure r
-    | none => typeErr s!"__format__ must return a str, not {trunc 200 (typeName w r)}"
+    | none => typeErr s!"{objFQN w obj}.__format__() must return a str, not {objFQN w r}"
 
 /-- `dir(obj)` for the object protocol, `_dir_object`, `Objects/object.c:2235`. -/
 def pyDir (rt : Rt) (obj : Val) : M Val := do
@@ -996,13 +1014,27 @@ def reduceToGetattr (obj name : Val) : M Val := do
   let g ← alloc B.builtinFn (.builtin .getattr none)
   pure (.tuple [g, .tuple [obj, name]])
 
+/-- `_Py_IsPrivateName`, `Python/symtable.c:3311`. -/
+def isPrivateName (n : String) : Bool :=
+  let c := n.toList
+  c.length ≥ 3 && c.take 2 == ['_', '_'] && c.drop (c.length - 2) != ['_', '_']
+
 /-- `method___reduce___impl`, `Objects/classobject.c:91`. -/
 def methodReduce (rt : Rt) (self : Val) : M Val := do
   let w ← getW
   match payloadOf w self with
   | some (.bound func s) =>
     let name ← rt.getAttr func "__name__"
-    reduceToGetattr s name
+    let w ← getW
+    match strOf w name with
+    | some n =>
+      if isPrivateName n then
+        let cls := match asType w s with
+          | some t => t
+          | none => typeOf w s
+        reduceToGetattr s (.str (pyMangle (pyTypeName w cls) n))
+      else reduceToGetattr s name
+    | none => reduceToGetattr s name
   | _ => gap%
 
 /-- `meth_reduce`, `Objects/methodobject.c:192`. -/
@@ -1378,15 +1410,15 @@ def typeShortName (w : World) (t : Addr) : String := typeQualname w t
 def objectSetDict (obj : Val) (value : Option Val) : M Unit := do
   let w ← getW
   match value with
-  | none =>
-    match obj with
-    | .obj a => modObj a fun o => { o with dict := none }
-    | _ => gap%
   | some v =>
-    match dictOf w v, v, obj with
-    | some _, .obj d, .obj a => modObj a fun o => { o with dict := some d }
-    | _, _, _ =>
+    if (dictOf w v).isNone then
       typeErr s!"__dict__ must be set to a dictionary, not a '{trunc 200 (typeName w v)}'"
+  | none => pure ()
+  if (tdata w (typeOf w obj)).dictoffset == 0 then attrErr "This object has no __dict__"
+  match obj, value with
+  | .obj a, none => modObj a fun o => { o with dict := none }
+  | .obj a, some (.obj d) => modObj a fun o => { o with dict := some d }
+  | _, _ => gap%
 
 /-- `descr_get`: a value found in a class dict is bound with no object. -/
 def bindToType (rt : Rt) (r : Val) (t : Addr) : M Val := do
@@ -1428,7 +1460,7 @@ def typeGetAnnotations (rt : Rt) (t : Addr) : M Val := do
         let r ← rt.call annotate [.int 1] []
         let w ← getW
         if (dictOf w r).isNone then
-          typeErr s!"__annotate__ returned non-dict of type '{trunc 100 (typeName w r)}'"
+          typeErr s!"__annotate__() must return a dict, not {objFQN w r}"
         pure r
       else alloc B.dict (.dict [])
     modType t fun d => { d with dict := NameDict.set d.dict "__annotations_cache__" ann }
@@ -1482,7 +1514,7 @@ def funcGetAnnotations (rt : Rt) (fn : Addr) (f : FuncData) : M Val := do
       let r ← rt.call a [.int 1] []
       let w ← getW
       if (dictOf w r).isNone then
-        typeErr s!"__annotate__ returned non-dict of type '{trunc 100 (typeName w r)}'"
+        typeErr s!"__annotate__() must return a dict, not {objFQN w r}"
       match payloadOf w (.obj fn) with
       | some (.func g) => store r g
       | _ => gap%
@@ -1524,6 +1556,54 @@ def genericSetDict (obj : Val) (value : Option Val) : M Unit := do
   if value.isNone then typeErr "cannot delete __dict__"
   objectSetDict obj value
 
+/-- `get_builtin_base_with_dict`, `Objects/typeobject.c:4005`: the first static class with a dict
+along `tp_base`. -/
+def builtinBaseWithDict (w : World) : Nat → Addr → Option Addr
+  | 0, _ => none
+  | fuel + 1, t =>
+    match (tdata w t).base with
+    | none => none
+    | some b =>
+      if (tdata w t).dictoffset != 0 && !(tdata w t).heap then some t
+      else builtinBaseWithDict w fuel b
+
+/-- `get_dict_descriptor`, `Objects/typeobject.c:4017`. -/
+def dictDescriptor (w : World) (base : Addr) : Option Val :=
+  match findInMro w base "__dict__" with
+  | some d => if isDataDescr w d then some d else none
+  | none => none
+
+/-- `raise_dict_descr_error`, `Objects/typeobject.c:4029`. -/
+def raiseDictDescrError {α : Type} (obj : Val) : M α := do
+  let w ← getW
+  typeErr s!"this __dict__ descriptor does not support '{trunc 200 (typeName w obj)}' objects"
+
+/-- `subtype_dict`, `Objects/typeobject.c:4037`: a static base keeps its own `__dict__`. -/
+def subtypeDict (rt : Rt) (obj : Val) : M Val := do
+  let w ← getW
+  match builtinBaseWithDict w w.heap.size (typeOf w obj) with
+  | some base =>
+    match dictDescriptor w base with
+    | none => raiseDictDescrError obj
+    | some descr =>
+      match slotOf w (typeOf w descr) .tp_descr_get with
+      | none => raiseDictDescrError obj
+      | some f => callDescrGet rt f descr (some obj) (some (.obj (typeOf w obj)))
+  | none => genericGetDict obj
+
+/-- `subtype_setdict`, `Objects/typeobject.c:4086`. -/
+def subtypeSetdict (rt : Rt) (obj : Val) (value : Option Val) : M Unit := do
+  let w ← getW
+  match builtinBaseWithDict w w.heap.size (typeOf w obj) with
+  | some base =>
+    match dictDescriptor w base with
+    | none => raiseDictDescrError obj
+    | some descr =>
+      match slotOf w (typeOf w descr) .tp_descr_set with
+      | none => raiseDictDescrError obj
+      | some f => callDescrSet rt f descr obj value
+  | none => objectSetDict obj value
+
 /-- Getter of the `PyGetSetDef`/`PyMemberDef` named `n` on static type `owner`. -/
 def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
   let w ← getW
@@ -1531,13 +1611,14 @@ def getsetGetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) : M Val := do
     | .obj a => a
     | _ => 0
   if owner == B.object && n == "__class__" then return .obj (typeOf w obj)
-  if (tdata w owner).heap then
-    if n == "__dict__" then return ← genericGetDict obj
-    if n == "__weakref__" then
-      if (tdata w (typeOf w obj)).weaklistoffset == 0 then
-        attrErr "This object has no __weakref__"
-      return .none
-    gap%
+  if owner == B.object && n == "__dict__" then return ← subtypeDict rt obj
+  if owner == B.object && n == "__weakref__" then
+    -- `subtype_getweakref`, `Objects/typeobject.c:4109`. Weak references are not modelled, and
+    -- `tp_subclasses` holds one to every class.
+    if (tdata w (typeOf w obj)).weaklistoffset == 0 then
+      attrErr "This object has no __weakref__"
+    if typeCheck w obj then gap%
+    return .none
   if owner == B.type then
     let d := tdata w tA
     if n == "__name__" then return .str (if d.heap then d.name else typeShortName w tA)
@@ -1733,9 +1814,7 @@ def getsetSetImpl (rt : Rt) (owner : Addr) (n : Name) (obj : Val) (value : Optio
     | .obj a => a
     | _ => 0
   if owner == B.object && n == "__class__" then return ← objectSetClass obj value
-  if (tdata w owner).heap then
-    if n == "__dict__" then return ← objectSetDict obj value
-    gap%
+  if owner == B.object && n == "__dict__" then return ← subtypeSetdict rt obj value
   if owner == B.type then
     if n == "__name__" then
       checkSetSpecial tA value "__name__"

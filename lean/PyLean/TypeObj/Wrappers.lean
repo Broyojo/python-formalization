@@ -161,7 +161,7 @@ def methodOutputAsList (rt : Rt) (o : Val) (meth : Name) : M Val := do
     let it ← tryM (rt.getIter out) fun e => do
       let w ← getW
       if excMatches w e B.TypeError then
-        typeErr s!"{trunc 200 (typeName w o)}.{meth}() returned a non-iterable (type {trunc 200 (typeName w out)})"
+        typeErr s!"{objFQN w o}.{meth}() must return an iterable, not {objFQN w out}"
       else raise e
     let xs ← pySequenceList rt it
     alloc B.list (.list xs)
@@ -202,7 +202,7 @@ def pyGetAIter (rt : Rt) (o : Val) : M Val := do
     let it ← vectorcallMethod rt "__aiter__" [o]
     let w ← getW
     if pyAIterCheck w it then pure it
-    else typeErr s!"aiter() returned not an async iterator of type '{trunc 100 (typeName w it)}'"
+    else typeErr s!"{objFQN w o}.__aiter__() must return an async iterator, not {objFQN w it}"
 
 /-- `PyIter_NextItem`, `Objects/abstract.c:2900`. -/
 def pyIterNextItem (rt : Rt) (it : Val) : M (Option Val) := do

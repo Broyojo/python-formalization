@@ -330,6 +330,15 @@ theorem descrGetsShareGuard_proven : DescrGetsShareGuard := by
 
 /-! ## `__reduce__` -/
 
+/-- The name `method___reduce___impl` gives `getattr`, `Objects/classobject.c:100-113`: a private
+name is mangled with the class of `__self__`, or `__self__` if it is a class. -/
+def reduceName (w : World) (s : Val) (nm : Name) : Name :=
+  if isPrivateName nm then
+    pyMangle (pyTypeName w (match asType w s with
+      | some t => t
+      | none => typeOf w s)) nm
+  else nm
+
 /-- `t` is `(getattr, (o, n))`: applying its first item to its second is `getattr(o, n)`. -/
 def IsGetattrCall (rt : Rt) (w : World) (t o : Val) (n : Name) : Prop :=
   ∃ g b args, t = .tuple [g, .tuple args] ∧ payloadOf w g = some (.builtin b none) ∧
@@ -345,14 +354,14 @@ theorem reduceToGetattr_call (rt : Rt) (o : Val) (n : Name) (w : World) :
 
 /-- **`__reduce__` of methods and descriptors rebuilds by `getattr`.** For a bound method, a builtin
 method with a `__self__`, a method-wrapper and a descriptor, the result applied to itself is
-`getattr` of the right object and name, so unpickling looks the callable up again. A builtin
-with no `__self__` reduces to its bare name, and a `__func__` whose `__name__` raises makes
-`__reduce__` raise. -/
+`getattr` of the right object and name, so unpickling looks the callable up again; a private
+method name is mangled, or `getattr` would not find it. A builtin with no `__self__` reduces to
+its bare name, and a `__func__` whose `__name__` raises makes `__reduce__` raise. -/
 def ReduceIsGetattr : Prop :=
   ∀ (rt : Rt) (w : World),
     (∀ m f s nm, payloadOf w m = some (.bound f s) →
       (∀ u, rt.getAttr f "__name__" u = .ok (.str nm) u) →
-      ∃ t w', methodReduce rt m w = .ok t w' ∧ IsGetattrCall rt w' t s nm) ∧
+      ∃ t w', methodReduce rt m w = .ok t w' ∧ IsGetattrCall rt w' t s (reduceName w s nm)) ∧
     (∀ m f s e w1, payloadOf w m = some (.bound f s) → rt.getAttr f "__name__" w = .err e w1 →
       methodReduce rt m w = .err e w1) ∧
     (∀ m b x nm, payloadOf w m = some (.builtin b (some x)) → builtinName b = some nm →
@@ -369,8 +378,15 @@ theorem reduceIsGetattr_proven : ReduceIsGetattr := by
   intro rt w
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro m f s nm p hn
-    obtain ⟨t, w', h, hc⟩ := reduceToGetattr_call rt s nm w
-    exact ⟨t, w', by simp [methodReduce, p, hn, h], hc⟩
+    obtain ⟨t, w', h, hc⟩ := reduceToGetattr_call rt s (reduceName w s nm) w
+    refine ⟨t, w', ?_, hc⟩
+    by_cases hp : isPrivateName nm = true
+    · simp only [reduceName, hp, if_true] at h
+      simp [methodReduce, p, hn, strOf, hp]
+      exact h
+    · have hp' : isPrivateName nm = false := by simpa using hp
+      simp only [reduceName, hp', Bool.false_eq_true, if_false] at h
+      simp [methodReduce, p, hn, h, strOf, hp']
   · intro m f s e w1 p hn
     simp [methodReduce, p, hn]
   · intro m b x nm p hn

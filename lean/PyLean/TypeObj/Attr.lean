@@ -66,6 +66,12 @@ def dictOf (w : World) : Val → Option (List (Val × Val))
     | some (.dict es) => some es
     | _ => none
 
+/-- `PyAnyDict_Check`: the entries of a `dict` or `frozendict`, or of a subclass. -/
+def anyDictOf (w : World) (v : Val) : Option (List (Val × Val)) :=
+  match payloadOf w v with
+  | some (.dict es) | some (.frozen es) => some es
+  | _ => none
+
 /-- `PyList_Check`: the items of a list or list subclass instance. -/
 def listOf (w : World) : Val → Option (List Val)
   | v =>
@@ -165,8 +171,8 @@ def funcDescrGet (f : Val) (obj : Option Val) : M Val :=
   | none | some .none => pure f
   | some o => pyMethodNew f o
 
-/-- `cm_descr_get`, `Objects/funcobject.c:1535`. `cm_callable` is `None` before
-`__init__`, set by `cm_new`, so the "uninitialized" branch cannot be reached. -/
+/-- `cm_descr_get`, `Objects/funcobject.c:1535`. `cm_new` sets `cm_callable` to `None`, so the
+payload is always there. -/
 def cmDescrGet (cm : Val) (obj : Option Val) (ty : Option Val) : M Val := do
   let w ← getW
   match payloadOf w cm with
@@ -176,14 +182,14 @@ def cmDescrGet (cm : Val) (obj : Option Val) (ty : Option Val) : M Val := do
       | none, some o => .obj (typeOf w o)
       | none, none => .none
     pyMethodNew f t
-  | _ => runtimeErr "uninitialized classmethod object"
+  | _ => gap%
 
 /-- `sm_descr_get`, `Objects/funcobject.c:1799`. -/
 def smDescrGet (sm : Val) : M Val := do
   let w ← getW
   match payloadOf w sm with
   | some (.staticmethod f) => pure f
-  | _ => runtimeErr "uninitialized staticmethod object"
+  | _ => gap%
 
 /-- `PyType_GetQualName(type)`: `type_qualname`, `Objects/typeobject.c:1570`. -/
 def typeQualname (w : World) (t : Addr) : String :=
@@ -198,6 +204,9 @@ def typeFQN (w : World) (t : Addr) : String :=
   match NameDict.get? d.dict "__module__" with
   | some (.str m) => if m == "builtins" || m == "__main__" then d.qualname else m ++ "." ++ d.qualname
   | _ => d.qualname
+
+/-- `%T` of `PyUnicode_FromFormat`: the fully qualified name of the type of `v`. -/
+def objFQN (w : World) (v : Val) : String := typeFQN w (typeOf w v)
 
 /-- `descr_check`, `Objects/descrobject.c:80`, also `descr_setcheck` at `:217`. -/
 def descrCheck (owner : Addr) (name : Name) (obj : Val) : M Unit := do

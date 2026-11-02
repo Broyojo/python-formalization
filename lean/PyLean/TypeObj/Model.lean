@@ -111,7 +111,7 @@ inductive CFn where
   | object | type | none | notImpl | ellipsis | int | bool | float | str | tuple | list
   | dict | dictKeys | function | method | builtinFn | wrapperDescr | methodWrapper | methodDescr
   | classmethodDescr | memberDescr | getsetDescr | property | classmethod | staticmethod
-  | super | mappingproxy | seqIter | listIter | tupleIter | strIter | cell | exception
+  | super | mappingproxy | seqIter | listIter | tupleIter | strIter | cell | exception | frozendict
   | exceptionGroup | stopIteration | systemExit | importError | osError | nameError
   | attributeError | syntaxError | keyError | memoryError | unicodeEncodeError
   | unicodeDecodeError | unicodeTranslateError
@@ -306,6 +306,9 @@ inductive Payload where
   /-- Dict entries in insertion order. Keys are compared with `Val.is` (exact `str`,
   `int`), so this is a dict for attribute namespaces, not `Objects/dictobject.c`. -/
   | dict (entries : List (Val × Val))
+  /-- A `frozendict`, or an instance of a subclass: `PyFrozenDictObject` is a `PyDictObject` that
+  `PyDict_Check` refuses. -/
+  | frozen (entries : List (Val × Val))
   | func (f : FuncData)
   /-- `PyCFunctionObject`: a builtin function, with `__self__` if bound. -/
   | builtin (b : Builtin) (self : Option Val)
@@ -407,6 +410,10 @@ structure World where
   curModule : Option Val := none
   /-- The objects `Py_ReprEnter` holds, `Objects/object.c:3108`, most recent first. -/
   reprStack : List Val := []
+  /-- `interp->cached_objects.dict_descriptor` and `weakref_descriptor`, `Objects/typeobject.c:4684`:
+  one `__dict__` and one `__weakref__` getset for all classes. -/
+  dictDescr : Option Val := none
+  weakrefDescr : Option Val := none
   deriving Inhabited
 
 /-- A raised exception. `val` is the exception object when one exists; a C-level
@@ -520,6 +527,9 @@ def dictKeyIter : Addr := 105
 def dictKeys : Addr := 106
 /-- `PyUnicodeIter_Type`; `strIter` is the iterator for compact ASCII strings. -/
 def strIterU : Addr := 107
+/-- `ImportCycleError` and `frozendict`, new in 3.15. -/
+def ImportCycleError : Addr := 108
+def frozendict : Addr := 109
 -- Exception classes used by C code.
 def BaseException : Addr := 31
 def Exception : Addr := 32
