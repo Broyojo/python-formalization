@@ -1,0 +1,62 @@
+id: mathint-nextafter-steps-zero-sign
+title: "math.nextafter(x, y) and math.nextafter(x, y, steps=1) return zeros of opposite sign when the step lands on y's zero"
+priority: P4
+kind: twin-mismatch
+module: mathint
+files: [Modules/mathmodule.c]
+functions: ["math_nextafter_impl"]
+summary: |
+  The docstring says "If steps is not specified or is None, it defaults to 1", and the docs
+  describe nextafter(x, y, steps) as the value `steps` steps after x towards y. Without
+  `steps`, math.nextafter calls the C library's nextafter(), which steps from -5e-324 towards
+  0.0 to -0.0 (the C standard's next representable value in that direction; glibc and IEEE
+  754 nextUp agree). With steps=1, the bit-twiddling path of math_nextafter_impl sees that
+  the distance from x to y in units in the last place is ax + ay = 1 + 0 <= steps and returns
+  y itself, +0.0. So nextafter(-5e-324, 0.0) is -0.0 but nextafter(-5e-324, 0.0, steps=1) is
+  0.0, and symmetrically nextafter(5e-324, -0.0) is 0.0 but with steps=1 it is -0.0. The same
+  happens for any steps that lands exactly on a zero y of the other sign (e.g. x=-1e-323,
+  steps=2): the iterated single steps end on -0.0, the steps path on +0.0. The two results
+  compare equal, so only code that looks at the sign of zero (copysign, 1/x, repr, atan2) sees
+  it. Every other case agrees bit for bit, as the Lean model of the steps path shows.
+likelihood: |
+  Low. Needs a walk that ends exactly on a signed zero of the other sign than x, and a
+  consumer that looks at the sign of zero.
+maybe_intended: |
+  Possibly. The steps code returns y once the walk reaches y's value, matching "If x is equal
+  to y, return y"; the code comment at mathmodule.c:2940-2941 shows the authors thought about
+  +0.0 vs -0.0 for the neighbouring branch. But the documented default makes steps=1 and no
+  steps the same call, and they differ.
+reproducer: |
+  import math
+  a = math.nextafter(-5e-324, 0.0)
+  b = math.nextafter(-5e-324, 0.0, steps=1)
+  c = math.nextafter(5e-324, -0.0)
+  d = math.nextafter(5e-324, -0.0, steps=1)
+  print('no steps:', repr(a), repr(c), ' steps=1:', repr(b), repr(d))
+  if math.copysign(1, a) != math.copysign(1, b) and math.copysign(1, c) != math.copysign(1, d):
+      print('REPRODUCED mathint-nextafter-steps-zero-sign')
+expected: |
+  nextafter(x, y) and nextafter(x, y, steps=1) give the same float, sign of zero included.
+observed: |
+  python3 3.15.2: no steps: -0.0 0.0  steps=1: 0.0 -0.0. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): identical. REPRODUCED.
+promised_by: |
+  The math.nextafter docstring (Modules/mathmodule.c:2845-2850, "If steps is not specified or is
+  None, it defaults to 1") and Doc/library/math.rst ("Return the floating-point value steps
+  steps after x towards y").
+cause: |
+  Modules/mathmodule.c:2870-2873 calls the C nextafter() when steps is None. For steps given,
+  :2935-2939 return uy.f whenever ax + ay <= usteps, where ax and ay are the magnitudes in ulps;
+  with ax == steps and ay == 0 the walk ends on zero and y's zero is returned rather than the
+  zero with x's sign that single steps produce.
+possible_fix: |
+  Use `ax + ay < usteps` for the y branch when ay == 0 (or return copysign(0.0, x) when
+  ax == usteps and ay == 0), or route steps == 1 to the C nextafter() like steps=None.
+duplicates:
+  issues: []
+  queries: ["nextafter steps zero sign", "nextafter steps", "nextafter negative zero",
+            "nextafter steps=1 -0.0"]
+  notes: "The feature issue python/cpython#94906 and PR #103881 discuss steps=0 and -0.0 vs 0.0 for steps=0 only. Not in vendor/bugforge-results."
+lean:
+  property: PyLean.MathInt.NextafterDefaultStep
+  theorem: PyLean.MathInt.nextafterDefaultStep_refuted

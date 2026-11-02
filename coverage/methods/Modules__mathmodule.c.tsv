@@ -2,18 +2,18 @@ file	line	endline	name	signature	status	entry	note
 Modules/mathmodule.c	96	103	dl_fast_sum	dl_fast_sum(double a, double b)	todo		
 Modules/mathmodule.c	106	113	dl_sum	dl_sum(double a, double b)	todo		
 Modules/mathmodule.c	118	124	dl_mul	dl_mul(double x, double y)	todo		
-Modules/mathmodule.c	144	150	dl_split	dl_split(double x) {	todo		
-Modules/mathmodule.c	153	163	dl_mul	dl_mul(double x, double y)	todo		
+Modules/mathmodule.c	144	150	dl_split	dl_split(double x) {	excluded		platform: compiled only under UNRELIABLE_FMA (Modules/mathmodule.c:115-165), which no configure or pyconfig.h of 3.15.2 defines; the default build uses the fma version of dl_mul at :117-124
+Modules/mathmodule.c	153	163	dl_mul	dl_mul(double x, double y)	excluded		platform: the Dekker dl_mul, compiled only under UNRELIABLE_FMA (Modules/mathmodule.c:115-165), which no configure or pyconfig.h of 3.15.2 defines; the default build uses the fma version at :117-124
 Modules/mathmodule.c	172	180	tl_fma	tl_fma(double x, double y, TripleLength total)	todo		
 Modules/mathmodule.c	183	187	tl_to_d	tl_to_d(TripleLength total)	todo		
 Modules/mathmodule.c	223	254	m_sinpi	m_sinpi(double x)	todo		
 Modules/mathmodule.c	352	378	lanczos_sum	lanczos_sum(double x)	todo		
-Modules/mathmodule.c	382	475	m_tgamma	m_tgamma(double x)	todo		changed-in-3.15:
-Modules/mathmodule.c	483	524	m_lgamma	m_lgamma(double x)	todo		changed-in-3.15:
+Modules/mathmodule.c	382	475	m_tgamma	m_tgamma(double x)	todo		
+Modules/mathmodule.c	483	524	m_lgamma	m_lgamma(double x)	todo		
 Modules/mathmodule.c	531	618	m_remainder	m_remainder(double x, double y)	todo		
-Modules/mathmodule.c	629	648	m_log	m_log(double x)	todo		changed-in-3.15:
-Modules/mathmodule.c	661	685	m_log2	m_log2(double x)	todo		changed-in-3.15:
-Modules/mathmodule.c	688	707	m_log10	m_log10(double x)	todo		changed-in-3.15:
+Modules/mathmodule.c	629	648	m_log	m_log(double x)	todo		
+Modules/mathmodule.c	661	685	m_log2	m_log2(double x)	todo		
+Modules/mathmodule.c	688	707	m_log10	m_log10(double x)	todo		
 Modules/mathmodule.c	715	755	is_error	is_error(double x, int raise_edom)	todo		
 Modules/mathmodule.c	788	825	math_1	math_1(PyObject *arg, double (*func) (double), int can_overflow, const char *err_msg)	todo		
 Modules/mathmodule.c	832	852	math_1a	math_1a(PyObject *arg, double (*func) (double), const char *err_msg)	todo		
@@ -22,15 +22,15 @@ Modules/mathmodule.c	991	1013	math_ceil	math_ceil(PyObject *module, PyObject *nu
 Modules/mathmodule.c	1060	1082	math_floor	math_floor(PyObject *module, PyObject *number) /*[clinic end generated code: output=c6a65c4884884b8a input=63af6b5d7ebcc3d6]*/	todo		
 Modules/mathmodule.c	1095	1099	math_fmax_impl	math_fmax_impl(PyObject *module, double x, double y) /*[clinic end generated code: output=00692358d312fee2 input=021596c027336ffe]*/	todo		changed-in-3.15: new function
 Modules/mathmodule.c	1112	1116	math_fmin_impl	math_fmin_impl(PyObject *module, double x, double y) /*[clinic end generated code: output=3d5b7826bd292dd9 input=d12e64ccc33f878a]*/	todo		changed-in-3.15: new function
-Modules/mathmodule.c	1148	1152	math_signbit_impl	math_signbit_impl(PyObject *module, double x) /*[clinic end generated code: output=20c5f20156a9b871 input=3d3493fbcb5bdb3e]*/	todo		changed-in-3.15: new function
+Modules/mathmodule.c	1148	1152	math_signbit_impl	math_signbit_impl(PyObject *module, double x) /*[clinic end generated code: output=20c5f20156a9b871 input=3d3493fbcb5bdb3e]*/	todo		
 Modules/mathmodule.c	1213	1237	_fsum_realloc	_fsum_realloc(double **p_ptr, Py_ssize_t n, double *ps, Py_ssize_t *m_ptr)	todo		
 Modules/mathmodule.c	1281	1396	math_fsum	math_fsum(PyObject *module, PyObject *seq) /*[clinic end generated code: output=ba5c672b87fe34fc input=4506244ded6057dc]*/	todo		
 Modules/mathmodule.c	1413	1430	math_trunc	math_trunc(PyObject *module, PyObject *x) /*[clinic end generated code: output=34b9697b707e1031 input=2168b34e0a09134d]*/	todo		
 Modules/mathmodule.c	1447	1460	math_frexp_impl	math_frexp_impl(PyObject *module, double x) /*[clinic end generated code: output=03e30d252a15ad4a input=215cf8ea28a0959b]*/	todo		
-Modules/mathmodule.c	1476	1541	math_ldexp_impl	math_ldexp_impl(PyObject *module, double x, PyObject *i) /*[clinic end generated code: output=b6892f3c2df9cc6a input=17d5970c1a40a8c1]*/	todo		changed-in-3.15:
+Modules/mathmodule.c	1476	1541	math_ldexp_impl	math_ldexp_impl(PyObject *module, double x, PyObject *i) /*[clinic end generated code: output=b6892f3c2df9cc6a input=17d5970c1a40a8c1]*/	todo		
 Modules/mathmodule.c	1556	1570	math_modf_impl	math_modf_impl(PyObject *module, double x) /*[clinic end generated code: output=90cee0260014c3c0 input=b4cfb6786afd9035]*/	todo		
-Modules/mathmodule.c	1583	1612	loghelper_int	loghelper_int(PyObject* arg, double (*func)(double))	todo		changed-in-3.15: new function
-Modules/mathmodule.c	1615	1639	loghelper	loghelper(PyObject* arg, double (*func)(double))	todo		changed-in-3.15:
+Modules/mathmodule.c	1583	1612	loghelper_int	loghelper_int(PyObject* arg, double (*func)(double))	todo		
+Modules/mathmodule.c	1615	1639	loghelper	loghelper(PyObject* arg, double (*func)(double))	todo		
 Modules/mathmodule.c	1645	1667	math_log	math_log(PyObject *module, PyObject * const *args, Py_ssize_t nargs)	todo		
 Modules/mathmodule.c	1684	1688	math_log2	math_log2(PyObject *module, PyObject *x) /*[clinic end generated code: output=5425899a4d5d6acb input=08321262bae4f39b]*/	todo		
 Modules/mathmodule.c	1701	1705	math_log10	math_log10(PyObject *module, PyObject *x) /*[clinic end generated code: output=be72a64617df9c6f input=b2469d02c6469e53]*/	todo		
@@ -45,14 +45,14 @@ Modules/mathmodule.c	2367	2432	math_pow_impl	math_pow_impl(PyObject *module, dou
 Modules/mathmodule.c	2448	2452	math_degrees_impl	math_degrees_impl(PyObject *module, double x) /*[clinic end generated code: output=7fea78b294acd12f input=81e016555d6e3660]*/	todo		
 Modules/mathmodule.c	2465	2469	math_radians_impl	math_radians_impl(PyObject *module, double x) /*[clinic end generated code: output=34daa47caf9b1590 input=91626fc489fe3d63]*/	todo		
 Modules/mathmodule.c	2482	2486	math_isfinite_impl	math_isfinite_impl(PyObject *module, double x) /*[clinic end generated code: output=8ba1f396440c9901 input=46967d254812e54a]*/	todo		
-Modules/mathmodule.c	2499	2503	math_isnormal_impl	math_isnormal_impl(PyObject *module, double x) /*[clinic end generated code: output=c7b302b5b89c3541 input=fdaa00c58aa7bc17]*/	todo		changed-in-3.15: new function
-Modules/mathmodule.c	2516	2524	math_issubnormal_impl	math_issubnormal_impl(PyObject *module, double x) /*[clinic end generated code: output=4e76ac98ddcae761 input=9a20aba7107d0d95]*/	todo		changed-in-3.15: new function
+Modules/mathmodule.c	2499	2503	math_isnormal_impl	math_isnormal_impl(PyObject *module, double x) /*[clinic end generated code: output=c7b302b5b89c3541 input=fdaa00c58aa7bc17]*/	todo		
+Modules/mathmodule.c	2516	2524	math_issubnormal_impl	math_issubnormal_impl(PyObject *module, double x) /*[clinic end generated code: output=4e76ac98ddcae761 input=9a20aba7107d0d95]*/	todo		
 Modules/mathmodule.c	2537	2541	math_isnan_impl	math_isnan_impl(PyObject *module, double x) /*[clinic end generated code: output=f537b4d6df878c3e input=935891e66083f46a]*/	todo		
 Modules/mathmodule.c	2555	2559	math_isinf_impl	math_isinf_impl(PyObject *module, double x) /*[clinic end generated code: output=9f00cbec4de7b06b input=8584152a71a3aea9]*/	todo		
 Modules/mathmodule.c	2588	2628	math_isclose_impl	math_isclose_impl(PyObject *module, double a, double b, double rel_tol, double abs_tol) /*[clinic end generated code: output=b73070207511952d input=12d41764468bfdb8]*/	todo		
 Modules/mathmodule.c	2631	2678	_check_long_mult_overflow	_check_long_mult_overflow(long a, long b) {	todo		
 Modules/mathmodule.c	2698	2832	math_prod_impl	math_prod_impl(PyObject *module, PyObject *iterable, PyObject *start) /*[clinic end generated code: output=36153bedac74a198 input=4c5ab0682782ed54]*/	todo		
 Modules/mathmodule.c	2854	2965	math_nextafter_impl	math_nextafter_impl(PyObject *module, double x, double y, PyObject *steps) /*[clinic end generated code: output=cc6511f02afc099e input=3a9151e6b1e9f346]*/	todo		
-Modules/mathmodule.c	2978	2996	math_ulp_impl	math_ulp_impl(PyObject *module, double x) /*[clinic end generated code: output=f5207867a9384dd4 input=31f9bfbbe373fcaa]*/	todo		changed-in-3.15:
+Modules/mathmodule.c	2978	2996	math_ulp_impl	math_ulp_impl(PyObject *module, double x) /*[clinic end generated code: output=f5207867a9384dd4 input=31f9bfbbe373fcaa]*/	todo		
 Modules/mathmodule.c	2999	3045	math_exec	math_exec(PyObject *module)	todo		changed-in-3.15:
-Modules/mathmodule.c	3129	3132	PyInit_math	PyInit_math(void)	todo		
+Modules/mathmodule.c	3129	3132	PyInit_math	PyInit_math(void)	excluded		internal-bootstrap: returns PyModuleDef_Init(&mathmodule); module creation boilerplate with no math behaviour (the module's contents are set up by math_exec)
