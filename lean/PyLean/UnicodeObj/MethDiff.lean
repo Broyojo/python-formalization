@@ -2,6 +2,7 @@ import PyLean.DiffCore
 import PyLean.StrSearch.Diff
 import PyLean.UnicodeObj.MethStrip
 import PyLean.UnicodeObj.MethPad
+import PyLean.UnicodeObj.MethTail
 
 /-! Difftest handler for the `str` method slice (`fn` names start with `meth_`). -/
 
@@ -66,6 +67,31 @@ def run (fn : String) (j : Json) : Except String Json := do
       | "zfill" => pure (unicodeZfill s w)
       | o => throw s!"bad op {o}"
     return encPy encStr r
+  | "meth_startswith" =>
+    let s ← getSeq j "s"
+    let sub ← decArg (← field j "sub")
+    let optArg (k : String) : Except String (Option Arg) := do
+      match j.getObjVal? k with
+      | .ok .null | .error _ => pure none
+      | .ok v => pure (some (← decArg v))
+    let st ← optArg "start"
+    let en ← optArg "end"
+    let r ← match ← getStr j "op" with
+      | "startswith" => pure (unicodeStartsEnds "startswith" (-1) s sub st en)
+      | "endswith" => pure (unicodeStartsEnds "endswith" 1 s sub st en)
+      | o => throw s!"bad op {o}"
+    return encPy toJson r
+  | "meth_removeaffix" =>
+    let s ← getSeq j "s"
+    let a ← decArg (← field j "affix")
+    let r ← match ← getStr j "op" with
+      | "removeprefix" => pure (unicodeRemoveprefix s a)
+      | "removesuffix" => pure (unicodeRemovesuffix s a)
+      | o => throw s!"bad op {o}"
+    return encPy encStr r
+  | "meth_tailmatch" =>
+    return encPy toJson (pyUnicodeTailmatch (← decArg (← field j "str")) (← decArg (← field j "sub"))
+      (← getInt j "start") (← getInt j "end") (← getInt j "dir"))
   | _ => throw s!"unknown fn {fn}"
 
 def handler : Handler := fun fn j =>

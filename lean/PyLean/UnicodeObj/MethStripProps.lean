@@ -346,4 +346,40 @@ theorem stripDoc_proven : StripDoc := by
     | str t => exact absurd rfl (hs' t)
     | _ => rfl
 
+/-- The C API documentation of `PyUnicode_Substring`: "Return a substring of str, from
+character index start (included) to character index end (excluded). Negative indices are not
+supported." A negative index raises `IndexError`; otherwise the result is the Python slice
+`str[start:end]`. For every string and every pair of `Py_ssize_t`. -/
+def SubstringDoc : Prop :=
+  ∀ (s : Str) (start «end» : Int),
+    pyUnicodeSubstring s start «end» =
+      if start < 0 ∨ «end» < 0 then .error (.indexError "string index out of range")
+      else .ok ((s.drop start.toNat).take («end» - start).toNat)
+
+theorem substringDoc_proven : SubstringDoc := by
+  intro s st e
+  unfold pyUnicodeSubstring
+  by_cases h0 : st = 0 ∧ min e (s.length : Int) = s.length
+  · rw [if_pos h0]
+    obtain ⟨rfl, h1⟩ := h0
+    rw [if_neg (show ¬ ((0 : Int) < 0 ∨ e < 0) by omega)]
+    simp only [Int.toNat_zero, List.drop_zero, Int.sub_zero]
+    rw [List.take_of_length_le (by omega)]
+  · rw [if_neg h0]
+    by_cases h1 : st < 0 ∨ min e (s.length : Int) < 0
+    · rw [if_pos h1, if_pos (show st < 0 ∨ e < 0 by omega)]
+    · rw [if_neg h1, if_neg (show ¬ (st < 0 ∨ e < 0) by omega)]
+      by_cases h2 : st ≥ s.length ∨ min e (s.length : Int) < st
+      · rw [if_pos h2]
+        rcases h2 with h2 | h2
+        · rw [List.drop_eq_nil_of_le (by omega)]; simp
+        · by_cases h4 : st ≥ s.length
+          · rw [List.drop_eq_nil_of_le (by omega)]; simp
+          · rw [show (e - st).toNat = 0 by omega]; simp
+      · rw [if_neg h2]
+        rcases (show e ≤ s.length ∨ e > s.length by omega) with h3 | h3
+        · rw [show min e (s.length : Int) = e by omega]
+        · rw [show min e (s.length : Int) = s.length by omega,
+            List.take_of_length_le (by simp; omega), List.take_of_length_le (by simp; omega)]
+
 end PyLean.UnicodeObj

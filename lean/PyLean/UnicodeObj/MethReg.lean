@@ -2,6 +2,7 @@ import PyLean.Registry
 import PyLean.UnicodeObj.MethCase
 import PyLean.UnicodeObj.MethStripProps
 import PyLean.UnicodeObj.MethPadProps
+import PyLean.UnicodeObj.MethTailProps
 
 /-! Registry entries of the `str` method slice. -/
 
@@ -48,7 +49,33 @@ def methEntries : List Entry := [
       "unicode_zfill_impl"]
     statement := "For every argument objects, center/ljust/rjust/zfill convert the width first (its __index__ errors and OverflowError win), then require the fill character to be a str of exactly one character (TypeError otherwise), then pad."
     source := "str.center/ljust/rjust docs: 'fillchar'; clinic converters"
-    status := .proven, prop := ``PadArgs, thm := some ``padArgs_proven }
+    status := .proven, prop := ``PadArgs, thm := some ``padArgs_proven },
+  { id := "unicodeobj-meth-substring-doc", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["PyUnicode_Substring"]
+    statement := "For every string and pair of Py_ssize_t, PyUnicode_Substring raises IndexError for a negative index and otherwise returns the Python slice str[start:end], through its shortcuts for the whole string, an empty result and the ASCII and kind copies."
+    source := "C API docs of PyUnicode_Substring"
+    status := .proven, prop := ``SubstringDoc, thm := some ``substringDoc_proven },
+  { id := "unicodeobj-meth-tailmatch-doc", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["tailmatch"]
+    statement := "For all strings, start, end and directions, tailmatch answers whether sub is a prefix (suffix) of s[start:end], nothing matching when the adjusted start plus len(sub) passes the clipped end, through the memcmp for one kind and the first/last/middle comparison for two."
+    source := "str.startswith/endswith docs; invariant: kind paths agree"
+    status := .proven, prop := ``TailmatchDoc, thm := some ``tailmatchDoc_proven },
+  { id := "unicodeobj-meth-tailmatch-api", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["PyUnicode_Tailmatch", "tailmatch"]
+    statement := "For all arguments, PyUnicode_Tailmatch raises TypeError for a str or substr that is not a str (str checked first) and otherwise returns 1 or 0 as the documented tail match."
+    source := "C API docs of PyUnicode_Tailmatch"
+    status := .proven, prop := ``TailmatchApi, thm := some ``tailmatchApi_proven },
+  { id := "unicodeobj-meth-startsends-doc", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicode_startswith_impl", "unicode_endswith_impl", "tailmatch"]
+    statement := "For every string and Py_ssize_t start and end, startswith/endswith answer the tail match for a str, any() over a tuple of str, raise TypeError at the first non-str tuple element only when no earlier element matched, and TypeError for any other argument."
+    source := "str.startswith/endswith docs"
+    status := .proven, prop := ``StartsEndsDoc, thm := some ``startsEndsDoc_proven },
+  { id := "unicodeobj-meth-removeaffix-doc", pyFile := "Objects/unicodeobject.c"
+    pyFns := ["unicode_removeprefix_impl", "unicode_removesuffix_impl", "tailmatch",
+      "PyUnicode_Substring"]
+    statement := "For every string, removeprefix returns string[len(prefix):] when it starts with the prefix and the string otherwise; removesuffix returns string[:-len(suffix)] when it ends with a non-empty suffix and the string otherwise; a non-str argument raises TypeError."
+    source := "str.removeprefix/removesuffix docs"
+    status := .proven, prop := ``RemoveAffixDoc, thm := some ``removeAffixDoc_proven }
 ]
 
 end PyLean.UnicodeObj

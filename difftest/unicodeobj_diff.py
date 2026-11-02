@@ -2493,6 +2493,88 @@ def run_meth_pad(c):
     return cps_of(getattr(s, c["op"])(*args))
 
 
+def me_affix(rng, s):
+    """A str argument that often is a prefix, suffix or middle piece of s."""
+    r = rng.random()
+    if s and r < 0.6:
+        i = rng.randint(0, len(s))
+        j = rng.randint(i, len(s))
+        piece = s[i:j]
+        if rng.random() < 0.2 and piece:
+            piece = piece[:-1] + [rng.choice(ME_ALPH)]
+        return piece
+    return me_str(rng, 3)
+
+
+@gen("meth", 5)
+def gen_meth_startswith(rng):
+    s = me_str(rng)
+    r = rng.random()
+    if r < 0.6:
+        sub = {"t": "str", "s": me_affix(rng, s)}
+    elif r < 0.9:
+        items = [{"t": "str", "s": me_affix(rng, s)} for _ in range(rng.randint(0, 3))]
+        if rng.random() < 0.3:
+            items.insert(rng.randint(0, len(items)), rng.choice(
+                [{"t": "int", "v": 1}, {"t": "none"}, {"t": "other", "tp": "bytes"}]))
+        sub = {"t": "tuple", "items": items}
+    else:
+        sub = rng.choice([{"t": "int", "v": 1}, {"t": "none"}, {"t": "other", "tp": "list"}])
+    c = {"mod": "unicodeobj", "fn": "meth_startswith", "op": rng.choice(["startswith", "endswith"]),
+         "s": s, "sub": sub}
+    if rng.random() < 0.6:
+        c["start"] = me_index_arg(rng, len(s) + 2)
+        if rng.random() < 0.6:
+            c["end"] = me_index_arg(rng, len(s) + 2)
+    return c
+
+
+@run("meth_startswith")
+def run_meth_startswith(c):
+    args = [me_obj(c["sub"])]
+    if "start" in c:
+        args.append(me_obj(c["start"]))
+        if "end" in c:
+            args.append(me_obj(c["end"]))
+    return getattr(s_of(c["s"]), c["op"])(*args)
+
+
+@gen("meth", 3)
+def gen_meth_removeaffix(rng):
+    s = me_str(rng)
+    if rng.random() < 0.9:
+        affix = {"t": "str", "s": me_affix(rng, s)}
+    else:
+        affix = rng.choice([{"t": "int", "v": 1}, {"t": "none"}, {"t": "other", "tp": "bytes"}])
+    return {"mod": "unicodeobj", "fn": "meth_removeaffix", "s": s, "affix": affix,
+            "op": rng.choice(["removeprefix", "removesuffix"])}
+
+
+@run("meth_removeaffix")
+def run_meth_removeaffix(c):
+    return cps_of(getattr(s_of(c["s"]), c["op"])(me_obj(c["affix"])))
+
+
+_ME_TAILMATCH = ctypes.pythonapi.PyUnicode_Tailmatch
+_ME_TAILMATCH.argtypes = [ctypes.py_object, ctypes.py_object, ctypes.c_ssize_t, ctypes.c_ssize_t,
+                          ctypes.c_int]
+_ME_TAILMATCH.restype = ctypes.c_ssize_t
+
+
+@gen("meth", 3)
+def gen_meth_tailmatch(rng):
+    s = me_str(rng)
+    a = {"t": "str", "s": s} if rng.random() < 0.95 else {"t": "int", "v": 3}
+    b = {"t": "str", "s": me_affix(rng, s)} if rng.random() < 0.95 else {"t": "none"}
+    return {"mod": "unicodeobj", "fn": "meth_tailmatch", "str": a, "sub": b,
+            "start": me_ssize(rng), "end": me_ssize(rng), "dir": rng.choice([1, -1, 0, 2])}
+
+
+@run("meth_tailmatch")
+def run_meth_tailmatch(c):
+    return _ME_TAILMATCH(me_obj(c["str"]), me_obj(c["sub"]), c["start"], c["end"], c["dir"])
+
+
 def me_width_value(a):
     if a["t"] == "int":
         return a["v"]
