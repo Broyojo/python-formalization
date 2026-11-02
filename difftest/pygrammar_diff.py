@@ -164,8 +164,8 @@ def enc(node):  # noqa: F811
 
 # ---- part peg
 
-for V in (Path("/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.14"),
-          Path.home() / "pf" / "cpython-3.14"):
+for V in (Path("/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.15"),
+          Path.home() / "pf" / "vendor" / "cpython-3.15"):
     if V.exists():
         break
 sys.path.insert(0, str(V / "Tools" / "peg_generator"))
@@ -357,6 +357,58 @@ def corpus():
 
 
 CORPUS = corpus()
+
+REPIN = [
+    # lazy imports, PEP 810
+    "lazy import a\n", "lazy import a.b as c, d\n", "lazy from a import b\n", "lazy from . import b\n",
+    "lazy from .a import b as c\n", "lazy from a import (b, c)\n", "lazy from a import *\n",
+    "lazy from ... import b\n", "def f():\n  lazy import a\n", "try:\n  lazy import a\nfinally: pass\n",
+    "lazy from __future__ import annotations\n", "lazy from __future__ import barry_as_FLUFL\n",
+    "lazy = 1\n", "lazy\n", "lazy.a\n", "lazy(1)\n", "lazy import\n", "lazy from\n", "lazy from a\n",
+    "lazy lazy import a\n", "lazy import lazy\n", "from lazy import lazy\n", "lazy: int\n",
+    # `_warn_relative_import_of_lazy`
+    "from . lazy import a\n", "from .. lazy import a\n", "from ... lazy import a\n", "from . . lazy import a\n",
+    "from .lazy import a\n", "from ..lazy import a\n", "from .\\\n lazy import a\n", "from . lazy.b import a\n",
+    "from . lazy2 import a\n", "from lazy import a\n", "x = 1\nfrom .  lazy import a\n",
+    "from a lazy import b\n", "from . a lazy import b\n", "from a.b lazy import *\n",
+    # `tok->barry_as_bdfl`
+    "1 <> 2\n", "a <> b\n", "a<>b\n", "a <>= b\n", "(a <> b)\n",
+    "from __future__ import barry_as_FLUFL\n1 <> 2\n", "from __future__ import barry_as_FLUFL\n1 != 2\n",
+    "from __future__ import barry_as_FLUFL; 1 <> 2\n", "from __future__ import division, barry_as_FLUFL\na<>b\n",
+    "from . import barry_as_FLUFL\n1 <> 2\n", "from __future__ import barry_as_FLUFL as x\n1 <> 2\n",
+    # DictComp with no value
+    "{**d for d in x}\n", "{**d for d in x if d}\n", "{**d async for d in x}\n", "{**a, **b for a in x}\n",
+    "{**a: b for a in x}\n", "{a: **b for a in x}\n", "{*a for a in x}\n", "[*a for a in x]\n",
+    "(*a for a in x)\n", "{a: *b for a in x}\n", "{**(a or b) for a in x}\n", "f(**a for a in x)\n",
+    # signed patterns
+    "match x:\n  case +1: pass\n", "match x:\n  case +1.5: pass\n", "match x:\n  case +1j: pass\n",
+    "match x:\n  case +1+2j: pass\n", "match x:\n  case +1-2j: pass\n", "match x:\n  case {+1: a}: pass\n",
+    "match x:\n  case +'a': pass\n", "match x:\n  case +x: pass\n", "match x:\n  case ++1: pass\n",
+    "match x:\n  case -+1: pass\n", "match x:\n  case [+1, *a]: pass\n", "match x:\n  case 1+-2j: pass\n",
+    # a missing comma
+    "(a b)\n", "[a b]\n", "{a b}\n", "(a\nb)\n", "('a'\n 'b'\n c)\n", "(print a)\n", "print a\n", "exec a\n",
+    "(1 2)\n", "f(a b)\n", "x = (1\n 'a'\n 2)\n", "a b\n", "[a\n b\n c]\n", "(a if b c)\n", "(a.b c.d)\n",
+    "(print a b)\n", "('''a\nb''' c)\n", "(a\\\n b)\n", "{1: a b}\n", "[x for x in y z]\n",
+    # `expecting '}'`
+    "f'{a\n", "f'''{a\n\n'''\n", "f'{{a'\n", "f\"{a\n\"\n", "t'''{a\n'''\n", "f'''{\n\nx\n'''\n", "f'''{a:{b\n}'''\n",
+    "f'''\n{a\n'''\n", "f'''{a\n{b\n'''\n", "x = f'''{(\n'''\n", "f'''{[a,\nb'''\n", "f'''{a}{b\n'''\n",
+    # interpolation text
+    "t'{x}'", "t'{x=}'", "t'{x = }'", "t'{ x = !r}'", "t'{x=:>3}'", "t'''{x=\n}'''", "t'''{x=\\\n}'''",
+    "t'''{x=\\\n\\\n}'''", "t'''{x= \\\n }'''", "t'{x = y}'", "t'{x==y}'", "t'{x==y=}'", "t'{x   }'", "t'  {  x  }'",
+    "t'''{x # c\n=}'''", "t'''{x=#c\n}'''", "t'''{'#'=}'''", "t'''{\"\\\"#x\"=#c\n}'''", "t'{a=!s:{b}}'",
+    "f'''{\"\\\"#x\"=#c\n}'''", "f'''{'\\'#'=}'''", "f'''{x=#c\n}'''", "f'''{x#c\n=}'''", "f'''{x=\n#c\n}'''",
+    "t'{x\u00a0=\u00a0}'", "t'''{x=\u2028}'''", "f'''{'é#'=#c\n}'''", "f'''{\"\\\\\"=#c\n}'''",
+    # decode errors at a known location
+    "f'\\N{foo}'", "f'''\n\\N{foo}'''", "t'\\xZ'", "f'a\\N{foo}b{x}'", "f'{x}\\U00110000'", "f'\\N{'", "'\\N{foo}'",
+    "f'''a\nb\\xZ{x}'''", "x = f'\\u12'\n", "rf'\\N{foo}'", "f'{x:\\N{foo}}'",
+    # lexer columns are characters now
+    "é (]\n", "é = 0x\n", "é = 1__0\n", "é = 1e\n", "é = 012\n", "é = 0b2\n", "é = 0o8\n", "'é' 0xg\n",
+    "éé = 1_\n", "数 = 0_\n", "'😀' = 0x\n", "é = 1é\n", "é = 0777\n", "é = 1.2.3e\n", "x = 'é'; y = 0b\n",
+    # handler and alias names, as the parser sees them
+    "try: pass\nexcept A as None: pass\n", "try: pass\nexcept* A as None: pass\n", "import a as None\n",
+    "from a import b as True\n", "def None(): pass\n", "class False: pass\n", "async def None(): pass\n",
+    "try: pass\nexcept A as b: pass\n", "try: pass\nexcept* A as b: pass\n",
+]
 LIBFILES = sorted(p for p in (V / "Lib").glob("*.py") if p.stat().st_size < 60000)
 
 
@@ -427,7 +479,7 @@ def make_case(src, rng):
     if rng.random() < 0.1:
         c["type_comments"] = True
     if rng.random() < 0.05:
-        c["feature_version"] = rng.choice([4, 5, 6, 7, 8, 9, 10, 12, 13])
+        c["feature_version"] = rng.choice([4, 5, 6, 7, 8, 9, 10, 12, 13, 14])
     if rng.random() < 0.15:
         # PyCF_DONT_IMPLY_DEDENT, PyCF_ALLOW_INCOMPLETE_INPUT, CO_FUTURE_BARRY_AS_BDFL
         c["flags"] = rng.choice([0x200, 0x4000, 0x4200, 0x400000, 0x404200])
@@ -435,6 +487,14 @@ def make_case(src, rng):
 
 
 def gen_case_peg(rng):
+    if rng.random() < 0.12:
+        src = rng.choice(REPIN)
+        if rng.random() < 0.3:
+            src = mutate(src, rng)
+        c = make_case(src, rng)
+        if c is not None and rng.random() < 0.4:
+            c["fn"] = "peg.warn"
+        return c
     r = rng.random()
     if r < 0.4:
         src = gen_source(rng)
@@ -461,6 +521,14 @@ def run_python_peg(c):
     if c.get("type_comments"):
         flags |= ast.PyCF_TYPE_COMMENTS
     fv = c.get("feature_version", -1)
+    if c["fn"] == "peg.warn":
+        with warnings.catch_warnings(record=True) as seen:
+            warnings.simplefilter("always")
+            try:
+                compile(src, "<unknown>", c["mode"], flags=flags, _feature_version=fv, dont_inherit=True)
+            except Exception:
+                pass
+        return {"ok": [[w.category.__name__, str(w.message), w.lineno] for w in seen]}
     try:
         t = compile(src, "<unknown>", c["mode"], flags=flags, _feature_version=fv, dont_inherit=True)
         return {"ok": enc(t)}
@@ -491,7 +559,14 @@ LEX_EDGE = ["", "\n", "\r", "\r\n", "\n\n", " ", "\t", "\f", "\\", "\\\n", "\\\r
         "f'\\N{BULLET}'", "f'\\N'", "f'\\{x}'", "rf'\\{x}'", "f'\\'", "f'{x=!r:^3}'", "f'{x=#\n}'",
         "f'''{x #c\n=}'''", "ub''", "bf''", "ft''", "tb''", "ur''", "BR''", "Rb''", "rF''", "fR''", "Tr''",
         "    a\n", "\ta\n", "\f\ta\n", "\\\n    a\n", "   \\\n a\n", "a\\\n", "a\\", "x = 1 \\\n  + 2\n",
-        "def f():\n\tpass\n        pass\n"]
+        "def f():\n\tpass\n        pass\n",
+        "(]\n", "[)\n", "{)\n", "(\n]\n", "[\n}\n", "f'{(]}'\n", "f'{[)}'\n", "f'{{(]}}'\n", "f'{a(]}'\n",
+        "f'{)}'\n", "f'{]}'\n", "f\'\'\'{(\n]}\'\'\'\n", "f'{x:{(]}}'\n", "t'{(]}'\n", "f'{(}'\n", "f'{[}'\n",
+        "1 <> 2\n", "a<>b\n", "<>\n", "<>=\n", "a <>= b\n", "<<>\n", "<>>\n",
+        "é (]\n", "é )\n", "é = 0x\n", "é = 1__0\n", "\'é\' $\n", "é ?\n", "数 = 1e\n", "f'é{(]}'\n",
+        "f'{a\n", "f\'\'\'{a\n\n\'\'\'\n", "f\'\'\'{(\n\'\'\'\n", "f\'\'\'{a}{b\n\'\'\'\n", "t\'\'\'{a\n\'\'\'\n",
+        "f\'\'\'{\"\\\"#x\"=#c\n}\'\'\'\n", "t\'\'\'{\'\\\'#\'=}\'\'\'\n", "t\'\'\'{x=#c\n}\'\'\'\n",
+        "f\'\'\'{x=!r\n}aaa\'\'\'\n", "lazy import a\n", "lazy from a import b\n", "from . lazy import a\n"]
 LEX_EDGE.append("def f(a):pass\nf\"{f lambda a=(:'\u00e0'\n)}\"")
 LEX_EDGE.append("(" * 201 + ")" * 201)
 LEX_EDGE.append("".join(" " * i + "if x:\n" for i in range(102)))
@@ -604,7 +679,16 @@ FOLD = ["__debug__", "if __debug__: pass", "x = __debug__", "__debug__ = 1", "de
         "from __future__ import annotations\ndef f(a: __debug__) -> __debug__: pass",
         "from __future__ import braces", "from __future__ import nope", "'doc'\nfrom __future__ import nope",
         "x\nfrom __future__ import nope", "from __future__ import division, nope", "from . import nope",
-        "from __future__ import *"]
+        "from __future__ import *",
+        "match x:\n  case +1: pass\n", "match x:\n  case +1.5: pass\n", "match x:\n  case +1j: pass\n",
+        "match x:\n  case +1+2j: pass\n", "match x:\n  case +1-2j: pass\n", "match x:\n  case +0.0+1j: pass\n",
+        "match x:\n  case -0.0+1j: pass\n", "match x:\n  case +0.0-1j: pass\n", "match x:\n  case {+1: y, +1+2j: z}: pass\n",
+        "match x:\n  case [+1, (+2 | 3), C(+4, a=+5)] as y: pass\n",
+        "{**__debug__ for a in b}\n", "{**a for a in __debug__}\n", "{**a for a in b if __debug__}\n",
+        "lazy import a\n", "lazy from a import b\n", "lazy from .a import b as c\n",
+        "from __future__ import annotations as b\n", "lazy from a import __debug__\n",
+        "try: pass\nexcept A as b: pass\n", "try: pass\nexcept* A as b: pass\n",
+        "import a as b\nfrom c import d as e\n", "def f(): pass\nclass C: pass\nasync def g(): pass\n"]
 
 
 def src_case(rng):
@@ -641,6 +725,15 @@ def mk_expr(rng):
                        ast.Starred(ast.Name("y", ast.Load(), **loc), ast.Load(), **loc),
                        ast.UnaryOp(ast.USub(), ast.Constant(1j, **loc), **loc),
                        ast.UnaryOp(ast.USub(), ast.Constant("s", **loc), **loc),
+                       ast.UnaryOp(ast.UAdd(), ast.Constant(1, **loc), **loc),
+                       ast.UnaryOp(ast.UAdd(), ast.Constant(1j, **loc), **loc),
+                       ast.UnaryOp(ast.UAdd(), ast.Constant("s", **loc), **loc),
+                       ast.UnaryOp(ast.Not(), ast.Constant(1, **loc), **loc),
+                       ast.UnaryOp(ast.Invert(), ast.Constant(1, **loc), **loc),
+                       ast.BinOp(ast.UnaryOp(ast.UAdd(), ast.Constant(1, **loc), **loc), ast.Add(),
+                                 ast.Constant(1j, **loc), **loc),
+                       ast.BinOp(ast.UnaryOp(ast.Not(), ast.Constant(1, **loc), **loc), ast.Add(),
+                                 ast.Constant(1j, **loc), **loc),
                        ast.BinOp(ast.Constant(1, **loc), ast.Add(), ast.Constant(1j, **loc), **loc),
                        ast.BinOp(ast.Constant(1j, **loc), ast.Add(), ast.Constant(1j, **loc), **loc),
                        ast.BinOp(ast.Constant(1, **loc), ast.Mult(), ast.Constant(1j, **loc), **loc),
@@ -673,6 +766,8 @@ def mutate_tree(t, rng):
                     v.append(mk_expr(rng))
             elif isinstance(v, ast.expr_context):
                 setattr(n, f, rng.choice([ast.Load(), ast.Store(), ast.Del()]))
+            elif isinstance(n, ast.DictComp) and f == "value" and rng.random() < 0.5:
+                n.value = None
             elif isinstance(v, ast.expr):
                 setattr(n, f, mk_expr(rng))
             elif isinstance(v, str):
@@ -680,7 +775,12 @@ def mutate_tree(t, rng):
             elif isinstance(v, int) and not isinstance(v, bool):
                 setattr(n, f, rng.choice([-1, 0, 1, 2]))
             elif v is None and f in ("cause", "rest", "name", "guard", "value", "pattern", "msg"):
-                pass
+                if isinstance(n, ast.ExceptHandler) and f == "name":
+                    n.name = rng.choice(["None", "True", "False", "_", "x"])
+                elif isinstance(n, ast.DictComp) and f == "value":
+                    n.value = mk_expr(rng)
+            elif v is None and f == "asname":
+                n.asname = rng.choice(["None", "True", "False", "_", "x"])
     return t
 
 
@@ -770,7 +870,11 @@ def run_python_check(c):
 
 sys.setrecursionlimit(5000)
 
-UNP_EDGE = [r'f"{x:\x7b}"', r'f"{x:\x7d}"', r'f"{x:\x00}"', r'f"{x:\r}"', r'f"{x:\ud800}"', r'u"a" f"{x}"',
+UNP_EDGE = ["lazy import a", "lazy import a.b as c, d", "lazy from a import b", "lazy from . import b",
+        "lazy from ..a import b as c", "lazy from a import *", "lazy from a import (b, c)",
+        "{**d for d in x}", "{**d for d in x if d}", "{**(a or b) for a in x}", "{**(yield) for a in x}",
+        "{**d async for d in x}", "{**(lambda: 0) for a in x}", "{**(a := 1) for a in x}", "{**{**a for a in x} for b in y}",
+        r'f"{x:\x7b}"', r'f"{x:\x7d}"', r'f"{x:\x00}"', r'f"{x:\r}"', r'f"{x:\ud800}"', r'u"a" f"{x}"',
         "t'''{\"\\\"#x\" #c\n}'''", "f'''{\"\\\"#x\"=#c\n}'''", "t'''\"\"\"\\'\\'\\'{x\n}'''", "t'{x!r:{y}}'",
         "1e999", "1e999j", "1e308", "1e16", "1e15", "1e-4", "1e-5", "1e22", "1e23", "5e-324", "2.5", "0.1", "1.0",
         "1e100", "123456789012345678.0", "0.0001", "0.00001", "4.35", "2.2250738585072014e-308", "9007199254740993.0",

@@ -21,15 +21,14 @@ def tokenizesIfParses (text : List Nat) : Bool :=
 lexical scanner for Python source, and `generate_tokens` raises only on invalid input. -/
 def TokenizeAcceptsValid : Prop := ∀ text : List Nat, tokenizesIfParses text = true
 
-/-- `f"""{x=!r\n}aaa"""\n`: valid, but `last_expr_size` stays that of the first line while
-`last_expr_end` is computed against the buffer of the second, so the size passed to
-`PyUnicode_DecodeUTF8` is negative. -/
+/-- `f"""{x=!r\n}aaa"""\n`, the input that raised `MemoryError` on 3.14.7, where the size of
+the expression came from two buffers. On 3.15.2 the expression is a span of `tok->buf`. -/
 def staleExprSize : List Nat :=
   [102, 34, 34, 34, 123, 120, 61, 33, 114, 10, 125, 97, 97, 97, 34, 34, 34, 10]
 
 set_option maxRecDepth 100000 in
-theorem tokenizeAcceptsValid_refuted : ¬ TokenizeAcceptsValid := fun h =>
-  absurd (h staleExprSize) (by decide +kernel)
+/-- That input now tokenizes. One input, so it credits no row. -/
+theorem staleExprSize_tokenizes : tokenizesIfParses staleExprSize = true := by decide +kernel
 
 /-- The debug text of `f'{expr=}'` ends with `=` and optional whitespace, as the docs of
 f-strings describe: "the text of the expression, an equal sign" then the value. -/
@@ -43,15 +42,158 @@ def debugTextOk (src : List Nat) : Bool :=
 /-- Every debug text of an f-string keeps the `=`. -/
 def DebugTextKeepsEquals : Prop := ∀ src : List Nat, debugTextOk src = true
 
-/-- `f'''{"\"#x"=#c\n}'''`: the comment-stripping loop of `set_ftstring_expr` does not skip
-escapes, as the scanning loop before it does, so it sees the string end early and takes
-the `#` inside it for a comment. -/
+/-- `f'''{"\"#x"=#c\n}'''`, whose `=` was lost on 3.14.7, where the comment-stripping loop of
+`set_ftstring_expr` did not skip escapes and took the `#` inside the string for a comment. -/
 def escapedHash : List Nat :=
   [102, 39, 39, 39, 123, 34, 92, 34, 35, 120, 34, 61, 35, 99, 10, 125, 39, 39, 39]
 
 set_option maxRecDepth 100000 in
-theorem debugTextKeepsEquals_refuted : ¬ DebugTextKeepsEquals := fun h =>
-  absurd (h escapedHash) (by decide +kernel)
+/-- That input now keeps it. One input, so it credits no row. -/
+theorem escapedHash_keeps : debugTextOk escapedHash = true := by decide +kernel
+
+theorem len_dropWhile (p : Nat → Bool) (l : List Nat) : (l.dropWhile p).length ≤ l.length := by
+  induction l with
+  | nil => simp
+  | cons a as ih =>
+    simp only [List.dropWhile]
+    split
+    · simp only [List.length_cons]
+      omega
+    · simp
+
+/-- One step of the first loop on anything but a backslash, whatever follows. -/
+theorem scan_plain {ch : Nat} {rest : List Nat} {inStr : Bool} {q : Nat} (h : ch ≠ 92) :
+    setFtstringExpr.scan (ch :: rest) inStr q =
+      if ch = 34 ∨ ch = 39 then
+        if inStr = false then setFtstringExpr.scan rest true ch
+        else if ch = q then setFtstringExpr.scan rest false q
+        else setFtstringExpr.scan rest inStr q
+      else if ch = 35 ∧ inStr = false then true
+      else setFtstringExpr.scan rest inStr q := by
+  cases rest <;> simp [setFtstringExpr.scan, h]
+
+theorem scan_comment_free {f : Nat} {bs : List Nat} {inStr : Bool} {q : Nat} :
+    bs.length < f → setFtstringExpr.scan (setFtstringExpr.strip f bs inStr q) inStr q = false := by
+  induction f generalizing bs inStr q with
+  | zero => exact fun h => by omega
+  | succ f ih =>
+    intro h
+    cases bs with
+    | nil => simp [setFtstringExpr.strip, setFtstringExpr.scan]
+    | cons ch rest =>
+      have hr : rest.length < f := by simpa using h
+      by_cases h1 : ch = 92
+      · subst h1
+        cases rest with
+        | nil => simp [setFtstringExpr.strip, setFtstringExpr.scan]
+        | cons e t =>
+          have ht : t.length < f := by
+            simp at hr
+            omega
+          simpa [setFtstringExpr.strip, setFtstringExpr.scan] using ih (inStr := inStr) (q := q) ht
+      · by_cases h2 : ch = 34 ∨ ch = 39
+        · cases inStr with
+          | false =>
+            simpa [setFtstringExpr.strip, scan_plain, h1, h2]
+              using ih (inStr := true) (q := ch) hr
+          | true =>
+            by_cases h3 : ch = q
+            · subst h3
+              simpa [setFtstringExpr.strip, scan_plain, h1, h2]
+                using ih (inStr := false) (q := ch) hr
+            · simpa [setFtstringExpr.strip, scan_plain, h1, h2, h3]
+                using ih (inStr := true) (q := q) hr
+        · by_cases h4 : ch = 35
+          · subst h4
+            cases inStr with
+            | false =>
+              cases hd : rest.dropWhile (fun x => x != 10) with
+              | nil => simp [setFtstringExpr.strip, setFtstringExpr.scan, hd]
+              | cons x t =>
+                have ht : t.length < f := by
+                  have := len_dropWhile (fun x => x != 10) rest
+                  rw [hd] at this
+                  simp at this
+                  omega
+                simpa [setFtstringExpr.strip, scan_plain, hd]
+                  using ih (inStr := false) (q := q) ht
+            | true =>
+              simpa [setFtstringExpr.strip, scan_plain]
+                using ih (inStr := true) (q := q) hr
+          · simpa [setFtstringExpr.strip, scan_plain, h1, h2, h4]
+              using ih (inStr := inStr) (q := q) hr
+
+theorem strip_no_comment {f : Nat} {bs : List Nat} {inStr : Bool} {q : Nat} :
+    bs.length < f → setFtstringExpr.scan bs inStr q = false →
+      setFtstringExpr.strip f bs inStr q = bs := by
+  induction f generalizing bs inStr q with
+  | zero => exact fun h => by omega
+  | succ f ih =>
+    intro h hs
+    cases bs with
+    | nil => simp [setFtstringExpr.strip]
+    | cons ch rest =>
+      have hr : rest.length < f := by simpa using h
+      by_cases h1 : ch = 92
+      · subst h1
+        cases rest with
+        | nil => simp [setFtstringExpr.strip]
+        | cons e t =>
+          have ht : t.length < f := by
+            simp at hr
+            omega
+          simp [setFtstringExpr.scan] at hs
+          simp [setFtstringExpr.strip, ih ht hs]
+      · by_cases h2 : ch = 34 ∨ ch = 39
+        · cases inStr with
+          | false =>
+            simp [scan_plain, h1, h2] at hs
+            simp [setFtstringExpr.strip, h1, h2, ih hr hs]
+          | true =>
+            by_cases h3 : ch = q
+            · subst h3
+              simp [scan_plain, h1, h2] at hs
+              simp [setFtstringExpr.strip, h1, h2, ih hr hs]
+            · simp [scan_plain, h1, h2, h3] at hs
+              simp [setFtstringExpr.strip, h1, h2, h3, ih hr hs]
+        · by_cases h4 : ch = 35
+          · subst h4
+            cases inStr with
+            | false => simp [scan_plain] at hs
+            | true =>
+              simp [scan_plain] at hs
+              simp [setFtstringExpr.strip, ih hr hs]
+          · simp [scan_plain, h1, h2, h4] at hs
+            simp [setFtstringExpr.strip, h1, h2, h4, ih hr hs]
+
+/-- `byte_col_to_char_col`, `Parser/tokenizer/helpers.c:15-24`: column 1 is column 1, and each
+byte adds a column unless it continues a UTF-8 character. These two facts determine the function,
+and they are what makes a tokenizer error's column count characters and not bytes. -/
+def ByteColCounts : Prop := ∀ (s : TokState),
+  byteColToCharCol s 1 = 1 ∧
+  ∀ k : Nat, byteColToCharCol s ((k : Int) + 2) = byteColToCharCol s ((k : Int) + 1) +
+    (if (s.at (s.lineStart + k)) &&& 0xC0 != 0x80 then 1 else 0)
+
+theorem byteColCounts_proven : ByteColCounts := by
+  intro s
+  refine ⟨by simp [byteColToCharCol], fun k => ?_⟩
+  unfold byteColToCharCol
+  have e1 : ((k : Int) + 2 - 1).toNat = k + 1 := by omega
+  have e2 : ((k : Int) + 1 - 1).toNat = k := by omega
+  rw [e1, e2, List.range_succ, List.filter_append]
+  simp only [List.filter_cons, List.filter_nil, List.length_append]
+  split <;> simp <;> omega
+
+/-- The two loops of `set_ftstring_expr`, `Parser/lexer/lexer.c:133-219`, agree. The first looks for
+a comment, the second removes comments. What the second leaves has none the first would find, and
+when the first finds none the second changes nothing. On 3.14.7 the second loop did not skip
+escapes, so they disagreed. `f` is the loop's bound, the length of the expression and one over. -/
+def CommentLoopsAgree : Prop := ∀ (f : Nat) (bs : List Nat), bs.length < f →
+  setFtstringExpr.scan (setFtstringExpr.strip f bs false 0) false 0 = false ∧
+  (setFtstringExpr.scan bs false 0 = false → setFtstringExpr.strip f bs false 0 = bs)
+
+theorem commentLoopsAgree_proven : CommentLoopsAgree :=
+  fun _ _ h => ⟨scan_comment_free h, strip_no_comment h⟩
 
 /-- Every spelling in `Grammar/Tokens` is found by `_PyToken_OneChar`, `_PyToken_TwoChars`
 and `_PyToken_ThreeChars` as the token it spells, as `Parser/token.c` is generated to do. -/

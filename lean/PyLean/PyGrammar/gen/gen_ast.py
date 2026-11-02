@@ -9,9 +9,9 @@ to fail if the committed file differs from what the sources generate.
 import sys
 from pathlib import Path
 
-V = Path("/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.14")
+V = Path("/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.15")
 if not V.exists():
-    V = Path.home() / "pf" / "cpython-3.14"
+    V = Path.home() / "pf" / "vendor" / "cpython-3.15"
 sys.path.insert(0, str(V / "Parser"))
 import asdl  # noqa: E402
 

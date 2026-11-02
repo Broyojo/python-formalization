@@ -19,9 +19,9 @@ import sys
 import tokenize
 from pathlib import Path
 
-V = Path("/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.14")
+V = Path("/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.15")
 if not V.exists():
-    V = Path.home() / "pf" / "cpython-3.14"
+    V = Path.home() / "pf" / "vendor" / "cpython-3.15"
 sys.path.insert(0, str(V / "Tools" / "peg_generator"))
 
 from pegen.c_generator import CParserGenerator  # noqa: E402
@@ -431,7 +431,7 @@ def main():
                         f"extra := {extra} }}")
         kind = ".loop1" if name.startswith("_loop1") else ".loop0" if is_loop else \
             ".gather" if is_gather else ".normal"
-        memo = rule.memo and not rule.left_recursive
+        memo = "memo" in rule.flags and not rule.left_recursive
         leader = bool(rule.left_recursive and rule.leader)
         rule_extra = any(a.action and "EXTRA" in a.action for a in rhs.alts)
         wi = name.endswith("without_invalid")

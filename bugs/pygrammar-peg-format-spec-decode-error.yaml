@@ -1,0 +1,55 @@
+id: pygrammar-peg-format-spec-decode-error
+title: "A bad escape in an f-string format spec escapes compile() as UnicodeDecodeError, not SyntaxError"
+priority: P4
+kind: wrong-exception
+module: pygrammar
+files: [Parser/action_helpers.c]
+functions: ["_PyPegen_decoded_constant_from_token"]
+summary: |
+  _PyPegen_decoded_constant_from_token returns NULL when _PyPegen_decode_string fails, with the
+  UnicodeDecodeError still set. Its two siblings first call the raiser that turns that error into
+  a SyntaxError: _PyPegen_decode_fstring_part and _PyPegen_constant_from_string. So
+  compile(r"f'\N{foo}'") raises "SyntaxError: (unicode error) ..." with a location, and
+  compile(r"f'{x:\N{foo}}'") raises a bare UnicodeDecodeError with none. This duplicates the open
+  python/cpython#157890, found while migrating the model to 3.15.2.
+likelihood: |
+  Low to moderate: it needs a malformed escape in a format spec, but it is reachable from plain
+  source text, and tools that wrap compile() in `except SyntaxError` crash on it.
+maybe_intended: |
+  No: the same malformed escape anywhere else in a string is a SyntaxError with a location.
+reproducer: |
+  good = bad = None
+  try:
+      compile(r"f'\N{foo}'", 'x', 'exec')
+  except Exception as e:
+      good = type(e).__name__
+  try:
+      compile(r"f'{x:\N{foo}}'", 'x', 'exec')
+  except Exception as e:
+      bad = type(e).__name__
+  print(good, bad)
+  if good == 'SyntaxError' and bad == 'UnicodeDecodeError':
+      print('REPRODUCED pygrammar-peg-format-spec-decode-error')
+expected: |
+  SyntaxError "(unicode error) ..." at the format spec, as for the same escape outside it.
+promised_by: |
+  The implementation disagreeing with itself, and compile()'s documented SyntaxError for invalid
+  source.
+cause: |
+  Parser/action_helpers.c:1471-1473: `if (str == NULL) return NULL;`. The siblings call
+  _Pypegen_raise_decode_error_known_location at line 1335 and _Pypegen_raise_decode_error at
+  line 1509 first.
+possible_fix: |
+  Call _Pypegen_raise_decode_error before returning NULL, as _PyPegen_constant_from_string does.
+tested:
+  python3 (3.15.2): REPRODUCED
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
+duplicates:
+  issues: [157890]
+  queries: ["format spec UnicodeDecodeError f-string compile",
+            "fstring format specifier unicode escape SyntaxError unicodeescape",
+            "decoded_constant_from_token", "PRs: decoded_constant_from_token"]
+  bugforge: "none"
+lean:
+  property: PyLean.PyGrammar.Peg.DecodeErrorsAreSyntaxErrors
+  theorem: PyLean.PyGrammar.Peg.decodeErrorsAreSyntaxErrors_refuted

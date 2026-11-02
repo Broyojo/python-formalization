@@ -15,7 +15,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parent / "Peg" / "RuleFacts.lean"
-ROOT = Path("/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.14")
+ROOT = Path("/Users/broyojo/code/projects/python-formalization/vendor/cpython-3.15")
 
 
 def spellings():

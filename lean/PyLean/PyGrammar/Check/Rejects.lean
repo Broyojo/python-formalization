@@ -15,8 +15,9 @@ message: the difftest covers those. Children that are absent from a row are not 
 deliberate where the C does not check them: `NamedExpr.target` is the case on record, see
 `pygrammar-check-namedexpr-target`, and `TableCovers` shows it is the only one. Source positions are
 checked on expressions, statements, patterns, `arg` and type parameters, but not on `vararg`, `kwarg`
-or `keyword`, `withitem`, `comprehension` and `match_case` nodes, nor on `TryStar` handlers, see
-`pygrammar-check-trystar-handlers`, which is why `handler` carries a flag.
+or `keyword`, `withitem`, `comprehension` and `match_case` nodes. `TryStar` handlers lose both their
+position and their name check, see `pygrammar-check-trystar-handlers`, which is why `handler` carries
+a flag.
 
 Rows for a constructor at the wrong arity are `(True, [])`: `obj2ast` does not produce those trees,
 and the validators accept them unread.
@@ -40,7 +41,7 @@ inductive Pos where
   | arguments
   | item
   | case_
-  | handler (positions : Bool)
+  | handler (isTry : Bool)
   | tparam
   /-- The value of `MatchValue`. -/
   | value
@@ -94,23 +95,24 @@ def NumLit (real imag : Bool) : Ast → Prop
   | .node .Constant (.const (.complex _ _) :: _) _ => imag = true
   | _ => False
 
-/-- The negation of one, by unary minus and no other operator. -/
-def NegLit (real imag : Bool) : Ast → Prop
-  | .node .UnaryOp [.node .USub _ _, o] _ => NumLit real imag o
+/-- One with a sign: unary minus or unary plus, and no other operator. -/
+def SignedLit (real imag : Bool) : Ast → Prop
+  | .node .UnaryOp [.node .USub _ _, o] _ | .node .UnaryOp [.node .UAdd _ _, o] _ =>
+    NumLit real imag o
   | _ => False
 
-/-- `a + bj` or `a - bj`: a possibly negated real on the left, and an unsigned imaginary on the
+/-- `a + bj` or `a - bj`: a possibly signed real on the left, and an unsigned imaginary on the
 right. -/
 def ComplexLit : Ast → Prop
   | .node .BinOp [l, .node .Add _ _, r] _ | .node .BinOp [l, .node .Sub _ _, r] _ =>
-    (NumLit true false l ∨ NegLit true false l) ∧ NumLit false true r
+    (NumLit true false l ∨ SignedLit true false l) ∧ NumLit false true r
   | _ => False
 
 /-- The shapes of `validate_pattern_match_value`. -/
 def LiteralOk : Ast → Prop
   | .node .Constant (.const v :: _) _ => ConstLit v
   | .node .Attribute _ _ => True
-  | e@(.node .UnaryOp _ _) => NegLit true true e
+  | e@(.node .UnaryOp _ _) => SignedLit true true e
   | e@(.node .BinOp _ _) => ComplexLit e
   | .node .JoinedStr _ _ | .node .TemplateStr _ _ => True
   | _ => False
@@ -120,6 +122,14 @@ def SingletonKey : Ast → Prop
   | .node .Constant (.const .none :: _) _ | .node .Constant (.const .true_ :: _) _
   | .node .Constant (.const .false_ :: _) _ => True
   | _ => False
+
+/-- An `alias`: `validate_import_names` checks both of its names. -/
+def AliasOk : Ast → Prop
+  | .node .alias_ [name, asname] _ => NameOk name ∧ (asname = .null ∨ NameOk asname)
+  | _ => True
+
+/-- The names of an import. -/
+def ImportOk (n : Ast) : Prop := seqLen n ≠ 0 ∧ ∀ a ∈ seqL n, AliasOk a
 
 /-- A row: the node's own rule, and the children that must satisfy theirs. -/
 abbrev Spec := Prop × List (Pos × Ast)
@@ -172,18 +182,18 @@ def exprBody (ctx : Ctor) : Ctor → List Ast → Spec
 def BodyOk (b : Ast) : Prop := seqLen b ≠ 0 ∧ NoNull (seqL b)
 
 /-- `Try` and `TryStar`. -/
-def trySpec (b hs o fb : Ast) (positions : Bool) : Spec :=
+def trySpec (b hs o fb : Ast) (isTry : Bool) : Spec :=
   (BodyOk b ∧ NoNull (seqL fb) ∧ NoNull (seqL o) ∧ (seqLen hs ≠ 0 ∨ seqLen fb ≠ 0)
       ∧ (seqLen hs = 0 → seqLen o = 0),
-    elts .stmt b ++ elts (.handler positions) hs ++ elts .stmt fb ++ elts .stmt o)
+    elts .stmt b ++ elts (.handler isTry) hs ++ elts .stmt fb ++ elts .stmt o)
 
 /-- `validate_stmt`. -/
 def stmtSpec : Ctor → List Ast → Spec
-  | .FunctionDef, [_, a, b, d, r, _, t] | .AsyncFunctionDef, [_, a, b, d, r, _, t] =>
-    (BodyOk b ∧ NoNull (seqL d),
+  | .FunctionDef, [n, a, b, d, r, _, t] | .AsyncFunctionDef, [n, a, b, d, r, _, t] =>
+    (BodyOk b ∧ NameOk n ∧ NoNull (seqL d),
       elts .stmt b ++ elts .tparam t ++ (.arguments, a) :: elts E d ++ [(E, r)])
-  | .ClassDef, [_, bs, ks, b, d, t] =>
-    (BodyOk b ∧ NoNull (seqL bs) ∧ NoNull (seqL d),
+  | .ClassDef, [n, bs, ks, b, d, t] =>
+    (BodyOk b ∧ NameOk n ∧ NoNull (seqL bs) ∧ NoNull (seqL d),
       elts .stmt b ++ elts .tparam t ++ elts E bs ++ elts .kw ks ++ elts E d)
   | .Return, [v] => (True, [(E, v)])
   | .Delete, [t] => (seqLen t ≠ 0 ∧ NoNull (seqL t), elts (.expr .Del) t)
@@ -202,8 +212,9 @@ def stmtSpec : Ctor → List Ast → Spec
   | .Try, [b, h, o, fb] => trySpec b h o fb true
   | .TryStar, [b, h, o, fb] => trySpec b h o fb false
   | .Assert, [t, m] => (True, [(E, t), (E, m)])
-  | .Import, [n] | .Global, [n] | .Nonlocal, [n] => (seqLen n ≠ 0, [])
-  | .ImportFrom, [_, n, lv] => (LevelOk lv ∧ seqLen n ≠ 0, [])
+  | .Import, [n, _] => (ImportOk n, [])
+  | .ImportFrom, [_, n, lv, _] => (LevelOk lv ∧ ImportOk n, [])
+  | .Global, [n] | .Nonlocal, [n] => (seqLen n ≠ 0, [])
   | .Expr, [v] => (True, [(E, v)])
   | _, _ => (True, [])
 
@@ -267,8 +278,10 @@ def caseSpec : Ctor → List Ast → Spec
   | .match_case_, [p, g, b] => (BodyOk b, (.pat false, p) :: (E, g) :: elts .stmt b)
   | _, _ => (True, [])
 
-def handlerSpec (positions : Bool) (l : Option Loc) : List Ast → Spec
-  | [ty, _, b] => ((positions = true → posOk l) ∧ BodyOk b, (E, ty) :: elts .stmt b)
+/-- Only `Try` checks the position and the name of a handler. -/
+def handlerSpec (isTry : Bool) (l : Option Loc) : List Ast → Spec
+  | [ty, n, b] =>
+    ((isTry = true → posOk l ∧ (n = .null ∨ NameOk n)) ∧ BodyOk b, (E, ty) :: elts .stmt b)
   | _ => (True, [])
 
 /-- The whole table. -/
@@ -286,7 +299,7 @@ def spec (p : Pos) (c : Ctor) (fs : List Ast) (l : Option Loc) : Spec :=
   | .arguments => argumentsSpec fs
   | .item => itemSpec fs
   | .case_ => caseSpec c fs
-  | .handler positions => handlerSpec positions l fs
+  | .handler isTry => handlerSpec isTry l fs
   | .tparam => (posOk l ∧ (tparamSpec c fs).1, (tparamSpec c fs).2)
   | .value | .key | .cls => (False, [])
 
@@ -420,6 +433,39 @@ theorem name_ok (n : Ast) : Ac (validateName n) (NameOk n) := by
     · rintro rfl
       simp [validateName, nullDeref, verr, ok1] at e
 
+theorem opt_name_ok (n : Ast) : Ac (if isNull n then ok1 else validateName n)
+    (n = .null ∨ NameOk n) := by
+  refine Ac.ite (fun h _ => Or.inl (isNull_eq.1 h)) (fun _ e => Or.inr (name_ok n e))
+
+theorem aliasOk_other {x : Ast} (hx : ∀ n a l, x = .node .alias_ [n, a] l → False) : AliasOk x := by
+  unfold AliasOk
+  split
+  · simp_all
+  · trivial
+
+theorem aliases_ok (xs : List Ast) : Ac (validateAliases xs) (∀ a ∈ xs, AliasOk a) := by
+  induction xs with
+  | nil => exact Ac.ok' (by simp)
+  | cons x rest ih =>
+    generalize he : x :: rest = ys
+    rw [validateAliases.eq_def]
+    split
+    · cases he
+    · cases he
+      refine Ac.seq (name_ok _) fun a1 => Ac.seq (opt_name_ok _) fun a2 => Ac.last ih fun a3 => ?_
+      intro y hy
+      rcases List.mem_cons.1 hy with q | q
+      · subst q
+        exact ⟨a1, a2⟩
+      · exact a3 y q
+    · rename_i hn
+      cases he
+      refine Ac.last ih fun a3 y hy => ?_
+      rcases List.mem_cons.1 hy with q | q
+      · subst q
+        exact aliasOk_other fun _ _ _ e => by subst e; exact hn _ _ _ rfl
+      · exact a3 y q
+
 theorem capture_ok (n : Ast) : Ac (if isNull n then ok1 else validateCapture n) (CaptureOk n) := by
   refine Ac.ite (fun h _ => Or.inl (isNull_eq.1 h)) (fun _ => ?_)
   intro e
@@ -436,6 +482,10 @@ theorem nonempty_ok (s : Ast) (a b : String) : Ac (validateNonemptySeq s a b) (s
   · rename_i h
     simpa using h
   · cases e
+
+theorem import_names_ok (s : Ast) (a b : String) :
+    Ac (validateImportNames s a b) (ImportOk s) :=
+  Ac.seq (nonempty_ok s a b) fun h1 => Ac.last (aliases_ok _) fun h2 => ⟨h1, h2⟩
 
 theorem names_ok_aux (xs : List Ast) (acc : V)
     (h : (xs.foldl (fun acc n => acc.and fun _ => validateName n) acc) = ok1) :
@@ -535,13 +585,23 @@ theorem number_lit {e : Ast} {r i : Bool} (h : ensureLiteralNumber e r i = true)
       | simp [NumLit, h]
   · cases h
 
-theorem negative_lit {e : Ast} {r i : Bool} (h : ensureLiteralNegative e r i = true) :
-    NegLit r i e := by
-  unfold ensureLiteralNegative at h
+theorem signed_lit {e : Ast} {r i : Bool} (h : ensureLiteralSigned e r i = true) :
+    SignedLit r i e := by
+  unfold ensureLiteralSigned at h
   split at h
-  · split at h
-    · exact number_lit h
-    · cases h
+  · rename_i op operand l
+    simp only [Bool.and_eq_true] at h
+    obtain ⟨hop, hv⟩ := h
+    have hn : NumLit r i operand := by
+      revert hv
+      split
+      · exact fun q => number_lit q
+      · exact fun q => by cases q
+    revert hop
+    split
+    · exact fun _ => hn
+    · exact fun _ => hn
+    · exact fun q => by cases q
   · cases h
 
 theorem complex_lit {e : Ast} (h : ensureLiteralComplex e = true) : ComplexLit e := by
@@ -550,11 +610,11 @@ theorem complex_lit {e : Ast} (h : ensureLiteralComplex e = true) : ComplexLit e
   · rename_i left op right l
     simp only [Bool.and_eq_true] at h
     obtain ⟨⟨hop, hl⟩, hr⟩ := h
-    have hl' : NumLit true false left ∨ NegLit true false left := by
+    have hl' : NumLit true false left ∨ SignedLit true false left := by
       revert hl
       split
       · exact fun q => Or.inl (number_lit q)
-      · exact fun q => Or.inr (negative_lit q)
+      · exact fun q => Or.inr (signed_lit q)
       · exact fun q => by cases q
     have hr' : NumLit false true right := by
       revert hr
@@ -626,6 +686,12 @@ theorem AC.optTp {f : Nat} (h : AC f) (t : Ast) :
   rw [isNull_eq.1 e]
   exact W.leaf trivial (by simp)
 
+theorem handler_name (p : Bool) (n : Ast) :
+    Ac (if p && !isNull n then validateName n else ok1) (p = true → n = .null ∨ NameOk n) := by
+  refine Ac.ite (fun _ e _ => Or.inr (name_ok n e)) (fun hc _ q => Or.inl (isNull_eq.1 ?_))
+  subst q
+  simpa using hc
+
 theorem pos_if (p : Bool) (l : Option Loc) :
     Ac (if p then validatePositions l else ok1) (p = true → posOk l) :=
   Ac.ite (fun _ e _ => positions_ok l e) (fun hp _ q => (hp q).elim)
@@ -637,6 +703,7 @@ macro "ac_call" : tactic => `(tactic| first
   | with_reducible exact pos_if _ _
   | with_reducible exact nonempty_ok _ _ _
   | with_reducible exact name_ok _
+  | with_reducible exact import_names_ok _ _ _
   | with_reducible exact capture_ok _
   | with_reducible exact names_ok _
   | with_reducible exact h.expr _ _
@@ -915,7 +982,7 @@ theorem ac_succ {f : Nat} (h : AC f) : AC (f + 1) := by
       | (refine Ac.ok' (W.value ?_ a)
          first
            | (rename_i hq
-              exact negative_lit hq)
+              exact signed_lit hq)
            | (rename_i hq
               exact complex_lit hq)
            | simp_all [LiteralOk, ConstLit])
@@ -1004,10 +1071,11 @@ theorem ac_succ {f : Nat} (h : AC f) : AC (f + 1) := by
     split
     · exact Ac.ok' all_nil
     · exact Ac.null
-    · refine Ac.seq (pos_if _ _) fun a0 => Ac.seq (h.opt _ _) fun a1 =>
-        Ac.seq (h.bodyS _ _) fun a2 => Ac.last (h.handlers _ _) fun a3 => all_cons (W.mk ?_) a3
+    · refine Ac.seq (pos_if _ _) fun a0 => Ac.seq (h.opt _ _) fun a1 => Ac.seq (handler_name _ _)
+        fun an => Ac.seq (h.bodyS _ _) fun a2 => Ac.last (h.handlers _ _) fun a3 =>
+          all_cons (W.mk ?_) a3
       simp only [OK, spec, handlerSpec, kids_cons, kids_elts]
-      exact ⟨⟨a0, a2.1⟩, a1, a2.2⟩
+      exact ⟨⟨fun q => ⟨a0 q, an q⟩, a2.1⟩, a1, a2.2⟩
     · rename_i x rest hn1 hn2
       exact Ac.last (h.handlers rest p) fun a => all_cons
         (w_handler_other (fun e => by subst e; exact hn1 rfl)

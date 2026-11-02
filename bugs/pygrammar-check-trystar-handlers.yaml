@@ -1,22 +1,26 @@
 id: pygrammar-check-trystar-handlers
-title: "_PyAST_Validate checks ExceptHandler positions for Try but not for TryStar, and lets a bare except* through to an internal 'Invalid CFG' error"
+title: "_PyAST_Validate checks ExceptHandler positions and names for Try but not for TryStar, and lets a bare except* through to an internal 'Invalid CFG' error"
 priority: P4
 kind: missing-validation
 module: pygrammar
 files: [Python/ast.c]
 functions: ["validate_stmt"]
 summary: |
-  validate_stmt has two copies of the handler loop. The Try copy calls VALIDATE_POSITIONS(handler);
-  the TryStar copy does not. So compile() of a tree with a handler whose lineno exceeds its
-  end_lineno raises "AST node line range (5, 1) is not valid" for Try and passes validation for
-  TryStar. Separately, ExceptHandler.type=None is accepted for TryStar although `except*:` has no
+  validate_stmt has two copies of the handler loop, and the TryStar copy lacks two checks the Try
+  copy has. VALIDATE_POSITIONS(handler): compile() of a tree with a handler whose lineno exceeds
+  its end_lineno raises "AST node line range (5, 1) is not valid" for Try and passes validation
+  for TryStar. validate_name(handler->v.ExceptHandler.name), added to the Try copy in 3.15:
+  ExceptHandler(name='None') raises "identifier field can't represent 'None' constant" for Try,
+  and for TryStar compiles to a store to a name called None, which codegen_nameop asserts against.
+  Separately, ExceptHandler.type=None is accepted for TryStar although `except*:` has no
   syntax; compile then fails with the internal message "Invalid CFG, stack underflow" from the
   flow graph code rather than a validation error.
 likelihood: |
   Low: only hand-built trees reach this, such as code generators and AST transformers.
 maybe_intended: |
-  The missing check looks like copy drift: the TryStar case was written from the Try case and the
-  positions check was added to Try later. Hand-built trees are supported by compile().
+  The missing checks look like copy drift: the TryStar case was written from the Try case, and
+  both checks were added to Try later, the name check as late as 3.15, which added it to every
+  other named statement in the same change. Hand-built trees are supported by compile().
 reproducer: |
   import ast
   L = dict(lineno=1, col_offset=0, end_lineno=1, end_col_offset=1)
@@ -32,25 +36,41 @@ reproducer: |
       except ValueError as e:
           res.append(str(e))
   print(res)
-  if res[0].startswith('AST node line range') and res[1] == 'ok':
+  names = []
+  for c in (ast.Try, ast.TryStar):
+      h = ast.ExceptHandler(x, 'None', [ast.Pass(**L)], **L)
+      try:
+          compile(ast.Module([c([ast.Pass(**L)], [h], [], [], **L)], []), 'x', 'exec')
+          names.append('ok')
+      except ValueError as e:
+          names.append(str(e))
+  print(names)
+  if (res[0].startswith('AST node line range') and res[1] == 'ok'
+          and names[0].startswith('identifier field') and names[1] == 'ok'):
       print('REPRODUCED pygrammar-check-trystar-handlers')
 expected: |
-  The same ValueError for both, and a clear validation error for a typeless except* handler.
+  The same ValueError from both, for the position and for the name, and a clear validation error
+  for a typeless except* handler.
 promised_by: |
   The implementation disagreeing with itself: Python/ast.c, Try_kind against TryStar_kind.
 cause: |
-  Python/ast.c, validate_stmt: the handler loop of Try_kind has VALIDATE_POSITIONS(handler); the
-  loop of TryStar_kind omits it, and neither case rejects a NULL type for except*.
+  Python/ast.c, validate_stmt: the handler loop of Try_kind, lines 890-899, has
+  VALIDATE_POSITIONS(handler) and validate_name of the handler's name; the loop of TryStar_kind,
+  lines 918-924, has neither, and it does not reject a NULL type for except*.
 possible_fix: |
-  Add VALIDATE_POSITIONS(handler) to the TryStar loop, and in it raise ValueError when
-  handler->v.ExceptHandler.type is NULL.
+  Add VALIDATE_POSITIONS(handler) and the validate_name check to the TryStar loop, and in it raise
+  ValueError when handler->v.ExceptHandler.type is NULL. Sharing one helper between the two cases
+  would stop them drifting again.
 tested:
   python3 (3.14.7): REPRODUCED
   main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
 duplicates:
   issues: []
   queries: ["ast validator TryStar handler position", "except* validator ExceptHandler type None Invalid CFG",
-            "Invalid CFG stack underflow compile ast"]
+            "Invalid CFG stack underflow compile ast", "validate_name ExceptHandler",
+            "TryStar handler name None validator", "PRs: validate_name forbidden names ast",
+            "identifier field represent None constant", "ast validate function name None compile crash",
+            "except* ast validation handler"]
   bugforge: "none"
 lean:
   property: PyLean.PyGrammar.Check.TryHandlersTwin

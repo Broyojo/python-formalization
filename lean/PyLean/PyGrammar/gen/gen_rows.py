@@ -38,9 +38,17 @@ CREDIT = {
         "Parser__tokenizer__string_tokenizer.c": ["tok_underflow_string"],
         "Parser__tokenizer__utf8_tokenizer.c": ["tok_underflow_string"],
     },
-    "pygrammar-lex-debug-text": {"Parser__lexer__lexer.c": ["set_ftstring_expr"]},
-    "pygrammar-lex-accepts-valid": {
-        "Parser__lexer__lexer.c": ["_PyLexer_update_ftstring_expr"]},
+    "pygrammar-lex-comment-loops": {"Parser__lexer__lexer.c": ["set_ftstring_expr"]},
+    "pygrammar-lex-byte-col": {"Parser__tokenizer__helpers.c": ["byte_col_to_char_col"]},
+    "pygrammar-peg-decode-known": {
+        "Parser__pegen_errors.c": ["_Pypegen_raise_decode_error_known_location"]},
+    "pygrammar-peg-decode-format-spec": {
+        "Parser__action_helpers.c": ["_PyPegen_decoded_constant_from_token"]},
+    "pygrammar-peg-missing-comma": {
+        "Parser__action_helpers.c": ["_PyPegen_raise_error_for_missing_comma"]},
+    "pygrammar-peg-warn-lazy": {"Parser__action_helpers.c": ["_warn_relative_import_of_lazy"]},
+    "pygrammar-peg-checked-from-import": {
+        "Parser__action_helpers.c": ["_PyPegen_checked_from_import"]},
     "pygrammar-lex-stacks": {
         "Parser__lexer__lexer.c": ["tok_get_normal_mode", "tok_get_fstring_mode", "tok_get",
                                    "_PyTokenizer_Get"]},
@@ -61,7 +69,8 @@ CREDIT = {
     "pygrammar-check-rejects": {
         "Python__ast.c": [
             "validate_comprehension", "validate_keywords", "validate_args", "validate_arguments",
-            "validate_expr", "ensure_literal_number", "ensure_literal_negative",
+            "validate_expr", "ensure_literal_number", "ensure_literal_signed",
+            "validate_import_names",
             "ensure_literal_complex", "validate_pattern_match_value", "validate_capture",
             "_validate_nonempty_seq", "validate_assignlist", "validate_body", "validate_stmt",
             "validate_stmts", "validate_exprs", "validate_typeparam", "validate_type_params"]},
@@ -87,7 +96,8 @@ CREDIT = {
     "pygrammar-peg-make-arguments": {
         "Parser__action_helpers.c": ["_PyPegen_make_arguments", "_get_names", "_get_defaults"]},
     "pygrammar-peg-concat": {"Parser__action_helpers.c": ["_build_concatenated_str"]},
-    "pygrammar-peg-strip-interpolation": {"Parser__action_helpers.c": ["_strip_interpolation_expr"]},
+    "pygrammar-peg-strip-interpolation": {
+        "Parser__action_helpers.c": ["_strip_interpolation_debug_expr"]},
     "pygrammar-peg-register-stmts": {"Parser__action_helpers.c": ["_PyPegen_register_stmts"]},
     "pygrammar-peg-never-silent": {"Parser__pegen.c": ["_PyPegen_run_parser"]},
     "pygrammar-peg-token-readers": {

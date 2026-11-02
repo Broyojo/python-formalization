@@ -40,8 +40,8 @@ def getCfg (j : Json) : Except String Cfg := do
     | .error _ => pure []
   return { ucn := ucn.map (fun (n, c) => (n.toList.map Char.toNat, c)), nfkc }
 
-/-- `compile(src, "<unknown>", mode, PyCF_ONLY_AST)`. -/
-def parseCase (j : Json) : Except String Json := do
+/-- The arguments of a `compile` case. -/
+def parseArgs (j : Json) : Except String (List Nat × StartRule × Bool × Nat × Nat × Cfg) := do
   let src : List Nat ← fromJson? (← field j "src")
   let mode ← getStr j "mode"
   let start : StartRule ← match mode with
@@ -55,11 +55,24 @@ def parseCase (j : Json) : Except String Json := do
     | .error _ => pure false
   let fv ← match j.getObjVal? "feature_version" with
     | .ok v => v.getNat?
-    | .error _ => pure 14
+    | .error _ => pure 15
   let flags ← match j.getObjVal? "flags" with
     | .ok v => v.getNat?
     | .error _ => pure 0
   let cfg ← getCfg j
+  return (src, start, tc, fv, flags, cfg)
+
+/-- The warnings `compile` emits, oldest first, whether or not it goes on to raise. -/
+def warnCase (j : Json) : Except String Json := do
+  let (src, start, tc, fv, flags, cfg) ← parseArgs j
+  if src.contains 0 then return Json.mkObj [("ok", toJson ([] : List Nat))]
+  let p := (parseRun cfg src start tc fv flags).2
+  let w := p.tok.warnings.reverse.map fun (c, m, l) => Json.arr #[toJson c, toJson m, toJson l]
+  return Json.mkObj [("ok", Json.arr w.toArray)]
+
+/-- `compile(src, "<unknown>", mode, PyCF_ONLY_AST)`. -/
+def parseCase (j : Json) : Except String Json := do
+  let (src, start, tc, fv, flags, cfg) ← parseArgs j
   if src.contains 0 then
     return encErr { cls := "SyntaxError", msg := "source code cannot contain null bytes" }
   match parseStr cfg src start tc fv flags with
@@ -76,6 +89,8 @@ def parseCase (j : Json) : Except String Json := do
   | .error e => return encErr e
 
 def handler : Handler := fun fn j =>
-  if fn == "peg.parse" then some (parseCase j) else none
+  if fn == "peg.parse" then some (parseCase j)
+  else if fn == "peg.warn" then some (warnCase j)
+  else none
 
 end PyLean.PyGrammar.Peg

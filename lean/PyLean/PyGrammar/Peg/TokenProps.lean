@@ -23,7 +23,7 @@ def RaiseDecodeError : Prop := ∀ (p : PS) (e : PyError), p.tok.err = some e �
       x.msg = s!"({t}) {e.msg}") ∧
   (decodeErrType e.cls = none → (raiseDecodeError p).2 = p)
 
-theorem raiseDecode_eq (p : PS) : raiseDecodeError p = (-1, (raiseDecodeBody p.tok.err p).2) := rfl
+theorem raiseDecode_eq (p : PS) : raiseDecodeError p = (-1, (raiseDecodeBody none p.tok.err p).2) := rfl
 
 theorem raiseDecode_some (p : PS) (e : PyError) (h : p.tok.err = some e) (t : String)
     (ht : decodeErrType e.cls = some t) :

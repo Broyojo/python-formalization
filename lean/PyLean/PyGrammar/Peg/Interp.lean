@@ -322,15 +322,21 @@ def fromUtf8 (src : List Nat) (execInput preserveCrlf : Bool) : TokState :=
 /-- Default fuel: call depth is bounded by `MAXSTACK` and loops by the token count. -/
 def defaultFuel (n : Nat) : Nat := 20000 + 64 * n
 
-/-- `_PyPegen_run_parser_from_string` with `PyCF_IGNORE_COOKIE`, `Parser/pegen.c:1052-1096`:
-what `compile(str, ...)` and `ast.parse(str)` do. `cfFlags` are the other compile flags. -/
-def parseStr (cfg : Cfg) (src : List Nat) (start : StartRule) (typeComments := false)
-    (featureVersion := 14) (cfFlags : Nat := 0) (fuel := defaultFuel src.length) :
-    Except PyError Ast :=
-  let tok := fromUtf8 src (start == .file) false
+/-- `_PyPegen_run_parser_from_string` with `PyCF_IGNORE_COOKIE`, `Parser/pegen.c:1052-1096`: what
+`compile(str, ...)` and `ast.parse(str)` do, up to the state the parser ends in. `cfFlags` are the
+other compile flags. -/
+def parseRun (cfg : Cfg) (src : List Nat) (start : StartRule) (typeComments := false)
+    (featureVersion := 15) (cfFlags : Nat := 0) (fuel := defaultFuel src.length) : Ast × PS :=
   let flags := computeParserFlags (cfFlags ||| 0x800 ||| (if typeComments then 0x1000 else 0))
+  let tok := { fromUtf8 src (start == .file) false with barryAsBdfl := flags &&& 0x0020 != 0 }
   let p := parserNew tok start flags featureVersion cfg
-  let (r, p) := (runParser fuel).run p
+  (runParser fuel).run p
+
+/-- What `parseRun` amounts to for the caller. -/
+def parseStr (cfg : Cfg) (src : List Nat) (start : StartRule) (typeComments := false)
+    (featureVersion := 15) (cfFlags : Nat := 0) (fuel := defaultFuel src.length) :
+    Except PyError Ast :=
+  let (r, p) := parseRun cfg src start typeComments featureVersion cfFlags fuel
   parseResult p r
 
 end PyLean.PyGrammar.Peg

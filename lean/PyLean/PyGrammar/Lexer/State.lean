@@ -67,10 +67,9 @@ structure Mode where
   start : Nat := 0
   multiLineStart : Nat := 0
   firstLine : Int := 0
-  /-- `last_expr_buffer`, as the source offset it was copied from. -/
-  lastExprBuf : Option Nat := none
-  lastExprSize : Int := 0
-  lastExprEnd : Int := 0
+  /-- `last_expr_start`, as an offset in the source: `tok->buf` is kept while inside an f-string,
+  and offsets do not move when it does, which is what `last_expr_start_offset` is for. -/
+  lastExprStart : Option Nat := none
   inDebug : Bool := false
   inFormatSpec : Bool := false
   /-- `string_kind == TSTRING` -/
@@ -115,6 +114,8 @@ structure TokState where
   /-- `tok_mode_stack_index` -/
   modeIndex : Nat := 0
   extraTokens : Bool := false
+  /-- `tok->barry_as_bdfl`, `Parser/lexer/state.h:141`. -/
+  barryAsBdfl : Bool := false
   commentNewline : Bool := false
   implicitNewline : Bool := false
   /-- Readline mode: `tok->underflow == tok_underflow_readline`. -/
@@ -313,12 +314,23 @@ def hex4 (c : Nat) : String :=
 /-- `%c` of a code point. -/
 def chStr (c : Nat) : String := String.singleton (Char.ofNat c)
 
+/-- `byte_col_to_char_col`, `Parser/tokenizer/helpers.c:15-24`: the bytes that start a character. -/
+def byteColToCharCol (s : TokState) (byteCol : Int) : Int :=
+  1 + (((List.range (byteCol - 1).toNat).filter fun i =>
+    (s.at (s.lineStart + i)) &&& 0xC0 != 0x80).length : Int)
+
 /-- `_syntaxerror_range`, `Parser/tokenizer/helpers.c:27-85`. -/
 def syntaxErrorRange (msg : String) (colOffset endColOffset : Int) (s : TokState) : TokState :=
   if s.done == E_ERROR then s else
   let errtext := utf8Decode (s.slice s.lineStart s.cur)
-  let col := if colOffset == -1 then (errtext.length : Int) else colOffset
-  let ecol := if endColOffset == -1 then col else endColOffset
+  let col :=
+    if colOffset == -1 then (errtext.length : Int)
+    else if colOffset > 0 then byteColToCharCol s colOffset
+    else colOffset
+  let ecol :=
+    if endColOffset == -1 then col
+    else if endColOffset > 0 then byteColToCharCol s endColOffset
+    else endColOffset
   -- `strcspn(tok->line_start, "\n")`
   let rest := (s.src.extract s.lineStart s.src.size).toList
   let lineLen := (rest.takeWhile (· != 10)).length

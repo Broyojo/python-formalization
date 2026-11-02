@@ -257,6 +257,15 @@ def negConst : PyConst → Option PyConst
   | .false_ => some (.int 0)
   | _ => none
 
+/-- `PyNumber_Positive` on a constant, `none` on `TypeError`. A bool becomes an int. -/
+def posConst : PyConst → Option PyConst
+  | .int v => some (.int v)
+  | .float b => some (.float b)
+  | .complex r i => some (.complex r i)
+  | .true_ => some (.int 1)
+  | .false_ => some (.int 0)
+  | _ => none
+
 /-- A real left operand as a float: `none` when it is out of range or not a number. -/
 def realBits : PyConst → Option Nat
   | .int v => intToBits v
@@ -290,6 +299,10 @@ def foldMatchValue (st : PState) : Nat → Ast → Ast
     match e with
     | .node .UnaryOp [.node .USub _ _, .node .Constant (.const v :: _) _] l =>
       match negConst v with
+      | some c => .node .Constant [.const c, .null] l
+      | none => e
+    | .node .UnaryOp [.node .UAdd _ _, .node .Constant (.const v :: _) _] l =>
+      match posConst v with
       | some c => .node .Constant [.const c, .null] l
       | none => e
     | .node .BinOp [left, op, right] l =>
@@ -456,7 +469,7 @@ def futureCheckFeatures (names : List Ast) : Except FutureError Bool :=
 /-- The statement loop of `future_parse`. -/
 def futureLoop : List Ast → Bool → Except FutureError Bool
   | [], acc => .ok acc
-  | .node .ImportFrom [.ident mod, names, .int 0] _ :: rest, acc =>
+  | .node .ImportFrom [.ident mod, names, .int 0, _] _ :: rest, acc =>
     if mod == "__future__".toList.map Char.toNat then
       match futureCheckFeatures (seqL names) with
       | .ok a => futureLoop rest (acc || a)

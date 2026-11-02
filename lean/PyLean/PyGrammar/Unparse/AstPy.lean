@@ -204,63 +204,79 @@ inductive LVal where
   | dict (ks vs : List LVal)
   deriving Inhabited
 
-/-- `_raise_malformed_node`, the message's node repr not rendered. -/
+/-- The `raise` at the end of `_convert_literal`, the message's node repr not rendered. -/
 def malformed : Except PyExc LVal := .error (.valueError "~malformed node or string")
 
-/-- `_convert_num` -/
-def convertNum (n : Ast) : Except PyExc PyConst :=
-  match n with
-  | .node .Constant (.const v :: _) _ =>
-    match v with
-    | .int _ | .float _ | .complex _ _ => .ok v
-    | _ => .error (.valueError "~malformed node or string")
-  | _ => .error (.valueError "~malformed node or string")
+/-- `type(x) in (int, float, complex)`: an exact test, so a `bool` is refused. -/
+def isNumber : PyConst → Bool
+  | .int _ | .float _ | .complex _ _ => true
+  | _ => false
 
-/-- `_convert_signed_num`; `+` keeps a number as it is, `-` is `PyNumber_Negative`. -/
-def convertSigned (n : Ast) : Except PyExc PyConst :=
-  match n with
-  | .node .UnaryOp [.node .UAdd _ _, o] _ => convertNum o
-  | .node .UnaryOp [.node .USub _ _, o] _ => do
-    match Check.negConst (← convertNum o) with
-    | some v => return v
-    | none => .error (.valueError "~malformed node or string")
-  | _ => convertNum n
+/-- `type(x) in (int, float)` -/
+def isRealConst : PyConst → Bool
+  | .int _ | .float _ => true
+  | _ => false
 
-/-- `return _convert_signed_num(node)` -/
-def signed (n : Ast) : Except PyExc LVal :=
-  match convertSigned n with
-  | .ok v => .ok (.c v)
-  | .error e => .error e
+/-- `type(x) is complex` -/
+def isComplexConst : PyConst → Bool
+  | .complex _ _ => true
+  | _ => false
+
+/-- `isinstance(node.left, (Constant, UnaryOp))` -/
+def isConstOrUnary : Ast → Bool
+  | .node .Constant _ _ | .node .UnaryOp _ _ => true
+  | _ => false
+
+/-- `isinstance(node.right, Constant)` -/
+def isConstantNode : Ast → Bool
+  | .node .Constant _ _ => true
+  | _ => false
 
 mutual
-  /-- `_convert`, `Lib/ast.py@3.14.7:80-105`. -/
+  /-- `_convert_literal`, `Lib/ast.py:67-114`. -/
   def convert : Nat → Ast → Except PyExc LVal
     | 0, _ => .error .modelFuel
     | f + 1, node =>
       match node with
       | .node .Constant (.const v :: _) _ => .ok (.c v)
+      | .node .Dict [keys, values] _ =>
+        if (seqU keys).length == (seqU values).length then do
+          return .dict (← convertList f (seqU keys)) (← convertList f (seqU values))
+        else malformed
       | .node .Tuple (elts :: _) _ => do return .tuple (← convertList f (seqU elts))
       | .node .List (elts :: _) _ => do return .list (← convertList f (seqU elts))
       | .node .Set (elts :: _) _ => do return .set (← convertList f (seqU elts))
       | .node .Call [.node .Name (.ident [115, 101, 116] :: _) _, .seq [], .seq []] _ =>
         .ok (.set [])
-      | .node .Dict [keys, values] _ =>
-        if (seqU keys).length != (seqU values).length then malformed
-        else do
-          return .dict (← convertList f (seqU keys)) (← convertList f (seqU values))
+      | .node .UnaryOp [.node o _ _, .node .Constant (.const v :: _) _] _ =>
+        if (o == .UAdd || o == .USub) && isNumber v then
+          if o == .UAdd then .ok (.c v)
+          else
+            match Check.negConst v with
+            | some r => .ok (.c r)
+            | none => malformed
+        else malformed
       | .node .BinOp [left, .node o _ _, right] _ =>
-        if o == .Add || o == .Sub then
-          match convertSigned left, convertNum right with
-          | .ok l, .ok r =>
-            match Check.complexArith (o == .Add) l r with
-            | some v => .ok (.c v)
-            | none => signed node
-          | .error e, _ => .error e
-          | _, .error e => .error e
-        else signed node
-      | _ => signed node
+        if (o == .Add || o == .Sub) && isConstOrUnary left && isConstantNode right then
+          match convert f left with
+          | .error e => .error e
+          | .ok (.c l) =>
+            if isRealConst l then
+              match convert f right with
+              | .error e => .error e
+              | .ok (.c r) =>
+                if isComplexConst r then
+                  match Check.complexArith (o == .Add) l r with
+                  | some v => .ok (.c v)
+                  | none => .error (.overflowError "int too large to convert to float")
+                else malformed
+              | .ok _ => malformed
+            else malformed
+          | .ok _ => malformed
+        else malformed
+      | _ => malformed
 
-  /-- `map(_convert, seq)` -/
+  /-- `map(_convert_literal, seq)` -/
   def convertList : Nat → List Ast → Except PyExc (List LVal)
     | 0, _ => .error .modelFuel
     | _ + 1, [] => .ok []
@@ -278,6 +294,6 @@ def LiteralRefusesCalls : Prop :=
 
 theorem literalRefusesCalls_proven : LiteralRefusesCalls := by
   intro f g a as kw l
-  simp [convert, signed, convertSigned, convertNum]
+  simp [convert, malformed]
 
 end PyLean.PyGrammar.Unparse

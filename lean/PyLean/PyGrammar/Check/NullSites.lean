@@ -26,6 +26,7 @@ def nullField : Ctor → Nat → Bool
   | .MatchClass, 1 | .MatchClass, 2 | .MatchClass, 3 => true
   | .match_case_, 0 => true
   | .Name, 0 | .TypeVar, 0 | .ParamSpec, 0 | .TypeVarTuple, 0 => true
+  | .FunctionDef, 0 | .AsyncFunctionDef, 0 | .ClassDef, 0 | .alias_, 0 => true
   | _, _ => false
 
 /-- A field that is `NULL`, or a list holding one. -/
@@ -101,6 +102,46 @@ theorem nonempty_safe {G : Prop} (s : Ast) (a b : String) : Nn (validateNonempty
   intro h
   unfold validateNonemptySeq at h
   split at h <;> cases h
+
+theorem optname_safe {G : Prop} (r : Ast) : Nn (if isNull r then ok1 else validateName r) G := by
+  by_cases h : isNull r = true
+  · rw [if_pos h]
+    exact Nn.ok'
+  · rw [if_neg h]
+    intro e
+    have := validateName_null e
+    subst this
+    exact (h rfl).elim
+
+theorem handlername_safe {G : Prop} (p : Bool) (r : Ast) :
+    Nn (if p && !isNull r then validateName r else ok1) G := by
+  by_cases h : (p && !isNull r) = true
+  · rw [if_pos h]
+    intro e
+    have := validateName_null e
+    subst this
+    simp [isNull] at h
+  · rw [if_neg h]
+    exact Nn.ok'
+
+theorem aliases_null (xs : List Ast) (h : validateAliases xs = nullDeref) : LN xs := by
+  induction xs with
+  | nil => cases h
+  | cons x rest ih =>
+    generalize he : x :: rest = ys at h
+    rw [validateAliases.eq_def] at h
+    split at h
+    · cases he
+    · cases he
+      rename_i name asname l
+      refine (Nn.and (G := LN (Ast.node .alias_ [name, asname] l :: rest)) (fun e => ?_)
+        (Nn.and (optname_safe asname) (fun e => (ih e).tail))) h
+      exact ⟨_, List.mem_cons_self .., HasNull.site 0 rfl (Or.inl (validateName_null e))⟩
+    · cases he
+      exact (ih h).tail
+
+theorem import_null (s : Ast) (a b : String) : Nn (validateImportNames s a b) (LN (seqL s)) :=
+  Nn.and (nonempty_safe s a b) (fun e => aliases_null _ e)
 
 theorem capture_null {n : Ast} (h : validateCapture n = nullDeref) : n = .null := by
   unfold validateCapture at h
@@ -213,6 +254,8 @@ macro "nn" : tactic => `(tactic| repeat' (first
   | with_reducible exact Nn.terr _
   | with_reducible exact positions_safe _
   | with_reducible exact nonempty_safe _ _ _
+  | with_reducible exact handlername_safe _ _
+  | ((with_reducible refine (import_null _ _ _).mono ?_); nn_up)
   | ((with_reducible refine (h.expr _ _).mono ?_); nn_up)
   | ((with_reducible refine (h.exprs _ _ _).mono ?_); nn_up)
   | ((with_reducible refine (h.comprehension _).mono ?_); nn_up)
