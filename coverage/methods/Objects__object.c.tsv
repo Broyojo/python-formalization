@@ -44,8 +44,8 @@ Objects/object.c	634	695	PyObject_Print	PyObject_Print(PyObject *op, FILE *fp, i
 Objects/object.c	699	701	_Py_BreakPoint	_Py_BreakPoint(void)	excluded		test-support: debug-build diagnostic, not reachable from Python
 Objects/object.c	711	717	_PyObject_IsFreed	_PyObject_IsFreed(PyObject *op)	excluded		test-support: debug-build diagnostic, not reachable from Python
 Objects/object.c	722	757	PyObject_Dump	PyObject_Dump(PyObject* op)	todo		changed-in-3.15: new function
-Objects/object.c	760	798	PyObject_Repr	PyObject_Repr(PyObject *v)	todo		changed-in-3.15: was typeobj-repr-str-result
-Objects/object.c	801	841	PyObject_Str	PyObject_Str(PyObject *v)	todo		changed-in-3.15: was typeobj-str-result
+Objects/object.c	760	798	PyObject_Repr	PyObject_Repr(PyObject *v)	modelled	typeobj-repr-str-result	
+Objects/object.c	801	841	PyObject_Str	PyObject_Str(PyObject *v)	modelled	typeobj-str-result	
 Objects/object.c	844	868	PyObject_ASCII	PyObject_ASCII(PyObject *v)	todo		
 Objects/object.c	871	900	PyObject_Bytes	PyObject_Bytes(PyObject *v)	todo		changed-in-3.15:
 Objects/object.c	903	915	clear_freelist	clear_freelist(struct _Py_freelist *freelist, int is_finalization, freefunc dofree)	excluded		no-behaviour: object allocator or free list
@@ -54,7 +54,7 @@ Objects/object.c	927	959	_PyObject_ClearFreeLists	_PyObject_ClearFreeLists(struc
 Objects/object.c	962	1009	_PyObject_FunctionStr	def _PyObject_FunctionStr(x): try: qualname = x.__qualname__ except AttributeError: return str(x) try: mod = x.__module__ if mod is not None and mod != 'builtins': return f\"{x.__module__}.{qualname}()\" except AttributeError: pass return qualname */ PyObject * _PyObject_FunctionStr(PyObject *x)	todo		
 Objects/object.c	1049	1094	do_richcompare	do_richcompare(PyThreadState *tstate, PyObject *v, PyObject *w, int op)	modelled	typeobj-richcompare-defaults,typeobj-richcompare-left-first,typeobj-richcompare-subclass-first	
 Objects/object.c	1100	1117	PyObject_RichCompare	PyObject_RichCompare(PyObject *v, PyObject *w, int op)	modelled	typeobj-richcompare-subclass-first	
-Objects/object.c	1122	1148	PyObject_RichCompareBool	PyObject_RichCompareBool(PyObject *v, PyObject *w, int op)	todo		changed-in-3.15: was typeobj-richcomparebool-identity
+Objects/object.c	1122	1148	PyObject_RichCompareBool	PyObject_RichCompareBool(PyObject *v, PyObject *w, int op)	modelled	typeobj-richcomparebool-identity	
 Objects/object.c	1151	1156	PyObject_HashNotImplemented	PyObject_HashNotImplemented(PyObject *v)	todo		
 Objects/object.c	1159	1177	PyObject_Hash	PyObject_Hash(PyObject *v)	todo		
 Objects/object.c	1180	1192	PyObject_GetAttrString	PyObject_GetAttrString(PyObject *v, const char *name)	todo		

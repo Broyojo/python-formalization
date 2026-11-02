@@ -2,13 +2,13 @@ file	line	endline	name	signature	status	entry	note
 Parser/lexer/lexer.c	53	56	contains_null_bytes	contains_null_bytes(const char* str, size_t size)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/lexer/lexer.c	60	96	tok_nextc	tok_nextc(struct tok_state *tok)	modelled	pygrammar-lex-nextc-in-buffer	
 Parser/lexer/lexer.c	100	111	tok_backup	tok_backup(struct tok_state *tok, int c)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Parser/lexer/lexer.c	114	237	set_ftstring_expr	set_ftstring_expr(struct tok_state* tok, struct token *token, char c) {	todo		changed-in-3.15: was pygrammar-lex-debug-text
+Parser/lexer/lexer.c	114	237	set_ftstring_expr	set_ftstring_expr(struct tok_state* tok, struct token *token, char c) {	modelled	pygrammar-lex-comment-loops	
 Parser/lexer/lexer.c	240	260	lookahead	lookahead(struct tok_state *tok, const char *test)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/lexer/lexer.c	263	318	verify_end_of_number	verify_end_of_number(struct tok_state *tok, int c, const char *kind) {	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/lexer/lexer.c	322	368	verify_identifier	verify_identifier(struct tok_state *tok)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/lexer/lexer.c	371	390	tok_decimal_tail	tok_decimal_tail(struct tok_state *tok)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/lexer/lexer.c	393	411	tok_continuation_line	tok_continuation_line(struct tok_state *tok) {	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
-Parser/lexer/lexer.c	459	1360	tok_get_normal_mode	tok_get_normal_mode(struct tok_state *tok, tokenizer_mode* current_tok, struct token *token)	todo		changed-in-3.15: was pygrammar-lex-stacks
-Parser/lexer/lexer.c	1363	1577	tok_get_fstring_mode	tok_get_fstring_mode(struct tok_state *tok, tokenizer_mode* current_tok, struct token *token)	todo		changed-in-3.15: was pygrammar-lex-stacks
+Parser/lexer/lexer.c	459	1360	tok_get_normal_mode	tok_get_normal_mode(struct tok_state *tok, tokenizer_mode* current_tok, struct token *token)	modelled	pygrammar-lex-stacks	
+Parser/lexer/lexer.c	1363	1577	tok_get_fstring_mode	tok_get_fstring_mode(struct tok_state *tok, tokenizer_mode* current_tok, struct token *token)	modelled	pygrammar-lex-stacks	
 Parser/lexer/lexer.c	1580	1588	tok_get	tok_get(struct tok_state *tok, struct token *token)	modelled	pygrammar-lex-stacks	
 Parser/lexer/lexer.c	1591	1599	_PyTokenizer_Get	_PyTokenizer_Get(struct tok_state *tok, struct token *token)	modelled	pygrammar-lex-stacks	

@@ -1,5 +1,5 @@
 file	line	endline	name	signature	status	entry	note
-Parser/tokenizer/helpers.c	15	24	byte_col_to_char_col	byte_col_to_char_col(const char *line, int byte_col)	todo		changed-in-3.15: new function
+Parser/tokenizer/helpers.c	15	24	byte_col_to_char_col	byte_col_to_char_col(const char *line, int byte_col)	modelled	pygrammar-lex-byte-col	
 Parser/tokenizer/helpers.c	27	85	_syntaxerror_range	_syntaxerror_range(struct tok_state *tok, const char *format, int col_offset, int end_col_offset, va_list vargs)	todo		changed-in-3.15: withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/tokenizer/helpers.c	88	96	_PyTokenizer_syntaxerror	_PyTokenizer_syntaxerror(struct tok_state *tok, const char *format, ...)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/tokenizer/helpers.c	99	108	_PyTokenizer_syntaxerror_known_range	_PyTokenizer_syntaxerror_known_range(struct tok_state *tok, int col_offset, int end_col_offset, const char *format, ...)	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
