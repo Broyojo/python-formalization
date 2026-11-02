@@ -7,9 +7,7 @@ bytesobj_diff.py
 corelibs_diff.py
 datetime_diff.py
 dictset_diff.py
-itertools_diff.py
 json_diff.py
-listsort_diff.py
 longobj_complex_diff.py
 mathint_diff.py
 pickle_diff.py
@@ -18,7 +16,6 @@ pyio_base_diff.py
 pyio_buffered_diff.py
 pyio_diff.py
 pyio_text_diff.py
-sequences_diff.py
 textlibs_diff.py
 typeobj_diff.py
 typeobj_exc_diff.py

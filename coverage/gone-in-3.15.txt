@@ -53,8 +53,6 @@ pygrammar-lex-tokenize-memoryerror
 pyio-bytesio-twins-same-class-no-export
 pyio-bytesio-write-near-maxsize-systemerror
 pystrtod-e-format-digit-count
-sequences-deque-copy-concat
-sequences-deque-subclass-copy-maxlen-truncated
 textlibs-struct-bytes-format-nonascii-error
 textlibs-struct-pack-into-0p-outside-field
 typeobj-exc-eg-repr-args-oob
