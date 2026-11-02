@@ -1,12 +1,12 @@
 file	line	endline	name	signature	status	entry	note
-Objects/enumobject.c	48	88	enum_new_impl	enum_new_impl(PyTypeObject *type, PyObject *iterable, PyObject *start) /*[clinic end generated code: output=e95e6e439f812c10 input=782e4911efcb8acf]*/	todo		
+Objects/enumobject.c	48	88	enum_new_impl	enum_new_impl(PyTypeObject *type, PyObject *iterable, PyObject *start) /*[clinic end generated code: output=e95e6e439f812c10 input=782e4911efcb8acf]*/	modelled	bytecode-enum-counts	
 Objects/enumobject.c	90	100	check_keyword	static int check_keyword(PyObject *kwnames, int index, const char *name)	todo		
 Objects/enumobject.c	104	153	enumerate_vectorcall	enumerate_vectorcall(PyObject *type, PyObject *const *args, size_t nargsf, PyObject *kwnames)	modelled	bytecode-enum-counts	
 Objects/enumobject.c	156	164	enum_dealloc	enum_dealloc(PyObject *op)	todo		
 Objects/enumobject.c	167	174	enum_traverse	enum_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Objects/enumobject.c	179	197	increment_longindex_lock_held	increment_longindex_lock_held(enumobject *en)	todo		
-Objects/enumobject.c	200	230	enum_next_long	enum_next_long(enumobject *en, PyObject* next_item)	todo		
-Objects/enumobject.c	233	272	enum_next	enum_next(PyObject *op)	todo		
+Objects/enumobject.c	179	197	increment_longindex_lock_held	increment_longindex_lock_held(enumobject *en)	modelled	bytecode-enum-counts	
+Objects/enumobject.c	200	230	enum_next_long	enum_next_long(enumobject *en, PyObject* next_item)	modelled	bytecode-enum-counts	
+Objects/enumobject.c	233	272	enum_next	enum_next(PyObject *op)	modelled	bytecode-enum-counts	
 Objects/enumobject.c	275	289	enum_reduce	enum_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
 Objects/enumobject.c	366	407	reversed_new_impl	reversed_new_impl(PyTypeObject *type, PyObject *seq) /*[clinic end generated code: output=f7854cc1df26f570 input=4781869729e3ba50]*/	todo		
 Objects/enumobject.c	410	423	reversed_vectorcall	reversed_vectorcall(PyObject *type, PyObject * const*args, size_t nargsf, PyObject *kwnames)	todo		

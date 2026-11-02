@@ -15,21 +15,21 @@ Lib/difflib.py	652	662	SequenceMatcher.real_quick_ratio	real_quick_ratio(self)	m
 Lib/difflib.py	667	715	get_close_matches	get_close_matches(word, possibilities, n=3, cutoff=0.6)	todo		
 Lib/difflib.py	718	723	_keep_original_ws	_keep_original_ws(s, tag_s)	todo		
 Lib/difflib.py	813	834	Differ.__init__	__init__(self, linejunk=None, charjunk=None)	excluded		no-behaviour: stores its two arguments
-Lib/difflib.py	836	875	Differ.compare	compare(self, a, b)	todo		
-Lib/difflib.py	877	880	Differ._dump	_dump(self, tag, x, lo, hi)	todo		
-Lib/difflib.py	882	894	Differ._plain_replace	_plain_replace(self, a, alo, ahi, b, blo, bhi)	todo		
-Lib/difflib.py	896	988	Differ._fancy_replace	_fancy_replace(self, a, alo, ahi, b, blo, bhi)	todo		
-Lib/difflib.py	990	1000	Differ._fancy_helper	_fancy_helper(self, a, alo, ahi, b, blo, bhi)	todo		
-Lib/difflib.py	1002	1027	Differ._qformat	_qformat(self, aline, bline, atags, btags)	todo		
-Lib/difflib.py	1046	1065	IS_LINE_JUNK	IS_LINE_JUNK(line, pat=None)	todo		
+Lib/difflib.py	836	875	Differ.compare	compare(self, a, b)	modelled	textlibs-difflib-restore	
+Lib/difflib.py	877	880	Differ._dump	_dump(self, tag, x, lo, hi)	modelled	textlibs-difflib-restore	
+Lib/difflib.py	882	894	Differ._plain_replace	_plain_replace(self, a, alo, ahi, b, blo, bhi)	modelled	textlibs-difflib-restore	
+Lib/difflib.py	896	988	Differ._fancy_replace	_fancy_replace(self, a, alo, ahi, b, blo, bhi)	modelled	textlibs-difflib-restore	
+Lib/difflib.py	990	1000	Differ._fancy_helper	_fancy_helper(self, a, alo, ahi, b, blo, bhi)	modelled	textlibs-difflib-restore	
+Lib/difflib.py	1002	1027	Differ._qformat	_qformat(self, aline, bline, atags, btags)	modelled	textlibs-difflib-restore	
+Lib/difflib.py	1046	1065	IS_LINE_JUNK	IS_LINE_JUNK(line, pat=None)	modelled	textlibs-difflib-is-line-junk	
 Lib/difflib.py	1067	1083	IS_CHARACTER_JUNK	IS_CHARACTER_JUNK(ch, ws=' \\t')	todo		
 Lib/difflib.py	1090	1099	_format_range_unified	_format_range_unified(start, stop)	todo		
-Lib/difflib.py	1101	1176	unified_diff	unified_diff(a, b, fromfile='', tofile='', fromfiledate='', tofiledate='', n=3, lineterm='\\n', *, color=False)	todo		
+Lib/difflib.py	1101	1176	unified_diff	unified_diff(a, b, fromfile='', tofile='', fromfiledate='', tofiledate='', n=3, lineterm='\\n', *, color=False)	modelled	textlibs-difflib-detects,textlibs-difflib-hunk-sides,textlibs-difflib-twins-refuse	
 Lib/difflib.py	1183	1192	_format_range_context	_format_range_context(start, stop)	todo		
-Lib/difflib.py	1195	1269	context_diff	context_diff(a, b, fromfile='', tofile='', fromfiledate='', tofiledate='', n=3, lineterm='\\n')	todo		
-Lib/difflib.py	1271	1292	_check_types	_check_types(a, b, *args)	todo		
+Lib/difflib.py	1195	1269	context_diff	context_diff(a, b, fromfile='', tofile='', fromfiledate='', tofiledate='', n=3, lineterm='\\n')	modelled	textlibs-difflib-context-sides,textlibs-difflib-detects,textlibs-difflib-twins-refuse	
+Lib/difflib.py	1271	1292	_check_types	_check_types(a, b, *args)	modelled	textlibs-difflib-twins-refuse	
 Lib/difflib.py	1294	1322	diff_bytes	diff_bytes(dfunc, a, b, fromfile=b'', tofile=b'', fromfiledate=b'', tofiledate=b'', n=3, lineterm=b'\\n')	todo		
-Lib/difflib.py	1324	1359	ndiff	ndiff(a, b, linejunk=None, charjunk=IS_CHARACTER_JUNK)	todo		
+Lib/difflib.py	1324	1359	ndiff	ndiff(a, b, linejunk=None, charjunk=IS_CHARACTER_JUNK)	modelled	textlibs-difflib-restore	
 Lib/difflib.py	1361	1628	_mdiff	_mdiff(fromlines, tolines, context=None, linejunk=None, charjunk=IS_CHARACTER_JUNK)	todo		
 Lib/difflib.py	1740	1755	HtmlDiff.__init__	__init__(self, tabsize=8, wrapcolumn=None, linejunk=None, charjunk=IS_CHARACTER_JUNK)	todo		
 Lib/difflib.py	1757	1782	HtmlDiff.make_file	make_file(self, fromlines, tolines, fromdesc='', todesc='', context=False, numlines=5, *, charset='utf-8')	todo		
@@ -41,4 +41,4 @@ Lib/difflib.py	1911	1935	HtmlDiff._format_line	_format_line(self, side, flag, li
 Lib/difflib.py	1937	1946	HtmlDiff._make_prefix	_make_prefix(self)	todo		
 Lib/difflib.py	1948	1993	HtmlDiff._convert_flags	_convert_flags(self, fromlist, tolist, flaglist, context, numlines)	todo		
 Lib/difflib.py	1995	2072	HtmlDiff.make_table	make_table(self, fromlines, tolines, fromdesc='', todesc='', context=False, numlines=5)	todo		
-Lib/difflib.py	2075	2105	restore	restore(delta, which)	todo		
+Lib/difflib.py	2075	2105	restore	restore(delta, which)	modelled	textlibs-difflib-restore	
