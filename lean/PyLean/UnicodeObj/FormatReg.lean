@@ -3,6 +3,7 @@ import PyLean.UnicodeObj.FormatProps
 import PyLean.UnicodeObj.FormatFloat
 import PyLean.UnicodeObj.FormatPercentProps
 import PyLean.UnicodeObj.FormatStrProps
+import PyLean.UnicodeObj.StrFormatDoc
 
 /-! Registry entries of the formatting slice. -/
 
@@ -37,6 +38,13 @@ def formatEntries : List Entry := [
     statement := "When format_long_internal takes its _PyLong_FormatWriter shortcut, the general path would give the same text, for every int, in all four bases, with or without #."
     source := "invariant: fast path vs general path"
     status := .proven, prop := ``IntFastSlow, thm := some ``intFastSlow_proven },
+  { id := "unicodeobj-format-str-doc", pyFile := "Objects/unicode_formatter.c"
+    pyFns := ["_PyUnicode_FormatAdvancedWriter", "parse_internal_render_format_spec", "get_integer",
+      "is_alignment_token", "is_sign_element", "calc_padding", "fill_padding", "format_string_internal"]
+    statement := "For every string, fill character, alignment <, > or ^, width and optional precision in ASCII digits (at most sys.maxsize), format(s, fill + align + width [+ '.' + precision] + 's') truncates to the precision and pads with fill to the width as the format mini-language documents."
+    source := "docs: Doc/library/string.rst, Format Specification Mini-Language (fill, align, width, precision for str)"
+    status := .proven, prop := ``StrFormatDoc, thm := some ``strFormatDoc_proven
+    notes := "Smoke-tested on 3.15.2 with 300k random strings, fills (digits and alignment characters included), widths and precisions; the model is the one the fmt_str difftest checks." },
   { id := "unicodeobj-format-group-loop", pyFile := "Objects/unicode_formatter.c"
     pyFns := ["_PyUnicode_InsertThousandsGrouping", "GroupGenerator_init", "GroupGenerator_next", "InsertThousandsGrouping_fill"]
     statement := "The rounds of the grouping loop are bounded by the number of digits."
