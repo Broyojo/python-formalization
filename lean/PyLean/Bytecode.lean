@@ -13,6 +13,7 @@ import PyLean.Bytecode.LawfulBuiltin
 import PyLean.Bytecode.SpecCompareFloat
 import PyLean.Bytecode.SpecSubscr
 import PyLean.Bytecode.SpecCells
+import PyLean.Bytecode.SpecForIter
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -28,6 +29,11 @@ open PyLean.Registry
 def op (n : String) : String := "opcode:" ++ n
 
 def entries : List Entry := GenObj.entries ++ [
+  { id := "bytecode-for-iter-seq", pyFile := "Python/bytecodes.c"
+    pyFns := [op "FOR_ITER_LIST", op "_ITER_CHECK_LIST", op "_ITER_JUMP_LIST", op "_ITER_NEXT_LIST", op "FOR_ITER_TUPLE", op "_ITER_CHECK_TUPLE", op "_ITER_JUMP_TUPLE", op "_ITER_NEXT_TUPLE"]
+    statement := "FOR_ITER_LIST and FOR_ITER_TUPLE equal FOR_ITER on every live stack GET_ITER could have left, item by item and at the end of the sequence."
+    source := "invariant: specialized opcode refines its generic form; Python/bytecodes.c _ITER_CHECK_LIST .. _ITER_NEXT_TUPLE; _PyForIter_VirtualIteratorNext, Python/ceval.c"
+    status := .proven, prop := ``ForIterSeq, thm := some ``forIterSeq_proven },
   { id := "bytecode-cells", pyFile := "Python/bytecodes.c"
     pyFns := [op "LOAD_DEREF", op "STORE_DEREF", op "DELETE_DEREF"]
     statement := "STORE_DEREF writes the cell and LOAD_DEREF reads back what was stored; DELETE_DEREF empties a bound cell; on an empty cell LOAD_DEREF and DELETE_DEREF raise the same exception with the stack and cell unchanged."
