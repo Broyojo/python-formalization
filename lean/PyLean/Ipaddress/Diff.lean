@@ -1,6 +1,7 @@
 import PyLean.DiffCore
 import PyLean.Ipaddress.Model
 import PyLean.Ipaddress.Exploded
+import PyLean.Ipaddress.Parse4
 
 /-! Differential-testing handler for `ipaddress`. A network is `[addr, prefixlen]`. -/
 
@@ -68,6 +69,14 @@ def run (fn : String) (j : Json) : Except String Json := do
     let a ← getNet j bits "a"
     let b ← getNet j bits "b"
     return encPy (fun ns => Json.arr (ns.map encNet).toArray) (addressExclude a b)
+  | "v4init" =>
+    let arg ← j.getObjVal? "arg"
+    let kind ← (← arg.getArrVal? 0).getStr?
+    let a ← match kind with
+      | "int" => pure (AddrArg.int (← (← arg.getArrVal? 1).getInt?))
+      | "bytes" => pure (AddrArg.bytes ((← (← arg.getArrVal? 1).getArr?).toList.filterMap (fun x => x.getNat?.toOption)))
+      | _ => pure (AddrArg.str (← (← arg.getArrVal? 1).getStr?).toList)
+    return encPy (fun n => Json.arr #[toJson n, toJson (String.ofList (ipv4Str n))]) (ipv4Init a)
   | other => throw s!"unknown fn {other}"
 
 def handler : Handler := fun fn j => some (run fn j)

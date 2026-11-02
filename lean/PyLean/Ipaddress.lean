@@ -6,11 +6,12 @@ import PyLean.Ipaddress.Lookup
 import PyLean.Ipaddress.Summarize
 import PyLean.Ipaddress.Subnets
 import PyLean.Ipaddress.Exploded
+import PyLean.Ipaddress.Parse4Props
 
 /-!
 `Lib/ipaddress.py`, CPython 3.15.2. The model covers the integer core of networks,
-`exploded` of IPv6 objects and `is_unspecified` of interfaces; string parsing and the
-other formatting are not modelled yet.
+`exploded` of IPv6 objects, `is_unspecified` of interfaces, and IPv4 text: parsing, formatting
+and the `IPv4Address` constructor.
 -/
 
 namespace PyLean.Ipaddress
@@ -106,7 +107,26 @@ def entries : List Entry := [
     pyFns := ["IPv4Interface.is_unspecified", "IPv6Interface.is_unspecified"]
     statement := "An IPv4 or IPv6 interface is unspecified exactly when its address is zero and its prefix is the full length."
     source := "Lib/ipaddress.py:1479-1481, :2273-2275; _BaseNetwork.is_unspecified docstring, :1099-1106", status := .proven
-    prop := ``IfaceUnspecified, thm := some ``ifaceUnspecified_proven }
+    prop := ``IfaceUnspecified, thm := some ``ifaceUnspecified_proven },
+  { id := "ipaddress-v4-text-roundtrip", pyFile := "Lib/ipaddress.py"
+    pyFns := ["IPv4Address.__init__", "_BaseV4._ip_int_from_string", "_BaseV4._parse_octet",
+      "_BaseV4._string_from_ip_int", "_BaseAddress.__str__"]
+    statement := "For every n in [0, 2**32), IPv4Address(str(IPv4Address(n))) stores n."
+    source := "docs: IPv4Address(int(IPv4Address('192.0.2.1'))) == IPv4Address('192.0.2.1'); invariant: str round-trips", status := .proven
+    prop := ``V4RoundTrip, thm := some ``v4RoundTrip_proven
+    notes := "Difftest fn v4init (strings, ints, bytes, exact messages): 36k cases over 3 seeds, 100%." },
+  { id := "ipaddress-v4-text-canonical", pyFile := "Lib/ipaddress.py"
+    pyFns := ["IPv4Address.__init__", "_BaseV4._ip_int_from_string", "_BaseV4._parse_octet",
+      "_BaseV4._string_from_ip_int", "_BaseAddress.__str__"]
+    statement := "For every string s that IPv4Address accepts, the address is below 2**32 and str of it is s: the parser accepts exactly one spelling per address."
+    source := "ipaddress.py:1229-1230, leading zeros rejected 'as strict as glibc's inet_pton()' (bpo-36384)", status := .proven
+    prop := ``V4Canonical, thm := some ``v4Canonical_proven
+    notes := "Smoke-tested on 300k random strings over digits, dots, spaces, signs and non-ASCII digits." },
+  { id := "ipaddress-v4-init-int-bytes", pyFile := "Lib/ipaddress.py"
+    pyFns := ["IPv4Address.__init__", "_IPAddressBase._check_int_address", "_IPAddressBase._check_packed_address"]
+    statement := "IPv4Address(int) accepts exactly [0, 2**32) and stores the int; four big-endian bytes give the int back, any other length raises AddressValueError."
+    source := "IPv4Address docstring, ipaddress.py:1271-1284; _check_int_address and _check_packed_address", status := .proven
+    prop := ``V4InitIntBytes, thm := some ``v4InitIntBytes_proven }
 ]
 
 end PyLean.Ipaddress

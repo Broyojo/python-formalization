@@ -38,7 +38,33 @@ def edge_int(rng, lo, hi):
     return rng.choice([lo, hi, lo - 1, hi + 1, 0, 1, -1, rng.randint(lo, hi)])
 
 
+V4_PIECES = ["0", "1", "9", "10", "99", "100", "199", "255", "256", "300", "999", "1000", "00", "01",
+             "001", "010", "0x1", "-1", "+1", " 1", "1 ", "", "a", "\u0663", "\uff11", "1\n", "25\u0665",
+             "2\u00b2", "'", "\\"]
+
+
+def gen_v4(rng):
+    k = rng.random()
+    if k < 0.3:
+        n = rng.choice([0, 1, 255, 256, 2**24, 2**32 - 1, rng.randrange(2**32)])
+        return ["str", str(ipaddress.IPv4Address(n))]
+    if k < 0.75:
+        parts = [rng.choice(V4_PIECES) if rng.random() < 0.4 else str(rng.randrange(256))
+                 for _ in range(rng.choice([4, 4, 4, 3, 5, 1, 0]))]
+        s = ".".join(parts)
+        if rng.random() < 0.05:
+            s = s.replace(".", "/", 1)
+        if rng.random() < 0.05:
+            s = s + rng.choice(["\n", " ", ".", "%"])
+        return ["str", s]
+    if k < 0.88:
+        return ["int", rng.choice([-1, 0, 2**32 - 1, 2**32, -(2**40), 2**64, rng.randrange(2**32)])]
+    return ["bytes", [rng.randrange(256) for _ in range(rng.choice([4, 4, 3, 5, 0, 16]))]]
+
+
 def gen_case(rng):
+    if rng.random() < 0.3:
+        return {"mod": "ipaddress", "fn": "v4init", "bits": 32, "arg": gen_v4(rng)}
     bits = rng.choice([32, 128])
     fn = rng.choice(["summarize", "mknet", "subnets", "supernet", "getitem",
                      "contains", "overlaps", "subnet_of", "address_exclude",
@@ -120,7 +146,11 @@ def run_python(c):
     mk = lambda t: Net(tuple(t))
     try:
         fn = c["fn"]
-        if fn == "exploded":
+        if fn == "v4init":
+            kind, val = c["arg"]
+            a = ipaddress.IPv4Address(bytes(val) if kind == "bytes" else val)
+            v = [a._ip, str(a)]
+        elif fn == "exploded":
             v = make_v6(c).exploded
         elif fn == "iface_unspecified":
             cls = {32: ipaddress.IPv4Interface, 128: ipaddress.IPv6Interface}[bits]
