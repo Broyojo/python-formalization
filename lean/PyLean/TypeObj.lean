@@ -10,6 +10,7 @@ import PyLean.TypeObj.PropsReduce
 import PyLean.TypeObj.PropsTotal
 import PyLean.TypeObj.PropsMethods
 import PyLean.TypeObj.SeqTuple
+import PyLean.TypeObj.StructSeq
 
 /-!
 The data model: `Objects/typeobject.c`, `Objects/object.c`, `Objects/abstract.c`,
@@ -952,6 +953,10 @@ def entries : List Entry := [
   p "typeobj-sequence-tuple" ab ["PySequence_Tuple"]
     "tuple(v) returns v itself for an exact tuple and otherwise a new tuple of exactly the items the iterable yields, in order, or the iterator's exception, for every number of items, below, at and above the eight-item stack buffer."
     "docs: tuple(iterable) has the iterable's items in the same order" ``SeqTuple.SeqTupleSpec ``SeqTuple.seqTupleSpec_proven
-    "Checked on 3.15.2 for 0..24 items with and without a raising iterator, and for tuple(t) is t." ] ++ excEntries
+    "Checked on 3.15.2 for 0..24 items with and without a raising iterator, and for tuple(t) is t.",
+  p "typeobj-structseq-reduce-round-trip" "Objects/structseq.c" ["structseq_new_impl", "structseq_reduce"]
+    "For every struct sequence type (hidden fields after visible ones, unnamed fields visible, distinct hidden names) and every value, type(*s.__reduce__()[1]) rebuilds every field, hidden ones included."
+    "invariant: pickling round-trips" ``StructSeq.ReduceRoundTrip ``StructSeq.reduceRoundTrip_proven
+    "The constructor's checks (sequence, dict, the three length messages, unexpected names) are mirrored and were checked on 3.15.2 with os.stat_result and time.struct_time." ] ++ excEntries
 
 end PyLean.TypeObj
