@@ -14,6 +14,7 @@ import PyLean.Bytecode.SpecCompareFloat
 import PyLean.Bytecode.SpecSubscr
 import PyLean.Bytecode.SpecCells
 import PyLean.Bytecode.SpecForIter
+import PyLean.Bytecode.SpecDict
 
 /-!
 The bytecode virtual machine: `Python/bytecodes.c`, `Python/ceval.c`, `Python/intrinsics.c`,
@@ -29,6 +30,16 @@ open PyLean.Registry
 def op (n : String) : String := "opcode:" ++ n
 
 def entries : List Entry := GenObj.entries ++ [
+  { id := "bytecode-global-roundtrip", pyFile := "Python/bytecodes.c"
+    pyFns := [op "STORE_GLOBAL"]
+    statement := "STORE_GLOBAL name then LOAD_GLOBAL name pushes the stored value and nothing else, on exact-dict globals; every other name keeps its value."
+    source := "invariant: Python/bytecodes.c STORE_GLOBAL, _LOAD_GLOBAL; PyDict_SetItem then PyDict_GetItemRef on a str key"
+    status := .proven, prop := ``GlobalRoundTrip, thm := some ``globalRoundTrip_proven },
+  { id := "bytecode-load-global", pyFile := "Python/bytecodes.c"
+    pyFns := [op "LOAD_GLOBAL", op "_LOAD_GLOBAL", op "_PUSH_NULL_CONDITIONAL"]
+    statement := "LOAD_GLOBAL looks in the globals then the builtins and pushes the value, with a NULL after it for the call form; when neither has the name it raises NameError naming it with the stack unchanged."
+    source := "Python/bytecodes.c _LOAD_GLOBAL, _PUSH_NULL_CONDITIONAL; _PyEval_LoadGlobalStackRef"
+    status := .proven, prop := ``LoadGlobalRules, thm := some ``loadGlobalRules_proven },
   { id := "bytecode-attr-dispatch", pyFile := "Python/bytecodes.c"
     pyFns := [op "STORE_ATTR", op "_STORE_ATTR", op "DELETE_ATTR", op "LOAD_ATTR", op "_LOAD_ATTR"]
     statement := "STORE_ATTR, DELETE_ATTR and LOAD_ATTR take the name from co_names, call PyObject_SetAttr, PyObject_DelAttr and getattr (or the method form with self_or_null on top), and pop their operands on success and failure, for any object model."
