@@ -1,6 +1,6 @@
 file	line	endline	name	signature	status	entry	note
-Python/bytecodes.c	148	148	opcode:NOP	pure inst(NOP, (--)) {	todo		changed-in-3.15:
-Python/bytecodes.c	156	156	opcode:NOT_TAKEN	macro(NOT_TAKEN) = NOP;	todo		
+Python/bytecodes.c	148	148	opcode:NOP	pure inst(NOP, (--)) {	excluded		no-behaviour: an empty body; NOT_TAKEN matters only as the marker bytecode-branches states
+Python/bytecodes.c	156	156	opcode:NOT_TAKEN	macro(NOT_TAKEN) = NOP;	excluded		no-behaviour: an empty body; NOT_TAKEN matters only as the marker bytecode-branches states
 Python/bytecodes.c	158	158	opcode:_CHECK_PERIODIC	op(_CHECK_PERIODIC, (--)) {	todo		changed-in-3.15:
 Python/bytecodes.c	163	163	opcode:_CHECK_PERIODIC_AT_END	replaced op(_CHECK_PERIODIC_AT_END, (--)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	168	168	opcode:_CHECK_PERIODIC_IF_NOT_YIELD_FROM	op(_CHECK_PERIODIC_IF_NOT_YIELD_FROM, (--)) {	todo		changed-in-3.15:
@@ -13,34 +13,35 @@ Python/bytecodes.c	230	230	opcode:_RESUME_CHECK	op(_RESUME_CHECK, (--)) {	todo		
 Python/bytecodes.c	245	245	opcode:RESUME_CHECK_JIT	macro(RESUME_CHECK_JIT) =	todo		changed-in-3.15: new function
 Python/bytecodes.c	250	250	opcode:_MONITOR_RESUME	op(_MONITOR_RESUME, (--)) {	todo		changed-in-3.15:
 Python/bytecodes.c	260	260	opcode:INSTRUMENTED_RESUME	macro(INSTRUMENTED_RESUME) =	todo		changed-in-3.15:
-Python/bytecodes.c	271	271	opcode:LOAD_FAST_CHECK	inst(LOAD_FAST_CHECK, (-- value)) {	todo		
-Python/bytecodes.c	283	283	opcode:LOAD_FAST	replicate(8) pure inst(LOAD_FAST, (-- value)) {	todo		
-Python/bytecodes.c	293	293	opcode:LOAD_FAST_AND_CLEAR	inst(LOAD_FAST_AND_CLEAR, (-- value)) {	todo		
-Python/bytecodes.c	298	298	opcode:LOAD_FAST_LOAD_FAST	inst(LOAD_FAST_LOAD_FAST, ( -- value1, value2)) {	todo		
-Python/bytecodes.c	305	305	opcode:LOAD_FAST_BORROW_LOAD_FAST_BORROW	inst(LOAD_FAST_BORROW_LOAD_FAST_BORROW, ( -- value1, value2)) {	todo		changed-in-3.15:
-Python/bytecodes.c	312	312	opcode:LOAD_CONST	inst(LOAD_CONST, (-- value)) {	todo		changed-in-3.15:
-Python/bytecodes.c	317	317	opcode:LOAD_SMALL_INT	replicate(4) inst(LOAD_SMALL_INT, (-- value)) {	todo		changed-in-3.15:
-Python/bytecodes.c	323	323	opcode:STORE_FAST	macro(STORE_FAST) = _SWAP_FAST + POP_TOP;	todo		changed-in-3.15:
+Python/bytecodes.c	271	271	opcode:LOAD_FAST_CHECK	inst(LOAD_FAST_CHECK, (-- value)) {	modelled	bytecode-load-fast-check	
+Python/bytecodes.c	283	283	opcode:LOAD_FAST	replicate(8) pure inst(LOAD_FAST, (-- value)) {	modelled	bytecode-load-fast	
+Python/bytecodes.c	288	288	opcode:LOAD_FAST_BORROW	replicate(8) pure inst (LOAD_FAST_BORROW, (-- value)) {	modelled	bytecode-load-fast	
+Python/bytecodes.c	293	293	opcode:LOAD_FAST_AND_CLEAR	inst(LOAD_FAST_AND_CLEAR, (-- value)) {	modelled	bytecode-load-clear-store	
+Python/bytecodes.c	298	298	opcode:LOAD_FAST_LOAD_FAST	inst(LOAD_FAST_LOAD_FAST, ( -- value1, value2)) {	modelled	bytecode-load-superinstructions	
+Python/bytecodes.c	305	305	opcode:LOAD_FAST_BORROW_LOAD_FAST_BORROW	inst(LOAD_FAST_BORROW_LOAD_FAST_BORROW, ( -- value1, value2)) {	modelled	bytecode-load-superinstructions	
+Python/bytecodes.c	312	312	opcode:LOAD_CONST	inst(LOAD_CONST, (-- value)) {	modelled	bytecode-load-const	
+Python/bytecodes.c	317	317	opcode:LOAD_SMALL_INT	replicate(4) inst(LOAD_SMALL_INT, (-- value)) {	modelled	bytecode-load-const	
+Python/bytecodes.c	323	323	opcode:STORE_FAST	macro(STORE_FAST) = _SWAP_FAST + POP_TOP;	modelled	bytecode-load-clear-store,bytecode-store-fast	
 Python/bytecodes.c	325	325	opcode:_SWAP_FAST	replicate(8) op(_SWAP_FAST, (value -- trash)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	336	336	opcode:STORE_FAST_LOAD_FAST	inst(STORE_FAST_LOAD_FAST, (value1 -- value2)) {	todo		changed-in-3.15:
-Python/bytecodes.c	346	346	opcode:STORE_FAST_STORE_FAST	inst(STORE_FAST_STORE_FAST, (value2, value1 --)) {	todo		changed-in-3.15:
-Python/bytecodes.c	359	359	opcode:POP_TOP	pure inst(POP_TOP, (value --)) {	todo		changed-in-3.15:
+Python/bytecodes.c	336	336	opcode:STORE_FAST_LOAD_FAST	inst(STORE_FAST_LOAD_FAST, (value1 -- value2)) {	modelled	bytecode-store-superinstructions	
+Python/bytecodes.c	346	346	opcode:STORE_FAST_STORE_FAST	inst(STORE_FAST_STORE_FAST, (value2, value1 --)) {	modelled	bytecode-store-superinstructions	
+Python/bytecodes.c	359	359	opcode:POP_TOP	pure inst(POP_TOP, (value --)) {	modelled	bytecode-stack-drops	
 Python/bytecodes.c	363	363	opcode:_POP_TOP_NOP	op(_POP_TOP_NOP, (value --)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	369	369	opcode:_POP_TOP_INT	op(_POP_TOP_INT, (value --)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	374	374	opcode:_POP_TOP_FLOAT	op(_POP_TOP_FLOAT, (value --)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	379	379	opcode:_POP_TOP_UNICODE	op(_POP_TOP_UNICODE, (value --)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	384	384	opcode:_POP_TOP_OPARG	op(_POP_TOP_OPARG, (args[oparg] -- )) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	389	389	opcode:PUSH_NULL	pure inst(PUSH_NULL, (-- res)) {	todo		
-Python/bytecodes.c	393	393	opcode:END_FOR	no_save_ip inst(END_FOR, (value -- )) {	todo		
-Python/bytecodes.c	403	403	opcode:POP_ITER	inst(POP_ITER, (iter, index_or_null -- )) {	todo		changed-in-3.15:
+Python/bytecodes.c	389	389	opcode:PUSH_NULL	pure inst(PUSH_NULL, (-- res)) {	modelled	bytecode-stack-drops	
+Python/bytecodes.c	393	393	opcode:END_FOR	no_save_ip inst(END_FOR, (value -- )) {	modelled	bytecode-stack-drops	
+Python/bytecodes.c	403	403	opcode:POP_ITER	inst(POP_ITER, (iter, index_or_null -- )) {	modelled	bytecode-stack-drops	
 Python/bytecodes.c	409	409	opcode:INSTRUMENTED_END_FOR	no_save_ip tier1 inst(INSTRUMENTED_END_FOR, (receiver, index_or_null, value -- receiver, index_or_null)) {	todo		changed-in-3.15:
 Python/bytecodes.c	421	421	opcode:INSTRUMENTED_POP_ITER	tier1 inst(INSTRUMENTED_POP_ITER, (iter, index_or_null -- )) {	todo		changed-in-3.15:
-Python/bytecodes.c	428	428	opcode:END_SEND	pure inst(END_SEND, (receiver, index_or_null, value -- val)) {	todo		changed-in-3.15:
+Python/bytecodes.c	428	428	opcode:END_SEND	pure inst(END_SEND, (receiver, index_or_null, value -- val)) {	modelled	bytecode-stack-drops	
 Python/bytecodes.c	436	436	opcode:INSTRUMENTED_END_SEND	tier1 inst(INSTRUMENTED_END_SEND, (receiver, index_or_null, value -- val)) {	todo		changed-in-3.15:
 Python/bytecodes.c	451	451	opcode:UNARY_NEGATIVE	macro(UNARY_NEGATIVE) = _UNARY_NEGATIVE + POP_TOP;	todo		changed-in-3.15:
 Python/bytecodes.c	453	453	opcode:_UNARY_NEGATIVE	op(_UNARY_NEGATIVE, (value -- res, v)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	465	465	opcode:_UNARY_NEGATIVE_FLOAT_INPLACE	tier2 op(_UNARY_NEGATIVE_FLOAT_INPLACE, (value -- res, v)) {	todo		changed-in-3.15: new function
-Python/bytecodes.c	477	477	opcode:UNARY_NOT	inst(UNARY_NOT, (value -- res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	477	477	opcode:UNARY_NOT	inst(UNARY_NOT, (value -- res)) {	modelled	bytecode-unary-not	
 Python/bytecodes.c	493	493	opcode:_SPECIALIZE_TO_BOOL	specializing op(_SPECIALIZE_TO_BOOL, (counter/1, value -- value)) {	todo		changed-in-3.15:
 Python/bytecodes.c	505	505	opcode:_TO_BOOL	op(_TO_BOOL, (value -- res)) {	todo		
 Python/bytecodes.c	512	512	opcode:TO_BOOL	macro(TO_BOOL) = _SPECIALIZE_TO_BOOL + unused/2 + _TO_BOOL;	todo		
@@ -221,7 +222,7 @@ Python/bytecodes.c	2319	2319	opcode:_LOAD_GLOBAL_BUILTINS	op(_LOAD_GLOBAL_BUILTI
 Python/bytecodes.c	2338	2338	opcode:_GUARD_BUILTINS_IS_CANONICAL	tier2 op(_GUARD_BUILTINS_IS_CANONICAL, (--)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	2342	2342	opcode:LOAD_GLOBAL_MODULE	macro(LOAD_GLOBAL_MODULE) =	todo		
 Python/bytecodes.c	2348	2348	opcode:LOAD_GLOBAL_BUILTIN	macro(LOAD_GLOBAL_BUILTIN) =	todo		
-Python/bytecodes.c	2354	2354	opcode:DELETE_FAST	inst(DELETE_FAST, (--)) {	todo		
+Python/bytecodes.c	2354	2354	opcode:DELETE_FAST	inst(DELETE_FAST, (--)) {	modelled	bytecode-delete-fast	
 Python/bytecodes.c	2368	2368	opcode:MAKE_CELL	inst(MAKE_CELL, (--)) {	todo		
 Python/bytecodes.c	2381	2381	opcode:DELETE_DEREF	inst(DELETE_DEREF, (--)) {	todo		
 Python/bytecodes.c	2393	2393	opcode:LOAD_FROM_DICT_OR_DEREF	inst(LOAD_FROM_DICT_OR_DEREF, (class_dict_st -- value)) {	todo		changed-in-3.15:
@@ -310,21 +311,21 @@ Python/bytecodes.c	3415	3415	opcode:CHECK_EG_MATCH	inst(CHECK_EG_MATCH, (exc_val
 Python/bytecodes.c	3441	3441	opcode:CHECK_EXC_MATCH	inst(CHECK_EXC_MATCH, (left, right -- left, b)) {	todo		
 Python/bytecodes.c	3456	3456	opcode:IMPORT_NAME	inst(IMPORT_NAME, (level, fromlist -- res)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3478	3478	opcode:IMPORT_FROM	inst(IMPORT_FROM, (from -- from, res)) {	todo		changed-in-3.15:
-Python/bytecodes.c	3494	3494	opcode:JUMP_FORWARD	tier1 inst(JUMP_FORWARD, (--)) {	todo		
+Python/bytecodes.c	3494	3494	opcode:JUMP_FORWARD	tier1 inst(JUMP_FORWARD, (--)) {	modelled	bytecode-jumps	
 Python/bytecodes.c	3503	3503	opcode:_SPECIALIZE_JUMP_BACKWARD	specializing tier1 op(_SPECIALIZE_JUMP_BACKWARD, (--)) {	todo		changed-in-3.15:
 Python/bytecodes.c	3515	3515	opcode:_JIT	tier1 op(_JIT, (--)) {	todo		changed-in-3.15:
-Python/bytecodes.c	3544	3544	opcode:JUMP_BACKWARD	macro(JUMP_BACKWARD) =	todo		
+Python/bytecodes.c	3544	3544	opcode:JUMP_BACKWARD	macro(JUMP_BACKWARD) =	modelled	bytecode-jumps	
 Python/bytecodes.c	3550	3550	opcode:JUMP_BACKWARD_NO_JIT	macro(JUMP_BACKWARD_NO_JIT) =	todo		
 Python/bytecodes.c	3555	3555	opcode:JUMP_BACKWARD_JIT	macro(JUMP_BACKWARD_JIT) =	todo		
 Python/bytecodes.c	3579	3579	opcode:ENTER_EXECUTOR	tier1 inst(ENTER_EXECUTOR, (--)) {	todo		changed-in-3.15:
-Python/bytecodes.c	3621	3621	opcode:_POP_JUMP_IF_FALSE	replaced op(_POP_JUMP_IF_FALSE, (cond -- )) {	todo		
-Python/bytecodes.c	3629	3629	opcode:_POP_JUMP_IF_TRUE	replaced op(_POP_JUMP_IF_TRUE, (cond -- )) {	todo		
-Python/bytecodes.c	3637	3637	opcode:_IS_NONE	op(_IS_NONE, (value -- b)) {	todo		
-Python/bytecodes.c	3648	3648	opcode:POP_JUMP_IF_TRUE	macro(POP_JUMP_IF_TRUE) = unused/1 + _POP_JUMP_IF_TRUE;	todo		
-Python/bytecodes.c	3650	3650	opcode:POP_JUMP_IF_FALSE	macro(POP_JUMP_IF_FALSE) = unused/1 + _POP_JUMP_IF_FALSE;	todo		
-Python/bytecodes.c	3652	3652	opcode:POP_JUMP_IF_NONE	macro(POP_JUMP_IF_NONE) = unused/1 + _IS_NONE + _POP_JUMP_IF_TRUE;	todo		
-Python/bytecodes.c	3654	3654	opcode:POP_JUMP_IF_NOT_NONE	macro(POP_JUMP_IF_NOT_NONE) = unused/1 + _IS_NONE + _POP_JUMP_IF_FALSE;	todo		
-Python/bytecodes.c	3656	3656	opcode:JUMP_BACKWARD_NO_INTERRUPT	replaced inst(JUMP_BACKWARD_NO_INTERRUPT, (--)) {	todo		changed-in-3.15:
+Python/bytecodes.c	3621	3621	opcode:_POP_JUMP_IF_FALSE	replaced op(_POP_JUMP_IF_FALSE, (cond -- )) {	modelled	bytecode-branches	
+Python/bytecodes.c	3629	3629	opcode:_POP_JUMP_IF_TRUE	replaced op(_POP_JUMP_IF_TRUE, (cond -- )) {	modelled	bytecode-branches	
+Python/bytecodes.c	3637	3637	opcode:_IS_NONE	op(_IS_NONE, (value -- b)) {	modelled	bytecode-branches	
+Python/bytecodes.c	3648	3648	opcode:POP_JUMP_IF_TRUE	macro(POP_JUMP_IF_TRUE) = unused/1 + _POP_JUMP_IF_TRUE;	modelled	bytecode-branches	
+Python/bytecodes.c	3650	3650	opcode:POP_JUMP_IF_FALSE	macro(POP_JUMP_IF_FALSE) = unused/1 + _POP_JUMP_IF_FALSE;	modelled	bytecode-branches	
+Python/bytecodes.c	3652	3652	opcode:POP_JUMP_IF_NONE	macro(POP_JUMP_IF_NONE) = unused/1 + _IS_NONE + _POP_JUMP_IF_TRUE;	modelled	bytecode-branches	
+Python/bytecodes.c	3654	3654	opcode:POP_JUMP_IF_NOT_NONE	macro(POP_JUMP_IF_NOT_NONE) = unused/1 + _IS_NONE + _POP_JUMP_IF_FALSE;	modelled	bytecode-branches	
+Python/bytecodes.c	3656	3656	opcode:JUMP_BACKWARD_NO_INTERRUPT	replaced inst(JUMP_BACKWARD_NO_INTERRUPT, (--)) {	modelled	bytecode-jumps	
 Python/bytecodes.c	3666	3666	opcode:GET_LEN	inst(GET_LEN, (obj -- obj, len)) {	todo		
 Python/bytecodes.c	3675	3675	opcode:_MATCH_CLASS	op(_MATCH_CLASS, (subject, type, names -- attrs, s, tp, n)) {	todo		changed-in-3.15: new function
 Python/bytecodes.c	3699	3699	opcode:MATCH_CLASS	macro(MATCH_CLASS) = _MATCH_CLASS + POP_TOP + POP_TOP + POP_TOP;	todo		changed-in-3.15:
@@ -502,9 +503,11 @@ Python/bytecodes.c	5863	5863	opcode:BUILD_SLICE	inst(BUILD_SLICE, (args[oparg] -
 Python/bytecodes.c	5873	5873	opcode:CONVERT_VALUE	inst(CONVERT_VALUE, (value -- result)) {	todo		
 Python/bytecodes.c	5883	5883	opcode:FORMAT_SIMPLE	inst(FORMAT_SIMPLE, (value -- res)) {	todo		
 Python/bytecodes.c	5899	5899	opcode:FORMAT_WITH_SPEC	inst(FORMAT_WITH_SPEC, (value, fmt_spec -- res)) {	todo		changed-in-3.15:
+Python/bytecodes.c	5906	5906	opcode:COPY	pure replicate(1:4) inst(COPY, (bottom, unused[oparg-1] -- bottom, unused[oparg-1], top)) {	modelled	bytecode-copy	
 Python/bytecodes.c	5910	5910	opcode:_SPECIALIZE_BINARY_OP	specializing op(_SPECIALIZE_BINARY_OP, (counter/1, lhs, rhs -- lhs, rhs)) {	modelled	bytecode-binary-op-add-int	
 Python/bytecodes.c	5924	5924	opcode:_BINARY_OP	op(_BINARY_OP, (lhs, rhs -- res, l, r)) {	modelled	bytecode-binary-op-add-int	
 Python/bytecodes.c	5940	5940	opcode:BINARY_OP	macro(BINARY_OP) = _SPECIALIZE_BINARY_OP + _RECORD_TOS_TYPE + _RECORD_NOS_TYPE + unused/4 + _BINARY_OP + POP_TOP + POP_TOP;	modelled	bytecode-binary-op-add-int	
+Python/bytecodes.c	5942	5942	opcode:SWAP	pure replicate(2:4) inst(SWAP, (bottom, unused[oparg-2], top --	modelled	bytecode-swap	
 Python/bytecodes.c	5949	5949	opcode:INSTRUMENTED_LINE	inst(INSTRUMENTED_LINE, ( -- )) {	todo		
 Python/bytecodes.c	5979	5979	opcode:INSTRUMENTED_INSTRUCTION	inst(INSTRUMENTED_INSTRUCTION, ( -- )) {	todo		
 Python/bytecodes.c	5992	5992	opcode:INSTRUMENTED_JUMP_FORWARD	inst(INSTRUMENTED_JUMP_FORWARD, ( -- )) {	todo		
@@ -518,6 +521,12 @@ Python/bytecodes.c	6042	6042	opcode:INSTRUMENTED_POP_JUMP_IF_NOT_NONE	inst(INSTR
 Python/bytecodes.c	6054	6054	opcode:EXTENDED_ARG	tier1 inst(EXTENDED_ARG, ( -- )) {	todo		
 Python/bytecodes.c	6062	6062	opcode:CACHE	tier1 inst(CACHE, (--)) {	todo		
 Python/bytecodes.c	6067	6067	opcode:RESERVED	tier1 inst(RESERVED, (--)) {	todo		changed-in-3.15:
+Python/bytecodes.c	6074	6074	opcode:_GUARD_IS_TRUE_POP	op (_GUARD_IS_TRUE_POP, (flag -- )) {	todo		
+Python/bytecodes.c	6080	6080	opcode:_GUARD_IS_FALSE_POP	op (_GUARD_IS_FALSE_POP, (flag -- )) {	todo		
+Python/bytecodes.c	6086	6086	opcode:_GUARD_BIT_IS_SET_POP	replicate(4:8) op (_GUARD_BIT_IS_SET_POP, (flag -- )) {	todo		
+Python/bytecodes.c	6097	6097	opcode:_GUARD_BIT_IS_UNSET_POP	replicate(4:8) op (_GUARD_BIT_IS_UNSET_POP, (flag -- )) {	todo		
+Python/bytecodes.c	6108	6108	opcode:_GUARD_IS_NONE_POP	op (_GUARD_IS_NONE_POP, (val -- )) {	todo		
+Python/bytecodes.c	6117	6117	opcode:_GUARD_IS_NOT_NONE_POP	op (_GUARD_IS_NOT_NONE_POP, (val -- )) {	todo		
 Python/bytecodes.c	6123	6123	opcode:_JUMP_TO_TOP	op(_JUMP_TO_TOP, (--)) {	todo		
 Python/bytecodes.c	6127	6127	opcode:_SET_IP	tier2 op(_SET_IP, (instr_ptr/4 --)) {	todo		
 Python/bytecodes.c	6131	6131	opcode:_CHECK_STACK_SPACE_OPERAND	tier2 op(_CHECK_STACK_SPACE_OPERAND, (framesize/2 --)) {	todo		changed-in-3.15:
