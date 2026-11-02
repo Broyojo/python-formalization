@@ -32,6 +32,7 @@ def run (fn : String) (j : Json) : Except String Json :=
   else if fn.startsWith "etree." then Etree.run fn j
   else if fn.startsWith "etreepath." then Etree.pathRun fn j
   else if fn.startsWith "etreeattrib." then Etree.attribRun j
+  else if fn.startsWith "etreecopy." then Etree.copyRun j
   else throw s!"unknown fn {fn}"
 
 def handler : Handler := fun fn j => some (run fn j)

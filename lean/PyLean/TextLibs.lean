@@ -17,6 +17,7 @@ import PyLean.TextLibs.EtreePathProps
 import PyLean.TextLibs.EtreeWriters
 import PyLean.TextLibs.EtreeAttrib
 import PyLean.TextLibs.EtreeRemove
+import PyLean.TextLibs.EtreeCopy
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1476,7 +1477,25 @@ def entries : List Entry := [
     source := "the implementation disagreeing with itself (C and Python twins)", status := .refuted
     prop := ``Etree.RemoveTwinsAll, thm := some ``Etree.removeTwinsAll_refuted
     bug := some "textlibs-etree-py-twin-setitem"
-    notes := "e.remove(5) with a child whose __eq__ is true: C's Clinic refuses 5, the twin's list.remove removes the child before its iselement check runs." }
+    notes := "e.remove(5) with a child whose __eq__ is true: C's Clinic refuses 5, the twin's list.remove removes the child before its iselement check runs." },
+  { id := "textlibs-etree-copy-independent", pyFile := "Modules/_elementtree.c"
+    pyFns := ["_elementtree_Element___copy___impl", "create_new_element"]
+    statement := "Setting an attribute on copy.copy(e) leaves e's attributes unchanged."
+    source := "the implementation disagreeing with itself (the Python twin's __copy__ makes a new dict)", status := .refuted
+    prop := ``Etree.CopyIndependentC, thm := some ``Etree.copyIndependentC_refuted
+    bug := some "textlibs-etree-copy-shares-attrib" },
+  { id := "textlibs-etree-copy-class", pyFile := "Modules/_elementtree.c"
+    pyFns := ["_elementtree_Element___copy___impl", "create_new_element"]
+    statement := "copy.copy(e) has e's class."
+    source := "the implementation disagreeing with itself (the Python twin uses self.__class__)", status := .refuted
+    prop := ``Etree.CopyKeepsClassC, thm := some ``Etree.copyKeepsClassC_refuted
+    bug := some "textlibs-etree-copy-shares-attrib" },
+  { id := "textlibs-etree-copy-independent-py", pyFile := "Lib/xml/etree/ElementTree.py"
+    pyFns := ["Element.__copy__", "Element.makeelement"]
+    statement := "In the twin, setting an attribute on copy.copy(e) leaves e's attributes unchanged, and the copy has e's class."
+    source := "docs: copy.copy makes a new object", status := .proven
+    prop := ``Etree.CopyIndependentPy, thm := some ``Etree.copyIndependentPy_proven
+    notes := "The class half is CopyKeepsClassPy, proven by rfl from makeelement's self.__class__." }
 ]
 
 end PyLean.TextLibs

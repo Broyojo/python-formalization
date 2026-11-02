@@ -1,0 +1,62 @@
+id: textlibs-etree-copy-shares-attrib
+title: "copy.copy of a C Element shares its attrib dict with the original (and drops the subclass)"
+priority: P3
+kind: twin-divergence
+module: textlibs
+files: [Modules/_elementtree.c]
+functions: ["_elementtree_Element___copy___impl", "create_new_element"]
+summary: |
+  Element.__copy__ in C passes self->extra->attrib to create_new_element, which stores that same
+  dict in the copy (create_extra). After c = copy.copy(e), c.set('z', '1') also gives e the
+  attribute z, and c.attrib is e.attrib. The children are copied into a new array, so only the
+  attributes are shared. The pure-Python Element copies through makeelement ->
+  self.__class__(tag, attrib), whose __init__ builds a new dict, so the original is unaffected.
+  The same call also makes an exact Element: copy.copy and copy.deepcopy of an Element subclass
+  (and the subclass children a deepcopy recreates) come back as plain Element in C and keep their
+  class in the twin.
+likelihood: |
+  Moderate for anyone who copies an element to derive a variant and then edits its attributes:
+  the edit silently changes the original. Behaviour is the same in 3.14.7.
+maybe_intended: |
+  Possibly for the sharing (a shallow copy may share contained objects), but it is inconsistent:
+  the C copy duplicates the children list and not the attrib dict, and the Python twin duplicates
+  both. Dropping the subclass looks unintended; __deepcopy__ has the same create_new_element call.
+reproducer: |
+  import copy
+  import xml.etree.ElementTree as ET
+  e = ET.Element('r', {'k': 'v'})
+  c = copy.copy(e)
+  c.set('z', '1')
+  class Sub(ET.Element):
+      pass
+  s = copy.copy(Sub('r'))
+  print('original:', e.attrib, 'shared:', c.attrib is e.attrib, 'copy class:', type(s).__name__)
+  if e.attrib == {'k': 'v', 'z': '1'} and c.attrib is e.attrib and type(s) is ET.Element:
+      print('REPRODUCED textlibs-etree-copy-shares-attrib')
+expected: |
+  original: {'k': 'v'}, shared: False, copy class: Sub (as with the pure-Python Element).
+observed: |
+  python3 3.15.2: original: {'k': 'v', 'z': '1'} shared: True copy class: Element. REPRODUCED.
+  main (cpython-main/python.exe): identical. REPRODUCED by check_bugs.py.
+promised_by: |
+  The twins are interchangeable (Lib/xml/etree/ElementTree.py:2088-2096 replaces the Python
+  Element with the C one), and the Python __copy__ at :189-194 defines the copy.
+cause: |
+  Modules/_elementtree.c:770-771 passes the original attrib to create_new_element, which keeps it
+  (:344-345, create_extra stores the reference) and always allocates st->Element_Type (:333).
+possible_fix: |
+  Pass a copy (PyDict_Copy, or keep a frozendict as is) to create_new_element in __copy__, and
+  allocate Py_TYPE(self) or call makeelement for subclasses.
+duplicates:
+  issues: []
+  queries: ["copy Element attrib shared", "Element __copy__ attrib dict shared",
+            "shallow copy Element attributes modified original", "elementtree copy.copy attrib",
+            "Element copy attrib same dict", "Element subclass deepcopy returns Element",
+            "elementtree copy subclass type lost", "_elementtree __deepcopy__ subclass",
+            "Element __copy__ subclass", "deepcopy Element subclass", "etree copy subclass",
+            "bugforge README: no ElementTree entry"]
+  note: |
+    Queries run as separate unquoted terms.
+lean:
+  property: PyLean.TextLibs.Etree.CopyIndependentC
+  theorem: PyLean.TextLibs.Etree.copyIndependentC_refuted

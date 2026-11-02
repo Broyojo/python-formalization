@@ -3734,6 +3734,31 @@ class EtreeAttribArea:
         return {"ok": out}
 
 
+@area("etreecopy", 2)
+class EtreeCopyArea:
+    """copy.copy of an Element in both twins, then set on the copy or the original (EtreeCopy.lean)."""
+
+    @classmethod
+    def gen(cls, r):
+        return {"mod": "textlibs", "fn": "etreecopy.run", "impl": r.choice(["c", "py"]), "sub": r.random() < 0.3,
+                "attrib": [[cps(a), cps(b)] for a, b in r.sample([("a", "1"), ("b", "2")], r.randint(0, 2))],
+                "k": cps(r.choice(["a", "z"])), "v": cps(r.choice(["9", ""])), "oncopy": r.random() < 0.6}
+
+    @classmethod
+    def run(cls, c):
+        import copy
+        EtreeArea.run({"impl": "c", "fn": "etree.get", "kids": [], "idx": 0})  # loads both modules
+        mod = EtreeArea.cmod if c["impl"] == "c" else EtreeArea.pymod
+
+        class Sub(mod.Element):
+            pass
+        e = (Sub if c["sub"] else mod.Element)("r", {txt(a): txt(b) for a, b in c["attrib"]})
+        cp = copy.copy(e)
+        (cp if c["oncopy"] else e).set(txt(c["k"]), txt(c["v"]))
+        enc = lambda x: [[cps(a), cps(b)] for a, b in x.attrib.items()]
+        return {"ok": {"orig": enc(e), "copy": enc(cp), "sub": type(cp) is Sub}}
+
+
 only = os.environ.get("TEXTLIBS_ONLY")
 names = [n for n in AREAS if not only or n in only.split(",")]
 weights = [AREAS[n][1] for n in names]

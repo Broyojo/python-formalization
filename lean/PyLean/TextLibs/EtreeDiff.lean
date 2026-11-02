@@ -4,6 +4,7 @@ import PyLean.TextLibs.EtreePath
 import PyLean.TextLibs.EtreeWriters
 import PyLean.TextLibs.EtreeAttrib
 import PyLean.TextLibs.EtreeRemove
+import PyLean.TextLibs.EtreeCopy
 
 /-! `etree.*` difftest cases; see `EtreeArea` in `difftest/textlibs_diff.py`. A child is a
 number: below 1000 an Element whose tag is `e<n>`, otherwise the int `n` (not an Element). -/
@@ -217,6 +218,23 @@ def removeRun (j : Json) : Except String Json := do
   let c := (← getStr j "impl") == "c"
   let o := (if c then removeC else removePy) (scriptCmp script) 1000 0 kids x
   return Json.mkObj [("ok", Json.mkObj [("kids", toJson o.1), ("out", encPy (fun (_ : Unit) => Json.null) o.2)])]
+
+/-! ### `etreecopy.run`: copy, then set on the copy or the original -/
+
+def copyRun (j : Json) : Except String Json := do
+  let c := (← getStr j "impl") == "c"
+  let items ← pairsOf (← field j "attrib")
+  let sub ← getBool j "sub"
+  -- `Element(tag, attrib)`: C keeps no dict for an empty attrib; the twin always has one
+  let (h, e) : Heap × CElem :=
+    if c && items = [] then ([], ⟨lit "r", sub, none⟩) else ([items], ⟨lit "r", sub, some 0⟩)
+  let (h, cp) := (if c then copyC else copyPy) h e
+  let k ← nats (← field j "k")
+  let v ← nats (← field j "v")
+  let onCopy ← getBool j "oncopy"
+  let (h, e, cp) := if onCopy then let (h, cp) := setCE h cp k v; (h, e, cp) else let (h, e) := setCE h e k v; (h, e, cp)
+  return Json.mkObj [("ok", Json.mkObj [("orig", pairsJ (attrsOf h e)), ("copy", pairsJ (attrsOf h cp)),
+    ("sub", toJson cp.sub)])]
 
 def run (fn : String) (j : Json) : Except String Json := do
   if fn == "etree.remove" then return ← removeRun j
