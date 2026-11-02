@@ -1,7 +1,7 @@
 file	line	endline	name	signature	status	entry	note
 Objects/typeobject.c	97	101	types_world_is_stopped	types_world_is_stopped(void)	todo		changed-in-3.15: new function
-Objects/typeobject.c	131	137	types_stop_world	types_stop_world(void)	todo		changed-in-3.15: was excluded: no-behaviour: free-threading locks; the model is single-threaded
-Objects/typeobject.c	140	146	types_start_world	types_start_world(void)	todo		changed-in-3.15: was excluded: no-behaviour: free-threading locks; the model is single-threaded
+Objects/typeobject.c	131	137	types_stop_world	types_stop_world(void)	excluded		no-behaviour: free-threading locks; the model is single-threaded
+Objects/typeobject.c	140	146	types_start_world	types_start_world(void)	excluded		no-behaviour: free-threading locks; the model is single-threaded
 Objects/typeobject.c	165	179	type_lock_prevent_release	type_lock_prevent_release(pinned_mutexes_t *pinned)	todo		changed-in-3.15: was excluded: no-behaviour: free-threading locks; the model is single-threaded
 Objects/typeobject.c	182	197	type_lock_allow_release	type_lock_allow_release(pinned_mutexes_t *pinned)	todo		changed-in-3.15: was excluded: no-behaviour: free-threading locks; the model is single-threaded
 Objects/typeobject.c	235	242	type_from_ref	type_from_ref(PyObject *ref)	excluded		no-behaviour: field accessor; the model reads the same field of TypeData directly
@@ -218,7 +218,7 @@ Objects/typeobject.c	6177	6180	PyObject_GetItemData_DuringGC	PyObject_GetItemDat
 Objects/typeobject.c	6183	6186	PyObject_GetItemData	PyObject_GetItemData(PyObject *obj)	todo		changed-in-3.15:
 Objects/typeobject.c	6193	6243	find_name_in_mro	find_name_in_mro(PyTypeObject *type, PyObject *name, _PyStackRef *out)	modelled	typeobj-lookup-first-in-mro	
 Objects/typeobject.c	6248	6261	is_dunder_name	is_dunder_name(PyObject *name)	todo		
-Objects/typeobject.c	6264	6280	update_cache	update_cache(struct type_cache_entry *entry, PyObject *name, unsigned int version_tag, PyObject *value)	todo		changed-in-3.15: was excluded: no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
+Objects/typeobject.c	6264	6280	update_cache	update_cache(struct type_cache_entry *entry, PyObject *name, unsigned int version_tag, PyObject *value)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
 Objects/typeobject.c	6285	6305	update_cache_gil_disabled	update_cache_gil_disabled(struct type_cache_entry *entry, PyObject *name, unsigned int version_tag, PyObject *value)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
 Objects/typeobject.c	6310	6324	_PyTypes_AfterFork	_PyTypes_AfterFork(void)	excluded		no-behaviour: method cache and version tags are a transparent cache in front of find_name_in_mro
 Objects/typeobject.c	6332	6343	_PyType_LookupRefAndVersion	_PyType_LookupRefAndVersion(PyTypeObject *type, PyObject *name, unsigned int *version)	todo		
@@ -271,7 +271,7 @@ Objects/typeobject.c	7756	7853	object_set_class_world_stopped	object_set_class_w
 Objects/typeobject.c	7856	7895	object_set_class	object_set_class(PyObject *self, PyObject *value, void *closure)	todo		changed-in-3.15: was typeobj-set-class-checks
 Objects/typeobject.c	7912	7927	import_copyreg	import_copyreg(void)	todo		
 Objects/typeobject.c	7930	7976	_PyType_GetSlotNames	_PyType_GetSlotNames(PyTypeObject *cls)	modelled	typeobj-slotnames-typed	
-Objects/typeobject.c	7979	8101	object_getstate_default	object_getstate_default(PyObject *obj, int required)	todo		changed-in-3.15: was typeobj-getstate-guard
+Objects/typeobject.c	7979	8101	object_getstate_default	object_getstate_default(PyObject *obj, int required)	modelled	typeobj-getstate-guard	
 Objects/typeobject.c	8104	8124	object_getstate	object_getstate(PyObject *obj, int required)	todo		
 Objects/typeobject.c	8127	8130	_PyObject_GetState	_PyObject_GetState(PyObject *obj)	todo		
 Objects/typeobject.c	8139	8143	object___getstate___impl	object___getstate___impl(PyObject *self) /*[clinic end generated code: output=5a2500dcb6217e9e input=692314d8fbe194ee]*/	todo		

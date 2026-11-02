@@ -13,8 +13,8 @@ Parser/pegen.c	163	179	_get_keyword_or_name_type	_get_keyword_or_name_type(Parse
 Parser/pegen.c	182	220	initialize_token	initialize_token(Parser *p, Token *parser_token, struct token *new_token, int token_type) {	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
 Parser/pegen.c	223	242	_resize_tokens_array	_resize_tokens_array(Parser *p) {	excluded		no-behaviour: grows the token array; only allocation failure is observable
 Parser/pegen.c	245	293	_PyPegen_fill_token	_PyPegen_fill_token(Parser *p)	modelled	pygrammar-peg-fill-token	
-Parser/pegen.c	304	311	_PyPegen_clear_memo_statistics	_PyPegen_clear_memo_statistics(void)	todo		changed-in-3.15: was excluded: test-support: Py_DEBUG statistics
-Parser/pegen.c	314	338	_PyPegen_get_memo_statistics	_PyPegen_get_memo_statistics(void)	todo		changed-in-3.15: was excluded: test-support: Py_DEBUG statistics
+Parser/pegen.c	304	311	_PyPegen_clear_memo_statistics	_PyPegen_clear_memo_statistics(void)	excluded		test-support: Py_DEBUG statistics
+Parser/pegen.c	314	338	_PyPegen_get_memo_statistics	_PyPegen_get_memo_statistics(void)	excluded		test-support: Py_DEBUG statistics
 Parser/pegen.c	342	373	_PyPegen_is_memoized	_PyPegen_is_memoized(Parser *p, int type, void *pres)	modelled	pygrammar-peg-memo-cache	
 Parser/pegen.c	405	419	_PyPegen_expect_token	_PyPegen_expect_token(Parser *p, int type)	modelled	pygrammar-peg-expect-token	
 Parser/pegen.c	422	432	_PyPegen_expect_forced_result	_PyPegen_expect_forced_result(Parser *p, void* result, const char* expected) {	todo		withdrawn: the model and difftest exist, but no theorem yet depends on this body
