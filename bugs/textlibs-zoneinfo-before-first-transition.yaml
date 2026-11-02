@@ -1,0 +1,60 @@
+id: textlibs-zoneinfo-before-first-transition
+title: "zoneinfo: C and Python pick different local times before the first transition when every type is DST"
+priority: P3
+kind: twin-divergence
+module: textlibs
+files: [Lib/zoneinfo/_zoneinfo.py]
+functions: ["ZoneInfo._load_file"]
+summary: |
+  For instants before a TZif file's first transition, both implementations use the first non-DST
+  time type. When every type is DST, C falls back to time type 0 (_ttinfos[0],
+  Modules/_zoneinfo.c:1178-1182), as RFC 8536 3.2 prescribes for that period. The Python twin
+  falls back to self._ttinfos[0] (Lib/zoneinfo/_zoneinfo.py:258-260), but self._ttinfos is the
+  per-transition list built at :251, so it takes the type of the first transition instead. With
+  types [type0: +1h DST "AAA", type1: +2h DST "BB"] and a first transition to type 1, 1990 local
+  time is +01:00 AAA in C and +02:00 BB in Python.
+likelihood: |
+  Low: real tzdata files always have a non-DST type. It affects hand-made or unusual TZif files,
+  and anyone running the pure-Python zoneinfo (no _zoneinfo).
+maybe_intended: |
+  No: the variable names mix the two lists, and the C twin, written to match, uses type 0.
+reproducer: |
+  import io, struct, datetime as dt, warnings
+  warnings.simplefilter('ignore')
+  from test.support import import_helper
+  Cz = import_helper.import_fresh_module('zoneinfo')
+  Pz = import_helper.import_fresh_module('zoneinfo', blocked=['_zoneinfo'])
+  abbr = b'AAA\0BB\0'
+  types = [(3600, 1, 0), (7200, 1, 4)]
+  data = (b'TZif' + b'\0' * 16 + struct.pack('>6l', 0, 0, 0, 1, 2, len(abbr)) + struct.pack('>l', 10**9)
+          + bytes([1]) + b''.join(struct.pack('>lBB', *t) for t in types) + abbr)
+  res = []
+  for Z in (Cz.ZoneInfo, Pz.ZoneInfo):
+      d = dt.datetime(1990, 1, 1, tzinfo=Z.from_file(io.BytesIO(data), key='k'))
+      res.append((d.utcoffset(), d.tzname()))
+  print('C', res[0], 'Py', res[1])
+  if res[0] == (dt.timedelta(hours=1), 'AAA') and res[1] == (dt.timedelta(hours=2), 'BB'):
+      print('REPRODUCED textlibs-zoneinfo-before-first-transition')
+expected: |
+  Both: +01:00 AAA (time type 0), as C gives.
+observed: |
+  python3 3.15.2: C (1:00:00, 'AAA'), Py (2:00:00, 'BB'). REPRODUCED. The same with a v2 file and a
+  footer. Without transitions both agree.
+  main (cpython-main/python.exe): identical.
+promised_by: |
+  RFC 8536 3.2 (time type 0 before the first transition), and the twins being interchangeable.
+cause: |
+  Lib/zoneinfo/_zoneinfo.py:258-260 uses self._ttinfos[0] (per transition, :251) where the C
+  code uses the first entry of the type list.
+possible_fix: |
+  Use _ttinfo_list[0] at :259 (and keep None only when there are no types).
+duplicates:
+  issues: []
+  queries: ["zoneinfo ttinfo_before isdst", "zoneinfo before first transition DST",
+            "zoneinfo C Python differ first transition", "zoneinfo _tti_before",
+            "bugforge README: no zoneinfo entry"]
+  note: |
+    Queries run as separate unquoted terms.
+lean:
+  property: PyLean.TextLibs.Zoneinfo.BeforeTwins
+  theorem: PyLean.TextLibs.Zoneinfo.beforeTwins_refuted

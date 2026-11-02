@@ -18,6 +18,7 @@ import PyLean.TextLibs.EtreeWriters
 import PyLean.TextLibs.EtreeAttrib
 import PyLean.TextLibs.EtreeRemove
 import PyLean.TextLibs.EtreeCopy
+import PyLean.TextLibs.ZoneinfoBefore
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1495,7 +1496,17 @@ def entries : List Entry := [
     statement := "In the twin, setting an attribute on copy.copy(e) leaves e's attributes unchanged, and the copy has e's class."
     source := "docs: copy.copy makes a new object", status := .proven
     prop := ``Etree.CopyIndependentPy, thm := some ``Etree.copyIndependentPy_proven
-    notes := "The class half is CopyKeepsClassPy, proven by rfl from makeelement's self.__class__." }
+    notes := "The class half is CopyKeepsClassPy, proven by rfl from makeelement's self.__class__." },
+  { id := "textlibs-zoneinfo-before-twins", pyFile := "Lib/zoneinfo/_zoneinfo.py", pyFns := []
+    statement := "For every TZif type table and transition list (indices validated), C and Python pick the same local-time type before the first transition."
+    source := "the implementation disagreeing with itself (C and Python twins)", status := .refuted
+    prop := ``Zoneinfo.BeforeTwins, thm := some ``Zoneinfo.beforeTwins_refuted
+    bug := some "textlibs-zoneinfo-before-first-transition"
+    notes := "Models only the ttinfo_before block of ZoneInfo._load_file and its C twin in load_data (Modules/_zoneinfo.c:1170-1182); credits no row." },
+  { id := "textlibs-zoneinfo-before-twins-narrow", pyFile := "Lib/zoneinfo/_zoneinfo.py", pyFns := []
+    statement := "They agree when some type is not DST or the first transition names type 0."
+    source := "narrows textlibs-zoneinfo-before-twins", status := .proven
+    prop := ``Zoneinfo.BeforeTwinsNarrow, thm := some ``Zoneinfo.beforeTwinsNarrow_proven }
 ]
 
 end PyLean.TextLibs

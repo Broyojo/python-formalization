@@ -69,6 +69,11 @@ cause: |
   :1096-1098 `if (_PyDict_Pop_KnownHash(...) == 0) value = Py_NewRef(failobj);` with failobj NULL
   from OrderedDict_popitem_impl (:1172) or OrderedDict_pop_impl with no default (:1138).
   :1765-1783 advances from whichever node that lookup returned.
+note_more_triggers: |
+  Another trigger (2026-11-02, found by fuzzing C OrderedDict against the Python twin): a key whose
+  __eq__ pops from the OrderedDict while od.popitem(last=False) looks up the first key reaches the
+  same Py_NewRef(failobj == NULL) after the lookup; same site as gh-154817, so not recorded
+  separately.
 possible_fix: |
   Crash: test failobj at :1097 and raise KeyError, which is what open PR gh-154818 does.
   Hang: _odict_find_node* could return NULL when ix == DKIX_EMPTY instead of consulting
