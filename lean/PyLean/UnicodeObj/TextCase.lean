@@ -109,11 +109,20 @@ def doTitle (s : Str) : CaseOut := titleLoop false [] s startOut
 /-- `(size_t) length > PY_SSIZE_T_MAX / (3 * sizeof(Py_UCS4))`. -/
 def caseLengthLimit : Nat := (2 ^ 63 - 1) / 12
 
-/-- `case_operation`, unicodeobject.c:9974-10017. The kind of the result is
-`kindOfMax maxchar`, the `PyUnicode_New(newlength, maxchar)` call. -/
+/-- A `Py_UCS4` stored in a unit of kind `k`: `_PyUnicode_CONVERT_BYTES(Py_UCS4, Py_UCS1, ...)`
+and `(Py_UCS4, Py_UCS2, ...)` keep the low 8 or 16 bits, the `memcpy` of the 4-byte kind keeps
+all 32. -/
+def storeAs (k : Kind) (c : Nat) : Nat := c % 2 ^ (8 * k.width)
+
+/-- `case_operation`, unicodeobject.c:9974-10017: the length check (:9987-9990), `perform`
+(:9994), `PyUnicode_New(newlength, maxchar)` choosing the kind `kindOfMax maxchar` (:9995),
+and the copy of `tmp` into a buffer of that kind (:10001-10013). The `PyMem_Malloc` and
+`PyUnicode_New` allocation failures (`MemoryError`) are not modelled. -/
 def caseOperation (perform : Str → CaseOut) (s : Str) : Py Str :=
   if s.length > caseLengthLimit then .error (.overflowError "string is too long")
-  else .ok (perform s).res
+  else
+    let o := perform s
+    .ok (o.res.map (storeAs (kindOfMax o.maxchar)))
 
 /-- `unicode_title_impl`, unicodeobject.c:10867-10871. -/
 def unicodeTitle (s : Str) : Py Str := caseOperation doTitle s

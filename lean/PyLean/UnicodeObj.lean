@@ -4,6 +4,7 @@ import PyLean.UnicodeObj.ObjectReg
 import PyLean.UnicodeObj.CodecReg
 import PyLean.UnicodeObj.FormatReg
 import PyLean.UnicodeObj.TextReg
+import PyLean.UnicodeObj.MethReg
 
 /-!
 All of `Objects/unicodeobject.c`, `Objects/unicode_writer.c`, `Objects/unicode_format.c`,
@@ -17,6 +18,6 @@ namespace PyLean.UnicodeObj
 
 open PyLean.Registry
 
-def entries : List Entry := objectEntries ++ codecEntries ++ formatEntries ++ textEntries
+def entries : List Entry := objectEntries ++ codecEntries ++ formatEntries ++ textEntries ++ methEntries
 
 end PyLean.UnicodeObj

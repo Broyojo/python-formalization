@@ -187,6 +187,45 @@ theorem caseOutputBound_proven : CaseOutputBound := by
       have := mapLoop_good lowerUcs4_ok cs hcs [c] _ 1 (emit_good h0 ht.1 ht.2)
       simpa [doCapitalize, Nat.add_comm] using this
 
+theorem le_foldl_max (l : List Nat) : ∀ a, a ≤ l.foldl max a ∧ ∀ x ∈ l, x ≤ l.foldl max a := by
+  induction l with
+  | nil => intro a; simp
+  | cons y ys ih =>
+    intro a
+    obtain ⟨h1, h2⟩ := ih (max a y)
+    refine ⟨Nat.le_trans (Nat.le_max_left _ _) h1, ?_⟩
+    intro x hx
+    rcases List.mem_cons.1 hx with rfl | hx
+    · exact Nat.le_trans (Nat.le_max_right _ _) h1
+    · exact h2 x hx
+
+/-- With a correct `maxchar`, the copy into the buffer of kind `kindOfMax maxchar` loses no
+bits. -/
+theorem storeAs_good {o : CaseOut} {n : Nat} (h : Good o n) :
+    o.res.map (storeAs (kindOfMax o.maxchar)) = o.res := by
+  obtain ⟨-, hv, hm⟩ := h
+  refine (List.map_congr_left ?_).trans (List.map_id o.res)
+  intro x hx
+  show storeAs _ x = x
+  have hle : x ≤ o.maxchar := by rw [hm]; exact (le_foldl_max o.res 0).2 x hx
+  have hx' : x ≤ maxUnicode := hv x hx
+  unfold maxUnicode at hx'
+  unfold storeAs kindOfMax
+  by_cases h1 : o.maxchar < 128
+  · rw [if_pos h1]; exact Nat.mod_eq_of_lt (by simp only [Kind.width]; omega)
+  · rw [if_neg h1]
+    by_cases h2 : o.maxchar < 256
+    · rw [if_pos h2]; exact Nat.mod_eq_of_lt (by simp only [Kind.width]; omega)
+    · rw [if_neg h2]
+      by_cases h3 : o.maxchar < 65536
+      · rw [if_pos h3]; exact Nat.mod_eq_of_lt (by simp only [Kind.width]; omega)
+      · rw [if_neg h3]; exact Nat.mod_eq_of_lt (by simp only [Kind.width]; omega)
+
+theorem caseOperation_good {perform : Str → CaseOut} {s : Str} {n : Nat}
+    (hl : s.length ≤ caseLengthLimit) (h : Good (perform s) n) :
+    caseOperation perform s = .ok (perform s).res := by
+  simp only [caseOperation, if_neg (show ¬ s.length > caseLengthLimit by omega), storeAs_good h]
+
 /-! ## Final sigma -/
 
 /-- `l` (nearest character first) starts with `\p{case-ignorable}*\p{cased}`. -/

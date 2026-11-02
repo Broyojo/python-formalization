@@ -629,7 +629,7 @@ theorem swap_step : ∀ c, c < 128 →
 theorem bytesStrTwin_proven : BytesStrTwin := by
   intro b hb hlen
   have ha := isAscii_of b hb
-  have hnot : ¬ b.length > caseLengthLimit := by omega
+  have hgood := caseOutputBound_proven b (fun c hc => by have := hb c hc; unfold maxUnicode; omega)
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · simp [unicodeLower, ha, asciiUpperOrLower, bytesLower]
   · simp [unicodeUpper, ha, asciiUpperOrLower, bytesUpper]
@@ -644,9 +644,10 @@ theorem bytesStrTwin_proven : BytesStrTwin := by
           rw [if_neg (by omega : ¬ c = 0x3A3), f.2.1, f.1, ← s]
           cases pyIsUpper c <;> cases pyIsLower c <;> simp) [] startOut
       simpa [doSwapcase, bytesSwapcase, startOut] using this
-    simp [unicodeSwapcase, caseOperation, hnot, this]
+    rw [unicodeSwapcase, caseOperation_good hlen hgood.2.2.2.1, this]
   · have := titleLoop_bytes b hb false [] startOut
-    simp only [unicodeTitle, caseOperation, if_neg hnot, doTitle, bytesTitle, this]
+    rw [unicodeTitle, caseOperation_good hlen hgood.2.2.2.2.1]
+    simp only [doTitle, bytesTitle, this]
     rfl
   · cases b with
     | nil => simp [unicodeCapitalize, bytesCapitalize]
@@ -661,7 +662,8 @@ theorem bytesStrTwin_proven : BytesStrTwin := by
       have hres : (doCapitalize (c :: cs)).res = pyToUpper c :: cs.map pyToLower := by
         simpa [doCapitalize, f.2.2.1, emit, startOut] using this
       have h0 : ¬ (c :: cs).length = 0 := by simp
-      simp only [unicodeCapitalize, if_neg h0, caseOperation, if_neg hnot, hres, bytesCapitalize,
+      rw [unicodeCapitalize, if_neg h0, caseOperation_good hlen hgood.2.2.2.2.2, hres]
+      simp only [bytesCapitalize,
         bytesLower]
   · match b, hb with
     | [], _ => rfl
