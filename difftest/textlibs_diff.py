@@ -14,6 +14,12 @@ import warnings
 
 import common
 
+# The C-accelerated ElementTree, captured before any area calls import_fresh_module, which
+# rebinds xml.etree.ElementTree on the package (so a later plain import gets the Python twin).
+import xml.etree.ElementTree as ET_C  # noqa: E402
+import _elementtree as _ET_ACCEL  # noqa: E402
+assert ET_C.Element is _ET_ACCEL.Element
+
 warnings.simplefilter("ignore")
 M = sys.maxsize
 AREAS = {}
@@ -3452,9 +3458,8 @@ class EtreeArea:
         if not hasattr(cls, "pymod"):
             # import_fresh_module rebinds xml.etree.ElementTree on the package, so take the
             # C-accelerated module first and keep both.
-            import xml.etree.ElementTree as cmod
             from test.support import import_helper
-            cls.cmod = cmod
+            cls.cmod = ET_C
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 cls.pymod = import_helper.import_fresh_module("xml.etree.ElementTree", blocked=["_elementtree"])
@@ -3591,9 +3596,8 @@ class EtreePathArea:
     def run(cls, c):
         from xml.etree import ElementPath as EP
         if not hasattr(cls, "pymod"):
-            import xml.etree.ElementTree as cmod
             from test.support import import_helper
-            cls.cmod = cmod
+            cls.cmod = ET_C
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 cls.pymod = import_helper.import_fresh_module("xml.etree.ElementTree", blocked=["_elementtree"])
@@ -3680,7 +3684,7 @@ class EtreeAttribArea:
 
     @classmethod
     def run(cls, c):
-        import xml.etree.ElementTree as ET
+        ET = ET_C
         try:
             e = ET.Element("r") if c["init"] is None else ET.Element("r", cls.obj(c["init"]))
         except Exception as ex:
