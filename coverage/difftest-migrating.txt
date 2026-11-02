@@ -1,7 +1,6 @@
 bytecode_diff.py
 bytecode_frame_diff.py
 bytecode_gen_diff.py
-bytesobj_diff.py
 dictset_diff.py
 pygrammar_diff.py
 typeobj_diff.py
