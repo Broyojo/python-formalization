@@ -52,7 +52,7 @@ Modules/_elementtree.c	1600	1607	_elementtree_Element_items_impl	_elementtree_El
 Modules/_elementtree.c	1615	1622	_elementtree_Element_keys_impl	_elementtree_Element_keys_impl(ElementObject *self) /*[clinic end generated code: output=bc5bfabbf20eeb3c input=f02caf5b496b5b0b]*/	modelled	textlibs-etree-attrib-no-bad-call	
 Modules/_elementtree.c	1625	1632	element_length	element_length(PyObject *op)	todo		
 Modules/_elementtree.c	1645	1661	_elementtree_Element_makeelement_impl	_elementtree_Element_makeelement_impl(ElementObject *self, PyTypeObject *cls, PyObject *tag, PyObject *attrib) /*[clinic end generated code: output=d50bb17a47077d47 input=589829dab92f26e8]*/	todo		
-Modules/_elementtree.c	1672	1720	_elementtree_Element_remove_impl	_elementtree_Element_remove_impl(ElementObject *self, PyObject *subelement) /*[clinic end generated code: output=38fe6c07d6d87d1f input=6133e1d05597d5ee]*/	todo		changed-in-3.15:
+Modules/_elementtree.c	1672	1720	_elementtree_Element_remove_impl	_elementtree_Element_remove_impl(ElementObject *self, PyObject *subelement) /*[clinic end generated code: output=38fe6c07d6d87d1f input=6133e1d05597d5ee]*/	modelled	textlibs-etree-remove-twins,textlibs-etree-remove-twins-all	
 Modules/_elementtree.c	1723	1742	element_repr	element_repr(PyObject *op)	todo		
 Modules/_elementtree.c	1754	1773	_elementtree_Element_set_impl	_elementtree_Element_set_impl(ElementObject *self, PyObject *key, PyObject *value) /*[clinic end generated code: output=fb938806be3c5656 input=1efe90f7d82b3fe9]*/	modelled	textlibs-etree-attrib-no-bad-call	
 Modules/_elementtree.c	1776	1808	element_setitem	element_setitem(PyObject *op, Py_ssize_t index, PyObject* item)	modelled	textlibs-etree-item-store-order,textlibs-etree-item-twins	
@@ -65,7 +65,7 @@ Modules/_elementtree.c	2078	2088	element_attrib_getter	element_attrib_getter(PyO
 Modules/_elementtree.c	2100	2106	element_tag_setter	element_tag_setter(PyObject *op, PyObject *value, void *closure)	todo		
 Modules/_elementtree.c	2109	2115	element_text_setter	element_text_setter(PyObject *op, PyObject *value, void *closure)	todo		
 Modules/_elementtree.c	2118	2124	element_tail_setter	element_tail_setter(PyObject *op, PyObject *value, void *closure)	todo		
-Modules/_elementtree.c	2127	2143	element_attrib_setter	element_attrib_setter(PyObject *op, PyObject *value, void *closure)	todo		changed-in-3.15:
+Modules/_elementtree.c	2127	2143	element_attrib_setter	element_attrib_setter(PyObject *op, PyObject *value, void *closure)	modelled	textlibs-etree-attrib-invariant	
 Modules/_elementtree.c	2174	2191	elementiter_dealloc	elementiter_dealloc(PyObject *op)	todo		
 Modules/_elementtree.c	2194	2205	elementiter_traverse	elementiter_traverse(PyObject *op, visitproc visit, void *arg)	todo		
 Modules/_elementtree.c	2210	2227	parent_stack_push_new	parent_stack_push_new(ElementIterObject *it, ElementObject *parent)	todo		
