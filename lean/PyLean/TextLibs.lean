@@ -26,6 +26,7 @@ import PyLean.TextLibs.UrlTwins
 import PyLean.TextLibs.UrlLegacy
 import PyLean.TextLibs.TomlErr
 import PyLean.TextLibs.TomlStr
+import PyLean.TextLibs.TomlKey
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1676,6 +1677,13 @@ def entries : List Entry := [
     statement := "For every str without \"'\" and without control characters other than tab, parse_value on its single-quoted form returns it unchanged; a control character other than tab before the closing quote raises TOMLDecodeError 'Found invalid character' at that character; with no closing quote it raises 'Expected \"'\"' at the end of the document."
     source := "docs ('parsing TOML 1.1.0'); TOML 1.1 spec, literal strings", status := .proven
     prop := ``Toml.LiteralStrSpec, thm := some ``Toml.literalStrSpec_proven }
+,
+  { id := "textlibs-toml-keys", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["parse_key", "parse_key_part", "skip_chars", "parse_one_line_basic_str", "parse_literal_str"]
+    statement := "For every dotted key whose parts are each bare (non-empty, A-Za-z0-9_-), literal or basic (any escapes), with spaces or tabs around the dots and after it, and followed by text that does not continue it, parse_key returns the tuple of parts and the position after the trailing whitespace when the key has at most MAX_KEY_PARTS parts or only one, and raises RecursionError 'TOML key has more than the allowed N parts' otherwise."
+    source := "docs ('parsing TOML 1.1.0'); TOML 1.1 spec, Keys; comment at _parser.py:32-36 on MAX_KEY_PARTS", status := .proven
+    prop := ``Toml.KeySpec, thm := some ``Toml.keySpec_proven
+    notes := "A one-part key is never checked against MAX_KEY_PARTS (the check is in the loop), so MAX_KEY_PARTS = 0 still accepts 'a = 1'." }
 ]
 
 end PyLean.TextLibs
