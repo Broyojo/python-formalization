@@ -1,6 +1,6 @@
 /-!
 Integer inequalities behind the correctness of `math.isqrt`
-(mathmodule.c@3.14.7:1494-1636, "Sketch of proof of correctness"), stated without
+(mathintegermodule.c:155-296, "Sketch of proof of correctness"), stated without
 square roots.
 -/
 
@@ -85,7 +85,7 @@ theorem approx_pos {a m : Nat} (h : Approx a m) : 1 ≤ a := by
   · exact h0
 
 /-- One iteration of the Newton loop: `b = (a << k-1) + (m >> k+1) // a`
-(mathmodule.c@3.14.7:1531-1547, @3.14.7:1772-1789). -/
+(mathintegermodule.c:191-207, :432-449). -/
 theorem newton_step (m a k : Nat) (hk : 1 ≤ k) (hA : Approx a (m >>> (2 * k)))
     (h3 : 2 ^ (k - 1) ≤ a) : Approx ((a <<< (k - 1)) + (m >>> (k + 1)) / a) m := by
   have ha := approx_pos hA
@@ -133,7 +133,7 @@ theorem newton_step (m a k : Nat) (hk : 1 ≤ k) (hA : Approx a (m >>> (2 * k)))
 
 /-- Scaling an approximation down: if `a ≈ √M` then `a >> s ≈ √(M >> 2s)`, provided
 `a >> s >= 2` (or `M` is an exact multiple of `4^s` and `a >> s >= 1`).
-Used where `_approximate_isqrt`'s result is shifted (mathmodule.c@3.14.7:1733, @3.14.7:1758). -/
+Used where `_approximate_isqrt`'s result is shifted (mathintegermodule.c:393, :418). -/
 theorem approx_shift (A M s : Nat) (hA : Approx A M)
     (hc : 2 ≤ A / 2 ^ s ∨ (M % (2 ^ s * 2 ^ s) = 0 ∧ 1 ≤ A / 2 ^ s)) :
     Approx (A >>> s) (M >>> (2 * s)) := by
@@ -200,7 +200,7 @@ theorem approx_shift (A M s : Nat) (hA : Approx A M)
       simp only [Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc]
     omega
 
-/-- The final check-and-correct step, mathmodule.c@3.14.7:1793-1813 and @3.14.7:1734. -/
+/-- The final check-and-correct step, mathintegermodule.c:453-473 and :394. -/
 theorem approx_correct (a n : Nat) (h : Approx a n) :
     let r := if n < a * a then a - 1 else a
     r * r ≤ n ∧ n < (r + 1) * (r + 1) := by

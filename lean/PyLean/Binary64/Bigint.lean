@@ -1,7 +1,7 @@
 import PyLean.Binary64.Model
 
 /-!
-The multiple-precision kernel of `Python/dtoa.c`, CPython 3.14.7, limb by limb:
+The multiple-precision kernel of `Python/dtoa.c`, CPython 3.15.2, limb by limb:
 base `2 ^ 32` digits, least significant first, in the order the C loops touch them.
 Each helper keeps the loop structure of its source so that `Bigint.val` can be
 related to it in `BigintLemmas.lean`.

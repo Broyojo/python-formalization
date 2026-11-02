@@ -5,8 +5,8 @@ Conversions between `int` and C types, and the value functions that read digits
 directly: `PyLong_From*`, `PyLong_As*`, the sign predicates, `_PyLong_NumBits`,
 `long_hash`, `bit_length` and `bit_count`, longobject.c.
 
-The accumulation loops are mirrored with `uint64_t` wraparound, so that the
-`(x >> SHIFT) != prev` test is what detects overflow, as in the C.
+The accumulation loops mirror 3.15: the two top digits are unrolled, and the test
+`x > (ULONG_MAX >> SHIFT)` comes before each shift, so `x` never wraps.
 -/
 
 namespace PyLean.LongObj
@@ -62,18 +62,36 @@ theorem fromCUInt_spec {x : Nat} (h : x ≤ 2 ^ 64) : fromCUInt x = Long.ofInt x
 
 /-! ## Accumulating digits, top first -/
 
-/-- `x = (x << SHIFT) | digit; if ((x >> SHIFT) != prev) overflow;`, longobject.c:641-647
-and its copies, on `uint64_t`. `ds` runs from the top digit down. -/
+/-- `unroll_digits_ulong` and `unroll_digits_size_t`, longobject.c:535-581, for 64-bit
+`unsigned long` and `size_t`: the top two digits, so `x` starts below `2 ** 60`, and the
+digits left. `ds` runs from the top digit down. The callers have at least two digits
+(`assert(i >= 2)`); the second case is outside that and starts the loop from zero. -/
+def unroll : List Nat → Nat × List Nat
+  | a :: b :: rest => ((a <<< 30) ||| b, rest)
+  | ds => (0, ds)
+
+/-- `if (x > (ULONG_MAX >> SHIFT)) overflow; x = (x << SHIFT) | digit;`,
+longobject.c:641-647 and its copies. The test comes first, so the shift cannot wrap.
+`ds` runs from the top digit down. -/
 def accumLoop : List Nat → Nat → Option Nat
   | [], x => some x
   | d :: ds, x =>
-    let x' := u64 ((x <<< 30) ||| d)
-    if x' >>> 30 ≠ x then none else accumLoop ds x'
+    if x > (2 ^ 64 - 1) >>> 30 then none else accumLoop ds ((x <<< 30) ||| d)
+
+/-- `unroll_digits_ulong`, then the loop. -/
+def accumDigits (ds : List Nat) : Option Nat :=
+  let (x, rest) := unroll ds
+  accumLoop rest x
 
 /-- The same loop with no check, longobject.c:871-873 and :1696-1698. -/
 def maskLoop : List Nat → Nat → Nat
   | [], x => x
   | d :: ds, x => maskLoop ds (u64 ((x <<< 30) ||| d))
+
+/-- `unroll_digits_ulong`, then the unchecked loop. -/
+def maskDigits (ds : List Nat) : Nat :=
+  let (x, rest) := unroll ds
+  maskLoop rest x
 
 /-- The exact value of the digits accumulated so far. -/
 def foldB (ds : List Nat) (x : Nat) : Nat := ds.foldl (fun x d => x * 2 ^ 30 + d) x
@@ -103,16 +121,14 @@ theorem accumLoop_spec : ∀ (ds : List Nat) (x : Nat), IsDigits ds → x < 2 ^ 
   | d :: ds, x, hd, hx => by
     have ⟨h1, h2⟩ := isDigits_cons.1 hd
     have hor : (x <<< 30) ||| d = x * 2 ^ 30 + d := shl_or x d 30 h1
-    simp only [accumLoop, hor, u64, foldB_cons]
-    by_cases hfit : x * 2 ^ 30 + d < 2 ^ 64
-    · rw [Nat.mod_eq_of_lt hfit]
-      have hs : (x * 2 ^ 30 + d) >>> 30 = x := by rw [shr30]; omega
-      simp only [hs, ne_eq, not_true_eq_false, ite_false]
-      exact accumLoop_spec ds _ h2 hfit
+    have hc : (2 ^ 64 - 1) >>> 30 = 2 ^ 34 - 1 := by decide
+    simp only [accumLoop, hor, foldB_cons, hc]
+    by_cases hfit : x > 2 ^ 34 - 1
     · have hge := foldB_ge ds (x * 2 ^ 30 + d)
-      have hne : ((x * 2 ^ 30 + d) % 2 ^ 64) >>> 30 ≠ x := by rw [shr30]; omega
       have hnf : ¬ foldB ds (x * 2 ^ 30 + d) < 2 ^ 64 := by omega
-      rw [if_pos hne, if_neg hnf]
+      rw [if_pos hfit, if_neg hnf]
+    · rw [if_neg hfit]
+      exact accumLoop_spec ds _ h2 (by omega)
 
 theorem maskLoop_spec : ∀ (ds : List Nat) (x : Nat), IsDigits ds → x < 2 ^ 64 →
     maskLoop ds x = foldB ds x % 2 ^ 64
@@ -128,13 +144,40 @@ theorem foldB_rev (V : Nat) : foldB (digitsOf V).reverse 0 = V := by
   unfold foldB
   rw [fold_val, val_digitsOf]
 
-/-- `accumLoop` on the digits of `V`. -/
+/-- What `unroll` leaves to accumulate is the value of the whole list. -/
+theorem unroll_spec : ∀ ds : List Nat, IsDigits ds →
+    (unroll ds).1 < 2 ^ 60 ∧ IsDigits (unroll ds).2 ∧
+      foldB (unroll ds).2 (unroll ds).1 = foldB ds 0
+  | [], _ => ⟨by decide, isDigits_nil, rfl⟩
+  | [a], h => ⟨by show 0 < 2 ^ 60; decide, h, rfl⟩
+  | a :: b :: rest, h => by
+    have ⟨h1, h2⟩ := isDigits_cons.1 h
+    have ⟨h3, h4⟩ := isDigits_cons.1 h2
+    have hor : (a <<< 30) ||| b = a * 2 ^ 30 + b := shl_or a b 30 h3
+    simp only [unroll, hor]
+    refine ⟨by omega, h4, ?_⟩
+    rw [foldB_cons a, foldB_cons b]
+    simp
+
+theorem accumDigits_spec (ds : List Nat) (hd : IsDigits ds) :
+    accumDigits ds = if foldB ds 0 < 2 ^ 64 then some (foldB ds 0) else none := by
+  obtain ⟨h1, h2, h3⟩ := unroll_spec ds hd
+  simp only [accumDigits]
+  rw [accumLoop_spec _ _ h2 (by omega), h3]
+
+theorem maskDigits_spec (ds : List Nat) (hd : IsDigits ds) :
+    maskDigits ds = foldB ds 0 % 2 ^ 64 := by
+  obtain ⟨h1, h2, h3⟩ := unroll_spec ds hd
+  simp only [maskDigits]
+  rw [maskLoop_spec _ _ h2 (by omega), h3]
+
+/-- `accumDigits` on the digits of `V`. -/
 theorem accum_digits (V : Nat) :
-    accumLoop (digitsOf V).reverse 0 = if V < 2 ^ 64 then some V else none := by
+    accumDigits (digitsOf V).reverse = if V < 2 ^ 64 then some V else none := by
   have hd : IsDigits (digitsOf V).reverse := by
     intro x hx
     exact digitsOf_digits V x (List.mem_reverse.1 hx)
-  rw [accumLoop_spec _ _ hd (by decide), foldB_rev]
+  rw [accumDigits_spec _ hd, foldB_rev]
 
 /-! ## `long`, `Py_ssize_t` -/
 
@@ -143,7 +186,7 @@ def asLongAndOverflow (v : Long) : Int × Int :=
   if v.isCompact = true then (v.medium, 0)
   else
     let sign : Int := if v.neg then -1 else 1
-    match accumLoop v.ds.reverse 0 with
+    match accumDigits v.ds.reverse with
     | none => (-1, sign)
     | some x =>
       if x ≤ 2 ^ 63 - 1 then ((x : Int) * sign, 0)
@@ -168,7 +211,7 @@ def asSsize (v : Long) : Py Int :=
   if v.isCompact = true then .ok v.medium
   else
     let sign : Int := if v.neg then -1 else 1
-    match accumLoop v.ds.reverse 0 with
+    match accumDigits v.ds.reverse with
     | none => overflow
     | some x =>
       if x ≤ 2 ^ 63 - 1 then .ok ((x : Int) * sign)
@@ -180,7 +223,7 @@ def asUnsignedLong (v : Long) : Py Nat :=
   if !v.neg && v.isCompact then .ok v.medium.toNat
   else if v.neg then .error (.overflowError "can't convert negative value to unsigned int")
   else
-    match accumLoop v.ds.reverse 0 with
+    match accumDigits v.ds.reverse with
     | none => .error (.overflowError "Python int too large to convert to C unsigned long")
     | some x => .ok x
 
@@ -189,7 +232,7 @@ def asSizeT (v : Long) : Py Nat :=
   if !v.neg && v.isCompact then .ok v.medium.toNat
   else if v.neg then .error (.overflowError "can't convert negative value to size_t")
   else
-    match accumLoop v.ds.reverse 0 with
+    match accumDigits v.ds.reverse with
     | none => .error (.overflowError "Python int too large to convert to C size_t")
     | some x => .ok x
 
@@ -199,11 +242,11 @@ def asUnsignedMask (v : Long) : Nat :=
   if v.isCompact = true then (v.medium % 2 ^ 64).toNat
   else
     let sign : Int := if v.neg then -1 else 1
-    (((maskLoop v.ds.reverse 0 : Nat) * sign) % 2 ^ 64).toNat
+    (((maskDigits v.ds.reverse : Nat) * sign) % 2 ^ 64).toNat
 
 /-- `PyLong_AsLongLongAndOverflow(vv, &overflow)`, longobject.c:1737-1810. It adds the
 digit where `PyLong_AsLongAndOverflow` ors it; `x << SHIFT` has zero low bits, so
-this is the same `accumLoop`. -/
+this is the same `accumDigits`. -/
 def asLongLongAndOverflow (v : Long) : Int × Int := asLongAndOverflow v
 
 theorem compact_iff (a : Int) : (Long.ofInt a).isCompact = true ↔ a.natAbs < 2 ^ 30 := by
@@ -326,7 +369,7 @@ theorem asSsize_spec (a : Int) :
 theorem asUnsigned_common (a : Int) (e1 e2 : PyExc) (f : Long → Py Nat)
     (hf : ∀ v, f v = if (!v.neg && v.isCompact) = true then .ok v.medium.toNat
       else if v.neg = true then .error e1
-      else match accumLoop v.ds.reverse 0 with
+      else match accumDigits v.ds.reverse with
         | none => .error e2
         | some x => .ok x) :
     f (Long.ofInt a) = if a < 0 then .error e1
@@ -378,7 +421,7 @@ theorem asUnsignedMask_spec (a : Int) : asUnsignedMask (Long.ofInt a) = (a % 2 ^
     have hd : IsDigits (digitsOf a.natAbs).reverse := by
       intro x hx
       exact digitsOf_digits _ x (List.mem_reverse.1 hx)
-    rw [hds, hneg, maskLoop_spec _ _ hd (by decide), foldB_rev]
+    rw [hds, hneg, maskDigits_spec _ hd, foldB_rev]
     simp only [decide_eq_true_eq]
     generalize hA : a.natAbs = A at *
     by_cases hn : a < 0
@@ -444,10 +487,10 @@ theorem numBits_spec (a : Int) : numBits (Long.ofInt a) = bitLength a.natAbs := 
 
 /-! ## `long_hash` -/
 
-/-- `_PyHASH_MODULUS`, pyhash.h. -/
+/-- `PyHASH_MODULUS`, pyhash.h. -/
 def hashModulus : Nat := 2 ^ 61 - 1
 
-/-- One iteration of the loop of `long_hash`, longobject.c@3.14.7:3634-3638. -/
+/-- One iteration of the loop of `long_hash`, longobject.c:3733-3737. -/
 def hashStep (x d : Nat) : Nat :=
   let x := (u64 (x <<< 30) &&& hashModulus) ||| (x >>> (61 - 30))
   let x := x + d
@@ -456,12 +499,24 @@ def hashStep (x d : Nat) : Nat :=
 /-- `(Py_uhash_t)-1` becomes `-2`, and the result is read as `Py_hash_t`. -/
 def hashResult (x : Nat) : Int := s64of (if x = 2 ^ 64 - 1 then 2 ^ 64 - 2 else x)
 
+/-- The first two digits of `long_hash`, longobject.c:3691-3704: `PyHASH_BITS` (61) is at
+least `2 * PyLong_SHIFT`, so both go in with no reduction. `ds` runs from the top digit
+down; there are at least two, as the int is not compact. -/
+def hashUnroll : List Nat → Nat × List Nat
+  | a :: b :: rest => ((a <<< 30) + b, rest)
+  | ds => (0, ds)
+
+/-- The digit loop of `long_hash`, after the unrolled digits. -/
+def hashDigits (ds : List Nat) : Nat :=
+  let (x, rest) := hashUnroll ds
+  rest.foldl hashStep x
+
 /-- `long_hash(obj)`, longobject.c:3674-3743. -/
 def longHash (v : Long) : Int :=
   if v.isCompact = true then hashResult (v.medium % 2 ^ 64).toNat
   else
     let sign : Int := if v.neg then -1 else 1
-    let x := v.ds.reverse.foldl hashStep 0
+    let x := hashDigits v.ds.reverse
     hashResult (((x : Int) * sign) % 2 ^ 64).toNat
 
 /-- The specification of `hash(int)`: the magnitude modulo `2**61 - 1`, with the sign,
@@ -472,7 +527,7 @@ def pyHash (a : Int) : Int :=
   if h = -1 then -2 else h
 
 /-- Rotating by `SHIFT` is multiplication by `2**SHIFT` modulo `2**61 - 1`, the argument
-of the comment at longobject.c@3.14.7:3609-3633. -/
+of the comment at longobject.c:3708-3732. -/
 theorem hashStep_spec {x d : Nat} (hx : x < hashModulus) (hd : d < 2 ^ 30) :
     hashStep x d = (x * 2 ^ 30 + d) % hashModulus := by
   have hM : hashModulus = 2 ^ 61 - 1 := rfl
@@ -498,6 +553,20 @@ theorem hashFold : ∀ (ds : List Nat) (x : Nat), IsDigits ds → x < hashModulu
     have ⟨h1, h2⟩ := isDigits_cons.1 hd
     simp only [List.foldl_cons]
     rw [hashStep_spec hx h1, hashFold ds _ h2 (Nat.mod_lt _ (by decide)), foldB_cons, foldB_mod]
+
+theorem hashDigits_spec : ∀ ds : List Nat, IsDigits ds → hashDigits ds = foldB ds 0 % hashModulus
+  | [], _ => rfl
+  | [a], h => by
+    simp only [hashDigits, hashUnroll]
+    exact hashFold [a] 0 h (by decide)
+  | a :: b :: rest, h => by
+    have ⟨h1, h2⟩ := isDigits_cons.1 h
+    have ⟨h3, h4⟩ := isDigits_cons.1 h2
+    have hs : a <<< 30 = a * 2 ^ 30 := Nat.shiftLeft_eq a 30
+    have hM : hashModulus = 2 ^ 61 - 1 := rfl
+    simp only [hashDigits, hashUnroll, hs]
+    rw [hashFold rest _ h4 (by rw [hM]; omega), foldB_cons a, foldB_cons b]
+    simp
 
 /-- `hash(a)` follows the numeric hash rule for every int, on both paths of `long_hash`. -/
 theorem longHash_spec (a : Int) : longHash (Long.ofInt a) = pyHash a := by
@@ -532,7 +601,7 @@ theorem longHash_spec (a : Int) : longHash (Long.ofInt a) = pyHash a := by
     have hd : IsDigits (digitsOf a.natAbs).reverse := by
       intro x hx
       exact digitsOf_digits _ x (List.mem_reverse.1 hx)
-    rw [hds, hneg, hashFold _ _ hd (by decide), foldB_rev, hR]
+    rw [hds, hneg, hashDigits_spec _ hd, foldB_rev, hR]
     simp only [decide_eq_true_eq]
     by_cases hn : a < 0
     · simp only [hn, ite_true]

@@ -27,7 +27,7 @@ end
 
 /-- The four outcomes of `__complex__`: absent, and nothing runs; returning an
 exact complex, and its value is the result; returning a subclass instance, which
-warns; returning anything else, which is the `TypeError` on line 501, with the
+warns; returning anything else, which is the `TypeError` on line 517, with the
 call on the log. An exception from the method propagates. -/
 def TrySpecialOutcomes : Prop :=
   ∀ (R : Type) [CDouble R] (E : Env R) (op : Obj R) (s : List Ev),
@@ -39,18 +39,18 @@ def TrySpecialOutcomes : Prop :=
     (∀ res c, op.dcomplex = .returns res → res.val = .cplx c → res.exact = false →
       E.warnErr = false →
       try_complex_special_method E op s =
-        .ok (some c) (Ev.warn (s!"__complex__ returned non-complex (type {pct 200 res.ti.tpName}).  " ++
+        .ok (some c) (Ev.warn (s!"{op.ti.fqName}.__complex__() must return a complex, not {res.ti.fqName}.  " ++
           "The ability to return an instance of a strict subclass of complex " ++
           "is deprecated, and may be removed in a future version of Python.") ::
           Ev.call "__complex__" :: s)) ∧
     (∀ res, op.dcomplex = .returns res → (∀ c, res.val ≠ .cplx c) →
       try_complex_special_method E op s =
-        .error (.typeError s!"__complex__ returned non-complex (type {pct 200 res.ti.tpName})")
+        .error (.typeError s!"{op.ti.fqName}.__complex__() must return a complex, not {res.ti.fqName}")
           (Ev.call "__complex__" :: s))
 
 theorem try_special_returns {R : Type} [CDouble R] (E : Env R) (op res : Obj R) (s : List Ev)
     (h : op.dcomplex = .returns res) :
-    try_complex_special_method E op s = complexResult E res (Ev.call "__complex__" :: s) := by
+    try_complex_special_method E op s = complexResult E op res (Ev.call "__complex__" :: s) := by
   simp only [try_complex_special_method, h]
   rfl
 
@@ -82,8 +82,8 @@ theorem trySpecialOutcomes_proven : TrySpecialOutcomes := by
     | none => rfl
     | other => rfl
 
-theorem complexResult_not_none {R : Type} [CDouble R] (E : Env R) (res : Obj R) (s s' : List Ev) :
-    complexResult E res s ≠ .ok none s' := by
+theorem complexResult_not_none {R : Type} [CDouble R] (E : Env R) (op res : Obj R) (s s' : List Ev) :
+    complexResult E op res s ≠ .ok none s' := by
   unfold complexResult
   cases hv : res.val
   case cplx c =>
@@ -111,9 +111,9 @@ theorem try_special_not_none {R : Type} [CDouble R] (E : Env R) (op : Obj R) (s 
     simp only [bind, EStateM.bind]
     cases hc : callSlot "__complex__" Slot.builtin op s with
     | error e s₂ => intro h'; cases h'
-    | ok o s₂ => exact complexResult_not_none E o s₂ s'
+    | ok o s₂ => exact complexResult_not_none E op o s₂ s'
   | raises e => intro h'; cases h'
-  | returns o => exact complexResult_not_none E o _ s'
+  | returns o => exact complexResult_not_none E op o _ s'
 
 /-! ## `complex_new_impl` check order -/
 

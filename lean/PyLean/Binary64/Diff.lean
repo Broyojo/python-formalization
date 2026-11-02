@@ -21,12 +21,25 @@ def getF (j : Json) (key : String) : Except String F64 := do
 def libmPow (a b : F64) : F64 :=
   F64.ofBits (Float.pow (Float.ofBits a.bits.toUInt64) (Float.ofBits b.bits.toUInt64)).toBits.toNat
 
-def getObj (j : Json) (key : String) : Except String Obj := do
+partial def getObj (j : Json) (key : String) : Except String Obj := do
   let o ← field j key
   match o.getObjVal? "f", o.getObjVal? "i", o.getObjVal? "o" with
-  | .ok v, _, _ => return .float (F64.ofBits (← v.getNat?))
+  | .ok v, _, _ =>
+    let x := F64.ofBits (← v.getNat?)
+    match (o.getObjValAs? String "sub").toOption with
+    | some t => return .floatSub t x
+    | none => return .float x
   | _, .ok v, _ => return .int (← v.getInt?)
-  | _, _, .ok v => return .other (← v.getStr?) none none
+  | _, _, .ok v =>
+    let t ← v.getStr?
+    let fq := (o.getObjValAs? String "fq").toOption.getD t
+    let ff : Option Obj ← match o.getObjVal? "ff" with
+      | .ok _ => do let r ← getObj o "ff"; pure (some r)
+      | .error _ => pure none
+    let ix : Option Int ← match o.getObjVal? "ix" with
+      | .ok w => do let i ← w.getInt?; pure (some i)
+      | .error _ => pure none
+    return .other t ff ix fq
   | _, _, _ => throw "bad object"
 
 def getNats (j : Json) (key : String) : Except String (List Nat) := do
@@ -85,6 +98,15 @@ def runFloat (fn : String) (j : Json) : Except String Json := do
   | "f_ratio" =>
     return encPy (fun p => Json.arr #[toJson p.1, toJson p.2]) (float_as_integer_ratio (← x))
   | "pack2" => return encPy toJson (PyFloat_Pack2 (← x) (← getBool j "le"))
+  | "st_unpack" =>
+    let b ← getNats j "b"
+    let fmt ← getStr j "fmt"
+    let r : F64 := match fmt.toList with
+      | ['<', 'f'] | ['=', 'f'] | ['@', 'f'] => nu_float b
+      | ['<', 'd'] | ['=', 'd'] | ['@', 'd'] => PyFloat_Unpack8 b true
+      | [_, 'f'] => PyFloat_Unpack4 b false
+      | _ => PyFloat_Unpack8 b false
+    return Json.mkObj [("ok", toJson r.bits)]
   | "pack4" => return encPy toJson (PyFloat_Pack4 (← x) (← getBool j "le"))
   | "pack8" => return encPy toJson (PyFloat_Pack8 (← x) (← getBool j "le"))
   | "unpack2" =>
@@ -104,6 +126,12 @@ def runFloat (fn : String) (j : Json) : Except String Json := do
     match PyOS_double_to_string (← x) c (← getInt j "p") fl with
     | none => return fuelOut
     | some r => return Json.mkObj [("ok", encStr (render r.1))]
+  | "fmt_big" =>
+    let fl : DtsFlags := {}
+    match PyOS_double_to_string_checked (← x) (← getNat j "code") (← getInt j "p") fl with
+    | .ok none => return fuelOut
+    | .ok (some r) => return Json.mkObj [("ok", encStr (render r.1))]
+    | .error e => return encPy encStr (.error e)
   | "parse" =>
     let arg : StrArg :=
       match j.getObjVal? "cps" with
@@ -232,7 +260,7 @@ def runComplex (fn : String) (j : Json) : Except String Json := do
 
 def run (fn : String) (j : Json) : Except String Json := do
   if fn.startsWith "c_" then runComplex fn j
-  else if fn.startsWith "f_" || ["pack2", "pack4", "pack8", "unpack2", "unpack4", "unpack8", "repr",
+  else if fn.startsWith "f_" || ["pack2", "pack4", "pack8", "unpack2", "unpack4", "unpack8", "st_unpack", "repr", "fmt_big",
       "fmt", "parse", "getformat", "asdouble", "info"].contains fn then
     runFloat fn j
   else

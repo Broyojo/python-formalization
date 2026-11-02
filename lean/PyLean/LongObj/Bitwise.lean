@@ -193,13 +193,17 @@ def bwFinish (negz : Bool) (z : List Nat) : Py Long :=
     | .error e => .error e
   else .ok ⟨false, normalize z⟩
 
-/-- Lines 5535-5597 of `long_bitwise`, once both operands are in two's complement and
-`x` is the longer: choose the size and sign of `z`, combine, complement back. -/
-def bwCore (op : BitOp) (x y : List Nat) (nx ny : Bool) : Py Long := do
-  longAlloc (bwSize op x y ny + (if op.bool nx ny = true then 1 else 0))
-  bwFinish (op.bool nx ny) (zOf op x y ny)
+/-- Lines 5621-5696 of `long_bitwise`, once both operands are in two's complement and
+`x` is the longer: choose the size and sign of `z`, return 0 when `z` would have no
+digits and no sign digit (:5645-5649), else combine and complement back. -/
+def bwCore (op : BitOp) (x y : List Nat) (nx ny : Bool) : Py Long :=
+  let sizeZ := bwSize op x y ny + (if op.bool nx ny = true then 1 else 0)
+  if sizeZ = 0 then .ok ⟨false, []⟩
+  else do
+    longAlloc sizeZ
+    bwFinish (op.bool nx ny) (zOf op x y ny)
 
-/-- If negative, replace by the two's complement, longobject.c@3.14.7:5493-5519. -/
+/-- If negative, replace by the two's complement, longobject.c:5597-5619. -/
 def twosOf (neg : Bool) (ds : List Nat) : Py (List Nat) :=
   if neg then
     match longAlloc ds.length, vComplGo ds 1 with
@@ -208,13 +212,17 @@ def twosOf (neg : Bool) (ds : List Nat) : Py (List Nat) :=
     | _, .error e => .error e
   else .ok ds
 
-/-- `long_bitwise(a, op, b)`, longobject.c:5573-5696. -/
-def longBitwise (a : Long) (op : BitOp) (b : Long) : Py Long :=
+/-- The body of `long_bitwise` after the swap: `a` is the longer operand. -/
+def bwOrdered (a : Long) (op : BitOp) (b : Long) : Py Long :=
   match twosOf a.neg a.ds, twosOf b.neg b.ds with
-  | .ok x, .ok y =>
-    if x.length < y.length then bwCore op y x b.neg a.neg else bwCore op x y a.neg b.neg
+  | .ok x, .ok y => bwCore op x y a.neg b.neg
   | .error e, _ => .error e
   | _, .error e => .error e
+
+/-- `long_bitwise(a, op, b)`, longobject.c:5573-5696. 3.15 swaps the operands first, on
+their digit counts (:5591-5595), and only then takes the two's complements. -/
+def longBitwise (a : Long) (op : BitOp) (b : Long) : Py Long :=
+  if a.ds.length < b.ds.length then bwOrdered b op a else bwOrdered a op b
 
 /-- The `int64_t` two's complement bit pattern of a `stwodigits`. -/
 def u64of (x : Int) : Nat := (x % 2 ^ 64).toNat
@@ -507,6 +515,18 @@ theorem zOf_spec (op : BitOp) {x y : List Nat} (hx : IsDigits x) (hy : IsDigits 
           simp [BitOp.bool]
         · simp [h1, h2, BitOp.bool]
 
+/-- With `size_z == 0` there is nothing in `z`. -/
+theorem zOf_nil (op : BitOp) {x y : List Nat} (hl : y.length ≤ x.length) (ny : Bool)
+    (h : bwSize op x y ny = 0) : zOf op x y ny = [] := by
+  have hy : y = [] := by
+    apply List.eq_nil_of_length_eq_zero
+    cases op <;> cases ny <;>
+      simp only [bwSize, Bool.false_eq_true, ite_false, ite_true] at h <;> omega
+  subst hy
+  cases op <;> cases ny <;>
+    simp only [bwSize, Bool.false_eq_true, ite_false, ite_true] at h <;>
+    simp [zOf, bwSize, bwOverlap, h, List.eq_nil_of_length_eq_zero h]
+
 theorem bwCore_spec (op : BitOp) {x y : List Nat} (hx : IsDigits x) (hy : IsDigits y)
     (hl : y.length ≤ x.length) (hs : x.length + 1 ≤ maxLongDigits) (nx ny : Bool) :
     bwCore op x y nx ny = .ok (Long.ofInt (tcVal (zOf op x y ny) (op.bool nx ny))) := by
@@ -516,7 +536,16 @@ theorem bwCore_spec (op : BitOp) {x y : List Nat} (hx : IsDigits x) (hy : IsDigi
       cases op <;> simp only [bwSize] <;> (try split) <;> omega
     split <;> omega
   simp only [bwCore]
-  rw [longAlloc_ok hsz]
+  by_cases h0 : bwSize op x y ny + (if op.bool nx ny = true then 1 else 0) = 0
+  · have h1 : op.bool nx ny = false := by
+      cases hn : op.bool nx ny
+      · rfl
+      · rw [hn] at h0; simp at h0
+    have h2 : bwSize op x y ny = 0 := by
+      rw [h1] at h0; simpa using h0
+    rw [if_pos h0, h1, zOf_nil op hl ny h2]
+    rfl
+  rw [if_neg h0, longAlloc_ok hsz]
   simp only [bind_ok]
   unfold bwFinish
   by_cases hneg : op.bool nx ny = true
@@ -560,12 +589,17 @@ theorem longBitwise_spec (op : BitOp) (a b : Int)
   have eb : (Long.ofInt b).neg = decide (b < 0) := rfl
   have da : (Long.ofInt a).ds = digitsOf a.natAbs := rfl
   have db : (Long.ofInt b).ds = digitsOf b.natAbs := rfl
-  simp only [longBitwise, ea, eb, da, db, hx, hy]
+  have l1 := length_digitsOf a.natAbs
+  have l2 := length_digitsOf b.natAbs
   by_cases hl : x.length < y.length
-  · rw [if_pos hl, bwCore_spec op y1 x1 (by omega) (by omega)]
+  · have : (digitsOf a.natAbs).length < (digitsOf b.natAbs).length := by omega
+    simp only [longBitwise, bwOrdered, ea, eb, da, db, hx, hy, this, ite_true]
+    rw [bwCore_spec op y1 x1 (by omega) (by omega)]
     refine ⟨_, rfl, fun i => ?_⟩
     rw [(zOf_spec op y1 x1 (by omega) _ _ i).2, y3, x3, BitOp.comm]
-  · rw [if_neg hl, bwCore_spec op x1 y1 (by omega) (by omega)]
+  · have : ¬ (digitsOf a.natAbs).length < (digitsOf b.natAbs).length := by omega
+    simp only [longBitwise, bwOrdered, ea, eb, da, db, hx, hy, this, ite_false]
+    rw [bwCore_spec op x1 y1 (by omega) (by omega)]
     refine ⟨_, rfl, fun i => ?_⟩
     rw [(zOf_spec op x1 y1 (by omega) _ _ i).2, y3, x3]
 

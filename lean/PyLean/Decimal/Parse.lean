@@ -21,7 +21,7 @@ with a digit. `\d` is Unicode `Nd`. Under `IGNORECASE`, a pattern letter
 matches its two ASCII cases and, by Unicode simple case folding, also
 `İ` (U+0130) and `ı` (U+0131) for `i` and `ſ` (U+017F) for `s`; no other
 non-ASCII character matches a letter of this pattern (checked exhaustively
-against `re` on 3.14.7). The groups then go through `int()`, which applies
+against `re` on 3.15.2). The groups then go through `int()`, which applies
 the 4300-digit limit.
 
 **`_decimal`** (_decimal.c:2403-2420 → 2224-2250): `numeric_as_ascii(u, 1, 1)`

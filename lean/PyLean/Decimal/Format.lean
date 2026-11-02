@@ -25,9 +25,9 @@ start with the characters it consumes, except
 `(?P<zeropad>0)?(?P<minimumwidth>\d+)?`, where both readings leave the same
 remainder.
 
-**`_decimal`** (`dec_format`, _decimal.c@3.14.7:3538-3679): the `str` is encoded
-with `PyUnicode_AsUTF8AndSize` (@3.14.7:3562, which fails on a lone surrogate), a NUL
-fill character in position 0 is replaced by `'_'` (@3.14.7:3575-3584), and the *C
+**`_decimal`** (`_decimal_Decimal___format___impl`, _decimal.c:3760-3889): the `str` is
+encoded with `PyUnicode_AsUTF8AndSize` (:3778, which fails on a lone surrogate), a NUL
+fill character in position 0 is replaced by `'_'` (:3791-3800), and the *C
 string* is handed to `mpd_parse_fmt_str`, which stops at the first NUL byte.
 If that parser rejects the spec, `pydec_format` (:3710-3744) falls back to
 `_pydecimal`'s `__format__` on the full `str`. A spec accepted by
@@ -207,11 +207,18 @@ def mpdParseFmt (lib : LibMpdec) (s : List Nat) : Option Nat := do
 
 def isSurrogate (c : Nat) : Bool := 0xD800 ≤ c && c ≤ 0xDFFF
 
+/-- A non-`str` spec: the clinic `unicode` converter of `Decimal.__format__`
+(clinic/_decimal.c.h) refuses it before the body runs. 3.14 raised `format arg must be
+str` from the body. `format()` itself checks the type first, so only a direct call of
+`__format__` reaches this. -/
+def cFormatBadArg (ty : String) : PyExc :=
+  .typeError s!"__format__() argument 1 must be str, not {if ty == "NoneType" then "None" else ty}"
+
 /-- `format(_decimal.Decimal(x), spec)` for a finite `x`: the spec decides. -/
 def cFormat (lib : LibMpdec) (s : List Nat) : FmtOutcome :=
   if s.any isSurrogate then .unicodeEncodeError
   else
-    -- NUL fill character replaced by '_' (:3575-3584); the C string ends at
+    -- NUL fill character replaced by '_' (_decimal.c:3791-3800); the C string ends at
     -- the first remaining NUL
     let s' := match s with
       | 0 :: r => cp '_' :: r

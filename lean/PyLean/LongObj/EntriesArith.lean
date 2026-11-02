@@ -26,11 +26,17 @@ def entriesArith : List Entry := [
     source := "comment at longobject.c:3780", status := .proven
     prop := ``XSubExact, thm := some ``xSubExact_proven },
   { id := "longobj-add-sub", pyFile := "Objects/longobject.c"
-    pyFns := ["long_add", "_PyLong_Add", "long_sub", "_PyLong_Subtract"]
+    pyFns := ["long_add", "long_sub"]
     statement := "a + b and a - b return the canonical object for all ints with room for one more digit, on the compact path and the digit path."
     source := "invariant: exact integer arithmetic", status := .proven
     prop := ``LongAddSubExact, thm := some ``longAddSubExact_proven
     notes := "The slot wrappers are in longobj-binary-methods." },
+  { id := "longobj-compact-ops", pyFile := "Objects/longobject.c"
+    pyFns := ["_PyCompactLong_Add", "_PyCompactLong_Subtract", "_PyCompactLong_Multiply", "medium_from_stwodigits"]
+    statement := "On compact ints the functions behind BINARY_OP_ADD_INT, BINARY_OP_SUBTRACT_INT and BINARY_OP_MULTIPLY_INT give the canonical object of the exact result when it is medium, and otherwise decline with no exception."
+    source := "comment at longobject.c:4359-4360; invariant: exact integer arithmetic", status := .proven
+    prop := ``CompactOpsExact, thm := some ``compactOpsExact_proven
+    notes := "These replace _PyLong_Add, _PyLong_Subtract and _PyLong_Multiply of 3.14. The difftest reaches them through a specialized BINARY_OP, checked with dis." },
   { id := "longobj-vector-add-sub", pyFile := "Objects/longobject.c", pyFns := ["v_iadd", "v_isub"]
     statement := "v_iadd and v_isub are exact modulo the width of x, returning a carry or borrow of 0 or 1."
     source := "comments at longobject.c:1849-1852, :1800-1803", status := .proven
@@ -41,7 +47,7 @@ def entriesArith : List Entry := [
     source := "comment at longobject.c:4068-4071 and the (*) comment at :4134-4177", status := .proven
     prop := ``KMulExact, thm := some ``kMulExact_proven },
   { id := "longobj-mul", pyFile := "Objects/longobject.c"
-    pyFns := ["long_mul", "_PyLong_Multiply", "_PyLong_Negate", "Py_LOCAL_INLINE"]
+    pyFns := ["long_mul", "_PyLong_Negate", "Py_LOCAL_INLINE"]
     statement := "a * b returns the canonical object on the compact path and through k_mul, for x * y and for x * x on one object."
     source := "invariant: exact integer arithmetic", status := .proven
     prop := ``LongMulExact, thm := some ``longMulExact_proven },

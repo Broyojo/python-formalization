@@ -11,6 +11,7 @@ Exits non-zero on any mismatch. See difftest/common.py.
 """
 
 import ctypes
+import dis
 import struct
 import sys
 import warnings
@@ -108,8 +109,35 @@ def knuth_pair(rng):
     return v, w
 
 
+def spec_add(a, b):
+    return a + b
+
+
+def spec_sub(a, b):
+    return a - b
+
+
+def spec_mul(a, b):
+    return a * b
+
+
+SPECIALIZED = {"add": (spec_add, "BINARY_OP_ADD_INT"), "sub": (spec_sub, "BINARY_OP_SUBTRACT_INT"),
+               "mul": (spec_mul, "BINARY_OP_MULTIPLY_INT")}
+
+
+def warmed(op):
+    """The function for `op`, specialized: only then does it reach _PyCompactLong_*."""
+    f, name = SPECIALIZED[op]
+    for _ in range(100):
+        if any(i.opname == name for i in dis.get_instructions(f, adaptive=True)):
+            return f
+        for _ in range(100):
+            f(3, 4)
+    raise AssertionError(f"{name} was not reached")
+
+
 def gen_case(rng):
-    fn = rng.choice(["add", "sub", "mul", "mul", "square", "divmod", "divmod", "floordiv", "mod",
+    fn = rng.choice(["add", "sub", "mul", "mul", "square", "compact", "compact", "divmod", "divmod", "floordiv", "mod",
                      "rshift", "lshift", "and", "or", "xor", "invert", "neg", "abs", "bool",
                      "pow", "powmod", "lopsided", "balanced", "balanced", "bigsquare", "knuth", "bigdiv",
                      "as_long_overflow", "as_long", "sizeof", "ratio", "int_info", "as_longlong",
@@ -119,10 +147,33 @@ def gen_case(rng):
                      "as_int", "as_ssize", "as_ulong", "as_size_t", "as_mask", "from_c", "get_sign",
                      "bit_length", "bit_count", "hash", "bool_repr", "bool_invert", "bool_op"])
     c = {"mod": "longobj", "fn": fn}
-    if fn in ("add", "sub", "mul", "and", "or", "xor"):
+    if fn == "compact":
+        # Compact operands, and results on both sides of the medium range.
+        pick = lambda: rng.choice([0, 1, 2, 3, 256, 257, 1024, 1025, 1 << 15, (1 << 15) + 1, B >> 1,
+                                   (B >> 1) + 1, B - 2, B - 1, rng.randrange(B), rng.randrange(1 << 16)])
+        c["op"] = rng.choice(["add", "sub", "mul"])
+        c["a"], c["b"] = pick() * rng.choice([1, -1]), pick() * rng.choice([1, -1])
+    elif fn in ("add", "sub", "mul", "and", "or", "xor"):
         c["a"], c["b"] = edge_int(rng), edge_int(rng)
+        if fn in ("and", "or", "xor"):
+            # long_bitwise swaps on digit counts, then may find an empty result.
+            r = rng.random()
+            if r < 0.1:
+                c["b"] = 0
+            elif r < 0.2:
+                c["a"] = 0
+            elif r < 0.3:
+                c["a"] = -digits(rng, rng.randrange(2, 9))
+                c["b"] = rng.choice([1, -1]) * digits(rng, rng.randrange(1, 12))
+    elif fn == "hash":
+        # Multiples of the modulus, at the unrolled two digits and past them.
+        M = (1 << 61) - 1
+        c["a"] = rng.choice([edge_int(rng), (M * rng.randrange(1 << rng.randrange(1, 70)) + rng.randrange(-2, 3)),
+                             digits(rng, 2), digits(rng, 3), (1 << 60) - 1, 1 << 60, M, M + 1, M - 1, 2 * M])
+        if rng.random() < 0.4:
+            c["a"] = -c["a"]
     elif fn in ("square", "invert", "neg", "abs", "bool", "get_sign", "bit_length", "bit_count",
-                "hash", "sizeof", "ratio"):
+                "sizeof", "ratio"):
         c["a"] = edge_int(rng)
     elif fn in ("true_div", "true_div_round"):
         style = rng.randrange(5)
@@ -183,7 +234,10 @@ def gen_case(rng):
         c["a"] = rng.choice([v, -v, edge_int(rng, ("small", "digits"))])
     elif fn in ("as_long_overflow", "as_long", "as_int", "as_ssize", "as_ulong", "as_size_t", "as_mask",
                 "as_longlong", "as_ulonglong", "void_ptr"):
-        base = rng.choice([0, 1, B - 1, B, 1 << 31, (1 << 31) - 1, P63, P63 - 1, P64, P64 - 1, 1 << 90])
+        # Two digits and three: the unrolled digits, then the first test of the loop.
+        base = rng.choice([0, 1, B - 1, B, 1 << 31, (1 << 31) - 1, P63, P63 - 1, P64, P64 - 1, 1 << 90,
+                           1 << 60, (1 << 60) - 1, 1 << 94, 1 << 120, (1 << 34) << 30, ((1 << 34) - 1) << 30,
+                           (((1 << 34) - 1) << 30) | (B - 1)])
         v = base + rng.randrange(-2, 3)
         c["a"] = rng.choice([v, -v, edge_int(rng)])
     elif fn == "from_c":
@@ -254,6 +308,9 @@ def run_python(c):
     b = c.get("b")
 
     def thunk():
+        if fn == "compact":
+            f = warmed(c["op"])
+            return f(a, b)
         if fn == "add":
             return a + b
         if fn == "sub":

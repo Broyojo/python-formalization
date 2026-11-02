@@ -1,0 +1,72 @@
+id: binary64-struct-f-le-quiets-snan
+title: "struct.unpack('<f') quiets a signaling NaN on a little-endian host, while struct.unpack('>f') keeps it"
+priority: P4
+kind: regression
+module: binary64
+files: [Modules/_struct.c, Objects/floatobject.c]
+functions: ["init_endian_tables", "nu_float", "PyFloat_Unpack4"]
+summary: |
+  On a little-endian host, struct.unpack('<f', b) and struct.unpack('>f', b[::-1]) read the same
+  binary32 and disagree when it is a signaling NaN. '>f' reaches PyFloat_Unpack4, which restores
+  the signaling bit after the conversion to double. '<f' and '=f' now reach nu_float, which does a
+  plain (double)x, and that conversion sets the quiet bit. So 0x7f89b33c unpacks to
+  0x7ff9366780000000 through '<f' and to 0x7ff1366780000000 through '>f', and
+  struct.pack('<f', struct.unpack('<f', b)[0]) no longer gives b back. On a big-endian host the
+  same split would hit '>f' instead.
+  Before 3.15 the endian tables skipped 'f' and 'd', so '<f' went through PyFloat_Unpack4 on every
+  host. gh-145633 removed that exception along with the unknown_format code, and only native 'f'
+  had the plain conversion before.
+likelihood: |
+  Low. Needs a signaling NaN in binary32 data, and code that looks at NaN bits. Software that
+  round-trips binary formats byte for byte through struct is the case that sees it: its bytes
+  change, on 3.15 only.
+maybe_intended: |
+  Not on purpose as far as the PR shows: it describes dropping code for an unsupported format, not
+  a change to NaN handling. A maintainer could still answer that a signaling NaN through a double
+  is not promised. PyFloat_Unpack4 keeps the bit deliberately, though, since gh-130317, and native
+  'f' was always the documented exception to standard sizes and formats.
+reproducer: |
+  import struct, sys
+  raw = bytes.fromhex('3cb3897f')          # little-endian bytes of the signaling NaN 0x7f89b33c
+  bits = lambda x: struct.pack('>d', x).hex()
+  host, other = ('<f', '>f') if sys.byteorder == 'little' else ('>f', '<f')
+  data = raw if host == '<f' else raw[::-1]
+  a = struct.unpack(host, data)[0]
+  b = struct.unpack(other, data[::-1])[0]
+  print(host, '->', bits(a))
+  print(other, '->', bits(b))
+  print('pack of the', host, 'result ->', struct.pack(host, a).hex(), 'from', data.hex())
+  if bits(a) != bits(b) and struct.pack(host, a) != data:
+      print('REPRODUCED binary64-struct-f-le-quiets-snan')
+expected: |
+  The same 64 bits from both byte orders, 0x7ff1366780000000, as on 3.14.7, and the original four
+  bytes back from pack.
+promised_by: |
+  Doc/library/struct.rst:321: 'f' uses the IEEE 754 binary32 format in the standard modes, with no
+  difference stated between '<' and '>'. Objects/floatobject.c:2165 `return sNaN double if x was
+  sNaN float`. The test suite covers that code directly, not through '<f'.
+cause: |
+  Modules/_struct.c:1528-1551 init_endian_tables now copies the native pack and unpack functions
+  over 'f' and 'd' in the table of the host's byte order; 3.14.7 skipped those two. The copied
+  nu_float, Modules/_struct.c:483-488, is `PyFloat_FromDouble((double)x)`. lu_float at :1283 is
+  no longer reached. 'd' is unaffected, since nu_double copies 8 bytes.
+possible_fix: |
+  Make nu_float call PyFloat_Unpack4(p, PY_LITTLE_ENDIAN) as np_float already calls PyFloat_Pack4,
+  which also fixes native 'f', or restore the skip for 'f' in init_endian_tables.
+tested: |
+  python3 3.15.2: REPRODUCED. main (3.16.0a1+dev): REPRODUCED. 3.14.7: not reproduced, both byte
+  orders give 0x7ff1366780000000.
+duplicates:
+  issues: []
+  related:
+    - {number: 130317, state: closed, relation: "the fix that made PyFloat_Unpack4 keep the signaling bit"}
+    - {number: 145633, state: closed, relation: "the unknown_format removal whose PR, 146189, dropped the skip for 'f' and 'd'"}
+    - {number: 141042, state: closed, relation: "half precision NaN handling in struct, a different path"}
+  queries: ["repo:python/cpython struct float native signaling NaN", "repo:python/cpython sNaN unpack float struct",
+            "repo:python/cpython signaling NaN struct unpack", "repo:python/cpython sNaN float pack quiet",
+            "repo:python/cpython nu_float", "repo:python/cpython struct float endian nan payload",
+            "repo:python/cpython prs: unknown float format remove struct"]
+  bugforge: "four struct entries, on iter_unpack, pack_into and '0p'; none on float formats"
+lean:
+  property: PyLean.Binary64.StructFloatOrdersAgree
+  theorem: PyLean.Binary64.structFloatOrdersAgree_refuted

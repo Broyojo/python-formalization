@@ -137,7 +137,7 @@ def entriesConv : List Entry := [
     statement := "hash(a) is sign(a) * (abs(a) % (2**61 - 1)), with -1 replaced by -2, for all ints, on the compact and digit paths."
     source := "stdtypes: Hashing of numeric types", status := .proven
     prop := ``LongHashExact, thm := some ``longHashExact_proven
-    notes := "Proves the rotation argument of the comment at longobject.c@3.14.7:3609-3633." },
+    notes := "Proves the rotation argument of the comment at longobject.c:3708-3732, including the two digits 3.15 unrolled." },
   { id := "longobj-bit-count", pyFile := "Objects/longobject.c"
     pyFns := ["int_bit_count_impl", "popcount_digit"]
     statement := "int.bit_count is the number of ones in the binary representation of the absolute value."

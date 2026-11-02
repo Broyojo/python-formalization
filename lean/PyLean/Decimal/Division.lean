@@ -1,4 +1,5 @@
 import PyLean.Decimal.Ops
+import PyLean.Binary64.Model
 
 /-!
 The division family of `_pydecimal`: `__truediv__`, `_divide`, `__divmod__`,
@@ -80,6 +81,28 @@ _pydecimal.py:1447-1450 and :1601-1604: both operands as integers at the lower e
 def scaled (ca : Nat) (ea : Int) (cb : Nat) (eb : Int) : Nat × Nat :=
   if ea ≥ eb then (ca * 10 ^ (ea - eb).toNat, cb) else (ca, cb * 10 ^ (eb - ea).toNat)
 
+/-- `_LOG_10_BASE_2_LO`, _pydecimal.py:458: the double just below `log2(10)`. -/
+def log10Base2Lo : Binary64.F64 := .ofBits 0x400a934f0979a371
+
+/-- `_LOG_10_BASE_2_HI`, _pydecimal.py:461: the double just above `log2(10)`. -/
+def log10Base2Hi : Binary64.F64 := .ofBits 0x400a934f0979a372
+
+/-- `q.bit_length()`. -/
+def bitLen (q : Nat) : Nat := if q = 0 then 0 else Nat.log2 q + 1
+
+/-- `_is_less_than_pow10a_use_str(q, a)`, _pydecimal.py:470-499: `is_valid`, and whether
+`str(q)` was computed. Python compares the int with the double exactly; the double itself
+is the rounded product. In the band the two tests leave open, `str(q)` runs whatever `q`
+is, so the integer string limit can raise where 3.14 only compared integers. -/
+def isLessThanPow10aUseStr (q a : Nat) : Py (Bool × Bool) :=
+  let fa := Binary64.F64.ofInt a
+  if (bitLen q : Rat) < (Binary64.F64.mul fa log10Base2Lo).toRat then .ok (true, false)
+  else if (Binary64.F64.add Binary64.F64.one (Binary64.F64.mul fa log10Base2Hi)).toRat ≤ bitLen q then
+    .ok (false, false)
+  else do
+    strLimit q
+    return (decide (numDigits q ≤ a), true)
+
 /-- `Decimal._divide`, _pydecimal.py:1428-1464: `(self // other, self % other)`
 for finite `self` and non-zero `other`. -/
 def divideD (c : Ctx) (a b : Dec) : DM (Dec × Dec) := do
@@ -96,8 +119,9 @@ def divideD (c : Ctx) (a b : Dec) : DM (Dec × Dec) := do
       let p := scaled ca ea cb eb
       let q := p.1 / p.2
       let r := p.1 % p.2
-      if q < 10 ^ c.prec then
-        liftPy (strLimit q)
+      let res ← liftPy (isLessThanPow10aUseStr q c.prec)
+      if res.1 then
+        liftPy (if res.2 then .ok () else strLimit q)
         liftPy (strLimit r)
         return (.fin sign q 0, .fin sa r idealExp)
     | _, _ => pure ()
@@ -153,7 +177,9 @@ def nearestQR (x y : Nat) : Nat × Int :=
   let r := x % y
   if 2 * r + q % 2 > y then (q + 1, (r : Int) - y) else (q, r)
 
-/-- `Decimal.remainder_near`, _pydecimal.py:1550-1625. -/
+/-- `Decimal.remainder_near`, _pydecimal.py:1550-1625. `_is_less_than_pow10a(q, prec)`
+(:504-536), which replaced the test `q >= 10**prec` in 3.15, is taken as that test: it
+rests on `math.log10` of a big int, which is not modelled. -/
 def remainderNear (c : Ctx) (a b : Dec) : DM Dec := do
   if let some ans ← checkNans c a (some b) then return ans
   if isinfinity a ≠ 0 then return ← invalid c

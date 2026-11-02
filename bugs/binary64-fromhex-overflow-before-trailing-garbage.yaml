@@ -45,6 +45,7 @@ possible_fix: |
   trailing whitespace loop and `s != s_end`) right after the exponent at :1355, then turn
   the `goto overflow_error` paths back on. The `finished:` path can then drop its check.
 tested: |
+  python3 3.15.2: REPRODUCED
   python3 3.14.7: REPRODUCED. main: REPRODUCED.
 duplicates:
   issues: []

@@ -53,6 +53,7 @@ possible_fix: |
   correct it with one exact residual check. Or leave the code and widen the hedge in the
   divmod documentation to "may differ from it for very large quotients".
 tested: |
+  python3 3.15.2: REPRODUCED
   python3 3.14.7: REPRODUCED. main: REPRODUCED.
 duplicates:
   issues: []

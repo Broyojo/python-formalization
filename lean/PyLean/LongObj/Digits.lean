@@ -1,7 +1,7 @@
 import PyLean.MathInt.ToBytes
 
 /-!
-Foundations of the digit-level model of `Objects/longobject.c` (CPython 3.14.7).
+Foundations of the digit-level model of `Objects/longobject.c` (CPython 3.15.2).
 
 Build assumptions (the interpreter under test): `PyLong_SHIFT = 30`, `digit` is
 `uint32_t`, `twodigits` is `uint64_t`, `sdigit` is `int32_t`, `stwodigits` is
@@ -378,8 +378,8 @@ theorem Long.medium_ofInt {v : Int} (h : v.natAbs < 2 ^ 30) : (Long.ofInt v).med
 
 /-! ## Constructing small objects -/
 
-/-- `_PY_NSMALLPOSINTS`, pycore_runtime_structs.h@3.14.7:109. -/
-def nSmallPos : Int := 257
+/-- `_PY_NSMALLPOSINTS`, pycore_runtime_structs.h:97: 1025 since 3.15, and it was 257. -/
+def nSmallPos : Int := 1025
 /-- `_PY_NSMALLNEGINTS`, pycore_runtime_structs.h:98. -/
 def nSmallNeg : Int := 5
 
@@ -419,6 +419,23 @@ def fromSTwoDigits (x : Int) : Long :=
   if isSmallInt x then fromSingle x
   else if isMediumInt x then fromSingle x
   else fromLarge x
+
+/-- `medium_from_stwodigits(x)`, longobject.c:327-350: `_PyLong_FromSTwoDigits` for a
+medium result only. `none` is `PyStackRef_NULL`: it is not an exception, and the
+specialized instruction falls back to the generic `long_add`, `long_sub` or `long_mul`. -/
+def mediumFromSTwoDigits (x : Int) : Option Long :=
+  if isSmallInt x then some (fromSingle x)
+  else if !isMediumInt x then none
+  else some (fromSingle x)
+
+/-- `_PyCompactLong_Add(a, b)`, longobject.c:3869-3875, for compact `a` and `b`. -/
+def compactAdd (a b : Long) : Option Long := mediumFromSTwoDigits (a.medium + b.medium)
+
+/-- `_PyCompactLong_Subtract(a, b)`, longobject.c:3914-3920. -/
+def compactSub (a b : Long) : Option Long := mediumFromSTwoDigits (a.medium - b.medium)
+
+/-- `_PyCompactLong_Multiply(a, b)`, longobject.c:4361-4367. -/
+def compactMul (a b : Long) : Option Long := mediumFromSTwoDigits (a.medium * b.medium)
 
 theorem digitLoop_eq (f t : Nat) (h : t < 2 ^ (30 * f)) : digitLoop f t = digitsOf t := by
   have key : ∀ f t, t < 2 ^ (30 * f) →
@@ -497,5 +514,36 @@ theorem fromSTwoDigits_eq {x : Int} (h1 : -(2 ^ 63 : Int) ≤ x) (h2 : x < 2 ^ 6
       omega
     · simp only [hm, ite_false]
       exact fromLarge_eq (by omega)
+
+/-- `medium_from_stwodigits` gives the canonical object of a medium `x` and declines the rest. -/
+theorem mediumFromSTwoDigits_eq {x : Int} (h1 : -(2 ^ 63 : Int) ≤ x) (h2 : x < 2 ^ 63) :
+    mediumFromSTwoDigits x = if x.natAbs < 2 ^ 30 then some (Long.ofInt x) else none := by
+  unfold mediumFromSTwoDigits
+  by_cases hs : isSmallInt x = true
+  · have hb : x.natAbs < 2 ^ 30 := by
+      simp only [isSmallInt, nSmallNeg, nSmallPos, Bool.and_eq_true] at hs
+      have h3 := of_decide_eq_true hs.1
+      have h4 := of_decide_eq_true hs.2
+      omega
+    rw [if_pos hs, if_pos hb, fromSingle_eq hb]
+  · rw [if_neg hs]
+    by_cases hm : isMediumInt x = true
+    · have hb : x.natAbs < 2 ^ 30 := by
+        rw [isMediumInt_iff h1 h2] at hm
+        have h3 := of_decide_eq_true hm
+        simp only [MASK] at h3
+        omega
+      simp only [hm, Bool.not_true, Bool.false_eq_true, ite_false]
+      rw [if_pos hb, fromSingle_eq hb]
+    · have hb : ¬ x.natAbs < 2 ^ 30 := by
+        intro hb
+        apply hm
+        rw [isMediumInt_iff h1 h2]
+        apply decide_eq_true
+        simp only [MASK]
+        omega
+      have hm' : isMediumInt x = false := by simpa using hm
+      simp only [hm', Bool.not_false, ite_true]
+      rw [if_neg hb]
 
 end PyLean.LongObj

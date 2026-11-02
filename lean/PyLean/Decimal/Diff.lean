@@ -308,6 +308,7 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "ratio_c" => return encPy (fun (p : Int × Int) => Json.arr #[hexInt p.1, hexInt p.2]) (cRatio (← getDec j "a"))
   | "fromint_py" => return encPy encDec (pyFromInt (Int.ofNat (natOfHex (← getStr j "n")) * (if ← getBool j "neg" then -1 else 1)))
   | "fromint_c" => return encPy encDec (cFromInt (Int.ofNat (natOfHex (← getStr j "n")) * (if ← getBool j "neg" then -1 else 1)))
+  | "fmtarg_c" => return encPy toJson (.error (cFormatBadArg (← getStr j "arg")) : Py String)
   | "fmt_py" => return Json.mkObj [("ok", encOutcome (pyFormat (← getCps j "spec")))]
   | "fmt_c" =>
     let lib : LibMpdec := if (← getStr j "libmpdec") == "2" then .bundled251 else .system401
@@ -398,13 +399,13 @@ def run (fn : String) (j : Json) : Except String Json := do
     let key ← sigKeyOf (← field j "key")
     let w : SdOperand ←
       match ← getStr j "w" with
-      | "copy" => pure (.dict (keyed (flagsAsDict (statusOfActs acts))))
+      | "copy" | "copy_frozen" => pure (.dict (keyed (flagsAsDict (statusOfActs acts))))
       | "self" => pure (.sd sd)
       | "unbound" => pure (.sd none)
       | "other_ctx" =>
         let acts2 ← (← (← field j "acts2").getArr?).toList.mapM (·.getStr?)
         pure (.sd (some (statusOfActs acts2)))
-      | "bad_dict" => pure (.dict [(.other, true)])
+      | "bad_dict" | "bad_frozen" => pure (.dict [(.other, true)])
       | _ => pure .other
     return runSd (← getStr j "op") sd key w
   | "ieee" =>

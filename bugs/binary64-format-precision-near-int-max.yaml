@@ -46,6 +46,7 @@ possible_fix: |
   Already done upstream by gh-158446: DOUBLE_TO_STRING_PRECISION_MAX in Python/pystrtod.c:411
   and a clamp of ndigits in Python/dtoa.c:2385-2388 on main.
 tested: |
+  python3 3.15.2: NOT REPRODUCED, fixed. This record describes 3.14.7 and stays in coverage/gone-in-3.15.txt.
   python3 3.14.7: REPRODUCED. main: not reproduced (the check added for gh-158446 raises
   ValueError).
 duplicates:
@@ -61,3 +62,4 @@ lean:
   theorem: PyLean.Binary64.eFormatDigitCount_refuted
   also:
     - {property: PyLean.Binary64.DtoaFixedKeepsIntegerPart, theorem: PyLean.Binary64.dtoaFixedKeepsIntegerPart_refuted}
+  note: "Both refutations held on 3.14.7. On 3.15.2 the two properties are open; PrecisionGuard and Mode3NoWrap state the fix."

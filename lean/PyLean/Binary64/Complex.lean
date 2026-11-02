@@ -1,10 +1,10 @@
 import PyLean.Binary64.Dtoa
 
 /-!
-`Objects/complexobject.c`, CPython 3.14.7, the float paths. The transcendental C library
+`Objects/complexobject.c`, CPython 3.15.2, the float paths. The transcendental C library
 functions are parameters (`Libm`): the body of each function is mirrored and every
 property holds for any C library. The `__format__` machinery lives in
-`Python/formatter_unicode.c` and is not modelled here.
+`Objects/unicode_formatter.c` and is not modelled here.
 -/
 
 namespace PyLean.Binary64
@@ -195,8 +195,7 @@ def c_powi (x : C) (n : Int) : C × Bool :=
   else _Py_c_quot c_1 (c_powu x (-n).toNat)
 
 /-- `_Py_c_abs`, complexobject.c:367-397: the value and `errno == ERANGE`. `stale` is that
-same test on entry: the NaN path at :389 returns without touching `errno`, and in 3.14.7
-nothing clears it first. -/
+same test on entry: the NaN path at :389 returns without touching `errno`. -/
 def _Py_c_abs (m : Libm) (stale : Bool) (z : C) : F64 × Bool :=
   if !z.re.isFinite || !z.im.isFinite then
     if z.re.isInf then (z.re.abs, false)
@@ -281,9 +280,10 @@ def complex_neg (z : C) : C := ⟨z.re.neg, z.im.neg⟩
 /-- `complex_pos`, complexobject.c:785-793. -/
 def complex_pos (z : C) : C := z
 
-/-- `complex_abs`, complexobject.c:795-809. -/
-def complex_abs (m : Libm) (stale : Bool) (z : C) : Py F64 :=
-  let (r, erange) := _Py_c_abs m stale z
+/-- `complex_abs`, complexobject.c:795-809. `_stale` is whether `errno == ERANGE` on entry;
+`errno = 0` at :801 discards it before `_Py_c_abs` runs. -/
+def complex_abs (m : Libm) (_stale : Bool) (z : C) : Py F64 :=
+  let (r, erange) := _Py_c_abs m false z
   if erange then .error (.overflowError "absolute value too large") else .ok r
 
 /-- `complex_bool`, complexobject.c:811-816. -/

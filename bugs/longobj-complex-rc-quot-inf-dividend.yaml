@@ -39,6 +39,7 @@ possible_fix: |
   Add the branch: if a is infinite and b is finite, set r from copysign(1, a) and b, as on
   lines 230-233 with y = 0.
 tested:
+  python3 3.15.2: REPRODUCED
   python3 (3.14.7): REPRODUCED
   main (vendor/cpython-main/python.exe, 3.16.0a1+dev): REPRODUCED
 duplicates:
