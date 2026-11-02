@@ -17,10 +17,10 @@ Lib/ipaddress.py	397	405	_IPAddressBase.reverse_pointer	reverse_pointer(self)	to
 Lib/ipaddress.py	407	414	_IPAddressBase._check_int_address	_check_int_address(self, address)	modelled	ipaddress-v4-init-int-bytes	
 Lib/ipaddress.py	416	421	_IPAddressBase._check_packed_address	_check_packed_address(self, address, expected_len)	modelled	ipaddress-v4-init-int-bytes	
 Lib/ipaddress.py	424	434	_IPAddressBase._ip_int_from_prefix	_ip_int_from_prefix(cls, prefixlen)	todo		
-Lib/ipaddress.py	437	459	_IPAddressBase._prefix_from_ip_int	_prefix_from_ip_int(cls, ip_int)	todo		
-Lib/ipaddress.py	462	464	_IPAddressBase._report_invalid_netmask	_report_invalid_netmask(cls, netmask_str)	todo		
-Lib/ipaddress.py	467	489	_IPAddressBase._prefix_from_prefix_string	_prefix_from_prefix_string(cls, prefixlen_str)	todo		
-Lib/ipaddress.py	492	523	_IPAddressBase._prefix_from_ip_string	_prefix_from_ip_string(cls, ip_str)	todo		
+Lib/ipaddress.py	437	459	_IPAddressBase._prefix_from_ip_int	_prefix_from_ip_int(cls, ip_int)	modelled	ipaddress-v4-mask-doc-rule,ipaddress-v4-mask-roundtrip	
+Lib/ipaddress.py	462	464	_IPAddressBase._report_invalid_netmask	_report_invalid_netmask(cls, netmask_str)	modelled	ipaddress-v4-mask-int	
+Lib/ipaddress.py	467	489	_IPAddressBase._prefix_from_prefix_string	_prefix_from_prefix_string(cls, prefixlen_str)	modelled	ipaddress-v4-mask-roundtrip	
+Lib/ipaddress.py	492	523	_IPAddressBase._prefix_from_ip_string	_prefix_from_ip_string(cls, ip_str)	modelled	ipaddress-v4-mask-doc-rule,ipaddress-v4-mask-roundtrip	
 Lib/ipaddress.py	526	547	_IPAddressBase._split_addr_prefix	_split_addr_prefix(cls, address)	todo		
 Lib/ipaddress.py	549	550	_IPAddressBase.__reduce__	__reduce__(self)	todo		
 Lib/ipaddress.py	566	567	_BaseAddress.__int__	__int__(self)	todo		
@@ -68,7 +68,7 @@ Lib/ipaddress.py	1088	1096	_BaseNetwork.is_global	is_global(self)	todo
 Lib/ipaddress.py	1099	1108	_BaseNetwork.is_unspecified	is_unspecified(self)	todo		
 Lib/ipaddress.py	1111	1120	_BaseNetwork.is_loopback	is_loopback(self)	todo		
 Lib/ipaddress.py	1150	1151	_BaseV4._explode_shorthand_ip_string	_explode_shorthand_ip_string(self)	todo		
-Lib/ipaddress.py	1154	1177	_BaseV4._make_netmask	_make_netmask(cls, arg)	todo		
+Lib/ipaddress.py	1154	1177	_BaseV4._make_netmask	_make_netmask(cls, arg)	modelled	ipaddress-v4-mask-doc-rule,ipaddress-v4-mask-int,ipaddress-v4-mask-roundtrip	
 Lib/ipaddress.py	1180	1203	_BaseV4._ip_int_from_string	_ip_int_from_string(cls, ip_str)	modelled	ipaddress-v4-text-canonical,ipaddress-v4-text-roundtrip	
 Lib/ipaddress.py	1206	1239	_BaseV4._parse_octet	_parse_octet(cls, octet_str)	modelled	ipaddress-v4-text-canonical,ipaddress-v4-text-roundtrip	
 Lib/ipaddress.py	1242	1252	_BaseV4._string_from_ip_int	_string_from_ip_int(cls, ip_int)	modelled	ipaddress-v4-text-canonical,ipaddress-v4-text-roundtrip	
