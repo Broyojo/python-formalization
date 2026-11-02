@@ -117,30 +117,42 @@ def hasDelta (b : Nat) : Bool := ((deltaBlocks >>> b) &&& 1) != 0
 
 def blockCheck (b : Nat) : Bool :=
   decide (blockCount ≤ b) ||
-    (rangeAll (fun j => recIndep (recInBlock b j)) 6 0 &&
-     (hasDelta b || rangeAll (fun j => recZero (recInBlock b j)) 6 0))
+    (rangeAll (fun j => recIndep (recInBlock b j)) 7 0 &&
+     (hasDelta b || rangeAll (fun j => recZero (recInBlock b j)) 7 0))
 
 def hiCheck (hi : Nat) : Bool :=
-  decide (0x4400 ≤ hi) ||
+  decide (0x2200 ≤ hi) ||
     (decide (idx1 hi < blockCount) &&
      (!hasDelta (idx1 hi) ||
-       rangeAll (fun j => deltaOk (hi * 64 + j) (recInBlock (idx1 hi) j)) 6 0))
+       rangeAll (fun j => deltaOk (hi * 128 + j) (recInBlock (idx1 hi) j)) 7 0))
 
-theorem blocks_ok : rangeAll blockCheck 11 0 = true := by decide +kernel
+/-- In three pieces: the kernel's memory limit is per declaration. -/
+theorem blocks_ok0 : rangeAll blockCheck 7 0 = true := by decide +kernel
+theorem blocks_ok1 : rangeAll blockCheck 7 128 = true := by decide +kernel
+theorem blocks_ok2 : rangeAll blockCheck 7 256 = true := by decide +kernel
+
+theorem blocks_ok {b : Nat} (h : b < 384) : blockCheck b = true := by
+  have e : (2 : Nat) ^ 7 = 128 := by decide
+  by_cases h0 : b < 128
+  · exact rangeAll_spec _ _ _ blocks_ok0 b (Nat.zero_le _) (by omega)
+  by_cases h1 : b < 256
+  · exact rangeAll_spec _ _ _ blocks_ok1 b (by omega) (by omega)
+  · exact rangeAll_spec _ _ _ blocks_ok2 b (by omega) (by omega)
+
 theorem his_ok : rangeAll hiCheck 15 0 = true := by decide +kernel
 
 theorem gettyperecord_eq {c : Nat} (h : c ≤ maxUnicode) :
-    gettyperecord c = recInBlock (idx1 (c >>> 6)) (c &&& 63) := by
+    gettyperecord c = recInBlock (idx1 (c >>> 7)) (c &&& 127) := by
   have hm : maxUnicode = 0x10FFFF := rfl
   have : ¬ c ≥ 0x110000 := by omega
   simp only [gettyperecord, this, if_false]
   rfl
 
 theorem c_parts {c : Nat} (h : c ≤ maxUnicode) :
-    c >>> 6 < 0x4400 ∧ c &&& 63 < 64 ∧ (c >>> 6) * 64 + (c &&& 63) = c := by
+    c >>> 7 < 0x2200 ∧ c &&& 127 < 128 ∧ (c >>> 7) * 128 + (c &&& 127) = c := by
   have hm : maxUnicode = 0x10FFFF := rfl
-  have h1 : c >>> 6 = c / 64 := by simp [Nat.shiftRight_eq_div_pow]
-  have h2 : c &&& 63 = c % 64 := Nat.and_two_pow_sub_one_eq_mod c 6
+  have h1 : c >>> 7 = c / 128 := by simp [Nat.shiftRight_eq_div_pow]
+  have h2 : c &&& 127 = c % 128 := Nat.and_two_pow_sub_one_eq_mod c 7
   rw [h1, h2]
   omega
 
@@ -148,24 +160,24 @@ theorem rec_facts {c : Nat} (h : c ≤ maxUnicode) :
     recIndep (gettyperecord c) = true ∧ deltaOk c (gettyperecord c) = true := by
   obtain ⟨h1, h2, h3⟩ := c_parts h
   rw [gettyperecord_eq h]
-  generalize hb : idx1 (c >>> 6) = b
-  generalize hj : c &&& 63 = j at *
-  have hhi := rangeAll_spec _ _ _ his_ok (c >>> 6) (Nat.zero_le _) (by
+  generalize hb : idx1 (c >>> 7) = b
+  generalize hj : c &&& 127 = j at *
+  have hhi := rangeAll_spec _ _ _ his_ok (c >>> 7) (Nat.zero_le _) (by
     have : (2 : Nat) ^ 15 = 32768 := by decide
-    have : (0x4400 : Nat) ≤ 32768 := by decide
+    have : (0x2200 : Nat) ≤ 32768 := by decide
     omega)
   simp only [hiCheck, Bool.or_eq_true, decide_eq_true_eq, Bool.and_eq_true, Bool.not_eq_true'] at hhi
   rcases hhi with hhi | ⟨hlt, hd⟩
   · omega
   · rw [hb] at hlt hd
-    have hbl := rangeAll_spec _ _ _ blocks_ok b (Nat.zero_le _) (by
-      have : blockCount ≤ 2 ^ 11 := by decide
+    have hbl := blocks_ok (b := b) (by
+      have : blockCount ≤ 384 := by decide
       omega)
     simp only [blockCheck, Bool.or_eq_true, decide_eq_true_eq, Bool.and_eq_true] at hbl
     rcases hbl with hbl | ⟨ha, hz⟩
     · omega
-    · have hj64 : j < 0 + 2 ^ 6 := by
-        have : (2 : Nat) ^ 6 = 64 := by decide
+    · have hj64 : j < 0 + 2 ^ 7 := by
+        have : (2 : Nat) ^ 7 = 128 := by decide
         omega
       refine ⟨rangeAll_spec _ _ _ ha j (Nat.zero_le _) hj64, ?_⟩
       by_cases hdb : hasDelta b = true
@@ -173,7 +185,7 @@ theorem rec_facts {c : Nat} (h : c ≤ maxUnicode) :
         · simp [hdb] at hd
         · have := rangeAll_spec _ _ _ hd j (Nat.zero_le _) hj64
           rwa [h3] at this
-      · have hzero : rangeAll (fun j => recZero (recInBlock b j)) 6 0 = true := by
+      · have hzero : rangeAll (fun j => recZero (recInBlock b j)) 7 0 = true := by
           rcases hz with hz | hz
           · exact absurd hz hdb
           · exact hz

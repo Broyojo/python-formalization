@@ -41,7 +41,7 @@ expected: |
   UnicodeEncodeError in both branches.
 observed: |
   b'\x01' in the dict branch, which charmap_decode then rejects.
-tested: "REPRODUCED on python3 3.14.7 and on main (3.16.0a1+dev) by scripts/check_bugs.py"
+tested: "REPRODUCED on python3 3.15.2 and on main (3.16.0a1+dev) by scripts/check_bugs.py"
 promised_by: |
   Internal consistency: the trie branch and the decoder both treat U+FFFE as undefined.
 cause: |

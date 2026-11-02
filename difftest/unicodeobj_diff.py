@@ -413,6 +413,9 @@ def sf_dec(j):
             if name in attrs:
                 return answer(attrs[name])
             raise AttributeError(f"'U' object has no attribute '{name}'")
+    # `%T` prints the module and qualified name: keep them what the model calls the class
+    U.__qualname__ = "U"
+    U.__module__ = "__main__"
     if j["item"] is not None:
         U.__getitem__ = lambda self, k: answer(j["item"])
     return U()
@@ -759,7 +762,7 @@ def ff_type(n):
                 "types.GenericAlias": types.GenericAlias}[str_of(n["s"])]
     if str_of(n["q"]) == "deque":
         import collections
-        return collections.deque  # a heap type in 3.14, with a dotted name
+        return collections.deque  # a heap type, with a dotted name
     cls = type("Heap", (), {})
     cls.__qualname__ = str_of(n["q"])
     cls.__module__ = 1 if n["m"] is None else str_of(n["m"])
@@ -914,6 +917,25 @@ def it_run(it, op):
     if k == "setstate":
         return common.py_result(lambda: (it.__setstate__(sf_dec(op["o"])), None)[1])
     return common.py_result(lambda: it_reduce(it, op))
+
+
+@gen("format", 1)
+def gen_fmt_unicode_char(rng):
+    ch = rng.choice([0, 65, 127, 128, 255, 256, 0x20ac, 0xd800, 0xffff, 0x10000, 0x10ffff, 0x110000, 0x110001,
+                     0x7fffffff, 0x80000000, 0xffffffff, rng.randrange(0x110000), rng.randrange(0x110000, 2 ** 32)])
+    return {"mod": "unicodeobj", "fn": "fmt_unicode_char", "ch": ch}
+
+
+@run("fmt_unicode_char")
+def run_fmt_unicode_char(c):
+    import ctypes
+    f = ctypes.pythonapi.PyUnicode_FromKindAndData
+    f.restype = ctypes.py_object
+    f.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_ssize_t]
+    buf = ctypes.c_uint32(c["ch"])
+    r = f(4, ctypes.addressof(buf), 1)
+    k = kind_of(r)
+    return [cps_of(r), k[0], k[1]]
 
 
 @run("fmt_iter")
@@ -1203,6 +1225,56 @@ def run_codec_utf8_writer(c):
     r = api.PyUnicodeWriter_Finish(w)
     k = kind_of(r)
     return [{"ok": None} if "ok" in res else res, n.value, cps_of(r), k[0], k[1]]
+
+
+CHUNK_ALPHA = {
+    "utf-8": [0x41, 0x80, 0x90, 0x9f, 0xa0, 0xbf, 0xc0, 0xc2, 0xdf, 0xe0, 0xe1, 0xed, 0xef, 0xf0, 0xf1, 0xf4, 0xf5, 0xff],
+    "utf-16-le": [0x00, 0x41, 0xd7, 0xd8, 0xdb, 0xdc, 0xdf, 0xe0, 0xff],
+    "utf-16-be": [0x00, 0x41, 0xd7, 0xd8, 0xdb, 0xdc, 0xdf, 0xe0, 0xff],
+    "utf-32-le": [0x00, 0x01, 0x10, 0x11, 0xd8, 0xdc, 0xff],
+    "utf-32-be": [0x00, 0x01, 0x10, 0x11, 0xd8, 0xdc, 0xff],
+    "raw_unicode_escape": list(b"\\\\uU0178a\n") + [0xff],
+    "unicode_escape": list(b"\\\\\\Nxu U0178{}a\nb") + [0xff],
+}
+
+
+@gen("codec", 5)
+def gen_codec_chunks(rng):
+    codec = rng.choice(list(CHUNK_ALPHA))
+    b = [rng.choice(CHUNK_ALPHA[codec]) for _ in range(rng.randint(0, 9))]
+    return {"mod": "unicodeobj", "fn": "codec_chunks", "codec": codec, "b": b, "k": rng.randint(0, len(b) + 1),
+            "errors": rng.choice(DEC_HANDLERS)}
+
+
+@run("codec_chunks")
+def run_codec_chunks(c):
+    import codecs
+    import warnings
+    dec = {"utf-8": codecs.utf_8_decode, "utf-16-le": codecs.utf_16_le_decode, "utf-16-be": codecs.utf_16_be_decode,
+           "utf-32-le": codecs.utf_32_le_decode, "utf-32-be": codecs.utf_32_be_decode,
+           "raw_unicode_escape": codecs.raw_unicode_escape_decode,
+           "unicode_escape": codecs.unicode_escape_decode}[c["codec"]]
+    b, k, errors = bytes(c["b"]), c["k"], c["errors"]
+
+    def call(x, final):
+        try:
+            s, n = dec(x, errors, final)
+            return cps_of(s), n
+        except UnicodeError:
+            return None
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        whole = call(b, True)
+        whole = list(whole) if whole else None
+        first = call(b[:k], False)
+        if first is None:
+            return ["first", whole]
+        s1, n = first
+        second = call(b[n:], True)
+        if second is None:
+            return ["second", s1, n, whole]
+        return ["both", s1, n, second[0], second[1], whole]
 
 
 @gen("codec", 4)
@@ -1776,6 +1848,53 @@ def gen_fmt_percent(rng):
     return {"mod": "unicodeobj", "fn": "fmt_percent", "fmt": cps_of(fmt), "args": args}
 
 
+PCT_CONV_315 = ["'", '"', "$", "!", "q", "Q", "z", "\xe9", "\u20ac", "\x00", "\x7f", "\x80", "\n", "\u0378",
+                "\U0001f600", "\U0001fffe", "\ud800", "%", "*", "-", "(", ")", "5", " "]
+PCT_BIG_315 = [2 ** 31 - 1, 2 ** 31, -2 ** 31, -2 ** 31 - 1, 2 ** 63 - 1, 2 ** 63, -2 ** 63, -2 ** 63 + 1, -2 ** 63 - 1,
+               2 ** 64, -1, 0, 1, 5, 7]
+
+
+@gen("format", 3)
+def gen_fmt_percent_315(rng):
+    """The branches 3.15 added: positions, argument numbers, and keys mixed with no keys."""
+    obj = lambda: pct_enc(rng.choice(PCT_OBJS))
+    r = rng.randint(0, 8)
+    pre = rng.choice(["", "abc", "%d", "%%", "\u20ac"])
+    if r == 0:      # a key, then what may not follow one, or the other way round
+        fmt = rng.choice(["%(a)s %d", "%(a)s %s", "%d %(a)s", "%s%(a)s", "%(a)*d", "%(a).*d", "%(a)-*d", "%(a)s %*d",
+                          "%(a)s%(b)s", "%(a)5.2d", "%(a)", "%(a", "%(", "%(a)%", "%(a))s", "%((a)s", "%(a)d%%"])
+        args = {"k": "dict", "items": [[cps_of(k), obj()] for k in rng.sample(["a", "b", "(a)"], rng.randint(0, 3))]}
+    elif r == 1:    # a key without a mapping
+        fmt = rng.choice(["%(a)s", "x%(a)d", "%d%(a)s"])
+        args = rng.choice([{"k": "single", "item": obj()}, {"k": "tuple", "items": [obj()]}, {"k": "tuple", "items": []}])
+    elif r == 2:    # a mapping as the one argument
+        fmt = rng.choice(["%s", "%r", "%a", "%d", "%x", "%f", "%c", "%5s", "%s %s", "", "x", "%*d", "%.*f", "%%", "%q"])
+        args = {"k": "dict", "items": [[cps_of(k), obj()] for k in rng.sample(["a", "b"], rng.randint(0, 2))]}
+    elif r == 3:    # `*` with one argument that is not a tuple
+        fmt = rng.choice(["%*d", "%.*d", "%-*s", "%*.*f", "%*"])
+        args = {"k": "single", "item": obj()}
+    elif r == 4:    # bad conversions
+        fmt = pre + "%" + rng.choice(["", "-", "5", ".2", "l", "#0"]) + rng.choice(PCT_CONV_315)
+        items = [rng.choice(PCT_OBJS) for _ in range(rng.randint(0, 2))]
+        args = {"k": "tuple", "items": [pct_enc(o) for o in items]}
+    elif r == 5:    # the end of the format
+        fmt = pre + rng.choice(["%", "%5", "%.", "%.3", "%-", "%l", "%h", "%L", "%5.", "%*", "%.*", "%5l", "%#0"])
+        args = {"k": "tuple", "items": [pct_enc(rng.choice([1, 2.5, "s", None])) for _ in range(rng.randint(0, 2))]}
+    elif r == 6:    # sizes
+        fmt = rng.choice(["%99999999999999999999d", "%9223372036854775807d", "%9223372036854775808d",
+                          "%.99999999999d", "%.2147483648d", "%.2147483647d", "x%99999999999999999999d"])
+        args = {"k": "tuple", "items": [pct_enc(7)]}
+    elif r == 7:    # the sizes of `*`, and a value for each
+        fmt = pre + rng.choice(["%*d", "%*s", "%.*d", "%.*s", "%*.*d", "%-*d", "%0*d"])
+        vals = [rng.choice(PCT_BIG_315), rng.choice([0, 1, 5, 7, -1] + PCT_BIG_315), 3, "s"]
+        keep = rng.randint(1, 4)
+        args = {"k": "tuple", "items": ([pct_enc(3)] if pre == "%d" else []) + [pct_enc(v) for v in vals[:keep]]}
+    else:           # the argument number
+        fmt = pre + rng.choice(["%d", "%x", "%f", "%c", "%*d", "%s %d", "%s %s %x", "%s"])
+        args = {"k": "tuple", "items": [obj() for _ in range(rng.randint(0, 4))]}
+    return {"mod": "unicodeobj", "fn": "fmt_percent", "fmt": cps_of(fmt), "args": args}
+
+
 @run("fmt_percent")
 def run_fmt_percent(c):
     a = c["args"]
@@ -1932,7 +2051,7 @@ def gen_text_maketrans(rng):
             if str(k) not in seen:
                 seen.add(str(k))
                 items.append([k, text_item(rng)])
-        return {"mod": "unicodeobj", "fn": "text_maketrans_dict", "x": items}
+        return {"mod": "unicodeobj", "fn": "text_maketrans_dict", "x": items, "frozen": rng.random() < 0.4}
     return {"mod": "unicodeobj", "fn": "text_maketrans_other", "y": rng.choice([None, [97]])}
 
 
@@ -2093,7 +2212,7 @@ def run_text_maketrans_dict(c):
     for k, v in c["x"]:
         key = s_of(k["s"]) if k["t"] == "str" else k["v"] if k["t"] == "int" else (1, 2)
         d[key] = conv_item(v)
-    return enc_trans(str.maketrans(d))
+    return enc_trans(str.maketrans(frozendict(d) if c.get("frozen") else d))
 
 
 @run("text_maketrans_other")
@@ -2193,11 +2312,15 @@ def size_ok(c):
                    for v, dotted in digit_runs(s_of(c["spec"])))
     if fn == "fmt_percent":
         fmt = s_of(c["fmt"])
-        if not all(number_ok(v) for v, _ in digit_runs(fmt)):
+        # A precision above INT_MAX is refused, and so is one %d cannot pad: nothing gets built.
+        if not all(number_ok(v) if not dotted else
+                   v <= SIZE_CAP or v > 2 ** 31 - 1 or (v == 2 ** 31 - 1 and fmt.endswith("d"))
+                   for v, dotted in digit_runs(fmt)):
             return False
         items = c["args"].get("items", [c["args"].get("item")])
         ints = [pct_dec(o) for o in items if c["args"]["k"] == "tuple" and o["t"] == "int"]
-        return "*" not in fmt or all(number_ok(v) for v in ints)
+        only_prec = fmt.count("*") == fmt.count(".*")
+        return "*" not in fmt or all(number_ok(v) or (only_prec and abs(v) >= 2 ** 31) for v in ints)
     return True
 
 

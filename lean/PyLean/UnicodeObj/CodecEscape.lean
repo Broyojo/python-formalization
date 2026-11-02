@@ -161,7 +161,7 @@ def rawEscapeDecode (input : Bytes) (h : ErrHandler) (final : Bool) : Py (Str ×
       input []
 
 /-- The bytes `PyUnicode_AsRawUnicodeEscapeString` writes for one character,
-unicodeobject.c@3.14.7:7223-7252. -/
+unicodeobject.c:7095-7124. -/
 def rawEscapeChar (ch : Nat) : Bytes :=
   if ch < 0x100 then [ch]
   else if ch < 0x10000 then [92, 117] ++ hex4 ch

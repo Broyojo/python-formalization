@@ -39,7 +39,8 @@ inductive GObj where
   | user (tp : String) (fmt : Str → Except PyExc GObj) (toStr toRepr : Except PyExc GObj)
       (attr : Str → Except PyExc GObj) (item : Option (GKey → Except PyExc GObj))
 
-/-- `Py_TYPE(obj)->tp_name`. -/
+/-- `Py_TYPE(obj)->tp_name`, which is also what `%T` prints for these objects: `%T` adds the module
+and the qualified name, and the classes of the difftest have neither to add. -/
 def GObj.tpName : GObj → String
   | .int _ => "int"
   | .bool _ => "bool"
@@ -75,18 +76,18 @@ def reprG : Nat → GObj → Py Str
     let parts ← items.mapM fun kv => do
       return unicodeRepr kv.1 ++ lit ": " ++ (← reprG fuel kv.2)
     .ok (lit "{" ++ (lit ", ").intercalate parts ++ lit "}")
-  | _ + 1, .user _ _ _ toRepr _ _ => do
+  | _ + 1, .user tp _ _ toRepr _ _ => do
     match ← toRepr with
     | .str s => .ok s
-    | o => .error (.typeError s!"__repr__ returned non-string (type {o.tpName})")
+    | o => .error (.typeError s!"{tp}.__repr__() must return a str, not {o.tpName}")
 
 /-- `PyObject_Str`. -/
 def strG (fuel : Nat) : GObj → Py Str
   | .str s => .ok s
-  | .user _ _ toStr _ _ _ => do
+  | .user tp _ toStr _ _ _ => do
     match ← toStr with
     | .str s => .ok s
-    | o => .error (.typeError s!"__str__ returned non-string (type {o.tpName})")
+    | o => .error (.typeError s!"{tp}.__str__() must return a str, not {o.tpName}")
   | o => reprG fuel o
 
 /-- `PyObject_ASCII`. -/
@@ -118,10 +119,10 @@ def pyObjectFormat (o : GObj) (spec : Str) : Py Str :=
   | .bool b, _ => intFormat (if b then 1 else 0) "bool" (lit (if b then "True" else "False")) spec
   | .float x, _ => formatFloatAdvanced x spec
   | .complex re im, _ => formatComplexAdvanced re im spec
-  | .user _ fmt _ _ _ _, _ => do
+  | .user tp fmt _ _ _ _, _ => do
     match ← fmt spec with
     | .str s => .ok s
-    | r => .error (.typeError s!"__format__ must return a str, not {r.tpName}")
+    | r => .error (.typeError s!"{tp}.__format__() must return a str, not {r.tpName}")
   | o, _ => objectFormat o spec
 
 /-- `render_field`, unicode_format.h:500-552: the exact types go straight to their formatter. -/

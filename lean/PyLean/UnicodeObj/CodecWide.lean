@@ -146,8 +146,8 @@ def utf32Char (le : Bool) (c : Nat) : List Nat :=
   if le then [c % 256, c / 256 % 256, c / 65536 % 256, c / 16777216 % 256]
   else [c / 16777216 % 256, c / 65536 % 256, c / 256 % 256, c % 256]
 
-/-- The `while (pos < len)` of `_PyUnicode_EncodeUTF16` and `_PyUnicode_EncodeUTF32`,
-unicodeobject.c:6422-6484 and @3.14.7:6174-6248. `unitSize` is 2 or 4. A `bytes` replacement must
+/-- The `for (pos = 0; pos < len; )` of `_PyUnicode_EncodeUTF16` and `_PyUnicode_EncodeUTF32`,
+unicodeobject.c:6414-6484 and 6075-6146. `unitSize` is 2 or 4. A `bytes` replacement must
 be a whole number of units and a `str` one must be ASCII, and each str character is
 written as a character. -/
 def encodeWideLoop (charBytes : Nat → List Nat) (unitSize : Nat) (h : ErrHandler)

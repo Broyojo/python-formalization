@@ -778,11 +778,11 @@ def outText (arg : FArg) : FOut → Str
 /-- `%` and `format()` are separate paths to the same digits: `'%-08.3f' % x` and the like go
 through `formatfloat` and `unicode_format_arg_output`, `format` through
 `format_float_internal`. For every float and every flag, width and precision of a `%e`, `%f`
-or `%g` directive, they give the same text. `-1 ≤ width` is what the parser leaves: the one way
-past it is `unicodeobj-format-percent-star-width`, on record as refuted. -/
+or `%g` directive, they give the same text. `-1 ≤ width` is what the parser leaves, which
+`StarWidthSpec` shows for the one way a negative number could get there. -/
 def PercentFloatMatchesFormat : Prop :=
   ∀ (ctx ctx' : FCtx) (x : F64) (arg : FArg) (i : Nat),
-    getNextArg ctx = .ok (.float x, ctx') → FloatCh arg.ch → -1 ≤ arg.width →
+    getNextArg true ctx = .ok (.float x, ctx') → FloatCh arg.ch → -1 ≤ arg.width →
     arg.prec ≤ 2 ^ 31 - 1 →
     (formatArgFormat ctx arg i >>= fun r => (.ok (outText arg r.1, r.2) : Py (Str × FCtx))) =
       (formatFloatInternal x (pctSpec arg) >>= fun s => .ok (s, ctx'))
@@ -802,6 +802,25 @@ theorem floatBuf_pct (x : F64) (arg : FArg) (hc : FloatCh arg.ch) :
   · simp only [floatBuf, pctSpec, a0, a1, a2, a3, Bool.false_eq_true, if_false, if_neg hp]
     generalize doubleToString _ _ _ _ = y
     cases y <;> rfl
+
+/-- The failure paths of `formatfloat`, unicode_format.c:136-144. A value that is not a real number
+is reported with the conversion, the argument and its type, and an `int` too large for a double keeps
+its `OverflowError`. -/
+def PercentFloatErrors : Prop :=
+  ∀ (ctx : FCtx) (arg : FArg),
+    (∀ v : FObj, (v = .none ∨ (∃ s, v = .str s) ∨ (∃ s e, v = .mapping s e)) →
+      formatFloatPct ctx v arg = .error (formatErr .typeError ctx arg
+        s!"%{Char.ofNat arg.ch} requires a real number, not {v.typeName}")) ∧
+    (∀ n : Int, n.natAbs ≥ 2 ^ 1024 - 2 ^ 970 →
+      formatFloatPct ctx (.int n) arg = .error (.overflowError "int too large to convert to float"))
+
+theorem percentFloatErrors_proven : PercentFloatErrors := by
+  intro ctx arg
+  constructor
+  · intro v hv
+    rcases hv with rfl | ⟨s, rfl⟩ | ⟨s, e, rfl⟩ <;> rfl
+  · intro n hn
+    simp only [formatFloatPct, FObj.asDouble, if_pos hn, bind, Except.bind]
 
 theorem percentFloatMatchesFormat_proven : PercentFloatMatchesFormat := by
   intro ctx ctx' x arg i hn hc hw hp

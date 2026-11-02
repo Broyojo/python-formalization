@@ -31,6 +31,15 @@ def unicodeChar (ch : Nat) : Str × Kind :=
   if ch < 256 then ([ch], if ch < 128 then .ascii else .ucs1)
   else ([ch], kindOfMax ch)
 
+/-- `unicode_char` for any `Py_UCS4`. Since 3.15 this is not an `assert`: an out of range character
+reaches `PyUnicode_New`, unicodeobject.c:1310-1314, which refuses it. The iterators cannot get
+here with one, since they read characters of a `str`. -/
+def unicodeCharChecked (ch : Nat) : Py (Str × Kind) :=
+  if ch < 256 then .ok (unicodeChar ch)
+  else if ch > maxUnicode then
+    .error (.named "SystemError" "invalid maximum character passed to PyUnicode_New")
+  else .ok (unicodeChar ch)
+
 /-- `unicodeiter_next`, unicodeobject.c:14628-14650. -/
 def unicodeiterNext (it : UIter) : UIter × Option (Str × Kind) :=
   match it.seq with
@@ -59,7 +68,7 @@ def unicodeiterLen (it : UIter) : Int :=
   | some s => (s.length : Int) - it.index
   | none => 0
 
-/-- `PyLong_AsSsize_t`, Objects/longobject.c@3.14.7:628-680. It does not call `__index__`. -/
+/-- `PyLong_AsSsize_t`, Objects/longobject.c:708-759. It does not call `__index__`. -/
 def longAsSsize : GObj → Py Int
   | .int v =>
     if v > ssizeMax ∨ v < ssizeMin then

@@ -6,7 +6,7 @@ Properties of `PyUnicodeWriter`.
 
 `CapValue` is the type invariant of `writer->maxchar`, and every operation keeps it. `WInv` is
 sharper: the capacity is exactly what the text needs. Every operation keeps that too, unless a
-decode fails, and that one exception is the defect of gh-158439 on 3.14.
+decode fails, and that one exception is the defect of gh-158439, which 3.15.2 still has.
 -/
 
 namespace PyLean.UnicodeObj
@@ -1052,7 +1052,7 @@ theorem create_inv {n : Int} {w : UWriter} (h : writerCreate n = .ok w) : WInv w
 `_PyUnicode_CheckConsistency` demands one. Unless a decode fails, `Finish` gives one: for every
 script of operations, from any `PyUnicodeWriter_Create`. The precondition on `WriteASCII` is its
 documented one. The decode precondition is the point of the layering: `WriterAlwaysCanonical` is
-this statement without it, and it is false on 3.14. -/
+this statement without it, and it is false on 3.15.2. -/
 def WriterFinishCanonical : Prop :=
   ∀ (n : Int) (w : UWriter) (ops : List WOp), writerCreate n = .ok w →
     (∀ op ∈ ops, op.valid) → (∀ op ∈ ops, op.isDecode = true → ∃ s, opText op = .ok s) →
@@ -1064,7 +1064,7 @@ theorem writerFinishCanonical_proven : WriterFinishCanonical := by
 
 /-- What `WriterFinishCanonical` cannot see, since under its invariant these branches change nothing:
 a one-byte buffer holding at most one character gives the canonical kind whatever the writer has
-been through, failed decodes included. That is the `LATIN1` singleton of `unicode_result`, and
+been through, failed decodes included. That is the `LATIN1` singleton of `_PyUnicode_Result`, and
 `pos == 0` in `_PyUnicodeWriter_Finish`. A `Finish` that kept the buffer's kind fails this at
 `{ text := [97], cap := 255 }`, which a failed decode of `\xc3\xa9\xff` reaches. -/
 def WriterFinishOneByte : Prop :=
@@ -1157,7 +1157,7 @@ theorem writerFailureKeepsState_proven : WriterFailureKeepsState := by
   | decode b size h c => simp [WOp.isDecode] at hd
 
 /-- The same sentence for every operation: a failed operation is not observable afterwards, by
-`Finish` or by anything written later. Refuted on 3.14, by `WriteUTF8` itself, whose documentation
+`Finish` or by anything written later. Refuted on 3.15.2, by `WriteUTF8` itself, whose documentation
 says it. -/
 def WriterFailureUnobservable : Prop :=
   ∀ (w : UWriter) (op : WOp) (e : PyExc) (rest : List WOp), WInv w →

@@ -750,7 +750,7 @@ theorem fromFormatVTwins_proven : FromFormatVTwins := by
     simp [fromFormatConv, fromFormatSwitch, ffBad, ffChar, hs, F_LONG]
 
 /-- `PyUnicodeWriter_Format`, like `WriteUTF8`, is documented to leave the writer unchanged on
-error. Refuted on 3.14: `"%c%c"` writes a wide character and then fails on the second, and what is
+error. Refuted on 3.15.2: `"%c%c"` writes a wide character and then fails on the second, and what is
 left is a writer too wide for its text. gh-158439 names this function too. -/
 def WriterFormatUnobservable : Prop :=
   ∀ (w : UWriter) (fmt : Bytes) (args : List VArg) (e : PyExc), WInv w →
