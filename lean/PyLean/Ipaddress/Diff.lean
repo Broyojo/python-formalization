@@ -4,6 +4,7 @@ import PyLean.Ipaddress.Exploded
 import PyLean.Ipaddress.Parse4
 import PyLean.Ipaddress.Hosts
 import PyLean.Ipaddress.Mask4
+import PyLean.Ipaddress.Parse6
 
 /-! Differential-testing handler for `ipaddress`. A network is `[addr, prefixlen]`. -/
 
@@ -74,6 +75,10 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "hosts" =>
     let n ← getNet j bits "net"
     return encPy toJson (.ok (Json.arr #[toJson (iterList n), toJson (hostsList n), toJson n.numAddresses]) : Py Json)
+  | "v6init" =>
+    return encPy (fun (ip, sc) => Json.arr #[toJson ip, match sc with | some x => toJson (String.ofList x) | none => Json.null,
+        toJson (String.ofList (ipv6Str ip sc))])
+      (ipv6InitStr (← getStr j "s").toList)
   | "mask4" =>
     return encPy toJson (makeNetmask4 (← getStr j "s").toList)
   | "v4init" =>

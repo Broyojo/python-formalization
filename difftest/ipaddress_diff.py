@@ -81,7 +81,36 @@ def gen_mask(rng):
                        "0x18", "1e1", "255.255.255.00", "'", "24\n"])
 
 
+V6_TOKS = ["0", "1", "ffff", "FFFF", "0000", "00000", "12345", "abcd", "g", "", "db8", "001",
+           "1.2.3.4", "01.2.3.4", "255.255.255.255", "1.2.3", "300.1.1.1", " 1", "a.b"]
+
+
+def gen_v6(rng):
+    k = rng.random()
+    if k < 0.35:
+        n = rng.choice([0, 1, 2**128 - 1, 0xffff00000000 | rng.randrange(2**32), rng.randrange(2**128),
+                        rng.randrange(2**16) << (16 * rng.randrange(8)),
+                        int("".join(rng.choice(["0000", "%04x" % rng.randrange(65536)]) for _ in range(8)), 16)])
+        s = str(ipaddress.IPv6Address(n))
+        if rng.random() < 0.3:
+            s = ipaddress.IPv6Address(n).exploded
+        if rng.random() < 0.2:
+            s = s.upper()
+    else:
+        parts = [rng.choice(V6_TOKS) for _ in range(rng.randint(1, 11))]
+        s = ":".join(parts)
+        if rng.random() < 0.3:
+            s = s.replace(":", "::", 1)
+    if rng.random() < 0.15:
+        s += "%" + rng.choice(["eth0", "1", "", "a%b", "x y"])
+    if rng.random() < 0.03:
+        s = rng.choice(["", "::/1", "1" * 46, "1:" * 60, "%", "::%"])
+    return s
+
+
 def gen_case(rng):
+    if rng.random() < 0.15:
+        return {"mod": "ipaddress", "fn": "v6init", "bits": 128, "s": gen_v6(rng)}
     if rng.random() < 0.1:
         return {"mod": "ipaddress", "fn": "mask4", "bits": 32, "s": gen_mask(rng)}
     if rng.random() < 0.3:
@@ -172,6 +201,9 @@ def run_python(c):
     mk = lambda t: Net(tuple(t))
     try:
         fn = c["fn"]
+        if fn == "v6init":
+            a = ipaddress.IPv6Address(c["s"])
+            return {"ok": [a._ip, a.scope_id, str(a)]}
         if fn == "mask4":
             return {"ok": ipaddress.IPv4Network._make_netmask(c["s"])[1]}
         if fn == "hosts":
