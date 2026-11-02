@@ -8,6 +8,7 @@ import PyLean.Ipaddress.Subnets
 import PyLean.Ipaddress.Exploded
 import PyLean.Ipaddress.Parse4Props
 import PyLean.Ipaddress.Hosts
+import PyLean.Ipaddress.Mask4
 
 /-!
 `Lib/ipaddress.py`, CPython 3.15.2. The model covers the integer core of networks,
@@ -134,7 +135,25 @@ def entries : List Entry := [
     statement := "For every valid IPv4 or IPv6 network, list(net) is every address from the network address up, num_addresses counts them, and list(net.hosts()) is that list minus exactly what the documentation excludes (IPv4: network and broadcast below /31; IPv6: the Subnet-Router anycast address below /127)."
     source := "Doc/library/ipaddress.rst, hosts() for IPv4Network and IPv6Network", status := .proven
     prop := ``HostsDoc, thm := some ``hostsDoc_proven
-    notes := "Difftest fn hosts (list, hosts, num_addresses on prefixes within 10 of the maximum): ~9.5k cases over 3 seeds, 100%." }
+    notes := "Difftest fn hosts (list, hosts, num_addresses on prefixes within 10 of the maximum): ~9.5k cases over 3 seeds, 100%." },
+  { id := "ipaddress-v4-mask-roundtrip", pyFile := "Lib/ipaddress.py"
+    pyFns := ["_BaseV4._make_netmask", "_IPAddressBase._prefix_from_prefix_string",
+      "_IPAddressBase._prefix_from_ip_string", "_IPAddressBase._prefix_from_ip_int"]
+    statement := "For every prefix length p in [0, 32], an IPv4 mask string is read as p when it is str(p), the netmask of /p, or (0 < p < 32) the hostmask of /p."
+    source := "Doc/library/ipaddress.rst, IPv4Network: prefix, net mask or host mask", status := .proven
+    prop := ``MaskRoundTrip, thm := some ``maskRoundTrip_proven
+    notes := "Difftest fn mask4 (_make_netmask on prefix strings, netmasks, hostmasks, flipped bits, random quads, junk; exact NetmaskValueError messages): 12k cases over 3 seeds, 100%." },
+  { id := "ipaddress-v4-mask-int", pyFile := "Lib/ipaddress.py"
+    pyFns := ["_BaseV4._make_netmask", "_IPAddressBase._report_invalid_netmask"]
+    statement := "An int IPv4 mask is accepted exactly in [0, 32] as its own prefix length; any other int raises NetmaskValueError('<n> is not a valid netmask')."
+    source := "ipaddress.py:1163-1167; IPv4Network docs, a two-tuple with a prefix length", status := .proven
+    prop := ``MaskInt, thm := some ``maskInt_proven
+    notes := "Smoke-tested: _make_netmask(-1), (0), (32), (33), (2**64)." },
+  { id := "ipaddress-v4-mask-doc-rule", pyFile := "Lib/ipaddress.py"
+    pyFns := ["_IPAddressBase._prefix_from_ip_string", "_IPAddressBase._prefix_from_ip_int", "_BaseV4._make_netmask"]
+    statement := "A dotted mask whose first field is non-zero is accepted only as a netmask, as the documentation's rule says."
+    source := "Doc/library/ipaddress.rst, IPv4Network item 1", status := .refuted
+    prop := ``DocMaskRule, thm := some ``docMaskRule_refuted, bug := some "ipaddress-mask-rule-hostmask-first-field" }
 ]
 
 end PyLean.Ipaddress

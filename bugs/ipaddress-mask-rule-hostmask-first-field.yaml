@@ -1,0 +1,49 @@
+id: ipaddress-mask-rule-hostmask-first-field
+title: "ipaddress: a dotted mask starting with a non-zero field is accepted as a hostmask, against the documented rule"
+priority: P5
+kind: doc-mismatch
+module: ipaddress
+files: [Lib/ipaddress.py, Doc/library/ipaddress.rst]
+functions: ["_IPAddressBase._prefix_from_ip_string", "_BaseV4._make_netmask"]
+summary: |
+  The IPv4Network docs say a dotted mask "is interpreted as a net mask if it starts with a non-zero
+  field, or as a host mask if it starts with a zero field, with the single exception of an all-zero
+  mask which is treated as a net mask". The code tries the netmask reading first and then the
+  hostmask reading, whatever the first field is. So IPv4Network('0.0.0.0/127.255.255.255') is /1
+  and IPv4Network('0.0.0.0/1.255.255.255') is /7, where the documented rule calls both invalid
+  netmasks (NetmaskValueError).
+likelihood: |
+  Low: such masks are unusual. The effect is that a malformed netmask is accepted silently as a
+  hostmask.
+maybe_intended: |
+  Likely the docs simplify; the code's "netmask, else hostmask" rule agrees with the docs on every
+  mask that is valid under the documented rule. Either the docs or the code could change.
+reproducer: |
+  import ipaddress
+  got = [ipaddress.IPv4Network('0.0.0.0/' + m).prefixlen for m in ('127.255.255.255', '1.255.255.255')]
+  print(got)
+  if got == [1, 7]:
+      print('REPRODUCED ipaddress-mask-rule-hostmask-first-field')
+expected: |
+  NetmaskValueError for both, per the documented rule.
+observed: |
+  python3 3.15.2: [1, 7]. REPRODUCED.
+  main (cpython-main/python.exe, 3.16.0a1+dev): same. REPRODUCED by check_bugs.py.
+promised_by: |
+  Doc/library/ipaddress.rst, IPv4Network, item 1 (lines 503-507 in the 3.15 tree).
+cause: |
+  Lib/ipaddress.py:492-524, _prefix_from_ip_string: tries _prefix_from_ip_int(ip_int), then the
+  complement, without looking at the first field.
+possible_fix: |
+  Document the actual rule ("a netmask if it is one, otherwise a hostmask"), or check the first
+  field as documented.
+duplicates:
+  issues: []
+  queries: ["IPv4Network mask non-zero field hostmask", "ipaddress net mask host mask",
+            "ipaddress hostmask interpreted (gh-63002 read: older documentation errors, not this)",
+            "bugforge README: no netmask entry"]
+  note: |
+    Queries run as separate unquoted terms.
+lean:
+  property: PyLean.Ipaddress.DocMaskRule
+  theorem: PyLean.Ipaddress.docMaskRule_refuted

@@ -62,7 +62,28 @@ def gen_v4(rng):
     return ["bytes", [rng.randrange(256) for _ in range(rng.choice([4, 4, 3, 5, 0, 16]))]]
 
 
+def gen_mask(rng):
+    k = rng.random()
+    if k < 0.3:
+        p = rng.randint(0, 40)
+        return rng.choice(["", "0", "00"]) + str(p) if rng.random() < 0.2 else str(p)
+    if k < 0.75:
+        p = rng.randint(0, 32)
+        m = ((1 << 32) - 1) ^ (((1 << 32) - 1) >> p)
+        if rng.random() < 0.5:
+            m ^= (1 << 32) - 1
+        if rng.random() < 0.2:
+            m ^= 1 << rng.randrange(32)
+        return str(ipaddress.IPv4Address(m))
+    if k < 0.9:
+        return str(ipaddress.IPv4Address(rng.randrange(1 << 32)))
+    return rng.choice([" 24", "24 ", "+24", "-1", "", "\u0662\u0664", "1.2.3", "255.255.255.0.0",
+                       "0x18", "1e1", "255.255.255.00", "'", "24\n"])
+
+
 def gen_case(rng):
+    if rng.random() < 0.1:
+        return {"mod": "ipaddress", "fn": "mask4", "bits": 32, "s": gen_mask(rng)}
     if rng.random() < 0.3:
         return {"mod": "ipaddress", "fn": "v4init", "bits": 32, "arg": gen_v4(rng)}
     if rng.random() < 0.15:
@@ -151,6 +172,8 @@ def run_python(c):
     mk = lambda t: Net(tuple(t))
     try:
         fn = c["fn"]
+        if fn == "mask4":
+            return {"ok": ipaddress.IPv4Network._make_netmask(c["s"])[1]}
         if fn == "hosts":
             net = NET[bits](tuple(c["net"]))
             return {"ok": [[int(x) for x in net], [int(x) for x in net.hosts()], net.num_addresses]}
