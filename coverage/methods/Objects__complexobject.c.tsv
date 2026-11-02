@@ -32,7 +32,7 @@ Objects/complexobject.c	675	679	real_to_complex	real_to_complex(PyObject **pobj,
 Objects/complexobject.c	740	773	complex_pow	complex_pow(PyObject *v, PyObject *w, PyObject *z)	modelled	complex-pow-special	
 Objects/complexobject.c	776	783	complex_neg	complex_neg(PyObject *op)	modelled	complex-parts	
 Objects/complexobject.c	786	793	complex_pos	complex_pos(PyObject *op)	modelled	complex-parts	
-Objects/complexobject.c	796	809	complex_abs	complex_abs(PyObject *op)	modelled	complex-abs	
+Objects/complexobject.c	796	809	complex_abs	complex_abs(PyObject *op)	modelled	complex-abs,complex-abs-nan-any-errno	
 Objects/complexobject.c	812	816	complex_bool	complex_bool(PyObject *op)	modelled	complex-bool	
 Objects/complexobject.c	819	872	complex_richcompare	complex_richcompare(PyObject *v, PyObject *w, int op)	modelled	complex-compare	
 Objects/complexobject.c	882	888	complex_conjugate_impl	complex_conjugate_impl(PyComplexObject *self) /*[clinic end generated code: output=5059ef162edfc68e input=71b8ab003e1cec95]*/	modelled	complex-parts	
