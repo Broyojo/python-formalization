@@ -531,7 +531,7 @@ def listReprLoop (rt : Rt) (v : Val) : Nat → Nat → List String → M (List S
       let r ← rt.repr item
       listReprLoop rt v fuel (i + 1) (r :: acc)
 
-/-- The loop of `dict_repr_lock_held`, `Objects/dictobject.c@3.14.7:3434`: `repr(key)`, then
+/-- The loop of `anydict_repr_impl`, `Objects/dictobject.c:3642`: `repr(key)`, then
 `repr(value)`, pair by pair, with the dict read again each time. A deletion during the loop is
 not exact: `_PyDict_Next` walks a table with dummy entries, and the model has a list. -/
 def dictReprLoop (rt : Rt) (v : Val) : Nat → Nat → List String → M (List String)
@@ -650,7 +650,7 @@ def callRepr (rt : Rt) (f : SlotFn) (v : Val) : M Val := do
       let rs ← listReprLoop rt v iterFuel 0 []
       pure (.str ("[" ++ ", ".intercalate rs ++ "]"))
   | .c .dict =>
-    -- `dict_repr_lock_held`, `Objects/dictobject.c@3.14.7:3403`: the guard comes before the empty check.
+    -- `anydict_repr_impl`, `Objects/dictobject.c:3642`: the guard comes before the empty check.
     withRepr v "{...}" do
       let rs ← dictReprLoop rt v iterFuel 0 []
       pure (.str ("{" ++ ", ".intercalate rs ++ "}"))
@@ -1142,7 +1142,7 @@ def raiseWithNote {α : Type} (rt : Rt) (e : PyErr) (note : String) : M α := do
     | .exc c m _ => .exc c m (some x)
     | e => e)
 
-/-- `insertdict`, `Objects/dictobject.c@3.14.7:1891`, with a known hash: an existing entry keeps its key
+/-- `insertdict`, `Objects/dictobject.c:2001`, with a known hash: an existing entry keeps its key
 and takes the value; otherwise the pair goes at the end with its hash recorded. -/
 def dictInsert (rt : Rt) (addr : Addr) (k : Val) (h : Int) (v : Val) : M Unit := do
   match ← dictProbe rt addr k h iterFuel 0 with
@@ -1178,7 +1178,7 @@ def dictDictMergeLoop (rt : Rt) (addr other : Addr) (orig : Nat) : Nat → Nat �
       if (dictEntries w other).length != orig then runtimeErr "dict mutated during update"
       dictDictMergeLoop rt addr other orig fuel (i + 1)
 
-/-- `dict_dict_merge`, `Objects/dictobject.c@3.14.7:3892`. An empty target takes a clone of the table,
+/-- `dict_dict_merge`, `Objects/dictobject.c:4170`. An empty target takes a clone of the table,
 which C does only for a clean `other` (`:4187`); the model has no table to test that on, and the
 difference shows only for keys of equal hash. -/
 def dictDictMerge (rt : Rt) (addr other : Addr) : M Unit := do
@@ -1235,7 +1235,7 @@ def dictMergeLoop (rt : Rt) (addr : Addr) (b it : Val) : Nat → M Unit
       dictSetAt rt addr k v
       dictMergeLoop rt addr b it fuel
 
-/-- `dict_merge`, `Objects/dictobject.c@3.14.7:3991`, with `override` 1. -/
+/-- `dict_merge`, `Objects/dictobject.c:4259`, with `override` 1. -/
 def dictMerge (rt : Rt) (addr : Addr) (x : Val) : M Unit := do
   let w ← getW
   match x, dictOf w x, slotOf w (typeOf w x) .tp_iter == some (.c .dict) with
@@ -1269,10 +1269,13 @@ def dictUpdateArg (rt : Rt) (addr : Addr) (x : Val) : M Unit := do
       let it ← rt.getIter x
       mergeSeq2Loop rt addr it iterFuel 0
 
-/-- `PyDict_Copy`, `Objects/dictobject.c:4549`: a fresh dict, filled by `dict_merge` when the type
-overrides `tp_iter` (`:4490`), so an override is seen. -/
+/-- `PyDict_Copy`, `Objects/dictobject.c:4549`, with `copy_lock_held_untracked`, `:4433`: an empty
+dict copies to a new one and runs nothing, whatever its type overrides. Otherwise a fresh dict is
+filled by `dict_merge`, which sees an overridden `tp_iter`. -/
 def dictCopy (rt : Rt) (x : Val) : M Addr := do
+  let w ← getW
   let d ← allocCell (.val { cls := B.dict, body := .dict [] })
+  if ((anyDictOf w x).getD []).isEmpty then return d
   dictMerge rt d x
   pure d
 
@@ -1602,7 +1605,7 @@ where
     match f, a with
     | .generic, _ => vectorcallMethod rt idunder [a, b]
     | .c .dict, .obj addr =>
-      -- `dict_ior`, `Objects/dictobject.c@3.14.7:4793`.
+      -- `_PyDict_IOr`, `Objects/dictobject.c:5192`.
       dictUpdateArg rt addr b
       pure a
     | .c .mappingproxy, _ =>
@@ -1898,7 +1901,7 @@ def callMpSubscript (rt : Rt) (f : SlotFn) (o key : Val) : M Val := do
   | .c .tuple => bySeq f "tuple"
   | .c .str => bySeq f "str"
   | .c .dict =>
-    -- `dict_subscript`, `Objects/dictobject.c@3.14.7:3505`.
+    -- `_PyDict_Subscript`, `Objects/dictobject.c:3786`.
     let h ← dictHashKey rt key
     let found ← match o with
       | .obj a =>
@@ -1977,7 +1980,7 @@ def callAssSubscript (rt : Rt) (f : SlotFn) (o key : Val) (value : Option Val) :
     | none => let _ ← vectorcallMethod rt "__delitem__" [o, key]
     | some v => let _ ← vectorcallMethod rt "__setitem__" [o, key, v]
   | .c .dict =>
-    -- `dict_ass_sub`, `Objects/dictobject.c@3.14.7:3541`, then `insertdict` or `PyDict_DelItem`.
+    -- `_PyDict_StoreSubscript`, `Objects/dictobject.c:3797`, then `insertdict` or `PyDict_DelItem`.
     let h ← dictHashKey rt key
     match o with
     | .obj a =>
@@ -2305,7 +2308,7 @@ def callContains (rt : Rt) (f : SlotFn) (seq ob : Val) : M Bool := do
   | .c .tuple => anyEq rt ob ((tupleOf w seq).getD [])
   | .c .list => anyEq rt ob ((listOf w seq).getD [])
   | .c .dict =>
-    -- `PyDict_Contains`, `Objects/dictobject.c@3.14.7:4837`.
+    -- `PyDict_Contains`, `Objects/dictobject.c:5248`.
     let h ← dictHashKey rt ob
     match seq with
     | .obj a => pure (← dictProbe rt a ob h iterFuel 0).isSome

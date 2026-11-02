@@ -578,7 +578,7 @@ def genericGetAttr (rt : Rt) (obj : Val) (n : Name) : M Val := do
   | some v => pure v
   | none => gap%
 
-/-- `_Py_type_getattro_impl`, `Objects/typeobject.c@3.14.7:6103`. `suppress` is
+/-- `_Py_type_getattro_stackref`, `Objects/typeobject.c:6620`. `suppress` is
 `suppress_missing_attribute != NULL`. -/
 def typeGetattroImpl (rt : Rt) (ty : Val) (n : Name) (suppress : Bool) : M (Option Val) := do
   let w ← getW
@@ -608,13 +608,13 @@ def typeGetattroImpl (rt : Rt) (ty : Val) (n : Name) (suppress : Bool) : M (Opti
   if suppress then pure none
   else attrErr s!"type object '{trunc 100 (tpName w tyA)}' has no attribute '{n}'"
 
-/-- `_Py_type_getattro`, `Objects/typeobject.c@3.14.7:6195`. -/
+/-- `_Py_type_getattro`, `Objects/typeobject.c:6603`. -/
 def typeGetattro (rt : Rt) (ty : Val) (n : Name) : M Val := do
   match ← typeGetattroImpl rt ty n false with
   | some v => pure v
   | none => gap%
 
-/-- `_super_lookup_descr`, `Objects/typeobject.c@3.14.7:11840`: search the MRO of `objType`
+/-- `_PySuper_LookupDescr`, `Objects/typeobject.c:12693`: search the MRO of `objType`
 strictly after `suType`. -/
 def superLookupDescr (w : World) (suType objType : Addr) (n : Name) : Option Val :=
   match (tdata w objType).mro with

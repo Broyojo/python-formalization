@@ -8,9 +8,7 @@ chaining, notes, __reduce__, ExceptionGroup construction errors, split/subgroup 
 tuple and callable matchers over nested groups, derive overrides, and the C API through
 _testcapi (Lean binds the same names to its model of those functions).
 
-Probes stay away from three things the model leaves out on purpose:
- * eg.args shorter than 2 followed by repr(eg): that is the 3.14.7 crash (bug
-   typeobj-exc-eg-repr-args-oob).
+Probes stay away from two things the model leaves out on purpose:
  * __suppress_context__ = True on an exact MemoryError: the freelist would leak it into the
    next scenario (bug typeobj-exc-memoryerror-freelist-state).
  * the keyword "Did you mean" suggestion of getargs.c: the bad keyword is never close to a
@@ -617,7 +615,9 @@ class X(T.G):
             self.probes(["setattr", name(v), r.choice(["message", "exceptions"]), lit(1)])
             self.probes(["delattr", name(v), r.choice(["message", "exceptions"])])
         if r.random() < 0.1:
-            self.probes(["setattr", name(v), "args", TUPLE(lit(1), r.choice([lit(2), LIST(lit(2))]))])
+            self.probes(["setattr", name(v), "args",
+                         r.choice([TUPLE(lit(1), lit(2)), TUPLE(lit(1), LIST(lit(2))), TUPLE(), TUPLE(lit(1)),
+                                   TUPLE(lit(1), lit(2), LIST(lit(2)))])])
             self.probe(call(name("repr"), name(v)))
 
     def block_group_ctor(self):

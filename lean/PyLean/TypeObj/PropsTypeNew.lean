@@ -158,13 +158,14 @@ theorem slotDictTwiceRejected_proven : SlotDictTwiceRejected := by
 `Objects/typeobject.c:4883-4896`. Anything else, or an absent name, leaves the dict as it
 was. -/
 def WrapInDictOnlyFunctions : Prop :=
-  ∀ (dict : NameDict) (attr : Name) (cls : Addr) (mk : Val → Payload) (v : Val) (w : World),
-    (NameDict.get? dict attr = none → wrapInDict dict attr cls mk w = .ok dict w) ∧
+  ∀ (rt : Rt) (dict : NameDict) (attr : Name) (cls : Addr) (mk : Val → Payload) (v : Val)
+    (w : World),
+    (NameDict.get? dict attr = none → wrapInDict rt dict attr cls mk w = .ok dict w) ∧
     (NameDict.get? dict attr = some v → (∀ f, payloadOf w v ≠ some (.func f)) →
-      wrapInDict dict attr cls mk w = .ok dict w)
+      wrapInDict rt dict attr cls mk w = .ok dict w)
 
 theorem wrapInDictOnlyFunctions_proven : WrapInDictOnlyFunctions := by
-  intro dict attr cls mk v w
+  intro rt dict attr cls mk v w
   constructor
   · intro h; simp [wrapInDict, h]
   · intro h1 h2

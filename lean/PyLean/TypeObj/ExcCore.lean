@@ -284,7 +284,7 @@ def argUnexpectedKeyword (fname : String) (names : List Name) (kw : Kw) : M Unit
   | none => typeErr s!"invalid keyword argument for {fname}()"
 
 /-- `PyArg_ParseTupleAndKeywords(empty_tuple, kwds, "|$OO...:fname", names, ...)`:
-`vgetargskeywords`, `Python/getargs.c@3.14.7:1575`, for keyword-only objects. -/
+`vgetargskeywords`, `Python/getargs.c:2015`, for keyword-only objects. -/
 def argKeywordOnly (fname : String) (names : List Name) (kw : Kw) : M (Name → Option Val) := do
   if kw.length > names.length then
     let l := names.length

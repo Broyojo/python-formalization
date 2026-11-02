@@ -1,7 +1,7 @@
 import PyLean.TypeObj.Mro
 
 /-!
-Class creation: `mro_invoke`, `best_base`, `_PyType_CalculateMetaclass`, `type_new` and its
+Class creation: `mro_invoke`, `find_best_base`, `_PyType_CalculateMetaclass`, `type_new` and its
 helpers, `PyType_Ready` for heap types, `inherit_special`, `inherit_slots`,
 `type_new_set_names`, `type_new_init_subclass`, `__bases__` assignment and `__class__`
 assignment (`Objects/typeobject.c`).
@@ -94,7 +94,7 @@ def mroInvoke (rt : Rt) (t : Addr) : M (List Addr) := do
   let w ← getW
   pure (result.filterMap (asType w))
 
-/-- `mro_internal_unlocked`, `Objects/typeobject.c@3.14.7:3552`. Returns whether the new MRO was
+/-- `mro_internal`, `Objects/typeobject.c:3695`. Returns whether the new MRO was
 stored. The reentrancy test compares by value: the C test is on pointers, which differ
 in the same cases unless a custom `mro()` installs an equal MRO. -/
 def mroInternal (rt : Rt) (t : Addr) : M Bool := do
@@ -107,7 +107,7 @@ def mroInternal (rt : Rt) (t : Addr) : M Bool := do
     modType t fun d => { d with mro := some newMro }
     pure true
 
-/-- The loop of `best_base`, `Objects/typeobject.c:3757-3795`. `winner` is the most derived
+/-- The loop of `find_best_base`, `Objects/typeobject.c:3757-3795`. `winner` is the most derived
 solid base so far, `base` the base that provided it. -/
 def bestBaseLoop (w : World) : List Val → Option Addr → Option Addr → Except String Addr
   | [], _, some b => .ok b
@@ -127,7 +127,7 @@ def bestBaseLoop (w : World) : List Val → Option Addr → Option Addr → Exce
           else if isSubtype w candidate win then bestBaseLoop w rest (some candidate) (some bi)
           else .error "multiple bases have instance lay-out conflict"
 
-/-- `best_base`, `Objects/typeobject.c@3.14.7:3614`. -/
+/-- `find_best_base`, `Objects/typeobject.c:3747`. -/
 def bestBase (bases : List Val) : M Addr := do
   let w ← getW
   match bestBaseLoop w bases none none with
@@ -282,8 +282,16 @@ def typeNewGetSlots (rt : Rt) (ctx : TypeNewCtx) (dict : NameDict) : M TypeNewCt
       | none => pySequenceTuple rt slots
     pure { ctx with slots := some items, nslot := items.length }
 
-/-- `PyStaticMethod_New`/`PyClassMethod_New`, `Objects/funcobject.c:1993`, `:1727`. -/
-def wrapInDict (dict : NameDict) (attr : Name) (cls : Addr) (mk : Val → Payload) :
+/-- `functools_wraps`, `Objects/funcobject.c:1391`, with `functools_copy_attr`. -/
+def functoolsWraps (rt : Rt) (wrapper wrapped : Val) : M Unit := do
+  for n in ["__module__", "__name__", "__qualname__", "__doc__"] do
+    match ← rt.getOptionalAttr wrapped n with
+    | some v => rt.setAttr wrapper n (some v)
+    | none => pure ()
+
+/-- `PyStaticMethod_New`/`PyClassMethod_New`, `Objects/funcobject.c:1993`, `:1727`. They go through
+`sm_set_callable` and `cm_set_callable`, so the wrapper has the attributes of the function. -/
+def wrapInDict (rt : Rt) (dict : NameDict) (attr : Name) (cls : Addr) (mk : Val → Payload) :
     M NameDict := do
   let w ← getW
   match NameDict.get? dict attr with
@@ -291,12 +299,13 @@ def wrapInDict (dict : NameDict) (attr : Name) (cls : Addr) (mk : Val → Payloa
     match payloadOf w f with
     | some (.func _) =>
       let s ← alloc cls (mk f)
+      functoolsWraps rt s f
       pure (NameDict.set dict attr s)
     | _ => pure dict
   | none => pure dict
 
 /-- `type_new_set_attrs`, `Objects/typeobject.c:4862`, on the dict, before descriptors. -/
-def typeNewSetAttrs (ctx : TypeNewCtx) (t : Addr) (dict0 : NameDict) : M NameDict := do
+def typeNewSetAttrs (rt : Rt) (ctx : TypeNewCtx) (t : Addr) (dict0 : NameDict) : M NameDict := do
   if ctx.name.contains (Char.ofNat 0) then
     valueErr "type name must not contain null characters"
   let w ← getW
@@ -313,9 +322,9 @@ def typeNewSetAttrs (ctx : TypeNewCtx) (t : Addr) (dict0 : NameDict) : M NameDic
       | some qs => pure (NameDict.erase dict "__qualname__", qs)
     | none => pure (dict, ctx.name)
   modType t fun d => { d with qualname := qual }
-  let dict ← wrapInDict dict "__new__" B.staticmethod .staticmethod
-  let dict ← wrapInDict dict "__init_subclass__" B.classmethod .classmethod
-  let dict ← wrapInDict dict "__class_getitem__" B.classmethod .classmethod
+  let dict ← wrapInDict rt dict "__new__" B.staticmethod .staticmethod
+  let dict ← wrapInDict rt dict "__init_subclass__" B.classmethod .classmethod
+  let dict ← wrapInDict rt dict "__class_getitem__" B.classmethod .classmethod
   pure dict
 
 /-- `type_add_common_descriptor`, `Objects/typeobject.c:4684`: the cached getset of `object`, and
@@ -492,7 +501,7 @@ def addSubclass (b t : Addr) : M Unit :=
 def removeSubclass (b t : Addr) : M Unit :=
   modType b fun d => { d with subclasses := d.subclasses.filter (· != t) }
 
-/-- `type_ready`, `Objects/typeobject.c@3.14.7:8936`, for a heap type. -/
+/-- `type_ready`, `Objects/typeobject.c:9584`, for a heap type. -/
 def typeReady (rt : Rt) (t : Addr) (members : List Name) : M Unit := do
   let _ ← mroInternal rt t
   typeReadySetNew t
@@ -540,7 +549,7 @@ def typeNewImpl (rt : Rt) (ctx0 : TypeNewCtx) (orig : NameDict) : M Val := do
     dict := orig, asNumber := true, asSequence := true, asMapping := true, asAsync := true,
     asBuffer := true, heap := true, baseType := true,
     htSlots := names.bind fun n => if n.isEmpty then none else some n })
-  let dict ← typeNewSetAttrs ctx t orig
+  let dict ← typeNewSetAttrs rt ctx t orig
   let members := names.getD []
   let dict ← typeNewDescriptors ctx t ctx.nslot dict
   let dict ← typeNewSetCell "__classcell__" (.obj t) dict
@@ -732,7 +741,7 @@ def mroHierarchy (rt : Rt) : Nat → Addr → M (List (Addr × Option (List Addr
       acc := acc ++ more
     pure acc
 
-/-- `type_set_bases_unlocked`, `Objects/typeobject.c@3.14.7:1792`. A failure while recomputing
+/-- `type_check_new_bases` and `type_set_bases_unlocked`, `Objects/typeobject.c:1905`, `:1968`. A failure while recomputing
 restores `tp_bases`, `tp_base` and every MRO already changed (`undo`, `bail`). -/
 def typeSetBases (rt : Rt) (t : Addr) (value : Option Val) : M Unit := do
   checkSetSpecial t value "__bases__"

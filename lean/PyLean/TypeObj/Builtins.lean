@@ -237,7 +237,7 @@ def initialState : World × NameDict :=
     bootstrap
     let mut env : NameDict := builtinTable.filterMap fun r =>
       if r.name == "NoneType" || r.name == "ellipsis" then none else some (r.name, Val.obj r.addr)
-    -- `INIT_ALIAS`, `Objects/exceptions.c@3.14.7:4545`.
+    -- `_PyBuiltins_AddExceptions`, `Objects/exceptions.c:4614`.
     env := NameDict.set (NameDict.set env "EnvironmentError" (.obj B.OSError)) "IOError" (.obj B.OSError)
     env := NameDict.set (NameDict.set env "NotImplemented" .notImpl) "Ellipsis" .ellipsis
     for (n, b) in builtinFunctions do

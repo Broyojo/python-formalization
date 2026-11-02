@@ -2040,7 +2040,7 @@ def fam_repin(g):
     the layout checks of __class__ and __bases__ assignment, deleting special attributes, private
     names in method.__reduce__, ImportError.__repr__ and the repr of a group with replaced args."""
     r = g.rng
-    which = r.randrange(9)
+    which = r.randrange(10)
     fd = name("frozendict")
     cls(g, "A", (), [g.method("m", "A.m", ["s"], [["ret", lit(1)]])])
     # The source does not mangle, so the private method goes in by hand.
@@ -2071,11 +2071,21 @@ def fam_repin(g):
                 g.probe(["cmp", op, name("p"), w])
                 g.probe(["cmp", op, w, name("p")])
     elif which == 1:
-        log = r.random() < 0.5
+        # An empty dict copies without running anything, whatever its type overrides.
+        ga = [["log", "O.__getattribute__"]]
+        ga.append(["raise", call(name("AttributeError"), lit("ga"))] if r.random() < 0.5 else
+                  ["ret", call(attr(name("object"), "__getattribute__"), name("s"), name("n"))])
+        cls(g, "O", ["dict"], [g.method("__iter__", "O.__iter__", ["s"], [["log", "O.__iter__"],
+                                                                         ["ret", call(name("iter"), ["list", []])]]),
+                               g.method("__getattribute__", "O.__getattribute__", ["s", "n"], ga)])
+        for x in [call(name("O")), call(name("O"), ["dict", [[lit("k"), lit(1)]]])]:
+            for y in [call(name("O")), call(name("O"), ["dict", [[lit("j"), lit(2)]]]), ["dict", []]]:
+                g.probe(["bin", "|", x, y])
+                g.probe(["bin", "|", y, x])
         sink = [["log", "E.__eq__"]]
         if r.random() < 0.3:
             sink.append(["raise", call(name("ValueError"), lit("e"))])
-        sink.append(["assign_attr", name("s"), "got", name("o")] if False else ["ret", r.choice([lit(True), lit(False), lit(5)])])
+        sink.append(["ret", r.choice([lit(True), lit(False), lit(5)])])
         body = [g.method("__eq__", "E.__eq__", ["s", "o"], sink),
                 g.method("__ne__", "E.__ne__", ["s", "o"], [["log", "E.__ne__"], ["ret", lit(0)]]),
                 ["assign", "__hash__", NONE]]
@@ -2099,8 +2109,7 @@ def fam_repin(g):
             d = ["sub", attr(name("A"), "__dict__"), lit(k)]
             g.probe(d)
             g.probe(call(name("repr"), d))
-            g.probe(["is", d, ["sub", attr(name("B"), "__dict__"), lit(k)]] if False else
-                    ["is", d, ["sub", attr(name("W") if k == "__weakref__" else name("DD"), "__dict__"), lit(k)]])
+            g.probe(["is", d, ["sub", attr(name("W") if k == "__weakref__" else name("DD"), "__dict__"), lit(k)]])
             for a in ["__name__", "__qualname__", "__objclass__"]:
                 g.probe(attr(d, a))
             g.probe(call(attr(d, "__reduce__")))
@@ -2122,8 +2131,6 @@ def fam_repin(g):
         base = r.choice(["tuple", "int", "str", "bytes", "list", "dict", "float", "type", "ValueError", "object"])
         slots = r.choice([["a"], ["a", "b"], ["__dict__"], ["__weakref__"], ["a", "__dict__", "__weakref__"],
                           ["__dict__", "__dict__"], [], ["1x"], ["a", "a"], [1]])
-        body = [["assign", "__slots__", ["tuple", [lit(x) for x in slots]]]]
-        g.main.append(["try_cls", "T", base, body] if False else ["assign", "T", NONE])
         src = call(name("type"), lit("T"), ["tuple", [name(base)]],
                    ["dict", [[lit("__slots__"), ["tuple", [lit(x) for x in slots]]]]])
         g.probe(src)
@@ -2163,7 +2170,6 @@ def fam_repin(g):
                 g.probe(attr(name(x), "__bases__"))
                 g.probe(attr(name(x), "__base__"))
             else:
-                g.main.append(["assign", "o", call(name(r.choice(names)))] if False else ["assign", "o", NONE])
                 g.probes(["setattr", call(name(x)), "__class__", name(y)])
     elif which == 5:
         for t in ["int", "A", "type", "object"]:
@@ -2199,6 +2205,51 @@ def fam_repin(g):
             g.probe(call(name("repr"), name("e")))
         g.probe(attr(name("ImportCycleError"), "__mro__"))
         g.probe(call(name("issubclass"), name("ImportCycleError"), name("ImportError")))
+    elif which == 8:
+        ctor = name(r.choice(["classmethod", "staticmethod"]))
+        fail = r.random() < 0.3
+        cls(g, "G", (), [g.method("__call__", "G.__call__", ["s"], [["ret", lit(4)]]),
+                         ["assign", "__doc__", lit("gdoc")]])
+        cls(g, "H", [], [g.method("__getattr__", "H.__getattr__", ["s", "n"], [["log", "H.__getattr__"]] +
+                                  ([["raise", call(name("ValueError"), lit("h"))]] if fail else []) +
+                                  [["raise", call(name("AttributeError"), lit("n"))]]),
+                         g.method("__call__", "H.__call__", ["s"], [["ret", lit(5)]])])
+        cls(g, "CM", [ctor[1]], [g.method("__init__", "CM.__init__", ["s", "x"], [["log", "CM.__init__"]])])
+        g.main.append(["assign", "f", attr(name("A"), "m")])
+        g.main.append(["assign", "c", call(ctor, name("f"))])
+        for e in [attr(name("c"), "__name__"), attr(name("c"), "__qualname__"), attr(name("c"), "__doc__"),
+                  attr(name("c"), "__module__"), attr(name("c"), "__func__"), attr(name("c"), "__wrapped__"),
+                  call(name("list"), attr(name("c"), "__dict__"))]:
+            g.probe(e)
+        g.probes(["setattr", name("f"), "__name__", lit("renamed")])
+        g.probe(call(attr(name("c"), "__init__"), name("f")))
+        g.probe(attr(name("c"), "__name__"))
+        g.main.append(["assign", "other", call(name("G"))])
+        g.probe(call(attr(name("c"), "__init__"), name("other")))
+        g.probe(call(name("repr"), call(name("type"), attr(name("c"), "__func__"))))
+        g.probe(attr(name("c"), "__doc__"))
+        g.probe(call(ctor))
+        g.probe(call(ctor, lit(1), lit(2)))
+        g.probe(call(ctor, name("f"), kw=[("k", lit(1))]))
+        g.probe(call(attr(ctor, "__new__"), ctor))
+        g.probe(call(name("repr"), call(name("type"), call(attr(call(attr(ctor, "__new__"), ctor, name("f")), "__get__"), name("a")))))
+        g.probe(call(attr(ctor, "__new__"), name("int"), name("f")))
+        g.probe(call(attr(call(ctor, name("f")), "__init__")))
+        g.probe(call(attr(call(ctor, name("f")), "__init__"), name("f"), kw=[("k", lit(1))]))
+        g.probe(call(ctor, call(name("H"))))
+        g.probe(call(name("CM"), name("f")))
+        g.probe(attr(call(name("CM"), name("f")), "__func__"))
+        g.probe(attr(call(name("CM"), name("f")), "__name__"))
+        g.probe(attr(call(name("CM"), NONE), "__func__"))
+        g.probe(call(ctor, NONE))
+        cls(g, "K", (), [g.method("__new__", "K.__new__", ["c"], [["ret", call(attr(name("object"), "__new__"), name("c"))]]),
+                         g.method("__init_subclass__", "K.__init_subclass__", ["c"], [["ret", NONE]]),
+                         g.method("__class_getitem__", "K.__class_getitem__", ["c", "x"], [["ret", name("x")]])])
+        for k in ["__new__", "__init_subclass__", "__class_getitem__"]:
+            d = ["sub", attr(name("K"), "__dict__"), lit(k)]
+            g.probe(attr(d, "__name__"))
+            g.probe(attr(d, "__qualname__"))
+            g.probe(call(name("list"), attr(d, "__dict__")))
     else:
         g.main.append(["assign", "e", call(name("ExceptionGroup"), lit("x"),
                                            r.choice([["list", [call(name("ValueError"), lit(1))]],

@@ -4,7 +4,7 @@ import PyLean.TypeObj.Model
 `slotdefs` and slot maintenance: `Objects/typeobject.c:11684-12358`.
 
 Omitted from `slotdefs`: the four `tp_getattr`/`tp_setattr` lines (`:11685-11688`). Those
-slots are NULL in every type this model has, so `resolve_slotdups` skips them and
+slots are NULL in every type this model has, so `update_one_slot` skips them and
 `update_one_slot` leaves them NULL.
 -/
 
@@ -117,7 +117,7 @@ def setSlot (slots : List (Slot × SlotFn)) (s : Slot) (v : Option SlotFn) :
 /-- `slotptr(type, offset) != NULL`: the struct holding `s` exists. -/
 def slotExists (w : World) (t : Addr) (s : Slot) : Bool := hasGroup w t s.group
 
-/-- `resolve_slotdups`, `Objects/typeobject.c@3.14.7:11213`: the unique filled slot among the
+/-- The loop over `slotdefs_dups`, `Objects/typeobject.c:12053`: the unique filled slot among the
 slotdefs named `n`, if exactly one is filled. -/
 def resolveSlotdups (w : World) (t : Addr) (n : Name) : Option Slot :=
   let filled := (slotdefs.filter (·.name == n)).filter fun p =>
@@ -174,7 +174,7 @@ def updateOneSlotStep (w : World) (t : Addr) (ptr : Slot) (st : UpdState) (p : S
         else { st with useGeneric := true, generic := p.generic }
       | _ => { st with useGeneric := true, generic := p.generic }
 
-/-- `update_one_slot`, `Objects/typeobject.c@3.14.7:11308`, for the slot `ptr`. -/
+/-- `update_one_slot`, `Objects/typeobject.c:12006`, for the slot `ptr`. -/
 def updateOneSlotValue (w : World) (t : Addr) (ptr : Slot) : Option SlotFn :=
   let st := (slotdefs.filter (·.slot == ptr)).foldl (updateOneSlotStep w t ptr) {}
   if st.specific.isSome && !st.useGeneric then st.specific else st.generic
@@ -210,7 +210,7 @@ def updateSubclasses (attr : Name) (slots : List Slot) : Nat → World → Addr 
       if NameDict.contains (tdata w sub).dict attr then w
       else updateSubclasses attr slots fuel w sub) w
 
-/-- `update_slot`, `Objects/typeobject.c@3.14.7:11439`. -/
+/-- `update_slot`, `Objects/typeobject.c:12188`. -/
 def updateSlot (w : World) (t : Addr) (n : Name) : World :=
   match slotsNamed n with
   | [] => w

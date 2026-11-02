@@ -2,7 +2,7 @@ import PyLean.Core
 import PyLean.TypeObj.Gap
 
 /-!
-# The Python object model (CPython 3.14.7)
+# The Python object model (CPython 3.15.2)
 
 This file is the shared vocabulary of the data model: values, the heap, type
 objects, descriptors, exceptions, and the monad every interpreter-level function

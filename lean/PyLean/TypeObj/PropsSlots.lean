@@ -255,7 +255,7 @@ theorem slotDescrSetDispatch_proven : SlotDescrSetDispatch := by
   simp [slotTpDescrSet]
 
 /-- `slot_tp_descr_get` passes `None` for a missing instance or type, and returns the
-descriptor unchanged if `__get__` went away, `Objects/typeobject.c@3.14.7:10529-10544`. -/
+descriptor unchanged if `__get__` went away, `Objects/typeobject.c:11231`. -/
 def SlotDescrGetArgs : Prop :=
   ∀ (rt : Rt) (self get : Val) (ty : Val) (w : World),
     (findInMro w (typeOf w self) "__get__" = some get →

@@ -155,7 +155,7 @@ theorem typeGetattroMetaDataDescriptorFirst_proven : TypeGetattroMetaDataDescrip
   cases h : callDescrGet rt g m (some ty) (some (.obj (typeOf w ty))) w <;> simp [h]
 
 /-- The class's own lookup beats non-data attributes of the metaclass, and is bound with
-`obj = NULL`, `Objects/typeobject.c@3.14.7:6156`. -/
+`obj = NULL`, `Objects/typeobject.c:6690`. -/
 def TypeGetattroClassAttrNext : Prop :=
   ∀ (rt : Rt) (ty : Val) (t : Addr) (n : Name) (a : Val) (lg : SlotFn) (w : World),
     ty = .obj t →

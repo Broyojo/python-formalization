@@ -455,22 +455,32 @@ def propertyInit (rt : Rt) (self : Val) (args : List Val) (kw : Kw) : M Unit := 
       else catchMatch B.AttributeError set (pure ())
   | _ => gap%
 
-/-- `functools_wraps`, `Objects/funcobject.c:1391`: copy `__module__`, `__name__`,
-`__qualname__`, `__doc__` onto the wrapper, then its `__dict__` gets `__wrapped__`... in
-3.14 the function copies four attributes through `functools_copy_attr`. -/
-def functoolsWraps (rt : Rt) (wrapper wrapped : Val) : M Unit := do
-  for n in ["__module__", "__name__", "__qualname__", "__doc__"] do
-    match ← rt.getOptionalAttr wrapped n with
-    | some v => rt.setAttr wrapper n (some v)
-    | none => pure ()
+/-- `cm_new`, `sm_new`, `Objects/funcobject.c:1557`, `:1819`: `__new__` takes the callable, so a
+subclass that skips `__init__` still has one. -/
+def descrWrapNew (rt : Rt) (name : String) (t : Addr) (args : List Val) (kw : Kw)
+    (mk : Val → Payload) : M Val := do
+  noKeywords name kw
+  unpackTuple name 1 1 args.length
+  match args with
+  | [c] =>
+    let v ← alloc t (mk c)
+    functoolsWraps rt v c
+    pure v
+  | _ => gap%
 
-/-- `cm_init`, `sm_init`, `Objects/funcobject.c:1580`, `:1842`. -/
+/-- `cm_init`, `sm_init`, `Objects/funcobject.c:1580`, `:1842`, and `cm_set_callable`, `sm_set_callable`
+(`:1544`, `:1806`): the callable of `cm_new` is not set again, so nothing is copied twice. -/
 def descrWrapInit (rt : Rt) (name : String) (self : Val) (args : List Val) (kw : Kw)
     (mk : Val → Payload) : M Unit := do
   noKeywords name kw
   unpackTuple name 1 1 args.length
+  let w ← getW
   match args, self with
   | [c], .obj a =>
+    let cur := match payloadOf w self with
+      | some (.classmethod f) | some (.staticmethod f) => some f
+      | _ => none
+    if cur.any (·.is c) then return ()
     modObj a fun o => { o with body := mk c }
     functoolsWraps rt self c
   | _, _ => gap%
@@ -572,7 +582,9 @@ def callTpNew (rt : Rt) (f : SlotFn) (t : Addr) (args : List Val) (kw : Kw) : M 
       typeErr s!"mappingproxy() argument must be a mapping, not {typeName w m}"
     alloc B.mappingproxy (.proxy m)
   | .c .frozendict => frozendictNew rt t args kw
-  | .c .list | .c .dict | .c .property | .c .classmethod | .c .staticmethod | .c .super =>
+  | .c .classmethod => descrWrapNew rt "classmethod" t args kw .classmethod
+  | .c .staticmethod => descrWrapNew rt "staticmethod" t args kw .staticmethod
+  | .c .list | .c .dict | .c .property | .c .super =>
     alloc t (freshBody w t)
   | .c .none =>
     if excessArgs args kw then typeErr "NoneType takes no arguments" else pure .none
@@ -631,7 +643,7 @@ def typeCall (rt : Rt) (t : Addr) (args : List Val) (kw : Kw) : M Val := do
       pure obj
     | none => pure obj
 
-/-- `tp_new_wrapper`, `Objects/typeobject.c@3.14.7:9821`. -/
+/-- `tp_new_wrapper`, `Objects/typeobject.c:10513`. -/
 def tpNewWrapper (rt : Rt) (ty : Addr) (args : List Val) (kw : Kw) : M Val := do
   let w ← getW
   let tn := tpName w ty
@@ -1096,9 +1108,9 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
     | _ => gap%
   | .numDunderFormat =>
     -- `int.__format__` and `float.__format__`, `_PyLong_FormatAdvancedWriter` and
-    -- `_PyFloat_FormatAdvancedWriter`, `Python/formatter_unicode.c@3.14.7:1590`, `@3.14.7:1652`: an empty
-    -- spec is the `str` of the number, and type `s` is `unknown_presentation_type` (@3.14.7:1584,
-    -- @3.14.7:1642). Other specs belong to `LongObj` and `Binary64`.
+    -- `_PyFloat_FormatAdvancedWriter`, `Objects/unicode_formatter.c:1828`, `:1890`: an empty
+    -- spec is the `str` of the number, and type `s` is `unknown_presentation_type` (`:1880`,
+    -- `:1923`). Other specs belong to `LongObj` and `Binary64`.
     match args with
     | [s] =>
       match strOf w s with
@@ -1110,8 +1122,8 @@ def callBuiltin (rt : Rt) (b : Builtin) (self : Option Val) (args : List Val) (k
     | _ => gap%
   | .strDunderFormat =>
     -- `unicode___format___impl` through `_PyUnicode_FormatAdvancedWriter`,
-    -- `Python/formatter_unicode.c`: an empty spec is `PyObject_Str`, and spec `s` takes the fast
-    -- path at `@3.14.7:913`, which hands back the object itself, subclass and all. Other specs belong
+    -- `Objects/unicode_formatter.c:1792`: an empty spec is `PyObject_Str`, and spec `s` takes the
+    -- fast path of `format_string_internal`, which hands back the object itself, subclass and all. Other specs belong
     -- to `UnicodeObj`.
     match args with
     | [s] =>
