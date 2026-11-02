@@ -18,6 +18,6 @@ Objects/sliceobject.c	379	390	evaluate_slice_index	evaluate_slice_index(PyObject
 Objects/sliceobject.c	397	523	_PySlice_GetLongIndices	_PySlice_GetLongIndices(PySliceObject *self, PyObject *length, PyObject **start_ptr, PyObject **stop_ptr, PyObject **step_ptr)	modelled	rangeslice-indices-in-bounds,rangeslice-range-slice	
 Objects/sliceobject.c	528	553	slice_indices	slice_indices(PyObject *op, PyObject* len)	modelled	rangeslice-indices-in-bounds,rangeslice-slice-errors	
 Objects/sliceobject.c	564	568	slice_reduce	slice_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))	todo		
-Objects/sliceobject.c	581	625	slice_richcompare	slice_richcompare(PyObject *v, PyObject *w, int op)	todo		
+Objects/sliceobject.c	581	625	slice_richcompare	slice_richcompare(PyObject *v, PyObject *w, int op)	modelled	rangeslice-slice-hash-eq	
 Objects/sliceobject.c	628	635	slice_traverse	slice_traverse(PyObject *op, visitproc visit, void *arg)	todo		
-Objects/sliceobject.c	651	663	slice_hash	slice_hash(PyObject *op)	todo		
+Objects/sliceobject.c	651	663	slice_hash	slice_hash(PyObject *op)	modelled	rangeslice-slice-hash-eq	

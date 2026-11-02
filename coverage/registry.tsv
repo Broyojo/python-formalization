@@ -144,6 +144,7 @@ rangeslice-setstate-clips	refuted	Objects/rangeobject.c	range_iterator___setstat
 rangeslice-setstate-skips	proven	Objects/rangeobject.c	range_iterator___setstate___impl,longrange_iterator___setstate___impl
 rangeslice-setstate-state-types	proven	Objects/rangeobject.c	range_iterator___setstate___impl,longrange_iterator___setstate___impl
 rangeslice-getindices-contract	refuted	Objects/sliceobject.c	PySlice_GetIndices
+rangeslice-slice-hash-eq	proven	Objects/sliceobject.c	slice_hash,slice_richcompare
 mathint-isqrt-floor-sqrt	proven	Modules/mathintegermodule.c	math.integer.isqrt,_approximate_isqrt
 mathint-comb-formula	proven	Modules/mathintegermodule.c	math.integer.comb,perm_comb_small,perm_comb
 mathint-perm-formula	proven	Modules/mathintegermodule.c	math.integer.perm,perm_comb_small,perm_comb
