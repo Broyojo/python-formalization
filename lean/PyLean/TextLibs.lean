@@ -1469,7 +1469,14 @@ def entries : List Entry := [
     pyFns := ["Element.remove"]
     statement := "The same theorem, credited to the Python twin's remove, which turns every ValueError (one raised by __eq__ included) into ValueError('x not in self')."
     source := "the implementation disagreeing with itself (C and Python twins)", status := .proven
-    prop := ``Etree.RemoveTwins, thm := some ``Etree.removeTwins_proven }
+    prop := ``Etree.RemoveTwins, thm := some ``Etree.removeTwins_proven },
+  { id := "textlibs-etree-remove-twins-all", pyFile := "Lib/xml/etree/ElementTree.py"
+    pyFns := ["Element.remove", "_elementtree_Element_remove_impl"]
+    statement := "Element.remove leaves the same children in both twins for every argument, Element or not."
+    source := "the implementation disagreeing with itself (C and Python twins)", status := .refuted
+    prop := ``Etree.RemoveTwinsAll, thm := some ``Etree.removeTwinsAll_refuted
+    bug := some "textlibs-etree-py-twin-setitem"
+    notes := "e.remove(5) with a child whose __eq__ is true: C's Clinic refuses 5, the twin's list.remove removes the child before its iselement check runs." }
 ]
 
 end PyLean.TextLibs

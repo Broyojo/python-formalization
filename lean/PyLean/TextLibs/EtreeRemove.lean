@@ -38,10 +38,13 @@ def removeLoopC (cmp : Cmp α σ) (x : α) : Nat → σ → List α → Nat → 
         | (.ok true, kids, s) => (kids, s, .ok (some i))
         | (.ok false, kids, s) => removeLoopC cmp x f s kids (i + 1)
 
-/-- `Element.remove` for an Element `x` (Clinic has checked the type), :1673-1720: not found is
+/-- `Element.remove`, :1663-1720: Clinic's `subclass_of` check first (`isElem`); not found is
 `ValueError("%R not in %R")`; found at `i` removes it unless the comparison left fewer than
 `i + 1` children. -/
-def removeC (cmp : Cmp α σ) (fuel : Nat) (s : σ) (kids : List α) (x : α) : List α × Py Unit :=
+def removeC (cmp : Cmp α σ) (fuel : Nat) (s : σ) (kids : List α) (x : α) (isElem : Bool := true) :
+    List α × Py Unit :=
+  if !isElem then (kids, .error (.typeError "~remove() argument must be xml.etree.ElementTree.Element"))
+  else
   match removeLoopC cmp x fuel s kids 0 with
   | (kids, _, .error e) => (kids, .error e)
   | (kids, _, .ok none) => (kids, .error (.valueError "~%R not in %R"))
@@ -69,15 +72,22 @@ def listRemoveM (cmp : Cmp α σ) (fuel : Nat) (s : σ) (l : List α) (x : α) :
   | (l, _, .ok none) => (l, .error (.valueError "list.remove(x): x not in list"))
   | (l, _, .ok (some i)) => (listAssSlice l (i : Int) ((i : Int) + 1) [], .ok ())
 
-/-- `Element.remove` in the twin, for an Element `x`: any `ValueError`, including one raised by an
-`__eq__`, becomes `ValueError(f"{subelement!r} not in {self!r}")`. -/
-def removePy (cmp : Cmp α σ) (fuel : Nat) (s : σ) (kids : List α) (x : α) : List α × Py Unit :=
+/-- `Element.remove` in the twin, ElementTree.py:247-270: `list.remove` first; any `ValueError`,
+one raised by an `__eq__` included, becomes `TypeError` when `x` is a class or has no `tag`
+(`iselement`, duck typing; `iselement` here is that test's result) and otherwise
+`ValueError(f"{subelement!r} not in {self!r}")`. -/
+def removePy (cmp : Cmp α σ) (fuel : Nat) (s : σ) (kids : List α) (x : α) (iselement : Bool := true) :
+    List α × Py Unit :=
   match listRemoveM cmp fuel s kids x with
-  | (l, .error (.valueError _)) => (l, .error (.valueError "~%r not in %r"))
+  | (l, .error (.valueError _)) =>
+    if !iselement then (l, .error (.typeError "~expected an Element, not %s"))
+    else (l, .error (.valueError "~%r not in %r"))
   | r => r
 
 /-- For every comparator, however it raises or mutates the children in place, `remove` of an
-Element leaves the same children and raises the same exception class in both twins. -/
+Element (one that passes both twins' checks, the documented precondition) leaves the same children
+and raises the same exception class in both twins. `removeTwinsAll_refuted` drops the
+precondition. -/
 def RemoveTwins : Prop :=
   ∀ (α σ : Type) [DecidableEq α] (cmp : Cmp α σ) (fuel : Nat) (s : σ) (kids : List α) (x : α),
     (removeC cmp fuel s kids x).1 = (removePy cmp fuel s kids x).1 ∧
@@ -130,5 +140,18 @@ theorem removeTwins_proven : RemoveTwins := by
     · by_cases h : i < l.length
       · simp [h, eraseIdx_slice l i h, Agree]
       · simp [h, slice_noop l i h, Agree]
+
+/-- The same for every object, Element or not, each twin applying its own check. -/
+def RemoveTwinsAll : Prop :=
+  ∀ (α σ : Type) [DecidableEq α] (cmp : Cmp α σ) (fuel : Nat) (s : σ) (kids : List α) (x : α) (b : Bool),
+    (removeC cmp fuel s kids x b).1 = (removePy cmp fuel s kids x b).1
+
+/-- `e.remove(5)` where the only child's `__eq__(5)` is true: C's Clinic refuses 5 and leaves the
+child; the twin's `list.remove` removes it. -/
+theorem removeTwinsAll_refuted : ¬ RemoveTwinsAll := by
+  intro h
+  have := h Nat Unit (fun _ l _ _ => (.ok true, l, ())) 5 () [0] 5 false
+  revert this
+  decide
 
 end PyLean.TextLibs.Etree

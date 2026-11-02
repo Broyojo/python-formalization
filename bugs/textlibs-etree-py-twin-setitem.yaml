@@ -15,6 +15,10 @@ summary: |
   PySequence_Fast before appending, so an iterator that yields two Elements and then raises leaves
   the element unchanged in C and with both appended in the twin (which, like list.extend, appends
   as it goes). Neither is documented; recorded as a twin difference.
+  Element.remove checks its argument only after list.remove has searched: e.remove(5) with a child
+  whose __eq__ returns True removes that child in the twin, while C's Argument Clinic refuses 5
+  with TypeError before searching (3.15 added the twin's TypeError to match C, but after the
+  search).
   The twin also checks the value before the index, so e[100] = 5 raises TypeError there and
   IndexError in C; that difference is cosmetic and is recorded only for completeness.
 likelihood: |
