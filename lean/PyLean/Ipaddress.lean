@@ -10,6 +10,7 @@ import PyLean.Ipaddress.Parse4Props
 import PyLean.Ipaddress.Hosts
 import PyLean.Ipaddress.Mask4
 import PyLean.Ipaddress.Parse6Props
+import PyLean.Ipaddress.Compress6
 
 /-!
 `Lib/ipaddress.py`, CPython 3.15.2. The model covers the integer core of networks,
@@ -162,7 +163,13 @@ def entries : List Entry := [
     pyFns := ["_IPAddressBase._prefix_from_ip_string", "_IPAddressBase._prefix_from_ip_int", "_BaseV4._make_netmask"]
     statement := "A dotted mask whose first field is non-zero is accepted only as a netmask, as the documentation's rule says."
     source := "Doc/library/ipaddress.rst, IPv4Network item 1", status := .refuted
-    prop := ``DocMaskRule, thm := some ``docMaskRule_refuted, bug := some "ipaddress-mask-rule-hostmask-first-field" }
+    prop := ``DocMaskRule, thm := some ``docMaskRule_refuted, bug := some "ipaddress-mask-rule-hostmask-first-field" },
+  { id := "ipaddress-v6-compress-rfc5952", pyFile := "Lib/ipaddress.py"
+    pyFns := ["_BaseV6._compress_hextets", "_BaseV6._string_from_ip_int"]
+    statement := "For every 128-bit int, _string_from_ip_int writes the eight hextets in '%x' joined by ':' when no two adjacent hextets are zero, and otherwise replaces the first longest run of zero hextets (length at least two) by '::'."
+    source := "RFC 5952 4.2; the ipaddress docs' compressed form", status := .proven
+    prop := ``CompressRFC5952, thm := some ``compressRFC5952_proven
+    notes := "The loop of _compress_hextets reads a hextet only through hextet == '0', and '%x' % v == '0' iff v == 0, so the fold runs on the Bool mask; decide checks the run it ends on for all 256 masks. Smoke: 165k ints (every zero mask, random densities, 3 seeds) agree with python3 3.15.2." }
 ]
 
 end PyLean.Ipaddress
