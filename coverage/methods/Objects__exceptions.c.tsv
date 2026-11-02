@@ -3,13 +3,13 @@ Objects/exceptions.c	30	34	get_exc_state	get_exc_state(void)	excluded		internal-
 Objects/exceptions.c	42	46	PyBaseExceptionObject_CAST	PyBaseExceptionObject_CAST(PyObject *exc)	excluded		no-behaviour: pointer cast with a debug assert
 Objects/exceptions.c	52	77	BaseException_new	BaseException_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-vectorcall-twin	
 Objects/exceptions.c	80	88	BaseException_init	BaseException_init(PyObject *op, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-vectorcall-twin	
-Objects/exceptions.c	92	121	BaseException_vectorcall	BaseException_vectorcall(PyObject *type_obj, PyObject * const*args, size_t nargsf, PyObject *kwnames)	todo		changed-in-3.15: was typeobj-exc-vectorcall-twin
+Objects/exceptions.c	92	121	BaseException_vectorcall	BaseException_vectorcall(PyObject *type_obj, PyObject * const*args, size_t nargsf, PyObject *kwnames)	modelled	typeobj-exc-vectorcall-twin	
 Objects/exceptions.c	125	135	BaseException_clear	BaseException_clear(PyObject *op)	modelled	typeobj-exc-memoryerror-freelist-fresh	
 Objects/exceptions.c	138	147	BaseException_dealloc	BaseException_dealloc(PyObject *op)	excluded		no-behaviour: deallocation; the object model has no reference counts
 Objects/exceptions.c	150	160	BaseException_traverse	BaseException_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
 Objects/exceptions.c	163	182	BaseException_str	BaseException_str(PyObject *op)	todo		
 Objects/exceptions.c	185	202	BaseException_repr	BaseException_repr(PyObject *op)	todo		
-Objects/exceptions.c	212	219	BaseException___reduce___impl	BaseException___reduce___impl(PyBaseExceptionObject *self) /*[clinic end generated code: output=af87c1247ef98748 input=283be5a10d9c964f]*/	todo		changed-in-3.15: was typeobj-exc-reduce,typeobj-exc-nameerror-reduce
+Objects/exceptions.c	212	219	BaseException___reduce___impl	BaseException___reduce___impl(PyBaseExceptionObject *self) /*[clinic end generated code: output=af87c1247ef98748 input=283be5a10d9c964f]*/	modelled	typeobj-exc-nameerror-reduce,typeobj-exc-reduce	
 Objects/exceptions.c	235	258	BaseException___setstate___impl	BaseException___setstate___impl(PyBaseExceptionObject *self, PyObject *state) /*[clinic end generated code: output=f3834889950453ab input=f9b1aea70382cdb6]*/	modelled	typeobj-exc-setstate	
 Objects/exceptions.c	271	278	BaseException_with_traceback_impl	BaseException_with_traceback_impl(PyBaseExceptionObject *self, PyObject *tb) /*[clinic end generated code: output=81e92f2387927f10 input=b5fb64d834717e36]*/	modelled	typeobj-exc-traceback-setter	
 Objects/exceptions.c	290	318	BaseException_add_note_impl	BaseException_add_note_impl(PyBaseExceptionObject *self, PyObject *note) /*[clinic end generated code: output=fb7cbcba611c187b input=e60a6b6e9596acaf]*/	modelled	typeobj-exc-add-note	
@@ -41,15 +41,15 @@ Objects/exceptions.c	835	840	SystemExit_clear	SystemExit_clear(PyObject *op)	exc
 Objects/exceptions.c	843	848	SystemExit_dealloc	SystemExit_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
 Objects/exceptions.c	851	856	SystemExit_traverse	SystemExit_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
 Objects/exceptions.c	875	879	PyBaseExceptionGroupObject_CAST	PyBaseExceptionGroupObject_CAST(PyObject *exc)	excluded		no-behaviour: pointer cast with a debug assert
-Objects/exceptions.c	882	1007	BaseExceptionGroup_new	BaseExceptionGroup_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		changed-in-3.15: was typeobj-exc-eg-rejects-non-exception,typeobj-exc-eg-no-base-in-exception,typeobj-exc-eg-wraps,typeobj-exc-eg-rejects-empty,typeobj-exc-eg-repr-after-new
-Objects/exceptions.c	1010	1023	_PyExc_CreateExceptionGroup	_PyExc_CreateExceptionGroup(const char *msg_str, PyObject *excs)	todo		changed-in-3.15: was typeobj-exc-eg-created-through-class
+Objects/exceptions.c	882	1007	BaseExceptionGroup_new	BaseExceptionGroup_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-eg-no-base-in-exception,typeobj-exc-eg-rejects-empty,typeobj-exc-eg-rejects-non-exception,typeobj-exc-eg-repr-after-new,typeobj-exc-eg-wraps	
+Objects/exceptions.c	1010	1023	_PyExc_CreateExceptionGroup	_PyExc_CreateExceptionGroup(const char *msg_str, PyObject *excs)	modelled	typeobj-exc-eg-created-through-class	
 Objects/exceptions.c	1026	1035	BaseExceptionGroup_init	BaseExceptionGroup_init(PyObject *self, PyObject *args, PyObject *kwds)	modelled	typeobj-exc-eg-init	
 Objects/exceptions.c	1038	1045	BaseExceptionGroup_clear	BaseExceptionGroup_clear(PyObject *op)	excluded		no-behaviour: GC tp_clear; drops references, no Python-visible effect while the object is reachable
 Objects/exceptions.c	1048	1053	BaseExceptionGroup_dealloc	BaseExceptionGroup_dealloc(PyObject *self)	excluded		no-behaviour: deallocation; the object model has no reference counts
 Objects/exceptions.c	1056	1063	BaseExceptionGroup_traverse	BaseExceptionGroup_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC tp_traverse
 Objects/exceptions.c	1066	1077	BaseExceptionGroup_str	BaseExceptionGroup_str(PyObject *op)	modelled	typeobj-exc-eg-str	
-Objects/exceptions.c	1080	1126	BaseExceptionGroup_repr	BaseExceptionGroup_repr(PyObject *op)	todo		changed-in-3.15: was typeobj-exc-eg-repr-in-bounds,typeobj-exc-eg-repr-after-new,typeobj-exc-eg-repr-saved
-Objects/exceptions.c	1136	1148	BaseExceptionGroup_derive_impl	BaseExceptionGroup_derive_impl(PyBaseExceptionGroupObject *self, PyObject *excs) /*[clinic end generated code: output=4307564218dfbf06 input=f72009d38e98cec1]*/	todo		changed-in-3.15: was typeobj-exc-eg-created-through-class
+Objects/exceptions.c	1080	1126	BaseExceptionGroup_repr	BaseExceptionGroup_repr(PyObject *op)	modelled	typeobj-exc-eg-repr-after-new,typeobj-exc-eg-repr-in-bounds,typeobj-exc-eg-repr-saved	
+Objects/exceptions.c	1136	1148	BaseExceptionGroup_derive_impl	BaseExceptionGroup_derive_impl(PyBaseExceptionGroupObject *self, PyObject *excs) /*[clinic end generated code: output=4307564218dfbf06 input=f72009d38e98cec1]*/	modelled	typeobj-exc-eg-created-through-class	
 Objects/exceptions.c	1151	1230	exceptiongroup_subset	exceptiongroup_subset( PyBaseExceptionGroupObject *_orig, PyObject *excs, PyObject **result)	modelled	typeobj-exc-subset-metadata,typeobj-exc-subset-suppress-context,typeobj-exc-subset-checks,typeobj-exc-split-partition	
 Objects/exceptions.c	1245	1276	get_matcher_type	get_matcher_type(PyObject *value, _exceptiongroup_split_matcher_type *type)	modelled	typeobj-exc-matcher-type	
 Objects/exceptions.c	1279	1314	exceptiongroup_split_check_match	exceptiongroup_split_check_match(PyObject *exc, _exceptiongroup_split_matcher_type matcher_type, PyObject *matcher_value)	modelled	typeobj-exc-match-by-type,typeobj-exc-split-partition,typeobj-exc-instance-ids	

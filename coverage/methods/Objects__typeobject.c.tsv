@@ -161,7 +161,7 @@ Objects/typeobject.c	4158	4172	valid_identifier	valid_identifier(PyObject *s)	to
 Objects/typeobject.c	4175	4194	type_init	type_init(PyObject *cls, PyObject *args, PyObject *kwds)	todo		
 Objects/typeobject.c	4198	4201	PyType_GetFlags	PyType_GetFlags(PyTypeObject *type)	todo		changed-in-3.15:
 Objects/typeobject.c	4205	4208	PyType_SUPPORTS_WEAKREFS	PyType_SUPPORTS_WEAKREFS(PyTypeObject *type)	todo		
-Objects/typeobject.c	4213	4246	_PyType_CalculateMetaclass	_PyType_CalculateMetaclass(PyTypeObject *metatype, PyObject *bases)	todo		changed-in-3.15: was typeobj-metaclass-conflict,typeobj-metaclass-winner
+Objects/typeobject.c	4213	4246	_PyType_CalculateMetaclass	_PyType_CalculateMetaclass(PyTypeObject *metatype, PyObject *bases)	modelled	typeobj-metaclass-conflict,typeobj-metaclass-winner	
 Objects/typeobject.c	4272	4302	type_new_visit_slots	type_new_visit_slots(type_new_ctx *ctx)	todo		
 Objects/typeobject.c	4310	4375	type_new_copy_slots	type_new_copy_slots(type_new_ctx *ctx, PyObject *dict)	todo		
 Objects/typeobject.c	4379	4414	type_new_slots_bases	type_new_slots_bases(type_new_ctx *ctx)	todo		
@@ -184,7 +184,7 @@ Objects/typeobject.c	4927	4954	type_new_get_slots	type_new_get_slots(type_new_ct
 Objects/typeobject.c	4958	4997	type_new_init	type_new_init(type_new_ctx *ctx)	todo		changed-in-3.15:
 Objects/typeobject.c	5001	5043	type_new_impl	type_new_impl(type_new_ctx *ctx)	todo		changed-in-3.15:
 Objects/typeobject.c	5047	5114	type_new_get_bases	type_new_get_bases(type_new_ctx *ctx, PyObject **type)	todo		changed-in-3.15:
-Objects/typeobject.c	5118	5169	type_new	type_new(PyTypeObject *metatype, PyObject *args, PyObject *kwds)	todo		changed-in-3.15: was typeobj-type-new-args
+Objects/typeobject.c	5118	5169	type_new	type_new(PyTypeObject *metatype, PyObject *args, PyObject *kwds)	modelled	typeobj-type-new-args	
 Objects/typeobject.c	5173	5187	type_vectorcall	type_vectorcall(PyObject *metatype, PyObject *const *args, size_t nargsf, PyObject *kwnames)	todo		
 Objects/typeobject.c	5193	5196	_align_up	_align_up(Py_ssize_t size)	excluded		no-behaviour: object allocator or free list
 Objects/typeobject.c	5199	5236	check_basicsize_includes_size_and_offsets	check_basicsize_includes_size_and_offsets(PyTypeObject* type)	todo		
