@@ -1,8 +1,8 @@
 import PyLean.Core
 
 /-!
-Model of the integer core of CPython `Lib/ipaddress.py` (3.14, identical on
-main at the time of writing): network construction from `(int, int)`,
+Model of the integer core of CPython `Lib/ipaddress.py` (3.15.2): network
+construction from `(int, int)`,
 `summarize_address_range`, `subnets`, `supernet`, `__getitem__`,
 `__contains__`, `overlaps`, `subnet_of` and `address_exclude`.
 
@@ -26,7 +26,7 @@ structure Net where
   prefixlen : Nat
   deriving Repr, DecidableEq, Inhabited
 
-/-- `_ALL_ONES`, ipaddress.py:1143 and :1623. -/
+/-- `_ALL_ONES`, ipaddress.py:1143 and :1619. -/
 def allOnes (bits : Nat) : Nat := 2 ^ bits - 1
 
 /-- `_ip_int_from_prefix`, ipaddress.py:424-434. -/
@@ -69,7 +69,7 @@ def countRighthandZeroBits (number bits : Nat) : Nat :=
   if number = 0 then bits
   else min bits (bitLength (notAnd number (number - 1)))
 
-/-- The `while` loop of `summarize_address_range`, ipaddress.py:241-250.
+/-- The `while` loop of `summarize_address_range`, ipaddress.py:242-249.
 `fuel` bounds the iteration count; the caller passes the range length plus one,
 which suffices because each iteration advances `first` by at least one and
 the extra unit pays for the final `first > last` test. -/
@@ -86,7 +86,7 @@ def summarizeLoop (bits last : Nat) : Nat → Nat → Py (List Net)
     else .ok []
 
 /-- `list(summarize_address_range(first, last))` for two addresses of the same
-version, ipaddress.py:197-250. -/
+version, ipaddress.py:197-249. -/
 def summarizeAddressRange (bits first last : Nat) : Py (List Net) :=
   if first > last then .error (.valueError "last IP address must be greater than first")
   else summarizeLoop bits last (last - first + 2) first

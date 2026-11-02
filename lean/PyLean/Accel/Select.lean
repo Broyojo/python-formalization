@@ -2,15 +2,19 @@ import PyLean.Accel.Bisect
 import PyLean.Accel.Heap
 
 /-!
-Model of the pure-Python-only parts of `heapq` (CPython 3.14.7): `nsmallest`,
+Model of the pure-Python-only parts of `heapq` (CPython 3.15.2): `nsmallest`,
 `nlargest` (Lib/heapq.py:477-593) and `merge` (:330-408), over ints with an
 optional pure key function. They have no C twin; at run time they call
 whatever `heapify`/`heapreplace`/... the module exports (the C ones when
 `_heapq` is present). The model uses the Python twins; `HeapTwinsAgree` and
 `HeapifyTwinsAgree` show the C ones compute the same lists for every `lt`.
 
-An iterable is a list of ints plus a flag saying whether it is a sized
-container (so `len(iterable)` succeeds) or a bare iterator.
+An iterable is the list of ints it yields plus three things about `len(iterable)`,
+which is a callback (:491-497, :551-557). `sized` says it does not raise
+`TypeError` or `AttributeError`, the two classes the source catches. `size` is what
+it returns, by default the true count; `__len__` can report any other number,
+nothing checks the two against each other, and since 3.15 a low count is observable.
+`lenRaises` is any other exception, which propagates.
 
 Python compares the decorated tuples `(elem, order)`, `(key, order, elem)` and
 the merge entries `[value, order, next]` lexicographically. The `order` fields
@@ -76,15 +80,18 @@ def nsmallestKeyLoop (key : Int → Int) (result : List (Int × Int × Int)) (to
       nsmallestKeyLoop key result top (order + 1) rest
     else nsmallestKeyLoop key result top order rest
 
-/-- `heapq.nsmallest(n, iterable, key=key)`, Lib/heapq.py:477-535. `sized`
-says whether `len(iterable)` works (@3.14.7:491-497). `zip(range(n), it)` takes the
-first `max(n, 0)` items without consuming more. -/
-def nsmallest (n : Int) (it : List Int) (sized : Bool) (key : Option (Int → Int)) : Py (List Int) := do
+/-- `heapq.nsmallest(n, iterable, key=key)`, Lib/heapq.py:477-535. Only the `n != 1`
+path calls `len(iterable)` (:491-497); 3.15 returns `sorted(iterable, key=key)` there
+with no `[:n]`. `zip(range(n), it)` takes the first `max(n, 0)` items without
+consuming more. -/
+def nsmallest (n : Int) (it : List Int) (sized : Bool) (key : Option (Int → Int))
+    (size : Int := it.length) (lenRaises : Option PyExc := none) : Py (List Int) := do
   if n = 1 then
     return match pyMinMax (fun a b => decide (a < b)) key it with
       | none => []
       | some r => [r]
-  if sized ∧ n ≥ it.length then return sliceTo (pySorted key it) n
+  if let some e := lenRaises then throw e
+  if sized ∧ n ≥ size then return pySorted key it
   let firstN := (it.take n.toNat).zipIdx
   let rest := it.drop n.toNat
   match key with
@@ -130,15 +137,18 @@ def nlargestKeyLoop (key : Int → Int) (result : List (Int × Int × Int)) (top
       nlargestKeyLoop key result top (order - 1) rest
     else nlargestKeyLoop key result top order rest
 
-/-- `heapq.nlargest(n, iterable, key=key)`, Lib/heapq.py:537-593.
-`zip(range(0, -n, -1), it)` pairs the first `max(n, 0)` items with orders
-`0, -1, -2, ...`; `result.sort(reverse=True)` is a descending stable sort. -/
-def nlargest (n : Int) (it : List Int) (sized : Bool) (key : Option (Int → Int)) : Py (List Int) := do
+/-- `heapq.nlargest(n, iterable, key=key)`, Lib/heapq.py:537-593, with `len(iterable)`
+as in `nsmallest` (:551-557). `zip(range(0, -n, -1), it)` pairs the first `max(n, 0)`
+items with orders `0, -1, -2, ...`; `result.sort(reverse=True)` is a descending
+stable sort. -/
+def nlargest (n : Int) (it : List Int) (sized : Bool) (key : Option (Int → Int))
+    (size : Int := it.length) (lenRaises : Option PyExc := none) : Py (List Int) := do
   if n = 1 then
     return match pyMinMax (fun a b => decide (a > b)) key it with
       | none => []
       | some r => [r]
-  if sized ∧ n ≥ it.length then return sliceTo (pySortedRev key it) n
+  if let some e := lenRaises then throw e
+  if sized ∧ n ≥ size then return pySortedRev key it
   let firstN := (it.take n.toNat).zipIdx
   let rest := it.drop n.toNat
   match key with

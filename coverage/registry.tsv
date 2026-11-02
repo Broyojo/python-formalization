@@ -9,14 +9,18 @@ ipaddress-summarize-reversed	proven	Lib/ipaddress.py	summarize_address_range
 ipaddress-subnets-partition	proven	Lib/ipaddress.py	_BaseNetwork.subnets
 ipaddress-supernet-contains	proven	Lib/ipaddress.py	_BaseNetwork.supernet
 ipaddress-address-exclude-partition	proven	Lib/ipaddress.py	_BaseNetwork.address_exclude
-datetime-ordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ymd2ord,_ord2ymd,_is_leap,_days_before_year,_days_in_month,_days_before_month,_check_date_fields,C datetime_date_fromordinal_impl,C date_toordinal,C ord_to_ymd,C ymd_to_ord,C is_leap,C days_in_month,C days_before_month,C days_before_year,C check_date_args
+ipaddress-exploded-total	refuted	Lib/ipaddress.py	_BaseV6._explode_shorthand_ip_string
+ipaddress-exploded-keeps-suffix	refuted	Lib/ipaddress.py	IPv6Address._explode_shorthand_ip_string,_BaseV6._explode_shorthand_ip_string
+ipaddress-exploded-by-case	proven	Lib/ipaddress.py	IPv6Address._explode_shorthand_ip_string,_BaseV6._explode_shorthand_ip_string
+ipaddress-exploded-hextets	proven	Lib/ipaddress.py	_BaseV6._explode_shorthand_ip_string
+ipaddress-iface-unspecified	proven	Lib/ipaddress.py	IPv4Interface.is_unspecified,IPv6Interface.is_unspecified
+datetime-ordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ymd2ord,_ord2ymd,_is_leap,_days_before_year,_days_in_month,_days_before_month,_check_date_fields,C date_fromordinal,C date_toordinal,C ord_to_ymd,C ymd_to_ord,C is_leap,C days_in_month,C days_before_month,C days_before_year,C check_date_args
 datetime-toordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ord2ymd,_ymd2ord,C ord_to_ymd,C ymd_to_ord
 datetime-date-add-timedelta	proven	Lib/_pydatetime.py	date.__add__,_ymd2ord,_ord2ymd,_check_date_fields,C add_date_timedelta,C date_add,C normalize_y_m_d,C normalize_date,C ord_to_ymd,C ymd_to_ord
-datetime-isocalendar-roundtrip	proven	Lib/_pydatetime.py	date.isocalendar,date.fromisocalendar,_isoweek_to_gregorian,_isoweek1monday,C date_isocalendar,C datetime_date_fromisocalendar_impl,C iso_week1_monday,C weekday
+datetime-isocalendar-roundtrip	proven	Lib/_pydatetime.py	date.isocalendar,date.fromisocalendar,_isoweek_to_gregorian,_isoweek1monday,C date_isocalendar,C date_fromisocalendar,C iso_week1_monday,C weekday
 datetime-fromisocalendar-exact	proven	Lib/_pydatetime.py	date.fromisocalendar,date.isocalendar,_isoweek_to_gregorian,_isoweek1monday
-datetime-fromisocalendar-twins	refuted	Lib/_pydatetime.py	date.fromisocalendar,_isoweek_to_gregorian
-datetime-fromisocalendar-twins-cint	proven	Lib/_pydatetime.py	date.fromisocalendar,_isoweek_to_gregorian,C datetime_date_fromisocalendar_impl
-datetime-timedelta-ctor-twins	proven	Lib/_pydatetime.py	timedelta.__new__,C delta_new_impl,C accum,C microseconds_to_delta_ex,C new_delta_ex,C check_delta_day_range,C checked_divmod,C normalize_pair,C normalize_d_s_us,C divmod
+datetime-fromisocalendar-twins	proven	Lib/_pydatetime.py	date.fromisocalendar,_isoweek_to_gregorian,C date_fromisocalendar
+datetime-timedelta-ctor-twins	proven	Lib/_pydatetime.py	timedelta.__new__,C delta_new,C accum,C microseconds_to_delta_ex,C new_delta_ex,C check_delta_day_range,C checked_divmod,C normalize_pair,C normalize_d_s_us,C divmod
 datetime-timedelta-ctor-exact	proven	Lib/_pydatetime.py	timedelta.__new__,timedelta.days,timedelta.seconds,timedelta.microseconds
 datetime-timedelta-ops-twins	proven	Lib/_pydatetime.py	timedelta.__add__,timedelta.__sub__,timedelta.__neg__,timedelta.__abs__,timedelta.__mul__,timedelta.__floordiv__,timedelta.__truediv__,timedelta.__mod__,timedelta.__divmod__,timedelta._to_microseconds,_divide_and_round,C delta_add,C delta_subtract,C delta_negative,C delta_abs,C delta_multiply,C delta_divide,C delta_truedivide,C delta_remainder,C delta_divmod,C multiply_int_timedelta,C divide_timedelta_int,C divide_timedelta_timedelta,C truedivide_timedelta_int,C divide_nearest,C delta_to_microseconds
 datetime-timedelta-divmod	proven	Lib/_pydatetime.py	timedelta.__divmod__,timedelta.__floordiv__,timedelta.__mod__,timedelta._to_microseconds
@@ -28,21 +32,19 @@ datetime-timezone-range	proven	Lib/_pydatetime.py	timezone.__new__,C new_timezon
 datetime-timezone-name	proven	Lib/_pydatetime.py	timezone.__str__,timezone.tzname,timezone._name_from_offset,C timezone_str,C timezone_tzname
 datetime-tzinfo-base	proven	Lib/_pydatetime.py	tzinfo.tzname,tzinfo.utcoffset,tzinfo.dst,C tzinfo_nogo,C tzinfo_tzname,C tzinfo_utcoffset,C tzinfo_dst
 datetime-timezone-methods	proven	Lib/_pydatetime.py	timezone.utcoffset,timezone.dst,timezone.__eq__,timezone.__hash__,timezone.__getinitargs__,C timezone_utcoffset,C timezone_dst,C timezone_richcompare,C timezone_hash,C timezone_getinitargs
-datetime-timezone-new	proven	Lib/_pydatetime.py	timezone.__new__,timezone._create,C timezone_new_impl,C create_timezone,C new_timezone
+datetime-timezone-new	proven	Lib/_pydatetime.py	timezone.__new__,timezone._create,C timezone_new,C create_timezone,C new_timezone
 datetime-time-offsets	proven	Lib/_pydatetime.py	time.utcoffset,time.dst,_check_utc_offset,C call_tzinfo_method,C call_utcoffset,C call_dst,C get_tzinfo_member,C time_utcoffset,C time_dst
 datetime-datetime-offsets	proven	Lib/_pydatetime.py	datetime.utcoffset,datetime.dst,_check_utc_offset,C call_tzinfo_method,C call_utcoffset,C call_dst,C get_tzinfo_member,C datetime_utcoffset,C datetime_dst
 datetime-tzname-twins	proven	Lib/_pydatetime.py	time.tzname,datetime.tzname,_check_tzname,C time_tzname,C datetime_tzname,C call_tzname
 datetime-time-repr	proven	Lib/_pydatetime.py	time.__repr__,_get_class_module,C time_repr,C append_keyword_tzinfo,C append_keyword_fold
 datetime-datetime-repr	proven	Lib/_pydatetime.py	datetime.__repr__,_get_class_module,C datetime_repr,C append_keyword_tzinfo,C append_keyword_fold
-datetime-time-isoformat-twins	proven	Lib/_pydatetime.py	time.isoformat,time._tzstr,_format_time,_format_offset,C datetime_time_isoformat_impl,C time_str,C format_utcoffset
-datetime-datetime-isoformat-twins	proven	Lib/_pydatetime.py	datetime.isoformat,datetime.__str__,_format_time,_format_offset,C datetime_datetime_isoformat_impl,C datetime_str,C format_utcoffset
-datetime-replace-combine	proven	Lib/_pydatetime.py	time.replace,datetime.replace,datetime.combine,datetime.date,datetime.time,datetime.timetz,C datetime_time_replace_impl,C datetime_datetime_replace_impl,C datetime_datetime_combine_impl,C datetime_getdate,C datetime_gettime,C datetime_gettimetz
-datetime-time-pickle	proven	Lib/_pydatetime.py	time._getstate,time.__setstate,time.__reduce_ex__,time.__reduce__,C time_getstate,C time_from_pickle,C datetime_time___reduce_ex___impl,C datetime_time___reduce___impl
-datetime-datetime-pickle	proven	Lib/_pydatetime.py	datetime._getstate,datetime.__setstate,datetime.__reduce_ex__,datetime.__reduce__,C datetime_getstate,C datetime_from_pickle,C datetime_datetime___reduce_ex___impl,C datetime_datetime___reduce___impl
-datetime-time-ctor	proven	Lib/_pydatetime.py	time.__new__,_check_time_fields,_check_tzinfo_arg,C time_new,C datetime_time_impl,C new_time_ex2,C check_time_args,C check_tzinfo_subclass
-datetime-time-ctor-fold-twins	refuted	Lib/_pydatetime.py	time.__new__,_check_time_fields,C time_new
-datetime-datetime-ctor	proven	Lib/_pydatetime.py	datetime.__new__,_check_date_fields,_check_time_fields,_check_tzinfo_arg,C datetime_new,C datetime_datetime_impl,C new_datetime_ex2,C check_date_args,C check_time_args,C check_tzinfo_subclass
-datetime-datetime-ctor-fold-twins	refuted	Lib/_pydatetime.py	datetime.__new__,_check_date_fields,_check_time_fields,C datetime_new
+datetime-time-isoformat-twins	proven	Lib/_pydatetime.py	time.isoformat,time._tzstr,_format_time,_format_offset,C time_isoformat,C time_str,C format_utcoffset
+datetime-datetime-isoformat-twins	proven	Lib/_pydatetime.py	datetime.isoformat,datetime.__str__,_format_time,_format_offset,C datetime_isoformat,C datetime_str,C format_utcoffset
+datetime-replace-combine	proven	Lib/_pydatetime.py	time.replace,datetime.replace,datetime.combine,datetime.date,datetime.time,datetime.timetz,C datetime_time_replace_impl,C datetime_datetime_replace_impl,C datetime_combine,C datetime_getdate,C datetime_gettime,C datetime_gettimetz
+datetime-time-pickle	proven	Lib/_pydatetime.py	time._getstate,time.__setstate,time.__reduce_ex__,time.__reduce__,C time_getstate,C time_from_pickle,C time_reduce_ex,C time_reduce
+datetime-datetime-pickle	proven	Lib/_pydatetime.py	datetime._getstate,datetime.__setstate,datetime.__reduce_ex__,datetime.__reduce__,C datetime_getstate,C datetime_from_pickle,C datetime_reduce_ex,C datetime_reduce
+datetime-time-ctor	proven	Lib/_pydatetime.py	time.__new__,_check_time_fields,_check_tzinfo_arg,C time_new,C new_time_ex2,C check_time_args,C check_tzinfo_subclass
+datetime-datetime-ctor	proven	Lib/_pydatetime.py	datetime.__new__,_check_date_fields,_check_time_fields,_check_tzinfo_arg,C datetime_new,C new_datetime_ex2,C check_date_args,C check_time_args,C check_tzinfo_subclass
 datetime-time-compare-base	proven	Lib/_pydatetime.py	time.__eq__,time.__le__,time.__lt__,time.__ge__,time.__gt__,time._cmp,_cmp,C time_richcompare,C diff_to_bool
 datetime-time-compare-twins	refuted	Lib/_pydatetime.py	time.__eq__,time._cmp,C time_richcompare
 datetime-time-hash-total	refuted	Lib/_pydatetime.py	time.__hash__
@@ -56,7 +58,7 @@ datetime-date-timetuple	proven	Lib/_pydatetime.py	date.timetuple,_build_struct_t
 datetime-ctime	proven	Lib/_pydatetime.py	date.ctime,datetime.ctime,C date_ctime,C datetime_ctime,C format_ctime
 datetime-date-repr	proven	Lib/_pydatetime.py	date.__repr__,_get_class_module,C date_repr
 datetime-date-pickle	proven	Lib/_pydatetime.py	date._getstate,date.__setstate,date.__reduce__,C date_getstate,C date_from_pickle,C date_reduce
-datetime-date-ctor	proven	Lib/_pydatetime.py	date.__new__,_check_date_fields,C date_new,C datetime_date_impl,C new_date_ex,C check_date_args
+datetime-date-ctor	proven	Lib/_pydatetime.py	date.__new__,_check_date_fields,C date_new,C new_date_ex,C check_date_args
 datetime-isocalendardate	proven	Lib/_pydatetime.py	IsoCalendarDate.__new__,IsoCalendarDate.year,IsoCalendarDate.week,IsoCalendarDate.weekday,IsoCalendarDate.__repr__,C iso_calendar_date_repr,C iso_calendar_date_year,C iso_calendar_date_week,C iso_calendar_date_weekday
 datetime-datetime-sub-twins	proven	Lib/_pydatetime.py	datetime.__sub__,C datetime_subtract,C delta_cmp,C delta_subtract
 datetime-datetime-add	proven	Lib/_pydatetime.py	datetime.__add__,C datetime_add,C add_datetime_timedelta,C normalize_datetime
@@ -67,43 +69,38 @@ datetime-datetime-timetuple	proven	Lib/_pydatetime.py	datetime.timetuple,C datet
 datetime-datetime-utctimetuple	proven	Lib/_pydatetime.py	datetime.utctimetuple,C datetime_utctimetuple
 datetime-datetime-compare	proven	Lib/_pydatetime.py	datetime.__eq__,datetime.__le__,datetime.__lt__,datetime.__ge__,datetime.__gt__,datetime._cmp,_cmp,C datetime_richcompare,C diff_to_bool,C flip_fold,C get_flip_fold_offset,C pep495_eq_exception
 datetime-strftime-twins	refuted	Lib/_pydatetime.py	_wrap_strftime,C wrap_strftime
-datetime-astimezone-twins	refuted	Lib/_pydatetime.py	datetime.astimezone,C datetime_datetime_astimezone_impl
+datetime-astimezone-twins	refuted	Lib/_pydatetime.py	datetime.astimezone,C datetime_astimezone
 datetime-time-pickle-ctor-twins	refuted	Lib/_pydatetime.py	time.__new__,C time_new
 datetime-mktime-twins	proven	Lib/_pydatetime.py	datetime._mktime,C local_to_seconds
 datetime-mktime-fixed	proven	Lib/_pydatetime.py	datetime._mktime,C local_to_seconds
 datetime-utc-to-seconds	proven	Lib/_pydatetime.py	C utc_to_seconds,C ymd_to_ord
 datetime-packed-accessors	proven	Lib/_pydatetime.py	date.year,date.month,date.day,time.hour,time.minute,time.second,time.microsecond,datetime.hour,datetime.minute,datetime.second,datetime.microsecond,C date_year,C date_month,C date_day,C time_hour,C time_minute,C py_time_second,C time_microsecond,C datetime_hour,C datetime_minute,C datetime_second,C datetime_microsecond,C set_date_fields
 datetime-subclass-construction	proven	Lib/_pydatetime.py	C new_date_subclass_ex,C new_datetime_ex,C new_datetime_subclass_fold_ex,C call_subclass_fold,C new_time_ex,C new_time_subclass_fold_ex
-datetime-format-via-strftime	proven	Lib/_pydatetime.py	date.__format__,time.__format__,C datetime_date___format___impl,C datetime_time___format___impl
+datetime-format-via-strftime	proven	Lib/_pydatetime.py	date.__format__,time.__format__,C date_format
 datetime-tzinfo-reduce	proven	Lib/_pydatetime.py	tzinfo.__reduce__,C tzinfo_reduce
 datetime-sanitize-isoformat	proven	Lib/_pydatetime.py	C _sanitize_isoformat_str
 strptime-julian-weekday	proven	Lib/_strptime.py	_calc_julian_from_U_or_W
 strptime-seqtore-sorted	proven	Lib/_strptime.py	TimeRE.__seqToRE
 strptime-compile-errors	proven	Lib/_strptime.py	TimeRE.pattern,TimeRE.compile,TimeRE.__init__
-strptime-methods	proven	Lib/_strptime.py	_strptime,_strptime_datetime_date,_strptime_datetime_time,_strptime_datetime_datetime,_parse_tz,C datetime_date_strptime_impl,C datetime_time_strptime_impl,C datetime_datetime_strptime_impl
+strptime-methods	proven	Lib/_strptime.py	_strptime,_strptime_datetime_date,_strptime_datetime_time,_strptime_datetime_datetime,_parse_tz,C date_strptime,C time_strptime,C datetime_strptime
 datetime-strptime-wrappers	proven	Lib/_pydatetime.py	date.strptime,time.strptime,datetime.strptime
-datetime-date-isoformat-roundtrip	proven	Lib/_pydatetime.py	date.isoformat,date.fromisoformat,datetime.fromisoformat,_parse_isoformat_date,_read_isoformat_component,_find_isoformat_datetime_separator,_is_ascii_digit,C date_isoformat,C date_str,C datetime_date_fromisoformat_impl,C datetime_datetime_fromisoformat_impl,C tzinfo_from_isoformat_results,C parse_isoformat_date,C parse_digits,C is_digit,C _find_isoformat_datetime_separator
-datetime-date-fromiso-twins	refuted	Lib/_pydatetime.py	date.fromisoformat,C datetime_date_fromisoformat_impl,C parse_isoformat_date,C parse_digits
-datetime-time-fromiso-twins	refuted	Lib/_pydatetime.py	time.fromisoformat,_parse_hh_mm_ss_ff,_parse_isoformat_time,C datetime_time_fromisoformat_impl,C parse_hh_mm_ss_ff,C parse_isoformat_time
-datetime-datetime-fromiso-twins	refuted	Lib/_pydatetime.py	datetime.fromisoformat,_parse_isoformat_time,C datetime_datetime_fromisoformat_impl,C parse_isoformat_time
+datetime-date-isoformat-roundtrip	proven	Lib/_pydatetime.py	date.isoformat,date.fromisoformat,datetime.fromisoformat,_parse_isoformat_date,_find_isoformat_datetime_separator,_is_ascii_digit,C date_isoformat,C date_str,C date_fromisoformat,C datetime_fromisoformat,C tzinfo_from_isoformat_results,C parse_isoformat_date,C parse_digits,C is_digit,C _find_isoformat_datetime_separator
+datetime-date-fromiso-twins	refuted	Lib/_pydatetime.py	date.fromisoformat,_parse_isoformat_date,C date_fromisoformat,C parse_isoformat_date,C parse_digits
+datetime-time-fromiso-twins	refuted	Lib/_pydatetime.py	time.fromisoformat,_parse_hh_mm_ss_ff,_parse_isoformat_time,C time_fromisoformat,C parse_hh_mm_ss_ff,C parse_isoformat_time
+datetime-datetime-fromiso-twins	refuted	Lib/_pydatetime.py	datetime.fromisoformat,_parse_isoformat_time,C datetime_fromisoformat,C parse_isoformat_time
 datetime-datetime-fromiso-bare-separator	refuted	Lib/_pydatetime.py	datetime.fromisoformat,_find_isoformat_datetime_separator
-datetime-datetime-fromiso-midnight-valid-date	refuted	Lib/_pydatetime.py	datetime.fromisoformat,C datetime_datetime_fromisoformat_impl
+datetime-datetime-fromiso-midnight-valid-date	refuted	Lib/_pydatetime.py	datetime.fromisoformat,C datetime_fromisoformat
 datetime-date-fromiso-ten-chars	refuted	Lib/_pydatetime.py	date.fromisoformat,_parse_isoformat_date,C parse_isoformat_date
-datetime-read-isoformat-component	proven	Lib/_pydatetime.py	_read_isoformat_component
-datetime-fromiso-offset-range	proven	Lib/_pydatetime.py	time.fromisoformat,_parse_isoformat_time,_parse_hh_mm_ss_ff,_check_time_fields,C datetime_time_fromisoformat_impl,C parse_isoformat_time,C parse_hh_mm_ss_ff,C check_time_args,C tzinfo_from_isoformat_results
-strptime-abbreviations	proven	Lib/_strptime.py	TimeRE.__init__
-strptime-end-check	proven	Lib/_strptime.py	_strptime
-strptime-z-colon	proven	Lib/_strptime.py	_strptime
-strptime-day-needs-year	refuted	Lib/_strptime.py	TimeRE.pattern,TimeRE.__init__,TimeRE.compile
-datetime-time-isoformat-roundtrip	open	Lib/_pydatetime.py	time.isoformat,time.fromisoformat,_parse_isoformat_time,_parse_hh_mm_ss_ff,_format_time,_format_offset,C datetime_time_fromisoformat_impl,C parse_isoformat_time,C parse_hh_mm_ss_ff
-datetime-datetime-isoformat-roundtrip	open	Lib/_pydatetime.py	datetime.isoformat,datetime.fromisoformat,_find_isoformat_datetime_separator,C datetime_datetime_isoformat_impl,C datetime_datetime_fromisoformat_impl
+datetime-time-isoformat-roundtrip	open	Lib/_pydatetime.py	time.isoformat,time.fromisoformat,_parse_isoformat_time,_parse_hh_mm_ss_ff,_format_time,_format_offset,C time_fromisoformat,C parse_isoformat_time,C parse_hh_mm_ss_ff
+datetime-datetime-isoformat-roundtrip	open	Lib/_pydatetime.py	datetime.isoformat,datetime.fromisoformat,_find_isoformat_datetime_separator,C datetime_isoformat,C datetime_fromisoformat
 datetime-datetime-eq-hash	open	Lib/_pydatetime.py	C datetime_hash,C datetime_richcompare
 datetime-strftime-twins-narrow	open	Lib/_pydatetime.py	_wrap_strftime,C wrap_strftime,C make_freplacement,C make_somezreplacement,C make_Zreplacement,C format_utcoffset
 datetime-time-compare-whole-minutes	open	Lib/_pydatetime.py	time._cmp,C time_richcompare
-datetime-astimezone-to-timezone	open	Lib/_pydatetime.py	datetime.astimezone,timezone.fromutc,C datetime_datetime_astimezone_impl,C timezone_fromutc
+datetime-astimezone-to-timezone	open	Lib/_pydatetime.py	datetime.astimezone,timezone.fromutc,C datetime_astimezone,C timezone_fromutc
 datetime-tzinfo-fromutc	open	Lib/_pydatetime.py	tzinfo.fromutc,C tzinfo_fromutc
 datetime-timedelta-str-repr	open	Lib/_pydatetime.py	timedelta.__str__,timedelta.__repr__,C delta_str,C delta_repr
 fractions-ctor-normalizes	proven	Lib/fractions.py	Fraction.__new__
+fractions-ctor-one-arg	proven	Lib/fractions.py	Fraction.__new__
 fractions-ctor-zero-denominator	refuted	Lib/fractions.py	Fraction.__new__
 fractions-arith-exact	proven	Lib/fractions.py	Fraction._add,Fraction._sub,Fraction._mul,Fraction._div,_operator_fallbacks
 fractions-pow-exact	proven	Lib/fractions.py	Fraction.__pow__
@@ -131,10 +128,12 @@ rangeslice-indices-in-bounds	proven	Objects/sliceobject.c	slice_indices,_PySlice
 rangeslice-slice-errors	proven	Objects/sliceobject.c	slice_indices,PySlice_Unpack,compute_slice
 rangeslice-list-slice-indices	proven	Objects/sliceobject.c	PySlice_Unpack,PySlice_AdjustIndices,list_slice_wrap,list_slice_step_lock_held
 rangeslice-range-slice	proven	Objects/rangeobject.c	compute_slice,_PySlice_GetLongIndices
-rangeslice-iter	proven	Objects/rangeobject.c	range_iter,fast_range_iter,rangeiter_next,longrangeiter_next
-rangeslice-reversed	proven	Objects/rangeobject.c	range_reverse,fast_range_iter,rangeiter_next,longrangeiter_next
-rangeslice-iter-reduce	proven	Objects/rangeobject.c	rangeiter_reduce,longrangeiter_reduce,rangeiter_len,longrangeiter_len
-rangeslice-setstate-clips	refuted	Objects/rangeobject.c	rangeiter_setstate,longrangeiter_setstate
+rangeslice-iter	proven	Objects/rangeobject.c	range_iter,fast_range_iter,rangeiter_next,longrangeiter_next,longrangeiter_next_lock_held
+rangeslice-reversed	proven	Objects/rangeobject.c	range_reverse,fast_range_iter,rangeiter_next,longrangeiter_next,longrangeiter_next_lock_held
+rangeslice-iter-reduce	proven	Objects/rangeobject.c	range_iterator___reduce___impl,longrange_iterator___reduce___impl,range_iterator___length_hint___impl,longrange_iterator___length_hint___impl
+rangeslice-setstate-clips	refuted	Objects/rangeobject.c	range_iterator___setstate___impl
+rangeslice-setstate-skips	proven	Objects/rangeobject.c	range_iterator___setstate___impl,longrange_iterator___setstate___impl
+rangeslice-setstate-state-types	proven	Objects/rangeobject.c	range_iterator___setstate___impl,longrange_iterator___setstate___impl
 rangeslice-getindices-contract	refuted	Objects/sliceobject.c	PySlice_GetIndices
 mathint-isqrt-floor-sqrt	proven	Modules/mathmodule.c	math.isqrt,_approximate_isqrt
 mathint-comb-formula	proven	Modules/mathmodule.c	math.comb,perm_comb_small,perm_comb
@@ -175,7 +174,9 @@ strsearch-replace-str-bytes	proven	Objects/stringlib/transmogrify.h	str.replace,
 strsearch-split-rsplit-agree	proven	Objects/stringlib/split.h	str.split,str.rsplit,bytes.split,bytes.rsplit
 accel-bisect-twins-agree	refuted	Modules/_bisectmodule.c	bisect_left,bisect_right,insort_left,insort_right
 accel-bisect-twins-agree-hi-not-minus-one	refuted	Modules/_bisectmodule.c	bisect_left,bisect_right,insort_left,insort_right
-accel-bisect-twins-agree-in-range	proven	Modules/_bisectmodule.c	bisect_left,bisect_right,insort_left,insort_right
+accel-bisect-twins-agree-in-range	refuted	Modules/_bisectmodule.c	bisect_left
+accel-bisect-twins-agree-nonneg-lo	proven	Modules/_bisectmodule.c	bisect_left,bisect_right,insort_left,insort_right
+accel-bisect-negative-lo-raises	proven	Modules/_bisectmodule.c	bisect_left,bisect_right,insort_left,insort_right
 accel-bisect-left-partition	proven	Lib/bisect.py	bisect_left
 accel-bisect-right-partition	proven	Lib/bisect.py	bisect_right
 accel-bisect-doc-partition	refuted	Lib/bisect.py	bisect_left,bisect_right
@@ -187,7 +188,9 @@ accel-heapify-twins-agree	proven	Modules/_heapqmodule.c	heapify,heapify_max,cach
 accel-heap-ops-invariant	proven	Lib/heapq.py	heappush,heappop,heapreplace,heappushpop,heappush_max,heappop_max,heapreplace_max,heappushpop_max
 accel-heapify-makes-heap	proven	Lib/heapq.py	heapify,heapify_max
 accel-nsmallest-sorted-prefix	proven	Lib/heapq.py	nsmallest
+accel-nsmallest-any-len	refuted	Lib/heapq.py	nsmallest
 accel-nlargest-sorted-prefix	proven	Lib/heapq.py	nlargest
+accel-nlargest-any-len	refuted	Lib/heapq.py	nlargest
 accel-merge-sorted	proven	Lib/heapq.py	merge
 decimal-parse-c-accepts-py	refuted	Modules/_decimal/_decimal.c	Decimal.__new__,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii
 decimal-parse-c-accepts-py-casefree	proven	Modules/_decimal/_decimal.c	Decimal.__new__,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii
@@ -383,7 +386,7 @@ itertools-combinatorics-doc-agree-ssize	refuted	Modules/itertoolsmodule.c	iterto
 itertools-combinatorics-doc-agree-alloc	proven	Modules/itertoolsmodule.c	itertools_combinations_impl,combinations_next,combinations_next_lock_held,itertools_combinations_with_replacement_impl,cwr_next,cwr_next_lock_held,itertools_permutations_impl,permutations_next,permutations_next_lock_held
 itertools-simple-doc-agree	proven	Modules/itertoolsmodule.c	itertools_accumulate_impl,accumulate_next,accumulate_next_lock_held,chain_new,chain_new_internal,itertools_chain_from_iterable_impl,chain_next,chain_next_lock_held,itertools_compress_impl,compress_next,itertools_cycle_impl,cycle_next,itertools_dropwhile_impl,dropwhile_next,itertools_takewhile_impl,takewhile_next,itertools_filterfalse_impl,filterfalse_next,itertools_starmap_impl,starmap_next,zip_longest_new,zip_longest_next,zip_longest_next_lock_held
 itertools-constructor-errors	proven	Modules/itertoolsmodule.c	itertools_cycle_impl,itertools_accumulate_impl,itertools_compress_impl,batched_new_impl,chain_new,itertools_chain_from_iterable_impl,zip_longest_new
-itertools-arg-checks	proven	Modules/itertoolsmodule.c	islice_new,itertools_permutations_impl,itertools_combinations_impl,itertools_combinations_with_replacement_impl,itertools_tee_impl
+itertools-arg-checks	proven	Modules/itertoolsmodule.c	islice_new,itertools_permutations_impl
 itertools-sizeof	proven	Modules/itertoolsmodule.c	product_sizeof,combinations_sizeof,cwr_sizeof,permutations_sizeof
 itertools-batched-doc-agree	refuted	Modules/itertoolsmodule.c	batched_new_impl,batched_next
 itertools-batched-doc-agree-alloc	proven	Modules/itertoolsmodule.c	batched_new_impl,batched_next
@@ -445,10 +448,7 @@ sequences-array-del-slice-agree	open	Modules/arraymodule.c	array_ass_subscr
 sequences-array-bytes-round-trip	proven	Modules/arraymodule.c	frombytes,array_array_frombytes_impl,array_array_tobytes_impl
 sequences-array-byteswap	proven	Modules/arraymodule.c	array_array_byteswap_impl
 sequences-array-concat	proven	Modules/arraymodule.c	array_concat,array_inplace_concat,array_do_extend,array_array_extend_impl
-sequences-array-iter-extend	refuted	Modules/arraymodule.c	array_iter_extend,array_array_extend_impl
-sequences-array-iter-extend-exact	proven	Modules/arraymodule.c	array_iter_extend,array_array_extend_impl
-sequences-array-ins1-atomic	refuted	Modules/arraymodule.c	ins1,ins,array_array_append_impl,array_array_insert_impl,e_setitem
-sequences-array-ins1-failure	proven	Modules/arraymodule.c	ins1,ins,array_array_append_impl,array_array_insert_impl
+sequences-array-iter-extend	proven	Modules/arraymodule.c	array_iter_extend,array_array_extend_impl
 sequences-array-repeat	proven	Modules/arraymodule.c	array_repeat,array_inplace_repeat,newarrayobject,newarrayobject_untracked
 sequences-array-clear-copy	proven	Modules/arraymodule.c	array_array_clear_impl,array_array___copy___impl,array_array___deepcopy___impl,array_slice
 sequences-array-fromlist	proven	Modules/arraymodule.c	array_array_fromlist_impl,array_array_tolist_impl,setarrayitem,getarrayitem
@@ -471,7 +471,7 @@ sequences-tuplegetter	proven	Modules/_collectionsmodule.c	tuplegetter_new_impl,t
 sequences-deque-irepeat	refuted	Modules/_collectionsmodule.c	deque_inplace_repeat_lock_held,deque_inplace_repeat,deque_repeat
 sequences-deque-irepeat-checked	proven	Modules/_collectionsmodule.c	deque_inplace_repeat_lock_held,deque_inplace_repeat,deque_repeat
 sequences-list-repeat	proven	Objects/listobject.c	list_inplace_repeat_lock_held,list_repeat_lock_held
-sequences-deque-copy-concat	proven	Modules/_collectionsmodule.c	deque_copy_impl,deque___copy___impl,deque_concat_lock_held,deque_concat
+sequences-deque-copy-concat	refuted	Modules/_collectionsmodule.c	deque_copy_impl,deque___copy___impl,deque_concat_lock_held,deque_concat
 sequences-deque-copy-concat-checked	proven	Modules/_collectionsmodule.c	deque_copy_impl,deque___copy___impl,deque_concat_lock_held,deque_concat
 sequences-deque-reverse	proven	Modules/_collectionsmodule.c	deque_reverse_impl
 listsort-powerloop-first-bit	proven	Objects/listobject.c	powerloop
@@ -481,7 +481,7 @@ listsort-stack-bound	proven	Objects/listobject.c	found_new_run,list_sort_impl
 listsort-stack-bound-tight	proven	Objects/listobject.c	found_new_run
 listsort-stack-comment-log2	refuted	Objects/listobject.c	found_new_run
 listsort-sort-push-assert	proven	Objects/listobject.c	list_sort_impl,count_run,binarysort,found_new_run
-listsort-minrun	proven	Objects/listobject.c	minrun_next,merge_init
+listsort-minrun	proven	Objects/listobject.c	merge_compute_minrun
 listsort-gallop	proven	Objects/listobject.c	gallop_left,gallop_right
 listsort-binarysort	proven	Objects/listobject.c	binarysort
 listsort-count-run	proven	Objects/listobject.c	count_run
@@ -492,7 +492,6 @@ listsort-int-sorted-stable	proven	Objects/listobject.c	list.sort
 listsort-reverse-stable	proven	Objects/listobject.c	list.sort
 listsort-key	proven	Objects/listobject.c	list.sort
 listsort-long-compare	proven	Objects/listobject.c	unsafe_long_compare,unsafe_object_compare,long_compare,long_richcompare
-listsort-object-compare	proven	Objects/listobject.c	unsafe_object_compare
 binary64-round-nearest-even	proven	Objects/floatobject.c	
 binary64-bits-value-roundtrip	proven	Objects/floatobject.c	
 binary64-fma-correct	proven	Objects/floatobject.c	

@@ -135,7 +135,7 @@ theorem zfillSign_eq (s : Seq) (f : Nat) (hf : 1 ≤ f) :
       rw [this]; rfl
     · rfl
 
-/-- `zfill` docstring and stdtypes.rst@3.14.7:2892-2898: "left filled with ASCII '0'
+/-- `zfill` docstring and Doc/builtins/stdtypes.rst:3182-3188: "left filled with ASCII '0'
 digits to make a string of length width. A leading sign prefix ('+'/'-') is
 handled by inserting the padding after the sign character rather than before.
 The original string is returned if width is less than or equal to len(s)."

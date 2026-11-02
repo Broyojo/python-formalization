@@ -1,6 +1,7 @@
 import PyLean.Registry
 import PyLean.Fractions.Model
 import PyLean.Fractions.Parse
+import PyLean.Fractions.CtorOne
 import PyLean.Fractions.Format
 import PyLean.Fractions.Diff
 import PyLean.Fractions.Ctor
@@ -14,9 +15,9 @@ import PyLean.Fractions.FormatProps
 import PyLean.Fractions.FormatF
 
 /-!
-`Lib/fractions.py`, CPython 3.14.7. The model covers construction from ints
-and strings, the arithmetic and comparison operators with Fraction and int
-operands, `**` with an int exponent, the integer conversions and rounding,
+`Lib/fractions.py`, CPython 3.15.2. The model covers construction from ints
+and strings, the one-argument dispatch (with `as_integer_ratio` as a callback), the
+arithmetic and comparison operators with Fraction and int operands, `**` with an int exponent, the integer conversions and rounding,
 `__hash__`, `limit_denominator`, `__str__` and `__format__`. Float operands
 and float conversions are out of scope.
 -/
@@ -31,6 +32,12 @@ def entries : List Entry := [
     statement := "For all ints n and d != 0, Fraction(n, d) has a positive denominator, numerator and denominator coprime, and value n/d."
     source := "Fraction docs (\"value equal to numerator/denominator\", numerator/denominator \"in lowest terms\", denominator \"Guaranteed to be positive\"); fractions.py:302-311"
     status := .proven, prop := ``CtorNormalizes, thm := some ``ctorNormalizes_proven },
+  { id := "fractions-ctor-one-arg", pyFile := "Lib/fractions.py"
+    pyFns := ["Fraction.__new__"]
+    statement := "With one argument, Fraction(x) takes an exact int, then as_integer_ratio (unless x is a type), then str, then numbers.Rational, and otherwise raises TypeError; an x that is Rational and whose as_integer_ratio agrees with numerator and denominator gives that pair."
+    source := "fractions.py:239-287; __new__ docstring (\"another Rational instance\")"
+    status := .proven, prop := ``CtorOneArgOrder, thm := some ``ctorOneArgOrder_proven
+    notes := "3.15 moved the Rational branch last. On 3.14.7 a Rational with a disagreeing as_integer_ratio took numerator and denominator. No branch normalizes what the object returns." },
   { id := "fractions-ctor-zero-denominator", pyFile := "Lib/fractions.py"
     pyFns := ["Fraction.__new__"]
     statement := "For every int n, Fraction(n, 0) raises ZeroDivisionError."

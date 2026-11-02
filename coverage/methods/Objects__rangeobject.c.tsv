@@ -22,18 +22,18 @@ Objects/rangeobject.c	699	717	range_repr	range_repr(PyObject *op)	todo
 Objects/rangeobject.c	721	726	range_reduce	range_reduce(PyObject *op, PyObject *args)	todo		
 Objects/rangeobject.c	729	748	range_subscript	range_subscript(PyObject *op, PyObject *item)	modelled	rangeslice-getitem	
 Objects/rangeobject.c	758	762	range_bool	range_bool(PyObject *op)	todo		
-Objects/rangeobject.c	846	859	rangeiter_next	rangeiter_next(PyObject *op)	todo		changed-in-3.15: was rangeslice-iter,rangeslice-reversed
-Objects/rangeobject.c	870	874	range_iterator___length_hint___impl	range_iterator___length_hint___impl(_PyRangeIterObject *r) /*[clinic end generated code: output=9ba6f22b1fc23dcc input=e3eb311e99d76e43]*/	todo		changed-in-3.15: new function
-Objects/rangeobject.c	885	913	range_iterator___reduce___impl	range_iterator___reduce___impl(_PyRangeIterObject *r) /*[clinic end generated code: output=c44d53750c388415 input=75a25b7076dc2c54]*/	todo		changed-in-3.15: new function
-Objects/rangeobject.c	926	940	range_iterator___setstate___impl	range_iterator___setstate___impl(_PyRangeIterObject *r, PyObject *state) /*[clinic end generated code: output=464b3cbafc2e3562 input=c8c84fab2519d200]*/	todo		changed-in-3.15: new function
+Objects/rangeobject.c	846	859	rangeiter_next	rangeiter_next(PyObject *op)	modelled	rangeslice-iter,rangeslice-reversed	
+Objects/rangeobject.c	870	874	range_iterator___length_hint___impl	range_iterator___length_hint___impl(_PyRangeIterObject *r) /*[clinic end generated code: output=9ba6f22b1fc23dcc input=e3eb311e99d76e43]*/	modelled	rangeslice-iter-reduce	
+Objects/rangeobject.c	885	913	range_iterator___reduce___impl	range_iterator___reduce___impl(_PyRangeIterObject *r) /*[clinic end generated code: output=c44d53750c388415 input=75a25b7076dc2c54]*/	modelled	rangeslice-iter-reduce	
+Objects/rangeobject.c	926	940	range_iterator___setstate___impl	range_iterator___setstate___impl(_PyRangeIterObject *r, PyObject *state) /*[clinic end generated code: output=464b3cbafc2e3562 input=c8c84fab2519d200]*/	modelled	rangeslice-setstate-clips,rangeslice-setstate-skips,rangeslice-setstate-state-types	
 Objects/rangeobject.c	943	946	rangeiter_dealloc	rangeiter_dealloc(PyObject *self)	todo		
 Objects/rangeobject.c	992	1014	get_len_of_range	get_len_of_range(long lo, long hi, long step)	modelled	rangeslice-len-fast-slow	
 Objects/rangeobject.c	1020	1034	fast_range_iter	fast_range_iter(long start, long stop, long step, long len)	modelled	rangeslice-iter,rangeslice-reversed	
-Objects/rangeobject.c	1045	1050	longrange_iterator___length_hint___impl	longrange_iterator___length_hint___impl(longrangeiterobject *r) /*[clinic end generated code: output=e1bce24da7e8bfde input=ba94b050d940411e]*/	todo		changed-in-3.15: new function
-Objects/rangeobject.c	1061	1087	longrange_iterator___reduce___impl	longrange_iterator___reduce___impl(longrangeiterobject *r) /*[clinic end generated code: output=0077f94ae2a4e99a input=2e8930e897ace086]*/	todo		changed-in-3.15: new function
-Objects/rangeobject.c	1100	1142	longrange_iterator___setstate___impl	longrange_iterator___setstate___impl(longrangeiterobject *r, PyObject *state) /*[clinic end generated code: output=870787f0574f0da4 input=8b116de3018de824]*/	todo		changed-in-3.15: new function
+Objects/rangeobject.c	1045	1050	longrange_iterator___length_hint___impl	longrange_iterator___length_hint___impl(longrangeiterobject *r) /*[clinic end generated code: output=e1bce24da7e8bfde input=ba94b050d940411e]*/	modelled	rangeslice-iter-reduce	
+Objects/rangeobject.c	1061	1087	longrange_iterator___reduce___impl	longrange_iterator___reduce___impl(longrangeiterobject *r) /*[clinic end generated code: output=0077f94ae2a4e99a input=2e8930e897ace086]*/	modelled	rangeslice-iter-reduce	
+Objects/rangeobject.c	1100	1142	longrange_iterator___setstate___impl	longrange_iterator___setstate___impl(longrangeiterobject *r, PyObject *state) /*[clinic end generated code: output=870787f0574f0da4 input=8b116de3018de824]*/	modelled	rangeslice-setstate-skips,rangeslice-setstate-state-types	
 Objects/rangeobject.c	1152	1159	longrangeiter_dealloc	longrangeiter_dealloc(PyObject *op)	todo		
-Objects/rangeobject.c	1162	1181	longrangeiter_next_lock_held	longrangeiter_next_lock_held(PyObject *op)	todo		changed-in-3.15: new function
-Objects/rangeobject.c	1184	1191	longrangeiter_next	longrangeiter_next(PyObject *op)	todo		changed-in-3.15: was rangeslice-iter,rangeslice-reversed
+Objects/rangeobject.c	1162	1181	longrangeiter_next_lock_held	longrangeiter_next_lock_held(PyObject *op)	modelled	rangeslice-iter,rangeslice-reversed	
+Objects/rangeobject.c	1184	1191	longrangeiter_next	longrangeiter_next(PyObject *op)	modelled	rangeslice-iter,rangeslice-reversed	
 Objects/rangeobject.c	1227	1279	range_iter	range_iter(PyObject *seq)	modelled	rangeslice-iter	
 Objects/rangeobject.c	1282	1384	range_reverse	range_reverse(PyObject *seq, PyObject *Py_UNUSED(ignored))	modelled	rangeslice-reversed	

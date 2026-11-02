@@ -39,13 +39,13 @@ expected: |
   Either the docs mention the empty-substring edge case (the open docs issue #68431), or the
   results match the slice: 3, 1, True and 2.
 promised_by: |
-  Doc/library/stdtypes.rst@3.14.7:2002-2006 (str.find "within the slice s[start:end]"), @3.14.7:1903-1907
+  Doc/builtins/stdtypes.rst:2278-2282 (str.find "within the slice s[start:end]"), :2179-2183
   (str.count "in the range [start, end]"), the find/count docstrings in unicodeobject.c
   ("such that sub is contained within S[start:end]").
 cause: |
   ADJUST_INDICES (unicodeobject.c:9563-9579, bytes_methods.c:432-448) clamps end to len but not
-  start, and any_find_slice (:9696-9698), unicode_count_impl (:11800-11802), tailmatch
-  (:9959-9961) and find_internal / _Py_bytes_count / tailmatch in bytes_methods.c return
+  start, and any_find_slice (:9599-9601), unicode_count_impl (:11528-11530), tailmatch
+  (:9726-9728) and find_internal / _Py_bytes_count / tailmatch in bytes_methods.c return
   "not found" when end - start < len(sub), which for len(sub) == 0 means start > end.
 possible_fix: |
   Documentation only (as #68431 proposes): state that an empty sub is found only at indices
@@ -59,7 +59,7 @@ duplicates:
             "startswith empty string start", "count empty substring", "find start greater than length"]
   bugforge: "no match in vendor/bugforge-results/README.md"
 results:
-  python_3_14_7: REPRODUCED
+  python_3_15_2: REPRODUCED
   python_main: REPRODUCED
 lean:
   property: PyLean.StrSearch.FindSliceLiteral

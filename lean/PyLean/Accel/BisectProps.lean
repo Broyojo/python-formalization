@@ -191,6 +191,55 @@ def BisectTwinsAgreeInRange : Prop :=
     cInsortLeft a x lo hi key = pyInsortLeft a x lo hi key ∧
     cInsortRight a x lo hi key = pyInsortRight a x lo hi key
 
+/-- True on 3.14.7, false on 3.15.2: `bisect_left([], 0, -1)` raises
+`ValueError('lo cannot be negative')` in C (the `allow_negative=False` converter)
+and `ValueError('lo must be non-negative')` in Python. -/
+theorem bisectTwinsAgreeInRange_refuted : ¬BisectTwinsAgreeInRange := by
+  intro h
+  have := (h [] 0 (-1) none none (by decide) (by simp) (by decide) (by decide) (by simp)).1
+  revert this
+  decide
+
+/-- The same four functions for every non-negative `Py_ssize_t` `lo` and every
+`Py_ssize_t` `hi` except `-1`: same value or same exception and message, and the
+same final list. The hypotheses beyond `len(a)` are exactly the refuted cases. -/
+def BisectTwinsAgreeNonnegLo : Prop :=
+  ∀ (a : List Int) (x lo : Int) (hi : Option Int) (key : Option (Int → Int)),
+    (a.length : Int) ≤ ssizeMax → hi ≠ some (-1) →
+    0 ≤ lo → lo ≤ ssizeMax → (∀ h, hi = some h → ssizeMin ≤ h ∧ h ≤ ssizeMax) →
+    cBisectLeft a x lo hi key = pyBisectLeft a x lo hi key ∧
+    cBisectRight a x lo hi key = pyBisectRight a x lo hi key ∧
+    cInsortLeft a x lo hi key = pyInsortLeft a x lo hi key ∧
+    cInsortRight a x lo hi key = pyInsortRight a x lo hi key
+
+/-- A negative `lo` that fits a `Py_ssize_t`, whatever `hi` is, even an `hi` C
+cannot convert: both twins raise `ValueError` before reading `a`, each with its
+own message. C refuses in the `lo` converter, so before `hi` is converted. -/
+def BisectNegativeLoRaises : Prop :=
+  ∀ (a : List Int) (x lo : Int) (hi : Option Int) (key : Option (Int → Int)),
+    ssizeMin ≤ lo → lo < 0 →
+    cBisectLeft a x lo hi key = .error (.valueError "lo cannot be negative") ∧
+    cBisectRight a x lo hi key = .error (.valueError "lo cannot be negative") ∧
+    cInsortLeft a x lo hi key = .error (.valueError "lo cannot be negative") ∧
+    cInsortRight a x lo hi key = .error (.valueError "lo cannot be negative") ∧
+    pyBisectLeft a x lo hi key = .error (.valueError "lo must be non-negative") ∧
+    pyBisectRight a x lo hi key = .error (.valueError "lo must be non-negative") ∧
+    pyInsortLeft a x lo hi key = .error (.valueError "lo must be non-negative") ∧
+    pyInsortRight a x lo hi key = .error (.valueError "lo must be non-negative")
+
+theorem bisectNegativeLoRaises_proven : BisectNegativeLoRaises := by
+  intro a x lo hi key h1 h2
+  have hc : cConvLo lo = .error (.valueError "lo cannot be negative") := by
+    simp only [cConvLo]
+    rw [ite_false' (by unfold ssizeMax; omega), ite_true' h2]
+  have hl : ∀ y, pyBisectLeft a y lo hi key = .error (.valueError "lo must be non-negative") :=
+    fun y => by simp only [pyBisectLeft]; rw [ite_true' h2]
+  have hr : ∀ y, pyBisectRight a y lo hi key = .error (.valueError "lo must be non-negative") :=
+    fun y => by simp only [pyBisectRight]; rw [ite_true' h2]
+  simp only [cBisectLeft, cBisectRight, cInsortLeft, cInsortRight, pyInsortLeft, pyInsortRight,
+    hc, hl, hr, bind, Except.bind]
+  simp
+
 /-- The C and Python `hi` agree once converted. -/
 theorem cHi_eq (a : List Int) (hi : Option Int) (h : Int) (hne : hi ≠ some (-1))
     (hc : cConvHi hi = .ok h) :
@@ -222,39 +271,35 @@ theorem cConvHi_some_le (hi : Option Int) (h : Int) (hc : cConvHi hi = .ok h) : 
 /-- The internal searches agree on converted arguments (left). -/
 theorem internalLeft_eq (a : List Int) (x lo : Int) (hi : Option Int) (h : Int)
     (key : Option (Int → Int)) (hlen : (a.length : Int) ≤ ssizeMax)
-    (hne : hi ≠ some (-1)) (hc : cConvHi hi = .ok h) :
+    (hne : hi ≠ some (-1)) (hc : cConvHi hi = .ok h) (h0 : 0 ≤ lo) :
     cInternalLeft a x lo h key = pyBisectLeft a x lo hi key := by
   have hh := cHi_eq a hi h hne hc
   have hle := cConvHi_some_le hi h hc
   simp only [cInternalLeft, pyBisectLeft]
-  split
-  · rfl
-  · rw [hh]
-    apply bisectLoop_congr
-    intro m h1 h2
-    have : hi.getD a.length ≤ ssizeMax := by
-      cases hi with
-      | none => simpa using hlen
-      | some h' => rw [← hh]; split <;> omega
-    rw [pyIndex_eq_cIndex a m (by omega)]
+  rw [ite_false' (show ¬ lo < 0 by omega), hh]
+  apply bisectLoop_congr
+  intro m h1 h2
+  have : hi.getD a.length ≤ ssizeMax := by
+    cases hi with
+    | none => simpa using hlen
+    | some h' => rw [← hh]; split <;> omega
+  rw [pyIndex_eq_cIndex a m (by omega)]
 
 theorem internalRight_eq (a : List Int) (x lo : Int) (hi : Option Int) (h : Int)
     (key : Option (Int → Int)) (hlen : (a.length : Int) ≤ ssizeMax)
-    (hne : hi ≠ some (-1)) (hc : cConvHi hi = .ok h) :
+    (hne : hi ≠ some (-1)) (hc : cConvHi hi = .ok h) (h0 : 0 ≤ lo) :
     cInternalRight a x lo h key = pyBisectRight a x lo hi key := by
   have hh := cHi_eq a hi h hne hc
   have hle := cConvHi_some_le hi h hc
   simp only [cInternalRight, pyBisectRight]
-  split
-  · rfl
-  · rw [hh]
-    apply bisectLoop_congr
-    intro m h1 h2
-    have : hi.getD a.length ≤ ssizeMax := by
-      cases hi with
-      | none => simpa using hlen
-      | some h' => rw [← hh]; split <;> omega
-    rw [pyIndex_eq_cIndex a m (by omega)]
+  rw [ite_false' (show ¬ lo < 0 by omega), hh]
+  apply bisectLoop_congr
+  intro m h1 h2
+  have : hi.getD a.length ≤ ssizeMax := by
+    cases hi with
+    | none => simpa using hlen
+    | some h' => rw [← hh]; split <;> omega
+  rw [pyIndex_eq_cIndex a m (by omega)]
 
 /-- A successful Python search returns a value in `[0, PY_SSIZE_T_MAX]`. -/
 theorem pyBisectLeft_range (a : List Int) (x lo : Int) (hi : Option Int) (key : Option (Int → Int))
@@ -290,9 +335,11 @@ theorem listInsert_eq (a : List Int) (i x : Int) (h0 : 0 ≤ i) (h1 : i ≤ ssiz
   simp only [listInsert, cListInsert]
   rw [ite_false' (by unfold ssizeMin; omega), ite_false' (by omega)]
 
-theorem bisectTwinsAgreeInRange_proven : BisectTwinsAgreeInRange := by
+theorem bisectTwinsAgreeNonnegLo_proven : BisectTwinsAgreeNonnegLo := by
   intro a x lo hi key hlen hne hlo1 hlo2 hhi
-  have hcl : cConvLo lo = .ok lo := by simp only [cConvLo]; rw [ite_false' (by omega)]
+  have hcl : cConvLo lo = .ok lo := by
+    simp only [cConvLo]
+    rw [ite_false' (by unfold ssizeMin; omega), ite_false' (by omega)]
   have hhi' : ∀ h, hi = some h → h ≤ ssizeMax := fun h e => (hhi h e).2
   cases hc : cConvHi hi with
   | error e =>
@@ -305,10 +352,10 @@ theorem bisectTwinsAgreeInRange_proven : BisectTwinsAgreeInRange := by
       rw [ite_false' (by omega)] at hc
       cases hc
   | ok h =>
-    have eL := internalLeft_eq a x lo hi h key hlen hne hc
-    have eR := internalRight_eq a x lo hi h key hlen hne hc
-    have eL' := internalLeft_eq a (applyKey key x) lo hi h key hlen hne hc
-    have eR' := internalRight_eq a (applyKey key x) lo hi h key hlen hne hc
+    have eL := internalLeft_eq a x lo hi h key hlen hne hc hlo1
+    have eR := internalRight_eq a x lo hi h key hlen hne hc hlo1
+    have eL' := internalLeft_eq a (applyKey key x) lo hi h key hlen hne hc hlo1
+    have eR' := internalRight_eq a (applyKey key x) lo hi h key hlen hne hc hlo1
     simp only [cBisectLeft, cBisectRight, cInsortLeft, cInsortRight, pyInsortLeft, pyInsortRight,
       hcl, hc, bind, Except.bind, eL, eR, eL', eR']
     refine ⟨trivial, trivial, ?_, ?_⟩
@@ -429,9 +476,8 @@ theorem twins_of_in_range (a : List Int) (lo : Int) (hi : Option Int)
     ∀ x key, cBisectLeft a x lo hi key = pyBisectLeft a x lo hi key ∧
       cBisectRight a x lo hi key = pyBisectRight a x lo hi key := by
   intro x key
-  have h := bisectTwinsAgreeInRange_proven a x lo hi key hlen (hi_ne_of_in_range a lo hi h0 h1)
-    (by unfold ssizeMin; omega) (by omega)
-    (fun h e => by subst e; simp at h1 h2; unfold ssizeMin; omega)
+  have h := bisectTwinsAgreeNonnegLo_proven a x lo hi key hlen (hi_ne_of_in_range a lo hi h0 h1)
+    h0 (by omega) (fun h e => by subst e; simp at h1 h2; unfold ssizeMin; omega)
   exact ⟨h.1, h.2.1⟩
 
 theorem bisectLeftPartition_proven : BisectLeftPartition := by
@@ -498,7 +544,7 @@ def LeftDoc (key : Option (Int → Int)) (a : List Int) (x lo ip hi : Int) : Pro
 def RightDoc (key : Option (Int → Int)) (a : List Int) (x lo ip hi : Int) : Prop :=
   (∀ e ∈ pySlice a lo ip, applyKey key e ≤ x) ∧ (∀ e ∈ pySlice a ip hi, x < applyKey key e)
 
-/-- Doc/library/bisect.rst:48-51 and :71-74, read literally for every `lo`
+/-- Doc/library/bisect.rst:48-51 and :70-72, read literally for every `lo`
 and `hi` the functions accept: whenever a twin returns `ip` for a sorted `a`,
 `ip` partitions the slices `a[lo:ip]` and `a[ip:hi]` (`hi=None` is `len(a)`). -/
 def BisectDocPartition : Prop :=
@@ -553,15 +599,19 @@ theorem doc_of_loop (key : Option (Int → Int)) (a : List Int) (probe : Int →
 theorem c_unfold (a : List Int) (lo : Int) (hi : Option Int) (hnn : ∀ h, hi = some h → 0 ≤ h)
     (r : Int → Int → Py Int) (ip : Int)
     (hc : (do let lo ← cConvLo lo; let hi ← cConvHi hi; r lo hi) = .ok ip) :
-    ∃ h, (if h = -1 then (a.length : Int) else h) = hi.getD a.length ∧ r lo h = .ok ip := by
+    0 ≤ lo ∧ ∃ h, (if h = -1 then (a.length : Int) else h) = hi.getD a.length ∧ r lo h = .ok ip := by
   cases hlo : cConvLo lo with
   | error e => rw [hlo] at hc; cases hc
   | ok lo' =>
-    have : lo' = lo := by
+    have hl : lo' = lo ∧ 0 ≤ lo := by
       simp only [cConvLo] at hlo; split at hlo
       · cases hlo
-      · cases hlo; rfl
+      · split at hlo
+        · cases hlo
+        · cases hlo; exact ⟨rfl, by omega⟩
+    obtain ⟨this, hl0⟩ := hl
     subst this
+    refine ⟨hl0, ?_⟩
     rw [hlo] at hc
     cases hh : cConvHi hi with
     | error e => simp only [bind, Except.bind, hh] at hc; cases hc
@@ -592,15 +642,13 @@ theorem bisectDocPartitionNonnegHi_proven : BisectDocPartitionNonnegHi := by
       exact ⟨fun e he => of_decide_eq_true (this.1 e he), fun e he => by
         have := of_decide_eq_false (this.2 e he); omega⟩
   · intro ip hr
-    obtain ⟨h, hh, hr⟩ := c_unfold a lo hi hnn (fun lo hi => cInternalLeft a x lo hi key) ip hr
+    obtain ⟨hl0, h, hh, hr⟩ := c_unfold a lo hi hnn (fun lo hi => cInternalLeft a x lo hi key) ip hr
     simp only [cInternalLeft] at hr
-    split at hr
-    · cases hr
-    · rw [hh] at hr
-      have := doc_of_loop key a _ _ (cProbe_spec key a) (mono_left key a x hs) _ lo _ ip
-        (by omega) hH hr
-      exact ⟨fun e he => of_decide_eq_true (this.1 e he), fun e he => by
-        have := of_decide_eq_false (this.2 e he); omega⟩
+    rw [hh] at hr
+    have := doc_of_loop key a _ _ (cProbe_spec key a) (mono_left key a x hs) _ lo _ ip
+      hl0 hH hr
+    exact ⟨fun e he => of_decide_eq_true (this.1 e he), fun e he => by
+      have := of_decide_eq_false (this.2 e he); omega⟩
   · intro ip hr
     simp only [pyBisectRight] at hr
     split at hr
@@ -615,20 +663,18 @@ theorem bisectDocPartitionNonnegHi_proven : BisectDocPartitionNonnegHi := by
         simp only [Bool.not_eq_false'] at h1
         exact of_decide_eq_true h1
   · intro ip hr
-    obtain ⟨h, hh, hr⟩ := c_unfold a lo hi hnn (fun lo hi => cInternalRight a x lo hi key) ip hr
+    obtain ⟨hl0, h, hh, hr⟩ := c_unfold a lo hi hnn (fun lo hi => cInternalRight a x lo hi key) ip hr
     simp only [cInternalRight] at hr
-    split at hr
-    · cases hr
-    · rw [hh] at hr
-      have := doc_of_loop key a _ _ (cProbe_spec key a) (mono_right key a x hs) _ lo _ ip
-        (by omega) hH hr
-      refine ⟨fun e he => ?_, fun e he => ?_⟩
-      · have h1 := this.1 e he
-        simp only [Bool.not_eq_true'] at h1
-        have := of_decide_eq_false h1; omega
-      · have h1 := this.2 e he
-        simp only [Bool.not_eq_false'] at h1
-        exact of_decide_eq_true h1
+    rw [hh] at hr
+    have := doc_of_loop key a _ _ (cProbe_spec key a) (mono_right key a x hs) _ lo _ ip
+      hl0 hH hr
+    refine ⟨fun e he => ?_, fun e he => ?_⟩
+    · have h1 := this.1 e he
+      simp only [Bool.not_eq_true'] at h1
+      have := of_decide_eq_false h1; omega
+    · have h1 := this.2 e he
+      simp only [Bool.not_eq_false'] at h1
+      exact of_decide_eq_true h1
 
 /-! ### insort keeps the list sorted -/
 
@@ -681,7 +727,7 @@ def InsortKeepsSorted : Prop :=
 
 theorem insortKeepsSorted_proven : InsortKeepsSorted := by
   intro a x key hlen hs
-  have ht := bisectTwinsAgreeInRange_proven a x 0 none key hlen (by simp) (by decide) (by decide)
+  have ht := bisectTwinsAgreeNonnegLo_proven a x 0 none key hlen (by simp) (by decide) (by decide)
     (by simp)
   obtain ⟨ipL, hpL, -, hL0, hL1, hLl, hLr⟩ :=
     bisectLeftPartition_proven a (applyKey key x) 0 none key hlen hs (Int.le_refl _) (by simp) (by simp)

@@ -1,5 +1,6 @@
 import PyLean.DiffCore
 import PyLean.Fractions.Format
+import PyLean.Fractions.CtorOne
 
 /-! Differential-testing handler for `fractions` cases (`"mod": "fractions"`).
 
@@ -52,8 +53,36 @@ def getFrac (j : Json) (key : String) : Except String (Py Frac) := do
   let some b := arr[1]? | throw s!"{key}: missing denominator"
   return ofInts (← decodeInt a) (← decodeInt b)
 
+/-- A pair of ints, or `null`. -/
+def optPair (j : Json) : Except String (Option (Int × Int)) := do
+  match j with
+  | .null => return none
+  | _ =>
+    let arr ← j.getArr?
+    let some a := arr[0]? | throw "pair: missing first"
+    let some b := arr[1]? | throw "pair: missing second"
+    return some (← decodeInt a, ← decodeInt b)
+
+/-- `"ratio"`: `null`, `[n, d]`, or `{"exc": class, "msg": message}`. -/
+def getRatio (j : Json) : Except String (Option (Py (Int × Int))) := do
+  match j.getObjVal? "exc" with
+  | .ok cls => return some (.error (.named (← cls.getStr?) (← (← j.getObjVal? "msg").getStr?)))
+  | .error _ => return (optPair j).toOption.join.map .ok
+
+def getCtorArg (j : Json) : Except String CtorArg := do
+  let v ← j.getObjVal? "arg"
+  let exact ← v.getObjVal? "int"
+  return {
+    exactInt := if exact.isNull then none else (decodeInt exact).toOption
+    isFloat := ← getBool v "float"
+    isType := ← getBool v "type"
+    ratio := ← getRatio (← v.getObjVal? "ratio")
+    str := (getStr v "str").toOption.map String.toList
+    rational := ← optPair (← v.getObjVal? "rational") }
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
+  | "ctor1" => return encPy encFrac (ofOne (← getCtorArg j))
   | "ctor" => return encPy encFrac (ofInts (← getBig j "n") (← getBig j "d"))
   | "parse" => return encPy encFrac (parse (← getStr j "s").toList)
   | "decimal" =>

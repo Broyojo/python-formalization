@@ -9,7 +9,7 @@ import PyLean.StrSearch.Split
 import PyLean.StrSearch.Replace
 
 /-!
-Search and split methods of `str`, `bytes`, `bytearray`: `Objects/stringlib/`, `Objects/unicodeobject.c`, `Objects/bytes_methods.c`, CPython 3.14.7.
+Search and split methods of `str`, `bytes`, `bytearray`: `Objects/stringlib/`, `Objects/unicodeobject.c`, `Objects/bytes_methods.c`, CPython 3.15.2.
 -/
 
 namespace PyLean.StrSearch
@@ -70,12 +70,12 @@ def entries : List Entry := [
   { id := "strsearch-center-balanced", pyFile := "Objects/unicodeobject.c"
     pyFns := ["str.center"]
     statement := "s.center(width) is s when width <= len(s), else s padded with l fills before and r after, l + len(s) + r == width, |l - r| <= 1."
-    source := "center docstring and stdtypes.rst@3.14.7:1889-1893"
+    source := "center docstring and Doc/builtins/stdtypes.rst:2165-2169"
     status := .proven, prop := ``CenterBalanced, thm := some ``centerBalanced_proven },
   { id := "strsearch-zfill-spec", pyFile := "Objects/unicodeobject.c"
     pyFns := ["str.zfill"]
     statement := "s.zfill(width) is s when width <= len(s); otherwise '0' * (width - len(s)) is inserted after a leading '+'/'-', or before s."
-    source := "zfill docstring and stdtypes.rst@3.14.7:2892-2898"
+    source := "zfill docstring and Doc/builtins/stdtypes.rst:3182-3188"
     status := .proven, prop := ``ZfillSpec, thm := some ``zfillSpec_proven },
   { id := "strsearch-expandtabs-str-bytes", pyFile := "Objects/stringlib/transmogrify.h"
     pyFns := ["str.expandtabs", "bytes.expandtabs"]
@@ -113,7 +113,7 @@ def entries : List Entry := [
   { id := "strsearch-replace-str-bytes", pyFile := "Objects/stringlib/transmogrify.h"
     pyFns := ["str.replace", "bytes.replace"]
     statement := "On byte strings, str.replace and bytes.replace agree for every old (empty included), new and count: same result, or both OverflowError."
-    source := "invariant: str vs bytes (unicodeobject.c:10577-10833 vs transmogrify.h:277-738)"
+    source := "invariant: str vs bytes (unicodeobject.c:10577-10853 vs transmogrify.h:277-738)"
     status := .proven, prop := ``ReplaceStrBytes, thm := some ``replaceStrBytes_proven
     notes := "Precondition len(s) < sys.maxsize (type invariant)." },
   { id := "strsearch-split-rsplit-agree", pyFile := "Objects/stringlib/split.h"

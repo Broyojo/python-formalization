@@ -31,6 +31,23 @@ KEYS = {"none": None, "neg": lambda x: -x, "div3": lambda x: x // 3,
 BIG = [2**63 - 1, 2**63, 2**63 + 1, -2**63, -2**63 - 1, 2**64, -2**64, 2**100]
 
 
+class Sized:
+    """Iterates `items`, but `len()` gives `size`, which need not match them: a count,
+    or {"exc": class name, "msg": message} for a `__len__` that raises."""
+
+    def __init__(self, items, size):
+        self.items, self.size = items, size
+
+    def __iter__(self):
+        return iter(self.items)
+
+    def __len__(self):
+        if isinstance(self.size, dict):
+            raise {"TypeError": TypeError, "AttributeError": AttributeError,
+                   "RuntimeError": RuntimeError, "ValueError": ValueError}[self.size["exc"]](self.size["msg"])
+        return self.size
+
+
 def small_list(rng, n=None):
     if n is None:
         n = rng.choice([0, 0, 1, 2, 3, 4, 5, 7, 8, rng.randrange(20), rng.randrange(40)])
@@ -49,6 +66,11 @@ def gen_bisect(rng, fn):
     lo = rng.choice(edge + [0, 0, 0] + ([rng.choice(BIG)] if rng.random() < 0.15 else []))
     hi = rng.choice(edge + [None, None, None, None] + ([rng.choice(BIG)] if rng.random() < 0.15 else []))
     x = rng.randint(-12, 12) if rng.random() < 0.9 else rng.choice(BIG)
+    if rng.random() < 0.1:
+        # 3.15 refuses a negative lo in the clinic converter, so before hi is converted.
+        # This pairs the boundaries of both, which is where the order of the checks shows.
+        lo = rng.choice([-1, -2, -2**63, -2**63 + 1, -2**63 - 1, 2**63 - 1, 2**63])
+        hi = rng.choice(BIG + [None, -1, 0, n, 2**63 - 2])
     return {"a": a, "x": x, "lo": lo, "hi": hi, "key": key}
 
 
@@ -71,8 +93,23 @@ def gen_select(rng, fn):
     n = len(it)
     nn = rng.choice([-2, -1, 0, 1, 1, 2, 3, n - 1, n, n + 1, rng.randrange(-3, 45),
                      rng.choice(BIG)])
-    return {"n": nn, "it": it, "sized": rng.random() < 0.5,
-            "key": rng.choice(["none", "none", "neg", "div3", "mod3", "abs"])}
+    c = {"n": nn, "it": it, "key": rng.choice(["none", "none", "neg", "div3", "mod3", "abs"])}
+    if rng.random() < 0.7:
+        # A list has the right len(); len() of an iterator is a TypeError, which nsmallest
+        # catches, so its message never reaches the result.
+        if rng.random() < 0.5:
+            c.update(kind="list", size=n)
+        else:
+            c.update(kind="iter", size={"exc": "TypeError", "msg": "no len()"})
+    elif rng.random() < 0.75:
+        # A __len__ that disagrees with the items reaches `return sorted(...)` with n below
+        # the item count, the only case in which 3.15's dropped `[:n]` shows.
+        size = rng.choice([0, 0, 1, 2, 3, n, n + 1, n + 3, rng.randrange(6), max(n - 1, 0)])
+        c.update(kind="obj", size=size, n=rng.choice([nn, 0, 2, 3, size, size + 1, size - 1]))
+    else:
+        c.update(kind="obj", size={"exc": rng.choice(["TypeError", "AttributeError", "RuntimeError",
+                                                      "ValueError"]), "msg": "from __len__"})
+    return c
 
 
 def gen_merge(rng, fn):
@@ -124,7 +161,7 @@ def run_python(c):
         return r if h == c["heap"] else {"exc": r["exc"], "msg": r["msg"] + " [list mutated]"}
     hq = mods["heapq"]
     if fn in ("nsmallest", "nlargest"):
-        it = list(c["it"]) if c["sized"] else iter(c["it"])
+        it = {"list": list, "iter": iter}.get(c["kind"], lambda v: Sized(v, c["size"]))(c["it"])
         return common.py_result(lambda: getattr(hq, fn)(c["n"], it, key=key))
     if fn == "merge":
         return common.py_result(lambda: list(hq.merge(*[iter(x) for x in c["its"]],
