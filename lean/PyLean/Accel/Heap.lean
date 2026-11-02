@@ -2,7 +2,7 @@ import PyLean.Core
 
 /-!
 Model of the `heapq` heap primitives: the pure-Python twin `Lib/heapq.py` and the
-C accelerator `Modules/_heapqmodule.c` (CPython 3.14.7).
+C accelerator `Modules/_heapqmodule.c` (CPython 3.15.2).
 
 Every function is generic in the element type `α` and the comparison
 `lt : α → α → Bool`, which is Python's `a < b`. The min-heap functions use

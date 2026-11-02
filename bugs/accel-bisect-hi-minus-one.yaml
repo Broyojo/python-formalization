@@ -45,7 +45,7 @@ expected: |
   The twins agree on hi=-1 (either both treat it as an empty range, or both reject negative hi
   like they reject negative lo), and a returned ip satisfies the documented partition.
 observed: |
-  python3 3.14.7: C 2 / Python 0; C [1, 2, 3, 3, 4, 5] / Python [3, 1, 2, 3, 4, 5]. REPRODUCED.
+  python3 3.15.2: C 2 / Python 0; C [1, 2, 3, 3, 4, 5] / Python [3, 1, 2, 3, 4, 5]. REPRODUCED.
   main (python.exe 3.16.0a1+dev heads/main:ef1fce0): identical. REPRODUCED.
 promised_by: |
   Doc/library/bisect.rst:48-51 (bisect_left partition) and :71-74 (bisect_right); the twin

@@ -2,7 +2,7 @@ import PyLean.Core
 
 /-!
 Model of `bisect`: the pure-Python twin `Lib/bisect.py` and the C accelerator
-`Modules/_bisectmodule.c` (CPython 3.14.7), over lists of `int` compared with `<`.
+`Modules/_bisectmodule.c` (CPython 3.15.2), over lists of `int` compared with `<`.
 
 * `a` is a Python `list` of ints (`List Int`); its length is a `Py_ssize_t`, so
   `a.length ≤ ssizeMax` is a type invariant.
@@ -86,11 +86,14 @@ def pyInsortLeft (a : List Int) (x lo : Int) (hi : Option Int) (key : Option (In
 
 /-! ### C accelerator, `Modules/_bisectmodule.c` -/
 
-/-- Argument Clinic's `lo: Py_ssize_t = 0` (clinic/_bisectmodule.c.h):
-`_PyNumber_Index` then `PyLong_AsSsize_t`. -/
+/-- Argument Clinic's `lo: Py_ssize_t(allow_negative=False) = 0`
+(clinic/_bisectmodule.c.h:84-101): `_PyNumber_Index`, `PyLong_AsSsize_t`, then
+the converter's own check. Since 3.15 this refusal happens here, while parsing
+`lo`, so before `hi` is converted, and its message differs from `bisect.py`'s. -/
 def cConvLo (lo : Int) : Py Int :=
   if lo < ssizeMin ∨ lo > ssizeMax then
     .error (.overflowError "Python int too large to convert to C ssize_t")
+  else if lo < 0 then .error (.valueError "lo cannot be negative")
   else .ok lo
 
 /-- `hi: Py_ssize_t(c_default='-1', accept={int, NoneType}) = None`:
@@ -110,27 +113,25 @@ def cIndex (a : List Int) (i : Int) : Py Int :=
   if 0 ≤ i ∧ i < a.length then .ok (a.getD i.toNat 0)
   else .error (.indexError "list index out of range")
 
-/-- `internal_bisect_right`, Modules/_bisectmodule.c:52-145, on already
-converted `Py_ssize_t` arguments. `hi == -1` means "use `len(a)`" (:60-64).
-`mid = ((size_t)lo + hi) / 2` (:78) cannot wrap since `0 ≤ lo < hi ≤
-PY_SSIZE_T_MAX`. The same-type fast path (:98-125) and the generic path
-(:126-129) compute the same `item < litem` for ints. -/
+/-- `internal_bisect_right`, Modules/_bisectmodule.c:53-145, on already
+converted `Py_ssize_t` arguments. 3.15 removed the `lo < 0` check here: it moved
+into the converter, `cConvLo`, so `0 ≤ lo` on entry. `hi == -1` means "use
+`len(a)`" (:60-64). `mid = ((size_t)lo + hi) / 2` (:78) cannot wrap since
+`0 ≤ lo < hi ≤ PY_SSIZE_T_MAX`. The same-type fast path (:98-125) and the generic
+path (:126-129) compute the same `item < litem` for ints. -/
 def cInternalRight (a : List Int) (x lo hi : Int) (key : Option (Int → Int)) : Py Int :=
-  if lo < 0 then .error (.valueError "lo must be non-negative")
-  else
-    let hi := if hi = -1 then (a.length : Int) else hi
-    bisectLoop (fun mid => applyKey key <$> cIndex a mid) (fun v => !decide (x < v))
-      (hi - lo).toNat lo hi
+  let hi := if hi = -1 then (a.length : Int) else hi
+  bisectLoop (fun mid => applyKey key <$> cIndex a mid) (fun v => !decide (x < v))
+    (hi - lo).toNat lo hi
 
-/-- `internal_bisect_left`, Modules/_bisectmodule.c:232-325 (`litem < item`). -/
+/-- `internal_bisect_left`, Modules/_bisectmodule.c:233-325 (`litem < item`). -/
 def cInternalLeft (a : List Int) (x lo hi : Int) (key : Option (Int → Int)) : Py Int :=
-  if lo < 0 then .error (.valueError "lo must be non-negative")
-  else
-    let hi := if hi = -1 then (a.length : Int) else hi
-    bisectLoop (fun mid => applyKey key <$> cIndex a mid) (fun v => decide (v < x))
-      (hi - lo).toNat lo hi
+  let hi := if hi = -1 then (a.length : Int) else hi
+  bisectLoop (fun mid => applyKey key <$> cIndex a mid) (fun v => decide (v < x))
+    (hi - lo).toNat lo hi
 
-/-- `_bisect.bisect_right`, Modules/_bisectmodule.c:147-175. -/
+/-- `_bisect.bisect_right`, Modules/_bisectmodule.c:147-175, with its clinic
+wrapper (clinic/_bisectmodule.c.h:84-113 parses `lo` before `hi`). -/
 def cBisectRight (a : List Int) (x lo : Int) (hi : Option Int) (key : Option (Int → Int)) : Py Int := do
   let lo ← cConvLo lo
   let hi ← cConvHi hi
