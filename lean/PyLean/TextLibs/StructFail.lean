@@ -95,8 +95,8 @@ theorem indexOverflow_proven : IndexOverflow := by
 /-- A raising `__bool__` raises out of `?`, in both format tables, rather than counting as false. -/
 def BoolRaises : Prop :=
   ∀ (o : PyO) (e : PyExc), o.truth = .error e →
-    runPack ⟨'?', 1, 1, .nuBool, .npBool⟩ (.obj o) = .error e ∧
-    runPack ⟨'?', 1, 0, .buBool, .bpBool⟩ (.obj o) = .error e
+    runPack ⟨['?'], 1, 1, .nuBool, .npBool⟩ (.obj o) = .error e ∧
+    runPack ⟨['?'], 1, 0, .buBool, .bpBool⟩ (.obj o) = .error e
 
 theorem boolRaises_proven : BoolRaises := by
   intro o e h
@@ -165,71 +165,74 @@ theorem complexOrder_proven : ComplexOrder := by
 /-! ### Buffers and offsets -/
 
 /-- The two buffer formats fail differently: `y*` lets an exception from `__buffer__` through, and the
-`w*` of `pack_into` replaces it with `TypeError`, which also refuses `bytes`. -/
+`Py_buffer(accept={rwbuffer})` of `pack_into` replaces it with `TypeError`, which also refuses `bytes`. -/
 def BufferLaws : Prop :=
-  ∀ (t : String) (e : PyExc) (b : List Nat),
+  ∀ (t : String) (e : PyExc) (b : List Nat) (n : Nat),
     readBuf (.raises t e) = .error e ∧
-    writeBuf (.raises t e) = .error (.typeError s!"argument must be read-write bytes-like object, not {t}") ∧
-    writeBuf (.bytes b) = .error (.typeError "argument must be read-write bytes-like object, not bytes") ∧
-    writeBuf (.bytearray b) = .ok b ∧ readBuf (.bytes b) = .ok b ∧ readBuf (.bytearray b) = .ok b
+    writeBuf n (.raises t e) =
+      .error (.typeError s!"pack_into() argument {n} must be read-write bytes-like object, not {t}") ∧
+    writeBuf n (.bytes b) =
+      .error (.typeError s!"pack_into() argument {n} must be read-write bytes-like object, not bytes") ∧
+    writeBuf n (.bytearray b) = .ok b ∧ readBuf (.bytes b) = .ok b ∧ readBuf (.bytearray b) = .ok b
 
 theorem bufferLaws_proven : BufferLaws := by
-  intro t e b
+  intro t e b n
   exact ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩
 
-/-- `s_pack_into` checks in the order of its body: the item count, then the buffer, then the offset.
-So a bad buffer is reported even with a raising offset, and only then does `__index__` run. -/
+/-- `Struct.pack_into`: the clinic wrapper converts the buffer and then the offset, and only then does the
+body compare the items with `s_len`. So a bad buffer comes first, and the count that matters is the
+one a `__init__` run by `__index__` left: the check cannot be stale, as it was in 3.14. -/
 def PackIntoOrder : Prop :=
-  ∀ (s : SObj) (b : BufArg) (off : OffArg) (args : List SV),
-    (args.length ≠ s.sLen → structPackIntoA s (.full b off args) =
-      .error (structErr s!"pack_into expected {s.sLen} items for packing (got {args.length})")) ∧
-    (args.length = s.sLen → ∀ e, writeBuf b = .error e → structPackIntoA s (.full b off args) = .error e) ∧
-    (args.length = s.sLen → ∀ buf e, writeBuf b = .ok buf → offNumber off = .error e →
-      structPackIntoA s (.full b off args) = .error e)
+  ∀ (s t : SObj) (b : BufArg) (off : OffArg) (args : List SV) (ty : String) (r : Py Int) (n : Int),
+    (∀ e, writeBuf 1 b = .error e → structPackIntoA s 1 1 (.full b off args) = .error e) ∧
+    (∀ buf e, writeBuf 1 b = .ok buf → offSsize off = .error e →
+      structPackIntoA s 1 1 (.full b off args) = .error e) ∧
+    (∀ buf, writeBuf 1 b = .ok buf → r = .ok n → ssizeArg n = .ok n → args.length ≠ t.sLen →
+      structPackIntoA s 1 1 (.full b (.index ty r (some t)) args) =
+        .error (structErr s!"pack_into expected {t.sLen} items for packing (got {args.length})"))
 
 theorem packIntoOrder_proven : PackIntoOrder := by
-  intro s b off args
-  refine ⟨fun h => ?_, fun h e h2 => ?_, fun h buf e h2 h3 => ?_⟩
-  · simp [structPackIntoA, h]
+  intro s t b off args ty r n
+  refine ⟨fun e h => ?_, fun buf e h h2 => ?_, fun buf h h2 h3 h4 => ?_⟩
+  · simp [structPackIntoA, h, bind, Except.bind]
   · simp [structPackIntoA, h, h2, bind, Except.bind]
-  · simp [structPackIntoA, h, h2, h3, bind, Except.bind]
+  · subst h2
+    simp [structPackIntoA, h, offSsize, offNumber, h3, h4, bind, Except.bind, throw, throwThe, MonadExcept.throw,
+      MonadExceptOf.throw]
 
-/-- The same offset is reported differently by two functions: too large for `Py_ssize_t`, `pack_into`
-raises `IndexError` and `unpack_from` raises `OverflowError`. An exception from `__index__` comes out
-of both unchanged. -/
+/-- An offset too large for `Py_ssize_t` is the same `OverflowError` in `pack_into` and `unpack_from`:
+both are clinic `Py_ssize_t` arguments now. An exception from `__index__` comes out of both unchanged. -/
 def OffsetLaws : Prop :=
-  ∀ (e : PyExc) (t : String) (s : SObj) (b : List Nat) (args : List SV), args.length = s.sLen →
+  ∀ (e : PyExc) (t : String) (s : SObj) (b : List Nat) (args : List SV),
     offSsize (.index t (.error e) none) = .error e ∧
     offSsize (.int (2 ^ 63)) = .error (.overflowError "Python int too large to convert to C ssize_t") ∧
-    structPackIntoA s (.full (.bytearray b) (.index t (.ok (2 ^ 63)) none) args) =
-      .error (.indexError s!"cannot fit '{t}' into an index-sized integer") ∧
-    structPackIntoA s (.full (.bytearray b) (.index t (.error e) none) args) = .error e
+    structPackIntoA s 1 1 (.full (.bytearray b) (.index t (.ok (2 ^ 63)) none) args) =
+      .error (.overflowError "Python int too large to convert to C ssize_t") ∧
+    structPackIntoA s 1 1 (.full (.bytearray b) (.index t (.error e) none) args) = .error e
 
 theorem offsetLaws_proven : OffsetLaws := by
-  intro e t s b args h
-  refine ⟨rfl, ?_, ?_, ?_⟩
-  · rfl
-  · simp [structPackIntoA, h, writeBuf, offNumber, asSsizeIndex, longMin, longMax, OffArg.ty, bind,
-      Except.bind]
-  · simp [structPackIntoA, h, writeBuf, offNumber, bind, Except.bind]
+  intro e t s b args
+  exact ⟨rfl, rfl, rfl, rfl⟩
 
 /-- The module functions convert the format first, so a bad format is reported ahead of a bad buffer,
-and otherwise they are the `Struct` methods. Both `pack` and `pack_into` need a format at all. -/
+and otherwise they are the `Struct` methods, with the argument numbers one higher. `pack` and
+`pack_into` check how many arguments they got before anything else. -/
 def ModuleOrder : Prop :=
   ∀ (f : FmtArg) (b : BufArg) (off : OffArg) (a : List SV) (p : PackIntoArgs),
-    modPackA a none = .error (.typeError "missing format argument") ∧
-    modPackIntoA p none = .error (.typeError "missing format argument") ∧
+    modPackA a none = .error (.typeError "pack expected at least 1 argument, got 0") ∧
+    modPackIntoA p none = .error (.typeError "pack_into expected at least 3 arguments, got 0") ∧
     (∀ e, cacheStruct f = .error e →
       modUnpackA f b = .error e ∧ modUnpackFromA f b off = .error e ∧ modIterUnpackA f b = .error e ∧
-      modPackA a (some f) = .error e ∧ modPackIntoA p (some f) = .error e) ∧
+      modPackA a (some f) = .error e ∧ modPackIntoA (.full b off a) (some f) = .error e) ∧
     (∀ s, cacheStruct f = .ok s →
       modUnpackA f b = structUnpackA s b ∧ modUnpackFromA f b off = structUnpackFromA s b off ∧
       modIterUnpackA f b = structIterUnpackA s b ∧ modPackA a (some f) = structPack s a ∧
-      modPackIntoA p (some f) = structPackIntoA s p)
+      modPackIntoA (.full b off a) (some f) = structPackIntoA s 2 2 (.full b off a))
 
 theorem moduleOrder_proven : ModuleOrder := by
   intro f b off a p
-  refine ⟨rfl, rfl, fun e h => ?_, fun s h => ?_⟩
+  refine ⟨rfl, ?_, fun e h => ?_, fun s h => ?_⟩
+  · cases p <;> rfl
   · simp [modUnpackA, modUnpackFromA, modIterUnpackA, modPackA, modPackIntoA, h, bind, Except.bind]
   · simp [modUnpackA, modUnpackFromA, modIterUnpackA, modPackA, modPackIntoA, h, bind, Except.bind]
 
@@ -342,16 +345,16 @@ theorem packNoUnsafe_refuted : ¬PackNoUnsafe := by
   exact h (.str [105]) (sOf (.str [105])) [.obj { index := some (.ok 1), reinit := true }]
     (by decide +kernel) (by decide +kernel)
 
-/-- `pack_into` reads only the arguments it was given. -/
+/-- `pack_into` cannot be made to walk freed codes by a value it is packing. The offset can no longer do
+it: `PackIntoOrder` has the check after that conversion. -/
 def PackIntoNoUnsafe : Prop :=
-  ∀ (f g : FmtArg) (s t : SObj) (args : List SV) (buf : List Nat) (n : Int),
-    structInit f = .ok s → structInit g = .ok t →
-    structPackIntoA s (.full (.bytearray buf) (.index "O" (.ok n) (some t)) args) ≠ .error MEMORY
+  ∀ (f : FmtArg) (s : SObj) (args : List SV) (buf : List Nat) (n : Int),
+    structInit f = .ok s → structPackIntoA s 1 1 (.full (.bytearray buf) (.int n) args) ≠ .error MEMORY
 
 theorem packIntoNoUnsafe_refuted : ¬PackIntoNoUnsafe := by
   intro h
-  exact h (.str [105]) (.str [105, 105]) (sOf (.str [105])) (sOf (.str [105, 105])) [.int 1]
-    (List.replicate 8 0) 0 (by decide +kernel) (by decide +kernel) (by decide +kernel)
+  exact h (.str [105]) (sOf (.str [105])) [.obj { index := some (.ok 1), reinit := true }]
+    (List.replicate 8 0) 0 (by decide +kernel) (by decide +kernel)
 
 /-- `iter_unpack` reads only the buffer it was given, whatever happens to the `Struct` after the
 iterator is made. -/
@@ -375,5 +378,105 @@ theorem iterLenNoCrash_refuted : ¬IterLenNoCrash := by
   intro h
   exact h (.str [98]) (.str [48, 115]) (sOf (.str [98])) (sOf (.str [48, 115])) [0, 0] { buf := [0, 0] }
     (by decide +kernel) (by decide +kernel) (by decide +kernel) (by decide +kernel)
+
+/-! ### The life of a `Struct` -/
+
+/-- `Zf` and `Zd` are `F` and `D`: `format_equal` compares the whole code, `getentry` takes the first entry
+that matches, and both passes step over two characters. In each table the entry at `Zf...` has the
+size, alignment and routines of the one at `F...`, and a `Z` with anything else after it, or at the
+end, is a bad character. A `format_equal` that looked only at the first character fails this. -/
+def ZCodes : Prop :=
+  ∀ (t : Tab) (r : List Char),
+    (∃ e e', getentry ('Z' :: 'f' :: r) t.table = .ok e ∧ getentry ('F' :: r) t.table = .ok e' ∧
+      e.format = ['Z', 'f'] ∧ (e.size, e.alignment, e.unpack, e.pack) = (e'.size, e'.alignment, e'.unpack, e'.pack)) ∧
+    (∃ e e', getentry ('Z' :: 'd' :: r) t.table = .ok e ∧ getentry ('D' :: r) t.table = .ok e' ∧
+      e.format = ['Z', 'd'] ∧ (e.size, e.alignment, e.unpack, e.pack) = (e'.size, e'.alignment, e'.unpack, e'.pack)) ∧
+    getentry ['Z'] t.table = .error (structErr "bad char in struct format") ∧
+    (∀ c, c ≠ 'f' → c ≠ 'd' →
+      getentry ('Z' :: c :: r) t.table = .error (structErr "bad char in struct format"))
+
+theorem zCodes_proven : ZCodes := by
+  intro t r
+  have hbad : ∀ c, c ≠ 'f' → c ≠ 'd' →
+      ∀ l : List FormatDef, (∀ e ∈ l, e.format.length = 1 → e.format ≠ ['Z']) →
+      (∀ e ∈ l, e.format.length = 2 → e.format.head? = some 'Z' → e.format = ['Z', 'f'] ∨ e.format = ['Z', 'd']) →
+      (∀ e ∈ l, e.format.length = 1 ∨ e.format.length = 2) →
+      getentry ('Z' :: c :: r) l = .error (structErr "bad char in struct format") := by
+    intro c h1 h2 l
+    induction l with
+    | nil => intro _ _ _; rfl
+    | cons e es ih =>
+      intro a b d
+      have ht : formatEqual e ('Z' :: c :: r) = false := by
+        have h3 := a e (by simp)
+        have h4 := b e (by simp)
+        have h5 := d e (by simp)
+        unfold formatEqual
+        obtain ⟨fm, _, _, _, _⟩ := e
+        simp only at h3 h4 h5 ⊢
+        match fm, h3, h4, h5 with
+        | [x], h3, _, _ =>
+          have : x ≠ 'Z' := fun hx => h3 rfl (by rw [hx])
+          simp [List.isPrefixOf, this]
+        | [x, y], _, h4, _ =>
+          by_cases hx : x = 'Z'
+          · subst hx
+            rcases h4 rfl rfl with h | h
+            · simp only [List.cons.injEq] at h
+              simp [List.isPrefixOf, h.2.1, Ne.symm h1]
+            · simp only [List.cons.injEq] at h
+              simp [List.isPrefixOf, h.2.1, Ne.symm h2]
+          · simp [List.isPrefixOf, hx]
+      unfold getentry
+      rw [if_neg (by simp [ht])]
+      exact ih (fun x hx => a x (by simp [hx])) (fun x hx => b x (by simp [hx])) (fun x hx => d x (by simp [hx]))
+  have hall : ∀ t : Tab, (∀ e ∈ t.table, e.format.length = 1 → e.format ≠ ['Z']) ∧
+      (∀ e ∈ t.table, e.format.length = 2 → e.format.head? = some 'Z' → e.format = ['Z', 'f'] ∨ e.format = ['Z', 'd']) ∧
+      (∀ e ∈ t.table, e.format.length = 1 ∨ e.format.length = 2) := by
+    intro t
+    cases t <;> decide +kernel
+  obtain ⟨a, b, d⟩ := hall t
+  refine ⟨?_, ?_, ?_, fun c h1 h2 => hbad c h1 h2 t.table a b d⟩
+  · cases t <;> exact ⟨_, _, rfl, rfl, rfl, rfl⟩
+  · cases t <;> exact ⟨_, _, rfl, rfl, rfl, rfl⟩
+  · cases t <;> rfl
+
+/-- The object model of `Struct`. `Struct(f)` is `set_format` once, with `s_init` doing nothing. Calling
+`__init__` with an equal format warns of nothing and changes nothing. With another format it warns,
+and the message says whether `__init__` ran before, and the format changes or the call fails with what
+`set_format` raises. A subclass with its own `__init__` gets a warning for a bad format in `__new__`
+and the object stays without a format, so that `__init__` can still set one. -/
+def LifeLaw : Prop :=
+  (∀ (f : FmtArg) (a : CallArgs), a = ⟨[f], []⟩ →
+    (typeCallL {} a).2 = [] ∧
+    (∀ s, setFormat f = .ok s → ∃ l, (typeCallL {} a).1 = .ok l ∧ l.obj = some s ∧ l.initCalled = true) ∧
+    (∀ e, setFormat f = .error e → (typeCallL {} a).1 = .error e)) ∧
+  (∀ (s : SObj) (b : Bool) (f : FmtArg), sameFormat s f = true →
+    structInitImpl ⟨some s, b⟩ f = (.ok ⟨some s, true⟩, [])) ∧
+  (∀ (s s' : SObj) (b : Bool) (f : FmtArg), sameFormat s f = false → setFormat f = .ok s' →
+    ∃ l, structInitImpl ⟨some s, b⟩ f = (.ok l, [("FutureWarning",
+      if b then "Re-initialization of Struct by calling the __init__() method will not work in future Python versions"
+      else "Different format arguments for __new__() and __init__() methods of Struct")]) ∧ l.obj = some s') ∧
+  (∀ (s : SObj) (b : Bool) (f : FmtArg) (e : PyExc), sameFormat s f = false → setFormat f = .error e →
+    (structInitImpl ⟨some s, b⟩ f).1 = .error e) ∧
+  (∀ (f : FmtArg) (e : PyExc), setFormat f = .error e →
+    sNewL { initIsS := false } ⟨[f], []⟩ =
+      (.ok {}, [("DeprecationWarning", s!"Invalid 'format' argument for Struct.__new__(): {e.message}")])) ∧
+  (∀ (f : FmtArg) (s : SObj), setFormat f = .ok s →
+    (sInitL { initIsS := false } {} ⟨[f], []⟩).1 = .ok ⟨some s, true⟩)
+
+theorem lifeLaw_proven : LifeLaw := by
+  refine ⟨?_, fun s b f h => ?_, fun s s' b f h h2 => ?_, fun s b f e h h2 => ?_, fun f e h => ?_, fun f s h => ?_⟩
+  · intro f a ha
+    subst ha
+    refine ⟨?_, fun s h => ?_, fun e h => ?_⟩
+    · cases h : setFormat f <;> simp [typeCallL, sNewL, sInitL, h]
+    · exact ⟨⟨some s, true⟩, by simp [typeCallL, sNewL, sInitL, h], rfl, rfl⟩
+    · simp [typeCallL, sNewL, h]
+  · simp [structInitImpl, h]
+  · exact ⟨⟨some s', true⟩, by simp [structInitImpl, h, h2], rfl⟩
+  · simp [structInitImpl, h, h2]
+  · simp [sNewL, h]
+  · simp [sInitL, parseFormat, structInitImpl, h]
 
 end PyLean.TextLibs.Struct

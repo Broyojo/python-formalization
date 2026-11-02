@@ -33,7 +33,7 @@ reproducer: |
 expected: |
   2147483652 delimiters for 2147483653 fields, or an OverflowError.
 observed: |
-  python3 3.14.7: 2147483647 delimiters, in 31 s with about 10 GB. REPRODUCED.
+  python3 3.15.2: 2147483647 delimiters, in 31 s with about 10 GB. REPRODUCED.
   main 3.16.0a1+dev: 2147483647 delimiters. REPRODUCED. num_fields is still an int there.
 promised_by: |
   The csv format and the docs of writerow: the fields of a row are separated by the delimiter.

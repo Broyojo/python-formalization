@@ -35,10 +35,10 @@ reproducer: |
 expected: |
   Each pair gives the same result, as the docs state.
 observed: |
-  python3 3.14.7: None, <re.Match span=(0, 3)>, None, <re.Match span=(0, 2)>. REPRODUCED.
+  python3 3.15.2: None, <re.Match span=(0, 3)>, None, <re.Match span=(0, 2)>. REPRODUCED.
   main 3.16.0a1+dev: the same. REPRODUCED.
 promised_by: |
-  Doc/library/re.rst@3.14.7:216, "x{m,n}+ is equivalent to (?>x{m,n})".
+  Doc/library/re.rst:260, "x{m,n}+ is equivalent to (?>x{m,n})".
 cause: |
   Modules/_sre/sre_lib.h:1366-1382 runs the first pattern[1] iterations with DO_JUMP0, each ending at
   its own SUCCESS, and fails at once when one fails. It never retries an earlier iteration, which

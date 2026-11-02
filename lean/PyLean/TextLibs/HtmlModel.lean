@@ -2,7 +2,7 @@ import PyLean.Core
 import PyLean.TextLibs.Html5Table
 
 /-!
-`Lib/html/__init__.py`, CPython 3.14.7. Strings are lists of code points. Arguments are `str`, and
+`Lib/html/__init__.py`, CPython 3.15.2. Strings are lists of code points. Arguments are `str`, and
 `quote` is a flag, as a stated scope limit: the functions use nothing but `str` methods on them, so
 they accept any object that has those methods.
 

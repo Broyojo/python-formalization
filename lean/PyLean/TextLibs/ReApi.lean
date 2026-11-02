@@ -2,7 +2,7 @@ import PyLean.TextLibs.ReEngine
 import PyLean.UnicodeObj.Repr
 
 /-!
-The Python-facing layer of `Modules/_sre/sre.c` and `Lib/re/__init__.py`, CPython 3.14.7: pattern
+The Python-facing layer of `Modules/_sre/sre.c` and `Lib/re/__init__.py`, CPython 3.15.2: pattern
 objects, `match`, `fullmatch`, `search`, `findall`, `finditer`, `split`, `sub`, match objects,
 `escape`, `Scanner` and the code validator. A callable `repl` or `Scanner` action runs arbitrary
 Python, so `sub` takes a literal or template `repl` and `Scanner` takes opaque actions.
@@ -756,7 +756,10 @@ def shuffleArgs (fn first : String) (least : Nat) (args : List Int) (kwFirst kwF
 /-- A `Scanner`, `Lib/re/__init__.py:394-413`: its pattern object. `flags` is not passed through
 `fix_flags` for the combined pattern, and each phrase is parsed in a state of its own. -/
 def scannerInit (istext : Bool) (phrases : List (List Nat)) (flags : Nat) : Py Pat := do
-  let parsed ← phrases.mapM (fun ph => parse istext ph flags)
+  let parsed ← phrases.mapM (fun ph => do
+    let x ← parse istext ph flags
+    if x.groupwidths.length ≠ 1 then throw (.valueError "Cannot use capturing groups in re.Scanner")
+    return x)
   let n := phrases.length
   let wrap (gid : Nat) (x : Parsed) : List Node := [.subpattern (some gid) 0 0 x.p]
   let alts := parsed.zipIdx.map fun (x, i) => wrap (i + 1) x

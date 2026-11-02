@@ -30,7 +30,7 @@ reproducer: |
 expected: |
   TypeError for all of them, as for 1.
 observed: |
-  python3 3.14.7: ["''", "''", "''", "''"], expected string object, got 'int'. REPRODUCED.
+  python3 3.15.2: ["''", "''", "''", "''"], expected string object, got 'int'. REPRODUCED.
   main 3.16.0a1+dev: the same. REPRODUCED.
 promised_by: |
   Doc/library/shlex.rst: "Return a shell-escaped version of the string s."

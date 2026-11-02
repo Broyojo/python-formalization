@@ -24,7 +24,7 @@ reproducer: |
 expected: |
   A relative path stays relative.
 observed: |
-  python3 3.14.7: c:\windows, False, True, .\c:\windows. REPRODUCED.
+  python3 3.15.2: c:\windows, False, True, .\c:\windows. REPRODUCED.
   main 3.16.0a1+dev: the same. REPRODUCED.
   This ran the pure-Python fallback on Linux. Python/fileutils.c:2564-2575 skips `.\` the same way.
 promised_by: |

@@ -23,7 +23,7 @@ reproducer: |
 expected: |
   None from both.
 observed: |
-  python3 3.14.7: <re.Match span=(1, 1)>, None. REPRODUCED.
+  python3 3.15.2: <re.Match span=(1, 1)>, None. REPRODUCED.
   main 3.16.0a1+dev (the vendored checkout predates the fix): the same. REPRODUCED.
 promised_by: |
   Doc/library/re.rst:1446-1452 on endpos: "If endpos is less than pos, no match will be found."

@@ -36,7 +36,7 @@ reproducer: |
 expected: |
   The same exception for 5000 digits as for 50.
 observed: |
-  python3 3.14.7: OverflowError, ValueError, PatternError, ValueError. REPRODUCED.
+  python3 3.15.2: OverflowError, ValueError, PatternError, ValueError. REPRODUCED.
   main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
 promised_by: |
   docs: re.compile raises re.PatternError for an invalid pattern; the OverflowError at

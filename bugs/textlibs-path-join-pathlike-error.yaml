@@ -42,7 +42,7 @@ reproducer: |
 expected: |
   "Can't mix strings and bytes in path components" for the first, and "mine" for the second.
 observed: |
-  python3 3.14.7: the os.PathLike message, twice. REPRODUCED.
+  python3 3.15.2: the os.PathLike message, twice. REPRODUCED.
   main 3.16.0a1+dev: the same. REPRODUCED.
 promised_by: |
   The message itself, which names os.PathLike as acceptable.

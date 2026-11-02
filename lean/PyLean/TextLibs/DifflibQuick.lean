@@ -189,7 +189,7 @@ theorem groupedLaw_proven : GroupedLaw := by
 
 /-! ### `quick_ratio` -/
 
-/-- `numb`, `Lib/difflib.py@3.14.7:642-645`. -/
+/-- `numb`, `Lib/difflib.py:643-646`. -/
 def bud (full : List (Nat × Nat)) (avail : List (Nat × Int)) (x : Nat) : Int :=
   match avail.lookup x with
   | some v => v

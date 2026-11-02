@@ -2,7 +2,7 @@ import PyLean.Core
 import PyLean.UnicodeObj.TextCase
 
 /-!
-Model of the pure part of `Lib/posixpath.py`, `Lib/ntpath.py` and `Lib/genericpath.py`, CPython 3.14.7,
+Model of the pure part of `Lib/posixpath.py`, `Lib/ntpath.py` and `Lib/genericpath.py`, CPython 3.15.2,
 with `_Py_normpath_and_size`, `Python/fileutils.c:2520-2632`, as the `posix` build runs it.
 
 Values keep their kind, because `str` and `bytes` do not mix: `ntpath.join` can raise or succeed on a
@@ -114,12 +114,12 @@ def splitextP (a : PathArg) : Py (PV × PV) := do
   let (r, e) := splitextL v.s 47 none
   return (⟨v.isb, r⟩, ⟨v.isb, e⟩)
 
-/-- `posixpath.basename`, `Lib/posixpath.py@3.14.7:166-171`. -/
+/-- `posixpath.basename`, `Lib/posixpath.py:167-172`. -/
 def basenameP (a : PathArg) : Py PV := do
   let v ← fspath a
   return ⟨v.isb, v.s.drop (rfind 47 v.s + 1).toNat⟩
 
-/-- `posixpath.dirname`, `Lib/posixpath.py@3.14.7:176-184`. -/
+/-- `posixpath.dirname`, `Lib/posixpath.py:177-185`. -/
 def dirnameP (a : PathArg) : Py PV := do
   let v ← fspath a
   let i := (rfind 47 v.s + 1).toNat
@@ -273,7 +273,7 @@ def splitrootN (p : List Nat) : List Nat × List Nat × List Nat :=
     else (p.take 2, [], p.drop 2)
   else ([], [], p)
 
-/-- `ntpath.isabs`, `Lib/ntpath.py@3.14.7:80-94`. -/
+/-- `ntpath.isabs`, `Lib/ntpath.py:80-94`. -/
 def isabsN (a : PathArg) : Py Bool := do
   let v ← fspath a
   let s := toBack (v.s.take 3)

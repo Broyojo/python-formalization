@@ -39,7 +39,7 @@ reproducer: |
 expected: |
   The same events however the text is split.
 observed: |
-  python3 3.14.7: ['amp--'] ['amp-'], REPRODUCED.
+  python3 3.15.2: ['amp--'] ['amp-'], REPRODUCED.
   main 3.16.0a1+dev: ['amp--'] ['amp-'], REPRODUCED.
 promised_by: |
   Doc/library/html.parser.rst:99-100: "It is processed insofar as it consists of complete elements;

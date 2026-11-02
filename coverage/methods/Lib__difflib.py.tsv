@@ -10,7 +10,7 @@ Lib/difflib.py	422	491	SequenceMatcher.get_matching_blocks	get_matching_blocks(s
 Lib/difflib.py	493	546	SequenceMatcher.get_opcodes	get_opcodes(self)	modelled	textlibs-difflib-opcodes,textlibs-difflib-grouped-cache	
 Lib/difflib.py	548	596	SequenceMatcher.get_grouped_opcodes	get_grouped_opcodes(self, n=3)	modelled	textlibs-difflib-grouped,textlibs-difflib-grouped-cache	
 Lib/difflib.py	598	621	SequenceMatcher.ratio	ratio(self)	modelled	textlibs-difflib-ratio-bound	
-Lib/difflib.py	623	650	SequenceMatcher.quick_ratio	quick_ratio(self)	todo		changed-in-3.15: was textlibs-difflib-quick-bound
+Lib/difflib.py	623	650	SequenceMatcher.quick_ratio	quick_ratio(self)	modelled	textlibs-difflib-quick-bound	
 Lib/difflib.py	652	662	SequenceMatcher.real_quick_ratio	real_quick_ratio(self)	modelled	textlibs-difflib-ratio-bound	
 Lib/difflib.py	667	715	get_close_matches	get_close_matches(word, possibilities, n=3, cutoff=0.6)	todo		changed-in-3.15:
 Lib/difflib.py	718	723	_keep_original_ws	_keep_original_ws(s, tag_s)	todo		

@@ -2,7 +2,7 @@ import PyLean.Core
 import PyLean.UnicodeObj.Ctype
 
 /-!
-Model of `TextWrapper._wrap_chunks` and `_handle_long_word`, `Lib/textwrap.py:197-339`, CPython 3.14.7.
+Model of `TextWrapper._wrap_chunks` and `_handle_long_word`, `Lib/textwrap.py:197-339`, CPython 3.15.2.
 The regexes of `_split` and the munging before it are not modelled here: these two functions take any
 list of chunks, and everything about line length and lost text is decided in them. `chunks` is kept in
 reading order, so its head is `chunks[-1]` of the reversed list CPython uses.

@@ -38,7 +38,7 @@ reproducer: |
 expected: |
   The instance is used as it is, as dialect_new's "Can we reuse this instance?" branch intends.
 observed: |
-  python3 3.14.7: D.__init__() takes 1 positional argument but 2 were given. REPRODUCED.
+  python3 3.15.2: D.__init__() takes 1 positional argument but 2 were given. REPRODUCED.
   main 3.16.0a1+dev: the same. REPRODUCED.
 promised_by: |
   Nothing explicit, since the type is private. csv.reader's docs accept "an instance of a subclass of

@@ -29,7 +29,7 @@ reproducer: |
 expected: |
   The two results agree, and with the group not closed at the conditional, both are None.
 observed: |
-  python3 3.14.7: <re.Match span=(0, 1)>, None. REPRODUCED.
+  python3 3.15.2: <re.Match span=(0, 1)>, None. REPRODUCED.
   main 3.16.0a1+dev: the same. REPRODUCED.
 promised_by: |
   Doc/library/re.rst on (?(id/name)yes|no): the yes pattern is tried "if the group with given id or

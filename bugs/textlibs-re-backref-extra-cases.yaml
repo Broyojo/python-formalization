@@ -22,7 +22,7 @@ reproducer: |
 expected: |
   Both match.
 observed: |
-  python3 3.14.7: <re.Match span=(0, 2)>, None. REPRODUCED.
+  python3 3.15.2: <re.Match span=(0, 2)>, None. REPRODUCED.
   main 3.16.0a1+dev: the same. REPRODUCED.
 promised_by: |
   Doc/library/re.rst on IGNORECASE and on backreferences.

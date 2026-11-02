@@ -1,7 +1,7 @@
 import PyLean.TextLibs.QpProps
 
 /-!
-`Lib/quopri.py`, CPython 3.14.7. Each of `encode`, `decode`, `encodestring` and `decodestring` has two
+`Lib/quopri.py`, CPython 3.15.2. Each of `encode`, `decode`, `encodestring` and `decodestring` has two
 bodies: the one that calls `binascii`, which every build takes, and the pure-Python one below it, taken
 when `b2a_qp` is `None`. They differ, so both are modelled. `quotetabs` and `header` are flags, so they
 are `Bool`, a stated scope limit: the source only tests their truth.
