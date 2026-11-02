@@ -2159,7 +2159,7 @@ class ReArea:
             if roll < 0.45:
                 parts.append(r.choice(cls.CHARS))
             elif roll < 0.75:
-                a = r.choice([0x30, 0x41, 0x61, 0xc0, 0x100, 0x370, 0x400, 0x4e00, 0xfb00, 0xff00, 0xffe0, 0x10400, 0x1f600])
+                a = r.choice([0x30, 0x41, 0x61, 0xc0, 0x100, 0x370, 0x400, 0x4e00, 0xa7c0, 0xfb00, 0xff00, 0xffe0, 0x10400, 0x16ea0, 0x1f600])
                 # only ranges that start near the top of the BMP may cross it: one starting low
                 # costs 65536 table lookups and reaches no other branch
                 b = a + r.choice([0, 1, 2, 5, 25, 26, 100, 300] + ([70000] if a >= 0xff00 else []))
@@ -3021,7 +3021,297 @@ class DifflibArea:
         return [r.randrange(m) for _ in range(r.randint(0, 14))]
 
     @classmethod
+    def gen_ops(cls, r, a, b, seq):
+        ops = []
+        for _ in range(r.randint(1, 6)):
+            k = r.random()
+            if k < 0.25:
+                ops.append({"op": "opcodes"})
+            elif k < 0.4:
+                ops.append({"op": "blocks"})
+            elif k < 0.55:
+                ops.append({"op": "grouped", "n": r.choice([0, 1, 2, 3])})
+            elif k < 0.7:
+                ops.append({"op": r.choice(["ratio", "quick", "real"])})
+            elif k < 0.87:
+                la, lb = len(a), len(b)
+                x = sorted([r.randint(0, la), r.randint(0, la)])
+                y = sorted([r.randint(0, lb), r.randint(0, lb)])
+                ops.append({"op": "longest", "alo": x[0], "ahi": x[1], "blo": y[0], "bhi": y[1]})
+            elif k < 0.93:
+                ops.append({"op": "seqs", "x": seq(), "y": seq(), "same": r.random() < 0.3, "same2": r.random() < 0.3})
+            else:
+                ops.append({"op": r.choice(["seq1", "seq2"]), "x": seq(), "same": r.random() < 0.3})
+        return ops
+
+    @classmethod
+    def gen_obj(cls, r):
+        """Objects of a class of ours: equal objects that are not identical, hash collisions, a __hash__ or
+        __eq__ that raises, and the same object in several places."""
+        kinds = r.choice(["lawful", "lawful", "collide", "hashraise", "eqraise", "unlawful"])
+        n = r.randint(1, 8)
+        elems = []
+        for i in range(n):
+            v = r.randrange(5)
+            if kinds == "collide":
+                h = r.choice([1, 2, 9])
+            elif kinds == "unlawful":
+                h = r.randrange(6)
+            else:
+                h = v % 3 + 1 if r.random() < 0.5 else v + 8
+            if kinds != "unlawful":
+                h = v + 8 if kinds != "collide" else h
+            e = {"v": v, "h": h, "bad": []}
+            elems.append(e)
+        if kinds == "collide":
+            for e in elems:
+                e["h"] = e["v"] % 2 + 1
+        if kinds == "hashraise":
+            for _ in range(r.randint(1, 2)):
+                elems[r.randrange(n)]["h"] = None
+        if kinds == "eqraise":
+            for _ in range(r.randint(1, 3)):
+                e = elems[r.randrange(n)]
+                e["bad"].append(r.randrange(n))
+                if r.random() < 0.5:
+                    e["h"] = 1
+                    elems[r.randrange(n)]["h"] = 1
+
+        def seq():
+            return [r.randrange(n) for _ in range(r.randint(0, 9))]
+        a, b = seq(), seq()
+        if r.random() < 0.3:
+            b = list(a)
+        if r.random() < 0.05:
+            b = [r.randrange(n) for _ in range(r.choice([199, 200, 201, 300]))]
+        return {"mod": "textlibs", "fn": "difflib.obj", "elems": elems, "a": a, "b": b, "auto": r.random() < 0.6,
+                "hasjunk": r.random() < 0.3, "junk": [r.randrange(5) for _ in range(r.randint(0, 2))],
+                "boom": [r.randrange(n)] if r.random() < 0.2 else [], "ops": cls.gen_ops(r, a, b, seq)}
+
+    @classmethod
+    def run_obj(cls, c):
+        import difflib
+
+        class El:
+            __slots__ = ("i", "v", "h", "bad")
+
+            def __init__(self, i, d):
+                self.i, self.v, self.h, self.bad = i, d["v"], d["h"], d["bad"]
+
+            def __hash__(self):
+                if self.h is None:
+                    raise ValueError(f"hash {self.i}")
+                return self.h
+
+            def __eq__(self, o):
+                if o.i in self.bad:
+                    raise ValueError(f"eq {self.i} {o.i}")
+                return self.v == o.v
+
+        els = [El(i, d) for i, d in enumerate(c["elems"])]
+
+        def junk(x):
+            if x.i in c["boom"]:
+                raise ValueError("boom")
+            return x.v in c["junk"]
+
+        def conv(l):
+            return [els[i] for i in l]
+
+        def body():
+            s = difflib.SequenceMatcher(junk if c["hasjunk"] else None, conv(c["a"]), conv(c["b"]), c["auto"])
+            out = []
+            for o in c["ops"]:
+                try:
+                    out.append(cls.op(s, o, conv))
+                except Exception as e:
+                    out.append(["exc", {"exc": type(e).__name__, "msg": str(e)}])
+            return out
+        return common.py_result(body)
+
+    @classmethod
+    def op(cls, s, o, conv):
+        k = o["op"]
+        if k == "blocks":
+            return [list(t) for t in s.get_matching_blocks()]
+        if k == "opcodes":
+            return [list(t) for t in s.get_opcodes()]
+        if k == "grouped":
+            return [[list(t) for t in g] for g in s.get_grouped_opcodes(o["n"])]
+        if k in ("ratio", "quick", "real"):
+            f = {"ratio": s.ratio, "quick": s.quick_ratio, "real": s.real_quick_ratio}[k]()
+            length = len(s.a) + len(s.b)
+            if length == 0:
+                return [0, 0] if f == 1.0 else ["bad", f]
+            m = round(f * length / 2)
+            return [m, length] if 2.0 * m / length == f else ["bad", f]
+        if k == "longest":
+            return list(s.find_longest_match(o["alo"], o["ahi"], o["blo"], o["bhi"]))
+        if k == "seqs":
+            s.set_seqs(s.a if o["same"] else conv(o["x"]), s.b if o["same2"] else conv(o["y"]))
+            return None
+        f = s.set_seq1 if k == "seq1" else s.set_seq2
+        cur = s.a if k == "seq1" else s.b
+        f(cur if o["same"] else conv(o["x"]))
+        return None
+
+    LINES = ["a\n", "b\n", "abc\n", "abd\n", "  x\n", "\n", "#\n", " # \n", "hello world\n", "hello wurld\n", "abcdefghij\n",
+             "abcdefghix\n", "\tab\n", "ab \n", "one two three\n", "one tree three\n", "x", "", "- y\n", "? z\n", "+ q\n", "  w\n"]
+    OBJS = [1, b"x", None, [1]]
+
+    @classmethod
+    def txt(cls, r):
+        return r.choice(cls.LINES)
+
+    @classmethod
+    def strs(cls, r, m=8):
+        return [[ord(c) for c in cls.txt(r)] for _ in range(r.randint(0, m))]
+
+    @classmethod
+    def gen_text(cls, r):
+        k = r.choice(["unified", "unified", "context", "context", "ndiff", "ndiff", "ndiff", "restore", "range", "junk", "keepws", "close"])
+        c = {"mod": "textlibs", "fn": "difflib.text", "op": k}
+
+        def seq():
+            base = cls.strs(r)
+            if r.random() < 0.3:
+                # close to another sequence, so the matcher finds something
+                base = [[ord(ch) for ch in cls.LINES[i % 6]] for i in range(r.randint(0, 12))]
+            return base
+
+        def edited(a):
+            b = list(a)
+            for _ in range(r.randint(0, 3)):
+                if b:
+                    i = r.randrange(len(b))
+                    b[i] = [ord(ch) for ch in cls.txt(r)]
+            if r.random() < 0.3:
+                b.insert(r.randint(0, len(b)), [ord(ch) for ch in cls.txt(r)])
+            return b
+
+        if k in ("unified", "context"):
+            a = seq()
+            b = edited(a) if r.random() < 0.6 else seq()
+            bad = r.random() < 0.2
+
+            def wrap(l):
+                x = list(l)
+                if bad and r.random() < 0.7:
+                    x.insert(r.randint(0, len(x)), {"o": r.randrange(4)})
+                if r.random() < 0.03:
+                    return {"str": [97, 10]}
+                return x
+
+            def text(v):
+                if r.random() < 0.03:
+                    return {"bad": 1}
+                return [ord(ch) for ch in v]
+            c.update({"a": wrap(a), "b": wrap(b), "f": text(r.choice(["", "x.py"])), "t": text(r.choice(["", "y.py"])),
+                      "fd": text(r.choice(["", "2026"])), "td": text(r.choice(["", "2027"])), "n": r.choice([0, 1, 2, 3, 3, 5]),
+                      "lt": text(r.choice(["\n", "", "\r\n"]))})
+        elif k == "ndiff":
+            a = seq()
+            b = edited(a) if r.random() < 0.7 else seq()
+            lj, cj = None, "default"
+            if r.random() < 0.3:
+                lj = {"junk": cls.strs(r, 2), "boom": cls.strs(r, 1) if r.random() < 0.3 else []}
+            x = r.random()
+            if x < 0.2:
+                cj = None
+            elif x < 0.4:
+                cj = {"junk": [32], "boom": [r.choice([97, 98, 104, 120])] if r.random() < 0.5 else []}
+            c.update({"a": a, "b": b, "lj": lj, "cj": cj})
+        elif k == "restore":
+            c.update({"d": cls.strs(r), "which": r.choice([1, 2, 2, 1, 0, 3, -1])})
+        elif k == "range":
+            s = r.randint(0, 5)
+            c.update({"s": s, "e": s + r.choice([0, 0, 1, 1, 2, 3, 10])})
+        elif k == "junk":
+            c["s"] = [ord(ch) for ch in r.choice(cls.LINES + [" \t", "##", "#x", "\u00a0#\u2003"])]
+        elif k == "keepws":
+            c.update({"s": [ord(ch) for ch in cls.txt(r)], "tags": [r.choice([32, 94, 45, 43]) for _ in range(r.randint(0, 12))]})
+        else:
+            import struct
+            cut = r.choice([0.0, 0.3, 0.5, 0.6, 0.75, 0.8, 1.0, -0.1, 1.5, float("nan")])
+            c.update({"w": [ord(ch) for ch in cls.txt(r)], "ps": cls.strs(r, 6), "n": r.choice([1, 2, 3, 10, 0, -1]),
+                      "cut": struct.unpack(">Q", struct.pack(">d", cut))[0]})
+        return c
+
+    @classmethod
+    def run_text(cls, c):
+        import difflib
+        import struct
+
+        def s(l):
+            return "".join(map(chr, l))
+
+        def lines(a):
+            if isinstance(a, dict):
+                return s(a["str"])
+            return [cls.OBJS[x["o"]] if isinstance(x, dict) else s(x) for x in a]
+
+        def text(v):
+            return b"x" if isinstance(v, dict) else s(v)
+
+        def nats(l):
+            return [[ord(ch) for ch in x] for x in l]
+
+        def drain(g):
+            out = []
+            try:
+                for x in g:
+                    out.append(x)
+            except Exception as e:
+                return out, ["exc", {"exc": type(e).__name__, "msg": str(e)}]
+            return out, None
+
+        k = c["op"]
+
+        def body():
+            if k in ("unified", "context"):
+                f = difflib.unified_diff if k == "unified" else difflib.context_diff
+                g = f(lines(c["a"]), lines(c["b"]), text(c["f"]), text(c["t"]), text(c["fd"]), text(c["td"]), c["n"], text(c["lt"]))
+                if k == "unified":
+                    return nats(list(g))
+                out, e = drain(g)
+                return [nats(out), e]
+            if k == "ndiff":
+                def lj(x):
+                    if [ord(ch) for ch in x] in c["lj"]["boom"]:
+                        raise ValueError("boom")
+                    return [ord(ch) for ch in x] in c["lj"]["junk"]
+
+                def cj(x):
+                    if ord(x) in c["cj"]["boom"]:
+                        raise ValueError("boom")
+                    return ord(x) in c["cj"]["junk"]
+                cjf = None if c["cj"] is None else difflib.IS_CHARACTER_JUNK if isinstance(c["cj"], str) else cj
+                a, b = [s(x) for x in c["a"]], [s(x) for x in c["b"]]
+                out, e = drain(difflib.ndiff(a, b, lj if c["lj"] is not None else None, cjf))
+                r1 = r2 = []
+                if e is None:
+                    r1, r2 = list(difflib.restore(out, 1)), list(difflib.restore(out, 2))
+                return [[nats(out), e], {"ok": nats(r1)}, {"ok": nats(r2)}]
+            if k == "restore":
+                return nats(list(difflib.restore([s(x) for x in c["d"]], c["which"])))
+            if k == "range":
+                return nats([difflib._format_range_unified(c["s"], c["e"]), difflib._format_range_context(c["s"], c["e"])])
+            if k == "junk":
+                x = s(c["s"])
+                return [difflib.IS_LINE_JUNK(x), [difflib.IS_CHARACTER_JUNK(ch) for ch in x]]
+            if k == "keepws":
+                return nats([difflib._keep_original_ws(s(c["s"]), s(c["tags"]))])
+            cut = struct.unpack(">d", struct.pack(">Q", c["cut"]))[0]
+            return nats(difflib.get_close_matches(s(c["w"]), [s(x) for x in c["ps"]], c["n"], cut))
+        return common.py_result(body)
+
+    @classmethod
     def gen(cls, r):
+        x = r.random()
+        if x < 0.35:
+            return cls.gen_text(r)
+        if x < 0.7:
+            return cls.gen_obj(r)
         a, b = cls.seq(r), cls.seq(r)
         if r.random() < 0.3:
             b = list(a)
@@ -3059,43 +3349,22 @@ class DifflibArea:
     @classmethod
     def run(cls, c):
         import difflib
+        if c["fn"] == "difflib.obj":
+            return cls.run_obj(c)
+        if c["fn"] == "difflib.text":
+            return cls.run_text(c)
 
         def junk(x):
             if x in c["boom"]:
                 raise ValueError("boom")
             return x in c["junk"]
 
-        def op(s, o):
-            k = o["op"]
-            if k == "blocks":
-                return [list(t) for t in s.get_matching_blocks()]
-            if k == "opcodes":
-                return [list(t) for t in s.get_opcodes()]
-            if k == "grouped":
-                return [[list(t) for t in g] for g in s.get_grouped_opcodes(o["n"])]
-            if k in ("ratio", "quick", "real"):
-                f = {"ratio": s.ratio, "quick": s.quick_ratio, "real": s.real_quick_ratio}[k]()
-                length = len(s.a) + len(s.b)
-                if length == 0:
-                    return [0, 0] if f == 1.0 else ["bad", f]
-                m = round(f * length / 2)
-                return [m, length] if 2.0 * m / length == f else ["bad", f]
-            if k == "longest":
-                return list(s.find_longest_match(o["alo"], o["ahi"], o["blo"], o["bhi"]))
-            if k == "seqs":
-                s.set_seqs(s.a if o["same"] else list(o["x"]), s.b if o["same2"] else list(o["y"]))
-                return None
-            f = s.set_seq1 if k == "seq1" else s.set_seq2
-            cur = s.a if k == "seq1" else s.b
-            f(cur if o["same"] else list(o["x"]))
-            return None
-
         def body():
             s = difflib.SequenceMatcher(junk if c["hasjunk"] else None, list(c["a"]), list(c["b"]), c["auto"])
             out = []
             for o in c["ops"]:
                 try:
-                    out.append(op(s, o))
+                    out.append(cls.op(s, o, list))
                 except Exception as e:
                     out.append(["exc", {"exc": type(e).__name__, "msg": str(e)}])
             return out

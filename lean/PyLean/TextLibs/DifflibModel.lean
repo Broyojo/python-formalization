@@ -57,14 +57,17 @@ def junkOf (f : Nat → Py Bool) : List (Nat × List Nat) → List Nat × Py Uni
       (k :: x.1, x.2)
     | .ok false => junkOf f r
 
+/-- The `if isjunk:` of `Lib/difflib.py:288`. -/
+def junkStep (isjunk : Option (Nat → Py Bool)) (b2j : List (Nat × List Nat)) : List Nat × Py Unit :=
+  match isjunk with
+  | some f => junkOf f b2j
+  | none => ([], .ok ())
+
 /-- `Lib/difflib.py:267-304`, on the matcher with `b` set. When `isjunk` raises, `b2j` holds everything,
 `bjunk` the elements judged so far, and `bpopular` its old value, and the object can still be used. -/
 def chainB (s : SM) : SM × Py Unit :=
   let b2j := buildB2j s.b
-  let j : List Nat × Py Unit :=
-    match s.isjunk with
-    | some f => junkOf f b2j
-    | none => ([], .ok ())
+  let j := junkStep s.isjunk b2j
   match j.2 with
   | .error e => ({ s with b2j, bjunk := j.1 }, .error e)
   | .ok () =>

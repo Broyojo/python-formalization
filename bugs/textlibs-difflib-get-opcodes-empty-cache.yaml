@@ -1,0 +1,55 @@
+id: textlibs-difflib-get-opcodes-empty-cache
+title: "SequenceMatcher.get_opcodes caches an empty list before computing, so after an exception the next call returns []"
+priority: P3
+kind: wrong-result
+module: textlibs
+files: [Lib/difflib.py]
+functions: ["SequenceMatcher.get_opcodes"]
+summary: |
+  `get_opcodes` does `self.opcodes = answer = []` and only then calls `get_matching_blocks`, filling the
+  list afterwards. If `get_matching_blocks` raises, the empty list stays in the cache, and the next
+  `get_opcodes()` on the matcher returns `[]` with no error. Empty opcodes are what two empty sequences
+  give, so the caller is told that there is nothing to do. `a` is not hashed until the matcher runs, so
+  `SequenceMatcher(None, [[1], 2], [2, 3])` is built without complaint, the first `get_opcodes()` raises
+  TypeError, and the second returns `[]`. Any exception does the same, including KeyboardInterrupt or a
+  timeout raised by a signal handler during a long comparison. `ratio()` and `get_matching_blocks()`
+  have no such problem: they assign their cache when they are done, and raise again on a second call.
+likelihood: |
+  Low. It takes a matcher that is used again after an exception. Interactive use is the likely case:
+  interrupt a slow comparison, then ask again. There is no error, and the answer is wrong.
+maybe_intended: |
+  No. `get_matching_blocks` assigns its cache after computing, a few lines away, and nothing in the docs
+  or comments gives a reason for assigning this one early. A maintainer would likely take the two-line fix.
+reproducer: |
+  import difflib
+  s = difflib.SequenceMatcher(None, [[1], 2], [2, 3])
+  try:
+      s.get_opcodes()
+      first = None
+  except TypeError as e:
+      first = str(e)
+  second = s.get_opcodes()
+  print(repr(first), second)
+  if first is not None and second == []:
+      print('REPRODUCED textlibs-difflib-get-opcodes-empty-cache')
+expected: |
+  The second call raises the same TypeError, as `get_matching_blocks()` and `ratio()` do.
+observed: |
+  python3 3.15.2: "cannot use 'list' as a dict key (unhashable type: 'list')", then []. REPRODUCED.
+  main 3.16.0a1+dev: the same. REPRODUCED.
+promised_by: |
+  Lib/difflib.py:496-498: the first tuple has i1 == j1 == 0 and the tuples describe how to turn a into b.
+  An empty list does not do that for sequences that are not empty.
+cause: |
+  Lib/difflib.py:525 assigns `self.opcodes = answer = []` ahead of `self.get_matching_blocks()` at :526,
+  and :522 returns `self.opcodes` whenever it is not None.
+possible_fix: |
+  Assign at the end: `answer = []` at :525, and `self.opcodes = answer` just before `return answer`.
+duplicates: |
+  None found. Bugforge has four difflib entries, none on this. #54194 (closed, completed) was about the
+  caching of get_matching_blocks; #56593 (open) is about code and doc bugs of Match; #140761 (closed, not
+  planned) is a question about the meaning of opcodes.
+  Queries, unquoted words: gh search issues --repo python/cpython difflib get_opcodes; SequenceMatcher
+  opcodes; SequenceMatcher unhashable; SequenceMatcher exception; difflib get_opcodes empty; SequenceMatcher
+  cache; SequenceMatcher get_opcodes exception retry. grep -i difflib vendor/bugforge-results/README.md.
+lean: lean/PyLean/TextLibs/DifflibObjLaws.lean (OpcodesFailAgain, opcodesFailAgain_refuted)
