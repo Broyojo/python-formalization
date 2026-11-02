@@ -3763,6 +3763,475 @@ class EtreeCopyArea:
         return {"ok": {"orig": enc(e), "copy": enc(cp), "sub": type(cp) is Sub}}
 
 
+# ---- urllib.parse ------------------------------------------------------------
+
+import ipaddress
+import unicodedata
+import urllib.parse as UP
+
+# Non-ASCII characters whose NFKC forms do not interact with their neighbours.
+URL_NONASCII = "é℀＠／？＃：ｆÅ¼İßΣ․å中"
+URL_CHARS = ":/?#[]@%;=&+ .-_~aAvVxXfF019\t\n\r\x00\x1f" + URL_NONASCII
+URL_HOSTS = ["::1", "fe80::1%eth0", "1.2.3.4", "v1.x", "V1F.a", "vg.x", "v1.", "::ffff:1.2.3.4",
+             "abc", "", "1::2::3", "2001:db8::1", "::", "Ex.COM", "a℀b", "h＠x"]
+URL_SCHEMES = ["http", "HTTP", "https", "x", "a+b", "1a", "mailto", "file", "sip", "tel", "svn+ssh", "", "ftp", "Ab-1.c"]
+
+
+def arg_enc(x):
+    if x is None:
+        return None
+    if isinstance(x, str):
+        return {"s": cps(x)}
+    if isinstance(x, bytearray):
+        return {"ba": list(x)}
+    return {"b": list(x)}
+
+
+def arg_dec(a):
+    if a is None:
+        return None
+    if "s" in a:
+        return txt(a["s"])
+    if "b" in a:
+        return bytes(a["b"])
+    return bytearray(a["ba"])
+
+
+def res_enc(r):
+    return {"f": [None if x is None else (list(x) if isinstance(x, (bytes, bytearray)) else cps(x)) for x in r],
+            "b": isinstance(r, (UP.SplitResultBytes, UP.ParseResultBytes, UP.DefragResultBytes)),
+            "k": getattr(r, "_keep_empty", None)}
+
+
+def url_oracles(strs):
+    """NFKC of each non-ASCII character, and every candidate host that ip_address accepts."""
+    nf = {}
+    for s in strs:
+        if isinstance(s, str):
+            for ch in s:
+                if ord(ch) >= 128:
+                    nf[ord(ch)] = cps(unicodedata.normalize("NFKC", ch))
+    ip = []
+    seen = set()
+    for s in strs:
+        if not isinstance(s, str):
+            try:
+                s = s.decode("ascii")
+            except Exception:
+                continue
+        s = s.lstrip(UP._WHATWG_C0_CONTROL_OR_SPACE)
+        for b in "\t\r\n":
+            s = s.replace(b, "")
+        starts = [0] + [i + 1 for i, c in enumerate(s) if c in "[@/"]
+        ends = [len(s)] + [j for j, c in enumerate(s) if c in "]:/?#@["]
+        for i in starts:
+            for j in ends:
+                if j >= i and (i, j, s) not in seen:
+                    seen.add((i, j, s))
+                    h = s[i:j]
+                    try:
+                        a = ipaddress.ip_address(h)
+                    except ValueError:
+                        continue
+                    ip.append([cps(h), isinstance(a, ipaddress.IPv4Address)])
+    return {"nfkc": [[k, v] for k, v in nf.items()], "ip": ip}
+
+
+def nfkc_ok(strs):
+    for s in strs:
+        if isinstance(s, str) and unicodedata.normalize("NFKC", s) != "".join(
+                unicodedata.normalize("NFKC", c) for c in s):
+            return False
+    return True
+
+
+class QMap:
+    def __init__(self, items):
+        self._items = items
+
+    def items(self):
+        return self._items
+
+
+class QObj:
+    def __init__(self, text, items=None):
+        self.text = text
+        self.its = items
+
+    def __str__(self):
+        return self.text
+
+
+class QSeqObj(QObj):
+    def __len__(self):
+        return len(self.its)
+
+    def __iter__(self):
+        return iter(self.its)
+
+
+def qv_dec(j):
+    if "s" in j:
+        return txt(j["s"])
+    if "b" in j:
+        return bytes(j["b"])
+    if "items" in j:
+        return QSeqObj(txt(j["o"]), [qv_dec(e) for e in j["items"]])
+    return QObj(txt(j["o"]))
+
+
+@area("url", 10)
+class UrlArea:
+    """urllib.parse (UrlModel.lean). Arguments travel as null / {"s"} / {"b"} / {"ba"}."""
+
+    @staticmethod
+    def rstr(r, n, chars=URL_CHARS):
+        return "".join(r.choice(chars) for _ in range(r.randint(0, n)))
+
+    @classmethod
+    def host(cls, r):
+        k = r.random()
+        if k < 0.3:
+            return "[" + r.choice(URL_HOSTS) + "]" + r.choice(["", ":80", ":", "x", ":8a", ":" + "9" * r.randint(1, 6),
+                                                               ":" + "0" * r.choice([4300, 4301])])
+        if k < 0.5:
+            return r.choice(URL_HOSTS) + r.choice(["", ":80", ":", ":x", ":65536", ":0080"])
+        return cls.rstr(r, 6)
+
+    @classmethod
+    def url(cls, r):
+        k = r.random()
+        if k < 0.25:
+            return cls.rstr(r, 14)
+        parts = []
+        if r.random() < 0.15:
+            parts.append(r.choice([" ", "\x00", "\t", "\x1f "]))
+        if r.random() < 0.7:
+            parts.append(r.choice(URL_SCHEMES) + r.choice([":", ":", "", "\t:"]))
+        if r.random() < 0.65:
+            ui = ""
+            if r.random() < 0.3:
+                ui = r.choice(["u", "u:p", "[a]", "u:p[s]", "", "u@v", "℀"]) + "@"
+            parts.append(r.choice(["//", "//", "/", "///", "/\t/"]) + ui + cls.host(r))
+        parts.append(r.choice(["", "/", "/a", "/a/b;p", ";x", "a:b", "/./..", "/a/../b/.", "//x", "/%41"]))
+        if r.random() < 0.4:
+            parts.append("?" + cls.rstr(r, 4))
+        if r.random() < 0.4:
+            parts.append("#" + cls.rstr(r, 4))
+        return "".join(parts)
+
+    @classmethod
+    def wrap(cls, r, s, allow_none=True):
+        k = r.random()
+        if allow_none and k < 0.05:
+            return None
+        if k < 0.75 or not s.isascii():
+            return {"s": cps(s)}
+        if k < 0.93:
+            return {"b": list(s.encode())}
+        return {"ba": list(s.encode())}
+
+    @classmethod
+    def gen(cls, r):
+        fn = r.choice(["split", "split", "parse", "parse", "defrag", "unsplit", "unparse", "join", "join",
+                       "quote", "quote_plus", "qfb", "unquote", "unquote_plus", "uqtb", "qsl", "qs",
+                       "encode", "encode", "geturl", "helpers", "rt_qsl"])
+        c = {"mod": "textlibs", "fn": "url." + fn}
+        if fn in ("split", "parse", "defrag"):
+            u = cls.url(r)
+            ua = cls.wrap(r, u)
+            sch = None
+            if fn != "defrag" and r.random() < 0.3:
+                s = r.choice(["http", "", "HTTP", " x ", "1a", "a\tb"])
+                sch = {"s": cps(s)} if r.random() < 0.6 or ua is None or "s" in ua else {"b": list(s.encode())}
+                if r.random() < 0.1:
+                    sch = {"b": list(s.encode())}
+            strs = [arg_dec(ua), arg_dec(sch)]
+            if not nfkc_ok([x for x in strs if x is not None]):
+                return None
+            c.update(url=ua, scheme=sch, frag=r.random() < 0.85, man=r.random() < 0.5,
+                     **url_oracles([x for x in strs if x is not None]))
+        elif fn == "join":
+            b, u = cls.url(r), cls.url(r)
+            if r.random() < 0.3:
+                b = r.choice(["http://a/b/c/d;p?q", "http://a/b/", "http:/a", "x:y", "", "//h/p", "http://a"])
+            if r.random() < 0.3:
+                u = r.choice(["g", "./g", "../g", "../..", "..", ".", "g/", "/g", "//g", "?y", "#s", "", "../../../g",
+                              "g;x", "./", "/./g", "g/../h", "http:g", "https:g", "//h/./x"])
+            if not nfkc_ok([b, u]):
+                return None
+            ba, ua = cls.wrap(r, b), cls.wrap(r, u)
+            if r.random() < 0.05:
+                ua = {"b": []}
+            c.update(base=ba, url=ua, frag=r.random() < 0.85,
+                     **url_oracles([x for x in (arg_dec(ba), arg_dec(ua)) if x is not None]))
+        elif fn in ("unsplit", "unparse"):
+            n = 5 if fn == "unsplit" else 6
+            if r.random() < 0.05:
+                n += r.choice([-1, 1])
+            pool = ["", "", "http", "x", "h", "/p", "p", "//p", "q", "a:b", "f", "Ab"]
+            isb = r.random() < 0.2
+            parts = []
+            for _ in range(n):
+                k = r.random()
+                if k < 0.2:
+                    parts.append(None)
+                elif k < 0.25:
+                    parts.append({"b": []} if r.random() < 0.7 else {"ba": []})
+                else:
+                    s = r.choice(pool)
+                    parts.append({"b": list(s.encode())} if isb else {"s": cps(s)})
+            c.update(parts=parts, keep=r.choice([None, None, True, False]) if r.random() < 0.9 else None,
+                     ke=r.choice([None, None, True, False]))
+            if (fn == "unsplit" and n != 5) or (fn == "unparse" and n != 6):
+                c["keep"] = None
+        elif fn == "qfb" and r.random() < 0.01:
+            # the chunked path of quote_from_bytes, for len(bs) >= 200_000
+            n = r.choice([199999, 200000, 200001, 200704])
+            c.update(s={"b": [r.choice([97, 32, 37, 200, 47]) for _ in range(n)]},
+                     safe={"s": cps(r.choice(["", "/", " "]))})
+        elif fn in ("quote", "quote_plus", "qfb", "unquote", "unquote_plus", "uqtb"):
+            k = r.random()
+            alpha = " %+/&=~-_.aZ09" + "é€\U0001f600\ud800" + "%41%e9%C3%A9%G%%2%"
+            s = "".join(r.choice([r.choice(alpha), "%" + r.choice("0aF") + r.choice("1bG")]) for _ in range(r.randint(0, 8)))
+            if k < 0.6:
+                a = {"s": cps(s)}
+            elif k < 0.95:
+                try:
+                    a = {"b": list(s.encode("utf-8", "surrogatepass"))}
+                except Exception:
+                    a = {"b": []}
+                if r.random() < 0.2:
+                    a = {"ba": a["b"]}
+            else:
+                a = None
+            c["s"] = a
+            if fn in ("quote", "quote_plus", "qfb"):
+                sf = r.choice(["", "/", "+", "&=", "é/", "%", " ", "~/"])
+                c["safe"] = r.choice([{"s": cps(sf)}, {"s": cps(sf)}, {"b": list(sf.encode())}, None if r.random() < 0.1 else {"s": []}])
+            if fn in ("quote", "quote_plus", "unquote", "unquote_plus"):
+                if r.random() < 0.5:
+                    c["enc"] = r.choice([None, "utf-8", "ascii", "latin-1"])
+                if r.random() < 0.5:
+                    c["err"] = r.choice([None, "strict", "replace", "ignore", "surrogateescape",
+                                         "backslashreplace", "xmlcharrefreplace", "surrogatepass"])
+                    if c.get("enc") in ("ascii", "latin-1") and c["err"] == "surrogatepass":
+                        c["err"] = "strict"
+        elif fn in ("qsl", "qs", "rt_qsl"):
+            if fn == "rt_qsl":
+                # parse_qsl(urlencode(pairs)) shape: quoted pairs
+                al = "a b&=+%é\U0001f600;"
+                pairs = [("".join(r.choice(al) for _ in range(r.randint(0, 3))), "".join(r.choice(al) for _ in range(r.randint(0, 3))))
+                         for _ in range(r.randint(0, 3))]
+                q = UP.urlencode(pairs)
+                c["fn"] = r.choice(["url.qsl", "url.qs"])
+            else:
+                q = "".join(r.choice(["a", "=", "&", ";", "+", "%2", "%41", "%e9", "é", "", "b=", "&&"]) for _ in range(r.randint(0, 6)))
+            k = r.random()
+            c["qs"] = {"s": cps(q)} if k < 0.6 else ({"b": list(q.encode())} if k < 0.85 else ({"ba": list(q.encode())} if k < 0.95 else None))
+            sep = r.choice(["&", "&", ";", "&&", "", "\xe9"])
+            sk = r.random()
+            c["sep"] = {"s": cps(sep)} if sk < 0.7 else ({"b": list(sep.encode("latin-1"))} if sk < 0.92 else ({"ba": list(sep.encode())} if sk < 0.97 else None))
+            c["keep"] = r.random() < 0.5
+            c["strict"] = r.random() < 0.2
+            if r.random() < 0.3:
+                c["enc"] = r.choice([None, "utf-8", "ascii", "latin-1"])
+            if r.random() < 0.3:
+                c["err"] = r.choice([None, "strict", "replace", "ignore", "surrogateescape"])
+            c["max"] = r.choice([None, None, None, 0, 1, 2, 3, -1])
+        elif fn == "encode":
+            al = ["a", "b c", "&=", "é", "+", "%", "\U0001f600", ""]
+            def qv():
+                k = r.random()
+                if k < 0.55:
+                    return {"s": cps(r.choice(al))}
+                if k < 0.7:
+                    return {"b": list(r.choice(al).encode())}
+                if k < 0.85:
+                    return {"o": cps(r.choice(["1", "None", "[1, 2]", "x y"]))}
+                return {"o": cps("<seq>"), "items": [r.choice([{"s": cps(r.choice(al))}, {"b": list(b"x y")}, {"o": cps("7")}]) for _ in range(r.randint(0, 3))]}
+            k = r.random()
+            if k < 0.45:
+                q = {"kind": "map", "items": [[qv(), qv()] for _ in range(r.randint(0, 3))]}
+            elif k < 0.95:
+                items = []
+                for i in range(r.randint(0, 3)):
+                    ln = 2 if r.random() < 0.9 else r.choice([1, 3])
+                    items.append({"tuple": r.random() < 0.85 or i > 0, "xs": [qv() for _ in range(ln)]})
+                q = {"kind": "seq", "items": items}
+            else:
+                q = {"kind": "nolen"}
+            sf = r.choice(["", "/", "+", " "])
+            c.update(query=q, doseq=r.random() < 0.5, plain=r.random() < 0.25,
+                     safe={"s": cps(sf)} if r.random() < 0.8 else {"b": list(sf.encode())})
+            if r.random() < 0.3:
+                c["enc"] = r.choice([None, "utf-8", "ascii", "latin-1"])
+            if r.random() < 0.3:
+                c["err"] = r.choice([None, "strict", "replace", "ignore"])
+        elif fn == "geturl":
+            kind = r.choice(["split", "parse", "defrag"])
+            n = {"split": 5, "parse": 6, "defrag": 2}[kind]
+            isb = r.random() < 0.3
+            pool = ["", "", "http", "x", "h", "/p", "p", "//p", "q", "a:b", "f", "file"]
+            fields = []
+            for i in range(n):
+                if r.random() < 0.25 and not (kind == "defrag" and i == 0):
+                    fields.append(None)
+                else:
+                    fields.append(list(r.choice(pool).encode()) if isb else cps(r.choice(pool)))
+            c.update(kind=kind, res={"f": fields, "b": isb, "k": r.choice([None, True, False])})
+        else:  # helpers
+            al = ":/?#@;=<>  　URLaAİ1\t" + "9"
+            s = "".join(r.choice(al) for _ in range(r.randint(0, 9)))
+            if r.random() < 0.2:
+                s = r.choice(["<URL:http://h/p>", " <a> ", "URL: x", "user:pw@host:80", "//h:1/p?q#t", "//h?q",
+                              "http:x", "h:" + "1" * 4301, "host:", ":", "a;b=c;d", "Http:/x"])
+            c.update(s=cps(s), defport=r.choice([-1, 0, 80]))
+        return c
+
+    @classmethod
+    def run(cls, c):
+        fn = c["fn"][4:]
+        if fn in ("split", "parse"):
+            f = UP.urlsplit if fn == "split" else UP.urlparse
+            try:
+                res = f(arg_dec(c["url"]), arg_dec(c["scheme"]), c["frag"], missing_as_none=c["man"])
+            except Exception as e:
+                return {"exc": type(e).__name__, "msg": str(e)}
+            def g(attr):
+                return getattr(res, attr)
+            out = {"res": res_enc(res), "user": None if res.username is None else list(res.username) if isinstance(res.username, bytes) else cps(res.username),
+                   "pw": None if res.password is None else list(res.password) if isinstance(res.password, bytes) else cps(res.password)}
+            h = common.py_result(lambda: g("hostname"))
+            if "ok" in h and h["ok"] is not None:
+                h["ok"] = list(h["ok"]) if isinstance(h["ok"], bytes) else cps(h["ok"])
+            out["host"] = h
+            out["port"] = common.py_result(lambda: g("port"))
+            if out["port"].get("msg", "").startswith("Port could not be cast"):  # repr: a ~ message in the model
+                out["port"]["msg"] = "~Port could not be cast to integer value"
+            gu = common.py_result(res.geturl)
+            if "ok" in gu:
+                gu["ok"] = arg_enc(gu["ok"])
+            out["geturl"] = gu
+            tr = common.py_result(lambda: res.decode("ascii") if out["res"]["b"] else res.encode("ascii"))
+            if "ok" in tr:
+                tr["ok"] = res_enc(tr["ok"])
+            out["trans"] = tr
+            return {"ok": out}
+        if fn == "defrag":
+            try:
+                res = UP.urldefrag(arg_dec(c["url"]), missing_as_none=c["man"])
+            except Exception as e:
+                return {"exc": type(e).__name__, "msg": str(e)}
+            gu = common.py_result(res.geturl)
+            if "ok" in gu:
+                gu["ok"] = arg_enc(gu["ok"])
+            return {"ok": {"res": res_enc(res), "geturl": gu}}
+        if fn in ("unsplit", "unparse"):
+            parts = [arg_dec(a) for a in c["parts"]]
+            cls_ = UP.SplitResult if fn == "unsplit" else UP.ParseResult
+            if c["keep"] is not None:
+                comp = cls_(*parts)
+                comp._keep_empty = c["keep"]
+            else:
+                comp = tuple(parts)
+            f = UP.urlunsplit if fn == "unsplit" else UP.urlunparse
+            kw = {} if c["ke"] is None else {"keep_empty": c["ke"]}
+            out = common.py_result(lambda: f(comp, **kw))
+            if "ok" in out:
+                out["ok"] = arg_enc(out["ok"])
+            return out
+        if fn == "join":
+            out = common.py_result(lambda: UP.urljoin(arg_dec(c["base"]), arg_dec(c["url"]), c["frag"]))
+            if "ok" in out:
+                out["ok"] = arg_enc(out["ok"])
+            return out
+        def kw():
+            d = {}
+            if "enc" in c:
+                d["encoding"] = c["enc"]
+            if "err" in c:
+                d["errors"] = c["err"]
+            return d
+        def strout(o):
+            if "ok" in o:
+                o["ok"] = list(o["ok"]) if isinstance(o["ok"], (bytes, bytearray)) else cps(o["ok"])
+            return o
+        if fn in ("quote", "quote_plus"):
+            f = UP.quote if fn == "quote" else UP.quote_plus
+            return strout(common.py_result(lambda: f(arg_dec(c["s"]), arg_dec(c["safe"]), **kw())))
+        if fn == "qfb":
+            return strout(common.py_result(lambda: UP.quote_from_bytes(arg_dec(c["s"]), arg_dec(c["safe"]))))
+        if fn in ("unquote", "unquote_plus"):
+            f = UP.unquote if fn == "unquote" else UP.unquote_plus
+            return strout(common.py_result(lambda: f(arg_dec(c["s"]), **kw())))
+        if fn == "uqtb":
+            return strout(common.py_result(lambda: UP.unquote_to_bytes(arg_dec(c["s"]))))
+        if fn in ("qsl", "qs"):
+            k = {"keep_blank_values": c["keep"], "strict_parsing": c["strict"], "max_num_fields": c["max"],
+                 "separator": arg_dec(c["sep"])}
+            k.update(kw())
+            def enc(x):
+                return list(x) if isinstance(x, (bytes, bytearray)) else cps(x)
+            if fn == "qsl":
+                o = common.py_result(lambda: UP.parse_qsl(arg_dec(c["qs"]), **k))
+                if "ok" in o:
+                    o["ok"] = [[enc(a), enc(b)] for a, b in o["ok"]]
+            else:
+                o = common.py_result(lambda: UP.parse_qs(arg_dec(c["qs"]), **k))
+                if "ok" in o:
+                    o["ok"] = [[enc(a), [enc(v) for v in b]] for a, b in o["ok"].items()]
+            return o
+        if fn == "encode":
+            q = c["query"]
+            if q["kind"] == "map":
+                query = QMap([(qv_dec(a), qv_dec(b)) for a, b in q["items"]])
+            elif q["kind"] == "seq":
+                query = [tuple(qv_dec(x) for x in e["xs"]) if e["tuple"] else [qv_dec(x) for x in e["xs"]] for e in q["items"]]
+            else:
+                query = object()
+            k = {"doseq": c["doseq"], "safe": arg_dec(c["safe"]), "quote_via": UP.quote if c["plain"] else UP.quote_plus}
+            k.update(kw())
+            return strout(common.py_result(lambda: UP.urlencode(query, **k)))
+        if fn == "geturl":
+            rj = c["res"]
+            vals = [None if f is None else (bytes(f) if rj["b"] else txt(f)) for f in rj["f"]]
+            k = c["kind"]
+            cl = {("split", False): UP.SplitResult, ("split", True): UP.SplitResultBytes,
+                  ("parse", False): UP.ParseResult, ("parse", True): UP.ParseResultBytes,
+                  ("defrag", False): UP.DefragResult, ("defrag", True): UP.DefragResultBytes}[(k, rj["b"])]
+            obj = cl(*vals)
+            if rj["k"] is not None:
+                obj._keep_empty = rj["k"]
+            o = common.py_result(obj.geturl)
+            if "ok" in o:
+                o["ok"] = arg_enc(o["ok"])
+            return o
+        # helpers
+        s = txt(c["s"])
+        def oj(x):
+            return None if x is None else cps(x)
+        def pj(p):
+            return [cps(p[0]), oj(p[1])]
+        ty = common.py_result(lambda: UP._splittype(s))
+        if "ok" in ty:
+            ty["ok"] = [oj(ty["ok"][0]), cps(ty["ok"][1])]
+        h = UP._splithost(s)
+        u = UP._splituser(s)
+        npo = common.py_result(lambda: UP._splitnport(s, c["defport"]))
+        if "ok" in npo:
+            npo["ok"] = [cps(npo["ok"][0]), npo["ok"][1]]
+        at = UP._splitattr(s)
+        tb = strout(common.py_result(lambda: UP._to_bytes(s)))
+        if "exc" in tb:  # embeds a repr: a ~ message in the model
+            tb["msg"] = "~URL contains non-ASCII characters"
+        return {"ok": {"type": ty, "host": [oj(h[0]), cps(h[1])], "user": [oj(u[0]), cps(u[1])],
+                       "passwd": pj(UP._splitpasswd(s)), "port": pj(UP._splitport(s)), "nport": npo,
+                       "query": pj(UP._splitquery(s)), "tag": pj(UP._splittag(s)),
+                       "attr": [cps(at[0]), [cps(x) for x in at[1]]], "value": pj(UP._splitvalue(s)),
+                       "unwrap": cps(UP.unwrap(s)), "tobytes": tb}}
+
+
 only = os.environ.get("TEXTLIBS_ONLY")
 names = [n for n in AREAS if not only or n in only.split(",")]
 weights = [AREAS[n][1] for n in names]

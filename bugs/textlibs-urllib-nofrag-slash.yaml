@@ -1,0 +1,55 @@
+id: textlibs-urllib-nofrag-slash
+title: "urlunsplit(urlsplit(u, allow_fragments=False, missing_as_none=True)) inserts a '/' before a '#' path"
+priority: P4
+kind: wrong-result
+module: textlibs
+files: [Lib/urllib/parse.py]
+functions: ["urlsplit", "_urlsplit", "_splitnetloc", "urlunsplit", "_urlunsplit", "urlparse", "urlunparse"]
+summary: |
+  With allow_fragments=False, `_urlsplit` still ends the netloc at `#` (`_splitnetloc` stops at
+  any of `/?#`) but no longer splits the fragment off, so `urlsplit('http://h#x',
+  allow_fragments=False)` returns netloc 'h' and path '#x'. `_urlunsplit` then sees a path that does
+  not start with '/' after a netloc and inserts one, so rebuilding gives 'http://h/#x'. This holds
+  with the new missing_as_none=True / keep_empty mode, which 3.15 documents as the way to rebuild
+  a parsed URL, and for geturl(), whose docs list only scheme case and empty components as changes.
+likelihood: |
+  Low: allow_fragments=False is rarely used, and for http the two URLs are usually equivalent. It
+  changes the URL text, which matters to code that signs or compares URLs.
+maybe_intended: |
+  Possibly: the docs say fragments are then "parsed as part of the path or query component", and
+  a path starting with '#' after a netloc has no valid spelling without the '/'. A maintainer may
+  prefer documenting it to changing _splitnetloc.
+reproducer: |
+  from urllib.parse import urlsplit, urlunsplit, urlparse, urlunparse
+  r = urlsplit('http://h#x', allow_fragments=False, missing_as_none=True)
+  out = (r, urlunsplit(r), r.geturl(),
+         urlunparse(urlparse('http://h#x', allow_fragments=False, missing_as_none=True)))
+  print(out)
+  if out[1] == 'http://h/#x' and out[2] == 'http://h/#x' and out[3] == 'http://h/#x':
+      print('REPRODUCED textlibs-urllib-nofrag-slash')
+expected: |
+  'http://h#x' from urlunsplit, urlunparse and geturl(), as for allow_fragments=True.
+observed: |
+  python3 3.15.2: SplitResult(scheme='http', netloc='h', path='#x', query=None, fragment=None),
+  'http://h/#x' three times. REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Doc/library/urllib.parse.rst, urlunsplit: "If keep_empty is true, empty strings are kept in the
+  result ... This allows rebuilding a URL that was parsed with option missing_as_none=True." And
+  SplitResult.geturl: "This may differ from the original URL in that the scheme may be normalized
+  to lower case and empty components may be dropped."
+cause: |
+  Lib/urllib/parse.py:613-614 split the netloc at `#` whatever allow_fragments is, :620-621 only
+  split the fragment when allow_fragments is true, and :684-685 in _urlunsplit prefix '/' to a
+  path that follows a netloc.
+possible_fix: |
+  When allow_fragments is false, either stop _splitnetloc only at '/' and '?' (keeping '#' in the
+  netloc is wrong too), or have _urlsplit leave the '#...' after an empty path to the query/path
+  without the netloc rule; at least document the '/' in geturl()'s list of changes.
+duplicates: |
+  None found. Queries: gh search issues --repo python/cpython allow_fragments; allow_fragments
+  urlunsplit; urlsplit fragment netloc slash. Related but different: #53064 (extra slash with
+  scheme, closed), #73837 (inconsistent behaviour on invalid inputs, closed). Not in the bugforge
+  list.
+lean: lean/PyLean/TextLibs/UrlBrackets.lean (SplitRoundTripAll, splitRoundTripAll_refuted); the
+  allow_fragments=True round trip is proven in UrlSplitThm.lean (SplitRoundTrip).
