@@ -20,3 +20,4 @@ pygrammar-lex-debug-text
 pygrammar-lex-debug-text-escaped-quote
 pygrammar-lex-tokenize-memoryerror
 typeobj-exc-eg-repr-args-oob
+unicodeobj-text-dedent-isspace-blank-lines

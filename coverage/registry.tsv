@@ -22,6 +22,7 @@ ipaddress-v4-mask-roundtrip	proven	Lib/ipaddress.py	_BaseV4._make_netmask,_IPAdd
 ipaddress-v4-mask-int	proven	Lib/ipaddress.py	_BaseV4._make_netmask,_IPAddressBase._report_invalid_netmask
 ipaddress-v6-text-roundtrip	proven	Lib/ipaddress.py	IPv6Address.__init__,_BaseV6._ip_int_from_string,_BaseV6._parse_hextet,_BaseV6._compress_hextets,_BaseV6._string_from_ip_int,_BaseV6._split_scope_id,IPv6Address.__str__,IPv6Address._ipv4_mapped_ipv6_to_str,IPv6Address.ipv4_mapped
 ipaddress-v4-mask-doc-rule	refuted	Lib/ipaddress.py	_IPAddressBase._prefix_from_ip_string,_IPAddressBase._prefix_from_ip_int,_BaseV4._make_netmask
+ipaddress-v6-compress-rfc5952	proven	Lib/ipaddress.py	_BaseV6._compress_hextets,_BaseV6._string_from_ip_int
 datetime-ordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ymd2ord,_ord2ymd,_is_leap,_days_before_year,_days_in_month,_days_before_month,_check_date_fields,C datetime_date_fromordinal_impl,C date_toordinal,C ord_to_ymd,C ymd_to_ord,C is_leap,C days_in_month,C days_before_month,C days_before_year,C check_date_args
 datetime-toordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ord2ymd,_ymd2ord,C ord_to_ymd,C ymd_to_ord
 datetime-date-add-timedelta	proven	Lib/_pydatetime.py	date.__add__,_ymd2ord,_ord2ymd,_check_date_fields,C add_date_timedelta,C date_add,C normalize_y_m_d,C normalize_date,C ord_to_ymd,C ymd_to_ord

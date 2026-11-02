@@ -16,8 +16,10 @@ likelihood: |
   Occasional: `python -c "$(cat script_with_crlf.py)"` or a command pasted from a CRLF file, when
   the code is indented and has a blank line. Form feeds are much rarer.
 maybe_intended: |
-  Possibly in part: the C code works on UTF-8 bytes and is deliberately simple. But the comment
-  claims an exact match, and CRLF input is the realistic case.
+  Yes in 3.15.2: the comment above _PyUnicode_Dedent (Objects/unicodeobject.c:13645-13649) now says
+  "Unlike `textwrap.dedent`, this only supports spaces and tabs and doesn't normalize empty lines",
+  so the behaviour this record describes is documented there. The record stands for 3.14.7 only and
+  is listed in coverage/gone-in-3.15.txt. (Second review pass, 2026-11-02.)
 reproducer: |
   import subprocess, sys, textwrap
   code = "  x = 1\r\n\r\n  print(x)\r\n"
