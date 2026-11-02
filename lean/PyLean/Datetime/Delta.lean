@@ -3,7 +3,7 @@ import PyLean.Core
 /-!
 `timedelta` with integer arguments: the pure-Python class
 (`Lib/_pydatetime.py:635-995`) and the C type (`Modules/_datetimemodule.c`,
-`delta_new` :2831-2932, `microseconds_to_delta_ex` :2217-2284, `new_delta_ex`
+`delta_new_impl` :2832-2932, `microseconds_to_delta_ex` :2218-2284, `new_delta_ex`
 :1383-1411 and the number methods).
 
 Float arguments are out of scope. Python's `divmod` and `//`, `%` by a positive
@@ -26,7 +26,7 @@ structure Delta where
 def MAX_DELTA_DAYS : Int := 999999999
 
 /-- `timedelta._to_microseconds`, _pydatetime.py:873-875; C
-`delta_to_microseconds`, :2177-2233. -/
+`delta_to_microseconds`, :2139-2190. -/
 def Delta.toUs (t : Delta) : Int := (t.days * 86400 + t.seconds) * 1000000 + t.us
 
 /-- The field invariant every constructed `timedelta` satisfies. -/
@@ -75,7 +75,7 @@ def pyDivmod (a b : Int) : Py (Int × Int) :=
   if b = 0 then .error (.zeroDivisionError "division by zero")
   else .ok (a.fdiv b, a.fmod b)
 
-/-- `_divide_and_round`, _pydatetime.py:611-630 (round half to even). -/
+/-- `_divide_and_round`, _pydatetime.py:615-632 (round half to even). -/
 def divideAndRound (a b : Int) : Py Int := do
   let (q, r) ← pyDivmod a b
   let r := r * 2
@@ -92,7 +92,7 @@ def subPy (a b : Delta) : Py Delta := deltaPy (a.days - b.days) (a.seconds - b.s
 def negPy (a : Delta) : Py Delta := deltaPy (-a.days) (-a.seconds) (-a.us) 0 0 0 0
 /-- `__abs__`, :852-856. -/
 def absPy (a : Delta) : Py Delta := if a.days < 0 then a.negPy else .ok a
-/-- `__mul__` with an int, :858-864. -/
+/-- `__mul__` with an int, :858-869. -/
 def mulPy (a : Delta) (k : Int) : Py Delta := deltaPy (a.days * k) (a.seconds * k) (a.us * k) 0 0 0 0
 /-- `__floordiv__` with an int, :877-884. -/
 def floordivIntPy (a : Delta) (k : Int) : Py Delta := do
@@ -118,12 +118,12 @@ def asCInt (x : Int) : Py Int :=
   if -2 ^ 31 ≤ x ∧ x ≤ 2 ^ 31 - 1 then .ok x
   else .error (.overflowError "Python int too large to convert to C int")
 
-/-- `check_delta_day_range`, _datetimemodule.c:644-653. -/
+/-- `check_delta_day_range`, _datetimemodule.c:645-653. -/
 def checkDeltaDayRange (d : Int) : Py Unit :=
   if -MAX_DELTA_DAYS ≤ d ∧ d ≤ MAX_DELTA_DAYS then .ok ()
   else .error (.overflowError s!"days={d}; must have magnitude <= 999999999")
 
-/-- `microseconds_to_delta_ex`, :2217-2284. The `BadDivmod` branches are dead
+/-- `microseconds_to_delta_ex`, :2218-2284. The `BadDivmod` branches are dead
 for int `divmod`. -/
 def usToDeltaC (x : Int) : Py Delta := do
   let us := x % 1000000
@@ -133,8 +133,8 @@ def usToDeltaC (x : Int) : Py Delta := do
   checkDeltaDayRange d
   return ⟨d, s, us⟩
 
-/-- `delta_new` with int arguments, :2831-2932: the arguments are accumulated
-into an exact microsecond count (`accum`, :2733-2812) in the order
+/-- `delta_new_impl` with int arguments, :2832-2932: the arguments are accumulated
+into an exact microsecond count (`accum`, :2733-2811) in the order
 microseconds, milliseconds, seconds, minutes, hours, days, weeks. -/
 def deltaC (days seconds microseconds milliseconds minutes hours weeks : Int) : Py Delta :=
   usToDeltaC (microseconds + milliseconds * 1000 + seconds * 1000000 + minutes * 60000000 +
@@ -156,26 +156,26 @@ def newDeltaNormC (d s us : Int) : Py Delta := do
 
 namespace Delta
 
-/-- `delta_add`, :2455-2475. -/
+/-- `delta_add`, :2455-2474. -/
 def addC (a b : Delta) : Py Delta := newDeltaNormC (a.days + b.days) (a.seconds + b.seconds) (a.us + b.us)
-/-- `delta_subtract`, :2514-2534. -/
+/-- `delta_subtract`, :2514-2533. -/
 def subC (a b : Delta) : Py Delta := newDeltaNormC (a.days - b.days) (a.seconds - b.seconds) (a.us - b.us)
-/-- `delta_negative`, :2477-2484. -/
+/-- `delta_negative`, :2477-2483. -/
 def negC (a : Delta) : Py Delta := newDeltaNormC (-a.days) (-a.seconds) (-a.us)
-/-- `delta_abs`, :2498-2512 (`delta_positive` copies without normalizing). -/
+/-- `delta_abs`, :2498-2511 (`delta_positive` copies without normalizing). -/
 def absC (a : Delta) : Py Delta := if a.days < 0 then a.negC else .ok a
-/-- `multiply_int_timedelta`, :2290-2310. -/
+/-- `multiply_int_timedelta`, :2290-2308. -/
 def mulC (a : Delta) (k : Int) : Py Delta := usToDeltaC (k * a.toUs)
-/-- `divide_timedelta_int`, :2370-2389 (`PyNumber_FloorDivide`). -/
+/-- `divide_timedelta_int`, :2370-2388 (`PyNumber_FloorDivide`). -/
 def floordivIntC (a : Delta) (k : Int) : Py Delta := do usToDeltaC (← pyDivmod a.toUs k).1
-/-- `delta_divide` with a timedelta, :2605-2625 and `divide_timedelta_timedelta`, :2391-2415. -/
+/-- `delta_divide` with a timedelta, :2605-2624 and `divide_timedelta_timedelta`, :2391-2411. -/
 def floordivC (a b : Delta) : Py Int := do return (← pyDivmod a.toUs b.toUs).1
-/-- `truedivide_timedelta_int`, :2437-2453 (`divide_nearest`, :392-403, i.e.
+/-- `truedivide_timedelta_int`, :2437-2452 (`divide_nearest`, :392-403, i.e.
 `_PyLong_DivmodNear`, which also rounds half to even). -/
 def truedivIntC (a : Delta) (k : Int) : Py Delta := do usToDeltaC (← divideAndRound a.toUs k)
-/-- `delta_remainder`, :2650-2683. -/
+/-- `delta_remainder`, :2650-2682. -/
 def modC (a b : Delta) : Py Delta := do usToDeltaC (← pyDivmod a.toUs b.toUs).2
-/-- `delta_divmod`, :2685-2726. -/
+/-- `delta_divmod`, :2685-2721. -/
 def divmodC (a b : Delta) : Py (Int × Delta) := do
   let (q, r) ← pyDivmod a.toUs b.toUs
   return (q, ← usToDeltaC r)
@@ -204,7 +204,7 @@ def padInt (width : Nat) (n : Int) : List Char :=
 /-- `'%d' % n`. -/
 def showInt (n : Int) : List Char := padInt 0 n
 
-/-- `timedelta.__str__`, _pydatetime.py:784-794; C `delta_str`, :3035-3062. -/
+/-- `timedelta.__str__`, _pydatetime.py:784-794; C `delta_str`, :2992-3018. -/
 def Delta.str (t : Delta) : String :=
   let mm := t.seconds / 60
   let ss := t.seconds % 60
@@ -217,7 +217,7 @@ def Delta.str (t : Delta) : String :=
   let s := if t.us ≠ 0 then s ++ ['.'] ++ padInt 6 t.us else s
   String.ofList s
 
-/-- `timedelta.__repr__`, _pydatetime.py:770-782; C `delta_repr`, :2986-3033. -/
+/-- `timedelta.__repr__`, _pydatetime.py:770-782; C `delta_repr`, :2943-2989. -/
 def Delta.repr (t : Delta) : String :=
   let args := (if t.days ≠ 0 then ["days=" ++ String.ofList (showInt t.days)] else []) ++
     (if t.seconds ≠ 0 then ["seconds=" ++ String.ofList (showInt t.seconds)] else []) ++

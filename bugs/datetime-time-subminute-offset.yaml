@@ -1,5 +1,5 @@
 id: datetime-time-subminute-offset
-title: "datetime.time comparison and hash mishandle sub-minute UTC offsets (3.14.7; fixed on main)"
+title: "datetime.time comparison and hash mishandle sub-minute UTC offsets (3.15.2; fixed on main)"
 priority: P4
 kind: twin-mismatch
 module: datetime
@@ -38,13 +38,13 @@ promised_by: |
   datetime docs: "If both comparands are aware and have different tzinfo attributes, the
   comparands are first adjusted by subtracting their UTC offsets."; __hash__ contract.
 cause: |
-  Lib/_pydatetime.py:1568-1570 (`myhhmm = self._hour * 60 + self._minute - myoff//timedelta(minutes=1)`),
+  Lib/_pydatetime.py:1573-1574 (`myhhmm = self._hour * 60 + self._minute - myoff//timedelta(minutes=1)`),
   :1589-1593 (`assert not m % timedelta(minutes=1), "whole minute"`);
-  Modules/_datetimemodule.c:5071-5082 (offset seconds only).
+  Modules/_datetimemodule.c:5064-5082 (offset seconds only).
 possible_fix: |
   Fixed on main by the change for gh-99772.
 reproduces:
-  python3 (3.14.7): REPRODUCED
+  python3 (3.15.2): REPRODUCED
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): not reproduced (fixed)
 duplicates:
   issues:

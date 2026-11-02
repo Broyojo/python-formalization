@@ -6,7 +6,7 @@ layer of the model did not cover: comparison, `datetime` arithmetic, `combine`,
 `replace`, `fromutc`, `astimezone` with an explicit `tz`, time tuples, `repr`,
 `ctime`, hash keys and pickle state. Python and C are mirrored separately where
 they differ. Citations are to `Lib/_pydatetime.py` (Py) and
-`Modules/_datetimemodule.c` (C) of 3.14.7.
+`Modules/_datetimemodule.c` (C) of 3.15.2.
 -/
 
 namespace PyLean.Datetime
@@ -48,10 +48,10 @@ def diffToBool (diff : Int) : CmpOp → Bool
 
 namespace Delta
 
-/-- `timedelta._getstate`, Py:940-941; C `delta_getstate`, :3024-3029. -/
+/-- `timedelta._getstate`, Py:959-960; C `delta_getstate`, :3024-3029. -/
 def getstate (t : Delta) : List Int := [t.days, t.seconds, t.us]
 
-/-- `timedelta._cmp`, Py:924-926. -/
+/-- `timedelta._cmp`, Py:943-945. -/
 def cmpPy (a b : Delta) : Int := cmpTuple a.getstate b.getstate
 
 /-- `delta_cmp`, :2536-2546. -/
@@ -62,16 +62,16 @@ def cmpC (a b : Delta) : Int :=
     if diff = 0 then a.us - b.us else diff
   else diff
 
-/-- `timedelta.__eq__`..`__gt__`, Py:894-922 (`__ne__` is the default inverse of `__eq__`). -/
+/-- `timedelta.__eq__`..`__gt__`, Py:913-941 (`__ne__` is the default inverse of `__eq__`). -/
 def richPy (op : CmpOp) (a b : Delta) : Bool := diffToBool (a.cmpPy b) op
 
 /-- `delta_richcompare`, :2549-2558. -/
 def richC (op : CmpOp) (a b : Delta) : Bool := diffToBool (a.cmpC b) op
 
-/-- `timedelta.__bool__`, Py:933-936; C `delta_bool`, :2935-2940. -/
+/-- `timedelta.__bool__`, Py:952-955; C `delta_bool`, :2935-2940. -/
 def bool (t : Delta) : Bool := t.days != 0 || t.seconds != 0 || t.us != 0
 
-/-- `timedelta.__pos__`, Py:830-831. -/
+/-- `timedelta.__pos__`, Py:849-850. -/
 def posPy (a : Delta) : Delta := a
 
 /-- `delta_positive`, :2486-2495 (no normalization, range already valid). -/
@@ -79,7 +79,7 @@ def posC (a : Delta) : Py Delta := do
   checkDeltaDayRange a.days
   return ⟨a.days, a.seconds, a.us⟩
 
-/-- `timedelta.__rsub__`, Py:818-821: `other - self` as `-self + other`. -/
+/-- `timedelta.__rsub__`, Py:837-840: `other - self` as `-self + other`. -/
 def rsubPy (self other : Delta) : Py Delta := do
   let n ← self.negPy
   n.addPy other
@@ -112,16 +112,16 @@ inductive HashKey where
   | ints (xs : List Int)
   deriving Repr, DecidableEq, Inhabited
 
-/-- `timedelta.__hash__`, Py:928-931, and `delta_hash`, :2563-2576. -/
+/-- `timedelta.__hash__`, Py:947-950, and `delta_hash`, :2563-2576. -/
 def Delta.hashKey (t : Delta) : HashKey := .ints t.getstate
 
 /-! ### `date` -/
 
-/-- `date._cmp`, Py:1198-1203. -/
+/-- `date._cmp`, Py:1223-1228. -/
 def dateCmpPy (a b : Int × Int × Int) : Int :=
   cmpTuple [a.1, a.2.1, a.2.2] [b.1, b.2.1, b.2.2]
 
-/-- `date.__eq__`..`__gt__`, Py:1173-1196: `none` is `NotImplemented` (a `datetime` operand). -/
+/-- `date.__eq__`..`__gt__`, Py:1198-1221: `none` is `NotImplemented` (a `datetime` operand). -/
 def dateRichPy (op : CmpOp) (a b : Int × Int × Int) (otherIsDatetime : Bool) : Option Bool :=
   if otherIsDatetime then none else some (diffToBool (dateCmpPy a b) op)
 
@@ -130,19 +130,19 @@ def dateRichC (op : CmpOp) (a b : Int × Int × Int) (otherIsDatetime : Bool) : 
   if otherIsDatetime then none
   else some (diffToBool (memcmpBytes (dateData a.1 a.2.1 a.2.2) (dateData b.1 b.2.1 b.2.2)) op)
 
-/-- `date.__hash__`, Py:1205-1209: the hash of the one-element state tuple. -/
+/-- `date.__hash__`, Py:1230-1234: the hash of the one-element state tuple. -/
 def dateHashKeyPy (y m d : Int) : HashKey := .tuple1 (dateData y m d)
 
-/-- `date_hash` through `generic_hash`, :3964-3984. -/
+/-- `date_hash` through `generic_hash`, :3964-3967. -/
 def dateHashKeyC (y m d : Int) : HashKey := .bytes (dateData y m d)
 
-/-- `date.weekday()`, Py:1234-1236. -/
+/-- `date.weekday()`, Py:1259-1261. -/
 def dateWeekdayPy (y m d : Int) : Int := (toordinal y m d + 6) % 7
 
 /-- `date_weekday`, :3994-3998, through `weekday`. -/
 def dateWeekdayC (y m d : Int) : Int := weekdayC y m d
 
-/-- `date.isoweekday()`, Py:1240-1243. -/
+/-- `date.isoweekday()`, Py:1265-1268. -/
 def dateIsoweekdayPy (y m d : Int) : Int :=
   let r := toordinal y m d % 7
   if r = 0 then 7 else r
@@ -150,7 +150,7 @@ def dateIsoweekdayPy (y m d : Int) : Int :=
 /-- `date_isoweekday`, :3705-3710. -/
 def dateIsoweekdayC (y m d : Int) : Int := weekdayC y m d + 1
 
-/-- `date.__sub__(date)`, Py:1224-1232. -/
+/-- `date.__sub__(date)`, Py:1249-1257. -/
 def dateSubDatePy (a b : Int × Int × Int) : Py Delta :=
   deltaPy (toordinal a.1 a.2.1 a.2.2 - toordinal b.1 b.2.1 b.2.2) 0 0 0 0 0 0
 
@@ -160,26 +160,26 @@ def dateSubDateC (a b : Int × Int × Int) : Py Delta := do
   checkDeltaDayRange d
   return ⟨d, 0, 0⟩
 
-/-- `date.__sub__(timedelta)`, Py:1226-1227: `self + timedelta(-other.days)`. -/
+/-- `date.__sub__(timedelta)`, Py:1249-1257: `self + timedelta(-other.days)`. -/
 def dateSubDeltaPy (y m d : Int) (t : Delta) : Py (Int × Int × Int) := do
   dateAddPy y m d (← deltaPy (-t.days) 0 0 0 0 0 0)
 
-/-- `add_date_timedelta` with `negate = 1`, :3546-3559. -/
+/-- `add_date_timedelta` with `negate = 1`, :3547-3559. -/
 def dateSubDeltaC (y m d : Int) (t : Delta) : Py (Int × Int × Int) := do
   let (y, m, d) ← normalizeYMDC y m (d + -t.days)
   checkDate y m d
 
-/-- `date.replace`, Py:1159-1167. -/
+/-- `date.replace`, Py:1184-1192. -/
 def dateReplacePy (y m d : Int) (ny nm nd : Option Int) : Py (Int × Int × Int) :=
   checkDate (ny.getD y) (nm.getD m) (nd.getD d)
 
 /-- `datetime_date_replace_impl`, :3956-3961, through `new_date_subclass_ex`
-(@3.14.7:1182-1198) and `new_date_ex` (:1168-1180). The clinic `"i"` conversion is modelled
-by `fitsCInt`. -/
+(:1191-1206) and `new_date_ex` (:1168-1187). The clinic `int` conversion is modelled by
+`fitsCInt`. -/
 def dateReplaceC (y m d : Int) (ny nm nd : Option Int) : Py (Int × Int × Int) :=
   let (y, m, d) := (ny.getD y, nm.getD m, nd.getD d)
   if ¬(fitsCInt y ∧ fitsCInt m ∧ fitsCInt d) then
-    .error (.overflowError "~signed integer is greater than maximum")
+    .error (.overflowError "Python int too large to convert to C int")
   else checkDate y m d
 
 /-! ### Time tuples -/
@@ -197,7 +197,7 @@ def buildStructTimePy (y m d hh mm ss dstflag : Int) : TimeTuple :=
 def buildStructTimeC (y m d hh mm ss dstflag : Int) : TimeTuple :=
   [y, m, d, hh, mm, ss, weekdayC y m d, daysBeforeMonth y m + d, dstflag]
 
-/-- `date.timetuple()`, Py:1146-1149. -/
+/-- `date.timetuple()`, Py:1171-1174. -/
 def dateTimetuplePy (y m d : Int) : TimeTuple := buildStructTimePy y m d 0 0 0 (-1)
 
 /-- `date_timetuple`, :3937-3943. -/
@@ -214,13 +214,13 @@ def fmt2Space (n : Int) : String :=
   let s := fmtD n
   if s.length < 2 then " " ++ s else s
 
-/-- `date.ctime()`, Py:1091-1097, and `datetime.ctime()`, Py:2115-2123. -/
+/-- `date.ctime()`, Py:1114-1120, and `datetime.ctime()`, Py:2164-2172. -/
 def ctimePy (y m d hh mm ss : Int) : String :=
   let wd := toordinal y m d % 7
   let wd := if wd = 0 then 7 else wd
   s!"{dayNames.getD wd.toNat ""} {monthNames.getD m.toNat ""} {fmt2Space d} {fmt0 2 hh}:{fmt0 2 mm}:{fmt0 2 ss} {fmt0 4 y}"
 
-/-- `format_ctime`, :1692-1708. -/
+/-- `format_ctime`, :1700-1716. -/
 def ctimeC (y m d hh mm ss : Int) : String :=
   let wday := weekdayC y m d
   s!"{dayNames.getD (wday + 1).toNat ""} {monthNames.getD m.toNat ""} {fmt2Space d} {fmt0 2 hh}:{fmt0 2 mm}:{fmt0 2 ss} {fmt0 4 y}"
@@ -231,98 +231,98 @@ def ctimeC (y m d hh mm ss : Int) : String :=
 def getClassModule (moduleName : String) : String :=
   if moduleName = "datetime" then "datetime." else ""
 
-/-- `date.__repr__`, Py:1073-1084. -/
+/-- `date.__repr__`, Py:1096-1107. -/
 def dateReprPy (y m d : Int) : String :=
   s!"{getClassModule "datetime"}date({fmtD y}, {fmtD m}, {fmtD d})"
 
-/-- `date_repr`, :3570-3576. -/
+/-- `date_repr`, :3619-3625. -/
 def dateReprC (y m d : Int) : String := s!"datetime.date({fmtD y}, {fmtD m}, {fmtD d})"
 
-/-- `s[:-1] + ", tzinfo=%r" % tz + ")"`, and C `append_keyword_tzinfo`, :1620-1637. -/
+/-- `s[:-1] + ", tzinfo=%r" % tz + ")"`, and C `append_keyword_tzinfo`, :1628-1645. -/
 def appendTzinfo (env : TzEnv) (s : String) (tz : Option Tz) : String :=
   match tz with
   | none => s
   | some t => (s.dropEnd 1).toString ++ s!", tzinfo={t.repr env})"
 
-/-- `s[:-1] + ", fold=1)"`, and C `append_keyword_fold`, :1645-1661. -/
+/-- `s[:-1] + ", fold=1)"`, and C `append_keyword_fold`, :1653-1669. -/
 def appendFold (s : String) (fold : Int) : String :=
   if fold = 0 then s else (s.dropEnd 1).toString ++ s!", fold={fmtD fold})"
 
-/-- The positional part of `time.__repr__`, Py:1578-1585. -/
+/-- The positional part of `time.__repr__`, Py:1606-1623. -/
 def tmReprBasePy (t : TM) : String :=
   let s := if t.us ≠ 0 then s!", {fmtD t.s}, {fmtD t.us}"
     else if t.s ≠ 0 then s!", {fmtD t.s}" else ""
   s!"{getClassModule "datetime"}time({fmtD t.h}, {fmtD t.mi}{s})"
 
-/-- `time.__repr__`, Py:1576-1593. -/
+/-- `time.__repr__`, Py:1606-1623. -/
 def timeReprPy (env : TzEnv) (t : TM) : String :=
   appendFold (appendTzinfo env (tmReprBasePy t) t.tz) t.fold
 
-/-- The positional part of `time_repr`, :4781-4787. -/
+/-- The positional part of `time_repr`, :4852-4876. -/
 def tmReprBaseC (t : TM) : String :=
   if t.us ≠ 0 then s!"datetime.time({fmtD t.h}, {fmtD t.mi}, {fmtD t.s}, {fmtD t.us})"
   else if t.s ≠ 0 then s!"datetime.time({fmtD t.h}, {fmtD t.mi}, {fmtD t.s})"
   else s!"datetime.time({fmtD t.h}, {fmtD t.mi})"
 
-/-- `time_repr`, :4771-4795. -/
+/-- `time_repr`, :4852-4876. -/
 def timeReprC (env : TzEnv) (t : TM) : String :=
   appendFold (appendTzinfo env (tmReprBaseC t) t.tz) t.fold
 
-/-- The positional part of `datetime.__repr__`, Py:2154-2161. -/
+/-- The positional part of `datetime.__repr__`, Py:2201-2218. -/
 def dtReprBasePy (dt : DT) : String :=
   let L := [dt.y, dt.m, dt.d, dt.h, dt.mi, dt.s, dt.us]
   let L := if L.getLast? = some 0 then L.dropLast else L
   let L := if L.getLast? = some 0 then L.dropLast else L
   s!"{getClassModule "datetime"}datetime({", ".intercalate (L.map fmtD)})"
 
-/-- `datetime.__repr__`, Py:2152-2169. The tzinfo keyword comes before fold. -/
+/-- `datetime.__repr__`, Py:2201-2218. The tzinfo keyword comes before fold. -/
 def dtReprPy (env : TzEnv) (dt : DT) : String :=
   appendFold (appendTzinfo env (dtReprBasePy dt) dt.tz) dt.fold
 
-/-- The positional part of `datetime_repr`, :6216-6238. -/
+/-- The positional part of `datetime_repr`, :6378-6413. -/
 def dtReprBaseC (dt : DT) : String :=
   let f (xs : List Int) := s!"datetime.datetime({", ".intercalate (xs.map fmtD)})"
   if dt.us ≠ 0 then f [dt.y, dt.m, dt.d, dt.h, dt.mi, dt.s, dt.us]
   else if dt.s ≠ 0 then f [dt.y, dt.m, dt.d, dt.h, dt.mi, dt.s]
   else f [dt.y, dt.m, dt.d, dt.h, dt.mi]
 
-/-- `datetime_repr`, :6213-6248: fold is appended first, then tzinfo. -/
+/-- `datetime_repr`, :6378-6413: fold is appended first, then tzinfo. -/
 def dtReprC (env : TzEnv) (dt : DT) : String :=
   appendTzinfo env (appendFold (dtReprBaseC dt) dt.fold) dt.tz
 
-/-- `IsoCalendarDate.__repr__`, Py:1376-1378. -/
+/-- `IsoCalendarDate.__repr__`, Py:1401-1403. -/
 def isoReprPy (y w d : Int) : String :=
   s!"IsoCalendarDate(year={fmtD y}, week={fmtD w}, weekday={fmtD d})"
 
-/-- `iso_calendar_date_repr`, :3659-3676. -/
+/-- `iso_calendar_date_repr`, :3723-3740. -/
 def isoReprC (y w d : Int) : String :=
   s!"datetime.IsoCalendarDate(year={fmtD y}, week={fmtD w}, weekday={fmtD d})"
 
 /-! ### Offsets in `isoformat` -/
 
-/-- `time._tzstr`, Py:1571-1574: `_format_offset(self.utcoffset())`. -/
+/-- `time._tzstr`, Py:1601-1604: `_format_offset(self.utcoffset())`. -/
 def tmTzstrPy (env : TzEnv) (t : TM) : Py String := do
   let off ← t.utcoffsetPy env
   return String.ofList (formatOffset (off.map Delta.toUs))
 
-/-- `time.isoformat`, Py:1595-1610. -/
+/-- `time.isoformat`, Py:1625-1640. -/
 def tmIsoformatPy (env : TzEnv) (t : TM) (spec : TimeSpec) : Py String := do
   let s := String.ofList (formatTime t.h t.mi t.s t.us spec)
   return s ++ (← tmTzstrPy env t)
 
-/-- `time_isoformat`, :4804-4868, with `format_utcoffset` (:1723-1768). -/
+/-- `datetime_time_isoformat_impl`, :4900-4959, with `format_utcoffset` (:1767-1813). -/
 def tmIsoformatC (env : TzEnv) (t : TM) (spec : TimeSpec) : Py String := do
   let s := String.ofList (formatTime t.h t.mi t.s t.us spec)
   let off ← t.utcoffsetC env
   return s ++ String.ofList (formatOffset (off.map Delta.toUs))
 
-/-- `datetime.isoformat`, Py:2125-2150. -/
+/-- `datetime.isoformat`, Py:2174-2199. -/
 def dtIsoformatPy (env : TzEnv) (dt : DT) (sep : Char) (spec : TimeSpec) : Py String := do
   let s := String.ofList (dateIsoformat dt.y dt.m dt.d ++ [sep] ++ formatTime dt.h dt.mi dt.s dt.us spec)
   let off ← dt.utcoffsetPy env
   return s ++ String.ofList (formatOffset (off.map Delta.toUs))
 
-/-- `datetime_isoformat`, :6263-6328. -/
+/-- `datetime_datetime_isoformat_impl`, :6450-6510. -/
 def dtIsoformatC (env : TzEnv) (dt : DT) (sep : Char) (spec : TimeSpec) : Py String := do
   let s := String.ofList (dateIsoformat dt.y dt.m dt.d ++ [sep] ++ formatTime dt.h dt.mi dt.s dt.us spec)
   let off ← dt.utcoffsetC env
@@ -336,7 +336,7 @@ def TM.base (t : TM) : List Int := [t.h, t.mi, t.s, t.us]
 /-- `myoff // timedelta(minutes=1)`. -/
 def floorMinutes (off : Delta) : Int := off.toUs / 60000000
 
-/-- `time._cmp`, Py:1520-1546. -/
+/-- `time._cmp`, Py:1550-1576. -/
 def tmCmpPy (env : TzEnv) (a b : TM) (allowMixed : Bool) : Py Int := do
   let (myoff, otoff, baseCompare) ←
     if sameTz a.tz b.tz then pure (none, none, true)
@@ -354,7 +354,7 @@ def tmCmpPy (env : TzEnv) (a b : TM) (allowMixed : Bool) : Py Int := do
     if allowMixed then return 2
     else throw (.typeError "cannot compare naive and aware times")
 
-/-- `time.__eq__`..`__gt__`, Py:1490-1518 (`__ne__` inverts `__eq__`). -/
+/-- `time.__eq__`..`__gt__`, Py:1520-1548 (`__ne__` inverts `__eq__`). -/
 def tmRichPy (env : TzEnv) (op : CmpOp) (a b : TM) : Py Bool := do
   match op with
   | .eq => return (← tmCmpPy env a b true) == 0
@@ -364,7 +364,7 @@ def tmRichPy (env : TzEnv) (op : CmpOp) (a b : TM) : Py Bool := do
   | .ge => return diffToBool (← tmCmpPy env a b false) .ge
   | .gt => return diffToBool (← tmCmpPy env a b false) .gt
 
-/-- `time_richcompare`, :4907-4975. -/
+/-- `time_richcompare`, :5027-5095. -/
 def tmRichC (env : TzEnv) (op : CmpOp) (a b : TM) : Py Bool := do
   if sameTz a.tz b.tz then return diffToBool (memcmpBytes (timeData a) (timeData b)) op
   let offset1 ← a.utcoffsetC env
@@ -386,7 +386,7 @@ def tmRichC (env : TzEnv) (op : CmpOp) (a b : TM) : Py Bool := do
 /-- `time.replace(fold=0)` as `__hash__` uses it. -/
 def TM.fold0 (t : TM) : TM := { t with fold := 0 }
 
-/-- `time.__hash__`, Py:1548-1567; `none` key means the `assert` failed with
+/-- `time.__hash__`, Py:1578-1597; `none` key means the `assert` failed with
 `AssertionError('whole minute')`. -/
 def tmHashKeyPy (env : TzEnv) (self : TM) : Py HashKey := do
   let t := if self.fold ≠ 0 then self.fold0 else self
@@ -406,7 +406,7 @@ def tmHashKeyPy (env : TzEnv) (self : TM) : Py HashKey := do
         return .bytes (timeData ⟨h, m, self.s, self.us, 0, none⟩)
       else return .ints [h, m, self.s, self.us]
 
-/-- `time_hash`, :4978-5034. The `timedelta` arithmetic cannot leave its range. -/
+/-- `time_hash`, :5098-5154. The `timedelta` arithmetic cannot leave its range. -/
 def tmHashKeyC (env : TzEnv) (self : TM) : Py HashKey := do
   let self0 := if self.fold ≠ 0 then self.fold0 else self
   let offset ← self0.utcoffsetC env
@@ -422,54 +422,71 @@ def tmHashKeyC (env : TzEnv) (self : TM) : Py HashKey := do
 /-- `date`, `time` part fields of a `datetime` built from checked fields. -/
 def DT.ymd (dt : DT) : Int × Int × Int := (dt.y, dt.m, dt.d)
 
-/-- `datetime.date()`, Py:2031-2033, and `datetime_getdate`, :6932-6938. -/
+/-- `datetime.date()`, Py:2081-2083, and `datetime_getdate`, :7121-7127. -/
 def dtDate (dt : DT) : Int × Int × Int := dt.ymd
 
-/-- `datetime.time()`, Py:2035-2037, and `datetime_gettime`, :6941-6950. -/
+/-- `datetime.time()`, Py:2085-2087, and `datetime_gettime`, :7130-7139. -/
 def dtTime (dt : DT) : TM := ⟨dt.h, dt.mi, dt.s, dt.us, dt.fold, none⟩
 
-/-- `datetime.timetz()`, Py:2039-2042, and `datetime_gettimetz`, :6953-6962. -/
+/-- `datetime.timetz()`, Py:2089-2092, and `datetime_gettimetz`, :7142-7151. -/
 def dtTimetz (dt : DT) : TM := ⟨dt.h, dt.mi, dt.s, dt.us, dt.fold, dt.tz⟩
 
-/-- The fold check at the end of `_check_time_fields`, Py:585-586, and
+/-- The fold check at the end of `_check_time_fields`, Py:591-606, and
 `check_time_args`, :703-707. -/
 def checkFold (fold : Int) : Py Unit :=
   if fold = 0 ∨ fold = 1 then .ok ()
   else .error (.valueError s!"fold must be either 0 or 1, not {fold}")
 
 /-- `datetime(year, ..., tzinfo, fold=fold)` for int fields: `_check_date_fields`,
-`_check_time_fields`, Py:1755-1788; `new_datetime_ex2`, :1202-1232. -/
+`_check_time_fields`, Py:591-606; `new_datetime_ex2`, :1210-1240. -/
 def newDT (dt : DT) : Py DT := do
   let _ ← checkDate dt.y dt.m dt.d
   let _ ← checkTime dt.h dt.mi dt.s dt.us
   checkFold dt.fold
   return dt
 
-/-- `time(hour, ..., tzinfo, fold=fold)` for int fields: Py:1411-1448;
-`new_time_ex2`, :1310-1337. -/
+/-- `time(hour, ..., tzinfo, fold=fold)` for int fields: Py:1436-1473;
+`new_time_ex2`, :1318-1345. -/
 def newTM (t : TM) : Py TM := do
   let _ ← checkTime t.h t.mi t.s t.us
   checkFold t.fold
   return t
 
-/-- `datetime.combine(date, time, tzinfo)`, Py:1906-1916, and `datetime_combine`,
-:5723-5752, for the date and time objects it takes. `tz = none` is the default
+/-- `datetime.combine(date, time, tzinfo)`, Py:1952-1961, and `datetime_datetime_combine_impl`,
+:5891-5911, for the date and time objects it takes. `tz = none` is the default
 `tzinfo=True`, `tz = some x` an explicit value (`some none` is `None`). -/
 def dtCombine (ymd : Int × Int × Int) (t : TM) (tz : Option (Option Tz)) : Py DT :=
   newDT ⟨ymd.1, ymd.2.1, ymd.2.2, t.h, t.mi, t.s, t.us, t.fold, tz.getD t.tz⟩
 
-/-- `datetime.replace`, Py:2044-2067, for int fields. -/
+/-- `datetime.replace`, Py:2094-2117, for int fields. -/
 def dtReplace (dt : DT) (y m d h mi s us fold : Option Int) (tz : Option (Option Tz)) : Py DT :=
   newDT ⟨y.getD dt.y, m.getD dt.m, d.getD dt.d, h.getD dt.h, mi.getD dt.mi, s.getD dt.s,
     us.getD dt.us, fold.getD dt.fold, tz.getD dt.tz⟩
 
-/-- `time.replace`, Py:1687-1702, for int fields. -/
+/-- `time.replace`, Py:1732-1747, for int fields. -/
 def tmReplace (t : TM) (h mi s us fold : Option Int) (tz : Option (Option Tz)) : Py TM :=
   newTM ⟨h.getD t.h, mi.getD t.mi, s.getD t.s, us.getD t.us, fold.getD t.fold, tz.getD t.tz⟩
 
+/-- `datetime_datetime_replace_impl`, :6753-6762: the clinic `int` conversions, then the
+fields checked as in `dtReplace`. -/
+def dtReplaceC (dt : DT) (y m d h mi s us fold : Option Int) (tz : Option (Option Tz)) : Py DT :=
+  if ¬(fitsCInt (y.getD dt.y) ∧ fitsCInt (m.getD dt.m) ∧ fitsCInt (d.getD dt.d) ∧
+      fitsCInt (h.getD dt.h) ∧ fitsCInt (mi.getD dt.mi) ∧ fitsCInt (s.getD dt.s) ∧
+      fitsCInt (us.getD dt.us) ∧ fitsCInt (fold.getD dt.fold)) then
+    .error (.overflowError "Python int too large to convert to C int")
+  else dtReplace dt y m d h mi s us fold tz
+
+/-- `datetime_time_replace_impl`, :5171-5178: the clinic `int` conversions, then the fields
+checked as in `tmReplace`. -/
+def tmReplaceC (t : TM) (h mi s us fold : Option Int) (tz : Option (Option Tz)) : Py TM :=
+  if ¬(fitsCInt (h.getD t.h) ∧ fitsCInt (mi.getD t.mi) ∧ fitsCInt (s.getD t.s) ∧
+      fitsCInt (us.getD t.us) ∧ fitsCInt (fold.getD t.fold)) then
+    .error (.overflowError "Python int too large to convert to C int")
+  else tmReplace t h mi s us fold tz
+
 /-! ### `datetime`: arithmetic -/
 
-/-- `datetime.__add__`, Py:2287-2304. -/
+/-- `datetime.__add__`, Py:2340-2357. -/
 def dtAddPy (dt : DT) (other : Delta) : Py DT := do
   let delta ← deltaPy (toordinal dt.y dt.m dt.d) dt.s dt.us 0 dt.mi dt.h 0
   let delta ← delta.addPy other
@@ -489,7 +506,7 @@ def normalizeTailC (hh mi s us : Int) (r : Py (Int × Int × Int)) : Py DT :=
   | .ok (y, m, d) => .ok ⟨y, m, d, hh, mi, s, us, 0, none⟩
   | .error e => .error e
 
-/-- `normalize_datetime`, :844-853. -/
+/-- `normalize_datetime`, :847-856. -/
 def normalizeDatetimeC (y m d hh mi s us : Int) : Py DT :=
   let (s, us) := normalizePair s us 1000000
   let (mi, s) := normalizePair mi s 60
@@ -497,16 +514,16 @@ def normalizeDatetimeC (y m d hh mi s us : Int) : Py DT :=
   let (d, hh) := normalizePair d hh 24
   normalizeTailC hh mi s us (normalizeYMDC y m d)
 
-/-- `add_datetime_timedelta`, :6076-6101, with the `factor` of the caller. -/
+/-- `add_datetime_timedelta`, :6241-6266, with the `factor` of the caller. -/
 def addDatetimeTimedeltaC (dt : DT) (delta : Delta) (factor : Int) : Py DT := do
   let r ← normalizeDatetimeC dt.y dt.m (dt.d + delta.days * factor) dt.h dt.mi
     (dt.s + delta.seconds * factor) (dt.us + delta.us * factor)
   newDT { r with tz := dt.tz }
 
-/-- `datetime.__sub__(timedelta)`, Py:2311-2313: `self + -other`. -/
+/-- `datetime.__sub__(timedelta)`, Py:2361-2383: `self + -other`. -/
 def dtSubDeltaPy (dt : DT) (other : Delta) : Py DT := do dtAddPy dt (← other.negPy)
 
-/-- `datetime.__sub__(datetime)`, Py:2308-2330. -/
+/-- `datetime.__sub__(datetime)`, Py:2361-2383. -/
 def dtSubPy (env : TzEnv) (self other : DT) : Py Delta := do
   let days1 := toordinal self.y self.m self.d
   let days2 := toordinal other.y other.m other.d
@@ -523,7 +540,7 @@ def dtSubPy (env : TzEnv) (self other : DT) : Py Delta := do
     r.subPy mo
   | _, _ => throw (.typeError "cannot mix naive and timezone-aware time")
 
-/-- `datetime_subtract` for two datetimes, :6125-6208. -/
+/-- `datetime_subtract` for two datetimes, :6290-6373. -/
 def dtSubC (env : TzEnv) (left right : DT) : Py Delta := do
   let (offset1, offset2) ←
     if sameTz left.tz right.tz then pure (none, none)
@@ -552,7 +569,7 @@ def DT.base (dt : DT) : List Int := [dt.y, dt.m, dt.d, dt.h, dt.mi, dt.s, dt.us]
 /-- `self.replace(fold=not self.fold)`. -/
 def DT.flipFold (dt : DT) : DT := { dt with fold := if dt.fold = 0 then 1 else 0 }
 
-/-- `datetime._cmp`, Py:2250-2285. -/
+/-- `datetime._cmp`, Py:2303-2338. -/
 def dtCmpPy (env : TzEnv) (self other : DT) (allowMixed : Bool) : Py Int := do
   if sameTz self.tz other.tz then return cmpTuple self.base other.base
   let myoff ← self.utcoffsetPy env
@@ -568,7 +585,7 @@ def dtCmpPy (env : TzEnv) (self other : DT) (allowMixed : Bool) : Py Int := do
   if diff.days < 0 then return -1
   return if diff.bool then 1 else 0
 
-/-- `datetime.__eq__`..`__gt__`, Py:2220-2248. -/
+/-- `datetime.__eq__`..`__gt__`, Py:2273-2301. -/
 def dtRichPy (env : TzEnv) (op : CmpOp) (a b : DT) : Py Bool := do
   match op with
   | .eq => return (← dtCmpPy env a b true) == 0
@@ -578,17 +595,17 @@ def dtRichPy (env : TzEnv) (op : CmpOp) (a b : DT) : Py Bool := do
   | .ge => return diffToBool (← dtCmpPy env a b false) .ge
   | .gt => return diffToBool (← dtCmpPy env a b false) .gt
 
-/-- `get_flip_fold_offset`, :6359-6369, through `flip_fold`, :6343-6356. -/
+/-- `get_flip_fold_offset`, :6541-6551, through `flip_fold`, :6525-6538. -/
 def getFlipFoldOffsetC (env : TzEnv) (dt : DT) : Py (Option Delta) := dt.flipFold.utcoffsetC env
 
-/-- `pep495_eq_exception`, :6378-6404. -/
+/-- `pep495_eq_exception`, :6560-6586. -/
 def pep495EqExceptionC (env : TzEnv) (self other : DT) (o1 o2 : Option Delta) : Py Bool := do
   let f1 ← getFlipFoldOffsetC env self
   if !offEq f1 o1 then return true
   let f2 ← getFlipFoldOffsetC env other
   return !offEq f2 o2
 
-/-- `datetime_richcompare`, :6407-6485. -/
+/-- `datetime_richcompare`, :6589-6666. -/
 def dtRichC (env : TzEnv) (op : CmpOp) (self other : DT) : Py Bool := do
   if sameTz self.tz other.tz then
     return diffToBool (memcmpBytes (dtData self) (dtData other)) op
@@ -613,7 +630,7 @@ def dtRichC (env : TzEnv) (op : CmpOp) (self other : DT) : Py Bool := do
   | .ne => return true
   | _ => throw (.typeError "can't compare offset-naive and offset-aware datetimes")
 
-/-- `datetime.__hash__`, Py:2332-2345. -/
+/-- `datetime.__hash__`, Py:2385-2398. -/
 def dtHashKeyPy (env : TzEnv) (self : DT) : Py HashKey := do
   let t := if self.fold ≠ 0 then { self with fold := 0 } else self
   let tzoff ← t.utcoffsetPy env
@@ -626,7 +643,7 @@ def dtHashKeyPy (env : TzEnv) (self : DT) : Py HashKey := do
     let r ← base.subPy o
     return r.hashKey
 
-/-- `datetime_hash`, :6488-6552. -/
+/-- `datetime_hash`, :6669-6733. -/
 def dtHashKeyC (env : TzEnv) (self : DT) : Py HashKey := do
   let self0 := if self.fold ≠ 0 then { self with fold := 0 } else self
   let offset ← self0.utcoffsetC env
@@ -641,7 +658,7 @@ def dtHashKeyC (env : TzEnv) (self : DT) : Py HashKey := do
 
 /-! ### `datetime`: time tuples -/
 
-/-- `datetime.timetuple()`, Py:1966-1977. -/
+/-- `datetime.timetuple()`, Py:2016-2027. -/
 def dtTimetuplePy (env : TzEnv) (dt : DT) : Py TimeTuple := do
   let dst ← dt.dstPy env
   let flag : Int := match dst with
@@ -649,7 +666,7 @@ def dtTimetuplePy (env : TzEnv) (dt : DT) : Py TimeTuple := do
     | some o => if o.bool then 1 else 0
   return buildStructTimePy dt.y dt.m dt.d dt.h dt.mi dt.s flag
 
-/-- `datetime_timetuple`, :6818-6841. -/
+/-- `datetime_timetuple`, :7007-7030. -/
 def dtTimetupleC (env : TzEnv) (dt : DT) : Py TimeTuple := do
   let dst ← dt.dstC env
   let flag : Int := match dst with
@@ -657,7 +674,7 @@ def dtTimetupleC (env : TzEnv) (dt : DT) : Py TimeTuple := do
     | some o => if o.bool then 1 else 0
   return buildStructTimeC dt.y dt.m dt.d dt.h dt.mi dt.s flag
 
-/-- `datetime.utctimetuple()`, Py:2022-2029. -/
+/-- `datetime.utctimetuple()`, Py:2072-2079. -/
 def dtUtctimetuplePy (env : TzEnv) (self : DT) : Py TimeTuple := do
   let offset ← self.utcoffsetPy env
   let u ← match offset with
@@ -665,7 +682,7 @@ def dtUtctimetuplePy (env : TzEnv) (self : DT) : Py TimeTuple := do
     | none => pure self
   return buildStructTimePy u.y u.m u.d u.h u.mi u.s 0
 
-/-- `datetime_utctimetuple`, :6965-7002. -/
+/-- `datetime_utctimetuple`, :7154-7191. -/
 def dtUtctimetupleC (env : TzEnv) (self : DT) : Py TimeTuple := do
   let offset ← self.utcoffsetC env
   let u ← match offset with
@@ -675,7 +692,7 @@ def dtUtctimetupleC (env : TzEnv) (self : DT) : Py TimeTuple := do
 
 /-! ### `tzinfo.fromutc`, `timezone.fromutc`, `astimezone` -/
 
-/-- `tzinfo.fromutc`, Py:1316-1341, for a `datetime` argument. `tzoid` is `self`. -/
+/-- `tzinfo.fromutc`, Py:1341-1366, for a `datetime` argument. `tzoid` is `self`. -/
 def tzinfoFromutcPy (env : TzEnv) (tzoid : Nat) (dt : DT) : Py DT := do
   if dt.tz.map (·.oid) ≠ some tzoid then throw (.valueError "dt.tzinfo is not self")
   let dtoff ← dt.utcoffsetPy env
@@ -693,7 +710,7 @@ def tzinfoFromutcPy (env : TzEnv) (tzoid : Nat) (dt : DT) : Py DT := do
     dtAddPy dt dtdst
   else dtAddPy dt dtdst
 
-/-- `tzinfo_fromutc`, :4120-4190. -/
+/-- `tzinfo_fromutc`, :4179-4249. -/
 def tzinfoFromutcC (env : TzEnv) (tzoid : Nat) (dt : DT) : Py DT := do
   if dt.tz.map (·.oid) ≠ some tzoid then throw (.valueError "fromutc: dt.tzinfo is not self")
   let off ← dt.utcoffsetC env
@@ -709,12 +726,12 @@ def tzinfoFromutcC (env : TzEnv) (tzoid : Nat) (dt : DT) : Py DT := do
     | throw (.valueError "fromutc: tz.dst() gave inconsistent results; cannot convert")
   if dst.bool then addDatetimeTimedeltaC result dst 1 else return result
 
-/-- `timezone.fromutc`, Py:2489-2496. -/
+/-- `timezone.fromutc`, Py:2544-2551. -/
 def timezoneFromutcPy (tz : Tz) (offset : Delta) (dt : DT) : Py DT :=
   if dt.tz.map (·.oid) ≠ some tz.oid then .error (.valueError "fromutc: dt.tzinfo is not self")
   else dtAddPy dt offset
 
-/-- `timezone_fromutc`, :4444-4460. -/
+/-- `timezone_fromutc`, :4507-4523. -/
 def timezoneFromutcC (tz : Tz) (offset : Delta) (dt : DT) : Py DT :=
   if dt.tz.map (·.oid) ≠ some tz.oid then .error (.valueError "fromutc: dt.tzinfo is not self")
   else addDatetimeTimedeltaC dt offset 1
@@ -731,7 +748,7 @@ def tzFromutcC (env : TzEnv) (tz : Tz) (dt : DT) : Py DT :=
   | .timezone offset _ => timezoneFromutcC tz offset dt
   | .custom _ => tzinfoFromutcC env tz.oid dt
 
-/-- `datetime.astimezone(tz)`, Py:2088-2111, for an aware `self` whose tzinfo gives
+/-- `datetime.astimezone(tz)`, Py:2137-2160, for an aware `self` whose tzinfo gives
 a non-None offset. A naive `self` (or `utcoffset()` returning `None`) goes through
 the local time zone and is reported as `platformLocal`. The result of
 `mytz.utcoffset(self)` is not checked here, unlike `self.utcoffset()`. -/
@@ -749,7 +766,7 @@ def dtAstimezonePy (env : TzEnv) (self : DT) (tz : Tz) : Py (Option DT) := do
     let u ← dtReplace u none none none none none none none none (some (some tz))
     some <$> tzFromutcPy env tz u
 
-/-- `datetime_astimezone`, :6720-6815, same domain as `dtAstimezonePy`. -/
+/-- `datetime_datetime_astimezone_impl`, :6914-7004, same domain as `dtAstimezonePy`. -/
 def dtAstimezoneC (env : TzEnv) (self : DT) (tz : Tz) : Py (Option DT) := do
   let some mytz := self.tz | return none
   if mytz.oid = tz.oid then return some self
@@ -760,34 +777,34 @@ def dtAstimezoneC (env : TzEnv) (self : DT) (tz : Tz) : Py (Option DT) := do
 
 /-! ### Pickle state -/
 
-/-- `date._getstate`, Py:1275-1277, and `date_getstate`, :3923-3929. -/
+/-- `date._getstate`, Py:1300-1302, and `date_getstate`, :4004-4010. -/
 def dateGetstate (y m d : Int) : List Nat := dateData y m d
 
-/-- `date.__setstate`, Py:1279-1281, and `date_from_pickle`, :3219-3230. -/
+/-- `date.__setstate`, Py:1304-1306, and `date_from_pickle`, :3221-3232. -/
 def dateSetstate : List Nat → Option (Int × Int × Int)
   | [yhi, ylo, m, d] => some (yhi * 256 + ylo, m, d)
   | _ => none
 
-/-- `time._getstate(protocol)`, Py:1708-1719, and `time_getstate`, :5138-5156. -/
+/-- `time._getstate(protocol)`, Py:1753-1764, and `time_getstate`, :5269-5287. -/
 def tmGetstate (t : TM) (protocol : Int) : List Nat :=
   match timeData t with
   | h :: rest => (if t.fold ≠ 0 ∧ protocol > 3 then h + 128 else h) :: rest
   | [] => []
 
-/-- `time.__setstate`, Py:1721-1732, and `time_from_pickle`, :4621-4650. -/
+/-- `time.__setstate`, Py:1766-1777, and `time_from_pickle`, :4678-4707. -/
 def tmSetstate (tz : Option Tz) : List Nat → Option TM
   | [h, mi, s, us1, us2, us3] =>
     let (fold, h) := if h > 127 then (1, h - 128) else (0, h)
     some ⟨h, mi, s, ((us1 * 256 + us2) * 256 + us3 : Nat), fold, tz⟩
   | _ => none
 
-/-- `datetime._getstate(protocol)`, Py:2349-2362, and `datetime_getstate`, :7012-7030. -/
+/-- `datetime._getstate(protocol)`, Py:2402-2415, and `datetime_getstate`, :7201-7219. -/
 def dtGetstate (dt : DT) (protocol : Int) : List Nat :=
   match dtData dt with
   | yhi :: ylo :: m :: rest => yhi :: ylo :: (if dt.fold ≠ 0 ∧ protocol > 3 then m + 128 else m) :: rest
   | l => l
 
-/-- `datetime.__setstate`, Py:2364-2377, and `datetime_from_pickle`, :5346-5375. -/
+/-- `datetime.__setstate`, Py:2417-2430, and `datetime_from_pickle`, :5455-5484. -/
 def dtSetstate (tz : Option Tz) : List Nat → Option DT
   | [yhi, ylo, m, d, hh, mi, s, us1, us2, us3] =>
     let (fold, m) := if m > 127 then (1, m - 128) else (0, m)

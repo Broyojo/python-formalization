@@ -14,15 +14,15 @@ Lib/_pydatetime.py	206	214	_need_normalize_century	_need_normalize_century()	exc
 Lib/_pydatetime.py	217	295	_wrap_strftime	_wrap_strftime(object, format, timetuple)	modelled	datetime-strftime-twins	
 Lib/_pydatetime.py	298	299	_is_ascii_digit	_is_ascii_digit(c)	modelled	datetime-date-isoformat-roundtrip	
 Lib/_pydatetime.py	301	355	_find_isoformat_datetime_separator	_find_isoformat_datetime_separator(dtstr)	modelled	datetime-date-isoformat-roundtrip,datetime-datetime-fromiso-bare-separator	
-Lib/_pydatetime.py	358	363	_read_isoformat_component	_read_isoformat_component(s, n)	todo		changed-in-3.15: new function
-Lib/_pydatetime.py	366	403	_parse_isoformat_date	_parse_isoformat_date(dtstr)	todo		changed-in-3.15: was datetime-date-fromiso-ten-chars,datetime-date-fromiso-twins,datetime-date-isoformat-roundtrip
-Lib/_pydatetime.py	409	451	_parse_hh_mm_ss_ff	_parse_hh_mm_ss_ff(tstr)	todo		changed-in-3.15: was datetime-time-fromiso-twins
-Lib/_pydatetime.py	453	519	_parse_isoformat_time	_parse_isoformat_time(tstr)	todo		changed-in-3.15: was datetime-datetime-fromiso-twins,datetime-time-fromiso-twins
-Lib/_pydatetime.py	522	551	_isoweek_to_gregorian	_isoweek_to_gregorian(year, week, day)	modelled	datetime-fromisocalendar-exact,datetime-fromisocalendar-twins,datetime-isocalendar-roundtrip	
+Lib/_pydatetime.py	358	363	_read_isoformat_component	_read_isoformat_component(s, n)	modelled	datetime-date-isoformat-roundtrip,datetime-read-isoformat-component	
+Lib/_pydatetime.py	366	403	_parse_isoformat_date	_parse_isoformat_date(dtstr)	modelled	datetime-date-fromiso-ten-chars,datetime-date-isoformat-roundtrip	
+Lib/_pydatetime.py	409	451	_parse_hh_mm_ss_ff	_parse_hh_mm_ss_ff(tstr)	modelled	datetime-fromiso-offset-range,datetime-time-fromiso-twins	
+Lib/_pydatetime.py	453	519	_parse_isoformat_time	_parse_isoformat_time(tstr)	modelled	datetime-datetime-fromiso-twins,datetime-fromiso-offset-range,datetime-time-fromiso-twins	
+Lib/_pydatetime.py	522	551	_isoweek_to_gregorian	_isoweek_to_gregorian(year, week, day)	modelled	datetime-fromisocalendar-exact,datetime-fromisocalendar-twins,datetime-fromisocalendar-twins-cint,datetime-isocalendar-roundtrip	
 Lib/_pydatetime.py	555	558	_check_tzname	_check_tzname(name)	modelled	datetime-tzname-twins	
 Lib/_pydatetime.py	566	576	_check_utc_offset	_check_utc_offset(name, offset)	modelled	datetime-datetime-offsets,datetime-time-offsets	
 Lib/_pydatetime.py	578	589	_check_date_fields	_check_date_fields(year, month, day)	modelled	datetime-date-add-timedelta,datetime-date-ctor,datetime-datetime-ctor,datetime-ordinal-roundtrip	
-Lib/_pydatetime.py	591	606	_check_time_fields	_check_time_fields(hour, minute, second, microsecond, fold)	modelled	datetime-datetime-ctor,datetime-time-ctor	
+Lib/_pydatetime.py	591	606	_check_time_fields	_check_time_fields(hour, minute, second, microsecond, fold)	modelled	datetime-datetime-ctor,datetime-fromiso-offset-range,datetime-time-ctor	
 Lib/_pydatetime.py	608	613	_check_tzinfo_arg	_check_tzinfo_arg(tz)	modelled	datetime-datetime-ctor,datetime-time-ctor	
 Lib/_pydatetime.py	615	632	_divide_and_round	_divide_and_round(a, b)	modelled	datetime-timedelta-ops-twins	
 Lib/_pydatetime.py	657	768	timedelta.__new__	__new__(cls, days=0, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0)	modelled	datetime-timedelta-ctor-exact,datetime-timedelta-ctor-twins	
@@ -59,7 +59,7 @@ Lib/_pydatetime.py	1036	1041	date.fromtimestamp	fromtimestamp(cls, t)	excluded		
 Lib/_pydatetime.py	1044	1047	date.today	today(cls)	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
 Lib/_pydatetime.py	1050	1057	date.fromordinal	fromordinal(cls, n)	modelled	datetime-ordinal-roundtrip,datetime-toordinal-roundtrip	
 Lib/_pydatetime.py	1060	1075	date.fromisoformat	fromisoformat(cls, date_string)	modelled	datetime-date-fromiso-ten-chars,datetime-date-isoformat-roundtrip	
-Lib/_pydatetime.py	1078	1082	date.fromisocalendar	fromisocalendar(cls, year, week, day)	modelled	datetime-fromisocalendar-exact,datetime-fromisocalendar-twins,datetime-isocalendar-roundtrip	
+Lib/_pydatetime.py	1078	1082	date.fromisocalendar	fromisocalendar(cls, year, week, day)	modelled	datetime-fromisocalendar-exact,datetime-fromisocalendar-twins,datetime-fromisocalendar-twins-cint,datetime-isocalendar-roundtrip	
 Lib/_pydatetime.py	1085	1092	date.strptime	strptime(cls, date_string, format)	modelled	datetime-strptime-wrappers	
 Lib/_pydatetime.py	1096	1107	date.__repr__	__repr__(self)	modelled	datetime-date-repr	
 Lib/_pydatetime.py	1114	1120	date.ctime	ctime(self)	modelled	datetime-ctime	
@@ -116,7 +116,7 @@ Lib/_pydatetime.py	1578	1597	time.__hash__	__hash__(self)	modelled	datetime-time
 Lib/_pydatetime.py	1601	1604	time._tzstr	_tzstr(self)	modelled	datetime-time-isoformat-twins	
 Lib/_pydatetime.py	1606	1623	time.__repr__	__repr__(self)	modelled	datetime-time-repr	
 Lib/_pydatetime.py	1625	1640	time.isoformat	isoformat(self, timespec='auto')	modelled	datetime-time-isoformat-twins	
-Lib/_pydatetime.py	1645	1670	time.fromisoformat	fromisoformat(cls, time_string)	todo		changed-in-3.15: was datetime-time-fromiso-twins
+Lib/_pydatetime.py	1645	1670	time.fromisoformat	fromisoformat(cls, time_string)	modelled	datetime-fromiso-offset-range,datetime-time-fromiso-twins	
 Lib/_pydatetime.py	1672	1684	time.strftime	strftime(self, format)	todo		
 Lib/_pydatetime.py	1686	1691	time.__format__	__format__(self, fmt)	modelled	datetime-format-via-strftime	
 Lib/_pydatetime.py	1695	1702	time.utcoffset	utcoffset(self)	modelled	datetime-time-offsets	
@@ -140,7 +140,7 @@ Lib/_pydatetime.py	1920	1929	datetime.utcfromtimestamp	utcfromtimestamp(cls, t)	
 Lib/_pydatetime.py	1932	1935	datetime.now	now(cls, tz=None)	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
 Lib/_pydatetime.py	1938	1948	datetime.utcnow	utcnow(cls)	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
 Lib/_pydatetime.py	1951	1961	datetime.combine	combine(cls, date, time, tzinfo=True)	modelled	datetime-replace-combine	
-Lib/_pydatetime.py	1964	2014	datetime.fromisoformat	fromisoformat(cls, date_string)	todo		changed-in-3.15: was datetime-date-isoformat-roundtrip,datetime-datetime-fromiso-bare-separator,datetime-datetime-fromiso-midnight-valid-date,datetime-datetime-fromiso-twins
+Lib/_pydatetime.py	1964	2014	datetime.fromisoformat	fromisoformat(cls, date_string)	modelled	datetime-date-isoformat-roundtrip,datetime-datetime-fromiso-bare-separator,datetime-datetime-fromiso-midnight-valid-date,datetime-datetime-fromiso-twins	
 Lib/_pydatetime.py	2016	2027	datetime.timetuple	timetuple(self)	modelled	datetime-datetime-timetuple	
 Lib/_pydatetime.py	2029	2061	datetime._mktime	_mktime(self)	modelled	datetime-mktime-fixed,datetime-mktime-twins	
 Lib/_pydatetime.py	2064	2070	datetime.timestamp	timestamp(self)	todo		
@@ -149,7 +149,7 @@ Lib/_pydatetime.py	2081	2083	datetime.date	date(self)	modelled	datetime-replace-
 Lib/_pydatetime.py	2085	2087	datetime.time	time(self)	modelled	datetime-replace-combine	
 Lib/_pydatetime.py	2089	2092	datetime.timetz	timetz(self)	modelled	datetime-replace-combine	
 Lib/_pydatetime.py	2094	2117	datetime.replace	replace(self, year=None, month=None, day=None, hour=None, minute=None, second=None, microsecond=None, tzinfo=True, *, fold=None)	modelled	datetime-replace-combine	
-Lib/_pydatetime.py	2121	2135	datetime._local_timezone	_local_timezone(self)	todo		changed-in-3.15: was excluded: platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
+Lib/_pydatetime.py	2121	2135	datetime._local_timezone	_local_timezone(self)	excluded		platform: reads the OS clock, localtime(3) or the libc strftime behaviour; no pure part beyond what the callers model
 Lib/_pydatetime.py	2137	2160	datetime.astimezone	astimezone(self, tz=None)	modelled	datetime-astimezone-twins	
 Lib/_pydatetime.py	2164	2172	datetime.ctime	ctime(self)	modelled	datetime-ctime	
 Lib/_pydatetime.py	2174	2199	datetime.isoformat	isoformat(self, sep='T', timespec='auto')	modelled	datetime-datetime-isoformat-twins	

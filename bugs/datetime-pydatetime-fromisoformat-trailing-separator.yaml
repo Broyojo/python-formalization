@@ -27,7 +27,7 @@ promised_by: C/Python twin agreement.
 cause: Lib/_pydatetime.py:1983 (`if tstr:`) falls back to the date-only path for an empty time.
 possible_fix: Take the date-only path only when the string ends at the separator location (as C does).
 reproduces:
-  python3 (3.14.7): REPRODUCED
+  python3 (3.15.2): REPRODUCED
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED (snapshot predates the gh-160850 fix)
 duplicates:
   issues:

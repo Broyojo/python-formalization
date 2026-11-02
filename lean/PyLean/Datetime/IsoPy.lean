@@ -1,15 +1,17 @@
 import PyLean.Datetime.Calendar
 
 /-!
-The pure-Python ISO 8601 parsers of `Lib/_pydatetime.py` (CPython 3.14.7):
+The pure-Python ISO 8601 parsers of `Lib/_pydatetime.py` (CPython 3.15.2):
 `date.fromisoformat`, `time.fromisoformat` and `datetime.fromisoformat`.
 
 Strings are `List Char` (code points). Lean `Char` excludes lone surrogates,
 so strings containing them are out of scope.
 
-The 3.14.7 parser converts fixed-width slices with `int()`, which accepts much
-more than ASCII digits; `pyInt` models `int(str)` exactly (Unicode 16.0 tables,
-as in `unicodedata.unidata_version` of CPython 3.14.7).
+Since 3.15 the parsers refuse non-ASCII text and read fixed-width fields through
+`_read_isoformat_component`, which demands exactly `n` digits before it calls
+`int()`. `pyInt` still models `int(str)` exactly, because `_strptime` applies it to
+what `\d` matched (Unicode 17.0 tables, as in `unicodedata.unidata_version` of
+CPython 3.15.2).
 -/
 
 namespace PyLean.Datetime
@@ -19,7 +21,7 @@ open PyLean
 /-! ### `int(str)` -/
 
 /-- Code point of the zero of every run of ten Unicode decimal digits
-(`Py_UNICODE_TODECIMAL`), Unicode 16.0. Generated from `int(chr(cp))` over all
+(`Py_UNICODE_TODECIMAL`), Unicode 17.0. Generated from `int(chr(cp))` over all
 non-ASCII code points. -/
 def decimalZeros : List Nat :=
   [0x660, 0x6f0, 0x7c0, 0x966, 0x9e6, 0xa66, 0xae6, 0xb66, 0xbe6, 0xc66, 0xce6, 0xd66,
@@ -27,11 +29,11 @@ def decimalZeros : List Nat :=
    0x1a90, 0x1b50, 0x1bb0, 0x1c40, 0x1c50, 0xa620, 0xa8d0, 0xa900, 0xa9d0, 0xa9f0, 0xaa50,
    0xabf0, 0xff10, 0x104a0, 0x10d30, 0x10d40, 0x11066, 0x110f0, 0x11136, 0x111d0, 0x112f0,
    0x11450, 0x114d0, 0x11650, 0x116c0, 0x116d0, 0x116da, 0x11730, 0x118e0, 0x11950, 0x11bf0,
-   0x11c50, 0x11d50, 0x11da0, 0x11f50, 0x16130, 0x16a60, 0x16ac0, 0x16b50, 0x16d70, 0x1ccf0,
+   0x11c50, 0x11d50, 0x11da0, 0x11de0, 0x11f50, 0x16130, 0x16a60, 0x16ac0, 0x16b50, 0x16d70, 0x1ccf0,
    0x1d7ce, 0x1d7d8, 0x1d7e2, 0x1d7ec, 0x1d7f6, 0x1e140, 0x1e2f0, 0x1e4f0, 0x1e5f1, 0x1e950,
    0x1fbf0]
 
-/-- Non-ASCII code points with `Py_UNICODE_ISSPACE`, Unicode 16.0. -/
+/-- Non-ASCII code points with `Py_UNICODE_ISSPACE`, Unicode 17.0. -/
 def unicodeSpaces : List Nat :=
   [0x85, 0xa0, 0x1680, 0x2000, 0x2001, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006, 0x2007,
    0x2008, 0x2009, 0x200a, 0x2028, 0x2029, 0x202f, 0x205f, 0x3000]
@@ -104,6 +106,19 @@ def findPlusOne (s : List Char) (c : Char) : Nat :=
   | some i => i + 1
   | none => 0
 
+/-- `s.isascii()`. -/
+def isAsciiStr (s : List Char) : Bool := s.all (fun c => c.toNat < 128)
+
+/-- `s.isdigit()` on an ASCII string: not empty, and only digits. Every caller has
+checked `s.isascii()` (`_read_isoformat_component`'s comment, _pydatetime.py:359-360),
+so the non-ASCII digits `str.isdigit` also accepts cannot occur. -/
+def isDigitStr (s : List Char) : Bool := !s.isEmpty && s.all isAsciiDigit
+
+/-- `_read_isoformat_component`, _pydatetime.py:358-363. -/
+def readIsoComponent (s : List Char) (n : Nat) : Py Int :=
+  if s.length ≠ n ∨ !isDigitStr s then .error (.valueError "Invalid isoformat string")
+  else pyInt s
+
 /-- A parsed `time`: fields and the UTC offset in microseconds (`none` for a
 naive time; `timezone.utc` is `some 0`). -/
 structure TimeV where
@@ -153,49 +168,49 @@ def findSepPy (s : List Char) : Py Nat :=
     else .ok 8
   else .ok 8
 
-/-- `_parse_isoformat_date`, _pydatetime.py:366-404. -/
+/-- `_parse_isoformat_date`, _pydatetime.py:366-403. -/
 def parseIsoDatePy (s : List Char) : Py (Int × Int × Int) := do
   let len := s.length
   if ¬(len = 7 ∨ len = 8 ∨ len = 10) then throw (.valueError "Invalid isoformat string")
-  let year ← pyInt (slice s 0 4)
+  if !isAsciiStr s then throw (.valueError "Invalid isoformat string")
+  let year ← readIsoComponent (slice s 0 4) 4
   let hasSep := decide (charAt s 4 = '-')
   let pos := 4 + (if hasSep then 1 else 0)
   if slice s pos (pos + 1) = ['W'] then
     let pos := pos + 1
-    let weekno ← pyInt (slice s pos (pos + 2))
+    let weekno ← readIsoComponent (slice s pos (pos + 2)) 2
     let pos := pos + 2
     let dayno ← if len > pos then do
         if decide (slice s pos (pos + 1) = ['-']) != hasSep then
           throw (.valueError "Inconsistent use of dash separator")
         let pos := pos + (if hasSep then 1 else 0)
-        pyInt (slice s pos (pos + 1))
+        readIsoComponent (slice s pos (pos + 1)) 1
       else pure 1
     isoweekToGregorianPy year weekno dayno
   else
-    let month ← pyInt (slice s pos (pos + 2))
+    let month ← readIsoComponent (slice s pos (pos + 2)) 2
     let pos := pos + 2
     if decide (slice s pos (pos + 1) = ['-']) != hasSep then
       throw (.valueError "Inconsistent use of dash separator")
     let pos := pos + (if hasSep then 1 else 0)
-    let day ← pyInt (slice s pos (pos + 2))
+    let day ← readIsoComponent (slice s pos (pos + 2)) 2
     return (year, month, day)
 
-/-- One `time_comps[comp] = int(tstr[pos:pos+2])` step of `_parse_hh_mm_ss_ff`,
-with its length check (@3.14.7:405-408). -/
+/-- One `time_comps[comp] = _read_isoformat_component(tstr[pos:pos+2], 2)` step of
+`_parse_hh_mm_ss_ff`, _pydatetime.py:416. -/
 def timeCompPy (t : List Char) (pos : Nat) : Py Int :=
-  if t.length < pos + 2 then .error (.valueError "Incomplete time component")
-  else pyInt (slice t pos (pos + 2))
+  readIsoComponent (slice t pos (pos + 2)) 2
 
 /-- `_FRACTION_CORRECTION[i]`, _pydatetime.py:406. -/
 def fractionCorrection (i : Nat) : Int := [100000, 10000, 1000, 100, 10].getD i 0
 
-/-- The fraction tail of `_parse_hh_mm_ss_ff`, _pydatetime.py:433-450. -/
+/-- The fraction tail of `_parse_hh_mm_ss_ff`, _pydatetime.py:432-449. -/
 def fractionPy (t : List Char) (pos : Nat) : Py Int := do
   if pos < t.length then
     if charAt t pos ≠ '.' ∧ charAt t pos ≠ ',' then
       throw (.valueError "Invalid microsecond separator")
     let rest := t.drop (pos + 1)
-    if !rest.all isAsciiDigit then throw (.valueError "Non-digit values in fraction")
+    if !isDigitStr rest then throw (.valueError "Non-digit values in fraction")
     let toParse := min rest.length 6
     let us ← pyInt (rest.take toParse)
     if toParse < 6 then return us * fractionCorrection (toParse - 1) else return us
@@ -220,11 +235,13 @@ def parseHHMMSSFFPy (t : List Char) : Py (Int × Int × Int × Int) := do
   let us ← fractionPy t (pos + 2)
   return (hh, mm, ss, us)
 
-/-- `_parse_isoformat_time`, _pydatetime.py@3.14.7:445-500: the time, whether `24:00`
-became midnight, and whether hour 24 came with non-zero other fields. -/
-def parseIsoTimePy (t : List Char) : Py (TimeV × Bool × Bool) := do
+/-- `_parse_isoformat_time`, _pydatetime.py:453-519: the time, whether `24:00` became
+midnight, whether hour 24 came with non-zero other fields, and `error_from_tz`, the
+`ValueError` of `_check_time_fields` on an offset whose fields are out of range. -/
+def parseIsoTimePy (t : List Char) : Py (TimeV × Bool × Bool × Option PyExc) := do
   let len := t.length
   if len < 2 then throw (.valueError "Isoformat time too short")
+  if !isAsciiStr t then throw (.valueError "Invalid isoformat string")
   let a := findPlusOne t '-'
   let tzPos := if a ≠ 0 then a else
     let b := findPlusOne t '+'
@@ -235,44 +252,56 @@ def parseIsoTimePy (t : List Char) : Py (TimeV × Bool × Bool) := do
     if hour = 24 then
       if minute = 0 ∧ second = 0 ∧ us = 0 then ((0 : Int), true, false) else (hour, false, true)
     else (hour, false, false)
-  let tzi ← if tzPos = len ∧ t.getLast? = some 'Z' then pure (some 0)
+  let (tzi, errorFromTz) : Option Int × Option PyExc ←
+    if tzPos = len ∧ t.getLast? = some 'Z' then pure (some 0, none)
     else if tzPos > 0 then do
       let tzstr := t.drop tzPos
       if tzstr.length = 0 ∨ tzstr.length = 1 ∨ tzstr.length = 3 ∨ charAt t (tzPos - 1) = 'Z' then
         throw (.valueError "Malformed time zone string")
       let (th, tm, ts, tus) ← parseHHMMSSFFPy tzstr
-      if th = 0 ∧ tm = 0 ∧ ts = 0 ∧ tus = 0 then pure (some 0)
+      if th = 0 ∧ tm = 0 ∧ ts = 0 ∧ tus = 0 then pure (some 0, none)
       else
         let tzsign : Int := if charAt t (tzPos - 1) = '-' then -1 else 1
-        let td ← deltaPy 0 ts tus 0 tm th 0
-        let off ← td.mulPy tzsign
-        some <$> timezonePy off
-    else pure none
-  return (⟨hour, minute, second, us, tzi⟩, becameNextDay, errorFromComponents)
+        match checkTime th tm ts tus with
+        | .error e => pure (none, some e)
+        | .ok _ =>
+          let td ← deltaPy 0 ts tus 0 tm th 0
+          let off ← td.mulPy tzsign
+          let o ← timezonePy off
+          pure (some o, none)
+    else pure (none, none)
+  return (⟨hour, minute, second, us, tzi⟩, becameNextDay, errorFromComponents, errorFromTz)
 
 /-! ### `fromisoformat` -/
 
-/-- `date.fromisoformat`, _pydatetime.py:1059-1074. -/
+/-- `date.fromisoformat`, _pydatetime.py:1060-1075. -/
 def dateFromIsoPy (s : List Char) : Py (Int × Int × Int) :=
-  if !s.all (fun c => c.toNat < 128) then .error (.valueError "Argument must be an ASCII str")
+  if !isAsciiStr s then .error (.valueError "Argument must be an ASCII str")
   else if ¬(s.length = 7 ∨ s.length = 8 ∨ s.length = 10) then
     .error (.valueError "~Invalid isoformat string")
   else match (do let (y, m, d) ← parseIsoDatePy s; checkDate y m d) with
     | .ok v => .ok v
     | .error _ => .error (.valueError "~Invalid isoformat string")
 
-/-- `time.fromisoformat`, _pydatetime.py@3.14.7:1614-1628. The `cls(...)` call checks
-the fields; every exception becomes `ValueError`. -/
-def timeFromIsoPy (s : List Char) : Py TimeV :=
-  let s := match s with
-    | 'T' :: r => r
-    | r => r
-  match (do
-      let (t, _, _) ← parseIsoTimePy s
-      let _ ← checkTime t.h t.mi t.s t.us
-      pure t) with
-  | .ok v => .ok v
-  | .error _ => .error (.valueError "~Invalid isoformat string")
+/-- `time_string.removeprefix('T')`. -/
+def removePrefixT : List Char → List Char
+  | 'T' :: r => r
+  | r => r
+
+/-- `time.fromisoformat`, _pydatetime.py:1645-1670. Only a `ValueError` of the parser
+becomes `Invalid isoformat string`: since 3.15 an offset out of range keeps its own
+message and the `cls(...)` call is outside the `try`, so it raises its own too. -/
+def timeFromIsoPy (s : List Char) : Py TimeV := do
+  let s := removePrefixT s
+  let (t, _, errorFromComponents, errorFromTz) ← match parseIsoTimePy s with
+    | .ok v => pure v
+    | .error (.valueError _) => throw (.valueError "~Invalid isoformat string")
+    | .error e => throw e
+  if let some e := errorFromTz then throw e
+  if errorFromComponents then
+    throw (.valueError "Minute, second, and microsecond must be 0 when hour is 24")
+  let _ ← checkTime t.h t.mi t.s t.us
+  return t
 
 /-- The `24:00` rollover of `datetime.fromisoformat`, _pydatetime.py:1998-2010. -/
 def rolloverPy (y m d : Int) : Int × Int × Int :=
@@ -285,7 +314,7 @@ def rolloverPy (y m d : Int) : Int × Int × Int :=
     else (y, m, d)
   else (y, m, d)
 
-/-- `datetime.fromisoformat`, _pydatetime.py:1963-2012. -/
+/-- `datetime.fromisoformat`, _pydatetime.py:1964-2014. -/
 def datetimeFromIsoPy (s : List Char) : Py DateTimeV := do
   if s.length < 7 then throw (.valueError "~Invalid isoformat string")
   let parsed : Py (List Char × (Int × Int × Int)) := do
@@ -296,9 +325,11 @@ def datetimeFromIsoPy (s : List Char) : Py DateTimeV := do
     | .ok v => pure v
     | .error _ => throw (.valueError "~Invalid isoformat string")
   let (t, (y, m, d)) ← if tstr ≠ [] then do
-      let (t, becameNextDay, errorFromComponents) ← match parseIsoTimePy tstr with
+      let (t, becameNextDay, errorFromComponents, errorFromTz) ← match parseIsoTimePy tstr with
         | .ok v => pure v
-        | .error _ => throw (.valueError "~Invalid isoformat string")
+        | .error (.valueError _) => throw (.valueError "~Invalid isoformat string")
+        | .error e => throw e
+      if let some e := errorFromTz then throw e
       if errorFromComponents then
         throw (.valueError "minute, second, and microsecond must be 0 when hour is 24")
       pure (t, if becameNextDay then rolloverPy y m d else (y, m, d))

@@ -292,28 +292,29 @@ theorem datetimePickle_proven : DatetimePickle := by
 /-- `time(h, m, s, us, tz, fold=f)` with C-`int` fields: the twins agree. Fields
 outside `int` are the rejected class of gh-158778. -/
 def TimeCtorInt : Prop :=
-  ∀ (h mi s us f : Int) (tz : Arg), fitsCInt h → fitsCInt mi → fitsCInt s → fitsCInt us →
+  ∀ (h mi s us f : Int) (tz : Arg), fitsCInt h → fitsCInt mi → fitsCInt s → fitsCInt us → fitsCInt f →
     (tz = .none_ ∨ ∃ t, tz = .tz t) →
     timeNewPy (.int h) (.int mi) (.int s) (.int us) tz f = timeNewC [.int h, .int mi, .int s, .int us, tz] f
 
 theorem timeCtorInt_proven : TimeCtorInt := by
-  intro h mi s us f tz h1 h2 h3 h4 htz
+  intro h mi s us f tz h1 h2 h3 h4 h5 htz
   rcases htz with rfl | ⟨t, rfl⟩ <;>
-    simp [timeNewPy, timeNewC, stateOf, pyIndex, parseI, h1, h2, h3, h4, checkTzinfoArgPy, checkTzinfoSubclassC,
-      bind, Except.bind, pure, Except.pure]
+    simp [timeNewPy, timeNewC, datetimeTimeClinicC, datetimeTimeImplC, clinicArity, stateOf, pyIndex, parseI_int,
+      h1, h2, h3, h4, h5, checkTzinfoArgPy, checkTzinfoSubclassC, bind, Except.bind, pure, Except.pure]
 
 /-- `datetime(y, ..., us, tz, fold=f)` with C-`int` fields: the twins agree. -/
 def DatetimeCtorInt : Prop :=
   ∀ (y m d h mi s us f : Int) (tz : Arg), fitsCInt y → fitsCInt m → fitsCInt d → fitsCInt h → fitsCInt mi →
-    fitsCInt s → fitsCInt us → (tz = .none_ ∨ ∃ t, tz = .tz t) →
+    fitsCInt s → fitsCInt us → fitsCInt f → (tz = .none_ ∨ ∃ t, tz = .tz t) →
     datetimeNewPy (.int y) (.int m) (.int d) (.int h) (.int mi) (.int s) (.int us) tz f =
       datetimeNewC [.int y, .int m, .int d, .int h, .int mi, .int s, .int us, tz] f
 
 theorem datetimeCtorInt_proven : DatetimeCtorInt := by
-  intro y m d h mi s us f tz h1 h2 h3 h4 h5 h6 h7 htz
+  intro y m d h mi s us f tz h1 h2 h3 h4 h5 h6 h7 h8 htz
   rcases htz with rfl | ⟨t, rfl⟩ <;>
-    simp [datetimeNewPy, datetimeNewC, stateOf, pyIndex, parseI, h1, h2, h3, h4, h5, h6, h7, checkTzinfoArgPy,
-      checkTzinfoSubclassC, bind, Except.bind, pure, Except.pure]
+    simp [datetimeNewPy, datetimeNewC, datetimeDatetimeClinicC, datetimeDatetimeImplC, clinicArity, stateOf, pyIndex,
+      parseI_int, h1, h2, h3, h4, h5, h6, h7, h8, checkTzinfoArgPy, checkTzinfoSubclassC, bind, Except.bind, pure,
+      Except.pure]
 
 /-! ### Comparison and hash -/
 

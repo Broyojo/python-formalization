@@ -141,12 +141,8 @@ def getOp (j : Json) : Except String CmpOp := do
   | "ne" => pure .ne | "gt" => pure .gt | "ge" => pure .ge
   | s => throw s!"bad op {s}"
 
-def getSpecS (j : Json) : Except String TimeSpec := do
-  match ← getStr j "spec" with
-  | "auto" => pure .auto | "hours" => pure .hours | "minutes" => pure .minutes
-  | "seconds" => pure .seconds | "milliseconds" => pure .milliseconds
-  | "microseconds" => pure .microseconds
-  | s => throw s!"bad spec {s}"
+def getSpecS (j : Json) : Except String (Py TimeSpec) := do
+  return parseTimespec (← getStr j "spec")
 
 def decArg (j : Json) : Except String Arg := do
   match j with
@@ -193,10 +189,13 @@ def decLocale (j : Json) : Except String LocaleTimeV := do
            lcTime := ← getStr j "t", lcTimeAmpm := ← getStr j "ta", altDigits := alt,
            ambiguousTz := ← getBool j "amb" }
 
-def decFound (j : Json) : Except String (List (String × String)) := do
+def decFound (j : Json) : Except String StrpFound := do
   (← j.getArr?).toList.mapM fun p => do
     let a ← p.getArr?
-    return (← (a.getD 0 .null).getStr?, ← (a.getD 1 .null).getStr?)
+    let v ← match a.getD 1 .null with
+      | .null => pure none
+      | x => some <$> x.getStr?
+    return (← (a.getD 0 .null).getStr?, v)
 
 def encStrp (r : StrpResult) : Json :=
   Json.arr #[Json.arr #[toJson r.year, toJson r.month, toJson r.day, toJson r.hour, toJson r.minute,
@@ -306,7 +305,7 @@ def runObj (fn : String) (j : Json) : Except String Json := do
     return toJson ((if isC then timeReprC else timeReprPy) env a)
   | "tm_iso" =>
     let a ← decTM (← field j "a"); let s ← getSpecS j
-    return encPy toJson ((if isC then tmIsoformatC else tmIsoformatPy) env a s)
+    return encPy toJson (do (if isC then tmIsoformatC else tmIsoformatPy) env a (← s))
   | "tm_state" =>
     let a ← decTM (← field j "a")
     return toJson (tmGetstate a (← getInt j "proto"))
@@ -315,8 +314,8 @@ def runObj (fn : String) (j : Json) : Except String Json := do
     return encPy encStrf ((if isC then tmStrftimeC else tmStrftimePy) env a f norm)
   | "tm_replace" =>
     let a ← decTM (← field j "a")
-    return encPy encTMv (tmReplace a (← getOptField j "nh") (← getOptField j "nmi") (← getOptField j "ns")
-      (← getOptField j "nus") (← getOptField j "nfold") (← getOptTzArg j))
+    return encPy encTMv ((if isC then tmReplaceC else tmReplace) a (← getOptField j "nh") (← getOptField j "nmi")
+      (← getOptField j "ns") (← getOptField j "nus") (← getOptField j "nfold") (← getOptTzArg j))
   | "dt_cmp" =>
     let a ← decDT (← field j "a"); let b ← decDT (← field j "b"); let op ← getOp j
     return encPy toJson ((if isC then dtRichC else dtRichPy) env op a b)
@@ -329,7 +328,7 @@ def runObj (fn : String) (j : Json) : Except String Json := do
   | "dt_iso" =>
     let a ← decDT (← field j "a"); let s ← getSpecS j
     let sep := Char.ofNat (← getNat j "sep")
-    return encPy toJson ((if isC then dtIsoformatC else dtIsoformatPy) env a sep s)
+    return encPy toJson (do (if isC then dtIsoformatC else dtIsoformatPy) env a sep (← s))
   | "dt_ctime" =>
     let a ← decDT (← field j "a")
     return toJson ((if isC then ctimeC else ctimePy) a.y a.m a.d a.h a.mi a.s)
@@ -356,9 +355,9 @@ def runObj (fn : String) (j : Json) : Except String Json := do
     return encPy encDTv (dtCombine a t (← getOptTzArg j))
   | "dt_replace" =>
     let a ← decDT (← field j "a")
-    return encPy encDTv (dtReplace a (← getOptField j "ny") (← getOptField j "nm") (← getOptField j "nd")
-      (← getOptField j "nh") (← getOptField j "nmi") (← getOptField j "ns") (← getOptField j "nus")
-      (← getOptField j "nfold") (← getOptTzArg j))
+    return encPy encDTv ((if isC then dtReplaceC else dtReplace) a (← getOptField j "ny") (← getOptField j "nm")
+      (← getOptField j "nd") (← getOptField j "nh") (← getOptField j "nmi") (← getOptField j "ns")
+      (← getOptField j "nus") (← getOptField j "nfold") (← getOptTzArg j))
   | "dt_fromutc" =>
     let a ← decDT (← field j "a")
     let some tz := ← decTz (← field j "tz") | throw "tz"
@@ -376,24 +375,15 @@ def runObj (fn : String) (j : Json) : Except String Json := do
     return encPy encStrf ((if isC then dtStrftimeC else dtStrftimePy) env a f g norm)
   | "ctor_date" =>
     let args ← getArgs j "args"
-    let r := if isC then dateNewC args
-      else dateNewPy (args.getD 0 .none_) (args.getD 1 .none_) (args.getD 2 .none_)
-    return encPy encYMD' r
+    return encPy encYMD' (if isC then dateNewC args else dateCallPy args)
   | "ctor_time" =>
     let args ← getArgs j "args"
     let fold ← getInt j "fold"
-    let r := if isC then timeNewC args fold
-      else timeNewPy (args.getD 0 (.int 0)) (args.getD 1 (.int 0)) (args.getD 2 (.int 0))
-        (args.getD 3 (.int 0)) (args.getD 4 .none_) fold
-    return encPy encTMv r
+    return encPy encTMv (if isC then timeNewC args fold else timeCallPy args fold)
   | "ctor_datetime" =>
     let args ← getArgs j "args"
     let fold ← getInt j "fold"
-    let r := if isC then datetimeNewC args fold
-      else datetimeNewPy (args.getD 0 .none_) (args.getD 1 .none_) (args.getD 2 .none_)
-        (args.getD 3 (.int 0)) (args.getD 4 (.int 0)) (args.getD 5 (.int 0)) (args.getD 6 (.int 0))
-        (args.getD 7 .none_) fold
-    return encPy encDTv r
+    return encPy encDTv (if isC then datetimeNewC args fold else datetimeCallPy args fold)
   | "td_str2" =>
     let a ← decDelta (← field j "a")
     return if isC then toJson #[a.strC, a.reprC] else toJson #[a.str, a.repr]
@@ -417,6 +407,10 @@ def runObj (fn : String) (j : Json) : Except String Json := do
   | "strp_core" =>
     let lt ← decLocale (← field j "lt"); let found ← decFound (← field j "found")
     return encPy encStrp (strptimeCore lt found)
+  | "strp_tail" =>
+    let lt ← decLocale (← field j "lt"); let found ← decFound (← field j "found")
+    let colonZ : Option (Option String) := found.lookup "colon_z"
+    return encPy encStrp (strptimeTail lt (← chars "data") (← getNat j "end") found colonZ)
   | "strp_date" =>
     let lt ← decLocale (← field j "lt"); let found ← decFound (← field j "found")
     return encPy encYMD' (strptimeDate lt found)

@@ -197,19 +197,43 @@ theorem pyInt_dc (l : List Nat) (hne : l ≠ []) (h : ∀ k ∈ l, k < 10) :
   rw [← List.map_cons, underscoreDigits_dc _ _ h]
   rfl
 
+theorem isDigitStr_dc (l : List Nat) (hne : l ≠ []) (h : ∀ k ∈ l, k < 10) :
+    isDigitStr (l.map dc) = true := by
+  have hall : (l.map dc).all isAsciiDigit = true := by
+    rw [List.all_eq_true]
+    intro x hx
+    simp only [List.mem_map] at hx
+    obtain ⟨j, hj, rfl⟩ := hx
+    exact (dc_facts j (h j hj)).1
+  unfold isDigitStr
+  rw [hall]
+  cases l with
+  | nil => exact absurd rfl hne
+  | cons k t => rfl
+
+theorem readIsoComponent_dc (l : List Nat) (hne : l ≠ []) (h : ∀ k ∈ l, k < 10) :
+    readIsoComponent (l.map dc) l.length = .ok (digitsNat l) := by
+  unfold readIsoComponent
+  rw [if_neg (by simp [isDigitStr_dc l hne h])]
+  exact pyInt_dc l hne h
+
 /-! ### The date parsers on `YYYY-MM-DD` -/
 
 theorem parseIsoDatePy_ext (a b c e f g i j : Nat) (ha : a < 10) (hb : b < 10) (hc : c < 10) (he : e < 10)
     (hf : f < 10) (hg : g < 10) (hi : i < 10) (hj : j < 10) :
     parseIsoDatePy [dc a, dc b, dc c, dc e, '-', dc f, dc g, '-', dc i, dc j] =
       .ok (((a * 1000 + b * 100 + c * 10 + e : Nat) : Int), ((f * 10 + g : Nat) : Int), ((i * 10 + j : Nat) : Int)) := by
-  have p4 := pyInt_dc [a, b, c, e] (by simp) (by simp; omega)
-  have p2m := pyInt_dc [f, g] (by simp) (by simp; omega)
-  have p2d := pyInt_dc [i, j] (by simp) (by simp; omega)
-  simp only [List.map_cons, List.map_nil, digitsNat, List.foldl_cons, List.foldl_nil] at p4 p2m p2d
+  have p4 := readIsoComponent_dc [a, b, c, e] (by simp) (by simp; omega)
+  have p2m := readIsoComponent_dc [f, g] (by simp) (by simp; omega)
+  have p2d := readIsoComponent_dc [i, j] (by simp) (by simp; omega)
+  simp only [List.map_cons, List.map_nil, digitsNat, List.foldl_cons, List.foldl_nil, List.length_cons,
+    List.length_nil] at p4 p2m p2d
   have hW : dc f ≠ 'W' := (dc_facts f hf).2.2.2.2.2.2.2.2.1
+  have hasc : ∀ k, k < 10 → (dc k).toNat < 128 := fun k hk => by rw [(dc_facts k hk).2.1]; omega
+  have hA : isAsciiStr [dc a, dc b, dc c, dc e, '-', dc f, dc g, '-', dc i, dc j] = true := by
+    simp [isAsciiStr, hasc a ha, hasc b hb, hasc c hc, hasc e he, hasc f hf, hasc g hg, hasc i hi, hasc j hj]
   unfold parseIsoDatePy
-  simp only [List.length_cons, List.length_nil, slice, charAt]
+  simp only [List.length_cons, List.length_nil, slice, charAt, hA]
   simp [p4, p2m, p2d, hW, bind, Except.bind, pure, Except.pure]
   omega
 
@@ -258,7 +282,7 @@ theorem dateIsoformatRoundtrip_proven : DateIsoformatRoundtrip := by
     rw [(dc_facts k hk).2.1]; omega
   have hutf : ∀ k, k < 10 → utf8Char (dc k) = [48 + k] := fun k hk => (dc_facts k hk).2.2.2.2.2.2.2.2.2.2
   refine ⟨?_, ?_, ?_, ?_⟩
-  · unfold dateFromIsoPy
+  · unfold dateFromIsoPy isAsciiStr
     simp [hascii _ (show y.toNat / 1000 < 10 by omega), hascii _ (show y.toNat / 100 % 10 < 10 by omega),
       hascii _ (show y.toNat / 10 % 10 < 10 by omega), hascii _ (show y.toNat % 10 < 10 by omega),
       hascii _ (show m.toNat / 10 < 10 by omega), hascii _ (show m.toNat % 10 < 10 by omega),

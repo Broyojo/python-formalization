@@ -33,7 +33,7 @@ cause: |
   iteration) then :1063-1089 parses the fraction without a decimal mark.
 possible_fix: After the SS component, only parse a fraction if the next character is '.' or ','.
 reproduces:
-  python3 (3.14.7): REPRODUCED
+  python3 (3.15.2): REPRODUCED
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): REPRODUCED
 duplicates:
   issues:
