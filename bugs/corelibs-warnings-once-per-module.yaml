@@ -1,0 +1,47 @@
+id: corelibs-warnings-once-per-module
+title: "warnings 'once' shows a warning once per module in C (duplicate of gh-159792)"
+priority: P4
+kind: twin-divergence
+module: corelibs
+files: [Python/_warnings.c]
+functions: ["warn_explicit", "update_registry", "already_warned"]
+summary: |
+  Under the 'once' action the C warn_explicit records (text, category) in the caller's registry when
+  there is one, and in the global once registry only when there is none, so the same warning from
+  two modules is shown twice. _py_warnings always uses the global once registry. The C once registry
+  also carries a 'version' and is cleared whenever the filters change (gh-153128). Already reported
+  upstream as gh-159792, with an open PR (gh-159829).
+likelihood: |
+  Moderate: simplefilter('once') is common.
+maybe_intended: |
+  Long-standing (since 2008); the issue discusses whether changing it is disruptive.
+reproducer: |
+  import warnings
+  warnings.simplefilter('once')
+  shown = []
+  warnings._showwarnmsg = lambda m: shown.append(m.filename)
+  warnings.warn_explicit('hello', UserWarning, 'a.py', 1, module='a', registry={})
+  warnings.warn_explicit('hello', UserWarning, 'b.py', 2, module='b', registry={})
+  print(shown)
+  if shown == ['a.py', 'b.py']:
+      print('REPRODUCED corelibs-warnings-once-per-module')
+expected: |
+  ['a.py'] ("print only the first occurrence of matching warnings, regardless of location").
+observed: |
+  python3 3.15.2: ['a.py', 'b.py']. REPRODUCED.
+  main (cpython-main/python.exe): same (the fix PR is not merged). REPRODUCED.
+promised_by: |
+  Doc/library/warnings.rst, the "once" action; the twins agreeing.
+cause: |
+  Python/_warnings.c:880-887: `if (registry == NULL || registry == Py_None) registry =
+  get_once_registry(interp);`, then update_registry on that registry.
+possible_fix: |
+  See gh-159829.
+duplicates:
+  issues: ["#159792", "#153128"]
+  queries: ["onceregistry", "warnings once action module registry", "simplefilter once multiple modules"]
+  note: |
+    Duplicate: gh-159792 is this exact behaviour; gh-153128 is the once-registry reset on filter change.
+lean:
+  property: PyLean.CoreLibs.Warn.WarnTwinsOnce
+  theorem: PyLean.CoreLibs.Warn.warnTwinsOnce_refuted

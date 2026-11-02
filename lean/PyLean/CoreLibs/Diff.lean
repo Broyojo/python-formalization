@@ -7,6 +7,7 @@ import PyLean.CoreLibs.EnumDC.Diff
 import PyLean.CoreLibs.Misc.Diff
 import PyLean.CoreLibs.CalStat.Diff
 import PyLean.CoreLibs.Rand.Diff
+import PyLean.CoreLibs.Warn.Diff
 
 /-! Differential-testing handler for `corelibs` cases (`"mod": "corelibs"`).
 `fn` is `<area>.<name>`; the area's handler gets `<name>`. -/
@@ -23,7 +24,8 @@ def areas : List (String × Handler) := [
   ("enumdc", EnumDC.handler),
   ("misc", Misc.handler),
   ("calstat", CalStat.handler),
-  ("rand", Rand.handler)
+  ("rand", Rand.handler),
+  ("warn", Warn.handler)
 ]
 
 def handler : Handler := fun fn j =>

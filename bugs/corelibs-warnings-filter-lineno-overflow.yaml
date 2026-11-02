@@ -1,0 +1,56 @@
+id: corelibs-warnings-filter-lineno-overflow
+title: "warnings: filterwarnings(lineno=2**63) is accepted, then every warning raises OverflowError"
+priority: P3
+kind: missing-validation
+module: corelibs
+files: [Lib/_py_warnings.py, Python/_warnings.c]
+functions: ["filterwarnings", "simplefilter", "_setoption", "filter_search"]
+summary: |
+  filterwarnings and simplefilter check that lineno is an int >= 0 but set no upper bound. The C
+  filter search converts each filter's lineno with PyLong_AsSsize_t, so once a filter with
+  lineno >= 2**63 is installed, every warning that reaches it (warnings.warn, warn_explicit, and
+  warnings raised by C code such as DeprecationWarning) raises "OverflowError: Python int too large to
+  convert to C ssize_t" instead of being filtered. The pure-Python twin compares ints and simply
+  never matches that filter. -W and PYTHONWARNINGS go through _setoption, which checks lineno < 0
+  only, so `python -W "ignore::Warning::99999999999999999999"` installs the same filter at startup.
+likelihood: |
+  Low: nobody means to filter line 2**63. It is a validation hole: the filter is accepted where it
+  is created and fails far away, in every later warning.
+maybe_intended: |
+  No; the lineno checks were added for exactly this kind of input (gh-125899 for bools).
+reproducer: |
+  import warnings
+  warnings.filterwarnings('ignore', lineno=2**63)
+  try:
+      warnings.warn('x')
+      print('no error')
+  except OverflowError as e:
+      print('OverflowError:', e)
+      print('REPRODUCED corelibs-warnings-filter-lineno-overflow')
+expected: |
+  filterwarnings raises ValueError for a lineno that cannot be a line number (or the filter is
+  stored and never matches, as in _py_warnings).
+observed: |
+  python3 3.15.2: OverflowError: Python int too large to convert to C ssize_t. REPRODUCED.
+  main (cpython-main/python.exe): same. REPRODUCED.
+promised_by: |
+  Doc/library/warnings.rst: filterwarnings's lineno "an integer line number, 0 matches all
+  warnings"; the twins agree; a filter that was accepted does not break unrelated warnings.
+cause: |
+  Lib/_py_warnings.py:274-277 (filterwarnings), :306-309 (simplefilter) and :384 (_setoption) check
+  only isinstance and `lineno < 0`; Python/_warnings.c:519-524 (filter_search) fails the whole search when
+  PyLong_AsSsize_t overflows.
+possible_fix: |
+  Reject lineno > sys.maxsize in filterwarnings, simplefilter and _setoption; or in filter_search
+  treat an overflowing lineno as matching nothing.
+duplicates:
+  issues: []
+  queries: ["filterwarnings lineno OverflowError", "filterwarnings large lineno",
+            "warnings filter lineno too large", "filterwarnings lineno ssize_t",
+            "warnings OverflowError C ssize_t filter", "filterwarnings lineno (gh-125899 read: bools, not this)",
+            "bugforge README: no warnings entry"]
+  note: |
+    Queries run as separate unquoted terms.
+lean:
+  property: PyLean.CoreLibs.Warn.WarnTwinsValidLines
+  theorem: PyLean.CoreLibs.Warn.warnTwinsValidLines_refuted

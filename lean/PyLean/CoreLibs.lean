@@ -8,6 +8,7 @@ import PyLean.CoreLibs.EnumDC
 import PyLean.CoreLibs.Misc
 import PyLean.CoreLibs.CalStat
 import PyLean.CoreLibs.Rand
+import PyLean.CoreLibs.Warn
 
 /-!
 Core libraries, CPython 3.15.2. One area per group of source files:
@@ -19,6 +20,7 @@ Core libraries, CPython 3.15.2. One area per group of source files:
 * `Misc`: Lib/contextlib.py, Lib/numbers.py, Lib/keyword.py, Lib/types.py, Lib/weakref.py, Lib/graphlib.py, Lib/sched.py, Lib/queue.py
 * `CalStat`: Lib/calendar.py, Lib/statistics.py
 * `Rand`: Lib/random.py, Modules/_randommodule.c
+* `Warn`: Python/_warnings.c, Lib/_py_warnings.py (`warn_explicit`)
 -/
 
 namespace PyLean.CoreLibs
@@ -33,6 +35,7 @@ def entries : List Entry :=
   EnumDC.entries ++
   Misc.entries ++
   CalStat.entries ++
-  Rand.entries
+  Rand.entries ++
+  Warn.entries
 
 end PyLean.CoreLibs

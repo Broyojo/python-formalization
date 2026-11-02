@@ -31,7 +31,7 @@ Lib/_py_warnings.py	449	451	_is_internal_frame	_is_internal_frame(frame)	todo
 Lib/_py_warnings.py	454	461	_next_external_frame	_next_external_frame(frame, skip_file_prefixes)	todo		
 Lib/_py_warnings.py	465	520	warn	warn(message, category=None, stacklevel=1, source=None, *, skip_file_prefixes=())	todo		changed-in-3.15:
 Lib/_py_warnings.py	523	553	_match_filename	_match_filename(pattern, filename, *, MS_WINDOWS=sys.platform == 'win32')	todo		changed-in-3.15: new function
-Lib/_py_warnings.py	556	625	warn_explicit	warn_explicit(message, category, filename, lineno, module=None, registry=None, module_globals=None, source=None)	todo		changed-in-3.15:
+Lib/_py_warnings.py	556	625	warn_explicit	warn_explicit(message, category, filename, lineno, module=None, registry=None, module_globals=None, source=None)	todo		
 Lib/_py_warnings.py	633	643	WarningMessage.__init__	__init__(self, message, category, filename, lineno, file=None, line=None, source=None, module=None)	todo		changed-in-3.15:
 Lib/_py_warnings.py	645	649	WarningMessage.__str__	__str__(self)	todo		changed-in-3.15:
 Lib/_py_warnings.py	651	652	WarningMessage.__repr__	__repr__(self)	todo		

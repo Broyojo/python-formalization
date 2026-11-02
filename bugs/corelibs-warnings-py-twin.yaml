@@ -1,0 +1,75 @@
+id: corelibs-warnings-py-twin
+title: "_py_warnings.warn_explicit differs from C: line-0 warnings vanish under 'module', UnboundLocalError for an unknown default action, and four smaller differences"
+priority: P4
+kind: twin-divergence
+module: corelibs
+files: [Lib/_py_warnings.py, Python/_warnings.c]
+functions: ["warn_explicit", "filter_search", "check_matched", "warnings_warn_explicit_impl"]
+summary: |
+  The pure-Python warn_explicit (used when _warnings is unavailable, and by the test suite) against
+  the C one, found by a model of both and 180k differential cases:
+  1. Under the 'module' action Python marks "seen in this module" with the key (text, category, 0),
+     which is also the key of the warning itself when its lineno is 0. So a warning at line 0 is
+     never shown at all under 'module'. C uses (text, category) and shows it once.
+  2. With an empty filters list and an unrecognized defaultaction, Python's RuntimeError message
+     formats `item`, the loop variable the empty loop never bound: UnboundLocalError. (With filters
+     present, it names the last filter, which did not match.) C names None.
+  3. module=None passed explicitly: C returns at once (meant for interpreter shutdown,
+     _warnings.c:812-813); Python treats it as omitted and applies the filters.
+  4. C evaluates a filter's message regex, module regex and issubclass before using any of them;
+     Python short-circuits. A filter whose message doesn't match but whose category's metaclass
+     __subclasscheck__ raises is skipped by Python and raises in C.
+  5. C converts lineno with the int converter: 2**31 raises OverflowError, 5.0 and '5' TypeError;
+     Python's int(lineno) takes all three.
+  6. An unrecognized action: C has already stored registry[key] = True when it raises RuntimeError,
+     so the same call next time returns silently; Python raises again.
+likelihood: |
+  Low. 1 needs lineno 0 (warn_explicit callers, frames without line numbers); 2 needs a bad
+  defaultaction. The rest are edge cases of the Python fallback.
+maybe_intended: |
+  3 is deliberate in C; 4-6 are incidental. 1 and 2 are plain bugs in the Python version.
+reproducer: |
+  import _py_warnings as pw
+  pw._set_module(pw)
+  shown = []
+  pw._showwarnmsg = lambda m: shown.append(m.lineno)
+  pw.resetwarnings(); pw.simplefilter('module')
+  pw.warn_explicit('hello', UserWarning, 'a.py', 0, module='a', registry={})
+  pw.resetwarnings(); pw.defaultaction = 'bogus'
+  try:
+      pw.warn_explicit('x', UserWarning, 'a.py', 1, module='a')
+      err = None
+  except Exception as e:
+      err = type(e).__name__
+  print('shown:', shown, 'unknown action:', err)
+  if shown == [] and err == 'UnboundLocalError':
+      print('REPRODUCED corelibs-warnings-py-twin')
+expected: |
+  shown: [0] (the C twin shows it once), and RuntimeError for the unknown action.
+observed: |
+  python3 3.15.2: shown: [] unknown action: UnboundLocalError. REPRODUCED.
+  main (cpython-main/python.exe): same. REPRODUCED.
+promised_by: |
+  The twins agreeing (warnings.py takes C's warn and warn_explicit when _warnings imports, else the
+  Python ones); Doc/library/warnings.rst: "module" prints "the first occurrence of matching warnings
+  for each module where the warning is issued (regardless of line number)".
+cause: |
+  Lib/_py_warnings.py:603-608 (altkey at :605): altkey = (text, category, 0) collides with key (text, category, lineno)
+  for lineno 0. :613-615 formats `item`, unbound after an empty loop at :577. C: _warnings.c:812-813
+  (module None), :498-530 (all tests before use), :892 (pair altkey via update_registry), :874-877 (registry set
+  before the unknown-action error at :894-898); clinic `lineno: int` at :1304.
+possible_fix: |
+  Python: use the pair (text, category) as altkey, as C does, and set item = None before the loop.
+duplicates:
+  issues: []
+  queries: ["warnings module action lineno 0", "_py_warnings module lineno zero",
+            "warn_explicit lineno 0 module", "warnings altkey", "py_warnings C warnings differ",
+            "bugforge README: no warnings entry"]
+  note: |
+    Queries run as separate unquoted terms. The 'once' difference is gh-159792 (separate record).
+lean:
+  property: PyLean.CoreLibs.Warn.WarnTwinsModule
+  theorem: PyLean.CoreLibs.Warn.warnTwinsModule_refuted
+  also: [PyLean.CoreLibs.Warn.pyUnknownActionRaises_refuted, PyLean.CoreLibs.Warn.warnTwinsNoneModule_refuted,
+         PyLean.CoreLibs.Warn.warnTwinsRaising_refuted, PyLean.CoreLibs.Warn.warnTwinsAnyLine_refuted,
+         PyLean.CoreLibs.Warn.warnTwinsUnknownAction_refuted]

@@ -7,7 +7,7 @@ Python/_warnings.c	68	74	warnings_clear_state	warnings_clear_state(WarningsState
 Python/_warnings.c	78	97	create_filter	create_filter(PyObject *category, PyObject *action_str, const char *modname)	todo		
 Python/_warnings.c	101	132	init_filters	init_filters(PyInterpreterState *interp)	todo		
 Python/_warnings.c	136	170	_PyWarnings_InitState	_PyWarnings_InitState(PyInterpreterState *interp)	todo		
-Python/_warnings.c	176	214	check_matched	check_matched(PyInterpreterState *interp, PyObject *obj, PyObject *arg, PyObject *arg2)	todo		changed-in-3.15:
+Python/_warnings.c	176	214	check_matched	check_matched(PyInterpreterState *interp, PyObject *obj, PyObject *arg, PyObject *arg2)	todo		
 Python/_warnings.c	224	256	get_warnings_attr	get_warnings_attr(PyInterpreterState *interp, PyObject *attr, int try_import)	todo		
 Python/_warnings.c	259	264	warnings_lock	warnings_lock(PyInterpreterState *interp)	todo		
 Python/_warnings.c	267	272	warnings_unlock	warnings_unlock(PyInterpreterState *interp)	todo		
@@ -21,12 +21,12 @@ Python/_warnings.c	370	379	warnings_acquire_lock_impl	warnings_acquire_lock_impl
 Python/_warnings.c	387	399	warnings_release_lock_impl	warnings_release_lock_impl(PyObject *module) /*[clinic end generated code: output=d73d5a8789396750 input=ea01bb77870c5693]*/	todo		
 Python/_warnings.c	402	426	get_once_registry	get_once_registry(PyInterpreterState *interp)	todo		
 Python/_warnings.c	430	455	get_default_action	get_default_action(PyInterpreterState *interp)	todo		
-Python/_warnings.c	541	596	get_filter	get_filter(PyInterpreterState *interp, PyObject *category, PyObject *text, Py_ssize_t lineno, PyObject *module, PyObject *filename, PyObject **item)	todo		changed-in-3.15:
+Python/_warnings.c	541	596	get_filter	get_filter(PyInterpreterState *interp, PyObject *category, PyObject *text, Py_ssize_t lineno, PyObject *module, PyObject *filename, PyObject **item)	todo		
 Python/_warnings.c	600	649	already_warned	already_warned(PyInterpreterState *interp, PyObject *registry, PyObject *key, int should_set)	todo		
-Python/_warnings.c	652	666	update_registry	update_registry(PyInterpreterState *interp, PyObject *registry, PyObject *text, PyObject *category, int add_zero)	todo		changed-in-3.15:
+Python/_warnings.c	652	666	update_registry	update_registry(PyInterpreterState *interp, PyObject *registry, PyObject *text, PyObject *category, int add_zero)	todo		
 Python/_warnings.c	669	736	show_warning	show_warning(PyThreadState *tstate, PyObject *filename, int lineno, PyObject *text, PyObject *category, PyObject *sourceline)	todo		changed-in-3.15:
 Python/_warnings.c	739	794	call_show_warning	call_show_warning(PyThreadState *tstate, PyObject *category, PyObject *text, PyObject *message, PyObject *filename, int lineno, PyObject *lineno_obj, PyObject *sourceline, PyObject *source, PyObject *module)	todo		changed-in-3.15:
-Python/_warnings.c	797	922	warn_explicit	warn_explicit(PyThreadState *tstate, PyObject *category, PyObject *message, PyObject *filename, int lineno, PyObject *module, PyObject *registry, PyObject *sourceline, PyObject *source)	todo		changed-in-3.15:
+Python/_warnings.c	797	922	warn_explicit	warn_explicit(PyThreadState *tstate, PyObject *category, PyObject *message, PyObject *filename, int lineno, PyObject *module, PyObject *registry, PyObject *sourceline, PyObject *source)	todo		
 Python/_warnings.c	925	931	get_frame_filename	get_frame_filename(PyFrameObject *frame)	todo		
 Python/_warnings.c	934	955	is_internal_filename	is_internal_filename(PyObject *filename)	todo		
 Python/_warnings.c	958	980	is_filename_to_skip	is_filename_to_skip(PyObject *filename, PyTupleObject *skip_file_prefixes)	todo		

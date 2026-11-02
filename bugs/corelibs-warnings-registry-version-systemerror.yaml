@@ -1,0 +1,58 @@
+id: corelibs-warnings-registry-version-systemerror
+title: "warnings: a registry 'version' outside C long makes warn_explicit leak an OverflowError (SystemError)"
+priority: P3
+kind: missing-error-check
+module: corelibs
+files: [Python/_warnings.c]
+functions: ["already_warned", "warn_explicit"]
+summary: |
+  already_warned compares the registry's 'version' with PyLong_AsLong(version_obj) and never checks
+  for an error. A 'version' of 2**63 or more (or below -2**63) makes PyLong_AsLong return -1 with
+  OverflowError set; the code treats -1 as a stale version, clears the registry and carries on with
+  the exception still set. What surfaces depends on what runs next: SystemError("<built-in function
+  warn_explicit> returned a result with an exception set") for 'ignore', SystemError from
+  __import__ when the warning is shown, the OverflowError itself when a filter's regex runs, and the
+  warning when the action is 'error'. warnings.warn hits it through a module's __warningregistry__.
+  The pure-Python twin (_py_warnings) clears the registry and shows the warning.
+likelihood: |
+  Low: a registry is written by the warnings machinery, so this needs code that writes
+  __warningregistry__['version'] itself. But it is an internal error leaking from a public function,
+  and calling C API functions with an exception set is undefined (a debug build asserts).
+maybe_intended: |
+  No; every other PyLong_As* call in the file checks for an error.
+reproducer: |
+  import warnings
+  warnings.simplefilter('ignore')
+  try:
+      warnings.warn_explicit('x', UserWarning, 'a.py', 1, registry={'version': 2**64})
+      print('no error')
+  except SystemError as e:
+      print('SystemError:', e, '| context:', repr(e.__context__))
+      print('REPRODUCED corelibs-warnings-registry-version-systemerror')
+expected: |
+  None returned (the registry is treated as stale and cleared), as _py_warnings does, or a
+  documented TypeError/ValueError for a malformed registry.
+observed: |
+  python3 3.15.2: SystemError: <built-in function warn_explicit> returned a result with an exception
+  set | context: OverflowError('Python int too large to convert to C long'). REPRODUCED.
+  main (cpython-main/python.exe): same. REPRODUCED.
+promised_by: |
+  Invariant: no internal error leaks from a public function; the twins agree.
+cause: |
+  Python/_warnings.c:614-620, already_warned: `PyLong_AsLong(version_obj) != st->filters_version`
+  with no `PyErr_Occurred()` check (filters_version is a long), so the error stays set while :621-631
+  clear and rewrite the registry and warn_explicit (:797-922) goes on to call Python code.
+possible_fix: |
+  Use PyLong_AsLongAndOverflow (an overflow means "stale"), or check for -1 with an error set and
+  PyErr_Clear() before treating the version as stale.
+duplicates:
+  issues: []
+  queries: ["warningregistry version SystemError", "already_warned PyLong_AsLong",
+            "__warningregistry__ version overflow", "warn_explicit registry version",
+            "warnings registry SystemError", "bugforge README: no warnings entry"]
+  note: |
+    Queries run as separate unquoted terms. Same code in 3.14.7.
+lean:
+  property: PyLean.CoreLibs.Warn.NoSystemError
+  theorem: PyLean.CoreLibs.Warn.noSystemError_refuted
+  also: [PyLean.CoreLibs.Warn.warnTwinsAnyVersion_refuted]
