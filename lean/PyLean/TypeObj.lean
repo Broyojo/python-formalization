@@ -9,6 +9,7 @@ import PyLean.TypeObj.PropsDict
 import PyLean.TypeObj.PropsReduce
 import PyLean.TypeObj.PropsTotal
 import PyLean.TypeObj.PropsMethods
+import PyLean.TypeObj.SeqTuple
 
 /-!
 The data model: `Objects/typeobject.c`, `Objects/object.c`, `Objects/abstract.c`,
@@ -947,6 +948,10 @@ def entries : List Entry := [
     "descrobject.c:630, :1393" ``ReduceIsGetattr ``reduceIsGetattr_proven,
   p "typeobj-classmethod-bindings-agree" fu ["cm_descr_get"]
     "cm.__get__(o), cm.__get__(o, type(o)) and cm.__get__(None, type(o)) build methods that compare equal."
-    "funcobject.c:1535" ``ClassmethodBindingsAgree ``classmethodBindingsAgree_proven ] ++ excEntries
+    "funcobject.c:1535" ``ClassmethodBindingsAgree ``classmethodBindingsAgree_proven,
+  p "typeobj-sequence-tuple" ab ["PySequence_Tuple"]
+    "tuple(v) returns v itself for an exact tuple and otherwise a new tuple of exactly the items the iterable yields, in order, or the iterator's exception, for every number of items, below, at and above the eight-item stack buffer."
+    "docs: tuple(iterable) has the iterable's items in the same order" ``SeqTuple.SeqTupleSpec ``SeqTuple.seqTupleSpec_proven
+    "Checked on 3.15.2 for 0..24 items with and without a raising iterator, and for tuple(t) is t." ] ++ excEntries
 
 end PyLean.TypeObj
