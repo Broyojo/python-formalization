@@ -227,7 +227,8 @@ def copyRun (j : Json) : Except String Json := do
   let sub ← getBool j "sub"
   -- `Element(tag, attrib)`: C keeps no dict for an empty attrib; the twin always has one
   let (h, e) : Heap × CElem :=
-    if c && items = [] then ([], ⟨lit "r", sub, none⟩) else ([items], ⟨lit "r", sub, some 0⟩)
+    if c && items = [] then ([], { tag := lit "r", sub := sub, attrib := none })
+    else ([items], { tag := lit "r", sub := sub, attrib := some 0 })
   let (h, cp) := (if c then copyC else copyPy) h e
   let k ← nats (← field j "k")
   let v ← nats (← field j "v")
