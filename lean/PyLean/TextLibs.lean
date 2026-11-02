@@ -16,6 +16,7 @@ import PyLean.TextLibs.EtreeProps
 import PyLean.TextLibs.EtreePathProps
 import PyLean.TextLibs.EtreeWriters
 import PyLean.TextLibs.EtreeAttrib
+import PyLean.TextLibs.EtreeRemove
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1457,7 +1458,18 @@ def entries : List Entry := [
     statement := "Element.__setstate__ keeps the attrib slot NULL, a dict or a frozendict."
     source := "invariant: the setter and Element() enforce it", status := .refuted
     prop := ``Etree.SetstateKeepsAttrib, thm := some ``Etree.setstateKeepsAttrib_refuted
-    bug := some "textlibs-etree-setstate-attrib-systemerror" }
+    bug := some "textlibs-etree-setstate-attrib-systemerror" },
+  { id := "textlibs-etree-remove-twins", pyFile := "Modules/_elementtree.c"
+    pyFns := ["_elementtree_Element_remove_impl"]
+    statement := "For every child __eq__, however it raises or changes the children in place, Element.remove of an Element leaves the same children and raises the same exception class in C and in the Python twin (list.remove)."
+    source := "the implementation disagreeing with itself (C and Python twins)", status := .proven
+    prop := ``Etree.RemoveTwins, thm := some ``Etree.removeTwins_proven
+    notes := "C's post-loop check (extra NULL or i >= length) does what list_ass_slice's clipping does in list.remove. clear() inside __eq__ is out of scope: the twin rebinds _children." },
+  { id := "textlibs-etree-remove-twins-py", pyFile := "Lib/xml/etree/ElementTree.py"
+    pyFns := ["Element.remove"]
+    statement := "The same theorem, credited to the Python twin's remove, which turns every ValueError (one raised by __eq__ included) into ValueError('x not in self')."
+    source := "the implementation disagreeing with itself (C and Python twins)", status := .proven
+    prop := ``Etree.RemoveTwins, thm := some ``Etree.removeTwins_proven }
 ]
 
 end PyLean.TextLibs

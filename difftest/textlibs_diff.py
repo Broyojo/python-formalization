@@ -3380,7 +3380,13 @@ class EtreeArea:
 
     @classmethod
     def gen(cls, r):
-        f = r.choice(["get", "set", "set", "set", "del", "append", "insert", "extend"])
+        f = r.choice(["get", "set", "set", "set", "del", "append", "insert", "extend", "remove", "remove"])
+        if f == "remove":
+            kids = list(range(r.randint(0, 6)))
+            return {"mod": "textlibs", "fn": "etree.remove", "impl": r.choice(["c", "py"]), "kids": kids,
+                    "x": r.choice(kids + [99, 99]),
+                    "script": [[r.choice(["t", "f", "f", "f", "raiseV", "raiseK"]), r.choice([0, 0, 1, 2, 3, 4])]
+                               for _ in range(r.randint(0, 6))]}
         c = {"mod": "textlibs", "fn": "etree." + f, "impl": r.choice(["c", "py"]),
              "kids": list(range(r.randint(0, 9)))}
         if f in ("append", "insert", "extend"):
@@ -3409,6 +3415,39 @@ class EtreeArea:
         return c
 
     @classmethod
+    def run_remove(cls, c, mod):
+        script, calls = c["script"], [0]
+
+        class E(mod.Element):
+            def __eq__(self, other):
+                k = calls[0]
+                calls[0] += 1
+                res, eff = script[k] if k < len(script) else ["f", 0]
+                if eff == 1:
+                    parent.append(E("e%d" % (50 + k)))
+                elif eff == 2 and len(parent):
+                    del parent[0]
+                elif eff == 3:
+                    parent.insert(0, E("e%d" % (50 + k)))
+                elif eff == 4:
+                    parent[:] = []
+                if res == "raiseV":
+                    raise ValueError("eq")
+                if res == "raiseK":
+                    raise KeyError("eq")
+                return res == "t"
+            __hash__ = object.__hash__
+
+        parent = mod.Element("r")
+        kids = [E("e%d" % n) for n in c["kids"]]
+        parent.extend(kids)
+        x = kids[c["x"]] if c["x"] < len(kids) else E("e%d" % c["x"])
+        out = common.py_result(lambda: (parent.remove(x), None)[1])
+        if "exc" in out and out["exc"] == "ValueError" and " not in " in out["msg"]:
+            out["msg"] = "~%R not in %R" if c["impl"] == "c" else "~%r not in %r"
+        return {"ok": {"kids": [int(k.tag[1:]) for k in parent], "out": out}}
+
+    @classmethod
     def run(cls, c):
         if not hasattr(cls, "pymod"):
             # import_fresh_module rebinds xml.etree.ElementTree on the package, so take the
@@ -3423,6 +3462,8 @@ class EtreeArea:
             import _elementtree
             assert cls.cmod.Element is _elementtree.Element
         mod = cls.cmod if c["impl"] == "c" else cls.pymod
+        if c["fn"] == "etree.remove":
+            return cls.run_remove(c, mod)
         e = mod.Element("r")
         e.extend([mod.Element("e%d" % n) for n in c["kids"]])
 

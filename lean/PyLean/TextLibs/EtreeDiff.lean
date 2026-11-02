@@ -3,6 +3,7 @@ import PyLean.TextLibs.EtreeModel
 import PyLean.TextLibs.EtreePath
 import PyLean.TextLibs.EtreeWriters
 import PyLean.TextLibs.EtreeAttrib
+import PyLean.TextLibs.EtreeRemove
 
 /-! `etree.*` difftest cases; see `EtreeArea` in `difftest/textlibs_diff.py`. A child is a
 number: below 1000 an Element whose tag is `e<n>`, otherwise the int `n` (not an Element). -/
@@ -187,7 +188,38 @@ def attribRun (j : Json) : Except String Json := do
       out := out.push r
     return Json.mkObj [("ok", Json.arr out)]
 
+/-! ### `etree.remove`: a scripted `__eq__` -/
+
+def removeEff (eff : Nat) (k : Nat) (l : List Nat) : List Nat :=
+  match eff with
+  | 1 => l ++ [50 + k]
+  | 2 => l.drop 1
+  | 3 => (50 + k) :: l
+  | 4 => []
+  | _ => l
+
+def scriptCmp (script : List (String × Nat)) : Cmp Nat Nat := fun k l _ _ =>
+  let (res, eff) := script.getD k ("f", 0)
+  let l := removeEff eff k l
+  let r : Py Bool :=
+    if res == "raiseV" then .error (.valueError "eq")
+    else if res == "raiseK" then .error (.keyError "'eq'")
+    else .ok (res == "t")
+  (r, l, k + 1)
+
+def removeRun (j : Json) : Except String Json := do
+  let kids ← nats (← field j "kids")
+  let x ← getNat j "x"
+  let script ← (← (← field j "script").getArr?).toList.mapM fun e => do
+    match (← e.getArr?).toList with
+    | [r, f] => return (← r.getStr?, ← f.getNat?)
+    | _ => throw "script"
+  let c := (← getStr j "impl") == "c"
+  let o := (if c then removeC else removePy) (scriptCmp script) 1000 0 kids x
+  return Json.mkObj [("ok", Json.mkObj [("kids", toJson o.1), ("out", encPy (fun (_ : Unit) => Json.null) o.2)])]
+
 def run (fn : String) (j : Json) : Except String Json := do
+  if fn == "etree.remove" then return ← removeRun j
   let kids ← nats (← field j "kids")
   let c := (← getStr j "impl") == "c"
   let isIdx := (j.getObjVal? "idx").isOk
