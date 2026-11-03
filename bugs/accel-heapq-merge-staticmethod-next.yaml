@@ -1,0 +1,91 @@
+id: accel-heapq-merge-staticmethod-next
+title: "heapq.merge raises AttributeError for a valid iterator whose __next__ is a staticmethod, once it is the last input left"
+priority: P5
+kind: uncaught-exception
+module: accel
+files: [Lib/heapq.py]
+functions: ["merge"]
+summary: |
+  merge stores `next = it.__next__` for each input (Lib/heapq.py:365, :388) and, when only one
+  input is left, delegates to it with `yield from next.__self__` (:383, :408). That assumes
+  `it.__next__` is a bound method whose `__self__` is the iterator. The iterator protocol does
+  not require it: a class may define `__next__` as a staticmethod (or any callable that is not
+  a descriptor binding to the instance), and `next(it)`, `for` loops and `list(it)` accept such
+  an iterator. Then `it.__next__` is a plain function, and merge raises
+  `AttributeError: 'function' object has no attribute '__self__'` after yielding that input's
+  current head. merge(It()) over [1, 2, 3] yields 1, then raises; merge([0, 1], It()) yields
+  0, 1, 1, then raises. Same with the C and the pure-Python heap functions, with and without a
+  key. Nothing is lost silently: the error propagates.
+  Lean: accel-merge-sorted-any-iter (MergeIsSorted with next.__self__ a free callback) is refuted
+  on the merge(It()) run, checked by the kernel; accel-merge-sorted is proven for iterators whose
+  __next__ is bound. The difftest generates such iterators (accel_diff.py, "static").
+likelihood: |
+  Very low. Iterators with a staticmethod or other unbound callable as __next__ are unusual;
+  the state has to live outside the instance (a closure or a class attribute).
+maybe_intended: |
+  Possibly tolerated: `next.__self__` is an implementation shortcut from the single-input fast
+  path (python/cpython#63162, bpo-18962), and maintainers treat odd iterators as user error
+  (python/cpython#104790, an iterator whose __iter__ resets itself, closed as not a bug, which is
+  the other consequence of the same line: `yield from` calls iter() on the iterator again).
+  The fix is cheap, though, and the error message does not point at merge's assumption.
+reproducer: |
+  from test.support.import_helper import import_fresh_module
+  ch = import_fresh_module('heapq', fresh=['_heapq'])
+  ph = import_fresh_module('heapq', blocked=['_heapq'])
+
+  def It(items):
+      """A valid iterator whose __next__ is a staticmethod."""
+      src = iter(items)
+      class It:
+          def __iter__(self):
+              return self
+          __next__ = staticmethod(lambda: next(src))
+      return It()
+
+  print('list(It([1, 2, 3])) ->', list(It([1, 2, 3])))
+
+  def run(mod, inputs, key):
+      out = []
+      try:
+          for v in mod.merge(*inputs, key=key):
+              out.append(v)
+      except Exception as e:
+          return out, f'{type(e).__name__}: {e}'
+      return out, None
+
+  rows = []
+  for name, mod in (('stock heapq (C heap functions)', ch), ('pure-Python heapq', ph)):
+      for key in (None, lambda x: x):
+          k = 'key=None' if key is None else 'key=lambda x: x'
+          a = run(mod, [It([1, 2, 3])], key)
+          b = run(mod, [[0, 1], It([1, 2, 3])], key)
+          print(f'{name}, {k}: merge(It([1, 2, 3])) -> {a}; merge([0, 1], It([1, 2, 3])) -> {b}')
+          rows.append((a, b))
+
+  err = "AttributeError: 'function' object has no attribute '__self__'"
+  if all(a == ([1], err) and b == ([0, 1, 1], err) for a, b in rows):
+      print('REPRODUCED accel-heapq-merge-staticmethod-next')
+expected: |
+  list(merge(It([1, 2, 3]))) == [1, 2, 3] and list(merge([0, 1], It([1, 2, 3]))) == [0, 1, 1, 2, 3].
+observed: |
+  python3 3.15.2: [1] then AttributeError, and [0, 1, 1] then AttributeError, for both heap
+  implementations, keyed and unkeyed. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): identical. REPRODUCED.
+promised_by: |
+  The merge docstring (Lib/heapq.py:331-335): "Merge multiple sorted inputs into a single sorted
+  output", for any iterables; the iterator protocol (Doc/library/stdtypes.rst, iterator.__next__)
+  asks only that __next__() return the next item.
+cause: |
+  Lib/heapq.py:383 and :408: `yield from next.__self__` recovers the iterator from the bound
+  method stored at :365 / :388 instead of keeping the iterator itself.
+possible_fix: |
+  Keep the iterator in the loop (`for order, it in enumerate(map(iter, iterables))` already has
+  it) and, in the fast path, continue with `while True: yield next()` or keep `it` in the heap
+  entry; or fall back to the stored `next` when `__self__` is missing.
+duplicates:
+  issues: ["bugforge heapq-20261003-022813-c1 (not filed upstream): the same finding, merge of a single staticmethod-__next__ iterator"]
+  related: ["python/cpython#63162 (bpo-18962, fixed): added the single-iterator fast path with yield from next.__self__", "python/cpython#104790 (closed, not a bug): an iterator whose __iter__ resets it repeats items through the same yield from"]
+  queries: ["heapq merge __self__", "heapq merge staticmethod", "merge next __self__ AttributeError", "heapq merge iterator __next__", "heapq merge yield from", "heapq merge AttributeError", "heapq merge", "bugforge README: heapq.merge entries"]
+lean:
+  property: PyLean.Accel.Heapq.MergeIsSortedAnyIter
+  theorem: PyLean.Accel.Heapq.mergeIsSortedAnyIter_refuted

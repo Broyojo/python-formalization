@@ -224,10 +224,17 @@ def entries : List Entry := [
     notes := "list(merge([1, 5], [2], key=key)) with key(5) raising StopIteration returns [1, 2]: the except StopIteration meant for an exhausted input (:391, :403) also catches the key's." },
   { id := "accel-merge-sorted", pyFile := "Lib/heapq.py"
     pyFns := ["merge"]
-    statement := "For inputs each sorted by key (descending if reverse), list(merge(*inputs, key, reverse)) == sorted(chain(*inputs), key=key, reverse=reverse), ties included, for every element type with a strict weak order and a pure key."
+    statement := "For inputs each sorted by key (descending if reverse), list(merge(*inputs, key, reverse)) == sorted(chain(*inputs), key=key, reverse=reverse), ties included, for every element type with a strict weak order and a pure key, and for iterators whose __next__ is a bound method (next.__self__ is the iterator: SEnv.selfOf the identity); accel-merge-sorted-any-iter refutes it without that restriction."
     source := "merge docstring, Lib/heapq.py:330-346; Doc/library/heapq.rst", status := .proven
     prop := ``Heapq.MergeIsSorted, thm := some ``Heapq.mergeIsSorted_proven
-    notes := "Over the generator model for both heap implementations, by an invariant (HeapqMergeSorted.MInv) held at every suspension point: per-input iterator positions, one heap entry (by reference) per non-empty input, heap order. It unfolds the main loop (:370-378 / :394-404, both the next() and the StopIteration branch) and the single-input tail with next.__self__ (:379-383 / :405-408). Scope: honest inputs, whose next.__self__ is the iterator itself; a staticmethod __next__ raises AttributeError there (modelled as SEnv.selfOf, difftested)." }
+    notes := "Over the generator model for both heap implementations, by an invariant (HeapqMergeSorted.MInv) held at every suspension point: per-input iterator positions, one heap entry (by reference) per non-empty input, heap order. It unfolds the main loop (:370-378 / :394-404, both the next() and the StopIteration branch) and the single-input tail with next.__self__ (:379-383 / :405-408). Scope: honest inputs, whose next.__self__ is the iterator itself; a staticmethod __next__ raises AttributeError there (modelled as SEnv.selfOf, difftested), refuted as accel-merge-sorted-any-iter." },
+  { id := "accel-merge-sorted-any-iter", pyFile := "Lib/heapq.py"
+    pyFns := ["merge"]
+    statement := "accel-merge-sorted with next.__self__ (Lib/heapq.py:383, :408) any callback, so for every iterator the protocol allows, including one whose __next__ is a staticmethod."
+    source := "merge docstring, Lib/heapq.py:331-345; iterator protocol, Doc/library/stdtypes.rst", status := .refuted
+    prop := ``Heapq.MergeIsSortedAnyIter, thm := some ``Heapq.mergeIsSortedAnyIter_refuted
+    bug := some "accel-heapq-merge-staticmethod-next"
+    notes := "merge(It()) over [1, 2, 3], It's __next__ a staticmethod: the first next() yields 1, the second reaches yield from next.__self__ with one input left and raises AttributeError: 'function' object has no attribute '__self__' (HeapqMergeSorted.mergeStatic_run, by the kernel, for both heap implementations). Measured on 3.15.2 for both heaps, keyed and unkeyed; merge([0, 1], It()) gives 0, 1, 1 then the same error." }
 ]
 
 end PyLean.Accel

@@ -326,6 +326,7 @@ accel-nselect-any-len	refuted	Lib/heapq.py	nsmallest,nlargest
 accel-merge-first-next	proven	Lib/heapq.py	merge
 accel-merge-no-silent-drop	refuted	Lib/heapq.py	merge
 accel-merge-sorted	proven	Lib/heapq.py	merge
+accel-merge-sorted-any-iter	refuted	Lib/heapq.py	merge
 decimal-parse-c-accepts-py	refuted	Modules/_decimal/_decimal.c	Decimal.__new__,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii
 decimal-parse-c-accepts-py-casefree	proven	Modules/_decimal/_decimal.c	Decimal.__new__,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii
 decimal-parse-py-accepts-c	refuted	Lib/_pydecimal.py	Decimal.__new__,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii
