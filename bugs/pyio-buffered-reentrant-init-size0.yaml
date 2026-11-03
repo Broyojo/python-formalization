@@ -1,6 +1,6 @@
 id: pyio-buffered-reentrant-init-size0
 title: "io.BufferedReader/Writer: a failed __init__(raw, 0) re-entered from a raw callback leaves buffer_size 0: SIGFPE in read, endless loop in write"
-priority: P2
+priority: P1
 kind: crash
 module: pyio
 files: [Modules/_io/bufferedio.c]
@@ -116,3 +116,10 @@ review_notes: |
   default 8192) read(n) does not trap and returns n bytes whose tail nobody wrote (size 4 measured
   returning heap bytes such as b'...\x80C'); a refused negative size (-1) does not trap on read;
   integer division by zero traps on x86 but yields 0 on aarch64 (not checked: no ARM pod).
+priority_note: |
+  Re-rated P2 -> P1 (2026-11-03) after the fourth model pass: a refused re-entered __init__(raw, -1)
+  stores buffer_size = -1, and BufferedWriter.write with raw.write answering None reaches
+  memcpy(self->buffer, ..., (size_t)-1) -- an out-of-bounds write. Measured on 3.15.2: SIGSEGV for a
+  writer; a BufferedRandom ran on with a corrupted heap and crashed later in GC. The earlier P2 rationale
+  ("no memory corruption") no longer holds. Same root cause as pyio-buffered-reentrant-init-free (P1);
+  report the two together.
