@@ -22,8 +22,9 @@ summary: |
   fixed on main by gh-156869 after 3.15.2.
   f_getitem and cf_getitem widen with a C (double) cast instead of PyFloat_Unpack4, and f_setitem
   narrows with (float): a signalling NaN loaded with frombytes comes back quiet, so a[i] = a[i]
-  changes the bits of an 'f' item 0x7f800001 to 0x7fc00001 (and of an 'e' item 0x7d00 to 0x7f00),
-  while struct 'f' and PyFloat_Pack4/Unpack4 keep a signalling NaN since 3.14.
+  changes the bits of an 'f' item 0x7f800001 to 0x7fc00001 (and of an 'e' item 0x7d00 to 0x7f00,
+  through the float step of e_setitem), while struct 'f' and PyFloat_Pack4/Unpack4 keep a
+  signalling NaN since 3.14. Main fixes the 'e' case but not the 'f'/'Zf' one (see observed).
   Lean (lean/PyLean/Sequences/ArrayFloatProps.lean): ArrayHalfStruct is refuted by
   x = 1 + 2**-11 + 2**-40, ArraySingleStruct by 1e300, ArrayFloatItems by 0x7f800001;
   ArrayFloatRoundTrip states the exact round trip of every e, f, d, Zf and Zd pattern (only
@@ -64,10 +65,13 @@ expected: |
   unchanged.
 observed: |
   python3 3.15.2: 003c 013c 65504.0 0100c07f. REPRODUCED.
-  main (python.exe 3.16.0a1+dev ef1fce0): 013c 013c None 0100c07f. NOT REPRODUCED as a whole: the
-  double rounding and the overflow boundary are fixed there (gh-156869 parses a double and packs
-  with PyFloat_Pack2/Pack4); the signalling NaN of 'f' still comes back quiet, because f_getitem
-  still widens with a (double) cast.
+  main (python.exe 3.16.0a1+dev ef1fce0): 013c 013c None 0100c07f. NOT REPRODUCED as a whole.
+  gh-156869 makes e_setitem parse a double and call PyFloat_Pack2 on it directly, which fixes the
+  double rounding, the overflow boundary and the 'e' signalling NaN (an 'e' item 0x7d00 stays
+  0x7d00 under a[0] = a[0] on main; it becomes 0x7f00 on 3.15.2). The 'f' and 'Zf' signalling
+  NaNs still come back quiet on main (0x7f800001 -> 0x7fc00001), because f_getitem and cf_getitem
+  still widen with a C (double) cast (main Modules/arraymodule.c:602-605, 644-650), and that cast
+  already quiets the NaN before f_setitem's PyFloat_Pack4 sees it.
 promised_by: |
   Doc/library/array.rst:44-45, 74-79: the 'e' item is the C type _Float16 (IEEE 754 binary16), to
   which C converts a double with one rounding; Doc/library/struct.rst:319-323 for the format
@@ -77,9 +81,11 @@ cause: |
   then :637 (`PyFloat_Pack2(x, ...)` on the promoted float); :646 (`(double)` in f_getitem),
   :652-659 (`float x` stored as is in f_setitem), :689 and :704-705 (cf_getitem, cf_setitem).
 possible_fix: |
-  What main does (gh-156869): parse a double ("d") in e_setitem, f_setitem and cf_setitem and pack
-  with PyFloat_Pack2 / PyFloat_Pack4; read 'f' and 'Zf' items with PyFloat_Unpack4. A backport to
-  3.15 would fix all three parts.
+  A backport of gh-156869 (parse a double ("d") in e_setitem, f_setitem and cf_setitem and pack
+  with PyFloat_Pack2 / PyFloat_Pack4) fixes the double rounding, the overflow boundary, the silent
+  inf and the 'e' signalling NaN. It does not fix the 'f'/'Zf' signalling NaN: main still reads
+  those items with a (double) cast. That needs f_getitem and cf_getitem to read with
+  PyFloat_Unpack4, which keeps a signalling NaN, on main as on 3.15.
 duplicates:
   issues:
     - {number: 156864, state: closed, relation: "partial duplicate: 1e300 stored as inf in 'e'; its fix also removes the double rounding, which the issue does not mention"}

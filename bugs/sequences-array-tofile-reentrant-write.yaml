@@ -53,8 +53,10 @@ possible_fix: |
   size from Py_SIZE(self) on every iteration and stop when the block starts past the end.
 duplicates:
   issues:
-    - {number: 142884, state: open, relation: "duplicate"}
-    - {number: 144922, state: closed, relation: "duplicate of 142884"}
+    - {number: 142884, state: open, relation: "duplicate (confirmed): same root cause, nbytes/nblocks cached across the write() callback"}
+    - {number: 144922, state: closed, relation: "closed as a duplicate of 142884"}
+  prs:
+    - {number: 144925, state: closed, relation: "fix re-checking Py_SIZE per block, closed unmerged"}
   queries: ["gh search issues: array tofile", "array.tofile crash", "array tofile use after free",
             "array tofile write clear", "tofile mutate array write", "array tofile segfault",
             "bugforge README: no array entries"]

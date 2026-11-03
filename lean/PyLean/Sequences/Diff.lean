@@ -396,11 +396,19 @@ def readMut (k : Nat) (a : Arr) : Option PyExc × Arr :=
   | 3 => (none, { a with exports := a.exports + 1 })
   | _ => (none, a)
 
-/-- `io.BytesIO(bs).read(n)` (`n >= 0`) after `readMut k`. -/
+/-- `io.BytesIO(bs).read(n)` (`n >= 0`) after `readMut k`. For `k` = 4, 5, 6 the data comes
+back as an instance of a `bytes` subclass whose `__buffer__` returns `memoryview(b'')`,
+`memoryview(bytes(4)).cast('I')` (item size 4), or raises `ValueError("buf")`. -/
 def scriptRead (bs : List Nat) (k : Nat) : ReadFn := fun n a =>
-  match readMut k a with
-  | (some e, a) => (.raises e, a)
-  | (none, a) => (.bytes (bs.take n.toNat), a)
+  let d := bs.take n.toNat
+  match k with
+  | 4 => (.bytesSub d.length (.ok ([], 1)), a)
+  | 5 => (.bytesSub d.length (.ok ([0, 0, 0, 0], 4)), a)
+  | 6 => (.bytesSub d.length (.error (.valueError "buf")), a)
+  | k =>
+    match readMut k a with
+    | (some e, a) => (.raises e, a)
+    | (none, a) => (.bytes d, a)
 
 /-- The scripted `write` of the difftest: mode 1 raises `ValueError("write")` at call `k`,
 mode 2 appends a zero item at each call (the array only grows, so every block stays inside
