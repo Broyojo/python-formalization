@@ -1,0 +1,69 @@
+id: pyio-bufferedrandom-failed-seek-duplicates
+title: "_pyio.BufferedRandom: after a seek() that fails, tell() is wrong and read() returns data twice"
+priority: P3
+kind: sibling-mismatch
+module: pyio
+files: [Lib/_pyio.py]
+functions: ["BufferedRandom.seek", "BufferedRandom.tell", "BufferedReader.tell", "BufferedReader._read_unlocked"]
+summary: |
+  BufferedRandom.seek first undoes the read-ahead by seeking the raw stream back over the unread
+  part of the read buffer, then calls raw.seek(pos, whence), and only then empties the read
+  buffer. If raw.seek raises (for example OSError EINVAL for a negative position on a real file),
+  the read buffer is kept while the raw position has already been moved back to the logical
+  position. tell() then subtracts the buffered bytes a second time, and the next reads return the
+  buffered bytes followed by the same bytes again from the raw stream. io.BufferedRandom leaves
+  everything unchanged when the raw seek fails.
+likelihood: |
+  Moderate for _pyio users: f.seek(-1) on a file opened 'rb+' after a read is an ordinary
+  mistake, and code that catches the OSError and goes on reading gets duplicated data silently.
+  _pyio itself is rarely used in production.
+maybe_intended: |
+  No. The comment at Lib/_pyio.py:1438-1439 says the order is chosen so that a failed raw seek
+  does not lose buffered data, but the undo at :1434-1437 has already been applied to the raw
+  stream, so keeping the buffer makes the data appear twice.
+reproducer: |
+  import io, _pyio, os, tempfile
+  fd, path = tempfile.mkstemp()
+  os.write(fd, b"0123456789")
+  os.close(fd)
+  out = {}
+  for mod in (io, _pyio):
+      with mod.open(path, "rb+") as f:
+          f.read(2)
+          try:
+              f.seek(-1)
+          except OSError:
+              pass
+          out[mod.__name__] = (f.tell(), f.read())
+  os.unlink(path)
+  print(out)
+  if out["io"] == (2, b"23456789") and out["_pyio"] != out["io"]:
+      print("REPRODUCED pyio-bufferedrandom-failed-seek-duplicates")
+expected: |
+  Both twins: tell() == 2 and read() == b'23456789', as io does.
+observed: |
+  python3 3.15.2: io (2, b'23456789'); _pyio (0, b'2345678923456789'). REPRODUCED.
+  main (python.exe 3.16.0a1+dev): identical. REPRODUCED.
+promised_by: |
+  Twin agreement with Modules/_io/bufferedio.c:1429-1453 (a failed raw seek changes nothing);
+  invariant: an operation that raises leaves the stream position where it was.
+cause: |
+  Lib/_pyio.py:1434-1437 seeks the raw stream back by len(self._read_buf) - self._read_pos;
+  :1440 `pos = self.raw.seek(pos, whence)` raises; :1441-1442, which reset the read buffer, are
+  skipped. BufferedReader.tell (:1223-1225) then computes raw.tell() - len(buf) + pos, and
+  _read_unlocked serves the stale buffer before reading the same bytes from the raw stream.
+possible_fix: |
+  Reset the read buffer right after undoing the read-ahead (inside the `if self._read_buf:` block),
+  since from then on the raw position already is the logical position; or re-apply the read-ahead
+  offset when raw.seek fails.
+duplicates:
+  status: new
+  issues:
+    - {number: 56422, state: closed, relation: "BufferedRandom: issues with interlaced read-write (2011)", reason: "different path: no failing seek"}
+  queries: ["BufferedRandom seek failure tell", "_pyio BufferedRandom seek read buffer", "BufferedRandom seek OSError duplicate data",
+            "pyio seek raw seek fails read buffer", "BufferedRandom undo read ahead seek", "_pyio BufferedRandom seek exception tell",
+            "BufferedRandom seek fails data read twice", "pyio seek invalid argument tell wrong",
+            "BufferedRandom read buffer not reset seek error", "_pyio seek negative OSError tell", "bugforge README: no bufferedio entries"]
+lean:
+  property: PyLean.PyIO.RandomFailedSeekTwins
+  theorem: PyLean.PyIO.randomFailedSeekTwins_refuted

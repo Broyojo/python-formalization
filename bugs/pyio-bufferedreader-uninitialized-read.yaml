@@ -1,0 +1,85 @@
+id: pyio-bufferedreader-uninitialized-read
+title: "io.BufferedReader returns uninitialized heap memory when raw.readinto() reports bytes it did not store"
+priority: P3
+kind: memory-disclosure
+module: pyio
+files: [Modules/_io/bufferedio.c, Modules/_io/iobase.c]
+functions: ["_bufferedreader_raw_read", "_bufferedreader_fill_buffer", "_buffered_init",
+            "_bufferedreader_read_generic", "_io__RawIOBase_read_impl"]
+summary: |
+  _bufferedreader_raw_read passes raw.readinto() a memoryview of the internal buffer (or of the
+  PyBytesWriter being filled) and trusts any count between 0 and the view's length. The buffer
+  comes from PyMem_Malloc in _buffered_init and is never cleared, so a raw stream that returns a
+  count without writing that many bytes makes read(), peek(), read1() and readinto() return
+  whatever the buffer held: bytes of an earlier read, or uninitialized heap memory (on the first
+  fill, typically heap pointers). _pyio.BufferedReader reads through RawIOBase.read, which
+  allocates a zeroed bytearray, so it returns zero bytes for the same raw stream. The C
+  RawIOBase.read (Modules/_io/iobase.c) has the same exposure: PyByteArray_FromStringAndSize(NULL,
+  n) does not clear the bytes either.
+likelihood: |
+  Low. It needs a raw stream that miscounts, which breaks the RawIOBase.readinto contract (for
+  example a wrapper that returns len(b) after a short read). The consequence, disclosure of heap
+  contents including addresses, is worse than an exception and differs from the Python twin.
+maybe_intended: |
+  Probably not. Garbage in, garbage out is a defensible stance for the stale bytes, but returning
+  uninitialized memory to Python code is normally avoided (bytearray(n) and _pyio both zero it),
+  and checking or zero-filling costs little next to a Python method call.
+reproducer: |
+  import io, _pyio
+  def run(mod, size):
+      class Raw(mod.RawIOBase):
+          calls = 0
+          def readable(self):
+              return True
+          def readinto(self, b):
+              self.calls += 1
+              if self.calls == 1:
+                  b[:4] = b"abcd"
+                  return 4
+              return len(b)      # claims a full read, stores nothing
+      f = mod.BufferedReader(Raw(), size)
+      return f.read(1), f.read(3), f.read(1)
+  c, p = run(io, 4), run(_pyio, 4)
+  print("io   ", c)
+  print("_pyio", p)
+  class Liar(io.RawIOBase):
+      def readable(self):
+          return True
+      def readinto(self, b):
+          return len(b)
+  print("fresh buffer:", io.BufferedReader(Liar(), 16).peek())
+  if c == (b"a", b"bcd", b"a") and p == (b"a", b"bcd", b"\x00"):
+      print("REPRODUCED pyio-bufferedreader-uninitialized-read")
+expected: |
+  Both twins agree: zero bytes (what _pyio returns), or an error for the miscounted read.
+observed: |
+  python3 3.15.2: io returns (b'a', b'bcd', b'a') (the stale byte of the earlier fill), _pyio
+  (b'a', b'bcd', b'\x00'); peek() on a fresh 16-byte buffer returns heap pointers such as
+  b'p\x83F@Hv\x00\x00\x08\xa9\xbe\t\\V\x00\x00'. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): identical behaviour. REPRODUCED.
+promised_by: |
+  Invariant: no uninitialized memory reaches Python objects. Twin agreement with _pyio.
+cause: |
+  Modules/_io/bufferedio.c:848 allocates the buffer with PyMem_Malloc and nothing clears it;
+  :1661 only rejects counts outside [0, len], and :1684 then sets read_end = start + n over bytes
+  nobody wrote. _bufferedreader_read_generic (:1809, :1837) and read1 (:1074, :1080) read into an
+  uninitialized PyBytesWriter the same way. Modules/_io/iobase.c:932 creates the bytearray with
+  uninitialized contents and :953 keeps bytes_filled of them.
+possible_fix: |
+  Zero the buffer once in _buffered_init (PyMem_Calloc) and the destination in the direct-read
+  paths, or document that a miscounting raw stream leaks memory. Using PyMem_Calloc at
+  bufferedio.c:848 and zero-filling in iobase.c:932 removes the uninitialized-memory part; stale
+  bytes of earlier reads would remain.
+duplicates:
+  status: new
+  issues:
+    - {number: 157075, state: closed, relation: "a raw callback keeping the exporter-less memoryview after the call", reason: "different bug: lifetime of the view, not the count"}
+  queries: ["BufferedReader uninitialized memory", "BufferedReader readinto returns count without writing",
+            "buffered uninitialized heap readinto", "BufferedReader information leak", "readinto lie uninitialized",
+            "bufferedio PyMem_Malloc uninitialized", "readinto returned length uninitialized bytes",
+            "BufferedReader garbage data readinto", "BufferedReader readinto return value trusted",
+            "raw readinto uninitialized", "io BufferedReader heap memory disclosure", "BufferedReader stale buffer data",
+            "bugforge README: no bufferedio entries"]
+lean:
+  property: PyLean.PyIO.BufferedReaderNoUninit
+  theorem: PyLean.PyIO.bufferedReaderNoUninit_refuted

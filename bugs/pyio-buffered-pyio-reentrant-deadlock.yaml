@@ -1,0 +1,75 @@
+id: pyio-buffered-pyio-reentrant-deadlock
+title: "_pyio.BufferedReader/Writer deadlock on a re-entrant call where io raises RuntimeError"
+priority: P4
+kind: sibling-mismatch
+module: pyio
+files: [Lib/_pyio.py, Modules/_io/bufferedio.c]
+functions: ["BufferedReader.read", "BufferedReader._read_unlocked", "RawIOBase.read", "_enter_buffered_busy"]
+summary: |
+  _pyio.BufferedReader and BufferedWriter guard their methods with `_read_lock` and
+  `_write_lock`, which are `_thread.allocate_lock()` objects and not re-entrant. If code running
+  inside a raw stream callback (or a signal handler, the case bpo-10478 was about) calls back into
+  the same buffered object, the second `with self._read_lock:` blocks forever: the thread
+  deadlocks on itself. io.BufferedReader detects the same situation in _enter_buffered_busy and
+  raises RuntimeError("reentrant call inside <_io.BufferedReader>"), and the outer call completes.
+likelihood: |
+  Low. It needs re-entrant use of one buffered object from its own raw stream or from a signal
+  handler, and _pyio is rarely used. When it happens the process hangs with no message.
+maybe_intended: |
+  Possibly. bpo-10478 (2010) added the RuntimeError to the C implementation for the signal-handler
+  case and left _pyio as it was; _pyio is a reference implementation. A non-blocking check of the
+  owner (as the C code does) would make the twins agree.
+reproducer: |
+  import _pyio, io, threading
+  def make(mod):
+      class Raw(mod.RawIOBase):
+          buf = None
+          def readable(self):
+              return True
+          def readinto(self, b):
+              if self.buf is not None:
+                  inner, self.buf = self.buf, None
+                  try:
+                      inner.read(1)
+                  except RuntimeError as e:
+                      print(mod.__name__, "inner:", e)
+              b[:1] = b"x"
+              return 1
+      raw = Raw()
+      f = mod.BufferedReader(raw, 4)
+      raw.buf = f
+      return f
+  print("io outer:", make(io).read(1))
+  f = make(_pyio)
+  t = threading.Thread(target=lambda: print("_pyio outer:", f.read(1)), daemon=True)
+  t.start()
+  t.join(2)
+  if t.is_alive():
+      print("_pyio still blocked after 2 s")
+      print("REPRODUCED pyio-buffered-pyio-reentrant-deadlock")
+expected: |
+  _pyio raises RuntimeError for the inner call as io does, and the outer read returns b'x'.
+observed: |
+  python3 3.15.2: io prints "inner: reentrant call inside <_io.BufferedReader>" and "io outer:
+  b'x'"; the _pyio thread is still blocked after 2 s. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): identical. REPRODUCED.
+promised_by: |
+  Invariant: no hang. Twin agreement with Modules/_io/bufferedio.c:299-303.
+cause: |
+  Lib/_pyio.py:1060 and :1256 create the locks with Lock = _thread.allocate_lock; :1079
+  `with self._read_lock:` (and :1142, :1165, :1190, :1231, :1264, :1290, :1297, :1323) block when
+  the thread already holds the lock. Modules/_io/bufferedio.c:299-303 checks
+  `self->owner == PyThread_get_thread_ident()` and raises instead.
+possible_fix: |
+  Record the owner thread when taking the lock in _pyio and raise RuntimeError("reentrant call
+  inside ...") when the owner tries again, mirroring _enter_buffered_busy.
+duplicates:
+  status: new
+  issues:
+    - {number: 54687, state: closed, relation: "bpo-10478 'Ctrl-C locks up the interpreter': added the RuntimeError to the C code", reason: "fixed the C twin only"}
+  queries: ["_pyio deadlock reentrant BufferedReader", "pyio Lock reentrant deadlock", "pyio reentrant deadlock",
+            "_pyio Lock deadlock signal handler", "_pyio BufferedWriter reentrant", "reentrant call inside BufferedWriter pyio",
+            "_pyio BufferedWriter signal handler deadlock", "bugforge README: no bufferedio entries"]
+lean:
+  property: PyLean.PyIO.PyBufferedNoHang
+  theorem: PyLean.PyIO.pyBufferedNoHang_refuted
