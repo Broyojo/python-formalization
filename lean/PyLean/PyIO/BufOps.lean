@@ -112,6 +112,8 @@ def stepOp (op : BfOp) : BM Val := do
   | .name => do checkInit; thr (noRawAttr "name")
   | .mode => do checkInit; thr (noRawAttr "mode")
   | .getstate => thr (.typeError s!"cannot pickle '{className s}' instances")
+  -- `buffer_size: Py_ssize_t` (clinic/bufferedio.c.h)
+  | .reinit n => wrapArg (argSsize n) (fun n => do init (kindOf s) n; pure .none)
 
 end BC2
 
@@ -181,6 +183,7 @@ def stepOp (op : BfOp) : PM Val := do
   | .name => if s.detached then thr (noneAttr "name") else thr (noRawAttr "name")
   | .mode => if s.detached then thr (noneAttr "mode") else thr (noRawAttr "mode")
   | .getstate => thr (.typeError s!"cannot pickle '{className s}' object")
+  | .reinit n => do init s.kind n; pure .none
 
 end BP2
 
@@ -199,36 +202,37 @@ inductive Outcome (σ : Type) where
   | initErr (e : PyExc)
 
 /-- Run the operations in turn, stopping when the process dies or hangs. -/
-def runSeq {σ : Type} (step : BfOp → SM σ Val) (stop : σ → Bool) : σ → List BfOp → Option (σ × List (Py Val))
-  | s, [] => some (s, [])
+def runSeq {σ : Type} (step : BfOp → SM σ Val) (stop : σ → Bool) : σ → List BfOp → Except σ (σ × List (Py Val))
+  | s, [] => .ok (s, [])
   | s, o :: os =>
     let (s', r) := step o s
-    if stop s' then none else
+    if stop s' then .error s' else
     match runSeq step stop s' os with
-    | none => none
-    | some (s'', rs) => some (s'', r :: rs)
+    | .error t => .error t
+    | .ok (s'', rs) => .ok (s'', r :: rs)
 
 def reFuel (r : Raw) : Nat := r.hooks.length + 2
 
 /-- `io.Buffered*(raw, size)` then the operations. -/
 def runC (kind : Nat) (raw : Raw) (size : Int) (ops : List BfOp) : Outcome BufS :=
-  let s0 : BufS := default
-  match BC2.init kind raw size (stepC (reFuel raw)) s0 with
-  | (s, .error e) => if s.crashed then .crashed else .initErr e
+  -- `tp_alloc`'s zeros; `readable`/`writable` stand for the type
+  let s0 : BufS := { (default : BufS) with raw := raw, readable := kind ≠ 1, writable := kind ≠ 0 }
+  match BC2.init kind size (stepC (reFuel raw)) s0 with
+  | (s, .error e) => if s.crashed then (if s.blocked then .hung else .crashed) else .initErr e
   | (s, .ok _) =>
     match runSeq (stepC (reFuel raw + 1)) (·.crashed) s ops with
-    | none => .crashed
-    | some (s, rs) => .done s rs
+    | .error t => if t.blocked then .hung else .crashed
+    | .ok (s, rs) => .done s rs
 
 /-- `_pyio.Buffered*(raw, size)` then the operations. -/
 def runP (kind : Nat) (raw : Raw) (size : Int) (ops : List BfOp) : Outcome BufP :=
   -- the harness arms the hooks once the constructor has returned, and counts from there
-  match BP2.init kind { raw with hooks := [] } size (stepP 0) default with
+  match BP2.init kind size (stepP 0) { (default : BufP) with raw := { raw with hooks := [] }, kind := kind } with
   | (_, .error e) => .initErr e
   | (s, .ok _) =>
     let s := { s with raw := { s.raw with hooks := raw.hooks, tick := 0 } }
     match runSeq (stepP (reFuel raw + 1)) (·.hung) s ops with
-    | none => .hung
-    | some (s, rs) => .done s rs
+    | .error _ => .hung
+    | .ok (s, rs) => .done s rs
 
 end PyLean.PyIO

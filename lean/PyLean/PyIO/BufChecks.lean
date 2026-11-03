@@ -72,7 +72,7 @@ theorem onRaw_ok {α : Type} (c : RCall) (f : Raw → Raw × α) (R : CH) (s s' 
 
 /-- On an attached raw with no hooks, a callback answers what the raw method answers. -/
 theorem onRaw_nohook {α : Type} (c : RCall) (f : Raw → Raw × α) (R : CH) (s : BufS)
-    (hd : s.detached = false) (hh : s.raw.hooks = []) :
+    (hd : s.rawNull = false) (hh : s.raw.hooks = []) :
     onRaw c f R s = ({ s with raw := (f (s.raw.enter c).1).1 }, .ok (f (s.raw.enter c).1).2) := by
   unfold onRaw
   rw [bind_of_ok (get_apply R s)]
@@ -118,6 +118,27 @@ theorem Raw.write_not_data (r : Raw) (b d : List Nat) : (r.write b).2 ≠ .data 
 
 /-! ## `_bufferedreader_raw_read` and `_PyIO_trap_eintr` -/
 
+/-- A class relation: `sub c b` is `issubclass(c, b)`. Not assumed reflexive or
+transitive: a metaclass or a custom `mro()` decides it for user classes. -/
+structure Hier where
+  sub : String → String → Bool
+
+/-- Builtin exception classes and whether they are `OSError` subclasses. -/
+def builtinOSError : List (String × Bool) :=
+  [("OSError", true), ("BlockingIOError", true), ("ChildProcessError", true), ("ConnectionError", true),
+   ("BrokenPipeError", true), ("ConnectionAbortedError", true), ("ConnectionRefusedError", true),
+   ("ConnectionResetError", true), ("FileExistsError", true), ("FileNotFoundError", true),
+   ("InterruptedError", true), ("IsADirectoryError", true), ("NotADirectoryError", true),
+   ("PermissionError", true), ("ProcessLookupError", true), ("TimeoutError", true),
+   ("BaseException", false), ("Exception", false), ("ValueError", false), ("TypeError", false),
+   ("RuntimeError", false), ("AttributeError", false), ("KeyError", false), ("IndexError", false),
+   ("OverflowError", false), ("ZeroDivisionError", false), ("ArithmeticError", false),
+   ("LookupError", false), ("UnicodeError", false), ("MemoryError", false), ("SystemError", false)]
+
+/-- What CPython guarantees of the relation, as far as this file asks it: on a builtin
+class, `issubclass(c, OSError)` is the builtin answer; other classes are unconstrained. -/
+def HierOk (H : Hier) : Prop := ∀ c b, (c, b) ∈ builtinOSError → H.sub c "OSError" = b
+
 /-- The raw state after a callback that consumed one `readinto` script step. -/
 def afterReadinto (s : BufS) (len : Int) (t : List RStep) : BufS :=
   { s with raw := { (s.raw.enter (.readinto len)).1 with rs := t } }
@@ -131,11 +152,14 @@ raw stream's `readinto`:
 2. an int answer `v` that fits `Py_ssize_t` is the count when `0 <= v <= len` and
    is refused with `OSError("raw readinto() returned invalid length ...")`
    otherwise (:1661-1666);
-3. an exception that is an `OSError` (any subclass) with `errno == EINTR` is
+3. for every class relation `H` that is the builtin one on builtin classes
+   (`HierOk`), an exception of class `c` with `issubclass(c, OSError)` under `H`
+   (what its MRO, carried by the raised value, says) and `errno == EINTR` is
    swallowed and the call is made again with the same arguments, and every other
-   exception propagates unchanged: the class name plays no part, so
-   `InterruptedError('x')` (no `errno`) propagates and `PermissionError(EINTR, 'x')`
-   is retried (:1639-1641 and `_PyIO_trap_eintr`, :878-901).
+   exception propagates unchanged (:1639-1641 and `_PyIO_trap_eintr`, :878-901):
+   `FileExistsError`, `ConnectionResetError`, `io.UnsupportedOperation` or a user
+   `OSError` subclass with that `errno` is retried; `InterruptedError('x')` has no
+   `errno` and propagates.
 
 Invariant: what is copied out of the buffer was counted as read. The hypothesis
 `0 <= len` holds at every caller (`buffer_size - start`, `remaining`, `n > 0`); in
@@ -146,17 +170,19 @@ def RawReadChecks : Prop :=
     0 ≤ len → BC2.rawRead ptr len fuel R s = (s', .ok (n, d)) →
     n = -2 ∨ (0 ≤ n ∧ n ≤ len ∧ (d.length : Int) ≤ n)) ∧
   (∀ (len : Int) (fuel : Nat) (R : CH) (s : BufS) (v : Int) (t : List RStep),
-    s.detached = false → s.raw.closed = false → s.raw.hooks = [] → s.raw.rs = .bad v :: t → InSsize v →
+    s.rawNull = false → s.raw.closed = false → s.raw.hooks = [] → s.raw.rs = .bad v :: t → InSsize v →
     (BC2.rawRead none len (fuel + 1) R s).2 =
       if v < 0 ∨ v > len then
         .error (osError s!"raw readinto() returned invalid length {v} (should have been between 0 and {len})")
       else .ok (v, [])) ∧
-  (∀ (len : Int) (fuel : Nat) (R : CH) (s : BufS) (c m : String) (eno : Option Nat) (t : List RStep),
-    s.detached = false → s.raw.closed = false → s.raw.hooks = [] →
-    s.raw.rs = .raise c m eno :: t →
-    (BC2.isOSErrorCls c = true ∧ eno = some 4 →
+  (∀ (H : Hier), HierOk H →
+    ∀ (len : Int) (fuel : Nat) (R : CH) (s : BufS) (c m : String) (eno : Option Nat) (mro : List String)
+    (t : List RStep),
+    s.rawNull = false → s.raw.closed = false → s.raw.hooks = [] →
+    s.raw.rs = .raise c m eno mro :: t → decide ("OSError" ∈ mro) = H.sub c "OSError" →
+    (H.sub c "OSError" = true ∧ eno = some 4 →
       BC2.rawRead none len (fuel + 2) R s = BC2.rawRead none len (fuel + 1) R (afterReadinto s len t)) ∧
-    (¬(BC2.isOSErrorCls c = true ∧ eno = some 4) →
+    (¬(H.sub c "OSError" = true ∧ eno = some 4) →
       (BC2.rawRead none len (fuel + 1) R s).2 = .error (.named c (errMsg m eno))))
 
 theorem rawRead_count (ptr : Option Bool) (len : Int) (hl : 0 ≤ len) : ∀ (fuel : Nat) (R : CH)
@@ -239,9 +265,11 @@ theorem rawReadChecks_proven : RawReadChecks := by
       split
       · rfl
       · rfl
-  · intro len fuel R s c m eno t hd hc hh hr
+  · intro H _ len fuel R s c m eno mro t hd hc hh hr hm
+    rw [← hm]
+    simp only [decide_eq_true_eq]
     have hres : ((s.raw.enter (.readinto len)).1.readinto len.toNat).2 =
-        .exc (.named c (errMsg m eno)) eno := by
+        .exc (.named c (errMsg m eno)) eno mro := by
       simp [Raw.readinto, Raw.enter, hc, hr]
     constructor
     · intro ⟨h1, h2⟩
@@ -251,7 +279,9 @@ theorem rawReadChecks_proven : RawReadChecks := by
       rw [BC2.bind_of_ok (BC2.onRaw_nohook _ _ R s hd hh)]
       rw [hres]
       dsimp only
-      simp only [BC2.trapEintr, PyExc.className, h1, h2, beq_self_eq_true, Bool.and_self, ite_true]
+      have ht : BC2.trapEintr eno mro = true := by
+        simp [BC2.trapEintr, h1, h2]
+      simp only [ht, ite_true]
       congr 1
       simp [afterReadinto, Raw.readinto, Raw.enter, hc, hr]
     · intro hn
@@ -261,9 +291,9 @@ theorem rawReadChecks_proven : RawReadChecks := by
       rw [BC2.bind_of_ok (BC2.onRaw_nohook _ _ R s hd hh)]
       rw [hres]
       dsimp only
-      have ht : BC2.trapEintr (.named c (errMsg m eno)) eno = false := by
-        simp only [BC2.trapEintr, PyExc.className, Bool.and_eq_false_iff]
-        by_cases h1 : BC2.isOSErrorCls c = true
+      have ht : BC2.trapEintr eno mro = false := by
+        simp only [BC2.trapEintr, Bool.and_eq_false_iff]
+        by_cases h1 : "OSError" ∈ mro
         · right; cases eno with
           | none => rfl
           | some n =>
@@ -290,7 +320,7 @@ def RawWriteChecks : Prop :=
   (∀ (ptr : Option Bool) (b : List Nat) (fuel : Nat) (R : CH) (s s' : BufS) (n : Int),
     BC2.rawWrite ptr b fuel R s = (s', .ok n) → n = -2 ∨ (0 ≤ n ∧ n ≤ b.length)) ∧
   (∀ (b : List Nat) (fuel : Nat) (R : CH) (s : BufS) (v : Int) (t : List RStep),
-    s.detached = false → s.raw.closed = false → s.raw.hooks = [] → s.raw.ws = .bad v :: t →
+    s.rawNull = false → s.raw.closed = false → s.raw.hooks = [] → s.raw.ws = .bad v :: t →
     let n : Int := if InSsize v then v else -1
     (BC2.rawWrite none b (fuel + 1) R s).2 =
       if n < 0 ∨ n > b.length then

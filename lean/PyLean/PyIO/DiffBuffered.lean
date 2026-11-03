@@ -21,7 +21,11 @@ def getErrno (j : Json) : Except String (Option Nat) :=
 
 def getRStep (j : Json) : Except String RStep := do
   if j matches .null then return .block
-  if let some (c, m) ← getRaise j then return .raise c m (← getErrno j)
+  if let some (c, m) ← getRaise j then
+    let mro ← match j.getObjVal? "mro" with
+      | .ok v => do (← v.getArr?).toList.mapM Json.getStr?
+      | .error _ => pure []
+    return .raise c m (← getErrno j) mro
   if let .ok v := j.getObjVal? "bad" then return .bad (← v.getInt?)
   if let .ok _ := j.getObjVal? "wrong" then return .wrong
   return .short (← (← j.getObjVal? "short").getNat?)
@@ -95,6 +99,7 @@ def getBfOp (j : Json) : Except String BfOp := do
   | "name" => return .name
   | "mode" => return .mode
   | "getstate" => return .getstate
+  | "reinit" => return .reinit (← getInt j "size")
   | o => throw s!"unknown op {o}"
 
 def getReHook (j : Json) : Except String (Nat × BfOp) := do

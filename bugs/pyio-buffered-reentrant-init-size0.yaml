@@ -1,0 +1,98 @@
+id: pyio-buffered-reentrant-init-size0
+title: "io.BufferedReader/Writer: a failed __init__(raw, 0) re-entered from a raw callback leaves buffer_size 0: SIGFPE in read, endless loop in write"
+priority: P1
+kind: crash
+module: pyio
+files: [Modules/_io/bufferedio.c]
+functions: ["_io_BufferedReader___init___impl", "_io_BufferedWriter___init___impl", "_buffered_init",
+            "_bufferedreader_read_generic", "_io_BufferedWriter_write_impl"]
+summary: |
+  The constructors store `self->buffer_size = buffer_size` before `_buffered_init` checks it, and
+  a refused size (`<= 0`, "buffer size must be strictly positive") leaves it stored. Called again
+  on a live object from inside a raw-stream callback (the raw's `readinto` or `write` calls
+  `buf.__init__(raw, 0)`, catching the ValueError), it changes `buffer_size` under the method that
+  is running, which goes on using it:
+  - `BufferedReader.read(10)` on a reader whose size is not a power of two: the next
+    `MINUS_LAST_BLOCK` computes `self->buffer_size * (size / self->buffer_size)` with
+    `buffer_size == 0` and the process dies of SIGFPE (integer division by zero);
+  - `BufferedWriter.write(b)` with `len(b) >= buffer_size`: `while (remaining >= self->buffer_size)`
+    becomes `while (0 >= 0)` once everything is written, and the method calls `raw.write(b'')`
+    forever.
+  Same family as pyio-buffered-reentrant-init-free (an `__init__` that bypasses the method lock),
+  but a different mechanism: here `_buffered_init` refuses and frees nothing.
+likelihood: |
+  Low: it needs a raw stream that re-initializes the object wrapping it, with an invalid size, from
+  inside one of its own callbacks. It is reachable from pure Python and ends in a crash or a hang.
+maybe_intended: |
+  No. A failed __init__ should not leave state a running method trusts, and a crash or endless loop
+  from pure Python code is a bug.
+reproducer: |
+  import subprocess, sys
+  child = r'''
+  import io, sys
+  class Raw(io.RawIOBase):
+      buf = None
+      def readable(self): return True
+      def writable(self): return True
+      def reinit(self):
+          if self.buf is not None:
+              buf, self.buf = self.buf, None
+              try:
+                  buf.__init__(self, 0)
+              except ValueError:
+                  pass
+      def readinto(self, b):
+          self.reinit()
+          b[:1] = b"x"
+          return 1
+      def write(self, b):
+          self.reinit()
+          return len(b)
+  raw = Raw()
+  if sys.argv[1] == "read":
+      f = io.BufferedReader(raw, 3)
+      raw.buf = f
+      print(f.read(10))
+  else:
+      f = io.BufferedWriter(raw, 5)
+      raw.buf = f
+      f.write(b"abcdefghij")
+  print("survived")
+  '''
+  out = {}
+  for which in ("read", "write"):
+      try:
+          p = subprocess.run([sys.executable, "-c", child, which], capture_output=True, text=True, timeout=10)
+          out[which] = p.returncode
+      except subprocess.TimeoutExpired:
+          out[which] = "timeout"
+  print(out)
+  if out["read"] == -8 and out["write"] == "timeout":
+      print("REPRODUCED pyio-buffered-reentrant-init-size0")
+expected: |
+  The refused re-initialization leaves the running method alone (or is itself refused as a
+  re-entrant call); read(10) and write() complete or raise.
+observed: |
+  python3 3.15.2: read exits with SIGFPE (-8); write never returns (timeout). REPRODUCED.
+  main (python.exe 3.16.0a1+dev): identical. REPRODUCED.
+promised_by: |
+  Invariant: no crash or hang from pure Python code.
+cause: |
+  Modules/_io/bufferedio.c:1605 (reader) and :1961 (writer) store buffer_size before
+  `_buffered_init` refuses it at :841-845, and nothing checks `self->ok` again in the running method.
+  MINUS_LAST_BLOCK (:408-411) divides by buffer_size when buffer_mask is 0 (:1834 in
+  _bufferedreader_read_generic); `_io_BufferedWriter_write_impl` loops on
+  `remaining >= self->buffer_size` (:2186).
+possible_fix: |
+  Validate buffer_size before storing it in the constructors, and refuse re-initialization while the
+  object's lock is held (the fix proposed for pyio-buffered-reentrant-init-free).
+duplicates:
+  status: new
+  issues:
+    - {number: 154997, state: open, relation: "re-entrant detach(); different mutation", reason: "not a duplicate"}
+  queries: ["BufferedReader division by zero buffer_size", "BufferedWriter infinite loop buffer_size 0",
+            "MINUS_LAST_BLOCK division", "buffered __init__ buffer_size 0 crash", "SIGFPE BufferedReader",
+            "BufferedWriter write hangs reinit", "bugforge README: no bufferedio entries"]
+lean:
+  property: PyLean.PyIO.BufferedCNoCrash
+  theorem: PyLean.PyIO.bufferedCNoCrash_refuted_size0

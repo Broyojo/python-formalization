@@ -28,6 +28,28 @@ def bufferedEntries : List Entry := [
     status := .refuted, prop := ``BufferedCNoCrash, thm := some ``bufferedCNoCrash_refuted
     bug := some "pyio-buffered-reentrant-detach-crash"
     notes := "raw.closed, read by CHECK_CLOSED in read(1) before the lock, calls detach(): self->raw is NULL when _bufferedreader_raw_read calls readinto (SIGSEGV). Duplicate of gh-154997 (open)." },
+  { id := "pyio-buffered-c-no-crash-reinit", pyFile := "Modules/_io/bufferedio.c"
+    pyFns := ["_buffered_init", "_io_BufferedReader___init___impl", "_io__Buffered_read_impl",
+      "_bufferedreader_read_generic", "_bufferedreader_fill_buffer"]
+    statement := "No sequence of operations on io.BufferedReader, BufferedWriter or BufferedRandom over a raw stream written in Python kills the interpreter, whatever the raw answers and whatever it calls back into (here: __init__)."
+    source := "invariant: no crash from pure Python code"
+    status := .refuted, prop := ``BufferedCNoCrash, thm := some ``bufferedCNoCrash_refuted_reinit
+    bug := some "pyio-buffered-reentrant-init-free"
+    notes := "raw.readinto, called by read(1) under the lock, calls buf.__init__(raw, 8): _buffered_init (:846-860) frees the buffer and lock the read holds and makes a free new lock; the read's LEAVE_BUFFERED unlocks it and PyMutex_Unlock aborts. reinit_unlocked_ok: the same __init__ from CHECK_CLOSED, before the lock, is harmless (both measured on 3.15.2)." },
+  { id := "pyio-buffered-c-no-crash-init-size0", pyFile := "Modules/_io/bufferedio.c"
+    pyFns := ["_bufferedreader_read_generic", "_io_BufferedReader___init___impl", "_buffered_init"]
+    statement := "No sequence of operations on io.BufferedReader, BufferedWriter or BufferedRandom over a raw stream written in Python kills the interpreter (here: a re-entered __init__ with buffer_size 0)."
+    source := "invariant: no crash from pure Python code"
+    status := .refuted, prop := ``BufferedCNoCrash, thm := some ``bufferedCNoCrash_refuted_size0
+    bug := some "pyio-buffered-reentrant-init-size0"
+    notes := "raw.readinto, called by read(10) on a reader of size 3, calls buf.__init__(raw, 0): :1605 stores buffer_size 0 before :841 refuses it, and MINUS_LAST_BLOCK (:408-411, buffer_mask 0) divides by it: SIGFPE (measured on 3.15.2 and main)." },
+  { id := "pyio-buffered-c-no-hang", pyFile := "Modules/_io/bufferedio.c"
+    pyFns := ["_io_BufferedWriter_write_impl", "_io_BufferedWriter___init___impl", "_buffered_init"]
+    statement := "No sequence of operations on io.BufferedReader, BufferedWriter or BufferedRandom blocks the thread forever, whatever the raw stream answers and calls back into."
+    source := "invariant: no hang"
+    status := .refuted, prop := ``BufferedCNoHang, thm := some ``bufferedCNoHang_refuted
+    bug := some "pyio-buffered-reentrant-init-size0"
+    notes := "raw.write, called by write(10 bytes) on a writer of size 5, calls buf.__init__(raw, 0): buffer_size becomes 0 and `while (remaining >= self->buffer_size)` (:2186) calls raw.write(b'') forever (measured on 3.15.2 and main)." },
   { id := "pyio-bufferedreader-no-uninit", pyFile := "Modules/_io/bufferedio.c"
     pyFns := ["_buffered_init", "_io__Buffered_peek_impl", "_bufferedreader_peek_unlocked",
       "_bufferedreader_fill_buffer", "_bufferedreader_raw_read"]
@@ -80,10 +102,10 @@ def bufferedEntries : List Entry := [
     notes := "seekable() returning 1, asked first by both: iobase.c:413-428 refuses it, _pyio.py:1426 (raw._checkSeekable, :430-435) accepts it." },
   { id := "pyio-buffered-raw-read-checks", pyFile := "Modules/_io/bufferedio.c"
     pyFns := ["_bufferedreader_raw_read", "_PyIO_trap_eintr"]
-    statement := "_bufferedreader_raw_read never reports a count outside [0, len] except -2 for None and stores no more than it reports, for every raw answer, state and re-entry handler; an int answer v is the count when 0 <= v <= len and is refused with OSError 'raw readinto() returned invalid length' otherwise; an exception that is an OSError with errno EINTR is retried with the same arguments and every other exception (InterruptedError('x') without errno included) propagates unchanged."
+    statement := "_bufferedreader_raw_read never reports a count outside [0, len] except -2 for None and stores no more than it reports, for every raw answer, state and re-entry handler; an int answer v is the count when 0 <= v <= len and is refused with OSError 'raw readinto() returned invalid length' otherwise; an exception that is an instance of OSError (by its class's MRO, so for every class hierarchy) with errno EINTR is retried with the same arguments and every other exception (InterruptedError('x') without errno included) propagates unchanged."
     source := "invariant: what is copied out of the buffer was counted as read (bufferedio.c:1661-1666, :1639-1641, :878-901)"
     status := .proven, prop := ``RawReadChecks, thm := some ``rawReadChecks_proven
-    notes := "Measured on 3.15.2: InterruptedError('x') propagates, PermissionError(EINTR, 'x') and InterruptedError(EINTR, 'x') are retried." },
+    notes := "Measured on 3.15.2: InterruptedError('x') and MyOSError('x') propagate; PermissionError, InterruptedError, FileExistsError, ConnectionResetError, io.UnsupportedOperation and a user OSError subclass with errno EINTR are retried. The exception's class is given by its MRO (RStep.raise), so the statement quantifies over every hierarchy." },
   { id := "pyio-buffered-raw-write-checks", pyFile := "Modules/_io/bufferedio.c"
     pyFns := ["_bufferedwriter_raw_write"]
     statement := "_bufferedwriter_raw_write never reports a count outside [0, len(b)] except -2 for None, for every raw answer, state and re-entry handler; an int answer is the count when in range and is refused with OSError 'raw write() returned invalid length' otherwise, with -1 for an int too large for Py_ssize_t."
@@ -91,7 +113,7 @@ def bufferedEntries : List Entry := [
     status := .proven, prop := ``RawWriteChecks, thm := some ``rawWriteChecks_proven },
   { id := "pyio-buffered-lock-discipline", pyFile := "Modules/_io/bufferedio.c"
     pyFns := ["_enter_buffered_busy"]
-    statement := "Over the bodies of every method of BufferedReader, BufferedWriter and BufferedRandom, for every state, raw stream and re-entered call: a call ends with the lock as it found it unless the process died, so a call made with the lock free leaves it free on every path; and close(), or write() on a writer, made while this thread holds the lock is refused with RuntimeError('reentrant call inside <_io.Buffered...>') and changes nothing."
+    statement := "Over the bodies of every method of BufferedReader, BufferedWriter and BufferedRandom, __init__ included, for every state, raw stream and re-entered call: a call ends with the same lock, held or not as it found it, unless the process died or __init__ replaced it by a new free lock; a call made with the lock free leaves it free unless the process died; and close(), or write() on a writer, made while this thread holds the lock is refused with RuntimeError('reentrant call inside <_io.Buffered...>') and changes nothing."
     source := "invariant: the lock serializes and a failure never leaves it held (bufferedio.c:294-338)"
     status := .proven, prop := ``LockDiscipline, thm := some ``lockDiscipline_proven
     notes := "Proved compositionally over every method body (BufLock.lean, Keeps), with re-entered calls run by stepC. Scope: one thread and no interpreter finalization, so the timed acquire and fatal error of :305-325 are not modelled." }

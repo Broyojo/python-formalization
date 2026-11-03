@@ -88,6 +88,5 @@ duplicates:
             "bufferedio reinit crash", "BufferedReader __init__ called again", "__init__ twice io",
             "gh issue view 154997 (detach only)", "bugforge README: only shlex 'buffered' entries, unrelated"]
 lean:
-  property: null
-  theorem: null
-  note: "Not yet a Lean refutation: the BufC model has no re-entrant __init__ operation (review finding); add it and refute BufferedCNoCrash through it."
+  property: PyLean.PyIO.BufferedCNoCrash
+  theorem: PyLean.PyIO.bufferedCNoCrash_refuted_reinit

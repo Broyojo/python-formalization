@@ -119,7 +119,7 @@ def rawRead (n : Nat) (viaSelf : Bool := true) : PM (Option (List Nat)) := do
   let res ← if viaSelf then onRaw "read" (.readinto n) (fun r => r.readinto n)
     else onRawObj (.readinto n) (fun r => r.readinto n)
   match res with
-  | .exc e _ => thr e
+  | .exc e _ _ => thr e
   | .none => pure none
   | .data d => pure (some d)
   | .count _ => pure (some [])
@@ -203,8 +203,9 @@ def flushLoop : Nat → PM Unit
     if s.writeBuf = [] then pure () else
     let res ← onRaw "write" (.write s.writeBuf) (fun r => r.write s.writeBuf)
     match res with
-    | .exc e _ =>
-      if e.className == "BlockingIOError" then
+    | .exc e _ mro =>
+      -- `except BlockingIOError:` matches subclasses too
+      if mro.contains "BlockingIOError" then
         thr (.named "RuntimeError" "self.raw should implement RawIOBase: it should not raise BlockingIOError")
       else thr e
     | .none => thr (.named "BlockingIOError" "write could not complete without blocking|0")
@@ -297,7 +298,7 @@ def readintoLoop (len : Nat) (one : Bool) : Nat → Int → List Nat → PM (Int
         let k := len - written.toNat
         let res ← onRaw "readinto" (.readinto k) (fun r => r.readinto k)
         match res with
-        | .exc e _ => thr e
+        | .exc e _ _ => thr e
         | .none | .count 0 | .data [] => pure (written, out)
         | .count _ => pure (written, out)
         | .wrong => thr (.typeError "unsupported operand type(s) for +=: 'int' and 'str'")
@@ -551,9 +552,9 @@ def detach : PM Val := do
   mod fun s => { s with detached := true }
   pure .none
 
-/-- The constructors, _pyio.py:1049-1060, :1247-1256, :1425-1428. -/
-def init (kind : Nat) (raw : Raw) (size : Int) : PM Unit := do
-  put ⟨raw, false, kind, 0, [], 0, [], false, false, false⟩
+/-- The constructors, _pyio.py:1049-1060, :1247-1256, :1425-1428, on the object as it
+is: `__init__` may run again on one in use. -/
+def init (kind : Nat) (size : Int) : PM Unit := do
   -- `raw._checkSeekable()`, _pyio.py:1426 and :430-435: `if not self.seekable()`
   if kind = 2 then
     let a ← inquiryObj .seekable Raw.canSeek
@@ -561,12 +562,17 @@ def init (kind : Nat) (raw : Raw) (size : Int) : PM Unit := do
   if kind = 0 ∨ kind = 2 then
     let a ← inquiryObj .readable Raw.canRead
     if !a.truthy then thr (osError "\"raw\" argument must be readable.")
+    mod fun s => { s with detached := false }
     if size ≤ 0 then thr (.valueError "invalid buffer size")
+    -- :1058-1060: a new read buffer and a new `_read_lock`
+    mod fun s => { s with size := size.toNat, readBuf := [], readPos := 0, rl := false }
   if kind = 1 ∨ kind = 2 then
     let a ← inquiryObj .writable Raw.canWrite
     if !a.truthy then thr (osError "\"raw\" argument must be writable.")
+    mod fun s => { s with detached := false }
     if size ≤ 0 then thr (.valueError "invalid buffer size")
-  mod fun s => { s with size := size.toNat }
+    -- :1254-1256: a new write buffer and a new `_write_lock`
+    mod fun s => { s with size := size.toNat, writeBuf := [], wl := false }
 
 end BP2
 
