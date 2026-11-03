@@ -160,7 +160,7 @@ def addFilter (it : FItem) (append : Bool) (s : FState) : Py FState := do
         -- `__eq__` is taken for "not in the list"
         let r ← match pyRemove it xs with
           | .ok r => pure (r.getD xs)
-          | .error e => if e.className = "ValueError" then pure xs else .error e
+          | .error e => if isA e "ValueError" then pure xs else .error e
         pure (Cont.list (.item it :: r))
       else do
         if ← pyContains it xs then pure (Cont.list xs) else pure (Cont.list (xs ++ [.item it]))

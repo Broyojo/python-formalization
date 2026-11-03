@@ -14,12 +14,14 @@ def pFnShow (s : String) : Option Fn :=
   match s with
   | "orig" => some .showOrig
   | "user" => some (.user 1)
+  | "userraise" => some (.userRaises 1 (.valueError "hook failed"))
   | "noncallable" => some .noncallable
   | _ => none
 
 def pFnImpl (s : String) : Fn :=
   match s with
   | "user" => .user 2
+  | "userraise" => .userRaises 2 (.valueError "hook failed")
   | "noncallable" => .noncallable
   | _ => .implOrig
 
@@ -93,6 +95,7 @@ def runCtx (j : Json) : Except String Json := do
     | "none" => none
     | "oserr" => some (.error (.named "OSError" "write failed"))
     | "keyerr" => some (.error (.keyError "'write failed'"))
+    | "brokenpipe" => some (.error (.named "BrokenPipeError" "write failed"))
     | _ => some (.ok ())
   let sw := pFnShow (← (← j.getObjVal? "show").getStr?)
   let im := pFnImpl (← (← j.getObjVal? "impl").getStr?)
@@ -109,12 +112,14 @@ def runCtx (j : Json) : Except String Json := do
     | none => jStr "deleted"
     | some .showOrig => jStr "orig"
     | some (.user _) => jStr "user"
+    | some (.userRaises _ _) => jStr "userraise"
     | some .noncallable => jStr "noncallable"
     | some _ => jStr "other"
   let (seen, impk) : Array Ref × Json := match st.showImpl with
     | .implOrig => (R.seen, jStr "orig")
     | .noncallable => (R.seen, jStr "noncallable")
     | .logAppend l => let (s, n) := seqId R.seen l; (s, Json.arr #["log", toJson n])
+    | .userRaises _ _ => (R.seen, jStr "userraise")
     | _ => (R.seen, jStr "user")
   let logs := seen.toList.map fun l => Json.arr ((st.logs l).map (fun m => jStr (toString m))).toArray
   let final := Json.arr #[Json.arr ((getFilters use st).map jElem).toArray, jBool (st.filters == some 0),

@@ -289,26 +289,29 @@ theorem recordCaptures_proven : RecordCaptures := by
 /-! ## Showing a warning -/
 
 /-- `_showwarnmsg` (:217-233) and `_showwarnmsg_impl` (:133-150): a replaced `showwarning` is
-called instead of the implementation (and a non-callable one raises `TypeError`); the original or
-a deleted `showwarning` goes to `_showwarnmsg_impl`, which outside record mode writes the text to
-`sys.stderr`: lost when `sys.stderr` is `None` or the write raises `OSError`, written when it
-succeeds, and any other exception from the write propagates. -/
+called instead of the implementation, and an exception it raises propagates (:230-231); a
+non-callable one raises `TypeError`; the original or a deleted `showwarning` goes to
+`_showwarnmsg_impl`, which outside record mode writes the text to `sys.stderr`: lost when
+`sys.stderr` is `None` or the write raises `OSError` or a subclass (`except OSError`, :146-150),
+written when it succeeds, and any other exception from the write propagates. -/
 def ShowDispatch : Prop :=
   ∀ (useCtx : Bool) (m : Nat) (st : MState),
     (∀ i, st.showwarning = some (.user i) → showwarnmsg useCtx m st = .ok { st with out := st.out ++ [.hook i] }) ∧
+    (∀ i e, st.showwarning = some (.userRaises i e) → showwarnmsg useCtx m st = .error e) ∧
     (st.showwarning = some .noncallable → ∃ e, showwarnmsg useCtx m st = .error e ∧ e.className = "TypeError") ∧
     ((st.showwarning = some .showOrig ∨ st.showwarning = none) → st.showImpl = .implOrig →
       ctxLog st (getContext useCtx st) = none → st.formatwarning = some .fmtOrig →
       (st.stderr = none → showwarnmsg useCtx m st = .ok { st with out := st.out ++ [.lost] }) ∧
       (st.stderr = some (.ok ()) → showwarnmsg useCtx m st = .ok { st with out := st.out ++ [.written] }) ∧
-      (∀ e, st.stderr = some (.error e) → e.className = "OSError" →
+      (∀ e, st.stderr = some (.error e) → isA e "OSError" = true →
         showwarnmsg useCtx m st = .ok { st with out := st.out ++ [.lost] }) ∧
-      (∀ e, st.stderr = some (.error e) → e.className ≠ "OSError" → showwarnmsg useCtx m st = .error e))
+      (∀ e, st.stderr = some (.error e) → isA e "OSError" = false → showwarnmsg useCtx m st = .error e))
 
 theorem showDispatch_proven : ShowDispatch := by
   intro useCtx m st
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
   · intro i h; simp [showwarnmsg, h]
+  · intro i e h; simp [showwarnmsg, h]
   · intro h; exact ⟨_, by simp [showwarnmsg, h]; rfl, rfl⟩
   · intro hsw himpl hlog hfmt
     have hcall : showwarnmsg useCtx m st = writeOut st := by
@@ -319,6 +322,71 @@ theorem showDispatch_proven : ShowDispatch := by
     · intro h; simp [writeOut, h, hfmt]
     · intro e h he; simp [writeOut, h, hfmt, he]
     · intro e h he; simp [writeOut, h, hfmt, he]
+
+/-- `BrokenPipeError` is an `OSError`: a `sys.stderr` whose `write` raises it loses the warning. -/
+theorem brokenPipe_isOSError : isA (.named "BrokenPipeError" "x") "OSError" = true := by decide
+
+/-! ## A nested `catch_warnings` inside a recording one -/
+
+/-- A `catch_warnings()` inside a `catch_warnings(record=True)` still records into the outer list,
+in both modes: with contexts `_Context.copy` passes the log on (:59-60); without, the inner
+`__enter__` leaves `_showwarnmsg_impl` (the outer `log.append`) alone. For an outer object whose
+`__enter__` succeeds with a log (and, with contexts, the module's own `_showwarnmsg_impl`), every
+inner `catch_warnings` with no action and no record that enters, and every warning shown through
+`_showwarnmsg` then. -/
+def NestedRecord : Prop :=
+  ∀ (useCtx : Bool) (cw : CW) (st : MState) cw' st1 l (name : String) (om : Option String) cat ln ap
+    (m : Nat),
+    cw.record = true → (useCtx = true → st.showImpl = .implOrig) → cw.filter = none →
+    cwEnter useCtx cw st = (cw', st1, .ok (some l)) →
+    ∃ cw2 st2, cwEnter useCtx (cwInit name false om none cat ln ap) st1 = (cw2, st2, .ok none) ∧
+      ∃ st3, showwarnmsg useCtx m st2 = .ok st3 ∧ st3.logs l = st2.logs l ++ [m]
+
+theorem nestedRecord_proven : NestedRecord := by
+  intro useCtx cw st cw' st1 l name om cat ln ap m hrec himpl hnf hen
+  unfold cwEnter at hen
+  split at hen
+  · simp at hen
+  · cases useCtx
+    · cases hf : st.filters with
+      | none => simp [hf] at hen
+      | some r =>
+        cases hsw : st.showwarning with
+        | none => simp [hf, hsw] at hen
+        | some sw =>
+          simp only [hf, hsw, hrec, hnf, if_true, Bool.false_eq_true, if_false] at hen
+          simp only [Prod.mk.injEq] at hen
+          obtain ⟨_, hst, hl⟩ := hen
+          simp only [Except.ok.injEq, Option.some.injEq] at hl
+          subst hst hl
+          refine ⟨_, _, rfl, ?_⟩
+          simp [showwarnmsg, callImpl, upd]
+    · cases hsw : st.showwarning with
+      | none => simp [hsw, newContext] at hen
+      | some sw =>
+        simp only [newContext, hsw, hrec, hnf, if_true] at hen
+        simp only [Prod.mk.injEq] at hen
+        obtain ⟨_, hst, hl⟩ := hen
+        simp only [Except.ok.injEq, Option.some.injEq] at hl
+        subst hst hl
+        have hi := himpl rfl
+        refine ⟨_, _, rfl, ?_⟩
+        simp [showwarnmsg, callImpl, hi, showImplOrig, getContext, ctxLog, upd, newContext]
+
+/-! ## `__exit__` of an object never entered -/
+
+/-- `__exit__` of a `catch_warnings` that was never entered raises `RuntimeError` naming it
+(:728-729) and changes nothing, in both modes; its `repr` (:689-696) is the class name with
+`record=True` when recording (the module is the `warnings` module). -/
+def ExitNotEntered : Prop :=
+  ∀ (useCtx : Bool) (name : String) (record : Bool) (action : Option ActA) cat ln ap (st : MState),
+    cwExit useCtx (cwInit name record none action cat ln ap) st =
+      (st, .error (.named "RuntimeError"
+        s!"Cannot exit {s!"{name}({if record then "record=True" else ""})"} without entering first"))
+
+theorem exitNotEntered_proven : ExitNotEntered := by
+  intro useCtx name record action cat ln ap st
+  cases record <;> rfl
 
 /-! ## The list C searches against `_get_filters()` -/
 

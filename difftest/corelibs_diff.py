@@ -9985,6 +9985,8 @@ class warn_Other:
             raise KeyError("eq")
         if self.r == "verr":
             raise ValueError("eq")
+        if self.r == "uerr":
+            raise UnicodeError("eq")
         return self.r == "t"
 
     __hash__ = object.__hash__
@@ -10052,7 +10054,7 @@ warn_STRS = ["", "a", "x.*", "(", "a{4294967296}", "[", "__main__", "mod"]
 
 def warn_gen_elem(rng):
     if rng.random() < .15:
-        return ["o", rng.randrange(3), rng.choice(["t", "f", "f", "raise", "verr"])]
+        return ["o", rng.randrange(3), rng.choice(["t", "f", "f", "raise", "verr", "uerr"])]
     rx = (lambda ci: None if rng.random() < .6 else [rng.choice(["a", "x.*", "__main__"]), ci])
     return ["i", rng.choice(warn_ACTS), rx(True), rng.choice([0, 1, 3, 12]), rx(False), rng.choice([0, 0, 1, 2])]
 
@@ -10451,14 +10453,14 @@ def warn_gen_ctx(rng):
         elif r < .88:
             ops.append(["sf", warn_gen_act(rng), rng.choice([0, 1, 3]), ["i", 0], rng.random() < .3])
         elif r < .95:
-            ops.append(["setshow", rng.choice(["orig", "user", "noncallable", "deleted"])])
+            ops.append(["setshow", rng.choice(["orig", "user", "noncallable", "deleted", "userraise"])])
         else:
             ops.append(["repr", rng.randrange(ncw)])
     return {"fn": "warn.ctx", "use": rng.random() < .5,
             "filters": [warn_gen_elem(rng) for _ in range(rng.choice([0, 1, 2]))],
-            "show": rng.choice(["orig", "orig", "orig", "user", "noncallable", "deleted"]),
-            "impl": rng.choice(["orig", "orig", "orig", "user", "noncallable"]),
-            "stderr": rng.choice(["ok", "ok", "ok", "none", "oserr", "keyerr"]), "ops": ops}
+            "show": rng.choice(["orig", "orig", "orig", "user", "noncallable", "deleted", "userraise"]),
+            "impl": rng.choice(["orig", "orig", "orig", "user", "noncallable", "userraise"]),
+            "stderr": rng.choice(["ok", "ok", "ok", "none", "oserr", "keyerr", "brokenpipe"]), "ops": ops}
 
 
 def warn_run_ctx(case):
@@ -10473,7 +10475,9 @@ def warn_run_ctx1(case):
     mod.showwarning, mod._showwarnmsg_impl = orig_show, orig_impl
     warn_PYG["_use_context"] = case["use"]
     shown = []
-    hooks = {"user": lambda *a: shown.append(["hook", 1]), "noncallable": 5}
+    def raising_hook(*a):
+        raise ValueError("hook failed")
+    hooks = {"user": lambda *a: shown.append(["hook", 1]), "noncallable": 5, "userraise": raising_hook}
     init = [warn_elem_mk(e) for e in case["filters"]]
     mod.filters = init
     if case["show"] == "deleted":
@@ -10482,11 +10486,13 @@ def warn_run_ctx1(case):
         mod.showwarning = hooks[case["show"]]
     if case["impl"] == "user":
         mod._showwarnmsg_impl = lambda m: shown.append(["hook", 2])
+    elif case["impl"] == "userraise":
+        mod._showwarnmsg_impl = raising_hook
     elif case["impl"] == "noncallable":
         mod._showwarnmsg_impl = 5
     err = warn_io.StringIO()
     sys.stderr = {"ok": err, "none": None, "oserr": warn_ErrFile(OSError),
-                  "keyerr": warn_ErrFile(KeyError)}[case["stderr"]]
+                  "keyerr": warn_ErrFile(KeyError), "brokenpipe": warn_ErrFile(BrokenPipeError)}[case["stderr"]]
     v0 = warn_cver()
     cws, logs, outs = [], [], []
 
@@ -10551,9 +10557,11 @@ def warn_run_ctx1(case):
                 outs.append(["exc", type(e).__name__, str(e)])
         sw = getattr(mod, "showwarning", warn_SENT)
         swk = ("deleted" if sw is warn_SENT else "orig" if sw is mod._showwarning_orig else
-               "user" if sw is hooks["user"] else "noncallable" if sw is hooks["noncallable"] else "other")
+               "user" if sw is hooks["user"] else "noncallable" if sw is hooks["noncallable"] else
+               "userraise" if sw is raising_hook else "other")
         imp = mod._showwarnmsg_impl
         impk = ("orig" if imp is orig_impl else "noncallable" if isinstance(imp, int) else
+                "userraise" if imp is raising_hook else
                 ["log", logid(imp.__self__)] if isinstance(getattr(imp, "__self__", None), list) else "user")
         final = [[warn_elem_enc(e) for e in mod._get_filters()], mod.filters is init, swk, impk,
                  warn_cver() - v0, [[str(getattr(x, "message", x)) for x in lg] for lg in logs]]

@@ -222,6 +222,61 @@ def noModAttr (a : String) : PyExc := .named "AttributeError" s!"module 'warning
 def unhashableErr (tp : String) : PyExc :=
   .typeError s!"cannot use '{tp}' as a set element (unhashable type: '{tp}')"
 
+/-- The base class of a builtin exception class (Objects/exceptions.c), by name: `except C:`
+catches `C` and its subclasses. Classes not listed (user classes) have no known base here. -/
+def excBase : String → Option String
+  | "BrokenPipeError" | "ConnectionAbortedError" | "ConnectionRefusedError" | "ConnectionResetError" =>
+    some "ConnectionError"
+  | "ConnectionError" | "BlockingIOError" | "ChildProcessError" | "FileExistsError" | "FileNotFoundError"
+  | "InterruptedError" | "IsADirectoryError" | "NotADirectoryError" | "PermissionError"
+  | "ProcessLookupError" | "TimeoutError" => some "OSError"
+  | "UnicodeDecodeError" | "UnicodeEncodeError" | "UnicodeTranslateError" => some "UnicodeError"
+  | "UnicodeError" => some "ValueError"
+  | "ModuleNotFoundError" => some "ImportError"
+  | "KeyError" | "IndexError" => some "LookupError"
+  | "OverflowError" | "ZeroDivisionError" | "FloatingPointError" => some "ArithmeticError"
+  | "RecursionError" | "NotImplementedError" | "PythonFinalizationError" => some "RuntimeError"
+  | "OSError" | "ValueError" | "ImportError" | "LookupError" | "ArithmeticError" | "RuntimeError"
+  | "TypeError" | "AttributeError" | "NameError" | "AssertionError" | "SystemError" | "Warning" =>
+    some "Exception"
+  | "UnboundLocalError" => some "NameError"
+  | _ => none
+
+/-- Whether class `c` is `base` or a subclass (the chains above are at most five long). -/
+def excIsA (c base : String) : Bool :=
+  let rec go : Nat → String → Bool
+    | 0, _ => false
+    | n + 1, k => k == base || match excBase k with
+      | some p => go n p
+      | none => false
+  go 6 c
+
+/-- `except base:` for an exception. -/
+def isA (e : PyExc) (base : String) : Bool := excIsA e.className base
+
+/-- An attribute of the `warnings` module as `PyObject_GetOptionalAttr` finds it: there, missing
+(an `AttributeError`, which it clears), or a lookup that raises something else. -/
+inductive AttrR (α : Type) where
+  | found (a : α)
+  | missing
+  | raises (e : PyExc)
+
+/-- `get_warnings_attr(interp, attr, try_import)`, _warnings.c:224-256: with `try_import` (and the
+interpreter not finalizing) `import warnings`, whose `ImportError` (or subclass) is cleared;
+otherwise `sys.modules['warnings']`, which may be absent; then the attribute. `.ok none` is `NULL`
+with no error set. -/
+def getWarningsAttr {α : Type} (tryImport : Bool) (importW : Py Unit) (inSysModules : Bool)
+    (attr : AttrR α) : Py (Option α) :=
+  let lookup : Py (Option α) := match attr with
+    | .found a => .ok (some a)
+    | .missing => .ok none
+    | .raises e => .error e
+  if tryImport then
+    match importW with
+    | .error e => if isA e "ImportError" then .ok none else .error e
+    | .ok () => lookup
+  else if inSysModules then lookup else .ok none
+
 def intMax : Int := 2 ^ 31 - 1
 def longMax : Int := 2 ^ 63 - 1
 
@@ -239,11 +294,22 @@ def pyShow (E : Env) (c : Call) : Py Bool := do
 (:669-736, which prints and clears every error), not callable raises, a missing `WarningMessage`
 raises, else `WarningMessage(...)` and the call. -/
 def cShow (E : Env) : Py Bool :=
-  match E.shw with
-  | .call wm fn => do wm; fn; return true
-  | .noncallable _ => .error (.typeError "warnings._showwarnmsg() must be set to a callable")
-  | .deleted => .ok true
-  | .noWM => .error (.named "RuntimeError" "unable to get warnings.WarningMessage")
+  -- `GET_WARNINGS_ATTR(interp, _showwarnmsg, 1)`, :749
+  match getWarningsAttr true (.ok ()) true (match E.shw with | .deleted => .missing | _ => .found ()) with
+  | .error e => .error e
+  | .ok none => .ok true
+  | .ok (some ()) =>
+    match E.shw with
+    | .noncallable _ => .error (.typeError "warnings._showwarnmsg() must be set to a callable")
+    | s =>
+      -- `GET_WARNINGS_ATTR(interp, WarningMessage, 0)`, :763
+      match getWarningsAttr false (.ok ()) true (match s with | .noWM => .missing | _ => .found ()) with
+      | .error e => .error e
+      | .ok none => .error (.named "RuntimeError" "unable to get warnings.WarningMessage")
+      | .ok (some ()) =>
+        match s with
+        | .call wm fn => do wm; fn; return true
+        | _ => .ok true
 
 /-! ## The Python twin, Lib/_py_warnings.py -/
 
@@ -459,10 +525,15 @@ def cListName (K : WCfg) : Py String :=
 
 /-- `get_default_action`, :430-455: a deleted `defaultaction` falls back to the str read last. -/
 def cDefault (K : WCfg) : Py String :=
-  match K.dflt with
-  | .deleted s => .ok s
-  | .val (.str s) => .ok s
-  | .val _ => .error dfltTypeErr
+  -- `GET_WARNINGS_ATTR(interp, defaultaction, 0)`, :437
+  match getWarningsAttr false (.ok ()) true (match K.dflt with | .deleted _ => .missing | .val a => .found a) with
+  | .error e => .error e
+  | .ok none => match K.dflt with
+    | .deleted s => .ok s
+    | .val (.str s) => .ok s
+    | .val _ => .error dfltTypeErr
+  | .ok (some (.str s)) => .ok s
+  | .ok (some _) => .error dfltTypeErr
 
 /-- `already_warned`, :600-649: `(error left set, warned, registry)`. A `'version'` that is not an
 exact int is stale; one outside C long makes `PyLong_AsLong` return -1 with `OverflowError` set,

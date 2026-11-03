@@ -78,7 +78,7 @@ theorem addFilter_ver (it : FItem) (ap : Bool) (s s' : FState) (h : addFilter it
           Except.ok.injEq] at h
         rw [← h]
       | error e =>
-        by_cases hv : e.className = "ValueError"
+        by_cases hv : isA e "ValueError" = true
         · simp only [hc, hr, hv, if_true, bind, Except.bind, pure, Except.pure, Bool.not_false,
             Except.ok.injEq] at h
           rw [← h]
@@ -254,16 +254,21 @@ def ResetSpec : Prop :=
 theorem resetSpec_proven : ResetSpec :=
   ⟨fun _ _ => rfl, fun _ _ => ⟨_, rfl, rfl⟩, fun _ => rfl⟩
 
-/-- `try: filters.remove(item) except ValueError: pass` (:326-329) also catches a `ValueError` that
-an element's `__eq__` raises: the remove stops there, the new item goes in front anyway, and the
-elements (the raising one included) stay. Stated for a list whose first element raises. -/
+/-- `try: filters.remove(item) except ValueError: pass` (:326-329) also catches a `ValueError` (or
+any subclass, such as `UnicodeError`) that an element's `__eq__` raises: the remove stops there,
+the new item goes in front anyway, and the elements (the raising one included) stay; any other
+exception propagates and changes nothing. Stated for a list whose first element raises. -/
 def AddFilterValueError : Prop :=
-  ∀ it id msg xs v, addFilter it false ⟨.list (.other id (.error (.valueError msg)) :: xs), v⟩ =
-    .ok ⟨.list (.item it :: .other id (.error (.valueError msg)) :: xs), v + 1⟩
+  ∀ it id e xs v,
+    (isA e "ValueError" = true → addFilter it false ⟨.list (.other id (.error e) :: xs), v⟩ =
+      .ok ⟨.list (.item it :: .other id (.error e) :: xs), v + 1⟩) ∧
+    (isA e "ValueError" = false → addFilter it false ⟨.list (.other id (.error e) :: xs), v⟩ = .error e)
 
 theorem addFilterValueError_proven : AddFilterValueError := by
-  intro it id msg xs v
-  simp [addFilter, pyRemove, elemEq, bind, Except.bind, pure, Except.pure, PyExc.className]
+  intro it id e xs v
+  constructor
+  · intro h; simp [addFilter, pyRemove, elemEq, bind, Except.bind, pure, Except.pure, h]
+  · intro h; simp [addFilter, pyRemove, elemEq, bind, Except.bind, pure, Except.pure, h]
 
 /-! ## The version -/
 

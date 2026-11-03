@@ -118,7 +118,7 @@ module name, for which `__import__` raises `ValueError`, is the refuted case), `
 raises only `re.PatternError`, the same with or without `re.I`. -/
 def OptEnvOk (E : OEnv) : Prop :=
   (∀ m k e, E.imp m k = .error e → isImportErr e = true) ∧
-  (∀ m k e, E.getattr m k = .error e → e.className = "AttributeError") ∧
+  (∀ m k e, E.getattr m k = .error e → isA e "AttributeError" = true) ∧
   (∀ m k, E.getattr m k ≠ .ok .nonclass) ∧
   (∀ m k i, E.getattr m k = .ok (.cls i) → E.fenv.isType i = true) ∧
   E.fenv.isType E.warning = true ∧ E.fenv.isWarn E.warning = true ∧

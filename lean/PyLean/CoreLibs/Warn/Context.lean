@@ -38,6 +38,7 @@ inductive Fn where
   | fmtOrig
   | logAppend (log : Ref)
   | user (id : Nat)
+  | userRaises (id : Nat) (e : PyExc)
   | noncallable
   deriving DecidableEq, Repr
 
@@ -143,7 +144,7 @@ def writeOut (st : MState) : Py MState :=
     match w with
     | .ok () => .ok { st with out := st.out ++ [.written] }
     | .error e =>
-      if e.className == "OSError" then .ok { st with out := st.out ++ [.lost] } else .error e
+      if isA e "OSError" then .ok { st with out := st.out ++ [.lost] } else .error e
 
 /-- `_showwarnmsg_impl(msg)`, :133-150: the context's log, if any, takes it
 (`_record_warning`, :63-64). -/
@@ -158,6 +159,7 @@ def callImpl (useCtx : Bool) (msg : Nat) (st : MState) : Py MState :=
   | .implOrig => showImplOrig useCtx msg st
   | .logAppend l => .ok { st with logs := upd st.logs l (st.logs l ++ [msg]), out := st.out ++ [.logged l] }
   | .user i => .ok { st with out := st.out ++ [.hook i] }
+  | .userRaises _ e => .error e
   | .noncallable => .error (.typeError "'int' object is not callable")
   -- `showwarning` itself is a valid `_showwarnmsg_impl` only through `showwarning(...)`'s
   -- arguments; the other originals are not message hooks
@@ -170,6 +172,8 @@ def showwarnmsg (useCtx : Bool) (msg : Nat) (st : MState) : Py MState :=
   | none | some .showOrig => callImpl useCtx msg st
   | some .noncallable => .error (.typeError "warnings.showwarning() must be set to a function or method")
   | some (.user i) => .ok { st with out := st.out ++ [.hook i] }
+  -- `sw(msg.message, ...)` raising: the exception propagates, :230-231
+  | some (.userRaises _ e) => .error e
   | some _ => .error (.typeError "~takes positional arguments")
 
 /-! ## `catch_warnings` -/
