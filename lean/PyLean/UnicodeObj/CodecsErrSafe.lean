@@ -48,13 +48,27 @@ theorem checkType_err (H : Hier) (e : ExcObj) (s : String) (x : HErr) (h : check
 
 /-! ## What a handler may raise, and where it may stop -/
 
-/-- The exceptions a standard handler raises: its argument (whose class then has the exception
-flag), a `TypeError`, the failure to load `unicodedata`'s C API, or the UTF-8 encoder's error on the
-`encoding` attribute. Never anything internal. -/
-def ErrOk (H : Hier) (capi : Except PyExc (Nat → Option Str)) (e : ExcObj) : HErr → Prop
+/-- The exceptions a handler body raises before `_PyErr_SetObject`'s normalization step: a
+call of `PyErr_SetObject(type(exc), exc)` with a class that has the exception flag, a
+`TypeError`, the failure to load `unicodedata`'s C API, or the UTF-8 encoder's error on the
+`encoding` attribute. -/
+def ErrOkRaw (H : Hier) (capi : Except PyExc (Nat → Option Str)) (e : ExcObj) : HErr → Prop
   | .reraise => H.excFlag e.cls = true
+  | .normalize => False
   | .exc x => x.className = "TypeError" ∨ capi = .error x ∨
       ∃ enc, e.encoding = .str enc ∧ utf8Encode enc .strict = .error x
+
+/-- The exceptions a standard handler raises: its argument (when its class has the exception
+flag and `issubclass(cls, cls)` holds), the normalized `type(exc)(exc)` (when that `issubclass`
+is false), what the metaclass's `__subclasscheck__` raised, a `TypeError`, the failure to load
+`unicodedata`'s C API, or the UTF-8 encoder's error on the `encoding` attribute. Never anything
+internal. -/
+def ErrOk (H : Hier) (capi : Except PyExc (Nat → Option Str)) (e : ExcObj) : HErr → Prop
+  | .reraise => H.excFlag e.cls = true ∧ H.subcheck e.cls = .ok true
+  | .normalize => H.subcheck e.cls = .ok false
+  | .exc x => x.className = "TypeError" ∨ capi = .error x ∨
+      (∃ enc, e.encoding = .str enc ∧ utf8Encode enc .strict = .error x) ∨
+      H.subcheck e.cls = .error x
 
 /-- A returned position lies inside the `object` attribute, and past the clipped `start` when
 the clipped range is not empty: the codec loop moves on. -/
@@ -64,13 +78,13 @@ def PosOk (e : ExcObj) (pos : Nat) : Prop :=
 
 def ResOk (H : Hier) (capi : Except PyExc (Nat → Option Str)) (e : ExcObj) : HPy Body → Prop
   | .ok b => PosOk e b.pos
-  | .error x => ErrOk H capi e x
+  | .error x => ErrOkRaw H capi e x
 
 /-- `unicodedata` names fit the 256-byte buffer of codecs.c:1091 (NAME_MAXLEN). -/
 def NamesFit (g : Nat → Option Str) : Prop := ∀ c n, g c = some n → n.length < 256
 
 theorem typeErr_ok (H : Hier) (capi) (e : ExcObj) (x : HErr) (h : ∃ m, x = .exc (.typeError m)) :
-    ErrOk H capi e x := by
+    ErrOkRaw H capi e x := by
   obtain ⟨m, rfl⟩ := h; left; rfl
 
 theorem resOk_params (H : Hier) (capi) (e : ExcObj) (ab : Bool) (f : Params → Body)
@@ -128,7 +142,7 @@ theorem ignore_resOk (H : Hier) (hH : HierOk H) (capi) (e : ExcObj) :
   · exact resOk_params H capi e false _ (fun p hp => posOk_stop e false p hp)
   · split
     · exact resOk_params H capi e true _ (fun p hp => posOk_stop e true p hp)
-    · simp [wrongType, raiseT, ResOk, ErrOk, PyExc.className]
+    · simp [wrongType, raiseT, ResOk, ErrOkRaw, PyExc.className]
 
 theorem replace_resOk (H : Hier) (capi) (e : ExcObj) :
     ResOk H capi e (replaceErrors H e) := by
@@ -148,12 +162,12 @@ theorem replace_resOk (H : Hier) (capi) (e : ExcObj) :
         | ok p => simp only [pure, Except.pure, ResOk]; exact posOk_stop e true p hp
     · split
       · exact resOk_params H capi e false _ (fun p hp => posOk_stop e false p hp)
-      · simp [wrongType, raiseT, ResOk, ErrOk, PyExc.className]
+      · simp [wrongType, raiseT, ResOk, ErrOkRaw, PyExc.className]
 
 theorem xml_resOk (H : Hier) (capi) (e : ExcObj) : ResOk H capi e (xmlCharRefReplaceErrors H e) := by
   unfold xmlCharRefReplaceErrors
   split
-  · simp [wrongType, raiseT, ResOk, ErrOk, PyExc.className]
+  · simp [wrongType, raiseT, ResOk, ErrOkRaw, PyExc.className]
   · exact resOk_params H capi e false _ (fun p hp => posOk_guard e false p hp 10 (by omega) (by omega))
 
 theorem backslash_resOk (H : Hier) (capi) (e : ExcObj) :
@@ -165,13 +179,13 @@ theorem backslash_resOk (H : Hier) (capi) (e : ExcObj) :
     · exact resOk_params H capi e true _ (fun p hp => posOk_stop e true p hp)
     · split
       · exact resOk_params H capi e false _ (fun p hp => posOk_guard e false p hp 10 (by omega) (by omega))
-      · simp [wrongType, raiseT, ResOk, ErrOk, PyExc.className]
+      · simp [wrongType, raiseT, ResOk, ErrOkRaw, PyExc.className]
 
 theorem ok_bind {α β ε : Type} (a : α) (f : α → Except ε β) : (Except.ok a >>= f) = f a := rfl
 theorem err_bind {α β ε : Type} (x : ε) (f : α → Except ε β) : (Except.error x >>= f) = .error x := rfl
 
 theorem resOk_bind_ite {H : Hier} {capi} {e : ExcObj} {c : Prop} [Decidable c] {x : List Nat}
-    {k : List Nat → HPy Body} (hT : c → ResOk H capi e (k x)) (hF : ¬c → ErrOk H capi e .reraise) :
+    {k : List Nat → HPy Body} (hT : c → ResOk H capi e (k x)) (hF : ¬c → ErrOkRaw H capi e .reraise) :
     ResOk H capi e ((if c then (.ok x : HPy (List Nat)) else .error .reraise) >>= k) := by
   by_cases hc : c
   · rw [if_pos hc, ok_bind]; exact hT hc
@@ -188,9 +202,9 @@ theorem name_resOk (H : Hier) (capi) (hc : ∀ g, capi = .ok g → NamesFit g) (
     ResOk H capi e (nameReplaceErrors H capi e) := by
   unfold nameReplaceErrors
   split
-  · simp [wrongType, raiseT, ResOk, ErrOk, PyExc.className]
+  · simp [wrongType, raiseT, ResOk, ErrOkRaw, PyExc.className]
   · cases hcap : capi with
-    | error x => simp [bind, Except.bind, ResOk, ErrOk]
+    | error x => simp [bind, Except.bind, ResOk, ErrOkRaw]
     | ok g =>
       simp only [pure, Except.pure, ok_bind]
       apply resOk_params'
@@ -215,7 +229,7 @@ theorem stdEncoding_err (enc : Str) (x : HErr) (h : stdEncoding enc = .error x) 
   | ok u => rw [hu] at h; simp at h
 
 theorem encCode_errOk (H : Hier) (capi) (e : ExcObj) (expect : String) (x : HErr)
-    (h : encCodeOf H e expect = .error x) : ErrOk H capi e x := by
+    (h : encCodeOf H e expect = .error x) : ErrOkRaw H capi e x := by
   unfold encCodeOf getEncoding at h
   cases hc : checkType H e expect with
   | error y => rw [hc] at h; simp [bind, Except.bind] at h; subst h; exact typeErr_ok H capi e y (checkType_err H e expect y hc)
@@ -234,7 +248,7 @@ theorem bytelength_pos (code : EncCode) (h : code ≠ .unknown) : 0 < code.bytel
   cases code <;> simp [EncCode.bytelength] at *
 
 theorem reraise_ok (H : Hier) (capi) (e : ExcObj) (h : H.excFlag e.cls = true) :
-    ErrOk H capi e .reraise := h
+    ErrOkRaw H capi e .reraise := h
 
 /-- The scope of `HandlersSafe`: an encode or decode error has the exception flag. -/
 def FlagOk (H : Hier) (e : ExcObj) : Prop :=
@@ -294,7 +308,7 @@ theorem pass_resOk (H : Hier) (capi) (e : ExcObj) (hF : FlagOk H e) :
             have : (!isSurrogate 0) = true := by decide
             rw [if_pos this]
             exact reraise_ok H capi e f
-    · simp [wrongType, raiseT, ResOk, ErrOk, PyExc.className]
+    · simp [wrongType, raiseT, ResOk, ErrOkRaw, PyExc.className]
 
 theorem escConsume_length : ∀ (k : Nat) (l : List Nat), (escConsume k l).length ≤ k
   | 0, _ => by simp [escConsume]
@@ -337,14 +351,15 @@ theorem esc_resOk (H : Hier) (capi) (e : ExcObj) (hF : FlagOk H e) :
         simp only [pure, Except.pure, ResOk]
         refine ⟨l, ?_, by omega, fun _ => by omega⟩
         rcases hl with ⟨_, h⟩ | ⟨_, h⟩ <;> simp [h]
-    · simp [wrongType, raiseT, ResOk, ErrOk, PyExc.className]
+    · simp [wrongType, raiseT, ResOk, ErrOkRaw, PyExc.className]
 
 /-- **No internal error, positions in range**, for every object of any class and with any
 attributes handed to a standard handler, provided an encode or decode error has the exception
 flag (`FlagOk`; scope: only a custom `mro()` on a base class breaks it, see
-`HandlersSafeAll`). The handler raises only its argument (and only when its class has the
-flag), a `TypeError`, the failure to load `unicodedata`'s C API, or the UTF-8 encoder's error on
-the `encoding` attribute; and a position it returns lies inside `object`, past the clipped
+`HandlersSafeAll`). The handler raises only its argument (when its class has the flag and
+`issubclass(cls, cls)` holds), the normalized `type(exc)(exc)` (when that is false), what a
+metaclass `__subclasscheck__` raised, a `TypeError`, the failure to load `unicodedata`'s C API,
+or the UTF-8 encoder's error on the `encoding` attribute; and a position it returns lies inside `object`, past the clipped
 `start` whenever the clipped range is not empty. -/
 def HandlersSafe : Prop :=
   ∀ (H : Hier) (capi : Except PyExc (Nat → Option Str)) (h : ErrHandler) (e : ExcObj),
@@ -356,17 +371,44 @@ def HandlersSafe : Prop :=
 theorem resOk_map (H : Hier) (capi) (e : ExcObj) (r : HPy Body) (h : ResOk H capi e r) :
     match Body.result <$> r with
     | .ok (_, pos) => PosOk e pos
-    | .error x => ErrOk H capi e x := by
+    | .error x => ErrOkRaw H capi e x := by
   cases r <;> simpa [Functor.map, Except.map, Body.result, ResOk] using h
+
+/-- `_PyErr_SetObject`'s normalization step keeps what a body may raise inside `ErrOk`. -/
+theorem step_lift (H : Hier) (capi) (e : ExcObj) (r : HPy (Rep × Nat))
+    (h : match r with
+      | .ok (_, pos) => PosOk e pos
+      | .error x => ErrOkRaw H capi e x) :
+    match setObjectStep H e r with
+    | .ok (_, pos) => PosOk e pos
+    | .error x => ErrOk H capi e x := by
+  rcases r with x | ⟨_, pos⟩
+  · cases x with
+    | exc x =>
+      simp only [setObjectStep, ErrOk]
+      simp only [ErrOkRaw] at h
+      rcases h with h | h | h
+      · exact Or.inl h
+      · exact Or.inr (Or.inl h)
+      · exact Or.inr (Or.inr (Or.inl h))
+    | reraise =>
+      simp only [ErrOkRaw] at h
+      simp only [setObjectStep]
+      rcases hs : H.subcheck e.cls with y | b
+      · simp [ErrOk, hs]
+      · cases b <;> simp [ErrOk, hs, h]
+    | normalize => simp [ErrOkRaw] at h
+  · exact h
 
 theorem handlersSafe_proven : HandlersSafe := by
   intro H capi h e hH hc hF
+  apply step_lift
   cases h with
   | strict =>
-    simp only [callBuiltin, strictErrors]
+    simp only [callRaw, strictErrors]
     by_cases hb : H.excFlag e.cls = true
-    · simp only [hb, if_true, ErrOk]
-    · simp [hb, raiseT, ErrOk, PyExc.className]
+    · simp only [hb, if_true, ErrOkRaw]
+    · simp [hb, raiseT, ErrOkRaw, PyExc.className]
   | ignore => exact resOk_map H capi e _ (ignore_resOk H hH capi e)
   | replace => exact resOk_map H capi e _ (replace_resOk H capi e)
   | xmlcharrefreplace => exact resOk_map H capi e _ (xml_resOk H capi e)
@@ -401,13 +443,15 @@ theorem builtinSub_dec (c : String) (h : builtinSub c "UnicodeDecodeError" = tru
 MRO, and its `tp_base` `A` has no `BaseException` in its MRO, so `B` lacks the flag. -/
 def oddHier : Hier :=
   { sub := fun c b => if c = "B" then b == "UnicodeEncodeError" else builtinSub c b
-    excFlag := fun c => c != "B" }
+    excFlag := fun c => c != "B"
+    subcheck := fun _ => .ok true }
 
 theorem oddHier_ok : HierOk oddHier := by
   have nb : ∀ c ∈ builtinClasses, c ≠ "B" := by
     intro c hc; simp [builtinClasses] at hc; rcases hc with h | h | h | h | h | h | h | h | h <;>
       subst h <;> decide
-  refine ⟨fun c hc b => by simp [oddHier, nb c hc], fun c hc => by simp [oddHier, nb c hc], ?_, ?_, ?_⟩
+  refine ⟨fun c hc b => by simp [oddHier, nb c hc], fun c hc => by simp [oddHier, nb c hc],
+    fun c _ => rfl, ?_, ?_, ?_⟩
   all_goals
     intro c ⟨h1, h2⟩
     by_cases hB : c = "B"
@@ -432,7 +476,7 @@ theorem handlersSafeAll_refuted : ¬ HandlersSafeAll := by
   have := h oddHier (.ok fun _ => none) .surrogateescape oddExc oddHier_ok (fun g hg c n hc => by
     cases hg; simp at hc)
   rw [oddExc_systemError] at this
-  simp [ErrOk, PyExc.className, oddExc] at this
+  simp [ErrOk, PyExc.className, oddExc, oddHier] at this
 
 /-! ## Classes with a custom `mro()` -/
 
@@ -455,14 +499,14 @@ def OddClasses : Prop :=
 theorem oddClasses_proven : OddClasses := by
   intro H capi e hH
   refine ⟨fun hU => ⟨fun hE => ?_, fun hD => ⟨?_, ?_⟩⟩, fun hf => ?_⟩
-  · simp [callBuiltin, surrogatePassErrors, hE, surrogatePassEncode, encCodeOf, getEncoding,
+  · simp [callBuiltin, callRaw, setObjectStep, surrogatePassErrors, hE, surrogatePassEncode, encCodeOf, getEncoding,
       checkType, hU, raiseT, bind, Except.bind, Functor.map, Except.map]
   · have hE := hH.dec_not_enc hD
-    simp [callBuiltin, surrogatePassErrors, hE, hD, surrogatePassDecode, encCodeOf, getEncoding,
+    simp [callBuiltin, callRaw, setObjectStep, surrogatePassErrors, hE, hD, surrogatePassDecode, encCodeOf, getEncoding,
       checkType, hU, raiseT, bind, Except.bind, Functor.map, Except.map]
   · have hE := hH.dec_not_enc hD
-    simp [callBuiltin, replaceErrors, hE, hD, replaceDecode, decodeGetEnd, checkType, hU, raiseT,
+    simp [callBuiltin, callRaw, setObjectStep, replaceErrors, hE, hD, replaceDecode, decodeGetEnd, checkType, hU, raiseT,
       bind, Except.bind, Functor.map, Except.map]
-  · simp [callBuiltin, strictErrors, hf]
+  · simp [callBuiltin, callRaw, setObjectStep, strictErrors, hf, raiseT]
 
 end PyLean.UnicodeObj.Codecs

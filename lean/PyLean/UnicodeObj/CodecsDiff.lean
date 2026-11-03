@@ -39,8 +39,12 @@ def getHier (j : Json) : Except String Hier := do
   let mro ← (← field j "mro").getArr?
   let mro ← mro.toList.mapM (·.getStr?)
   let flag ← getBool j "flag"
+  let sc : Py Bool ← match ← getStr (← field j "subcheck") "t" with
+    | "raise" => pure (.error (.named "RuntimeError" "subclasscheck"))
+    | "false" => pure (.ok false)
+    | _ => pure (.ok true)
   return ⟨fun c b => if c == cls then mro.contains b else Codecs.builtinSub c b,
-    fun c => if c == cls then flag else true⟩
+    fun c => if c == cls then flag else true, fun c => if c == cls then sc else .ok true⟩
 
 def getExcObj (j : Json) : Except String ExcObj := do
   return { cls := ← getStr j "cls", tpName := ← getStr j "tp", clsRepr := ← getStr j "repr",
@@ -66,6 +70,7 @@ def encHandler (r : HPy (Rep × Nat)) : Json :=
   match r with
   | .ok (rep, pos) => Json.mkObj [("rep", encRep rep), ("pos", toJson pos)]
   | .error .reraise => Json.mkObj [("raised", toJson "self")]
+  | .error .normalize => Json.mkObj [("raised", toJson "normalize")]
   | .error (.exc e) => Json.mkObj [("raised", toJson e.className), ("msg", toJson e.message)]
 
 

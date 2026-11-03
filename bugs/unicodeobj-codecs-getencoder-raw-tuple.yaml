@@ -59,5 +59,7 @@ lean: |
 duplicates:
   issues:
     - {number: 49746, state: closed, relation: related, reason: "2009 docstring fix for codecs.lookup returning a tuple vs CodecInfo; not the getters"}
+    - {number: 48428, state: closed, relation: related, reason: "codecs: Documentation Inconsistency; docs only"}
+    - {number: 45202, state: closed, relation: related, reason: "Docstring for codecs.lookup is incorrect; docs only"}
   queries: ["getencoder tuple AttributeError", "codecs register tuple CodecInfo lookup", "codec search function return tuple"]
   bugforge: "no match in vendor/bugforge-results/README.md"

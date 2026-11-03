@@ -16,6 +16,7 @@ def lowerEnc (bad : PyExc) : HPy (Rep × Nat) → Py (EncRep × Nat)
   | .ok (.str s, p) => .ok (.str s, p)
   | .ok (.bytes b, p) => .ok (.bytes b, p)
   | .error .reraise => .error bad
+  | .error .normalize => .error .modelFuel
   | .error (.exc x) => .error x
 
 /-- The same for a decode handler, whose replacement must be a `str`. -/
@@ -23,6 +24,7 @@ def lowerDec (bad : PyExc) : HPy (Rep × Nat) → Py (Str × Nat)
   | .ok (.str s, p) => .ok (s, p)
   | .ok (.bytes _, _) => .error .modelFuel
   | .error .reraise => .error bad
+  | .error .normalize => .error .modelFuel
   | .error (.exc x) => .error x
 
 /-- The number of leading sizes that add up to at most `budget`. -/
@@ -52,8 +54,9 @@ def cutStop (h : ErrHandler) (getname : Nat → Option Str) (code : EncCode) (s 
   | _ => en
 
 /-- **Encode errors.** On every object of an ordinary class below `UnicodeEncodeError` (scope:
-its MRO keeps `UnicodeError` and it has the exception flag, which only a custom `mro()` breaks;
-`OddClasses` says what happens then) whose `object` is a `str`, with any `start` and `end`, each standard handler gives what the codec-loop model gives for the
+its MRO keeps `UnicodeError` and it has the exception flag, which only a custom `mro()` breaks,
+`OddClasses` says what happens then; and `issubclass(cls, cls)` is true without raising, which only
+a metaclass `__subclasscheck__` breaks, `EncodeAgreeAll` records that case) whose `object` is a `str`, with any `start` and `end`, each standard handler gives what the codec-loop model gives for the
 clipped range: `start` clipped to `[0, max(0, len-1)]`, `end` to `[min(1, len), len]`, then cut
 by `cutStop`. The `encoding` attribute matters only to `surrogatepass`. -/
 def EncodeAgree : Prop :=
@@ -175,30 +178,31 @@ theorem encodeAgree_proven : EncodeAgree := by
   have hle := enOf_le e s.length
   have hsle := stOf_le e s.length
   simp only
+  rw [callBuiltin_ord hO.2.2]
   cases h with
   | strict =>
-    simp [callBuiltin, strictErrors, hO.2, lowerEnc, encodeHandlerCall]
+    simp [callRaw, strictErrors, hO.2.1, lowerEnc, encodeHandlerCall]
   | ignore =>
-    simp [callBuiltin, ignoreErrors, hE, ignoreError, hp, bind, Except.bind, pure, Except.pure,
+    simp [callRaw, ignoreErrors, hE, ignoreError, hp, bind, Except.bind, pure, Except.pure,
       Functor.map, Except.map, Body.result, lowerEnc, encodeHandlerCall, cutStop]
   | replace =>
-    simp [callBuiltin, replaceErrors, hE, replaceEncode, hp, bind, Except.bind, pure, Except.pure,
+    simp [callRaw, replaceErrors, hE, replaceEncode, hp, bind, Except.bind, pure, Except.pure,
       Functor.map, Except.map, Body.result, lowerEnc, encodeHandlerCall, cutStop]
     omega
   | xmlcharrefreplace =>
-    simp only [callBuiltin, xmlCharRefReplaceErrors, hE, Bool.not_true, Bool.false_eq_true, if_false,
+    simp only [callRaw, xmlCharRefReplaceErrors, hE, Bool.not_true, Bool.false_eq_true, if_false,
       hp, bind, Except.bind, pure, Except.pure, Functor.map, Except.map, Body.result, lowerEnc,
       encodeHandlerCall, cutStop_guard .xmlcharrefreplace (Or.inl rfl)]
     congr 3
     refine flatMap_congr _ (fun x hx => xmlBlock_eq x (hv x (mem_slice hx)))
   | backslashreplace =>
-    simp only [callBuiltin, backslashReplaceErrors, hE, if_true, backslashEncode, hp, bind, Except.bind, pure,
+    simp only [callRaw, backslashReplaceErrors, hE, if_true, backslashEncode, hp, bind, Except.bind, pure,
       Except.pure, Functor.map, Except.map, Body.result, lowerEnc, encodeHandlerCall,
       cutStop_guard .backslashreplace (Or.inr rfl)]
     congr 3
     exact flatMap_congr _ (fun x _ => writeUnicodeHex_eq x)
   | namereplace =>
-    simp only [callBuiltin, nameReplaceErrors, hE, Bool.not_true, Bool.false_eq_true, if_false,
+    simp only [callRaw, nameReplaceErrors, hE, Bool.not_true, Bool.false_eq_true, if_false,
       hp, bind, Except.bind, pure, Except.pure, Functor.map, Except.map, Body.result, lowerEnc,
       encodeHandlerCall, cutStop_name]
     congr 3
@@ -207,8 +211,8 @@ theorem encodeAgree_proven : EncodeAgree := by
     cases getname x <;> simp [writeUnicodeHex_eq]
   | surrogatepass =>
     have hc := hcode rfl
-    simp only [callBuiltin, surrogatePassErrors, hE, if_true, surrogatePassEncode, bail_flag hO.2,
-      bailOn_flag hO.2]
+    simp only [callRaw, surrogatePassErrors, hE, if_true, surrogatePassEncode, bail_flag hO.2.1,
+      bailOn_flag hO.2.1]
     · simp only [bind, Except.bind, hc]
       by_cases hu : code = .unknown
       · subst hu
@@ -232,8 +236,8 @@ theorem encodeAgree_proven : EncodeAgree := by
           rw [if_neg hall]
           simp [hu', hall', lowerEnc, Functor.map, Except.map]
   | surrogateescape =>
-    simp only [callBuiltin, surrogateEscapeErrors, hE, if_true, surrogateEscapeEncode, hp, bind,
-      Except.bind, bailOn_flag hO.2]
+    simp only [callRaw, surrogateEscapeErrors, hE, if_true, surrogateEscapeEncode, hp, bind,
+      Except.bind, bailOn_flag hO.2.1]
     rw [escWrite_eq]
     simp only [encodeHandlerCall, cutStop, drop_take_slice]
     by_cases hall : (slice s (stOf e s.length) (enOf e s.length)).all
@@ -250,31 +254,32 @@ theorem decodeAgree_proven : DecodeAgree := by
   have hsle := stOf_le e b.length
   have hU := hO.1
   simp only
+  rw [callBuiltin_ord hO.2.2]
   cases h with
   | strict =>
-    simp [callBuiltin, strictErrors, hO.2, lowerDec, decodeHandlerCall]
+    simp [callRaw, strictErrors, hO.2.1, lowerDec, decodeHandlerCall]
   | ignore =>
-    simp [callBuiltin, ignoreErrors, hE, hT, hD, ignoreError, hp, bind, Except.bind, pure,
+    simp [callRaw, ignoreErrors, hE, hT, hD, ignoreError, hp, bind, Except.bind, pure,
       Except.pure, Functor.map, Except.map, Body.result, lowerDec, decodeHandlerCall]
   | replace =>
-    simp [callBuiltin, replaceErrors, hE, hD, replaceDecode, decodeGetEnd, checkType, hU, hp, bind,
+    simp [callRaw, replaceErrors, hE, hD, replaceDecode, decodeGetEnd, checkType, hU, hp, bind,
       Except.bind, pure, Except.pure, Functor.map, Except.map, Body.result, lowerDec,
       decodeHandlerCall, replacementChars]
   | xmlcharrefreplace =>
-    simp [callBuiltin, xmlCharRefReplaceErrors, hE, wrongType, raiseT, htp, Functor.map,
+    simp [callRaw, xmlCharRefReplaceErrors, hE, wrongType, raiseT, htp, Functor.map,
       Except.map, lowerDec, decodeHandlerCall, wrongExceptionType]
   | backslashreplace =>
-    simp only [callBuiltin, backslashReplaceErrors, hE, hD, Bool.false_eq_true, if_false, if_true,
+    simp only [callRaw, backslashReplaceErrors, hE, hD, Bool.false_eq_true, if_false, if_true,
       backslashDecode, hp, bind, Except.bind, pure, Except.pure, Functor.map, Except.map,
       Body.result, lowerDec, decodeHandlerCall, drop_take_slice]
     rw [flatMap_congr _ (fun x _ => byteHex_eq x)]
   | namereplace =>
-    simp [callBuiltin, nameReplaceErrors, hE, wrongType, raiseT, htp, Functor.map, Except.map,
+    simp [callRaw, nameReplaceErrors, hE, wrongType, raiseT, htp, Functor.map, Except.map,
       lowerDec, decodeHandlerCall, wrongExceptionType, bind, Except.bind]
   | surrogatepass =>
     have hc := hcode rfl
-    simp only [callBuiltin, surrogatePassErrors, hE, hD, Bool.false_eq_true, if_false, if_true,
-      surrogatePassDecode, bail_flag hO.2]
+    simp only [callRaw, surrogatePassErrors, hE, hD, Bool.false_eq_true, if_false, if_true,
+      surrogatePassDecode, bail_flag hO.2.1]
     · simp only [bind, Except.bind, hc]
       by_cases hu : code = .unknown
       · subst hu
@@ -294,8 +299,8 @@ theorem decodeAgree_proven : DecodeAgree := by
         · simp [hs, Functor.map, Except.map, Body.result, lowerDec, pure, Except.pure]
         · simp [hs, Functor.map, Except.map, Body.result, lowerDec, pure, Except.pure]
   | surrogateescape =>
-    simp only [callBuiltin, surrogateEscapeErrors, hE, hD, Bool.false_eq_true, if_false, if_true,
-      surrogateEscapeDecode, hp, bind, Except.bind, decodeHandlerCall, bail_flag hO.2]
+    simp only [callRaw, surrogateEscapeErrors, hE, hD, Bool.false_eq_true, if_false, if_true,
+      surrogateEscapeDecode, hp, bind, Except.bind, decodeHandlerCall, bail_flag hO.2.1]
     rw [escConsume_eq]
     have hrun : escapeRun 4 ((b.drop (stOf e b.length)).take (enOf e b.length - stOf e b.length)) =
         escapeRun (min 4 (enOf e b.length - stOf e b.length)) (b.drop (stOf e b.length)) :=
@@ -319,29 +324,30 @@ theorem translateSpec_proven : TranslateSpec := by
   have hD := hH.tr_not_dec hT
   have hp := getParams_str e s hobj
   simp only
+  rw [callBuiltin_ord hO.2.2]
   cases h with
-  | strict => simp [callBuiltin, strictErrors, hO.2]
+  | strict => simp [callRaw, strictErrors, hO.2.1]
   | ignore =>
-    simp [callBuiltin, ignoreErrors, hE, hT, ignoreError, hp, bind, Except.bind, pure, Except.pure,
+    simp [callRaw, ignoreErrors, hE, hT, ignoreError, hp, bind, Except.bind, pure, Except.pure,
       Functor.map, Except.map, Body.result]
   | replace =>
-    simp [callBuiltin, replaceErrors, hE, hD, hT, replaceTranslate, hp, bind, Except.bind, pure,
+    simp [callRaw, replaceErrors, hE, hD, hT, replaceTranslate, hp, bind, Except.bind, pure,
       Except.pure, Functor.map, Except.map, Body.result, replacementChars]
   | xmlcharrefreplace =>
-    simp [callBuiltin, xmlCharRefReplaceErrors, hE, Functor.map, Except.map, wrongType, raiseT]
+    simp [callRaw, xmlCharRefReplaceErrors, hE, Functor.map, Except.map, wrongType, raiseT]
   | backslashreplace =>
-    simp only [callBuiltin, backslashReplaceErrors, hE, hD, hT, Bool.false_eq_true, if_false,
+    simp only [callRaw, backslashReplaceErrors, hE, hD, hT, Bool.false_eq_true, if_false,
       if_true, backslashEncode, hp, bind, Except.bind, pure, Except.pure, Functor.map, Except.map,
       Body.result, cutStop_guard .backslashreplace (Or.inr rfl)]
     congr 3
     exact flatMap_congr _ (fun x _ => writeUnicodeHex_eq x)
   | namereplace =>
-    simp [callBuiltin, nameReplaceErrors, hE, Functor.map, Except.map, wrongType, raiseT, bind,
+    simp [callRaw, nameReplaceErrors, hE, Functor.map, Except.map, wrongType, raiseT, bind,
       Except.bind]
   | surrogatepass =>
-    simp [callBuiltin, surrogatePassErrors, hE, hD, Functor.map, Except.map, wrongType, raiseT]
+    simp [callRaw, surrogatePassErrors, hE, hD, Functor.map, Except.map, wrongType, raiseT]
   | surrogateescape =>
-    simp [callBuiltin, surrogateEscapeErrors, hE, hD, Functor.map, Except.map, wrongType, raiseT]
+    simp [callRaw, surrogateEscapeErrors, hE, hD, Functor.map, Except.map, wrongType, raiseT]
 
 theorem handlersAgree_proven : HandlersAgree :=
   ⟨encodeAgree_proven, decodeAgree_proven, translateSpec_proven⟩
