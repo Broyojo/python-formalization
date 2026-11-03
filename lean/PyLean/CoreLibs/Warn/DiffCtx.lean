@@ -1,4 +1,5 @@
 import PyLean.CoreLibs.Warn.DiffOps
+import PyLean.CoreLibs.Warn.DiffWe
 import PyLean.CoreLibs.Warn.Context
 
 /-! `warn.ctx` cases: a script of `catch_warnings` objects entered and exited, warnings shown
@@ -123,9 +124,12 @@ def runCtx (j : Json) : Except String Json := do
   let im := pFnImpl (← (← j.getObjVal? "impl").getStr?)
   let fmt : Option Fn := match j.getObjVal? "fmt" with
     | .ok (.str "raise") => some (.userRaises 3 (.valueError "fmt failed"))
+    | .ok (.str "deleted") => none
     | _ => some .fmtOrig
+  -- the module `__getattr__`: `getattr` maps `showwarning` / `formatwarning` to what it raises
+  let ga : String → Option PyExc := fun a => caseGetattr j a
   let st : MState := MState.mk (fun i => if i = 0 then init else []) (fun _ => []) 1 (some 0) sw im
-    fmt 0 .unset (fun _ => ⟨0, none⟩) stderr [] (fun _ => false) dHier (some 0) dModRepr
+    fmt 0 .unset (fun _ => ⟨0, none⟩) stderr [] (fun _ => false) dHier (some 0) ⟨dModRepr, ga⟩
   let mut R : CtxRun := ⟨st, #[], #[]⟩
   let mut outs : Array Json := #[]
   for op in ← jArr (← j.getObjVal? "ops") do

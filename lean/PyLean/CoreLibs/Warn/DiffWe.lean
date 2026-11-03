@@ -7,7 +7,15 @@ the once registry, through the C model or the Python one.
 
 Categories: 0 Warning, 1 UserWarning, 2 a subclass of UserWarning, 3 DeprecationWarning, 4 a
 subclass of UserWarning whose metaclass `__subclasscheck__` raises `KeyError('boom')`, 5 a subclass
-of UserWarning whose `__init__` raises `ValueError('bad message')`.
+of UserWarning whose `__init__` raises `ValueError('bad message')`, 6 `LieW`, a subclass of
+UserWarning whose `__class__` property gives DeprecationWarning.
+Messages (`msg`): a str; `lieU` and `lieI`, str subclasses whose `__class__` gives UserWarning or
+`int`; `raise` and `raiseA`, str subclasses whose `__class__` raises `ValueError('cls')` or
+`AttributeError('cls')`; `inst`, an instance of the category; `instlie`, a `LieW` instance.
+`getattr` maps a deleted module attribute to what the module's `__getattr__` raises for it
+(`key`: `KeyError('k')`, `ae`: `AE('a')`, an `AttributeError` subclass); `imp` is `raise`
+(`builtins.__import__` raises `RuntimeError('no import')` for `warnings`) or `none`
+(`sys.modules['warnings'] = None` during the call).
 Patterns: `"a"`, `"ab"`, `"m"`, `"x"`, `".*b"` (compiled with `re.I` for messages), `"RAISE"` (an
 object whose `match` raises `ValueError('bad pattern')`), `"PLAIN:s"` (the str `s`). A filter item
 is `[action, msg, cat, mod, ln, shape]` with shape `tuple`, `list` or `short` (a 3-tuple) and an
@@ -66,11 +74,23 @@ def matchFilename (p : Pat) (fn : String) : Py Bool := do
 
 def isSub (a b : Nat) : Py Bool :=
   if b = 4 then .error (.keyError "'boom'")
-  else .ok (b = 0 || a = b || ((a = 2 || a = 4 || a = 5) && b = 1))
+  else .ok (b = 0 || a = b || ((a = 2 || a = 4 || a = 5 || a = 6) && b = 1))
 
 def catName : Nat → String
   | 0 => "Warning" | 1 => "UserWarning" | 2 => "W1" | 3 => "DeprecationWarning" | 4 => "Odd"
-  | _ => "BadInit"
+  | 6 => "LieW" | _ => "BadInit"
+
+/-- What the module `__getattr__` of the cases raises. -/
+def gaErr (k : String) : PyExc :=
+  if k = "key" then .keyError "'k'" else .named "AE" "a"
+
+/-- The `getattr` entry of a case for attribute `a`. -/
+def caseGetattr (j : Json) (a : String) : Option PyExc :=
+  match j.getObjVal? "getattr" with
+  | .ok o => match o.getObjVal? a with
+    | .ok (.str k) => some (gaErr k)
+    | _ => none
+  | _ => none
 
 def pItem (j : Json) : Except String Item := do
   let msg ← (← jGetI j 1).getStr? <|> pure ""
@@ -149,7 +169,11 @@ def srcUnavail (fn : String) : Bool := fn.isEmpty || (fn.startsWith "<" && fn.en
 def runCase (twin : String) (j : Json) : Except String Json := do
   let fs ← (← jArr (← j.getObjVal? "filters")).mapM pItem
   let dfltJ ← j.getObjVal? "dflt"
-  let dflt : DfltV := if optBool j "dfltdel" then .deleted "ignore" else match dfltJ with
+  let dflt : DfltV := if optBool j "dfltdel" then
+      (match caseGetattr j "defaultaction" with
+       | some e => .raises e "ignore"
+       | none => .deleted "ignore")
+    else match dfltJ with
     | .str a => .val (.str a)
     | _ => .val (.hashable "int")
   let modJ ← j.getObjVal? "module"
@@ -167,10 +191,19 @@ def runCase (twin : String) (j : Json) : Except String Json := do
     | "bad" => (.dict (.error (.valueError "no source")),
         if srcUnavail filename then .ok () else .error (.valueError "no source"))
     | _ => (.none, .ok ())
+  let mk := optStr j "msg" "str"
+  let (cat, inst, pyCls) : Nat × Bool × ClsV := match mk with
+    | "lieU" => (cat, false, .cls 1 "UserWarning" true)
+    | "lieI" => (cat, false, .cls 10 "int" false)
+    | "raise" => (cat, false, .raises (.valueError "cls"))
+    | "raiseA" => (cat, false, .raises (.named "AttributeError" "cls"))
+    | "inst" => (cat, true, .own)
+    | "instlie" => (6, true, .cls 3 "DeprecationWarning" true)
+    | _ => (cat, false, .own)
   let c : Call := { text := ← (← j.getObjVal? "text").getStr?, cat := cat, filename := filename,
                     lineno := ← pLine (← j.getObjVal? "lineno"), module := module,
-                    mkMsg := if cat = 5 then .error (.valueError "bad message") else .ok (),
-                    globs := globs, pyLines := pyLines }
+                    mkMsg := if cat == 5 && !inst then .error (.valueError "bad message") else .ok (),
+                    globs := globs, pyLines := pyLines, inst := inst, pyCls := pyCls }
   let reg ← match ← j.getObjVal? "reg" with
     | .null => pure RegArg.none
     | .str "obj" => pure RegArg.obj
@@ -181,23 +214,34 @@ def runCase (twin : String) (j : Json) : Except String Json := do
   let onceR ← pReg (← j.getObjVal? "once")
   let once : OnceV := match optStr j "oncek" "dict" with
     | "int" => .notDict "int" onceR
-    | "deleted" => .deleted onceR
+    | "deleted" => match caseGetattr j "onceregistry" with
+      | some e => .raises e onceR
+      | none => .deleted onceR
     | _ => .dict onceR
   let showA : ShowA := match optStr j "show" (if optBool j "showraise" then "raise" else "ok") with
     | "raise" => .call (.ok ()) (.error (.valueError "show failed"))
-    | "deleted" => .deleted
+    | "deleted" => match caseGetattr j "_showwarnmsg" with
+      | some e => .swRaises (.ok ()) e
+      | none => .deleted
     | "noncallable" => .noncallable "int"
-    | "nowm" => .noWM
+    | "nowm" => match caseGetattr j "WarningMessage" with
+      | some e => .wmRaises e
+      | none => .noWM
     | _ => .call (.ok ()) (.ok ())
+  let importW : Py Unit := match optStr j "imp" "ok" with
+    | "raise" => .error (.named "RuntimeError" "no import")
+    | "none" => .error (.named "ModuleNotFoundError" "import of warnings halted; None in sys.modules")
+    | _ => .ok ()
   let E : Env := { isSub := isSub, isSubPy := fun _ b => b = 4, matchFilename := matchFilename,
-                   shw := showA, hier := dHier }
+                   shw := showA, hier := dHier, importW := importW }
   let K : WCfg := ⟨optBool j "ctx", optBool j "tuple", dflt, once⟩
   let r := if twin = "c" then cWarnExplicit E K fs VER c reg else pyWarnExplicit E K fs VER c reg
   let out := match r.out with
     | .error e => if e = warnRaised c then Json.arr #["exc", jStr (catName c.cat), jStr c.text]
       else encR jBool (.error e)
     | .ok b => encR jBool (.ok b)
-  return Json.mkObj [("ok", Json.arr #[out, jOpt jReg r.reg, jReg r.once])]
+  let printed := twin = "c" && cFellBack E K fs VER c reg
+  return Json.mkObj [("ok", Json.arr #[out, jOpt jReg r.reg, jReg r.once, jBool printed])]
 
 def weHandler : Handler := fun fn j =>
   match fn with

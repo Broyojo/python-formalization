@@ -19,7 +19,11 @@ Scope:
 * A module attribute that holds a function: the original `showwarning` (`_showwarning_orig`), the
   original `_showwarnmsg_impl`, the original `formatwarning`, a record log's `append`, another
   callable (a user hook, called with the message), or a non-callable object; `showwarning` and
-  `formatwarning` can also be deleted.
+  `formatwarning` can also be deleted, and the module can have a `__getattr__` that raises for a
+  deleted one (`MState.modGetattr`, read for `showwarning` and `formatwarning`; for `filters`,
+  which `_GlobalContext._filters` reads under `except AttributeError`, :72-80, it is out of scope,
+  as is a `__getattr__` that returns a value). Every `except AttributeError` goes through the class
+  relation `hier`.
 * `_formatwarnmsg_impl`'s text is not modelled (only that something is written); writing to the file can
   succeed, raise `OSError` (swallowed), or raise something else.
 * The lock is held around each body (`with _wm._lock:`); `_filters_mutated_lock_held` therefore
@@ -65,6 +69,13 @@ inductive Shown where
   | hook (id : Nat)
   deriving DecidableEq, Repr
 
+/-- `repr()` of a module object (by id), and the `warnings` module's `__getattr__` for a missing
+attribute: `none` when there is none (the lookup raises `AttributeError`), else the exception it
+raises. -/
+structure ModInfo where
+  repr : Nat → String
+  getattr : String → Option PyExc
+
 structure MState where
   /-- the filters lists -/
   lists : Ref → List Elem
@@ -89,12 +100,21 @@ structure MState where
   hier : Hier
   /-- `sys.modules['warnings']`, by object id (`none` when it is missing) -/
   sysWarnings : Option Nat
-  /-- `repr()` of a module object -/
-  modRepr : Nat → String
+  /-- `repr()` of a module object, and the `warnings` module's `__getattr__` -/
+  mods : ModInfo
+
+def MState.modRepr (st : MState) : Nat → String := st.mods.repr
+def MState.modGetattr (st : MState) : String → Option PyExc := st.mods.getattr
 
 def upd {α : Type} (f : Nat → α) (k : Nat) (v : α) : Nat → α := fun i => if i = k then v else f i
 
 def noFilters : PyExc := .named "AttributeError" "module 'warnings' has no attribute 'filters'"
+
+/-- What `_wm.a` raises for a missing attribute `a`. -/
+def modAttrErr (st : MState) (a : String) : PyExc :=
+  match st.modGetattr a with
+  | some e => e
+  | none => .named "AttributeError" s!"module 'warnings' has no attribute '{a}'"
 
 /-! ## Contexts -/
 
@@ -144,16 +164,20 @@ def writeOut (st : MState) : Py MState :=
   match st.stderr with
   | none => .ok { st with out := st.out ++ [.lost] }
   | some w =>
-    -- `text = _wm._formatwarnmsg(msg)`, :145, outside the `try`
+    let write : Py MState := match w with
+      | .ok () => .ok { st with out := st.out ++ [.written] }
+      | .error e =>
+        -- `except OSError: pass`, :148-150
+        if isA st.hier e "OSError" then .ok { st with out := st.out ++ [.lost] } else .error e
+    -- `text = _wm._formatwarnmsg(msg)`, :145, outside the `try`; `_formatwarnmsg`, :240-251:
+    -- `try: fw = _wm.formatwarning except AttributeError: pass`
     match st.formatwarning with
     | some .noncallable => .error (.typeError "'int' object is not callable")
     | some (.userRaises _ e) => .error e
-    | _ =>
-    match w with
-    | .ok () => .ok { st with out := st.out ++ [.written] }
-    | .error e =>
-      -- `except OSError: pass`, :148-150
-      if isA st.hier e "OSError" then .ok { st with out := st.out ++ [.lost] } else .error e
+    | none =>
+      let e := modAttrErr st "formatwarning"
+      if isA st.hier e "AttributeError" then write else .error e
+    | _ => write
 
 /-- `_showwarnmsg_impl(msg)`, :133-150: the context's log, if any, takes it
 (`_record_warning`, :63-64). -/
@@ -174,11 +198,16 @@ def callImpl (useCtx : Bool) (msg : Nat) (st : MState) : Py MState :=
   -- arguments; the other originals are not message hooks
   | _ => .error (.typeError "~takes positional arguments")
 
-/-- `_showwarnmsg(msg)`, :217-233: a replaced `showwarning` is called; otherwise (also when it was
-deleted) `_showwarnmsg_impl`. `showwarning` (:121-124) calls `_showwarnmsg_impl` too. -/
+/-- `_showwarnmsg(msg)`, :217-233: `try: sw = _wm.showwarning except AttributeError: pass`; a
+replaced `showwarning` is called; otherwise (also when the lookup raised an exception under
+`AttributeError`) `_showwarnmsg_impl`; any other exception from the lookup propagates.
+`showwarning` (:121-124) calls `_showwarnmsg_impl` too. -/
 def showwarnmsg (useCtx : Bool) (msg : Nat) (st : MState) : Py MState :=
   match st.showwarning with
-  | none | some .showOrig => callImpl useCtx msg st
+  | none =>
+    let e := modAttrErr st "showwarning"
+    if isA st.hier e "AttributeError" then callImpl useCtx msg st else .error e
+  | some .showOrig => callImpl useCtx msg st
   | some .noncallable => .error (.typeError "warnings.showwarning() must be set to a function or method")
   | some (.user i) => .ok { st with out := st.out ++ [.hook i] }
   -- `sw(msg.message, ...)` raising: the exception propagates, :230-231
@@ -264,8 +293,9 @@ def cwEnter (useCtx : Bool) (cw : CW) (st : MState) : CW × MState × Py (Option
   match step with
   | .error e => (cw, st, .error e)
   | .ok (cw, st, ctx) =>
+  -- `self._showwarning = self._module.showwarning`, :710
   match st.showwarning with
-  | none => (cw, st, .error noShowAttr)
+  | none => (cw, st, .error (modAttrErr st "showwarning"))
   | some sw =>
   let cw := { cw with savedShow := some sw }
   let st := { st with ver := st.ver + 1 }

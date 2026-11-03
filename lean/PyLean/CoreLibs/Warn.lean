@@ -19,10 +19,10 @@ def cFns : List String := ["warn_explicit", "get_filter", "check_matched", "alre
 def entries : List Entry := [
   { id := "warn-twins-narrow", pyFile := "Python/_warnings.c"
     pyFns := cFns
-    statement := "For callbacks that do not raise, warnings._showwarnmsg (callable) and warnings.WarningMessage present, a filters list (in warnings.filters or a context) of 5-tuples with a str action error/ignore/always/all/default, compiled patterns and int lines that fit Py_ssize_t, such a str defaultaction, a dict onceregistry, an int line that fits C int, a module omitted or a str, a message that can be built, no module_globals, and a registry that is None or a dict whose version is an exact int within C long, C warn_explicit and _py_warnings.warn_explicit give the same result and leave the same registry and once registry (True == 1)."
+    statement := "For callbacks that do not raise, warnings._showwarnmsg (callable) and warnings.WarningMessage present and C's import of warnings succeeding, a filters list (in warnings.filters or a context) of 5-tuples with a str action error/ignore/always/all/default, compiled patterns and int lines that fit Py_ssize_t, such a str defaultaction, a dict onceregistry, an int line that fits C int, a module omitted or a str, a message that can be built and whose __class__ is not overridden, no module_globals, and a registry that is None or a dict whose version is an exact int within C long, C warn_explicit and _py_warnings.warn_explicit give the same result, leave the same registry and once registry (True == 1), and C shows the warning through _showwarnmsg as Python does."
     source := "twin: _py_warnings.py:556-625 against _warnings.c:797-922", status := .proven
     prop := ``WarnTwinsNarrow, thm := some ``warnTwinsNarrow_proven
-    notes := "Difftest corelibs area warn: plain-str filters, 5-element lists, short items, non-str and unhashable actions, non-int filter lines, tuple filters, context filters, deleted defaultaction and onceregistry, a non-dict onceregistry, deleted or non-callable _showwarnmsg, deleted WarningMessage, module_globals (an int, a dict, a dict whose loader raises), mapping registries, non-int linenos, non-str modules, raising message constructors and True versions included; 150k cases over 3 seeds, 100%. Every hypothesis is on record as a refutation (the entries below)." },
+    notes := "Difftest corelibs area warn: plain-str filters, 5-element lists, short items, non-str and unhashable actions, non-int filter lines, tuple filters, context filters, deleted defaultaction and onceregistry, a non-dict onceregistry, deleted or non-callable _showwarnmsg, deleted WarningMessage, module_globals (an int, a dict, a dict whose loader raises), mapping registries, non-int linenos, non-str modules, raising message constructors, True versions, Warning-instance messages, messages whose __class__ lies or raises, module __getattr__s that raise for deleted attributes, an __import__ hook that raises and sys.modules['warnings'] = None included; 200k cases over 4 seeds, 100%. Every hypothesis is on record as a refutation (the entries below)." },
   { id := "warn-twins-py", pyFile := "Lib/_py_warnings.py"
     pyFns := ["warn_explicit"]
     statement := "The same agreement, from the Python twin's side."
@@ -118,7 +118,35 @@ def entries : List Entry := [
     statement := "For every state of warnings.filters (list or tuple, or a context's), defaultaction (or deleted), onceregistry (a dict, another object, or deleted), _showwarnmsg and WarningMessage, the twins agree."
     source := "twin", status := .refuted
     prop := ``WarnTwinsModuleState, thm := some ``warnTwinsModuleState_refuted_tuple, bug := some "corelibs-warnings-py-twin-warn"
-    notes := "Also refuted by warnTwinsModuleState_refuted_ctxTuple, _show (C falls back to show_warning when _showwarnmsg is deleted), _once (TypeError against AttributeError) and _dflt (C uses the cached default)." },
+    notes := "Also refuted by warnTwinsModuleState_refuted_ctxTuple, _show (C falls back to show_warning when _showwarnmsg is deleted), _once (TypeError against AttributeError), _dflt (C uses the cached default), and _dfltGetattr, _onceGetattr, _showGetattr, _wmGetattr (a module __getattr__ raising an AttributeError subclass for a deleted attribute: C's PyObject_GetOptionalAttr clears it, Python's _wm.x raises it)." },
+  { id := "warn-lookup-raises", pyFile := "Python/_warnings.c"
+    pyFns := ["get_default_action", "get_once_registry", "call_show_warning", "get_warnings_attr", "warn_explicit"]
+    statement := "A module __getattr__ that raises an exception whose class is not under AttributeError, for a deleted defaultaction (reached with no filter), onceregistry (once action, no registry), _showwarnmsg or WarningMessage (always action): C warn_explicit and _py_warnings.warn_explicit both raise it, for every call with an int line in C int, a module omitted or a str, and a message that can be built."
+    source := "the 'NULL && PyErr_Occurred()' returns of :410-412, :438-441, :749-752, :763-768; twin", status := .proven
+    prop := ``LookupRaisesTwins, thm := some ``lookupRaisesTwins_proven
+    notes := "Measured on 3.15.2 with KeyError for each attribute (both twins raise it); difftest warn.c / warn.py getattr cases." },
+  { id := "warn-lookup-raises-py", pyFile := "Lib/_py_warnings.py"
+    pyFns := ["warn_explicit"]
+    statement := "The same, from the Python side: _wm.defaultaction, _wm.onceregistry, _wm._showwarnmsg and _wm.WarningMessage propagate what the module __getattr__ raises."
+    source := "twin", status := .proven
+    prop := ``LookupRaisesTwins, thm := some ``lookupRaisesTwins_proven },
+  { id := "warn-twins-class-read", pyFile := "Lib/_py_warnings.py"
+    pyFns := ["warn_explicit"]
+    statement := "With any message __class__ (as isinstance and message.__class__ read it), C warn_explicit and _py_warnings.warn_explicit agree, under the other hypotheses of warn-twins-narrow."
+    source := "twin", status := .refuted
+    prop := ``WarnTwinsClassRead, thm := some ``warnTwinsClassRead_refuted, bug := some "corelibs-warnings-class-read"
+    notes := "A str subclass whose __class__ claims W1, with the error action: C raises the UserWarning, Python's raise message raises TypeError. Also warnTwinsClassRead_refuted_raise (__class__ raises ValueError: C shows, Python raises) and _inst (a Warning instance whose __class__ lies: different registry keys)." },
+  { id := "warn-twins-class-read-c", pyFile := "Python/_warnings.c"
+    pyFns := ["warn_explicit"]
+    statement := "The same, from the C side (PyObject_TypeCheck and Py_TYPE, :822-833)."
+    source := "twin", status := .refuted
+    prop := ``WarnTwinsClassRead, thm := some ``warnTwinsClassRead_refuted, bug := some "corelibs-warnings-class-read" },
+  { id := "warn-twins-import", pyFile := "Python/_warnings.c"
+    pyFns := ["call_show_warning", "get_warnings_attr"]
+    statement := "For every outcome of C's import of warnings in call_show_warning, C warn_explicit and _py_warnings.warn_explicit agree (and C shows through _showwarnmsg), under the other hypotheses of warn-twins-narrow."
+    source := "twin", status := .refuted
+    prop := ``WarnTwinsImport, thm := some ``warnTwinsImport_refuted, bug := some "corelibs-warnings-show-import"
+    notes := "A builtins.__import__ that raises RuntimeError for warnings: C raises it, Python shows the warning. Also warnTwinsImport_refuted_none (bug corelibs-warnings-show-sysmodules-none): sys.modules['warnings'] = None makes C print through show_warning, past a record log." },
   { id := "warn-twins-module-state-py", pyFile := "Lib/_py_warnings.py"
     pyFns := ["warn_explicit"]
     statement := "The same, from the Python side."
@@ -189,7 +217,7 @@ def entries : List Entry := [
     notes := "Difftest warn.filt_*: elements whose __eq__ raises ValueError, UnicodeError or KeyError." },
   { id := "warn-get-warnings-attr", pyFile := "Python/_warnings.c"
     pyFns := ["get_warnings_attr"]
-    statement := "For every class relation, get_warnings_attr: with try_import, an exception from import warnings whose class has ImportError in its MRO (ModuleNotFoundError, ImportCycleError, a user class whose MRO contains ImportError) is cleared and gives NULL, any other import error propagates; without it, warnings missing from sys.modules gives NULL; a present attribute is returned, a missing one is NULL (no error), and a lookup that raises propagates."
+    statement := "For every class relation, get_warnings_attr: with try_import, an exception from import warnings whose class has ImportError in its MRO (ModuleNotFoundError, ImportCycleError, a user class whose MRO contains ImportError) is cleared and gives NULL, any other import error propagates; without it, warnings missing from sys.modules gives NULL; a present attribute is returned, a missing one is NULL (no error), and a module __getattr__ that raises an exception whose class has AttributeError in its MRO gives NULL too, while any other exception from it propagates."
     source := "the comments of :219-222 and :232-233 ('Fallback to the C implementation')", status := .proven
     prop := ``GetWarningsAttrSpec, thm := some ``getWarningsAttrSpec_proven
     notes := "Measured on 3.15.2: sys.modules['warnings'] = None, or a finder raising ImportCycleError or a user ImportError subclass for warnings, makes warn_explicit print through show_warning (a ValueError propagates); a warnings module whose __getattr__ raises ValueError makes warn_explicit raise it. call_show_warning and get_default_action are written over getWarningsAttr (Model.lean)." },
@@ -236,7 +264,7 @@ def entries : List Entry := [
   { id := "warn-call-twins-narrow", pyFile := "Python/_warnings.c"
     pyFns := ["warnings_warn_impl", "get_category", "do_warn", "setup_context", "next_external_frame",
               "is_internal_frame", "is_filename_to_skip", "is_internal_filename"]
-    statement := "For a str or Warning message, a Warning subclass or None category, a stacklevel from 1 to the C int maximum, skip_file_prefixes a tuple of strs, frames with C int lines and globals whose __name__ is a str or missing and whose registry is missing, None or a dict with an exact version in C long, and the hypotheses of warn-twins-narrow: C and Python warnings.warn give the same result and use and leave the same registry and once registry. The twins' registry lookups are separate mirrors (cRegOf, pyRegOf)."
+    statement := "For a str or Warning message whose __class__ is not overridden, a Warning subclass or None category, a stacklevel from 1 to the C int maximum, skip_file_prefixes a tuple of strs, frames with C int lines and globals whose __name__ is a str or missing and whose registry is missing, None or a dict with an exact version in C long, and the hypotheses of warn-twins-narrow: C and Python warnings.warn give the same result and use and leave the same registry and once registry. The twins' registry lookups are separate mirrors (cRegOf, pyRegOf)."
     source := "twin: _py_warnings.py:465-520 against _warnings.c:1015-1211", status := .proven
     prop := ``WarnCallTwinsNarrow, thm := some ``warnCallTwinsNarrow_proven
     notes := "Difftest warn.call_c / warn.call_py: generated stacks of frames (exec'd functions with chosen filenames and globals) run in a fresh thread, so they are the whole stack." },
@@ -267,7 +295,7 @@ def entries : List Entry := [
     prop := ``NextExtSpec, thm := some ``nextExtSpec_proven },
   { id := "warn-category-errors", pyFile := "Python/_warnings.c"
     pyFns := ["get_category", "warnings_warn_impl"]
-    statement := "With a str message and a category that is not a Warning subclass (an instance or another class), both twins raise TypeError, for every stacklevel within Py_ssize_t and every tuple of prefixes."
+    statement := "With a str message whose __class__ does not make it a Warning for Python (not overridden, a class that is not a Warning subclass, or a read raising an exception under AttributeError) and a category that is not a Warning subclass (an instance or another class), both twins raise TypeError, for every class relation, stacklevel within Py_ssize_t and tuple of prefixes."
     source := "docs: category must be a subclass of Warning", status := .proven
     prop := ``WarnCatErr, thm := some ``warnCatErr_proven },
   { id := "warn-category-errors-py", pyFile := "Lib/_py_warnings.py"
@@ -275,6 +303,23 @@ def entries : List Entry := [
     statement := "The same, from the Python side."
     source := "docs", status := .proven
     prop := ``WarnCatErr, thm := some ``warnCatErr_proven },
+  { id := "warn-category-errors-any-cls", pyFile := "Lib/_py_warnings.py"
+    pyFns := ["warn"]
+    statement := "For every str message, Python warn raises TypeError for a category that is not a Warning subclass."
+    source := "docs: category must be a subclass of Warning; twin", status := .refuted
+    prop := ``WarnCatErrAnyCls, thm := some ``warnCatErrAnyCls_refuted, bug := some "corelibs-warnings-class-read"
+    notes := "A str subclass whose __class__ claims UserWarning, with category=5: Python takes UserWarning (:469-470); C raises TypeError." },
+  { id := "warn-call-twins-cls", pyFile := "Lib/_py_warnings.py"
+    pyFns := ["warn"]
+    statement := "With any message __class__, C and Python warnings.warn agree, under the other hypotheses of warn-call-twins-narrow."
+    source := "twin", status := .refuted
+    prop := ``WarnCallTwinsCls, thm := some ``warnCallTwinsCls_refuted, bug := some "corelibs-warnings-class-read"
+    notes := "Also warnCallTwinsCls_refuted_raise (__class__ raises ValueError) and _inst (a UserWarning instance whose __class__ gives DeprecationWarning: different registry keys)." },
+  { id := "warn-call-twins-cls-c", pyFile := "Python/_warnings.c"
+    pyFns := ["get_category"]
+    statement := "The same, from the C side (get_category's PyObject_TypeCheck, :1121-1123)."
+    source := "twin", status := .refuted
+    prop := ``WarnCallTwinsCls, thm := some ``warnCallTwinsCls_refuted, bug := some "corelibs-warnings-class-read" },
   { id := "warn-category-message", pyFile := "Python/_warnings.c"
     pyFns := ["get_category"]
     statement := "The two category TypeErrors have the same message."
@@ -313,8 +358,8 @@ def entries : List Entry := [
     source := "twin", status := .refuted
     prop := ``FilterListTwinsTuple, thm := some ``filterListTwinsTuple_refuted, bug := some "corelibs-warnings-py-twin-warn" },
   { id := "warn-show-dispatch", pyFile := "Lib/_py_warnings.py"
-    pyFns := ["_showwarnmsg", "_showwarnmsg_impl"]
-    statement := "_showwarnmsg calls a replaced showwarning instead of the implementation, and an exception it raises propagates (TypeError when it is not callable); the original or deleted showwarning goes to _showwarnmsg_impl, which outside record mode propagates an exception from a replaced formatwarning, loses the warning when sys.stderr is None or the write raises an exception whose class has OSError in its MRO (BrokenPipeError, io.UnsupportedOperation, a user class whose MRO contains OSError), writes it when the write succeeds, and propagates any other exception from the write (a class whose custom mro() leaves OSError out included). Quantified over every class relation."
+    pyFns := ["_showwarnmsg", "_showwarnmsg_impl", "_formatwarnmsg"]
+    statement := "_showwarnmsg calls a replaced showwarning instead of the implementation, and an exception it raises propagates (TypeError when it is not callable); for a deleted showwarning, an exception from the module __getattr__ whose class is not under AttributeError propagates, and one under it (the plain AttributeError among them) goes on like the original showwarning to _showwarnmsg_impl, which outside record mode propagates an exception from a replaced formatwarning (and for a deleted formatwarning, _formatwarnmsg's lookup error the same way: propagated unless under AttributeError), loses the warning when sys.stderr is None or the write raises an exception whose class has OSError in its MRO (BrokenPipeError, io.UnsupportedOperation, a user class whose MRO contains OSError), writes it when the write succeeds, and propagates any other exception from the write (a class whose custom mro() leaves OSError out included). Quantified over every class relation."
     source := "docs: showwarning may be replaced; _showwarnmsg_impl's comments :141-150", status := .proven
     prop := ``ShowDispatch, thm := some ``showDispatch_proven },
   { id := "warn-nested-record", pyFile := "Lib/_py_warnings.py"

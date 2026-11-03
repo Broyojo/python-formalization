@@ -450,8 +450,8 @@ def defFE : FEnv := ⟨fun _ _ => .ok (), fun _ => true, fun _ => true, builtinH
 def defR : Rx → String → Py Bool := fun _ s => .ok (s.toList.take 8 == "__main__".toList)
 def defK : DefaultCats := ⟨3, 6, 7, 8⟩
 def defE : Env := ⟨fun a b => .ok (decide (a = b)), fun _ _ => false, fun _ _ => .ok false, .call (.ok ()) (.ok ()),
-  builtinHier⟩
-def defCall : Call := ⟨"x", 3, "a.py", .int 1, .some "__main__x", .ok (), .none, .ok ()⟩
+  builtinHier, .ok ()⟩
+def defCall : Call := ⟨"x", 3, "a.py", .int 1, .some "__main__x", .ok (), .none, .ok (), false, .own⟩
 
 theorem defEnv : DefaultsEnv defFE defR defK :=
   ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, fun _ => rfl, by decide, by decide, by decide, by decide,
@@ -460,7 +460,7 @@ theorem defEnv : DefaultsEnv defFE defR defK :=
 /-- A `DeprecationWarning` from module `__main__x`: C ignores it, Python shows it once. -/
 theorem defaultsTwin_refuted : ¬ DefaultsTwin := fun h =>
   refute (h defFE defR defK defE defCall 1 "__main__x" defEnv
-    ⟨fun _ _ => ⟨_, rfl⟩, fun _ _ => ⟨_, rfl⟩, _, _, rfl⟩ rfl)
+    ⟨fun _ _ => ⟨_, rfl⟩, fun _ _ => ⟨_, rfl⟩, ⟨_, _, rfl⟩, rfl⟩ rfl)
     (x := .ok (some (.str "ignore"))) (y := .ok (some (.str "default"))) (by rfl)
     (by rw [pyDefaults_eq defFE defR defK defEnv]; rfl) (by simp)
 
