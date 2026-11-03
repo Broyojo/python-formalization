@@ -117,6 +117,7 @@ def runCtx (j : Json) : Except String Json := do
     | "brokenpipe" => some (.error (.named "BrokenPipeError" "write failed"))
     | "unsupported" => some (.error (.named "UnsupportedOperation" "write failed"))
     | "myoserr" => some (.error (.named "MyOSError" "write failed"))
+    | "yerr" => some (.error (.named "Y" "y"))
     | _ => some (.ok ())
   let sw := pFnShow (← (← j.getObjVal? "show").getStr?)
   let im := pFnImpl (← (← j.getObjVal? "impl").getStr?)

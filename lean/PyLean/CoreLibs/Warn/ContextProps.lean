@@ -297,9 +297,10 @@ called instead of the implementation, and an exception it raises propagates (:23
 non-callable one raises `TypeError`; the original or a deleted `showwarning` goes to
 `_showwarnmsg_impl`, which outside record mode formats the text (a replaced `formatwarning` that
 raises propagates, :145) and writes it to `sys.stderr`: lost when `sys.stderr` is `None` or the
-write raises an exception whose class is `OSError` or a subclass under the state's class hierarchy
-(`except OSError`, :146-150; so `BrokenPipeError`, `io.UnsupportedOperation`, user subclasses),
-written when it succeeds, and any other exception from the write propagates. -/
+write raises an exception of a class `c` with `st.hier.sub c "OSError"`, that is with `OSError` in
+its MRO (`except OSError`, :146-150; so `BrokenPipeError`, `io.UnsupportedOperation`, a user class
+whose MRO contains `OSError`), written when it succeeds, and any other exception from the write
+propagates (a class whose custom `mro()` leaves `OSError` out included). -/
 def ShowDispatch : Prop :=
   ∀ (useCtx : Bool) (m : Nat) (st : MState),
     (∀ i, st.showwarning = some (.user i) → showwarnmsg useCtx m st = .ok { st with out := st.out ++ [.hook i] }) ∧
@@ -336,10 +337,10 @@ theorem showDispatch_proven : ShowDispatch := by
       · intro e h he; simp [writeOut, h, hfmt, he]
       · intro e h he; simp [writeOut, h, hfmt, he]
 
-/-- In every hierarchy Python can have, `BrokenPipeError` is an `OSError`: a `sys.stderr` whose
+/-- In every relation CPython can have, `BrokenPipeError` is an `OSError`: a `sys.stderr` whose
 `write` raises it loses the warning. -/
 theorem brokenPipe_isOSError (H : Hier) (h : HierOk H) : isA H (.named "BrokenPipeError" "x") "OSError" = true :=
-  h.2.1 _ _ _ (h.2.2 _ _ rfl) (h.2.2 _ _ rfl)
+  (h "BrokenPipeError" "OSError" (by decide)).trans (by decide)
 
 /-! ## A nested `catch_warnings` inside a recording one -/
 

@@ -125,6 +125,7 @@ def excBase : String → Option String
   | "TypeError" | "AttributeError" | "NameError" | "AssertionError" | "SystemError" | "Warning" =>
     some "Exception"
   | "UnboundLocalError" => some "NameError"
+  | "Exception" => some "BaseException"
   | _ => none
 
 /-- Whether builtin class `c` is `base` or a subclass (the chains above are at most five long). -/
@@ -136,22 +137,31 @@ def excIsA (c base : String) : Bool :=
       | none => false
   go 6 c
 
-/-- A class hierarchy over exception class names: `sub c b` is `issubclass(c, b)`. The models
-take it as a parameter: the classes of the exceptions a callback raises are open (user classes,
-`io.UnsupportedOperation`, which is both an `OSError` and a `ValueError`, ...). -/
+/-- The class relation `except` uses, over exception class names: `sub c b` is
+`PyType_IsSubtype(c, b)`, whether `b` is in `c.__mro__` (the test of `PyErr_GivenExceptionMatches`).
+The models take it as a parameter: the classes of the exceptions a callback raises are open (user
+classes, `io.UnsupportedOperation`, which is both an `OSError` and a `ValueError`, ...), and a
+metaclass `mro()` can drop intermediate bases, so for a non-builtin class the relation need not be
+transitive: a class whose `mro()` is `[cls, UnicodeEncodeError, BaseException, object]` is under
+`UnicodeEncodeError` but not under `ValueError`. -/
 structure Hier where
   sub : String → String → Bool
 
-/-- What Python guarantees of `issubclass` between exception classes: reflexive, transitive, and
-agreeing with the builtin classes' own bases (`excBase`). -/
-def HierOk (H : Hier) : Prop :=
-  (∀ c, H.sub c c = true) ∧ (∀ a b c, H.sub a b = true → H.sub b c = true → H.sub a c = true) ∧
-  (∀ c b, excBase c = some b → H.sub c b = true)
+/-- A builtin class of the table (its MRO is fixed). -/
+def isBuiltinExc (c : String) : Bool := (excBase c).isSome || c == "BaseException"
 
-/-- The builtin classes alone (every other class unrelated to every base): one hierarchy. -/
+/-- What CPython guarantees of the relation: on a builtin class it is the builtin one, every
+builtin ancestor included (`excIsA`); a non-builtin class is unconstrained (no transitivity, no
+reflexivity: a custom `mro()` decides). -/
+def HierOk (H : Hier) : Prop :=
+  ∀ c b, isBuiltinExc c = true → H.sub c b = excIsA c b
+
+/-- The builtin classes alone (every other class unrelated to every base): one relation. -/
 def builtinHier : Hier := ⟨excIsA⟩
 
-/-- `except base:` for an exception, under the hierarchy `H`. -/
+theorem builtinHier_ok : HierOk builtinHier := fun _ _ _ => rfl
+
+/-- `except base:` for an exception, under the class relation `H`. -/
 def isA (H : Hier) (e : PyExc) (base : String) : Bool := H.sub e.className base
 
 /-- `warnings._showwarnmsg` and `warnings.WarningMessage` as the show step finds them: both there
@@ -173,7 +183,7 @@ structure Env where
   matchFilename : Pat → String → Py Bool
   /-- the show step -/
   shw : ShowA
-  /-- the exception class hierarchy -/
+  /-- the exception class relation (`PyType_IsSubtype`) -/
   hier : Hier
 
 /-- `warnings.defaultaction`: a value, or deleted (C then uses the str it read last). -/
@@ -279,7 +289,7 @@ inductive AttrR (α : Type) where
   | raises (e : PyExc)
 
 /-- `get_warnings_attr(interp, attr, try_import)`, _warnings.c:224-256: with `try_import` (and the
-interpreter not finalizing) `import warnings`, whose `ImportError` (or subclass) is cleared;
+interpreter not finalizing) `import warnings`, whose error is cleared when its class has `ImportError` in its MRO;
 otherwise `sys.modules['warnings']`, which may be absent; then the attribute. `.ok none` is `NULL`
 with no error set. -/
 def getWarningsAttr {α : Type} (H : Hier) (tryImport : Bool) (importW : Py Unit) (inSysModules : Bool)
