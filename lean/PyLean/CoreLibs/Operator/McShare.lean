@@ -1,4 +1,4 @@
-import PyLean.CoreLibs.Operator.Getters
+import PyLean.CoreLibs.Operator.Strength
 
 /-!
 `methodcaller` and the keyword dict it shares with `functools.partial`, CPython 3.15.2.
@@ -34,9 +34,12 @@ inductive Key where
   | other (n : Int)
   deriving Repr, DecidableEq
 
-/-- A dict on the heap: its items in insertion order, and `Py_REFCNT`. -/
+/-- A dict on the heap: its entries table in insertion order, where a deleted entry stays as `none` at its index
+(`delitem_common` leaves a dummy, Objects/dictobject.c), and `Py_REFCNT`. Positions matter because `PyDict_Next`
+walks by index. Scope limit: the table is not compacted when an insertion resizes it (`insertion_resize`), so a
+mutation that both deletes and then inserts past the table's usable size is out of scope. -/
 structure DictObj (α : Type) where
-  items : List (Key × α)
+  entries : List (Option (Key × α))
   refs : Nat
   deriving Repr, DecidableEq
 
@@ -48,8 +51,11 @@ def updAt {β : Type} : List β → Nat → (β → β) → List β
   | x :: xs, 0, f => f x :: xs
   | x :: xs, n + 1, f => x :: updAt xs n f
 
-/-- The items at an address; a dangling address reads as empty (it never occurs here). -/
-def itemsAt {α : Type} (h : Heap α) (d : Nat) : List (Key × α) := (h[d]?.map (·.items)).getD []
+/-- The entries at an address; a dangling address reads as empty (it never occurs here). -/
+def entriesAt {α : Type} (h : Heap α) (d : Nat) : List (Option (Key × α)) := (h[d]?.map (·.entries)).getD []
+
+/-- The live items at an address, in order. -/
+def itemsAt {α : Type} (h : Heap α) (d : Nat) : List (Key × α) := (entriesAt h d).filterMap id
 
 def refsAt {α : Type} (h : Heap α) (d : Nat) : Nat := (h[d]?.map (·.refs)).getD 0
 
@@ -57,13 +63,19 @@ def refsAt {α : Type} (h : Heap α) (d : Nat) : Nat := (h[d]?.map (·.refs)).ge
 def incref {α : Type} (h : Heap α) (d : Nat) : Heap α := updAt h d (fun o => { o with refs := o.refs + 1 })
 def decref {α : Type} (h : Heap α) (d : Nat) : Heap α := updAt h d (fun o => { o with refs := o.refs - 1 })
 
-/-- A new dict with one reference; its address is the old length. -/
-def alloc {α : Type} (h : Heap α) (items : List (Key × α)) : Heap α × Nat := (h ++ [⟨items, 1⟩], h.length)
+/-- A new dict with one reference and a compact table; its address is the old length. -/
+def alloc {α : Type} (h : Heap α) (items : List (Key × α)) : Heap α × Nat := (h ++ [⟨items.map some, 1⟩], h.length)
 
-/-- `d[k] = v`, `PyDict_SetItem`: an equal key keeps its place and takes the value; a new key goes at the end. -/
-def dictSet {α : Type} (items : List (Key × α)) (k : Key) (v : α) : List (Key × α) :=
-  if items.any (fun p => decide (p.1 = k)) then items.map (fun p => if p.1 = k then (p.1, v) else p)
-  else items ++ [(k, v)]
+/-- `d[k] = v`, `PyDict_SetItem`: an equal key keeps its entry and takes the value; a new key gets a new entry at the
+end. -/
+def dictSet {α : Type} (es : List (Option (Key × α))) (k : Key) (v : α) : List (Option (Key × α)) :=
+  if es.any (fun e => match e with | some p => decide (p.1 = k) | none => false) then
+    es.map (fun e => match e with | some p => if p.1 = k then some (p.1, v) else some p | none => none)
+  else es ++ [some (k, v)]
+
+/-- `del d[k]`: the entry stays, emptied. -/
+def dictDel {α : Type} (es : List (Option (Key × α))) (k : Key) : List (Option (Key × α)) :=
+  es.map (fun e => match e with | some p => if p.1 = k then none else some p | none => none)
 
 /-- An object `partial_new` and `methodcaller_new` see as an argument: the `methodcaller` type, a `str`, or a value
 of the abstract type. -/
@@ -173,7 +185,15 @@ def mcReduceC {α : Type} (W : PWorld α) (imp : Py Unit) (h : Heap α) (mc : Mc
 /-- `p.keywords[k] = v` in Python: the `keywords` member is `pto->kw` itself (Modules/_functoolsmodule.c:688),
 read-only as an attribute and mutable as a dict. -/
 def setKeyword {α : Type} (h : Heap α) (p : PartialObj α) (k : Key) (v : α) : Heap α :=
-  updAt h p.kw (fun o => { o with items := dictSet o.items k v })
+  updAt h p.kw (fun o => { o with entries := dictSet o.entries k v })
+
+/-- `del p.keywords[k]`. -/
+def delKeyword {α : Type} (h : Heap α) (p : PartialObj α) (k : Key) : Heap α :=
+  updAt h p.kw (fun o => { o with entries := dictDel o.entries k })
+
+/-- `p.keywords.clear()`: `PyDict_Clear` gives the dict an empty table. -/
+def clearKeywords {α : Type} (h : Heap α) (p : PartialObj α) : Heap α :=
+  updAt h p.kw (fun o => { o with entries := [] })
 
 /-- The keyword part of `methodcaller_repr`, :1834-1848: `PyUnicode_FromFormat("%U=%R", key, value)` for each item.
 `%U` of a key that is not a `str` is undefined behaviour (`none`): unicodeobject.c only asserts the type. -/
@@ -189,20 +209,81 @@ def kwReprs {α : Type} (rep : α → Py String) : List (Key × α) → Option (
       | some (.error e) => some (.error e)
       | some (.ok l) => some (.ok ((s ++ "=" ++ r) :: l))
 
-/-- `methodcaller_repr`, Modules/_operator.c:1799-1873, reading `mc->kwds` from the heap. `none` is undefined
-behaviour. The name is an exact `str` here, with `nameRepr` its repr. -/
+/-- A `repr` that may run Python code: its outcome, and the heap after it. A value's `__repr__` can write to
+`p.keywords`, which is `mc->kwds` once shared. -/
+abbrev RepS (α : Type) := α → Heap α → Py String × Heap α
+
+/-- A `repr` that touches nothing. -/
+def pureRep {α : Type} (rep : α → Py String) : RepS α := fun a h => (rep a, h)
+
+/-- The positional loop of `methodcaller_repr`, :1827-1832: the first failing `PyObject_Repr` stops it. -/
+def posReprs {α : Type} (rep : RepS α) : List α → Heap α → Py (List String) × Heap α
+  | [], h => (.ok [], h)
+  | a :: as, h =>
+    match rep a h with
+    | (.error e, h') => (.error e, h')
+    | (.ok r, h') =>
+      match posReprs rep as h' with
+      | (.error e, h'') => (.error e, h'')
+      | (.ok rs, h'') => (.ok (r :: rs), h'')
+
+/-- The entries from index `j` on: the first live one with its index. -/
+def nextFrom {α : Type} : List (Option (Key × α)) → Nat → Option (Nat × Key × α)
+  | [], _ => none
+  | none :: es, j => nextFrom es (j + 1)
+  | some (k, v) :: es, j => some (j, k, v)
+
+/-- `PyDict_Next(mp, &pos, &key, &value)`: the first live entry at index `pos` or later of the table as it is now. -/
+def dictNext {α : Type} (es : List (Option (Key × α))) (pos : Nat) : Option (Nat × Key × α) :=
+  nextFrom (es.drop pos) pos
+
+def changedSize : PyExc := .named "RuntimeError" "keywords dict changed size during iteration"
+
+/-- The keyword loop of `methodcaller_repr`, :1834-1853. `PyDict_Next` reads the dict at each step, so a value's
+`__repr__` that writes to it is seen. Each item is `PyUnicode_FromFormat("%U=%R", key, value)` (:1838): `%U` of a key
+that is not a `str` is undefined behaviour (`none`), and `%R` runs the value's `__repr__`, whose failure stops the
+loop (:1839-1840). An item past `numtotalargs` is the size check of :1841-1845, and a loop that ends short of it is
+the check of :1849-1853, both `RuntimeError`. `i` starts at the number of positional arguments. The fuel is never
+the outcome: `i` grows each step and the loop stops once it reaches `total`. -/
+def kwLoop {α : Type} (rep : RepS α) (d total : Nat) :
+    Nat → Nat → Nat → Heap α → List String → Option (Py (List String) × Heap α)
+  | 0, _, _, h, _ => some (.error .modelFuel, h)
+  | fuel + 1, pos, i, h, acc =>
+    match dictNext (entriesAt h d) pos with
+    | none => if i = total then some (.ok acc, h) else some (.error changedSize, h)
+    | some (_, .other _, _) => none
+    | some (j, .str s, v) =>
+      match rep v h with
+      | (.error e, h') => some (.error e, h')
+      | (.ok r, h') =>
+        if total ≤ i then some (.error changedSize, h')
+        else kwLoop rep d total fuel (j + 1) (i + 1) h' (acc ++ [s ++ "=" ++ r])
+
+/-- `methodcaller_repr`, Modules/_operator.c:1799-1873, reading `mc->kwds` from the heap, with reprs that may write to
+it. `numkwdargs` is read once, before any `repr` runs (:1811), and the keyword loop runs only when it was not zero
+(:1834). `none` is undefined behaviour. The name is an exact `str` here, with `nameRepr` its repr. -/
+def mcReprHeapS {α : Type} (rep : RepS α) (running : Bool) (cls nameRepr : String) (h : Heap α)
+    (mc : McObj α) : Option (Py String × Heap α) :=
+  if running then some (.ok (cls ++ "(...)"), h) else
+  let nk := match mc.kwds with | none => 0 | some d => (itemsAt h d).length
+  let np := mc.args.length
+  if np + nk = 0 then some (.ok (cls ++ "(" ++ nameRepr ++ ")"), h) else
+  match posReprs rep mc.args h with
+  | (.error e, h1) => some (.error e, h1)
+  | (.ok a, h1) =>
+    let kwPart : Option (Py (List String) × Heap α) :=
+      match mc.kwds with
+      | none => some (.ok [], h1)
+      | some d => if nk = 0 then some (.ok [], h1) else kwLoop rep d (np + nk) (np + nk + 1) 0 np h1 []
+    match kwPart with
+    | none => none
+    | some (.error e, h2) => some (.error e, h2)
+    | some (.ok k, h2) => some (.ok (cls ++ "(" ++ nameRepr ++ ", " ++ joinArgs (a ++ k) ++ ")"), h2)
+
+/-- `methodcaller_repr` with reprs that write nothing: the outcome only. -/
 def mcReprHeap {α : Type} (rep : α → Py String) (running : Bool) (cls nameRepr : String) (h : Heap α)
     (mc : McObj α) : Option (Py String) :=
-  if running then some (.ok (cls ++ "(...)")) else
-  let kws := match mc.kwds with | none => [] | some d => itemsAt h d
-  if mc.args.isEmpty && kws.isEmpty then some (.ok (cls ++ "(" ++ nameRepr ++ ")")) else
-  match mapPy rep mc.args with
-  | .error e => some (.error e)
-  | .ok a =>
-    match kwReprs rep kws with
-    | none => none
-    | some (.error e) => some (.error e)
-    | some (.ok k) => some (.ok (cls ++ "(" ++ nameRepr ++ ", " ++ joinArgs (a ++ k) ++ ")"))
+  (mcReprHeapS (pureRep rep) running cls nameRepr h mc).map Prod.fst
 
 /-- What `getattr(obj, name)` gives: the `functools.partial` type, or another callable taking the arguments and
 the keyword items. -/
@@ -266,7 +347,7 @@ def McReduceExact : Prop :=
     (mc.kwds = some d → itemsAt h d ≠ [] → (itemsAt h d).any (fun p => W.isPh (.val p.2)) = false →
       refsAt h d ≠ 1 →
       mcReduceC W (.ok ()) h mc =
-        .ok (.viaPartial ⟨.mcType, [.str mc.name], h.length⟩ mc.args, h ++ [⟨itemsAt h d, 1⟩]))
+        .ok (.viaPartial ⟨.mcType, [.str mc.name], h.length⟩ mc.args, h ++ [⟨(itemsAt h d).map some, 1⟩]))
 
 theorem mcReduceExact_proven : McReduceExact := by
   intro α W h mc d e hc hp
@@ -305,7 +386,7 @@ def McReduceIsolated : Prop :=
 theorem mcReduceIsolated_refuted : ¬McReduceIsolated := by
   intro hI
   have := hI String (fun s => .ok s) "operator.methodcaller" "'f'" "f" [] [("a", "1")] []
-    [⟨[(.str "a", "1")], 1⟩] [⟨[(.str "a", "1")], 2⟩] ⟨"f", [], some 0, some (["1"], [.str "a"])⟩
+    [⟨[some (.str "a", "1")], 1⟩] [⟨[some (.str "a", "1")], 2⟩] ⟨"f", [], some 0, some (["1"], [.str "a"])⟩
     ⟨.mcType, [.str "f"], 0⟩ [] (.str "a") "2" (by decide) (by decide)
   revert this
   decide
@@ -325,7 +406,7 @@ def McReduceNoCrash : Prop :=
 theorem mcReduceNoCrash_refuted : ¬McReduceNoCrash := by
   intro hN
   have := hN String (fun s => .ok s) "operator.methodcaller" "'f'" "f" [] [("a", "1")] []
-    [⟨[(.str "a", "1")], 1⟩] [⟨[(.str "a", "1")], 2⟩] ⟨"f", [], some 0, some (["1"], [.str "a"])⟩
+    [⟨[some (.str "a", "1")], 1⟩] [⟨[some (.str "a", "1")], 2⟩] ⟨"f", [], some 0, some (["1"], [.str "a"])⟩
     ⟨.mcType, [.str "f"], 0⟩ [] (.other 1) "2" (by decide) (by decide)
   revert this
   decide
@@ -351,7 +432,7 @@ def bigItems : List (Key × String) := bigKw.map (fun p => (Key.str p.1, p.2))
 theorem mcCallIsolated_refuted : ¬McCallIsolated := by
   intro hC
   have := hC String Unit (fun s => .ok s) "operator.methodcaller" "'f'" "f" ["print"] bigKw []
-    [⟨bigItems, 1⟩] [⟨bigItems, 2⟩] ⟨"f", ["print"], some 0, none⟩
+    [⟨bigItems.map some, 1⟩] [⟨bigItems.map some, 2⟩] ⟨"f", ["print"], some 0, none⟩
     ⟨.val "print", [], 0⟩ (.str "k0") "changed" (by decide) (by decide)
   revert this
   decide
@@ -415,5 +496,170 @@ theorem mcVectorcallFresh_proven : McVectorcallFresh := by
       · rw [← hc.1, h3]; simp [alloc]; omega
       · simp only [alloc, Option.some.injEq] at h3
         rw [← hc.1, ← h3]; omega
+
+/-! ### The size check of `methodcaller_repr` -/
+
+/-- The keyword loop of `methodcaller_repr`, every step, for any `repr` and any heap: with no entry left it answers
+the text exactly when it printed `numtotalargs` items, and is otherwise the `RuntimeError` of :1849-1853; an entry
+past `numtotalargs` is the `RuntimeError` of :1841-1845, raised after that entry's `repr` ran; otherwise the entry is
+printed and the loop goes on from the next index of the dict as the `repr` left it; a failing `repr` stops it; a key
+that is not a `str` is undefined behaviour. -/
+def McReprGuard : Prop :=
+  ∀ (α : Type) (rep : RepS α) (d total fuel pos i j : Nat) (h h' : Heap α) (acc : List String) (s r : String)
+    (v : α) (n : Int) (e : PyExc),
+    (dictNext (entriesAt h d) pos = none → i = total →
+      kwLoop rep d total (fuel + 1) pos i h acc = some (.ok acc, h)) ∧
+    (dictNext (entriesAt h d) pos = none → i ≠ total →
+      kwLoop rep d total (fuel + 1) pos i h acc = some (.error changedSize, h)) ∧
+    (dictNext (entriesAt h d) pos = some (j, .str s, v) → rep v h = (.ok r, h') → total ≤ i →
+      kwLoop rep d total (fuel + 1) pos i h acc = some (.error changedSize, h')) ∧
+    (dictNext (entriesAt h d) pos = some (j, .str s, v) → rep v h = (.ok r, h') → i < total →
+      kwLoop rep d total (fuel + 1) pos i h acc =
+        kwLoop rep d total fuel (j + 1) (i + 1) h' (acc ++ [s ++ "=" ++ r])) ∧
+    (dictNext (entriesAt h d) pos = some (j, .str s, v) → rep v h = (.error e, h') →
+      kwLoop rep d total (fuel + 1) pos i h acc = some (.error e, h')) ∧
+    (dictNext (entriesAt h d) pos = some (j, .other n, v) → kwLoop rep d total (fuel + 1) pos i h acc = none)
+
+theorem mcReprGuard_proven : McReprGuard := by
+  intro α rep d total fuel pos i j h h' acc s r v n e
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro h1 h2; simp [kwLoop, h1, h2]
+  · intro h1 h2; simp [kwLoop, h1, h2]
+  · intro h1 h2 h3; simp [kwLoop, h1, h2, h3]
+  · intro h1 h2 h3
+    have : ¬ total ≤ i := by omega
+    simp [kwLoop, h1, h2, this]
+  · intro h1 h2; simp [kwLoop, h1, h2]
+  · intro h1; simp [kwLoop, h1]
+
+theorem posReprs_pure {α : Type} (rep : α → Py String) :
+    ∀ (args : List α) (h : Heap α), posReprs (pureRep rep) args h = (mapPy rep args, h)
+  | [], _ => rfl
+  | a :: as, h => by
+    simp only [posReprs, pureRep, mapPy]
+    cases rep a with
+    | error e => rfl
+    | ok x =>
+      have := posReprs_pure rep as h
+      simp only [this]
+      cases mapPy rep as <;> rfl
+
+theorem kwLoop_pure {α : Type} (rep : α → Py String) (d total : Nat) (h : Heap α) :
+    ∀ (items : List (Key × α)) (fuel pos i : Nat) (acc : List String),
+      (entriesAt h d).drop pos = items.map some → i + items.length = total → items.length < fuel →
+      kwLoop (pureRep rep) d total fuel pos i h acc =
+        (kwReprs rep items).map (fun r => (r.map (acc ++ ·), h))
+  | [], fuel, pos, i, acc, hd, hi, hf => by
+    obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by simp at hf; omega⟩
+    have hn : dictNext (entriesAt h d) pos = none := by simp [dictNext, hd, nextFrom]
+    simp at hi
+    simp [kwLoop, hn, hi, kwReprs, Except.map]
+  | (k, v) :: rest, fuel, pos, i, acc, hd, hi, hf => by
+    obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by simp at hf; omega⟩
+    have hn : dictNext (entriesAt h d) pos = some (pos, k, v) := by
+      simp only [dictNext, hd, List.map_cons, nextFrom]
+    have hd' : (entriesAt h d).drop (pos + 1) = rest.map some := by
+      rw [← List.tail_drop, hd]; rfl
+    cases k with
+    | other m => simp [kwLoop, hn, kwReprs]
+    | str s =>
+      simp only [List.length_cons] at hi hf
+      cases hr : rep v with
+      | error e => simp [kwLoop, hn, pureRep, hr, kwReprs, Except.map]
+      | ok x =>
+        have hlt : ¬ total ≤ i := by omega
+        have ih := kwLoop_pure rep d total h rest f (pos + 1) (i + 1) (acc ++ [s ++ "=" ++ x]) hd' (by omega)
+          (by omega)
+        simp only [kwLoop, hn, pureRep, hr, hlt, ite_false]
+        rw [ih]
+        simp only [kwReprs, hr]
+        cases kwReprs rep rest with
+        | none => rfl
+        | some q =>
+          cases q with
+          | error e => rfl
+          | ok l => simp [Except.map]
+
+/-- With reprs that write nothing, the size check never fires and `methodcaller_repr` over a compact keyword dict is
+the name, the positional reprs and the `key=repr` items joined, the first failure being the outcome. -/
+def McReprPure : Prop :=
+  ∀ (α : Type) (rep : α → Py String) (cls nameRepr : String) (h : Heap α) (mc : McObj α) (d : Nat)
+    (items : List (Key × α)),
+    mc.kwds = some d → entriesAt h d = items.map some →
+    mcReprHeap rep false cls nameRepr h mc =
+      if mc.args.isEmpty && items.isEmpty then some (.ok (cls ++ "(" ++ nameRepr ++ ")")) else
+      match mapPy rep mc.args with
+      | .error e => some (.error e)
+      | .ok a =>
+        match kwReprs rep items with
+        | none => none
+        | some (.error e) => some (.error e)
+        | some (.ok k) => some (.ok (cls ++ "(" ++ nameRepr ++ ", " ++ joinArgs (a ++ k) ++ ")"))
+
+theorem mcReprPure_proven : McReprPure := by
+  intro α rep cls nameRepr h mc d items hk he
+  have hl : (itemsAt h d).length = items.length := by
+    simp only [itemsAt, he]
+    induction items with
+    | nil => rfl
+    | cons x xs ih => simp [ih]
+  have hz : (mc.args.length + items.length = 0) ↔ (mc.args.isEmpty && items.isEmpty) = true := by
+    simp [List.isEmpty_iff, List.length_eq_zero_iff]
+  simp only [mcReprHeap, mcReprHeapS, Bool.false_eq_true, ite_false, hk, hl, posReprs_pure]
+  by_cases h0 : mc.args.length + items.length = 0
+  · simp [h0, hz.mp h0]
+  · have h0' : ¬ (mc.args.isEmpty && items.isEmpty) = true := fun x => h0 (hz.mpr x)
+    simp only [h0, ite_false, h0', Bool.false_eq_true]
+    cases hm : mapPy rep mc.args with
+    | error e => rfl
+    | ok a =>
+      simp only
+      by_cases hi : items.length = 0
+      · have : items = [] := List.length_eq_zero_iff.mp hi
+        subst this
+        simp [kwReprs, Except.map]
+      · have hk2 := kwLoop_pure rep d (mc.args.length + items.length) h items
+          (mc.args.length + items.length + 1) 0 mc.args.length [] (by simp [he]) rfl (by omega)
+        simp only [hi, ite_false, hk2]
+        cases kwReprs rep items with
+        | none => rfl
+        | some q => cases q <;> rfl
+
+/-- What a value's `__repr__` does to `p.keywords` in the cases measured on 3.15.2: add a key `zz`, delete `a` or
+`b`, clear the dict, or set `b` to `"9"`; any other value prints itself. -/
+def mutRep (p : PartialObj String) : RepS String := fun v h =>
+  if v = "add" then (.ok "V", setKeyword h p (.str "zz") "0")
+  else if v = "del_a" then (.ok "V", delKeyword h p (.str "a"))
+  else if v = "del_b" then (.ok "V", delKeyword h p (.str "b"))
+  else if v = "clear" then (.ok "V", clearKeywords h p)
+  else if v = "set_b" then (.ok "V", setKeyword h p (.str "b") "9")
+  else (.ok v, h)
+
+/-- `repr(mc)` for `mc = methodcaller('f', **kw)` once `p = mc.__reduce__()[0]` shares the dict, the values' reprs
+writing to `p.keywords`. -/
+def reprAfter (kw : List (String × String)) : Option (Py String) :=
+  match mcFromCall [] "f" [] kw with
+  | .error _ => none
+  | .ok (mc, h1) =>
+    match mcReduceC (plainWorld String) (.ok ()) h1 mc with
+    | .ok (.viaPartial p _, h2) => (mcReprHeapS (mutRep p) false "operator.methodcaller" "'f'" h2 mc).map Prod.fst
+    | _ => none
+
+/-- The size check reached through the shared dict, as measured on 3.15.2 and main: a key added anywhere, a key
+deleted before it is reached, or a clear before the end is `RuntimeError`; a key deleted after it was printed, a
+clear at the last item, a value changed in place, and a deletion balanced by an addition are not, and the text
+shows what the loop read. -/
+def McReprMutations : Prop :=
+  reprAfter [("a", "add"), ("b", "1")] = some (.error changedSize) ∧
+  reprAfter [("a", "1"), ("b", "add")] = some (.error changedSize) ∧
+  reprAfter [("a", "del_b"), ("b", "1")] = some (.error changedSize) ∧
+  reprAfter [("a", "1"), ("b", "del_a")] = some (.ok "operator.methodcaller('f', a=1, b=V)") ∧
+  reprAfter [("a", "del_a"), ("b", "1")] = some (.ok "operator.methodcaller('f', a=V, b=1)") ∧
+  reprAfter [("a", "clear"), ("b", "1")] = some (.error changedSize) ∧
+  reprAfter [("a", "1"), ("b", "clear")] = some (.ok "operator.methodcaller('f', a=1, b=V)") ∧
+  reprAfter [("a", "set_b"), ("b", "1")] = some (.ok "operator.methodcaller('f', a=V, b=9)") ∧
+  reprAfter [("a", "del_b"), ("b", "1"), ("c", "add")] = some (.ok "operator.methodcaller('f', a=V, c=V, zz=0)")
+
+theorem mcReprMutations_proven : McReprMutations := by unfold McReprMutations; decide
 
 end PyLean.CoreLibs.Operator.McShare

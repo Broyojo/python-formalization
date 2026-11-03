@@ -857,7 +857,8 @@ def tscmp (a b : List Nat) : Bool :=
 one-dimensional view of these bytes, raises (a non-contiguous `memoryview` raises `BufferError`), or gives a view
 with `ndim > 1` (a `memoryview` gives `ndim = 1` for a simple request, so that case needs another exporter). -/
 inductive DigestArg where
-  | str (ascii : Bool) (data : List Nat)
+  /-- A `str` (`PyUnicode_Check`, so a subclass too), with `Py_TYPE(x)->tp_name`. -/
+  | str (ascii : Bool) (data : List Nat) (tn : String)
   | buffer (data : List Nat)
   | bufferErr (e : PyExc)
   | bufferNd
@@ -869,9 +870,9 @@ def DigestArg.hasBuffer : DigestArg → Bool
   | .buffer _ | .bufferErr _ | .bufferNd => true
   | _ => false
 
-/-- `Py_TYPE(x)->tp_name` of an argument without the buffer protocol. -/
+/-- `Py_TYPE(x)->tp_name` of an argument without the buffer protocol, as :877-880 print it. -/
 def DigestArg.tn : DigestArg → String
-  | .str _ _ => "str"
+  | .str _ _ tn => tn
   | .other tn => tn
   | _ => "?"
 
@@ -889,7 +890,7 @@ def digestBuffer : DigestArg → Py (List Nat)
 otherwise, with neither a buffer exporter, the `TypeError` naming both types (:876-882); else `a`'s buffer, then
 `b`'s, each failing on its own (:884-904). -/
 def compareDigest : DigestArg → DigestArg → Py Bool
-  | .str aa a, .str ab b =>
+  | .str aa a _, .str ab b _ =>
     if !aa || !ab then
       .error (.typeError "comparing strings with non-ASCII characters is not supported")
     else .ok (tscmp a b)
