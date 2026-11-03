@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.TextLibs.Diff
-import PyLean.TextLibs.StructPrep
+import PyLean.TextLibs.StructUse
 import PyLean.TextLibs.BinasciiEq3
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
@@ -373,6 +373,26 @@ def entries : List Entry := [
     statement := "iter_unpack refuses a zero-sized format first, then a failing buffer, then a length that is not a multiple."
     source := "Modules/_struct.c:2293-2314", status := .proven
     prop := ``IterUnpackOrder, thm := some ``iterUnpackOrder_proven },
+  { id := "textlibs-struct-iter-unpack-buffer-reinit", pyFile := "Modules/_struct.c", pyFns := ["Struct_iter_unpack_impl"]
+    statement := "iter_unpack does not divide by zero, whatever its buffer's __buffer__ does."
+    source := "undisputed: Python code must not crash the interpreter", status := .refuted
+    prop := ``IterUnpackNoCrash, thm := some ``iterUnpackNoCrash_refuted
+    bug := some "textlibs-struct-reinit-memory-safety"
+    notes := "The zero test at 2291 is before PyObject_GetBuffer (2303); a __buffer__ installing '0s' makes 2307 divide by zero. python/cpython#158695, closed as bulk filing." },
+  { id := "textlibs-struct-unpack-count", pyFile := "Modules/_struct.c", pyFns := ["Struct_unpack_impl"]
+    statement := "For every accepted str format and every buffer of the struct's size, unpack succeeds and returns exactly s_len values."
+    source := "docs: the result is a tuple with one item per format item", status := .proven
+    prop := ``UnpackLength, thm := some ``unpackLength_proven
+    notes := "s_unpack_internal (2038-2081) has no inventory row; this statement unfolds it. The impl reads s_size and s_codes after the buffer conversion, which the model now does (bufStruct)." },
+  { id := "textlibs-struct-unpack-from-laws", pyFile := "Modules/_struct.c", pyFns := ["Struct_unpack_from_impl"]
+    statement := "unpack_from at a non-negative offset with room reads the buffer from that offset (as unpack_from of the tail at 0); a negative offset leaving less than size bytes, one before the buffer, and a buffer too short are refused with the source's messages."
+    source := "Modules/_struct.c:2134-2173", status := .proven
+    prop := ``UnpackFromLaws, thm := some ``unpackFromLaws_proven
+    notes := "The impl reads the Struct as the buffer and offset conversions left it (bufStruct, offStruct)." },
+  { id := "textlibs-struct-iter-len-laws", pyFile := "Modules/_struct.c", pyFns := ["unpackiter_len", "unpackiter_iternext"]
+    statement := "On a struct left alone, __length_hint__ is the number of tuples the iterator still yields, and it is 0 once next() has raised StopIteration."
+    source := "Modules/_struct.c:2211-2223", status := .proven
+    prop := ``IterLenLaws, thm := some ``iterLenLaws_proven },
   { id := "textlibs-struct-iter-drive", pyFile := "Modules/_struct.c", pyFns := ["unpackiter_iternext"]
     statement := "With the Struct left alone, the iterator object yields the tuples of the list model, and its read stays in the buffer."
     source := "docs: iter_unpack", status := .proven
@@ -410,9 +430,23 @@ def entries : List Entry := [
     source := "invariant", status := .proven
     prop := ``RangeErrorBounds, thm := some ``rangeErrorBounds_proven },
   { id := "textlibs-struct-repr", pyFile := "Modules/_struct.c", pyFns := ["s_repr"]
-    statement := "repr(Struct(fmt)) of a format without control characters is Struct('fmt')."
-    source := "invariant: repr round-trips the format", status := .proven
-    prop := ``ReprPlain, thm := some ``reprPlain_proven },
+    statement := "repr of a Struct, or of a subclass under its own type name, is the type name and Python's repr of the format, with \\t, \\n, \\r, \\x0b and \\x0c for the whitespace an accepted format can hold."
+    source := "Modules/_struct.c:2557-2563 (_PyType_Name)", status := .proven
+    prop := ``ReprPlain, thm := some ``reprPlain_proven
+    notes := "The hypothesis is the alphabet of accepted formats (printable ASCII without quote and backslash, and the Py_ISSPACE controls); it is not derived from prepare_s here. The difftest checks Struct only; subclass names were checked by hand." },
+  { id := "textlibs-struct-cache-coherent", pyFile := "Modules/_struct.c"
+    pyFns := ["cache_struct_converter", "_clearcache_impl"]
+    statement := "With only exact str keys in the cache, a hit or a miss gives the struct of the format's value, the cache stays coherent and within MAXCACHE entries; after _clearcache(), unpack depends only on the format's value whatever the cache held."
+    source := "Modules/_struct.c:2614-2680", status := .proven
+    prop := ``CacheCoherent, thm := some ``cacheCoherent_proven
+    notes := "The cache is a list of (key, Struct) with dict lookup by the key's __eq__; __hash__ is assumed to agree with __eq__, and a raising __eq__/__hash__ during the lookup is out of scope (stated limit)." },
+  { id := "textlibs-struct-cache-value-only", pyFile := "Modules/_struct.c"
+    pyFns := ["cache_struct_converter"]
+    statement := "unpack(fmt, buf) depends only on the value of fmt, whatever was passed to the module functions before."
+    source := "docs: the module functions are equivalent to Struct(format) methods", status := .refuted
+    prop := ``CacheValueOnly, thm := some ``cacheValueOnly_refuted
+    bug := some "textlibs-struct-cache-str-subclass-key"
+    notes := "After calcsize(CI('B')) with a case-insensitive str subclass, unpack('b', b'\\xff') returns (255,) until _clearcache(). Reproduces on main." },
   { id := "textlibs-binascii-base64-round-trip", pyFile := "Modules/binascii.c"
     pyFns := ["binascii_a2b_base64_impl", "binascii_b2a_base64_impl", "base64_encode_trio", "base64_encode_fast", "base64_decode_quad", "base64_decode_fast"]
     statement := "a2b_base64(b2a_base64(d, newline=False), strict_mode=s) == d for every bytes value d and both strict modes."

@@ -102,7 +102,7 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "struct.calcsize" => return encPy toJson (calcsize (← decFmt j))
   | "struct.info" =>
     return encPy (fun s => Json.mkObj [("size", toJson s.sSize), ("len", toJson s.sLen),
-        ("sizeof", toJson (sSizeof s)), ("repr", toJson (sRepr s))]) (structInit (← decFmt j))
+        ("sizeof", toJson (sSizeof s)), ("repr", toJson (sRepr "Struct" s))]) (structInit (← decFmt j))
   | "struct.uninit" =>
     return Json.mkObj [("ok", Json.mkObj [("size", toJson (sGetSize sNew)),
       ("pack", encPy toJson (do structPack (← ensureReady sNew) [])),

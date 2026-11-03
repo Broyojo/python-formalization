@@ -948,24 +948,32 @@ def structPackInto (s : SObj) (buffer : List Nat) (offset0 : Int) (args : List S
     throw (structErr s!"pack_into expected {s.sLen} items for packing (got {args.length})")
   packIntoBody s buffer off args
 
-/-- A buffer argument. `raises` is an object whose `__buffer__` raises. -/
+/-- A buffer argument. `raises` is an object whose `__buffer__` raises; `reinit` is one whose
+`__buffer__` calls `__init__` on the `Struct` in use, which becomes `t`, and then returns a writable
+buffer holding `b`. -/
 inductive BufArg where
   | bytes (b : List Nat)
   | bytearray (b : List Nat)
   | notBuffer (ty : String)
   | raises (ty : String) (e : PyExc)
+  | reinit (b : List Nat) (t : SObj)
   deriving Repr, DecidableEq, Inhabited
+
+/-- The `Struct` after the buffer conversion ran. -/
+def bufStruct (s : SObj) : BufArg → SObj
+  | .reinit _ t => t
+  | _ => s
 
 /-- `y*`, and `PyObject_GetBuffer` with `PyBUF_SIMPLE`: a raising `__buffer__` passes through. -/
 def readBuf : BufArg → Py (List Nat)
-  | .bytes b | .bytearray b => .ok b
+  | .bytes b | .bytearray b | .reinit b _ => .ok b
   | .notBuffer t => .error (.typeError s!"a bytes-like object is required, not '{t}'")
   | .raises _ e => .error e
 
 /-- `Py_buffer(accept={rwbuffer})`, the clinic code in `Modules/clinic/_struct.c.h`: any failure, a
 raising `__buffer__` too, is this `TypeError`. `fname` and `pos` name the argument. -/
 def writeBuf (pos : Nat) : BufArg → Py (List Nat)
-  | .bytearray b => .ok b
+  | .bytearray b | .reinit b _ => .ok b
   | .bytes _ =>
     .error (.typeError s!"pack_into() argument {pos} must be read-write bytes-like object, not bytes")
   | .notBuffer t | .raises t _ =>
@@ -994,14 +1002,22 @@ def offNumber : OffArg → Py Int
 /-- The clinic `Py_ssize_t` argument of `unpack_from`. -/
 def offSsize (a : OffArg) : Py Int := do ssizeArg (← offNumber a)
 
-/-- `Struct_unpack_impl`: the clinic takes the buffer first. -/
-def structUnpackA (s : SObj) (b : BufArg) : Py (List SV) := do
-  structUnpack s (← readBuf b)
+/-- The `Struct` after the offset conversion ran. -/
+def offStruct (s : SObj) : OffArg → SObj
+  | .index _ _ (some t) => t
+  | _ => s
 
-/-- `Struct_unpack_from_impl`: the clinic takes the buffer, then the offset. -/
+/-- `Struct_unpack_impl`, `Modules/_struct.c:2105-2118`: the clinic takes the buffer first, and the
+impl then reads `s_size` and `s_codes`, which `__buffer__` can have replaced. -/
+def structUnpackA (s : SObj) (b : BufArg) : Py (List SV) := do
+  structUnpack (bufStruct s b) (← readBuf b)
+
+/-- `Struct_unpack_from_impl`, `Modules/_struct.c:2134-2173`: the clinic takes the buffer, then the
+offset, and the impl reads the `Struct` as both conversions left it. -/
 def structUnpackFromA (s : SObj) (b : BufArg) (off : OffArg) : Py (List SV) := do
   let buf ← readBuf b
-  structUnpackFrom s buf (← offSsize off)
+  let offset ← offSsize off
+  structUnpackFrom (offStruct (bufStruct s b) off) buf offset
 
 /-- The arguments of `pack_into`, `few n` being only `n` of them when two are required. -/
 inductive PackIntoArgs where
@@ -1017,9 +1033,7 @@ def structPackIntoA (s : SObj) (pos extra : Nat) : PackIntoArgs → Py (List Nat
   | .full b off args => do
     let buffer ← writeBuf pos b
     let offset ← offSsize off
-    let s' := match off with
-      | .index _ _ (some t) => t
-      | _ => s
+    let s' := offStruct (bufStruct s b) off
     if args.length ≠ s'.sLen then
       throw (structErr s!"pack_into expected {s'.sLen} items for packing (got {args.length})")
     packIntoBody s' buffer offset args
@@ -1032,15 +1046,19 @@ structure UIter where
   index : Nat := 0
   deriving Repr, DecidableEq, Inhabited
 
-/-- `Struct_iter_unpack_impl`, `Modules/_struct.c:2285-2318`. -/
+/-- `Struct_iter_unpack_impl`, `Modules/_struct.c:2285-2318`. The zero test at 2291 is on the `Struct`
+before `PyObject_GetBuffer` (2303) runs `__buffer__`; the `%` at 2307 is on the `s_size` after it, so a
+`__buffer__` that installs a zero-sized format divides by zero (`MEMORY`, SIGFPE on x86-64). -/
 def structIterUnpackA (s : SObj) (b : BufArg) : Py UIter :=
   if s.sSize = 0 then .error (structErr "cannot iteratively unpack with a struct of length 0")
   else
     match readBuf b with
     | .error e => .error e
     | .ok buf =>
-      if buf.length % s.sSize ≠ 0 then
-        .error (structErr s!"iterative unpacking requires a buffer of a multiple of {s.sSize} bytes")
+      let t := bufStruct s b
+      if t.sSize = 0 then .error MEMORY
+      else if buf.length % t.sSize ≠ 0 then
+        .error (structErr s!"iterative unpacking requires a buffer of a multiple of {t.sSize} bytes")
       else .ok { buf }
 
 /-- `unpackiter_iternext`, `Modules/_struct.c:2230-2251`: `none` is `StopIteration`. The bound on the
@@ -1081,9 +1099,10 @@ def reprChar (c : Nat) : String :=
   else if c = 11 then "\\x0b" else if c = 12 then "\\x0c"
   else String.singleton (Char.ofNat c)
 
-/-- `s_repr`, `Modules/_struct.c:2557-2563`: `"%s(%R)"` of the type name and the format. -/
-def sRepr (s : SObj) : String :=
-  "Struct('" ++ String.join (s.format.map reprChar) ++ "')"
+/-- `s_repr`, `Modules/_struct.c:2557-2563`: `"%s(%R)"` of `_PyType_Name(Py_TYPE(self))`, the
+unqualified name of the object's type (a subclass prints its own), and the format. -/
+def sRepr (tyName : String) (s : SObj) : String :=
+  tyName ++ "('" ++ String.join (s.format.map reprChar) ++ "')"
 
 /-- `Struct.__new__(Struct)`, `s_new`, `Modules/_struct.c:1868-1950`: with no format the object has no
 codes and no `s_format`. -/
