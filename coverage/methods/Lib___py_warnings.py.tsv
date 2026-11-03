@@ -4,7 +4,7 @@ Lib/_py_warnings.py	53	55	_Context.__init__	__init__(self, filters)	modelled	war
 Lib/_py_warnings.py	57	61	_Context.copy	copy(self)	modelled	warn-nested-record,warn-catch-restores	
 Lib/_py_warnings.py	63	64	_Context._record_warning	_record_warning(self, msg)	modelled	warn-record-captures	
 Lib/_py_warnings.py	68	69	_GlobalContext.__init__	__init__(self)	todo		
-Lib/_py_warnings.py	72	80	_GlobalContext._filters	_filters(self)	todo		review: ctxFilters .global (Context.lean:130-133, getFilters :140-143) is warnings.filters, or a fresh [] when it was deleted, but the property's own 'try: return _wm.filters except AttributeError' (:75-80) is not routed through the class relation: the fourth pass states a module __getattr__ for filters out of scope (Context.lean:22-25), so a lookup that raises something else cannot be expressed; measured on 3.15.2, del warnings.filters with a module __getattr__ raising KeyError makes _py_warnings.warn_explicit raise KeyError. This is the gap that made _showwarnmsg HOLLOW last round, and the exclusion is not on record.
+Lib/_py_warnings.py	72	80	_GlobalContext._filters	_filters(self)	modelled	warn-catch-restores,warn-filter-list-twins-py,warn-filters-lookup-raises-py	
 Lib/_py_warnings.py	89	95	_get_context	_get_context()	modelled	warn-filter-list-twins-py,warn-catch-restores	
 Lib/_py_warnings.py	98	100	_set_context	_set_context(context)	modelled	warn-catch-restores,warn-record-captures	
 Lib/_py_warnings.py	103	108	_new_context	_new_context()	modelled	warn-nested-record,warn-catch-restores,warn-record-captures	
@@ -15,7 +15,7 @@ Lib/_py_warnings.py	127	130	formatwarning	formatwarning(message, category, filen
 Lib/_py_warnings.py	133	150	_showwarnmsg_impl	_showwarnmsg_impl(msg)	modelled	warn-show-dispatch,warn-nested-record,warn-record-captures	
 Lib/_py_warnings.py	153	210	_formatwarnmsg_impl	_formatwarnmsg_impl(msg)	todo		
 Lib/_py_warnings.py	217	233	_showwarnmsg	_showwarnmsg(msg)	modelled	warn-show-dispatch,warn-record-captures	
-Lib/_py_warnings.py	240	251	_formatwarnmsg	_formatwarnmsg(msg)	todo		review: New row (credited by --prefill through warn-show-dispatch). The body of :242-251 lives in writeOut (Context.lean:163-182): the formatwarning lookup goes through modAttrErr and the class relation, and ShowDispatch pins a raising replaced formatter and both deleted-lookup outcomes; but the catch-all '| _ => write' treats formatwarning set to the original showwarning, _showwarnmsg_impl or a log's append as a formatter that succeeds, where 3.15.2 raises RecursionError, TypeError and TypeError (measured), and the text it returns is not modelled, so 'return fw(...)' for a replaced formatter that returns cannot be told from always calling _formatwarnmsg_impl: ShowDispatch says nothing about a non-raising replaced formatwarning (measured: its text is what gets written, a non-str gives the write's TypeError), so a _formatwarnmsg that ignored it satisfies every entry.
+Lib/_py_warnings.py	240	251	_formatwarnmsg	_formatwarnmsg(msg)	modelled	warn-show-dispatch	
 Lib/_py_warnings.py	254	291	filterwarnings	filterwarnings(action, message='', category=Warning, module='', lineno=0, append=False)	modelled	warn-filterwarnings-spec,warn-simplefilter-warncat,warn-version-bumps	
 Lib/_py_warnings.py	294	310	simplefilter	simplefilter(action, category=Warning, lineno=0, append=False)	modelled	warn-simplefilter-warncat,warn-simplefilter-any-cat,warn-version-bumps	
 Lib/_py_warnings.py	313	317	_filters_mutated	_filters_mutated()	modelled	warn-version-bumps	
