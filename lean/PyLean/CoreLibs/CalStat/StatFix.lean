@@ -797,7 +797,8 @@ theorem weights_neg (ws : List Rat) (h : ∃ a ∈ ws, a < 0) (st : SumSt) :
 
 /-- `harmonic_mean`'s refusals, statistics.py:297-314: a single value that is not a number
 (`isinstance(x, (numbers.Real, Decimal))` fails: a str, `None`, or another object) raises
-`TypeError('unsupported type')`; with weights of the right length, a negative weight is refused by
+`TypeError('unsupported type')`, and a single negative number (int, Fraction, float or Decimal)
+raises `StatisticsError(errmsg)` (:300-301); with weights of the right length, a negative weight is refused by
 `_fail_neg(weights, errmsg)` with `StatisticsError('harmonic mean does not support negative values')`,
 before the data is read. -/
 def HarmonicRefusals : Prop :=
@@ -805,10 +806,16 @@ def HarmonicRefusals : Prop :=
     harmonicMean [⟨c, v⟩] none = .error (.typeError "unsupported type")) ∧
   (∀ (data : List PyN) (ws : List Rat), data ≠ [] → ws.length = data.length → (∃ a ∈ ws, a < 0) →
     harmonicMean data (some (fracs ws)) =
-      .error (.named "StatisticsError" "harmonic mean does not support negative values"))
+      .error (.named "StatisticsError" "harmonic mean does not support negative values")) ∧
+  (∀ (c : Cls) (q : Rat), q < 0 →
+    (∀ v ∈ [Val.frac q, Val.flt (.fin q), Val.dec (.fin q)],
+      harmonicMean [⟨c, v⟩] none =
+        .error (.named "StatisticsError" "harmonic mean does not support negative values")) ∧
+    (∀ i : Int, i < 0 → harmonicMean [⟨c, .int i⟩] none =
+        .error (.named "StatisticsError" "harmonic mean does not support negative values")))
 
 theorem harmonicRefusals_proven : HarmonicRefusals := by
-  refine ⟨?_, ?_⟩
+  refine ⟨?_, ?_, ?_⟩
   · intro c v hv
     rcases hv with rfl | ⟨s, rfl⟩ | ⟨t, rfl⟩ <;> rfl
   · intro data ws hne hl hneg
@@ -816,6 +823,20 @@ theorem harmonicRefusals_proven : HarmonicRefusals := by
     have hlen : ((fracs ws).length != data.length) = false := by simp [fracs, hl]
     simp only [hmGeneral, hlen, Bool.false_eq_true, ite_false, weights_neg ws hneg {}]
     rfl
+  · intro c q hq
+    have h0 : ((0 : Int) : Rat) = 0 := rfl
+    refine ⟨?_, ?_⟩
+    · intro v hv
+      simp only [List.mem_cons, List.not_mem_nil, or_false] at hv
+      rcases hv with rfl | rfl | rfl <;>
+        simp [harmonicMean, vltPy, vlt, Val.ext, Ext.lt, Val.ordered, h0, hq, throw, throwThe,
+          MonadExcept.throw, MonadExceptOf.throw, statErr, hmErrmsg, bind, Except.bind]
+    · intro i hi
+      have hi' : (i : Rat) < 0 := by
+        have := Rat.intCast_lt_intCast.mpr hi
+        simpa using this
+      simp [harmonicMean, vltPy, vlt, Val.ext, Ext.lt, Val.ordered, hi', throw, throwThe,
+        MonadExcept.throw, MonadExceptOf.throw, statErr, hmErrmsg, bind, Except.bind]
 
 /-! ## The pickling state -/
 
