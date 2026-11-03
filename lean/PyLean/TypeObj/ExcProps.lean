@@ -4,6 +4,7 @@ import PyLean.TypeObj.ExcPropsGroup2
 import PyLean.TypeObj.ExcPropsBase2
 import PyLean.TypeObj.ExcPropsRest2
 import PyLean.TypeObj.ExcPropsOsStr
+import PyLean.TypeObj.ExcPropsSetstateC
 import PyLean.TypeObj.ExcPropsSplitTotal
 
 /-!
@@ -54,9 +55,16 @@ def excEntries : List Entry := [
     "e.__reduce__() is (type(e), e.args) plus the instance dict exactly when a dict exists."
     "exceptions.c:211-219" ``BaseExceptionReduceShape ``baseExceptionReduceShape_proven,
   p "typeobj-exc-setstate" ["BaseException___setstate___impl"]
-    "__setstate__(None) does nothing and a non-dict is a TypeError; a dict is walked by position in its current state, each str key set with setattr in order, a non-str key or a failed set ending it; with a __setattr__ that leaves the dict alone the result is setattr of every item in order."
+    "__setstate__(None) does nothing, a non-dict is a TypeError, a non-str first key is the TypeError of setattr, and with a __setattr__ that leaves the dict alone the result is setattr of every item in order."
     "exceptions.c:234-258" ``BaseExceptionSetstateLive ``baseExceptionSetstateLive_proven
-    "Deleting state entries during the loop is outside the model: PyDict_Next walks a table with dummy entries, the model a list. Adding is exact.",
+    "The interpreter's dict has no dummy slots, so a __setattr__ that changes the state dict is stated on the real table instead: typeobj-exc-setstate-table.",
+  p "typeobj-exc-setstate-table" ["BaseException___setstate___impl"]
+    "Over the dict table of dictobject.c, each turn of __setstate__ calls PyDict_Next on the dict as it now is from the last position, sets the attribute through __setattr__ (whose insertions, resizes and deletions the next turn sees), and stops at the end or at a raise; with a __setattr__ that leaves the dict alone it sets exactly the items of the walk, in order."
+    "exceptions.c:246-255; PyDict_Next and insertion_resize, Objects/dictobject.c (PyLean.DictSet)" ``SetstateC.SetstateTableSteps ``SetstateC.setstateTableSteps_proven,
+  p "typeobj-exc-setstate-table-examples" []
+    "As on 3.15.2: deleting 'a' while setting it still sets a, b and c (the deletion leaves a dummy), and an insertion that resizes a table holding two dummies skips the two keys after the current one."
+    "CPython 3.15.2 runs of both programs" ``SetstateC.SetstateTableExamples ``SetstateC.setstateTableExamples_proven
+    "Behaviour on record, not a bug: PyDict_Next under mutation has no promised result.",
   p "typeobj-exc-traceback-setter" ["BaseException___traceback___set_impl", "BaseException_with_traceback_impl"]
     "__traceback__ accepts only a traceback or None (TypeError otherwise, world unchanged), cannot be deleted, and with_traceback returns self."
     "exceptions.c:270-278, 391-412" ``TracebackSetterChecks ``tracebackSetterChecks_proven,
@@ -178,6 +186,21 @@ def excEntries : List Entry := [
   p "typeobj-exc-eg-new-stores" ["BaseExceptionGroup_new"]
     "On success BaseExceptionGroup.__new__ stores args as passed, the message, the items of tuple(exceptions) and, for a sequence other than a list or tuple, the repr taken before the conversion; the class is the one the checks chose."
     "exceptions.c:906-1002" ``EgNewStores ``egNewStores_proven,
+  p "typeobj-exc-eg-isinstance" ["BaseExceptionGroup_new"]
+    "isinstance(x, Exception) in BaseExceptionGroup_new is true without running code for an Exception, and false for another exception whose __class__ is its own type."
+    "exceptions.c:946; object_isinstance, Objects/abstract.c:2603" ``EgIsInstanceException ``egIsInstanceException_proven,
+  p "typeobj-exc-eg-nested-flag" ["BaseExceptionGroup_new"]
+    "The nested flag is true exactly when some item's isinstance(x, Exception) is false."
+    "exceptions.c:933-953" ``EgNestedFlag ``egNestedFlag_proven,
+  p "typeobj-exc-eg-choose-nested" ["BaseExceptionGroup_new"]
+    "With a nested BaseException, ExceptionGroup and its Exception subclasses refuse (%.200s of the name), BaseExceptionGroup and its other subclasses keep their class."
+    "exceptions.c:955-985" ``EgChooseNested ``egChooseNested_proven,
+  p "typeobj-exc-eg-repr-tuple" ["BaseExceptionGroup_repr"]
+    "With no saved string and two args whose second is not a list, repr(eg) shows eg.exceptions as a tuple."
+    "exceptions.c:1108-1110, 1119-1122" ``EgReprTupleForm ``egReprTupleForm_proven,
+  p "typeobj-exc-check-match-class" ["exceptiongroup_split_check_match"]
+    "Matching by one exception class is issubclass(type(exc), cls), with no code run."
+    "exceptions.c:1284-1288; PyErr_GivenExceptionMatches, Python/errors.c" ``SplitCheckMatchClass ``splitCheckMatchClass_proven,
   p "typeobj-exc-eg-repr-list" ["BaseExceptionGroup_repr"]
     "With no saved string, two args and a list second arg, repr(eg) shows a new list of eg.exceptions."
     "exceptions.c:1098-1107, 1119-1122" ``EgReprListForm ``egReprListForm_proven,
@@ -204,8 +227,14 @@ def excEntries : List Entry := [
     "exceptions.c:1716-1737" ``PrepReraiseStarHandOff ``prepReraiseStarHandOff_proven,
   -- ImportError and OSError (ExcPropsRest2)
   p "typeobj-exc-importerror-init-kw" ["ImportError_init"]
-    "ImportError.__init__ sets args, each of name, path and name_from to its keyword or NULL, and msg to the only argument or NULL, on every call; an unexpected keyword is a TypeError raised after args was replaced."
-    "exceptions.c:1803-1837" ``ImportErrorInitKw ``importErrorInitKw_proven,
+    "ImportError.__init__ sets args, each of name, path and name_from to its keyword or NULL, and msg to the only argument or NULL, on every call; an unexpected keyword is a TypeError, with the 'Did you mean' suggestion of _Py_CalculateSuggestions when there is one, raised after args was replaced."
+    "exceptions.c:1803-1837; Python/getargs.c:1939-1999; Python/suggestions.c:16-180" ``ImportErrorInitKw ``importErrorInitKw_proven,
+  p "typeobj-exc-kw-suggestions" []
+    "The modelled _Py_CalculateSuggestions gives, for the keyword names of ImportError, NameError and AttributeError, the suggestions 3.15.2 prints for nam, Name, nme, named, pat, path_, name_fro, nameFrom, ob, obj_ and none for zzq, x, naem, é, o, zz, obj."
+    "CPython 3.15.2 runs" ``KwSuggestionsMatch ``kwSuggestionsMatch_proven,
+  p "typeobj-exc-name-attr-unexpected" ["NameError_init", "AttributeError_init"]
+    "NameError and AttributeError refuse an unknown keyword with the getargs message and suggestion, after args was replaced."
+    "exceptions.c:2580-2605, 2663-2690; Python/getargs.c:1939-1999" ``NameAttrInitUnexpected ``nameAttrInitUnexpected_proven,
   p "typeobj-exc-importerror-getstate-reduce" ["ImportError_getstate", "ImportError_reduce"]
     "With name, path or name_from set, the state is a new copy of the instance dict with the set members over it; otherwise the instance dict itself or None; __reduce__ is (type, args) for a None state and (type, args, state) otherwise."
     "exceptions.c:1879-1925" ``ImportErrorGetstateReduce ``importErrorGetstateReduce_proven,
@@ -218,6 +247,9 @@ def excEntries : List Entry := [
   p "typeobj-exc-oserror-init-effects" ["OSError_init"]
     "oserror_init with 3-5 arguments and a non-None filename stores errno, strerror, filename (and a non-None filename2) and cuts args to two; with fewer than 2 or more than 5 it clears errno and strerror and keeps args; an exact BlockingIOError with an int third argument stores characters_written and keeps args."
     "exceptions.c:2123-2176" ``OsErrorInitEffects ``osErrorInitEffects_proven,
+  p "typeobj-exc-oserror-init-two-or-none" ["OSError_init"]
+    "oserror_init with exactly two arguments stores errno and strerror and keeps args; with 3-5 arguments and a None filename it stores errno and strerror, skips filename and filename2, and keeps args whole."
+    "exceptions.c:2136, 2165-2172" ``OsErrorInitTwoOrNone ``osErrorInitTwoOrNone_proven,
   p "typeobj-exc-oserror-written-set" ["OSError_written_set"]
     "del e.characters_written is AttributeError when unset and resets it otherwise; an int outside Py_ssize_t is a ValueError with nothing stored."
     "exceptions.c:2444-2462" ``OsErrorWrittenSetBranches ``osErrorWrittenSetBranches_proven,

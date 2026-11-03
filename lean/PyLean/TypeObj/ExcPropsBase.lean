@@ -193,35 +193,26 @@ theorem baseExceptionReduceShape_proven : BaseExceptionReduceShape := by
   simp only [baseExceptionReduce, M.bind_app, getW_app]
   cases h : instDictAddr w v <;> simp
 
-/-- **`__setstate__` sets each item of the dict, reading the dict as it is now.** `None` is a
-no-op and anything but a dict is a `TypeError` with the world unchanged (`:241-245`). A dict is
-walked by position (`PyDict_Next`, `:246`): each turn reads position `i` of the dict in the
-current world, so an item a `__setattr__` adds is set too; the end of the dict ends the loop; a
-non-string key is the `TypeError` of `PyObject_SetAttr`; a failing set is the result
-(`:252-254`); a successful one goes on at `i + 1` in the world it left. Last, with exact str keys
-and a `__setattr__` that leaves the dict alone, `__setstate__(d)` is exactly
-`setattr(self, k, v)` for every item in order, so a version that skips items or sets nothing
-fails. The `es.length < excIterFuel` hypothesis is the model's loop bound, not a Python limit. -/
+/-- **`__setstate__` accepts `None` and dicts, and sets each item of an unchanged dict.** `None`
+is a no-op and anything but a dict is a `TypeError` with the world unchanged (`:241-245`); a
+non-string first key is the `TypeError` of `PyObject_SetAttr`. With exact str keys and a
+`__setattr__` that leaves the dict alone, `__setstate__(d)` is exactly `setattr(self, k, v)` for
+every item in order, so a version that skips items or sets nothing fails.
+
+This is the interpreter's loop over a dict without dummy slots. When `__setattr__` changes the
+state dict, CPython's `PyDict_Next` walk depends on dummies and resizes, which the interpreter's
+dict does not have; that case is `SetstateC.SetstateTableSteps` and `SetstateTableExamples`, over
+the table of `PyLean.DictSet`. `es.length < excIterFuel` is the model's loop bound. -/
 def BaseExceptionSetstateLive : Prop :=
   (∀ (rt : Rt) (self : Val) (w : World), baseExceptionSetstate rt self .none w = .ok .none w) ∧
   (∀ (rt : Rt) (self state : Val) (w : World), state.is .none = false →
     dictOf w state = none →
     baseExceptionSetstate rt self state w =
       .err (.exc B.TypeError "state is not a dictionary" none) w) ∧
-  (∀ (rt : Rt) (self state : Val) (fuel i : Nat) (w : World),
-    ((dictOf w state).getD [])[i]? = none → setstateLoop rt self state (fuel + 1) i w = .ok () w) ∧
-  (∀ (rt : Rt) (self state k v : Val) (fuel i : Nat) (w : World),
-    ((dictOf w state).getD [])[i]? = some (k, v) → strOf w k = none →
-    setstateLoop rt self state (fuel + 1) i w =
+  (∀ (rt : Rt) (self state k v : Val) (rest : List (Val × Val)) (w : World),
+    state.is .none = false → dictOf w state = some ((k, v) :: rest) → strOf w k = none →
+    baseExceptionSetstate rt self state w =
       .err (.exc B.TypeError s!"attribute name must be string, not '{trunc 200 (typeName w k)}'" none) w) ∧
-  (∀ (rt : Rt) (self state k v : Val) (n : Name) (fuel i : Nat) (w w1 : World),
-    ((dictOf w state).getD [])[i]? = some (k, v) → strOf w k = some n →
-    rt.setAttr self n (some v) w = .ok () w1 →
-    setstateLoop rt self state (fuel + 1) i w = setstateLoop rt self state fuel (i + 1) w1) ∧
-  (∀ (rt : Rt) (self state k v : Val) (n : Name) (fuel i : Nat) (e : PyErr) (w w1 : World),
-    ((dictOf w state).getD [])[i]? = some (k, v) → strOf w k = some n →
-    rt.setAttr self n (some v) w = .err e w1 →
-    setstateLoop rt self state (fuel + 1) i w = .err e w1) ∧
   (∀ (rt : Rt) (self state : Val) (es : List (Name × Val)) (w : World),
     state.is .none = false → dictOf w state = some (es.map fun p => (Val.str p.1, p.2)) →
     es.length < excIterFuel →
@@ -269,19 +260,17 @@ theorem setstateLoop_fold (rt : Rt) (self state : Val) (es : List (Name × Val))
       simp [setstateLoop, hget, List.drop_eq_nil_of_le hge, listForM_nil]
 
 theorem baseExceptionSetstateLive_proven : BaseExceptionSetstateLive := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
   · intro rt self w
     simp [baseExceptionSetstate, Val.is]
   · intro rt self state w h1 h2
     simp [baseExceptionSetstate, h1, h2, typeErr, raiseC]
-  · intro rt self state fuel i w h
-    simp [setstateLoop, h]
-  · intro rt self state k v fuel i w h hk
-    simp [setstateLoop, h, hk, typeErr, raiseC]
-  · intro rt self state k v n fuel i w w1 h hk hs
-    simp [setstateLoop, h, hk, hs]
-  · intro rt self state k v n fuel i e w w1 h hk hs
-    simp [setstateLoop, h, hk, hs]
+  · intro rt self state k v rest w hn hd hk
+    have hf : excIterFuel = 99999 + 1 := rfl
+    simp only [baseExceptionSetstate, hn, M.bind_app, getW_app, hd, Bool.false_eq_true, if_false]
+    rw [hf, setstateLoop]
+    simp only [M.bind_app, getW_app, hd, Option.getD_some, List.getElem?_cons_zero, hk]
+    simp [typeErr, raiseC]
   · intro rt self state es w hn hd hl hfr
     simp only [baseExceptionSetstate, hn, M.bind_app, getW_app, hd, Bool.false_eq_true, if_false]
     rw [setstateLoop_fold rt self state es hfr excIterFuel 0 w hd (by simpa using hl)]

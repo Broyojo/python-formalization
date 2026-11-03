@@ -1813,6 +1813,8 @@ typeobj-exc-keyerror-str	proven	Objects/exceptions.c
 typeobj-exc-vectorcall-twin	proven	Objects/exceptions.c	BaseException_new,BaseException_init,BaseException_vectorcall
 typeobj-exc-reduce	proven	Objects/exceptions.c	BaseException___reduce___impl
 typeobj-exc-setstate	proven	Objects/exceptions.c	BaseException___setstate___impl
+typeobj-exc-setstate-table	proven	Objects/exceptions.c	BaseException___setstate___impl
+typeobj-exc-setstate-table-examples	proven	Objects/exceptions.c	
 typeobj-exc-traceback-setter	proven	Objects/exceptions.c	BaseException___traceback___set_impl,BaseException_with_traceback_impl
 typeobj-exc-cause-suppress	proven	Objects/exceptions.c	BaseException___cause___set_impl,PyException_SetCause
 typeobj-exc-context-set	proven	Objects/exceptions.c	BaseException___context___set_impl,PyException_SetContext
@@ -1849,6 +1851,11 @@ typeobj-exc-add-note-branches	proven	Objects/exceptions.c	BaseException_add_note
 typeobj-exc-clear-fields	proven	Objects/exceptions.c	BaseException_clear,MemoryError_dealloc,get_memory_error
 typeobj-exc-eg-new-refusals	proven	Objects/exceptions.c	BaseExceptionGroup_new
 typeobj-exc-eg-new-stores	proven	Objects/exceptions.c	BaseExceptionGroup_new
+typeobj-exc-eg-isinstance	proven	Objects/exceptions.c	BaseExceptionGroup_new
+typeobj-exc-eg-nested-flag	proven	Objects/exceptions.c	BaseExceptionGroup_new
+typeobj-exc-eg-choose-nested	proven	Objects/exceptions.c	BaseExceptionGroup_new
+typeobj-exc-eg-repr-tuple	proven	Objects/exceptions.c	BaseExceptionGroup_repr
+typeobj-exc-check-match-class	proven	Objects/exceptions.c	exceptiongroup_split_check_match
 typeobj-exc-eg-repr-list	proven	Objects/exceptions.c	BaseExceptionGroup_repr
 typeobj-exc-matcher-refuses	proven	Objects/exceptions.c	get_matcher_type
 typeobj-exc-check-match-branches	proven	Objects/exceptions.c	exceptiongroup_split_check_match
@@ -1858,10 +1865,13 @@ typeobj-exc-same-metadata-iff	proven	Objects/exceptions.c	is_same_exception_meta
 typeobj-exc-prep-reraise-group	proven	Objects/exceptions.c	_PyExc_PrepReraiseStar
 typeobj-exc-prep-reraise-handoff	proven	Objects/exceptions.c	PyUnstable_Exc_PrepReraiseStar
 typeobj-exc-importerror-init-kw	proven	Objects/exceptions.c	ImportError_init
+typeobj-exc-kw-suggestions	proven	Objects/exceptions.c	
+typeobj-exc-name-attr-unexpected	proven	Objects/exceptions.c	NameError_init,AttributeError_init
 typeobj-exc-importerror-getstate-reduce	proven	Objects/exceptions.c	ImportError_getstate,ImportError_reduce
 typeobj-exc-oserror-use-init-slots	proven	Objects/exceptions.c	oserror_use_init
 typeobj-exc-oserror-init-use-init	proven	Objects/exceptions.c	OSError_init
 typeobj-exc-oserror-init-effects	proven	Objects/exceptions.c	OSError_init
+typeobj-exc-oserror-init-two-or-none	proven	Objects/exceptions.c	OSError_init
 typeobj-exc-oserror-written-set	proven	Objects/exceptions.c	OSError_written_set
 typeobj-exc-syntaxerror-init	proven	Objects/exceptions.c	SyntaxError_init
 typeobj-exc-my-basename	proven	Objects/exceptions.c	my_basename
