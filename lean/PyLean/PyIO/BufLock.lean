@@ -114,14 +114,14 @@ theorem keeps_hangC {α : Type} : Keeps (hangC : BM α) := ⟨fun _ _ _ => .inl 
 
 theorem enter_held (R : CH) (s : BufS) (h : s.locked = true) :
     enter R s = (s, .error (.named "RuntimeError" s!"reentrant call inside {reprC s}")) := by
-  rcases s with ⟨raw, ok, det, rd, wr, lk, ap, hb, buf, pos, rp, re, wp, we, sz, cr, lg, mk, bl⟩
+  rcases s with ⟨raw, ok, det, rn, rd, wr, lk, ap, hb, buf, pos, rp, re, wp, we, sz, cr, lg, mk, bl⟩
   simp only at h
   subst h
   rfl
 
 theorem enter_free (R : CH) (s : BufS) (h : s.locked = false) :
     enter R s = ({ s with locked := true }, .ok ()) := by
-  rcases s with ⟨raw, ok, det, rd, wr, lk, ap, hb, buf, pos, rp, re, wp, we, sz, cr, lg, mk, bl⟩
+  rcases s with ⟨raw, ok, det, rn, rd, wr, lk, ap, hb, buf, pos, rp, re, wp, we, sz, cr, lg, mk, bl⟩
   simp only at h
   subst h
   rfl
@@ -390,11 +390,11 @@ theorem lockDiscipline_proven : LockDiscipline := by
     · exact .inl h
     · exact .inr (h.trans hl)
     · exact .inr h
-  · rcases s with ⟨raw, ok, det, rd, wr, lk, ap, hb, buf, pos, rp, re, wp, we, sz, cr, lg, mk, bl⟩
+  · rcases s with ⟨raw, ok, det, rn, rd, wr, lk, ap, hb, buf, pos, rp, re, wp, we, sz, cr, lg, mk, bl⟩
     simp only at hok hl
     subst hok hl
     rfl
-  · rcases s with ⟨raw, ok, det, rd, wr, lk, ap, hb, buf, pos, rp, re, wp, we, sz, cr, lg, mk, bl⟩
+  · rcases s with ⟨raw, ok, det, rn, rd, wr, lk, ap, hb, buf, pos, rp, re, wp, we, sz, cr, lg, mk, bl⟩
     simp only at hok hw hl
     subst hok hw hl
     rfl

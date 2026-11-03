@@ -417,6 +417,9 @@ pyio-bytesio-readinto-overlap	proven	Modules/_io/bytesio.c	_io_BytesIO_readinto_
 pyio-bufferedreader-readinto-twins	refuted	Lib/_pyio.py	BufferedReader._readinto,BufferedIOBase.readinto
 pyio-bufferedreader-readline-bound	proven	Lib/_pyio.py	IOBase.readline
 pyio-buffered-c-no-crash	refuted	Modules/_io/bufferedio.c	_io__Buffered_read_impl,_io__Buffered_detach_impl,_bufferedreader_raw_read
+pyio-buffered-c-no-crash-reinit	refuted	Modules/_io/bufferedio.c	_buffered_init,_io_BufferedReader___init___impl,_io__Buffered_read_impl,_bufferedreader_read_generic,_bufferedreader_fill_buffer
+pyio-buffered-c-no-crash-init-size0	refuted	Modules/_io/bufferedio.c	_bufferedreader_read_generic,_io_BufferedReader___init___impl,_buffered_init
+pyio-buffered-c-no-hang	refuted	Modules/_io/bufferedio.c	_io_BufferedWriter_write_impl,_io_BufferedWriter___init___impl,_buffered_init
 pyio-bufferedreader-no-uninit	refuted	Modules/_io/bufferedio.c	_buffered_init,_io__Buffered_peek_impl,_bufferedreader_peek_unlocked,_bufferedreader_fill_buffer,_bufferedreader_raw_read
 pyio-bufferedreader-read1-no-uninit	refuted	Modules/_io/bufferedio.c	_io__Buffered_read1_impl,_bufferedreader_raw_read
 pyio-buffered-pyio-no-hang	refuted	Lib/_pyio.py	BufferedReader.read

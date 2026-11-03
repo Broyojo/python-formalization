@@ -545,5 +545,16 @@ def run_python(c):
     return run_case(c)
 
 
+# CHUNK_START=k skips the first k cases of the seed, so one seed's cases can be run in
+# chunks (`--cases` is then the chunk length)
+_SEEN = [0]
+
+
+def gen_chunk(rng):
+    c = gen_case(rng)
+    _SEEN[0] += 1
+    return c if _SEEN[0] > int(os.environ.get("CHUNK_START", "0")) else None
+
+
 if __name__ == "__main__":
-    common.main(gen_case, run_python, default_cases=20000)
+    common.main(gen_chunk, run_python, default_cases=20000)

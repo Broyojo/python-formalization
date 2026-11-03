@@ -11,7 +11,8 @@ that runs a re-entered operation, so the lock (`ENTER_BUFFERED`, :329-338, and
 `_enter_buffered_busy`, :294-327), the checks done before it is taken, and the
 fields re-read after each callback are all part of the model.
 
-* `self->raw == NULL` after `detach` is `detached`; a method call or attribute
+* `self->raw == NULL` (after `detach`, until `__init__` stores a raw again) is
+  `rawNull`, and `detached` is the flag of the same name; a method call or attribute
   read on it dereferences `Py_TYPE(NULL)`, which is `crashErr` (the process dies).
 * `self->buffer == NULL` after `close` is `!hasBuf`.
 * Uninitialized memory (the `PyMem_Malloc`ed buffer, an unfilled
@@ -28,6 +29,8 @@ structure BufS where
   raw : Raw
   ok : Bool
   detached : Bool
+  /-- `self->raw == NULL`. -/
+  rawNull : Bool
   readable : Bool
   writable : Bool
   /-- `self->owner` is this thread: the lock is held. -/
@@ -150,7 +153,7 @@ or `PyObject_GetAttr`: with `self->raw == NULL` (`detach`) these read
 `Py_TYPE(NULL)`. -/
 def onRaw {α : Type} (c : RCall) (f : Raw → Raw × α) : BM α := do
   let s ← get
-  if s.detached then crash
+  if s.rawNull then crash
   callback c
   let s ← get
   let (r, a) := f s.raw
@@ -169,7 +172,7 @@ def onRawObj {α : Type} (c : RCall) (f : Raw → Raw × α) : BM α := do
 (Objects/call.c:941-943, `null_error`). -/
 def onRawObjArgs {α : Type} (c : RCall) (f : Raw → Raw × α) : BM α := do
   let s ← get
-  if s.detached then thr (.named "SystemError" "null argument to internal routine")
+  if s.rawNull then thr (.named "SystemError" "null argument to internal routine")
   onRaw c f
 
 /-- `raw.readable()`, `raw.writable()` or `raw.seekable()` through
@@ -515,7 +518,7 @@ def readAll : BM Val := do
   resetRead
   -- `PyObject_GetOptionalAttr(self->raw, &_Py_ID(readall), ...)`
   let s ← get
-  if s.detached then crash
+  if s.rawNull then crash
   let tmp ← rawReadall (fuelOf s) [] false
   if cur = 0 then pure tmp
   else pure (.bytes (data ++ tmp.bytesOf))
@@ -756,7 +759,7 @@ def close : BM Val := do
     -- :583-607: ENTER (a failure returns at once), raw.close(), free, LEAVE
     let res ← locked do
       let s ← get
-      if s.detached then crash
+      if s.rawNull then crash
       let res ← attempt (onRaw .close Raw.close)
       mod fun s => { s with hasBuf := false, readEnd := 0, pos := 0 }
       pure res
@@ -775,8 +778,8 @@ def detach : BM Val := do
   -- returns NULL with no exception set, which the call machinery reports as a
   -- `SystemError` whose text depends on whether the call site was specialized
   -- (`_Py_CheckFunctionResult` or the eval loop's "error return without exception set")
-  if s.detached then thr (.named "SystemError" "~NULL without an exception")
-  mod fun s => { s with detached := true, ok := false }
+  if s.rawNull then thr (.named "SystemError" "~NULL without an exception")
+  mod fun s => { s with detached := true, rawNull := true, ok := false }
   pure .none
 
 /-- The write loop of `_io_BufferedWriter_write_impl`, bufferedio.c:2184-2215:
@@ -788,7 +791,7 @@ def writeLoop (b : List Nat) : Nat → Int → Int → BM (Int × Int)
     if remaining ≥ s.size then
       -- `buffer_size` 0 (a re-entered `__init__(raw, 0)`) with nothing left: the raw
       -- stream is asked for `b''` forever once its scripts and hooks are spent
-      if remaining = 0 ∧ s.size = 0 ∧ s.raw.ws = [] ∧ s.raw.closed = false ∧ s.detached = false ∧
+      if remaining = 0 ∧ s.size = 0 ∧ s.raw.ws = [] ∧ s.raw.closed = false ∧ s.rawNull = false ∧
           s.raw.hooks.all (·.1 ≤ s.raw.tick) then hangC
       let n ← rawWrite none (b.drop written.toNat) (fuelOf s)
       if n = -2 then
@@ -890,7 +893,9 @@ def init (kind : Nat) (size : Int) : BM Unit := do
   if kind = 1 ∨ kind = 2 then
     let a ← inquiryObj .writable Raw.canWrite
     checkInq a "File or stream is not writable."
-  mod fun s => { s with size := size.toNat }
+  -- `Py_XSETREF(self->raw, Py_NewRef(raw))`: attached again even if a check's
+  -- callback detached it (`detached` stays as that left it)
+  mod fun s => { s with rawNull := false, size := size.toNat }
   -- `_buffered_init`
   if size ≤ 0 then thr (.valueError "buffer size must be strictly positive")
   mod fun s => { s with hasBuf := false }
