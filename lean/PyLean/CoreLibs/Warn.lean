@@ -13,15 +13,16 @@ namespace PyLean.CoreLibs.Warn
 
 open PyLean.Registry
 
-def cFns : List String := ["warn_explicit", "get_filter", "check_matched", "already_warned", "update_registry"]
+def cFns : List String := ["warn_explicit", "get_filter", "check_matched", "already_warned", "update_registry",
+  "get_once_registry", "get_default_action", "get_warnings_attr", "call_show_warning", "warnings_warn_explicit_impl"]
 
 def entries : List Entry := [
   { id := "warn-twins-narrow", pyFile := "Python/_warnings.c"
     pyFns := cFns
-    statement := "For callbacks that do not raise, filters that are 5-tuples of a str action error/ignore/always/all/default, compiled patterns and lines that fit Py_ssize_t, an int line that fits C int, a module omitted or a str, a message that can be built, and a registry that is None or a dict whose version is an exact int within C long, C warn_explicit and _py_warnings.warn_explicit give the same result and leave the same registry and once registry (True == 1)."
+    statement := "For callbacks that do not raise, warnings._showwarnmsg (callable) and warnings.WarningMessage present, a filters list (in warnings.filters or a context) of 5-tuples with a str action error/ignore/always/all/default, compiled patterns and int lines that fit Py_ssize_t, such a str defaultaction, a dict onceregistry, an int line that fits C int, a module omitted or a str, a message that can be built, no module_globals, and a registry that is None or a dict whose version is an exact int within C long, C warn_explicit and _py_warnings.warn_explicit give the same result and leave the same registry and once registry (True == 1)."
     source := "twin: _py_warnings.py:556-625 against _warnings.c:797-922", status := .proven
     prop := ``WarnTwinsNarrow, thm := some ``warnTwinsNarrow_proven
-    notes := "Difftest corelibs area warn: plain-str filters, 5-element lists, short items, non-str actions and default actions, non-int lines, non-str modules, raising message constructors, non-dict registries and True versions included; 180k cases over 6 seeds, 100%." },
+    notes := "Difftest corelibs area warn: plain-str filters, 5-element lists, short items, non-str and unhashable actions, non-int filter lines, tuple filters, context filters, deleted defaultaction and onceregistry, a non-dict onceregistry, deleted or non-callable _showwarnmsg, deleted WarningMessage, module_globals (an int, a dict, a dict whose loader raises), mapping registries, non-int linenos, non-str modules, raising message constructors and True versions included; 150k cases over 3 seeds, 100%. Every hypothesis is on record as a refutation (the entries below)." },
   { id := "warn-twins-py", pyFile := "Lib/_py_warnings.py"
     pyFns := ["warn_explicit"]
     statement := "The same agreement, from the Python twin's side."
@@ -107,6 +108,28 @@ def entries : List Entry := [
     statement := "With a defaultaction that is not a str, the twins raise the same exception."
     source := "twin", status := .refuted
     prop := ``WarnTwinsDfltType, thm := some ``warnTwinsDfltType_refuted, bug := some "corelibs-warnings-py-twin" },
+  { id := "warn-twins-line-obj", pyFile := "Python/_warnings.c"
+    pyFns := ["get_filter"]
+    statement := "With a filter line that is not an int, the twins agree."
+    source := "twin", status := .refuted
+    prop := ``WarnTwinsLineObj, thm := some ``warnTwinsLineObj_refuted, bug := some "corelibs-warnings-py-twin-warn" },
+  { id := "warn-twins-module-state", pyFile := "Python/_warnings.c"
+    pyFns := ["get_filter", "get_once_registry", "get_default_action", "get_warnings_attr", "call_show_warning", "warn_explicit"]
+    statement := "For every state of warnings.filters (list or tuple, or a context's), defaultaction (or deleted), onceregistry (a dict, another object, or deleted), _showwarnmsg and WarningMessage, the twins agree."
+    source := "twin", status := .refuted
+    prop := ``WarnTwinsModuleState, thm := some ``warnTwinsModuleState_refuted_tuple, bug := some "corelibs-warnings-py-twin-warn"
+    notes := "Also refuted by warnTwinsModuleState_refuted_ctxTuple, _show (C falls back to show_warning when _showwarnmsg is deleted), _once (TypeError against AttributeError) and _dflt (C uses the cached default)." },
+  { id := "warn-twins-module-state-py", pyFile := "Lib/_py_warnings.py"
+    pyFns := ["warn_explicit"]
+    statement := "The same, from the Python side."
+    source := "twin", status := .refuted
+    prop := ``WarnTwinsModuleState, thm := some ``warnTwinsModuleState_refuted_show, bug := some "corelibs-warnings-py-twin-warn" },
+  { id := "warn-twins-globals", pyFile := "Python/_warnings.c"
+    pyFns := ["warnings_warn_explicit_impl"]
+    statement := "With module_globals given, the twins agree (here for an ignored warning)."
+    source := "twin", status := .refuted
+    prop := ``WarnTwinsGlobals, thm := some ``warnTwinsGlobals_refuted, bug := some "corelibs-warnings-py-twin-warn"
+    notes := "module_globals=5 and a dict whose loader's get_source raises (warnTwinsGlobals_refuted_loader): C raises before the filters, Python returns None." },
   { id := "warn-py-unknown-action", pyFile := "Lib/_py_warnings.py"
     pyFns := ["warn_explicit"]
     statement := "_py_warnings raises RuntimeError for an unknown action whenever C does, for every filters list."
@@ -143,14 +166,27 @@ def entries : List Entry := [
   { id := "warn-lock-spec", pyFile := "Python/_warnings.c"
     pyFns := ["warnings_acquire_lock_impl", "warnings_release_lock_impl", "warnings_filters_mutated_lock_held_impl",
               "warnings_lock", "warnings_unlock", "warnings_lock_held"]
-    statement := "_release_lock after _acquire_lock gives the depth back, _release_lock raises RuntimeError exactly when the lock is not held, and _filters_mutated_lock_held raises RuntimeError exactly when the lock is not held."
+    statement := "For every thread and lock state: _acquire_lock succeeds exactly when no other thread holds the lock, releasing right after gives the state back, _release_lock raises RuntimeError exactly when the calling thread does not hold the lock (another thread holding it is not enough), and _filters_mutated_lock_held raises RuntimeError exactly when no thread holds it."
     source := "invariant; the 'cannot release un-acquired lock' and 'warnings lock is not held' errors", status := .proven
-    prop := ``LockSpec, thm := some ``lockSpec_proven },
+    prop := ``LockSpec, thm := some ``lockSpec_proven
+    notes := "Difftest warn.filt_c runs the lock from the main thread and a helper thread." },
   { id := "warn-mutated-lock-twins", pyFile := "Lib/_py_warnings.py"
     pyFns := ["_filters_mutated_lock_held"]
-    statement := "The C and Python _filters_mutated_lock_held agree at every lock depth."
-    source := "twin", status := .refuted
-    prop := ``MutatedLockHeldTwins, thm := some ``mutatedLockHeldTwins_refuted, bug := some "corelibs-warnings-py-twin-warn" },
+    statement := "Under C's precondition (the lock is held, _warnings.c:1368), the C and Python _filters_mutated_lock_held agree: both move the version on by one."
+    source := "twin", status := .proven
+    prop := ``MutatedLockHeldTwins, thm := some ``mutatedLockHeldTwins_proven
+    notes := "Without the lock C raises and Python does not; that breaks C's stated precondition, so it is not recorded as a defect." },
+  { id := "warn-reset-spec", pyFile := "Lib/_py_warnings.py"
+    pyFns := ["resetwarnings"]
+    statement := "resetwarnings leaves an empty list (and moves the version on); a tuple refuses item deletion with TypeError; with warnings.filters deleted nothing changes but the version."
+    source := "docstring :338: 'Clear the list of warning filters'", status := .proven
+    prop := ``ResetSpec, thm := some ``resetSpec_proven },
+  { id := "warn-add-filter-valueerror", pyFile := "Lib/_py_warnings.py"
+    pyFns := ["_add_filter"]
+    statement := "A ValueError raised by an element's __eq__ during filters.remove is taken for 'not in the list': the new item is inserted in front and every element, the raising one included, stays."
+    source := "the except ValueError of :326-329", status := .proven
+    prop := ``AddFilterValueError, thm := some ``addFilterValueError_proven
+    notes := "Difftest warn.filt_*: elements whose __eq__ raises ValueError or KeyError." },
   { id := "warn-defaults-twin-narrow", pyFile := "Python/_warnings.c"
     pyFns := ["init_filters", "create_filter"]
     statement := "For every module name that is __main__ or does not start with __main__, C's initial filters and the list _setup_defaults builds pick the same filter action for every warning."
@@ -173,6 +209,11 @@ def entries : List Entry := [
     statement := "Every action name stands for itself, the empty field for 'default', every answer is an action name the field is a prefix of, and anything else raises _OptionError."
     source := "docs: the -W action may be abbreviated", status := .proven
     prop := ``GetactionSpec, thm := some ``getactionSpec_proven },
+  { id := "warn-getaction-abbrev", pyFile := "Lib/_py_warnings.py"
+    pyFns := ["_getaction"]
+    statement := "A non-empty prefix of an action name stands for that name unless it also abbreviates a name earlier in default, always, all, ignore, module, once, error."
+    source := "docs: the -W action may be abbreviated", status := .proven
+    prop := ``GetactionAbbrev, thm := some ``getactionAbbrev_proven },
   { id := "warn-options-narrow", pyFile := "Lib/_py_warnings.py"
     pyFns := ["_processoptions", "_setoption", "_getcategory", "_getaction"]
     statement := "When imports raise only ImportError, getattr only AttributeError, every attribute named is a class and re.compile raises only PatternError (the same with or without re.I), no list of -W options makes _processoptions raise, on a filters list whose elements' == does not raise."
@@ -189,7 +230,7 @@ def entries : List Entry := [
   { id := "warn-call-twins-narrow", pyFile := "Python/_warnings.c"
     pyFns := ["warnings_warn_impl", "get_category", "do_warn", "setup_context", "next_external_frame",
               "is_internal_frame", "is_filename_to_skip", "is_internal_filename"]
-    statement := "For a str or Warning message, a Warning subclass or None category, a stacklevel from 1 to the C int maximum, skip_file_prefixes a tuple of strs, frames with C int lines and globals whose __name__ is a str or missing and whose registry is missing, None or a dict with an exact version in C long, and the hypotheses of warn-twins-narrow: C and Python warnings.warn give the same result and use and leave the same registry and once registry."
+    statement := "For a str or Warning message, a Warning subclass or None category, a stacklevel from 1 to the C int maximum, skip_file_prefixes a tuple of strs, frames with C int lines and globals whose __name__ is a str or missing and whose registry is missing, None or a dict with an exact version in C long, and the hypotheses of warn-twins-narrow: C and Python warnings.warn give the same result and use and leave the same registry and once registry. The twins' registry lookups are separate mirrors (cRegOf, pyRegOf)."
     source := "twin: _py_warnings.py:465-520 against _warnings.c:1015-1211", status := .proven
     prop := ``WarnCallTwinsNarrow, thm := some ``warnCallTwinsNarrow_proven
     notes := "Difftest warn.call_c / warn.call_py: generated stacks of frames (exec'd functions with chosen filenames and globals) run in a fresh thread, so they are the whole stack." },
@@ -198,12 +239,47 @@ def entries : List Entry := [
     statement := "The same agreement, from the Python side."
     source := "twin", status := .proven
     prop := ``WarnCallTwinsNarrow, thm := some ``warnCallTwinsNarrow_proven },
+  { id := "warn-internal-filename", pyFile := "Python/_warnings.c"
+    pyFns := ["is_internal_filename"]
+    statement := "is_internal_filename (and _is_internal_filename, the same internalFn) holds exactly when the filename contains both 'importlib' and '_bootstrap'."
+    source := "docstring of _is_internal_frame :450", status := .proven
+    prop := ``InternalFnSpec, thm := some ``internalFnSpec_proven },
+  { id := "warn-internal-filename-py", pyFile := "Lib/_py_warnings.py"
+    pyFns := ["_is_internal_filename"]
+    statement := "The same, from the Python side."
+    source := "docstring of _is_internal_frame :450", status := .proven
+    prop := ``InternalFnSpec, thm := some ``internalFnSpec_proven },
+  { id := "warn-next-external", pyFile := "Python/_warnings.c"
+    pyFns := ["next_external_frame"]
+    statement := "next_external_frame (and _next_external_frame, the same nextExt) with a skip test that does not raise returns the first frame after the current one that is neither internal nor skipped, or none."
+    source := "docstring of _next_external_frame :455", status := .proven
+    prop := ``NextExtSpec, thm := some ``nextExtSpec_proven },
+  { id := "warn-next-external-py", pyFile := "Lib/_py_warnings.py"
+    pyFns := ["_next_external_frame"]
+    statement := "The same, from the Python side."
+    source := "docstring of _next_external_frame :455", status := .proven
+    prop := ``NextExtSpec, thm := some ``nextExtSpec_proven },
+  { id := "warn-category-errors", pyFile := "Python/_warnings.c"
+    pyFns := ["get_category", "warnings_warn_impl"]
+    statement := "With a str message and a category that is not a Warning subclass (an instance or another class), both twins raise TypeError, for every stacklevel within Py_ssize_t and every tuple of prefixes."
+    source := "docs: category must be a subclass of Warning", status := .proven
+    prop := ``WarnCatErr, thm := some ``warnCatErr_proven },
+  { id := "warn-category-errors-py", pyFile := "Lib/_py_warnings.py"
+    pyFns := ["warn"]
+    statement := "The same, from the Python side."
+    source := "docs", status := .proven
+    prop := ``WarnCatErr, thm := some ``warnCatErr_proven },
+  { id := "warn-category-message", pyFile := "Python/_warnings.c"
+    pyFns := ["get_category"]
+    statement := "The two category TypeErrors have the same message."
+    source := "twin", status := .refuted
+    prop := ``WarnCatMsg, thm := some ``warnCatMsg_refuted, bug := some "corelibs-warnings-py-twin-warn" },
   { id := "warn-call-twins", pyFile := "Python/_warnings.c"
     pyFns := ["warnings_warn_impl", "setup_context"]
     statement := "For every stacklevel and skip_file_prefixes, the twins give the same result and use the same registry."
     source := "twin", status := .refuted
     prop := ``WarnCallTwins, thm := some ``warnCallTwins_refuted, bug := some "corelibs-warnings-py-twin-warn"
-    notes := "stacklevel=0; also warnCallTwins_refuted_prefix (a tuple prefix) and warnCallTwins_refuted_huge (stacklevel 2**64)." },
+    notes := "stacklevel=0; also warnCallTwins_refuted_prefix (a tuple prefix), _huge (stacklevel 2**64), _order (warn('x', 5, skip_file_prefixes=[]): C's skip_file_prefixes TypeError first), _nameNone (C drops the warning, Python shows it) and _nameObj (C uses '<string>', Python passes the object)." },
   { id := "warn-call-twins-py", pyFile := "Lib/_py_warnings.py"
     pyFns := ["warn"]
     statement := "The same, from the Python side."
@@ -212,7 +288,7 @@ def entries : List Entry := [
   -- catch_warnings and the contexts (Warn/Context.lean, ContextProps.lean)
   { id := "warn-filter-list-twins", pyFile := "Python/_warnings.c"
     pyFns := ["get_warnings_context", "get_warnings_context_filters", "get_warnings_filters"]
-    statement := "While warnings.filters exists, the list C's get_filter searches (the context's _filters, else warnings.filters) is the one Python's _get_filters() returns, in context mode or while no context is set."
+    statement := "While warnings.filters exists and no filters container is a tuple, the list C's get_filter searches (the context's _filters, else warnings.filters) is the one Python's _get_filters() returns, in context mode or while no context is set."
     source := "twin", status := .proven
     prop := ``FilterListTwins, thm := some ``filterListTwins_proven },
   { id := "warn-filter-list-twins-py", pyFile := "Lib/_py_warnings.py"
@@ -225,13 +301,23 @@ def entries : List Entry := [
     statement := "Also when warnings.filters was deleted, C and Python search the same list."
     source := "twin", status := .refuted
     prop := ``FilterListTwinsAny, thm := some ``filterListTwinsAny_refuted, bug := some "corelibs-warnings-py-twin-warn" },
+  { id := "warn-filter-list-twins-tuple", pyFile := "Python/_warnings.c"
+    pyFns := ["get_warnings_filters", "get_warnings_context_filters"]
+    statement := "Also with a tuple as warnings.filters, C and Python search the same list."
+    source := "twin", status := .refuted
+    prop := ``FilterListTwinsTuple, thm := some ``filterListTwinsTuple_refuted, bug := some "corelibs-warnings-py-twin-warn" },
+  { id := "warn-show-dispatch", pyFile := "Lib/_py_warnings.py"
+    pyFns := ["_showwarnmsg", "_showwarnmsg_impl"]
+    statement := "_showwarnmsg calls a replaced showwarning instead of the implementation (TypeError when it is not callable); the original or deleted showwarning goes to _showwarnmsg_impl, which outside record mode loses the warning when sys.stderr is None or the write raises OSError, writes it when the write succeeds, and propagates any other exception from the write."
+    source := "docs: showwarning may be replaced; _showwarnmsg_impl's comments :141-150", status := .proven
+    prop := ``ShowDispatch, thm := some ``showDispatch_proven },
   { id := "warn-catch-restores", pyFile := "Lib/_py_warnings.py"
     pyFns := ["catch_warnings.__init__", "catch_warnings.__enter__", "catch_warnings.__exit__", "_Context.__init__",
               "_Context.copy", "_new_context", "_set_context", "_get_context", "_get_filters", "_GlobalContext._filters"]
-    statement := "In both context modes, a catch_warnings whose action simplefilter accepts enters, a second __enter__ raises RuntimeError and changes nothing, and whatever the block does to the filters it sees, __exit__ makes _get_filters() what it was and restores showwarning (and without contexts warnings.filters and _showwarnmsg_impl), the version moving on by one."
-    source := "docs: copies and, upon exit, restores the warnings filter and showwarning()", status := .open
-    prop := ``CatchRestores
-    notes := "Open: the proof (both modes, any edit of the filters inside the block) is not done; difftest warn.ctx agrees on 150k cases." },
+    statement := "In both context modes, a catch_warnings(...) whose action simplefilter accepts enters; with no action the block sees a copy of the filters (a new list, same contents); a second __enter__ raises RuntimeError and changes nothing; and whatever the block does to the filters it sees, __exit__ makes _get_filters() what it was and restores showwarning (and without contexts warnings.filters and _showwarnmsg_impl), the version moving on by one."
+    source := "docs: copies and, upon exit, restores the warnings filter and showwarning()", status := .proven
+    prop := ``CatchRestores, thm := some ``catchRestores_proven
+    notes := "Difftest warn.ctx agrees on 150k cases over 3 seeds." },
   { id := "warn-catch-enter-atomic", pyFile := "Lib/_py_warnings.py"
     pyFns := ["catch_warnings.__enter__"]
     statement := "An __enter__ that raises leaves _showwarnmsg_impl, warnings.filters and the context as they were."

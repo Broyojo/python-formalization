@@ -72,10 +72,17 @@ theorem addFilter_ver (it : FItem) (ap : Bool) (s s' : FState) (h : addFilter it
     rw [← h]
   | list xs =>
     cases ap
-    · cases hr : pyRemove it xs <;>
+    · cases hr : pyRemove it xs with
+      | ok r =>
         simp only [hc, hr, bind, Except.bind, pure, Except.pure, Bool.not_false, if_true,
-          reduceCtorEq, Except.ok.injEq] at h
-      rw [← h]
+          Except.ok.injEq] at h
+        rw [← h]
+      | error e =>
+        by_cases hv : e.className = "ValueError"
+        · simp only [hc, hr, hv, if_true, bind, Except.bind, pure, Except.pure, Bool.not_false,
+            Except.ok.injEq] at h
+          rw [← h]
+        · simp [hc, hr, hv, bind, Except.bind] at h
     · cases hr : pyContains it xs with
       | error e => simp [hc, hr, bind, Except.bind] at h
       | ok b => cases b <;> simp only [hc, hr, bind, Except.bind, pure, Except.pure, Bool.not_true,
@@ -234,19 +241,44 @@ theorem simpleIsFilter_refuted : ¬ SimpleIsFilter := fun h =>
     (y := .error (.typeError "category must be a Warning subclass")) (by rfl) (by rfl)
     (by simp)
 
+/-! ## `resetwarnings` and `_add_filter`'s `except ValueError` -/
+
+/-- `resetwarnings()` "clear[s] the list of warning filters, so that no filters are active": on a
+list it leaves the empty list (and the version moves on); a tuple refuses item deletion and is
+left as it was; with `warnings.filters` deleted the fresh `[]` is emptied and nothing changes. -/
+def ResetSpec : Prop :=
+  (∀ xs v, resetwarnings ⟨.list xs, v⟩ = .ok ⟨.list [], v + 1⟩) ∧
+  (∀ xs v, ∃ e, resetwarnings ⟨.tuple xs, v⟩ = .error e ∧ e.className = "TypeError") ∧
+  (∀ v, resetwarnings ⟨.deleted, v⟩ = .ok ⟨.deleted, v + 1⟩)
+
+theorem resetSpec_proven : ResetSpec :=
+  ⟨fun _ _ => rfl, fun _ _ => ⟨_, rfl, rfl⟩, fun _ => rfl⟩
+
+/-- `try: filters.remove(item) except ValueError: pass` (:326-329) also catches a `ValueError` that
+an element's `__eq__` raises: the remove stops there, the new item goes in front anyway, and the
+elements (the raising one included) stay. Stated for a list whose first element raises. -/
+def AddFilterValueError : Prop :=
+  ∀ it id msg xs v, addFilter it false ⟨.list (.other id (.error (.valueError msg)) :: xs), v⟩ =
+    .ok ⟨.list (.item it :: .other id (.error (.valueError msg)) :: xs), v + 1⟩
+
+theorem addFilterValueError_proven : AddFilterValueError := by
+  intro it id msg xs v
+  simp [addFilter, pyRemove, elemEq, bind, Except.bind, pure, Except.pure, PyExc.className]
+
 /-! ## The version -/
 
 /-- Every successful mutation of the filters through the API moves the version on by exactly one,
 so that `already_warned` (_warnings.c:616-632) and `warn_explicit` (_py_warnings.py:570-572)
 clear every registry made before it: `filterwarnings`, `simplefilter`, `resetwarnings` on any
-container, `_filters_mutated` at any lock depth, and C `_filters_mutated_lock_held` whenever it
-succeeds. -/
+container, `_filters_mutated` from a thread that can take the lock, and C
+`_filters_mutated_lock_held` whenever it succeeds. -/
 def VersionBumps : Prop :=
   (∀ E a m cat md ln ap s s', filterwarnings E a m cat md ln ap s = .ok s' → s'.ver = s.ver + 1) ∧
   (∀ a cat ln ap s s', simplefilter a cat ln ap s = .ok s' → s'.ver = s.ver + 1) ∧
   (∀ s s', resetwarnings s = .ok s' → s'.ver = s.ver + 1) ∧
-  (∀ d v, cFiltersMutated d v = .ok (d, v + 1)) ∧
-  (∀ d v v', cMutatedLockHeld d v = .ok v' → v' = v + 1)
+  (∀ t l v, (l.owner = none → l.level = 0) → (l.owner = none ∨ l.owner = some t) →
+    cFiltersMutated t l v = some (.ok (l, v + 1))) ∧
+  (∀ l v v', cMutatedLockHeld l v = .ok v' → v' = v + 1)
 
 theorem versionBumps_proven : VersionBumps := by
   refine ⟨?_, ?_, ?_, ?_, ?_⟩
@@ -263,35 +295,68 @@ theorem versionBumps_proven : VersionBumps := by
   · intro s s' h
     unfold resetwarnings at h
     split at h <;> simp at h <;> rw [← h]
-  · intro d v
-    simp [cFiltersMutated, cAcquire, cMutatedLockHeld, cRelease, bind, Except.bind, pure, Except.pure]
-  · intro d v v' h
+  · intro t l v hinv hl
+    obtain ⟨o, lv⟩ := l
+    simp only at hl hinv
+    rcases hl with rfl | rfl
+    · have := hinv rfl
+      subst this
+      simp [cFiltersMutated, cAcquire, cMutatedLockHeld, cRelease, bind, Except.bind, pure, Except.pure]
+    · simp [cFiltersMutated, cAcquire, cMutatedLockHeld, cRelease, bind, Except.bind, pure, Except.pure]
+  · intro l v v' h
     unfold cMutatedLockHeld at h
     split at h <;> simp at h
     omega
 
 /-! ## The lock -/
 
-/-- The C lock: releasing what was acquired gives the depth back, releasing an unheld lock is
-refused, and C `_filters_mutated_lock_held` refuses exactly when the lock is not held. -/
+/-- The C lock (a recursive mutex, Python/lock.c:402-454), for every thread `t` and state: `t` can
+take it exactly when no other thread holds it, and releasing right after gives the state back
+(up to the owner of a free lock); `_release_lock` from `t` is refused exactly when `t` does not
+hold it (another thread holding it is not enough); and C `_filters_mutated_lock_held` refuses
+exactly when no thread holds the lock (`PyMutex_IsLocked`). -/
 def LockSpec : Prop :=
-  (∀ d, cRelease (cAcquire d) = .ok d) ∧
-  (∀ d, (∃ e, cRelease d = .error e) ↔ d = 0) ∧
-  (∀ d v, (∃ e, cMutatedLockHeld d v = .error e) ↔ d = 0)
+  (∀ t l, (cAcquire t l).isSome ↔ (l.owner = none ∨ l.owner = some t)) ∧
+  (∀ t l l', cAcquire t l = some l' → cRelease t l' = .ok (if l.owner = none then ⟨none, 0⟩ else l)) ∧
+  (∀ t l, (∃ e, cRelease t l = .error e) ↔ l.owner ≠ some t) ∧
+  (∀ l v, (∃ e, cMutatedLockHeld l v = .error e) ↔ l.owner = none)
 
 theorem lockSpec_proven : LockSpec := by
-  refine ⟨?_, ?_, ?_⟩
-  · intro d; simp [cRelease, cAcquire]
-  · intro d; unfold cRelease; split <;> simp_all
-  · intro d v; unfold cMutatedLockHeld; split <;> simp_all
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro t l
+    obtain ⟨o, lv⟩ := l
+    cases o with
+    | none => simp [cAcquire]
+    | some u =>
+      by_cases h : u = t
+      · simp [cAcquire, h]
+      · simp only [cAcquire, h, if_false, Option.isSome_none, Bool.false_eq_true, false_iff]
+        simp only [reduceCtorEq, Option.some.injEq, false_or]
+        exact h
+  · intro t l l' h
+    obtain ⟨o, lv⟩ := l
+    cases o with
+    | none => simp [cAcquire] at h; subst h; simp [cRelease]
+    | some u =>
+      by_cases hu : u = t
+      · subst hu; simp [cAcquire] at h; subst h; simp [cRelease]
+      · simp [cAcquire, hu] at h
+  · intro t l
+    unfold cRelease
+    by_cases h : l.owner = some t
+    · simp only [h, if_true, ne_eq, not_true_eq_false, iff_false]
+      split <;> simp
+    · simp [h]
+  · intro l v; unfold cMutatedLockHeld; split <;> simp_all
 
-/-- The twins of `_filters_mutated_lock_held` agree: refuted, the Python one does not check the
-lock (_py_warnings.py:117-118), the C one refuses without it (_warnings.c:1369-1372). -/
-def MutatedLockHeldTwins : Prop := ∀ d v, cMutatedLockHeld d v = .ok (pyMutatedLockHeld v)
+/-- Under C's precondition ("the lock must be held by the caller", _warnings.c:1368), the twins of
+`_filters_mutated_lock_held` agree: both move the version on by one. -/
+def MutatedLockHeldTwins : Prop :=
+  ∀ l v, l.owner ≠ none → cMutatedLockHeld l v = .ok (pyMutatedLockHeld v)
 
-theorem mutatedLockHeldTwins_refuted : ¬ MutatedLockHeldTwins := fun h => by
-  have := h 0 0
-  simp [cMutatedLockHeld] at this
+theorem mutatedLockHeldTwins_proven : MutatedLockHeldTwins := by
+  intro l v h
+  simp [cMutatedLockHeld, pyMutatedLockHeld, Option.isNone_iff_eq_none, h]
 
 /-! ## The initial filters -/
 
@@ -299,7 +364,7 @@ theorem mutatedLockHeldTwins_refuted : ¬ MutatedLockHeldTwins := fun h => by
 def rxPat (R : Rx → String → Py Bool) (r : Rx) : Pat := .regex (R r) true (.typeError "~expected string")
 
 def elemItem (R : Rx → String → Py Bool) : Elem → Item
-  | .item f => .tuple ⟨some f.action, f.msg.map (rxPat R), f.cat, f.mod.map (rxPat R), f.ln⟩
+  | .item f => .tuple ⟨.str f.action, f.msg.map (rxPat R), f.cat, f.mod.map (rxPat R), .int f.ln⟩
   | .other _ _ => .other (.typeError "~cannot unpack")
 
 /-- The filters `_setup_defaults` leaves on an empty list, as items. -/
@@ -309,11 +374,11 @@ def pyDefaults (E : FEnv) (R : Rx → String → Py Bool) (K : DefaultCats) : Li
   | _ => []
 
 /-- The action a filters list picks for a call: the matching filter's (`none` when none does). -/
-def pickC (E : Env) (c : Call) (ln : Int) (fs : List Item) (m : String) : Py (Option String) :=
-  (cFind E false c ln (.str m) 0 fs).map (fun f => f.bind (·.action))
+def pickC (E : Env) (c : Call) (ln : Int) (fs : List Item) (m : String) : Py (Option AV) :=
+  (cFind E false c ln (.str m) "filters" 0 fs).map (fun f => f.map (·.action))
 
-def pickPy (E : Env) (c : Call) (ln : Int) (fs : List Item) : Py (Option String) :=
-  (pyFind E c ln fs).map (fun f => f.bind (·.action))
+def pickPy (E : Env) (c : Call) (ln : Int) (fs : List Item) : Py (Option AV) :=
+  (pyFind E c ln fs).map (fun f => f.map (·.action))
 
 /-- The environment of the defaults: the four categories are Warning classes, `__main__` compiles,
 and its pattern matches what starts with `__main__` (`re.match` of a literal). -/
@@ -343,11 +408,11 @@ def DefaultsTwinNarrow : Prop :=
 
 theorem pyDefaults_eq (FE : FEnv) (R : Rx → String → Py Bool) (K : DefaultCats) (h : DefaultsEnv FE R K) :
     pyDefaults FE R K =
-      [.tuple ⟨some "default", none, K.deprecation, some (rxPat R ⟨"__main__", false⟩), 0⟩,
-       .tuple ⟨some "ignore", none, K.deprecation, none, 0⟩,
-       .tuple ⟨some "ignore", none, K.pending, none, 0⟩,
-       .tuple ⟨some "ignore", none, K.importW, none, 0⟩,
-       .tuple ⟨some "ignore", none, K.resource, none, 0⟩] := by
+      [.tuple ⟨.str "default", none, K.deprecation, some (rxPat R ⟨"__main__", false⟩), .int 0⟩,
+       .tuple ⟨.str "ignore", none, K.deprecation, none, .int 0⟩,
+       .tuple ⟨.str "ignore", none, K.pending, none, .int 0⟩,
+       .tuple ⟨.str "ignore", none, K.importW, none, .int 0⟩,
+       .tuple ⟨.str "ignore", none, K.resource, none, .int 0⟩] := by
   obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, hc, _, d1, d2, d3, d4, d5, d6⟩ := h
   have hne : ("__main__" : String).isEmpty = false := by decide
   have he : ("" : String).isEmpty = true := by decide
@@ -369,15 +434,15 @@ theorem defaultsTwinNarrow_proven : DefaultsTwinNarrow := by
   unfold pickC pickPy
   simp only [initFilters, Bool.false_eq_true, if_false, createFilter, Option.map_some, Option.map_none,
     cFind, cFilterMatches, pyFind, pyFilterMatches, checkMatched, pyMsgOk, pyModOk, hm, pyMatch,
-    cIsSub, hb0, hb1, hb2, hb3, asSsize, hfit, rxPat, hR, hmain, Option.isNone_some, if_false,
+    cIsSub, hb0, hb1, hb2, hb3, asSsize, hfit, rxPat, hR, hmain, if_false, pyLnOk,
     bind, Except.bind, pure, Except.pure, Bool.false_and, Bool.not_false, Except.map, callPat]
   cases b0 <;> cases b1 <;> cases b2 <;> cases b3 <;> cases hmm : (m == "__main__") <;> simp [hmm]
 
 def defFE : FEnv := ⟨fun _ _ => .ok (), fun _ => true, fun _ => true⟩
 def defR : Rx → String → Py Bool := fun _ s => .ok (s.toList.take 8 == "__main__".toList)
 def defK : DefaultCats := ⟨3, 6, 7, 8⟩
-def defE : Env := ⟨fun a b => .ok (decide (a = b)), fun _ _ => false, fun _ _ => .ok false, .ok ()⟩
-def defCall : Call := ⟨"x", 3, "a.py", .int 1, .some "__main__x", .ok ()⟩
+def defE : Env := ⟨fun a b => .ok (decide (a = b)), fun _ _ => false, fun _ _ => .ok false, .call (.ok ()) (.ok ())⟩
+def defCall : Call := ⟨"x", 3, "a.py", .int 1, .some "__main__x", .ok (), .none, .ok ()⟩
 
 theorem defEnv : DefaultsEnv defFE defR defK :=
   ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, fun _ => rfl, by decide, by decide, by decide, by decide,
@@ -385,8 +450,9 @@ theorem defEnv : DefaultsEnv defFE defR defK :=
 
 /-- A `DeprecationWarning` from module `__main__x`: C ignores it, Python shows it once. -/
 theorem defaultsTwin_refuted : ¬ DefaultsTwin := fun h =>
-  refute (h defFE defR defK defE defCall 1 "__main__x" defEnv ⟨fun _ _ => ⟨_, rfl⟩, fun _ _ => ⟨_, rfl⟩⟩ rfl)
-    (x := .ok (some "ignore")) (y := .ok (some "default")) (by rfl)
+  refute (h defFE defR defK defE defCall 1 "__main__x" defEnv
+    ⟨fun _ _ => ⟨_, rfl⟩, fun _ _ => ⟨_, rfl⟩, _, _, rfl⟩ rfl)
+    (x := .ok (some (.str "ignore"))) (y := .ok (some (.str "default"))) (by rfl)
     (by rw [pyDefaults_eq defFE defR defK defEnv]; rfl) (by simp)
 
 end PyLean.CoreLibs.Warn

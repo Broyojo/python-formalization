@@ -76,6 +76,7 @@ def pElem (j : Json) : Except String Elem := do
     let r : Py Bool := match ← jStrAt j 2 with
       | "t" => .ok true
       | "f" => .ok false
+      | "verr" => .error (.valueError "eq")
       | _ => .error (.keyError "'eq'")
     return .other (← jNatAt j 1) r
   | _ => return .item ⟨← jStrAt j 1, ← pRx (← jGetI j 2), ← jNatAt j 3, ← pRx (← jGetI j 4), ← jIntAt j 5⟩
@@ -124,10 +125,14 @@ def jRes {α : Type} : Py α → Json
 
 /-! ## Runs -/
 
-/-- One operation of a `filt` script on twin `c` (lock depth `d`) or Python. -/
-def runOp (isC : Bool) (op : Json) (d : Nat) (s : FState) : Except String (Py (Nat × FState)) := do
+/-- One operation of a `filt` script on twin `c` (lock state `d`; the main thread is 1, a helper
+thread 2) or Python. `none` is an `_acquire_lock` that would block. -/
+def runOp (isC : Bool) (op : Json) (d : LockSt) (s : FState) :
+    Except String (Option (Py (LockSt × FState))) := do
   let k ← jStrAt op 0
-  let lift := fun (r : Py FState) => r.map (fun s' => (d, s'))
+  let lift := fun (r : Py FState) => some (r.map (fun s' => (d, s')))
+  -- `with _wm._lock:` blocks while the helper thread holds the lock
+  if isC && d.owner = some 2 && k ∈ ["fw", "sf", "reset", "mut"] then return none
   match k with
   | "fw" =>
     return lift (filterwarnings dFEnv (← pAct (← jGetI op 1)) (← pStrA (← jGetI op 2)) (← jNatAt op 3)
@@ -137,27 +142,32 @@ def runOp (isC : Bool) (op : Json) (d : Nat) (s : FState) : Except String (Py (N
       (← jBoolAt op 4) s)
   | "reset" => return lift (resetwarnings s)
   | "mut" =>
-    if isC then return (cFiltersMutated d s.ver).map (fun (d', v) => (d', { s with ver := v }))
-    else return .ok (d, { s with ver := s.ver + 1 })
-  | "acq" => return .ok (if isC then cAcquire d else d, s)
-  | "rel" => if isC then return (cRelease d).map (fun d' => (d', s)) else return .ok (d, s)
+    if isC then return (cFiltersMutated 1 d s.ver).map (fun r => r.map (fun (d', v) => (d', { s with ver := v })))
+    else return some (.ok (d, { s with ver := s.ver + 1 }))
+  | "acq" | "oacq" =>
+    let t := if k = "acq" then 1 else 2
+    if isC then return (cAcquire t d).map (fun d' => .ok (d', s)) else return some (.ok (d, s))
+  | "rel" | "orel" =>
+    let t := if k = "rel" then 1 else 2
+    if isC then return some ((cRelease t d).map (fun d' => (d', s))) else return some (.ok (d, s))
   | _ =>
-    if isC then return (cMutatedLockHeld d s.ver).map (fun v => (d, { s with ver := v }))
-    else return .ok (d, { s with ver := pyMutatedLockHeld s.ver })
+    if isC then return some ((cMutatedLockHeld d s.ver).map (fun v => (d, { s with ver := v })))
+    else return some (.ok (d, { s with ver := pyMutatedLockHeld s.ver }))
 
 def runFilt (isC : Bool) (j : Json) : Except String Json := do
   let s0 : FState := ⟨← pCont (← j.getObjVal? "init"), 0⟩
   let ops ← jArr (← j.getObjVal? "ops")
-  let mut d := 0
+  let mut d : LockSt := ⟨none, 0⟩
   let mut s := s0
   let mut outs : Array Json := #[]
   for op in ops do
     match ← runOp isC op d s with
-    | .ok (d', s') =>
+    | none => outs := outs.push (Json.arr #["blocked"])
+    | some (.ok (d', s')) =>
       d := d'
       s := s'
       outs := outs.push (Json.arr #["ok"])
-    | .error e => outs := outs.push (jRes (α := Unit) (.error e))
+    | some (.error e) => outs := outs.push (jRes (α := Unit) (.error e))
   return Json.mkObj [("ok", Json.arr #[Json.arr outs, jCont s.cont, jInt s.ver])]
 
 def runOpt (j : Json) : Except String Json := do
@@ -179,7 +189,8 @@ def runDefaults (j : Json) : Except String Json := do
   match ← (← j.getObjVal? "twin").getStr? with
   | "c" =>
     let fs := (initFilters false dK).map fun
-      | .tuple f | .list5 f => Json.arr #[jStr (f.action.getD ""), jPat f.msg, toJson f.cat, jPat f.mod, jInt f.ln]
+      | .tuple f | .list5 f => Json.arr #[jStr (match f.action with | .str a => a | _ => ""), jPat f.msg,
+          toJson f.cat, jPat f.mod, jInt (match f.ln with | .int v => v | .obj _ => 0)]
       | .other _ => Json.null
     return Json.mkObj [("ok", Json.arr fs.toArray)]
   | _ =>

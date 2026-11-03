@@ -75,6 +75,9 @@ structure WEnv where
   userWarning : Nat
   /-- `category(message)` for a str message -/
   mkMsg : Nat → Py Unit
+  /-- `linecache.getlines(filename, globals)` for the globals `g` (Python passes the frame's
+  globals as `module_globals`) -/
+  lines : Nat → Py Unit
 
 /-- Where the walk ends: `warn`'s own frame (Python only), frame `i`, or past the outermost frame
 (`<sys>`). -/
@@ -199,11 +202,22 @@ structure WCtx where
   reg : RegArg
   deriving DecidableEq
 
-def regOf : RegV → RegArg
+/-- The registry `setup_context` passes, :1078-1091: `PyDict_GetItemRef(globals,
+"__warningregistry__")`, and a new dict stored there when it is missing. A dict subclass is a dict
+(`.dict`), anything else is passed as it is. -/
+def cRegOf : RegV → RegArg
   | .missing => .dict []
   | .dict r => .dict r
   | .none => .none
   | .obj => .obj
+
+/-- The registry Python `warn` passes, :510: `globals.setdefault("__warningregistry__", {})`. -/
+def pyRegOf (v : RegV) : RegArg :=
+  match v with
+  | .dict r => .dict r
+  | .none => .none
+  | .obj => .obj
+  | .missing => .dict []
 
 def frameAt (W : WEnv) : Pos → Nat × String × Int
   | .self => (W.self.globals, W.self.filename, W.self.lineno)
@@ -243,7 +257,7 @@ def cSetup (W : WEnv) (s : Int) (skip : Option (List PElem)) : Py WCtx := do
     | none => .sys
   let (g, fn, ln) := frameAt W pos
   let G := W.globals g
-  return ⟨fn, ln, g, cModule G.name, regOf G.reg⟩
+  return ⟨fn, ln, g, cModule G.name, cRegOf G.reg⟩
 
 /-- `get_category`, :1119-1144. -/
 def cGetCategory (W : WEnv) (m : MsgA) (c : CatA) : Py Nat :=
@@ -262,7 +276,7 @@ def textOf : MsgA → String
 /-- The call `warn_explicit` gets. -/
 def callOf (W : WEnv) (m : MsgA) (cat : Nat) (x : WCtx) : Call :=
   ⟨textOf m, cat, x.filename, .int x.lineno, x.module,
-   match m with | .warn _ _ => .ok () | .str _ => W.mkMsg cat⟩
+   match m with | .warn _ _ => .ok () | .str _ => W.mkMsg cat, .none, W.lines x.g⟩
 
 /-- C `warn(message, category, stacklevel, source, *, skip_file_prefixes)`: the clinic
 conversions (:1172-1190: `stacklevel` to `Py_ssize_t`, `skip_file_prefixes` a tuple), then
@@ -297,7 +311,7 @@ def pyWarnSetup (W : WEnv) (m : MsgA) (c : CatA) (s : Int) (skip : SkipA) : Py (
   let pos ← pyWalk W.frames ps s
   let (g, fn, ln) := frameAt W pos
   let G := W.globals g
-  return (cat, ⟨fn, ln, g, pyModule G.name, regOf G.reg⟩)
+  return (cat, ⟨fn, ln, g, pyModule G.name, pyRegOf G.reg⟩)
 
 /-- What a `warn` call leaves: its result, whose registry it used and what that registry holds
 after (when it is a dict), and the once registry. -/
@@ -315,14 +329,14 @@ def finish (x : Py (Nat × WCtx)) (W : WEnv) (m : MsgA) (we : Call → RegArg �
     let r := we (callOf W m cat ctx) ctx.reg
     ⟨r.out, r.reg.map (fun r' => (ctx.g, r')), r.once, some ctx⟩
 
-/-- C `warnings.warn`. -/
-def cWarn (W : WEnv) (E : Env) (fs : List Item) (dflt : Option String) (ver : Int) (once : Reg)
+/-- C `warnings.warn`: `do_warn` calls `warn_explicit` with no `module_globals` (:1163-1164). -/
+def cWarn (W : WEnv) (E : Env) (K : WCfg) (fs : List Item) (ver : Int)
     (m : MsgA) (c : CatA) (s : Int) (skip : SkipA) : WRes :=
-  finish (cWarnSetup W m c s skip) W m (fun call reg => cWarnExplicit E fs dflt ver call reg once) once
+  finish (cWarnSetup W m c s skip) W m (fun call reg => cWarnExplicit E K fs ver call reg) (onceReg K.once)
 
-/-- Python `warnings.warn`. -/
-def pyWarn (W : WEnv) (E : Env) (fs : List Item) (dflt : Option String) (ver : Int) (once : Reg)
+/-- Python `warnings.warn`: `_wm.warn_explicit(..., globals, ...)`, :511-520. -/
+def pyWarn (W : WEnv) (E : Env) (K : WCfg) (fs : List Item) (ver : Int)
     (m : MsgA) (c : CatA) (s : Int) (skip : SkipA) : WRes :=
-  finish (pyWarnSetup W m c s skip) W m (fun call reg => pyWarnExplicit E fs dflt ver call reg once) once
+  finish (pyWarnSetup W m c s skip) W m (fun call reg => pyWarnExplicit E K fs ver call reg) (onceReg K.once)
 
 end PyLean.CoreLibs.Warn

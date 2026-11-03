@@ -79,6 +79,37 @@ theorem getactionSpec_proven : GetactionSpec := by
       | some x => simp [hf] at h
     · simp [ha] at h
 
+theorem find?_first {α : Type} [DecidableEq α] (P : α → Bool) (l : List α) (n : α) (hn : n ∈ l)
+    (hpre : ∀ x ∈ l.takeWhile (· ≠ n), P x = false) (hP : P n = true) : l.find? P = some n := by
+  induction l with
+  | nil => simp at hn
+  | cons x xs ih =>
+    by_cases hx : x = n
+    · subst hx; simp [List.find?, hP]
+    · have hxP : P x = false := hpre x (by simp [List.takeWhile, hx])
+      simp only [List.find?, hxP]
+      have hn' : n ∈ xs := by
+        simp only [List.mem_cons] at hn
+        rcases hn with h | h
+        · exact absurd h.symm hx
+        · exact h
+      exact ih hn' (fun y hy => hpre y (by simp only [List.takeWhile, hx, ne_eq, not_false_eq_true, decide_true, List.mem_cons]; exact Or.inr hy))
+
+/-- The abbreviation of the `-W` action (the documentation: "the action ... may be abbreviated"):
+a non-empty prefix of an action name stands for that name unless it is also a prefix of a name
+earlier in `default, always, all, ignore, module, once, error` (so `a` and `al` are `always`,
+`i` is `ignore`, `m` is `module`, `o` is `once`, `e` is `error`). -/
+def GetactionAbbrev : Prop :=
+  ∀ n ∈ actionOrder, ∀ p : List Char, p ≠ [] → p.isPrefixOf n.toList = true →
+    (∀ n' ∈ actionOrder.takeWhile (· ≠ n), p.isPrefixOf n'.toList = false) → getaction p = .ok n
+
+theorem getactionAbbrev_proven : GetactionAbbrev := by
+  intro n hn p hp hpre hearly
+  have hne : p.isEmpty = false := by cases p <;> simp_all
+  unfold getaction
+  rw [hne, find?_first _ actionOrder n hn hearly hpre]
+  rfl
+
 /-! ## What escapes `_processoptions` -/
 
 /-- The environment the narrow property assumes: imports raise only `ImportError` (the empty

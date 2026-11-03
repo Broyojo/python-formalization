@@ -12,16 +12,24 @@ Scope:
   `category(message)` otherwise) is a callback of the call that can raise.
 * A filters-list item is a 5-tuple, a 5-element list (C refuses it, Python unpacks it), or
   something else (C refuses it; Python's unpacking raises what the call gives). Its action is a
-  str or not; its message and module patterns are compiled regexes (callbacks, C or Python code,
-  that can raise) or plain strs (what C's internal default filters hold); its line is an int.
-  `defaultaction` is a str or not.
-* A registry is `None`, a dict, or some other object. Its values are ints, each with whether it is
-  an exact int (C stores `True`; a `'version'` that is a bool or an int subclass is not exact).
+  str, another hashable object, or an unhashable one; its message and module patterns are
+  compiled regexes (callbacks, C or Python code, that can raise) or plain strs (what C's internal
+  default filters hold); its line is an int or another object.
+* The filters C searches are `warnings.filters` or the context's `_filters` (`WCfg.ctx`), a list or
+  a tuple (`WCfg.tuple`); Python iterates either. `defaultaction` is a value or deleted;
+  `onceregistry` a dict, another object, or deleted (C keeps what it read last of each).
+* A registry is `None`, a dict, another mapping (C refuses it, Python uses it), or some other
+  object. Its values are ints, each with whether it is an exact int (C stores `True`; a
+  `'version'` that is a bool or an int subclass is not exact).
 * `lineno` is an int, or another object that Python's `int()` converts (or fails on) and C's `int`
   converter refuses. `module` is omitted, `None`, a str, or another object whose regex match raises.
+  `module_globals` is `None`, a dict, or another object: C checks it and runs `get_source_line`
+  first; Python passes it to `linecache.getlines` when the warning is shown. Both outcomes are
+  callbacks of the call.
 * `_match_filename` is one `Env` callback: the C code calls the Python function.
-* `showwarning` (with the `linecache.getlines` and `WarningMessage` before it) is one `Env`
-  callback that can raise.
+* The show step (`ShowA`): `WarningMessage(...)` and the call of `_showwarnmsg` are callbacks that
+  can raise; either attribute can be missing or `_showwarnmsg` not callable, and the twins
+  differ there (C falls back to `show_warning` when `_showwarnmsg` is missing).
 * An `OverflowError` that `already_warned` leaves set (`PyLong_AsLong` on a `'version'` outside
   C long) changes what runs after it, as measured on 3.15.2: a C callback (`re.Pattern.match`)
   sees it and fails with it; `_match_filename` fails with `SystemError`; a pattern's `match` or a
@@ -72,19 +80,41 @@ inductive Pat where
   | regex (call : String → Py Bool) (cfunc : Bool) (objErr : PyExc)
   | plain (s : String)
 
-/-- A filters-list item's fields. `action` is `none` when it is not a str. -/
+/-- An action value: a str, another hashable object, or an unhashable one (its type name). -/
+inductive AV where
+  | str (s : String)
+  | hashable (tp : String)
+  | unhashable (tp : String)
+  deriving DecidableEq, Repr
+
+/-- A filter's line: an int, or another object (its type name). -/
+inductive LnV where
+  | int (v : Int)
+  | obj (tp : String)
+  deriving DecidableEq, Repr
+
+/-- A filters-list item's fields. -/
 structure Filter where
-  action : Option String
+  action : AV
   msg : Option Pat
   cat : Nat
   mod : Option Pat
-  ln : Int
+  ln : LnV
 
 /-- One element of the filters list. -/
 inductive Item where
   | tuple (f : Filter)
   | list5 (f : Filter)
   | other (unpackErr : PyExc)
+
+/-- `warnings._showwarnmsg` and `warnings.WarningMessage` as the show step finds them: both there
+(`WarningMessage(...)` and the call of `_showwarnmsg` are callbacks that can raise),
+`_showwarnmsg` not callable, `_showwarnmsg` deleted, or `WarningMessage` deleted. -/
+inductive ShowA where
+  | call (wm : Py Unit) (fn : Py Unit)
+  | noncallable (tp : String)
+  | deleted
+  | noWM
 
 /-- The Python-visible callbacks. -/
 structure Env where
@@ -94,8 +124,35 @@ structure Env where
   isSubPy : Nat → Nat → Bool
   /-- `_py_warnings._match_filename(pattern, filename)`, Python code -/
   matchFilename : Pat → String → Py Bool
-  /-- `linecache.getlines`, `WarningMessage(...)` and `_showwarnmsg(msg)` -/
-  showMsg : Py Unit
+  /-- the show step -/
+  shw : ShowA
+
+/-- `warnings.defaultaction`: a value, or deleted (C then uses the str it read last). -/
+inductive DfltV where
+  | val (a : AV)
+  | deleted (cached : String)
+
+/-- `warnings.onceregistry`: a dict, another object (its type name, with no `get`), or deleted (C
+then uses the dict it read last). -/
+inductive OnceV where
+  | dict (r : Reg)
+  | notDict (tp : String) (kept : Reg)
+  | deleted (cached : Reg)
+
+/-- The module state `warn_explicit` reads besides the filters: whether C finds the filters in the
+context variable (`_warnings_context _filters`) rather than `warnings.filters`, whether that
+container is a tuple, `defaultaction`, `onceregistry`. -/
+structure WCfg where
+  ctx : Bool
+  tuple : Bool
+  dflt : DfltV
+  once : OnceV
+
+/-- The once registry's contents (empty for an object that is not a dict). -/
+def onceReg : OnceV → Reg
+  | .dict r => r
+  | .notDict _ r => r
+  | .deleted r => r
 
 /-- The `module` argument: omitted (C `NULL`), an explicit `None`, a str, or another object. -/
 inductive ModArg where
@@ -111,12 +168,21 @@ inductive LineArg where
   | int (v : Int)
   | obj (pyInt : Py Int) (cErr : PyExc)
 
-/-- The `registry` argument. -/
+/-- The `registry` argument: `None`, a dict, another mapping (with `get`, `clear` and item
+assignment), or an object with none of them. -/
 inductive RegArg where
   | none
   | dict (r : Reg)
+  | mapping (r : Reg)
   | obj
   deriving DecidableEq
+
+/-- The `module_globals` argument: `None`, a dict (C's `get_source_line` outcome, which can raise
+from the loader's `get_source`), or another object (its type name). -/
+inductive GlobA where
+  | none
+  | dict (cSrc : Py Unit)
+  | obj (tp : String)
 
 structure Call where
   text : String
@@ -126,9 +192,12 @@ structure Call where
   module : ModArg
   /-- `str(message)` for a Warning instance, `category(message)` otherwise -/
   mkMsg : Py Unit
+  globs : GlobA
+  /-- `linecache.getlines(filename, module_globals)` in the Python twin -/
+  pyLines : Py Unit
 
 /-- What a call leaves: its result (`true` when the warning was shown), the registry passed in
-(if a dict), and the once registry. -/
+(if a dict or mapping), and the once registry. -/
 structure Res where
   out : Py Bool
   reg : Option Reg
@@ -144,14 +213,37 @@ def noMatchAttr : PyExc := .named "AttributeError" "'str' object has no attribut
 def noGetAttr : PyExc := .named "AttributeError" "~object has no attribute 'get'"
 def regTypeErr : PyExc := .typeError "'registry' must be a dict or None"
 def cmpTypeErr : PyExc := .typeError "~Can't compare str and object"
-def notTuple (i : Nat) : PyExc := .valueError s!"warnings.filters item {i} isn't a 5-tuple"
+/-- `filter_search`'s message, :475-476, with the list's name. -/
+def notTupleIn (nm : String) (i : Nat) : PyExc := .valueError s!"warnings.{nm} item {i} isn't a 5-tuple"
+def notTuple (i : Nat) : PyExc := notTupleIn "filters" i
 def actionTypeErr : PyExc := .typeError "~action must be a string"
 def dfltTypeErr : PyExc := .typeError "~warnings.defaultaction must be a string"
+def noModAttr (a : String) : PyExc := .named "AttributeError" s!"module 'warnings' has no attribute '{a}'"
+def unhashableErr (tp : String) : PyExc :=
+  .typeError s!"cannot use '{tp}' as a set element (unhashable type: '{tp}')"
 
 def intMax : Int := 2 ^ 31 - 1
 def longMax : Int := 2 ^ 63 - 1
 
-def showOut (E : Env) : Py Bool := E.showMsg.map (fun _ => true)
+/-- Python's show step, :619-625: `linecache.getlines`, `_wm.WarningMessage(...)`, then
+`_wm._showwarnmsg(msg)`. -/
+def pyShow (E : Env) (c : Call) : Py Bool := do
+  c.pyLines
+  match E.shw with
+  | .call wm fn => do wm; fn; return true
+  | .noncallable tp => .error (.typeError s!"'{tp}' object is not callable")
+  | .deleted => .error (noModAttr "_showwarnmsg")
+  | .noWM => .error (noModAttr "WarningMessage")
+
+/-- C's `call_show_warning`, :739-794: `_showwarnmsg` missing falls back to `show_warning`
+(:669-736, which prints and clears every error), not callable raises, a missing `WarningMessage`
+raises, else `WarningMessage(...)` and the call. -/
+def cShow (E : Env) : Py Bool :=
+  match E.shw with
+  | .call wm fn => do wm; fn; return true
+  | .noncallable _ => .error (.typeError "warnings._showwarnmsg() must be set to a callable")
+  | .deleted => .ok true
+  | .noWM => .error (.named "RuntimeError" "unable to get warnings.WarningMessage")
 
 /-! ## The Python twin, Lib/_py_warnings.py -/
 
@@ -180,16 +272,23 @@ def pyModOk (E : Env) (c : Call) (f : Filter) : Py Bool :=
       | .plain _ => .error noMatchAttr
     | _ => E.matchFilename m c.filename
 
+/-- `ln == 0 or lineno == ln`, :581: an object that is not an int equals neither. -/
+def pyLnOk (l : LnV) (ln : Int) : Bool :=
+  match l with
+  | .int v => v == 0 || ln == v
+  | .obj _ => false
+
 /-- The filter test, _py_warnings.py:579-584: `and` short-circuits in this order. -/
 def pyFilterMatches (E : Env) (c : Call) (ln : Int) (f : Filter) : Py Bool := do
   let g1 ← pyMsgOk c f
   if !g1 then return false
   let g2 ← E.isSub c.cat f.cat
   if !g2 then return false
-  if !(f.ln == 0 || ln == f.ln) then return false
+  if !pyLnOk f.ln ln then return false
   pyModOk E c f
 
-/-- The `for item in filters: action, msg, cat, mod, ln = item ... break` loop, :577-587. -/
+/-- The `for item in filters: action, msg, cat, mod, ln = item ... break` loop, :577-587 (any
+iterable: a tuple of filters is searched like a list). -/
 def pyFind (E : Env) (c : Call) (ln : Int) : List Item → Py (Option Filter)
   | [] => pure .none
   | it :: its =>
@@ -198,11 +297,8 @@ def pyFind (E : Env) (c : Call) (ln : Int) : List Item → Py (Option Filter)
     | .tuple f | .list5 f => do
       if ← pyFilterMatches E c ln f then pure (.some f) else pyFind E c ln its
 
-/-- `action` after the loop: the filter's, or `defaultaction` (:586-587); `none` when not a str. -/
-def actionOf (item : Option Filter) (dflt : Option String) : Option String :=
-  match item with | .some f => f.action | .none => dflt
-
-/-- :568-572 on a dict: one of another filters version (by `!=`, so `True == 1`) is cleared. -/
+/-- :568-572 on a dict or mapping: one of another filters version (by `!=`, so `True == 1`) is
+cleared. -/
 def pyRegPrep (ver : Int) (r0 : Reg) : Reg :=
   if ((regGet r0 .version).map (·.n)).getD 0 != ver then regSet [] .version (exactInt ver) else r0
 
@@ -212,30 +308,39 @@ def unboundItem : PyExc :=
   .named "UnboundLocalError" "cannot access local variable 'item' where it is not associated with a value"
 
 /-- The actions, :588-625: `(result, registry, once registry)`. `bound` is whether the loop
-variable `item` was ever assigned. An action that is not a str equals none of the names. -/
-def pyAction (E : Env) (c : Call) (ln : Int) (action : Option String) (bound : Bool) (r1 once : Reg) :
+variable `item` was ever assigned. An action that is not a str equals none of the names, and
+`action in {"always", "all"}` (:601) hashes it. -/
+def pyAction (E : Env) (K : WCfg) (c : Call) (ln : Int) (action : AV) (bound : Bool) (r1 : Reg) :
     Py Bool × Reg × Reg :=
+  let once := onceReg K.once
   let key := Key.tri c.text c.cat ln
-  if action = some "ignore" then (.ok false, r1, once)
-  else if action = some "error" then (.error (warnRaised c), r1, once)
-  else if action = some "once" then
+  if action = .str "ignore" then (.ok false, r1, once)
+  else if action = .str "error" then (.error (warnRaised c), r1, once)
+  else if action = .str "once" then
     let r2 := regSet r1 key one
     let ok := Key.pair c.text c.cat
-    if truthy (regGet once ok) then (.ok false, r2, once)
-    else (showOut E, r2, regSet once ok one)
-  else if action = some "always" ∨ action = some "all" then (showOut E, r1, once)
-  else if action = some "module" then
+    match K.once with
+    | .dict o =>
+      if truthy (regGet o ok) then (.ok false, r2, once)
+      else (pyShow E c, r2, regSet o ok one)
+    | .notDict _ _ => (.error noGetAttr, r2, once)
+    | .deleted _ => (.error (noModAttr "onceregistry"), r2, once)
+  else match action with
+  | .unhashable tp => (.error (unhashableErr tp), r1, once)
+  | _ =>
+  if action = .str "always" ∨ action = .str "all" then (pyShow E c, r1, once)
+  else if action = .str "module" then
     let r2 := regSet r1 key one
     let alt := Key.tri c.text c.cat 0
     if truthy (regGet r2 alt) then (.ok false, r2, once)
-    else (showOut E, regSet r2 alt one, once)
-  else if action = some "default" then (showOut E, regSet r1 key one, once)
+    else (pyShow E c, regSet r2 alt one, once)
+  else if action = .str "default" then (pyShow E c, regSet r1 key one, once)
   else (.error (if bound then unrecognized else unboundItem), r1, once)
 
 /-- `warn_explicit`, _py_warnings.py:556-625. `ver` is `_wm._filters_version`. -/
-def pyWarnExplicit (E : Env) (fs : List Item) (dflt : Option String) (ver : Int) (c : Call)
-    (reg : RegArg) (once : Reg) : Res :=
-  let regOut : Option Reg := match reg with | .dict r => .some r | _ => .none
+def pyWarnExplicit (E : Env) (K : WCfg) (fs : List Item) (ver : Int) (c : Call) (reg : RegArg) : Res :=
+  let once := onceReg K.once
+  let regOut : Option Reg := match reg with | .dict r | .mapping r => .some r | _ => .none
   -- `lineno = int(lineno)`, :559
   match ((match c.lineno with | .int v => .ok v | .obj p _ => p) : Py Int) with
   | .error e => ⟨.error e, regOut, once⟩
@@ -247,14 +352,18 @@ def pyWarnExplicit (E : Env) (fs : List Item) (dflt : Option String) (ver : Int)
   -- the registry, :568-572
   match reg with
   | .obj => ⟨.error noGetAttr, regOut, once⟩
-  | .none | .dict _ =>
-  let r1 := pyRegPrep ver (match reg with | .dict r => r | _ => [])
+  | .none | .dict _ | .mapping _ =>
+  let r1 := pyRegPrep ver (match reg with | .dict r | .mapping r => r | _ => [])
   let res : Py Bool × Reg × Reg :=
     if truthy (regGet r1 (.tri c.text c.cat ln)) then (.ok false, r1, once)
     else
       match pyFind E c ln fs with
       | .error e => (.error e, r1, once)
-      | .ok item => pyAction E c ln (actionOf item dflt) (item.isSome || !fs.isEmpty) r1 once
+      | .ok (.some f) => pyAction E K c ln f.action true r1
+      | .ok .none =>
+        match K.dflt with
+        | .deleted _ => (.error (noModAttr "defaultaction"), r1, once)
+        | .val a => pyAction E K c ln a (!fs.isEmpty) r1
   ⟨res.1, regOut.map (fun _ => res.2.1), res.2.2⟩
 
 /-! ## The C twin, Python/_warnings.c -/
@@ -304,10 +413,13 @@ def checkMatched (E : Env) (pend : Bool) (obj : Option Pat) (arg : Arg) (filenam
     | .null => if pend then .error leaked else E.matchFilename (.regex call cfunc objErr) filename
 
 /-- `PyLong_AsSsize_t` on the filter's line, :519-524. -/
-def asSsize (v : Int) : Py Int :=
-  if v > ssizeMax ∨ v < -ssizeMax - 1 then
-    .error (.overflowError "Python int too large to convert to C ssize_t")
-  else .ok v
+def asSsize (l : LnV) : Py Int :=
+  match l with
+  | .obj _ => .error (.typeError "an integer is required")
+  | .int v =>
+    if v > ssizeMax ∨ v < -ssizeMax - 1 then
+      .error (.overflowError "Python int too large to convert to C ssize_t")
+    else .ok v
 
 /-- `PyObject_IsSubclass`, :512: Python code under a pending error fails with `SystemError`. -/
 def cIsSub (E : Env) (pend : Bool) (a b : Nat) : Py Bool :=
@@ -323,18 +435,34 @@ def cFilterMatches (E : Env) (pend : Bool) (c : Call) (ln : Int) (mod : Arg) (f 
   let l ← asSsize f.ln
   pure (goodMsg && isSub && goodMod && (l == 0 || ln == l))
 
-/-- `filter_search`'s loop, :470-537: an item that is not a 5-tuple, then an action that is not a
-str, stop the search. -/
-def cFind (E : Env) (pend : Bool) (c : Call) (ln : Int) (mod : Arg) (i : Nat) :
+/-- `filter_search`'s loop, :470-537, over the list named `nm`: an item that is not a 5-tuple,
+then an action that is not a str, stop the search. -/
+def cFind (E : Env) (pend : Bool) (c : Call) (ln : Int) (mod : Arg) (nm : String) (i : Nat) :
     List Item → Py (Option Filter)
   | [] => pure .none
   | it :: its =>
     match it with
-    | .other _ | .list5 _ => .error (notTuple i)
+    | .other _ | .list5 _ => .error (notTupleIn nm i)
     | .tuple f =>
-      if f.action.isNone then .error actionTypeErr
-      else do
-        if ← cFilterMatches E pend c ln mod f then pure (.some f) else cFind E pend c ln mod (i + 1) its
+      match f.action with
+      | .str _ => do
+        if ← cFilterMatches E pend c ln mod f then pure (.some f) else cFind E pend c ln mod nm (i + 1) its
+      | _ => .error actionTypeErr
+
+/-- `get_warnings_context_filters` (:332-337) and `get_warnings_filters` (:356-360) refuse a
+container that is not a list; the result is the name `filter_search` reports. -/
+def cListName (K : WCfg) : Py String :=
+  if K.tuple then
+    .error (.valueError (if K.ctx then "_filters of warnings._warnings_context must be a list"
+      else "_warnings.filters must be a list"))
+  else .ok (if K.ctx then "_warnings_context _filters" else "filters")
+
+/-- `get_default_action`, :430-455: a deleted `defaultaction` falls back to the str read last. -/
+def cDefault (K : WCfg) : Py String :=
+  match K.dflt with
+  | .deleted s => .ok s
+  | .val (.str s) => .ok s
+  | .val _ => .error dfltTypeErr
 
 /-- `already_warned`, :600-649: `(error left set, warned, registry)`. A `'version'` that is not an
 exact int is stale; one outside C long makes `PyLong_AsLong` return -1 with `OverflowError` set,
@@ -354,31 +482,36 @@ def cAlreadyWarned (ver : Int) (r : Reg) (k : Key) (shouldSet : Bool) : Bool × 
   else (pending, false, if shouldSet then regSet r k cTrue else r)
 
 /-- The actions after `get_filter`, :861-909: `(error left set, result, registry, once
-registry)`. -/
-def cAction (E : Env) (ver : Int) (c : Call) (ln : Int) (action : String) (reg1 : Option Reg)
-    (once : Reg) : Bool × Py Bool × Option Reg × Reg :=
+registry)`. With no caller registry, `once` uses `get_once_registry` (:402-426), which refuses an
+object that is not a dict and falls back to the dict read last when it was deleted. -/
+def cAction (E : Env) (K : WCfg) (ver : Int) (c : Call) (ln : Int) (action : String) (reg1 : Option Reg) :
+    Bool × Py Bool × Option Reg × Reg :=
+  let once := onceReg K.once
   let key := Key.tri c.text c.cat ln
   if action = "error" then (false, .error (warnRaised c), reg1, once)
   else if action = "ignore" then (false, .ok false, reg1, once)
-  else if action = "always" ∨ action = "all" then (false, showOut E, reg1, once)
+  else if action = "always" ∨ action = "all" then (false, cShow E, reg1, once)
   else
     let reg2 := reg1.map (fun r => regSet r key cTrue)
     let pk := Key.pair c.text c.cat
     if action = "once" then
       match reg2 with
       | .none =>
-        let (p, w, o) := cAlreadyWarned ver once pk true
-        (p, if w then .ok false else showOut E, reg2, o)
+        match K.once with
+        | .notDict tp _ => (false, .error (.typeError s!"_warnings.onceregistry must be a dict, not '{tp}'"), reg2, once)
+        | .dict o | .deleted o =>
+          let (p, w, o') := cAlreadyWarned ver o pk true
+          (p, if w then .ok false else cShow E, reg2, o')
       | .some r =>
         let (p, w, r') := cAlreadyWarned ver r pk true
-        (p, if w then .ok false else showOut E, .some r', once)
+        (p, if w then .ok false else cShow E, .some r', once)
     else if action = "module" then
       match reg2 with
-      | .none => (false, showOut E, reg2, once)
+      | .none => (false, cShow E, reg2, once)
       | .some r =>
         let (p, w, r') := cAlreadyWarned ver r pk true
-        (p, if w then .ok false else showOut E, .some r', once)
-    else if action = "default" then (false, showOut E, reg2, once)
+        (p, if w then .ok false else cShow E, .some r', once)
+    else if action = "default" then (false, cShow E, reg2, once)
     else (false, .error unrecognized, reg2, once)
 
 /-- A pending `OverflowError` turns every result into `SystemError` but the exceptions that
@@ -391,25 +524,33 @@ def withPending (c : Call) (pend : Bool) (out : Py Bool) : Py Bool :=
     | .ok _ => .error leaked
   else out
 
-/-- `warn_explicit`, :797-922, after the clinic conversion of `lineno` to C `int`
-(`warnings_warn_explicit_impl`, :1314-1349). `ver` is `filters_version`; `fs` the filters list
-`get_filter` searches. -/
-def cWarnExplicit (E : Env) (fs : List Item) (dflt : Option String) (ver : Int) (c : Call)
-    (reg : RegArg) (once : Reg) : Res :=
-  let regOut : Option Reg := match reg with | .dict r => .some r | _ => .none
+/-- `warnings.warn_explicit`: the clinic conversion of `lineno` to C `int`, then
+`warnings_warn_explicit_impl` (:1314-1349: `module_globals` must be a dict, and `get_source_line`,
+:1214-1296, runs before the lock), then `warn_explicit`, :797-922. `ver` is `filters_version`;
+`fs` the filters `get_filter` searches. -/
+def cWarnExplicit (E : Env) (K : WCfg) (fs : List Item) (ver : Int) (c : Call) (reg : RegArg) : Res :=
+  let once := onceReg K.once
+  let regOut : Option Reg := match reg with | .dict r | .mapping r => .some r | _ => .none
   match c.lineno with
   | .obj _ e => ⟨.error e, regOut, once⟩
   | .int ln =>
   if ln > intMax ∨ ln < -intMax - 1 then
     ⟨.error (.overflowError "Python int too large to convert to C int"), regOut, once⟩
   else
+  -- :1328-1341
+  match (match c.globs with
+    | .none => .ok ()
+    | .obj tp => .error (.typeError s!"module_globals must be a dict or a frozendict, not {tp}")
+    | .dict src => src : Py Unit) with
+  | .error e => ⟨.error e, regOut, once⟩
+  | .ok () =>
   -- :812-813
   match c.module with
   | .none => ⟨.ok false, regOut, once⟩
   | .omitted | .some _ | .obj =>
   -- :815-818
   match reg with
-  | .obj => ⟨.error regTypeErr, regOut, once⟩
+  | .obj | .mapping _ => ⟨.error regTypeErr, regOut, once⟩
   | .none | .dict _ =>
   -- :822-833
   match c.mkMsg with
@@ -423,13 +564,23 @@ def cWarnExplicit (E : Env) (fs : List Item) (dflt : Option String) (ver : Int) 
     | _ => (false, false, .none)
   if warned then ⟨withPending c pend0 (.ok false), reg1, once⟩
   else
-    match cFind E pend0 c ln (modArg c) 0 fs with
+    match cListName K with
+    | .error e => ⟨.error e, reg1, once⟩
+    | .ok nm =>
+    match cFind E pend0 c ln (modArg c) nm 0 fs with
     | .error e => ⟨.error e, reg1, once⟩
     | .ok item =>
-      match actionOf item dflt with
-      | .none => ⟨.error dfltTypeErr, reg1, once⟩
-      | .some a =>
-        let (p, out, r, o) := cAction E ver c ln a reg1 once
+      let act : Py String := match item with
+        | .some f => match f.action with | .str s => .ok s | _ => .error actionTypeErr
+        -- with an error left set, a deleted `defaultaction` makes `get_default_action` return that
+        -- error (`PyErr_Occurred`, :439-441)
+        | .none => match pend0, K.dflt with
+          | true, .deleted _ => .error longOverflow
+          | _, _ => cDefault K
+      match act with
+      | .error e => ⟨.error e, reg1, once⟩
+      | .ok a =>
+        let (p, out, r, o) := cAction E K ver c ln a reg1
         ⟨withPending c (pend0 || p) out, r, o⟩
 
 end PyLean.CoreLibs.Warn

@@ -5,7 +5,8 @@ kind: twin-divergence
 module: corelibs
 files: [Lib/_py_warnings.py, Python/_warnings.c]
 functions: ["warn", "warnings_warn_impl", "setup_context", "_setup_defaults", "init_filters",
-            "_filters_mutated_lock_held"]
+            "get_warnings_filters", "get_warnings_context_filters", "call_show_warning",
+            "get_once_registry", "get_default_action", "warnings_warn_explicit_impl", "warn_explicit"]
 summary: |
   The pure-Python `warn` (used when `_warnings` is unavailable, and by the test suite) against the
   C one, from a model of both (Warn/WarnCall.lean) and differential cases:
@@ -34,11 +35,29 @@ summary: |
      equality (:186-195): a DeprecationWarning from a module named `__main__x` (or, via
      warn_explicit without a module, from a file `__main__.py`) is shown by the Python defaults
      and ignored by C's.
-  7. `_filters_mutated_lock_held()` called without the lock: C raises RuntimeError("warnings lock
-     is not held", :1369-1372), the Python one bumps the version.
-  8. `del warnings.filters`: C keeps searching the list it read last (`get_warnings_filters`
+  7. `del warnings.filters`: C keeps searching the list it read last (`get_warnings_filters`
      keeps `st->filters`, :346-353); Python's `_GlobalContext._filters` returns a fresh `[]`
      (:76-80), so `filterwarnings` then changes nothing C sees.
+  warn_explicit, measured on 3.15.2 (Warn/Props.lean, the WarnTwinsModuleState, WarnTwinsGlobals,
+  WarnTwinsLineObj, WarnTwinsRegObj and WarnTwinsItemShape refutations):
+  8. `warnings.filters` (or a context's `_filters`) a tuple: C raises ValueError
+     "_warnings.filters must be a list" (:356-360, :332-337); Python iterates the tuple.
+  9. `warnings._showwarnmsg` deleted: C falls back to `show_warning` and prints (:750-755);
+     Python raises AttributeError. Not callable: different TypeErrors. `WarningMessage` deleted:
+     C RuntimeError "unable to get warnings.WarningMessage", Python AttributeError.
+  10. `warnings.onceregistry` not a dict, with the `once` action: C TypeError (:416-422), Python
+     AttributeError from `.get`. Deleted: C uses the dict it read last, Python AttributeError.
+     `warnings.defaultaction` deleted: likewise (C the cached str, :437-444).
+  11. `module_globals` given: C checks its type and runs `get_source_line` before anything else
+     (:1328-1341), so `warn_explicit(..., module_globals=5)` or a dict whose loader's
+     `get_source` raises fails even for an ignored warning; Python returns None (it only passes
+     `module_globals` to `linecache.getlines` when it shows the warning).
+  12. A registry that is a mapping but not a dict: C TypeError "'registry' must be a dict or
+     None"; Python uses it.
+  13. A filter whose line is not an int: C TypeError "an integer is required"
+     (`PyLong_AsSsize_t`, :519-524); Python never matches it. A filter action that is unhashable:
+     Python's `action in {"always", "all"}` (:601) raises TypeError about hashing, C "action must
+     be a string".
 likelihood: |
   Low: the Python twin runs only without `_warnings` (and in tests). Items 1 and 2 are the
   likeliest to be hit by code tested against both.
@@ -83,8 +102,12 @@ promised_by: |
 cause: |
   Lib/_py_warnings.py:487-490 (`sys._getframe(stacklevel)` for stacklevel <= 1), :445-446
   (`str.startswith` with any prefix object), :506-509 (any `__name__`), :924 (a regex for
-  '__main__'), :117-118 (no lock check); Python/_warnings.c:1027-1041, :1046-1056, :1098-1104,
-  :117 (`create_filter` with a plain str), :1369-1372.
+  '__main__'), :76-80 (`[]` for a deleted `filters`), :568-575 and :598 (duck-typed registry and
+  once registry), :601 (hashing the action), :619-625 (`linecache.getlines`, `WarningMessage`,
+  `_showwarnmsg` looked up when shown); Python/_warnings.c:1027-1041, :1046-1056, :1098-1104, :117
+  (`create_filter` with a plain str), :346-360 and :332-337 (cached / list-only filters),
+  :402-455 (dict-only once registry, cached default), :519-524 (int filter line), :749-770
+  (`show_warning` fallback), :815-818 (dict-only registry), :1328-1341 (`module_globals`).
 possible_fix: |
   In `_py_warnings.warn`, clamp `stacklevel` to 1 for `sys._getframe`, check that every prefix is
   a str, and use "<string>" for a non-str `__name__`; in `_setup_defaults`, use
@@ -93,10 +116,15 @@ duplicates:
   issues: []
   queries: ["stacklevel zero", "skip_file_prefixes", "warnings stacklevel 0 _py_warnings",
             "_py_warnings warn stacklevel", "skip_file_prefixes tuple", "_setup_defaults __main__",
-            "_py_warnings twin warn"]
+            "_py_warnings twin warn", "warnings.filters must be a list", "warnings filters tuple",
+            "_showwarnmsg deleted", "show_warning fallback", "module_globals warn_explicit",
+            "onceregistry must be a dict", "defaultaction deleted", "warn_explicit registry mapping",
+            "warnings unhashable action", "warnings __name__ None", "skip_file_prefixes TypeError order"]
   note: |
     gh-126209 (skip_file_prefixes with __file__) and gh-125818 (None as skip_file_prefixes) are
-    different. Related to corelibs-warnings-py-twin (warn_explicit differences, same twin).
+    different. gh-77690 (closed: module_globals=True gave SystemError) added the dict check of
+    item 11; it does not discuss the Python twin. Related to corelibs-warnings-py-twin
+    (warn_explicit differences, same twin).
     Bugforge README: no warnings entry.
 lean:
   property: PyLean.CoreLibs.Warn.WarnCallTwins
