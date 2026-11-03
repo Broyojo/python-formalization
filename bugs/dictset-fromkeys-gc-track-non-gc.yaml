@@ -1,0 +1,99 @@
+id: dictset-fromkeys-gc-track-non-gc
+title: "dict.fromkeys on a subclass whose __new__ returns a non-GC object GC-tracks that object, corrupting memory (segfault in gc.collect)"
+priority: P1
+kind: memory-safety
+module: dictset
+files: [Objects/dictobject.c]
+functions: ["_PyDict_FromKeys", "dict_fromkeys_impl"]
+summary: |
+  `_PyDict_FromKeys` (Objects/dictobject.c:3417) calls `cls()` for a dict subclass (:3430) and uses
+  whatever it returns as `d`. When the iterable is empty, or `d` is neither an exact dict nor a
+  frozendict, nothing checks that `d` is a dict at all before the exit path at :3596-3597:
+
+      else if (!_PyObject_GC_IS_TRACKED(d)) {
+          _PyObject_GC_TRACK(d);
+      }
+
+  Both macros assume `d` has a `PyGC_Head` in front of it. For an object whose type has no
+  Py_TPFLAGS_HAVE_GC (bytes, int, str, float, ...), the "GC head" is the tail of whatever lies before
+  it in memory, typically the previous object in the same pool. `_PyObject_GC_TRACK` writes the GC
+  list pointers there and links that memory into the young generation; the next collection walks it
+  and crashes.
+
+  The exit-time tracking is new in 3.15 (gh-151722, PR 152067 / 3.15 backport 152225, which made
+  `_PyDict_FromKeys` build the result untracked and track it at the end). 3.14.7 has no such call
+  (Objects/dictobject.c@3.14.7, `_PyDict_FromKeys` returns `d` directly), so this is a 3.15
+  regression.
+likelihood: |
+  Low in ordinary code: it needs a dict subclass whose `__new__` returns an object that is not a
+  dict (a factory/caching `__new__` returning some sentinel), then `fromkeys` on it. It is reachable
+  from pure Python with no ctypes, no gc tricks and no threads, and it corrupts memory silently: the
+  `fromkeys` call returns normally and the crash happens at the next GC, far from the cause.
+maybe_intended: |
+  No. A `__new__` returning an object of another type is allowed (Python then skips `__init__`), and
+  in 3.14 `D.fromkeys([])` simply returned that object. Writing GC links into an object without a GC
+  header is never intended.
+reproducer: |
+  import subprocess, sys
+  child = r'''
+  import gc
+  xs = [bytes(40) for _ in range(2000)]
+  class D(dict):
+      __new__ = lambda cls, *a: xs[1000]
+  r = D.fromkeys([])
+  assert r is xs[1000]
+  print("fromkeys returned", type(r).__name__, flush=True)
+  gc.collect()
+  print("survived gc.collect()", flush=True)
+  '''
+  p = subprocess.run([sys.executable, "-c", child], capture_output=True, text=True)
+  print("child stdout:", p.stdout.strip().replace("\n", " | "))
+  print("child returncode:", p.returncode)
+  if p.returncode < 0 and "fromkeys returned bytes" in p.stdout and "survived" not in p.stdout:
+      print("REPRODUCED dictset-fromkeys-gc-track-non-gc")
+expected: |
+  `D.fromkeys([])` returns `xs[1000]` unchanged (as 3.14.7 does) and `gc.collect()` completes.
+observed: |
+  python3 3.15.2 (tags/v3.15.2:5e58eaa, GCC 11.4.0, release build): `fromkeys returned bytes`, then
+  SIGSEGV (exit 139) inside `gc.collect()`. REPRODUCED.
+  main (3.16.0a1+dev, ef1fce0): identical, SIGSEGV. REPRODUCED.
+  Found by the dictobject.c review (coverage/review/Objects__dictobject.c.tsv, row
+  `_PyDict_FromKeys`) and re-run independently.
+promised_by: |
+  Invariant: no crash or memory corruption from pure-Python code. Objects/dictobject.c:3596-3597 rely
+  on `d` being a GC object; `_PyObject_GC_TRACK`'s own precondition (Include/internal/pycore_gc.h) is
+  that the object is a GC object not yet tracked.
+cause: |
+  Objects/dictobject.c:3430 `d = _PyObject_CallNoArgs(cls)` accepts any object. Only the
+  `PyDict_CheckExact(d)` fast paths and the frozendict copy (:3443) look at its type; for an empty
+  iterable the insertion loop never runs (so no `PyObject_SetItem` raises TypeError first), and
+  control reaches `Done:` (:3587) with `need_copy == 0`, where :3596-3597 GC-track `d` unconditionally.
+  With a non-empty iterable and a non-dict `d` without `__setitem__`, `PyObject_SetItem` raises and
+  the Fail path is taken, so the trigger is an empty iterable, or a non-GC `d` whose `__setitem__`
+  succeeds.
+possible_fix: |
+  Only track what this function created untracked: guard :3596 with `PyObject_IS_GC(d)` at least,
+  or better, track only when `d` is an any-dict (`PyAnyDict_Check(d)`) that was created untracked
+  here (remember that in a flag where `frozendict_new_untracked` is called), leaving objects returned
+  by `cls()` alone.
+duplicates:
+  issues:
+    - {number: 151722, state: closed, relation: "origin: the change that added exit-time GC tracking; not a duplicate"}
+  prs:
+    - {number: 152067, state: merged, relation: "gh-151722 on main: introduced :3596-3597"}
+    - {number: 152225, state: merged, relation: "3.15 backport of 152067"}
+    - {number: 155178, state: open, relation: "frozendict GC tracking change; does not touch this path"}
+  queries: ["fromkeys GC track", "fromkeys _PyObject_GC_TRACK", "fromkeys __new__ returns non-dict crash",
+            "fromkeys segfault", "dict fromkeys gc.collect crash", "_PyDict_FromKeys tracked",
+            "fromkeys", "fromkeys crash", "fromkeys subclass __new__", "PRs: fromkeys",
+            "bugforge README: no fromkeys entry"]
+  note: |
+    `gh search issues --repo python/cpython` with unquoted words, sorted by update; the plain
+    "fromkeys" query returns unrelated issues (153229 fast-clone, 158254 reverse iterators), none
+    about tracking a non-dict. Related to, but distinct from, dictset-fromkeys-frozendict-rewritten
+    (same function, same gh-151722 change, different defect: that one fills a leaked frozendict, this
+    one GC-tracks a non-GC object).
+lean:
+  property: null
+  theorem: null
+  note: "Not yet a Lean refutation: the DictSet model of _PyDict_FromKeys (Ops315.lean) has no GC-header notion; the review marked the row HOLLOW for this."
