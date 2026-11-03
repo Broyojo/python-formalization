@@ -1,0 +1,160 @@
+id: operator-methodcaller-reduce-shares-kwargs
+title: "operator.methodcaller: __reduce__ hands the methodcaller's private kwargs dict to functools.partial, so writing to partial.keywords changes the methodcaller (stale calls; a non-str key segfaults repr)"
+priority: P1
+kind: memory-safety
+module: corelibs
+files: [Modules/_operator.c, Modules/_functoolsmodule.c, Objects/call.c]
+functions: ["methodcaller_reduce", "methodcaller_repr", "methodcaller_call", "methodcaller_new", "partial_new"]
+summary: |
+  `methodcaller_reduce` (Modules/_operator.c:1876-1908) builds its constructor with
+  `PyObject_VectorcallDict(partial, newargs, 2, mc->kwds)` (:1903). `functools.partial` has no
+  vectorcall, so `_PyObject_VectorcallDictTstate` falls back to `_PyObject_MakeTpCall`
+  (Objects/call.c:127-131), which passes a dict through unchanged (:222-223), and `type_call` hands it
+  to `partial_new` (Objects/typeobject.c:2512). `partial_new` adopts a uniquely referenced keyword dict
+  instead of copying it: `else if (_PyObject_IsUniquelyReferenced(kw)) { pto->kw = Py_NewRef(kw); }`
+  (Modules/_functoolsmodule.c:299-300). The methodcaller is the only holder of `mc->kwds`
+  (`methodcaller_new` takes the dict `_PyObject_MakeTpCall` built, :1717, and the caller drops its own
+  reference), so `partial.keywords` *is* the methodcaller's internal dict.
+
+  Python code can then write to the methodcaller's private state:
+  * Aliasing: after `p, _ = mc.__reduce__(); p.keywords['a'] = 2`, `repr(mc)` shows `a=2`, but `mc(obj)`
+    still passes `a=1`, because the vectorcall arguments (`vectorcall_args`, `vectorcall_kwnames`) were
+    computed once in `_methodcaller_initialize_vectorcall` (:1649-1686). The object now disagrees with itself.
+  * Crash: `p.keywords[1] = 2; repr(mc)` makes `methodcaller_repr` run
+    `PyUnicode_FromFormat("%U=%R", key, value)` (:1838) on an `int` key. `%U` only asserts that its argument
+    is a str (Objects/unicodeobject.c:2965), so a release build reads the int as a str: SIGSEGV.
+  * Use-after-free: with 7 or more keywords there is no vectorcall (:1730-1737), so only the dict holds the
+    values. A value whose `__repr__` clears `p.keywords` and returns a non-str frees itself on return, and
+    `PyObject_Repr` then formats `%T` of the freed object for its TypeError (Objects/object.c:791-793).
+    Release build: the TypeError's message is formatted from freed memory, with no visible damage; under
+    PYTHONMALLOC=debug the freed memory is poisoned and the process segfaults.
+
+  A second entry point to the same adoption, found while modelling: `methodcaller_call` (:1779-1796), the
+  path of any methodcaller with 8 or more arguments counting the name, calls
+  `PyObject_Call(method, mc->args, mc->kwds)` (:1793). When the method is the `functools.partial` type itself,
+  `type_call` gives `mc->kwds` to `partial_new`, which adopts it again. The partial that `mc(obj)` returns
+  shares the dict, and the same crash follows (reproduced, see `variants`).
+
+  The pure-Python twin (Lib/operator.py:337-342) rebuilds with `partial(..., **self._kwargs)`, which makes
+  a new dict, so it has no aliasing; `pickle` and `copy` consume the reduce value without mutating it and are
+  not affected. This is not python/cpython#155733: that issue (and its open PR #155779) is about non-str keys
+  *passed at construction* (`methodcaller('x', **{1: 'x'})`); the PR validates keys in `methodcaller_new`
+  and `partial_new`, which runs before the dict is shared, so a key written later through
+  `partial.keywords` still reaches `methodcaller_repr`, and the stale-arguments aliasing is untouched.
+likelihood: |
+  Low. It is pure Python with no ctypes, threads or gc tricks, but it needs `__reduce__` called directly
+  (or a methodcaller of 8+ arguments whose method is `functools.partial`) and the returned partial's
+  `keywords` mutated. `pickle` and `copy` call `__reduce__`/`__reduce_ex__` and only read the result, so
+  ordinary serialization never triggers it. Code that introspects reduce values and edits them (custom
+  serializers, `copyreg` users that patch keywords) would hit the silent aliasing first.
+maybe_intended: |
+  No. `__reduce__` returns a recipe for a new object; nothing documents that it exposes the original's
+  internal state, and the methodcaller's own vectorcall cache assumes `mc->kwds` never changes. The
+  uniquely-referenced shortcut in `partial_new` is an optimisation for temporary dicts built by the call
+  machinery; `mc->kwds` is not a temporary, it is owned by a live object.
+reproducer: |
+  import subprocess, sys
+  alias = r'''
+  import operator
+  class O:
+      def f(self, **kw): return kw
+  mc = operator.methodcaller('f', a=1)
+  p, args = mc.__reduce__()
+  p.keywords['a'] = 2
+  print("repr:", repr(mc), "| call:", mc(O()))
+  '''
+  crash = r'''
+  import operator
+  mc = operator.methodcaller('f', a=1)
+  p, _ = mc.__reduce__()
+  p.keywords[1] = 2
+  print("before", flush=True)
+  repr(mc)
+  print("survived", flush=True)
+  '''
+  a = subprocess.run([sys.executable, "-c", alias], capture_output=True, text=True)
+  c = subprocess.run([sys.executable, "-c", crash], capture_output=True, text=True)
+  print("alias child:", a.stdout.strip(), a.stderr.strip()[-200:])
+  print("crash child returncode:", c.returncode, "stdout:", c.stdout.strip().replace("\n", " | "))
+  aliased = "a=2)" in a.stdout and a.stdout.rsplit("| call:", 1)[-1].strip() == "{'a': 1}"
+  crashed = c.returncode < 0 and "before" in c.stdout and "survived" not in c.stdout
+  if aliased and crashed:
+      print("REPRODUCED operator-methodcaller-reduce-shares-kwargs")
+variants:
+  use_after_free_repr: |
+    # run with PYTHONMALLOC=debug: rc -11 on 3.15.2 and main; release build: a TypeError read from freed memory
+    import operator
+    holder = {}
+    class V:
+        def __repr__(self):
+            holder['p'].keywords.clear()   # drops the last reference to self
+            return 5                       # non-str: PyObject_Repr formats %T of the freed self
+    kw = {('k%d' % i): i for i in range(6)}
+    kw['z'] = V()
+    mc = operator.methodcaller('f', **kw)  # 1 + 7 >= 8: no vectorcall, only the dict holds V()
+    del kw
+    holder['p'] = mc.__reduce__()[0]
+    repr(mc)
+  call_route: |
+    # rc -11 on 3.15.2 and main
+    import operator, functools
+    class O: pass
+    o = O(); o.f = functools.partial
+    mc = operator.methodcaller('f', print, **{('k%d' % i): i for i in range(7)})   # 9 args: methodcaller_call
+    q = mc(o)            # PyObject_Call(functools.partial, (print,), mc->kwds): q.keywords is mc->kwds
+    q.keywords[1] = 2
+    repr(mc)
+expected: |
+  `p.keywords` is a dict of the partial's own: writing to it leaves `mc` unchanged, so `repr(mc)` keeps
+  printing `a=1` and no key written there can reach `methodcaller_repr`.
+observed: |
+  python3 3.15.2: alias child prints `repr: operator.methodcaller('f', a=2) | call: {'a': 1}`; crash child
+  prints "before" and dies with SIGSEGV (rc -11), also under PYTHONMALLOC=debug. REPRODUCED.
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): identical. REPRODUCED.
+  Variant use_after_free_repr: in a release build an ordinary uncaught TypeError (rc 1) whose message was
+  formatted from the freed object's type, "V.__repr__() must return a str, not int"; rc -11 under
+  PYTHONMALLOC=debug on 3.15.2 and on main.
+  Variant call_route: rc -11 on 3.15.2 and on main.
+  A second `__reduce__` while the first partial is alive copies (refcount 2), and `methodcaller('f', **d)`
+  gets a fresh dict, so the sharing needs exactly the paths above.
+promised_by: |
+  Invariant: no crash or memory corruption from pure-Python code. The pickle protocol: `__reduce__` returns
+  a callable and arguments that build a new object.
+cause: |
+  Modules/_operator.c:1903 passes `mc->kwds` itself as the keyword dict of a call to `functools.partial`, and
+  :1793 does the same in `methodcaller_call`. Objects/call.c:222-223 forwards a dict unchanged to `tp_call`.
+  Modules/_functoolsmodule.c:299-300 adopts a keyword dict whose refcount is 1 instead of copying it; the
+  refcount is 1 because the methodcaller is its only owner, not because it is a temporary. The adoption
+  dates from the original `Py_REFCNT(kw) == 1` test; PR #140062 (merged 2025-10-15) only renamed it to
+  `_PyObject_IsUniquelyReferenced`.
+possible_fix: |
+  In `methodcaller_reduce`, pass a copy: `PyObject *kw = PyDict_Copy(mc->kwds); constructor =
+  PyObject_VectorcallDict(partial, newargs, 2, kw); Py_XDECREF(kw);`, or call `partial` with the stored
+  `vectorcall_kwnames` and values (`PyObject_Vectorcall` with kwnames) so the call machinery builds a
+  temporary dict. In `methodcaller_call`, pass `PyDict_Copy(mc->kwds)` (or a dict built from it) to
+  `PyObject_Call`. The root, and the fix that covers other callers, is `partial_new`: only adopt `kw` when it
+  is known to be a temporary (for example, never adopt in `tp_new`, and keep the shortcut in the vectorcall
+  path, which builds its own dict).
+duplicates:
+  issues:
+    - {number: 155733, state: open, relation: "related, not a duplicate: non-str keyword keys passed at construction to methodcaller/partial crash the same %U in methodcaller_repr. Here the key is written after construction through the shared dict, and the aliasing has no non-str key at all. Open PR #155779 validates keys at construction only and would not fix this. Report together with it, or as a follow-up comment there (human decides)."}
+    - {number: 154189, state: closed, relation: "unrelated: UAF in partial_vectorcall through a reentrant __setstate__ from a key's __hash__"}
+  queries: ["methodcaller reduce (11 results: pickling feature #67144, none on aliasing)",
+            "methodcaller kwargs partial (155733 related)", "partial uniquely referenced kwargs (154189, unrelated)",
+            "methodcaller repr crash (155733 related)", "partial keywords shared dict (none relevant)",
+            "methodcaller __reduce__ keywords (0 results)", "methodcaller kwds (156762 tp_clear signature, 71970 uninitialized memory, both unrelated)",
+            "methodcaller segfault (155733)", "partial kw refcount (73986 partial repr keywords abuse, 70133 setstate type confusion: old, unrelated)",
+            "methodcaller use after free (none relevant)",
+            "gh search prs _PyObject_IsUniquelyReferenced; uniquely referenced functools; Py_REFCNT 1 IsUniquelyReferenced replace -> PR #140062 (rename only)",
+            "gh search prs 155733 -> PR #155779 (open; validates keys at construction)",
+            "gh issue view 155733, gh issue view 154189, gh pr diff 140062, gh pr diff 155779",
+            "bugforge README: only operator.iconcat (#158733), unrelated"]
+  note: "Found by the _operator.c review (2026-11-03); the call route was found while modelling it. All reproductions rerun independently on the pod."
+lean:
+  property: PyLean.CoreLibs.Operator.McShare.McReduceNoCrash
+  theorem: PyLean.CoreLibs.Operator.McShare.mcReduceNoCrash_refuted
+  related: ["PyLean.CoreLibs.Operator.McShare.mcReduceIsolated_refuted (the aliasing: repr(mc) changes after p.keywords['a'] = 2)",
+            "PyLean.CoreLibs.Operator.McShare.mcCallIsolated_refuted (the methodcaller_call route)",
+            "PyLean.CoreLibs.Operator.McShare.mcReduceExact_proven (every branch of methodcaller_reduce, adoption included)",
+            "PyLean.CoreLibs.Operator.McShare.mcVectorcallFresh_proven (the vectorcall path does not share)"]
+  note: "McShare.lean puts mc->kwds on a heap with reference counts; partialNew mirrors partial_new's checks and its NULL/adopt/copy branches (Modules/_functoolsmodule.c:161-319, for a func that is not a partial), mcReduceC mirrors methodcaller_reduce, mcReprHeap mirrors methodcaller_repr with %U of a non-str key as undefined behaviour. The use-after-free variant needs object lifetimes and is not modelled."

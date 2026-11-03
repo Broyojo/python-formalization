@@ -304,12 +304,12 @@ theorem methodcallerNew_proven : MethodcallerNew := by
     | nil => rfl
     | cons p ps => rfl
 
-/-- The `repr` of `methodcaller` is one string in both twins, with no arguments or with any, when no argument's
-`repr` raises. -/
+/-- The `repr` of `methodcaller` is one string in both twins, with no arguments or with any, when neither the name's
+nor any argument's `repr` raises. -/
 def MethodcallerRepr : Prop :=
   ∀ (α : Type) (r : α → String) (cls nameRepr : String) (c : Mc α),
     let rep : α → Py String := fun a => .ok (r a)
-    mcReprC rep false cls nameRepr c = mcReprPy rep cls nameRepr c
+    mcReprC rep false cls (.ok nameRepr) c = mcReprPy rep cls (.ok nameRepr) c
 
 theorem join_cons (n x : String) (xs : List String) :
     joinArgs (n :: x :: xs) = n ++ ", " ++ joinArgs (x :: xs) := by
@@ -326,7 +326,7 @@ theorem methodcallerRepr_proven : MethodcallerRepr := by
   by_cases he : (c.args.isEmpty && c.kw.isEmpty) = true
   · have e1 : c.args = [] := by simpa using (Bool.and_eq_true_iff.mp he).1
     have e2 : c.kw = [] := by simpa using (Bool.and_eq_true_iff.mp he).2
-    simp [e1, e2, joinArgs]
+    simp [e1, e2, joinArgs, Except.map]
   · simp only [he, Bool.false_eq_true, ite_false]
     cases hl : c.args.map r ++ c.kw.map rk with
     | nil =>

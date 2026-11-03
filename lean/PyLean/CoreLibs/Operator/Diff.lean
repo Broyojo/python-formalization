@@ -239,7 +239,14 @@ def getHintObj (j : Json) : Except String HintObj := do
     | .str "raise" => pure (some (.error (valueErr "hint")))
     | .str "str" => pure (some (.ok (.other "str")))
     | v => do pure (some (.ok (.int (← v.getInt?))))
-  pure ⟨len, hint, "O"⟩
+  -- how the class holds it: a function, a staticmethod taking no argument (Python's call with `obj` is a
+  -- `TypeError`), a property returning the function, or a property whose getter raises `TypeError`
+  let desc : Option HintDesc := match (j.getObjValD "desc").getStr?.toOption.getD "func" with
+    | "static" => hint.map (fun r => .static r (.error (.typeError "takes 0 positional arguments")))
+    | "prop" => hint.map (fun r => .prop (.ok r))
+    | "propraise" => hint.map (fun _ => .prop (.error (.typeError "get")))
+    | _ => hint.map .func
+  pure ⟨len, desc, "O"⟩
 
 def getDefault (j : Json) : Except String HintDefault := do
   match ← getStr j "dkind" with
@@ -251,6 +258,7 @@ def getDigest (j : Json) : Except String DigestArg := do
   match ← getStr j "k" with
   | "str" => pure (.str (← getBool j "ascii") ((← getIntList j "data").map Int.toNat))
   | "bytes" => pure (.buffer ((← getIntList j "data").map Int.toNat))
+  | "noncontig" => pure (.bufferErr (.named "BufferError" "memoryview: underlying buffer is not C-contiguous"))
   | _ => pure (.other "int")
 
 /-- Attribute reads on the `N` objects of the cases: `x` and the empty name fail. -/
@@ -621,8 +629,8 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "mc_repr" =>
     let mc ← mcOf j
     let cls := "operator.methodcaller"
-    if c then pure (encPy toJson (mcReprC intRep false cls "'m'" mc))
-    else pure (encPy toJson (mcReprPy intRep cls "'m'" mc))
+    if c then pure (encPy toJson (mcReprC intRep false cls (.ok "'m'") mc))
+    else pure (encPy toJson (mcReprPy intRep cls (.ok "'m'") mc))
   | "mc_reduce" =>
     let mc ← mcOf j
     match mcReduce mc with

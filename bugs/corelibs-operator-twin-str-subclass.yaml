@@ -1,0 +1,81 @@
+id: corelibs-operator-twin-str-subclass
+title: "operator twins differ on str-subclass names: attrgetter looks up and prints a different object, and methodcaller reprs its name at the other end"
+priority: P5
+kind: twin-mismatch
+module: corelibs
+files: [Lib/operator.py, Modules/_operator.c]
+functions: ["attrgetter_new", "attrgetter_repr", "dotted_getattr", "methodcaller_repr", "attrgetter.__init__", "attrgetter.__repr__", "methodcaller.__repr__"]
+summary: |
+  Three small differences between Modules/_operator.c and Lib/operator.py, all about names that are
+  instances of a str subclass:
+  * attrgetter lookup: for an undotted name, `attrgetter_new` keeps the object itself
+    (Modules/_operator.c:1304-1307; `_PyUnicode_InternMortal` leaves subclasses alone,
+    Objects/unicodeobject.c:14306-14310) and `dotted_getattr` passes it to `PyObject_GetAttr` (:1420).
+    Lib/operator.py:255-259 passes the exact strs that `attr.split('.')` returns. A `__getattribute__`
+    (or a dict lookup through the name's `__eq__`/`__hash__`) sees a different object.
+  * attrgetter repr: for a dotted name C prints `repr` of the exact str that `dotjoinattr` rebuilds
+    (:1536-1549), Python prints `repr` of the original argument (Lib/operator.py:271-274), so a subclass with
+    its own `__repr__` prints differently. (For an undotted name both print the object.)
+  * methodcaller repr order: Python evaluates `repr(self._name)` first (Lib/operator.py:330), C formats
+    `%R` of `mc->name` last (:1865), after the arguments, so when both the name's and an argument's
+    `__repr__` raise, the exceptions differ.
+likelihood: |
+  Very low: the pure twin only runs without _operator, and the names must be str subclasses with their
+  own `__repr__`, or a `__getattribute__` that inspects the name's type.
+maybe_intended: |
+  Yes in practice. Recorded so the twin differences are on file, as the model keeps them apart. Not worth
+  a report on its own.
+reproducer: |
+  import operator
+  from test.support import import_helper
+  py = import_helper.import_fresh_module('operator', blocked=['_operator'])
+  class R(str):
+      def __repr__(self):
+          return 'R!'
+  class O:
+      def __getattribute__(self, n):
+          return type(n).__name__
+  look = operator.attrgetter(R('x'))(O()), py.attrgetter(R('x'))(O())
+  rep1 = repr(operator.attrgetter(R('a.b'))), repr(py.attrgetter(R('a.b')))
+  rep2 = repr(operator.attrgetter(R('a.b'), 'c')), repr(py.attrgetter(R('a.b'), 'c'))
+  rep3 = repr(operator.attrgetter(R('x'))), repr(py.attrgetter(R('x')))
+  class S(str):
+      def __repr__(self):
+          raise ValueError('name')
+  class X:
+      def __repr__(self):
+          raise KeyError('arg')
+  def t(f):
+      try:
+          return f()
+      except Exception as e:
+          return type(e).__name__
+  order = t(lambda: repr(operator.methodcaller(S('f'), X()))), t(lambda: repr(py.methodcaller(S('f'), X())))
+  order0 = t(lambda: repr(operator.methodcaller(S('f')))), t(lambda: repr(py.methodcaller(S('f'))))
+  print(look, rep1, rep2, rep3, order, order0)
+  if (look == ('R', 'str') and rep1 == ("operator.attrgetter('a.b')", "operator.attrgetter(R!)")
+          and rep2 == ("operator.attrgetter('a.b', 'c')", "operator.attrgetter(R!, 'c')")
+          and rep3 == ("operator.attrgetter(R!)", "operator.attrgetter(R!)")
+          and order == ('KeyError', 'ValueError') and order0 == ('ValueError', 'ValueError')):
+      print('REPRODUCED corelibs-operator-twin-str-subclass')
+expected: |
+  The same outcome in both twins.
+observed: |
+  python3 3.15.2: as in the reproducer. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Nothing explicit; the twins are meant to agree.
+cause: |
+  Modules/_operator.c:1304-1307 and :1420 against Lib/operator.py:255-259; :1536-1549 against
+  Lib/operator.py:271-274; :1865 against Lib/operator.py:330.
+possible_fix: |
+  None needed.
+duplicates:
+  issues: []
+  queries: ["attrgetter str subclass (60898 'Add pure Python operator module', 88074: unrelated)",
+            "attrgetter repr subclass (none relevant)", "methodcaller repr order (none relevant)",
+            "attrgetter intern subclass getattr (0 results)",
+            "bugforge README: only operator.iconcat (#158733), unrelated"]
+lean:
+  property: PyLean.CoreLibs.Operator.AttrLookupTwins
+  theorem: PyLean.CoreLibs.Operator.attrLookupTwins_refuted
+  related: ["PyLean.CoreLibs.Operator.attrReprTwins_refuted", "PyLean.CoreLibs.Operator.mcReprExact_refuted"]
