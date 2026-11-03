@@ -55,9 +55,9 @@ Lib/urllib/parse.py	1123	1200	urlencode	urlencode(query, doseq=False, safe='', e
 Lib/urllib/parse.py	1203	1206	to_bytes	to_bytes(url)	excluded		deprecated: DeprecationWarning since 3.8 (Lib/urllib/parse.py:1204-1206), then returns _to_bytes(url)
 Lib/urllib/parse.py	1209	1220	_to_bytes	_to_bytes(url)	todo		
 Lib/urllib/parse.py	1223	1233	unwrap	unwrap(url)	todo		
-Lib/urllib/parse.py	1236	1240	splittype	splittype(url)	excluded		deprecated: DeprecationWarning since 3.8, then returns _splittype(url), which textlibs-urllib-type-host-split models (TypeHostSplit pins both of its branches). review: The note says _splittype is modelled, but its row is todo and no entry names it, so the justification is false.
+Lib/urllib/parse.py	1236	1240	splittype	splittype(url)	excluded		deprecated: DeprecationWarning since 3.8, then returns _splittype(url), which textlibs-urllib-type-host-split models (TypeHostSplit pins both of its branches).
 Lib/urllib/parse.py	1244	1254	_splittype	_splittype(url)	todo		
-Lib/urllib/parse.py	1257	1261	splithost	splithost(url)	excluded		deprecated: DeprecationWarning since 3.8, then returns _splithost(url), which textlibs-urllib-type-host-split models (TypeHostSplit pins both of its branches). review: The note says _splithost is modelled, but its row is todo and no entry names it, so the justification is false.
+Lib/urllib/parse.py	1257	1261	splithost	splithost(url)	excluded		deprecated: DeprecationWarning since 3.8, then returns _splithost(url), which textlibs-urllib-type-host-split models (TypeHostSplit pins both of its branches).
 Lib/urllib/parse.py	1265	1277	_splithost	_splithost(url)	todo		
 Lib/urllib/parse.py	1280	1284	splituser	splituser(host)	excluded		deprecated: DeprecationWarning since 3.8, then returns _splituser(...), which is modelled
 Lib/urllib/parse.py	1287	1290	_splituser	_splituser(host)	modelled	textlibs-urllib-legacy-split	
