@@ -18,6 +18,9 @@ summary: |
   :847) and finally runs `LEAVE_BUFFERED`, which unlocks the freshly allocated lock that no one holds:
   the interpreter aborts with `Fatal Python error: PyMutex_Unlock: unlocking mutex that is not
   locked`. Before the abort, bytes are copied out of (and the memoryview written into) freed memory.
+  The same freed memory is reached on an EINTR retry: a raw `write` that raised OSError(EINTR) after
+  the re-entered `__init__` is called again with the memoryview over the freed buffer and reads
+  whatever now occupies it (found by the buffered difftest, seed 322; modelled as `staleRead`).
 
   A third face: when the re-entered `__init__` asks for a size the allocator refuses (for example
   `2**48`), `_buffered_init` has already freed the buffer (:846-847) and leaves `self->buffer` NULL
