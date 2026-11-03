@@ -3192,6 +3192,7 @@ warn-filter-list-twins-any	refuted	Python/_warnings.c	get_warnings_filters
 warn-filter-list-cached	proven	Python/_warnings.c	get_warnings_filters
 warn-filter-list-twins-cached	refuted	Python/_warnings.c	get_warnings_filters
 warn-filter-list-twins-tuple	refuted	Python/_warnings.c	get_warnings_filters,get_warnings_context_filters
+warn-ctx-filter-list-set	proven	Python/_warnings.c	get_warnings_context_filters,get_warnings_filters
 warn-show-dispatch	proven	Lib/_py_warnings.py	_showwarnmsg,_showwarnmsg_impl,_formatwarnmsg
 warn-nested-record	proven	Lib/_py_warnings.py	_Context.copy,_new_context,catch_warnings.__enter__,_showwarnmsg_impl
 warn-exit-not-entered	proven	Lib/_py_warnings.py	catch_warnings.__exit__
