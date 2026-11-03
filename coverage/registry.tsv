@@ -6,9 +6,11 @@ ipaddress-getitem-sequence	proven	Lib/ipaddress.py	_BaseNetwork.__getitem__
 ipaddress-contains-mem	proven	Lib/ipaddress.py	_BaseNetwork.__contains__
 ipaddress-overlaps-share	proven	Lib/ipaddress.py	_BaseNetwork.overlaps,_BaseNetwork.__contains__
 ipaddress-subnet-of-mem	proven	Lib/ipaddress.py	_BaseNetwork.subnet_of,_BaseNetwork._is_subnet_of
+ipaddress-supernet-of-mem	proven	Lib/ipaddress.py	_BaseNetwork.supernet_of,_BaseNetwork._is_subnet_of
 ipaddress-subnet-of-scope-blind	refuted	Lib/ipaddress.py	_BaseNetwork.subnet_of,_BaseNetwork._is_subnet_of
 ipaddress-summarize-exact-cover	proven	Lib/ipaddress.py	summarize_address_range,_count_righthand_zero_bits
 ipaddress-summarize-rejects	proven	Lib/ipaddress.py	summarize_address_range
+ipaddress-summarize-interfaces	proven	Lib/ipaddress.py	summarize_address_range
 ipaddress-summarize-scope-blind	refuted	Lib/ipaddress.py	summarize_address_range
 ipaddress-crzb-exact	proven	Lib/ipaddress.py	_count_righthand_zero_bits
 ipaddress-subnets-partition	proven	Lib/ipaddress.py	_BaseNetwork.subnets
@@ -24,6 +26,8 @@ ipaddress-iface-unspecified	proven	Lib/ipaddress.py	IPv4Interface.is_unspecified
 ipaddress-v4-text-roundtrip	proven	Lib/ipaddress.py	IPv4Address.__init__,_BaseV4._ip_int_from_string,_BaseV4._parse_octet,_BaseV4._string_from_ip_int,_BaseAddress.__str__
 ipaddress-v4-text-canonical	proven	Lib/ipaddress.py	IPv4Address.__init__,_BaseV4._ip_int_from_string,_BaseV4._parse_octet,_BaseV4._string_from_ip_int,_BaseAddress.__str__
 ipaddress-v4-str-refusals	proven	Lib/ipaddress.py	IPv4Address.__init__,_BaseV4._ip_int_from_string,_BaseV4._parse_octet
+ipaddress-v4-ip-int-from-string	proven	Lib/ipaddress.py	_BaseV4._ip_int_from_string,_BaseV4._parse_octet
+ipaddress-v4-string-from-ip-int	proven	Lib/ipaddress.py	_BaseV4._string_from_ip_int
 ipaddress-v4-parse-octet	proven	Lib/ipaddress.py	_BaseV4._parse_octet
 ipaddress-v4-init-int-bytes	proven	Lib/ipaddress.py	IPv4Address.__init__,_IPAddressBase._check_int_address,_IPAddressBase._check_packed_address
 ipaddress-v6-init-int-bytes	proven	Lib/ipaddress.py	IPv6Address.__init__,_IPAddressBase._check_int_address,_IPAddressBase._check_packed_address
