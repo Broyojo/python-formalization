@@ -41,13 +41,14 @@ cause: |
   ((root + plus) / 2)**2 == n/m the function returns `root` (:1756), here the odd neighbour, because the
   28-digit quotient n/m rounds up before `sqrt()` and the rounded root lands below the midpoint.
 possible_fix: |
-  On equality return whichever of `root` and `plus` (or `minus`) has an even last digit, or compute
-  the root of the exact fraction with `localcontext(prec=2*prec+2)` and round once with `+x`.
+  The two comparisons are exact, so a tie is detectable: on equality with a midpoint, return whichever of
+  `root` and `plus` (or `minus`) has an even last digit.
 duplicates:
   issues:
     - {number: 90034, state: closed, relation: "introduced the correctly rounded square roots of stdev (bpo-45876); no report of the tie", reason: "different issue"}
+    - {number: 44997, state: closed, relation: "Decimal.sqrt itself not using round-half-even (2007, fixed); here Decimal.sqrt is right and the correction step in statistics is not", reason: "different bug"}
   queries: ["decimal_sqrt_of_frac", "stdev Decimal rounding", "pstdev decimal", "stdev decimal correctly rounded",
-            "statistics decimal sqrt", "bugforge README: no statistics stdev/pstdev Decimal entries"]
+            "statistics decimal sqrt", "decimal sqrt half even", "bugforge README: no statistics stdev/pstdev Decimal entries"]
 lean:
   property: PyLean.CoreLibs.CalStat.DecimalSqrtHalfEven
   theorem: PyLean.CoreLibs.CalStat.decimalSqrtHalfEven_refuted

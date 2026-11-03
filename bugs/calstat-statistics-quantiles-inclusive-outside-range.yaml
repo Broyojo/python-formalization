@@ -44,7 +44,8 @@ duplicates:
   issues:
     - {number: 150318, state: open, relation: "same rounding in the same expression; reports unsorted cut points for duplicate float data, both methods", reason: "duplicate"}
     - {number: 158759, state: closed, relation: "same function: infinite cut points from finite inputs (overflow)", reason: "different bug"}
-  queries: ["quantiles constant", "quantiles inclusive range", "quantiles rounding",
+  queries: ["quantiles constant", "quantiles inclusive range", "quantiles rounding", "quantiles monotonic",
+            "quantiles minimum maximum", "quantiles interpolation",
             "bugforge README: statistics.quantiles, one entry on overflow"]
 lean:
   property: PyLean.CoreLibs.CalStat.QuantilesInclusiveInRange

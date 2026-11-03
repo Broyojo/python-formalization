@@ -60,7 +60,8 @@ duplicates:
   issues:
     - {number: 158752, state: closed, relation: "different symptom: the sums of squares themselves underflow to 0 and correlation raises 'at least one of the inputs is constant'; closed as part of a bulk close, not on the merits", reason: "different bug"}
   queries: ["sqrtprod underflow", "correlation subnormal", "correlation underflow", "statistics correlation tiny",
-            "sqrtprod", "correlation proportional", "correlation precision small", "statistics correlation accuracy",
+            "sqrtprod", "sqrtprod subnormal", "correlation proportional", "correlation precision small",
+            "statistics correlation accuracy", "correlation small values wrong", "correlation greater than 1",
             "bugforge README: statistics.correlation entries (constant misclassification, out of range by one ulp), none on the accuracy of _sqrtprod"]
 lean:
   property: PyLean.CoreLibs.CalStat.SqrtprodAccurate
