@@ -68,8 +68,15 @@ theorem addFilter_ver (H : Hier) (it : FItem) (ap : Bool) (s s' : FState) (h : a
   unfold addFilter at h
   cases hc : s.cont with
   | deleted =>
-    simp only [hc, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at h
-    rw [← h]
+    by_cases ha : isA H noFilters "AttributeError" = true
+    · simp only [hc, deletedOk, ha, if_true, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at h
+      rw [← h]
+    · simp [hc, deletedOk, ha, bind, Except.bind] at h
+  | raises e =>
+    by_cases ha : isA H e "AttributeError" = true
+    · simp only [hc, deletedOk, ha, if_true, bind, Except.bind, pure, Except.pure, Except.ok.injEq] at h
+      rw [← h]
+    · simp [hc, deletedOk, ha, bind, Except.bind] at h
   | list xs =>
     cases ap
     · cases hr : pyRemove it xs with
@@ -245,14 +252,27 @@ theorem simpleIsFilter_refuted : ¬ SimpleIsFilter := fun h =>
 
 /-- `resetwarnings()` "clear[s] the list of warning filters, so that no filters are active": on a
 list it leaves the empty list (and the version moves on); a tuple refuses item deletion and is
-left as it was; with `warnings.filters` deleted the fresh `[]` is emptied and nothing changes. -/
+left as it was; with `warnings.filters` deleted the fresh `[]` of `_GlobalContext._filters` is
+emptied and nothing changes (for the plain `AttributeError`, in every relation CPython can have),
+and a module `__getattr__` that raises an exception under `AttributeError` does the same, while
+any other exception from it propagates (measured on 3.15.2 with `KeyError`). -/
 def ResetSpec : Prop :=
-  (∀ xs v, resetwarnings ⟨.list xs, v⟩ = .ok ⟨.list [], v + 1⟩) ∧
-  (∀ xs v, ∃ e, resetwarnings ⟨.tuple xs, v⟩ = .error e ∧ e.className = "TypeError") ∧
-  (∀ v, resetwarnings ⟨.deleted, v⟩ = .ok ⟨.deleted, v + 1⟩)
+  ∀ H : Hier,
+  (∀ xs v, resetwarnings H ⟨.list xs, v⟩ = .ok ⟨.list [], v + 1⟩) ∧
+  (∀ xs v, ∃ e, resetwarnings H ⟨.tuple xs, v⟩ = .error e ∧ e.className = "TypeError") ∧
+  (HierOk H → ∀ v, resetwarnings H ⟨.deleted, v⟩ = .ok ⟨.deleted, v + 1⟩) ∧
+  (∀ e v, isA H e "AttributeError" = true → resetwarnings H ⟨.raises e, v⟩ = .ok ⟨.raises e, v + 1⟩) ∧
+  (∀ e v, isA H e "AttributeError" = false → resetwarnings H ⟨.raises e, v⟩ = .error e)
 
-theorem resetSpec_proven : ResetSpec :=
-  ⟨fun _ _ => rfl, fun _ _ => ⟨_, rfl, rfl⟩, fun _ => rfl⟩
+theorem noFilters_caught (H : Hier) (h : HierOk H) : isA H noFilters "AttributeError" = true :=
+  (h "AttributeError" "AttributeError" (by decide)).trans (by decide)
+
+theorem resetSpec_proven : ResetSpec := by
+  intro H
+  refine ⟨fun _ _ => rfl, fun _ _ => ⟨_, rfl, rfl⟩, ?_, ?_, ?_⟩
+  · intro hk v; simp [resetwarnings, deletedOk, noFilters_caught H hk, Except.map]
+  · intro e v h; simp [resetwarnings, deletedOk, h, Except.map]
+  · intro e v h; simp [resetwarnings, deletedOk, h, Except.map]
 
 /-- `try: filters.remove(item) except ValueError: pass` (:326-329) also catches an exception of a
 class `c` with `H.sub c "ValueError"` (`ValueError` in its MRO: every builtin subclass such as
@@ -283,7 +303,7 @@ container, `_filters_mutated` from a thread that can take the lock, and C
 def VersionBumps : Prop :=
   (∀ E a m cat md ln ap s s', filterwarnings E a m cat md ln ap s = .ok s' → s'.ver = s.ver + 1) ∧
   (∀ H a cat ln ap s s', simplefilter H a cat ln ap s = .ok s' → s'.ver = s.ver + 1) ∧
-  (∀ s s', resetwarnings s = .ok s' → s'.ver = s.ver + 1) ∧
+  (∀ H s s', resetwarnings H s = .ok s' → s'.ver = s.ver + 1) ∧
   (∀ t l v, (l.owner = none → l.level = 0) → (l.owner = none ∨ l.owner = some t) →
     cFiltersMutated t l v = some (.ok (l, v + 1))) ∧
   (∀ l v v', cMutatedLockHeld l v = .ok v' → v' = v + 1)
@@ -300,9 +320,13 @@ theorem versionBumps_proven : VersionBumps := by
     cases hp : sfPrep a cat ln with
     | error e => simp [hp, bind, Except.bind] at h
     | ok it => simp only [hp, bind, Except.bind] at h; exact addFilter_ver _ _ _ _ _ h
-  · intro s s' h
+  · intro H s s' h
     unfold resetwarnings at h
-    split at h <;> simp at h <;> rw [← h]
+    split at h
+    · simp at h; rw [← h]
+    · unfold deletedOk at h; split at h <;> simp [Except.map] at h; rw [← h]
+    · unfold deletedOk at h; split at h <;> simp [Except.map] at h; rw [← h]
+    · simp at h
   · intro t l v hinv hl
     obtain ⟨o, lv⟩ := l
     simp only at hl hinv

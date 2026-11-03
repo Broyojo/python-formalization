@@ -80,10 +80,6 @@ def catName : Nat → String
   | 0 => "Warning" | 1 => "UserWarning" | 2 => "W1" | 3 => "DeprecationWarning" | 4 => "Odd"
   | 6 => "LieW" | _ => "BadInit"
 
-/-- What the module `__getattr__` of the cases raises. -/
-def gaErr (k : String) : PyExc :=
-  if k = "key" then .keyError "'k'" else .named "AE" "a"
-
 /-- The `getattr` entry of a case for attribute `a`. -/
 def caseGetattr (j : Json) (a : String) : Option PyExc :=
   match j.getObjVal? "getattr" with

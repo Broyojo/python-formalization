@@ -97,11 +97,19 @@ def pElem (j : Json) : Except String Elem := do
     return .other (← jNatAt j 1) r
   | _ => return .item ⟨← jStrAt j 1, ← pRx (← jGetI j 2), ← jNatAt j 3, ← pRx (← jGetI j 4), ← jIntAt j 5⟩
 
+/-- What the module `__getattr__` of the cases raises. -/
+def gaErr (k : String) : PyExc :=
+  if k = "key" then .keyError "'k'" else .named "AE" "a"
+
+/-- `["list", xs]`, `["tuple", xs]`, `["deleted"]`, or `["deleted", k]` with a module `__getattr__`
+raising `gaErr k` for `filters`. -/
 def pCont (j : Json) : Except String Cont := do
   match ← jStrAt j 0 with
   | "list" => return .list (← (← jArr (← jGetI j 1)).mapM pElem)
   | "tuple" => return .tuple (← (← jArr (← jGetI j 1)).mapM pElem)
-  | _ => return .deleted
+  | _ => match jStrAt j 1 with
+    | .ok k => return .raises (gaErr k)
+    | .error _ => return .deleted
 
 def pAct (j : Json) : Except String ActA := do
   match ← jStrAt j 0 with
@@ -133,7 +141,7 @@ def jElem : Elem → Json
 def jCont : Cont → Json
   | .list xs => Json.arr #["list", Json.arr (xs.map jElem).toArray]
   | .tuple xs => Json.arr #["tuple", Json.arr (xs.map jElem).toArray]
-  | .deleted => Json.arr #["deleted"]
+  | .deleted | .raises _ => Json.arr #["deleted"]
 
 def jRes {α : Type} : Py α → Json
   | .ok _ => Json.arr #["ok"]
@@ -156,7 +164,7 @@ def runOp (isC : Bool) (op : Json) (d : LockSt) (s : FState) :
   | "sf" =>
     return lift (simplefilter dHier (← pAct (← jGetI op 1)) (← jNatAt op 2) (← pIntA (← jGetI op 3))
       (← jBoolAt op 4) s)
-  | "reset" => return lift (resetwarnings s)
+  | "reset" => return lift (resetwarnings dHier s)
   | "mut" =>
     if isC then return (cFiltersMutated 1 d s.ver).map (fun r => r.map (fun (d', v) => (d', { s with ver := v })))
     else return some (.ok (d, { s with ver := s.ver + 1 }))

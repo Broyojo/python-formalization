@@ -118,7 +118,7 @@ def entries : List Entry := [
     statement := "For every state of warnings.filters (list or tuple, or a context's), defaultaction (or deleted), onceregistry (a dict, another object, or deleted), _showwarnmsg and WarningMessage, the twins agree."
     source := "twin", status := .refuted
     prop := ``WarnTwinsModuleState, thm := some ``warnTwinsModuleState_refuted_tuple, bug := some "corelibs-warnings-py-twin-warn"
-    notes := "Also refuted by warnTwinsModuleState_refuted_ctxTuple, _show (C falls back to show_warning when _showwarnmsg is deleted), _once (TypeError against AttributeError), _dflt (C uses the cached default), and _dfltGetattr, _onceGetattr, _showGetattr, _wmGetattr (a module __getattr__ raising an AttributeError subclass for a deleted attribute: C's PyObject_GetOptionalAttr clears it, Python's _wm.x raises it)." },
+    notes := "Also refuted by warnTwinsModuleState_refuted_ctxTuple, _show (C falls back to show_warning when _showwarnmsg is deleted), _once (TypeError against AttributeError), _dflt (C uses the cached default), and _dfltGetattr, _onceGetattr, _showGetattr, _wmGetattr (a module __getattr__ raising an AttributeError subclass for a deleted attribute: C's PyObject_GetOptionalAttr clears it, Python's _wm.x raises it), and _noncallable (_showwarnmsg = 5: C's PyCallable_Check TypeError, :757-761, against Python's \"'int' object is not callable\")." },
   { id := "warn-lookup-raises", pyFile := "Python/_warnings.c"
     pyFns := ["get_default_action", "get_once_registry", "call_show_warning", "get_warnings_attr", "warn_explicit"]
     statement := "A module __getattr__ that raises an exception whose class is not under AttributeError, for a deleted defaultaction (reached with no filter), onceregistry (once action, no registry), _showwarnmsg or WarningMessage (always action): C warn_explicit and _py_warnings.warn_explicit both raise it, for every call with an int line in C int, a module omitted or a str, and a message that can be built."
@@ -206,9 +206,20 @@ def entries : List Entry := [
     notes := "Without the lock C raises and Python does not; that breaks C's stated precondition, so it is not recorded as a defect." },
   { id := "warn-reset-spec", pyFile := "Lib/_py_warnings.py"
     pyFns := ["resetwarnings"]
-    statement := "resetwarnings leaves an empty list (and moves the version on); a tuple refuses item deletion with TypeError; with warnings.filters deleted nothing changes but the version."
+    statement := "For every class relation: resetwarnings leaves an empty list (and moves the version on); a tuple refuses item deletion with TypeError; with warnings.filters deleted nothing changes but the version (for the plain AttributeError, in every relation CPython can have), and the same for a module __getattr__ raising an exception under AttributeError, while any other exception from it propagates."
     source := "docstring :338: 'Clear the list of warning filters'", status := .proven
     prop := ``ResetSpec, thm := some ``resetSpec_proven },
+  { id := "warn-filters-lookup-raises", pyFile := "Python/_warnings.c"
+    pyFns := ["get_warnings_filters"]
+    statement := "For a deleted warnings.filters whose module __getattr__ raises an exception not under AttributeError: C get_warnings_filters returns that error (:347-349), and Python's _GlobalContext._filters lets it out, so _get_filters(), simplefilter, resetwarnings and catch_warnings.__enter__ (both modes) raise it, while no _Context is current."
+    source := "the 'NULL && PyErr_Occurred()' return of :347-349; the except AttributeError of :75-80", status := .proven
+    prop := ``FiltersLookupRaises, thm := some ``filtersLookupRaises_proven
+    notes := "Measured on 3.15.2 with KeyError (C and Python warn_explicit, simplefilter, resetwarnings, _get_filters, catch_warnings().__enter__ all raise it; with an AttributeError subclass C uses its cached list, Python []). Difftest warn.filt_* and warn.ctx: deleted filters with a module __getattr__ raising KeyError or an AttributeError subclass." },
+  { id := "warn-filters-lookup-raises-py", pyFile := "Lib/_py_warnings.py"
+    pyFns := ["_GlobalContext._filters", "_get_filters", "_add_filter", "resetwarnings", "catch_warnings.__enter__"]
+    statement := "The same, from the Python side: _GlobalContext._filters routes the lookup error through except AttributeError (the class relation), and _add_filter, resetwarnings and __enter__ propagate what escapes."
+    source := "the except AttributeError of :75-80", status := .proven
+    prop := ``FiltersLookupRaises, thm := some ``filtersLookupRaises_proven },
   { id := "warn-add-filter-valueerror", pyFile := "Lib/_py_warnings.py"
     pyFns := ["_add_filter"]
     statement := "For every class relation (PyType_IsSubtype over the MRO): an exception raised by an element's __eq__ during filters.remove whose class has ValueError in its MRO (every builtin ValueError subclass, io.UnsupportedOperation, a user class whose MRO contains ValueError) is taken for 'not in the list': the new item is inserted in front and every element, the raising one included, stays; any other exception propagates."
@@ -359,7 +370,7 @@ def entries : List Entry := [
     prop := ``FilterListTwinsTuple, thm := some ``filterListTwinsTuple_refuted, bug := some "corelibs-warnings-py-twin-warn" },
   { id := "warn-show-dispatch", pyFile := "Lib/_py_warnings.py"
     pyFns := ["_showwarnmsg", "_showwarnmsg_impl", "_formatwarnmsg"]
-    statement := "_showwarnmsg calls a replaced showwarning instead of the implementation, and an exception it raises propagates (TypeError when it is not callable); for a deleted showwarning, an exception from the module __getattr__ whose class is not under AttributeError propagates, and one under it (the plain AttributeError among them) goes on like the original showwarning to _showwarnmsg_impl, which outside record mode propagates an exception from a replaced formatwarning (and for a deleted formatwarning, _formatwarnmsg's lookup error the same way: propagated unless under AttributeError), loses the warning when sys.stderr is None or the write raises an exception whose class has OSError in its MRO (BrokenPipeError, io.UnsupportedOperation, a user class whose MRO contains OSError), writes it when the write succeeds, and propagates any other exception from the write (a class whose custom mro() leaves OSError out included). Quantified over every class relation."
+    statement := "_showwarnmsg calls a replaced showwarning instead of the implementation, and an exception it raises propagates (TypeError when it is not callable); for a deleted showwarning, an exception from the module __getattr__ whose class is not under AttributeError propagates, and one under it (the plain AttributeError among them) goes on like the original showwarning to _showwarnmsg_impl, which outside record mode writes what _formatwarnmsg returned: _formatwarnmsg_impl's text for the original or a caught deleted formatwarning, exactly the text a replaced formatwarning returned (None for a hook returning nothing); it propagates an exception from a replaced formatwarning, TypeError for a non-callable one, the original _showwarnmsg_impl or a log's append, RecursionError for the original showwarning, and a deleted formatwarning's lookup error unless under AttributeError; the write loses the warning when sys.stderr is None or the write raises an exception whose class has OSError in its MRO (BrokenPipeError, io.UnsupportedOperation, a user class whose MRO contains OSError), writes it when the write succeeds, and propagates any other exception from the write (a class whose custom mro() leaves OSError out included). Quantified over every class relation."
     source := "docs: showwarning may be replaced; _showwarnmsg_impl's comments :141-150", status := .proven
     prop := ``ShowDispatch, thm := some ``showDispatch_proven },
   { id := "warn-nested-record", pyFile := "Lib/_py_warnings.py"
@@ -382,10 +393,10 @@ def entries : List Entry := [
   { id := "warn-catch-restores", pyFile := "Lib/_py_warnings.py"
     pyFns := ["catch_warnings.__init__", "catch_warnings.__enter__", "catch_warnings.__exit__", "_Context.__init__",
               "_Context.copy", "_new_context", "_set_context", "_get_context", "_get_filters", "_GlobalContext._filters"]
-    statement := "In both context modes, a catch_warnings(...) whose action simplefilter accepts enters; with no action the block sees a copy of the filters (a new list, same contents); a second __enter__ raises RuntimeError and changes nothing; and whatever the block does to the filters it sees, __exit__ makes _get_filters() what it was and restores showwarning (and without contexts warnings.filters and _showwarnmsg_impl), the version moving on by one."
+    statement := "In both context modes, in a state where a deleted warnings.filters reads as [] (its lookup error is caught; always so with no module __getattr__), a catch_warnings(...) whose action simplefilter accepts enters; with no action the block sees a copy of the filters (a new list, same contents); a second __enter__ raises RuntimeError and changes nothing; and whatever the block does to the filters it sees, __exit__ makes _get_filters() what it was and restores showwarning (and without contexts warnings.filters and _showwarnmsg_impl), the version moving on by one."
     source := "docs: copies and, upon exit, restores the warnings filter and showwarning()", status := .proven
     prop := ``CatchRestores, thm := some ``catchRestores_proven
-    notes := "Difftest warn.ctx agrees on 150k cases over 3 seeds." },
+    notes := "Difftest warn.ctx agrees on 200k cases over 4 seeds. Without the condition on a deleted warnings.filters the statement is false (catchRestoresAnyRead_refuted: a module __getattr__ raising KeyError makes __enter__ raise, as measured on 3.15.2); that is the documented behaviour, recorded in warn-filters-lookup-raises." },
   { id := "warn-catch-enter-atomic", pyFile := "Lib/_py_warnings.py"
     pyFns := ["catch_warnings.__enter__"]
     statement := "An __enter__ that raises leaves _showwarnmsg_impl, warnings.filters and the context as they were."

@@ -20,12 +20,14 @@ Scope:
   original `_showwarnmsg_impl`, the original `formatwarning`, a record log's `append`, another
   callable (a user hook, called with the message), or a non-callable object; `showwarning` and
   `formatwarning` can also be deleted, and the module can have a `__getattr__` that raises for a
-  deleted one (`MState.modGetattr`, read for `showwarning` and `formatwarning`; for `filters`,
-  which `_GlobalContext._filters` reads under `except AttributeError`, :72-80, it is out of scope,
-  as is a `__getattr__` that returns a value). Every `except AttributeError` goes through the class
+  deleted attribute (`MState.modGetattr`, read for `showwarning`, `formatwarning` and `filters`;
+  one that returns a value is out of scope). Every `except AttributeError` goes through the class
   relation `hier`.
-* `_formatwarnmsg_impl`'s text is not modelled (only that something is written); writing to the file can
-  succeed, raise `OSError` (swallowed), or raise something else.
+* A replaced `formatwarning` returns a text (`Txt`: a str, or another object) or raises; the text
+  `_formatwarnmsg_impl` builds is not rendered (`Txt.dflt`). Writing a text to `sys.stderr` can
+  succeed, raise `OSError` (swallowed), or raise something else, depending on the text. The
+  message is `WarningMessage(text, UserWarning, filename, lineno)`: `msg.file` and `msg.line` are
+  `None`.
 * The lock is held around each body (`with _wm._lock:`); `_filters_mutated_lock_held` therefore
   succeeds and bumps the version.
 -/
@@ -36,6 +38,14 @@ open PyLean
 
 abbrev Ref := Nat
 
+/-- A text to write: what `_formatwarnmsg_impl` builds, a str a replaced `formatwarning` returned,
+or another object it returned (its type name). -/
+inductive Txt where
+  | dflt
+  | str (s : String)
+  | obj (tp : String)
+  deriving DecidableEq, Repr
+
 inductive Fn where
   | showOrig
   | implOrig
@@ -44,6 +54,8 @@ inductive Fn where
   | user (id : Nat)
   | userRaises (id : Nat) (e : PyExc)
   | noncallable
+  /-- another callable that returns the text `t` (as a `formatwarning`) -/
+  | ret (id : Nat) (t : Txt)
   deriving DecidableEq, Repr
 
 /-- A `_Context`: its `_filters` list and its `log` (a list, or `None`). -/
@@ -64,7 +76,7 @@ inductive CtxV where
 callback), lost (`sys.stderr` is `None`, or the write raised `OSError`), or passed to a user hook. -/
 inductive Shown where
   | logged (log : Ref)
-  | written
+  | written (t : Txt)
   | lost
   | hook (id : Nat)
   deriving DecidableEq, Repr
@@ -90,8 +102,8 @@ structure MState where
   ver : Int
   ctxv : CtxV
   ctxs : Nat → Ctx
-  /-- `sys.stderr`: `none` when it is `None`; else what `write` does -/
-  stderr : Option (Py Unit)
+  /-- `sys.stderr`: `none` when it is `None`; else what `write(text)` does -/
+  stderr : Option (Txt → Py Unit)
   /-- what the shown warnings did, oldest first -/
   out : List Shown
   /-- which references are tuples rather than lists (only C's list check reads it) -/
@@ -108,8 +120,6 @@ def MState.modGetattr (st : MState) : String → Option PyExc := st.mods.getattr
 
 def upd {α : Type} (f : Nat → α) (k : Nat) (v : α) : Nat → α := fun i => if i = k then v else f i
 
-def noFilters : PyExc := .named "AttributeError" "module 'warnings' has no attribute 'filters'"
-
 /-- What `_wm.a` raises for a missing attribute `a`. -/
 def modAttrErr (st : MState) (a : String) : PyExc :=
   match st.modGetattr a with
@@ -125,11 +135,27 @@ def getContext (useCtx : Bool) (st : MState) : CtxV :=
     | .unset => .global
     | v => v
 
-/-- The list `context._filters` names: a `_Context`'s list, or for `_global_context` (:72-80)
-`warnings.filters`, or a fresh `[]` when it was deleted (`none`). -/
+/-- The list `context._filters` names when reading it succeeds: a `_Context`'s list, or for
+`_global_context` (:72-80) `warnings.filters`, or a fresh `[]` when it was deleted (`none`). -/
 def ctxFilters (st : MState) : CtxV → Option Ref
   | .ctx c => some (st.ctxs c).filters
   | _ => st.filters
+
+/-- Reading `context._filters`, :72-80: for `_global_context` and a deleted `warnings.filters`,
+`try: return _wm.filters except AttributeError: return []` (`deletedOk`); the value is then
+`ctxFilters`. -/
+def ctxRead (st : MState) : CtxV → Py Unit
+  | .ctx _ => .ok ()
+  | _ => match st.filters with
+    | some _ => .ok ()
+    | none => deletedOk st.hier (modAttrErr st "filters")
+
+/-- `_get_filters()`, :111-114, as its contents, with the read failing. -/
+def pyGetFilters (useCtx : Bool) (st : MState) : Py (List Elem) :=
+  (ctxRead st (getContext useCtx st)).map fun () =>
+    match ctxFilters st (getContext useCtx st) with
+    | some r => st.lists r
+    | none => []
 
 /-- The log of a context: `_GlobalContext.__init__` sets `None` and nothing sets it later. -/
 def ctxLog (st : MState) : CtxV → Option Ref
@@ -164,20 +190,30 @@ def writeOut (st : MState) : Py MState :=
   match st.stderr with
   | none => .ok { st with out := st.out ++ [.lost] }
   | some w =>
-    let write : Py MState := match w with
-      | .ok () => .ok { st with out := st.out ++ [.written] }
+    let write (t : Txt) : Py MState := match w t with
+      | .ok () => .ok { st with out := st.out ++ [.written t] }
       | .error e =>
         -- `except OSError: pass`, :148-150
         if isA st.hier e "OSError" then .ok { st with out := st.out ++ [.lost] } else .error e
     -- `text = _wm._formatwarnmsg(msg)`, :145, outside the `try`; `_formatwarnmsg`, :240-251:
-    -- `try: fw = _wm.formatwarning except AttributeError: pass`
+    -- `try: fw = _wm.formatwarning except AttributeError: pass`, then
+    -- `fw(msg.message, msg.category, msg.filename, msg.lineno, msg.line)` for a replaced one
     match st.formatwarning with
-    | some .noncallable => .error (.typeError "'int' object is not callable")
-    | some (.userRaises _ e) => .error e
     | none =>
       let e := modAttrErr st "formatwarning"
-      if isA st.hier e "AttributeError" then write else .error e
-    | _ => write
+      if isA st.hier e "AttributeError" then write .dflt else .error e
+    | some .fmtOrig => write .dflt
+    | some (.ret _ t) => write t
+    -- a hook that returns `None`
+    | some (.user _) => write (.obj "NoneType")
+    | some (.userRaises _ e) => .error e
+    | some .noncallable => .error (.typeError "'int' object is not callable")
+    -- `showwarning(message, category, filename, lineno, None)` calls `_wm._showwarnmsg_impl`, which
+    -- (no log, the same `sys.stderr`) formats through `formatwarning` again
+    | some .showOrig => .error (.named "RecursionError" "maximum recursion depth exceeded")
+    -- `_showwarnmsg_impl(m, c, f, l, line)` and `log.append(m, c, f, l, line)`: too many arguments
+    | some .implOrig => .error (.typeError "_showwarnmsg_impl() takes 1 positional argument but 5 were given")
+    | some (.logAppend _) => .error (.typeError "list.append() takes exactly one argument (5 given)")
 
 /-- `_showwarnmsg_impl(msg)`, :133-150: the context's log, if any, takes it
 (`_record_warning`, :63-64). -/
@@ -191,7 +227,7 @@ def callImpl (useCtx : Bool) (msg : Nat) (st : MState) : Py MState :=
   match st.showImpl with
   | .implOrig => showImplOrig useCtx msg st
   | .logAppend l => .ok { st with logs := upd st.logs l (st.logs l ++ [msg]), out := st.out ++ [.logged l] }
-  | .user i => .ok { st with out := st.out ++ [.hook i] }
+  | .user i | .ret i _ => .ok { st with out := st.out ++ [.hook i] }
   | .userRaises _ e => .error e
   | .noncallable => .error (.typeError "'int' object is not callable")
   -- `showwarning` itself is a valid `_showwarnmsg_impl` only through `showwarning(...)`'s
@@ -209,7 +245,7 @@ def showwarnmsg (useCtx : Bool) (msg : Nat) (st : MState) : Py MState :=
     if isA st.hier e "AttributeError" then callImpl useCtx msg st else .error e
   | some .showOrig => callImpl useCtx msg st
   | some .noncallable => .error (.typeError "warnings.showwarning() must be set to a function or method")
-  | some (.user i) => .ok { st with out := st.out ++ [.hook i] }
+  | some (.user i) | some (.ret i _) => .ok { st with out := st.out ++ [.hook i] }
   -- `sw(msg.message, ...)` raising: the exception propagates, :230-231
   | some (.userRaises _ e) => .error e
   | some _ => .error (.typeError "~takes positional arguments")
@@ -227,7 +263,7 @@ structure CW where
   savedFilters : Option Ref
   savedImpl : Fn
   savedShow : Option Fn
-  savedCtx : CtxV
+  savedCtx : Option CtxV
 
 /-- `self._module = sys.modules['warnings'] if module is None else module`, :682. -/
 def cwModuleOf (module : Option Nat) (sysWarnings : Option Nat) : Py Nat :=
@@ -242,7 +278,7 @@ def cwInit (name : String) (record : Bool) (module : Nat)
     (action : Option ActA) (category : Nat) (lineno : IntA) (append : Bool) : CW :=
   { name := name, record := record, module := module,
     filter := action.map (fun a => (a, category, lineno, append)), entered := false,
-    savedFilters := none, savedImpl := .implOrig, savedShow := none, savedCtx := .unset }
+    savedFilters := none, savedImpl := .implOrig, savedShow := none, savedCtx := none }
 
 /-- `catch_warnings.__repr__`, :689-696: `self._module is not sys.modules['warnings']` is tested
 when `repr` runs (a missing `sys.modules['warnings']` raises `KeyError`); `name` is
@@ -255,11 +291,14 @@ def cwRepr (cw : CW) (sysWarnings : Option Nat) (modRepr : Nat → String) : Py 
     let args := a1 ++ (if cw.module = w then [] else [s!"module={modRepr cw.module}"])
     .ok s!"{cw.name}({", ".intercalate args})"
 
-/-- The filters state `simplefilter` works on: the current filters list. -/
+/-- The filters state `simplefilter` works on: the current filters list, or a deleted
+`warnings.filters` with what its lookup raises. -/
 def curFState (useCtx : Bool) (st : MState) : FState :=
   ⟨match ctxFilters st (getContext useCtx st) with
     | some r => .list (st.lists r)
-    | none => .deleted, st.ver⟩
+    | none => match st.modGetattr "filters" with
+      | some e => .raises e
+      | none => .deleted, st.ver⟩
 
 /-- Writing a filters state back to the list it came from. -/
 def putFState (useCtx : Bool) (st : MState) (fs : FState) : MState :=
@@ -269,10 +308,11 @@ def putFState (useCtx : Bool) (st : MState) (fs : FState) : MState :=
 
 def noShowAttr : PyExc := .named "AttributeError" "module 'warnings' has no attribute 'showwarning'"
 def noSavedFilters : PyExc := .named "AttributeError" "'catch_warnings' object has no attribute '_filters'"
+def noSavedCtx : PyExc := .named "AttributeError" "'catch_warnings' object has no attribute '_saved_context'"
 
 /-- `catch_warnings.__enter__`, :698-725: the object and the state it leaves, and the log it
 returns or the exception it raises. Nothing is undone when it raises. -/
-def cwEnter (useCtx : Bool) (cw : CW) (st : MState) : CW × MState × Py (Option Ref) :=
+def cwEnterWith (read : Py Unit) (useCtx : Bool) (cw : CW) (st : MState) : CW × MState × Py (Option Ref) :=
   if cw.entered then
     (cw, st, match cwRepr cw st.sysWarnings st.modRepr with
       | .ok r => .error (.named "RuntimeError" s!"Cannot enter {r} twice")
@@ -281,10 +321,14 @@ def cwEnter (useCtx : Bool) (cw : CW) (st : MState) : CW × MState × Py (Option
   let cw := { cw with entered := true }
   -- with _wm._lock:
   let step : Py (CW × MState × Option Nat) := if useCtx then
+      -- `self._module._new_context()`: `old.copy()` reads `old._filters` (`read`)
+      match read with
+      | .error e => .error e
+      | .ok () =>
       let (st', old, c) := newContext st
-      .ok ({ cw with savedCtx := old }, st', some c)
+      .ok ({ cw with savedCtx := some old }, st', some c)
     else match st.filters with
-      | none => .error noFilters
+      | none => .error (modAttrErr st "filters")
       | some r =>
         let r' := st.next
         .ok ({ cw with savedFilters := some r, savedImpl := st.showImpl },
@@ -315,6 +359,11 @@ def cwEnter (useCtx : Bool) (cw : CW) (st : MState) : CW × MState × Py (Option
     | .ok fs => (cw, putFState useCtx st fs, .ok log)
     | .error e => (cw, st, .error e)
 
+/-- `catch_warnings.__enter__`, :698-725 (`cwEnterWith` with the read of the old context's
+`_filters`). -/
+def cwEnter (useCtx : Bool) (cw : CW) (st : MState) : CW × MState × Py (Option Ref) :=
+  cwEnterWith (if useCtx then ctxRead st (getContext true st) else .ok ()) useCtx cw st
+
 def noSavedShow : PyExc := .named "AttributeError" "'catch_warnings' object has no attribute '_showwarning'"
 
 /-- `catch_warnings.__exit__`, :727-737: the state it leaves and how it ends. -/
@@ -324,7 +373,10 @@ def cwExit (useCtx : Bool) (cw : CW) (st : MState) : MState × Py Unit :=
       | .ok r => .error (.named "RuntimeError" s!"Cannot exit {r} without entering first")
       | .error e => .error e)
   else
-  let step : Py MState := if useCtx then .ok { st with ctxv := cw.savedCtx }
+  let step : Py MState := if useCtx then
+      match cw.savedCtx with
+      | none => .error noSavedCtx
+      | some v => .ok { st with ctxv := v }
     else match cw.savedFilters with
       | none => .error noSavedFilters
       | some r => .ok { st with filters := some r, showImpl := cw.savedImpl }
@@ -349,7 +401,11 @@ def cFilterList (st : MState) (cached : Ref) : Py (List Elem × String) :=
     | some r =>
       if st.tuples r then .error (.valueError "_warnings.filters must be a list")
       else .ok (st.lists r, "filters")
-    | none => .ok (st.lists cached, "filters")
+    -- `GET_WARNINGS_ATTR(interp, filters, 0)` `NULL`: with an error set it returns (:347-349),
+    -- else the cached list (`PyObject_GetOptionalAttr` clears an `AttributeError`)
+    | none => match st.modGetattr "filters" with
+      | some e => if isA st.hier e "AttributeError" then .ok (st.lists cached, "filters") else .error e
+      | none => .ok (st.lists cached, "filters")
   | v =>
     match ctxFilters st v with
     | some r =>
