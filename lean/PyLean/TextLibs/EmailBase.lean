@@ -46,6 +46,9 @@ inductive EExc where
   | assertionError (msg : Str)
   /-- An exception raised by `_ew.decode` that `get_encoded_word` does not catch. -/
   | decRaise (cls : String) (msg : Str)
+  /-- `RecursionError("maximum recursion depth exceeded")`: a Python call found no frame left
+  (`_Py_CheckRecursiveCallPy`, Python/ceval.c). -/
+  | recursionError
   /-- Not a Python exception: the model's loop fuel ran out. -/
   | fuel
   deriving Repr, DecidableEq, Inhabited
@@ -66,12 +69,14 @@ def EExc.cls : EExc → String
   | .unboundLocal _ => "UnboundLocalError"
   | .assertionError _ => "AssertionError"
   | .decRaise c _ => c
+  | .recursionError => "RecursionError"
   | .fuel => "<model fuel exhausted>"
 
 /-- `str(e)`. -/
 def EExc.msg : EExc → Str
   | .hpe m | .invalidEw m | .valueError m | .assertionError m | .decRaise _ m => m
   | .indexError m | .unboundLocal m => S m
+  | .recursionError => S "maximum recursion depth exceeded"
   | .fuel => []
 
 def strIndexError : EExc := .indexError "string index out of range"

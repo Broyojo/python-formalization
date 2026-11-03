@@ -80,6 +80,7 @@ duplicates:
             "bugforge README: only pprint and difflib RecursionError entries, unrelated"]
   note: "Found by the email re-review (2026-11-03) as the reason CommentSpec is false for deep nesting."
 lean:
-  property: null
-  theorem: null
-  note: "CommentSpec (EmailQuote.lean) must be bounded in depth or given a frame model; the refutation belongs there."
+  property: PyLean.TextLibs.Email.CommentNestingUnbounded
+  theorem: PyLean.TextLibs.Email.commentNestingUnbounded_refuted
+  file: lean/PyLean/TextLibs/EmailQuote.lean
+  note: "The frames get_comment, str() and content need are modelled in EmailFrames.lean (commentN, commentStrN, contentN) and checked exactly against CPython by the emailfr difftest; comment_depth7 shows '('*7 + ')'*7 parsing with 8 frames and str() raising, and get_comment raising with 7. CommentSpec is now stated with the sufficient bound 2 * depth + 6 <= frames."

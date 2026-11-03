@@ -1,4 +1,5 @@
 import PyLean.TextLibs.EmailUnstruct
+import PyLean.TextLibs.EmailFrames
 
 /-!
 Quoting round trips of `Lib/email/_header_value_parser.py` (CPython 3.15.2): the text
@@ -610,7 +611,8 @@ def CB.content : CB → Str
   | .text s => s
   | .nest s i r => s ++ [40] ++ i.render ++ [41] ++ r.content
 
-/-- `get_comment` on comments, nested ones included:
+/-- `get_comment` on comments, nested ones included, with no recursion limit (`CommentSpec` adds
+the frames CPython needs; this is the shape of the results):
 * for every canonical body `b` (escaped text with nested comments) and rest `r`,
   `get_comment('(' + b + ')' + r)` returns `r` and a comment whose `str()` is `'(' + b + ')'`
   and whose `content` is `b` with its top-level text unescaped; its elements are
@@ -622,7 +624,7 @@ def CB.content : CB → Str
   `HeaderParseError("expected '(' but found '<value>'")` (:1292-1294).
 The docstring: "comment = "(" *([FWS] ccontent) [FWS] ")"; ccontent = ctext / quoted-pair /
 comment. We handle nested comments here, and quoted-pair in our qp-ctext routine." -/
-def CommentSpec : Prop :=
+def CommentShape : Prop :=
   (∀ (n : Nat) (b : CB) (r : Str), b.render.length + 1 < n →
     ∃ c, getComment n ([40] ++ b.render ++ [41] ++ r) = .ok (c, r) ∧
       c.str = [40] ++ b.render ++ [41] ∧ commentContent c = b.content ∧
@@ -728,6 +730,18 @@ def WsKid (k : Tok) : Prop := ∃ s ty ds, k = .term .ws s ty ds ∧ ty ≠ "com
 /-- The comment loop over escaped text, up to a tail that is the end of the value or starts with
 a parenthesis: it takes `j` iterations, at most one per character, and appends whitespace and
 ctext `WhiteSpaceTerminal`s whose texts make up the text. -/
+theorem validateN_le (s : Str) : validateN s ≤ 4 := by
+  unfold validateN; split <;> omega
+
+theorem qpCtextN_le (v : Str) : qpCtextN v ≤ 5 := by
+  unfold qpCtextN
+  cases getPtextToEndchars v (fun c => c == 40 || c == 41) with
+  | ok r =>
+    obtain ⟨p, q, b⟩ := r
+    have := validateN_le p
+    simp only; omega
+  | error e => simp
+
 theorem commentLoop_text (tl : Str)
     (hsp : tl.takeWhile isSpace = [] ∧ tl.dropWhile isSpace = tl)
     (hpt : ∀ (c : Nat) (s : Str), isWsp c = false → ∃ qp,
@@ -739,9 +753,12 @@ theorem commentLoop_text (tl : Str)
       ∃ j ks', j ≤ s.length ∧
         commentLoop n (escWith Eparen s ++ tl) (.node .comment ty ks ds atts) =
           commentLoop (n - j) tl (.node .comment ty (ks ++ ks') ds atts) ∧
-        strs ks' = s ∧ ∀ k ∈ ks', WsKid k
+        strs ks' = s ∧ (∀ k ∈ ks', WsKid k) ∧
+        commentLoopN n (escWith Eparen s ++ tl) ≤ max 5 (commentLoopN (n - j) tl)
   | 0, _, _, _, _, _, h => absurd h (Nat.not_lt_zero _)
-  | n + 1, [], ty, ks, ds, atts, _ => ⟨0, [], Nat.le_refl _, by simp [escWith_nil], rfl, by simp⟩
+  | n + 1, [], ty, ks, ds, atts, _ =>
+    ⟨0, [], Nat.le_refl _, by simp [escWith_nil], rfl, by simp,
+      by simp only [escWith_nil, List.nil_append, Nat.sub_zero]; exact Nat.le_max_right _ _⟩
   | n + 1, c :: s, ty, ks, ds, atts, hlen => by
     simp only [List.length_cons] at hlen
     by_cases hw : isWsp c = true
@@ -755,15 +772,15 @@ theorem commentLoop_text (tl : Str)
         have := dropWhile_length_le isSpace s; omega
       have hle : ((c :: s).dropWhile isSpace).length ≤ s.length := by
         rw [List.dropWhile_cons, if_pos hs]; exact dropWhile_length_le isSpace s
-      obtain ⟨j, ks', hj, h1, h2, h3⟩ := commentLoop_text tl hsp hpt n ((c :: s).dropWhile isSpace)
+      obtain ⟨j, ks', hj, h1, h2, h3, hN⟩ := commentLoop_text tl hsp hpt n ((c :: s).dropWhile isSpace)
         ty (ks ++ [WT ((c :: s).takeWhile isSpace) "fws"]) ds atts hlt
-      refine ⟨j + 1, WT ((c :: s).takeWhile isSpace) "fws" :: ks', by simp; omega, ?_, ?_, ?_⟩
+      have hc41 : (c == 41) = false := by
+        cases h : (c == 41)
+        · rfl
+        · simp at h; subst h; cases hw
+      refine ⟨j + 1, WT ((c :: s).takeWhile isSpace) "fws" :: ks', by simp; omega, ?_, ?_, ?_, ?_⟩
       · rw [hv]
         rw [commentLoop]
-        have hc41 : (c == 41) = false := by
-          cases h : (c == 41)
-          · rfl
-          · simp at h; subst h; cases hw
         simp only [hc41, hw, Bool.false_eq_true, ↓reduceIte]
         rw [← hv, hfws.1, hfws.2]
         simp only [Tok.push]
@@ -777,6 +794,11 @@ theorem commentLoop_text (tl : Str)
         rcases hk with rfl | hk
         · exact ⟨_, _, _, rfl, by decide⟩
         · exact h3 k hk
+      · rw [hv, commentLoopN]
+        simp only [hc41, hw, Bool.false_eq_true, ↓reduceIte]
+        rw [← hv, hfws.2, Nat.add_sub_add_right]
+        simp only [fwsN]
+        omega
     · have hw' : isWsp c = false := by simpa using hw
       obtain ⟨h, tl', hv, hhw, hhend, _⟩ := escWith_head escOkParen (s := s) hw' tl
       have hh41 : (h == 41) = false := by
@@ -797,9 +819,9 @@ theorem commentLoop_text (tl : Str)
       have hle : u.length ≤ s.length := by
         have := dropWhile_notWsp_lt (s := s) hw'; rw [hu]; omega
       obtain ⟨ds', hds⟩ := validateXtext_term .ws t "ptext" []
-      obtain ⟨j, ks', hj, h1, h2, h3⟩ := commentLoop_text tl hsp hpt n u ty
+      obtain ⟨j, ks', hj, h1, h2, h3, hN⟩ := commentLoop_text tl hsp hpt n u ty
         (ks ++ [validateXtext (WT t "ptext")]) ds atts hlt
-      refine ⟨j + 1, validateXtext (WT t "ptext") :: ks', by simp; omega, ?_, ?_, ?_⟩
+      refine ⟨j + 1, validateXtext (WT t "ptext") :: ks', by simp; omega, ?_, ?_, ?_, ?_⟩
       · rw [hv]
         rw [commentLoop]
         simp only [hh41, hh40, hhw, Bool.false_eq_true, ↓reduceIte]
@@ -815,6 +837,12 @@ theorem commentLoop_text (tl : Str)
         · simp only [WT] at hds ⊢
           rw [hds]; exact ⟨_, _, _, rfl, by decide⟩
         · exact h3 k hk
+      · rw [hv, commentLoopN]
+        simp only [hh41, hh40, hhw, Bool.false_eq_true, ↓reduceIte]
+        rw [← hv, hqc, Nat.add_sub_add_right]
+        simp only
+        have := qpCtextN_le (escWith Eparen (c :: s) ++ tl)
+        omega
 
 theorem tail_paren (e : Nat) (he : e = 40 ∨ e = 41) (r : Str) :
     (e :: r).takeWhile isSpace = [] ∧ (e :: r).dropWhile isSpace = e :: r := by
@@ -854,6 +882,35 @@ theorem commentStrs_ws (ks : List Tok) (h : ∀ k ∈ ks, WsKid k) :
   rw [commentStrs_noComment ks (fun k hk => by
     obtain ⟨s, ty, ds, rfl, hty⟩ := h k hk; simpa [Tok.ty] using hty), makeParenPairs_eq]
 
+/-- Levels of comments nested inside a body. -/
+def CB.depth : CB → Nat
+  | .text _ => 0
+  | .nest _ i r => max (i.depth + 1) r.depth
+
+theorem quoteN_append : ∀ (a b : List Tok), quoteN (a ++ b) = max (quoteN a) (quoteN b)
+  | [], b => by simp [quoteN]
+  | x :: a, b => by simp only [List.cons_append, quoteN, quoteN_append a b]; omega
+
+theorem kidsStrN_append : ∀ (a b : List Tok), kidsStrN (a ++ b) = max (kidsStrN a) (kidsStrN b)
+  | [], b => by simp [kidsStrN]
+  | x :: a, b => by simp only [List.cons_append, kidsStrN, kidsStrN_append a b]; omega
+
+theorem quoteN_ws : ∀ (ks : List Tok), (∀ k ∈ ks, WsKid k) → quoteN ks ≤ 1
+  | [], _ => by simp [quoteN]
+  | k :: ks, h => by
+    obtain ⟨s, ty, ds, rfl, hty⟩ := h k (by simp)
+    have := quoteN_ws ks (fun x hx => h x (by simp [hx]))
+    have h0 : commentStrN (Tok.term TC.ws s ty ds) = 0 := rfl
+    have h1 : (if ((Tok.term TC.ws s ty ds).ty == "comment") = true then (0 : Nat) else 0) = 0 := by
+      split <;> rfl
+    rw [quoteN, h0, h1]; omega
+
+theorem kidsStrN_ws : ∀ (ks : List Tok), (∀ k ∈ ks, WsKid k) → kidsStrN ks = 0
+  | [], _ => rfl
+  | k :: ks, h => by
+    obtain ⟨s, ty, ds, rfl, _⟩ := h k (by simp)
+    simp [kidsStrN, commentStrN, kidsStrN_ws ks (fun x hx => h x (by simp [hx]))]
+
 /-- A comment element: a whitespace/ctext terminal or a nested comment. -/
 def CKid (k : Tok) : Prop := WsKid k ∨ k.ty = "comment"
 
@@ -862,20 +919,22 @@ theorem commentLG (n : Nat) :
       (atts : List (String × AV)), b.render.length < n →
       ∃ ks', commentLoop n (b.render ++ 41 :: r) (.node .comment ty ks ds atts) =
           .ok (.node .comment ty (ks ++ ks') ds atts, 41 :: r) ∧
-        commentStrs ks' = b.render ∧ strs ks' = b.content ∧ ∀ k ∈ ks', CKid k) ∧
+        commentStrs ks' = b.render ∧ strs ks' = b.content ∧ (∀ k ∈ ks', CKid k) ∧
+        quoteN ks' ≤ 2 * b.depth + 1 ∧ kidsStrN ks' ≤ 2 * b.depth) ∧
     (∀ (b : CB) (r : Str), b.render.length + 1 < n →
       ∃ ks', getComment n ([40] ++ b.render ++ [41] ++ r) =
           .ok (.node .comment "comment" ks' [] [], r) ∧
-        commentStrs ks' = b.render ∧ strs ks' = b.content ∧ ∀ k ∈ ks', CKid k) := by
+        commentStrs ks' = b.render ∧ strs ks' = b.content ∧ (∀ k ∈ ks', CKid k) ∧
+        quoteN ks' ≤ 2 * b.depth + 1 ∧ kidsStrN ks' ≤ 2 * b.depth) := by
   have ih : ∀ m, m < n → _ := fun m hm => commentLG m
   refine ⟨?_, ?_⟩
   · intro b r ty ks ds atts hlen
     cases b with
     | text s =>
-      obtain ⟨j, ks', hj, h1, h2, h3⟩ := commentLoop_text (41 :: r) (tail_paren 41 (.inr rfl) r)
+      obtain ⟨j, ks', hj, h1, h2, h3, _⟩ := commentLoop_text (41 :: r) (tail_paren 41 (.inr rfl) r)
         (pt_paren 41 (.inr rfl) r) n s ty ks ds atts
         (by have := escWith_length_ge Eparen s; simp [CB.render] at hlen; omega)
-      refine ⟨ks', ?_, ?_, ?_, fun k hk => .inl (h3 k hk)⟩
+      refine ⟨ks', ?_, ?_, ?_, fun k hk => .inl (h3 k hk), ?_, ?_⟩
       · simp only [CB.render]
         rw [h1]
         obtain ⟨m, hm⟩ : ∃ m, n - j = m + 1 := ⟨n - j - 1, by
@@ -883,22 +942,24 @@ theorem commentLG (n : Nat) :
         rw [hm]; simp [commentLoop]; rfl
       · rw [commentStrs_ws ks' h3, h2]; rfl
       · rw [h2]; rfl
+      · have := quoteN_ws ks' h3; simp [CB.depth]; omega
+      · rw [kidsStrN_ws ks' h3]; simp [CB.depth]
     | nest s i rest =>
       have hs := escWith_length_ge Eparen s
       simp only [CB.render, List.length_append, List.length_cons, List.length_nil] at hlen
       have hval : (CB.nest s i rest).render ++ 41 :: r =
           escWith Eparen s ++ 40 :: (i.render ++ 41 :: (rest.render ++ 41 :: r)) := by
         simp [CB.render]
-      obtain ⟨j, ks1, hj, h1, h2, h3⟩ := commentLoop_text
+      obtain ⟨j, ks1, hj, h1, h2, h3, _⟩ := commentLoop_text
         (40 :: (i.render ++ 41 :: (rest.render ++ 41 :: r)))
         (tail_paren 40 (.inl rfl) _) (pt_paren 40 (.inl rfl) _) n s ty ks ds atts (by omega)
       obtain ⟨m, hm⟩ : ∃ m, n - j = m + 1 := ⟨n - j - 1, by omega⟩
-      obtain ⟨ksi, hgi, hgi1, hgi2, hgi3⟩ := (ih m (by omega)).2 i (rest.render ++ 41 :: r)
+      obtain ⟨ksi, hgi, hgi1, hgi2, hgi3, hgi4, hgi5⟩ := (ih m (by omega)).2 i (rest.render ++ 41 :: r)
         (by omega)
       let c : Tok := .node .comment "comment" ksi [] []
-      obtain ⟨ksr, hlr, hlr1, hlr2, hlr3⟩ := (ih m (by omega)).1 rest r ty (ks ++ ks1 ++ [c]) ds
-        atts (by omega)
-      refine ⟨ks1 ++ [c] ++ ksr, ?_, ?_, ?_, ?_⟩
+      obtain ⟨ksr, hlr, hlr1, hlr2, hlr3, hlr4, hlr5⟩ := (ih m (by omega)).1 rest r ty
+        (ks ++ ks1 ++ [c]) ds atts (by omega)
+      refine ⟨ks1 ++ [c] ++ ksr, ?_, ?_, ?_, ?_, ?_, ?_⟩
       · rw [hval, h1, hm]
         unfold commentLoop
         simp only [show (40 == 41) = false from rfl, show isWsp 40 = false from rfl,
@@ -919,10 +980,20 @@ theorem commentLG (n : Nat) :
         · exact .inl (h3 k hk)
         · exact .inr rfl
         · exact hlr3 k hk
+      · have h1q := quoteN_ws ks1 h3
+        have hcq : quoteN [c] = 1 + (1 + quoteN ksi) := by
+          simp [quoteN, c, commentStrN, Tok.ty]
+        rw [quoteN_append, quoteN_append, hcq]
+        simp only [CB.depth]
+        omega
+      · have hcs : kidsStrN [c] = 1 + quoteN ksi := by simp [kidsStrN, c, commentStrN]
+        rw [kidsStrN_append, kidsStrN_append, kidsStrN_ws ks1 h3, hcs]
+        simp only [CB.depth]
+        omega
   · intro b r hlen
     obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
-    obtain ⟨ks', h1, h2, h3, h4⟩ := (ih m (by omega)).1 b r "comment" [] [] [] (by omega)
-    refine ⟨ks', ?_, h2, h3, h4⟩
+    obtain ⟨ks', h1, h2, h3, h4, h5, h6⟩ := (ih m (by omega)).1 b r "comment" [] [] [] (by omega)
+    refine ⟨ks', ?_, h2, h3, h4, h5, h6⟩
     have hv : [40] ++ b.render ++ [41] ++ r = 40 :: (b.render ++ 41 :: r) := by simp
     rw [hv, getComment]
     simp only [headIs, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte, List.drop_succ_cons,
@@ -932,10 +1003,10 @@ theorem commentLG (n : Nat) :
 termination_by n
 decreasing_by all_goals omega
 
-theorem commentSpec_proven : CommentSpec := by
+theorem commentShape : CommentShape := by
   refine ⟨?_, ?_, ?_⟩
   · intro n b r hlen
-    obtain ⟨ks', h1, h2, h3, h4⟩ := (commentLG n).2 b r hlen
+    obtain ⟨ks', h1, h2, h3, h4, _, _⟩ := (commentLG n).2 b r hlen
     refine ⟨_, h1, ?_, ?_, ?_⟩
     · simp [Tok.str, h2]
     · simp [commentContent, Tok.kids, h3]
@@ -945,7 +1016,7 @@ theorem commentSpec_proven : CommentSpec := by
       · exact .inr h
   · intro n s hlen
     obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
-    obtain ⟨j, ks', hj, h1, h2, h3⟩ := commentLoop_text [] (by simp) pt_end m s "comment" [] [] []
+    obtain ⟨j, ks', hj, h1, h2, h3, _⟩ := commentLoop_text [] (by simp) pt_end m s "comment" [] [] []
       (by have := escWith_length_ge Eparen s; omega)
     refine ⟨.node .comment "comment" ks' [invalidHeader (S "end of header inside comment")] [],
       ?_, ?_, ?_, rfl⟩
@@ -968,5 +1039,201 @@ theorem commentSpec_proven : CommentSpec := by
     have hx : (x != 40) = true := by simpa using hh
     rw [getComment]
     simp [headIs, hx]; rfl
+
+/-! ## The recursion limit -/
+
+/-- The frames `get_comment` needs on a canonical comment: one per level of nesting, five at most
+below the innermost one. -/
+theorem commentLGN (n : Nat) :
+    (∀ (b : CB) (r : Str), b.render.length < n →
+      commentLoopN n (b.render ++ 41 :: r) ≤ b.depth + 5) ∧
+    (∀ (b : CB) (r : Str), b.render.length + 1 < n →
+      commentN n ([40] ++ b.render ++ [41] ++ r) ≤ b.depth + 6) := by
+  have ih : ∀ m, m < n → _ := fun m hm => commentLGN m
+  refine ⟨?_, ?_⟩
+  · intro b r hlen
+    cases b with
+    | text s =>
+      obtain ⟨j, ks', hj, h1, h2, h3, hN⟩ := commentLoop_text (41 :: r) (tail_paren 41 (.inr rfl) r)
+        (pt_paren 41 (.inr rfl) r) n s "comment" [] [] []
+        (by have := escWith_length_ge Eparen s; simp [CB.render] at hlen; omega)
+      obtain ⟨m, hm⟩ : ∃ m, n - j = m + 1 := ⟨n - j - 1, by
+        have := escWith_length_ge Eparen s; simp [CB.render] at hlen; omega⟩
+      rw [hm] at hN
+      have h0 : commentLoopN (m + 1) (41 :: r) = 0 := by simp [commentLoopN]
+      rw [h0] at hN
+      simp only [CB.render, CB.depth]
+      omega
+    | nest s i rest =>
+      have hs := escWith_length_ge Eparen s
+      simp only [CB.render, List.length_append, List.length_cons, List.length_nil] at hlen
+      have hval : (CB.nest s i rest).render ++ 41 :: r =
+          escWith Eparen s ++ 40 :: (i.render ++ 41 :: (rest.render ++ 41 :: r)) := by
+        simp [CB.render]
+      obtain ⟨j, ks1, hj, h1, h2, h3, hN⟩ := commentLoop_text
+        (40 :: (i.render ++ 41 :: (rest.render ++ 41 :: r)))
+        (tail_paren 40 (.inl rfl) _) (pt_paren 40 (.inl rfl) _) n s "comment" [] [] [] (by omega)
+      obtain ⟨m, hm⟩ : ∃ m, n - j = m + 1 := ⟨n - j - 1, by omega⟩
+      rw [hm] at hN
+      obtain ⟨ksi, hgi, -⟩ := (commentLG m).2 i (rest.render ++ 41 :: r) (by omega)
+      have hv : [40] ++ i.render ++ [41] ++ (rest.render ++ 41 :: r) =
+          40 :: (i.render ++ 41 :: (rest.render ++ 41 :: r)) := by simp
+      rw [hv] at hgi
+      have hNi := (ih m (by omega)).2 i (rest.render ++ 41 :: r) (by omega)
+      rw [hv] at hNi
+      have hNr := (ih m (by omega)).1 rest r (by omega)
+      have hstep : commentLoopN (m + 1) (40 :: (i.render ++ 41 :: (rest.render ++ 41 :: r))) =
+          max (commentN m (40 :: (i.render ++ 41 :: (rest.render ++ 41 :: r))))
+            (commentLoopN m (rest.render ++ 41 :: r)) := by
+        rw [commentLoopN]
+        simp only [show (40 == 41) = false from rfl, show isWsp 40 = false from rfl,
+          show (40 == 40) = true from rfl, Bool.false_eq_true, ↓reduceIte]
+        rw [hgi]
+      rw [hstep] at hN
+      rw [hval]
+      simp only [CB.depth]
+      omega
+  · intro b r hlen
+    obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
+    obtain ⟨ks', h1, -⟩ := (commentLG m).1 b r "comment" [] [] [] (by omega)
+    have hN := (ih m (by omega)).1 b r (by omega)
+    have hv : [40] ++ b.render ++ [41] ++ r = 40 :: (b.render ++ 41 :: r) := by simp
+    rw [hv, commentN]
+    simp only [headIs, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte, List.drop_succ_cons,
+      List.drop_zero]
+    simp only [mkL, LC.defTy] at h1 ⊢
+    rw [h1]
+    simp only [initN]
+    omega
+
+/-- `get_comment` on comments, nested ones included, with the recursion limit. `r` is
+`py_recursion_remaining` when `get_comment`, `str()` or `content` is called (the recursion
+limit less the Python frames already on the stack; the default limit is 1000):
+* for every canonical body `b` (escaped text with nested comments, `depth` levels of nesting)
+  and rest `rest`, when `2 * depth + 6 ≤ r`: `get_comment('(' + b + ')' + rest)` returns `rest`
+  and a comment whose `str()` is `'(' + b + ')'` and whose `content` is `b` with its top-level
+  text unescaped, its elements `WhiteSpaceTerminal`s (whitespace and ctext, `get_qp_ctext`'s
+  class, :1204-1209) and nested comments. `get_comment` needs one frame per level and
+  `str()` and `content` two (`Comment.__str__` and `Comment.quote`, :289-301), so the bound is
+  sufficient; `CommentNestingUnbounded` is refuted, and the difftest checks the exact frame
+  counts (`commentN`, `commentStrN`, `contentN`) against CPython;
+* a comment that the value ends inside, `'(' + make_parenthesis_pairs(s)`, needs at most 6
+  frames, gets the defect "end of header inside comment" and its closing parenthesis back in
+  `str()` (:1305-1308);
+* a non-empty value that does not start with `(` raises
+  `HeaderParseError("expected '(' but found '<value>'")` (:1292-1294), with one frame.
+The docstring: "comment = "(" *([FWS] ccontent) [FWS] ")"; ccontent = ctext / quoted-pair /
+comment. We handle nested comments here, and quoted-pair in our qp-ctext routine." -/
+def CommentSpec : Prop :=
+  (∀ (r n : Nat) (b : CB) (rest : Str), b.render.length + 1 < n → 2 * b.depth + 6 ≤ r →
+    ∃ c, getCommentR r n ([40] ++ b.render ++ [41] ++ rest) = .ok (c, rest) ∧
+      commentStrR r c = .ok ([40] ++ b.render ++ [41]) ∧ commentContentR r c = .ok b.content ∧
+      ∀ k ∈ c.kids, (∃ s ty ds, k = .term .ws s ty ds) ∨ k.ty = "comment") ∧
+  (∀ (r n : Nat) (s : Str), s.length + 1 < n → 6 ≤ r →
+    ∃ c, getCommentR r n ([40] ++ makeParenPairs s) = .ok (c, []) ∧
+      commentStrR r c = .ok ([40] ++ makeParenPairs s ++ [41]) ∧ commentContentR r c = .ok s ∧
+      c.ds = [invalidHeader (S "end of header inside comment")]) ∧
+  (∀ (r n : Nat) (v : Str), 1 ≤ r → 0 < n → v ≠ [] → v.head? ≠ some 40 →
+    getCommentR r n v = .error (.hpe (S "expected '(' but found '" ++ v ++ S "'")))
+
+theorem commentSpec_proven : CommentSpec := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro r n b rest hlen hr
+    obtain ⟨ks', h1, h2, h3, h4, h5, h6⟩ := (commentLG n).2 b rest hlen
+    have hN := (commentLGN n).2 b rest hlen
+    refine ⟨.node .comment "comment" ks' [] [], ?_, ?_, ?_, ?_⟩
+    · unfold getCommentR need
+      rw [if_pos (by omega), h1]
+    · unfold commentStrR need
+      rw [if_pos (by simp only [commentStrN]; omega)]
+      simp [Tok.str, h2]
+    · unfold commentContentR need
+      rw [if_pos (by simp only [contentN, Tok.kids]; omega)]
+      simp [Tok.kids, h3]
+    · intro k hk
+      rcases h4 k hk with ⟨s, ty, ds, rfl, _⟩ | h
+      · exact .inl ⟨s, ty, ds, rfl⟩
+      · exact .inr h
+  · intro r n s hlen hr
+    obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
+    obtain ⟨j, ks', hj, h1, h2, h3, hN⟩ := commentLoop_text [] (by simp) pt_end m s "comment" [] [] []
+      (by have := escWith_length_ge Eparen s; omega)
+    obtain ⟨k, hk⟩ : ∃ k, m - j = k + 1 := ⟨m - j - 1, by omega⟩
+    have hloop : commentLoop m (escWith Eparen s ++ []) (mkL .comment) =
+        .ok (.node .comment "comment" ks' [] [], []) := by
+      simp only [mkL, LC.defTy]
+      rw [h1, hk]
+      simp [commentLoop]; rfl
+    have hv : [40] ++ makeParenPairs s = 40 :: (escWith Eparen s ++ []) := by
+      simp [makeParenPairs_eq]
+    have hc : getComment (m + 1) ([40] ++ makeParenPairs s) =
+        .ok (.node .comment "comment" ks' [invalidHeader (S "end of header inside comment")] [],
+          []) := by
+      rw [hv, getComment]
+      simp only [headIs, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte, List.drop_succ_cons,
+        List.drop_zero]
+      rw [hloop]
+      simp [Tok.addDefect]; rfl
+    have hcN : commentN (m + 1) ([40] ++ makeParenPairs s) ≤ 6 := by
+      rw [hv, commentN]
+      simp only [headIs, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte, List.drop_succ_cons,
+        List.drop_zero]
+      rw [hloop]
+      rw [hk] at hN
+      have h0 : commentLoopN (k + 1) [] = 0 := by simp [commentLoopN]
+      rw [h0] at hN
+      simp only [initN, defectN]
+      omega
+    refine ⟨.node .comment "comment" ks' [invalidHeader (S "end of header inside comment")] [],
+      ?_, ?_, ?_, rfl⟩
+    · unfold getCommentR need
+      rw [if_pos (by omega), hc]
+    · unfold commentStrR need
+      rw [if_pos (by have := quoteN_ws ks' h3; simp only [commentStrN]; omega)]
+      simp only [Tok.str]
+      rw [commentStrs_ws ks' h3, h2, makeParenPairs_eq]
+    · unfold commentContentR need
+      rw [if_pos (by simp only [contentN, Tok.kids, kidsStrN_ws ks' h3]; omega)]
+      simp [Tok.kids, h2]
+  · intro r n v hr hn hv hh
+    obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
+    obtain ⟨x, xs, rfl⟩ := List.exists_cons_of_ne_nil hv
+    have hx : (x != 40) = true := by simpa using hh
+    unfold getCommentR need
+    rw [if_pos (by rw [commentN]; simp [headIs, hx]; omega)]
+    exact commentShape.2.2 (m + 1) (x :: xs) hn hv hh
+
+/-- Nested empty comments: `'(' * k + ')' * k` as a body. -/
+def nestCB : Nat → CB
+  | 0 => .text []
+  | k + 1 => .nest [] (nestCB k) (.text [])
+
+/-- The unbounded reading: given the frames any comment without nesting needs (six),
+`get_comment` returns for every nesting depth, and so does `str()` of the comment it returns. -/
+def CommentNestingUnbounded : Prop :=
+  ∀ (r n : Nat) (b : CB) (rest : Str), 6 ≤ r → b.render.length + 1 < n →
+    (match getCommentR r n ([40] ++ b.render ++ [41] ++ rest) with
+     | .ok (c, _) => noRaise (commentStrR r c)
+     | .error e => noRaise (.error e : EPy Unit)) = true
+
+/-- Seven levels, `'(' * 7 + ')' * 7`, with 8 frames left: `get_comment` needs 8 (one per level
+and one for the innermost `Comment()`), so it parses; `str()` needs 13 (two per level, one for
+the innermost `Comment.__str__`) and raises `RecursionError`. With 7 frames `get_comment`
+itself raises. -/
+theorem comment_depth7 :
+    (match getCommentR 8 100 ([40] ++ (nestCB 6).render ++ [41]) with
+      | .ok (c, _) => errOf (commentStrR 8 c)
+      | .error _ => none) = some .recursionError ∧
+    errOf (getCommentR 7 100 ([40] ++ (nestCB 6).render ++ [41])) = some .recursionError := by
+  decide +kernel
+
+theorem commentNestingUnbounded_refuted : ¬ CommentNestingUnbounded := by
+  intro h
+  have h1 := h 8 100 (nestCB 6) [] (by decide) (by decide +kernel)
+  have h2 : (match getCommentR 8 100 ([40] ++ (nestCB 6).render ++ [41] ++ []) with
+     | .ok (c, _) => noRaise (commentStrR 8 c)
+     | .error e => noRaise (.error e : EPy Unit)) = false := by decide +kernel
+  rw [h2] at h1
+  exact Bool.false_ne_true h1
 
 end PyLean.TextLibs.Email

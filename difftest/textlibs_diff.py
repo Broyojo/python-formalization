@@ -4915,6 +4915,77 @@ class EmailArea:
         return {"ok": out}
 
 
+def email_frame_depth():
+    f, d = sys._getframe(1), 0
+    while f is not None:
+        d += 1
+        f = f.f_back
+    return d
+
+
+def email_comment_body(r, depth):
+    out = []
+    for _ in range(r.randint(0, 4)):
+        k = r.random()
+        if k < 0.3 and depth < 12:
+            out.append("(" + email_comment_body(r, depth + 1) + ")")
+        else:
+            out.append(r.choice(["a", " ", "\t", "\\(", "\\)", "\\\\", "\x00", "\x7f", "\udcff", "xy", "\xa0", "\\ "]))
+    return "".join(out)
+
+
+@area("emailfr", 2)
+class EmailFramesArea:
+    """get_comment, Comment.__str__ and Comment.content with `r` frames left (EmailFrames.lean)."""
+
+    @classmethod
+    def gen(cls, r):
+        k = r.random()
+        if k < 0.15:
+            m = r.randint(1, 300)
+            v = "(" * m + ")" * r.randint(m - 1, m)
+            fr = r.randint(max(1, m - 5), 2 * m + 5)
+        else:
+            v = "(" + email_comment_body(r, 0) + r.choice([")", ")", ")", "", ")x"])
+            if r.random() < 0.05:
+                v = r.choice(["", "x", " (a)"]) + v
+            fr = r.randint(1, 30)
+        return {"mod": "textlibs", "fn": "emailfr.get_comment", "v": cps(v), "r": fr}
+
+    @classmethod
+    def run(cls, c):
+        v, fr = txt(c["v"]), c["r"]
+        old = sys.getrecursionlimit()
+
+        def go():
+            d = email_frame_depth()
+            sys.setrecursionlimit(d + fr)
+            try:
+                try:
+                    res = HVP.get_comment(v)
+                except Exception as e:
+                    return ("err", e)
+                t, rest = res
+                try:
+                    s = str(t)
+                    so = None
+                except RecursionError as e:
+                    so = {"e": email_exc_j(e)}
+                try:
+                    cont = t.content
+                    co = None
+                except RecursionError as e:
+                    co = {"e": email_exc_j(e)}
+                return ("ok", t, rest, so or {"v": cps(s)}, co or {"v": cps(cont)})
+            finally:
+                sys.setrecursionlimit(old)
+        out = go()
+        if out[0] == "err":
+            return {"ok": {"err": email_exc_j(out[1])}}
+        _, t, rest, s, cont = out
+        return {"ok": {"t": email_tok_j(t), "rest": cps(rest), "s": s, "c": cont}}
+
+
 only = os.environ.get("TEXTLIBS_ONLY")
 names = [n for n in AREAS if not only or n in only.split(",")]
 weights = [AREAS[n][1] for n in names]
