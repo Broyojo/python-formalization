@@ -14,9 +14,14 @@ def getRaise (j : Json) : Except String (Option (String × String)) :=
   | .ok c => do return some ((← c.getStr?), (← (← j.getObjVal? "msg").getStr?))
   | .error _ => return none
 
+def getErrno (j : Json) : Except String (Option Nat) :=
+  match j.getObjVal? "errno" with
+  | .ok .null | .error _ => .ok none
+  | .ok v => some <$> v.getNat?
+
 def getRStep (j : Json) : Except String RStep := do
   if j matches .null then return .block
-  if let some (c, m) ← getRaise j then return .raise c m
+  if let some (c, m) ← getRaise j then return .raise c m (← getErrno j)
   if let .ok v := j.getObjVal? "bad" then return .bad (← v.getInt?)
   if let .ok _ := j.getObjVal? "wrong" then return .wrong
   return .short (← (← j.getObjVal? "short").getNat?)
@@ -26,6 +31,11 @@ def getSStep (j : Json) : Except String SStep := do
   if let some (c, m) ← getRaise j then return .raise c m
   if let .ok _ := j.getObjVal? "wrong" then return .wrong
   return .bad (← (← j.getObjVal? "bad").getInt?)
+
+def getQStep (j : Json) : Except String QStep := do
+  if j matches .null then return .ok
+  if let some (c, m) ← getRaise j then return .raise c m
+  return .int (← (← j.getObjVal? "int").getInt?)
 
 def getCStep (j : Json) : Except String CStep := do
   if j matches .null then return .ok
@@ -55,6 +65,9 @@ def encRCall (m : Bool) : RCall → Json
   | .close => Json.arr #[toJson "close"]
   | .closed => Json.arr #[toJson "closed"]
   | .isatty => Json.arr #[toJson "isatty"]
+  | .readable => Json.arr #[toJson "readable"]
+  | .writable => Json.arr #[toJson "writable"]
+  | .seekable => Json.arr #[toJson "seekable"]
   | .re r => Json.arr #[toJson "re", encPy bVal (maskPy m r)]
 
 def getBfOp (j : Json) : Except String BfOp := do
@@ -94,6 +107,8 @@ def getRaw (j : Json) : Except String Raw := do
   let ws ← (← (← field j "ws").getArr?).toList.mapM getRStep
   let ss ← (← (← field j "ss").getArr?).toList.mapM getSStep
   let cs ← (← (← field j "cs").getArr?).toList.mapM getCStep
+  let qs ← (← (← field j "qs").getArr?).toList.mapM getQStep
+  let fr ← getOptInt j "flushRet"
   let hooks ← (← (← field j "hooks").getArr?).toList.mapM getReHook
   let fl ← bNats (← field j "flags")
   let cf : Option (String × String) ← match j.getObjVal? "closeFail" with
@@ -101,7 +116,7 @@ def getRaw (j : Json) : Except String Raw := do
     | .ok v =>
       let a ← v.getArr?
       pure (some ((← (a.getD 0 .null).getStr?), (← (a.getD 1 .null).getStr?)))
-  return { data, pos := 0, rs, ws, ss, cs, canRead := fl.getD 0 0 != 0, canWrite := fl.getD 1 0 != 0,
+  return { data, pos := 0, rs, ws, ss, cs, qs, flushRet := fr, canRead := fl.getD 0 0 != 0, canWrite := fl.getD 1 0 != 0,
            canSeek := fl.getD 2 0 != 0, closed := false, closeFail := cf, hooks, tick := 0, log := [] }
 
 def encOutcome {σ : Type} (m : Bool) (raw : σ → Raw) : Outcome σ → Json

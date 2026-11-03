@@ -34,7 +34,10 @@ warnings.simplefilter("ignore")
 sys.unraisablehook = lambda u: None
 M = sys.maxsize
 MODS = {"c": io, "py": _pyio}
-EXC = [("ValueError", "boom"), ("OSError", "bad"), ("InterruptedError", "[Errno 4] x")]
+# (class, message, errno): `_PyIO_trap_eintr` retries an OSError whose errno is EINTR,
+# whatever its class; InterruptedError("x") has no errno and is not retried
+EXC = [("ValueError", "boom", None), ("OSError", "bad", None), ("InterruptedError", "x", errno.EINTR),
+       ("InterruptedError", "x", None), ("PermissionError", "x", errno.EINTR), ("PermissionError", "x", None)]
 # sizes PyBytesWriter_Create refuses, on both sides of the "byte string is too large" bound
 HUGE = [M, M - 1, M - 32, M - 33, 2**62, 2**48]
 
@@ -64,10 +67,10 @@ _pyio.Lock = DLock
 
 
 def raised(r):
-    cls = r["raise"]
-    if cls == "InterruptedError":
-        raise InterruptedError(errno.EINTR, "x")
-    raise getattr(builtins, cls)(r["msg"])
+    cls = getattr(builtins, r["raise"])
+    if r.get("errno") is not None:
+        raise cls(r["errno"], r["msg"])
+    raise cls(r["msg"])
 
 
 def outcome(thunk):
@@ -85,25 +88,36 @@ def make_raw_class(mod):
             self.d, self.p = bytearray(c["data"]), 0
             self.rs, self.ws, self.ss = list(c["rs"]), list(c["ws"]), list(c["ss"])
             self.cs, self.hooks = list(c["cs"]), {n: op for n, op in c["hooks"]}
+            self.qs, self.fr = list(c["qs"]), c["flushRet"]
             self.fl, self.cf, self.calls = c["flags"], c["closeFail"], []
             self.n, self.buf, self.shut, self.mask = 0, None, False, c["mask"]
 
         def enter(self, entry):
             self.calls.append(entry)
             self.n += 1
-            op = self.hooks.pop(self.n, None)
+            op = self.hooks.pop(self.n, None) if self.buf is not None else None
             if op is not None and self.buf is not None:
                 r = outcome(lambda: apply(self.buf, op))
                 self.calls.append(["re", mask(r) if self.mask else r])
 
+        def _inq(self, name, flag):
+            self.enter([name])
+            if self.qs:
+                s = self.qs.pop(0)
+                if s is not None:
+                    if "raise" in s:
+                        raised(s)
+                    return s["int"]
+            return bool(flag)
+
         def readable(self):
-            return bool(self.fl[0])
+            return self._inq("readable", self.fl[0])
 
         def writable(self):
-            return bool(self.fl[1])
+            return self._inq("writable", self.fl[1])
 
         def seekable(self):
-            return bool(self.fl[2])
+            return self._inq("seekable", self.fl[2])
 
         @property
         def closed(self):
@@ -214,6 +228,7 @@ def make_raw_class(mod):
             self.enter(["flush"])
             if self.shut:
                 raise ValueError("I/O operation on closed file.")
+            return self.fr
 
         def close(self):
             self.enter(["close"])
@@ -229,7 +244,7 @@ def make_raw_class(mod):
             return False
 
         def disarm(self):
-            self.hooks, self.cs, self.rs, self.ws, self.ss, self.cf = {}, [], [], [], [], None
+            self.hooks, self.cs, self.rs, self.ws, self.ss, self.cf, self.qs = {}, [], [], [], [], None, []
             self.buf = None
     return Raw
 
@@ -252,8 +267,8 @@ def rstep(rng, key, write):
         return {"bad": rng.choice(bads)}
     if r < 0.9:
         return {"wrong": 1}
-    c, m = rng.choice(EXC)
-    return {"raise": c, "msg": m}
+    c, m, e = rng.choice(EXC)
+    return {"raise": c, "msg": m, "errno": e}
 
 
 def sstep(rng):
@@ -264,7 +279,17 @@ def sstep(rng):
         return {"bad": rng.choice([-1, -5, 2**64, 0, 3])}
     if r < 0.85:
         return {"wrong": 1}
-    c, m = rng.choice(EXC[:2])
+    c, m, _ = rng.choice(EXC[:2])
+    return {"raise": c, "msg": m}
+
+
+def qstep(rng):
+    r = rng.random()
+    if r < 0.5:
+        return None
+    if r < 0.85:
+        return {"int": rng.choice([0, 1, 2, -1])}
+    c, m, _ = rng.choice(EXC[:2])
     return {"raise": c, "msg": m}
 
 
@@ -274,7 +299,7 @@ def cstep(rng):
         return None
     if r < 0.9:
         return {"lie": rng.random() < 0.5}
-    c, m = rng.choice(EXC[:2])
+    c, m, _ = rng.choice(EXC[:2])
     return {"raise": c, "msg": m}
 
 
@@ -327,6 +352,8 @@ def gen_case(rng):
          "ss": [sstep(rng) for _ in range(rng.choice([0, 0, 0, 2]))],
          "cs": [cstep(rng) for _ in range(rng.choice([0, 0, 0, 2, 4]))],
          "hooks": [],
+         "qs": [qstep(rng) for _ in range(rng.choice([0, 0, 0, 0, 1, 2, 4]))],
+         "flushRet": rng.choice([None, None, None, 42]),
          "closeFail": ["ValueError", "cl"] if rng.random() < 0.1 else None}
     if rng.random() < 0.4:
         ticks = rng.sample(range(1, 12), rng.choice([1, 1, 2, 3]))
@@ -427,12 +454,16 @@ def run_case(c):
     raw.setup(c)
     cls = CLS[key, c["kind"]]
     f = cls.__new__(cls)
-    raw.buf = f
+    # _pyio's constructors build the object as they go, so its hooks are armed (and
+    # counted) only once __init__ has returned; C's run during __init__, where `ok` is 0
+    raw.buf = f if key == "c" else None
     try:
         try:
             f.__init__(raw, c["size"])
         except Exception as e:
             return norm(e)
+        if key == "py":
+            raw.buf, raw.n = f, 0
         out = []
         for op in c["ops"]:
             out.append(outcome(lambda: apply(f, op)))

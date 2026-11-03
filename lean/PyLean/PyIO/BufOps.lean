@@ -95,9 +95,13 @@ def stepOp (op : BfOp) : BM Val := do
   -- bufferedio.c:652-670 forwards to the raw, but only the types that list the
   -- method do: a reader has no `writable` and a writer no `readable`, so those
   -- are `_IOBase`'s False. The harness raw answers from flags init checked.
-  | .readable => if !s.readable then pure (Val.bool false) else do checkInit; pure (Val.bool true)
-  | .writable => if !s.writable then pure (Val.bool false) else do checkInit; pure (Val.bool true)
-  | .seekable => do checkInit; let b ← rawFlag Raw.canSeek; pure (Val.bool b)
+  | .readable =>
+    if !s.readable then pure (Val.bool false) else do
+    checkInit; let a ← inquiry .readable Raw.canRead; pure a.val
+  | .writable =>
+    if !s.writable then pure (Val.bool false) else do
+    checkInit; let a ← inquiry .writable Raw.canWrite; pure a.val
+  | .seekable => do checkInit; let a ← inquiry .seekable Raw.canSeek; pure a.val
   | .isatty => do
     -- `_io__Buffered_isatty_impl`, bufferedio.c:722-728
     checkInit
@@ -163,11 +167,11 @@ def stepOp (op : BfOp) : PM Val := do
   -- `BufferedWriter` has no `readable`, `BufferedReader` no `writable`: IOBase's False
   | .readable =>
     if s.kind = 1 then pure (Val.bool false) else do
-    let b ← rawFlag "readable" Raw.canRead; pure (Val.bool b)
+    let a ← inquiry "readable" .readable Raw.canRead; pure a.val
   | .writable =>
     if s.kind = 0 then pure (Val.bool false) else do
-    let b ← rawFlag "writable" Raw.canWrite; pure (Val.bool b)
-  | .seekable => do let b ← rawFlag "seekable" Raw.canSeek; pure (Val.bool b)
+    let a ← inquiry "writable" .writable Raw.canWrite; pure a.val
+  | .seekable => do let a ← inquiry "seekable" .seekable Raw.canSeek; pure a.val
   | .isatty => do
     let r ← onRaw "isatty" .isatty Raw.isatty
     let b ← ofPy r
@@ -218,9 +222,11 @@ def runC (kind : Nat) (raw : Raw) (size : Int) (ops : List BfOp) : Outcome BufS 
 
 /-- `_pyio.Buffered*(raw, size)` then the operations. -/
 def runP (kind : Nat) (raw : Raw) (size : Int) (ops : List BfOp) : Outcome BufP :=
-  match BP2.init kind raw size with
-  | .error e => .initErr e
-  | .ok s =>
+  -- the harness arms the hooks once the constructor has returned, and counts from there
+  match BP2.init kind { raw with hooks := [] } size (stepP 0) default with
+  | (_, .error e) => .initErr e
+  | (s, .ok _) =>
+    let s := { s with raw := { s.raw with hooks := raw.hooks, tick := 0 } }
     match runSeq (stepP (reFuel raw + 1)) (·.hung) s ops with
     | none => .hung
     | some (s, rs) => .done s rs

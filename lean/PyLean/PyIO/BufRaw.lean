@@ -65,8 +65,32 @@ inductive RStep where
   | bad (v : Int)
   /-- Return the `str` `'x'`. -/
   | wrong
+  /-- Raise `c(m)`, or `c(errno, m)` when `eno` is set (then `str(e)` is `[Errno eno] m`). -/
+  | raise (c m : String) (eno : Option Nat)
+  deriving Repr, DecidableEq, Inhabited
+
+/-- One answer of `readable()`, `writable()` or `seekable()`. -/
+inductive QStep where
+  /-- The raw's own flag, as a `bool`. -/
+  | ok
+  /-- The `int` `v` (truthy unless 0, never `is True`). -/
+  | int (v : Int)
   | raise (c m : String)
   deriving Repr, DecidableEq, Inhabited
+
+/-- What an inquiry answers. -/
+inductive QAns where
+  | bool (b : Bool)
+  | int (v : Int)
+  deriving Repr, DecidableEq, Inhabited
+
+def QAns.truthy : QAns → Bool
+  | .bool b => b
+  | .int v => v != 0
+
+def QAns.val : QAns → Val
+  | .bool b => .bool b
+  | .int v => .int v
 
 /-- One answer of `seek` or `tell`. -/
 inductive SStep where
@@ -95,6 +119,9 @@ inductive RCall where
   | close
   | closed
   | isatty
+  | readable
+  | writable
+  | seekable
   | re (r : Py Val)
   deriving Repr, DecidableEq, Inhabited
 
@@ -105,6 +132,10 @@ structure Raw where
   ws : List RStep
   ss : List SStep
   cs : List CStep
+  /-- Answers of `readable()`, `writable()`, `seekable()`, in call order. -/
+  qs : List QStep
+  /-- What `flush()` returns (`None` when absent). -/
+  flushRet : Option Int
   canRead : Bool
   canWrite : Bool
   canSeek : Bool
@@ -129,8 +160,14 @@ inductive RRes where
   | bad (v : Int)
   /-- The `str` `'x'`. -/
   | wrong
-  | exc (e : PyExc)
+  /-- An exception and its `errno` (`None` when it has none). -/
+  | exc (e : PyExc) (eno : Option Nat)
   deriving Repr, DecidableEq, Inhabited
+
+/-- `str(c(errno, m))` is `[Errno errno] m`; `str(c(m))` is `m`. -/
+def errMsg (m : String) : Option Nat → String
+  | some n => s!"[Errno {n}] {m}"
+  | none => m
 
 /-- What `seek` or `tell` answers. -/
 inductive IRes where
@@ -156,7 +193,7 @@ def note (r : Raw) (v : Py Val) : Raw := { r with log := r.log ++ [RCall.re v] }
 
 /-- `readinto(b)` with `len(b) = len`. -/
 def readinto (r : Raw) (len : Nat) : Raw × RRes :=
-  if r.closed then (r, .exc rawClosedErr) else
+  if r.closed then (r, .exc rawClosedErr none) else
   let take (r : Raw) (k : Nat) : Raw × RRes :=
     let d := (r.data.drop r.pos).take (min k len)
     ({ r with pos := r.pos + d.length }, .data d)
@@ -166,11 +203,11 @@ def readinto (r : Raw) (len : Nat) : Raw × RRes :=
   | .block :: t => ({ r with rs := t }, .none)
   | .bad v :: t => ({ r with rs := t }, .bad v)
   | .wrong :: t => ({ r with rs := t }, .wrong)
-  | .raise c m :: t => ({ r with rs := t }, .exc (.named c m))
+  | .raise c m e :: t => ({ r with rs := t }, .exc (.named c (errMsg m e)) e)
 
 /-- `write(b)`. -/
 def write (r : Raw) (b : List Nat) : Raw × RRes :=
-  if r.closed then (r, .exc rawClosedErr) else
+  if r.closed then (r, .exc rawClosedErr none) else
   let put (r : Raw) (k : Nat) : Raw × RRes :=
     let d := b.take k
     -- as the harness raw: a zero-length write does not pad up to a position past the end
@@ -182,7 +219,7 @@ def write (r : Raw) (b : List Nat) : Raw × RRes :=
   | .block :: t => ({ r with ws := t }, .none)
   | .bad v :: t => ({ r with ws := t }, .bad v)
   | .wrong :: t => ({ r with ws := t }, .wrong)
-  | .raise c m :: t => ({ r with ws := t }, .exc (.named c m))
+  | .raise c m e :: t => ({ r with ws := t }, .exc (.named c (errMsg m e)) e)
 
 def popS (r : Raw) : Raw × SStep :=
   match r.ss with
@@ -224,9 +261,18 @@ def truncate (r : Raw) (p : Option Int) : Raw × Py Int :=
   let d := (r.data ++ List.replicate (n.toNat - r.data.length) 0).take n.toNat
   ({ r with data := d }, .ok n)
 
-/-- `flush()`. -/
-def flush (r : Raw) : Raw × Py Unit :=
-  if r.closed then (r, .error closedFileErr) else (r, .ok ())
+/-- `flush()`: what it returns is scripted. -/
+def flush (r : Raw) : Raw × Py Val :=
+  if r.closed then (r, .error closedFileErr) else
+  (r, .ok (match r.flushRet with | some v => .int v | none => .none))
+
+/-- `readable()`, `writable()` or `seekable()`, whose flag is `flag`. -/
+def inquire (r : Raw) (flag : Bool) : Raw × Py QAns :=
+  match r.qs with
+  | [] => (r, .ok (.bool flag))
+  | .ok :: t => ({ r with qs := t }, .ok (.bool flag))
+  | .int v :: t => ({ r with qs := t }, .ok (.int v))
+  | .raise c m :: t => ({ r with qs := t }, .error (.named c m))
 
 /-- `close()`. -/
 def close (r : Raw) : Raw × Py Unit :=
