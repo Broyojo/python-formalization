@@ -2336,6 +2336,16 @@ textlibs-plist-binary-round-trip	proven	Lib/plistlib.py	dumps,dump,loads,load,_B
 textlibs-plist-binary-float-bits	refuted	Lib/plistlib.py	_BinaryPlistWriter._flatten,_BinaryPlistWriter._getrefnum
 textlibs-plist-binary-datetime	refuted	Lib/plistlib.py	_BinaryPlistWriter._write_object,_BinaryPlistParser._read_object
 textlibs-plist-count-to-size	proven	Lib/plistlib.py	_count_to_size
+textlibs-plist-invalid-file-exception	proven	Lib/plistlib.py	InvalidFileException.__init__
+textlibs-plist-read	proven	Lib/plistlib.py	_BinaryPlistParser._read
+textlibs-plist-read-ints	proven	Lib/plistlib.py	_BinaryPlistParser._read_ints
+textlibs-plist-get-size	proven	Lib/plistlib.py	_BinaryPlistParser._get_size
+textlibs-plist-read-token	proven	Lib/plistlib.py	_BinaryPlistParser._read_object
+textlibs-plist-load-dispatch	proven	Lib/plistlib.py	load,loads
+textlibs-plist-loads-str	proven	Lib/plistlib.py	loads
+textlibs-plist-write-succeeds	proven	Lib/plistlib.py	dumps,dump,_BinaryPlistWriter.write,_BinaryPlistWriter._flatten,_BinaryPlistWriter._getrefnum,_BinaryPlistWriter._write_size,_BinaryPlistWriter._write_object
+textlibs-plist-write-errors	proven	Lib/plistlib.py	dumps,dump,_BinaryPlistWriter._write_object,_BinaryPlistWriter.write
+textlibs-plist-date-whole-seconds	proven	Lib/plistlib.py	_BinaryPlistWriter._write_object,_BinaryPlistParser._read_object
 coll-count-elements-twins	proven	Lib/collections/__init__.py	_count_elements
 coll-counter-update-fast-slow	proven	Lib/collections/__init__.py	Counter.update
 coll-counter-update-adds	proven	Lib/collections/__init__.py	Counter.update,Counter.__init__,Counter.__missing__,_count_elements
