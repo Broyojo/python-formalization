@@ -412,6 +412,11 @@ def cFilterList (st : MState) (cached : Ref) : Py (List Elem × String) :=
       | some e => if isA st.hier e "AttributeError" then fromCache else .error e
       | none => fromCache
   | v =>
+    -- `PyObject_GetAttr(ctx, "_filters")` `NULL` returns the error (:327-331): for
+    -- `_global_context` the `_filters` property, :72-80 (`ctxRead`)
+    match ctxRead st v with
+    | .error e => .error e
+    | .ok () =>
     match ctxFilters st v with
     | some r =>
       if st.tuples r then .error (.valueError "_filters of warnings._warnings_context must be a list")
