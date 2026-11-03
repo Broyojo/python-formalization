@@ -2,7 +2,9 @@ import PyLean.Core
 
 /-!
 Struct sequences (`os.stat_result`, `time.struct_time`, ...), Objects/structseq.c, CPython 3.15.2:
-the constructor `structseq_new_impl` (:167-272) and `__reduce__` (`structseq_reduce`, :389-428).
+the constructor `structseq_new_impl` (:166-270), `__reduce__` (`structseq_reduce`, :342-385) and
+`__replace__` (`structseq_replace`, :388-458). `StructSeqC.lean` models the same functions in
+memory, with the size attributes read from the type's dict.
 
 A struct sequence type has `nVis` visible fields (the tuple part), `nFields` fields in all, and
 `nUnnamed` unnamed visible fields; field `i` (for `i ≥ nUnnamed`) is named
@@ -38,14 +40,14 @@ inductive SeqArg (α : Type) where
 def lookup (items : List (Key × Option α)) (name : String) : Option (Option α) :=
   (items.find? (fun kv => match kv.1 with | .str s => s == name | .other => false)).map (·.2)
 
-/-- The hidden fields read from the dict (:240-255): each found name counts. -/
+/-- The hidden fields read from the dict (:240-254): each found name counts. -/
 def fillFromDict (t : SType) (items : List (Key × Option α)) (len : Nat) : List (Option α) × Nat :=
   (List.range (t.nFields - len)).foldl (fun (acc, n) k =>
     match lookup items (t.nameOf (len + k)) with
     | some v => (acc ++ [v], n + 1)
     | none => (acc ++ [none], n)) ([], 0)
 
-/-- `structseq_new_impl(type, arg, dict)`, :167-272. -/
+/-- `structseq_new_impl(type, arg, dict)`, :166-270. -/
 def structseqNew (t : SType) (arg : SeqArg α) (dict : Option (DictArg α)) : Py (List (Option α)) :=
   match arg with
   | .notSeq => .error (.typeError "constructor requires a sequence")
@@ -74,7 +76,7 @@ def structseqNew (t : SType) (arg : SeqArg α) (dict : Option (DictArg α)) : Py
           else .ok (xs ++ List.replicate (t.nFields - len) none)
         | _ => .ok (xs ++ List.replicate (t.nFields - len) none)
 
-/-- `structseq_reduce`, :389-428: `(type, (tuple(visible), {name: value for hidden fields}))`. -/
+/-- `structseq_reduce`, :342-385: `(type, (tuple(visible), {name: value for hidden fields}))`. -/
 def structseqReduce (t : SType) (s : List (Option α)) : List (Option α) × List (Key × Option α) :=
   (s.take t.nVis, (List.range (t.nFields - t.nVis)).map fun k => (.str (t.nameOf (t.nVis + k)), s.getD (t.nVis + k) none))
 
@@ -166,7 +168,7 @@ theorem reduceRoundTrip_proven : ReduceRoundTrip := by
     simp only [List.getD_eq_getElem?_getD] at hrebuild
     simpa using hrebuild
 
-/-! ## `__replace__` (`copy.replace`), :389-458 -/
+/-! ## `__replace__` (`copy.replace`), :388-458 -/
 
 /-- `PyDict_PopString(kwargs, name)`: the value, if present, and the dict without it. -/
 def popName (kws : List (String × Option α)) (name : String) : Option (Option α) × List (String × Option α) :=
@@ -174,7 +176,7 @@ def popName (kws : List (String × Option α)) (name : String) : Option (Option 
   | some (_, v) => (some v, kws.filter (·.1 != name))
   | none => (none, kws)
 
-/-- The field loop, :421-431: field `i` takes the popped value or keeps its own. -/
+/-- The field loop, :423-433: field `i` takes the popped value or keeps its own. -/
 def replaceLoop (names : List String) : List (Option α) → List (String × Option α) → List (Option α) × List (String × Option α)
   | [], kws => ([], kws)
   | v :: vs, kws =>
