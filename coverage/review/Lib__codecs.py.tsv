@@ -1,5 +1,5 @@
 file	line	name	verdict	mirror	property	settled	reason
-Lib/codecs.py	975	getencoder	FAITHFUL	yes	yes	yes	libGetAttr is lookup(encoding).encode (:983); CApiMatchesLib equates it with PyCodec_Encoder on CodecInfo objects and gives both the lookup error otherwise.
+Lib/codecs.py	975	getencoder	FAITHFUL	yes	yes	yes	libGetAttr is lookup(encoding).encode (:983); CApiMatchesLib equates it with PyCodec_Encoder on CodecInfo objects and gives both the lookup error otherwise, and the refuted CApiMatchesLibAll (bug reproduced on 3.15.2 and main) puts the raw 4-tuple case, where getencoder raises AttributeError and C works, on record.
 Lib/codecs.py	985	getdecoder	FAITHFUL	yes	yes	yes	lookup(encoding).decode (:993), equated with PyCodec_Decoder by CApiMatchesLib.
 Lib/codecs.py	995	getincrementalencoder	FAITHFUL	yes	yes	yes	libGetIncremental mirrors :1004-1007 (None raises LookupError(encoding)); CApiMatchesLib pins the None case and equality with PyCodec_IncrementalEncoder otherwise, with no attribute assumption.
 Lib/codecs.py	1009	getincrementaldecoder	FAITHFUL	yes	yes	yes	Same as getincrementalencoder for :1018-1021.
