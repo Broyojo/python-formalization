@@ -47,6 +47,7 @@ partial def decObj (j : Json) : Except String Obj := do
   | "tuple" => return .tuple (← (← (at' 1).getArr?).toList.mapM decObj)
   | "iter" => return .iter (← (← (at' 1).getArr?).toList.mapM decObj)
   | "iterraises" => return .iterRaises (← (← (at' 1).getArr?).toList.mapM decObj) (← decExc (at' 2))
+  | "mapraises" => return .mapRaises (← (← (at' 1).getArr?).toList.mapM decObj) (← decExc (at' 2))
   | "iterhint" =>
     let xs ← (← (at' 1).getArr?).toList.mapM decObj
     match at' 2 with

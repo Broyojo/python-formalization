@@ -79,8 +79,12 @@ inductive Obj where
   /-- A `dict` with bytes keys. -/
   | dict (kv : List (Seq × Obj))
   | iter (xs : List Obj)
-  /-- A generator that yields `xs`, then raises `e`. -/
+  /-- A generator that yields `xs`, then raises `e`; under PEP 479 a `StopIteration` raised in a
+  generator reaches the caller as `RuntimeError('generator raised StopIteration')`. -/
   | iterRaises (xs : List Obj) (e : PyExc)
+  /-- A C iterator, `map(f, ...)`, that gives `xs` and then has `f` raise `e`; a `StopIteration` from
+  `f` passes through `map_next` and ends the iteration. -/
+  | mapRaises (xs : List Obj) (e : PyExc)
   /-- An iterator with a `__length_hint__`: `xs`, then the hint's value or exception. -/
   | iterHint (xs : List Obj) (hint : Py Int)
   /-- A class whose `__iter__` raises `e`. -/
@@ -108,6 +112,7 @@ def Obj.typeName : Obj → String
   | .tuple _ => "tuple"
   | .dict _ => "dict"
   | .iter _ | .iterRaises _ _ => "generator"
+  | .mapRaises _ _ => "map"
   | .iterHint _ _ => "BHint"
   | .iterCallRaises _ => "BIterCall"
   | .index _ => "BIdx"

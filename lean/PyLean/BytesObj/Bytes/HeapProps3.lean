@@ -13,7 +13,7 @@ open PyLean PyLean.StrSearch
 /-! ## Extended-slice assignment and deletion -/
 
 /-- The extended-slice part of `bytearray_ass_subscript_lock_held`, :880-939 (`baAssExtended`): a value
-of the slice's length (not 0) is stored by the loop of :928-934 and succeeds whether or not there are
+of the slice's length (not 0) is stored by the loop of :935-936 and succeeds whether or not there are
 exports, since the size does not change; a value of another non-zero length is the `ValueError`
 naming both sizes; an empty value deletes, which with exports is `_canresize`'s `BufferError` even for
 an empty slice (:887-889, before the `slicelen == 0` exit), and without exports an empty slice leaves
@@ -215,7 +215,7 @@ theorem init_reset_empty (h : H) (hx : h.ba.exports = 0) (hz : h.ba.size = 0) :
 * a list of `int`s whose fast path meets a value outside `range(256)` empties the object again
   (:1121-1122) and raises that value's `ValueError`, also when later items are not `int`s;
 * a list of objects that are not exact `int`s (here: classes with `__index__`) leaves the fast path
-  (:1115-1117), resizes the object back to 0 and runs the iterator loop, which appends every item;
+  (:1110-1117), resizes the object back to 0 and runs the iterator loop, which appends every item;
 * a tuple goes through the same fast path as a list;
 * a generator (`bytearray(iter(...))`) runs the iterator loop (:1130-1181), which appends every item
   in order and drops none;
@@ -702,7 +702,7 @@ theorem adjust_neg (n st sp se : Int) (hn : 0 ≤ n) (hse : se < 0)
 
 /-- `del b[s]` for an extended slice of an object without exports succeeds for every slice whose
 step is not 1 (and so, with `SliceDeleteAgrees`, does what `del list[s]` does): the compaction loop
-of :893-922 and the tail move stay inside the buffer, and the shrink of :926 succeeds. With exports it
+of :899-908 and the tail move of :910-915 stay inside the buffer, and the shrink of :916-918 succeeds. With exports it
 is `BufferError` (`BaAssExtendedSpec`). For every object below 2^45 bytes. -/
 def BaAssSliceDelOk : Prop :=
   ∀ (b : BA) (sl : RangeSlice.Slice) (st sp se : Int), RangeSlice.sliceUnpack sl = .ok (st, sp, se) →
@@ -837,5 +837,391 @@ def SizeChecksNull : Prop :=
 theorem sizeChecksNull_refuted : ¬ SizeChecksNull := by
   intro hp
   exact hp _ rfl rfl
+
+/-! ## A failed copy in slice assignment, and the error exits of `__init__`'s loop -/
+
+theorem baNew_list_bad (xs : List Nat) (v : Int) (ys : List Obj) (hc : ∀ c ∈ xs, c < 256) (hv : v < 0 ∨ v ≥ 256)
+    (hs : ((xs.length + 1 + ys.length : Nat) : Int) < 2 ^ 46) :
+    baNew (some (.list (xs.map (fun c : Nat => Obj.int (c : Int)) ++ .int v :: ys))) none none =
+      .error (.valueError "byte must be in range(0, 256)") := by
+  have h := (initInitialised_proven.2 xs v ys hc hv hs).2.2
+  unfold baNew
+  rw [baNewObject_eq]
+  revert h
+  generalize baInit {} (some (.list (xs.map (fun c : Nat => Obj.int (c : Int)) ++ .int v :: ys))) none none = r
+  obtain ⟨b, e⟩ := r
+  intro h
+  simp only at h
+  subst h
+  rfl
+
+theorem baNew_plain : baNew (some .plain) none none =
+    .error (.typeError "cannot convert 'object' object to bytearray") := rfl
+
+theorem run_ints (o : Obj) : ∀ (xs : List Nat) (cur : BA), (∀ c ∈ xs, c < 256) → cur.exports = 0 →
+    (cur.data.length : Int) + xs.length < 2 ^ 45 →
+    ∃ cur', baInit.run o cur (xs.map (fun c : Nat => Obj.int (c : Int))) = baInit.run o cur' [] ∧
+      cur'.data = cur.data ++ seqData xs := by
+  intro xs
+  induction xs with
+  | nil => intro cur _ _ _; exact ⟨cur, rfl, by simp [seqData]⟩
+  | cons c rest ih =>
+    intro cur hc hx hs
+    obtain ⟨r, hr, hrd, hrx⟩ := initLoop_append cur c (hc c (by simp)) hx (by simp at hs; omega)
+    obtain ⟨cur', e1, e2⟩ := ih r (fun x hx' => hc x (by simp [hx'])) hrx (by rw [hrd]; simp at hs ⊢; omega)
+    refine ⟨cur', ?_, by rw [e2, hrd]; simp [seqData]⟩
+    simp only [List.map_cons, baInit.run, hr]
+    exact e1
+
+theorem genRaised_not_stop (e : PyExc) : excMatches (genRaised e) "StopIteration" = false := by
+  unfold genRaised
+  split
+  · rfl
+  · rename_i he; simpa using he
+
+theorem baNew_mapRaises (xs : List Nat) (e : PyExc) (hc : ∀ c ∈ xs, c < 256) (hs : (xs.length : Int) < 2 ^ 45) :
+    (excMatches e "StopIteration" = false →
+      baNew (some (.mapRaises (xs.map (fun c : Nat => Obj.int (c : Int))) e)) none none = .error e) ∧
+    (excMatches e "StopIteration" = true →
+      ∃ r, baNew (some (.mapRaises (xs.map (fun c : Nat => Obj.int (c : Int))) e)) none none = .ok r ∧ r.seq = xs) := by
+  obtain ⟨cur', e1, e2⟩ := run_ints (.mapRaises (xs.map (fun c : Nat => Obj.int (c : Int))) e) xs {} hc rfl
+    (by simpa using hs)
+  refine ⟨fun he => ?_, fun he => ⟨cur', ?_, ?_⟩⟩
+  · simp only [baNew, baNewObject_eq, baInit, init_fresh, Obj.index?, Obj.buffer?, getIterOr, iterItems?]
+    rw [e1]
+    simp [baInit.run, iterFinish, he]
+  · simp only [baNew, baNewObject_eq, baInit, init_fresh, Obj.index?, Obj.buffer?, getIterOr, iterItems?]
+    rw [e1]
+    simp [baInit.run, iterFinish, he]
+  · rw [BA.seq, e2]; simp [seqData_seq]
+
+theorem baNew_iterRaises (xs : List Nat) (e : PyExc) (hc : ∀ c ∈ xs, c < 256) (hs : (xs.length : Int) < 2 ^ 45) :
+    baNew (some (.iterRaises (xs.map (fun c : Nat => Obj.int (c : Int))) e)) none none = .error (genRaised e) := by
+  obtain ⟨cur', e1, _⟩ := run_ints (.iterRaises (xs.map (fun c : Nat => Obj.int (c : Int))) e) xs {} hc rfl
+    (by simpa using hs)
+  have hz : ({} : BA).size = 0 := rfl
+  simp only [baNew, baNewObject_eq, baInit, init_fresh, Obj.index?, Obj.buffer?, getIterOr, iterItems?]
+  rw [e1]
+  simp [baInit.run, iterFinish]
+
+/-- `b[s] = v` (:828-862) when the copy `PyByteArray_FromObject(values)` fails (:857-859): the error is
+the result, and the object is as the first unpacking of the slice left it (unchanged for slice parts
+that run no Python code), so nothing is deleted. This holds for a list holding a value outside
+`range(256)` (`b[0:1] = [300]`), an object that is neither a buffer nor iterable (`b[0:1] = object()`,
+the `TypeError` of `bytearray(object())`), a generator that raises after its items (what its caller
+sees: a `StopIteration` raised in it is `RuntimeError` under PEP 479), a C iterator (`map`) that raises
+anything but `StopIteration`, and a Python iterator whose `__next__` raises anything but
+`StopIteration`. A `map` whose function raises `StopIteration` has simply ended, so its items are
+assigned (`b[0:1] = map(f, ...)` succeeds). For every heap and `__index__` slice parts with a non-zero
+step. -/
+def BaAssSubCopyFails : Prop :=
+  ∀ (h : H) (st sp se : Option (List Act × Int)), stepOk se →
+    let once := fun (h0 : H) => runActs (runActs (runActs h0 (ipActs se)) (ipActs st)) (ipActs sp)
+    let key := Key.slice (ipArg st) (ipArg sp) (ipArg se)
+    (∀ (xs : List Nat) (v : Int) (ys : List Obj), (∀ c ∈ xs, c < 256) → (v < 0 ∨ v ≥ 256) →
+      ((xs.length + 1 + ys.length : Nat) : Int) < 2 ^ 46 →
+      baAssSubE key (some (.obj (.list (xs.map (fun c : Nat => Obj.int (c : Int)) ++ .int v :: ys)))) h =
+        (.error (.valueError "byte must be in range(0, 256)"), once h)) ∧
+    baAssSubE key (some (.obj .plain)) h = (.error (.typeError "cannot convert 'object' object to bytearray"), once h) ∧
+    (∀ (xs : List Nat) (e : PyExc), (∀ c ∈ xs, c < 256) → (xs.length : Int) < 2 ^ 45 →
+      baAssSubE key (some (.obj (.iterRaises (xs.map (fun c : Nat => Obj.int (c : Int))) e))) h =
+        (.error (genRaised e), once h)) ∧
+    (∀ (xs : List Nat) (e : PyExc), (∀ c ∈ xs, c < 256) → (xs.length : Int) < 2 ^ 45 →
+      excMatches e "StopIteration" = false →
+      baAssSubE key (some (.obj (.mapRaises (xs.map (fun c : Nat => Obj.int (c : Int))) e))) h = (.error e, once h)) ∧
+    (∀ (xs : List Nat) (e : PyExc), (∀ c ∈ xs, c < 256) → (xs.length : Int) < 2 ^ 45 →
+      excMatches e "StopIteration" = true →
+      baAssSubE key (some (.obj (.mapRaises (xs.map (fun c : Nat => Obj.int (c : Int))) e))) h =
+        liftBA (fun b => baAssSlice b ⟨ipVal st, ipVal sp, ipVal se⟩ (some (.bytearray xs))) (once (once h))) ∧
+    (∀ (fa : List Act) (e : PyExc), excMatches e "StopIteration" = false →
+      baAssSubE key (some (.it [] fa (some e))) h = (.error e, runActs (once h) fa))
+
+theorem baAssSubCopyFails_proven : BaAssSubCopyFails := by
+  intro h st sp se hok
+  dsimp only
+  have hu := sliceUnpack_ip st sp se
+  obtain ⟨t, ht⟩ : ∃ t, RangeSlice.sliceUnpack ⟨ipVal st, ipVal sp, ipVal se⟩ = .ok t := by
+    cases hsu : RangeSlice.sliceUnpack ⟨ipVal st, ipVal sp, ipVal se⟩ with
+    | error e => exact absurd hsu (sliceUnpack_ne st sp se hok e)
+    | ok t => exact ⟨t, rfl⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro xs v ys hc hv hs
+    simp only [baAssSubE, E.bind_app, hu _ hok, ht, Arg.numberCheck, Obj.isNumber, Bool.false_or, Bool.false_eq_true,
+      ↓reduceIte, fromObjectE, E.lift_app, baNew_list_bad xs v ys hc hv hs, Functor.map, Except.map]
+  · simp only [baAssSubE, E.bind_app, hu _ hok, ht, Arg.numberCheck, Obj.isNumber, Bool.false_or, Bool.false_eq_true,
+      ↓reduceIte, fromObjectE, E.lift_app, baNew_plain, Functor.map, Except.map]
+  · intro xs e hc hs
+    simp only [baAssSubE, E.bind_app, hu _ hok, ht, Arg.numberCheck, Obj.isNumber, Bool.false_or, Bool.false_eq_true,
+      ↓reduceIte, fromObjectE, E.lift_app, baNew_iterRaises xs e hc hs, Functor.map, Except.map]
+  · intro xs e hc hs he
+    simp only [baAssSubE, E.bind_app, hu _ hok, ht, Arg.numberCheck, Obj.isNumber, Bool.false_or, Bool.false_eq_true,
+      ↓reduceIte, fromObjectE, E.lift_app, (baNew_mapRaises xs e hc hs).1 he, Functor.map, Except.map]
+  · intro xs e hc hs he
+    obtain ⟨r, hr, hseq⟩ := (baNew_mapRaises xs e hc hs).2 he
+    simp only [baAssSubE, E.bind_app, hu _ hok, ht, Arg.numberCheck, Obj.isNumber, Bool.false_or, Bool.false_eq_true,
+      ↓reduceIte, fromObjectE, E.lift_app, hr, Functor.map, Except.map, hseq]
+    exact assSliceCore_ip st sp se (some xs) _ hok
+  · intro fa e he
+    simp only [baAssSubE, E.bind_app, hu _ hok, ht, Arg.numberCheck, Bool.false_or, Bool.false_eq_true,
+      ↓reduceIte, fromObjectE]
+    simp [extendLoopE, iterStepE, E.bind_app, runCb_app, he, E.throw_app, E.attempt_app]
+
+/-- The iterator loop of `__init__` over the items `ws` that convert, then the step after them. -/
+theorem initLoop_prefix (f : Nat → Obj) (hf : ∀ c, c < 256 → (f c).index? = some (.ok (c : Int))) :
+    ∀ (ws : List Nat) (ss rest : List (List Act × Item)) (fa : List Act) (fin : Option PyExc) (i fuel : Nat) (h : H),
+      (∀ c ∈ ws, c < 256) → ss.drop i = ws.map (fun c => (([] : List Act), Item.obj (f c))) ++ rest →
+      ws.length < fuel → h.ba.exports = 0 → (h.ba.data.length : Int) + ws.length < 2 ^ 45 →
+      ∃ h1, h1.ba.data = h.ba.data ++ seqData ws ∧ h1.ba.exports = 0 ∧
+        initLoopE ss fa fin fuel i h = initLoopE ss fa fin (fuel - ws.length) (i + ws.length) h1 := by
+  intro ws
+  induction ws with
+  | nil => intro ss rest fa fin i fuel h _ _ _ hx _; exact ⟨h, by simp [seqData], hx, by simp⟩
+  | cons c more ih =>
+    intro ss rest fa fin i fuel h hc hd hfu hx hs
+    obtain ⟨k, rfl⟩ : ∃ k, fuel = k + 1 := ⟨fuel - 1, by simp at hfu; omega⟩
+    have hc1 : c < 256 := hc c (by simp)
+    simp only [List.map_cons, List.cons_append] at hd
+    obtain ⟨r, hr, hrd, hrx⟩ := initLoop_append h.ba c hc1 hx (by simp at hs; omega)
+    have hg : getByteValueE (Item.toArg (.obj (f c))) h = (.ok c, h) := by
+      have hv : ¬ ((c : Int) < 0 ∨ (c : Int) ≥ 256) := by omega
+      simp [getByteValueE, Item.toArg, indexE, hf c hc1, E.bind_app, E.lift_app, hv]
+    obtain ⟨h1, e1, e2, e3⟩ := ih ss rest fa fin (i + 1) k (h.put r) (fun x hx' => hc x (by simp [hx']))
+      (drop_succ_of ss i _ _ hd) (by simp at hfu; omega) (by simp [H.put, hrx])
+      (by simp [H.put, hrd]; simp at hs; omega)
+    refine ⟨h1, by rw [e1]; simp [H.put, hrd, seqData], e2, ?_⟩
+    have ef : k + 1 - (more.length + 1) = k - more.length := by omega
+    have ei : i + (more.length + 1) = i + 1 + more.length := by omega
+    simp only [List.length_cons, ef, ei]
+    rw [← e3]
+    simp only [initLoopE, iterStepE, hd, E.bind_app, runCb_app, runActs, List.foldl_nil, E.pure_app]
+    simp only [hg, put_ok, hr]
+
+/-- The error exits of `bytearray___init___impl`'s iterator loop, :1129-1181, and of the steps before it,
+for an object without exports:
+* an item outside `range(256)` (:1159-1162) is the `ValueError`, and one that is not an integer the
+  `TypeError` of `_getbytevalue`, after the items before it were appended;
+* an iterator that raises after its items (:1149-1153) gives that exception, with the items appended,
+  unless it is `StopIteration`, which ends the loop normally: so a C iterator (`map`) whose function
+  raises `StopIteration` ends, and one that raises anything else fails; a generator's caller sees what
+  it raised, with a `StopIteration` turned into `RuntimeError` (PEP 479), so a generator always fails;
+* an item whose `__index__` takes a view of the object makes the append's resize (:1169-1170) raise
+  `BufferError` on an empty object with no spare allocation;
+* an object that is neither a buffer nor iterable is the "cannot convert" `TypeError` of :1131-1138;
+* an `__index__` that raises `TypeError` falls through to the iterator step (:1060-1063), and so to
+  that `TypeError`, while any other exception of `__index__` is the result.
+For every heap and value, below 2^45 bytes. -/
+def BaInitLoopErrors : Prop :=
+  ∀ h : H, h.ba.exports = 0 →
+    (∀ (xs : List Nat) (v : Int) (ys : List Obj), (∀ c ∈ xs, c < 256) → (v < 0 ∨ v ≥ 256) →
+      ((xs.length : Nat) : Int) < 2 ^ 45 →
+      ∃ h', baInitE (some (.obj (.iter (xs.map (fun c : Nat => Obj.int (c : Int)) ++ .int v :: ys)))) none none h =
+        (.error (.valueError "byte must be in range(0, 256)"), h') ∧ h'.ba.data = seqData xs) ∧
+    (∀ (xs : List Nat) (cs : Seq) (ys : List Obj), (∀ c ∈ xs, c < 256) → ((xs.length : Nat) : Int) < 2 ^ 45 →
+      ∃ h', baInitE (some (.obj (.iter (xs.map (fun c : Nat => Obj.int (c : Int)) ++ .str cs :: ys)))) none none h =
+        (.error (.typeError "'str' object cannot be interpreted as an integer"), h') ∧ h'.ba.data = seqData xs) ∧
+    (∀ (xs : List Nat) (e : PyExc), (∀ c ∈ xs, c < 256) → (xs.length : Int) < 2 ^ 45 →
+      ∃ h', baInitE (some (.obj (.iterRaises (xs.map (fun c : Nat => Obj.int (c : Int))) e))) none none h =
+        (.error (genRaised e), h') ∧ h'.ba.data = seqData xs) ∧
+    (∀ (xs : List Nat) (e : PyExc), (∀ c ∈ xs, c < 256) → (xs.length : Int) < 2 ^ 45 →
+      excMatches e "StopIteration" = false →
+      ∃ h', baInitE (some (.obj (.mapRaises (xs.map (fun c : Nat => Obj.int (c : Int))) e))) none none h =
+        (.error e, h') ∧ h'.ba.data = seqData xs) ∧
+    (∀ (xs : List Nat) (e : PyExc), (∀ c ∈ xs, c < 256) → (xs.length : Int) < 2 ^ 45 →
+      excMatches e "StopIteration" = true →
+      ∃ h', baInitE (some (.obj (.mapRaises (xs.map (fun c : Nat => Obj.int (c : Int))) e))) none none h =
+        (.ok (), h') ∧ h'.ba.data = seqData xs) ∧
+    (h.ba.size = 0 → h.ba.alloc ≤ 1 → ∀ c : Nat, c < 256 →
+      baInitE (some (.it [([], .idx [.grab] (.ok c))] [] none)) none none h = (.error exportsMsg, runActs h [.grab])) ∧
+    (∃ h', baInitE (some (.obj .plain)) none none h =
+      (.error (.typeError "cannot convert 'object' object to bytearray"), h') ∧ h'.ba.data = []) ∧
+    (∀ m : String, ∃ h', baInitE (some (.idx [] (.error (.typeError m)))) none none h =
+      (.error (.typeError "cannot convert 'RIdx' object to bytearray"), h') ∧ h'.ba.data = []) ∧
+    (∀ m : String, ∃ h', baInitE (some (.idx [] (.error (.valueError m)))) none none h =
+      (.error (.valueError m), h') ∧ h'.ba.data = [])
+
+theorem initLoop_badstep (ss : List (List Act × Item)) (fa : List Act) (fin : Option PyExc) (fuel i : Nat) (h : H)
+    (item : Item) (tl : List (List Act × Item)) (hd : ss.drop i = ([], item) :: tl) (hfu : 0 < fuel) (e : PyExc)
+    (hg : getByteValueE item.toArg h = (.error e, h)) : initLoopE ss fa fin fuel i h = (.error e, h) := by
+  obtain ⟨k, rfl⟩ : ∃ k, fuel = k + 1 := ⟨fuel - 1, by omega⟩
+  simp [initLoopE, iterStepE, hd, E.bind_app, runCb_app, runActs, hg]
+
+theorem initLoop_end (ss : List (List Act × Item)) (fa : List Act) (fin : Option PyExc) (fuel i : Nat) (h : H)
+    (hd : ss.drop i = []) (hfu : 0 < fuel) :
+    initLoopE ss fa fin fuel i h =
+      (match fin with
+       | none => .ok ()
+       | some e => if excMatches e "StopIteration" then .ok () else .error e, runActs h fa) := by
+  obtain ⟨k, rfl⟩ : ∃ k, fuel = k + 1 := ⟨fuel - 1, by omega⟩
+  cases fin with
+  | none => simp [initLoopE, iterStepE, hd, E.bind_app, runCb_app]
+  | some e =>
+    by_cases he : excMatches e "StopIteration" = true
+    · simp [initLoopE, iterStepE, hd, E.bind_app, runCb_app, he]
+    · simp [initLoopE, iterStepE, hd, E.bind_app, runCb_app, he, E.throw_app]
+
+theorem baInitLoopErrors_proven : BaInitLoopErrors := by
+  intro h hx
+  obtain ⟨h0, hbase, hd0, hx0⟩ := init_reset h hx
+  have hint : ∀ c, c < 256 → ((fun c : Nat => Obj.int (c : Int)) c).index? = some (.ok (c : Int)) := fun _ _ => rfl
+  have hiter : ∀ (items : List Obj) (k : E Unit),
+      baInitE (some (.obj (.iter items))) none none h =
+        initLoopE (items.map (fun x => (([] : List Act), Item.obj x))) [] none
+          ((items.map (fun x => (([] : List Act), Item.obj x))).length + 1) 0 h0 := by
+    intro items _
+    unfold baInitE; rw [hbase]
+    simp only [encNoArg, Bool.false_eq_true, ↓reduceIte, E.pure_app, E.bind_app, Arg.indexCheck, Obj.index?,
+      Option.isSome_none, Arg.bufferCheck, Obj.buffer?]
+    simp only [getIterE, E.bind_app, E.lift_app, getIterOr, iterItems?, iterFinish, E.pure_app]
+  have hraise : ∀ (items : List Obj) (e : PyExc),
+      baInitE (some (.obj (.iterRaises items e))) none none h =
+        initLoopE (items.map (fun x => (([] : List Act), Item.obj x))) [] (some (genRaised e))
+          ((items.map (fun x => (([] : List Act), Item.obj x))).length + 1) 0 h0 := by
+    intro items e
+    unfold baInitE; rw [hbase]
+    simp only [encNoArg, Bool.false_eq_true, ↓reduceIte, E.pure_app, E.bind_app, Arg.indexCheck, Obj.index?,
+      Option.isSome_none, Arg.bufferCheck, Obj.buffer?]
+    simp only [getIterE, E.bind_app, E.lift_app, getIterOr, iterItems?, iterFinish, E.pure_app]
+  have hmap : ∀ (items : List Obj) (e : PyExc) (b : Bool), excMatches e "StopIteration" = b →
+      baInitE (some (.obj (.mapRaises items e))) none none h =
+        initLoopE (items.map (fun x => (([] : List Act), Item.obj x))) [] (if b then none else some e)
+          ((items.map (fun x => (([] : List Act), Item.obj x))).length + 1) 0 h0 := by
+    intro items e b hb
+    unfold baInitE; rw [hbase]
+    simp only [encNoArg, Bool.false_eq_true, ↓reduceIte, E.pure_app, E.bind_app, Arg.indexCheck, Obj.index?,
+      Option.isSome_none, Arg.bufferCheck, Obj.buffer?]
+    cases b <;> simp only [getIterE, E.bind_app, E.lift_app, getIterOr, iterItems?, iterFinish, E.pure_app, hb,
+      Bool.false_eq_true, ↓reduceIte]
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro xs v ys hc hv hs
+    rw [hiter _ (pure ())]
+    let ss := (xs.map (fun c : Nat => Obj.int (c : Int)) ++ .int v :: ys).map (fun x => (([] : List Act), Item.obj x))
+    have hss : ss = xs.map (fun c => (([] : List Act), Item.obj ((fun c : Nat => Obj.int (c : Int)) c))) ++
+        (([], Item.obj (.int v)) :: ys.map (fun x => (([] : List Act), Item.obj x))) := by
+      simp [ss, List.map_append, List.map_map, Function.comp_def]
+    obtain ⟨h1, e1, e2, e3⟩ := initLoop_prefix _ hint xs ss
+      (([], Item.obj (.int v)) :: ys.map (fun x => (([] : List Act), Item.obj x))) [] none 0 (ss.length + 1) h0 hc
+      (by rw [hss]; rfl) (by simp [ss]; omega) hx0 (by simp [hd0]; omega)
+    refine ⟨h1, ?_, by rw [e1, hd0]; rfl⟩
+    rw [e3]
+    have hv' : v < 0 ∨ 256 ≤ v := by omega
+    exact initLoop_badstep ss [] none _ _ h1 (.obj (.int v)) (ys.map (fun x => (([] : List Act), Item.obj x)))
+      (by rw [hss, Nat.zero_add]; simp)
+      (by simp [ss]; omega) _
+      (by simp [getByteValueE, Item.toArg, indexE, Obj.index?, E.bind_app, E.lift_app, hv', E.throw_app])
+  · intro xs cs ys hc hs
+    rw [hiter _ (pure ())]
+    let ss := (xs.map (fun c : Nat => Obj.int (c : Int)) ++ .str cs :: ys).map (fun x => (([] : List Act), Item.obj x))
+    have hss : ss = xs.map (fun c => (([] : List Act), Item.obj ((fun c : Nat => Obj.int (c : Int)) c))) ++
+        (([], Item.obj (.str cs)) :: ys.map (fun x => (([] : List Act), Item.obj x))) := by
+      simp [ss, List.map_append, List.map_map, Function.comp_def]
+    obtain ⟨h1, e1, e2, e3⟩ := initLoop_prefix _ hint xs ss
+      (([], Item.obj (.str cs)) :: ys.map (fun x => (([] : List Act), Item.obj x))) [] none 0 (ss.length + 1) h0 hc
+      (by rw [hss]; rfl) (by simp [ss]; omega) hx0 (by simp [hd0]; omega)
+    refine ⟨h1, ?_, by rw [e1, hd0]; rfl⟩
+    rw [e3]
+    exact initLoop_badstep ss [] none _ _ h1 (.obj (.str cs)) (ys.map (fun x => (([] : List Act), Item.obj x)))
+      (by rw [hss, Nat.zero_add]; simp)
+      (by simp [ss]; omega) _
+      (by simp [getByteValueE, Item.toArg, indexE, Obj.index?, E.bind_app, E.throw_app, notInteger, Obj.typeName]; rfl)
+  · intro xs e hc hs
+    rw [hraise]
+    let ss := (xs.map (fun c : Nat => Obj.int (c : Int))).map (fun x => (([] : List Act), Item.obj x))
+    have hss : ss = xs.map (fun c => (([] : List Act), Item.obj ((fun c : Nat => Obj.int (c : Int)) c))) ++ [] := by
+      simp [ss, List.map_map, Function.comp_def]
+    obtain ⟨h1, e1, e2, e3⟩ := initLoop_prefix _ hint xs ss [] [] (some (genRaised e)) 0 (ss.length + 1) h0 hc
+      (by rw [hss]; rfl) (by simp [ss]) hx0 (by simp [hd0]; omega)
+    refine ⟨runActs h1 [], ?_, by simp [runActs, e1, hd0, seqData]⟩
+    rw [e3, initLoop_end ss [] (some (genRaised e)) _ _ h1 (by rw [hss]; simp) (by simp [ss])]
+    simp [genRaised_not_stop]
+  · intro xs e hc hs he
+    rw [hmap _ e _ he]
+    let ss := (xs.map (fun c : Nat => Obj.int (c : Int))).map (fun x => (([] : List Act), Item.obj x))
+    have hss : ss = xs.map (fun c => (([] : List Act), Item.obj ((fun c : Nat => Obj.int (c : Int)) c))) ++ [] := by
+      simp [ss, List.map_map, Function.comp_def]
+    obtain ⟨h1, e1, e2, e3⟩ := initLoop_prefix _ hint xs ss [] [] _ 0 (ss.length + 1) h0 hc
+      (by rw [hss]; rfl) (by simp [ss]) hx0 (by simp [hd0]; omega)
+    refine ⟨runActs h1 [], ?_, by simp [runActs, e1, hd0, seqData]⟩
+    rw [e3, initLoop_end ss [] _ _ _ h1 (by rw [hss]; simp) (by simp [ss])]
+    simp [he]
+  · intro xs e hc hs he
+    rw [hmap _ e _ he]
+    let ss := (xs.map (fun c : Nat => Obj.int (c : Int))).map (fun x => (([] : List Act), Item.obj x))
+    have hss : ss = xs.map (fun c => (([] : List Act), Item.obj ((fun c : Nat => Obj.int (c : Int)) c))) ++ [] := by
+      simp [ss, List.map_map, Function.comp_def]
+    obtain ⟨h1, e1, e2, e3⟩ := initLoop_prefix _ hint xs ss [] [] _ 0 (ss.length + 1) h0 hc
+      (by rw [hss]; rfl) (by simp [ss]) hx0 (by simp [hd0]; omega)
+    refine ⟨runActs h1 [], ?_, by simp [runActs, e1, hd0, seqData]⟩
+    rw [e3, initLoop_end ss [] _ _ _ h1 (by rw [hss]; simp) (by simp [ss])]
+    simp [he]
+  · intro hz ha c hc
+    have hb2 := init_reset_empty h hx hz
+    have hg1 : runActs h [.grab] = { h with ba := baGetBuffer h.ba, kept := h.kept + 1 } := rfl
+    have hga : Act.run h .grab = { h with ba := baGetBuffer h.ba, kept := h.kept + 1 } := rfl
+    have hsz : (baGetBuffer h.ba).size = 0 := hz
+    have hal : ¬ ((baGetBuffer h.ba).size + 1 < (baGetBuffer h.ba).alloc) := by
+      simp only [baGetBuffer] at hsz ⊢; omega
+    have hres : baResize (baGetBuffer h.ba) ((baGetBuffer h.ba).size + 1) = .error exportsMsg :=
+      exportRule_proven.2.1 _ _ (by omega) (by omega) (by simp [baGetBuffer])
+    have hloop : baInitLoop (baGetBuffer h.ba) [.int c] = .error exportsMsg := by
+      simp [baInitLoop, getByte_ok c hc, hal, hres]
+    have hv : ¬ ((c : Int) < 0 ∨ (c : Int) ≥ 256) := by omega
+    unfold baInitE; rw [hb2]
+    simp only [encNoArg, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, E.pure_app, E.bind_app, Arg.indexCheck,
+      Arg.bufferCheck, getIterE]
+    simp [initLoopE, iterStepE, E.bind_app, runCb_app, getByteValueE, Item.toArg, indexE, hv, put_ok, hg1, hga, hloop,
+      runActs]
+  · refine ⟨h0, ?_, hd0⟩
+    unfold baInitE; rw [hbase]
+    simp only [encNoArg, Bool.false_eq_true, ↓reduceIte, E.pure_app, E.bind_app, Arg.indexCheck, Obj.index?,
+      Option.isSome_none, Arg.bufferCheck, Obj.buffer?]
+    simp only [getIterE, E.bind_app, E.lift_app, getIterOr, iterItems?, E.throw_app]
+    rfl
+  · intro m
+    refine ⟨h0, ?_, hd0⟩
+    unfold baInitE; rw [hbase]
+    have hte : isTypeError (.typeError m) = true := rfl
+    simp only [encNoArg, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, E.pure_app, E.bind_app, Arg.indexCheck, E.attempt_app,
+      asSsizeE, indexE, runCb_app, hte, Arg.bufferCheck, getIterE, E.throw_app, runActs, List.foldl_nil]
+    rfl
+  · intro m
+    refine ⟨h0, ?_, hd0⟩
+    unfold baInitE; rw [hbase]
+    have hte : isTypeError (.valueError m) = false := rfl
+    simp only [encNoArg, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, E.pure_app, E.bind_app, Arg.indexCheck,
+      E.attempt_app, asSsizeE, indexE, runCb_app, hte, E.throw_app, runActs, List.foldl_nil]
+
+/-! ## The append of `__init__`'s loop under a view -/
+
+/-- `n` zeros, then an item whose `__index__` takes a view of the object (`views.append(memoryview(b))`)
+and returns 1, as the steps of a Python iterator. -/
+def zerosThenView (n : Nat) : List (List Act × Item) :=
+  List.replicate n ([], Item.obj (.int 0)) ++ [([], .idx [.grab] (.ok 1))]
+
+/-- The append of `bytearray___init___impl`'s loop, :1164-1170: when `Py_SIZE + 1 < ob_alloc` the byte is
+written into the spare allocation, with no `_canresize` and so also under a view; otherwise
+`PyByteArray_Resize` runs, which with exports raises `BufferError`. Where the spare room comes from is
+the growth strategy (`BaResizeStrategy`): from an empty object the allocations are 1, 2, ..., 8 and then
+16 at the 9th byte, so on 3.15.2 `b.__init__(iter([0]*9 + [G()]))` succeeds while `[0]*8 + [G()]` and
+`[0]*15 + [G()]` raise `BufferError`, where `G.__index__` takes `memoryview(b)`. For every object and
+byte. -/
+def BaInitAppendView : Prop :=
+  (∀ (b : BA) (c : Nat), c < 256 → b.size + 1 < b.alloc →
+    baInitLoop b [.int c] = .ok { b with data := b.data ++ [(c : Int)] }) ∧
+  (∀ (b : BA) (c : Nat), c < 256 → ¬ (b.size + 1 < b.alloc) → 0 < b.exports →
+    baInitLoop b [.int c] = .error exportsMsg) ∧
+  ((baInitE (some (.it (zerosThenView 9) [] none)) none none { ba := {} }).1 = .ok () ∧
+   (baInitE (some (.it (zerosThenView 9) [] none)) none none { ba := {} }).2.ba.data =
+     List.replicate 9 0 ++ [1] ∧
+   (baInitE (some (.it (zerosThenView 9) [] none)) none none { ba := {} }).2.ba.exports = 1) ∧
+  (baInitE (some (.it (zerosThenView 8) [] none)) none none { ba := {} }).1 = .error exportsMsg ∧
+  (baInitE (some (.it (zerosThenView 15) [] none)) none none { ba := {} }).1 = .error exportsMsg
+
+theorem baInitAppendView_proven : BaInitAppendView := by
+  refine ⟨?_, ?_, ⟨by decide +kernel, by decide +kernel, by decide +kernel⟩, by decide +kernel, by decide +kernel⟩
+  · intro b c hc hs
+    simp [baInitLoop, getByte_ok c hc, hs]
+  · intro b c hc hs hx
+    have hr := exportRule_proven.2.1 b (b.size + 1) (by simp [BA.size]; omega) (by omega) hx
+    simp [baInitLoop, getByte_ok c hc, hs, hr, exportsMsg]
 
 end PyLean.BytesObj.Bytes

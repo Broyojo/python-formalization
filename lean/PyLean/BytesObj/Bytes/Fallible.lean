@@ -104,13 +104,21 @@ theorem mutatorsIndexRaises_proven : MutatorsIndexRaises := by
 
 /-- A failing iterator: `bytes(it)` and `extend` check each item as it comes, so with good items the
 iterator's exception comes last, and `extend` writes nothing. `join` runs the iterator to its end
-first, so the exception wins over a bad item, where `bytes` reports the item. -/
+first, so the exception wins over a bad item, where `bytes` reports the item. For a generator the
+exception is what its caller sees, `genRaised e`: a `StopIteration` raised in the generator is
+`RuntimeError('generator raised StopIteration')` (PEP 479). For a C iterator (`map`) a
+`StopIteration` is the normal end, so `bytes(it)` and `extend` give what the plain iterator of the
+same items gives, and any other exception is the result. -/
 def IterRaisesRules : Prop :=
   ∀ (vals : Seq) (e : PyExc), (∀ c ∈ vals, c < 256) →
     let xs := asItems vals
-    bytesNew (some (.iterRaises xs e)) none none = .error e ∧
-    (∀ (sep : Seq) (bad : List Obj), pyBytesJoin (.bytes sep) (.iterRaises bad e) = .error e) ∧
-    (∀ self : BA, baExtend self (.iterRaises xs e) = .error e) ∧
+    bytesNew (some (.iterRaises xs e)) none none = .error (genRaised e) ∧
+    (∀ (sep : Seq) (bad : List Obj), pyBytesJoin (.bytes sep) (.iterRaises bad e) = .error (genRaised e)) ∧
+    (∀ self : BA, baExtend self (.iterRaises xs e) = .error (genRaised e)) ∧
+    (excMatches e "StopIteration" = false → bytesNew (some (.mapRaises xs e)) none none = .error e ∧
+      ∀ self : BA, baExtend self (.mapRaises xs e) = .error e) ∧
+    (excMatches e "StopIteration" = true → bytesNew (some (.mapRaises xs e)) none none = .ok vals ∧
+      ∀ self : BA, baExtend self (.mapRaises xs e) = baExtend self (.iter xs)) ∧
     (∀ (self : BA) (v : Int), v < 0 → ssizeMin ≤ v →
       baExtend self (.iterRaises (.int v :: xs) e) = .error (.valueError "byte must be in range(0, 256)")) ∧
     (∀ v : Int, v < 0 → ssizeMin ≤ v →
@@ -128,7 +136,8 @@ theorem iterRaisesRules_proven : IterRaisesRules := by
   have hba := asItems_mapM vals hv
   have hbuf : bytesSizeCheck 32 = .ok () := by decide
   have hw : writerCreate 64 false = .ok { overallocate := true, size := 64 } := by decide
-  refine ⟨?_, fun sep bad => ?_, fun self => ?_, fun self v h1 h2 => ?_, fun v h1 h2 => ?_⟩
+  refine ⟨?_, fun sep bad => ?_, fun self => ?_, fun he => ⟨?_, fun self => ?_⟩, fun he => ⟨?_, fun self => ?_⟩,
+    fun self v h1 h2 => ?_, fun v h1 h2 => ?_⟩
   · simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, iterItems?, hb, getIterOr, lengthHint,
       iterFinish, hw, bind, Except.bind, pure, Except.pure]
   · have hm : mallocFails 64 = false := by decide
@@ -136,6 +145,13 @@ theorem iterRaisesRules_proven : IterRaisesRules := by
       bind, Except.bind]
   · simp [baExtend, Obj.buffer?, getIterOr, iterItems?, lengthHint, hbuf, hba, iterFinish, bind,
       Except.bind, Except.mapError]
+  · simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, iterItems?, hb, getIterOr, lengthHint,
+      iterFinish, hw, he, bind, Except.bind, pure, Except.pure]
+  · simp [baExtend, Obj.buffer?, getIterOr, iterItems?, lengthHint, hbuf, hba, iterFinish, he, bind,
+      Except.bind, Except.mapError]
+  · simp [bytesNew, Obj.index?, bytesFromObject, Obj.buffer?, iterItems?, hb, getIterOr, lengthHint,
+      iterFinish, hw, he, bind, Except.bind, pure, Except.pure]
+  · simp [baExtend, Obj.buffer?, getIterOr, iterItems?, lengthHint, iterFinish, he]
   · have hg := getByte_bad v (Or.inl h1)
     simp [baExtend, Obj.buffer?, getIterOr, iterItems?, lengthHint, hbuf, hg, bind, Except.bind,
       Except.mapError, List.mapM_cons]
