@@ -440,21 +440,21 @@ theorem matchTime_head {c : Nat} {t : Str} (h : isDigit c = false) : matchTime (
     simp [this]
   · rfl
 
-theorem parseValue_num {cfg : Cfg} {src : Str} {pos fuel c0 : Nat} {t : Str} {m : NumM}
+theorem parseValue_num {cfg : Cfg} {src : Str} {rr pos fuel c0 : Nat} {t : Str} {m : NumM}
     (h : src.drop pos = c0 :: t) (hc : c0 ≠ 34 ∧ c0 ≠ 39 ∧ c0 ≠ 116 ∧ c0 ≠ 102 ∧ c0 ≠ 91 ∧ c0 ≠ 123)
     (hd : matchDatetime (src.drop pos) = none) (ht : matchTime (src.drop pos) = none)
-    (hm : matchNumber (src.drop pos) = some m) :
-    parseValue cfg src (fuel + 1) pos =
+    (hm : matchNumber (src.drop pos) = some m) (hrr : matchToNumberN cfg (sl src pos (pos + m.len)) m ≤ rr) :
+    parseValue cfg src rr (fuel + 1) pos =
       (matchToNumber cfg (sl src pos (pos + m.len)) m).map (fun v => (pos + m.len, v)) := by
   have hg := getElem?_of_drop h
   obtain ⟨h1, h2, h3, h4, h5, h6⟩ := hc
-  simp [parseValue, hg, hd, ht, hm, h1, h2, h3, h4, h5, h6]
+  simp [parseValue, hg, hd, ht, hm, h1, h2, h3, h4, h5, h6, need_ok hrr]
 
-theorem parseValue_special {cfg : Cfg} {src : Str} {pos fuel c0 : Nat} {t : Str}
+theorem parseValue_special {cfg : Cfg} {src : Str} {rr pos fuel c0 : Nat} {t : Str}
     (h : src.drop pos = c0 :: t) (hc : c0 ≠ 34 ∧ c0 ≠ 39 ∧ c0 ≠ 116 ∧ c0 ≠ 102 ∧ c0 ≠ 91 ∧ c0 ≠ 123)
     (hd : matchDatetime (src.drop pos) = none) (ht : matchTime (src.drop pos) = none)
-    (hm : matchNumber (src.drop pos) = none) :
-    parseValue cfg src (fuel + 1) pos =
+    (hm : matchNumber (src.drop pos) = none) (hrr : ∀ s, cfg.pfN s ≤ rr) (hr1 : 1 ≤ rr) :
+    parseValue cfg src rr (fuel + 1) pos =
       let firstThree := sl src pos (pos + 3)
       if firstThree == S "inf" || firstThree == S "nan" then do
         cfg.pf firstThree
@@ -469,12 +469,12 @@ theorem parseValue_special {cfg : Cfg} {src : Str} {pos fuel c0 : Nat} {t : Str}
   have hg := getElem?_of_drop h
   obtain ⟨h1, h2, h3, h4, h5, h6⟩ := hc
   simp only [parseValue, hg, hd, ht, hm]
-  simp [h1, h2, h3, h4, h5, h6]
+  simp [h1, h2, h3, h4, h5, h6, need_ok (hrr _), need_ok hr1]
 
-theorem pf_floatResult (pf : ParseFloat) (maxK maxD pos : Nat) (tok : Str) :
-    (do (mkCfg pf maxK maxD).pf tok; pure (pos + tok.length, TVal.flt tok) : Py (Nat × TVal)) =
+theorem pf_floatResult (pf : ParseFloat) (maxK maxD : Nat) (tz : TzCache) (pos : Nat) (tok : Str) :
+    (do (mkCfg pf maxK maxD tz).pf tok; pure (pos + tok.length, TVal.flt tok) : Py (Nat × TVal)) =
       floatResult pf pos tok := by
-  rcases pf with ⟨isF, call⟩
+  rcases pf with ⟨isF, call, frs⟩
   simp only [mkCfg, makeSafeParseFloat, floatResult]
   cases isF <;> simp only [Bool.false_eq_true, ite_false, ite_true] <;> cases call tok with
     | error e => rfl
@@ -494,9 +494,10 @@ both) or `inf`/`nan` with an optional sign, the object `parse_float` returns whe
 exactly the token's text, `parse_float`'s own exception, or `ValueError` "parse_float must not
 return dicts or lists" when it returns a dict or list (unless it is `float` itself). -/
 def NumberSpec : Prop :=
-  ∀ (pf : ParseFloat) (maxK maxD : Nat) (src : Str) (pos fuel : Nat) (t : NumTok) (rest : Str),
+  ∀ (pf : ParseFloat) (maxK maxD : Nat) (tz : TzCache) (src : Str) (rr pos fuel : Nat) (t : NumTok) (rest : Str),
+    (∀ s, 1 + makeSafeParseFloatN pf s ≤ rr) →
     t.ok → stopHead rest → src.drop pos = t.enc ++ rest →
-    parseValue (mkCfg pf maxK maxD) src (fuel + 1) pos = t.result pf maxD pos
+    parseValue (mkCfg pf maxK maxD tz) src rr (fuel + 1) pos = t.result pf maxD pos
 
 /-- The decimal branch of `intBase0` once the sign is read. -/
 def intBody (maxD : Nat) (neg : Bool) (body : Str) : Py Int :=
@@ -516,9 +517,10 @@ theorem intBase0_plain (maxD c : Nat) (t : Str) (h48 : c ≠ 48) (h43 : c ≠ 43
   split <;> try simp_all
   split <;> simp_all [intBody]
 
-theorem number_dec (pf : ParseFloat) (maxK maxD : Nat) (src : Str) (pos fuel : Nat) (sg : Str) (r : Run)
+theorem number_dec (pf : ParseFloat) (maxK maxD : Nat) (tz : TzCache) (src : Str) (rr pos fuel : Nat)
+    (hrr : ∀ s, 1 + makeSafeParseFloatN pf s ≤ rr) (sg : Str) (r : Run)
     (rest : Str) (hok : (NumTok.dec sg r).ok) (hrest : stopHead rest) (h : src.drop pos = (sg ++ r.enc) ++ rest) :
-    parseValue (mkCfg pf maxK maxD) src (fuel + 1) pos = (NumTok.dec sg r).result pf maxD pos := by
+    parseValue (mkCfg pf maxK maxD tz) src rr (fuel + 1) pos = (NumTok.dec sg r).result pf maxD pos := by
   obtain ⟨hs, hr, h0⟩ := hok
   have hst := stop_not_digit hrest
   obtain ⟨rt, hre, hdig, h43, h45⟩ := run_head r hr
@@ -564,7 +566,7 @@ theorem number_dec (pf : ParseFloat) (maxK maxD : Nat) (src : Str) (pos fuel : N
     rw [ha1]
     simp only [List.append_assoc, hsg, List.drop_left, hip, hfr, List.drop_zero, hex]
     simp
-  rw [parseValue_num hc0 hc hd ht hm]
+  rw [parseValue_num hc0 hc hd ht hm (by have := hrr []; simp only [matchToNumberN]; simp; omega)]
   have hsl : sl src pos (pos + (sg ++ r.enc).length) = sg ++ r.enc := sl_of_drop h
   simp only [hsl, matchToNumber, Bool.false_eq_true, ite_false, mkCfg]
   have hnd := ndigits_run 10 (by omega) r hr
@@ -589,10 +591,11 @@ theorem number_dec (pf : ParseFloat) (maxK maxD : Nat) (src : Str) (pos fuel : N
     simp only [hb, Bool.false_eq_true, ite_false, hlim, Except.map]
     rcases hs with rfl | rfl | rfl <;> simp
 
-theorem number_pre (pf : ParseFloat) (maxK maxD : Nat) (src : Str) (pos fuel : Nat) (l b : Nat) (r : Run)
+theorem number_pre (pf : ParseFloat) (maxK maxD : Nat) (tz : TzCache) (src : Str) (rr pos fuel : Nat)
+    (hrr : ∀ s, 1 + makeSafeParseFloatN pf s ≤ rr) (l b : Nat) (r : Run)
     (rest : Str) (hok : (NumTok.pre l b r).ok) (hrest : stopHead rest)
     (h : src.drop pos = (48 :: l :: r.enc) ++ rest) :
-    parseValue (mkCfg pf maxK maxD) src (fuel + 1) pos = (NumTok.pre l b r).result pf maxD pos := by
+    parseValue (mkCfg pf maxK maxD tz) src rr (fuel + 1) pos = (NumTok.pre l b r).result pf maxD pos := by
   obtain ⟨hlb, hr⟩ := hok
   have hst := stop_not_digit hrest
   have hb16 : b ≤ 16 := by rcases hlb with ⟨-, rfl⟩ | ⟨-, rfl⟩ | ⟨-, rfl⟩ <;> decide
@@ -622,7 +625,7 @@ theorem number_pre (pf : ParseFloat) (maxK maxD : Nat) (src : Str) (pos fuel : N
       rfl
   have hm : matchNumber (src.drop pos) = some ⟨r.enc.length + 2, false⟩ := by
     rw [h, matchNumber_eq]; simp only [List.cons_append] at ha1 ⊢; rw [ha1]
-  rw [parseValue_num h (by decide) hd ht hm]
+  rw [parseValue_num h (by decide) hd ht hm (by have := hrr []; simp only [matchToNumberN]; simp; omega)]
   have hsl : sl src pos (pos + (r.enc.length + 2)) = 48 :: l :: r.enc := by
     have := sl_of_drop h; simp only [List.length_cons] at this
     rwa [show pos + (r.enc.length + 1 + 1) = pos + (r.enc.length + 2) by omega] at this
@@ -633,10 +636,11 @@ theorem number_pre (pf : ParseFloat) (maxK maxD : Nat) (src : Str) (pos fuel : N
   simp only [hsl, matchToNumber, Bool.false_eq_true, ite_false, mkCfg, hib, NumTok.result, Except.map]
   congr 2; omega
 
-theorem number_flt (pf : ParseFloat) (maxK maxD : Nat) (src : Str) (pos fuel : Nat) (sg : Str) (ip : Run)
+theorem number_flt (pf : ParseFloat) (maxK maxD : Nat) (tz : TzCache) (src : Str) (rr pos fuel : Nat)
+    (hrr : ∀ s, 1 + makeSafeParseFloatN pf s ≤ rr) (sg : Str) (ip : Run)
     (fr : Option Run) (ex : Option (Nat × Str × Run)) (rest : Str) (hok : (NumTok.flt sg ip fr ex).ok)
     (hrest : stopHead rest) (h : src.drop pos = (sg ++ ip.enc ++ fracEnc fr ++ expEnc ex) ++ rest) :
-    parseValue (mkCfg pf maxK maxD) src (fuel + 1) pos = (NumTok.flt sg ip fr ex).result pf maxD pos := by
+    parseValue (mkCfg pf maxK maxD tz) src rr (fuel + 1) pos = (NumTok.flt sg ip fr ex).result pf maxD pos := by
   obtain ⟨hs, hip, hip0, hfr, hex, hsome⟩ := hok
   have hst := stop_not_digit hrest
   obtain ⟨rt, hre, hdig, h43, h45⟩ := run_head ip hip
@@ -747,16 +751,17 @@ theorem number_flt (pf : ParseFloat) (maxK maxD : Nat) (src : Str) (pos fuel : N
     simp only [List.append_assoc, ha1, hsg, List.drop_left, hipn, hlen_fr, hlen_ex]
     simp only [List.length_append, Option.some.injEq, NumM.mk.injEq, decide_eq_true_eq]
     exact ⟨by omega, by omega⟩
-  rw [parseValue_num hc0 hc hd ht hm]
+  rw [parseValue_num hc0 hc hd ht hm (by simp only [matchToNumberN, mkCfg, decide_true, ite_true]; exact hrr _)]
   have hsl : sl src pos (pos + (sg ++ ip.enc ++ fracEnc fr ++ expEnc ex).length) =
       sg ++ ip.enc ++ fracEnc fr ++ expEnc ex := sl_of_drop h
   simp only [hsl, matchToNumber, decide_true, ite_true]
   rw [map_pf]
-  exact pf_floatResult pf maxK maxD pos _
+  exact pf_floatResult pf maxK maxD tz pos _
 
-theorem number_special (pf : ParseFloat) (maxK maxD : Nat) (src : Str) (pos fuel : Nat) (sg n : Str)
+theorem number_special (pf : ParseFloat) (maxK maxD : Nat) (tz : TzCache) (src : Str) (rr pos fuel : Nat)
+    (hrr : ∀ s, 1 + makeSafeParseFloatN pf s ≤ rr) (sg n : Str)
     (rest : Str) (hok : (NumTok.special sg n).ok) (h : src.drop pos = (sg ++ n) ++ rest) :
-    parseValue (mkCfg pf maxK maxD) src (fuel + 1) pos = (NumTok.special sg n).result pf maxD pos := by
+    parseValue (mkCfg pf maxK maxD tz) src rr (fuel + 1) pos = (NumTok.special sg n).result pf maxD pos := by
   obtain ⟨hs, hn⟩ := hok
   have key : ∃ c0 tt, src.drop pos = c0 :: tt ∧ isDigit c0 = false ∧ c0 ≠ 48 ∧
       (c0 ≠ 34 ∧ c0 ≠ 39 ∧ c0 ≠ 116 ∧ c0 ≠ 102 ∧ c0 ≠ 91 ∧ c0 ≠ 123) := by
@@ -768,7 +773,8 @@ theorem number_special (pf : ParseFloat) (maxK maxD : Nat) (src : Str) (pos fuel
   have hm : matchNumber (src.drop pos) = none := by
     rw [matchNumber_eq, hc0, nAlt1_head h48, ← hc0, h]
     rcases hs with rfl | rfl | rfl <;> rcases hn with rfl | rfl <;> rfl
-  rw [parseValue_special hc0 hc hd ht hm]
+  rw [parseValue_special hc0 hc hd ht hm (fun s => by have := hrr s; simp only [mkCfg]; omega)
+    (by have := hrr []; omega)]
   have s3 : ∀ tok : Str, tok.length = 3 → src.drop pos = tok ++ rest → sl src pos (pos + 3) = tok := by
     intro tok hl h'; have := sl_of_drop h'; rwa [hl] at this
   have s4 : ∀ tok : Str, tok.length = 4 → src.drop pos = tok ++ rest →
@@ -780,24 +786,24 @@ theorem number_special (pf : ParseFloat) (maxK maxD : Nat) (src : Str) (pos fuel
   have hinf : S "inf" = [105, 110, 102] := rfl
   have hnan : S "nan" = [110, 97, 110] := rfl
   rcases hs with rfl | rfl | rfl <;> rcases hn with rfl | rfl <;> simp only [hinf, hnan, List.nil_append] at h
-  · rw [s3 _ rfl h]; exact pf_floatResult pf maxK maxD pos _
-  · rw [s3 _ rfl h]; exact pf_floatResult pf maxK maxD pos _
+  · rw [s3 _ rfl h]; exact pf_floatResult pf maxK maxD tz pos _
+  · rw [s3 _ rfl h]; exact pf_floatResult pf maxK maxD tz pos _
   · obtain ⟨e3, e4⟩ := s4 [43, 105, 110, 102] rfl h
-    rw [e3, e4]; exact pf_floatResult pf maxK maxD pos _
+    rw [e3, e4]; exact pf_floatResult pf maxK maxD tz pos _
   · obtain ⟨e3, e4⟩ := s4 [43, 110, 97, 110] rfl h
-    rw [e3, e4]; exact pf_floatResult pf maxK maxD pos _
+    rw [e3, e4]; exact pf_floatResult pf maxK maxD tz pos _
   · obtain ⟨e3, e4⟩ := s4 [45, 105, 110, 102] rfl h
-    rw [e3, e4]; exact pf_floatResult pf maxK maxD pos _
+    rw [e3, e4]; exact pf_floatResult pf maxK maxD tz pos _
   · obtain ⟨e3, e4⟩ := s4 [45, 110, 97, 110] rfl h
-    rw [e3, e4]; exact pf_floatResult pf maxK maxD pos _
+    rw [e3, e4]; exact pf_floatResult pf maxK maxD tz pos _
 
 /-- `NumberSpec` holds. -/
 theorem numberSpec_proven : NumberSpec := by
-  intro pf maxK maxD src pos fuel t rest hok hrest h
+  intro pf maxK maxD tz src rr pos fuel t rest hrr hok hrest h
   cases t with
-  | dec sg r => exact number_dec pf maxK maxD src pos fuel sg r rest hok hrest h
-  | pre l b r => exact number_pre pf maxK maxD src pos fuel l b r rest hok hrest h
-  | flt sg ip fr ex => exact number_flt pf maxK maxD src pos fuel sg ip fr ex rest hok hrest h
-  | special sg n => exact number_special pf maxK maxD src pos fuel sg n rest hok h
+  | dec sg r => exact number_dec pf maxK maxD tz src rr pos fuel hrr sg r rest hok hrest h
+  | pre l b r => exact number_pre pf maxK maxD tz src rr pos fuel hrr l b r rest hok hrest h
+  | flt sg ip fr ex => exact number_flt pf maxK maxD tz src rr pos fuel hrr sg ip fr ex rest hok hrest h
+  | special sg n => exact number_special pf maxK maxD tz src rr pos fuel hrr sg n rest hok h
 
 end PyLean.TextLibs.Toml

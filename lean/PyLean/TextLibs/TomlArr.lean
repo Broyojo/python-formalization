@@ -232,6 +232,22 @@ def TItems.need : TItems → Nat
   | .cons _ _ _ v _ _ rest => max (v.need + 1) rest.need + 1
 end
 
+mutual
+/-- How deeply arrays and inline tables nest in a value. -/
+def SV.depth : SV → Nat
+  | .str _ | .bool _ => 0
+  | .arr _ items => items.depth + 1
+  | .tbl _ items => items.depth + 1
+def AItems.depth : AItems → Nat
+  | .nil => 0
+  | .one v _ => v.depth
+  | .cons v _ _ rest => max v.depth rest.depth
+def TItems.depth : TItems → Nat
+  | .nil => 0
+  | .one _ _ _ v _ => v.depth
+  | .cons _ _ _ v _ _ rest => max v.depth rest.depth
+end
+
 /-! ## Parsing -/
 
 theorem SV.head (v : SV) : ∃ c t, v.enc = c :: t ∧ (c = 34 ∨ c = 116 ∨ c = 102 ∨ c = 91 ∨ c = 123) := by
@@ -287,17 +303,17 @@ theorem kpart_head_props (k : KPart) (hk : k.ok) (x : Str) :
   · simp [tomlWsNl, hws, hc.1, hc.2.1]
   · exact hc.2.2
 
-theorem parseValue_arr {cfg : Cfg} {src : Str} {pos f : Nat} (hg : src[pos]? = some 91) :
-    parseValue cfg src (f + 1) pos = parseArray cfg src f pos := by
+theorem parseValue_arr {cfg : Cfg} {src : Str} {r pos f : Nat} (hg : src[pos]? = some 91) :
+    parseValue cfg src r (f + 1) pos = need r 1 (parseArray cfg src (r - 1) f pos) := by
   simp [parseValue, hg]
 
-theorem parseValue_tbl {cfg : Cfg} {src : Str} {pos f : Nat} (hg : src[pos]? = some 123) :
-    parseValue cfg src (f + 1) pos = parseInlineTable cfg src f pos := by
+theorem parseValue_tbl {cfg : Cfg} {src : Str} {r pos f : Nat} (hg : src[pos]? = some 123) :
+    parseValue cfg src r (f + 1) pos = need r 1 (parseInlineTable cfg src (r - 1) f pos) := by
   simp [parseValue, hg]
 
-theorem parseValue_bool {cfg : Cfg} {src : Str} {pos f : Nat} {rest : Str} (b : Bool)
+theorem parseValue_bool {cfg : Cfg} {src : Str} {r pos f : Nat} {rest : Str} (b : Bool)
     (h : src.drop pos = (if b then S "true" else S "false") ++ rest) :
-    parseValue cfg src (f + 1) pos = .ok (pos + (if b then S "true" else S "false").length, .bool b) := by
+    parseValue cfg src r (f + 1) pos = .ok (pos + (if b then S "true" else S "false").length, .bool b) := by
   cases b
   · have h' : src.drop pos = S "false" ++ rest := by simpa using h
     have hg : src[pos]? = some 102 := getElem?_of_drop (r := S "alse" ++ rest) (by rw [h']; rfl)
@@ -395,11 +411,11 @@ theorem TItems.head_props (items : TItems) (hok : items.ok) (x : Str) : notFill 
     exact ⟨by simpa [TItems.enc] using this.1, fun _ c hc => this.2 c (by simpa [TItems.enc] using hc)⟩
 
 /-- `parse_key_value_pair` on `k w1 = w2 v` for a one-part key, given what `parse_value` does. -/
-theorem pkv {cfg : Cfg} {src : Str} {pos fuel : Nat} {k : KPart} {w1 w2 vs rest : Str} {res : Nat × TVal}
-    (hk : k.ok) (h1 : allWs w1) (h2 : allWs w2) (hvh : ∀ c, (vs ++ rest).head? = some c → tomlWs c = false)
+theorem pkv {cfg : Cfg} {src : Str} {r pos fuel : Nat} {k : KPart} {w1 w2 vs rest : Str} {res : Nat × TVal}
+    (hr : 8 ≤ r) (hk : k.ok) (h1 : allWs w1) (h2 : allWs w2) (hvh : ∀ c, (vs ++ rest).head? = some c → tomlWs c = false)
     (h : src.drop pos = k.enc ++ w1 ++ 61 :: w2 ++ vs ++ rest)
-    (hv : parseValue cfg src fuel (pos + k.enc.length + w1.length + 1 + w2.length) = .ok res) :
-    parseKeyValuePair cfg src (fuel + 1) pos = .ok (res.1, [k.val], res.2) := by
+    (hv : parseValue cfg src (r - 1) fuel (pos + k.enc.length + w1.length + 1 + w2.length) = .ok res) :
+    parseKeyValuePair cfg src r (fuel + 1) pos = .ok (res.1, [k.val], res.2) := by
   have hkey := keySpec_proven cfg.maxKeyParts src pos k w1 [] (61 :: w2 ++ vs ++ rest) hk h1 (by simp)
     (by intro c hc; simp at hc; subst hc; decide) (by simpa using h)
   rw [if_pos (Or.inr rfl)] at hkey
@@ -412,30 +428,39 @@ theorem pkv {cfg : Cfg} {src : Str} {pos fuel : Nat} {k : KPart} {w1 w2 vs rest 
     skipChars_of_drop hd1 h2 hvh
   have hpos : pos + (k.enc ++ w1).length + 1 + w2.length = pos + k.enc.length + w1.length + 1 + w2.length := by
     simp; omega
-  simp only [parseKeyValuePair, hkey, bind, Except.bind, hg, show (some 61 != some 61) = false from rfl,
-    Bool.false_eq_true, ite_false, hsk, hpos, hv, pure, Except.pure]
+  simp only [parseKeyValuePair, need_parseKey hr, hkey, bind, Except.bind, hg,
+    show (some 61 != some 61) = false from rfl, Bool.false_eq_true, ite_false, hsk, hpos,
+    need_ok (show 1 ≤ r by omega), hv, pure, Except.pure]
+
+theorem le_of_max_le {a b c k : Nat} (h : 3 * max a b + k ≤ c) : 3 * a + k ≤ c ∧ 3 * b + k ≤ c := by
+  have h1 := Nat.le_max_left a b
+  have h2 := Nat.le_max_right a b
+  generalize max a b = m at h h1 h2
+  omega
 
 mutual
-theorem SV.parse (cfg : Cfg) (src : Str) : ∀ (v : SV) (pos fuel : Nat) (rest : Str), v.ok →
+theorem SV.parse (cfg : Cfg) (src : Str) : ∀ (v : SV) (r pos fuel : Nat) (rest : Str), v.ok →
     (∀ c, rest.head? = some c → c ≠ 34) → src.drop pos = v.enc ++ rest → v.need ≤ fuel →
-    parseValue cfg src fuel pos = .ok (pos + v.enc.length, v.val)
-  | .str ps, pos, fuel, rest, hok, hr, h, hf => by
+    3 * v.depth + 10 ≤ r →
+    parseValue cfg src r fuel pos = .ok (pos + v.enc.length, v.val)
+  | .str ps, r, pos, fuel, rest, hok, hr, h, hf, hd => by
     obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by simp [SV.need] at hf; omega⟩
-    have := basicStrRoundTrip_proven.1 cfg src pos f ps rest hok (by simpa [SV.enc] using h)
-      (fun hh => hr 34 hh.2 rfl)
+    have := basicStrRoundTrip_proven.1 cfg src r pos f ps rest (by simp [SV.depth] at hd; omega) hok
+      (by simpa [SV.enc] using h) (fun hh => hr 34 hh.2 rfl)
     rw [this]; simp [SV.enc, SV.val]; omega
-  | .bool b, pos, fuel, rest, _, _, h, hf => by
+  | .bool b, r, pos, fuel, rest, _, _, h, hf, _ => by
     obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by simp [SV.need] at hf; omega⟩
     rw [parseValue_bool b (by simpa [SV.enc] using h)]; rfl
-  | .arr lead items, pos, fuel, rest, hok, hr, h, hf => by
+  | .arr lead items, r, pos, fuel, rest, hok, hr, h, hf, hd => by
     obtain ⟨g, rfl⟩ : ∃ g, fuel = g + 2 := ⟨fuel - 2, by simp [SV.need] at hf; omega⟩
     obtain ⟨hlead, hitems⟩ := hok
+    simp only [SV.depth] at hd
     have h0 : src.drop pos = 91 :: (fillEnc lead ++ (items.enc ++ rest)) := by simpa [SV.enc] using h
-    rw [parseValue_arr (getElem?_of_drop h0)]
+    rw [parseValue_arr (getElem?_of_drop h0), need_ok (show 1 ≤ r by omega)]
     have hd1 : src.drop (pos + 1) = fillEnc lead ++ (items.enc ++ rest) := drop_succ_of_drop h0
     have hsk := skipCawF_fill hlead (AItems.head_props items rest).1 hd1
     have hd2 : src.drop (pos + 1 + (fillEnc lead).length) = items.enc ++ rest := drop_add_of_drop hd1
-    simp only [parseArray, hsk, bind, Except.bind]
+    simp only [parseArray, need_skipCaw (show 4 ≤ r - 1 by omega), hsk, bind, Except.bind]
     by_cases hnil : items = .nil
     · subst hnil
       have hst : startsAt src (pos + 1 + (fillEnc lead).length) [93] = true :=
@@ -446,17 +471,19 @@ theorem SV.parse (cfg : Cfg) (src : Str) : ∀ (v : SV) (pos fuel : Nat) (rest :
         have := ((AItems.head_props items rest).2 hnil c (by simp [hct])).1
         simp [startsAt, hd2, hct, List.isPrefixOf, Ne.symm this]
       simp only [hst, Bool.false_eq_true, ite_false]
-      rw [AItems.parse cfg src items _ g [] rest hnil hitems hd2 (by simp [SV.need] at hf; omega)]
+      rw [AItems.parse cfg src items (r - 1) _ g [] rest hnil hitems hd2 (by simp [SV.need] at hf; omega)
+        (by omega)]
       simp [SV.enc, SV.val]; omega
-  | .tbl lead items, pos, fuel, rest, hok, hr, h, hf => by
+  | .tbl lead items, r, pos, fuel, rest, hok, hr, h, hf, hd => by
     obtain ⟨g, rfl⟩ : ∃ g, fuel = g + 2 := ⟨fuel - 2, by simp [SV.need] at hf; omega⟩
     obtain ⟨hlead, hitems⟩ := hok
+    simp only [SV.depth] at hd
     have h0 : src.drop pos = 123 :: (fillEnc lead ++ (items.enc ++ rest)) := by simpa [SV.enc] using h
-    rw [parseValue_tbl (getElem?_of_drop h0)]
+    rw [parseValue_tbl (getElem?_of_drop h0), need_ok (show 1 ≤ r by omega)]
     have hd1 : src.drop (pos + 1) = fillEnc lead ++ (items.enc ++ rest) := drop_succ_of_drop h0
     have hsk := skipCawF_fill hlead (TItems.head_props items hitems rest).1 hd1
     have hd2 : src.drop (pos + 1 + (fillEnc lead).length) = items.enc ++ rest := drop_add_of_drop hd1
-    simp only [parseInlineTable, hsk, bind, Except.bind]
+    simp only [parseInlineTable, need_skipCaw (show 4 ≤ r - 1 by omega), hsk, bind, Except.bind]
     by_cases hnil : items = .nil
     · subst hnil
       have hst : startsAt src (pos + 1 + (fillEnc lead).length) [125] = true :=
@@ -467,69 +494,77 @@ theorem SV.parse (cfg : Cfg) (src : Str) : ∀ (v : SV) (pos fuel : Nat) (rest :
         have := (TItems.head_props items hitems rest).2 hnil c (by simp [hct])
         simp [startsAt, hd2, hct, List.isPrefixOf, Ne.symm this]
       simp only [hst, Bool.false_eq_true, ite_false]
-      rw [TItems.parse cfg src items _ g [] Flags.init rest hnil hitems (by intro k _; simp [dget_nil, Flags.init])
-        hd2 (by simp [SV.need] at hf; omega)]
+      rw [TItems.parse cfg src items (r - 1) _ g [] Flags.init rest hnil hitems
+        (by intro k _; simp [dget_nil, Flags.init]) hd2 (by simp [SV.need] at hf; omega) (by omega)]
       simp [SV.enc, SV.val]; omega
 
-theorem AItems.parse (cfg : Cfg) (src : Str) : ∀ (items : AItems) (pos fuel : Nat) (acc : List TVal) (rest : Str),
+theorem AItems.parse (cfg : Cfg) (src : Str) : ∀ (items : AItems) (r pos fuel : Nat) (acc : List TVal) (rest : Str),
     items ≠ .nil → items.ok → src.drop pos = items.enc ++ rest → items.need ≤ fuel →
-    arrayLoop cfg src fuel pos acc = .ok (pos + items.enc.length, .arr (acc ++ items.vals))
-  | .nil, _, _, _, _, hne, _, _, _ => absurd rfl hne
-  | .one v fa, pos, fuel, acc, rest, _, hok, h, hf => by
+    3 * items.depth + 11 ≤ r →
+    arrayLoop cfg src r fuel pos acc = .ok (pos + items.enc.length, .arr (acc ++ items.vals))
+  | .nil, _, _, _, _, _, hne, _, _, _, _ => absurd rfl hne
+  | .one v fa, r, pos, fuel, acc, rest, _, hok, h, hf, hd => by
     obtain ⟨g, rfl⟩ : ∃ g, fuel = g + 1 := ⟨fuel - 1, by simp [AItems.need] at hf; omega⟩
     obtain ⟨hv, hfa⟩ := hok
+    simp only [AItems.depth] at hd
     have h1 : src.drop pos = v.enc ++ (fillEnc fa ++ 93 :: rest) := by simpa [AItems.enc] using h
-    have hvp := SV.parse cfg src v pos g _ hv (fill_head_ne34 fa hfa _ (by intro c hc; simp at hc; omega)) h1
-      (by simp [AItems.need] at hf; omega)
+    have hvp := SV.parse cfg src v (r - 1) pos g _ hv (fill_head_ne34 fa hfa _ (by intro c hc; simp at hc; omega)) h1
+      (by simp [AItems.need] at hf; omega) (by omega)
     have hd1 : src.drop (pos + v.enc.length) = fillEnc fa ++ (93 :: rest) := drop_add_of_drop h1
     have hsk := skipCawF_fill hfa (notFill_93 rest) hd1
     have hd2 : src.drop (pos + v.enc.length + (fillEnc fa).length) = [93] ++ rest := drop_add_of_drop hd1
     have hc := sl_of_drop hd2
     simp only [List.length_singleton] at hc
-    simp only [arrayLoop, hvp, bind, Except.bind, hsk, hc, show ([93] == [93]) = true from rfl, ite_true, pure,
+    simp only [arrayLoop, need_ok (show 1 ≤ r by omega), hvp, bind, Except.bind,
+      need_skipCaw (show 4 ≤ r by omega), hsk, hc, show ([93] == [93]) = true from rfl, ite_true, pure,
       Except.pure]
     simp [AItems.enc, AItems.vals]; omega
-  | .cons v fa fb r, pos, fuel, acc, rest, _, hok, h, hf => by
+  | .cons v fa fb r', r, pos, fuel, acc, rest, _, hok, h, hf, hd => by
     obtain ⟨g, rfl⟩ : ∃ g, fuel = g + 1 := ⟨fuel - 1, by simp [AItems.need] at hf; omega⟩
     obtain ⟨hv, hfa, hfb, hr⟩ := hok
-    have h1 : src.drop pos = v.enc ++ (fillEnc fa ++ 44 :: (fillEnc fb ++ (r.enc ++ rest))) := by
+    simp only [AItems.depth] at hd
+    obtain ⟨hdv, hdr⟩ := le_of_max_le hd
+    have h1 : src.drop pos = v.enc ++ (fillEnc fa ++ 44 :: (fillEnc fb ++ (r'.enc ++ rest))) := by
       simpa [AItems.enc] using h
-    have hvp := SV.parse cfg src v pos g _ hv (fill_head_ne34 fa hfa _ (by intro c hc; simp at hc; omega)) h1
-      (by simp [AItems.need] at hf; omega)
-    have hd1 : src.drop (pos + v.enc.length) = fillEnc fa ++ (44 :: (fillEnc fb ++ (r.enc ++ rest))) :=
+    have hvp := SV.parse cfg src v (r - 1) pos g _ hv (fill_head_ne34 fa hfa _ (by intro c hc; simp at hc; omega)) h1
+      (by simp [AItems.need] at hf; omega) (by omega)
+    have hd1 : src.drop (pos + v.enc.length) = fillEnc fa ++ (44 :: (fillEnc fb ++ (r'.enc ++ rest))) :=
       drop_add_of_drop h1
     have hsk := skipCawF_fill hfa (notFill_44 _) hd1
-    have hd2 : src.drop (pos + v.enc.length + (fillEnc fa).length) = [44] ++ (fillEnc fb ++ (r.enc ++ rest)) :=
+    have hd2 : src.drop (pos + v.enc.length + (fillEnc fa).length) = [44] ++ (fillEnc fb ++ (r'.enc ++ rest)) :=
       drop_add_of_drop hd1
     have hc := sl_of_drop hd2
     simp only [List.length_singleton] at hc
-    have hd3 : src.drop (pos + v.enc.length + (fillEnc fa).length + 1) = fillEnc fb ++ (r.enc ++ rest) :=
+    have hd3 : src.drop (pos + v.enc.length + (fillEnc fa).length + 1) = fillEnc fb ++ (r'.enc ++ rest) :=
       drop_add_of_drop hd2
-    have hsk2 := skipCawF_fill hfb (AItems.head_props r rest).1 hd3
-    have hd4 : src.drop (pos + v.enc.length + (fillEnc fa).length + 1 + (fillEnc fb).length) = r.enc ++ rest :=
+    have hsk2 := skipCawF_fill hfb (AItems.head_props r' rest).1 hd3
+    have hd4 : src.drop (pos + v.enc.length + (fillEnc fa).length + 1 + (fillEnc fb).length) = r'.enc ++ rest :=
       drop_add_of_drop hd3
-    simp only [arrayLoop, hvp, bind, Except.bind, hsk, hc, show ([44] == [93]) = false from rfl,
+    simp only [arrayLoop, need_ok (show 1 ≤ r by omega), hvp, bind, Except.bind,
+      need_skipCaw (show 4 ≤ r by omega), hsk, hc, show ([44] == [93]) = false from rfl,
       show ([44] != [44]) = false from rfl, Bool.false_eq_true, ite_false, hsk2]
-    by_cases hnil : r = .nil
+    by_cases hnil : r' = .nil
     · subst hnil
       have hst := startsAt_of_drop (p := [93]) (by simpa [AItems.enc] using hd4)
       simp [hst, AItems.enc, AItems.vals, pure, Except.pure]; omega
     · have hst : startsAt src (pos + v.enc.length + (fillEnc fa).length + 1 + (fillEnc fb).length) [93] = false := by
-        obtain ⟨c, t, hct⟩ := List.exists_cons_of_ne_nil (by simp [AItems.enc_ne] : r.enc ++ rest ≠ [])
-        have := ((AItems.head_props r rest).2 hnil c (by simp [hct])).1
+        obtain ⟨c, t, hct⟩ := List.exists_cons_of_ne_nil (by simp [AItems.enc_ne] : r'.enc ++ rest ≠ [])
+        have := ((AItems.head_props r' rest).2 hnil c (by simp [hct])).1
         simp [startsAt, hd4, hct, List.isPrefixOf, Ne.symm this]
       simp only [hst, Bool.false_eq_true, ite_false]
-      rw [AItems.parse cfg src r _ g (acc ++ [v.val]) rest hnil hr hd4 (by simp [AItems.need] at hf; omega)]
+      rw [AItems.parse cfg src r' r _ g (acc ++ [v.val]) rest hnil hr hd4 (by simp [AItems.need] at hf; omega)
+        (by omega)]
       simp [AItems.enc, AItems.vals]; omega
 
-theorem TItems.parse (cfg : Cfg) (src : Str) : ∀ (items : TItems) (pos fuel : Nat) (data : Dict) (flags : Flags)
+theorem TItems.parse (cfg : Cfg) (src : Str) : ∀ (items : TItems) (r pos fuel : Nat) (data : Dict) (flags : Flags)
     (rest : Str), items ≠ .nil → items.ok → (∀ k ∈ items.keys, dget data k = none ∧ dget flags.tree k = none) →
-    src.drop pos = items.enc ++ rest → items.need ≤ fuel →
-    inlineLoop cfg src fuel pos data flags = .ok (pos + items.enc.length, .tbl (data ++ items.vals))
-  | .nil, _, _, _, _, _, hne, _, _, _, _ => absurd rfl hne
-  | .one k w1 w2 v fa, pos, fuel, data, flags, rest, _, hok, hfresh, h, hf => by
+    src.drop pos = items.enc ++ rest → items.need ≤ fuel → 3 * items.depth + 12 ≤ r →
+    inlineLoop cfg src r fuel pos data flags = .ok (pos + items.enc.length, .tbl (data ++ items.vals))
+  | .nil, _, _, _, _, _, _, hne, _, _, _, _, _ => absurd rfl hne
+  | .one k w1 w2 v fa, r, pos, fuel, data, flags, rest, _, hok, hfresh, h, hf, hd => by
     obtain ⟨g, rfl⟩ : ∃ g, fuel = g + 2 := ⟨fuel - 2, by simp [TItems.need] at hf; omega⟩
     obtain ⟨hk, hw1, hw2, hv, hfa⟩ := hok
+    simp only [TItems.depth] at hd
     have h1 : src.drop pos = k.enc ++ w1 ++ 61 :: w2 ++ v.enc ++ (fillEnc fa ++ 125 :: rest) := by
       simpa [TItems.enc] using h
     have hvpos : src.drop (pos + k.enc.length + w1.length + 1 + w2.length) = v.enc ++ (fillEnc fa ++ 125 :: rest) := by
@@ -537,9 +572,9 @@ theorem TItems.parse (cfg : Cfg) (src : Str) : ∀ (items : TItems) (pos fuel : 
       have e : pos + (k.enc ++ w1 ++ 61 :: w2).length = pos + k.enc.length + w1.length + 1 + w2.length := by
         simp; omega
       rw [e] at this; exact this
-    have hvp := SV.parse cfg src v _ g _ hv (fill_head_ne34 fa hfa _ (by intro c hc; simp at hc; omega)) hvpos
-      (by simp [TItems.need] at hf; omega)
-    have hkv := pkv hk hw1 hw2 (fun c hc => ((SV.head_props v _).2 c hc).2.2.2) h1 hvp
+    have hvp := SV.parse cfg src v (r - 1 - 1) _ g _ hv (fill_head_ne34 fa hfa _ (by intro c hc; simp at hc; omega))
+      hvpos (by simp [TItems.need] at hf; omega) (by omega)
+    have hkv := pkv (r := r - 1) (by omega) hk hw1 hw2 (fun c hc => ((SV.head_props v _).2 c hc).2.2.2) h1 hvp
     have hfr := hfresh k.val (by simp [TItems.keys])
     have hd1 : src.drop (pos + k.enc.length + w1.length + 1 + w2.length + v.enc.length) = fillEnc fa ++ (125 :: rest) :=
       drop_add_of_drop hvpos
@@ -548,57 +583,60 @@ theorem TItems.parse (cfg : Cfg) (src : Str) : ∀ (items : TItems) (pos fuel : 
         [125] ++ rest := drop_add_of_drop hd1
     have hc := sl_of_drop hd2
     simp only [List.length_singleton] at hc
-    simp only [inlineLoop, hkv, bind, Except.bind]
+    simp only [inlineLoop, need_ok (show 1 ≤ r by omega), hkv, bind, Except.bind]
     simp only [Flags.is_, List.isEmpty_cons, Bool.false_eq_true, ite_false, isAux, hfr.2, show ([k.val] : Key).dropLast = [] from rfl,
       show ([k.val] : Key).getLastD [] = k.val from rfl, withNest, hfr.1, Option.isSome_none, overwriteErr, dset_absent data k.val v.val hfr.1,
-      hsk, hc, show ([125] == [125]) = true from rfl, ite_true, pure, Except.pure]
+      need_skipCaw (show 4 ≤ r by omega), hsk, hc, show ([125] == [125]) = true from rfl, ite_true, pure, Except.pure]
     simp [TItems.enc, TItems.vals]; omega
-  | .cons k w1 w2 v fa fb r, pos, fuel, data, flags, rest, _, hok, hfresh, h, hf => by
+  | .cons k w1 w2 v fa fb r', r, pos, fuel, data, flags, rest, _, hok, hfresh, h, hf, hd => by
     obtain ⟨g, rfl⟩ : ∃ g, fuel = g + 1 := ⟨fuel - 1, by simp [TItems.need] at hf; omega⟩
     obtain ⟨g', hg'⟩ : ∃ g', g = g' + 1 := ⟨g - 1, by simp [TItems.need] at hf; omega⟩
     obtain ⟨hk, hw1, hw2, hv, hfa, hfb, hr, hkr⟩ := hok
+    simp only [TItems.depth] at hd
+    obtain ⟨hdv, hdr⟩ := le_of_max_le hd
     have h1 : src.drop pos = k.enc ++ w1 ++ 61 :: w2 ++ v.enc ++
-        (fillEnc fa ++ 44 :: (fillEnc fb ++ (r.enc ++ rest))) := by
+        (fillEnc fa ++ 44 :: (fillEnc fb ++ (r'.enc ++ rest))) := by
       simpa [TItems.enc] using h
     have hvpos : src.drop (pos + k.enc.length + w1.length + 1 + w2.length) =
-        v.enc ++ (fillEnc fa ++ 44 :: (fillEnc fb ++ (r.enc ++ rest))) := by
+        v.enc ++ (fillEnc fa ++ 44 :: (fillEnc fb ++ (r'.enc ++ rest))) := by
       have := drop_add_of_drop (a := k.enc ++ w1 ++ 61 :: w2) (by simpa using h1)
       have e : pos + (k.enc ++ w1 ++ 61 :: w2).length = pos + k.enc.length + w1.length + 1 + w2.length := by
         simp; omega
       rw [e] at this; exact this
-    have hvp := SV.parse cfg src v _ g' _ hv (fill_head_ne34 fa hfa _ (by intro c hc; simp at hc; omega)) hvpos
-      (by simp [TItems.need] at hf; omega)
-    have hkv := pkv hk hw1 hw2 (fun c hc => ((SV.head_props v _).2 c hc).2.2.2) h1 hvp
+    have hvp := SV.parse cfg src v (r - 1 - 1) _ g' _ hv (fill_head_ne34 fa hfa _ (by intro c hc; simp at hc; omega))
+      hvpos (by simp [TItems.need] at hf; omega) (by omega)
+    have hkv := pkv (r := r - 1) (by omega) hk hw1 hw2 (fun c hc => ((SV.head_props v _).2 c hc).2.2.2) h1 hvp
     rw [← hg'] at hkv
     have hfr := hfresh k.val (by simp [TItems.keys])
     have hd1 : src.drop (pos + k.enc.length + w1.length + 1 + w2.length + v.enc.length) =
-        fillEnc fa ++ (44 :: (fillEnc fb ++ (r.enc ++ rest))) := drop_add_of_drop hvpos
+        fillEnc fa ++ (44 :: (fillEnc fb ++ (r'.enc ++ rest))) := drop_add_of_drop hvpos
     have hsk := skipCawF_fill hfa (notFill_44 _) hd1
     have hd2 : src.drop (pos + k.enc.length + w1.length + 1 + w2.length + v.enc.length + (fillEnc fa).length) =
-        [44] ++ (fillEnc fb ++ (r.enc ++ rest)) := drop_add_of_drop hd1
+        [44] ++ (fillEnc fb ++ (r'.enc ++ rest)) := drop_add_of_drop hd1
     have hc := sl_of_drop hd2
     simp only [List.length_singleton] at hc
     have hd3 : src.drop (pos + k.enc.length + w1.length + 1 + w2.length + v.enc.length + (fillEnc fa).length + 1) =
-        fillEnc fb ++ (r.enc ++ rest) := drop_add_of_drop hd2
-    have hsk2 := skipCawF_fill hfb (TItems.head_props r hr rest).1 hd3
+        fillEnc fb ++ (r'.enc ++ rest) := drop_add_of_drop hd2
+    have hsk2 := skipCawF_fill hfb (TItems.head_props r' hr rest).1 hd3
     have hd4 : src.drop (pos + k.enc.length + w1.length + 1 + w2.length + v.enc.length + (fillEnc fa).length + 1 +
-        (fillEnc fb).length) = r.enc ++ rest := drop_add_of_drop hd3
-    simp only [inlineLoop, hkv, bind, Except.bind]
+        (fillEnc fb).length) = r'.enc ++ rest := drop_add_of_drop hd3
+    simp only [inlineLoop, need_ok (show 1 ≤ r by omega), hkv, bind, Except.bind]
     simp only [Flags.is_, List.isEmpty_cons, Bool.false_eq_true, ite_false, isAux, hfr.2, show ([k.val] : Key).dropLast = [] from rfl,
       show ([k.val] : Key).getLastD [] = k.val from rfl, withNest, hfr.1, Option.isSome_none, overwriteErr, dset_absent data k.val v.val hfr.1,
-      hsk, hc, show ([44] == [125]) = false from rfl, show ([44] != [44]) = false from rfl, hsk2]
-    by_cases hnil : r = .nil
+      need_skipCaw (show 4 ≤ r by omega), hsk, hc, show ([44] == [125]) = false from rfl,
+      show ([44] != [44]) = false from rfl, hsk2]
+    by_cases hnil : r' = .nil
     · subst hnil
       have hst := startsAt_of_drop (p := [125]) (by simpa [TItems.enc] using hd4)
       simp [hst, TItems.enc, TItems.vals, pure, Except.pure]; omega
     · have hst : startsAt src (pos + k.enc.length + w1.length + 1 + w2.length + v.enc.length + (fillEnc fa).length + 1 +
           (fillEnc fb).length) [125] = false := by
-        obtain ⟨c, t, hct⟩ := List.exists_cons_of_ne_nil (by simp [TItems.enc_ne r hr] : r.enc ++ rest ≠ [])
-        have := (TItems.head_props r hr rest).2 hnil c (by simp [hct])
+        obtain ⟨c, t, hct⟩ := List.exists_cons_of_ne_nil (by simp [TItems.enc_ne r' hr] : r'.enc ++ rest ≠ [])
+        have := (TItems.head_props r' hr rest).2 hnil c (by simp [hct])
         simp [startsAt, hd4, hct, List.isPrefixOf, Ne.symm this]
       simp only [hst, Bool.false_eq_true, ite_false]
-      have hfresh' : ∀ fl : Flags, (∀ k' ∈ r.keys, dget fl.tree k' = none) →
-          ∀ k' ∈ r.keys, dget (data ++ [(k.val, v.val)]) k' = none ∧ dget fl.tree k' = none := by
+      have hfresh' : ∀ fl : Flags, (∀ k' ∈ r'.keys, dget fl.tree k' = none) →
+          ∀ k' ∈ r'.keys, dget (data ++ [(k.val, v.val)]) k' = none ∧ dget fl.tree k' = none := by
         intro fl hfl k' hk'
         have hne : k' ≠ k.val := fun e => hkr (e ▸ hk')
         refine ⟨?_, hfl k' hk'⟩
@@ -606,18 +644,18 @@ theorem TItems.parse (cfg : Cfg) (src : Str) : ∀ (items : TItems) (pos fuel : 
         exact (hfresh k' (by simp [TItems.keys, hk'])).1
       cases hdl : v.val.isDictOrList
       · simp only [hdl, Bool.false_eq_true, ite_false, pure, Except.pure]
-        rw [TItems.parse cfg src r _ g _ flags rest hnil hr
+        rw [TItems.parse cfg src r' r _ g _ flags rest hnil hr
           (hfresh' flags (fun k' hk' => (hfresh k' (by simp [TItems.keys, hk'])).2)) hd4
-          (by simp [TItems.need] at hf; omega)]
+          (by simp [TItems.need] at hf; omega) (by omega)]
         simp [TItems.enc, TItems.vals]; omega
       · simp only [hdl, ite_true, Flags.set, List.isEmpty_cons, Bool.false_eq_true, ite_false]
-        rw [TItems.parse cfg src r _ g _ _ rest hnil hr
+        rw [TItems.parse cfg src r' r _ g _ _ rest hnil hr
           (hfresh' _ (fun k' hk' => by
             have hne : k' ≠ k.val := fun e => hkr (e ▸ hk')
             simp only [fsetAux]
             rw [dget_dset_ne _ _ _ _ hne]
             exact (hfresh k' (by simp [TItems.keys, hk'])).2)) hd4
-          (by simp [TItems.need] at hf; omega)]
+          (by simp [TItems.need] at hf; omega) (by omega)]
         simp [TItems.enc, TItems.vals]; omega
 end
 
@@ -694,17 +732,20 @@ basic strings and booleans by arrays and inline tables (distinct keys, one-part 
 bare, literal or basic, spaces or tabs around `=`), with any whitespace, newlines and comments
 after `[`/`{`, around each `,` and before `]`/`}`, and an optional trailing comma, `parse_value`
 (with the fuel `loads` gives it) returns the nested lists and dicts in order and the position
-after the value. -/
+after the value, when at least `3 * depth + 10` frames are left below it (the recursion limit:
+each array level takes two frames, `parse_value` and `parse_array`, each inline table three, with
+`parse_key_value_pair`; the docs say nesting is limited by it). `NestingDepthLimit` and
+`nestingUnbounded_refuted` show that a bound is needed. -/
 def ArrayTableSpec : Prop :=
-  ∀ (cfg : Cfg) (src : Str) (pos : Nat) (v : SV) (rest : Str), v.ok →
-    (∀ c, rest.head? = some c → c ≠ 34) → src.drop pos = v.enc ++ rest →
-    parseValue cfg src (vFuel src) pos = .ok (pos + v.enc.length, v.val)
+  ∀ (cfg : Cfg) (src : Str) (r pos : Nat) (v : SV) (rest : Str), v.ok →
+    (∀ c, rest.head? = some c → c ≠ 34) → src.drop pos = v.enc ++ rest → 3 * v.depth + 10 ≤ r →
+    parseValue cfg src r (vFuel src) pos = .ok (pos + v.enc.length, v.val)
 
 theorem arrayTableSpec_proven : ArrayTableSpec := by
-  intro cfg src pos v rest hok hr h
+  intro cfg src r pos v rest hok hr h hd
   have hl := congrArg List.length h
   simp at hl
   have := SV.need_le v
-  exact SV.parse cfg src v pos _ rest hok hr h (by unfold vFuel; omega)
+  exact SV.parse cfg src v r pos _ rest hok hr h (by unfold vFuel; omega) hd
 
 end PyLean.TextLibs.Toml

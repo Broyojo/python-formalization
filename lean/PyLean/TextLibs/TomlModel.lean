@@ -26,12 +26,19 @@ Library calls are parameters:
   their range checks (Modules/_datetimemodule.c); their messages never escape, since
   `parse_value` replaces every `ValueError` of `match_to_datetime`.
 
+The recursion limit is modelled: `loads` takes `frames`, the value of
+`py_recursion_remaining` when it is called (`sys.getrecursionlimit()` minus the number of Python
+frames on the stack), and every call of a Python function takes one frame (see `need`).
+
 Scope limits: the regular expressions of `_re.py` are hand-written matchers (they need no
-backtracking beyond what the matchers do, see each one); the recursion limit is not modelled
-(CPython raises `RecursionError` for deep nesting, as the docs say); `lru_cache` of `cached_tz`
-only memoizes, and `timezone(timedelta(0))` is `timezone.utc`, so an offset is a number of
-minutes. Loops and the mutual recursion run on fuel that `loads` makes large enough
-(`PyExc.modelFuel` is never a Python outcome).
+backtracking beyond what the matchers do, see each one); `lru_cache` of `cached_tz` only
+memoizes, and `timezone(timedelta(0))` is `timezone.utc`, so an offset is a number of minutes.
+Whether the cache already holds an offset only changes the frames `match_to_datetime` needs; it is
+the parameter `tzCached`, fixed for one call of `loads` (a document whose first datetime with a
+new offset fills the cache for a later one is out of scope). `_re`'s names are taken as already
+imported: `__lazy_modules__` (_parser.py:9) makes the first parse that reaches a date, time or
+number run the import machinery's frames. Loops and the mutual recursion run on fuel that `loads`
+makes large enough (`PyExc.modelFuel` is never a Python outcome).
 -/
 
 namespace PyLean.TextLibs.Toml
@@ -194,10 +201,17 @@ def tdeInit (warnErr : Bool) (msg doc pos : EArg) (args : List EArg) : Py TdeIni
       let args := if msg != .dflt then msg :: args else args
       .ok (.legacy args)
 
+/-- A raised `TOMLDecodeError`, as `.named "TOMLDecodeError" m`: `m` is `str(e)`, a NUL (which
+`str(e)` never holds: the parser's messages are fixed text or a `repr`), then `e.pos` in decimal.
+`e.msg` and `e.doc` are the arguments, and `e.lineno` and `e.colno` follow from `doc` and `pos`
+(`TdeCoords`). -/
+def tdeExc (errmsg : Str) (pos : Nat) : PyExc :=
+  .named "TOMLDecodeError" (toS errmsg ++ "\x00" ++ toString pos)
+
 /-- `raise TOMLDecodeError(msg, src, pos)` from inside the parser. -/
 def tde (msg : Str) (src : Str) (pos : Nat) : PyExc :=
   match tdeFull msg src pos with
-  | .ok r => .named "TOMLDecodeError" (toS r.errmsg)
+  | .ok r => tdeExc r.errmsg pos
   | .error e => e
 
 def tdeS (msg : String) (src : Str) (pos : Nat) : PyExc := tde (S msg) src pos
@@ -235,6 +249,10 @@ structure ParseFloat where
   /-- `parse_float is float`. -/
   isFloat : Bool
   call : Str → Py PfOut
+  /-- The most Python frames one call on this string pushes (its own included): `0` for a C
+  callable such as `float` or `decimal.Decimal`. The callable is assumed not to catch
+  `RecursionError`. -/
+  frames : Str → Nat := fun _ => 0
 
 /-- `make_safe_parse_float(parse_float)`, _parser.py:758-776: the decorated callable. -/
 def makeSafeParseFloat (pf : ParseFloat) : Str → Py Unit :=
@@ -245,13 +263,45 @@ def makeSafeParseFloat (pf : ParseFloat) : Str → Py Unit :=
     | .dictOrList => .error (.valueError "parse_float must not return dicts or lists")
     | .other => pure ()
 
+/-- The frames one call of the decorated callable pushes: `float` itself is C (:767-768);
+`safe_parse_float` is a Python function (:770-774) that calls `parse_float`. -/
+def makeSafeParseFloatN (pf : ParseFloat) (s : Str) : Nat :=
+  if pf.isFloat then 0 else 1 + pf.frames s
+
+/-- Whether `cached_tz`'s `lru_cache` already holds `(hour_str, minute_str, sign_str)`. -/
+abbrev TzCache := Str → Str → Nat → Bool
+
 structure Cfg where
   /-- The decorated `parse_float`. -/
   pf : Str → Py Unit
+  /-- The frames one call of it pushes. -/
+  pfN : Str → Nat
   /-- `MAX_KEY_PARTS`, _parser.py:37. -/
   maxKeyParts : Nat
   /-- `sys.get_int_max_str_digits()`; `0` is no limit. -/
   maxStrDigits : Nat
+  tzCached : TzCache
+
+/-! ## The recursion limit
+
+Calling a Python function pushes a frame: `_Py_EnterRecursivePy` (Python/ceval_macros.h:426-429,
+run at `start_frame`, Python/bytecodes.c:6579-6583) decrements `py_recursion_remaining` and, when
+it was not positive, raises `RecursionError("maximum recursion depth exceeded")`
+(`_Py_CheckRecursiveCallPy`, Python/ceval.c:1025-1043); returning gives the frame back. C
+functions (`str` methods, `int`, `float`, `chr`, regular expressions, `datetime`, the
+`lru_cache` wrapper, exception classes) push none.
+
+Every function of the parser except the recursive ones and the statement loop is pure and
+catches no `RecursionError`, so it raises `RecursionError` exactly when the deepest chain of
+calls it makes on its input needs more frames than are left. `fooN` is that depth for `foo`,
+its own frame included, and `need` checks it where `foo` is called. Raising `TOMLDecodeError`
+runs its `__init__` (_parser.py:89-136), a Python frame that calls only C functions. A call
+that needs one frame is checked only where nothing before it already needed one. -/
+
+def recErr : PyExc := .named "RecursionError" "maximum recursion depth exceeded"
+
+/-- A call that pushes at most `n` frames, made with `r` frames left. -/
+def need {α : Type} (r n : Nat) (x : Py α) : Py α := if n ≤ r then x else .error recErr
 
 /-! ## Scanning, _parser.py:320-369 -/
 
@@ -274,10 +324,19 @@ def skipUntil (src : Str) (pos : Nat) (expect : Str) (errorOn : Nat → Bool) (e
     if errorOnEof then .error (tde (S "Expected " ++ reprS expect) src src.length)
     else check src.length
 
+/-- Frames `skip_until` pushes: its own, and the error's `__init__` when it raises. -/
+def skipUntilN (src : Str) (pos : Nat) (expect : Str) (errorOn : Nat → Bool) (errorOnEof : Bool) : Nat :=
+  match skipUntil src pos expect errorOn errorOnEof with
+  | .ok _ => 1
+  | .error _ => 2
+
 /-- `skip_comment`, _parser.py:351-360. -/
 def skipComment (src : Str) (pos : Nat) : Py Nat :=
   if src[pos]? == some 35 then skipUntil src (pos + 1) [10] illegalBasic false
   else .ok pos
+
+def skipCommentN (src : Str) (pos : Nat) : Nat :=
+  if src[pos]? == some 35 then 1 + skipUntilN src (pos + 1) [10] illegalBasic false else 1
 
 /-- `skip_comments_and_array_ws`, _parser.py:363-369. -/
 def skipCaw (src : Str) : Nat → Nat → Py Nat
@@ -289,6 +348,19 @@ def skipCaw (src : Str) : Nat → Nat → Py Nat
     if pos == before then pure pos else skipCaw src fuel pos
 
 def skipCawF (src : Str) (pos : Nat) : Py Nat := skipCaw src (src.length + 1) pos
+
+/-- The deepest call the loop of `skip_comments_and_array_ws` makes in its rounds: `skip_chars`
+(one frame) and `skip_comment`. -/
+def skipCawNAux (src : Str) : Nat → Nat → Nat
+  | 0, _ => 0
+  | fuel + 1, pos =>
+    let p := skipChars src pos tomlWsNl
+    let n := max 1 (skipCommentN src p)
+    match skipComment src p with
+    | .error _ => n
+    | .ok q => if q == pos then n else max n (skipCawNAux src fuel q)
+
+def skipCawN (src : Str) (pos : Nat) : Nat := 1 + skipCawNAux src (src.length + 1) pos
 
 /-! ## Strings, _parser.py:566-683 -/
 
@@ -335,6 +407,19 @@ def parseBasicStrEscape (src : Str) (pos : Nat) (multiline : Bool) : Py (Nat × 
 def parseBasicStrEscapeMl (src : Str) (pos : Nat) : Py (Nat × Str) :=
   parseBasicStrEscape src pos true
 
+/-- Frames `parse_hex_char` pushes: its own, then `is_unicode_scalar_value` (:607) or the
+`__init__` of the error at :604 or :608. -/
+def parseHexCharN : Nat := 2
+
+/-- Frames `parse_basic_str_escape` pushes: its own; below it `skip_chars` or an error's
+`__init__` on the whitespace branch (:574-584), `parse_hex_char` (:585-590), nothing for a
+`frozendict` lookup (:592), an error's `__init__` (:594). -/
+def parseBasicStrEscapeN (src : Str) (pos : Nat) (multiline : Bool) : Nat :=
+  let escId := sl src pos (pos + 2)
+  1 + (if multiline && (escId == [92, 32] || escId == [92, 9] || escId == [92, 10]) then 1
+    else if escId == [92, 120] || escId == [92, 117] || escId == [92, 85] then parseHexCharN
+    else if (escRepl escId).isSome then 0 else 1)
+
 /-- The loop of `parse_basic_str`, _parser.py:663-683. -/
 def basicStrLoop (src : Str) (multiline : Bool) : Nat → Nat → Nat → Str → Py (Nat × Str)
   | 0, _, _, _ => .error .modelFuel
@@ -359,9 +444,35 @@ def basicStrLoop (src : Str) (multiline : Bool) : Nat → Nat → Nat → Str �
 def parseBasicStr (src : Str) (pos : Nat) (multiline : Bool) : Py (Nat × Str) :=
   basicStrLoop src multiline (src.length + 1) pos pos []
 
+/-- The deepest call of the loop of `parse_basic_str`: the escape parser (through the
+`_multiline` wrapper, one more frame, when `multiline`) or an error's `__init__`. -/
+def basicStrNAux (src : Str) (multiline : Bool) : Nat → Nat → Nat
+  | 0, _ => 0
+  | fuel + 1, pos =>
+    match src[pos]? with
+    | none => 1
+    | some c =>
+      if c == 34 then
+        if !multiline then 0
+        else if startsAt src pos [34, 34, 34] then 0
+        else basicStrNAux src multiline fuel (pos + 1)
+      else if c == 92 then
+        let n := if multiline then 1 + parseBasicStrEscapeN src pos true
+          else parseBasicStrEscapeN src pos false
+        match (if multiline then parseBasicStrEscapeMl src pos else parseBasicStrEscape src pos false) with
+        | .error _ => n
+        | .ok (p, _) => max n (basicStrNAux src multiline fuel p)
+      else if (if multiline then illegalMl c else illegalBasic c) then 1
+      else basicStrNAux src multiline fuel (pos + 1)
+
+def parseBasicStrN (src : Str) (pos : Nat) (multiline : Bool) : Nat :=
+  1 + basicStrNAux src multiline (src.length + 1) pos
+
 /-- `parse_one_line_basic_str`, _parser.py:503-505. -/
 def parseOneLineBasicStr (src : Str) (pos : Nat) : Py (Nat × Str) :=
   parseBasicStr src (pos + 1) false
+
+def parseOneLineBasicStrN (src : Str) (pos : Nat) : Nat := 1 + parseBasicStrN src (pos + 1) false
 
 /-- `parse_literal_str`, _parser.py:614-620. -/
 def parseLiteralStr (src : Str) (pos : Nat) : Py (Nat × Str) := do
@@ -369,6 +480,8 @@ def parseLiteralStr (src : Str) (pos : Nat) : Py (Nat × Str) := do
   let startPos := pos
   let pos ← skipUntil src pos [39] illegalBasic true
   pure (pos + 1, sl src startPos pos)
+
+def parseLiteralStrN (src : Str) (pos : Nat) : Nat := 1 + skipUntilN src (pos + 1) [39] illegalBasic true
 
 /-- `parse_multiline_str`, _parser.py:623-651. -/
 def parseMultilineStr (src : Str) (pos : Nat) (literal : Bool) : Py (Nat × Str) := do
@@ -385,6 +498,11 @@ def parseMultilineStr (src : Str) (pos : Nat) (literal : Bool) : Py (Nat × Str)
   if !startsAt src pos [delim] then return (pos, result ++ [delim])
   let pos := pos + 1
   return (pos, result ++ [delim, delim])
+
+def parseMultilineStrN (src : Str) (pos : Nat) (literal : Bool) : Nat :=
+  let pos := pos + 3
+  let pos := if startsAt src pos [10] then pos + 1 else pos
+  1 + (if literal then skipUntilN src pos [39, 39, 39] illegalMl true else parseBasicStrN src pos true)
 
 /-! ## `_re.py` -/
 
@@ -491,6 +609,10 @@ def intBase0 (maxStrDigits : Nat) (s : Str) : Py Int :=
 def matchToNumber (cfg : Cfg) (group : Str) (m : NumM) : Py TVal :=
   if m.floatpart then do cfg.pf group; pure (.flt group)
   else (intBase0 cfg.maxStrDigits group).map .int
+
+/-- Frames `match_to_number` pushes: its own and `parse_float`'s (`int` is C). -/
+def matchToNumberN (cfg : Cfg) (group : Str) (m : NumM) : Nat :=
+  1 + if m.floatpart then cfg.pfN group else 0
 
 /-- `([01][0-9]|2[0-3])`. -/
 def hourOk (a b : Nat) : Bool := ((a == 48 || a == 49) && isDigit b) || (a == 50 && inR 48 51 b)
@@ -640,6 +762,13 @@ def matchToDatetime (m : DtM) : Py TVal := do
     checkDate year month day
     checkTime hour minute sec micros
     pure (.datetime year month day hour minute sec micros tz)
+
+/-- Frames `match_to_datetime` pushes: its own, and `cached_tz`'s when the `lru_cache` (a C
+wrapper) does not hold the offset. -/
+def matchToDatetimeN (tzCached : TzCache) (m : DtM) : Nat :=
+  1 + match m.time with
+    | some (_, .ofs sg h mm) => if tzCached h mm sg then 0 else 1
+    | _ => 0
 
 /-- `match_to_localtime`, _re.py:109-113. -/
 def matchToLocaltime (t : TimeM) : Py TVal := do
@@ -808,6 +937,15 @@ def parseKeyPart (src : Str) (pos : Nat) : Py (Nat × Str) :=
     else .error (tdeS "Invalid initial character for a key part" src pos)
   | none => .error (tdeS "Invalid initial character for a key part" src pos)
 
+def parseKeyPartN (src : Str) (pos : Nat) : Nat :=
+  1 + match src[pos]? with
+    | some c =>
+      if bareKey c then 1
+      else if c == 39 then parseLiteralStrN src pos
+      else if c == 34 then parseOneLineBasicStrN src pos
+      else 1
+    | none => 1
+
 def keyPartsMsg (n : Nat) : String := s!"TOML key has more than the allowed {n} parts"
 
 /-- The loop of `parse_key`, _parser.py:469-484. -/
@@ -828,90 +966,126 @@ def parseKey (maxKeyParts : Nat) (src : Str) (pos : Nat) : Py (Nat × Key) := do
   let pos := skipChars src pos tomlWs
   keyLoop maxKeyParts src (src.length + 1) pos [part]
 
+/-- The deepest call of the loop of `parse_key`: `skip_chars` (one frame) and `parse_key_part`;
+`RecursionError(...)` is a C call. -/
+def keyLoopN (maxKeyParts : Nat) (src : Str) : Nat → Nat → Key → Nat
+  | 0, _, _ => 0
+  | fuel + 1, pos, key =>
+    if src[pos]? != some 46 then 0
+    else
+      let p1 := skipChars src (pos + 1) tomlWs
+      let n := max 1 (parseKeyPartN src p1)
+      match parseKeyPart src p1 with
+      | .error _ => n
+      | .ok (p, part) =>
+        if (key ++ [part]).length > maxKeyParts then n
+        else max n (keyLoopN maxKeyParts src fuel (skipChars src p tomlWs) (key ++ [part]))
+
+/-- Frames `parse_key` pushes (the `skip_chars` after the first part needs one, fewer than
+`parse_key_part`). -/
+def parseKeyN (maxKeyParts : Nat) (src : Str) (pos : Nat) : Nat :=
+  1 + match parseKeyPart src pos with
+    | .error _ => parseKeyPartN src pos
+    | .ok (p, part) =>
+      max (parseKeyPartN src pos) (keyLoopN maxKeyParts src (src.length + 1) (skipChars src p tomlWs) [part])
+
 /-! ## Values, _parser.py:449-462, 508-563, 686-751 -/
 
 mutual
 
-/-- `parse_value`, _parser.py:686-751. -/
-def parseValue (cfg : Cfg) (src : Str) : Nat → Nat → Py (Nat × TVal)
+/-- `parse_value`, _parser.py:686-751, with `r` frames left below its own. -/
+def parseValue (cfg : Cfg) (src : Str) (r : Nat) : Nat → Nat → Py (Nat × TVal)
   | 0, _ => .error .modelFuel
   | fuel + 1, pos =>
     let c := src[pos]?
     if c == some 34 then
-      if startsAt src pos [34, 34, 34] then (parseMultilineStr src pos false).map (fun r => (r.1, .str r.2))
-      else (parseOneLineBasicStr src pos).map (fun r => (r.1, .str r.2))
+      if startsAt src pos [34, 34, 34] then
+        need r (parseMultilineStrN src pos false) ((parseMultilineStr src pos false).map (fun r => (r.1, .str r.2)))
+      else need r (parseOneLineBasicStrN src pos) ((parseOneLineBasicStr src pos).map (fun r => (r.1, .str r.2)))
     else if c == some 39 then
-      if startsAt src pos [39, 39, 39] then (parseMultilineStr src pos true).map (fun r => (r.1, .str r.2))
-      else (parseLiteralStr src pos).map (fun r => (r.1, .str r.2))
+      if startsAt src pos [39, 39, 39] then
+        need r (parseMultilineStrN src pos true) ((parseMultilineStr src pos true).map (fun r => (r.1, .str r.2)))
+      else need r (parseLiteralStrN src pos) ((parseLiteralStr src pos).map (fun r => (r.1, .str r.2)))
     else if c == some 116 && startsAt src pos (S "true") then .ok (pos + 4, .bool true)
     else if c == some 102 && startsAt src pos (S "false") then .ok (pos + 5, .bool false)
-    else if c == some 91 then parseArray cfg src fuel pos
-    else if c == some 123 then parseInlineTable cfg src fuel pos
+    else if c == some 91 then need r 1 (parseArray cfg src (r - 1) fuel pos)
+    else if c == some 123 then need r 1 (parseInlineTable cfg src (r - 1) fuel pos)
     else
       match matchDatetime (src.drop pos) with
       | some m =>
+        -- the `__init__` of the error at :730 needs one frame, no more than `match_to_datetime`
+        need r (matchToDatetimeN cfg.tzCached m) <|
         match matchToDatetime m with
         | .ok v => .ok (pos + m.len, v)
         | .error (.valueError _) => .error (tdeS "Invalid date or datetime" src pos)
         | .error e => .error e
       | none =>
         match matchTime (src.drop pos) with
-        | some t => (matchToLocaltime t).map (fun v => (pos + t.len, v))
+        | some t => need r 1 ((matchToLocaltime t).map (fun v => (pos + t.len, v)))
         | none =>
           match matchNumber (src.drop pos) with
-          | some m => (matchToNumber cfg (sl src pos (pos + m.len)) m).map (fun v => (pos + m.len, v))
+          | some m =>
+            need r (matchToNumberN cfg (sl src pos (pos + m.len)) m)
+              ((matchToNumber cfg (sl src pos (pos + m.len)) m).map (fun v => (pos + m.len, v)))
           | none =>
             let firstThree := sl src pos (pos + 3)
-            if firstThree == S "inf" || firstThree == S "nan" then do
-              cfg.pf firstThree
-              pure (pos + 3, .flt firstThree)
+            if firstThree == S "inf" || firstThree == S "nan" then
+              need r (cfg.pfN firstThree) (do
+                cfg.pf firstThree
+                pure (pos + 3, .flt firstThree))
             else
               let firstFour := sl src pos (pos + 4)
               if firstFour == S "-inf" || firstFour == S "+inf" || firstFour == S "-nan" ||
-                  firstFour == S "+nan" then do
-                cfg.pf firstFour
-                pure (pos + 4, .flt firstFour)
-              else .error (tdeS "Invalid value" src pos)
+                  firstFour == S "+nan" then
+                need r (cfg.pfN firstFour) (do
+                  cfg.pf firstFour
+                  pure (pos + 4, .flt firstFour))
+              else need r 1 (.error (tdeS "Invalid value" src pos))
 
-/-- `parse_array`, _parser.py:508-529. -/
-def parseArray (cfg : Cfg) (src : Str) : Nat → Nat → Py (Nat × TVal)
+/-- `parse_array`, _parser.py:508-529, with `r` frames left below its own. -/
+def parseArray (cfg : Cfg) (src : Str) (r : Nat) : Nat → Nat → Py (Nat × TVal)
   | 0, _ => .error .modelFuel
   | fuel + 1, pos => do
     let pos := pos + 1
-    let pos ← skipCawF src pos
+    let pos ← need r (skipCawN src pos) (skipCawF src pos)
     if startsAt src pos [93] then pure (pos + 1, .arr [])
-    else arrayLoop cfg src fuel pos []
+    else arrayLoop cfg src r fuel pos []
 
-/-- The loop of `parse_array`, _parser.py:515-529. -/
-def arrayLoop (cfg : Cfg) (src : Str) : Nat → Nat → List TVal → Py (Nat × TVal)
+/-- The loop of `parse_array`, _parser.py:515-529. The error's `__init__` at :524 needs one
+frame, fewer than the `skip_comments_and_array_ws` before it. -/
+def arrayLoop (cfg : Cfg) (src : Str) (r : Nat) : Nat → Nat → List TVal → Py (Nat × TVal)
   | 0, _, _ => .error .modelFuel
   | fuel + 1, pos, array => do
-    let (pos, val) ← parseValue cfg src fuel pos
+    let (pos, val) ← need r 1 (parseValue cfg src (r - 1) fuel pos)
     let array := array ++ [val]
-    let pos ← skipCawF src pos
+    let pos ← need r (skipCawN src pos) (skipCawF src pos)
     let c := sl src pos (pos + 1)
     if c == [93] then return (pos + 1, .arr array)
     if c != [44] then .error (tdeS "Unclosed array" src pos)
     else
       let pos := pos + 1
-      let pos ← skipCawF src pos
+      let pos ← need r (skipCawN src pos) (skipCawF src pos)
       if startsAt src pos [93] then pure (pos + 1, .arr array)
-      else arrayLoop cfg src fuel pos array
+      else arrayLoop cfg src r fuel pos array
 
-/-- `parse_inline_table`, _parser.py:532-563. -/
-def parseInlineTable (cfg : Cfg) (src : Str) : Nat → Nat → Py (Nat × TVal)
+/-- `parse_inline_table`, _parser.py:532-563, with `r` frames left below its own. `NestedDict()`
+and `Flags()` (:534-535) run an `__init__` each, one frame, fewer than the
+`skip_comments_and_array_ws` after them. -/
+def parseInlineTable (cfg : Cfg) (src : Str) (r : Nat) : Nat → Nat → Py (Nat × TVal)
   | 0, _ => .error .modelFuel
   | fuel + 1, pos => do
     let pos := pos + 1
-    let pos ← skipCawF src pos
+    let pos ← need r (skipCawN src pos) (skipCawF src pos)
     if startsAt src pos [125] then pure (pos + 1, .tbl [])
-    else inlineLoop cfg src fuel pos [] Flags.init
+    else inlineLoop cfg src r fuel pos [] Flags.init
 
-/-- The loop of `parse_inline_table`, _parser.py:540-563, over `nested_dict.dict` and `flags`. -/
-def inlineLoop (cfg : Cfg) (src : Str) : Nat → Nat → Dict → Flags → Py (Nat × TVal)
+/-- The loop of `parse_inline_table`, _parser.py:540-563, over `nested_dict.dict` and `flags`.
+The `Flags` and `NestedDict` methods and the errors' `__init__` need one frame each, and
+`parse_key_value_pair` has just needed more (`parse_key` alone needs three, `parseKeyN_ge`). -/
+def inlineLoop (cfg : Cfg) (src : Str) (r : Nat) : Nat → Nat → Dict → Flags → Py (Nat × TVal)
   | 0, _, _, _ => .error .modelFuel
   | fuel + 1, pos, data, flags => do
-    let (pos, key, value) ← parseKeyValuePair cfg src fuel pos
+    let (pos, key, value) ← need r 1 (parseKeyValuePair cfg src (r - 1) fuel pos)
     let keyParent := key.dropLast
     let keyStem := key.getLastD []
     if flags.is_ key FROZEN then
@@ -921,27 +1095,28 @@ def inlineLoop (cfg : Cfg) (src : Str) : Nat → Nat → Dict → Flags → Py (
         if (dget nest keyStem).isSome then
           .error (tde (S "Duplicate inline table key " ++ reprS keyStem) src pos)
         else .ok (dset nest keyStem value, ())) keyParent data
-      let pos ← skipCawF src pos
+      let pos ← need r (skipCawN src pos) (skipCawF src pos)
       let c := sl src pos (pos + 1)
       if c == [125] then return (pos + 1, .tbl data)
       if c != [44] then .error (tdeS "Unclosed inline table" src pos)
       else
         let pos := pos + 1
-        let pos ← skipCawF src pos
+        let pos ← need r (skipCawN src pos) (skipCawF src pos)
         if startsAt src pos [125] then return (pos + 1, .tbl data)
         let flags ← if value.isDictOrList then flags.set key FROZEN true else pure flags
-        inlineLoop cfg src fuel pos data flags
+        inlineLoop cfg src r fuel pos data flags
 
-/-- `parse_key_value_pair`, _parser.py:449-462. -/
-def parseKeyValuePair (cfg : Cfg) (src : Str) : Nat → Nat → Py (Nat × Key × TVal)
+/-- `parse_key_value_pair`, _parser.py:449-462, with `r` frames left below its own. After
+`parse_key`, the error's `__init__` and `skip_chars` need one frame. -/
+def parseKeyValuePair (cfg : Cfg) (src : Str) (r : Nat) : Nat → Nat → Py (Nat × Key × TVal)
   | 0, _ => .error .modelFuel
   | fuel + 1, pos => do
-    let (pos, key) ← parseKey cfg.maxKeyParts src pos
+    let (pos, key) ← need r (parseKeyN cfg.maxKeyParts src pos) (parseKey cfg.maxKeyParts src pos)
     if src[pos]? != some 61 then
       .error (tdeS "Expected '=' after a key in a key/value pair" src pos)
     else
       let pos := skipChars src (pos + 1) tomlWs
-      let (pos, value) ← parseValue cfg src fuel pos
+      let (pos, value) ← need r 1 (parseValue cfg src (r - 1) fuel pos)
       pure (pos, key, value)
 
 end
@@ -981,6 +1156,13 @@ def createListRule (cfg : Cfg) (src : Str) (pos : Nat) (out : Out) : Py (Nat × 
       .error (tdeS "Expected ']]' at the end of an array declaration" src pos)
     else pure (pos + 2, key, { data, flags })
 
+/-- Frames `create_dict_rule` (`skip = 1`) and `create_list_rule` (`skip = 2`) push: their own
+and `parse_key`'s. Their other calls (`skip_chars`, the `Flags` and `NestedDict` methods,
+`append_nest_to_list` and the `get_or_create_nest` it calls, an error's `__init__`) need at most
+two, and `parse_key` at least three (`parseKeyN_ge`). -/
+def createRuleN (maxKeyParts : Nat) (src : Str) (pos skip : Nat) : Nat :=
+  1 + parseKeyN maxKeyParts src (skipChars src (pos + skip) tomlWs)
+
 /-- The `for cont_key in relative_path_cont_keys` loop of `key_value_rule`, _parser.py:422-429. -/
 def contKeysLoop (src : Str) (pos : Nat) : List Key → Flags → Py Flags
   | [], fl => .ok fl
@@ -989,9 +1171,11 @@ def contKeysLoop (src : Str) (pos : Nat) : List Key → Flags → Py Flags
       .error (tde (S "Cannot redefine namespace " ++ keyRepr ck) src pos)
     else contKeysLoop src pos cks (fl.addPending ck EXPLICIT_NEST)
 
-/-- `key_value_rule`, _parser.py:415-446. -/
-def keyValueRule (cfg : Cfg) (src : Str) (pos : Nat) (out : Out) (header : Key) : Py (Nat × Out) := do
-  let (pos, key, value) ← parseKeyValuePair cfg src (vFuel src) pos
+/-- `key_value_rule`, _parser.py:415-446, with `r` frames left below its own. The `Flags` and
+`NestedDict` methods and the errors' `__init__` need one frame each, fewer than
+`parse_key_value_pair` needed. -/
+def keyValueRule (cfg : Cfg) (src : Str) (r : Nat) (pos : Nat) (out : Out) (header : Key) : Py (Nat × Out) := do
+  let (pos, key, value) ← need r 1 (parseKeyValuePair cfg src (r - 1) (vFuel src) pos)
   let keyParent := key.dropLast
   let keyStem := key.getLastD []
   let absKeyParent := header ++ keyParent
@@ -1014,35 +1198,38 @@ def crlf : Str → Str
   | c :: r => c :: crlf r
   | [] => []
 
-/-- The statement loop of `loads`, _parser.py:169-217. -/
-def mainLoop (cfg : Cfg) (src : Str) : Nat → Nat → Out → Key → Py Dict
+/-- The statement loop of `loads`, _parser.py:169-217, with `r` frames left below `loads`'s own.
+`loads` has checked `r ≥ 3`, more than `skip_chars`, `finalize_pending` (and the `Flags.set` it
+calls) and an error's `__init__` need. -/
+def mainLoop (cfg : Cfg) (src : Str) (r : Nat) : Nat → Nat → Out → Key → Py Dict
   | 0, _, _, _ => .error .modelFuel
   | fuel + 1, pos, out, header =>
     let pos := skipChars src pos tomlWs
     match src[pos]? with
     | none => .ok out.data
     | some c =>
-      if c == 10 then mainLoop cfg src fuel (pos + 1) out header
+      if c == 10 then mainLoop cfg src r fuel (pos + 1) out header
       else do
         let (pos, out, header) ←
           if keyInitial c then do
-            let (p, o) ← keyValueRule cfg src pos out header
+            let (p, o) ← need r 1 (keyValueRule cfg src (r - 1) pos out header)
             pure (skipChars src p tomlWs, o, header)
           else if c == 91 then do
             let second := src[pos + 1]?
             let flags ← out.flags.finalizePending
             let out := { out with flags }
-            let (p, key, o) ← if second == some 91 then createListRule cfg src pos out
-              else createDictRule cfg src pos out
+            let (p, key, o) ← if second == some 91 then
+                need r (createRuleN cfg.maxKeyParts src pos 2) (createListRule cfg src pos out)
+              else need r (createRuleN cfg.maxKeyParts src pos 1) (createDictRule cfg src pos out)
             pure (skipChars src p tomlWs, o, key)
           else if c != 35 then .error (tdeS "Invalid statement" src pos)
           else pure (pos, out, header)
-        let pos ← skipComment src pos
+        let pos ← need r (skipCommentN src pos) (skipComment src pos)
         match src[pos]? with
         | none => .ok out.data
         | some c =>
           if c != 10 then .error (tdeS "Expected newline or end of document after a statement" src pos)
-          else mainLoop cfg src fuel (pos + 1) out header
+          else mainLoop cfg src r fuel (pos + 1) out header
 
 /-- The first argument of `loads`: a `str`, or an object whose `replace` raises
 `AttributeError` or `TypeError` (its `type(s).__qualname__`). -/
@@ -1052,17 +1239,28 @@ inductive SArg where
   deriving Repr, DecidableEq, Inhabited
 
 /-- The configuration `loads` runs with. -/
-def mkCfg (pf : ParseFloat) (maxKeyParts maxStrDigits : Nat) : Cfg :=
-  { pf := makeSafeParseFloat pf, maxKeyParts, maxStrDigits }
+def mkCfg (pf : ParseFloat) (maxKeyParts maxStrDigits : Nat) (tzCached : TzCache) : Cfg :=
+  { pf := makeSafeParseFloat pf, pfN := makeSafeParseFloatN pf, maxKeyParts, maxStrDigits, tzCached }
 
-/-- `loads(s, parse_float=pf)`, _parser.py:151-219. -/
-def loads (pf : ParseFloat) (maxKeyParts maxStrDigits : Nat) (s : SArg) : Py Dict :=
+/-- `loads(s, parse_float=pf)`, _parser.py:151-219, called with `frames` frames left.
+
+`Output()` (:163) runs `Output.__init__`, which instantiates `NestedDict` and `Flags`. Once the
+call site is specialized, `CALL_ALLOC_AND_ENTER_INIT` (Python/bytecodes.c:4815-4823) takes two
+frames for an instantiation, an `_Py_InitCleanup` shim and `__init__` (:4790-4813), when at least
+two are left (`_CHECK_RECURSION_REMAINING`, :4611-4613), and the generic call takes one
+otherwise; so `Output()` succeeds exactly when three are left: the shim, `Output.__init__`, and
+one for `NestedDict()`. (Instantiating a class whose `__init__` calls nothing needs one frame
+either way.) The model takes the call sites as specialized, which they are after a few calls of
+`loads`; on a cold call site two frames suffice. `make_safe_parse_float` (:165) needs one. -/
+def loads (pf : ParseFloat) (maxKeyParts maxStrDigits : Nat) (tzCached : TzCache)
+    (frames : Nat) (s : SArg) : Py Dict :=
+  need frames 1 <|
   match s with
   | .other q => .error (.typeError s!"Expected str object, not '{q}'")
   | .str s =>
     let src := crlf s
-    let cfg := mkCfg pf maxKeyParts maxStrDigits
-    mainLoop cfg src (src.length + 1) 0 Out.init []
+    let cfg := mkCfg pf maxKeyParts maxStrDigits tzCached
+    need (frames - 1) 3 (mainLoop cfg src (frames - 1) (src.length + 1) 0 Out.init [])
 
 /-- What `fp.read()` returned: `bytes`/`bytearray`, an object without `decode` (a `str` from a
 text file), or an object whose `decode()` gives this outcome. -/
@@ -1074,8 +1272,10 @@ inductive ReadVal where
 def binaryModeMsg : String :=
   "File must be opened in binary mode, e.g. use `open('foo.toml', 'rb')`"
 
-/-- `load(fp, parse_float=pf)`, _parser.py:139-148. `read` is the outcome of `fp.read()`. -/
-def load (pf : ParseFloat) (maxKeyParts maxStrDigits : Nat) (read : Py ReadVal) : Py Dict := do
+/-- `load(fp, parse_float=pf)`, _parser.py:139-148, called with `frames` frames left. `read` is
+the outcome of `fp.read()` (the frames it needs are part of that outcome). -/
+def load (pf : ParseFloat) (maxKeyParts maxStrDigits : Nat) (tzCached : TzCache)
+    (frames : Nat) (read : Py ReadVal) : Py Dict := need frames 1 do
   let b ← read
   let s ← match b with
     | .bytes b => (UnicodeObj.utf8Decode b .strict).map SArg.str
@@ -1084,6 +1284,6 @@ def load (pf : ParseFloat) (maxKeyParts maxStrDigits : Nat) (read : Py ReadVal) 
       match r with
       | .error (.named "AttributeError" _) => .error (.typeError binaryModeMsg)
       | r => r
-  loads pf maxKeyParts maxStrDigits s
+  loads pf maxKeyParts maxStrDigits tzCached (frames - 1) s
 
 end PyLean.TextLibs.Toml
