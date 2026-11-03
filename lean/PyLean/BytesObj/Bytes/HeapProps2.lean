@@ -1604,9 +1604,9 @@ theorem initFast_ok : ∀ (vs : List Nat) (i : Nat) (cur : BA) (pre : List Int),
 nothing, whatever the argument (`_canresize` comes first); otherwise the object is emptied first and
 then: no argument leaves it empty; an `int` `n > 0` gives `n` zero bytes, a negative one
 `ValueError('negative count')` (the object stays empty), one outside `Py_ssize_t` the `OverflowError`
-of `PyNumber_AsSsize_t`; a buffer gives its bytes; a list of `int`s goes through the fast path, which
-gives the values when all are in `range(256)` and otherwise empties the object again and raises the
-`ValueError` of the first bad one (so no unwritten byte is left, `InitInitialised`). For every heap
+of `PyNumber_AsSsize_t`; a C buffer gives its bytes; a list of `int`s all in `range(256)` goes
+through the fast path and gives the values. (The fast path's `ValueError`, its fall back to the slow
+path, tuples, iterators, a Python `__buffer__` and the `TypeError`s are `BaInitPaths`.) For every heap
 and argument below 2^46 bytes. -/
 def BaInitESpec : Prop :=
   ∀ h : H,
