@@ -1822,10 +1822,38 @@ typeobj-exc-attributeerror-init	proven	Objects/exceptions.c	AttributeError_init
 typeobj-exc-oserror-parsed-once	proven	Objects/exceptions.c	oserror_use_init
 typeobj-exc-oserror-remap	proven	Objects/exceptions.c	
 typeobj-exc-oserror-errnomap	proven	Objects/exceptions.c	
-typeobj-exc-oserror-positions	proven	Objects/exceptions.c	OSError_init
+typeobj-exc-oserror-positions	proven	Objects/exceptions.c	
 typeobj-exc-oserror-reduce	proven	Objects/exceptions.c	
 typeobj-exc-oserror-str	proven	Objects/exceptions.c	OSError_str
+typeobj-exc-oserror-str-branches	proven	Objects/exceptions.c	OSError_str
+typeobj-exc-oserror-str-no-crash	refuted	Objects/exceptions.c	OSError_str
+typeobj-exc-oserror-str-fixed-on-cex	proven	Objects/exceptions.c	
+typeobj-exc-oserror-str-fixed-no-crash	open	Objects/exceptions.c	
 typeobj-exc-oserror-written	proven	Objects/exceptions.c	OSError_written_get,OSError_written_set
+typeobj-exc-new-stores	proven	Objects/exceptions.c	BaseException_new
+typeobj-exc-init-kw	proven	Objects/exceptions.c	BaseException_init
+typeobj-exc-vectorcall-kw	proven	Objects/exceptions.c	BaseException_vectorcall
+typeobj-exc-traceback-set-stores	proven	Objects/exceptions.c	BaseException___traceback___set_impl,BaseException_with_traceback_impl
+typeobj-exc-chain-refusals	proven	Objects/exceptions.c	BaseException___context___set_impl,BaseException___cause___set_impl
+typeobj-exc-args-set-get	proven	Objects/exceptions.c	BaseException_args_set_impl,BaseException_args_get_impl
+typeobj-exc-add-note-branches	proven	Objects/exceptions.c	BaseException_add_note_impl
+typeobj-exc-clear-fields	proven	Objects/exceptions.c	BaseException_clear,MemoryError_dealloc,get_memory_error
+typeobj-exc-eg-new-refusals	proven	Objects/exceptions.c	BaseExceptionGroup_new
+typeobj-exc-eg-new-stores	proven	Objects/exceptions.c	BaseExceptionGroup_new
+typeobj-exc-eg-repr-list	proven	Objects/exceptions.c	BaseExceptionGroup_repr
+typeobj-exc-matcher-refuses	proven	Objects/exceptions.c	get_matcher_type
+typeobj-exc-check-match-branches	proven	Objects/exceptions.c	exceptiongroup_split_check_match
+typeobj-exc-subset-notes	proven	Objects/exceptions.c	exceptiongroup_subset
+typeobj-exc-projection-leaf-group	proven	Objects/exceptions.c	exception_group_projection
+typeobj-exc-same-metadata-iff	proven	Objects/exceptions.c	is_same_exception_metadata
+typeobj-exc-prep-reraise-group	proven	Objects/exceptions.c	_PyExc_PrepReraiseStar
+typeobj-exc-prep-reraise-handoff	proven	Objects/exceptions.c	PyUnstable_Exc_PrepReraiseStar
+typeobj-exc-importerror-init-kw	proven	Objects/exceptions.c	ImportError_init
+typeobj-exc-importerror-getstate-reduce	proven	Objects/exceptions.c	ImportError_getstate,ImportError_reduce
+typeobj-exc-oserror-use-init-slots	proven	Objects/exceptions.c	oserror_use_init
+typeobj-exc-oserror-init-use-init	proven	Objects/exceptions.c	OSError_init
+typeobj-exc-oserror-init-effects	proven	Objects/exceptions.c	OSError_init
+typeobj-exc-oserror-written-set	proven	Objects/exceptions.c	OSError_written_set
 typeobj-exc-syntaxerror-init	proven	Objects/exceptions.c	SyntaxError_init
 typeobj-exc-my-basename	proven	Objects/exceptions.c	my_basename
 typeobj-exc-syntaxerror-lineno	proven	Objects/exceptions.c	SyntaxError_str
@@ -1852,7 +1880,7 @@ typeobj-exc-eg-init	proven	Objects/exceptions.c	BaseExceptionGroup_init
 typeobj-exc-eg-repr-in-bounds	proven	Objects/exceptions.c	BaseExceptionGroup_repr
 typeobj-exc-eg-repr-after-new	proven	Objects/exceptions.c	BaseExceptionGroup_repr,BaseExceptionGroup_new
 typeobj-exc-eg-repr-saved	proven	Objects/exceptions.c	BaseExceptionGroup_repr
-typeobj-exc-eg-created-through-class	proven	Objects/exceptions.c	BaseExceptionGroup_derive_impl,_PyExc_CreateExceptionGroup
+typeobj-exc-eg-created-through-class	proven	Objects/exceptions.c	
 typeobj-exc-eg-bases	proven	Objects/exceptions.c	
 typeobj-exc-subset-metadata	proven	Objects/exceptions.c	exceptiongroup_subset
 typeobj-exc-subset-suppress-context	refuted	Objects/exceptions.c	exceptiongroup_subset,PyException_SetCause
