@@ -12,6 +12,8 @@ log (with the outcomes of re-entered calls), and the raw's final contents and
 position are compared with the Lean models (`buf_c`, `buf_py`).
 
 A C case with hooks runs in a forked child, so a crash is an outcome ("crash").
+A case the model calls undefined behaviour ("ub") is not compared or counted in
+"agree"; only the operations that finished before the UB are (see `main`).
 _pyio's locks are swapped for ones that raise instead of blocking forever when
 taken twice by the same thread, so a deadlock is an outcome too ("hang").
 """
@@ -296,8 +298,9 @@ def sstep(rng):
         return {"bad": rng.choice([-1, -5, 2**64, 0, 3])}
     if r < 0.85:
         return {"wrong": 1}
-    c, m, _ = rng.choice(EXC[:2])
-    return {"raise": c, "msg": m}
+    # a BlockingIOError subclass from seek counts as blocking in the write path
+    c, m = rng.choice([("ValueError", "boom"), ("OSError", "bad"), ("MyBlockingError", "x")])
+    return {"raise": c, "msg": m, "mro": [k.__name__ for k in CLASSES[c].__mro__]}
 
 
 def qstep(rng):
@@ -565,8 +568,12 @@ def gen_chunk(rng):
 
 
 def main():
-    """common.main, except that a case the model calls undefined behaviour ("ub": a
-    memcpy of a negative length) has no outcome to compare: it is counted apart."""
+    """common.main, except for a case the model calls undefined behaviour ("ub": a
+    memcpy of a negative length, a store through a stale or NULL pointer above the
+    unmapped page). Its outcome is not compared, and it is not counted in "agree":
+    only the results of the operations that finished before the UB are, by running
+    those operations alone (forked) and comparing their results with the model's.
+    A UB inside `__init__` has no such prefix."""
     import argparse
     import random
     ap = argparse.ArgumentParser()
@@ -579,25 +586,45 @@ def main():
         c = gen_chunk(rng)
         if c is not None:
             cases.append(c)
-    mismatches, ub, by_fn = 0, 0, {}
+    mismatches, bad, by_fn = 0, 0, {}
+    ub, ub_init, ub_pre_ok, ub_ops = 0, 0, 0, 0
+
+    def report(c, py, lo):
+        nonlocal mismatches
+        mismatches += 1
+        if mismatches <= 20:
+            print(f"MISMATCH {json.dumps(c)}\n  python: {py}\n  lean:   {lo}", file=sys.stderr)
+
     for c, lo in zip(cases, common.run_lean(cases)):
-        tot = by_fn.setdefault(c["fn"], [0, 0])
-        tot[0] += 1
+        tot = by_fn.setdefault(c["fn"], [0, 0, 0])
         if lo.get("ub"):
             ub += 1
-            tot[1] += 1
+            tot[2] += 1
+            pre = lo.get("prefix")
+            if pre is None:
+                ub_init += 1
+                continue
+            # the operations before the one the model calls UB, in a fresh process
+            py = run_forked(dict(c, ops=c["ops"][:len(pre)]))
+            if py.get("ok") == pre:
+                ub_pre_ok += 1
+                ub_ops += len(pre)
+            else:
+                report(c, py, lo)
             continue
+        tot[0] += 1
         py = run_python(c)
         ok = "harness_error" not in lo and common.agree(py, lo)
         tot[1] += ok
         if not ok:
-            mismatches += 1
-            if mismatches <= 20:
-                print(f"MISMATCH {json.dumps(c)}\n  python: {py}\n  lean:   {lo}", file=sys.stderr)
-    for fn, (n, good) in sorted(by_fn.items()):
-        print(f"{fn:20s} {good}/{n}")
-    print(f"undefined behaviour (not compared): {ub}")
-    print(f"python {sys.version.split()[0]}: {len(cases) - mismatches}/{len(cases)} agree")
+            bad += 1
+            report(c, py, lo)
+    for fn, (n, good, u) in sorted(by_fn.items()):
+        print(f"{fn:20s} {good}/{n} agree ({u} ub, not compared)")
+    compared = len(cases) - ub
+    print(f"ub cases: {ub} ({ub_init} in __init__); the results before the UB agree in "
+          f"{ub_pre_ok}/{ub - ub_init} ({ub_ops} operations)")
+    print(f"python {sys.version.split()[0]}: {compared - bad}/{compared} agree ({ub} ub, not compared)")
     sys.exit(1 if mismatches else 0)
 
 

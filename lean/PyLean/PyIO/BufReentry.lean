@@ -23,7 +23,7 @@ def Outcome.isInitErr {σ : Type} : Outcome σ → Bool
   | _ => false
 
 def Outcome.isUB {σ : Type} : Outcome σ → Bool
-  | .ub => true
+  | .ub _ _ => true
   | _ => false
 
 def Outcome.results {σ : Type} : Outcome σ → List (Py Val)
@@ -81,7 +81,9 @@ theorem reinit_unlocked_ok :
 /-- A re-entered `__init__(raw, 0)` fails, but only after storing `buffer_size = 0`
 (bufferedio.c:1605, refused at :841). In `read(10)` on a reader of size 3 (not a
 power of two, so `buffer_mask` is 0), the next `MINUS_LAST_BLOCK` divides by it:
-the process dies of SIGFPE. -/
+the process dies of SIGFPE. That is x86-64, where the model's `crash` for a division by
+zero holds (measured on 3.15.2); C calls it undefined behaviour, and on AArch64 `sdiv`
+returns 0 instead of trapping. -/
 def size0ReadRaw : Raw := { plainRaw (List.replicate 20 120) with hooks := [(4, .reinit 0)] }
 
 theorem bufferedCNoCrash_refuted_size0 : ¬BufferedCNoCrash := by
@@ -121,8 +123,10 @@ theorem reinit_negative_read :
 
 /-- In `write(10 bytes)` on a writer of size 5 whose `raw.write` re-enters
 `__init__(raw, s)` and answers `None`: with `s = -1`, `memcpy(self->buffer, ...,
-self->buffer_size)` (:2195-2196) is given a huge `size_t`: undefined behaviour
-(measured: SIGSEGV for this writer; a `BufferedRandom` ran on with a corrupted heap);
+self->buffer_size)` (:2195-2196) is given a huge `size_t`: undefined behaviour, which
+is why the model claims no outcome. What happens depends on the heap layout: we measured
+SIGSEGV for this writer, a reviewer's raw got `BlockingIOError` with
+`characters_written` -1, and a `BufferedRandom` ran on with a corrupted heap;
 with `s = 0` it copies nothing and the write raises `BlockingIOError` (0 written). -/
 theorem reinit_negative_write :
     (runC 1 { plainRaw [] with ws := [.block], hooks := [(4, .reinit (-1))] } 5
@@ -135,8 +139,8 @@ theorem reinit_negative_write :
 /-- A re-entered `__init__(raw, 2**48)` frees the buffer (:846-847) and fails to
 allocate the new one (:848-851): `self->buffer` is `NULL` when `read(4)` on a reader of
 size 8 copies the filled bytes out of it with `memcpy(out, self->buffer + self->pos, 4)`
-(:1877) at `pos` 0, an address no unprivileged Linux process can map, and the process
-dies (measured: SIGSEGV). The raw answers 8 without storing anything, so nothing is
+(:1877) at `pos` 0, an address below `unmappedBelow` (a platform assumption: Linux with
+`vm.mmap_min_addr` at least 4096), and the process dies (measured: SIGSEGV). The raw answers 8 without storing anything, so nothing is
 written into the freed buffer before that. -/
 theorem reinit_nomem_read_crash :
     (runC 0 { plainRaw (List.replicate 20 120) with rs := [.bad 8], hooks := [(4, .reinit (2 ^ 48))] } 8

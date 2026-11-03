@@ -30,9 +30,14 @@ def getRStep (j : Json) : Except String RStep := do
   if let .ok _ := j.getObjVal? "wrong" then return .wrong
   return .short (← (← j.getObjVal? "short").getNat?)
 
+def getMro (j : Json) : Except String (List String) :=
+  match j.getObjVal? "mro" with
+  | .ok v => do (← v.getArr?).toList.mapM Json.getStr?
+  | .error _ => pure []
+
 def getSStep (j : Json) : Except String SStep := do
   if j matches .null then return .ok
-  if let some (c, m) ← getRaise j then return .raise c m
+  if let some (c, m) ← getRaise j then return .raise c m (← getMro j)
   if let .ok _ := j.getObjVal? "wrong" then return .wrong
   return .bad (← (← j.getObjVal? "bad").getInt?)
 
@@ -122,12 +127,14 @@ def getRaw (j : Json) : Except String Raw := do
       let a ← v.getArr?
       pure (some ((← (a.getD 0 .null).getStr?), (← (a.getD 1 .null).getStr?)))
   return { data, pos := 0, rs, ws, ss, cs, qs, flushRet := fr, canRead := fl.getD 0 0 != 0, canWrite := fl.getD 1 0 != 0,
-           canSeek := fl.getD 2 0 != 0, closed := false, closeFail := cf, hooks, tick := 0, log := [] }
+           canSeek := fl.getD 2 0 != 0, closed := false, excMro := [], closeFail := cf, hooks, tick := 0, log := [] }
 
 def encOutcome {σ : Type} (m : Bool) (raw : σ → Raw) : Outcome σ → Json
   | .crashed => Json.mkObj [("ok", Json.null), ("crash", Json.bool true)]
   | .hung => Json.mkObj [("ok", Json.null), ("hang", Json.bool true)]
-  | .ub => Json.mkObj [("ok", Json.null), ("ub", Json.bool true)]
+  -- the results before the undefined behaviour, which the harness compares
+  | .ub init rs => Json.mkObj [("ok", Json.null), ("ub", Json.bool true),
+      ("prefix", if init then Json.null else Json.arr (rs.map (fun x => encPy bVal (maskPy m x))).toArray)]
   | .initErr e => encPy (fun (_ : Unit) => Json.null) (.error e)
   | .done s rs =>
     let r := raw s

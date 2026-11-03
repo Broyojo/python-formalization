@@ -14,7 +14,8 @@ summary: |
   is running, which goes on using it:
   - `BufferedReader.read(10)` on a reader whose size is not a power of two: the next
     `MINUS_LAST_BLOCK` computes `self->buffer_size * (size / self->buffer_size)` with
-    `buffer_size == 0` and the process dies of SIGFPE (integer division by zero);
+    `buffer_size == 0` and the process dies of SIGFPE (integer division by zero: undefined
+    behaviour in C, which traps on x86-64, where this was measured; AArch64 gives 0);
   - `BufferedWriter.write(b)` with `len(b) >= buffer_size`: `while (remaining >= self->buffer_size)`
     becomes `while (0 >= 0)` once everything is written, and the method calls `raw.write(b'')`
     forever.
@@ -25,7 +26,8 @@ summary: |
   - a negative size is stored too (`Py_ssize_t`): `__init__(raw, -1)` makes `MINUS_LAST_BLOCK`
     compute `-1 * (n / -1) = n` and the read completes, but in `write`, with `raw.write`
     answering None, `memcpy(self->buffer, ..., self->buffer_size)` gets `(size_t)-1`: undefined
-    behaviour (SIGSEGV for a writer; a BufferedRandom was seen running on with a corrupted heap).
+    behaviour whose result depends on the heap layout (SIGSEGV for our writer; a reviewer's raw
+    got BlockingIOError with characters_written -1; a BufferedRandom ran on with a corrupted heap).
   Same family as pyio-buffered-reentrant-init-free (an `__init__` that bypasses the method lock),
   but a different mechanism: here `_buffered_init` refuses and frees nothing.
 likelihood: |
