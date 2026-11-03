@@ -276,24 +276,85 @@ def PyVal.toJ : PyVal → Json
   | .complex re im => Json.mkObj [("c", toJson [re, im])]
   | .str c => Json.mkObj [("s", toJson c)]
   | .obj t _ => Json.mkObj [("o", toJson t)]
+  | .user t _ _ _ _ => Json.mkObj [("o", toJson t)]
+
+/-- The exception a `DeprecationWarning` turned into an error raises; its message embeds
+`%T` names, so only the class is compared. -/
+def warnErr (w : Bool) : Option PyExc :=
+  if w then some (.named "DeprecationWarning" "~deprecated subclass result") else none
+
+/-- A user method's result: `{"f": bits}`, `{"fs": [cls, bits, warn]}`, `{"i": n}`,
+`{"is": [cls, n, warn]}`, `{"c": [re, im]}`, `{"cs": [cls, re, im, warn]}`, `{"o": cls}` or
+`{"r": msg}` (raises `ValueError(msg)`). -/
+def jRet (j : Json) : Except String Ret := do
+  let at_ (a : Array Json) (k : Nat) : Except String Json :=
+    match a[k]? with | some v => .ok v | none => .error "ret"
+  match j.getObjVal? "f", j.getObjVal? "fs", j.getObjVal? "i", j.getObjVal? "is" with
+  | .ok b, _, _, _ => return .float (← b.getNat?)
+  | _, .ok a, _, _ =>
+    let a ← a.getArr?
+    return .floatSub (← (← at_ a 0).getStr?) (← (← at_ a 1).getNat?) (warnErr (← (← at_ a 2).getBool?))
+  | _, _, .ok n, _ => return .int (← n.getInt?)
+  | _, _, _, .ok a =>
+    let a ← a.getArr?
+    return .intSub (← (← at_ a 0).getStr?) (← (← at_ a 1).getInt?) (warnErr (← (← at_ a 2).getBool?))
+  | _, _, _, _ =>
+    match j.getObjVal? "c", j.getObjVal? "cs", j.getObjVal? "o", j.getObjVal? "r" with
+    | .ok c, _, _, _ =>
+      let a ← c.getArr?
+      return .complex (← (← at_ a 0).getNat?) (← (← at_ a 1).getNat?)
+    | _, .ok a, _, _ =>
+      let a ← a.getArr?
+      return .complexSub (← (← at_ a 0).getStr?) (← (← at_ a 1).getNat?) (← (← at_ a 2).getNat?)
+        (warnErr (← (← at_ a 3).getBool?))
+    | _, _, .ok o, _ => return .other (← o.getStr?)
+    | _, _, _, .ok m => return .raises (.valueError (← m.getStr?))
+    | _, _, _, _ => throw "ret"
+
+def jOptRet (j : Option Json) : Except String (Option Ret) :=
+  match j with
+  | none | some .null => .ok none
+  | some r => some <$> jRet r
+
+def jBase (j : Json) : Except String UBase :=
+  match j with
+  | .null => .ok .plain
+  | j =>
+    match j.getObjVal? "f", j.getObjVal? "c", j.getObjVal? "i" with
+    | .ok b, _, _ => UBase.float <$> b.getNat?
+    | _, .ok c, _ => do
+      let a ← c.getArr?
+      let some re := a[0]? | throw "base"
+      let some im := a[1]? | throw "base"
+      return .complex (← re.getNat?) (← im.getNat?)
+    | _, _, .ok n => UBase.int <$> n.getInt?
+    | _, _, _ => .error "base"
+
+def jPlainObj (j : Json) : Except String PyVal :=
+  match j.getObjVal? "f", j.getObjVal? "s", j.getObjVal? "o", j.getObjVal? "c" with
+  | .ok b, _, _, _ => PyVal.float <$> b.getNat?
+  | _, .ok c, _, _ => do
+    let arr ← c.getArr?
+    return .str (← arr.toList.mapM (·.getNat?))
+  | _, _, .ok t, _ => do
+    let i ← jOptInt ((j.getObjVal? "i").toOption.getD .null)
+    return .obj (← t.getStr?) i
+  | _, _, _, .ok c => do
+    let arr ← c.getArr?
+    let some re := arr[0]? | throw "complex"
+    let some im := arr[1]? | throw "complex"
+    return .complex (← re.getNat?) (← im.getNat?)
+  | _, _, _, _ => .error "value"
 
 def jVal (j : Json) : Except String PyVal :=
   match j with
   | .obj _ =>
-    match j.getObjVal? "f", j.getObjVal? "s", j.getObjVal? "o", j.getObjVal? "c" with
-    | .ok b, _, _, _ => PyVal.float <$> b.getNat?
-    | _, .ok c, _, _ => do
-      let arr ← c.getArr?
-      return .str (← arr.toList.mapM (·.getNat?))
-    | _, _, .ok t, _ => do
-      let i ← jOptInt ((j.getObjVal? "i").toOption.getD .null)
-      return .obj (← t.getStr?) i
-    | _, _, _, .ok c => do
-      let arr ← c.getArr?
-      let some re := arr[0]? | throw "complex"
-      let some im := arr[1]? | throw "complex"
-      return .complex (← re.getNat?) (← im.getNat?)
-    | _, _, _, _ => .error "value"
+    match j.getObjVal? "u" with
+    | .ok u => do
+      return .user (← u.getStr?) (← jBase ((j.getObjVal? "b").toOption.getD .null))
+        (← jOptRet (j.getObjVal? "fl").toOption) (← jOptRet (j.getObjVal? "ix").toOption)
+        (← jOptRet (j.getObjVal? "cx").toOption)
+    | .error _ => jPlainObj j
   | v => PyVal.int <$> v.getInt?
 
 def jVals (j : Json) : Except String (List PyVal) := do
@@ -319,8 +380,39 @@ def eqOf (x : PyVal) : PyVal → Py Bool := fun v =>
 def arrJ (a : Arr) : Json :=
   Json.arr #[natsJ (arrToBytes a), toJson a.allocated, toJson a.hasBuf]
 
-def strRepr (s : List Nat) : String := "<str " ++ toString s ++ ">"
-def floatRepr (b : Nat) : String := s!"<float {b}>"
+/-- What the scripted `read` of the difftest does to the array before it returns (`k`):
+nothing, append a zero item (`a.frombytes(bytes(a.itemsize))`), clear it, or open a
+`memoryview` of it that stays open. A failure is raised from `read`. -/
+def readMut (k : Nat) (a : Arr) : Option PyExc × Arr :=
+  match k with
+  | 1 =>
+    match arrFromBytes a (List.replicate a.tc.itemsize.toNat 0) 1 with
+    | .ok a' => (none, a')
+    | .error e => (some e, a)
+  | 2 =>
+    match arrClear a with
+    | .ok a' => (none, a')
+    | .error e => (some e, a)
+  | 3 => (none, { a with exports := a.exports + 1 })
+  | _ => (none, a)
+
+/-- `io.BytesIO(bs).read(n)` (`n >= 0`) after `readMut k`. -/
+def scriptRead (bs : List Nat) (k : Nat) : ReadFn := fun n a =>
+  match readMut k a with
+  | (some e, a) => (.raises e, a)
+  | (none, a) => (.bytes (bs.take n.toNat), a)
+
+/-- The scripted `write` of the difftest: mode 1 raises `ValueError("write")` at call `k`,
+mode 2 appends a zero item at each call (the array only grows, so every block stays inside
+it), anything else just records. -/
+def scriptWrite (mode k : Nat) : WriteFn := fun i _ a =>
+  match mode with
+  | 1 => if i = k then (.error (.valueError "write"), a) else (.ok (), a)
+  | 2 =>
+    match arrFromBytes a (List.replicate a.tc.itemsize.toNat 0) 1 with
+    | .ok a' => (.ok (), a')
+    | .error e => (.error e, a)
+  | _ => (.ok (), a)
 
 /-- An array of the typecode of `tcj` holding the C values of `vs`. -/
 def arrOf (tc : TC) (vs : List PyVal) : Except String Arr :=
@@ -402,15 +494,21 @@ def stepArr (s : AState) (op : Array Json) : Except String (Json × AState) := d
   | "tobytes" => return same (okJ (natsJ (arrToBytes a)))
   | "fromfile" =>
     let bs ← jNats (← arg op 1)
-    let (r, a') := arrFromFile a (fun n => .bytes (bs.take n.toNat)) (← jInt (← arg op 2))
+    let (r, a', _) := arrFromFile a (scriptRead bs 0) (← jVal (← arg op 2))
+    return (pyJ (fun _ => unitJ) r, { s with a := a' })
+  | "fromfile_mut" =>
+    let bs ← jNats (← arg op 1)
+    let (r, a', _) := arrFromFile a (scriptRead bs (← (← arg op 3).getNat?)) (← jVal (← arg op 2))
     return (pyJ (fun _ => unitJ) r, { s with a := a' })
   | "fromfile_notbytes" =>
-    let (r, a') := arrFromFile a (fun _ => .notBytes) (← jInt (← arg op 1))
+    let (r, a', _) := arrFromFile a (fun _ a => (.notBytes, a)) (← jVal (← arg op 1))
     return (pyJ (fun _ => unitJ) r, { s with a := a' })
   | "fromfile_raise" =>
-    let (r, a') := arrFromFile a (fun _ => .raises (.valueError "read")) (← jInt (← arg op 1))
+    let (r, a', _) := arrFromFile a (fun _ a => (.raises (.valueError "read"), a)) (← jVal (← arg op 1))
     return (pyJ (fun _ => unitJ) r, { s with a := a' })
-  | "tofile" => return same (okJ (toJson ((arrToFile a).map natsJ)))
+  | "tofile" =>
+    let (r, a', out) := arrToFile a (scriptWrite (← (← arg op 1).getNat?) (← (← arg op 2).getNat?))
+    return (okJ (Json.arr #[pyJ (fun _ => unitJ) r, toJson (out.map natsJ)]), { s with a := a' })
   | "fromunicode" => return keep (arrFromUnicode a (← jNats (← arg op 1))) (fun _ => unitJ) id
   | "tounicode" => return same (pyJ natsJ (arrToUnicode a))
   | "byteswap" => return (okJ unitJ, { s with a := arrByteswap a })
@@ -424,7 +522,7 @@ def stepArr (s : AState) (op : Array Json) : Except String (Json × AState) := d
   | "itemsize" => return same (okJ (toJson a.tc.itemsize))
   | "len" => return same (okJ (toJson (arrLength a)))
   | "reduce_ex" => return same (pyJ reducedJ (arrReduceEx a (← jVal (← arg op 1))))
-  | "repr" => return same (pyJ toJson (arrRepr floatRepr strRepr a))
+  | "repr" => return same (pyJ toJson (arrRepr a))
   | "mv_open" =>
     let ((f, i, n, b), a') := arrGetBuf a
     return (okJ (Json.arr #[toJson f, toJson i, toJson n, toJson b]), { s with a := a' })
@@ -433,6 +531,10 @@ def stepArr (s : AState) (op : Array Json) : Except String (Json × AState) := d
     let o ← jOp (← arg op 1)
     let other ← arrOf (← jTC (← arg op 2)) (← jVals (← arg op 3))
     return same (pyJ toJson (arrRich o a other))
+  | "cmp_bad" =>
+    let o ← jOp (← arg op 1)
+    return same (pyJ (fun r => match r with | some b => toJson b | none => toJson "NotImplemented")
+      (arrRichcompare o (.inl a) (.inr "list")))
   | "it_new" => return (okJ unitJ, { s with its := s.its.push arrIter })
   | "it_next" =>
     let k ← (← arg op 1).getNat?
@@ -647,6 +749,22 @@ def run (fn : String) (j : Json) : Except String Json := do
     let items ← jNats (← field j "items")
     let r := reconstructArg tc >>= (fun s => reconstruct tn s m items)
     return pyJ (fun a => Json.arr #[toJson a.tc.code, natsJ (arrToBytes a)]) r
+  | "array_tofile" =>
+    -- an array of `n` items holding the bytes `(7k + 3) % 256`, written with `scriptWrite`
+    let tc ← jTC (← field j "tc")
+    let n ← getInt j "n"
+    let bs := (List.range (n.toNat * tc.itemsize.toNat)).map (fun k => (k * 7 + 3) % 256)
+    let blockSum (blk : List Nat) : Json :=
+      Json.arr #[toJson blk.length,
+        toJson ((blk.zipIdx.map (fun (b, i) => b * (i + 1))).foldl (· + ·) 0 % 1000000007)]
+    match arrNew "array" tc.code .none with
+    | .error e => return errJ e
+    | .ok a0 =>
+      match arrFromBytes a0 bs 1 with
+      | .error e => return errJ e
+      | .ok a =>
+        let (r, a', out) := arrToFile a (scriptWrite (← getInt j "mode").toNat (← getInt j "k").toNat)
+        return okJ (Json.arr #[pyJ (fun _ => unitJ) r, toJson (out.map blockSum), toJson a'.items.length])
   | _ => pure ()
   let ops := (← (← field j "ops").getArr?).toList
   match fn with

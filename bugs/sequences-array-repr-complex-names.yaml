@@ -1,0 +1,62 @@
+id: sequences-array-repr-complex-names
+title: "repr() of a 'Zd' or 'Zf' array with an infinite or NaN imaginary part is not eval()-able: it contains infj and nanj"
+priority: P4
+kind: doc-mismatch
+module: sequences
+files: [Modules/arraymodule.c, Doc/library/array.rst]
+functions: ["array_repr"]
+summary: |
+  array_repr writes the repr of tolist() (Modules/arraymodule.c:2715-2723). For the complex
+  typecodes new in 3.15 the items are complex numbers, and complex_repr writes an infinite or NaN
+  imaginary part as `infj` / `nanj`: repr(array('Zd', [complex(0, inf)])) is
+  "array('Zd', [infj])" and complex(1, nan) gives "array('Zd', [(1+nanj)])". The documentation
+  promises that repr can be passed to eval() once `array`, `inf` and `nan` are defined; with
+  those defined, eval raises NameError: name 'infj' is not defined. The float typecodes are fine,
+  because a float repr uses only `inf` and `nan`.
+  Lean (lean/PyLean/Sequences/ArrayRepr.lean): ArrayReprNames (the only names in repr(a) are the
+  type, `inf` and `nan`) is refuted by array('Zd', [infj]); arrRepr mirrors array_repr with the
+  exact float_repr and complex_repr of Binary64.Dtoa and Binary64.Complex.
+likelihood: |
+  Low: it needs a complex array holding an infinity or NaN in an imaginary part, and code that
+  relies on eval(repr(a)).
+maybe_intended: |
+  Possibly accepted as a documentation gap: the complex repr has the same property outside
+  arrays, and the sentence about inf and nan predates the complex typecodes. Either the docs
+  should mention it for 'Zf'/'Zd', or array_repr could emit complex(re, im) for such items.
+reproducer: |
+  from array import array
+  inf, nan = float('inf'), float('nan')
+  r1 = repr(array('Zd', [complex(0, inf)]))
+  r2 = repr(array('Zf', [complex(1, nan)]))
+  try:
+      eval(r1)
+      e1 = None
+  except NameError as e:
+      e1 = str(e)
+  print(r1, r2, e1)
+  if r1 == "array('Zd', [infj])" and r2 == "array('Zf', [(1+nanj)])" and e1 == "name 'infj' is not defined":
+      print('REPRODUCED sequences-array-repr-complex-names')
+expected: |
+  A repr that eval() turns back into an equal array with array, inf and nan defined, as for the
+  'd' typecode (array('d', [inf]) round-trips).
+observed: |
+  python3 3.15.2: array('Zd', [infj]) array('Zf', [(1+nanj)]) name 'infj' is not defined. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Doc/library/array.rst:298-312 ("The string representation is guaranteed to be able to be
+  converted back to an array with the same type and value using eval() ... Variables inf and nan
+  must also be defined if it contains corresponding floating-point values.").
+cause: |
+  Modules/arraymodule.c:2718 and :2723 use %R of the tolist() list, and Objects/complexobject.c:574-628 formats
+  each part with PyOS_double_to_string and appends 'j' after the imaginary part.
+possible_fix: |
+  Document that 'Zf'/'Zd' reprs with non-finite imaginary parts need infj and nanj, or format such
+  items as complex(re, im) in array_repr.
+duplicates:
+  issues: []
+  queries: ["gh search issues: array repr complex", "array Zd", "array Zf", "complex repr infj",
+            "repr complex nan eval", "complex repr inf eval NameError", "infj", "nanj", "array repr eval",
+            "bugforge README: no array entries"]
+lean:
+  property: PyLean.Sequences.ArrayReprNames
+  theorem: PyLean.Sequences.arrayReprNames_refuted

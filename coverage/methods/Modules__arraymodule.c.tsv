@@ -25,22 +25,22 @@ Modules/arraymodule.c	556	559	q_getitem	q_getitem(arrayobject *ap, Py_ssize_t i)
 Modules/arraymodule.c	562	573	q_setitem	q_setitem(arrayobject *ap, Py_ssize_t i, PyObject *v)	modelled	sequences-array-range-check	
 Modules/arraymodule.c	576	580	QQ_getitem	QQ_getitem(arrayobject *ap, Py_ssize_t i)	modelled	sequences-array-get-set	
 Modules/arraymodule.c	583	615	QQ_setitem	QQ_setitem(arrayobject *ap, Py_ssize_t i, PyObject *v)	modelled	sequences-array-get-set,sequences-array-non-index-item,sequences-array-range-check	
-Modules/arraymodule.c	618	624	e_getitem	e_getitem(arrayobject *ap, Py_ssize_t i)	todo		changed-in-3.15: new function
-Modules/arraymodule.c	627	641	e_setitem	e_setitem(arrayobject *ap, Py_ssize_t i, PyObject *v)	modelled	sequences-array-ins1-atomic	
-Modules/arraymodule.c	644	647	f_getitem	f_getitem(arrayobject *ap, Py_ssize_t i)	todo		
-Modules/arraymodule.c	650	661	f_setitem	f_setitem(arrayobject *ap, Py_ssize_t i, PyObject *v)	todo		
-Modules/arraymodule.c	664	667	d_getitem	d_getitem(arrayobject *ap, Py_ssize_t i)	todo		
-Modules/arraymodule.c	670	681	d_setitem	d_setitem(arrayobject *ap, Py_ssize_t i, PyObject *v)	todo		
-Modules/arraymodule.c	684	690	cf_getitem	cf_getitem(arrayobject *ap, Py_ssize_t i)	todo		changed-in-3.15: new function
-Modules/arraymodule.c	693	710	cf_setitem	cf_setitem(arrayobject *ap, Py_ssize_t i, PyObject *v)	todo		changed-in-3.15: new function
-Modules/arraymodule.c	713	719	cd_getitem	cd_getitem(arrayobject *ap, Py_ssize_t i)	todo		changed-in-3.15: new function
-Modules/arraymodule.c	722	739	cd_setitem	cd_setitem(arrayobject *ap, Py_ssize_t i, PyObject *v)	todo		changed-in-3.15: new function
+Modules/arraymodule.c	618	624	e_getitem	e_getitem(arrayobject *ap, Py_ssize_t i)	modelled	sequences-array-float-round-trip	
+Modules/arraymodule.c	627	641	e_setitem	e_setitem(arrayobject *ap, Py_ssize_t i, PyObject *v)	modelled	sequences-array-float-conv,sequences-array-float-round-trip,sequences-array-half-struct,sequences-array-ins1-atomic	
+Modules/arraymodule.c	644	647	f_getitem	f_getitem(arrayobject *ap, Py_ssize_t i)	modelled	sequences-array-float-items,sequences-array-float-round-trip	
+Modules/arraymodule.c	650	661	f_setitem	f_setitem(arrayobject *ap, Py_ssize_t i, PyObject *v)	modelled	sequences-array-float-conv,sequences-array-float-items,sequences-array-float-round-trip,sequences-array-single-struct	
+Modules/arraymodule.c	664	667	d_getitem	d_getitem(arrayobject *ap, Py_ssize_t i)	modelled	sequences-array-float-round-trip	
+Modules/arraymodule.c	670	681	d_setitem	d_setitem(arrayobject *ap, Py_ssize_t i, PyObject *v)	modelled	sequences-array-float-conv,sequences-array-float-round-trip	
+Modules/arraymodule.c	684	690	cf_getitem	cf_getitem(arrayobject *ap, Py_ssize_t i)	modelled	sequences-array-float-round-trip	
+Modules/arraymodule.c	693	710	cf_setitem	cf_setitem(arrayobject *ap, Py_ssize_t i, PyObject *v)	modelled	sequences-array-float-conv,sequences-array-float-round-trip	
+Modules/arraymodule.c	713	719	cd_getitem	cd_getitem(arrayobject *ap, Py_ssize_t i)	modelled	sequences-array-float-round-trip	
+Modules/arraymodule.c	722	739	cd_setitem	cd_setitem(arrayobject *ap, Py_ssize_t i, PyObject *v)	modelled	sequences-array-float-conv,sequences-array-float-round-trip	
 Modules/arraymodule.c	800	836	newarrayobject_untracked	newarrayobject_untracked(PyTypeObject *type, Py_ssize_t size, const struct arraydescr *descr)	modelled	sequences-array-attrs,sequences-array-repeat	
 Modules/arraymodule.c	839	846	newarrayobject	newarrayobject(PyTypeObject *type, Py_ssize_t size, const struct arraydescr *descr)	modelled	sequences-array-attrs,sequences-array-repeat	
 Modules/arraymodule.c	849	859	getarrayitem	getarrayitem(PyObject *op, Py_ssize_t i)	modelled	sequences-array-fromlist,sequences-array-get-set,sequences-array-search-agree,sequences-array-subscript	
 Modules/arraymodule.c	862	889	ins1	ins1(arrayobject *self, Py_ssize_t where, PyObject *v)	modelled	sequences-array-range-check	
 Modules/arraymodule.c	893	905	array_dealloc	array_dealloc(PyObject *op)	excluded		no-behaviour: clears weak references and frees the buffer
-Modules/arraymodule.c	908	1015	array_richcompare	array_richcompare(PyObject *v, PyObject *w, int op)	todo		
+Modules/arraymodule.c	908	1015	array_richcompare	array_richcompare(PyObject *v, PyObject *w, int op)	modelled	sequences-array-richcompare	
 Modules/arraymodule.c	1018	1021	array_length	array_length(PyObject *op)	modelled	sequences-array-attrs,sequences-array-subscript	
 Modules/arraymodule.c	1024	1031	array_item	array_item(PyObject *op, Py_ssize_t i)	modelled	sequences-array-subscript	
 Modules/arraymodule.c	1034	1058	array_slice	array_slice(arrayobject *a, Py_ssize_t ilow, Py_ssize_t ihigh)	modelled	sequences-array-clear-copy	
@@ -68,8 +68,8 @@ Modules/arraymodule.c	1559	1573	array_array_buffer_info_impl	array_array_buffer_
 Modules/arraymodule.c	1585	1589	array_array_append_impl	array_array_append_impl(arrayobject *self, PyObject *v) /*[clinic end generated code: output=2f1e8cbad70c2a8b input=0b98d9d78e78f0fa]*/	modelled	sequences-array-range-check	
 Modules/arraymodule.c	1602	1697	array_array_byteswap_impl	array_array_byteswap_impl(arrayobject *self) /*[clinic end generated code: output=5f8236cbdf0d90b5 input=8732f800e1b47bac]*/	modelled	sequences-array-byteswap	
 Modules/arraymodule.c	1706	1730	array_array_reverse_impl	array_array_reverse_impl(arrayobject *self) /*[clinic end generated code: output=c04868b36f6f4089 input=cd904f01b27d966a]*/	modelled	sequences-array-reverse	
-Modules/arraymodule.c	1745	1791	array_array_fromfile_impl	array_array_fromfile_impl(arrayobject *self, PyTypeObject *cls, PyObject *f, Py_ssize_t n) /*[clinic end generated code: output=83a667080b345ebc input=db46b06ac1b6de87]*/	todo		changed-in-3.15:
-Modules/arraymodule.c	1804	1840	array_array_tofile_impl	array_array_tofile_impl(arrayobject *self, PyTypeObject *cls, PyObject *f) /*[clinic end generated code: output=4560c628d9c18bc2 input=5a24da7a7b407b52]*/	todo		
+Modules/arraymodule.c	1745	1791	array_array_fromfile_impl	array_array_fromfile_impl(arrayobject *self, PyTypeObject *cls, PyObject *f, Py_ssize_t n) /*[clinic end generated code: output=83a667080b345ebc input=db46b06ac1b6de87]*/	modelled	sequences-array-fromfile,sequences-array-fromfile-doc	
+Modules/arraymodule.c	1804	1840	array_array_tofile_impl	array_array_tofile_impl(arrayobject *self, PyTypeObject *cls, PyObject *f) /*[clinic end generated code: output=4560c628d9c18bc2 input=5a24da7a7b407b52]*/	modelled	sequences-array-tofile,sequences-array-tofile-safe	
 Modules/arraymodule.c	1852	1883	array_array_fromlist_impl	array_array_fromlist_impl(arrayobject *self, PyObject *list) /*[clinic end generated code: output=6c23733a68dd68df input=be2605a96c49680f]*/	modelled	sequences-array-fromlist	
 Modules/arraymodule.c	1892	1911	array_array_tolist_impl	array_array_tolist_impl(arrayobject *self) /*[clinic end generated code: output=00b60cc9eab8ef89 input=a8d7784a94f86b53]*/	modelled	sequences-array-fromlist	
 Modules/arraymodule.c	1914	1947	frombytes	frombytes(arrayobject *self, Py_buffer *buffer)	modelled	sequences-array-bytes-round-trip	
@@ -84,7 +84,7 @@ Modules/arraymodule.c	2293	2558	array__array_reconstructor_impl	array__array_rec
 Modules/arraymodule.c	2571	2647	array_array___reduce_ex___impl	array_array___reduce_ex___impl(arrayobject *self, PyTypeObject *cls, PyObject *value) /*[clinic end generated code: output=4958ee5d79452ad5 input=19968cf0f91d3eea]*/	modelled	sequences-array-reduce	
 Modules/arraymodule.c	2650	2655	array_get_typecode	array_get_typecode(PyObject *op, void *Py_UNUSED(closure))	modelled	sequences-array-attrs	
 Modules/arraymodule.c	2658	2662	array_get_itemsize	array_get_itemsize(PyObject *op, void *Py_UNUSED(closure))	modelled	sequences-array-attrs	
-Modules/arraymodule.c	2702	2727	array_repr	array_repr(PyObject *op)	todo		changed-in-3.15:
+Modules/arraymodule.c	2702	2727	array_repr	array_repr(PyObject *op)	modelled	sequences-array-repr-names,sequences-array-repr-w-injective	
 Modules/arraymodule.c	2730	2792	array_subscr	array_subscr(PyObject *op, PyObject *item)	modelled	sequences-array-subscript	
 Modules/arraymodule.c	2795	2951	array_ass_subscr	array_ass_subscr(PyObject *op, PyObject *item, PyObject *value)	modelled	sequences-array-slice-assign-agree,sequences-array-slice-assign-agree-nonempty	
 Modules/arraymodule.c	2957	2993	array_buffer_getbuf	array_buffer_getbuf(PyObject *op, Py_buffer *view, int flags)	modelled	sequences-array-buffer	
@@ -99,5 +99,5 @@ Modules/arraymodule.c	3409	3426	array_arrayiterator___setstate___impl	array_arra
 Modules/arraymodule.c	3456	3463	array_traverse	array_traverse(PyObject *module, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal of module state
 Modules/arraymodule.c	3466	3477	array_clear	array_clear(PyObject *module)	excluded		no-behaviour: GC clear of module state
 Modules/arraymodule.c	3480	3483	array_free	array_free(void *module)	excluded		no-behaviour: module teardown
-Modules/arraymodule.c	3509	3576	array_modexec	array_modexec(PyObject *m)	todo		changed-in-3.15:
+Modules/arraymodule.c	3509	3576	array_modexec	array_modexec(PyObject *m)	excluded		internal-bootstrap: the module exec slot; it interns the method names, creates the two types, registers array with collections.abc.MutableSequence and publishes the constant tuple array.typecodes (the codes of the descriptor table, TC.all), failing only with MemoryError or an import error
 Modules/arraymodule.c	3601	3604	PyInit_array	PyInit_array(void)	excluded		internal-bootstrap: module entry point

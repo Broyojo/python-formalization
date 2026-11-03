@@ -164,8 +164,64 @@ def float_bits(x):
     return int.from_bytes(struct.pack("<d", x), "little")
 
 
+_CLS = {}
+
+
+def user_cls(name, base, ns):
+    """A class whose `%T` and `tp_name` both print `name`."""
+    key = (name, base, tuple(sorted(ns)))
+    ns = dict(ns, __module__="builtins")
+    return type(name, (base,), ns)
+
+
+def ret_obj(r):
+    """What a user `__float__`/`__index__`/`__complex__` returns, or raises."""
+    if "f" in r:
+        return to_float(r["f"])
+    if "fs" in r:
+        return user_cls(r["fs"][0], float, {})(to_float(r["fs"][1]))
+    if "i" in r:
+        return r["i"]
+    if "is" in r:
+        return user_cls(r["is"][0], int, {})(r["is"][1])
+    if "c" in r:
+        return complex(to_float(r["c"][0]), to_float(r["c"][1]))
+    if "cs" in r:
+        return user_cls(r["cs"][0], complex, {})(complex(to_float(r["cs"][1]), to_float(r["cs"][2])))
+    if "o" in r:
+        return user_cls(r["o"], object, {})()
+    raise ValueError(r["r"])
+
+
+def user_val(j):
+    ns = {}
+    for key, meth in (("fl", "__float__"), ("ix", "__index__"), ("cx", "__complex__")):
+        r = j.get(key)
+        if r is not None:
+            ns[meth] = (lambda r: lambda self: ret_obj(r))(r)
+    b = j.get("b")
+    if b is None:
+        return user_cls(j["u"], object, ns)()
+    if "f" in b:
+        return user_cls(j["u"], float, ns)(to_float(b["f"]))
+    if "c" in b:
+        return user_cls(j["u"], complex, ns)(complex(to_float(b["c"][0]), to_float(b["c"][1])))
+    return user_cls(j["u"], int, ns)(b["i"])
+
+
+def werr_in(x):
+    """Whether a value (or nested list) asks for DeprecationWarning to be an error."""
+    if isinstance(x, dict):
+        return x.get("werr", False) or any(werr_in(v) for v in x.values())
+    if isinstance(x, list):
+        return any(werr_in(v) for v in x)
+    return False
+
+
 def to_val(j):
     if isinstance(j, dict):
+        if "u" in j:
+            return user_val(j)
         if "f" in j:
             return to_float(j["f"])
         if "c" in j:
@@ -383,6 +439,21 @@ def half_edge(rng):
                                   rng.uniform(-1.0, 1.0), rng.uniform(-1e-4, 1e-4)]))
 
 
+def half_round_edge(rng):
+    """Doubles near ties of binary16 and binary32, so that the float step of e_setitem
+    rounds differently from a direct rounding, and near the boundaries of each format."""
+    k = rng.randint(-24, 15)
+    m = rng.randint(1024, 2047)
+    base = m * 2.0 ** (k - 10)
+    half_ulp16 = 2.0 ** (k - 11)
+    x = base + half_ulp16 + rng.choice([0.0, 2.0 ** (k - 40), -2.0 ** (k - 40), 2.0 ** (k - 35), 2.0 ** (k - 36),
+                                        -2.0 ** (k - 36), 2.0 ** (k - 24), 2.0 ** (k - 25), 2.0 ** (k - 26)])
+    return float_bits(rng.choice([x, -x, 65519.998046875, 65519.99804687499, 65519.99609375, 65520.0,
+                                  3.4028235677973366e38, 3.4028235677973362e38, 3.402823669209385e38,
+                                  float.fromhex("0x1.ffffffp+127"), float.fromhex("0x1.fffffefffffffp+127"),
+                                  float.fromhex("0x1.ffffff0000001p+127"), 1e300, -1e300]))
+
+
 def good_val(rng, tc):
     """A value that fits typecode tc."""
     if tc == "e":
@@ -413,6 +484,41 @@ def any_val(rng, tc):
                        {"c": [fbits(rng), fbits(rng)]}])
 
 
+def gen_ret(rng, kind, werr):
+    """A result of a user method; `kind` is the method's natural result type."""
+    r = rng.random()
+    if r < 0.35:
+        return {"f": fbits(rng)} if kind == "f" else ({"i": rng.choice([0, 1, -1, 5, 2 ** 64, 2 ** 1024, -2 ** 63])}
+                                                       if kind == "i" else {"c": [fbits(rng), fbits(rng)]})
+    if r < 0.5:
+        if kind == "f":
+            return {"fs": ["FS", fbits(rng), werr]}
+        if kind == "i":
+            return {"is": ["IS", rng.choice([3, 2 ** 70]), werr]}
+        return {"cs": ["CS", fbits(rng), fbits(rng), werr]}
+    if r < 0.7:
+        return {"r": "meth"}
+    return rng.choice([{"o": "O"}, {"f": fbits(rng)}, {"i": 7}, {"c": [fbits(rng), 0]}, {"fs": ["FS", fbits(rng), werr]},
+                       {"is": ["IS", 4, werr]}, {"cs": ["CS", fbits(rng), 0, werr]}])
+
+
+def user_obj(rng, werr):
+    """An instance of a user class: its base, and which of __float__, __index__ and
+    __complex__ it defines, with what they give."""
+    j = {"u": rng.choice(["U", "V"]), "werr": werr}
+    b = rng.random()
+    if b < 0.15:
+        j["b"] = {"f": fbits(rng)}
+    elif b < 0.3:
+        j["b"] = {"c": [fbits(rng), fbits(rng)]}
+    elif b < 0.4:
+        j["b"] = {"i": rng.choice([0, 3, 2 ** 64, 2 ** 1100])}
+    for key, kind in (("fl", "f"), ("ix", "i"), ("cx", "c")):
+        if rng.random() < 0.5:
+            j[key] = gen_ret(rng, kind, werr)
+    return j
+
+
 def store_val(rng, tc):
     """A value to store, with more of what 3.15 changed: values `PyFloat_Pack2` refuses after
     `ins1` has grown the array, and `__index__` objects for `II_setitem`, `LL_setitem` and
@@ -422,6 +528,10 @@ def store_val(rng, tc):
     if tc in ("I", "L", "Q") and rng.random() < 0.2:
         lo, hi = INT_RANGE[tc]
         return {"o": "Idx", "i": rng.choice([lo, hi, lo - 1, hi + 1, 2 ** 64, -2 ** 64, 5])}
+    if rng.random() < (0.35 if tc in ("e", "f", "d", "Zf", "Zd") else 0.08):
+        return user_obj(rng, rng.random() < 0.3)
+    if tc == "e" and rng.random() < 0.3:
+        return {"f": half_round_edge(rng)}
     return any_val(rng, tc)
 
 
@@ -436,7 +546,7 @@ def gen_array_op(rng, a):
                      "tolist", "frombytes", "frombytes_wide", "tobytes", "fromfile", "fromfile_notbytes",
                      "fromfile_raise", "tofile", "fromunicode", "tounicode", "byteswap", "reverse", "clear",
                      "copy", "buffer_info", "typecode", "itemsize", "len", "reduce_ex", "repr", "mv_open",
-                     "mv_close", "cmp", "cmp_other", "it_new", "it_new", "it_next", "it_next", "it_reduce",
+                     "mv_close", "cmp", "cmp_other", "cmp_bad", "it_new", "it_new", "it_next", "it_next", "it_reduce",
                      "it_setstate"])
     def good(k):
         return [good_val(rng, tc) for _ in range(k)]
@@ -485,7 +595,7 @@ def gen_array_op(rng, a):
         tc2 = rng.choice([t for t in "bBhHiIlLqQ" if t != tc])
         return [op[:-6], tc2, [good_val(rng, tc2) for _ in range(rng.choice([0, 1, 2]))]]
     if op in ("add_bad", "iadd_bad", "iadd_self", "extend_bad", "extend_self", "fromlist_bad", "tolist",
-              "tobytes", "tofile", "tounicode", "byteswap", "reverse", "clear", "copy", "buffer_info",
+              "tobytes", "tounicode", "byteswap", "reverse", "clear", "copy", "buffer_info",
               "typecode", "itemsize", "len", "repr", "mv_open", "mv_close", "it_new"):
         return [op]
     if op in ("extend", "extend_raise", "fromlist"):
@@ -496,10 +606,19 @@ def gen_array_op(rng, a):
         return [op, [rng.choice([0, 1, 255, 0x80, rng.randrange(256)]) for _ in range(k)]]
     if op == "fromfile":
         k = rng.choice([0, 1, 2, 3, 8, 16])
-        return [op, [rng.randrange(256) for _ in range(k * rng.choice([1, ITEMSIZE[tc]]))],
-                rng.choice([0, 1, 2, 3, 8, -1, M, M + 1, M // ITEMSIZE[tc], M // ITEMSIZE[tc] + 1])]
+        nbytes = k * rng.choice([1, ITEMSIZE[tc]]) + rng.choice([0, 0, 0, 1, ITEMSIZE[tc] - 1])
+        cnt = rng.choice([0, 1, 2, 3, 8, -1, M, M + 1, M // ITEMSIZE[tc], M // ITEMSIZE[tc] + 1, k, k + 1,
+                          {"o": "Idx", "i": rng.choice([1, 2, -1, 2 ** 64])}, {"o": "NoneType"}, {"f": fbits(rng)},
+                          user_obj(rng, False)])
+        if rng.random() < 0.4:
+            return ["fromfile_mut", [rng.randrange(256) for _ in range(nbytes)], cnt, rng.randrange(4)]
+        return [op, [rng.randrange(256) for _ in range(nbytes)], cnt]
     if op in ("fromfile_notbytes", "fromfile_raise"):
-        return [op, rng.choice([0, 1, 2, -1])]
+        return [op, rng.choice([0, 1, 2, -1, {"o": "NoneType"}])]
+    if op == "tofile":
+        return [op, rng.randrange(3), rng.randrange(2)]
+    if op == "cmp_bad":
+        return [op, rng.choice(list(OPS))]
     if op == "fromunicode":
         cs = [rng.choice([97, 98, 0xe9, 0xfeff, 0xd800, 0x10ffff, 0]) for _ in range(rng.choice([0, 1, 2, 3]))]
         if tc == "w" and not cs and a.buffer_info()[0] == 0:
@@ -638,9 +757,33 @@ def gen_tuplegetter(rng):
             "tuple": [rng.randint(0, 5) for _ in range(n)]}
 
 
+def gen_tofile(rng):
+    tc = rng.choice(TYPECODES)
+    blocks = rng.choice([1, 2, 3])
+    nbytes = rng.choice([65536 * blocks, 65536 * blocks - ITEMSIZE[tc], 65536 * (blocks - 1) + ITEMSIZE[tc],
+                         65536 * blocks + 7 * ITEMSIZE[tc]])
+    return {"mod": "sequences", "fn": "array_tofile", "tc": tc, "n": max(nbytes // ITEMSIZE[tc], 1),
+            "mode": rng.randrange(3), "k": rng.randrange(3)}
+
+
+def run_tofile(c):
+    a = array(c["tc"])
+    n = c["n"] * a.itemsize
+    a.frombytes(bytes((k * 7 + 3) % 256 for k in range(n)))
+    f = BlockFile(a, c["mode"], c["k"])
+    try:
+        a.tofile(f)
+        r = {"ok": None}
+    except Exception as e:
+        r = {"exc": type(e).__name__, "msg": str(e)}
+    return {"ok": [r, f.chunks, len(a)]}
+
+
 def gen_case(rng):
     kind = rng.choice(["list", "array", "array", "array", "deque", "deque", "deque", "array_new", "reconstruct",
-                       "defdict", "count", "tuplegetter"])
+                       "defdict", "count", "tuplegetter"] + (["array_tofile"] if rng.random() < 0.03 else []))
+    if kind == "array_tofile":
+        return gen_tofile(rng)
     if kind == "array_new":
         return gen_array_new(rng)
     if kind == "reconstruct":
@@ -686,7 +829,12 @@ def gen_case(rng):
         if op[0].startswith("it_") and op[0] not in ("it_new", "it_make") and op[1] >= len(extra["its"]):
             continue
         ops.append(op)
-        py_res(lambda: run_op(obj, op, kind, c, extra))
+        if werr_in(op):
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", DeprecationWarning)
+                py_res(lambda: run_op(obj, op, kind, c, extra))
+        else:
+            py_res(lambda: run_op(obj, op, kind, c, extra))
         if len(obj) > 3000:
             break
     for v in extra["views"]:
@@ -761,11 +909,45 @@ class RaisingFile:
 
 
 class ChunkFile:
-    def __init__(self):
+    """A scripted `write`: mode 1 raises at call k, mode 2 appends a zero item each call."""
+
+    def __init__(self, a, mode, k):
+        self.a, self.mode, self.k = a, mode, k
         self.chunks = []
 
     def write(self, b):
         self.chunks.append(list(b))
+        if self.mode == 1 and len(self.chunks) - 1 == self.k:
+            raise ValueError("write")
+        if self.mode == 2:
+            self.a.frombytes(bytes(self.a.itemsize))
+
+
+class BlockFile(ChunkFile):
+    def write(self, b):
+        n = len(self.chunks)
+        self.chunks.append([len(b), sum(x * (i + 1) for i, x in enumerate(b)) % 1000000007])
+        if self.mode == 1 and n == self.k:
+            raise ValueError("write")
+        if self.mode == 2:
+            self.a.frombytes(bytes(self.a.itemsize))
+
+
+class MutFile:
+    """A scripted `read`: before returning data[:n], k = 1 appends a zero item, k = 2 clears
+    the array, k = 3 opens a memoryview of it that stays open."""
+
+    def __init__(self, a, data, k, extra):
+        self.a, self.f, self.k, self.extra = a, io.BytesIO(data), k, extra
+
+    def read(self, n):
+        if self.k == 1:
+            self.a.frombytes(bytes(self.a.itemsize))
+        elif self.k == 2:
+            self.a.clear()
+        elif self.k == 3:
+            self.extra["views"].append(memoryview(self.a))
+        return self.f.read(n)
 
 
 def run_deque_op(d, op, extra):
@@ -989,15 +1171,23 @@ def run_array_op(a, op, c, extra):
     if name == "tobytes":
         return list(a.tobytes())
     if name == "fromfile":
-        return a.fromfile(io.BytesIO(bytes(args[0])), args[1])
+        return a.fromfile(io.BytesIO(bytes(args[0])), to_val(args[1]))
+    if name == "fromfile_mut":
+        return a.fromfile(MutFile(a, bytes(args[0]), args[2], extra), to_val(args[1]))
     if name == "fromfile_notbytes":
-        return a.fromfile(NotBytesFile(), args[0])
+        return a.fromfile(NotBytesFile(), to_val(args[0]))
     if name == "fromfile_raise":
-        return a.fromfile(RaisingFile(), args[0])
+        return a.fromfile(RaisingFile(), to_val(args[0]))
     if name == "tofile":
-        f = ChunkFile()
-        a.tofile(f)
-        return f.chunks
+        f = ChunkFile(a, args[0], args[1])
+        try:
+            a.tofile(f)
+            return [{"ok": None}, f.chunks]
+        except Exception as e:
+            return [{"exc": type(e).__name__, "msg": str(e)}, f.chunks]
+    if name == "cmp_bad":
+        r = getattr(a, "__%s__" % args[0])([1])
+        return "NotImplemented" if r is NotImplemented else r
     if name == "fromunicode":
         return a.fromunicode("".join(map(chr, args[0])))
     if name == "tounicode":
@@ -1025,7 +1215,7 @@ def run_array_op(a, op, c, extra):
             return [r[0].__name__, r[1][0], [from_val(v) for v in r[1][1]]]
         return [r[1][0].__name__, r[1][1], r[1][2], list(r[1][3])]
     if name == "repr":
-        return arr_repr(a)
+        return repr(a)
     if name == "mv_open":
         m = memoryview(a)
         extra["views"].append(m)
@@ -1281,6 +1471,8 @@ def run_python(c):
         return run_array_new(c)
     if kind == "reconstruct":
         return run_reconstruct(c)
+    if kind == "array_tofile":
+        return run_tofile(c)
     try:
         obj = make(c)
     except Exception as e:
@@ -1289,7 +1481,12 @@ def run_python(c):
     extra = {"its": [], "views": []}
     out = []
     for op in c["ops"]:
-        r = py_res(lambda: run_op(obj, op, kind, c, extra))
+        if werr_in(op):
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", DeprecationWarning)
+                r = py_res(lambda: run_op(obj, op, kind, c, extra))
+        else:
+            r = py_res(lambda: run_op(obj, op, kind, c, extra))
         if kind == "deque":
             st = [[from_el(e) for e in obj], blocks(obj)]
         elif kind == "array":

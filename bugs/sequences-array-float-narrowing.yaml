@@ -1,0 +1,93 @@
+id: sequences-array-float-narrowing
+title: "array('e') rounds a double twice (through a C float), so it stores a different half than struct.pack('e'); 'e', 'f' and 'Zf' disagree with struct at the overflow boundary and on signalling NaNs"
+priority: P3
+kind: twin-mismatch
+module: sequences
+files: [Modules/arraymodule.c]
+functions: ["e_setitem", "f_setitem", "f_getitem", "cf_setitem", "cf_getitem"]
+summary: |
+  e_setitem parses its value with PyArg_Parse(v, "f;...") (Modules/arraymodule.c:629-630), which
+  rounds the double to a C float (Python/getargs.c:922-930), and then calls PyFloat_Pack2 on that
+  float promoted back to double (:636-639). Rounding binary64 to binary32 and then to binary16 is
+  a double rounding: a double just above a binary16 tie is first rounded onto the tie, and the
+  second rounding goes to even. struct.pack('e', x), and a single C conversion to _Float16 (the
+  item type Doc/library/array.rst gives), round once.
+  For x = 1 + 2**-11 + 2**-40, array('e', [x])[0] is 1.0 and struct.unpack('e',
+  struct.pack('e', x))[0] is 1.0009765625, the nearest half. The same double rounding moves the
+  overflow boundary: every double in [65519.998046875, 65520) rounds to the float 65520.0, so
+  array('e', [65519.999]) raises OverflowError where struct.pack('e', 65519.999) gives 65504.0.
+  Past the float range the float conversion gives inf, which PyFloat_Pack2 accepts:
+  array('e', [1e300]) stores inf (struct raises OverflowError) - this part, and the same silent
+  inf of f_setitem and cf_setitem (array('f', [1e300])), are python/cpython#156864 and #156865,
+  fixed on main by gh-156869 after 3.15.2.
+  f_getitem and cf_getitem widen with a C (double) cast instead of PyFloat_Unpack4, and f_setitem
+  narrows with (float): a signalling NaN loaded with frombytes comes back quiet, so a[i] = a[i]
+  changes the bits of an 'f' item 0x7f800001 to 0x7fc00001 (and of an 'e' item 0x7d00 to 0x7f00),
+  while struct 'f' and PyFloat_Pack4/Unpack4 keep a signalling NaN since 3.14.
+  Lean (lean/PyLean/Sequences/ArrayFloatProps.lean): ArrayHalfStruct is refuted by
+  x = 1 + 2**-11 + 2**-40, ArraySingleStruct by 1e300, ArrayFloatItems by 0x7f800001;
+  ArrayFloatRoundTrip states the exact round trip of every e, f, d, Zf and Zd pattern (only
+  signalling NaNs of e and f change, by their quiet bit), ArrayFloatConv the conversions.
+likelihood: |
+  Low to moderate. The double rounding needs a double that is not exactly representable as a
+  float and lies within 2**-24 relative of a half tie: about one random double in 2**13 for a
+  given half interval, so arrays filled from computed float64 data (numpy interop, sensor data)
+  do hit it, and the error is one half ulp. The overflow window is narrow. Signalling NaNs only
+  come from frombytes or reinterpretation.
+maybe_intended: |
+  The double rounding is not intended: it is a side effect of reusing the "f" parser for 'e',
+  and main changed e_setitem to parse a double (gh-156869), which removes it. The inf for values
+  past the float range was acknowledged as a bug (#156864, #156865). The NaN quieting of 'f' may
+  be considered acceptable, as C leaves NaN conversion unspecified, but struct deliberately keeps
+  signalling NaNs and array does not.
+reproducer: |
+  import struct
+  from array import array
+  x = 1 + 2.0 ** -11 + 2.0 ** -40
+  a = array('e', [x]).tobytes()
+  s = struct.pack('<e', x)
+  try:
+      array('e', [65519.999])
+      boundary = None
+  except OverflowError:
+      boundary = struct.unpack('<e', struct.pack('<e', 65519.999))[0]
+  f = array('f')
+  f.frombytes((0x7f800001).to_bytes(4, 'little'))
+  f[0] = f[0]
+  snan = f.tobytes().hex()
+  print(a.hex(), s.hex(), boundary, snan)
+  if a == b'\x00\x3c' and s == b'\x01\x3c' and boundary == 65504.0 and snan == '0100c07f':
+      print('REPRODUCED sequences-array-float-narrowing')
+expected: |
+  array('e', [x]).tobytes() == struct.pack('<e', x) for every float x (one rounding to nearest,
+  OverflowError exactly when that rounding overflows), and a[i] = a[i] leaving the item's bits
+  unchanged.
+observed: |
+  python3 3.15.2: 003c 013c 65504.0 0100c07f. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): 013c 013c None 0100c07f. NOT REPRODUCED as a whole: the
+  double rounding and the overflow boundary are fixed there (gh-156869 parses a double and packs
+  with PyFloat_Pack2/Pack4); the signalling NaN of 'f' still comes back quiet, because f_getitem
+  still widens with a (double) cast.
+promised_by: |
+  Doc/library/array.rst:44-45, 74-79: the 'e' item is the C type _Float16 (IEEE 754 binary16), to
+  which C converts a double with one rounding; Doc/library/struct.rst:319-323 for the format
+  struct shares. Twin: struct.pack('e') and PyFloat_Pack2 on the same double.
+cause: |
+  Modules/arraymodule.c:629-630 (`float x; PyArg_Parse(v, "f;array item must be float", &x)`)
+  then :637 (`PyFloat_Pack2(x, ...)` on the promoted float); :646 (`(double)` in f_getitem),
+  :652-659 (`float x` stored as is in f_setitem), :689 and :704-705 (cf_getitem, cf_setitem).
+possible_fix: |
+  What main does (gh-156869): parse a double ("d") in e_setitem, f_setitem and cf_setitem and pack
+  with PyFloat_Pack2 / PyFloat_Pack4; read 'f' and 'Zf' items with PyFloat_Unpack4. A backport to
+  3.15 would fix all three parts.
+duplicates:
+  issues:
+    - {number: 156864, state: closed, relation: "partial duplicate: 1e300 stored as inf in 'e'; its fix also removes the double rounding, which the issue does not mention"}
+    - {number: 156865, state: closed, relation: "partial duplicate: silent inf in 'f' and 'Zf'"}
+  queries: ["gh search issues: array float16 rounding", "array typecode e struct", "array e double rounding",
+            "array half precision float", "array Zf", "array f typecode signaling nan", "array snan",
+            "signaling NaN float pack", "struct pack e rounding", "gh pr view 156869 (merged 2026-09-18, main only)",
+            "bugforge README: no array entries"]
+lean:
+  property: PyLean.Sequences.ArrayHalfStruct
+  theorem: PyLean.Sequences.arrayHalfStruct_refuted

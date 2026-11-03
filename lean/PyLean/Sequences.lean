@@ -14,6 +14,10 @@ import PyLean.Sequences.ArrayBytes
 import PyLean.Sequences.ArrayOps
 import PyLean.Sequences.ArrayText
 import PyLean.Sequences.CollectionsProps
+import PyLean.Sequences.ArrayFloatProps
+import PyLean.Sequences.ArrayCmp
+import PyLean.Sequences.ArrayFile
+import PyLean.Sequences.ArrayRepr
 
 /-!
 `collections.deque`, `collections.defaultdict`, `_count_elements`, `_tuplegetter`
@@ -150,11 +154,82 @@ def entries : List Entry := [
     prop := ``ArrayCharDouble, thm := some ``arrayCharDouble_proven
     notes := "The d clause of this property is about bit patterns only; f and d are open in sequences-array-float-items." },
   { id := "sequences-array-float-items", pyFile := "Modules/arraymodule.c"
-    pyFns := ["f_getitem", "f_setitem", "d_getitem", "d_setitem"]
+    pyFns := ["f_getitem", "f_setitem"]
     statement := "Every bit pattern stored in an f or d array reads as a float and stores back unchanged."
-    source := "invariant", status := .open
-    prop := ``ArrayFloatItems
-    notes := "Waits for lean/PyLean/Binary64/. The model and the difftest cover these paths." },
+    source := "invariant", status := .refuted
+    prop := ``ArrayFloatItems, thm := some ``arrayFloatItems_refuted
+    bug := some "sequences-array-float-narrowing"
+    notes := "The f signalling NaN 0x7f800001 comes back as 0x7fc00001: f_getitem widens with a C (double) cast and f_setitem narrows with (float). sequences-array-float-round-trip is the exact statement. Reproduces on main." },
+  { id := "sequences-array-float-round-trip", pyFile := "Modules/arraymodule.c"
+    pyFns := ["e_getitem", "e_setitem", "f_getitem", "f_setitem", "d_getitem", "d_setitem",
+      "cf_getitem", "cf_setitem", "cd_getitem", "cd_setitem"]
+    statement := "For every bit pattern an e, f, d, Zf or Zd item can hold, a[i] reads it through the getitem's C conversion (PyFloat_Unpack2, (double), the double itself, the parts) and a[i] = a[i] stores it back; the only change is the quiet bit of a signalling NaN of e or f (or of a Zf part), which goes through a C float."
+    source := "invariant: reading and storing an item is the identity", status := .proven
+    prop := ``ArrayFloatRoundTrip, thm := some ``arrayFloatRoundTrip_proven
+    notes := "The 65536 binary16 patterns are checked by the kernel (HalfTrip.lean); binary32 is proven by exponent class (ArrayFloat.lean)." },
+  { id := "sequences-array-float-conv", pyFile := "Modules/arraymodule.c"
+    pyFns := ["e_setitem", "f_setitem", "d_setitem", "cf_setitem", "cd_setitem"]
+    statement := "For every object v (user classes with any __float__, __index__ and __complex__ that may raise or return any class): d stores PyFloat_AsDouble(v), f its binary32 rounding, e PyFloat_Pack2 of that binary32, Zd the parts of PyComplex_AsCComplex(v) and Zf their roundings; a failed conversion raises its exception before the index check; PyFloat_AsDouble and PyComplex_AsCComplex take the value of a float or complex (subclass) instance, else __complex__ (Zf, Zd only), __float__ (its result checked, a subclass result after a DeprecationWarning that may raise), __index__, or TypeError."
+    source := "Doc/c-api/float.rst:45-55; Doc/c-api/complex.rst:105-120; Python/getargs.c:922-951", status := .proven
+    prop := ``ArrayFloatConv, thm := some ``arrayFloatConv_proven
+    notes := "Scope: a conversion method that mutates the array is not modelled (the idxOk flag of tcSetitem stands for it)." },
+  { id := "sequences-array-half-struct", pyFile := "Modules/arraymodule.c"
+    pyFns := ["e_setitem"]
+    statement := "array('e', [x]).tobytes() == struct.pack('<e', x) for every float x, OverflowError included."
+    source := "Doc/library/array.rst:44-45, 74-79 (_Float16); twin: PyFloat_Pack2 of the double, as struct does", status := .refuted
+    prop := ``ArrayHalfStruct, thm := some ``arrayHalfStruct_refuted
+    bug := some "sequences-array-float-narrowing"
+    notes := "x = 1 + 2**-11 + 2**-40: the C float step lands on a binary16 tie, so array gives 1.0, struct 1.0009765625. Also [65519.998046875, 65520) raises OverflowError (struct gives 65504) and 1e300 stores inf. Fixed on main by gh-156869." },
+  { id := "sequences-array-single-struct", pyFile := "Modules/arraymodule.c"
+    pyFns := ["f_setitem"]
+    statement := "array('f', [x]).tobytes() == struct.pack('<f', x) for every float x, OverflowError included."
+    source := "twin: PyFloat_Pack4 of the double, as struct does", status := .refuted
+    prop := ``ArraySingleStruct, thm := some ``arraySingleStruct_refuted
+    bug := some "sequences-array-float-narrowing"
+    notes := "1e300 is stored as inf where struct raises OverflowError (python/cpython#156865, fixed on main after 3.15.2)." },
+  { id := "sequences-array-richcompare", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_richcompare"]
+    statement := "For every operator and every two arrays whose items decode, of any typecodes, v <op> w equals list(v) <op> list(w) (list_richcompare on the items: NaN unequal, -0.0 == 0.0, int == float, complex unordered): the compareitems fast path agrees with the item-by-item path; two arrays of one integer or character typecode compare their stored C values in integer order, also when an item does not decode; a non-array operand gives NotImplemented."
+    source := "Doc/library/stdtypes.rst (sequences compare lexicographically); twin: fast path vs item-by-item path", status := .proven
+    prop := ``ArrayRichcompare, thm := some ``arrayRichcompare_proven },
+  { id := "sequences-array-fromfile-doc", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_array_fromfile_impl"]
+    statement := "For a file holding k whole items, a.fromfile(f, n) appends n items, or, when k < n, the k items and raises EOFError."
+    source := "Doc/library/array.rst:208-213", status := .refuted
+    prop := ``ArrayFromFileDoc, thm := some ``arrayFromFileDoc_refuted
+    bug := some "sequences-array-fromfile-partial-item"
+    notes := "A file that ends inside an item gives ValueError and inserts nothing. Reproduces on main." },
+  { id := "sequences-array-fromfile", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_array_fromfile_impl"]
+    statement := "a.fromfile(f, n) for every read callback (raising, returning any object, changing the array): n is refused (TypeError, OverflowError, ValueError for negative, MemoryError past PY_SSIZE_T_MAX bytes) before read is called; read's exception propagates; a non-bytes result raises TypeError; a length that is not a multiple of the item size raises ValueError and appends nothing; otherwise all items read are appended to the array as read left it, then EOFError unless exactly n items came; BufferError if read left a buffer exported."
+    source := "Doc/library/array.rst:208-213; Modules/clinic/arraymodule.c.h:412-427", status := .proven
+    prop := ``ArrayFromFile, thm := some ``arrayFromFile_proven },
+  { id := "sequences-array-tofile", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_array_tofile_impl"]
+    statement := "For every write callback that leaves the array alone and may raise at any call, a.tofile(f) writes the 64 KiB blocks of a.tobytes() in order, one call each, stopping after the first call that raises with its exception; the blocks put together are a.tobytes(); an empty array writes nothing."
+    source := "Doc/library/array.rst:270-284 (tobytes is what tofile writes)", status := .proven
+    prop := ``ArrayToFile, thm := some ``arrayToFile_proven },
+  { id := "sequences-array-tofile-safe", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_array_tofile_impl"]
+    statement := "For every write callback, a.tofile(f) reads only inside the array (its outcome is never C undefined behaviour)."
+    source := "invariant: no out-of-bounds read", status := .refuted
+    prop := ``ArrayToFileSafe, thm := some ``arrayToFileSafe_refuted
+    bug := some "sequences-array-tofile-reentrant-write"
+    notes := "A write that clears the array makes the next block a read at NULL + 65536 (SIGSEGV). Duplicate of python/cpython#142884, open; reproduces on main." },
+  { id := "sequences-array-repr-names", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_repr"]
+    statement := "For every array of a numeric typecode whose items decode, the only names in repr(a) are the type, inf and nan, so eval with those defined can read it back."
+    source := "Doc/library/array.rst:298-307", status := .refuted
+    prop := ``ArrayReprNames, thm := some ``arrayReprNames_refuted
+    bug := some "sequences-array-repr-complex-names"
+    notes := "array('Zd', [complex(0, inf)]) prints as array('Zd', [infj]). The model prints floats and complex numbers with Binary64.float_repr and complex_repr and strs with UnicodeObj.unicodeRepr." },
+  { id := "sequences-array-repr-w-injective", pyFile := "Modules/arraymodule.c"
+    pyFns := ["array_repr"]
+    statement := "Two w arrays of the same type whose items decode and whose reprs are equal hold the same characters."
+    source := "Doc/library/array.rst:298-307", status := .refuted
+    prop := ``ArrayReprWInjective, thm := some ``arrayReprWInjective_refuted
+    bug := some "sequences-array-w-tounicode-bom"
+    notes := "array('w', '\\ufeffa') and array('w', 'a') both print array('w', 'a')." },
   { id := "sequences-array-del-slice-agree", pyFile := "Modules/arraymodule.c"
     pyFns := ["array_ass_subscr"]
     statement := "del a[s] agrees with del l[s] for every slice."

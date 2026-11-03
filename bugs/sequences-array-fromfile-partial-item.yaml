@@ -1,0 +1,72 @@
+id: sequences-array-fromfile-partial-item
+title: "array.fromfile() raises ValueError and inserts nothing when the file ends inside an item, though the docs promise EOFError with the available items inserted"
+priority: P3
+kind: doc-mismatch
+module: sequences
+files: [Modules/arraymodule.c, Doc/library/array.rst]
+functions: ["array_array_fromfile_impl"]
+summary: |
+  fromfile(f, n) reads n * itemsize bytes and hands whatever read() returned to frombytes
+  (Modules/arraymodule.c:1778). When the file ends in the middle of an item, read() returns a
+  length that is not a multiple of the item size, frombytes raises
+  ValueError("bytes length not a multiple of item size") (:1924-1929), and fromfile returns
+  before its EOFError check (:1783-1788). So for a file holding 6 bytes,
+  array('i').fromfile(f, 2) raises ValueError and the array stays empty, while the whole item
+  that was available is lost and the 6 bytes are consumed from the file. With 4 bytes the same
+  call raises EOFError and inserts the item, as documented. Python 2 truncated the partial item
+  and inserted the whole ones.
+  The same check uses `!=` (:1776), so a read() that returns more bytes than asked appends all of
+  them and then raises EOFError("read() didn't return enough bytes").
+  Lean (lean/PyLean/Sequences/ArrayFile.lean): ArrayFromFileDoc is refuted by a file of 6 bytes
+  and n = 2 on an 'i' array; ArrayFromFile states the exact behaviour for every read() callback.
+likelihood: |
+  Moderate for anyone reading fixed-size records from a truncated or still-growing file: the
+  documented recovery (catch EOFError, keep the items) does not happen, and the exception type
+  differs.
+maybe_intended: |
+  Unlikely. The EOFError path exists to keep the available items (bpo-5334 restored it in 3.0
+  after it had been lost), and nothing documents the ValueError.
+reproducer: |
+  import io
+  from array import array
+  a = array('i')
+  f = io.BytesIO(b'\x01\x00\x00\x00\x02\x00')
+  try:
+      a.fromfile(f, 2)
+      exc = None
+  except Exception as e:
+      exc = type(e).__name__
+  b = array('i')
+  try:
+      b.fromfile(io.BytesIO(b'\x01\x00\x00\x00'), 2)
+      exc2 = None
+  except EOFError:
+      exc2 = 'EOFError'
+  print(exc, list(a), f.tell(), exc2, list(b))
+  if exc == 'ValueError' and len(a) == 0 and f.tell() == 6 and exc2 == 'EOFError' and list(b) == [1]:
+      print('REPRODUCED sequences-array-fromfile-partial-item')
+expected: |
+  EOFError, with the one whole item available inserted (array('i', [1])), as for a file that
+  ends on an item boundary.
+observed: |
+  python3 3.15.2: ValueError [] 6 EOFError [1]. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Doc/library/array.rst:208-213: "If less than n items are available, EOFError is raised, but the
+  items that were available are still inserted into the array."
+cause: |
+  Modules/arraymodule.c:1776 (`not_enough_bytes = (PyBytes_GET_SIZE(b) != nbytes)`), :1778-1781
+  (frombytes of the whole result, whose ValueError returns at once), :1924-1929 (frombytes).
+possible_fix: |
+  Before calling frombytes, truncate b to a multiple of itemsize (keeping not_enough_bytes set),
+  so the whole items are appended and EOFError is raised; and compare with `<` so a result longer
+  than requested is cut to nbytes or refused explicitly.
+duplicates:
+  issues:
+    - {number: 49584, state: closed, relation: "related, not a duplicate: bpo-5334, items not inserted on EOFError at all (fixed in 3.0.2); the partial item case was not considered"}
+  queries: ["gh search issues: array fromfile", "array fromfile ValueError", "array fromfile EOFError",
+            "fromfile item size", "fromfile not a multiple of item size", "array fromfile truncated",
+            "fromfile partial", "array fromfile short read", "bugforge README: no array entries"]
+lean:
+  property: PyLean.Sequences.ArrayFromFileDoc
+  theorem: PyLean.Sequences.arrayFromFileDoc_refuted
