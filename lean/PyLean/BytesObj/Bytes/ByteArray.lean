@@ -319,8 +319,12 @@ where
 /-- The extended-slice part of `bytearray_ass_subscript_lock_held`,
 bytearrayobject.c:880-939, for `step ≠ 1`. `needed == 0` is the deletion branch, also
 for an assignment of an empty value (`bugs/sequences-array-extended-slice-empty-deletes.yaml`),
-and `_canresize` comes before the `slicelen == 0` return. The loops are the ones of
-`Sequences.delExtended` and `Sequences.storeLoop`. -/
+and `_canresize` comes before the `slicelen == 0` return. The deletion, :894-918 (the reversal of
+a negative step, the compaction loop, the tail move and the shrink), is `Sequences.delExtended`, and
+the store loop, :935-936, is `Sequences.storeLoop`. The compaction loop of `delExtended` is the
+list's, which runs while `cur < stop`, where this one counts `i < slicelen`; the two make the same
+rounds, since `PySlice_AdjustIndices` puts round `slicelen - 1` before `stop` and round `slicelen`
+at or past it (`delLoop_ok` with `adjust_pos`/`adjust_neg`, HeapProps3.lean). -/
 def baAssExtended (self : BA) (start stop step slicelen : Int) (bytes : List Int) : Py BA := do
   let needed : Int := bytes.length
   if needed = 0 then

@@ -769,6 +769,18 @@ def entries : List Entry := [
     source := "Doc/c-api/bytearray.rst:76-78", status := .refuted
     prop := ``SizeChecksNull, thm := some ``sizeChecksNull_refuted
     bug := some "bytesobj-bytearray-size-null-doc" },
+  { id := "bytesobj-bytearray-ass-copy-fails", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_ass_subscript_lock_held", "bytearray_ass_subscript"]
+    statement := "When PyByteArray_FromObject fails for the value of b[s] = v (a list holding a value outside range(256), an object neither buffer nor iterable, an iterator that raises), the error is the result and b is left as the slice's own callbacks left it: nothing is deleted."
+    source := "bytearrayobject.c:856-859", status := .proven
+    prop := ``BaAssSubCopyFails, thm := some ``baAssSubCopyFails_proven
+    notes := "Scope: callbacks act on self only." },
+  { id := "bytesobj-bytearray-init-loop-errors", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray___init___impl"]
+    statement := "The error exits of __init__'s iterator loop: a bad or non-integer item raises after the items before it were appended; an iterator's exception is the result unless it is StopIteration; an item whose __index__ takes a view makes the append's resize raise BufferError; a non-iterable is the 'cannot convert' TypeError; an __index__ TypeError falls through to it while other __index__ exceptions are the result."
+    source := "bytearrayobject.c:1056-1066, :1129-1181", status := .proven
+    prop := ``BaInitLoopErrors, thm := some ``baInitLoopErrors_proven
+    notes := "Scope: callbacks act on self only." },
   { id := "bytesobj-bytes-class-tables", pyFile := "Objects/bytes_methods.c"
     pyFns := ["_Py_bytes_isspace", "_Py_bytes_isalpha", "_Py_bytes_isalnum", "_Py_bytes_isdigit"]
     statement := "isspace, isalpha, isdigit and isalnum are 'non-empty and every byte in the class', for the exact byte ranges of pyctype.c."
