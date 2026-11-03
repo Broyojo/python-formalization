@@ -711,6 +711,11 @@ def entries : List Entry := [
     source := "Doc/library/inspect.rst:1877-1901 (flags that can be passed to __buffer__); invariant: no internal error from a documented call", status := .refuted
     prop := ``BufferFlagsNoSystemError, thm := some ``bufferFlagsNoSystemError_refuted
     bug := some "bytesobj-bytearray-buffer-flags-systemerror" },
+  { id := "bytesobj-bytearray-hex-sep", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_hex_impl"]
+    statement := "hex(sep, n) with a separator that runs no Python code: a one-byte bytes or one-character str below 128 gives bytes.hex of the contents with it, grouped by n; another length is ValueError('sep must be length 1.'), a non-ASCII one ValueError('sep must be ASCII.'), an object without a length the TypeError of len(); the object is left as it was."
+    source := "twin: bytes.hex; Doc/library/stdtypes.rst bytes.hex; Python/pystrhex.c:118-150", status := .proven
+    prop := ``BaHexSepSpec, thm := some ``baHexSepSpec_proven },
   { id := "bytesobj-bytes-class-tables", pyFile := "Objects/bytes_methods.c"
     pyFns := ["_Py_bytes_isspace", "_Py_bytes_isalpha", "_Py_bytes_isalnum", "_Py_bytes_isdigit"]
     statement := "isspace, isalpha, isdigit and isalnum are 'non-empty and every byte in the class', for the exact byte ranges of pyctype.c."

@@ -1722,4 +1722,109 @@ theorem bufferFlagsNoSystemError_refuted : ¬ BufferFlagsNoSystemError := by
   intro hp
   exact hp {} 0x100 _ (by simp [inspectReadWrite]) ((baBufferExport_proven {} 0x100).2.1 (Or.inl rfl)) rfl
 
+/-! ## `hex` with a separator -/
+
+theorem strhex_bytes1 (s : Seq) (c : Nat) (hc : c ≤ 127) (bps : Int) :
+    strhexImpl s (some (.bytes [c])) bps false = strhexBody s (some c) bps := by
+  have h1 : ¬ (c > 127 ∧ (!false) = true) := by omega
+  simp only [strhexImpl, objLength, List.length_cons, List.length_nil, bind, Except.bind, ne_eq,
+    not_true_eq_false, ↓reduceIte, pure, Except.pure, List.headD_cons, h1]
+  rfl
+
+theorem strhex_str1 (s : Seq) (c : Nat) (hc : c ≤ 127) (bps : Int) :
+    strhexImpl s (some (.str [c])) bps false = strhexBody s (some c) bps := by
+  have h1 : ¬ (c > 127 ∧ (!false) = true) := by omega
+  have h2 : ¬ (c ≥ 256) := by omega
+  simp only [strhexImpl, objLength, List.length_cons, List.length_nil, bind, Except.bind, ne_eq,
+    not_true_eq_false, ↓reduceIte, pure, Except.pure, List.headD_cons, h1, h2]
+  rfl
+
+/-- `baHexE` once the separator's check has given `r`: `ob_exports` is raised around the check and
+lowered after, and a separator that runs no Python code leaves the object as it was. -/
+theorem hex_after_sep (h : H) (bps : Int) (h1 : ssizeMin ≤ bps) (h2 : bps ≤ ssizeMax) (o : Obj)
+    (r : Py (Option Nat)) (hr0 : ∀ hb : H, (lengthE (.obj o) >>= fun n => E.lift (hexSepCheck (.obj o) n)) hb = (r, hb)) :
+    baHexE cRead (some (.obj o)) (some (.obj (.int bps))) h =
+      ((r >>= fun parsed => strhexBody h.ba.seq parsed bps), h) := by
+  have rs := read_same h { h with ba := baGetBuffer h.ba } ⟨rfl, rfl, rfl, rfl⟩
+  have e3 : ({ ba := baReleaseBuffer (baGetBuffer h.ba), gen := h.gen, kept := h.kept } : H) = h := by
+    rw [release_get]
+  have hr := hr0 { h with ba := baGetBuffer h.ba }
+  simp only [E.bind_app] at hr
+  simp only [baHexE, E.bind_app, clinic_int bps ⟨h1, h2⟩, E.get_app, exportsUp, E.modify_app, E.attempt_app,
+    hexSepE]
+  rw [hr]
+  cases r with
+  | error e => simp [exportsDown, E.modify_app, e3, E.lift_app, bind, Except.bind]
+  | ok p => simp [cRead, readE_app, rs, exportsDown, E.modify_app, e3, seq_getBuffer, E.lift_app, bind, Except.bind]
+
+/-- `bytearray.hex(sep, bytes_per_sep)` (:2733-2747) with a separator that runs no Python code: a
+one-byte `bytes` or one-character `str` below 128 gives `bytes.hex` of the contents with that
+separator (whose grouping by `bytes_per_sep` is `HexGroups`); a `bytes` of another length is
+`ValueError('sep must be length 1.')`, a non-ASCII one `ValueError('sep must be ASCII.')`, and an
+object without a length the `TypeError` of `PyObject_Length`. The object is left as it was in every
+case (`ob_exports` is lowered again). For every heap and every `bytes_per_sep` in `Py_ssize_t`. -/
+def BaHexSepSpec : Prop :=
+  ∀ (h : H) (bps : Int), ssizeMin ≤ bps → bps ≤ ssizeMax →
+    (∀ c : Nat, c ≤ 127 → baHexE cRead (some (.obj (.bytes [c]))) (some (.obj (.int bps))) h =
+      (bytesHex h.ba.seq (some (.bytes [c])) bps, h)) ∧
+    (∀ c : Nat, c ≤ 127 → baHexE cRead (some (.obj (.str [c]))) (some (.obj (.int bps))) h =
+      (bytesHex h.ba.seq (some (.str [c])) bps, h)) ∧
+    (∀ s : Seq, s.length ≠ 1 → baHexE cRead (some (.obj (.bytes s))) (some (.obj (.int bps))) h =
+      (.error (.valueError "sep must be length 1."), h)) ∧
+    (∀ c : Nat, 128 ≤ c → baHexE cRead (some (.obj (.bytes [c]))) (some (.obj (.int bps))) h =
+      (.error (.valueError "sep must be ASCII."), h)) ∧
+    (∀ c : Nat, 128 ≤ c → baHexE cRead (some (.obj (.str [c]))) (some (.obj (.int bps))) h =
+      (.error (.valueError "sep must be ASCII."), h)) ∧
+    (∀ v : Int, baHexE cRead (some (.obj (.int v))) (some (.obj (.int bps))) h =
+      (.error (.typeError "object of type 'int' has no len()"), h))
+
+theorem baHexSepSpec_proven : BaHexSepSpec := by
+  intro h bps h1 h2
+  have hr : ¬ (bps < ssizeMin ∨ bps > ssizeMax) := by omega
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro c hc
+    have hc' : ¬ (c > 127) := by omega
+    rw [hex_after_sep h bps h1 h2 (.bytes [c]) (.ok (some c)) (fun hb => by
+      simp only [E.bind_app, lengthE, objLength, E.lift_app, Functor.map, Except.map]
+      simp [ objLength, E.lift_app, hexSepCheck, hc', Functor.map, Except.map, E.bind_app, pure, Except.pure, throw, throwThe,
+        MonadExceptOf.throw, bind, Except.bind])]
+    simp [bytesHex, hr, strhex_bytes1 _ c hc, bind, Except.bind]
+  · intro c hc
+    have hc' : ¬ (c > 127) := by omega
+    have hc2 : ¬ (c ≥ 256) := by omega
+    rw [hex_after_sep h bps h1 h2 (.str [c]) (.ok (some c)) (fun hb => by
+      simp only [E.bind_app, lengthE, objLength, E.lift_app, Functor.map, Except.map]
+      simp [ objLength, E.lift_app, hexSepCheck, hc', hc2, Functor.map, Except.map, E.bind_app, pure, Except.pure, throw, throwThe,
+        MonadExceptOf.throw, bind, Except.bind])]
+    simp [bytesHex, hr, strhex_str1 _ c hc, bind, Except.bind]
+  · intro s hs
+    have hs' : ((s.length : Nat) : Int) ≠ 1 := by omega
+    rw [hex_after_sep h bps h1 h2 (.bytes s) (.error (.valueError "sep must be length 1.")) (fun hb => by
+      simp only [E.bind_app, lengthE, objLength, E.lift_app, Functor.map, Except.map]
+      simp [ objLength, E.lift_app, hexSepCheck, hs', Functor.map, Except.map, E.bind_app, pure, Except.pure, throw, throwThe,
+        MonadExceptOf.throw, bind, Except.bind])]
+    rfl
+  · intro c hc
+    have hc' : c > 127 := by omega
+    rw [hex_after_sep h bps h1 h2 (.bytes [c]) (.error (.valueError "sep must be ASCII.")) (fun hb => by
+      simp only [E.bind_app, lengthE, objLength, E.lift_app, Functor.map, Except.map]
+      simp [ objLength, E.lift_app, hexSepCheck, hc', Functor.map, Except.map, E.bind_app, pure, Except.pure, throw, throwThe,
+        MonadExceptOf.throw, bind, Except.bind])]
+    rfl
+  · intro c hc
+    rw [hex_after_sep h bps h1 h2 (.str [c]) (.error (.valueError "sep must be ASCII.")) (fun hb => by
+      simp only [E.bind_app, lengthE, objLength, E.lift_app, Functor.map, Except.map]
+      by_cases hc2 : c ≥ 256
+      · simp [hexSepCheck, hc2, pure, Except.pure, throw, throwThe, MonadExceptOf.throw, bind, Except.bind]
+      · have hc' : c > 127 := by omega
+        simp [lengthE, objLength, E.lift_app, hexSepCheck, hc2, hc', Functor.map, Except.map, E.bind_app, pure, Except.pure, throw, throwThe,
+        MonadExceptOf.throw, bind, Except.bind])]
+    rfl
+  · intro v
+    rw [hex_after_sep h bps h1 h2 (.int v) (.error (.typeError "object of type 'int' has no len()")) (fun hb => by
+      simp only [E.bind_app, lengthE, objLength, E.lift_app, Functor.map, Except.map]
+      simp [ objLength, E.lift_app, Functor.map, Except.map, E.bind_app, Obj.typeName, bind, Except.bind]
+      rfl)]
+    rfl
+
 end PyLean.BytesObj.Bytes
