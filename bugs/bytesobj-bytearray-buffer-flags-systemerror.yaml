@@ -1,6 +1,6 @@
 id: bytesobj-bytearray-buffer-flags-systemerror
 title: "bytearray().__buffer__(inspect.BufferFlags.READ) raises SystemError (bad argument to internal function)"
-priority: P3
+priority: P4
 kind: wrong-exception
 module: bytesobj
 files: [Objects/bytearrayobject.c, Objects/abstract.c]
@@ -22,6 +22,12 @@ likelihood: |
   Low: READ and WRITE are flags for PyMemoryView_FromMemory, not request types, and few programs pass them
   to __buffer__. Impact is an exception type only (SystemError instead of, say, BufferError or ValueError).
 maybe_intended: |
+  Partly: the check itself was added on purpose (gh-114685, PR gh-114802) to catch C callers passing
+  PyBUF_READ/PyBUF_WRITE, which are memoryview-only flags. What is not intended is that Python code
+  following Doc/library/inspect.rst:1874-1877 ("can be passed to the __buffer__ method") gets a
+  SystemError. The fix belongs in how __buffer__ maps these flags (or in the docs), not in bytearray;
+  bytes behaves the same. Re-rated P3 -> P4 by the bytearray review (2026-11-03).
+
   Partly: the BadInternalCall in PyBuffer_FillInfo is a deliberate guard against C callers passing
   PyBUF_READ/PyBUF_WRITE as request flags. What is not intended is that the guard's SystemError is reachable
   from Python through a documented enum member, and that memoryview, bytes and bytearray disagree.
@@ -60,7 +66,10 @@ possible_fix: |
   BufferError for PyBUF_READ/PyBUF_WRITE, or have PyBuffer_FillInfo raise BufferError instead of
   BadInternalCall; alternatively document READ and WRITE as not valid for __buffer__.
 duplicates:
-  issues: []
+  issues:
+    - {number: 114685, state: closed, relation: "related prior work: the issue behind the PyBUF_READ/PyBUF_WRITE guard in PyBuffer_FillInfo; the guard is deliberate for C callers"}
+  prs:
+    - {number: 114802, state: merged, relation: "'PyBuffer_FillInfo now raises on PyBUF_{READ,WRITE}' (2024-02-04): introduced the SystemError this record reaches from Python via __buffer__"}
   queries: ["__buffer__ SystemError", "PyBUF_READ PyBuffer_FillInfo", "BufferFlags READ bad argument internal function",
     "__buffer__ flags", "PyBuffer_FillInfo SystemError", "bad argument to internal function buffer"]
   bugforge: "no entry (vendor/bugforge-results/README.md has no PyBUF_READ, BufferFlags or 'bad argument to internal function' finding)"

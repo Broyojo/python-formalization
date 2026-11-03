@@ -162,7 +162,7 @@ def baReverseLoop (self : BA) : BA :=
 /-- `bytearray_iter`, :3179-3195: `PyErr_BadInternalCall` for an object that is not a bytearray (which
 `tp_iter` never passes), else a new iterator at index 0. -/
 def baIterOf (isBytearray : Bool) : Py BAIter :=
-  if !isBytearray then .error (systemError "Objects/bytearrayobject.c:3184: bad argument to internal function")
+  if !isBytearray then .error (systemError "Objects/bytearrayobject.c:3185: bad argument to internal function")
   else .ok { index := 0 }
 
 /-- `bytearrayiter_setstate`, :3110-3132, on any object: `PyLong_AsSsize_t` takes only an `int` (a

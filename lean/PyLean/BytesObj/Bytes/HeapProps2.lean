@@ -1365,7 +1365,7 @@ change, the length hint is exactly the number of items still to come, 0 once exh
 `__index__`), does nothing to an exhausted iterator, and otherwise sets the index clamped to
 `[-1, len]`, so that the iterator then yields `b[k:]`. For every object and state. -/
 def BaIterFull : Prop :=
-  baIterOf false = .error (systemError "Objects/bytearrayobject.c:3184: bad argument to internal function") ∧
+  baIterOf false = .error (systemError "Objects/bytearrayobject.c:3185: bad argument to internal function") ∧
   baIterOf true = .ok { index := 0 } ∧
   (∀ seq : BA, baDrain seq (seq.data.length + 1) { index := 0 } = seq.data) ∧
   (∀ (seq : BA) (i : Nat), baIterLen seq { index := i } = (baDrain seq (seq.data.length + 1) { index := i }).length) ∧
