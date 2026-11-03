@@ -674,6 +674,11 @@ listsort-reverse-stable	proven	Objects/listobject.c	list.sort
 listsort-key	proven	Objects/listobject.c	list.sort
 listsort-long-compare	proven	Objects/listobject.c	unsafe_long_compare,unsafe_object_compare,long_compare,long_richcompare
 listsort-object-compare	proven	Objects/listobject.c	unsafe_object_compare
+listsort-fallible-agree	proven	Objects/listobject.c	binarysort,count_run,gallop_left,gallop_right,merge_lo,merge_hi,merge_at,list_sort_impl
+listsort-perm-on-error	proven	Objects/listobject.c	binarysort,count_run,gallop_left,gallop_right,merge_lo,merge_hi,merge_at,list_sort_impl
+listsort-fail-exits	proven	Objects/listobject.c	gallop_left,gallop_right,merge_at,merge_lo,merge_hi,binarysort,count_run
+listsort-fails	proven	Objects/listobject.c	list_sort_impl,PyList_Sort,count_run
+listsort-count-run-maximal	proven	Objects/listobject.c	count_run
 binary64-round-nearest-even	proven	Objects/floatobject.c	
 binary64-bits-value-roundtrip	proven	Objects/floatobject.c	
 binary64-fma-correct	proven	Objects/floatobject.c	
@@ -1062,6 +1067,10 @@ bytesobj-list-extend-iter-reentrant	proven	Objects/listobject.c	list_extend_iter
 bytesobj-sortslice-moves	proven	Objects/listobject.c	sortslice_copy,sortslice_copy_incr,sortslice_copy_decr,sortslice_memcpy,sortslice_memmove,sortslice_advance
 bytesobj-repr-step	proven	Objects/listobject.c	list_repr_impl
 bytesobj-list-extend-iter-wf	proven	Objects/listobject.c	list_extend_iter_lock_held
+bytesobj-sort-compare-tied	proven	Objects/listobject.c	safe_object_compare,unsafe_tuple_compare
+bytesobj-sortslice-reverse	proven	Objects/listobject.c	sortslice_reverse,PyList_Reverse
+bytesobj-list-iter-states	proven	Objects/listobject.c	listiter_len,listreviter_len,listiter_setstate,listreviter_setstate
+bytesobj-list-init-iterable	proven	Objects/listobject.c	list___init___impl,list_vectorcall,list_richcompare_impl,list_richcompare
 bytesobj-bytes-class-shortcut	proven	Objects/bytes_methods.c	_Py_bytes_isspace,_Py_bytes_isalpha,_Py_bytes_isalnum,_Py_bytes_isdigit,bytearray_isspace,bytearray_isalpha,bytearray_isalnum,bytearray_isdigit
 bytesobj-bytes-cased	proven	Objects/bytes_methods.c	_Py_bytes_islower,_Py_bytes_isupper,bytearray_islower,bytearray_isupper
 bytesobj-bytes-title	proven	Objects/bytes_methods.c	_Py_bytes_istitle,_Py_bytes_title,bytearray_istitle,bytearray_title
