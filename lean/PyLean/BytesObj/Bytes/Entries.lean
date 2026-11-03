@@ -771,15 +771,21 @@ def entries : List Entry := [
     bug := some "bytesobj-bytearray-size-null-doc" },
   { id := "bytesobj-bytearray-ass-copy-fails", pyFile := "Objects/bytearrayobject.c"
     pyFns := ["bytearray_ass_subscript_lock_held", "bytearray_ass_subscript"]
-    statement := "When PyByteArray_FromObject fails for the value of b[s] = v (a list holding a value outside range(256), an object neither buffer nor iterable, an iterator that raises), the error is the result and b is left as the slice's own callbacks left it: nothing is deleted."
+    statement := "When PyByteArray_FromObject fails for the value of b[s] = v (a list holding a value outside range(256), an object neither buffer nor iterable, an iterator that raises, a generator's StopIteration being RuntimeError), the error is the result and b is left as the slice's own callbacks left it: nothing is deleted."
     source := "bytearrayobject.c:856-859", status := .proven
     prop := ``BaAssSubCopyFails, thm := some ``baAssSubCopyFails_proven
     notes := "Scope: callbacks act on self only." },
   { id := "bytesobj-bytearray-init-loop-errors", pyFile := "Objects/bytearrayobject.c"
     pyFns := ["bytearray___init___impl"]
-    statement := "The error exits of __init__'s iterator loop: a bad or non-integer item raises after the items before it were appended; an iterator's exception is the result unless it is StopIteration; an item whose __index__ takes a view makes the append's resize raise BufferError; a non-iterable is the 'cannot convert' TypeError; an __index__ TypeError falls through to it while other __index__ exceptions are the result."
+    statement := "The error exits of __init__'s iterator loop: a bad or non-integer item raises after the items before it were appended; an iterator's exception is the result unless it is StopIteration (a map's StopIteration ends the loop, a generator's is RuntimeError); an item whose __index__ takes a view makes the append's resize raise BufferError; a non-iterable is the 'cannot convert' TypeError; an __index__ TypeError falls through to it while other __index__ exceptions are the result."
     source := "bytearrayobject.c:1056-1066, :1129-1181", status := .proven
     prop := ``BaInitLoopErrors, thm := some ``baInitLoopErrors_proven
+    notes := "Scope: callbacks act on self only." },
+  { id := "bytesobj-bytearray-init-append-view", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray___init___impl"]
+    statement := "The append of __init__'s loop writes into spare allocation without _canresize, also under a view, and otherwise resizes, which with exports is BufferError; from an empty object, iter([0]*9 + [G()]) succeeds while [0]*8 + [G()] and [0]*15 + [G()] raise BufferError, G.__index__ taking memoryview(b)."
+    source := "bytearrayobject.c:1164-1170; growth strategy :302-327", status := .proven
+    prop := ``BaInitAppendView, thm := some ``baInitAppendView_proven
     notes := "Scope: callbacks act on self only." },
   { id := "bytesobj-bytes-class-tables", pyFile := "Objects/bytes_methods.c"
     pyFns := ["_Py_bytes_isspace", "_Py_bytes_isalpha", "_Py_bytes_isalnum", "_Py_bytes_isdigit"]
@@ -884,9 +890,10 @@ def entries : List Entry := [
     prop := ``MutatorsIndexRaises, thm := some ``mutatorsIndexRaises_proven },
   { id := "bytesobj-bytes-iter-raises", pyFile := "Objects/bytesobject.c"
     pyFns := ["_PyBytes_FromIterator", "PyBytes_FromObject", "PyBytes_Join"]
-    statement := "bytes(it) and extend check items as they come, so a failing iterator's exception comes after good items and a bad item comes before it; join runs the iterator to its end first, so its exception wins over any item; extend writes nothing."
+    statement := "bytes(it) and extend check items as they come, so a failing iterator's exception comes after good items and a bad item comes before it; join runs the iterator to its end first, so its exception wins over any item; extend writes nothing. A generator's StopIteration reaches them as RuntimeError (PEP 479); a C iterator's (map) StopIteration ends it, as a plain iterator does."
     source := "the loops at bytesobject.c:3080-3108, bytearrayobject.c:2286-2324; PySequence_Fast", status := .proven
-    prop := ``IterRaisesRules, thm := some ``iterRaisesRules_proven },
+    prop := ``IterRaisesRules, thm := some ``iterRaisesRules_proven
+    notes := "Corrected: an earlier statement gave the iterator's exception for every e, false at StopIteration (map succeeds, a generator gives RuntimeError)." },
   { id := "bytesobj-bytes-hint-rules", pyFile := "Objects/bytesobject.c"
     pyFns := ["_PyBytes_FromIterator", "PyBytes_Join"]
     statement := "__length_hint__ runs before the first item: a TypeError from it is ignored, another exception wins over a bad item, a negative value is ValueError, and a good value does not change the result."

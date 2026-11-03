@@ -250,7 +250,7 @@ def bytesGetItem (s : Seq) (i : Int) : Py Nat := do
 iterate. A `bytes` argument yields ints. -/
 def iterItems? (o : Obj) : Option (List Obj) :=
   match o with
-  | .list xs | .tuple xs | .iter xs | .iterRaises xs _ | .iterHint xs _ => some xs
+  | .list xs | .tuple xs | .iter xs | .iterRaises xs _ | .mapRaises xs _ | .iterHint xs _ => some xs
   | .bytes s | .bytearray s | .memview s _ => some (s.map (fun (c : Nat) => Obj.int (c : Int)))
   | .str cs => some (cs.map (fun c => Obj.str [c]))
   | .dict kv => some (kv.map (fun p => Obj.bytes p.1))
@@ -266,10 +266,17 @@ def getIterOr (msg : PyExc) (o : Obj) : Py (List Obj) :=
     | some xs => .ok xs
     | none => .error msg
 
-/-- What ends an iteration: `PyIter_Next` failing after the last item. -/
+/-- The exception a generator's caller sees when the generator's code raises `e`: PEP 479 turns a
+`StopIteration` into `RuntimeError` (`stopiteration_error`, Python/intrinsics.c:140-165). -/
+def genRaised (e : PyExc) : PyExc :=
+  if excMatches e "StopIteration" then .named "RuntimeError" "generator raised StopIteration" else e
+
+/-- What ends an iteration: `PyIter_Next` failing after the last item. A C iterator's
+`StopIteration` is the normal end, which every caller clears. -/
 def iterFinish (o : Obj) : Py Unit :=
   match o with
-  | .iterRaises _ e => .error e
+  | .iterRaises _ e => .error (genRaised e)
+  | .mapRaises _ e => if excMatches e "StopIteration" then .ok () else .error e
   | _ => .ok ()
 
 /-- `PyObject_LengthHint(o, d)`, Objects/abstract.c:95-152, with the default `d` for a

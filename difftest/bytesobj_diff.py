@@ -9,6 +9,7 @@ carry "mod": "bytesobj" and a `fn` starting with the family prefix.
 
 import ctypes
 import gc
+import itertools
 import operator
 import sys
 import weakref
@@ -1005,7 +1006,7 @@ class BBoom(Exception):
 
 def b_exc(e):
     return {"TypeError": TypeError, "ValueError": ValueError, "OverflowError": OverflowError,
-            "BBoom": BBoom, "TSub": TSub, "VSub": VSub}[e[0]](e[1])
+            "BBoom": BBoom, "TSub": TSub, "VSub": VSub, "StopIteration": StopIteration}[e[0]](e[1])
 
 
 class BIdxRaises:
@@ -1061,6 +1062,19 @@ def b_iter_raises(xs, e):
     raise b_exc(e)
 
 
+def b_map_raises(xs, e):
+    """`map(f, ...)`, a C iterator, whose `f` gives `xs` and then raises `e` (a `StopIteration` ends it)."""
+    it = iter(xs)
+
+    def f(_):
+        try:
+            return next(it)
+        except StopIteration:
+            pass
+        raise b_exc(e)
+    return map(f, itertools.count())
+
+
 def b_bflt(x):
     import math
     if math.isnan(x):
@@ -1098,6 +1112,8 @@ def b_build(o):
         return (b_build(x) for x in o[1])
     if t == "iterraises":
         return b_iter_raises([b_build(x) for x in o[1]], o[2])
+    if t == "mapraises":
+        return b_map_raises([b_build(x) for x in o[1]], o[2])
     if t == "iterhint":
         return BHint([b_build(x) for x in o[1]], o[2])
     if t == "itercallraises":
@@ -1178,7 +1194,7 @@ def b_robj(rng, depth=2):
 
 
 B_EXC = [["TypeError", "boom"], ["ValueError", "boom"], ["OverflowError", "boom"], ["BBoom", "boom"],
-         ["TSub", "boom"], ["VSub", "boom"]]
+         ["TSub", "boom"], ["VSub", "boom"], ["StopIteration", "boom"]]
 B_HINT = [0, 1, 3, 64, 100, 255, 256, 257, -1, -5, 2 ** 70, -2 ** 70, sys.maxsize, sys.maxsize - 32, sys.maxsize - 33,
           2 ** 47]
 
@@ -1195,7 +1211,7 @@ def b_rfail(rng):
     if k == 1:
         return ["dunderraises", e]
     if k == 2:
-        return ["iterraises", items, e]
+        return [rng.choice(["iterraises", "mapraises"]), items, e]
     if k == 3:
         return ["itercallraises", e]
     return ["iterhint", items, rng.choice(B_HINT + B_EXC)]
@@ -1353,7 +1369,7 @@ def b_robj_ascii(rng, depth=2):
 def b_noaddr(o):
     """`%a` of a misaligned argument: objects whose repr has an address are out of scope."""
     t = o[0]
-    if t in ("memview", "plain", "iter", "index", "dunder", "iterraises", "iterhint", "itercallraises",
+    if t in ("memview", "plain", "iter", "index", "dunder", "iterraises", "mapraises", "iterhint", "itercallraises",
              "indexraises", "dunderraises"):
         return ["int", 1]
     if t in ("list", "tuple"):
@@ -1434,7 +1450,7 @@ def b_sweep():
     for e in B_EXC:
         objs += [["indexraises", e], ["dunderraises", e], ["itercallraises", e]]
         for it in items:
-            objs += [["iterraises", it, e], ["iterhint", it, e]]
+            objs += [["iterraises", it, e], ["mapraises", it, e], ["iterhint", it, e]]
     for it in items:
         objs += [["iterhint", it, h] for h in [0, 1, 64, -1, 2 ** 70, -2 ** 70]]
     cases = []
