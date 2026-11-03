@@ -2144,6 +2144,9 @@ textlibs-struct-le-complex-float-overflow	refuted	Modules/_struct.c	np_float_com
 textlibs-struct-bytes-format-nonascii-error	proven	Modules/_struct.c	cache_struct_converter,set_format,pack_impl
 textlibs-struct-void-p-index-overflow	refuted	Modules/_struct.c	np_void_p,s_pack_internal
 textlibs-struct-pack-into-0p-outside-field	proven	Modules/_struct.c	Struct_pack_into_impl,s_pack_internal,pack_into_impl
+textlibs-struct-sp-count	proven	Modules/_struct.c	prepare_s
+textlibs-struct-pack-values	proven	Modules/_struct.c	Struct_pack_impl
+textlibs-struct-pack-into-matches-pack	proven	Modules/_struct.c	Struct_pack_into_impl,s_pack_internal
 textlibs-struct-pack-length	proven	Modules/_struct.c	Struct_pack_impl,s_pack_internal
 textlibs-struct-pack-into-laws	proven	Modules/_struct.c	Struct_pack_into_impl
 textlibs-struct-pack-p-field	proven	Modules/_struct.c	s_pack_internal
