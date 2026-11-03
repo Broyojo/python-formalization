@@ -54,7 +54,8 @@ def NameReplaceWritesNames : Prop :=
 
 /-- `UnicodeEncodeError('ascii', '\U000f0000', 0, 1, 'r')`. -/
 def aliasExc : ExcObj :=
-  { cls := "UnicodeEncodeError", tpName := "UnicodeEncodeError", encoding := .str (lit "ascii"),
+  { cls := "UnicodeEncodeError", tpName := "UnicodeEncodeError",
+    clsRepr := "<class 'UnicodeEncodeError'>", encoding := .str (lit "ascii"),
     object := .str [0xF0000], start := 0, stop := 1 }
 
 /-- For every database that meets `UcdOk`, the real one included: `namereplace` writes
@@ -72,9 +73,9 @@ theorem nameReplace_alias (u : Ucd) (hu : UcdOk u) :
     if_false, capiOf, getParams_str aliasExc [0xF0000] rfl, pure, Except.pure, bind, Except.bind,
     Functor.map, Except.map, Body.result, List.length_singleton, hs, he, slice, List.drop_zero,
     Nat.sub_zero, List.take_one, List.head?_cons, Option.toList_some, nameSizeLoop, nameSize, hn]
-  have hfit : ¬ (0 > ssizeMaxN - (1 + 1 + 1 + (lit "NULL").length + 1)) := by decide
-  simp only [hfit, if_false, Nat.zero_add]
-  simp [nameBlock, hn]
+  have hfit : ¬ ((ssizeMaxN : Int) - (3 + ((lit "NULL").length : Int) + 1) < 0) := by
+    simp [ssizeMaxN, lit]
+  simp [nameBlock, hn, hfit]
 
 theorem nameReplaceWritesNames_refuted : ¬ NameReplaceWritesNames := by
   intro h

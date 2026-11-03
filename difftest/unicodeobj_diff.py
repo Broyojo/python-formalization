@@ -2746,6 +2746,30 @@ class SubVal(ValueError):
     pass
 
 
+class MroDropEnc(type):
+    """A metaclass whose MRO keeps UnicodeEncodeError but drops its bases."""
+    def mro(cls):
+        return [cls, UnicodeEncodeError, object]
+
+
+class MroDropDec(type):
+    def mro(cls):
+        return [cls, UnicodeDecodeError, BaseException, object]
+
+
+class MroEnc(UnicodeEncodeError, metaclass=MroDropEnc):
+    pass
+
+
+class MroEncSub(MroEnc):
+    """tp_base MroEnc has no BaseException in its MRO, so this class lacks the exception flag."""
+    pass
+
+
+class MroDec(UnicodeDecodeError, metaclass=MroDropDec):
+    pass
+
+
 def fqn(t):
     """`PyType_GetFullyQualifiedName`, which `%T` prints: no module for builtins and __main__."""
     return t.__qualname__ if t.__module__ in ("builtins", "__main__") else f"{t.__module__}.{t.__qualname__}"
@@ -2755,6 +2779,7 @@ CH_KINDS = {
     "enc": UnicodeEncodeError, "dec": UnicodeDecodeError, "tr": UnicodeTranslateError,
     "subenc": SubEnc, "subdec": SubDec, "subtr": SubTr,
     "uerr": UnicodeError, "value": ValueError, "subval": SubVal, "int": int, "strobj": str,
+    "mroenc": MroEnc, "mroencsub": MroEncSub, "mrodec": MroDec,
 }
 CH_HANDLERS = ["strict", "ignore", "replace", "xmlcharrefreplace", "backslashreplace", "namereplace",
                "surrogatepass", "surrogateescape"]
@@ -2826,11 +2851,12 @@ def ch_pos(rng, n):
 
 @gen("codecs", 10)
 def gen_codecs_handler(rng):
-    kind = rng.choices(list(CH_KINDS), weights=[6, 6, 3, 2, 2, 1, 1, 1, 1, 1, 1])[0]
+    kind = rng.choices(list(CH_KINDS), weights=[6, 6, 3, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1])[0]
     cls = CH_KINDS[kind]
     obj_type = "bytes" if issubclass(cls, UnicodeDecodeError) else "str"
     c = {"mod": "unicodeobj", "fn": "codecs_handler", "h": rng.choice(CH_HANDLERS), "kind": kind,
-         "cls": fqn(cls), "tp": fqn(cls), "mro": [fqn(t) for t in cls.__mro__]}
+         "cls": fqn(cls), "tp": fqn(cls), "mro": [fqn(t) for t in cls.__mro__],
+         "flag": bool(cls.__flags__ & (1 << 30)), "repr": repr(cls)}
     if obj_type == "str" and rng.random() < 0.5:
         enc = {"k": "str", "v": ch_rand_enc(rng)}
     else:
@@ -2909,7 +2935,8 @@ def run_codecs_handler(c):
     h = codecs.lookup_error(c["h"])
     try:
         rep, pos = h(e)
-    except Exception as x:
+    except:  # noqa: E722 -- a class with a custom mro() may be no Exception
+        x = sys.exc_info()[1]
         if x is e:
             return {"raised": "self"}
         return {"raised": type(x).__name__, "msg": str(x)}
