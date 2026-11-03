@@ -755,9 +755,7 @@ def attributeErrorGetstate (v : Val) : M Val := do
   let w ← getW
   let d := excDataOf w v
   let es := instDictEntries w v
-  let es := match memGet d "name" with
-    | some n => dictSetEntry es (.str "name") n
-    | none => es
+  let es := optSetEntry es "name" (memGet d "name")
   alloc B.dict (.dict (dictSetEntry es (.str "args") (.tuple d.args)))
 
 /-- `AttributeError_reduce`, `Objects/exceptions.c:2749`. -/
@@ -768,9 +766,12 @@ def attributeErrorReduce (v : Val) : M Val := do
 
 /-! ## `MemoryError` -/
 
-/-- `MemoryError_new`, `Objects/exceptions.c:4143`, on the path every program with fewer
-than 16 live `MemoryError`s takes: `get_memory_error` hands out a freelist entry, whose
-`args` is the empty tuple whatever was passed. `ExcFreelist.lean` models the list itself. -/
+/-- `MemoryError_new`, `Objects/exceptions.c:4143`, for the interpreter, which has no freelist in
+its world and never frees: it takes the freelist branch of `get_memory_error`, whose `args` is the
+empty tuple whatever was passed. That is CPython while an entry is free (16 are preallocated at
+startup and each dead `MemoryError` returns one); with the freelist empty CPython keeps the
+arguments instead. `memoryErrorNewC` in `ExcFreelist.lean` is the mirror with the freelist
+explicit, and the properties of `MemoryError_new` are stated there. -/
 def memoryErrorNew (t : Addr) (args : List Val) : M Val :=
   if t != B.MemoryError then baseExceptionNew t args
   else baseExceptionNew t []

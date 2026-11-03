@@ -582,4 +582,405 @@ theorem osErrorInitTwoOrNone_proven : OsErrorInitTwoOrNone := by
           memGet_memSet_ne _ "errno" "filename2" _ (by decide)]
       · first | rfl | trivial
 
+/-- **`NameError.__init__` and `AttributeError.__init__` store their keywords and reset the
+others** (`:2580-2605`, `:2663-2690`): with keywords among the names (at most the parse's bound),
+`args` is the positional arguments and each member is its keyword or NULL (`Py_XSETREF` with
+NULL, `:2602`, `:2686-2687`), on a first or a later call. An init that keeps an old `name` or
+`obj` fails. `MemNodup` is the type invariant that each member name is stored once. -/
+def NameAttrInitStores : Prop :=
+  (∀ (a : Addr) (d : ExcData) (args : List Val) (kw : Kw) (w : World), IsExc w a d → MemNodup d →
+    kw.length ≤ 1 → kw.all (fun p => ["name"].contains p.1) = true →
+    ∃ w', nameErrorInit (.obj a) args kw w = .ok () w' ∧
+      excArgs w' (.obj a) = args ∧
+      memGet (excDataOf w' (.obj a)) "name" = NameDict.get? kw "name") ∧
+  (∀ (a : Addr) (d : ExcData) (args : List Val) (kw : Kw) (w : World), IsExc w a d → MemNodup d →
+    kw.length ≤ 2 → kw.all (fun p => ["name", "obj"].contains p.1) = true →
+    ∃ w', attributeErrorInit (.obj a) args kw w = .ok () w' ∧
+      excArgs w' (.obj a) = args ∧
+      memGet (excDataOf w' (.obj a)) "name" = NameDict.get? kw "name" ∧
+      memGet (excDataOf w' (.obj a)) "obj" = NameDict.get? kw "obj")
+
+theorem nameAttrInitStores_proven : NameAttrInitStores := by
+  refine ⟨?_, ?_⟩
+  · intro a d args kw w hx hnd hl hall
+    have hany : kw.any (fun p => !["name"].contains p.1) = false := by
+      rw [List.all_eq_true] at hall
+      rw [List.any_eq_false]
+      intro p hp
+      have := hall p hp
+      simp only [Bool.not_eq_true', Bool.not_eq_false', this, not_true_eq_false, not_false_eq_true]
+      decide
+    have hgt : ¬ 1 < kw.length := by omega
+    have h1 := hx.update (fun d => { d with args := args })
+    have h2 := isExc_memSet h1 "name" (NameDict.get? kw "name")
+    refine ex_of_isExc h2 ?_ ?_
+    · simp only [nameErrorInit, baseExceptionInit, argNoKeywords, argKeywordOnly, M.bind_app,
+        getW_app, excUpdate_app]
+      simp only [List.isEmpty_nil, Bool.not_true, Bool.false_eq_true, if_false, gt_iff_lt, hgt, hany]
+      simp [excUpdate_app, hgt]
+      try rfl
+    · intro h2
+      simp only [excArgs]
+      rw [h2.data]
+      have n0 : MemNodup { d with args := args } := hnd
+      exact ⟨rfl, memGet_memSet_self n0 _ _⟩
+  · intro a d args kw w hx hnd hl hall
+    have hany : kw.any (fun p => !["name", "obj"].contains p.1) = false := by
+      rw [List.all_eq_true] at hall
+      rw [List.any_eq_false]
+      intro p hp
+      have := hall p hp
+      simp only [Bool.not_eq_true', Bool.not_eq_false', this, not_true_eq_false, not_false_eq_true]
+      decide
+    have hgt : ¬ 2 < kw.length := by omega
+    have h1 := hx.update (fun d => { d with args := args })
+    have h2 := isExc_memSet h1 "name" (NameDict.get? kw "name")
+    have h3 := isExc_memSet h2 "obj" (NameDict.get? kw "obj")
+    refine ex_of_isExc h3 ?_ ?_
+    · simp only [attributeErrorInit, baseExceptionInit, argNoKeywords, argKeywordOnly, M.bind_app,
+        getW_app, excUpdate_app]
+      simp only [List.isEmpty_nil, Bool.not_true, Bool.false_eq_true, if_false, gt_iff_lt, hgt, hany]
+      simp [excUpdate_app, hgt]
+      try rfl
+    · intro h3
+      simp only [excArgs]
+      rw [h3.data]
+      have n0 : MemNodup { d with args := args } := hnd
+      have n1 := memSet_nodup n0 "name" (NameDict.get? kw "name")
+      refine ⟨rfl, ?_, memGet_memSet_self n1 _ _⟩
+      rw [memGet_memSet_ne _ "obj" "name" _ (by decide), memGet_memSet_self n0]
+
+/-! ## `SyntaxError` -/
+
+theorem memGet_memSet_eq {d : ExcData} (hd : MemNodup d) (n : Name) (v : Option Val) (m : Name) :
+    memGet (memSet n v d) m = if n = m then v else memGet d m := by
+  by_cases h : n = m
+  · subst h; simp [memGet_memSet_self hd]
+  · simp [h, memGet_memSet_ne _ _ _ _ h]
+
+/-- **`SyntaxError.__init__` stores `msg` and the location** (`:2790-2837`): with at least one
+argument `msg` is the first (`:2800-2802`), and with exactly two the second is parsed: it is
+`syntaxErrorParseInfo` in the world after `args` and `msg` were stored. The parse converts it with
+`tuple()`, and 4, 6 or 7 items are stored as `filename`, `lineno`, `offset`, `text` and the
+optional `end_lineno`, `end_offset`, `_metadata` (NULL when absent, `:2822-2828`). Five items are
+the `end_offset` refusal (`SyntaxErrorInitChecks`). `MemNodup` is the type invariant that each
+member name is stored once. -/
+def SyntaxErrorInitStores : Prop :=
+  (∀ (rt : Rt) (a : Addr) (d : ExcData) (items : List Val) (w : World),
+    IsExc w a d → MemNodup d → 4 ≤ items.length → items.length ≤ 7 → items.length ≠ 5 →
+    ∃ w', syntaxErrorParseInfo rt (.obj a) (.tuple items) w = .ok () w' ∧
+      memGet (excDataOf w' (.obj a)) "filename" = items[0]? ∧
+      memGet (excDataOf w' (.obj a)) "lineno" = items[1]? ∧
+      memGet (excDataOf w' (.obj a)) "offset" = items[2]? ∧
+      memGet (excDataOf w' (.obj a)) "text" = items[3]? ∧
+      memGet (excDataOf w' (.obj a)) "end_lineno" = items[4]? ∧
+      memGet (excDataOf w' (.obj a)) "end_offset" = items[5]? ∧
+      memGet (excDataOf w' (.obj a)) "_metadata" = items[6]?) ∧
+  (∀ (rt : Rt) (a : Addr) (m info : Val) (w : World),
+    syntaxErrorInit rt (.obj a) [m, info] [] w =
+      syntaxErrorParseInfo rt (.obj a) info
+        (excUpdW (excUpdW w a fun d => { d with args := [m, info] }) a (memSet "msg" (some m)))) ∧
+  (∀ (rt : Rt) (a : Addr) (d : ExcData) (m : Val) (rest : List Val) (w : World),
+    IsExc w a d → rest.length ≠ 1 →
+    ∃ w', syntaxErrorInit rt (.obj a) (m :: rest) [] w = .ok () w' ∧
+      excArgs w' (.obj a) = m :: rest ∧ memGet (excDataOf w' (.obj a)) "msg" = some m ∧
+      memGet (excDataOf w' (.obj a)) "filename" = memGet d "filename") ∧
+  (∀ (rt : Rt) (a : Addr) (d : ExcData) (w : World), IsExc w a d →
+    ∃ w', syntaxErrorInit rt (.obj a) [] [] w = .ok () w' ∧ excArgs w' (.obj a) = [] ∧
+      memGet (excDataOf w' (.obj a)) "msg" = memGet d "msg")
+
+theorem argCount_in (n : Nat) (h1 : 4 ≤ n) (h2 : n ≤ 7) (W : World) :
+    argCount none 4 7 n W = .ok () W := by
+  have hb : (decide (n < 4) || decide (7 < n)) = false := by
+    rw [Bool.or_eq_false_iff]; constructor <;> simp <;> omega
+  unfold argCount
+  simp only [hb]
+  rfl
+
+theorem syntaxErrorParseInfo_ok (rt : Rt) (a : Addr) (items : List Val) (w : World)
+    (hc : ∀ W, argCount none 4 7 items.length W = .ok () W)
+    (hend : (items[4]?.isSome && items[5]?.isNone) = false) :
+    syntaxErrorParseInfo rt (.obj a) (.tuple items) w = syntaxErrorStoreInfo (.obj a) items w := by
+  simp only [syntaxErrorParseInfo, M.bind_app, excSeqTuple, M.pure_app, hc, hend]
+  cases syntaxErrorStoreInfo (.obj a) items w <;> rfl
+
+theorem storeInfo_reads (d : ExcData) (hnd : MemNodup d) (items : List Val) :
+    memGet (memSet "_metadata" items[6]? (memSet "end_offset" items[5]? (memSet "end_lineno" items[4]?
+      (memSet "text" items[3]? (memSet "offset" items[2]? (memSet "lineno" items[1]?
+        (memSet "filename" items[0]? d))))))) "filename" = items[0]? ∧
+    memGet (memSet "_metadata" items[6]? (memSet "end_offset" items[5]? (memSet "end_lineno" items[4]?
+      (memSet "text" items[3]? (memSet "offset" items[2]? (memSet "lineno" items[1]?
+        (memSet "filename" items[0]? d))))))) "lineno" = items[1]? ∧
+    memGet (memSet "_metadata" items[6]? (memSet "end_offset" items[5]? (memSet "end_lineno" items[4]?
+      (memSet "text" items[3]? (memSet "offset" items[2]? (memSet "lineno" items[1]?
+        (memSet "filename" items[0]? d))))))) "offset" = items[2]? ∧
+    memGet (memSet "_metadata" items[6]? (memSet "end_offset" items[5]? (memSet "end_lineno" items[4]?
+      (memSet "text" items[3]? (memSet "offset" items[2]? (memSet "lineno" items[1]?
+        (memSet "filename" items[0]? d))))))) "text" = items[3]? ∧
+    memGet (memSet "_metadata" items[6]? (memSet "end_offset" items[5]? (memSet "end_lineno" items[4]?
+      (memSet "text" items[3]? (memSet "offset" items[2]? (memSet "lineno" items[1]?
+        (memSet "filename" items[0]? d))))))) "end_lineno" = items[4]? ∧
+    memGet (memSet "_metadata" items[6]? (memSet "end_offset" items[5]? (memSet "end_lineno" items[4]?
+      (memSet "text" items[3]? (memSet "offset" items[2]? (memSet "lineno" items[1]?
+        (memSet "filename" items[0]? d))))))) "end_offset" = items[5]? ∧
+    memGet (memSet "_metadata" items[6]? (memSet "end_offset" items[5]? (memSet "end_lineno" items[4]?
+      (memSet "text" items[3]? (memSet "offset" items[2]? (memSet "lineno" items[1]?
+        (memSet "filename" items[0]? d))))))) "_metadata" = items[6]? := by
+  have n4 := memSet_nodup hnd "filename" items[0]?
+  have n5 := memSet_nodup n4 "lineno" items[1]?
+  have n6 := memSet_nodup n5 "offset" items[2]?
+  have n7 := memSet_nodup n6 "text" items[3]?
+  have n8 := memSet_nodup n7 "end_lineno" items[4]?
+  have n9 := memSet_nodup n8 "end_offset" items[5]?
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [memGet_memSet_ne _ "_metadata" "filename" _ (by decide), memGet_memSet_ne _ "end_offset" "filename" _ (by decide), memGet_memSet_ne _ "end_lineno" "filename" _ (by decide), memGet_memSet_ne _ "text" "filename" _ (by decide), memGet_memSet_ne _ "offset" "filename" _ (by decide), memGet_memSet_ne _ "lineno" "filename" _ (by decide), memGet_memSet_self hnd]
+  · rw [memGet_memSet_ne _ "_metadata" "lineno" _ (by decide), memGet_memSet_ne _ "end_offset" "lineno" _ (by decide), memGet_memSet_ne _ "end_lineno" "lineno" _ (by decide), memGet_memSet_ne _ "text" "lineno" _ (by decide), memGet_memSet_ne _ "offset" "lineno" _ (by decide), memGet_memSet_self n4]
+  · rw [memGet_memSet_ne _ "_metadata" "offset" _ (by decide), memGet_memSet_ne _ "end_offset" "offset" _ (by decide), memGet_memSet_ne _ "end_lineno" "offset" _ (by decide), memGet_memSet_ne _ "text" "offset" _ (by decide), memGet_memSet_self n5]
+  · rw [memGet_memSet_ne _ "_metadata" "text" _ (by decide), memGet_memSet_ne _ "end_offset" "text" _ (by decide), memGet_memSet_ne _ "end_lineno" "text" _ (by decide), memGet_memSet_self n6]
+  · rw [memGet_memSet_ne _ "_metadata" "end_lineno" _ (by decide), memGet_memSet_ne _ "end_offset" "end_lineno" _ (by decide), memGet_memSet_self n7]
+  · rw [memGet_memSet_ne _ "_metadata" "end_offset" _ (by decide), memGet_memSet_self n8]
+  · rw [memGet_memSet_self n9]
+
+theorem excUpdate_isExc {w w' : World} {a : Addr} {d : ExcData} (hx : IsExc w a d)
+    (f : ExcData → ExcData) (h : excUpdate (.obj a) f w = .ok () w') : IsExc w' a (f d) := by
+  rw [excUpdate_app] at h
+  cases h
+  exact hx.update f
+
+theorem excUpdate_total2 (a : Addr) (f : ExcData → ExcData) (w : World) :
+    ∃ w', excUpdate (.obj a) f w = .ok () w' := ⟨_, excUpdate_app w a f⟩
+
+theorem storeInfo_spec {w : World} {a : Addr} {d : ExcData} (hx : IsExc w a d) (items : List Val) :
+    ∃ w', syntaxErrorStoreInfo (.obj a) items w = .ok () w' ∧
+      IsExc w' a (memSet "_metadata" items[6]? (memSet "end_offset" items[5]? (memSet "end_lineno" items[4]?
+        (memSet "text" items[3]? (memSet "offset" items[2]? (memSet "lineno" items[1]?
+          (memSet "filename" items[0]? d))))))) := by
+  obtain ⟨w1, h1⟩ := excUpdate_total2 a (memSet "filename" items[0]?) w
+  have y1 := excUpdate_isExc hx _ h1
+  obtain ⟨w2, h2⟩ := excUpdate_total2 a (memSet "lineno" items[1]?) w1
+  have y2 := excUpdate_isExc y1 _ h2
+  obtain ⟨w3, h3⟩ := excUpdate_total2 a (memSet "offset" items[2]?) w2
+  have y3 := excUpdate_isExc y2 _ h3
+  obtain ⟨w4, h4⟩ := excUpdate_total2 a (memSet "text" items[3]?) w3
+  have y4 := excUpdate_isExc y3 _ h4
+  obtain ⟨w5, h5⟩ := excUpdate_total2 a (memSet "end_lineno" items[4]?) w4
+  have y5 := excUpdate_isExc y4 _ h5
+  obtain ⟨w6, h6⟩ := excUpdate_total2 a (memSet "end_offset" items[5]?) w5
+  have y6 := excUpdate_isExc y5 _ h6
+  obtain ⟨w7, h7⟩ := excUpdate_total2 a (memSet "_metadata" items[6]?) w6
+  have y7 := excUpdate_isExc y6 _ h7
+  exact ⟨w7, by simp only [syntaxErrorStoreInfo, M.bind_app, h1, h2, h3, h4, h5, h6, h7], y7⟩
+
+theorem syntaxErrorInitStores_proven : SyntaxErrorInitStores := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro rt a d items w hx hnd h4 h7 h5
+    have hend : (items[4]?.isSome && items[5]?.isNone) = false := by
+      rcases Nat.lt_or_ge items.length 5 with h | h
+      · rw [List.getElem?_eq_none (show items.length ≤ 4 by omega)]; rfl
+      · rw [List.getElem?_eq_getElem (show 5 < items.length by omega)]
+        simp
+    obtain ⟨w', hs, hx'⟩ := storeInfo_spec hx items
+    refine ⟨w', ?_, ?_⟩
+    · rw [syntaxErrorParseInfo_ok rt a items w (argCount_in _ h4 h7) hend, hs]
+    · rw [hx'.data]
+      exact storeInfo_reads d hnd items
+  · intro rt a m info w
+    simp only [syntaxErrorInit, baseExceptionInit, argNoKeywords, M.bind_app, getW_app,
+      List.isEmpty_nil, excUpdate_app]
+    rfl
+  · intro rt a d m rest w hx hr
+    have x1 := hx.update (fun d => { d with args := m :: rest })
+    have x2 := isExc_memSet x1 "msg" (some m)
+    refine ex_of_isExc x2 ?_ ?_
+    · simp only [syntaxErrorInit, baseExceptionInit, argNoKeywords, M.bind_app, getW_app,
+        List.isEmpty_nil, excUpdate_app]
+      match rest, hr with
+      | [], _ => simp [excUpdate_app]
+      | _ :: _ :: _, _ => simp [excUpdate_app]
+    · intro x2
+      simp only [excArgs]
+      rw [x2.data]
+      refine ⟨rfl, memGet_memSet_same _ _ _, ?_⟩
+      rw [memGet_memSet_ne _ "msg" "filename" _ (by decide)]
+      rfl
+  · intro rt a d w hx
+    have x1 := hx.update (fun d => { d with args := [] })
+    refine ex_of_isExc x1 ?_ ?_
+    · simp [syntaxErrorInit, baseExceptionInit, argNoKeywords, excUpdate_app]
+    · intro x1
+      simp only [excArgs]
+      rw [x1.data]
+      exact ⟨rfl, rfl⟩
+
+theorem basenameOffset_nosep (i off : Nat) (cs : List Char) (h : sepChar ∉ cs) :
+    basenameOffset i off cs = off := by
+  induction cs generalizing i off with
+  | nil => rfl
+  | cons c cs ih =>
+    simp only [List.mem_cons, not_or] at h
+    have hc : (c == sepChar) = false := by simpa using Ne.symm h.1
+    simp [basenameOffset, hc, ih _ _ h.2]
+
+theorem basenameOffset_last (post : List Char) (hp : sepChar ∉ post) :
+    ∀ (pre : List Char) (i off : Nat),
+      basenameOffset i off (pre ++ sepChar :: post) = i + pre.length + 1 := by
+  intro pre
+  induction pre with
+  | nil => intro i off; simp [basenameOffset, basenameOffset_nosep _ _ _ hp]
+  | cons c pre ih =>
+    intro i off
+    simp only [List.cons_append, basenameOffset, ih, List.length_cons]
+    omega
+
+/-- **`my_basename` drops exactly up to the last separator** (`:2882-2904`): with a `/` in the
+name, the result is what follows the last one; with none, the name itself. `fun _ => ""` fails
+both. -/
+def MyBasenameExact : Prop :=
+  (∀ (pre post : List Char), sepChar ∉ post →
+    myBasename (String.ofList (pre ++ sepChar :: post)) = String.ofList post) ∧
+  (∀ (s : String), sepChar ∉ s.toList → myBasename s = s)
+
+theorem myBasenameExact_proven : MyBasenameExact := by
+  refine ⟨?_, ?_⟩
+  · intro pre post hp
+    have ho := basenameOffset_last post hp pre 0 0
+    simp only [myBasename, String.toList_ofList, ho]
+    simp
+  · intro s h
+    simp [myBasename, basenameOffset_nosep _ _ _ h]
+
+/-- **`SyntaxError.__str__`** (`:2907-2949`): `str(msg)` (`None` when unset) is followed by
+` (file, line N)`, ` (file)` or ` (line N)`, where `file` is `my_basename` of a `str` filename
+(subclasses included, printed by their content) and `N` the value of an exact `int` lineno, `-1`
+when it does not fit in `long`; with neither, just `str(msg)`. The filename and lineno are read
+before `str(msg)` runs. -/
+def SyntaxErrorStrFormats : Prop :=
+  ∀ (rt : Rt) (self : Val) (m : String) (w w1 : World),
+    rt.str (orNone (memGet (excDataOf w self) "msg")) w = .ok m w1 →
+    (∀ (f : Val) (fs : String) (l : Int), memGet (excDataOf w self) "filename" = some f →
+      strOf w f = some fs → memGet (excDataOf w self) "lineno" = some (.int l) →
+      syntaxErrorStr rt self w = .ok (.str s!"{m} ({myBasename fs}, line {longOrMinusOne l})") w1) ∧
+    (∀ (f : Val) (fs : String), memGet (excDataOf w self) "filename" = some f →
+      strOf w f = some fs → (∀ l, memGet (excDataOf w self) "lineno" ≠ some (.int l)) →
+      syntaxErrorStr rt self w = .ok (.str s!"{m} ({myBasename fs})") w1) ∧
+    (∀ (l : Int), (∀ f fs, memGet (excDataOf w self) "filename" = some f → strOf w f ≠ some fs) →
+      memGet (excDataOf w self) "lineno" = some (.int l) →
+      syntaxErrorStr rt self w = .ok (.str s!"{m} (line {longOrMinusOne l})") w1)
+
+theorem syntaxErrorStrFormats_proven : SyntaxErrorStrFormats := by
+  intro rt self m w w1 hm
+  refine ⟨?_, ?_, ?_⟩
+  · intro f fs l h1 h2 h3
+    simp only [syntaxErrorStr, M.bind_app, getW_app, h1, Option.map, h2, h3]
+    simp [hm]
+  · intro f fs h1 h2 h3
+    have hl : (match memGet (excDataOf w self) "lineno" with
+        | some (.int i) => some i
+        | _ => (none : Option Int)) = none := by
+      cases hq : memGet (excDataOf w self) "lineno" with
+      | none => rfl
+      | some v => cases v <;> first | rfl | exact absurd hq (h3 _)
+    simp only [syntaxErrorStr, M.bind_app, getW_app, h1, Option.map, h2, hl]
+    simp [hm]
+  · intro l h1 h3
+    cases hq : memGet (excDataOf w self) "filename" with
+    | none => simp [syntaxErrorStr, hq, h3, hm]
+    | some f =>
+      cases hs : strOf w f with
+      | none => simp [syntaxErrorStr, hq, hs, h3, hm]
+      | some fs => exact absurd hs (h1 f fs hq)
+
+/-! ## `AttributeError` pickling -/
+
+/-- **`AttributeError.__getstate__` and `__reduce__`** (`:2719-2760`): the state is a new dict, a
+copy of the instance dict with `name` over it when the member is set and `args` always (`args`
+is never NULL on an initialised object); `obj` is left out on purpose (`:2733-2735`), so the state
+holds `obj` only when the instance dict does; every other key is the instance dict's.
+`__reduce__` is `(type, args, state)` with `type` and `args` read after `__getstate__` ran
+(`:2757`). The instance dict's keys are compared by the model's identity test (exact `str`
+attribute names); a key with a colliding hash and a Python `__eq__` is outside the model, see bug
+`typeobj-exc-getstate-borrowed-dict`. -/
+def AttributeErrorGetstateReduce : Prop :=
+  (∀ (v : Val) (w : World),
+    ∃ w', attributeErrorGetstate v w = .ok (.obj w.heap.size) w' ∧
+      ∃ es, dictOf w' (.obj w.heap.size) = some es ∧
+        dictLookup es (.str "args") = some (.tuple (excArgs w v)) ∧
+        dictLookup es (.str "name") =
+          (memGet (excDataOf w v) "name").or (dictLookup (instDictEntries w v) (.str "name")) ∧
+        dictLookup es (.str "obj") = dictLookup (instDictEntries w v) (.str "obj") ∧
+        (∀ k, k ≠ "args" → k ≠ "name" →
+          dictLookup es (.str k) = dictLookup (instDictEntries w v) (.str k))) ∧
+  (∀ (v st : Val) (w w1 : World), attributeErrorGetstate v w = .ok st w1 →
+    attributeErrorReduce v w = .ok (.tuple [.obj (typeOf w1 v), .tuple (excArgs w1 v), st]) w1)
+
+theorem attributeErrorGetstateReduce_proven : AttributeErrorGetstateReduce := by
+  refine ⟨?_, ?_⟩
+  · intro v w
+    simp only [attributeErrorGetstate, M.bind_app, getW_app, alloc_app]
+    refine ⟨_, rfl, _, dictOf_alloc _ _ _, ?_, ?_, ?_, ?_⟩
+    · rw [dictLookup_setEntry_same]; rfl
+    · rw [dictLookup_setEntry_ne _ _ _ _ (by decide), lookup_optSet_same]
+    · rw [dictLookup_setEntry_ne _ _ _ _ (by decide), lookup_optSet_ne _ _ _ _ (by decide)]
+    · intro k h1 h2
+      rw [dictLookup_setEntry_ne _ _ _ _ (Ne.symm h1), lookup_optSet_ne _ _ _ _ (Ne.symm h2)]
+  · intro v st w w1 h
+    simp only [attributeErrorReduce, M.bind_app, h, getW_app]
+    rfl
+
+/-! ## `MemoryError` and its freelist -/
+
+/-- **`MemoryError.__new__` with the freelist explicit** (`:4111-4151`): a subclass gets a fresh
+object with its arguments and leaves the freelist alone; `MemoryError` itself takes the most
+recently freed entry with `args` `()` when one is free, and a fresh object with the given
+arguments when none is. -/
+def MemoryErrorNewBranches : Prop :=
+  (∀ (args : List Val) (s : MemFreelist),
+    memoryErrorNewC false args s = (.fresh { args := args }, s)) ∧
+  (∀ (args : List Val) (d : ExcData) (s : MemFreelist),
+    memoryErrorNewC true args (d :: s) = (.reused { d with args := [] }, s)) ∧
+  (∀ (args : List Val), memoryErrorNewC true args [] = (.fresh { args := args }, []))
+
+theorem memoryErrorNewBranches_proven : MemoryErrorNewBranches := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro args s; rfl
+  · intro args d s; rfl
+  · intro args; rfl
+
+/-- **`MemoryError(*args)` keeps its arguments**, as a subclass and `BaseException.__new__` do.
+FALSE whenever a freelist entry is free, which is the case from startup (16 preallocated):
+the entry comes back with `args` `()` (`:4124`). Holds once the freelist is empty. -/
+def MemoryErrorNewCKeepsArgs : Prop :=
+  ∀ (args : List Val) (s : MemFreelist) (d : ExcData) (s' : MemFreelist),
+    memoryErrorNewC true args s = (.reused d, s') → d.args = args
+
+theorem memoryErrorNewCKeepsArgs_refuted : ¬MemoryErrorNewCKeepsArgs := by
+  intro h
+  have := h [.int 1] [{}] { args := [] } [] rfl
+  simp at this
+
+/-- **`_PyErr_NoMemory` takes a freelist entry, or the shared last-resort error** (`:4154-4167`,
+`get_memory_error(0, NULL, NULL)`): with an entry free it is that entry, `args` `()`, and the list
+shrinks by one; with none it is the last-resort singleton, never a fresh allocation. -/
+def PyErrNoMemoryBranches : Prop :=
+  (∀ (d : ExcData) (s : MemFreelist), pyErrNoMemory (d :: s) = (.reused { d with args := [] }, s)) ∧
+  pyErrNoMemory [] = (.lastResort, [])
+
+theorem pyErrNoMemoryBranches_proven : PyErrNoMemoryBranches := ⟨fun _ _ => rfl, rfl⟩
+
+/-- **`preallocate_memerrors` fills the freelist with sixteen cleared objects** (`:4198-4217`):
+each is a `MemoryError` made with no arguments and passed through `BaseException_clear`, so it has
+`args` `()` and no traceback, cause, context or notes. -/
+def PreallocateContents : Prop :=
+  preallocateMemerrors.length = memerrorsSave ∧
+  ∀ d ∈ preallocateMemerrors, d = baseExceptionClear { args := [] }
+
+theorem preallocateContents_proven : PreallocateContents := by
+  refine ⟨rfl, ?_⟩
+  intro d hd
+  simp [preallocateMemerrors, memoryErrorDealloc, memerrorsSave, List.range, List.range.loop,
+    List.foldl] at hd
+  first
+    | exact hd
+    | (rcases hd with h | h | h | h | h | h | h | h | h | h | h | h | h | h | h | h <;> exact h)
+
 end PyLean.TypeObj

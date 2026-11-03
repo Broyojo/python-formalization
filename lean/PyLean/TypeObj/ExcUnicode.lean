@@ -18,11 +18,12 @@ def bytesOf (w : World) (v : Val) : Option (List Nat) :=
     | _ => none
   else none
 
-/-- `PyObject_GetBuffer(object, &view, PyBUF_SIMPLE)` for the buffer types of this model. -/
+/-- `PyObject_GetBuffer(object, &view, PyBUF_SIMPLE)` for the buffer types of this model; the
+refusal is `"a bytes-like object is required, not '%.100s'"`, `Objects/abstract.c:450-452`. -/
 def bufferOf (w : World) (v : Val) : M (List Nat) :=
   match payloadOf w v with
   | some (.bytes b) => pure b
-  | _ => typeErr s!"a bytes-like object is required, not '{trunc 200 (typeName w v)}'"
+  | _ => typeErr s!"a bytes-like object is required, not '{String.ofList (truncUtf8 100 (typeName w v).toList)}'"
 
 /-- `check_unicode_error_attribute`, `Objects/exceptions.c:3065`. -/
 def checkUnicodeErrorAttribute (attr : Option Val) (name : String) (asBytes : Bool) : M Unit := do
