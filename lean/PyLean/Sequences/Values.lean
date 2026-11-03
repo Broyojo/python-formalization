@@ -19,15 +19,54 @@ namespace PyLean.Sequences
 
 open PyLean
 
+/-- What a call of a user `__float__`, `__index__` or `__complex__` gave: an exact float,
+int or complex; an instance of a strict subclass of one (`tname` is its class, `warn` what
+the `DeprecationWarning` CPython then issues does: `none` when it is shown or ignored, `some e`
+when the warnings filter turns it into the exception `e`); an object of another class; or an
+exception `e`, which also stands for a lookup of the method that raises. -/
+inductive Ret where
+  | float (bits : Nat)
+  | floatSub (tname : String) (bits : Nat) (warn : Option PyExc)
+  | int (n : Int)
+  | intSub (tname : String) (n : Int) (warn : Option PyExc)
+  | complex (re im : Nat)
+  | complexSub (tname : String) (re im : Nat) (warn : Option PyExc)
+  | other (tname : String)
+  | raises (e : PyExc)
+  deriving Repr, DecidableEq
+
+/-- `type(r).__name__` of a returned object. -/
+def Ret.tname : Ret → String
+  | .float _ => "float"
+  | .int _ => "int"
+  | .complex _ _ => "complex"
+  | .floatSub t _ _ | .intSub t _ _ | .complexSub t _ _ _ | .other t => t
+  | .raises _ => "<raised>"
+
+/-- The builtin base of a user class: none, or `float`, `complex` or `int`, with the value the
+instance holds. -/
+inductive UBase where
+  | plain
+  | float (bits : Nat)
+  | complex (re im : Nat)
+  | int (n : Int)
+  deriving Repr, DecidableEq
+
 /-- A Python object as seen by array code. `obj t i` is any other object of type
-`t`; `i` is its `__index__`, if it has one. -/
+`t`; `i` is its `__index__`, if it has one. `user t base flt idx cpx` is an instance of a
+user class `t` (the name `%T` and `tp_name` print, the same for a class whose `__module__` is
+`builtins`) derived from `base`, with the outcome of its `__float__`, `__index__` and
+`__complex__` methods, `none` for a method the class does not define. Calling a method is
+modelled by its outcome, so a method that raises or returns an object of any class is in
+scope; one that mutates the array is not. -/
 inductive PyVal where
   | int (n : Int)
   | float (bits : Nat)
   | complex (re im : Nat)
   | str (cps : List Nat)
   | obj (tname : String) (index : Option Int)
-  deriving Repr, DecidableEq, Inhabited
+  | user (tname : String) (base : UBase) (flt idx cpx : Option Ret)
+  deriving Repr, DecidableEq
 
 instance : Inhabited PyVal := ⟨.int 0⟩
 
@@ -37,12 +76,28 @@ def PyVal.typeName : PyVal → String
   | .complex _ _ => "complex"
   | .str _ => "str"
   | .obj t _ => t
+  | .user t _ _ _ _ => t
+
+/-- The check of what `nb_index` returned in `_PyNumber_Index` (Objects/abstract.c:1426-1448):
+an exact int is taken, an int subclass after the `DeprecationWarning`, anything else is a
+`TypeError`. `owner` is the class of the object converted. -/
+def retIndex (owner : String) : Ret → Py Int
+  | .int n => .ok n
+  | .intSub _ n w =>
+    match w with
+    | some e => .error e
+    | none => .ok n
+  | .raises e => .error e
+  | r => .error (.typeError s!"{owner}.__index__() must return an int, not {r.tname}")
 
 /-- `_PyNumber_Index` (Objects/abstract.c:1410-1454). -/
 def toIndex (v : PyVal) : Py Int :=
   match v with
   | .int n => .ok n
   | .obj _ (some n) => .ok n
+  -- `PyLong_Check(item)`: an int subclass is returned as it is (:1416-1418)
+  | .user _ (.int n) _ _ _ => .ok n
+  | .user t _ _ (some r) _ => retIndex t r
   | v => .error (.typeError s!"'{v.typeName}' object cannot be interpreted as an integer")
 
 def longMin : Int := -9223372036854775808
@@ -83,24 +138,64 @@ def intToDouble (n : Int) : Option Nat :=
         if q = 2 * two52 then (two52, L) else (q, L - 1)
     if e ≥ 1024 then none else some (sign + ((e + 1023) <<< 52) + (q - two52))
 
-/-- `PyFloat_AsDouble` (Objects/floatobject.c:247-299) on the values we model. -/
+/-- `PyLong_AsDouble` (Objects/longobject.c:3567-3596). -/
+def longAsDouble (n : Int) : Py Nat :=
+  match intToDouble n with
+  | some b => .ok b
+  | none => .error (.overflowError "int too large to convert to float")
+
+/-- The check of what `nb_float` returned in `PyFloat_AsDouble`
+(Objects/floatobject.c:278-299): an exact float is taken, a float subclass after the
+`DeprecationWarning`, anything else is a `TypeError`. -/
+def retFloat (owner : String) : Ret → Py Nat
+  | .float b => .ok b
+  | .floatSub _ b w =>
+    match w with
+    | some e => .error e
+    | none => .ok b
+  | .raises e => .error e
+  | r => .error (.typeError s!"{owner}.__float__() must return a float, not {r.tname}")
+
+/-- `PyFloat_AsDouble` (Objects/floatobject.c:247-303). A float or float subclass gives its
+value without calling `__float__` (:258-260). Otherwise `nb_float` decides (:278-299): `int`
+has one (`long_float`, which is `PyLong_AsDouble`), a user class has one when it defines
+`__float__`, `complex` has none. Without it, `nb_index` (`__index__`, or an int base) is
+converted with `_PyNumber_Index` and `PyLong_AsDouble` (:263-271); without either, `TypeError`
+(:273-275). -/
 def asDouble (v : PyVal) : Py Nat :=
-  let ofInt (n : Int) : Py Nat :=
-    match intToDouble n with
-    | some b => .ok b
-    | none => .error (.overflowError "int too large to convert to float")
   match v with
   | .float b => .ok b
-  | .int n => ofInt n
-  | .obj _ (some n) => ofInt n
+  | .int n => longAsDouble n
+  | .obj _ (some n) => longAsDouble n
+  | .user _ (.float b) _ _ _ => .ok b
+  | .user t _ (some r) _ _ => retFloat t r
+  | .user _ (.int n) none _ _ => longAsDouble n
+  | .user t _ none (some r) _ =>
+    match retIndex t r with
+    | .ok n => longAsDouble n
+    | .error e => .error e
   | v => .error (.typeError s!"must be real number, not {v.typeName}")
 
-/-- `PyComplex_AsCComplex` (Objects/complexobject.c:537-571) on the values we model:
-a complex is itself, anything else is `PyFloat_AsDouble` with imaginary part 0. No
-modelled object has `__complex__`. -/
+/-- The check of what `__complex__` returned in `try_complex_special_method`
+(Objects/complexobject.c:505-534). -/
+def retComplex (owner : String) : Ret → Py (Nat × Nat)
+  | .complex re im => .ok (re, im)
+  | .complexSub _ re im w =>
+    match w with
+    | some e => .error e
+    | none => .ok (re, im)
+  | .raises e => .error e
+  | r => .error (.typeError s!"{owner}.__complex__() must return a complex, not {r.tname}")
+
+/-- `PyComplex_AsCComplex` (Objects/complexobject.c:538-571): a complex or complex subclass
+is its value (:545-547); otherwise `__complex__` is looked up and called (:554-559); without
+it, `PyFloat_AsDouble` gives the real part and the imaginary part is `+0.0` (:550-551, 563-569).
+`PyArg_Parse`'s `D` takes the exception whenever one is set (Python/getargs.c:942-951). -/
 def asComplex (v : PyVal) : Py (Nat × Nat) :=
   match v with
   | .complex re im => .ok (re, im)
+  | .user _ (.complex re im) _ _ _ => .ok (re, im)
+  | .user t _ _ _ (some r) => retComplex t r
   | v =>
     match asDouble v with
     | .ok b => .ok (b, 0)

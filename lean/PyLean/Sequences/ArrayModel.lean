@@ -1,5 +1,7 @@
 import PyLean.Sequences.ListModel
 import PyLean.Sequences.Values
+import PyLean.Binary64.Complex
+import PyLean.UnicodeObj.Repr
 
 /-!
 Model of `array.array` (`Modules/arraymodule.c`, CPython 3.15.2), all seventeen
@@ -708,6 +710,18 @@ def arrRich (op : CmpOp) (v w : Arr) : Py Bool :=
       | .ne => .ok true
       | op => pvRich op vi wi
 
+/-- `array_richcompare` (arraymodule.c:908-1015) on any two operands: an operand that is not
+an array (`.inr` with its type) gives `NotImplemented`, `none` here (:918-919). The result of
+the final `PyObject_RichCompare(vi, wi, op)` (:1010) is a `bool`: the items are ints, floats,
+complex numbers or strs, whose comparisons return `bool` or raise. -/
+def arrRichcompare (op : CmpOp) (v w : Arr ⊕ String) : Py (Option Bool) :=
+  match v, w with
+  | .inl v, .inl w =>
+    match arrRich op v w with
+    | .ok b => .ok (some b)
+    | .error e => .error e
+  | _, _ => .ok none
+
 /-! ### Bytes, files, unicode -/
 
 /-- The bytes of one item, little-endian two's complement. -/
@@ -752,47 +766,91 @@ def arrFromBytes (a : Arr) (bs : List Nat) (bufItemsize : Int) : Py Arr := do
     return { a' with items := memcpy a'.items old new }
   return a
 
-/-- What `f.read(nbytes)` returned. -/
+/-- What `f.read(nbytes)` returned: a `bytes` object or an instance of a subclass
+(`PyBytes_Check`), an object of another class, or an exception (also for a missing `read`). -/
 inductive ReadResult where
   | bytes (bs : List Nat)
   | notBytes
   | raises (e : PyExc)
 
-/-- `a.fromfile(f, n)` (`array_array_fromfile_impl`, arraymodule.c:1745-1791): `read`
-is `f.read`. The negative count is refused by the clinic wrapper since 3.15
-(Modules/clinic/arraymodule.c.h:423-427). The items read are kept when `EOFError` is
-raised. -/
-def arrFromFile (a : Arr) (read : Int → ReadResult) (n : Int) : Py Unit × Arr :=
-  match asSsize n with
-  | .error e => (.error e, a)
-  | .ok n =>
-    if n < 0 then (.error (.valueError "n cannot be negative"), a)
-    else if n > ssizeMax / a.tc.itemsize then (.error memoryError, a)
-    else
-      let nbytes := n * a.tc.itemsize
-      match read nbytes with
-      | .raises e => (.error e, a)
-      | .notBytes => (.error (.typeError "read() didn't return bytes"), a)
-      | .bytes bs =>
-        match arrFromBytes a bs 1 with
-        | .error e => (.error e, a)
-        | .ok a' =>
-          if (bs.length : Int) ≠ nbytes then
-            (.error (.named "EOFError" "read() didn't return enough bytes"), a')
-          else (.ok (), a')
+/-- `f.read` as a callback. It runs Python code, so it is given the array as it is at the call
+and returns, with its result, the array as the call leaves it: it may append to the array,
+clear it, or export a buffer of it. -/
+abbrev ReadFn := Int → Arr → ReadResult × Arr
 
-/-- The arguments of the `f.write` calls of `a.tofile(f)`
-(`array_array_tofile_impl`, arraymodule.c:1804-1840): 64 KiB blocks. -/
-def arrToFile (a : Arr) : List (List Nat) :=
+/-- The clinic conversion of `n` for `fromfile` (Modules/clinic/arraymodule.c.h:412-427):
+`_PyNumber_Index`, `PyLong_AsSsize_t`, and since 3.15 `allow_negative=False`. -/
+def fromFileCount (n : PyVal) : Py Int := do
+  let n ← toIndex n
+  let n ← asSsize n
+  if n < 0 then throw (.valueError "n cannot be negative")
+  return n
+
+/-- `a.fromfile(f, n)` (`array_array_fromfile_impl`, arraymodule.c:1745-1791), after the clinic
+conversion of `n` (`fromFileCount`). Returns the outcome, the array afterwards and the sizes
+`read` was called with. The bytes go through `array_array_frombytes` (:1778), so a length that
+is not a multiple of the item size raises `ValueError` and appends nothing, and the
+`EOFError` of a short read (:1783-1788) comes after the items were appended. Both act on the
+array as `read` left it. -/
+def arrFromFileC (a : Arr) (read : ReadFn) (n : Int) : Py Unit × Arr × List Int :=
+  if n > ssizeMax / a.tc.itemsize then (.error memoryError, a, [])
+  else
+    let nbytes := n * a.tc.itemsize
+    match read nbytes a with
+    | (.raises e, a) => (.error e, a, [nbytes])
+    | (.notBytes, a) => (.error (.typeError "read() didn't return bytes"), a, [nbytes])
+    | (.bytes bs, a) =>
+      match arrFromBytes a bs 1 with
+      | .error e => (.error e, a, [nbytes])
+      | .ok a' =>
+        if (bs.length : Int) ≠ nbytes then
+          (.error (.named "EOFError" "read() didn't return enough bytes"), a', [nbytes])
+        else (.ok (), a', [nbytes])
+
+def arrFromFile (a : Arr) (read : ReadFn) (n : PyVal) : Py Unit × Arr × List Int :=
+  match fromFileCount n with
+  | .error e => (.error e, a, [])
+  | .ok n => arrFromFileC a read n
+
+/-- `f.write` as a callback: given the number of the call (from 0), the block and the array at
+the call, the outcome and the array the call leaves. -/
+abbrev WriteFn := Nat → List Nat → Arr → Py Unit × Arr
+
+def blocksize : Int := 65536
+
+/-- `PyBytes_FromStringAndSize(self->ob_item + start, size)` at a later block of `tofile`: the
+bytes of the current buffer. A range past the items is a read the C code does not guard: of
+stale bytes when it stays inside the allocation, otherwise past the buffer or from
+`NULL + start` (`ob_item` is NULL once the array is emptied). The model reports both as `cUB`. -/
+def blockOf (a : Arr) (start size : Int) : Py (List Nat) :=
   let bytes := arrToBytes a
-  let nbytes : Int := bytes.length
-  let blocksize : Int := 65536
+  if start + size ≤ bytes.length then .ok ((bytes.drop start.toNat).take size.toNat)
+  else .error (cUB "tofile reads past the items of the array")
+
+/-- The loop of `array_array_tofile_impl` (arraymodule.c:1821-1836): `nbytes` and `nblocks`
+were computed once, before the loop (:1807-1811); `ob_item` is read again at each block
+(:1822). -/
+def toFileLoop (write : WriteFn) (nbytes nblocks : Int) : Nat → Int → Arr → List (List Nat) →
+    Py Unit × Arr × List (List Nat)
+  | 0, _, a, out => (.ok (), a, out)
+  | fuel + 1, i, a, out =>
+    if i < nblocks then
+      let size := if i * blocksize + blocksize > nbytes then nbytes - i * blocksize else blocksize
+      match blockOf a (i * blocksize) size with
+      | .error e => (.error e, a, out)
+      | .ok blk =>
+        match write out.length blk a with
+        | (.error e, a) => (.error e, a, out ++ [blk])
+        | (.ok (), a) => toFileLoop write nbytes nblocks fuel (i + 1) a (out ++ [blk])
+    else (.ok (), a, out)
+
+/-- `a.tofile(f)` (`array_array_tofile_impl`, arraymodule.c:1804-1840): the outcome, the array
+afterwards, and the arguments of the `write` calls, in order. -/
+def arrToFile (a : Arr) (write : WriteFn) : Py Unit × Arr × List (List Nat) :=
+  let nbytes : Int := a.items.length * a.tc.itemsize
   let nblocks := (nbytes + blocksize - 1) / blocksize
-  if a.items.length = 0 then []
-  else (List.range nblocks.toNat).map (fun (i : Nat) =>
-    let start := (i : Int) * blocksize
-    let size := if start + blocksize > nbytes then nbytes - start else blocksize
-    (bytes.drop start.toNat).take size.toNat)
+  if a.items.length = 0 then (.ok (), a, [])
+  else toFileLoop write nbytes nblocks nblocks.toNat 0 a []
 
 /-- The loop of `a.fromlist(list)`: `setitem` at `pos`, `pos + 1`, ... -/
 def fromListLoop (tc : TC) : List PyVal → Int → List Int → Py (List Int)
@@ -1149,24 +1207,44 @@ def arrReduceEx (a : Arr) (protocol : PyVal) : Py Reduced :=
       else .ok (.asBytes a.tname a.tc.code (mformatOf a.tc) (arrToBytes a))
   | _ => .error (.typeError "__reduce_ex__ argument should be an integer")
 
-/-- The `repr` of the list or string inside `repr(a)`, with `frepr` the repr of a
-float (the shortest round-trip digits belong to `Binary64`). -/
-def pvRepr (frepr : Nat → String) : PyVal → String
-  | .float b => frepr b
-  | .complex re im => s!"<complex {frepr re} {frepr im}>"
-  | .int n => toString n
-  | v => v.typeName
+/-- Code points to a Lean string. -/
+def cpsStr (cs : List Nat) : String := String.ofList (cs.map Char.ofNat)
 
-/-- `repr(a)` (`array_repr`, arraymodule.c:2702-2727); `srepr` is `repr` of a str. -/
-def arrRepr (frepr : Nat → String) (srepr : List Nat → String) (a : Arr) : Py String := do
+/-- `PyObject_Repr` of an item of `tolist()`: `long_to_decimal_string` for an int,
+`float_repr` (Objects/floatobject.c:338-354) and `complex_repr`
+(Objects/complexobject.c:574-628) through the exact binary64 model, `Binary64.Dtoa`.
+`none` from those is the model of `PyOS_double_to_string` failing, `MemoryError` in C. The
+last case is unreachable: `tolist` gives ints, floats and complex numbers. -/
+def itemRepr : PyVal → Py String
+  | .int n => .ok (toString n)
+  | .float b =>
+    match Binary64.float_repr (Binary64.F64.ofBits b) with
+    | some s => .ok (cpsStr s)
+    | none => .error memoryError
+  | .complex re im =>
+    match Binary64.complex_repr ⟨Binary64.F64.ofBits re, Binary64.F64.ofBits im⟩ with
+    | some s => .ok (cpsStr s)
+    | none => .error memoryError
+  | v => .ok v.typeName
+
+/-- `repr(list)` for a non-empty list (`list_repr`, Objects/listobject.c): the item reprs
+between brackets, joined by `", "`. -/
+def listRepr (vs : List PyVal) : Py String := do
+  let rs ← vs.mapM itemRepr
+  return "[" ++ ", ".intercalate rs ++ "]"
+
+/-- `repr(a)` (`array_repr`, arraymodule.c:2702-2727): `"%s('%s')"` for an empty array,
+otherwise `"%s('%s', %R)"` of the `tounicode()` string (`u`, `w`, through `unicode_repr`,
+`UnicodeObj.Repr`) or the `tolist()` list, whose error propagates (:2720-2721). -/
+def arrRepr (a : Arr) : Py String := do
   let c := a.tc.code
   if a.items.length = 0 then return s!"{a.tname}('{c}')"
   if a.tc = .u ∨ a.tc = .w then
     let s ← arrToUnicode a
-    return s!"{a.tname}('{c}', {srepr s})"
+    return s!"{a.tname}('{c}', {cpsStr (UnicodeObj.unicodeRepr s)})"
   let vs ← arrToList a
-  let body := ", ".intercalate (vs.map (pvRepr frepr))
-  return s!"{a.tname}('{c}', [{body}])"
+  let body ← listRepr vs
+  return s!"{a.tname}('{c}', {body})"
 
 /-- The fields of `memoryview(a)` (`array_buffer_getbuf`, arraymodule.c:2957-2993):
 format, itemsize, length in items, nbytes; the array gains an export. -/

@@ -1,0 +1,63 @@
+id: sequences-array-tofile-reentrant-write
+title: "array.tofile() reads past the array (NULL + 65536 after clear()) when the file's write() empties or shrinks the array"
+priority: P2
+kind: memory-safety
+module: sequences
+files: [Modules/arraymodule.c]
+functions: ["array_array_tofile_impl"]
+summary: |
+  tofile computes nbytes and nblocks from Py_SIZE(self) once (Modules/arraymodule.c:1807-1811),
+  then for each 64 KiB block reads self->ob_item + i*BLOCKSIZE again and copies `size` bytes
+  computed from the old nbytes (:1822-1828), calling f.write(bytes) in between (:1831). A write()
+  that clears or shrinks the array frees or reallocates the buffer, so the next block reads freed
+  memory, past the new buffer, or from NULL + 65536 after clear(). A write that only grows the
+  array is safe. No buffer is exported during the call, so nothing stops the resize.
+  Lean (lean/PyLean/Sequences/ArrayFile.lean): ArrayToFileSafe (tofile never reads outside the
+  items, for every write callback) is refuted by a 'Zd' array of 4097 items and a write that
+  clears it; ArrayToFile states the exact calls for every write that leaves the array alone.
+likelihood: |
+  Low in ordinary code (a file object that mutates the array it is writing), but it is a crash
+  and an out-of-bounds read reachable from pure Python, which can leak heap contents to the file.
+maybe_intended: |
+  No. Duplicate of python/cpython#142884 (open since 2025-12); #144922 was closed as its
+  duplicate and PR gh-144925 (re-check Py_SIZE each block) was closed unmerged. Serhiy suggested
+  holding an export while writing.
+reproducer: |
+  import subprocess, sys
+  code = (
+      "import array\n"
+      "class W:\n"
+      "    def __init__(self, a): self.a = a\n"
+      "    def write(self, b): self.a.clear()\n"
+      "a = array.array('Zd', [0j] * 4097)\n"
+      "a.tofile(W(a))\n"
+      "print('no crash')\n")
+  p = subprocess.run([sys.executable, '-I', '-c', code], capture_output=True, text=True)
+  print(p.returncode, p.stdout.strip())
+  if p.returncode < 0:
+      print('REPRODUCED sequences-array-tofile-reentrant-write')
+expected: |
+  Either the remaining blocks of the current (empty) array, i.e. nothing more, or BufferError for
+  resizing during tofile; never a read outside the buffer.
+observed: |
+  python3 3.15.2: -11 (SIGSEGV). REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Invariant: no crash or out-of-bounds read from Python code.
+cause: |
+  Modules/arraymodule.c:1807-1811 (nbytes, nblocks computed once), :1822 (`ptr = self->ob_item +
+  i*BLOCKSIZE` with the current, possibly NULL, ob_item), :1826-1827 (size from the stale
+  nbytes), :1831 (the write call that can resize the array).
+possible_fix: |
+  Increment self->ob_exports around the loop (resizes then raise BufferError), or recompute the
+  size from Py_SIZE(self) on every iteration and stop when the block starts past the end.
+duplicates:
+  issues:
+    - {number: 142884, state: open, relation: "duplicate"}
+    - {number: 144922, state: closed, relation: "duplicate of 142884"}
+  queries: ["gh search issues: array tofile", "array.tofile crash", "array tofile use after free",
+            "array tofile write clear", "tofile mutate array write", "array tofile segfault",
+            "bugforge README: no array entries"]
+lean:
+  property: PyLean.Sequences.ArrayToFileSafe
+  theorem: PyLean.Sequences.arrayToFileSafe_refuted
