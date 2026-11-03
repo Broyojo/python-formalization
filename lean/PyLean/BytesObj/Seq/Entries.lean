@@ -17,6 +17,7 @@ import PyLean.BytesObj.Seq.ListRows2
 import PyLean.BytesObj.Seq.ListRows3
 import PyLean.BytesObj.Seq.ListRows4
 import PyLean.BytesObj.Seq.ListRows5
+import PyLean.BytesObj.Seq.ListRows6
 
 /-! Registry entries for tuple (Objects/tupleobject.c) and list (Objects/listobject.c). -/
 
@@ -285,7 +286,15 @@ def entries : List Entry := [
       "sortslice_memmove", "sortslice_advance"]
     statement := "Slot by slot, for every slice: sortslice_copy puts s2[j] at s1[i] in keys and values and changes nothing else; copy_incr and copy_decr copy at the cursors and step them forward or back; memcpy and memmove put s2[j+k] at s1[i+k] for k < n, memmove reading the source as it was; advance moves the cursor n slots; a slice without values stays without."
     source := "listobject.c:1660-1723 (keys and values always moved in sync)", status := .proven
-    prop := ``SortsliceMoves, thm := some ``sortsliceMoves_proven }
+    prop := ``SortsliceMoves, thm := some ``sortsliceMoves_proven },
+  { id := "bytesobj-repr-step", pyFile := "Objects/listobject.c", pyFns := ["list_repr_impl"]
+    statement := "For every item __repr__, including one that replaces, inserts or removes items: each pass of repr(l) tests the index against the size of the list the previous __repr__ left, reads the item from that list's current array, and goes on with the list the __repr__ leaves; past the end it closes the bracket; a raising __repr__ ends it."
+    source := "listobject.c:621-640 (the comment at :621-624)", status := .proven
+    prop := ``ReprStep, thm := some ``reprStep_proven },
+  { id := "bytesobj-list-extend-iter-wf", pyFile := "Objects/listobject.c", pyFns := ["list_extend_iter_lock_held"]
+    statement := "list.extend from a generic iterable keeps the list's invariant (allocated covers the items, an array exists when anything is allocated) for every iterator whose callbacks keep it, including one that clears the list or replaces its array: the size and allocation are reread after each __next__."
+    source := "listobject.c:1338-1365 (the reread at :1350)", status := .proven
+    prop := ``ListExtendIterWF, thm := some ``listExtendIterWF_proven }
 ]
 
 end PyLean.BytesObj.Seq
