@@ -63,3 +63,16 @@ duplicates:
 lean:
   property: PyLean.BytesObj.Bytes.InitLoopKeepsLayout
   theorem: PyLean.BytesObj.Bytes.initLoopKeepsLayout_refuted
+stronger_reproducer: |
+  Found by the bytearray review (2026-11-03): the overflow does reach outside the allocation. Under
+  PYTHONMALLOC=debug the following aborts on 3.15.2 and main (rc -6, "Debug memory block at address
+  ... API 'o'"; the reviewer saw "_PyMem_DebugRawFree: bad trailing pad byte", the pad bytes holding the
+  written 0x41s; with 8 trailing items it aborts in _PyMem_DebugRawRealloc instead):
+      b = bytearray()
+      def g():
+          for _ in range(15): yield 0
+          del b[:7]
+          for _ in range(7): yield 0x41
+      b.__init__(g())
+      b.clear()
+  The upstream report (gh-158928) should quote this, since it shows a real heap write past the buffer.
