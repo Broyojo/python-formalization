@@ -10,8 +10,9 @@ summary: |
   _read_object recurses once per nested array or dict, and parse catches OSError, IndexError,
   struct.error, OverflowError and ValueError, not RecursionError, so a binary plist of n nested
   one-element arrays raises RecursionError("maximum recursion depth exceeded") from loads when fewer
-  than n + 6 frames are left (one each for loads, load, parse and the innermost _read_object's
-  _get_size/_read). Cycles do not recurse: a container is stored in self._objects before its
+  than n + 6 frames are left: three for loads, load and parse, one _read_object per array, and
+  three below the innermost array's _read_object for _read_refs, _read_ints and _read (the
+  string's _read_object and its _read need only two). Cycles do not recurse: a container is stored in self._objects before its
   elements are read, so the depth is bounded by the number of objects, which the proof uses.
 likelihood: |
   Not applicable.

@@ -1,7 +1,7 @@
 id: textlibs-plist-binary-datetime-max
 title: "plistlib: a binary plist written from datetime.max cannot be read back (InvalidFileException)"
 priority: P3
-kind: wrong-result
+kind: exception-on-read
 module: textlibs
 files: [Lib/plistlib.py]
 functions: ["_BinaryPlistWriter._write_object", "_BinaryPlistParser._read_object"]

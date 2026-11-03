@@ -18,7 +18,7 @@ likelihood: |
 maybe_intended: |
   Possibly: the sharing is meant to save space for equal values, and Python equality says they are
   equal. The same mechanism conflates fold-distinct aware datetimes (gh-158735/gh-158736, closed
-  without discussion as part of a bulk report).
+  NOT_PLANNED for flooding the tracker, not on the merits).
 reproducer: |
   import math, plistlib
   value = [0.0, -0.0]
@@ -45,8 +45,10 @@ possible_fix: |
   Key floats by their bit pattern (e.g. (float, struct.pack('>d', value))) or skip the sharing for
   floats equal to zero.
 duplicates: |
-  Same root cause as gh-158735 and gh-158736 (closed, bulk report; aware datetimes), not the same
-  value. Queries: gh search issues --repo python/cpython plistlib zero; plistlib -0.0; plistlib float;
+  Same root cause as gh-158735 and gh-158736 (aware datetimes), not the same value. Those were
+  closed NOT_PLANNED because they were part of a bulk filing that flooded the tracker (see the
+  maintainer's comment on gh-158748), not on their merits, so they say nothing about whether the
+  sharing is intended. Queries: gh search issues --repo python/cpython plistlib zero; plistlib -0.0; plistlib float;
   plistlib binary; plistlib dedup. Bugforge list: plistlib-20261003-073911-c2/c3/c4 are the
   datetime variants.
 lean: lean/PyLean/TextLibs/PlistRefute.lean (BinaryFloatBits, binaryFloatBits_refuted)
