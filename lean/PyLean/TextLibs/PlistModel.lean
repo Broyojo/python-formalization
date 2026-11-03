@@ -551,7 +551,8 @@ def isFmtBinary (header : List Nat) : Bool := header.take 8 == asciiBytes "bplis
 /-- The `fmt` argument. -/
 inductive Fmt where
   | none | xml | binary
-  /-- Any other hashable object; `repr` is its `repr()`. -/
+  /-- Any other hashable object, not equal to `FMT_XML` or `FMT_BINARY`; `repr` is its `repr()`.
+  Scope limit: `.other` is a hashable object that is not equal to `FMT_XML` or `FMT_BINARY`; `_FORMATS` finds a key by hash and equality, so an object whose own `__hash__`/`__eq__` makes it equal to a format would select that format, and is not represented. -/
   | other (repr : String)
   /-- An object of type `ty` whose `hash()` raises `e` (a C `__hash__`: a Python one would push a
   frame, out of scope). `list`'s raises `TypeError("unhashable type: 'list'")`. -/
