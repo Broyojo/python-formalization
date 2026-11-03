@@ -1,5 +1,6 @@
 import PyLean.Registry
 import PyLean.BytesObj.Bytes.Specs4
+import PyLean.BytesObj.Bytes.HeapProps
 
 /-! Registry entries for bytes (Objects/bytesobject.c, Objects/bytes_methods.c) and
 bytearray (Objects/bytearrayobject.c). -/
@@ -385,6 +386,72 @@ def entries : List Entry := [
     source := "comment bytearrayobject.c:120; GH-143195 comment, :2627", status := .proven
     prop := ``ReadWrappers, thm := some ``readWrappers_proven
     notes := "The search, split, partition, pad and strip results are compared for bytes and bytearray by difftest/strsearch_diff.py; the entries strsearch-* prove their content." },
+  { id := "bytesobj-bytearray-search-live", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["_bytearray_with_buffer", "bytearray_find_impl", "bytearray_rfind_impl", "bytearray_index_impl",
+      "bytearray_rindex_impl", "bytearray_count_impl", "bytearray_startswith_impl", "bytearray_endswith_impl",
+      "bytearray_contains"]
+    statement := "For every heap and every argument, whatever the __index__ of sub, start and end and the __buffer__ and __release_buffer__ of sub (or of each item of a startswith tuple) do to the bytearray, the search reads through the pointer taken before them exactly the bytes the object holds at that moment: ob_exports keeps the size and the storage, so no read is stale or of freed memory."
+    source := "invariant: no read of freed or stale memory; comment bytearrayobject.c:120, gh-142560", status := .proven
+    prop := ``SearchReadsLive, thm := some ``searchReadsLive_proven
+    notes := "Callbacks are statements on self (in-place writes, resizes, front deletions, taking and releasing views), each through the model of that method; see Heap.lean." },
+  { id := "bytesobj-bytearray-search-twin", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["_bytearray_with_buffer", "bytearray_find_impl", "bytearray_rfind_impl", "bytearray_index_impl",
+      "bytearray_rindex_impl", "bytearray_count_impl"]
+    statement := "With an argument and bounds that run no Python code, bytearray.find, rfind, index, rindex and count are the bytes methods on the contents, and leave the object as it was (ob_exports back where it was)."
+    source := "twin: bytes and bytearray share _Py_bytes_find etc. (bytes_methods.c)", status := .proven
+    prop := ``SearchTwinBytes, thm := some ``searchTwinBytes_proven },
+  { id := "bytesobj-bytearray-strip-release", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_strip_impl_helper", "bytearray_strip_impl"]
+    statement := "strip copies the bytes its loops scanned: copying after the argument's __release_buffer__ gives what copying before it gives. Refuted: an in-place write there gives bytearray(b' a ').strip(B()) == bytearray(b' '), and self.clear() there makes the copy read freed memory."
+    source := "invariant: no read of freed memory; Doc/library/stdtypes.rst bytearray.strip", status := .refuted
+    prop := ``StripCopiesScanned, thm := some ``stripCopiesScanned_refuted
+    bug := some "bytesobj-bytearray-strip-release-uaf" },
+  { id := "bytesobj-bytearray-strip-norel", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_strip_impl_helper", "bytearray_strip_impl", "bytearray_lstrip_impl", "bytearray_rstrip_impl"]
+    statement := "When the argument's release runs no Python code (None, a C buffer, self, or a class whose __release_buffer__ does nothing), strip, lstrip and rstrip are the strip of the contents as the argument's __buffer__ left them, with the six whitespace bytes for None."
+    source := "narrowing of bytesobj-bytearray-strip-release; Doc/library/stdtypes.rst bytearray.strip", status := .proven
+    prop := ``StripNoRelAgrees, thm := some ``stripNoRelAgrees_proven },
+  { id := "bytesobj-bytearray-split-live", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_split_impl", "bytearray_rsplit_impl"]
+    statement := "For every heap, separator and maxsplit: with ob_exports raised before sbuf and slen are read, the separator's __buffer__ and __release_buffer__ cannot resize the bytearray, so splitting through sbuf reads the live contents."
+    source := "invariant: no stale read; comment bytearrayobject.c:1875", status := .proven
+    prop := ``SplitReadsLive, thm := some ``splitReadsLive_proven },
+  { id := "bytesobj-bytearray-hex-live", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_hex_impl"]
+    statement := "For every heap, separator and bytes_per_sep: argbuf is read before ob_exports is raised, and the separator's __len__ (gh-143195) runs with it raised, so the hexlify loop reads the live contents."
+    source := "invariant: no read of freed memory; gh-143195 comment, bytearrayobject.c:2740-2742", status := .proven
+    prop := ``HexReadsLive, thm := some ``hexReadsLive_proven },
+  { id := "bytesobj-bytearray-rich-live", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_richcompare"]
+    statement := "For every heap, operand and operator: self is exported before the other operand's __buffer__ runs, so the memcmp reads the live contents of self."
+    source := "invariant: no stale read", status := .proven
+    prop := ``RichReadsLive, thm := some ``richReadsLive_proven },
+  { id := "bytesobj-bytearray-item-after-index", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["_getbytevalue", "bytearray_subscript_lock_held", "bytearray_subscript", "bytearray_ass_subscript_lock_held",
+      "bytearray_ass_subscript", "bytearray_setitem_lock_held", "bytearray_setitem", "bytearray_append_impl",
+      "bytearray_remove_impl", "bytearray_insert_impl", "bytearray_take_bytes_impl"]
+    statement := "For every heap and every __index__ callback: b[k], b[i] = x, the sq_ass_item b[i] = x, append, remove, insert and take_bytes run the conversion first and then the method on the object as the callback left it, so the position is checked against the size after the callback (GH-91153); an exception of the value's __index__ comes before the IndexError of the position."
+    source := "GH-91153 comments, bytearrayobject.c:746-747, :800-801, :1629", status := .proven
+    prop := ``ItemAfterIndex, thm := some ``itemAfterIndex_proven
+    notes := "The slice branches of subscript and assignment (__index__ of slice parts, a value converted with PyByteArray_FromObject and the slice unpacked again) are modelled and compared by the difftest family bare; their contents are those of bytesobj-bytearray-slice-*." },
+  { id := "bytesobj-bytearray-iadd-self", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_iconcat_lock_held", "bytearray_iconcat", "bytearray_extend_impl", "bytearray_setslice"]
+    statement := "b += x is b.extend(x) for every bytes-like x. Refuted: b += b raises BufferError, because bytearray_iconcat_lock_held exports b as its own argument and then resizes it, where b.extend(b) copies first."
+    source := "Doc/library/stdtypes.rst mutable sequence operations: s += t extends s with the contents of t", status := .refuted
+    prop := ``IAddIsExtend, thm := some ``iAddIsExtend_refuted
+    bug := some "bytesobj-bytearray-iadd-self" },
+  { id := "bytesobj-bytearray-iadd-extend-obj", pyFile := "Objects/bytearrayobject.c"
+    pyFns := []
+    statement := "For a C bytes-like object that is not self, b += x and b.extend(x) give the same result and contents."
+    source := "narrowing of bytesobj-bytearray-iadd-self", status := .open
+    prop := ``IAddExtendObj
+    notes := "Open: the proof has to follow the growth branch of bytearray_setslice_linear (resize, empty memmove, copy) against the resize and copy of iconcat; the difftest family bare compares both." },
+  { id := "bytesobj-bytearray-init-steal", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray___init___impl"]
+    statement := "bytearray.__init__(s, encoding) leaves the same object whether the codec's result is uniquely referenced (installed as the storage) or not (appended with iconcat). Refuted: a Python codec that resizes self has its bytes dropped (and leaked) on the first path and kept on the second; one that keeps memoryview(self) gets its storage replaced under the export on the first and BufferError on the second."
+    source := "invariant: uniqueness of a bytes object is not visible to Python code; exported storage is not replaced (Doc/c-api/bytearray.rst)", status := .refuted
+    prop := ``InitPathsAgree, thm := some ``initPathsAgree_refuted
+    bug := some "bytesobj-bytearray-init-codec-steal" },
   { id := "bytesobj-bytes-class-tables", pyFile := "Objects/bytes_methods.c"
     pyFns := ["_Py_bytes_isspace", "_Py_bytes_isalpha", "_Py_bytes_isalnum", "_Py_bytes_isdigit"]
     statement := "isspace, isalpha, isdigit and isalnum are 'non-empty and every byte in the class', for the exact byte ranges of pyctype.c."
