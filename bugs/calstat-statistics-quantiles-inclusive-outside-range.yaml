@@ -1,0 +1,51 @@
+id: calstat-statistics-quantiles-inclusive-outside-range
+title: "statistics.quantiles(method='inclusive') gives cut points above the maximum of constant float data"
+priority: P4
+kind: wrong-result
+module: corelibs
+files: [Lib/statistics.py]
+functions: ["quantiles"]
+summary: |
+  With `method='inclusive'` the data's minimum and maximum are documented as the 0th and 100th
+  percentiles, so every cut point should lie between them. The interpolation
+  `(data[j] * (n - delta) + data[j + 1] * delta) / n` rounds three times, and for constant data it need
+  not give back the constant: `quantiles([0.1, 0.1], n=3, method='inclusive')` is
+  `[0.10000000000000002, 0.10000000000000002]`, above the maximum 0.1. The same rounding makes the cut
+  points of sorted data non-monotone, which is the open issue python/cpython#150318.
+likelihood: |
+  Moderate on repeated float values; the excess is one ulp.
+maybe_intended: |
+  Duplicate in substance of python/cpython#150318 (open), where a maintainer said "In practice, I don't
+  think this would ever matter." The fix proposed there (`data[j] + (data[j+1] - data[j]) * delta / n`)
+  also keeps constant data constant. Kept as a record of the range violation, not for separate filing.
+reproducer: |
+  import statistics
+  q = statistics.quantiles([0.1, 0.1], n=3, method='inclusive')
+  print(q)
+  if any(c > 0.1 for c in q):
+      print('REPRODUCED calstat-statistics-quantiles-inclusive-outside-range')
+expected: |
+  [0.1, 0.1].
+observed: |
+  python3 3.15.2: [0.10000000000000002, 0.10000000000000002]. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Lib/statistics.py:1188-1190: "If method is set to inclusive, data is treated as population data. The
+  minimum value is treated as the 0th percentile and the maximum value is treated as the 100th
+  percentile."
+cause: |
+  Lib/statistics.py:1209: `data[j] * (n - delta)` and `data[j + 1] * delta` are rounded, their sum is
+  rounded, and the division by n is rounded; for 0.1 * 2 + 0.1 * 1 = 0.30000000000000004 the quotient
+  by 3 is 0.10000000000000002.
+possible_fix: |
+  `data[j] + (data[j + 1] - data[j]) * delta / n` (and likewise at :1220), which is exactly `data[j]`
+  when the neighbours are equal.
+duplicates:
+  issues:
+    - {number: 150318, state: open, relation: "same rounding in the same expression; reports unsorted cut points for duplicate float data, both methods", reason: "duplicate"}
+    - {number: 158759, state: closed, relation: "same function: infinite cut points from finite inputs (overflow)", reason: "different bug"}
+  queries: ["quantiles constant", "quantiles inclusive range", "quantiles rounding",
+            "bugforge README: statistics.quantiles, one entry on overflow"]
+lean:
+  property: PyLean.CoreLibs.CalStat.QuantilesInclusiveInRange
+  theorem: PyLean.CoreLibs.CalStat.quantilesInclusiveInRange_refuted

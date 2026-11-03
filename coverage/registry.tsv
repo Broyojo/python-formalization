@@ -3015,7 +3015,7 @@ calstat-statistics-geometric-exact	proven	statistics.py	geometric_mean
 calstat-statistics-pdf-exact	proven	statistics.py	NormalDist.pdf
 calstat-statistics-geometric-checks	proven	statistics.py	geometric_mean
 calstat-statistics-two-input-checks	proven	statistics.py	covariance,correlation,linear_regression
-calstat-statistics-correlation-constant	refuted	statistics.py	correlation,linear_regression
+calstat-statistics-correlation-constant	refuted	statistics.py	correlation
 calstat-statistics-correlation-bounded	refuted	statistics.py	correlation,_sqrtprod
 calstat-statistics-kernels-centred	proven	statistics.py	register,normal_kernel,logistic_kernel,sigmoid_kernel,rectangular_kernel,triangular_kernel,parabolic_kernel,quartic_kernel,triweight_kernel,cosine_kernel
 calstat-statistics-newton-post	proven	statistics.py	_newton_raphson,_quartic_invcdf_estimate,_triweight_invcdf_estimate
@@ -3029,6 +3029,16 @@ calstat-statistics-normaldist-eq-hash	proven	statistics.py	NormalDist.__eq__,Nor
 calstat-statistics-normaldist-undefined	proven	statistics.py	NormalDist.pdf,NormalDist.cdf,NormalDist.zscore,NormalDist.overlap,NormalDist.inv_cdf
 calstat-statistics-inv-cdf-centre	proven	statistics.py	NormalDist.inv_cdf,NormalDist.quantiles,NormalDist.samples,_normal_dist_inv_cdf
 calstat-statistics-from-samples-short	proven	statistics.py	NormalDist.from_samples
+calstat-statistics-sqrtprod-accurate	refuted	statistics.py	_sqrtprod
+calstat-statistics-correlation-proportional	refuted	statistics.py	correlation,_sqrtprod
+calstat-statistics-decimal-sqrt-half-even	refuted	statistics.py	_decimal_sqrt_of_frac
+calstat-statistics-decimal-sqrt-nearest	open	statistics.py	_decimal_sqrt_of_frac
+calstat-statistics-quantiles-inclusive-in-range	refuted	statistics.py	quantiles
+calstat-statistics-quantiles-hf	proven	statistics.py	quantiles
+calstat-statistics-linreg-proportional	proven	statistics.py	linear_regression
+calstat-statistics-fmean-ints	proven	statistics.py	fmean
+calstat-statistics-fmean-weighted-ints	proven	statistics.py	fmean
+calstat-statistics-normaldist-eq	proven	statistics.py	NormalDist.__eq__,NormalDist.__hash__
 rand-genrand-in-bounds	proven	Modules/_randommodule.c	genrand_uint32
 rand-genrand-twist-recurrence	proven	Modules/_randommodule.c	genrand_uint32
 rand-random-exact-rational	proven	Modules/_randommodule.c	_random_Random_random_impl

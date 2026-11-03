@@ -1,0 +1,53 @@
+id: calstat-statistics-decimal-sqrt-tie
+title: "statistics._decimal_sqrt_of_frac rounds an exact halfway root down to an odd digit, so stdev/pstdev of Decimals is not half-even"
+priority: P4
+kind: wrong-result
+module: corelibs
+files: [Lib/statistics.py]
+functions: ["_decimal_sqrt_of_frac", "pstdev", "stdev"]
+summary: |
+  `_decimal_sqrt_of_frac(n, m)` promises "Square root of n/m as a Decimal, correctly rounded". It
+  computes `(Decimal(n) / Decimal(m)).sqrt()` and then moves one step up or down when n/m lies
+  strictly beyond the midpoint to a neighbour. When the root lies exactly on that midpoint neither
+  strict test fires, and the first estimate is kept whatever its last digit. In the default context
+  (28 digits, ROUND_HALF_EVEN) `pstdev([Decimal(0), Decimal('2.000000000000000000000000003')])` is
+  exactly 1.0000000000000000000000000015 and should round to ...002; it returns
+  1.000000000000000000000000001.
+likelihood: |
+  Very low: it needs a variance that is the exact square of a 29-digit value ending in 5.
+maybe_intended: |
+  Possibly: "correctly rounded" may be meant as "one of the two nearest", and the result is within half
+  a unit of the last place. But stdev's other branch (floats) is correctly rounded with ties to even,
+  and Decimal arithmetic in this context is half-even, so the two disagree on ties.
+reproducer: |
+  import statistics
+  from decimal import Decimal as D
+  from fractions import Fraction as F
+  r = statistics.pstdev([D(0), D('2.000000000000000000000000003')])
+  exact = F(2000000000000000000000000003, 2 * 10**27)   # 1.0000000000000000000000000015, a tie
+  d = statistics._decimal_sqrt_of_frac(exact.numerator ** 2, exact.denominator ** 2)
+  print(r, d)
+  if r == D('1.000000000000000000000000001') and d == r:
+      print('REPRODUCED calstat-statistics-decimal-sqrt-tie')
+expected: |
+  1.000000000000000000000000002 (half-even rounding of 1.0000000000000000000000000015).
+observed: |
+  python3 3.15.2: 1.000000000000000000000000001 1.000000000000000000000000001. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Lib/statistics.py:1732, the docstring: "Square root of n/m as a Decimal, correctly rounded."
+cause: |
+  Lib/statistics.py:1747 and :1753 compare with strict `>` and `<`; on equality with the midpoint
+  ((root + plus) / 2)**2 == n/m the function returns `root` (:1756), here the odd neighbour, because the
+  28-digit quotient n/m rounds up before `sqrt()` and the rounded root lands below the midpoint.
+possible_fix: |
+  On equality return whichever of `root` and `plus` (or `minus`) has an even last digit, or compute
+  the root of the exact fraction with `localcontext(prec=2*prec+2)` and round once with `+x`.
+duplicates:
+  issues:
+    - {number: 90034, state: closed, relation: "introduced the correctly rounded square roots of stdev (bpo-45876); no report of the tie", reason: "different issue"}
+  queries: ["decimal_sqrt_of_frac", "stdev Decimal rounding", "pstdev decimal", "stdev decimal correctly rounded",
+            "statistics decimal sqrt", "bugforge README: no statistics stdev/pstdev Decimal entries"]
+lean:
+  property: PyLean.CoreLibs.CalStat.DecimalSqrtHalfEven
+  theorem: PyLean.CoreLibs.CalStat.decimalSqrtHalfEven_refuted

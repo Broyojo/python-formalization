@@ -1,6 +1,7 @@
 import PyLean.Registry
 import PyLean.CoreLibs.CalStat.StatSqrt
 import PyLean.CoreLibs.CalStat.StatExact
+import PyLean.CoreLibs.CalStat.StatND
 
 /-! Registry entries for `Lib/statistics.py`. -/
 
@@ -126,7 +127,7 @@ def statisticsEntries : List Entry := [
     "Length mismatch, fewer than two points and an unknown method raise, in source order; proportional=True gives intercept 0.0."
     "docstrings" ``TwoInputChecks ``twoInputChecks_proven,
   re "correlation-constant" "corelibs-statistics-correlation-constant-undetected"
-    ["correlation", "linear_regression"]
+    ["correlation"]
     "correlation raises StatisticsError for constant x."
     "Doc/library/statistics.rst:757" ``ConstantInputDetected ``constantInputDetected_refuted,
   re "correlation-bounded" "corelibs-statistics-correlation-out-of-range" ["correlation", "_sqrtprod"]
@@ -175,7 +176,40 @@ def statisticsEntries : List Entry := [
     "docstrings" ``InvCdfCentre ``invCdfCentre_proven,
   st "from-samples-short" ["NormalDist.from_samples"]
     "from_samples needs two points and raises the StatisticsError of _mean_stdev otherwise."
-    "statistics.py:1762-1763" ``FromSamplesShort ``fromSamplesShort_proven
+    "statistics.py:1762-1763" ``FromSamplesShort ``fromSamplesShort_proven,
+  re "sqrtprod-accurate" "calstat-statistics-sqrtprod-partial-underflow" ["_sqrtprod"]
+    "For positive finite floats x, y, _sqrtprod(x, y) is a finite float v with |v*v - x*y| <= 2**-50 * x*y."
+    "Lib/statistics.py:1773 (docstring: improved accuracy, without overflow/underflow)"
+    ``SqrtprodAccurate ``sqrtprodAccurate_refuted,
+  re "correlation-proportional" "calstat-statistics-sqrtprod-partial-underflow" ["correlation", "_sqrtprod"]
+    "For exactly proportional normal-float data y = c*x, c > 0, x not constant, correlation(x, y) is within 2**-50 of 1."
+    "Lib/statistics.py:691-692; docstring of _sqrtprod"
+    ``CorrelationProportional ``correlationProportional_refuted,
+  re "decimal-sqrt-half-even" "calstat-statistics-decimal-sqrt-tie" ["_decimal_sqrt_of_frac"]
+    "Whenever sqrt(n/m) is rational, _decimal_sqrt_of_frac(n, m) is its 28-digit half-even rounding."
+    "Lib/statistics.py:1732 (docstring: correctly rounded)" ``DecimalSqrtHalfEven ``decimalSqrtHalfEven_refuted,
+  op "decimal-sqrt-nearest" ["_decimal_sqrt_of_frac"]
+    "_decimal_sqrt_of_frac(n, m) is a nearest 28-digit value to sqrt(n/m), ties either way."
+    "narrowing of decimal-sqrt-half-even"
+    "Needs: the sticky-digit argument that decSqrtFin is the 28-digit rounding of the root of the rounded quotient, the 0.5-ulp error of that quotient, and a 1.5-ulp bound so that one neighbour step suffices, including at powers of ten. Smoke-tested on 100000 random and tie cases." ``DecimalSqrtNearest,
+  re "quantiles-inclusive-in-range" "calstat-statistics-quantiles-inclusive-outside-range" ["quantiles"]
+    "With method='inclusive' every cut point of finite float data lies between the minimum and the maximum."
+    "Lib/statistics.py:1188-1190" ``QuantilesInclusiveInRange ``quantilesInclusiveInRange_refuted,
+  st "quantiles-hf" ["quantiles"]
+    "For Fraction data, n < 1 raises before the data is read; with two or more points the cut points are Hyndman-Fan definition 7 ('inclusive') or 6 ('exclusive', extended linearly past the ends) of sorted(data) at i/n, exactly; an unknown method raises ValueError."
+    "Lib/statistics.py:1149-1170 (R6/R7), 1176-1224" ``QuantilesHF ``quantilesHF_proven,
+  st "linreg-proportional" ["linear_regression"]
+    "For int data, linear_regression(x, y, proportional=True) checks the lengths, then computes the exact sums sum(x*y) and sum(x*x) (sumprod is exact on ints), converts them to float (OverflowError past the float range), raises 'x is constant' when sum(x*x) == 0, and otherwise returns float(sum(x*y)) / float(sum(x*x)) with intercept 0.0: the correctly rounded least-squares slope through the origin when both sums are below 2**53."
+    "Lib/statistics.py:745-805 (docstring: fit through the origin, intercept always 0.0)" ``LinRegProportional ``linRegProportional_proven,
+  st "fmean-ints" ["fmean"]
+    "For int data with magnitudes summing below 2**53 and len() truthful or raising a TypeError (an iterator, decided by the class relation H), fmean is the correctly rounded mean, StatisticsError for no data; an exception of the iterator propagates; another exception of len() propagates before iteration."
+    "Lib/statistics.py:182-207" ``FmeanInts ``fmeanInts_proven,
+  st "fmean-weighted-ints" ["fmean"]
+    "For int data and int weights (sum(x*w) and the weights' magnitudes below 2**53), fmean(data, weights) is sum(x*w) / sum(w) correctly rounded (a signed zero for a zero numerator), raises for zero total weight, turns sumprod's ValueError and any ValueError (under H) of the data iterator into the length error, and lets any other iterator exception through."
+    "Lib/statistics.py:209-222" ``FmeanWeightedInts ``fmeanWeightedInts_proven,
+  st "normaldist-eq" ["NormalDist.__eq__", "NormalDist.__hash__"]
+    "__eq__ is NotImplemented for non-NormalDist, true iff mu and sigma compare equal, symmetric, transitive, reflexive iff no NaN; __hash__ is hash((mu, sigma)) and agrees on equal objects; equal objects give the same pdf(x), cdf(x) (erfc(+-0) equal) and zscore(x) up to ==."
+    "Lib/statistics.py:1432-1440 (docstrings)" ``NormalDistEq ``normalDistEq_proven
 ]
 
 end PyLean.CoreLibs.CalStat

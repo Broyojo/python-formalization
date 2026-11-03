@@ -8383,7 +8383,8 @@ def calstat_gen_stat(rng):
     fns = ["s._exact_ratio", "s._isfinite", "s._coerce", "s._sum", "s._ss", "s._ss", "s._convert", "s._fail_neg", "s._rank", "s._rank",
            "s._integer_sqrt_of_frac_rto", "s._float_sqrt_of_frac", "s._float_sqrt_of_frac",
            "s._decimal_sqrt_of_frac", "s._mean_stdev", "s._sqrtprod",
-           "s.mean", "s.mean", "s.fmean", "s.fmean", "s.geometric_mean", "s.harmonic_mean", "s.harmonic_mean", "s.median", "s.median_low",
+           "s.mean", "s.mean", "s.fmean", "s.fmean", "s.fmean_it", "s.fmean_it", "s.fmean_it",
+           "s._sqrtprod", "s.correlation", "s._decimal_sqrt_of_frac", "s.quantiles", "s.geometric_mean", "s.harmonic_mean", "s.harmonic_mean", "s.median", "s.median_low",
            "s.median_high", "s.median_grouped", "s.mode", "s.multimode", "s.variance", "s.variance", "s.pvariance",
            "s.stdev", "s.pstdev", "s.covariance", "s.correlation", "s.correlation", "s.linear_regression",
            "s.linear_regression", "s.quantiles", "s.quantiles", "s.kde", "s.kde", "s.kde_random", "s.kernel", "s.kernel",
@@ -8433,12 +8434,27 @@ def calstat_gen_stat(rng):
         c["m"] = rng.choice([1, 2, 3, rng.randint(1, 10 ** 30)])
         if c["n"] < 0:
             c["m"] = -c["m"]
+        if rng.random() < 0.3:
+            # exact squares of 29-digit values: ties, and their neighbours
+            k = rng.randint(10 ** 28, 10 ** 29 - 1)
+            k = k - k % 10 + rng.choice([5, 5, 5, 4, 6, 0])
+            scale = 10 ** rng.randint(20, 32)
+            c["n"], c["m"] = k * k, scale * scale
     elif fn == "s._mean_stdev":
         c["data"] = calstat_data(rng, calstat_NUMMIX)
     elif fn == "s._sqrtprod":
         pool = [0.0, 1.0, 2.0, 1e308, 1e-308, 5e-324, 1e200, 1e-200, 3.0, calstat_math.inf, float("nan")]
         c["x"] = calstat_fstr(rng.choice(pool + [rng.uniform(0, 10)]))
         c["y"] = calstat_fstr(rng.choice(pool + [rng.uniform(0, 10)]))
+        if rng.random() < 0.5:
+            # products in and around the subnormal range, where only sqrt(x*y) == 0 is rescaled
+            e = rng.randint(-1100, -1000)
+            a = rng.randint(-600, 0)
+            x = calstat_math.ldexp(rng.uniform(0.5, 1), a)
+            y = calstat_math.ldexp(rng.uniform(0.5, 1), e - a)
+            if rng.random() < 0.3:
+                x, y = 10 * 2.0 ** -540, 10 * 2.0 ** -538
+            c["x"], c["y"] = calstat_fstr(x), calstat_fstr(y)
     elif fn in ("s.mean", "s.variance", "s.pvariance", "s.stdev", "s.pstdev"):
         c["data"] = calstat_data(rng)
         if fn != "s.mean":
@@ -8452,6 +8468,25 @@ def calstat_gen_stat(rng):
         if rng.random() < 0.5:
             n = len(c["data"]) if rng.random() < 0.9 else rng.randint(0, 4)
             c["weights"] = [calstat_value_spec(rng, rng.choice(["smallint", "unitfloat", "frac"])) for _ in range(n)]
+    elif fn == "s.fmean_it":
+        mix = rng.choice([["smallint"], ["int"], ["unitfloat"], ["float"], ["frac"], ["smallint", "frac"], ["bool", "smallint"],
+                          ["unitfloat", "specialf"], ["str"], ["dec"]])
+        c["data"] = calstat_data(rng, [mix])
+        c["src"] = rng.choice(["list", "tuple", "iter", "fail", "fail", "badlen", "badlen", "gen"])
+        excs = [["ValueError", "boom"], ["TypeError", "bad"], ["RuntimeError", "rt"], ["MyTypeError", "mt"],
+                ["MyValueError", "mv"]]
+        c["exc"] = rng.choice(excs)
+        c["weights"] = None
+        if rng.random() < 0.5:
+            n = len(c["data"]) if rng.random() < 0.8 else rng.randint(0, 5)
+            c["weights"] = [calstat_value_spec(rng, rng.choice(["smallint", "smallint", "unitfloat", "frac"])) for _ in range(n)]
+            if rng.random() < 0.15:
+                c["weights"] = [calstat_spec(rng.choice([1, -1])) for _ in range(n)]
+                c["weights"] = c["weights"][:-1] + [calstat_spec(-sum(int(x[2:]) for x in c["weights"][:-1]))] if n else []
+            c["wsrc"] = rng.choice(["list", "tuple", "iter", "fail", "gen"])
+            c["wexc"] = rng.choice(excs)
+            if c["src"] == "badlen":
+                c["src"] = "list"
     elif fn == "s.geometric_mean":
         c["data"] = calstat_data(rng, [["posint"], ["posfloat"], ["posfrac"], ["posint", "posfrac"], ["smallint"], ["unitfloat"],
                                        ["posfloat", "specialf"], ["int"], ["float"], ["none"]])
@@ -8482,6 +8517,13 @@ def calstat_gen_stat(rng):
         c["y"] = [calstat_value_spec(rng, rng.choice(mix)) for _ in range(n)]
         if rng.random() < 0.2 and c["x"]:
             c["x"] = [c["x"][0]] * len(c["x"])
+        if fn in ("s.correlation", "s.covariance", "s.linear_regression") and rng.random() < 0.15:
+            # exactly proportional data whose sums of squares are normal but whose product underflows
+            k = rng.randint(2, 6)
+            ex, ey = rng.randint(-400, -200), rng.randint(-400, -200)
+            base = [rng.randint(-9, 9) for _ in range(k)]
+            c["x"] = [calstat_spec(calstat_math.ldexp(b, ex)) for b in base]
+            c["y"] = [calstat_spec(calstat_math.ldexp(b * rng.choice([1, 2, 3, -1]), ey)) for b in base]
         if fn == "s.correlation":
             c["method"] = rng.choice(["linear", "linear", "ranked", "ranked", "bogus"])
         if fn == "s.linear_regression":
@@ -8490,6 +8532,9 @@ def calstat_gen_stat(rng):
         c["data"] = calstat_data(rng, calstat_NUMMIX + [["str"], ["dec"]], 12)
         c["n"] = rng.choice([1, 2, 3, 4, 4, 5, 7, 10, 20, 0, -1])
         c["method"] = rng.choice(["exclusive", "exclusive", "inclusive", "inclusive", "bogus"])
+        if rng.random() < 0.2:
+            v = calstat_spec(rng.choice([0.1, 0.3, 0.7, 1 / 3, 1e300, rng.uniform(-5, 5)]))
+            c["data"] = [v] * rng.randint(1, 6)
     elif fn in ("s.kde", "s.kde_random"):
         mix = rng.choice([["smallint"], ["unitfloat"], ["smallint", "unitfloat"], ["frac"]])
         c["data"] = calstat_data(rng, [mix])
@@ -8578,6 +8623,76 @@ def calstat_L(k):
     return [calstat_obj(s) for s in k]
 
 
+class calstat_MyTypeError(TypeError):
+    pass
+
+
+class calstat_MyValueError(ValueError):
+    pass
+
+
+calstat_MyTypeError.__name__ = "MyTypeError"
+calstat_MyValueError.__name__ = "MyValueError"
+calstat_EXC = {"ValueError": ValueError, "TypeError": TypeError, "RuntimeError": RuntimeError,
+               "MyTypeError": calstat_MyTypeError, "MyValueError": calstat_MyValueError}
+
+
+def calstat_exc(spec):
+    return calstat_EXC[spec[0]](spec[1])
+
+
+class calstat_FailIter:
+    """An iterator (no `__len__`) that yields `items` and then raises `exc` from `__next__`."""
+
+    def __init__(self, items, exc):
+        self.items = list(items)
+        self.exc = exc
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.items:
+            return self.items.pop(0)
+        raise self.exc
+
+
+class calstat_BadLen:
+    """An iterable whose `__len__` raises `exc`."""
+
+    def __init__(self, items, exc):
+        self.items = list(items)
+        self.exc = exc
+
+    def __len__(self):
+        raise self.exc
+
+    def __iter__(self):
+        return iter(self.items)
+
+
+def calstat_gen_stop(items):
+    """A generator whose body lets a StopIteration escape: PEP 479 turns it into RuntimeError."""
+    yield from items
+    raise StopIteration
+
+
+def calstat_src(items, src, exc):
+    if src == "list":
+        return list(items)
+    if src == "tuple":
+        return tuple(items)
+    if src == "iter":
+        return iter(items)
+    if src == "fail":
+        return calstat_FailIter(items, calstat_exc(exc))
+    if src == "badlen":
+        return calstat_BadLen(items, calstat_exc(exc))
+    if src == "gen":
+        return calstat_gen_stop(items)
+    raise KeyError(src)
+
+
 class calstat_Script:
     """What `_random.Random(seed)` is replaced by in `kde_random`: scripted draws."""
 
@@ -8642,6 +8757,12 @@ def calstat_stat_call(c, fn):
         w = c["weights"]
         d = calstat_L(c["data"])
         return calstat_res(st.fmean(iter(d) if c["iter"] else d, None if w is None else calstat_L(w)))
+    if fn == "fmean_it":
+        d = calstat_src(calstat_L(c["data"]), c["src"], c.get("exc"))
+        w = None
+        if c["weights"] is not None:
+            w = calstat_src(calstat_L(c["weights"]), c["wsrc"], c.get("wexc"))
+        return calstat_res(st.fmean(d, w))
     if fn == "geometric_mean":
         return calstat_fstr(st.geometric_mean(calstat_L(c["data"])))
     if fn == "harmonic_mean":
