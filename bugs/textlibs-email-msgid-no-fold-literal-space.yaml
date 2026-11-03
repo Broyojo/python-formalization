@@ -74,4 +74,4 @@ duplicates: |
   UnboundLocalError email; UnboundLocalError pos _get_ptext_to_endchars; get_no_fold_literal;
   no-fold-literal; _get_ptext_to_endchars; message-id domain literal whitespace;
   UnboundLocalError header parser; email Message-ID UnboundLocalError; get_dtext.
-lean: lean/PyLean/TextLibs/EmailRefute.lean (MessageIdNoRaise, messageIdNoRaise_refuted)
+lean: lean/PyLean/TextLibs/EmailRefute.lean (MessageIdNoRaise, messageIdNoRaise_refuted; MessageIdsNoRaise, messageIdsNoRaise_refuted)

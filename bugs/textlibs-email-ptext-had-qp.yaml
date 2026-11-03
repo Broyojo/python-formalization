@@ -51,4 +51,4 @@ duplicates: |
   domain-literal; domain literal quoted pair defect; domain-literal quoted-pair obsolete;
   _get_ptext_to_endchars had_qp. Bugforge: email.headerregistry-20261004-004044-c1 ("Address fails
   to escape closing brackets in domain literals", not filed) is about writing, not this flag.
-lean: lean/PyLean/TextLibs/EmailQuote.lean (PtextQpFlag, ptextQpFlag_refuted, dtext_no_defect)
+lean: lean/PyLean/TextLibs/EmailQuote.lean (PtextQpFlag, ptextQpFlag_refuted; DtextQpDefect, dtextQpDefect_refuted)

@@ -569,4 +569,404 @@ theorem ptextQpFlag_refuted : ¬ PtextQpFlag := by
   have := h [97, 92, 98] (fun c => c == 34) [97, 98] [] false ptext_qp_unset (by decide)
   cases this
 
+/-! ## `get_dtext` -/
+
+/-- `get_dtext`'s docstring (:1582-1591): "Quoted pairs are converted to their unquoted values,
+so what is returned is a ptext token, in this case a ValueTerminal. If there were
+quoted-printables, an ObsoleteHeaderDefect is added to the returned token's defect list." For
+every value: when the token's text is shorter than the text consumed (a quoted pair lost its
+backslash), the token carries an `ObsoleteHeaderDefect`. -/
+def DtextQpDefect : Prop :=
+  ∀ (v : Str) (t : Tok) (rest : Str), getDtext v = .ok (t, rest) →
+    t.str.length + rest.length < v.length → t.ds.any (·.cls == "ObsoleteHeaderDefect") = true
+
+/-- `a\b`: `get_dtext` returns the `ValueTerminal` `ab` with no defect (the `had_qp` test at
+:1595 sees `False`). -/
+theorem dtext_qp :
+    getDtext [97, 92, 98] = .ok (.term .val [97, 98] "ptext" [], []) := by
+  rfl
+
+theorem dtextQpDefect_refuted : ¬ DtextQpDefect := by
+  intro h
+  have := h [97, 92, 98] _ [] dtext_qp (by decide)
+  simp [Tok.ds] at this
+
+/-! ## Nested comments -/
+
+/-- A comment body in canonical form: escaped text, optionally followed by a nested comment and
+another body. -/
+inductive CB where
+  | text (s : Str)
+  | nest (s : Str) (inner rest : CB)
+
+/-- The text of a body, as `str()` of a comment writes it (`Comment.quote` escapes text with
+the `make_parenthesis_pairs` escapes and leaves nested comments alone). -/
+def CB.render : CB → Str
+  | .text s => escWith Eparen s
+  | .nest s i r => escWith Eparen s ++ [40] ++ i.render ++ [41] ++ r.render
+
+/-- `Comment.content` of a body: the text unescaped, nested comments as written. -/
+def CB.content : CB → Str
+  | .text s => s
+  | .nest s i r => s ++ [40] ++ i.render ++ [41] ++ r.content
+
+/-- `get_comment` on comments, nested ones included:
+* for every canonical body `b` (escaped text with nested comments) and rest `r`,
+  `get_comment('(' + b + ')' + r)` returns `r` and a comment whose `str()` is `'(' + b + ')'`
+  and whose `content` is `b` with its top-level text unescaped; its elements are
+  `WhiteSpaceTerminal`s (whitespace and ctext, `get_qp_ctext`'s class, :1204-1209) and nested
+  comments;
+* a comment that the value ends inside, `'(' + make_parenthesis_pairs(s)`, gets the defect
+  "end of header inside comment" and its closing parenthesis back in `str()` (:1305-1308);
+* a non-empty value that does not start with `(` raises
+  `HeaderParseError("expected '(' but found '<value>'")` (:1292-1294).
+The docstring: "comment = "(" *([FWS] ccontent) [FWS] ")"; ccontent = ctext / quoted-pair /
+comment. We handle nested comments here, and quoted-pair in our qp-ctext routine." -/
+def CommentSpec : Prop :=
+  (∀ (n : Nat) (b : CB) (r : Str), b.render.length + 1 < n →
+    ∃ c, getComment n ([40] ++ b.render ++ [41] ++ r) = .ok (c, r) ∧
+      c.str = [40] ++ b.render ++ [41] ∧ commentContent c = b.content ∧
+      ∀ k ∈ c.kids, (∃ s ty ds, k = .term .ws s ty ds) ∨ k.ty = "comment") ∧
+  (∀ (n : Nat) (s : Str), s.length + 1 < n →
+    ∃ c, getComment n ([40] ++ makeParenPairs s) = .ok (c, []) ∧
+      c.str = [40] ++ makeParenPairs s ++ [41] ∧ commentContent c = s ∧
+      c.ds = [invalidHeader (S "end of header inside comment")]) ∧
+  (∀ (n : Nat) (v : Str), 0 < n → v ≠ [] → v.head? ≠ some 40 →
+    getComment n v = .error (.hpe (S "expected '(' but found '" ++ v ++ S "'")))
+
+/-- `get_fws` on escaped text followed by a tail that does not start with whitespace. -/
+theorem getFws_escT {E endc : Nat → Bool} (hok : EscOk E endc) (s : Str) (y : Str)
+    (hy : y.takeWhile isSpace = [] ∧ y.dropWhile isSpace = y) :
+    (getFws (escWith E s ++ y)).1 = WT (s.takeWhile isSpace) "fws" ∧
+    (getFws (escWith E s ++ y)).2 = escWith E (s.dropWhile isSpace) ++ y := by
+  have hsplit := List.takeWhile_append_dropWhile (p := isSpace) (l := s)
+  have hts := escWith_spaces hok (all_takeWhile (p := isSpace) s)
+  have hv : escWith E s ++ y = s.takeWhile isSpace ++ (escWith E (s.dropWhile isSpace) ++ y) := by
+    have h1 : escWith E s = escWith E (s.takeWhile isSpace ++ s.dropWhile isSpace) := by
+      rw [hsplit]
+    rw [h1, escWith_append, hts, List.append_assoc]
+  have hhead : (escWith E (s.dropWhile isSpace) ++ y).takeWhile isSpace = [] ∧
+      (escWith E (s.dropWhile isSpace) ++ y).dropWhile isSpace = escWith E (s.dropWhile isSpace) ++ y := by
+    cases hd : s.dropWhile isSpace with
+    | nil => simp [escWith_nil, hy.1, hy.2]
+    | cons d l' =>
+      have hd' := mem_dropWhile_head hd
+      rw [escWith_cons]
+      split
+      · have h92s : isSpace 92 = false := by decide
+        simp [List.takeWhile_cons, List.dropWhile_cons, h92s]
+      · simp [List.takeWhile_cons, List.dropWhile_cons, hd']
+  rw [getFws_fst, getFws_snd, hv, takeWhile_append_all _ (all_takeWhile s),
+    dropWhile_append_all _ (all_takeWhile s), hhead.1, hhead.2]
+  simp
+
+/-- `_get_ptext_to_endchars` on escaped text that runs to the end of the value. -/
+theorem ptext_esc_end {E endc : Nat → Bool} (hok : EscOk E endc) {c : Nat} {s : Str}
+    (hc : isWsp c = false) :
+    ∃ qp, getPtextToEndchars (escWith E (c :: s) ++ []) endc =
+      .ok ((c :: s).takeWhile (fun x => !isWsp x),
+        escWith E ((c :: s).dropWhile (fun x => !isWsp x)) ++ [], qp) := by
+  obtain ⟨t, ht⟩ : ∃ t, t = (c :: s).takeWhile (fun x => !isWsp x) := ⟨_, rfl⟩
+  obtain ⟨u, hu0⟩ : ∃ u, u = (c :: s).dropWhile (fun x => !isWsp x) := ⟨_, rfl⟩
+  rw [← ht, ← hu0]
+  have hsplit : t ++ u = c :: s := by rw [ht, hu0]; exact List.takeWhile_append_dropWhile
+  have htnw : ∀ a ∈ t, isWsp a = false := fun a ha => by
+    rw [ht] at ha; simpa using mem_takeWhile_p ha
+  have hesc := escWith_noWsp (E := E) htnw
+  have hv : escWith E (c :: s) ++ [] = escWith E t ++ escWith E u := by
+    rw [← hsplit, escWith_append, List.append_nil]
+  have htne : t ≠ [] := by
+    rw [ht]; simp only [List.takeWhile_cons, hc, Bool.not_false, ↓reduceIte]; simp
+  have hene : escWith E t ≠ [] := by
+    obtain ⟨x, xs, hx⟩ := List.exists_cons_of_ne_nil htne
+    rw [hx, escWith_cons]; split <;> simp
+  unfold getPtextToEndchars
+  have hvne : (escWith E (c :: s) ++ []).isEmpty = false := by
+    rw [List.append_nil, escWith_cons]; split <;> simp
+  rw [if_neg (by simpa using hvne)]
+  cases u with
+  | nil =>
+    simp only [escWith_nil, List.append_nil] at hv
+    have hw : wspSplit (escWith E (c :: s) ++ []) = (escWith E t, []) := by
+      have h1 := takeWhile_append_all (p := fun x => !isWsp x) ([] : Str) hesc
+      have h2 := dropWhile_append_all (p := fun x => !isWsp x) ([] : Str) hesc
+      simp only [List.append_nil] at h1 h2
+      simp only [wspSplit, List.append_nil, hv, h1, h2, List.takeWhile_nil, List.dropWhile_nil]
+    simp only [hw]
+    rw [if_neg (by simp [hene])]
+    obtain ⟨qp', hl⟩ := ptextLoop_esc hok [] t false []
+    refine ⟨qp', ?_⟩
+    rw [List.append_nil] at hl
+    rw [hl]
+    simp [ptextLoop, escWith_nil, pure, Except.pure]
+  | cons w u' =>
+    have hw' : isWsp w = true := by
+      have := mem_dropWhile_head (p := fun x => !isWsp x) (l := c :: s) (d := w) (l' := u')
+        hu0.symm
+      simpa using this
+    have hws := hok.space w (isSpace_of_wsp hw')
+    have hesc_u : escWith E (w :: u') = w :: escWith E u' := by
+      rw [escWith_cons, if_neg (by simp [hws.1, hws.2])]; rfl
+    have hw : wspSplit (escWith E (c :: s) ++ []) = (escWith E t, w :: escWith E u') := by
+      simp only [wspSplit, hv, hesc_u, takeWhile_append_all _ hesc, dropWhile_append_all _ hesc,
+        List.takeWhile_cons, List.dropWhile_cons, hw', Bool.not_true,
+        Bool.false_eq_true, ↓reduceIte, List.append_nil]
+    simp only [hw]
+    rw [if_neg (by simp [hene])]
+    obtain ⟨qp', hl⟩ := ptextLoop_esc hok [] t false []
+    refine ⟨qp', ?_⟩
+    rw [List.append_nil] at hl
+    rw [hl]
+    simp [ptextLoop, hesc_u, pure, Except.pure]
+
+/-- Paren end characters. -/
+def parenEnd (c : Nat) : Bool := c == 40 || c == 41
+
+/-- A comment element the text loop produces: a `WhiteSpaceTerminal` that is not a comment. -/
+def WsKid (k : Tok) : Prop := ∃ s ty ds, k = .term .ws s ty ds ∧ ty ≠ "comment"
+
+/-- The comment loop over escaped text, up to a tail that is the end of the value or starts with
+a parenthesis: it takes `j` iterations, at most one per character, and appends whitespace and
+ctext `WhiteSpaceTerminal`s whose texts make up the text. -/
+theorem commentLoop_text (tl : Str)
+    (hsp : tl.takeWhile isSpace = [] ∧ tl.dropWhile isSpace = tl)
+    (hpt : ∀ (c : Nat) (s : Str), isWsp c = false → ∃ qp,
+      getPtextToEndchars (escWith Eparen (c :: s) ++ tl) parenEnd =
+        .ok ((c :: s).takeWhile (fun x => !isWsp x),
+          escWith Eparen ((c :: s).dropWhile (fun x => !isWsp x)) ++ tl, qp)) :
+    ∀ (n : Nat) (s : Str) (ty : String) (ks : List Tok) (ds : List Defect)
+      (atts : List (String × AV)), s.length < n →
+      ∃ j ks', j ≤ s.length ∧
+        commentLoop n (escWith Eparen s ++ tl) (.node .comment ty ks ds atts) =
+          commentLoop (n - j) tl (.node .comment ty (ks ++ ks') ds atts) ∧
+        strs ks' = s ∧ ∀ k ∈ ks', WsKid k
+  | 0, _, _, _, _, _, h => absurd h (Nat.not_lt_zero _)
+  | n + 1, [], ty, ks, ds, atts, _ => ⟨0, [], Nat.le_refl _, by simp [escWith_nil], rfl, by simp⟩
+  | n + 1, c :: s, ty, ks, ds, atts, hlen => by
+    simp only [List.length_cons] at hlen
+    by_cases hw : isWsp c = true
+    · have hs := isSpace_of_wsp hw
+      have hspc := escOkParen.space c hs
+      have hv : escWith Eparen (c :: s) ++ tl = c :: (escWith Eparen s ++ tl) := by
+        rw [escWith_cons, if_neg (by simp [hspc.1, hspc.2])]; rfl
+      have hfws := getFws_escT escOkParen (c :: s) tl hsp
+      have hlt : ((c :: s).dropWhile isSpace).length < n := by
+        rw [List.dropWhile_cons, if_pos hs]
+        have := dropWhile_length_le isSpace s; omega
+      have hle : ((c :: s).dropWhile isSpace).length ≤ s.length := by
+        rw [List.dropWhile_cons, if_pos hs]; exact dropWhile_length_le isSpace s
+      obtain ⟨j, ks', hj, h1, h2, h3⟩ := commentLoop_text tl hsp hpt n ((c :: s).dropWhile isSpace)
+        ty (ks ++ [WT ((c :: s).takeWhile isSpace) "fws"]) ds atts hlt
+      refine ⟨j + 1, WT ((c :: s).takeWhile isSpace) "fws" :: ks', by simp; omega, ?_, ?_, ?_⟩
+      · rw [hv]
+        rw [commentLoop]
+        have hc41 : (c == 41) = false := by
+          cases h : (c == 41)
+          · rfl
+          · simp at h; subst h; cases hw
+        simp only [hc41, hw, Bool.false_eq_true, ↓reduceIte]
+        rw [← hv, hfws.1, hfws.2]
+        simp only [Tok.push]
+        rw [h1, Nat.add_sub_add_right]
+        simp
+      · rw [strs, h2]
+        simp only [Tok.str, WT]
+        exact List.takeWhile_append_dropWhile
+      · intro k hk
+        simp only [List.mem_cons] at hk
+        rcases hk with rfl | hk
+        · exact ⟨_, _, _, rfl, by decide⟩
+        · exact h3 k hk
+    · have hw' : isWsp c = false := by simpa using hw
+      obtain ⟨h, tl', hv, hhw, hhend, _⟩ := escWith_head escOkParen (s := s) hw' tl
+      have hh41 : (h == 41) = false := by
+        simp only [Bool.or_eq_false_iff] at hhend; exact hhend.2
+      have hh40 : (h == 40) = false := by
+        simp only [Bool.or_eq_false_iff] at hhend; exact hhend.1
+      obtain ⟨qp, hq⟩ := hpt c s hw'
+      obtain ⟨t, ht⟩ : ∃ t, t = (c :: s).takeWhile (fun x => !isWsp x) := ⟨_, rfl⟩
+      obtain ⟨u, hu⟩ : ∃ u, u = (c :: s).dropWhile (fun x => !isWsp x) := ⟨_, rfl⟩
+      rw [← ht, ← hu] at hq
+      have hqc : getQpCtext (escWith Eparen (c :: s) ++ tl) =
+          .ok (validateXtext (WT t "ptext"), escWith Eparen u ++ tl) := by
+        simp only [getQpCtext]
+        have : (fun c => c == 40 || c == 41) = parenEnd := rfl
+        rw [this, hq]; rfl
+      have hlt : u.length < n := by
+        have := dropWhile_notWsp_lt (s := s) hw'; rw [hu]; omega
+      have hle : u.length ≤ s.length := by
+        have := dropWhile_notWsp_lt (s := s) hw'; rw [hu]; omega
+      obtain ⟨ds', hds⟩ := validateXtext_term .ws t "ptext" []
+      obtain ⟨j, ks', hj, h1, h2, h3⟩ := commentLoop_text tl hsp hpt n u ty
+        (ks ++ [validateXtext (WT t "ptext")]) ds atts hlt
+      refine ⟨j + 1, validateXtext (WT t "ptext") :: ks', by simp; omega, ?_, ?_, ?_⟩
+      · rw [hv]
+        rw [commentLoop]
+        simp only [hh41, hh40, hhw, Bool.false_eq_true, ↓reduceIte]
+        rw [← hv, hqc]
+        simp only [Tok.push]
+        rw [h1, Nat.add_sub_add_right]
+        simp
+      · rw [strs, h2, (validateXtext_WT t "ptext").1, ht, hu]
+        exact split_noWsp c s
+      · intro k hk
+        simp only [List.mem_cons] at hk
+        rcases hk with rfl | hk
+        · simp only [WT] at hds ⊢
+          rw [hds]; exact ⟨_, _, _, rfl, by decide⟩
+        · exact h3 k hk
+
+theorem tail_paren (e : Nat) (he : e = 40 ∨ e = 41) (r : Str) :
+    (e :: r).takeWhile isSpace = [] ∧ (e :: r).dropWhile isSpace = e :: r := by
+  have h40 : isSpace 40 = false := by decide
+  have h41 : isSpace 41 = false := by decide
+  rcases he with rfl | rfl <;> simp [List.takeWhile_cons, List.dropWhile_cons, h40, h41]
+
+theorem pt_paren (e : Nat) (he : e = 40 ∨ e = 41) (r : Str) :
+    ∀ (c : Nat) (s : Str), isWsp c = false → ∃ qp,
+      getPtextToEndchars (escWith Eparen (c :: s) ++ e :: r) parenEnd =
+        .ok ((c :: s).takeWhile (fun x => !isWsp x),
+          escWith Eparen ((c :: s).dropWhile (fun x => !isWsp x)) ++ e :: r, qp) := by
+  intro c s hc
+  exact ptext_esc escOkParen hc r (by rcases he with rfl | rfl <;> rfl)
+    (by rcases he with rfl | rfl <;> rfl)
+
+theorem pt_end : ∀ (c : Nat) (s : Str), isWsp c = false → ∃ qp,
+      getPtextToEndchars (escWith Eparen (c :: s) ++ []) parenEnd =
+        .ok ((c :: s).takeWhile (fun x => !isWsp x),
+          escWith Eparen ((c :: s).dropWhile (fun x => !isWsp x)) ++ [], qp) := by
+  intro c s hc
+  exact ptext_esc_end escOkParen hc
+
+theorem escWith_length_ge (E : Nat → Bool) : ∀ s : Str, s.length ≤ (escWith E s).length
+  | [] => Nat.le_refl _
+  | c :: s => by
+    rw [escWith_cons]
+    have := escWith_length_ge E s
+    split <;> simp <;> omega
+
+theorem commentStrs_append : ∀ (a b : List Tok), commentStrs (a ++ b) = commentStrs a ++ commentStrs b
+  | [], _ => rfl
+  | x :: a, b => by simp [commentStrs, commentStrs_append a b]
+
+theorem commentStrs_ws (ks : List Tok) (h : ∀ k ∈ ks, WsKid k) :
+    commentStrs ks = escWith Eparen (strs ks) := by
+  rw [commentStrs_noComment ks (fun k hk => by
+    obtain ⟨s, ty, ds, rfl, hty⟩ := h k hk; simpa [Tok.ty] using hty), makeParenPairs_eq]
+
+/-- A comment element: a whitespace/ctext terminal or a nested comment. -/
+def CKid (k : Tok) : Prop := WsKid k ∨ k.ty = "comment"
+
+theorem commentLG (n : Nat) :
+    (∀ (b : CB) (r : Str) (ty : String) (ks : List Tok) (ds : List Defect)
+      (atts : List (String × AV)), b.render.length < n →
+      ∃ ks', commentLoop n (b.render ++ 41 :: r) (.node .comment ty ks ds atts) =
+          .ok (.node .comment ty (ks ++ ks') ds atts, 41 :: r) ∧
+        commentStrs ks' = b.render ∧ strs ks' = b.content ∧ ∀ k ∈ ks', CKid k) ∧
+    (∀ (b : CB) (r : Str), b.render.length + 1 < n →
+      ∃ ks', getComment n ([40] ++ b.render ++ [41] ++ r) =
+          .ok (.node .comment "comment" ks' [] [], r) ∧
+        commentStrs ks' = b.render ∧ strs ks' = b.content ∧ ∀ k ∈ ks', CKid k) := by
+  have ih : ∀ m, m < n → _ := fun m hm => commentLG m
+  refine ⟨?_, ?_⟩
+  · intro b r ty ks ds atts hlen
+    cases b with
+    | text s =>
+      obtain ⟨j, ks', hj, h1, h2, h3⟩ := commentLoop_text (41 :: r) (tail_paren 41 (.inr rfl) r)
+        (pt_paren 41 (.inr rfl) r) n s ty ks ds atts
+        (by have := escWith_length_ge Eparen s; simp [CB.render] at hlen; omega)
+      refine ⟨ks', ?_, ?_, ?_, fun k hk => .inl (h3 k hk)⟩
+      · simp only [CB.render]
+        rw [h1]
+        obtain ⟨m, hm⟩ : ∃ m, n - j = m + 1 := ⟨n - j - 1, by
+          have := escWith_length_ge Eparen s; simp [CB.render] at hlen; omega⟩
+        rw [hm]; simp [commentLoop]; rfl
+      · rw [commentStrs_ws ks' h3, h2]; rfl
+      · rw [h2]; rfl
+    | nest s i rest =>
+      have hs := escWith_length_ge Eparen s
+      simp only [CB.render, List.length_append, List.length_cons, List.length_nil] at hlen
+      have hval : (CB.nest s i rest).render ++ 41 :: r =
+          escWith Eparen s ++ 40 :: (i.render ++ 41 :: (rest.render ++ 41 :: r)) := by
+        simp [CB.render]
+      obtain ⟨j, ks1, hj, h1, h2, h3⟩ := commentLoop_text
+        (40 :: (i.render ++ 41 :: (rest.render ++ 41 :: r)))
+        (tail_paren 40 (.inl rfl) _) (pt_paren 40 (.inl rfl) _) n s ty ks ds atts (by omega)
+      obtain ⟨m, hm⟩ : ∃ m, n - j = m + 1 := ⟨n - j - 1, by omega⟩
+      obtain ⟨ksi, hgi, hgi1, hgi2, hgi3⟩ := (ih m (by omega)).2 i (rest.render ++ 41 :: r)
+        (by omega)
+      let c : Tok := .node .comment "comment" ksi [] []
+      obtain ⟨ksr, hlr, hlr1, hlr2, hlr3⟩ := (ih m (by omega)).1 rest r ty (ks ++ ks1 ++ [c]) ds
+        atts (by omega)
+      refine ⟨ks1 ++ [c] ++ ksr, ?_, ?_, ?_, ?_⟩
+      · rw [hval, h1, hm]
+        unfold commentLoop
+        simp only [show (40 == 41) = false from rfl, show isWsp 40 = false from rfl,
+          show (40 == 40) = true from rfl, Bool.false_eq_true, ↓reduceIte]
+        have hg : getComment m (40 :: (i.render ++ 41 :: (rest.render ++ 41 :: r))) =
+            .ok (c, rest.render ++ 41 :: r) := by
+          rw [← hgi]; simp
+        rw [hg]
+        simp only [Tok.push]
+        rw [hlr]; simp
+      · rw [commentStrs_append, commentStrs_append, commentStrs_ws ks1 h3, h2, hlr1]
+        simp [commentStrs, c, Tok.str, Tok.ty, hgi1, CB.render]
+      · rw [strs_append, strs_append, h2, hlr2]
+        simp [strs, c, Tok.str, hgi1, CB.content]
+      · intro k hk
+        simp only [List.mem_append, List.mem_singleton] at hk
+        rcases hk with (hk | rfl) | hk
+        · exact .inl (h3 k hk)
+        · exact .inr rfl
+        · exact hlr3 k hk
+  · intro b r hlen
+    obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
+    obtain ⟨ks', h1, h2, h3, h4⟩ := (ih m (by omega)).1 b r "comment" [] [] [] (by omega)
+    refine ⟨ks', ?_, h2, h3, h4⟩
+    have hv : [40] ++ b.render ++ [41] ++ r = 40 :: (b.render ++ 41 :: r) := by simp
+    rw [hv, getComment]
+    simp only [headIs, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte, List.drop_succ_cons,
+      List.drop_zero]
+    simp only [mkL, LC.defTy] at h1 ⊢
+    rw [h1]; simp; rfl
+termination_by n
+decreasing_by all_goals omega
+
+theorem commentSpec_proven : CommentSpec := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro n b r hlen
+    obtain ⟨ks', h1, h2, h3, h4⟩ := (commentLG n).2 b r hlen
+    refine ⟨_, h1, ?_, ?_, ?_⟩
+    · simp [Tok.str, h2]
+    · simp [commentContent, Tok.kids, h3]
+    · intro k hk
+      rcases h4 k hk with ⟨s, ty, ds, rfl, _⟩ | h
+      · exact .inl ⟨s, ty, ds, rfl⟩
+      · exact .inr h
+  · intro n s hlen
+    obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
+    obtain ⟨j, ks', hj, h1, h2, h3⟩ := commentLoop_text [] (by simp) pt_end m s "comment" [] [] []
+      (by have := escWith_length_ge Eparen s; omega)
+    refine ⟨.node .comment "comment" ks' [invalidHeader (S "end of header inside comment")] [],
+      ?_, ?_, ?_, rfl⟩
+    · have hv : [40] ++ makeParenPairs s = 40 :: (escWith Eparen s ++ []) := by
+        simp [makeParenPairs_eq]
+      rw [hv, getComment]
+      simp only [headIs, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte, List.drop_succ_cons,
+        List.drop_zero]
+      simp only [mkL, LC.defTy]
+      rw [h1]
+      obtain ⟨k, hk⟩ : ∃ k, m - j = k + 1 := ⟨m - j - 1, by omega⟩
+      rw [hk]
+      simp [commentLoop, Tok.addDefect]; rfl
+    · simp only [Tok.str]
+      rw [commentStrs_ws ks' h3, h2, makeParenPairs_eq]
+    · simp [commentContent, Tok.kids, h2]
+  · intro n v hn hv hh
+    obtain ⟨m, rfl⟩ : ∃ m, n = m + 1 := ⟨n - 1, by omega⟩
+    obtain ⟨x, xs, rfl⟩ := List.exists_cons_of_ne_nil hv
+    have hx : (x != 40) = true := by simpa using hh
+    rw [getComment]
+    simp [headIs, hx]; rfl
+
 end PyLean.TextLibs.Email

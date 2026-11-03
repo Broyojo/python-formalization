@@ -54,4 +54,4 @@ duplicates: |
   gh-151858. Related closed: gh-76359. Queries: gh search issues --repo python/cpython
   display_name IndexError group; email group display name comment IndexError;
   _header_value_parser IndexError; email header parser IndexError.
-lean: lean/PyLean/TextLibs/EmailRefute.lean (DisplayNameTotal, displayNameTotal_refuted)
+lean: lean/PyLean/TextLibs/EmailRefute.lean (DisplayNameTotal, displayNameTotal_refuted; DisplayNameValueTotal, displayNameValueTotal_refuted)
