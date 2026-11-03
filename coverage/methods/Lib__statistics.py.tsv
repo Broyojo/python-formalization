@@ -1,7 +1,7 @@
 file	line	endline	name	signature	status	entry	note
 Lib/statistics.py	159	179	mean	mean(data)	modelled	calstat-statistics-mean-floats,calstat-statistics-mean-fractions,calstat-statistics-mean-int-subclass,calstat-statistics-mean-ints	
-Lib/statistics.py	182	222	fmean	fmean(data, weights=None)	todo		review: fmeanIt follows :192-222 and FmeanInts/FmeanWeightedInts pin int values (correctly rounded below 2**53, smoke-tested on 3.15.2) and every data-side error path under Hier, but listOf drops the isinstance(weights, (list, tuple)) test at :209, so a list subclass whose __iter__ raises ValueError gives the length StatisticsError on 3.15.2 (sumprod's iter() is inside the try) and the raw ValueError in the model; every weighted conjunct takes weights = PyIter.ofList, so the list(weights) failure at :210 is in no theorem; and float data, the documented domain and the docstring example, is in no theorem (an fmean that mishandled a weights generator's exception passes).
-Lib/statistics.py	225	262	geometric_mean	geometric_mean(data)	todo		
+Lib/statistics.py	182	222	fmean	fmean(data, weights=None)	modelled	calstat-statistics-fmean-floats,calstat-statistics-fmean-ints,calstat-statistics-fmean-weighted-ints,calstat-statistics-fmean-weights-arg	
+Lib/statistics.py	225	262	geometric_mean	geometric_mean(data)	modelled	calstat-statistics-geometric-scan	
 Lib/statistics.py	265	325	harmonic_mean	harmonic_mean(data, weights=None)	modelled	calstat-statistics-harmonic-early-out,calstat-statistics-harmonic-exact	
 Lib/statistics.py	328	349	median	median(data)	modelled	calstat-statistics-median-order	
 Lib/statistics.py	352	374	median_low	median_low(data)	modelled	calstat-statistics-median-order	
@@ -15,7 +15,7 @@ Lib/statistics.py	610	630	stdev	stdev(data, xbar=None)	modelled	calstat-statisti
 Lib/statistics.py	633	653	pstdev	pstdev(data, mu=None)	modelled	calstat-statistics-stdev-of-variance	
 Lib/statistics.py	658	684	covariance	covariance(x, y, /)	todo		withdrawn: only input checks: an always-raising or constant result passes
 Lib/statistics.py	687	739	correlation	correlation(x, y, /, *, method='linear')	modelled	calstat-statistics-correlation-proportional	
-Lib/statistics.py	745	805	linear_regression	linear_regression(x, y, /, *, proportional=False)	todo		review: LinRegProportional only covers proportional=True with int data (sumprod exact on both the long and the generic path, slope correctly rounded below 2**53, smoke-tested), so the default proportional=False branch, the fsum means, centring and intercept ybar - slope * xbar (:790-794, :804), is in no theorem: a linear_regression returning (0.0, 0.0) whenever proportional is false passes; its general conjunct also only restates the body after sumprod.
+Lib/statistics.py	745	805	linear_regression	linear_regression(x, y, /, *, proportional=False)	modelled	calstat-statistics-linreg-centred,calstat-statistics-linreg-proportional	
 Lib/statistics.py	812	819	register	register(*kernels)	todo		withdrawn: only cdf(0) and the support: any centred kernel passes
 Lib/statistics.py	822	829	normal_kernel	normal_kernel()	todo		withdrawn: only cdf(0) and the support: any centred kernel passes
 Lib/statistics.py	832	838	logistic_kernel	logistic_kernel()	todo		withdrawn: only cdf(0) and the support: any centred kernel passes
@@ -31,11 +31,11 @@ Lib/statistics.py	913	919	triweight_kernel	triweight_kernel()	todo		withdrawn: o
 Lib/statistics.py	922	929	cosine_kernel	cosine_kernel()	todo		withdrawn: only cdf(0) and the support: any centred kernel passes
 Lib/statistics.py	936	1092	kde	kde(data, h, kernel='normal', *, cumulative=False)	todo		withdrawn: only input checks: an always-raising or constant result passes
 Lib/statistics.py	1095	1137	kde_random	kde_random(data, h, kernel='normal', *, seed=None)	todo		withdrawn: only input checks: an always-raising or constant result passes
-Lib/statistics.py	1176	1224	quantiles	quantiles(data, *, n=4, method='exclusive')	todo		review: QuantilesHF pins Fraction data of two or more points to an independent Rat.floor form of HF7 and the line-extended HF6 (checked against 3.15.2 on 5000 random cases) and the inclusive float refutation is genuine, but the ld < 2 branch (:1199-1202, data * (n - 1) for one point and the empty-data error) is in no entry on the row, so a quantiles returning [] for one point passes (quantiles-shape and the quantiles-method refutation would cover it but are not listed), QuantilesIter is a restatement of the quantilesIt wrapper defined beside it, and the exclusive method on floats is run by no entry.
+Lib/statistics.py	1176	1224	quantiles	quantiles(data, *, n=4, method='exclusive')	modelled	calstat-statistics-quantiles-hf,calstat-statistics-quantiles-inclusive-in-range,calstat-statistics-quantiles-method,calstat-statistics-quantiles-shape	
 Lib/statistics.py	1239	1244	NormalDist.__init__	__init__(self, mu=0.0, sigma=1.0)	modelled	calstat-statistics-normaldist-init	
-Lib/statistics.py	1247	1249	NormalDist.from_samples	from_samples(cls, data)	todo		review: FromSamplesTwin (from_samples equals NormalDist(mean(data), stdev(data))) is proven for Fraction data only, and the wrong from_samples that literally calls NormalDist(mean(data), stdev(data)) passes it and FromSamplesShort, yet for float data, the documented domain and every doc example, the two differ: from_samples([nan, 1.0]) is NormalDist(nan, nan) while stdev raises ValueError('inf or nan encountered in data') on 3.15.2, an excluded case not on record as a refutation; the docs' 'using fmean()' (statistics.rst:918-919) is also false (means differ in the last bit on Fractions, measured) and not recorded.
+Lib/statistics.py	1247	1249	NormalDist.from_samples	from_samples(cls, data)	modelled	calstat-statistics-from-samples-fmean,calstat-statistics-from-samples-twin,calstat-statistics-from-samples-twin-floats	
 Lib/statistics.py	1251	1257	NormalDist.samples	samples(self, n, *, seed=None)	todo		withdrawn: the sigma-zero error or a length, no value: an always-raising method passes
-Lib/statistics.py	1259	1265	NormalDist.pdf	pdf(self, x)	todo		
+Lib/statistics.py	1259	1265	NormalDist.pdf	pdf(self, x)	modelled	calstat-statistics-pdf-shape	
 Lib/statistics.py	1267	1271	NormalDist.cdf	cdf(self, x)	todo		withdrawn: the sigma-zero error or a length, no value: an always-raising method passes
 Lib/statistics.py	1273	1285	NormalDist.inv_cdf	inv_cdf(self, p)	todo		withdrawn: the sigma-zero error or a length, no value: an always-raising method passes
 Lib/statistics.py	1287	1296	NormalDist.quantiles	quantiles(self, n=4)	todo		withdrawn: the sigma-zero error or a length, no value: an always-raising method passes
@@ -54,8 +54,8 @@ Lib/statistics.py	1416	1418	NormalDist.__pos__	__pos__(x1)	modelled	calstat-stat
 Lib/statistics.py	1420	1422	NormalDist.__neg__	__neg__(x1)	modelled	calstat-statistics-normaldist-arith	
 Lib/statistics.py	1426	1428	NormalDist.__rsub__	__rsub__(x1, x2)	modelled	calstat-statistics-normaldist-arith	
 Lib/statistics.py	1432	1436	NormalDist.__eq__	__eq__(x1, x2)	modelled	calstat-statistics-normaldist-eq	
-Lib/statistics.py	1438	1440	NormalDist.__hash__	__hash__(self)	todo		review: The only conjunct a constant hash fails is ND.hash X = hashTuple [hashFlt mu, hashFlt sigma], which is rfl on the one-line definition, and the substantive one (equal objects hash equal, including 0.0 and -0.0) is satisfied by lambda self: 0; the mirror is also wrong for NaN, which CPython hashes by identity while hashFlt gives 0 (hash(NormalDist(nan, 1.0)) is not hash((0, 1.0)) on 3.15.2), so that conjunct read about CPython is false for NaN fields.
-Lib/statistics.py	1442	1443	NormalDist.__repr__	__repr__(self)	todo		review: Still credited by normaldist-eq-hash despite its withdrawn note: ND.repr hard-codes 'NormalDist' where :1443 uses type(self).__name__ (repr of a subclass Sub(1, 2) is Sub(mu=1.0, sigma=2.0) on 3.15.2), and NormalDistEqHash's repr conjunct is rfl on the definition plus two examples, with fltRepr itself unproven.
+Lib/statistics.py	1438	1440	NormalDist.__hash__	__hash__(self)	modelled	calstat-statistics-normaldist-eq,calstat-statistics-normaldist-hash-value	
+Lib/statistics.py	1442	1443	NormalDist.__repr__	__repr__(self)	todo		mirror now takes type(self).__name__ (difftested with subclasses); the only property is the format string itself, so a repr round-trip (eval(repr(X)) == X) is needed, which needs fltRepr to round-trip, unproven
 Lib/statistics.py	1445	1446	NormalDist.__getstate__	__getstate__(self)	modelled	calstat-statistics-normaldist-init	
 Lib/statistics.py	1448	1449	NormalDist.__setstate__	__setstate__(self, state)	modelled	calstat-statistics-normaldist-init	
 Lib/statistics.py	1454	1509	_sum	_sum(data)	modelled	calstat-statistics-coerce-order,calstat-statistics-sum-exact	

@@ -1,7 +1,7 @@
 import PyLean.Registry
 import PyLean.CoreLibs.CalStat.StatSqrt
 import PyLean.CoreLibs.CalStat.StatExact
-import PyLean.CoreLibs.CalStat.StatND
+import PyLean.CoreLibs.CalStat.StatMore
 
 /-! Registry entries for `Lib/statistics.py`. -/
 
@@ -164,7 +164,7 @@ def statisticsEntries : List Entry := [
     "invariant"
     "vector_norm accumulates in argument order, so it needs an error analysis of the compensated sum; a scan of 300000 random pairs found no difference." ``HypotCommutes,
   st "normaldist-eq-hash" ["NormalDist.__eq__", "NormalDist.__hash__", "NormalDist.__repr__"]
-    "__eq__ is symmetric, equal objects hash equal, also for 0.0 and -0.0, and __repr__ shows mu and sigma with repr(float)."
+    "__eq__ is symmetric, equal objects hash equal whatever the identity hash of a NaN field, also for 0.0 and -0.0, and __repr__ shows type(self).__name__, mu and sigma with repr(float)."
     "docstrings" ``NormalDistEqHash ``normalDistEqHash_proven,
   st "normaldist-undefined" ["NormalDist.pdf", "NormalDist.cdf", "NormalDist.zscore",
       "NormalDist.overlap", "NormalDist.inv_cdf"]
@@ -211,11 +211,35 @@ def statisticsEntries : List Entry := [
     "For int data and int weights (sum(x*w) and the weights' magnitudes below 2**53), fmean(data, weights) is sum(x*w) / sum(w) correctly rounded (a signed zero for a zero numerator), raises for zero total weight, turns sumprod's ValueError and any ValueError (under H) of the data iterator into the length error, and lets any other iterator exception through."
     "Lib/statistics.py:209-222" ``FmeanWeightedInts ``fmeanWeightedInts_proven,
   st "normaldist-eq" ["NormalDist.__eq__", "NormalDist.__hash__"]
-    "__eq__ is NotImplemented for non-NormalDist, true iff mu and sigma compare equal, symmetric, transitive, reflexive iff no NaN; __hash__ is hash((mu, sigma)) and agrees on equal objects; equal objects give the same pdf(x), cdf(x) (erfc(+-0) equal) and zscore(x) up to ==."
+    "__eq__ is NotImplemented for non-NormalDist, true iff mu and sigma compare equal, symmetric, transitive, reflexive iff no NaN; equal objects hash equal (whatever the identity hash of a NaN) and give the same pdf(x), cdf(x) (erfc(+-0) equal) and zscore(x) up to ==."
     "Lib/statistics.py:1432-1440 (docstrings)" ``NormalDistEq ``normalDistEq_proven,
   st "from-samples-twin" ["NormalDist.from_samples"]
     "For Fraction data, NormalDist.from_samples(data) has the same outcome as NormalDist(mean(data), stdev(data)): the correctly rounded exact mean and _float_sqrt_of_frac of the exact sample variance, the same OverflowError; fewer than two points raise."
-    "Lib/statistics.py:1246-1249, 1759-1769; Doc/library/statistics.rst:918-919" ``FromSamplesTwin ``fromSamplesTwin_proven
+    "Lib/statistics.py:1246-1249, 1759-1769; Doc/library/statistics.rst:918-919" ``FromSamplesTwin ``fromSamplesTwin_proven,
+  re "from-samples-fmean" "calstat-statistics-from-samples-not-fmean-stdev" ["NormalDist.from_samples"]
+    "For float data, from_samples(data) has the outcome of NormalDist(fmean(data), stdev(data)), as the documentation says."
+    "Doc/library/statistics.rst:918-919" ``FromSamplesFmeanStdev ``fromSamplesFmeanStdev_refuted,
+  re "from-samples-twin-floats" "calstat-statistics-from-samples-not-fmean-stdev" ["NormalDist.from_samples", "_mean_stdev"]
+    "For float data, from_samples(data) has the outcome of NormalDist(mean(data), stdev(data))."
+    "the Fraction twin from-samples-twin, extended to floats" ``FromSamplesTwinFloats ``fromSamplesTwinFloats_refuted,
+  st "normaldist-hash-value" ["NormalDist.__hash__"]
+    "With no NaN field, hash(NormalDist(mu, sigma)) is the tuple hash of the field hashes, and each finite non-zero field hashes as its exact value (the numeric hash: r * den = |num| mod 2**61-1, as hash(Fraction(x))); zeros hash 0, infinities +-314159; a NaN field hashes by identity, an input of the model."
+    "Lib/statistics.py:1438-1440; Doc/library/stdtypes.rst, hashing of numeric types" ``NormalDistHashValue ``normalDistHashValue_proven,
+  st "fmean-weights-arg" ["fmean"]
+    "Weights that are not a list or tuple are copied by list() first, whose exception propagates before the data is read; a list or tuple (subclasses included) is iterated inside sumprod's try, so an exception of its iter() or of its iterator before the data ends becomes the length StatisticsError when it is a ValueError (under H) and comes out otherwise."
+    "Lib/statistics.py:209-215" ``FmeanWeightsArg ``fmeanWeightsArg_proven,
+  st "fmean-floats" ["fmean"]
+    "If math.fsum is correctly rounded (the open mathint-fsum-correctly-rounded, a hypothesis), fmean of finite float data with a non-zero exact sum S is round(round(S) / n), for a sequence or an iterator."
+    "Lib/statistics.py:183, 192-207" ``FmeanFloats ``fmeanFloats_proven,
+  st "geometric-scan" ["geometric_mean"]
+    "geometric_mean of positive data is exp(fsum(map(log, data)) / n) (NaN for a NaN sum); with zeros it is 0.0, or NaN when the sum of the logs of the positive items is NaN or +inf; the first negative item raises after the logs of the items before it; empty data raises."
+    "Lib/statistics.py:225-262" ``GeometricScan ``geometricScan_proven,
+  st "pdf-shape" ["NormalDist.pdf"]
+    "For positive sigma, pdf is symmetric about mu (equal computed distances give equal densities, any exp), pdf(mu) is 1/(sqrt(tau)*sigma) given exp(-0.0) == 1, and pdf(+-inf) is 0.0 given exp(-inf) == 0."
+    "Lib/statistics.py:1259-1265; C99 Annex F" ``PdfShape ``pdfShape_proven,
+  st "linreg-centred" ["linear_regression"]
+    "linear_regression(x, y) with an intercept is the regression through the origin of the centred data [xi - fmean(x)], [yi - fmean(y)], with intercept fmean(y) - slope * fmean(x); fsum(x) / n is fmean(x)."
+    "Lib/statistics.py:790-805" ``LinRegCentred ``linRegCentred_proven
 ]
 
 end PyLean.CoreLibs.CalStat

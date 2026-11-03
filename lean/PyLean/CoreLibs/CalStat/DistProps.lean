@@ -172,21 +172,25 @@ theorem eq_symm (a b : Flt) : Flt.eq a b = Flt.eq b a := by
 /-- `__eq__` compares `mu` and `sigma` numerically and is symmetric; equal objects hash equal
 (the docstring of `__hash__`), also for `0.0` against `-0.0`. `__repr__` shows both fields. -/
 def NormalDistEqHash : Prop :=
-  ∀ X Y : ND,
+  ∀ (X Y : ND) (i j i' j' : Int),
     ND.beq X Y = ND.beq Y X ∧
-    (ND.beq X Y = true → ND.hash X = ND.hash Y) ∧
-    ND.repr X = "NormalDist(mu=" ++ fltRepr X.mu ++ ", sigma=" ++ fltRepr X.sigma ++ ")" ∧
-    ND.repr ⟨.zero false, .fin 1⟩ = "NormalDist(mu=0.0, sigma=1.0)" ∧
-    ND.repr ⟨.fin (mkRat 3602879701896397 36028797018963968), .fin (mkRat 5 2)⟩ =
+    (ND.beq X Y = true → ND.hash X i j = ND.hash Y i' j') ∧
+    ND.repr "NormalDist" X = "NormalDist(mu=" ++ fltRepr X.mu ++ ", sigma=" ++ fltRepr X.sigma ++ ")" ∧
+    ND.repr "NormalDist" ⟨.zero false, .fin 1⟩ = "NormalDist(mu=0.0, sigma=1.0)" ∧
+    ND.repr "NormalDist" ⟨.fin (mkRat 3602879701896397 36028797018963968), .fin (mkRat 5 2)⟩ =
       "NormalDist(mu=0.1, sigma=2.5)"
 
+theorem hashObj_eq (a b : Flt) (i j : Int) (h : Flt.eq a b = true) : hashFltObj i a = hashFltObj j b := by
+  have := hash_eq a b h
+  cases a <;> cases b <;> simp_all [hashFltObj, Flt.eq]
+
 theorem normalDistEqHash_proven : NormalDistEqHash := by
-  intro X Y
+  intro X Y i j i' j'
   refine ⟨?_, ?_, ?_, by decide +kernel, by decide +kernel⟩
   · simp only [ND.beq, eq_symm X.mu Y.mu, eq_symm X.sigma Y.sigma]
   · intro h
     simp only [ND.beq, Bool.and_eq_true] at h
-    simp only [ND.hash, hash_eq _ _ h.1, hash_eq _ _ h.2]
+    simp only [ND.hash, hashObj_eq _ _ i i' h.1, hashObj_eq _ _ j j' h.2]
   · rfl
 
 /-! ## Zero `sigma` and the range of `p` -/

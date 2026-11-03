@@ -18,7 +18,11 @@ likelihood: |
 maybe_intended: |
   Possibly: "correctly rounded" may be meant as "one of the two nearest", and the result is within half
   a unit of the last place. But stdev's other branch (floats) is correctly rounded with ties to even,
-  and Decimal arithmetic in this context is half-even, so the two disagree on ties.
+  and Decimal arithmetic in this context is half-even, so the two disagree on ties. The module's own
+  test oracle (Lib/test/test_statistics.py:2196-2204: the root at four times the precision with
+  ROUND_05UP, then `+x` in the default context) gives 1.000000000000000000000000002 on this input, so
+  the tests' definition of correct rounding disagrees with the function exactly on ties; the tested
+  inputs are not ties.
 reproducer: |
   import statistics
   from decimal import Decimal as D
