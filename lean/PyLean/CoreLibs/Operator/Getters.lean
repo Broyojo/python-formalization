@@ -225,6 +225,65 @@ def attrArgsPy (g : AttrPy) : List (List Char) :=
     | .str s | .strSub s _ => some s
     | .other => none)
 
+/-! ### `attrgetter` with name objects
+
+`nameC` keeps the characters of a name, which is all an exact `str` has. A `str` subclass also has an identity and
+methods of its own, and C keeps the object for an undotted name, so these definitions keep it. -/
+
+/-- What `attrgetter_new` keeps for one name, Modules/_operator.c:1283-1350. An undotted name is the object itself,
+interned (:1304-1307), and `_PyUnicode_InternMortal` leaves a `str` subclass as it is (Objects/unicodeobject.c:14306-
+14310). A dotted name becomes a tuple of new exact `str` parts (`PyUnicode_Substring`, :1308-1349). -/
+inductive CAttr where
+  | single (a : AttrArg)
+  | chain (parts : Chain)
+  deriving Repr, DecidableEq
+
+/-- The `PyUnicode_Check` and the dot count of `attrgetter_new`, :1287-1304. -/
+def nameCObj : AttrArg → Py CAttr
+  | .other => .error (.typeError attrNameMsg)
+  | .str s => if '.' ∈ s then .ok (.chain (splitChars s)) else .ok (.single (.str s))
+  | .strSub s c => if '.' ∈ s then .ok (.chain (splitChars s)) else .ok (.single (.strSub s c))
+
+def attrgetterNewCObj (args : List AttrArg) : Py (List CAttr) := mapPy nameCObj args
+
+/-- `getattr(obj, name)` given the name object: `PyObject_GetAttr` passes it on, and a `__getattribute__` or
+`__getattr__` written in Python, or a dict lookup through the name's own `__eq__`, sees it. -/
+abbrev GetAttrObj (α : Type) := α → AttrArg → Py α
+
+/-- `dotted_getattr`, Modules/_operator.c:1397-1427: a tuple is walked with its exact parts (:1403-1418), a single
+name is looked up as it is (:1419-1424). -/
+def dottedObj {α : Type} (ga : GetAttrObj α) (obj : α) : CAttr → Py α
+  | .single a => ga obj a
+  | .chain c => dotted (fun o n => ga o (.str n)) obj c
+
+/-- `attrgetter_call_impl`, Modules/_operator.c:1455-1484. -/
+def attrCallCObj {α : Type} (ga : GetAttrObj α) (stored : List CAttr) (obj : α) : Py (Out α) :=
+  match stored with
+  | [x] =>
+    match dottedObj ga obj x with
+    | .error e => .error e
+    | .ok v => .ok (.one v)
+  | _ =>
+    match mapPy (dottedObj ga obj) stored with
+    | .error e => .error e
+    | .ok vs => .ok (.many vs)
+
+/-- `attrgetter.__call__` in Python, Lib/operator.py:255-259: `getattr` with the parts `attr.split('.')` returned, so
+with exact `str` objects. -/
+def attrCallPyObj {α : Type} (ga : GetAttrObj α) (g : AttrPy) (obj : α) : Py (Out α) :=
+  attrCall (fun o n => ga o (.str n)) g.names obj
+
+/-- `dotjoinattr`, Modules/_operator.c:1487-1499: a tuple is joined with `"."` into a new exact `str`, anything else
+is itself. -/
+def dotjoinObj : CAttr → AttrArg
+  | .single a => a
+  | .chain c => .str (joinChars c)
+
+/-- `attrgetter_repr`, Modules/_operator.c:1525-1555: one name prints `%R` of its `dotjoinattr` (:1536-1544), more
+print the tuple of `attrgetter_args` (:1545-1552). `rep` is `repr` of a name object. -/
+def attrReprC (rep : AttrArg → Py String) (running : Bool) (cls : String) (stored : List CAttr) : Py String :=
+  reprC rep running cls (stored.map dotjoinObj)
+
 /-! ### `methodcaller` -/
 
 /-- A `methodcaller`: the fields of both twins. -/
@@ -279,25 +338,34 @@ def usesVectorcall (nargs nkw : Nat) : Bool := decide (nargs + 1 + nkw < 8)
 def mcCallC {α β : Type} (m : Meth α β) (c : Mc α) (obj : α) : Py β :=
   if usesVectorcall c.args.length c.kw.length then mcVectorcall m c obj else mcCall m c obj
 
-/-- `methodcaller.__repr__`, Lib/operator.py:329-335. -/
-def mcReprPy {α : Type} (rep : α → Py String) (cls nameRepr : String) (c : Mc α) : Py String :=
-  match mapPy rep c.args with
+/-- `methodcaller.__repr__`, Lib/operator.py:329-335. `nameRep` is `repr(self._name)`, which a `str` subclass can
+make raise; it is the first thing evaluated (:330). -/
+def mcReprPy {α : Type} (rep : α → Py String) (cls : String) (nameRep : Py String) (c : Mc α) : Py String :=
+  match nameRep with
   | .error e => .error e
-  | .ok a =>
-    match mapPy (fun p => (rep p.2).map (fun r => p.1 ++ "=" ++ r)) c.kw with
+  | .ok nameRepr =>
+    match mapPy rep c.args with
     | .error e => .error e
-    | .ok k => .ok (cls ++ "(" ++ joinArgs (nameRepr :: a ++ k) ++ ")")
+    | .ok a =>
+      match mapPy (fun p => (rep p.2).map (fun r => p.1 ++ "=" ++ r)) c.kw with
+      | .error e => .error e
+      | .ok k => .ok (cls ++ "(" ++ joinArgs (nameRepr :: a ++ k) ++ ")")
 
-/-- `methodcaller_repr`, Modules/_operator.c:1799-1873, with the guard as in `reprC`. -/
-def mcReprC {α : Type} (rep : α → Py String) (running : Bool) (cls nameRepr : String) (c : Mc α) : Py String :=
+/-- `methodcaller_repr`, Modules/_operator.c:1799-1873, with the guard as in `reprC`. The name's `%R` is evaluated
+when the format is: at :1816 with no arguments, otherwise at :1865, after every argument and keyword. -/
+def mcReprC {α : Type} (rep : α → Py String) (running : Bool) (cls : String) (nameRep : Py String) (c : Mc α) :
+    Py String :=
   if running then .ok (cls ++ "(...)") else
-  if c.args.isEmpty && c.kw.isEmpty then .ok (cls ++ "(" ++ nameRepr ++ ")") else
+  if c.args.isEmpty && c.kw.isEmpty then nameRep.map (fun nameRepr => cls ++ "(" ++ nameRepr ++ ")") else
   match mapPy rep c.args with
   | .error e => .error e
   | .ok a =>
     match mapPy (fun p => (rep p.2).map (fun r => p.1 ++ "=" ++ r)) c.kw with
     | .error e => .error e
-    | .ok k => .ok (cls ++ "(" ++ nameRepr ++ ", " ++ joinArgs (a ++ k) ++ ")")
+    | .ok k =>
+      match nameRep with
+      | .error e => .error e
+      | .ok nameRepr => .ok (cls ++ "(" ++ nameRepr ++ ", " ++ joinArgs (a ++ k) ++ ")")
 
 /-- What `__reduce__` returns. -/
 inductive McReduce (α : Type) where
