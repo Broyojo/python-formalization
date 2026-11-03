@@ -110,14 +110,15 @@ inductive AddrArg where
   | bytes (b : List Nat)
   | str (s : List Char)
 
-/-- `IPv4Address.__init__`, ipaddress.py:1269-1302: the `_ip` it stores. -/
+/-- `IPv4Address.__init__`, ipaddress.py:1269-1302: the `_ip` it stores. The int branch
+(:1286-1289) and the bytes branch (:1292-1295, `int.from_bytes(address)` is big-endian), then
+`str(address)` (:1299-1302). -/
 def ipv4Init (a : AddrArg) : Py Nat :=
   match a with
   | .int v => checkIntAddress 32 v
-  | .bytes b =>
-    if b.length ≠ 4 then
-      .error (.named "AddressValueError" "~(len != 4) is not permitted as an IPv4 address")
-    else .ok (fromBytesBig b)
+  | .bytes b => do
+    checkPackedAddress 32 4 b
+    pure (fromBytesBig b)
   | .str s =>
     if '/' ∈ s then .error (avErr ((reprPlain s).map ("Unexpected '/' in " ++ ·)))
     else ipIntFromString4 s

@@ -5,6 +5,7 @@ import PyLean.Ipaddress.Parse4
 import PyLean.Ipaddress.Hosts
 import PyLean.Ipaddress.Mask4
 import PyLean.Ipaddress.Parse6
+import PyLean.Ipaddress.Parse6Errors
 
 /-! Differential-testing handler for `ipaddress`. A network is `[addr, prefixlen]`. -/
 
@@ -19,6 +20,22 @@ def getNet (j : Json) (bits : Nat) (key : String) : Except String Net := do
   let some a := arr[0]? | throw s!"{key}: missing addr"
   let some p := arr[1]? | throw s!"{key}: missing prefixlen"
   return ⟨bits, ← a.getNat?, ← p.getNat?⟩
+
+/-- `"arg": ["int", n]`, `["bytes", [b, ...]]` or `["str", s]`. -/
+def getAddrArg (j : Json) : Except String AddrArg := do
+  let arg ← j.getObjVal? "arg"
+  match ← (← arg.getArrVal? 0).getStr? with
+  | "int" => return .int (← (← arg.getArrVal? 1).getInt?)
+  | "bytes" => return .bytes ((← (← arg.getArrVal? 1).getArr?).toList.filterMap (fun x => x.getNat?.toOption))
+  | _ => return .str (← (← arg.getArrVal? 1).getStr?).toList
+
+/-- `{"k": "addr", "bits": b, "ip": n}`, `{"k": "net", "bits": b, "net": [a, p]}` or
+`{"k": "other", "ty": "int"}`. -/
+def getOperand (j : Json) : Except String Operand := do
+  match ← getStr j "k" with
+  | "addr" => return .addr (← getNat j "bits") (← getNat j "ip")
+  | "net" => return .net (← getNet j (← getNat j "bits") "net")
+  | _ => return .other (← getStr j "ty")
 
 def run (fn : String) (j : Json) : Except String Json := do
   let bits ← (← j.getObjVal? "bits").getNat?
@@ -37,9 +54,9 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "getattr" =>
     return encPy toJson (moduleGetattr (← getStr j "name"))
   | "summarize" =>
-    let first ← (← j.getObjVal? "first").getNat?
-    let last ← (← j.getObjVal? "last").getNat?
-    return encPy (fun ns => Json.arr (ns.map encNet).toArray) (summarizeAddressRange bits first last)
+    let first ← getOperand (← j.getObjVal? "first")
+    let last ← getOperand (← j.getObjVal? "last")
+    return encPy (fun ns => Json.arr (ns.map encNet).toArray) (summarizeOp first last)
   | "mknet" =>
     let a ← (← j.getObjVal? "addr").getInt?
     let p ← (← j.getObjVal? "prefixlen").getInt?
@@ -58,37 +75,58 @@ def run (fn : String) (j : Json) : Except String Json := do
     return encPy toJson (getitem n i)
   | "contains" =>
     let n ← getNet j bits "net"
-    let a ← (← j.getObjVal? "addr").getNat?
-    return encPy toJson (.ok (contains n a) : Py Bool)
+    return encPy toJson (containsOp n (← getOperand (← j.getObjVal? "other")))
   | "overlaps" =>
     let a ← getNet j bits "a"
-    let b ← getNet j bits "b"
-    return encPy toJson (.ok (overlaps a b) : Py Bool)
+    return encPy toJson (overlapsOp a (← getOperand (← j.getObjVal? "other")))
   | "subnet_of" =>
     let a ← getNet j bits "a"
-    let b ← getNet j bits "b"
-    return encPy toJson (.ok (subnetOf a b) : Py Bool)
+    return encPy toJson (subnetOfOp a (← getOperand (← j.getObjVal? "other")))
   | "address_exclude" =>
     let a ← getNet j bits "a"
-    let b ← getNet j bits "b"
-    return encPy (fun ns => Json.arr (ns.map encNet).toArray) (addressExclude a b)
+    return encPy (fun ns => Json.arr (ns.map encNet).toArray) (addressExcludeOp a (← getOperand (← j.getObjVal? "other")))
   | "hosts" =>
     let n ← getNet j bits "net"
     return encPy toJson (.ok (Json.arr #[toJson (iterList n), toJson (hostsList n), toJson n.numAddresses]) : Py Json)
   | "v6init" =>
-    return encPy (fun (ip, sc) => Json.arr #[toJson ip, match sc with | some x => toJson (String.ofList x) | none => Json.null,
-        toJson (String.ofList (ipv6Str ip sc))])
-      (ipv6InitStr (← getStr j "s").toList)
+    let a ← getAddrArg j
+    let r : Py (Nat × Option (List Char) × List Char) := do
+      let (ip, sc) ← ipv6Init a
+      let t ← ipv6StrPy ip sc
+      pure (ip, sc, t)
+    return encPy (fun (ip, sc, t) => Json.arr #[toJson ip,
+        match sc with | some x => toJson (String.ofList x) | none => Json.null, toJson (String.ofList t)]) r
   | "mask4" =>
     return encPy toJson (makeNetmask4 (← getStr j "s").toList)
-  | "v4init" =>
+  | "mask" =>
     let arg ← j.getObjVal? "arg"
-    let kind ← (← arg.getArrVal? 0).getStr?
-    let a ← match kind with
-      | "int" => pure (AddrArg.int (← (← arg.getArrVal? 1).getInt?))
-      | "bytes" => pure (AddrArg.bytes ((← (← arg.getArrVal? 1).getArr?).toList.filterMap (fun x => x.getNat?.toOption)))
-      | _ => pure (AddrArg.str (← (← arg.getArrVal? 1).getStr?).toList)
-    return encPy (fun n => Json.arr #[toJson n, toJson (String.ofList (ipv4Str n))]) (ipv4Init a)
+    let a ← match ← (← arg.getArrVal? 0).getStr? with
+      | "int" => pure (MaskArg.int (← (← arg.getArrVal? 1).getInt?))
+      | _ => pure (MaskArg.str (← (← arg.getArrVal? 1).getStr?).toList)
+    return encPy toJson (makeNetmaskCached bits [] a).1
+  | "prefix_from_ip_int" =>
+    return encPy toJson (prefixFromIpInt bits (← getNat j "n"))
+  | "string_from_ip_int" =>
+    let a ← match j.getObjVal? "n" with
+      | .ok .null | .error _ => pure none
+      | .ok v => some <$> v.getNat?
+    return encPy (fun cs => toJson (String.ofList cs)) (stringFromIpInt6Py a)
+  | "mapped_to_str" =>
+    return encPy (fun cs => toJson (String.ofList cs)) (ipv4MappedToStr (← getNat j "ip"))
+  | "v6_ip_int" =>
+    return encPy toJson (ipIntFromString6 (← getStr j "s").toList)
+  | "parse_hextet" =>
+    let s := (← getStr j "s").toList
+    return encPy toJson (match parseHextet s with
+      | .ok v => .ok v
+      | .error e => .error (.valueError ((hexMsg s e).getD "~ValueError")) : Py Nat)
+  | "parse_octet" =>
+    let s := (← getStr j "s").toList
+    return encPy toJson (match parseOctet s with
+      | .ok v => .ok v
+      | .error e => .error (.valueError ((octetMsg s e).getD "~ValueError")) : Py Nat)
+  | "v4init" =>
+    return encPy (fun n => Json.arr #[toJson n, toJson (String.ofList (ipv4Str n))]) (ipv4Init (← getAddrArg j))
   | other => throw s!"unknown fn {other}"
 
 def handler : Handler := fun fn j => some (run fn j)

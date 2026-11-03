@@ -143,64 +143,109 @@ theorem getitemSequence_proven : GetitemSequence := by
       congr 1; omega
     · rw [ite_eq_right hi, ite_eq_left (by omega), ite_eq_right (by omega)]
 
-/-- `address in net` holds exactly for the addresses of the block. -/
+/-- `other in net`, ipaddress.py:731-741, for every kind of `other`: an address of the network's
+version is in it exactly when it is one of the block's addresses; an address of the other version
+and any network are not (the comment at :732, "always false if one is v4 and the other is v6");
+an object without `version` raises `AttributeError`. -/
 def ContainsMem : Prop :=
-  ∀ (n : Net) (x : Nat), n.Valid → x < 2 ^ n.bits → contains n x = n.mem x
+  ∀ n : Net, IsVersion n.bits → n.Valid →
+    (∀ x, x < 2 ^ n.bits → containsOp n (.addr n.bits x) = .ok (n.mem x)) ∧
+    (∀ b x, versionOf b ≠ versionOf n.bits → containsOp n (.addr b x) = .ok false) ∧
+    (∀ m : Net, containsOp n (.net m) = .ok false) ∧
+    (∀ ty, containsOp n (.other ty) =
+      .error (.named "AttributeError" s!"'{ty}' object has no attribute 'version'"))
 
-theorem containsMem_proven : ContainsMem :=
-  fun n x hn hx => contains_eq_mem n x hn hx
+theorem containsMem_proven : ContainsMem := by
+  intro n _ hn
+  refine ⟨fun x hx => ?_, fun b x hb => ?_, fun m => ?_, fun ty => rfl⟩
+  · simp [containsOp, contains_eq_mem n x hn hx]
+  · simp [containsOp, Ne.symm hb]
+  · simp only [containsOp]; split <;> rfl
 
-/-- `overlaps` docstring, ipaddress.py:744: "Tell if self is partly contained
-in other", i.e. the two blocks share an address. -/
+theorem overlapsOp_net (a b : Net) (h : versionOf a.bits = versionOf b.bits) :
+    overlapsOp a (.net b) = .ok (contains b a.addr || contains b a.broadcast ||
+      contains a b.addr || contains a b.broadcast) := by
+  simp only [overlapsOp, inOp, containsOp, h, ne_eq, not_true_eq_false, ↓reduceIte]
+  cases contains b a.addr <;> cases contains b a.broadcast <;> cases contains a b.addr <;>
+    cases contains a b.broadcast <;> rfl
+
+/-- `a.overlaps(b)`, ipaddress.py:743-748, docstring "Tell if self is partly contained in other":
+for a network `b` of the same version, true exactly when the blocks share an address; a network
+of the other version never overlaps (its `__contains__` refuses the addresses); an address or an
+object without `__contains__` makes the first `in` raise `TypeError`. -/
 def OverlapsShareAddress : Prop :=
-  ∀ a b : Net, a.Valid → b.Valid → a.bits = b.bits →
-    (overlaps a b = true ↔ ∃ x, a.mem x = true ∧ b.mem x = true)
+  ∀ a : Net, IsVersion a.bits → a.Valid →
+    (∀ b : Net, b.Valid → b.bits = a.bits →
+      ∃ r, overlapsOp a (.net b) = .ok r ∧ (r = true ↔ ∃ x, a.mem x = true ∧ b.mem x = true)) ∧
+    (∀ b : Net, versionOf b.bits ≠ versionOf a.bits → overlapsOp a (.net b) = .ok false) ∧
+    (∀ bb x, overlapsOp a (.addr bb x) =
+      .error (.typeError s!"argument of type 'IPv{versionOf bb}Address' is not a container or iterable")) ∧
+    (∀ ty, overlapsOp a (.other ty) =
+      .error (.typeError s!"argument of type '{ty}' is not a container or iterable"))
 
 theorem overlapsShareAddress_proven : OverlapsShareAddress := by
-  intro a b ha hb hbits
-  have hal := Net.addr_add_size_le a ha
-  have hbl := Net.addr_add_size_le b hb
-  have hal' : a.addr + a.size ≤ 2 ^ b.bits := hbits ▸ hal
-  have hbl' : b.addr + b.size ≤ 2 ^ a.bits := hbits ▸ hbl
-  have haK := Net.size_pos a
-  have hbK := Net.size_pos b
-  have habc := Net.broadcast_eq a ha
-  have hbbc := Net.broadcast_eq b hb
-  unfold overlaps
-  rw [contains_eq_mem b a.addr hb (by omega), contains_eq_mem b a.broadcast hb (by omega),
-    contains_eq_mem a b.addr ha (by omega), contains_eq_mem a b.broadcast ha (by omega),
-    habc, hbbc]
-  unfold Net.mem
-  simp only [Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq]
-  constructor
-  · rintro (((h | h) | h) | h)
-    · exact ⟨a.addr, ⟨by omega, by omega⟩, h⟩
-    · exact ⟨a.addr + (a.size - 1), ⟨by omega, by omega⟩, h⟩
-    · exact ⟨b.addr, h, ⟨by omega, by omega⟩⟩
-    · exact ⟨b.addr + (b.size - 1), h, ⟨by omega, by omega⟩⟩
-  · rintro ⟨x, ⟨h1, h2⟩, ⟨h3, h4⟩⟩
-    by_cases h : b.addr ≤ a.addr
-    · exact Or.inl (Or.inl (Or.inl ⟨h, by omega⟩))
-    · exact Or.inl (Or.inr ⟨by omega, by omega⟩)
+  intro a _ ha
+  refine ⟨fun b hb hbits => ?_, fun b hv => ?_, fun bb x => rfl, fun ty => rfl⟩
+  · refine ⟨_, overlapsOp_net a b (by rw [hbits]), ?_⟩
+    have hal := Net.addr_add_size_le a ha
+    have hbl := Net.addr_add_size_le b hb
+    have hal' : a.addr + a.size ≤ 2 ^ b.bits := hbits ▸ hal
+    have hbl' : b.addr + b.size ≤ 2 ^ a.bits := hbits.symm ▸ hbl
+    have haK := Net.size_pos a
+    have hbK := Net.size_pos b
+    have habc := Net.broadcast_eq a ha
+    have hbbc := Net.broadcast_eq b hb
+    rw [contains_eq_mem b a.addr hb (by omega), contains_eq_mem b a.broadcast hb (by omega),
+      contains_eq_mem a b.addr ha (by omega), contains_eq_mem a b.broadcast ha (by omega),
+      habc, hbbc]
+    unfold Net.mem
+    simp only [Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq]
+    constructor
+    · rintro (((h | h) | h) | h)
+      · exact ⟨a.addr, ⟨by omega, by omega⟩, h⟩
+      · exact ⟨a.addr + (a.size - 1), ⟨by omega, by omega⟩, h⟩
+      · exact ⟨b.addr, h, ⟨by omega, by omega⟩⟩
+      · exact ⟨b.addr + (b.size - 1), h, ⟨by omega, by omega⟩⟩
+    · rintro ⟨x, ⟨h1, h2⟩, ⟨h3, h4⟩⟩
+      by_cases h : b.addr ≤ a.addr
+      · exact Or.inl (Or.inl (Or.inl ⟨h, by omega⟩))
+      · exact Or.inl (Or.inr ⟨by omega, by omega⟩)
+  · simp [overlapsOp, inOp, containsOp, hv, Ne.symm hv, bind, Except.bind]
 
-/-- `subnet_of`: every address of `a` is an address of `b`. -/
+/-- `a.subnet_of(b)`, ipaddress.py:1039-1041 through `_is_subnet_of` (:1028-1037), docstring
+"Return True if this network is a subnet of other": for a network `b` of the same version, true
+exactly when every address of `a` is in `b`; a different version raises `TypeError` (:1031-1032);
+an address of the same version or an object without `version` raises `TypeError` through the
+caught `AttributeError` (:1035-1037). -/
 def SubnetOfMem : Prop :=
-  ∀ a b : Net, a.Valid → b.Valid → a.bits = b.bits →
-    (subnetOf a b = true ↔ ∀ x, a.mem x = true → b.mem x = true)
+  ∀ a : Net, IsVersion a.bits → a.Valid →
+    (∀ b : Net, b.Valid → b.bits = a.bits →
+      ∃ r, subnetOfOp a (.net b) = .ok r ∧ (r = true ↔ ∀ x, a.mem x = true → b.mem x = true)) ∧
+    (∀ b : Net, versionOf b.bits ≠ versionOf a.bits →
+      subnetOfOp a (.net b) = .error (.typeError "~are not of the same version")) ∧
+    (∀ bb x, versionOf bb ≠ versionOf a.bits →
+      subnetOfOp a (.addr bb x) = .error (.typeError "~are not of the same version")) ∧
+    (∀ x, subnetOfOp a (.addr a.bits x) = .error (.typeError "~Unable to test subnet containment between")) ∧
+    (∀ ty, subnetOfOp a (.other ty) = .error (.typeError "~Unable to test subnet containment between"))
 
 theorem subnetOfMem_proven : SubnetOfMem := by
-  intro a b ha hb _
-  have haK := Net.size_pos a
-  have hbK := Net.size_pos b
-  unfold subnetOf Net.mem
-  rw [Net.broadcast_eq a ha, Net.broadcast_eq b hb]
-  simp only [Bool.and_eq_true, decide_eq_true_eq]
-  constructor
-  · rintro ⟨h1, h2⟩ x ⟨h3, h4⟩
-    exact ⟨by omega, by omega⟩
-  · intro h
-    have e1 := h a.addr ⟨Nat.le_refl _, by omega⟩
-    have e2 := h (a.addr + (a.size - 1)) ⟨by omega, by omega⟩
-    exact ⟨by omega, by omega⟩
+  intro a _ ha
+  refine ⟨fun b hb hbits => ?_, fun b hv => ?_, fun bb x hv => ?_, fun x => ?_, fun ty => rfl⟩
+  · refine ⟨subnetOf a b, by simp [subnetOfOp, isSubnetOf, hbits], ?_⟩
+    have haK := Net.size_pos a
+    have hbK := Net.size_pos b
+    unfold subnetOf Net.mem
+    rw [Net.broadcast_eq a ha, Net.broadcast_eq b hb]
+    simp only [Bool.and_eq_true, decide_eq_true_eq]
+    constructor
+    · rintro ⟨h1, h2⟩ x ⟨h3, h4⟩
+      exact ⟨by omega, by omega⟩
+    · intro h
+      have e1 := h a.addr ⟨Nat.le_refl _, by omega⟩
+      have e2 := h (a.addr + (a.size - 1)) ⟨by omega, by omega⟩
+      exact ⟨by omega, by omega⟩
+  · simp [subnetOfOp, isSubnetOf, Ne.symm hv]
+  · simp [subnetOfOp, isSubnetOf, Ne.symm hv]
+  · simp [subnetOfOp, isSubnetOf]
 
 end PyLean.Ipaddress

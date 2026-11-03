@@ -108,9 +108,99 @@ def gen_v6(rng):
     return s
 
 
+def gen_operand(rng, bits):
+    """An address, a network of either version, or an object without `version`."""
+    k = rng.random()
+    if k < 0.15:
+        return {"k": "other", "ty": rng.choice(["int", "NoneType"])}
+    b = bits if rng.random() < 0.75 else (160 - bits)
+    if k < 0.5:
+        return {"k": "addr", "bits": b, "ip": edge_addr(rng, b)}
+    return {"k": "net", "bits": b, "net": list(rand_net(rng, b))}
+
+
+HEX_CHARS = "0123456789abcdefABCDEF"
+
+
+def gen_hextet(rng):
+    k = rng.random()
+    if k < 0.6:
+        return "".join(rng.choice(HEX_CHARS) for _ in range(rng.randint(1, 4)))
+    if k < 0.75:
+        return "".join(rng.choice(HEX_CHARS) for _ in range(rng.randint(5, 7)))
+    return rng.choice(["", "g", "0x1", " 1", "1 ", "\u0661", "+1", "-1", "1.2", "'", "%"])
+
+
+def gen_v6_spelling(rng):
+    """Uncompressed, compressed or dotted-quad spellings in mixed case with leading zeros."""
+    k = rng.random()
+    n = rng.choice([rng.randrange(2**128), 0, 2**128 - 1, rng.randrange(2**16) << (16 * rng.randrange(8))])
+    groups = ["%x" % ((n >> (16 * (7 - i))) & 0xffff) for i in range(8)]
+    groups = [g.zfill(rng.randint(len(g), 4)) for g in groups]
+    groups = [g.upper() if rng.random() < 0.3 else g for g in groups]
+    if k < 0.4:
+        return ":".join(groups)
+    if k < 0.7:
+        i = rng.randrange(8)
+        j = rng.randrange(i, 9)
+        return ":".join(groups[:i]) + "::" + ":".join(groups[j:])
+    q = ".".join(str(rng.randrange(256)) for _ in range(4))
+    if k < 0.85:
+        return ":".join(groups[:6]) + ":" + q
+    i = rng.randrange(7)
+    return ":".join(groups[:i]) + "::" + ":".join(groups[i:6]) + (":" if i < 6 else "") + q
+
+
+def gen_addr_arg(rng, bits):
+    k = rng.random()
+    if k < 0.6:
+        return ["str", gen_v6(rng) if rng.random() < 0.6 else gen_v6_spelling(rng)]
+    if k < 0.8:
+        top = (1 << bits) - 1
+        return ["int", rng.choice([-1, 0, top, top + 1, -(2**200), 2**200, rng.randrange(top + 1)])]
+    return ["bytes", [rng.randrange(256) for _ in range(rng.choice([16, 16, 15, 17, 4, 0, 1]))]]
+
+
+def gen_mask_arg(rng, bits):
+    if rng.random() < 0.3:
+        return ["int", rng.choice([-1, 0, 1, bits - 1, bits, bits + 1, 2**64, rng.randint(-5, bits + 5)])]
+    k = rng.random()
+    if bits == 32 and k < 0.5:
+        return ["str", gen_mask(rng)]
+    p = rng.randint(0, bits + 3)
+    return ["str", rng.choice([str(p), "0" + str(p), "00" + str(p), " " + str(p), str(p) + "\n", "+" + str(p),
+                               "", "\u0661\u0662", "1e1", "0x10", "0" * 5000, "0" * 4300, "0" * 4299 + "1",
+                               "255.255.255.0", "ffff::"])]
+
+
 def gen_case(rng):
     if rng.random() < 0.15:
-        return {"mod": "ipaddress", "fn": "v6init", "bits": 128, "s": gen_v6(rng)}
+        if rng.random() < 0.5:
+            return {"mod": "ipaddress", "fn": "v6init", "bits": 128, "arg": ["str", gen_v6(rng)]}
+        return {"mod": "ipaddress", "fn": "v6init", "bits": 128, "arg": gen_addr_arg(rng, 128)}
+    if rng.random() < 0.12:
+        fn = rng.choice(["mask", "prefix_from_ip_int", "string_from_ip_int", "mapped_to_str", "v6_ip_int",
+                         "parse_hextet", "parse_octet"])
+        bits = rng.choice([32, 128])
+        c = {"mod": "ipaddress", "fn": fn, "bits": bits}
+        if fn == "mask":
+            c["arg"] = gen_mask_arg(rng, bits)
+        elif fn == "prefix_from_ip_int":
+            p = rng.randint(0, bits)
+            m = ((1 << bits) - 1) ^ (((1 << bits) - 1) >> p)
+            c["n"] = rng.choice([m, m ^ ((1 << bits) - 1), m ^ (1 << rng.randrange(bits)), rng.randrange(1 << bits),
+                                 0, (1 << bits) - 1])
+        elif fn == "string_from_ip_int":
+            c["n"] = rng.choice([None, 2**128, 2**128 - 1, 2**200, edge_addr(rng, 128)])
+        elif fn == "mapped_to_str":
+            c["ip"] = rng.choice([0xffff00000000 | rng.randrange(1 << 32), edge_addr(rng, 128), 0xffff00000000])
+        elif fn == "v6_ip_int":
+            c["s"] = gen_v6(rng).split("%")[0] if rng.random() < 0.5 else gen_v6_spelling(rng)
+        elif fn == "parse_hextet":
+            c["s"] = gen_hextet(rng)
+        else:
+            c["s"] = rng.choice(V4_PIECES + [str(rng.randrange(1000)), "0" * rng.randint(1, 5)])
+        return c
     if rng.random() < 0.1:
         return {"mod": "ipaddress", "fn": "mask4", "bits": 32, "s": gen_mask(rng)}
     if rng.random() < 0.3:
@@ -143,7 +233,13 @@ def gen_case(rng):
         a, b = edge_addr(rng, bits), edge_addr(rng, bits)
         if rng.random() < 0.8:
             a, b = min(a, b), max(a, b)
-        c.update(first=a, last=b)
+        first = {"k": "addr", "bits": bits, "ip": a}
+        last = {"k": "addr", "bits": bits, "ip": b}
+        if rng.random() < 0.15:
+            first = gen_operand(rng, bits)
+        if rng.random() < 0.15:
+            last = gen_operand(rng, bits)
+        c.update(first=first, last=last)
     elif fn == "mknet":
         c.update(addr=edge_int(rng, 0, (1 << bits) - 1) if rng.random() < 0.3 else edge_addr(rng, bits),
                  prefixlen=edge_int(rng, 0, bits))
@@ -160,7 +256,10 @@ def gen_case(rng):
         size = 1 << (bits - net[1])
         c.update(net=net, i=edge_int(rng, -size, size - 1))
     elif fn == "contains":
-        c.update(net=rand_net(rng, bits), addr=edge_addr(rng, bits))
+        other = {"k": "addr", "bits": bits, "ip": edge_addr(rng, bits)}
+        if rng.random() < 0.3:
+            other = gen_operand(rng, bits)
+        c.update(net=rand_net(rng, bits), other=other)
     else:
         a = rand_net(rng, bits)
         if fn == "address_exclude" and rng.random() < 0.8:
@@ -171,7 +270,13 @@ def gen_case(rng):
             b = ((a[0] | (edge_addr(rng, bits) & hostbits)) & mask, q)
         else:
             b = rand_net(rng, bits)
-        c.update(a=a, b=b)
+        other = {"k": "net", "bits": bits, "net": list(b)}
+        if rng.random() < 0.25:
+            other = gen_operand(rng, bits)
+        if fn == "address_exclude" and other["k"] == "net" and other["net"][1] - a[1] > 12 and \
+                other["bits"] == bits:
+            return None
+        c.update(a=a, other=other)
     return c
 
 
@@ -195,6 +300,19 @@ def module_attr(name):
         return getattr(ipaddress, name)
 
 
+def make_operand(o):
+    if o["k"] == "addr":
+        return ADDR[o["bits"]](o["ip"])
+    if o["k"] == "net":
+        return NET[o["bits"]](tuple(o["net"]))
+    return {"int": 5, "NoneType": None}[o["ty"]]
+
+
+def make_arg(arg):
+    kind, val = arg
+    return bytes(val) if kind == "bytes" else val
+
+
 def run_python(c):
     bits = c["bits"]
     Net = NET[bits]
@@ -202,16 +320,31 @@ def run_python(c):
     try:
         fn = c["fn"]
         if fn == "v6init":
-            a = ipaddress.IPv6Address(c["s"])
+            a = ipaddress.IPv6Address(make_arg(c["arg"]))
             return {"ok": [a._ip, a.scope_id, str(a)]}
         if fn == "mask4":
             return {"ok": ipaddress.IPv4Network._make_netmask(c["s"])[1]}
+        if fn == "mask":
+            return {"ok": NET[bits]._make_netmask(c["arg"][1])[1]}
+        if fn == "prefix_from_ip_int":
+            return {"ok": NET[bits]._prefix_from_ip_int(c["n"])}
+        if fn == "string_from_ip_int":
+            if c["n"] is None:
+                return {"ok": ipaddress.IPv6Address._string_from_ip_int()}
+            return {"ok": ipaddress.IPv6Address._string_from_ip_int(c["n"])}
+        if fn == "mapped_to_str":
+            return {"ok": ipaddress.IPv6Address(c["ip"])._ipv4_mapped_ipv6_to_str()}
+        if fn == "v6_ip_int":
+            return {"ok": ipaddress.IPv6Address._ip_int_from_string(c["s"])}
+        if fn == "parse_hextet":
+            return {"ok": ipaddress.IPv6Address._parse_hextet(c["s"])}
+        if fn == "parse_octet":
+            return {"ok": ipaddress.IPv4Address._parse_octet(c["s"])}
         if fn == "hosts":
             net = NET[bits](tuple(c["net"]))
             return {"ok": [[int(x) for x in net], [int(x) for x in net.hosts()], net.num_addresses]}
         if fn == "v4init":
-            kind, val = c["arg"]
-            a = ipaddress.IPv4Address(bytes(val) if kind == "bytes" else val)
+            a = ipaddress.IPv4Address(make_arg(c["arg"]))
             v = [a._ip, str(a)]
         elif fn == "exploded":
             v = make_v6(c).exploded
@@ -222,7 +355,7 @@ def run_python(c):
             v = module_attr(c["name"])
         elif fn == "summarize":
             v = [enc_net(n) for n in ipaddress.summarize_address_range(
-                ADDR[bits](c["first"]), ADDR[bits](c["last"]))]
+                make_operand(c["first"]), make_operand(c["last"]))]
         elif fn == "mknet":
             v = enc_net(Net((c["addr"], c["prefixlen"])))
         elif fn == "subnets":
@@ -232,13 +365,13 @@ def run_python(c):
         elif fn == "getitem":
             v = int(mk(c["net"])[c["i"]])
         elif fn == "contains":
-            v = ADDR[bits](c["addr"]) in mk(c["net"])
+            v = make_operand(c["other"]) in mk(c["net"])
         elif fn == "overlaps":
-            v = mk(c["a"]).overlaps(mk(c["b"]))
+            v = mk(c["a"]).overlaps(make_operand(c["other"]))
         elif fn == "subnet_of":
-            v = mk(c["a"]).subnet_of(mk(c["b"]))
+            v = mk(c["a"]).subnet_of(make_operand(c["other"]))
         elif fn == "address_exclude":
-            v = [enc_net(n) for n in mk(c["a"]).address_exclude(mk(c["b"]))]
+            v = [enc_net(n) for n in mk(c["a"]).address_exclude(make_operand(c["other"]))]
         return {"ok": v}
     except Exception as e:
         return {"exc": type(e).__name__, "msg": str(e)}

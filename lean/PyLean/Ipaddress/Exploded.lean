@@ -1,14 +1,14 @@
-import PyLean.Ipaddress.Model
+import PyLean.Ipaddress.Parse6Props
 
 /-!
 The 3.15 changes to `ipaddress` outside the integer core: `exploded` of IPv6 objects,
 `is_unspecified` of interfaces and the module `__getattr__`.
 
-`_BaseV6._explode_shorthand_ip_string` builds `ip_str` and parses it back with
-`_ip_int_from_string` (ipaddress.py:1868-1875). The parser is not modelled: for a
-string made by `_string_from_ip_int` the round trip is the identity, and the one
-`ip_str` that is not such a string is `str(self.network_address)` with a scope id,
-which the parser refuses. A scope id is a non-empty string without `%`.
+`_BaseV6._explode_shorthand_ip_string` builds `ip_str` (ipaddress.py:1868-1873) and parses it
+back with `_ip_int_from_string` (:1875), here `ipIntFromString6`. For an address the text is
+`_string_from_ip_int(self._ip)`, for an interface `str(self.ip)` (an `IPv6Address` without the
+scope id), and for a network `str(self.network_address)`, which keeps the scope id the parser
+then refuses.
 
 Text is `List Char`, as in `Fractions.Format`, so that counterexamples evaluate.
 -/
@@ -37,28 +37,30 @@ def hextets (ip : Nat) : List Nat :=
 def explodedHex (ip : Nat) : List Char :=
   List.intercalate [':'] ((hextets ip).map hextet)
 
-/-- `'%s%%%s' % (exploded, self._scope_id)` under `if self._scope_id:`, :1880-1881. -/
-def withScope (s : List Char) : Option (List Char) → List Char
-  | some sc => s ++ '%' :: sc
-  | none => s
-
 /-- `'%s/%d' % (s, self._prefixlen)`. -/
 def withPrefix (s : List Char) (p : Nat) : List Char := s ++ '/' :: Nat.toDigits 10 p
 
-/-- `_BaseV6._explode_shorthand_ip_string`, ipaddress.py:1861-1884. Only the network
-branch reads `str(...)` of an address that still has its scope id (:1869); 3.15 made the
-address branch use `_string_from_ip_int` (:1873). -/
-def baseExplode (kind : V6Kind) (ip p : Nat) (scope : Option (List Char)) : Py (List Char) :=
-  if kind = .network ∧ scope.isSome then
-    .error (.named "AddressValueError" "~Only hex digits permitted")
-  else if kind = .network then .ok (withPrefix (explodedHex ip) p)
-  else
-    let exploded := withScope (explodedHex ip) scope
-    if kind = .interface then .ok (withPrefix exploded p) else .ok exploded
+/-- `ip_str` of `_BaseV6._explode_shorthand_ip_string`, ipaddress.py:1868-1873: `str` of the
+network address, which carries the scope id (:1869); `str(self.ip)`, where `ip` is
+`IPv6Address(self._ip)` without the scope id (:1871, :2255-2256); `_string_from_ip_int(self._ip)`
+(:1873). -/
+def explodeIpStr (kind : V6Kind) (ip : Nat) (scope : Option (List Char)) : Py (List Char) :=
+  match kind with
+  | .network => ipv6StrPy ip scope
+  | .interface => ipv6StrPy ip none
+  | .address => stringFromIpInt6Py (some ip)
 
-/-- `ipv4_mapped`, ipaddress.py:2165-2176. -/
-def ipv4Mapped (ip : Nat) : Option Nat :=
-  if ip >>> 32 = 0xFFFF then some (ip &&& 0xFFFFFFFF) else none
+/-- `_BaseV6._explode_shorthand_ip_string`, ipaddress.py:1861-1884: the text, its re-parse
+(:1875), the 32 hex digits in groups of four (:1876-1877), the prefix for a network (:1878-1879),
+the scope id if there is one (:1880-1881), the prefix for an interface (:1882-1883). -/
+def baseExplode (kind : V6Kind) (ip p : Nat) (scope : Option (List Char)) : Py (List Char) := do
+  let ipStr ← explodeIpStr kind ip scope
+  let ipInt ← ipIntFromString6 ipStr
+  let exploded := explodedHex ipInt
+  if kind = .network then return withPrefix exploded p
+  let exploded := addScope exploded scope
+  if kind = .interface then return withPrefix exploded p
+  return exploded
 
 /-- `str(IPv4Address(v))`, `_string_from_ip_int`, ipaddress.py:1241-1250. -/
 def dottedQuad (v : Nat) : List Char :=
@@ -79,11 +81,16 @@ def ExplodedTotal : Prop :=
   ∀ (kind : V6Kind) (ip p : Nat) (scope : Option (List Char)),
     ip < 2 ^ 128 → p ≤ 128 → scope ≠ some [] → ∃ s, explode kind ip p scope = .ok s
 
+set_option maxRecDepth 20000 in
+theorem explode_scoped_net : (explode .network 0 64 (some ['e'])).toBool = false := by decide
+
 /-- `IPv6Network('1::%e/128').exploded` raises `AddressValueError`, here at `::%e/64`. -/
 theorem explodedTotal_refuted : ¬ExplodedTotal := by
   intro h
   obtain ⟨s, hs⟩ := h .network 0 64 (some ['e']) (by decide) (by decide) (by decide)
-  simp [explode, baseExplode] at hs
+  have := explode_scoped_net
+  rw [hs] at this
+  cases this
 
 /-- The exploded text of an interface ends in `/prefixlen`, and of a scoped address in its
 scope id, as `compressed` and `str()` do. -/
@@ -93,35 +100,55 @@ def ExplodedKeepsSuffix : Prop :=
   (∀ (ip p : Nat) (sc s : List Char),
     explode .address ip p (some sc) = .ok s → ('%' :: sc).isSuffixOf s = true)
 
+set_option maxRecDepth 20000 in
+theorem explode_mapped_iface : explode .interface 0xffff01020304 64 none =
+    .ok "0000:0000:0000:0000:0000:ffff:1.2.3.4".toList := by decide
+
 /-- `IPv6Interface('::ffff:1.2.3.4/64').exploded` loses the `/64`. -/
 theorem explodedKeepsSuffix_refuted : ¬ExplodedKeepsSuffix := by
   intro h
-  have := h.1 0xffff01020304 64 none _ rfl
+  have := h.1 0xffff01020304 64 none _ explode_mapped_iface
   revert this
   decide
 
-/-- What `exploded` is, by case, once those two are set aside: a network without scope id
-and every object outside `::ffff:0:0/96` keep the prefix and the scope id, and an
-IPv4-mapped address or interface is the 30 characters of its first six groups and a dotted
-quad, with neither. No scope id or prefix reaches a mapped result: that is the refuted
-`ExplodedKeepsSuffix`, as a positive statement. -/
+/-- What `exploded` is, by case, once those two are set aside, for every 128-bit address: a
+network without scope id and every object outside `::ffff:0:0/96` keep the prefix and the scope
+id, and an IPv4-mapped address or interface is the 30 characters of its first six groups and a
+dotted quad, with neither. The re-parse (:1875) gives the address back in each case. No scope id or
+prefix reaches a mapped result: that is the refuted `ExplodedKeepsSuffix`, as a positive
+statement. -/
 def ExplodedByCase : Prop :=
-  ∀ (ip p : Nat) (scope : Option (List Char)),
+  ∀ (ip p : Nat) (scope : Option (List Char)), ip < 2 ^ 128 →
     explode .network ip p none = .ok (withPrefix (explodedHex ip) p) ∧
     (ipv4Mapped ip = none →
-      explode .address ip p scope = .ok (withScope (explodedHex ip) scope) ∧
-      explode .interface ip p scope = .ok (withPrefix (withScope (explodedHex ip) scope) p)) ∧
+      explode .address ip p scope = .ok (addScope (explodedHex ip) scope) ∧
+      explode .interface ip p scope = .ok (withPrefix (addScope (explodedHex ip) scope) p)) ∧
     (∀ v4, ipv4Mapped ip = some v4 →
-      explode .address ip p scope = .ok ((withScope (explodedHex ip) scope).take 30 ++ dottedQuad v4) ∧
+      explode .address ip p scope = .ok ((addScope (explodedHex ip) scope).take 30 ++ dottedQuad v4) ∧
       explode .interface ip p scope =
-        .ok ((withPrefix (withScope (explodedHex ip) scope) p).take 30 ++ dottedQuad v4))
+        .ok ((withPrefix (addScope (explodedHex ip) scope) p).take 30 ++ dottedQuad v4))
+
+theorem str_reparse (ip : Nat) (h : ip < 2 ^ 128) :
+    ipv6StrPy ip none = .ok (base6 ip) ∧ ipIntFromString6 (base6 ip) = .ok ip := by
+  refine ⟨?_, (base6_ok ip h).2⟩
+  rw [ipv6StrPy_eq ip h]
+  rfl
+
+theorem plain_reparse (ip : Nat) (h : ip < 2 ^ 128) :
+    stringFromIpInt6Py (some ip) = .ok (stringFromIpInt6 ip) ∧
+      ipIntFromString6 (stringFromIpInt6 ip) = .ok ip := by
+  have hle : ¬ ip > allOnes 128 := by unfold allOnes; omega
+  exact ⟨by simp [stringFromIpInt6Py, hle], plain_roundtrip ip h⟩
 
 theorem explodedByCase_proven : ExplodedByCase := by
-  intro ip p scope
+  intro ip p scope hip
+  obtain ⟨s1, s2⟩ := str_reparse ip hip
+  obtain ⟨a1, a2⟩ := plain_reparse ip hip
   refine ⟨?_, fun h => ?_, fun v4 h => ?_⟩
-  · simp [explode, baseExplode]
-  · simp [explode, baseExplode, h]
-  · simp [explode, baseExplode, h, Functor.map, Except.map]
+  · simp [explode, baseExplode, explodeIpStr, s1, s2, bind, Except.bind, pure, Except.pure]
+  · simp [explode, baseExplode, explodeIpStr, h, s1, s2, a1, a2, bind, Except.bind, pure, Except.pure]
+  · simp [explode, baseExplode, explodeIpStr, h, s1, s2, a1, a2, bind, Except.bind, pure, Except.pure,
+      Functor.map, Except.map]
 
 /-- The groups `exploded` prints are the address: read back as a base-65536 number they
 give `ip`, for every 128-bit `ip`. So `_ip_int_from_string`'s round trip, which the model
