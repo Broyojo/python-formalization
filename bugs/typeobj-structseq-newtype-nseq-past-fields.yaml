@@ -1,10 +1,10 @@
 id: typeobj-structseq-newtype-nseq-past-fields
-title: "PyStructSequence_NewType does not validate its desc: n_in_sequence = #fields + 4 reads past the field array, unnamed hidden fields make __reduce__ and the constructor read tp_members[-1], and 2^29 hidden fields wrap tp_basicsize"
+title: "PyStructSequence_NewType and PyStructSequence_InitType2 do not validate their desc: n_in_sequence = #fields + 4 (InitType2: + 1 to + 4) reads past the field array, unnamed hidden fields make __reduce__ and the constructor read tp_members[-1], and 2^29 hidden fields wrap NewType's tp_basicsize"
 priority: P4
 kind: validation-order
 module: typeobj
 files: [Objects/structseq.c, Objects/typeobject.c]
-functions: ["_PyStructSequence_NewType", "PyStructSequence_NewType", "count_members", "initialize_members", "structseq_reduce", "structseq_new_impl"]
+functions: ["_PyStructSequence_NewType", "PyStructSequence_NewType", "PyStructSequence_InitType2", "initialize_static_fields", "count_members", "initialize_members", "structseq_reduce", "structseq_new_impl"]
 summary: |
   `_PyStructSequence_NewType` (structseq.c:744-793) checks nothing about the desc it is given.
   Three consequences, all from C (or ctypes), all one cause:
@@ -30,9 +30,17 @@ summary: |
      (:55-62) counts none of its hidden fields. (The reproducer maps one 2 MB page of unnamed
      fields 4096 times, so the 8 GB desc costs 2 MB.)
 
+  4. The static twin `PyStructSequence_InitType2` (:672-704) computes the same basicsize in
+     `Py_ssize_t` (`initialize_static_fields`, :581-582), and `PyType_Ready` of a static type has
+     no "too small for base" check (that is in `PyType_FromMetaclass`, Objects/typeobject.c:5781);
+     it only refuses `tp_dictoffset + tp_basicsize <= 0` (:9571-9577). So `n_in_sequence` =
+     #fields + 1 .. + 4 all reach the `__match_args__` loop and crash, where NewType refuses + 1 ..
+     + 3 with TypeError; #fields + 5 and above give SystemError "tp_dictoffset that is too small".
+
   The Lean model refutes `NewTypeInBounds` (case 1, one field, `n_in_sequence = 5`),
-  `ReduceInBoundsBuilt` (case 2) and `NewTypeBasicsizeExact` (case 3). `NewTypeOutcomes` proves
-  the refusals listed in case 1 and that every valid desc is accepted.
+  `ReduceInBoundsBuilt` (case 2), `NewTypeBasicsizeExact` (case 3) and `StaticTwinAll` (case 4,
+  one field, `n_in_sequence = 2`). `NewTypeOutcomes` proves the refusals listed in case 1 and that
+  every valid desc is accepted; `StaticTwin` that on valid descs the two twins agree.
 likelihood: |
   Very low: a C extension has to pass a desc that is wrong (too large `n_in_sequence`, unnamed
   hidden fields) or absurd (2^29 fields). All three are reachable through ctypes.
@@ -113,14 +121,35 @@ reproducer: |
   r = subprocess.run([sys.executable, "-I", "-c", WIDE], capture_output=True, text=True, timeout=120)
   print("2^29 unnamed fields, n_in_sequence = 0: n_fields, n_sequence_fields, __basicsize__ =", r.stdout.strip() or r.stderr.strip()[-200:])
   case3 = r.stdout.split() == [str(2 ** 29), "0", "32"]
-  if case1 and case2 and case3:
+  STATIC = HELPER + (
+      "arr = (Field * 2)()\n"
+      "b = ctypes.create_string_buffer(b'a'); keep.append(b)\n"
+      "arr[0].name = ctypes.cast(b, ctypes.c_void_p).value\n"
+      "d = Desc(b'm.T', None, ctypes.cast(arr, ctypes.c_void_p).value, int(sys.argv[1]))\n"
+      "api.PyStructSequence_InitType2.restype = ctypes.c_int\n"
+      "api.PyStructSequence_InitType2.argtypes = [ctypes.c_void_p, ctypes.POINTER(Desc)]\n"
+      "buf = ctypes.create_string_buffer(type.__basicsize__ + 64)\n"
+      "try:\n"
+      "    api.PyStructSequence_InitType2(ctypes.addressof(buf), ctypes.byref(d))\n"
+      "    print('built', flush=True)\n"
+      "except Exception as e:\n"
+      "    print(type(e).__name__, flush=True)\n"
+      "import os; os._exit(0)\n")
+  sout = {}
+  for nseq in (1, 2, 6):
+      r = subprocess.run([sys.executable, "-I", "-c", STATIC, str(nseq)], capture_output=True, text=True, timeout=60)
+      sout[nseq] = r.stdout.strip() if r.returncode == 0 else f"crash {r.returncode}"
+      print(f"InitType2, 1 field, n_in_sequence = {nseq}: {sout[nseq]}")
+  case4 = sout[1] == "built" and sout[2].startswith("crash") and sout[6] == "SystemError"
+  if case1 and case2 and case3 and case4:
       print("REPRODUCED typeobj-structseq-newtype-nseq-past-fields")
 expected: |
   A desc with `n_in_sequence` outside `0 .. #fields`, or an unnamed field past `n_in_sequence`,
   is refused with an exception before anything reads it; a type built has
   `tp_basicsize = 32 + 8 * hidden` or is refused.
 observed: |
-  python3 (3.15.2): n_in_sequence 2-4 TypeError, 5 crash (SIGSEGV), 6 and 9 SystemError; the
+  python3 (3.15.2): n_in_sequence 2-4 TypeError, 5 crash (SIGSEGV), 6 and 9 SystemError (InitType2:
+  1 builds, 2 crashes, 6 SystemError); the
   unnamed-hidden type's `__reduce__` dict has keys ['m.T', 'x']; the wide type has n_fields
   536870912 and __basicsize__ 32. REPRODUCED by scripts/check_bugs.py.
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): the same, REPRODUCED.
@@ -141,7 +170,7 @@ duplicates:
   issues: []
   queries: ["PyStructSequence_NewType n_in_sequence", "n_in_sequence crash", "PyStructSequence_NewType crash",
             "n_in_sequence", "structseq", "PyStructSequence", "PyStructSequence_UnnamedField", "PyStructSequence_NewType desc validate",
-            "structseq unnamed field hidden", "structseq basicsize overflow", "n_unnamed_fields reduce"]
+            "structseq unnamed field hidden", "PyStructSequence_InitType2", "PyStructSequence_InitType", "structseq basicsize overflow", "n_unnamed_fields reduce"]
   bugforge: "no match for structseq or PyStructSequence"
 lean:
   property: PyLean.TypeObj.StructSeq.NewTypeInBounds
@@ -149,3 +178,4 @@ lean:
   also:
     - {property: PyLean.TypeObj.StructSeq.ReduceInBoundsBuilt, theorem: PyLean.TypeObj.StructSeq.reduceInBoundsBuilt_refuted}
     - {property: PyLean.TypeObj.StructSeq.NewTypeBasicsizeExact, theorem: PyLean.TypeObj.StructSeq.newTypeBasicsizeExact_refuted}
+    - {property: PyLean.TypeObj.StructSeq.StaticTwinAll, theorem: PyLean.TypeObj.StructSeq.staticTwinAll_refuted}
