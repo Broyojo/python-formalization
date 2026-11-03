@@ -24,7 +24,7 @@ import PyLean.TextLibs.UrlQuery
 import PyLean.TextLibs.UrlBrackets
 import PyLean.TextLibs.UrlTwins
 import PyLean.TextLibs.UrlLegacy
-import PyLean.TextLibs.UrlSpecQuery
+import PyLean.TextLibs.UrlSpecBytes
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1725,7 +1725,12 @@ def entries : List Entry := [
     pyFns := ["urlencode"]
     statement := "For every query and option of urlencode: an object without len and a sequence whose first element is not a tuple raise TypeError('not a valid non-string sequence or mapping object'); a mapping encodes as its items; keys and values go through quote_via (quote_plus or quote), bytes without encoding/errors, other objects as str(v); without doseq pairs give quote_via(k) + '=' + quote_via(v) joined by '&'; with doseq the result is that of the pairs expanded one per element (a key whose value is an empty sequence is still quoted, and its error raised)."
     source := "docstring of urlencode (doseq; 'encoding and errors only if a component is a str')", status := .proven
-    prop := ``Url.UrlencodeSpec, thm := some ``Url.urlencodeSpec_proven }
+    prop := ``Url.UrlencodeSpec, thm := some ``Url.urlencodeSpec_proven },
+  { id := "textlibs-urllib-parse-bytes-twin", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["urlparse", "urldefrag"]
+    statement := "For every ASCII bytes URL, every allow_fragments and missing_as_none, urlparse and urldefrag on it give what they give on the decoded str as a bytes result (same fields, _keep_empty kept), errors included."
+    source := "the implementation disagreeing with itself (bytes path against str path); docs 'Parsing ASCII Encoded Bytes'", status := .proven
+    prop := ``Url.ParseBytesTwin, thm := some ``Url.parseBytesTwin_proven }
 ]
 
 end PyLean.TextLibs
