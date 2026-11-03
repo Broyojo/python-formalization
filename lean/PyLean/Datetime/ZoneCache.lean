@@ -109,4 +109,74 @@ def runC (loads : K → Bool) : CacheSt K → List (CacheOp K) → CacheSt K × 
     | some st' => let (s, r) := runC loads st' ops; (s, false :: r)
     | none => let (s, r) := runC loads st ops; (s, true :: r)
 
+/-! ### Subclasses -/
+
+/-- `ZoneInfo.__init_subclass__`, _zoneinfo.py:36-38: a fresh strong cache, then
+`weakref.WeakValueDictionary()` (`wvd`, which raises if the lookup or call does). -/
+def initSubclassPy (wvd : Py Unit) : Py (CacheSt K) := wvd.map fun _ => ⟨[], []⟩
+
+/-- C `zoneinfo_init_subclass`, Modules/_zoneinfo.c:2622-2637, with `new_weak_cache`
+(:2592-2603): `weakref.WeakValueDictionary()` stored as `cls._weak_cache`; there is no strong
+cache for a subclass. -/
+def initSubclassC (wvd : Py Unit) : Py (CacheSt K) := wvd.map fun _ => ⟨[], []⟩
+
+/-- `zoneinfo_ZoneInfo_impl` on a subclass: `zone_from_strong_cache` misses at once
+(:2520-2522), `get_weak_cache` reads `cls._weak_cache` (:299-301), and `update_strong_cache`
+returns without inserting (:2547-2549). The Python `__new__` is `newPy` on the subclass's own
+caches. -/
+def newCSub (loads : K → Bool) (st : CacheSt K) (k : K) : Option (CacheSt K) :=
+  let weak? : Option (List K) :=
+    if k ∈ st.weak then some st.weak
+    else if loads k then some (k :: st.weak) else none
+  weak?.map fun weak => ⟨st.strong, weak⟩
+
+/-- `ZoneInfo(k)` calls on a subclass, after its creation; the weak cache loses every key the
+strong cache does not hold after each call (refcounting frees the instance at once). -/
+def runSubPy (loads : K → Bool) (st : CacheSt K) : List K → CacheSt K
+  | [] => st
+  | k :: ks =>
+    let st := (newPy loads st k).getD st
+    runSubPy loads ⟨st.strong, st.weak.filter (· ∈ st.strong)⟩ ks
+
+def runSubC (loads : K → Bool) (st : CacheSt K) : List K → CacheSt K
+  | [] => st
+  | k :: ks =>
+    let st := (newCSub loads st k).getD st
+    runSubC loads ⟨st.strong, st.weak.filter (· ∈ st.strong)⟩ ks
+
+/-! ### Re-entry through key finalizers and comparisons (C) -/
+
+/-- C `clear_strong_cache`, Modules/_zoneinfo.c:2581-2590, on the base class, with keys that
+have finalizers. `strong_cache_free` (:2391-2402) walks the list it was given, and
+`strong_cache_node_free` (:2376-2383) drops the node's key, then its zone (whose dealloc drops
+`zone->key`, the key's last reference, `zoneinfo_clear` :376-382), and only then frees the node;
+`state->ZONEINFO_STRONG_CACHE` is reset after the whole walk (:2589). `dels k` lists the keys
+the finalizer of `k` passes to `ZoneInfo(...)`. While node 0 is being released the list is
+intact, so such a call works on it, unless inserting trims a node the walk frees again (double
+free); from node 1 on the head is node 0, already freed, and `find_in_strong_cache` reads it.
+`none` is that undefined behaviour. The weak cache was cleared first (:518). -/
+def clearStrongC (loads : K → Bool) (dels : K → List K) (st : CacheSt K) : Option (CacheSt K) :=
+  let call (i : Nat) (s : CacheSt K) (k' : K) : Option (CacheSt K) :=
+    if i ≥ 1 then none
+    else if k' ∉ s.strong ∧ (k' ∈ s.weak ∨ loads k' = true) ∧ s.strong.length ≥ 8 then none
+    else some ((newC loads s k').getD s)    -- a failing `ZoneInfo(k')` in a finalizer is unraisable
+  let rec walk : Nat → List K → CacheSt K → Option (CacheSt K)
+    | _, [], s => some s
+    | i, k :: rest, s =>
+      match (dels k).foldlM (call i) s with
+      | none => none
+      | some s => walk (i + 1) rest s
+  (walk 0 st.strong ⟨st.strong, []⟩).map fun s => ⟨[], s.weak⟩
+
+/-- C `find_in_strong_cache`, :2436-2453, when the comparison `key == node->key` can run
+`ZoneInfo.clear_cache()` (`clears key k`): that frees every node, so afterwards reading
+`node->next`, or handing the node to `move_strong_cache_node_to_front`, reads freed memory
+(`none`). `eq` is the comparison's result. -/
+def findInStrongC (eq clears : K → K → Bool) (key : K) : List K → Option (Option K)
+  | [] => some none
+  | k :: rest =>
+    if clears key k then none
+    else if eq key k then some (some k)
+    else findInStrongC eq clears key rest
+
 end PyLean.Datetime.Zone

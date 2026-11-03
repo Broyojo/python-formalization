@@ -363,20 +363,17 @@ def findTtinfoC (z : CZone) : Option DTObj → Option (Py (Option TTI))
 
 /-! ### `fromutc` -/
 
-/-- `ZoneInfo.fromutc`, _zoneinfo.py:118-160, up to the shared `dt + tti.utcoff`: the
-`_ttinfo` whose offset is added, and whether the result gets `fold=1`. `isSelf` is
-`dt.tzinfo is self`. -/
-def fromutcPy (z : PyZone) (dt : DTObj) (isSelf : Bool) : Py (TTI × Bool) := do
-  if !dt.isDatetime then throw (.typeError "fromutc() requires a datetime argument")
-  if !isSelf then throw (.valueError "dt.tzinfo is not self")
-  let ts ← getLocalTsPy dt
+/-- `ZoneInfo.fromutc`, _zoneinfo.py:126-155, from the local timestamp on: the `_ttinfo` whose
+offset is added, and whether the result gets `fold=1`. `year` is `dt.year`, read only on the
+rule branch. -/
+def fromutcCorePy (z : PyZone) (ts : Int) (year : Py Int) : Py (TTI × Bool) := do
   let numTrans := z.transUtc.length
   let tzstr : Option TZStr := match z.tzAfter with | .tzstr r => some r | .tti _ => none
   let afterTti : TTI := match z.tzAfter with | .tti t => t | .tzstr _ => default
   if numTrans ≥ 1 ∧ ts < z.transUtc.getD 0 0 then
     pure (z.ttiBefore.getD default, false)
   else if (numTrans = 0 ∨ ts > z.transUtc.getLast?.getD 0) ∧ tzstr.isSome then do
-    let y ← dt.yearAttr
+    let y ← year
     pure ((tzstr.getD default).getTransInfoFromutc ts y)
   else if numTrans = 0 then pure (afterTti, false)
   else do
@@ -391,17 +388,21 @@ def fromutcPy (z : PyZone) (dt : DTObj) (isSelf : Bool) : Py (TTI × Bool) := do
     let shift := ttiPrev.utcoff - tti.utcoff
     pure (tti, decide (shift > ts - pyGet z.transUtc ((idx : Int) - 1)))
 
-/-- C `zoneinfo_fromutc`, Modules/_zoneinfo.c:642-763, up to `PyNumber_Add(dt, tti->utcoff)`:
-the same pair. The year is the struct's (:674). -/
-def fromutcC (z : CZone) (dt : DTObj) (isSelf : Bool) : Py (TTI × Bool) := do
-  if !dt.isDatetime then throw (.typeError "fromutc: argument must be a datetime")
-  if !isSelf then throw (.valueError "fromutc: dt.tzinfo is not self")
-  let ts ← getLocalTsC dt
+/-- `ZoneInfo.fromutc`, _zoneinfo.py:118-160, up to the shared `dt + tti.utcoff`. `isSelf` is
+`dt.tzinfo is self`. -/
+def fromutcPy (z : PyZone) (dt : DTObj) (isSelf : Bool) : Py (TTI × Bool) := do
+  if !dt.isDatetime then throw (.typeError "fromutc() requires a datetime argument")
+  if !isSelf then throw (.valueError "dt.tzinfo is not self")
+  let ts ← getLocalTsPy dt
+  fromutcCorePy z ts dt.yearAttr
+
+/-- C `zoneinfo_fromutc`, Modules/_zoneinfo.c:663-715, from the local timestamp on. -/
+def fromutcCoreC (z : CZone) (ts year : Int) : TTI × Bool :=
   let numTrans := z.transUtc.length
   if numTrans ≥ 1 ∧ ts < z.transUtc.getD 0 0 then
-    pure (z.ttiBefore.getD default, false)
+    (z.ttiBefore.getD default, false)
   else if numTrans = 0 ∨ ts > z.transUtc.getD (numTrans - 1) 0 then
-    let (tti, fold) := z.rule.findFromutc ts dt.y
+    let (tti, fold) := z.rule.findFromutc ts year
     -- :681-694: the fold left by the last explicit transition
     let fold := if numTrans ≠ 0 then
         let ttiPrev := if numTrans = 1 then z.ttiBefore.getD default
@@ -409,12 +410,20 @@ def fromutcC (z : CZone) (dt : DTObj) (isSelf : Bool) : Py (TTI × Bool) := do
         let diff := wrap64 (ttiPrev.utcoff - tti.utcoff)
         if diff > 0 ∧ ts < wrap64 (z.transUtc.getD (numTrans - 1) 0 + diff) then true else fold
       else fold
-    pure (tti, fold)
+    (tti, fold)
   else
     let idx := bisectC ts z.transUtc
     let (ttiPrev, tti) := if idx ≥ 2 then (z.ttinfos.getD (idx - 2) default, z.ttinfos.getD (idx - 1) default)
       else (z.ttiBefore.getD default, z.ttinfos.getD 0 default)
     let shift := wrap64 (ttiPrev.utcoff - tti.utcoff)
-    pure (tti, decide (shift > wrap64 (ts - z.transUtc.getD (idx - 1) 0)))
+    (tti, decide (shift > wrap64 (ts - z.transUtc.getD (idx - 1) 0)))
+
+/-- C `zoneinfo_fromutc`, Modules/_zoneinfo.c:642-763, up to `PyNumber_Add(dt, tti->utcoff)`.
+The year is the struct's (:674). -/
+def fromutcC (z : CZone) (dt : DTObj) (isSelf : Bool) : Py (TTI × Bool) := do
+  if !dt.isDatetime then throw (.typeError "fromutc: argument must be a datetime")
+  if !isSelf then throw (.valueError "fromutc: dt.tzinfo is not self")
+  let ts ← getLocalTsC dt
+  pure (fromutcCoreC z ts dt.y)
 
 end PyLean.Datetime.Zone
