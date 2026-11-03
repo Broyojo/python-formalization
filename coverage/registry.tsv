@@ -2318,6 +2318,12 @@ textlibs-email-nested-comment-recursion	refuted	Lib/email/_header_value_parser.p
 textlibs-email-unstructured-encoded-words	proven	Lib/email/_header_value_parser.py	get_unstructured,get_encoded_word,EWWhiteSpaceTerminal.__str__,TokenList.__str__
 textlibs-email-encoded-word-spec	proven	Lib/email/_header_value_parser.py	get_encoded_word
 textlibs-email-unstructured-word-then-ew	proven	Lib/email/_header_value_parser.py	get_unstructured
+textlibs-plist-loads-binary-invalid-only	proven	Lib/plistlib.py	loads,load,_BinaryPlistParser.parse,_BinaryPlistParser._read_object,_BinaryPlistParser._get_size,_BinaryPlistParser._read,_BinaryPlistParser._read_ints,_BinaryPlistParser._read_refs,InvalidFileException.__init__
+textlibs-plist-loads-nesting-depth	refuted	Lib/plistlib.py	_BinaryPlistParser._read_object,_BinaryPlistParser.parse
+textlibs-plist-binary-round-trip	proven	Lib/plistlib.py	dumps,dump,loads,load,_BinaryPlistWriter.write,_BinaryPlistWriter._flatten,_BinaryPlistWriter._getrefnum,_BinaryPlistWriter._write_size,_BinaryPlistWriter._write_object,_BinaryPlistParser.parse,_BinaryPlistParser._read_object,_BinaryPlistParser._get_size,_BinaryPlistParser._read,_BinaryPlistParser._read_ints,_BinaryPlistParser._read_refs
+textlibs-plist-binary-float-bits	refuted	Lib/plistlib.py	_BinaryPlistWriter._flatten,_BinaryPlistWriter._getrefnum
+textlibs-plist-binary-datetime	refuted	Lib/plistlib.py	_BinaryPlistWriter._write_object,_BinaryPlistParser._read_object
+textlibs-plist-count-to-size	proven	Lib/plistlib.py	_count_to_size
 coll-count-elements-twins	proven	Lib/collections/__init__.py	_count_elements
 coll-counter-update-fast-slow	proven	Lib/collections/__init__.py	Counter.update
 coll-counter-update-adds	proven	Lib/collections/__init__.py	Counter.update,Counter.__init__,Counter.__missing__,_count_elements
