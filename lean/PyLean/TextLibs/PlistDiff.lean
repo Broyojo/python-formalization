@@ -60,6 +60,7 @@ def fmtJ (s : String) : Fmt :=
   | "none" => .none
   | "xml" => .xml
   | "binary" => .binary
+  | "[]" => .badHash "list" (.typeError "unhashable type: 'list'")
   | rp => .other rp
 
 /-- The XML side is not part of these cases: the generator only reaches it through `isFmtXml`,

@@ -357,6 +357,7 @@ def dumpR (xml : XmlWrite) (r : Nat) (H : WHeap) (root : Nat) (fmt : Fmt) (cfg :
   | .xml | .binary => call r fun _ => .ok ()
   | .none => .error (.valueError "Unsupported format: None")
   | .other rp => .error (.valueError s!"Unsupported format: {rp}")
+  | .badHash ty e => .error (frozendictKeyErr ty e)
   -- writer = _FORMATS[fmt]["writer"](fp, ...): Enum.__hash__ again, then the writer's __init__
   call r fun _ => .ok ()
   if fmt = .binary then

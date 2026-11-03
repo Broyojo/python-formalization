@@ -55,8 +55,11 @@ open PyLean PyLean.TextLibs PyLean.Binary64
 /-! ## Exceptions -/
 
 def recErr : PyExc := .named "RecursionError" "maximum recursion depth exceeded"
-/-- `InvalidFileException()`, :467-469 (`message="Invalid file"`). -/
-def invalidFile : PyExc := .named "InvalidFileException" "Invalid file"
+/-- `InvalidFileException(message)`, :467-469: a `ValueError` subclass whose `__init__` passes
+`message` to `ValueError.__init__`, so `str(e)` is `message`. -/
+def invalidFileExc (message : String) : PyExc := .named "InvalidFileException" message
+/-- `InvalidFileException()`: the default `message="Invalid file"`. -/
+def invalidFile : PyExc := invalidFileExc "Invalid file"
 /-- `struct.error`. -/
 def structErr (m : String) : PyExc := .named "error" m
 
@@ -548,9 +551,19 @@ def isFmtBinary (header : List Nat) : Bool := header.take 8 == asciiBytes "bplis
 /-- The `fmt` argument. -/
 inductive Fmt where
   | none | xml | binary
-  /-- Any other object; `repr` is its `repr()`. -/
+  /-- Any other hashable object; `repr` is its `repr()`. -/
   | other (repr : String)
+  /-- An object of type `ty` whose `hash()` raises `e` (a C `__hash__`: a Python one would push a
+  frame, out of scope). `list`'s raises `TypeError("unhashable type: 'list'")`. -/
+  | badHash (ty : String) (e : PyExc)
   deriving Repr, DecidableEq
+
+/-- Looking a key up in a `frozendict` (`_FORMATS[fmt]`, `fmt in _FORMATS`) when its hash raises:
+`dict_unhashable_type`, Objects/dictobject.c:2442-2460, rewraps an exact `TypeError` as
+`TypeError("cannot use '%T' as a frozendict key (%S)")` and lets any other exception through. -/
+def frozendictKeyErr (ty : String) (e : PyExc) : PyExc :=
+  if e.className = "TypeError" then .typeError s!"cannot use '{ty}' as a frozendict key ({e.message})"
+  else e
 
 /-- The XML parser (`_PlistParser(dict_type, aware_datetime).parse(fp)` on the whole buffer, with
 `r` frames left below `load`): a parameter here, modelled in `PlistXml.lean`. -/
@@ -575,6 +588,7 @@ def loadR (xml : XmlParse) (r : Nat) (buf : List Nat) (fmt : Fmt) (aware : Bool)
       | .xml => call r fun _ => .ok true
       | .binary => call r fun _ => .ok false
       | .other rp => .error (.keyError rp)
+      | .badHash ty e => .error (frozendictKeyErr ty e)
     -- p = P(dict_type=dict_type, aware_datetime=aware_datetime): __init__ is one frame
     call r fun _ => .ok ()
     if P then xml r aware buf else parseR r aware buf

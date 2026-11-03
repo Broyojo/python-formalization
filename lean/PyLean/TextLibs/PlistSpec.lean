@@ -12,13 +12,16 @@ open PyLean PyLean.TextLibs
 is a `ValueError` (so `parse` itself catches it, :508-510); with no frame left the instantiation
 raises `RecursionError` instead. -/
 def InvalidFileSpec : Prop :=
+  (∀ m : String, (invalidFileExc m).message = m ∧ (invalidFileExc m).className = "InvalidFileException" ∧
+    isInst (invalidFileExc m) "ValueError" = true ∧ parseCatches (invalidFileExc m) = true) ∧
+  invalidFile = invalidFileExc "Invalid file" ∧
   (∀ r, 1 ≤ r → (raiseInvalid r : Py Unit) = .error invalidFile) ∧
   invalidFile.className = "InvalidFileException" ∧ invalidFile.message = "Invalid file" ∧
   isInst invalidFile "ValueError" = true ∧ isInst invalidFile "Exception" = true ∧
   parseCatches invalidFile = true ∧ (raiseInvalid 0 : Py Unit) = .error recErr
 
 theorem invalidFileSpec_proven : InvalidFileSpec := by
-  refine ⟨fun r hr => ?_, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  refine ⟨fun m => ⟨rfl, rfl, rfl, rfl⟩, rfl, fun r hr => ?_, rfl, rfl, rfl, rfl, rfl, rfl⟩
   obtain ⟨r, rfl⟩ : ∃ j, r = j + 1 := ⟨r - 1, by omega⟩
   rfl
 
@@ -268,10 +271,18 @@ def LoadDispatchSpec : Prop :=
   (∀ (xml : XmlParse) (r : Nat) (buf : List Nat) (aware : Bool) (rp : String), 2 ≤ r →
     loadsR xml r (.bytes buf) (.other rp) aware = .error (.keyError rp)) ∧
   (∀ (xml : XmlParse) (r : Nat) (buf : List Nat) (aware : Bool), 3 ≤ r →
-    isFmtXml (buf.take 32) = true → loadsR xml r (.bytes buf) .none aware = xml (r - 2) aware buf)
+    isFmtXml (buf.take 32) = true → loadsR xml r (.bytes buf) .none aware = xml (r - 2) aware buf) ∧
+  (∀ (xml : XmlParse) (r : Nat) (buf : List Nat) (aware : Bool) (ty : String) (e : PyExc), 2 ≤ r →
+    loadsR xml r (.bytes buf) (.badHash ty e) aware =
+      .error (if e.className = "TypeError" then
+        .typeError s!"cannot use '{ty}' as a frozendict key ({e.message})" else e)) ∧
+  (∀ (xml : XmlParse) (r : Nat) (buf : List Nat) (aware : Bool), 4 ≤ r →
+    loadsR xml r (.bytes buf) .xml aware = xml (r - 2) aware buf) ∧
+  (∀ (xml : XmlParse) (r : Nat) (buf : List Nat) (aware : Bool), 4 ≤ r →
+    loadsR xml r (.bytes buf) .binary aware = parseR (r - 2) aware buf)
 
 theorem loadDispatchSpec_proven : LoadDispatchSpec := by
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro xml r buf aware hr hx hb
     obtain ⟨r, rfl⟩ : ∃ j, r = j + 3 := ⟨r - 3, by omega⟩
     simp [loadsR, loadR, call, bind, Except.bind, header_take, hx, hb, raiseInvalid]
@@ -281,6 +292,15 @@ theorem loadDispatchSpec_proven : LoadDispatchSpec := by
   · intro xml r buf aware hr hx
     obtain ⟨r, rfl⟩ : ∃ j, r = j + 3 := ⟨r - 3, by omega⟩
     simp [loadsR, loadR, call, bind, Except.bind, header_take, hx]
+  · intro xml r buf aware ty e hr
+    obtain ⟨r, rfl⟩ : ∃ j, r = j + 2 := ⟨r - 2, by omega⟩
+    simp [loadsR, loadR, call, bind, Except.bind, frozendictKeyErr]
+  · intro xml r buf aware hr
+    obtain ⟨r, rfl⟩ : ∃ j, r = j + 4 := ⟨r - 4, by omega⟩
+    simp [loadsR, loadR, call, bind, Except.bind]
+  · intro xml r buf aware hr
+    obtain ⟨r, rfl⟩ : ∃ j, r = j + 4 := ⟨r - 4, by omega⟩
+    simp [loadsR, loadR, call, bind, Except.bind]
 
 /-- `loads(s)` for a `str`: with `fmt=FMT_BINARY` a `TypeError` (:921-923); otherwise the UTF-8
 encoding of `s` is loaded (:924), and a lone surrogate's `UnicodeEncodeError` propagates. -/

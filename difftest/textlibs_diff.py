@@ -4993,7 +4993,7 @@ import plistlib  # noqa: E402
 
 PL_EPOCH = _pl_dt.datetime(2001, 1, 1)
 PL_US = _pl_dt.timedelta(microseconds=1)
-PL_FMT = {"none": None, "xml": plistlib.FMT_XML, "binary": plistlib.FMT_BINARY,
+PL_FMT = {"none": None, "xml": plistlib.FMT_XML, "binary": plistlib.FMT_BINARY, "[]": [],
           "'xml'": "xml", "3": 3, "1.5": 1.5}
 PL_DT_MIN = -(730485 * 86400 * 10**6)
 PL_DT_MAX = 2921574 * 86400 * 10**6 - 1
@@ -5236,7 +5236,7 @@ def pl_dumps_case(r, fn="plist.dumps"):
     else:
         h, root = pl_heap(r)
         fr = r.randint(1, 14) if r.random() < 0.1 else 400
-    fmt = "binary" if fn == "plist.rt" or r.random() < 0.95 else r.choice(["none", "'xml'", "3"])
+    fmt = "binary" if fn == "plist.rt" or r.random() < 0.95 else r.choice(["none", "'xml'", "3", "[]"])
     aware = r.random() < 0.3
     if aware:
         # a naive datetime would go through local time: keep those within 1970..2037
@@ -5400,7 +5400,7 @@ def pl_loads_case(r):
             data = b"x" + data
     if r.random() < 0.08:
         fr = r.randint(1, 12)
-    fmt = "none" if r.random() < 0.7 else r.choice(["binary"] * 8 + ["'xml'", "3"])
+    fmt = "none" if r.random() < 0.7 else r.choice(["binary"] * 8 + ["'xml'", "3", "[]"])
     if fmt == "none" and plistlib._is_fmt_xml(data[:32]):
         fmt = "binary"
     c = {"mod": "textlibs", "fn": "plist.loads", "fmt": fmt, "aware": r.random() < 0.3, "r": fr}

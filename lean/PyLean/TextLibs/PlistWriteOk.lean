@@ -7,14 +7,15 @@ namespace PyLean.TextLibs.Plist
 open PyLean PyLean.TextLibs
 
 /-- What the writer accepts: ints in -2**63..2**64-1, UIDs in 0..2**64-1, strs without lone
-surrogates, no datetimes (not covered) and no other types; dicts whose keys are all `str`
+surrogates, naive datetimes with `aware_datetime=False` (aware ones and the local-time path are
+not covered) and no other types; dicts whose keys are all `str`
 (or `skipkeys`); and references to cells of the heap. -/
 def Supported (H : WHeap) (cfg : WCfg) : Prop :=
   ∀ c, c < H.length → match H.getD c .none with
     | .int v => -2 ^ 63 ≤ v ∧ v < 2 ^ 64
     | .uid d => 0 ≤ d ∧ d < 2 ^ 64
     | .str s => ∀ ch ∈ s, UnicodeObj.isSurrogate ch = false
-    | .date _ _ => False
+    | .date _ off => off = none ∧ cfg.awareDatetime = false
     | .other _ _ => False
     | .list xs => ∀ x ∈ xs, x < H.length
     | .tuple xs => ∀ x ∈ xs, x < H.length
@@ -274,7 +275,8 @@ theorem writeObject_ok (k : Nat) (H : WHeap) (cfg : WCfg) (rs : Nat) (st : WStat
       simp [writeSizeR, call, pure, Except.pure]
   · simp [writeSizeR, call, pure, Except.pure]
   · simp [writeSizeR, call, pure, Except.pure]
-  · exact hSc.elim
+  · obtain ⟨rfl, ha⟩ := hSc
+    simp [dateSeconds, ha, pure, Except.pure, bind, Except.bind]
   · rename_i d
     have h0 : ¬ d < 0 := by omega
     rw [if_neg h0]

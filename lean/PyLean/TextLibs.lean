@@ -2179,7 +2179,7 @@ def entries : List Entry := [
 ,
   { id := "textlibs-plist-invalid-file-exception", pyFile := "Lib/plistlib.py"
     pyFns := ["InvalidFileException.__init__"]
-    statement := "raise InvalidFileException() raises an exception of class InvalidFileException whose message is 'Invalid file', which is a ValueError (so parse's own except clause catches it) and an Exception; with no frame left the instantiation raises RecursionError instead."
+    statement := "InvalidFileException(message) has str(e) == message, class InvalidFileException, is a ValueError and is caught by parse's except; raise InvalidFileException() uses the default message 'Invalid file' and raises an exception of class InvalidFileException whose message is 'Invalid file', which is a ValueError (so parse's own except clause catches it) and an Exception; with no frame left the instantiation raises RecursionError instead."
     source := "Lib/plistlib.py:467-469; Doc/library/plistlib.rst (InvalidFileException)", status := .proven
     prop := ``Plist.InvalidFileSpec, thm := some ``Plist.invalidFileSpec_proven }
 ,
@@ -2209,7 +2209,7 @@ def entries : List Entry := [
 ,
   { id := "textlibs-plist-load-dispatch", pyFile := "Lib/plistlib.py"
     pyFns := ["load", "loads"]
-    statement := "With fmt=None, load raises InvalidFileException for every header that is neither XML nor bplist00 and hands every XML header to the XML parser; for any format object outside FMT_XML and FMT_BINARY, _FORMATS[fmt] raises KeyError(fmt)."
+    statement := "With fmt=None, load raises InvalidFileException for every header that is neither XML nor bplist00 and hands every XML header to the XML parser; for any other hashable format object _FORMATS[fmt] raises KeyError(fmt), and for an unhashable one the frozendict lookup's TypeError(\"cannot use '<type>' as a frozendict key (<hash error>)\"); fmt=FMT_XML always goes to the XML parser and fmt=FMT_BINARY to the binary parser."
     source := "Lib/plistlib.py:898-913", status := .proven
     prop := ``Plist.LoadDispatchSpec, thm := some ``Plist.loadDispatchSpec_proven }
 ,
@@ -2222,15 +2222,15 @@ def entries : List Entry := [
   { id := "textlibs-plist-write-succeeds", pyFile := "Lib/plistlib.py"
     pyFns := ["dumps", "dump", "_BinaryPlistWriter.write", "_BinaryPlistWriter._flatten",
       "_BinaryPlistWriter._getrefnum", "_BinaryPlistWriter._write_size", "_BinaryPlistWriter._write_object"]
-    statement := "With len(heap) + 8 frames, dumps(value, fmt=FMT_BINARY) returns bytes for every object graph (sharing and cycles included) of None, bools, ints in -2**63..2**64-1, floats, strs without lone surrogates, bytes, bytearrays, UIDs with data in 0..2**64-1, lists, tuples, and dicts and frozendicts whose keys are all strs (or with skipkeys), whatever sort_keys."
+    statement := "With len(heap) + 8 frames, dumps(value, fmt=FMT_BINARY) returns bytes for every object graph (sharing and cycles included) of None, bools, ints in -2**63..2**64-1, floats, strs without lone surrogates, bytes, bytearrays, UIDs with data in 0..2**64-1, naive datetimes (with aware_datetime=False), lists, tuples, and dicts and frozendicts whose keys are all strs (or with skipkeys), whatever sort_keys."
     source := "Doc/library/plistlib.rst (supported value types; TypeError and OverflowError are the documented failures)", status := .proven
     prop := ``Plist.WriteSucceeds, thm := some ``Plist.writeSucceeds_proven
-    notes := "The frame bound comes from _flatten recursing only into objects it has not numbered (notSeen decreases). Together with BinaryRoundTrip this pins that _flatten numbers every element, dict keys and values included. Datetimes are not covered; subclasses of the builtin types are a scope limit." }
+    notes := "The frame bound comes from _flatten recursing only into objects it has not numbered (notSeen decreases). Together with BinaryRoundTrip this pins that _flatten numbers every element, dict keys and values included. Aware datetimes and naive ones with aware_datetime=True (local time) are not covered; subclasses of the builtin types are a scope limit." }
 ,
   { id := "textlibs-plist-write-errors", pyFile := "Lib/plistlib.py"
     pyFns := ["dumps", "dump", "_BinaryPlistWriter._write_object", "_BinaryPlistWriter.write"]
-    statement := "dumps(w, fmt=FMT_BINARY) raises OverflowError(str(w)) for every int outside -2**63..2**64-1, ValueError('UIDs must be positive') for a UID with negative data and OverflowError('UID(d)') for data >= 2**64, TypeError(str(w)) for an unsupported object, UnicodeEncodeError for every str with a lone surrogate, TypeError(\"can't subtract offset-naive and offset-aware datetimes\") for an aware datetime without aware_datetime, and OverflowError('date value out of range') when an aware datetime's UTC time leaves the datetime range; dumps(value, fmt=f) raises ValueError('Unsupported format: %r') for fmt None or any other non-format object."
-    source := "Doc/library/plistlib.rst (TypeError for unsupported types, OverflowError for unrepresentable ints); Lib/plistlib.py:788-791, :803, :810-815, :826, :832-843, :869, :934-935", status := .proven
+    statement := "dumps(w, fmt=FMT_BINARY) raises OverflowError(str(w)) for every int outside -2**63..2**64-1, ValueError('UIDs must be positive') for a UID with negative data and OverflowError('UID(d)') for data >= 2**64, TypeError(str(w)) for an unsupported object, UnicodeEncodeError for every str with a lone surrogate, TypeError(\"can't subtract offset-naive and offset-aware datetimes\") for an aware datetime without aware_datetime, and OverflowError('date value out of range') when an aware datetime's UTC time leaves the datetime range; dumps(value, fmt=f) raises ValueError('Unsupported format: %r') for fmt None or any other hashable non-format object, and for an unhashable fmt the frozendict lookup's TypeError(\"cannot use '<type>' as a frozendict key (<hash error>)\") (another exception from __hash__ propagates); a dict root with a non-str key and skipkeys=False raises TypeError('keys must be strings') whatever sort_keys (:174-176 and :738-741); and a naive datetime alone is written as token 0x33 and the 8 bytes of the double nearest (value - datetime(2001, 1, 1)) in seconds, with the exact offset table and trailer."
+    source := "Doc/library/plistlib.rst (TypeError for unsupported types, OverflowError for unrepresentable ints); Lib/plistlib.py:788-791, :803, :808-815, :826, :832-843, :869, :934-935, :174-176, :738-741; Objects/dictobject.c:2442-2460", status := .proven
     prop := ``Plist.WriteErrors, thm := some ``Plist.writeErrors_proven }
 ,
   { id := "textlibs-plist-date-whole-seconds", pyFile := "Lib/plistlib.py"

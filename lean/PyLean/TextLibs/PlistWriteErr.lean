@@ -23,6 +23,47 @@ theorem utf16_surrogate (nameOf : Nat → Option UnicodeObj.Str) (input : Unicod
             · exact absurd hs hc
             · exact ⟨x, hx, hs⟩)
 
+theorem keptItems_nonstr (H : WHeap) : ∀ items : List (Nat × Nat), (∃ q ∈ items, keyStr H q.1 = none) →
+    keptItems H false items = .error (.typeError "keys must be strings")
+  | [], h => by simp at h
+  | (k, v) :: rest, h => by
+    simp only [keptItems]
+    by_cases hk : keyStr H k = none
+    · simp [hk]
+    · have hn : (keyStr H k).isNone = false := by cases h' : keyStr H k <;> simp_all
+      rw [if_neg (by simp [hn])]
+      obtain ⟨q, hq, hq'⟩ := h
+      simp at hq
+      rcases hq with rfl | hq
+      · exact absurd hq' hk
+      · rw [keptItems_nonstr H rest ⟨q, hq, hq'⟩]; rfl
+
+theorem dumps_dict_nonstr (xmlw : XmlWrite) (cfg : WCfg) (k : Nat) (H : WHeap) (items : List (Nat × Nat))
+    (hd : H.getD 0 .none = .dict items) (hs : cfg.skipkeys = false) (hq : ∃ q ∈ items, keyStr H q.1 = none) :
+    dumpsR xmlw (k + 8) H 0 .binary cfg = .error (.typeError "keys must be strings") := by
+  have hdi : (dictItems H cfg items >>= keptItems H cfg.skipkeys) = .error (.typeError "keys must be strings") := by
+    unfold dictItems
+    rw [hs]
+    by_cases hsk : cfg.sortKeys = true
+    · have hany : items.any (fun (k, _) => (keyStr H k).isNone) = true := by
+        obtain ⟨q, hq1, hq2⟩ := hq
+        exact List.any_eq_true.mpr ⟨q, hq1, by rcases q with ⟨a, b⟩; simp [hq2]⟩
+      simp [hsk, hany, bind, Except.bind]
+    · simp [hsk, bind, Except.bind, keptItems_nonstr H items hq]
+  have hflat : flattenR H cfg (k + 5) 0 WState.init = .error (.typeError "keys must be strings") := by
+    simp only [flattenR, WState.init, tableLookup, idLookup, List.find?_nil, Option.map_none,
+      Option.isSome_none, hd]
+    simp only [scalarType, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
+    simp only [dictItemsR, call, bind, Except.bind] at hdi ⊢
+    revert hdi
+    cases dictItems H cfg items with
+    | error e => intro h; simpa using h
+    | ok its =>
+      intro h
+      simp only at h ⊢
+      rw [h]
+  simp [dumpsR, dumpR, binaryWriteR, call, bind, Except.bind, hflat]
+
 /-- The documented and the other refusals of `dumps(fmt=FMT_BINARY)`, for a value `w` alone:
 `OverflowError(value)` for an int outside -2**63..2**64-1 (:788-791, :803), `ValueError('UIDs must
 be positive')` and `OverflowError(value)` for a UID's data (:832-833, :843), `TypeError(value)` for an
@@ -47,11 +88,20 @@ def WriteErrors : Prop :=
       dumpsR xmlw (k + 8) [.date us (some o)] 0 .binary cfg = .error (.overflowError "date value out of range")) ∧
     (∀ H root, dumpsR xmlw (k + 2) H root .none cfg = .error (.valueError "Unsupported format: None")) ∧
     (∀ H root rp, dumpsR xmlw (k + 2) H root (.other rp) cfg =
-      .error (.valueError s!"Unsupported format: {rp}"))
+      .error (.valueError s!"Unsupported format: {rp}")) ∧
+    (∀ H root ty e, dumpsR xmlw (k + 2) H root (.badHash ty e) cfg =
+      .error (if e.className = "TypeError" then
+        .typeError s!"cannot use '{ty}' as a frozendict key ({e.message})" else e)) ∧
+    (∀ (H : WHeap) items, H.getD 0 .none = .dict items → cfg.skipkeys = false →
+      (∃ q ∈ items, keyStr H q.1 = none) →
+      dumpsR xmlw (k + 8) H 0 .binary cfg = .error (.typeError "keys must be strings")) ∧
+    (∀ us, cfg.awareDatetime = false → dumpsR xmlw (k + 8) [.date us none] 0 .binary cfg =
+      .ok (asciiBytes "bplist00" ++ 0x33 :: beBytes (Binary64.F64.ofRat (mkRat us 1000000)).bits 8 ++
+        [8, 0, 0, 0, 0, 0, 0, 1, 1] ++ beBytes 1 8 ++ beBytes 0 8 ++ beBytes 17 8))
 
 theorem writeErrors_proven : WriteErrors := by
   intro xmlw cfg k
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro v hv
     have h0 : ∀ h : -2 ^ 63 ≤ v, v < 2 ^ 64 → False := fun h1 h2 => by omega
     simp [dumpsR, dumpR, binaryWriteR, flattenR, WState.init, tableLookup, idLookup, scalarType,
@@ -99,5 +149,12 @@ theorem writeErrors_proven : WriteErrors := by
       Except.bind, dateSeconds, ha, ho, hr']
   · intro H root; simp [dumpsR, dumpR, call, bind, Except.bind]
   · intro H root rp; simp [dumpsR, dumpR, call, bind, Except.bind]
+  · intro H root ty e; simp [dumpsR, dumpR, call, bind, Except.bind, frozendictKeyErr]
+  · intro H items hd hs hq
+    exact dumps_dict_nonstr xmlw cfg k H items hd hs hq
+  · intro us ha
+    simp [dumpsR, dumpR, binaryWriteR, flattenR, WState.init, tableLookup, idLookup, scalarType,
+      call, countToSizeR, countToSize, writeAll, writeObjectR, getrefnumR, scalarMatch, bind,
+      Except.bind, dateSeconds, ha, pure, Except.pure, beBytes_length, packRefs, beBytes, asciiBytes, bplistHeader]
 
 end PyLean.TextLibs.Plist
