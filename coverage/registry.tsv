@@ -2774,7 +2774,12 @@ corelibs-copy-tuple-identity	proven	Lib/copy.py	_deepcopy_tuple
 corelibs-copy-shallow	proven	Lib/copy.py	copy
 corelibs-copy-pickle-reduce	refuted	Lib/copy.py	copy,_reconstruct
 corelibs-copy-reconstruct	proven	Lib/copy.py	_reconstruct
-corelibs-copy-method-replace	proven	Lib/copy.py	_deepcopy_method,replace,deepcopy
+corelibs-copy-method-replace	proven	Lib/copy.py	_deepcopy_method,deepcopy
+corelibs-copy-method-aliasing	refuted	Lib/copy.py	_deepcopy_method,deepcopy
+corelibs-copy-replace	proven	Lib/copy.py	replace
+corelibs-copy-state-none	proven	Lib/copy.py	_reconstruct,deepcopy
+corelibs-copy-deepcopy-paths	proven	Lib/copy.py	deepcopy
+corelibs-copy-iter-fails	proven	Lib/copy.py	_reconstruct,deepcopy
 corelibs-abc-check-order	proven	Lib/abc.py	ABCMeta.__subclasscheck__
 corelibs-abc-register-invalidates	proven	Lib/abc.py	ABCMeta.register
 corelibs-abc-second-check	proven	Lib/abc.py	ABCMeta.__subclasscheck__
@@ -2800,6 +2805,7 @@ corelibs-operator-methodcaller-exact	proven	Lib/operator.py	methodcaller.__init_
 corelibs-operator-mc-repr-exact	proven	Lib/operator.py	methodcaller.__repr__,methodcaller_repr
 corelibs-copy-list-exact	proven	Lib/copy.py	_deepcopy_list,deepcopy
 corelibs-copy-dict-exact	proven	Lib/copy.py	_deepcopy_dict,deepcopy
+corelibs-copy-dict-merge	proven	Lib/copy.py	_deepcopy_dict,deepcopy
 corelibs-copy-order	proven	Lib/copy.py	_deepcopy_dict,_deepcopy_list,_reconstruct
 corelibs-copy-aliasing	proven	Lib/copy.py	_deepcopy_list,deepcopy
 corelibs-copy-tuple-exact	proven	Lib/copy.py	_deepcopy_tuple

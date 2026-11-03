@@ -3724,7 +3724,9 @@ def operator_gen(rng):
         return rng.choice([
             {"fn": "operator.call_op", "twin": twin, "args": [0] * rng.randrange(0, 3), "bad": rng.random() < .3,
              "kw": rng.random() < .3},
-            {"fn": "operator.replace", "has": rng.choice(["ok", "raise", "none"])}])
+            {"fn": "operator.replace", "has": rng.choice(["ok", "raise", "none", "null"]),
+             "obj": rng.randrange(-3, 4),
+             "changes": [[k, rng.randrange(-5, 6)] for k in rng.sample(["a", "b", "c"], rng.randrange(0, 4))]}])
     if r == 21:
         names = ["f", "g", "h"]
         table = [[n, rng.choice(["abs", "no"])] for n in names]
@@ -3738,11 +3740,64 @@ def operator_gen(rng):
 def operator_spec(rng, n):
     size = rng.choice([2, 3, 3, 4, 5, 5, 1, 6])
     kind = rng.choice(["inst", "inst", "list", "dict"])
+    # a state for a list or a dict `y` meets `y.__dict__`, which neither has
     return {"rv": "tuple", "size": size, "ctorfail": rng.random() < .1, "kind": kind,
             "args": [rng.randrange(0, n) for _ in range(rng.randrange(0, 3))] if kind == "inst" else [],
-            "state": rng.randrange(0, n) if kind == "inst" and size >= 3 and rng.random() < .5 else None,
+            "state": rng.randrange(0, n) if (kind == "inst" or rng.random() < .3) and size >= 3 and rng.random() < .5
+            else None,
             "listiter": [rng.randrange(0, n)] if size >= 4 and rng.random() < .4 else None,
+            "listfail": rng.random() < .2, "dictfail": rng.random() < .2,
             "dictiter": None, "setstate": rng.choice(["no", "no", "ok", "raise"]) if kind == "inst" else "no"}
+
+
+def operator_state(rng, cells, ok):
+    """A state for the default step of `_reconstruct` (no `__setstate__`), Lib/copy.py:258-266, built from new cells
+    after the graph: a mapping or a sequence of pairs for `__dict__.update`, good or bad elements, a `(state,
+    slotstate)` tuple whose slot keys are `str` or not, or something `update` cannot take. Returns its cell."""
+    def add(c):
+        cells.append(c)
+        return len(cells) - 1
+
+    def key():
+        return add({"k": "str", "s": rng.choice(["a", "b", "f0"])}) if rng.random() < .85 else rng.choice(ok)
+
+    def mapping(kind):
+        # distinct keys, as a real dict has: `str` names, and at most one atom
+        items = []
+        for name in rng.sample(["a", "b", "f0"], rng.randrange(0, 3)):
+            items += [add({"k": "str", "s": name}), rng.choice(ok)]
+        if rng.random() < .2:
+            items += [rng.choice(ok), rng.choice(ok)]
+        return add({"k": kind, "items": items})
+
+    def element():
+        r = rng.random()
+        if r < .55:
+            return add({"k": rng.choice(["tuple", "list"]), "items": [key(), rng.choice(ok)]})
+        if r < .7:
+            return add({"k": "tuple", "items": [rng.choice(ok) for _ in range(rng.choice([1, 3]))]})
+        if r < .8:
+            return add({"k": "str", "s": rng.choice(["xy", "z", ""])})
+        if r < .9:
+            return mapping("dict")
+        return rng.choice(ok)
+
+    nones = [j for j in ok if cells[j]["n"] == 0]
+    r = rng.random()
+    if r < .3:
+        return mapping(rng.choice(["dict", "dict", "fdict"]))
+    if r < .55:
+        return add({"k": rng.choice(["list", "tuple"]), "items": [element() for _ in range(rng.randrange(0, 3))]})
+    if r < .85:
+        first = mapping("dict") if rng.random() < .6 or not nones else rng.choice(nones)
+        if rng.random() < .8:
+            slot = mapping("dict")          # a frozendict is built after the tuples
+        else:
+            slot = rng.choice([mapping("dict"), add({"k": "list", "items": []}), rng.choice(nones or ok)])
+        return add({"k": "tuple", "items": [first, slot]})
+    if r < .95:
+        return add({"k": "str", "s": rng.choice(["", "ab"])})
+    return rng.choice(ok)
 
 
 def operator_merge_graph(rng):
@@ -3764,9 +3819,35 @@ def operator_merge_graph(rng):
             "memo": [[3, rng.randrange(0, 3)]] if rng.random() < .8 else []}
 
 
+def operator_state_graph(rng):
+    """`_reconstruct`'s state step, `__setstate__`, `listiter` and `dictiter` (Lib/copy.py:252-284), which the general
+    graphs reach rarely: one hooked object whose reduce value has the items, with a state that is `None`, an atom, or
+    one built by `operator_state`, and iterators that may raise after their items."""
+    cells = [{"k": "atom", "n": v} for v in (0, rng.randrange(1, 4), rng.randrange(0, 4))]     # cell 0 is `None`
+    ok = [0, 1, 2]
+    kind = rng.choice(["inst", "inst", "list", "dict"])
+    size = rng.choice([3, 4, 5, 5])
+    hooked = {"k": "hooked", "copier": "no", "tag": "3", "deepcopier": "no", "rv": "tuple", "size": size,
+              "ctorfail": False, "kind": kind,
+              "args": [rng.choice(ok) for _ in range(rng.randrange(0, 2))] if kind == "inst" else [],
+              "state": None, "listiter": None, "dictiter": None,
+              "setstate": rng.choice(["no", "no", "ok", "raise"]) if kind == "inst" else "no",
+              "listfail": rng.random() < .3, "dictfail": rng.random() < .3}
+    cells.append(hooked)                                                                       # cell 3
+    r = rng.random()
+    hooked["state"] = 0 if r < .2 else rng.choice(ok) if r < .3 else operator_state(rng, cells, ok)
+    if size >= 4 and rng.random() < .6:
+        hooked["listiter"] = [rng.choice(ok) for _ in range(rng.randrange(0, 3))]
+    if size >= 5 and rng.random() < .6:
+        hooked["dictiter"] = [[rng.choice(ok), rng.choice(ok)] for _ in range(rng.randrange(0, 3))]
+    return {"fn": "operator.deepcopy", "cells": cells, "root": 3, "shallow": rng.random() < .4, "memo": []}
+
+
 def operator_graph(rng):
     if rng.random() < .15:
         return operator_merge_graph(rng)
+    if rng.random() < .2:
+        return operator_state_graph(rng)
     n = rng.randrange(1, 7)
     cells = []
     for i in range(n):
@@ -3785,8 +3866,9 @@ def operator_graph(rng):
                 items += [key, rng.randrange(0, n)]
             cells.append({"k": k, "items": items})
         elif k == "inst":
+            # an attribute `f0` hides the class's method of that name from `getattr`, so from `copy` of a method
             cells.append({"k": k, "attrs": [[a, rng.randrange(0, n)]
-                                            for a in rng.sample(["a", "b"], rng.randrange(0, 3))]})
+                                            for a in rng.sample(["a", "b", "f0"], rng.randrange(0, 3))]})
         elif k == "method":
             cells.append({"k": k, "self": rng.randrange(0, n)})
         elif k in ("cls", "meta"):
@@ -3833,12 +3915,11 @@ def operator_graph(rng):
             if c["state"] is not None:
                 if c["setstate"] in ("ok", "raise"):
                     # `__setstate__` stores what it gets, so the state may lead back to the object itself
-                    # through a list, which is the reason `memo[id(x)] = y` comes first in `_reconstruct`
+                    # through a list, which is the reason `memo[id(x)] = y` comes first in `_reconstruct`; the
+                    # state may be `None` (the atom 0), and then `__setstate__` is not called, :252
                     c["state"] = rng.randrange(0, n)
                 else:
-                    c["state"] = rng.choice(ok)
-                    if cells[c["state"]]["n"] == 0:      # the model's `None`
-                        c["state"] = None
+                    c["state"] = operator_state(rng, cells, ok) if rng.random() < .8 else rng.choice(ok)
             if c["listiter"] is not None:
                 c["listiter"] = [rng.randrange(0, n) if c["kind"] == "list" else rng.choice(ok)]
             distinct = list({cells[j]["n"]: j for j in ok}.values())
@@ -3878,7 +3959,7 @@ class operator_Inst:
         for i, a in enumerate(args):
             setattr(self, f"k{i}", a)
 
-    def operator_fn(self):
+    def f0(self):
         return 0
 
 
@@ -3931,10 +4012,15 @@ def operator_hooked(spec, objs):
             return "name"
         if rv == "raise":
             raise ValueError("reduce")
+        def it(xs, which):
+            yield from xs
+            if spec.get(which + "fail"):
+                raise ValueError(which + "iter" + spec["tag"])
         t = [operator_ctor(spec), tuple(objs[j] for j in spec["args"]),
              objs[spec["state"]] if spec["state"] is not None else None,
-             iter([objs[j] for j in spec["listiter"]]) if spec["listiter"] is not None else None,
-             iter([(objs[a], objs[b]) for a, b in spec["dictiter"]]) if spec["dictiter"] is not None else None, None]
+             it([objs[j] for j in spec["listiter"]], "list") if spec["listiter"] is not None else None,
+             it([(objs[a], objs[b]) for a, b in spec["dictiter"]], "dict") if spec["dictiter"] is not None else None,
+             None]
         return tuple(t[:spec["size"]])
     body["__reduce_ex__"] = reduce_ex if rv != "absent" else None
     body["__reduce__"] = None
@@ -3946,7 +4032,9 @@ def operator_build_graph(cells):
     for i, c in enumerate(cells):
         k = c["k"]
         if k == "atom":
-            objs[i] = operator_Atom(c["n"])
+            objs[i] = None if c["n"] == 0 else operator_Atom(c["n"])      # the atom 0 is `None`
+        elif k == "str":
+            objs[i] = c["s"]
         elif k == "list":
             objs[i] = []
         elif k == "dict":
@@ -3968,7 +4056,7 @@ def operator_build_graph(cells):
             objs[i] = frozendict({objs[a]: objs[b] for a, b in zip(it[::2], it[1::2])})
     for i, c in enumerate(cells):
         if c["k"] == "method":
-            objs[i] = objs[c["self"]].operator_fn
+            objs[i] = objs[c["self"]].f0
     for i, c in enumerate(cells):
         k = c["k"]
         if k == "list":
@@ -3983,9 +4071,22 @@ def operator_build_graph(cells):
     return objs
 
 
+def operator_key(k):
+    """An instance `__dict__` key as the model writes it: a `str` itself, an `int` `#n`, `None` `#0`."""
+    if isinstance(k, str):
+        return k
+    if k is None:
+        return "#0"
+    return "#" + str(int(k))
+
+
 def operator_render(o, seen):
+    if o is None:
+        return ["atom", 0]
     if isinstance(o, operator_Atom):
         return ["atom", int(o)]
+    if isinstance(o, str):
+        return ["str", o]
     if o is operator_Empty:
         return ["cls"]
     if isinstance(o, operator_Meta):
@@ -4003,8 +4104,8 @@ def operator_render(o, seen):
     if isinstance(o, operator_types.MethodType):
         return ["method", [operator_render(o.__self__, seen)]]
     if isinstance(o, operator_Inst):
-        names = sorted(o.__dict__)
-        return ["inst", names, [operator_render(o.__dict__[n], seen) for n in names]]
+        names = sorted(o.__dict__, key=operator_key)
+        return ["inst", [operator_key(n) for n in names], [operator_render(o.__dict__[n], seen) for n in names]]
     out = []
     for k, v in o.items():
         out.append(operator_render(k, seen))
@@ -4187,9 +4288,12 @@ def operator_run(case):
         def rep(s, **k):
             if h == "raise":
                 raise ValueError("replace")
-            return 4
-        cls = type("X", (), {"__replace__": rep} if h != "none" else {})
-        return py_result(lambda: operator_copy.replace(cls()))
+            return s.v * 1000 + 10 * len(k) + sum(k.values())
+        body = {"ok": {"__replace__": rep}, "raise": {"__replace__": rep}, "null": {"__replace__": None}}.get(h, {})
+        cls = type("X", (), body)
+        obj = cls()
+        obj.v = case["obj"]
+        return py_result(lambda: operator_copy.replace(obj, **dict(case["changes"])))
     if fn == "abstract":
         return operator_abstract(case)
     if fn == "abc":
