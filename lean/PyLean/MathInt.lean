@@ -30,6 +30,9 @@ import PyLean.MathInt.FltRemainder
 import PyLean.MathInt.FltLogObj
 import PyLean.MathInt.FltGammaVal
 import PyLean.MathInt.FltHypotConv
+import PyLean.MathInt.FltSinpi
+import PyLean.MathInt.FltLgammaRefl
+import PyLean.MathInt.FltFsumPaths
 
 /-!
 Integer functions of `math.integer` (`Modules/mathintegermodule.c`, re-exported by
@@ -64,6 +67,12 @@ def entries : List Entry := [
     source := "Doc/library/math.rst: fsum (\"Return an accurate floating-point sum\"); the msum comment at mathmodule.c:1239-1267", status := .open
     prop := ``FsumCorrectlyRounded
     notes := "Open: needs the invariant that the partials stay non-overlapping and sum exactly (Shewchuk) and the half-even correction of :1371-1383. Smoke-tested on 100000 random lists against Fraction sums; the model agrees with CPython in the difftest." },
+  { id := "mathint-fsum-paths", pyFile := "Modules/mathmodule.c"
+    pyFns := ["math.fsum"]
+    statement := "For every list of floats xs: fsum over an iterator that raises e after yielding xs raises e unless processing xs already raised OverflowError('intermediate overflow in fsum') or MemoryError('math.fsum partials'), which is raised instead; an item whose conversion raises after xs is handled the same way; and when xs contains an infinity or a NaN, fsum(xs) either raises one of those two errors or returns: ValueError('-inf + inf in fsum') when both infinities occur, else a NaN when a NaN occurs, else the infinity that occurs."
+    source := "mathmodule.c:1296-1306 (iteration and ASSIGN_DOUBLE per item), :1323-1335 (special_sum, inf_sum, \"a nonfinite x could arise either as a result of intermediate overflow, or as a result of a nan or inf in the summands\"), :1347-1353 (\"-inf + inf in fsum\")", status := .proven
+    prop := ``FsumPaths, thm := some ``fsumPaths_proven
+    notes := "The proof tracks special_sum and inf_sum as a three-flag automaton and shows the running sum x stays non-finite through the partials loop once xsave is non-finite (no swap: fabs(inf) < fabs(y) is false). The OverflowError alternative is real: fsum([inf, 1e308, 1e308]) and fsum([nan, 1e308, 1e308]) raise OverflowError on python3 3.15.2 although the special value already decides the result. Smoke-tested on 100000 random lists (60926 with a special value)." },
   { id := "mathint-remainder-exact", pyFile := "Modules/mathmodule.c"
     pyFns := ["m_remainder"]
     statement := "For finite x and finite nonzero y, math.remainder(x, y) is exactly x - n*y with n the integer nearest x/y (ties to even), and a zero result has the sign of x."
@@ -129,6 +138,24 @@ def entries : List Entry := [
     source := "mathmodule.c:428-434 (\"tiny arguments: tgamma(x) ~ 1/x for x near 0\") and :508-510 (\"lgamma(x) ~ -log(fabs(x)) for small x\")", status := .proven
     prop := ``GammaTiny, thm := some ``gammaTiny_proven
     notes := "Smoke-tested on python3 3.15.2 for 100000 tiny x of both signs, including subnormals (gamma raises OverflowError below 2**-1024)." },
+  { id := "mathint-sinpi-sign", pyFile := "Modules/mathmodule.c"
+    pyFns := ["m_sinpi"]
+    statement := "For every C sin and cos with the sign of the mathematical functions on [-1, 1] (finite there, errno untouched) and every finite non-integer x, m_sinpi(x) is finite and nonzero, leaves errno as it was, and is negative exactly when sin(pi*x) is: when x < 0 and floor(abs(x)) is even, or x > 0 and floor(abs(x)) is odd."
+    source := "mathmodule.c:222-254 (m_sinpi: reduction modulo 2, the five argument ranges, the comment at :241-242 that sin(pi*(1.0-y)) keeps 0.0 at y == 1.0)", status := .proven
+    prop := ``SinpiSign, thm := some ``sinpiSign_proven
+    notes := "Proves that every reduced argument pi*(y), pi*(y-0.5), pi*(1-y), pi*(y-1.5), pi*(y-2) lies in [-1, 1] with the right sign after rounding (1.0 - y and y - 2.0 exact by Sterbenz), and that n = (int)round(2.0*y) is floor(2y + 1/2). Checked on python3 3.15.2 through a Python transcription of m_sinpi on 200000 negative non-integers." },
+  { id := "mathint-gamma-underflow-sign", pyFile := "Modules/mathmodule.c"
+    pyFns := ["m_tgamma", "m_sinpi"]
+    statement := "For every C sin and cos with the sign of the mathematical functions on [-1, 1], math.gamma(x) for every non-integer float x < -200 returns a zero with the sign of Gamma(x): -0.0 when floor(-x) is even and 0.0 when it is odd."
+    source := "mathmodule.c:436-449 (\"tgamma(x) ... underflows to +-0.0 for x < -200, not a negative integer\"; 0.0/m_sinpi(x))", status := .proven
+    prop := ``GammaUnderflowSign, thm := some ``gammaUnderflowSign_proven
+    notes := "Smoke-tested on python3 3.15.2 for 197086 non-integers below -200 up to -2**52." },
+  { id := "mathint-lgamma-reflection", pyFile := "Modules/mathmodule.c"
+    pyFns := ["m_lgamma", "m_sinpi"]
+    statement := "For every C library and every negative non-integer float x with abs(x) >= 1e-20: whenever math.lgamma(x) and math.lgamma(-x) both return, lgamma(x) == ((logpi - log(abs(m_sinpi(-x)))) - log(-x)) - lgamma(-x) in float arithmetic, with CPython's logpi and the C log (the reflection formula, computed from the very Lanczos value lgamma(-x) returns)."
+    source := "mathmodule.c:515-521 (\"Use reflection formula to get value for negative x\")", status := .proven
+    prop := ``LgammaReflection, thm := some ``lgammaReflection_proven
+    notes := "Conditional on both calls returning: when lgamma raises is stated by mathint-gamma-doc (ValueError exactly at the poles, for range-only errno). The positive Lanczos value itself (lanczos_sum, log, the g terms) depends on the C log and is checked by the difftest only. Smoke-tested on python3 3.15.2 for 199455 negative non-integers against a Python transcription of the formula." },
   { id := "mathint-nextafter-default-step", pyFile := "Modules/mathmodule.c"
     pyFns := ["math.nextafter"]
     statement := "For all floats x and y, math.nextafter(x, y) and math.nextafter(x, y, steps=1) return the same float (equal bit patterns, or both NaN)."
