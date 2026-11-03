@@ -2841,6 +2841,7 @@ corelibs-operator-methodcaller-exact	proven	Lib/operator.py	methodcaller.__init_
 corelibs-operator-mc-repr-exact	proven	Lib/operator.py	methodcaller.__repr__,methodcaller_repr
 corelibs-copy-list-exact	proven	Lib/copy.py	_deepcopy_list,deepcopy
 corelibs-copy-dict-exact	proven	Lib/copy.py	_deepcopy_dict,deepcopy
+corelibs-copy-dict-merge	proven	Lib/copy.py	_deepcopy_dict,deepcopy
 corelibs-copy-order	proven	Lib/copy.py	_deepcopy_dict,_deepcopy_list,_reconstruct
 corelibs-copy-aliasing	proven	Lib/copy.py	_deepcopy_list,deepcopy
 corelibs-copy-tuple-exact	proven	Lib/copy.py	_deepcopy_tuple
