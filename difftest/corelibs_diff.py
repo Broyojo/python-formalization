@@ -4917,6 +4917,70 @@ def enumdc_gdc(rng):
             "defined": defined, "has_slots": op[0] == "info" and rng.random() < .1, "post": rng.random() < .2, "op": op}
 
 
+def enumdc_gdcmro(rng):
+    # Bases that share the names c and d, often with init=False and no default, and an own c that may be a field(init=False)
+    # without a default: reading such a field on the instance falls through the MRO to the next class attribute, which a
+    # ClassVar, an InitVar or a field of a later base left (Lib/dataclasses.py:628-632, 1085-1102).
+    case = enumdc_gdc(rng)
+    fz = case["params"]["frozen"]
+    bases = []
+    for _ in range(rng.randrange(1, 4)):
+        fields = []
+        for name in ["c", "d"][:rng.randrange(1, 3)]:
+            kind = rng.choice(["plain", "plain", "classvar", "initvar"])
+            f = enumdc_gfield(rng, name, kind, kind == "plain" and rng.random() < .3)
+            f["unhash"] = False
+            f["kw"] = None if kind == "classvar" else bool(f["kw"])
+            f["init"] = True if kind == "classvar" else rng.random() < .4
+            if f["factory"] is None and rng.random() < .4:
+                f["default"] = None
+            fields.append(f)
+        if rng.random() < .4:
+            fields[0].update({"kind": "plain", "init": False, "default": None, "factory": None, "kw": False})
+        seen = False
+        for f in fields:
+            if f["kind"] == "classvar" or f["kw"] or not f["init"]:
+                continue
+            if f["default"] is not None or f["factory"] is not None:
+                seen = True
+            elif seen:
+                f["default"] = 1
+        bases.append({"fields": fields, "frozen": fz})
+    anns = [a for a in case["anns"] if a["name"] != "c"]
+    r = rng.random()
+    if r < .35:
+        own = enumdc_gfield(rng, "c", "plain", False)
+        own.update({"init": False, "default": None, "factory": None, "unhash": False})
+        anns.insert(rng.randrange(0, len(anns) + 1), {"name": "c", "kind": "plain", "attr": ["field", own]})
+    elif r < .5:
+        anns.insert(rng.randrange(0, len(anns) + 1), {"name": "c", "kind": "plain", "attr": ["missing"]})
+    elif r < .6:
+        anns.insert(rng.randrange(0, len(anns) + 1), {"name": "c", "kind": "plain", "attr": ["value", rng.randrange(0, 5), False]})
+    merged = {}
+    for b in bases:
+        for f in b["fields"]:
+            merged[f["name"]] = f["kind"] != "classvar" and f["init"]
+    for a in anns:
+        if a["kind"] != "kw":
+            merged[a["name"]] = a["kind"] != "classvar" and (a["attr"][0] != "field" or a["attr"][1]["init"])
+    names = list(merged)
+    p = case["params"]
+    defined = case["defined"]
+    if rng.random() < .2:
+        op = ["info"]
+    else:
+        p["init"] = True
+        defined = [n for n in defined if n not in ("__init__", "__setattr__")]
+        kw = [[n, rng.randrange(20, 30)] for n in names if (merged[n] and rng.random() < .85) or rng.random() < .05]
+        if rng.random() < .6:
+            op = ["init", [], kw]
+        else:
+            op = ["replace", [], kw, [[n, rng.randrange(30, 40)] for n in names if rng.random() < .2]]
+    case.update({"bases": bases, "anns": anns, "defined": defined, "op": op,
+                 "has_slots": op[0] == "info" and case["has_slots"]})
+    return case
+
+
 def enumdc_gdv(rng, depth):
     r = rng.randrange(0, 15 if depth > 0 else 4)
     if r == 0:
@@ -5006,6 +5070,8 @@ def enumdc_gen(rng):
     if r0 >= 33:
         return enumdc_gmisc(rng)
     if r0 >= 25:
+        if r0 <= 26 and rng.random() < .6:
+            return enumdc_gdcmro(rng)
         return enumdc_gdc(rng)
     if r0 <= 8:
         return enumdc_gclass(rng)

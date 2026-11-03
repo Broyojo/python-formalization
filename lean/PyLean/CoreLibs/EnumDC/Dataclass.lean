@@ -174,6 +174,51 @@ def addFns (cls : String) (defined : List String) : List (String × Option Strin
       | .error e => .error e
       | .ok l => .ok (n :: l)
 
+/-- The entries of one class's `__dict__` under names of fields, after `_process_class`: a value, or `none` for a
+`member_descriptor` of `__slots__`, which raises `AttributeError` on an instance that has not set it. -/
+abbrev ClsDict := List (String × Option Int)
+
+/-- The class's own `__dict__` after the loop at Lib/dataclasses.py:1085-1102. For each annotation that is a field,
+pseudo-fields included, a `Field` is replaced with its default, or deleted when it has none (:1092-1102); a value that is
+not a `Field` stays. `.value` is what `getattr(cls, name)` found, in the class or in a base: either way the lookup along
+the MRO finds that value first, so it stands here. An annotation `_: KW_ONLY` is not a field (:1073-1081), and keeps its
+attribute; a `Field` left under it is not a value of this model, and is not listed. -/
+def ownDict : List Ann → ClsDict
+  | [] => []
+  | a :: r =>
+    let rest := ownDict r
+    match a.kind, a.attr with
+    | .field _, .field f =>
+      match f.dflt with
+      | some d => (a.name, some d) :: rest
+      | none => rest
+    | _, .value v _ => (a.name, some v) :: rest
+    | _, .slot => (a.name, none) :: rest
+    | _, _ => rest
+
+/-- The `__dict__` of a dataclass base, under the names of its fields: when the base was processed, the same loop at
+Lib/dataclasses.py:1085-1102 left each field's default there, `ClassVar` and `InitVar` pseudo-fields included, and deleted
+the attribute of a field without one. Scope: a base has `object` as its only base, its defaults are its own, and it has
+no `__slots__`. -/
+def baseDict (fs : List DField) : ClsDict :=
+  fs.filterMap fun f => f.dflt.map fun d => (f.name, some d)
+
+/-- `_add_slots`, Lib/dataclasses.py:1355-1374: a new class whose `__dict__` drops the attributes named by `fields(cls)`
+(:1366-1369) and has a slot for each of them instead (:1362-1364). The bases have no `__slots__`, so `_get_slots` gives
+only `__dict__` and `__weakref__` for them (:1274-1280), and no field name is an inherited slot. -/
+def slotDict (real : List String) (d : ClsDict) : ClsDict :=
+  real.map (fun n => (n, none)) ++ d.filter (fun p => !real.contains p.1)
+
+/-- The class `__dict__`s along the MRO, the class first: the bases are held in reversed MRO order. -/
+def classMro (c : DClass) (fields : List DField) : List ClsDict :=
+  let own := ownDict c.anns
+  (if c.params.slots then slotDict ((fields.filter (fun f => f.kind == .plain)).map (·.name)) own else own) ::
+    c.bases.reverse.map (fun b => baseDict b.1)
+
+/-- The first class along the MRO whose `__dict__` holds `name`. -/
+def mroFind (mro : List ClsDict) (name : String) : Option (Option Int) :=
+  mro.findSome? (fun d => d.lookup name)
+
 /-- A class after `_process_class`. -/
 structure DInfo where
   params : DParams
@@ -183,6 +228,8 @@ structure DInfo where
   generated : List String
   hash : HashAction
   matchArgs : Option (List String)
+  /-- The class attributes along the MRO, by `classMro`. -/
+  mro : List ClsDict
   deriving Repr, DecidableEq
 
 /-- `field_list`: real fields only. -/
@@ -230,7 +277,8 @@ def processClass (c : DClass) : Py DInfo :=
             else if p.slots && c.hasSlots then .error (.typeError s!"{c.name} already specifies __slots__")
             else .ok { params := p, fields := fields, std := std, kw := kw, generated := gen, hash := action,
                        matchArgs := if p.matchArgs && !c.defined.contains "__match_args__"
-                         then some (std.map (·.name)) else none }
+                         then some (std.map (·.name)) else none,
+                       mro := classMro c fields }
 
 /-! ### The generated `__init__` -/
 
@@ -285,16 +333,18 @@ def callInit (i : DInfo) (hasPost : Bool) (args : List Int) (kwargs : List (Stri
     | some f => if hasPost then .error (.named "NameError" s!"name '{f.name}' is not defined") else .ok (initBody i hasPost bound)
     | none => .ok (initBody i hasPost bound)
 
-/-- `getattr(obj, name)`: the instance, then the default in the class. -/
+/-- `getattr(obj, name)`: what the instance holds, in its `__dict__` or its slots; then the class attribute along the MRO,
+which is where `_field_init` leaves a field it does not assign (Lib/dataclasses.py:628-632). That attribute need not be the
+field's own default: a field without one had its attribute deleted (:1092-1100), and the lookup goes on to the next class,
+where a `ClassVar`, an `InitVar` or a field of the same name may have left a default. An unset slot is an
+`AttributeError`, and so is a name that no class holds. -/
 def getAttrD (i : DInfo) (o : DObj) (name : String) : Py Int :=
   match o.attrs.lookup name with
   | some v => .ok v
   | none =>
-    if i.params.slots && i.real.any (fun f => f.name == name) then .error (.named "AttributeError" ("~" ++ name))
-    else
-      match (i.fields.find? (fun f => f.name == name)).bind DField.dflt with
-      | some v => .ok v
-      | none => .error (.named "AttributeError" ("~" ++ name))
+    match mroFind i.mro name with
+    | some (some v) => .ok v
+    | _ => .error (.named "AttributeError" ("~" ++ name))
 
 /-- The loop of `_replace`, Lib/dataclasses.py:1802-1819. -/
 def replaceLoop (i : DInfo) (o : DObj) : List DField → List (String × Int) → Py (List (String × Int))

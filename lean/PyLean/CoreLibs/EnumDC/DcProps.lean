@@ -870,7 +870,7 @@ theorem initBindsAlways_refuted : ¬InitBindsAlways := by
   let c : DClass := { anns := [{ name := "x", kind := .field .initVar, attr := .field { init := false } }] }
   let f : DField := { name := "x", kind := .initVar, init := false, kwOnly := some false }
   let i : DInfo := { params := {}, fields := [f], std := [], kw := [], generated := ["__init__", "__repr__", "__eq__"],
-                     hash := .setNone, matchArgs := some [] }
+                     hash := .setNone, matchArgs := some [], mro := [[]] }
   have h1 : processClass c = .ok i := by decide +kernel
   have h2 : bindArgs i.std i.kw [] [] = .ok [] := by decide +kernel
   obtain ⟨o, ho⟩ := h c i [] [] [] h1 h2
