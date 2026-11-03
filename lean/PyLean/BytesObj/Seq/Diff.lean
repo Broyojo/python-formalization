@@ -374,8 +374,8 @@ def stepIter (forward : Bool) (it : ListIter) (l : List DEl) (op : Array Json) :
     let (a, st) := listIterReduce it l
     return (okJ (Json.arr #[enEls a, match st with | some i => toJson i | none => Json.null]), it, l)
   | "setstate" =>
-    let s ← (← argAt op 1).getInt?
-    let r := if forward then listIterSetstate it l s else listRevIterSetstate it l s
+    let s : Option Int := ((← argAt op 1).getInt?).toOption
+    let r := if forward then listIterSetstateObj it l s else listRevIterSetstateObj it l s
     match r with
     | .ok it' => return (okJ unitJ, it', l)
     | .error e => return (errJ e, it, l)
@@ -618,6 +618,12 @@ def runList (fn : String) (j : Json) : Except String Json := do
     let o := listFromStack (List.range n)
     return okJ (Json.arr ((listClearOrder o).map enOptNat).toArray)
   | "list.sort_sizeof" => return okJ (toJson (listSizeof (listDuringSort : St)))
+  | "list.sizeof_sub" =>
+    -- `type_new` lays out `k` `__slots__` after the `PyListObject` (40 bytes): `40 + 8 * k`.
+    let k ← getNat j "k"
+    let items ← jEls (← field j "items")
+    let o := (listInit (LObj.empty : St) (some (.fast items))).1
+    return okJ (toJson (listSizeof o (40 + 8 * (k : Int))))
   | "list.latin_lt" =>
     let v ← elIntPair (← field j "v")
     let w ← elIntPair (← field j "w")

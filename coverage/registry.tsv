@@ -674,6 +674,11 @@ listsort-reverse-stable	proven	Objects/listobject.c	list.sort
 listsort-key	proven	Objects/listobject.c	list.sort
 listsort-long-compare	proven	Objects/listobject.c	unsafe_long_compare,unsafe_object_compare,long_compare,long_richcompare
 listsort-object-compare	proven	Objects/listobject.c	unsafe_object_compare
+listsort-fallible-agree	proven	Objects/listobject.c	binarysort,count_run,gallop_left,gallop_right,merge_lo,merge_hi,merge_at,list_sort_impl
+listsort-perm-on-error	proven	Objects/listobject.c	binarysort,count_run,gallop_left,gallop_right,merge_lo,merge_hi,merge_at,list_sort_impl
+listsort-fail-exits	proven	Objects/listobject.c	gallop_left,gallop_right,merge_at,merge_lo,merge_hi,binarysort,count_run
+listsort-fails	proven	Objects/listobject.c	list_sort_impl,PyList_Sort,count_run
+listsort-count-run-maximal	proven	Objects/listobject.c	count_run
 binary64-round-nearest-even	proven	Objects/floatobject.c	
 binary64-bits-value-roundtrip	proven	Objects/floatobject.c	
 binary64-fma-correct	proven	Objects/floatobject.c	
@@ -1062,6 +1067,10 @@ bytesobj-list-extend-iter-reentrant	proven	Objects/listobject.c	list_extend_iter
 bytesobj-sortslice-moves	proven	Objects/listobject.c	sortslice_copy,sortslice_copy_incr,sortslice_copy_decr,sortslice_memcpy,sortslice_memmove,sortslice_advance
 bytesobj-repr-step	proven	Objects/listobject.c	list_repr_impl
 bytesobj-list-extend-iter-wf	proven	Objects/listobject.c	list_extend_iter_lock_held
+bytesobj-sort-compare-tied	proven	Objects/listobject.c	safe_object_compare,unsafe_tuple_compare
+bytesobj-sortslice-reverse	proven	Objects/listobject.c	sortslice_reverse,PyList_Reverse
+bytesobj-list-iter-states	proven	Objects/listobject.c	listiter_len,listreviter_len,listiter_setstate,listreviter_setstate
+bytesobj-list-init-iterable	proven	Objects/listobject.c	list___init___impl,list_vectorcall,list_richcompare_impl,list_richcompare
 bytesobj-bytes-class-shortcut	proven	Objects/bytes_methods.c	_Py_bytes_isspace,_Py_bytes_isalpha,_Py_bytes_isalnum,_Py_bytes_isdigit,bytearray_isspace,bytearray_isalpha,bytearray_isalnum,bytearray_isdigit
 bytesobj-bytes-cased	proven	Objects/bytes_methods.c	_Py_bytes_islower,_Py_bytes_isupper,bytearray_islower,bytearray_isupper
 bytesobj-bytes-title	proven	Objects/bytes_methods.c	_Py_bytes_istitle,_Py_bytes_title,bytearray_istitle,bytearray_title
@@ -2143,7 +2152,8 @@ textlibs-struct-float-unpack	proven	Modules/_struct.c	unpack_float,bu_float,lu_f
 textlibs-struct-double-bytes	proven	Modules/_struct.c	unpack_double,nu_double,np_double,bu_double,bp_double
 textlibs-struct-prepare-two-passes	proven	Modules/_struct.c	prepare_s,whichtable,getentry
 textlibs-struct-prepare-refusals	proven	Modules/_struct.c	prepare_s,getentry
-textlibs-struct-one-item-size	proven	Modules/_struct.c	prepare_s,whichtable,getentry,format_equal,align
+textlibs-struct-one-item-size	proven	Modules/_struct.c	prepare_s,whichtable,getentry,format_equal,align,set_format,calcsize_impl
+textlibs-struct-pair-offsets	proven	Modules/_struct.c	prepare_s,align,getentry,whichtable
 textlibs-struct-prefix-tables	proven	Modules/_struct.c	whichtable,prepare_s
 textlibs-struct-set-format	proven	Modules/_struct.c	set_format
 textlibs-struct-char-code	proven	Modules/_struct.c	nu_char,np_char
@@ -2156,6 +2166,9 @@ textlibs-struct-little-is-native	proven	Modules/_struct.c	init_endian_tables
 textlibs-struct-z-codes	proven	Modules/_struct.c	format_equal,getentry,align
 textlibs-struct-life	proven	Modules/_struct.c	s_new,s_init,Struct_impl,set_format,same_format,Struct___init___impl
 textlibs-struct-life-branches	proven	Modules/_struct.c	s_new,Struct_impl,same_format,Struct___init___impl,s_init
+textlibs-struct-life-branches2	proven	Modules/_struct.c	same_format,Struct___init___impl,s_init
+textlibs-struct-unpack-values	proven	Modules/_struct.c	Struct_unpack_impl
+textlibs-struct-cache-edges	proven	Modules/_struct.c	cache_struct_converter
 textlibs-struct-native-complex-snan	refuted	Modules/_struct.c	nu_float_complex
 textlibs-struct-unpack-from-offsets	proven	Modules/_struct.c	Struct_unpack_from_impl,unpack_from_impl
 textlibs-struct-iter-length	proven	Modules/_struct.c	unpackiter_len,unpackiter_iternext
@@ -2825,7 +2838,12 @@ corelibs-copy-tuple-identity	proven	Lib/copy.py	_deepcopy_tuple
 corelibs-copy-shallow	proven	Lib/copy.py	copy
 corelibs-copy-pickle-reduce	refuted	Lib/copy.py	copy,_reconstruct
 corelibs-copy-reconstruct	proven	Lib/copy.py	_reconstruct
-corelibs-copy-method-replace	proven	Lib/copy.py	_deepcopy_method,replace,deepcopy
+corelibs-copy-method-replace	proven	Lib/copy.py	_deepcopy_method,deepcopy
+corelibs-copy-method-aliasing	refuted	Lib/copy.py	_deepcopy_method,deepcopy
+corelibs-copy-replace	proven	Lib/copy.py	replace
+corelibs-copy-state-none	proven	Lib/copy.py	_reconstruct,deepcopy
+corelibs-copy-deepcopy-paths	proven	Lib/copy.py	deepcopy
+corelibs-copy-iter-fails	proven	Lib/copy.py	_reconstruct,deepcopy
 corelibs-abc-check-order	proven	Lib/abc.py	ABCMeta.__subclasscheck__
 corelibs-abc-register-invalidates	proven	Lib/abc.py	ABCMeta.register
 corelibs-abc-second-check	proven	Lib/abc.py	ABCMeta.__subclasscheck__

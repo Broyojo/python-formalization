@@ -823,8 +823,8 @@ def structUnpackFrom (s : SObj) (buf : List Nat) (offset0 : Int) : Py (List SV) 
       unpacking {size} bytes at offset {offset} (actual buffer size is {len})")
   sUnpackInternal s (buf.drop offset.toNat)
 
-/-- `Struct_iter_unpack_impl` and `unpackiter_iternext`, `Modules/_struct.c:2231-2251,
-2122-2154`: the tuples the iterator yields. `fuel` bounds the loop. -/
+/-- `Struct_iter_unpack_impl` and `unpackiter_iternext`, `Modules/_struct.c:2286-2318,
+2231-2251`: the tuples the iterator yields. `fuel` bounds the loop. -/
 def iterLoop (s : SObj) (buf : List Nat) : (fuel : Nat) → (index : Nat) → Py (List (List SV))
   | 0, _ => .error .modelFuel
   | fuel + 1, index =>
