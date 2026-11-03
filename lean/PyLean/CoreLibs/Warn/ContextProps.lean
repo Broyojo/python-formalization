@@ -653,4 +653,54 @@ theorem filterListTwinsTuple_refuted : ¬ FilterListTwinsTuple := fun h => by
   have e := h false { st0 with tuples := fun _ => true } 0 (Or.inr rfl) (by simp [st0])
   simp [cFilterList, st0, Except.map] at e
 
+/-- The same with the context variable set (`get_warnings_context_filters`, :332-337): with
+`_global_context` current and `warnings.filters` a tuple, C refuses it, Python iterates it. -/
+theorem filterListTwinsTuple_refuted_ctx : ¬ FilterListTwinsTuple := fun h => by
+  have e := h true { st0 with ctxv := .global, tuples := fun _ => true } 0 (Or.inl rfl) (by simp [st0])
+  simp [cFilterList, ctxRead, ctxFilters, st0, Except.map] at e
+
+/-! ## The set context variable: no cache, its own list check -/
+
+/-- `get_warnings_context_filters` (:318-339) with the context variable set, against the unset
+path (`get_warnings_filters`, :343-362), as `cFilterList` follows them, in every state: with
+`_global_context` current and a deleted `warnings.filters` whose lookup error is caught
+(`_GlobalContext._filters` gives `[]`), C searches `[]`, as Python's `_get_filters()` does, and
+never the object `get_warnings_filters` cached; the list check is the set branch's own, so a tuple
+as `warnings.filters` under `_global_context`, or as a current `_Context`'s `_filters`, raises
+`ValueError("_filters of warnings._warnings_context must be a list")` (where the unset path says
+"_warnings.filters must be a list"). Measured on 3.15.2 under `-X context_aware_warnings=1`. -/
+def CtxFilterListSet : Prop :=
+  ∀ (st : MState) (cached : Ref),
+    (st.ctxv = .global → st.filters = none →
+      isA st.hier (modAttrErr st "filters") "AttributeError" = true →
+      cFilterList st cached = .ok ([], "_warnings_context _filters") ∧ pyGetFilters true st = .ok []) ∧
+    (∀ r, st.ctxv = .global → st.filters = some r → st.tuples r = true →
+      cFilterList st cached = .error (.valueError "_filters of warnings._warnings_context must be a list")) ∧
+    (∀ c, st.ctxv = .ctx c → st.tuples (st.ctxs c).filters = true →
+      cFilterList st cached = .error (.valueError "_filters of warnings._warnings_context must be a list")) ∧
+    (st.ctxv = .unset → ∀ r, st.filters = some r → st.tuples r = true →
+      cFilterList st cached = .error (.valueError "_warnings.filters must be a list"))
+
+theorem ctxFilterListSet_proven : CtxFilterListSet := by
+  intro st cached
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro hv hf he
+    exact ⟨by simp [cFilterList, hv, ctxRead, hf, deletedOk, he, ctxFilters],
+      by simp [pyGetFilters, getContext, hv, ctxRead, hf, deletedOk, he, ctxFilters, Except.map]⟩
+  · intro r hv hf ht; simp [cFilterList, hv, ctxRead, hf, ctxFilters, ht]
+  · intro c hv ht; simp [cFilterList, hv, ctxRead, ctxFilters, ht]
+  · intro hv r hf ht; simp [cFilterList, hv, hf, ht]
+
+/-- With the variable unset the same deleted `warnings.filters` makes C search the object it
+cached (`CFilterListCached`), so the set and unset paths differ on one state: a cached list holding
+an item, `del warnings.filters`, and no `__getattr__`. -/
+theorem ctxFilterList_set_vs_unset :
+    cFilterList { st0 with filters := none, lists := fun _ => [.other 0 (.ok false)] } 0 =
+      .ok ([.other 0 (.ok false)], "filters") ∧
+    cFilterList { st0 with filters := none, lists := fun _ => [.other 0 (.ok false)], ctxv := .global } 0 =
+      .ok ([], "_warnings_context _filters") := by
+  constructor
+  · simp [cFilterList, st0, MState.modGetattr]
+  · rfl
+
 end PyLean.CoreLibs.Warn
