@@ -118,19 +118,19 @@ Objects/dictobject.c	3127	3129	_PyDict_Clear_LockHeld	_PyDict_Clear_LockHeld(PyO
 Objects/dictobject.c	3132	3137	PyDict_Clear	PyDict_Clear(PyObject *op)	todo		withdrawn: theorem covers combined tables only; the split branch of this body is unproved
 Objects/dictobject.c	3145	3205	_PyDict_Next	_PyDict_Next(PyObject *op, Py_ssize_t *ppos, PyObject **pkey, PyObject **pvalue, Py_hash_t *phash)	todo		changed-in-3.15: withdrawn: both table shapes are proved, but its PyDict_Check return is not mirrored
 Objects/dictobject.c	3226	3229	PyDict_Next	PyDict_Next(PyObject *op, Py_ssize_t *ppos, PyObject **pkey, PyObject **pvalue)	todo		one-line call of _PyDict_Next
-Objects/dictobject.c	3234	3275	_PyDict_Pop_KnownHash	_PyDict_Pop_KnownHash(PyDictObject *mp, PyObject *key, Py_hash_t hash, PyObject **result)	todo		
+Objects/dictobject.c	3234	3275	_PyDict_Pop_KnownHash	_PyDict_Pop_KnownHash(PyDictObject *mp, PyObject *key, Py_hash_t hash, PyObject **result)	modelled	dict-pop-body	
 Objects/dictobject.c	3278	3311	pop_lock_held	pop_lock_held(PyObject *op, PyObject *key, PyObject **result)	modelled	dict-checks	
-Objects/dictobject.c	3314	3322	PyDict_Pop	PyDict_Pop(PyObject *op, PyObject *key, PyObject **result)	todo		withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
-Objects/dictobject.c	3326	3339	PyDict_PopString	PyDict_PopString(PyObject *op, const char *key, PyObject **result)	todo		
-Objects/dictobject.c	3343	3354	dict_pop_default	dict_pop_default(PyObject *dict, PyObject *key, PyObject *default_value)	todo		withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
-Objects/dictobject.c	3357	3360	_PyDict_Pop	_PyDict_Pop(PyObject *dict, PyObject *key, PyObject *default_value)	todo		withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
-Objects/dictobject.c	3363	3387	dict_dict_fromkeys	dict_dict_fromkeys(PyDictObject *mp, PyObject *iterable, PyObject *value)	todo		
+Objects/dictobject.c	3314	3322	PyDict_Pop	PyDict_Pop(PyObject *op, PyObject *key, PyObject **result)	modelled	dict-pop-body	withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
+Objects/dictobject.c	3326	3339	PyDict_PopString	PyDict_PopString(PyObject *op, const char *key, PyObject **result)	modelled	dict-pop-body	
+Objects/dictobject.c	3343	3354	dict_pop_default	dict_pop_default(PyObject *dict, PyObject *key, PyObject *default_value)	modelled	dict-pop-body	withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
+Objects/dictobject.c	3357	3360	_PyDict_Pop	_PyDict_Pop(PyObject *dict, PyObject *key, PyObject *default_value)	modelled	dict-pop-body	withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
+Objects/dictobject.c	3363	3387	dict_dict_fromkeys	dict_dict_fromkeys(PyDictObject *mp, PyObject *iterable, PyObject *value)	modelled	dict-dict-fromkeys-body	
 Objects/dictobject.c	3390	3413	dict_set_fromkeys	dict_set_fromkeys(PyDictObject *mp, PyObject *iterable, PyObject *value)	todo		changed-in-3.15:
-Objects/dictobject.c	3417	3600	_PyDict_FromKeys	_PyDict_FromKeys(PyObject *cls, PyObject *iterable, PyObject *value)	todo		
+Objects/dictobject.c	3417	3600	_PyDict_FromKeys	_PyDict_FromKeys(PyObject *cls, PyObject *iterable, PyObject *value)	modelled	dict-fromkeys-frozen-stable	
 Objects/dictobject.c	3605	3638	dict_dealloc	dict_dealloc(PyObject *self)	modelled	dict-dealloc	
-Objects/dictobject.c	3642	3724	anydict_repr_impl	anydict_repr_impl(PyObject *self)	todo		
-Objects/dictobject.c	3727	3731	dict_repr_lock_held	dict_repr_lock_held(PyObject *self)	todo		
-Objects/dictobject.c	3734	3741	dict_repr	dict_repr(PyObject *self)	todo		
+Objects/dictobject.c	3642	3724	anydict_repr_impl	anydict_repr_impl(PyObject *self)	modelled	dict-repr-body,dict-repr-quiet	
+Objects/dictobject.c	3727	3731	dict_repr_lock_held	dict_repr_lock_held(PyObject *self)	modelled	dict-repr-body	
+Objects/dictobject.c	3734	3741	dict_repr	dict_repr(PyObject *self)	modelled	dict-repr-body,dict-repr-quiet	
 Objects/dictobject.c	3744	3747	dict_length	dict_length(PyObject *self)	excluded		trivial: returns GET_USED(mp), which is mp->ma_used in the GIL build, one field, no branch
 Objects/dictobject.c	3750	3753	frozendict_length	frozendict_length(PyObject *self)	excluded		trivial: returns mp->ma_used, one field, no branch
 Objects/dictobject.c	3756	3783	_PyDict_SubscriptKnownHash	_PyDict_SubscriptKnownHash(PyObject *self, PyObject *key, Py_hash_t hash)	modelled	dict-readers-faithful,dict-subscript-body	
@@ -142,37 +142,37 @@ Objects/dictobject.c	3861	3896	values_lock_held	values_lock_held(PyObject *dict)
 Objects/dictobject.c	3899	3906	PyDict_Values	PyDict_Values(PyObject *dict)	todo		withdrawn: theorem covers combined tables only; the split branch of this body is unproved
 Objects/dictobject.c	3909	3959	items_lock_held	items_lock_held(PyObject *dict)	todo		changed-in-3.15: the allocation retry at the head of the body is not mirrored
 Objects/dictobject.c	3962	3970	PyDict_Items	PyDict_Items(PyObject *dict)	todo		withdrawn: theorem covers combined tables only; the split branch of this body is unproved
-Objects/dictobject.c	3984	3988	dict_fromkeys_impl	dict_fromkeys_impl(PyTypeObject *type, PyObject *iterable, PyObject *value) /*[clinic end generated code: output=8fb98e4b10384999 input=3903715eb48b287e]*/	todo		
+Objects/dictobject.c	3984	3988	dict_fromkeys_impl	dict_fromkeys_impl(PyTypeObject *type, PyObject *iterable, PyObject *value) /*[clinic end generated code: output=8fb98e4b10384999 input=3903715eb48b287e]*/	modelled	dict-fromkeys-frozen-stable	
 Objects/dictobject.c	3992	4005	dict_update_arg	dict_update_arg(PyObject *self, PyObject *arg)	modelled	dict-update-arg-routes	
-Objects/dictobject.c	4008	4028	dict_update_common	dict_update_common(PyObject *self, PyObject *args, PyObject *kwds, const char *methname)	todo		
-Objects/dictobject.c	4034	4039	dict_update	dict_update(PyObject *self, PyObject *args, PyObject *kwds)	todo		
+Objects/dictobject.c	4008	4028	dict_update_common	dict_update_common(PyObject *self, PyObject *args, PyObject *kwds, const char *methname)	modelled	dict-update-body	
+Objects/dictobject.c	4034	4039	dict_update	dict_update(PyObject *self, PyObject *args, PyObject *kwds)	modelled	dict-update-body	
 Objects/dictobject.c	4052	4138	merge_from_seq2_lock_held	merge_from_seq2_lock_held(PyObject *d, PyObject *seq2, int override)	modelled	dict-merge-seq2-order	
-Objects/dictobject.c	4141	4149	dict_merge_from_seq2	dict_merge_from_seq2(PyObject *d, PyObject *seq2, int override)	todo		
-Objects/dictobject.c	4152	4167	PyDict_MergeFromSeq2	PyDict_MergeFromSeq2(PyObject *d, PyObject *seq2, int override)	todo		
+Objects/dictobject.c	4141	4149	dict_merge_from_seq2	dict_merge_from_seq2(PyObject *d, PyObject *seq2, int override)	modelled	dict-merge-api-body,dict-mergefromseq2-keeps-absent	
+Objects/dictobject.c	4152	4167	PyDict_MergeFromSeq2	PyDict_MergeFromSeq2(PyObject *d, PyObject *seq2, int override)	modelled	dict-merge-api-body,dict-mergefromseq2-keeps-absent	
 Objects/dictobject.c	4170	4256	dict_dict_merge	dict_dict_merge(PyDictObject *mp, PyDictObject *other, int override, PyObject **dupkey)	modelled	dict-dict-merge-body,dict-merge-guard,dict-merge-quiet,dict-merge-rest-body,dict-merge-step-body	
 Objects/dictobject.c	4259	4354	dict_merge	dict_merge(PyObject *a, PyObject *b, int override, PyObject **dupkey)	modelled	dict-merge-generic	
 Objects/dictobject.c	4357	4377	dict_merge_api	dict_merge_api(PyObject *a, PyObject *b, int override, PyObject **dupkey)	modelled	dict-merge-generic	
-Objects/dictobject.c	4380	4383	PyDict_Update	PyDict_Update(PyObject *a, PyObject *b)	todo		
-Objects/dictobject.c	4386	4390	PyDict_Merge	PyDict_Merge(PyObject *a, PyObject *b, int override)	todo		
-Objects/dictobject.c	4393	4396	_PyDict_MergeUniq	_PyDict_MergeUniq(PyObject *a, PyObject *b, PyObject **dupkey)	todo		
-Objects/dictobject.c	4405	4409	dict_copy_impl	dict_copy_impl(PyDictObject *self) /*[clinic end generated code: output=ffb782cf970a5c39 input=73935f042b639de4]*/	todo		
-Objects/dictobject.c	4415	4430	copy_values	copy_values(PyDictValues *values)	todo		
-Objects/dictobject.c	4433	4546	copy_lock_held_untracked	copy_lock_held_untracked(PyObject *o, int as_frozendict)	todo		
-Objects/dictobject.c	4549	4564	PyDict_Copy	PyDict_Copy(PyObject *o)	todo		
-Objects/dictobject.c	4569	4583	anydict_copy_untracked	anydict_copy_untracked(PyObject *o)	todo		
-Objects/dictobject.c	4588	4605	_PyDict_CopyAsDict	_PyDict_CopyAsDict(PyObject *o)	todo		
+Objects/dictobject.c	4380	4383	PyDict_Update	PyDict_Update(PyObject *a, PyObject *b)	modelled	dict-merge-api-body	
+Objects/dictobject.c	4386	4390	PyDict_Merge	PyDict_Merge(PyObject *a, PyObject *b, int override)	modelled	dict-merge-api-body	
+Objects/dictobject.c	4393	4396	_PyDict_MergeUniq	_PyDict_MergeUniq(PyObject *a, PyObject *b, PyObject **dupkey)	modelled	dict-merge-api-body	
+Objects/dictobject.c	4405	4409	dict_copy_impl	dict_copy_impl(PyDictObject *self) /*[clinic end generated code: output=ffb782cf970a5c39 input=73935f042b639de4]*/	modelled	dict-copy-body	
+Objects/dictobject.c	4415	4430	copy_values	copy_values(PyDictValues *values)	modelled	dict-copy-body	
+Objects/dictobject.c	4433	4546	copy_lock_held_untracked	copy_lock_held_untracked(PyObject *o, int as_frozendict)	modelled	dict-copy-body,dict-copy-refines	
+Objects/dictobject.c	4549	4564	PyDict_Copy	PyDict_Copy(PyObject *o)	modelled	dict-copy-body	
+Objects/dictobject.c	4569	4583	anydict_copy_untracked	anydict_copy_untracked(PyObject *o)	modelled	dict-copy-body,dict-or-refines	
+Objects/dictobject.c	4588	4605	_PyDict_CopyAsDict	_PyDict_CopyAsDict(PyObject *o)	modelled	dict-copy-body	
 Objects/dictobject.c	4608	4615	PyDict_Size	PyDict_Size(PyObject *mp)	todo		changed-in-3.15: withdrawn: theorem is rfl on a thin definition
-Objects/dictobject.c	4622	4681	dict_equal_lock_held	dict_equal_lock_held(PyDictObject *a, PyDictObject *b)	todo		
-Objects/dictobject.c	4684	4692	dict_equal	dict_equal(PyDictObject *a, PyDictObject *b)	todo		
-Objects/dictobject.c	4695	4712	dict_richcompare	dict_richcompare(PyObject *v, PyObject *w, int op)	todo		
+Objects/dictobject.c	4622	4681	dict_equal_lock_held	dict_equal_lock_held(PyDictObject *a, PyDictObject *b)	modelled	dict-equal-body	
+Objects/dictobject.c	4684	4692	dict_equal	dict_equal(PyDictObject *a, PyDictObject *b)	modelled	dict-equal-body	
+Objects/dictobject.c	4695	4712	dict_richcompare	dict_richcompare(PyObject *v, PyObject *w, int op)	modelled	dict-richcompare-body	
 Objects/dictobject.c	4726	4737	dict___contains___impl	dict___contains___impl(PyDictObject *self, PyObject *key) /*[clinic end generated code: output=1b314e6da7687dae input=fe1cb42ad831e820]*/	todo		changed-in-3.15: withdrawn: converts PyDict_Contains to a bool object, no definition or theorem of its own
 Objects/dictobject.c	4750	4769	dict_get_impl	dict_get_impl(PyDictObject *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=bba707729dee05bf input=279ddb5790b6b107]*/	modelled	dict-readers-faithful	
 Objects/dictobject.c	4772	4871	dict_setdefault_ref_lock_held	dict_setdefault_ref_lock_held(PyObject *d, PyObject *key, PyObject *default_value, PyObject **result, int incref_result)	modelled	dict-checks,dict-setdefault-no-crash	
-Objects/dictobject.c	4874	4882	PyDict_SetDefaultRef	PyDict_SetDefaultRef(PyObject *d, PyObject *key, PyObject *default_value, PyObject **result)	todo		withdrawn: the counterexample does not run this function
-Objects/dictobject.c	4885	4892	PyDict_SetDefault	PyDict_SetDefault(PyObject *d, PyObject *key, PyObject *defaultobj)	todo		
+Objects/dictobject.c	4874	4882	PyDict_SetDefaultRef	PyDict_SetDefaultRef(PyObject *d, PyObject *key, PyObject *default_value, PyObject **result)	modelled	dict-setdefaultref-no-crash	withdrawn: the counterexample does not run this function
+Objects/dictobject.c	4885	4892	PyDict_SetDefault	PyDict_SetDefault(PyObject *d, PyObject *key, PyObject *defaultobj)	modelled	dict-setdefault-c-contract	
 Objects/dictobject.c	4908	4915	dict_setdefault_impl	dict_setdefault_impl(PyDictObject *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=f8c1101ebf69e220 input=9237af9a0a224302]*/	modelled	dict-setdefault-no-crash	
 Objects/dictobject.c	4925	4930	dict_clear_impl	dict_clear_impl(PyDictObject *self) /*[clinic end generated code: output=5139a830df00830a input=0bf729baba97a4c2]*/	todo		withdrawn: theorem covers combined tables only; the split branch of this body is unproved
-Objects/dictobject.c	4947	4951	dict_pop_impl	dict_pop_impl(PyDictObject *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=3abb47b89f24c21c input=d409c7eb2de67e38]*/	todo		withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
+Objects/dictobject.c	4947	4951	dict_pop_impl	dict_pop_impl(PyDictObject *self, PyObject *key, PyObject *default_value) /*[clinic end generated code: output=3abb47b89f24c21c input=d409c7eb2de67e38]*/	modelled	dict-pop-body	withdrawn: Honest makes hashing total, so the failure path of this body is assumed away
 Objects/dictobject.c	4964	5045	dict_popitem_impl	dict_popitem_impl(PyDictObject *self) /*[clinic end generated code: output=e65fcb04420d230d input=ef28b4da5f0f762e]*/	modelled	dict-popitem-lifo,dict-split-refines	
 Objects/dictobject.c	5048	5077	dict_traverse	dict_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal or GC clear hook, no effect on the object's Python-level behaviour
 Objects/dictobject.c	5080	5084	dict_tp_clear	dict_tp_clear(PyObject *op)	excluded		no-behaviour: GC traversal or GC clear hook, no effect on the object's Python-level behaviour
@@ -181,9 +181,9 @@ Objects/dictobject.c	5107	5113	_PyDict_ClearKeysVersionLockHeld	_PyDict_ClearKey
 Objects/dictobject.c	5116	5124	_PyDict_SizeOf	_PyDict_SizeOf(PyDictObject *mp)	todo		
 Objects/dictobject.c	5127	5135	_PyDict_KeysSize	_PyDict_KeysSize(PyDictKeysObject *keys)	todo		
 Objects/dictobject.c	5144	5148	dict___sizeof___impl	dict___sizeof___impl(PyDictObject *self) /*[clinic end generated code: output=44279379b3824bda input=4fec4ddfc44a4d1a]*/	todo		
-Objects/dictobject.c	5151	5166	_PyDict_Or	_PyDict_Or(PyObject *self, PyObject *other)	todo		
-Objects/dictobject.c	5169	5188	frozendict_or	frozendict_or(PyObject *self, PyObject *other)	todo		
-Objects/dictobject.c	5192	5198	_PyDict_IOr	_PyDict_IOr(PyObject *self, PyObject *other)	todo		
+Objects/dictobject.c	5151	5166	_PyDict_Or	_PyDict_Or(PyObject *self, PyObject *other)	modelled	dict-or-body,dict-or-refines	
+Objects/dictobject.c	5169	5188	frozendict_or	frozendict_or(PyObject *self, PyObject *other)	modelled	dict-or-body	
+Objects/dictobject.c	5192	5198	_PyDict_IOr	_PyDict_IOr(PyObject *self, PyObject *other)	modelled	dict-or-body	
 Objects/dictobject.c	5235	5244	dict_contains	dict_contains(PyObject *op, PyObject *key)	modelled	dict-readers-faithful	
 Objects/dictobject.c	5248	5256	PyDict_Contains	PyDict_Contains(PyObject *op, PyObject *key)	modelled	dict-checks,dict-readers-faithful	
 Objects/dictobject.c	5259	5268	PyDict_ContainsString	PyDict_ContainsString(PyObject *op, const char *key)	todo		withdrawn: theorem is rfl on a thin definition
@@ -282,11 +282,11 @@ Objects/dictobject.c	8242	8251	dict_event_name	dict_event_name(PyDict_WatchEvent
 Objects/dictobject.c	8254	8277	_PyDict_SendEvent	_PyDict_SendEvent(int watcher_bits, PyDict_WatchEvent event, PyDictObject *mp, PyObject *key, PyObject *value)	todo		
 Objects/dictobject.c	8281	8297	_PyObject_InlineValuesConsistencyCheck	_PyObject_InlineValuesConsistencyCheck(PyObject *obj)	excluded		no-behaviour: debug-only, compiled out or only asserts in release builds
 Objects/dictobject.c	8303	8311	frozendict_getnewargs	frozendict_getnewargs(PyObject *op, PyObject *Py_UNUSED(dummy))	todo		changed-in-3.15: new function
-Objects/dictobject.c	8342	8360	frozendict_repr	frozendict_repr(PyObject *self)	todo		
+Objects/dictobject.c	8342	8360	frozendict_repr	frozendict_repr(PyObject *self)	modelled	dict-repr-body	
 Objects/dictobject.c	8363	8366	_shuffle_bits	_shuffle_bits(Py_uhash_t h)	todo		changed-in-3.15: new function
 Objects/dictobject.c	8371	8398	frozendict_pair_hash	frozendict_pair_hash(Py_hash_t key_hash, PyObject *value)	todo		changed-in-3.15: new function
 Objects/dictobject.c	8403	8449	frozendict_hash	frozendict_hash(PyObject *op)	todo		changed-in-3.15: new function
 Objects/dictobject.c	8455	8466	frozendict_new_untracked	frozendict_new_untracked(PyTypeObject *type)	todo		changed-in-3.15: new function
 Objects/dictobject.c	8469	8488	frozendict_new	frozendict_new(PyTypeObject *type, PyObject *args, PyObject *kwds)	todo		changed-in-3.15: new function
 Objects/dictobject.c	8492	8512	PyFrozenDict_New	PyFrozenDict_New(PyObject *iterable)	todo		changed-in-3.15: new function
-Objects/dictobject.c	8521	8535	frozendict_copy_impl	frozendict_copy_impl(PyFrozenDictObject *self) /*[clinic end generated code: output=e580fd91d9fc2cf7 input=35f6abeaa08fd4bc]*/	todo		
+Objects/dictobject.c	8521	8535	frozendict_copy_impl	frozendict_copy_impl(PyFrozenDictObject *self) /*[clinic end generated code: output=e580fd91d9fc2cf7 input=35f6abeaa08fd4bc]*/	modelled	dict-copy-body	
