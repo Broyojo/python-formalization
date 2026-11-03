@@ -173,8 +173,8 @@ theorem runActs_ok (h0 h : H) (acts : List Act) (hk : Ok h0 h) : Ok h0 (runActs 
     exact ih _ (act_ok h0 h a hk)
 
 /-- A pointer taken in `h0` reads the live contents of every `Ok` state. -/
-theorem read_live (h0 h : H) (hk : Ok h0 h) : h.read h0.ptr 0 h0.ba.size = .ok h.ba.seq := by
-  obtain ⟨⟨g, o, l, _⟩, _⟩ := hk
+theorem read_same (h0 h : H) (hs : Same h0 h) : h.read h0.ptr 0 h0.ba.size = .ok h.ba.seq := by
+  obtain ⟨g, o, l, _⟩ := hs
   unfold H.read H.ptr
   simp only [BA.size] at *
   by_cases hn : (h0.ba.data.length : Int) = 0
@@ -187,6 +187,9 @@ theorem read_live (h0 h : H) (hk : Ok h0 h) : h.read h0.ptr 0 h0.ba.size = .ok h
     simp only [hn, ↓reduceIte, g, o, ne_eq, not_true_eq_false, hc, and_self, hj, List.drop_zero]
     rw [← l]
     simp [BA.seq]
+
+theorem read_live (h0 h : H) (hk : Ok h0 h) : h.read h0.ptr 0 h0.ba.size = .ok h.ba.seq :=
+  read_same h0 h hk.1
 
 theorem readE_live (h0 h : H) (hk : Ok h0 h) : readE h0.ptr 0 h0.ba.size h = curSeq h := by
   simp [readE, curSeq, read_live h0 h hk]
@@ -795,5 +798,388 @@ theorem searchReadsLive_proven : SearchReadsLive := by
     apply withBuffer_live _ _ h hi
     intro h0 hp
     exact contains_live h0 h0 (Ok.refl h0 hp) sub
+
+end PyLean.BytesObj.Bytes
+
+namespace PyLean.BytesObj.Bytes
+
+open PyLean PyLean.StrSearch
+
+/-! ## With C arguments, the search methods are those of `bytes` -/
+
+theorem clamp_clamp (v : Int) : clampSsize (clampSsize v) = clampSsize v := by
+  unfold clampSsize ssizeMin ssizeMax
+  omega
+
+theorem parseFindsByte_clamp (v : Int) : parseFindsByte (.byte (clampSsize v)) = parseFindsByte (.byte v) := by
+  simp only [parseFindsByte, clamp_clamp]
+
+theorem bytesFindInternal_clamp (s : Seq) (v st en : Int) (fwd : Bool) :
+    bytesFindInternal s (.byte (clampSsize v)) st en fwd = bytesFindInternal s (.byte v) st en fwd := by
+  unfold bytesFindInternal
+  rw [parseFindsByte_clamp]
+
+theorem bytesCount_clamp (s : Seq) (v : Int) (st en : Option Int) :
+    bytesCount s (.byte (clampSsize v)) st en = bytesCount s (.byte v) st en := by
+  unfold bytesCount
+  rw [parseFindsByte_clamp]
+
+theorem bytesFindInternal_range (s : Seq) (v st en : Int) (fwd : Bool) (h : v < 0 ∨ v > 255) :
+    bytesFindInternal s (.byte v) st en fwd = .error (.valueError "byte must be in range(0, 256)") := by
+  have : clampSsize v < 0 ∨ clampSsize v > 255 := by unfold clampSsize ssizeMin ssizeMax; omega
+  simp [bytesFindInternal, parseFindsByte, this, bind, Except.bind]
+
+theorem bytesCount_range (s : Seq) (v : Int) (st en : Option Int) (h : v < 0 ∨ v > 255) :
+    bytesCount s (.byte v) st en = .error (.valueError "byte must be in range(0, 256)") := by
+  have : clampSsize v < 0 ∨ clampSsize v > 255 := by unfold clampSsize ssizeMin ssizeMax; omega
+  simp [bytesCount, parseFindsByte, this, bind, Except.bind]
+
+/-- A bound that is an `int` or absent. -/
+def bnd : Option Int → Option Arg
+  | none => none
+  | some v => some (.obj (.int v))
+
+theorem sliceIndex_bnd (b : Option Int) (h : H) :
+    sliceIndexE (bnd b) h = (.ok (b.map clampSsize), h) := by
+  cases b with
+  | none => rfl
+  | some v => rfl
+
+theorem argStart_map (b : Option Int) : (b.map clampSsize).getD 0 = argStart b := by
+  cases b <;> rfl
+
+theorem argEnd_map (b : Option Int) : (b.map clampSsize).getD ssizeMax = argEnd b := by
+  cases b <;> rfl
+
+theorem withBuffer_seq (h : H) (hi : Inv h) {α : Type} (body : Ptr → Int → E α) (r : Py α)
+    (hb : ∀ h1 : H, h1 = { h with ba := baGetBuffer h.ba } → body h1.ptr h1.ba.size h1 = (r, h1)) :
+    withBufferE body h = (r, h) := by
+  unfold withBufferE
+  have := hb _ rfl
+  simp only [H.ptr, baGetBuffer, BA.size] at this ⊢
+  rw [this]
+  simp [baReleaseBuffer]
+
+theorem getBuf_obj (o : Obj) (t : Seq) (hb : o.buffer? = some t) (h : H) :
+    getBufE (.obj o) h = (.ok ⟨.bytes t, noRel⟩, h) := by
+  unfold getBufE
+  dsimp only
+  rw [hb]
+  rfl
+
+theorem parse_obj_buf (o : Obj) (t : Seq) (hb : o.buffer? = some t) (h : H) :
+    parseFindsByteE (.obj o) h = (.ok (.obj (.obj o)), h) := by
+  unfold parseFindsByteE
+  simp [Arg.bufferCheck, hb]
+
+theorem parse_obj_noindex (o : Obj) (hb : o.buffer? = none) (hx : o.index? = none) (h : H) :
+    parseFindsByteE (.obj o) h =
+      (.error (.typeError s!"argument should be integer or bytes-like object, not '{o.typeName}'"), h) := by
+  unfold parseFindsByteE
+  simp [Arg.bufferCheck, Arg.indexCheck, hb, hx, Arg.typeName]
+
+theorem parse_obj_index_err (o : Obj) (e : PyExc) (hb : o.buffer? = none) (hx : o.index? = some (.error e))
+    (h : H) : parseFindsByteE (.obj o) h = (.error e, h) := by
+  unfold parseFindsByteE
+  simp [Arg.bufferCheck, Arg.indexCheck, hb, hx, asSsizeE, indexE]
+
+theorem parse_obj_index_ok (o : Obj) (v : Int) (hb : o.buffer? = none) (hx : o.index? = some (.ok v))
+    (h : H) : parseFindsByteE (.obj o) h =
+      (if clampSsize v < 0 ∨ clampSsize v > 255 then .error (.valueError "byte must be in range(0, 256)")
+       else .ok (.byte (clampSsize v)), h) := by
+  unfold parseFindsByteE
+  simp only [Arg.bufferCheck, Arg.indexCheck, hb, hx, Option.isSome_none, Option.isSome_some,
+    Bool.false_eq_true, ↓reduceIte, Bool.not_true, E.bind_app, asSsizeE, indexE, E.lift_app, E.pure_app]
+  split <;> rfl
+
+/-- The search body on a C argument: `parse_args_finds_byte` of `bytes`, then the search on the
+contents. -/
+theorem seq_getBuffer (b : BA) : (baGetBuffer b).seq = b.seq := rfl
+
+theorem argStart_idem (x : Option Int) : argStart (some (argStart x)) = argStart x := by
+  cases x <;> simp [argStart, clamp_clamp] <;> rfl
+
+theorem argEnd_idem (x : Option Int) : argEnd (some (argEnd x)) = argEnd x := by
+  cases x <;> simp [argEnd, clamp_clamp] <;> unfold clampSsize ssizeMin ssizeMax <;> omega
+
+theorem bytesCount_args (s : Seq) (b : BSub) (st en : Option Int) :
+    bytesCount s b (some (argStart st)) (some (argEnd en)) = bytesCount s b st en := by
+  unfold bytesCount
+  rw [argStart_idem, argEnd_idem]
+
+theorem ok_bind {α β : Type} (x : α) (f : α → Py β) : (Except.ok x >>= f : Py β) = f x := rfl
+
+theorem findInternal_obj (h1 : H) (hp : Pinned h1) (o : Obj) (st en : Int) (fwd : Bool) :
+    findInternalE cRead h1.ptr h1.ba.size (.obj o) st en fwd h1 =
+      ((do let b ← parseFindsByteObj o; bytesFindInternal h1.ba.seq b st en fwd), h1) := by
+  have rl := readE_live h1 h1 (Ok.refl _ hp)
+  unfold findInternalE parseFindsByteObj
+  cases hb : o.buffer? with
+  | some t =>
+    simp only [E.bind_app, parse_obj_buf o t hb, getBuf_obj o t hb, cRead, rl, curSeq, Buf.read,
+      E.pure_app, noRel, E.lift_app, ok_bind]
+  | none =>
+    cases hx : o.index? with
+    | none => simp only [E.bind_app, parse_obj_noindex o hb hx]; rfl
+    | some r =>
+      cases r with
+      | error e => simp only [E.bind_app, parse_obj_index_err o e hb hx]; rfl
+      | ok v =>
+        simp only [E.bind_app, parse_obj_index_ok o v hb hx]
+        by_cases hr : clampSsize v < 0 ∨ clampSsize v > 255
+        · simp only [hr, ↓reduceIte, ok_bind]
+          rw [bytesFindInternal_range _ _ _ _ _ (by unfold clampSsize ssizeMin ssizeMax at hr; omega)]
+        · simp only [hr, ↓reduceIte, cRead, E.bind_app, rl, curSeq, E.lift_app, bytesFindInternal_clamp,
+            ok_bind]
+
+theorem count_obj (h1 : H) (hp : Pinned h1) (o : Obj) (st en : Int) :
+    countE cRead h1.ptr h1.ba.size (.obj o) st en h1 =
+      ((do let b ← parseFindsByteObj o; bytesCount h1.ba.seq b (some st) (some en)), h1) := by
+  have rl := readE_live h1 h1 (Ok.refl _ hp)
+  unfold countE parseFindsByteObj
+  cases hb : o.buffer? with
+  | some t =>
+    simp only [E.bind_app, parse_obj_buf o t hb, getBuf_obj o t hb, cRead, rl, curSeq, Buf.read,
+      E.pure_app, noRel, E.lift_app, ok_bind]
+  | none =>
+    cases hx : o.index? with
+    | none => simp only [E.bind_app, parse_obj_noindex o hb hx]; rfl
+    | some r =>
+      cases r with
+      | error e => simp only [E.bind_app, parse_obj_index_err o e hb hx]; rfl
+      | ok v =>
+        simp only [E.bind_app, parse_obj_index_ok o v hb hx]
+        by_cases hr : clampSsize v < 0 ∨ clampSsize v > 255
+        · simp only [hr, ↓reduceIte, ok_bind]
+          rw [bytesCount_range _ _ _ _ (by unfold clampSsize ssizeMin ssizeMax at hr; omega)]
+        · simp only [hr, ↓reduceIte, cRead, E.bind_app, rl, curSeq, E.lift_app, bytesCount_clamp,
+            ok_bind]
+
+/-- `bytearray.find`, `rfind`, `index`, `rindex` and `count` with an argument and bounds that
+run no Python code are the `bytes` methods on the contents, and leave the object as it was. -/
+def SearchTwinBytes : Prop :=
+  ∀ (h : H), Inv h → ∀ (o : Obj) (st en : Option Int) (forward : Bool),
+    baFindE cRead (.obj o) (bnd st) (bnd en) forward h = (bytesFindObj h.ba.seq o st en forward, h) ∧
+    baIndexE cRead (.obj o) (bnd st) (bnd en) forward h = (bytesIndexObj h.ba.seq o st en forward, h) ∧
+    baCountE cRead (.obj o) (bnd st) (bnd en) h = (bytesCountObj h.ba.seq o st en, h)
+
+theorem searchTwinBytes_proven : SearchTwinBytes := by
+  intro h hi o st en forward
+  have hp : Pinned { h with ba := baGetBuffer h.ba } := by
+    unfold Inv at hi; simp only [Pinned, baGetBuffer]; omega
+  refine ⟨?_, ?_, ?_⟩
+  · unfold baFindE
+    simp only [E.bind_app, sliceIndex_bnd]
+    apply withBuffer_seq h hi
+    intro h1 e1
+    subst e1
+    rw [findInternal_obj _ hp, argStart_map, argEnd_map]
+    rfl
+  · unfold baIndexE
+    simp only [E.bind_app, sliceIndex_bnd]
+    apply withBuffer_seq h hi
+    intro h1 e1
+    subst e1
+    simp only [E.bind_app]
+    rw [findInternal_obj _ hp, argStart_map, argEnd_map]
+    simp only [seq_getBuffer]
+    unfold bytesIndexObj bytesIndex
+    cases parseFindsByteObj o with
+    | error e => rfl
+    | ok b =>
+      simp only [ok_bind]
+      cases bytesFindInternal h.ba.seq b (argStart st) (argEnd en) forward with
+      | error e => rfl
+      | ok r =>
+        by_cases hr : r = -1
+        · simp [hr, ok_bind, E.throw_app, throw, throwThe, MonadExceptOf.throw, E.bind_app, Except.bind,
+            bind]
+          rfl
+        · simp [hr, ok_bind, E.pure_app, pure, Except.pure]
+          rfl
+  · unfold baCountE
+    simp only [E.bind_app, sliceIndex_bnd]
+    apply withBuffer_seq h hi
+    intro h1 e1
+    subst e1
+    rw [count_obj _ hp, argStart_map, argEnd_map]
+    simp only [seq_getBuffer]
+    unfold bytesCountObj
+    cases parseFindsByteObj o with
+    | error e => rfl
+    | ok b =>
+      simp only [ok_bind, bytesCount_args]
+
+end PyLean.BytesObj.Bytes
+
+namespace PyLean.BytesObj.Bytes
+
+open PyLean PyLean.StrSearch
+
+/-! ## strip copies after the release -/
+
+/-- The bytes `strip` returns are the ones its loops scanned: copying after the argument's
+`__release_buffer__` (the C order, :2460-2462) gives what copying before it gives. -/
+def StripCopiesScanned : Prop :=
+  ∀ (h : H), Inv h → ∀ (arg : Option Arg) (t : StripType),
+    (baStripE true arg t h).1 = (baStripE false arg t h).1
+
+/-- `bytearray(b" a ").strip(B())` where `B.__buffer__` gives `b" "` and `B.__release_buffer__`
+does `self[1] = 32`: the loops find `a` between the spaces, the copy reads the space written over
+it, and the result is `bytearray(b" ")`, which still ends in a byte of the set. -/
+def stripHeap : H := { ba := { data := [32, 97, 32], alloc := 3 } }
+
+theorem strip_rewritten :
+    (baStripE true (some (.buf [] (.ok [32]) [.set 1 32])) .both stripHeap).1 = .ok [32] ∧
+    (baStripE false (some (.buf [] (.ok [32]) [.set 1 32])) .both stripHeap).1 = .ok [97] := by
+  constructor <;> rfl
+
+/-- With `self.clear()` in `__release_buffer__` the copy reads the freed storage. -/
+theorem strip_freed :
+    (baStripE true (some (.buf [] (.ok [32]) [.resize 0])) .both stripHeap).1 = .error uafRead := by
+  rfl
+
+theorem stripCopiesScanned_refuted : ¬ StripCopiesScanned := by
+  intro hs
+  have := hs stripHeap (by unfold Inv; decide) (some (.buf [] (.ok [32]) [.set 1 32])) .both
+  rw [strip_rewritten.1, strip_rewritten.2] at this
+  exact absurd this (by decide)
+
+/-! ## Without Python code in `__release_buffer__` -/
+
+/-- The argument's `PyBuffer_Release` runs no Python code: `None`, a C object, `self`, a `bytes`
+subclass, or a class whose `__release_buffer__` does nothing to `self`. -/
+def NoRelCode : Option Arg → Prop
+  | some (.buf _ _ rel) => rel = []
+  | _ => True
+
+theorem read_slice (h : H) (l r : Nat) (hlr : l ≤ r) (hr : r ≤ h.ba.data.length) :
+    h.read h.ptr l (r - l) = .ok ((h.ba.seq.drop l).take (r - l)) := by
+  unfold H.read H.ptr
+  by_cases hn : ((r : Int) - l) = 0
+  · have : r - l = 0 := by omega
+    simp [hn, this]
+  · have hc : (0 ≤ h.ba.offset + (l : Int) - h.ba.offset ∧ 0 ≤ (r : Int) - l ∧
+        h.ba.offset + (l : Int) - h.ba.offset + ((r : Int) - l) ≤ h.ba.size) := by
+      simp only [BA.size]; omega
+    have hj : (h.ba.offset + (l : Int) - h.ba.offset).toNat = l := by omega
+    have hk : ((r : Int) - l).toNat = r - l := by omega
+    simp only [hn, ↓reduceIte, ne_eq, not_true_eq_false, hc, and_self, hj, hk, BA.seq, List.map_take,
+      List.map_drop]
+
+theorem stripBounds_le (mem : Nat → Bool) (t : StripType) (s : Seq) :
+    (stripBounds mem t s).1 ≤ (stripBounds mem t s).2 ∧ (stripBounds mem t s).2 ≤ s.length := by
+  unfold stripBounds
+  have tw : ∀ l : Seq, (l.takeWhile mem).length + (l.dropWhile mem).length = l.length := by
+    intro l
+    rw [← List.length_append, List.takeWhile_append_dropWhile]
+  have h1 : (s.takeWhile mem).length ≤ s.length := by have := tw s; omega
+  have h2 : ∀ i, (((s.drop i).reverse.dropWhile mem).length) ≤ s.length - i := by
+    intro i
+    have := tw (s.drop i).reverse
+    simp only [List.length_reverse, List.length_drop] at this
+    omega
+  by_cases hr : t = .right
+  · subst hr
+    simp only [ne_eq, not_true_eq_false, ↓reduceIte, reduceCtorEq, not_false_eq_true]
+    have := h2 0
+    omega
+  · simp only [ne_eq, hr, not_false_eq_true, ↓reduceIte]
+    by_cases hl : t = .left
+    · subst hl
+      simp only [not_true_eq_false, ↓reduceIte]
+      omega
+    · simp only [hl, not_false_eq_true, ↓reduceIte]
+      have := h2 (s.takeWhile mem).length
+      omega
+
+theorem stripBounds_read (h : H) (cs : Seq) (t : StripType) :
+    let b := stripBounds (fun c => cs.contains c) t h.ba.seq
+    h.read h.ptr (b.1 : Int) ((b.2 : Int) - (b.1 : Int)) = .ok (stripWith (fun c => cs.contains c) t h.ba.seq) := by
+  intro b
+  obtain ⟨hle, hlen⟩ := stripBounds_le (fun c => cs.contains c) t h.ba.seq
+  have hl : h.ba.seq.length = h.ba.data.length := by simp [BA.seq]
+  have := read_slice h b.1 b.2 hle (by rw [← hl]; exact hlen)
+  rw [this, stripWith_bounds]
+
+/-- With no Python code in `__release_buffer__`, `strip` is the strip of the contents as the
+argument's `__buffer__` left them: for `None` the six bytes of `bytearray_strip_impl_helper`, for a
+C buffer, for `self` (`b.strip(b)`) and for a class whose `__release_buffer__` does nothing, its
+bytes. The object is left as `__buffer__` left it, its exports included. -/
+def StripNoRelAgrees : Prop :=
+  (∀ (h : H) (t : StripType), baStripE true none t h = (.ok (bytearrayStrip h.ba.seq none t), h)) ∧
+  (∀ (h : H) (o : Obj) (cs : Seq) (t : StripType), o.buffer? = some cs →
+    baStripE true (some (.obj o)) t h = (.ok (bytearrayStrip h.ba.seq (some cs) t), h)) ∧
+  (∀ (h : H) (t : StripType),
+    baStripE true (some .me) t h = (.ok (bytearrayStrip h.ba.seq (some h.ba.seq) t), h)) ∧
+  (∀ (h : H) (acts : List Act) (cs : Seq) (t : StripType),
+    baStripE true (some (.buf acts (.ok cs) [])) t h =
+      (.ok (bytearrayStrip (runActs h acts).ba.seq (some cs) t), runActs h acts))
+
+theorem readE_self (h : H) : readE h.ptr 0 h.ba.size h = (.ok h.ba.seq, h) := by
+  simp [readE, read_same h h ⟨rfl, rfl, rfl, rfl⟩]
+
+theorem E.bind_def {α β : Type} (x : E α) (f : α → E β) (h : H) :
+    E.bind x f h = match x h with
+      | (.ok a, h') => f a h'
+      | (.error e, h') => (.error e, h') := rfl
+
+theorem E.map_app {α β : Type} (f : α → β) (x : E α) (h : H) :
+    (f <$> x) h = match x h with
+      | (.ok a, h') => (.ok (f a), h')
+      | (.error e, h') => (.error e, h') := by
+  show E.bind x (fun a => E.pure (f a)) h = _
+  simp only [E.bind_def]
+  rfl
+
+theorem readE_app (p : Ptr) (i n : Int) (h : H) : readE p i n h = (h.read p i n, h) := rfl
+
+theorem read_self (h : H) : h.read h.ptr 0 h.ba.size = .ok h.ba.seq := read_same h h ⟨rfl, rfl, rfl, rfl⟩
+
+theorem getBuf_me (h : H) :
+    getBufE .me h = (.ok ⟨.self h.ptr h.ba.size, exportsDown⟩, { h with ba := baGetBuffer h.ba }) := by
+  unfold getBufE
+  rfl
+
+theorem getBuf_buf (acts : List Act) (cs : Seq) (rel : List Act) (h : H) :
+    getBufE (.buf acts (.ok cs) rel) h = (.ok ⟨.bytes cs, runCb rel (.ok ())⟩, runActs h acts) := by
+  unfold getBufE
+  rfl
+
+theorem stripNoRelAgrees_proven : StripNoRelAgrees := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro h t
+    have := stripBounds_read h [9, 10, 13, 12, 11, 32] t
+    simp only at this
+    simp only [baStripE, E.bind_app, E.pure_app, E.get_app, readE_app, read_self, this, ↓reduceIte,
+      bytearrayStrip, Option.getD_none]
+  · intro h o cs t hb
+    have hnone : (Arg.obj o).isNone = false := by
+      cases o <;> simp_all [Arg.isNone, Obj.buffer?]
+    have := stripBounds_read h cs t
+    simp only at this
+    simp only [baStripE, hnone, Bool.false_eq_true, ↓reduceIte, E.bind_app, E.map_app, getBuf_obj o cs hb,
+      E.pure_app, E.get_app, readE_app, read_self, Buf.read, noRel, this, bytearrayStrip, Option.getD_some]
+  · intro h t
+    have hs : Same h { h with ba := baGetBuffer h.ba } := ⟨rfl, rfl, rfl, rfl⟩
+    have r1 := read_same h { h with ba := baGetBuffer h.ba } hs
+    have := stripBounds_read h h.ba.seq t
+    simp only at this
+    have e3 : ({ ba := baReleaseBuffer (baGetBuffer h.ba), gen := h.gen, kept := h.kept } : H) = h := by
+      rw [release_get]
+    simp only [baStripE, Arg.isNone, Bool.false_eq_true, ↓reduceIte, E.bind_app, E.map_app, getBuf_me,
+      E.pure_app, E.get_app, readE_app, Buf.read, exportsDown, E.modify_app]
+    simp only [show ({ h with ba := baGetBuffer h.ba } : H).ptr = h.ptr from rfl,
+      show ({ h with ba := baGetBuffer h.ba } : H).ba.size = h.ba.size from rfl, r1,
+      show ({ h with ba := baGetBuffer h.ba } : H).ba.seq = h.ba.seq from rfl, e3, this,
+      bytearrayStrip, Option.getD_some]
+  · intro h acts cs t
+    have := stripBounds_read (runActs h acts) cs t
+    simp only at this
+    simp only [baStripE, Arg.isNone, Bool.false_eq_true, ↓reduceIte, E.bind_app, E.map_app, getBuf_buf,
+      runCb, E.pure_app, E.get_app, readE_app, read_self, Buf.read, List.foldl_nil, this,
+      bytearrayStrip, Option.getD_some]
+    simp only [runActs, List.foldl_nil] at this ⊢
+    rw [this]
 
 end PyLean.BytesObj.Bytes

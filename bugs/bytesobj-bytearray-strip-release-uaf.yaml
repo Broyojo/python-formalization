@@ -1,0 +1,87 @@
+id: bytesobj-bytearray-strip-release-uaf
+title: "bytearray.strip/lstrip/rstrip copy from self after the argument's __release_buffer__ ran: use after free"
+priority: P1
+kind: memory-safety
+module: bytesobj
+files: [Objects/bytearrayobject.c]
+functions: ["bytearray_strip_impl_helper", "bytearray_strip_impl", "bytearray_lstrip_impl", "bytearray_rstrip_impl"]
+summary: |
+  bytearray_strip_impl_helper takes the argument's buffer (:2440), reads `myptr = PyByteArray_AS_STRING(self)`
+  and `mysize` (:2445-2446), finds `left` and `right`, then calls PyBuffer_Release(&vbytes) (:2460-2461) and
+  only then copies `right - left` bytes from `myptr + left` (:2462). For an argument whose class defines
+  __release_buffer__ (PEP 688) the release runs Python code while `self` is not exported, so it can resize
+  `self`: `self.clear()` frees the storage `myptr` points into, and the copy reads freed memory. With a large
+  bytearray the process dies with SIGSEGV. Without a resize, an in-place write in __release_buffer__ changes
+  the bytes that are copied after the bounds were computed, so the result is not stripped:
+  `bytearray(b" a ").strip(B())` gives `bytearray(b" ")`.
+  The other methods of this file that take a buffer of their argument either raise ob_exports first
+  (find, split, join, hex, %) or release only after the copy (translate, setslice, +=, +, comparison).
+  Lean: StripCopiesScanned (the copy reads the bytes the loops scanned) is refuted on `b" a "` with an
+  in-place write in __release_buffer__ (strip_rewritten), and strip_freed shows the read of freed storage
+  for `self.clear()`. StripNoRelAgrees, for arguments whose release runs no Python code, is proven: the
+  result is then the strip of the contents as __buffer__ left them.
+likelihood: |
+  Low: it needs an argument class with __release_buffer__ that mutates the bytearray being stripped. It is
+  reachable from pure Python since PEP 688 (3.12) and gives an out-of-bounds read of freed heap memory.
+maybe_intended: |
+  No. The same file raises ob_exports around every other callback that could resize self (gh-142560,
+  gh-142557, gh-143195), and the copy does not need the argument's buffer, which is released too early.
+reproducer: |
+  import subprocess, sys
+  crash = '''
+  ba = bytearray(b"x" * (1 << 22))
+  class S:
+      def __buffer__(self, flags):
+          return memoryview(b" ")
+      def __release_buffer__(self, view):
+          ba.clear()
+  ba.strip(S())
+  '''
+  codes = []
+  for m in ("strip", "lstrip", "rstrip"):
+      r = subprocess.run([sys.executable, "-I", "-c", crash.replace(".strip(", "." + m + "(")],
+                         capture_output=True, text=True)
+      codes.append(r.returncode)
+  print("clear() in __release_buffer__: exit status", codes)
+  s = bytearray(b" a ")
+  class B:
+      def __buffer__(self, flags):
+          return memoryview(b" ")
+      def __release_buffer__(self, view):
+          s[1] = 0x20
+  r = s.strip(B())
+  print("in-place write in __release_buffer__:", r)
+  if r == bytearray(b" ") or any(c < 0 for c in codes):
+      print("REPRODUCED bytesobj-bytearray-strip-release-uaf")
+expected: |
+  The bytes are copied before the argument's buffer is released (or ob_exports is raised around the
+  helper), so `b" a ".strip(B())` is `bytearray(b"a")` and nothing reads freed memory.
+observed: |
+  python3 3.15.2: exit status [-11, -11, -11] (SIGSEGV for strip, lstrip and rstrip), and the in-place
+  case gives bytearray(b' '). REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Invariant: no read of freed memory from pure Python. Doc/library/stdtypes.rst bytearray.strip: the
+  result has the leading and trailing bytes of the set removed.
+cause: |
+  Objects/bytearrayobject.c:2460-2462: PyBuffer_Release(&vbytes), which can run __release_buffer__, comes
+  before PyByteArray_FromStringAndSize(myptr + left, right - left), which reads through the pointer taken
+  at :2445.
+possible_fix: |
+  Create the result before releasing the argument's buffer (swap :2460-2461 and :2462), or raise
+  self->ob_exports around the helper as bytearray_split_impl does.
+duplicates:
+  issues: []
+  related:
+    - {number: 143195, state: closed, relation: "same class of bug in bytearray.hex (sep.__len__), fixed by raising ob_exports"}
+    - {number: 142560, state: closed, relation: "re-entrant __index__ in bytearray search methods, fixed by _bytearray_with_buffer"}
+  queries: ["bytearray strip __release_buffer__", "bytearray strip use-after-free", "bytearray release_buffer",
+    "bytearray strip crash", "bytearray lstrip", "bytearray rstrip", "__release_buffer__ use after free",
+    "bytearray __buffer__ use-after-free", "bytearray re-entrant buffer", "bytearray use after free",
+    "bytearray UAF", "bytearray segfault", "bytearray strip buffer", "strip __buffer__",
+    "bytearray_strip_impl_helper", "lstrip use-after-free", "strip use-after-free", "bytearray strip reentrant",
+    "release_buffer bytearray clear", "PyBuffer_Release bytearray", "use-after-free bytearray"]
+  bugforge: "no entry for bytearray strip (vendor/bugforge-results/README.md)"
+lean:
+  property: PyLean.BytesObj.Bytes.StripCopiesScanned
+  theorem: PyLean.BytesObj.Bytes.stripCopiesScanned_refuted
