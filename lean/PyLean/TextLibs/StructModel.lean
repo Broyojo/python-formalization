@@ -52,6 +52,10 @@ inductive SV where
   | other (truth : Bool)
   /-- An object with conversions that can raise and re-enter. -/
   | obj (o : PyO)
+  /-- The very `bytearray` that `pack_into` writes into, passed as an argument. `s_pack_internal`
+  reads it when it packs that item, after the `memset` at `Modules/_struct.c:2340` and the items
+  before it. -/
+  | alias
   deriving Repr, DecidableEq, Inhabited
 
 /-- `struct.error`. -/
@@ -470,6 +474,7 @@ def isTrue : SV → Py Bool
   | .bool b => .ok b
   | .other t => .ok t
   | .obj o => o.truth
+  | .alias => .ok true
 
 /-- `Py` to `Option`: `struct` replaces every exception from these two conversions, a raising
 `__float__` included, `Modules/_struct.c:281-286`. -/
@@ -881,8 +886,15 @@ def SV.reinits : SV → Bool
   | .obj o => o.reinit
   | _ => false
 
-/-- One `while (j--)` turn of `s_pack_internal`. -/
-def packOne (code : Code) (buf : List Nat) (off : Nat) (v : SV) : Py (List Nat) :=
+/-- An argument as `s_pack_internal` reads it: the aliased `bytearray` with its contents of the moment. -/
+def resolve (whole : List Nat) : SV → SV
+  | .alias => .bytearray whole
+  | v => v
+
+/-- One `while (j--)` turn of `s_pack_internal`. `pre` is the part of the target before the region
+being packed, so `pre ++ buf` is the whole target an aliased argument shows. -/
+def packOne (code : Code) (pre buf : List Nat) (off : Nat) (v0 : SV) : Py (List Nat) :=
+  let v := resolve (pre ++ buf) v0
   let e := code.fmtdef
   if e.format = ['s'] then do
     let w ← packS code v ((buf.drop off).take code.size)
@@ -897,29 +909,30 @@ def packOne (code : Code) (buf : List Nat) (off : Nat) (v : SV) : Py (List Nat) 
     return overlay buf off w
 
 /-- `while (j--)` of `s_pack_internal`; the result is the buffer and the unused args. -/
-def packRepeat (code : Code) : (j : Nat) → (off : Nat) → List Nat → List SV →
+def packRepeat (code : Code) (pre : List Nat) : (j : Nat) → (off : Nat) → List Nat → List SV →
     Py (List Nat × List SV)
   | 0, _, buf, args => .ok (buf, args)
   | j + 1, off, buf, args =>
     match args with
     | [] => .error (.named "SystemError" "args exhausted")
     | v :: rest => do
-      let buf' ← packOne code buf off v
-      packRepeat code j (off + code.size) buf' rest
+      let buf' ← packOne code pre buf off v
+      packRepeat code pre j (off + code.size) buf' rest
 
-/-- `s_pack_internal`, `Modules/_struct.c:2331-2415`, working on the region starting at
-the offset inside `buf`. -/
-def sPackInternal (s : SObj) (buf : List Nat) (args : List SV) : Py (List Nat) := do
+/-- `s_pack_internal`, `Modules/_struct.c:2331-2415`, working on the region `buf` of the target, which
+`pre` precedes: the `memset` (2340) comes first, and every argument is read only when its item is
+packed. -/
+def sPackInternal (s : SObj) (pre buf : List Nat) (args : List SV) : Py (List Nat) := do
   let cleared := List.replicate s.sSize 0 ++ buf.drop s.sSize
   let r ← s.codes.foldlM (init := (cleared, args)) fun acc code =>
-    packRepeat code code.repeat_ code.offset acc.1 acc.2
+    packRepeat code pre code.repeat_ code.offset acc.1 acc.2
   return r.1
 
 /-- `Struct_pack_impl`, `Modules/_struct.c:2431-2458`. -/
 def structPack (s : SObj) (args : List SV) : Py (List Nat) :=
   if args.length ≠ s.sLen then
     .error (structErr s!"pack expected {s.sLen} items for packing (got {args.length})")
-  else sPackInternal s (List.replicate s.sSize 0) args
+  else sPackInternal s [] (List.replicate s.sSize 0) args
 
 /-- `Struct_pack_into_impl`, `Modules/_struct.c:2478-2537`, past its first check: the buffer afterwards. -/
 def packIntoBody (s : SObj) (buffer : List Nat) (offset : Int) (args : List SV) :
@@ -938,7 +951,7 @@ def packIntoBody (s : SObj) (buffer : List Nat) (offset : Int) (args : List SV) 
     throw (structErr s!"pack_into requires a buffer of at least {size + offset} bytes for \
       packing {size} bytes at offset {offset} (actual buffer size is {len})")
   let o := offset.toNat
-  let tail ← sPackInternal s (buffer.drop o) args
+  let tail ← sPackInternal s (buffer.take o) (buffer.drop o) args
   return buffer.take o ++ tail
 
 def structPackInto (s : SObj) (buffer : List Nat) (offset0 : Int) (args : List SV) :

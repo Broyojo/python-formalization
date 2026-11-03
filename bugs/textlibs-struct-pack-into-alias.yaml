@@ -1,0 +1,43 @@
+id: textlibs-struct-pack-into-alias
+title: "struct: pack_into('4s', ba, 0, ba) writes zeros: the argument is read after the memset of its target"
+priority: P5
+kind: wrong-result
+module: textlibs
+files: [Modules/_struct.c]
+functions: ["s_pack_internal", "Struct_pack_into_impl"]
+summary: |
+  `s_pack_internal` clears the struct's bytes in the target first (`memset`, Modules/_struct.c:2340)
+  and reads each argument only when it packs that item. When an `s` (or `p`) argument is the very
+  bytearray being packed into, it is read after the clear, so `pack_into('4s', ba, 0, ba)` turns
+  `ba` into zeros instead of leaving it as it was, unlike passing `bytes(ba)`.
+likelihood: |
+  Very low: it needs the target buffer itself, or an overlapping view, as an argument.
+maybe_intended: |
+  Likely: aliasing source and destination is undefined in most APIs. Already reported and closed as
+  not planned.
+reproducer: |
+  import struct
+  ba = bytearray(b'\x01\x02\x03\x04')
+  struct.pack_into('4s', ba, 0, ba)
+  cb = bytearray(b'\x01\x02\x03\x04')
+  struct.pack_into('4s', cb, 0, bytes(cb))
+  print(ba, cb)
+  if ba == bytearray(4) and cb == bytearray(b'\x01\x02\x03\x04'):
+      print('REPRODUCED textlibs-struct-pack-into-alias')
+expected: |
+  The same bytes as for a copy of the buffer.
+observed: |
+  python3 3.15.2: bytearray(b'\x00\x00\x00\x00') bytearray(b'\x01\x02\x03\x04'). REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): the same. REPRODUCED.
+promised_by: |
+  invariant: an argument's value is the value it has when pack_into is called.
+cause: |
+  Modules/_struct.c:2340 (memset before the loop) and 2348-2369 (the 's' branch reads the argument's
+  buffer when its item is packed).
+possible_fix: |
+  Copy aliased arguments first, or document that the target must not be an argument.
+duplicates: |
+  Duplicate of python/cpython#158761 ("struct.pack_into corrupts an 's' value when source and
+  destination are the same bytearray"), closed as not planned on 2026-10-04; also the bugforge entry
+  struct-20261003-122508-c3. Queries: gh issue view 158761 --repo python/cpython.
+lean: lean/PyLean/TextLibs/StructPack.lean (PackIntoAliasCopy, packIntoAliasCopy_refuted; PackItems)
