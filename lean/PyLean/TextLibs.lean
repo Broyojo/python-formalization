@@ -28,6 +28,7 @@ import PyLean.TextLibs.TomlErr
 import PyLean.TextLibs.TomlStr
 import PyLean.TextLibs.TomlKey
 import PyLean.TextLibs.TomlNum
+import PyLean.TextLibs.TomlDate
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1692,6 +1693,13 @@ def entries : List Entry := [
     source := "docs of load/loads (parse_float 'will be called with the string of every TOML float'; 'must not return a dict or a list, else a ValueError is raised'; Integers: int max str digits); TOML 1.1 spec, Integer and Float", status := .proven
     prop := ``Toml.NumberSpec, thm := some ``Toml.numberSpec_proven
     notes := "RE_NUMBER, RE_DATETIME and RE_LOCALTIME are hand-written matchers; the theorem shows the date patterns never match a number token. parse_float is modelled as a function of its argument." }
+,
+  { id := "textlibs-toml-datetimes", pyFile := "Lib/tomllib/_re.py"
+    pyFns := ["match_to_datetime", "cached_tz", "match_to_localtime"]
+    statement := "For every YYYY-MM-DD (month 01-12, day 01-31), optionally followed by T, t or a space, HH:MM with optional :SS and optional fraction, and an optional Z/z or +-HH:MM offset, followed by what may end a value, parse_value returns datetime.date, or datetime.datetime with seconds defaulting to 0, microseconds the first six fraction digits (truncated, zero-padded) and tzinfo None, UTC or the signed offset, when the date exists (year >= 1, day within the month), and raises TOMLDecodeError 'Invalid date or datetime' at the token otherwise; every HH:MM[:SS[.frac]] local time gives the corresponding datetime.time."
+    source := "docs conversion table (offset/local date-time, local date, local time); TOML 1.1 spec, Offset Date-Time ('additional precision must be truncated, not rounded'), seconds optional in 1.1", status := .proven
+    prop := ``Toml.DatetimeSpec, thm := some ``Toml.datetimeSpec_proven
+    notes := "Also exercises parse_value's date branches. datetime.date/datetime/time and timezone are modelled by their range checks; lru_cache of cached_tz only memoizes, and timezone(timedelta(0)) is timezone.utc, so an offset is a number of minutes." }
 ]
 
 end PyLean.TextLibs
