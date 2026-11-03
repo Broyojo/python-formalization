@@ -846,6 +846,7 @@ dict-set-fromkeys-body	proven	Objects/dictobject.c	dict_set_fromkeys
 dict-iter-yields	proven	Objects/dictobject.c	dict_iter,dict___reversed___impl,dictiter_iternextkey_lock_held,dictiter_iternextvalue_lock_held,dictiter_iternextitem_lock_held,dictreviter_iter_lock_held
 dict-iter-len	proven	Objects/dictobject.c	dictiter_len
 dict-table-geometry	proven	Objects/dictobject.c	new_keys_object,insert_to_emptydict,insertion_resize,insert_combined_dict
+dict-setdefault-split-fallthrough	proven	Objects/dictobject.c	dict_setdefault_ref_lock_held
 dict-setdefault-refines	proven	Objects/dictobject.c	dict_setdefault_ref_lock_held
 dict-setdefault-split-str	proven	Objects/dictobject.c	dict_setdefault_ref_lock_held
 dict-update-uniq-run	proven	Objects/dictobject.c	PyDict_Update,_PyDict_MergeUniq
@@ -2305,7 +2306,10 @@ textlibs-toml-inline-table-rules	proven	Lib/tomllib/_parser.py	parse_inline_tabl
 textlibs-toml-multiline-literal	proven	Lib/tomllib/_parser.py	parse_multiline_str,parse_value,skip_until
 textlibs-email-dtext-qp-defect	refuted	Lib/email/_header_value_parser.py	get_dtext
 textlibs-email-comment-spec	proven	Lib/email/_header_value_parser.py	get_comment,get_qp_ctext,Comment.__str__,Comment.quote,Comment.content,make_parenthesis_pairs,_get_ptext_to_endchars,get_fws
+textlibs-email-nested-comment-recursion	refuted	Lib/email/_header_value_parser.py	get_comment,Comment.__str__,Comment.quote
 textlibs-email-unstructured-encoded-words	proven	Lib/email/_header_value_parser.py	get_unstructured,get_encoded_word,EWWhiteSpaceTerminal.__str__,TokenList.__str__
+textlibs-email-encoded-word-spec	proven	Lib/email/_header_value_parser.py	get_encoded_word
+textlibs-email-unstructured-word-then-ew	proven	Lib/email/_header_value_parser.py	get_unstructured
 coll-count-elements-twins	proven	Lib/collections/__init__.py	_count_elements
 coll-counter-update-fast-slow	proven	Lib/collections/__init__.py	Counter.update
 coll-counter-update-adds	proven	Lib/collections/__init__.py	Counter.update,Counter.__init__,Counter.__missing__,_count_elements
@@ -2977,6 +2981,7 @@ warn-lock-spec	proven	Python/_warnings.c	warnings_acquire_lock_impl,warnings_rel
 warn-mutated-lock-twins	proven	Lib/_py_warnings.py	_filters_mutated_lock_held
 warn-reset-spec	proven	Lib/_py_warnings.py	resetwarnings
 warn-add-filter-valueerror	proven	Lib/_py_warnings.py	_add_filter
+warn-get-warnings-attr	proven	Python/_warnings.c	get_warnings_attr
 warn-defaults-twin-narrow	proven	Python/_warnings.c	init_filters,create_filter
 warn-defaults-twin-py	proven	Lib/_py_warnings.py	_setup_defaults
 warn-defaults-twin	refuted	Python/_warnings.c	init_filters,create_filter
@@ -3000,6 +3005,8 @@ warn-filter-list-twins-py	proven	Lib/_py_warnings.py	_get_filters,_get_context,_
 warn-filter-list-twins-any	refuted	Python/_warnings.c	get_warnings_filters
 warn-filter-list-twins-tuple	refuted	Python/_warnings.c	get_warnings_filters,get_warnings_context_filters
 warn-show-dispatch	proven	Lib/_py_warnings.py	_showwarnmsg,_showwarnmsg_impl
+warn-nested-record	proven	Lib/_py_warnings.py	_Context.copy,_new_context,catch_warnings.__enter__,_showwarnmsg_impl
+warn-exit-not-entered	proven	Lib/_py_warnings.py	catch_warnings.__exit__,catch_warnings.__repr__
 warn-catch-restores	proven	Lib/_py_warnings.py	catch_warnings.__init__,catch_warnings.__enter__,catch_warnings.__exit__,_Context.__init__,_Context.copy,_new_context,_set_context,_get_context,_get_filters,_GlobalContext._filters
 warn-catch-enter-atomic	refuted	Lib/_py_warnings.py	catch_warnings.__enter__
 warn-record-captures	proven	Lib/_py_warnings.py	_showwarnmsg,_showwarnmsg_impl,_Context._record_warning,catch_warnings.__enter__,_new_context,_set_context
