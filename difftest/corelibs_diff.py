@@ -3693,6 +3693,7 @@ def operator_gen(rng):
         return {"fn": "operator.length_hint", "twin": twin,
                 "len": rng.choice([None, None, 3, 0, "raise"]),
                 "hint": rng.choice([None, 0, 2, -1, "ni", "typeerror", "raise", "str"]),
+                "desc": rng.choice(["func", "func", "func", "static", "prop", "propraise"]),
                 "dkind": rng.choice(["int", "int", "int", "other"]), "d": rng.choice([0, 7, -1])}
     if r == 13:
         xs = [rng.randrange(0, 9) for _ in range(rng.randrange(0, 5))]
@@ -3726,7 +3727,7 @@ def operator_gen(rng):
         return {"fn": "operator.mc_reduce", "twin": twin, "args": args, "kw": kw}
     if r == 17:
         def arg():
-            k = rng.choice(["str", "str", "bytes", "bytes", "int"])
+            k = rng.choice(["str", "str", "bytes", "bytes", "int", "noncontig"])
             return {"k": k, "ascii": rng.random() < .8,
                     "data": [rng.randrange(97, 100) for _ in range(rng.randrange(0, 4))]}
         a = arg()
@@ -4322,6 +4323,9 @@ def operator_run(case):
                 return "".join(map(chr, a["data"])) + ("" if a["ascii"] else "é")
             if a["k"] == "bytes":
                 return bytes(a["data"])
+            if a["k"] == "noncontig":
+                # PyObject_GetBuffer(PyBUF_SIMPLE) refuses a strided view
+                return memoryview(bytes(range(4)))[::2]
             return 5
         r = py_result(lambda: operator_C._compare_digest(conv(case["a"]), conv(case["b"])))
         if "exc" in r and "bytes-like" in r["msg"]:
@@ -4610,7 +4614,19 @@ def operator_hint(case, m):
             if hint == "raise":
                 raise ValueError("hint")
             return {"ni": NotImplemented, "str": "x"}.get(hint, hint)
-        body["__length_hint__"] = h
+        desc = case.get("desc", "func")
+        if desc == "static":
+            # C calls it with no argument; Python's call with obj is a TypeError
+            body["__length_hint__"] = staticmethod(lambda: h(None))
+        elif desc == "prop":
+            # C's lookup runs the getter on obj and calls what it returns; Python calls the property object
+            body["__length_hint__"] = property(lambda s: (lambda: h(s)))
+        elif desc == "propraise":
+            def g(s):
+                raise TypeError("get")
+            body["__length_hint__"] = property(g)
+        else:
+            body["__length_hint__"] = h
     obj = type("O", (), body)()
     d = case["d"] if case["dkind"] == "int" else "x"
     return py_result(lambda: m.length_hint(obj, d))

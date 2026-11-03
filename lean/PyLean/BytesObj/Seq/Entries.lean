@@ -20,6 +20,8 @@ import PyLean.BytesObj.Seq.ListRows5
 import PyLean.BytesObj.Seq.ListRows6
 import PyLean.BytesObj.Seq.ListRows7
 import PyLean.BytesObj.Seq.ListRows8
+import PyLean.BytesObj.Seq.ListRows9
+import PyLean.BytesObj.Seq.ListRows10
 
 /-! Registry entries for tuple (Objects/tupleobject.c) and list (Objects/listobject.c). -/
 
@@ -55,7 +57,7 @@ def entries : List Entry := [
     prop := ``ContainsIdentity, thm := some ``containsIdentity_proven },
   { id := "bytesobj-list-search-reentrant", pyFile := "Objects/listobject.c"
     pyFns := ["list_contains", "list_index_impl", "list_count_impl", "list_remove_impl", "list_richcompare_impl"]
-    statement := "x in l, l.index, l.count, l.remove and the search of l == r read no slot outside the list, whatever a comparison does to it, however often."
+    statement := "x in l, l.index, l.count, l.remove and the search of l == r read no slot outside the list, whatever a comparison does to it, however often: l.index and l.count read PyList_GET_ITEM only after valid_index against the current size (lists of at most PY_SSIZE_T_MAX items)."
     source := "listobject.c:676-693, :3360-3372, :3386-3445, :3479-3495", status := .proven
     prop := ``ListSearchSafe, thm := some ``listSearchSafe_proven },
   { id := "bytesobj-index-agree", pyFile := "Objects/tupleobject.c", pyFns := ["tuple_index_impl", "list_index_impl"]
@@ -314,7 +316,59 @@ def entries : List Entry := [
     pyFns := ["list___init___impl", "list_vectorcall", "list_richcompare_impl", "list_richcompare"]
     statement := "list.__init__(iterable) drops the old items and holds the iterable's, list(x) is that on a new list (TypeError for a non-iterable), success forced up to PY_SSIZE_T_MAX/16 items; a list comparison with a non-list operand is NotImplemented."
     source := "listobject.c:3464-3465, :3543-3590", status := .proven
-    prop := ``ListInitIterable, thm := some ``listInitIterable_proven }
+    prop := ``ListInitIterable, thm := some ``listInitIterable_proven },
+  { id := "bytesobj-list-index-step", pyFile := "Objects/listobject.c"
+    pyFns := ["list_index_impl", "list_get_item_ref", "valid_index"]
+    statement := "For every comparison, including one that changes the list: each pass of l.index stops at the bound clipped on entry or past the current end without a call, otherwise compares the current item and returns i (true), the exception (raising) or goes on at i + 1 with the list the comparison left (false); falling out is ValueError('list.index(x): x not in list'); an __eq__ that is false and pops leaves the first n // 2 items and raises that ValueError."
+    source := "listobject.c:3345-3375 (the reread at :3361)", status := .proven
+    prop := ``IndexStep, thm := some ``indexStep_proven },
+  { id := "bytesobj-list-index-call", pyFile := "Objects/listobject.c", pyFns := ["list_index_impl"]
+    statement := "l.index(x, start, stop) converts start then stop (an int saturates, __index__ runs and may raise or change the list, a non-index is TypeError('slice indices must be integers or have an __index__ method')), a failure stops before the next step, and list_index_impl then runs on the list as the conversions left it, searching exactly the positions of range(*slice(start, stop).indices(len(l)))."
+    source := "Objects/clinic/listobject.c.h:320-348; Python/ceval.c:2957-2979; listobject.c:3350-3359; Doc/library/stdtypes.rst (s.index(x[, i[, j]]))", status := .proven
+    prop := ``IndexCall, thm := some ``indexCall_proven },
+  { id := "bytesobj-list-count-step", pyFile := "Objects/listobject.c"
+    pyFns := ["list_count_impl", "list_get_item_ref", "valid_index"]
+    statement := "For every comparison, including one that changes the list: each pass of l.count returns the count past the current end, counts an identical item without a call, otherwise compares and goes on at i + 1 with the list the comparison left (one more for true), or returns the exception; an __eq__ that is true and pops counts ceil(n/2) and leaves n // 2 items."
+    source := "listobject.c:3386-3410 (the reread at :3392)", status := .proven
+    prop := ``CountStep, thm := some ``countStep_proven },
+  { id := "bytesobj-list-remove-step", pyFile := "Objects/listobject.c", pyFns := ["list_remove_impl"]
+    statement := "For every comparison, including one that changes the list: l.remove raises ValueError('list.remove(x): x not in list') past the current end, goes on at i + 1 with the list a false comparison left, returns a raising comparison's exception, and on a true one deletes position i of the list the comparison left (nothing when it is now shorter), which never fails on a well-formed list."
+    source := "listobject.c:3424-3445 (the size test at :3430, the deletion at :3436)", status := .proven
+    prop := ``RemoveStep, thm := some ``removeStep_proven },
+  { id := "bytesobj-list-remove-result", pyFile := "Objects/listobject.c", pyFns := ["list_remove_impl"]
+    statement := "For every element type and every comparison that leaves the list alone (it may raise): l.remove(x) deletes the item at the first position whose comparison is not false when that comparison is true, raises its exception with the list unchanged when it raises, and raises ValueError('list.remove(x): x not in list') with the list unchanged when every comparison is false."
+    source := "Doc/library/stdtypes.rst (s.remove(x)); listobject.c:3424-3445", status := .proven
+    prop := ``RemoveResult, thm := some ``removeResult_proven },
+  { id := "bytesobj-list-subscript-dispatch", pyFile := "Objects/listobject.c"
+    pyFns := ["list_subscript", "list_item"]
+    statement := "l[item]: an __index__ runs first (its exception propagates; a value outside Py_ssize_t is IndexError('cannot fit <type> into an index-sized integer')) and the size is read after it, giving item n (or n + len) of the list as __index__ left it or IndexError('list index out of range'); an int is the same without code; a slice is list_slice_subscript; anything else is TypeError('list indices must be integers or slices, not <type>')."
+    source := "listobject.c:3711-3733, :695-714", status := .proven
+    prop := ``SubscriptDispatch, thm := some ``subscriptDispatch_proven },
+  { id := "bytesobj-list-ass-subscript-arms", pyFile := "Objects/listobject.c"
+    pyFns := ["list_ass_subscript_lock_held", "list_ass_item_lock_held"]
+    statement := "l[item] = v and del l[item] outside the slice arm: __index__ runs first and the size is read after it; in range, the store replaces item k and keeps the array, the deletion removes item k and never fails on a well-formed list; out of range IndexError('list assignment index out of range'); outside Py_ssize_t IndexError('cannot fit ...'); a non-index non-slice is TypeError('list indices must be integers or slices, not <type>')."
+    source := "listobject.c:3752-3766, :3910-3914, :1159-1179", status := .proven
+    prop := ``AssSubscriptArms, thm := some ``assSubscriptArms_proven },
+  { id := "bytesobj-list-ass-slice-errors", pyFile := "Objects/listobject.c"
+    pyFns := ["list_ass_subscript_lock_held", "adjust_slice_indexes"]
+    statement := "The slice arm of l[s] = v / del l[s] refuses before changing anything: a zero step is ValueError('slice step cannot be zero'), a value PySequence_Fast refuses is TypeError('must assign iterable to extended slice') for every slice, and an extended slice given a sequence of the wrong length is ValueError('attempt to assign sequence of size <len(t)> to extended slice of size <L>') with L = len(range(*s.indices(len(l))))."
+    source := "listobject.c:3766-3876", status := .proven
+    prop := ``AssSliceErrors, thm := some ``assSliceErrors_proven },
+  { id := "bytesobj-list-ass-slice-iter", pyFile := "Objects/listobject.c"
+    pyFns := ["list_ass_subscript_lock_held", "adjust_slice_indexes"]
+    statement := "l[s] = it for an iterable that PySequence_Fast has to iterate (user code that may raise or change the list): the slice is unpacked first, an exception from the iteration is the result with the list as the iteration left it, and otherwise the store runs on that list with its size read after the iteration, as a store of the same items from a list."
+    source := "listobject.c:3769, :3846-3858", status := .proven
+    prop := ``AssSliceIter, thm := some ``assSliceIter_proven },
+  { id := "bytesobj-list-del-slice", pyFile := "Objects/listobject.c"
+    pyFns := ["list_ass_subscript_lock_held", "adjust_slice_indexes", "list_ass_slice_lock_held"]
+    statement := "For every well-formed list and every slice s with int/None parts and a non-zero step, del l[s] succeeds, keeps the list well formed, and leaves exactly the items whose positions are not in range(*s.indices(len(l))), in order: step 1, an empty slice, and the extended-slice compaction loop with its negative-step normalisation and tail move."
+    source := "Doc/library/stdtypes.rst (del s[i:j:k]); listobject.c:3773-3837", status := .proven
+    prop := ``DelSlice, thm := some ``delSlice_proven },
+  { id := "bytesobj-list-iter-reduce-order", pyFile := "Objects/listobject.c"
+    pyFns := ["listiter_reduce", "listreviter_reduce", "listiter_reduce_general"]
+    statement := "For every builtins lookup, including one whose key __eq__ exhausts the iterator or changes the list (gh-101765) or one that fails: list_iterator.__reduce__ looks up iter and list_reverseiterator.__reduce__ looks up reversed, the result names what the lookup returned, the index and the list are read after the lookup ((callable, (seq,), index) for a live index, (callable, ([],)) otherwise), and a failed lookup's exception is the result."
+    source := "listobject.c:4126-4130, :4278-4282, :4303-4335; Python/ceval.c:2651-2658", status := .proven
+    prop := ``ReduceOrder, thm := some ``reduceOrder_proven }
 ]
 
 end PyLean.BytesObj.Seq

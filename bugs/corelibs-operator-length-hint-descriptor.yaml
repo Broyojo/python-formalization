@@ -1,0 +1,64 @@
+id: corelibs-operator-length-hint-descriptor
+title: "operator.length_hint twins bind __length_hint__ differently: a staticmethod or a property gives the hint in C and the default in Python"
+priority: P5
+kind: twin-mismatch
+module: corelibs
+files: [Lib/operator.py, Objects/abstract.c]
+functions: ["length_hint", "_operator_length_hint_impl"]
+summary: |
+  `PyObject_LengthHint` (Objects/abstract.c:113-121) looks the hint up with `_PyObject_LookupSpecial`, which
+  runs the descriptor's `__get__` with the object, and calls the result with no argument; a failing lookup
+  returns -1 whatever the exception (:114-116). The pure twin (Lib/operator.py:213-221) reads
+  `type(obj).__length_hint__`, which runs `__get__` with no instance, and calls `hint(obj)`, swallowing a
+  TypeError. So:
+  * `__length_hint__ = staticmethod(lambda: 5)`: C returns 5; Python calls it with `obj`, gets a TypeError
+    and returns the default.
+  * `__length_hint__ = property(getter)` where the getter returns a callable: C calls it; Python calls the
+    property object, a TypeError, and returns the default. A getter that raises TypeError makes C raise it
+    and Python return the default.
+likelihood: |
+  Very low: the pure twin only runs without _operator, and `__length_hint__` is almost always a method.
+maybe_intended: |
+  Yes in practice; `_PyObject_LookupSpecial` is how every special method is looked up in C. Recorded so the
+  difference is on file, as the model keeps the two lookups apart.
+reproducer: |
+  import operator
+  from test.support import import_helper
+  py = import_helper.import_fresh_module('operator', blocked=['_operator'])
+  class S:
+      __length_hint__ = staticmethod(lambda: 5)
+  class P:
+      @property
+      def __length_hint__(self):
+          return lambda: 7
+  class Q:
+      @property
+      def __length_hint__(self):
+          raise TypeError('get')
+  def t(f):
+      try:
+          return f()
+      except Exception as e:
+          return type(e).__name__
+  r = [(t(lambda: operator.length_hint(X())), t(lambda: py.length_hint(X()))) for X in (S, P, Q)]
+  print(r)
+  if r == [(5, 0), (7, 0), ('TypeError', 0)]:
+      print('REPRODUCED corelibs-operator-length-hint-descriptor')
+expected: |
+  The same outcome in both twins.
+observed: |
+  python3 3.15.2: [(5, 0), (7, 0), ('TypeError', 0)]. REPRODUCED. main (3.16.0a1+dev): REPRODUCED.
+promised_by: |
+  Nothing explicit; the twins are meant to agree.
+cause: |
+  Objects/abstract.c:113-121 (`_PyObject_LookupSpecial`, call with no argument, lookup error propagated)
+  against Lib/operator.py:213-221 (`type(obj).__length_hint__`, `hint(obj)`).
+possible_fix: |
+  None needed.
+duplicates:
+  issues: []
+  queries: ["length_hint staticmethod (0 results)", "length_hint property (64060, unrelated)", "length_hint pure python LookupSpecial (60898, 80732: unrelated)",
+            "bugforge README: only operator.iconcat (#158733), unrelated"]
+lean:
+  property: PyLean.CoreLibs.Operator.LengthHintDescTwins
+  theorem: PyLean.CoreLibs.Operator.lengthHintDescTwins_refuted

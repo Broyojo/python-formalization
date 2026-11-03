@@ -6,6 +6,7 @@ import PyLean.ListSort.CountRunMax
 import PyLean.ListSort.CountRunInput
 import PyLean.ListSort.FallibleSteps
 import PyLean.ListSort.CountRunFail
+import PyLean.ListSort.PreSort
 
 /-!
 `list.sort` (powersort/timsort in `Objects/listobject.c`, `Objects/listsort.txt`), CPython 3.15.2.
@@ -115,6 +116,11 @@ def entries : List Entry := [
     source := "listobject.c:2799-2832", status := .proven
     prop := ``ObjectCompareSpec, thm := some ``objectCompareSpec_proven
     notes := "The rich comparison, PyObject_IsTrue and the fallback are parameters with no assumptions. Difftested on two-item lists (fn \"objcmp\"). The sameSlot = false branch is not difftested: slot_tp_richcompare on a type without __lt__ returns NotImplemented, so the branch gives the same answer as the slot would and cannot be told apart from Python. A raising comparison in the whole sort is listsort-perm-on-error and listsort-fails." },
+  { id := "listsort-presort-select", pyFile := "Objects/listobject.c", pyFns := ["list_sort_impl"]
+    statement := "For every list of at least two keys, the pre-sort check picks: if the first key is an exact non-empty tuple, unsafe_tuple_compare when every key is one (with tuple_elem_compare chosen as below from the first items, safe_object_compare for tuples of tuples) and safe_object_compare otherwise; else, when every key has the first key's exact type, unsafe_latin_compare (str, all 1-byte kind), unsafe_long_compare (int, all compact), unsafe_float_compare (float), unsafe_object_compare (any other type with tp_richcompare), and safe_object_compare when the types differ or there is no tp_richcompare."
+    source := "listobject.c:3029-3123 (the loop :3047-3086, the choice :3088-3122)", status := .proven
+    prop := ``PreSortSelect, thm := some ``preSortSelect_proven
+    notes := "The key is modelled by what the check reads (exact type by identity, 1-byte kind, compactness, tuple-ness and first item, tp_richcompare). That each chosen compare answers as PyObject_RichCompareBool(v, w, Py_LT) for its class is bytesobj-sort-compare-agree (latin, tuple), listsort-long-compare (int) and listsort-object-compare; unsafe_float_compare is the double < of float_richcompare. Not difftestable directly; smoke-tested through __lt__ call counts (unsafe_object_compare calls a NotImplemented __lt__ twice, the generic path once)." },
   { id := "listsort-fallible-agree", pyFile := "Objects/listobject.c"
     pyFns := ["binarysort", "count_run", "gallop_left", "gallop_right", "merge_lo", "merge_hi", "merge_at", "list_sort_impl"]
     statement := "With a comparison that never raises, the fallible binarysort, count_run, gallop_left, gallop_right, merge_lo, merge_hi, merge_at and list.sort (with and without a key function that leaves the list alone) compute exactly the model's result and comparison count and report no exception."

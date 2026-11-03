@@ -7,6 +7,8 @@ import PyLean.CoreLibs.Operator.AbcProps
 import PyLean.CoreLibs.Operator.Strength
 import PyLean.CoreLibs.Operator.CopyStrength
 import PyLean.CoreLibs.Operator.AbcStrength
+import PyLean.CoreLibs.Operator.McShare
+import PyLean.CoreLibs.Operator.AttrObjProps
 
 /-! Registry for the `Operator` area of CoreLibs: Lib/operator.py, Modules/_operator.c, Lib/copy.py, Lib/abc.py,
 CPython 3.15.2. -/
@@ -25,8 +27,12 @@ def entries : List Entry := [
     pyFns := ["sub", "matmul", "floordiv", "truediv", "mod", "lshift", "rshift", "and_", "xor", "or_",
       "_operator_sub_impl", "_operator_matmul_impl", "_operator_floordiv_impl", "_operator_truediv_impl",
       "_operator_mod_impl", "_operator_lshift_impl", "_operator_rshift_impl", "_operator_and__impl",
-      "_operator_xor_impl", "_operator_or__impl"]
-    statement := "binary_op1 for every operator: the right slot is dropped for one type or one slot, a subclass's goes first, NotImplemented moves on, an exception stops, and the TypeError names the operator and the types."
+      "_operator_xor_impl", "_operator_or__impl", "_operator_add_impl", "_operator_mul_impl", "_operator_pow_impl",
+      "_operator_iadd_impl", "_operator_isub_impl", "_operator_imul_impl", "_operator_imatmul_impl",
+      "_operator_ifloordiv_impl", "_operator_itruediv_impl", "_operator_imod_impl", "_operator_ilshift_impl",
+      "_operator_irshift_impl", "_operator_iand_impl", "_operator_ixor_impl", "_operator_ior_impl",
+      "_operator_ipow_impl"]
+    statement := "binary_op1 for every operator: the right slot is dropped for one type or one slot and kept otherwise; a lone left or right slot gives its value, exception or TypeError; with both, a subclass's goes first, NotImplemented moves on, an exception stops, and the TypeError names the operator and the types."
     source := "language reference, data model"
     status := .proven
     prop := ``BinaryDispatch
@@ -61,7 +67,7 @@ def entries : List Entry := [
       "iadd", "_operator_isub_impl", "_operator_imatmul_impl", "_operator_ifloordiv_impl",
       "_operator_itruediv_impl", "_operator_imod_impl", "_operator_ilshift_impl", "_operator_irshift_impl",
       "_operator_iand_impl", "_operator_ixor_impl", "_operator_ior_impl", "_operator_iadd_impl"]
-    statement := "__iop__ first, its NotImplemented falls back to the binary operator; += prefers sq_inplace_concat to sq_concat."
+    statement := "__iop__ first: its value and its exception are final, its NotImplemented falls back to the binary operator; += prefers sq_inplace_concat to sq_concat."
     source := "language reference on augmented assignment"
     status := .proven
     prop := ``InplaceFallback
@@ -87,7 +93,7 @@ def entries : List Entry := [
     pyFile := file
     pyFns := ["lt", "le", "eq", "ne", "ge", "gt", "_operator_lt_impl", "_operator_le_impl", "_operator_eq_impl",
       "_operator_ne_impl", "_operator_ge_impl", "_operator_gt_impl"]
-    statement := "do_richcompare for every operator: the method's object unconverted, the reflected method first for a strict subclass, the operator swapped on reflection, an exception stops, and with no answer == and != are identity and the orderings raise TypeError."
+    statement := "do_richcompare for every operator: the method's object unconverted, the reflected method first for a strict subclass, the operator swapped on reflection, an exception stops in either order, and with no answer == and != are identity and the orderings raise TypeError."
     source := "data model on rich comparison"
     status := .proven
     prop := ``RichCompareOrder
@@ -103,7 +109,7 @@ def entries : List Entry := [
   { id := "corelibs-operator-truth"
     pyFile := file
     pyFns := ["truth", "not_", "_operator_truth_impl", "_operator_not__impl"]
-    statement := "truth and not_ on every kind of object: bool, None, __bool__ with its failures, __len__ with its failures, and the default; not_ is the negation with the same exception."
+    statement := "truth and not_ on every kind of object: True, False and None, __bool__ with its result and its failures, __len__ with its failures, and the default; not_ is the negation with the same exception."
     source := "language reference, truth value testing"
     status := .proven
     prop := ``TruthProtocol
@@ -137,7 +143,7 @@ def entries : List Entry := [
   { id := "corelibs-operator-getitem"
     pyFile := file
     pyFns := ["getitem", "_operator_getitem_impl"]
-    statement := "a[b]: mp_subscript, sq_item through __index__ with a negative index adjusted, __class_getitem__, and the TypeErrors."
+    statement := "a[b]: mp_subscript, sq_item through __index__ (its exception propagates) with a negative index adjusted when there is sq_length, __class_getitem__ with its value and its exception, and the TypeErrors with their messages."
     source := "Objects/abstract.c"
     status := .proven
     prop := ``GetItemProtocol
@@ -145,7 +151,7 @@ def entries : List Entry := [
   { id := "corelibs-operator-setdel"
     pyFile := file
     pyFns := ["setitem", "delitem", "_operator_setitem_impl", "_operator_delitem_impl"]
-    statement := "a[b] = c and del a[b]: mp_ass_subscript, then the sequence path, with the wording of the function that noticed."
+    statement := "a[b] = c and del a[b]: mp_ass_subscript, then the sequence path with a raising __index__ or sq_length propagating and a negative index adjusted for both, with the wording of the function that noticed."
     source := "Objects/abstract.c"
     status := .proven
     prop := ``SetDelProtocol
@@ -177,8 +183,9 @@ def entries : List Entry := [
     thm := some ``countAndIndex_proven },
   { id := "corelibs-operator-iter-errors"
     pyFile := file
-    pyFns := ["contains", "_operator_contains_impl", "countOf", "indexOf"]
-    statement := "A non-iterable: C replaces the TypeError's message and only a TypeError's; __contains__ wins over iteration."
+    pyFns := ["contains", "_operator_contains_impl", "countOf", "indexOf", "_operator_countOf_impl",
+      "_operator_indexOf_impl"]
+    statement := "A non-iterable: C replaces the TypeError's message for countOf, indexOf and contains, and only a TypeError's, while Python passes it on; __contains__ wins over iteration."
     source := "Objects/abstract.c"
     status := .proven
     prop := ``IterErrors
@@ -202,7 +209,7 @@ def entries : List Entry := [
   { id := "corelibs-operator-length-hint-twins"
     pyFile := file
     pyFns := ["length_hint", "_operator_length_hint_impl"]
-    statement := "length_hint agrees between the twins in the Py_ssize_t range."
+    statement := "length_hint agrees between the twins in the Py_ssize_t range, for a __length_hint__ that is a function in the class."
     source := "twin"
     status := .proven
     prop := ``LengthHintTwins
@@ -242,8 +249,8 @@ def entries : List Entry := [
     thm := some ``getterArity_proven },
   { id := "corelibs-operator-getter-repr"
     pyFile := file
-    pyFns := ["itemgetter.__repr__", "attrgetter.__repr__", "itemgetter_repr", "attrgetter_repr"]
-    statement := "repr of itemgetter and attrgetter is one string in both twins, for one item or many; a failing repr propagates."
+    pyFns := ["itemgetter.__repr__", "itemgetter_repr"]
+    statement := "repr of itemgetter is one string in both twins, for one item or many; a failing repr propagates."
     source := "twin"
     status := .proven
     prop := ``GetterReprTwins
@@ -529,7 +536,7 @@ def entries : List Entry := [
   { id := "corelibs-operator-length-hint-py-exact"
     pyFile := file
     pyFns := ["length_hint"]
-    statement := "length_hint in Python, every path: default first, len wins, a TypeError falls through, others propagate, a negative hint raises."
+    statement := "length_hint in Python, every path: default first, len wins, a TypeError falls through, others propagate, a negative hint raises; hint(obj) is called on what the class gives, so a property is a TypeError and the default."
     source := "Lib/operator.py"
     status := .proven
     prop := ``LengthHintPyExact
@@ -537,7 +544,7 @@ def entries : List Entry := [
   { id := "corelibs-operator-length-hint-c-exact"
     pyFile := file
     pyFns := ["_operator_length_hint_impl"]
-    statement := "length_hint in C, every path, with Py_ssize_t around the same checks: default and hint must fit, the overflow before the sign."
+    statement := "length_hint in C, every path, with Py_ssize_t around the same checks: default and hint must fit, the overflow before the sign; a raising _PyObject_LookupSpecial propagates whatever its class, a staticmethod is called with no argument."
     source := "Modules/_operator.c"
     status := .proven
     prop := ``LengthHintCExact
@@ -545,7 +552,7 @@ def entries : List Entry := [
   { id := "corelibs-operator-digest-exact"
     pyFile := file
     pyFns := ["_operator__compare_digest_impl"]
-    statement := "compare_digest is equality on ASCII strings and on buffers, and refuses the rest with the source's message."
+    statement := "compare_digest is equality on ASCII strings and on buffers, refuses the rest with the source's message, and propagates a failing PyObject_GetBuffer or a view with ndim > 1, a's before b's."
     source := "docs of hmac.compare_digest"
     status := .proven
     prop := ``DigestExact
@@ -568,8 +575,8 @@ def entries : List Entry := [
     thm := some ``itemgetterExact_proven },
   { id := "corelibs-operator-getter-repr-exact"
     pyFile := file
-    pyFns := ["itemgetter.__repr__", "attrgetter.__repr__", "itemgetter_repr", "attrgetter_repr"]
-    statement := "The repr of the two getters is the class name with the items joined by commas, the first failing repr stops it, and C has a recursion guard."
+    pyFns := ["itemgetter.__repr__", "itemgetter_repr"]
+    statement := "The repr of itemgetter is the class name with the items joined by commas, the first failing repr stops it, and C has a recursion guard."
     source := "twin"
     status := .proven
     prop := ``GetterReprExact
@@ -577,7 +584,7 @@ def entries : List Entry := [
   { id := "corelibs-operator-attr-name-exact"
     pyFile := file
     pyFns := ["attrgetter.__init__", "attrgetter.__reduce__", "attrgetter_new", "dotjoinattr", "attrgetter_args", "attrgetter_reduce"]
-    statement := "attrgetter names: the split is the one with no dot that joins back; C reads the characters of a str subclass and Python calls its split; anything else is refused."
+    statement := "attrgetter names: the split is the one with no dot that joins back; Python calls the name's split; C keeps an undotted name as the object given, a str subclass included, and a dotted one as exact parts; anything else is refused."
     source := "docs of operator; twin"
     status := .proven
     prop := ``AttrNameExact
@@ -593,7 +600,7 @@ def entries : List Entry := [
   { id := "corelibs-operator-methodcaller-exact"
     pyFile := file
     pyFns := ["methodcaller.__init__", "methodcaller.__call__", "methodcaller_new", "methodcaller_call", "methodcaller_vectorcall", "_methodcaller_initialize_vectorcall"]
-    statement := "methodcaller built and called: any str is stored with the arguments as given, anything else refused; the lookup runs first and its failure is the outcome, and the vectorcall limit is seven."
+    statement := "methodcaller built and called: no name and a non-str name are refused with their messages, any str is stored with the arguments as given; the vectorcall path checks the count before keywords; the lookup runs first and its failure is the outcome, and the vectorcall limit is seven."
     source := "docs of operator; twin"
     status := .proven
     prop := ``MethodcallerExact
@@ -601,11 +608,107 @@ def entries : List Entry := [
   { id := "corelibs-operator-mc-repr-exact"
     pyFile := file
     pyFns := ["methodcaller.__repr__", "methodcaller_repr"]
-    statement := "The repr of methodcaller for a repr that may raise: the twins agree on every outcome, on the text, and on the first failure."
+    statement := "The repr of methodcaller, for a name and arguments whose repr may raise: the twins agree on every outcome."
+    source := "twin"
+    status := .refuted
+    prop := ``McReprExact
+    thm := some ``mcReprExact_refuted
+    bug := some "corelibs-operator-twin-str-subclass" },
+  { id := "corelibs-operator-mc-repr-order"
+    pyFile := file
+    pyFns := ["methodcaller.__repr__", "methodcaller_repr"]
+    statement := "The repr of methodcaller, each twin: one text when every repr succeeds; Python's first step is the name's repr, C's last (except with no arguments), so the first failing argument repr is C's outcome whatever the name does; C's recursion guard."
     source := "twin"
     status := .proven
-    prop := ``McReprExact
-    thm := some ``mcReprExact_proven },
+    prop := ``McReprOrder
+    thm := some ``mcReprOrder_proven },
+  { id := "corelibs-operator-attr-lookup-exact"
+    pyFile := file
+    pyFns := ["attrgetter.__init__", "attrgetter.__call__", "attrgetter_new", "dotted_getattr", "attrgetter_call_impl"]
+    statement := "attrgetter lookups with name objects: exact str names give one call in both twins; a dotted str subclass walks exact parts in C as Python's default split does; an undotted str subclass is looked up as the object itself in C."
+    source := "twin; Modules/_operator.c"
+    status := .proven
+    prop := ``AttrLookupExact
+    thm := some ``attrLookupExact_proven },
+  { id := "corelibs-operator-attr-lookup-twins"
+    pyFile := file
+    pyFns := ["attrgetter.__init__", "attrgetter.__call__", "attrgetter_new", "dotted_getattr"]
+    statement := "attrgetter does one lookup in both twins for any name the constructors accept."
+    source := "twin"
+    status := .refuted
+    prop := ``AttrLookupTwins
+    thm := some ``attrLookupTwins_refuted
+    bug := some "corelibs-operator-twin-str-subclass" },
+  { id := "corelibs-operator-attr-repr-exact"
+    pyFile := file
+    pyFns := ["attrgetter.__repr__", "attrgetter_repr", "dotjoinattr", "attrgetter_args"]
+    statement := "The repr of attrgetter: one outcome in both twins when no argument is a str subclass with its own __repr__; otherwise C prints the subclass object for an undotted name and the rebuilt exact str for a dotted one; C's recursion guard."
+    source := "twin"
+    status := .proven
+    prop := ``AttrReprExact
+    thm := some ``attrReprExact_proven },
+  { id := "corelibs-operator-attr-repr-twins"
+    pyFile := file
+    pyFns := ["attrgetter.__repr__", "attrgetter_repr", "dotjoinattr"]
+    statement := "The repr of attrgetter is one outcome in both twins for any name the constructors accept."
+    source := "twin"
+    status := .refuted
+    prop := ``AttrReprTwins
+    thm := some ``attrReprTwins_refuted
+    bug := some "corelibs-operator-twin-str-subclass" },
+  { id := "corelibs-operator-length-hint-descriptor"
+    pyFile := file
+    pyFns := ["length_hint", "_operator_length_hint_impl"]
+    statement := "length_hint agrees between the twins for any __length_hint__ the class holds, with a hint that fits and is not negative."
+    source := "twin"
+    status := .refuted
+    prop := ``LengthHintDescTwins
+    thm := some ``lengthHintDescTwins_refuted
+    bug := some "corelibs-operator-length-hint-descriptor" },
+  { id := "corelibs-operator-mc-reduce-exact"
+    pyFile := file
+    pyFns := ["methodcaller_reduce"]
+    statement := "methodcaller_reduce, every branch: no keywords is (type, (name, *args)) and touches nothing; a failing import of functools propagates; a Placeholder value is partial_new's TypeError; otherwise partial(type, name) holding mc->kwds itself when the methodcaller is its only holder, and a copy otherwise."
+    source := "Modules/_operator.c:1876-1908; Modules/_functoolsmodule.c:161-319"
+    status := .proven
+    prop := ``McShare.McReduceExact
+    thm := some ``McShare.mcReduceExact_proven },
+  { id := "corelibs-operator-mc-reduce-isolated"
+    pyFile := file
+    pyFns := ["methodcaller_reduce", "methodcaller_new", "methodcaller_repr"]
+    statement := "Writing to the keywords of the partial that __reduce__ returns leaves repr(mc) as it was."
+    source := "pickle protocol; Python twin"
+    status := .refuted
+    prop := ``McShare.McReduceIsolated
+    thm := some ``McShare.mcReduceIsolated_refuted
+    bug := some "operator-methodcaller-reduce-shares-kwargs" },
+  { id := "corelibs-operator-mc-reduce-no-crash"
+    pyFile := file
+    pyFns := ["methodcaller_reduce", "methodcaller_new", "methodcaller_repr"]
+    statement := "repr of a methodcaller built with keyword syntax is defined after any write to what __reduce__ returned."
+    source := "invariant: no crash from pure Python"
+    status := .refuted
+    prop := ``McShare.McReduceNoCrash
+    thm := some ``McShare.mcReduceNoCrash_refuted
+    bug := some "operator-methodcaller-reduce-shares-kwargs" },
+  { id := "corelibs-operator-mc-call-isolated"
+    pyFile := file
+    pyFns := ["methodcaller_call", "methodcaller_new", "methodcaller_repr"]
+    statement := "A partial returned by mc(obj), the method being functools.partial, has keywords of its own: writing to them leaves repr(mc) as it was."
+    source := "invariant"
+    status := .refuted
+    prop := ``McShare.McCallIsolated
+    thm := some ``McShare.mcCallIsolated_refuted
+    bug := some "operator-methodcaller-reduce-shares-kwargs" },
+  { id := "corelibs-operator-mc-vectorcall-fresh"
+    pyFile := file
+    pyFns := ["methodcaller_vectorcall", "_methodcaller_initialize_vectorcall"]
+    statement := "On the vectorcall path a partial made by mc(obj) gets a new keyword dict, never mc->kwds."
+    source := "Modules/_operator.c:1628-1686; Objects/call.c:222-236"
+    status := .proven
+    prop := ``McShare.McVectorcallFresh
+    thm := some ``McShare.mcVectorcallFresh_proven },
+
   { id := "corelibs-copy-list-exact"
     pyFile := copyFile
     pyFns := ["_deepcopy_list", "deepcopy"]

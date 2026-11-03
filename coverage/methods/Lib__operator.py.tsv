@@ -36,11 +36,11 @@ Lib/operator.py	173	175	delitem	delitem(a, b)	modelled	corelibs-operator-setdel
 Lib/operator.py	177	179	getitem	getitem(a, b)	modelled	corelibs-operator-getitem	
 Lib/operator.py	181	187	indexOf	indexOf(a, b)	modelled	corelibs-operator-search-exact	
 Lib/operator.py	189	191	setitem	setitem(a, b, c)	modelled	corelibs-operator-setdel	
-Lib/operator.py	193	230	length_hint	length_hint(obj, default=0)	modelled	corelibs-operator-length-hint-py-exact	
+Lib/operator.py	193	230	length_hint	length_hint(obj, default=0)	modelled	corelibs-operator-length-hint-py-exact,corelibs-operator-length-hint-descriptor	
 Lib/operator.py	234	236	call	call(obj, /, *args, **kwargs)	modelled	corelibs-operator-call	
-Lib/operator.py	250	266	attrgetter.__init__	__init__(self, attr, /, *attrs)	modelled	corelibs-operator-attr-name-exact,corelibs-operator-attr-call-exact	
+Lib/operator.py	250	266	attrgetter.__init__	__init__(self, attr, /, *attrs)	modelled	corelibs-operator-attr-name-exact,corelibs-operator-attr-call-exact,corelibs-operator-attr-lookup-exact	
 Lib/operator.py	268	269	attrgetter.__call__	__call__(self, obj, /)	modelled	corelibs-operator-attr-call-exact	
-Lib/operator.py	271	274	attrgetter.__repr__	__repr__(self)	modelled	corelibs-operator-getter-repr-exact	
+Lib/operator.py	271	274	attrgetter.__repr__	__repr__(self)	modelled	corelibs-operator-attr-repr-exact,corelibs-operator-attr-repr-twins	
 Lib/operator.py	276	277	attrgetter.__reduce__	__reduce__(self)	modelled	corelibs-operator-attr-name-exact	
 Lib/operator.py	287	297	itemgetter.__init__	__init__(self, item, /, *items)	modelled	corelibs-operator-itemgetter-exact	
 Lib/operator.py	299	300	itemgetter.__call__	__call__(self, obj, /)	modelled	corelibs-operator-itemgetter-exact	
@@ -48,7 +48,7 @@ Lib/operator.py	302	305	itemgetter.__repr__	__repr__(self)	modelled	corelibs-ope
 Lib/operator.py	307	308	itemgetter.__reduce__	__reduce__(self)	todo		
 Lib/operator.py	319	324	methodcaller.__init__	__init__(self, name, /, *args, **kwargs)	modelled	corelibs-operator-methodcaller-exact	
 Lib/operator.py	326	327	methodcaller.__call__	__call__(self, obj, /)	modelled	corelibs-operator-methodcaller-exact	
-Lib/operator.py	329	335	methodcaller.__repr__	__repr__(self)	modelled	corelibs-operator-mc-repr-exact	
+Lib/operator.py	329	335	methodcaller.__repr__	__repr__(self)	modelled	corelibs-operator-mc-repr-order,corelibs-operator-mc-repr-exact	
 Lib/operator.py	337	342	methodcaller.__reduce__	__reduce__(self)	modelled	corelibs-operator-methodcaller-new	
 Lib/operator.py	347	350	iadd	iadd(a, b)	modelled	corelibs-operator-inplace-exact	
 Lib/operator.py	352	355	iand	iand(a, b)	modelled	corelibs-operator-inplace-fallback	

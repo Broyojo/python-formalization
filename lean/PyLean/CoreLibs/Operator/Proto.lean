@@ -42,7 +42,7 @@ structure BinArgs (α : Type) where
   lt : String
   rt : String
 
-/-- `slotw` of `binary_op1`, Objects/abstract.c:954-962: null for the same type and for the same slot. -/
+/-- `slotw` of `binary_op1`, Objects/abstract.c:954-963: null for the same type and for the same slot. -/
 def BinArgs.slotw {α : Type} (A : BinArgs α) : Option (Slot α) :=
   if A.sameType then none else
   match A.sw, A.sv with
@@ -74,7 +74,7 @@ def binaryOp1 {α : Type} (A : BinArgs α) (v w : α) : Py (Ret α) :=
 def binopError (sym lt rt : String) : PyExc :=
   .typeError s!"unsupported operand type(s) for {sym}: '{lt}' and '{rt}'"
 
-/-- `binary_op`, Objects/abstract.c:1003-1011: `PyNumber_Subtract` and the rest of `BINARY_FUNC`, so the body of
+/-- `binary_op`, Objects/abstract.c:1010-1019: `PyNumber_Subtract` and the rest of `BINARY_FUNC`, so the body of
 `a - b`, `a & b`, ... in Python and of `_operator_sub_impl`, ... in C. -/
 def binaryOp {α : Type} (A : BinArgs α) (sym : String) (v w : α) : Py α :=
   match binaryOp1 A v w with
@@ -140,7 +140,7 @@ def fitSsize (mk : String → PyExc) (tn : String) (n : Int) : Py Int :=
   if n > ssizeMax ∨ n < ssizeMin then .error (mk s!"cannot fit '{tn}' into an index-sized integer")
   else .ok n
 
-/-- `sequence_repeat`, Objects/abstract.c:1157-1174. -/
+/-- `sequence_repeat`, Objects/abstract.c:1156-1173. -/
 def sequenceRepeat {α : Type} (Q : SeqArgs α) (f : α → Int → Py α) (seq n : α) : Py α :=
   match Q.index n with
   | none => .error (.typeError s!"can't multiply sequence by non-int of type '{Q.tn n}'")
@@ -152,7 +152,7 @@ def sequenceRepeat {α : Type} (Q : SeqArgs α) (f : α → Int → Py α) (seq 
       | .error e => .error e
       | .ok c => f seq c
 
-/-- `PyNumber_Add`, Objects/abstract.c:1138-1155, for `a + b` and `_operator_add_impl`. -/
+/-- `PyNumber_Add`, Objects/abstract.c:1137-1154, for `a + b` and `_operator_add_impl`. -/
 def numberAdd {α : Type} (A : BinArgs α) (Q : SeqArgs α) (v w : α) : Py α :=
   match binaryOp1 A v w with
   | .error e => .error e
@@ -175,7 +175,7 @@ def numberMul {α : Type} (A : BinArgs α) (Q : SeqArgs α) (v w : α) : Py α :
       | some f => sequenceRepeat Q f w v
       | none => .error (binopError "*" A.lt A.rt)
 
-/-- `ternary_op`, Objects/abstract.c:1026-1109, with `z` being `None`: `NoneType` has no `nb_power`, so the
+/-- `ternary_op`, Objects/abstract.c:1029-1121, with `z` being `None`: `NoneType` has no `nb_power`, so the
 third step finds nothing and the order is that of `binary_op1`. `op_name` is what the error says. -/
 def ternaryOp {α : Type} (A : BinArgs α) (name : String) (v w : α) : Py α :=
   binaryOp A name v w
@@ -185,7 +185,7 @@ def numberPow {α : Type} (A : BinArgs α) (v w : α) : Py α := ternaryOp A "**
 
 /-! ### In-place operators -/
 
-/-- `binary_iop1`, Objects/abstract.c:1228-1249: the in-place slot, then `binary_op1`. -/
+/-- `binary_iop1`, Objects/abstract.c:1227-1251: the in-place slot, then `binary_op1`. -/
 def binaryIop1 {α : Type} (iop : Option (α → α → Py (Ret α))) (A : BinArgs α) (v w : α) : Py (Ret α) :=
   match iop with
   | none => binaryOp1 A v w
@@ -195,7 +195,7 @@ def binaryIop1 {α : Type} (iop : Option (α → α → Py (Ret α))) (A : BinAr
     | .ok (.val x) => .ok (.val x)
     | .ok .notImplemented => binaryOp1 A v w
 
-/-- `binary_iop`, Objects/abstract.c:1258-1267: `PyNumber_InPlaceSubtract` and the rest of `INPLACE_BINOP`. -/
+/-- `binary_iop`, Objects/abstract.c:1259-1269: `PyNumber_InPlaceSubtract` and the rest of `INPLACE_BINOP`. -/
 def inplaceOp {α : Type} (iop : Option (α → α → Py (Ret α))) (A : BinArgs α) (sym : String) (v w : α) :
     Py α :=
   match binaryIop1 iop A v w with
@@ -203,7 +203,7 @@ def inplaceOp {α : Type} (iop : Option (α → α → Py (Ret α))) (A : BinArg
   | .ok (.val x) => .ok x
   | .ok .notImplemented => .error (binopError sym A.lt A.rt)
 
-/-- `PyNumber_InPlaceAdd`, Objects/abstract.c:1306-1326. -/
+/-- `PyNumber_InPlaceAdd`, Objects/abstract.c:1306-1327. -/
 def inplaceAdd {α : Type} (iop : Option (α → α → Py (Ret α))) (A : BinArgs α) (Q : SeqArgs α) (v w : α) :
     Py α :=
   match binaryIop1 iop A v w with
@@ -220,7 +220,7 @@ def inplaceAdd {α : Type} (iop : Option (α → α → Py (Ret α))) (A : BinAr
         | none => err
     else err
 
-/-- `PyNumber_InPlaceMultiply`, Objects/abstract.c:1328-1354. The right operand's `sq_repeat` is tried only
+/-- `PyNumber_InPlaceMultiply`, Objects/abstract.c:1329-1356. The right operand's `sq_repeat` is tried only
 under `else if (mw != NULL)`, so only when the left type has no `tp_as_sequence` at all. A heap class always
 has it, with or without a repeat slot, which is where this differs from `PyNumber_Multiply`. -/
 def inplaceMul {α : Type} (iop : Option (α → α → Py (Ret α))) (A : BinArgs α) (Q : SeqArgs α) (v w : α) :
@@ -243,7 +243,7 @@ def inplaceMul {α : Type} (iop : Option (α → α → Py (Ret α))) (A : BinAr
       | none => err
     else err
 
-/-- `ternary_iop`, Objects/abstract.c:1271-1286, with `z` being `None`: `PyNumber_InPlacePower`. -/
+/-- `ternary_iop`, Objects/abstract.c:1271-1287, with `z` being `None`: `PyNumber_InPlacePower`. -/
 def inplacePow {α : Type} (iop : Option (α → α → Py (Ret α))) (A : BinArgs α) (v w : α) : Py α :=
   match iop with
   | none => ternaryOp A "**=" v w
@@ -572,7 +572,9 @@ inductive IterArg (α : Type) where
 in C, with the truth test of the result. The `==` may raise, and so may `__bool__` of what it returns. -/
 abbrev Same (α : Type) := α → α → Py Bool
 
-/-- The `TypeError` handling of `_PySequence_IterSearch`, Objects/abstract.c:2150-2162. -/
+/-- The `TypeError` handling of `_PySequence_IterSearch`, Objects/abstract.c:2150-2162. `PyErr_ExceptionMatches`
+also matches a subclass of `TypeError`; `PyExc` has no class hierarchy, so such an exception is modelled as
+`.typeError` (scope limit). -/
 def iterError (tn : String) (contains : Bool) (e : PyExc) : PyExc :=
   match e with
   | .typeError _ =>
@@ -737,12 +739,38 @@ inductive HintRet where
   | other (tn : String)
   deriving Repr, DecidableEq
 
+/-- What the class holds as `__length_hint__`. The twins reach it differently: C through `_PyObject_LookupSpecial`
+(Objects/abstract.c:113), which runs the descriptor's `__get__` with the object, then a call with no argument
+(:120); Python through `type(obj).__length_hint__` (Lib/operator.py:213-216), which runs `__get__` with no
+instance, then `hint(obj)` (:218-221). -/
+inductive HintDesc where
+  /-- A function: C calls the bound method, Python the function with `obj`; one call, this outcome. -/
+  | func (r : Py HintRet)
+  /-- A `staticmethod`: both unwrap it; C calls it with no argument (`noArg`), Python with `obj` (`withObj`). -/
+  | static (noArg withObj : Py HintRet)
+  /-- A `property`: C's lookup runs the getter on `obj`, which can raise, and calls what it returns (`get`);
+  Python gets the property object itself, and calling it is a `TypeError`. -/
+  | prop (get : Py (Py HintRet))
+  deriving Repr
+
+/-- C: the lookup's exception, or the outcome of the call. -/
+def hintLookupC : HintDesc → Py (Py HintRet)
+  | .func r => .ok r
+  | .static r _ => .ok r
+  | .prop g => g
+
+/-- Python: the outcome of `hint(obj)`. -/
+def hintCallPy : HintDesc → Py HintRet
+  | .func r => r
+  | .static _ r => r
+  | .prop _ => .error (.typeError "'property' object is not callable")
+
 /-- What `length_hint` sees of an object. -/
 structure HintObj where
   /-- `len(obj)`; a missing `__len__` is the `TypeError` case. -/
   len : Py Nat
-  /-- `type(obj).__length_hint__`, called; `none` when there is none. -/
-  hint : Option (Py HintRet)
+  /-- `__length_hint__` on the class; `none` when there is none. -/
+  hint : Option HintDesc
   /-- `%T` of the object. -/
   tn : String := "O"
   deriving Repr
@@ -776,7 +804,7 @@ def lengthHintPy (o : HintObj) (default : HintDefault) : Py Int := do
   match o.hint with
   | none => pure d
   | some h =>
-    match h with
+    match hintCallPy h with
     | .error e => if isTypeError e then pure d else throw e
     | .ok .notImplemented => pure d
     | .ok (.other tn) => throw (.typeError s!"__length_hint__ must be integer, not {tn}")
@@ -790,7 +818,7 @@ def toSsize (n : Int) : Py Int :=
   else .ok n
 
 /-- `_operator_length_hint_impl`, Modules/_operator.c:826-831, with the argument-clinic conversion
-of `default` to `Py_ssize_t`, and `PyObject_LengthHint`, Objects/abstract.c:95. -/
+of `default` to `Py_ssize_t`, and `PyObject_LengthHint`, Objects/abstract.c:95-150, whose `_PyObject_LookupSpecial` failure propagates whatever its class (:113-116). -/
 def lengthHintC (o : HintObj) (default : HintDefault) : Py Int := do
   let d ← match default with
     | .int n => toSsize n
@@ -802,13 +830,16 @@ def lengthHintC (o : HintObj) (default : HintDefault) : Py Int := do
   match o.hint with
   | none => pure d
   | some h =>
-    match h with
-    | .error e => if isTypeError e then pure d else throw e
-    | .ok .notImplemented => pure d
-    | .ok (.other tn) => throw (.typeError s!"{o.tn}.__length_hint__() must return an int, not {tn}")
-    | .ok (.int v) =>
-      let r ← toSsize v
-      if r < 0 then throw (.valueError (negativeHintC o)) else pure r
+    match hintLookupC h with
+    | .error e => throw e
+    | .ok call =>
+      match call with
+      | .error e => if isTypeError e then pure d else throw e
+      | .ok .notImplemented => pure d
+      | .ok (.other tn) => throw (.typeError s!"{o.tn}.__length_hint__() must return an int, not {tn}")
+      | .ok (.int v) =>
+        let r ← toSsize v
+        if r < 0 then throw (.valueError (negativeHintC o)) else pure r
 
 /-! ### `_compare_digest` -/
 
@@ -822,29 +853,56 @@ starts the result at 1. -/
 def tscmp (a b : List Nat) : Bool :=
   if a.length = b.length then tscmpLoop 0 a b == 0 else tscmpLoop 1 b b == 0
 
-/-- The arguments of `_compare_digest`. -/
+/-- The arguments of `_compare_digest`. A buffer exporter's `PyObject_GetBuffer(x, PyBUF_SIMPLE)` gives a
+one-dimensional view of these bytes, raises (a non-contiguous `memoryview` raises `BufferError`), or gives a view
+with `ndim > 1` (a `memoryview` gives `ndim = 1` for a simple request, so that case needs another exporter). -/
 inductive DigestArg where
   | str (ascii : Bool) (data : List Nat)
   | buffer (data : List Nat)
+  | bufferErr (e : PyExc)
+  | bufferNd
   | other (tn : String)
   deriving Repr, DecidableEq
 
-/-- `_operator__compare_digest_impl`, Modules/_operator.c:852-916. -/
+/-- `PyObject_CheckBuffer`. -/
+def DigestArg.hasBuffer : DigestArg → Bool
+  | .buffer _ | .bufferErr _ | .bufferNd => true
+  | _ => false
+
+/-- `Py_TYPE(x)->tp_name` of an argument without the buffer protocol. -/
+def DigestArg.tn : DigestArg → String
+  | .str _ _ => "str"
+  | .other tn => tn
+  | _ => "?"
+
+def ndimMsg := "Buffer must be single dimension"
+
+/-- `PyObject_GetBuffer(x, &view, PyBUF_SIMPLE)` and the `ndim > 1` test, Modules/_operator.c:884-892 and
+:894-904. -/
+def digestBuffer : DigestArg → Py (List Nat)
+  | .buffer d => .ok d
+  | .bufferErr e => .error e
+  | .bufferNd => .error (.named "BufferError" ndimMsg)
+  | _ => .error (.typeError "~a bytes-like object is required")
+
+/-- `_operator__compare_digest_impl`, Modules/_operator.c:852-916: two `str` compare their ASCII data (:858-870);
+otherwise, with neither a buffer exporter, the `TypeError` naming both types (:876-882); else `a`'s buffer, then
+`b`'s, each failing on its own (:884-904). -/
 def compareDigest : DigestArg → DigestArg → Py Bool
   | .str aa a, .str ab b =>
     if !aa || !ab then
       .error (.typeError "comparing strings with non-ASCII characters is not supported")
     else .ok (tscmp a b)
-  | .buffer a, .buffer b => .ok (tscmp a b)
-  | .other ta, .other tb =>
-    .error (.typeError
-      s!"unsupported operand types(s) or combination of types: '{ta}' and '{tb}'")
-  | .str _ _, .other tb =>
-    .error (.typeError
-      s!"unsupported operand types(s) or combination of types: 'str' and '{tb}'")
-  | .other ta, .str _ _ =>
-    .error (.typeError
-      s!"unsupported operand types(s) or combination of types: '{ta}' and 'str'")
-  | _, _ => .error (.typeError "~a bytes-like object is required")
+  | a, b =>
+    if !a.hasBuffer && !b.hasBuffer then
+      .error (.typeError
+        s!"unsupported operand types(s) or combination of types: '{a.tn}' and '{b.tn}'")
+    else
+      match digestBuffer a with
+      | .error e => .error e
+      | .ok da =>
+        match digestBuffer b with
+        | .error e => .error e
+        | .ok db => .ok (tscmp da db)
 
 end PyLean.CoreLibs.Operator

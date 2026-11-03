@@ -578,15 +578,28 @@ def containsLoop (cmp : Cmp α) (el : α) : Nat → Int → LObj α → Py Bool 
 def listContains (cmp : Cmp α) (fuel : Nat) (o : LObj α) (el : α) : Py Bool × LObj α :=
   containsLoop cmp el fuel 0 o
 
+/-- `list_get_item_ref(op, i)` of the default build, listobject.c:401-408, as `list_index_impl` and
+`list_count_impl` call it: `valid_index(i, Py_SIZE(op))` on the size the list has now (:404), then
+`PyList_GET_ITEM(op, i)` (:407), an unchecked read of the current array, which would be `cUB`
+outside it. `.ok none` is the `NULL` that ends both loops ("out-of-bounds", :3363-3365, :3393-3395). -/
+def listGetItemRefC (l : List α) (i : Int) : Py (Option α) :=
+  if validIndex i l.length then
+    match slot l i with
+    | some v => .ok (some v)
+    | none => .error (cUB "list_get_item_ref: PyList_GET_ITEM outside the items")
+  else .ok none
+
 /-- The loop of `list_index_impl`, listobject.c:3360-3372: `none` is falling out
-of the loop, which is what raises `ValueError`. -/
+of the loop, which is what raises `ValueError`. `stop` was clipped once, before the loop, against
+the size on entry (:3350-3359); each pass rereads the list through `list_get_item_ref` (:3361). -/
 def indexLoop (cmp : Cmp α) (value : α) (stop : Int) : Nat → Int → LObj α → Py (Option Int) × LObj α
   | 0, _, o => (.error .modelFuel, o)
   | fuel + 1, i, o =>
     if i < stop then
-      match listGetItemRef o.items i with
-      | none => (.ok none, o)
-      | some item =>
+      match listGetItemRefC o.items i with
+      | .error e => (.error e, o)
+      | .ok none => (.ok none, o)
+      | .ok (some item) =>
         match cmp o item value with
         | (.ok true, o') => (.ok (some i), o')
         | (.ok false, o') => indexLoop cmp value stop fuel (i + 1) o'
@@ -610,15 +623,63 @@ def listIndex (cmp : Cmp α) (fuel : Nat) (o : LObj α) (value : α) (start stop
   | (.ok none, o') => (.error (.valueError "list.index(x): x not in list"), o')
   | (.error e, o') => (.error e, o')
 
+/-- An argument of a `slice_index` converter or of `PyNumber_AsSsize_t`, by what the C looks at:
+an `int` (`PyLong_Check`, so a subclass too, whose `__index__` is never called, Objects/abstract.c:1416),
+an object with `nb_index` whose `__index__` is user code (it sees the list and may change it, and it
+may raise, which includes "`%T.__index__() must return an int, not %T`", abstract.c:1432-1436),
+or an object without `nb_index`. `tpName` is `Py_TYPE(item)->tp_name`. -/
+inductive IdxArg (α : Type) where
+  | int (n : Int) (tpName : String := "int")
+  | index (tpName : String) (f : LObj α → Py Int × LObj α)
+  | notIndex (tpName : String)
+
+/-- `_PyNumber_Index(item)` (abstract.c:1410-1465) for an argument that has `nb_index`: `none` for an
+object without it. -/
+def IdxArg.index? (a : IdxArg α) (o : LObj α) : Option (Py Int × LObj α) :=
+  match a with
+  | .int n _ => some (.ok n, o)
+  | .index _ f => some (f o)
+  | .notIndex _ => none
+
+/-- `_PyEval_SliceIndexNotNone(v, pi)`, Python/ceval.c:2957-2979, the clinic converter of `start`
+and `stop` (Objects/clinic/listobject.c.h:334-342): an index saturates (`PyNumber_AsSsize_t(v, NULL)`,
+abstract.c:1495-1504, `clampSsize`); anything else is a `TypeError`. -/
+def sliceIndexArg (a : IdxArg α) (o : LObj α) : Py Int × LObj α :=
+  match a.index? o with
+  | none => (.error (.typeError "slice indices must be integers or have an __index__ method"), o)
+  | some (.error e, o') => (.error e, o')
+  | some (.ok n, o') => (.ok (PyLean.RangeSlice.clampSsize n), o')
+
+/-- `l.index(value[, start[, stop]])`: `list_index` (Objects/clinic/listobject.c.h:320-348) converts
+`start`, then `stop`, each of which may run `__index__` and change the list, and only then calls
+`list_index_impl`, which reads `Py_SIZE(self)` of the list as the conversions left it (:3350-3359).
+The converted values are already in `Py_ssize_t`, so `listIndexBounds`'s saturation leaves them alone. -/
+def listIndexCall (cmp : Cmp α) (fuel : Nat) (o : LObj α) (value : α) (start stop : Option (IdxArg α)) :
+    Py Int × LObj α :=
+  let conv (a : Option (IdxArg α)) (o : LObj α) : Py (Option Int) × LObj α :=
+    match a with
+    | none => (.ok none, o)
+    | some a =>
+      match sliceIndexArg a o with
+      | (.ok n, o') => (.ok (some n), o')
+      | (.error e, o') => (.error e, o')
+  match conv start o with
+  | (.error e, o1) => (.error e, o1)
+  | (.ok s, o1) =>
+    match conv stop o1 with
+    | (.error e, o2) => (.error e, o2)
+    | (.ok t, o2) => listIndex cmp fuel o2 value s t
+
 /-- `list_count_impl`, listobject.c:3386-3410: the `obj == value` shortcut, then
 the comparison. -/
 def countLoop (same : α → α → Bool) (cmp : Cmp α) (value : α) :
     Nat → Int → Int → LObj α → Py Int × LObj α
   | 0, _, _, o => (.error .modelFuel, o)
   | fuel + 1, i, count, o =>
-    match listGetItemRef o.items i with
-    | none => (.ok count, o)
-    | some obj =>
+    match listGetItemRefC o.items i with
+    | .error e => (.error e, o)
+    | .ok none => (.ok count, o)
+    | .ok (some obj) =>
       if same obj value then countLoop same cmp value fuel (i + 1) (count + 1) o
       else
         match cmp o obj value with
@@ -794,6 +855,109 @@ where
     else if len = 0 then .ok self
     else .ok { self with items := storeLoopL self.items step seq start }
 
+/-! ## Subscripts: the type dispatch -/
+
+/-- `%.200s` of a type name: at most 200 characters (the names here are ASCII). -/
+def trunc200 (s : String) : String := String.ofList (s.toList.take 200)
+
+/-- `l[item]`, `l[item] = v` and `del l[item]` by what `list_subscript` and
+`list_ass_subscript_lock_held` test: `_PyIndex_Check(item)` (listobject.c:3715, :3758) holds for an
+`int` (any `PyLong_Check` object, whose `__index__` is never called) and for an object with
+`nb_index`, whose `__index__` is user code that sees the list, may change it and may raise;
+`PySlice_Check(item)` (:3724, :3766) for a slice, here with int/None parts; anything else is
+`.other`. `tpName` is `Py_TYPE(item)->tp_name`. -/
+inductive SubItem (α : Type) where
+  | int (n : Int) (tpName : String := "int")
+  | index (tpName : String) (f : LObj α → Py Int × LObj α)
+  | slice (s : Slice)
+  | other (tpName : String)
+
+/-- `PyNumber_AsSsize_t(item, PyExc_IndexError)`, Objects/abstract.c:1468-1513, after
+`_PyNumber_Index` returned `n`: an `IndexError` naming the item's type when `n` does not fit. -/
+def asSsizeIndexError (tpName : String) (n : Int) : Py Int :=
+  if ssizeMin ≤ n ∧ n ≤ ssizeMax then .ok n
+  else .error (.indexError s!"cannot fit '{trunc200 tpName}' into an index-sized integer")
+
+/-- `TypeError("list indices must be integers or slices, not %.200s")`, listobject.c:3727-3731 and
+:3910-3914. -/
+def listIndicesError (tpName : String) : PyExc :=
+  .typeError s!"list indices must be integers or slices, not {trunc200 tpName}"
+
+/-- `l[item]`, `list_subscript(_self, item)`, listobject.c:3711-3733. The index arm converts first
+(:3717-3719), which may run `__index__`, and only then reads `PyList_GET_SIZE(self)` (:3720-3721) and
+calls `list_item` (:3722), all on the list as `__index__` left it. A slice gives a new list
+(`list_slice_subscript`, :3725). The result is the item (`.inl`) or the new list (`.inr`), with the
+list afterwards. -/
+def listSubscriptAny (o : LObj α) (item : SubItem α) : Py (α ⊕ LObj α) × LObj α :=
+  match item with
+  | .slice s =>
+    match listGetSlice o.items s with
+    | .ok r => (.ok (.inr r), o)
+    | .error e => (.error e, o)
+  | .other tp => (.error (listIndicesError tp), o)
+  | .int n tp => idxArm tp (.ok n) o
+  | .index tp f => idxArm tp (f o).1 (f o).2
+where
+  idxArm (tp : String) (r : Py Int) (o : LObj α) : Py (α ⊕ LObj α) × LObj α :=
+    match r with
+    | .error e => (.error e, o)
+    | .ok n =>
+      match asSsizeIndexError tp n with
+      | .error e => (.error e, o)
+      | .ok i =>
+        let i := if i < 0 then i + o.items.length else i
+        match listItem o.items i with
+        | .ok v => (.ok (.inl v), o)
+        | .error e => (.error e, o)
+
+/-- What `PySequence_Fast(value, "must assign iterable to extended slice")` (listobject.c:3846-3856)
+makes of the value of a slice store: the list itself, which is copied first (:3846-3849); an exact
+list or tuple, whose items are taken as they are (`seq`); any other iterable, which `PySequence_List`
+iterates, running user code that sees the list, may change it and may raise (`iter`, the items
+and the list afterwards); or a refusal. -/
+inductive SeqView (α : Type) where
+  | selfCopy
+  | seq (items : List α)
+  | iter (f : LObj α → Py (List α) × LObj α)
+  | notIterable
+
+/-- `l[item] = value` (`value = some (v, view)`, `view` being what the slice arm makes of `v`) and
+`del l[item]` (`value = none`), `list_ass_subscript_lock_held(_self, item, value)`,
+listobject.c:3752-3916. The index arm converts (:3759-3761), which may run `__index__`, then adds the
+size the list has after it (:3762-3763) and calls `list_ass_item_lock_held` (:3764); the slice arm is
+`listAssSubscript` (:3766-3909), where `PySlice_Unpack` (:3769) comes before `PySequence_Fast`
+(:3851), whose iteration may change the list before `adjust_slice_indexes` reads its size (:3858);
+anything else is the `TypeError` (:3910-3914). The result is the list afterwards and the exception,
+if any. -/
+def listAssSubscriptAny (self : LObj α) (item : SubItem α) (value : Option (α × SeqView α)) : LRes α :=
+  match item with
+  | .slice s =>
+    match value with
+    | none => liftRes self (listAssSubscript self s .del)
+    | some (_, .selfCopy) => liftRes self (listAssSubscript self s .selfCopy)
+    | some (_, .seq items) => liftRes self (listAssSubscript self s (.seq items))
+    | some (_, .notIterable) => liftRes self (listAssSubscript self s .notIterable)
+    | some (_, .iter f) =>
+      match RangeSlice.sliceUnpack s with
+      | .error e => (self, some e)
+      | .ok _ =>
+        match f self with
+        | (.error e, o') => (o', some e)
+        | (.ok items, o') => liftRes o' (listAssSubscript o' s (.seq items))
+  | .other tp => (self, some (listIndicesError tp))
+  | .int n tp => idxArm tp (.ok n) self
+  | .index tp f => idxArm tp (f self).1 (f self).2
+where
+  idxArm (tp : String) (r : Py Int) (o : LObj α) : LRes α :=
+    match r with
+    | .error e => (o, some e)
+    | .ok n =>
+      match asSsizeIndexError tp n with
+      | .error e => (o, some e)
+      | .ok i =>
+        let i := if i < 0 then i + o.items.length else i
+        liftRes o (listAssItem o i (value.map (·.1)))
+
 /-! ## Iterators -/
 
 /-- `_PyListIterObject` and `listreviterobject`: `alive` is `it_seq != NULL`. The
@@ -873,6 +1037,39 @@ def listRevIterSetstateObj (it : ListIter) (l : List α) : Option Int → Py Lis
 state)`: `iter(seq)` or `reversed(seq)` with the index, or an empty list. -/
 def listIterReduce (it : ListIter) (l : List α) : List α × Option Int :=
   if it.index ≥ 0 then (l, some it.index) else ([], none)
+
+/-- The value of `it.__reduce__()`: `(callable, (it_seq,), index)` for a live iterator
+(`Py_BuildValue("N(O)n", ...)`), `(callable, ([],))` for an exhausted one (`"N(N)"`). -/
+inductive IterReduce (β α : Type) where
+  | live (callable : β) (seq : List α) (index : Int)
+  | empty (callable : β)
+  deriving Repr, DecidableEq
+
+/-- `listiter_reduce_general(_it, forward)`, listobject.c:4303-4335, on the iterator and the list it
+points to. `getBuiltin name st` is `_PyEval_GetBuiltin(&_Py_ID(name))` (Python/ceval.c:2651-2658), a
+lookup in the frame's builtins mapping that can run user code (a key's `__eq__`), which may change the
+iterator and the list, and fails with `AttributeError(name)` when the name is missing. The lookup comes
+first ("call must be before access of iterator pointers", gh-101765, :4309-4314 and :4321), and the
+index is loaded from the iterator as it left it (:4316, :4323). `idx >= 0` gives the list and the
+index (:4317-4319, :4324-4326); otherwise an empty list (:4328-4334). A failed lookup returns `NULL`
+through `Py_BuildValue`'s `N` with the lookup's exception. -/
+def listIterReduceGen {β : Type} (getBuiltin : String → ListIter × List α → Py β × (ListIter × List α))
+    (forward : Bool) (st : ListIter × List α) : Py (IterReduce β α) × (ListIter × List α) :=
+  match getBuiltin (if forward then "iter" else "reversed") st with
+  | (.error e, st') => (.error e, st')
+  | (.ok c, st') =>
+    if st'.1.index ≥ 0 then (.ok (.live c st'.2 st'.1.index), st')
+    else (.ok (.empty c), st')
+
+/-- `listiter_reduce(it)`, listobject.c:4126-4130: `listiter_reduce_general(it, 1)`. -/
+def listIterReduceFwd {β : Type} (getBuiltin : String → ListIter × List α → Py β × (ListIter × List α))
+    (st : ListIter × List α) : Py (IterReduce β α) × (ListIter × List α) :=
+  listIterReduceGen getBuiltin true st
+
+/-- `listreviter_reduce(it)`, listobject.c:4278-4282: `listiter_reduce_general(it, 0)`. -/
+def listRevIterReduce {β : Type} (getBuiltin : String → ListIter × List α → Py β × (ListIter × List α))
+    (st : ListIter × List α) : Py (IterReduce β α) × (ListIter × List α) :=
+  listIterReduceGen getBuiltin false st
 
 /-! ## C API -/
 

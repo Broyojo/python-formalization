@@ -7,6 +7,7 @@ Each family below supplies `gen_<family>(rng)` and `run_<family>(case)`. Cases
 carry "mod": "bytesobj" and a `fn` starting with the family prefix.
 """
 
+import builtins
 import ctypes
 import gc
 import itertools
@@ -204,6 +205,40 @@ def clear_items(items):
         yield x
 
 
+class Ix:
+    """An object with `__index__`, which may change the list under test or raise first."""
+
+    def __init__(self, v, eff):
+        self.v, self.eff = v, eff
+
+    def __index__(self):
+        t = TARGET[0]
+        if self.eff == "bad":
+            raise ValueError("idx")
+        if t is not None:
+            if self.eff == "pop":
+                if t:
+                    t.pop()
+            elif self.eff == "clear":
+                t.clear()
+            elif self.eff == "add":
+                if len(t) < 12:
+                    t.append(0)
+        return self.v
+
+
+def mk_ix(a):
+    """An index argument: `{"ix": "int"|"obj"|"str"|"float", "v": n, "eff": ...}`."""
+    k = a["ix"]
+    if k == "int":
+        return a["v"]
+    if k == "obj":
+        return Ix(a["v"], a["eff"])
+    if k == "str":
+        return "a"
+    return 1.5
+
+
 def build_ext(arg, reg, self_list):
     k = arg["k"]
     if k == "self":
@@ -257,6 +292,17 @@ def list_op(l, op, reg):
         return l.reverse()
     if name == "getitem":
         return enc(operator.getitem(l, op[1]))
+    if name == "getitemx":
+        return enc(operator.getitem(l, mk_ix(op[1])))
+    if name == "setitemx":
+        return operator.setitem(l, mk_ix(op[1]), reg.mk(op[2]))
+    if name == "delitemx":
+        return operator.delitem(l, mk_ix(op[1]))
+    if name == "setslice_gen":
+        return operator.setitem(l, as_slice(op[1]), build_ext(op[2], reg, l))
+    if name == "indexx":
+        args = [mk_ix(a) for a in op[2:] if a is not None]
+        return l.index(reg.mk(op[1]), *args)
     if name == "getslice":
         return enc_state(operator.getitem(l, as_slice(op[1])))
     if name == "binslice":
@@ -329,7 +375,11 @@ def iter_op(it, op, l):
         return len(gc.get_referents(it))
     if name == "reduce":
         r = it.__reduce__()
-        return [encs(r[1][0]), r[2] if len(r) > 2 else None]
+        out = [encs(r[1][0]), r[2] if len(r) > 2 else None]
+        # list iterators (l given) also report the callable, `iter` or `reversed`
+        return out if l is None else out + [r[0].__name__]
+    if name in ("reduce_exhaust", "reduce_add", "reduce_missing"):
+        return reduce_hooked(it, l, name)
     if name == "setstate":
         return it.__setstate__(op[1])
     if name == "pop":
@@ -341,6 +391,37 @@ def iter_op(it, op, l):
     if name == "clear":
         return l.clear()
     raise ValueError(name)
+
+
+def reduce_hooked(it, l, how):
+    """`it.__reduce__()` with the builtins entry it looks up replaced: by a key whose `__eq__`
+    exhausts the iterator or appends to the list before it matches (gh-101765), or removed."""
+    bd = builtins.__dict__
+    name = "iter" if type(it).__name__ == "list_iterator" else "reversed"
+    orig = bd[name]
+
+    class Key:
+        def __hash__(self):
+            return hash(name)
+
+        def __eq__(self, other):
+            if how == "reduce_exhaust":
+                for _ in it:
+                    pass
+            else:
+                l.append(0)
+            return other == name
+
+    del bd[name]
+    if how != "reduce_missing":
+        bd[Key()] = orig
+    try:
+        r = it.__reduce__()
+        return [encs(r[1][0]), r[2] if len(r) > 2 else None, r[0].__name__]
+    finally:
+        for k in [k for k in bd if isinstance(k, Key)]:
+            del bd[k]
+        bd[name] = orig
 
 
 def run_list_iter(c):
@@ -767,10 +848,34 @@ def gen_ext(rng, allow_self=True):
     return {"k": k, "hint": hint, "items": seq_items(rng, 30), "err": rng.random() < 0.15}
 
 
+def gen_ix(rng, n):
+    r = rng.random()
+    if r < 0.15:
+        return {"ix": "int", "v": seq_edge(rng, n)}
+    if r < 0.85:
+        return {"ix": "obj", "v": seq_edge(rng, n), "eff": rng.choice(["none", "none", "pop", "clear", "add", "bad"])}
+    return {"ix": rng.choice(["str", "float"])}
+
+
 def gen_list_op(rng, n):
     kinds = ("nan", "bad", "weird", "pop", "clear", "add")
     e = lambda: seq_elem(rng, kinds)
     k = rng.randrange(26)
+    if rng.random() < 0.12:
+        k = rng.randrange(5)
+        if k == 4:
+            return ["setslice_gen", seq_slice(rng, n),
+                    {"k": rng.choice(["iter", "mutiter", "cleariter"]), "items": seq_items(rng, 10),
+                     "hint": None, "err": rng.random() < 0.2}]
+        if k == 0:
+            return ["getitemx", gen_ix(rng, n)]
+        if k == 1:
+            return ["setitemx", gen_ix(rng, n), e()]
+        if k == 2:
+            return ["delitemx", gen_ix(rng, n)]
+        start = gen_ix(rng, n) if rng.random() < 0.8 else None
+        stop = gen_ix(rng, n) if start is not None and rng.random() < 0.6 else None
+        return ["indexx", e(), start, stop]
     if k <= 3:
         return ["append", e()]
     if k == 4:
@@ -836,7 +941,8 @@ def gen_iter(rng):
     n = len(items)
 
     def op():
-        k = rng.choice(["next", "next", "next", "hint", "refs", "reduce", "setstate", "pop", "add", "clear"])
+        k = rng.choice(["next", "next", "next", "hint", "refs", "reduce", "setstate", "pop", "add", "clear",
+                        "reduce_exhaust", "reduce_add", "reduce_missing"])
         return [k, rng.choice([0, 1, -1, -2, n, n + 1, n - 1, M, -M - 1, M + 1, 2 ** 64, "x"])] if k == "setstate" else [k]
     return {"mod": "bytesobj", "fn": "list.iter", "items": items, "forward": rng.random() < 0.5,
             "ops": [op() for _ in range(rng.randint(1, 12))]}
