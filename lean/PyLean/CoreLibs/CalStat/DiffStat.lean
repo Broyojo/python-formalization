@@ -1,5 +1,6 @@
 import PyLean.DiffCore
 import PyLean.CoreLibs.CalStat.Dist
+import PyLean.CoreLibs.CalStat.StatND
 import PyLean.CoreLibs.CalStat.DiffCal
 
 /-! Differential-test dispatch for the `statistics` half of the area.
@@ -196,6 +197,36 @@ def numEq (a b : PyN) : Bool := veq a.v b.v
 def getFL (j : Json) (k : String) : Except String (List Flt) := do
   (← (← field j k).getArr?).toList.mapM (fun x => do parseFlt (← x.getStr?))
 
+/-- The exception classes the difftest raises from its iterators. -/
+def mkExc (c m : String) : PyExc :=
+  match c with
+  | "ValueError" => .valueError m
+  | "TypeError" => .typeError m
+  | _ => .named c m
+
+/-- The class relation of the difftest: the builtin table plus its two subclasses. -/
+def diffHier : PyLean.CoreLibs.Warn.Hier :=
+  ⟨fun c b => match c with
+    | "MyTypeError" => b == "MyTypeError" || PyLean.CoreLibs.Warn.excIsA "TypeError" b
+    | "MyValueError" => b == "MyValueError" || PyLean.CoreLibs.Warn.excIsA "ValueError" b
+    | _ => PyLean.CoreLibs.Warn.excIsA c b⟩
+
+def getExc (j : Json) (k : String) : Except String PyExc := do
+  let a ← (← field j k).getArr?
+  return mkExc (← (a[0]!).getStr?) (← (a[1]!).getStr?)
+
+/-- The iterable a case describes: what `len()` gives and how iteration ends. -/
+def getIter (items : List PyN) (src : String) (exc : Except String PyExc) : Except String PyIter := do
+  let noLen : PyExc := .typeError "~object has no len()"
+  let pep479 : PyExc := .named "RuntimeError" "generator raised StopIteration"
+  match src with
+  | "list" | "tuple" => return PyIter.ofList items
+  | "iter" => return ⟨.error noLen, items, none⟩
+  | "fail" => return ⟨.error noLen, items, some (← exc)⟩
+  | "badlen" => return ⟨.error (← exc), items, none⟩
+  | "gen" => return ⟨.error noLen, items, some pep479⟩
+  | _ => throw s!"bad src {src}"
+
 def runStat (fn : String) (j : Json) : Option (Except String Json) :=
   match fn with
   | "s._exact_ratio" => some do
@@ -225,6 +256,15 @@ def runStat (fn : String) (j : Json) : Option (Except String Json) :=
     return encPy encF (sqrtprod (← parseFlt (← getStr j "x")) (← parseFlt (← getStr j "y")))
   | "s.mean" => some do return encPy encN (mean (← getL j "data"))
   | "s.fmean" => some do return encPy encV (fmean (← getL j "data") (← getOptL j "weights"))
+  | "s.quantiles_it" => some do
+    let data ← getIter (← getL j "data") (← getStr j "src") (getExc j "exc")
+    return encPy (encL encN) (quantilesIt data (← getInt j "n") (← getStr j "method"))
+  | "s.fmean_it" => some do
+    let data ← getIter (← getL j "data") (← getStr j "src") (getExc j "exc")
+    let w ← match ← getOptL j "weights" with
+      | none => pure none
+      | some wl => some <$> getIter wl (← getStr j "wsrc") (getExc j "wexc")
+    return encPy encV (fmeanIt diffHier data w)
   | "s.geometric_mean" => some do
     return encPy encF (geometricMean (← getLibm j) (← getL j "data"))
   | "s.harmonic_mean" => some do
