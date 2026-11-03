@@ -964,6 +964,26 @@ def baTranslateE (table : Arg) (deletechars : Option Arg) : E Seq := do
     relDel
     return out
 
+/-- The body of `bytearray_split_impl` and `bytearray_rsplit_impl` with `ob_exports` raised:
+`sbuf` and `slen` (`p`, `n`) are read first, then the separator's buffer taken (:1883-1895). -/
+def splitBodyE (rd : Ptr → Int → E Seq) (p : Ptr) (n : Int) (sep : Option Arg) (ms : Int) (right : Bool) :
+    E (List Seq) :=
+  match sep with
+  | some a =>
+    if a.isNone then do
+      let s ← rd p n
+      E.lift ((if right then bytesRSplit else bytesSplit) s none ms)
+    else do
+      let b ← getBufE a
+      let s ← rd p n
+      let t ← b.read
+      let r := (if right then bytesRSplit else bytesSplit) s (some t) ms
+      b.rel
+      E.lift r
+  | none => do
+    let s ← rd p n
+    E.lift ((if right then bytesRSplit else bytesSplit) s none ms)
+
 /-- `bytearray.split(sep, maxsplit)` (`right = false`), :1868-1900, and `rsplit`, :1992-2024:
 `ob_exports` is raised before `sbuf` and `slen` are read and the separator's buffer taken. -/
 def baSplitE (rd : Ptr → Int → E Seq) (sep : Option Arg) (maxsplit : Option Arg) (right : Bool) :
@@ -971,20 +991,7 @@ def baSplitE (rd : Ptr → Int → E Seq) (sep : Option Arg) (maxsplit : Option 
   let ms ← match maxsplit with
     | none => pure (-1)
     | some a => clinicSsizeE a
-  withBufferE fun p n => do
-    let sepNone : Bool := match sep with
-      | none => true
-      | some a => a.isNone
-    if sepNone then
-      let s ← rd p n
-      E.lift ((if right then bytesRSplit else bytesSplit) s none ms)
-    else
-      let b ← getBufE (sep.getD .me)
-      let s ← rd p n
-      let t ← b.read
-      let r := (if right then bytesRSplit else bytesSplit) s (some t) ms
-      b.rel
-      E.lift r
+  withBufferE fun p n => splitBodyE rd p n sep ms right
 
 /-- `bytearray.partition(sep)` (`right = false`), :1920-1939, and `rpartition`, :1960-1979: the
 separator is copied by `_PyByteArray_FromBufferObject`, :148-166 (its `__buffer__` and
@@ -1001,21 +1008,26 @@ def baPartitionE (sep : Arg) (right : Bool) : E (Seq × Seq × Seq) := do
     let s ← curSeq
     E.lift ((if right then stringlibRPartition else stringlibPartition) s t)
 
+/-- The checks of the separator of `_Py_strhex_impl`, pystrhex.c:122-150, once `PyObject_Length` gave
+`seplen`. -/
+def hexSepCheck (a : Arg) (seplen : Int) : Py (Option Nat) := do
+  if seplen ≠ 1 then throw (.valueError "sep must be length 1.")
+  let c : Nat ← match a with
+    | .obj (.str cs) =>
+      if cs.headD 0 ≥ 256 then throw (.valueError "sep must be ASCII.")
+      pure (cs.headD 0)
+    | .obj (.bytes s) | .slen _ _ s => pure (s.headD 0)
+    | _ => throw (.typeError "sep must be str or bytes.")
+  if c > 127 then throw (.valueError "sep must be ASCII.")
+  return some c
+
 /-- The separator of `_Py_strhex_impl`, pystrhex.c:118-150: `PyObject_Length(sep)` runs `__len__`. -/
-def hexSepE (sep : Option Arg) : E (Option Nat) := do
+def hexSepE (sep : Option Arg) : E (Option Nat) :=
   match sep with
-  | none => return none
-  | some a =>
+  | none => pure none
+  | some a => do
     let seplen ← lengthE a
-    if seplen ≠ 1 then throw (.valueError "sep must be length 1.")
-    let c : Nat ← match a with
-      | .obj (.str cs) =>
-        if cs.headD 0 ≥ 256 then throw (.valueError "sep must be ASCII.")
-        pure (cs.headD 0)
-      | .obj (.bytes s) | .slen _ _ s => pure (s.headD 0)
-      | _ => throw (.typeError "sep must be str or bytes.")
-    if c > 127 then throw (.valueError "sep must be ASCII.")
-    return some c
+    E.lift (hexSepCheck a seplen)
 
 /-- `_Py_strhex_impl` past the separator, pystrhex.c:152-253, on the bytes `arg`. -/
 def strhexBody (arg : Seq) (parsed : Option Nat) (bytesPerSep : Int) : Py Seq := do

@@ -1,4 +1,5 @@
 import PyLean.BytesObj.Bytes.Heap
+import PyLean.BytesObj.Bytes.ByteArrayProps
 
 /-!
 Lemmas on the heap model: while a C function holds an export of `self`, nothing a callback does
@@ -1181,5 +1182,382 @@ theorem stripNoRelAgrees_proven : StripNoRelAgrees := by
       bytearrayStrip, Option.getD_some]
     simp only [runActs, List.foldl_nil] at this ⊢
     rw [this]
+
+end PyLean.BytesObj.Bytes
+
+namespace PyLean.BytesObj.Bytes
+
+open PyLean PyLean.StrSearch
+
+/-! ## split, hex and comparison read the live object -/
+
+theorem split_body_live (h0 h : H) (hk : Ok h0 h) (sep : Option Arg) (ms : Int) (right : Bool) :
+    splitBodyE cRead h0.ptr h0.ba.size sep ms right h = splitBodyE liveRead h0.ptr h0.ba.size sep ms right h := by
+  unfold splitBodyE
+  cases sep with
+  | none => simp only [cRead, liveRead, E.bind_app, readE_live h0 h hk]
+  | some a =>
+    by_cases hn : a.isNone = true
+    · simp only [hn, ↓reduceIte, cRead, liveRead, E.bind_app, readE_live h0 h hk]
+    · simp only [hn, Bool.false_eq_true, ↓reduceIte, E.bind_app]
+      have hb := getBuf_ok h0 a h hk
+      rcases hy : getBufE a h with ⟨r2, h2⟩
+      rw [hy] at hb
+      simp only at hb
+      cases r2 with
+      | error e => rfl
+      | ok b => simp only [cRead, liveRead, E.bind_app, readE_live h0 h2 hb]
+
+theorem keeps_lengthE (h0 : H) (a : Arg) : Keeps (Ok h0) (lengthE a) := by
+  intro h hh
+  cases a with
+  | slen acts res s =>
+    unfold lengthE
+    refine keeps_bind _ _ _ (keeps_runCb_ok h0 acts res) (fun v => ?_) h hh
+    intro h' hh'
+    simp only
+    split
+    · exact hh'
+    · split
+      · exact hh'
+      · exact hh'
+  | obj o => exact hh
+  | me => exact hh
+  | idx _ _ => exact hh
+  | buf _ _ _ => exact hh
+  | it _ _ _ => exact hh
+
+theorem keeps_hexSep (h0 : H) (sep : Option Arg) : Keeps (Ok h0) (hexSepE sep) := by
+  cases sep with
+  | none => exact keeps_pure _ _
+  | some a => exact keeps_bind _ _ _ (keeps_lengthE h0 a) (fun _ => keeps_lift _ _)
+
+/-- `bytearray.split`, `rsplit` and `hex`: the separator's callbacks (`__buffer__`, `__len__`)
+run with `ob_exports` raised, so the pointer taken before them reads the object as it is when
+the C code reads it. For every heap whose views are exports. -/
+def SplitReadsLive : Prop :=
+  ∀ (h : H), Inv h → ∀ (sep maxsplit : Option Arg) (right : Bool),
+    baSplitE cRead sep maxsplit right h = baSplitE liveRead sep maxsplit right h
+
+theorem splitReadsLive_proven : SplitReadsLive := by
+  intro h hi sep maxsplit right
+  unfold baSplitE
+  cases maxsplit with
+  | none =>
+    simp only [E.bind_app, E.pure_app]
+    apply withBuffer_live _ _ h hi
+    intro h0 hp
+    exact split_body_live h0 h0 (Ok.refl h0 hp) sep _ right
+  | some a =>
+    simp only [E.bind_app]
+    have hk := keeps_clinicSsizeE Inv good_inv a h hi
+    rcases hx : clinicSsizeE a h with ⟨r, h1⟩
+    rw [hx] at hk
+    simp only at hk
+    cases r with
+    | error e => rfl
+    | ok ms =>
+      simp only
+      apply withBuffer_live _ _ h1 hk
+      intro h0 hp
+      exact split_body_live h0 h0 (Ok.refl h0 hp) sep ms right
+
+/-- `bytearray.hex`: `argbuf` is read before `ob_exports` is raised, and the separator's
+`__len__` (gh-143195) runs after; the hexlify loop reads the live object. -/
+def HexReadsLive : Prop :=
+  ∀ (h : H), Inv h → ∀ (sep bps : Option Arg),
+    baHexE cRead sep bps h = baHexE liveRead sep bps h
+
+theorem hex_body_live (h : H) (hi : Inv h) (sep : Option Arg) (bps : Int) :
+    (do
+      let h' ← E.get
+      let p := h'.ptr
+      let arglen := h'.ba.size
+      exportsUp
+      let r ← E.attempt (do
+        let parsed ← hexSepE sep
+        let arg ← cRead p arglen
+        E.lift (strhexBody arg parsed bps))
+      exportsDown
+      E.lift r : E Seq) h =
+    (do
+      let h' ← E.get
+      let p := h'.ptr
+      let arglen := h'.ba.size
+      exportsUp
+      let r ← E.attempt (do
+        let parsed ← hexSepE sep
+        let arg ← liveRead p arglen
+        E.lift (strhexBody arg parsed bps))
+      exportsDown
+      E.lift r : E Seq) h := by
+  simp only [E.bind_app, E.get_app, exportsUp, E.modify_app, E.attempt_app]
+  have hp : Ok h { h with ba := baGetBuffer h.ba } := by
+    refine ⟨⟨rfl, rfl, rfl, rfl⟩, ?_⟩
+    unfold Inv at hi; simp only [Pinned, baGetBuffer]; omega
+  have hk := keeps_hexSep h sep { h with ba := baGetBuffer h.ba } hp
+  rcases hx : hexSepE sep { h with ba := baGetBuffer h.ba } with ⟨r, h1⟩
+  rw [hx] at hk
+  simp only at hk
+  cases r with
+  | error e => rfl
+  | ok parsed => simp only [cRead, liveRead, readE_live h h1 hk]
+
+theorem hexReadsLive_proven : HexReadsLive := by
+  intro h hi sep bps
+  unfold baHexE
+  cases bps with
+  | none =>
+    simp only [E.bind_app, E.pure_app]
+    exact hex_body_live h hi sep 1
+  | some a =>
+    simp only [E.bind_app]
+    have hk := keeps_clinicSsizeE Inv good_inv a h hi
+    rcases hx : clinicSsizeE a h with ⟨r, h1⟩
+    rw [hx] at hk
+    simp only at hk
+    cases r with
+    | error e => rfl
+    | ok v =>
+      simp only
+      have := hex_body_live h1 hk sep v
+      simp only [E.bind_app] at this
+      exact this
+
+/-- `bytearray_richcompare`: the other operand's `__buffer__` runs after `self` is exported, so the
+`memcmp` reads `self` as it is then. -/
+def RichReadsLive : Prop :=
+  ∀ (h : H), Inv h → ∀ (other : Arg) (op : CmpOp), baRichE cRead other op h = baRichE liveRead other op h
+
+theorem richReadsLive_proven : RichReadsLive := by
+  intro h hi other op
+  unfold baRichE
+  by_cases hb : other.bufferCheck = true
+  · simp only [hb, Bool.not_true, Bool.false_eq_true, ↓reduceIte, E.bind_app, getBuf_me, E.attempt_app]
+    have hp : Ok h { h with ba := baGetBuffer h.ba } := by
+      refine ⟨⟨rfl, rfl, rfl, rfl⟩, ?_⟩
+      unfold Inv at hi; simp only [Pinned, baGetBuffer]; omega
+    have hk := getBuf_ok h other _ hp
+    rcases hx : getBufE other { h with ba := baGetBuffer h.ba } with ⟨r, h2⟩
+    rw [hx] at hk
+    simp only at hk
+    cases r with
+    | error e => rfl
+    | ok vo =>
+      simp only
+      split
+      · rfl
+      · simp only [E.bind_app, cRead, liveRead, readE_live h h2 hk]
+  · simp only [Bool.not_eq_true] at hb
+    simp [hb]
+
+end PyLean.BytesObj.Bytes
+
+namespace PyLean.BytesObj.Bytes
+
+open PyLean PyLean.StrSearch
+
+/-! ## `b += x` and `b.extend(x)` -/
+
+/-- `b += x` and `b.extend(x)` agree for every bytes-like `x` (`s += t` "extends s with the contents
+of t", Doc/library/stdtypes.rst, mutable sequence operations). -/
+def IAddIsExtend : Prop :=
+  ∀ (h : H), Inv h → ∀ (x : Arg), x.bufferCheck = true → (baIConcatE x h).1 = (baExtendE x h).1
+
+def iaddHeap : H := { ba := { data := [97], alloc := 1 } }
+
+/-- `b = bytearray(b"a"); b += b` raises `BufferError`: `bytearray_iconcat_lock_held` exports `b` as
+its own argument and then resizes it. `b.extend(b)` copies first (:697-707) and gives `b"aa"`. -/
+theorem iadd_self : (baIConcatE .me iaddHeap).1 = .error (bufferError "Existing exports of data: object cannot be re-sized") ∧
+    (baExtendE .me iaddHeap).1 = .ok () ∧ (baExtendE .me iaddHeap).2.ba.data = [97, 97] := by
+  refine ⟨rfl, rfl, rfl⟩
+
+theorem iAddIsExtend_refuted : ¬ IAddIsExtend := by
+  intro hh
+  have := hh iaddHeap (by unfold Inv; decide) .me rfl
+  rw [iadd_self.1, iadd_self.2.1] at this
+  exact absurd this (by decide)
+
+/-! ## The two ways `bytearray(str, encoding)` installs the encoded bytes -/
+
+/-- `bytearray.__init__(s, encoding)` gives the same object whether the codec's result is uniquely
+referenced (it becomes the storage, :1031-1038) or not (it is appended with `bytearray_iconcat`,
+:1040): the uniqueness of a `bytes` object is not visible to Python code. -/
+def InitPathsAgree : Prop :=
+  ∀ (h : H), Inv h → ∀ (cs : Seq) (name : String) (acts : List Act) (enc : Seq),
+    let r1 := baInitE (some (.obj (.str cs))) (some (name, .py acts (.ok enc) true)) none h
+    let r2 := baInitE (some (.obj (.str cs))) (some (name, .py acts (.ok enc) false)) none h
+    r1.1 = r2.1 ∧ r1.2.ba.data = r2.2.ba.data
+
+def initHeap : H := { ba := { data := [120], alloc := 1 } }
+
+/-- A codec that does `self.resize(2)`: the unique result replaces the storage and the two zero
+bytes are dropped (and their `bytes` object leaked); the shared result is appended after them. -/
+theorem init_steal_drops :
+    (baInitE (some (.obj (.str [104, 105]))) (some ("rcodec", .py [.resize 2] (.ok [104, 105]) true)) none
+      initHeap).2.ba.data = [104, 105] ∧
+    (baInitE (some (.obj (.str [104, 105]))) (some ("rcodec", .py [.resize 2] (.ok [104, 105]) false)) none
+      initHeap).2.ba.data = [0, 0, 104, 105] := by
+  refine ⟨rfl, rfl⟩
+
+/-- A codec that keeps `memoryview(self)`: the unique result is installed under the export, the
+shared one is refused. -/
+theorem init_steal_exported :
+    (baInitE (some (.obj (.str [104, 105]))) (some ("rcodec", .py [.grab] (.ok [104, 105]) true)) none
+      initHeap).1 = .ok () ∧
+    (baInitE (some (.obj (.str [104, 105]))) (some ("rcodec", .py [.grab] (.ok [104, 105]) true)) none
+      initHeap).2.ba.exports = 1 ∧
+    (baInitE (some (.obj (.str [104, 105]))) (some ("rcodec", .py [.grab] (.ok [104, 105]) false)) none
+      initHeap).1 = .error (bufferError "Existing exports of data: object cannot be re-sized") := by
+  refine ⟨rfl, rfl, rfl⟩
+
+theorem initPathsAgree_refuted : ¬ InitPathsAgree := by
+  intro hh
+  have := (hh initHeap (by unfold Inv; decide) [104, 105] "rcodec" [.resize 2] [104, 105]).2
+  rw [init_steal_drops.1, init_steal_drops.2] at this
+  exact absurd this (by decide)
+
+theorem resize_len (b r : BA) (n : Int) (h : baResize b n = .ok r) : (r.data.length : Int) = n := by
+  obtain ⟨h0, hc⟩ := baResize_cases b r n h
+  rcases hc with ⟨e, hn⟩ | ⟨_, _, hd, _⟩
+  · subst e; simp [hn, BA.size]
+  · rw [hd]; exact resizedData_length _ _ h0
+
+/-- For a C bytes-like object that is not `self`, `b += x` is `b.extend(x)`: the same result and the
+same contents. (Open: the proof has to follow `bytearray_setslice_linear`'s growth branch.) -/
+def IAddExtendObj : Prop :=
+  ∀ (h : H) (o : Obj) (t : Seq), o.buffer? = some t →
+    (baIConcatE (.obj o) h).1 = (baExtendE (.obj o) h).1 ∧
+    (baIConcatE (.obj o) h).2.ba.data = (baExtendE (.obj o) h).2.ba.data
+
+end PyLean.BytesObj.Bytes
+
+namespace PyLean.BytesObj.Bytes
+
+open PyLean PyLean.StrSearch
+
+/-! ## Item access after `__index__` -/
+
+theorem runCb_app {α : Type} (acts : List Act) (res : Py α) (h : H) : runCb acts res h = (res, runActs h acts) := rfl
+
+theorem put_ok (h : H) (f : BA → Py BA) : liftBA f h = match f h.ba with
+    | .ok b => (.ok (), h.put b)
+    | .error e => (.error e, h) := rfl
+
+/-- `b[k]`, `b[i] = v`, `del b[i]`, `b.append(v)`, `b.insert(i, v)`, `b.remove(v)` and
+`b.take_bytes(n)` with an `__index__` that changes `b`: the conversion runs first, and then the
+method of the pure model runs on the object as the callback left it, so the index is checked
+against the size after the callback (GH-91153). An exception from `__index__` is raised before
+any check of the index, with the callback's changes kept. For every heap and every callback, with
+values that fit in `Py_ssize_t`. -/
+def ItemAfterIndex : Prop :=
+  ∀ (h : H) (acts : List Act) (v : Int), ssizeMin ≤ v → v ≤ ssizeMax →
+    let h' := runActs h acts
+    -- b[k] for k.__index__() = v
+    baSubscriptE (.one (.idx acts (.ok v))) h = ((SubRes.byte <$> baGetItem h'.ba v), h') ∧
+    -- b[i] = x with x.__index__() = v
+    (∀ i : Int, ssizeMin ≤ i → i ≤ ssizeMax →
+      baAssSubE (.one (.obj (.int i))) (some (.idx acts (.ok v))) h = liftBA (fun b => baAssIndex b i (some (.int v))) h') ∧
+    -- the same through sq_ass_item
+    (∀ i : Int, baSetItemE i (some (.idx acts (.ok v))) h = liftBA (fun b => baSetItemRaw b i (some (.int v))) h') ∧
+    baAppendE (.idx acts (.ok v)) h = liftBA (fun b => baAppend b (.int v)) h' ∧
+    baRemoveE (.idx acts (.ok v)) h = liftBA (fun b => baRemove b (.int v)) h' ∧
+    (∀ i : Int, ssizeMin ≤ i → i ≤ ssizeMax →
+      baInsertE (.obj (.int i)) (.idx acts (.ok v)) h = liftBA (fun b => baInsert b i (.int v)) h') ∧
+    baTakeBytesE (some (.idx acts (.ok v))) h = liftBAR (fun b => baTakeBytes b (.int v)) h' ∧
+    -- an exception of the value's __index__ comes before the IndexError of the position
+    (∀ (e : PyExc) (i : Int), ssizeMin ≤ i → i ≤ ssizeMax →
+      baAssSubE (.one (.obj (.int i))) (some (.idx acts (.error e))) h = (.error e, h'))
+
+theorem getByte_idx (acts : List Act) (v : Int) (h : H) :
+    getByteValueE (.idx acts (.ok v)) h =
+      ((if v < 0 ∨ v ≥ 256 then .error (.valueError "byte must be in range(0, 256)") else .ok v.toNat),
+        runActs h acts) := by
+  simp only [getByteValueE, indexE, E.bind_app, runCb_app]
+  split <;> rfl
+
+theorem getByteValue_int (v : Int) :
+    getByteValue (.int v) = (if v < 0 ∨ v ≥ 256 then .error (.valueError "byte must be in range(0, 256)") else .ok v.toNat) := by
+  simp only [getByteValue, Obj.index?]
+
+theorem E.throw_bind {α β : Type} (e : PyExc) (f : α → E β) (h : H) :
+    E.bind (throw e : E α) f h = (.error e, h) := rfl
+
+theorem E.get_bind {β : Type} (f : H → E β) (h : H) : E.bind E.get f h = f h h := rfl
+
+theorem E.pure_bind {α β : Type} (a : α) (f : α → E β) (h : H) : E.bind (pure a : E α) f h = f a h := rfl
+
+theorem E.bind_err {α β : Type} (e : PyExc) (f : α → E β) (s : H) :
+    E.bind (fun h => ((.error e : Py α), h)) f s = (.error e, s) := rfl
+
+theorem max_byte (v : Int) (hv : ¬(v < 0 ∨ v ≥ 256)) : max v 0 = v := by omega
+
+theorem itemAfterIndex_proven : ItemAfterIndex := by
+  intro h acts v h1 h2
+  dsimp only
+  have hs : Sequences.subIndex v = .ok v := by
+    simp only [Sequences.subIndex, Sequences.asSsizeExc, h1, h2, and_self, ↓reduceIte]
+  have hr : ssizeMin ≤ v ∧ v ≤ ssizeMax := ⟨h1, h2⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · simp only [baSubscriptE, Arg.indexCheck, Bool.not_true, Bool.false_eq_true, ↓reduceIte, E.bind_app,
+      asSsizeE, indexE, runCb_app, hr, and_self, E.pure_app, curSize, E.get_app]
+    unfold baGetItem baGetItemRaw
+    simp only [hs, bind, Except.bind]
+    split <;> split <;> simp_all [E.throw_bind, E.get_bind, Functor.map, Except.map]
+  · intro i hi1 hi2
+    have hsi : Sequences.subIndex i = .ok i := by
+      simp only [Sequences.subIndex, Sequences.asSsizeExc, hi1, hi2, and_self, ↓reduceIte]
+    unfold baAssIndex
+    by_cases hv : v < 0 ∨ v ≥ 256
+    · simp [baAssSubE, Arg.indexCheck, Obj.index?, asSsizeE, indexE, hi1, hi2, Functor.map, E.bind_def,
+        getByte_idx, hv, put_ok, hsi, getByteValue_int, bind, Except.bind, Except.map]
+    · have hm := max_byte v hv
+      simp [baAssSubE, Arg.indexCheck, Obj.index?, asSsizeE, indexE, hi1, hi2, Functor.map, E.bind_def,
+        getByte_idx, hv, put_ok, hsi, getByteValue_int, bind, Except.bind, Except.map, E.pure, curSize, hm,
+        Function.comp]
+      repeat' split
+      all_goals simp_all [E.throw_bind, throw, throwThe, MonadExceptOf.throw, pure, Except.pure, put_ok, E.bind_err]
+  · intro i
+    unfold baSetItemRaw
+    by_cases hv : v < 0 ∨ v ≥ 256
+    · simp [baSetItemE, Functor.map, E.bind_def, getByte_idx, hv, put_ok, getByteValue_int, bind, Except.bind,
+        Except.map]
+    · have hm := max_byte v hv
+      simp [baSetItemE, Functor.map, E.bind_def, getByte_idx, hv, put_ok, getByteValue_int, bind, Except.bind,
+        Except.map, E.pure, curSize, hm, Function.comp]
+      repeat' split
+      all_goals simp_all [E.throw_bind, throw, throwThe, MonadExceptOf.throw, pure, Except.pure, put_ok, E.bind_err]
+  · simp only [baAppendE, E.bind_app, getByte_idx]
+    unfold baAppend
+    simp only [put_ok, getByteValue_int, bind, Except.bind]
+    by_cases hv : v < 0 ∨ v ≥ 256
+    · simp [hv]
+    · have hm := max_byte v hv
+      simp [hv, hm, pure, Except.pure, put_ok, E.pure]
+  · simp only [baRemoveE, E.bind_app, getByte_idx]
+    unfold baRemove
+    simp only [put_ok, getByteValue_int, bind, Except.bind]
+    by_cases hv : v < 0 ∨ v ≥ 256
+    · simp [hv]
+    · have hm := max_byte v hv
+      simp [hv, hm, pure, Except.pure, put_ok, E.pure]
+  · intro i hi1 hi2
+    have ha : Sequences.asSsize i = .ok i := by
+      simp only [Sequences.asSsize, hi1, hi2, and_self, ↓reduceIte]
+    simp only [baInsertE, clinicSsizeE, indexE, Obj.index?, E.bind_app, E.lift_app, ha, getByte_idx]
+    unfold baInsert
+    simp only [put_ok, ha, getByteValue_int, bind, Except.bind]
+    by_cases hv : v < 0 ∨ v ≥ 256
+    · simp [hv]
+    · have hm := max_byte v hv
+      simp [hv, hm, pure, Except.pure, put_ok, E.pure]
+  · simp only [baTakeBytesE, Arg.isNone, Bool.false_eq_true, ↓reduceIte, Arg.indexCheck, E.bind_app,
+      asSsizeE, indexE, runCb_app, hr, and_self, E.pure_app, curSize, liftBAR]
+    unfold baTakeBytes
+    simp only [Obj.index?, takeCount, hr, and_self, ↓reduceIte, bind, Except.bind, pure, Except.pure]
+  · intro e i hi1 hi2
+    simp only [baAssSubE, Arg.indexCheck, Obj.index?, Option.isSome_some, Bool.not_true, Bool.false_eq_true,
+      ↓reduceIte, E.bind_app, asSsizeE, indexE, E.lift_app, hi1, hi2, and_self, E.pure_app, Functor.map,
+      E.bind_def, getByteValueE, runCb_app]
 
 end PyLean.BytesObj.Bytes
