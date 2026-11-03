@@ -1,13 +1,19 @@
 import PyLean.TypeObj.StructSeqCProps
 
 /-!
-# `__reduce__` and `__replace__` stay in bounds while the size attributes are the type's own
+# The constructor, `__reduce__` and `__replace__` on the C model, while the sizes are honest
 
-The counterpart of `ReduceInBounds` and `ReplaceInBounds` (refuted): on a type whose three size
-attributes still say what `PyStructSequence_NewType` stored (`HonestLayout`, the state
-`NewTypeLayout` proves it builds), both functions only touch memory they own, for every object
-the constructor leaves (`WellFormed`), every keyword set and every allocator outcome. So the only
-way to the undefined behaviour of the refutations is Python code rebinding those attributes.
+On a type whose three size attributes still hold what `PyStructSequence_NewType` stored
+(`HonestLayout`), these theorems give the exact outcome of each function, failure paths first:
+`NewImplSpecC` (`structseq_new_impl`: the argument's exception, the not-a-dict refusal, the
+three length messages, `MemoryError`, the lookups of the `dict` argument with both
+`PyDict_GET_SIZE` reads, and the object built), `ReduceSpecC` and `ReplaceSpecC`. Every callback
+(the argument's conversion, the dict lookups, the keyword pops, name decoding) is an arbitrary
+outcome. `SizeReadSpec` and `NewReadsFirst` cover every state of the dict.
+
+The refutations `ReplaceInBounds`, `ReduceInBounds`, `NewImplInBounds` (StructSeqCProps.lean)
+show what rebinding the size attributes does, and `ReduceInBoundsBuilt` (StructSeqNewType.lean)
+what an unnamed hidden field does.
 -/
 
 namespace PyLean.TypeObj.StructSeq
@@ -16,17 +22,12 @@ open PyLean PyLean.UnicodeObj
 
 variable {α β γ : Type}
 
-/-- `Honest`, and `tp_members` holds the `n - u` named fields, with the unnamed ones visible. -/
+/-- `Honest`, and `tp_members` holds the `n - u` named fields, the unnamed fields being visible
+(`u ≤ v`). Unnamed fields are "only allowed for indices < n_visible_fields" (structseq.c:23-24);
+that is a precondition on the desc, which `PyStructSequence_NewType` does not check
+(`ReduceInBoundsBuilt` refutes the statement without it). -/
 def HonestLayout (t : CType) (v n u : Nat) : Prop :=
   Honest t v n u ∧ t.members.length = n - u ∧ u ≤ v
-
-theorem isUB_bind {x : CRes β} {f : β → CRes γ} (hx : x.isUB = false)
-    (hf : ∀ a, x = .ok a → (f a).isUB = false) : (x >>= f).isUB = false := by
-  cases x with
-  | ok a => exact hf a rfl
-  | exc e => rfl
-  | nullNoExc => rfl
-  | ub w => simp [CRes.isUB] at hx
 
 theorem isUB_ofPy {x : Py β} : (CRes.ofPy x).isUB = false := by
   cases x <;> rfl
@@ -36,189 +37,60 @@ theorem realSize_honest {t : CType} {v n u : Nat} (h : Honest t v n u) : realSiz
   simp only [realSize, hb, obItemOff]
   omega
 
-theorem fromArray_ok (slots : List (Slot α)) :
-    ∀ k, (∀ i, i < k → ∃ a, slots[i]? = some (.val a)) → (fromArray slots k).isUB = false := by
-  intro k
-  induction k with
-  | zero => intro _; rfl
-  | succ k ih =>
-    intro h
-    simp only [fromArray]
-    apply isUB_bind (ih (fun i hi => h i (by omega)))
-    intro xs _
-    obtain ⟨a, ha⟩ := h k (by omega)
-    have hk : k < slots.length := by
-      rcases List.getElem?_eq_some_iff.mp ha with ⟨hk, _⟩; exact hk
-    have hs : slots[k] = .val a := by
-      rcases List.getElem?_eq_some_iff.mp ha with ⟨_, h2⟩; exact h2
-    simp only [readSlot, dif_pos hk, CRes.bind_ok, hs, deref]
-    rfl
+theorem honest_reads {t : CType} {v n u : Nat} (h : HonestLayout t v n u) (hn : n < 2 ^ 57) :
+    sizeOrNull (getTypeAttrAsSize t.nameStr t.dict "n_fields") = .ok n ∧
+    sizeOrNull (getTypeAttrAsSize t.nameStr t.dict "n_sequence_fields") = .ok v ∧
+    sizeOrNull (getTypeAttrAsSize t.nameStr t.dict "n_unnamed_fields") = .ok u := by
+  obtain ⟨⟨hd, _, hv⟩, _, hu⟩ := h
+  exact ⟨sizeOf_small _ _ _ n (by rw [hd]; exact honest_nfields v n u) (by omega),
+    sizeOf_small _ _ _ v (by rw [hd]; exact honest_nseq v n u) (by omega),
+    sizeOf_small _ _ _ u (by rw [hd]; exact honest_nunnamed v n u) (by omega)⟩
 
-theorem reduceLoop_ok (t : CType) (o : CObj α) (u n : Nat) (hm : t.members.length = n - u)
-    (hw : ∀ i, i < n → ∃ a, o.slots[i]? = some (.val a)) :
-    ∀ fuel i, u ≤ i → i + fuel ≤ n → (reduceLoop t o u fuel i).isUB = false := by
-  intro fuel
-  induction fuel with
-  | zero => intro _ _ _; rfl
-  | succ fuel ih =>
-    intro i hu hle
-    simp only [reduceLoop]
-    have hidx : ∃ b, memberName t.members ((i : Int) - u) "structseq_reduce: tp_members out of range" =
-        .ok (.name b) := by
-      unfold memberName
-      rw [if_neg (show ¬ ((i : Int) - u < 0) by omega)]
-      rw [dif_pos (show ((i : Int) - u).toNat < t.members.length by omega)]
-      exact ⟨_, rfl⟩
-    obtain ⟨b, hb⟩ := hidx
-    rw [hb]
-    simp only [CRes.bind_ok, fromCString]
-    apply isUB_bind isUB_ofPy
-    intro key _
-    obtain ⟨a, ha⟩ := hw i (by omega)
-    have hk : i < o.slots.length := by
-      rcases List.getElem?_eq_some_iff.mp ha with ⟨hk, _⟩; exact hk
-    have hs : o.slots[i] = .val a := by
-      rcases List.getElem?_eq_some_iff.mp ha with ⟨_, h2⟩; exact h2
-    simp only [readSlot, dif_pos hk, CRes.bind_ok, hs, deref]
-    apply isUB_bind (ih (i + 1) (by omega) (by omega))
-    intro _ _
-    rfl
+/-! ## The block while it is filled -/
 
-/-- `s.__reduce__()` never accesses memory out of bounds while the type's size attributes are
-its own, for every object the constructor leaves. -/
-def ReduceInBoundsHonest : Prop :=
-  ∀ (α : Type) (t : CType) (v n u : Nat) (o : CObj α), HonestLayout t v n u → o.size = v →
-    WellFormed t o → (reduceC t o).isUB = false
+/-- `pre` written, `m` slots still `NULL`, then `J`. -/
+def shape (pre : List α) (m : Nat) (J : List (Slot α)) : List (Slot α) :=
+  pre.map Slot.val ++ List.replicate m .null ++ J
 
-theorem reduceInBoundsHonest_proven : ReduceInBoundsHonest := by
-  intro α t v n u o ⟨hH, hm, huv⟩ hsz hw
-  have hrs := realSize_honest hH
-  have hw' : ∀ i, i < n → ∃ a, o.slots[i]? = some (.val a) := by
-    intro i hi; apply hw; rw [hsz, hrs]; exact hi
-  obtain ⟨hd, hb, hv⟩ := hH
-  unfold reduceC
-  by_cases hu63 : u < 2 ^ 63
-  case neg =>
-    have hbig : sizeOrNull (getTypeAttrAsSize t.nameStr t.dict "n_unnamed_fields") =
-        .exc (.overflowError "Python int too large to convert to C ssize_t") := by
-      unfold getTypeAttrAsSize asSsize sizeOrNull
-      rw [hd, honest_nunnamed]
-      simp only
-      rw [if_neg (by unfold ssizeMin ssizeMax; omega)]
-    rw [hbig]; rfl
-  have h3 : sizeOrNull (getTypeAttrAsSize t.nameStr t.dict "n_unnamed_fields") = .ok u :=
-    sizeOf_small _ _ _ u (by rw [hd]; exact honest_nunnamed v n u) hu63
-  rw [h3]
-  simp only [CRes.bind_ok]
-  apply isUB_bind (fromArray_ok o.slots o.size (fun i hi => hw' i (by omega)))
-  intro tup _
-  apply isUB_bind
-  · rw [hsz, show realSize t v = n from realSize_honest ⟨hd, hb, hv⟩]
-    exact reduceLoop_ok t o u n hm hw' (n - v) v huv (by omega)
-  · intro _ _; rfl
+theorem shape_length (pre : List α) (m : Nat) (J : List (Slot α)) :
+    (shape pre m J).length = pre.length + m + J.length := by
+  simp [shape]; omega
 
-theorem replaceCopyLoop_ok (self : CObj α) (n : Nat) (hw : ∀ i, i < n → ∃ a, self.slots[i]? = some (.val a)) :
-    ∀ fuel i (res : List (Slot α)), i + fuel ≤ n → n ≤ res.length →
-      (replaceCopyLoop self fuel i res).isUB = false := by
-  intro fuel
-  induction fuel with
-  | zero => intro _ _ _ _; rfl
-  | succ fuel ih =>
-    intro i res hle hres
-    simp only [replaceCopyLoop]
-    obtain ⟨a, ha⟩ := hw i (by omega)
-    have hk : i < self.slots.length := by
-      rcases List.getElem?_eq_some_iff.mp ha with ⟨hk, _⟩; exact hk
-    have hs : self.slots[i] = .val a := by
-      rcases List.getElem?_eq_some_iff.mp ha with ⟨_, h2⟩; exact h2
-    simp only [readSlot, dif_pos hk, CRes.bind_ok, hs, deref, writeSlot, if_pos (show i < res.length by omega)]
-    exact ih (i + 1) _ (by omega) (by simp; omega)
+theorem write_shape (pre : List α) (m : Nat) (J : List (Slot α)) (x : α) (w : String) :
+    writeSlot (shape pre (m + 1) J) pre.length (.val x) w = .ok (shape (pre ++ [x]) m J) := by
+  unfold writeSlot
+  rw [if_pos (by rw [shape_length]; omega)]
+  congr 1
+  simp only [shape, List.replicate_succ, List.append_assoc, List.cons_append, List.map_append,
+    List.map_cons, List.map_nil, List.nil_append]
+  rw [List.set_append_right _ _ (by simp)]
+  simp
 
-theorem replaceKwLoop_ok (t : CType) (self : CObj α) (n : Nat) (hm : t.members.length = n)
-    (hw : ∀ i, i < n → ∃ a, self.slots[i]? = some (.val a)) :
-    ∀ fuel i (res : List (Slot α)) (kws : List (Str × α)), i + fuel ≤ n → n ≤ res.length →
-      (replaceKwLoop t self fuel i res kws).isUB = false := by
-  intro fuel
-  induction fuel with
-  | zero => intro _ _ _ _ _; rfl
-  | succ fuel ih =>
-    intro i res kws hle hres
-    simp only [replaceKwLoop]
-    have hidx : ∃ b, memberName t.members (i : Int) "structseq_replace: tp_members past the sentinel" =
-        .ok (.name b) := by
-      unfold memberName
-      rw [if_neg (show ¬ ((i : Int) < 0) by omega)]
-      rw [dif_pos (show (i : Int).toNat < t.members.length by omega)]
-      exact ⟨_, rfl⟩
-    obtain ⟨b, hb⟩ := hidx
-    rw [hb]
-    simp only [CRes.bind_ok, fromCString]
-    apply isUB_bind isUB_ofPy
-    intro key _
-    obtain ⟨a, ha⟩ := hw i (by omega)
-    have hk : i < self.slots.length := by
-      rcases List.getElem?_eq_some_iff.mp ha with ⟨hk, _⟩; exact hk
-    have hs : self.slots[i] = .val a := by
-      rcases List.getElem?_eq_some_iff.mp ha with ⟨_, h2⟩; exact h2
-    cases hp : popKw kws key with
-    | mk got kws' =>
-      simp only
-      cases got with
-      | some x =>
-        simp only [CRes.pure_eq, CRes.bind_ok, writeSlot, if_pos (show i < res.length by omega)]
-        exact ih (i + 1) _ _ (by omega) (by simp; omega)
-      | none =>
-        simp only [readSlot, dif_pos hk, CRes.bind_ok, hs, deref, writeSlot,
-          if_pos (show i < res.length by omega)]
-        exact ih (i + 1) _ _ (by omega) (by simp; omega)
+theorem read_vals (vals : List α) (rest : List (Slot α)) (i : Nat) (hi : i < vals.length) (w : String) :
+    readSlot (vals.map Slot.val ++ rest) i w = .ok (.val vals[i]) := by
+  unfold readSlot
+  rw [dif_pos (by simp; omega)]
+  rw [List.getElem_append_left (by simp; omega)]
+  simp
 
-/-- `copy.replace(s, **kws)` never accesses memory out of bounds while the type's size
-attributes are its own, for every object the constructor leaves, every keyword set and every
-allocator outcome; the type has fewer than `2^57` fields, as in `NewIndexContract`. (A type with
-unnamed fields is refused before any access.) -/
-def ReplaceInBoundsHonest : Prop :=
-  ∀ (α : Type) (t : CType) (v n u : Nat) (o : CObj α) (nargs : Nat) (kws : Option (List (Str × α)))
-    (malloc : Nat → Bool), HonestLayout t v n u → n < 2 ^ 57 → o.size = v → WellFormed t o →
-    (replaceC t o nargs kws malloc).isUB = false
+theorem memberName_getD (ms : List Member) (i u : Nat) (hu : u ≤ i) (hi : i - u < ms.length) (w : String) :
+    memberName ms ((i : Int) - u) w = .ok (.name (ms.getD (i - u) ⟨[], 0⟩).name) := by
+  unfold memberName
+  rw [if_neg (show ¬ ((i : Int) - u < 0) by omega)]
+  have he : ((i : Int) - u).toNat = i - u := by omega
+  rw [dif_pos (by rw [he]; exact hi)]
+  simp only [he, List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hi, Option.getD_some]
 
-theorem replaceInBoundsHonest_proven : ReplaceInBoundsHonest := by
-  intro α t v n u o nargs kws malloc ⟨hH, hm, huv⟩ hn hsz hw
-  have hrs := realSize_honest hH
-  have hw' : ∀ i, i < n → ∃ a, o.slots[i]? = some (.val a) := by
-    intro i hi; apply hw; rw [hsz, hrs]; exact hi
-  have hnew := newIndexContract_proven α t v n u malloc hH hn
-  obtain ⟨hd, hb, hv⟩ := hH
-  have h3 : sizeOrNull (getTypeAttrAsSize t.nameStr t.dict "n_unnamed_fields") = .ok u :=
-    sizeOf_small _ _ _ u (by rw [hd]; exact honest_nunnamed v n u) (by omega)
-  unfold replaceC
-  by_cases ha : nargs ≠ 0
-  · rw [if_pos ha]; rfl
-  · rw [if_neg ha]
-    rw [h3]
-    simp only [CRes.bind_ok]
-    by_cases hu : u > 0
-    · rw [if_pos hu]; rfl
-    · rw [if_neg hu]
-      have hu0 : u = 0 := by omega
-      subst hu0
-      rcases hnew with ⟨_, hme⟩ | ⟨_, res, hres, _, _, hslots, _⟩
-      · rw [hme]; rfl
-      · rw [hres]
-        simp only [CRes.bind_ok]
-        have hlen : n ≤ res.slots.length := by rw [hslots]; simp
-        rw [hsz, show realSize t v = n from realSize_honest ⟨hd, hb, hv⟩]
-        cases kws with
-        | some kws =>
-          simp only
-          apply isUB_bind (replaceKwLoop_ok t o n (by omega) hw' n 0 res.slots kws (by omega) hlen)
-          intro _ _
-          split <;> rfl
-        | none =>
-          simp only
-          apply isUB_bind (replaceCopyLoop_ok o n hw' n 0 res.slots (by omega) hlen)
-          intro _ _
-          rfl
+theorem memberName_nat (ms : List Member) (i : Nat) (hi : i < ms.length) (w : String) :
+    memberName ms (i : Int) w = .ok (.name (ms.getD i ⟨[], 0⟩).name) := by
+  have := memberName_getD ms i 0 (Nat.zero_le _) (by omega) w
+  simpa using this
 
+theorem drop_take_succ (vals : List α) (i k : Nat) (hi : i < vals.length) :
+    (vals.drop i).take (k + 1) = vals[i] :: (vals.drop (i + 1)).take k := by
+  rw [List.drop_eq_getElem_cons hi]; rfl
+
+theorem CRes.map_bind_ok {x : CRes β} {f : β → CRes γ} : x.bind f = x >>= f := rfl
 /-! ## The size reads, for every state of the dict -/
 
 /-- What one size read gives, for every content of the dict under that key: the lookup's own

@@ -84,7 +84,7 @@ def dictArg (j : Json) : Except String (Option (CDictArg Json)) := do
   | .str "notdict" => pure (some .notDict)
   | j =>
     let kv ← kvList j
-    pure (some (.dict (fun k => .ok ((kv.find? (·.1 == k)).map (·.2))) kv.length))
+    pure (some (.dict (fun _ k => .ok ((kv.find? (·.1 == k)).map (·.2))) kv.length kv.length))
 
 def seqArg (j : Json) : Except String (Py (List Json)) := do
   match j with
@@ -105,6 +105,15 @@ def dictify (ps : List (Str × Json)) : List (Str × Json) :=
 
 def reduceJson (r : List Json × List (Str × Json)) : Json :=
   toJson [toJson r.1, toJson ((dictify r.2).map fun (k, v) => toJson [toJson (strOf k), v])]
+
+/-- `kwargs` holding exact-str keys, as the harness passes them: field `i`'s pop finds the key
+unless an earlier field had the same name; what is left is the keys that name no field. -/
+def kwOracle (t : CType) (n : Nat) (kv : List (Str × Json)) : KwArg Json :=
+  let names := (t.members.take n).map fun m => (utf8Decode m.name .strict).toOption.getD []
+  { pop := fun i key =>
+      let rest := kv.filter fun p => !((names.take i).contains p.1)
+      .ok ((rest.find? (·.1 == key)).map (·.2)),
+    sizeAfter := (kv.filter fun p => !(names.contains p.1)).length }
 
 inductive CapiOp where
   | set (i : Int) (v : Json)
@@ -135,7 +144,7 @@ def run (fn : String) (j : Json) : Except String Json := do
         | _ => throw "bad set"
       let o := sets.foldl (fun (o : CRes (CObj Json)) (i, v) => o.bind fun o => pssSetItem o i v)
         (pssNew (α := Json) t malloc)
-      pure <| cres (fun s => toJson (strOf s)) (o.bind fun o => structseqRepr t o repOf)
+      pure <| cres (fun s => toJson (strOf s)) (o.bind fun o => structseqRepr (fun n => decide (n < 2 ^ 45)) t o repOf)
     | r => pure (cres (fun _ => Json.null) r)
   | "ss_capi" =>
     let r ← build j
@@ -182,7 +191,7 @@ def run (fn : String) (j : Json) : Except String Json := do
         let t := { b.type with dict := ← applyLies b.type.dict (← field j "lies") }
         let kws ← match ← field j "kws" with
           | .null => pure none
-          | v => some <$> kvList v
+          | v => some <$> (kwOracle t (realSize t o.size) <$> kvList v)
         let nargs ← getNat j "nargs"
         let res := (replaceC t o nargs kws malloc).bind fun r =>
           (reduceC b.type r).bind fun red => .ok (visible r, reduceJson red)

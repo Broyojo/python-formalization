@@ -1,86 +1,151 @@
 id: typeobj-structseq-newtype-nseq-past-fields
-title: "PyStructSequence_NewType with n_in_sequence = number of fields + 4 reads past the field array and crashes; +1..+3 and +5.. are refused only by accident of the basicsize arithmetic"
+title: "PyStructSequence_NewType does not validate its desc: n_in_sequence = #fields + 4 reads past the field array, unnamed hidden fields make __reduce__ and the constructor read tp_members[-1], and 2^29 hidden fields wrap tp_basicsize"
 priority: P4
 kind: validation-order
 module: typeobj
 files: [Objects/structseq.c, Objects/typeobject.c]
-functions: ["_PyStructSequence_NewType", "PyStructSequence_NewType", "count_members"]
+functions: ["_PyStructSequence_NewType", "PyStructSequence_NewType", "count_members", "initialize_members", "structseq_reduce", "structseq_new_impl"]
 summary: |
-  `_PyStructSequence_NewType` never checks `desc->n_in_sequence` against the number of fields
-  `count_members` found. It computes `spec.basicsize = (int)(sizeof(PyStructSequence) +
-  (hidden - 1) * sizeof(PyObject *))` with `hidden = n_members - n_in_sequence` (:774-775), and
-  `initialize_structseq_dict` then reads `desc->fields[i]` for every `i < n_in_sequence`
-  (:510-520). An `n_in_sequence` above the field count is rejected only as a side effect of
-  `PyType_FromSpecWithBases`'s handling of that basicsize:
+  `_PyStructSequence_NewType` (structseq.c:744-793) checks nothing about the desc it is given.
+  Three consequences, all from C (or ctypes), all one cause:
 
-    - `hidden = -1, -2, -3`: basicsize 24, 16, 8, below tuple's 32: TypeError from `type_ready`
-      (Objects/typeobject.c:5207-5212);
-    - `hidden <= -5`: a negative basicsize means "extend the base", which tuple refuses:
-      SystemError (Objects/typeobject.c:5629-5643);
-    - `hidden = -4`: basicsize 0 means "inherit the base's" (:5645-5648), the type is built, and
-      the `__match_args__` loop reads `fields[n]` (the terminator, whose NULL name goes to
-      `PyUnicode_FromString`) and past it: a crash.
+  1. `n_in_sequence` is never compared with the number of fields `count_members` found. It
+     computes `spec.basicsize = (int)(sizeof(PyStructSequence) + (hidden - 1) *
+     sizeof(PyObject *))` with `hidden = n_members - n_in_sequence` (:774-775), and
+     `initialize_structseq_dict` reads `desc->fields[i]` for every `i < n_in_sequence`
+     (:510-520). A too-large `n_in_sequence` is rejected only as a side effect of
+     `PyType_FromSpecWithBases`'s handling of that basicsize:
+       - `hidden = -1, -2, -3`: basicsize 24, 16, 8: TypeError (Objects/typeobject.c:5207-5212);
+       - `hidden <= -5`: a negative basicsize means "extend the base": SystemError (:5629-5643);
+       - `hidden = -4`: basicsize 0 means "inherit" (:5645-5648), the type is built, and the
+         `__match_args__` loop reads `fields[n]` (the terminator, whose NULL name goes to
+         `PyUnicode_FromString`) and past it: a crash.
+  2. Unnamed fields are "only allowed for indices < n_visible_fields" (comment at :23-24), but an
+     unnamed hidden field is accepted. `structseq_reduce` (:369) and the constructor's dict loop
+     (:242) index `tp_members[i - n_unnamed_fields]`, which for fields `x`, unnamed, unnamed and
+     `n_in_sequence = 1` is `tp_members[-1]`: on 3.15.2 `__reduce__` returns the dict
+     `{'m.T': None, 'x': None}`, the key `'m.T'` read from the memory before the array.
+  3. The `(int)` cast at :775 wraps: with 2^29 hidden fields, `40 + (2^29 - 1) * 8` is `2^32 + 32`,
+     cast to 32, so the type has `n_fields = 2^29` and `tp_basicsize = 32`, and `get_real_size`
+     (:55-62) counts none of its hidden fields. (The reproducer maps one 2 MB page of unnamed
+     fields 4096 times, so the 8 GB desc costs 2 MB.)
 
-  The Lean model refutes `NewTypeInBounds` with one field and `n_in_sequence = 5`.
+  The Lean model refutes `NewTypeInBounds` (case 1, one field, `n_in_sequence = 5`),
+  `ReduceInBoundsBuilt` (case 2) and `NewTypeBasicsizeExact` (case 3). `NewTypeOutcomes` proves
+  the refusals listed in case 1 and that every valid desc is accepted.
 likelihood: |
-  Very low: a C extension has to pass an `n_in_sequence` larger than its field list, which is a
-  programming error. It is reachable through ctypes.
+  Very low: a C extension has to pass a desc that is wrong (too large `n_in_sequence`, unnamed
+  hidden fields) or absurd (2^29 fields). All three are reachable through ctypes.
 maybe_intended: |
-  Largely. The docs say only "Number of fields visible to the Python side", which implies it is at
-  most the number of fields; C API functions often do not validate such input. But the function
-  does reject every other too-large value with an exception, so a crash for exactly one value is
-  not a deliberate design.
+  Largely. The docs say only "Number of fields visible to the Python side", and the unnamed-field
+  rule lives in a source comment; C API functions often do not validate such input. But the
+  function does reject every other too-large `n_in_sequence` with an exception, so a crash for
+  exactly one value, and a silently wrong layout, are not a deliberate design.
 reproducer: |
   import subprocess, sys
   HELPER = (
       "import ctypes, sys\n"
       "api = ctypes.pythonapi\n"
       "class Field(ctypes.Structure):\n"
-      "    _fields_ = [('name', ctypes.c_char_p), ('doc', ctypes.c_char_p)]\n"
+      "    _fields_ = [('name', ctypes.c_void_p), ('doc', ctypes.c_char_p)]\n"
       "class Desc(ctypes.Structure):\n"
       "    _fields_ = [('name', ctypes.c_char_p), ('doc', ctypes.c_char_p),\n"
-      "                ('fields', ctypes.POINTER(Field)), ('n_in_sequence', ctypes.c_int)]\n"
+      "                ('fields', ctypes.c_void_p), ('n_in_sequence', ctypes.c_int)]\n"
       "api.PyStructSequence_NewType.restype = ctypes.py_object\n"
       "api.PyStructSequence_NewType.argtypes = [ctypes.POINTER(Desc)]\n"
-      "fields = (Field * 2)()\n"
-      "fields[0].name = b'a'\n"
-      "fields[1].name = None\n"
-      "d = Desc(b'm.T', None, fields, int(sys.argv[1]))\n"
+      "UNNAMED = ctypes.c_void_p.in_dll(api, 'PyStructSequence_UnnamedField').value\n"
+      "keep = []\n"
+      "def mk(names, nseq):\n"
+      "    arr = (Field * (len(names) + 1))()\n"
+      "    for i, nm in enumerate(names):\n"
+      "        if nm is None:\n"
+      "            arr[i].name = UNNAMED\n"
+      "        else:\n"
+      "            b = ctypes.create_string_buffer(nm); keep.append(b)\n"
+      "            arr[i].name = ctypes.cast(b, ctypes.c_void_p).value\n"
+      "    arr[len(names)].name = None\n"
+      "    d = Desc(b'm.T', None, ctypes.cast(arr, ctypes.c_void_p).value, nseq); keep.append((arr, d))\n"
+      "    return api.PyStructSequence_NewType(ctypes.byref(d))\n")
+  NSEQ = HELPER + (
       "try:\n"
-      "    api.PyStructSequence_NewType(ctypes.byref(d))\n"
+      "    mk([b'a'], int(sys.argv[1]))\n"
       "    print('built')\n"
       "except Exception as e:\n"
       "    print(type(e).__name__)\n")
   out = {}
   for nseq in (2, 3, 4, 5, 6, 9):
-      r = subprocess.run([sys.executable, "-I", "-c", HELPER, str(nseq)], capture_output=True, text=True, timeout=60)
+      r = subprocess.run([sys.executable, "-I", "-c", NSEQ, str(nseq)], capture_output=True, text=True, timeout=60)
       out[nseq] = r.stdout.strip() if r.returncode == 0 else f"crash {r.returncode}"
       print(f"1 field, n_in_sequence = {nseq}: {out[nseq]}")
-  if (out[2] == out[3] == out[4] == "TypeError" and out[5].startswith("crash")
-          and out[6] == out[9] == "SystemError"):
+  case1 = (out[2] == out[3] == out[4] == "TypeError" and out[5].startswith("crash")
+           and out[6] == out[9] == "SystemError")
+  HIDDEN = HELPER + (
+      "T = mk([b'x', None, None], 1)\n"
+      "print(sorted(T((1,)).__reduce__()[1][1]))\n")
+  r = subprocess.run([sys.executable, "-I", "-c", HIDDEN], capture_output=True, text=True, timeout=60)
+  print("fields x, unnamed, unnamed, n_in_sequence = 1: __reduce__ dict keys", r.stdout.strip() or f"crash {r.returncode}")
+  case2 = r.returncode != 0 or r.stdout.strip() != "[]"
+  WIDE = (
+      "import ctypes, mmap, os\n"
+      "libc = ctypes.CDLL(None, use_errno=True)\n"
+      "libc.mmap.restype = ctypes.c_void_p\n"
+      "libc.mmap.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_long]\n"
+      "api = ctypes.pythonapi\n"
+      "UNNAMED = ctypes.c_void_p.in_dll(api, 'PyStructSequence_UnnamedField').value\n"
+      "CHUNK = 2 * 1024 * 1024\n"
+      "N = 2 ** 29\n"
+      "chunks = N * 16 // CHUNK\n"
+      "fd = os.memfd_create('fields'); os.ftruncate(fd, CHUNK)\n"
+      "m = mmap.mmap(fd, CHUNK); m.write(bytes((ctypes.c_void_p * 2)(UNNAMED, None)) * (CHUNK // 16))\n"
+      "fd2 = os.memfd_create('end'); os.ftruncate(fd2, CHUNK)\n"
+      "base = libc.mmap(None, (chunks + 1) * CHUNK, 0, 0x22, -1, 0)\n"
+      "for i in range(chunks + 1):\n"
+      "    r = libc.mmap(base + i * CHUNK, CHUNK, 1, 0x11, fd if i < chunks else fd2, 0)\n"
+      "    assert r == base + i * CHUNK\n"
+      "class Desc(ctypes.Structure):\n"
+      "    _fields_ = [('name', ctypes.c_char_p), ('doc', ctypes.c_char_p),\n"
+      "                ('fields', ctypes.c_void_p), ('n_in_sequence', ctypes.c_int)]\n"
+      "api.PyStructSequence_NewType.restype = ctypes.py_object\n"
+      "api.PyStructSequence_NewType.argtypes = [ctypes.POINTER(Desc)]\n"
+      "d = Desc(b'm.Wide', None, base, 0)\n"
+      "T = api.PyStructSequence_NewType(ctypes.byref(d))\n"
+      "print(T.n_fields, T.n_sequence_fields, T.__basicsize__)\n")
+  r = subprocess.run([sys.executable, "-I", "-c", WIDE], capture_output=True, text=True, timeout=120)
+  print("2^29 unnamed fields, n_in_sequence = 0: n_fields, n_sequence_fields, __basicsize__ =", r.stdout.strip() or r.stderr.strip()[-200:])
+  case3 = r.stdout.split() == [str(2 ** 29), "0", "32"]
+  if case1 and case2 and case3:
       print("REPRODUCED typeobj-structseq-newtype-nseq-past-fields")
 expected: |
-  Every `n_in_sequence` larger than the number of fields (or negative) raises the same
-  exception before anything reads the field array.
+  A desc with `n_in_sequence` outside `0 .. #fields`, or an unnamed field past `n_in_sequence`,
+  is refused with an exception before anything reads it; a type built has
+  `tp_basicsize = 32 + 8 * hidden` or is refused.
 observed: |
-  python3 (3.15.2): n_in_sequence 2-4 TypeError, 5 crash (SIGSEGV), 6 and 9 SystemError.
-  REPRODUCED by scripts/check_bugs.py.
+  python3 (3.15.2): n_in_sequence 2-4 TypeError, 5 crash (SIGSEGV), 6 and 9 SystemError; the
+  unnamed-hidden type's `__reduce__` dict has keys ['m.T', 'x']; the wide type has n_fields
+  536870912 and __basicsize__ 32. REPRODUCED by scripts/check_bugs.py.
   main (3.16.0a1+dev, vendor/cpython-main/python.exe): the same, REPRODUCED.
 promised_by: |
-  Undisputed invariant: a C API call either fails with an exception or works; and the function's
-  own behaviour on the neighbouring values.
+  Undisputed invariants: a C API call either fails with an exception or works, and does not
+  read outside its input; the layout `tp_basicsize` states is the one the size attributes state.
+  The function's own behaviour on the neighbouring `n_in_sequence` values.
 cause: |
-  Objects/structseq.c:774-775 derives the basicsize from an unchecked `n_in_sequence`; :510-520
-  read `desc->fields[i]` for `i < n_in_sequence`; Objects/typeobject.c:5645-5648 turns the
-  resulting basicsize 0 into "inherit".
+  Objects/structseq.c:744-775 derives the layout from an unchecked desc; :774-775 casts the
+  basicsize to int; :510-520 read `desc->fields[i]` for `i < n_in_sequence`; :369 and :242 index
+  `tp_members[i - n_unnamed_fields]`; Objects/typeobject.c:5645-5648 turns basicsize 0 into
+  "inherit".
 possible_fix: |
-  Check `0 <= desc->n_in_sequence <= n_members` in `_PyStructSequence_NewType` (and in
-  `PyStructSequence_InitType2`, which computes the same layout) before using it.
+  In `_PyStructSequence_NewType` (and `PyStructSequence_InitType2`, which builds the same
+  layout), refuse `n_in_sequence < 0 || n_in_sequence > n_members`, an unnamed field at an index
+  `>= n_in_sequence`, and a basicsize that does not fit an int, before using any of them.
 duplicates:
   issues: []
   queries: ["PyStructSequence_NewType n_in_sequence", "n_in_sequence crash", "PyStructSequence_NewType crash",
-            "n_in_sequence", "structseq", "PyStructSequence"]
+            "n_in_sequence", "structseq", "PyStructSequence", "PyStructSequence_UnnamedField", "PyStructSequence_NewType desc validate",
+            "structseq unnamed field hidden", "structseq basicsize overflow", "n_unnamed_fields reduce"]
   bugforge: "no match for structseq or PyStructSequence"
 lean:
   property: PyLean.TypeObj.StructSeq.NewTypeInBounds
   theorem: PyLean.TypeObj.StructSeq.newTypeInBounds_refuted
+  also:
+    - {property: PyLean.TypeObj.StructSeq.ReduceInBoundsBuilt, theorem: PyLean.TypeObj.StructSeq.reduceInBoundsBuilt_refuted}
+    - {property: PyLean.TypeObj.StructSeq.NewTypeBasicsizeExact, theorem: PyLean.TypeObj.StructSeq.newTypeBasicsizeExact_refuted}
