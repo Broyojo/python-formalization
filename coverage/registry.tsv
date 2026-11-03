@@ -2133,7 +2133,8 @@ textlibs-struct-float-unpack	proven	Modules/_struct.c	unpack_float,bu_float,lu_f
 textlibs-struct-double-bytes	proven	Modules/_struct.c	unpack_double,nu_double,np_double,bu_double,bp_double
 textlibs-struct-prepare-two-passes	proven	Modules/_struct.c	prepare_s,whichtable,getentry
 textlibs-struct-prepare-refusals	proven	Modules/_struct.c	prepare_s,getentry
-textlibs-struct-one-item-size	proven	Modules/_struct.c	prepare_s,whichtable,getentry,format_equal,align
+textlibs-struct-one-item-size	proven	Modules/_struct.c	prepare_s,whichtable,getentry,format_equal,align,set_format,calcsize_impl
+textlibs-struct-pair-offsets	proven	Modules/_struct.c	prepare_s,align,getentry,whichtable
 textlibs-struct-prefix-tables	proven	Modules/_struct.c	whichtable,prepare_s
 textlibs-struct-set-format	proven	Modules/_struct.c	set_format
 textlibs-struct-char-code	proven	Modules/_struct.c	nu_char,np_char
@@ -2146,6 +2147,9 @@ textlibs-struct-little-is-native	proven	Modules/_struct.c	init_endian_tables
 textlibs-struct-z-codes	proven	Modules/_struct.c	format_equal,getentry,align
 textlibs-struct-life	proven	Modules/_struct.c	s_new,s_init,Struct_impl,set_format,same_format,Struct___init___impl
 textlibs-struct-life-branches	proven	Modules/_struct.c	s_new,Struct_impl,same_format,Struct___init___impl,s_init
+textlibs-struct-life-branches2	proven	Modules/_struct.c	same_format,Struct___init___impl,s_init
+textlibs-struct-unpack-values	proven	Modules/_struct.c	Struct_unpack_impl
+textlibs-struct-cache-edges	proven	Modules/_struct.c	cache_struct_converter
 textlibs-struct-native-complex-snan	refuted	Modules/_struct.c	nu_float_complex
 textlibs-struct-unpack-from-offsets	proven	Modules/_struct.c	Struct_unpack_from_impl,unpack_from_impl
 textlibs-struct-iter-length	proven	Modules/_struct.c	unpackiter_len,unpackiter_iternext

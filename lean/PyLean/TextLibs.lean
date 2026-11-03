@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.TextLibs.Diff
-import PyLean.TextLibs.StructUse
+import PyLean.TextLibs.StructMore
 import PyLean.TextLibs.BinasciiEq3
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
@@ -216,11 +216,17 @@ def entries : List Entry := [
     prop := ``PrepareRefusals, thm := some ``prepareRefusals_proven
     notes := "The MemoryError at 1734-1737 needs more than 2**58 codes and is not stated." },
   { id := "textlibs-struct-one-item-size", pyFile := "Modules/_struct.c"
-    pyFns := ["prepare_s", "whichtable", "getentry", "format_equal", "align"]
+    pyFns := ["prepare_s", "whichtable", "getentry", "format_equal", "align", "set_format", "calcsize_impl"]
     statement := "For every byte-order prefix (or none), every code of the table it selects and every one-digit count d, calcsize(prefix + str(d) + code) == d * size(code)."
     source := "docs: the size table of the format characters", status := .proven
     prop := ``OneItemSize, thm := some ``oneItemSize_proven
     notes := "Every table, every entry, x, s and p included; checked against CPython for the same formats." },
+  { id := "textlibs-struct-pair-offsets", pyFile := "Modules/_struct.c"
+    pyFns := ["prepare_s", "align", "getentry", "whichtable"]
+    statement := "For every prefix and every two codes a, b of its table, Struct(prefix + a + b) puts a at offset 0 and b at the first multiple of b's alignment after a, and its size is that offset plus b's size (calcsize('bi') == 8, 'h' of 'bh' at 2); x makes no code."
+    source := "Modules/_struct.c:1747-1780", status := .proven
+    prop := ``PairOffsets, thm := some ``pairOffsets_proven
+    notes := "Exhaustive over all pairs of every table; calcsize checked against CPython for the same formats." },
   { id := "textlibs-struct-prefix-tables", pyFile := "Modules/_struct.c"
     pyFns := ["whichtable", "prepare_s"]
     statement := "Every code of a format prefixed by < or = comes from the little-endian table, by > or ! from the big-endian table, and by @ from the native one; a format with no prefix character gives the same codes, size and length as with @."
@@ -281,6 +287,23 @@ def entries : List Entry := [
     source := "Modules/_struct.c:1843-2004", status := .proven
     prop := ``LifeBranches, thm := some ``lifeBranches_proven
     notes := "Each branch checked on 3.15.2 with Struct subclasses." },
+  { id := "textlibs-struct-life-branches2", pyFile := "Modules/_struct.c"
+    pyFns := ["same_format", "Struct___init___impl", "s_init"]
+    statement := "__init__ with bytes other than the struct's format warns and installs them; on a subclass with its own __init__, a struct __new__ made is initialised explicitly (Different format... and the new format), while on Struct itself the first __init__ after __new__ changes nothing."
+    source := "Modules/_struct.c:1937-2004", status := .proven
+    prop := ``LifeBranches2, thm := some ``lifeBranches2_proven
+    notes := "Struct.__new__(Struct, 'b').__init__('h') leaves size 1 on 3.15.2, as stated." },
+  { id := "textlibs-struct-unpack-values", pyFile := "Modules/_struct.c"
+    pyFns := ["Struct_unpack_impl"]
+    statement := "Struct.unpack of a right-sized buffer is s_unpack_internal of that buffer from its first byte, with the struct the buffer conversion left, and s_unpack_internal gives each item read at its code's offset plus j * size, in order."
+    source := "Modules/_struct.c:2047-2072, 2105-2118", status := .proven
+    prop := ``UnpackValues, thm := some ``unpackValues_proven },
+  { id := "textlibs-struct-cache-edges", pyFile := "Modules/_struct.c"
+    pyFns := ["cache_struct_converter"]
+    statement := "The converter refuses an unhashable format with the dictionary's TypeError, rewords a TypeError from __hash__ and passes other exceptions, lets Struct() refuse a hashable non-format, gives bytes the struct of their surrogateescape decoding (the str's for ASCII), and returns the struct uncached when PyDict_SetItem fails."
+    source := "Modules/_struct.c:2617-2664", status := .proven
+    prop := ``CacheEdges, thm := some ``cacheEdges_proven
+    notes := "struct.pack([], 1), a raising __hash__, bytes keys and a str subclass whose second __hash__ raises were checked on 3.15.2." },
   { id := "textlibs-struct-native-complex-snan", pyFile := "Modules/_struct.c", pyFns := ["nu_float_complex"]
     statement := "unpack('F', b) and unpack('>F', swapped b) agree on every 8-byte buffer."
     source := "invariant: byte order is the only difference", status := .refuted
