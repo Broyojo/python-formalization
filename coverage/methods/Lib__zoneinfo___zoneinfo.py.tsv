@@ -1,6 +1,6 @@
 file	line	endline	name	signature	status	entry	note
 Lib/zoneinfo/_zoneinfo.py	26	27	_load_timedelta	_load_timedelta(seconds)	todo		
-Lib/zoneinfo/_zoneinfo.py	36	38	ZoneInfo.__init_subclass__	__init_subclass__(cls)	todo		
+Lib/zoneinfo/_zoneinfo.py	36	38	ZoneInfo.__init_subclass__	__init_subclass__(cls)	modelled	datetime-zoneinfo-cache-twins-subclass	
 Lib/zoneinfo/_zoneinfo.py	40	56	ZoneInfo.__new__	__new__(cls, key)	todo		review: newPy mirrors :41-54 on keys, but only for the base class and for keys whose __hash__/__eq__ cannot raise or re-enter (a failing get/setdefault/pop is not an outcome), and the subclass case, where this method keeps 8 per subclass and C none (measured on 3.15.2), is scoped out without a refutation.
 Lib/zoneinfo/_zoneinfo.py	59	63	ZoneInfo.no_cache	no_cache(cls, key)	todo		
 Lib/zoneinfo/_zoneinfo.py	66	79	ZoneInfo._new_instance	_new_instance(cls, key)	todo		

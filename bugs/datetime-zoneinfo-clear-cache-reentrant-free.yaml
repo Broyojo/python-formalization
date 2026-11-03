@@ -82,6 +82,6 @@ duplicates:
             "bugforge README: no zoneinfo entry"]
   note: "Found by the zoneinfo review (2026-11-03); reproducer rebuilt from its probe and re-run independently."
 lean:
-  property: null
-  theorem: null
-  note: "Not yet a Lean refutation: the cache model (ZoneCache.lean) has no key destructors; the review marked the cache rows HOLLOW for this scope limit."
+  property: PyLean.Datetime.Zone.ClearCacheDefined
+  theorem: PyLean.Datetime.Zone.clearCacheDefined_refuted
+  note: "clearStrongC (ZoneCache.lean) mirrors clear_strong_cache/strong_cache_free/strong_cache_node_free with key finalizers that call ZoneInfo(...); the counterexample is three cached keys whose finalizers each construct a new key, as in the reproducer."

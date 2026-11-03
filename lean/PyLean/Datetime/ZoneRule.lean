@@ -327,24 +327,35 @@ def dayruleNew (julian : Bool) (day hour minute second : Int) : Option TRule :=
   else if hour < -167 ∨ hour > 167 then none
   else some (.day julian (wrapU 16 (wrapS 16 day)) (wrapS 16 hour) (wrapS 8 minute) (wrapS 8 second))
 
-/-- C `parse_transition_rule`, :1839-1937 (allocation failure is not modelled). The time
-defaults to 02:00:00. -/
-def parseTransRuleC (p : Bytes) : Option (TRule × Bytes) :=
+/-- What the date part of a rule reads: `Mm.w.d`, or a day with or without `J`. -/
+inductive RuleDate where
+  | cal (m w d : Int)
+  | day (julian : Bool) (d : Int)
+  deriving Repr, DecidableEq
+
+/-- The date part of C `parse_transition_rule`, :1863-1881 and :1903-1913. -/
+def parseRuleDateC (p : Bytes) : Option (RuleDate × Bytes) :=
   if peek p = 77 then do
     let (month, p) ← parseDigitsC 1 2 p.tail
     if peek p ≠ 46 then none
     let (week, p) ← parseDigitsC 1 1 p.tail
     if peek p ≠ 46 then none
     let (day, p) ← parseDigitsC 1 1 p.tail
-    let ((h, mi, s), p) ← if peek p = 47 then parseTransTimeC 0 0 p.tail else some ((2, 0, 0), p)
-    let r ← calendarruleNew month week day h mi s
-    pure (r, p)
+    pure (.cal month week day, p)
   else do
     let (julian, p) := if peek p = 74 then (true, p.tail) else (false, p)
     let (day, p) ← parseDigitsC 1 3 p
-    let ((h, mi, s), p) ← if peek p = 47 then parseTransTimeC 0 0 p.tail else some ((2, 0, 0), p)
-    let r ← dayruleNew julian day h mi s
-    pure (r, p)
+    pure (.day julian day, p)
+
+/-- C `parse_transition_rule`, :1839-1937 (allocation failure is not modelled): the date, an
+optional `/time` (02:00:00 by default, :1853-1855), then `calendarrule_new` or `dayrule_new`. -/
+def parseTransRuleC (p : Bytes) : Option (TRule × Bytes) := do
+  let (dt, p) ← parseRuleDateC p
+  let ((h, mi, s), p) ← if peek p = 47 then parseTransTimeC 0 0 p.tail else some ((2, 0, 0), p)
+  let r ← match dt with
+    | .cal month week day => calendarruleNew month week day h mi s
+    | .day julian day => dayruleNew julian day h mi s
+  pure (r, p)
 
 /-- C `build_tzrule`, :1999-2030 (`dst_abbr == NULL` gives an STD-only rule; `load_timedelta`
 of offsets this small cannot fail). -/
@@ -515,18 +526,22 @@ def reMonthRule (s : Bytes) : Option (Int × Int × Int) :=
       | _ => none
   | _ => none
 
+/-- The date part of `_parse_dst_start_end`, :708-726. -/
+def parseDatePy (date : Bytes) : Py TRule :=
+  if date.take 1 = [77] then
+    match reMonthRule date with
+    | none => .error (.valueError "~Invalid dst start/end date:")
+    | some (m, w, d) => calendarOffsetNew m w d
+  else
+    let (julian, date) := if date.take 1 = [74] then (true, date.drop 1) else (false, date)
+    if ¬(1 ≤ date.length ∧ date.length ≤ 3 ∧ date.all isDigitB) then
+      .error (.valueError "~Invalid dst start/end date:")
+    else dayOffsetNew (digitsVal date) julian
+
 /-- `_parse_dst_start_end`, :706-731. -/
 def parseDstStartEndPy (x : Bytes) : Py TRule := do
   let (date, time) := splitFirst 47 x
-  let off ← if date.take 1 = [77] then
-      match reMonthRule date with
-      | none => throw (.valueError "~Invalid dst start/end date:")
-      | some (m, w, d) => calendarOffsetNew m w d
-    else do
-      let (julian, date) := if date.take 1 = [74] then (true, date.drop 1) else (false, date)
-      if ¬(1 ≤ date.length ∧ date.length ≤ 3 ∧ date.all isDigitB) then
-        throw (.valueError "~Invalid dst start/end date:")
-      dayOffsetNew (digitsVal date) julian
+  let off ← parseDatePy date
   match time with
   | none => pure off
   | some t => do
@@ -546,6 +561,15 @@ def stripAngle (s : Bytes) : Bytes :=
 /-- `ValueError` from `_parse_tz_str`; the messages embed the string. -/
 def tzErrPy (what : String) : PyExc := .valueError s!"~{what}"
 
+/-- `try: offset = _parse_tz_delta(t) except ValueError as e: raise ValueError(...) from e`
+(_zoneinfo.py:670-673, :680-683): a `ValueError` becomes the caller's own; anything else
+propagates. -/
+def pyOffStep (t : Bytes) (msg : String) : Py Int :=
+  match parseTzDeltaPy t with
+  | .ok v => pure v
+  | .error (.valueError _) => throw (tzErrPy msg)
+  | .error e => throw e
+
 /-- `_parse_tz_str(tz_str)`, :627-703, on the decoded string's UTF-8 bytes. Every `ValueError`
 of a helper is re-raised as the caller's own `ValueError`. -/
 def parseTzStrPy (tz : Bytes) : Py After := do
@@ -556,18 +580,12 @@ def parseTzStrPy (tz : Bytes) : Py After := do
   let stdAbbr := stripAngle stdG
   let dstAbbr := dstG.map stripAngle
   let stdOffset ← match stdoffG with
-    | some t => (match parseTzDeltaPy t with
-      | .ok v => pure v
-      | .error (.valueError _) => throw (tzErrPy "Invalid STD offset in")
-      | .error e => throw e)
+    | some t => pyOffStep t "Invalid STD offset in"
     | none => throw (tzErrPy "Invalid STD offset in")
   match dstAbbr with
   | some da => do
     let dstOffset ← match dstoffG with
-      | some t => (match parseTzDeltaPy t with
-        | .ok v => pure v
-        | .error (.valueError _) => throw (tzErrPy "Invalid DST offset in")
-        | .error e => throw e)
+      | some t => pyOffStep t "Invalid DST offset in"
       | none => pure (stdOffset + 3600)
     match startEndStr with
     | none => throw (tzErrPy "Missing transition rules:")

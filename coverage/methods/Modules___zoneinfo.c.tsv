@@ -3,7 +3,7 @@ Modules/_zoneinfo.c	201	206	zoneinfo_get_state	zoneinfo_get_state(PyObject *mod)
 Modules/_zoneinfo.c	209	214	zoneinfo_get_state_by_cls	zoneinfo_get_state_by_cls(PyTypeObject *cls)	excluded		internal-bootstrap: returns the module state of the defining class; no Python-visible behaviour
 Modules/_zoneinfo.c	219	224	zoneinfo_get_state_by_self	zoneinfo_get_state_by_self(PyTypeObject *self)	excluded		internal-bootstrap: finds the module by definition and returns its state; no Python-visible behaviour
 Modules/_zoneinfo.c	227	290	zoneinfo_new_instance	zoneinfo_new_instance(zoneinfo_state *state, PyTypeObject *type, PyObject *key)	todo		
-Modules/_zoneinfo.c	293	302	get_weak_cache	get_weak_cache(zoneinfo_state *state, PyTypeObject *type)	todo		
+Modules/_zoneinfo.c	293	302	get_weak_cache	get_weak_cache(zoneinfo_state *state, PyTypeObject *type)	modelled	datetime-zoneinfo-cache-twins-subclass	
 Modules/_zoneinfo.c	315	364	zoneinfo_ZoneInfo_impl	zoneinfo_ZoneInfo_impl(PyTypeObject *type, PyObject *key) /*[clinic end generated code: output=95e61dab86bb95c3 input=ef73d7a83bf8790e]*/	todo		review: newC drops the PyErr_Occurred() return after zone_from_strong_cache (:320-321), failing weak_cache.get/setdefault calls (:328, :344) and the RuntimeError type check (:352-358), and takes keys as non-raising decidable values, so the open use-after-free gh-142782 (re-entrant key __eq__) and the subclass case (C keeps no strong cache, Python 8 per subclass: measured on 3.15.2) are scoped out without a refutation.
 Modules/_zoneinfo.c	367	373	zoneinfo_traverse	zoneinfo_traverse(PyObject *op, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal of the type and key (policy: no heap model)
 Modules/_zoneinfo.c	376	382	zoneinfo_clear	zoneinfo_clear(PyObject *op)	excluded		no-behaviour: tp_clear that only drops the key and file_repr references (policy: no finalization model)
@@ -23,7 +23,7 @@ Modules/_zoneinfo.c	872	891	load_timedelta	load_timedelta(zoneinfo_state *state,
 Modules/_zoneinfo.c	898	919	build_ttinfo	build_ttinfo(zoneinfo_state *state, long utcoffset, long dstoffset, PyObject *tzname, _ttinfo *out)	todo		
 Modules/_zoneinfo.c	923	930	xdecref_ttinfo	xdecref_ttinfo(_ttinfo *ttinfo)	excluded		no-behaviour: Py_XDECREF of a ttinfo's two timedeltas and str, which have no finalizers
 Modules/_zoneinfo.c	934	953	ttinfo_eq	ttinfo_eq(const _ttinfo *const tti0, const _ttinfo *const tti1)	todo		
-Modules/_zoneinfo.c	967	1308	load_data	load_data(zoneinfo_state *state, PyZoneInfo_ZoneInfo *self, PyObject *file_obj)	todo		changed-in-3.15:
+Modules/_zoneinfo.c	967	1308	load_data	load_data(zoneinfo_state *state, PyZoneInfo_ZoneInfo *self, PyObject *file_obj)	todo		
 Modules/_zoneinfo.c	1312	1355	calendarrule_year_to_timestamp	calendarrule_year_to_timestamp(TransitionRuleType *base_self, int year)	modelled	datetime-zoneinfo-rule-date-twins	
 Modules/_zoneinfo.c	1359	1403	calendarrule_new	calendarrule_new(int month, int week, int day, int hour, int minute, int second, CalendarRule *out)	todo		
 Modules/_zoneinfo.c	1412	1445	dayrule_year_to_timestamp	dayrule_year_to_timestamp(TransitionRuleType *base_self, int year)	modelled	datetime-zoneinfo-rule-date-twins,datetime-zoneinfo-zero-based-rule	
@@ -56,9 +56,9 @@ Modules/_zoneinfo.c	2487	2505	move_strong_cache_node_to_front	move_strong_cache_
 Modules/_zoneinfo.c	2517	2535	zone_from_strong_cache	zone_from_strong_cache(zoneinfo_state *state, const PyTypeObject *const type, PyObject *const key)	todo		review: The subclass miss (:2520-2522) is scoped out although Python subclasses keep their own strong cache (measured), and its walk and move-to-front are where gh-142782's open use-after-free happens, which the non-raising key model cannot express.
 Modules/_zoneinfo.c	2544	2574	update_strong_cache	update_strong_cache(zoneinfo_state *state, const PyTypeObject *const type, PyObject *key, PyObject *zone)	todo		review: Insert-and-trim (:2551-2573) is (k :: strong).take 8, but its subclass no-op (:2547-2549) is exactly the twin divergence for subclasses (Python keeps 8 per subclass, measured), scoped out without a refutation.
 Modules/_zoneinfo.c	2582	2590	clear_strong_cache	clear_strong_cache(zoneinfo_state *state, const PyTypeObject *const type)	todo		review: Modelled as an atomic [], but the body frees every node while state->ZONEINFO_STRONG_CACHE still points at them (:2588-2589), so a key whose __del__ calls ZoneInfo() during clear_cache() walks freed nodes (SIGSEGV measured on 3.15.2 and main); the subclass no-op is also scoped out.
-Modules/_zoneinfo.c	2593	2603	new_weak_cache	new_weak_cache(void)	todo		review: Not only bootstrap: zoneinfo_init_subclass (:2625) calls it at runtime for every subclass, looking weakref.WeakValueDictionary up at call time and failing if that raises, which is Python-visible (Sub._weak_cache).
+Modules/_zoneinfo.c	2593	2603	new_weak_cache	new_weak_cache(void)	todo		
 Modules/_zoneinfo.c	2607	2620	initialize_caches	initialize_caches(zoneinfo_state *state)	excluded		internal-bootstrap: creates the empty timedelta dict and weak cache at module exec
-Modules/_zoneinfo.c	2623	2637	zoneinfo_init_subclass	zoneinfo_init_subclass(PyObject *cls, PyObject *args, PyObject *kwargs)	todo		
+Modules/_zoneinfo.c	2623	2637	zoneinfo_init_subclass	zoneinfo_init_subclass(PyObject *cls, PyObject *args, PyObject *kwargs)	modelled	datetime-zoneinfo-cache-twins-subclass	
 Modules/_zoneinfo.c	2699	2723	module_traverse	module_traverse(PyObject *mod, visitproc visit, void *arg)	excluded		no-behaviour: GC traversal of the module state (policy: no heap model)
 Modules/_zoneinfo.c	2726	2742	module_clear	module_clear(PyObject *mod)	excluded		no-behaviour: module tp_clear, drops state references and frees the strong cache at teardown (policy: no finalization model)
 Modules/_zoneinfo.c	2745	2748	module_free	module_free(void *mod)	excluded		no-behaviour: m_free calling module_clear at teardown (policy: no finalization model)
