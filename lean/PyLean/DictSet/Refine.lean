@@ -30,6 +30,8 @@ structure Honest (P : Proto K (PyDict K V)) (hf : K → Int) (eqv : K → K → 
   symm : ∀ a b, eqv a b = eqv b a
   trans : ∀ a b c, eqv a b = true → eqv b c = true → eqv a c = true
   hash_cons : ∀ a b, eqv a b = true → hf a = hf b
+  /-- `__hash__` does nothing to the dict. -/
+  hash_quiet : ∀ k s, P.hashEff k s = s := by intro _ _; rfl
 
 /-- What any keys object satisfies, the shared keys of a split table included. A search needs no
 more than this. -/

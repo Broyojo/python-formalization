@@ -259,44 +259,58 @@ theorem mergeSameSizeUnseen_proven : MergeSameSizeUnseen :=
   ⟨intSwaps, wReceiver, wSource, by decide +kernel⟩
 
 section Generic
-variable (P : Proto K (PyDict K V)) (g : K → DM K V V) (key : K) (rest : List K)
-  (d s : PyDict K V)
+variable (P : Proto K (PyDict K V)) (g : K → DM K V V) (step : DM K V (Option K))
+  (rest : List (DM K V (Option K))) (key : K) (d d1 s : PyDict K V)
 
-theorem generic_present_skip (h : pyDictContains P key d = (.ok true, s)) :
-    mergeGenericLoop P g 0 (key :: rest) d = mergeGenericLoop P g 0 rest s := by
-  simp [mergeGenericLoop, M.bind_run, h]
+theorem generic_step_error (e : PyExc) (ov : Nat) (hs : step d = (.error e, s)) :
+    mergeGenericLoop P g ov (step :: rest) d = (.error e, s) := by
+  simp [mergeGenericLoop, M.bind_run, hs]
 
-theorem generic_present_raise (h : pyDictContains P key d = (.ok true, s)) :
-    mergeGenericLoop P g 2 (key :: rest) d = mergeDup key s := by
+theorem generic_step_end (ov : Nat) (hs : step d = (.ok none, s)) :
+    mergeGenericLoop P g ov (step :: rest) d = (.ok (), s) := by
+  simp [mergeGenericLoop, M.bind_run, hs]
+
+theorem generic_present_skip (hs : step d = (.ok (some key), d1))
+    (h : pyDictContains P key d1 = (.ok true, s)) :
+    mergeGenericLoop P g 0 (step :: rest) d = mergeGenericLoop P g 0 rest s := by
+  simp [mergeGenericLoop, M.bind_run, hs, h]
+
+theorem generic_present_raise (hs : step d = (.ok (some key), d1))
+    (h : pyDictContains P key d1 = (.ok true, s)) :
+    mergeGenericLoop P g 2 (step :: rest) d = mergeDup key s := by
   have hd : ∀ t : PyDict K V, mergeDup key t = (.error mergeDupExc, { t with dupkey := some key }) :=
     fun _ => rfl
-  simp [mergeGenericLoop, M.bind_run, h, hd]
+  simp [mergeGenericLoop, M.bind_run, hs, h, hd]
 
 theorem generic_contains_raises (ov : Nat) (hov : ov ≠ 1) (e : PyExc)
-    (h : pyDictContains P key d = (.error e, s)) :
-    mergeGenericLoop P g ov (key :: rest) d = (.error e, s) := by
+    (hs : step d = (.ok (some key), d1)) (h : pyDictContains P key d1 = (.error e, s)) :
+    mergeGenericLoop P g ov (step :: rest) d = (.error e, s) := by
   have : (ov != 1) = true := by simpa using hov
-  simp [mergeGenericLoop, M.bind_run, h, this]
+  simp [mergeGenericLoop, M.bind_run, hs, h, this]
 
-theorem generic_absent (ov : Nat) (hov : ov ≠ 1) (h : pyDictContains P key d = (.ok false, s)) :
-    mergeGenericLoop P g ov (key :: rest) d =
+theorem generic_absent (ov : Nat) (hov : ov ≠ 1) (hs : step d = (.ok (some key), d1))
+    (h : pyDictContains P key d1 = (.ok false, s)) :
+    mergeGenericLoop P g ov (step :: rest) d =
       (g key >>= fun v => dictSetItem P key v >>= fun _ => mergeGenericLoop P g ov rest) s := by
   have : (ov != 1) = true := by simpa using hov
-  simp [mergeGenericLoop, M.bind_run, h, this]
+  simp [mergeGenericLoop, M.bind_run, hs, h, this]
 
 /-- `override == 1` never tests membership. -/
-theorem generic_override1 :
-    mergeGenericLoop P g 1 (key :: rest) d =
-      (g key >>= fun v => dictSetItem P key v >>= fun _ => mergeGenericLoop P g 1 rest) d := by
-  simp [mergeGenericLoop, M.bind_run]
+theorem generic_override1 (hs : step d = (.ok (some key), d1)) :
+    mergeGenericLoop P g 1 (step :: rest) d =
+      (g key >>= fun v => dictSetItem P key v >>= fun _ => mergeGenericLoop P g 1 rest) d1 := by
+  simp [mergeGenericLoop, M.bind_run, hs]
 
 end Generic
 
 /-- The slow path of `dict_merge`, for any protocol and any `keys()` and `__getitem__`, which may
-raise and may change the receiver. -/
+raise and may change the receiver. The keys are taken one `PyIter_Next` at a time, each on the state
+the previous turn left, so a keys list that a callback grows or shrinks is read as it now is. -/
 def MergeGeneric : Prop :=
-  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (g : K → DM K V V) (keys : DM K V (List K))
-    (key : K) (rest : List K) (ov : Nat) (d s : PyDict K V) (b : Option (MergeObj K V)),
+  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (g : K → DM K V V)
+    (keys : DM K V (ReIter (PyDict K V) K)) (step : DM K V (Option K))
+    (rest : List (DM K V (Option K))) (key : K) (ov : Nat) (d d1 s : PyDict K V)
+    (b : Option (MergeObj K V)),
     dictMergeChecked P false b ov d = (.error badInternalCall, d) ∧
     (d.frozen = true → dictMergeChecked P true b ov d =
       (.error (frozendictNoSupport "assignment"), d)) ∧
@@ -306,20 +320,28 @@ def MergeGeneric : Prop :=
     (d.frozen = false → ∀ o : MergeObj K V, (o.isDict && o.iterIsDict) = false →
       dictMergeChecked P true (some o) ov d = dictMerge P (.mapping o.keys o.getitem) ov d) ∧
     (∀ e, keys d = (.error e, s) → dictMerge P (.mapping keys g) ov d = (.error e, s)) ∧
-    (∀ ks, keys d = (.ok ks, s) → dictMerge P (.mapping keys g) ov d = mergeGenericLoop P g ov ks s) ∧
-    (pyDictContains P key d = (.ok true, s) →
-      mergeGenericLoop P g 0 (key :: rest) d = mergeGenericLoop P g 0 rest s ∧
-      mergeGenericLoop P g 2 (key :: rest) d = mergeDup key s) ∧
-    (ov ≠ 1 → ∀ e, pyDictContains P key d = (.error e, s) →
-      mergeGenericLoop P g ov (key :: rest) d = (.error e, s)) ∧
-    (ov ≠ 1 → pyDictContains P key d = (.ok false, s) →
-      mergeGenericLoop P g ov (key :: rest) d =
-        (g key >>= fun v => dictSetItem P key v >>= fun _ => mergeGenericLoop P g ov rest) s) ∧
-    mergeGenericLoop P g 1 (key :: rest) d =
-      (g key >>= fun v => dictSetItem P key v >>= fun _ => mergeGenericLoop P g 1 rest) d
+    (∀ it e, keys d = (.ok it, d1) → it.getIter d1 = (.error e, s) →
+      dictMerge P (.mapping keys g) ov d = (.error e, s)) ∧
+    (∀ it, keys d = (.ok it, d1) → it.getIter d1 = (.ok (), s) →
+      dictMerge P (.mapping keys g) ov d = mergeGenericLoop P g ov it.steps s) ∧
+    (∀ e, step d = (.error e, s) → mergeGenericLoop P g ov (step :: rest) d = (.error e, s)) ∧
+    (step d = (.ok none, s) → mergeGenericLoop P g ov (step :: rest) d = (.ok (), s)) ∧
+    (step d = (.ok (some key), d1) →
+      (pyDictContains P key d1 = (.ok true, s) →
+        mergeGenericLoop P g 0 (step :: rest) d = mergeGenericLoop P g 0 rest s ∧
+        mergeGenericLoop P g 2 (step :: rest) d = mergeDup key s) ∧
+      (ov ≠ 1 → ∀ e, pyDictContains P key d1 = (.error e, s) →
+        mergeGenericLoop P g ov (step :: rest) d = (.error e, s)) ∧
+      (ov ≠ 1 → pyDictContains P key d1 = (.ok false, s) →
+        mergeGenericLoop P g ov (step :: rest) d =
+          (g key >>= fun v => dictSetItem P key v >>= fun _ => mergeGenericLoop P g ov rest) s) ∧
+      mergeGenericLoop P g 1 (step :: rest) d =
+        (g key >>= fun v => dictSetItem P key v >>= fun _ => mergeGenericLoop P g 1 rest) d1)
 theorem mergeGeneric_proven : MergeGeneric := by
-  intro K V _ P g keys key rest ov d s b
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, generic_override1 P g key rest d⟩
+  intro K V _ P g keys step rest key ov d d1 s b
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, fun e h => generic_step_error P g step rest d s e ov h,
+    fun h => generic_step_end P g step rest d s ov h, fun hs => ⟨fun h => ?_, fun hov e h => ?_,
+    fun hov h => ?_, generic_override1 P g step rest key d d1 hs⟩⟩
   · simp [dictMergeChecked]
   · intro hf
     simp [dictMergeChecked, hf]
@@ -331,15 +353,14 @@ theorem mergeGeneric_proven : MergeGeneric := by
     simp [dictMergeChecked, MergeObj.route, h, hf]
   · intro e h
     simp [dictMerge, M.bind_run, h]
-  · intro ks h
-    simp [dictMerge, M.bind_run, h]
-  · intro h
-    exact ⟨generic_present_skip P g key rest d s h, generic_present_raise P g key rest d s h⟩
-  · intro hov e h
-    exact generic_contains_raises P g key rest d s ov hov e h
-  · intro hov h
-    exact generic_absent P g key rest d s ov hov h
-
+  · intro it e h1 h2
+    simp [dictMerge, M.bind_run, h1, h2]
+  · intro it h1 h2
+    simp [dictMerge, M.bind_run, h1, h2]
+  · exact ⟨generic_present_skip P g step rest key d d1 s hs h,
+      generic_present_raise P g step rest key d d1 s hs h⟩
+  · exact generic_contains_raises P g step rest key d d1 s ov hov e hs h
+  · exact generic_absent P g step rest key d d1 s ov hov hs h
 /-- `merge_from_seq2_lock_held`, for an iterator that may raise or change the receiver at any step:
 `PyObject_GetIter` first, then each outcome of a step and what follows it, on both branches of
 `override`. The state after a failure is the one the step left, so what earlier elements did stays,
@@ -355,10 +376,10 @@ def Seq2Order : Prop :=
     (seq2Loop P ov i [] d = (.ok (), d)) ∧
     (∀ e, step d = (.error e, s) → seq2Loop P ov i (step :: rest) d = (.error e, s)) ∧
     (step d = (.ok none, s) → seq2Loop P ov i (step :: rest) d = (.ok (), s)) ∧
-    (∀ m, step d = (.ok (some (.notSeq (.typeError m))), s) →
+    (∀ e, step d = (.ok (some (.notSeq e true)), s) →
       seq2Loop P ov i (step :: rest) d =
-        (.error (.typeError m), { s with note := some (seq2Note i) })) ∧
-    (∀ e, (∀ m, e ≠ .typeError m) → step d = (.ok (some (.notSeq e)), s) →
+        (.error e, { s with note := some (seq2Note i) })) ∧
+    (∀ e, step d = (.ok (some (.notSeq e false)), s) →
       seq2Loop P ov i (step :: rest) d = (.error e, s)) ∧
     (∀ n, step d = (.ok (some (.wrongLen n)), s) → seq2Loop P ov i (step :: rest) d =
       (.error (.valueError s!"dictionary update sequence element #{i} has length {n}; 2 is required"), s)) ∧
@@ -379,12 +400,10 @@ theorem seq2Order_proven : Seq2Order := by
     simp [seq2Loop, M.bind_run, h]
   · intro h
     simp [seq2Loop, M.bind_run, h]
-  · intro m h
+  · intro e h
     simp [seq2Loop, M.bind_run, h, M.modify_run]
-  · intro e he h
-    cases e with
-    | typeError m => exact absurd rfl (he m)
-    | _ => simp [seq2Loop, M.bind_run, h]
+  · intro e h
+    simp [seq2Loop, M.bind_run, h]
   · intro n h
     simp [seq2Loop, M.bind_run, h]
   · intro k v h

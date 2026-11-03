@@ -130,17 +130,43 @@ theorem overwriteKeepsOrder_proven : OverwriteKeepsOrder := by
     by_cases hq : eqv p.1 key = true <;> simp [hq]
   · simp [assocSet, h]
 
-/-- `del d[key]` is the list operation, and a missing key raises and changes nothing. -/
+/-- `PyDict_DelItem` (:2925-2936) on a frozendict: the hash, then the test of
+`_PyDict_DelItem_KnownHash_LockHeld` (:2941-2949). -/
+theorem dictDelItemChecked_frozen {K V : Type} [DecidableEq K] {P : Proto K (PyDict K V)}
+    {hf : K → Int} {eqv : K → K → Bool} (H : Honest P hf eqv) (key : K) (mp : PyDict K V)
+    (hfz : mp.frozen = true) :
+    dictDelItemChecked P true key mp = (.error (frozendictNoSupport "deletion"), mp) := by
+  simp [dictDelItemChecked, dictDelItemKnownHashChecked, H.hash_ok, H.hash_quiet, hfz]
+
+/-- `PyDict_DelItem` on a dict is the body after the test. -/
+theorem dictDelItemChecked_dict {K V : Type} [DecidableEq K] {P : Proto K (PyDict K V)}
+    {hf : K → Int} {eqv : K → K → Bool} (H : Honest P hf eqv) (key : K) (mp : PyDict K V)
+    (hfz : mp.frozen = false) : dictDelItemChecked P true key mp = dictDelItem P key mp := by
+  simp [dictDelItemChecked, dictDelItemKnownHashChecked, dictDelItem, H.hash_ok, H.hash_quiet, hfz]
+
+/-- `PyDict_DelItem`: a frozendict refuses with the `TypeError` of `frozendict_does_not_support`
+and is unchanged; on a dict, `del d[key]` is the list operation, and a missing key raises and
+changes nothing. -/
 def DelItemRefines : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (hf : K → Int) (eqv : K → K → Bool),
     Honest P hf eqv → ∀ (mp : PyDict K V), DictInv hf eqv P.isStr mp → ∀ key : K,
-      ((dictAssoc mp).any (fun p => eqv p.1 key) = false ∧
-        dictDelItem P key mp = (.error (keyErr P key), mp)) ∨
-      ((dictAssoc mp).any (fun p => eqv p.1 key) = true ∧
-        ∃ d', dictDelItem P key mp = (.ok (), d') ∧ DictInv hf eqv P.isStr d' ∧
-          dictAssoc d' = assocDel eqv (dictAssoc mp) key)
-theorem delItemRefines_proven : DelItemRefines := fun _ _ _ _ _ _ H mp hd key =>
-  dictDelItem_spec H mp hd key
+      (mp.frozen = true ∧
+        dictDelItemChecked P true key mp = (.error (frozendictNoSupport "deletion"), mp)) ∨
+      (mp.frozen = false ∧
+        (((dictAssoc mp).any (fun p => eqv p.1 key) = false ∧
+          dictDelItemChecked P true key mp = (.error (keyErr P key), mp)) ∨
+        ((dictAssoc mp).any (fun p => eqv p.1 key) = true ∧
+          ∃ d', dictDelItemChecked P true key mp = (.ok (), d') ∧ DictInv hf eqv P.isStr d' ∧
+            dictAssoc d' = assocDel eqv (dictAssoc mp) key)))
+theorem delItemRefines_proven : DelItemRefines := by
+  intro K V _ P hf eqv H mp hd key
+  cases hfz : mp.frozen with
+  | true => exact Or.inl ⟨rfl, dictDelItemChecked_frozen H key mp hfz⟩
+  | false =>
+    right
+    refine ⟨rfl, ?_⟩
+    rw [dictDelItemChecked_dict H key mp hfz]
+    exact dictDelItem_spec H mp hd key
 
 /-- `dict.popitem()` is LIFO (`Doc/library/stdtypes.rst`). -/
 def PopitemLifo : Prop :=

@@ -45,9 +45,10 @@ def Inst.values (i : Inst K V) : Values V :=
     | .combined _ => i.inlineV
   | none => i.inlineV
 
-/-- `invalidate_and_clear_inline_values` (:2131-2139), `clear_inline_values` (:7728-7737). -/
+/-- `invalidate_and_clear_inline_values` (:2131-2139), `clear_inline_values` (:7728-7737): `valid`
+cleared and every value slot NULL; the insertion-order array is left as it was. -/
 def invalidateInline (v : Values V) : Values V :=
-  { v with valid := false, values := v.values.map fun _ => none, order := [] }
+  { v with valid := false, values := v.values.map fun _ => none }
 
 /-- After a dict operation on an instance dict: the shared keys may have grown, and a resize
 that left the split form has invalidated the inline values (:2229-2233). -/

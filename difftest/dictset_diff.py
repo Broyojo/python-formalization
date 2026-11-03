@@ -81,6 +81,36 @@ class KRaise(K):
         raise ValueError("eq")
 
 
+class KESub(KeyError):
+    pass
+
+
+class KRaiseK(K):
+    """`__eq__` raises a subclass of KeyError, which `PyDict_GetItem` swallows without a report."""
+    __slots__ = ()
+    __hash__ = K.__hash__
+
+    def __eq__(self, o):
+        raise KESub("eq")
+
+
+class TESub(TypeError):
+    pass
+
+
+class NextRaises:
+    """A pair element whose iterator raises: a TypeError subclass or a ValueError."""
+
+    def __init__(self, exc):
+        self.exc = exc
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        raise self.exc
+
+
 TARGET = [None]
 POOL = [None]
 
@@ -151,6 +181,21 @@ class KSub(dict):
         return list(dict.keys(self))[::-1]
 
 
+class HClear:
+    """`__hash__` clears the target dict, then raises: the dict is changed before the error."""
+    __slots__ = ("u",)
+
+    def __init__(self, u):
+        self.u = u
+
+    def __hash__(self):
+        evil_act(TARGET[0], 1)
+        raise ValueError("hash")
+
+    def __repr__(self):
+        return f"HC({self.u})"
+
+
 class HRaise:
     __slots__ = ("u",)
 
@@ -176,6 +221,26 @@ class Mapping:
             if a is k:
                 return b
         raise KeyError(k)
+
+
+class AppendMapping(Mapping):
+    """`keys()` returns the mapping's own list, which the first `__getitem__` extends: dict_merge
+    iterates that very list, so it reaches the appended key."""
+
+    def __init__(self, ks, pairs, extra, ev):
+        super().__init__(ks, list(pairs) + [(extra, ev)])
+        self.lst = list(ks)
+        self.extra = extra
+        self.done = False
+
+    def keys(self):
+        return self.lst
+
+    def __getitem__(self, k):
+        if not self.done:
+            self.done = True
+            self.lst.append(self.extra)
+        return super().__getitem__(k)
 
 
 class HookMapping(Mapping):
@@ -262,6 +327,8 @@ def build(spec):
         return S(p)
     if kind == "K":
         return K(p[0], p[1], u)
+    if kind == "Krk":
+        return KRaiseK(p[0], p[1], u)
     if kind == "Kr":
         return KRaise(p[0], p[1], u)
     if kind == "Kev":
@@ -272,6 +339,8 @@ def build(spec):
         return [u]
     if kind == "hraise":
         return HRaise(u)
+    if kind == "hclr":
+        return HClear(u)
     if kind == "fz":
         return frozenset(p)
     if kind == "st":
@@ -287,14 +356,21 @@ class Pool:
     def _cls(self, key):
         return self.cls.setdefault(key, len(self.cls))
 
-    def add(self, kind, p, ckey=None, hk=0, r=False, a=0, fs=None, ra=0):
+    def add(self, kind, p, ckey=None, hk=0, r=False, a=0, fs=None, ra=0, rk=False):
         u = len(self.specs)
         ckey = ckey if ckey is not None else ("u", u)
         spec = {"py": [kind, p], "u": u, "c": self._cls(ckey), "hk": hk, "r": r, "a": a, "fs": fs,
-                "ra": ra}
+                "ra": ra, "rk": rk}
         o = build(spec)
+        if kind == "hclr":
+            # Its hash acts on a dict; the class is recorded here instead.
+            spec["h"], spec["hk"] = 0, 3
         try:
+            if kind == "hclr":
+                raise LookupError
             spec["h"] = hash(o)
+        except LookupError:
+            pass
         except TypeError:
             spec["h"] = 0
             spec["hk"] = 1
@@ -354,6 +430,8 @@ def mixed_pool(pool, rng):
         pool.add("hraise", 0)
     if rng.random() < 0.2:
         pool.add("Kr", [99, h], r=True)
+    if rng.random() < 0.1:
+        pool.add("Krk", [98, h], r=True, rk=True)
     if rng.random() < 0.2:
         pool.add("fz", [1, 2], ("fs", 12))
         pool.add("st", [1, 2], ("fs", 12), fs=hash(frozenset([1, 2])))
@@ -401,7 +479,7 @@ def upd_arg(rng, n, hooks=True):
             if r < 0.9:
                 items.append(["p", k(), k()])
             elif r < 0.95:
-                items.append(["b"])
+                items.append(rng.choice([["b"], ["b"], ["bt"], ["bv"]]))
             else:
                 items.append(["l", rng.choice([0, 1, 3])])
         return ["p", items, rng.random() < 0.1]
@@ -411,6 +489,8 @@ def upd_arg(rng, n, hooks=True):
         if rng.random() < 0.3 and ks:
             act = rng.choice([0, 1, 2]) if hooks else 0
             return ["mr", ks, pairs, rng.choice(ks), act, rng.random() < 0.15]
+        if rng.random() < 0.2:
+            return ["ma", ks, pairs, k(), k()]
         return ["m", ks, pairs]
     if o < 0.97:
         items = [["p", k(), k()] for _ in range(rng.randint(0, 6))]
@@ -829,6 +909,9 @@ def gen_evil(rng):
     n = len(pool.specs)
     if rng.random() < 0.5:
         target = "d"
+        if rng.random() < 0.5:
+            pool.add("hclr", 0)
+            n = len(pool.specs)
         ops = []
         for _ in range(rng.randint(4, 30)):
             k = rng.randrange(n)
@@ -1470,6 +1553,10 @@ class Runner:
             return (self.O(it[1]), self.O(it[2]))
         if t == "b":
             return 7
+        if t == "bt":
+            return NextRaises(TESub("sub"))
+        if t == "bv":
+            return NextRaises(ValueError("next"))
         return [self.pool[0]] * it[1]
 
     def upd_arg(self, a, recv=None):
@@ -1488,6 +1575,9 @@ class Runner:
             return items
         if t == "m":
             return Mapping([self.O(x) for x in a[1]], [(self.O(p[0]), self.O(p[1])) for p in a[2]])
+        if t == "ma":
+            return AppendMapping([self.O(x) for x in a[1]], [(self.O(p[0]), self.O(p[1])) for p in a[2]],
+                                 self.O(a[3]), self.O(a[4]))
         if t == "mr":
             return HookMapping([self.O(x) for x in a[1]], [(self.O(p[0]), self.O(p[1])) for p in a[2]],
                                self.O(a[3]), a[4], recv, a[5])

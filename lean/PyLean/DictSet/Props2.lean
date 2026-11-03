@@ -17,7 +17,7 @@ variable {P : Proto K (PyDict K V)} {hf : K → Int} {eqv : K → K → Bool}
 
 theorem hashKey_ok (H : Honest P hf eqv) (key : K) (s : PyDict K V) :
     hashKey P key s = (.ok (hf key), s) := by
-  simp only [hashKey, H.hash_ok]
+  simp only [hashKey, H.hash_ok, H.hash_quiet]
 
 /-- The read family. All of them agree with the list, and none changes the dict. -/
 theorem read_family (H : Honest P hf eqv) (d : PyDict K V) (hd : DictInv hf eqv P.isStr d) (key : K) :
@@ -44,9 +44,7 @@ theorem read_family (H : Honest P hf eqv) (d : PyDict K V) (hd : DictInv hf eqv 
     simp only [dictGetItemRefKnownHash, hb]
     cases r <;> rfl
   refine ⟨?_, known, refk, ?_, ?_, ?_, ?_⟩
-  · simp only [dictGetitemSuppress, Bool.not_true, Bool.false_eq_true, if_false, H.hash_ok]
-    simp only [M.tryCatch, hb]
-    rfl
+  · simp [dictGetitemSuppress, H.hash_ok, H.hash_quiet, M.tryCatch, hb]
   · simp only [pyDictGetItemRef, Bool.not_true, Bool.false_eq_true, if_false]
     show (pure PUnit.unit >>= fun _ => hashKey P key >>= fun h => dictGetItemRefKnownHash P key h) d = _
     simp only [M.bind_run, M.pure_run, hashKey_ok H key d, refk]
@@ -56,7 +54,7 @@ theorem read_family (H : Honest P hf eqv) (d : PyDict K V) (hd : DictInv hf eqv 
     show (pure PUnit.unit >>= fun _ => hashKey P key >>= fun h =>
       dictLookup P key h >>= fun r => pure r.2) d = _
     simp only [M.bind_run, M.pure_run, hashKey_ok H key d, hl]
-  · simp only [dictGetItemWithErrorUnchecked, M.bind_run, M.lift_run, H.hash_ok, known]
+  · simp only [dictGetItemWithErrorUnchecked, M.bind_run, hashCall, H.hash_ok, H.hash_quiet, known]
 
 /-- `key in d`. -/
 theorem contains_spec (H : Honest P hf eqv) (d : PyDict K V) (hd : DictInv hf eqv P.isStr d) (key : K) :
@@ -117,7 +115,7 @@ theorem pop_spec (H : Honest P hf eqv) (d : PyDict K V) (hd : DictInv hf eqv P.i
       left
       refine ⟨rfl, ?_⟩
       rw [hq] at h1
-      simp [pyDictPop, dictPopKnownHash, h0, H.hash_ok, h1, hfz]
+      simp [pyDictPop, dictPopKnownHash, h0, H.hash_ok, H.hash_quiet, h1, hfz]
     | some v =>
       right
       rcases dichotomy (eqv := eqv) k key with ⟨t, e, a, b⟩ | hno
@@ -134,7 +132,7 @@ theorem pop_spec (H : Honest P hf eqv) (d : PyDict K V) (hd : DictInv hf eqv P.i
         refine ⟨v, d', rfl, ?_, c2, by rw [ha]; exact c3⟩
         have hne2 : ((t : Int) == DKIX_EMPTY) = false := by
           simp [DKIX_EMPTY]
-        simp [pyDictPop, dictPopKnownHash, h0, H.hash_ok, hl, hne2, c1, hval, hfz]
+        simp [pyDictPop, dictPopKnownHash, h0, H.hash_ok, H.hash_quiet, hl, hne2, c1, hval, hfz]
       · rw [ha] at hq
         simp only [assocGet, Option.map_eq_some_iff, Prod.exists] at hq
         obtain ⟨a, b, h5, _⟩ := hq

@@ -118,49 +118,51 @@ theorem estimateSmallest_proven : EstimateSmallest := by
     omega
 
 /-- `dict_getitem`, with what it reports: not a dict is silent; a failed hash and a failed lookup go
-to `sys.unraisablehook`, a `KeyError` from the lookup being dropped silently; and a good lookup gives
-its value. -/
+to `sys.unraisablehook`, an exception from the lookup that matches `KeyError` (the class or a
+subclass, whatever test of the exception's class `isKeyError` is) being dropped silently; and a good
+lookup gives its value. The lookup runs on the dict as `__hash__` left it. -/
 def DictGetitemBody : Prop :=
-  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (key : K) (d s : PyDict K V) (e : PyExc)
-    (h : Int) (r : Int × Option V) (m : String),
-    dictGetitemFull P false key d = (.ok (none, none), d) ∧
-    (P.hash key = .error e → dictGetitemFull P true key d = (.ok (none, some e), d)) ∧
+  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (isKeyError : PyExc → Bool) (key : K)
+    (d s : PyDict K V) (e : PyExc) (h : Int) (r : Int × Option V),
+    dictGetitemFull P isKeyError false key d = (.ok (none, none), d) ∧
+    (P.hash key = .error e →
+      dictGetitemFull P isKeyError true key d = (.ok (none, some e), P.hashEff key d)) ∧
     (P.hash key = .ok h →
-      (dictLookup P key h d = (.ok r, s) → dictGetitemFull P true key d = (.ok (r.2, none), s)) ∧
-      (dictLookup P key h d = (.error (.keyError m), s) →
-        dictGetitemFull P true key d = (.ok (none, none), s)) ∧
-      ((∀ m', e ≠ .keyError m') → dictLookup P key h d = (.error e, s) →
-        dictGetitemFull P true key d = (.ok (none, some e), s)))
+      (dictLookup P key h (P.hashEff key d) = (.ok r, s) →
+        dictGetitemFull P isKeyError true key d = (.ok (r.2, none), s)) ∧
+      (isKeyError e = true → dictLookup P key h (P.hashEff key d) = (.error e, s) →
+        dictGetitemFull P isKeyError true key d = (.ok (none, none), s)) ∧
+      (isKeyError e = false → dictLookup P key h (P.hashEff key d) = (.error e, s) →
+        dictGetitemFull P isKeyError true key d = (.ok (none, some e), s)))
 theorem dictGetitemBody_proven : DictGetitemBody := by
-  intro K V _ P key d s e h r m
-  refine ⟨rfl, fun hh => ?_, fun hh => ⟨fun hl => ?_, fun hl => ?_, fun hn hl => ?_⟩⟩
+  intro K V _ P isKeyError key d s e h r
+  refine ⟨rfl, fun hh => ?_, fun hh => ⟨fun hl => ?_, fun hk hl => ?_, fun hk hl => ?_⟩⟩
   · simp [dictGetitemFull, hh]
   · simp [dictGetitemFull, hh, hl]
-  · simp [dictGetitemFull, hh, hl]
-  · cases e with
-    | keyError m' => exact absurd rfl (hn m')
-    | _ => simp [dictGetitemFull, hh, hl]
+  · simp [dictGetitemFull, hh, hl, hk]
+  · simp [dictGetitemFull, hh, hl, hk]
 
 /-- `dictGetitemFull` is `dictGetitemSuppress`, which the difftest and the older theorems use, with the
 report added: the value and the state are the same. -/
 def GetitemLink : Prop :=
-  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (isDict : Bool) (key : K) (d : PyDict K V),
-    (dictGetitemFull P isDict key d).2 = (dictGetitemSuppress P isDict key d).2 ∧
-    (dictGetitemFull P isDict key d).1.map Prod.fst = (dictGetitemSuppress P isDict key d).1
+  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (isKeyError : PyExc → Bool) (isDict : Bool)
+    (key : K) (d : PyDict K V),
+    (dictGetitemFull P isKeyError isDict key d).2 = (dictGetitemSuppress P isDict key d).2 ∧
+    (dictGetitemFull P isKeyError isDict key d).1.map Prod.fst = (dictGetitemSuppress P isDict key d).1
 theorem getitemLink_proven : GetitemLink := by
-  intro K V _ P isDict key d
+  intro K V _ P isKeyError isDict key d
   cases isDict with
   | false => exact ⟨rfl, rfl⟩
   | true =>
     cases hh : P.hash key with
     | error e => simp [dictGetitemFull, dictGetitemSuppress, hh, Except.map]
     | ok h =>
-      cases hl : dictLookup P key h d with
+      cases hl : dictLookup P key h (P.hashEff key d) with
       | mk r s =>
         cases r with
         | error e =>
-          cases e <;>
-            simp [dictGetitemFull, dictGetitemSuppress, hh, hl, M.tryCatch, M.bind_run, Except.map]
+          cases hk : isKeyError e <;>
+            simp [dictGetitemFull, dictGetitemSuppress, hh, hl, hk, M.tryCatch, M.bind_run, Except.map]
         | ok x =>
           simp [dictGetitemFull, dictGetitemSuppress, hh, hl, M.tryCatch, M.bind_run, Except.map]
 
@@ -185,7 +187,8 @@ theorem delKnownHashBody_proven : DelKnownHashBody := by
   · have e1 : (ix == DKIX_EMPTY) = false := by simpa using hne
     simp [dictDelItemKnownHash, h, e1]
 
-/-- `_PyDict_SubscriptKnownHash` on every branch, for any `__missing__`: a good slot gives its value, whatever
+/-- `_PyDict_SubscriptKnownHash` on every branch, for any `__missing__`, after the hash (on the dict as
+`__hash__` left it): a good slot gives its value, whatever
 `missing` is; and with no value, an exact dict raises `KeyError`, while a subclass runs the special
 lookup, whose failure is the result, and calls what it finds on the state it left, which either may
 have changed. With nothing found the result is `KeyError`. -/
@@ -193,7 +196,7 @@ def SubscriptBody : Prop :=
   ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (key : K) (h : Int)
     (mp s s' : PyDict K V) (ix : Int) (old : Option V)
     (look : DM K V (Option (K → DM K V V))) (missing : Option (DM K V (Option (K → DM K V V)))),
-    P.hash key = .ok h → dictLookup P key h mp = (.ok (ix, old), s) →
+    P.hash key = .ok h → dictLookup P key h (P.hashEff key mp) = (.ok (ix, old), s) →
     (∀ v, old = some v → ix ≠ DKIX_EMPTY → dictSubscript P missing key mp = (.ok v, s)) ∧
     ((old = none ∨ ix = DKIX_EMPTY) →
       dictSubscript P none key mp = (.error (keyErr P key), s) ∧
@@ -203,7 +206,7 @@ def SubscriptBody : Prop :=
       (∀ f, look s = (.ok (some f), s') → dictSubscript P (some look) key mp = f key s'))
 theorem subscriptBody_proven : SubscriptBody := by
   intro K V _ P key h mp s s' ix old look missing hh hl
-  have hk : ∀ {β : Type} (f : Int → DM K V β), (hashKey P key >>= f) mp = f h mp := by
+  have hk : ∀ {β : Type} (f : Int → DM K V β), (hashKey P key >>= f) mp = f h (P.hashEff key mp) := by
     intro β f
     simp [hashKey, hh, M.bind_run]
   have hs : ∀ m, dictSubscript P m key mp =
@@ -329,12 +332,13 @@ theorem dictResizeRefines_proven : DictResizeRefines := by
   · obtain ⟨k', h1, h2, h3, h4, h5, _⟩ := dictResize_split H mp k v hb w log2New hlt hroom unicode
     exact ⟨k', h1, h2, h3, h4, h5, dictResize_kind h1 rfl⟩
 
-/-- `dictresize` leaving the split form of an instance's dict, `@3.14.7:2138-2142`: the inline values are
-invalidated and emptied, in the same number of slots, and the dict is the one that now answers. -/
+/-- `dictresize` leaving the split form of an instance's dict (:2229-2233, :2131-2139): the inline
+values are invalidated and emptied, in the same number of slots, with the insertion-order array left
+as it was, and the dict is the one that now answers. -/
 def ResizeInvalidatesInline : Prop :=
   ∀ (K V : Type) (d : PyDict K V) (k : Keys K V) (s : ObjSt K V), d.body = .combined k →
     let i := (syncDict true d s).inst
-    i.dict = some d ∧ i.inlineV.valid = false ∧ i.inlineV.order = [] ∧
+    i.dict = some d ∧ i.inlineV.valid = false ∧ i.inlineV.order = s.inst.inlineV.order ∧
       i.inlineV.capacity = s.inst.inlineV.capacity ∧ ∀ ix, i.inlineV.get ix = none
 theorem resizeInvalidatesInline_proven : ResizeInvalidatesInline := by
   intro K V d k s hb i

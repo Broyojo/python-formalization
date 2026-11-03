@@ -179,7 +179,7 @@ theorem dictDelItem_spec (H : Honest P hf eqv) (mp : PyDict K V)
   obtain ⟨k, hb, w, hu⟩ := hd.wf
   have ha : dictAssoc mp = k.items := by simp [dictAssoc, hb]
   rw [ha]
-  simp only [dictDelItem, H.hash_ok, dictDelItemKnownHash]
+  simp only [dictDelItem, H.hash_ok, H.hash_quiet, dictDelItemKnownHash]
   rcases dichotomy (eqv := eqv) k key with ⟨ix, e, h1, h2⟩ | hno
   · right
     refine ⟨(any_items k key).mpr ⟨ix, e, h1, h2⟩, ?_⟩
@@ -306,7 +306,7 @@ theorem dictGet_spec (H : Honest P hf eqv) (mp : PyDict K V)
     dictGet P key dflt mp = (.ok ((assocGet eqv (dictAssoc mp) key).getD dflt), mp) := by
   obtain ⟨ix, h1, h2, h3⟩ := lookup_assoc H mp hd key
   have hhash : hashKey P key mp = (.ok (hf key), mp) := by
-    simp [hashKey, H.hash_ok]
+    simp [hashKey, H.hash_ok, H.hash_quiet]
   simp only [dictGet, M.bind_run, hhash, h1]
   cases hq : assocGet eqv (dictAssoc mp) key with
   | none => simp

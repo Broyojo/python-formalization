@@ -22,28 +22,38 @@ variable [DecidableEq K] (P : Proto K (PyDict K V))
 /-- `dict_getitem` (:2389-2431), behind `PyDict_GetItem` and `PyDict_GetItemString`:
 every error is swallowed. -/
 def dictGetitemSuppress (isDict : Bool) (key : K) : DM K V (Option V) :=
-  if !isDict then pure none else
-  match P.hash key with
+  if !isDict then pure none else fun mp0 =>
+  let mp := P.hashEff key mp0
+  (match P.hash key with
   | .error _ => pure none
   | .ok hash =>
     M.tryCatch (do
       let r ← dictLookup P key hash
-      return r.2) (fun _ => pure none)
+      return r.2) (fun _ => pure none) : DM K V (Option V)) mp
 
 /-- `dict_getitem` with what it reports: `(value, unraisable)`, the second being the exception
-passed to `PyErr_FormatUnraisable` (:2399, @3.14.7:2336). A `KeyError` from the lookup is dropped without
-a report (:2424). -/
-def dictGetitemFull (isDict : Bool) (key : K) : DM K V (Option V × Option PyExc) :=
-  if !isDict then pure (none, none) else
-  match P.hash key with
+passed to `PyErr_FormatUnraisable` (:2399, :2425). An exception from the lookup that
+`PyErr_GivenExceptionMatches(exc2, PyExc_KeyError)` accepts, a `KeyError` or an instance of a
+subclass, is dropped without a report (:2424). `isKeyError` is that test, a property of the
+exception's class. -/
+def dictGetitemFull (isKeyError : PyExc → Bool) (isDict : Bool) (key : K) :
+    DM K V (Option V × Option PyExc) :=
+  if !isDict then pure (none, none) else fun mp0 =>
+  let mp1 := P.hashEff key mp0
+  (match P.hash key with
   | .error e => pure (none, some e)
   | .ok hash => fun mp =>
     match dictLookup P key hash mp with
     | (.ok r, s) => (.ok (r.2, none), s)
     | (.error e, s) =>
-      match e with
-      | .keyError _ => (.ok (none, none), s)
-      | e => (.ok (none, some e), s)
+      if isKeyError e then (.ok (none, none), s) else (.ok (none, some e), s) :
+    DM K V (Option V × Option PyExc)) mp1
+
+/-- `PyErr_GivenExceptionMatches(e, PyExc_KeyError)` for the exceptions the models raise
+themselves. -/
+def isKeyErrorExact : PyExc → Bool
+  | .keyError _ => true
+  | _ => false
 
 /-- `_PyDict_GetItem_KnownHash` (:2489-2509). -/
 def dictGetItemKnownHash (isDict : Bool) (key : K) (hash : Int) : DM K V (Option V) := do
@@ -82,7 +92,7 @@ def pyDictGetItemWithError (isDict : Bool) (key : K) : DM K V (Option V) := do
 
 /-- `_PyDict_GetItemWithError` (:2643-2652): `tp_hash`, then the known-hash lookup. -/
 def dictGetItemWithErrorUnchecked (key : K) : DM K V (Option V) := do
-  let hash ← M.lift (P.hash key)
+  let hash ← hashCall P key
   dictGetItemKnownHash P true key hash
 
 /-- `_PyDict_LookupIndex` (:2462-2483). -/
@@ -154,7 +164,7 @@ def dictGet (key : K) (dflt : V) : DM K V V := do
 
 /-- `delitemif_lock_held` (:2981-3017) and `_PyDict_DelItemIf`: `pred` may raise. -/
 def dictDelItemIf (pred : V → Py Bool) (key : K) : DM K V Bool := do
-  let hash ← M.lift (P.hash key)
+  let hash ← hashCall P key
   let r ← dictLookup P key hash
   match r.2 with
   | none => return false
@@ -188,6 +198,7 @@ def pyDictPop (isAny : Bool) (key : K) : DM K V (Option V) := fun mp =>
   else if mp.frozen then (.error (frozendictNoSupport "deletion"), mp)
   else if mp.used == 0 then (.ok none, mp)
   else
+    let mp := P.hashEff key mp
     match P.hash key with
     | .error e => (.error (dictUnhashableType P mp.frozen key e), mp)
     | .ok hash => dictPopKnownHash P key hash mp
@@ -440,28 +451,39 @@ inductive MergeArg (K V : Type) where
   /-- `PyAnyDict_Check(b) && Py_TYPE(b)->tp_iter == dict_iter`. -/
   | dict (d : PyDict K V)
   /-- Otherwise: `PyMapping_Keys(b)` and `PyObject_GetItem`. Both run Python code, so both may
-  raise and may change the receiver. The list is private to `dict_merge` once built, which is
-  why the loop can walk it. -/
-  | mapping (keys : DM K V (List K)) (getitem : K → DM K V V)
+  raise and may change the receiver. `PyMapping_Keys` hands back the object `keys()` returned when
+  it is an exact list (`Objects/abstract.c:2439-2441`), so the list can grow or shrink while the
+  loop runs: `keys` gives the iterator the loop runs over, as `PyObject_GetIter` and `PyIter_Next`
+  (:4298, :4305) see it, step by step, after whatever the previous turn did. -/
+  | mapping (keys : DM K V (ReIter (PyDict K V) K)) (getitem : K → DM K V V)
 
-/-- The slow loop of `dict_merge` (:4305-4341). -/
-def mergeGenericLoop (getitem : K → DM K V V) (override : Nat) : List K → DM K V Unit
+/-- The iterator over a list no callback touches. -/
+def ReIter.ofKeys {σ : Type} (ks : List K) : ReIter σ K :=
+  { steps := ks.map fun k => pure (some k) }
+
+/-- The slow loop of `dict_merge` (:4305-4341). Each step is one `PyIter_Next` on the keys list: it
+may raise, which ends the loop with that error (:4342-4346), and `none` is its end. -/
+def mergeGenericLoop (getitem : K → DM K V V) (override : Nat) :
+    List (DM K V (Option K)) → DM K V Unit
   | [] => pure ()
-  | key :: rest => do
-    let skip ← (if override != 1 then do
-      let status ← pyDictContains P key
-      if status then
-        if override == 0 then
-          pure true
-        else do
-          mergeDup key
-          pure true
-      else pure false
-    else pure false)
-    if !skip then
-      let value ← getitem key
-      dictSetItem P key value
-    mergeGenericLoop getitem override rest
+  | step :: rest => do
+    match ← step with
+    | none => pure ()
+    | some key =>
+      let skip ← (if override != 1 then do
+        let status ← pyDictContains P key
+        if status then
+          if override == 0 then
+            pure true
+          else do
+            mergeDup key
+            pure true
+        else pure false
+      else pure false)
+      if !skip then
+        let value ← getitem key
+        dictSetItem P key value
+      mergeGenericLoop getitem override rest
 
 /-- `dict_merge` (:4258-4354), behind `PyDict_Update` (override 1), `PyDict_Merge`
 (`override != 0`) and `_PyDict_MergeUniq` (override 2). -/
@@ -469,20 +491,21 @@ def dictMerge (b : MergeArg K V) (override : Nat) : DM K V Unit :=
   match b with
   | .dict other => dictDictMerge P other override
   | .mapping keys getitem => do
-    let ks ← keys
-    mergeGenericLoop P getitem override ks
+    let it ← keys
+    it.getIter
+    mergeGenericLoop P getitem override it.steps
 
-/-- The right operand of `dict_merge` as an object: whether it passes the test at :4267, what it
+/-- The right operand of `dict_merge` as an object: whether it passes the test at :4268, what it
 holds as a dict, and how the slow path reads it. -/
 structure MergeObj (K V : Type) where
   isDict : Bool
   /-- `Py_TYPE(b)->tp_iter == dict_iter`. -/
   iterIsDict : Bool
   asDict : PyDict K V
-  keys : DM K V (List K)
+  keys : DM K V (ReIter (PyDict K V) K)
   getitem : K → DM K V V
 
-/-- The route `dict_merge` takes on it (:4267). -/
+/-- The route `dict_merge` takes on it (:4268). -/
 def MergeObj.route (b : MergeObj K V) : MergeArg K V :=
   if b.isDict && b.iterIsDict then .dict b.asDict else .mapping b.keys b.getitem
 
@@ -499,8 +522,9 @@ def dictMergeChecked (aIsAny : Bool) (b : Option (MergeObj K V)) (override : Nat
 
 /-- One element of the iterable given to `dict.update`, after `PySequence_Fast`. -/
 inductive Seq2Item (K V : Type) where
-  /-- `PySequence_Fast` raised. -/
-  | notSeq (e : PyExc)
+  /-- `PySequence_Fast` raised `e`; `isTypeError` is `PyErr_ExceptionMatches(PyExc_TypeError)` of it
+  (:4083), true for a `TypeError` and for an instance of a subclass. -/
+  | notSeq (e : PyExc) (isTypeError : Bool)
   | wrongLen (n : Nat)
   | pair (k : K) (v : V)
 
@@ -517,10 +541,8 @@ def seq2Loop (override : Bool) : Nat → List (DM K V (Option (Seq2Item K V))) �
     | none => pure ()
     | some item =>
       match item with
-      | .notSeq e =>
-        match e with
-        | .typeError _ => M.modify fun mp => { mp with note := some (seq2Note i) }
-        | _ => pure ()
+      | .notSeq e isTE =>
+        if isTE then M.modify fun mp => { mp with note := some (seq2Note i) }
         M.throw e
       | .wrongLen n =>
         M.throw (.valueError s!"dictionary update sequence element #{i} has length {n}; 2 is required")

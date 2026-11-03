@@ -19,6 +19,8 @@ import PyLean.DictSet.Eq315
 import PyLean.DictSet.Repr315
 import PyLean.DictSet.FromKeys315
 import PyLean.DictSet.Update315
+import PyLean.DictSet.Iter315
+import PyLean.DictSet.Geometry315
 
 /-!
 `Objects/dictobject.c`, `Objects/setobject.c`, `Objects/odictobject.c`, CPython 3.15.2.
@@ -95,7 +97,7 @@ def entries : List Entry := [
     prop := ``OverwriteKeepsOrder, thm := some ``overwriteKeepsOrder_proven },
   { id := "dict-delitem-refines", pyFile := "Objects/dictobject.c",
     pyFns := ["PyDict_DelItem", "delitem_common", "_PyDict_DelItem_KnownHash_LockHeld", "lookdict_index"]
-    statement := "del d[key] on a well-formed dict removes exactly that pair and keeps the table well formed; a missing key raises KeyError and changes nothing."
+    statement := "PyDict_DelItem on a well-formed frozendict raises the TypeError of frozendict_does_not_support and changes nothing; on a dict it removes exactly that pair and keeps the table well formed, and a missing key raises KeyError and changes nothing."
     source := "language; invariant: Dummy slots at dictobject.c:78-83", status := .proven
     prop := ``DelItemRefines, thm := some ``delItemRefines_proven },
   { id := "dict-popitem-lifo", pyFile := "Objects/dictobject.c", pyFns := ["dict_popitem_impl"]
@@ -129,7 +131,7 @@ def entries : List Entry := [
     prop := ``InvUnderLyingEq, thm := some ``invUnderLyingEq_proven },
   { id := "dict-readers-faithful", pyFile := "Objects/dictobject.c",
     pyFns := ["PyDict_GetItemRef", "_PyDict_GetItemRef_KnownHash", "PyDict_GetItemWithError", "PyDict_Contains", "_PyDict_Contains_KnownHash", "_PyDict_Subscript", "_PyDict_SubscriptKnownHash", "dict_contains", "dict_get_impl"]
-    statement := "For every key protocol, including a hash or __eq__ that raises or mutates the dict, each reader is faithful to _Py_dict_lookup: a raising hash or lookup propagates with the state the lookup left, a slot with ix >= 0 but no value (a split key this dict lacks) reads as absent and is never dereferenced, and a slot with a value gives that value."
+    statement := "For every key protocol, including a hash or __eq__ that raises or mutates the dict, each reader is faithful to _Py_dict_lookup: a raising hash propagates in the state __hash__ left, a raising lookup in the state it left, the lookup runs on the dict as __hash__ left it, a slot with ix >= 0 but no value (a split key this dict lacks) reads as absent and is never dereferenced, and a slot with a value gives that value."
     source := "dictobject.c:2520-2609, 2637, 5234-5292, 3755-3794, 4749-4769; the ix>=0,value==NULL note at 2025-2032", status := .proven
     prop := ``ReadersFaithful, thm := some ``readersFaithful_proven },
   { id := "dict-contains", pyFile := "Objects/dictobject.c",
@@ -147,7 +149,7 @@ def entries : List Entry := [
     source := "dict.pop docstring", status := .proven
     prop := ``PopSpec, thm := some ``popSpec_proven },
   { id := "dict-clear", pyFile := "Objects/dictobject.c",
-    pyFns := []
+    pyFns := ["clear_lock_held"]
     statement := "d.clear() leaves a well-formed empty dict."
     source := "dict.clear docstring", status := .proven
     prop := ``ClearSpec, thm := some ``clearSpec_proven },
@@ -245,11 +247,11 @@ def entries : List Entry := [
     source := "dictobject.c:4178-4183", status := .proven
     prop := ``MergeEmptyTarget, thm := some ``mergeEmptyTarget_proven },
   { id := "dict-merge-generic", pyFile := "Objects/dictobject.c", pyFns := ["dict_merge", "dict_merge_api"]
-    statement := "dict_merge takes the fast route exactly for a dict whose tp_iter is dict_iter. On the slow route, for every key protocol and a keys() and __getitem__ that may raise or change the receiver: a failed entry test or keys() raises at once; override 1 never tests membership; on a present key override 0 skips __getitem__ and override 2 raises KeyError; on an absent key, or with override 1, __getitem__ runs first and the store sees what it left."
+    statement := "dict_merge takes the fast route exactly for a dict whose tp_iter is dict_iter. On the slow route, for every key protocol and a keys() and __getitem__ that may raise or change the receiver: keys() failing, PyObject_GetIter failing or a PyIter_Next that raises is the result, and each key is the next PyIter_Next on the state the previous turn left, so a keys list that a callback grows is read as it now is; a failed entry test raises at once; override 1 never tests membership; on a present key override 0 skips __getitem__ and override 2 raises KeyError; on an absent key, or with override 1, __getitem__ runs first and the store sees what it left."
     source := "dictobject.c:4258-4354, :4356-4377", status := .proven
     prop := ``MergeGeneric, thm := some ``mergeGeneric_proven },
   { id := "dict-merge-seq2-order", pyFile := "Objects/dictobject.c", pyFns := ["merge_from_seq2_lock_held"]
-    statement := "For an iterator that may raise or change the receiver at any step: PyObject_GetIter failing or an empty iterator ends it; a raising step or a bad element stops the loop with what earlier elements did still in place, and a TypeError from PySequence_Fast gets the note naming the element; a pair is stored, always if override is true and only if absent otherwise, and the loop goes on from the state the store left."
+    statement := "For an iterator that may raise or change the receiver at any step: PyObject_GetIter failing or an empty iterator ends it; a raising step or a bad element stops the loop with what earlier elements did still in place, and an exception from PySequence_Fast that matches TypeError, the class or a subclass, gets the note naming the element, no other; a pair is stored, always if override is true and only if absent otherwise, and the loop goes on from the state the store left."
     source := "dictobject.c:4064-4126", status := .proven
     prop := ``Seq2Order, thm := some ``seq2Order_proven },
   { id := "dict-merge-refines", pyFile := "Objects/dictobject.c",
@@ -430,11 +432,11 @@ def entries : List Entry := [
     prop := ``GetItemSuppressed, thm := some ``getItemSuppressed_proven },
   { id := "dict-hash-failure", pyFile := "Objects/dictobject.c",
     pyFns := ["setitem_take2_lock_held", "PyDict_DelItem"]
-    statement := "For every key protocol, when hashing the key raises, each of these raises dict_unhashable_type's exception and leaves the dict unchanged."
+    statement := "For every key protocol, including a __hash__ that changes the dict before it raises, when hashing the key raises, each of these, PyDict_DelItem with its frozendict test included, raises dict_unhashable_type's exception in the state __hash__ left, and does nothing else."
     source := "dictobject.c:2441-2460", status := .proven
     prop := ``HashFailureFamily, thm := some ``hashFailureFamily_proven },
   { id := "dict-pop-hash-order", pyFile := "Objects/dictobject.c", pyFns := []
-    statement := "With a key whose hash raises, PyDict_Pop answers not-found on an empty dict without hashing, and raises on a non-empty one."
+    statement := "With a key whose hash raises, PyDict_Pop answers not-found on an empty dict without hashing, and raises on a non-empty one, in the state __hash__ left."
     source := "dictobject.c:3295-3309", status := .proven
     prop := ``PopHashOrder, thm := some ``popHashOrder_proven },
   { id := "dict-compare-unicode-failure", pyFile := "Objects/dictobject.c", pyFns := ["compare_unicode_generic"]
@@ -456,7 +458,7 @@ def entries : List Entry := [
     source := "dictobject.c:604-610", status := .proven
     prop := ``EstimateSmallest, thm := some ``estimateSmallest_proven },
   { id := "dict-getitem-body", pyFile := "Objects/dictobject.c", pyFns := ["dict_getitem"]
-    statement := "PyDict_GetItem, for every key protocol: not a dict is silent; a failed hash goes to sys.unraisablehook; a failed lookup goes there too, unless it is a KeyError, which is dropped; and a good lookup gives its value."
+    statement := "PyDict_GetItem, for every key protocol: not a dict is silent; a failed hash goes to sys.unraisablehook; a failed lookup goes there too, unless its exception matches KeyError, the class or a subclass, which is dropped silently; and a good lookup, on the dict as __hash__ left it, gives its value."
     source := "dictobject.c:2379-2430", status := .proven
     prop := ``DictGetitemBody, thm := some ``dictGetitemBody_proven },
   { id := "dict-getitem-link", pyFile := "Objects/dictobject.c", pyFns := ["dict_getitem"]
@@ -497,8 +499,8 @@ def entries : List Entry := [
     prop := ``DictResizeRefines, thm := some ``dictResizeRefines_proven },
   { id := "dict-resize-invalidates-inline", pyFile := "Objects/dictobject.c",
     pyFns := ["invalidate_and_clear_inline_values"]
-    statement := "When an instance's dict leaves the split form, its inline values are marked invalid and emptied, and the dict is what now answers."
-    source := "dictobject.c:2132-2139, :2229-2233", status := .proven
+    statement := "When an instance's dict leaves the split form, its inline values are marked invalid and every value slot is emptied, the insertion-order array left as it was, and the dict is what now answers."
+    source := "dictobject.c:2131-2139, :2229-2233", status := .proven
     prop := ``ResizeInvalidatesInline, thm := some ``resizeInvalidatesInline_proven },
   { id := "dict-dealloc", pyFile := "Objects/dictobject.c", pyFns := ["dict_dealloc"]
     statement := "A watcher that keeps a reference during dict_dealloc gets the dict as it left it, not cleared; without one the dict is gone."
@@ -583,9 +585,9 @@ def entries : List Entry := [
     prop := ``SetIterLenNonneg, thm := some ``setIterLenNonneg_refuted
     bug := some "dictset-setiter-negative-length-hint" },
   { id := "dict-pop-body", pyFile := "Objects/dictobject.c",
-    pyFns := ["_PyDict_Pop_KnownHash", "PyDict_Pop", "PyDict_PopString", "dict_pop_default",
-      "_PyDict_Pop", "dict_pop_impl"]
-    statement := "For every key protocol, including a hash that raises and an __eq__ that raises or changes the dict: pop on an empty dict answers not found before hashing; a failed hash is dict_unhashable_type's exception with the dict unchanged; a failed lookup is the result in the state __eq__ left; a slot with no value (a shared key this split dict lacks) is not found and nothing is deleted; a value is removed by delitem_common and returned. dict.pop turns not found into the default or KeyError(key); PyDict_PopString fails, untouched, when the key cannot be made."
+    pyFns := ["_PyDict_Pop_KnownHash", "pop_lock_held", "PyDict_Pop", "PyDict_PopString",
+      "dict_pop_default", "_PyDict_Pop", "dict_pop_impl"]
+    statement := "For every key protocol, including a hash that raises or changes the dict and an __eq__ that raises or changes it: pop on an empty dict answers not found before hashing; a failed hash is dict_unhashable_type's exception in the state __hash__ left; after the hash an empty dict is tested again; a failed lookup is the result in the state __eq__ left; a slot with no value (a shared key this split dict lacks) is not found and nothing is deleted; a value is removed by delitem_common and returned. dict.pop turns not found into the default or KeyError(key); PyDict_PopString fails, untouched, when the key cannot be made."
     source := "Doc/c-api/dict.rst PyDict_Pop; dict.pop docstring; dictobject.c:3232-3361, :4947-4951", status := .proven
     prop := ``PopBody, thm := some ``popBody_proven },
   { id := "dict-setdefaultref-no-crash", pyFile := "Objects/dictobject.c", pyFns := ["PyDict_SetDefaultRef"]
@@ -674,7 +676,48 @@ def entries : List Entry := [
     source := "PEP 814: frozendict is immutable; dictobject.c:3436-3442", status := .refuted
     prop := ``FromKeysFrozenStable, thm := some ``fromKeysFrozenStable_refuted
     bug := some "dictset-fromkeys-frozendict-rewritten"
-    notes := "F.fromkeys for a frozendict subclass F calls F(d) with the untracked copy d (:3593); a G.fromkeys whose G() returns d finds it untracked, skips the copy, and fills d in place (:3538-3555)." }
+    notes := "F.fromkeys for a frozendict subclass F calls F(d) with the untracked copy d (:3593); a G.fromkeys whose G() returns d finds it untracked, skips the copy, and fills d in place (:3538-3555)." },
+  { id := "dict-fromkeys-no-crash", pyFile := "Objects/dictobject.c",
+    pyFns := ["_PyDict_FromKeys", "dict_fromkeys_impl"]
+    statement := "For every key type keeping the hash/eq contract, fromkeys never crashes, whatever cls() returns and whatever the iterable."
+    source := "invariant: no crash", status := .refuted
+    prop := ``FromKeysNoCrash, thm := some ``fromKeysNoCrash_refuted
+    bug := some "dictset-fromkeys-gc-track-non-gc"
+    notes := "D.fromkeys([]) for a dict subclass whose __new__ returns a bytes object: :3596-3597 run _PyObject_GC_IS_TRACKED and _PyObject_GC_TRACK on an object with no GC header, modelled as a crash." },
+  { id := "dict-set-fromkeys-body", pyFile := "Objects/dictobject.c", pyFns := ["dict_set_fromkeys"]
+    statement := "For every key protocol: a failed resize to a general table is the result; otherwise each step takes the next entry of the set as _PySet_NextEntryRef finds it after the last insertdict, which a key's __eq__ may have changed, and insertdicts it with its stored hash, a failure being the result in the state it left."
+    source := "dictobject.c:3389-3413", status := .proven
+    prop := ``DictSetFromkeysBody, thm := some ``dictSetFromkeysBody_proven },
+  { id := "dict-iter-yields", pyFile := "Objects/dictobject.c",
+    pyFns := ["dict_iter", "dict___reversed___impl", "dictiter_iternextkey_lock_held",
+      "dictiter_iternextvalue_lock_held", "dictiter_iternextitem_lock_held", "dictreviter_iter_lock_held"]
+    statement := "On a well-formed dict of either form, list(it) by next() hands back the keys for a key iterator, the values for a value iterator and the pairs for an item iterator, forward in the order of the list and reversed backward; iter(d) is the forward key iterator and reversed(d) the backward one."
+    source := "Doc/library/stdtypes.rst: iter(d), reversed(d); dictobject.c:5438-5443, :6352-6358", status := .proven
+    prop := ``IterYields, thm := some ``iterYields_proven },
+  { id := "dict-iter-len", pyFile := "Objects/dictobject.c", pyFns := ["dictiter_len"]
+    statement := "__length_hint__ of a dict iterator is what is left while the iterator is alive and the dict has the size it had, and 0 otherwise; a new iterator over a dict of n items says n."
+    source := "PEP 424; dictobject.c:5636-5644", status := .proven
+    prop := ``DictIterLen, thm := some ``dictIterLen_proven
+    notes := "ma_used and len are Py_ssize_t, below 2**63: a type invariant." },
+  { id := "dict-table-geometry", pyFile := "Objects/dictobject.c",
+    pyFns := ["new_keys_object", "insert_to_emptydict", "insertion_resize", "insert_combined_dict"]
+    statement := "For every key protocol: new_keys_object gives 2**l empty slots, no entry, USABLE_FRACTION(2**l) usable and the asked kind; insert_to_emptydict the 8-slot table, unicode exactly for an exact str key, 4 usable and the one entry; insertion_resize a table of calculate_log2_keysize(GROWTH_RATE(used)) with USABLE_FRACTION of it less used usable; insert_combined_dict, with room and no non-str key for a unicode table, the same size and kind with one usable fewer and the entry appended, and with no room first the insertion_resize size."
+    source := "dictobject.c:794-847, :1861-1909, :2051-2095; visible through sys.getsizeof", status := .proven
+    prop := ``TableGeometry, thm := some ``tableGeometry_proven },
+  { id := "dict-setdefault-refines", pyFile := "Objects/dictobject.c",
+    pyFns := ["dict_setdefault_ref_lock_held"]
+    statement := "For an honest key protocol and a well-formed dict: setdefault of a present key gives status 1 and its value, the dict unchanged; of an absent key stores the default, status 0, by insert_to_emptydict on an empty table and insert_combined_dict otherwise, as d[key] = default would; the one failure is MemoryError."
+    source := "dict.setdefault docstring", status := .proven
+    prop := ``SetdefaultRefines, thm := some ``setdefaultRefines_proven },
+  { id := "dict-setdefault-split-str", pyFile := "Objects/dictobject.c",
+    pyFns := ["dict_setdefault_ref_lock_held"]
+    statement := "For every key protocol and an exact str key on a split table: a failed insert_split_key is the result; a shared-keys slot with a value gives status 1 and that value; one with none stores the default there with _PyDict_InsertSplitValue, status 0."
+    source := "dictobject.c:4817-4830", status := .proven
+    prop := ``SetdefaultSplitStr, thm := some ``setdefaultSplitStr_proven },
+  { id := "dict-update-uniq-run", pyFile := "Objects/dictobject.c", pyFns := ["PyDict_Update", "_PyDict_MergeUniq"]
+    statement := "For an honest key protocol and a well-formed dict b on the fast route: PyDict_Update refuses what is not a dict and a frozendict, and otherwise stores every pair of b over the receiver's in order, the fold of d[k] = v, or MemoryError; _PyDict_MergeUniq on a non-empty dict that holds the key of b's first pair stops with -2 and that key in dupkey, or MemoryError."
+    source := "Doc/c-api/dict.rst PyDict_Update; dictobject.c:4379-4396, :4227-4243", status := .proven
+    prop := ``UpdateUniqRun, thm := some ``updateUniqRun_proven }
 ]
 
 end PyLean.DictSet

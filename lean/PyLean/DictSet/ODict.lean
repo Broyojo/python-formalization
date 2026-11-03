@@ -503,7 +503,8 @@ def odictRepr (krepr : K → Py String) (vrepr : V → Py String) (tname : Strin
     | .error e => .error e
     | .ok ks =>
       let getitem : K → Py V := fun k => (dictSubscript P none k od.d).1
-      match mergeGenericLoop P (fun k => M.lift (getitem k)) 1 (ks.map (·.1)) ({} : PyDict K V) with
+      match mergeGenericLoop P (fun k => M.lift (getitem k)) 1 (ReIter.ofKeys (ks.map (·.1))).steps
+          ({} : PyDict K V) with
       | (.error e, _) => .error e
       | (.ok _, dcopy) =>
         match dictRepr krepr vrepr false dcopy with

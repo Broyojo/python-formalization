@@ -34,7 +34,7 @@ def viewNew (kind : ViewKind) (d : PyDict K V) : View K V := { kind, d }
 def dictviewLen (v : View K V) : Nat := v.d.used
 
 /-- `dictkeys_iter` (:6591-6599), `dictitems_iter` (:7028-7036), `dictvalues_iter`
-(:7140-7148), and the `*_reversed` slots (:7016-7024, @3.14.7:6684-6692, @3.14.7:6774-6782). -/
+(:7140-7148), and the `*_reversed` slots (:7016-7024, :7128-7136, :7218-7226). -/
 def dictviewIter (v : View K V) (rev : Bool) : DictIter :=
   dictiterNew v.d (match v.kind with
     | .keys => .key

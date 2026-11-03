@@ -126,4 +126,55 @@ theorem fromKeysFrozenStable_refuted : ¬FromKeysFrozenStable := by
   revert this
   decide +kernel
 
+/-! ### `cls()` that returns an object with no GC header -/
+
+/-- `fromkeys` never crashes, for every key type keeping the hash/eq contract, whatever `cls()`
+returns and whatever the iterable. -/
+def FromKeysNoCrash : Prop :=
+  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (hf : K → Int) (eqv : K → K → Bool),
+    Honest P hf eqv → ∀ (cls : FkCls K V) (it : FkIter K V) (v : V) (id : Nat),
+      (dictFromkeysImpl P cls it v id).1 ≠ .error (crash "")
+
+/-- `class D(dict): __new__ = lambda cls, *a: some_bytes`: `D()` is that `bytes` object. -/
+def fkBytesCls : FkCls Nat Nat :=
+  { isFrozendictType := false
+    call := .ok { d := { ident := 5 }, isAny := false, exact := false, tracked := false, isGC := false }
+    callWith := fun x => .ok x
+    setItem := fun _ _ => pure ()
+    instMap := .dict {} }
+
+/-- `D.fromkeys([])`: the loop does nothing, and `_PyObject_GC_TRACK` runs on the `bytes` object. -/
+theorem fromKeysNoCrash_refuted : ¬FromKeysNoCrash := by
+  intro h
+  exact h Nat Nat intProto _ _ intProto_honest fkBytesCls (fkList []) 0 10 rfl
+
+/-! ### From a set -/
+
+/-- `dict_set_fromkeys`, for every key protocol: a failed resize (to a general table of the size the
+set needs, or the dict's own if bigger) is the result; otherwise each step takes the next entry of the
+set as `_PySet_NextEntryRef` finds it, after whatever the last `insertdict` did, and `insertdict`s it
+with its stored hash, a failure being the result in the state it left; the end of the set ends it. -/
+def DictSetFromkeysBody : Prop :=
+  ∀ (K V : Type) [DecidableEq K] (P : Proto K (PyDict K V)) (size : Nat)
+    (steps : List (DM K V (Option (K × Int)))) (step : DM K V (Option (K × Int)))
+    (rest : List (DM K V (Option (K × Int)))) (value : V) (mp s t : PyDict K V) (key : K) (hash : Int),
+    (∀ e, dictResize (max (estimateLog2Keysize size) mp.body.log2Size) false mp = (.error e, s) →
+      dictSetFromkeys P size steps value mp = (.error e, s)) ∧
+    (dictResize (max (estimateLog2Keysize size) mp.body.log2Size) false mp = (.ok (), s) →
+      dictSetFromkeys P size steps value mp = setFromkeysLoop P value steps s) ∧
+    (∀ e, step s = (.error e, t) → setFromkeysLoop P value (step :: rest) s = (.error e, t)) ∧
+    (step s = (.ok none, t) → setFromkeysLoop P value (step :: rest) s = (.ok (), t)) ∧
+    (step s = (.ok (some (key, hash)), t) →
+      setFromkeysLoop P value (step :: rest) s =
+        (insertDict P key hash value >>= fun _ => setFromkeysLoop P value rest) t)
+
+theorem dictSetFromkeysBody_proven : DictSetFromkeysBody := by
+  intro K V _ P size steps step rest value mp s t key hash
+  refine ⟨fun e h => ?_, fun h => ?_, fun e h => ?_, fun h => ?_, fun h => ?_⟩
+  · simp [dictSetFromkeys, M.bind_run, h]
+  · simp [dictSetFromkeys, M.bind_run, h]
+  · simp [setFromkeysLoop, M.bind_run, h]
+  · simp [setFromkeysLoop, M.bind_run, h]
+  · simp [setFromkeysLoop, M.bind_run, h]
+
 end PyLean.DictSet

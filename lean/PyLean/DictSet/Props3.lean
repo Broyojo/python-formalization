@@ -264,8 +264,10 @@ theorem dictDictMerge_spec (H : Honest P hf eqv) (mp other : PyDict K V)
 theorem mergeGeneric_spec (H : Honest P hf eqv) (getitem : K → DM K V V) :
     ∀ (ks : List K) (vs : List V) (d : PyDict K V), DictInv hf eqv P.isStr d →
       ks.length = vs.length → (∀ p ∈ ks.zip vs, ∀ s, getitem p.1 s = (.ok p.2, s)) →
-      (∃ s, mergeGenericLoop P getitem 1 ks d = (.error memoryError, s) ∧ TooBig s.used) ∨
-      ∃ d', mergeGenericLoop P getitem 1 ks d = (.ok (), d') ∧ DictInv hf eqv P.isStr d' ∧
+      (∃ s, mergeGenericLoop P getitem 1 (ReIter.ofKeys ks).steps d = (.error memoryError, s) ∧
+        TooBig s.used) ∨
+      ∃ d', mergeGenericLoop P getitem 1 (ReIter.ofKeys ks).steps d = (.ok (), d') ∧
+        DictInv hf eqv P.isStr d' ∧
         dictAssoc d' = (ks.zip vs).foldl (fun l p => assocSet eqv l p.1 p.2) (dictAssoc d) := by
   intro ks
   induction ks with
@@ -278,14 +280,16 @@ theorem mergeGeneric_spec (H : Honest P hf eqv) (getitem : K → DM K V V) :
     | nil => simp at hl
     | cons v vrest =>
       have hg0 : ∀ s, getitem key s = (.ok v, s) := hg (key, v) (by simp)
-      have hunf : mergeGenericLoop P getitem 1 (key :: rest) d =
-          (dictSetItem P key v >>= fun _ => mergeGenericLoop P getitem 1 rest) d := by
-        simp only [mergeGenericLoop, bne_self_eq_false, Bool.false_eq_true, if_false]
+      have hunf : mergeGenericLoop P getitem 1 (ReIter.ofKeys (key :: rest)).steps d =
+          (dictSetItem P key v >>= fun _ =>
+            mergeGenericLoop P getitem 1 (ReIter.ofKeys rest).steps) d := by
+        simp only [ReIter.ofKeys, List.map_cons, mergeGenericLoop, bne_self_eq_false,
+          Bool.false_eq_true, if_false]
         simp [M.bind_run, M.pure_run, hg0]
       rcases dictSetItem_spec H d hd key v with ⟨hbig, h1⟩ | ⟨d1, h1, h2, h3⟩
       · exact Or.inl ⟨d, by rw [hunf]; exact M.bind_err h1, hbig⟩
-      · have hnext : mergeGenericLoop P getitem 1 (key :: rest) d =
-            mergeGenericLoop P getitem 1 rest d1 := by
+      · have hnext : mergeGenericLoop P getitem 1 (ReIter.ofKeys (key :: rest)).steps d =
+            mergeGenericLoop P getitem 1 (ReIter.ofKeys rest).steps d1 := by
           rw [hunf]
           exact M.bind_ok h1
         rcases ih vrest d1 h2 (by simpa using hl) (fun p hp => hg p (by simp [hp])) with
@@ -357,13 +361,16 @@ def MergeMappingRefines : Prop :=
     Honest P hf eqv → ∀ (getitem : K → DM K V V) (ks : List K) (vs : List V) (d : PyDict K V),
       DictInv hf eqv P.isStr d → ks.length = vs.length →
       (∀ p ∈ ks.zip vs, ∀ s, getitem p.1 s = (.ok p.2, s)) →
-      (∃ s, dictMerge P (.mapping (pure ks) getitem) 1 d = (.error memoryError, s) ∧ TooBig s.used) ∨
-      ∃ d', dictMerge P (.mapping (pure ks) getitem) 1 d = (.ok (), d') ∧ DictInv hf eqv P.isStr d' ∧
+      (∃ s, dictMerge P (.mapping (pure (ReIter.ofKeys ks)) getitem) 1 d = (.error memoryError, s) ∧
+        TooBig s.used) ∨
+      ∃ d', dictMerge P (.mapping (pure (ReIter.ofKeys ks)) getitem) 1 d = (.ok (), d') ∧
+        DictInv hf eqv P.isStr d' ∧
         dictAssoc d' = (ks.zip vs).foldl (fun l p => assocSet eqv l p.1 p.2) (dictAssoc d)
 theorem mergeMappingRefines_proven : MergeMappingRefines := by
   intro K V _ P hf eqv H getitem ks vs d hd hl hg
-  have hunf : dictMerge P (.mapping (pure ks) getitem) 1 d = mergeGenericLoop P getitem 1 ks d := by
-    simp only [dictMerge, M.bind_run, M.pure_run]
+  have hunf : dictMerge P (.mapping (pure (ReIter.ofKeys ks)) getitem) 1 d =
+      mergeGenericLoop P getitem 1 (ReIter.ofKeys ks).steps d := by
+    simp only [dictMerge, M.bind_run, M.pure_run, ReIter.ofKeys]
   rw [hunf]
   exact mergeGeneric_spec H getitem ks vs d hd hl hg
 

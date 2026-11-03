@@ -566,16 +566,21 @@ def dictUnhashableType (frozen : Bool) (key : K) (e : PyExc) : PyExc :=
     .typeError s!"cannot use '{P.typeName key}' as a {what} key ({m})"
   | e => e
 
+/-- A call of `__hash__` through `PyObject_Hash`: its effect on the state, then its answer. -/
+def hashCall (key : K) : DM K V Int := fun s => (P.hash key, P.hashEff key s)
+
 /-- `_PyObject_HashFast(key)` followed by `dict_unhashable_type` on failure, the
 opening of most entry points. -/
-def hashKey (key : K) : DM K V Int := fun mp =>
+def hashKey (key : K) : DM K V Int := fun mp0 =>
+  let mp := P.hashEff key mp0
   match P.hash key with
   | .ok h => (.ok h, mp)
   | .error e => (.error (dictUnhashableType P mp.frozen key e), mp)
 
 /-- `setitem_take2_lock_held` (:2732-2760), with `PyDict_SetItem`, `setitem_lock_held`
 and `_PyDict_SetItem_Take2`, which differ only in reference counting. -/
-def dictSetItem (key : K) (value : V) : DM K V Unit := fun mp =>
+def dictSetItem (key : K) (value : V) : DM K V Unit := fun mp0 =>
+  let mp := P.hashEff key mp0
   match P.hash key with
   | .error e => (.error (dictUnhashableType P mp.frozen key e), mp)
   | .ok hash =>
@@ -630,13 +635,15 @@ def dictDelItemKnownHashChecked (isAny : Bool) (key : K) (hash : Int) : DM K V U
   else dictDelItemKnownHash P key hash mp
 
 /-- `PyDict_DelItem` (:2925-2936). -/
-def dictDelItem (key : K) : DM K V Unit := fun mp =>
+def dictDelItem (key : K) : DM K V Unit := fun mp0 =>
+  let mp := P.hashEff key mp0
   match P.hash key with
   | .error e => (.error (dictUnhashableType P mp.frozen key e), mp)
   | .ok hash => dictDelItemKnownHash P key hash mp
 
 /-- `PyDict_DelItem` (:2926-2936) on any object: the key is hashed before the check in the callee. -/
-def dictDelItemChecked (isAny : Bool) (key : K) : DM K V Unit := fun mp =>
+def dictDelItemChecked (isAny : Bool) (key : K) : DM K V Unit := fun mp0 =>
+  let mp := P.hashEff key mp0
   match P.hash key with
   | .error e => (.error (dictUnhashableType P mp.frozen key e), mp)
   | .ok hash => dictDelItemKnownHashChecked P isAny key hash mp

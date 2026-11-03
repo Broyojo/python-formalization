@@ -306,7 +306,7 @@ theorem dictSetItem_spec (H : Honest P hf eqv) (mp : PyDict K V)
   obtain ⟨k, hb, w, hu⟩ := hd.wf
   have ha : dictAssoc mp = k.items := by simp [dictAssoc, hb]
   rw [ha]
-  simp only [dictSetItem, H.hash_ok]
+  simp only [dictSetItem, H.hash_ok, H.hash_quiet]
   by_cases hE : mp.body.isEmptyKeys = true
   · right
     rw [if_pos hE]
