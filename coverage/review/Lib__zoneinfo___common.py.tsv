@@ -1,0 +1,4 @@
+file	line	name	verdict	mirror	property	settled	reason
+Lib/zoneinfo/_common.py	32	load_data	HOLLOW	yes	no	yes	loadData mirrors :33-132, but LoadDataValueError's counterexample fails inside _TZifHeader.from_file (:166), so the refutation holds for any body after :33; the AssertionError of :123 is shown only by the bug reproducer, and LoadDataShape (the success path) is open.
+Lib/zoneinfo/_common.py	146	_TZifHeader.__init__	HOLLOW	yes	yes	no	The seven slot stores are the Header record, but its only entry, load-data-shape, is open.
+Lib/zoneinfo/_common.py	151	_TZifHeader.from_file	FAITHFUL	yes	yes	yes	headerFromFile mirrors :153-168 (magic, int(_version), 15 skipped bytes, >6l), and the refutation turns on its unchecked struct.unpack of a 23-byte read raising struct.error, against the from_file docs' ValueError (Doc/library/zoneinfo.rst:205-206); reproduced on 3.15.2 and main.
