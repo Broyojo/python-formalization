@@ -1,4 +1,4 @@
-import PyLean.Ipaddress.Parse6
+import PyLean.Ipaddress.Fmt6
 
 /-! `V6RoundTrip`: parsing `str()` of an IPv6 address gives the address and its scope id back.
 The plan in the docstring of `V6RoundTrip`: hex digits (1), the run invariant of
@@ -594,14 +594,16 @@ theorem ipv4Mapped_eq (n : Nat) :
 /-- `str()` of an IPv6 address with a 128-bit `_ip` succeeds, with the text `ipv6Str` gives. -/
 theorem ipv6StrPy_eq (n : Nat) (hn : n < 2 ^ 128) (sc : Option (List Char)) :
     ipv6StrPy n sc = .ok (ipv6Str n sc) := by
-  have hle : ¬ n > allOnes 128 := by unfold allOnes; omega
-  have hq' : ¬ (65535 : Nat) > allOnes 128 := by unfold allOnes; decide
+  have hs : stringFromIpInt6Py .address (some ((n >>> 32 : Nat) : Int)) =
+      .ok (stringFromIpInt6 (n / 2 ^ 32)) := by
+    rw [shiftRight32]; exact stringFromIpInt6Py_nat .address _ (by omega)
+  have hp := stringFromIpInt6Py_nat .address n hn
   unfold ipv6StrPy ipv6Str
   rw [ipv4Mapped_eq]
   by_cases hq : n / 2 ^ 32 = 0xFFFF
-  · simp only [hq, ↓reduceIte, ipv4MappedToStr, ipv4Mapped_eq, stringFromIpInt6Py, shiftRight32, hq']
+  · simp only [hq, ↓reduceIte, ipv4MappedToStr, ipv4Mapped_eq, hs]
     cases sc <;> rfl
-  · simp only [hq, ↓reduceIte, stringFromIpInt6Py, hle]
+  · simp only [hq, ↓reduceIte, hp]
     cases sc <;> rfl
 
 /-- `IPv6Address(str(IPv6Address(n) with scope sc))` gives `n` and `sc` back. -/

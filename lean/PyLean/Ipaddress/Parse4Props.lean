@@ -187,8 +187,10 @@ theorem digits_quad (p : List Char) (h : p.all isDigitC = true) : p.all quadC = 
   simp only [List.all_eq_true] at h ⊢
   intro c hc; simp [quadC, h c hc]
 
-theorem v4RoundTrip_proven : V4RoundTrip := by
-  intro n hn
+/-- `_BaseV4._ip_int_from_string` reads `_string_from_ip_int` of every 32-bit int back, and that
+text holds no `/`. -/
+theorem ipIntFromString4_roundtrip (n : Nat) (hn : n < 2 ^ 32) :
+    ipIntFromString4 (stringFromIpInt4 n) = .ok n ∧ '/' ∉ stringFromIpInt4 n := by
   obtain ⟨p1, d1, e1⟩ := octet_repr (n / 2 ^ 24 % 256) (Nat.mod_lt _ (by decide))
   obtain ⟨p2, d2, e2⟩ := octet_repr (n / 2 ^ 16 % 256) (Nat.mod_lt _ (by decide))
   obtain ⟨p3, d3, e3⟩ := octet_repr (n / 2 ^ 8 % 256) (Nat.mod_lt _ (by decide))
@@ -221,53 +223,63 @@ theorem v4RoundTrip_proven : V4RoundTrip := by
     simp [joinOn1]
   have hb := from_to_bytes n hn
   simp only [toBytes4] at hb
-  simp only [ipv4Init, ipv4Str, stringFromIpInt4, toBytes4, List.map_cons, List.map_nil]
-  rw [if_neg hslash]
+  simp only [stringFromIpInt4, toBytes4, List.map_cons, List.map_nil]
+  refine ⟨?_, hslash⟩
   unfold ipIntFromString4
   rw [if_neg (by simp only [hne]; decide), hsplit]
   simp only [parseOctets, p1, p2, p3, p4, Except.map]
   simp [hb]
+
+/-- Every string `_BaseV4._ip_int_from_string` accepts is `_string_from_ip_int` of its value. -/
+theorem ipIntFromString4_canonical (s : List Char) (n : Nat) (h : ipIntFromString4 s = .ok n) :
+    n < 2 ^ 32 ∧ stringFromIpInt4 n = s := by
+  unfold ipIntFromString4 at h
+  split at h
+  · simp at h
+  · dsimp only at h
+    split at h
+    · simp at h
+    · rename_i hlen
+      split at h
+      · rename_i bs hbs
+        simp only [Except.ok.injEq] at h
+        subst h
+        have hjs := join_split '.' s
+        generalize splitOn1 '.' s = parts at hbs hlen hjs
+        match parts, hlen, hbs, hjs with
+        | [o1, o2, o3, o4], _, hbs, hjs =>
+          cases e1 : parseOctet o1 <;> simp [parseOctets, e1, Except.map] at hbs
+          rename_i b1
+          cases e2 : parseOctet o2 <;> simp [e2] at hbs
+          rename_i b2
+          cases e3 : parseOctet o3 <;> simp [e3] at hbs
+          rename_i b3
+          cases e4 : parseOctet o4 <;> simp [e4] at hbs
+          rename_i b4
+          subst hbs
+          obtain ⟨l1, r1⟩ := octet_canon o1 b1 e1
+          obtain ⟨l2, r2⟩ := octet_canon o2 b2 e2
+          obtain ⟨l3, r3⟩ := octet_canon o3 b3 e3
+          obtain ⟨l4, r4⟩ := octet_canon o4 b4 e4
+          obtain ⟨tb, lt⟩ := to_from_bytes b1 b2 b3 b4 l1 l2 l3 l4
+          refine ⟨lt, ?_⟩
+          simp only [stringFromIpInt4, tb, List.map_cons, List.map_nil, r1, r2, r3, r4]
+          exact hjs
+        | [], h, _, _ | [_], h, _, _ | [_, _], h, _, _ | [_, _, _], h, _, _ => simp at h
+        | _ :: _ :: _ :: _ :: _ :: _, h, _, _ => simp at h
+      · simp at h
+
+theorem v4RoundTrip_proven : V4RoundTrip := by
+  intro n hn
+  obtain ⟨h1, h2⟩ := ipIntFromString4_roundtrip n hn
+  simp [ipv4Init, ipv4Str, h2, h1]
 
 theorem v4Canonical_proven : V4Canonical := by
   intro s n h
   simp only [ipv4Init] at h
   split at h
   · simp at h
-  · unfold ipIntFromString4 at h
-    split at h
-    · simp at h
-    · dsimp only at h
-      split at h
-      · simp at h
-      · rename_i hlen
-        split at h
-        · rename_i bs hbs
-          simp only [Except.ok.injEq] at h
-          subst h
-          have hjs := join_split '.' s
-          generalize splitOn1 '.' s = parts at hbs hlen hjs
-          match parts, hlen, hbs, hjs with
-          | [o1, o2, o3, o4], _, hbs, hjs =>
-            cases e1 : parseOctet o1 <;> simp [parseOctets, e1, Except.map] at hbs
-            rename_i b1
-            cases e2 : parseOctet o2 <;> simp [e2] at hbs
-            rename_i b2
-            cases e3 : parseOctet o3 <;> simp [e3] at hbs
-            rename_i b3
-            cases e4 : parseOctet o4 <;> simp [e4] at hbs
-            rename_i b4
-            subst hbs
-            obtain ⟨l1, r1⟩ := octet_canon o1 b1 e1
-            obtain ⟨l2, r2⟩ := octet_canon o2 b2 e2
-            obtain ⟨l3, r3⟩ := octet_canon o3 b3 e3
-            obtain ⟨l4, r4⟩ := octet_canon o4 b4 e4
-            obtain ⟨tb, lt⟩ := to_from_bytes b1 b2 b3 b4 l1 l2 l3 l4
-            refine ⟨lt, ?_⟩
-            simp only [ipv4Str, stringFromIpInt4, tb, List.map_cons, List.map_nil, r1, r2, r3, r4]
-            exact hjs
-          | [], h, _, _ | [_], h, _, _ | [_, _], h, _, _ | [_, _, _], h, _, _ => simp at h
-          | _ :: _ :: _ :: _ :: _ :: _, h, _, _ => simp at h
-        · simp at h
+  · exact ipIntFromString4_canonical s n h
 
 /-- `IPv4Address(int)` and `IPv4Address(bytes)`, ipaddress.py:1286-1296, with `_check_int_address`
 (:407-414) and `_check_packed_address(address, 4)` (:416-421): an int is stored exactly when it is
@@ -393,5 +405,134 @@ theorem v4StrRefusals_proven : V4StrRefusals := by
       | cons _ _ => rfl
     have hl4' : pre.length + (post.length + 1) = 4 := by omega
     simp [ipv4Init, hs, ipIntFromString4, he, hl4', hsp, parseOctets_first pre post o e hpre ho]
+
+/-! ## `_BaseV4._string_from_ip_int` on every int -/
+
+theorem toBytesBE_four (n : Nat) : toBytesBE 4 n = toBytes4 n := by
+  show [n / 256 ^ 3 % 256, n / 256 ^ 2 % 256, n / 256 ^ 1 % 256, n / 256 ^ 0 % 256] = _
+  simp [toBytes4]
+
+theorem e32N : (2 : Nat) ^ 32 = 4294967296 := rfl
+theorem e32I : (2 : Int) ^ 32 = 4294967296 := rfl
+
+/-- For a 32-bit int, `_string_from_ip_int` returns `stringFromIpInt4`. -/
+theorem stringFromIpInt4Py_ok (n : Nat) (h : n < 2 ^ 32) :
+    stringFromIpInt4Py (n : Int) = .ok (stringFromIpInt4 n) := by
+  have h0 : ¬ ((n : Int) < 0) := by omega
+  have h1 : ¬ (256 ^ 4 ≤ (n : Int).toNat) := by
+    rw [Int.toNat_natCast]
+    rw [e32N] at h
+    show ¬ 4294967296 ≤ n
+    omega
+  rw [stringFromIpInt4Py, intToBytesPy, if_neg h0, toBytesPy, if_neg h1, Int.toNat_natCast,
+    toBytesBE_four]
+  rfl
+
+/-- `_BaseV4._string_from_ip_int(ip_int)`, ipaddress.py:1242-1252, for every int: `ip_int.to_bytes(4,
+'big')` (:1252) raises `OverflowError("can't convert negative int to unsigned")` for a negative int
+and `OverflowError('int too big to convert')` for one of 2**32 or more (Objects/longobject.c:1127-1133,
+:1248-1252); for every other int it returns the one string that `_ip_int_from_string` reads back as
+that int, and nothing else. So a version that wrapped mod 2**32 (`2**32` as `'0.0.0.0'`), raised in
+range, or printed another spelling (leading zeros, another order) fails this. -/
+def StringFromIpInt4Spec : Prop :=
+  (∀ n : Int, n < 0 →
+    stringFromIpInt4Py n = .error (.overflowError "can't convert negative int to unsigned")) ∧
+  (∀ n : Int, 2 ^ 32 ≤ n → stringFromIpInt4Py n = .error (.overflowError "int too big to convert")) ∧
+  (∀ (n : Int) (s : List Char),
+    stringFromIpInt4Py n = .ok s ↔ 0 ≤ n ∧ ipIntFromString4 s = .ok n.toNat)
+
+theorem stringFromIpInt4Spec_proven : StringFromIpInt4Spec := by
+  have hneg : ∀ n : Int, n < 0 →
+      stringFromIpInt4Py n = .error (.overflowError "can't convert negative int to unsigned") := by
+    intro n h
+    rw [stringFromIpInt4Py, intToBytesPy, if_pos h]
+    rfl
+  have hbig : ∀ n : Int, 2 ^ 32 ≤ n →
+      stringFromIpInt4Py n = .error (.overflowError "int too big to convert") := by
+    intro n h
+    rw [e32I] at h
+    have h0 : ¬ n < 0 := by omega
+    have h1 : 256 ^ 4 ≤ n.toNat := by
+      show 4294967296 ≤ n.toNat
+      omega
+    rw [stringFromIpInt4Py, intToBytesPy, if_neg h0, toBytesPy, if_pos h1]
+    rfl
+  refine ⟨hneg, hbig, fun n s => ⟨fun h => ?_, fun ⟨h0, hp⟩ => ?_⟩⟩
+  · by_cases h0 : n < 0
+    · rw [hneg n h0] at h; cases h
+    by_cases h1 : 2 ^ 32 ≤ n
+    · rw [hbig n h1] at h; cases h
+    rw [e32I] at h1
+    have hm : n = ((n.toNat : Nat) : Int) := by omega
+    have hlt : n.toNat < 2 ^ 32 := by rw [e32N]; omega
+    rw [hm, stringFromIpInt4Py_ok _ hlt] at h
+    simp only [Except.ok.injEq] at h
+    subst h
+    exact ⟨by omega, (ipIntFromString4_roundtrip _ hlt).1⟩
+  · obtain ⟨hlt, hs⟩ := ipIntFromString4_canonical s _ hp
+    have hm : n = ((n.toNat : Nat) : Int) := by omega
+    rw [hm, stringFromIpInt4Py_ok _ hlt, hs]
+
+/-! ## `_BaseV4._ip_int_from_string` on every string -/
+
+/-- `_BaseV4._ip_int_from_string(ip_str)`, ipaddress.py:1180-1203, on every str, `/` included
+(`_prefix_from_ip_string` passes a mask string to it directly, :505-508, so the tuple mask
+`('10.0.0.0', '255.0.0.0/8')` reaches it without `IPv4Address`'s `/` check): it accepts exactly
+the strings `_string_from_ip_int` writes, each as the int written (so `'255.0.0.0/8'` and every
+other string holding `/` is refused); everything else raises `AddressValueError`, never another
+class (the docstring's "Raises", which `_prefix_from_ip_string` relies on to report a bad mask,
+:506-508), with the message of the first failed check: empty (:1193-1194), other than four
+`.`-separated parts (:1196-1198), then the first octet `_parse_octet` refuses (:1200-1203). -/
+def V4IpIntFromString : Prop :=
+  (∀ (s : List Char) (n : Nat), ipIntFromString4 s = .ok n ↔ stringFromIpInt4Py n = .ok s) ∧
+  (∀ s, '/' ∈ s → ∃ m, ipIntFromString4 s = .error (.named "AddressValueError" m)) ∧
+  (∀ s, (∃ n, ipIntFromString4 s = .ok n) ∨ ∃ m, ipIntFromString4 s = .error (.named "AddressValueError" m)) ∧
+  ipIntFromString4 [] = .error (.named "AddressValueError" "Address cannot be empty") ∧
+  (∀ s, s ≠ [] → (splitOn1 '.' s).length ≠ 4 →
+    ipIntFromString4 s = .error (avErr ((reprPlain s).map ("Expected 4 octets in " ++ ·)))) ∧
+  (∀ s pre o post e, splitOn1 '.' s = pre ++ o :: post → pre.length + post.length = 3 →
+    (∀ p ∈ pre, ∃ v, parseOctet p = .ok v) → parseOctet o = .error e →
+    ipIntFromString4 s = .error (avErr (do let m ← octetMsg o e; let r ← reprPlain s; pure (m ++ " in " ++ r))))
+
+theorem v4IpIntFromString_proven : V4IpIntFromString := by
+  have hiff : ∀ (s : List Char) (n : Nat), ipIntFromString4 s = .ok n ↔ stringFromIpInt4Py n = .ok s := by
+    intro s n
+    constructor
+    · intro h
+      obtain ⟨hlt, hs⟩ := ipIntFromString4_canonical s n h
+      rw [stringFromIpInt4Py_ok n hlt, hs]
+    · intro h
+      have := (stringFromIpInt4Spec_proven.2.2 n s).mp h
+      rw [Int.toNat_natCast] at this
+      exact this.2
+  have hcls : ∀ s, (∃ n, ipIntFromString4 s = .ok n) ∨
+      ∃ m, ipIntFromString4 s = .error (.named "AddressValueError" m) := by
+    intro s
+    unfold ipIntFromString4 avErr
+    dsimp only
+    split
+    · exact Or.inr ⟨_, rfl⟩
+    · split
+      · exact Or.inr ⟨_, rfl⟩
+      · split
+        · exact Or.inl ⟨_, rfl⟩
+        · exact Or.inr ⟨_, rfl⟩
+  refine ⟨hiff, fun s hs => ?_, hcls, rfl, fun s hne hl => ?_,
+    fun s pre o post e hsp hlen hpre ho => ?_⟩
+  · rcases hcls s with ⟨n, hn⟩ | h
+    · obtain ⟨hlt, hstr⟩ := ipIntFromString4_canonical s n hn
+      have := (ipIntFromString4_roundtrip n hlt).2
+      rw [hstr] at this
+      exact absurd hs this
+    · exact h
+  · have he : s.isEmpty = false := by cases s <;> simp_all
+    simp [ipIntFromString4, he, hl]
+  · have hl4 : (splitOn1 '.' s).length = 4 := by rw [hsp]; simp; omega
+    have he : s.isEmpty = false := by
+      cases s with
+      | nil => simp [splitOn1] at hl4
+      | cons _ _ => rfl
+    have hl4' : pre.length + (post.length + 1) = 4 := by omega
+    simp [ipIntFromString4, he, hl4', hsp, parseOctets_first pre post o e hpre ho]
 
 end PyLean.Ipaddress

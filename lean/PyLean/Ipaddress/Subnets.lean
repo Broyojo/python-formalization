@@ -625,9 +625,9 @@ theorem supernetContains_proven : SupernetContains :=
 and that has no scope id, the result is, for each prefix length from `s.prefixlen + 1` to
 `o.prefixlen` in that order, the block of that length next to the one holding `o`; these blocks
 and `o` cover `s` once. `s` may have a scope id. An `o` that `subnet_of` refuses raises
-`ValueError` (:831-832); a network or address of the other version raises `TypeError` (:824-826),
-an address of the same version raises `TypeError` (:828-829), and an object without `version`
-raises `AttributeError` at `other.version`.
+`ValueError` (:831-832); a network, address or interface of the other version raises `TypeError`
+(:824-826), an address or interface of the same version raises `TypeError` (:828-829), and an
+object without `version` raises `AttributeError` at `other.version`.
 
 The hypothesis `o.scope = none` sets aside a scoped `o`: then the halves `subnets` builds never
 equal it, and `address_exclude` raises `AssertionError` (`AddressExcludeTotal`, refuted, and
@@ -644,7 +644,10 @@ def AddressExcludePartition : Prop :=
       addressExcludeOp s (.net o) = .error (.typeError "~are not of the same version")) ∧
     (∀ b x sc, versionOf b ≠ versionOf s.bits →
       addressExcludeOp s (.addr b x sc) = .error (.typeError "~are not of the same version")) ∧
+    (∀ b x sc p, versionOf b ≠ versionOf s.bits →
+      addressExcludeOp s (.iface b x sc p) = .error (.typeError "~are not of the same version")) ∧
     (∀ x sc, addressExcludeOp s (.addr s.bits x sc) = .error (.typeError "~is not a network object")) ∧
+    (∀ x sc p, addressExcludeOp s (.iface s.bits x sc p) = .error (.typeError "~is not a network object")) ∧
     (∀ ty, addressExcludeOp s (.other ty) =
       .error (.named "AttributeError" s!"'{ty}' object has no attribute 'version'"))
 
@@ -668,7 +671,7 @@ theorem addressExclude_exact (s o : Net) (hs : s.Valid) (ho : o.Valid) (hb : o.b
 theorem addressExcludePartition_proven : AddressExcludePartition := by
   intro s _ hs
   refine ⟨fun o ho hb hos hsub => ?_, fun o hb hsub => ?_, fun o hv => ?_, fun b x sc hv => ?_,
-    fun x sc => ?_, fun ty => rfl⟩
+    fun b x sc p hv => ?_, fun x sc => ?_, fun x sc p => ?_, fun ty => rfl⟩
   · have hv : versionOf s.bits = versionOf o.bits := by rw [hb]
     have hx := addressExclude_exact s o hs ho hb hos hsub
     obtain ⟨out, h1, -, h3⟩ := SubnetsAux.addressExclude_spec s o hs ho hb hos hsub
@@ -680,6 +683,8 @@ theorem addressExcludePartition_proven : AddressExcludePartition := by
     simp [addressExcludeOp, hv, addressExclude, hsub, bind, Except.bind] <;> rfl
   · simp [addressExcludeOp, Ne.symm hv]
   · simp [addressExcludeOp, Ne.symm hv]
+  · simp [addressExcludeOp, Ne.symm hv]
+  · simp [addressExcludeOp]
   · simp [addressExcludeOp]
 
 /-- `address_exclude` docstring, ipaddress.py:789-822: "Returns: An iterator of the IPv(4|6)Network

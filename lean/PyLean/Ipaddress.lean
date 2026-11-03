@@ -13,6 +13,7 @@ import PyLean.Ipaddress.Parse6Props
 import PyLean.Ipaddress.Parse6Spec
 import PyLean.Ipaddress.Parse6Errors
 import PyLean.Ipaddress.Compress6
+import PyLean.Ipaddress.Iface
 
 /-!
 `Lib/ipaddress.py`, CPython 3.15.2. The model covers the integer core of networks and their
@@ -67,20 +68,26 @@ def entries : List Entry := [
     prop := ``GetitemSequence, thm := some ``getitemSequence_proven },
   { id := "ipaddress-contains-mem", pyFile := "Lib/ipaddress.py"
     pyFns := ["_BaseNetwork.__contains__"]
-    statement := "address in net holds exactly for the addresses of the block, whatever either scope id; an address of the other version and any network are not in it; an object without version raises AttributeError."
+    statement := "address in net, and interface in net (by its address alone), holds exactly for the addresses of the block, whatever either scope id; an address or interface of the other version and any network are not in it; an object without version raises AttributeError."
     source := "invariant; comment at Lib/ipaddress.py:732", status := .proven
     prop := ``ContainsMem, thm := some ``containsMem_proven },
   { id := "ipaddress-overlaps-share", pyFile := "Lib/ipaddress.py"
     pyFns := ["_BaseNetwork.overlaps", "_BaseNetwork.__contains__"]
-    statement := "a.overlaps(b) holds exactly when the blocks share an address for b of the same version, is False for b of the other version, and raises TypeError for an address or a non-container."
+    statement := "a.overlaps(b) holds exactly when the blocks share an address for b of the same version, is False for b of the other version, and raises TypeError for an address, an interface or a non-container."
     source := "overlaps docstring, Lib/ipaddress.py:744", status := .proven
     prop := ``OverlapsShareAddress, thm := some ``overlapsShareAddress_proven },
   { id := "ipaddress-subnet-of-mem", pyFile := "Lib/ipaddress.py"
     pyFns := ["_BaseNetwork.subnet_of", "_BaseNetwork._is_subnet_of"]
-    statement := "For a network b of the same version, a.subnet_of(b) holds exactly when every address of a is in b and, for IPv6 networks with the same network address, their scope ids are equal (the <= of :1033 is total_ordering's < or ==, and only == reads the scope id); another version, an address or an object without version raise TypeError."
+    statement := "For a network b of the same version, a.subnet_of(b) holds exactly when every address of a is in b and, for IPv6 networks with the same network address, their scope ids are equal (the <= of :1033 is total_ordering's < or ==, and only == reads the scope id); another version, an address, an interface or an object without version raise TypeError."
     source := "subnet_of docstring, Lib/ipaddress.py:1040; code :1028-1037; IPv6Address.__eq__ :2009-2015", status := .proven
     prop := ``SubnetOfMem, thm := some ``subnetOfMem_proven
-    notes := "Net carries the network address's scope id. The docstring's reading without the scope condition is ipaddress-subnet-of-scope-blind, refuted." },
+    notes := "Net carries the network address's scope id. The docstring's reading without the scope condition is ipaddress-subnet-of-scope-blind, refuted. supernet_of, which passes its argument as a, is ipaddress-supernet-of-mem." },
+  { id := "ipaddress-supernet-of-mem", pyFile := "Lib/ipaddress.py"
+    pyFns := ["_BaseNetwork.supernet_of", "_BaseNetwork._is_subnet_of"]
+    statement := "a.supernet_of(o) runs _is_subnet_of(o, a) with o first: for a network o of the same version it equals o.subnet_of(a), True exactly when every address of o is in a and, for IPv6 networks with the same network address, their scope ids are equal; o of another version (network, address or interface) raises TypeError('... are not of the same version'); an address or interface of the same version (no network_address) and an object without version raise TypeError('Unable to test subnet containment between ...') through the caught AttributeError."
+    source := "supernet_of docstring, Lib/ipaddress.py:1044; code :1028-1037, :1043-1045", status := .proven
+    prop := ``SupernetOfMem, thm := some ``supernetOfMem_proven
+    notes := "isSubnetOf takes two Operands (the first was a Net before). Difftest fn supernet_of (networks, addresses, interfaces of both versions, ints, None)." },
   { id := "ipaddress-subnet-of-scope-blind", pyFile := "Lib/ipaddress.py"
     pyFns := ["_BaseNetwork.subnet_of", "_BaseNetwork._is_subnet_of"]
     statement := "A network all of whose addresses are in a network b of the same version is a subnet of b, whatever the scope ids."
@@ -93,12 +100,18 @@ def entries : List Entry := [
     statement := "For addresses of one version that first > last lets through (int(first) < int(last), or equal ints with equal scope ids), summarize_address_range returns valid unscoped networks, each the largest aligned block starting where the previous one ended and not passing last (a list Greedy admits only one of)."
     source := "summarize_address_range docstring and doctest, Lib/ipaddress.py:198-229; code :229-249", status := .proven
     prop := ``SummarizeExactCover, thm := some ``summarizeExactCover_proven
-    notes := "greedy_unique: the conditions fix the list. Operand addresses carry the scope id that first > last compares. Difftest fn summarize (addresses of both versions, scoped IPv6 addresses, networks, ints)." },
+    notes := "greedy_unique: the conditions fix the list. Operand addresses carry the scope id that first > last compares. Interfaces are ipaddress-summarize-interfaces. Difftest fn summarize (addresses and interfaces of both versions, scoped IPv6 ones, networks, ints)." },
   { id := "ipaddress-summarize-rejects", pyFile := "Lib/ipaddress.py"
     pyFns := ["summarize_address_range"]
-    statement := "summarize_address_range raises TypeError for a non-address argument and for two versions, ValueError when first > last (int(first) > int(last), or for IPv6 equal ints with different scope ids), and ValueError('unknown IP version') for a version other than 4 and 6."
+    statement := "summarize_address_range raises TypeError for an argument that is neither an address nor an interface and for two versions, ValueError when first > last (int(first) > int(last), or for IPv6 equal ints with different scope ids), and ValueError('unknown IP version') for a version other than 4 and 6."
     source := "summarize_address_range docstring Raise list, Lib/ipaddress.py:214-221; code :223-237", status := .proven
     prop := ``SummarizeRejects, thm := some ``summarizeRejects_proven },
+  { id := "ipaddress-summarize-interfaces", pyFile := "Lib/ipaddress.py"
+    pyFns := ["summarize_address_range"]
+    statement := "Interfaces pass the isinstance check and are ordered by their own __lt__/__eq__: an interface first and an address last of one version raise ValueError('last IP address must be greater than first') whatever the ints; an address first and an interface last give the summary of int(first)..int(last), or [] when int(first) > int(last); two interfaces raise ValueError unless first precedes or equals last in the order network address (scope ids included), then prefix length, then address, and otherwise give the same int summary or []."
+    source := "summarize_address_range docstring, Lib/ipaddress.py:198-221 (ValueError if last is not greater than first); IPv4Interface.__lt__/__eq__ :1431-1453 and IPv6Interface :2225-2247; Objects/object.c:1055-1061 (reflected comparison first for a subclass)", status := .proven
+    prop := ``SummarizeInterfaces, thm := some ``summarizeInterfaces_proven
+    notes := "Consistent with the interface ordering, by which an address sorts before every interface (comment at :1451-1452), so not filed as a defect. Difftest fn summarize with interface operands (scoped IPv6 ones included)." },
   { id := "ipaddress-summarize-scope-blind", pyFile := "Lib/ipaddress.py"
     pyFns := ["summarize_address_range"]
     statement := "For addresses of one version with int(first) <= int(last), summarize_address_range returns, whatever the scope ids (the loop reads only _ip)."
@@ -194,6 +207,18 @@ def entries : List Entry := [
     statement := "IPv4Address(s) for a str s stores an int or raises AddressValueError, never another class, with the message of the first failed check: '/', empty, not four parts, then the first octet _parse_octet refuses ('<message> in <repr>')."
     source := "IPv4Address docstring Raises, Lib/ipaddress.py:1281-1282; ip_address relies on the class, :41-49", status := .proven
     prop := ``V4StrRefusals, thm := some ``v4StrRefusals_proven },
+  { id := "ipaddress-v4-ip-int-from-string", pyFile := "Lib/ipaddress.py"
+    pyFns := ["_BaseV4._ip_int_from_string", "_BaseV4._parse_octet"]
+    statement := "For every str s, '/' included, _BaseV4._ip_int_from_string(s) returns n exactly when _string_from_ip_int(n) is s, so every string holding '/' (such as the tuple mask '255.0.0.0/8') is refused; every refusal is AddressValueError with the message of the first failed check: empty, not four parts, then the first octet _parse_octet refuses ('<message> in <repr>')."
+    source := "_ip_int_from_string docstring Raises, Lib/ipaddress.py:1189-1190; _prefix_from_ip_string passes mask strings to it directly, :505-508", status := .proven
+    prop := ``V4IpIntFromString, thm := some ``v4IpIntFromString_proven
+    notes := "Difftest fns v4_ip_int (strings with '/') and tuple_mask4 (IPv4Network((addr, mask)) with str masks holding '/')." },
+  { id := "ipaddress-v4-string-from-ip-int", pyFile := "Lib/ipaddress.py"
+    pyFns := ["_BaseV4._string_from_ip_int"]
+    statement := "For every int n, _BaseV4._string_from_ip_int(n) raises OverflowError(\"can't convert negative int to unsigned\") for n < 0 and OverflowError('int too big to convert') for n >= 2**32, and otherwise returns the one string s that _ip_int_from_string reads back as n."
+    source := "_string_from_ip_int docstring, Lib/ipaddress.py:1243-1250 ('Turns a 32-bit integer into dotted decimal notation'); code :1252; int.to_bytes, Objects/longobject.c:1108-1254", status := .proven
+    prop := ``StringFromIpInt4Spec, thm := some ``stringFromIpInt4Spec_proven
+    notes := "Difftest fn v4_string_from_ip_int (ints around 0 and 2**32, huge and negative ones)." },
   { id := "ipaddress-v4-parse-octet", pyFile := "Lib/ipaddress.py"
     pyFns := ["_BaseV4._parse_octet"]
     statement := "_parse_octet refuses the empty string, a non-ASCII-digit character, more than three digits, a leading zero and a value above 255, in that order, and reads every other string as its decimal value."
@@ -315,10 +340,10 @@ def entries : List Entry := [
     prop := ``DocMaskRule, thm := some ``docMaskRule_refuted, bug := some "ipaddress-mask-rule-hostmask-first-field" },
   { id := "ipaddress-v6-compress-rfc5952", pyFile := "Lib/ipaddress.py"
     pyFns := ["_BaseV6._compress_hextets", "_BaseV6._string_from_ip_int"]
-    statement := "cls._string_from_ip_int() raises TypeError for IPv6Address and IPv6Interface (cls._ip is the slot descriptor) and AttributeError for IPv6Network (no _ip); for every class it raises ValueError above 2**128 - 1, and for every 128-bit int it writes the eight hextets in '%x' joined by ':' when no two adjacent hextets are zero, and otherwise replaces the first longest run of zero hextets (length at least two) by '::'."
+    statement := "cls._string_from_ip_int() raises TypeError for IPv6Address and IPv6Interface (cls._ip is the slot descriptor) and AttributeError for IPv6Network (no _ip); for every class it raises ValueError above 2**128 - 1; for every int in [0, 2**128) it writes the eight hextets in '%x' joined by ':' when no two adjacent hextets are zero, and otherwise replaces the first longest run of zero hextets (length at least two) by '::'; for a negative int -m it returns the text of the leading 31 hex digits of m with '-' before it when their top group is non-zero, so -m and m give the same text for 0 < m < 2**112."
     source := "RFC 5952 4.2; the ipaddress docs' compressed form; _string_from_ip_int docstring Raises, Lib/ipaddress.py:1845-1846; code :1849-1859", status := .proven
     prop := ``CompressRFC5952, thm := some ``compressRFC5952_proven
-    notes := "The loop of _compress_hextets reads a hextet only through hextet == '0', and '%x' % v == '0' iff v == 0, so the fold runs on the Bool mask; decide checks the run it ends on for all 256 masks." }
+    notes := "The loop of _compress_hextets reads a hextet only through hextet == '0', and '%x' % v == '0' iff v == 0, so the fold runs on the Bool mask; decide checks the run it ends on for all 256 masks. '%032x' and the slices are mirrored on Int (fmt032x, hextetsOfInt in Fmt6); a negative int passes the one-sided check at :1852. Only private callers could pass one, every public caller passes _ip or _ip >> 32, so no bug record. Difftest fn string_from_ip_int (negative ints down to -(2**200))." }
 ]
 
 end PyLean.Ipaddress

@@ -137,8 +137,7 @@ theorem str_reparse (ip : Nat) (h : ip < 2 ^ 128) :
 theorem plain_reparse (ip : Nat) (h : ip < 2 ^ 128) :
     stringFromIpInt6Py .address (some ip) = .ok (stringFromIpInt6 ip) ∧
       ipIntFromString6 (stringFromIpInt6 ip) = .ok ip := by
-  have hle : ¬ ip > allOnes 128 := by unfold allOnes; omega
-  exact ⟨by simp [stringFromIpInt6Py, hle], plain_roundtrip ip h⟩
+  exact ⟨stringFromIpInt6Py_nat .address ip h, plain_roundtrip ip h⟩
 
 theorem explodedByCase_proven : ExplodedByCase := by
   intro ip p scope hip

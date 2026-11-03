@@ -39,11 +39,14 @@ def getAddrArg (j : Json) : Except String AddrArg := do
   | "bytes" => return .bytes ((← (← arg.getArrVal? 1).getArr?).toList.filterMap (fun x => x.getNat?.toOption))
   | _ => return .str (← (← arg.getArrVal? 1).getStr?).toList
 
-/-- `{"k": "addr", "bits": b, "ip": n, "scope": s}`, `{"k": "net", "bits": b, "net": [a, p, s]}` or
-`{"k": "other", "ty": "int"}`. -/
+/-- `{"k": "addr", "bits": b, "ip": n, "scope": s}`, `{"k": "iface", "bits": b, "ip": n, "scope": s,
+"prefixlen": p}`, `{"k": "net", "bits": b, "net": [a, p, s]}` or `{"k": "other", "ty": "int"}`. -/
 def getOperand (j : Json) : Except String Operand := do
   match ← getStr j "k" with
   | "addr" => return .addr (← getNat j "bits") (← getNat j "ip") (← getScope (j.getObjVal? "scope").toOption)
+  | "iface" =>
+    let sc ← getScope (j.getObjVal? "scope").toOption
+    return .iface (← getNat j "bits") (← getNat j "ip") sc (← getNat j "prefixlen")
   | "net" => return .net (← getNet j (← getNat j "bits") "net")
   | _ => return .other (← getStr j "ty")
 
@@ -92,6 +95,23 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "subnet_of" =>
     let a ← getNet j bits "a"
     return encPy toJson (subnetOfOp a (← getOperand (← j.getObjVal? "other")))
+  | "supernet_of" =>
+    let a ← getNet j bits "a"
+    return encPy toJson (supernetOfOp a (← getOperand (← j.getObjVal? "other")))
+  | "tuple_mask4" =>
+    -- `IPv4Network((addr, mask))` with a str address and a str mask: `IPv4Address(addr)`, then
+    -- `_make_netmask(mask)`, then the host-bits check (ipaddress.py:1541-1546).
+    let addr ← getStr j "addr"
+    let mask ← getStr j "s"
+    let r : Py Net := do
+      let a ← ipv4Init (.str addr.toList)
+      let p ← makeNetmask4 mask.toList
+      mkNet 32 a p
+    return encPy encNet r
+  | "v4_ip_int" =>
+    return encPy toJson (ipIntFromString4 (← getStr j "s").toList)
+  | "v4_string_from_ip_int" =>
+    return encPy (fun cs => toJson (String.ofList cs)) (stringFromIpInt4Py (← (← j.getObjVal? "n").getInt?))
   | "address_exclude" =>
     let a ← getNet j bits "a"
     return encPy (fun ns => Json.arr (ns.map encNet).toArray) (addressExcludeOp a (← getOperand (← j.getObjVal? "other")))
@@ -139,7 +159,7 @@ def run (fn : String) (j : Json) : Except String Json := do
   | "string_from_ip_int" =>
     let a ← match j.getObjVal? "n" with
       | .ok .null | .error _ => pure none
-      | .ok v => some <$> v.getNat?
+      | .ok v => some <$> v.getInt?
     let cls ← match (getStr j "cls").toOption with
       | some "interface" => pure V6Cls.interface
       | some "network" => pure V6Cls.network

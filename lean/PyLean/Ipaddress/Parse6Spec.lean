@@ -33,18 +33,20 @@ def V6StrForm : Prop :=
 
 theorem v6StrForm_proven : V6StrForm := by
   intro ip hip
-  have hle : ¬ ip > allOnes 128 := by unfold allOnes; omega
-  have hq' : ¬ (65535 : Nat) > allOnes 128 := by unfold allOnes; decide
+  have hs : stringFromIpInt6Py .address (some ((ip >>> 32 : Nat) : Int)) =
+      .ok (stringFromIpInt6 (ip / 2 ^ 32)) := by
+    rw [shiftRight32]; exact stringFromIpInt6Py_nat .address _ (by omega)
+  have hp := stringFromIpInt6Py_nat .address ip hip
   refine ⟨ipv4Mapped_eq ip, fun hq => ?_, fun hq => ?_⟩
   · have h1 : ipv4MappedToStr ip = .ok ("::ffff:".toList ++ ipv4Str (ip % 2 ^ 32)) := by
-      simp only [ipv4MappedToStr, ipv4Mapped_eq, hq, ↓reduceIte, stringFromIpInt6Py, shiftRight32]
-      simp only [hq', ↓reduceIte, bind, Except.bind, pure, Except.pure]
+      simp only [ipv4MappedToStr, ipv4Mapped_eq, hq, ↓reduceIte, hs]
+      simp only [bind, Except.bind, pure, Except.pure]
       rw [show (0xFFFF : Nat) = 65535 from rfl, ffff_str]
       rfl
     refine ⟨h1, fun sc => ?_⟩
     simp only [ipv6StrPy, ipv4Mapped_eq, hq, ↓reduceIte, h1, bind, Except.bind, pure, Except.pure]
   · refine ⟨by simp [ipv4MappedToStr, ipv4Mapped_eq, hq], fun sc => ?_⟩
-    simp [ipv6StrPy, ipv4Mapped_eq, hq, stringFromIpInt6Py, hle, bind, Except.bind, pure, Except.pure]
+    simp [ipv6StrPy, ipv4Mapped_eq, hq, hp, bind, Except.bind, pure, Except.pure]
 
 /-! ## Int and bytes -/
 

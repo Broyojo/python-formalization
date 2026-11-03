@@ -38,15 +38,6 @@ def prefixFromPrefixString (maxp : Nat) (s : List Char) : Py Nat :=
     let p := digitsVal s
     if p ≤ maxp then .ok p else reportInvalidNetmask (reprPlain s)
 
-/-- The `k` big-endian bytes of `n mod 256**k`; `ip_int.to_bytes(k, 'big')` for `ip_int < 256**k`. -/
-def toBytesBE (k n : Nat) : List Nat := (List.range k).map fun i => n / 256 ^ (k - 1 - i) % 256
-
-/-- `n.to_bytes(k, 'big')` for an int `n >= 0` (`int_to_bytes_impl`, Objects/longobject.c, through
-`_PyLong_AsByteArray`): `OverflowError('int too big to convert')` when `n` needs more than `k`
-bytes, else the bytes. -/
-def toBytesPy (k n : Nat) : Py (List Nat) :=
-  if 256 ^ k ≤ n then .error (.overflowError "int too big to convert") else .ok (toBytesBE k n)
-
 /-- `_prefix_from_ip_int`, ipaddress.py:437-460, for `max_prefixlen` `bits`: the trailing zeros
 (:449-450), the prefix length (:451), the leading ones (:452-453); for a mismatch (:454) the
 `to_bytes` (:455-456), which raises first for an int of more than `max_prefixlen` bits, then the

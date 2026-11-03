@@ -26,21 +26,28 @@ def hextetVals (n : Nat) : List Nat := (List.range 8).map fun i => n / 65536 ^ (
 def ZeroRun (vs : List Nat) (s L : Nat) : Prop :=
   s + L ≤ vs.length ∧ ∀ i, s ≤ i → i < s + L → vs[i]? = some 0
 
-/-- `cls._string_from_ip_int(ip_int)`, `Lib/ipaddress.py:1835-1859`, for every class that inherits
-it and every argument. Above `_ALL_ONES` it raises `ValueError('IPv6 address is too large')`
-(:1852-1853, the docstring's "Raises"); with the default `ip_int=None` it reads `cls._ip`
-(:1849-1850): for `IPv6Address` and `IPv6Interface` the slot descriptor (:1919), and `int()` of
-that raises `TypeError`; `IPv6Network` has no `_ip`, so the lookup raises `AttributeError`. For
-every class and every `ip_int < 2**128`, with `vs` its eight hextet values:
+/-- `cls._string_from_ip_int(ip_int=None)`, `Lib/ipaddress.py:1835-1859`, for every class that
+inherits it and every argument: `None` and every int. With the default `ip_int=None` it reads
+`cls._ip` (:1849-1850): for `IPv6Address` and `IPv6Interface` the slot descriptor (:1919), and
+`int()` of that raises `TypeError`; `IPv6Network` has no `_ip`, so the lookup raises
+`AttributeError`. Above `_ALL_ONES` it raises `ValueError('IPv6 address is too large')`
+(:1852-1853, the docstring's "Raises"). For every class:
 
-* if no two adjacent hextets are zero, the result is `':'.join('%x' % v for v in vs)`, so a single
-  zero hextet is never compressed (RFC 5952 4.2.2);
-* if `[s, s + L)` is a run of zeros with `L ≥ 2`, every run of zeros is shorter or equally long,
-  and every equally long run starts at `s` or later (the first longest run, RFC 5952 4.2.1 and
-  4.2.3), the output is `':'.join(vs[:s]) + '::' + ':'.join(vs[s+L:])`, each value as `'%x'`.
-
-The hypotheses on `s` and `L` describe the run; they are not assumptions about the input, and
-such a run exists whenever two adjacent hextets are zero. -/
+* for every `ip_int` in `[0, 2**128)`, with `vs` its eight hextet values: if no two adjacent
+  hextets are zero, the result is `':'.join('%x' % v for v in vs)`, so a single zero hextet is
+  never compressed (RFC 5952 4.2.2); if `[s, s + L)` is a run of zeros with `L ≥ 2`, every run of
+  zeros is shorter or equally long, and every equally long run starts at `s` or later (the first
+  longest run, RFC 5952 4.2.1 and 4.2.3), the output is `':'.join(vs[:s]) + '::' +
+  ':'.join(vs[s+L:])`, each value as `'%x'`. The hypotheses on `s` and `L` describe the run; they
+  are not assumptions about the input, and such a run exists whenever two adjacent hextets are
+  zero;
+* the check at :1852 is one-sided, so a negative `ip_int = -m` is formatted too: `'%032x' % -m` is
+  `-` and the hex digits of `m` padded to 31, of which the slices (:1856) read only the first 32
+  characters, i.e. the leading 31 hex digits of `m` (`m // 16**(k-31)` for `m` of `k` digits, `m`
+  itself when it has at most 31), and the first slice `-xyz` is the negative number `-0xxyz`. So
+  the result is the text of that 31-digit value, with `-` before it when its top group is
+  non-zero; in particular for `0 < m < 2**112` it is the text of `m` itself (`-1` gives `'::1'`),
+  and the method gives the same string for `-m` and `m`. -/
 def CompressRFC5952 : Prop :=
   stringFromIpInt6Py .address none = .error (.typeError
     "int() argument must be a string, a bytes-like object or a real number, not 'member_descriptor'") ∧
@@ -49,14 +56,19 @@ def CompressRFC5952 : Prop :=
   stringFromIpInt6Py .network none =
     .error (.named "AttributeError" "type object 'IPv6Network' has no attribute '_ip'") ∧
   ∀ cls : V6Cls,
-  (∀ n : Nat, 2 ^ 128 ≤ n → stringFromIpInt6Py cls (some n) = .error (.valueError "IPv6 address is too large")) ∧
-  ∀ n : Nat, n < 2 ^ 128 →
+  (∀ n : Int, 2 ^ 128 ≤ n → stringFromIpInt6Py cls (some n) = .error (.valueError "IPv6 address is too large")) ∧
+  (∀ n : Nat, n < 2 ^ 128 →
     ((∀ s, ¬ ZeroRun (hextetVals n) s 2) →
-      stringFromIpInt6Py cls (some n) = .ok (joinOn1 ':' ((hextetVals n).map hexStr))) ∧
+      stringFromIpInt6Py cls (some (n : Int)) = .ok (joinOn1 ':' ((hextetVals n).map hexStr))) ∧
     (∀ s L, 2 ≤ L → ZeroRun (hextetVals n) s L →
       (∀ s' L', ZeroRun (hextetVals n) s' L' → L' < L ∨ (L' = L ∧ s ≤ s')) →
-      stringFromIpInt6Py cls (some n) = .ok (joinOn1 ':' (((hextetVals n).take s).map hexStr) ++ [':', ':'] ++
-        joinOn1 ':' (((hextetVals n).drop (s + L)).map hexStr)))
+      stringFromIpInt6Py cls (some (n : Int)) = .ok (joinOn1 ':' (((hextetVals n).take s).map hexStr) ++
+        [':', ':'] ++ joinOn1 ':' (((hextetVals n).drop (s + L)).map hexStr)))) ∧
+  (∀ m k : Nat, 0 < m → m < 16 ^ k → (k ≤ 31 ∨ 16 ^ (k - 1) ≤ m) →
+    stringFromIpInt6Py cls (some (-(m : Int))) =
+      .ok ((if 2 ^ 112 ≤ m / 16 ^ (k - 31) then ['-'] else []) ++ stringFromIpInt6 (m / 16 ^ (k - 31)))) ∧
+  (∀ m : Nat, 0 < m → m < 2 ^ 112 →
+    stringFromIpInt6Py cls (some (-(m : Int))) = stringFromIpInt6Py cls (some (m : Int)))
 
 /-! ## (1) The loop sees only the mask -/
 
@@ -262,15 +274,156 @@ theorem compressRFC5952_core : ∀ n : Nat, n < 2 ^ 128 →
     rw [this] at h2
     exact absurd h2 (by decide)
 
+/-! ## Negative ints -/
+
+theorem cfinish_cons_swap (x y : List Char) (T : List (List Char)) (bs : Int) (bl : Nat) (ds : Int)
+    (dl : Nat) (h : bl > 1 → 1 ≤ bs) :
+    ∃ R, cfinish (x :: T) (bs, bl, ds, dl) = x :: R ∧ cfinish (y :: T) (bs, bl, ds, dl) = y :: R := by
+  by_cases hgt : bl > 1
+  · obtain ⟨b, rfl⟩ : ∃ b : Nat, bs = ((b + 1 : Nat) : Int) :=
+      ⟨bs.toNat - 1, by have := h hgt; omega⟩
+    have hne : ¬ (((b + 1 : Nat) : Int) = 0) := by omega
+    have htn : ((b + 1 : Nat) : Int).toNat = b + 1 := by simp
+    have key : ∀ z : List Char, cfinish (z :: T) (((b + 1 : Nat) : Int), bl, ds, dl) =
+        z :: ((if b + bl + 1 = T.length + 1 then T ++ [[]] else T).take b ++ [[]] ++
+          (if b + bl + 1 = T.length + 1 then T ++ [[]] else T).drop (b + bl)) := by
+      intro z
+      unfold cfinish
+      simp only [hgt, ↓reduceIte, htn, hne, List.length_cons]
+      rw [show b + 1 + bl = b + bl + 1 by omega]
+      by_cases he : b + bl + 1 = T.length + 1
+      · rw [if_pos he, if_pos he]
+        all_goals rfl
+      · rw [if_neg he, if_neg he]
+        all_goals rfl
+    exact ⟨_, key x, key y⟩
+  · refine ⟨T, ?_, ?_⟩ <;> simp [cfinish, hgt]
+
+/-- With a first hextet other than `'0'`, the compression keeps it in front, whatever it is. -/
+theorem compress_head (x y : List Char) (T : List (List Char)) (hx : x ≠ ['0']) (hy : y ≠ ['0'])
+    (hT : T.length = 7) :
+    ∃ R, compressHextets (x :: T) = x :: R ∧ compressHextets (y :: T) = y :: R := by
+  have hm : ∀ z : List Char, z ≠ ['0'] →
+      ((z :: T).map fun h => decide (h = ['0'])) = false :: T.map fun h => decide (h = ['0']) := by
+    intro z hz; simp [hz]
+  rw [compress_eq, compress_eq, fold_mask, fold_mask, hm x hx, hm y hy]
+  have hok := maskOK_len8 (false :: T.map fun h => decide (h = ['0'])) (by simp [hT])
+  unfold maskOK at hok
+  generalize (false :: T.map fun h => decide (h = ['0'])).zipIdx.foldl mstep (-1, 0, -1, 0) = st
+    at hok ⊢
+  obtain ⟨bs, bl, ds, dl⟩ := st
+  simp only at hok
+  apply cfinish_cons_swap
+  intro hgt
+  simp only [hgt, ↓reduceIte, Bool.and_eq_true, decide_eq_true_eq] at hok
+  obtain ⟨⟨h0, hrun⟩, -⟩ := hok
+  rcases Nat.eq_zero_or_pos bs.toNat with hz | hz
+  · exfalso
+    rw [hz] at hrun
+    simp only [runB, Bool.and_eq_true, List.all_eq_true, List.mem_range] at hrun
+    have := hrun.2 0 (by omega)
+    simp at this
+  · omega
+
+theorem map_range8_if {β : Type} (a : β) (f : Nat → β) :
+    (List.range 8).map (fun i => if i = 0 then a else f i) = a :: ((List.range 8).map f).tail := rfl
+
+/-- The hextets of a negative int `-m`: `v`, the leading 31 hex digits of `m`, is below `16**31`;
+the first hextet is `'%x'` of minus its top three digits, the other seven are those of `v`. -/
+theorem hextetsOfInt_neg (m k : Nat) (hm : 0 < m) (hk : m < 16 ^ k)
+    (hk' : k ≤ 31 ∨ 16 ^ (k - 1) ≤ m) :
+    m / 16 ^ (k - 31) < 16 ^ 31 ∧
+    hextetsOfInt (-(m : Int)) =
+      fmtX (-((m / 16 ^ (k - 31) / 16 ^ 28 : Nat) : Int)) :: (hextetsOf (m / 16 ^ (k - 31))).tail := by
+  have hv : m / 16 ^ (k - 31) < 16 ^ 31 := by
+    rw [Nat.div_lt_iff_lt_mul (pow16_pos _), ← Nat.pow_add]
+    exact Nat.lt_of_lt_of_le hk (Nat.pow_le_pow_right (by decide) (by omega))
+  refine ⟨hv, ?_⟩
+  obtain ⟨B, hB⟩ := fmt032x_neg m k hm hk hk'
+  generalize m / 16 ^ (k - 31) = v at hv hB ⊢
+  have hu : v / 16 ^ 28 < 4096 := by
+    rw [Nat.div_lt_iff_lt_mul (pow16_pos _)]
+    exact Nat.lt_of_lt_of_le hv (by decide)
+  unfold hextetsOfInt
+  rw [hB]
+  have hmap : (List.range 8).map
+      (fun i => fmtX (intHex (((('-' :: digitsW 31 v) ++ B).drop (4 * i)).take 4))) =
+      (List.range 8).map (fun i => if i = 0 then fmtX (-((v / 16 ^ 28 : Nat) : Int))
+        else hexStr (v / 65536 ^ (7 - i) % 65536)) := by
+    apply List.map_congr_left
+    intro i hi
+    rw [List.mem_range] at hi
+    rcases Nat.eq_zero_or_pos i with rfl | hpos
+    · rw [slice_zero, intHex_neg3, Nat.mod_eq_of_lt hu, if_pos rfl]
+    · rw [slice_hi _ _ _ i hpos hi, intHex_digits4, fmtX_nat, if_neg (show i ≠ 0 by omega),
+        show 28 - 4 * i = 4 * (7 - i) by omega, Nat.pow_mul]
+      all_goals rfl
+  rw [hmap, map_range8_if]
+  all_goals rfl
+
+/-- `_string_from_ip_int(-m)` for `m > 0` with `k` hex digits (or `k <= 31` with `m < 16**k`): the
+text of `v = m // 16**(k-31)`, after a `-` when `v >= 2**112`. -/
+theorem stringFromIpInt6Int_neg (m k : Nat) (hm : 0 < m) (hk : m < 16 ^ k)
+    (hk' : k ≤ 31 ∨ 16 ^ (k - 1) ≤ m) :
+    stringFromIpInt6Int (-(m : Int)) =
+      (if 2 ^ 112 ≤ m / 16 ^ (k - 31) then ['-'] else []) ++ stringFromIpInt6 (m / 16 ^ (k - 31)) := by
+  obtain ⟨hv, hh⟩ := hextetsOfInt_neg m k hm hk hk'
+  unfold stringFromIpInt6Int stringFromIpInt6
+  rw [hh]
+  generalize m / 16 ^ (k - 31) = v at hv ⊢
+  have hu : v / 16 ^ 28 < 4096 := by
+    rw [Nat.div_lt_iff_lt_mul (pow16_pos _)]
+    exact Nat.lt_of_lt_of_le hv (by decide)
+  have hval : v / 65536 ^ 7 % 65536 = v / 16 ^ 28 := by
+    rw [show (65536 : Nat) ^ 7 = 16 ^ 28 from rfl]
+    exact Nat.mod_eq_of_lt (by omega)
+  have hhead : hextetsOf v = hexStr (v / 16 ^ 28) :: (hextetsOf v).tail := by
+    rw [← hval]; rfl
+  have hT : (hextetsOf v).tail.length = 7 := by simp [hextetsOf]
+  rw [hhead, List.tail_cons, fmtX_neg]
+  generalize (hextetsOf v).tail = T at hT ⊢
+  by_cases hu0 : v / 16 ^ 28 = 0
+  · have hlt : ¬ 2 ^ 112 ≤ v := by
+      intro h
+      have h' : 16 ^ 28 ≤ v := by rw [show (16 : Nat) ^ 28 = 2 ^ 112 from rfl]; exact h
+      have := Nat.div_pos h' (pow16_pos 28)
+      omega
+    rw [if_pos hu0, if_neg hlt, List.nil_append, hu0]
+  · have h2 : 2 ^ 112 ≤ v := by
+      have := (Nat.le_div_iff_mul_le (pow16_pos 28)).mp (show 1 ≤ v / 16 ^ 28 by omega)
+      rw [show (2 : Nat) ^ 112 = 16 ^ 28 from rfl]
+      omega
+    rw [if_neg hu0, if_pos h2]
+    have hne : hexStr (v / 16 ^ 28) ≠ ['0'] :=
+      fun h => hu0 ((hexStr_facts _ (by omega)).2.2.2.2 h)
+    obtain ⟨R, h1, h3⟩ := compress_head ('-' :: hexStr (v / 16 ^ 28)) (hexStr (v / 16 ^ 28)) T
+      (by simp) hne hT
+    rw [h1, h3]
+    cases R <;> rfl
+
 theorem compressRFC5952_proven : CompressRFC5952 := by
-  refine ⟨rfl, rfl, rfl, fun cls => ⟨fun n hn => ?_, fun n hn => ?_⟩⟩
-  · have : n > allOnes 128 := by unfold allOnes; omega
-    simp [stringFromIpInt6Py, this]
-  · have hle : ¬ n > allOnes 128 := by unfold allOnes; omega
-    have hpy : stringFromIpInt6Py cls (some n) = .ok (stringFromIpInt6 n) := by
-      simp [stringFromIpInt6Py, hle]
+  refine ⟨rfl, rfl, rfl, fun cls => ⟨fun n hn => ?_, fun n hn => ?_, fun m k hm hk hk' => ?_,
+    fun m hm h112 => ?_⟩⟩
+  · have e1 : (2 : Int) ^ 128 = 340282366920938463463374607431768211456 := by decide
+    have e2 : allOnes 128 = 340282366920938463463374607431768211455 := by decide
+    have hgt : n > ((allOnes 128 : Nat) : Int) := by rw [e2]; rw [e1] at hn; omega
+    unfold stringFromIpInt6Py
+    dsimp only
+    rw [if_pos hgt]
+  · rw [stringFromIpInt6Py_nat cls n hn]
     obtain ⟨c1, c2⟩ := compressRFC5952_core n hn
-    rw [hpy]
     exact ⟨fun h => by rw [c1 h], fun s L h1 h2 h3 => by rw [c2 s L h1 h2 h3]⟩
+  · have hle : ¬ (-(m : Int) > ((allOnes 128 : Nat) : Int)) := by omega
+    unfold stringFromIpInt6Py
+    dsimp only
+    rw [if_neg hle, stringFromIpInt6Int_neg m k hm hk hk']
+  · have hk : m < 16 ^ 31 := Nat.lt_of_lt_of_le h112 (by decide)
+    have hle : ¬ (-(m : Int) > ((allOnes 128 : Nat) : Int)) := by omega
+    have hlt : ¬ 2 ^ 112 ≤ m := by omega
+    rw [stringFromIpInt6Py_nat cls m (Nat.lt_of_lt_of_le h112 (by decide))]
+    unfold stringFromIpInt6Py
+    dsimp only
+    rw [if_neg hle, stringFromIpInt6Int_neg m 31 hm hk (Or.inl (Nat.le_refl 31)), Nat.sub_self,
+      Nat.pow_zero, Nat.div_one, if_neg hlt, List.nil_append]
 
 end PyLean.Ipaddress

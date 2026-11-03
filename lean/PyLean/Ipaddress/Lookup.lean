@@ -145,21 +145,26 @@ theorem getitemSequence_proven : GetitemSequence := by
 
 /-- `other in net`, ipaddress.py:731-741, for every kind of `other`: an address of the network's
 version is in it exactly when it is one of the block's addresses, whatever either scope id (:741
-reads only `_ip`); an address of the other version and any network are not (the comment at :732,
-"always false if one is v4 and the other is v6"); an object without `version` raises
-`AttributeError`. -/
+reads only `_ip`), and so is an interface, by its `_ip` alone (whatever its prefix); an address or
+interface of the other version and any network are not (the comment at :732, "always false if one
+is v4 and the other is v6"); an object without `version` raises `AttributeError`. -/
 def ContainsMem : Prop :=
   ∀ n : Net, IsVersion n.bits → n.Valid →
     (∀ x sc, x < 2 ^ n.bits → containsOp n (.addr n.bits x sc) = .ok (n.mem x)) ∧
+    (∀ x sc p, x < 2 ^ n.bits → containsOp n (.iface n.bits x sc p) = .ok (n.mem x)) ∧
     (∀ b x sc, versionOf b ≠ versionOf n.bits → containsOp n (.addr b x sc) = .ok false) ∧
+    (∀ b x sc p, versionOf b ≠ versionOf n.bits → containsOp n (.iface b x sc p) = .ok false) ∧
     (∀ m : Net, containsOp n (.net m) = .ok false) ∧
     (∀ ty, containsOp n (.other ty) =
       .error (.named "AttributeError" s!"'{ty}' object has no attribute 'version'"))
 
 theorem containsMem_proven : ContainsMem := by
   intro n _ hn
-  refine ⟨fun x sc hx => ?_, fun b x sc hb => ?_, fun m => ?_, fun ty => rfl⟩
+  refine ⟨fun x sc hx => ?_, fun x sc p hx => ?_, fun b x sc hb => ?_, fun b x sc p hb => ?_,
+    fun m => ?_, fun ty => rfl⟩
   · simp [containsOp, contains_eq_mem n x hn hx]
+  · simp [containsOp, contains_eq_mem n x hn hx]
+  · simp [containsOp, Ne.symm hb]
   · simp [containsOp, Ne.symm hb]
   · simp only [containsOp]; split <;> rfl
 
@@ -172,8 +177,8 @@ theorem overlapsOp_net (a b : Net) (h : versionOf a.bits = versionOf b.bits) :
 
 /-- `a.overlaps(b)`, ipaddress.py:743-748, docstring "Tell if self is partly contained in other":
 for a network `b` of the same version, true exactly when the blocks share an address; a network
-of the other version never overlaps (its `__contains__` refuses the addresses); an address or an
-object without `__contains__` makes the first `in` raise `TypeError`. -/
+of the other version never overlaps (its `__contains__` refuses the addresses); an address, an
+interface or an object without `__contains__` makes the first `in` raise `TypeError`. -/
 def OverlapsShareAddress : Prop :=
   ∀ a : Net, IsVersion a.bits → a.Valid →
     (∀ b : Net, b.Valid → b.bits = a.bits →
@@ -181,12 +186,14 @@ def OverlapsShareAddress : Prop :=
     (∀ b : Net, versionOf b.bits ≠ versionOf a.bits → overlapsOp a (.net b) = .ok false) ∧
     (∀ bb x sc, overlapsOp a (.addr bb x sc) =
       .error (.typeError s!"argument of type 'IPv{versionOf bb}Address' is not a container or iterable")) ∧
+    (∀ bb x sc p, overlapsOp a (.iface bb x sc p) =
+      .error (.typeError s!"argument of type 'IPv{versionOf bb}Interface' is not a container or iterable")) ∧
     (∀ ty, overlapsOp a (.other ty) =
       .error (.typeError s!"argument of type '{ty}' is not a container or iterable"))
 
 theorem overlapsShareAddress_proven : OverlapsShareAddress := by
   intro a _ ha
-  refine ⟨fun b hb hbits => ?_, fun b hv => ?_, fun bb x sc => rfl, fun ty => rfl⟩
+  refine ⟨fun b hb hbits => ?_, fun b hv => ?_, fun bb x sc => rfl, fun bb x sc p => rfl, fun ty => rfl⟩
   · refine ⟨_, overlapsOp_net a b (by rw [hbits]), ?_⟩
     have hal := Net.addr_add_size_le a ha
     have hbl := Net.addr_add_size_le b hb
@@ -218,9 +225,9 @@ of the same version the result is `True` exactly when every address of `a` is in
 IPv6 networks with the same network address, their scope ids are equal. `b.network_address <=
 a.network_address` (:1033) is `total_ordering`'s `b < a or b == a`, and only `==` reads the scope
 id (`IPv6Address.__eq__`, :2009-2015). A different version raises `TypeError` (:1031-1032); an
-address of the same version or an object without `version` raises `TypeError` through the caught
-`AttributeError` (:1035-1037). The docstring's "Return True if this network is a subnet of other"
-without the scope condition is `SubnetOfScopeBlind`, refuted. -/
+address or an interface of the same version (no `network_address`) or an object without `version`
+raises `TypeError` through the caught `AttributeError` (:1035-1037). The docstring's "Return True if
+this network is a subnet of other" without the scope condition is `SubnetOfScopeBlind`, refuted. -/
 def SubnetOfMem : Prop :=
   ∀ a : Net, IsVersion a.bits → a.Valid →
     (∀ b : Net, b.Valid → b.bits = a.bits →
@@ -231,13 +238,18 @@ def SubnetOfMem : Prop :=
       subnetOfOp a (.net b) = .error (.typeError "~are not of the same version")) ∧
     (∀ bb x sc, versionOf bb ≠ versionOf a.bits →
       subnetOfOp a (.addr bb x sc) = .error (.typeError "~are not of the same version")) ∧
+    (∀ bb x sc p, versionOf bb ≠ versionOf a.bits →
+      subnetOfOp a (.iface bb x sc p) = .error (.typeError "~are not of the same version")) ∧
     (∀ x sc, subnetOfOp a (.addr a.bits x sc) =
+      .error (.typeError "~Unable to test subnet containment between")) ∧
+    (∀ x sc p, subnetOfOp a (.iface a.bits x sc p) =
       .error (.typeError "~Unable to test subnet containment between")) ∧
     (∀ ty, subnetOfOp a (.other ty) = .error (.typeError "~Unable to test subnet containment between"))
 
 theorem subnetOfMem_proven : SubnetOfMem := by
   intro a _ ha
-  refine ⟨fun b hb hbits => ?_, fun b hv => ?_, fun bb x sc hv => ?_, fun x sc => ?_, fun ty => rfl⟩
+  refine ⟨fun b hb hbits => ?_, fun b hv => ?_, fun bb x sc hv => ?_, fun bb x sc p hv => ?_,
+    fun x sc => ?_, fun x sc p => ?_, fun ty => rfl⟩
   · refine ⟨subnetOf a b, by simp [subnetOfOp, isSubnetOf, hbits], ?_⟩
     have haK := Net.size_pos a
     have hbK := Net.size_pos b
@@ -268,7 +280,51 @@ theorem subnetOfMem_proven : SubnetOfMem := by
       · exact Or.inr ⟨h, fun hv => h3 h (by rw [← hbits]; exact versionOf_six hv)⟩
   · simp [subnetOfOp, isSubnetOf, Ne.symm hv]
   · simp [subnetOfOp, isSubnetOf, Ne.symm hv]
+  · simp [subnetOfOp, isSubnetOf, Ne.symm hv]
   · simp [subnetOfOp, isSubnetOf]
+  · simp [subnetOfOp, isSubnetOf]
+
+/-- `self.supernet_of(other)`, ipaddress.py:1043-1045, which is `_is_subnet_of(other, self)`
+(:1028-1037) with the argument in the first place, so every kind of `other` reaches the checks that
+`subnet_of` runs on `self`: for a network `b` of the same version it is `b.subnet_of(self)` (the
+method and its equivalent agree), `True` exactly when every address of `b` is in `self` and, for
+IPv6 networks with the same network address, their scope ids are equal; another version raises
+`TypeError('... are not of the same version')` (:1031-1032, before any `network_address`); an
+address or an interface of the same version has no `network_address` and an object without
+`version` has no `version`, and the `AttributeError` becomes `TypeError('Unable to test subnet
+containment between ...')` (:1035-1037). -/
+def SupernetOfMem : Prop :=
+  ∀ s : Net, IsVersion s.bits → s.Valid →
+    (∀ b : Net, b.Valid → b.bits = s.bits →
+      supernetOfOp s (.net b) = subnetOfOp b (.net s) ∧
+      ∃ r, supernetOfOp s (.net b) = .ok r ∧
+        (r = true ↔ (∀ x, b.mem x = true → s.mem x = true) ∧
+          (s.addr = b.addr → s.bits = 128 → s.scope = b.scope))) ∧
+    (∀ b : Net, versionOf b.bits ≠ versionOf s.bits →
+      supernetOfOp s (.net b) = .error (.typeError "~are not of the same version")) ∧
+    (∀ bb x sc, versionOf bb ≠ versionOf s.bits →
+      supernetOfOp s (.addr bb x sc) = .error (.typeError "~are not of the same version")) ∧
+    (∀ bb x sc p, versionOf bb ≠ versionOf s.bits →
+      supernetOfOp s (.iface bb x sc p) = .error (.typeError "~are not of the same version")) ∧
+    (∀ x sc, supernetOfOp s (.addr s.bits x sc) =
+      .error (.typeError "~Unable to test subnet containment between")) ∧
+    (∀ x sc p, supernetOfOp s (.iface s.bits x sc p) =
+      .error (.typeError "~Unable to test subnet containment between")) ∧
+    (∀ ty, supernetOfOp s (.other ty) = .error (.typeError "~Unable to test subnet containment between"))
+
+theorem supernetOfMem_proven : SupernetOfMem := by
+  intro s hsv hs
+  refine ⟨fun b hb hbits => ?_, fun b hv => ?_, fun bb x sc hv => ?_, fun bb x sc p hv => ?_,
+    fun x sc => ?_, fun x sc p => ?_, fun ty => rfl⟩
+  · have hbv : IsVersion b.bits := hbits ▸ hsv
+    obtain ⟨r, hr, hiff⟩ := (subnetOfMem_proven b hbv hb).1 s hs hbits.symm
+    refine ⟨rfl, r, hr, ?_⟩
+    rw [hiff, hbits]
+  · simp [supernetOfOp, isSubnetOf, hv]
+  · simp [supernetOfOp, isSubnetOf, hv]
+  · simp [supernetOfOp, isSubnetOf, hv]
+  · simp [supernetOfOp, isSubnetOf]
+  · simp [supernetOfOp, isSubnetOf]
 
 /-- `subnet_of` docstring, ipaddress.py:1040, "Return True if this network is a subnet of other",
 read on addresses: a network all of whose addresses are in `b` is a subnet of `b`. Refuted:

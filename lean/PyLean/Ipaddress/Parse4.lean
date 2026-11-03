@@ -99,9 +99,38 @@ def ipIntFromString4 (s : List Char) : Py Nat :=
 /-- `ip_int.to_bytes(4, 'big')` for `ip_int < 2**32`. -/
 def toBytes4 (n : Nat) : List Nat := [n / 2 ^ 24 % 256, n / 2 ^ 16 % 256, n / 2 ^ 8 % 256, n % 256]
 
-/-- `_BaseV4._string_from_ip_int`, ipaddress.py:1242-1252: `'.'.join(map(str, ...))`. -/
+/-- `'.'.join(map(str, bs))` for the bytes `bs`. -/
+def dottedBytes (bs : List Nat) : List Char := joinOn1 '.' (bs.map (fun b => (toString b).toList))
+
+/-- `_BaseV4._string_from_ip_int` for `ip_int < 2**32`, the only values `__str__` and the other
+callers pass (`_ip`, :602, :1428, :1466-1477): `stringFromIpInt4Py` returns it
+(`stringFromIpInt4Py_ok` in `Parse4Props`). -/
 def stringFromIpInt4 (n : Nat) : List Char :=
   joinOn1 '.' ((toBytes4 n).map (fun b => (toString b).toList))
+
+/-- The `k` big-endian bytes of `n mod 256**k`; `ip_int.to_bytes(k, 'big')` for `ip_int < 256**k`. -/
+def toBytesBE (k n : Nat) : List Nat := (List.range k).map fun i => n / 256 ^ (k - 1 - i) % 256
+
+/-- `n.to_bytes(k, 'big')` for an int `n >= 0` (`int_to_bytes_impl`, Objects/longobject.c:6395-6425,
+through `_PyLong_AsByteArray`): `OverflowError('int too big to convert')` when `n` needs more than
+`k` bytes (:1248-1252), else the bytes. -/
+def toBytesPy (k n : Nat) : Py (List Nat) :=
+  if 256 ^ k ≤ n then .error (.overflowError "int too big to convert") else .ok (toBytesBE k n)
+
+/-- `n.to_bytes(k, 'big')` for any int `n` (`signed=False`): `_PyLong_AsByteArray`
+(Objects/longobject.c:1108-1254) refuses a negative int first, with
+`OverflowError("can't convert negative int to unsigned")` (:1127-1133), then one that needs more
+than `k` bytes. -/
+def intToBytesPy (k : Nat) (n : Int) : Py (List Nat) :=
+  if n < 0 then .error (.overflowError "can't convert negative int to unsigned")
+  else toBytesPy k n.toNat
+
+/-- `_BaseV4._string_from_ip_int(ip_int)`, ipaddress.py:1242-1252, for an int `ip_int`:
+`'.'.join(map(str, ip_int.to_bytes(4, 'big')))`, so `OverflowError` for a negative int and for one
+of 2**32 or more. -/
+def stringFromIpInt4Py (n : Int) : Py (List Char) := do
+  let bs ← intToBytesPy 4 n
+  pure (dottedBytes bs)
 
 /-- The argument of `IPv4Address(address)`: an int, a bytes object, or anything else, which is
 taken through `str()` (here its string). -/

@@ -180,11 +180,41 @@ def summarizeAddressRange (bits first : Nat) (sf : Option String) (last : Nat)
   else if versionOf bits ≠ 4 ∧ versionOf bits ≠ 6 then .error (.valueError "unknown IP version")
   else summarizeLoop bits last (last - first + 2) first
 
+/-- `summarize_address_range` after `first > last` (:229) let the arguments through: the version
+picks the network class (:232-237) and the loop runs on `first._ip` and `last._ip` (:239-249). -/
+def summarizeInts (bits first last : Nat) : Py (List Net) :=
+  if versionOf bits ≠ 4 ∧ versionOf bits ≠ 6 then .error (.valueError "unknown IP version")
+  else summarizeLoop bits last (last - first + 2) first
+
+/-- `self < other` for two networks of one version, `_BaseNetwork.__lt__`, ipaddress.py:708-718,
+after its type and version checks (:709-713): `network_address != other.network_address` is
+`not ==` (`IPv6Address.__eq__` compares the scope ids, :2009-2015), and then `<` on the network
+addresses (`_ip` only, :576-584); otherwise the netmasks, which are built from ints and so have no
+scope id (:714-717). -/
+def netLt (a b : Net) : Bool :=
+  if !addrEq a.bits a.addr a.scope b.addr b.scope then addrLt a.addr b.addr
+  else if a.netmask ≠ b.netmask then decide (a.netmask < b.netmask)
+  else false
+
+/-- `self.network` of an interface with `max_prefixlen` `bits`, `_ip` `ip`, scope id `scope` and
+prefix length `p`: `IPv4Interface.__init__` (:1415-1421) and `IPv6Interface.__init__`
+(:2209-2215) build it as `IPvXNetwork((addr, mask), strict=False)`, whose `network_address` is
+`IPvXAddress(addr)`, scope id included, unless host bits are set, when it is rebuilt from the masked
+int with no scope id (:1541-1548, :2331-2339). -/
+def ifaceNet (bits ip : Nat) (scope : Option String) (p : Nat) : Net :=
+  let a := ip &&& ipIntFromPrefix bits p
+  ⟨bits, a, p, if a = ip then scope else none⟩
+
 /-- An argument where an address or network is expected. -/
 inductive Operand where
   /-- An `IPv4Address` or `IPv6Address` with `max_prefixlen` `bits`, `_ip` `ip` and (IPv6)
-  `_scope_id` `scope`. Interfaces, which override `__eq__` and `__lt__`, are out of scope. -/
+  `_scope_id` `scope`. -/
   | addr (bits : Nat) (ip : Nat) (scope : Option String)
+  /-- An `IPv4Interface` or `IPv6Interface` (a subclass of the address class, :1413, :2207) with
+  `max_prefixlen` `bits`, `_ip` `ip`, (IPv6) `_scope_id` `scope` and prefix length `prefixlen`; its
+  `network` is `ifaceNet bits ip scope prefixlen`. It overrides `__eq__` and `__lt__`
+  (:1431-1453, :2225-2247), has `network` but no `network_address`, and no `__contains__`. -/
+  | iface (bits : Nat) (ip : Nat) (scope : Option String) (prefixlen : Nat)
   /-- An `IPv4Network` or `IPv6Network`. -/
   | net (n : Net)
   /-- An object of type `tyName` with no `version` attribute that supports neither `in` nor
@@ -192,13 +222,83 @@ inductive Operand where
   | other (tyName : String)
   deriving Repr, DecidableEq
 
+/-- `max_prefixlen` of an operand with a `version` (0 for `other`, which has none). -/
+@[simp] def Operand.bits : Operand → Nat
+  | .addr b _ _ | .iface b _ _ _ => b
+  | .net n => n.bits
+  | .other _ => 0
+
+/-- The operand has no `version` attribute. -/
+@[simp] def Operand.isOther : Operand → Bool
+  | .other _ => true
+  | .addr _ _ _ | .iface _ _ _ _ | .net _ => false
+
+/-- The network, for an operand that has `network_address` and `broadcast_address`. -/
+@[simp] def Operand.asNet : Operand → Option Net
+  | .net n => some n
+  | .addr _ _ _ | .iface _ _ _ _ | .other _ => none
+
+/-- `self < other` for two interfaces of one version, `IPv4Interface.__lt__` (:1443-1453) and
+`IPv6Interface.__lt__` (:2237-2247): `address_less` is the address comparison (`_ip` only), then
+`self.network < other.network or self.network == other.network and address_less`. -/
+def ifaceLt (bits x : Nat) (sx : Option String) (px y : Nat) (sy : Option String) (py : Nat) : Bool :=
+  let n1 := ifaceNet bits x sx px
+  let n2 := ifaceNet bits y sy py
+  netLt n1 n2 || (netEq n1 n2 && addrLt x y)
+
+/-- `self == other` for two interfaces of one version, `IPv4Interface.__eq__` (:1431-1441) and
+`IPv6Interface.__eq__` (:2225-2235): the address equality (`_ip`, and for IPv6 the scope ids), and
+if that holds `self.network == other.network`. -/
+def ifaceEq (bits x : Nat) (sx : Option String) (px y : Nat) (sy : Option String) (py : Nat) : Bool :=
+  addrEq bits x sx y sy && netEq (ifaceNet bits x sx px) (ifaceNet bits y sy py)
+
+/-- `self < other` for an interface `self` (`max_prefixlen` `bits`, `_ip` `x`, scope id `sx`, prefix
+length `px`) and an address or interface `other` of its version, `IPv4Interface.__lt__`
+(:1443-1453) and `IPv6Interface.__lt__` (:2237-2247): `address_less` is not `NotImplemented` for an
+address; then `self.network < other.network or ...`, where an address has no `network`, and the
+`AttributeError` gives `False` (:1450-1453, "the unassociated address is considered less than all
+interfaces"). -/
+def ifaceLtOp (bits x : Nat) (sx : Option String) (px : Nat) : Operand → Bool
+  | .iface _ y sy py => ifaceLt bits x sx px y sy py
+  | .addr _ _ _ | .net _ | .other _ => false
+
+/-- `self == other` for an interface `self` and an address or interface `other` of its version,
+`IPv4Interface.__eq__` (:1431-1441) and `IPv6Interface.__eq__` (:2225-2235): unequal addresses
+return `False` (:1433-1434); equal ones go on to `self.network == other.network`, and an address has
+no `network`, so the `AttributeError` gives `False` (:1435-1441). -/
+def ifaceEqOp (bits x : Nat) (sx : Option String) (px : Nat) : Operand → Bool
+  | .iface _ y sy py => ifaceEq bits x sx px y sy py
+  | .addr _ y sy => if !addrEq bits x sx y sy then false else false
+  | .net _ | .other _ => false
+
+/-- `first > last` (:229) for two operands of one version that pass the `isinstance` check (an
+address or an interface). Two addresses: `addrGt`. An interface `first`: `first.__gt__` is
+`total_ordering`'s `_gt_from_lt` (Lib/functools.py:89-94), `not first < last and first != last`
+with the interface's `__lt__`, and `!=` is `not first.__eq__(last)` (Objects/typeobject.c:7590-7597).
+An address `first` and an interface `last`: the interface's type is a proper subclass of the
+address's, so Python calls the reflected `last.__lt__(first)` first (Objects/object.c:1055-1061),
+and its result, never `NotImplemented` for an address, is the answer. -/
+def summarizeGt (first last : Operand) : Bool :=
+  match first, last with
+  | .addr b x sx, .addr _ y sy => addrGt b x sx y sy
+  | .iface b x sx px, l => !ifaceLtOp b x sx px l && !ifaceEqOp b x sx px l
+  | .addr _ _ _, .iface b y sy py => ifaceLtOp b y sy py first
+  | _, _ => false
+
 /-- `list(summarize_address_range(first, last))`, ipaddress.py:197-249: the `isinstance` check
-(:223-225) and the version check (:226-228) come first. -/
+against `_BaseAddress` (:223-225), which interfaces pass, and the version check (:226-228) come
+first; then `first > last` (:229, `summarizeGt`), and the rest reads only `_ip`. -/
 def summarizeOp (first last : Operand) : Py (List Net) :=
   match first, last with
   | .addr b1 x sx, .addr b2 y sy =>
     if versionOf b1 ≠ versionOf b2 then .error (.typeError "~are not of the same version")
     else summarizeAddressRange b1 x sx y sy
+  | .iface b1 x _ _, .addr b2 y _ | .addr b1 x _, .iface b2 y _ _
+  | .iface b1 x _ _, .iface b2 y _ _ =>
+    if versionOf b1 ≠ versionOf b2 then .error (.typeError "~are not of the same version")
+    else if summarizeGt first last then
+      .error (.valueError "last IP address must be greater than first")
+    else summarizeInts b1 x y
   | _, _ => .error (.typeError "first and last must be IP addresses, not networks")
 
 /-- `list(range(start, stop, step))` for `step > 0`. -/
@@ -259,18 +359,20 @@ def getitem (n : Net) (i : Int) : Py Nat :=
 def contains (n : Net) (a : Nat) : Bool := a &&& n.netmask == n.addr
 
 /-- `other in self`, `_BaseNetwork.__contains__`, ipaddress.py:731-741: a version mismatch is
-`False` (:733-734), a network is `False` (:736-737), an address is tested against the mask
-(:741). `other.version` raises `AttributeError` for an object without it. -/
+`False` (:733-734), a network is `False` (:736-737), an address or interface is tested against the
+mask through its `_ip` (:741). `other.version` raises `AttributeError` for an object without it. -/
 def containsOp (n : Net) : Operand → Py Bool
   | .other ty => .error (.named "AttributeError" s!"'{ty}' object has no attribute 'version'")
   | .addr b x _ => if versionOf n.bits ≠ versionOf b then .ok false else .ok (contains n x)
+  | .iface b x _ _ => if versionOf n.bits ≠ versionOf b then .ok false else .ok (contains n x)
   | .net m => if versionOf n.bits ≠ versionOf m.bits then .ok false else .ok false
 
-/-- `x in c` for an address `x`: a network's `__contains__`; an address or another object has
-neither `__contains__` nor `__iter__`, and `in` raises `TypeError`. -/
+/-- `x in c` for an address `x`: a network's `__contains__`; an address, an interface or another
+object has neither `__contains__` nor `__iter__`, and `in` raises `TypeError`. -/
 def inOp (x : Operand) : Operand → Py Bool
   | .net m => containsOp m x
   | .addr b _ _ => .error (.typeError s!"argument of type 'IPv{versionOf b}Address' is not a container or iterable")
+  | .iface b _ _ _ => .error (.typeError s!"argument of type 'IPv{versionOf b}Interface' is not a container or iterable")
   | .other ty => .error (.typeError s!"argument of type '{ty}' is not a container or iterable")
 
 /-- `self.overlaps(other)`, ipaddress.py:743-748: four `in` tests joined by `or`. For an `other`
@@ -293,22 +395,25 @@ are built from ints (:750-753) and `>=` is `not b < a` (`addrGe`). -/
 def subnetOf (a b : Net) : Bool :=
   addrLe b.bits b.addr b.scope a.addr a.scope && addrGe b.broadcast a.broadcast
 
-/-- `_BaseNetwork._is_subnet_of(a, b)` for a network `a`, ipaddress.py:1028-1037: `b.version`
-(an `AttributeError` for an object without it) and the version check (:1031-1032) come first;
-`b.network_address` on an address raises `AttributeError`; both `AttributeError`s become
-`TypeError` (:1035-1037). -/
-def isSubnetOf (a : Net) (b : Operand) : Py Bool :=
-  match b with
-  | .other _ => .error (.typeError "~Unable to test subnet containment between")
-  | .addr bb _ _ =>
-    if versionOf a.bits ≠ versionOf bb then .error (.typeError "~are not of the same version")
-    else .error (.typeError "~Unable to test subnet containment between")
-  | .net m =>
-    if versionOf a.bits ≠ versionOf m.bits then .error (.typeError "~are not of the same version")
-    else .ok (subnetOf a m)
+/-- `_BaseNetwork._is_subnet_of(a, b)`, ipaddress.py:1028-1037, for any two operands (a static
+method: `subnet_of` passes `self` as `a`, `supernet_of` passes its argument). In the `try`
+(:1029-1034): `a.version` and `b.version` (an `AttributeError` for an object without one), the
+version check, which raises `TypeError` (:1031-1032) that the `except AttributeError` does not
+catch; then `b.network_address` and `a.network_address`, which an address or an interface lacks
+(`AttributeError`), and the comparisons of two networks (`subnetOf`). Every `AttributeError` becomes
+`TypeError('Unable to test subnet containment between ...')` (:1035-1037). -/
+def isSubnetOf (a b : Operand) : Py Bool :=
+  if a.isOther || b.isOther then .error (.typeError "~Unable to test subnet containment between")
+  else if versionOf a.bits ≠ versionOf b.bits then .error (.typeError "~are not of the same version")
+  else match b.asNet, a.asNet with
+    | some nb, some na => .ok (subnetOf na nb)
+    | _, _ => .error (.typeError "~Unable to test subnet containment between")
 
-/-- `self.subnet_of(other)`, ipaddress.py:1039-1041. -/
-def subnetOfOp (s : Net) (o : Operand) : Py Bool := isSubnetOf s o
+/-- `self.subnet_of(other)`, ipaddress.py:1039-1041: `_is_subnet_of(self, other)`. -/
+def subnetOfOp (s : Net) (o : Operand) : Py Bool := isSubnetOf (.net s) o
+
+/-- `self.supernet_of(other)`, ipaddress.py:1043-1045: `_is_subnet_of(other, self)`. -/
+def supernetOfOp (s : Net) (o : Operand) : Py Bool := isSubnetOf o (.net s)
 
 /-- `s1, s2 = net.subnets()`; unpacking raises when there is one subnet. -/
 def halves (n : Net) : Py (Net × Net) := do
@@ -351,11 +456,11 @@ def addressExclude (s other : Net) : Py (List Net) := do
 
 /-- `list(self.address_exclude(other))`, ipaddress.py:788-861: `other.version` (an
 `AttributeError` for an object without it) and the version check (:824-826), then the network
-check (:828-829). -/
+check (:828-829), which an address or an interface fails. -/
 def addressExcludeOp (s : Net) (o : Operand) : Py (List Net) :=
   match o with
   | .other ty => .error (.named "AttributeError" s!"'{ty}' object has no attribute 'version'")
-  | .addr b _ _ =>
+  | .addr b _ _ | .iface b _ _ _ =>
     if versionOf s.bits ≠ versionOf b then .error (.typeError "~are not of the same version")
     else .error (.typeError "~is not a network object")
   | .net m =>

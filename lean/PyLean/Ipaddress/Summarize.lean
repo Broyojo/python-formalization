@@ -393,15 +393,21 @@ theorem greedy_unique (bits last : Nat) :
       subst hnm
       rw [ih ms (lo + n.size) nrest mrest]
 
+/-- An operand that passes `isinstance(_, _BaseAddress)` (:223): an address or an interface. -/
+def isAddrLike : Operand → Bool
+  | .addr _ _ _ | .iface _ _ _ _ => true
+  | .net _ | .other _ => false
+
 /-- The docstring's "Raise:" list, ipaddress.py:214-221, in the order the code checks it
-(:223-237): an argument that is not an address raises `TypeError('first and last must be IP
-addresses, not networks')`; addresses of two versions raise `TypeError`; `first > last` raises
+(:223-237): an argument that is neither an address nor an interface (a subclass of the address
+class) raises `TypeError('first and last must be IP addresses, not networks')`; addresses of two
+versions raise `TypeError`; `first > last` raises
 `ValueError('last IP address must be greater than first')`, which is `int(first) > int(last)`, or
 for IPv6 equal ints with different scope ids (`total_ordering`'s `not a < b and a != b`,
 `IPv6Address.__eq__` at :2009-2015); a version other than 4 and 6 raises
 `ValueError('unknown IP version')`. With `SummarizeExactCover` every pair of addresses is covered. -/
 def SummarizeRejects : Prop :=
-  (∀ f l : Operand, (∀ b x s, f ≠ .addr b x s) ∨ (∀ b y s, l ≠ .addr b y s) →
+  (∀ f l : Operand, isAddrLike f = false ∨ isAddrLike l = false →
     summarizeOp f l = .error (.typeError "first and last must be IP addresses, not networks")) ∧
   (∀ (b1 b2 x y : Nat) (sx sy : Option String), versionOf b1 ≠ versionOf b2 →
     summarizeOp (.addr b1 x sx) (.addr b2 y sy) = .error (.typeError "~are not of the same version")) ∧
@@ -415,9 +421,7 @@ def SummarizeRejects : Prop :=
 theorem summarizeRejects_proven : SummarizeRejects := by
   refine ⟨fun f l h => ?_, fun b1 b2 x y sx sy h => ?_, fun b1 b2 x y sx sy h hxy => ?_,
     fun b1 b2 x y sx sy h hb hxy => ?_⟩
-  · cases f <;> cases l <;> first
-      | rfl
-      | (rcases h with h | h <;> exact absurd rfl (h _ _ _))
+  · cases f <;> cases l <;> simp [isAddrLike] at h <;> rfl
   · simp [summarizeOp, h]
   · have hg : addrGt b1 x sx y sy = true := by
       apply (addrGt_iff b1 x sx y sy).mpr

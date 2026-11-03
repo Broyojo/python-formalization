@@ -161,13 +161,53 @@ def compressHextets (hs : List (List Char)) : List (List Char) :=
     if bs = 0 then [] :: hs else hs
   else hs
 
-/-- The eight hextets of `'%032x' % ip_int`, each as `'%x'`. -/
+/-- The eight hextets of `'%032x' % ip_int`, each as `'%x'`, for `0 <= ip_int < 2**128`
+(`hextetsOfInt_nat` in `Fmt6`). -/
 def hextetsOf (n : Nat) : List (List Char) :=
   (List.range 8).map fun i => hexStr (n / 65536 ^ (7 - i) % 65536)
 
-/-- `_BaseV6._string_from_ip_int`, :1835-1859, for `ip_int < 2**128`: the eight hextets of
-`'%032x' % ip_int` as `'%x'` (:1855-1856), compressed (:1858), joined (:1859). -/
+/-- `_BaseV6._string_from_ip_int` for `0 <= ip_int < 2**128`, the values every caller passes
+(`_ip`, and `_ip >> 32` at :1996): `stringFromIpInt6Int` of such an int (`stringFromIpInt6Int_nat`
+in `Fmt6`). -/
 def stringFromIpInt6 (n : Nat) : List Char := joinOn1 ':' (compressHextets (hextetsOf n))
+
+/-- The `w` hex digits of `m mod 16**w`, most significant first. -/
+def digitsW (w m : Nat) : List Char := (List.range w).map fun j => hd (m / 16 ^ (w - 1 - j) % 16)
+
+/-- `hexLen` with fuel `f`; `f >= m` is enough. -/
+def hexLenAux : Nat → Nat → Nat
+  | 0, _ => 1
+  | f + 1, m => if m < 16 then 1 else hexLenAux f (m / 16) + 1
+
+/-- The number of hex digits of `m` (one for 0): `len(format(m, 'x'))`. -/
+def hexLen (m : Nat) : Nat := hexLenAux m m
+
+/-- `'%032x' % n` for an int `n`: the `%x` digits of `abs(n)` (`_PyUnicode_FormatLong`,
+Objects/unicode_format.c:193-321), after a `-` for a negative int, zero-padded so that sign and
+digits fill at least 32 characters; the `0` fill goes after the sign and the width counts it
+(`unicode_format_arg_output`, :819-969, fill `'0'` at :836-837). Padding the digits with zeros is
+writing `abs(n)` with that many digit positions. -/
+def fmt032x (n : Int) : List Char :=
+  if n < 0 then '-' :: digitsW (max 31 (hexLen n.natAbs)) n.natAbs
+  else digitsW (max 32 (hexLen n.natAbs)) n.natAbs
+
+/-- `int(t, 16)` for a four-character slice of `'%032x' % ip_int`: hex digits, or for the first
+slice of a negative int `-` and three hex digits. -/
+def intHex (t : List Char) : Int :=
+  if t.head? = some '-' then -((hexVal t.tail : Nat) : Int) else ((hexVal t : Nat) : Int)
+
+/-- `'%x' % v` for `abs(v) < 2**16`, which holds for every value `int()` reads from four characters:
+the digits of `abs(v)`, after a `-` for a negative `v`. -/
+def fmtX (v : Int) : List Char := if v < 0 then '-' :: hexStr v.natAbs else hexStr v.toNat
+
+/-- `['%x' % int(hex_str[x:x+4], 16) for x in range(0, 32, 4)]` for `hex_str = '%032x' % ip_int`,
+ipaddress.py:1855-1856, with `x = 4 * i`. -/
+def hextetsOfInt (n : Int) : List (List Char) :=
+  (List.range 8).map fun i => fmtX (intHex (((fmt032x n).drop (4 * i)).take 4))
+
+/-- `_BaseV6._string_from_ip_int`, ipaddress.py:1836-1859, after the `ip_int > cls._ALL_ONES` check:
+the hextets of `'%032x' % ip_int` (:1855-1856), compressed (:1858), joined with `:` (:1859). -/
+def stringFromIpInt6Int (n : Int) : List Char := joinOn1 ':' (compressHextets (hextetsOfInt n))
 
 /-- The classes that inherit `_BaseV6._string_from_ip_int`: `IPv6Address`, `IPv6Interface` (a
 subclass of `IPv6Address`, :2207) and `IPv6Network` (:2282). -/
@@ -177,21 +217,22 @@ inductive V6Cls where
   | network
   deriving Repr, DecidableEq, Inhabited
 
-/-- `cls._string_from_ip_int(ip_int=None)`, `_BaseV6._string_from_ip_int`, :1835-1859, with the
-argument checks. It is a classmethod, so with no argument it reads `cls._ip` (:1849-1850): for
+/-- `cls._string_from_ip_int(ip_int=None)`, `_BaseV6._string_from_ip_int`, :1835-1859, for `None` or
+an int. It is a classmethod, so with no argument it reads `cls._ip` (:1849-1850): for
 `IPv6Address` and its subclass `IPv6Interface` that is the `__slots__` descriptor of `_ip` (:1919),
 and `int()` of it raises `TypeError`; `IPv6Network` has no `_ip` at all (its bases `_BaseV6` and
 `_BaseNetwork` define none), so the lookup raises `AttributeError`. Above `_ALL_ONES` it raises
-`ValueError` (:1852-1853). The class matters for nothing else. -/
-def stringFromIpInt6Py (cls : V6Cls) (ipInt : Option Nat) : Py (List Char) :=
+`ValueError` (:1852-1853); the check is one-sided, so a negative int goes on to the formatting.
+The class matters for nothing else. -/
+def stringFromIpInt6Py (cls : V6Cls) (ipInt : Option Int) : Py (List Char) :=
   match ipInt with
   | none =>
     match cls with
     | .network => .error (.named "AttributeError" "type object 'IPv6Network' has no attribute '_ip'")
     | .address | .interface => .error (.typeError
       "int() argument must be a string, a bytes-like object or a real number, not 'member_descriptor'")
-  | some n => if n > allOnes 128 then .error (.valueError "IPv6 address is too large")
-    else .ok (stringFromIpInt6 n)
+  | some n => if n > (allOnes 128 : Int) then .error (.valueError "IPv6 address is too large")
+    else .ok (stringFromIpInt6Int n)
 
 /-- `IPv6Address._ipv4_mapped_ipv6_to_str`, :1980-1996: `'%s:%s'` of `_string_from_ip_int` of the
 high 96 bits and `str(ipv4_mapped)`; `AddressValueError` naming `str(self)` for an address outside
@@ -200,7 +241,7 @@ def ipv4MappedToStr (ip : Nat) : Py (List Char) :=
   match ipv4Mapped ip with
   | none => .error (.named "AddressValueError" "~Can not apply to non-IPv4-mapped IPv6 address")
   | some v4 => do
-    let hi ← stringFromIpInt6Py .address (some (ip >>> 32))
+    let hi ← stringFromIpInt6Py .address (some ((ip >>> 32 : Nat) : Int))
     pure (hi ++ ':' :: ipv4Str v4)
 
 /-- `ip_str + '%' + self._scope_id if self._scope_id else ip_str`, :2004. -/
