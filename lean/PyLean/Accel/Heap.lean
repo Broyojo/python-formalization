@@ -11,9 +11,12 @@ with every comparison's operands swapped, which is `lt` replaced by
 `flip lt` (`maxLt lt`); each `*_max` definition cites its own source lines.
 
 A heap is a Python `list` (`List α`). Functions return the final list (and the
-returned item where there is one). The C code's `RuntimeError("list changed
-size during iteration")` checks (`_heapqmodule.c:53-57`, `:103-107`, ...) only
-fire when a comparison mutates the list, which is out of scope.
+returned item where there is one). This is the special case of an honest comparison (pure,
+never raising, not touching the list). The models of record, with comparisons that may raise,
+keep state and mutate the list (and the C `RuntimeError("list changed size during
+iteration")` checks), are in `HeapqModel.lean`; `HeapqBridge.lean` shows they reduce to these
+definitions for an honest comparison, which is how the correctness proofs here are reused. The
+registry entries are stated over `HeapqModel.lean`.
 
 Loops use fuel. Each sift loop moves `pos` strictly towards its bound, so the
 fuel passed by the callers (the list length or the start position) is always

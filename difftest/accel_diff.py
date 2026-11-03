@@ -6,8 +6,17 @@ Each case names its twin with "impl": "c" runs the `_bisect`/`_heapq`
 accelerator, "py" the pure-Python module imported with the accelerator
 blocked. nsmallest/nlargest/merge exist only in Python; "c" there means the
 stock `heapq` module, whose helpers then call the C heap functions.
+Heap cases run with scripted comparisons (class `E`): comparison k logs its operands and
+then runs the case's actions for k, which may mutate the heap list, flip the answer, raise,
+or return an object whose `__bool__` raises. The returned item, the exception, the final
+list and the comparison log are all compared. C cases whose script mutates the list run in
+a forked child, so a crash is a recorded outcome (`{"crash": true}`).
+
 Exits non-zero on any mismatch. See difftest/common.py.
 """
+
+import json
+import os
 
 from test.support.import_helper import import_fresh_module
 
@@ -74,18 +83,130 @@ def gen_bisect(rng, fn):
     return {"a": a, "x": x, "lo": lo, "hi": hi, "key": key}
 
 
+MUTATING = ("append", "pop", "clear", "set")
+
+
+def gen_action(rng, n, mutate):
+    kinds = ["raise", "boolraise", "flip"] + (["append", "pop", "clear", "set", "set", "append"]
+                                              if mutate else [])
+    a = rng.choice(kinds)
+    if a == "append":
+        return ["append", rng.randint(-15, 15)]
+    if a == "set":
+        return ["set", rng.randrange(n + 3), rng.randint(-15, 15)]
+    return [a]
+
+
 def gen_heap(rng, fn):
-    if fn == "heapify" and rng.random() < 0.03:
-        n = rng.choice([2499, 2500, 2501, 2502, 2559, 4094, 4095, 4096, 4097, 6142, 6143,
-                        rng.randrange(2490, 9000)])
-        heap = small_list(rng, n)
+    if fn == "heapify" and rng.random() < 0.01:
+        n = rng.choice([2499, 2500, 2501, 2502, 2600, 4095, 4096, 4097])
+        heap = [rng.randint(-50, 50) for _ in range(n)]
+        kmax = rng.choice([5, 50, 3000, 6000])
     else:
-        heap = small_list(rng)
+        heap = small_list(rng, rng.choice([0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 15,
+                                           rng.randrange(25)]))
+        kmax = 2 * len(heap).bit_length() + 4
     is_max = rng.random() < 0.5
-    if fn != "heapify" and rng.random() < 0.7:
+    if fn != "heapify" and rng.random() < 0.6:
         m = MODS["c"]["heapq"]
         (m.heapify_max if is_max else m.heapify)(heap)
-    return {"heap": heap, "max": is_max, "item": rng.randint(-12, 12)}
+    u = rng.random()
+    arg = "list" if u < 0.93 else ("tuple" if u < 0.97 else "none")
+    if arg == "none":
+        heap = []
+    script = []
+    if rng.random() < 0.75:
+        for k in sorted(rng.sample(range(1, kmax + 1), min(kmax, rng.choice([1, 1, 2, 3])))):
+            script.append([k, [gen_action(rng, len(heap), arg == "list")
+                               for _ in range(rng.choice([1, 1, 1, 2]))]])
+    return {"heap": heap, "max": is_max, "item": rng.randint(-12, 12), "arg": arg,
+            "script": script}
+
+
+class Bad:
+    """What a scripted `__lt__` returns for "boolraise": its truth test raises."""
+
+    def __init__(self, k):
+        self.k = k
+
+    def __bool__(self):
+        raise TypeError(f"bool {self.k}")
+
+
+class E:
+    """A heap item compared through a scripted `__lt__` (Lean: `Heapq.scriptCmp`)."""
+
+    ctx = None
+    __slots__ = ("v",)
+
+    def __init__(self, v):
+        self.v = v
+
+    def __lt__(self, other):
+        st = E.ctx
+        st["k"] += 1
+        k = st["k"]
+        st["log"].append([self.v, other.v])
+        res = self.v < other.v
+        h = st["heap"]
+        for act in st["script"].get(k, ()):
+            op = act[0]
+            if op == "append":
+                h.append(E(act[1]))
+            elif op == "pop":
+                if h:
+                    h.pop()
+            elif op == "clear":
+                h.clear()
+            elif op == "set":
+                if act[1] < len(h):
+                    h[act[1]] = E(act[2])
+            elif op == "flip":
+                res = not res
+            elif op == "raise":
+                raise ValueError(f"cmp {k}")
+            elif op == "boolraise":
+                return Bad(k)
+        return res
+
+
+def run_heap(c):
+    f = getattr(MODS[c["impl"]]["heapq"], c["fn"] + ("_max" if c["max"] else ""))
+    items = [E(v) for v in c["heap"]]
+    heap = {"list": items, "tuple": tuple(items), "none": None}[c["arg"]]
+    st = {"k": 0, "log": [], "heap": heap, "script": {k: acts for k, acts in c["script"]}}
+    E.ctx = st
+    args = (E(c["item"]),) if c["fn"] in ("heappush", "heapreplace", "heappushpop") else ()
+    try:
+        r = f(heap, *args)
+        out = {"r": r.v if isinstance(r, E) else None, "exc": None}
+    except Exception as e:
+        out = {"r": None, "exc": [type(e).__name__, str(e)]}
+    out["heap"] = [x.v for x in heap] if heap is not None else []
+    out["log"] = st["log"]
+    return {"ok": out}
+
+
+def in_child(thunk):
+    """Run `thunk` in a forked child; a child killed by a signal is `{"ok": {"crash": true}}`."""
+    rfd, wfd = os.pipe()
+    pid = os.fork()
+    if pid == 0:
+        os.close(rfd)
+        try:
+            data = json.dumps(thunk()).encode()
+        except BaseException as e:  # harness failure, not a model outcome
+            data = json.dumps({"harness_error": repr(e)}).encode()
+        with os.fdopen(wfd, "wb") as fh:
+            fh.write(data)
+        os._exit(0)
+    os.close(wfd)
+    with os.fdopen(rfd, "rb") as fh:
+        data = fh.read()
+    _, status = os.waitpid(pid, 0)
+    if os.WIFSIGNALED(status):
+        return {"ok": {"crash": True}}
+    return json.loads(data)
 
 
 def gen_select(rng, fn):
@@ -152,13 +273,10 @@ def run_python(c):
             return {"ok": a}
         return r if a == c["a"] else {"exc": r["exc"], "msg": r["msg"] + " [list mutated]"}
     if fn.startswith("heap"):
-        h = list(c["heap"])
-        f = getattr(mods["heapq"], fn + ("_max" if c["max"] else ""))
-        args = (c["item"],) if fn in ("heappush", "heapreplace", "heappushpop") else ()
-        r = common.py_result(lambda: f(h, *args))
-        if "ok" in r:
-            return {"ok": [r["ok"], h]}
-        return r if h == c["heap"] else {"exc": r["exc"], "msg": r["msg"] + " [list mutated]"}
+        mutates = any(a[0] in MUTATING for _, acts in c["script"] for a in acts)
+        if c["impl"] == "c" and mutates:
+            return in_child(lambda: run_heap(c))
+        return run_heap(c)
     hq = mods["heapq"]
     if fn in ("nsmallest", "nlargest"):
         it = {"list": list, "iter": iter}.get(c["kind"], lambda v: Sized(v, c["size"]))(c["it"])
