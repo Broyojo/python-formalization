@@ -3880,6 +3880,29 @@ def qv_dec(j):
     return QObj(txt(j["o"]))
 
 
+def url_split_out(res):
+    """The attributes of a split or parse result, `geturl()` and `encode`/`decode('ascii')`."""
+    def b_or_s(x):
+        return None if x is None else list(x) if isinstance(x, bytes) else cps(x)
+    out = {"res": res_enc(res), "user": b_or_s(res.username), "pw": b_or_s(res.password)}
+    h = common.py_result(lambda: res.hostname)
+    if "ok" in h and h["ok"] is not None:
+        h["ok"] = b_or_s(h["ok"])
+    out["host"] = h
+    out["port"] = common.py_result(lambda: res.port)
+    if out["port"].get("msg", "").startswith("Port could not be cast"):  # repr: a ~ message in the model
+        out["port"]["msg"] = "~Port could not be cast to integer value"
+    gu = common.py_result(res.geturl)
+    if "ok" in gu:
+        gu["ok"] = arg_enc(gu["ok"])
+    out["geturl"] = gu
+    tr = common.py_result(lambda: res.decode("ascii") if out["res"]["b"] else res.encode("ascii"))
+    if "ok" in tr:
+        tr["ok"] = res_enc(tr["ok"])
+    out["trans"] = tr
+    return out
+
+
 @area("url", 10)
 class UrlArea:
     """urllib.parse (UrlModel.lean). Arguments travel as null / {"s"} / {"b"} / {"ba"}."""
@@ -3935,7 +3958,7 @@ class UrlArea:
     def gen(cls, r):
         fn = r.choice(["split", "split", "parse", "parse", "defrag", "unsplit", "unparse", "join", "join",
                        "quote", "quote_plus", "qfb", "unquote", "unquote_plus", "uqtb", "qsl", "qs",
-                       "encode", "encode", "geturl", "helpers", "rt_qsl"])
+                       "encode", "encode", "geturl", "helpers", "rt_qsl", "netloc", "rcodec", "splitparams"])
         c = {"mod": "textlibs", "fn": "url." + fn}
         if fn in ("split", "parse", "defrag"):
             u = cls.url(r)
@@ -4068,6 +4091,29 @@ class UrlArea:
                 c["enc"] = r.choice([None, "utf-8", "ascii", "latin-1"])
             if r.random() < 0.3:
                 c["err"] = r.choice([None, "strict", "replace", "ignore"])
+        elif fn == "netloc":
+            isb = r.random() < 0.4
+            al = "u:p@[]%Ab:19" + ("\x80\xe9\xff" if isb else "\xe9\u0661\xb2\u0130\u212a")
+            nl = "".join(r.choice(al) for _ in range(r.randint(0, 10)))
+            c.update(res={"f": [[], list(nl.encode("latin-1")) if isb else cps(nl), [], [], []], "b": isb, "k": None})
+        elif fn == "rcodec":
+            isb = r.random() < 0.5
+            if isb:
+                f = [None if r.random() < 0.2 else [r.choice([97, 47, 0x80, 0xc3, 0xa9, 0xff, 0xed, 0xa0])
+                                                    for _ in range(r.randint(0, 4))] for _ in range(5)]
+            else:
+                f = [None if r.random() < 0.2 else cps("".join(r.choice("a/\xe9\u20ac\ud800\x80")
+                                                               for _ in range(r.randint(0, 4)))) for _ in range(5)]
+            enc = r.choice(["utf-8", "ascii", "latin-1"])
+            err = r.choice(["strict", "replace", "ignore", "surrogateescape", "backslashreplace", "surrogatepass",
+                            "xmlcharrefreplace"])
+            if enc in ("ascii", "latin-1") and err == "surrogatepass":
+                err = "strict"
+            if isb and err == "xmlcharrefreplace":
+                err = "strict"
+            c.update(res={"f": f, "b": isb, "k": r.choice([None, True, False])}, enc=enc, err=err)
+        elif fn == "splitparams":
+            c.update(s=cps("".join(r.choice("a/;b") for _ in range(r.randint(0, 8)))), man=r.random() < 0.5)
         elif fn == "geturl":
             kind = r.choice(["split", "parse", "defrag"])
             n = {"split": 5, "parse": 6, "defrag": 2}[kind]
@@ -4092,32 +4138,30 @@ class UrlArea:
     @classmethod
     def run(cls, c):
         fn = c["fn"][4:]
+        if fn == "netloc":
+            rj = c["res"]
+            vals = [bytes(f) if rj["b"] else txt(f) for f in rj["f"]]
+            return {"ok": url_split_out((UP.SplitResultBytes if rj["b"] else UP.SplitResult)(*vals))}
+        if fn == "rcodec":
+            rj = c["res"]
+            vals = [None if f is None else (bytes(f) if rj["b"] else txt(f)) for f in rj["f"]]
+            obj = (UP.SplitResultBytes if rj["b"] else UP.SplitResult)(*vals)
+            if rj["k"] is not None:
+                obj._keep_empty = rj["k"]
+            o = common.py_result(lambda: obj.decode(c["enc"], c["err"]) if rj["b"] else obj.encode(c["enc"], c["err"]))
+            if "ok" in o:
+                o["ok"] = res_enc(o["ok"])
+            return o
+        if fn == "splitparams":
+            p = UP._splitparams(txt(c["s"]), missing_as_none=c["man"])
+            return {"ok": [cps(p[0]), None if p[1] is None else cps(p[1])]}
         if fn in ("split", "parse"):
             f = UP.urlsplit if fn == "split" else UP.urlparse
             try:
                 res = f(arg_dec(c["url"]), arg_dec(c["scheme"]), c["frag"], missing_as_none=c["man"])
             except Exception as e:
                 return {"exc": type(e).__name__, "msg": str(e)}
-            def g(attr):
-                return getattr(res, attr)
-            out = {"res": res_enc(res), "user": None if res.username is None else list(res.username) if isinstance(res.username, bytes) else cps(res.username),
-                   "pw": None if res.password is None else list(res.password) if isinstance(res.password, bytes) else cps(res.password)}
-            h = common.py_result(lambda: g("hostname"))
-            if "ok" in h and h["ok"] is not None:
-                h["ok"] = list(h["ok"]) if isinstance(h["ok"], bytes) else cps(h["ok"])
-            out["host"] = h
-            out["port"] = common.py_result(lambda: g("port"))
-            if out["port"].get("msg", "").startswith("Port could not be cast"):  # repr: a ~ message in the model
-                out["port"]["msg"] = "~Port could not be cast to integer value"
-            gu = common.py_result(res.geturl)
-            if "ok" in gu:
-                gu["ok"] = arg_enc(gu["ok"])
-            out["geturl"] = gu
-            tr = common.py_result(lambda: res.decode("ascii") if out["res"]["b"] else res.encode("ascii"))
-            if "ok" in tr:
-                tr["ok"] = res_enc(tr["ok"])
-            out["trans"] = tr
-            return {"ok": out}
+            return {"ok": url_split_out(res)}
         if fn == "defrag":
             try:
                 res = UP.urldefrag(arg_dec(c["url"]), missing_as_none=c["man"])

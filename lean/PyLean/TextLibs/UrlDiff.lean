@@ -211,6 +211,18 @@ def run (fn : String) (j : Json) : Except String Json := do
     let plain ← getBool j "plain"
     let o : EncOpts := { doseq, safe, encoding, errors, via := if plain then .plain else .plus }
     return encPyStr (urlencode (← queryJ (← field j "query")) o)
+  | "url.netloc" =>
+    let r ← resJ (← field j "res")
+    return encPy (fun r => resOut r splitGeturl) (.ok r)
+  | "url.rcodec" =>
+    let r ← resJ (← field j "res")
+    let e ← encName (← getStr j "enc")
+    let h ← handlerName (← getStr j "err")
+    return encPy encRes (if r.isBytes then resDecode r e h else resEncode r e h)
+  | "url.splitparams" =>
+    let s ← natsJ (← field j "s")
+    let p := splitparamsMn s (← getBool j "man")
+    return Json.mkObj [("ok", Json.arr #[toJson p.1, encOpt p.2])]
   | "url.geturl" =>
     let r ← resJ (← field j "res")
     return encPyArg (match ← getStr j "kind" with
