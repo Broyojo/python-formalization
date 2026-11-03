@@ -295,17 +295,18 @@ a `datetime.date`, or a `datetime.datetime` whose seconds default to 0, whose mi
 the first six fraction digits (truncated, zero-padded) and whose `tzinfo` is `None` (local),
 UTC (`Z`) or the signed offset, when the date exists (year 1 or later, day within the month);
 otherwise it raises `TOMLDecodeError` "Invalid date or datetime" at the token. Every `HH:MM`
-local time token gives the corresponding `datetime.time`. -/
+local time token gives the corresponding `datetime.time`. Each with at least two frames left
+below `parse_value` (the recursion limit). -/
 def DatetimeSpec : Prop :=
-  (∀ (cfg : Cfg) (src : Str) (pos fuel : Nat) (t : DtTok) (rest : Str),
+  (∀ (cfg : Cfg) (src : Str) (rr pos fuel : Nat) (t : DtTok) (rest : Str), 2 ≤ rr →
     t.ok → stopHead rest → (t.time = none → ∀ r', rest = 32 :: r' → ∀ c, r'.head? = some c → isDigit c = false) →
     src.drop pos = t.enc ++ rest →
-    parseValue cfg src (fuel + 1) pos =
+    parseValue cfg src rr (fuel + 1) pos =
       if 1 ≤ t.y ∧ t.d ≤ daysInMonth t.y t.mo then .ok (pos + t.enc.length, t.val)
       else .error (tdeS "Invalid date or datetime" src pos)) ∧
-  (∀ (cfg : Cfg) (src : Str) (pos fuel : Nat) (t : TimeTok) (rest : Str),
+  (∀ (cfg : Cfg) (src : Str) (rr pos fuel : Nat) (t : TimeTok) (rest : Str), 2 ≤ rr →
     t.ok → stopHead rest → src.drop pos = t.enc ++ rest →
-    parseValue cfg src (fuel + 1) pos = .ok (pos + t.enc.length, .time t.h t.mi t.secV t.usV))
+    parseValue cfg src rr (fuel + 1) pos = .ok (pos + t.enc.length, .time t.h t.mi t.secV t.usV))
 
 theorem matchDatetime_third {c0 c1 c2 : Nat} {t : Str} (h : isDigit c2 = false) :
     matchDatetime (c0 :: c1 :: c2 :: t) = none := by
@@ -451,7 +452,7 @@ theorem datetime_tok (t : DtTok) (ht : t.ok) :
 
 theorem datetimeSpec_proven : DatetimeSpec := by
   refine ⟨?_, ?_⟩
-  · intro cfg src pos fuel t rest ht hr hsp h
+  · intro cfg src rr pos fuel t rest hrr ht hr hsp h
     have hm := matchDatetime_tok t ht rest hr hsp
     have hval := datetime_tok t ht
     change matchDatetime (t.enc ++ rest) = some t.m at hm
@@ -464,12 +465,12 @@ theorem datetimeSpec_proven : DatetimeSpec := by
     rw [← h] at hm
     simp only [parseValue, hg, hm, optBeq_ne hdig.1, optBeq_ne hdig.2.1, optBeq_ne hdig.2.2.1,
       optBeq_ne hdig.2.2.2.1, optBeq_ne hdig.2.2.2.2.1, optBeq_ne hdig.2.2.2.2.2, Bool.false_and,
-      Bool.false_eq_true, ite_false]
+      Bool.false_eq_true, ite_false, need_ok (Nat.le_trans (matchToDatetimeN_le cfg.tzCached t.m) hrr)]
     by_cases hv : 1 ≤ t.y ∧ t.d ≤ daysInMonth t.y t.mo
     · rw [hval.1 hv, if_pos hv]; rfl
     · obtain ⟨msg, hmsg⟩ := hval.2 hv
       rw [hmsg, if_neg hv]
-  · intro cfg src pos fuel t rest ht hr h
+  · intro cfg src rr pos fuel t rest hrr ht hr h
     have hst := stop_not_digit hr
     have hmt := matchTime_tok t ht rest (fun c hc => ⟨(hst c hc).1, (hst c hc).2.2.2.1, (hst c hc).2.2.2.2.1⟩)
     have hc0 : src.drop pos = (48 + t.h / 10) :: (48 + t.h % 10) :: 58 :: ((pad2 t.mi ++ secTok t.sec) ++ rest) := by
@@ -482,7 +483,7 @@ theorem datetimeSpec_proven : DatetimeSpec := by
         48 + t.h / 10 ≠ 91 ∧ 48 + t.h / 10 ≠ 123 := by omega
     simp only [parseValue, hg, hd, hmt, optBeq_ne hdig.1, optBeq_ne hdig.2.1, optBeq_ne hdig.2.2.1,
       optBeq_ne hdig.2.2.2.1, optBeq_ne hdig.2.2.2.2.1, optBeq_ne hdig.2.2.2.2.2, Bool.false_and,
-      Bool.false_eq_true, ite_false, localtime_tok t ht]
+      Bool.false_eq_true, ite_false, need_ok (show 1 ≤ rr by omega), localtime_tok t ht]
     simp [Except.map, TimeTok.m]
 
 end PyLean.TextLibs.Toml

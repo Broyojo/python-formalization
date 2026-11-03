@@ -150,18 +150,18 @@ theorem finalize_nil (fl : Flags) (h : fl.pending = []) : fl.finalizePending = .
 
 /-- One round of the statement loop on a table header whose rule succeeds, followed by a
 newline. -/
-theorem mainLoop_hdr_ok {cfg : Cfg} {src : Str} {f pos p : Nat} {out o : Out} {header key : Key} {fl : Flags}
+theorem mainLoop_hdr_ok {cfg : Cfg} {src : Str} {R f pos p : Nat} {out o : Out} {header key : Key} {fl : Flags}
     (h0 : src[pos]? = some 91) (hfin : out.flags.finalizePending = .ok fl)
     (hrule : (if src[pos + 1]? == some 91 then createListRule cfg src pos { out with flags := fl }
       else createDictRule cfg src pos { out with flags := fl }) = .ok (p, key, o))
-    (hnl : src[p]? = some 10) :
-    mainLoop cfg src (f + 1) pos out header = mainLoop cfg src f (p + 1) o key := by
+    (hnl : src[p]? = some 10) (hR : 9 ≤ R) :
+    mainLoop cfg src R (f + 1) pos out header = mainLoop cfg src R f (p + 1) o key := by
   have hs0 : skipChars src pos tomlWs = pos := skipChars_at h0 (by decide)
   have hs1 : skipChars src p tomlWs = p := skipChars_at hnl (by decide)
   have hc1 : skipComment src p = .ok p := by simp [skipComment, hnl]
   simp only [mainLoop, hs0, h0, show ((91 : Nat) == 10) = false from rfl, Bool.false_eq_true, ite_false,
     show keyInitial 91 = false from rfl, show ((91 : Nat) == 91) = true from rfl, ite_true, hfin, bind,
-    Except.bind]
+    Except.bind, need_createRule hR, need_skipComment (show 3 ≤ R by omega)]
   by_cases hc : (src[pos + 1]? == some 91) = true
   · rw [if_pos hc] at hrule ⊢; rw [hrule]
     simp only [pure, Except.pure, hs1, hc1, hnl, show ((10 : Nat) != 10) = false from rfl, Bool.false_eq_true,
@@ -171,32 +171,32 @@ theorem mainLoop_hdr_ok {cfg : Cfg} {src : Str} {f pos p : Nat} {out o : Out} {h
       ite_false]
 
 /-- ... whose rule succeeds at the end of the document. -/
-theorem mainLoop_hdr_end {cfg : Cfg} {src : Str} {f pos p : Nat} {out o : Out} {header key : Key} {fl : Flags}
+theorem mainLoop_hdr_end {cfg : Cfg} {src : Str} {R f pos p : Nat} {out o : Out} {header key : Key} {fl : Flags}
     (h0 : src[pos]? = some 91) (hfin : out.flags.finalizePending = .ok fl)
     (hrule : (if src[pos + 1]? == some 91 then createListRule cfg src pos { out with flags := fl }
       else createDictRule cfg src pos { out with flags := fl }) = .ok (p, key, o))
-    (hend : src[p]? = none) :
-    mainLoop cfg src (f + 1) pos out header = .ok o.data := by
+    (hend : src[p]? = none) (hR : 9 ≤ R) :
+    mainLoop cfg src R (f + 1) pos out header = .ok o.data := by
   have hs0 : skipChars src pos tomlWs = pos := skipChars_at h0 (by decide)
   have hs1 : skipChars src p tomlWs = p := skipChars_stop (fun x hx => by rw [List.head?_drop, hend] at hx; cases hx)
   have hc1 : skipComment src p = .ok p := by simp [skipComment, hend]
   simp only [mainLoop, hs0, h0, show ((91 : Nat) == 10) = false from rfl, Bool.false_eq_true, ite_false,
     show keyInitial 91 = false from rfl, show ((91 : Nat) == 91) = true from rfl, ite_true, hfin, bind,
-    Except.bind]
+    Except.bind, need_createRule hR, need_skipComment (show 3 ≤ R by omega)]
   by_cases hc : (src[pos + 1]? == some 91) = true
   · rw [if_pos hc] at hrule ⊢; rw [hrule]; simp only [pure, Except.pure, hs1, hc1, hend]
   · rw [if_neg hc] at hrule ⊢; rw [hrule]; simp only [pure, Except.pure, hs1, hc1, hend]
 
 /-- ... whose rule raises. -/
-theorem mainLoop_hdr_err {cfg : Cfg} {src : Str} {f pos : Nat} {out : Out} {header : Key} {fl : Flags} {e : PyExc}
+theorem mainLoop_hdr_err {cfg : Cfg} {src : Str} {R f pos : Nat} {out : Out} {header : Key} {fl : Flags} {e : PyExc}
     (h0 : src[pos]? = some 91) (hfin : out.flags.finalizePending = .ok fl)
     (hrule : (if src[pos + 1]? == some 91 then createListRule cfg src pos { out with flags := fl }
-      else createDictRule cfg src pos { out with flags := fl }) = .error e) :
-    mainLoop cfg src (f + 1) pos out header = .error e := by
+      else createDictRule cfg src pos { out with flags := fl }) = .error e) (hR : 9 ≤ R) :
+    mainLoop cfg src R (f + 1) pos out header = .error e := by
   have hs0 : skipChars src pos tomlWs = pos := skipChars_at h0 (by decide)
   simp only [mainLoop, hs0, h0, show ((91 : Nat) == 10) = false from rfl, Bool.false_eq_true, ite_false,
     show keyInitial 91 = false from rfl, show ((91 : Nat) == 91) = true from rfl, ite_true, hfin, bind,
-    Except.bind]
+    Except.bind, need_createRule hR, need_skipComment (show 3 ≤ R by omega)]
   by_cases hc : (src[pos + 1]? == some 91) = true
   · rw [if_pos hc] at hrule ⊢; rw [hrule]
   · rw [if_neg hc] at hrule ⊢; rw [hrule]
@@ -372,9 +372,11 @@ theorem getElem_of_eq {src a : Str} {c : Nat} {b : Str} (h : src = a ++ c :: b) 
     src[n]? = some c := by
   subst h; subst hn; simp
 
-theorem loads_eq (pf : ParseFloat) (maxK maxD : Nat) (src : Str) (h : 13 ∉ src) :
-    loads pf maxK maxD (.str src) = mainLoop (mkCfg pf maxK maxD) src (src.length + 1) 0 Out.init [] := by
-  simp [loads, crlf_id src h]
+theorem loads_eq (pf : ParseFloat) (maxK maxD : Nat) (tz : TzCache) (fr : Nat) (src : Str) (h : 13 ∉ src)
+    (hfr : 4 ≤ fr) :
+    loads pf maxK maxD tz fr (.str src) =
+      mainLoop (mkCfg pf maxK maxD tz) src (fr - 1) (src.length + 1) 0 Out.init [] := by
+  simp [loads, crlf_id src h, need_ok (show 1 ≤ fr by omega), need_ok (show 3 ≤ fr - 1 by omega)]
 
 /-- The state after a first header `[K]` on an empty document. -/
 theorem first_dict {cfg : Cfg} {src : Str} {p0 : KPart} {ps : List KPart} {rest : Str}
@@ -409,27 +411,28 @@ literal or basic parts, at most `MAX_KEY_PARTS` - 1 parts) and bare key `x`:
 (4) `[[K]]` then `[K]` raises "Cannot declare K twice";
 (5) `[K.x]` then `[K]` gives `K = {x = {}}` (a super-table may follow its sub-table);
 (6) `[[K]]`, `[K.x]`, `[[K]]`, `[K.x]` gives `K = [{x = {}}, {x = {}}]` (each element of an array of
-tables has its own sub-tables). -/
+tables has its own sub-tables). Each with at least ten frames left when `loads` is called (the
+recursion limit). -/
 def TableRules : Prop :=
-  ∀ (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart) (x : Str),
-    p0.ok → (∀ p ∈ ps, p.ok) → ps.length + 2 ≤ maxK → x ≠ [] → (∀ c ∈ x, bareKey c = true) →
+  ∀ (pf : ParseFloat) (maxK maxD : Nat) (tz : TzCache) (fr : Nat) (p0 : KPart) (ps : List KPart) (x : Str),
+    10 ≤ fr → p0.ok → (∀ p ∈ ps, p.ok) → ps.length + 2 ≤ maxK → x ≠ [] → (∀ c ∈ x, bareKey c = true) →
     let K := keyEnc p0 ps
     let k := keyVal p0 ps
-    loads pf maxK maxD (.str (hdr K ++ 10 :: hdr K)) =
+    loads pf maxK maxD tz fr (.str (hdr K ++ 10 :: hdr K)) =
       .error (tde (S "Cannot declare " ++ keyRepr k ++ S " twice") (hdr K ++ 10 :: hdr K) (2 * K.length + 4)) ∧
-    loads pf maxK maxD (.str (aot K ++ 10 :: aot K)) =
+    loads pf maxK maxD tz fr (.str (aot K ++ 10 :: aot K)) =
       .ok (nestDict k.dropLast [(k.getLastD [], .arr [.tbl [], .tbl []])]) ∧
-    loads pf maxK maxD (.str (hdr K ++ 10 :: aot K)) =
+    loads pf maxK maxD tz fr (.str (hdr K ++ 10 :: aot K)) =
       .error (tdeS "Cannot overwrite a value" (hdr K ++ 10 :: aot K) (2 * K.length + 5)) ∧
-    loads pf maxK maxD (.str (aot K ++ 10 :: hdr K)) =
+    loads pf maxK maxD tz fr (.str (aot K ++ 10 :: hdr K)) =
       .error (tde (S "Cannot declare " ++ keyRepr k ++ S " twice") (aot K ++ 10 :: hdr K) (2 * K.length + 6)) ∧
-    loads pf maxK maxD (.str (hdr (K ++ 46 :: x) ++ 10 :: hdr K)) = .ok (nestDict k [(x, .tbl [])]) ∧
-    loads pf maxK maxD (.str (aot K ++ 10 :: hdr (K ++ 46 :: x) ++ 10 :: aot K ++ 10 :: hdr (K ++ 46 :: x))) =
+    loads pf maxK maxD tz fr (.str (hdr (K ++ 46 :: x) ++ 10 :: hdr K)) = .ok (nestDict k [(x, .tbl [])]) ∧
+    loads pf maxK maxD tz fr (.str (aot K ++ 10 :: hdr (K ++ 46 :: x) ++ 10 :: aot K ++ 10 :: hdr (K ++ 46 :: x))) =
       .ok (nestDict k.dropLast [(k.getLastD [], .arr [.tbl [(x, .tbl [])], .tbl [(x, .tbl [])]])])
 
-theorem scen1 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
+theorem scen1 (pf : ParseFloat) (maxK maxD : Nat) (tz : TzCache) (fr : Nat) (hfr : 10 ≤ fr) (p0 : KPart) (ps : List KPart)
     (h0 : p0.ok) (hps : ∀ p ∈ ps, p.ok) (hmax : ps.length + 1 ≤ maxK) :
-    loads pf maxK maxD (.str (hdr (keyEnc p0 ps) ++ 10 :: hdr (keyEnc p0 ps))) =
+    loads pf maxK maxD tz fr (.str (hdr (keyEnc p0 ps) ++ 10 :: hdr (keyEnc p0 ps))) =
       .error (tde (S "Cannot declare " ++ keyRepr (keyVal p0 ps) ++ S " twice")
         (hdr (keyEnc p0 ps) ++ 10 :: hdr (keyEnc p0 ps)) (2 * (keyEnc p0 ps).length + 4)) := by
   generalize hK : keyEnc p0 ps = K
@@ -437,14 +440,15 @@ theorem scen1 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
   generalize hsrc : hdr K ++ 10 :: hdr K = src
   have h13 : 13 ∉ src := by
     rw [← hsrc, ← hK]; simp [hdr, keyEnc_no13 h0 hps]
-  rw [loads_eq pf maxK maxD src h13]
+  rw [loads_eq pf maxK maxD tz fr src h13 (by omega)]
+  have hR9 : 9 ≤ fr - 1 := by omega
   obtain ⟨f, hf⟩ : ∃ f, src.length + 1 = f + 1 + 1 := ⟨src.length - 1, by rw [← hsrc]; simp [hdr] <;> omega⟩
   rw [hf]
-  have hr1 := first_dict (cfg := mkCfg pf maxK maxD) (rest := 10 :: hdr K) h0 hps hmax (by rw [hK, hsrc])
+  have hr1 := first_dict (cfg := mkCfg pf maxK maxD tz) (rest := 10 :: hdr K) h0 hps hmax (by rw [hK, hsrc])
   rw [hK, hk] at hr1
   have hg0 : src[0]? = some 91 := by rw [← hsrc]; rfl
   have hnl : src[K.length + 2]? = some 10 := getElem_of_eq (a := hdr K) (b := hdr K) (by rw [hsrc]) _ (by simp [hdr])
-  rw [mainLoop_hdr_ok hg0 (finalize_nil _ rfl) hr1 hnl]
+  rw [mainLoop_hdr_ok (hR := hR9) hg0 (finalize_nil _ rfl) hr1 hnl]
   -- the second header
   obtain ⟨c, t, hKe, hcws, hc91⟩ := keyEnc_head (ps := ps) h0
   rw [hK] at hKe
@@ -455,7 +459,7 @@ theorem scen1 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
     getElem_of_eq (a := hdr K ++ [10, 91]) (b := t ++ [93]) (by rw [← hsrc, hKe]; simp [hdr]) _ (by simp [hdr] <;> omega)
   have hd4 : src.drop (K.length + 3 + 1) = K ++ [93] :=
     drop_eq_of (a := hdr K ++ [10, 91]) (by rw [← hsrc]; simp [hdr]) _ (by simp [hdr] <;> omega)
-  have hk2 := parseKey_enc (maxK := (mkCfg pf maxK maxD).maxKeyParts) h0 hps hmax (hrest93 [])
+  have hk2 := parseKey_enc (maxK := (mkCfg pf maxK maxD tz).maxKeyParts) h0 hps hmax (hrest93 [])
     (by rw [hK]; exact hd4)
   rw [hK, hk] at hk2
   have hws : skipChars src (K.length + 3 + 1) tomlWs = K.length + 3 + 1 := skipChars_at hg4 hcws
@@ -464,16 +468,16 @@ theorem scen1 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
       (by simp [hdr] <;> omega))
   have hknil : k ≠ [] := by rw [← hk]; exact keyVal_ne p0 ps
   have hrule : (if src[K.length + 3 + 1]? == some 91 then
-      createListRule (mkCfg pf maxK maxD) src (K.length + 3)
+      createListRule (mkCfg pf maxK maxD tz) src (K.length + 3)
         { data := nestDict k [], flags := { tree := fsetAux EXPLICIT_NEST false k [], pending := [] } }
-      else createDictRule (mkCfg pf maxK maxD) src (K.length + 3)
+      else createDictRule (mkCfg pf maxK maxD tz) src (K.length + 3)
         { data := nestDict k [], flags := { tree := fsetAux EXPLICIT_NEST false k [], pending := [] } }) =
       .error (tde (S "Cannot declare " ++ keyRepr k ++ S " twice") src (2 * K.length + 4)) := by
     rw [if_neg (by simp [hg4, hc91])]
     rw [createDictRule_eq hws hk2 hknil hcl]
     simp only [flags_is _ _ hknil, isAux_fsetAux_self _ _ k [] hknil, Bool.true_or, ite_true]
     congr 2; omega
-  exact mainLoop_hdr_err (f := f) hg3 (finalize_nil _ rfl) hrule
+  exact mainLoop_hdr_err (hR := hR9) (f := f) hg3 (finalize_nil _ rfl) hrule
 
 theorem getLast?_ne {k : Key} (h : k ≠ []) : k.getLast? = some (k.getLastD []) := by
   cases k with
@@ -532,9 +536,9 @@ theorem first_list {cfg : Cfg} {src : Str} {p0 : KPart} {ps : List KPart} {rest 
     append_empty hne, overwriteErr, Except.map, unsetAux_nil]
   simp; omega
 
-theorem scen2 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
+theorem scen2 (pf : ParseFloat) (maxK maxD : Nat) (tz : TzCache) (fr : Nat) (hfr : 10 ≤ fr) (p0 : KPart) (ps : List KPart)
     (h0 : p0.ok) (hps : ∀ p ∈ ps, p.ok) (hmax : ps.length + 1 ≤ maxK) :
-    loads pf maxK maxD (.str (aot (keyEnc p0 ps) ++ 10 :: aot (keyEnc p0 ps))) =
+    loads pf maxK maxD tz fr (.str (aot (keyEnc p0 ps) ++ 10 :: aot (keyEnc p0 ps))) =
       .ok (nestDict (keyVal p0 ps).dropLast [((keyVal p0 ps).getLastD [], .arr [.tbl [], .tbl []])]) := by
   have hne := keyVal_ne p0 ps
   generalize hK : keyEnc p0 ps = K
@@ -543,15 +547,16 @@ theorem scen2 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
   generalize hsrc : aot K ++ 10 :: aot K = src
   have h13 : 13 ∉ src := by
     rw [← hsrc, ← hK]; simp [aot, keyEnc_no13 h0 hps]
-  rw [loads_eq pf maxK maxD src h13]
+  rw [loads_eq pf maxK maxD tz fr src h13 (by omega)]
+  have hR9 : 9 ≤ fr - 1 := by omega
   obtain ⟨f, hf⟩ : ∃ f, src.length + 1 = f + 1 + 1 := ⟨src.length - 1, by rw [← hsrc]; simp [aot] <;> omega⟩
   rw [hf]
-  have hr1 := first_list (cfg := mkCfg pf maxK maxD) (rest := 10 :: aot K) h0 hps hmax (by rw [hK, hsrc])
+  have hr1 := first_list (cfg := mkCfg pf maxK maxD tz) (rest := 10 :: aot K) h0 hps hmax (by rw [hK, hsrc])
   rw [hK, hk] at hr1
   have hg0 : src[0]? = some 91 := by rw [← hsrc]; rfl
   have hnl : src[K.length + 4]? = some 10 :=
     getElem_of_eq (a := aot K) (b := aot K) (by rw [hsrc]) _ (by simp [aot] <;> omega)
-  rw [mainLoop_hdr_ok hg0 (finalize_nil _ rfl) hr1 hnl]
+  rw [mainLoop_hdr_ok (hR := hR9) hg0 (finalize_nil _ rfl) hr1 hnl]
   obtain ⟨c, t, hKe, hcws, hc91⟩ := keyEnc_head (ps := ps) h0
   rw [hK] at hKe
   have hg5 : src[K.length + 4 + 1]? = some 91 :=
@@ -562,7 +567,7 @@ theorem scen2 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
     getElem_of_eq (a := aot K ++ [10, 91, 91]) (b := t ++ [93, 93]) (by rw [← hsrc, hKe]; simp [aot]) _ (by simp [aot] <;> omega)
   have hd7 : src.drop (K.length + 4 + 1 + 2) = K ++ [93, 93] :=
     drop_eq_of (a := aot K ++ [10, 91, 91]) (by rw [← hsrc]; simp [aot]) _ (by simp [aot] <;> omega)
-  have hk2 := parseKey_enc (maxK := (mkCfg pf maxK maxD).maxKeyParts) h0 hps hmax (hrest93 [93]) (by rw [hK]; exact hd7)
+  have hk2 := parseKey_enc (maxK := (mkCfg pf maxK maxD tz).maxKeyParts) h0 hps hmax (hrest93 [93]) (by rw [hK]; exact hd7)
   rw [hK, hk] at hk2
   have hws : skipChars src (K.length + 4 + 1 + 2) tomlWs = K.length + 4 + 1 + 2 := skipChars_at hg7 hcws
   have hcl : startsAt src (K.length + 4 + 1 + 2 + K.length) [93, 93] = true :=
@@ -571,10 +576,10 @@ theorem scen2 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
   have hend : src[K.length + 4 + 1 + 2 + K.length + 2]? = none := by
     rw [← hsrc]; simp [aot]; omega
   have hrule : (if src[K.length + 4 + 1 + 1]? == some 91 then
-      createListRule (mkCfg pf maxK maxD) src (K.length + 4 + 1)
+      createListRule (mkCfg pf maxK maxD tz) src (K.length + 4 + 1)
         { data := nestDict k.dropLast [(k.getLastD [], .arr [.tbl []])],
           flags := { tree := fsetAux EXPLICIT_NEST false k [], pending := [] } }
-      else createDictRule (mkCfg pf maxK maxD) src (K.length + 4 + 1)
+      else createDictRule (mkCfg pf maxK maxD tz) src (K.length + 4 + 1)
         { data := nestDict k.dropLast [(k.getLastD [], .arr [.tbl []])],
           flags := { tree := fsetAux EXPLICIT_NEST false k [], pending := [] } }) =
       .ok (K.length + 4 + 1 + 2 + K.length + 2, k,
@@ -585,14 +590,14 @@ theorem scen2 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
     rw [createListRule_eq hws hk2 hne hcl]
     simp only [flags_is _ _ hne, isAux_fsetAux_nil_ne FROZEN EXPLICIT_NEST (by decide), Bool.false_eq_true,
       ite_false, append_again hne, overwriteErr, Except.map]
-  exact mainLoop_hdr_end (f := f)
+  exact mainLoop_hdr_end (hR := hR9) (f := f)
     (out := { data := nestDict k.dropLast [(k.getLastD [], .arr [.tbl []])],
               flags := { tree := fsetAux EXPLICIT_NEST false k [], pending := [] } })
     hg5 (finalize_nil _ rfl) hrule hend
 
-theorem scen3 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
+theorem scen3 (pf : ParseFloat) (maxK maxD : Nat) (tz : TzCache) (fr : Nat) (hfr : 10 ≤ fr) (p0 : KPart) (ps : List KPart)
     (h0 : p0.ok) (hps : ∀ p ∈ ps, p.ok) (hmax : ps.length + 1 ≤ maxK) :
-    loads pf maxK maxD (.str (hdr (keyEnc p0 ps) ++ 10 :: aot (keyEnc p0 ps))) =
+    loads pf maxK maxD tz fr (.str (hdr (keyEnc p0 ps) ++ 10 :: aot (keyEnc p0 ps))) =
       .error (tdeS "Cannot overwrite a value" (hdr (keyEnc p0 ps) ++ 10 :: aot (keyEnc p0 ps))
         (2 * (keyEnc p0 ps).length + 5)) := by
   have hne := keyVal_ne p0 ps
@@ -602,15 +607,16 @@ theorem scen3 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
   generalize hsrc : hdr K ++ 10 :: aot K = src
   have h13 : 13 ∉ src := by
     rw [← hsrc, ← hK]; simp [hdr, aot, keyEnc_no13 h0 hps]
-  rw [loads_eq pf maxK maxD src h13]
+  rw [loads_eq pf maxK maxD tz fr src h13 (by omega)]
+  have hR9 : 9 ≤ fr - 1 := by omega
   obtain ⟨f, hf⟩ : ∃ f, src.length + 1 = f + 1 + 1 := ⟨src.length - 1, by rw [← hsrc]; simp [hdr, aot] <;> omega⟩
   rw [hf]
-  have hr1 := first_dict (cfg := mkCfg pf maxK maxD) (rest := 10 :: aot K) h0 hps hmax (by rw [hK, hsrc])
+  have hr1 := first_dict (cfg := mkCfg pf maxK maxD tz) (rest := 10 :: aot K) h0 hps hmax (by rw [hK, hsrc])
   rw [hK, hk] at hr1
   have hg0 : src[0]? = some 91 := by rw [← hsrc]; rfl
   have hnl : src[K.length + 2]? = some 10 :=
     getElem_of_eq (a := hdr K) (b := aot K) (by rw [hsrc]) _ (by simp [hdr] <;> omega)
-  rw [mainLoop_hdr_ok hg0 (finalize_nil _ rfl) hr1 hnl]
+  rw [mainLoop_hdr_ok (hR := hR9) hg0 (finalize_nil _ rfl) hr1 hnl]
   obtain ⟨c, t, hKe, hcws, hc91⟩ := keyEnc_head (ps := ps) h0
   rw [hK] at hKe
   have hg3 : src[K.length + 2 + 1]? = some 91 :=
@@ -621,16 +627,16 @@ theorem scen3 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
     getElem_of_eq (a := hdr K ++ [10, 91, 91]) (b := t ++ [93, 93]) (by rw [← hsrc, hKe]; simp [hdr, aot]) _ (by simp [hdr] <;> omega)
   have hd5 : src.drop (K.length + 2 + 1 + 2) = K ++ [93, 93] :=
     drop_eq_of (a := hdr K ++ [10, 91, 91]) (by rw [← hsrc]; simp [hdr, aot]) _ (by simp [hdr] <;> omega)
-  have hk2 := parseKey_enc (maxK := (mkCfg pf maxK maxD).maxKeyParts) h0 hps hmax (hrest93 [93]) (by rw [hK]; exact hd5)
+  have hk2 := parseKey_enc (maxK := (mkCfg pf maxK maxD tz).maxKeyParts) h0 hps hmax (hrest93 [93]) (by rw [hK]; exact hd5)
   rw [hK, hk] at hk2
   have hws : skipChars src (K.length + 2 + 1 + 2) tomlWs = K.length + 2 + 1 + 2 := skipChars_at hg5 hcws
   have hcl : startsAt src (K.length + 2 + 1 + 2 + K.length) [93, 93] = true :=
     startsAt_of_drop (r := []) (drop_eq_of (a := hdr K ++ [10, 91, 91] ++ K) (by rw [← hsrc]; simp [hdr, aot]) _
       (by simp [hdr] <;> omega))
   have hrule : (if src[K.length + 2 + 1 + 1]? == some 91 then
-      createListRule (mkCfg pf maxK maxD) src (K.length + 2 + 1)
+      createListRule (mkCfg pf maxK maxD tz) src (K.length + 2 + 1)
         { data := nestDict k [], flags := { tree := fsetAux EXPLICIT_NEST false k [], pending := [] } }
-      else createDictRule (mkCfg pf maxK maxD) src (K.length + 2 + 1)
+      else createDictRule (mkCfg pf maxK maxD tz) src (K.length + 2 + 1)
         { data := nestDict k [], flags := { tree := fsetAux EXPLICIT_NEST false k [], pending := [] } }) =
       .error (tdeS "Cannot overwrite a value" src (2 * K.length + 5)) := by
     rw [if_pos (by simp [hg4])]
@@ -638,11 +644,11 @@ theorem scen3 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
     simp only [flags_is _ _ hne, isAux_fsetAux_nil_ne FROZEN EXPLICIT_NEST (by decide), Bool.false_eq_true,
       ite_false, append_onto_table hne, overwriteErr, Except.map]
     congr 2; omega
-  exact mainLoop_hdr_err (f := f) hg3 (finalize_nil _ rfl) hrule
+  exact mainLoop_hdr_err (hR := hR9) (f := f) hg3 (finalize_nil _ rfl) hrule
 
-theorem scen4 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
+theorem scen4 (pf : ParseFloat) (maxK maxD : Nat) (tz : TzCache) (fr : Nat) (hfr : 10 ≤ fr) (p0 : KPart) (ps : List KPart)
     (h0 : p0.ok) (hps : ∀ p ∈ ps, p.ok) (hmax : ps.length + 1 ≤ maxK) :
-    loads pf maxK maxD (.str (aot (keyEnc p0 ps) ++ 10 :: hdr (keyEnc p0 ps))) =
+    loads pf maxK maxD tz fr (.str (aot (keyEnc p0 ps) ++ 10 :: hdr (keyEnc p0 ps))) =
       .error (tde (S "Cannot declare " ++ keyRepr (keyVal p0 ps) ++ S " twice")
         (aot (keyEnc p0 ps) ++ 10 :: hdr (keyEnc p0 ps)) (2 * (keyEnc p0 ps).length + 6)) := by
   have hne := keyVal_ne p0 ps
@@ -652,15 +658,16 @@ theorem scen4 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
   generalize hsrc : aot K ++ 10 :: hdr K = src
   have h13 : 13 ∉ src := by
     rw [← hsrc, ← hK]; simp [hdr, aot, keyEnc_no13 h0 hps]
-  rw [loads_eq pf maxK maxD src h13]
+  rw [loads_eq pf maxK maxD tz fr src h13 (by omega)]
+  have hR9 : 9 ≤ fr - 1 := by omega
   obtain ⟨f, hf⟩ : ∃ f, src.length + 1 = f + 1 + 1 := ⟨src.length - 1, by rw [← hsrc]; simp [hdr, aot] <;> omega⟩
   rw [hf]
-  have hr1 := first_list (cfg := mkCfg pf maxK maxD) (rest := 10 :: hdr K) h0 hps hmax (by rw [hK, hsrc])
+  have hr1 := first_list (cfg := mkCfg pf maxK maxD tz) (rest := 10 :: hdr K) h0 hps hmax (by rw [hK, hsrc])
   rw [hK, hk] at hr1
   have hg0 : src[0]? = some 91 := by rw [← hsrc]; rfl
   have hnl : src[K.length + 4]? = some 10 :=
     getElem_of_eq (a := aot K) (b := hdr K) (by rw [hsrc]) _ (by simp [aot] <;> omega)
-  rw [mainLoop_hdr_ok hg0 (finalize_nil _ rfl) hr1 hnl]
+  rw [mainLoop_hdr_ok (hR := hR9) hg0 (finalize_nil _ rfl) hr1 hnl]
   obtain ⟨c, t, hKe, hcws, hc91⟩ := keyEnc_head (ps := ps) h0
   rw [hK] at hKe
   have hg5 : src[K.length + 4 + 1]? = some 91 :=
@@ -669,17 +676,17 @@ theorem scen4 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
     getElem_of_eq (a := aot K ++ [10, 91]) (b := t ++ [93]) (by rw [← hsrc, hKe]; simp [hdr, aot]) _ (by simp [aot] <;> omega)
   have hd6 : src.drop (K.length + 4 + 1 + 1) = K ++ [93] :=
     drop_eq_of (a := aot K ++ [10, 91]) (by rw [← hsrc]; simp [hdr, aot]) _ (by simp [aot] <;> omega)
-  have hk2 := parseKey_enc (maxK := (mkCfg pf maxK maxD).maxKeyParts) h0 hps hmax (hrest93 []) (by rw [hK]; exact hd6)
+  have hk2 := parseKey_enc (maxK := (mkCfg pf maxK maxD tz).maxKeyParts) h0 hps hmax (hrest93 []) (by rw [hK]; exact hd6)
   rw [hK, hk] at hk2
   have hws : skipChars src (K.length + 4 + 1 + 1) tomlWs = K.length + 4 + 1 + 1 := skipChars_at hg6 hcws
   have hcl : startsAt src (K.length + 4 + 1 + 1 + K.length) [93] = true :=
     startsAt_of_drop (r := []) (drop_eq_of (a := aot K ++ [10, 91] ++ K) (by rw [← hsrc]; simp [hdr, aot]) _
       (by simp [aot] <;> omega))
   have hrule : (if src[K.length + 4 + 1 + 1]? == some 91 then
-      createListRule (mkCfg pf maxK maxD) src (K.length + 4 + 1)
+      createListRule (mkCfg pf maxK maxD tz) src (K.length + 4 + 1)
         { data := nestDict k.dropLast [(k.getLastD [], .arr [.tbl []])],
           flags := { tree := fsetAux EXPLICIT_NEST false k [], pending := [] } }
-      else createDictRule (mkCfg pf maxK maxD) src (K.length + 4 + 1)
+      else createDictRule (mkCfg pf maxK maxD tz) src (K.length + 4 + 1)
         { data := nestDict k.dropLast [(k.getLastD [], .arr [.tbl []])],
           flags := { tree := fsetAux EXPLICIT_NEST false k [], pending := [] } }) =
       .error (tde (S "Cannot declare " ++ keyRepr k ++ S " twice") src (2 * K.length + 6)) := by
@@ -687,12 +694,12 @@ theorem scen4 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
     rw [createDictRule_eq hws hk2 hne hcl]
     simp only [flags_is _ _ hne, isAux_fsetAux_self _ _ k [] hne, Bool.true_or, ite_true]
     congr 2; omega
-  exact mainLoop_hdr_err (f := f) hg5 (finalize_nil _ rfl) hrule
+  exact mainLoop_hdr_err (hR := hR9) (f := f) hg5 (finalize_nil _ rfl) hrule
 
-theorem scen5 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart) (x : Str)
+theorem scen5 (pf : ParseFloat) (maxK maxD : Nat) (tz : TzCache) (fr : Nat) (hfr : 10 ≤ fr) (p0 : KPart) (ps : List KPart) (x : Str)
     (h0 : p0.ok) (hps : ∀ p ∈ ps, p.ok) (hmax : ps.length + 2 ≤ maxK) (hx : x ≠ [])
     (hxb : ∀ c ∈ x, bareKey c = true) :
-    loads pf maxK maxD (.str (hdr (keyEnc p0 ps ++ 46 :: x) ++ 10 :: hdr (keyEnc p0 ps))) =
+    loads pf maxK maxD tz fr (.str (hdr (keyEnc p0 ps ++ 46 :: x) ++ 10 :: hdr (keyEnc p0 ps))) =
       .ok (nestDict (keyVal p0 ps) [(x, .tbl [])]) := by
   have hne := keyVal_ne p0 ps
   have hKx : keyEnc p0 (ps ++ [.bare x]) = keyEnc p0 ps ++ 46 :: x := by simp [keyEnc, KPart.enc]
@@ -711,16 +718,17 @@ theorem scen5 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
     rw [← hsrc, ← hKx]; simp only [hdr, List.cons_append, List.mem_cons, List.mem_append, not_or]
     refine ⟨by decide, ⟨keyEnc_no13 h0 hpsx, by decide⟩, by decide, by decide, ?_, by decide⟩
     rw [← hK]; exact keyEnc_no13 h0 hps
-  rw [loads_eq pf maxK maxD src h13]
+  rw [loads_eq pf maxK maxD tz fr src h13 (by omega)]
+  have hR9 : 9 ≤ fr - 1 := by omega
   obtain ⟨f, hf⟩ : ∃ f, src.length + 1 = f + 1 + 1 := ⟨src.length - 1, by rw [← hsrc]; simp [hdr] <;> omega⟩
   rw [hf]
-  have hr1 := first_dict (cfg := mkCfg pf maxK maxD) (ps := ps ++ [.bare x]) (rest := 10 :: hdr K) h0 hpsx
+  have hr1 := first_dict (cfg := mkCfg pf maxK maxD tz) (ps := ps ++ [.bare x]) (rest := 10 :: hdr K) h0 hpsx
     (show (ps ++ [KPart.bare x]).length + 1 ≤ maxK by simp; omega) (by rw [hKx, hsrc])
   rw [hKx, hkx] at hr1
   have hg0 : src[0]? = some 91 := by rw [← hsrc]; rfl
   have hnl : src[(K ++ 46 :: x).length + 2]? = some 10 :=
     getElem_of_eq (a := hdr (K ++ 46 :: x)) (b := hdr K) (by rw [hsrc]) _ (by simp [hdr] <;> omega)
-  rw [mainLoop_hdr_ok hg0 (finalize_nil _ rfl) hr1 hnl]
+  rw [mainLoop_hdr_ok (hR := hR9) hg0 (finalize_nil _ rfl) hr1 hnl]
   obtain ⟨c, t, hKe, hcws, hc91⟩ := keyEnc_head (ps := ps) h0
   rw [hK] at hKe
   generalize hL : (K ++ 46 :: x).length + 2 + 1 = L
@@ -730,7 +738,7 @@ theorem scen5 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
     getElem_of_eq (a := hdr (K ++ 46 :: x) ++ [10, 91]) (b := t ++ [93]) (by rw [← hsrc, hKe]; simp [hdr]) _ (by rw [← hL]; simp [hdr] <;> omega)
   have hd4 : src.drop (L + 1) = K ++ [93] :=
     drop_eq_of (a := hdr (K ++ 46 :: x) ++ [10, 91]) (by rw [← hsrc]; simp [hdr]) _ (by rw [← hL]; simp [hdr] <;> omega)
-  have hk2 := parseKey_enc (maxK := (mkCfg pf maxK maxD).maxKeyParts) h0 hps
+  have hk2 := parseKey_enc (maxK := (mkCfg pf maxK maxD tz).maxKeyParts) h0 hps
     (show ps.length + 1 ≤ maxK by omega) (hrest93 [])
     (by rw [hK]; exact hd4)
   rw [hK, hk] at hk2
@@ -741,9 +749,9 @@ theorem scen5 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
   have hend : src[L + 1 + K.length + 1]? = none := by
     rw [← hsrc, ← hL]; simp [hdr]; omega
   have hrule : (if src[L + 1]? == some 91 then
-      createListRule (mkCfg pf maxK maxD) src L
+      createListRule (mkCfg pf maxK maxD tz) src L
         { data := nestDict (k ++ [x]) [], flags := { tree := fsetAux EXPLICIT_NEST false (k ++ [x]) [], pending := [] } }
-      else createDictRule (mkCfg pf maxK maxD) src L
+      else createDictRule (mkCfg pf maxK maxD tz) src L
         { data := nestDict (k ++ [x]) [], flags := { tree := fsetAux EXPLICIT_NEST false (k ++ [x]) [], pending := [] } }) =
       .ok (L + 1 + K.length + 1, k,
         { data := nestDict k [(x, .tbl [])],
@@ -753,7 +761,7 @@ theorem scen5 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
     rw [createDictRule_eq hws hk2 hne hcl]
     simp only [flags_is _ _ hne, isAux_fsetAux_nil_prefix, Bool.or_false, Bool.false_eq_true, ite_false,
       getOrCreateNest, nestDict_append, nestDict, withNest_nest, overwriteErr, Except.map]
-  exact mainLoop_hdr_end (f := f)
+  exact mainLoop_hdr_end (hR := hR9) (f := f)
     (out := { data := nestDict (k ++ [x]) [],
               flags := { tree := fsetAux EXPLICIT_NEST false (k ++ [x]) [], pending := [] } })
     hg3 (finalize_nil _ rfl) hrule hend
@@ -905,10 +913,10 @@ theorem list_at {cfg : Cfg} {src : Str} {pos : Nat} {p0 : KPart} {ps : List KPar
 
 /-- `[[K]]`, `[K.x]`, `[[K]]`, `[K.x]`: each element of the array of tables gets its own
 sub-table (the flags of the old element are dropped when the new one starts). -/
-theorem scen6 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart) (x : Str)
+theorem scen6 (pf : ParseFloat) (maxK maxD : Nat) (tz : TzCache) (fr : Nat) (hfr : 10 ≤ fr) (p0 : KPart) (ps : List KPart) (x : Str)
     (h0 : p0.ok) (hps : ∀ p ∈ ps, p.ok) (hmax : ps.length + 2 ≤ maxK) (hx : x ≠ [])
     (hxb : ∀ c ∈ x, bareKey c = true) :
-    loads pf maxK maxD (.str (aot (keyEnc p0 ps) ++ 10 :: hdr (keyEnc p0 ps ++ 46 :: x) ++ 10 ::
+    loads pf maxK maxD tz fr (.str (aot (keyEnc p0 ps) ++ 10 :: hdr (keyEnc p0 ps ++ 46 :: x) ++ 10 ::
         aot (keyEnc p0 ps) ++ 10 :: hdr (keyEnc p0 ps ++ 46 :: x))) =
       .ok (nestDict (keyVal p0 ps).dropLast
         [((keyVal p0 ps).getLastD [], .arr [.tbl [(x, .tbl [])], .tbl [(x, .tbl [])]])]) := by
@@ -920,9 +928,9 @@ theorem scen6 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
     rcases hp with hp | rfl
     · exact hps p hp
     · exact ⟨hx, hxb⟩
-  have hmx : (ps ++ [KPart.bare x]).length + 1 ≤ (mkCfg pf maxK maxD).maxKeyParts := by
+  have hmx : (ps ++ [KPart.bare x]).length + 1 ≤ (mkCfg pf maxK maxD tz).maxKeyParts := by
     show (ps ++ [KPart.bare x]).length + 1 ≤ maxK; simp; omega
-  have hm1 : ps.length + 1 ≤ (mkCfg pf maxK maxD).maxKeyParts := by show ps.length + 1 ≤ maxK; omega
+  have hm1 : ps.length + 1 ≤ (mkCfg pf maxK maxD tz).maxKeyParts := by show ps.length + 1 ≤ maxK; omega
   have h13x := keyEnc_no13 h0 hpsx
   rw [hKx] at h13x
   generalize hK : keyEnc p0 ps = K at hKx h13x
@@ -932,23 +940,24 @@ theorem scen6 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
   have h13 : 13 ∉ src := by
     rw [← hsrc]; simp only [aot, hdr, List.cons_append, List.mem_cons, List.mem_append, not_or]
     simp_all
-  rw [loads_eq pf maxK maxD src h13]
+  rw [loads_eq pf maxK maxD tz fr src h13 (by omega)]
+  have hR9 : 9 ≤ fr - 1 := by omega
   obtain ⟨f, hf⟩ : ∃ f, src.length + 1 = f + 1 + 1 + 1 + 1 :=
     ⟨src.length - 3, by rw [← hsrc]; simp [aot, hdr] <;> omega⟩
   rw [hf]
   -- step 1: `[[K]]`
-  have hr1 := first_list (cfg := mkCfg pf maxK maxD) (src := src) (rest := 10 :: hdr (K ++ 46 :: x) ++ 10 :: aot K ++ 10 ::
+  have hr1 := first_list (cfg := mkCfg pf maxK maxD tz) (src := src) (rest := 10 :: hdr (K ++ 46 :: x) ++ 10 :: aot K ++ 10 ::
     hdr (K ++ 46 :: x)) h0 hps hm1 (by rw [hK, ← hsrc]; simp)
   rw [hK, hk] at hr1
   have hg0 : src[0]? = some 91 := by rw [← hsrc]; rfl
   have hn1 : src[K.length + 4]? = some 10 :=
     getElem_of_eq (a := aot K) (b := hdr (K ++ 46 :: x) ++ 10 :: aot K ++ 10 :: hdr (K ++ 46 :: x))
       (by rw [← hsrc]; simp) _ (by simp [aot] <;> omega)
-  rw [mainLoop_hdr_ok hg0 (finalize_nil _ rfl) hr1 hn1]
+  rw [mainLoop_hdr_ok (hR := hR9) hg0 (finalize_nil _ rfl) hr1 hn1]
   -- step 2: `[K.x]`
   have hd2 : src.drop (K.length + 4 + 1) = hdr (K ++ 46 :: x) ++ (10 :: aot K ++ 10 :: hdr (K ++ 46 :: x)) :=
     drop_eq_of (a := aot K ++ [10]) (by rw [← hsrc]; simp) _ (by simp [aot] <;> omega)
-  have hr2 := dict_at (cfg := mkCfg pf maxK maxD)
+  have hr2 := dict_at (cfg := mkCfg pf maxK maxD tz)
     (out := { data := nestDict k.dropLast [(k.getLastD [], .arr [.tbl []])],
               flags := { tree := fsetAux EXPLICIT_NEST false k [], pending := [] } })
     h0 hpsx hmx (by rw [hKx]; exact hd2)
@@ -963,7 +972,7 @@ theorem scen6 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
   have hn2 : src[K.length + 4 + 1 + 1 + (K ++ 46 :: x).length + 1]? = some 10 :=
     getElem_of_eq (a := aot K ++ [10] ++ hdr (K ++ 46 :: x)) (b := aot K ++ 10 :: hdr (K ++ 46 :: x))
       (by rw [← hsrc]; simp) _ (by simp [aot, hdr] <;> omega)
-  rw [mainLoop_hdr_ok
+  rw [mainLoop_hdr_ok (hR := hR9)
     (out := { data := nestDict k.dropLast [(k.getLastD [], .arr [.tbl []])],
               flags := { tree := fsetAux EXPLICIT_NEST false k [], pending := [] } })
     hg2 (finalize_nil _ rfl) hr2 hn2]
@@ -972,7 +981,7 @@ theorem scen6 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
   have hd3 : src.drop E2 = aot K ++ (10 :: hdr (K ++ 46 :: x)) :=
     drop_eq_of (a := aot K ++ [10] ++ hdr (K ++ 46 :: x) ++ [10]) (by rw [← hsrc]; simp) _
       (by rw [← hE2]; simp [aot, hdr] <;> omega)
-  have hr3 := list_at (cfg := mkCfg pf maxK maxD)
+  have hr3 := list_at (cfg := mkCfg pf maxK maxD tz)
     (out := { data := nestDict k.dropLast [(k.getLastD [], .arr [.tbl [(x, .tbl [])]])],
               flags := { tree := fsetAux EXPLICIT_NEST false (k ++ [x]) (fsetAux EXPLICIT_NEST false k []),
                          pending := [] } })
@@ -990,7 +999,7 @@ theorem scen6 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
     getElem_of_eq (a := aot K ++ [10] ++ hdr (K ++ 46 :: x) ++ [10] ++ aot K) (b := hdr (K ++ 46 :: x))
       (by rw [← hsrc]; simp) _
       (by rw [← hE2]; simp [aot, hdr] <;> omega)
-  rw [mainLoop_hdr_ok
+  rw [mainLoop_hdr_ok (hR := hR9)
     (out := { data := nestDict k.dropLast [(k.getLastD [], .arr [.tbl [(x, .tbl [])]])],
               flags := { tree := fsetAux EXPLICIT_NEST false (k ++ [x]) (fsetAux EXPLICIT_NEST false k []),
                          pending := [] } })
@@ -1000,7 +1009,7 @@ theorem scen6 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
   have hd4 : src.drop E3 = hdr (K ++ 46 :: x) ++ [] :=
     drop_eq_of (a := aot K ++ [10] ++ hdr (K ++ 46 :: x) ++ [10] ++ aot K ++ [10]) (by rw [← hsrc]; simp) _
       (by rw [← hE3, ← hE2]; simp [aot, hdr] <;> omega)
-  have hr4 := dict_at (cfg := mkCfg pf maxK maxD)
+  have hr4 := dict_at (cfg := mkCfg pf maxK maxD tz)
     (out := { data := nestDict k.dropLast [(k.getLastD [], .arr [.tbl [(x, .tbl [])], .tbl []])],
               flags := { tree := fsetAux EXPLICIT_NEST false k [], pending := [] } })
     h0 hpsx hmx (by rw [hKx]; exact hd4)
@@ -1011,15 +1020,15 @@ theorem scen6 (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart)
   have hg4 : src[E3]? = some 91 := getElem?_of_drop (by rw [hd4]; rfl)
   have hend : src[E3 + 1 + (K ++ 46 :: x).length + 1]? = none := by
     rw [← hE3, ← hE2, ← hsrc]; simp [aot, hdr]; omega
-  exact mainLoop_hdr_end (f := f)
+  exact mainLoop_hdr_end (hR := hR9) (f := f)
     (out := { data := nestDict k.dropLast [(k.getLastD [], .arr [.tbl [(x, .tbl [])], .tbl []])],
               flags := { tree := fsetAux EXPLICIT_NEST false k [], pending := [] } })
     hg4 (finalize_nil _ rfl) hr4 hend
 
 theorem tableRules_proven : TableRules := by
-  intro pf maxK maxD p0 ps x h0 hps hmax hx hxb
-  exact ⟨scen1 pf maxK maxD p0 ps h0 hps (by omega), scen2 pf maxK maxD p0 ps h0 hps (by omega),
-    scen3 pf maxK maxD p0 ps h0 hps (by omega), scen4 pf maxK maxD p0 ps h0 hps (by omega),
-    scen5 pf maxK maxD p0 ps x h0 hps hmax hx hxb, scen6 pf maxK maxD p0 ps x h0 hps hmax hx hxb⟩
+  intro pf maxK maxD tz fr p0 ps x hfr h0 hps hmax hx hxb
+  exact ⟨scen1 pf maxK maxD tz fr hfr p0 ps h0 hps (by omega), scen2 pf maxK maxD tz fr hfr p0 ps h0 hps (by omega),
+    scen3 pf maxK maxD tz fr hfr p0 ps h0 hps (by omega), scen4 pf maxK maxD tz fr hfr p0 ps h0 hps (by omega),
+    scen5 pf maxK maxD tz fr hfr p0 ps x h0 hps hmax hx hxb, scen6 pf maxK maxD tz fr hfr p0 ps x h0 hps hmax hx hxb⟩
 
 end PyLean.TextLibs.Toml

@@ -187,17 +187,18 @@ theorem mlLoop (src q rest : Str) (hq : q = [] ∨ q = [34] ∨ q = [34, 34]) :
 newlines included, or with any escape basic strings allow; line-ending backslashes, which trim the
 newline and the whitespace after them), optionally preceded by a newline right after the opening
 `"""` (trimmed), and followed by up to two `"` before the closing `"""` (kept), `parse_value`
-returns the text and the position after the closing quotes. -/
+returns the text and the position after the closing quotes, with at least six frames left below it
+(the recursion limit). -/
 def MultilineBasicSpec : Prop :=
-  ∀ (cfg : Cfg) (src : Str) (pos fuel : Nat) (ms : List MPiece) (nl q rest : Str),
+  ∀ (cfg : Cfg) (src : Str) (rr pos fuel : Nat) (ms : List MPiece) (nl q rest : Str), 6 ≤ rr →
     mOk ms → (nl = [] ∨ nl = [10]) → (q = [] ∨ q = [34] ∨ q = [34, 34]) →
     (nl = [] → ∀ c, (encM ms ++ q).head? = some c → c ≠ 10) → (∀ c, rest.head? = some c → c ≠ 34) →
     src.drop pos = [34, 34, 34] ++ nl ++ encM ms ++ q ++ [34, 34, 34] ++ rest →
-    parseValue cfg src (fuel + 1) pos =
+    parseValue cfg src rr (fuel + 1) pos =
       .ok (pos + 6 + nl.length + (encM ms).length + q.length, .str (valsM ms ++ q))
 
 theorem multilineBasicSpec_proven : MultilineBasicSpec := by
-  intro cfg src pos fuel ms nl q rest hms hnl hq hhead hrest h
+  intro cfg src rr pos fuel ms nl q rest hrr hms hnl hq hhead hrest h
   have hg : src[pos]? = some 34 := getElem?_of_drop (r := [34, 34] ++ nl ++ encM ms ++ q ++ [34, 34, 34] ++ rest)
     (by rw [h]; simp)
   have hst3 : startsAt src pos [34, 34, 34] = true :=
@@ -229,7 +230,8 @@ theorem multilineBasicSpec_proven : MultilineBasicSpec := by
     simp only [List.length_append, List.length_cons, List.length_nil] at this
     rw [show p + (encM ms).length + 3 = p + ((encM ms).length + (0 + 1 + 1 + 1)) by omega]
     exact this
-  simp only [parseValue, hg, show (some 34 == some 34) = true from rfl, ite_true, hst3, parseMultilineStr, hp,
+  simp only [parseValue, hg, show (some 34 == some 34) = true from rfl, ite_true, hst3,
+    need_ok (Nat.le_trans (parseMultilineStrN_le src pos false) hrr), parseMultilineStr, hp,
     Bool.false_eq_true, ite_false, parseBasicStr, hloop, bind, Except.bind, pure, Except.pure, sl_self,
     List.nil_append, Except.map]
   rcases hq with rfl | rfl | rfl

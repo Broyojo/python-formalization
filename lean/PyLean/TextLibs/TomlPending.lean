@@ -96,16 +96,16 @@ tables using a [table] header is not allowed": for every dotted key `K` (bare, l
 parts) and bare key `x`, `loads('K.x=true\n[K]')` raises "Cannot declare K twice" at the position
 after the header's key. -/
 def DottedThenHeader : Prop :=
-  ∀ (pf : ParseFloat) (maxK maxD : Nat) (p0 : KPart) (ps : List KPart) (x : Str),
-    p0.ok → (∀ p ∈ ps, p.ok) → ps.length + 2 ≤ maxK → x ≠ [] → (∀ c ∈ x, bareKey c = true) →
+  ∀ (pf : ParseFloat) (maxK maxD : Nat) (tz : TzCache) (fr : Nat) (p0 : KPart) (ps : List KPart) (x : Str),
+    12 ≤ fr → p0.ok → (∀ p ∈ ps, p.ok) → ps.length + 2 ≤ maxK → x ≠ [] → (∀ c ∈ x, bareKey c = true) →
     let K := keyEnc p0 ps
     let k := keyVal p0 ps
-    loads pf maxK maxD (.str ((K ++ 46 :: x) ++ S "=true" ++ 10 :: hdr K)) =
+    loads pf maxK maxD tz fr (.str ((K ++ 46 :: x) ++ S "=true" ++ 10 :: hdr K)) =
       .error (tde (S "Cannot declare " ++ keyRepr k ++ S " twice") ((K ++ 46 :: x) ++ S "=true" ++ 10 :: hdr K)
         (2 * K.length + x.length + 8))
 
 theorem dottedThenHeader_proven : DottedThenHeader := by
-  intro pf maxK maxD p0 ps x h0 hps hmax hx hxb
+  intro pf maxK maxD tz fr p0 ps x hfr h0 hps hmax hx hxb
   simp only
   have hne := keyVal_ne p0 ps
   have hKx : keyEnc p0 (ps ++ [.bare x]) = keyEnc p0 ps ++ 46 :: x := by simp [keyEnc, KPart.enc]
@@ -124,13 +124,13 @@ theorem dottedThenHeader_proven : DottedThenHeader := by
   have h13 : 13 ∉ src := by
     rw [← hsrc]; simp only [hdr, S, List.cons_append, List.mem_cons, List.mem_append, not_or]
     (simp_all) <;> decide
-  rw [loads_eq pf maxK maxD src h13]
+  rw [loads_eq pf maxK maxD tz fr src h13 (by omega)]
   obtain ⟨f, hf⟩ : ∃ f, src.length + 1 = f + 1 + 1 := ⟨src.length - 1, by rw [← hsrc]; simp [hdr] <;> omega⟩
   rw [hf]
   -- the line `K.x=true`
   have hd0 : src.drop 0 = keyEnc p0 (ps ++ [.bare x]) ++ (61 :: (S "true" ++ 10 :: hdr K)) := by
     rw [hKx, ← hsrc]; simp; rfl
-  have hkey := parseKey_enc (maxK := (mkCfg pf maxK maxD).maxKeyParts) (src := src) (pos := 0) h0 hpsx
+  have hkey := parseKey_enc (maxK := (mkCfg pf maxK maxD tz).maxKeyParts) (src := src) (pos := 0) h0 hpsx
     (show (ps ++ [KPart.bare x]).length + 1 ≤ maxK by simp; omega)
     (by intro c hc; simp at hc; subst hc; decide) hd0
   rw [hKx, hkx] at hkey
@@ -141,20 +141,21 @@ theorem dottedThenHeader_proven : DottedThenHeader := by
   have hd2 : src.drop ((K ++ 46 :: x).length + 1) = S "true" ++ (10 :: hdr K) := drop_succ_of_drop hd1
   have hsk : skipChars src ((K ++ 46 :: x).length + 1) tomlWs = (K ++ 46 :: x).length + 1 :=
     skipChars_at (c := 116) (getElem?_of_drop (r := S "rue" ++ 10 :: hdr K) (by rw [hd2]; rfl)) (by decide)
-  have hval := parseValue_bool (cfg := mkCfg pf maxK maxD) (src := src) (pos := (K ++ 46 :: x).length + 1)
+  have hval := parseValue_bool (cfg := mkCfg pf maxK maxD tz) (src := src) (r := fr - 1 - 1 - 1 - 1) (pos := (K ++ 46 :: x).length + 1)
     (f := vFuel src - 1 - 1) (rest := 10 :: hdr K) true (by simpa using hd2)
   have hfuel : vFuel src - 1 = vFuel src - 1 - 1 + 1 := by unfold vFuel; omega
-  have hpkv : parseKeyValuePair (mkCfg pf maxK maxD) src (vFuel src) 0 =
+  have hpkv : parseKeyValuePair (mkCfg pf maxK maxD tz) src (fr - 1 - 1 - 1) (vFuel src) 0 =
       .ok ((K ++ 46 :: x).length + 1 + 4, k ++ [x], .bool true) := by
     rw [show vFuel src = vFuel src - 1 + 1 by unfold vFuel; omega]
-    simp only [parseKeyValuePair, hkey, bind, Except.bind, Nat.zero_add, hg1,
-      show (some 61 != some 61) = false from rfl, Bool.false_eq_true, ite_false, hsk]
+    simp only [parseKeyValuePair, need_parseKey (show 8 ≤ fr - 1 - 1 - 1 by omega), hkey, bind, Except.bind,
+      Nat.zero_add, hg1, show (some 61 != some 61) = false from rfl, Bool.false_eq_true, ite_false, hsk,
+      need_ok (show 1 ≤ fr - 1 - 1 - 1 by omega)]
     rw [hfuel, hval]; rfl
-  have hrule : keyValueRule (mkCfg pf maxK maxD) src 0 Out.init [] =
+  have hrule : keyValueRule (mkCfg pf maxK maxD tz) src (fr - 1 - 1) 0 Out.init [] =
       .ok ((K ++ 46 :: x).length + 1 + 4,
         { data := nestDict k [(x, .bool true)],
           flags := { tree := [], pending := (pref k k.length).map (·, EXPLICIT_NEST) } }) := by
-    simp only [keyValueRule, hpkv, bind, Except.bind]
+    simp only [keyValueRule, need_ok (show 1 ≤ fr - 1 - 1 by omega), hpkv, bind, Except.bind]
     rw [contKeys_dotted, show Out.init.flags = { tree := [], pending := [] } from rfl,
       contKeys_pending src _ k k.length (Nat.le_refl _)]
     simp only [List.dropLast_concat, List.getLastD_concat, List.nil_append, Flags.is_, List.isEmpty_iff, hne,
@@ -167,7 +168,7 @@ theorem dottedThenHeader_proven : DottedThenHeader := by
     have : src = c :: (t ++ (ps ++ [KPart.bare x]).flatMap (fun p => 46 :: p.enc) ++ 61 :: (S "true" ++ 10 :: hdr K)) := by
       have := hd0; simp only [List.drop_zero] at this; rw [this]; simp [keyEnc, hke]
     rw [this]; rfl
-  rw [mainLoop_kv hc hki hcws hc10 hrule]
+  rw [mainLoop_kv hc hki hcws hc10 hrule (by omega)]
   have hd4 : src.drop ((K ++ 46 :: x).length + 1 + 4) = 10 :: hdr K := by
     have := drop_add_of_drop (a := S "true") (r := 10 :: hdr K) hd2
     rw [show (S "true").length = 4 from rfl] at this; exact this
@@ -177,14 +178,14 @@ theorem dottedThenHeader_proven : DottedThenHeader := by
   obtain ⟨tt, hfin⟩ := finalize_last k hne
   have hd5 : src.drop ((K ++ 46 :: x).length + 1 + 4 + 1) = hdr K ++ [] := by simpa using drop_succ_of_drop hd4
   have hg5 : src[(K ++ 46 :: x).length + 1 + 4 + 1]? = some 91 := getElem?_of_drop (by rw [hd5]; rfl)
-  have hr := dict_at (cfg := mkCfg pf maxK maxD)
+  have hr := dict_at (cfg := mkCfg pf maxK maxD tz)
     (out := { data := nestDict k [(x, .bool true)],
               flags := { tree := fsetAux EXPLICIT_NEST false k tt, pending := [] } })
     h0 hps (show ps.length + 1 ≤ maxK by omega) (by rw [hK]; exact hd5)
   rw [hK, hk] at hr
   simp only [flags_is _ _ hne, isAux_fsetAux_self _ _ k tt hne, Bool.true_or, ite_true] at hr
   rw [show (K ++ 46 :: x).length + 1 + 4 + 1 + 1 + K.length = 2 * K.length + x.length + 8 by simp; omega] at hr
-  exact mainLoop_hdr_err (f := f)
+  exact mainLoop_hdr_err (hR := show 9 ≤ fr - 1 by omega) (f := f)
     (out := { data := nestDict k [(x, .bool true)],
               flags := { tree := [], pending := (pref k k.length).map (·, EXPLICIT_NEST) } })
     hg5 hfin hr

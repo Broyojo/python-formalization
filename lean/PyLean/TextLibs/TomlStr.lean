@@ -208,15 +208,16 @@ theorem basicStrLoop_pieces (src rest : Str) : ∀ (ps : List Piece), (∀ p ∈
 /-- Basic strings, TOML 1.1 "String": for every list of characters each written as itself
 (when it is not `"`, `\` or a control character other than tab) or with any escape that the
 spec allows for it (`\b \t \n \f \r \e \" \\`, `\xHH` below 256, `\uHHHH` and `\UHHHHHHHH` for
-Unicode scalar values, hex in either case), `parse_value` on `"…"` returns that string and the
+Unicode scalar values, hex in either case), `parse_value` on `"…"`, with at least six frames left
+below it (the recursion limit; one string needs at most six), returns that string and the
 position after the closing quote. An escape of a value that is not a Unicode scalar value
 (a surrogate, or above U+10FFFF) raises `TOMLDecodeError` "Escaped character is not a Unicode
 scalar value", and a raw control character other than tab raises "Illegal character". -/
 def BasicStrRoundTrip : Prop :=
-  (∀ (cfg : Cfg) (src : Str) (pos fuel : Nat) (ps : List Piece) (rest : Str),
+  (∀ (cfg : Cfg) (src : Str) (r pos fuel : Nat) (ps : List Piece) (rest : Str), 6 ≤ r →
     (∀ p ∈ ps, p.ok) → src.drop pos = 34 :: encAll ps ++ 34 :: rest →
     ¬ (ps = [] ∧ rest.head? = some 34) →
-    parseValue cfg src (fuel + 1) pos = .ok (pos + (encAll ps).length + 2, .str (ps.map Piece.val))) ∧
+    parseValue cfg src r (fuel + 1) pos = .ok (pos + (encAll ps).length + 2, .str (ps.map Piece.val))) ∧
   (∀ (src : Str) (pos c : Nat) (up multiline : Bool) (rest : Str), isScalar c = false →
     (c < 65536 → src.drop pos = [92, 117] ++ hexD c 4 up ++ rest →
       parseBasicStrEscape src pos multiline =
@@ -255,7 +256,7 @@ theorem startsAt3_of {src : Str} {pos q : Nat} {a rest : Str} (h : src.drop pos 
 
 theorem basicStrRoundTrip_proven : BasicStrRoundTrip := by
   refine ⟨?_, ?_, ?_⟩
-  · intro cfg src pos fuel ps rest hok h hne
+  · intro cfg src r pos fuel ps rest hr hok h hne
     have hst : startsAt src pos [34, 34, 34] = false := by
       refine startsAt3_of (by simpa using h) ?_ (by
         rintro ⟨he, hr⟩; cases ps with
@@ -273,7 +274,8 @@ theorem basicStrRoundTrip_proven : BasicStrRoundTrip := by
       have := congrArg List.length h; simp at this; omega
     have hloop := basicStrLoop_pieces src rest ps hok (src.length + 1) (pos + 1) (pos + 1) [] h1
       (Nat.le_refl _) (by omega)
-    simp only [parseValue, hg, hst, parseOneLineBasicStr, parseBasicStr, hloop, sl_self]
+    simp only [parseValue, hg, hst, need_ok (Nat.le_trans (parseOneLineBasicStrN_le src pos) hr),
+      parseOneLineBasicStr, parseBasicStr, hloop, sl_self]
     simp [Except.map]; omega
   · intro src pos c up multiline rest hs
     refine ⟨fun hc h => ?_, fun hc h => ?_⟩
@@ -300,24 +302,25 @@ theorem basicStrRoundTrip_proven : BasicStrRoundTrip := by
 /-- Literal strings, TOML 1.1 "String": for every string without `'` and without control
 characters other than tab, `parse_value` on `'…'` returns it unchanged; a control character
 other than tab raises "Found invalid character" at its position; without a closing `'`,
-"Expected \"'\"" at the end of the document (before any check of the characters). -/
+"Expected \"'\"" at the end of the document (before any check of the characters). Each with at
+least three frames left below `parse_value` (the recursion limit). -/
 def LiteralStrSpec : Prop :=
-  (∀ (cfg : Cfg) (src : Str) (pos fuel : Nat) (s rest : Str),
+  (∀ (cfg : Cfg) (src : Str) (r pos fuel : Nat) (s rest : Str), 3 ≤ r →
     (∀ x ∈ s, x ≠ 39 ∧ illegalBasic x = false) → src.drop pos = 39 :: s ++ 39 :: rest →
     ¬ (s = [] ∧ rest.head? = some 39) →
-    parseValue cfg src (fuel + 1) pos = .ok (pos + s.length + 2, .str s)) ∧
-  (∀ (cfg : Cfg) (src : Str) (pos fuel c : Nat) (s1 s2 rest : Str),
+    parseValue cfg src r (fuel + 1) pos = .ok (pos + s.length + 2, .str s)) ∧
+  (∀ (cfg : Cfg) (src : Str) (r pos fuel c : Nat) (s1 s2 rest : Str), 3 ≤ r →
     (∀ x ∈ s1, x ≠ 39 ∧ illegalBasic x = false) → illegalBasic c = true → 39 ∉ s2 →
     src.drop pos = 39 :: s1 ++ c :: s2 ++ 39 :: rest →
-    parseValue cfg src (fuel + 1) pos =
+    parseValue cfg src r (fuel + 1) pos =
       .error (tde (S "Found invalid character " ++ reprS [c]) src (pos + 1 + s1.length))) ∧
-  (∀ (cfg : Cfg) (src : Str) (pos fuel : Nat) (s : Str), 39 ∉ s → s ≠ [] →
+  (∀ (cfg : Cfg) (src : Str) (r pos fuel : Nat) (s : Str), 3 ≤ r → 39 ∉ s → s ≠ [] →
     src.drop pos = 39 :: s →
-    parseValue cfg src (fuel + 1) pos = .error (tde (S "Expected " ++ reprS [39]) src src.length))
+    parseValue cfg src r (fuel + 1) pos = .error (tde (S "Expected " ++ reprS [39]) src src.length))
 
 theorem literalStrSpec_proven : LiteralStrSpec := by
   refine ⟨?_, ?_, ?_⟩
-  · intro cfg src pos fuel s rest hs h hne
+  · intro cfg src r pos fuel s rest hr hs h hne
     have hst : startsAt src pos [39, 39, 39] = false := by
       refine startsAt3_of (by simpa using h) ?_ hne
       cases s with
@@ -331,9 +334,9 @@ theorem literalStrSpec_proven : LiteralStrSpec := by
     have hfi : firstIdx illegalBasic (sl src (pos + 1) (pos + 1 + s.length)) = none := by
       rw [hsl]; exact firstIdx_none (fun x hx => (hs x hx).2)
     have h34 : (some 39 == some 34) = false := by decide
-    simp only [parseValue, hg, h34, hst, parseLiteralStr, skipUntil, hfind, hfi]
+    simp only [parseValue, hg, h34, hst, need_ok (Nat.le_trans (parseLiteralStrN_le src pos) hr), parseLiteralStr, skipUntil, hfind, hfi]
     simp [hsl, Except.map, bind, Except.bind, pure, Except.pure]; omega
-  · intro cfg src pos fuel c s1 s2 rest hs1 hc hs2 h
+  · intro cfg src r pos fuel c s1 s2 rest hr hs1 hc hs2 h
     have hc39 : c ≠ 39 := by intro e; subst e; simp [illegalBasic, asciiCtrl] at hc
     have hst : startsAt src pos [39, 39, 39] = false := by
       refine startsAt3_of (a := s1 ++ c :: s2) (by simpa using h) ?_ (by simp)
@@ -356,9 +359,9 @@ theorem literalStrSpec_proven : LiteralStrSpec := by
         drop_add_of_drop (a := s1) (by simpa using h1)
       simp [List.getD, getElem?_of_drop this]
     have h34 : (some 39 == some 34) = false := by decide
-    simp only [parseValue, hg, h34, hst, parseLiteralStr, skipUntil, hfind, hfi, hgc]
+    simp only [parseValue, hg, h34, hst, need_ok (Nat.le_trans (parseLiteralStrN_le src pos) hr), parseLiteralStr, skipUntil, hfind, hfi, hgc]
     simp [Except.map, bind, Except.bind]
-  · intro cfg src pos fuel s hs hne h
+  · intro cfg src r pos fuel s hr hs hne h
     have hst : startsAt src pos [39, 39, 39] = false := by
       cases s with
       | nil => exact absurd rfl hne
@@ -369,7 +372,7 @@ theorem literalStrSpec_proven : LiteralStrSpec := by
     have h1 : src.drop (pos + 1) = s := by simpa using drop_succ_of_drop h
     have hfind : findSub [39] (src.drop (pos + 1)) = none := by rw [h1]; exact findSub_single_none hs
     have h34 : (some 39 == some 34) = false := by decide
-    simp only [parseValue, hg, h34, hst, parseLiteralStr, skipUntil, hfind]
+    simp only [parseValue, hg, h34, hst, need_ok (Nat.le_trans (parseLiteralStrN_le src pos) hr), parseLiteralStr, skipUntil, hfind]
     simp [Except.map, bind, Except.bind]
 
 end PyLean.TextLibs.Toml

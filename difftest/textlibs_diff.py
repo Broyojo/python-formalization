@@ -4283,6 +4283,31 @@ import io as _io  # noqa: E402
 import tomllib  # noqa: E402
 import tomllib._parser as TP  # noqa: E402
 
+# The model counts Python frames (`need` in TomlModel.lean). It takes `_re`'s lazily imported
+# names as already bound, call sites as specialized (see `loads`) and `cached_tz` as holding
+# every offset (`tzAll`), so do all three now.
+for _ in range(8):
+    tomllib.loads("a = 1979-05-27T07:32:00+01:00\nb = 07:32:00\nc = 1\nd = 1.5\ne = {f = [1]}")
+import tomllib._re as _TR  # noqa: E402
+for _sg in "+-":
+    for _h in range(24):
+        for _m in range(60):
+            _TR.cached_tz("%02d" % _h, "%02d" % _m, _sg)
+
+
+def toml_call(frames, fn, *args, **kw):
+    """Call `fn` with exactly `frames` frames left (`py_recursion_remaining` at the call)."""
+    f, depth = sys._getframe(), 0
+    while f is not None:
+        depth += 1
+        f = f.f_back
+    old = sys.getrecursionlimit()
+    sys.setrecursionlimit(depth + frames)
+    try:
+        return fn(*args, **kw)
+    finally:
+        sys.setrecursionlimit(old)
+
 
 class TomlTag:
     """What the `tag` parse_float returns: an object that is neither dict nor list."""
@@ -4557,6 +4582,22 @@ class TomlArea:
         return s
 
     @classmethod
+    def deep(cls, r):
+        """A value nested in arrays and inline tables, and roughly the frames it needs."""
+        leaf = r.choice([cls.string(r), cls.number(r), cls.datetime(r), cls.time(r), "true", "[]", "{}",
+                         "[1, 2", "{a = 1", "x", '"\\u00e9"', '"""a\\\n b"""', "'''x'''", "1.5", "inf"])
+        v, need = leaf, 7
+        for _ in range(r.choice([r.randint(1, 8), r.randint(1, 60), r.randint(200, 340)])):
+            if r.random() < 0.5:
+                v = "[" + cls.sep(r) + v + cls.sep(r) + r.choice(["]", "]", ",]", ", 1]", "]", ""])
+                need += 2
+            else:
+                v = "{" + cls.sep(r, False) + cls.key(r) + " = " + v + cls.sep(r, False) + r.choice(["}", "}", ", b = 1}"])
+                need += 3
+        head = r.choice(["", "", "[t]\n", "[[t]]\n", "x = 1\n", "# c\n"])
+        return head + cls.key(r) + " = " + v + r.choice(["", "\n", " # end", "\n[u]"]), need
+
+    @classmethod
     def earg(cls, r, doc_len):
         k = r.random()
         if k < 0.15:
@@ -4581,11 +4622,24 @@ class TomlArea:
                 c["args"] = [cls.earg(r, len(d)) for _ in range(r.randint(1, 2))]
             return c
         c.update(pf=r.choice(["float", "float", "float", "tag", "raise_e", "list_dot", "dict_inf"]),
-                 maxk=r.choice([1000, 1000, 1000, 2, 3]), maxd=r.choice([4300, 4300, 0, 640, 700]))
+                 maxk=r.choice([1000, 1000, 1000, 2, 3]), maxd=r.choice([4300, 4300, 0, 640, 700]),
+                 frames=900)
+        k = r.random()
+        if k < 0.25:
+            # near the recursion limit: `float` and `TomlTag` need different frames, so the
+            # harness's float/TomlTag comparison is off here
+            c["pf"] = r.choice(["tag", "raise_e", "list_dot", "dict_inf"])
         if fn == "loads" and r.random() < 0.02:
             c["type"] = r.choice(["bytes", "int", "NoneType", "bytearray"])
+            c["frames"] = r.choice([1, 2, 900])
             return c
-        s = cls.doc(r)
+        if k < 0.13:
+            s, need = cls.deep(r)
+            c["frames"] = max(1, need + r.randint(-8, 8))
+        else:
+            s = cls.doc(r)
+            if k < 0.25:
+                c["frames"] = r.randint(1, 24)
         if fn == "load":
             if r.random() < 0.1:
                 c["text"] = cps(s)
@@ -4642,21 +4696,22 @@ class TomlArea:
         TP.MAX_KEY_PARTS = c["maxk"]
         sys.set_int_max_str_digits(c["maxd"])
         try:
+            fr = c["frames"]
             if fn == "load":
                 if "bytes" in c:
                     def go(pf):
-                        return tomllib.load(_io.BytesIO(bytes(c["bytes"])), parse_float=pf)
+                        return toml_call(fr, tomllib.load, _io.BytesIO(bytes(c["bytes"])), parse_float=pf)
                 else:
                     def go(pf):
-                        return tomllib.load(_io.StringIO(txt(c["text"])), parse_float=pf)
+                        return toml_call(fr, tomllib.load, _io.StringIO(txt(c["text"])), parse_float=pf)
             elif "type" in c:
                 arg = {"bytes": b"a = 1", "int": 1, "NoneType": None, "bytearray": bytearray(b"a")}[c["type"]]
                 def go(pf):
-                    return tomllib.loads(arg, parse_float=pf)
+                    return toml_call(fr, tomllib.loads, arg, parse_float=pf)
             else:
                 doc = txt(c["doc"])
                 def go(pf):
-                    return tomllib.loads(doc, parse_float=pf)
+                    return toml_call(fr, tomllib.loads, doc, parse_float=pf)
             name = c["pf"]
             r1 = common.py_result(lambda: go(toml_pf(name)))
             if name == "float":
