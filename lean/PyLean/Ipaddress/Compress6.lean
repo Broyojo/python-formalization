@@ -19,18 +19,21 @@ namespace PyLean.Ipaddress
 open PyLean
 
 /-- The eight hextet values of `ip_int`, high first: `int(hex_str[x:x+4], 16)` for
-`hex_str = '%032x' % ip_int` (`Lib/ipaddress.py:1854-1855`). -/
+`hex_str = '%032x' % ip_int` (`Lib/ipaddress.py:1855-1856`). -/
 def hextetVals (n : Nat) : List Nat := (List.range 8).map fun i => n / 65536 ^ (7 - i) % 65536
 
 /-- `vs[s:s+L]` is in range and every value in it is zero. -/
 def ZeroRun (vs : List Nat) (s L : Nat) : Prop :=
   s + L ≤ vs.length ∧ ∀ i, s ≤ i → i < s + L → vs[i]? = some 0
 
-/-- For every `ip_int < 2**128` (the precondition: `_string_from_ip_int` raises `ValueError` for
-larger values, `Lib/ipaddress.py:1851-1852`), with `vs` its eight hextet values:
+/-- `_BaseV6._string_from_ip_int(ip_int)`, `Lib/ipaddress.py:1835-1859`, for every argument. Above
+`_ALL_ONES` it raises `ValueError('IPv6 address is too large')` (:1852-1853, the docstring's
+"Raises"); with the default `ip_int=None` it reads `cls._ip` (:1849-1850), the slot descriptor,
+and `int()` of that raises `TypeError`. For every `ip_int < 2**128`, with `vs` its eight hextet
+values:
 
-* if no two adjacent hextets are zero, `_string_from_ip_int(ip_int)` is `':'.join('%x' % v for v
-  in vs)`, so a single zero hextet is never compressed (RFC 5952 4.2.2);
+* if no two adjacent hextets are zero, the result is `':'.join('%x' % v for v in vs)`, so a single
+  zero hextet is never compressed (RFC 5952 4.2.2);
 * if `[s, s + L)` is a run of zeros with `L ≥ 2`, every run of zeros is shorter or equally long,
   and every equally long run starts at `s` or later (the first longest run, RFC 5952 4.2.1 and
   4.2.3), the output is `':'.join(vs[:s]) + '::' + ':'.join(vs[s+L:])`, each value as `'%x'`.
@@ -38,13 +41,16 @@ larger values, `Lib/ipaddress.py:1851-1852`), with `vs` its eight hextet values:
 The hypotheses on `s` and `L` describe the run; they are not assumptions about the input, and
 such a run exists whenever two adjacent hextets are zero. -/
 def CompressRFC5952 : Prop :=
+  stringFromIpInt6Py none = .error (.typeError
+    "int() argument must be a string, a bytes-like object or a real number, not 'member_descriptor'") ∧
+  (∀ n : Nat, 2 ^ 128 ≤ n → stringFromIpInt6Py (some n) = .error (.valueError "IPv6 address is too large")) ∧
   ∀ n : Nat, n < 2 ^ 128 →
     ((∀ s, ¬ ZeroRun (hextetVals n) s 2) →
-      stringFromIpInt6 n = joinOn1 ':' ((hextetVals n).map hexStr)) ∧
+      stringFromIpInt6Py (some n) = .ok (joinOn1 ':' ((hextetVals n).map hexStr))) ∧
     (∀ s L, 2 ≤ L → ZeroRun (hextetVals n) s L →
       (∀ s' L', ZeroRun (hextetVals n) s' L' → L' < L ∨ (L' = L ∧ s ≤ s')) →
-      stringFromIpInt6 n = joinOn1 ':' (((hextetVals n).take s).map hexStr) ++ [':', ':'] ++
-        joinOn1 ':' (((hextetVals n).drop (s + L)).map hexStr))
+      stringFromIpInt6Py (some n) = .ok (joinOn1 ':' (((hextetVals n).take s).map hexStr) ++ [':', ':'] ++
+        joinOn1 ':' (((hextetVals n).drop (s + L)).map hexStr)))
 
 /-! ## (1) The loop sees only the mask -/
 
@@ -184,7 +190,13 @@ theorem joinOn1_dc (A B : List (List Char)) (p q : Prop) [Decidable p] [Decidabl
 
 /-! ## The property -/
 
-theorem compressRFC5952_proven : CompressRFC5952 := by
+theorem compressRFC5952_core : ∀ n : Nat, n < 2 ^ 128 →
+    ((∀ s, ¬ ZeroRun (hextetVals n) s 2) →
+      stringFromIpInt6 n = joinOn1 ':' ((hextetVals n).map hexStr)) ∧
+    (∀ s L, 2 ≤ L → ZeroRun (hextetVals n) s L →
+      (∀ s' L', ZeroRun (hextetVals n) s' L' → L' < L ∨ (L' = L ∧ s ≤ s')) →
+      stringFromIpInt6 n = joinOn1 ':' (((hextetVals n).take s).map hexStr) ++ [':', ':'] ++
+        joinOn1 ':' (((hextetVals n).drop (s + L)).map hexStr)) := by
   intro n _
   have hlen := hextetVals_length n
   have hok := maskOK_len8 ((hextetVals n).map fun v => decide (v = 0)) (by simp [hlen])
@@ -243,5 +255,16 @@ theorem compressRFC5952_proven : CompressRFC5952 := by
     have h2 := (runB_iff _ s 2).mpr (zeroRun_mono _ s L 2 hsL hL)
     rw [this] at h2
     exact absurd h2 (by decide)
+
+theorem compressRFC5952_proven : CompressRFC5952 := by
+  refine ⟨rfl, fun n hn => ?_, fun n hn => ?_⟩
+  · have : n > allOnes 128 := by unfold allOnes; omega
+    simp [stringFromIpInt6Py, this]
+  · have hle : ¬ n > allOnes 128 := by unfold allOnes; omega
+    have hpy : stringFromIpInt6Py (some n) = .ok (stringFromIpInt6 n) := by
+      simp [stringFromIpInt6Py, hle]
+    obtain ⟨c1, c2⟩ := compressRFC5952_core n hn
+    rw [hpy]
+    exact ⟨fun h => by rw [c1 h], fun s L h1 h2 h3 => by rw [c2 s L h1 h2 h3]⟩
 
 end PyLean.Ipaddress

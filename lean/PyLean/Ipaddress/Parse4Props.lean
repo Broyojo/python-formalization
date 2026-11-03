@@ -269,27 +269,129 @@ theorem v4Canonical_proven : V4Canonical := by
           | _ :: _ :: _ :: _ :: _ :: _, h, _, _ => simp at h
         · simp at h
 
-/-- The other two arguments of `IPv4Address`: an int is accepted exactly in `[0, 2**32)` and
-stored as is; four bytes `ip.to_bytes(4, 'big')` give `ip` back, and any other length raises
-`AddressValueError`. -/
+/-- `IPv4Address(int)` and `IPv4Address(bytes)`, ipaddress.py:1286-1296, with `_check_int_address`
+(:407-414) and `_check_packed_address(address, 4)` (:416-421): an int is stored exactly when it is
+in `[0, 2**32)`, and otherwise `AddressValueError` names it and the bound; four big-endian bytes
+`ip.to_bytes(4, 'big')` give `ip` back, and any other length raises `AddressValueError` with the
+bytes' repr and both lengths. The class matters: `ip_address` catches `AddressValueError` and
+`NetmaskValueError` only (:41-49). -/
 def V4InitIntBytes : Prop :=
-  (∀ (v : Int) (n : Nat), ipv4Init (.int v) = .ok n ↔ (0 ≤ v ∧ v < 2 ^ 32 ∧ (n : Int) = v)) ∧
+  (∀ v : Int, ipv4Init (.int v) =
+    if v < 0 then
+      .error (.named "AddressValueError" s!"{v} (< 0) is not permitted as an IPv{(4 : Nat)} address")
+    else if 2 ^ 32 ≤ v then
+      .error (.named "AddressValueError"
+        s!"{v} (>= 2**{(32 : Nat)}) is not permitted as an IPv{(4 : Nat)} address")
+    else .ok v.toNat) ∧
   (∀ n : Nat, n < 2 ^ 32 → ipv4Init (.bytes (toBytes4 n)) = .ok n) ∧
   (∀ b : List Nat, b.length ≠ 4 →
-    ipv4Init (.bytes b) = .error (.named "AddressValueError" "~(len != 4) is not permitted as an IPv4 address"))
+    ipv4Init (.bytes b) = .error (.named "AddressValueError"
+      s!"{bytesRepr b} (len {b.length} != {(4 : Nat)}) is not permitted as an IPv{(4 : Nat)} address"))
 
 theorem v4InitIntBytes_proven : V4InitIntBytes := by
-  refine ⟨fun v n => ?_, fun n hn => ?_, fun b hb => ?_⟩
+  refine ⟨fun v => ?_, fun n hn => ?_, fun b hb => ?_⟩
   · have hA : ((allOnes 32 : Nat) : Int) = 4294967295 := by simp [allOnes]
-    simp only [ipv4Init, checkIntAddress, hA]
+    have hv : versionOf 32 = 4 := rfl
+    simp only [ipv4Init, checkIntAddress, hA, hv]
     by_cases h0 : v < 0
-    · simp [h0]; omega
+    · simp [h0]
     · by_cases h1 : v > 4294967295
-      · simp [h0, h1]; omega
-      · simp [h0, h1]; omega
+      · have h1' : (2 : Int) ^ 32 ≤ v := by omega
+        simp [h0, h1, h1'] <;> omega
+      · have h1' : ¬ ((2 : Int) ^ 32 ≤ v) := by omega
+        simp [h0, h1, h1'] <;> omega
   · have := from_to_bytes n hn
-    simp only [ipv4Init, toBytes4, List.length_cons, List.length_nil] at this ⊢
-    simp [this]
-  · simp [ipv4Init, hb]
+    simp only [ipv4Init, checkPackedAddress, toBytes4, List.length_cons, List.length_nil] at this ⊢
+    simp [this, bind, Except.bind, pure, Except.pure]
+  · simp [ipv4Init, checkPackedAddress, hb, versionOf, bind, Except.bind]
+
+/-- `_BaseV4._parse_octet`, ipaddress.py:1206-1239, by input: the empty string, a string with a
+character other than an ASCII digit, more than three digits, a leading zero, and a value above 255
+raise the five `ValueError`s in that order of precedence (`octetMsg` holds their messages, :1220,
+:1223-1224, :1228-1229, :1233-1234, :1238); every other string is its decimal value. -/
+def ParseOctetSpec : Prop :=
+  ∀ s : List Char,
+    (s = [] → parseOctet s = .error .empty) ∧
+    (s ≠ [] → s.all isDigitC = false → parseOctet s = .error .nonDigit) ∧
+    (s.all isDigitC = true → 3 < s.length → parseOctet s = .error .tooLong) ∧
+    (s.all isDigitC = true → 2 ≤ s.length → s.length ≤ 3 → s.head? = some '0' →
+      parseOctet s = .error .leadingZero) ∧
+    (s.all isDigitC = true → 1 ≤ s.length → s.length ≤ 3 → (s.length = 1 ∨ s.head? ≠ some '0') →
+      parseOctet s = if digitsVal s ≤ 255 then .ok (digitsVal s) else .error (.tooBig (digitsVal s)))
+
+theorem parseOctetSpec_proven : ParseOctetSpec := by
+  intro s
+  refine ⟨fun h => by simp [h, parseOctet], fun h hd => ?_, fun hd hl => ?_, fun hd h2 h3 hz => ?_,
+    fun hd h1 h3 hz => ?_⟩
+  · have : s.isEmpty = false := by cases s <;> simp_all
+    simp [parseOctet, this, hd]
+  · have : s.isEmpty = false := by cases s <;> simp_all
+    simp [parseOctet, this, hd, hl]
+  · have : s.isEmpty = false := by cases s <;> simp_all
+    have hne : s ≠ ['0'] := by intro e; subst e; simp at h2
+    have : ¬ s.length > 3 := by omega
+    simp [parseOctet, *]
+  · have he : s.isEmpty = false := by cases s <;> simp_all
+    have hl : ¬ s.length > 3 := by omega
+    have hz' : ¬ (s ≠ ['0'] ∧ s.head? = some '0') := by
+      rintro ⟨h1, h2⟩
+      rcases hz with hz | hz
+      · match s, hz, h1, h2 with
+        | [c], _, h1, h2 => simp at h2; exact h1 (by rw [h2])
+      · exact hz h2
+    simp only [parseOctet, he, hd, hl, hz', Bool.not_true, Bool.false_eq_true, ↓reduceIte]
+    by_cases hv : digitsVal s ≤ 255
+    · simp [hv]
+    · simp [hv]
+
+theorem parseOctets_first (pre post : List (List Char)) (o : List Char) (e : OctetErr)
+    (hpre : ∀ p ∈ pre, ∃ v, parseOctet p = .ok v) (ho : parseOctet o = .error e) :
+    parseOctets (pre ++ o :: post) = .error (o, e) := by
+  induction pre with
+  | nil => simp [parseOctets, ho]
+  | cons p ps ih =>
+    obtain ⟨v, hv⟩ := hpre p (by simp)
+    simp [parseOctets, hv, ih (fun q hq => hpre q (by simp [hq])), Except.map]
+
+/-- `IPv4Address(s)` for a str `s`, ipaddress.py:1298-1302 and `_ip_int_from_string` (:1180-1203):
+it stores an int or raises `AddressValueError`, never another class (`ip_address` relies on that
+to fall through to IPv6, :41-49, and `_prefix_from_ip_string` to report a bad mask, :506-508), and
+the message is that of the first check that fails: a `/` (:1300-1301), the empty string
+(:1193-1194), other than four dot-separated parts (:1196-1198), then the first octet `_parse_octet`
+refuses, as `'<octet message> in <repr>'` (:1200-1203). `reprPlain` is `repr(s)` where the model renders it. -/
+def V4StrRefusals : Prop :=
+  (∀ s, (∃ n, ipv4Init (.str s) = .ok n) ∨ ∃ m, ipv4Init (.str s) = .error (.named "AddressValueError" m)) ∧
+  (∀ s, '/' ∈ s → ipv4Init (.str s) = .error (avErr ((reprPlain s).map ("Unexpected '/' in " ++ ·)))) ∧
+  ipv4Init (.str []) = .error (.named "AddressValueError" "Address cannot be empty") ∧
+  (∀ s, s ≠ [] → '/' ∉ s → (splitOn1 '.' s).length ≠ 4 →
+    ipv4Init (.str s) = .error (avErr ((reprPlain s).map ("Expected 4 octets in " ++ ·)))) ∧
+  (∀ s pre o post e, '/' ∉ s → splitOn1 '.' s = pre ++ o :: post → pre.length + post.length = 3 →
+    (∀ p ∈ pre, ∃ v, parseOctet p = .ok v) → parseOctet o = .error e →
+    ipv4Init (.str s) = .error (avErr (do let m ← octetMsg o e; let r ← reprPlain s; pure (m ++ " in " ++ r))))
+
+theorem v4StrRefusals_proven : V4StrRefusals := by
+  refine ⟨fun s => ?_, fun s h => ?_, ?_, fun s hne hs hl => ?_, fun s pre o post e hs hsp hlen hpre ho => ?_⟩
+  · unfold ipv4Init ipIntFromString4 avErr
+    dsimp only
+    split
+    · exact Or.inr ⟨_, rfl⟩
+    · split
+      · exact Or.inr ⟨_, rfl⟩
+      · split
+        · exact Or.inr ⟨_, rfl⟩
+        · split
+          · exact Or.inl ⟨_, rfl⟩
+          · exact Or.inr ⟨_, rfl⟩
+  · simp [ipv4Init, h]
+  · decide
+  · have he : s.isEmpty = false := by cases s <;> simp_all
+    simp [ipv4Init, hs, ipIntFromString4, he, hl]
+  · have hl4 : (splitOn1 '.' s).length = 4 := by rw [hsp]; simp; omega
+    have he : s.isEmpty = false := by
+      cases s with
+      | nil => simp [splitOn1] at hl4
+      | cons _ _ => rfl
+    have hl4' : pre.length + (post.length + 1) = 4 := by omega
+    simp [ipv4Init, hs, ipIntFromString4, he, hl4', hsp, parseOctets_first pre post o e hpre ho]
 
 end PyLean.Ipaddress

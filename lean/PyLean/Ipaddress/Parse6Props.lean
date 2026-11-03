@@ -320,7 +320,7 @@ theorem compressed_parse (h0 h1 h2 h3 h4 h5 h6 h7 : List Char) (v0 v1 v2 v3 v4 v
     · repeat' (first | exact allHexGood_nil | refine allHexGood_cons _ _ ?_ ?_ | assumption)
     intro s hs he hl
     unfold ipIntFromString6
-    simp [hs, he, hl, skipScan, p0, p1, p2, p3, p4, p5, p6, p7, d0, d1, d2, d3, d4, d5, d6, d7,
+    simp [hs, he, hl, ipv6Suffix, ipv6Layout, ipv6Hextets, skipScan, p0, p1, p2, p3, p4, p5, p6, p7, d0, d1, d2, d3, d4, d5, d6, d7,
       e0, e1, e2, e3, e4, e5, e6, e7, parseHextets, head!_cons', Except.map]
     simp only [pure, Except.pure, Except.ok.injEq]
   · have y0 : b ≤ 0 → 0 < b + bl → v0 = 0 := fun x y => z0 (by simpa using hrun 0 x y)
@@ -352,7 +352,7 @@ theorem compressed_parse (h0 h1 h2 h3 h4 h5 h6 h7 : List Char) (v0 v1 v2 v3 v4 v
       · repeat' (first | exact allHexGood_nil | refine allHexGood_cons _ _ ?_ ?_ | assumption)
       intro s hs he hl
       unfold ipIntFromString6
-      simp [hs, he, hl, skipScan, p0, p1, p2, p3, p4, p5, p6, p7, d0, d1, d2, d3, d4, d5, d6, d7,
+      simp [hs, he, hl, ipv6Suffix, ipv6Layout, ipv6Hextets, skipScan, p0, p1, p2, p3, p4, p5, p6, p7, d0, d1, d2, d3, d4, d5, d6, d7,
         e0, e1, e2, e3, e4, e5, e6, e7, parseHextets, head!_cons', Except.map]
       simp only [pure, Except.pure, Except.ok.injEq]
       rw [combine_zeros]
@@ -484,7 +484,7 @@ theorem mapped_roundtrip (n : Nat) (hq : n / 2 ^ 32 = 65535) :
   have he : (joinOn1 ':' [[], [], ['f', 'f', 'f', 'f'], q]).isEmpty = false := by simp [joinOn1]
   generalize joinOn1 ':' [[], [], ['f', 'f', 'f', 'f'], q] = s at hs hl he ⊢
   unfold ipIntFromString6
-  simp [hs, he, hl, qd, hv4, skipScan, pa, pb, ea, eb, parse_ffff, parseHextets, head!_cons', Except.map]
+  simp [hs, he, hl, qd, hv4, ipv6Suffix, ipv6Layout, ipv6Hextets, skipScan, pa, pb, ea, eb, parse_ffff, parseHextets, head!_cons', Except.map]
   simp only [pure, Except.pure, Except.ok.injEq]
   exact mapped_combine n m hm hn
 
@@ -582,9 +582,33 @@ theorem partition_some (a x : List Char) (h : '%' ∉ a) : partitionPct (a ++ '%
   rw [this]
   simp [List.span.loop]
 
+theorem shiftRight32 (n : Nat) : n >>> 32 = n / 2 ^ 32 := Nat.shiftRight_eq_div_pow n 32
+
+theorem and32 (n : Nat) : n &&& 0xFFFFFFFF = n % 2 ^ 32 := by
+  rw [show (0xFFFFFFFF : Nat) = 2 ^ 32 - 1 by rfl]; exact Nat.and_two_pow_sub_one_eq_mod n 32
+
+theorem ipv4Mapped_eq (n : Nat) :
+    ipv4Mapped n = if n / 2 ^ 32 = 0xFFFF then some (n % 2 ^ 32) else none := by
+  simp only [ipv4Mapped, shiftRight32, and32]
+
+/-- `str()` of an IPv6 address with a 128-bit `_ip` succeeds, with the text `ipv6Str` gives. -/
+theorem ipv6StrPy_eq (n : Nat) (hn : n < 2 ^ 128) (sc : Option (List Char)) :
+    ipv6StrPy n sc = .ok (ipv6Str n sc) := by
+  have hle : ¬ n > allOnes 128 := by unfold allOnes; omega
+  have hq' : ¬ (65535 : Nat) > allOnes 128 := by unfold allOnes; decide
+  unfold ipv6StrPy ipv6Str
+  rw [ipv4Mapped_eq]
+  by_cases hq : n / 2 ^ 32 = 0xFFFF
+  · simp only [hq, ↓reduceIte, ipv4MappedToStr, ipv4Mapped_eq, stringFromIpInt6Py, shiftRight32, hq']
+    cases sc <;> rfl
+  · simp only [hq, ↓reduceIte, stringFromIpInt6Py, hle]
+    cases sc <;> rfl
+
 /-- `IPv6Address(str(IPv6Address(n) with scope sc))` gives `n` and `sc` back. -/
 theorem v6RoundTrip_proven : V6RoundTrip := by
   intro n sc hn hsc
+  refine ⟨ipv6Str n sc, ipv6StrPy_eq n hn sc, ?_⟩
+  show ipv6InitStr (ipv6Str n sc) = .ok (n, sc)
   obtain ⟨hc, hp⟩ := base6_ok n hn
   have hslash : '/' ∉ base6 n := v6C_not _ hc '/' (by decide)
   have hpct : '%' ∉ base6 n := v6C_not _ hc '%' (by decide)
@@ -599,13 +623,13 @@ theorem v6RoundTrip_proven : V6RoundTrip := by
   rw [hstr]
   cases sc with
   | none =>
-    simp only [ipv6InitStr, hslash, ↓reduceIte, partition_none _ hpct, hp]
-    rfl
+    simp [ipv6InitStr, splitScopeId, hslash, partition_none _ hpct, hp, bind, Except.bind, pure,
+      Except.pure]
   | some x =>
     obtain ⟨hx0, hx1, hx2⟩ := hsc x rfl
     have hs : '/' ∉ base6 n ++ '%' :: x := by simp [hslash, hx2]
-    simp only [ipv6InitStr, hs, ↓reduceIte, partition_some _ _ hpct, hp]
-    simp [hx0, hx1]
-    rfl
+    have hx0' : x.isEmpty = false := by cases x <;> simp_all
+    simp [ipv6InitStr, splitScopeId, hs, partition_some _ _ hpct, hp, hx0', hx1, bind, Except.bind,
+      pure, Except.pure, Functor.map, Except.map]
 
 end PyLean.Ipaddress

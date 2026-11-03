@@ -8,6 +8,17 @@ namespace PyLean.Ipaddress
 
 open PyLean
 
+/-- The network of prefix `k` next to the one holding address `a`: `a`'s block of prefix `k`
+with the bit of weight `2**(bits - k)` flipped. -/
+def sibling (bits a k : Nat) : Net :=
+  let h := 2 ^ (bits - k)
+  let q := a / h
+  ⟨bits, (if q % 2 = 0 then q + 1 else q - 1) * h, k⟩
+
+/-- The siblings of `a`'s blocks of prefix `p + 1, ..., p + n`, in that order. -/
+def excludeTail (bits a p n : Nat) : List Net :=
+  (List.range n).map fun j => sibling bits a (p + 1 + j)
+
 namespace SubnetsAux
 
 theorem testBit_allOnes (b i : Nat) : (allOnes b).testBit i = decide (i < b) := by
@@ -353,6 +364,143 @@ theorem excludeLoop_spec (o : Net) (ho : o.Valid) :
           all_goals omega
 
 
+theorem sibling_lo {bits bits' x A h k : Nat} (hb : bits = bits') (hh : 2 ^ (bits - k) = h)
+    (hpos : 0 < h) (hA : A % (2 * h) = 0) (h1 : A ≤ x) (h2 : x < A + h) :
+    sibling bits x k = ⟨bits', A + h, k⟩ := by
+  subst hb
+  obtain ⟨c, hc⟩ := Nat.dvd_of_mod_eq_zero hA
+  have ec : A = 2 * (c * h) := by rw [hc, Nat.mul_assoc, Nat.mul_comm h c]
+  have hq : x / h = 2 * c := by
+    apply Nat.div_eq_of_lt_le
+    · rw [Nat.mul_assoc]; omega
+    · rw [Nat.add_mul, Nat.one_mul, Nat.mul_assoc]; omega
+  have hev : 2 * c % 2 = 0 := Nat.mul_mod_right 2 c
+  show (⟨bits, (if x / 2 ^ (bits - k) % 2 = 0 then x / 2 ^ (bits - k) + 1
+    else x / 2 ^ (bits - k) - 1) * 2 ^ (bits - k), k⟩ : Net) = _
+  rw [hh, hq]
+  simp only [hev, ↓reduceIte, Net.mk.injEq, and_true, true_and]
+  rw [Nat.add_mul, Nat.one_mul, Nat.mul_assoc]; omega
+
+theorem sibling_hi {bits bits' x A h k : Nat} (hb : bits = bits') (hh : 2 ^ (bits - k) = h)
+    (hpos : 0 < h) (hA : A % (2 * h) = 0) (h1 : A + h ≤ x) (h2 : x < A + 2 * h) :
+    sibling bits x k = ⟨bits', A, k⟩ := by
+  subst hb
+  obtain ⟨c, hc⟩ := Nat.dvd_of_mod_eq_zero hA
+  have ec : A = 2 * (c * h) := by rw [hc, Nat.mul_assoc, Nat.mul_comm h c]
+  have hq : x / h = 2 * c + 1 := by
+    apply Nat.div_eq_of_lt_le
+    · rw [Nat.add_mul, Nat.one_mul, Nat.mul_assoc]; omega
+    · rw [Nat.add_mul, Nat.add_mul, Nat.one_mul, Nat.mul_assoc]; omega
+  have hodd : (2 * c + 1) % 2 = 1 := by omega
+  have hne : ¬ ((2 * c + 1) % 2 = 0) := by omega
+  show (⟨bits, (if x / 2 ^ (bits - k) % 2 = 0 then x / 2 ^ (bits - k) + 1
+    else x / 2 ^ (bits - k) - 1) * 2 ^ (bits - k), k⟩ : Net) = _
+  rw [hh, hq]
+  simp only [hne, ↓reduceIte, Nat.add_sub_cancel, Net.mk.injEq, and_true, true_and]
+  rw [Nat.mul_assoc]; omega
+
+theorem excludeTail_succ (bits a p n : Nat) :
+    excludeTail bits a p (n + 1) = sibling bits a (p + 1) :: excludeTail bits a (p + 1) n := by
+  unfold excludeTail
+  rw [List.range_succ_eq_map]
+  simp only [List.map_cons, List.map_map, Nat.add_zero]
+  congr 1
+  apply List.map_congr_left
+  intro j _
+  simp only [Function.comp_apply]
+  congr 1
+  omega
+
+theorem excludeLoop_exact (o : Net) (ho : o.Valid) :
+    ∀ (fuel : Nat) (B : Net), B.Valid → B.bits = o.bits → B.prefixlen < o.prefixlen →
+      B.addr ≤ o.addr → o.addr + o.size ≤ B.addr + B.size →
+      o.prefixlen - B.prefixlen ≤ fuel →
+      excludeLoop o fuel ⟨B.bits, B.addr, B.prefixlen + 1⟩
+          ⟨B.bits, B.addr + 2 ^ (B.bits - (B.prefixlen + 1)), B.prefixlen + 1⟩ =
+        .ok (excludeTail o.bits o.addr B.prefixlen (o.prefixlen - B.prefixlen)) := by
+  intro fuel
+  induction fuel with
+  | zero => intro B _ _ hp _ _ hf; omega
+  | succ fuel ih =>
+    intro B hB hbits hp hlo hhi hf
+    have hov := ho
+    obtain ⟨hop, hoa, hom⟩ := ho
+    obtain ⟨hBp, hBa, hBm⟩ := hB
+    have hBlt : B.prefixlen < B.bits := by omega
+    obtain ⟨_, v1, v2⟩ := halves_spec B ⟨hBp, hBa, hBm⟩ hBlt
+    have hK : 2 ^ (B.bits - B.prefixlen) = 2 * 2 ^ (B.bits - (B.prefixlen + 1)) := by
+      rw [show B.bits - B.prefixlen = (B.bits - (B.prefixlen + 1)) + 1 by omega, Nat.pow_succ]
+      omega
+    have hdk : 2 ^ (o.bits - o.prefixlen) ∣ 2 ^ (B.bits - (B.prefixlen + 1)) :=
+      Nat.pow_dvd_pow 2 (by omega)
+    have hdK : 2 ^ (B.bits - (B.prefixlen + 1)) ∣ 2 ^ (B.bits - B.prefixlen) :=
+      Nat.pow_dvd_pow 2 (by omega)
+    simp only [Net.size] at hhi
+    rw [hK] at hhi
+    have hBo : B.addr % 2 ^ (o.bits - o.prefixlen) = 0 := by
+      have := Nat.mod_mod_of_dvd B.addr (Nat.dvd_trans hdk hdK); rw [hBm] at this
+      rw [← this]; exact Nat.zero_mod _
+    rw [hK] at hBm
+    have hh' : 2 ^ (o.bits - (B.prefixlen + 1)) = 2 ^ (B.bits - (B.prefixlen + 1)) := by rw [hbits]
+    generalize hh : 2 ^ (B.bits - (B.prefixlen + 1)) = h at hdk hdK hK v2 hhi hBm hh' ⊢
+    generalize hso : 2 ^ (o.bits - o.prefixlen) = so at hdk hom hhi hBo
+    have hhpos : 0 < h := hh ▸ Nat.two_pow_pos _
+    have hsopos : 0 < so := hso ▸ Nat.two_pow_pos _
+    have hhso : h % so = 0 := Nat.mod_eq_zero_of_dvd hdk
+    rw [show o.prefixlen - B.prefixlen = (o.prefixlen - (B.prefixlen + 1)) + 1 by omega,
+      excludeTail_succ]
+    by_cases hc : o.addr < B.addr + h
+    · have hin : o.addr + so ≤ B.addr + h :=
+        add_le_of_mod hom (by rw [Nat.add_mod, hBo, hhso]; simp) hc
+      rw [sibling_lo hbits.symm hh' hhpos hBm hlo hc]
+      by_cases heq : o.prefixlen = B.prefixlen + 1
+      · have hso_h : so = h := by rw [← hso, ← hh, hbits, heq]
+        have hs1 : (⟨B.bits, B.addr, B.prefixlen + 1⟩ : Net) = o := by
+          cases o; simp only [Net.mk.injEq] at *; omega
+        have hz : o.prefixlen - (B.prefixlen + 1) = 0 := by omega
+        rw [hz]
+        simp [excludeLoop, hs1, excludeTail]
+      · have hs1 : ¬ ((⟨B.bits, B.addr, B.prefixlen + 1⟩ : Net) = o) := by
+          intro e; rw [← e] at heq; exact heq rfl
+        have hs2 : ¬ ((⟨B.bits, B.addr + h, B.prefixlen + 1⟩ : Net) = o) := by
+          intro e; rw [← e] at heq; exact heq rfl
+        have hsub : subnetOf o ⟨B.bits, B.addr, B.prefixlen + 1⟩ = true := by
+          simp only [subnetOf, broadcast_eq hov, broadcast_eq v1, Net.size, hh, hso]
+          simp; omega
+        obtain ⟨hhv, -, -⟩ := halves_spec _ v1 (by simp; omega)
+        have h1 := ih ⟨B.bits, B.addr, B.prefixlen + 1⟩ v1 hbits
+          (by simp; omega) hlo (by simp only [Net.size, hh, hso]; omega) (by simp; omega)
+        simp only [excludeLoop, hs1, hs2, hsub, hhv]
+        simp only at h1
+        simp [h1, hs1, hs2, bind, Except.bind, pure, Except.pure]
+    · rw [sibling_hi hbits.symm hh' hhpos hBm (by omega) (by omega)]
+      by_cases heq : o.prefixlen = B.prefixlen + 1
+      · have hso_h : so = h := by rw [← hso, ← hh, hbits, heq]
+        have hs2 : (⟨B.bits, B.addr + h, B.prefixlen + 1⟩ : Net) = o := by
+          cases o; simp only [Net.mk.injEq] at *; omega
+        have hs1 : ¬ ((⟨B.bits, B.addr, B.prefixlen + 1⟩ : Net) = o) := by
+          intro e; rw [← hs2] at e; simp at e; omega
+        have hz : o.prefixlen - (B.prefixlen + 1) = 0 := by omega
+        rw [hz]
+        simp [excludeLoop, hs1, hs2, excludeTail]
+      · have hs1 : ¬ ((⟨B.bits, B.addr, B.prefixlen + 1⟩ : Net) = o) := by
+          intro e; rw [← e] at heq; exact heq rfl
+        have hs2 : ¬ ((⟨B.bits, B.addr + h, B.prefixlen + 1⟩ : Net) = o) := by
+          intro e; rw [← e] at heq; exact heq rfl
+        have hnsub : subnetOf o ⟨B.bits, B.addr, B.prefixlen + 1⟩ = false := by
+          simp only [subnetOf, broadcast_eq hov, broadcast_eq v1, Net.size, hh, hso]
+          simp; omega
+        have hsub : subnetOf o ⟨B.bits, B.addr + h, B.prefixlen + 1⟩ = true := by
+          simp only [subnetOf, broadcast_eq hov, broadcast_eq v2, Net.size, hh, hso]
+          simp; omega
+        obtain ⟨hhv, -, -⟩ := halves_spec _ v2 (by simp; omega)
+        have h1 := ih ⟨B.bits, B.addr + h, B.prefixlen + 1⟩ v2 hbits
+          (by simp; omega) (by simp; omega) (by simp only [Net.size, hh, hso]; omega)
+          (by simp; omega)
+        simp only [excludeLoop, hs1, hs2, hsub, hnsub, hhv]
+        simp only at h1
+        simp [h1, hs1, hs2, bind, Except.bind, pure, Except.pure]
+
 theorem addressExclude_spec (s o : Net) (hs : s.Valid) (ho : o.Valid) (hb : o.bits = s.bits)
     (hsub : subnetOf o s = true) :
     ∃ out, addressExclude s o = .ok out ∧
@@ -414,17 +562,143 @@ def SupernetContains : Prop :=
 theorem supernetContains_proven : SupernetContains :=
   fun n d _ hv h0 hd => SubnetsAux.supernet_spec n d hv h0 hd
 
-/-- `address_exclude` docstring, ipaddress.py:789-822: for `other` a subnet of
-`self`, the result is "self minus other": valid networks of the same version
-that, together with `other`, cover every address of `self` exactly once. -/
+/-- `address_exclude` docstring, ipaddress.py:789-822, and its doctest in
+`Doc/library/ipaddress.rst` (`192.0.2.0/28` minus `192.0.2.1/32` is `192.0.2.8/29, 192.0.2.4/30,
+192.0.2.2/31, 192.0.2.0/32`): for a network `o` of the same version inside `s`, the result is,
+for each prefix length from `s.prefixlen + 1` to `o.prefixlen` in that order, the block of that
+length next to the one holding `o`; these blocks and `o` cover `s` once. An `o` outside `s` raises
+`ValueError` (:831-832); a network or address of the other version raises `TypeError` (:824-826),
+an address of the same version raises `TypeError` (:828-829), and an object without `version`
+raises `AttributeError` at `other.version`. -/
 def AddressExcludePartition : Prop :=
-  ∀ s o : Net, IsVersion s.bits → s.Valid → o.Valid → o.bits = s.bits →
-    subnetOf o s = true →
-    ∃ out, addressExclude s o = .ok out ∧
-      (∀ m ∈ out, m.bits = s.bits ∧ m.Valid) ∧
-      ∀ x, out.countP (fun m => m.mem x) = if s.mem x && !o.mem x then 1 else 0
+  ∀ s : Net, IsVersion s.bits → s.Valid →
+    (∀ o : Net, o.Valid → o.bits = s.bits → subnetOf o s = true →
+      addressExcludeOp s (.net o) = .ok (excludeTail s.bits o.addr s.prefixlen (o.prefixlen - s.prefixlen)) ∧
+      ∀ x, (excludeTail s.bits o.addr s.prefixlen (o.prefixlen - s.prefixlen)).countP (fun m => m.mem x) =
+        if s.mem x && !o.mem x then 1 else 0) ∧
+    (∀ o : Net, o.bits = s.bits → subnetOf o s = false →
+      addressExcludeOp s (.net o) = .error (.valueError "~not contained in")) ∧
+    (∀ o : Net, versionOf o.bits ≠ versionOf s.bits →
+      addressExcludeOp s (.net o) = .error (.typeError "~are not of the same version")) ∧
+    (∀ b x, versionOf b ≠ versionOf s.bits →
+      addressExcludeOp s (.addr b x) = .error (.typeError "~are not of the same version")) ∧
+    (∀ x, addressExcludeOp s (.addr s.bits x) = .error (.typeError "~is not a network object")) ∧
+    (∀ ty, addressExcludeOp s (.other ty) =
+      .error (.named "AttributeError" s!"'{ty}' object has no attribute 'version'"))
 
-theorem addressExcludePartition_proven : AddressExcludePartition :=
-  fun s o _ hs ho hb hsub => SubnetsAux.addressExclude_spec s o hs ho hb hsub
+theorem addressExclude_exact (s o : Net) (hs : s.Valid) (ho : o.Valid) (hb : o.bits = s.bits)
+    (hsub : subnetOf o s = true) :
+    addressExclude s o = .ok (excludeTail s.bits o.addr s.prefixlen (o.prefixlen - s.prefixlen)) := by
+  by_cases he : o = s
+  · subst he
+    simp [addressExclude, hsub, excludeTail]; rfl
+  · have hsub' := hsub
+    simp only [subnetOf, SubnetsAux.broadcast_eq hs, SubnetsAux.broadcast_eq ho, Bool.and_eq_true,
+      decide_eq_true_eq] at hsub'
+    obtain ⟨hlo, hhi⟩ := hsub'
+    have p1 := Nat.two_pow_pos (o.bits - o.prefixlen)
+    have p2 := Nat.two_pow_pos (s.bits - s.prefixlen)
+    have hhi' : o.addr + o.size ≤ s.addr + s.size := by
+      simp only [Net.size] at hhi ⊢; omega
+    have hp : s.prefixlen < o.prefixlen := by
+      apply Nat.lt_of_not_le; intro hle
+      rcases Nat.lt_or_eq_of_le hle with hlt | heq
+      · have := Nat.pow_lt_pow_right (a := 2) (by decide)
+          (by obtain ⟨_, _, _⟩ := ho; obtain ⟨_, _, _⟩ := hs; omega :
+            s.bits - s.prefixlen < o.bits - o.prefixlen)
+        simp only [Net.size] at hhi'; omega
+      · apply he
+        cases o; cases s; simp only [Net.mk.injEq] at *; simp only [Net.size] at *
+        refine ⟨hb, ?_, heq⟩
+        rw [hb, heq] at hhi'; omega
+    have hslt : s.prefixlen < s.bits := by obtain ⟨_, _, _⟩ := ho; omega
+    obtain ⟨hhv, -, -⟩ := SubnetsAux.halves_spec s hs hslt
+    have h1 := SubnetsAux.excludeLoop_exact o ho (s.bits + 1) s hs hb.symm hp hlo hhi'
+      (by obtain ⟨_, _, _⟩ := ho; omega)
+    rw [hb] at h1
+    simp [addressExclude, hsub, he, hhv, h1, bind, Except.bind]
+
+theorem addressExcludePartition_proven : AddressExcludePartition := by
+  intro s _ hs
+  refine ⟨fun o ho hb hsub => ?_, fun o hb hsub => ?_, fun o hv => ?_, fun b x hv => ?_,
+    fun x => ?_, fun ty => rfl⟩
+  · have hv : versionOf s.bits = versionOf o.bits := by rw [hb]
+    have hx := addressExclude_exact s o hs ho hb hsub
+    obtain ⟨out, h1, -, h3⟩ := SubnetsAux.addressExclude_spec s o hs ho hb hsub
+    rw [hx] at h1
+    cases h1
+    refine ⟨?_, h3⟩
+    simp [addressExcludeOp, hv, hx]
+  · have hv : versionOf s.bits = versionOf o.bits := by rw [hb]
+    simp [addressExcludeOp, hv, addressExclude, hsub, bind, Except.bind] <;> rfl
+  · simp [addressExcludeOp, Ne.symm hv]
+  · simp [addressExcludeOp, Ne.symm hv]
+  · simp [addressExcludeOp]
+
+/-- The argument checks of `subnets`, ipaddress.py:921-972, as the docstring lists them (:940-946):
+a network of one address yields itself whatever the arguments (:949-951, the documented
+"yield an iterator with just ourself"); otherwise `new_prefix` shorter than the prefix,
+`new_prefix` with a `prefixlen_diff` other than 1, a negative `prefixlen_diff` and a new prefix
+past `max_prefixlen` each raise `ValueError` with the source's message, and `new_prefix=k` is
+`prefixlen_diff=k - prefixlen` (:957), whose result `SubnetsPartition` gives. -/
+def SubnetsArgs : Prop :=
+  ∀ n : Net, IsVersion n.bits → n.Valid →
+    (n.prefixlen = n.bits → ∀ d np, subnets n d np = .ok [n]) ∧
+    (n.prefixlen < n.bits →
+      (∀ k d : Int, k < n.prefixlen → subnets n d (some k) = .error (.valueError "new prefix must be longer")) ∧
+      (∀ k d : Int, n.prefixlen ≤ k → d ≠ 1 →
+        subnets n d (some k) = .error (.valueError "cannot set prefixlen_diff and new_prefix")) ∧
+      (∀ k : Int, n.prefixlen ≤ k → subnets n 1 (some k) = subnets n (k - n.prefixlen) none) ∧
+      (∀ d : Int, d < 0 → subnets n d none = .error (.valueError "prefix length diff must be > 0")) ∧
+      (∀ d : Int, 0 ≤ d → (n.bits : Int) < n.prefixlen + d →
+        subnets n d none = .error (.valueError "~prefix length diff is invalid for netblock")))
+
+theorem subnetsArgs_proven : SubnetsArgs := by
+  intro n _ _
+  refine ⟨fun h d np => by simp [subnets, h]; rfl, fun hlt => ?_⟩
+  have hne : n.prefixlen ≠ n.bits := by omega
+  refine ⟨fun k d hk => ?_, fun k d hk hd => ?_, fun k hk => ?_, fun d hd => ?_, fun d hd hb => ?_⟩
+  · simp [subnets, hne, hk] <;> rfl
+  · have : ¬ k < n.prefixlen := by omega
+    simp [subnets, hne, this, hd] <;> rfl
+  · have : ¬ k < n.prefixlen := by omega
+    simp [subnets, hne, this] <;> rfl
+  · simp [subnets, hne, hd] <;> rfl
+  · have : ¬ d < 0 := by omega
+    simp [subnets, hne, this, hb] <;> rfl
+
+/-- The argument checks of `supernet`, ipaddress.py:974-1013, as the docstring lists them
+(:987-994): a `/0` network returns itself whatever the arguments (:996-997); otherwise
+`new_prefix` longer than the prefix and `new_prefix` with a `prefixlen_diff` other than 1 raise
+`ValueError`, `new_prefix=k` is `prefixlen_diff=prefixlen - k` (:1004), a `prefixlen_diff` past the
+prefix length raises `ValueError` naming both (:1006-1010), and a negative one raises `ValueError`
+from the shift `int(self.netmask) << prefixlen_diff` (:1011-1012). With `SupernetContains`
+(`0 <= prefixlen_diff <= prefixlen`) every argument is covered. -/
+def SupernetArgs : Prop :=
+  ∀ n : Net, IsVersion n.bits → n.Valid →
+    (n.prefixlen = 0 → ∀ d np, supernet n d np = .ok n) ∧
+    (0 < n.prefixlen →
+      (∀ k d : Int, n.prefixlen < k → supernet n d (some k) = .error (.valueError "new prefix must be shorter")) ∧
+      (∀ k d : Int, k ≤ n.prefixlen → d ≠ 1 →
+        supernet n d (some k) = .error (.valueError "cannot set prefixlen_diff and new_prefix")) ∧
+      (∀ k : Int, k ≤ n.prefixlen → supernet n 1 (some k) = supernet n (n.prefixlen - k) none) ∧
+      (∀ d : Int, n.prefixlen < d → supernet n d none =
+        .error (.valueError s!"current prefixlen is {n.prefixlen}, cannot have a prefixlen_diff of {d}")) ∧
+      (∀ d : Int, d < 0 → supernet n d none = .error (.valueError "negative shift count")))
+
+theorem supernetArgs_proven : SupernetArgs := by
+  intro n _ _
+  refine ⟨fun h d np => by simp [supernet, h]; rfl, fun hlt => ?_⟩
+  have hne : n.prefixlen ≠ 0 := by omega
+  refine ⟨fun k d hk => ?_, fun k d hk hd => ?_, fun k hk => ?_, fun d hd => ?_, fun d hd => ?_⟩
+  · simp [supernet, hne, hk] <;> rfl
+  · have : ¬ n.prefixlen < k := by omega
+    simp [supernet, hne, this, hd] <;> rfl
+  · have : ¬ n.prefixlen < k := by omega
+    simp [supernet, hne, this] <;> rfl
+  · have : (n.prefixlen : Int) - d < 0 := by omega
+    simp [supernet, hne, this] <;> rfl
+  · have : ¬ ((n.prefixlen : Int) - d < 0) := by omega
+    simp [supernet, hne, this, hd] <;> rfl
 
 end PyLean.Ipaddress
