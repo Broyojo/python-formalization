@@ -10,6 +10,13 @@ state that the C keeps across a failure is threaded through `SSt`: a failed call
 set, and `LASTMARK_RESTORE` only moves `lastmark`. `fuel` bounds the recursion; running out is
 `none`, which is never a Python outcome.
 
+`MAX_UNTIL` and `MIN_UNTIL` below `min` have no zero-width check in the C
+(`Modules/_sre/sre_lib.h:1220-1232`, `:1284-1296`), so `(?=){4294967294}x` nests 4294967294 levels
+before it fails, and no fuel reaches that. `zwSkip` skips those levels when the item is a straight
+run (`lin`) that comes back to the `UNTIL` unchanged; `TextLibs/ReEngineFast.lean` proves that this
+changes no result (`fast_complete`, `fast_sound`, `sreSearch_fast`). `Env.fast := false` is the
+step-by-step engine.
+
 `LOCALE` is the C locale: `sre_isalnum`, `sre_tolower` and `sre_toupper` act on ASCII only.
 -/
 
@@ -23,7 +30,7 @@ structure Rep where
   pat : Nat
   prev : Option Nat
   lastPtr : Option Nat
-  deriving Repr, Inhabited
+  deriving Repr, Inhabited, DecidableEq
 
 /-- The `SRE_STATE` fields that change during a match. -/
 structure SSt where
@@ -35,14 +42,17 @@ structure SSt where
   repeat_ : Option Nat := none
   reps : Array Rep := #[]
   mustAdvance : Bool := false
-  deriving Repr, Inhabited
+  deriving Repr, Inhabited, DecidableEq
 
-/-- What never changes during a match. `endp` is `state->end`. -/
+/-- What never changes during a match. `endp` is `state->end`. `fast` turns on the zero-width
+shortcut of `zwSkip`; `TextLibs/ReEngineFast.lean` proves it changes no result, against the run
+with `fast := false`, which is the C step by step. -/
 structure Env where
   code : Array Nat
   s : Array Nat
   endp : Nat
   matchAll : Bool
+  fast : Bool := true
 
 abbrev R := Option (Bool × SSt)
 
@@ -234,6 +244,110 @@ def Env.refMatch (e : Env) (norm : Nat → Nat) : (fuel p q ptr : Nat) → Optio
       else e.refMatch norm fuel (p + 1) q (ptr + 1)
     else some ptr
 
+/-- The ops of `exec` that test one character and step past it: whether `cur` passes, and the
+next `pc`. `p` is the word after the op. -/
+def Env.oneChar (e : Env) (op p cur : Nat) : Option (Bool × Nat) :=
+  if op == OP_LITERAL then some (cur == e.c p, p + 1)
+  else if op == OP_NOT_LITERAL then some (cur != e.c p, p + 1)
+  else if op == OP_CATEGORY then some (sreCategory (e.c p) cur, p + 1)
+  else if op == OP_ANY then some (cur != 10, p)
+  else if op == OP_ANY_ALL then some (true, p)
+  else if op == OP_IN then some (e.charset (p + 1) cur, p + e.c p)
+  else if op == OP_LITERAL_IGNORE then some (lowerAscii cur == e.c p, p + 1)
+  else if op == OP_LITERAL_UNI_IGNORE then some (lowerUnicode cur == e.c p, p + 1)
+  else if op == OP_LITERAL_LOC_IGNORE then some (charLocIgnore (e.c p) cur, p + 1)
+  else if op == OP_NOT_LITERAL_IGNORE then some (lowerAscii cur != e.c p, p + 1)
+  else if op == OP_NOT_LITERAL_UNI_IGNORE then some (lowerUnicode cur != e.c p, p + 1)
+  else if op == OP_NOT_LITERAL_LOC_IGNORE then some (!charLocIgnore (e.c p) cur, p + 1)
+  else if op == OP_IN_IGNORE then some (e.charset (p + 1) (lowerAscii cur), p + e.c p)
+  else if op == OP_IN_UNI_IGNORE then some (e.charset (p + 1) (lowerUnicode cur), p + e.c p)
+  else if op == OP_IN_LOC_IGNORE then some (e.charsetLoc (p + 1) cur, p + e.c p)
+  else none
+
+/-- Where a straight run of `lin` ends: an outcome of `exec`, or `stop`, at this `ptr` and state. -/
+inductive LinR where
+  | done (r : R)
+  | reach (ptr : Nat) (st : SSt)
+
+/-- `exec` from `pc` on code that neither branches, backtracks nor repeats: the ops of `oneChar`,
+`MARK`, `AT`, `JUMP`, `SUCCESS`, `FAILURE`, and `ASSERT`/`ASSERT_NOT` around such code. It stops
+when it reaches `stop`. `none` is any other op, or `fuel` running out. `TextLibs/ReEngineFast.lean`
+proves it is `exec`. -/
+def lin (e : Env) (stop : Option Nat) : (fuel pc ptr : Nat) → (top : Bool) → SSt → Option LinR
+  | 0, _, _, _, _ => none
+  | fuel + 1, pc, ptr, top, st =>
+    if stop == some pc then some (.reach ptr st)
+    else
+      let op := e.c pc
+      let p := pc + 1
+      let fail : Option LinR := some (.done (some (false, st)))
+      match e.oneChar op p (e.ch ptr) with
+      | some (ok, nxt) => if !(ptr < e.endp) || !ok then fail else lin e stop fuel nxt (ptr + 1) top st
+      | none =>
+        if op == OP_MARK then lin e stop fuel (p + 1) ptr top (doMark st (e.c p) ptr)
+        else if op == OP_SUCCESS then
+          if top && ((e.matchAll && ptr != e.endp) || (st.mustAdvance && ptr == st.start)) then fail
+          else some (.done (some (true, { st with ptr })))
+        else if op == OP_AT then
+          if !sreAt e ptr (e.c p) then fail else lin e stop fuel (p + 1) ptr top st
+        else if op == OP_JUMP || op == OP_INFO then lin e stop fuel (p + e.c p) ptr top st
+        else if op == OP_ASSERT then
+          if ptr < e.c (p + 1) then fail
+          else if e.c (p + 2) == OP_INFO then none
+          else
+            match lin e none fuel (p + 2) (ptr - e.c (p + 1)) false { st with ptr := ptr - e.c (p + 1) } with
+            | some (.done (some (false, st))) => some (.done (some (false, st)))
+            | some (.done (some (true, st))) => lin e stop fuel (p + e.c p) ptr top st
+            | _ => none
+        else if op == OP_ASSERT_NOT then
+          if ptr ≥ e.c (p + 1) then
+            if e.c (p + 2) == OP_INFO then none
+            else
+              let lm := st.lastmark
+              let li := st.lastindex
+              let snap := if st.repeat_.isSome then markSnap st lm else #[]
+              let hadRep := st.repeat_.isSome
+              match lin e none fuel (p + 2) (ptr - e.c (p + 1)) false { st with ptr := ptr - e.c (p + 1) } with
+              | some (.done (some (true, st))) => some (.done (some (false, st)))
+              | some (.done (some (false, st))) =>
+                let st := if hadRep then markPop st snap else st
+                lin e stop fuel (p + e.c p) ptr top (lastRestore st lm li)
+              | _ => none
+          else lin e stop fuel (p + e.c p) ptr top st
+        else if op == OP_FAILURE then fail
+        else none
+
+/-- The tail of the `count < min` case of `MAX_UNTIL` and `MIN_UNTIL`, `Modules/_sre/sre_lib.h:1225-1231`
+and `:1289-1295`: on failure, `ctx->u.rep->count = ctx->count-1; state->ptr = ptr;`. -/
+def untilBack (i ptr : Nat) (count : Int) : R → R
+  | some (false, st) => some (false, { (st.setRep i (fun r => { r with count := count - 1 })) with ptr })
+  | r => r
+
+/-- The zero-width shortcut of `MAX_UNTIL` and `MIN_UNTIL` below `min`. `st` is the state the item
+starts from, with `count` stored. If the item is a straight run (`lin`) back to this `UNTIL` at
+`pc` that leaves `ptr` where it was, and a second pass from there changes nothing, then every
+pass up to `min` is that second pass: the C loops `min - count` times (`sre_lib.h:1220-1232` has
+no zero-width check below `min`), and the result is the one at `count = min - 1`, under one
+`untilBack`. This is that state. `TextLibs/ReEngineFast.lean` proves the result is the same. -/
+def zwSkip (e : Env) (pc ptr : Nat) (top : Bool) (i : Nat) (count mn : Int) (pat : Nat) (st : SSt) :
+    Option SSt :=
+  if e.fast && count + 1 < mn && i < st.reps.size && e.c (pat + 3) != OP_INFO then
+    let fuel := e.code.size + 1
+    match lin e (some pc) fuel (pat + 3) ptr top st with
+    | some (.reach p2 y) =>
+      let y := { y with ptr }
+      let y1 := y.setRep i (fun r => { r with count := count + 1 })
+      if p2 == ptr && y.reps == st.reps && y.repeat_ == st.repeat_ then
+        match lin e (some pc) fuel (pat + 3) ptr top y1 with
+        | some (.reach p3 y2) =>
+          if p3 == ptr && ({ y2 with ptr } : SSt) == y1 then
+            some (y.setRep i (fun r => { r with count := mn - 1 }))
+          else none
+        | _ => none
+      else none
+    | _ => none
+  else none
+
 mutual
   /-- `SRE(match)` from `entrance:`, `Modules/_sre/sre_lib.h:678-692`. -/
   def matchAt (e : Env) : (fuel : Nat) → (pc : Nat) → (top : Bool) → SSt → R
@@ -324,12 +438,7 @@ mutual
         if (mn : Int) > (e.endp : Int) - ptr then fail
         else
           let st1 := { st with ptr }
-          let counted :=
-            if mn == 0 then some (0, st1)
-            else
-              match countFn e fuel (p + 3) mn st1 with
-              | none => none
-              | some (c, s) => if c < mn then some (c, s) else some (c, s)
+          let counted := if mn == 0 then some (0, st1) else countFn e fuel (p + 3) mn st1
           match counted with
           | none => none
           | some (cnt, st) =>
@@ -367,7 +476,7 @@ mutual
         | none => none
         | some (ret, st2) =>
           some (ret, { st2 with repeat_ := st2.reps[i]!.prev })
-      else if op == OP_MAX_UNTIL then
+      else if op == OP_MAX_UNTIL || op == OP_MIN_UNTIL then
         match st.repeat_ with
         | none => none
         | some i =>
@@ -377,46 +486,33 @@ mutual
           let mn : Int := e.c (rep.pat + 1)
           let mx := e.c (rep.pat + 2)
           if count < mn then
+            -- `sre_lib.h:1220-1232` (`MAX_UNTIL`) and `:1284-1296` (`MIN_UNTIL`), which are the same
             let st := st.setRep i (fun r => { r with count })
-            match matchAt e fuel (rep.pat + 3) top st with
-            | none => none
-            | some (true, st) => some (true, st)
-            | some (false, st) =>
-              some (false, { (st.setRep i (fun r => { r with count := count - 1 })) with ptr })
-          else if (count < mx ∨ mx == MAXREPEAT) ∧ some st.ptr != rep.lastPtr then
-            let st := st.setRep i (fun r => { r with count })
-            let lm := st.lastmark
-            let li := st.lastindex
-            let snap := markSnap st lm
-            let saved := st.reps[i]!.lastPtr
-            let st := st.setRep i (fun r => { r with lastPtr := some st.ptr })
-            match matchAt e fuel (rep.pat + 3) top st with
-            | none => none
-            | some (ret, st) =>
-              let st := st.setRep i (fun r => { r with lastPtr := saved })
-              if ret then some (true, st)
-              else
-                let st := lastRestore (markPop st snap) lm li
-                let st := { (st.setRep i (fun r => { r with count := count - 1 })) with ptr }
-                maxTail e fuel p ptr top i st
-          else maxTail e fuel p ptr top i st
-      else if op == OP_MIN_UNTIL then
-        match st.repeat_ with
-        | none => none
-        | some i =>
-          let st := { st with ptr }
-          let rep := st.reps[i]!
-          let count := rep.count + 1
-          let mn : Int := e.c (rep.pat + 1)
-          let mx := e.c (rep.pat + 2)
-          if count < mn then
-            let st := st.setRep i (fun r => { r with count })
-            match matchAt e fuel (rep.pat + 3) top st with
-            | none => none
-            | some (true, st) => some (true, st)
-            | some (false, st) =>
-              some (false, { (st.setRep i (fun r => { r with count := count - 1 })) with ptr })
+            untilBack i ptr count
+              (match zwSkip e pc ptr top i count mn rep.pat st with
+               | some st2 => exec e fuel pc ptr top st2
+               | none => matchAt e fuel (rep.pat + 3) top st)
+          else if op == OP_MAX_UNTIL then
+            -- `sre_lib.h:1234-1267`
+            if (count < mx ∨ mx == MAXREPEAT) ∧ some st.ptr != rep.lastPtr then
+              let st := st.setRep i (fun r => { r with count })
+              let lm := st.lastmark
+              let li := st.lastindex
+              let snap := markSnap st lm
+              let saved := st.reps[i]!.lastPtr
+              let st := st.setRep i (fun r => { r with lastPtr := some st.ptr })
+              match matchAt e fuel (rep.pat + 3) top st with
+              | none => none
+              | some (ret, st) =>
+                let st := st.setRep i (fun r => { r with lastPtr := saved })
+                if ret then some (true, st)
+                else
+                  let st := lastRestore (markPop st snap) lm li
+                  let st := { (st.setRep i (fun r => { r with count := count - 1 })) with ptr }
+                  maxTail e fuel p ptr top i st
+            else maxTail e fuel p ptr top i st
           else
+            -- `sre_lib.h:1298-1339`
             let st := { st with repeat_ := rep.prev }
             let lm := st.lastmark
             let li := st.lastindex

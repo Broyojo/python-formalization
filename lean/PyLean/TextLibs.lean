@@ -41,6 +41,7 @@ import PyLean.TextLibs.TomlScen
 import PyLean.TextLibs.TomlLoads
 import PyLean.TextLibs.TomlInline
 import PyLean.TextLibs.EmailEw2
+import PyLean.TextLibs.ReEngineFast
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in

@@ -117,7 +117,7 @@ mutual
         if more && (hasFlag flags FLAG_DOTALL || cur != 10) then k (pos + 1) st else some none
       | .in_ s => if more && setHit flags s cur then k (pos + 1) st else some none
       | .at_ a =>
-        if sreAt ⟨#[], c.s, c.endp, false⟩ pos (atCode flags a) then k pos st else some none
+        if sreAt ⟨#[], c.s, c.endp, false, true⟩ pos (atCode flags a) then k pos st else some none
       | .subpattern none add del p => semSeq c fuel p (combineFlags flags add del) pos st k
       | .subpattern (some 0) add del p => semSeq c fuel p (combineFlags flags add del) pos st k
       | .subpattern (some (g + 1)) add del p =>
