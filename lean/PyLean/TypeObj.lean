@@ -11,7 +11,7 @@ import PyLean.TypeObj.PropsTotal
 import PyLean.TypeObj.PropsMethods
 import PyLean.TypeObj.SeqTuple
 import PyLean.TypeObj.StructSeq
-import PyLean.TypeObj.StructSeqNewType
+import PyLean.TypeObj.StructSeqStatic
 
 /-!
 The data model: `Objects/typeobject.c`, `Objects/object.c`, `Objects/abstract.c`,
@@ -1059,6 +1059,26 @@ def entries : List Entry := [
     source := "invariant: tp_basicsize holds the hidden fields (structseq.c:58-61, :774-775)", status := .refuted,
     prop := ``StructSeq.NewTypeBasicsizeExact, thm := some ``StructSeq.newTypeBasicsizeExact_refuted,
     bug := some "typeobj-structseq-newtype-nseq-past-fields",
-    notes := "2^29 unnamed fields, none visible: (int)(40 + (2^29 - 1) * 8) is 32, so the type has n_fields = 2^29 and tp_basicsize 32. Reproduced on 3.15.2 with a desc array mapped over one 2 MB page." } ] ++ excEntries
+    notes := "2^29 unnamed fields, none visible: (int)(40 + (2^29 - 1) * 8) is 32, so the type has n_fields = 2^29 and tp_basicsize 32. Reproduced on 3.15.2 with a desc array mapped over one 2 MB page." },
+  p "typeobj-structseq-static-twin" ss
+    ["initialize_static_fields", "PyStructSequence_InitType2", "PyStructSequence_InitType", "count_members", "initialize_members"]
+    "A type whose refcount is not 0 is refused with SystemError; for every valid desc (0 <= n_in_sequence <= #fields, fewer than 2^28 - 4 hidden fields), allocator and outcome of the rest of type creation, PyStructSequence_InitType2 on a zeroed type gives exactly what PyStructSequence_NewType gives (the same exception, or the same name, tp_members, tp_basicsize, size attributes and __match_args__) and on success leaves the type ready with its members; PyStructSequence_InitType leaves no exception set exactly when InitType2 succeeds, and otherwise returns with InitType2's exception still set."
+    "Doc/c-api/tuple.rst (PyStructSequence_InitType: 'Initializes a struct sequence type type from desc in place'; InitType2: 'Like PyStructSequence_InitType, but returns 0 on success and -1 with an exception set on failure'); structseq.c:573-611, :672-710"
+    ``StructSeq.StaticTwin ``StructSeq.staticTwin_proven
+    "Outside the model: the flags (the static type is immutable, Objects/typeobject.c:9719-9721, so its size attributes cannot be rebound and typeobj-structseq-mutable-size-attrs does not apply; the heap one is not), and __module__ for a name without a dot (builtins for the static type, none for the heap one; the docs require the module in the name). Checked on 3.15.2 through ctypes on a zeroed PyTypeObject. Difftest ss_inittype: InitType2, InitType and a second InitType2 on the same object, on ctypes descs and every real struct sequence type read back as its desc.",
+  { id := "typeobj-structseq-static-twin-all", pyFile := ss,
+    pyFns := ["PyStructSequence_InitType2", "initialize_static_fields", "_PyStructSequence_NewType", "PyStructSequence_NewType"]
+    statement := "PyStructSequence_InitType2 on a zeroed type and PyStructSequence_NewType give the same outcome for every desc."
+    source := "Doc/c-api/tuple.rst: InitType2 is 'like' InitType, the static counterpart of NewType; the twin property", status := .refuted,
+    prop := ``StructSeq.StaticTwinAll, thm := some ``StructSeq.staticTwinAll_refuted,
+    bug := some "typeobj-structseq-newtype-nseq-past-fields",
+    notes := "One field, n_in_sequence = 2: NewType's basicsize 24 is refused with TypeError, but PyType_Ready of a static type has no basicsize-versus-base check, so InitType2 reads the field array's terminator and crashes (+1 to +4 all crash on 3.15.2). The twins also differ at 2^29 hidden fields, where only NewType's (int) cast wraps." },
+  { id := "typeobj-structseq-inittype2-no-dangling", pyFile := ss,
+    pyFns := ["PyStructSequence_InitType2", "initialize_static_fields"]
+    statement := "After a failing PyStructSequence_InitType2 the type is not left ready while pointing at a freed tp_members array."
+    source := "invariant: a failing call leaves no live object pointing at memory it freed", status := .refuted,
+    prop := ``StructSeq.InitType2NoDangling, thm := some ``StructSeq.initType2NoDangling_refuted,
+    bug := some "typeobj-structseq-inittype2-dangling-members",
+    notes := "n_in_sequence = -1: PyType_Ready succeeds (and makes the type immortal and ready), initialize_structseq_dict fails at PyTuple_New(-1), and :699-701 frees members; reading a member descriptor's __doc__ then crashes on 3.15.2." } ] ++ excEntries
 
 end PyLean.TypeObj

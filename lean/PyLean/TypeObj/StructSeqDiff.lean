@@ -1,5 +1,5 @@
 import PyLean.DiffCore
-import PyLean.TypeObj.StructSeqC
+import PyLean.TypeObj.StructSeqStatic
 
 /-! Differential-testing cases for struct sequences (`difftest/typeobj_structseq_diff.py`).
 
@@ -115,6 +115,15 @@ def kwOracle (t : CType) (n : Nat) (kv : List (Str × Json)) : KwArg Json :=
       .ok ((rest.find? (·.1 == key)).map (·.2)),
     sizeAfter := (kv.filter fun p => !(names.contains p.1)).length }
 
+/-- The size attributes, `__match_args__`, `__basicsize__` and the slot of each member. -/
+def builtJson (b : Built) : Json :=
+  let sz := fun k => match b.type.dict k with | .ok (some (.int n)) => toJson n | _ => Json.null
+  toJson [sz "n_sequence_fields", sz "n_fields", sz "n_unnamed_fields",
+    toJson (b.matchArgs.map strOf), toJson b.type.basicsize,
+    toJson (b.type.members.map fun m =>
+      toJson [toJson (match utf8Decode m.name .strict with | .ok s => strOf s | .error _ => "?"),
+              toJson m.slot])]
+
 inductive CapiOp where
   | set (i : Int) (v : Json)
   | get (i : Int)
@@ -123,13 +132,23 @@ def run (fn : String) (j : Json) : Except String Json := do
   match fn with
   | "ss_newtype" =>
     let r ← build j
-    pure <| cres (fun (b : Built) =>
-      let sz := fun k => match b.type.dict k with | .ok (some (.int n)) => toJson n | _ => Json.null
-      toJson [sz "n_sequence_fields", sz "n_fields", sz "n_unnamed_fields",
-        toJson (b.matchArgs.map strOf), toJson b.type.basicsize,
-        toJson (b.type.members.map fun m =>
-          toJson [toJson (match utf8Decode m.name .strict with | .ok s => strOf s | .error _ => "?"),
-                  toJson m.slot])]) r
+    pure <| cres builtJson r
+  | "ss_inittype" =>
+    let d ← parseDesc (← field j "desc")
+    let (r, _) := initType2 0 d malloc (.ok ())
+    let via ← getStr j "via"
+    if via == "twice" then
+      -- a second InitType2 on the same PyTypeObject: its refcount is no longer 0 once
+      -- PyType_Ready has made it immortal
+      let st := (initType2 0 d malloc (.ok ())).2
+      pure (cres builtJson (initType2 (if st.immortal then 1 else 0) d malloc (.ok ())).1)
+    else if via == "InitType" then
+      -- the exception InitType leaves set, which ctypes raises after the call
+      match (initType 0 d malloc (.ok ())).1 with
+      | .pending e => pure (excJson e)
+      | .done => pure (cres builtJson r)
+      | .ub w => pure (Json.mkObj [("exc", "UB"), ("msg", toJson w)])
+    else pure (cres builtJson r)
   | "ss_repr" =>
     let r ← build j
     match r with
