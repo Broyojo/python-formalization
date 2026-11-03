@@ -629,9 +629,7 @@ theorem assSliceErrors_proven : AssSliceErrors := by
   refine ⟨fun h0 value => ?_, fun h0 => ?_, fun a b c hsi hc ht => ?_⟩
   · obtain ⟨st, sp, ss⟩ := s
     simp only at h0; subst h0
-    cases value with
-    | none => rfl
-    | some p => rfl
+    rcases value with _ | ⟨x, _ | _ | _ | _⟩ <;> rfl
   · obtain ⟨st, sp, ss⟩ := s
     have hu : ∃ r, RangeSlice.sliceUnpack ⟨st, sp, ss⟩ = .ok r := by
       cases ss with
@@ -645,7 +643,7 @@ theorem assSliceErrors_proven : AssSliceErrors := by
         rw [if_neg this]
         exact ⟨_, rfl⟩
     obtain ⟨r, hr⟩ := hu
-    simp only [listAssSubscriptAny, SeqView.toAssVal, listAssSubscript, hr, bind, Except.bind, liftRes]
+    simp only [listAssSubscriptAny, listAssSubscript, hr, bind, Except.bind, liftRes]
   · have h0 : s.step ≠ some 0 := by
       intro h0
       obtain ⟨st, sp, ss⟩ := s
@@ -660,8 +658,41 @@ theorem assSliceErrors_proven : AssSliceErrors := by
     obtain ⟨rfl, rfl, rfl⟩ := hsi'
     have hc'' : ¬ c'' = 1 := fun h => hc (h1.mp h)
     rw [← hLdef] at ht ⊢
-    simp only [listAssSubscriptAny, SeqView.toAssVal, listAssSubscript, hsu, bind, Except.bind,
+    simp only [listAssSubscriptAny, listAssSubscript, hsu, bind, Except.bind,
       listAssSubscript.assSeq, adjustSliceIndexes, hadj, if_neg hc'', if_pos ht, liftRes]
+
+/-- `l[s] = it` for an iterable `it` that is neither the list nor an exact list or tuple, which
+`PySequence_Fast` (listobject.c:3851) turns into a list by iterating it (`PySequence_List`): that is
+user code, which may raise or change the list. The slice is unpacked first, so a zero step raises
+before `it` is iterated (`AssSliceErrors`); an exception from the iteration is the result, with the
+list as the iteration left it; otherwise the store runs on that list, its size read after the
+iteration (`adjust_slice_indexes`, :3858), exactly as a store of those items from a list. -/
+def AssSliceIter : Prop :=
+  ∀ (α : Type) (o : LObj α) (s : RangeSlice.Slice) (x : α) (f : LObj α → Py (List α) × LObj α),
+    s.step ≠ some 0 →
+    (∀ e o', f o = (.error e, o') → listAssSubscriptAny o (.slice s) (some (x, .iter f)) = (o', some e)) ∧
+    (∀ items o', f o = (.ok items, o') →
+      listAssSubscriptAny o (.slice s) (some (x, .iter f)) =
+        listAssSubscriptAny o' (.slice s) (some (x, .seq items)))
+
+theorem assSliceIter_proven : AssSliceIter := by
+  intro α o s x f h0
+  have hu : ∃ r, RangeSlice.sliceUnpack s = .ok r := by
+    obtain ⟨st, sp, ss⟩ := s
+    cases ss with
+    | none => exact ⟨_, rfl⟩
+    | some c =>
+      simp only [ne_eq, Option.some.injEq] at h0
+      unfold RangeSlice.sliceUnpack
+      simp only [bind, Except.bind, pure, Except.pure]
+      have : RangeSlice.clampSsize c ≠ 0 := by
+        unfold RangeSlice.clampSsize ssizeMin ssizeMax; split <;> (try split) <;> omega
+      rw [if_neg this]
+      exact ⟨_, rfl⟩
+  obtain ⟨r, hr⟩ := hu
+  refine ⟨fun e o' h => ?_, fun items o' h => ?_⟩
+  · simp only [listAssSubscriptAny, hr, h]
+  · simp only [listAssSubscriptAny, hr, h]
 
 /-! ## Iterator `__reduce__` -/
 

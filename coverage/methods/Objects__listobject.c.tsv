@@ -114,7 +114,7 @@ Objects/listobject.c	3694	3703	list_slice_subscript	list_slice_subscript(PyObjec
 Objects/listobject.c	3706	3709	_PyList_SliceSubscript	_PyList_SliceSubscript(PyObject* _self, PyObject* item)	modelled	bytesobj-slice-reads	
 Objects/listobject.c	3712	3733	list_subscript	list_subscript(PyObject* _self, PyObject* item)	modelled	bytesobj-list-subscript-dispatch,sequences-subscript-agree	
 Objects/listobject.c	3736	3750	adjust_slice_indexes	adjust_slice_indexes(PyListObject *lst, Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t step)	modelled	sequences-list-slice-assign	
-Objects/listobject.c	3753	3916	list_ass_subscript_lock_held	list_ass_subscript_lock_held(PyObject *_self, PyObject *item, PyObject *value)	modelled	bytesobj-list-ass-slice-errors,bytesobj-list-ass-subscript-arms,bytesobj-list-del-slice,sequences-list-slice-assign	
+Objects/listobject.c	3753	3916	list_ass_subscript_lock_held	list_ass_subscript_lock_held(PyObject *_self, PyObject *item, PyObject *value)	modelled	bytesobj-list-ass-slice-errors,bytesobj-list-ass-slice-iter,bytesobj-list-ass-subscript-arms,bytesobj-list-del-slice,sequences-list-slice-assign	
 Objects/listobject.c	3919	3934	list_ass_subscript	list_ass_subscript(PyObject *self, PyObject *item, PyObject *value)	todo		
 Objects/listobject.c	3937	3941	list_iteritem	list_iteritem(PyObject *obj, Py_ssize_t index)	modelled	bytesobj-iteritem-agrees	
 Objects/listobject.c	4052	4069	list_iter	list_iter(PyObject *seq)	modelled	bytesobj-list-iter-safe,bytesobj-list-iter-yields	

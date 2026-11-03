@@ -354,6 +354,11 @@ def entries : List Entry := [
     statement := "The slice arm of l[s] = v / del l[s] refuses before changing anything: a zero step is ValueError('slice step cannot be zero'), a value PySequence_Fast refuses is TypeError('must assign iterable to extended slice') for every slice, and an extended slice given a sequence of the wrong length is ValueError('attempt to assign sequence of size <len(t)> to extended slice of size <L>') with L = len(range(*s.indices(len(l))))."
     source := "listobject.c:3766-3876", status := .proven
     prop := ``AssSliceErrors, thm := some ``assSliceErrors_proven },
+  { id := "bytesobj-list-ass-slice-iter", pyFile := "Objects/listobject.c"
+    pyFns := ["list_ass_subscript_lock_held", "adjust_slice_indexes"]
+    statement := "l[s] = it for an iterable that PySequence_Fast has to iterate (user code that may raise or change the list): the slice is unpacked first, an exception from the iteration is the result with the list as the iteration left it, and otherwise the store runs on that list with its size read after the iteration, as a store of the same items from a list."
+    source := "listobject.c:3769, :3846-3858", status := .proven
+    prop := ``AssSliceIter, thm := some ``assSliceIter_proven },
   { id := "bytesobj-list-del-slice", pyFile := "Objects/listobject.c"
     pyFns := ["list_ass_subscript_lock_held", "adjust_slice_indexes", "list_ass_slice_lock_held"]
     statement := "For every well-formed list and every slice s with int/None parts and a non-zero step, del l[s] succeeds, keeps the list well formed, and leaves exactly the items whose positions are not in range(*s.indices(len(l))), in order: step 1, an empty slice, and the extended-slice compaction loop with its negative-step normalisation and tail move."

@@ -388,26 +388,27 @@ the C sense. The list is reread on each pass (`list_get_item_ref`, the size test
 and :3479-3495), which is what these functions are written for; `l.remove` then deletes with the old
 index on the current list, and `list_ass_slice` clips it. `l.index` and `l.count` read through
 `PyList_GET_ITEM` once `valid_index` has passed against the current size (`listGetItemRefC`), which
-would be `cUB` if the check used a stale size. Hypotheses: `NoFault`; every list, the given one and
-those a comparison leaves, has at most `PY_SSIZE_T_MAX` items (type invariant, `LenInv`); `index`'s
-start is in `[0, PY_SSIZE_T_MAX]`, as `list_index_impl`'s clipping leaves it. -/
+would be `cUB` if the check used a stale size. Hypotheses: `NoFault`; for `index` and `count` also
+that every list, the given one and those a comparison leaves, has at most `PY_SSIZE_T_MAX` items (type
+invariant, `LenInv`), and that `index`'s start is in `[0, PY_SSIZE_T_MAX]`, as `list_index_impl`'s
+clipping leaves it. -/
 def ListSearchSafe : Prop :=
   ∀ (α : Type) (cmp : Cmp α) (cmp2 : Cmp2 α) (same : α → α → Bool) (o : LObj α) (x : α) (fuel : Nat)
-    (start stop : Int) (v w : List α) (msg : String), NoFault cmp → LenInv cmp →
-    (o.items.length : Int) ≤ ssizeMax → 0 ≤ start → start ≤ ssizeMax →
+    (start stop : Int) (v w : List α) (msg : String), NoFault cmp →
     (∀ st a b m, (cmp2 st a b).1 ≠ .error (cUB m)) →
     (listContains cmp fuel o x).1 ≠ .error (cUB msg) ∧
-    (indexLoop cmp x stop fuel start o).1 ≠ .error (cUB msg) ∧
-    (listCount same cmp fuel o x).1 ≠ .error (cUB msg) ∧
     (listRemove cmp fuel o x).1 ≠ .error (cUB msg) ∧
-    (cmpLoop same cmp2 fuel 0 (v, w)).1 ≠ .error (cUB msg)
+    (cmpLoop same cmp2 fuel 0 (v, w)).1 ≠ .error (cUB msg) ∧
+    (LenInv cmp → (o.items.length : Int) ≤ ssizeMax → 0 ≤ start → start ≤ ssizeMax →
+      (indexLoop cmp x stop fuel start o).1 ≠ .error (cUB msg) ∧
+      (listCount same cmp fuel o x).1 ≠ .error (cUB msg))
 
 theorem listSearchSafe_proven : ListSearchSafe := by
-  intro α cmp cmp2 same o x fuel start stop v w msg hc hn hl hs0 hs1 hc2
-  exact ⟨containsLoop_safe cmp hc x fuel 0 o msg, indexLoop_safe cmp hc hn x stop fuel start hs0 hs1 o hl msg,
-    countLoop_safe same cmp hc hn x fuel 0 0 (by omega) (by decide) o hl msg,
-    removeLoop_safe cmp hc x fuel 0 (by omega) o msg,
-    cmpLoop_safe same cmp2 hc2 fuel 0 (by omega) (v, w) msg⟩
+  intro α cmp cmp2 same o x fuel start stop v w msg hc hc2
+  exact ⟨containsLoop_safe cmp hc x fuel 0 o msg, removeLoop_safe cmp hc x fuel 0 (by omega) o msg,
+    cmpLoop_safe same cmp2 hc2 fuel 0 (by omega) (v, w) msg, fun hn hl hs0 hs1 =>
+    ⟨indexLoop_safe cmp hc hn x stop fuel start hs0 hs1 o hl msg,
+      countLoop_safe same cmp hc hn x fuel 0 0 (by omega) (by decide) o hl msg⟩⟩
 
 /-! ## index -/
 

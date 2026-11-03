@@ -298,6 +298,8 @@ def list_op(l, op, reg):
         return operator.setitem(l, mk_ix(op[1]), reg.mk(op[2]))
     if name == "delitemx":
         return operator.delitem(l, mk_ix(op[1]))
+    if name == "setslice_gen":
+        return operator.setitem(l, as_slice(op[1]), build_ext(op[2], reg, l))
     if name == "indexx":
         args = [mk_ix(a) for a in op[2:] if a is not None]
         return l.index(reg.mk(op[1]), *args)
@@ -860,7 +862,11 @@ def gen_list_op(rng, n):
     e = lambda: seq_elem(rng, kinds)
     k = rng.randrange(26)
     if rng.random() < 0.12:
-        k = rng.randrange(4)
+        k = rng.randrange(5)
+        if k == 4:
+            return ["setslice_gen", seq_slice(rng, n),
+                    {"k": rng.choice(["iter", "mutiter", "cleariter"]), "items": seq_items(rng, 10),
+                     "hint": None, "err": rng.random() < 0.2}]
         if k == 0:
             return ["getitemx", gen_ix(rng, n)]
         if k == 1:

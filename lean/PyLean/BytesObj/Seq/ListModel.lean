@@ -910,30 +910,40 @@ where
         | .ok v => (.ok (.inl v), o)
         | .error e => (.error e, o)
 
-/-- What `PySequence_Fast(value, ...)` makes of the value of a slice store
-(listobject.c:3846-3856): the list itself, which is copied first, an iterable's items, or a refusal. -/
+/-- What `PySequence_Fast(value, "must assign iterable to extended slice")` (listobject.c:3846-3856)
+makes of the value of a slice store: the list itself, which is copied first (:3846-3849); an exact
+list or tuple, whose items are taken as they are (`seq`); any other iterable, which `PySequence_List`
+iterates, running user code that sees the list, may change it and may raise (`iter`, the items
+and the list afterwards); or a refusal. -/
 inductive SeqView (α : Type) where
   | selfCopy
   | seq (items : List α)
+  | iter (f : LObj α → Py (List α) × LObj α)
   | notIterable
-
-def SeqView.toAssVal : SeqView α → AssVal α
-  | .selfCopy => .selfCopy
-  | .seq items => .seq items
-  | .notIterable => .notIterable
 
 /-- `l[item] = value` (`value = some (v, view)`, `view` being what the slice arm makes of `v`) and
 `del l[item]` (`value = none`), `list_ass_subscript_lock_held(_self, item, value)`,
 listobject.c:3752-3916. The index arm converts (:3759-3761), which may run `__index__`, then adds the
 size the list has after it (:3762-3763) and calls `list_ass_item_lock_held` (:3764); the slice arm is
-`listAssSubscript` (:3766-3909); anything else is the `TypeError` (:3910-3914). The result is the list
-afterwards and the exception, if any. -/
+`listAssSubscript` (:3766-3909), where `PySlice_Unpack` (:3769) comes before `PySequence_Fast`
+(:3851), whose iteration may change the list before `adjust_slice_indexes` reads its size (:3858);
+anything else is the `TypeError` (:3910-3914). The result is the list afterwards and the exception,
+if any. -/
 def listAssSubscriptAny (self : LObj α) (item : SubItem α) (value : Option (α × SeqView α)) : LRes α :=
   match item with
   | .slice s =>
-    liftRes self (listAssSubscript self s (match value with
-      | none => .del
-      | some (_, v) => v.toAssVal))
+    match value with
+    | none => liftRes self (listAssSubscript self s .del)
+    | some (_, .selfCopy) => liftRes self (listAssSubscript self s .selfCopy)
+    | some (_, .seq items) => liftRes self (listAssSubscript self s (.seq items))
+    | some (_, .notIterable) => liftRes self (listAssSubscript self s .notIterable)
+    | some (_, .iter f) =>
+      match RangeSlice.sliceUnpack s with
+      | .error e => (self, some e)
+      | .ok _ =>
+        match f self with
+        | (.error e, o') => (o', some e)
+        | (.ok items, o') => liftRes o' (listAssSubscript o' s (.seq items))
   | .other tp => (self, some (listIndicesError tp))
   | .int n tp => idxArm tp (.ok n) self
   | .index tp f => idxArm tp (f self).1 (f self).2

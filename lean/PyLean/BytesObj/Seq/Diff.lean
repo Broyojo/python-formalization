@@ -289,6 +289,28 @@ def jOptIdxArg (j : Option Json) : Except String (Option (IdxArg DEl)) :=
   | none | some Json.null => .ok none
   | some v => some <$> jIdxArg v
 
+/-- `PySequence_List(it)` on one of the twin's generators: `next` until it ends, collecting the items,
+with the generator's effects on the list under test. -/
+def collectFx (src : IterFx DEl) : Nat → Nat → List DEl → St → Py (List DEl) × St
+  | 0, _, _, o => (.error .modelFuel, o)
+  | fuel + 1, k, acc, o =>
+    match src.next k o with
+    | (none, o') => (.ok acc, o')
+    | (some (.error e), o') => (.error e, o')
+    | (some (.ok x), o') => collectFx src fuel (k + 1) (acc ++ [x]) o'
+
+/-- The generators the twin passes to `l[s] = it`: `{"k": "iter"|"mutiter"|"cleariter", ...}`. -/
+def jGenView (j : Json) : Except String (SeqView DEl) := do
+  let items ← jEls (← field j "items")
+  let src ← match ← getStr j "k" with
+    | "iter" =>
+      let err := (j.getObjValAs? Bool "err").toOption.getD false
+      pure (pureFx items (.ok 8) (if err then some (.valueError "gen") else none))
+    | "mutiter" => pure (mutFx items)
+    | "cleariter" => pure (clearFx items)
+    | k => throw s!"gen view {k}"
+  return .iter (fun o => collectFx src (items.length + 2) 0 [] o)
+
 def lresJ : LRes DEl → Json × St
   | (o', none) => (okJ unitJ, o')
   | (o', some e) => (errJ e, o')
@@ -341,6 +363,9 @@ def stepList (o : St) (op : Array Json) : Except String (Json × St) := do
     let v ← jEl (← argAt op 2)
     return lresJ (listAssSubscriptAny o (← jSubItem (← argAt op 1)) (some (v, .notIterable)))
   | "delitemx" => return lresJ (listAssSubscriptAny o (← jSubItem (← argAt op 1)) none)
+  | "setslice_gen" =>
+    return lresJ (listAssSubscriptAny o (.slice (← jSlice (← argAt op 1)))
+      (some (.int 0, ← jGenView (← argAt op 2))))
   | "indexx" =>
     let (r, o') := listIndexCall effCmp (fuelOf o) o (← jEl (← argAt op 1))
       (← jOptIdxArg op[2]?) (← jOptIdxArg op[3]?)

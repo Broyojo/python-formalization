@@ -674,6 +674,7 @@ listsort-reverse-stable	proven	Objects/listobject.c	list.sort
 listsort-key	proven	Objects/listobject.c	list.sort
 listsort-long-compare	proven	Objects/listobject.c	unsafe_long_compare,unsafe_object_compare,long_compare,long_richcompare
 listsort-object-compare	proven	Objects/listobject.c	unsafe_object_compare
+listsort-presort-select	proven	Objects/listobject.c	list_sort_impl
 listsort-fallible-agree	proven	Objects/listobject.c	binarysort,count_run,gallop_left,gallop_right,merge_lo,merge_hi,merge_at,list_sort_impl
 listsort-perm-on-error	proven	Objects/listobject.c	binarysort,count_run,gallop_left,gallop_right,merge_lo,merge_hi,merge_at,list_sort_impl
 listsort-fail-exits	proven	Objects/listobject.c	gallop_left,gallop_right,merge_at,merge_lo,merge_hi,binarysort,count_run
@@ -1075,6 +1076,17 @@ bytesobj-sort-compare-tied	proven	Objects/listobject.c	safe_object_compare,unsaf
 bytesobj-sortslice-reverse	proven	Objects/listobject.c	sortslice_reverse,PyList_Reverse
 bytesobj-list-iter-states	proven	Objects/listobject.c	listiter_len,listreviter_len,listiter_setstate,listreviter_setstate
 bytesobj-list-init-iterable	proven	Objects/listobject.c	list___init___impl,list_vectorcall,list_richcompare_impl,list_richcompare
+bytesobj-list-index-step	proven	Objects/listobject.c	list_index_impl,list_get_item_ref,valid_index
+bytesobj-list-index-call	proven	Objects/listobject.c	list_index_impl
+bytesobj-list-count-step	proven	Objects/listobject.c	list_count_impl,list_get_item_ref,valid_index
+bytesobj-list-remove-step	proven	Objects/listobject.c	list_remove_impl
+bytesobj-list-remove-result	proven	Objects/listobject.c	list_remove_impl
+bytesobj-list-subscript-dispatch	proven	Objects/listobject.c	list_subscript,list_item
+bytesobj-list-ass-subscript-arms	proven	Objects/listobject.c	list_ass_subscript_lock_held,list_ass_item_lock_held
+bytesobj-list-ass-slice-errors	proven	Objects/listobject.c	list_ass_subscript_lock_held,adjust_slice_indexes
+bytesobj-list-ass-slice-iter	proven	Objects/listobject.c	list_ass_subscript_lock_held,adjust_slice_indexes
+bytesobj-list-del-slice	proven	Objects/listobject.c	list_ass_subscript_lock_held,adjust_slice_indexes,list_ass_slice_lock_held
+bytesobj-list-iter-reduce-order	proven	Objects/listobject.c	listiter_reduce,listreviter_reduce,listiter_reduce_general
 bytesobj-bytes-class-shortcut	proven	Objects/bytes_methods.c	_Py_bytes_isspace,_Py_bytes_isalpha,_Py_bytes_isalnum,_Py_bytes_isdigit,bytearray_isspace,bytearray_isalpha,bytearray_isalnum,bytearray_isdigit
 bytesobj-bytes-cased	proven	Objects/bytes_methods.c	_Py_bytes_islower,_Py_bytes_isupper,bytearray_islower,bytearray_isupper
 bytesobj-bytes-title	proven	Objects/bytes_methods.c	_Py_bytes_istitle,_Py_bytes_title,bytearray_istitle,bytearray_title
