@@ -51,12 +51,14 @@ theorem setItemOf_keeps (n : Nat) (h h' : Heap) (y k v : Nat) (hn : n ≤ h.cell
     | (cases e; done)
     | (cases e; exact keeps_set n h y _ hn hy)
 
-theorem setAttrOf_keeps (n : Nat) (h h' : Heap) (y : Nat) (k : String) (v : Nat) (hn : n ≤ h.cells.length)
+theorem setAttrOf_keeps (n : Nat) (h h' : Heap) (y : Nat) (k : AttrKey) (v : Nat) (hn : n ≤ h.cells.length)
     (hy : n ≤ y) (e : setAttrOf h y k v = .ok h') : Keeps n h h' := by
   simp only [setAttrOf] at e
   split at e
-  · cases e
-    exact keeps_set n h y _ hn hy
+  · split at e
+    · cases e
+    · cases e
+      exact keeps_set n h y _ hn hy
   · cases e
 
 theorem updateFrom_keeps (n y : Nat) (hy : n ≤ y) : ∀ (l : List (Nat × Nat)) (h h' : Heap),
@@ -272,9 +274,10 @@ theorem keeps_all (n : Nat) : ∀ fuel : Nat,
     (∀ h y l h', n ≤ h.cells.length → n ≤ y → deepAttrs fuel h y l = .ok h' → Keeps n h h') ∧
     (∀ h y l ss h', n ≤ h.cells.length → n ≤ y → deepState fuel h y l ss = .ok h' → Keeps n h h') ∧
     (∀ h y l h', n ≤ h.cells.length → n ≤ y → deepAppend fuel h y l = .ok h' → Keeps n h h') ∧
-    (∀ h y l h', n ≤ h.cells.length → n ≤ y → deepSetItems fuel h y l = .ok h' → Keeps n h h')
+    (∀ h y l h', n ≤ h.cells.length → n ≤ y → deepSetItems fuel h y l = .ok h' → Keeps n h h') ∧
+    (∀ h k h' k', n ≤ h.cells.length → deepKey fuel h k = .ok (h', k') → Keeps n h h')
   | 0 => by
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro h x h' y _ e; simp [deepcopy] at e
     · intro h l h' ys _ e; simp [deepList] at e
     · intro h acc l h' ys _ e; simp [deepPairs] at e
@@ -293,14 +296,21 @@ theorem keeps_all (n : Nat) : ∀ fuel : Nat,
         · cases e
     · intro h y l h' _ _ e; simp [deepAppend] at e
     · intro h y l h' _ _ e; simp [deepSetItems] at e
+    · intro h k h' k' hn e
+      cases k with
+      | name s =>
+        simp only [deepKey, Except.ok.injEq, Prod.mk.injEq] at e
+        obtain ⟨rfl, -⟩ := e
+        exact Keeps.refl n _ hn
+      | obj c => simp [deepKey] at e
   | fuel + 1 => by
-    obtain ⟨ih1, ih2, ih3, ih4, ih5, ih6, ih7⟩ := keeps_all n fuel
+    obtain ⟨ih1, ih2, ih3, ih4, ih5, ih6, ih7, ih8⟩ := keeps_all n fuel
     have hfresh : ∀ (h : Heap) (c : Cell), n ≤ h.cells.length →
         Keeps n h ((h.alloc c).1) ∧ n ≤ (h.alloc c).2 ∧ n ≤ (h.alloc c).1.cells.length := by
       intro h c hn
       have k := keeps_alloc n h c hn
       exact ⟨k, hn, k.1⟩
-    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro h x h' y hn e
       simp only [deepcopy] at e
       split at e
@@ -470,9 +480,13 @@ theorem keeps_all (n : Nat) : ∀ fuel : Nat,
           have k1 := ih1 _ _ _ _ hn e1
           split at e
           · cases e
-          · next h2 e2 =>
-            have k2 := setAttrOf_keeps n _ _ _ _ _ k1.1 hy e2
-            exact (k1.trans k2).trans (ih4 _ _ _ _ k2.1 hy e)
+          · next h2 k' e2 =>
+            have k2 := ih8 _ _ _ _ k1.1 e2
+            split at e
+            · cases e
+            · next h3 e3 =>
+              have k3 := setAttrOf_keeps n _ _ _ _ _ k2.1 hy e3
+              exact ((k1.trans k2).trans k3).trans (ih4 _ _ _ _ k3.1 hy e)
     · intro h y l ss h' hn hy e
       cases l with
       | none =>
@@ -528,6 +542,20 @@ theorem keeps_all (n : Nat) : ∀ fuel : Nat,
             · next h3 e3 =>
               have k3 := setItemOf_keeps n _ _ _ _ _ k2.1 hy e3
               exact ((k1.trans k2).trans k3).trans (ih7 _ _ _ _ k3.1 hy e)
+    · intro h k h' k' hn e
+      cases k with
+      | name s =>
+        simp only [deepKey, Except.ok.injEq, Prod.mk.injEq] at e
+        obtain ⟨rfl, -⟩ := e
+        exact Keeps.refl n _ hn
+      | obj c =>
+        simp only [deepKey] at e
+        split at e
+        · cases e
+        · next h1 c' e1 =>
+          simp only [Except.ok.injEq, Prod.mk.injEq] at e
+          obtain ⟨rfl, -⟩ := e
+          exact ih1 _ _ _ _ hn e1
 
 /-- `deepcopy` leaves the source alone: every cell that existed before the call is the same after it, for any
 object graph, cycles included, with `__deepcopy__`, `__reduce_ex__`, constructors and `__setstate__` of all shapes:
@@ -619,12 +647,12 @@ theorem deepcopyTupleIdentity_proven : DeepcopyTupleIdentity := by
 /-- `copy` by kind. A list, a dict and an instance become a new object with the same contents, so the items are shared
 (`cls.copy(x)`, Lib/copy.py:72-73, and the reduce path of a plain instance); an atom, a `str`, a tuple and a
 `frozendict` are themselves (:70-71). A bound method goes through `method.__reduce__`, so the copy is
-`getattr(self, name)`: an instance attribute of that name if there is one, which can be any object, else the function
-bound anew. `__copy__` goes first (:80-82): its exception propagates and its result is the copy. With no
+`getattr(self, name)`: an instance attribute of that name if there is one, which can be any object, else the class's
+function bound anew, and `AttributeError` when the class has no such function or `__self__` is not an instance. `__copy__` goes first (:80-82): its exception propagates and its result is the copy. With no
 `__copy__`, the reduce value goes to `_reconstruct` (:98-100), a string meaning `x`, a raising reductor propagating, and
 with no reductor at all `copy.Error`. -/
 def CopyShallow : Prop :=
-  ∀ (h : Heap) (x f s v : Nat) (l : List Nat) (d : List (Nat × Nat)) (a : List (String × Nat)) (e : PyExc)
+  ∀ (h : Heap) (x f s v : Nat) (l : List Nat) (d : List (Nat × Nat)) (a : List (AttrKey × Nat)) (e : PyExc)
     (dc : Option (Option PyExc)) (r : Option RvSpec) (rv : RvSpec) (n : Int) (t : String),
     (h.get x = .list l → copyShallow h x = .ok ((h.alloc (.list l)).1, h.cells.length)) ∧
     (h.get x = .dict d → copyShallow h x = .ok ((h.alloc (.dict d)).1, h.cells.length)) ∧
@@ -633,9 +661,13 @@ def CopyShallow : Prop :=
     (h.get x = .fdict d → copyShallow h x = .ok (h, x)) ∧
     (h.get x = .atom n → copyShallow h x = .ok (h, x)) ∧
     (h.get x = .str t → copyShallow h x = .ok (h, x)) ∧
-    (h.get x = .method f s → h.get s = .inst a → a.lookup (methName f) = some v → copyShallow h x = .ok (h, v)) ∧
-    (h.get x = .method f s → h.get s = .inst a → a.lookup (methName f) = none →
-      copyShallow h x = .ok ((h.alloc (.method f s)).1, h.cells.length)) ∧
+    (h.get x = .method f s → h.get s = .inst a → a.lookup (.name (methName f)) = some v →
+      copyShallow h x = .ok (h, v)) ∧
+    (h.get x = .method 0 s → h.get s = .inst a → a.lookup (.name (methName 0)) = none →
+      copyShallow h x = .ok ((h.alloc (.method 0 s)).1, h.cells.length)) ∧
+    (h.get x = .method f s → h.get s = .inst a → a.lookup (.name (methName f)) = none → f ≠ 0 →
+      (copyShallow h x).raises "AttributeError") ∧
+    (h.get x = .method f s → (∀ q, h.get s ≠ .inst q) → (copyShallow h x).raises "AttributeError") ∧
     (h.get x = .hooked (some (some e)) dc r → copyShallow h x = .error e) ∧
     (h.get x = .hooked (some none) dc r → copyShallow h x = .ok ((h.alloc (.atom 1)).1, h.cells.length)) ∧
     (h.get x = .hooked none dc none → (copyShallow h x).raises "Error") ∧
@@ -644,7 +676,7 @@ def CopyShallow : Prop :=
 
 theorem copyShallow_proven : CopyShallow := by
   intro h x f s v l d a e dc r rv n t
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, rfl, rfl⟩
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, rfl, rfl⟩
   · intro hc; simp [copyShallow, hc, Heap.alloc]
   · intro hc; simp [copyShallow, hc, Heap.alloc]
   · intro hc; simp [copyShallow, hc, Heap.alloc]
@@ -654,10 +686,43 @@ theorem copyShallow_proven : CopyShallow := by
   · intro hc; simp [copyShallow, hc]
   · intro hc hs hl; simp [copyShallow, getMethodAttr, hc, hs, hl]
   · intro hc hs hl; simp [copyShallow, getMethodAttr, hc, hs, hl, Heap.alloc]
+  · intro hc hs hl hf
+    refine ⟨.named "AttributeError" "~object has no attribute", ?_, rfl⟩
+    simp [copyShallow, getMethodAttr, hc, hs, hl, hf]
+  · intro hc hs
+    refine ⟨.named "AttributeError" "~object has no attribute", ?_, rfl⟩
+    cases hg : h.get s with
+    | inst q => exact absurd hg (hs q)
+    | _ => simp [copyShallow, getMethodAttr, hc, hg]
   · intro hc; simp [copyShallow, hc]
   · intro hc; simp [copyShallow, hc, Heap.alloc]
   · intro hc; exact ⟨_, by simp [copyShallow, hc]; rfl, rfl⟩
   · intro hc; simp [copyShallow, hc]
+
+theorem storeItem_miss {α : Type} (eq : α → α → Py Bool) (k : α) (v : Nat) : ∀ (acc : List (α × Nat)),
+    (∀ p ∈ acc, eq p.1 k = .ok false) → storeItem eq acc k v = .ok (acc ++ [(k, v)])
+  | [], _ => by simp [storeItem]
+  | (k0, v0) :: rest, hp => by
+    have h0 : eq k0 k = .ok false := hp (k0, v0) (by simp)
+    have h1 := storeItem_miss eq k v rest (fun p q => hp p (by simp [q]))
+    simp [storeItem, h0, h1]
+
+theorem storeItem_hit {α : Type} (eq : α → α → Py Bool) (k : α) (v : Nat) (k0 : α) (v0 : Nat)
+    (post : List (α × Nat)) :
+    ∀ (pre : List (α × Nat)), (∀ p ∈ pre, eq p.1 k = .ok false) → eq k0 k = .ok true →
+    storeItem eq (pre ++ (k0, v0) :: post) k v = .ok (pre ++ (k0, v) :: post)
+  | [], _, he => by simp [storeItem, he]
+  | (a, b) :: rest, hp, he => by
+    have h0 : eq a k = .ok false := hp (a, b) (by simp)
+    have h1 := storeItem_hit eq k v k0 v0 post rest (fun p q => hp p (by simp [q])) he
+    simp [storeItem, h0, h1]
+
+theorem akEq_name_ne (h : Heap) (q : AttrKey) (t : String) (hq : q ≠ .name t) : akEq h q (.name t) = .ok false := by
+  cases q with
+  | name s =>
+    have : s ≠ t := fun e => hq (by rw [e])
+    simp [akEq, this]
+  | obj c => simp [akEq]
 
 /-- `copy` takes whatever `__reduce__` tuple `pickle` takes. False: `pickle` takes a sixth item, the state
 setter, and `_reconstruct(x, None, *rv)` has parameters for five. -/
@@ -673,14 +738,14 @@ theorem copyAcceptsPickleReduce_refuted : ¬CopyAcceptsPickleReduce := by
 stops it. A state that is `None` does nothing at all, Lib/copy.py:252: neither `__setstate__` nor the default step
 runs. Otherwise `__setstate__` wins, and its exception propagates. The default step reads `y.__dict__` before it looks
 at the state, so even an empty dict state on an object without `__dict__` is an `AttributeError`; a dict state is
-merged item by item; a pair sequence stores its pairs, and an element of another length is the `ValueError` of
-`dict.update`. A two-item tuple is `(state, slotstate)`: `None` in either place is skipped, the slot state goes
+merged item by item; a pair sequence stores its pairs, a new name at the end and a name already there in its place
+with the new value, as a dict store does, and an element of another length is the `ValueError` of `dict.update`. A two-item tuple is `(state, slotstate)`: `None` in either place is skipped, the slot state goes
 through `setattr`, which wants `str` names. `listiter` needs `append`, which an object without it turns into
 `AttributeError`. -/
 def ReconstructSteps : Prop :=
   ∀ (h : Heap) (x y st a b p k v : Nat) (e : PyExc) (n : Nat) (bk : BuildKind) (args : List Nat) (s : Option Nat)
     (li : Option (ItemsIter Nat)) (di : Option (ItemsIter (Nat × Nat))) (ss : Option (Option PyExc))
-    (d : List (Nat × Nat)) (attrs : List (String × Nat)) (t : String),
+    (d : List (Nat × Nat)) (attrs pre post : List (AttrKey × Nat)) (t : String) (w : Nat),
     (n < 2 ∨ n > 5 → (reconShallow h (.tuple n none bk args s li di ss) x).raises "TypeError") ∧
     (2 ≤ n → n ≤ 5 → reconShallow h (.tuple n (some e) bk args s li di ss) x = .error e) ∧
     (noneCell h st = true → reconRest h y (some st) none none ss = .ok h) ∧
@@ -688,7 +753,11 @@ def ReconstructSteps : Prop :=
     (h.get st = .dict d → (∀ q, h.get y ≠ .inst q) → (reconRest h y (some st) none none none).raises "AttributeError") ∧
     (h.get st = .dict d → h.get y = .inst attrs → reconRest h y (some st) none none none = updateFrom y h d) ∧
     (h.get st = .list [p] → h.get p = .tuple [k, v] → h.get k = .str t → h.get y = .inst attrs →
-      reconRest h y (some st) none none none = .ok (h.set y (.inst (attrs.filter (fun q => q.1 ≠ t) ++ [(t, v)])))) ∧
+      (∀ q ∈ attrs, q.1 ≠ .name t) →
+      reconRest h y (some st) none none none = .ok (h.set y (.inst (attrs ++ [(.name t, v)])))) ∧
+    (h.get st = .list [p] → h.get p = .tuple [k, v] → h.get k = .str t → h.get y = .inst (pre ++ (.name t, w) :: post) →
+      (∀ q ∈ pre, q.1 ≠ .name t) →
+      reconRest h y (some st) none none none = .ok (h.set y (.inst (pre ++ (.name t, v) :: post)))) ∧
     (h.get st = .list [p] → h.get p = .tuple [k] → h.get y = .inst attrs →
       reconRest h y (some st) none none none =
         .error (.valueError "dictionary update sequence element #0 has length 1; 2 is required")) ∧
@@ -707,8 +776,8 @@ theorem noneCell_of_ne (h : Heap) (s : Nat) (hs : ∀ m, h.get s ≠ .atom m) : 
   · rfl
 
 theorem reconstructSteps_proven : ReconstructSteps := by
-  intro h x y st a b p k v e n bk args s li di ss d attrs t
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  intro h x y st a b p k v e n bk args s li di ss d attrs pre post t w
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro hn
     rcases hn with hn | hn
     · exact ⟨_, by simp [reconShallow, reconArity, hn]; rfl, rfl⟩
@@ -732,10 +801,18 @@ theorem reconstructSteps_proven : ReconstructSteps := by
     have hn : noneCell h st = false := noneCell_of_ne h st (by intro m hm; rw [hs] at hm; cases hm)
     simp only [reconRest, hn, stateApply, stateStep, stateSplit, hs, hy, dictUpdate, Bool.false_eq_true, ite_false]
     cases updateFrom y h d <;> rfl
-  · intro hs hp hk hy
+  · intro hs hp hk hy hq
     have hn : noneCell h st = false := noneCell_of_ne h st (by intro m hm; rw [hs] at hm; cases hm)
-    simp [reconRest, hn, stateApply, stateStep, stateSplit, hs, hy, dictUpdate, updateSeq, pairOf, hp, storeKey, keyHashErr,
-      hk, attrKey, setAttrOf]
+    have hst : storeItem (akEq h) attrs (.name t) v = .ok (attrs ++ [(.name t, v)]) :=
+      storeItem_miss _ _ _ attrs (fun q hq' => akEq_name_ne h q.1 t (hq q hq'))
+    simp [reconRest, hn, stateApply, stateStep, stateSplit, hs, hy, dictUpdate, updateSeq, pairOf, hp, storeKey,
+      keyHashErr, hk, attrKey, setAttrOf, hst]
+  · intro hs hp hk hy hq
+    have hn : noneCell h st = false := noneCell_of_ne h st (by intro m hm; rw [hs] at hm; cases hm)
+    have hst : storeItem (akEq h) (pre ++ (.name t, w) :: post) (.name t) v = .ok (pre ++ (.name t, v) :: post) :=
+      storeItem_hit _ _ _ _ _ post pre (fun q hq' => akEq_name_ne h q.1 t (hq q hq')) (by simp [akEq])
+    simp [reconRest, hn, stateApply, stateStep, stateSplit, hs, hy, dictUpdate, updateSeq, pairOf, hp, storeKey,
+      keyHashErr, hk, attrKey, setAttrOf, hst]
   · intro hs hp hy
     have hn : noneCell h st = false := noneCell_of_ne h st (by intro m hm; rw [hs] at hm; cases hm)
     simp [reconRest, hn, stateApply, stateStep, stateSplit, hs, hy, dictUpdate, updateSeq, pairOf, hp] <;>
