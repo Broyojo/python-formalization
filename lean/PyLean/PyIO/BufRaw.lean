@@ -101,7 +101,8 @@ inductive SStep where
   | ok
   | bad (v : Int)
   | wrong
-  | raise (c m : String)
+  /-- Raise `c(m)`; `mro` names the classes of `type(e).__mro__`. -/
+  | raise (c m : String) (mro : List String)
   deriving Repr, DecidableEq, Inhabited
 
 /-- One read of the `closed` property. -/
@@ -135,6 +136,8 @@ structure Raw where
   rs : List RStep
   ws : List RStep
   ss : List SStep
+  /-- The MRO of the exception the last `seek` or `tell` raised. -/
+  excMro : List String
   cs : List CStep
   /-- Answers of `readable()`, `writable()`, `seekable()`, in call order. -/
   qs : List QStep
@@ -236,7 +239,7 @@ def seek (r : Raw) (p w : Int) : Raw × Py IRes :=
   if r.closed then (r, .error rawClosedErr) else
   let (r, st) := r.popS
   match st with
-  | .raise c m => (r, .error (.named c m))
+  | .raise c m mro => ({ r with excMro := mro }, .error (.named c m))
   | .bad v => (r, .ok (.int v))
   | .wrong => (r, .ok .wrong)
   | .ok =>
@@ -251,7 +254,7 @@ def tell (r : Raw) : Raw × Py IRes :=
   if r.closed then (r, .error rawClosedErr) else
   let (r, st) := r.popS
   match st with
-  | .raise c m => (r, .error (.named c m))
+  | .raise c m mro => ({ r with excMro := mro }, .error (.named c m))
   | .bad v => (r, .ok (.int v))
   | .wrong => (r, .ok .wrong)
   | .ok => if !r.canSeek then (r, .error (osError "unseekable")) else (r, .ok (.int r.pos))
@@ -302,5 +305,8 @@ end Raw
 /-- Outcome of the whole test case: the process died, or hung. -/
 def crashErr : PyExc := .named "SIGSEGV" ""
 def hangErr : PyExc := .named "Deadlock" ""
+/-- Outcome of the whole test case: C undefined behaviour. Not `crashErr`: the
+process may die or go on with corrupted memory, so no result is claimed. -/
+def ubErr : PyExc := .named "UndefinedBehaviour" ""
 
 end PyLean.PyIO

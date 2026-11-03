@@ -1,5 +1,5 @@
 import PyLean.Registry
-import PyLean.PyIO.BufLock
+import PyLean.PyIO.BufInit
 
 /-! Registry entries for BufferedReader/Writer/Random/RWPair, BufferedIOBase. -/
 
@@ -100,6 +100,19 @@ def bufferedEntries : List Entry := [
     status := .refuted, prop := ``RandomInitTwins, thm := some ``randomInitTwins_refuted
     bug := some "pyio-buffered-init-inquiry-truthy"
     notes := "seekable() returning 1, asked first by both: iobase.c:413-428 refuses it, _pyio.py:1426 (raw._checkSeekable, :430-435) accepts it." },
+  { id := "pyio-buffered-c-init-success", pyFile := "Modules/_io/bufferedio.c"
+    pyFns := ["_io_BufferedReader___init___impl", "_io_BufferedWriter___init___impl",
+              "_io_BufferedRandom___init___impl", "_buffered_init"]
+    statement := "For io.BufferedReader, BufferedWriter and BufferedRandom over a raw stream whose seekable(), readable() and writable() answer True, whose tell() answers its position and that calls nothing back, for every buffer size: size <= 0 is refused with ValueError('buffer size must be strictly positive') after the inquiries; a size the allocator refuses raises MemoryError; otherwise construction succeeds with ok set, the raw attached, buffer_size = size, a buffer of size bytes, a free lock, buffer_mask = size - 1 exactly for a power of two, abs_pos = the raw's tell() when it fits Py_off_t (else 0, the failure cleared), an empty read buffer for a reader and an empty write buffer at 0 for a writer, and the raw has seen exactly the type's inquiries and one tell(), with no read, write or seek."
+    source := "doc: the constructors' documented arguments (raw, buffer_size); the bodies bufferedio.c:1592-1620, :1944-1974, :2485-2520 and _buffered_init :838-872"
+    status := .proven, prop := ``CInitSucceeds, thm := some ``cInitSucceeds_proven
+    notes := "Smoke-tested on 3.15.2: difftest cases with no operations (sizes 1, 3, 8, 8192, 0, -1, -5, 2**48, 2**48+1, logs as stated), a raw at position 5 whose tell() the object then reports, and a raw whose tell() answers 2**63, which constructs. The allocator's refusal is the module's allocation assumption (memLimit = 2**48, PyIO/Basic.lean), about the machine; lock allocation (:855-858) is assumed to succeed." },
+  { id := "pyio-buffered-py-init-success", pyFile := "Lib/_pyio.py"
+    pyFns := ["BufferedReader.__init__", "BufferedWriter.__init__", "BufferedRandom.__init__"]
+    statement := "For _pyio.BufferedReader, BufferedWriter and BufferedRandom over the same raw streams, for every buffer size: size <= 0 is refused with ValueError('invalid buffer size') after the inquiry; every positive size is accepted (nothing is allocated), the object attached, buffer_size = size, a reader's read buffer empty at 0 with a free _read_lock, a writer's write buffer empty with a free _write_lock, and the raw has seen exactly the type's inquiries (seekable() first for BufferedRandom) and nothing else."
+    source := "doc: the constructors' documented arguments; the bodies _pyio.py:1049-1060, :1247-1256, :1425-1428"
+    status := .proven, prop := ``PyInitSucceeds, thm := some ``pyInitSucceeds_proven
+    notes := "Smoke-tested on 3.15.2 with the C cases above: _pyio accepts 2**48 and 2**48+1 where C raises MemoryError, and asks no tell()." },
   { id := "pyio-buffered-raw-read-checks", pyFile := "Modules/_io/bufferedio.c"
     pyFns := ["_bufferedreader_raw_read", "_PyIO_trap_eintr"]
     statement := "_bufferedreader_raw_read never reports a count outside [0, len] except -2 for None and stores no more than it reports, for every raw answer, state and re-entry handler; an int answer v is the count when 0 <= v <= len and is refused with OSError 'raw readinto() returned invalid length' otherwise; an exception that is an instance of OSError (by its class's MRO, so for every class hierarchy) with errno EINTR is retried with the same arguments and every other exception (InterruptedError('x') without errno included) propagates unchanged."

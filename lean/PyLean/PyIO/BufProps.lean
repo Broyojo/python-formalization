@@ -10,7 +10,7 @@ open PyLean
 /-- A seekable raw stream over `d` that follows its contract: no scripted short
 reads, blocking, bad counts, exceptions, lies about `closed`, or re-entry. -/
 def plainRaw (d : List Nat) : Raw :=
-  { data := d, pos := 0, rs := [], ws := [], ss := [], cs := [], qs := [], flushRet := none, canRead := true, canWrite := true,
+  { data := d, pos := 0, rs := [], ws := [], ss := [], excMro := [], cs := [], qs := [], flushRet := none, canRead := true, canWrite := true,
     canSeek := true, closed := false, closeFail := none, hooks := [], tick := 0, log := [] }
 
 /-- The result of the last operation of a case, or what stopped the case. -/
@@ -19,7 +19,7 @@ def lastResult {σ : Type} : Outcome σ → Py Val
   | .initErr e => .error e
   | .crashed => .error crashErr
   | .hung => .error hangErr
-  | .ub => .error crashErr
+  | .ub _ _ => .error ubErr
 
 /-- `read(k)` then `readinto(bytearray(n))` on a new `BufferedReader(raw, size)`,
 C twin. -/

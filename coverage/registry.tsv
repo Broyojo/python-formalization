@@ -432,6 +432,8 @@ pyio-bufferedrandom-failed-seek-twins	refuted	Lib/_pyio.py	BufferedRandom.seek
 pyio-bufferedreader-init-inquiry-twins	refuted	Modules/_io/bufferedio.c	_io_BufferedReader___init___impl,BufferedReader.__init__
 pyio-bufferedwriter-init-inquiry-twins	refuted	Modules/_io/bufferedio.c	_io_BufferedWriter___init___impl,BufferedWriter.__init__
 pyio-bufferedrandom-init-inquiry-twins	refuted	Modules/_io/bufferedio.c	_io_BufferedRandom___init___impl,BufferedRandom.__init__
+pyio-buffered-c-init-success	proven	Modules/_io/bufferedio.c	_io_BufferedReader___init___impl,_io_BufferedWriter___init___impl,_io_BufferedRandom___init___impl,_buffered_init
+pyio-buffered-py-init-success	proven	Lib/_pyio.py	BufferedReader.__init__,BufferedWriter.__init__,BufferedRandom.__init__
 pyio-buffered-raw-read-checks	proven	Modules/_io/bufferedio.c	_bufferedreader_raw_read,_PyIO_trap_eintr
 pyio-buffered-raw-write-checks	proven	Modules/_io/bufferedio.c	_bufferedwriter_raw_write
 pyio-buffered-lock-discipline	proven	Modules/_io/bufferedio.c	_enter_buffered_busy

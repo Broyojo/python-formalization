@@ -199,18 +199,22 @@ inductive Outcome (σ : Type) where
   | done (s : σ) (rs : List (Py Val))
   | crashed
   | hung
-  /-- Undefined behaviour: the process may die or go on corrupted. -/
-  | ub
+  /-- Undefined behaviour: the process may die or go on corrupted. `rs` are the
+  results of the operations that finished before it (none if it was in `__init__`,
+  `init := true`); nothing after it is claimed. -/
+  | ub (init : Bool) (rs : List (Py Val))
   | initErr (e : PyExc)
 
-/-- Run the operations in turn, stopping when the process dies or hangs. -/
-def runSeq {σ : Type} (step : BfOp → SM σ Val) (stop : σ → Bool) : σ → List BfOp → Except σ (σ × List (Py Val))
+/-- Run the operations in turn, stopping when the process dies or hangs; either way
+with the results of the operations that finished. -/
+def runSeq {σ : Type} (step : BfOp → SM σ Val) (stop : σ → Bool) :
+    σ → List BfOp → Except (σ × List (Py Val)) (σ × List (Py Val))
   | s, [] => .ok (s, [])
   | s, o :: os =>
     let (s', r) := step o s
-    if stop s' then .error s' else
+    if stop s' then .error (s', []) else
     match runSeq step stop s' os with
-    | .error t => .error t
+    | .error (t, rs) => .error (t, r :: rs)
     | .ok (s'', rs) => .ok (s'', r :: rs)
 
 def reFuel (r : Raw) : Nat := r.hooks.length + 2
@@ -221,10 +225,10 @@ def runC (kind : Nat) (raw : Raw) (size : Int) (ops : List BfOp) : Outcome BufS 
   let s0 : BufS := { (default : BufS) with raw := raw, readable := kind ≠ 1, writable := kind ≠ 0 }
   match BC2.init kind size (stepC (reFuel raw)) s0 with
   | (s, .error e) =>
-    if s.crashed then (if s.blocked then .hung else if s.corrupt then .ub else .crashed) else .initErr e
+    if s.crashed then (if s.blocked then .hung else if s.corrupt then .ub true [] else .crashed) else .initErr e
   | (s, .ok _) =>
     match runSeq (stepC (reFuel raw + 1)) (·.crashed) s ops with
-    | .error t => if t.blocked then .hung else if t.corrupt then .ub else .crashed
+    | .error (t, rs) => if t.blocked then .hung else if t.corrupt then .ub false rs else .crashed
     | .ok (s, rs) => .done s rs
 
 /-- `_pyio.Buffered*(raw, size)` then the operations. -/

@@ -37,6 +37,8 @@ theorem put_apply (t : BufS) (R : CH) (s : BufS) : (put t : BM Unit) R s = (t, .
 theorem crash_not_ok {α : Type} (R : CH) (s s' : BufS) (a : α) : (crash : BM α) R s ≠ (s', .ok a) := by
   simp [crash, bind_def, mod, thr]
 
+theorem nullAccess_none (n : Int) (R : CH) (s : BufS) : nullAccess none n R s = (s, .ok ()) := rfl
+
 theorem thr_not_ok {α : Type} (e : PyExc) (R : CH) (s s' : BufS) (a : α) :
     (thr e : BM α) R s ≠ (s', .ok a) := by
   simp [thr]
@@ -169,7 +171,7 @@ Invariant: what is copied out of the buffer was counted as read. In 2 and 3 the
 raw is attached, open and has no hooks, which is what makes its answer the one the
 script names. -/
 def RawReadChecks : Prop :=
-  (∀ (ptr : Option Bool) (gen : Option Nat) (len : Int) (fuel : Nat) (R : CH) (s s' : BufS) (n : Int) (d : List Nat),
+  (∀ (ptr : Option Int) (gen : Option Nat) (len : Int) (fuel : Nat) (R : CH) (s s' : BufS) (n : Int) (d : List Nat),
     0 ≤ len → BC2.rawRead ptr gen len fuel R s = (s', .ok (n, d)) →
     n = -2 ∨ (0 ≤ n ∧ n ≤ len ∧ (d.length : Int) ≤ n)) ∧
   (∀ (len : Int) (fuel : Nat) (R : CH) (s : BufS) (v : Int) (t : List RStep), 0 ≤ len →
@@ -187,10 +189,10 @@ def RawReadChecks : Prop :=
       BC2.rawRead none none len (fuel + 2) R s = BC2.rawRead none none len (fuel + 1) R (afterReadinto s len t)) ∧
     (¬(H.sub c "OSError" = true ∧ eno = some 4) →
       (BC2.rawRead none none len (fuel + 1) R s).2 = .error (.named c (errMsg m eno)))) ∧
-  (∀ (ptr : Option Bool) (gen : Option Nat) (len : Int) (fuel : Nat) (R : CH) (s : BufS), ptr ≠ some true → len < 0 →
+  (∀ (ptr : Option Int) (gen : Option Nat) (len : Int) (fuel : Nat) (R : CH) (s : BufS), ptr ≠ some 0 → len < 0 →
     BC2.rawRead ptr gen len (fuel + 1) R s = (s, .error (.named "SystemError" "~NULL without an exception")))
 
-theorem rawRead_count (ptr : Option Bool) (gen : Option Nat) (len : Int) (hl : 0 ≤ len) : ∀ (fuel : Nat) (R : CH)
+theorem rawRead_count (ptr : Option Int) (gen : Option Nat) (len : Int) (hl : 0 ≤ len) : ∀ (fuel : Nat) (R : CH)
     (s s' : BufS) (n : Int) (d : List Nat), BC2.rawRead ptr gen len fuel R s = (s', .ok (n, d)) →
     n = -2 ∨ (0 ≤ n ∧ n ≤ len ∧ (d.length : Int) ≤ n) := by
   intro fuel
@@ -221,20 +223,18 @@ theorem rawRead_count (ptr : Option Bool) (gen : Option Nat) (len : Int) (hl : 0
       | data dd =>
         have hlen := Raw.readinto_data r len.toNat dd hr
         try dsimp only at h
+        obtain ⟨s2, u, -, h⟩ := BC2.bind_ok h
+        obtain ⟨s3, u, -, h⟩ := BC2.bind_ok h
         split at h
-        · obtain ⟨s2, a, h1, -⟩ := BC2.bind_ok h
-          exact absurd h1 (BC2.crash_not_ok _ _ _ _)
-        · obtain ⟨s3, u, -, h⟩ := BC2.bind_ok h
-          split at h
-          · obtain ⟨s2, a, -, h⟩ := BC2.bind_ok h
-            have := BC2.pure_ok h
-            simp only [Prod.mk.injEq] at this
-            obtain ⟨rfl, rfl⟩ := this
-            right; omega
-          · have := BC2.pure_ok h
-            simp only [Prod.mk.injEq] at this
-            obtain ⟨rfl, rfl⟩ := this
-            right; omega
+        · obtain ⟨s2, a, -, h⟩ := BC2.bind_ok h
+          have := BC2.pure_ok h
+          simp only [Prod.mk.injEq] at this
+          obtain ⟨rfl, rfl⟩ := this
+          right; omega
+        · have := BC2.pure_ok h
+          simp only [Prod.mk.injEq] at this
+          obtain ⟨rfl, rfl⟩ := this
+          right; omega
       | count k => exact absurd hr (Raw.readinto_not_count r len.toNat k)
       | wrong => exact absurd h (BC2.thr_not_ok _ _ _ _ _)
       | bad v =>
@@ -333,7 +333,7 @@ stream's `write`:
 Invariant: `write_pos` only advances over bytes the raw stream accepted. In 2 the
 raw is attached, open and has no hooks. -/
 def RawWriteChecks : Prop :=
-  (∀ (ptr : Option Bool) (gen : Option Nat) (b : List Nat) (fuel : Nat) (R : CH) (s s' : BufS) (n : Int),
+  (∀ (ptr : Option Int) (gen : Option Nat) (b : List Nat) (fuel : Nat) (R : CH) (s s' : BufS) (n : Int),
     BC2.rawWrite ptr gen b fuel R s = (s', .ok n) → n = -2 ∨ (0 ≤ n ∧ n ≤ b.length)) ∧
   (∀ (b : List Nat) (fuel : Nat) (R : CH) (s : BufS) (v : Int) (t : List RStep),
     s.rawNull = false → s.raw.closed = false → s.raw.hooks = [] → s.raw.ws = .bad v :: t →
@@ -343,7 +343,7 @@ def RawWriteChecks : Prop :=
         .error (osError s!"raw write() returned invalid length {n} (should have been between 0 and {b.length})")
       else .ok n)
 
-theorem rawWrite_count (ptr : Option Bool) (gen : Option Nat) (b : List Nat) : ∀ (fuel : Nat) (R : CH) (s s' : BufS) (n : Int),
+theorem rawWrite_count (ptr : Option Int) (gen : Option Nat) (b : List Nat) : ∀ (fuel : Nat) (R : CH) (s s' : BufS) (n : Int),
     BC2.rawWrite ptr gen b fuel R s = (s', .ok n) → n = -2 ∨ (0 ≤ n ∧ n ≤ b.length) := by
   intro fuel
   induction fuel with
@@ -359,38 +359,36 @@ theorem rawWrite_count (ptr : Option Bool) (gen : Option Nat) (b : List Nat) : �
       obtain ⟨s1, res, ho, h⟩ := BC2.bind_ok h
       obtain ⟨r, hr⟩ := BC2.onRaw_ok _ _ _ _ _ _ ho
       try dsimp only at h
-      split at h
-      · obtain ⟨s2, a, h1, -⟩ := BC2.bind_ok h
-        exact absurd h1 (BC2.crash_not_ok _ _ _ _)
-      · cases res with
-        | exc e =>
-          try dsimp only at h
-          split at h
-          · exact ih _ _ _ _ h
-          · exact absurd h (BC2.thr_not_ok _ _ _ _ _)
-        | none =>
-          left; exact (BC2.pure_ok h).symm
-        | count k =>
-          have hk := Raw.write_count r b k hr
-          try dsimp only at h
-          split at h
-          · obtain ⟨s2, a, -, h⟩ := BC2.bind_ok h
-            have := BC2.pure_ok h
-            subst this; right; omega
-          · have := BC2.pure_ok h
-            subst this; right; omega
-        | data dd => exact absurd hr (Raw.write_not_data r b dd)
-        | wrong => exact absurd h (BC2.thr_not_ok _ _ _ _ _)
-        | bad v =>
-          try dsimp only at h
-          repeat' (split at h)
-          all_goals first
-            | exact absurd h (BC2.thr_not_ok _ _ _ _ _)
-            | (obtain ⟨s2, a, -, h⟩ := BC2.bind_ok h
-               have := BC2.pure_ok h
-               subst this; right; omega)
-            | (have := BC2.pure_ok h
-               subst this; right; omega)
+      obtain ⟨s2, u, -, h⟩ := BC2.bind_ok h
+      cases res with
+      | exc e =>
+        try dsimp only at h
+        split at h
+        · exact ih _ _ _ _ h
+        · exact absurd h (BC2.thr_not_ok _ _ _ _ _)
+      | none =>
+        left; exact (BC2.pure_ok h).symm
+      | count k =>
+        have hk := Raw.write_count r b k hr
+        try dsimp only at h
+        split at h
+        · obtain ⟨s2, a, -, h⟩ := BC2.bind_ok h
+          have := BC2.pure_ok h
+          subst this; right; omega
+        · have := BC2.pure_ok h
+          subst this; right; omega
+      | data dd => exact absurd hr (Raw.write_not_data r b dd)
+      | wrong => exact absurd h (BC2.thr_not_ok _ _ _ _ _)
+      | bad v =>
+        try dsimp only at h
+        repeat' (split at h)
+        all_goals first
+          | exact absurd h (BC2.thr_not_ok _ _ _ _ _)
+          | (obtain ⟨s2, a, -, h⟩ := BC2.bind_ok h
+             have := BC2.pure_ok h
+             subst this; right; omega)
+          | (have := BC2.pure_ok h
+             subst this; right; omega)
 
 theorem rawWriteChecks_proven : RawWriteChecks := by
   refine ⟨fun ptr gen b fuel R s s' n h => rawWrite_count ptr gen b fuel R s s' n h, ?_⟩
@@ -400,6 +398,7 @@ theorem rawWriteChecks_proven : RawWriteChecks := by
   simp only [reduceCtorEq, ite_false]
   rw [BC2.bind_of_ok (show BC2.staleRead none R s = (s, .ok ()) from rfl)]
   rw [BC2.bind_of_ok (BC2.onRaw_nohook _ _ R s hd hh)]
+  rw [BC2.bind_of_ok (BC2.nullAccess_none _ _ _)]
   have hres : ((s.raw.enter (.write b)).1.write b).2 = .bad v := by
     simp [Raw.write, Raw.enter, hc, hw]
   rw [hres]

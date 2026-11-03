@@ -303,6 +303,11 @@ end BC2
 keeps_use PyLean.PyIO.BC2.keeps_init
 keeps_use PyLean.PyIO.BC2.keeps_flushMethod
 namespace BC2
+theorem keeps_nullAccess (p : Option Int) (n : Int) : Keeps (nullAccess p n) := by
+  unfold nullAccess corruptC; keeps
+end BC2
+keeps_use PyLean.PyIO.BC2.keeps_nullAccess
+namespace BC2
 theorem keeps_read (n : Int) : Keeps (read n) := by unfold read; keeps
 theorem keeps_read1 (n : Int) : Keeps (read1 n) := by unfold read1; keeps
 theorem keeps_readinto (len : Nat) (one : Bool) : Keeps (readinto len one) := by unfold readinto; keeps

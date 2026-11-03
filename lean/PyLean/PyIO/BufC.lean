@@ -46,7 +46,7 @@ structure BufS where
   writeEnd : Int
   /-- `buffer_size`, a `Py_ssize_t`: a refused `__init__` stores any value (:1605). -/
   size : Int
-  /-- The last exception a raw `write` raised, with its MRO, for
+  /-- The last exception a raw `write`, `seek` or `tell` raised, with its MRO, for
   `PyErr_GivenExceptionMatches(exc, PyExc_BlockingIOError)`. -/
   rawExc : Option (PyExc × List String)
   /-- The process died. -/
@@ -247,14 +247,19 @@ def checkPos : IRes → BM Int
 def rawTell : BM Int := do
   let r ← onRaw .tell Raw.tell
   match r with
-  | .error e => thr e
+  | .error e => do
+    -- the exception, with its MRO, for `_buffered_check_blocking_error`
+    mod fun s => { s with rawExc := some (e, s.raw.excMro) }
+    thr e
   | .ok v => checkPos v
 
 /-- `_buffered_raw_seek`, bufferedio.c:804-835. -/
 def rawSeek (t w : Int) : BM Int := do
   let r ← onRawObjArgs (.seek t w) (fun r => r.seek t w)
   match r with
-  | .error e => thr e
+  | .error e => do
+    mod fun s => { s with rawExc := some (e, s.raw.excMro) }
+    thr e
   | .ok v => checkPos v
 
 /-- `_PyIO_trap_eintr`, bufferedio.c:878-901: the exception is an instance of
@@ -264,10 +269,27 @@ is `EINTR` (4 on Linux, :887-895). The class name plays no part:
 subclass of `OSError` with that `errno` is retried. -/
 def trapEintr (eno : Option Nat) (mro : List String) : Bool := mro.contains "OSError" && eno == some 4
 
-/-- Where a raw callback reads or writes: `ptr` says whether the start pointer
-is `NULL` (`some true`), inside a freed buffer (`some false`), or valid (`none`). -/
-def bufPtr (s : BufS) (off : Int) : Option Bool :=
-  if s.hasBuf then none else some (decide (off = 0))
+/-- Where a raw callback reads or writes: `self->buffer + off`, which is `NULL + off`
+(`some off`) when a re-entered `__init__` freed the buffer (:846-847) and failed to
+allocate one (:848-851), or a valid pointer (`none`). -/
+def bufPtr (s : BufS) (off : Int) : Option Int :=
+  if s.hasBuf then none else some off
+
+/-- An assumption about the platform, not a fact about CPython: addresses below this
+are never mapped, so an access there faults (SIGSEGV) for certain. It holds when
+`vm.mmap_min_addr` is at least 4096, the Linux kernel's default (distributions raise it:
+65536 on Debian and Ubuntu x86-64, 32768 on some ARM ones), for an unprivileged process
+with nothing mapped there. An access at or above it, through `NULL + off`, is undefined
+behaviour: it may land in a mapping and read or corrupt it. -/
+def unmappedBelow : Int := 4096
+
+/-- An access of `n` bytes at `NULL + off` (`ptr = some off`): a fault below
+`unmappedBelow`, undefined behaviour above it. `bufCopy` and the raw callbacks' stores
+and reads through a view all go through this split. -/
+def nullAccess (ptr : Option Int) (n : Int) : BM Unit :=
+  match ptr with
+  | some off => if n > 0 then (if off < unmappedBelow then crash else corruptC) else pure ()
+  | none => pure ()
 
 /-- The raw stream stored bytes through a view of `self->buffer` made when the buffer
 was allocation `gen`, which a re-entered `__init__` has freed since: a write into freed
@@ -287,10 +309,10 @@ def nullView : PyExc := .valueError "PyMemoryView_FromBuffer(): info->buf must n
 
 /-- `_bufferedreader_raw_read`, bufferedio.c:1622-1670: the count (`-2` for `None`)
 and the bytes `readinto` stored (fewer than the count when it lied). -/
-def rawRead (ptr : Option Bool) (gen : Option Nat) (len : Int) : Nat → BM (Int × List Nat)
+def rawRead (ptr : Option Int) (gen : Option Nat) (len : Int) : Nat → BM (Int × List Nat)
   | 0 => thr .modelFuel
   | fuel + 1 => do
-    if ptr = some true then thr nullView
+    if ptr = some 0 then thr nullView
     -- a view of negative length (`buffer_size - start < 0` after a refused
     -- `__init__`): `len(b)` in the raw's `readinto` gets a negative `mp_length` with
     -- no exception set, a `SystemError` (whose text depends on the call site), before
@@ -301,8 +323,8 @@ def rawRead (ptr : Option Bool) (gen : Option Nat) (len : Int) : Nat → BM (Int
     | .exc e eno mro => if trapEintr eno mro then rawRead ptr gen len fuel else thr e
     | .none => pure ((-2 : Int), ([] : List Nat))
     | .data d =>
-      -- storing through a pointer into freed memory
-      if ptr = some false ∧ d ≠ [] then crash
+      -- storing through `NULL + off`, or through a view of freed memory
+      nullAccess ptr d.length
       staleStore gen d
       if d.length > 0 then mod fun s => if s.absPos ≠ -1 then { s with absPos := s.absPos + d.length } else s
       pure ((d.length : Int), d)
@@ -333,14 +355,14 @@ def fillBuffer : BM Int := do
   pure n
 
 /-- `_bufferedwriter_raw_write`, bufferedio.c:1976-2021. -/
-def rawWrite (ptr : Option Bool) (gen : Option Nat) (b : List Nat) : Nat → BM Int
+def rawWrite (ptr : Option Int) (gen : Option Nat) (b : List Nat) : Nat → BM Int
   | 0 => thr .modelFuel
   | fuel + 1 => do
-    if ptr = some true then thr nullView
+    if ptr = some 0 then thr nullView
     staleRead gen
     let res ← onRaw (.write b) (fun r => r.write b)
-    -- `raw.write` reads the view first (the harness copies it)
-    if ptr = some false then crash
+    -- `raw.write` reads the view first (the harness copies it), at `NULL + off`
+    nullAccess ptr b.length
     match res with
     | .exc e eno mro =>
       if trapEintr eno mro then rawWrite ptr gen b fuel else do
@@ -438,17 +460,12 @@ def flushMethod : BM Val := do
   let s ← get
   if s.writable then flush else simpleFlush
 
-/-- Addresses below this are never mapped for an unprivileged Linux process
-(`vm.mmap_min_addr`, 65536 by default): an access there faults for certain. -/
-def unmappedBelow : Int := 65536
-
 /-- A `memcpy`/`memmove`/`memchr` or scan of `n` bytes at `self->buffer + off`, when the
 buffer is `NULL` (a re-entered `__init__` freed it, :846-847, then failed at :848-851):
 an access below `unmappedBelow` faults; one above it is undefined behaviour. -/
 def bufCopy (off n : Int) : BM Unit := do
   let s ← get
-  if n > 0 ∧ !s.hasBuf then
-    if off < unmappedBelow then crash else corruptC
+  nullAccess (bufPtr s off) n
 
 /-- `PyBytes_FromStringAndSize(self->buffer + off, n)`. With the buffer `NULL` and `off = 0`
 the pointer is `NULL`, which asks for a new `bytes` of `n` uninitialized bytes
@@ -475,7 +492,9 @@ def readFast (n : Int) : BM (Option (List Nat)) := do
 def minusLastBlock (s : BufS) (n : Int) : BM Int :=
   if s.mask ≠ 0 then pure (n - n % (s.mask + 1))
   -- `buffer_size` is 0 after a re-entered `__init__(raw, 0)` (:1605 stores it before
-  -- `_buffered_init` refuses it, :841): the division traps (SIGFPE)
+  -- `_buffered_init` refuses it, :841). Division by zero is undefined behaviour in C;
+  -- `crash` is what x86-64 does (`idiv` traps: SIGFPE, measured on the pod), an
+  -- assumption about the platform: AArch64's `sdiv` gives 0 and does not trap
   else if s.size = 0 then crash
   -- C division truncates; `buffer_size` may be negative after a refused `__init__`
   else pure (s.size * Int.tdiv n s.size)
