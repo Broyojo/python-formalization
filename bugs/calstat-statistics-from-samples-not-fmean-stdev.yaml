@@ -1,0 +1,62 @@
+id: calstat-statistics-from-samples-not-fmean-stdev
+title: "NormalDist.from_samples is documented as using fmean() and stdev() but uses neither"
+priority: P5
+kind: documentation
+module: corelibs
+files: [Lib/statistics.py, Doc/library/statistics.rst]
+functions: ["NormalDist.from_samples", "_mean_stdev"]
+summary: |
+  The documentation says from_samples "Makes a normal distribution instance with mu and sigma
+  parameters estimated from the data using fmean() and stdev()". The code calls `_mean_stdev`, which
+  differs from both in two observable ways:
+  * mu is the exact mean correctly rounded (what `mean()` gives), not `fmean()`:
+    `NormalDist.from_samples([0.1, 0.1, 0.1]).mean` is 0.1 while `fmean([0.1, 0.1, 0.1])` is
+    0.10000000000000002. The difference is in the last bit, and from_samples is the more accurate.
+  * with a NaN or infinity in the data, `_mean_stdev` "handles Nans and Infs gracefully" and returns
+    NaN parameters, while `stdev()` raises: `NormalDist.from_samples([nan, 1.0])` is
+    `NormalDist(mu=nan, sigma=nan)`, `stdev([nan, 1.0])` raises
+    `ValueError('inf or nan encountered in data')`.
+likelihood: |
+  The first difference shows on most float data whose fsum-then-divide mean is not correctly rounded;
+  the second needs a NaN or infinity in the data.
+maybe_intended: |
+  Yes in substance: the code is deliberately more accurate than fmean(), and the NaN handling is a
+  deliberate branch (statistics.py:1767-1769, "Handle Nans and Infs gracefully"). Only the
+  documentation sentence is inaccurate; a fix would say "estimated with the sample mean and sample
+  standard deviation", or mention mean()/stdev() and the NaN behaviour.
+reproducer: |
+  import statistics, math
+  X = statistics.NormalDist.from_samples([0.1, 0.1, 0.1])
+  f = statistics.fmean([0.1, 0.1, 0.1])
+  Y = statistics.NormalDist.from_samples([math.nan, 1.0])
+  try:
+      statistics.stdev([math.nan, 1.0])
+      raised = False
+  except ValueError:
+      raised = True
+  print(X.mean, f, Y, raised)
+  if X.mean != f and math.isnan(Y.mean) and math.isnan(Y.stdev) and raised:
+      print('REPRODUCED calstat-statistics-from-samples-not-fmean-stdev')
+expected: |
+  Per the documentation: mu == fmean(data), and the error of stdev() for NaN data.
+observed: |
+  python3 3.15.2: 0.1 0.10000000000000002 NormalDist(mu=nan, sigma=nan) True. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Doc/library/statistics.rst:918-919.
+cause: |
+  Lib/statistics.py:1249 calls `_mean_stdev` (:1759-1769), which takes the mean from the exact sums
+  of `_ss` and, when the exact ratio is unavailable (NaN, infinity), returns `float(xbar)` and
+  `float(xbar) / float(ss)` instead of raising.
+possible_fix: |
+  Documentation only: "with mu and sigma estimated from the data as by mean() and stdev(); NaN or
+  infinite data gives NaN parameters".
+duplicates:
+  issues:
+    - {number: 80199, state: closed, relation: "added NormalDist (bpo-36018); no report of this sentence", reason: "origin"}
+  queries: ["from_samples fmean", "from_samples nan", "NormalDist from_samples stdev", "from_samples documentation",
+            "_mean_stdev nan", "bugforge README: no from_samples entries"]
+lean:
+  property: PyLean.CoreLibs.CalStat.FromSamplesFmeanStdev
+  theorem: PyLean.CoreLibs.CalStat.fromSamplesFmeanStdev_refuted
+  also: [PyLean.CoreLibs.CalStat.fromSamplesTwinFloats_refuted]

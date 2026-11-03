@@ -13,18 +13,29 @@ namespace PyLean.CoreLibs.CalStat
 open PyLean
 open PyLean.CoreLibs.Warn (Hier HierOk isA)
 
-/-- An iterable as `fmean` meets it: the outcome of `len(data)`, and what iterating it does: the
+/-- An iterable as `fmean` meets it: the outcome of `len(data)`; whether it is a `list` or `tuple`
+(an instance of one, subclasses included: the `isinstance` test at statistics.py:209); the exception
+`iter(data)` raises at once (`iterErr`, e.g. a `__iter__` that raises); and what iterating it does: the
 items it yields, then the end (`fin = none`) or the exception `e` its `__next__` raises
 (`fin = some e`). A `StopIteration` raised by `__next__` of a C iterator or of a class with
 `__next__` is the end of the iteration, so it is `none` here; a generator that lets one escape from
-its body raises `RuntimeError` instead (PEP 479), which is `some` of that `RuntimeError`. -/
+its body raises `RuntimeError` instead (PEP 479), which is `some` of that `RuntimeError`. Every
+iteration of the object behaves the same way (scope limit: an iterable whose iterations differ is not
+modelled). -/
 structure PyIter where
   len : Py Nat
   items : List PyN
   fin : Option PyExc
+  isSeq : Bool := false
+  iterErr : Option PyExc := none
+
+/-- An iterable that is not a list or tuple, whose `iter()` succeeds. -/
+def PyIter.mk' (len : Py Nat) (items : List PyN) (fin : Option PyExc) : PyIter :=
+  { len := len, items := items, fin := fin }
 
 /-- A list: `len` is its length and iteration ends normally. -/
-def PyIter.ofList (xs : List PyN) : PyIter := ⟨.ok xs.length, xs, none⟩
+def PyIter.ofList (xs : List PyN) : PyIter :=
+  { len := .ok xs.length, items := xs, fin := none, isSeq := true }
 
 /-- `math.fsum(iterable)`, Modules/mathmodule.c:1281-1396: each item is converted (:1299-1305)
 (`ASSIGN_DOUBLE`) and added to the partials before the next one is fetched; an exception from
@@ -35,23 +46,46 @@ def fsumIt (items : List PyN) (fin : Option PyExc) : Py Flt := do
   | some e => .error e
   | none => fsumEnd st
 
-/-- The loop of `math.sumprod(p, q)`, Modules/mathmodule.c:2178-2203, with `p` a fallible iterator
-and `q` a list: `p_i = p_next(p_it)` comes first, so an exception of `p` at step `k` wins over `q`
-being exhausted at `k`; a `StopIteration` set by `tp_iternext` is cleared and counts as the end
-(:2180-2186); `p_stopped != q_stopped` is the `ValueError` (:2199-2201). -/
-def sumprodItLoop : SP → List PyN → Option PyExc → List PyN → Py Val
-  | st, [], fin, qs =>
-    match fin with
+/-- `math.fsum(it)` from the call: `iter(it)` first. -/
+def fsumOf (it : PyIter) : Py Flt :=
+  match it.iterErr with
+  | some e => .error e
+  | none => fsumIt it.items it.fin
+
+/-- The loop of `math.sumprod(p, q)`, Modules/mathmodule.c:2166-2203, with both iterators fallible:
+`p_i = p_next(p_it)` comes first, so an exception of `p` at step `k` wins over anything `q` does at
+`k`; a `StopIteration` set by `tp_iternext` is cleared and counts as the end (:2180-2196);
+`p_stopped != q_stopped` is the `ValueError` (:2199-2201). -/
+def sumprodIt2 : SP → List PyN → Option PyExc → List PyN → Option PyExc → Py Val
+  | st, [], pf, qs, qf =>
+    match pf with
     | some e => .error e
     | none =>
       match qs with
-      | [] => do
-        let st ← if st.intEnabled then spFinalizeInt st else pure st
-        let st ← if st.fltEnabled then spFinalizeFlt st else pure st
-        return st.total
+      | [] =>
+        match qf with
+        | some e => .error e
+        | none => do
+          let st ← if st.intEnabled then spFinalizeInt st else pure st
+          let st ← if st.fltEnabled then spFinalizeFlt st else pure st
+          return st.total
       | _ :: _ => .error (.valueError "Inputs are not the same length")
-  | _, _ :: _, _, [] => .error (.valueError "Inputs are not the same length")
-  | st, p :: ps, fin, q :: qs => do sumprodItLoop (← spStep st p q) ps fin qs
+  | _, _ :: _, _, [], qf =>
+    match qf with
+    | some e => .error e
+    | none => .error (.valueError "Inputs are not the same length")
+  | st, p :: ps, pf, q :: qs, qf => do sumprodIt2 (← spStep st p q) ps pf qs qf
+
+/-- The loop with `q` a list. -/
+def sumprodItLoop (st : SP) (ps : List PyN) (pf : Option PyExc) (qs : List PyN) : Py Val :=
+  sumprodIt2 st ps pf qs none
+
+/-- `math.sumprod(p, q)`, mathmodule.c:2150-2158: `iter(p)`, then `iter(q)`, then the loop. -/
+def sumprodOf (p q : PyIter) : Py Val :=
+  match p.iterErr, q.iterErr with
+  | some e, _ => .error e
+  | none, some e => .error e
+  | none, none => sumprodIt2 {} p.items p.fin q.items q.fin
 
 /-- `try: n = len(data) except TypeError: ...`, statistics.py:194-200: the iterator path counts the
 items it consumes (`n = next(counter) - 1`). -/
@@ -60,16 +94,21 @@ def fmeanLen (H : Hier) (data : PyIter) : Py Nat :=
   | .ok n => .ok n
   | .error e => if isA H e "TypeError" then .ok data.items.length else .error e
 
-/-- `list(weights)` unless `weights` is a list or tuple, statistics.py:209-210. -/
-def listOf (w : PyIter) : Py (List PyN) :=
-  match w.fin with
-  | some e => .error e
-  | none => .ok w.items
+/-- `if not isinstance(weights, (list, tuple)): weights = list(weights)`, statistics.py:209-210: a
+list or tuple (or an instance of a subclass) is kept as it is; anything else is copied into a list,
+whose exception propagates. -/
+def listOf (w : PyIter) : Py PyIter :=
+  if w.isSeq then .ok w
+  else match w.iterErr, w.fin with
+    | some e, _ => .error e
+    | none, some e => .error e
+    | none, none => .ok (PyIter.ofList w.items)
 
 /-- `try: num = sumprod(data, weights) except ValueError: raise StatisticsError(...)`,
-statistics.py:212-215. -/
-def fmeanNum (H : Hier) (data : PyIter) (wl : List PyN) : Py Val :=
-  match sumprodItLoop {} data.items data.fin wl with
+statistics.py:212-215: everything `sumprod` raises, `iter()` of either argument included, goes
+through the `except`. -/
+def fmeanNum (H : Hier) (data w : PyIter) : Py Val :=
+  match sumprodOf data w with
   | .error e =>
     if isA H e "ValueError" then .error (statErr "data and weights must be the same length")
     else .error e
@@ -79,22 +118,22 @@ def fmeanNum (H : Hier) (data : PyIter) (wl : List PyN) : Py Val :=
 
 * No weights: `len(data)`; a `TypeError` (in the sense of `H`: the class or a subclass) sends it
   to the iterator path `fsum(compress(data, count(1)))`, which counts the items as they are
-  consumed; any other exception of `len` propagates. Either way `fsum` meets the items and then the
-  exception of the iterator, if any.
+  consumed; any other exception of `len` propagates. Either way `fsum` meets `iter(data)`, the items
+  and then the exception of the iterator, if any.
 * Weights: `list(weights)` unless it is a list or tuple (its exception propagates); `sumprod(data,
-  weights)` where a `ValueError` (in the sense of `H`), the length mismatch or one raised by the
-  data iterator, becomes the length `StatisticsError`; then `fsum(weights)` and the zero check. -/
+  weights)`, where any `ValueError` (in the sense of `H`) becomes the length `StatisticsError`; then
+  `fsum(weights)`, a second iteration of `weights`, outside the `try`; then the zero check. -/
 def fmeanIt (H : Hier) (data : PyIter) (weights : Option PyIter) : Py Val := do
   match weights with
   | none =>
     let n ← fmeanLen H data
-    let total ← fsumIt data.items data.fin
+    let total ← fsumOf data
     if n = 0 then throw (statErr "fmean requires at least one data point")
     vdiv (.flt total) (.int n)
   | some w =>
-    let wl ← listOf w
-    let num ← fmeanNum H data wl
-    let den ← fsumV (wl.map (·.v))
+    let w ← listOf w
+    let num ← fmeanNum H data w
+    let den ← fsumOf w
     if !den.truthy then throw (statErr "sum of weights must be non-zero")
     vdiv num (.flt den)
 
@@ -411,30 +450,53 @@ theorem div_ofQ_int (a b : Int) (hb0 : b ≠ 0) (hb : b.natAbs < 2 ^ 53) :
 
 theorem sumprodItLoop_none (st : SP) (ps qs : List PyN) :
     sumprodItLoop st ps none qs = sumprodLoop st ps qs := by
+  unfold sumprodItLoop
   induction ps generalizing st qs with
   | nil => cases qs <;> rfl
   | cons p ps ih =>
     cases qs with
     | nil => rfl
     | cons q qs =>
-      simp only [sumprodItLoop, sumprodLoop]
+      simp only [sumprodIt2, sumprodLoop]
       cases spStep st p q with
       | error e => rfl
       | ok st' => exact ih st' qs
 
-theorem sumprodItLoop_err (xs ws : List Int) (st : SP) (S : Int) (h : SpInv st S) (e : PyExc)
-    (hl : xs.length ≤ ws.length) : sumprodItLoop st (ints xs) (some e) (ints ws) = .error e := by
+/-- The data iterator raises `e` before the weights run out: `sumprod` raises `e`. -/
+theorem sumprodIt2_perr (xs ws : List Int) (st : SP) (S : Int) (h : SpInv st S) (e : PyExc)
+    (qf : Option PyExc) (hl : xs.length ≤ ws.length) :
+    sumprodIt2 st (ints xs) (some e) (ints ws) qf = .error e := by
   induction xs generalizing ws st S with
   | nil => rfl
   | cons a as ih =>
     cases ws with
     | nil => simp at hl
     | cons b bs =>
-      simp only [ints, List.map_cons, sumprodItLoop]
+      simp only [ints, List.map_cons, sumprodIt2]
       obtain ⟨st', e', i'⟩ := spStep_int st S a b h
       rw [bind_ok e']
       have := ih bs st' (S + a * b) i' (by simp at hl; omega)
       simpa [ints] using this
+
+/-- The weights iterator raises `e` before the data runs out (data a list): `sumprod` raises `e`. -/
+theorem sumprodIt2_qerr (xs ws : List Int) (st : SP) (S : Int) (h : SpInv st S) (e : PyExc)
+    (hl : ws.length ≤ xs.length) :
+    sumprodIt2 st (ints xs) none (ints ws) (some e) = .error e := by
+  induction ws generalizing xs st S with
+  | nil => cases xs <;> rfl
+  | cons b bs ih =>
+    cases xs with
+    | nil => simp at hl
+    | cons a as =>
+      simp only [ints, List.map_cons, sumprodIt2]
+      obtain ⟨st', e', i'⟩ := spStep_int st S a b h
+      rw [bind_ok e']
+      have := ih as st' (S + a * b) i' (by simp at hl; omega)
+      simpa [ints] using this
+
+theorem sumprodItLoop_err (xs ws : List Int) (st : SP) (S : Int) (h : SpInv st S) (e : PyExc)
+    (hl : xs.length ≤ ws.length) : sumprodItLoop st (ints xs) (some e) (ints ws) = .error e :=
+  sumprodIt2_perr xs ws st S h e none hl
 
 theorem sumprodLoop_mismatch (xs ws : List Int) (st : SP) (S : Int) (h : SpInv st S)
     (hl : xs.length ≠ ws.length) :
@@ -467,26 +529,26 @@ def FmeanInts : Prop :=
   ∀ (H : Hier) (xs : List Int) (lenR : Py Nat) (fin : Option PyExc),
     absSum xs < 2 ^ 53 → xs.length < 2 ^ 53 →
     ((lenR = .ok xs.length ∨ ∃ e, lenR = .error e ∧ isA H e "TypeError" = true) →
-      (fin = none → fmeanIt H ⟨lenR, ints xs, fin⟩ none =
+      (fin = none → fmeanIt H (PyIter.mk' lenR (ints xs) fin) none =
         if xs = [] then .error (.named "StatisticsError" "fmean requires at least one data point")
         else .ok (.flt (Flt.ofRat ((sumI xs : Rat) / (xs.length : Rat))))) ∧
-      (∀ e, fin = some e → fmeanIt H ⟨lenR, ints xs, fin⟩ none = .error e)) ∧
-    (∀ e, lenR = .error e → isA H e "TypeError" = false → fmeanIt H ⟨lenR, ints xs, fin⟩ none = .error e)
+      (∀ e, fin = some e → fmeanIt H (PyIter.mk' lenR (ints xs) fin) none = .error e)) ∧
+    (∀ e, lenR = .error e → isA H e "TypeError" = false → fmeanIt H (PyIter.mk' lenR (ints xs) fin) none = .error e)
 
 theorem fmeanInts_proven : FmeanInts := by
   intro H xs lenR fin hab hlen
   have hlenI : (ints xs).length = xs.length := by simp [ints]
   refine ⟨?_, ?_⟩
   · intro hl
-    have hn : fmeanLen H ⟨lenR, ints xs, fin⟩ = .ok xs.length := by
+    have hn : fmeanLen H (PyIter.mk' lenR (ints xs) fin) = .ok xs.length := by
       rcases hl with h | ⟨e, h, he⟩
-      · simp only [fmeanLen, h]
-      · simp only [fmeanLen, h, he, ite_true, hlenI]
+      · simp only [fmeanLen, h, PyIter.mk']
+      · simp only [fmeanLen, h, he, ite_true, hlenI, PyIter.mk']
     refine ⟨?_, ?_⟩
     · intro hf
       subst hf
       simp only [fmeanIt]
-      rw [bind_ok hn, bind_ok (fsumIt_ints xs hab)]
+      rw [bind_ok hn, bind_ok (show fsumOf (PyIter.mk' lenR (ints xs) none) = _ from fsumIt_ints xs hab)]
       by_cases h0 : xs = []
       · subst h0
         simp [throw, throwThe, MonadExcept.throw, MonadExceptOf.throw, statErr]
@@ -514,13 +576,14 @@ theorem fmeanInts_proven : FmeanInts := by
       subst hf
       simp only [fmeanIt]
       rw [bind_ok hn]
-      unfold fsumIt
+      unfold fsumOf fsumIt
+      simp only [PyIter.mk']
       have := fsum_fold_int xs 0 {} rfl rfl (by simpa using hab)
       rw [bind_ok this]
       rfl
   · intro e hl he
-    have : fmeanLen H ⟨lenR, ints xs, fin⟩ = .error e := by
-      simp only [fmeanLen, hl, he, Bool.false_eq_true, ite_false]
+    have : fmeanLen H (PyIter.mk' lenR (ints xs) fin) = .error e := by
+      simp only [fmeanLen, hl, he, Bool.false_eq_true, ite_false, PyIter.mk']
     simp only [fmeanIt]
     rw [this]
     rfl
@@ -537,38 +600,64 @@ def FmeanWeightedInts : Prop :=
   ∀ (H : Hier) (xs ws : List Int) (lenR : Py Nat) (fin : Option PyExc),
     absSum ws < 2 ^ 53 → (dotI xs ws).natAbs < 2 ^ 53 →
     (fin = none → xs.length = ws.length → sumI ws ≠ 0 →
-      fmeanIt H ⟨lenR, ints xs, fin⟩ (some (PyIter.ofList (ints ws))) =
+      fmeanIt H (PyIter.mk' lenR (ints xs) fin) (some (PyIter.ofList (ints ws))) =
         .ok (.flt (if dotI xs ws = 0 then .zero (decide (sumI ws < 0))
           else Flt.ofRat ((dotI xs ws : Rat) / (sumI ws : Rat))))) ∧
     (fin = none → xs.length = ws.length → sumI ws = 0 →
-      fmeanIt H ⟨lenR, ints xs, fin⟩ (some (PyIter.ofList (ints ws))) =
+      fmeanIt H (PyIter.mk' lenR (ints xs) fin) (some (PyIter.ofList (ints ws))) =
         .error (.named "StatisticsError" "sum of weights must be non-zero")) ∧
     (HierOk H → fin = none → xs.length ≠ ws.length →
-      fmeanIt H ⟨lenR, ints xs, fin⟩ (some (PyIter.ofList (ints ws))) =
+      fmeanIt H (PyIter.mk' lenR (ints xs) fin) (some (PyIter.ofList (ints ws))) =
         .error (.named "StatisticsError" "data and weights must be the same length")) ∧
     (∀ e, fin = some e → xs.length ≤ ws.length →
-      fmeanIt H ⟨lenR, ints xs, fin⟩ (some (PyIter.ofList (ints ws))) =
+      fmeanIt H (PyIter.mk' lenR (ints xs) fin) (some (PyIter.ofList (ints ws))) =
+        if isA H e "ValueError" then .error (.named "StatisticsError" "data and weights must be the same length")
+        else .error e)
+
+/-- The `isinstance(weights, (list, tuple))` test and `list(weights)`, statistics.py:209-210, for any
+data. Weights that are not a list or tuple are copied first: an exception of `iter(weights)` or of the
+iteration comes out as it is, before the data is looked at, and a copy that succeeds behaves as the
+list of its items. A list or tuple (or an instance of a subclass) is not copied, so `sumprod` meets its
+`__iter__` and its iterator inside the `try`: an exception there, from `iter(weights)` or from
+the weights' iterator before the data runs out, is turned into the length `StatisticsError` when it
+is a `ValueError` in the sense of `H`, and comes out otherwise. -/
+def FmeanWeightsArg : Prop :=
+  ∀ (H : Hier) (data w : PyIter) (xs ws : List Int) (lenR : Py Nat) (e : PyExc),
+    (w.isSeq = false → (w.iterErr = some e ∨ (w.iterErr = none ∧ w.fin = some e)) →
+      fmeanIt H data (some w) = .error e) ∧
+    (w.isSeq = false → w.iterErr = none → w.fin = none →
+      fmeanIt H data (some w) = fmeanIt H data (some (PyIter.ofList w.items))) ∧
+    (w.isSeq = true → w.iterErr = some e →
+      fmeanIt H (PyIter.mk' lenR (ints xs) none) (some w) =
+        if isA H e "ValueError" then .error (.named "StatisticsError" "data and weights must be the same length")
+        else .error e) ∧
+    (w.isSeq = true → w.iterErr = none → w.items = ints ws → w.fin = some e → ws.length ≤ xs.length →
+      fmeanIt H (PyIter.mk' lenR (ints xs) none) (some w) =
         if isA H e "ValueError" then .error (.named "StatisticsError" "data and weights must be the same length")
         else .error e)
 
 theorem fmeanWeightedInts_proven : FmeanWeightedInts := by
   intro H xs ws lenR fin hw hd
-  have hden := fsumV_ints ws hw
+  have hden : fsumOf (PyIter.ofList (ints ws)) = .ok (ofQ (sumI ws : Rat)) := fsumIt_ints ws hw
   have hsw : (sumI ws).natAbs < 2 ^ 53 := by
     have : ∀ l : List Int, (sumI l).natAbs ≤ absSum l := by
       intro l; induction l with
       | nil => simp [sumI, absSum]
       | cons a l ih => simp only [sumI, absSum]; omega
     have := this ws; omega
+  have hlo : listOf (PyIter.ofList (ints ws)) = .ok (PyIter.ofList (ints ws)) := rfl
   refine ⟨?_, ?_, ?_, ?_⟩
   · intro hf hl hs
     subst hf
-    have hnum : fmeanNum H ⟨lenR, ints xs, none⟩ (ints ws) = .ok (.int (dotI xs ws)) := by
+    have hnum : fmeanNum H (PyIter.mk' lenR (ints xs) none) (PyIter.ofList (ints ws)) =
+        .ok (.int (dotI xs ws)) := by
       have := sumprod_ints xs ws hl
       simp only [sumprod] at this
-      simp only [fmeanNum, sumprodItLoop_none, this]
-    simp only [fmeanIt, PyIter.ofList, listOf]
-    rw [ok_bind', bind_ok hnum, bind_ok hden]
+      have h2 := sumprodItLoop_none {} (ints xs) (ints ws)
+      unfold sumprodItLoop at h2
+      simp only [fmeanNum, sumprodOf, PyIter.mk', PyIter.ofList, h2, this]
+    simp only [fmeanIt]
+    rw [bind_ok hlo, bind_ok hnum, bind_ok hden]
     have ht : (ofQ ((sumI ws : Int) : Rat)).truthy = true := by
       unfold ofQ
       have : ¬ (((sumI ws : Int) : Rat) = 0) := fun h => hs (Rat.intCast_eq_zero_iff.mp h)
@@ -584,12 +673,15 @@ theorem fmeanWeightedInts_proven : FmeanWeightedInts := by
     rw [← hq, div_ofQ_int _ _ hs hsw]
   · intro hf hl hs
     subst hf
-    have hnum : fmeanNum H ⟨lenR, ints xs, none⟩ (ints ws) = .ok (.int (dotI xs ws)) := by
+    have hnum : fmeanNum H (PyIter.mk' lenR (ints xs) none) (PyIter.ofList (ints ws)) =
+        .ok (.int (dotI xs ws)) := by
       have := sumprod_ints xs ws hl
       simp only [sumprod] at this
-      simp only [fmeanNum, sumprodItLoop_none, this]
-    simp only [fmeanIt, PyIter.ofList, listOf]
-    rw [ok_bind', bind_ok hnum, bind_ok hden, hs]
+      have h2 := sumprodItLoop_none {} (ints xs) (ints ws)
+      unfold sumprodItLoop at h2
+      simp only [fmeanNum, sumprodOf, PyIter.mk', PyIter.ofList, h2, this]
+    simp only [fmeanIt]
+    rw [bind_ok hlo, bind_ok hnum, bind_ok hden, hs]
     rfl
   · intro hH hf hl
     subst hf
@@ -598,20 +690,106 @@ theorem fmeanWeightedInts_proven : FmeanWeightedInts := by
       have := hH "ValueError" "ValueError" (by decide)
       simp only [isA, PyExc.className]
       rw [this]; decide
-    have hnum : fmeanNum H ⟨lenR, ints xs, none⟩ (ints ws) =
+    have hnum : fmeanNum H (PyIter.mk' lenR (ints xs) none) (PyIter.ofList (ints ws)) =
         .error (statErr "data and weights must be the same length") := by
-      simp only [fmeanNum, sumprodItLoop_none, hm, hv, ite_true]
-    simp only [fmeanIt, PyIter.ofList, listOf]
-    rw [ok_bind', hnum]
+      have h2 := sumprodItLoop_none {} (ints xs) (ints ws)
+      unfold sumprodItLoop at h2
+      simp only [fmeanNum, sumprodOf, PyIter.mk', PyIter.ofList, h2, hm, hv, ite_true]
+    simp only [fmeanIt]
+    rw [bind_ok hlo, hnum]
     rfl
   · intro e hf hl
     subst hf
-    have hnum : fmeanNum H ⟨lenR, ints xs, some e⟩ (ints ws) =
+    have hnum : fmeanNum H (PyIter.mk' lenR (ints xs) (some e)) (PyIter.ofList (ints ws)) =
         if isA H e "ValueError" then .error (statErr "data and weights must be the same length")
         else .error e := by
-      simp only [fmeanNum, sumprodItLoop_err xs ws {} 0 spInv_init e hl]
-    simp only [fmeanIt, PyIter.ofList, listOf]
-    rw [ok_bind', hnum]
+      simp only [fmeanNum, sumprodOf, PyIter.mk', PyIter.ofList, sumprodIt2_perr xs ws {} 0 spInv_init e none hl]
+    simp only [fmeanIt]
+    rw [bind_ok hlo, hnum]
     split <;> rfl
+
+theorem fmeanWeightsArg_proven : FmeanWeightsArg := by
+  intro H data w xs ws lenR e
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro hs h
+    have : listOf w = .error e := by
+      unfold listOf
+      rw [if_neg (by simp [hs])]
+      rcases h with h | ⟨h1, h2⟩
+      · rw [h]
+      · rw [h1, h2]
+    simp only [fmeanIt]
+    rw [this]; rfl
+  · intro hs h1 h2
+    have : listOf w = .ok (PyIter.ofList w.items) := by
+      unfold listOf
+      rw [if_neg (by simp [hs]), h1, h2]
+    simp only [fmeanIt]
+    rw [bind_ok this]
+    rfl
+  · intro hs he
+    have : listOf w = .ok w := by unfold listOf; rw [if_pos hs]
+    have hnum : fmeanNum H (PyIter.mk' lenR (ints xs) none) w =
+        if isA H e "ValueError" then .error (statErr "data and weights must be the same length")
+        else .error e := by
+      simp only [fmeanNum, sumprodOf, PyIter.mk', he]
+    simp only [fmeanIt]
+    rw [bind_ok this, hnum]
+    split <;> rfl
+  · intro hs he hi hf hl
+    have : listOf w = .ok w := by unfold listOf; rw [if_pos hs]
+    have hnum : fmeanNum H (PyIter.mk' lenR (ints xs) none) w =
+        if isA H e "ValueError" then .error (statErr "data and weights must be the same length")
+        else .error e := by
+      simp only [fmeanNum, sumprodOf, PyIter.mk', he, hi, hf, sumprodIt2_qerr xs ws {} 0 spInv_init e hl]
+    simp only [fmeanIt]
+    rw [bind_ok this, hnum]
+    split <;> rfl
+
+/-! ## `fmean` of floats, relative to a correctly rounded `fsum` -/
+
+/-- `math.fsum` is correctly rounded: for finite floats whose exact sum `S` is not zero and rounds to
+a finite float, `fsum` returns that rounding. This is the open MathInt property
+`mathint-fsum-correctly-rounded`, here for the `fsum` mirror of this area; it is a hypothesis below, not
+a fact. -/
+def FsumCorrectlyRounded : Prop :=
+  ∀ xs : List Flt, (∀ x ∈ xs, x.isFinite = true) → sumQ (xs.map Flt.toRat) ≠ 0 →
+    (Flt.ofRat (sumQ (xs.map Flt.toRat))).isFinite = true →
+    fsumIt (floats xs) none = .ok (Flt.ofRat (sumQ (xs.map Flt.toRat)))
+
+/-- `fmean` of float data, the documented domain (statistics.py:183, "Convert data to floats and
+compute the arithmetic mean"), for a sequence or an iterator: given a correctly rounded `fsum`,
+`fmean` is the exact sum rounded once and divided by `n` with one more rounding, `round(round(S) / n)`,
+whatever `len()` route is taken (`H`). The zero sum (whose sign `fsum` decides) and overflow are left
+out with the hypothesis. -/
+def FmeanFloats : Prop :=
+  FsumCorrectlyRounded →
+  ∀ (H : Hier) (xs : List Flt) (lenR : Py Nat), (∀ x ∈ xs, x.isFinite = true) → xs.length < 2 ^ 53 →
+    (lenR = .ok xs.length ∨ ∃ e, lenR = .error e ∧ isA H e "TypeError" = true) →
+    sumQ (xs.map Flt.toRat) ≠ 0 → (Flt.ofRat (sumQ (xs.map Flt.toRat))).isFinite = true →
+    fmeanIt H (PyIter.mk' lenR (floats xs) none) none =
+      .ok (.flt (Flt.div (Flt.ofRat (sumQ (xs.map Flt.toRat))) (Flt.ofRat (xs.length : Rat))))
+
+theorem fmeanFloats_proven : FmeanFloats := by
+  intro hF H xs lenR hfin hlen hl hS hfS
+  have hlenI : (floats xs).length = xs.length := by simp [floats]
+  have hn : fmeanLen H (PyIter.mk' lenR (floats xs) none) = .ok xs.length := by
+    rcases hl with h | ⟨e, h, he⟩
+    · simp only [fmeanLen, h, PyIter.mk']
+    · simp only [fmeanLen, h, he, ite_true, hlenI, PyIter.mk']
+  have hs : fsumOf (PyIter.mk' lenR (floats xs) none) = .ok (Flt.ofRat (sumQ (xs.map Flt.toRat))) :=
+    hF xs hfin hS hfS
+  have hne : xs ≠ [] := by
+    intro h; subst h; exact hS rfl
+  have hl0 : xs.length ≠ 0 := by simpa using hne
+  have hnI : intToFlt (xs.length : Int) = .ok (.fin ((xs.length : Int) : Rat)) := by
+    rw [intToFlt_small _ (by omega), if_neg (by omega)]
+  simp only [fmeanIt]
+  rw [bind_ok hn, bind_ok hs]
+  simp only [hl0, ite_false, vdiv, arith, divOp, hnI, bind, Except.bind, fltDiv, pure, Except.pure]
+  have : Flt.ofRat ((xs.length : Nat) : Rat) = .fin ((xs.length : Int) : Rat) := by
+    have := ofRat_int (xs.length : Int) (by omega) (by omega)
+    simpa [Rat.intCast_natCast] using this
+  rw [this]
 
 end PyLean.CoreLibs.CalStat

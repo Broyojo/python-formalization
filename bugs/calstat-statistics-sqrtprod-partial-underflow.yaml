@@ -26,7 +26,18 @@ maybe_intended: |
   Possibly regarded as an accepted float limitation; a maintainer has rejected subnormal-input
   reports before (python/cpython#158786). Here the inputs are normal floats, and the function exists to
   handle underflow: it already rescales by 2**537 when the product underflows to zero, it just does not
-  do so when the product is merely subnormal.
+  do so when the product is merely subnormal. The rescaling came with PR #107855 ("Extend _sqrtprod() to
+  cover the full range of inputs"); in its review Serhiy Storchaka doubted it was worth going so far,
+  since under/overflow can occur outside _sqrtprod in computing its inputs, and Raymond Hettinger
+  answered that the module's ethos is "to aim for perfection almost regardless of cost". The
+  differential correction came with PR #107781 ("Minor accuracy improvement for
+  statistics.correlation()"). The tests added with #107855 (Lib/test/test_statistics.py:2768-2772)
+  check only `sys.float_info.min * sys.float_info.epsilon`, whose product underflows to exactly zero,
+  and `sys.float_info.max`; no subnormal non-zero product is tested.
+upstream_with: [corelibs-statistics-correlation-out-of-range]
+upstream_note: |
+  File together with corelibs-statistics-correlation-out-of-range: both are correlation() results the
+  documentation rules out (outside [-1, 1]), that one by one ulp, this one by far more.
 reproducer: |
   import statistics, math
   x = [math.ldexp(i, -270) for i in range(1, 6)]   # 1..5 times 2**-270, all normal floats
@@ -70,6 +81,8 @@ possible_fix: |
   An upstream PR should add a test for a subnormal (not zero) product.
 duplicates:
   issues:
+    - {number: 107855, state: merged, relation: "PR that added the exact-zero rescaling this misses; review discussion quoted above", reason: "origin"}
+    - {number: 107781, state: merged, relation: "PR that added the differential correction", reason: "origin"}
     - {number: 158752, state: closed, relation: "different symptom: the sums of squares themselves underflow to 0 and correlation raises 'at least one of the inputs is constant'; closed as part of a bulk close, not on the merits", reason: "different bug"}
   queries: ["sqrtprod underflow", "correlation subnormal", "correlation underflow", "statistics correlation tiny",
             "sqrtprod", "sqrtprod subnormal", "correlation proportional", "correlation precision small",

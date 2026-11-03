@@ -221,10 +221,12 @@ def getIter (items : List PyN) (src : String) (exc : Except String PyExc) : Exce
   let pep479 : PyExc := .named "RuntimeError" "generator raised StopIteration"
   match src with
   | "list" | "tuple" => return PyIter.ofList items
-  | "iter" => return ⟨.error noLen, items, none⟩
-  | "fail" => return ⟨.error noLen, items, some (← exc)⟩
-  | "badlen" => return ⟨.error (← exc), items, none⟩
-  | "gen" => return ⟨.error noLen, items, some pep479⟩
+  | "iter" => return PyIter.mk' (.error noLen) items none
+  | "fail" => return PyIter.mk' (.error noLen) items (some (← exc))
+  | "badlen" => return PyIter.mk' (.error (← exc)) items none
+  | "gen" => return PyIter.mk' (.error noLen) items (some pep479)
+  | "listsub_iter" => return { PyIter.ofList items with iterErr := some (← exc) }
+  | "listsub_fail" => return { PyIter.ofList items with fin := some (← exc) }
   | _ => throw s!"bad src {src}"
 
 def runStat (fn : String) (j : Json) : Option (Except String Json) :=
@@ -334,8 +336,12 @@ def runStat (fn : String) (j : Json) : Option (Except String Json) :=
   | "s.nd.pos" => some do return encPy encND (ND.pos (← getND j "X"))
   | "s.nd.neg" => some do return encPy encND (ND.neg (← getND j "X"))
   | "s.nd.eq" => some do return toJson (ND.beq (← getND j "X") (← getND j "Y"))
-  | "s.nd.hash" => some do return toJson (ND.hash (← getND j "X"))
-  | "s.nd.repr" => some do return toJson (ND.repr (← getND j "X"))
+  | "s.nd.hash" => some do return toJson (ND.hash (← getND j "X") 0 0)
+  | "s.nd.repr" => some do
+    let cls := match j.getObjVal? "cls" with
+      | .ok (.str c) => c
+      | _ => "NormalDist"
+    return toJson (ND.repr cls (← getND j "X"))
   | "s.nd.state" => some do
     let X ← getND j "X"
     let p := X.getstate

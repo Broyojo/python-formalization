@@ -94,8 +94,8 @@ theorem add_zero_same (y : Flt) (s t : Bool) : Flt.Same (Flt.add (.zero s) y) (F
 /-- `NormalDist.__eq__` and `__hash__`, statistics.py:1432-1440: "Two NormalDist objects are equal
 if their mu and sigma are both equal", "NormalDist objects hash equal if their mu and sigma are
 both equal". `==` against anything else is `NotImplemented`. The relation is symmetric and
-transitive, and reflexive exactly when neither field is NaN. The hash is that of the tuple
-`(mu, sigma)` and equal objects hash equal, also for `0.0` and `-0.0`. Equal objects are
+transitive, and reflexive exactly when neither field is NaN. Equal objects hash equal, also for
+`0.0` and `-0.0` (equal objects have no NaN field, so the identity hash of a NaN never enters). Equal objects are
 interchangeable: `pdf(x)` is the same float, `cdf(x)` too when `erfc(0.0) == erfc(-0.0)` (C99 Annex
 F: both are `1`), and `zscore(x)` results compare equal (or are both NaN), for every float
 `x`. -/
@@ -106,9 +106,8 @@ def NormalDistEq : Prop :=
     X.eqM (.nd Y) = Y.eqM (.nd X) ∧
     (X.eqM (.nd X) = some true ↔ X.mu.isNan = false ∧ X.sigma.isNan = false) ∧
     (X.eqM (.nd Y) = some true → Y.eqM (.nd Z) = some true → X.eqM (.nd Z) = some true) ∧
-    ND.hash X = hashTuple [hashFlt X.mu, hashFlt X.sigma] ∧
     (X.eqM (.nd Y) = some true →
-      ND.hash X = ND.hash Y ∧
+      (∀ i j i' j', ND.hash X i j = ND.hash Y i' j') ∧
       ∀ (L : Libm) (x : Flt),
         ND.pdf L X (.flt x) = ND.pdf L Y (.flt x) ∧
         ((∀ b, L.erfc (.zero b) = L.erfc (.zero false)) → ND.cdf L X (.flt x) = ND.cdf L Y (.flt x)) ∧
@@ -183,7 +182,7 @@ theorem zscore_mu_zero (σ x : Flt) (s t : Bool) (h : ∀ b, σ ≠ .zero b) :
 
 theorem normalDistEq_proven : NormalDistEq := by
   intro X Y Z hX hY hZ
-  refine ⟨fun _ => rfl, ?_, ?_, ?_, ?_, rfl, ?_⟩
+  refine ⟨fun _ => rfl, ?_, ?_, ?_, ?_, ?_⟩
   · simp [ND.eqM]
   · simp only [ND.eqM, eq_symm X.mu Y.mu, eq_symm X.sigma Y.sigma]
   · simp [ND.eqM, eq_self]
@@ -194,7 +193,8 @@ theorem normalDistEq_proven : NormalDistEq := by
     simp only [ND.eqM, Option.some.injEq, Bool.and_eq_true] at h
     obtain ⟨hm, hs⟩ := h
     refine ⟨?_, ?_⟩
-    · simp only [ND.hash, hash_eq _ _ hm, hash_eq _ _ hs]
+    · intro i j i' j'
+      simp only [ND.hash, hashObj_eq _ _ i i' hm, hashObj_eq _ _ j j' hs]
     intro L x
     obtain ⟨mu, sigma⟩ := X
     obtain ⟨mu', sigma'⟩ := Y
@@ -384,9 +384,10 @@ check of `n` comes first; then `sorted(data)` builds the list (`list(iterable)`,
 exception propagates before any comparison) and sorts it. -/
 def quantilesIt (data : PyIter) (n : Int) (method : String) : Py (List PyN) :=
   if n < 1 then .error (statErr "n must be at least 1")
-  else match data.fin with
-    | some e => .error e
-    | none => quantiles data.items n method
+  else match data.iterErr, data.fin with
+    | some e, _ => .error e
+    | none, some e => .error e
+    | none, none => quantiles data.items n method
 
 /-- The iteration of `quantiles`: with `n < 1` the iterable is not touched (whatever its iterator
 would raise); otherwise an exception of the iterator comes out before the data is compared; an
@@ -394,16 +395,97 @@ iterable that ends normally gives what the list of its items gives. -/
 def QuantilesIter : Prop :=
   ∀ (data : PyIter) (n : Int) (me : String),
     (n < 1 → quantilesIt data n me = .error (.named "StatisticsError" "n must be at least 1")) ∧
-    (1 ≤ n → ∀ e, data.fin = some e → quantilesIt data n me = .error e) ∧
-    (data.fin = none → quantilesIt data n me = quantiles data.items n me)
+    (1 ≤ n → ∀ e, (data.iterErr = some e ∨ (data.iterErr = none ∧ data.fin = some e)) →
+      quantilesIt data n me = .error e) ∧
+    (data.iterErr = none → data.fin = none → quantilesIt data n me = quantiles data.items n me)
 
 theorem quantilesIter_proven : QuantilesIter := by
   intro data n me
-  refine ⟨fun h => by simp [quantilesIt, h, statErr], fun h e he => ?_, fun he => ?_⟩
+  refine ⟨fun h => by simp [quantilesIt, h, statErr], fun h e he => ?_, fun he hf => ?_⟩
   · have : ¬ n < 1 := by omega
-    simp [quantilesIt, this, he]
+    rcases he with he | ⟨he, hf⟩
+    · simp [quantilesIt, this, he]
+    · simp [quantilesIt, this, he, hf]
   · by_cases h : n < 1
     · simp [quantilesIt, h, quantiles, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw, statErr]
-    · simp [quantilesIt, h, he]
+    · simp [quantilesIt, h, he, hf]
+
+/-! ## The value of `NormalDist.__hash__` -/
+
+/-- The numeric hash of a rational `q` (Doc/library/stdtypes.rst, "Hashing of numeric types", and
+`Lib/fractions.py` `_hash_algorithm`): `|num| * inverse(den)` modulo `P = 2**61 - 1`, with the sign of
+`q`, and `-1` replaced by `-2`. The inverse is given by its defining property, not by a formula. -/
+def NumHash (q : Rat) (h : Int) : Prop :=
+  ∃ r : Nat, r < hashModulus ∧ (r * q.den) % hashModulus = q.num.natAbs % hashModulus ∧
+    h = (let v : Int := if q < 0 then -(r : Int) else r; if v = -1 then -2 else v)
+
+theorem pow61_mod (t : Nat) : (2 ^ (61 * t)) % hashModulus = 1 := by
+  rw [Nat.pow_mul, Nat.pow_mod]
+  have : 2 ^ 61 % hashModulus = 1 := by decide
+  rw [this, Nat.one_pow]; decide
+
+/-- `_Py_HashDouble` of a finite non-zero float, whose denominator is a power of two, is its numeric
+hash: the same value as `hash(Fraction(x))`. -/
+theorem hashFlt_numHash (q : Rat) (k : Nat) (hk : q.den = 2 ^ k) : NumHash q (hashFlt (.fin q)) := by
+  have hlog : Nat.log2 q.den = k := by rw [hk, Nat.log2_two_pow]
+  refine ⟨(q.num.natAbs * 2 ^ ((61 - k % 61) % 61)) % hashModulus, Nat.mod_lt _ (by decide), ?_, ?_⟩
+  · rw [hk]
+    have he : (61 - k % 61) % 61 + k = 61 * ((k + 60) / 61) := by omega
+    rw [Nat.mod_mul_mod, Nat.mul_assoc, ← Nat.pow_add, he, Nat.mul_mod, pow61_mod, Nat.mul_one, Nat.mod_mod]
+  · simp only [hashFlt, hlog]
+
+/-- `NormalDist.__hash__`, statistics.py:1438-1440, where it is defined by value (no NaN field): it is
+the tuple hash of the two field hashes, and each finite non-zero field hashes as its exact value does,
+`hash(Fraction(mu))` and `hash(Fraction(sigma))` (`0.0` and `-0.0` hash `0`, the infinities
+`+-314159`, `sys.hash_info.inf`). A NaN field hashes by the identity of the float object, an input
+of the model, so `hash(NormalDist(nan, 1.0))` is not a function of the values. -/
+def NormalDistHashValue : Prop :=
+  ∀ (X : ND) (i j : Int), X.mu.isNan = false → X.sigma.isNan = false →
+    ND.hash X i j = hashTuple [hashFlt X.mu, hashFlt X.sigma] ∧
+    (∀ q k, (X.mu = .fin q ∨ X.sigma = .fin q) → q.den = 2 ^ k → NumHash q (hashFlt (.fin q))) ∧
+    (∀ b, hashFlt (.zero b) = 0) ∧ hashFlt (.inf false) = 314159 ∧ hashFlt (.inf true) = -314159
+
+theorem normalDistHashValue_proven : NormalDistHashValue := by
+  intro X i j hm hs
+  refine ⟨?_, fun q k _ hk => hashFlt_numHash q k hk, fun _ => rfl, rfl, rfl⟩
+  obtain ⟨mu, sigma⟩ := X
+  cases mu <;> cases sigma <;> simp_all [ND.hash, hashFltObj, Flt.isNan]
+
+/-! ## `from_samples` against the documentation and against `mean`/`stdev` on floats -/
+
+/-- Doc/library/statistics.rst:918-919: from_samples "Makes a normal distribution instance with mu and
+sigma parameters estimated from the data using fmean() and stdev()". For float data, the outcome is
+that of `NormalDist(fmean(data), stdev(data))`. -/
+def FromSamplesFmeanStdev : Prop :=
+  ∀ xs : List Flt, 2 ≤ xs.length →
+    ND.fromSamples (floats xs) =
+      (do let μ ← fmean (floats xs) none; let σ ← stdev (floats xs) none; ND.mk' μ σ)
+
+/-- `[0.1, 0.1, 0.1]`: `_mean_stdev` takes the exact mean, `0.1`; `fmean` gives
+`0.10000000000000002` (`fsum` rounds `0.3000000000000000166...` up, then the division rounds). -/
+theorem fromSamplesFmeanStdev_refuted : ¬FromSamplesFmeanStdev := by
+  intro h
+  have := h [f01, f01, f01] (by decide)
+  have e1 : ND.fromSamples (floats [f01, f01, f01]) = .ok ⟨f01, .zero false⟩ := by decide +kernel
+  rw [e1] at this
+  revert this
+  decide +kernel
+
+/-- The twin of `FromSamplesTwin` beyond Fractions: for float data, `from_samples(data)` has the
+outcome of `NormalDist(mean(data), stdev(data))`. -/
+def FromSamplesTwinFloats : Prop :=
+  ∀ xs : List Flt, 2 ≤ xs.length →
+    ND.fromSamples (floats xs) =
+      (do let μ ← mean (floats xs); let σ ← stdev (floats xs) none; ND.mk' μ.v σ)
+
+/-- `[nan, 1.0]`: `_mean_stdev` "handles Nans and Infs gracefully" (statistics.py:1767-1769) and gives
+`NormalDist(nan, nan)`, while `stdev` raises `ValueError('inf or nan encountered in data')`. -/
+theorem fromSamplesTwinFloats_refuted : ¬FromSamplesTwinFloats := by
+  intro h
+  have := h [.nan, Flt.one] (by decide)
+  have e1 : ND.fromSamples (floats [.nan, Flt.one]) = .ok ⟨.nan, .nan⟩ := by decide +kernel
+  rw [e1] at this
+  revert this
+  decide +kernel
 
 end PyLean.CoreLibs.CalStat

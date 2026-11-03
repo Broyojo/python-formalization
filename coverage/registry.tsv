@@ -3052,6 +3052,14 @@ calstat-statistics-fmean-ints	proven	statistics.py	fmean
 calstat-statistics-fmean-weighted-ints	proven	statistics.py	fmean
 calstat-statistics-normaldist-eq	proven	statistics.py	NormalDist.__eq__,NormalDist.__hash__
 calstat-statistics-from-samples-twin	proven	statistics.py	NormalDist.from_samples
+calstat-statistics-from-samples-fmean	refuted	statistics.py	NormalDist.from_samples
+calstat-statistics-from-samples-twin-floats	refuted	statistics.py	NormalDist.from_samples,_mean_stdev
+calstat-statistics-normaldist-hash-value	proven	statistics.py	NormalDist.__hash__
+calstat-statistics-fmean-weights-arg	proven	statistics.py	fmean
+calstat-statistics-fmean-floats	proven	statistics.py	fmean
+calstat-statistics-geometric-scan	proven	statistics.py	geometric_mean
+calstat-statistics-pdf-shape	proven	statistics.py	NormalDist.pdf
+calstat-statistics-linreg-centred	proven	statistics.py	linear_regression
 rand-genrand-in-bounds	proven	Modules/_randommodule.c	genrand_uint32
 rand-genrand-twist-recurrence	proven	Modules/_randommodule.c	genrand_uint32
 rand-random-exact-rational	proven	Modules/_randommodule.c	_random_Random_random_impl

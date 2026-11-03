@@ -8545,7 +8545,8 @@ def calstat_gen_stat(rng):
         mix = rng.choice([["smallint"], ["int"], ["unitfloat"], ["float"], ["frac"], ["smallint", "frac"], ["bool", "smallint"],
                           ["unitfloat", "specialf"], ["str"], ["dec"]])
         c["data"] = calstat_data(rng, [mix])
-        c["src"] = rng.choice(["list", "tuple", "iter", "fail", "fail", "badlen", "badlen", "gen"])
+        c["src"] = rng.choice(["list", "tuple", "iter", "fail", "fail", "badlen", "badlen", "gen",
+                               "listsub_iter", "listsub_fail"])
         excs = [["ValueError", "boom"], ["TypeError", "bad"], ["RuntimeError", "rt"], ["MyTypeError", "mt"],
                 ["MyValueError", "mv"]]
         c["exc"] = rng.choice(excs)
@@ -8556,7 +8557,8 @@ def calstat_gen_stat(rng):
             if rng.random() < 0.15:
                 c["weights"] = [calstat_spec(rng.choice([1, -1])) for _ in range(n)]
                 c["weights"] = c["weights"][:-1] + [calstat_spec(-sum(int(x[2:]) for x in c["weights"][:-1]))] if n else []
-            c["wsrc"] = rng.choice(["list", "tuple", "iter", "fail", "gen"])
+            c["wsrc"] = rng.choice(["list", "tuple", "iter", "fail", "gen", "listsub_iter", "listsub_fail",
+                                    "listsub_fail"])
             c["wexc"] = rng.choice(excs)
             if c["src"] == "badlen":
                 c["src"] = "list"
@@ -8654,6 +8656,10 @@ def calstat_gen_stat(rng):
     elif fn in ("s.nd.addc", "s.nd.subc", "s.nd.mulc", "s.nd.divc", "s.nd.rsubc"):
         c["X"] = calstat_nd(rng)
         c["x"] = rng.choice([calstat_const(rng), calstat_const(rng), "s:x", "i:0", "i:" + str(10 ** 400)])
+    elif fn == "s.nd.repr":
+        c["X"] = calstat_nd(rng)
+        if rng.random() < 0.4:
+            c["cls"] = rng.choice(["Sub", "MyNormal", "N2"])
     else:
         c["X"] = calstat_nd(rng)
     c["fn"] = "calstat." + fn
@@ -8750,7 +8756,25 @@ def calstat_gen_stop(items):
     raise StopIteration
 
 
+class calstat_ListIterErr(list):
+    """A list subclass whose `__iter__` raises."""
+
+    def __iter__(self):
+        raise self.exc
+
+
+class calstat_ListFail(list):
+    """A list subclass whose iterator raises after the items."""
+
+    def __iter__(self):
+        return calstat_FailIter(list.__iter__(self), self.exc)
+
+
 def calstat_src(items, src, exc):
+    if src in ("listsub_iter", "listsub_fail"):
+        obj = (calstat_ListIterErr if src == "listsub_iter" else calstat_ListFail)(items)
+        obj.exc = calstat_exc(exc)
+        return obj
     if src == "list":
         return list(items)
     if src == "tuple":
@@ -8918,6 +8942,10 @@ def calstat_stat_call(c, fn):
     if fn == "nd.hash":
         X = calstat_nds(c)
         return hash(X)
+    if fn == "nd.repr" and c.get("cls"):
+        sub = type(c["cls"], (st.NormalDist,), {"__slots__": ()})
+        X = calstat_nds(c)
+        return repr(sub(X.mean, X.stdev))
     if fn == "nd.repr":
         return repr(calstat_nds(c))
     if fn == "nd.state":

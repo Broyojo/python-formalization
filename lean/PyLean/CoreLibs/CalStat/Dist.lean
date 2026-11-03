@@ -616,12 +616,20 @@ def ND.rsubConst (X : ND) (c : Val) : Py ND := do
 /-- `NormalDist.__eq__` between two instances, statistics.py:1432-1436. -/
 def ND.beq (X Y : ND) : Bool := Flt.eq X.mu Y.mu && Flt.eq X.sigma Y.sigma
 
-/-- `NormalDist.__hash__`, statistics.py:1438-1440. -/
-def ND.hash (X : ND) : Int := hashTuple [hashFlt X.mu, hashFlt X.sigma]
+/-- `hash(x)` of a float object: `_Py_HashDouble`, except that a NaN hashes by the identity of the
+object (`_Py_HashPointer`, Python/pyhash.c), which the model takes as the input `idHash`. -/
+def hashFltObj (idHash : Int) : Flt → Int
+  | .nan => idHash
+  | x => hashFlt x
 
-/-- `NormalDist.__repr__`, statistics.py:1442-1443. -/
-def ND.repr (X : ND) : String :=
-  s!"NormalDist(mu={fltRepr X.mu}, sigma={fltRepr X.sigma})"
+/-- `NormalDist.__hash__`, statistics.py:1438-1440: `hash((self._mu, self._sigma))`; `idMu` and
+`idSigma` are the identity hashes of the two float objects, used only when they are NaN. -/
+def ND.hash (X : ND) (idMu idSigma : Int) : Int :=
+  hashTuple [hashFltObj idMu X.mu, hashFltObj idSigma X.sigma]
+
+/-- `NormalDist.__repr__`, statistics.py:1442-1443: `type(self).__name__` is `cls`. -/
+def ND.repr (cls : String) (X : ND) : String :=
+  s!"{cls}(mu={fltRepr X.mu}, sigma={fltRepr X.sigma})"
 
 /-- `NormalDist.__getstate__`, statistics.py:1445-1446. -/
 def ND.getstate (X : ND) : Flt × Flt := (X.mu, X.sigma)
