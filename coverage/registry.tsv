@@ -679,6 +679,9 @@ listsort-perm-on-error	proven	Objects/listobject.c	binarysort,count_run,gallop_l
 listsort-fail-exits	proven	Objects/listobject.c	gallop_left,gallop_right,merge_at,merge_lo,merge_hi,binarysort,count_run
 listsort-fails	proven	Objects/listobject.c	list_sort_impl,PyList_Sort,count_run
 listsort-count-run-maximal	proven	Objects/listobject.c	count_run
+listsort-count-run-input	proven	Objects/listobject.c	count_run
+listsort-fail-steps	proven	Objects/listobject.c	binarysort,gallop_left,gallop_right,merge_lo,merge_hi,merge_at,count_run,list_sort_impl,PyList_Sort
+listsort-fail-steps-2	proven	Objects/listobject.c	merge_hi,merge_at,count_run
 binary64-round-nearest-even	proven	Objects/floatobject.c	
 binary64-bits-value-roundtrip	proven	Objects/floatobject.c	
 binary64-fma-correct	proven	Objects/floatobject.c	
