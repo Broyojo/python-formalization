@@ -32,6 +32,7 @@ import PyLean.TextLibs.TomlDate
 import PyLean.TextLibs.TomlTable
 import PyLean.TextLibs.TomlLoad
 import PyLean.TextLibs.TomlArr
+import PyLean.TextLibs.TomlDoc
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1727,6 +1728,12 @@ def entries : List Entry := [
     source := "docs ('parsing TOML 1.1.0'; What's New: newlines and trailing commas in inline tables); TOML 1.1 spec, Array and Inline Table", status := .proven
     prop := ``Toml.ArrayTableSpec, thm := some ``Toml.arrayTableSpec_proven
     notes := "skip_comments_and_array_ws is shown to skip exactly a run of whitespace, newlines and comments (skipCaw_fill); inline tables run Flags.is_, Flags.set and get_or_create_nest(access_lists=False) on their local state." }
+,
+  { id := "textlibs-toml-document", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["loads", "key_value_rule", "parse_key_value_pair"]
+    statement := "For every document of 'key = value' lines joined by newlines (one-part keys written bare, literal or basic, all distinct; spaces or tabs around '='; values built from basic strings and booleans by arrays and inline tables, with comments and newlines inside them), loads returns the dict of the pairs in insertion order."
+    source := "docs ('parsing TOML 1.1.0'; Tables/dicts: 'loads dictionary entries in the order they appear'); TOML 1.1 spec, Key/Value Pair", status := .proven
+    prop := ``Toml.DocRoundTrip, thm := some ``Toml.docRoundTrip_proven }
 ]
 
 end PyLean.TextLibs
