@@ -34,13 +34,16 @@ MRO of `c`. -/
 structure Hier where
   sub : String → String → Bool
 
-/-- The builtin bases on the way from the three error classes to `BaseException`,
-Objects/exceptions.c (`SimpleExtendsException(PyExc_ValueError, UnicodeError, ...)` and the
+/-- The builtin bases on the way from the three error classes, and from `IndexError`, to
+`BaseException`, Objects/exceptions.c (`SimpleExtendsException(PyExc_ValueError, UnicodeError,
+...)`, `SimpleExtendsException(PyExc_LookupError, IndexError, ...)` and the
 `ComplexExtendsException(PyExc_UnicodeError, ...)` definitions). -/
 def builtinBase : String → Option String
   | "UnicodeEncodeError" | "UnicodeDecodeError" | "UnicodeTranslateError" => some "UnicodeError"
   | "UnicodeError" => some "ValueError"
   | "ValueError" => some "Exception"
+  | "IndexError" => some "LookupError"
+  | "LookupError" => some "Exception"
   | "Exception" => some "BaseException"
   | _ => none
 

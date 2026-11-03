@@ -1,5 +1,6 @@
 import PyLean.Registry
 import PyLean.UnicodeObj.CodecsErrNames
+import PyLean.UnicodeObj.CodecsRegProps2
 
 /-! Registry entries for `Python/codecs.c` and `Modules/_codecsmodule.c`. -/
 
@@ -7,9 +8,9 @@ namespace PyLean.UnicodeObj
 
 open PyLean.Registry PyLean.UnicodeObj.Codecs
 
-/-- The handler bodies and helpers every handler theorem below unfolds. -/
-def handlerFns : List String :=
-  ["PyCodec_StrictErrors", "_PyCodec_IgnoreError", "PyCodec_IgnoreErrors",
+/-- The bodies of the replacing and surrogate handlers and their dispatchers. -/
+def handlerBodies : List String :=
+  ["_PyCodec_IgnoreError", "PyCodec_IgnoreErrors",
    "_PyCodec_ReplaceUnicodeEncodeError", "_PyCodec_ReplaceUnicodeDecodeError",
    "_PyCodec_ReplaceUnicodeTranslateError", "PyCodec_ReplaceErrors",
    "PyCodec_XMLCharRefReplaceErrors", "_PyCodec_BackslashReplaceUnicodeEncodeError",
@@ -17,34 +18,53 @@ def handlerFns : List String :=
    "PyCodec_BackslashReplaceErrors", "PyCodec_NameReplaceErrors",
    "_PyCodec_SurrogatePassUnicodeEncodeError", "_PyCodec_SurrogatePassUnicodeDecodeError",
    "PyCodec_SurrogatePassErrors", "_PyCodec_SurrogateEscapeUnicodeEncodeError",
-   "_PyCodec_SurrogateEscapeUnicodeDecodeError", "PyCodec_SurrogateEscapeErrors",
-   "strict_errors", "ignore_errors", "replace_errors", "xmlcharrefreplace_errors",
-   "backslashreplace_errors", "namereplace_errors", "surrogatepass_errors", "surrogateescape_errors",
-   "wrong_exception_type", "codec_handler_write_unicode_hex", "n_decimal_digits_for_codepoint",
-   "codec_handler_unicode_replacement_character",
-   "_PyUnicodeError_GetParams", "PyUnicodeDecodeError_GetEnd", "PyUnicodeEncodeError_GetEncoding",
+   "_PyCodec_SurrogateEscapeUnicodeDecodeError", "PyCodec_SurrogateEscapeErrors"]
+
+/-- The registered functions, codecs.c:1508-1561. -/
+def handlerWrappers : List String :=
+  ["strict_errors", "ignore_errors", "replace_errors", "xmlcharrefreplace_errors",
+   "backslashreplace_errors", "namereplace_errors", "surrogatepass_errors", "surrogateescape_errors"]
+
+/-- What the replacements are written with. -/
+def handlerWriters : List String :=
+  ["codec_handler_write_unicode_hex", "n_decimal_digits_for_codepoint",
+   "codec_handler_unicode_replacement_character"]
+
+/-- The accessors of Objects/exceptions.c the handlers go through. -/
+def handlerAccessors : List String :=
+  ["_PyUnicodeError_GetParams", "PyUnicodeDecodeError_GetEnd", "PyUnicodeEncodeError_GetEncoding",
    "PyUnicodeDecodeError_GetEncoding"]
 
 def codecsEntries : List Entry := [
   { id := "unicodeobj-codecs-handlers-agree", pyFile := "Python/codecs.c"
-    pyFns := handlerFns
+    pyFns := ["PyCodec_StrictErrors", "wrong_exception_type"] ++ handlerBodies ++ handlerWrappers ++
+      handlerWriters ++ handlerAccessors
     statement := "Each of the eight standard error handlers, called directly on an exception object of any class below UnicodeEncodeError (UnicodeDecodeError, UnicodeTranslateError) with any start and end, gives what the codec-loop model of the same handler gives for start clipped to [0, max(0, len-1)] and end clipped to [min(1, len), len], cut only by the guards against a replacement longer than PY_SSIZE_T_MAX."
     source := "invariant: a handler called by a codec and the same handler called directly are one function; codecs.rst error handler table"
     status := .proven, prop := ``HandlersAgree, thm := some ``handlersAgree_proven
     notes := "The codec-loop model (CodecHandlers.lean) is difftested through real encode and decode calls; this one through codecs.lookup_error(name)(exc) with mutated attributes (codecs_handler). The class test is PyObject_TypeCheck, a hierarchy oracle constrained by HierOk; builtinHier_ok shows HierOk is satisfiable. The encoding name only reaches surrogatepass, whose code is a hypothesis here." },
   { id := "unicodeobj-codecs-handlers-safe", pyFile := "Python/codecs.c"
-    pyFns := handlerFns
+    pyFns := ["PyCodec_StrictErrors", "wrong_exception_type"] ++ handlerBodies ++ handlerWrappers ++
+      handlerAccessors
     statement := "For every object handed to a standard handler, whatever its class and attributes, the handler raises only its argument (and only when that is an exception), a TypeError, the failure to load unicodedata's C API, or the UTF-8 encoder's error on the encoding attribute; a position it returns lies in [0, len(object)] and past the clipped start whenever the clipped range is not empty."
     source := "invariant: no internal error, results in range, codec loops make progress"
     status := .proven, prop := ``HandlersSafe, thm := some ``handlersSafe_proven
     notes := "namereplace needs names under 256 bytes (NAME_MAXLEN, the buffer of codecs.c:1091) for the progress half." },
   { id := "unicodeobj-codecs-handlers-total", pyFile := "Python/codecs.c"
-    pyFns := handlerFns
+    pyFns := ["wrong_exception_type", "_PyCodec_IgnoreError", "PyCodec_IgnoreErrors",
+      "_PyCodec_ReplaceUnicodeEncodeError", "_PyCodec_ReplaceUnicodeDecodeError",
+      "_PyCodec_ReplaceUnicodeTranslateError", "PyCodec_ReplaceErrors", "PyCodec_XMLCharRefReplaceErrors",
+      "_PyCodec_BackslashReplaceUnicodeEncodeError", "_PyCodec_BackslashReplaceUnicodeDecodeError",
+      "_PyCodec_BackslashReplaceUnicodeTranslateError", "PyCodec_BackslashReplaceErrors",
+      "PyCodec_NameReplaceErrors", "PyCodec_SurrogatePassErrors", "PyCodec_SurrogateEscapeErrors",
+      "ignore_errors", "replace_errors", "xmlcharrefreplace_errors", "backslashreplace_errors",
+      "namereplace_errors", "surrogatepass_errors", "surrogateescape_errors",
+      "_PyUnicodeError_GetParams", "PyUnicodeDecodeError_GetEnd"]
     statement := "ignore, replace, backslashreplace, xmlcharrefreplace and namereplace succeed exactly when the class is one they take, the object attribute has the type that class needs, and (namereplace) unicodedata loads; on a class it does not take, every handler but strict raises wrong_exception_type's TypeError."
     source := "codecs.rst: the handlers replace; register_error: a handler must raise or return a replacement"
     status := .proven, prop := ``HandlersTotal, thm := some ``handlersTotal_proven },
   { id := "unicodeobj-codecs-buffers-exact", pyFile := "Python/codecs.c"
-    pyFns := handlerFns ++ ["codec_handler_unicode_hex_width"]
+    pyFns := handlerBodies ++ handlerWriters ++ ["codec_handler_unicode_hex_width"]
     statement := "Every handler body writes exactly as many characters (bytes) as its size loop allocated, for every exception object; the decode body of surrogateescape writes at most the four slots of its stack array."
     source := "invariant: no write past the allocation; the asserts of codecs.c:770, :837, :955, :1003, :1036, :1132"
     status := .proven, prop := ``BuffersExact, thm := some ``buffersExact_proven },
@@ -77,7 +97,51 @@ def codecsEntries : List Entry := [
     source := "codecs.rst: what appears in the braces is the Name property from Unicode Character Database"
     status := .refuted, prop := ``NameReplaceWritesNames, thm := some ``nameReplaceWritesNames_refuted
     bug := some "unicodeobj-codecs-namereplace-pua-names"
-    notes := "getname is called with with_alias_and_seq = 1, so the 942 Plane 15 private-use slots that hold aliases and named sequences get names: U+F0000 becomes \\N{NULL}." }
+    notes := "getname is called with with_alias_and_seq = 1, so the 942 Plane 15 private-use slots that hold aliases and named sequences get names: U+F0000 becomes \\N{NULL}." },
+  { id := "unicodeobj-codecs-lookup-doc", pyFile := "Python/codecs.c"
+    pyFns := ["normalizestring", "_PyCodec_Lookup"]
+    statement := "For every registry and name: a cached name is answered from the cache without calling anything; on a cache miss, with search functions that leave the registry alone, the answer is the first search function's that is not None (a 4-tuple, else TypeError), stored in the cache, and LookupError naming the encoding as given when none answers; after any successful lookup, every name with the same normalization (ASCII lower case, spaces to hyphens) is answered from the cache with the same object."
+    source := "codecs.rst, lookup: normalization, cache, scan, LookupError, stored in the cache"
+    status := .proven, prop := ``LookupDoc, thm := some ``lookupDoc_proven
+    notes := "Search functions that register or unregister during the scan are the subject of unicodeobj-codecs-lookup-raises; the cache part holds for every world." },
+  { id := "unicodeobj-codecs-lookup-raises", pyFile := "Python/codecs.c"
+    pyFns := ["_PyCodec_Lookup"]
+    statement := "For every registry, name and search functions, including ones that change the registry during the scan, a failed lookup raises an exception below LookupError in every hierarchy CPython can have, the TypeError for a bad answer, or what a search function raised."
+    source := "codecs.rst, lookup: If no CodecInfo object is found, a LookupError is raised"
+    status := .proven, prop := ``LookupRaisesLookupError, thm := some ``lookupRaisesLookupError_proven
+    notes := "When a search function unregisters search functions, the length saved at codecs.c:165 outlives the list and PyList_GetItemRef raises IndexError (unregWorld_lookup); IndexError is a LookupError, so the documentation holds, with an odd message." },
+  { id := "unicodeobj-codecs-encode-decode-paths", pyFile := "Python/codecs.c"
+    pyFns := ["args_tuple", "codec_getitem", "PyCodec_Encoder", "PyCodec_Decoder", "_PyCodec_EncodeInternal",
+      "_PyCodec_DecodeInternal", "PyCodec_Encode", "PyCodec_Decode", "_PyCodec_LookupTextEncoding",
+      "codec_getitem_checked", "_PyCodec_TextEncoder", "_PyCodec_TextDecoder", "_PyCodec_EncodeText",
+      "_PyCodec_DecodeText"]
+    statement := "codecs.encode/decode call the codec's first/second item with (obj,) or (obj, errors) and return the first item of the 2-tuple it answers, a TypeError for any other answer, the coder's exception with the note \"encoding with '<name>' codec failed\"; the text paths (str.encode, bytes.decode) do exactly the same for a codec that is a plain tuple or whose _is_text_encoding is absent or true, and otherwise raise the LookupError that points to codecs.encode()/decode(), or the error of reading or testing _is_text_encoding."
+    source := "codecs.rst: Codec.encode/decode return (output object, length consumed); invariant: the generic and text paths agree on text encodings"
+    status := .proven, prop := ``CodecPaths, thm := some ``codecPaths_proven },
+  { id := "unicodeobj-codecs-register-doc", pyFile := "Python/codecs.c"
+    pyFns := ["PyCodec_Register", "PyCodec_Unregister", "_codecs_register", "_codecs_unregister"]
+    statement := "codecs.register refuses a non-callable and otherwise appends to the search path, leaving the cache; codecs.unregister removes the first registration of that very object and clears the cache, or changes nothing when it is not registered; both return None."
+    source := "_codecs.register and _codecs.unregister docstrings"
+    status := .proven, prop := ``RegisterDoc, thm := some ``registerDoc_proven },
+  { id := "unicodeobj-codecs-error-registry", pyFile := "Python/codecs.c"
+    pyFns := ["PyCodec_RegisterError", "_PyCodec_UnregisterError", "PyCodec_LookupError",
+      "_codecs_register_error_impl", "_codecs__unregister_error_impl", "_codecs_lookup_error_impl"]
+    statement := "register_error refuses a non-callable and otherwise makes lookup_error(name) return the handler, builtin names included; lookup_error of an unknown name raises LookupError naming it (cut to 400 bytes) and NULL means strict; _unregister_error refuses the eight builtin names and otherwise answers whether a custom handler was registered, which lookup_error then no longer finds."
+    source := "codecs.rst, register_error and lookup_error; _codecs._unregister_error docstring"
+    status := .proven, prop := ``ErrorRegistryDoc, thm := some ``errorRegistryDoc_proven },
+  { id := "unicodeobj-codecs-escape-round-trip", pyFile := "Modules/_codecsmodule.c"
+    pyFns := ["_codecs_escape_encode_impl", "_codecs_escape_decode_impl", "codec_tuple"]
+    statement := "For every bytes object, codecs.escape_encode either raises OverflowError (only past PY_SSIZE_T_MAX/4 bytes) or returns escapes, with the input's length, that codecs.escape_decode decodes back to the input, with their own length."
+    source := "invariant: round trip"
+    status := .proven, prop := ``EscapeRoundTrip, thm := some ``escapeRoundTrip_proven
+    notes := "escape_decode is PyBytes_DecodeEscape, modelled in BytesObj (decode_flat)." },
+  { id := "unicodeobj-codecs-normalize-encoding-doc", pyFile := "Modules/_codecsmodule.c"
+    pyFns := ["_codecs__normalize_encoding_impl"]
+    statement := "_codecs._normalize_encoding (encodings.normalize_encoding since 3.15) collapses every run of non-alphanumeric characters other than '.' into one underscore and drops leading and trailing ones, for every ASCII name."
+    source := "codecs.rst, encodings.normalize_encoding"
+    status := .refuted, prop := ``NormalizeEncodingDoc, thm := some ``normalizeEncodingDoc_refuted
+    bug := some "unicodeobj-codecs-normalize-encoding-nul"
+    notes := "The C string handed to _Py_normalize_encoding ends at an embedded NUL: 'a\\x00b' gives 'a'; 3.14's Python version gave 'a_b'." }
 ]
 
 end PyLean.UnicodeObj

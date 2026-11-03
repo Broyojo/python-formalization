@@ -1,0 +1,342 @@
+import PyLean.UnicodeObj.CodecsRegProps
+
+/-!
+The generic and the text encode/decode paths, the error handler registry, `_normalize_encoding`
+and the escape codec.
+-/
+
+namespace PyLean.UnicodeObj.Codecs
+
+open PyLean PyLean.UnicodeObj
+
+/-! ## Encoding and decoding -/
+
+/-- What a coder's answer becomes (codecs.c:411-429, :456-473): the first item of a 2-tuple;
+a `TypeError` for anything else; the coder's exception with a note naming the encoding. -/
+def coderResult (r : Py Val) (what tupleMsg encoding : String) : NPy Val :=
+  match r with
+  | .error e => .error ⟨e, [s!"{what} with '{encoding}' codec failed"]⟩
+  | .ok (.tuple _ [out, _] _) => .ok out
+  | .ok _ => .error ⟨.typeError tupleMsg, []⟩
+
+/-- **codecs.encode and str.encode use one encoder the same way.** For every registry, object,
+encoding name and `errors`: if the lookup fails, both fail with its error. Otherwise
+`codecs.encode` calls the codec's first item with `(obj,)` or `(obj, errors)` and returns the
+first item of the 2-tuple it answers (codecs.rst: the encoder "returns a tuple (output object,
+length consumed)"), a `TypeError` for any other answer, and the encoder's exception with the
+note "encoding with '<encoding>' codec failed". The text path (`str.encode`) does exactly the
+same for a codec it accepts as a text encoding, and otherwise raises the `LookupError` that
+points to `codecs.encode()`, or the error of reading `_is_text_encoding`. -/
+def EncodePaths : Prop :=
+  ∀ (W : World) (st : Reg) (obj : Val) (enc : List Nat) (errors : Option Str),
+    match pyCodecLookup W st enc with
+    | (st1, .error e) =>
+      pyCodecEncode W st obj enc errors = (st1, .error ⟨e, []⟩) ∧
+      encodeText W st obj enc errors = (st1, .error ⟨e, []⟩)
+    | (st1, .ok codec) =>
+      let gen := (runOps W st1 (W.call (tupleItem codec 0) (argsTuple obj errors)).1,
+        coderResult (W.call (tupleItem codec 0) (argsTuple obj errors)).2 "encoding"
+          "encoder must return a tuple (object, integer)" (cstr enc))
+      pyCodecEncode W st obj enc errors = gen ∧
+      (isTextCodec W codec = .ok true → encodeText W st obj enc errors = gen) ∧
+      (isTextCodec W codec = .ok false → encodeText W st obj enc errors =
+        (st1, .error ⟨lookupErr s!"'{toLeanString (trunc400 ((utf8Decode enc .strict).toOption.getD []))}' is not a text encoding; use {("codecs.encode()" : String)} to handle arbitrary codecs", []⟩)) ∧
+      (∀ e, isTextCodec W codec = .error e → encodeText W st obj enc errors = (st1, .error ⟨e, []⟩))
+
+/-- **The same for codecs.decode and the text decode path** (`bytes.decode`). -/
+def DecodePaths : Prop :=
+  ∀ (W : World) (st : Reg) (obj : Val) (enc : List Nat) (errors : Option Str),
+    match pyCodecLookup W st enc with
+    | (st1, .error e) =>
+      pyCodecDecode W st obj enc errors = (st1, .error ⟨e, []⟩) ∧
+      decodeText W st obj enc errors = (st1, .error ⟨e, []⟩)
+    | (st1, .ok codec) =>
+      let gen := (runOps W st1 (W.call (tupleItem codec 1) (argsTuple obj errors)).1,
+        coderResult (W.call (tupleItem codec 1) (argsTuple obj errors)).2 "decoding"
+          "decoder must return a tuple (object,integer)" (cstr enc))
+      pyCodecDecode W st obj enc errors = gen ∧
+      (isTextCodec W codec = .ok true → decodeText W st obj enc errors = gen) ∧
+      (isTextCodec W codec = .ok false → decodeText W st obj enc errors =
+        (st1, .error ⟨lookupErr s!"'{toLeanString (trunc400 ((utf8Decode enc .strict).toOption.getD []))}' is not a text encoding; use {("codecs.decode()" : String)} to handle arbitrary codecs", []⟩)) ∧
+      (∀ e, isTextCodec W codec = .error e → decodeText W st obj enc errors = (st1, .error ⟨e, []⟩))
+
+def CodecPaths : Prop := EncodePaths ∧ DecodePaths
+
+theorem coderResult_eq (W : World) (st : Reg) (obj coder : Val) (encoding : String)
+    (errors : Option Str) (what tupleMsg : String) :
+    codecInternal W st obj coder encoding errors what tupleMsg =
+      (runOps W st (W.call coder (argsTuple obj errors)).1,
+        coderResult (W.call coder (argsTuple obj errors)).2 what tupleMsg encoding) := by
+  unfold codecInternal callVal coderResult
+  rcases W.call coder (argsTuple obj errors) with ⟨ops, r⟩
+  simp only
+  cases r with
+  | error e => rfl
+  | ok res =>
+    cases res with
+    | tuple id items exact =>
+      simp only
+      match items with
+      | [] => rfl
+      | [_] => rfl
+      | [_, _] => rfl
+      | _ :: _ :: _ :: _ => simp
+    | _ => rfl
+
+theorem lookupText_cases (W : World) (st : Reg) (enc : List Nat) (alt : Option String) :
+    lookupTextEncoding W st enc alt =
+      match pyCodecLookup W st enc with
+      | (st1, .error e) => (st1, .error e)
+      | (st1, .ok codec) =>
+        match isTextCodec W codec with
+        | .error e => (st1, .error e)
+        | .ok true => (st1, .ok codec)
+        | .ok false =>
+          let name := toLeanString (trunc400 ((utf8Decode enc .strict).toOption.getD []))
+          match alt with
+          | some cmd => (st1, .error (lookupErr
+              s!"'{name}' is not a text encoding; use {cmd} to handle arbitrary codecs"))
+          | none => (st1, .error (lookupErr s!"'{name}' is not a text encoding")) := rfl
+
+theorem encodePaths_proven : EncodePaths := by
+  intro W st obj enc errors
+  have hlt := lookupText_cases W st enc (some "codecs.encode()")
+  unfold pyCodecEncode encodeText pyCodecEncoder codecGetitem getitemChecked encodeInternal
+  rw [hlt]
+  rcases hl : pyCodecLookup W st enc with ⟨st1, r⟩
+  cases r with
+  | error e => simp
+  | ok codec =>
+    simp only [coderResult_eq]
+    refine ⟨?_, fun h => ?_, fun h => ?_, fun e h => ?_⟩
+    · trivial
+    all_goals (simp only [h]; try rfl)
+
+theorem decodePaths_proven : DecodePaths := by
+  intro W st obj enc errors
+  have hlt := lookupText_cases W st enc (some "codecs.decode()")
+  unfold pyCodecDecode decodeText pyCodecDecoder codecGetitem getitemChecked decodeInternal
+  rw [hlt]
+  rcases hl : pyCodecLookup W st enc with ⟨st1, r⟩
+  cases r with
+  | error e => simp
+  | ok codec =>
+    simp only [coderResult_eq]
+    refine ⟨?_, fun h => ?_, fun h => ?_, fun e h => ?_⟩
+    · trivial
+    all_goals (simp only [h]; try rfl)
+
+theorem codecPaths_proven : CodecPaths := ⟨encodePaths_proven, decodePaths_proven⟩
+
+/-! ## The error handler registry -/
+
+theorem dictSet_lookupS (d : List (String × Val)) (k : String) (v : Val) :
+    (dictSet d k v).lookup k = some v := by
+  unfold dictSet
+  split
+  · rename_i h
+    induction d with
+    | nil => simp at h
+    | cons e es ih =>
+      simp only [List.map_cons, List.lookup]
+      cases hb : e.1 == k
+      · have hk : (k == e.1) = false := by
+          simp only [beq_eq_false_iff_ne, ne_eq] at hb ⊢; exact fun x => hb x.symm
+        simp only [Bool.false_eq_true, if_false, hk]
+        apply ih
+        simpa [List.any_cons, hb] using h
+      · simp
+  · rename_i h
+    induction d with
+    | nil => simp [List.lookup]
+    | cons e es ih =>
+      have hb : (e.1 == k) = false := by
+        cases hx : e.1 == k
+        · rfl
+        · exact absurd (by simp [List.any_cons, hx]) h
+      have hk : (k == e.1) = false := by
+        simp only [beq_eq_false_iff_ne, ne_eq] at hb ⊢; exact fun x => hb x.symm
+      simp only [List.cons_append, List.lookup, hk]
+      apply ih
+      intro x; apply h; simp [List.any_cons, x]
+
+theorem lookup_filter_ne (d : List (String × Val)) (k : String) :
+    (d.filter (·.1 != k)).lookup k = none := by
+  induction d with
+  | nil => rfl
+  | cons e es ih =>
+    by_cases he : e.1 = k
+    · simp [List.filter, he, ih]
+    · have hk : (k == e.1) = false := by simp; exact fun x => he x.symm
+      have hne : (e.1 != k) = true := by simp [he]
+      simp only [List.filter, hne, List.lookup, hk]
+      exact ih
+
+theorem any_lookup (d : List (String × Val)) (k : String) :
+    d.any (·.1 == k) = (d.lookup k).isSome := by
+  induction d with
+  | nil => rfl
+  | cons e es ih =>
+    by_cases he : e.1 = k
+    · simp [List.lookup, he]
+    · have hk : (k == e.1) = false := by simp; exact fun x => he x.symm
+      simp [List.lookup, he, hk, ih]
+
+/-- **The error handler registry does what codecs.rst and `_unregister_error`'s docstring say.**
+`register_error(name, h)` refuses a non-callable `h` and otherwise makes `lookup_error(name)`
+return `h`, builtin names included; `lookup_error` of an unregistered name raises `LookupError`
+naming it (cut to 400 bytes), and a NULL name means "strict"; `_unregister_error` refuses the
+eight builtin names, and otherwise answers whether a custom handler was registered, after which
+`lookup_error` of that name raises. -/
+def ErrorRegistryDoc : Prop :=
+  ∀ (W : World) (st : Reg) (name : String) (h : Val),
+    (W.callable h = true → (codecsRegisterError W st name h).2 = .ok .none ∧
+      codecsLookupError (codecsRegisterError W st name h).1 name = .ok h) ∧
+    (W.callable h = false →
+      codecsRegisterError W st name h = (st, .error (.typeError "handler must be callable"))) ∧
+    lookupError st none = lookupError st (some "strict") ∧
+    (st.errors.lookup name = none → codecsLookupError st name =
+      .error (lookupErr s!"unknown error handler name '{toLeanString (trunc400 (lit name))}'")) ∧
+    (name ∈ builtinNames → codecsUnregisterError st name =
+      (st, .error (.valueError s!"cannot un-register built-in error handler '{name}'"))) ∧
+    (name ∉ builtinNames → (codecsUnregisterError st name).2 = .ok (st.errors.lookup name).isSome ∧
+      (codecsUnregisterError st name).1.errors.lookup name = none)
+
+theorem errorRegistryDoc_proven : ErrorRegistryDoc := by
+  intro W st name h
+  refine ⟨fun hc => ?_, fun hc => ?_, rfl, fun hn => ?_, fun hb => ?_, fun hb => ?_⟩
+  · simp [codecsRegisterError, codecsLookupError, registerError, hc, lookupError, dictSet_lookupS]
+  · simp [codecsRegisterError, registerError, hc]
+  · simp [codecsLookupError, lookupError, hn]
+  · simp [codecsUnregisterError, unregisterError, List.contains_iff_mem, hb]
+  · have hb' : builtinNames.contains name = false := by simpa [List.contains_iff_mem] using hb
+    unfold codecsUnregisterError unregisterError
+    simp only [hb', Bool.false_eq_true, if_false]
+    rw [any_lookup]
+    cases hl : st.errors.lookup name
+    · simp [hl]
+    · simp [lookup_filter_ne]
+
+/-! ## _normalize_encoding -/
+
+/-- The pieces of a name between separators (anything but an ASCII letter, digit or `.`), the
+empty ones dropped. -/
+def namePieces (s : List Nat) : List (List Nat) :=
+  (s.splitBy (fun a b => (pyIsAlnum a || a == 46) == (pyIsAlnum b || b == 46))).filter
+    (fun p => p.all fun c => pyIsAlnum c || c == 46)
+
+/-- `encodings.normalize_encoding` as codecs.rst describes it: "all non-alphanumeric characters
+except the dot used for Python package names are collapsed and replaced with a single
+underscore, leading and trailing underscores are removed." -/
+def docNormalize (s : List Nat) : List Nat := [95].intercalate (namePieces s)
+
+/-- **_normalize_encoding follows its documentation on ASCII names** (codecs.rst,
+`encodings.normalize_encoding`, which is `_codecs._normalize_encoding` since 3.15; "encoding
+should be ASCII only" is its documented precondition). -/
+def NormalizeEncodingDoc : Prop :=
+  ∀ s : Str, (∀ c ∈ s, c < 128) → normalizeEncodingC s = .ok (docNormalize s)
+
+theorem normalizeEncodingDoc_refuted : ¬ NormalizeEncodingDoc := by
+  intro h
+  have := h [97, 0, 98] (by decide)
+  revert this
+  decide
+
+/-! ## escape_encode and escape_decode -/
+
+set_option maxRecDepth 100000 in
+theorem escapeByte_form : BytesObj.Bytes.EncForm escapeByte := by
+  have hx : ∀ c, c < 256 → (c &&& 0xf0) >>> 4 = c / 16 ∧ c &&& 0xf = c % 16 := by decide
+  intro c hc
+  unfold escapeByte
+  by_cases h1 : c = 39 ∨ c = 92
+  · rw [if_pos h1]; right; left; exact ⟨rfl, by omega⟩
+  · rw [if_neg h1]
+    by_cases h2 : c = 9
+    · subst h2; simp
+    · rw [if_neg h2]
+      by_cases h3 : c = 10
+      · subst h3; simp
+      · rw [if_neg h3]
+        by_cases h4 : c = 13
+        · subst h4; simp
+        · rw [if_neg h4]
+          by_cases h5 : c < 32 ∨ c ≥ 0x7f
+          · rw [if_pos h5]
+            right; right; right; right; right
+            rw [(hx c hc).1, (hx c hc).2]
+            rfl
+          · rw [if_neg h5]
+            left; exact ⟨rfl, by omega⟩
+
+/-- **escape_decode undoes escape_encode.** For every bytes object, `codecs.escape_encode`
+either raises `OverflowError` (only past `PY_SSIZE_T_MAX / 4` bytes) or returns escapes, with the
+length of its input, that `codecs.escape_decode` decodes back to the input, with their own
+length. -/
+def EscapeRoundTrip : Prop :=
+  ∀ b : Bytes, Bytes.Valid b →
+    (b.length > ssizeMaxN / 4 ∧ escapeEncode b = .error (.overflowError "string is too large to encode")) ∨
+    ∃ e, escapeEncode b = .ok (e, b.length) ∧ escapeDecode e none = .ok (b, e.length)
+
+theorem escapeRoundTrip_proven : EscapeRoundTrip := by
+  intro b hb
+  by_cases hl : b.length > ssizeMaxN / 4
+  · left; exact ⟨hl, by simp [escapeEncode, hl]⟩
+  · right
+    refine ⟨b.flatMap escapeByte, by simp [escapeEncode, hl, codecTuple], ?_⟩
+    have hf := BytesObj.Bytes.flat_length _ escapeByte_form b hb
+    have := BytesObj.Bytes.decode_flat escapeByte escapeByte_form b hb
+      (2 * (b.flatMap escapeByte).length + 2) 0 [] (by omega)
+    simp only [escapeDecode, codecTuple, BytesObj.Bytes.bytesDecodeEscape, BytesObj.Bytes.decodeEscape2]
+    rw [this]
+    simp [bind, Except.bind, pure, Except.pure, Functor.map, Except.map]
+
+end PyLean.UnicodeObj.Codecs
+
+namespace PyLean.UnicodeObj.Codecs
+
+open PyLean PyLean.UnicodeObj
+
+/-! ## register and unregister -/
+
+theorem removeFirst_spec (f : Val) : ∀ (l : List Val),
+    (removeFirst f l = none ∧ ∀ x ∈ l, x.is f = false) ∨
+    ∃ pre g post, l = pre ++ g :: post ∧ (∀ x ∈ pre, x.is f = false) ∧ g.is f = true ∧
+      removeFirst f l = some (pre ++ post)
+  | [] => Or.inl ⟨rfl, by simp⟩
+  | x :: xs => by
+    simp only [removeFirst]
+    by_cases hx : x.is f = true
+    · right; exact ⟨[], x, xs, rfl, by simp, hx, by simp [hx]⟩
+    · have hx' : x.is f = false := by simpa using hx
+      rcases removeFirst_spec f xs with ⟨h1, h2⟩ | ⟨pre, g, post, h1, h2, h3, h4⟩
+      · left; simp only [hx', Bool.false_eq_true, if_false, h1, Option.map_none, true_and]
+        intro y hy; simp at hy; rcases hy with rfl | hy; exact hx'; exact h2 y hy
+      · right
+        refine ⟨x :: pre, g, post, by simp [h1], ?_, h3, by simp [hx', h4]⟩
+        intro y hy; simp at hy; rcases hy with rfl | hy; exact hx'; exact h2 y hy
+
+/-- **codecs.register and codecs.unregister do what their docstrings say.** `register`
+refuses a non-callable with "argument must be callable" and otherwise appends the function to
+the search path, cache untouched; `unregister` ("Unregister a codec search function and clear
+the registry's cache. If the search function is not registered, do nothing.") removes the first
+registration of that very object and empties the cache, or changes nothing. Both return
+`None`. -/
+def RegisterDoc : Prop :=
+  ∀ (W : World) (st : Reg) (f : Val),
+    (W.callable f = false → codecsRegister W st f = (st, .error (.typeError "argument must be callable"))) ∧
+    (W.callable f = true → codecsRegister W st f = ({ st with path := st.path ++ [f] }, .ok .none)) ∧
+    (codecsUnregister st f).2 = .ok .none ∧
+    (((∀ x ∈ st.path, x.is f = false) ∧ (codecsUnregister st f).1 = st) ∨
+     ∃ pre g post, st.path = pre ++ g :: post ∧ (∀ x ∈ pre, x.is f = false) ∧ g.is f = true ∧
+       (codecsUnregister st f).1 = { st with path := pre ++ post, cache := [] })
+
+theorem registerDoc_proven : RegisterDoc := by
+  intro W st f
+  refine ⟨fun h => by simp [codecsRegister, register, h], fun h => by simp [codecsRegister, register, h],
+    rfl, ?_⟩
+  rcases removeFirst_spec f st.path with ⟨h1, h2⟩ | ⟨pre, g, post, h1, h2, h3, h4⟩
+  · left; exact ⟨h2, by simp [codecsUnregister, unregister, h1]⟩
+  · right; exact ⟨pre, g, post, h1, h2, h3, by simp [codecsUnregister, unregister, h4]⟩
+
+end PyLean.UnicodeObj.Codecs

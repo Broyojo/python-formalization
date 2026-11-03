@@ -1,0 +1,68 @@
+id: unicodeobj-codecs-normalize-encoding-nul
+title: "encodings.normalize_encoding drops everything after an embedded NUL since 3.15 ('utf\\x008' gives 'utf')"
+priority: P4
+kind: regression
+module: unicodeobject
+files: [Modules/_codecsmodule.c, Objects/unicodeobject.c, Lib/encodings/__init__.py]
+functions: ["_codecs__normalize_encoding_impl"]
+summary: |
+  In 3.15 `encodings.normalize_encoding` became a call to the new C function
+  `_codecs._normalize_encoding`. That function gets the UTF-8 bytes and their length with
+  `PyUnicode_AsUTF8AndSize`, which allows embedded NULs, but then hands the bytes to
+  `_Py_normalize_encoding`, which treats them as a C string and stops at the first NUL. Everything
+  after a NUL is silently dropped:
+
+      >>> encodings.normalize_encoding('utf\x008')
+      'utf'
+      >>> encodings.normalize_encoding('a\x00b')
+      'a'
+
+  In 3.14 the pure-Python version treated NUL like any other non-alphanumeric character and gave
+  'utf_8' and 'a_b'. `encodings.search_function`, which normalizes through the same function, now
+  maps names with a NUL to the codec of their prefix: `encodings.search_function('utf-8\x00junk')`
+  returns the UTF-8 CodecInfo.
+likelihood: |
+  Low. `codecs.lookup`, `str.encode` and `bytes.decode` refuse names with a NUL ("embedded null
+  character") before the search function runs, so this needs a direct call to
+  `encodings.normalize_encoding` or `encodings.search_function`, both documented in codecs.rst.
+  The truncation is silent, which is the kind of NUL handling that `codecs.lookup` guards
+  against.
+maybe_intended: |
+  No. The function's own length check (`len > PY_SSIZE_T_MAX`) shows it means to process `len`
+  bytes, and the documented behaviour treats every non-alphanumeric character alike.
+reproducer: |
+  import encodings, warnings
+  a = encodings.normalize_encoding('utf\x008')
+  b = encodings.normalize_encoding('a\x00b')
+  info = encodings.search_function('utf-8\x00junk')
+  print(repr(a), repr(b), info)
+  if a == 'utf' and b == 'a' and info is not None and info.name == 'utf-8':
+      print('REPRODUCED unicodeobj-codecs-normalize-encoding-nul')
+expected: |
+  'utf_8' and 'a_b', as the documentation says and as 3.14 gave; search_function finds no codec
+  for 'utf-8\x00junk'.
+observed: |
+  'utf' and 'a'; search_function returns the UTF-8 codec.
+tested: "REPRODUCED on python3 3.15.2 and on main (3.16.0a1+dev)"
+promised_by: |
+  Doc/library/codecs.rst, `encodings.normalize_encoding`: "Normalization works as follows: all
+  non-alphanumeric characters except the dot used for Python package names are collapsed and
+  replaced with a single underscore, leading and trailing underscores are removed." NUL is an
+  ASCII non-alphanumeric character, and the input is ASCII, as the documentation asks.
+cause: |
+  Modules/_codecsmodule.c:1043-1056 passes `PyUnicode_AsUTF8AndSize` output to
+  `_Py_normalize_encoding(cstr, normalized, len + 1, 0)`, whose loop ends at the first NUL
+  (Objects/unicodeobject.c:3540-3543).
+possible_fix: |
+  Refuse an embedded NUL in `_codecs__normalize_encoding_impl` (as the `str` argument converter
+  of `codecs.lookup` does), or treat it as punctuation by passing the length to the
+  normalization loop.
+lean: |
+  Refuted by normalizeEncodingDoc_refuted (lean/PyLean/UnicodeObj/CodecsRegProps2.lean) on
+  'a\x00b'.
+duplicates:
+  issues:
+    - {number: 55531, state: closed, relation: related, reason: "asked for a faster normalize_encoding; its C implementation does not discuss NUL"}
+  queries: ["normalize_encoding null character", "_normalize_encoding", "encodings normalize_encoding C implementation",
+            "normalize_encoding embedded null"]
+  bugforge: "no match in vendor/bugforge-results/README.md"

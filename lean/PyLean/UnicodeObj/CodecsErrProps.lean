@@ -19,6 +19,8 @@ def ancestors (c : String) : List String :=
     ["UnicodeError", "ValueError", "Exception", "BaseException"]
   | "UnicodeError" => ["ValueError", "Exception", "BaseException"]
   | "ValueError" => ["Exception", "BaseException"]
+  | "IndexError" => ["LookupError", "Exception", "BaseException"]
+  | "LookupError" => ["Exception", "BaseException"]
   | "Exception" => ["BaseException"]
   | _ => []
 

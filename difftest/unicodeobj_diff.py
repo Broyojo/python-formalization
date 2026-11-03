@@ -2929,6 +2929,333 @@ def gen_codecs_ucs1_encode(rng):
 def run_codecs_ucs1_encode(c):
     return list(s_of(c["s"]).encode("ascii" if c["limit"] == 128 else "latin-1", c["h"]))
 
+
+# -- the registry: search functions, lookup, encode/decode, the C API, error handlers --
+
+REG_NAMES = ["", "a", "B c", "x-Y_z", "\xc9t\xe9", "a b-C", "Q", "longname" * 30, "€€" * 120]
+
+
+def reg_names(rng, tag):
+    """A few names under the case's tag, so no other case's cache entries interfere."""
+    out = []
+    for _ in range(rng.randint(1, 3)):
+        n = tag + rng.choice(REG_NAMES)
+        if rng.random() < 0.3:
+            n = n.upper()
+        out.append(n)
+    return out
+
+
+def reg_norm(name):
+    """normalizestring, for the generator only: which normalized name a rule answers."""
+    return "".join("-" if ch == " " else (ch.lower() if ch.isascii() else ch) for ch in name)
+
+
+def reg_ret(rng, ninfo):
+    r = rng.random()
+    if r < 0.35 and ninfo:
+        return {"t": "info", "i": rng.randrange(ninfo)}
+    if r < 0.7:
+        return {"t": "none"}
+    if r < 0.85:
+        return {"t": "bad", "form": rng.randrange(4)}
+    return {"t": "raise"}
+
+
+def reg_ops(rng, nfuncs):
+    if rng.random() < 0.8:
+        return []
+    return [{"t": rng.choice(["reg", "unreg", "unreg"]), "f": rng.randrange(nfuncs)} for _ in range(rng.randint(1, 3))]
+
+
+def reg_coder(rng):
+    r = rng.random()
+    if r < 0.45:
+        return {"t": "nargs"}
+    if r < 0.75:
+        v = rng.choice([{"k": "bytes", "v": [120, 255]}, {"k": "str", "v": [233]}, {"k": "bytearray", "v": [1]},
+                        {"k": "int", "v": 7}])
+        return {"t": "pair", "v": v}
+    if r < 0.88:
+        return {"t": "bad", "form": rng.randrange(3)}
+    return {"t": "raise"}
+
+
+@gen("codecs", 6)
+def gen_codecs_registry(rng):
+    tag = "uoc" + "".join(rng.choice("abcdefghij") for _ in range(10))
+    names = reg_names(rng, tag) + [tag + "nope"]
+    ncoders = rng.randint(1, 4)
+    coders = [reg_coder(rng) for _ in range(ncoders)]
+    ninfo = rng.randint(0, 3)
+    infos = []
+    for _ in range(ninfo):
+        kind = rng.choice(["ci", "ci", "ci", "tuple", "sub"])
+        info = {"kind": kind, "items": [rng.randrange(ncoders) for _ in range(4)]}
+        if kind == "ci":
+            info["ie"] = rng.choice([None, rng.randrange(ncoders)])
+            info["id"] = rng.choice([None, rng.randrange(ncoders)])
+            info["text"] = rng.choice([None, None, True, False, False, "raise"])
+        infos.append(info)
+    nfuncs = rng.randint(1, 3)
+    funcs = []
+    for _ in range(nfuncs):
+        rules = [[cps_of(reg_norm(n)), reg_ret(rng, ninfo), reg_ops(rng, nfuncs)]
+                 for n in rng.sample(names, rng.randint(0, len(names)))]
+        funcs.append({"rules": rules, "default": {"t": "none"} if rng.random() < 0.8 else reg_ret(rng, ninfo),
+                      "dops": reg_ops(rng, nfuncs)})
+    steps = []
+    for f in range(nfuncs):
+        if rng.random() < 0.85:
+            steps.append({"t": "register", "f": f})
+    for _ in range(rng.randint(1, 7)):
+        r = rng.random()
+        name = cps_of(rng.choice(names))
+        if r < 0.25:
+            steps.append({"t": "lookup", "name": name})
+        elif r < 0.35:
+            steps.append({"t": rng.choice(["register", "unregister"]), "f": rng.randrange(nfuncs)})
+        elif r < 0.38:
+            steps.append({"t": "register", "bad": True})
+        elif r < 0.55:
+            steps.append({"t": rng.choice(["encode", "decode"]), "name": name,
+                          "errors": rng.choice([None, cps_of("strict"), cps_of("uoc\xe9")])})
+        elif r < 0.68:
+            steps.append({"t": rng.choice(["strencode", "bytesdecode"]), "name": name,
+                          "errors": rng.choice([None, cps_of("strict")])})
+        elif r < 0.73:
+            steps.append({"t": "known", "name": name})
+        elif r < 0.85:
+            steps.append({"t": "capi", "which": rng.choice(["Encoder", "Decoder", "IncrementalEncoder",
+                                                            "IncrementalDecoder", "StreamReader", "StreamWriter"]),
+                          "name": name, "errors": rng.choice([None, cps_of("strict")])})
+        else:
+            en = rng.choice(["strict", "ignore", tag, tag + "h", "\xe9" * 250 + tag])
+            steps.append({"t": rng.choice(["regerr", "lookuperr", "unregerr"]), "name": en,
+                          "h": rng.choice([0, 1, "bad"])})
+    return {"mod": "unicodeobj", "fn": "codecs_registry", "tag": tag, "coders": coders, "infos": infos,
+            "funcs": funcs, "steps": steps}
+
+
+class RegBadBool:
+    def __bool__(self):
+        raise ValueError("bad bool")
+
+
+class RegTupleSub(tuple):
+    pass
+
+
+def reg_val(v):
+    k = v["k"]
+    return {"bytes": lambda: bytes(v["v"]), "str": lambda: s_of(v["v"]), "bytearray": lambda: bytearray(v["v"]),
+            "int": lambda: v["v"]}[k]()
+
+
+@run("codecs_registry")
+def run_codecs_registry(c):
+    import codecs
+    import ctypes
+    import _codecs
+    import warnings
+    ids = []  # (object, id): the identities the model knows
+
+    def make_coder(spec):
+        def coder(*args):
+            t = spec["t"]
+            if t == "nargs":
+                return len(args)
+            if t == "pair":
+                return (reg_val(spec["v"]), 0)
+            if t == "bad":
+                return ["x", (1,), (1, 2, 3)][spec["form"]]
+            raise ValueError("boom")
+        return coder
+    coders = [make_coder(s) for s in c["coders"]]
+    for i, f in enumerate(coders):
+        ids.append((f, 200 + i))
+    infos = []
+    for i, info in enumerate(c["infos"]):
+        items = [coders[j] for j in info["items"]]
+        if info["kind"] == "ci":
+            text = info["text"]
+            kw = {} if text is None else {"_is_text_encoding": RegBadBool() if text == "raise" else text}
+            obj = codecs.CodecInfo(*items, incrementalencoder=None if info["ie"] is None else coders[info["ie"]],
+                                   incrementaldecoder=None if info["id"] is None else coders[info["id"]],
+                                   name=c["tag"], **kw)
+        elif info["kind"] == "tuple":
+            obj = tuple(items)
+        else:
+            obj = RegTupleSub(items)
+        infos.append(obj)
+        ids.append((obj, 100 + i))
+    funcs = []
+    live = [True]
+    nreg = [0]  # registrations made, so the cleanup can undo every one
+
+    def reg(f):
+        codecs.register(f)
+        nreg[0] += 1
+
+    def run_ops(ops):
+        for op in ops:
+            (reg if op["t"] == "reg" else codecs.unregister)(funcs[op["f"]])
+
+    def ret(r):
+        t = r["t"]
+        if t == "none":
+            return None
+        if t == "info":
+            return infos[r["i"]]
+        if t == "bad":
+            return [(1, 2, 3), (1, 2, 3, 4, 5), [1, 2, 3, 4], "x"][r["form"]]
+        raise ValueError("search failed")
+
+    def make_search(spec):
+        def search(name):
+            if not live[0]:
+                return None
+            for rn, r, ops in spec["rules"]:
+                if name == s_of(rn):
+                    run_ops(ops)
+                    return ret(r)
+            run_ops(spec["dops"])
+            return ret(spec["default"])
+        return search
+    for i, spec in enumerate(c["funcs"]):
+        funcs.append(make_search(spec))
+        ids.append((funcs[-1], 1 + i))
+    handlers = [lambda e: ("", e.end), lambda e: ("?", e.end)]
+    for i, h in enumerate(handlers):
+        ids.append((h, 300 + i))
+
+    def enc(v):
+        for o, i in ids:
+            if v is o:
+                return {"id": i}
+        if v is None:
+            return {"none": 1}
+        if isinstance(v, bool):
+            return {"int": int(v)}
+        if isinstance(v, int):
+            return {"int": v}
+        if type(v) is str:
+            return {"str": cps_of(v)}
+        if type(v) is bytes:
+            return {"bytes": list(v)}
+        if type(v) is bytearray:
+            return {"bytearray": list(v)}
+        return {"other": type(v).__name__}
+
+    def opt(x):
+        return None if x is None else s_of(x)
+
+    api = ctypes.pythonapi
+    out = []
+    saved = {n: codecs.lookup_error(n) for n in ("strict", "ignore")}
+    # a clean cache: unregistering a registered function clears it
+    probe = lambda name: None
+    codecs.register(probe)
+    codecs.unregister(probe)
+    try:
+        for st in c["steps"]:
+            t = st["t"]
+            try:
+                if t == "register":
+                    r = codecs.register(5) if st.get("bad") else reg(funcs[st["f"]])
+                elif t == "unregister":
+                    r = codecs.unregister(funcs[st["f"]])
+                elif t == "lookup":
+                    r = codecs.lookup(s_of(st["name"]))
+                elif t in ("encode", "decode"):
+                    f = codecs.encode if t == "encode" else codecs.decode
+                    args = {"encoding": s_of(st["name"])}
+                    if st["errors"] is not None:
+                        args["errors"] = s_of(st["errors"])
+                    r = f("abc", **args)
+                elif t in ("strencode", "bytesdecode"):
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        if t == "strencode":
+                            r = "abc".encode(s_of(st["name"]), *([] if st["errors"] is None else [s_of(st["errors"])]))
+                        else:
+                            r = b"abc".decode(s_of(st["name"]), *([] if st["errors"] is None else [s_of(st["errors"])]))
+                elif t == "known":
+                    fn = api.PyCodec_KnownEncoding
+                    fn.restype, fn.argtypes = ctypes.c_int, [ctypes.c_char_p]
+                    r = fn(s_of(st["name"]).encode())
+                elif t == "capi":
+                    w = st["which"]
+                    fn = getattr(api, "PyCodec_" + w)
+                    fn.restype = ctypes.py_object
+                    name = s_of(st["name"]).encode()
+                    err = None if st["errors"] is None else s_of(st["errors"]).encode()
+                    if w in ("Encoder", "Decoder"):
+                        fn.argtypes = [ctypes.c_char_p]
+                        r = fn(name)
+                    elif w.startswith("Incremental"):
+                        fn.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+                        r = fn(name, err)
+                    else:
+                        fn.argtypes = [ctypes.c_char_p, ctypes.py_object, ctypes.c_char_p]
+                        r = fn(name, b"stream", err)
+                elif t == "regerr":
+                    r = codecs.register_error(st["name"], 5 if st["h"] == "bad" else handlers[st["h"]])
+                elif t == "lookuperr":
+                    r = codecs.lookup_error(st["name"])
+                else:
+                    r = _codecs._unregister_error(st["name"])
+                out.append({"ok": enc(r)})
+            except Exception as x:
+                out.append({"exc": type(x).__name__, "msg": str(x) if not isinstance(x, AttributeError) else "~",
+                            "notes": getattr(x, "__notes__", [])})
+    finally:
+        live[0] = False
+        for f in funcs:
+            for _ in range(nreg[0]):
+                codecs.unregister(f)
+        for name in (c["tag"], c["tag"] + "h", "\xe9" * 250 + c["tag"]):
+            _codecs._unregister_error(name)
+        for n, h in saved.items():
+            codecs.register_error(n, h)
+    return out
+
+@gen("codecs", 2)
+def gen_codecs_normalize(rng):
+    pool = list("aZ09._- ;#\x00") + ["\xe9", "\u20ac", "\ud800", "\U0001f600", "\x7f", "\t"]
+    s = "".join(rng.choice(pool) for _ in range(rng.randint(0, 9)))
+    return {"mod": "unicodeobj", "fn": "codecs_normalize", "s": cps_of(s)}
+
+
+@run("codecs_normalize")
+def run_codecs_normalize(c):
+    import _codecs
+    return cps_of(_codecs._normalize_encoding(s_of(c["s"])))
+
+
+@gen("codecs", 2)
+def gen_codecs_escape(rng):
+    if rng.random() < 0.5:
+        b = [rng.randrange(256) for _ in range(rng.randint(0, 8))]
+    else:
+        b = list(b"".join(rng.choice([b"\\", b"\\x4", b"\\x41", b"\\n", b"\\'", b"a", b"\\7", b"\\777", b"\\q",
+                                       b"\\", b"\\xzz", b"\xff"]) for _ in range(rng.randint(0, 5))))
+    return {"mod": "unicodeobj", "fn": "codecs_escape", "b": b, "enc": rng.random() < 0.5,
+            "errors": rng.choice([None, "strict", "ignore", "replace", "bogus"])}
+
+
+@run("codecs_escape")
+def run_codecs_escape(c):
+    import codecs
+    import warnings
+    if c["enc"]:
+        r, n = codecs.escape_encode(bytes(c["b"]))
+    else:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            r, n = codecs.escape_decode(bytes(c["b"]), c["errors"])
+    return [list(r), n]
+
 # ==== end codecs.c ====
 
 
