@@ -12,6 +12,12 @@ A cell is one Python object, and `id()` is its cell, except for the two singleto
 meet among the objects it tracks by identity: every `None` cell is the one `None` object and
 every empty tuple the one `()` (`objId`). Scalars (`_scalars`, :659) are tracked by value.
 
+Scope limit: a cell has one of the exact builtin types (or `UID`, or an `other` object the writer
+rejects). Subclasses of `str`, `int`, `float`, `bytes`, `list`, `tuple` or `dict` (an `IntEnum`,
+a `str` with its own `__eq__` or `__hash__`, a `dict` subclass with its own `items`) are not
+representable: `type(value)` in the scalar table key, user `__eq__`/`__hash__`/`__lt__` and
+`__index__` overrides would run Python code the model does not have.
+
 A dict cell holds its (key cell, value cell) items in insertion order. Its keys are pairwise
 unequal (the type invariant of a dict); a key that is not a `str` may be any hashable object, and
 only `isinstance(key, str)` is asked of it.
