@@ -19,6 +19,7 @@ def lastResult {σ : Type} : Outcome σ → Py Val
   | .initErr e => .error e
   | .crashed => .error crashErr
   | .hung => .error hangErr
+  | .ub => .error crashErr
 
 /-- `read(k)` then `readinto(bytearray(n))` on a new `BufferedReader(raw, size)`,
 C twin. -/

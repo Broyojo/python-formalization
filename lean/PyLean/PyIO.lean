@@ -76,7 +76,7 @@ def coreEntries : List Entry := [
       "_io_BytesIO_readlines_impl", "scan_eol_lock_held", "read_bytes_lock_held",
       "bytesio_iternext_lock_held", "bytesio_iternext", "BytesIO.read", "BytesIO.read1",
       "IOBase.readline", "IOBase.__iter__", "IOBase.__next__", "IOBase.readlines",
-      "_io_BytesIO_readinto_impl", "BufferedIOBase.readinto", "BufferedIOBase._readinto",
+      "_io_BytesIO_readinto_impl", "BufferedIOBase.readinto",
       "_io_BytesIO_write_impl", "write_bytes_lock_held", "BytesIO.write",
       "_io_BytesIO_seek_impl", "BytesIO.seek", "_io_BytesIO_tell_impl", "BytesIO.tell",
       "_io_BytesIO_truncate_impl", "BytesIO.truncate", "_io_BytesIO_getvalue_impl",
@@ -293,7 +293,7 @@ def coreEntries : List Entry := [
     status := .proven, prop := ``BytesIOReinit, thm := some ``bytesIOReinit_proven
     notes := "3.14.7 reset the size and position before refusing. The twins differ on purpose here: this entry states each, it does not claim they agree." },
   { id := "pyio-bytesio-readinto-overlap", pyFile := "Modules/_io/bytesio.c"
-    pyFns := ["_io_BytesIO_readinto_impl", "BufferedIOBase.readinto", "BufferedIOBase._readinto"]
+    pyFns := ["_io_BytesIO_readinto_impl", "BufferedIOBase.readinto"]
     statement := "readinto of a view of the stream's own buffer, for every position, offset and length, including overlapping ranges: both twins return the same count, end at the same position and leave the same contents, the old bytes at the read position copied to the view."
     source := "invariant: C accelerator vs pure-Python twin; bytesio.c:673 uses memmove since 3.15"
     status := .proven, prop := ``BytesIOReadintoOverlap, thm := some ``bytesIOReadintoOverlap_proven }

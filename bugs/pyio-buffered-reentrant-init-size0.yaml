@@ -18,6 +18,14 @@ summary: |
   - `BufferedWriter.write(b)` with `len(b) >= buffer_size`: `while (remaining >= self->buffer_size)`
     becomes `while (0 >= 0)` once everything is written, and the method calls `raw.write(b'')`
     forever.
+  - with a power-of-two size (the default 8192 included) `MINUS_LAST_BLOCK` uses `buffer_mask`
+    and does not trap: the fill loop stops (`read_end < buffer_size` is false) and
+    `PyBytesWriter_Finish` returns the requested length, its tail bytes nobody wrote (an
+    uninitialized read);
+  - a negative size is stored too (`Py_ssize_t`): `__init__(raw, -1)` makes `MINUS_LAST_BLOCK`
+    compute `-1 * (n / -1) = n` and the read completes, but in `write`, with `raw.write`
+    answering None, `memcpy(self->buffer, ..., self->buffer_size)` gets `(size_t)-1`: undefined
+    behaviour (SIGSEGV for a writer; a BufferedRandom was seen running on with a corrupted heap).
   Same family as pyio-buffered-reentrant-init-free (an `__init__` that bypasses the method lock),
   but a different mechanism: here `_buffered_init` refuses and frees nothing.
 likelihood: |
@@ -96,6 +104,8 @@ duplicates:
 lean:
   property: PyLean.PyIO.BufferedCNoCrash
   theorem: PyLean.PyIO.bufferedCNoCrash_refuted_size0
+  related: ["PyLean.PyIO.bufferedCNoHang_refuted (the write loop)", "PyLean.PyIO.size0_pow2_uninit",
+            "PyLean.PyIO.reinit_negative_read", "PyLean.PyIO.reinit_negative_write"]
 
 review_notes: |
   Independent re-review (2026-11-03): claim holds on 3.15.2 and main. Re-rated P1 -> P2: the record
