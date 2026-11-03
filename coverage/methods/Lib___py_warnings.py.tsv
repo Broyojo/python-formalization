@@ -1,44 +1,44 @@
 file	line	endline	name	signature	status	entry	note
 Lib/_py_warnings.py	24	26	_set_module	_set_module(module)	excluded		internal-bootstrap: sets the module global _wm that every function reads (warnings.py passes itself; tests pass another module)
-Lib/_py_warnings.py	53	55	_Context.__init__	__init__(self, filters)	todo		
-Lib/_py_warnings.py	57	61	_Context.copy	copy(self)	todo		
+Lib/_py_warnings.py	53	55	_Context.__init__	__init__(self, filters)	modelled	warn-catch-restores	
+Lib/_py_warnings.py	57	61	_Context.copy	copy(self)	modelled	warn-catch-restores	
 Lib/_py_warnings.py	63	64	_Context._record_warning	_record_warning(self, msg)	modelled	warn-record-captures	
 Lib/_py_warnings.py	68	69	_GlobalContext.__init__	__init__(self)	todo		
-Lib/_py_warnings.py	72	80	_GlobalContext._filters	_filters(self)	modelled	warn-filter-list-twins-py	
-Lib/_py_warnings.py	89	95	_get_context	_get_context()	modelled	warn-filter-list-twins-py	
-Lib/_py_warnings.py	98	100	_set_context	_set_context(context)	modelled	warn-record-captures	
-Lib/_py_warnings.py	103	108	_new_context	_new_context()	modelled	warn-record-captures	
-Lib/_py_warnings.py	111	114	_get_filters	_get_filters()	modelled	warn-filter-list-twins-py	
+Lib/_py_warnings.py	72	80	_GlobalContext._filters	_filters(self)	modelled	warn-filter-list-twins-py,warn-catch-restores	
+Lib/_py_warnings.py	89	95	_get_context	_get_context()	modelled	warn-filter-list-twins-py,warn-catch-restores	
+Lib/_py_warnings.py	98	100	_set_context	_set_context(context)	modelled	warn-catch-restores,warn-record-captures	
+Lib/_py_warnings.py	103	108	_new_context	_new_context()	modelled	warn-catch-restores,warn-record-captures	
+Lib/_py_warnings.py	111	114	_get_filters	_get_filters()	modelled	warn-filter-list-twins-py,warn-catch-restores	
 Lib/_py_warnings.py	117	118	_filters_mutated_lock_held	_filters_mutated_lock_held()	modelled	warn-mutated-lock-twins	
 Lib/_py_warnings.py	121	124	showwarning	showwarning(message, category, filename, lineno, file=None, line=None)	todo		
 Lib/_py_warnings.py	127	130	formatwarning	formatwarning(message, category, filename, lineno, line=None)	todo		
-Lib/_py_warnings.py	133	150	_showwarnmsg_impl	_showwarnmsg_impl(msg)	modelled	warn-record-captures	
+Lib/_py_warnings.py	133	150	_showwarnmsg_impl	_showwarnmsg_impl(msg)	modelled	warn-show-dispatch,warn-record-captures	
 Lib/_py_warnings.py	153	210	_formatwarnmsg_impl	_formatwarnmsg_impl(msg)	todo		
-Lib/_py_warnings.py	217	233	_showwarnmsg	_showwarnmsg(msg)	modelled	warn-record-captures	
+Lib/_py_warnings.py	217	233	_showwarnmsg	_showwarnmsg(msg)	modelled	warn-show-dispatch,warn-record-captures	
 Lib/_py_warnings.py	240	251	_formatwarnmsg	_formatwarnmsg(msg)	todo		
 Lib/_py_warnings.py	254	291	filterwarnings	filterwarnings(action, message='', category=Warning, module='', lineno=0, append=False)	modelled	warn-filterwarnings-spec,warn-simplefilter-warncat,warn-version-bumps	
 Lib/_py_warnings.py	294	310	simplefilter	simplefilter(action, category=Warning, lineno=0, append=False)	modelled	warn-simplefilter-warncat,warn-simplefilter-any-cat,warn-version-bumps	
 Lib/_py_warnings.py	313	317	_filters_mutated	_filters_mutated()	modelled	warn-version-bumps	
-Lib/_py_warnings.py	320	334	_add_filter	_add_filter(*item, append)	modelled	warn-filterwarnings-spec,warn-version-bumps	
-Lib/_py_warnings.py	337	341	resetwarnings	resetwarnings()	modelled	warn-version-bumps	
+Lib/_py_warnings.py	320	334	_add_filter	_add_filter(*item, append)	modelled	warn-filterwarnings-spec,warn-version-bumps,warn-add-filter-valueerror	
+Lib/_py_warnings.py	337	341	resetwarnings	resetwarnings()	modelled	warn-version-bumps,warn-reset-spec	
 Lib/_py_warnings.py	350	355	_processoptions	_processoptions(args)	modelled	warn-options-narrow,warn-options-no-escape	
 Lib/_py_warnings.py	359	406	_setoption	_setoption(arg)	modelled	warn-options-narrow,warn-options-no-escape	
-Lib/_py_warnings.py	410	416	_getaction	_getaction(action)	modelled	warn-getaction,warn-options-narrow	
+Lib/_py_warnings.py	410	416	_getaction	_getaction(action)	modelled	warn-getaction,warn-getaction-abbrev,warn-options-narrow	
 Lib/_py_warnings.py	420	438	_getcategory	_getcategory(category)	modelled	warn-options-narrow,warn-options-no-escape	
-Lib/_py_warnings.py	441	442	_is_internal_filename	_is_internal_filename(filename)	modelled	warn-call-twins-narrow-py	
+Lib/_py_warnings.py	441	442	_is_internal_filename	_is_internal_filename(filename)	modelled	warn-call-twins-narrow-py,warn-internal-filename-py	
 Lib/_py_warnings.py	445	446	_is_filename_to_skip	_is_filename_to_skip(filename, skip_file_prefixes)	modelled	warn-call-twins-narrow-py	
 Lib/_py_warnings.py	449	451	_is_internal_frame	_is_internal_frame(frame)	modelled	warn-call-twins-narrow-py	
-Lib/_py_warnings.py	454	461	_next_external_frame	_next_external_frame(frame, skip_file_prefixes)	modelled	warn-call-twins-narrow-py	
-Lib/_py_warnings.py	465	520	warn	warn(message, category=None, stacklevel=1, source=None, *, skip_file_prefixes=())	modelled	warn-call-twins-narrow-py,warn-call-twins-py	
+Lib/_py_warnings.py	454	461	_next_external_frame	_next_external_frame(frame, skip_file_prefixes)	modelled	warn-call-twins-narrow-py,warn-next-external-py	
+Lib/_py_warnings.py	465	520	warn	warn(message, category=None, stacklevel=1, source=None, *, skip_file_prefixes=())	modelled	warn-call-twins-narrow-py,warn-category-errors-py,warn-call-twins-py	
 Lib/_py_warnings.py	523	553	_match_filename	_match_filename(pattern, filename, *, MS_WINDOWS=sys.platform == 'win32')	todo		changed-in-3.15: new function
-Lib/_py_warnings.py	556	625	warn_explicit	warn_explicit(message, category, filename, lineno, module=None, registry=None, module_globals=None, source=None)	todo		review: pyWarnExplicit omits the failure paths at the head of the body: int(lineno) on a non-int (:559), str(message) and category(message) raising (:560-565, a callback C runs later and only when module is not None), and registry.get on a non-dict registry; linecache.getlines and WarningMessage(...) are folded into the show callback.
+Lib/_py_warnings.py	556	625	warn_explicit	warn_explicit(message, category, filename, lineno, module=None, registry=None, module_globals=None, source=None)	modelled	warn-twins-py,warn-twins-module,warn-twins-module-state-py,warn-py-unknown-action	review: pyWarnExplicit omits the failure paths at the head of the body: int(lineno) on a non-int (:559), str(message) and category(message) raising (:560-565, a callback C runs later and only when module is not None), and registry.get on a non-dict registry; linecache.getlines and WarningMessage(...) are folded into the show callback.
 Lib/_py_warnings.py	633	643	WarningMessage.__init__	__init__(self, message, category, filename, lineno, file=None, line=None, source=None, module=None)	todo		changed-in-3.15:
 Lib/_py_warnings.py	645	649	WarningMessage.__str__	__str__(self)	todo		changed-in-3.15:
 Lib/_py_warnings.py	651	652	WarningMessage.__repr__	__repr__(self)	todo		
-Lib/_py_warnings.py	675	687	catch_warnings.__init__	__init__(self, *, record=False, module=None, action=None, category=Warning, lineno=0, append=False)	todo		
+Lib/_py_warnings.py	675	687	catch_warnings.__init__	__init__(self, *, record=False, module=None, action=None, category=Warning, lineno=0, append=False)	modelled	warn-catch-restores	
 Lib/_py_warnings.py	689	696	catch_warnings.__repr__	__repr__(self)	todo		
-Lib/_py_warnings.py	698	725	catch_warnings.__enter__	__enter__(self)	modelled	warn-catch-enter-atomic,warn-record-captures	
-Lib/_py_warnings.py	727	737	catch_warnings.__exit__	__exit__(self, *exc_info)	todo		
+Lib/_py_warnings.py	698	725	catch_warnings.__enter__	__enter__(self)	modelled	warn-catch-restores,warn-catch-enter-atomic,warn-record-captures	
+Lib/_py_warnings.py	727	737	catch_warnings.__exit__	__exit__(self, *exc_info)	modelled	warn-catch-restores	
 Lib/_py_warnings.py	782	796	deprecated.__init__	__init__(self, message: str, /, *, category: type[Warning] | None=DeprecationWarning, stacklevel: int=1)	todo		
 Lib/_py_warnings.py	798	870	deprecated.__call__	__call__(self, arg, /)	todo		
 Lib/_py_warnings.py	876	892	_deprecated	_deprecated(name, message=_DEPRECATED_MSG, *, remove, _version=sys.version_info)	todo		

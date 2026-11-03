@@ -9624,6 +9624,8 @@ def rand_gen(rng):
 
 # ====== BEGIN AREA warn (Python/_warnings.c, Lib/_py_warnings.py) ======
 import json as warn_json  # noqa: E402
+import contextvars as warn_contextvars  # noqa: E402
+import io as warn_io  # noqa: E402
 import re as warn_re  # noqa: E402
 from test.support import import_helper as warn_ih  # noqa: E402
 
@@ -9631,6 +9633,7 @@ warn_py = warn_ih.import_fresh_module('_py_warnings')
 warn_py._set_module(warn_py)
 warn_c = warn_ih.import_fresh_module("warnings", fresh=["_warnings", "_py_warnings"])
 warn_c._set_module(warn_c)
+warn_PYG = warn_c.catch_warnings.__init__.__globals__   # the _py_warnings module warn_c uses
 
 
 class warn_W1(UserWarning):
@@ -9672,10 +9675,12 @@ def warn_gen_we(rng):
                           ([rng.choice(["PLAIN:a", "PLAIN:m", "PLAIN:ab", "PLAIN:x.a"])] if rng.random() < .1 else []))
     fs = []
     for _ in range(rng.choice([0, 1, 1, 2, 3])):
-        fs.append([rng.choice(warn_ACTS + (["bogus"] if rng.random() < .05 else []) + ([5] if rng.random() < .03 else [])),
+        fs.append([rng.choice(warn_ACTS + (["bogus"] if rng.random() < .05 else []) + ([5] if rng.random() < .03 else [])
+                              + ([["u"]] if rng.random() < .03 else [])),
                    pat(False),
                    rng.choice([0, 1, 1, 2, 3] + ([4] if rng.random() < .1 else [])), pat(True),
-                   rng.choice([0, 0, 0, 1, 2] + ([2**63, 2**64] if rng.random() < .05 else [])),
+                   rng.choice([0, 0, 0, 1, 2] + ([2**63, 2**64] if rng.random() < .05 else [])
+                              + (["5"] if rng.random() < .03 else [])),
                    rng.choice(["tuple"] * 30 + ["list", "short"])])
     text = rng.choice(warn_TEXTS)
     cat = rng.choice([0, 1, 2, 3] + ([5] if rng.random() < .05 else []))
@@ -9709,11 +9714,27 @@ def warn_gen_we(rng):
                 seen.add(key)
                 out.append(e)
         return out
-    reg = None if rng.random() < .25 else ("obj" if rng.random() < .03 else entries())
+    reg = None if rng.random() < .25 else ("obj" if rng.random() < .03 else
+                                          {"map": entries()} if rng.random() < .03 else entries())
     once = entries() if rng.random() < .5 else []
     module = rng.choice([["omit"], ["omit"], ["none"], ["s", "a"], ["s", "m"], ["s", "x.a"], ["s", "b"]] +
                         ([["obj"]] if rng.random() < .05 else []))
-    return {"fn": "warn." + rng.choice(["c", "py"]), "filters": fs,
+    extra = {}
+    if rng.random() < .25:
+        k = rng.random()
+        if k < .15:
+            extra["ctx"] = True
+        if rng.random() < .1:
+            extra["tuple"] = True
+        if rng.random() < .15:
+            extra["dfltdel"] = True
+        if rng.random() < .2:
+            extra["oncek"] = rng.choice(["int", "deleted"])
+        if rng.random() < .3:
+            extra["show"] = rng.choice(["deleted", "noncallable", "nowm"])
+        if rng.random() < .3:
+            extra["globs"] = rng.choice(["int", "empty", "bad"])
+    return {"fn": "warn." + rng.choice(["c", "py"]), "filters": fs, **extra,
             "dflt": rng.choice(["default", "default", "always", "error", "ignore", "once", "module"] +
                                (["bogus"] if rng.random() < .03 else []) + ([5] if rng.random() < .02 else [])),
             "text": text, "cat": cat, "filename": rng.choice(["a.py", "m.py", "<s>", "", "pkg/a.py",
@@ -9733,7 +9754,7 @@ def warn_pat(p, ci):
 
 
 def warn_item(f):
-    fields = (f[0], warn_pat(f[1], True), warn_CATS[f[2]], warn_pat(f[3], False), f[4])
+    fields = ([] if f[0] == ["u"] else f[0], warn_pat(f[1], True), warn_CATS[f[2]], warn_pat(f[3], False), f[4])
     if f[5] == "list":
         return list(fields)
     if f[5] == "short":
@@ -9753,7 +9774,8 @@ def warn_norm(msg):
             return rep
     if msg.endswith("object has no attribute 'get'"):
         return "~object has no attribute 'get'"
-    return msg
+    # the Python twin under test is the module `_py_warnings`; as `warnings` its name is `warnings`
+    return msg.replace("module '_py_warnings'", "module 'warnings'")
 
 
 def warn_key(e):
@@ -9787,10 +9809,57 @@ def warn_enc(d, cur):
     return sorted(out, key=lambda e: warn_json.dumps(e, separators=(',', ':')))
 
 
+class warn_Map:
+    """A mapping registry that is not a dict: `get`, `clear` and item assignment."""
+
+    def __init__(self, d):
+        self.d = d
+
+    def get(self, k, default=None):
+        return self.d.get(k, default)
+
+    def clear(self):
+        self.d.clear()
+
+    def __setitem__(self, k, v):
+        self.d[k] = v
+
+
+class warn_BadLoader:
+    def get_source(self, name):
+        raise ValueError("no source")
+
+
+warn_BAD_GLOBALS_LOADER = warn_BadLoader()
+
+
+def warn_globals(kind):
+    if kind == "int":
+        return 5
+    if kind == "empty":
+        return {}
+    import types
+    return {"__name__": "m", "__loader__": warn_BAD_GLOBALS_LOADER,
+            "__spec__": types.SimpleNamespace(name="m", loader=warn_BAD_GLOBALS_LOADER)}
+
+
+warn_ONCE_C = warn_c.onceregistry
+warn_ONCE_PY = warn_py.onceregistry
+warn_FILTERS_C = warn_c.filters
+warn_FILTERS_PY = warn_py.filters
+
+
 def warn_run_we(case):
+    return warn_contextvars.copy_context().run(warn_run_we1, case)
+
+
+def warn_run_we1(case):
+    import linecache
+    linecache.clearcache()
     twin = case["fn"].split(".")[1]
     mod = warn_c if twin == "c" else warn_py
     sys.modules['warnings'] = warn_c
+    mod.filters = warn_FILTERS_C if mod is warn_c else warn_FILTERS_PY
     items = [warn_item(f) for f in case["filters"]]
     mod.filters[:] = items
     mod._filters_mutated()
@@ -9804,6 +9873,12 @@ def warn_run_we(case):
     else:
         cur = mod._filters_version
     mod.defaultaction = case["dflt"]
+    if case.get("tuple"):
+        mod.filters = tuple(items)
+    if case.get("ctx") and twin == "c":
+        mod._warnings_context.set(warn_PYG["_Context"](mod.filters))
+    if case.get("dfltdel"):
+        del mod.defaultaction
 
     shown = []
 
@@ -9811,10 +9886,29 @@ def warn_run_we(case):
         if case["showraise"]:
             raise ValueError("show failed")
         shown.append(m)
-    mod._showwarnmsg = show
-    reg = None if case["reg"] is None else 5 if case["reg"] == "obj" else warn_mkdict(case["reg"], cur)
-    mod.onceregistry.clear()
-    mod.onceregistry.update(warn_mkdict(case["once"], cur))
+    sk = case.get("show", "ok")
+    saved_wm = mod.WarningMessage
+    if sk == "deleted":
+        if hasattr(mod, "_showwarnmsg"):
+            del mod._showwarnmsg
+    elif sk == "noncallable":
+        mod._showwarnmsg = 5
+    else:
+        mod._showwarnmsg = show
+        if sk == "nowm":
+            del mod.WarningMessage
+    reg = (None if case["reg"] is None else 5 if case["reg"] == "obj" else
+           warn_Map(warn_mkdict(case["reg"]["map"], cur)) if isinstance(case["reg"], dict) else
+           warn_mkdict(case["reg"], cur))
+    once_d = warn_ONCE_C if mod is warn_c else warn_ONCE_PY
+    mod.onceregistry = once_d
+    once_d.clear()
+    once_d.update(warn_mkdict(case["once"], cur))
+    ok = case.get("oncek", "dict")
+    if ok == "int":
+        mod.onceregistry = 5
+    elif ok == "deleted":
+        del mod.onceregistry
     kw = {}
     if case["module"][0] == "none":
         kw["module"] = None
@@ -9824,6 +9918,11 @@ def warn_run_we(case):
         kw["module"] = 5
     if reg is not None:
         kw["registry"] = reg
+    gk = case.get("globs", "none")
+    if gk != "none":
+        kw["module_globals"] = warn_globals(gk)
+    err, old_err = warn_io.StringIO(), sys.stderr
+    sys.stderr = err
     try:
         ln = case["lineno"]
         if isinstance(ln, list):
@@ -9839,12 +9938,19 @@ def warn_run_we(case):
         else:
             msg = warn_norm(msg)
         out = ["exc", type(e).__name__, msg]
+    finally:
+        sys.stderr = old_err
     if out[0] == "ok":
-        out = ["ok", bool(shown)]
-    once = warn_enc(mod.onceregistry, cur)
+        out = ["ok", bool(shown) or (sk == "deleted" and err.getvalue() != "")]
+    once = warn_enc(once_d, cur)
+    mod.onceregistry = once_d
+    mod.WarningMessage = saved_wm
+    mod._showwarnmsg = lambda m: None
+    mod.filters = warn_FILTERS_C if mod is warn_c else warn_FILTERS_PY
     mod.filters[:] = []
     mod.defaultaction = "default"
-    return {"ok": [out, None if not isinstance(reg, dict) else warn_enc(reg, cur), once]}
+    regd = reg if isinstance(reg, dict) else reg.d if isinstance(reg, warn_Map) else None
+    return {"ok": [out, None if regd is None else warn_enc(regd, cur), once]}
 
 
 def warn_warmup():
@@ -9877,6 +9983,8 @@ class warn_Other:
     def __eq__(self, o):
         if self.r == "raise":
             raise KeyError("eq")
+        if self.r == "verr":
+            raise ValueError("eq")
         return self.r == "t"
 
     __hash__ = object.__hash__
@@ -9924,7 +10032,7 @@ def warn_elem_mk(e):
 def warn_cver():
     """The C filters version: what already_warned stores in a stale registry."""
     probe = {}
-    old = warn_c._showwarnmsg
+    old = getattr(warn_c, "_showwarnmsg", lambda m: None)
     warn_c._showwarnmsg = lambda m: None
     try:
         warn_c.warn_explicit("probe", UserWarning, "p", 1, module="probe", registry=probe)
@@ -9944,7 +10052,7 @@ warn_STRS = ["", "a", "x.*", "(", "a{4294967296}", "[", "__main__", "mod"]
 
 def warn_gen_elem(rng):
     if rng.random() < .15:
-        return ["o", rng.randrange(3), rng.choice(["t", "f", "f", "raise"])]
+        return ["o", rng.randrange(3), rng.choice(["t", "f", "f", "raise", "verr"])]
     rx = (lambda ci: None if rng.random() < .6 else [rng.choice(["a", "x.*", "__main__"]), ci])
     return ["i", rng.choice(warn_ACTS), rx(True), rng.choice([0, 1, 3, 12]), rx(False), rng.choice([0, 0, 1, 2])]
 
@@ -9996,7 +10104,7 @@ def warn_gen_filt(rng):
         elif r < .87:
             ops.append(["mut"])
         else:
-            ops.append([rng.choice(["acq", "rel", "mlh"])])
+            ops.append([rng.choice(["acq", "rel", "mlh", "oacq", "orel"])])
     return {"fn": "warn." + twin, "init": init, "ops": ops}
 
 
@@ -10029,15 +10137,39 @@ def warn_set_cont(mod, init):
         mod.filters = xs if init[0] == "list" else tuple(xs)
 
 
+import queue as warn_queue  # noqa: E402
+import threading as warn_threading  # noqa: E402
+
+warn_HQ_IN, warn_HQ_OUT = warn_queue.Queue(), warn_queue.Queue()
+
+
+def warn_helper():
+    while True:
+        f = warn_HQ_IN.get()
+        warn_HQ_OUT.put(warn_res(f))
+
+
+warn_threading.Thread(target=warn_helper, daemon=True).start()
+
+
+def warn_in_helper(f):
+    warn_HQ_IN.put(f)
+    return warn_HQ_OUT.get()
+
+
 def warn_run_filt(case):
     mod = warn_c if case["fn"] == "warn.filt_c" else warn_py
     sys.modules['warnings'] = warn_c
     warn_set_cont(mod, case["init"])
     v0 = warn_ver(mod)
-    depth = 0
+    depth, odepth = 0, 0
     outs = []
     for op in case["ops"]:
         k = op[0]
+        if mod is warn_c and ((odepth > 0 and k in ("fw", "sf", "reset", "mut", "acq")) or
+                              (depth > 0 and k == "oacq")):
+            outs.append(["blocked"])
+            continue
         if k == "fw":
             f = (lambda op=op: mod.filterwarnings(warn_act_mk(op[1]), warn_str_mk(op[2]), warn_OBJS[op[3]],
                                                   warn_str_mk(op[4]), warn_line_mk(op[5]), op[6]))
@@ -10047,20 +10179,23 @@ def warn_run_filt(case):
             f = mod.resetwarnings
         elif k == "mut":
             f = mod._filters_mutated
-        elif k == "acq":
+        elif k in ("acq", "oacq"):
             f = (mod._acquire_lock if mod is warn_c else (lambda: None))
-        elif k == "rel":
+        elif k in ("rel", "orel"):
             f = (mod._release_lock if mod is warn_c else (lambda: None))
         else:
             f = mod._filters_mutated_lock_held
-        r = warn_res(f)
+        r = warn_in_helper(f) if k in ("oacq", "orel") else warn_res(f)
         if mod is warn_c and r == ["ok"]:
             depth += {"acq": 1, "rel": -1}.get(k, 0)
+            odepth += {"oacq": 1, "orel": -1}.get(k, 0)
         outs.append(r)
-    cont = warn_cont_enc(mod)
-    dv = warn_ver(mod) - v0
+    for _ in range(odepth):
+        warn_in_helper(warn_c._release_lock)
     for _ in range(depth):
         warn_c._release_lock()
+    cont = warn_cont_enc(mod)
+    dv = warn_ver(mod) - v0
     mod.filters = []
     return {"ok": [outs, cont, dv]}
 
@@ -10285,8 +10420,8 @@ def warn_run_call(case):
 
 # --- catch_warnings, the contexts, _showwarnmsg (Warn/Context.lean) ---
 import contextvars as warn_contextvars  # noqa: E402
+import io as warn_io  # noqa: E402
 
-warn_PYG = warn_c.catch_warnings.__init__.__globals__   # the _py_warnings module warn_c uses
 
 
 class warn_ErrFile:

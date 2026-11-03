@@ -25,7 +25,8 @@ Scope:
 * `re.compile` is a callback that can raise. `action not in {...}` hashes the action: a str is
   looked up, another hashable object is not in the set (its `repr` is in the message), an
   unhashable one raises `TypeError`.
-* The lock is the C recursive mutex, one thread: its depth. `PyMutex_IsLocked` (:277) reads it.
+* The lock is the C recursive mutex: its owner thread and level. `PyMutex_IsLocked` (:277) asks
+  whether any thread holds it.
 -/
 
 namespace PyLean.CoreLibs.Warn
@@ -155,8 +156,12 @@ def addFilter (it : FItem) (append : Bool) (s : FState) : Py FState := do
     | .deleted => pure Cont.deleted
     | .list xs =>
       if !append then do
-        let r ← pyRemove it xs
-        pure (Cont.list (.item it :: r.getD xs))
+        -- `try: filters.remove(item) except ValueError: pass`: a `ValueError` from an element's
+        -- `__eq__` is taken for "not in the list"
+        let r ← match pyRemove it xs with
+          | .ok r => pure (r.getD xs)
+          | .error e => if e.className = "ValueError" then pure xs else .error e
+        pure (Cont.list (.item it :: r))
       else do
         if ← pyContains it xs then pure (Cont.list xs) else pure (Cont.list (xs ++ [.item it]))
     | .tuple xs =>
@@ -237,27 +242,44 @@ def resetwarnings (s : FState) : Py FState :=
 def lockErr : PyExc := .named "RuntimeError" "cannot release un-acquired lock"
 def notHeldErr : PyExc := .named "RuntimeError" "warnings lock is not held"
 
-/-- `_acquire_lock()`, _warnings.c:370-379 (`warnings_lock`, :259-264). -/
-def cAcquire (d : Nat) : Nat := d + 1
+/-- The C recursive mutex (`_PyRecursiveMutex`, Python/lock.c:402-454): its owning thread, if any,
+and how many times more than once that thread holds it. -/
+structure LockSt where
+  owner : Option Nat
+  level : Nat
+  deriving DecidableEq, Repr
 
-/-- `_release_lock()`, :387-399: `_PyRecursiveMutex_TryUnlock` fails on a lock this thread does
-not hold (`warnings_unlock`, :267-272). -/
-def cRelease (d : Nat) : Py Nat := if d = 0 then .error lockErr else .ok (d - 1)
+/-- `_acquire_lock()` from thread `t`, _warnings.c:370-379 (`warnings_lock`, :259-264, and
+`_PyRecursiveMutex_Lock`, lock.c:402-412): `none` while another thread holds it (the call
+blocks). -/
+def cAcquire (t : Nat) (l : LockSt) : Option LockSt :=
+  match l.owner with
+  | some u => if u = t then some ⟨some t, l.level + 1⟩ else none
+  | none => some ⟨some t, 0⟩
 
-/-- C `_filters_mutated_lock_held()`, :1357-1377: refuses unless the lock is held
-(`warnings_lock_held`, :275-278). -/
-def cMutatedLockHeld (d : Nat) (v : Int) : Py Int := if d = 0 then .error notHeldErr else .ok (v + 1)
+/-- `_release_lock()` from thread `t`, :387-399 (`warnings_unlock`, :267-272, and
+`_PyRecursiveMutex_TryUnlock`, lock.c:440-454): refused unless `t` holds the lock. -/
+def cRelease (t : Nat) (l : LockSt) : Py LockSt :=
+  if l.owner = some t then
+    if l.level > 0 then .ok ⟨l.owner, l.level - 1⟩ else .ok ⟨none, 0⟩
+  else .error lockErr
+
+/-- C `_filters_mutated_lock_held()`, :1357-1377: refuses unless the lock is held by some thread
+(`warnings_lock_held`, :275-278, is `PyMutex_IsLocked`). -/
+def cMutatedLockHeld (l : LockSt) (v : Int) : Py Int :=
+  if l.owner.isNone then .error notHeldErr else .ok (v + 1)
 
 /-- Python `_filters_mutated_lock_held()`, _py_warnings.py:117-118: no check. -/
 def pyMutatedLockHeld (v : Int) : Int := v + 1
 
-/-- `_filters_mutated()`, :313-317, on the C module: `with _wm._lock:` (`_Lock.__enter__` and
-`__exit__`, Lib/warnings.py:81-86, are `_acquire_lock` and `_release_lock`). -/
-def cFiltersMutated (d : Nat) (v : Int) : Py (Nat × Int) := do
-  let d1 := cAcquire d
-  let v' ← cMutatedLockHeld d1 v
-  let d2 ← cRelease d1
-  return (d2, v')
+/-- `_filters_mutated()`, :313-317, on the C module from thread `t`: `with _wm._lock:`
+(`_Lock.__enter__` and `__exit__`, Lib/warnings.py:79-85, are `_acquire_lock` and
+`_release_lock`). `none` while another thread holds the lock. -/
+def cFiltersMutated (t : Nat) (l : LockSt) (v : Int) : Option (Py (LockSt × Int)) :=
+  (cAcquire t l).map fun l1 => do
+    let v' ← cMutatedLockHeld l1 v
+    let l2 ← cRelease t l1
+    return (l2, v')
 
 /-! ## The initial filters list -/
 
@@ -271,7 +293,7 @@ structure DefaultCats where
 /-- `create_filter(category, action, modname)`, _warnings.c:78-97: `(action, None, category,
 modname or None, 0)`, the module name a plain str. -/
 def createFilter (cat : Nat) (action : String) (modname : Option String) : Filter :=
-  { action := some action, msg := none, cat := cat, mod := modname.map Pat.plain, ln := 0 }
+  { action := .str action, msg := none, cat := cat, mod := modname.map Pat.plain, ln := .int 0 }
 
 /-- `init_filters`, :101-132: empty in a debug build, else five filters. -/
 def initFilters (debug : Bool) (K : DefaultCats) : List Item :=

@@ -79,15 +79,16 @@ def runCall (isC : Bool) (j : Json) : Except String Json := do
     return (⟨← jStrAt f 0, (← jIntAt f 2) + 2, ← jNatAt f 1⟩ : Frame)
   let W : WEnv := { frames := frames ++ [⟨"<top>", 3, k + 2⟩], self := ⟨"PYW", 505, k + 1⟩, globals := globals, sysG := k,
                     userWarning := 1,
-                    mkMsg := fun c => if c = 5 then .error (.valueError "bad message") else .ok () }
+                    mkMsg := fun c => if c = 5 then .error (.valueError "bad message") else .ok (),
+                    lines := fun _ => .ok () }
   let E : Env := { isSub := isSub, isSubPy := fun _ b => b = 4, matchFilename := matchFilename,
-                   showMsg := .ok () }
+                   shw := .call (.ok ()) (.ok ()) }
   let m ← pMsgA (← j.getObjVal? "msg")
   let c ← pCatA (← j.getObjVal? "cat")
   let s ← (← j.getObjVal? "sl").getInt?
   let skip ← pSkip (← j.getObjVal? "skip")
-  let r := if isC then cWarn W E [] (some "default") VER [] m c s skip
-    else pyWarn W E [] (some "default") VER [] m c s skip
+  let r := if isC then cWarn W E ⟨false, false, .val (.str "default"), .dict []⟩ [] VER m c s skip
+    else pyWarn W E ⟨false, false, .val (.str "default"), .dict []⟩ [] VER m c s skip
   let sh : Json := match r.out, r.ctx with
     | .ok true, some x => Json.arr #[jStr x.filename, jInt x.lineno, jModArg x.module]
     | _, _ => .null

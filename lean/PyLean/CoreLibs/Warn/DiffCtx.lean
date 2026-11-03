@@ -97,7 +97,7 @@ def runCtx (j : Json) : Except String Json := do
   let sw := pFnShow (← (← j.getObjVal? "show").getStr?)
   let im := pFnImpl (← (← j.getObjVal? "impl").getStr?)
   let st : MState := MState.mk (fun i => if i = 0 then init else []) (fun _ => []) 1 (some 0) sw im
-    (some .fmtOrig) 0 .unset (fun _ => ⟨0, none⟩) stderr []
+    (some .fmtOrig) 0 .unset (fun _ => ⟨0, none⟩) stderr [] (fun _ => false)
   let mut R : CtxRun := ⟨st, #[], #[]⟩
   let mut outs : Array Json := #[]
   for op in ← jArr (← j.getObjVal? "ops") do

@@ -74,9 +74,17 @@ def catName : Nat → String
 def pItem (j : Json) : Except String Item := do
   let msg ← (← jGetI j 1).getStr? <|> pure ""
   let mod ← (← jGetI j 3).getStr? <|> pure ""
-  let action := ((← jGetI j 0).getStr?).toOption
+  let action : AV := match (← jGetI j 0) with
+    | .str a => .str a
+    | .arr _ => .unhashable "list"
+    | _ => .hashable "int"
+  let ln : LnV := match (← jGetI j 4) with
+    | .str _ => .obj "str"
+    | v => match v.getInt? with
+      | .ok i => .int i
+      | .error _ => .obj "str"
   let f : Filter := { action := action, msg := pat true msg, cat := ← jNatAt j 2, mod := pat false mod,
-                      ln := ← jIntAt j 4 }
+                      ln := ln }
   match ← jStrAt j 5 with
   | "list" => return .list5 f
   | "short" => return .other (.valueError "not enough values to unpack (expected 5, got 3)")
@@ -124,9 +132,25 @@ def pLine (j : Json) : Except String LineArg :=
       (.typeError "'str' object cannot be interpreted as an integer"))
   | v => .int <$> v.getInt?
 
+def optStr (j : Json) (k : String) (d : String) : String :=
+  match j.getObjVal? k with
+  | .ok (.str v) => v
+  | _ => d
+
+def optBool (j : Json) (k : String) : Bool :=
+  match j.getObjVal? k with
+  | .ok (.bool b) => b
+  | _ => false
+
+/-- The source unavailable to `linecache` (`_source_unavailable`): empty or `<...>`. -/
+def srcUnavail (fn : String) : Bool := fn.isEmpty || (fn.startsWith "<" && fn.endsWith ">")
+
 def runCase (twin : String) (j : Json) : Except String Json := do
   let fs ← (← jArr (← j.getObjVal? "filters")).mapM pItem
-  let dflt := ((← j.getObjVal? "dflt").getStr?).toOption
+  let dfltJ ← j.getObjVal? "dflt"
+  let dflt : DfltV := if optBool j "dfltdel" then .deleted "ignore" else match dfltJ with
+    | .str a => .val (.str a)
+    | _ => .val (.hashable "int")
   let modJ ← j.getObjVal? "module"
   let module ← match ← jStrAt modJ 0 with
     | "omit" => pure ModArg.omitted
@@ -134,20 +158,40 @@ def runCase (twin : String) (j : Json) : Except String Json := do
     | "obj" => pure ModArg.obj
     | _ => pure (ModArg.some (← jStrAt modJ 1))
   let cat ← (← j.getObjVal? "cat").getNat?
-  let c : Call := { text := ← (← j.getObjVal? "text").getStr?, cat := cat,
-                    filename := ← (← j.getObjVal? "filename").getStr?,
+  let filename ← (← j.getObjVal? "filename").getStr?
+  let (globs, pyLines) : GlobA × Py Unit := match optStr j "globs" "none" with
+    | "int" => (.obj "int",
+        if srcUnavail filename then .ok () else .error (.typeError "module_globals must be a dict, not int"))
+    | "empty" => (.dict (.ok ()), .ok ())
+    | "bad" => (.dict (.error (.valueError "no source")),
+        if srcUnavail filename then .ok () else .error (.valueError "no source"))
+    | _ => (.none, .ok ())
+  let c : Call := { text := ← (← j.getObjVal? "text").getStr?, cat := cat, filename := filename,
                     lineno := ← pLine (← j.getObjVal? "lineno"), module := module,
-                    mkMsg := if cat = 5 then .error (.valueError "bad message") else .ok () }
+                    mkMsg := if cat = 5 then .error (.valueError "bad message") else .ok (),
+                    globs := globs, pyLines := pyLines }
   let reg ← match ← j.getObjVal? "reg" with
     | .null => pure RegArg.none
     | .str "obj" => pure RegArg.obj
+    | .obj kv => match kv.toList with
+      | [(_, v)] => RegArg.mapping <$> pReg v
+      | _ => throw "bad reg"
     | v => RegArg.dict <$> pReg v
-  let once ← pReg (← j.getObjVal? "once")
-  let showRaise ← (← j.getObjVal? "showraise").getBool?
+  let onceR ← pReg (← j.getObjVal? "once")
+  let once : OnceV := match optStr j "oncek" "dict" with
+    | "int" => .notDict "int" onceR
+    | "deleted" => .deleted onceR
+    | _ => .dict onceR
+  let showA : ShowA := match optStr j "show" (if optBool j "showraise" then "raise" else "ok") with
+    | "raise" => .call (.ok ()) (.error (.valueError "show failed"))
+    | "deleted" => .deleted
+    | "noncallable" => .noncallable "int"
+    | "nowm" => .noWM
+    | _ => .call (.ok ()) (.ok ())
   let E : Env := { isSub := isSub, isSubPy := fun _ b => b = 4, matchFilename := matchFilename,
-                   showMsg := if showRaise then .error (.valueError "show failed") else .ok () }
-  let r := if twin = "c" then cWarnExplicit E fs dflt VER c reg once
-    else pyWarnExplicit E fs dflt VER c reg once
+                   shw := showA }
+  let K : WCfg := ⟨optBool j "ctx", optBool j "tuple", dflt, once⟩
+  let r := if twin = "c" then cWarnExplicit E K fs VER c reg else pyWarnExplicit E K fs VER c reg
   let out := match r.out with
     | .error e => if e = warnRaised c then Json.arr #["exc", jStr (catName c.cat), jStr c.text]
       else encR jBool (.error e)

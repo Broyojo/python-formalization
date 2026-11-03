@@ -14,12 +14,13 @@ Scope:
 * The module is the `warnings` module (`catch_warnings(module=...)` with another module is the
   testing hook the docstring describes; only its `repr` is kept). `_use_context` is a parameter.
 * Lists are references into a heap; the filters lists hold `Elem`s, a record log holds message ids.
-  `warnings.filters` is a list or deleted (a tuple is covered in `Filters.lean`).
+  `warnings.filters` is a list or deleted; a reference can be marked a tuple, which only C's list
+  check (`cFilterList`) reads (`Filters.lean` covers the tuple for the filter functions).
 * A module attribute that holds a function: the original `showwarning` (`_showwarning_orig`), the
   original `_showwarnmsg_impl`, the original `formatwarning`, a record log's `append`, another
   callable (a user hook, called with the message), or a non-callable object; `showwarning` and
   `formatwarning` can also be deleted.
-* `_formatwarnmsg_impl`'s text is a callback (`Format.lean` has it); writing to the file can
+* `_formatwarnmsg_impl`'s text is not modelled (only that something is written); writing to the file can
   succeed, raise `OSError` (swallowed), or raise something else.
 * The lock is held around each body (`with _wm._lock:`); `_filters_mutated_lock_held` therefore
   succeeds and bumps the version.
@@ -81,6 +82,8 @@ structure MState where
   stderr : Option (Py Unit)
   /-- what the shown warnings did, oldest first -/
   out : List Shown
+  /-- which references are tuples rather than lists (only C's list check reads it) -/
+  tuples : Ref → Bool
 
 def upd {α : Type} (f : Nat → α) (k : Nat) (v : α) : Nat → α := fun i => if i = k then v else f i
 
@@ -278,15 +281,19 @@ def cwExit (useCtx : Bool) (cw : CW) (st : MState) : MState × Py Unit :=
 `warnings.filters` (`get_warnings_filters`, :343-362), which when deleted falls back to the list
 C cached the last time it read one (`cached`). The result's name is the one an item error
 message uses. -/
-def cFilterList (st : MState) (cached : Ref) : List Elem × String :=
+def cFilterList (st : MState) (cached : Ref) : Py (List Elem × String) :=
   match st.ctxv with
   | .unset =>
     match st.filters with
-    | some r => (st.lists r, "filters")
-    | none => (st.lists cached, "filters")
+    | some r =>
+      if st.tuples r then .error (.valueError "_warnings.filters must be a list")
+      else .ok (st.lists r, "filters")
+    | none => .ok (st.lists cached, "filters")
   | v =>
     match ctxFilters st v with
-    | some r => (st.lists r, "_warnings_context _filters")
-    | none => ([], "_warnings_context _filters")
+    | some r =>
+      if st.tuples r then .error (.valueError "_filters of warnings._warnings_context must be a list")
+      else .ok (st.lists r, "_warnings_context _filters")
+    | none => .ok ([], "_warnings_context _filters")
 
 end PyLean.CoreLibs.Warn
