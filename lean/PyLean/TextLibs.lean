@@ -35,6 +35,7 @@ import PyLean.TextLibs.TomlLoad
 import PyLean.TextLibs.TomlArr
 import PyLean.TextLibs.TomlDoc
 import PyLean.TextLibs.TomlMulti
+import PyLean.TextLibs.TomlPending
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1818,6 +1819,12 @@ def entries : List Entry := [
     source := "docs ('parsing TOML 1.1.0'); TOML 1.1 spec, multi-line basic strings ('A newline immediately following the opening delimiter will be trimmed', line ending backslash, 1 or 2 quotes next to the delimiters)", status := .proven
     prop := ``Toml.MultilineBasicSpec, thm := some ``Toml.multilineBasicSpec_proven
     notes := "Raw quotes inside the text are only allowed as the trailing one or two; the literal branch of parse_multiline_str (triple apostrophes) is not covered by this entry." }
+,
+  { id := "textlibs-toml-dotted-then-header", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["Flags.add_pending", "Flags.finalize_pending", "key_value_rule"]
+    statement := "For every dotted key K (bare, literal or basic parts, at most MAX_KEY_PARTS - 1 of them) and bare key x, loads('K.x=true\\n[K]') raises TOMLDecodeError 'Cannot declare K twice' at the position after the header's key: the tables a dotted key defines are recorded as pending and become explicit at the next header."
+    source := "TOML 1.1 spec, Table ('Since tables cannot be defined more than once, redefining such tables using a [table] header is not allowed'); comment at _parser.py:427-429", status := .proven
+    prop := ``Toml.DottedThenHeader, thm := some ``Toml.dottedThenHeader_proven }
 ]
 
 end PyLean.TextLibs
