@@ -141,14 +141,17 @@ their first element, the keys, so the values are never compared. -/
 def sortItems (H : WHeap) (items : List (Nat × Nat)) : List (Nat × Nat) :=
   items.mergeSort fun a b => !strLt ((keyStr H b.1).getD []) ((keyStr H a.1).getD [])
 
-/-- `_dict_items(d, sort_keys, skipkeys)`, :162-178, with `r` frames left. -/
-def dictItemsR (r : Nat) (H : WHeap) (cfg : WCfg) (items : List (Nat × Nat)) :
-    Py (List (Nat × Nat)) := call r fun _ =>
+/-- `_dict_items(d, sort_keys, skipkeys)`, :162-178. -/
+def dictItems (H : WHeap) (cfg : WCfg) (items : List (Nat × Nat)) : Py (List (Nat × Nat)) :=
   if cfg.sortKeys then
     if cfg.skipkeys then .ok (sortItems H (items.filter fun (k, _) => (keyStr H k).isSome))
     else if items.any (fun (k, _) => (keyStr H k).isNone) then .error (.typeError "keys must be strings")
     else .ok (sortItems H items)
   else .ok items
+
+/-- `_dict_items(...)` with `r` frames left. -/
+def dictItemsR (r : Nat) (H : WHeap) (cfg : WCfg) (items : List (Nat × Nat)) :
+    Py (List (Nat × Nat)) := call r fun _ => dictItems H cfg items
 
 /-- The loop `for k, v in items: if not isinstance(k, str): if skipkeys: continue; raise
 TypeError("keys must be strings")` of :737-743 and :855-859, giving the kept items. -/
@@ -158,6 +161,10 @@ def keptItems (H : WHeap) (skipkeys : Bool) : List (Nat × Nat) → Py (List (Na
     if (keyStr H k).isNone then
       if skipkeys then keptItems H skipkeys rest else .error (.typeError "keys must be strings")
     else do return (k, v) :: (← keptItems H skipkeys rest)
+
+/-- The items `_flatten` and `_write_object` keep: `_dict_items`, then the key check. -/
+def writtenItems (H : WHeap) (cfg : WCfg) (items : List (Nat × Nat)) : Py (List (Nat × Nat)) := do
+  keptItems H cfg.skipkeys (← dictItems H cfg items)
 
 /-! ## `_flatten`, :713-750 -/
 
