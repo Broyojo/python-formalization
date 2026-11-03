@@ -1,0 +1,93 @@
+id: pyio-buffered-reentrant-init-free
+title: "io.BufferedReader: calling __init__ from inside a raw stream callback frees the buffer and lock the running method holds (abort: PyMutex_Unlock on an unlocked mutex)"
+priority: P1
+kind: memory-safety
+module: pyio
+files: [Modules/_io/bufferedio.c]
+functions: ["_buffered_init", "_io_BufferedReader___init___impl", "_bufferedreader_raw_read", "_io__Buffered_read_impl"]
+summary: |
+  `_buffered_init` (Modules/_io/bufferedio.c:837-) frees and reallocates `self->buffer` (:846-848)
+  and `self->lock` (:853-858) whenever they already exist, and resets `self->owner = 0` (:860). It
+  does not check whether a method of the same object is running and holds that lock or is about to
+  write into that buffer. `BufferedReader.__init__` can be called again on a live object from Python
+  (it is an ordinary method), including from inside a raw-stream callback such as `readinto`, which
+  `_bufferedreader_raw_read` calls with a memoryview over `self->buffer` while `ENTER_BUFFERED` holds
+  `self->lock`.
+
+  When the callback returns, the outer method continues with the old buffer pointer (already freed by
+  :847) and finally runs `LEAVE_BUFFERED`, which unlocks the freshly allocated lock that no one holds:
+  the interpreter aborts with `Fatal Python error: PyMutex_Unlock: unlocking mutex that is not
+  locked`. Before the abort, bytes are copied out of (and the memoryview written into) freed memory.
+
+  This is a distinct defect from gh-154997 (re-entrant `detach()` leaves `self->raw` NULL): here
+  `raw` is valid and the problem is the buffer and lock being freed under the running method.
+likelihood: |
+  Low: it needs a raw stream that re-initializes the buffered object wrapping it, from inside one of
+  its own callbacks. It is reachable from pure Python with no ctypes, threads or gc tricks, and the
+  result is an abort with a use-after-free before it.
+maybe_intended: |
+  No. Re-calling `__init__` on a live object is allowed by Python, and `_buffered_init` deliberately
+  supports it (it frees the old buffer and lock); the method lock exists precisely to stop re-entrant
+  calls from touching the buffer (`_enter_buffered_busy` raises "reentrant call inside" for the other
+  methods). `__init__` bypasses that lock.
+reproducer: |
+  import subprocess, sys
+  child = r'''
+  import io
+  class Raw(io.RawIOBase):
+      def readable(self): return True
+      def readinto(self, b):
+          if not getattr(self, "done", False):
+              self.done = True
+              buf.__init__(Plain(), 8)   # re-initialize the BufferedReader that is calling us
+          b[:1] = b"x"
+          return 1
+  class Plain(io.RawIOBase):
+      def readable(self): return True
+      def readinto(self, b):
+          b[:1] = b"y"; return 1
+  buf = io.BufferedReader(Raw(), 8)
+  print("read ->", buf.read(1), flush=True)
+  print("survived", flush=True)
+  '''
+  p = subprocess.run([sys.executable, "-c", child], capture_output=True, text=True)
+  print("child returncode:", p.returncode)
+  print("child stderr:", p.stderr.strip().splitlines()[0] if p.stderr.strip() else "")
+  if p.returncode < 0 and "unlocking mutex that is not locked" in p.stderr and "survived" not in p.stdout:
+      print("REPRODUCED pyio-buffered-reentrant-init-free")
+expected: |
+  Either the inner `__init__` is refused while a method holds the lock (as other re-entrant calls are,
+  with RuntimeError "reentrant call inside <_io.BufferedReader>"), or `read(1)` completes on a
+  consistent object. No abort, no access to freed memory.
+observed: |
+  python3 3.15.2 (release build): child exits with SIGABRT (-6), stderr
+  "Fatal Python error: PyMutex_Unlock: unlocking mutex that is not locked". REPRODUCED.
+  main (3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
+  Found by the buffered I/O re-review (2026-11-03) and re-run independently.
+promised_by: |
+  Invariant: no crash or memory corruption from pure-Python code. Modules/_io/bufferedio.c's own
+  re-entrancy guard (`_enter_buffered_busy`, "reentrant call inside %R") states that a buffered object
+  must not be modified by a re-entrant call while a method holds its lock.
+cause: |
+  Modules/_io/bufferedio.c:846-860: `PyMem_Free(self->buffer)` and `PyThread_free_lock(self->lock)`
+  on a live object, with no check of `self->owner` / whether the lock is held. The outer method
+  (`_io__Buffered_read_impl` → `_bufferedreader_read_generic` → `_bufferedreader_raw_read`) still
+  uses the old buffer and then releases a lock it did not acquire (`LEAVE_BUFFERED`).
+possible_fix: |
+  In `_io_BufferedReader___init___impl` (and the Writer/Random/RWPair equivalents), refuse
+  re-initialization while the object's lock is held: check `self->lock != NULL && self->owner != 0`
+  (or try-acquire the lock without blocking) and raise RuntimeError("reentrant call inside %R"), as
+  `_enter_buffered_busy` does. Alternatively take the lock in `_buffered_init` before freeing.
+duplicates:
+  issues:
+    - {number: 154997, state: open, relation: "related: re-entrant detach() leaves raw NULL; different defect (this one frees buffer and lock), not a duplicate"}
+  queries: ["BufferedReader init reentrant", "buffered __init__ called twice use after free",
+            "PyMutex_Unlock unlocking mutex not locked io", "BufferedReader __init__ reentrant",
+            "BufferedReader init twice", "buffered __init__ use after free",
+            "PyMutex_Unlock unlocking mutex that is not locked (6 results: free-threading/interpreter issues, none in io)",
+            "bufferedio reinit crash", "BufferedReader __init__ called again", "__init__ twice io",
+            "gh issue view 154997 (detach only)", "bugforge README: only shlex 'buffered' entries, unrelated"]
+lean:
+  property: null
+  theorem: null
+  note: "Not yet a Lean refutation: the BufC model has no re-entrant __init__ operation (review finding); add it and refute BufferedCNoCrash through it."
