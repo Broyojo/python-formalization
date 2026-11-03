@@ -63,7 +63,7 @@ theorem dictSet_ok (l : List (K × Inst K)) (key : K) (i : Inst K) : ∃ r, dict
   | some e => exact ⟨l.map fun p => if p = e then (e.1, i) else p, by simp [dictSet, hr]⟩
 
 /-- Subclass states: Python's with its strong cache `ps`, C's without; one weak cache `W`. -/
-def subP (ps W : List (K × Inst K)) (n : Nat) : ZCls K := ⟨false, ps, some W, [], n, []⟩
+def subP (ps W : List (K × Inst K)) (n : Nat) : ZCls K := ⟨false, ps, some W, [], n, [], []⟩
 
 theorem sub_get (ps W : List (K × Inst K)) (n : Nat) (k : K) :
     (stepErrC o (subP [] W n) (.get k)).2 = (stepErrPy o (subP ps W n) (.get k)).2 ∧
@@ -80,7 +80,8 @@ theorem sub_get (ps W : List (K × Inst K)) (n : Nat) (k : K) :
       obtain ⟨s2, h2⟩ := dictSet_ok o hE hH s1 k (v0.getD inst)
       have ep : stepErrPy o (subP ps W n) (.get k) =
           (subP (if s2.length > 8 then s2.tail else s2) W n, .ok (some inst)) := by
-        simp [stepErrPy, newErrPy, getWeakPy, subP, hg, setWeakPy, h1, h2, Except.map]
+        simp [stepErrPy, newErrPy, getWeakPy, subP, hg, setWeakPy, h1, h2, Except.map] <;>
+          split <;> simp [setWeakPy, getWeakPy]
       have ec : stepErrC o (subP [] W n) (.get k) = (subP [] W n, .ok (some inst)) := by
         simp [stepErrC, newErrC, zoneFromStrongC, getWeakC, subP, hg, updateStrongC, Except.map]
       rw [ep, ec]; exact ⟨rfl, W, n, _, rfl, rfl⟩
@@ -101,7 +102,8 @@ theorem sub_get (ps W : List (K × Inst K)) (n : Nat) (k : K) :
           obtain ⟨s2, h2⟩ := dictSet_ok o hE hH s1 k (v0.getD inst)
           have ep : stepErrPy o (subP ps W n) (.get k) =
               (subP (if s2.length > 8 then s2.tail else s2) W' (n + 1), .ok (some inst)) := by
-            simp [stepErrPy, newErrPy, getWeakPy, subP, hg, hl, hs, setWeakPy, h1, h2, Except.map]
+            simp [stepErrPy, newErrPy, getWeakPy, subP, hg, hl, hs, setWeakPy, h1, h2, Except.map] <;>
+              split <;> simp [setWeakPy, getWeakPy]
           have ec : stepErrC o (subP [] W n) (.get k) = (subP [] W' (n + 1), .ok (some inst)) := by
             simp [stepErrC, newErrC, zoneFromStrongC, getWeakC, subP, hg, hl, hs, updateStrongC,
               Except.map]
@@ -109,8 +111,8 @@ theorem sub_get (ps W : List (K × Inst K)) (n : Nat) (k : K) :
 
 theorem sub_clearKeys (err : Option PyExc) : ∀ (ks : List K) (ps W : List (K × Inst K)) (n : Nat)
     (cw : Option (List (K × Inst K))),
-    (clearKeysC o W err ⟨false, [], cw, [], n, []⟩ ks).2 = (clearKeysPy o err (subP ps W n) ks).2 ∧
-    ∃ W' ps', (clearKeysC o W err ⟨false, [], cw, [], n, []⟩ ks).1 = subP [] W' n ∧
+    (clearKeysC o W err ⟨false, [], cw, [], n, [], []⟩ ks).2 = (clearKeysPy o err (subP ps W n) ks).2 ∧
+    ∃ W' ps', (clearKeysC o W err ⟨false, [], cw, [], n, [], []⟩ ks).1 = subP [] W' n ∧
       (clearKeysPy o err (subP ps W n) ks).1 = subP ps' W' n := by
   intro ks
   induction ks with
@@ -124,8 +126,8 @@ theorem sub_clearKeys (err : Option PyExc) : ∀ (ks : List K) (ps W : List (K �
       | nil => exact ⟨[], rfl⟩
       | cons a W => exact ⟨W1, by simp only [wvdPop, hw]⟩
     obtain ⟨W1, hwp⟩ := hwp
-    have hc : clearKeysC o W err ⟨false, [], cw, [], n, []⟩ (k :: ks) =
-        clearKeysC o W1 err ⟨false, [], cw, [], n, []⟩ ks := by
+    have hc : clearKeysC o W err ⟨false, [], cw, [], n, [], []⟩ (k :: ks) =
+        clearKeysC o W1 err ⟨false, [], cw, [], n, [], []⟩ ks := by
       simp [clearKeysC, ejectC, hwp]
     have hpy : clearKeysPy o err (subP ps W n) (k :: ks) = clearKeysPy o err (subP ps1 W1 n) ks := by
       simp [clearKeysPy, getWeakPy, subP, hwp, setWeakPy, hp]
@@ -152,7 +154,7 @@ theorem sub_run : ∀ (ops : List (ZOp K)) (ps W : List (K × Inst K)) (n : Nat)
           getWeakC, setWeakPy, subP]
       | clearKeys ks err =>
         have hc : stepErrC o (subP [] W n) (.clearKeys ks err) =
-            clearKeysC o W err ⟨false, [], some W, [], n, []⟩ ks := by
+            clearKeysC o W err ⟨false, [], some W, [], n, [], []⟩ ks := by
           simp [stepErrC, clearErrC, getWeakC, subP]
         have hp : stepErrPy o (subP ps W n) (.clearKeys ks err) = clearKeysPy o err (subP ps W n) ks := rfl
         rw [hc, hp]
@@ -161,6 +163,7 @@ theorem sub_run : ∀ (ops : List (ZOp K)) (ps W : List (K × Inst K)) (n : Nat)
       | drop _ => simp [ZOp.isPlain] at hall
       | delWeak => simp [ZOp.isPlain] at hall
       | setWeak _ => simp [ZOp.isPlain] at hall
+      | release _ => simp [ZOp.isPlain] at hall
     obtain ⟨e, W', n', ps', h1, h2⟩ := step
     obtain ⟨r1, r2⟩ := ih ps' W' n' hall.2
     simp only [runErrC, runErrPy]
@@ -231,82 +234,107 @@ theorem wvdPop_hash_err (o : KeyOps K) (k : K) (e : PyExc) (he : o.hash k = .err
   | nil => exact absurd rfl hW
   | cons a W => simp [wvdPop, dictPop, dictFind, he]
 
+/-- A zone the caller still references survives every callback. -/
+theorem mem_freeCb (rel : List (Inst K)) (s W : List (K × Inst K)) (f : Option (Inst K))
+    (w : K × Inst K) (hw : w ∈ W) (hr : w.2 ∉ rel) : w ∈ freeCb rel s W f := by
+  cases f with
+  | none => exact hw
+  | some i =>
+    simp only [freeCb]
+    by_cases h : (rel.contains i && !(s.any fun x => decide (x.2 = i))) = true
+    · rw [if_pos h]
+      have hi : rel.contains i = true := ((Bool.and_eq_true _ _).mp h).1
+      have hi' : i ∈ rel := by simpa using hi
+      refine List.mem_filter.mpr ⟨hw, ?_⟩
+      have : w.2 ≠ i := fun e => hr (e ▸ hi')
+      simpa using this
+    · rw [if_neg h]; exact hw
+
 end stop
 
+/-- A base-class state with released zones `rel`. -/
+def mkR {K : Type} (s W : List (K × Inst K)) (n : Nat) (rel : List (Inst K)) : ZCls K :=
+  ⟨true, s, some W, [], n, [], rel⟩
+
+/-- Each failure inside the `only_keys` loop stops it with that exception and the state at
+that point, whatever keys follow: C's failed eject (`break` at :542-544); C's failed weak
+`pop` (`break` at :552-553), after the eject freed `k`'s node, whose zone, if the caller
+released it, was collected and its weak entry removed (`freeCb`) before the `pop`; Python's
+failed weak `pop` and failed strong `pop` (the exception leaves the `for` loop,
+_zoneinfo.py:97-99). -/
+def ClearKeysBreaks : Prop :=
+  ∀ (K : Type) [DecidableEq K] (o : KeyOps K) (k : K) (rest : List K) (err : Option PyExc)
+    (x : PyExc) (ps cs W : List (K × Inst K)) (n : Nat) (rel : List (Inst K)),
+    (findStrongC o k cs = .error x →
+      clearErrC o (mkR cs W n rel) (some (k :: rest, err)) = (mkR cs W n rel, .error x)) ∧
+    (∀ s f, ejectC o (mkR cs W n rel) k = .ok (s, f) → wvdPop o (freeCb rel s W f) k = .error x →
+      clearErrC o (mkR cs W n rel) (some (k :: rest, err)) =
+        (mkR s (freeCb rel s W f) n rel, .error x)) ∧
+    (wvdPop o W k = .error x →
+      clearErrPy o (mkR ps W n rel) (some (k :: rest, err)) = (mkR ps W n rel, .error x)) ∧
+    (∀ W', wvdPop o W k = .ok W' → dictPop o ps k = .error x →
+      clearErrPy o (mkR ps W n rel) (some (k :: rest, err)) = (mkR ps W' n rel, .error x))
+
+theorem clearKeysBreaks_proven : ClearKeysBreaks := by
+  intro K _ o k rest err x ps cs W n rel
+  refine ⟨fun h => ?_, fun s f hs hp => ?_, fun hp => ?_, fun W' hp hd => ?_⟩
+  · have hej : ejectC o (mkR cs W n rel) k = .error x := by simp [ejectC, mkR, h]
+    simp only [clearErrC, getWeakC, mkR, ite_true, Option.getD_some, clearKeysC]
+    simp only [mkR] at hej
+    simp [hej]
+  · simp only [clearErrC, getWeakC, mkR, ite_true, Option.getD_some, clearKeysC]
+    simp only [mkR] at hs
+    simp [hs, hp]
+  · simp [clearErrPy, clearKeysPy, mkR, getWeakPy, hp]
+  · simp [clearErrPy, clearKeysPy, mkR, getWeakPy, hp, setWeakPy, hd]
+
 /-- `clear_cache(only_keys=[k, *rest])` on the base class, while the weak cache holds a zone
-for a key not equal to `k`, with a first key whose `__hash__` raises (and whose `__eq__` does
-not): both twins raise that exception and process no later key, whatever `rest` and the
-iterator do. (That zone survives C's eject of `k`'s node, so the weak cache is not empty when
-C's `dict.pop` runs; on an empty one `pop` never hashes the key and C carries on:
-`cacheErrTwins_refuted_empty`.) Python changes nothing (its weak-cache `pop` hashes
-first); C has already ejected the strong node equal to `k`, if any (`eject_from_strong_cache`
-compares without hashing), then the weak `pop` fails and the loop breaks (:552-553), so
-every other entry, the later keys' included, stays cached. -/
+the caller still references, with a first key whose `__hash__` raises (and whose `__eq__`
+does not): both twins raise that exception and process no later key, whatever `rest` and the
+iterator do. Python changes nothing (its weak-cache `pop` hashes first). C has at most
+ejected the strong node equal to `k` (`eject_from_strong_cache` compares without hashing);
+if the caller had released that node's zone, the zone is collected and its weak entry
+removed; the referenced zone keeps the weak cache non-empty, so `dict.pop` hashes, fails,
+and the loop breaks (:552-553). Without such a zone the `pop` can meet an empty dict and C
+carries on (`cacheTwinsReleased_refuted`, `cacheErrTwins_refuted_empty`). -/
 def ClearKeysStop : Prop :=
   ∀ (K : Type) [DecidableEq K] (o : KeyOps K) (k : K) (e : PyExc), o.hash k = .error e →
     (∀ b, ∃ r, o.eq k b = .ok r) →
-    ∀ (ps cs W : List (K × Inst K)) (n : Nat) (rest : List K) (err : Option PyExc),
-      (∃ w ∈ W, richEqBool o k w.1 = .ok false) →
-      clearErrPy o (mkZ ps W n) (some (k :: rest, err)) = (mkZ ps W n, .error e) ∧
-      (clearErrC o (mkZ cs W n) (some (k :: rest, err))).2 = .error e ∧
-      ((clearErrC o (mkZ cs W n) (some (k :: rest, err))).1 = mkZ cs W n ∨
+    ∀ (ps cs W : List (K × Inst K)) (n : Nat) (rel : List (Inst K)) (rest : List K)
+      (err : Option PyExc), (∃ w ∈ W, w.2 ∉ rel) →
+      clearErrPy o (mkR ps W n rel) (some (k :: rest, err)) = (mkR ps W n rel, .error e) ∧
+      (clearErrC o (mkR cs W n rel) (some (k :: rest, err))).2 = .error e ∧
+      ((clearErrC o (mkR cs W n rel) (some (k :: rest, err))).1 = mkR cs W n rel ∨
         ∃ nd ∈ cs, richEqBool o k nd.1 = .ok true ∧
-          (clearErrC o (mkZ cs W n) (some (k :: rest, err))).1 = mkZ (cs.erase nd) W n)
+          (clearErrC o (mkR cs W n rel) (some (k :: rest, err))).1 =
+            mkR (cs.erase nd) (freeCb rel (cs.erase nd) W (some nd.2)) n rel)
 
 theorem clearKeysStop_proven : ClearKeysStop := by
-  intro K _ o k e he hk ps cs W n rest err hW
-  have hW' : W ≠ [] := by
-    obtain ⟨w, hw, -⟩ := hW
-    intro h; rw [h] at hw; simp at hw
-  have hpop := wvdPop_hash_err o k e he W hW'
+  intro K _ o k e he hk ps cs W n rel rest err hW
+  obtain ⟨w, hw, hwr⟩ := hW
+  have hne : ∀ s f, freeCb rel s W f ≠ [] := fun s f h => by
+    have := mem_freeCb rel s W f w hw hwr; rw [h] at this; simp at this
+  have hW' : W ≠ [] := by intro h; rw [h] at hw; simp at hw
   refine ⟨?_, ?_⟩
-  · simp [clearErrPy, clearKeysPy, mkZ, getWeakPy, hpop]
+  · simp [clearErrPy, clearKeysPy, mkR, getWeakPy, wvdPop_hash_err o k e he W hW']
   · obtain ⟨r, hr, hr'⟩ := findStrongC_ok o k hk cs
-    have hc : clearErrC o (mkZ cs W n) (some (k :: rest, err)) =
-        clearKeysC o W err (mkZ cs W n) (k :: rest) := by
-      simp [clearErrC, getWeakC, mkZ]
+    have hc : clearErrC o (mkR cs W n rel) (some (k :: rest, err)) =
+        clearKeysC o W err (mkR cs W n rel) (k :: rest) := by
+      simp [clearErrC, getWeakC, mkR]
     rw [hc]
     rcases hr' with h | ⟨nd, hnd, h1, h2⟩
     · subst h
-      have hej : ejectC o (mkZ cs W n) k = .ok cs := by simp [ejectC, mkZ, hr]
-      simp only [clearKeysC, hej, hpop]
-      exact ⟨trivial, .inl rfl⟩
+      have hej : ejectC o (mkR cs W n rel) k = .ok (cs, none) := by simp [ejectC, mkR, hr]
+      have hp : wvdPop o W k = .error e := wvdPop_hash_err o k e he W hW'
+      simp only [clearKeysC, hej]
+      simp only [mkR, freeCb, hp]
+      refine ⟨?_, .inl ?_⟩ <;> simp
     · subst h2
-      have hej : ejectC o (mkZ cs W n) k = .ok (cs.erase nd) := by simp [ejectC, mkZ, hr]
-      simp only [clearKeysC, hej, hpop]
-      exact ⟨trivial, .inr ⟨nd, hnd, h1, rfl⟩⟩
-
-end PyLean.Datetime.Zone
-
-namespace PyLean.Datetime.Zone
-
-/-- Each failure inside the `only_keys` loop stops it with that exception and the state at
-that point, whatever keys follow: C's failed eject (`break` at :542-544) and failed weak
-`pop` (`break` at :552-553), Python's failed weak `pop` and failed strong `pop` (the
-exception leaves the `for` loop, _zoneinfo.py:97-99). -/
-def ClearKeysBreaks : Prop :=
-  ∀ (K : Type) [DecidableEq K] (o : KeyOps K) (k : K) (rest : List K) (err : Option PyExc)
-    (x : PyExc) (ps cs W : List (K × Inst K)) (n : Nat),
-    (findStrongC o k cs = .error x →
-      clearErrC o (mkZ cs W n) (some (k :: rest, err)) = (mkZ cs W n, .error x)) ∧
-    (∀ s, ejectC o (mkZ cs W n) k = .ok s → wvdPop o W k = .error x →
-      clearErrC o (mkZ cs W n) (some (k :: rest, err)) = (mkZ s W n, .error x)) ∧
-    (wvdPop o W k = .error x →
-      clearErrPy o (mkZ ps W n) (some (k :: rest, err)) = (mkZ ps W n, .error x)) ∧
-    (∀ W', wvdPop o W k = .ok W' → dictPop o ps k = .error x →
-      clearErrPy o (mkZ ps W n) (some (k :: rest, err)) = (mkZ ps W' n, .error x))
-
-theorem clearKeysBreaks_proven : ClearKeysBreaks := by
-  intro K _ o k rest err x ps cs W n
-  refine ⟨fun h => ?_, fun s hs hp => ?_, fun hp => ?_, fun W' hp hd => ?_⟩
-  · have hej : ejectC o (mkZ cs W n) k = .error x := by simp [ejectC, mkZ, h]
-    simp only [clearErrC, getWeakC, mkZ, ite_true, Option.getD_some, clearKeysC]
-    simp only [mkZ] at hej
-    simp [hej]
-  · simp only [clearErrC, getWeakC, mkZ, ite_true, Option.getD_some, clearKeysC]
-    simp only [mkZ] at hs
-    simp [hs, hp]
-  · simp [clearErrPy, clearKeysPy, mkZ, getWeakPy, hp]
-  · simp [clearErrPy, clearKeysPy, mkZ, getWeakPy, hp, setWeakPy, hd]
+      have hej : ejectC o (mkR cs W n rel) k = .ok (cs.erase nd, some nd.2) := by
+        simp [ejectC, mkR, hr]
+      have hp := wvdPop_hash_err o k e he _ (hne (cs.erase nd) (some nd.2))
+      simp only [clearKeysC, hej]
+      simp only [mkR, hp]
+      refine ⟨?_, .inr ⟨nd, hnd, h1, ?_⟩⟩ <;> simp
 
 end PyLean.Datetime.Zone

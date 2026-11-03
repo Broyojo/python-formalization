@@ -25,6 +25,12 @@ summary: |
   And on empty caches, `clear_cache(only_keys=[that key])` succeeds in C (the weak cache's
   `dict.pop` returns at once on an empty dict without hashing, Objects/dictobject.c:3295-3300)
   and raises `TypeError` in Python (`OrderedDict.pop` always hashes).
+  The same happens with a cached zone once nothing but the strong cache holds it:
+  `z = ZoneInfo('k'); del z; ZoneInfo.clear_cache(only_keys=[NoHash('k'), 'UTC'])`. C's eject
+  compares without hashing, finds `'k'`'s node and frees it (`strong_cache_node_free`); the
+  zone's last reference goes, its `KeyedRef` callback removes its weak entry, the weak cache's
+  `dict.pop` then sees an empty dict and does not hash, and C goes on to clear the later keys
+  and returns `None`. Python's weak-cache `pop` hashes first and raises `TypeError`.
 likelihood: |
   Very low: keys are documented as strings, and it needs a str subclass with a raising
   `__eq__`. No crash; the C behaviour is arguably reasonable on its own.
@@ -94,17 +100,28 @@ reproducer: |
           out3.append('cleared')
       except TypeError:
           out3.append('TypeError')
-  print('C', out[0], out2[0], out3[0], 'Py', out[1], out2[1], out3[1])
+  with open(os.path.join(T, 'UTC'), 'wb') as f:
+      f.write(blob + blob + b'\nUTC0\n')
+  out4 = []
+  for M in (Cz, Pz):
+      M.ZoneInfo.clear_cache()
+      z = M.ZoneInfo('a'); del z
+      try:
+          out4.append(M.ZoneInfo.clear_cache(only_keys=[NoHash('a'), 'UTC']))
+      except TypeError:
+          out4.append('TypeError')
+  print('C', out[0], out2[0], out3[0], out4[0], 'Py', out[1], out2[1], out3[1], out4[1])
   if (out[0] == [('RuntimeError', 'eq')] * 2 and out[1] == [('ok', None), ('ok', 'b')]
           and out2[0] == [True, 'TypeError', False] and out2[1] == ['TypeError', 'TypeError', True]
-          and out3 == ['cleared', 'TypeError']):
+          and out3 == ['cleared', 'TypeError'] and out4 == [None, 'TypeError']):
       print('REPRODUCED datetime-zoneinfo-cache-eq-raises')
 expected: |
   The twins agree: both return the zone and clear the key, or both raise.
 observed: |
   python3 3.15.2: C [RuntimeError, RuntimeError], Py [ok None, ok 'b']; unhashable key: C
   [cached zone, TypeError, node ejected], Py [TypeError, TypeError, still cached]; empty
-  caches: C cleared, Py TypeError. REPRODUCED.
+  caches: C cleared, Py TypeError; zone held only by the strong cache: C None (later keys
+  cleared), Py TypeError. REPRODUCED.
 promised_by: |
   C/Python twins.
 cause: |
@@ -130,4 +147,5 @@ lean:
   property: PyLean.Datetime.Zone.CacheErrTwins
   theorem: PyLean.Datetime.Zone.cacheErrTwins_refuted
   also: ["PyLean.Datetime.Zone.cacheErrTwins_refuted_unhashable (the __hash__ = None key)",
-         "PyLean.Datetime.Zone.cacheErrTwins_refuted_empty (empty caches, dict.pop fast path)"]
+         "PyLean.Datetime.Zone.cacheErrTwins_refuted_empty (empty caches, dict.pop fast path)",
+         "PyLean.Datetime.Zone.cacheTwinsReleased_refuted (zone held only by the strong cache)"]

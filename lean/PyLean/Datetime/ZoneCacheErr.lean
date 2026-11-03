@@ -19,10 +19,13 @@ among several stored keys with the same hash the comparison order can differ); t
 holds only instances of the class it belongs to, so the `PyObject_TypeCheck` at
 Modules/_zoneinfo.c:352-358 always passes; `zoneinfo_new_instance`/`_new_instance` succeed or
 fail by `loads key` and run no key methods; key finalizers and re-entrant `__eq__` are
-`clearStrongC`/`findInStrongC` in `ZoneCache.lean`; an instance is collected only at a `drop`
-step, so an instance whose last reference goes inside an operation (a C eject freeing the
-only node that held it) keeps its weak entry until the next `drop` (in CPython the
-`KeyedRef` callback removes it at once).
+`clearStrongC`/`findInStrongC` in `ZoneCache.lean`.
+
+References: `released` lists the zones the caller no longer references. A released zone that no
+strong entry holds is collected at once, and its `KeyedRef` callback removes its weak-cache
+entry: at `drop`/`release` steps, and inside an operation whenever a strong entry is freed
+(C `strong_cache_node_free` in an eject or when `update_strong_cache` trims, Python
+`OrderedDict.pop` and `popitem`), before the operation goes on (`freeCb`).
 
 An instance is named by the key object it was built for and a serial number (`next`, counting
 the instances built), so two instances built for the same key object stay distinct; a cache
@@ -142,10 +145,35 @@ structure ZCls (K : Type) where
   baseWeak : List (K × Inst K)
   next : Nat
   foreign : List (Inst K)
+  released : List (Inst K)
   deriving DecidableEq
 
 /-- A fresh `ZoneInfo` class state. -/
-def freshBase : ZCls K := ⟨true, [], some [], [], 0, []⟩
+def freshBase : ZCls K := ⟨true, [], some [], [], 0, [], []⟩
+
+/-- A freed strong entry dropped a reference to zone `i`: if the caller released it and no
+strong entry still holds it, it is collected and the `KeyedRef` callback removes its weak
+entry (`_remove_dead_weakref`, Lib/weakref.py:105-112). -/
+def freeCb (rel : List (Inst K)) (strong weak : List (K × Inst K)) : Option (Inst K) →
+    List (K × Inst K)
+  | none => weak
+  | some i => if rel.contains i && !(strong.any (·.2 = i)) then weak.filter (·.2 ≠ i) else weak
+
+def freeAll (rel : List (Inst K)) (strong weak : List (K × Inst K)) (is : List (Inst K)) :
+    List (K × Inst K) :=
+  is.foldl (fun w i => freeCb rel strong w (some i)) weak
+
+/-- With no released zone nothing is collected. -/
+@[simp] theorem freeCb_nil (strong weak : List (K × Inst K)) (f : Option (Inst K)) :
+    freeCb ([] : List (Inst K)) strong weak f = weak := by
+  cases f <;> simp [freeCb]
+
+@[simp] theorem freeAll_nil (strong weak : List (K × Inst K)) (is : List (Inst K)) :
+    freeAll ([] : List (Inst K)) strong weak is = weak := by
+  unfold freeAll
+  induction is generalizing weak with
+  | nil => rfl
+  | cons i is ih => simp only [List.foldl_cons, freeCb_nil]; exact ih weak
 
 /-- C `get_weak_cache`, Modules/_zoneinfo.c:292-302: the module state's cache for the base
 class, `PyObject_GetAttrString(type, "_weak_cache")` for a subclass (the C base type has no
@@ -192,6 +220,11 @@ list cut to 8. -/
 def updateStrongC (c : ZCls K) (key : K) (inst : Inst K) : List (K × Inst K) :=
   if !c.base then c.strong else ((key, inst) :: c.strong).take 8
 
+/-- The zones of the nodes `update_strong_cache` frees past the eighth (`strong_cache_free`,
+:2567-2573). -/
+def evictedC (c : ZCls K) (key : K) (inst : Inst K) : List (Inst K) :=
+  if !c.base then [] else (((key, inst) :: c.strong).drop 8).map Prod.snd
+
 /-- `zoneinfo_ZoneInfo_impl`, :315-364. The state is the class after the call, with the
 result. -/
 def newErrC (c : ZCls K) (key : K) : ZCls K × Py (Inst K) :=
@@ -217,16 +250,20 @@ def newErrC (c : ZCls K) (key : K) : ZCls K × Py (Inst K) :=
           let c := { c with weak := some weak', next := next }
           if inst ∈ c.foreign then                                -- :352-358 PyObject_TypeCheck
             (c, .error (.named "RuntimeError" "~Unexpected instance in weak cache"))
-          else ({ c with strong := updateStrongC c key inst }, .ok inst)   -- :361
+          else                                                    -- :361
+            let strong' := updateStrongC c key inst
+            ({ c with strong := strong',
+                      weak := c.weak.map fun w => freeAll c.released strong' w (evictedC c key inst) },
+              .ok inst)
 
 /-- `eject_from_strong_cache`, :2459-2479: `0` for a subclass (:2463-2465); a found node is
 unlinked and freed; `-1` when the comparison raised (:2475-2477). -/
-def ejectC (c : ZCls K) (key : K) : Py (List (K × Inst K)) :=
-  if !c.base then .ok c.strong
+def ejectC (c : ZCls K) (key : K) : Py (List (K × Inst K) × Option (Inst K)) :=
+  if !c.base then .ok (c.strong, none)
   else match findStrongC o key c.strong with
     | .error x => .error x
-    | .ok (some n) => .ok (c.strong.erase n)
-    | .ok none => .ok c.strong
+    | .ok (some n) => .ok (c.strong.erase n, some n.2)   -- `strong_cache_node_free(node)`
+    | .ok none => .ok (c.strong, none)
 
 /-- The `only_keys` loop of `zoneinfo_ZoneInfo_clear_cache_impl`, :533-557: per key, eject
 from the strong cache, then `weak_cache.pop(key, None)`; the first failure stops the loop.
@@ -238,8 +275,10 @@ def clearKeysC (weak : List (K × Inst K)) (err : Option PyExc) :
   | c, k :: ks =>
     match ejectC o c k with
     | .error x => ({ c with weak := some weak }, .error x)
-    | .ok strong =>
+    | .ok (strong, freed) =>
       let c := { c with strong := strong }
+      -- the freed node's zone may be collected now, its weak entry gone before the `pop`
+      let weak := freeCb c.released strong weak freed
       match wvdPop o weak k with
       | .error x => ({ c with weak := some weak }, .error x)
       | .ok weak' => clearKeysC weak' err c ks
@@ -280,8 +319,12 @@ def newErrPy (c : ZCls K) (key : K) : ZCls K × Py (Inst K) :=
         match dictSet o strong1 key (v.getD inst) with
         | .error x => ({ c with strong := strong1 }, .error x)
         | .ok strong2 =>
-          -- :49-54 `popitem(last=False)` past `_strong_cache_size`
-          ({ c with strong := if strong2.length > 8 then strong2.tail else strong2 }, .ok inst)
+          -- :49-54 `popitem(last=False)` past `_strong_cache_size`; the evicted zone may die
+          if strong2.length > 8 then
+            let c := { c with strong := strong2.tail }
+            (setWeakPy c (freeAll c.released c.strong (getWeakPy c) ((strong2.take 1).map Prod.snd)),
+              .ok inst)
+          else ({ c with strong := strong2 }, .ok inst)
 
 /-- The `only_keys` loop of `ZoneInfo.clear_cache`, :96-99: per key the weak cache, then the
 strong one. -/
@@ -294,7 +337,9 @@ def clearKeysPy (err : Option PyExc) : ZCls K → List K → ZCls K × Py (Optio
       let c := setWeakPy c weak'
       match dictPop o c.strong k with
       | .error x => (c, .error x)
-      | .ok (_, strong') => clearKeysPy err { c with strong := strong' } ks
+      | .ok (v, strong') =>
+        let c := { c with strong := strong' }
+        clearKeysPy err (setWeakPy c (freeCb c.released strong' (getWeakPy c) v)) ks
 
 /-- `ZoneInfo.clear_cache`, :95-103. -/
 def clearErrPy (c : ZCls K) (only : Option (List K × Option PyExc)) : ZCls K × Py (Option (Inst K)) :=
@@ -315,13 +360,27 @@ inductive ZOp (K : Type) where
   | drop (k : K)
   | delWeak
   | setWeak (d : List (K × Inst K))
+  | release (k : K)
 
 /-- Deleting or replacing `cls._weak_cache` is modelled for subclasses only (the base class's
 C cache is module state, and the C type is immutable); runs of the base class exclude them. -/
 def ZOp.isDel : ZOp K → Bool
   | .delWeak => true
   | .setWeak _ => true
+  | .release _ => true
   | _ => false
+
+/-- The caller lets go of the zone in the weak entry for key object `k` (`del z`), which the
+strong cache may still hold: it is then collected only when a strong entry holding it is
+freed. Runs of the abstract-model theorems exclude it (`ZoneCache.lean` keeps no reference
+counts); `drop` is the release of a zone no strong entry holds. -/
+def releaseStep (c : ZCls K) (k : K) : ZCls K × Py (Option (Inst K)) :=
+  match (c.weak.getD c.baseWeak).find? (·.1 = k) with
+  | none => (c, .ok none)
+  | some (_, i) =>
+    let rel := c.released ++ [i]
+    ({ c with released := rel, weak := c.weak.map fun w => freeCb rel c.strong w (some i),
+              baseWeak := freeCb rel c.strong c.baseWeak (some i) }, .ok none)
 
 /-- `cls._weak_cache = d` on a subclass, in both twins (a no-op on the base class, which runs
 exclude). -/
@@ -351,6 +410,7 @@ def stepErrC (c : ZCls K) : ZOp K → ZCls K × Py (Option (Inst K))
   | .drop k => ({ c with weak := c.weak.map fun w => dropIn c.strong w k }, .ok none)
   | .delWeak => delWeakStep c
   | .setWeak d => setWeakStep c d
+  | .release k => releaseStep c k
 
 def stepErrPy (c : ZCls K) : ZOp K → ZCls K × Py (Option (Inst K))
   | .get k => let (c', r) := newErrPy o c k; (c', r.map some)
@@ -360,6 +420,7 @@ def stepErrPy (c : ZCls K) : ZOp K → ZCls K × Py (Option (Inst K))
                          baseWeak := dropIn c.strong c.baseWeak k }, .ok none)
   | .delWeak => delWeakStep c
   | .setWeak d => setWeakStep c d
+  | .release k => releaseStep c k
 
 def runErrC : ZCls K → List (ZOp K) → ZCls K × List (Py (Option (Inst K)))
   | c, [] => (c, [])
@@ -400,7 +461,7 @@ def initSubclassErrC (kw : List String) (imported : Py WvdAttr) (baseWeak : List
   let _ := kw
   match newWeakCacheC imported with
   | .error x => .error x
-  | .ok () => .ok ⟨false, [], some [], baseWeak, 0, []⟩
+  | .ok () => .ok ⟨false, [], some [], baseWeak, 0, [], []⟩
 
 /-- `ZoneInfo.__init_subclass__(cls)`, _zoneinfo.py:36-38: `type.__new__` passes the class
 keywords, which this signature does not take; then a new `OrderedDict` and
@@ -412,6 +473,6 @@ def initSubclassErrPy (kw : List String) (bound : WvdAttr) (baseWeak : List (K �
   | [] =>
     match newWeakCachePy bound with
     | .error x => .error x
-    | .ok () => .ok ⟨false, [], some [], baseWeak, 0, []⟩
+    | .ok () => .ok ⟨false, [], some [], baseWeak, 0, [], []⟩
 
 end PyLean.Datetime.Zone

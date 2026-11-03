@@ -22,7 +22,7 @@ def sameHashKeys : KeyOps Nat := ⟨fun _ => .ok 0, fun _ _ => .error rtErr, fun
 /-- Keys compared by identity, as plain `object`s are. -/
 def idKeys : KeyOps Nat := ⟨fun k => .ok k, fun a b => .ok (decide (a = b)), fun _ => true⟩
 
-def freshSub : ZCls Nat := ⟨false, [], some [], [], 0, []⟩
+def freshSub : ZCls Nat := ⟨false, [], some [], [], 0, [], []⟩
 
 /-! ### Base class, keys whose comparison raises -/
 
@@ -84,7 +84,7 @@ theorem cacheTwinsSubclass_refuted : ¬ CacheTwinsSubclass := by
 (C `get_weak_cache` vs Python's `cls._weak_cache`). -/
 def WeakCacheAttrTwins : Prop :=
   ∀ (K : Type) [DecidableEq K] (o : KeyOps K) (ops : List (ZOp K)),
-    (runErrC o ⟨false, [], some [], [], 0, []⟩ ops).2 = (runErrPy o ⟨false, [], some [], [], 0, []⟩ ops).2
+    (runErrC o ⟨false, [], some [], [], 0, [], []⟩ ops).2 = (runErrPy o ⟨false, [], some [], [], 0, [], []⟩ ops).2
 
 /-- `del Sub._weak_cache; Sub(0)`: C's `PyObject_GetAttrString(type, "_weak_cache")`
 (:299-301) raises `AttributeError`, Python's `cls._weak_cache` finds `ZoneInfo._weak_cache`
@@ -146,7 +146,7 @@ namespace PyLean.Datetime.Zone
 def WeakCacheTypeTwins : Prop :=
   ∀ (K : Type) [DecidableEq K] (o : KeyOps K) (ops : List (ZOp K)),
     ops.all (fun op => match op with | .delWeak => false | _ => true) = true →
-    (runErrC o ⟨false, [], some [], [], 0, []⟩ ops).2 = (runErrPy o ⟨false, [], some [], [], 0, []⟩ ops).2
+    (runErrC o ⟨false, [], some [], [], 0, [], []⟩ ops).2 = (runErrPy o ⟨false, [], some [], [], 0, [], []⟩ ops).2
 
 /-- `Sub._weak_cache = {0: obj}` with `obj` not a `ZoneInfo`, then `Sub(0)`: C's
 `PyObject_TypeCheck` (Modules/_zoneinfo.c:352-358) raises `RuntimeError`, Python returns
@@ -186,6 +186,34 @@ returns at once on an empty dict without hashing, so the call succeeds; Python's
 theorem cacheErrTwins_refuted_empty : ¬ CacheErrTwins := by
   intro h
   have := h Nat unhashableKeys [.clearKeys [1] none] rfl
+  revert this
+  decide
+
+end PyLean.Datetime.Zone
+
+namespace PyLean.Datetime.Zone
+
+/-- Keys `0` (`'k'`), `1` (`'UTC'`), and `2`, a `str` subclass with `__hash__ = None` equal to
+`'k'`. -/
+def releaseKeys : KeyOps Nat :=
+  ⟨fun k => if k = 2 then .error (.typeError "~unhashable type") else .ok k,
+   fun a b => .ok (decide ((if a = 2 then 0 else a) = (if b = 2 then 0 else b))), fun _ => true⟩
+
+/-- On the base class, the twins give the same outcomes on every run, with the caller letting
+go of zones the strong cache still holds (`release`). -/
+def CacheTwinsReleased : Prop :=
+  ∀ (K : Type) [DecidableEq K] (o : KeyOps K) (ops : List (ZOp K)),
+    ops.all (fun op => match op with | .delWeak | .setWeak _ => false | _ => true) = true →
+    (runErrC o freshBase ops).2 = (runErrPy o freshBase ops).2
+
+/-- `z = ZoneInfo('k'); del z` (the strong cache alone holds the zone), then
+`clear_cache(only_keys=[NoHash('k'), 'UTC'])`: C's eject frees `'k'`'s node, the zone is
+collected and its `KeyedRef` callback empties the weak cache, so `dict.pop` returns without
+hashing and C clears the later keys and returns `None`; Python's weak-cache `pop` hashes the
+key and raises `TypeError`. -/
+theorem cacheTwinsReleased_refuted : ¬ CacheTwinsReleased := by
+  intro h
+  have := h Nat releaseKeys [.get 0, .release 0, .clearKeys [2, 1] none] rfl
   revert this
   decide
 

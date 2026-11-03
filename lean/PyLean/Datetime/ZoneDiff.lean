@@ -113,10 +113,13 @@ def getErrOps (j : Json) : Except String (List (ZOp Nat)) := do
     | "del" => pure .delWeak
     | t => throw s!"bad op {t}"
 
-/-- Refcounting frees an instance as soon as no strong entry holds it: its weak entries go. -/
+/-- After each operation the harness lets go of every zone it holds except `extra`: those
+zones are released, and the ones no strong entry holds are collected at once. -/
 def sweepZ (c : ZCls Nat) (extra : List (Inst Nat)) : ZCls Nat :=
   let held (p : Nat × Inst Nat) : Bool := c.strong.any (·.2 = p.2) || extra.contains p.2
-  { c with weak := c.weak.map (·.filter held), baseWeak := c.baseWeak.filter held }
+  let all := ((c.weak.getD []) ++ c.baseWeak ++ c.strong).map (·.2)
+  { c with weak := c.weak.map (·.filter held), baseWeak := c.baseWeak.filter held,
+           released := (c.released ++ all.filter (fun i => !extra.contains i)).eraseDups }
 
 /-- Instances are reported by order of first appearance (results, then strong values), as
 the harness numbers the objects it sees. -/
@@ -129,7 +132,7 @@ def runCerr (fn : String) (j : Json) : Except String Json := do
   let hold ← (← field j "hold").getBool?
   let ops ← getErrOps j
   let o := cerrOps kinds texts loads
-  let c0 : ZCls Nat := ⟨!sub, [], some [], [], 0, []⟩
+  let c0 : ZCls Nat := ⟨!sub, [], some [], [], 0, [], []⟩
   let isPy := fn = "zi_cerr_py"
   let step := if isPy then stepErrPy o else stepErrC o
   let (c, outs) := ops.foldl (fun (c, acc) op =>

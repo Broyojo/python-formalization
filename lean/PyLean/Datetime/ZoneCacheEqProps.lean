@@ -151,7 +151,7 @@ theorem wvdSetdefault_none (key : K) (i : Inst K) (l : List (K × Inst K)) (hn :
     dictSet_none o v hv hE hH key i l hn]
 
 /-- A base-class state with no foreign objects. -/
-def mkZ (s W : List (K × Inst K)) (n : Nat) : ZCls K := ⟨true, s, some W, [], n, []⟩
+def mkZ (s W : List (K × Inst K)) (n : Nat) : ZCls K := ⟨true, s, some W, [], n, [], []⟩
 
 def trim8 {α : Type} (l : List α) : List α := if l.length > 8 then l.tail else l
 
@@ -167,6 +167,7 @@ theorem py_get_hit (ps W : List (K × Inst K)) (n : Nat) (k : K) (w : K × Inst 
   simp only [stepErrPy, newErrPy, mkZ, getWeakPy, Option.getD_some, wvdGet_v o v hv hE hH, hw,
     Option.map_some, setWeakPy, dictPop_v o v hv hE hH, hv', dictSet_none o v hv hE hH k _ _ hn,
     trim8, Except.map]
+  split <;> simp [setWeakPy, getWeakPy, Except.map]
 
 theorem py_get_fail (ps W : List (K × Inst K)) (n : Nat) (k : K)
     (hw : W.find? (fun e => decide (v e.1 = v k)) = none) (hl : o.loads k = false) :
@@ -186,6 +187,7 @@ theorem py_get_new (ps W : List (K × Inst K)) (n : Nat) (k : K)
     Option.map_none, hl, Bool.not_true, Bool.false_eq_true, ite_false,
     wvdSetdefault_none o v hv hE hH k _ W hwn, Except.map, setWeakPy, dictPop_v o v hv hE hH, hpn,
     hr, Option.getD_none, dictSet_none o v hv hE hH k _ _ hp, trim8]
+  split <;> simp [setWeakPy, getWeakPy, Except.map]
 
 theorem c_get_strong (cs W : List (K × Inst K)) (n : Nat) (k : K) (e : K × Inst K)
     (he : cs.find? (fun e => decide (v e.1 = v k)) = some e) :
@@ -199,7 +201,7 @@ theorem c_get_weak (cs W : List (K × Inst K)) (n : Nat) (k : K) (w : K × Inst 
     stepErrC o (mkZ cs W n) (.get k) = (mkZ (((k, w.2) :: cs).take 8) W n, .ok (some w.2)) := by
   simp only [stepErrC, newErrC, zoneFromStrongC, mkZ, Bool.not_true, Bool.false_eq_true, ite_false,
     findStrongC_v o v hv hE hH, hc, getWeakC, ite_true, Option.getD_some, wvdGet_v o v hv hE hH, hw,
-    Option.map_some, List.not_mem_nil, updateStrongC, Except.map]
+    Option.map_some, List.not_mem_nil, updateStrongC, Except.map, freeAll_nil]
 
 theorem c_get_fail (cs W : List (K × Inst K)) (n : Nat) (k : K)
     (hc : cs.find? (fun e => decide (v e.1 = v k)) = none)
@@ -218,24 +220,27 @@ theorem c_get_new (cs W : List (K × Inst K)) (n : Nat) (k : K)
   simp only [stepErrC, newErrC, zoneFromStrongC, mkZ, Bool.not_true, Bool.false_eq_true, ite_false,
     findStrongC_v o v hv hE hH, hc, getWeakC, ite_true, Option.getD_some, wvdGet_v o v hv hE hH, hw,
     Option.map_none, hl, wvdSetdefault_none o v hv hE hH k _ W hwn, List.not_mem_nil,
-    updateStrongC, Except.map]
+    updateStrongC, Except.map, freeAll_nil, Option.map_some]
 
 theorem c_clearKeys_cons (cs W : List (K × Inst K)) (n : Nat) (cw : Option (List (K × Inst K)))
     (err : Option PyExc) (k : K) (ks : List K) :
-    clearKeysC o W err ⟨true, cs, cw, [], n, []⟩ (k :: ks) =
-      clearKeysC o (remv v W (v k)) err ⟨true, remv v cs (v k), cw, [], n, []⟩ ks := by
-  have hej : ejectC o ⟨true, cs, cw, [], n, []⟩ k = .ok (remv v cs (v k)) := by
+    clearKeysC o W err ⟨true, cs, cw, [], n, [], []⟩ (k :: ks) =
+      clearKeysC o (remv v W (v k)) err ⟨true, remv v cs (v k), cw, [], n, [], []⟩ ks := by
+  have hej : ∃ f, ejectC o ⟨true, cs, cw, [], n, [], []⟩ k = .ok (remv v cs (v k), f) := by
     simp only [ejectC, Bool.not_true, Bool.false_eq_true, ite_false, findStrongC_v o v hv hE hH]
     unfold remv
-    cases cs.find? (fun e => decide (v e.1 = v k)) <;> rfl
-  simp only [clearKeysC, hej, wvdPop_v o v hv hE hH]
+    cases cs.find? (fun e => decide (v e.1 = v k)) with
+    | none => exact ⟨none, rfl⟩
+    | some e => exact ⟨some e.2, rfl⟩
+  obtain ⟨f, hej⟩ := hej
+  simp only [clearKeysC, hej, freeCb_nil, wvdPop_v o v hv hE hH]
 
 theorem py_clearKeys_cons (ps W : List (K × Inst K)) (n : Nat) (err : Option PyExc) (k : K)
     (ks : List K) :
     clearKeysPy o err (mkZ ps W n) (k :: ks) =
       clearKeysPy o err (mkZ (remv v ps (v k)) (remv v W (v k)) n) ks := by
   simp only [clearKeysPy, mkZ, getWeakPy, Option.getD_some, wvdPop_v o v hv hE hH, setWeakPy,
-    dictPop_v o v hv hE hH]
+    dictPop_v o v hv hE hH, freeCb_nil]
 
 end ops
 
@@ -469,9 +474,9 @@ theorem sim_get (ι : V → Option (Inst K)) (sp sc : CacheSt V) (W ps cs : List
 theorem sim_clearKeys (err : Option PyExc) : ∀ (ks : List K) (ι : V → Option (Inst K))
     (sp sc : CacheSt V) (W ps cs : List (K × Inst K)) (n : Nat) (cw : Option (List (K × Inst K))),
     SimE v ι sp sc W ps cs n →
-    (clearKeysC o W err ⟨true, cs, cw, [], n, []⟩ ks).2 = (clearKeysPy o err (mkZ ps W n) ks).2 ∧
+    (clearKeysC o W err ⟨true, cs, cw, [], n, [], []⟩ ks).2 = (clearKeysPy o err (mkZ ps W n) ks).2 ∧
     ∃ sp' sc' W' ps' cs', (clearKeysPy o err (mkZ ps W n) ks).1 = mkZ ps' W' n ∧
-      (clearKeysC o W err ⟨true, cs, cw, [], n, []⟩ ks).1 = mkZ cs' W' n ∧
+      (clearKeysC o W err ⟨true, cs, cw, [], n, [], []⟩ ks).1 = mkZ cs' W' n ∧
       SimE v ι sp' sc' W' ps' cs' n := by
   intro ks
   induction ks with
@@ -587,7 +592,7 @@ theorem sim_step (ι : V → Option (Inst K)) (sp sc : CacheSt V) (W ps cs : Lis
   | clearKeys ks err =>
     have hp : stepErrPy o (mkZ ps W n) (.clearKeys ks err) = clearKeysPy o err (mkZ ps W n) ks := rfl
     have hc : stepErrC o (mkZ cs W n) (.clearKeys ks err) =
-        clearKeysC o W err ⟨true, cs, some W, [], n, []⟩ ks := by
+        clearKeysC o W err ⟨true, cs, some W, [], n, [], []⟩ ks := by
       simp [stepErrC, clearErrC, getWeakC, mkZ]
     unfold SimStep
     rw [hp, hc]
@@ -597,6 +602,7 @@ theorem sim_step (ι : V → Option (Inst K)) (sp sc : CacheSt V) (W ps cs : Lis
   | drop k => exact sim_drop o v hv hE hH ι sp sc W ps cs n h k
   | delWeak => simp [ZOp.isDel] at hop
   | setWeak d => simp [ZOp.isDel] at hop
+  | release k => simp [ZOp.isDel] at hop
 
 theorem sim_run : ∀ (ops : List (ZOp K)) (ι : V → Option (Inst K)) (sp sc : CacheSt V)
     (W ps cs : List (K × Inst K)) (n : Nat), SimE v ι sp sc W ps cs n →

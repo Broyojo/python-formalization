@@ -310,11 +310,11 @@ def gen_case(rng):
 
 def gen_cerr(rng):
     nkeys = 10
-    # hold: the harness keeps every instance it gets referenced, so a C eject cannot collect a zone
-    # (and remove its weak entry) inside clear_cache; unhashable keys (kind 3) only then
+    # hold: the harness keeps every instance it gets referenced; otherwise it drops them after
+    # each call, so the strong cache alone holds the cached zones and a C eject inside
+    # clear_cache can collect one (its weak entry goes before the next pop)
     hold = rng.random() < 0.5
-    kinds = [rng.choice([0, 0, 0, 1, 2, 3] if hold else [0, 0, 0, 1, 2]) if rng.random() < 0.6 else 0
-             for _ in range(nkeys)]
+    kinds = [rng.choice([0, 0, 0, 1, 2, 3]) if rng.random() < 0.6 else 0 for _ in range(nkeys)]
     # separate str objects with equal text compare equal
     texts = [i if rng.random() < 0.6 else rng.randrange(nkeys) for i in range(nkeys)]
     sub = rng.random() < 0.4
