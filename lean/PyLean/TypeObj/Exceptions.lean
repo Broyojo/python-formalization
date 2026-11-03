@@ -67,8 +67,8 @@ def excGetsetGet (_rt : Rt) (_owner : Addr) (n : Name) (obj : Val) : M Val := do
   let w ← getW
   match payloadOf w obj with
   | some (.exc e) =>
-    if n == "args" then return .tuple e.args
-    if n == "__traceback__" then return e.traceback
+    if n == "args" then return baseExceptionArgsGet e
+    if n == "__traceback__" then return baseExceptionTracebackGet e
     if n == "__context__" then return e.context.getD .none
     if n == "__cause__" then return e.cause.getD .none
     if n == "__suppress_context__" then return .bool e.suppressContext

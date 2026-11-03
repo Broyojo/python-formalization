@@ -88,7 +88,7 @@ theorem importErrorMsgStr_proven : ImportErrorMsgStr := by
   refine ⟨?_, ?_, ?_⟩
   · intro a d m w w' hx h
     simp [importErrorInit, baseExceptionInit, argNoKeywords, argKeywordOnly, excUpdate_app,
-      NameDict.get?] at h
+      NameDict.get?, importMsg] at h
     subst h
     have h1 := hx.update (fun d => { d with args := [m] })
     have h2 := isExc_memSet h1 "name" none
@@ -135,7 +135,7 @@ theorem reduceKeepsNameImportAttr_proven : ReduceKeepsNameImportAttr := by
     rw [dictOf_alloc]
     simp only [Option.getD_some]
     cases hp : memGet (excDataOf w v) "path" <;> cases hq : memGet (excDataOf w v) "name_from" <;>
-      simp [dictLookup_setEntry_ne, dictLookup_setEntry_same]
+      simp [optSetEntry, dictLookup_setEntry_ne, dictLookup_setEntry_same]
   · intro v n w h
     simp only [attributeErrorGetstate, M.bind_app, getW_app, h, alloc_app]
     refine ⟨_, _, rfl, ?_, ?_⟩
