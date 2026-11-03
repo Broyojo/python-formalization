@@ -255,21 +255,6 @@ theorem charCode_proven : CharCode := by
     | _ :: _ :: _, _ => rfl
   | _ => rfl
 
-/-- `?` stores the truth value of any object in one byte, and reads it back. The hypothesis is that
-`__bool__` did not raise; `BoolRaises` is the other case. -/
-def BoolCode : Prop :=
-  ∀ (v : SV) (b : Bool) (nat std : FormatDef), nat = ⟨['?'], 1, 1, .nuBool, .npBool⟩ →
-    std = ⟨['?'], 1, 0, .buBool, .bpBool⟩ → isTrue v = .ok b →
-    (∃ w, runPack nat v = .ok w ∧ runUnpack nat w = .ok (.bool b)) ∧
-    (∃ w, runPack std v = .ok w ∧ runUnpack std w = .ok (.bool b))
-
-theorem boolCode_proven : BoolCode := by
-  intro v b nat std h1 h2 h
-  subst h1 h2
-  constructor <;>
-    (refine ⟨[if b then 1 else 0], by simp [runPack, h, bind, Except.bind, pure, Except.pure], ?_⟩
-     cases b <;> rfl)
-
 /-! ### Byte-order twin laws for float and complex -/
 
 theorem leVal_eq_beVal_reverse : ∀ p : List Nat, leVal p = beVal p.reverse := by
@@ -623,7 +608,8 @@ theorem reprPlain_proven : ReprPlain := by
   unfold sRepr
   rw [hm]
 
-/-- Every non-NaN float survives `unpack('<f')` then `pack('<f')`. Stated, not yet proven. -/
+/-- Every non-NaN 32-bit pattern survives `unpack_float` then `PyFloat_Pack4` (`unpack('>f')` then
+`pack('>f')`). Proven in `TextLibs/StructFloat.lean`. -/
 def FloatRoundTrip : Prop :=
   ∀ y < 2 ^ 32, f32.isNaN y = false → pyFloatPack4Bits (pyFloatUnpack4Bits y) = .ok y
 

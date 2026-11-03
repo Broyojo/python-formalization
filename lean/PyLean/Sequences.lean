@@ -282,8 +282,8 @@ def entries : List Entry := [
     prop := ``ArrayIns1Failure, thm := some ``arrayIns1Failure_proven },
   { id := "sequences-array-repeat", pyFile := "Modules/arraymodule.c"
     pyFns := ["array_repeat", "array_inplace_repeat", "newarrayobject", "newarrayobject_untracked"]
-    statement := "For every array and int n: a * n and a *= n give the same items as list repetition, OverflowError outside Py_ssize_t included."
-    source := "invariant: same operators as list", status := .proven
+    statement := "For every array and int n whose result fits: a * n and a *= n give n copies of the items (none for n <= 0), OverflowError outside Py_ssize_t included."
+    source := "Doc/library/stdtypes.rst common sequence operations, note (2)", status := .proven
     prop := ``ArrayRepeat, thm := some ``arrayRepeat_proven },
   { id := "sequences-array-clear-copy", pyFile := "Modules/arraymodule.c"
     pyFns := ["array_array_clear_impl", "array_array___copy___impl", "array_array___deepcopy___impl",
@@ -405,9 +405,10 @@ def entries : List Entry := [
     notes := "Includes the ceil(maxlen / size) shortcut (periodicity of the repeated list) and the single-item block-filling path." },
   { id := "sequences-list-repeat", pyFile := "Objects/listobject.c"
     pyFns := ["list_inplace_repeat_lock_held", "list_repeat_lock_held"]
-    statement := "For every list (len <= sys.maxsize) and int n: l *= n and l * n agree; outside Py_ssize_t both raise OverflowError; n <= 0 gives []; otherwise l repeated n times, with MemoryError exactly when that exceeds sys.maxsize items."
-    source := "Doc/builtins/stdtypes.rst:1539-1552 note (2)", status := .proven
-    prop := ``ListRepeat, thm := some ``listRepeat_proven },
+    statement := "For every list (len <= PY_SSIZE_T_MAX/8) and int n: outside Py_ssize_t both raise OverflowError; n <= 0 gives []; otherwise l repeated n times, with MemoryError past PY_SSIZE_T_MAX/8 items for l * n and past PY_SSIZE_T_MAX/8 - 3 for l *= n (rounded to a multiple of 4 first); outside that window of three sizes the two agree."
+    source := "Doc/builtins/stdtypes.rst:1539-1552 note (2); listobject.c:319, :148-156, :194-200", status := .proven
+    prop := ``ListRepeat, thm := some ``listRepeat_proven
+    notes := "Before the 3.15.2 review the model left out both PY_SSIZE_T_MAX/8 limits and claimed [None] * 2**61 succeeds. In the window l * n asks PyMem_Malloc for about 2**63 bytes, which the model does not cover." },
   { id := "sequences-deque-copy-concat", pyFile := "Modules/_collectionsmodule.c"
     pyFns := ["deque_copy_impl", "deque___copy___impl", "deque_concat_lock_held", "deque_concat"]
     statement := "For every deque d, of any subclass and maxlen, and deque other: d.copy() has the same items and maxlen; d + other holds the last d.maxlen items of list(d) + list(other) with d's maxlen."

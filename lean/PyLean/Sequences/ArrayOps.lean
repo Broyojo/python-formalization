@@ -308,14 +308,23 @@ theorem mul_fits (L n s : Int) (hL : 0 ≤ L) (hn : 0 ≤ n) (hs : 1 ≤ s) (h :
   rw [Int.mul_assoc, Int.mul_comm s n, ← Int.mul_assoc]
   exact h1
 
+/-- The items of `s * n` for a sequence `s` (Doc/library/stdtypes.rst, common sequence
+operations, note (2)): `OverflowError` outside `Py_ssize_t`, `[]` for `n <= 0`, otherwise `n`
+copies. A `list` adds its own allocation limit of `PY_SSIZE_T_MAX / 8` items
+(`Sequences.ListRepeat`), which an array of 1-, 2- or 4-byte items does not share. -/
+def seqRepeatItems {α : Type} (l : List α) (n : Int) : Py (List α) := do
+  let n ← repeatCount n
+  if (l.length : Int) = 0 ∨ n ≤ 0 then return []
+  return (List.replicate n.toNat l).flatten
+
 /-- `a * n` and `a *= n`, for every array without exported buffers (`len(a)` fits, as
-does `len(a) * n`, a type invariant of the result) and every int `n`: the same as `list`,
-including `OverflowError` outside `Py_ssize_t` and an empty result for `n <= 0`. `*` gives
-a new `array.array` of the same typecode. -/
+does `len(a) * n`, a type invariant of the result) and every int `n`: the items of the
+common-sequence `s * n`, including `OverflowError` outside `Py_ssize_t` and an empty result
+for `n <= 0`. `*` gives a new `array.array` of the same typecode. -/
 def ArrayRepeat : Prop :=
   ∀ (a : Arr) (n : Int), a.exports = 0 → a.Fits a.items.length → a.Fits (a.items.length * max n 0) →
-    (arrRepeat a n).map (·.items) = listRepeat a.items n ∧
-    (arrIRepeat a n).map (·.items) = listRepeat a.items n ∧
+    (arrRepeat a n).map (·.items) = seqRepeatItems a.items n ∧
+    (arrIRepeat a n).map (·.items) = seqRepeatItems a.items n ∧
     (∀ c, arrRepeat a n = .ok c → c.tc = a.tc ∧ c.tname = "array")
 
 theorem arrayRepeat_proven : ArrayRepeat := by
@@ -325,20 +334,12 @@ theorem arrayRepeat_proven : ArrayRepeat := by
     have hL0 : (0 : Int) ≤ a.items.length := by omega
     have hsz := itemsize_pos a.tc
     obtain ⟨hA, hB⟩ := mul_fits (a.items.length) (max n 0) a.tc.itemsize hL0 (by omega) hsz hf
-    have hlist : ∀ (L : Int), L = a.items.length → listRepeat a.items n =
+    have hlist : ∀ (L : Int), L = a.items.length → seqRepeatItems a.items n =
         if L = 0 ∨ n ≤ 0 then .ok [] else .ok (List.replicate n.toNat a.items).flatten := by
       intro L hL
       subst hL
-      simp only [listRepeat, hrc, bind, Except.bind, pure, Except.pure, throwE]
-      by_cases hc : (a.items.length : Int) = 0 ∨ n ≤ 0
-      · rw [iteT hc, iteT hc]
-      · rw [iteF hc, iteF hc]
-        have hn : max n 0 = n := by omega
-        rw [hn] at hB
-        rw [iteF (show ¬ (a.items.length : Int) > ssizeMax / n from by
-          have : (a.items.length : Int) ≤ ssizeMax / n :=
-            Int.le_ediv_of_mul_le (by omega) hB
-          omega)]
+      simp only [seqRepeatItems, hrc, bind, Except.bind, pure, Except.pure]
+      try (split <;> rfl)
     rw [hlist _ rfl]
     have hnil : a.items = [] → (a.items.length : Int) = 0 := fun h => by simp [h]
     have hR : ∃ c, arrRepeat a n = .ok c ∧
@@ -414,8 +415,8 @@ theorem arrayRepeat_proven : ArrayRepeat := by
   · have hrc : repeatCount n = .error (.overflowError "cannot fit 'int' into an index-sized integer") := by
       unfold repeatCount asSsizeExc; rw [iteF hs]
     refine ⟨?_, ?_, fun c hc => ?_⟩
-    · simp only [arrRepeat, listRepeat, hrc, bind, Except.bind, Except.map]
-    · simp only [arrIRepeat, listRepeat, hrc, bind, Except.bind, Except.map]
+    · simp only [arrRepeat, seqRepeatItems, hrc, bind, Except.bind, Except.map]
+    · simp only [arrIRepeat, seqRepeatItems, hrc, bind, Except.bind, Except.map]
     · simp [arrRepeat, hrc, bind, Except.bind] at hc
 
 /-! ### `clear`, copies, `array_slice` -/

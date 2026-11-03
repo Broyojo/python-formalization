@@ -11,7 +11,7 @@ import PyLean.TypeObj.PropsTotal
 import PyLean.TypeObj.PropsMethods
 import PyLean.TypeObj.SeqTuple
 import PyLean.TypeObj.StructSeq
-import PyLean.TypeObj.StructSeqNewType
+import PyLean.TypeObj.StructSeqStatic
 
 /-!
 The data model: `Objects/typeobject.c`, `Objects/object.c`, `Objects/abstract.c`,
@@ -1049,8 +1049,8 @@ def entries : List Entry := [
     ``StructSeq.NewImplSpecC ``StructSeq.newImplSpecC_proven
     "The two PyDict_GET_SIZE reads are separate: on 3.15.2 a key hashing like 'tm_zone' whose __eq__ clears the dict makes time.struct_time(range(9), d) succeed with tm_zone None, and one that adds keys makes it raise. Hypothesis u <= v as in typeobj-structseq-reduce-spec. Difftest ss_new.",
   p "typeobj-structseq-newtype-outcomes" ss ["count_members", "initialize_members", "_PyStructSequence_NewType", "PyStructSequence_NewType"]
-    "For every desc, allocator and outcome of the rest of PyType_FromSpecWithBases, PyStructSequence_NewType raises MemoryError when tp_members cannot be allocated, then the rest's error; builds, for 0 <= n_in_sequence <= #fields and fewer than 2^28 - 4 hidden fields, the type with tp_members = the named fields at their own indices, tp_basicsize = 32 + 8 * hidden and the honest size attributes, unless a visible name is not UTF-8; raises TypeError for n_in_sequence = #fields + 1 .. #fields + 3, and SystemError for #fields + 5 and above and for a negative one (while hidden fits a C int)."
-    "Doc/c-api/tuple.rst (PyStructSequence_NewType, PyStructSequence_Desc); structseq.c:468-479, :539-570, :744-800; Objects/typeobject.c:5207-5212, :5339-5344, :5629-5648"
+    "For every desc, allocator and outcome of the rest of PyType_FromSpecWithBases, PyStructSequence_NewType raises MemoryError when tp_members cannot be allocated, then the rest's error; builds, for 0 <= n_in_sequence <= #fields and fewer than 2^28 - 4 hidden fields, the type with tp_members = the named fields at their own indices, tp_basicsize = 32 + 8 * hidden and the honest size attributes, unless a visible name is not UTF-8; raises TypeError for n_in_sequence = #fields + 1 .. #fields + 3, and SystemError for #fields + 5 and above and for a negative one (while hidden fits a C int); and raises SystemError for a named field called __weaklistoffset__, __dictoffset__ or __vectorcalloffset__ (the other cases are stated without such a field)."
+    "Doc/c-api/tuple.rst (PyStructSequence_NewType, PyStructSequence_Desc); structseq.c:468-479, :539-570, :744-800; Objects/typeobject.c:5207-5212, :5272-5297, :5339-5344, :5443-5451, :5629-5665"
     ``StructSeq.NewTypeOutcomes ``StructSeq.newTypeOutcomes_proven
     "n_in_sequence = #fields + 4 is typeobj-structseq-newtype-in-bounds, hidden >= 2^28 - 4 is typeobj-structseq-newtype-basicsize-exact. The model has no tp_flags (PyStructSequence_NewType passes 0). Difftest ss_newtype.",
   { id := "typeobj-structseq-newtype-basicsize-exact", pyFile := ss,
@@ -1059,6 +1059,38 @@ def entries : List Entry := [
     source := "invariant: tp_basicsize holds the hidden fields (structseq.c:58-61, :774-775)", status := .refuted,
     prop := ``StructSeq.NewTypeBasicsizeExact, thm := some ``StructSeq.newTypeBasicsizeExact_refuted,
     bug := some "typeobj-structseq-newtype-nseq-past-fields",
-    notes := "2^29 unnamed fields, none visible: (int)(40 + (2^29 - 1) * 8) is 32, so the type has n_fields = 2^29 and tp_basicsize 32. Reproduced on 3.15.2 with a desc array mapped over one 2 MB page." } ] ++ excEntries
+    notes := "2^29 unnamed fields, none visible: (int)(40 + (2^29 - 1) * 8) is 32, so the type has n_fields = 2^29 and tp_basicsize 32. Reproduced on 3.15.2 with a desc array mapped over one 2 MB page." },
+  p "typeobj-structseq-static-twin" ss
+    ["initialize_static_fields", "PyStructSequence_InitType2", "PyStructSequence_InitType", "count_members", "initialize_members"]
+    "A type whose refcount is not 0 is refused with SystemError; for every valid desc (0 <= n_in_sequence <= #fields, fewer than 2^28 - 4 hidden fields) with no field named __weaklistoffset__, __dictoffset__ or __vectorcalloffset__, and every allocator, when the steps neither model mirrors succeed on both sides (each path has its own: the rest of PyType_FromSpecWithBases, and the unmirrored steps of PyType_Ready), PyStructSequence_InitType2 on a zeroed type gives exactly what PyStructSequence_NewType gives (the same exception, or the same name, tp_members, tp_basicsize, size attributes and __match_args__) and on success leaves the type ready with its members; PyStructSequence_InitType leaves no exception set exactly when InitType2 succeeds, and otherwise returns with InitType2's exception still set."
+    "Doc/c-api/tuple.rst (PyStructSequence_InitType: 'Initializes a struct sequence type type from desc in place'; InitType2: 'Like PyStructSequence_InitType, but returns 0 on success and -1 with an exception set on failure'); structseq.c:573-611, :672-710"
+    ``StructSeq.StaticTwin ``StructSeq.staticTwin_proven
+    "The three offset names are excluded because only PyType_FromMetaclass refuses them (typeobj-structseq-static-twin-valid). Outside the model: the flags (the static type is immutable, Objects/typeobject.c:9719-9721, so its size attributes cannot be rebound and typeobj-structseq-mutable-size-attrs does not apply; the heap one is not), and __module__ for a name without a dot (builtins for the static type, none for the heap one; the docs require the module in the name). Checked on 3.15.2 through ctypes on a zeroed PyTypeObject. Difftest ss_inittype: InitType2, InitType and a second InitType2 on the same object, on ctypes descs and every real struct sequence type read back as its desc.",
+  p "typeobj-structseq-inittype2-outcomes" ss ["PyStructSequence_InitType2", "initialize_static_fields", "count_members", "initialize_members"]
+    "For every desc, refcount, allocator and outcome of the unmirrored steps of PyType_Ready, PyStructSequence_InitType2 returns, with what it leaves in the type: SystemError for a refcount other than 0; MemoryError when tp_members cannot be allocated; the exception of each failing PyType_Ready step (type immortal, members freed); once those succeed, for 0 <= n_in_sequence <= #fields the type with the named fields at their own indices, tp_basicsize = 32 + 8 * hidden and the honest size attributes, unless a visible name is not UTF-8; SystemError (tp_dictoffset that is too small) for n_in_sequence >= #fields + 5; SystemError from PyTuple_New for a negative one; and a read past the field array for #fields + 1 .. + 4 unless a name fails to decode first. No failure returns -1 without an exception."
+    "Doc/c-api/tuple.rst (InitType2: returns 0 on success and -1 with an exception set on failure); structseq.c:573-611, :672-704; Objects/typeobject.c:8812-8813, :9571-9577, :9584-9668, :9711-9736"
+    ``StructSeq.InitType2Outcomes ``StructSeq.initType2Outcomes_proven
+    "Messages checked on 3.15.2 through ctypes: 'type m.S has a tp_dictoffset that is too small' (n_in_sequence = 7, two fields), 'Objects/tupleobject.c:40: bad argument to internal function' (-1), 'Objects/structseq.c:689: bad argument to internal function' (a second call, also after a failed PyType_Ready, which already made the type immortal), UnicodeDecodeError for a field name that is not UTF-8. Difftest ss_inittype.",
+  { id := "typeobj-structseq-static-twin-all", pyFile := ss,
+    pyFns := ["PyStructSequence_InitType2", "initialize_static_fields", "_PyStructSequence_NewType", "PyStructSequence_NewType"]
+    statement := "PyStructSequence_InitType2 on a zeroed type and PyStructSequence_NewType give the same outcome for every desc."
+    source := "Doc/c-api/tuple.rst: InitType2 is 'like' InitType, the static counterpart of NewType; the twin property", status := .refuted,
+    prop := ``StructSeq.StaticTwinAll, thm := some ``StructSeq.staticTwinAll_refuted,
+    bug := some "typeobj-structseq-newtype-nseq-past-fields",
+    notes := "One field, n_in_sequence = 2: NewType's basicsize 24 is refused with TypeError, but PyType_Ready of a static type has no basicsize-versus-base check, so InitType2 reads the field array's terminator and crashes (+1 to +4 all crash on 3.15.2). The twins also differ at 2^29 hidden fields, where only NewType's (int) cast wraps." },
+  { id := "typeobj-structseq-static-twin-valid", pyFile := ss,
+    pyFns := ["PyStructSequence_InitType2", "_PyStructSequence_NewType", "PyStructSequence_NewType", "initialize_members"]
+    statement := "On every valid desc (0 <= n_in_sequence <= #fields, fewer than 2^28 - 4 hidden fields), whatever its field names, PyStructSequence_InitType2 on a zeroed type and PyStructSequence_NewType give the same outcome when the steps neither model mirrors succeed."
+    source := "Doc/c-api/tuple.rst: the two functions build the same struct sequence type from a desc, which reserves no field names", status := .refuted,
+    prop := ``StructSeq.StaticTwinValid, thm := some ``StructSeq.staticTwinValid_refuted,
+    bug := some "typeobj-structseq-twin-offset-member-names",
+    notes := "Fields a, __dictoffset__: PyType_FromMetaclass refuses an object member under that name with SystemError (typeobject.c:5443-5451, :5272-5297); PyType_Ready never looks at member names, and InitType2 builds m.S(a=1, __dictoffset__=2). Checked on 3.15.2 and main for all three names. Recorded at P5: the names are reserved by the PyType_FromSpec API, so NewType's refusal is defensible and nothing crashes; the record exists for the twin disagreement and the unhelpful message." },
+  { id := "typeobj-structseq-inittype2-no-dangling", pyFile := ss,
+    pyFns := ["PyStructSequence_InitType2", "initialize_static_fields"]
+    statement := "After a failing PyStructSequence_InitType2, no member descriptor in the type's dict points at a freed tp_members array."
+    source := "invariant: a failing call leaves no live object pointing at memory it freed", status := .refuted,
+    prop := ``StructSeq.InitType2NoDangling, thm := some ``StructSeq.initType2NoDangling_refuted,
+    bug := some "typeobj-structseq-inittype2-dangling-members",
+    notes := "Counterexample n_in_sequence = #fields + 5: type_ready has added the descriptors when its post check refuses the negative basicsize, keeps tp_dict on failure (typeobject.c:9665-9667), and :699-701 frees members. With n_in_sequence = -1 (initType2_dangling_ready) PyType_Ready succeeds and the dict fails at PyTuple_New(-1), leaving the type ready. In both cases reading a member descriptor's __doc__ crashes on 3.15.2." } ] ++ excEntries
 
 end PyLean.TypeObj

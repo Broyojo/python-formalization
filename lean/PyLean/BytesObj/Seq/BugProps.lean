@@ -67,15 +67,15 @@ def ListHintIgnoredWhenOverflowing : Prop :=
 
 theorem listHintIgnoredWhenOverflowing_proven : ListHintIgnoredWhenOverflowing := by
   intro α x src h1 h2 h3
-  unfold listExtendIter
-  simp only [h1]
   have hroom : extendRoom ({ items := [x], allocated := 1, hasItems := true } : LObj α) ssizeMax =
       .ok { items := [x], allocated := 1, hasItems := true } := by
     unfold extendRoom
     simp only [List.length_cons, List.length_nil]
     rw [if_pos (by decide)]
+  unfold listExtendIter listExtendIterFx
+  simp only [IterSrc.fx, h1]
   rw [hroom]
-  simp [h2, h3, extendDrain]
+  simp [drainFx, IterSrc.fx, h2, h3, extendCutBack]
 
 /-- `del l[-1]` and `l.pop()` remove the same item and leave the same list, allocation included,
 because both call `list_resize`. A list of one item is the exception `list_pop_impl` makes itself

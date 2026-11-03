@@ -1,0 +1,113 @@
+id: typeobj-structseq-inittype2-dangling-members
+title: "PyStructSequence_InitType2 frees tp_members after PyType_Ready has created the member descriptors, so a failure leaves the (immortal, sometimes ready) type with descriptors pointing at freed memory"
+priority: P4
+kind: memory-safety
+module: typeobj
+files: [Objects/structseq.c]
+functions: ["PyStructSequence_InitType2", "PyStructSequence_InitType", "initialize_static_fields"]
+summary: |
+  `PyStructSequence_InitType2` (structseq.c:672-704) allocates `members`, stores it as
+  `type->tp_members` (`initialize_static_fields`, :592), and calls `initialize_static_type`
+  (:595-611), which runs `PyType_Ready` and then `initialize_structseq_dict`. If either fails,
+  :699-701 does `PyMem_Free(members)` and returns -1. But by then `PyType_Ready` has made the
+  type immutable and immortal (Objects/typeobject.c:9719-9724) and created a member descriptor
+  for every field, each holding a pointer into `members`; when the failure is in
+  `initialize_structseq_dict`, the type is also `Py_TPFLAGS_READY`. The type stays reachable
+  (it is the caller's static object, and it is in `tuple.__subclasses__()`), and every member
+  descriptor reads freed memory.
+
+  `PyType_Ready` itself can fail after `type_ready_fill_dict` has added the descriptors, and
+  `type_ready` keeps `tp_dict` on failure (Objects/typeobject.c:9665-9667): with
+  `n_in_sequence >= #fields + 5` the post check refuses the negative basicsize ("type m.S has a
+  tp_dictoffset that is too small", :9571-9577), the type is not ready, and its dict still holds
+  descriptors over the freed array; reading one's `__doc__` crashes the same way.
+
+  `initialize_structseq_dict` fails after a successful `PyType_Ready` for a negative
+  `n_in_sequence` (`PyTuple_New(-1)`, SystemError) and on MemoryError. With fields `a`, `b` and
+  `n_in_sequence = -1`, `InitType2` raises SystemError, the type reports itself ready, and
+  reading `T.__dict__['a'].__doc__` (which dereferences `d_member->doc`) crashes; with
+  `n_in_sequence = 1` the same read gives `'doc of a'`. `PyStructSequence_InitType` hides the
+  return value, so its caller cannot even tell that the type is broken; the exception just stays
+  set.
+
+  The Lean model refutes `InitType2NoDangling` (no member descriptor of the type points at freed
+  members after a failure) with one field and `n_in_sequence = 6`, and
+  `initType2_dangling_ready` shows the ready case for `n_in_sequence = -1`.
+likelihood: |
+  Low: it needs a desc error (negative `n_in_sequence`) or a MemoryError during initialisation,
+  and then use of the half-initialised type. Through `PyStructSequence_InitType`, whose callers
+  cannot check for failure, a module would go on to use the type.
+maybe_intended: |
+  No. Freeing memory that a ready, immortal type points at is a cleanup-order mistake; on the
+  `PyType_Ready` failure path the type is also left immortal, so a retry is refused with
+  "bad argument to internal function".
+reproducer: |
+  import subprocess, sys
+  CODE = (
+      "import ctypes, os, sys\n"
+      "api = ctypes.pythonapi\n"
+      "class Field(ctypes.Structure):\n"
+      "    _fields_ = [('name', ctypes.c_char_p), ('doc', ctypes.c_char_p)]\n"
+      "class Desc(ctypes.Structure):\n"
+      "    _fields_ = [('name', ctypes.c_char_p), ('doc', ctypes.c_char_p),\n"
+      "                ('fields', ctypes.POINTER(Field)), ('n_in_sequence', ctypes.c_int)]\n"
+      "api.PyStructSequence_InitType2.restype = ctypes.c_int\n"
+      "api.PyStructSequence_InitType2.argtypes = [ctypes.c_void_p, ctypes.POINTER(Desc)]\n"
+      "fields = (Field * 3)((b'a', b'doc of a'), (b'b', b'doc of b'), (None, None))\n"
+      "buf = ctypes.create_string_buffer(type.__basicsize__ + 64)\n"
+      "d = Desc(b'm.S', None, fields, int(sys.argv[1]))\n"
+      "try:\n"
+      "    api.PyStructSequence_InitType2(ctypes.addressof(buf), ctypes.byref(d))\n"
+      "    print('initialised', flush=True)\n"
+      "except SystemError as e:\n"
+      "    print('SystemError:', e, flush=True)\n"
+      "T = ctypes.cast(ctypes.addressof(buf), ctypes.py_object).value\n"
+      "print('ready:', bool(T.__flags__ & (1 << 12)), flush=True)\n"
+      "descr = T.__dict__['a']\n"
+      "print('descriptor:', descr, flush=True)\n"
+      "print('doc:', repr(descr.__doc__), flush=True)\n"
+      "os._exit(0)\n")
+  res = {}
+  for nseq in (1, -1, 7):
+      r = subprocess.run([sys.executable, "-I", "-c", CODE, str(nseq)], capture_output=True, text=True, timeout=60)
+      res[nseq] = (r.returncode, r.stdout)
+      print(f"n_in_sequence = {nseq}: return code {r.returncode}: {r.stdout.strip()!r}")
+  ok_rc, ok_out = res[1]
+  bad_rc, bad_out = res[-1]
+  nr_rc, nr_out = res[7]
+  if (ok_rc == 0 and "doc: 'doc of a'" in ok_out and "SystemError" in bad_out
+          and "ready: True" in bad_out and "descriptor:" in bad_out and "doc: 'doc of a'" not in bad_out
+          and "tp_dictoffset that is too small" in nr_out and "ready: False" in nr_out
+          and "descriptor:" in nr_out and "doc: 'doc of a'" not in nr_out):
+      print("REPRODUCED typeobj-structseq-inittype2-dangling-members")
+expected: |
+  On failure the type is not left ready with dangling members: either the members are freed only
+  before `PyType_Ready` touched them, or they are kept (or the type is reset).
+observed: |
+  python3 (3.15.2): n_in_sequence = 1 prints 'doc of a'; n_in_sequence = -1 raises SystemError
+  (Objects/tupleobject.c:40), the type is ready, and reading the descriptor's __doc__ crashes
+  (SIGSEGV); n_in_sequence = 7 raises SystemError (tp_dictoffset that is too small), the type is
+  not ready, and the same read crashes. REPRODUCED by scripts/check_bugs.py.
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): the same, REPRODUCED.
+promised_by: |
+  Undisputed invariant: a C API function that fails does not leave live objects pointing at
+  memory it freed. Doc/c-api/tuple.rst: InitType2 "returns 0 on success and -1 with an exception
+  set on failure", nothing about the type being unusable.
+cause: |
+  Objects/structseq.c:699-701 frees `members` on any failure of `initialize_static_type`, which
+  may fail after `PyType_Ready` (:599) has made the type immortal (Objects/typeobject.c:9719-9724)
+  and created descriptors over `tp_members` (`type_ready_fill_dict`, :9623), whether
+  `PyType_Ready` then succeeded (READY set) or failed later (`tp_dict` kept, :9665-9667).
+possible_fix: |
+  Validate the desc (`0 <= n_in_sequence <= n_members`) before `PyType_Ready`, and once
+  `PyType_Ready` has succeeded do not free `tp_members` (leak them, as the successful path keeps
+  them), or clear the descriptors and `tp_members` before freeing.
+duplicates:
+  issues:
+    - {number: 77923, state: closed, relation: "PyStructSequence_InitType on uninitialised memory (bpo-33742), closed as not a bug; a different defect"}
+  queries: ["PyStructSequence_InitType2", "PyStructSequence_InitType", "InitType2 members free",
+            "structseq static type use after free", "PyStructSequence_InitType error"]
+  bugforge: "no match for structseq or PyStructSequence"
+lean:
+  property: PyLean.TypeObj.StructSeq.InitType2NoDangling
+  theorem: PyLean.TypeObj.StructSeq.initType2NoDangling_refuted

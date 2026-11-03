@@ -1021,14 +1021,14 @@ bytesobj-repr-terminates	proven	Objects/listobject.c	list_repr,list_repr_impl,tu
 bytesobj-slice-reads	proven	Objects/tupleobject.c	tuple_subscript,list_slice_lock_held,list_slice_subscript,_PyList_SliceSubscript
 bytesobj-list-resize	proven	Objects/listobject.c	list_resize,py_list_resize
 bytesobj-list-growth-pattern	proven	Objects/listobject.c	list_resize,_PyList_AppendTakeRefListResize,list_append_impl
-bytesobj-list-ops-wf	proven	Objects/listobject.c	list_resize,list_preallocate_exact,list_new_prealloc,list_clear_impl,list_clear,list_clear_slot,py_list_clear_impl,list_append_impl,list_extend_fast,list_extend_lock_held,list_extend_set,list_extend_dict,list_extend_dictitems,list_inplace_repeat,list_ass_item,list_ass_slice,reverse_slice,list_reverse_impl,PyList_Clear
+bytesobj-list-ops-wf	proven	Objects/listobject.c	list_resize,list_preallocate_exact,list_new_prealloc,list_clear_impl,list_clear,list_clear_slot,py_list_clear_impl,list_append_impl,list_extend_fast,list_extend_lock_held,list_extend_set,list_extend_dict,list_inplace_repeat,list_ass_item,list_ass_slice,reverse_slice,list_reverse_impl,PyList_Clear
 bytesobj-tuple-concat	proven	Objects/tupleobject.c	_PyTuple_Concat,tuple_alloc,tuple_get_empty
 bytesobj-repeat	proven	Objects/tupleobject.c	tuple_repeat,list_repeat,tuple_alloc
 bytesobj-tuple-construct	proven	Objects/tupleobject.c	maybe_tracked,PyTuple_FromArray,_PyTuple_FromStackRefStealOnSuccess,_PyTuple_FromArraySteal,PyTuple_Pack,_PyTuple_MaybeUntrack,tuple_new_impl,tuple_vectorcall,tuple_subtype_new,tuple___getnewargs___impl,tuple_slice
-bytesobj-capi-agree	proven	Objects/listobject.c	PyList_Size,PyList_GetItem,PyList_GetItemRef,PyList_SetItem,PyList_Insert,PyList_Append,PyList_SetSlice,PyList_Reverse,PyList_AsTuple,PyList_Extend,PyList_Clear,list_copy_impl,PyTuple_Size,PyTuple_GetItem,_PyTuple_Resize,list_ass_slice
+bytesobj-capi-agree	proven	Objects/listobject.c	PyList_Size,PyList_GetItem,PyList_GetItemRef,PyList_SetItem,PyList_Insert,PyList_Append,PyList_SetSlice,PyList_Reverse,PyList_AsTuple,PyList_Extend,PyList_Clear,list_copy_impl,PyTuple_Size,PyTuple_GetItem,_PyTuple_Resize,list_ass_slice,valid_index
 bytesobj-item-access	proven	Objects/tupleobject.c	tuple_item,tuple_length,list_item,list_length,tuple_subscript
 bytesobj-capi-construct	proven	Objects/listobject.c	PyList_New,PyTuple_New,_PyList_FromStackRefStealOnSuccess,_PyList_AsTupleAndClear,PyTuple_SetItem,PyList_GetSlice,PyTuple_GetSlice,list_vectorcall
-bytesobj-list-contents	proven	Objects/listobject.c	list_append_impl,PyList_Insert,list_clear_impl,reverse_slice,list_reverse_impl,PyList_Reverse,list_extend_fast,list_extend_set,list_extend_dict,list_extend_dictitems,_list_extend,list_extend_impl,_PyList_Extend,list_inplace_concat,list_concat_lock_held,_PyList_Concat,list_copy_impl,list___init___impl,list_inplace_repeat,list_inplace_repeat_lock_held
+bytesobj-list-contents	proven	Objects/listobject.c	list_append_impl,PyList_Insert,list_clear_impl,reverse_slice,list_reverse_impl,PyList_Reverse,list_extend_fast,list_extend_set,list_extend_dict,_list_extend,list_extend_impl,_PyList_Extend,list_inplace_concat,list_concat_lock_held,_PyList_Concat,list_copy_impl,list___init___impl,list_inplace_repeat,list_inplace_repeat_lock_held
 bytesobj-list-extend-iter	proven	Objects/listobject.c	list_extend_iter_lock_held,_list_extend
 bytesobj-sortslice-parallel	proven	Objects/listobject.c	sortslice_copy,sortslice_copy_incr,sortslice_copy_decr,sortslice_memcpy,sortslice_memmove,sortslice_advance,sortslice_reverse
 bytesobj-merge-mem	proven	Objects/listobject.c	merge_init,merge_getmem
@@ -1048,6 +1048,20 @@ bytesobj-tuple-binary-slice	proven	Objects/tupleobject.c
 bytesobj-iteritem-agrees	proven	Objects/tupleobject.c	tuple_iteritem,list_iteritem
 bytesobj-list-del-like-pop	proven	Objects/listobject.c	list_ass_item_lock_held,list_pop_impl
 bytesobj-list-ass-item-allocation	proven	Objects/listobject.c	list_ass_item_lock_held
+bytesobj-list-resize-exact	proven	Objects/listobject.c	list_resize,py_list_resize
+bytesobj-list-ops-succeed	proven	Objects/listobject.c	list_resize,valid_index,list_append_impl,_PyList_AppendTakeRefListResize,ins1,list_ass_item,list_ass_item_lock_held,list_clear_impl,list_clear,py_list_clear_impl,list_extend_fast,list_preallocate_exact,list_extend_set,list_ass_slice_lock_held,list_ass_slice
+bytesobj-list-inplace-repeat	proven	Objects/listobject.c	list_inplace_repeat_lock_held,list_inplace_repeat,list_repeat_lock_held,list_repeat
+bytesobj-capi-list-ops	proven	Objects/listobject.c	PyList_SetItem,PyList_Insert,PyList_Append,PyList_SetSlice,PyList_Clear,PyList_Extend,list_ass_slice,list_extend_lock_held
+bytesobj-capi-slice-concat	proven	Objects/listobject.c	PyList_GetSlice,list_slice_lock_held,PyList_New,list_new_prealloc,_PyList_Concat,list_concat_lock_held
+bytesobj-list-clear	proven	Objects/listobject.c	list_clear_impl,list_clear,py_list_clear_impl,PyList_Clear
+bytesobj-contains-reentrant	proven	Objects/listobject.c	list_contains,list_get_item_ref,_PyList_GetItemRef
+bytesobj-repr-reentrant	proven	Objects/listobject.c	list_repr_impl,list_repr
+bytesobj-list-ass-slice-clear	proven	Objects/listobject.c	list_ass_slice_lock_held,list_extend_fast
+bytesobj-list-extend-dispatch	proven	Objects/listobject.c	_list_extend,list_extend_impl,_PyList_Extend,list_inplace_concat,list_extend_dict,list_extend_dictitems,list_extend_set,list_extend_iter_lock_held
+bytesobj-list-extend-iter-reentrant	proven	Objects/listobject.c	list_extend_iter_lock_held
+bytesobj-sortslice-moves	proven	Objects/listobject.c	sortslice_copy,sortslice_copy_incr,sortslice_copy_decr,sortslice_memcpy,sortslice_memmove,sortslice_advance
+bytesobj-repr-step	proven	Objects/listobject.c	list_repr_impl
+bytesobj-list-extend-iter-wf	proven	Objects/listobject.c	list_extend_iter_lock_held
 bytesobj-bytes-class-shortcut	proven	Objects/bytes_methods.c	_Py_bytes_isspace,_Py_bytes_isalpha,_Py_bytes_isalnum,_Py_bytes_isdigit,bytearray_isspace,bytearray_isalpha,bytearray_isalnum,bytearray_isdigit
 bytesobj-bytes-cased	proven	Objects/bytes_methods.c	_Py_bytes_islower,_Py_bytes_isupper,bytearray_islower,bytearray_isupper
 bytesobj-bytes-title	proven	Objects/bytes_methods.c	_Py_bytes_istitle,_Py_bytes_title,bytearray_istitle,bytearray_title
@@ -1779,6 +1793,11 @@ typeobj-structseq-replace-spec	proven	Objects/structseq.c	structseq_replace,PySt
 typeobj-structseq-new-impl-spec	proven	Objects/structseq.c	structseq_new_impl,PyStructSequence_New,get_type_attr_as_size
 typeobj-structseq-newtype-outcomes	proven	Objects/structseq.c	count_members,initialize_members,_PyStructSequence_NewType,PyStructSequence_NewType
 typeobj-structseq-newtype-basicsize-exact	refuted	Objects/structseq.c	_PyStructSequence_NewType,PyStructSequence_NewType,count_members,initialize_members
+typeobj-structseq-static-twin	proven	Objects/structseq.c	initialize_static_fields,PyStructSequence_InitType2,PyStructSequence_InitType,count_members,initialize_members
+typeobj-structseq-inittype2-outcomes	proven	Objects/structseq.c	PyStructSequence_InitType2,initialize_static_fields,count_members,initialize_members
+typeobj-structseq-static-twin-all	refuted	Objects/structseq.c	PyStructSequence_InitType2,initialize_static_fields,_PyStructSequence_NewType,PyStructSequence_NewType
+typeobj-structseq-static-twin-valid	refuted	Objects/structseq.c	PyStructSequence_InitType2,_PyStructSequence_NewType,PyStructSequence_NewType,initialize_members
+typeobj-structseq-inittype2-no-dangling	refuted	Objects/structseq.c	PyStructSequence_InitType2,initialize_static_fields
 typeobj-exc-str-args	proven	Objects/exceptions.c	
 typeobj-exc-repr-args	proven	Objects/exceptions.c	
 typeobj-exc-keyerror-str	proven	Objects/exceptions.c	
@@ -2076,8 +2095,12 @@ textlibs-struct-le-complex-float-overflow	refuted	Modules/_struct.c	np_float_com
 textlibs-struct-bytes-format-nonascii-error	proven	Modules/_struct.c	cache_struct_converter,set_format,pack_impl
 textlibs-struct-void-p-index-overflow	refuted	Modules/_struct.c	np_void_p,s_pack_internal
 textlibs-struct-pack-into-0p-outside-field	open	Modules/_struct.c	
-textlibs-struct-half-round-trip	open	Modules/_struct.c	unpack_halffloat,pack_halffloat,nu_halffloat,np_halffloat
-textlibs-struct-float-round-trip	open	Modules/_struct.c	unpack_float,lu_float,lp_float
+textlibs-struct-half-round-trip	proven	Modules/_struct.c	unpack_halffloat,pack_halffloat
+textlibs-struct-float-round-trip	proven	Modules/_struct.c	unpack_float
+textlibs-struct-half-unpack	proven	Modules/_struct.c	unpack_halffloat,nu_halffloat,bu_halffloat,lu_halffloat
+textlibs-struct-half-overflow	proven	Modules/_struct.c	pack_halffloat,np_halffloat,bp_halffloat,lp_halffloat
+textlibs-struct-float-unpack	proven	Modules/_struct.c	unpack_float,bu_float,lu_float
+textlibs-struct-double-bytes	proven	Modules/_struct.c	unpack_double,nu_double,np_double,bu_double,bp_double
 textlibs-struct-prepare-two-passes	proven	Modules/_struct.c	prepare_s,whichtable,getentry
 textlibs-struct-char-code	proven	Modules/_struct.c	nu_char,np_char
 textlibs-struct-bool-code	proven	Modules/_struct.c	np_bool,bp_bool,nu_bool,bu_bool
@@ -2096,6 +2119,8 @@ textlibs-struct-uninitialized	proven	Modules/_struct.c	s_new
 textlibs-struct-get-pylong	proven	Modules/_struct.c	get_pylong
 textlibs-struct-index-raises	proven	Modules/_struct.c	get_long,get_ulong,get_longlong,get_ulonglong,get_ssize_t,get_size_t
 textlibs-struct-index-overflow	proven	Modules/_struct.c	np_int
+textlibs-struct-get-conversions	proven	Modules/_struct.c	get_pylong,get_long,get_ulong,get_longlong,get_ulonglong,get_ssize_t,get_size_t
+textlibs-struct-native-int-range	proven	Modules/_struct.c	np_byte,np_ubyte,np_short,np_ushort,np_int,np_uint,np_long,np_ulong,np_ssize_t,np_size_t,np_longlong,np_ulonglong,_range_error,get_pylong,get_long,get_ulong,get_longlong,get_ulonglong,get_ssize_t,get_size_t
 textlibs-struct-bool-raises	proven	Modules/_struct.c	np_bool,bp_bool
 textlibs-struct-float-replaced	proven	Modules/_struct.c	pack_halffloat,np_float,np_double,bp_float,bp_double,lp_float,lp_double
 textlibs-struct-float-order	proven	Modules/_struct.c	pack_halffloat,np_float,np_double

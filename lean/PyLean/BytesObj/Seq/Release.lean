@@ -28,6 +28,12 @@ def tupleDeallocOrder (items : List α) : List (Option α) :=
 def listDeallocOrder (o : LObj α) : List (Option α) :=
   if o.hasItems then backLoop o.items o.items.length else []
 
+/-- The `Py_XDECREF` order of `list_clear_impl(a, is_resize)`, listobject.c:893-921: nothing when
+`ob_item == NULL` (:896-899), otherwise the size is read, the list emptied, and the old items
+released from the last (:903-911). -/
+def listClearOrder (o : LObj α) : List (Option α) :=
+  if !o.hasItems then [] else backLoop o.items o.items.length
+
 /-- `tuple_traverse(self, visit, arg)`, tupleobject.c:727-735. -/
 def tupleTraverse (items : List α) : List (Option α) := backLoop items items.length
 

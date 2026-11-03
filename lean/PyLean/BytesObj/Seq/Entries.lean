@@ -12,6 +12,12 @@ import PyLean.BytesObj.Seq.CApiContent
 import PyLean.BytesObj.Seq.ContentProps
 import PyLean.BytesObj.Seq.BugProps
 import PyLean.BytesObj.Seq.Release
+import PyLean.BytesObj.Seq.ListRows
+import PyLean.BytesObj.Seq.ListRows2
+import PyLean.BytesObj.Seq.ListRows3
+import PyLean.BytesObj.Seq.ListRows4
+import PyLean.BytesObj.Seq.ListRows5
+import PyLean.BytesObj.Seq.ListRows6
 
 /-! Registry entries for tuple (Objects/tupleobject.c) and list (Objects/listobject.c). -/
 
@@ -108,7 +114,7 @@ def entries : List Entry := [
     statement := "The capacities through the first 65 appends are 0, 4, 8, 16, 24, 32, 40, 52, 64, 76, the sequence in the comment at listobject.c:144."
     source := "listobject.c:144", status := .proven
     prop := ``ListGrowthPattern, thm := some ``listGrowthPattern_proven },
-  { id := "bytesobj-list-ops-wf", pyFile := "Objects/listobject.c", pyFns := ["list_resize", "list_preallocate_exact", "list_new_prealloc", "list_clear_impl", "list_clear", "list_clear_slot", "py_list_clear_impl", "list_append_impl", "list_extend_fast", "list_extend_lock_held", "list_extend_set", "list_extend_dict", "list_extend_dictitems", "list_inplace_repeat", "list_ass_item", "list_ass_slice", "reverse_slice", "list_reverse_impl", "PyList_Clear"]
+  { id := "bytesobj-list-ops-wf", pyFile := "Objects/listobject.c", pyFns := ["list_resize", "list_preallocate_exact", "list_new_prealloc", "list_clear_impl", "list_clear", "list_clear_slot", "py_list_clear_impl", "list_append_impl", "list_extend_fast", "list_extend_lock_held", "list_extend_set", "list_extend_dict", "list_inplace_repeat", "list_ass_item", "list_ass_slice", "reverse_slice", "list_reverse_impl", "PyList_Clear"]
     statement := "Every mutating list method keeps the invariant: allocated covers the items, an array exists when anything is allocated, and its byte size fits Py_ssize_t."
     source := "invariant of PyListObject, Include/cpython/listobject.h", status := .proven
     prop := ``ListOpsWF, thm := some ``listOpsWF_proven },
@@ -124,7 +130,7 @@ def entries : List Entry := [
     statement := "The tuple construction paths and their GC tracking decisions, as gc.is_tracked shows them; tuple(t) is t for an exact tuple; a subclass instance starts with no cached hash; keyword arguments are rejected first."
     source := "tupleobject.c:445-516; Doc/library/gc.rst (is_tracked)", status := .proven
     prop := ``TupleConstruct, thm := some ``tupleConstruct_proven },
-  { id := "bytesobj-capi-agree", pyFile := "Objects/listobject.c", pyFns := ["PyList_Size", "PyList_GetItem", "PyList_GetItemRef", "PyList_SetItem", "PyList_Insert", "PyList_Append", "PyList_SetSlice", "PyList_Reverse", "PyList_AsTuple", "PyList_Extend", "PyList_Clear", "list_copy_impl", "PyTuple_Size", "PyTuple_GetItem", "_PyTuple_Resize", "list_ass_slice"]
+  { id := "bytesobj-capi-agree", pyFile := "Objects/listobject.c", pyFns := ["PyList_Size", "PyList_GetItem", "PyList_GetItemRef", "PyList_SetItem", "PyList_Insert", "PyList_Append", "PyList_SetSlice", "PyList_Reverse", "PyList_AsTuple", "PyList_Extend", "PyList_Clear", "list_copy_impl", "PyTuple_Size", "PyTuple_GetItem", "_PyTuple_Resize", "list_ass_slice", "valid_index"]
     statement := "Each C API entry point refuses an object of another type with its own error; PyList_GetItem and friends take no negative index, unlike l[i], and the others act on the contents as described, for every argument; _PyTuple_Resize keeps the prefix and pads with NULL."
     source := "Doc/c-api/list.rst, Doc/c-api/tuple.rst", status := .proven
     prop := ``CApiAgree, thm := some ``cApiAgree_proven },
@@ -136,7 +142,7 @@ def entries : List Entry := [
     statement := "The C API constructors and slice getters for every argument: PyList_New and PyTuple_New for every size, the stack-reference and tuple-and-clear paths, PyTuple_SetItem on a uniquely referenced tuple, PyList_GetSlice, PyTuple_GetSlice, and list_vectorcall's argument checks."
     source := "Doc/c-api/list.rst, Doc/c-api/tuple.rst", status := .proven
     prop := ``CApiConstruct, thm := some ``cApiConstruct_proven },
-  { id := "bytesobj-list-contents", pyFile := "Objects/listobject.c", pyFns := ["list_append_impl", "PyList_Insert", "list_clear_impl", "reverse_slice", "list_reverse_impl", "PyList_Reverse", "list_extend_fast", "list_extend_set", "list_extend_dict", "list_extend_dictitems", "_list_extend", "list_extend_impl", "_PyList_Extend", "list_inplace_concat", "list_concat_lock_held", "_PyList_Concat", "list_copy_impl", "list___init___impl", "list_inplace_repeat", "list_inplace_repeat_lock_held"]
+  { id := "bytesobj-list-contents", pyFile := "Objects/listobject.c", pyFns := ["list_append_impl", "PyList_Insert", "list_clear_impl", "reverse_slice", "list_reverse_impl", "PyList_Reverse", "list_extend_fast", "list_extend_set", "list_extend_dict", "_list_extend", "list_extend_impl", "_PyList_Extend", "list_inplace_concat", "list_concat_lock_held", "_PyList_Concat", "list_copy_impl", "list___init___impl", "list_inplace_repeat", "list_inplace_repeat_lock_held"]
     statement := "What the list methods do to the contents, for every element type and argument, including that __init__ drops the old contents before it looks at the iterable."
     source := "Doc/library/stdtypes.rst, mutable sequence types", status := .proven
     prop := ``ListContents, thm := some ``listContents_proven },
@@ -215,7 +221,80 @@ def entries : List Entry := [
   { id := "bytesobj-list-ass-item-allocation", pyFile := "Objects/listobject.c", pyFns := ["list_ass_item_lock_held"]
     statement := "l[i] = x leaves the array alone, and del l[i] is list_resize to one item less."
     source := "listobject.c:1159-1179", status := .proven
-    prop := ``ListAssItemAllocation, thm := some ``listAssItemAllocation_proven }
+    prop := ``ListAssItemAllocation, thm := some ``listAssItemAllocation_proven },
+  { id := "bytesobj-list-resize-exact", pyFile := "Objects/listobject.c", pyFns := ["list_resize", "py_list_resize"]
+    statement := "list_resize keeps the array when it is large enough and at most half empty or at most 32 slots, reallocates a larger array shrinking below half, allocates newsize + newsize/8 + 6 rounded down to a multiple of 4 (or newsize rounded up when the jump is larger), raises MemoryError growing past PY_SSIZE_T_MAX/8 slots, and never fails when shrinking."
+    source := "listobject.c:96-216 (the comments at :103, :118-120, :144-146, :203-204; gh-158592)", status := .proven
+    prop := ``ListResizeExact, thm := some ``listResizeExact_proven },
+  { id := "bytesobj-list-ops-succeed", pyFile := "Objects/listobject.c"
+    pyFns := ["list_resize", "valid_index", "list_append_impl", "_PyList_AppendTakeRefListResize", "ins1",
+      "list_ass_item", "list_ass_item_lock_held", "list_clear_impl", "list_clear", "py_list_clear_impl",
+      "list_extend_fast", "list_preallocate_exact", "list_extend_set", "list_ass_slice_lock_held", "list_ass_slice"]
+    statement := "For every list with its invariant: append and insert succeed exactly when list_resize can grow the list by one (insert refuses NULL first, and clips its index); item store and delete succeed for every valid index and raise IndexError otherwise; clear frees the array; extend from a sequence or set and slice assignment succeed up to PY_SSIZE_T_MAX/16 items and raise MemoryError past PY_SSIZE_T_MAX/8, a list with no array taking an exact even allocation from a sequence and an over-allocation from a set; slice deletion always succeeds; a non-iterable raises TypeError."
+    source := "Doc/library/stdtypes.rst mutable sequence types; listobject.c:502-528, :546-557, :893-921, :970-1089, :1159-1190, :1262-1298, :1388-1413", status := .proven
+    prop := ``ListOpsSucceed, thm := some ``listOpsSucceed_proven
+    notes := "The PyMem_Malloc of the recycle buffer in list_ass_slice_lock_held (:1006-1011) fails only when the allocator itself does, which no model here covers." },
+  { id := "bytesobj-list-inplace-repeat", pyFile := "Objects/listobject.c"
+    pyFns := ["list_inplace_repeat_lock_held", "list_inplace_repeat", "list_repeat_lock_held", "list_repeat"]
+    statement := "For every list with its invariant: l *= 1 and [] *= n change nothing, l *= n for n < 1 frees the array, otherwise l *= n holds n copies up to PY_SSIZE_T_MAX/8 - 3 items and raises MemoryError past PY_SSIZE_T_MAX/8; the contents models of l * n and l *= n (sequences-list-repeat) are these functions."
+    source := "Doc/library/stdtypes.rst common sequence operations, note (2); listobject.c:840-880, :1101-1156", status := .proven
+    prop := ``ListInplaceRepeatSpec, thm := some ``listInplaceRepeatSpec_proven },
+  { id := "bytesobj-capi-list-ops", pyFile := "Objects/listobject.c"
+    pyFns := ["PyList_SetItem", "PyList_Insert", "PyList_Append", "PyList_SetSlice", "PyList_Clear", "PyList_Extend",
+      "list_ass_slice", "list_extend_lock_held"]
+    statement := "PyList_SetItem, PyList_Insert, PyList_Append, PyList_SetSlice, PyList_Clear and PyList_Extend refuse a non-list with SystemError; Insert and Append refuse NULL; on a list each does what the method does, success forced: insert and append exactly when the list can grow, slice deletion always, slice assignment up to PY_SSIZE_T_MAX/16 items, a non-iterable slice value raising TypeError, clear freeing the array, extend from a sequence."
+    source := "Doc/c-api/list.rst", status := .proven
+    prop := ``CApiListOps, thm := some ``cApiListOps_proven },
+  { id := "bytesobj-capi-slice-concat", pyFile := "Objects/listobject.c"
+    pyFns := ["PyList_GetSlice", "list_slice_lock_held", "PyList_New", "list_new_prealloc", "_PyList_Concat",
+      "list_concat_lock_held"]
+    statement := "PyList_GetSlice(a, i, j) is a[max(i,0):max(j,0)] for every pair of indices, exactly allocated; PyList_New(0) has no array and a size past PY_SSIZE_T_MAX/8 raises MemoryError; list_new_prealloc fails past that size; a + b refuses a non-list with the source's TypeError and is otherwise a's items then b's, or MemoryError past PY_SSIZE_T_MAX/8 items."
+    source := "Doc/c-api/list.rst; listobject.c:261-327, :764-838; Include/pymem.h:63-65; Objects/obmalloc.c:1264", status := .proven
+    prop := ``CApiSliceConcat, thm := some ``cApiSliceConcat_proven },
+  { id := "bytesobj-list-clear", pyFile := "Objects/listobject.c"
+    pyFns := ["list_clear_impl", "list_clear", "py_list_clear_impl", "PyList_Clear"]
+    statement := "l.clear() and PyList_Clear leave every list empty with no array (sys.getsizeof 40) and release the old items last to first."
+    source := "Doc/library/stdtypes.rst (s.clear()); listobject.c:900-911 (the list is emptied before the items are released)", status := .proven
+    prop := ``ListClearSpec, thm := some ``listClearSpec_proven },
+  { id := "bytesobj-contains-reentrant", pyFile := "Objects/listobject.c"
+    pyFns := ["list_contains", "list_get_item_ref", "_PyList_GetItemRef"]
+    statement := "x in l rereads the list after each comparison, for every comparison: it stops at the current end, goes on in the list the comparison left, and ends on a true or raising comparison; with an __eq__ that pops, only the first ceil(n/2) items are compared and n // 2 remain."
+    source := "listobject.c:676-693; Doc/reference/expressions.rst membership tests", status := .proven
+    prop := ``ContainsReentrant, thm := some ``containsReentrant_proven },
+  { id := "bytesobj-repr-reentrant", pyFile := "Objects/listobject.c", pyFns := ["list_repr_impl", "list_repr"]
+    statement := "repr(l) rereads the size and the slot after each item's repr, as the comment at listobject.c:621-622 requires: with a __repr__ that pops, the result is the repr of the first ceil(n/2) items and n // 2 remain; a list or tuple already being printed prints as [...] or (...)."
+    source := "listobject.c:601-654 (the comment at :621-622); Objects/object.c Py_ReprEnter", status := .proven
+    prop := ``ReprReentrant, thm := some ``reprReentrant_proven },
+  { id := "bytesobj-list-ass-slice-clear", pyFile := "Objects/listobject.c"
+    pyFns := ["list_ass_slice_lock_held", "list_extend_fast"]
+    statement := "A slice assignment or deletion whose result is empty frees the array; extend from a sequence into a list whose array has room and is at most half empty keeps that array."
+    source := "listobject.c:1006-1010, :1275-1283, :121-128", status := .proven
+    prop := ``ListAssSliceClear, thm := some ``listAssSliceClear_proven },
+  { id := "bytesobj-list-extend-dispatch", pyFile := "Objects/listobject.c"
+    pyFns := ["_list_extend", "list_extend_impl", "_PyList_Extend", "list_inplace_concat", "list_extend_dict",
+      "list_extend_dictitems", "list_extend_set", "list_extend_iter_lock_held"]
+    statement := "_list_extend tests exact types, so a subclass of list, tuple, set or dict goes to its own iterator; an exact dict and its keys view store the keys and the values view the values, success forced; the items view stores a tuple per entry and, when one fails, keeps the old items and the pairs built so far; the generic path reads the size after the length hint, and a failed append keeps what was appended."
+    source := "Doc/library/stdtypes.rst (s.extend(t)); listobject.c:1300-1373, :1415-1532", status := .proven
+    prop := ``ListExtendDispatch, thm := some ``listExtendDispatch_proven },
+  { id := "bytesobj-list-extend-iter-reentrant", pyFile := "Objects/listobject.c"
+    pyFns := ["list_extend_iter_lock_held"]
+    statement := "list.extend from an iterator that appends z to the list before yielding each item leaves old ++ [z, x0, z, x1, ...], for every list and every such iterator: the size and allocation are reread after each __next__."
+    source := "listobject.c:1338-1365", status := .proven
+    prop := ``ListExtendIterReentrant, thm := some ``listExtendIterReentrant_proven },
+  { id := "bytesobj-sortslice-moves", pyFile := "Objects/listobject.c"
+    pyFns := ["sortslice_copy", "sortslice_copy_incr", "sortslice_copy_decr", "sortslice_memcpy",
+      "sortslice_memmove", "sortslice_advance"]
+    statement := "Slot by slot, for every slice: sortslice_copy puts s2[j] at s1[i] in keys and values and changes nothing else; copy_incr and copy_decr copy at the cursors and step them forward or back; memcpy and memmove put s2[j+k] at s1[i+k] for k < n, memmove reading the source as it was; advance moves the cursor n slots; a slice without values stays without."
+    source := "listobject.c:1660-1723 (keys and values always moved in sync)", status := .proven
+    prop := ``SortsliceMoves, thm := some ``sortsliceMoves_proven },
+  { id := "bytesobj-repr-step", pyFile := "Objects/listobject.c", pyFns := ["list_repr_impl"]
+    statement := "For every item __repr__, including one that replaces, inserts or removes items: each pass of repr(l) tests the index against the size of the list the previous __repr__ left, reads the item from that list's current array, and goes on with the list the __repr__ leaves; past the end it closes the bracket; a raising __repr__ ends it."
+    source := "listobject.c:621-640 (the comment at :621-624)", status := .proven
+    prop := ``ReprStep, thm := some ``reprStep_proven },
+  { id := "bytesobj-list-extend-iter-wf", pyFile := "Objects/listobject.c", pyFns := ["list_extend_iter_lock_held"]
+    statement := "list.extend from a generic iterable keeps the list's invariant (allocated covers the items, an array exists when anything is allocated) for every iterator whose callbacks keep it, including one that clears the list or replaces its array: the size and allocation are reread after each __next__."
+    source := "listobject.c:1338-1365 (the reread at :1350)", status := .proven
+    prop := ``ListExtendIterWF, thm := some ``listExtendIterWF_proven }
 ]
 
 end PyLean.BytesObj.Seq

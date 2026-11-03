@@ -1,0 +1,85 @@
+id: typeobj-structseq-twin-offset-member-names
+title: "A struct sequence field named __dictoffset__, __weaklistoffset__ or __vectorcalloffset__ makes PyStructSequence_NewType raise SystemError, while PyStructSequence_InitType2 builds the type"
+priority: P5
+kind: twin-mismatch
+module: typeobj
+files: [Objects/structseq.c, Objects/typeobject.c]
+functions: ["_PyStructSequence_NewType", "PyStructSequence_NewType", "PyStructSequence_InitType2"]
+summary: |
+  `_PyStructSequence_NewType` passes the fields to `PyType_FromSpecWithBases` as `Py_tp_members`.
+  `PyType_FromMetaclass` treats members named `__weaklistoffset__`, `__dictoffset__` and
+  `__vectorcalloffset__` as special offsets (Objects/typeobject.c:5443-5451) and
+  `special_offset_from_member` (:5272-5297, called at :5651-5665) refuses them unless they are
+  `Py_T_PYSSIZET`; the struct sequence members are `_Py_T_OBJECT` (structseq.c:560), so NewType
+  raises `SystemError: type of __dictoffset__ must be Py_T_PYSSIZET`. The static twin
+  `PyStructSequence_InitType2` goes through `PyType_Ready`, which never looks at member names,
+  and builds a working type with a field of that name (`m.S(a=1, __dictoffset__=2)`).
+
+  The Lean model refutes `StaticTwinValid` (on every valid desc the twins agree) with fields
+  `a`, `__dictoffset__`; `StaticTwin` holds once those three names are excluded.
+likelihood: |
+  Very low: a desc has to name a field after one of three reserved type-layout names.
+maybe_intended: |
+  Largely. The three names are reserved by the `PyType_FromSpec` API for offset members, so
+  refusing them in NewType is defensible; the message just does not say that a struct sequence
+  field may not use the name, and the static path accepts it. Recorded for the twin
+  disagreement, not as a defect to fix on its own.
+reproducer: |
+  import subprocess, sys
+  CODE = (
+      "import ctypes, os\n"
+      "api = ctypes.pythonapi\n"
+      "libc = ctypes.CDLL(None)\n"
+      "libc.calloc.restype = ctypes.c_void_p\n"
+      "libc.calloc.argtypes = [ctypes.c_size_t, ctypes.c_size_t]\n"
+      "class Field(ctypes.Structure):\n"
+      "    _fields_ = [('name', ctypes.c_char_p), ('doc', ctypes.c_char_p)]\n"
+      "class Desc(ctypes.Structure):\n"
+      "    _fields_ = [('name', ctypes.c_char_p), ('doc', ctypes.c_char_p),\n"
+      "                ('fields', ctypes.POINTER(Field)), ('n_in_sequence', ctypes.c_int)]\n"
+      "api.PyStructSequence_InitType2.restype = ctypes.c_int\n"
+      "api.PyStructSequence_InitType2.argtypes = [ctypes.c_void_p, ctypes.POINTER(Desc)]\n"
+      "api.PyStructSequence_NewType.restype = ctypes.py_object\n"
+      "api.PyStructSequence_NewType.argtypes = [ctypes.POINTER(Desc)]\n"
+      "arr = (Field * 3)((b'a', None), (b'__dictoffset__', None), (None, None))\n"
+      "d = Desc(b'm.S', None, arr, 2)\n"
+      "try:\n"
+      "    api.PyStructSequence_NewType(ctypes.byref(d)); print('NewType built')\n"
+      "except SystemError as e:\n"
+      "    print('NewType SystemError:', e)\n"
+      "buf = libc.calloc(1, type.__basicsize__ + 64)\n"
+      "api.PyStructSequence_InitType2(buf, ctypes.byref(d))\n"
+      "T = ctypes.cast(buf, ctypes.py_object).value\n"
+      "print('InitType2 built', repr(T((1, 2))), flush=True)\n"
+      "os._exit(0)\n")
+  r = subprocess.run([sys.executable, "-I", "-c", CODE], capture_output=True, text=True, timeout=60)
+  print(r.stdout.strip())
+  if ("NewType SystemError: type of __dictoffset__ must be Py_T_PYSSIZET" in r.stdout
+          and "InitType2 built m.S(a=1, __dictoffset__=2)" in r.stdout):
+      print("REPRODUCED typeobj-structseq-twin-offset-member-names")
+expected: |
+  The two ways of creating a struct sequence type from one desc agree: both accept the field
+  name, or both refuse it with a message about reserved field names.
+observed: |
+  python3 (3.15.2): NewType raises SystemError "type of __dictoffset__ must be Py_T_PYSSIZET";
+  InitType2 builds m.S(a=1, __dictoffset__=2). The same for __weaklistoffset__ and
+  __vectorcalloffset__; __module__ works on both. REPRODUCED by scripts/check_bugs.py.
+  main (3.16.0a1+dev, vendor/cpython-main/python.exe): the same, REPRODUCED.
+promised_by: |
+  Doc/c-api/tuple.rst presents PyStructSequence_InitType2 and PyStructSequence_NewType as two
+  ways to make the same struct sequence type from a desc; it reserves no field names.
+cause: |
+  Objects/typeobject.c:5443-5451 and :5651-5665 (PyType_FromMetaclass only) against
+  Objects/structseq.c:560 (`members[k].type = _Py_T_OBJECT`).
+possible_fix: |
+  Either document (or check in both functions) that these three names cannot be field names, or
+  have `_PyStructSequence_NewType` refuse them with a clear TypeError; nothing needs to change in
+  the static path.
+duplicates:
+  issues: []
+  queries: ["__dictoffset__ structseq", "PyStructSequence __dictoffset__", "must be Py_T_PYSSIZET",
+            "special_offset_from_member", "PyStructSequence_NewType field name"]
+  bugforge: "no match for structseq or PyStructSequence"
+lean:
+  property: PyLean.TypeObj.StructSeq.StaticTwinValid
+  theorem: PyLean.TypeObj.StructSeq.staticTwinValid_refuted

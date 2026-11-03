@@ -69,9 +69,9 @@ def CApiAgree : Prop :=
     (pyListAppend (some o) (some v) = .ok o' → o'.items = o.items ++ [v]) ∧
     pyListAppend (some o) none = .error systemError ∧
     (0 ≤ j → j ≤ k → k ≤ o.items.length →
-      (pyListSetSlice (some o) j k (some w) false = .ok o' →
+      (pyListSetSlice (some o) j k (.seq w) = .ok o' →
         o'.items = o.items.take j.toNat ++ w ++ o.items.drop k.toNat) ∧
-      (pyListSetSlice (some o) j k none true = .ok o' →
+      (pyListSetSlice (some o) j k .selfCopy = .ok o' →
         o'.items = o.items.take j.toNat ++ o.items ++ o.items.drop k.toNat)) ∧
     (pyListClear (some o) = .ok o' → o'.items = []) ∧
     (pyListReverse (some o) = .ok o' → o'.items = o.items.reverse) ∧

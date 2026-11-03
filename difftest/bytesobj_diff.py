@@ -182,12 +182,40 @@ def gen_items(items, err):
         raise ValueError("gen")
 
 
+class RevList(list):
+    """A list subclass with its own `__iter__`: `_list_extend` must not take the fast path."""
+
+    def __iter__(self):
+        return iter(list.copy(self)[::-1])
+
+
+def mut_items(items):
+    """A generator that changes the list under test before each item."""
+    for x in items:
+        TARGET[0].append(0)
+        yield x
+
+
+def clear_items(items):
+    """A generator that clears the list under test (freeing its array) before its second item."""
+    for i, x in enumerate(items):
+        if i == 1:
+            TARGET[0].clear()
+        yield x
+
+
 def build_ext(arg, reg, self_list):
     k = arg["k"]
     if k == "self":
         return self_list
     if k == "noniter":
         return 5
+    if k == "sub":
+        return RevList(reg.mks(arg["items"]))
+    if k == "mutiter":
+        return mut_items(reg.mks(arg["items"]))
+    if k == "cleariter":
+        return clear_items(reg.mks(arg["items"]))
     if k == "fast":
         items = reg.mks(arg["items"])
         return tuple(items) if arg["as"] == "tuple" else DISPLAY[len(items)](*items)
@@ -599,6 +627,11 @@ def list_case(c):
         return {"ok": encs(gc.get_referents(items()))}
     if fn == "list.release":
         return {"ok": release_order(list, c["n"])}
+    if fn == "list.clear_release":
+        log = []
+        o = [Finalized(i, log) for i in range(c["n"])]
+        o.clear()
+        return {"ok": log}
     if fn == "list.sort_sizeof":
         return {"ok": sizes_in_sort()}
     if fn == "list.latin_lt":
@@ -631,7 +664,8 @@ def list_case(c):
         return common.py_result(lambda: enc_state(L_GETSLICE(o, c["i"], c["j"])))
     if fn == "list.c_setslice":
         o = obj()
-        v = o if c["self"] else None if c["v"] == "x" else DISPLAY[len(c["v"])](*reg.mks(c["v"]))
+        v = (o if c["self"] else None if c["v"] == "x" else 5 if c["v"] == "noniter"
+             else DISPLAY[len(c["v"])](*reg.mks(c["v"])))
         return common.py_result(lambda: (L_SETSLICE(o, c["i"], c["j"], None if v is None else id(v)), enc_state(o))[1])
     if fn == "list.c_clear":
         o = obj()
@@ -687,17 +721,21 @@ def seq_slice(rng, n):
     return [part(), part(), step]
 
 
-def fits(size, n):
-    """Is `size * n` small, or rejected by an explicit check in the C code?"""
-    return size == 0 or n <= 1 or size * n <= BIG or size * n > ALLOC_LIMIT
+def fits(size, n, inplace=False):
+    """Is `size * n` small, or rejected by an explicit check in the C code? `l *= n` rounds the
+    size up to a multiple of 4 before `py_list_resize`'s test, so it refuses 3 sizes more."""
+    return (size == 0 or n <= 1 or size * n <= BIG or size * n > ALLOC_LIMIT
+            or (inplace and size * n > ALLOC_LIMIT - 3))
 
 
-def seq_count(rng, size):
+def seq_count(rng, size, inplace=False):
+    s = max(size, 1)
     while True:
         n = rng.choice([0, 1, -1, 2, 3, 5, M, -M, M + 1, -M - 2, 2 ** 64, 10 ** 30,
-                        2 ** 60, 2 ** 61, 2 ** 62, M // 2, M // 3 + 1, M // max(size, 1) + 1,
-                        ALLOC_LIMIT // max(size, 1) + 1])
-        if n > M or n < -M - 1 or fits(size, n):
+                        2 ** 60, 2 ** 61, 2 ** 62, M // 2, M // 3 + 1, M // s + 1,
+                        ALLOC_LIMIT // s + 1, ALLOC_LIMIT // s, (ALLOC_LIMIT - 3) // s + 1,
+                        (ALLOC_LIMIT - 3) // s])
+        if n > M or n < -M - 1 or fits(size, n, inplace):
             return n
 
 
@@ -706,9 +744,12 @@ def seq_tup(rng, maxlen=6, kinds=("nan", "bad", "weird")):
 
 
 def gen_ext(rng, allow_self=True):
-    k = rng.choice(["fast", "fast", "sized", "iter", "iter", "iter", "noniter"] + (["self"] if allow_self else []))
+    k = rng.choice(["fast", "fast", "sized", "iter", "iter", "iter", "noniter", "sub"]
+                   + (["self", "mutiter", "cleariter"] if allow_self else []))
     if k == "self" or k == "noniter":
         return {"k": k}
+    if k in ("sub", "mutiter", "cleariter"):
+        return {"k": k, "items": seq_items(rng, 20)}
     if k == "fast":
         return {"k": k, "items": seq_items(rng, 20), "as": rng.choice(["list", "tuple"])}
     if k == "sized":
@@ -760,7 +801,7 @@ def gen_list_op(rng, n):
     if k <= 19:
         return ["delslice", seq_slice(rng, n)]
     if k == 20:
-        return ["imul", seq_count(rng, n)]
+        return ["imul", seq_count(rng, n, inplace=True)]
     if k == 21:
         return ["mul", seq_count(rng, n)]
     if k == 22:
@@ -872,7 +913,8 @@ def gen_capi_list(rng):
         return {**case, "fn": "list.c_getslice", "items": o, "i": seq_edge_c(rng, n), "j": seq_edge_c(rng, n)}
     if which == 7:
         return {**case, "fn": "list.c_setslice", "items": o, "i": seq_edge_c(rng, n), "j": seq_edge_c(rng, n),
-                "v": rng.choice(["x", seq_items(rng, 6), seq_items(rng, 6)]), "self": o != "x" and rng.random() < 0.2}
+                "v": rng.choice(["x", "noniter", seq_items(rng, 6), seq_items(rng, 6)]),
+                "self": o != "x" and rng.random() < 0.2}
     if which == 8:
         return {**case, "fn": "list.c_clear", "items": o}
     if which == 9:
@@ -961,7 +1003,8 @@ def gen_seq(rng):
     if k == 41:
         return {**case, "fn": rng.choice(["tuple.referents", "list.referents"]), "items": seq_items(rng)}
     if k == 42:
-        return {**case, "fn": rng.choice(["tuple.release", "list.release"]), "n": rng.randint(0, 6)}
+        return {**case, "fn": rng.choice(["tuple.release", "list.release", "list.clear_release"]),
+                "n": rng.randint(0, 6)}
     return gen_capi_list(rng)
 
 

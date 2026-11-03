@@ -498,18 +498,6 @@ theorem rt_luUlonglong_lpUlonglong_Q : IntEntryRoundTrip ⟨['Q'], 8, 0, .luUlon
     rw [show loOf (⟨['Q'], 8, 0, .luUlonglong, .lpUlonglong⟩ : FormatDef) = (0) by decide] at h1; rw [show hiOf (⟨['Q'], 8, 0, .luUlonglong, .lpUlonglong⟩ : FormatDef) = (18446744073709551615) by decide] at h2
     exact packUlonglongStd_ok _ _ _ h1 h2) (fun _ => rfl)
 
-/-- `lilendianTable` after `init_endian_tables`, spelled out. -/
-def lilExplicit : List FormatDef :=
-  [⟨['x'], 1, 0, .none, .none⟩, ⟨['b'], 1, 0, .nuByte, .npByte⟩, ⟨['B'], 1, 0, .nuUbyte, .npUbyte⟩,
-   ⟨['c'], 1, 0, .nuChar, .npChar⟩, ⟨['s'], 1, 0, .none, .none⟩, ⟨['p'], 1, 0, .none, .none⟩,
-   ⟨['h'], 2, 0, .nuShort, .npShort⟩, ⟨['H'], 2, 0, .nuUshort, .npUshort⟩,
-   ⟨['i'], 4, 0, .nuInt, .npInt⟩, ⟨['I'], 4, 0, .nuUint, .npUint⟩,
-   ⟨['l'], 4, 0, .luInt, .lpInt⟩, ⟨['L'], 4, 0, .luUint, .lpUint⟩,
-   ⟨['q'], 8, 0, .nuLonglong, .npLonglong⟩, ⟨['Q'], 8, 0, .nuUlonglong, .npUlonglong⟩,
-   ⟨['?'], 1, 0, .buBool, .bpBool⟩, ⟨['e'], 2, 0, .nuHalffloat, .npHalffloat⟩,
-   ⟨['f'], 4, 0, .luFloat, .lpFloat⟩, ⟨['d'], 8, 0, .luDouble, .lpDouble⟩,
-   ⟨['F'], 8, 0, .nuFloatComplex, .npFloatComplex⟩, ⟨['D'], 16, 0, .nuDoubleComplex, .npDoubleComplex⟩]
-
 /-- The integer format codes of `Modules/_struct.c`. -/
 def isIntCode (c : Char) : Bool := "bBhHiIlLnNqQP".toList.contains c
 
@@ -619,7 +607,8 @@ end PyLean.TextLibs.Struct
 
 namespace PyLean.TextLibs.Struct
 
-/-- Every non-NaN half-float pattern survives unpack then pack. Stated, not yet proven. -/
+/-- Every non-NaN half-float pattern survives `PyFloat_Unpack2` then `PyFloat_Pack2`. Proven in
+`TextLibs/StructFloat.lean`. -/
 def HalfRoundTrip : Prop :=
   ∀ h < 65536, ¬(h / 1024 % 32 = 31 ∧ h % 1024 ≠ 0) →
     pyFloatPack2Bits (pyFloatUnpack2Bits h) = .ok h

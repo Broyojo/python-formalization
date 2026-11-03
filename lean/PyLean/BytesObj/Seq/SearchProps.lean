@@ -333,7 +333,7 @@ theorem cmpLoop_safe (same : α → α → Bool) (cmp : Cmp2 α) (hc : ∀ st a 
 /-- `x in l`, `l.index`, `l.count`, `l.remove` and the search of `l == r` on a comparison that can do
 anything Python can: raise, and change the list, however often. No path reads outside the items, in
 the C sense. The list is reread on each pass (`list_get_item_ref`, the size tests of :3424-3445
-and @3.14.7:3416-3432), which is what these functions are written for; `l.remove` then deletes with the old
+and :3479-3495), which is what these functions are written for; `l.remove` then deletes with the old
 index on the current list, and `list_ass_slice` clips it. Hypothesis: `NoFault`. -/
 def ListSearchSafe : Prop :=
   ∀ (α : Type) (cmp : Cmp α) (cmp2 : Cmp2 α) (same : α → α → Bool) (o : LObj α) (x : α) (fuel : Nat)
