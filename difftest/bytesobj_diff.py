@@ -17,7 +17,7 @@ import common
 
 
 def choose_family():
-    """`--family seq|bytes|mem` restricts the run; the option is removed from argv."""
+    """`--family seq|bytes|mem|bare` restricts the run; the option is removed from argv."""
     if "--family" not in sys.argv:
         return None
     i = sys.argv.index("--family")
@@ -3426,8 +3426,543 @@ def _run_mem_fmt(fn, fmt):
 # ===== end of family mem ==============================================
 
 
-FAMILIES = {"seq": (gen_seq, run_seq), "bytes": (gen_bytes, run_bytes), "mem": (gen_mem, run_mem)}
-PREFIXES = {"tuple": "seq", "list": "seq", "bytes": "bytes", "bytearray": "bytes", "mem": "mem"}
+# ===== family bare: bytearray under callbacks that change it ===========
+#
+# lean/PyLean/BytesObj/Bytes/Heap.lean models a bytearray that Python callbacks change while a C
+# function runs; HeapDiff.lean is the handler. A case has the initial bytes `s`, statements `prep`
+# run first, the operation and its arguments. A statement acts on the target `BA_T[0]`:
+# ["set", i, v] is `ba[i] = v`, ["resize", n] `ba.resize(n)`, ["del", k] `del ba[:k]`, ["grab"]
+# keeps `memoryview(ba)`, ["drop"] releases the last kept view; each in try/except. The answer is
+# the result and the object afterwards: contents, __alloc__(), ob_start - ob_bytes, ob_exports and
+# the number of kept views. A strip whose __release_buffer__ resizes the object reads freed memory:
+# it runs in a forked child, and a non-empty result or a signal is reported as undefined behaviour.
+
+import json as _json
+import os as _os
+
+
+class _PyByteArrayObject(ctypes.Structure):
+    _fields_ = [("ob_refcnt", ctypes.c_ssize_t), ("ob_type", ctypes.c_void_p),
+                ("ob_size", ctypes.c_ssize_t), ("ob_alloc", ctypes.c_ssize_t),
+                ("ob_bytes", ctypes.c_void_p), ("ob_start", ctypes.c_void_p),
+                ("ob_exports", ctypes.c_ssize_t), ("ob_bytes_object", ctypes.c_void_p)]
+
+
+def _raw(ba):
+    return _PyByteArrayObject.from_address(id(ba))
+
+
+BA_T = [None]
+VIEWS = []
+HAZARD = [False]
+KEEP = []
+CODEC = [None]
+
+
+def _layout(ba):
+    r = _raw(ba)
+    return (len(ba), ba.__alloc__(), (r.ob_start or 0) - (r.ob_bytes or 0))
+
+
+def run_acts(acts):
+    ba = BA_T[0]
+    for a in acts:
+        try:
+            k = a[0]
+            if k == "set":
+                ba[a[1]] = a[2]
+            elif k == "resize":
+                ba.resize(a[1])
+            elif k == "del":
+                del ba[:a[1]]
+            elif k == "grab":
+                VIEWS.append(memoryview(ba))
+            elif k == "drop":
+                if VIEWS:
+                    VIEWS.pop().release()
+        except Exception:
+            pass
+
+
+def _exc(e):
+    return {"TypeError": TypeError, "ValueError": ValueError, "OverflowError": OverflowError,
+            "TSub": TSub, "BBoom": BBoom, "StopIteration": StopIteration}[e[0]](e[1])
+
+
+class RIdx:
+    def __init__(self, acts, res):
+        self.acts, self.res = acts, res
+
+    def __index__(self):
+        run_acts(self.acts)
+        if self.res[0] == "exc":
+            raise _exc(self.res[1:])
+        return self.res[1]
+
+
+class RBuf:
+    def __init__(self, acts, res, rel):
+        self.acts, self.res, self.rel = acts, res, rel
+
+    def __buffer__(self, flags):
+        run_acts(self.acts)
+        if self.res[0] == "exc":
+            raise _exc(self.res[1:])
+        return memoryview(bytes(self.res[1]))
+
+    def __release_buffer__(self, view):
+        before = _layout(BA_T[0])
+        run_acts(self.rel)
+        if _layout(BA_T[0]) != before:
+            HAZARD[0] = True
+
+
+class RLen(bytes):
+    def __len__(self):
+        run_acts(self.acts)
+        if self.res[0] == "exc":
+            raise _exc(self.res[1:])
+        return self.res[1]
+
+
+class RIt:
+    def __init__(self, steps, fin_acts, fin):
+        self.steps, self.fin_acts, self.fin, self.i = steps, fin_acts, fin, 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.i < len(self.steps):
+            acts, item = self.steps[self.i]
+            self.i += 1
+            run_acts(acts)
+            return bare_build(item)
+        run_acts(self.fin_acts)
+        if self.fin is None:
+            raise StopIteration
+        raise _exc(self.fin)
+
+
+def bare_build(a):
+    t = a[0]
+    if t == "obj":
+        return b_build(a[1])
+    if t == "idx":
+        return RIdx(a[1], a[2])
+    if t == "buf":
+        return RBuf(a[1], a[2], a[3])
+    if t == "slen":
+        x = RLen(bytes(a[3]))
+        x.acts, x.res = a[1], a[2]
+        return x
+    if t == "it":
+        return RIt(a[1], a[2], a[3])
+    if t == "me":
+        return BA_T[0]
+    raise ValueError(t)
+
+
+def _rc_encode(s, errors="strict"):
+    acts, res, unique = CODEC[0]
+    run_acts(acts)
+    if res[0] == "exc":
+        raise _exc(res[1:])
+    b = bytes(bytearray(res[1]))
+    if not unique:
+        KEEP.append(b)
+    return (b, len(s))
+
+
+def _rc_decode(b, errors="strict"):
+    return (str(b, "latin-1"), len(b))
+
+
+codecs.register(lambda name: codecs.CodecInfo(_rc_encode, _rc_decode, name="rcodec")
+                if name == "rcodec" else None)
+
+_PSSI = ctypes.pythonapi.PySequence_SetItem
+_PSSI.argtypes = [ctypes.py_object, ctypes.c_ssize_t, ctypes.py_object]
+_PSSI.restype = ctypes.c_int
+_PSDI = ctypes.pythonapi.PySequence_DelItem
+_PSDI.argtypes = [ctypes.py_object, ctypes.c_ssize_t]
+_PSDI.restype = ctypes.c_int
+
+
+class _Raw(list):
+    """An answer already in JSON form."""
+
+
+def bare_enc(v):
+    if isinstance(v, _Raw):
+        return list(v)
+    if isinstance(v, (bytes, bytearray)):
+        return list(v)
+    if isinstance(v, str):
+        return [ord(c) for c in v]
+    if isinstance(v, (list, tuple)):
+        return [bare_enc(x) for x in v]
+    if v is NotImplemented:
+        return "NotImplemented"
+    return v
+
+
+def _opt(c, k):
+    v = c.get(k)
+    return None if v is None else bare_build(v)
+
+
+def bare_op(c, ba):
+    op = c["fn"][5:]
+    if op in ("find", "rfind", "index", "rindex", "count"):
+        args = [bare_build(c["sub"])]
+        if c.get("start") is not None or c.get("end") is not None:
+            args.append(_opt(c, "start"))
+        if c.get("end") is not None:
+            args.append(_opt(c, "end"))
+        return getattr(ba, op)(*args)
+    if op in ("startswith", "endswith"):
+        k, x = c["sub"]
+        sub = bare_build(x) if k == "one" else tuple(bare_build(y) for y in x)
+        args = [sub]
+        if c.get("start") is not None or c.get("end") is not None:
+            args.append(_opt(c, "start"))
+        if c.get("end") is not None:
+            args.append(_opt(c, "end"))
+        return getattr(ba, op)(*args)
+    if op == "contains":
+        return bare_build(c["sub"]) in ba
+    if op in ("strip", "lstrip", "rstrip"):
+        return getattr(ba, op)(*([] if c.get("arg") is None else [bare_build(c["arg"])]))
+    if op in ("getitem", "setsub"):
+        k = c["key"]
+        if k[0] == "one":
+            key = bare_build(k[1])
+        else:
+            key = slice(*[None if x is None else bare_build(x) for x in k[1:]])
+        if op == "getitem":
+            r = ba[key]
+            return _Raw(["slice", list(r)] if isinstance(r, bytearray) else ["byte", r])
+        if c.get("value") is None:
+            del ba[key]
+        else:
+            ba[key] = bare_build(c["value"])
+        return None
+    if op == "sqset":
+        if c.get("value") is None:
+            _PSDI(ba, c["i"])
+        else:
+            _PSSI(ba, c["i"], bare_build(c["value"]))
+        return None
+    if op == "insert":
+        return ba.insert(bare_build(c["index"]), bare_build(c["item"]))
+    if op == "append":
+        return ba.append(bare_build(c["item"]))
+    if op == "remove":
+        return ba.remove(bare_build(c["item"]))
+    if op == "pop":
+        return ba.pop(*([] if c.get("index") is None else [bare_build(c["index"])]))
+    if op == "take":
+        return ba.take_bytes(*([] if c.get("n") is None else [bare_build(c["n"])]))
+    if op == "iadd":
+        ba.__iadd__(bare_build(c["other"]))
+        return None
+    if op == "add":
+        return ba + bare_build(c["other"])
+    if op == "extend":
+        return ba.extend(bare_build(c["x"]))
+    if op == "init":
+        args = [] if c.get("x") is None else [bare_build(c["x"])]
+        kw = {}
+        if c.get("enc") is not None:
+            e = c["enc"]
+            kw["encoding"] = e[1]
+            if e[0] == "py":
+                CODEC[0] = (e[2], e[3], e[4])
+        if c.get("err") is not None:
+            kw["errors"] = c["err"]
+        return ba.__init__(*args, **kw)
+    if op == "translate":
+        args = [bare_build(c["table"])]
+        if c.get("del") is not None:
+            args.append(bare_build(c["del"]))
+        return ba.translate(*args)
+    if op in ("split", "rsplit"):
+        kw = {}
+        if c.get("sep") is not None:
+            kw["sep"] = bare_build(c["sep"])
+        if c.get("maxsplit") is not None:
+            kw["maxsplit"] = bare_build(c["maxsplit"])
+        return getattr(ba, op)(**kw)
+    if op in ("partition", "rpartition"):
+        return getattr(ba, op)(bare_build(c["sep"]))
+    if op == "hex":
+        kw = {}
+        if c.get("sep") is not None:
+            kw["sep"] = bare_build(c["sep"])
+        if c.get("bps") is not None:
+            kw["bytes_per_sep"] = bare_build(c["bps"])
+        return ba.hex(**kw)
+    if op == "join":
+        return ba.join(bare_build(c["it"]))
+    if op == "rich":
+        return getattr(ba, "__%s__" % c["cmp"])(bare_build(c["other"]))
+    raise ValueError(op)
+
+
+def _bare_once(c):
+    ba = bytearray(c["s"])
+    BA_T[0] = ba
+    VIEWS.clear()
+    KEEP.clear()
+    HAZARD[0] = False
+    run_acts(c["prep"])
+    try:
+        inner = {"ok": bare_enc(bare_op(c, ba))}
+    except Exception as e:
+        inner = {"exc": type(e).__name__, "msg": "~" if isinstance(e, UnicodeEncodeError) else str(e)}
+    if HAZARD[0] and inner.get("ok") and c["fn"] in ("bare.strip", "bare.lstrip", "bare.rstrip"):
+        return {"exc": "CUndefinedBehaviour", "msg": "read after a resize in __release_buffer__"}
+    r = _raw(ba)
+    st = [list(ba), ba.__alloc__(), (r.ob_start or 0) - (r.ob_bytes or 0), r.ob_exports, len(VIEWS)]
+    for v in VIEWS:
+        v.release()
+    VIEWS.clear()
+    KEEP.clear()
+    return {"ok": [inner, st]}
+
+
+def _in_child(c):
+    rfd, wfd = _os.pipe()
+    pid = _os.fork()
+    if pid == 0:
+        _os.close(rfd)
+        try:
+            out = _bare_once(c)
+        except BaseException as e:
+            out = {"exc": "Harness", "msg": repr(e)}
+        _os.write(wfd, _json.dumps(out).encode())
+        _os._exit(0)
+    _os.close(wfd)
+    data = b""
+    while True:
+        chunk = _os.read(rfd, 65536)
+        if not chunk:
+            break
+        data += chunk
+    _os.close(rfd)
+    _, status = _os.waitpid(pid, 0)
+    if _os.WIFSIGNALED(status):
+        return {"exc": "CUndefinedBehaviour", "msg": "signal %d" % _os.WTERMSIG(status)}
+    return _json.loads(data)
+
+
+def run_bare(c):
+    if c.get("fork"):
+        return _in_child(c)
+    return _bare_once(c)
+
+
+# --- generation ---
+
+_BARE_ALPHA = [32, 32, 9, 10, 97, 97, 98, 120, 0, 255, 122]
+
+
+def _bseq(rng, lo=0, hi=10):
+    return [rng.choice(_BARE_ALPHA) for _ in range(rng.randint(lo, hi))]
+
+
+def _bact(rng, resize=True):
+    k = rng.choice(["set", "set", "resize", "del", "grab", "drop"] if resize else ["set", "set", "grab", "drop"])
+    if k == "set":
+        return ["set", rng.randint(-3, 6), rng.choice([0, 32, 97, 120, 255, 256, -1])]
+    if k == "resize":
+        return ["resize", rng.choice([0, 0, 1, 2, 3, 5, 8, 13, 20, 40, -1, 2 ** 63])]
+    if k == "del":
+        return ["del", rng.randint(-2, 5)]
+    return [k]
+
+
+def _bacts(rng, resize=True, n=3):
+    return [_bact(rng, resize) for _ in range(rng.randint(0, n))]
+
+
+def _bexc(rng):
+    return ["exc"] + rng.choice([["TypeError", "bad"], ["ValueError", "bad"], ["TSub", "sub"],
+                                 ["BBoom", "boom"], ["OverflowError", "big"]])
+
+
+def _bint_res(rng, vals):
+    return _bexc(rng) if rng.random() < 0.12 else ["ok", rng.choice(vals)]
+
+
+_SMALLV = [0, 1, 2, 3, -1, -2, 97, 120, 32, 255, 256, 2 ** 63, -2 ** 63 - 1, 5, 7]
+
+
+def _barg(rng, kinds, vals=_SMALLV, bufs=None, resize=True):
+    k = rng.choice(kinds)
+    if k == "int":
+        return ["obj", ["int", rng.choice(vals)]]
+    if k == "none":
+        return ["obj", ["none"]]
+    if k == "bytes":
+        return ["obj", ["bytes", rng.choice(bufs) if bufs else _bseq(rng, 0, 3)]]
+    if k == "bytearray":
+        return ["obj", ["bytearray", rng.choice(bufs) if bufs else _bseq(rng, 0, 3)]]
+    if k == "str":
+        return ["obj", ["str", rng.choice([[], [97], [97, 98], [32], [233], [0x263a]])]]
+    if k == "float":
+        return ["obj", b_bflt(rng.choice([1.5, 0.0]))]
+    if k == "list":
+        return ["obj", ["list", [["int", rng.choice([0, 97, 255, 256, -1])] for _ in range(rng.randint(0, 3))]]]
+    if k == "idx":
+        return ["idx", _bacts(rng, resize), _bint_res(rng, vals)]
+    if k == "buf":
+        res = _bexc(rng) if rng.random() < 0.1 else ["ok", rng.choice(bufs) if bufs else _bseq(rng, 0, 3)]
+        return ["buf", _bacts(rng, resize), res, _bacts(rng, resize)]
+    if k == "slen":
+        return ["slen", _bacts(rng, resize), _bint_res(rng, [1, 1, 0, 2, -1]), rng.choice([[58], [32], [200], [], [58, 58]])]
+    if k == "me":
+        return ["me"]
+    if k == "it":
+        def item():
+            j = rng.choice(["int", "int", "idx", "buf", "me", "bytes"])
+            if j == "int":
+                return ["obj", ["int", rng.choice([0, 97, 120, 255, 256, -1])]]
+            if j == "bytes":
+                return ["obj", ["bytes", _bseq(rng, 0, 3)]]
+            if j == "idx":
+                return ["idx", _bacts(rng, resize, 2), _bint_res(rng, [0, 97, 255, 256])]
+            if j == "buf":
+                return ["buf", _bacts(rng, resize, 2), ["ok", _bseq(rng, 0, 3)], _bacts(rng, resize, 2)]
+            return ["me"]
+        steps = [[_bacts(rng, resize, 2), item()] for _ in range(rng.randint(0, 4))]
+        fin = None if rng.random() < 0.85 else rng.choice([["ValueError", "end"], ["StopIteration", ""], ["TSub", "t"]])
+        return ["it", steps, _bacts(rng, resize, 2), fin]
+    raise ValueError(k)
+
+
+_BARE_OPS = ["find", "rfind", "index", "rindex", "count", "startswith", "endswith", "contains",
+             "strip", "lstrip", "rstrip", "getitem", "setsub", "sqset", "insert", "append", "remove",
+             "pop", "take", "iadd", "add", "extend", "init", "translate", "split", "rsplit",
+             "partition", "rpartition", "hex", "join", "rich"]
+
+
+def gen_bare(rng):
+    op = rng.choice(_BARE_OPS)
+    c = {"mod": "bytesobj", "fn": "bare." + op, "s": _bseq(rng),
+         "prep": [rng.choice([["del", rng.randint(0, 4)], ["resize", rng.choice([0, 3, 12, 30])],
+                              ["grab"], ["set", 0, 120], ["drop"]]) for _ in range(rng.choice([0, 0, 1, 2, 3]))]}
+    idx_kinds = ["int", "int", "idx", "idx", "none", "bytes", "float"]
+    sub_kinds = ["int", "bytes", "bytearray", "idx", "buf", "me", "str", "none", "slen"]
+    if op in ("find", "rfind", "index", "rindex", "count"):
+        c["sub"] = _barg(rng, sub_kinds, vals=[97, 32, 120, 0, 255, 256, -1, 2 ** 63])
+        if rng.random() < 0.5:
+            c["start"] = _barg(rng, idx_kinds, vals=[0, 1, -1, -3, 2, 100, 2 ** 63])
+        if rng.random() < 0.4:
+            c["end"] = _barg(rng, idx_kinds, vals=[0, 1, -1, 3, 100, -2 ** 63 - 1])
+    elif op in ("startswith", "endswith"):
+        if rng.random() < 0.3:
+            c["sub"] = ["tuple", [_barg(rng, ["bytes", "buf", "me", "int", "slen"]) for _ in range(rng.randint(0, 3))]]
+        else:
+            c["sub"] = ["one", _barg(rng, ["bytes", "buf", "me", "int", "str", "bytearray", "slen"])]
+        if rng.random() < 0.5:
+            c["start"] = _barg(rng, idx_kinds, vals=[0, 1, -1, -3, 2, 100])
+        if rng.random() < 0.4:
+            c["end"] = _barg(rng, idx_kinds, vals=[0, 1, -1, 3, 100])
+    elif op == "contains":
+        c["sub"] = _barg(rng, sub_kinds, vals=[97, 32, 120, 0, 255, 256, -1, 2 ** 63])
+    elif op in ("strip", "lstrip", "rstrip"):
+        if rng.random() < 0.85:
+            a = _barg(rng, ["buf", "buf", "buf", "bytes", "me", "none", "int", "bytearray"],
+                      bufs=[[32], [32, 9], [97], [120, 32], [], [10, 32, 97]], resize=False)
+            if a[0] == "buf" and rng.random() < 0.3:
+                a[3] = a[3] + [["resize", 0]]
+                c["fork"] = True
+            c["arg"] = a
+    elif op in ("getitem", "setsub"):
+        if rng.random() < 0.5:
+            c["key"] = ["one", _barg(rng, ["int", "idx", "idx", "str", "none"], vals=[0, 1, 2, -1, -2, 5, 2 ** 63])]
+        else:
+            c["key"] = ["slice"] + [None if rng.random() < 0.4 else
+                                    _barg(rng, ["int", "idx", "str"], vals=[0, 1, 2, -1, -3, 5, 0, 2, -2])
+                                    for _ in range(3)]
+        if op == "setsub" and rng.random() < 0.85:
+            c["value"] = _barg(rng, ["int", "idx", "bytes", "bytearray", "buf", "me", "it", "str", "list", "float"],
+                               vals=[0, 97, 255, 256, -1])
+    elif op == "sqset":
+        c["i"] = rng.choice([0, 1, 2, -1, -2, 5, -20])
+        if rng.random() < 0.8:
+            c["value"] = _barg(rng, ["int", "idx", "idx", "float"], vals=[0, 97, 255, 256, -1])
+    elif op == "insert":
+        c["index"] = _barg(rng, ["int", "idx", "float"], vals=[0, 1, -1, 2, 100, -100, 2 ** 63])
+        c["item"] = _barg(rng, ["int", "idx", "float"], vals=[0, 97, 255, 256, -1])
+    elif op in ("append", "remove"):
+        c["item"] = _barg(rng, ["int", "idx", "idx", "float", "bytes"], vals=[0, 97, 120, 32, 255, 256, -1])
+    elif op == "pop":
+        if rng.random() < 0.8:
+            c["index"] = _barg(rng, ["int", "idx", "idx"], vals=[0, 1, -1, 2, 100, -100, 2 ** 63])
+    elif op == "take":
+        if rng.random() < 0.8:
+            c["n"] = _barg(rng, ["int", "idx", "idx", "none", "str"], vals=[0, 1, 2, -1, -2, 3, 100, 2 ** 63])
+    elif op in ("iadd", "add"):
+        c["other"] = _barg(rng, ["bytes", "bytearray", "buf", "buf", "me", "int", "str", "idx"])
+    elif op == "extend":
+        c["x"] = _barg(rng, ["it", "it", "it", "buf", "me", "bytes", "list", "idx", "str", "int"])
+    elif op == "init":
+        k = rng.random()
+        if k < 0.3:
+            c["x"] = ["obj", ["str", rng.choice([[97, 98, 99], [97], [], [104, 105], [233, 97]])]]
+            if rng.random() < 0.9:
+                if rng.random() < 0.4:
+                    c["enc"] = ["builtin", rng.choice(["ascii", "latin-1"])]
+                else:
+                    res = ["ok", _bseq(rng, 0, 4)] if rng.random() < 0.9 else _bexc(rng)
+                    c["enc"] = ["py", "rcodec", _bacts(rng), res, rng.random() < 0.6]
+        elif k < 0.95:
+            c["x"] = _barg(rng, ["it", "it", "idx", "buf", "me", "bytes", "list", "int", "float", "none"],
+                           vals=[0, 1, 3, -1, 2 ** 63])
+            if rng.random() < 0.05:
+                c["enc"] = ["builtin", "ascii"]
+        if rng.random() < 0.05:
+            c["err"] = "strict"
+    elif op == "translate":
+        tables = [list(range(256)), [(i + 1) % 256 for i in range(256)], [97] * 256, [1, 2]]
+        c["table"] = rng.choice([["obj", ["none"]], ["obj", ["bytes", rng.choice(tables)]],
+                                 _barg(rng, ["buf", "me", "int"], bufs=tables)])
+        if rng.random() < 0.5:
+            c["del"] = _barg(rng, ["bytes", "buf", "me", "int"], bufs=[[], [97], [32, 120]])
+    elif op in ("split", "rsplit"):
+        if rng.random() < 0.8:
+            c["sep"] = _barg(rng, ["bytes", "buf", "buf", "me", "none", "int"], bufs=[[32], [97], [], [97, 98], [120]])
+        if rng.random() < 0.4:
+            c["maxsplit"] = _barg(rng, ["int", "idx"], vals=[-1, 0, 1, 2, 2 ** 63])
+    elif op in ("partition", "rpartition"):
+        c["sep"] = _barg(rng, ["bytes", "buf", "buf", "me", "int", "str"], bufs=[[32], [97], [], [97, 98], [120]])
+    elif op == "hex":
+        if rng.random() < 0.7:
+            c["sep"] = rng.choice([["obj", ["str", [58]]], ["obj", ["bytes", [32]]], ["obj", ["str", [233]]],
+                                   ["obj", ["none"]], ["obj", ["int", 1]],
+                                   _barg(rng, ["slen", "slen", "me"])])
+        if rng.random() < 0.5:
+            c["bps"] = _barg(rng, ["int", "idx"], vals=[1, 2, -1, -2, 0, 3, 2 ** 63])
+    elif op == "join":
+        if rng.random() < 0.7:
+            c["it"] = _barg(rng, ["it"])
+        else:
+            c["it"] = ["obj", ["list", [["bytes", _bseq(rng, 0, 2)] for _ in range(rng.randint(0, 3))]]]
+    elif op == "rich":
+        c["other"] = _barg(rng, ["bytes", "bytearray", "buf", "buf", "me", "int", "str"])
+        c["cmp"] = rng.choice(["eq", "ne", "lt", "le", "gt", "ge"])
+    return c
+
+
+# ===== end of family bare =============================================
+
+
+FAMILIES = {"seq": (gen_seq, run_seq), "bytes": (gen_bytes, run_bytes), "mem": (gen_mem, run_mem),
+            "bare": (gen_bare, run_bare)}
+PREFIXES = {"tuple": "seq", "list": "seq", "bytes": "bytes", "bytearray": "bytes", "mem": "mem", "bare": "bare"}
 
 
 def main():

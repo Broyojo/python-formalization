@@ -1,0 +1,53 @@
+id: bytesobj-bytearray-iadd-self
+title: "b += b raises BufferError for a bytearray, while b.extend(b) and b[len(b):] = b work"
+priority: P3
+kind: duplicate-open-upstream
+module: bytesobj
+files: [Objects/bytearrayobject.c]
+functions: ["bytearray_iconcat_lock_held", "bytearray_iconcat"]
+summary: |
+  bytearray_iconcat_lock_held takes the buffer of its argument (:407) and then resizes self (:419). When the
+  argument is self, the buffer is an export of self, so bytearray_resize_lock_held refuses with
+  "Existing exports of data: object cannot be re-sized". bytearray_setslice copies a self argument first
+  (:697-707), and so does bytearray_ass_subscript (:848-862), so b.extend(b) and b[len(b):] = b double the
+  object. The documentation describes s += t as extending s with the contents of t.
+  Lean: IAddIsExtend (b += x is b.extend(x) for every bytes-like x) is refuted on b = bytearray(b"a"),
+  x = b (iadd_self).
+likelihood: |
+  Medium for the case (doubling a buffer in place is natural), low impact: an exception, no wrong data.
+maybe_intended: |
+  Possibly tolerated: the error has been there since the export check existed, and an open issue mentions it.
+reproducer: |
+  b = bytearray(b"a")
+  try:
+      b += b
+      r = None
+  except BufferError as e:
+      r = str(e)
+  c = bytearray(b"a")
+  c.extend(c)
+  print("b += b:", r, "/ c.extend(c):", c)
+  if r == "Existing exports of data: object cannot be re-sized" and c == bytearray(b"aa"):
+      print("REPRODUCED bytesobj-bytearray-iadd-self")
+expected: |
+  b += b gives bytearray(b"aa"), as b.extend(b) does.
+observed: |
+  python3 3.15.2: BufferError: Existing exports of data: object cannot be re-sized; c.extend(c) gives
+  bytearray(b'aa'). REPRODUCED.
+  main (python.exe 3.16.0a1+dev heads/main:ef1fce0): the same. REPRODUCED.
+promised_by: |
+  Doc/library/stdtypes.rst, mutable sequence operations: `s += t` extends s with the contents of t (for the
+  most part the same as s[len(s):len(s)] = t).
+cause: |
+  Objects/bytearrayobject.c:407-422: no `other == self` case before the resize, unlike bytearray_setslice.
+possible_fix: |
+  Copy the argument when it is self (as bytearray_setslice does), or take the size, release the buffer and
+  use bytearray_setslice(self, size, size, other).
+duplicates:
+  issues:
+    - {number: 85269, state: open, relation: "a comment there reports `o = bytearray(1); o += o` raising this BufferError"}
+  queries: ["bytearray iadd BufferError", "bytearray += itself", "bytearray inplace concat self", "bytearray_iconcat"]
+  bugforge: "no entry (vendor/bugforge-results/README.md)"
+lean:
+  property: PyLean.BytesObj.Bytes.IAddIsExtend
+  theorem: PyLean.BytesObj.Bytes.iAddIsExtend_refuted
