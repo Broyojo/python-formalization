@@ -523,7 +523,11 @@ theorem spInv_init : SpInv {} 0 := ⟨0, rfl, rfl, rfl, fun _ => rfl, fun _ => r
 what `except TypeError` catches). While the magnitudes add up to less than `2**53`, `fsum` is exact
 and the result is the mean `sum(data) / n` correctly rounded; empty data raises `StatisticsError`;
 an exception of the iterator after the items propagates; an exception of `len()` that is not a
-`TypeError` propagates before anything is iterated. `n` is below `2**53`, the count of items of
+`TypeError` propagates before anything is iterated. Why the bound on the magnitudes: below `2**53` every
+int and every partial sum is a float exactly, so `fsum`'s result is proven here from its mirror; past it,
+the data's conversion to float and `fsum`'s own rounding enter, which `FmeanFloats` covers under the
+open hypothesis that `fsum` is correctly rounded. It is a scope limit of this theorem, not a
+precondition of `fmean`. `n` is below `2**53`, the count of items of
 any list that fits in memory (`2**53` pointers are 64 PiB). -/
 def FmeanInts : Prop :=
   ∀ (H : Hier) (xs : List Int) (lenR : Py Nat) (fin : Option PyExc),
@@ -748,27 +752,36 @@ theorem fmeanWeightsArg_proven : FmeanWeightsArg := by
 
 /-! ## `fmean` of floats, relative to a correctly rounded `fsum` -/
 
-/-- `math.fsum` is correctly rounded: for finite floats whose exact sum `S` is not zero and rounds to
-a finite float, `fsum` returns that rounding. This is the open MathInt property
-`mathint-fsum-correctly-rounded`, here for the `fsum` mirror of this area; it is a hypothesis below, not
-a fact. -/
+/-- `fsum`'s overflow error, Modules/mathmodule.c:1329-1331 (`intermediate overflow in fsum`). -/
+def fsumOverflow : PyExc := .overflowError "intermediate overflow in fsum"
+
+/-- `math.fsum` is correctly rounded or raises its overflow error: for finite floats whose exact sum
+`S` is not zero and rounds to a finite float, `fsum` returns that rounding or raises `OverflowError`
+('intermediate overflow in fsum', which a partial can hit although `S` is finite:
+`fsum([1e308, 1e308, -1e308])`; the error is tested at test_math.py:787). This is the open MathInt property
+`mathint-fsum-correctly-rounded`, with both of its outcomes, here for the `fsum` mirror of this area;
+it is a hypothesis below, not a fact. -/
 def FsumCorrectlyRounded : Prop :=
   ∀ xs : List Flt, (∀ x ∈ xs, x.isFinite = true) → sumQ (xs.map Flt.toRat) ≠ 0 →
     (Flt.ofRat (sumQ (xs.map Flt.toRat))).isFinite = true →
-    fsumIt (floats xs) none = .ok (Flt.ofRat (sumQ (xs.map Flt.toRat)))
+    fsumIt (floats xs) none = .ok (Flt.ofRat (sumQ (xs.map Flt.toRat))) ∨
+    fsumIt (floats xs) none = .error fsumOverflow
 
 /-- `fmean` of float data, the documented domain (statistics.py:183, "Convert data to floats and
-compute the arithmetic mean"), for a sequence or an iterator: given a correctly rounded `fsum`,
-`fmean` is the exact sum rounded once and divided by `n` with one more rounding, `round(round(S) / n)`,
-whatever `len()` route is taken (`H`). The zero sum (whose sign `fsum` decides) and overflow are left
-out with the hypothesis. -/
+compute the arithmetic mean"), for a sequence or an iterator, given a correctly rounded `fsum`: when
+`fsum` does not overflow, `fmean` is the exact sum rounded once and divided by `n` with one more
+rounding, `round(round(S) / n)`; when it overflows, `fmean` raises that `OverflowError`; whatever
+`len()` route is taken (`H`). The zero sum, whose sign `fsum` decides, is left out. -/
 def FmeanFloats : Prop :=
   FsumCorrectlyRounded →
   ∀ (H : Hier) (xs : List Flt) (lenR : Py Nat), (∀ x ∈ xs, x.isFinite = true) → xs.length < 2 ^ 53 →
     (lenR = .ok xs.length ∨ ∃ e, lenR = .error e ∧ isA H e "TypeError" = true) →
     sumQ (xs.map Flt.toRat) ≠ 0 → (Flt.ofRat (sumQ (xs.map Flt.toRat))).isFinite = true →
-    fmeanIt H (PyIter.mk' lenR (floats xs) none) none =
-      .ok (.flt (Flt.div (Flt.ofRat (sumQ (xs.map Flt.toRat))) (Flt.ofRat (xs.length : Rat))))
+    (fsumIt (floats xs) none ≠ .error fsumOverflow →
+      fmeanIt H (PyIter.mk' lenR (floats xs) none) none =
+        .ok (.flt (Flt.div (Flt.ofRat (sumQ (xs.map Flt.toRat))) (Flt.ofRat (xs.length : Rat))))) ∧
+    (fsumIt (floats xs) none = .error fsumOverflow →
+      fmeanIt H (PyIter.mk' lenR (floats xs) none) none = .error fsumOverflow)
 
 theorem fmeanFloats_proven : FmeanFloats := by
   intro hF H xs lenR hfin hlen hl hS hfS
@@ -777,19 +790,34 @@ theorem fmeanFloats_proven : FmeanFloats := by
     rcases hl with h | ⟨e, h, he⟩
     · simp only [fmeanLen, h, PyIter.mk']
     · simp only [fmeanLen, h, he, ite_true, hlenI, PyIter.mk']
-  have hs : fsumOf (PyIter.mk' lenR (floats xs) none) = .ok (Flt.ofRat (sumQ (xs.map Flt.toRat))) :=
-    hF xs hfin hS hfS
-  have hne : xs ≠ [] := by
-    intro h; subst h; exact hS rfl
-  have hl0 : xs.length ≠ 0 := by simpa using hne
-  have hnI : intToFlt (xs.length : Int) = .ok (.fin ((xs.length : Int) : Rat)) := by
-    rw [intToFlt_small _ (by omega), if_neg (by omega)]
-  simp only [fmeanIt]
-  rw [bind_ok hn, bind_ok hs]
-  simp only [hl0, ite_false, vdiv, arith, divOp, hnI, bind, Except.bind, fltDiv, pure, Except.pure]
-  have : Flt.ofRat ((xs.length : Nat) : Rat) = .fin ((xs.length : Int) : Rat) := by
-    have := ofRat_int (xs.length : Int) (by omega) (by omega)
-    simpa [Rat.intCast_natCast] using this
-  rw [this]
+  refine ⟨fun hno => ?_, fun hov => ?_⟩
+  · have hs : fsumOf (PyIter.mk' lenR (floats xs) none) = .ok (Flt.ofRat (sumQ (xs.map Flt.toRat))) := by
+      rcases hF xs hfin hS hfS with h | h
+      · exact h
+      · exact absurd h hno
+    have hne : xs ≠ [] := by
+      intro h; subst h; exact hS rfl
+    have hl0 : xs.length ≠ 0 := by simpa using hne
+    have hnI : intToFlt (xs.length : Int) = .ok (.fin ((xs.length : Int) : Rat)) := by
+      rw [intToFlt_small _ (by omega), if_neg (by omega)]
+    simp only [fmeanIt]
+    rw [bind_ok hn, bind_ok hs]
+    simp only [hl0, ite_false, vdiv, arith, divOp, hnI, bind, Except.bind, fltDiv, pure, Except.pure]
+    have : Flt.ofRat ((xs.length : Nat) : Rat) = .fin ((xs.length : Int) : Rat) := by
+      have := ofRat_int (xs.length : Int) (by omega) (by omega)
+      simpa [Rat.intCast_natCast] using this
+    rw [this]
+  · have hs : fsumOf (PyIter.mk' lenR (floats xs) none) = .error fsumOverflow := hov
+    simp only [fmeanIt]
+    rw [bind_ok hn, hs]
+    rfl
+
+/-- The hypothesis is consistent with the mirror on the overflow example: `fsum([1e308, 1e308,
+-1e308])` raises the overflow error although the exact sum `1e308` is finite. -/
+theorem fsum_overflow_example :
+    fsumIt (floats [.fin 100000000000000001097906362944045541740492309677311846336810682903157585404911491537163328978494688899061249669721172515611590283743140088328307009198146046031271664502933027185697489699588559043338384466165001178426897626212945177628091195786707458122783970171784415105291802893207873272974885715430223118336,
+      .fin 100000000000000001097906362944045541740492309677311846336810682903157585404911491537163328978494688899061249669721172515611590283743140088328307009198146046031271664502933027185697489699588559043338384466165001178426897626212945177628091195786707458122783970171784415105291802893207873272974885715430223118336,
+      .fin (-100000000000000001097906362944045541740492309677311846336810682903157585404911491537163328978494688899061249669721172515611590283743140088328307009198146046031271664502933027185697489699588559043338384466165001178426897626212945177628091195786707458122783970171784415105291802893207873272974885715430223118336)]) none =
+      .error fsumOverflow := by decide +kernel
 
 end PyLean.CoreLibs.CalStat

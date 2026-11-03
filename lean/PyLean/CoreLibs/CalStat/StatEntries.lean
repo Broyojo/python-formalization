@@ -1,7 +1,7 @@
 import PyLean.Registry
 import PyLean.CoreLibs.CalStat.StatSqrt
 import PyLean.CoreLibs.CalStat.StatExact
-import PyLean.CoreLibs.CalStat.StatMore
+import PyLean.CoreLibs.CalStat.StatFix
 
 /-! Registry entries for `Lib/statistics.py`. -/
 
@@ -35,7 +35,7 @@ def statisticsEntries : List Entry := [
     "mean of finite floats is the exact mean correctly rounded."
     "docstring of _sum (no round-off)" ``MeanFloats ``meanFloats_proven,
   re "mean-int-subclass" "corelibs-statistics-mean-intenum-valueerror"
-    ["mean", "_convert", "variance", "pvariance"]
+    ["mean", "_convert"]
     "mean of valid members of an int subclass does not raise ValueError."
     "Doc/library/statistics.rst, mean" ``MeanIntSubclass ``meanIntSubclass_refuted,
   st "variance-fractions" ["variance", "pvariance", "_ss"]
@@ -50,7 +50,7 @@ def statisticsEntries : List Entry := [
   st "exact-ratio-spec" ["_exact_ratio", "_isfinite"]
     "_exact_ratio gives the value with a positive denominator for finite numbers, (x, None) exactly for what _isfinite calls non-finite, TypeError for non-numbers."
     "docstring of _exact_ratio; statistics.py:1613" ``ExactRatioSpec ``exactRatioSpec_proven,
-  re "coerce-order" "corelibs-statistics-coerce-set-order" ["_coerce", "_sum", "_ss"]
+  re "coerce-order" "corelibs-statistics-coerce-set-order" ["_coerce"]
     "The result of reduce(_coerce, types, int) does not depend on the order of the set of types."
     "invariant: same input, same outcome" ``CoerceOrderIndependent ``coerceOrderIndependent_refuted,
   st "coerce-builtin-order" ["_coerce"]
@@ -239,7 +239,49 @@ def statisticsEntries : List Entry := [
     "Lib/statistics.py:1259-1265; C99 Annex F" ``PdfShape ``pdfShape_proven,
   st "linreg-centred" ["linear_regression"]
     "linear_regression(x, y) with an intercept is the regression through the origin of the centred data [xi - fmean(x)], [yi - fmean(y)], with intercept fmean(y) - slope * fmean(x); fsum(x) / n is fmean(x)."
-    "Lib/statistics.py:790-805" ``LinRegCentred ``linRegCentred_proven
+    "Lib/statistics.py:790-805" ``LinRegCentred ``linRegCentred_proven,
+  st "median-empty" ["median", "median_low", "median_high"]
+    "median, median_low and median_high of empty data raise StatisticsError('no median for empty data')."
+    "Lib/statistics.py:343-344, 369-370, 391-392" ``MedianEmpty ``medianEmpty_proven,
+  st "quantiles-one" ["quantiles"]
+    "quantiles of one data point, n >= 1, is that point repeated n - 1 times, whatever the method."
+    "Lib/statistics.py:1199-1201" ``QuantilesOne ``quantilesOne_proven,
+  st "convert-branches" ["_convert"]
+    "_convert returns a float or Decimal (NaN and infinities included) of type T as it is, and turns a Fraction into a Decimal through T(numerator) / T(denominator), the 28-digit half-even rounding."
+    "Lib/statistics.py:1624-1641" ``ConvertBranches ``convertBranches_proven,
+  st "decimal-paths" ["mean", "variance", "pvariance", "stdev", "pstdev", "_convert"]
+    "On finite Decimal data, mean and (p)variance are the exact values rounded to 28 digits and (p)stdev is _decimal_sqrt_of_frac of the exact variance."
+    "docstring examples; Lib/statistics.py:628-629, 651-652" ``DecimalPaths ``decimalPaths_proven,
+  st "too-few-points" ["variance", "pvariance", "stdev", "pstdev"]
+    "variance and stdev of fewer than two points, pvariance and pstdev of no data, raise their StatisticsError."
+    "Lib/statistics.py:562-563, 605-606, 620-621, 643-644" ``TooFewPoints ``tooFewPoints_proven,
+  st "special-data" ["_sum", "_ss", "mean", "variance", "pvariance", "stdev", "pstdev"]
+    "For float data with a NaN or infinity, _sum and _ss return the in-order sum s of the non-finite items (partials[None]); mean, variance, pvariance give s / n, s / (n-1), s / n; stdev and pstdev raise ValueError('inf or nan encountered in data')."
+    "Lib/statistics.py:1499-1503, 1541-1545, 626-627, 649-650" ``SpecialData ``specialData_proven,
+  st "exact-ratio-fallback" ["_exact_ratio"]
+    "_exact_ratio of an object with numerator and denominator (not float, not Decimal) is that pair."
+    "Lib/statistics.py:1614-1618" ``ExactRatioFallback ``exactRatioFallback_proven,
+  st "pos-revalidates" ["NormalDist.__pos__"]
+    "+X builds a new instance through __init__: a negative sigma (possible after __setstate__) raises StatisticsError, otherwise the fields are kept."
+    "Lib/statistics.py:1416-1418" ``PosRevalidates ``posRevalidates_proven,
+  st "pdf-one-sigma" ["NormalDist.pdf"]
+    "When x - mu is exactly sigma, pdf(x) = exp(-0.5) / (sqrt(tau) * sigma), for any exp."
+    "Lib/statistics.py:1264-1265" ``PdfOneSigma ``pdfOneSigma_proven,
+  st "harmonic-weighted" ["harmonic_mean"]
+    "For positive Fraction data and non-negative Fraction weights, harmonic_mean(data, weights) is sum(w) / sum(w/x) exactly; mismatched lengths and all-zero weights raise."
+    "Lib/statistics.py:306-325; docstring example" ``HarmonicWeighted ``harmonicWeighted_proven,
+  st "fail-neg-gen" ["_fail_neg"]
+    "_fail_neg is a generator: it yields every value before the first negative one, then raises StatisticsError(errmsg), or ends; a comparison that raises ends it with that exception; consuming it gives the values or the first exception."
+    "Lib/statistics.py:1644-1649" ``FailNegGen ``failNegGen_proven,
+  st "multimode-order" ["multimode"]
+    "multimode's result is a sublist of the data's first occurrences, in order, with no two items equal (== an equivalence)."
+    "Lib/statistics.py:498-516 (docstring: in the order they were first encountered)" ``MultimodeOrder ``multimodeOrder_proven,
+  st "harmonic-refusals" ["harmonic_mean"]
+    "A single non-number raises TypeError('unsupported type'); a single negative int, Fraction, float or Decimal raises StatisticsError; a negative weight raises StatisticsError('harmonic mean does not support negative values') from _fail_neg(weights)."
+    "Lib/statistics.py:297-314" ``HarmonicRefusals ``harmonicRefusals_proven,
+  st "state-round-trip" ["NormalDist.__getstate__", "NormalDist.__setstate__"]
+    "__getstate__ is the tuple of the two slots and __setstate__ of it restores them exactly; a 2-item state is stored unconverted; any other length raises the unpacking ValueError."
+    "Lib/statistics.py:1445-1449" ``StateRoundTrip ``stateRoundTrip_proven
 ]
 
 end PyLean.CoreLibs.CalStat

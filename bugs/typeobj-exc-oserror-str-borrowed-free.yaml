@@ -1,0 +1,57 @@
+id: typeobj-exc-oserror-str-borrowed-free
+title: "OSError.__str__ formats borrowed attribute pointers; an errno/strerror __str__ that clears filename frees it before %R reads it (segfault) — duplicate of gh-160773, fixed after 3.15.2"
+priority: P1
+kind: memory-safety
+module: typeobj
+files: [Objects/exceptions.c]
+functions: ["OSError_str"]
+status: duplicate
+summary: |
+  `OSError_str` (Objects/exceptions.c:2347-2389 in 3.15.2) passes the borrowed members
+  `self->myerrno`, `self->strerror`, `self->filename` and `self->filename2` to
+  `PyUnicode_FromFormat` (:2372-2388). Each `%S`/`%R` conversion can run Python code, and the
+  members are writable attributes (:2465-2472). If the errno object's `__str__` sets
+  `e.filename = None`, the last reference to the filename object is dropped, and the later `%R`
+  reads freed memory.
+
+  Already reported as gh-160773 (closed) and fixed by gh-160822 on main, with backports gh-160884
+  (3.15) and gh-160885 (3.14), all merged 2026-10-29. The fix takes strong references first. That
+  is after the 3.15.2 release, so 3.15.2 still crashes. Found independently by the exceptions.c
+  review (2026-11-03). Nothing to file; recorded so the 3.15.2 behaviour is on record.
+likelihood: |
+  Low: it needs an errno or strerror object whose __str__ mutates the exception being formatted.
+  Pure Python, no ctypes.
+maybe_intended: "No; upstream fixed it as a crash."
+reproducer: |
+  import subprocess, sys
+  child = r'''
+  class Errno:
+      def __str__(self):
+          e.filename = None
+          return "1"
+  class FN:
+      def __repr__(self): return "fn"
+  e = OSError(Errno(), "s", FN())
+  del FN
+  print("str ->", str(e), flush=True)
+  print("survived", flush=True)
+  '''
+  p = subprocess.run([sys.executable, "-c", child], capture_output=True, text=True)
+  print("child returncode:", p.returncode, "stdout:", p.stdout.strip().replace("\n", " | "))
+  if p.returncode < 0 and "survived" not in p.stdout:
+      print("REPRODUCED typeobj-exc-oserror-str-borrowed-free")
+expected: "str(e) returns '[Errno 1] s: fn' (or reflects the cleared filename) and the process continues."
+observed: |
+  python3 3.15.2: SIGSEGV (rc -11), also under PYTHONMALLOC=debug. REPRODUCED.
+  main (3.16.0a1+dev, ef1fce0): prints "[Errno 1] s: fn" and survives (fixed by gh-160822).
+promised_by: "Invariant: no crash from pure-Python code."
+cause: "Objects/exceptions.c:2372-2388 (3.15.2): borrowed members passed to PyUnicode_FromFormat, whose conversions run user code."
+possible_fix: "Already fixed upstream: gh-160822 / 3.15 backport gh-160884 (take strong references before formatting)."
+duplicates:
+  issues:
+    - {number: 160773, state: closed, relation: "duplicate: same defect, same trigger shape (a formatting callback clearing filename); fixed after 3.15.2"}
+  prs:
+    - {number: 160822, state: merged, relation: "fix on main"}
+    - {number: 160884, state: merged, relation: "3.15 backport, merged 2026-10-29 (after 3.15.2)"}
+    - {number: 160885, state: merged, relation: "3.14 backport"}
+  queries: ["OSError str use after free", "OSError_str strong references (PRs)", "gh issue view 160773", "bugforge README: no OSError_str entry"]

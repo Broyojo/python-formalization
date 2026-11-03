@@ -182,22 +182,43 @@ def listAssSubscript (l : List α) (s : Slice) (value : Option (List α)) : Py (
     if len = 0 then return l
     return storeLoop l start step seq
 
+/-- `new_allocated` of `py_list_resize`, listobject.c:148-156, for `0 <= newsize`:
+`((size_t)newsize + (newsize >> 3) + 6) & ~(size_t)3`, then no over-allocation when
+the new size is closer to that than to the old size, and `0` for an empty list. -/
+def listNewAllocated (size newsize : Int) : Int :=
+  let na := ((newsize + newsize / 8 + 6) / 4) * 4
+  let na := if newsize - size > na - newsize then ((newsize + 3) / 4) * 4 else na
+  if newsize = 0 then 0 else na
+
 /-- `l *= n`: `sequence_repeat` conversion, then `list_inplace_repeat_lock_held`
-(listobject.c:1102-1140). -/
+(listobject.c:1102-1140): the explicit overflow test (:1115-1118), then
+`list_resize(self, output_size)` (:1121-1123).
+
+This model has the contents only, not `allocated`. It takes the list as exactly
+allocated (`allocated == len(l)`, as a display, `l.copy()` or `l * k` leaves it). For
+`n >= 2` the output is then larger than the allocation, so `list_resize` goes to
+`py_list_resize`, whose overflow test (:194-200) refuses a rounded allocation past
+`PY_SSIZE_T_MAX / sizeof(PyObject *)`; that is the second `MemoryError`. The shrinking
+fallback (:203-207) cannot apply to a growing list. `BytesObj.listInplaceRepeat`
+carries any allocation. -/
 def listIRepeat (l : List α) (n : Int) : Py (List α) := do
   let n ← repeatCount n
   let size : Int := l.length
   if size = 0 ∨ n = 1 then return l
   if n < 1 then return []
   if size > ssizeMax / n then throw memoryError
+  if listNewAllocated size (size * n) > ssizeMax / 8 then throw memoryError
   return (List.replicate n.toNat l).flatten
 
-/-- `l * n`: `list_repeat_lock_held` (listobject.c:841-880). -/
+/-- `l * n`: `list_repeat_lock_held` (listobject.c:841-880): the explicit overflow
+test (:848-849), then `list_new_prealloc(output_size)` (:852), whose `PyMem_New`
+(:319) fails for more than `PY_SSIZE_T_MAX / sizeof(PyObject *)` slots. -/
 def listRepeat (l : List α) (n : Int) : Py (List α) := do
   let n ← repeatCount n
   let size : Int := l.length
   if size = 0 ∨ n ≤ 0 then return []
   if size > ssizeMax / n then throw memoryError
+  if size * n > ssizeMax / 8 then throw memoryError
   return (List.replicate n.toNat l).flatten
 
 /-- `l.__init__(iterable)`: `list___init___impl` (listobject.c:3544-3565)

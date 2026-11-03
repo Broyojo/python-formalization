@@ -1761,8 +1761,8 @@ typeobj-reduce-getattr-cfunction	proven	Objects/methodobject.c	meth_reduce
 typeobj-reduce-getattr-descr	proven	Objects/descrobject.c	wrapper_reduce,descr_reduce
 typeobj-classmethod-bindings-agree	proven	Objects/funcobject.c	cm_descr_get
 typeobj-sequence-tuple	proven	Objects/abstract.c	PySequence_Tuple
-typeobj-structseq-reduce-round-trip	proven	Objects/structseq.c	structseq_new_impl,structseq_reduce
-typeobj-structseq-replace	proven	Objects/structseq.c	structseq_replace
+typeobj-structseq-reduce-round-trip	proven	Objects/structseq.c	
+typeobj-structseq-replace	proven	Objects/structseq.c	
 typeobj-structseq-repr-shape	proven	Objects/structseq.c	structseq_repr,PyStructSequence_GetItem
 typeobj-structseq-repr-labels	refuted	Objects/structseq.c	structseq_repr,count_members,initialize_members,_PyStructSequence_NewType,PyStructSequence_NewType
 typeobj-structseq-newtype-layout	proven	Objects/structseq.c	count_members,initialize_members,_PyStructSequence_NewType,PyStructSequence_NewType
@@ -1772,9 +1772,16 @@ typeobj-structseq-new-reads-first	proven	Objects/structseq.c	get_type_attr_as_si
 typeobj-structseq-new-sets-exception	refuted	Objects/structseq.c	PyStructSequence_New,get_type_attr_as_size
 typeobj-structseq-new-impl-in-bounds	refuted	Objects/structseq.c	structseq_new_impl,PyStructSequence_New,get_type_attr_as_size
 typeobj-structseq-reduce-in-bounds	refuted	Objects/structseq.c	structseq_reduce,get_type_attr_as_size,get_real_size
-typeobj-structseq-reduce-in-bounds-honest	proven	Objects/structseq.c	structseq_reduce,get_type_attr_as_size,get_real_size
+typeobj-structseq-reduce-spec	proven	Objects/structseq.c	structseq_reduce,get_type_attr_as_size,get_real_size
+typeobj-structseq-reduce-in-bounds-built	refuted	Objects/structseq.c	structseq_reduce,_PyStructSequence_NewType,PyStructSequence_NewType,count_members,initialize_members
 typeobj-structseq-replace-in-bounds	refuted	Objects/structseq.c	structseq_replace,PyStructSequence_New,get_type_attr_as_size,get_real_size
-typeobj-structseq-replace-in-bounds-honest	proven	Objects/structseq.c	structseq_replace,PyStructSequence_New,get_type_attr_as_size,get_real_size
+typeobj-structseq-replace-spec	proven	Objects/structseq.c	structseq_replace,PyStructSequence_New,get_type_attr_as_size,get_real_size
+typeobj-structseq-new-impl-spec	proven	Objects/structseq.c	structseq_new_impl,PyStructSequence_New,get_type_attr_as_size
+typeobj-structseq-newtype-outcomes	proven	Objects/structseq.c	count_members,initialize_members,_PyStructSequence_NewType,PyStructSequence_NewType
+typeobj-structseq-newtype-basicsize-exact	refuted	Objects/structseq.c	_PyStructSequence_NewType,PyStructSequence_NewType,count_members,initialize_members
+typeobj-structseq-static-twin	proven	Objects/structseq.c	initialize_static_fields,PyStructSequence_InitType2,PyStructSequence_InitType,count_members,initialize_members
+typeobj-structseq-static-twin-all	refuted	Objects/structseq.c	PyStructSequence_InitType2,initialize_static_fields,_PyStructSequence_NewType,PyStructSequence_NewType
+typeobj-structseq-inittype2-no-dangling	refuted	Objects/structseq.c	PyStructSequence_InitType2,initialize_static_fields
 typeobj-exc-str-args	proven	Objects/exceptions.c	
 typeobj-exc-repr-args	proven	Objects/exceptions.c	
 typeobj-exc-keyerror-str	proven	Objects/exceptions.c	
@@ -3015,12 +3022,12 @@ calstat-statistics-sum-exact	proven	statistics.py	_sum
 calstat-statistics-mean-fractions	proven	statistics.py	mean
 calstat-statistics-mean-ints	proven	statistics.py	mean,_convert
 calstat-statistics-mean-floats	proven	statistics.py	mean,_convert
-calstat-statistics-mean-int-subclass	refuted	statistics.py	mean,_convert,variance,pvariance
+calstat-statistics-mean-int-subclass	refuted	statistics.py	mean,_convert
 calstat-statistics-variance-fractions	proven	statistics.py	variance,pvariance,_ss
 calstat-statistics-variance-with-mean	proven	statistics.py	variance,pvariance,_ss
 calstat-statistics-stdev-of-variance	proven	statistics.py	stdev,pstdev,_mean_stdev
 calstat-statistics-exact-ratio-spec	proven	statistics.py	_exact_ratio,_isfinite
-calstat-statistics-coerce-order	refuted	statistics.py	_coerce,_sum,_ss
+calstat-statistics-coerce-order	refuted	statistics.py	_coerce
 calstat-statistics-coerce-builtin-order	proven	statistics.py	_coerce
 calstat-statistics-convert-spec	proven	statistics.py	_convert
 calstat-statistics-fail-neg	proven	statistics.py	_fail_neg
@@ -3079,6 +3086,20 @@ calstat-statistics-fmean-floats	proven	statistics.py	fmean
 calstat-statistics-geometric-scan	proven	statistics.py	geometric_mean
 calstat-statistics-pdf-shape	proven	statistics.py	NormalDist.pdf
 calstat-statistics-linreg-centred	proven	statistics.py	linear_regression
+calstat-statistics-median-empty	proven	statistics.py	median,median_low,median_high
+calstat-statistics-quantiles-one	proven	statistics.py	quantiles
+calstat-statistics-convert-branches	proven	statistics.py	_convert
+calstat-statistics-decimal-paths	proven	statistics.py	mean,variance,pvariance,stdev,pstdev,_convert
+calstat-statistics-too-few-points	proven	statistics.py	variance,pvariance,stdev,pstdev
+calstat-statistics-special-data	proven	statistics.py	_sum,_ss,mean,variance,pvariance,stdev,pstdev
+calstat-statistics-exact-ratio-fallback	proven	statistics.py	_exact_ratio
+calstat-statistics-pos-revalidates	proven	statistics.py	NormalDist.__pos__
+calstat-statistics-pdf-one-sigma	proven	statistics.py	NormalDist.pdf
+calstat-statistics-harmonic-weighted	proven	statistics.py	harmonic_mean
+calstat-statistics-fail-neg-gen	proven	statistics.py	_fail_neg
+calstat-statistics-multimode-order	proven	statistics.py	multimode
+calstat-statistics-harmonic-refusals	proven	statistics.py	harmonic_mean
+calstat-statistics-state-round-trip	proven	statistics.py	NormalDist.__getstate__,NormalDist.__setstate__
 rand-genrand-in-bounds	proven	Modules/_randommodule.c	genrand_uint32
 rand-genrand-twist-recurrence	proven	Modules/_randommodule.c	genrand_uint32
 rand-random-exact-rational	proven	Modules/_randommodule.c	_random_Random_random_impl

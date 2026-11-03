@@ -24,7 +24,11 @@ What is modelled, and the scope limits:
   junk or `NULL`, or reading `tp_members` past its sentinel is `CRes.ub`: undefined behaviour, which
   on 3.15.2 shows up as a segfault or a silent heap overwrite.
 * Allocation failure is an arbitrary predicate `malloc` on the byte count. `PyUnicodeWriter` is the
-  model of `UnicodeObj/ObjectWriter.lean`, which leaves out its own allocation failure.
+  model of `UnicodeObj/ObjectWriter.lean`; its creation can fail (`writerCreateC`, with its own
+  predicate `walloc`), its later growth cannot (that model has no allocation failure).
+* Python code run by a callback is an arbitrary outcome, and so is each lookup in the
+  constructor's `dict` argument and each pop from `__replace__`'s keywords: a key's `__eq__` can
+  raise or change the dict between them.
 * Python code run by a callback is an arbitrary outcome: `__repr__` of an item (`rep`), the
   conversion of the constructor's argument (`FastArg`, which may also rebind the size
   attributes), the lookups in the constructor's `dict` argument (`CDictArg`). Reference counts
@@ -192,7 +196,7 @@ def fromCString (n : MName) (what : String) : CRes Str :=
 def preSize : Nat := 16
 
 /-- `PyObject_GC_NewVar(PyStructSequence, type, n)` for `n ≥ 0`: the byte size of the block.
-`_PyObject_VAR_SIZE` (Include/cpython/objimpl.h:23-27) computes `basicsize + n * itemsize` in
+`_PyObject_VAR_SIZE` (Include/cpython/objimpl.h:22-26) computes `basicsize + n * itemsize` in
 `size_t` and rounds up to 8, both modulo 2^64 with no overflow check; `gc_alloc`
 (Python/gc.c:2012-2028) refuses a size above `PY_SSIZE_T_MAX - presize`, and the allocator may
 fail. `n < 0` (Python/gc.c:2055-2058) cannot happen: every caller checks it first. -/
@@ -292,12 +296,31 @@ def reprLoop {α : Type} (t : CType) (o : CObj α) (rep : α → Py Str) :
     let w ← reprField t o rep i w
     reprLoop t o rep fuel (i + 1) w
 
+/-- A `Py_ssize_t` result of `+` and `*`: CPython is built with `-fno-strict-overflow`, so signed
+arithmetic wraps modulo 2^64. -/
+def toSsize (x : Int) : Int :=
+  let m := x % 2 ^ 64
+  if m ≥ 2 ^ 63 then m - 2 ^ 64 else m
+
+/-- `PyUnicodeWriter_Create(length)`, Objects/unicode_writer.c:104-132: a negative length is
+`ValueError` (:107-111); otherwise the writer and, for `length > 0`, a buffer of `length`
+characters are allocated (`_PyUnicodeWriter_Prepare`, then `PyUnicode_New`, which refuses or
+fails to allocate with `MemoryError`). `walloc length` says whether that allocation succeeds.
+Later growth of the buffer is the writer model of `UnicodeObj/ObjectWriter.lean`, which has no
+allocation failure. -/
+def writerCreateC (length : Int) (walloc : Int → Bool) : CRes UWriter :=
+  if length < 0 then .exc (.valueError "length must be positive")
+  else if length > 0 ∧ walloc length = false then .exc memoryError
+  else CRes.ofPy (writerCreate length)
+
 /-- `structseq_repr(op)`, :273-339. The writer is created with room for
-`strlen(tp_name) + 1 + 5 * Py_SIZE + 1` characters (:280-286), always positive; `tp_name` is
-written whole with `PyUnicodeWriter_WriteUTF8(writer, tp_name, strlen(tp_name))` (:289): there
-is no truncation in 3.15. -/
-def structseqRepr {α : Type} (t : CType) (o : CObj α) (rep : α → Py Str) : CRes Str := do
-  let w ← CRes.ofPy (writerCreate (t.name.length + 1 + o.size * 5 + 1))
+`strlen(tp_name) + 1 + Py_SIZE * 5 + 1` characters (:280-286), computed in `Py_ssize_t`, so a
+huge `Py_SIZE` wraps it negative; `tp_name` is written whole with
+`PyUnicodeWriter_WriteUTF8(writer, tp_name, strlen(tp_name))` (:289): there is no truncation in
+3.15. -/
+def structseqRepr {α : Type} (walloc : Int → Bool) (t : CType) (o : CObj α) (rep : α → Py Str) :
+    CRes Str := do
+  let w ← writerCreateC (toSsize (t.name.length + 1 + o.size * 5 + 1)) walloc
   let w ← wop w (.utf8 t.name t.name.length)
   let w ← wop w (.char chLParen)
   let w ← reprLoop t o rep o.size 0 w
@@ -341,28 +364,30 @@ def reduceC {α : Type} (t : CType) (o : CObj α) : CRes (List α × List (Str �
 
 /-! ## `structseq_replace`, :388-458 -/
 
-/-- `PyDict_PopString(kwargs, name, &ob)` on the keyword dict, Objects/dictobject.c:3326-3339:
-the name is decoded first. -/
-def popKw {α : Type} (kws : List (Str × α)) (key : Str) : Option α × List (Str × α) :=
-  match kws.find? (·.1 == key) with
-  | some (_, v) => (some v, kws.filter (·.1 != key))
-  | none => (none, kws)
+/-- `kwargs`. `pop i name` is `PyDict_PopString(kwargs, name, &ob)` for field `i`, after the name
+is decoded (Objects/dictobject.c:3326-3339): the value removed, if a key compared equal, or what
+a key's `__eq__` raised. Keyword names can be str subclasses whose `__hash__` and `__eq__` are
+Python code, so each pop is its own outcome. `sizeAfter` is `PyDict_GET_SIZE(kwargs)` after the
+loop (:435). -/
+structure KwArg (α : Type) where
+  pop : Nat → Str → Py (Option α)
+  sizeAfter : Nat
 
 /-- The keyword loop, :423-433, from field `i` while `fuel` lasts. -/
-def replaceKwLoop {α : Type} (t : CType) (self : CObj α) :
-    Nat → Nat → List (Slot α) → List (Str × α) → CRes (List (Slot α) × List (Str × α))
-  | 0, _, res, kws => .ok (res, kws)
-  | fuel + 1, i, res, kws => do
+def replaceKwLoop {α : Type} (t : CType) (self : CObj α) (pop : Nat → Str → Py (Option α)) :
+    Nat → Nat → List (Slot α) → CRes (List (Slot α))
+  | 0, _, res => .ok res
+  | fuel + 1, i, res => do
     let n ← memberName t.members i "structseq_replace: tp_members past the sentinel"
     let key ← fromCString n "structseq_replace: NULL member name"
-    let (got, kws) := popKw kws key
+    let got ← CRes.ofPy (pop i key)
     let v ← match got with
       | some v => pure v
       | none => do
         let s ← readSlot self.slots i "structseq_replace: self item past the block"
         deref s "structseq_replace: NULL or junk self item"
     let res ← writeSlot res i (.val v) "structseq_replace: write past the new block"
-    replaceKwLoop t self fuel (i + 1) res kws
+    replaceKwLoop t self pop fuel (i + 1) res
 
 /-- The copy loop, :447-449, from field `i` while `fuel` lasts. -/
 def replaceCopyLoop {α : Type} (self : CObj α) : Nat → Nat → List (Slot α) → CRes (List (Slot α))
@@ -376,7 +401,7 @@ def replaceCopyLoop {α : Type} (self : CObj α) : Nat → Nat → List (Slot α
 /-- `structseq_replace(self, *args, **kwargs)`, :388-458. `kws` is `kwargs`, `none` for `NULL`.
 The new object comes from `PyStructSequence_New(Py_TYPE(self))`, which reads the dict again; the
 loops run over `n_fields` of `self`, from `tp_basicsize`. -/
-def replaceC {α : Type} (t : CType) (self : CObj α) (nargs : Nat) (kws : Option (List (Str × α)))
+def replaceC {α : Type} (t : CType) (self : CObj α) (nargs : Nat) (kws : Option (KwArg α))
     (malloc : Nat → Bool) : CRes (CObj α) := do
   if nargs ≠ 0 then .exc (.typeError "__replace__() takes no positional arguments")
   else
@@ -388,8 +413,8 @@ def replaceC {α : Type} (t : CType) (self : CObj α) (nargs : Nat) (kws : Optio
       let res ← pssNew (α := α) t malloc
       match kws with
       | some kws => do
-        let (slots, left) ← replaceKwLoop t self nFields 0 res.slots kws
-        if left ≠ [] then .exc (.typeError "~Got unexpected field name(s): %R")
+        let slots ← replaceKwLoop t self kws.pop nFields 0 res.slots
+        if kws.sizeAfter > 0 then .exc (.typeError "~Got unexpected field name(s): %R")
         else .ok { res with slots := slots }
       | none => do
         let slots ← replaceCopyLoop self nFields 0 res.slots
@@ -404,21 +429,23 @@ structure FastArg (α : Type) where
   res : Py (List α)
   dictAfter : TDict
 
-/-- The `dict` argument. `look name` is `PyDict_GetItemStringRef(dict, name)` after the name is
-decoded: what it finds, or what a key's `__eq__` raised; `size` is `PyDict_GET_SIZE(dict)`. -/
+/-- The `dict` argument. `look i name` is `PyDict_GetItemStringRef(dict, name)` for field `i`,
+after the name is decoded: what it finds, or what a key's `__eq__` raised. Such an `__eq__` is
+Python code that can change the dict, so each lookup is its own outcome, and the two reads of
+`PyDict_GET_SIZE(dict)` are separate: `size0` before the loop (:238), `size1` after it (:255). -/
 inductive CDictArg (α : Type) where
-  | dict (look : Str → Py (Option α)) (size : Nat)
+  | dict (look : Nat → Str → Py (Option α)) (size0 size1 : Nat)
   | notDict
 
 /-- The `dict` loop, :240-254, from field `i` while `fuel` lasts: the value found under
 `tp_members[i - n_unnamed_fields].name`, or `None`. Returns the block and the count found. -/
-def newDictLoop {α : Type} (t : CType) (none_ : α) (look : Str → Py (Option α)) (nUnnamed : Nat) :
+def newDictLoop {α : Type} (t : CType) (none_ : α) (look : Nat → Str → Py (Option α)) (nUnnamed : Nat) :
     Nat → Nat → List (Slot α) → Nat → CRes (List (Slot α) × Nat)
   | 0, _, res, found => .ok (res, found)
   | fuel + 1, i, res, found => do
     let n ← memberName t.members ((i : Int) - nUnnamed) "structseq_new: tp_members out of range"
     let key ← fromCString n "structseq_new: NULL member name"
-    let got ← CRes.ofPy (look key)
+    let got ← CRes.ofPy (look i key)
     let (v, found) := match got with
       | some v => (v, found + 1)
       | none => (none_, found)
@@ -466,10 +493,10 @@ def newImplC {α : Type} (t : CType) (arg : FastArg α) (dict : Option (CDictArg
       let res ← pssNew (α := α) t malloc
       let slots ← newCopyLoop xs 0 res.slots
       match dict with
-      | some (.dict look size) =>
-        if size > 0 then do
+      | some (.dict look size0 size1) =>
+        if size0 > 0 then do
           let (slots, found) ← newDictLoop t none_ look nUnnamed (maxLen - len) len slots 0
-          if size > found then .exc (.typeError s!"~{t.nameStr}() got duplicate or unexpected field name(s)")
+          if size1 > found then .exc (.typeError s!"~{t.nameStr}() got duplicate or unexpected field name(s)")
           else .ok { res with slots := slots }
         else do
           let slots ← newNoneLoop none_ (maxLen - len) len slots
@@ -519,13 +546,27 @@ def toCInt (x : Int) : Int :=
   let m := x % 2 ^ 32
   if m ≥ 2 ^ 31 then m - 2 ^ 32 else m
 
-/-- What `PyType_FromSpecWithBases(&spec, &PyTuple_Type)` does with `spec.basicsize`:
-`> 0` is used (Objects/typeobject.c:5339-5341); `< 0` asks for that much room on top of tuple
-(:5342-5344), which tuple, a variable-size base without `Py_TPFLAGS_ITEMS_AT_END`, refuses
-(:5629-5643); `0` inherits tuple's 32 (:5645-5648); then `type_ready` refuses a basicsize below
-the base's (:5207-5212). Every other check and allocation it does before is `rest`, an arbitrary
-outcome. Returns `tp_basicsize`. -/
-def fromSpecBasicsize (name : Bytes) (basicsize : Int) (rest : Py Unit) : CRes Nat :=
+/-- The member names `PyType_FromMetaclass` treats as special offsets (typeobject.c:5443-5451),
+in the order it checks them (:5651-5665). -/
+def specialNames : List String := ["__weaklistoffset__", "__dictoffset__", "__vectorcalloffset__"]
+
+/-- `special_offset_from_member` (Objects/typeobject.c:5272-5297) for the members of a struct
+sequence: they are `_Py_T_OBJECT`, so a member under one of the special names is refused with
+`SystemError`. The first special name (in check order) that some member has decides. -/
+def specialCheck (ms : List Member) : Option PyExc :=
+  match specialNames.find? (fun s => ms.any (·.name == lit s)) with
+  | some s => some (systemError s!"type of {s} must be Py_T_PYSSIZET")
+  | none => none
+
+/-- What `PyType_FromSpecWithBases(&spec, &PyTuple_Type)` does with `spec.basicsize` and the
+members: `> 0` is used (Objects/typeobject.c:5339-5341); `< 0` asks for that much room on top of
+tuple (:5342-5344), which tuple, a variable-size base without `Py_TPFLAGS_ITEMS_AT_END`, refuses
+(:5629-5643); `0` inherits tuple's 32 (:5645-5648); then the special offsets are computed from
+the members named `__weaklistoffset__`, `__dictoffset__`, `__vectorcalloffset__` (:5649-5665,
+`specialCheck`); and `check_basicsize_includes_size_and_offsets` refuses a basicsize below the
+base's (:5207-5212, called at :5781). Every other check and allocation it does before is `rest`,
+an arbitrary outcome. Returns `tp_basicsize`. -/
+def fromSpecBasicsize (name : Bytes) (ms : List Member) (basicsize : Int) (rest : Py Unit) : CRes Nat :=
   match rest with
   | .error e => .exc e
   | .ok () =>
@@ -533,9 +574,12 @@ def fromSpecBasicsize (name : Bytes) (basicsize : Int) (rest : Py Unit) : CRes N
       .exc (systemError "Cannot extend variable-size class without Py_TPFLAGS_ITEMS_AT_END.")
     else
       let bs := if basicsize = 0 then 32 else basicsize.toNat
-      if bs < 32 then
-        .exc (.typeError s!"~tp_basicsize for type '{String.ofList (name.map Char.ofNat)}' ({bs}) is too small for base 'tuple' (32)")
-      else .ok bs
+      match specialCheck ms with
+      | some e => .exc e
+      | none =>
+        if bs < 32 then
+          .exc (.typeError s!"~tp_basicsize for type '{String.ofList (name.map Char.ofNat)}' ({bs}) is too small for base 'tuple' (32)")
+        else .ok bs
 
 /-- The `__match_args__` loop of `initialize_structseq_dict`, :510-520: for `i < n_in_sequence`,
 the decoded names of the named fields. The terminator (index `fields.length`) has a `NULL`
@@ -584,7 +628,7 @@ def newType (d : Desc) (malloc : Nat → Bool) (rest : Py Unit) : CRes Built := 
   let (n, u) := countMembers d.fields
   let ms ← initializeMembers d.fields n u malloc
   let hidden : Int := (n : Int) - d.nInSeq
-  let bs ← fromSpecBasicsize d.name (toCInt (40 + (hidden - 1) * 8)) rest
+  let bs ← fromSpecBasicsize d.name ms (toCInt (40 + (hidden - 1) * 8)) rest
   let (dict, ma) ← initDict d n u
   .ok { type := { name := d.name, members := ms, basicsize := bs, dict := dict }, matchArgs := ma }
 

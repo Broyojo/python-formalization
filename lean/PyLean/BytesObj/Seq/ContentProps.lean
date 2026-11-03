@@ -373,14 +373,69 @@ def ListExtendIterContents : Prop :=
     (listExtendIter o src).2 = none ∧ (listExtendIter o src).1.items = o.items ++ src.items ∧
       (listExtendIter o src).1.WF
 
+/-- On an iterator that leaves the list alone, the drain loop is `extendDrain` over what is left, then
+the iterator's exception or the cut-back. -/
+theorem drainFx_pure (src : IterSrc α) :
+    ∀ (f k : Nat) (o o' : LObj α), src.items.length - k < f → extendDrain o (src.items.drop k) = .ok o' →
+      drainFx src.fx f k o = (match src.err with | some e => (o', some e) | none => extendCutBack o') := by
+  intro f
+  induction f with
+  | zero => intro k o o' h; omega
+  | succ f ih =>
+    intro k o o' hf hd
+    by_cases hk : k < src.items.length
+    · have hx : src.items[k]? = some src.items[k] := List.getElem?_eq_getElem hk
+      have hnext : src.fx.next k o = (some (.ok src.items[k]), o) := by
+        simp only [IterSrc.fx, hx]
+      have hdrop : src.items.drop k = src.items[k] :: src.items.drop (k + 1) := by
+        rw [List.drop_eq_getElem_cons hk]
+      rw [hdrop] at hd
+      simp only [drainFx, hnext]
+      by_cases hr : (o.items.length : Int) < o.allocated
+      · rw [if_pos hr]
+        rw [extendDrain, if_pos hr] at hd
+        exact ih (k + 1) _ o' (by omega) hd
+      · rw [if_neg hr]
+        rw [extendDrain, if_neg hr] at hd
+        cases ha : listAppend o src.items[k] with
+        | error e => rw [ha] at hd; simp at hd
+        | ok o2 =>
+          rw [ha] at hd
+          simp only
+          exact ih (k + 1) o2 o' (by omega) hd
+    · have hx : src.items[k]? = none := List.getElem?_eq_none (by omega)
+      have hdrop : src.items.drop k = [] := List.drop_eq_nil_of_le (by omega)
+      rw [hdrop, extendDrain] at hd
+      simp only [Except.ok.injEq] at hd
+      subst hd
+      cases he : src.err with
+      | some e =>
+        have hnext : src.fx.next k o = (some (.error e), o) := by simp only [IterSrc.fx, hx, he]
+        simp only [drainFx, hnext]
+      | none =>
+        have hnext : src.fx.next k o = (none, o) := by simp only [IterSrc.fx, hx, he]
+        simp only [drainFx, hnext]
+
 theorem listExtendIterContents_proven : ListExtendIterContents := by
   intro α o src n hw hh h0 he hb
   obtain ⟨o1, h1, h2, h3⟩ := extendRoom_ok o n hw h0 (by push_cast at hb; omega)
   have hb2 : ((o1.items.length + src.items.length : Nat) : Int) ≤ ssizeMax / 16 := by
     rw [h2]; omega
   obtain ⟨o2, h4, h5, h6⟩ := extendDrain_ok o1 src.items h3 hb2
-  unfold listExtendIter
-  simp only [hh, h1, h4, he]
+  have hg : src.fx.getIter o = (.ok (), o) := rfl
+  have hh' : src.fx.hint o = (.ok n, o) := by simp only [IterSrc.fx, hh]
+  have hd := drainFx_pure src (src.items.length + 1) 0 o1 o2 (by omega) (by simpa using h4)
+  rw [he] at hd
+  simp only at hd
+  unfold listExtendIter listExtendIterFx
+  rw [hg]
+  simp only
+  rw [hh']
+  simp only
+  rw [h1]
+  simp only
+  rw [hd]
+  unfold extendCutBack
   by_cases hroom : (o2.items.length : Int) < o2.allocated
   · simp only [hroom, if_true]
     have hsmall : (o2.items.length : Int) ≤ ssizeMax / 16 := by

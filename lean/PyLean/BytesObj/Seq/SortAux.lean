@@ -53,12 +53,27 @@ def sortsliceAdvance (s : SortSlice κ α) (n : Nat) : SortSlice κ α :=
   { keys := s.keys.drop n, values := s.values.map (·.drop n) }
 
 /-- `sortslice_copy_incr(dst, src)`, listobject.c:1682-1688: one item forward. Each
-returned pair is `(dst after the copy, advanced dst, advanced src)`; `sortslice_copy_decr`,
-:1690-1696, is the same copy with the cursors going back, so it is a `sortsliceCopy`
-at `i`, `j` as well. -/
+returned pair is `(dst after the copy, advanced dst, advanced src)`. -/
 def sortsliceCopyIncr (dst src : SortSlice κ α) : SortSlice κ α × SortSlice κ α × SortSlice κ α :=
   let d := sortsliceCopy dst 0 src 0
   (d, sortsliceAdvance d 1, sortsliceAdvance src 1)
+
+/-- `sortslice_copy_decr(dst, src)`, listobject.c:1690-1696: `*dst->keys-- = *src->keys--`, and the
+values when `dst` has any. A backward cursor is an index into its array (`advance` cannot go back);
+`(dst after the copy, dst cursor, src cursor)`, the cursors one lower, possibly `-1`, before the
+array, as `merge_hi`'s end there. -/
+def sortsliceCopyDecr (dst : SortSlice κ α) (di : Nat) (src : SortSlice κ α) (si : Nat) :
+    SortSlice κ α × Int × Int :=
+  (sortsliceCopy dst di src si, (di : Int) - 1, (si : Int) - 1)
+
+/-- `sortslice_memmove(s1, i, s2, j, n)`, listobject.c:1708-1715: `memmove` of the keys, and of the
+values when `s1` has any. The source is read as it was before the move, which is what `memmove`
+guarantees for overlapping ranges. -/
+def sortsliceMemmove (s1 : SortSlice κ α) (i : Nat) (s2 : SortSlice κ α) (j n : Nat) : SortSlice κ α :=
+  { keys := blit s1.keys i s2.keys j n
+    values := match s1.values, s2.values with
+      | some v1, some v2 => some (blit v1 i v2 j n)
+      | v1, _ => v1 }
 
 /-- `sortslice_reverse(s, n)`, listobject.c:1956-1961: `reverse_slice` on both. -/
 def sortsliceReverse (s : SortSlice κ α) (n : Nat) : SortSlice κ α :=

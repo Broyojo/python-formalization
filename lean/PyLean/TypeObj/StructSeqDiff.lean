@@ -1,5 +1,5 @@
 import PyLean.DiffCore
-import PyLean.TypeObj.StructSeqC
+import PyLean.TypeObj.StructSeqStatic
 
 /-! Differential-testing cases for struct sequences (`difftest/typeobj_structseq_diff.py`).
 
@@ -84,7 +84,7 @@ def dictArg (j : Json) : Except String (Option (CDictArg Json)) := do
   | .str "notdict" => pure (some .notDict)
   | j =>
     let kv ← kvList j
-    pure (some (.dict (fun k => .ok ((kv.find? (·.1 == k)).map (·.2))) kv.length))
+    pure (some (.dict (fun _ k => .ok ((kv.find? (·.1 == k)).map (·.2))) kv.length kv.length))
 
 def seqArg (j : Json) : Except String (Py (List Json)) := do
   match j with
@@ -106,6 +106,24 @@ def dictify (ps : List (Str × Json)) : List (Str × Json) :=
 def reduceJson (r : List Json × List (Str × Json)) : Json :=
   toJson [toJson r.1, toJson ((dictify r.2).map fun (k, v) => toJson [toJson (strOf k), v])]
 
+/-- `kwargs` holding exact-str keys, as the harness passes them: field `i`'s pop finds the key
+unless an earlier field had the same name; what is left is the keys that name no field. -/
+def kwOracle (t : CType) (n : Nat) (kv : List (Str × Json)) : KwArg Json :=
+  let names := (t.members.take n).map fun m => (utf8Decode m.name .strict).toOption.getD []
+  { pop := fun i key =>
+      let rest := kv.filter fun p => !((names.take i).contains p.1)
+      .ok ((rest.find? (·.1 == key)).map (·.2)),
+    sizeAfter := (kv.filter fun p => !(names.contains p.1)).length }
+
+/-- The size attributes, `__match_args__`, `__basicsize__` and the slot of each member. -/
+def builtJson (b : Built) : Json :=
+  let sz := fun k => match b.type.dict k with | .ok (some (.int n)) => toJson n | _ => Json.null
+  toJson [sz "n_sequence_fields", sz "n_fields", sz "n_unnamed_fields",
+    toJson (b.matchArgs.map strOf), toJson b.type.basicsize,
+    toJson (b.type.members.map fun m =>
+      toJson [toJson (match utf8Decode m.name .strict with | .ok s => strOf s | .error _ => "?"),
+              toJson m.slot])]
+
 inductive CapiOp where
   | set (i : Int) (v : Json)
   | get (i : Int)
@@ -114,13 +132,23 @@ def run (fn : String) (j : Json) : Except String Json := do
   match fn with
   | "ss_newtype" =>
     let r ← build j
-    pure <| cres (fun (b : Built) =>
-      let sz := fun k => match b.type.dict k with | .ok (some (.int n)) => toJson n | _ => Json.null
-      toJson [sz "n_sequence_fields", sz "n_fields", sz "n_unnamed_fields",
-        toJson (b.matchArgs.map strOf), toJson b.type.basicsize,
-        toJson (b.type.members.map fun m =>
-          toJson [toJson (match utf8Decode m.name .strict with | .ok s => strOf s | .error _ => "?"),
-                  toJson m.slot])]) r
+    pure <| cres builtJson r
+  | "ss_inittype" =>
+    let d ← parseDesc (← field j "desc")
+    let (r, _) := initType2 0 d malloc .allOk
+    let via ← getStr j "via"
+    if via == "twice" then
+      -- a second InitType2 on the same PyTypeObject: its refcount is no longer 0 once
+      -- PyType_Ready has made it immortal
+      let st := (initType2 0 d malloc .allOk).2
+      pure (cres builtJson (initType2 (if st.immortal then 1 else 0) d malloc .allOk).1)
+    else if via == "InitType" then
+      -- the exception InitType leaves set, which ctypes raises after the call
+      match (initType 0 d malloc .allOk).1 with
+      | .pending e => pure (excJson e)
+      | .done => pure (cres builtJson r)
+      | .ub w => pure (Json.mkObj [("exc", "UB"), ("msg", toJson w)])
+    else pure (cres builtJson r)
   | "ss_repr" =>
     let r ← build j
     match r with
@@ -135,7 +163,7 @@ def run (fn : String) (j : Json) : Except String Json := do
         | _ => throw "bad set"
       let o := sets.foldl (fun (o : CRes (CObj Json)) (i, v) => o.bind fun o => pssSetItem o i v)
         (pssNew (α := Json) t malloc)
-      pure <| cres (fun s => toJson (strOf s)) (o.bind fun o => structseqRepr t o repOf)
+      pure <| cres (fun s => toJson (strOf s)) (o.bind fun o => structseqRepr (fun n => decide (n < 2 ^ 45)) t o repOf)
     | r => pure (cres (fun _ => Json.null) r)
   | "ss_capi" =>
     let r ← build j
@@ -182,7 +210,7 @@ def run (fn : String) (j : Json) : Except String Json := do
         let t := { b.type with dict := ← applyLies b.type.dict (← field j "lies") }
         let kws ← match ← field j "kws" with
           | .null => pure none
-          | v => some <$> kvList v
+          | v => some <$> (kwOracle t (realSize t o.size) <$> kvList v)
         let nargs ← getNat j "nargs"
         let res := (replaceC t o nargs kws malloc).bind fun r =>
           (reduceC b.type r).bind fun red => .ok (visible r, reduceJson red)

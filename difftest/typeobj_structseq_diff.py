@@ -9,6 +9,12 @@ of `_PyStructSequence_NewType`. Then one of:
 
  * ss_newtype: the three size attributes, `__match_args__`, `__basicsize__`, and which slot each
    member attribute reads (found through `PyStructSequence_New`/`SetItem` and `getattr`);
+ * ss_inittype: the same for a static type that `PyStructSequence_InitType2` or
+   `PyStructSequence_InitType` fills in a zeroed `PyTypeObject`. The type, the desc and its names
+   are in memory that is never freed, as a static type's must be. A desc with `n_in_sequence` of
+   #fields + 1 .. + 4 crashes InitType2 (bug typeobj-structseq-newtype-nseq-past-fields), and a
+   negative one leaves a ready type with freed members (typeobj-structseq-inittype2-dangling-members),
+   so the generator leaves both out;
  * ss_repr:    `repr()` of an object filled through the C API, with items whose `__repr__`
    returns or raises, `NULL` items, the size attributes rebound and the type renamed;
  * ss_capi:    `PyStructSequence_New`, then `SetItem`/`GetItem` at in-block indices;
@@ -125,6 +131,11 @@ TPNAMES = [b"m.T", b"m.S", b"T", b"pkg.mod.Name", "m.Tü".encode(), b"m." + b"Q"
 def rand_desc(rng, valid=True):
     n = rng.choice([0, 1, 1, 2, 2, 3, 3, 4, 5, 6, 8])
     names = rng.sample(NAMES, n)
+    if n and rng.random() < 0.06:
+        # the special offset names PyType_FromMetaclass refuses for an object member (NewType
+        # raises SystemError, InitType2 builds the type), and a dunder name it does not care about
+        names[rng.randrange(n)] = rng.choice([b"__dictoffset__", b"__weaklistoffset__",
+                                              b"__vectorcalloffset__", b"__module__"])
     nseq = rng.randint(0, n)
     fields = list(names)
     # unnamed fields only among the visible ones (Objects/structseq.c:23-24)
@@ -132,7 +143,11 @@ def rand_desc(rng, valid=True):
         if rng.random() < 0.2:
             fields[i] = None
     if not valid:
-        nseq = rng.choice([n + 1, n + 2, n + 3, n + 5, n + 6, n + 9, -1, -2, -7])
+        if nseq < n and rng.random() < 0.3:
+            # an unnamed hidden field, which structseq.c:23-24 forbids and NewType accepts
+            fields[rng.randrange(nseq, n)] = None
+        else:
+            nseq = rng.choice([n + 1, n + 2, n + 3, n + 5, n + 6, n + 9, -1, -2, -7])
     return {"name": list(rng.choice(TPNAMES)), "fields": [None if f is None else list(f) for f in fields],
             "nseq": nseq}
 
@@ -247,6 +262,50 @@ def val_out(v):
 # --- generators ------------------------------------------------------------------------------
 
 VALS = [0, 1, -1, 2 ** 63, None, "s", "é", 7, 42]
+
+
+libc = ctypes.CDLL(None)
+libc.calloc.restype = ctypes.c_void_p
+libc.calloc.argtypes = [ctypes.c_size_t, ctypes.c_size_t]
+libc.strdup.restype = ctypes.c_void_p
+libc.strdup.argtypes = [ctypes.c_char_p]
+api.PyStructSequence_InitType2.restype = ctypes.c_int
+api.PyStructSequence_InitType2.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+api.PyStructSequence_InitType.restype = None
+api.PyStructSequence_InitType.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+
+
+LAST_BUF, LAST_DESC = [None], [None]
+
+
+def mk_static(name, fields, nseq, via):
+    """A static struct sequence type: a zeroed PyTypeObject and a desc, all leaked."""
+    arr = libc.calloc(len(fields) + 1, 16)
+    slots = (ctypes.c_void_p * (2 * (len(fields) + 1))).from_address(arr)
+    for i, f in enumerate(fields):
+        slots[2 * i] = UNNAMED if f is None else libc.strdup(bytes(f))
+    d = libc.calloc(1, ctypes.sizeof(Desc))
+    dv = Desc.from_address(d)
+    ctypes.c_void_p.from_address(d).value = libc.strdup(bytes(name))
+    dv.n_in_sequence = nseq
+    ctypes.c_void_p.from_address(d + 2 * ctypes.sizeof(ctypes.c_void_p)).value = arr
+    buf = libc.calloc(1, type.__basicsize__ + 64)
+    LAST_BUF[0], LAST_DESC[0] = buf, dv
+    getattr(api, "PyStructSequence_" + via)(buf, d)
+    return ctypes.cast(buf, ctypes.py_object).value
+
+
+def gen_inittype(rng):
+    for _ in range(20):
+        if rng.random() < 0.2:
+            T = rng.choice(STD_HEAP + STD_STATIC)
+            d = std_desc(T)
+        else:
+            d = rand_desc(rng, valid=rng.random() < 0.7)
+        n = len(d["fields"])
+        if not (n + 1 <= d["nseq"] <= n + 4) and d["nseq"] >= 0:
+            return {"desc": d, "via": rng.choice(["InitType2", "InitType", "InitType2", "InitType", "twice"])}
+    return None
 
 
 def gen_newtype(rng):
@@ -511,7 +570,7 @@ def gen_replace(rng):
     return None
 
 
-GENS = [("ss_newtype", gen_newtype, 2), ("ss_repr", gen_repr, 3), ("ss_capi", gen_capi, 2),
+GENS = [("ss_newtype", gen_newtype, 2), ("ss_inittype", gen_inittype, 2), ("ss_repr", gen_repr, 3), ("ss_capi", gen_capi, 2),
         ("ss_new", gen_new, 4), ("ss_reduce", gen_reduce, 2), ("ss_replace", gen_replace, 3)]
 
 
@@ -587,6 +646,30 @@ def run_newtype(case):
             if f is not None:
                 nm = bytes(f).decode()
                 members.append([nm, getattr(o, nm)[1]])
+    return [T.n_sequence_fields, T.n_fields, T.n_unnamed_fields, list(T.__match_args__),
+            T.__basicsize__, members]
+
+
+def run_inittype(case):
+    d = case["desc"]
+    if case["via"] == "twice":
+        try:
+            T = mk_static(bytes(d["name"]), [None if f is None else bytes(f) for f in d["fields"]],
+                          d["nseq"], "InitType2")
+            addr = id(T)
+        except SystemError:
+            addr = LAST_BUF[0]
+        api.PyStructSequence_InitType2(addr, ctypes.addressof(LAST_DESC[0]))
+        raise AssertionError("second InitType2 succeeded")
+    T = mk_static(bytes(d["name"]), [None if f is None else bytes(f) for f in d["fields"]], d["nseq"],
+                  case["via"])
+    n = len(d["fields"])
+    o = api.PyStructSequence_New(T)
+    for i in range(n):
+        val = ("slot", i)
+        api.Py_IncRef(val)
+        api.PyStructSequence_SetItem(o, i, val)
+    members = [[bytes(f).decode(), getattr(o, bytes(f).decode())[1]] for f in d["fields"] if f is not None]
     return [T.n_sequence_fields, T.n_fields, T.n_unnamed_fields, list(T.__match_args__),
             T.__basicsize__, members]
 
@@ -673,7 +756,7 @@ def run_replace(case):
     return [visible(r), reduce_out(r)]
 
 
-RUN = {"ss_newtype": run_newtype, "ss_repr": run_repr, "ss_capi": run_capi, "ss_new": run_new,
+RUN = {"ss_newtype": run_newtype, "ss_inittype": run_inittype, "ss_repr": run_repr, "ss_capi": run_capi, "ss_new": run_new,
        "ss_reduce": run_reduce, "ss_replace": run_replace}
 
 

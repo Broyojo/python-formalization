@@ -171,13 +171,27 @@ each step, and the index advances past the end too. -/
 def listIterItem (l : List α) (index : Int) : Option α × Int :=
   (listGetItemRef l index, index + 1)
 
-/-- `a + b`, `list_concat_lock_held`, listobject.c:790-820. -/
+/-- `a + b`, `list_concat_lock_held`, listobject.c:790-820: the items. -/
 def listConcat (a b : List α) : LObj α := LObj.prealloc (a ++ b)
 
-/-- `a + other`, `_PyList_Concat`, listobject.c:822-838. -/
+/-- `list_new_prealloc(size)`, listobject.c:302-327, filled with `items`: `PyList_New(0)`, then
+`PyMem_New(PyObject *, size)` (:319), which is `NULL` for `size > PY_SSIZE_T_MAX / sizeof(PyObject *)`
+(Include/pymem.h:63-65). Callers guarantee `size > 0`. -/
+def listNewPrealloc (items : List α) : Py (LObj α) :=
+  if (items.length : Int) > ssizeMax / 8 then .error memoryError
+  else .ok { items := items, allocated := items.length, hasItems := true }
+
+/-- `list_concat_lock_held(a, b)`, listobject.c:790-820: `PyList_New(0)` for an empty result,
+otherwise `list_new_prealloc` of the total size. -/
+def listConcatLH (a b : List α) : Py (LObj α) :=
+  if a.length + b.length = 0 then .ok LObj.empty
+  else listNewPrealloc (a ++ b)
+
+/-- `a + other`, `_PyList_Concat`, listobject.c:822-838: `PyList_Check(bb)` (a subclass
+passes, as `.inl`), else `TypeError` with `Py_TYPE(bb)->tp_name`. -/
 def listConcatAny (a : List α) (bb : Sum (List α) String) : Py (LObj α) :=
   match bb with
-  | .inl b => .ok (listConcat a b)
+  | .inl b => listConcatLH a b
   | .inr name => .error (.typeError s!"can only concatenate list (not \"{name}\") to list")
 
 /-- `a * n`, `list_repeat_lock_held`, listobject.c:840-880, with `list_new_prealloc`
@@ -301,27 +315,98 @@ def extendRoom (self : LObj α) (n : Int) : Py (LObj α) :=
     | .ok (a, h) => .ok { self with allocated := a, hasItems := h }
     | .error e => .error e
 
-/-- `list_extend_iter_lock_held(self, iterable)`, listobject.c:1300-1373. An
-exception out of the iterator skips the final cut-back and leaves what was
-appended. -/
-def listExtendIter (self : LObj α) (src : IterSrc α) : LRes α :=
-  match src.hint with
-  | .error e => (self, some e)
-  | .ok n =>
-    match extendRoom self n with
-    | .error e => (self, some e)
-    | .ok o =>
-      match extendDrain o src.items with
+/-- A generic iterable as `list_extend_iter_lock_held` (listobject.c:1300-1373) drives it. Each
+callback is user code that sees the list and may change it: `getIter` is `PyObject_GetIter`
+(:1303), `hint` is `PyObject_LengthHint(iterable, 8)` (:1309), and `next k` is the `k`-th call of
+`tp_iternext` (:1339), which gives `none` when the iterator is exhausted (`NULL` with no error, or
+with `StopIteration`, which is cleared, :1340-1346) and `some (.error e)` when it raises anything
+else. -/
+structure IterFx (α : Type) where
+  getIter : LObj α → Py Unit × LObj α
+  hint : LObj α → Py Int × LObj α
+  next : Nat → LObj α → Option (Py α) × LObj α
+
+/-- An `IterSrc` as callbacks that leave the list alone. -/
+def IterSrc.fx (src : IterSrc α) : IterFx α where
+  getIter o := (.ok (), o)
+  hint o := (src.hint, o)
+  next k o :=
+    match src.items[k]? with
+    | some x => (some (.ok x), o)
+    | none =>
+      match src.err with
+      | some e => (some (.error e), o)
+      | none => (none, o)
+
+/-- "Cut back result list if initial guess was too large", listobject.c:1361-1365. -/
+def extendCutBack (o : LObj α) : LRes α :=
+  if (o.items.length : Int) < o.allocated then
+    match listResize o.allocated o.hasItems o.items.length o.items.length with
+    | .ok (a, h) => ({ o with allocated := a, hasItems := h }, none)
+    | .error e => (o, some e)
+  else (o, none)
+
+/-- The drain loop of `list_extend_iter_lock_held`, listobject.c:1338-1365. `Py_SIZE(self)` and
+`allocated` are reread after each `tp_iternext`, which may have changed the list (:1350): while
+there is room the item goes straight in, otherwise through `_PyList_AppendTakeRef`. A failure of
+either the iterator or the append (`goto error`, :1343, :1356-1357) keeps what was appended. -/
+def drainFx (src : IterFx α) : Nat → Nat → LObj α → LRes α
+  | 0, _, o => (o, some .modelFuel)
+  | fuel + 1, k, o =>
+    match src.next k o with
+    | (none, o) => extendCutBack o
+    | (some (.error e), o) => (o, some e)
+    | (some (.ok x), o) =>
+      if (o.items.length : Int) < o.allocated then
+        drainFx src fuel (k + 1) { o with items := o.items ++ [x] }
+      else
+        match listAppend o x with
+        | .ok o' => drainFx src fuel (k + 1) o'
+        | .error e => (o, some e)
+
+/-- `list_extend_iter_lock_held(self, iterable)`, listobject.c:1300-1373: `PyObject_GetIter`, then
+the length hint, then `m = Py_SIZE(self)` (:1316), read after the hint ran, then room for `m + n`
+(`extendRoom`), then the drain. `fuel` bounds the number of `tp_iternext` calls. -/
+def listExtendIterFx (self : LObj α) (src : IterFx α) (fuel : Nat) : LRes α :=
+  match src.getIter self with
+  | (.error e, o) => (o, some e)
+  | (.ok (), o) =>
+    match src.hint o with
+    | (.error e, o) => (o, some e)
+    | (.ok n, o) =>
+      match extendRoom o n with
       | .error e => (o, some e)
-      | .ok o =>
-        match src.err with
-        | some e => (o, some e)
-        | none =>
-          if (o.items.length : Int) < o.allocated then
-            match listResize o.allocated o.hasItems o.items.length o.items.length with
-            | .ok (a, h) => ({ o with allocated := a, hasItems := h }, none)
-            | .error e => (o, some e)
-          else (o, none)
+      | .ok o => drainFx src fuel 0 o
+
+/-- `list_extend_iter_lock_held` on an iterable whose callbacks leave the list alone. -/
+def listExtendIter (self : LObj α) (src : IterSrc α) : LRes α :=
+  listExtendIterFx self src.fx (src.items.length + 1)
+
+/-- `list_extend_dict(self, dict, which_item)`, listobject.c:1415-1442: `which_item` is 0 for the
+keys, 1 for the values (:1418, :1434); the dict's size, then `list_resize(self, m + n)`, then the
+chosen half of each entry in dict order. -/
+def listExtendDict (self : LObj α) (keys values : List α) (which : Nat) : Py (LObj α) :=
+  listExtendSized self (if which = 0 then keys else values)
+
+/-- The fill loop of `list_extend_dictitems`, listobject.c:1458-1470: a `_PyTuple_FromPair` per
+entry; when one fails the size is set to `m + i` (:1463-1466), keeping the pairs stored so far. -/
+def pairLoop (pair : α → α → Py α) : List (α × α) → LObj α → LRes α
+  | [], o => (o, none)
+  | (k, v) :: rest, o =>
+    match pair k v with
+    | .ok t => pairLoop pair rest { o with items := o.items ++ [t] }
+    | .error e => (o, some e)
+
+/-- `list_extend_dictitems(self, dict)`, listobject.c:1444-1475: `list_resize(self, m + n)`, then
+`(key, value)` tuples built by `pair` (`_PyTuple_FromPair`). -/
+def listExtendDictItems (self : LObj α) (keys values : List α) (pair : α → α → Py α) : LRes α :=
+  let m : Int := self.items.length
+  let r : Int := m + keys.length
+  if r = 0 then (self, none)
+  else
+    match listResize self.allocated self.hasItems m r with
+    | .error e => (self, some e)
+    | .ok (a, h) => pairLoop pair (keys.zip values) { items := self.items, allocated := a, hasItems := h }
 
 /-- The argument of `list.extend`, as `_list_extend` classifies it. -/
 inductive ExtArg (α : Type) where
@@ -329,12 +414,16 @@ inductive ExtArg (α : Type) where
   | self
   /-- An exact `list` or `tuple`: `list_extend_lock_held`. -/
   | fast (items : List α)
-  /-- An exact set or frozenset, a dict, or a dict view: the items in iteration
-  order, as `list_extend_set`, `list_extend_dict` and `list_extend_dictitems`
-  would store them. -/
+  /-- An exact set or frozenset: the items in iteration order, as `list_extend_set` stores them. -/
   | sized (items : List α)
-  /-- Anything else with an iterator: `list_extend_iter_lock_held`. -/
+  /-- An exact dict (`which = 0`), its keys view (`0`) or its values view (`1`): `list_extend_dict`. -/
+  | dict (keys values : List α) (which : Nat)
+  /-- An items view: `list_extend_dictitems`, with `_PyTuple_FromPair`. -/
+  | dictItems (keys values : List α) (pair : α → α → Py α)
+  /-- Anything else with an iterator that leaves the list alone: `list_extend_iter_lock_held`. -/
   | iter (src : IterSrc α)
+  /-- Anything else, with callbacks that may change the list. -/
+  | iterFx (src : IterFx α) (fuel : Nat)
   /-- `PyObject_GetIter` fails; `name` is the type's `tp_name`. -/
   | notIterable (name : String)
 
@@ -348,8 +437,48 @@ def listExtend (self : LObj α) : ExtArg α → LRes α
   | .self => liftRes self (listInplaceRepeat self 2)
   | .fast items => liftRes self (listExtendFast self items)
   | .sized items => liftRes self (listExtendSized self items)
+  | .dict keys values which => liftRes self (listExtendDict self keys values which)
+  | .dictItems keys values pair => listExtendDictItems self keys values pair
   | .iter src => listExtendIter self src
+  | .iterFx src fuel => listExtendIterFx self src fuel
   | .notIterable name => (self, some (.typeError s!"'{name}' object is not iterable"))
+
+/-- An iterable by what the type tests of `_list_extend` (listobject.c:1477-1532) look at. `exact` is
+the exact-type check (`PyList_CheckExact`, `PyTuple_CheckExact`, `PyAnySet_CheckExact`,
+`PyDict_CheckExact`); an instance of a subclass has `exact = false`, and its class's iterator `src`.
+The dict views are tested with `Py_IS_TYPE` and cannot be subclassed. `.same` is the list itself. -/
+inductive Iterable (α : Type) where
+  | same
+  | list (exact : Bool) (items : List α) (src : IterFx α)
+  | tuple (exact : Bool) (items : List α) (src : IterFx α)
+  | set (exact : Bool) (items : List α) (src : IterFx α)
+  | dict (exact : Bool) (keys values : List α) (src : IterFx α)
+  | keys (keys values : List α)
+  | values (keys values : List α)
+  | items (keys values : List α) (pair : α → α → Py α)
+  | other (src : IterFx α)
+  | notIterable (name : String)
+
+/-- The dispatch of `_list_extend`, listobject.c:1482-1530, in its order. -/
+def classifyExt (fuel : Nat) : Iterable α → ExtArg α
+  | .same => .self
+  | .list true items _ => .fast items
+  | .tuple true items _ => .fast items
+  | .set true items _ => .sized items
+  | .dict true keys values _ => .dict keys values 0
+  | .keys keys values => .dict keys values 0
+  | .values keys values => .dict keys values 1
+  | .items keys values pair => .dictItems keys values pair
+  | .list false _ src => .iterFx src fuel
+  | .tuple false _ src => .iterFx src fuel
+  | .set false _ src => .iterFx src fuel
+  | .dict false _ _ src => .iterFx src fuel
+  | .other src => .iterFx src fuel
+  | .notIterable name => .notIterable name
+
+/-- `_list_extend` on an iterable. -/
+def listExtendAny (self : LObj α) (fuel : Nat) (it : Iterable α) : LRes α :=
+  listExtend self (classifyExt fuel it)
 
 /-- `l += iterable`, `list_inplace_concat`, listobject.c:1584-1592, which is
 `_list_extend` and returns `self`. -/
@@ -583,6 +712,15 @@ inductive AssVal (α : Type) where
   /-- `PySequence_Fast` fails: `value` is not iterable. -/
   | notIterable
 
+/-- `list_ass_slice(a, ilow, ihigh, v)`, listobject.c:1061-1089, with the `PySequence_Fast` of
+`list_ass_slice_lock_held` (:986-993): `v == a` is copied first (`list_slice_lock_held(a, 0, n)`,
+:1066), `NULL` deletes, and an object `PySequence_Fast` refuses raises its `TypeError`. -/
+def listAssSliceV (a : LObj α) (ilow ihigh : Int) : AssVal α → Py (LObj α)
+  | .del => listAssSlice a ilow ihigh none
+  | .selfCopy => listAssSlice a ilow ihigh (some a.items)
+  | .seq items => listAssSlice a ilow ihigh (some items)
+  | .notIterable => .error (.typeError "can only assign an iterable")
+
 /-- `memmove` on the items, as `Sequences.memmove`. -/
 def memmoveL (mem : List α) (dst src cnt : Int) : Py (List α) :=
   if 0 ≤ dst ∧ 0 ≤ src ∧ 0 ≤ cnt ∧ dst + cnt ≤ mem.length ∧ src + cnt ≤ mem.length then
@@ -792,13 +930,11 @@ def pyListGetSlice (op : Option (List α)) (ilow ihigh : Int) : Py (LObj α) :=
     .ok (listSliceLH a ilow ihigh)
 
 /-- `PyList_SetSlice(a, ilow, ihigh, v)`, listobject.c:1091-1099, with `list_ass_slice`,
-:1061-1089. `v` is `none` for `NULL`, `some items` for a sequence; `isSelf` says `v`
-is `a` itself, for which a private copy is made first. -/
-def pyListSetSlice (op : Option (LObj α)) (ilow ihigh : Int) (v : Option (List α)) (isSelf : Bool) :
-    Py (LObj α) :=
+:1061-1089 (`listAssSliceV`). -/
+def pyListSetSlice (op : Option (LObj α)) (ilow ihigh : Int) (v : AssVal α) : Py (LObj α) :=
   match op with
   | none => .error systemError
-  | some a => listAssSlice a ilow ihigh (if isSelf then some a.items else v)
+  | some a => listAssSliceV a ilow ihigh v
 
 /-- `PyList_Clear(self)`, listobject.c:1570-1581. -/
 def pyListClear (op : Option (LObj α)) : Py (LObj α) :=
