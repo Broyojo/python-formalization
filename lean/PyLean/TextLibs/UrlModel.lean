@@ -447,18 +447,23 @@ def urlsplit (nfkc : Str → Str) (ipk : Str → Option Bool) (url scheme : Arg)
   let f := fillMissing missingAsNone
   mkRes isB [f scheme, f netloc, some path, f query, f fragment] missingAsNone
 
-/-- `_splitparams(url, missing_as_none=True)`, :492-499, as `_urlparse` calls it. -/
+/-- `url.rfind('/')` when `url` has a `/`. -/
 def rfindSlash (url : Str) : Nat := ((rpart 47 url).1.map (·.length)).getD 0
 
-def splitparams (url : Str) : Str × Option Str :=
+/-- `_splitparams(url, missing_as_none)`, :492-499. Without `;` and `/`, `i` is `-1`: the result
+is `url[:-1], url`. -/
+def splitparamsMn (url : Str) (missingAsNone : Bool) : Str × Option Str :=
   if url.contains 47 then
     match (url.drop (rfindSlash url)).findIdx? (· == 59) with
-    | none => (url, none)
+    | none => (url, if missingAsNone then none else some [])
     | some j => (url.take (rfindSlash url + j), some (url.drop (rfindSlash url + j + 1)))
   else
     match url.findIdx? (· == 59) with
     | some i => (url.take i, some (url.drop (i + 1)))
     | none => (url.take (url.length - 1), some url)
+
+/-- `_splitparams(url, missing_as_none=True)`, as `_urlparse` calls it (:487). -/
+def splitparams (url : Str) : Str × Option Str := splitparamsMn url true
 
 /-- `uses_params`, :64-66. -/
 def usesParams : List Str :=
@@ -1000,55 +1005,95 @@ def hostinfoS (netloc : Option Str) : Option Str × Option Str :=
         (h, p.getD [])
     (some hostname, if port.isEmpty then none else some port)
 
+/-! The `bytes` mixin works on `bytes` values: lists of `UInt8`, split with `bytes.partition` and
+`bytes.rpartition` on one-byte separators. -/
+
+abbrev B8 := List UInt8
+
+/-- A `bytes` field as the `bytes` mixin holds it (`Res` keeps every field as code points). -/
+def toB8 (s : Str) : B8 := s.map Nat.toUInt8
+
+def ofB8 (b : B8) : Str := b.map UInt8.toNat
+
+/-- `b.partition(sep)` for a one-byte `sep` (Objects/stringlib/partition.h): the part before the
+first `sep`, and the part after it if there is one. -/
+def bpart (c : UInt8) : B8 → B8 × Option B8
+  | [] => ([], none)
+  | x :: r =>
+    if x == c then ([], some r)
+    else
+      let p := bpart c r
+      (x :: p.1, p.2)
+
+/-- `b.rpartition(sep)` for a one-byte `sep`: the part before the last `sep` if there is one, and
+the part after it. -/
+def brpart (c : UInt8) (s : B8) : Option B8 × B8 :=
+  match bpart c s.reverse with
+  | (a, none) => (none, a.reverse)
+  | (a, some b) => (some b.reverse, a.reverse)
+
 /-- `_NetlocResultMixinBytes._userinfo`, :249-261. -/
-def userinfoB (netloc : Option Str) : Option Str × Option Str :=
+def userinfoB (netloc : Option B8) : Option B8 × Option B8 :=
   match netloc with
   | none => (none, none)
   | some n =>
-    match (rpart 64 n).1 with
+    match (brpart 64 n).1 with
     | some userinfo =>
-      let (u, p) := part 58 userinfo
+      let (u, p) := bpart 58 userinfo
       (some u, p)
     | none => (none, none)
 
 /-- `_NetlocResultMixinBytes._hostinfo`, :263-277. -/
-def hostinfoB (netloc : Option Str) : Option Str × Option Str :=
+def hostinfoB (netloc : Option B8) : Option B8 × Option B8 :=
   match netloc with
   | none => (none, none)
   | some n =>
-    let hostinfo := (rpart 64 n).2
-    let (hostname, port) := match part 91 hostinfo with
+    let hostinfo := (brpart 64 n).2
+    let (hostname, port) := match bpart 91 hostinfo with
       | (_, some bracketed) =>
-        let (h, p) := part 93 bracketed
-        (h, ((part 58 (p.getD [])).2).getD [])
+        let (h, p) := bpart 93 bracketed
+        (h, ((bpart 58 (p.getD [])).2).getD [])
       | (_, none) =>
-        let (h, p) := part 58 hostinfo
+        let (h, p) := bpart 58 hostinfo
         (h, p.getD [])
     (some hostname, if port.isEmpty then none else some port)
+
+/-- `bytes.lower()`: `Py_TOLOWER` on each byte (Objects/bytes_methods.c), ASCII letters only. -/
+def blower (c : UInt8) : UInt8 := if 65 ≤ c ∧ c ≤ 90 then c + 32 else c
 
 /-- The `netloc` field of a result (index 1). -/
 def Res.netloc (r : Res) : Option Str := (r.fields.getD 1 none)
 
-/-- `username` and `password`, :178-184. -/
+/-- `username` and `password`, :178-184, through the result's own mixin. -/
 def username (r : Res) : Option Str :=
-  if r.isBytes then (userinfoB r.netloc).1 else (userinfoS r.netloc).1
+  if r.isBytes then (userinfoB (r.netloc.map toB8)).1.map ofB8 else (userinfoS r.netloc).1
 def password (r : Res) : Option Str :=
-  if r.isBytes then (userinfoB r.netloc).2 else (userinfoS r.netloc).2
+  if r.isBytes then (userinfoB (r.netloc.map toB8)).2.map ofB8 else (userinfoS r.netloc).2
 
 /-- `hostname`, :186-195: `str.lower` for `str`, `bytes.lower` for `bytes`. -/
 def hostname (r : Res) : Py (Option Str) :=
-  let hi := if r.isBytes then hostinfoB r.netloc else hostinfoS r.netloc
-  match hi.1 with
-  | none => .ok none
-  | some h =>
-    if h.isEmpty then .ok none
-    else
-      let (a, z) := part 37 h
-      let tail := match z with
-        | some z => 37 :: z
-        | none => []
-      if r.isBytes then .ok (some (a.map UnicodeObj.pyToLower ++ tail))
-      else (UnicodeObj.unicodeLower a).map (fun l => some (l ++ tail))
+  if r.isBytes then
+    match (hostinfoB (r.netloc.map toB8)).1 with
+    | none => .ok none
+    | some h =>
+      if h.isEmpty then .ok none
+      else
+        let (a, z) := bpart 37 h
+        let tail : B8 := match z with
+          | some z => 37 :: z
+          | none => []
+        .ok (some (ofB8 (a.map blower ++ tail)))
+  else
+    match (hostinfoS r.netloc).1 with
+    | none => .ok none
+    | some h =>
+      if h.isEmpty then .ok none
+      else
+        let (a, z) := part 37 h
+        let tail := match z with
+          | some z => 37 :: z
+          | none => []
+        (UnicodeObj.unicodeLower a).map (fun l => some (l ++ tail))
 
 /-- The body of `port` once `self._hostinfo[1]` is read, :200-207. -/
 def portOf : Option Str → Py (Option Nat)
@@ -1062,7 +1107,7 @@ def portOf : Option Str → Py (Option Nat)
 
 /-- `port`, :197-207. -/
 def port (r : Res) : Py (Option Nat) :=
-  portOf (if r.isBytes then hostinfoB r.netloc else hostinfoS r.netloc).2
+  portOf (if r.isBytes then (hostinfoB (r.netloc.map toB8)).2.map ofB8 else (hostinfoS r.netloc).2)
 
 /-! ## The legacy helpers, :1209-1407 (`str` arguments) -/
 

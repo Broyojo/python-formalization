@@ -281,7 +281,7 @@ theorem findIdx_none_not (c : Nat) : ∀ (l : Str), l.findIdx? (· == c) = none 
 
 theorem splitparams_rebuild (url : Str) (h : 59 ∈ url) :
     (splitparams url).1 ++ opt 59 (splitparams url).2 = url := by
-  unfold splitparams
+  unfold splitparams splitparamsMn
   by_cases hs : url.contains 47 = true
   · rw [if_pos hs]
     generalize rfindSlash url = r

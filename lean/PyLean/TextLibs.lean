@@ -24,6 +24,7 @@ import PyLean.TextLibs.UrlQuery
 import PyLean.TextLibs.UrlBrackets
 import PyLean.TextLibs.UrlTwins
 import PyLean.TextLibs.UrlLegacy
+import PyLean.TextLibs.UrlSpecQuery
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1627,15 +1628,22 @@ def entries : List Entry := [
     bug := some "textlibs-urllib-userinfo-brackets"
     notes := "Duplicate of the open #77523; refuted with the oracle ip_address('example.com') raising, as CPython does." },
   { id := "textlibs-urllib-netloc-twin", pyFile := "Lib/urllib/parse.py"
-    pyFns := ["_NetlocResultMixinStr._userinfo", "_NetlocResultMixinBytes._userinfo", "_NetlocResultMixinStr._hostinfo",
-      "_NetlocResultMixinBytes._hostinfo", "_NetlocResultMixinBase.username", "_NetlocResultMixinBase.password",
+    pyFns := ["_NetlocResultMixinBytes._userinfo", "_NetlocResultMixinBytes._hostinfo", "_NetlocResultMixinStr._userinfo",
+      "_NetlocResultMixinStr._hostinfo", "_NetlocResultMixinBase.username", "_NetlocResultMixinBase.password",
       "_NetlocResultMixinBase.hostname"]
-    statement := "For every result whose netloc is ASCII or None, the bytes result classes give the same username, password, hostname and port as the str classes (bytes.lower() agreeing with str.lower(), port errors of the same class)."
+    statement := "For every netloc that is a bytes value (code points below 256) or None, the bytes result classes (splitting bytes with b'@', b':', b'[', b']') give the same username, password and port as the str classes, and for an ASCII netloc the same hostname (bytes.lower() against str.lower())."
     source := "the implementation disagreeing with itself: the twin mixins at Lib/urllib/parse.py:212-277", status := .proven
-    prop := ``Url.NetlocTwin, thm := some ``Url.netlocTwin_proven },
+    prop := ``Url.NetlocTwin, thm := some ``Url.netlocTwin_proven
+    notes := "The bytes mixin is modelled on List UInt8 with its own partition/rpartition (UrlModel.bpart, brpart); the twin needs the injectivity of the byte conversion." },
+  { id := "textlibs-urllib-netloc-attrs", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["_NetlocResultMixinStr._userinfo", "_NetlocResultMixinStr._hostinfo", "_NetlocResultMixinBase.username",
+      "_NetlocResultMixinBase.password", "_NetlocResultMixinBase.hostname"]
+    statement := "For every str result and netloc: username/password come from the text before the last '@' (cut at its first ':', None without '@' or ':'); _hostinfo reads the text after the last '@' (host before the first ':', or between the first '[' and the next ']', port after the ':' that follows, empty port None); hostname is None for an empty host and otherwise lower-cases the part before the first '%' and keeps the zone."
+    source := "docs of urlsplit (username, password, hostname attributes; the zone comment at Lib/urllib/parse.py:190-191); RFC 3986 section 3.2", status := .proven
+    prop := ``Url.NetlocAttrSpec, thm := some ``Url.netlocAttrSpec_proven },
   { id := "textlibs-urllib-port", pyFile := "Lib/urllib/parse.py"
     pyFns := ["_NetlocResultMixinBase.port"]
-    statement := "For every str or bytes result: a port is in 0-65535, every error is ValueError, a netloc host:digits (no '@', '[', ':' in the host, at most 4300 ASCII digits) gives int(digits) or the range error, and a netloc without '@', '[', ':' has no port."
+    statement := "For every str or bytes result (a bytes netloc below 256): a port is in 0-65535, every error is ValueError, a netloc host:digits (no '@', '[', ':' in the host, at most 4300 ASCII digits) gives int(digits) or the range error, and a netloc without '@', '[', ':' has no port."
     source := "docs of urlsplit ('Port number as integer, if present'; invalid port raises ValueError)", status := .proven
     prop := ``Url.PortSpec, thm := some ``Url.portSpec_proven },
   { id := "textlibs-urllib-bytes-twin", pyFile := "Lib/urllib/parse.py"
@@ -1652,9 +1660,72 @@ def entries : List Entry := [
   { id := "textlibs-urllib-legacy-split", pyFile := "Lib/urllib/parse.py"
     pyFns := ["_splituser", "_splitpasswd", "_splitquery", "_splittag", "_splitvalue", "_splitattr", "_splitport",
       "_splitnport"]
-    statement := "For every str, _splituser/_splitquery/_splittag cut at the last '@'/'?'/'#', _splitpasswd/_splitvalue at the first ':'/'=', _splitattr at every ';', and the parts with the delimiter give the input back; _splitport returns a non-empty run of ASCII digits after the last ':' or the input (less a trailing ':') and None; _splitnport reads that port as int(port)."
-    source := "docstrings of the helpers (e.g. splituser('user[:passwd]@host[:port]') --> 'user[:passwd]', 'host[:port]'); _splitnport against _splitport", status := .proven
-    prop := ``Url.LegacySplit, thm := some ``Url.legacySplit_proven }
+    statement := "For every str, _splituser/_splitquery/_splittag cut at the last '@'/'?'/'#', _splitpasswd/_splitvalue at the first ':'/'=', _splitattr at every ';', losing nothing; _splitport cuts at the last ':' exactly when only ASCII digits follow (None for none) and otherwise returns (host, None); _splitnport returns (host, defport) without ':' or with an empty port, (host, int(port)) for ASCII digits (ValueError beyond the 4300-digit int limit), and (host, None) otherwise."
+    source := "docstrings of the helpers (e.g. splituser('user[:passwd]@host[:port]') --> 'user[:passwd]', 'host[:port]'; _splitnport's three return rules); docs of the int/str digit limit", status := .proven
+    prop := ``Url.LegacySplit, thm := some ``Url.legacySplit_proven },
+  { id := "textlibs-urllib-type-host-split", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["_splittype", "_splithost"]
+    statement := "For every str: _splittype returns the lower-cased text before the first ':' when it is non-empty and has no '/', and (None, url) otherwise; _splithost returns, for a URL starting '//', the text up to the next '/', '#' or '?' and the rest (with '/' put before a rest starting '#' or '?'), and (None, url) otherwise."
+    source := "docstrings (splittype('type:opaquestring') --> 'type', 'opaquestring'; splithost('//host[:port]/path') --> 'host[:port]', '/path') and the regular expressions at Lib/urllib/parse.py:1249, :1270", status := .proven
+    prop := ``Url.TypeHostSplit, thm := some ``Url.typeHostSplit_proven },
+  { id := "textlibs-urllib-quote-spec", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["quote", "quote_plus", "quote_from_bytes", "_Quoter.__init__", "_Quoter.__missing__", "_byte_quoter_factory"]
+    statement := "For every bytes/bytearray and str-or-bytes safe, quote_from_bytes (all three paths), quote and quote_plus write a byte as itself when it is one of the 66 always-safe characters or in safe's ASCII part, and otherwise as '%' and two upper-case hex digits; quote_plus on bytes adds b' ' to safe and turns spaces into '+'; quote on bytes refuses encoding, then errors, with TypeError; on a non-empty str, a character the encoding cannot write raises UnicodeEncodeError under errors None/'strict', and errors='ignore' drops it for ascii/latin-1."
+    source := "docstrings of quote, quote_plus, quote_from_bytes; RFC 3986 section 2.1 (uppercase hex digits)", status := .proven
+    prop := ``Url.QuoteSpec, thm := some ``Url.quoteSpec_proven
+    notes := "_ALWAYS_SAFE and the hex digits are written out as literals (UrlSpecQuote.alwaysSafeSet, hexUpper); _byte_quoter_factory's lru_cache and the _Quoter dict only memoize __missing__." },
+  { id := "textlibs-urllib-unquote-spec", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["unquote", "unquote_to_bytes", "_unquote_impl", "_generate_unquoted_parts"]
+    statement := "For every input, %XX escapes are read left to right (a '%' without two hex digits kept literally); unquote on an ASCII str is the input without '%' and otherwise the scanned bytes decoded with encoding/errors; a non-ASCII character is kept between the unquoted text on its two sides; unquote on bytes decodes the scanned bytes and refuses encoding=None; unquote_to_bytes scans bytes and the UTF-8 of a str, raises UnicodeEncodeError on a lone surrogate, AttributeError on None, and TypeError on a bytearray with '%'."
+    source := "docstrings of unquote and unquote_to_bytes; docs of unquote; the comment at Lib/urllib/parse.py:797-798", status := .proven
+    prop := ``Url.UnquoteSpec, thm := some ``Url.unquoteSpec_proven },
+  { id := "textlibs-urllib-brackets", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["_check_bracketed_netloc", "_check_bracketed_host"]
+    statement := "_check_bracketed_host accepts exactly an IPvFuture literal per the regex of :548 (starting v/V) or an IPv6 address per ip_address (otherwise), and raises 'IPvFuture address is invalid', 'An IPv4 address cannot be in brackets' or ip_address's error; _check_bracketed_netloc accepts exactly a host part after the last '@' that starts with '[' when it has one, has only a ':' port after the ']', and holds an accepted host, and raises 'Invalid IPv6 URL' for data before '[' or between ']' and ':'."
+    source := "comments at Lib/urllib/parse.py:526-529, :544-545 (RFC 3986 IP-literal); docs of urlsplit (invalid IPv6/IPvFuture brackets raise ValueError)", status := .proven
+    prop := ``Url.BracketSpec, thm := some ``Url.bracketSpec_proven
+    notes := "ipaddress.ip_address is the quantified oracle ipk." },
+  { id := "textlibs-urllib-splitparams", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["_splitparams"]
+    statement := "For every path and both values of missing_as_none, _splitparams cuts at the first ';' after the last '/' (None or '' without one), at the first ';' when there is no '/', and returns url[:-1], url with neither."
+    source := "docs of urlparse (parameters of the last path element); RFC 2396 section 3.3", status := .proven
+    prop := ``Url.SplitparamsSpec, thm := some ``Url.splitparamsSpec_proven },
+  { id := "textlibs-urllib-split-spec", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["urlsplit", "_urlsplit", "urlparse", "_urlparse", "urldefrag"]
+    statement := "For every str URL, scheme default (None or str), allow_fragments and missing_as_none: urlsplit, urlparse and (for a URL with '#') urldefrag succeed exactly when the netloc is accepted (no netloc, or both brackets or neither, an accepted bracketed host, not the NFKC rejection) and then return their documented fields (scheme lower-cased or the stripped default, params split for uses_params schemes, '' for missing parts unless missing_as_none); one kind of bracket raises 'Invalid IPv6 URL' and every other refusal is the failing check's ValueError; urldefrag returns (url, None or '') without '#'."
+    source := "docs of urlsplit (ValueError for invalid brackets and NFKC netlocs; scheme default; missing_as_none), urlparse and urldefrag", status := .proven
+    prop := ``Url.UrlsplitSpec, thm := some ``Url.urlsplitSpec_proven
+    notes := "unicodedata.normalize and ipaddress.ip_address are quantified oracles; the bracket and NFKC checks are pinned by textlibs-urllib-brackets and textlibs-urllib-nfkc-check." },
+  { id := "textlibs-urllib-unsplit-spec", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["urlunsplit", "urlunparse", "_urlunsplit"]
+    statement := "For every str components and every keep_empty and _keep_empty: keep_empty=True on a missing_as_none=False result raises 'Cannot distinguish ...'; a true keep_empty joins every non-None component, a false one first drops false components (keeping '' as netloc for uses_netloc schemes with an empty or '/'-path); _urlunsplit writes 'scheme:', '//netloc' with '/' before a relative path, '//' before a '//'-path without netloc, '?query', '#fragment', and urlsplit reads '////p' back as netloc '' and path '//p'."
+    source := "docstrings of urlunsplit and urlunparse; docs of keep_empty; RFC 3986 section 3.3", status := .proven
+    prop := ``Url.UnsplitSpec, thm := some ``Url.unsplitSpec_proven },
+  { id := "textlibs-urllib-defrag-geturl", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["_DefragResultBase.geturl"]
+    statement := "For every DefragResult or DefragResultBytes and every _keep_empty, geturl() is url + '#' + fragment when the fragment is non-empty, or empty and not None with _keep_empty true, and url otherwise."
+    source := "docs of DefragResult.geturl() and urldefrag", status := .proven
+    prop := ``Url.DefragGeturlSpec, thm := some ``Url.defragGeturlSpec_proven },
+  { id := "textlibs-urllib-coerce", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["_coerce_args", "_decode_args"]
+    statement := "For every argument list, _coerce_args raises TypeError('Cannot mix str and non-str arguments') when a true str and a true non-str are present; otherwise returns str arguments unchanged, or decodes bytes arguments with ASCII (UnicodeDecodeError for a byte from 128); through urlsplit, non-ASCII bytes raise UnicodeDecodeError and a str URL with a bytes scheme raises the TypeError."
+    source := "docs ('Attempting to mix str data with bytes or bytearray ... will raise TypeError, while ... non-ASCII byte values will trigger UnicodeDecodeError')", status := .proven
+    prop := ``Url.CoerceSpec, thm := some ``Url.coerceSpec_proven },
+  { id := "textlibs-urllib-result-codec", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["_ResultMixinStr.encode", "_ResultMixinBytes.decode"]
+    statement := "For every result and codec (utf-8, ascii, latin-1): when the codec can write every field, encode (any handler) encodes each non-None field and copies _keep_empty, and decode with the same codec (any handler) gives the result back; encode(errors='strict') raises UnicodeEncodeError on a character the codec cannot write; decode('ascii') raises UnicodeDecodeError on a byte from 128."
+    source := "docs of the result objects' encode() and decode(); round trip", status := .proven
+    prop := ``Url.ResCodecSpec, thm := some ``Url.resCodecSpec_proven },
+  { id := "textlibs-urllib-qsl-spec", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["parse_qsl"]
+    statement := "For every query and option of parse_qsl: a separator that is not a non-empty str or bytes raises ValueError; None gives []; max_num_fields below the field count raises 'Max number of fields exceeded' and otherwise changes nothing; with a one-character separator fields compose (a + sep + b), and one field gives the unquoted name/value around its first '=' (dropped when the value is empty without keep_blank_values), or without '=' raises ValueError under strict_parsing, gives (field, '') under keep_blank_values, and is dropped otherwise."
+    source := "docstring of parse_qsl (keep_blank_values, strict_parsing, max_num_fields, separator)", status := .proven
+    prop := ``Url.QslSpec, thm := some ``Url.qslSpec_proven },
+  { id := "textlibs-urllib-urlencode-spec", pyFile := "Lib/urllib/parse.py"
+    pyFns := ["urlencode"]
+    statement := "For every query and option of urlencode: an object without len and a sequence whose first element is not a tuple raise TypeError('not a valid non-string sequence or mapping object'); a mapping encodes as its items; keys and values go through quote_via (quote_plus or quote), bytes without encoding/errors, other objects as str(v); without doseq pairs give quote_via(k) + '=' + quote_via(v) joined by '&'; with doseq the result is that of the pairs expanded one per element (a key whose value is an empty sequence is still quoted, and its error raised)."
+    source := "docstring of urlencode (doseq; 'encoding and errors only if a component is a str')", status := .proven
+    prop := ``Url.UrlencodeSpec, thm := some ``Url.urlencodeSpec_proven }
 ]
 
 end PyLean.TextLibs

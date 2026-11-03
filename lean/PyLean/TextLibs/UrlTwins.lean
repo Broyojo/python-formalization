@@ -40,51 +40,236 @@ theorem hostinfo_sub (n : Str) : ∀ x ∈ ((hostinfoS (some n)).1.getD []), x �
   · simp only [hb, Option.getD_some] at hx
     exact hsub x (mem_part_snd (c := 91) (by rw [hb]) (mem_part_fst (c := 93) hx))
 
-/-- The netloc attributes of a result, as a tuple. -/
-def attrs (r : Res) : Option Str × Option Str × Py (Option Str) × Py (Option Nat) :=
-  (username r, password r, hostname r, port r)
+/-! ## The `bytes` mixin against the `str` mixin -/
 
-/-- For every result whose netloc is ASCII or `None`, the `bytes` result class
-(`_NetlocResultMixinBytes`) gives the same `username`, `password`, `hostname` and `port` as the
-`str` class (`_NetlocResultMixinStr`), `bytes.lower()` agreeing with `str.lower()`. The `port`
-errors embed a repr (`'x'` against `b'x'`), so both are `~` messages of the same class.
-Source: (a), the two classes are twins (Lib/urllib/parse.py:212-277), and the docs ("all return
-values ... provide either an encode() method ... or a decode() method"). -/
+theorem toNat_toUInt8 (a : Nat) (h : a < 256) : (Nat.toUInt8 a).toNat = a := by
+  simp [Nat.toUInt8]; omega
+
+theorem toUInt8_inj (a b : Nat) (ha : a < 256) (hb : b < 256) : Nat.toUInt8 a = Nat.toUInt8 b ↔ a = b := by
+  constructor
+  · intro e
+    have := congrArg UInt8.toNat e
+    rwa [toNat_toUInt8 a ha, toNat_toUInt8 b hb] at this
+  · intro e; rw [e]
+
+/-- All code points below 256: the type invariant of a `bytes` value. -/
+def Lt256 (s : Str) : Prop := ∀ c ∈ s, c < 256
+
+theorem ofB8_toB8 (s : Str) (hs : Lt256 s) : ofB8 (toB8 s) = s := by
+  induction s with
+  | nil => rfl
+  | cons c r ih =>
+    simp only [toB8, ofB8, List.map_cons, List.map_map] at ih ⊢
+    rw [toNat_toUInt8 c (hs c List.mem_cons_self), ih (fun x hx => hs x (List.mem_cons_of_mem _ hx))]
+
+theorem bpart_toB8 (c : Nat) (hc : c < 256) : ∀ s : Str, Lt256 s →
+    bpart (Nat.toUInt8 c) (toB8 s) = (toB8 (part c s).1, (part c s).2.map toB8)
+  | [], _ => rfl
+  | x :: r, hs => by
+    have hx := hs x List.mem_cons_self
+    have ih := bpart_toB8 c hc r (fun y hy => hs y (List.mem_cons_of_mem _ hy))
+    simp only [toB8, List.map_cons] at ih ⊢
+    rw [bpart, part_cons]
+    by_cases hxc : x = c
+    · subst hxc; simp [toB8]
+    · have : (Nat.toUInt8 x == Nat.toUInt8 c) = false := by
+        simp only [beq_eq_false_iff_ne, ne_eq]
+        rw [toUInt8_inj x c hx hc]; exact hxc
+      simp only [this, Bool.false_eq_true, ite_false, if_neg hxc, ih, List.map_cons]
+
+theorem lt256_reverse (s : Str) (hs : Lt256 s) : Lt256 s.reverse := fun c hc => hs c (List.mem_reverse.1 hc)
+
+theorem toB8_reverse (s : Str) : toB8 s.reverse = (toB8 s).reverse := by simp [toB8]
+
+theorem brpart_toB8 (c : Nat) (hc : c < 256) (s : Str) (hs : Lt256 s) :
+    brpart (Nat.toUInt8 c) (toB8 s) = ((rpart c s).1.map toB8, toB8 (rpart c s).2) := by
+  unfold brpart rpart
+  rw [← toB8_reverse, bpart_toB8 c hc _ (lt256_reverse s hs)]
+  rcases part c s.reverse with ⟨a, _ | b⟩ <;> simp [toB8_reverse]
+
+theorem lt256_part_fst (c : Nat) (s : Str) (hs : Lt256 s) : Lt256 (part c s).1 :=
+  fun x hx => hs x (mem_part_fst hx)
+
+theorem lt256_part_snd (c : Nat) (s : Str) (hs : Lt256 s) : ∀ y, (part c s).2 = some y → Lt256 y :=
+  fun _ hy x hx => hs x (mem_part_snd hy hx)
+
+theorem lt256_rpart_snd (c : Nat) (s : Str) (hs : Lt256 s) : Lt256 (rpart c s).2 :=
+  fun x hx => hs x (mem_rpart_snd hx)
+
+theorem mem_rpart_fst {c x : Nat} {l y : Str} (hy : (rpart c l).1 = some y) (h : x ∈ y) : x ∈ l := by
+  unfold rpart at hy
+  rcases hp : part c l.reverse with ⟨a, _ | b⟩
+  · rw [hp] at hy; simp at hy
+  · rw [hp] at hy
+    simp only [Option.some.injEq] at hy
+    subst hy
+    exact List.mem_reverse.1 (mem_part_snd (c := c) (l := l.reverse) (by rw [hp]) (List.mem_reverse.1 h))
+
+/-- The `bytes` `_userinfo` is the `str` one on the code points, byte for byte. -/
+theorem userinfoB_toB8 (n : Str) (hn : Lt256 n) :
+    userinfoB (some (toB8 n)) = ((userinfoS (some n)).1.map toB8, (userinfoS (some n)).2.map toB8) := by
+  simp only [userinfoB, userinfoS]
+  rw [show (64 : UInt8) = Nat.toUInt8 64 from rfl, brpart_toB8 64 (by omega) n hn]
+  rcases hr : rpart 64 n with ⟨_ | ui, hi⟩
+  · rfl
+  · have hui : Lt256 ui := fun x hx => hn x (mem_rpart_fst (by rw [hr]) hx)
+    simp only [Option.map_some]
+    rw [show (58 : UInt8) = Nat.toUInt8 58 from rfl, bpart_toB8 58 (by omega) ui hui]
+
+theorem hostinfoB_toB8 (n : Str) (hn : Lt256 n) :
+    hostinfoB (some (toB8 n)) = ((hostinfoS (some n)).1.map toB8, (hostinfoS (some n)).2.map toB8) := by
+  simp only [hostinfoB, hostinfoS]
+  rw [show (64 : UInt8) = Nat.toUInt8 64 from rfl, brpart_toB8 64 (by omega) n hn]
+  have hhi := lt256_rpart_snd 64 n hn
+  generalize (rpart 64 n).2 = hi at hhi ⊢
+  rw [show (91 : UInt8) = Nat.toUInt8 91 from rfl, bpart_toB8 91 (by omega) hi hhi]
+  rcases hb : part 91 hi with ⟨before, _ | br⟩
+  · simp only [Option.map_none]
+    rw [show (58 : UInt8) = Nat.toUInt8 58 from rfl, bpart_toB8 58 (by omega) hi hhi]
+    rcases part 58 hi with ⟨h, _ | p⟩
+    · simp [toB8]
+    · cases p <;> simp [toB8]
+  · have hbr : Lt256 br := lt256_part_snd 91 hi hhi br (by rw [hb])
+    simp only [Option.map_some]
+    rw [show (93 : UInt8) = Nat.toUInt8 93 from rfl, bpart_toB8 93 (by omega) br hbr]
+    rcases hq : part 93 br with ⟨h, _ | q⟩
+    · simp [toB8, bpart, part]
+    · have hq' : Lt256 q := lt256_part_snd 93 br hbr q (by rw [hq])
+      simp only [Option.map_some, Option.getD_some]
+      rw [show (58 : UInt8) = Nat.toUInt8 58 from rfl, bpart_toB8 58 (by omega) q hq']
+      rcases part 58 q with ⟨w, _ | p⟩
+      · simp [toB8]
+      · cases p <;> simp [toB8]
+
+theorem ofB8_toB8_opt (o : Option Str) (h : ∀ s, o = some s → Lt256 s) : (o.map toB8).map ofB8 = o := by
+  cases o with
+  | none => rfl
+  | some s => simp [ofB8_toB8 s (h s rfl)]
+
+theorem userinfoS_sub (n : Str) :
+    (∀ s, (userinfoS (some n)).1 = some s → ∀ x ∈ s, x ∈ n) ∧
+    (∀ s, (userinfoS (some n)).2 = some s → ∀ x ∈ s, x ∈ n) := by
+  simp only [userinfoS]
+  rcases hr : rpart 64 n with ⟨_ | ui, hi⟩
+  · simp
+  · have hsub : ∀ x ∈ ui, x ∈ n := fun x hx => mem_rpart_fst (by rw [hr]) hx
+    simp only
+    constructor
+    · intro s hs x hx
+      simp only [Option.some.injEq] at hs
+      subst hs
+      exact hsub x (mem_part_fst hx)
+    · intro s hs x hx
+      exact hsub x (mem_part_snd hs hx)
+
+theorem hostinfoS_snd_sub (n : Str) : ∀ s, (hostinfoS (some n)).2 = some s → ∀ x ∈ s, x ∈ n := by
+  intro s hs x hx
+  simp only [hostinfoS] at hs
+  have hsub : ∀ y, y ∈ (rpart 64 n).2 → y ∈ n := fun y hy => mem_rpart_snd hy
+  generalize (rpart 64 n).2 = hp at hs hsub
+  rcases hb : part 91 hp with ⟨before, _ | br⟩
+  · simp only [hb] at hs
+    split at hs
+    · cases hs
+    · cases hs
+      rcases hq : (part 58 hp).2 with _ | q
+      · simp [hq] at hx
+      · simp [hq] at hx; exact hsub x (mem_part_snd hq hx)
+  · simp only [hb, Option.getD_some] at hs
+    split at hs
+    · cases hs
+    · cases hs
+      have hbr : ∀ y ∈ br, y ∈ hp := fun y hy => mem_part_snd (c := 91) (by rw [hb]) hy
+      rcases hq : (part 93 br).2 with _ | q
+      · simp [hq, part] at hx
+      · simp only [hq, Option.getD_some] at hx
+        have hqq : ∀ y ∈ q, y ∈ hp := fun y hy => hbr y (mem_part_snd hq hy)
+        rcases hw : (part 58 q).2 with _ | w
+        · simp [hw] at hx
+        · simp [hw] at hx; exact hsub x (hqq x (mem_part_snd hw hx))
+
+theorem blower_toNat (c : Nat) (h : c < 256) : (blower (Nat.toUInt8 c)).toNat = UnicodeObj.pyToLower c := by
+  unfold blower
+  simp only [UInt8.le_iff_toNat_le, toNat_toUInt8 c h, show (65 : UInt8).toNat = 65 from rfl,
+    show (90 : UInt8).toNat = 90 from rfl, UnicodeObj.pyToLower, UnicodeObj.pyIsUpper]
+  split
+  · next hc => simp [UInt8.toNat_add, toNat_toUInt8 c h, hc.1, hc.2]; omega
+  · next hc =>
+    rw [toNat_toUInt8 c h]
+    simp only [Bool.and_eq_true, decide_eq_true_eq]
+    rw [if_neg hc]
+
+theorem ofB8_lower (a : Str) (ha : Lt256 a) : ofB8 ((toB8 a).map blower) = a.map UnicodeObj.pyToLower := by
+  induction a with
+  | nil => rfl
+  | cons c r ih =>
+    simp only [toB8, ofB8, List.map_cons, List.map_map] at ih ⊢
+    rw [blower_toNat c (ha c List.mem_cons_self), ih (fun x hx => ha x (List.mem_cons_of_mem _ hx))]
+
+/-- For every result whose netloc is a `bytes` value (every code point below 256) or `None`,
+the `bytes` result classes (`_NetlocResultMixinBytes`, splitting with `bytes.rpartition(b'@')`,
+`bytes.partition(b':')`, `b'['`, `b']'`) give the same `username`, `password` and `port` as the
+`str` classes (`_NetlocResultMixinStr`) on the same code points, and, for an ASCII netloc, the
+same `hostname` (`bytes.lower()` agreeing with `str.lower()` on ASCII). The `port` errors embed a
+repr (`'x'` against `b'x'`), so both are `~` messages of the same class. Source: (a), the two
+classes are twins (Lib/urllib/parse.py:212-277), and the docs ("all return values ... provide
+either an encode() method ... or a decode() method"). -/
 def NetlocTwin : Prop :=
   ∀ (fields : List (Option Str)) (k : Option Bool),
-    (∀ n, fields.getD 1 none = some n → ∀ c ∈ n, c < 128) →
-    attrs { fields, isBytes := true, keep := k } = attrs { fields, isBytes := false, keep := k }
-
-theorem userinfoB_eq (n : Option Str) : userinfoB n = userinfoS n := by
-  cases n <;> rfl
-
-theorem hostinfoB_eq (n : Option Str) : hostinfoB n = hostinfoS n := by
-  cases n <;> rfl
+    (∀ n, fields.getD 1 none = some n → Lt256 n) →
+    username { fields, isBytes := true, keep := k } = username { fields, isBytes := false, keep := k } ∧
+    password { fields, isBytes := true, keep := k } = password { fields, isBytes := false, keep := k } ∧
+    port { fields, isBytes := true, keep := k } = port { fields, isBytes := false, keep := k } ∧
+    ((∀ n, fields.getD 1 none = some n → ∀ c ∈ n, c < 128) →
+      hostname { fields, isBytes := true, keep := k } = hostname { fields, isBytes := false, keep := k })
 
 theorem netlocTwin_proven : NetlocTwin := by
-  intro fields k hasc
-  simp only [attrs, username, password, hostname, port, Res.netloc, userinfoB_eq, hostinfoB_eq,
-    ite_true, Bool.false_eq_true, ite_false]
-  refine Prod.ext rfl (Prod.ext rfl (Prod.ext ?_ rfl))
-  simp only
-  generalize hn : fields.getD 1 none = n at hasc
+  intro fields k h256
+  simp only [username, password, hostname, port, Res.netloc, ite_true, Bool.false_eq_true, ite_false]
+  generalize hn : fields.getD 1 none = n at h256
   cases n with
-  | none => rfl
+  | none => exact ⟨rfl, rfl, rfl, fun _ => rfl⟩
   | some n =>
-    have hsub := hostinfo_sub n
-    generalize (hostinfoS (some n)).1 = h at hsub ⊢
-    cases h with
-    | none => rfl
-    | some h =>
-      simp only [Option.getD_some] at hsub
-      simp only
-      split
-      · rfl
-      · have ha : UnicodeObj.isAscii (part 37 h).1 = true := by
-          simp only [UnicodeObj.isAscii, List.all_eq_true, decide_eq_true_eq]
-          intro c hc
-          exact hasc n rfl c (hsub c (mem_part_fst hc))
-        simp [UnicodeObj.unicodeLower, ha, UnicodeObj.asciiUpperOrLower, Except.map]
+    have hn256 := h256 n rfl
+    have hu := userinfoS_sub n
+    simp only [Option.map_some, userinfoB_toB8 n hn256, hostinfoB_toB8 n hn256]
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · exact ofB8_toB8_opt _ (fun s hs x hx => hn256 x (hu.1 s hs x hx))
+    · exact ofB8_toB8_opt _ (fun s hs x hx => hn256 x (hu.2 s hs x hx))
+    · rw [ofB8_toB8_opt _ (fun s hs x hx => hn256 x (hostinfoS_snd_sub n s hs x hx))]
+    · intro hasc
+      have hasc' := hasc n rfl
+      have hsub : ∀ s, (hostinfoS (some n)).1 = some s → ∀ x ∈ s, x ∈ n := by
+        intro s hs x hx
+        apply hostinfo_sub n x
+        rw [hs]; exact hx
+      generalize (hostinfoS (some n)).1 = h at hsub ⊢
+      cases h with
+      | none => rfl
+      | some h =>
+        have hh256 : Lt256 h := fun x hx => hn256 x (hsub h rfl x hx)
+        simp only [Option.map_some]
+        have he : (toB8 h).isEmpty = h.isEmpty := by simp [toB8]
+        rw [he]
+        split
+        · rfl
+        · rw [show (37 : UInt8) = Nat.toUInt8 37 from rfl, bpart_toB8 37 (by omega) h hh256]
+          have ha : UnicodeObj.isAscii (part 37 h).1 = true := by
+            simp only [UnicodeObj.isAscii, List.all_eq_true, decide_eq_true_eq]
+            intro c hc
+            exact hasc' c (hsub h rfl c (mem_part_fst hc))
+          have hlow : UnicodeObj.unicodeLower (part 37 h).1 = .ok ((part 37 h).1.map UnicodeObj.pyToLower) := by
+            simp [UnicodeObj.unicodeLower, ha, UnicodeObj.asciiUpperOrLower]
+          rw [hlow]
+          have hz : ∀ z, (part 37 h).2 = some z → Lt256 z := lt256_part_snd 37 h hh256
+          have h1 := ofB8_lower _ (lt256_part_fst 37 h hh256)
+          unfold ofB8 at h1
+          rcases hzz : (part 37 h).2 with _ | z
+          · simp [Except.map, ofB8, h1]
+          · have h2 := ofB8_toB8 z (hz z hzz)
+            unfold ofB8 at h2
+            simp only [Except.map, ofB8, List.map_append, List.map_cons, Option.map_some, h1, h2]
+            rfl
 
 /-! ## `urlsplit` on `bytes` -/
 
@@ -423,11 +608,12 @@ theorem rpart_absent (c : Nat) (l : Str) (h : c ∉ l) : rpart c l = (none, l) :
 /-- For every result (`str` or `bytes`) and every netloc: a port that `port` returns is in
 0-65535; every error it raises is a `ValueError`; when the netloc is `host:digits` with no `@`,
 `[` or `:` in the host and at most 4300 ASCII digits, `port` is their value or the range error;
-and a netloc with no `@`, `[` or `:` has no port. Source: the docs of `urlsplit` ("Port number as
-integer, if present"; "Reading the port attribute will raise a ValueError if an invalid port is
-specified"). -/
+and a netloc with no `@`, `[` or `:` has no port. A `bytes` netloc has its code points below 256
+(a type invariant). Source: the docs of `urlsplit` ("Port number as integer, if present";
+"Reading the port attribute will raise a ValueError if an invalid port is specified"). -/
 def PortSpec : Prop :=
   ∀ (fields : List (Option Str)) (k : Option Bool) (b : Bool),
+    (b = true → ∀ n, fields.getD 1 none = some n → Lt256 n) →
     let r : Res := { fields, isBytes := b, keep := k }
     (∀ p, port r = .ok (some p) → p ≤ 65535) ∧
     (∀ e, port r = .error e → e.className = "ValueError") ∧
@@ -481,7 +667,13 @@ theorem portOf_err (x : Option Str) (e : PyExc) (h : portOf x = .error e) : e.cl
     · cases h4; rfl
 
 theorem portSpec_proven : PortSpec := by
-  intro fields k b
+  intro fields k b hb
+  have hport : port { fields, isBytes := b, keep := k } = port { fields, isBytes := false, keep := k } := by
+    cases b
+    · rfl
+    · exact (netlocTwin_proven fields k (hb rfl)).2.2.1
+  simp only
+  rw [hport]
   refine ⟨fun p hp => portOf_range _ p hp, fun e he => portOf_err _ e he, ?_, ?_⟩
   · intro h d hn hh h64 hd hall hlen
     have h64' : 64 ∉ h ++ 58 :: d := by
@@ -493,8 +685,8 @@ theorem portSpec_proven : PortSpec := by
       have := List.all_eq_true.1 hall 91 m
       simp [isAsciiDigit] at this
     have h58 : 58 ∉ h := fun m => (hh 58 m).2.2 rfl
-    have hx : (hostinfoS (some (h ++ 58 :: d))).2 = some d ∧ (hostinfoB (some (h ++ 58 :: d))).2 = some d := by
-      simp only [hostinfoS, hostinfoB, rpart_absent 64 _ h64', part_absent 91 _ h91, part_prefix 58 h d h58,
+    have hx : (hostinfoS (some (h ++ 58 :: d))).2 = some d := by
+      simp only [hostinfoS, rpart_absent 64 _ h64', part_absent 91 _ h91, part_prefix 58 h d h58,
         Option.getD_some]
       simp [List.isEmpty_iff, hd]
     have hd' : (!d.isEmpty && d.all isAsciiDigit) = true := by simp [hd, hall]
@@ -502,17 +694,13 @@ theorem portSpec_proven : PortSpec := by
         else .error (.valueError "Port out of range 0-65535") := by
       simp only [portOf, hd', ite_true, intOfDigits, show ¬ d.length > 4300 by omega, ite_false]
     unfold port
-    simp only [Res.netloc, hn]
-    cases b
-    · simp only [Bool.false_eq_true, ite_false, hx.1, hp]
-    · simp only [ite_true, hx.2, hp]
+    simp only [Res.netloc, hn, Bool.false_eq_true, ite_false, hx, hp]
   · intro h hn hh
     have h64 : 64 ∉ h := fun m => (hh 64 m).1 rfl
     have h91 : 91 ∉ h := fun m => (hh 91 m).2.1 rfl
     have h58 : 58 ∉ h := fun m => (hh 58 m).2.2 rfl
     unfold port
     simp only [Res.netloc, hn]
-    cases b <;> simp [hostinfoS, hostinfoB, rpart_absent 64 _ h64, part_absent 91 _ h91,
-      part_absent 58 _ h58, portOf]
+    simp [hostinfoS, rpart_absent 64 _ h64, part_absent 91 _ h91, part_absent 58 _ h58, portOf]
 
 end PyLean.TextLibs.Url
