@@ -59,4 +59,4 @@ duplicates: |
   asterisk IndexError; _header_value_parser IndexError; rfc2231 parameter trailing asterisk;
   email header parser IndexError; parse_mime_parameters IndexError; message_from_string
   IndexError Content-Type.
-lean: lean/PyLean/TextLibs/EmailRefute.lean (ContentHeadersNoRaise, contentHeadersNoRaise_refuted)
+lean: lean/PyLean/TextLibs/EmailRefute.lean (ContentHeadersNoRaise, contentHeadersNoRaise_refuted; ContentDispositionNoRaise, contentDispositionNoRaise_refuted)

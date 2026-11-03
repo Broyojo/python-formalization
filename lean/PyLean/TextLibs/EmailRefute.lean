@@ -43,12 +43,16 @@ theorem cfgCaught_safe : DecSafe cfgCaught := by
 
 /-! ## `parse_message_id` and `parse_message_ids` -/
 
-/-- For every header value, `parse_message_id` and `parse_message_ids` return a token list
-(with defects) and raise nothing: they catch the `HeaderParseError` of `get_msg_id` and fall
-back to `get_unstructured` (_header_value_parser.py:2182-2189, 2213-2221). -/
+/-- For every header value, `parse_message_id` returns a token list (with defects) and raises
+nothing: it catches the `HeaderParseError` of `get_msg_id` and falls back to `get_unstructured`
+(_header_value_parser.py:2182-2189). -/
 def MessageIdNoRaise : Prop :=
-  ∀ (cfg : Cfg) (n : Nat) (v : Str), DecSafe cfg →
-    noRaise (parseMessageId cfg n v) = true ∧ noRaise (parseMessageIds cfg n v) = true
+  ∀ (cfg : Cfg) (n : Nat) (v : Str), DecSafe cfg → noRaise (parseMessageId cfg n v) = true
+
+/-- The same for `parse_message_ids` (In-Reply-To, References), which catches the
+`HeaderParseError` of `get_msg_id` the same way (:2213-2221). -/
+def MessageIdsNoRaise : Prop :=
+  ∀ (cfg : Cfg) (n : Nat) (v : Str), DecSafe cfg → noRaise (parseMessageIds cfg n v) = true
 
 /-- `<a@[ x]>`: the id-right is not a dot-atom-text, so `get_msg_id` tries
 `get_no_fold_literal`, whose `get_dtext(' x]>')` calls `_get_ptext_to_endchars` on a value
@@ -65,21 +69,31 @@ theorem messageIds_unbound :
 
 theorem messageIdNoRaise_refuted : ¬ MessageIdNoRaise := by
   intro h
-  have h1 := (h cfgCaught 100 (S "<a@[ x]>") cfgCaught_safe).1
+  have h1 := h cfgCaught 100 (S "<a@[ x]>") cfgCaught_safe
   have h2 : noRaise (parseMessageId cfgCaught 100 (S "<a@[ x]>")) = false := by decide +kernel
+  rw [h2] at h1
+  exact Bool.false_ne_true h1
+
+theorem messageIdsNoRaise_refuted : ¬ MessageIdsNoRaise := by
+  intro h
+  have h1 := h cfgCaught 100 (S "<a@[ x]>") cfgCaught_safe
+  have h2 : noRaise (parseMessageIds cfgCaught 100 (S "<a@[ x]>")) = false := by decide +kernel
   rw [h2] at h1
   exact Bool.false_ne_true h1
 
 /-! ## `parse_content_type_header` and `parse_content_disposition_header` -/
 
-/-- For every header value, `parse_content_type_header` and
-`parse_content_disposition_header` return a token list and raise nothing: a value that is not
-a valid parameter list is recovered by `parse_mime_parameters`, which catches the
-`HeaderParseError` of `get_parameter` and keeps the text as an invalid parameter
-(_header_value_parser.py:2650-2671). -/
+/-- For every header value, `parse_content_type_header` returns a token list and raises
+nothing: a value that is not a valid parameter list is recovered by `parse_mime_parameters`,
+which catches the `HeaderParseError` of `get_parameter` and keeps the text as an invalid
+parameter (_header_value_parser.py:2650-2671). -/
 def ContentHeadersNoRaise : Prop :=
+  ∀ (cfg : Cfg) (n : Nat) (v : Str), DecSafe cfg → noRaise (parseContentTypeHeader cfg n v) = true
+
+/-- The same for `parse_content_disposition_header`, which hands its parameters to
+`parse_mime_parameters` the same way (:2785-2786). -/
+def ContentDispositionNoRaise : Prop :=
   ∀ (cfg : Cfg) (n : Nat) (v : Str), DecSafe cfg →
-    noRaise (parseContentTypeHeader cfg n v) = true ∧
     noRaise (parseContentDispositionHeader cfg n v) = true
 
 /-- `text/plain; a*`: `get_parameter` reads the attribute `a`, finds `*`, fails to read a
@@ -97,8 +111,17 @@ theorem contentDisposition_star :
 
 theorem contentHeadersNoRaise_refuted : ¬ ContentHeadersNoRaise := by
   intro h
-  have h1 := (h cfgCaught 100 (S "text/plain; a*") cfgCaught_safe).1
+  have h1 := h cfgCaught 100 (S "text/plain; a*") cfgCaught_safe
   have h2 : noRaise (parseContentTypeHeader cfgCaught 100 (S "text/plain; a*")) = false := by
+    decide +kernel
+  rw [h2] at h1
+  exact Bool.false_ne_true h1
+
+theorem contentDispositionNoRaise_refuted : ¬ ContentDispositionNoRaise := by
+  intro h
+  have h1 := h cfgCaught 100 (S "attachment; filename*") cfgCaught_safe
+  have h2 : noRaise (parseContentDispositionHeader cfgCaught 100 (S "attachment; filename*")) =
+      false := by
     decide +kernel
   rw [h2] at h1
   exact Bool.false_ne_true h1
@@ -158,17 +181,28 @@ theorem mimeVersionNoRaise_refuted : ¬ MimeVersionNoRaise := by
 
 /-! ## `DisplayName.display_name` and `DisplayName.value` -/
 
-/-- `display_name` and `value` of the display name `get_display_name` returned, as Python
-outcomes; `true` when `get_display_name` raised. -/
+/-- `display_name` of the display name `get_display_name` returned, as a Python outcome;
+`true` when `get_display_name` raised. -/
 def dnTotal : EPy (Tok × Str) → Bool
-  | .ok (dn, _) => noRaise (displayName dn) && noRaise dn.value
+  | .ok (dn, _) => noRaise (displayName dn)
+  | .error _ => true
+
+/-- `value` of the display name `get_display_name` returned. -/
+def dnValueTotal : EPy (Tok × Str) → Bool
+  | .ok (dn, _) => noRaise dn.value
   | .error _ => true
 
 /-- For every value `get_display_name` parses, the display name's `display_name` (the phrase
-without its leading and trailing CFWS, :585-601) and `value` (:604-624) are strings; the
-address headers read both for every group and mailbox (Lib/email/headerregistry.py:343-347). -/
+without its leading and trailing CFWS, :585-601) is a string; the address headers read it for
+every group and mailbox (Lib/email/headerregistry.py:343-347). -/
 def DisplayNameTotal : Prop :=
   ∀ (cfg : Cfg) (n : Nat) (v : Str), dnTotal (getDisplayName cfg n v) = true
+
+/-- For every value `get_display_name` parses, the display name's `value` (:604-624: the
+phrase's value, or the quoted `display_name` when the phrase has a defect or a quoted string)
+is a string. -/
+def DisplayNameValueTotal : Prop :=
+  ∀ (cfg : Cfg) (n : Nat) (v : Str), dnValueTotal (getDisplayName cfg n v) = true
 
 /-- `(c)`: the phrase is a lone CFWS token (`get_word` finds nothing after the comment, and the
 loop of `get_phrase` takes the comment as CFWS). `display_name` pops it, leaving an empty list,
@@ -184,6 +218,15 @@ theorem displayNameTotal_refuted : ¬ DisplayNameTotal := by
   intro h
   have h1 := h cfgCaught 100 (S "(c)")
   have h2 : dnTotal (getDisplayName cfgCaught 100 (S "(c)")) = false := by decide +kernel
+  rw [h2] at h1
+  exact Bool.false_ne_true h1
+
+/-- `value` raises on `(c)` on its own account: the phrase has a defect, so `value` takes the
+quoting branch (:606-607, :612) and calls `display_name` (:622). -/
+theorem displayNameValueTotal_refuted : ¬ DisplayNameValueTotal := by
+  intro h
+  have h1 := h cfgCaught 100 (S "(c)")
+  have h2 : dnValueTotal (getDisplayName cfgCaught 100 (S "(c)")) = false := by decide +kernel
   rw [h2] at h1
   exact Bool.false_ne_true h1
 

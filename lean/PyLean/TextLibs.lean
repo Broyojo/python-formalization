@@ -40,6 +40,7 @@ import PyLean.TextLibs.EmailQuote
 import PyLean.TextLibs.TomlScen
 import PyLean.TextLibs.TomlLoads
 import PyLean.TextLibs.TomlInline
+import PyLean.TextLibs.EmailEw
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1843,22 +1844,36 @@ def entries : List Entry := [
     notes := "_ew.decode (Lib/email/_encoded_words.py) is a parameter. The termination part needs the regex rfc2047_matcher (hand-written as rfcSearch): a word starting with =? that it matches has a ?= after the =?, so get_encoded_word did not raise its plain HeaderParseError there. Encoded words that decode are not covered by the str/value part." }
 ,
   { id := "textlibs-email-msgid-no-fold-literal-space", pyFile := "Lib/email/_header_value_parser.py"
-    pyFns := ["parse_message_id", "parse_message_ids", "get_msg_id", "get_no_fold_literal", "get_dtext",
-      "_get_ptext_to_endchars"]
-    statement := "For every header value, parse_message_id and parse_message_ids return a token list and raise nothing (they turn the HeaderParseError of get_msg_id into a defect)."
+    pyFns := ["parse_message_id", "get_msg_id", "get_no_fold_literal", "_get_ptext_to_endchars"]
+    statement := "For every header value, parse_message_id returns a token list and raises nothing (it turns the HeaderParseError of get_msg_id into a defect)."
     source := "Lib/email/headerregistry.py:169-174 ('The parser should not, insofar as practical, raise any errors'); :2182-2189", status := .refuted
     prop := ``PyLean.TextLibs.Email.MessageIdNoRaise, thm := some ``PyLean.TextLibs.Email.messageIdNoRaise_refuted
     bug := some "textlibs-email-msgid-no-fold-literal-space"
-    notes := "'<a@[ x]>': get_no_fold_literal calls get_dtext on ' x]>', and _get_ptext_to_endchars reads the unbound pos for a value starting with a space (messageId_unbound, messageIds_unbound). The gh-134152 fix covered only the empty value." }
+    notes := "'<a@[ x]>': get_no_fold_literal calls get_dtext on ' x]>', and _get_ptext_to_endchars reads the unbound pos for a value starting with a space (messageId_unbound). The gh-134152 fix covered only the empty value." }
+,
+  { id := "textlibs-email-msgids-no-fold-literal-space", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["parse_message_ids"]
+    statement := "For every header value, parse_message_ids returns a token list and raises nothing (it turns the HeaderParseError of get_msg_id into a defect and keeps the rest as an InvalidMessageID)."
+    source := "Lib/email/headerregistry.py:169-174; :2213-2221", status := .refuted
+    prop := ``PyLean.TextLibs.Email.MessageIdsNoRaise, thm := some ``PyLean.TextLibs.Email.messageIdsNoRaise_refuted
+    bug := some "textlibs-email-msgid-no-fold-literal-space"
+    notes := "The same '<a@[ x]>' raises UnboundLocalError from parse_message_ids (References, In-Reply-To)." }
 ,
   { id := "textlibs-email-param-extended-marker-at-end", pyFile := "Lib/email/_header_value_parser.py"
-    pyFns := ["parse_content_type_header", "parse_content_disposition_header", "parse_mime_parameters",
-      "get_parameter"]
-    statement := "For every header value, parse_content_type_header and parse_content_disposition_header return a token list and raise nothing (parse_mime_parameters keeps an unparsable parameter as an invalid one)."
+    pyFns := ["parse_content_type_header", "parse_mime_parameters", "get_parameter"]
+    statement := "For every header value, parse_content_type_header returns a token list and raises nothing (parse_mime_parameters keeps an unparsable parameter as an invalid one)."
     source := "Lib/email/headerregistry.py:169-174; :2650-2671", status := .refuted
     prop := ``PyLean.TextLibs.Email.ContentHeadersNoRaise, thm := some ``PyLean.TextLibs.Email.contentHeadersNoRaise_refuted
     bug := some "textlibs-email-param-extended-marker-at-end"
-    notes := "'text/plain; a*' and 'attachment; filename*' raise IndexError at :2525 (contentType_star, contentDisposition_star). Duplicate of python/cpython#151857 (open)." }
+    notes := "'text/plain; a*' raises IndexError at :2525 (contentType_star). Duplicate of python/cpython#151857 (open)." }
+,
+  { id := "textlibs-email-disposition-extended-marker-at-end", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["parse_content_disposition_header"]
+    statement := "For every header value, parse_content_disposition_header returns a token list and raises nothing."
+    source := "Lib/email/headerregistry.py:169-174; :2785-2786 (parameters go to parse_mime_parameters)", status := .refuted
+    prop := ``PyLean.TextLibs.Email.ContentDispositionNoRaise, thm := some ``PyLean.TextLibs.Email.contentDispositionNoRaise_refuted
+    bug := some "textlibs-email-param-extended-marker-at-end"
+    notes := "'attachment; filename*' raises IndexError at :2525 (contentDisposition_star). Duplicate of python/cpython#151857 (open)." }
 ,
   { id := "textlibs-email-section-nondecimal-digit", pyFile := "Lib/email/_header_value_parser.py"
     pyFns := ["get_section"]
@@ -1877,12 +1892,20 @@ def entries : List Entry := [
     notes := "'²' raises ValueError from int() (mimeVersion_superscript). Duplicate of python/cpython#158708 (closed in a batch, not on the merits)." }
 ,
   { id := "textlibs-email-display-name-only-cfws", pyFile := "Lib/email/_header_value_parser.py"
-    pyFns := ["DisplayName.display_name", "DisplayName.value", "get_display_name", "get_phrase"]
-    statement := "For every value get_display_name parses, display_name and value of the resulting DisplayName are strings (raise nothing)."
+    pyFns := ["DisplayName.display_name"]
+    statement := "For every value get_display_name parses, display_name of the resulting DisplayName is a string (raises nothing)."
     source := "Lib/email/headerregistry.py:169-174 and :343-347 (address headers read display_name of every group and mailbox)", status := .refuted
     prop := ``PyLean.TextLibs.Email.DisplayNameTotal, thm := some ``PyLean.TextLibs.Email.displayNameTotal_refuted
     bug := some "textlibs-email-display-name-only-cfws"
     notes := "'(c)': the phrase is one CFWS token; display_name pops it and reads res[-1] of an empty list (displayName_comment). Duplicate of python/cpython#151857 (open)." }
+,
+  { id := "textlibs-email-display-name-value-only-cfws", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["DisplayName.value"]
+    statement := "For every value get_display_name parses, value of the resulting DisplayName is a string (raises nothing)."
+    source := "Lib/email/headerregistry.py:169-174; DisplayName.value :604-624", status := .refuted
+    prop := ``PyLean.TextLibs.Email.DisplayNameValueTotal, thm := some ``PyLean.TextLibs.Email.displayNameValueTotal_refuted
+    bug := some "textlibs-email-display-name-only-cfws"
+    notes := "'(c)': the phrase has a defect, so value takes the quoting branch and calls display_name, which raises IndexError." }
 ,
   { id := "textlibs-email-quoted-string-reparse", pyFile := "Lib/email/_header_value_parser.py"
     pyFns := ["get_quoted_string", "get_bare_quoted_string", "BareQuotedString.__str__", "quote_string",
@@ -1904,12 +1927,12 @@ def entries : List Entry := [
     notes := "s is any text, whitespace included (runs of spaces become fws tokens, the rest qcontent/ctext runs). With an encoded word that decodes, the quoted-string half fails: textlibs-email-quoted-string-reparse." }
 ,
   { id := "textlibs-email-ptext-had-qp", pyFile := "Lib/email/_header_value_parser.py"
-    pyFns := ["_get_ptext_to_endchars", "get_dtext"]
+    pyFns := ["_get_ptext_to_endchars"]
     statement := "Whenever _get_ptext_to_endchars returns fewer characters than it consumed (it dropped the backslash of a quoted pair), its had_qp flag is True."
     source := "docstring :1037-1043 ('a flag that is True iff there were any quoted printables decoded')", status := .refuted
     prop := ``PyLean.TextLibs.Email.PtextQpFlag, thm := some ``PyLean.TextLibs.Email.ptextQpFlag_refuted
     bug := some "textlibs-email-ptext-had-qp"
-    notes := "'a\\b' gives ('ab', '', False) (ptext_qp_unset); get_dtext therefore adds no ObsoleteHeaderDefect for '[a\\b]' while '[a\\\\b]' gets one (dtext_no_defect)." },
+    notes := "'a\\b' gives ('ab', '', False) (ptext_qp_unset)." },
   { id := "textlibs-toml-nesting", pyFile := "Lib/tomllib/_parser.py"
     pyFns := ["parse_value", "parse_array", "skip_comments_and_array_ws", "parse_key_value_pair", "key_value_rule", "loads"]
     statement := "For every bare key x and every m, loads('x = ' + '[' * (m + 1) + ']' * (m + 1)), called with fr frames left (sys.getrecursionlimit() minus the frames on the stack), returns {x: m + 1 nested empty lists} exactly when 2m + 7 <= fr, and raises RecursionError('maximum recursion depth exceeded') otherwise: each array level takes two frames (parse_value, parse_array)."
@@ -2034,6 +2057,29 @@ def entries : List Entry := [
     statement := "With at least three frames left: for every text without ''' and without control characters other than tab and newline, an optional newline after the opening ''' (trimmed) and one or two ''' before the closing ''' (kept), parse_value returns the text and the position after the quotes; without a closing ''' it raises 'Expected \"'''\"' at the end of the document; a control character other than tab or newline before the closing quotes raises 'Found invalid character' there."
     source := "TOML 1.1 spec, String (multi-line literal strings; 1 or 2 single quotes next to the delimiters)", status := .proven
     prop := ``Toml.MultilineLiteralSpec, thm := some ``Toml.multilineLiteralSpec_proven }
+,
+  { id := "textlibs-email-dtext-qp-defect", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["get_dtext"]
+    statement := "Whenever get_dtext returns a token whose text is shorter than the text it consumed (a quoted pair was unquoted), the token carries an ObsoleteHeaderDefect."
+    source := "get_dtext docstring :1582-1591 ('If there were quoted-printables, an ObsoleteHeaderDefect is added to the returned token's defect list')", status := .refuted
+    prop := ``PyLean.TextLibs.Email.DtextQpDefect, thm := some ``PyLean.TextLibs.Email.dtextQpDefect_refuted
+    bug := some "textlibs-email-ptext-had-qp"
+    notes := "'a\\b': get_dtext returns ValueTerminal('ab', 'ptext') with no defect (dtext_qp), because had_qp is only set for an escaped backslash." }
+,
+  { id := "textlibs-email-comment-spec", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["get_comment", "get_qp_ctext", "Comment.__str__", "Comment.quote", "Comment.content",
+      "make_parenthesis_pairs", "_get_ptext_to_endchars", "get_fws"]
+    statement := "For every canonical comment body b (text escaped with make_parenthesis_pairs, with nested comments in canonical form) and rest r, get_comment('(' + b + ')' + r) returns r and a comment whose str() is '(' + b + ')', whose content is b with its top-level text unescaped, and whose elements are WhiteSpaceTerminals or nested comments; a comment the value ends inside gets 'end of header inside comment' and its ')' in str(); a non-empty value not starting with '(' raises HeaderParseError(\"expected '(' but found '<value>'\")."
+    source := "get_comment docstring :1287-1291 (ccontent = ctext / quoted-pair / comment; nested comments handled here); get_qp_ctext docstring :1197-1206 (a WhiteSpaceTerminal); Comment.content (module docstring :51-52); :1292-1294, :1305-1308", status := .proven
+    prop := ``PyLean.TextLibs.Email.CommentSpec, thm := some ``PyLean.TextLibs.Email.commentSpec_proven
+    notes := "Bodies are CB: text, or text, a nested comment and another body. Nested comments go through get_comment's recursion (:1300-1301) and Comment.quote's comment branch (:297-298); text runs through get_qp_ctext, which must stop at an unescaped '(' as well as ')'." }
+,
+  { id := "textlibs-email-unstructured-encoded-words", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["get_unstructured", "get_encoded_word", "EWWhiteSpaceTerminal.__str__", "TokenList.__str__"]
+    statement := "For every list of encoded words =?tok?= that _ew.decode decodes (no ?= inside tok) separated by runs of whitespace, get_unstructured returns a token list with no defects whose elements are the EncodedWords with an EWWhiteSpaceTerminal between each two, and whose str() is the decoded texts run together."
+    source := "RFC 2047 section 6.2 ('linear-white-space that separates a pair of adjacent encoded-words is ignored'); :1168-1180", status := .proven
+    prop := ``PyLean.TextLibs.Email.UnstructuredEncodedWords, thm := some ``PyLean.TextLibs.Email.unstructuredEncodedWords_proven
+    notes := "_ew.decode is any function that accepts these words; the decoded texts are arbitrary. Pins get_encoded_word's split at the closing ?= and the rest it returns, the EncodedWord token, and the EWWhiteSpaceTerminal replacement of :1175-1178." }
 ]
 
 end PyLean.TextLibs
