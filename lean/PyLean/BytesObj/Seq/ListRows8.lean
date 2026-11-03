@@ -103,7 +103,7 @@ def ListInitIterable : Prop :=
     (listInit o (some (.fast s))).2 = none ∧ (listInit o (some (.fast s))).1.items = s ∧
     listVectorcall [.fast s] 0 = .ok (listInit (LObj.empty : LObj α) (some (.fast s))).1 ∧
     ((listVectorcall [.fast s] 0).map LObj.items = .ok s) ∧
-    listVectorcall [(.notIterable name : ExtArg α)] 0 = .error (.typeError s!"'{name}' object is not iterable") ∧
+    listVectorcall [(.notIterable name : ExtArg α)] 0 = .error (.typeError s!"'{trunc200 name}' object is not iterable") ∧
     listRichcompareAny E cmp final fuel op (some v) none = none ∧
     listRichcompareAny E cmp final fuel op none (some v) = none ∧
     listRichcompareAny E cmp final fuel op (some v) (some s) = some (listRichcompare E cmp final fuel op v s)

@@ -3,6 +3,7 @@ import PyLean.ListSort.Model
 import PyLean.ListSort.Compare
 import PyLean.ListSort.Minrun
 import PyLean.ListSort.FallibleBridge
+import PyLean.ListSort.Modified
 
 /-!
 Differential-testing handler for `listsort` cases (`"mod": "listsort"`).
@@ -86,6 +87,26 @@ def fallbackOf (gt : String) (rich : Py (RichRes Bool)) : Py Bool :=
   | .ok (.bool b) => .ok b
   | .ok (.other o) => isTrueOf gt o
 
+/-- What the twin's `M.__lt__` does to the list it sorts: `add` is `append(0)`, `clear` is `clear()`
+(nothing on the empty list without an array that `list_sort_impl` leaves), `pop` is `pop()` on a
+non-empty list (the generator only pops after an `add`), which frees the array when it empties it. -/
+def viewEff (name : String) (v : LView Int) : LView Int :=
+  match name with
+  | "add" => { items := v.items ++ [0], allocated := max v.allocated (v.items.length + 1 : Int) }
+  | "clear" => if v.items = [] ∧ v.allocated ≤ 0 then v else { items := [], allocated := 0 }
+  | "pop" =>
+    let items := v.items.dropLast
+    { items := items, allocated := if items = [] then 0 else v.allocated }
+  | _ => v
+
+/-- The effects of the call number `at`, in order. -/
+def callEff (at_ : Nat) (effs : List String) : Nat → LView Int → LView Int := fun k v =>
+  if k = at_ then effs.foldl (fun v e => viewEff e v) v else v
+
+def encExc : Option PyExc → Json
+  | none => Json.null
+  | some e => toJson e.className
+
 def run (fn : String) (j : Json) : Except String Json := do
   match fn with
   | "sort" | "plain" =>
@@ -121,6 +142,26 @@ def run (fn : String) (j : Json) : Except String Json := do
       | none => Json.null
       | some ex => toJson ex.className
     return Json.mkObj [("ok", Json.arr #[encList r, en])]
+  | "cmpmut" =>
+    let a ← getIntList j "a"
+    let bad ← getInt j "bad"
+    let rev ← getBool j "reverse"
+    let at_ ← getNat j "at"
+    let effs ← (← (← field j "eff").getArr?).toList.mapM (fun e => e.getStr?)
+    let lt : PLt Int := fun x y =>
+      if x = bad ∨ y = bad then .error (.named "KeyError" "~bad") else .ok (decide (x < y))
+    match ← getBool j "key" with
+    | false =>
+      let (r, e) := listSortImplFx lt (callEff at_ effs) a rev
+      return Json.mkObj [("ok", Json.arr #[encList r, encExc e])]
+    | true =>
+      let kmut ← getBool j "kmut"
+      let kbad ← getInt j "kbad"
+      let key : Int → LView Int → Py Int × LView Int := fun x u =>
+        let u := if kmut then viewEff "add" u else u
+        if x = kbad then (.error (.named "IndexError" "~key"), u) else (.ok x, u)
+      let (r, e) := listSortKeyImplFx lt key (callEff at_ effs) a rev
+      return Json.mkObj [("ok", Json.arr #[encList r, encExc e])]
   | "evil" =>
     let a ← getIntList j "a"
     let mode ← getStr j "mode"

@@ -270,11 +270,17 @@ the list under test as `El` does, then return `v`. -/
 def ixFn (v : Int) (eff : String) : St → Py Int × St := fun o =>
   if eff = "bad" then (.error (.valueError "idx"), o) else (.ok v, applyEff (some eff) o)
 
-/-- An index argument as a subscript: `{"ix": "int"|"obj"|"str"|"float", "v": n, "eff": e}`. -/
+/-- The twin's `UNAME`: 101 copies of `é`, 202 bytes of UTF-8. -/
+def uName : String := String.ofList (List.replicate 101 'é')
+
+/-- An index argument as a subscript: `{"ix": "int"|"obj"|"uniobj"|"str"|"float"|"uni", "v": n,
+"eff": e}`. -/
 def jSubItem (j : Json) : Except String (SubItem DEl) := do
   match ← getStr j "ix" with
   | "int" => return .int (← (← field j "v").getInt?)
   | "obj" => return .index "Ix" (ixFn (← (← field j "v").getInt?) (← getStr j "eff"))
+  | "uniobj" => return .index uName (ixFn (← (← field j "v").getInt?) (← getStr j "eff"))
+  | "uni" => return .other uName
   | k => return .other k
 
 /-- An index argument of `l.index`. -/
@@ -282,6 +288,8 @@ def jIdxArg (j : Json) : Except String (IdxArg DEl) := do
   match ← getStr j "ix" with
   | "int" => return .int (← (← field j "v").getInt?)
   | "obj" => return .index "Ix" (ixFn (← (← field j "v").getInt?) (← getStr j "eff"))
+  | "uniobj" => return .index uName (ixFn (← (← field j "v").getInt?) (← getStr j "eff"))
+  | "uni" => return .notIndex uName
   | k => return .notIndex k
 
 def jOptIdxArg (j : Option Json) : Except String (Option (IdxArg DEl)) :=

@@ -195,7 +195,7 @@ passes, as `.inl`), else `TypeError` with `Py_TYPE(bb)->tp_name`. -/
 def listConcatAny (a : List α) (bb : Sum (List α) String) : Py (LObj α) :=
   match bb with
   | .inl b => listConcatLH a b
-  | .inr name => .error (.typeError s!"can only concatenate list (not \"{name}\") to list")
+  | .inr name => .error (.typeError s!"can only concatenate list (not \"{trunc200 name}\") to list")
 
 /-- `a * n`, `list_repeat_lock_held`, listobject.c:840-880, with `list_new_prealloc`
 failing like `PyMem_New` for an output past `PY_SSIZE_T_MAX / 8`. -/
@@ -444,7 +444,7 @@ def listExtend (self : LObj α) : ExtArg α → LRes α
   | .dictItems keys values pair => listExtendDictItems self keys values pair
   | .iter src => listExtendIter self src
   | .iterFx src fuel => listExtendIterFx self src fuel
-  | .notIterable name => (self, some (.typeError s!"'{name}' object is not iterable"))
+  | .notIterable name => (self, some (.typeError s!"'{trunc200 name}' object is not iterable"))
 
 /-- An iterable by what the type tests of `_list_extend` (listobject.c:1477-1532) look at. `exact` is
 the exact-type check (`PyList_CheckExact`, `PyTuple_CheckExact`, `PyAnySet_CheckExact`,
@@ -856,9 +856,6 @@ where
     else .ok { self with items := storeLoopL self.items step seq start }
 
 /-! ## Subscripts: the type dispatch -/
-
-/-- `%.200s` of a type name: at most 200 characters (the names here are ASCII). -/
-def trunc200 (s : String) : String := String.ofList (s.toList.take 200)
 
 /-- `l[item]`, `l[item] = v` and `del l[item]` by what `list_subscript` and
 `list_ass_subscript_lock_held` test: `_PyIndex_Check(item)` (listobject.c:3715, :3758) holds for an

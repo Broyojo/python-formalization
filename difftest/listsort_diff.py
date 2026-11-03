@@ -84,6 +84,33 @@ RES = {"true": True, "false": False, "notimpl": NotImplemented, "one": 1, "zero"
        "full": [0], "empty": [], "none": None, "badbool": B()}
 
 
+MUT = [None, 0, None]   # [the list being sorted, calls so far, the case]
+
+
+class M:
+    """An item whose `__lt__` changes the list being sorted at one call, and raises on `bad`."""
+    __slots__ = ("v",)
+
+    def __init__(self, v):
+        self.v = v
+
+    def __lt__(self, other):
+        n = MUT[1]
+        MUT[1] += 1
+        c = MUT[2]
+        if n == c["at"]:
+            for e in c["eff"]:
+                if e == "add":
+                    MUT[0].append(0)
+                elif e == "clear":
+                    MUT[0].clear()
+                elif e == "pop":
+                    MUT[0].pop()
+        if self.v == c["bad"] or other.v == c["bad"]:
+            raise KeyError("bad")
+        return self.v < other.v
+
+
 def answer(mode):
     if mode == "raise":
         raise ValueError("cmp")
@@ -219,6 +246,16 @@ def gen_case(rng):
             return {"mod": "listsort", "fn": "raise", "a": a, "bad": bad, "reverse": rng.random() < 0.3}
         return {"mod": "listsort", "fn": "keyraise", "a": a, "bad": bad, "mut": rng.random() < 0.5,
                 "reverse": rng.random() < 0.3}
+    if r < 0.18:
+        a = gen_list(rng)
+        bad = rng.choice(a) if a and rng.random() < 0.3 else 10 ** 9
+        case = {"mod": "listsort", "fn": "cmpmut", "a": a, "bad": bad, "reverse": rng.random() < 0.3,
+                "at": rng.choice([0, 1, 2, 3, rng.randrange(0, 60), 10 ** 6]),
+                "eff": rng.choice([[], ["add"], ["clear"], ["add", "clear"], ["add", "pop"],
+                                   ["add", "pop", "clear"]]),
+                "key": rng.random() < 0.4, "kmut": rng.random() < 0.3,
+                "kbad": rng.choice(a) if a and rng.random() < 0.2 else 10 ** 9}
+        return case
     if r < 0.26:
         mode = rng.choice(["noisy", "noisy", "hash"])
         m = rng.choice([5, 11, 37, 101, 1009, 10007] if mode == "noisy" else [3, 5, 8, 16, 101])
@@ -330,6 +367,28 @@ def run_python(c):
         except (KeyError, ValueError) as e:
             exc = type(e).__name__
         return {"ok": [l, exc]}
+    if fn == "cmpmut":
+        # the comparison changes the list at call `at` and raises on `bad`; with `key`, the keys are
+        # `M` objects, and the key function appends to the list (`kmut`) and raises on `kbad`
+        l = list(c["a"]) if c["key"] else [M(x) for x in c["a"]]
+        MUT[0], MUT[1], MUT[2] = l, 0, c
+
+        def key(x):
+            if c["kmut"]:
+                l.append(0)
+            if x == c["kbad"]:
+                raise IndexError("key")
+            return M(x)
+        try:
+            if c["key"]:
+                l.sort(key=key, reverse=c["reverse"])
+            else:
+                l.sort(reverse=c["reverse"])
+            exc = None
+        except (KeyError, ValueError, IndexError) as e:
+            exc = type(e).__name__
+        MUT[0] = None
+        return {"ok": [l if c["key"] else [m.v for m in l], exc]}
     if fn == "evil":
         lt = EVIL[c["mode"]]
         m = c["m"]

@@ -675,6 +675,7 @@ listsort-key	proven	Objects/listobject.c	list.sort
 listsort-long-compare	proven	Objects/listobject.c	unsafe_long_compare,unsafe_object_compare,long_compare,long_richcompare
 listsort-object-compare	proven	Objects/listobject.c	unsafe_object_compare
 listsort-presort-select	proven	Objects/listobject.c	list_sort_impl
+listsort-sort-modified	proven	Objects/listobject.c	list_sort_impl
 listsort-fallible-agree	proven	Objects/listobject.c	binarysort,count_run,gallop_left,gallop_right,merge_lo,merge_hi,merge_at,list_sort_impl
 listsort-perm-on-error	proven	Objects/listobject.c	binarysort,count_run,gallop_left,gallop_right,merge_lo,merge_hi,merge_at,list_sort_impl
 listsort-fail-exits	proven	Objects/listobject.c	gallop_left,gallop_right,merge_at,merge_lo,merge_hi,binarysort,count_run
