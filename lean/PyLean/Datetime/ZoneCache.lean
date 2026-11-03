@@ -13,8 +13,8 @@ Scope of `newPy`/`newC`/`runPy`/`runC` (the cases outside it are modelled furthe
 refuted in ZoneProps.lean):
 * the base class `ZoneInfo`. For a subclass the C strong cache is a no-op
   (:2520-2522, :2547-2549, :2584-2586: "Strong cache currently only implemented for base
-  class"), while Python gives each subclass its own (`__init_subclass__`, :36-38); that is
-  `runSubPy`/`runSubC` and `CacheTwinsSubclass`;
+  class"), while Python gives each subclass its own (`__init_subclass__`, :36-38); subclasses
+  are `ZCls` with `base = false` in `ZoneCacheErr.lean` (`CacheTwinsSubclass`);
 * keys are compared by a decidable equality that cannot raise, as for the documented `str`
   keys. C compares with `PyObject_RichCompareBool` (:2441), Python through the dict's hash
   and `__eq__`. A key whose `__eq__` re-enters `clear_cache()` is `findInStrongC`
@@ -51,7 +51,7 @@ past 8 entries the oldest is popped. -/
 def newPy (loads : K → Bool) (st : CacheSt K) (k : K) : Option (CacheSt K) :=
   let weak? : Option (List K) :=
     if k ∈ st.weak then some st.weak
-    else if loads k then some (k :: st.weak) else none
+    else if loads k then some (st.weak ++ [k]) else none
   weak?.map fun weak =>
     let strong := st.strong.erase k ++ [k]
     let strong := if strong.length > 8 then strong.tail else strong
@@ -68,7 +68,7 @@ def newC (loads : K → Bool) (st : CacheSt K) (k : K) : Option (CacheSt K) :=
   else
     let weak? : Option (List K) :=
       if k ∈ st.weak then some st.weak
-      else if loads k then some (k :: st.weak) else none
+      else if loads k then some (st.weak ++ [k]) else none
     weak?.map fun weak => ⟨(k :: st.strong).take 8, weak⟩
 
 /-- `ZoneInfo.clear_cache`, _zoneinfo.py:94-103: per key, the weak cache then the strong one. -/
@@ -114,41 +114,6 @@ def runC (loads : K → Bool) : CacheSt K → List (CacheOp K) → CacheSt K × 
     match stepC loads st op with
     | some st' => let (s, r) := runC loads st' ops; (s, false :: r)
     | none => let (s, r) := runC loads st ops; (s, true :: r)
-
-/-! ### Subclasses -/
-
-/-- `ZoneInfo.__init_subclass__`, _zoneinfo.py:36-38: a fresh strong cache, then
-`weakref.WeakValueDictionary()` (`wvd`, which raises if the lookup or call does). -/
-def initSubclassPy (wvd : Py Unit) : Py (CacheSt K) := wvd.map fun _ => ⟨[], []⟩
-
-/-- C `zoneinfo_init_subclass`, Modules/_zoneinfo.c:2622-2637, with `new_weak_cache`
-(:2592-2603): `weakref.WeakValueDictionary()` stored as `cls._weak_cache`; there is no strong
-cache for a subclass. -/
-def initSubclassC (wvd : Py Unit) : Py (CacheSt K) := wvd.map fun _ => ⟨[], []⟩
-
-/-- `zoneinfo_ZoneInfo_impl` on a subclass: `zone_from_strong_cache` misses at once
-(:2520-2522), `get_weak_cache` reads `cls._weak_cache` (:299-301), and `update_strong_cache`
-returns without inserting (:2547-2549). The Python `__new__` is `newPy` on the subclass's own
-caches. -/
-def newCSub (loads : K → Bool) (st : CacheSt K) (k : K) : Option (CacheSt K) :=
-  let weak? : Option (List K) :=
-    if k ∈ st.weak then some st.weak
-    else if loads k then some (k :: st.weak) else none
-  weak?.map fun weak => ⟨st.strong, weak⟩
-
-/-- `ZoneInfo(k)` calls on a subclass, after its creation; the weak cache loses every key the
-strong cache does not hold after each call (refcounting frees the instance at once). -/
-def runSubPy (loads : K → Bool) (st : CacheSt K) : List K → CacheSt K
-  | [] => st
-  | k :: ks =>
-    let st := (newPy loads st k).getD st
-    runSubPy loads ⟨st.strong, st.weak.filter (· ∈ st.strong)⟩ ks
-
-def runSubC (loads : K → Bool) (st : CacheSt K) : List K → CacheSt K
-  | [] => st
-  | k :: ks =>
-    let st := (newCSub loads st k).getD st
-    runSubC loads ⟨st.strong, st.weak.filter (· ∈ st.strong)⟩ ks
 
 /-! ### Re-entry through key finalizers and comparisons (C) -/
 

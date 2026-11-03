@@ -1,6 +1,6 @@
 id: datetime-zoneinfo-fromutc-static-footer
 title: "zoneinfo: pure-Python fromutc() adds the last transition's offset instead of the footer's after the last transition (two or more transitions, fixed-offset footer)"
-priority: P3
+priority: P4
 kind: twin-divergence
 module: datetime
 files: [Lib/zoneinfo/_zoneinfo.py]
@@ -17,9 +17,12 @@ summary: |
   UTC becomes 00:00 in C and 02:00 in Python, although Python's own utcoffset() of that result is
   +00:00, so the UTC round trip loses two hours.
 likelihood: |
-  Low for system tzdata (the footer normally matches the last transition's type), but files
-  whose footer differs from the last transition (zone rule changes, hand-written or truncated
-  'slim' files) exist; it affects pure-Python users (PyPy) only.
+  Very low. zic writes a footer that agrees with the last transition's type, so system tzdata
+  and the tzdata package never have a fixed-offset footer that differs from it; it takes a
+  hand-written or edited TZif file, and only the pure-Python twin (PyPy, or no _zoneinfo) is
+  affected. P4 rather than P3 for that reason (lowered on review, 2026-11-03): the code is
+  plainly wrong (gh-159706 fixed the one-transition case of the same branch), but no real file
+  reaches it.
 maybe_intended: |
   No: gh-159706 fixed the same branch for a single transition (:146-148) but the `num_trans > 1`
   test above it still wins for two or more.

@@ -49,9 +49,37 @@ structure TTI where
   tzname : Bytes
   deriving Repr, DecidableEq, Inhabited
 
-/-- `_ttinfo.__eq__` (:408-413) and C `ttinfo_eq` (:934-953): field by field. The fields are a
-timedelta, a timedelta and a str, whose comparisons cannot raise. -/
-def ttiEq (a b : TTI) : Bool := a.utcoff == b.utcoff && a.dstoff == b.dstoff && a.tzname == b.tzname
+/-- C `ttinfo_eq`, Modules/_zoneinfo.c:933-953, over its three `PyObject_RichCompareBool`
+results (`-1` error, `0`, `1`), in the order it makes them: `utcoff`, then `dstoff`, then
+`tzname`, each made only when the one before gave `1` (`rv < 1` jumps to `end`). -/
+def ttinfoEqWithC (cu cd cn : Unit → Int) : Int :=
+  let rv := cu ()
+  if rv < 1 then rv
+  else
+    let rv := cd ()
+    if rv < 1 then rv
+    else cn ()
+
+/-- `_ttinfo.__eq__`, Lib/zoneinfo/_zoneinfo.py:408-413: `self.utcoff == other.utcoff and
+self.dstoff == other.dstoff and self.tzname == other.tzname`, left to right, stopping at the
+first false operand. Each operand is the truth of that comparison in a monad `m` (for `Py`,
+the comparison or its `bool()` may raise). -/
+def ttinfoEqWithPy {m : Type → Type} [Monad m] (pu pd pn : m Bool) : m Bool := do
+  if !(← pu) then return false
+  if !(← pd) then return false
+  pn
+
+/-- `ttinfo_eq` on two `_ttinfo`s: the fields are two `timedelta`s and a `str`, whose
+comparisons cannot fail. -/
+def ttiEqC (a b : TTI) : Int :=
+  ttinfoEqWithC (fun _ => if a.utcoff = b.utcoff then 1 else 0)
+    (fun _ => if a.dstoff = b.dstoff then 1 else 0)
+    (fun _ => if a.tzname = b.tzname then 1 else 0)
+
+/-- `_ttinfo.__eq__` on two `_ttinfo`s (comparisons that cannot fail: the identity monad). -/
+def ttiEqPy (a b : TTI) : Bool :=
+  ttinfoEqWithPy (m := Id) (pure (decide (a.utcoff = b.utcoff))) (pure (decide (a.dstoff = b.dstoff)))
+    (pure (decide (a.tzname = b.tzname)))
 
 /-- A transition-date rule, with the fields as stored. -/
 inductive TRule where

@@ -165,7 +165,7 @@ def fixedPy (ttinfoList : List TTI) (tzAfter : After) : Bool :=
   if ttinfoList.length > 1 ∨ !isTti then false
   else if ttinfoList = [] then true
   else match tzAfter with
-    | .tti t => ttiEq (ttinfoList.getD 0 default) t
+    | .tti t => ttiEqPy (ttinfoList.getD 0 default) t   -- `_ttinfo_list[0] == tz_after`
     | .tzstr _ => false
 
 /-- `ZoneInfo._load_file`, _zoneinfo.py:229-300, after `_common.load_data`.
@@ -266,11 +266,12 @@ def ruleC (tzStr : Option Bytes) (fallback : Py CRule) : Py CRule :=
   let hasTzStr : Bool := match tzStr with | some s => !s.isEmpty | none => false
   if hasTzStr then parseTzStrC (tzStr.getD []) else fallback
 
-/-- `self->fixed_offset`, :1240-1255. -/
+/-- `self->fixed_offset`, :1240-1255: `constant_offset = ttinfo_eq(...)`, whose `< 0` error
+branch (:1250-1251) cannot be taken on two `_ttinfo`s (`ttiEqC_range`). -/
 def fixedC (ttinfoList : List TTI) (rule : CRule) : Bool :=
   if ttinfoList.length > 1 ∨ !rule.stdOnly then false
   else if ttinfoList = [] then true
-  else ttiEq (ttinfoList.getD 0 default) rule.std
+  else decide (ttiEqC (ttinfoList.getD 0 default) rule.std = 1)
 
 /-- C `load_data`, Modules/_zoneinfo.c:966-1308, after `_common.load_data` returned `d`.
 `PyLong_AsLongLong` and `PyLong_AsLong` cannot fail on the 64- and 32-bit values `struct`

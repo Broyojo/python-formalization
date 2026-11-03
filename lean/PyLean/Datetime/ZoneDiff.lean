@@ -1,6 +1,7 @@
 import PyLean.DiffCore
 import PyLean.Datetime.ZoneLoad
 import PyLean.Datetime.ZoneCache
+import PyLean.Datetime.ZoneCacheErr
 
 /-!
 Differential-testing runner for `zoneinfo` cases (`fn` starting with `zi_`), dispatched from
@@ -79,6 +80,62 @@ def getOps (j : Json) : Except String (List (CacheOp Nat)) := do
       pure (.clearKeys ks)
     | t => throw s!"bad op {t}"
 
+/-- Key behaviour for `zi_cerr_*`: kind 0 a plain `str`, 1 a `str` subclass whose `__eq__`
+raises `RuntimeError`, 2 the same with `__hash__` returning 0. A comparison involving a kind 1
+or 2 key raises (its `__eq__`, or its reflected one, runs first). -/
+def cerrOps (kinds loads : List Int) : KeyOps Nat :=
+  let kind (k : Nat) : Int := kinds.getD k 0
+  ⟨fun k => .ok (if kind k = 2 then 0 else (k : Int) + 1),
+   fun a b => if kind a ≠ 0 ∨ kind b ≠ 0 then .error (.named "RuntimeError" "eq") else .ok (decide (a = b)),
+   fun k => loads.contains (k : Int)⟩
+
+def getErrOps (j : Json) : Except String (List (ZOp Nat)) := do
+  let arr ← (← field j "ops").getArr?
+  arr.toList.mapM fun o => do
+    let a ← o.getArr?
+    let tag ← (a.getD 0 .null).getStr?
+    match tag with
+    | "get" => pure (.get (← (a.getD 1 .null).getNat?))
+    | "clear" => pure .clear
+    | "keys" => do
+      let ks ← (a.getD 1 .null).getArr?
+      let ks ← ks.toList.mapM (·.getNat?)
+      let e ← (a.getD 2 .null).getBool?
+      pure (.clearKeys ks (if e then some (.valueError "it") else none))
+    | "del" => pure .delWeak
+    | t => throw s!"bad op {t}"
+
+/-- Refcounting frees an instance as soon as no strong entry holds it: its weak entries go. -/
+def sweepZ (c : ZCls Nat) : ZCls Nat :=
+  let held (p : Nat × Inst Nat) : Bool := c.strong.any (·.2 = p.2)
+  { c with weak := c.weak.map (·.filter held), baseWeak := c.baseWeak.filter held }
+
+/-- Instances are reported by order of first appearance (results, then strong values), as
+the harness numbers the objects it sees. -/
+def runCerr (fn : String) (j : Json) : Except String Json := do
+  let kinds ← intList j "kinds"
+  let loads ← intList j "loads"
+  let sub ← (← field j "sub").getBool?
+  let ops ← getErrOps j
+  let o := cerrOps kinds loads
+  let c0 : ZCls Nat := ⟨!sub, [], some [], [], 0⟩
+  let isPy := fn = "zi_cerr_py"
+  let step := if isPy then stepErrPy o else stepErrC o
+  let (c, outs) := ops.foldl (fun (c, acc) op =>
+    let (c', r) := step c op
+    (sweepZ c', acc ++ [r])) (c0, ([] : List (Py (Option (Inst Nat)))))
+  let seen : List (Inst Nat) := outs.filterMap fun r => match r with | .ok (some i) => some i | _ => none
+  let order := (seen ++ c.strong.map (·.2)).eraseDups
+  let canon (i : Inst Nat) : Nat := order.idxOf i
+  let enc (r : Py (Option (Inst Nat))) : Json :=
+    match r with
+    | .ok (some i) => Json.mkObj [("ok", Json.arr #[toJson i.1, toJson (canon i)])]
+    | .ok none => Json.mkObj [("ok", Json.null)]
+    | .error e => Json.mkObj [("exc", toJson e.className)]
+  let alive := (c.strong.map fun p => canon p.2).eraseDups.mergeSort (· ≤ ·)
+  let strong := if isPy then toJson (c.strong.map fun p => [p.1, canon p.2]) else Json.null
+  return Json.mkObj [("ok", Json.arr #[Json.arr (outs.map enc).toArray, toJson alive, strong])]
+
 def runZone (fn : String) (j : Json) : Except String Json := do
   match fn with
   | "zi_data" => return encPy encData (loadData (← getBytes j "data"))
@@ -106,6 +163,7 @@ def runZone (fn : String) (j : Json) : Except String Json := do
       | none => (st, acc ++ [true])) ((⟨[], []⟩ : CacheSt Nat), ([] : List Bool))
     let keys := if fn = "zi_cache_py" then st.strong.reverse else st.strong.mergeSort (· ≤ ·)
     return Json.mkObj [("ok", Json.arr #[toJson keys, toJson raised])]
+  | "zi_cerr_py" | "zi_cerr_c" => runCerr fn j
   | _ => throw s!"unknown zoneinfo fn {fn}"
 
 end PyLean.Datetime.Zone
