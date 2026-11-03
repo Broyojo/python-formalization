@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.BytesObj.Bytes.Specs4
-import PyLean.BytesObj.Bytes.HeapProps2
+import PyLean.BytesObj.Bytes.HeapProps3
 
 /-! Registry entries for bytes (Objects/bytesobject.c, Objects/bytes_methods.c) and
 bytearray (Objects/bytearrayobject.c). -/
@@ -716,6 +716,59 @@ def entries : List Entry := [
     statement := "hex(sep, n) with a separator that runs no Python code: a one-byte bytes or one-character str below 128 gives bytes.hex of the contents with it, grouped by n; another length is ValueError('sep must be length 1.'), a non-ASCII one ValueError('sep must be ASCII.'), an object without a length the TypeError of len(); the object is left as it was."
     source := "twin: bytes.hex; Doc/library/stdtypes.rst bytes.hex; Python/pystrhex.c:118-150", status := .proven
     prop := ``BaHexSepSpec, thm := some ``baHexSepSpec_proven },
+  { id := "bytesobj-bytearray-ass-extended", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_ass_subscript_lock_held", "bytearray_ass_subscript"]
+    statement := "The extended-slice branch: a value of the slice's non-zero length is stored and succeeds even with exports; another non-zero length is the ValueError naming both sizes; an empty value deletes, which with exports is BufferError even for an empty slice, and without exports an empty slice changes nothing."
+    source := "bytearrayobject.c:880-939", status := .proven
+    prop := ``BaAssExtendedSpec, thm := some ``baAssExtendedSpec_proven },
+  { id := "bytesobj-bytearray-ass-extended-ok", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_ass_subscript_lock_held", "bytearray_ass_subscript"]
+    statement := "b[s] = v for an extended slice and a non-empty value of the slice's length succeeds on every object and slice, with the contents list[s] = v leaves; any other non-zero length raises the ValueError."
+    source := "Doc/library/stdtypes.rst s[i:j:k] = t; bytearrayobject.c:924-937", status := .proven
+    prop := ``BaAssSliceExtOk, thm := some ``baAssSliceExtOk_proven },
+  { id := "bytesobj-bytearray-ass-extended-del", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_ass_subscript_lock_held", "bytearray_ass_subscript"]
+    statement := "del b[s] for an extended slice of an object without exports succeeds for every slice (the compaction loop, the tail move and the shrink stay in bounds) and leaves what del list[s] leaves."
+    source := "Doc/library/stdtypes.rst del s[i:j:k]; bytearrayobject.c:881-922", status := .proven
+    prop := ``BaAssSliceDelOk, thm := some ``baAssSliceDelOk_proven },
+  { id := "bytesobj-bytearray-ass-values", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_ass_subscript_lock_held", "bytearray_ass_subscript"]
+    statement := "b[s] = v for a list of ints, a class with __buffer__ (its __buffer__ then __release_buffer__) and self: the slice is unpacked once, the value copied with PyByteArray_FromObject, and the slice unpacked again for the assignment of the copy."
+    source := "bytearrayobject.c:828-862", status := .proven
+    prop := ``BaAssSubValues, thm := some ``baAssSubValues_proven
+    notes := "Scope: callbacks act on self only; a Python __buffer__ returns memoryview(bytes(...))." },
+  { id := "bytesobj-bytearray-init-more", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray___init___impl"]
+    statement := "__init__: encoding or errors without a string argument are the TypeErrors; the list fast path's bad value empties the object and raises ValueError; a list of non-int items falls back to the iterator loop; a tuple takes the fast path; a generator's items are all appended in order; a class with __buffer__ gives its bytes, or BufferError when its callback took a view, with __release_buffer__ run after."
+    source := "docstring, bytearrayobject.c:2954-2966; bytearrayobject.c:1003-1181", status := .proven
+    prop := ``BaInitPaths, thm := some ``baInitPaths_proven
+    notes := "Scope: callbacks act on self only; a Python __buffer__ returns memoryview(bytes(...))." },
+  { id := "bytesobj-bytearray-resize-storage", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_resize_storage"]
+    statement := "On the physical buffer, the memmoves of bytearray_resize_storage leave ob_start == ob_bytes with the old contents there when _PyBytes_ResizeKeepOnError fails (also for a shrink), and the bytes the resize keeps at the start when it succeeds."
+    source := "invariant: a failed resize keeps the contents; bytearrayobject.c:227-260", status := .proven
+    prop := ``BaResizeStorageSpec, thm := some ``baResizeStorageSpec_proven },
+  { id := "bytesobj-bytearray-resize-left-mirror", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_resize_storage", "bytearray_resize_lock_held"]
+    statement := "baResizeLeft, what a failed resize leaves, is the state the mirrored failure path of bytearray_resize_storage leaves whenever the storage step is reached and fails."
+    source := "bytearrayobject.c:227-260, :302-336", status := .proven
+    prop := ``BaResizeLeftMirror, thm := some ``baResizeLeftMirror_proven },
+  { id := "bytesobj-bytearray-dealloc", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_dealloc"]
+    statement := "bytearray_dealloc prints the SystemError exactly when exports remain; from a fresh object every sequence of Python statements leaves one export per view Python holds, so an object Python drops prints nothing."
+    source := "invariant: views are the only exports Python code holds; bytearrayobject.c:1277-1288", status := .proven
+    prop := ``BaDeallocSpec, thm := some ``baDeallocSpec_proven },
+  { id := "bytesobj-bytearray-tp-new", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_new"]
+    statement := "bytearray.__new__ ignores its arguments and gives an empty object on the empty bytes, with no storage and no exports, for any type; a failed allocation is MemoryError."
+    source := "bytearrayobject.c:959-971", status := .proven
+    prop := ``BaTpNewSpec, thm := some ``baTpNewSpec_proven },
+  { id := "bytesobj-bytearray-size-null", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["PyByteArray_Size"]
+    statement := "PyByteArray_Size(NULL) gives an error, as the documentation's 'after checking for a NULL pointer' says. Refuted: the body only asserts, and a release build dereferences NULL."
+    source := "Doc/c-api/bytearray.rst:76-78", status := .refuted
+    prop := ``SizeChecksNull, thm := some ``sizeChecksNull_refuted
+    bug := some "bytesobj-bytearray-size-null-doc" },
   { id := "bytesobj-bytes-class-tables", pyFile := "Objects/bytes_methods.c"
     pyFns := ["_Py_bytes_isspace", "_Py_bytes_isalpha", "_Py_bytes_isalnum", "_Py_bytes_isdigit"]
     statement := "isspace, isalpha, isdigit and isalnum are 'non-empty and every byte in the class', for the exact byte ranges of pyctype.c."

@@ -180,4 +180,52 @@ def baDrain (seq : BA) : Nat → BAIter → List Int
     | (some v, it') => v :: baDrain seq k it'
     | (none, _) => []
 
+/-! ## `bytearray_resize_storage`, :227-260, on the physical buffer -/
+
+/-- `bytearray_resize_storage(self, new_size, alloc)`, :227-260. `mem` is `ob_bytes[0 ..
+ob_start - ob_bytes + Py_SIZE(self))`, the physical buffer up to the end of the data. When
+`ob_start != ob_bytes` the first `min(new_size, size)` bytes are moved to the start (:240-247); then
+`_PyBytes_ResizeKeepOnError` (`baStorageCheck`) either succeeds, leaving `ob_start == ob_bytes`, or
+fails, and for a shrink the remaining `size - new_size` bytes are moved down after the first ones
+(:250-255), so that `Py_SIZE` bytes from `ob_bytes` are the contents again. Returns the result, the
+object (its `data` read at `ob_start`, `Py_SIZE` long) and the buffer. The trailing NUL of :256 is
+past the contents and not modelled. -/
+def baResizeStorage (b : BA) (mem : List Int) (newSize alloc : Int) : Py Unit × BA × List Int :=
+  let size := b.size
+  let oldOff := b.offset
+  let step1 : Py (List Int) :=
+    if oldOff ≠ 0 then Sequences.memmove mem 0 oldOff (min newSize size) else .ok mem
+  match step1 with
+  | .error e => (.error e, b, mem)
+  | .ok mem1 =>
+    match baStorageCheck b.alloc alloc with
+    | .ok () => (.ok (), { b with offset := 0, data := mem1.take size.toNat }, mem1)
+    | .error e =>
+      let step2 : Py (List Int) :=
+        if oldOff ≠ 0 ∧ newSize < size then
+          Sequences.memmove mem1 newSize (oldOff + newSize) (size - newSize)
+        else .ok mem1
+      match step2 with
+      | .error e2 => (.error e2, { b with offset := 0, data := mem1.take size.toNat }, mem1)
+      | .ok mem2 => (.error e, { b with offset := 0, data := mem2.take size.toNat }, mem2)
+
+/-! ## `tp_new` -/
+
+/-- `bytearray_new`, :959-971 (`tp_new`): `PyType_GenericNew` fails only when the allocation does
+(`MemoryError`); otherwise, for any type (a subclass too) and whatever the arguments (they are
+`__init__`'s), the object is put on the empty `bytes` by `bytearray_reinit_from_bytes(self, 0)`, with
+no exports. -/
+def baTpNew (_args : List Obj) (allocFails : Bool) : Py BA :=
+  if allocFails then .error memoryError else .ok baNewObject
+
+
+/-! ## `PyByteArray_Size` on a `NULL` pointer -/
+
+/-- What a C caller gets from `PyByteArray_Size(o)` (:208-215) for `o = NULL` (`none`): the two `assert`s
+are compiled out of a release build, so `PyByteArray_GET_SIZE` dereferences `NULL`. A bytearray gives
+its size. -/
+def baSizeC : Option BA → Py Int
+  | none => .error (.named "CUndefinedBehaviour" "~NULL pointer dereference in PyByteArray_GET_SIZE")
+  | some b => .ok b.size
+
 end PyLean.BytesObj.Bytes

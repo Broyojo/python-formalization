@@ -1,0 +1,60 @@
+id: bytesobj-bytearray-size-null-doc
+title: "Docs say PyByteArray_Size checks for a NULL pointer; the body only asserts, so NULL crashes a release build"
+priority: P5
+kind: doc-mismatch
+module: bytesobj
+files: [Objects/bytearrayobject.c, Doc/c-api/bytearray.rst]
+functions: ["PyByteArray_Size"]
+summary: |
+  Doc/c-api/bytearray.rst:76-78 says PyByteArray_Size "Return[s] the size of bytearray after checking for a
+  NULL pointer" (the entry for PyByteArray_AsString, :81-84, says the same). The body,
+  Objects/bytearrayobject.c:208-215, is `assert(self != NULL); assert(PyByteArray_Check(self)); return
+  PyByteArray_GET_SIZE(self);`: there is no check in a release build, and PyByteArray_Size(NULL)
+  dereferences NULL (SIGSEGV on 3.15.2 and on main). The wording looks like it was written for an earlier
+  implementation; either the doc or the code should change.
+  Lean: SizeChecksNull (NULL gives an error rather than undefined behaviour) is refuted on baSizeC, the
+  model of PyByteArray_Size on a possibly NULL pointer (sizeChecksNull_refuted).
+likelihood: |
+  Very low: only C callers passing NULL, which is a caller bug anyway. A documentation fix is enough.
+maybe_intended: |
+  Likely: the C-API generally does not check for NULL arguments, and the asserts document the
+  precondition. The text "after checking for a NULL pointer" promises more than the code does.
+reproducer: |
+  import subprocess, sys
+  child = r'''
+  import ctypes
+  f = ctypes.pythonapi.PyByteArray_Size
+  f.argtypes = [ctypes.c_void_p]
+  f.restype = ctypes.c_ssize_t
+  try:
+      r = f(None)
+      print("returned", r, flush=True)
+  except Exception as e:
+      print("raised", type(e).__name__, e, flush=True)
+  '''
+  p = subprocess.run([sys.executable, "-c", child], capture_output=True, text=True)
+  print("child output:", p.stdout.strip(), "| returncode:", p.returncode)
+  if p.returncode < 0 and "returned" not in p.stdout and "raised" not in p.stdout:
+      print("REPRODUCED bytesobj-bytearray-size-null-doc")
+expected: |
+  As documented: a NULL argument is checked (an error return with an exception set), or the documentation
+  does not promise a check.
+observed: |
+  python3 3.15.2: the child dies with signal 11 (returncode -11). REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0, release build): the same. REPRODUCED.
+promised_by: |
+  Doc/c-api/bytearray.rst:76-78: "Return the size of bytearray after checking for a NULL pointer."
+cause: |
+  Objects/bytearrayobject.c:208-215: the NULL test is an assert, compiled out of release builds.
+possible_fix: |
+  Drop "after checking for a NULL pointer" from the PyByteArray_Size and PyByteArray_AsString entries (the
+  macro forms PyByteArray_GET_SIZE and PyByteArray_AS_STRING are documented as unchecked), or add a real
+  NULL check with PyErr_BadInternalCall.
+duplicates:
+  issues:
+    - {number: 77921, state: closed, relation: "a docs issue about PyByteArray_AsString's trailing null byte; not the NULL check"}
+  queries: ["PyByteArray_Size NULL", "checking for a NULL pointer", "PyByteArray_AsString NULL documentation"]
+  bugforge: "no entry (vendor/bugforge-results/README.md has no PyByteArray_Size or PyByteArray_AsString finding)"
+lean:
+  property: PyLean.BytesObj.Bytes.SizeChecksNull
+  theorem: PyLean.BytesObj.Bytes.sizeChecksNull_refuted
