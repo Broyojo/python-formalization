@@ -943,6 +943,126 @@ theorem finalizeClears_proven : FinalizeClears := by
     rw [e] at this; exact getElem?_of_drop_nil this
   rw [mainLoop_hdr_end (hR := hR9) hg4 (finalize_nil _ rfl) hr4 hend]
 
+/-- Dotted keys and headers, TOML 1.1 "Table" (a dotted key defines its tables; a sub-table not
+yet defined may still be declared): for all bare keys `a`, `b`, `c`, `d`, `x` with `x ≠ a`,
+`c ≠ d`, and boolean `X`, `loads('a.b.c=X\n[x]\n[a.b.d]')` gives
+`{a: {b: {c: X, d: {}}}, x: {}}`. `finalize_pending` marks `a` and `a.b` as defined one by one
+(`recursive=False`): marked recursively, `[a.b.d]` would raise "Cannot declare". With at least
+sixteen frames left. -/
+def FinalizeNotRecursive : Prop :=
+  ∀ (pf : ParseFloat) (maxK maxD : Nat) (tz : TzCache) (fr : Nat) (a b c d x : Str) (y : Bool),
+    bareOk a → bareOk b → bareOk c → bareOk d → bareOk x → x ≠ a → d ≠ c → 3 ≤ maxK → 16 ≤ fr →
+    loads pf maxK maxD tz fr (.str (a ++ 46 :: b ++ 46 :: c ++ 61 :: boolText y ++ 10 :: hdr x ++ 10 ::
+      hdr (a ++ 46 :: b ++ 46 :: d))) =
+      .ok [(a, .tbl [(b, .tbl [(c, .bool y), (d, .tbl [])])]), (x, .tbl [])]
+
+set_option maxHeartbeats 1600000 in
+theorem finalizeNotRecursive_proven : FinalizeNotRecursive := by
+  intro pf maxK maxD tz fr a b c d x y ha hb hc hd hx hxa hdc hk hfr
+  have hmax0 : ([] : List KPart).length + 1 ≤ (mkCfg pf maxK maxD tz).maxKeyParts := by simp [mkCfg]; omega
+  have hmax2 : [KPart.bare b, KPart.bare c].length + 1 ≤ (mkCfg pf maxK maxD tz).maxKeyParts := by
+    simp [mkCfg]; omega
+  have hmax2' : [KPart.bare b, KPart.bare d].length + 1 ≤ (mkCfg pf maxK maxD tz).maxKeyParts := by
+    simp [mkCfg]; omega
+  have hR9 : 9 ≤ fr - 1 := by omega
+  have hK3 : ∀ z, keyEnc (.bare a) [.bare b, .bare z] = a ++ 46 :: b ++ 46 :: z := by
+    intro z; simp [keyEnc, KPart.enc]
+  have hKv3 : ∀ z, keyVal (.bare a) [.bare b, .bare z] = [a, b, z] := by intro z; simp [keyVal, KPart.val]
+  have hps : ∀ z, bareOk z → ∀ p ∈ [KPart.bare b, KPart.bare z], p.ok := by
+    intro z hz p hp; simp at hp; rcases hp with rfl | rfl
+    · exact bareOk_kpart hb
+    · exact bareOk_kpart hz
+  have hna := bare_no13 ha
+  have hnb := bare_no13 hb
+  have hnc := bare_no13 hc
+  have hnd := bare_no13 hd
+  have hnx := bare_no13 hx
+  have hny := boolText_no13' y
+  have hax : a ≠ x := Ne.symm hxa
+  have hcd : c ≠ d := Ne.symm hdc
+  generalize hsrc : a ++ 46 :: b ++ 46 :: c ++ 61 :: boolText y ++ 10 :: hdr x ++ 10 ::
+    hdr (a ++ 46 :: b ++ 46 :: d) = src
+  have h13 : 13 ∉ src := by rw [← hsrc]; simp [hdr]; simp_all
+  rw [loads_eq pf maxK maxD tz fr src h13 (by omega)]
+  obtain ⟨f, hf⟩ : ∃ f, src.length + 1 = f + 1 + 1 + 1 := ⟨src.length - 2, by rw [← hsrc]; simp [hdr] <;> omega⟩
+  rw [hf]
+  -- `a.b.c=X`
+  have hd0 : src.drop 0 = keyEnc (.bare a) [.bare b, .bare c] ++ 61 :: (SV.bool y).enc ++
+      (10 :: hdr x ++ 10 :: hdr (a ++ 46 :: b ++ 46 :: d)) := by
+    rw [hK3, boolText_enc, ← hsrc]; simp
+  have hr1 := kvr_at (cfg := mkCfg pf maxK maxD tz) (R := fr - 1) (header := []) (out := Out.init)
+    (bareOk_kpart ha) (hps c hc) hmax2 (v := SV.bool y) trivial (by intro c hc; simp at hc; subst hc; decide)
+    (by simp [SV.depth]; omega) hd0
+  rw [hK3, hKv3] at hr1
+  generalize hP1 : 0 + (a ++ 46 :: b ++ 46 :: c).length + 1 + (SV.bool y).enc.length = P1 at hr1
+  have hb1 : kvBody src P1 Out.init [] [a, b, c] (SV.bool y).val =
+      .ok (P1, Out.mk (nestDict [a, b] [(c, .bool y)]) (Flags.mk [] [([a], EXPLICIT_NEST), ([a, b], EXPLICIT_NEST)])) := by
+    have hrange : List.range 2 = [0, 1] := rfl
+    simp [kvBody, hrange, contKeysLoop, Out.init, Flags.init, Flags.is_, isAux, dget_nil, dget_cons, Flags.addPending,
+      withNest, nestDict, dset, overwriteErr, SV.val, TVal.isDictOrList, bind, Except.bind, pure, Except.pure]
+  rw [hb1] at hr1
+  obtain ⟨c0, hg0, hi0, hw0, h100⟩ := kv_line_pos (a := a) (tail := 46 :: b ++ 46 :: c ++ 61 :: (SV.bool y).enc ++
+    (10 :: hdr x ++ 10 :: hdr (a ++ 46 :: b ++ 46 :: d))) (by rw [hd0, hK3]; simp) ha
+  rw [mainLoop_kv_hdr hg0 hi0 hw0 h100 hr1 (by omega)]
+  have hdP1 : src.drop P1 = 10 :: (hdr (keyEnc (.bare x) []) ++ 10 :: hdr (a ++ 46 :: b ++ 46 :: d)) := by
+    rw [← hP1, keyEnc_bare]
+    exact drop_eq_of (a := a ++ 46 :: b ++ 46 :: c ++ 61 :: boolText y) (by rw [← hsrc]; simp) _
+      (by simp [boolText_enc] <;> omega)
+  simp only [getElem?_of_drop hdP1, reduceCtorEq, ite_false, ite_true]
+  -- `[x]`
+  have hd2 := drop_succ_of_drop hdP1
+  have hfin : (Flags.mk [] [([a], EXPLICIT_NEST), ([a, b], EXPLICIT_NEST)]).finalizePending =
+      .ok (Flags.mk (fsetAux EXPLICIT_NEST false [a, b] (fsetAux EXPLICIT_NEST false [a] [])) []) := by
+    simp [Flags.finalizePending, Flags.set, List.foldlM, bind, Except.bind, pure, Except.pure]
+  have hr2 := dict_at (cfg := mkCfg pf maxK maxD tz)
+    (out := Out.mk (nestDict [a, b] [(c, .bool y)])
+      (Flags.mk (fsetAux EXPLICIT_NEST false [a, b] (fsetAux EXPLICIT_NEST false [a] [])) []))
+    (bareOk_kpart hx) (by simp) hmax0 hd2
+  rw [keyEnc_bare, keyVal_bare] at hr2
+  have hfz2 : ((Flags.mk (fsetAux EXPLICIT_NEST false [a, b] (fsetAux EXPLICIT_NEST false [a] [])) []).is_ [x]
+      EXPLICIT_NEST || (Flags.mk (fsetAux EXPLICIT_NEST false [a, b] (fsetAux EXPLICIT_NEST false [a] [])) []).is_
+      [x] FROZEN) = false := by
+    simp [Flags.is_, isAux, fsetAux, dset, dget_cons, dget_nil, hxa, hax, FNode.empty]
+  have hgo2 : getOrCreateNest true [x] (nestDict [a, b] [(c, .bool y)]) =
+      .ok (nestDict [a, b] [(c, .bool y)] ++ [(x, .tbl [])]) := by
+    simp [getOrCreateNest, withNest, nestDict, dget_cons, dget_nil, hxa, hax, dset, Except.map, bind, Except.bind,
+      pure, Except.pure]
+  simp only [hfz2, Bool.false_eq_true, ite_false, hgo2, overwriteErr, Except.map] at hr2
+  have hg2 : src[P1 + 1]? = some 91 := getElem?_of_drop (by rw [hd2]; rfl)
+  have hd2b : src.drop (P1 + 1 + 1 + x.length + 1) = 10 :: hdr (a ++ 46 :: b ++ 46 :: d) := by
+    have := drop_add_of_drop (a := hdr (keyEnc (.bare x) [])) hd2
+    rw [keyEnc_bare] at this
+    have e : P1 + 1 + (hdr x).length = P1 + 1 + 1 + x.length + 1 := by simp [hdr]; omega
+    rw [← e]; exact this
+  rw [mainLoop_hdr_ok (hR := hR9) hg2 hfin hr2 (getElem?_of_drop hd2b)]
+  -- `[a.b.d]`
+  have hd3 : src.drop (P1 + 1 + 1 + x.length + 1 + 1) = hdr (keyEnc (.bare a) [.bare b, .bare d]) ++ [] := by
+    rw [hK3]; simpa using drop_succ_of_drop hd2b
+  have hr3 := dict_at (cfg := mkCfg pf maxK maxD tz)
+    (out := Out.mk (nestDict [a, b] [(c, .bool y)] ++ [(x, .tbl [])])
+      (Flags.mk (fsetAux EXPLICIT_NEST false [x] (fsetAux EXPLICIT_NEST false [a, b]
+        (fsetAux EXPLICIT_NEST false [a] []))) []))
+    (bareOk_kpart ha) (hps d hd) hmax2' hd3
+  rw [hK3, hKv3] at hr3
+  have hfz3 : ((Flags.mk (fsetAux EXPLICIT_NEST false [x] (fsetAux EXPLICIT_NEST false [a, b]
+      (fsetAux EXPLICIT_NEST false [a] []))) []).is_ [a, b, d] EXPLICIT_NEST ||
+      (Flags.mk (fsetAux EXPLICIT_NEST false [x] (fsetAux EXPLICIT_NEST false [a, b]
+      (fsetAux EXPLICIT_NEST false [a] []))) []).is_ [a, b, d] FROZEN) = false := by
+    simp [Flags.is_, isAux, fsetAux, dset, dget_cons, dget_nil, hax, hxa, FNode.empty, FNode.flags, FNode.rflags,
+      FNode.nested, addFlag, FROZEN, EXPLICIT_NEST]
+  have hgo3 : getOrCreateNest true [a, b, d] (nestDict [a, b] [(c, .bool y)] ++ [(x, .tbl [])]) =
+      .ok [(a, .tbl [(b, .tbl [(c, .bool y), (d, .tbl [])])]), (x, .tbl [])] := by
+    simp [getOrCreateNest, withNest, nestDict, dget_cons, dget_nil, hax, hxa, hdc, hcd, dset, Except.map, bind, Except.bind,
+      pure, Except.pure]
+  simp only [hfz3, Bool.false_eq_true, ite_false, hgo3, overwriteErr, Except.map] at hr3
+  have hg3 : src[P1 + 1 + 1 + x.length + 1 + 1]? = some 91 := getElem?_of_drop (by rw [hd3]; rfl)
+  have hend : src[P1 + 1 + 1 + x.length + 1 + 1 + 1 + (a ++ 46 :: b ++ 46 :: d).length + 1]? = none := by
+    have := drop_add_of_drop (a := hdr (a ++ 46 :: b ++ 46 :: d)) (r := []) (by rw [hK3] at hd3; exact hd3)
+    have e : P1 + 1 + 1 + x.length + 1 + 1 + (hdr (a ++ 46 :: b ++ 46 :: d)).length =
+        P1 + 1 + 1 + x.length + 1 + 1 + 1 + (a ++ 46 :: b ++ 46 :: d).length + 1 := by simp [hdr]; omega
+    rw [e] at this; exact getElem?_of_drop_nil this
+  rw [mainLoop_hdr_end (hR := hR9) hg3 (finalize_nil _ rfl) hr3 hend]
+
 /-! ## `TOMLDecodeError.pos` past the end of the document -/
 
 /-- `loads('a = "\\')` (a backslash as the last character of a basic string) raises

@@ -1909,6 +1909,12 @@ def entries : List Entry := [
     statement := "For all bare keys t, a, b, boolean X and at least sixteen frames left, loads('[[t]]\\na.b=X\\n[[t]]\\n[t.a]') gives {t: [{a: {b: X}}, {a: {}}]}: the second [[t]] turns the pending t.a into a flag, clears the pending set and drops the flags under t (without the clear, [t.a] would raise 'Cannot declare')."
     source := "TOML 1.1 spec, Array of Tables (each [[t]] starts a new table)", status := .proven
     prop := ``Toml.FinalizeClears, thm := some ``Toml.finalizeClears_proven },
+  { id := "textlibs-toml-finalize-not-recursive", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["Flags.finalize_pending", "Flags.set", "Flags.is_", "create_dict_rule", "key_value_rule",
+      "NestedDict.get_or_create_nest"]
+    statement := "For all bare keys a, b, c, d, x with x != a, c != d, boolean X and at least sixteen frames left, loads('a.b.c=X\\n[x]\\n[a.b.d]') gives {a: {b: {c: X, d: {}}}, x: {}}: finalize_pending marks a and a.b one by one (recursive=False); marked recursively, [a.b.d] would raise 'Cannot declare'."
+    source := "TOML 1.1 spec, Table (a dotted key defines its tables; an undefined sub-table may still be declared)", status := .proven
+    prop := ``Toml.FinalizeNotRecursive, thm := some ``Toml.finalizeNotRecursive_proven },
   { id := "textlibs-toml-escape-eof-pos", pyFile := "Lib/tomllib/_parser.py"
     pyFns := ["parse_basic_str_escape", "parse_basic_str", "loads"]
     statement := "Every TOMLDecodeError(msg, doc, pos) that loads raises has pos <= len(doc) (doc after CRLF normalisation)."
