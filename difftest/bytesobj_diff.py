@@ -196,6 +196,14 @@ def mut_items(items):
         yield x
 
 
+def clear_items(items):
+    """A generator that clears the list under test (freeing its array) before its second item."""
+    for i, x in enumerate(items):
+        if i == 1:
+            TARGET[0].clear()
+        yield x
+
+
 def build_ext(arg, reg, self_list):
     k = arg["k"]
     if k == "self":
@@ -206,6 +214,8 @@ def build_ext(arg, reg, self_list):
         return RevList(reg.mks(arg["items"]))
     if k == "mutiter":
         return mut_items(reg.mks(arg["items"]))
+    if k == "cleariter":
+        return clear_items(reg.mks(arg["items"]))
     if k == "fast":
         items = reg.mks(arg["items"])
         return tuple(items) if arg["as"] == "tuple" else DISPLAY[len(items)](*items)
@@ -735,10 +745,10 @@ def seq_tup(rng, maxlen=6, kinds=("nan", "bad", "weird")):
 
 def gen_ext(rng, allow_self=True):
     k = rng.choice(["fast", "fast", "sized", "iter", "iter", "iter", "noniter", "sub"]
-                   + (["self", "mutiter"] if allow_self else []))
+                   + (["self", "mutiter", "cleariter"] if allow_self else []))
     if k == "self" or k == "noniter":
         return {"k": k}
-    if k == "sub" or k == "mutiter":
+    if k in ("sub", "mutiter", "cleariter"):
         return {"k": k, "items": seq_items(rng, 20)}
     if k == "fast":
         return {"k": k, "items": seq_items(rng, 20), "as": rng.choice(["list", "tuple"])}

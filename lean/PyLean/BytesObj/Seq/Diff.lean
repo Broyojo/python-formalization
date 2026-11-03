@@ -211,6 +211,16 @@ def mutFx (items : List DEl) : IterFx DEl where
     | some x => (some (.ok x), match listAppend o (.int 0) with | .ok o' => o' | .error _ => o)
     | none => (none, o)
 
+/-- The twin's `clear_items(items)`: a generator that clears the list under test before its
+second item. -/
+def clearFx (items : List DEl) : IterFx DEl where
+  getIter o := (.ok (), o)
+  hint o := (.ok 8, o)
+  next k o :=
+    match items[k]? with
+    | some x => (some (.ok x), if k = 1 then listClear o else o)
+    | none => (none, o)
+
 def unpair : DEl → DEl × DEl
   | .tup [a, b] => (a, b)
   | x => (x, x)
@@ -247,6 +257,9 @@ def jExt (j : Json) : Except String (ExtArg DEl) := do
   | "mutiter" =>
     let items ← jEls (← field j "items")
     return classifyExt (items.length + 1) (.other (mutFx items))
+  | "cleariter" =>
+    let items ← jEls (← field j "items")
+    return classifyExt (items.length + 1) (.other (clearFx items))
   | "noniter" => return classifyExt 0 (.notIterable "int")
   | k => throw s!"ext {k}"
 
