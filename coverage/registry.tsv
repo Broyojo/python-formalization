@@ -6,12 +6,16 @@ ipaddress-getitem-sequence	proven	Lib/ipaddress.py	_BaseNetwork.__getitem__
 ipaddress-contains-mem	proven	Lib/ipaddress.py	_BaseNetwork.__contains__
 ipaddress-overlaps-share	proven	Lib/ipaddress.py	_BaseNetwork.overlaps,_BaseNetwork.__contains__
 ipaddress-subnet-of-mem	proven	Lib/ipaddress.py	_BaseNetwork.subnet_of,_BaseNetwork._is_subnet_of
+ipaddress-subnet-of-scope-blind	refuted	Lib/ipaddress.py	_BaseNetwork.subnet_of,_BaseNetwork._is_subnet_of
 ipaddress-summarize-exact-cover	proven	Lib/ipaddress.py	summarize_address_range,_count_righthand_zero_bits
 ipaddress-summarize-rejects	proven	Lib/ipaddress.py	summarize_address_range
+ipaddress-summarize-scope-blind	refuted	Lib/ipaddress.py	summarize_address_range
 ipaddress-crzb-exact	proven	Lib/ipaddress.py	_count_righthand_zero_bits
 ipaddress-subnets-partition	proven	Lib/ipaddress.py	_BaseNetwork.subnets
 ipaddress-supernet-contains	proven	Lib/ipaddress.py	_BaseNetwork.supernet
 ipaddress-address-exclude-partition	proven	Lib/ipaddress.py	_BaseNetwork.address_exclude,_BaseNetwork.subnets,_BaseNetwork.subnet_of,_BaseNetwork._is_subnet_of
+ipaddress-address-exclude-total	refuted	Lib/ipaddress.py	_BaseNetwork.address_exclude,_BaseNetwork.subnets,_BaseNetwork.subnet_of,_BaseNetwork._is_subnet_of
+ipaddress-address-exclude-scoped	proven	Lib/ipaddress.py	_BaseNetwork.address_exclude,_BaseNetwork.subnets,_BaseNetwork.subnet_of,_BaseNetwork._is_subnet_of
 ipaddress-exploded-total	refuted	Lib/ipaddress.py	_BaseV6._explode_shorthand_ip_string
 ipaddress-exploded-keeps-suffix	refuted	Lib/ipaddress.py	IPv6Address._explode_shorthand_ip_string,_BaseV6._explode_shorthand_ip_string
 ipaddress-exploded-by-case	proven	Lib/ipaddress.py	IPv6Address._explode_shorthand_ip_string,_BaseV6._explode_shorthand_ip_string,_BaseV6._ip_int_from_string,_BaseV6._string_from_ip_int,IPv6Address.__str__
@@ -29,7 +33,7 @@ ipaddress-prefix-from-ip-int	proven	Lib/ipaddress.py	_IPAddressBase._prefix_from
 ipaddress-prefix-string	proven	Lib/ipaddress.py	_IPAddressBase._prefix_from_prefix_string,_IPAddressBase._report_invalid_netmask
 ipaddress-prefix-from-ip-string	proven	Lib/ipaddress.py	_IPAddressBase._prefix_from_ip_string,_IPAddressBase._prefix_from_ip_int,_IPAddressBase._report_invalid_netmask,_BaseV4._ip_int_from_string,_BaseV4._parse_octet
 ipaddress-v4-mask-roundtrip	proven	Lib/ipaddress.py	_BaseV4._make_netmask,_IPAddressBase._prefix_from_prefix_string,_IPAddressBase._prefix_from_ip_string,_IPAddressBase._prefix_from_ip_int,_IPAddressBase._report_invalid_netmask
-ipaddress-v4-mask-int	proven	Lib/ipaddress.py	_BaseV4._make_netmask,_BaseV6._make_netmask,_IPAddressBase._report_invalid_netmask
+ipaddress-v4-mask-int	proven	Lib/ipaddress.py	_BaseV4._make_netmask,_BaseV6._make_netmask,_IPAddressBase._report_invalid_netmask,_IPAddressBase._prefix_from_prefix_string,_IPAddressBase._prefix_from_ip_string
 ipaddress-v6-text-roundtrip	proven	Lib/ipaddress.py	IPv6Address.__init__,_BaseV6._ip_int_from_string,_BaseV6._parse_hextet,_BaseV6._compress_hextets,_BaseV6._string_from_ip_int,_BaseV6._split_scope_id,IPv6Address.__str__,IPv6Address._ipv4_mapped_ipv6_to_str,IPv6Address.ipv4_mapped
 ipaddress-v6-str-form	proven	Lib/ipaddress.py	IPv6Address.__str__,IPv6Address._ipv4_mapped_ipv6_to_str,IPv6Address.ipv4_mapped,_BaseV6._string_from_ip_int,_BaseAddress.__str__
 ipaddress-v6-split-scope	proven	Lib/ipaddress.py	_BaseV6._split_scope_id,IPv6Address.__init__
@@ -37,6 +41,8 @@ ipaddress-v6-parse-hextet	proven	Lib/ipaddress.py	_BaseV6._parse_hextet
 ipaddress-v6-parse-spellings	proven	Lib/ipaddress.py	_BaseV6._ip_int_from_string,_BaseV6._parse_hextet,_BaseV6._compress_hextets,IPv4Address.__init__,_BaseV4._ip_int_from_string,_BaseV4._parse_octet
 ipaddress-v6-parse-refusals	proven	Lib/ipaddress.py	_BaseV6._ip_int_from_string,_BaseV6._parse_hextet,IPv4Address.__init__
 ipaddress-v4-netmask-cache	refuted	Lib/ipaddress.py	_BaseV4._make_netmask
+ipaddress-v6-netmask-cache	refuted	Lib/ipaddress.py	_BaseV6._make_netmask
+ipaddress-v6-init-str	proven	Lib/ipaddress.py	IPv6Address.__init__,_BaseV6._split_scope_id
 ipaddress-v4-mask-doc-rule	refuted	Lib/ipaddress.py	_IPAddressBase._prefix_from_ip_string,_IPAddressBase._prefix_from_ip_int,_BaseV4._make_netmask
 ipaddress-v6-compress-rfc5952	proven	Lib/ipaddress.py	_BaseV6._compress_hextets,_BaseV6._string_from_ip_int
 datetime-ordinal-roundtrip	proven	Lib/_pydatetime.py	date.fromordinal,date.toordinal,_ymd2ord,_ord2ymd,_is_leap,_days_before_year,_days_in_month,_days_before_month,_check_date_fields,C datetime_date_fromordinal_impl,C date_toordinal,C ord_to_ymd,C ymd_to_ord,C is_leap,C days_in_month,C days_before_month,C days_before_year,C check_date_args
