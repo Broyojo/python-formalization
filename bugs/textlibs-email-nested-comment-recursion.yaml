@@ -1,0 +1,85 @@
+id: textlibs-email-nested-comment-recursion
+title: "email: reading a header with a few hundred nested comments raises RecursionError (policy.default, HeaderRegistry)"
+priority: P3
+kind: uncaught-exception
+module: textlibs
+files: [Lib/email/_header_value_parser.py]
+functions: ["get_comment", "Comment.__str__", "Comment.quote", "Comment.content", "get_cfws", "get_address_list"]
+summary: |
+  `get_comment` (Lib/email/_header_value_parser.py:1287-1309) parses a nested comment by calling
+  itself (:1300-1301), and `Comment.__str__` / `Comment.quote` (:290-299) and `Comment.content`
+  recurse the same way over the result. Nothing bounds the nesting depth, so a header value with a
+  few hundred `(` (well within any line-length limit a mail server enforces on a folded header)
+  exhausts the Python stack. The RecursionError is not a `HeaderParseError`, so the parser's
+  recovery paths do not catch it: it propagates out of `HeaderRegistry()(name, value)` and out of
+  `msg['To']` on a message parsed with `policy.default`, where malformed input is otherwise reported
+  as defects.
+
+  Measured on 3.15.2 with the default recursion limit: `'a@b ' + '('*n + ')'*n` as a `To:` value
+  raises RecursionError from `HeaderRegistry` and from `msg['To']` for n = 500, 1000, 1200 and 5000.
+  `get_comment` alone parses depth 600-900 and fails only when the result is converted to `str()`
+  (found by the email review), and fails in parsing itself from depth 1000.
+likelihood: |
+  Low in ordinary mail, but the input is attacker-controlled by construction: any program that reads
+  headers of received mail with `policy.default` (the documented modern API) gets an unexpected
+  exception type from header access instead of a defect. 1000 bytes of parentheses suffice.
+maybe_intended: |
+  Partly. Python code that recurses on nested input commonly has a recursion limit (tomllib
+  documents one). But the email package documents that it "does a very good job of parsing
+  non-compliant messages, providing information about how a message was deemed broken" via
+  `defects` (Doc/library/email.parser.rst:62-68), and its own error handling catches only
+  HeaderParseError, so a RecursionError escaping is not a designed outcome.
+reproducer: |
+  import email, email.policy
+  from email.headerregistry import HeaderRegistry
+  def outcome(n):
+      v = 'a@b ' + '(' * n + ')' * n
+      out = []
+      try:
+          str(HeaderRegistry()('To', v)); out.append('ok')
+      except Exception as e:
+          out.append(type(e).__name__)
+      try:
+          m = email.message_from_string('To: ' + v + '\n\n', policy=email.policy.default)
+          str(m['To']); out.append('ok')
+      except Exception as e:
+          out.append(type(e).__name__)
+      return out
+  shallow, deep = outcome(20), outcome(500)
+  print('depth 20:', shallow, 'depth 500:', deep)
+  if shallow == ['ok', 'ok'] and deep == ['RecursionError', 'RecursionError']:
+      print('REPRODUCED textlibs-email-nested-comment-recursion')
+expected: |
+  Either the header parses (an iterative or depth-limited comment parser), or the excess nesting is
+  reported as a defect (for example an InvalidHeaderDefect) and the header value is kept as
+  unstructured text, as other malformed input is.
+observed: |
+  python3 3.15.2: depth 20 parses; depth 500 raises RecursionError from both HeaderRegistry and
+  msg['To']. REPRODUCED.
+  main (3.16.0a1+dev, ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Doc/library/email.parser.rst:62-68 (non-compliant messages are reported through `defects`);
+  invariant: no internal error leaking from a parser whose documented failure mode is
+  HeaderParseError/defects.
+cause: |
+  Lib/email/_header_value_parser.py:1300-1301: `token, value = get_comment(value)` inside
+  get_comment's loop, unbounded. Comment.quote (:296-299) and TokenList.__str__ recurse over the
+  same depth when the header's str() is built.
+possible_fix: |
+  Track depth in get_comment and, past a fixed limit (say 100), stop recursing: treat the rest as
+  ctext and append an InvalidHeaderDefect('too deeply nested comment'). Or make get_comment
+  iterative with an explicit stack; then Comment.__str__ needs the same treatment.
+duplicates:
+  issues:
+    - {number: 151857, state: open, relation: "same module, different exception (IndexError on empty-input edge cases); not a duplicate"}
+  queries: ["email nested comments recursion", "get_comment recursion", "email RecursionError header",
+            "_header_value_parser RecursionError", "email header nested comments RecursionError",
+            "_header_value_parser recursion", "email parser recursion depth comment", "email RecursionError",
+            "email recursion", "header recursion comment", "email deeply nested", "RecursionError email",
+            "_header_value_parser (10 results, none about recursion)", "email header parser (6 results)",
+            "bugforge README: only pprint and difflib RecursionError entries, unrelated"]
+  note: "Found by the email re-review (2026-11-03) as the reason CommentSpec is false for deep nesting."
+lean:
+  property: null
+  theorem: null
+  note: "CommentSpec (EmailQuote.lean) must be bounded in depth or given a frame model; the refutation belongs there."
