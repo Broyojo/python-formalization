@@ -14,6 +14,11 @@ import PyLean.DictSet.Body
 import PyLean.DictSet.Iter
 import PyLean.DictSet.SetHash
 import PyLean.DictSet.SetBranches
+import PyLean.DictSet.Copy315
+import PyLean.DictSet.Eq315
+import PyLean.DictSet.Repr315
+import PyLean.DictSet.FromKeys315
+import PyLean.DictSet.Update315
 
 /-!
 `Objects/dictobject.c`, `Objects/setobject.c`, `Objects/odictobject.c`, CPython 3.15.2.
@@ -576,7 +581,100 @@ def entries : List Entry := [
     statement := "After any program of add, discard and next() on a set iterator, __length_hint__ is not negative."
     source := "PEP 424; PyObject_LengthHint rejects a negative hint", status := .refuted
     prop := ``SetIterLenNonneg, thm := some ``setIterLenNonneg_refuted
-    bug := some "dictset-setiter-negative-length-hint" }
+    bug := some "dictset-setiter-negative-length-hint" },
+  { id := "dict-pop-body", pyFile := "Objects/dictobject.c",
+    pyFns := ["_PyDict_Pop_KnownHash", "PyDict_Pop", "PyDict_PopString", "dict_pop_default",
+      "_PyDict_Pop", "dict_pop_impl"]
+    statement := "For every key protocol, including a hash that raises and an __eq__ that raises or changes the dict: pop on an empty dict answers not found before hashing; a failed hash is dict_unhashable_type's exception with the dict unchanged; a failed lookup is the result in the state __eq__ left; a slot with no value (a shared key this split dict lacks) is not found and nothing is deleted; a value is removed by delitem_common and returned. dict.pop turns not found into the default or KeyError(key); PyDict_PopString fails, untouched, when the key cannot be made."
+    source := "Doc/c-api/dict.rst PyDict_Pop; dict.pop docstring; dictobject.c:3232-3361, :4947-4951", status := .proven
+    prop := ``PopBody, thm := some ``popBody_proven },
+  { id := "dict-setdefaultref-no-crash", pyFile := "Objects/dictobject.c", pyFns := ["PyDict_SetDefaultRef"]
+    statement := "For every key type keeping the hash/eq contract, PyDict_SetDefaultRef on a fresh instance __dict__ never dereferences NULL."
+    source := "invariant: no crash", status := .refuted
+    prop := ``PyDictSetDefaultRefNoCrash, thm := some ``pyDictSetDefaultRefNoCrash_refuted
+    bug := some "dictset-setdefault-split-null"
+    notes := "The defect of dict-setdefault-no-crash through the C API entry point, which passes incref_result 1 and a result pointer. Checked on 3.15.2 with _testcapi.dict_setdefaultref: SIGSEGV." },
+  { id := "dict-setdefault-c-contract", pyFile := "Objects/dictobject.c", pyFns := ["PyDict_SetDefault"]
+    statement := "For every key type keeping the hash/eq contract, PyDict_SetDefault on a fresh instance __dict__ returns a value, or NULL with an exception set, never NULL without one."
+    source := "Doc/c-api/dict.rst PyDict_SetDefault", status := .refuted
+    prop := ``PyDictSetDefaultContract, thm := some ``pyDictSetDefaultContract_refuted
+    bug := some "dictset-setdefault-split-null"
+    notes := "Same branch, with incref_result 0: NULL is returned and no exception is set. Checked on 3.15.2 with _testcapi.dict_setdefault: SystemError, returned NULL without setting an exception." },
+  { id := "dict-mergefromseq2-keeps-absent", pyFile := "Objects/dictobject.c",
+    pyFns := ["PyDict_MergeFromSeq2", "dict_merge_from_seq2"]
+    statement := "For every key type keeping the hash/eq contract, PyDict_MergeFromSeq2(d, [(key, v)], 0) on a fresh instance __dict__ that does not hold key leaves key in d."
+    source := "Doc/c-api/dict.rst PyDict_MergeFromSeq2: if override is false, existing pairs are kept (new keys are added)", status := .refuted
+    prop := ``MergeSeq2KeepsAbsent, thm := some ``mergeSeq2KeepsAbsent_refuted
+    bug := some "dictset-setdefault-split-null"
+    notes := "Same branch, with result NULL: the pair is reported present and dropped. Checked on 3.15.2 with _testlimitedcapi.dict_mergefromseq2: the key is not in the dict afterwards." },
+  { id := "dict-copy-body", pyFile := "Objects/dictobject.c",
+    pyFns := ["dict_copy_impl", "copy_values", "copy_lock_held_untracked", "PyDict_Copy",
+      "anydict_copy_untracked", "_PyDict_CopyAsDict", "frozendict_copy_impl"]
+    statement := "For every key protocol: PyDict_Copy refuses what is not a dict, a frozendict included; the copy is a frozendict exactly when asked, which anydict_copy_untracked does for a frozendict and _PyDict_CopyAsDict never does; an empty source gives an empty object, a split one the same shared keys with copied values, a combined one with at most a third deleted and dict_iter as tp_iter a clone, both iterating as the source does with no callback run, and anything else dict_merge(copy, o, 1) by the route tp_iter decides; frozendict.copy of an exact frozendict is the object itself."
+    source := "dict.copy and frozendict.copy docstrings; dictobject.c:4404-4602, :8520-8535", status := .proven
+    prop := ``CopyBody, thm := some ``copyBody_proven },
+  { id := "dict-copy-refines", pyFile := "Objects/dictobject.c", pyFns := ["copy_lock_held_untracked"]
+    statement := "For an honest key protocol, a copy of a well-formed dict whose type keeps dict_iter is a new well-formed dict or frozendict, as asked, with the identity it was given and the same pairs in the same order, on all three routes; the one failure is MemoryError."
+    source := "dict.copy docstring: a shallow copy", status := .proven
+    prop := ``CopyRefines, thm := some ``copyRefines_proven },
+  { id := "dict-or-body", pyFile := "Objects/dictobject.c",
+    pyFns := ["_PyDict_Or", "frozendict_or", "_PyDict_IOr"]
+    statement := "For every key protocol and right operand: | is NotImplemented unless both operands are dicts or frozendicts, and otherwise copies self with anydict_copy_untracked and updates the copy from other, a failure of either being the result; frozendict_or gives back other itself for an empty exact frozendict self and an exact frozendict other, and self itself for an exact empty dict or frozendict other, and otherwise is _PyDict_Or; |= updates self in place and returns it."
+    source := "PEP 584, PEP 814; dictobject.c:5150-5198", status := .proven
+    prop := ``OrBody, thm := some ``orBody_proven },
+  { id := "dict-or-refines", pyFile := "Objects/dictobject.c", pyFns := ["_PyDict_Or", "anydict_copy_untracked"]
+    statement := "For an honest key protocol and two well-formed exact dicts or frozendicts, self | other is a new well-formed object, a frozendict exactly when self is, holding self's pairs updated in order by other's, or MemoryError; so the shortcuts of frozendict_or give the pairs the general path gives."
+    source := "PEP 584: d1 | d2 is d1.copy() updated by d2", status := .proven
+    prop := ``OrRefines, thm := some ``orRefines_proven },
+  { id := "dict-update-body", pyFile := "Objects/dictobject.c", pyFns := ["dict_update_common", "dict_update"]
+    statement := "For every key protocol and argument, dict.update with two positional arguments raises the TypeError of PyArg_UnpackTuple and changes nothing; with one it runs dict_update_arg, whose failure is the result and stops the keywords; then keywords that are not all strings raise TypeError('keywords must be strings') in the state the argument left, and string keywords are merged with override 1."
+    source := "dict.update docstring; dictobject.c:4007-4039", status := .proven
+    prop := ``UpdateBody, thm := some ``updateBody_proven },
+  { id := "dict-merge-api-body", pyFile := "Objects/dictobject.c",
+    pyFns := ["PyDict_Update", "PyDict_Merge", "_PyDict_MergeUniq", "PyDict_MergeFromSeq2",
+      "dict_merge_from_seq2"]
+    statement := "For every key protocol: PyDict_Merge with any non-zero override, 2 included, is PyDict_Update, so only _PyDict_MergeUniq reaches override 2, under which a key already present stops the merge with it as dupkey, while 0 skips it and 1 stores over it; PyDict_MergeFromSeq2 refuses what is not a dict, with the frozendict TypeError for one, and otherwise runs the sequence merge, whose failed PyObject_GetIter is the result."
+    source := "Doc/c-api/dict.rst PyDict_Merge, PyDict_MergeFromSeq2; dictobject.c:4140-4167, :4356-4396", status := .proven
+    prop := ``MergeApiBody, thm := some ``mergeApiBody_proven },
+  { id := "dict-equal-body", pyFile := "Objects/dictobject.c", pyFns := ["dict_equal_lock_held", "dict_equal"]
+    statement := "For every key protocol and value comparison, either of which may raise or change both dicts: different sizes at the start are unequal; each turn reads entry i and the bound of a as a is now, skipping a NULL key or value; the key is looked up in b with its stored hash, an exception being the result and no value meaning unequal; the values are compared, an exception or a no ending it and a yes going on from the state the callbacks left; past the bound the dicts are equal."
+    source := "dictobject.c:4621-4692", status := .proven
+    prop := ``EqualBody, thm := some ``equalBody_proven },
+  { id := "dict-richcompare-body", pyFile := "Objects/dictobject.c", pyFns := ["dict_richcompare"]
+    statement := "For every protocol: an operand that is not a dict or frozendict, or an operator other than == and !=, gives NotImplemented; == is dict_equal's answer and != its negation, an exception passing through."
+    source := "dictobject.c:4694-4712", status := .proven
+    prop := ``RichcompareBody, thm := some ``richcompareBody_proven },
+  { id := "dict-equal-reads-left-live", pyFile := "Objects/dictobject.c", pyFns := []
+    statement := "a == b is True for a = {1: X, 2: 3} and b = {1: 5, 2: 4} when X == 5 clears a and answers yes: the bound of the loop is read again and found 0."
+    source := "dictobject.c:4633; checked on 3.15.2", status := .proven
+    prop := ``EqualReadsLeftLive, thm := some ``equalReadsLeftLive_proven
+    notes := "Behaviour on record, not a bug report." },
+  { id := "dict-repr-body", pyFile := "Objects/dictobject.c",
+    pyFns := ["anydict_repr_impl", "dict_repr_lock_held", "dict_repr", "frozendict_repr"]
+    statement := "For any repr of keys and values, which may raise and change the dict: a failed Py_ReprEnter is the result, a dict being printed is {...}, an empty one {}; otherwise each turn takes the next item by _PyDict_Next on the dict as the last repr left it and writes ', ' unless first, repr(key), ': ', repr(value), a failed repr ending it in the state it left, and the end closes the brace; a frozendict is tp_name() when empty and tp_name(...) around the same text otherwise."
+    source := "dictobject.c:3641-3741, :8341-8359", status := .proven
+    prop := ``ReprBody, thm := some ``reprBody_proven },
+  { id := "dict-repr-quiet", pyFile := "Objects/dictobject.c", pyFns := ["anydict_repr_impl", "dict_repr"]
+    statement := "repr of a dict with a combined table, when the reprs of its keys and values do not change it, is {k1: v1, k2: v2, ...} in iteration order, or {} when empty, and the dict is unchanged."
+    source := "Doc/library/stdtypes.rst; dictobject.c:3657-3713", status := .proven
+    prop := ``ReprQuiet, thm := some ``reprQuiet_proven
+    notes := "Combined tables; a split table goes through the same loop, which dict-repr-body covers for every table." },
+  { id := "dict-dict-fromkeys-body", pyFile := "Objects/dictobject.c", pyFns := ["dict_dict_fromkeys"]
+    statement := "For every key protocol: a failed resize is the result; otherwise the loop takes the items of the iterable as it is now, which a key's __eq__ may change, an insertdict failure being the result in the state it left; no turn compares the iterable's size with what it was."
+    source := "dictobject.c:3362-3387", status := .proven
+    prop := ``DictDictFromkeysBody, thm := some ``dictDictFromkeysBody_proven },
+  { id := "dict-fromkeys-shrink-unseen", pyFile := "Objects/dictobject.c", pyFns := []
+    statement := "dict.fromkeys(src) while a key's __eq__ pops an item of src succeeds and leaves out the key popped."
+    source := "dictobject.c:3380-3385 against :4249; checked on 3.15.2", status := .proven
+    prop := ``FromkeysShrinkUnseen, thm := some ``fromkeysShrinkUnseen_proven
+    notes := "Behaviour on record, not a bug report: dict.fromkeys(iter(src)) raises RuntimeError on the same program." },
+  { id := "dict-fromkeys-frozen-stable", pyFile := "Objects/dictobject.c",
+    pyFns := ["_PyDict_FromKeys", "dict_fromkeys_impl"]
+    statement := "For every key type keeping the hash/eq contract: if a call of fromkeys hands a frozendict to Python code and cls() of a later call returns it, the later call does not change it."
+    source := "PEP 814: frozendict is immutable; dictobject.c:3436-3442", status := .refuted
+    prop := ``FromKeysFrozenStable, thm := some ``fromKeysFrozenStable_refuted
+    bug := some "dictset-fromkeys-frozendict-rewritten"
+    notes := "F.fromkeys for a frozendict subclass F calls F(d) with the untracked copy d (:3593); a G.fromkeys whose G() returns d finds it untracked, skips the copy, and fills d in place (:3538-3555)." }
 ]
 
 end PyLean.DictSet
