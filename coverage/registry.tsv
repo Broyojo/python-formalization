@@ -3006,7 +3006,8 @@ warn-filter-list-twins-any	refuted	Python/_warnings.c	get_warnings_filters
 warn-filter-list-twins-tuple	refuted	Python/_warnings.c	get_warnings_filters,get_warnings_context_filters
 warn-show-dispatch	proven	Lib/_py_warnings.py	_showwarnmsg,_showwarnmsg_impl
 warn-nested-record	proven	Lib/_py_warnings.py	_Context.copy,_new_context,catch_warnings.__enter__,_showwarnmsg_impl
-warn-exit-not-entered	proven	Lib/_py_warnings.py	catch_warnings.__exit__,catch_warnings.__repr__
+warn-exit-not-entered	proven	Lib/_py_warnings.py	catch_warnings.__exit__
+warn-repr-spec	proven	Lib/_py_warnings.py	catch_warnings.__repr__
 warn-catch-restores	proven	Lib/_py_warnings.py	catch_warnings.__init__,catch_warnings.__enter__,catch_warnings.__exit__,_Context.__init__,_Context.copy,_new_context,_set_context,_get_context,_get_filters,_GlobalContext._filters
 warn-catch-enter-atomic	refuted	Lib/_py_warnings.py	catch_warnings.__enter__
 warn-record-captures	proven	Lib/_py_warnings.py	_showwarnmsg,_showwarnmsg_impl,_Context._record_warning,catch_warnings.__enter__,_new_context,_set_context
