@@ -2,12 +2,15 @@ import PyLean.Accel.Bisect
 import PyLean.Accel.Heap
 
 /-!
-Model of the pure-Python-only parts of `heapq` (CPython 3.15.2): `nsmallest`,
+Pure int models of the pure-Python-only parts of `heapq` (CPython 3.15.2): `nsmallest`,
 `nlargest` (Lib/heapq.py:477-593) and `merge` (:330-408), over ints with an
 optional pure key function. They have no C twin; at run time they call
 whatever `heapify`/`heapreplace`/... the module exports (the C ones when
 `_heapq` is present). The model uses the Python twins; `HeapTwinsAgree` and
-`HeapifyTwinsAgree` show the C ones compute the same lists for every `lt`.
+`HeapifyTwinsAgree` show the C ones compute the same lists for every `lt`. These are no longer
+the models of record: `HeapqSelect.lean` models the three functions with fallible callbacks over
+any element type, and its proofs reach these int models (and their correctness theorems in
+`Selection.lean`, `SelectProps.lean`) through int codes.
 
 An iterable is the list of ints it yields plus three things about `len(iterable)`,
 which is a callback (:491-497, :551-557). `sized` says it does not raise
@@ -185,7 +188,7 @@ structure MEntry where
 def entLt (a b : MEntry) : Bool := lt2 (a.kv, a.order) (b.kv, b.order)
 
 /-- The `while len(h) > 1` loop with its inner `while True`, :370-378 and
-@3.14.7:394-404. The inner loop only replaces the top entry, so `len(h)` is
+:394-404. The inner loop only replaces the top entry, so `len(h)` is
 unchanged and checking `len(h) > 1` before every step is the same control
 flow. `fuel` is the total number of items plus one. -/
 def mergeLoop (lt : MEntry → MEntry → Bool) (key : Int → Int) :

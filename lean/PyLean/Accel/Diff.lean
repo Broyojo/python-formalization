@@ -3,6 +3,7 @@ import PyLean.Accel.Bisect
 import PyLean.Accel.Heap
 import PyLean.Accel.HeapqModel
 import PyLean.Accel.Select
+import PyLean.Accel.SelectDiff
 
 /-!
 Differential-testing handler for `accel` cases (`"mod": "accel"`).
@@ -206,17 +207,7 @@ def run (fn : String) (j : Json) : Except String Json := do
         | "heappushpop" => let (e, w) := (Heapq.pyHeappushpop S lt mx item).run w0; (e.map some, w)
         | _ => let (e, w) := (Heapq.pyHeapify S lt mx).run w0; (e.map (fun _ => none), w)
       return Json.mkObj [("ok", encHeapPy r)]
-  | "nsmallest" | "nlargest" =>
-    let n ← getInt j "n"
-    let it ← getIntList j "it"
-    let (sized, size, lenRaises) ← getSize j it
-    return encPy encList (if fn == "nsmallest" then nsmallest n it sized key size lenRaises
-      else nlargest n it sized key size lenRaises)
-  | "merge" =>
-    let its ← (← (← field j "its").getArr?).toList.mapM (fun v => do
-      (← v.getArr?).toList.mapM (·.getInt?))
-    let rev ← getBool j "reverse"
-    return encPy encList (merge its key rev)
+  | "nsmallest" | "nlargest" | "merge" => SelDiff.runSel fn isC j
   | other => throw s!"unknown fn {other}"
 
 def handler : Handler := fun fn j => some (run fn j)

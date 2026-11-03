@@ -14,13 +14,16 @@ summary: |
   number of comparisons and produce exactly the same heap" (:326-329). That is true of the final
   heap, but the comparisons run in a different order, so a comparison that raises, or keeps
   state, can tell the two apart. On list(range(2501)) with a comparison that raises at once, C
-  first compares items 2045 and 2046, Python items 2499 and 2500. The two raise different
-  exceptions (for a TypeError from incomparable items, a different message) and leave
-  different lists. Up to 2500 items C and Python make exactly the same comparisons in the same
-  order (Lean: accel-heap-twins-agree); the refutation is accel-heapify-twins-agree-fallible.
+  first compares items 2045 and 2046, Python items 2499 and 2500, so the two raise different
+  exceptions (for a TypeError from incomparable items, a different message). In that example the
+  comparison raises at once, before anything has moved, so both twins leave the list unchanged;
+  when the comparison raises later, after some sifting, the partly heapified lists differ too.
+  Up to 2500 items C and Python make exactly the same comparisons in the same order (Lean:
+  accel-heap-twins-agree); the refutation is accel-heapify-twins-agree-fallible.
 likelihood: |
   Needs a heapify of more than 2500 items in which some comparison raises (mixed incomparable
-  items), and code that looks at which exception it got or at the partly heapified list.
+  items), and code that looks at which exception it got (or, when the raise comes after some
+  sifting, at the partly heapified list).
   Cosmetic.
 maybe_intended: |
   Almost certainly. The order was changed deliberately for cache efficiency (bpo-24155,

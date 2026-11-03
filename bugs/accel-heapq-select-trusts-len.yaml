@@ -14,7 +14,7 @@ summary: |
   all of them back. nsmallest(2, it) returns 4 items for an `it` that yields 3, 1, 2, 5 and has
   len(it) == 0, and nsmallest(0, it) returns the same 4. On 3.14.7 both results are what the
   docs say, sorted(iterable)[:n]. When `__len__` is right the docs still hold, with ties, for
-  every n >= 0 (Lean: accel-nsmallest-sorted-prefix, accel-nlargest-sorted-prefix).
+  every n >= 0 (Lean: accel-nselect-sorted-prefix, now for any element type with a strict weak order and fallible callbacks).
 likelihood: |
   Low. It needs a `__len__` that under-reports, or a container that grows between the len()
   and the sorted(), for example one shared with another thread. Such iterables are arguably
@@ -63,5 +63,5 @@ duplicates:
   bugforge: "#158718 concerns nsmallest and equality, not len(): no match"
   cause_pr: "#139087, merged 2025-09-18"
 lean:
-  property: PyLean.Accel.NsmallestAnyLen
-  theorem: PyLean.Accel.nsmallestAnyLen_refuted
+  property: PyLean.Accel.Heapq.NSelectAnyLen
+  theorem: PyLean.Accel.Heapq.nSelectAnyLen_refuted

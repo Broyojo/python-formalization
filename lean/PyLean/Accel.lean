@@ -22,6 +22,14 @@ import PyLean.Accel.HeapqTwins
 import PyLean.Accel.HeapqTwinsPub
 import PyLean.Accel.HeapqBridge
 import PyLean.Accel.HeapqProps
+import PyLean.Accel.HeapqSelect
+import PyLean.Accel.HeapqSelectBase
+import PyLean.Accel.HeapqSelectHonest
+import PyLean.Accel.HeapqSelectSim
+import PyLean.Accel.HeapqSelectSimK
+import PyLean.Accel.HeapqSelectProps
+import PyLean.Accel.HeapqMergeProps
+import PyLean.Accel.SelectDiff
 import PyLean.Accel.Diff
 
 /-!
@@ -29,8 +37,11 @@ C accelerators vs. their pure-Python twins: `bisect` (`Modules/_bisectmodule.c`
 vs `Lib/bisect.py`) and `heapq` (`Modules/_heapqmodule.c` vs `Lib/heapq.py`),
 CPython 3.15.2.
 
-`bisect`, `nsmallest`, `nlargest` and `merge` are modelled over int elements compared with `<`
-and pure key functions; mutation of the list during a comparison is out of scope there.
+`bisect` is modelled over int elements compared with `<` and pure key functions; mutation of
+the list during a comparison is out of scope there. `nsmallest`, `nlargest` and `merge` are
+modelled in `Accel/HeapqSelect.lean` over any element type with fallible, stateful callbacks
+(`<`, `==`, `>`, the key, `iter`, `next`, `len`), `merge` as a generator; the pure models of
+`Accel/Select.lean` are reused, through int codes, in the proofs.
 
 The heap primitives (`heappush` ... `heapify` and the `*_max` variants) are modelled in
 `Accel/HeapqModel.lean` over any element type with comparisons that are Python code: they may
@@ -176,37 +187,44 @@ def entries : List Entry := [
     statement := "For every element type and honest strict weak order, heapify and heapify_max turn any list into a min-heap / max-heap with the same items."
     source := "Lib/heapq.py:171-180, :211-215; Doc/library/heapq.rst", status := .proven
     prop := ``Heapq.HeapifyMakesHeap, thm := some ``Heapq.heapifyMakesHeap_proven },
-  { id := "accel-nsmallest-sorted-prefix", pyFile := "Lib/heapq.py"
-    pyFns := ["nsmallest"]
-    statement := "For n >= 0, nsmallest(n, iterable, key) == sorted(iterable, key=key)[:n], ties included, for sized and unsized iterables whose len() is their item count."
-    source := "nsmallest docstring, Lib/heapq.py:477-481; Doc/library/heapq.rst:183-188", status := .proven
-    prop := ``NsmallestIsSortedPrefix, thm := some ``nsmallestIsSortedPrefix_proven
-    notes := "Covers the n == 1 min() shortcut, the n >= len sorted() shortcut and both heap branches. Negative n is excluded: its meaning is undefined (python/cpython#57483); nsmallest returns [] there while sorted(...)[:n] drops items. The hypothesis on len() is refuted below as accel-nsmallest-any-len." },
-  { id := "accel-nsmallest-any-len", pyFile := "Lib/heapq.py"
-    pyFns := ["nsmallest"]
-    statement := "For n >= 0 and any len(iterable), nsmallest(n, iterable, key) == sorted(iterable, key=key)[:n]."
-    source := "nsmallest docstring, Lib/heapq.py:477-481; Doc/library/heapq.rst:183-188", status := .refuted
-    prop := ``NsmallestAnyLen, thm := some ``nsmallestAnyLen_refuted
+  { id := "accel-heap-twins-agree-any-seq", pyFile := "Modules/_heapqmodule.c"
+    pyFns := ["_heapq_heappush_impl", "siftdown", "heappush", "_siftdown"]
+    statement := "Without the exact-list scope of accel-heap-twins-agree: for every first argument (a list subclass, seen by Python through its own methods and by C through the raw storage, or a non-list), the C and Python heap functions agree."
+    source := "invariant: C accelerator vs pure-Python twin", status := .refuted
+    prop := ``Heapq.HeapTwinsAgreeAnySeq, thm := some ``Heapq.heapTwinsAgreeAnySeq_refuted
+    bug := some "accel-heapq-list-subclass-overrides"
+    notes := "heappush(LoggedList([1, 2, 3]), 0) for a list subclass overriding append: same list, but only Python calls the override. heapify(()) raises TypeError in C and returns None in Python (reproducer)." },
+  { id := "accel-nselect-sorted-prefix", pyFile := "Lib/heapq.py"
+    pyFns := ["nsmallest", "nlargest"]
+    statement := "For every element type, strict weak order < (== its equivalence), pure key or None, n >= 0, C or Python heap functions, correct list.sort, and iterable yielding xs whose len() is the count or is missing: nsmallest(n, it, key) == sorted(it, key=key)[:n] and nlargest(n, it, key) == sorted(it, key=key, reverse=True)[:n], ties included."
+    source := "nsmallest/nlargest docstrings, Lib/heapq.py:477-481, :537-541; Doc/library/heapq.rst", status := .proven
+    prop := ``Heapq.NSelectIsSortedPrefix, thm := some ``Heapq.nSelectIsSortedPrefix_proven
+    notes := "Covers the n == 1 min()/max() path, the n >= len sorted() path and both heap paths with their (elem, order) and (key, order, elem) tuples, whose comparisons call == and < of the elements. list.sort and list() are callees in Objects/listobject.c, taken as a parameter with the contract SortOk (a stable sort for a strict weak order). Negative n excluded (python/cpython#57483); == inconsistent with < out of scope (python/cpython#158718, closed)." },
+  { id := "accel-nselect-any-len", pyFile := "Lib/heapq.py"
+    pyFns := ["nsmallest", "nlargest"]
+    statement := "As accel-nselect-sorted-prefix for every len() result."
+    source := "nsmallest/nlargest docstrings, Lib/heapq.py:477-481, :537-541", status := .refuted
+    prop := ``Heapq.NSelectAnyLen, thm := some ``Heapq.nSelectAnyLen_refuted
     bug := some "accel-heapq-select-trusts-len"
-    notes := "True on 3.14.7, which sliced. 3.15 returns sorted(iterable) whole when n >= len(iterable), so a __len__ below the item count gives more than n items." },
-  { id := "accel-nlargest-sorted-prefix", pyFile := "Lib/heapq.py"
-    pyFns := ["nlargest"]
-    statement := "For n >= 0, nlargest(n, iterable, key) == sorted(iterable, key=key, reverse=True)[:n], ties included, for sized and unsized iterables whose len() is their item count."
-    source := "nlargest docstring, Lib/heapq.py:537-541; Doc/library/heapq.rst:174-180", status := .proven
-    prop := ``NlargestIsSortedPrefix, thm := some ``nlargestIsSortedPrefix_proven
-    notes := "As for nsmallest; negative n excluded (python/cpython#57483)." },
-  { id := "accel-nlargest-any-len", pyFile := "Lib/heapq.py"
-    pyFns := ["nlargest"]
-    statement := "For n >= 0 and any len(iterable), nlargest(n, iterable, key) == sorted(iterable, key=key, reverse=True)[:n]."
-    source := "nlargest docstring, Lib/heapq.py:537-541; Doc/library/heapq.rst:174-180", status := .refuted
-    prop := ``NlargestAnyLen, thm := some ``nlargestAnyLen_refuted
-    bug := some "accel-heapq-select-trusts-len"
-    notes := "As accel-nsmallest-any-len." },
+    notes := "nsmallest(2, it) for an it yielding 3, 1, 2 with len(it) == 0 returns all three: 3.15 returns sorted(iterable) whole when n >= len(iterable)." },
+  { id := "accel-merge-first-next", pyFile := "Lib/heapq.py"
+    pyFns := ["merge"]
+    statement := "For every element type, strict weak order (== its equivalence), pure key, reverse, and C or Python heap functions, the first next() on merge(*inputs) pulls exactly one item from each non-empty input and yields a head no other head's key is below (above with reverse=True); with only empty inputs it is exhausted."
+    source := "merge docstring, Lib/heapq.py:331-335", status := .proven
+    prop := ``Heapq.MergeFirstNext, thm := some ``Heapq.mergeFirstNext_proven },
+  { id := "accel-merge-no-silent-drop", pyFile := "Lib/heapq.py"
+    pyFns := ["merge"]
+    statement := "With honest inputs and comparisons and any fallible key, list(merge(*inputs, key=key)) either raises or returns every input item."
+    source := "merge docstring, Lib/heapq.py:331-345", status := .refuted
+    prop := ``Heapq.MergeNoSilentDrop, thm := some ``Heapq.mergeNoSilentDrop_refuted
+    bug := some "accel-heapq-merge-swallows-stopiteration"
+    notes := "list(merge([1, 5], [2], key=key)) with key(5) raising StopIteration returns [1, 2]: the except StopIteration meant for an exhausted input (:391, :403) also catches the key's." },
   { id := "accel-merge-sorted", pyFile := "Lib/heapq.py"
     pyFns := ["merge"]
-    statement := "For inputs sorted by key (descending if reverse), list(merge(*its, key, reverse)) == sorted(chain(*its), key=key, reverse=reverse), ties included."
-    source := "merge docstring, Lib/heapq.py:330-346; Doc/library/heapq.rst:149-171", status := .proven
-    prop := ``MergeIsSorted, thm := some ``mergeIsSorted_proven }
+    statement := "For inputs each sorted by key (descending if reverse), list(merge(*inputs, key, reverse)) == sorted(chain(*inputs), key=key, reverse=reverse), ties included, for every element type with a strict weak order and a pure key."
+    source := "merge docstring, Lib/heapq.py:330-346; Doc/library/heapq.rst", status := .open
+    prop := ``Heapq.MergeIsSorted
+    notes := "Restated over the generator model. Open: the proof of the old int model (MergeProps.mergeLoop_spec) has to be carried across the generator's suspension states and the per-input iterator positions; the first step (accel-merge-first-next) is proven." }
 ]
 
 end PyLean.Accel

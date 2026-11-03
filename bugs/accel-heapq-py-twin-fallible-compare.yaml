@@ -29,13 +29,17 @@ summary: |
 likelihood: |
   CPython always uses _heapq, so only code that runs the pure-Python module sees it:
   implementations or builds without the accelerator, and tests that import heapq with _heapq
-  blocked. The raising case is realistic: heaps of (priority, payload) tuples raise TypeError
+  blocked. PyPy ships Lib/heapq.py and, as far as we know, no `_heapq` accelerator, so there the
+  pure-Python code is the implementation actually used (not checked on a PyPy build). The
+  raising case is realistic: heaps of (priority, payload) tuples raise TypeError
   when priorities tie and the payloads cannot be ordered, and after the exception the Python
   heap has silently lost an entry. The mutation case needs an `__lt__` that changes the heap.
 maybe_intended: |
-  Probably tolerated. In python/cpython#100968 (closed, not planned) a maintainer said heapq
-  cannot be made transactional when a comparison fails partway, and that refers to the heap
-  invariant; nothing promises the multiset survives a failed call. Still, C keeps every item and
+  Probably tolerated. In python/cpython#100968 (closed, not planned) Raymond Hettinger said heapq
+  cannot reliably handle a comparison that fails partway through an update, short of saving the
+  whole heap first, and that it will not be made transactional without a new, encapsulated API.
+  That was about the heap invariant, but the same answer likely covers the multiset: nothing
+  promises what a heap holds after a failed call. Still, C keeps every item and
   the Python twin does not, and "C raises RuntimeError, Python goes on" is a twin difference.
 reproducer: |
   from test.support.import_helper import import_fresh_module

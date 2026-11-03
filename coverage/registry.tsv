@@ -320,11 +320,12 @@ accel-heapify-twins-agree	proven	Modules/_heapqmodule.c	heapify_internal,_heapq_
 accel-heapify-twins-agree-fallible	refuted	Modules/_heapqmodule.c	_heapq_heapify_impl,heapify_internal,cache_friendly_heapify,keep_top_bit,siftup,heapify,_siftup
 accel-heap-ops-invariant	proven	Lib/heapq.py	heappush,heappop,heapreplace,heappushpop,heappush_max,heappop_max,heapreplace_max,heappushpop_max,_siftdown,_siftup,_siftdown_max,_siftup_max
 accel-heapify-makes-heap	proven	Lib/heapq.py	heapify,heapify_max,_siftup,_siftdown,_siftup_max,_siftdown_max
-accel-nsmallest-sorted-prefix	proven	Lib/heapq.py	nsmallest
-accel-nsmallest-any-len	refuted	Lib/heapq.py	nsmallest
-accel-nlargest-sorted-prefix	proven	Lib/heapq.py	nlargest
-accel-nlargest-any-len	refuted	Lib/heapq.py	nlargest
-accel-merge-sorted	proven	Lib/heapq.py	merge
+accel-heap-twins-agree-any-seq	refuted	Modules/_heapqmodule.c	_heapq_heappush_impl,siftdown,heappush,_siftdown
+accel-nselect-sorted-prefix	proven	Lib/heapq.py	nsmallest,nlargest
+accel-nselect-any-len	refuted	Lib/heapq.py	nsmallest,nlargest
+accel-merge-first-next	proven	Lib/heapq.py	merge
+accel-merge-no-silent-drop	refuted	Lib/heapq.py	merge
+accel-merge-sorted	open	Lib/heapq.py	merge
 decimal-parse-c-accepts-py	refuted	Modules/_decimal/_decimal.c	Decimal.__new__,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii
 decimal-parse-c-accepts-py-casefree	proven	Modules/_decimal/_decimal.c	Decimal.__new__,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii
 decimal-parse-py-accepts-c	refuted	Lib/_pydecimal.py	Decimal.__new__,PyDecType_FromUnicodeExactWS,PyDecType_FromCStringExact,numeric_as_ascii

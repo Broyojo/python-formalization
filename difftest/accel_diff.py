@@ -40,23 +40,6 @@ KEYS = {"none": None, "neg": lambda x: -x, "div3": lambda x: x // 3,
 BIG = [2**63 - 1, 2**63, 2**63 + 1, -2**63, -2**63 - 1, 2**64, -2**64, 2**100]
 
 
-class Sized:
-    """Iterates `items`, but `len()` gives `size`, which need not match them: a count,
-    or {"exc": class name, "msg": message} for a `__len__` that raises."""
-
-    def __init__(self, items, size):
-        self.items, self.size = items, size
-
-    def __iter__(self):
-        return iter(self.items)
-
-    def __len__(self):
-        if isinstance(self.size, dict):
-            raise {"TypeError": TypeError, "AttributeError": AttributeError,
-                   "RuntimeError": RuntimeError, "ValueError": ValueError}[self.size["exc"]](self.size["msg"])
-        return self.size
-
-
 def small_list(rng, n=None):
     if n is None:
         n = rng.choice([0, 0, 1, 2, 3, 4, 5, 7, 8, rng.randrange(20), rng.randrange(40)])
@@ -209,39 +192,238 @@ def in_child(thunk):
     return json.loads(data)
 
 
-def gen_select(rng, fn):
-    it = small_list(rng)
-    n = len(it)
-    nn = rng.choice([-2, -1, 0, 1, 1, 2, 3, n - 1, n, n + 1, rng.randrange(-3, 45),
-                     rng.choice(BIG)])
-    c = {"n": nn, "it": it, "key": rng.choice(["none", "none", "neg", "div3", "mod3", "abs"])}
-    if rng.random() < 0.7:
-        # A list has the right len(); len() of an iterator is a TypeError, which nsmallest
-        # catches, so its message never reaches the result.
-        if rng.random() < 0.5:
-            c.update(kind="list", size=n)
+SKINDS = ["lt", "eq", "key", "next", "iter", "len"]
+
+
+def gen_script(rng, bound):
+    if rng.random() < 0.3:
+        return []
+    out = []
+    for _ in range(rng.choice([1, 1, 2, 3])):
+        kind = rng.choice(SKINDS + ["lt", "eq", "next"])
+        acts = ["raise", "stop"] + (["boolraise", "flip"] if kind in ("lt", "eq") else [])
+        out.append([kind, rng.randint(1, max(1, bound)), rng.choice(acts)])
+    return out
+
+
+def gen_objs(rng, m):
+    """Element values, and the object index of each of `m` items (some objects repeat)."""
+    span = rng.choice([1, 3, 10, 100])
+    vals, idx = [], []
+    for _ in range(m):
+        if vals and rng.random() < 0.15:
+            idx.append(rng.randrange(len(vals)))
         else:
-            c.update(kind="iter", size={"exc": "TypeError", "msg": "no len()"})
-    elif rng.random() < 0.75:
-        # A __len__ that disagrees with the items reaches `return sorted(...)` with n below
-        # the item count, the only case in which 3.15's dropped `[:n]` shows.
-        size = rng.choice([0, 0, 1, 2, 3, n, n + 1, n + 3, rng.randrange(6), max(n - 1, 0)])
-        c.update(kind="obj", size=size, n=rng.choice([nn, 0, 2, 3, size, size + 1, size - 1]))
+            vals.append(rng.randint(-span, span))
+            idx.append(len(vals) - 1)
+    return vals, idx
+
+
+def gen_src(rng, name, items):
+    if rng.random() < 0.3:
+        return {"kind": "it", "name": name, "items": items}
+    u = rng.random()
+    if u < 0.25:
+        ln = None
+    elif u < 0.75:
+        ln = len(items)
+    elif u < 0.85:
+        ln = rng.choice([0, 1, 2, len(items) + 1, max(len(items) - 1, 0)])
     else:
-        c.update(kind="obj", size={"exc": rng.choice(["TypeError", "AttributeError", "RuntimeError",
-                                                      "ValueError"]), "msg": "from __len__"})
-    return c
+        ln = {"exc": rng.choice(["TypeError", "AttributeError", "ValueError", "RuntimeError"]),
+              "msg": "from __len__"}
+    return {"kind": "src", "name": name, "items": items, "len": ln}
+
+
+def gen_select(rng, fn):
+    m = rng.choice([0, 1, 2, 3, 4, 5, 6, 8, 10, 12, rng.randrange(20), rng.randrange(41)])
+    vals, idx = gen_objs(rng, m)
+    n = rng.choice([-2, -1, 0, 1, 1, 2, 3, m - 1, m, m + 1, rng.randrange(-3, 45)])
+    key = rng.choice(["none", "none", "neg", "div3", "mod3", "abs"])
+    return {"objs": vals, "src": gen_src(rng, "s", idx), "n": n, "key": key,
+            "script": gen_script(rng, 3 * m + 6)}
 
 
 def gen_merge(rng, fn):
     key = rng.choice(["none", "none", "neg", "div3", "mod3", "abs"])
     rev = rng.random() < 0.5
-    its = [small_list(rng, rng.choice([0, 1, 2, 3, 5, rng.randrange(12)]))
-           for _ in range(rng.choice([0, 1, 2, 2, 3, 4, rng.randrange(8)]))]
-    if rng.random() < 0.9:
-        for it in its:
-            it.sort(key=KEYS[key], reverse=rev)
-    return {"its": its, "key": key, "reverse": rev}
+    k = rng.choice([0, 1, 2, 2, 3, 4, rng.randrange(7)])
+    vals, srcs, total = [], [], 0
+    span = rng.choice([1, 3, 10, 100])
+    for i in range(k):
+        m = rng.choice([0, 1, 2, 3, 5, rng.randrange(9)])
+        vs = [rng.randint(-span, span) for _ in range(m)]
+        if rng.random() < 0.9:
+            vs.sort(key=KEYS[key], reverse=rev)
+        items = []
+        for v in vs:
+            if vals and rng.random() < 0.1:
+                items.append(rng.randrange(len(vals)))
+            else:
+                vals.append(v)
+                items.append(len(vals) - 1)
+        total += m
+        srcs.append(gen_src(rng, f"s{i}", items))
+    return {"objs": vals, "srcs": srcs, "key": key, "reverse": rev,
+            "script": gen_script(rng, 3 * total + 6)}
+
+
+class SCtx:
+    cur = None
+
+
+def s_bump(kind):
+    c = SCtx.cur
+    c["ctr"][kind] = c["ctr"].get(kind, 0) + 1
+    j = c["ctr"][kind]
+    return j, c["script"].get((kind, j))
+
+
+class SBad:
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __bool__(self):
+        raise TypeError(self.msg)
+
+
+class SE:
+    """An element; `<` and `==` are scripted (Lean: `SelDiff.cmpCall`)."""
+
+    __slots__ = ("v",)
+    __hash__ = None
+
+    def __init__(self, v):
+        self.v = v
+
+    def _cmp(self, kind, other, res):
+        SCtx.cur["log"].append([kind, self.v, other.v])
+        j, a = s_bump(kind)
+        if a == "raise":
+            raise ValueError(f"{kind} {j}")
+        if a == "stop":
+            raise StopIteration
+        if a == "boolraise":
+            return SBad(f"bool {kind} {j}")
+        if a == "flip":
+            return not res
+        return res
+
+    def __lt__(self, other):
+        return self._cmp("lt", other, self.v < other.v)
+
+    def __eq__(self, other):
+        return self._cmp("eq", other, self.v == other.v)
+
+
+class SKey:
+    def __init__(self, f):
+        self.f = f
+
+    def __call__(self, x):
+        SCtx.cur["log"].append(["key", x.v])
+        j, a = s_bump("key")
+        if a == "raise":
+            raise ValueError(f"key {j}")
+        if a == "stop":
+            raise StopIteration
+        return SE(self.f(x.v))
+
+
+class It:
+    def __init__(self, name, items):
+        self.name, self.items, self.i = name, items, 0
+
+    def __iter__(self):
+        SCtx.cur["log"].append(["iter", self.name])
+        j, a = s_bump("iter")
+        if a == "raise":
+            raise ValueError(f"iter {j}")
+        if a == "stop":
+            raise StopIteration
+        return self
+
+    def __next__(self):
+        SCtx.cur["log"].append(["next", self.name])
+        j, a = s_bump("next")
+        if a == "raise":
+            raise ValueError(f"next {j}")
+        if a == "stop":
+            raise StopIteration
+        if self.i < len(self.items):
+            self.i += 1
+            return self.items[self.i - 1]
+        raise StopIteration
+
+
+class Src:
+    def __init__(self, name, items, ln=None):
+        self.name, self.items, self.ln = name, items, ln
+
+    def __iter__(self):
+        SCtx.cur["log"].append(["iter", self.name])
+        j, a = s_bump("iter")
+        if a == "raise":
+            raise ValueError(f"iter {j}")
+        if a == "stop":
+            raise StopIteration
+        return It(self.name + "'", self.items)
+
+
+class SrcLen(Src):
+    def __len__(self):
+        SCtx.cur["log"].append(["len", self.name])
+        j, a = s_bump("len")
+        if a == "raise":
+            raise ValueError(f"len {j}")
+        if a == "stop":
+            raise StopIteration
+        if isinstance(self.ln, dict):
+            raise {"TypeError": TypeError, "AttributeError": AttributeError,
+                   "ValueError": ValueError, "RuntimeError": RuntimeError}[self.ln["exc"]](self.ln["msg"])
+        return self.ln
+
+
+def make_src(d, objs):
+    items = [objs[i] for i in d["items"]]
+    if d["kind"] == "it":
+        return It(d["name"], items)
+    if d.get("len") is None:
+        return Src(d["name"], items)
+    return SrcLen(d["name"], items, d["len"])
+
+
+def run_select(c):
+    hq = MODS[c["impl"]]["heapq"]
+    objs = [SE(v) for v in c["objs"]]
+    SCtx.cur = {"ctr": {}, "log": [], "script": {(k, j): a for k, j, a in c["script"]}}
+    key = None if c["key"] == "none" else SKey(KEYS[c["key"]])
+    out = {"r": [], "exc": None}
+    if c["fn"] == "merge":
+        g = hq.merge(*[make_src(d, objs) for d in c["srcs"]], key=key, reverse=c["reverse"])
+        while True:
+            try:
+                out["r"].append(next(g).v)
+            except StopIteration:
+                break
+            except Exception as e:
+                out["exc"] = [type(e).__name__, str(e)]
+                break
+        try:
+            v = next(g)
+            out["after"] = v.v
+        except StopIteration:
+            out["after"] = "stop"
+        except Exception as e:
+            out["after"] = [type(e).__name__, str(e)]
+    else:
+        try:
+            r = getattr(hq, c["fn"])(c["n"], make_src(c["src"], objs), key=key)
+            out["r"] = [x.v for x in r]
+        except Exception as e:
+            out["exc"] = [type(e).__name__, str(e)]
+    out["log"] = SCtx.cur["log"]
+    return {"ok": out}
 
 
 GENS = {
@@ -277,13 +459,8 @@ def run_python(c):
         if c["impl"] == "c" and mutates:
             return in_child(lambda: run_heap(c))
         return run_heap(c)
-    hq = mods["heapq"]
-    if fn in ("nsmallest", "nlargest"):
-        it = {"list": list, "iter": iter}.get(c["kind"], lambda v: Sized(v, c["size"]))(c["it"])
-        return common.py_result(lambda: getattr(hq, fn)(c["n"], it, key=key))
-    if fn == "merge":
-        return common.py_result(lambda: list(hq.merge(*[iter(x) for x in c["its"]],
-                                                       key=key, reverse=c["reverse"])))
+    if fn in ("nsmallest", "nlargest", "merge"):
+        return run_select(c)
     raise ValueError(fn)
 
 
