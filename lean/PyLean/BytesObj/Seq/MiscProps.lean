@@ -40,7 +40,7 @@ def TupleConcatSpec : Prop :=
       (a.items = [] → b.exact = true → r = .arg 1) ∧
       (b.items = [] → a.exact = true → (a.items ≠ [] ∨ b.exact = false) → r = .arg 0)) ∧
     (∀ name, tupleConcat a (.other name) =
-      .error (.typeError s!"can only concatenate tuple (not \"{name}\") to tuple"))
+      .error (.typeError s!"can only concatenate tuple (not \"{trunc200 name}\") to tuple"))
 
 theorem tupleConcatSpec_proven : TupleConcatSpec := by
   intro α a b hlim

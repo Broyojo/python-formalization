@@ -72,14 +72,14 @@ def ListContents : Prop :=
     (listExtend o .self = (o', none) → o'.items = o.items ++ o.items) ∧
     (listIConcat o (.fast s) = (o', none) → o'.items = o.items ++ s) ∧
     (listIConcat o (.notIterable name)).1 = o ∧
-    (listIConcat o (.notIterable name)).2 = some (.typeError s!"'{name}' object is not iterable") ∧
+    (listIConcat o (.notIterable name)).2 = some (.typeError s!"'{trunc200 name}' object is not iterable") ∧
     (1 ≤ w → listInplaceRepeat o w = .ok o' → o'.items = (List.replicate w.toNat o.items).flatten) ∧
     (w < 1 → listInplaceRepeat o w = .ok o' → o'.items = []) ∧
     (listConcat a b).items = a ++ b ∧
     (listSliceLH a 0 a.length).items = a ∧
     (listInit o none).1.items = [] ∧
     (listInit o (some (.notIterable name))).1.items = [] ∧
-    (listInit o (some (.notIterable name))).2 = some (.typeError s!"'{name}' object is not iterable")
+    (listInit o (some (.notIterable name))).2 = some (.typeError s!"'{trunc200 name}' object is not iterable")
 
 theorem listClear_items (o : LObj α) (hw : o.WF) : (listClear o).items = [] := by
   unfold listClear

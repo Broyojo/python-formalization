@@ -55,6 +55,18 @@ def richBool (E : ElemOps α ρ) (op : CmpOp) (v w : α) : Py Bool :=
     | .ok r => E.truth r
     | .error e => .error e
 
+/-- `%.200s` of a UTF-8 C string in `PyUnicode_FromFormat` (`unicode_fromformat_write_utf8`,
+Objects/unicodeobject.c:2623-2660): at most 200 bytes, and an incomplete sequence at the cut is
+dropped (`pconsumed`), so the longest prefix of whole characters whose encoding fits in `n` bytes.
+Type names are valid UTF-8 without NUL (`type()` refuses both), so nothing in the middle is
+replaced. The same definition as `TypeObj.truncUtf8`. -/
+def truncUtf8 : Nat → List Char → List Char
+  | _, [] => []
+  | n, c :: cs => if c.utf8Size ≤ n then c :: truncUtf8 (n - c.utf8Size) cs else []
+
+/-- `%.200s` of a type name (`Py_TYPE(o)->tp_name`). -/
+def trunc200 (s : String) : String := String.ofList (truncUtf8 200 s.toList)
+
 /-- `Py_RETURN_RICHCOMPARE(val1, val2, op)`, Include/object.h. -/
 def cmpSizes (op : CmpOp) (a b : Int) : Bool :=
   match op with

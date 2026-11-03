@@ -475,8 +475,8 @@ theorem removeResult_proven : RemoveResult := by
 * anything else is `TypeError("list indices must be integers or slices, not <type>")`
   (:3727-3731).
 
-Hypothesis: lists have at most `PY_SSIZE_T_MAX` items (type invariant). Type names are taken to be
-ASCII, so `%.200s` keeps 200 characters. -/
+Hypothesis: lists have at most `PY_SSIZE_T_MAX` items (type invariant). `<type>` is the type's name
+cut by `%.200s` to 200 bytes of UTF-8 without a partial character (`trunc200`). -/
 def SubscriptDispatch : Prop :=
   ∀ (α : Type) (o : LObj α) (tp : String) (f : LObj α → Py Int × LObj α),
     (∀ e o', f o = (.error e, o') → listSubscriptAny o (.index tp f) = (.error e, o')) ∧
@@ -548,8 +548,8 @@ the slice arm:
 * anything that is neither an index nor a slice is `TypeError("list indices must be integers or
   slices, not <type>")` (:3910-3914), the list unchanged.
 
-Hypotheses: the list `__index__` leaves is well formed (`LObj.WF`, type invariant); type names are
-ASCII. -/
+Hypothesis: the list `__index__` leaves is well formed (`LObj.WF`, type invariant). `<type>` is cut
+as in `SubscriptDispatch`. -/
 def AssSubscriptArms : Prop :=
   ∀ (α : Type) (o : LObj α) (tp : String) (f : LObj α → Py Int × LObj α) (value : Option (α × SeqView α)),
     (∀ e o', f o = (.error e, o') → listAssSubscriptAny o (.index tp f) value = (o', some e)) ∧

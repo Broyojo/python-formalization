@@ -222,7 +222,7 @@ def CApiListOps : Prop :=
     ((o.items.length + w.length : Int) ≤ ssizeMax / 16 → ∃ o',
       pyListExtend (some o) (.fast w) = ((o', none), some ()) ∧ o'.items = o.items ++ w) ∧
     pyListExtend (some o) (.notIterable name) =
-      ((o, some (.typeError s!"'{name}' object is not iterable")), some ())
+      ((o, some (.typeError s!"'{trunc200 name}' object is not iterable")), some ())
 
 theorem cApiListOps_proven : CApiListOps := by
   intro α o i j v x av arg w name hw
@@ -267,7 +267,7 @@ def CApiSliceConcat : Prop :=
       listNewPrealloc items = .ok { items := items, allocated := items.length, hasItems := true }) ∧
     (ssizeMax / 8 < (items.length : Int) → listNewPrealloc items = .error memoryError) ∧
     listConcatAny a (.inr name) =
-      .error (.typeError s!"can only concatenate list (not \"{name}\") to list") ∧
+      .error (.typeError s!"can only concatenate list (not \"{trunc200 name}\") to list") ∧
     ((a.length + b.length : Int) ≤ ssizeMax / 8 → listConcatAny a (.inl b) = .ok (LObj.prealloc (a ++ b))) ∧
     (ssizeMax / 8 < (a.length + b.length : Int) → listConcatAny a (.inl b) = .error memoryError)
 

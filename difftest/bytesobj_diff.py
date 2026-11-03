@@ -227,6 +227,11 @@ class Ix:
         return self.v
 
 
+UNAME = "\u00e9" * 101           # 202 bytes of UTF-8: `%.200s` keeps 100 characters
+UCls = type(UNAME, (), {})
+UIx = type(UNAME, (Ix,), {})
+
+
 def mk_ix(a):
     """An index argument: `{"ix": "int"|"obj"|"str"|"float", "v": n, "eff": ...}`."""
     k = a["ix"]
@@ -234,6 +239,10 @@ def mk_ix(a):
         return a["v"]
     if k == "obj":
         return Ix(a["v"], a["eff"])
+    if k == "uniobj":
+        return UIx(a["v"], a["eff"])
+    if k == "uni":
+        return UCls()
     if k == "str":
         return "a"
     return 1.5
@@ -854,7 +863,9 @@ def gen_ix(rng, n):
         return {"ix": "int", "v": seq_edge(rng, n)}
     if r < 0.85:
         return {"ix": "obj", "v": seq_edge(rng, n), "eff": rng.choice(["none", "none", "pop", "clear", "add", "bad"])}
-    return {"ix": rng.choice(["str", "float"])}
+    if r < 0.92:
+        return {"ix": "uniobj", "v": seq_edge(rng, n), "eff": rng.choice(["none", "pop", "bad"])}
+    return {"ix": rng.choice(["str", "float", "uni"])}
 
 
 def gen_list_op(rng, n):
