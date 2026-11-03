@@ -2018,6 +2018,26 @@ def entries : List Entry := [
     statement := "For all bare keys a, b, c, d, x with x != a, c != d, boolean X and at least sixteen frames left, loads('a.b.c=X\\n[x]\\n[a.b.d]') gives {a: {b: {c: X, d: {}}}, x: {}}: finalize_pending marks a and a.b one by one (recursive=False); marked recursively, [a.b.d] would raise 'Cannot declare'."
     source := "TOML 1.1 spec, Table (a dotted key defines its tables; an undefined sub-table may still be declared)", status := .proven
     prop := ``Toml.FinalizeNotRecursive, thm := some ``Toml.finalizeNotRecursive_proven },
+  { id := "textlibs-toml-kv-rule-more", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["key_value_rule", "NestedDict.get_or_create_nest", "Flags.set", "Flags.is_"]
+    statement := "For all bare keys t, a, b, booleans X, Y and at least eighteen frames left: loads('a=X\\na.b=Y') raises 'Cannot overwrite a value' after Y (get_or_create_nest's KeyError caught in key_value_rule); loads('[t]\\na={}\\na.b=Y') raises 'Cannot mutate immutable namespace ('t', 'a')' after Y (FROZEN set and checked on header + key)."
+    source := "TOML 1.1 spec, Keys ('Defining a key multiple times is invalid') and Inline Table ('Keys and sub-tables cannot be added outside the braces')", status := .proven
+    prop := ``Toml.KvRuleMore, thm := some ``Toml.kvRuleMore_proven },
+  { id := "textlibs-toml-top-level-comments", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["loads", "skip_comment", "skip_until", "create_dict_rule", "parse_key_part"]
+    statement := "After any run of blank and comment lines, with at least ten frames left (3 * depth + 14 per value): a key = value line, spaces or tabs and a comment running to the end gives the one-entry dict; a header [K], spaces or tabs and such a comment gives {K: {}}; a '[' that is the last character raises 'Invalid initial character for a key part' one past it."
+    source := "TOML 1.1 spec, Comment ('Comments may be placed after a key/value pair'); _parser.py:192-195", status := .proven
+    prop := ``Toml.TopLevelComments, thm := some ``Toml.topLevelComments_proven },
+  { id := "textlibs-toml-multiline-basic-errors", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["parse_basic_str", "parse_multiline_str", "parse_value"]
+    statement := "With at least six frames left: '\"\"\"', an optional newline, characters, then a control character other than tab and newline raises 'Illegal character' there; '\"\"\"', an optional newline and characters up to the end of the document raise 'Unterminated string' at the end."
+    source := "TOML 1.1 spec, String (multi-line basic strings: control characters other than tab, line feed and carriage return must be escaped)", status := .proven
+    prop := ``Toml.MultilineBasicErrors, thm := some ``Toml.multilineBasicErrors_proven },
+  { id := "textlibs-toml-inline-dotted", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["parse_inline_table", "NestedDict.get_or_create_nest", "Flags.is_", "Flags.set"]
+    statement := "For all bare keys a, b != c, values v, w of ArrayTableSpec and fillers around ',' and before '}', with 3 * depth + 16 frames left: {a.b=v, a.c=w} gives {a: {b: v, c: w}} and the position after '}'."
+    source := "TOML 1.1 spec, Inline Table (dotted keys inside braces)", status := .proven
+    prop := ``Toml.InlineDotted, thm := some ``Toml.inlineDotted_proven },
   { id := "textlibs-toml-escape-eof-pos", pyFile := "Lib/tomllib/_parser.py"
     pyFns := ["parse_basic_str_escape", "parse_basic_str", "loads"]
     statement := "Every TOMLDecodeError(msg, doc, pos) that loads raises has pos <= len(doc) (doc after CRLF normalisation)."
@@ -2054,7 +2074,7 @@ def entries : List Entry := [
     notes := "access_lists=False is not observable here: every list in an inline table is a value, which is frozen before a dotted key can reach it." },
   { id := "textlibs-toml-multiline-literal", pyFile := "Lib/tomllib/_parser.py"
     pyFns := ["parse_multiline_str", "parse_value", "skip_until"]
-    statement := "With at least three frames left: for every text without ''' and without control characters other than tab and newline, an optional newline after the opening ''' (trimmed) and one or two ''' before the closing ''' (kept), parse_value returns the text and the position after the quotes; without a closing ''' it raises 'Expected \"'''\"' at the end of the document; a control character other than tab or newline before the closing quotes raises 'Found invalid character' there."
+    statement := "With at least three frames left: for every text without ''' that does not end with ' (one or two ' inside are kept) and has no control characters other than tab and newline, an optional newline after the opening ''' (trimmed) and one or two ''' before the closing ''' (kept), parse_value returns the text and the position after the quotes; without a closing ''' it raises 'Expected \"'''\"' at the end of the document; a control character other than tab or newline before the closing quotes raises 'Found invalid character' there."
     source := "TOML 1.1 spec, String (multi-line literal strings; 1 or 2 single quotes next to the delimiters)", status := .proven
     prop := ``Toml.MultilineLiteralSpec, thm := some ``Toml.multilineLiteralSpec_proven }
 ,

@@ -303,6 +303,39 @@ theorem findSub_triple_none : ∀ {s : Str}, 39 ∉ s → findSub [39, 39, 39] s
     have hr : 39 ∉ r := fun m => hs (by simp [m])
     simp [findSub, List.isPrefixOf, Ne.symm hc, findSub_triple_none hr]
 
+/-- The first `'''` of `s ++ x` is at `len(s)` when `s` holds no `'''`, does not end with `'`,
+and `x` starts with `'''`. -/
+theorem findSub_triple_gen : ∀ (s x : Str), findSub [39, 39, 39] s = none → s.getLast? ≠ some 39 →
+    [39, 39, 39].isPrefixOf x = true → findSub [39, 39, 39] (s ++ x) = some s.length
+  | [], x, _, _, hx => by
+    cases x with
+    | nil => simp [List.isPrefixOf] at hx
+    | cons c r => simp [findSub, hx]
+  | c :: r, x, hn, hl, hx => by
+    simp only [findSub] at hn
+    split at hn
+    · cases hn
+    · next hpre =>
+      have hr : findSub [39, 39, 39] r = none := by
+        cases h : findSub [39, 39, 39] r with
+        | none => rfl
+        | some _ => rw [h] at hn; cases hn
+      have hlr : r.getLast? ≠ some 39 := by
+        cases r with
+        | nil => simp
+        | cons d t => rwa [List.getLast?_cons_cons] at hl
+      have hnp : [39, 39, 39].isPrefixOf (c :: (r ++ x)) = false := by
+        match r, hl, hpre with
+        | [], hl, _ =>
+          have : c ≠ 39 := by intro e; apply hl; simp [e]
+          simp [List.isPrefixOf, Ne.symm this]
+        | [d], hl, _ =>
+          have : d ≠ 39 := by intro e; apply hl; simp [e]
+          simp [List.isPrefixOf, Ne.symm this]
+        | d :: e :: t, _, hpre => simpa [List.isPrefixOf] using hpre
+      have ih := findSub_triple_gen r x hr hlr hx
+      simp [findSub, hnp, ih]
+
 theorem parseMultilineStrN_lit_le (src : Str) (pos : Nat) : parseMultilineStrN src pos true ≤ 3 := by
   have h1 := skipUntilN_le src (pos + 3) [39, 39, 39] illegalMl true
   have h2 := skipUntilN_le src (pos + 3 + 1) [39, 39, 39] illegalMl true
@@ -316,14 +349,15 @@ three single quotes on each side ... A newline immediately following the opening
 be trimmed. All other content between the delimiters is interpreted as-is without modification";
 "You can write 1 or 2 single quotes anywhere within a multi-line literal string, but sequences of
 three or more single quotes are not permitted"), with at least three frames left: for every text
-without `'` and without control characters other than tab and newline, an optional newline right
-after `'''` (trimmed), and one or two `'` before the closing `'''` (kept), `parse_value` returns
+without `'''` that does not end with `'` (one or two `'` inside are kept) and has no control
+characters other than tab and newline, an optional newline right after `'''` (trimmed), and one or two `'` before the closing `'''` (kept), `parse_value` returns
 the text and the position after the quotes; without a closing `'''` it raises "Expected \"'''\""
 at the end of the document; a control character other than tab or newline before the closing
 quotes raises "Found invalid character" there. -/
 def MultilineLiteralSpec : Prop :=
   (∀ (cfg : Cfg) (src : Str) (r pos fuel : Nat) (nl s q rest : Str), 3 ≤ r → (nl = [] ∨ nl = [10]) →
-    (q = [] ∨ q = [39] ∨ q = [39, 39]) → (∀ c ∈ s, c ≠ 39 ∧ illegalMl c = false) →
+    (q = [] ∨ q = [39] ∨ q = [39, 39]) → (∀ c ∈ s, illegalMl c = false) →
+    findSub [39, 39, 39] s = none → s.getLast? ≠ some 39 →
     (nl = [] → (s ++ q).head? ≠ some 10) → (∀ c, rest.head? = some c → c ≠ 39) →
     src.drop pos = [39, 39, 39] ++ nl ++ s ++ q ++ [39, 39, 39] ++ rest →
     parseValue cfg src r (fuel + 1) pos = .ok (pos + 6 + nl.length + s.length + q.length, .str (s ++ q))) ∧
@@ -338,14 +372,13 @@ def MultilineLiteralSpec : Prop :=
 
 theorem multilineLiteralSpec_proven : MultilineLiteralSpec := by
   refine ⟨?_, ?_, ?_⟩
-  · intro cfg src r pos fuel nl s q rest hr hnl hq hs hhead hrest h
+  · intro cfg src r pos fuel nl s q rest hr hnl hq hs hns3 hlast hhead hrest h
     have hg : src[pos]? = some 39 := getElem?_of_drop (r := [39, 39] ++ nl ++ s ++ q ++ [39, 39, 39] ++ rest)
       (by rw [h]; simp)
     have hst3 : startsAt src pos [39, 39, 39] = true :=
       startsAt_of_drop (r := nl ++ s ++ q ++ [39, 39, 39] ++ rest) (by rw [h]; simp)
     have hd3 : src.drop (pos + 3) = nl ++ (s ++ q ++ [39, 39, 39] ++ rest) := by
       simpa using drop_add_of_drop (a := [39, 39, 39]) (by rw [h]; simp)
-    have hn39 : 39 ∉ s := fun m => (hs 39 m).1 rfl
     obtain ⟨p, hp, hpp, hdp⟩ : ∃ p, (if startsAt src (pos + 3) [10] = true then pos + 3 + 1 else pos + 3) = p ∧
         p = pos + 3 + nl.length ∧ src.drop p = s ++ (q ++ [39, 39, 39] ++ rest) := by
       rcases hnl with rfl | rfl
@@ -364,10 +397,10 @@ theorem multilineLiteralSpec_proven : MultilineLiteralSpec := by
     subst hpp
     have hfind : findSub [39, 39, 39] (src.drop (pos + 3 + nl.length)) = some s.length := by
       rw [hdp]
-      refine findSub_triple hn39 ?_
+      refine findSub_triple_gen s _ hns3 hlast ?_
       rcases hq with rfl | rfl | rfl <;> simp [List.isPrefixOf]
     have hsl : sl src (pos + 3 + nl.length) (pos + 3 + nl.length + s.length) = s := sl_of_drop hdp
-    have hfi : firstIdx illegalMl s = none := firstIdx_none (fun x hx => (hs x hx).2)
+    have hfi : firstIdx illegalMl s = none := firstIdx_none hs
     have hdq : src.drop (pos + 3 + nl.length + s.length + 3) = q ++ rest := by
       have := drop_add_of_drop (a := s ++ [39, 39, 39]) (r := q ++ rest) (by
         rw [hdp]; rcases hq with rfl | rfl | rfl <;> simp)
@@ -443,5 +476,196 @@ theorem multilineLiteralSpec_proven : MultilineLiteralSpec := by
       Bool.false_eq_true, ite_false, ite_true, hst3,
       need_ok (Nat.le_trans (parseMultilineStrN_lit_le src pos) hr), parseMultilineStr, hns, skipUntil, hfind,
       hsl, hfi, hgc, bind, Except.bind, Except.map]
+
+/-! ## Multi-line basic string errors, _parser.py:654-683 -/
+
+/-- The multi-line loop of `parse_basic_str` over raw characters. -/
+theorem mlRaw (src : Str) : ∀ (s : Str) (fuel pos start : Nat) (res rest : Str),
+    (∀ x ∈ s, x ≠ 34 ∧ x ≠ 92 ∧ illegalMl x = false) → src.drop pos = s ++ rest →
+    basicStrLoop src true (fuel + s.length) pos start res = basicStrLoop src true fuel (pos + s.length) start res
+  | [], _, _, _, _, _, _, _ => by simp
+  | c :: t, fuel, pos, start, res, rest, hs, h => by
+    obtain ⟨h34, h92, hill⟩ := hs c (by simp)
+    have h1 : src.drop pos = c :: (t ++ rest) := by simpa using h
+    have hg := getElem?_of_drop h1
+    have ih := mlRaw src t fuel (pos + 1) start res rest (fun x hx => hs x (by simp [hx])) (drop_succ_of_drop h1)
+    rw [show fuel + (c :: t).length = (fuel + t.length) + 1 by simp; omega]
+    simp only [basicStrLoop, hg, beq_iff_eq, h34, h92, ite_false, hill, Bool.false_eq_true, ite_true, if_true]
+    rw [ih]; congr 1; simp; omega
+
+/-- Multi-line basic strings, TOML 1.1 "String" ("Any Unicode character may be used except those
+that must be escaped: backslash and the control characters other than tab, line feed, and
+carriage return"), with at least six frames left: `"""`, an optional newline, characters, then a
+control character other than tab and newline raises "Illegal character" there; `"""`, an optional
+newline and characters up to the end of the document raise "Unterminated string" at the end. -/
+def MultilineBasicErrors : Prop :=
+  (∀ (cfg : Cfg) (src : Str) (r pos fuel : Nat) (nl s : Str) (c : Nat) (rest : Str), 6 ≤ r →
+    (nl = [] ∨ nl = [10]) → (∀ x ∈ s, x ≠ 34 ∧ x ≠ 92 ∧ illegalMl x = false) → illegalMl c = true →
+    (nl = [] → s.head? ≠ some 10) → src.drop pos = [34, 34, 34] ++ nl ++ s ++ c :: rest →
+    parseValue cfg src r (fuel + 1) pos =
+      .error (tde (S "Illegal character " ++ reprS [c]) src (pos + 3 + nl.length + s.length))) ∧
+  (∀ (cfg : Cfg) (src : Str) (r pos fuel : Nat) (nl s : Str), 6 ≤ r → (nl = [] ∨ nl = [10]) →
+    (∀ x ∈ s, x ≠ 34 ∧ x ≠ 92 ∧ illegalMl x = false) → (nl = [] → s.head? ≠ some 10) →
+    src.drop pos = [34, 34, 34] ++ nl ++ s →
+    parseValue cfg src r (fuel + 1) pos = .error (tdeS "Unterminated string" src (pos + 3 + nl.length + s.length)))
+
+/-- `"""` and the optional newline: the position where `parse_basic_str` starts. -/
+theorem ml_open {src : Str} {pos : Nat} {nl t : Str} (hnl : nl = [] ∨ nl = [10]) (hh : nl = [] → t.head? ≠ some 10)
+    (h : src.drop pos = [34, 34, 34] ++ nl ++ t) :
+    (if startsAt src (pos + 3) [10] = true then pos + 3 + 1 else pos + 3) = pos + 3 + nl.length ∧
+      src.drop (pos + 3 + nl.length) = t := by
+  have hd3 : src.drop (pos + 3) = nl ++ t := by
+    simpa using drop_add_of_drop (a := [34, 34, 34]) (by rw [h]; simp)
+  rcases hnl with rfl | rfl
+  · have hns : startsAt src (pos + 3) [10] = false := by
+      unfold startsAt; rw [hd3]
+      cases ht : t with
+      | nil => rfl
+      | cons c r => have := hh rfl; rw [ht] at this; simp at this; simp [List.isPrefixOf, Ne.symm this]
+    exact ⟨by simp [hns], by simpa using hd3⟩
+  · have hys : startsAt src (pos + 3) [10] = true := startsAt_of_drop (by simpa using hd3)
+    exact ⟨by simp [hys], by simpa using drop_succ_of_drop (c := 10) (by simpa using hd3)⟩
+
+theorem multilineBasicErrors_proven : MultilineBasicErrors := by
+  refine ⟨?_, ?_⟩
+  · intro cfg src r pos fuel nl s c rest hr hnl hs hc hh h
+    have hc34 : c ≠ 34 := by intro e; subst e; simp [illegalMl, asciiCtrl] at hc
+    have hc92 : c ≠ 92 := by intro e; subst e; simp [illegalMl, asciiCtrl] at hc
+    have hg : src[pos]? = some 34 := getElem?_of_drop (r := [34, 34] ++ nl ++ s ++ c :: rest) (by rw [h]; simp)
+    have hst3 : startsAt src pos [34, 34, 34] = true := startsAt_of_drop (r := nl ++ s ++ c :: rest) (by rw [h]; simp)
+    obtain ⟨hp, hdp⟩ := ml_open (t := s ++ c :: rest) hnl
+      (by intro e; cases s with
+        | nil => simp; intro e'; subst e'; simp [illegalMl, asciiCtrl] at hc
+        | cons x xs => have := hh e; simpa using this) (by rw [h]; simp)
+    have hlen : s.length < src.length + 1 := by have := congrArg List.length h; simp at this; omega
+    have hloop := mlRaw src s (src.length + 1 - s.length) (pos + 3 + nl.length) (pos + 3 + nl.length) [] (c :: rest) hs hdp
+    rw [show src.length + 1 - s.length + s.length = src.length + 1 by omega] at hloop
+    obtain ⟨f, hf⟩ : ∃ f, src.length + 1 - s.length = f + 1 := ⟨src.length - s.length, by omega⟩
+    have hgc : src[pos + 3 + nl.length + s.length]? = some c := getElem?_of_drop (by simpa using drop_add_of_drop hdp)
+    have hstep : basicStrLoop src true (src.length + 1 - s.length) (pos + 3 + nl.length + s.length)
+        (pos + 3 + nl.length) [] = .error (tde (S "Illegal character " ++ reprS [c]) src (pos + 3 + nl.length + s.length)) := by
+      rw [hf]; simp [basicStrLoop, hgc, hc34, hc92, hc]
+    simp only [parseValue, hg, show (some 34 == some 34) = true from rfl, ite_true, hst3,
+      need_ok (Nat.le_trans (parseMultilineStrN_le src pos false) hr), parseMultilineStr, hp, Bool.false_eq_true,
+      ite_false, parseBasicStr, hloop, hstep, bind, Except.bind, Except.map]
+  · intro cfg src r pos fuel nl s hr hnl hs hh h
+    have hg : src[pos]? = some 34 := getElem?_of_drop (r := [34, 34] ++ nl ++ s) (by rw [h]; simp)
+    have hst3 : startsAt src pos [34, 34, 34] = true := startsAt_of_drop (r := nl ++ s) (by rw [h]; simp)
+    obtain ⟨hp, hdp⟩ := ml_open (t := s ++ []) hnl (by simpa using hh) (by rw [h]; simp)
+    have hlen : s.length < src.length + 1 := by have := congrArg List.length h; simp at this; omega
+    have hloop := mlRaw src s (src.length + 1 - s.length) (pos + 3 + nl.length) (pos + 3 + nl.length) [] [] hs hdp
+    rw [show src.length + 1 - s.length + s.length = src.length + 1 by omega] at hloop
+    obtain ⟨f, hf⟩ : ∃ f, src.length + 1 - s.length = f + 1 := ⟨src.length - s.length, by omega⟩
+    have hgn : src[pos + 3 + nl.length + s.length]? = none := getElem?_of_drop_nil (by simpa using drop_add_of_drop hdp)
+    have hstep : basicStrLoop src true (src.length + 1 - s.length) (pos + 3 + nl.length + s.length)
+        (pos + 3 + nl.length) [] = .error (tdeS "Unterminated string" src (pos + 3 + nl.length + s.length)) := by
+      rw [hf]; simp [basicStrLoop, hgn]
+    simp only [parseValue, hg, show (some 34 == some 34) = true from rfl, ite_true, hst3,
+      need_ok (Nat.le_trans (parseMultilineStrN_le src pos false) hr), parseMultilineStr, hp, Bool.false_eq_true,
+      ite_false, parseBasicStr, hloop, hstep, bind, Except.bind, Except.map]
+
+/-! ## Dotted keys inside inline tables, _parser.py:540-563 -/
+
+/-- Inline tables, TOML 1.1 "Inline Table" (keys may be dotted, as in `{ type.name = "pug" }`),
+with fillers around `,` and before `}`: for all bare keys `a`, `b ≠ c` and values `v`, `w` of
+`ArrayTableSpec`, `{a.b=v, a.c=w}` gives `{a: {b: v, c: w}}` and the position after `}`. With
+`3 * depth + 16` frames left for the deeper value. -/
+def InlineDotted : Prop :=
+  ∀ (cfg : Cfg) (src : Str) (r pos fuel : Nat) (lead fa fb fc : List Fill) (a b c : Str) (v w : SV) (rest : Str),
+    (∀ f ∈ lead, f.ok) → (∀ f ∈ fa, f.ok) → (∀ f ∈ fb, f.ok) → (∀ f ∈ fc, f.ok) →
+    bareOk a → bareOk b → bareOk c → b ≠ c → v.ok → w.ok →
+    2 ≤ cfg.maxKeyParts → 3 * v.depth + 16 ≤ r → 3 * w.depth + 16 ≤ r → v.need + w.need + 8 ≤ fuel →
+    src.drop pos = 123 :: fillEnc lead ++ a ++ 46 :: b ++ 61 :: v.enc ++ fillEnc fa ++ 44 :: fillEnc fb ++
+      a ++ 46 :: c ++ 61 :: w.enc ++ fillEnc fc ++ 125 :: rest →
+    parseValue cfg src r fuel pos =
+      .ok (pos + 1 + (fillEnc lead).length + (a ++ 46 :: b).length + 1 + v.enc.length + (fillEnc fa).length + 1 +
+        (fillEnc fb).length + (a ++ 46 :: c).length + 1 + w.enc.length + (fillEnc fc).length + 1,
+        .tbl [(a, .tbl [(b, v.val), (c, w.val)])])
+
+theorem inlineDotted_proven : InlineDotted := by
+  intro cfg src r pos fuel lead fa fb fc a b c v w rest hlead hfa hfb hfc ha hb hc hbc hv hw hmax hrv hrw hf h
+  obtain ⟨g, rfl⟩ : ∃ g, fuel = g + 1 + 1 + 1 + 1 + 1 := ⟨fuel - 5, by omega⟩
+  have hps : ∀ z, bareOk z → ∀ p ∈ [KPart.bare z], p.ok := by intro z hz p hp; simp at hp; subst hp; exact hz
+  have hmax2 : [KPart.bare b].length + 1 ≤ cfg.maxKeyParts := by simp; omega
+  have hcb : c ≠ b := Ne.symm hbc
+  have h0 : src.drop pos = 123 :: fillEnc lead ++ (keyEnc (.bare a) [.bare b] ++ (61 :: v.enc ++ (fillEnc fa ++
+      44 :: fillEnc fb ++ a ++ 46 :: c ++ 61 :: w.enc ++ fillEnc fc ++ 125 :: rest))) := by
+    rw [h, keyEnc_bare2]; simp
+  rw [parseValue_brace hlead (keyEnc_notFill (bareOk_kpart ha) _).1 (keyEnc_notFill (bareOk_kpart ha) _).2
+    (by omega) h0]
+  have hd1 : src.drop (pos + 1 + (fillEnc lead).length) = keyEnc (.bare a) [.bare b] ++ 61 :: v.enc ++
+      (fillEnc fa ++ 44 :: fillEnc fb ++ (a ++ 46 :: c ++ 61 :: w.enc ++ fillEnc fc ++ 125 :: rest)) :=
+    drop_of_eq_pre (a := 123 :: fillEnc lead) (by rw [h, keyEnc_bare2]; simp) (by simp; omega)
+  have hv34 := fill_head_ne34 fa hfa (44 :: fillEnc fb) (by intro x hx; simp at hx; omega)
+  rw [inline_entry (g := g + 1) (bareOk_kpart ha) (hps b hb) hmax2 hv
+    (fun x hx => hv34 x (by simpa using hx)) (by omega) (by omega) hd1, keyEnc_bare2, keyVal_bare2]
+  -- the first entry and the comma
+  generalize hP2 : pos + 1 + (fillEnc lead).length + (a ++ 46 :: b).length + 1 + v.enc.length = P2
+  have hd2 : src.drop P2 = fillEnc fa ++ (44 :: (fillEnc fb ++ (a ++ 46 :: c ++ 61 :: w.enc ++ fillEnc fc ++
+      125 :: rest))) :=
+    drop_of_eq_pre (a := 123 :: fillEnc lead ++ (a ++ 46 :: b) ++ 61 :: v.enc) (by rw [h]; simp)
+      (by rw [← hP2]; simp; omega)
+  have hsk := skipCawF_fill hfa (notFill_44 _) hd2
+  have hd2c : src.drop (P2 + (fillEnc fa).length) = [44] ++ (fillEnc fb ++ (a ++ 46 :: c ++ 61 :: w.enc ++
+      fillEnc fc ++ 125 :: rest)) := by simpa using drop_add_of_drop hd2
+  have hcomma := sl_of_drop hd2c
+  simp only [List.length_singleton] at hcomma
+  have hd3 : src.drop (P2 + (fillEnc fa).length + 1) = fillEnc fb ++ (a ++ 46 :: c ++ 61 :: w.enc ++
+      fillEnc fc ++ 125 :: rest) := drop_add_of_drop hd2c
+  obtain ⟨a0, at', hat, ha0⟩ := bare_head ha
+  have hnf2 : notFill (a ++ 46 :: c ++ 61 :: w.enc ++ fillEnc fc ++ 125 :: rest) := by
+    rw [hat]; intro x hx; simp at hx; subst hx; obtain ⟨-, hw0, h10, -, h35, -⟩ := bare_char ha0
+    exact ⟨by simp [tomlWsNl, hw0, h10], h35⟩
+  have hsk2 := skipCawF_fill hfb hnf2 hd3
+  have hd4 : src.drop (P2 + (fillEnc fa).length + 1 + (fillEnc fb).length) = keyEnc (.bare a) [.bare c] ++
+      61 :: w.enc ++ (fillEnc fc ++ 125 :: rest) := by
+    rw [keyEnc_bare2]; have := drop_add_of_drop hd3; simpa using this
+  have hst : startsAt src (P2 + (fillEnc fa).length + 1 + (fillEnc fb).length) [125] = false := by
+    unfold startsAt; rw [hd4, keyEnc_bare2, hat]
+    have : a0 ≠ 125 := by intro e; subst e; simp [bareKey, inR] at ha0
+    simp [List.isPrefixOf, Ne.symm this]
+  have his1 : Flags.init.is_ [a, b] FROZEN = false := by simp [Flags.init, Flags.is_, isAux, dget_nil]
+  have hfl : ∀ fl : Flags, fl = Flags.init ∨ fl = { tree := fsetAux FROZEN true [a, b] [], pending := [] } →
+      fl.is_ [a, c] FROZEN = false := by
+    intro fl hfl
+    rcases hfl with rfl | rfl
+    · simp [Flags.init, Flags.is_, isAux, dget_nil]
+    · simp [Flags.is_, isAux, fsetAux, dset, dget_cons, dget_nil, hcb, FNode.empty, FNode.rflags, FNode.nested,
+        FNode.flags, addFlag]
+  simp only [inlineBody, his1, Bool.false_eq_true, ite_false, show ([a, b] : Key).dropLast = [a] from rfl,
+    show ([a, b] : Key).getLastD [] = b from rfl, withNest_empty, dget_nil, Option.isSome_none, dset_nil,
+    Except.map, overwriteErr, bind, Except.bind, nestDict, need_skipCaw (show 4 ≤ r - 1 by omega), hsk, hcomma,
+    show ([44] == [125]) = false from rfl, show ([44] != [44]) = false from rfl, hsk2, hst]
+  -- the second entry
+  have hrest2 : ∀ x, (fillEnc fc ++ 125 :: rest).head? = some x → x ≠ 34 :=
+    fill_head_ne34 fc hfc _ (by intro x hx; simp at hx; omega)
+  generalize hP5 : P2 + (fillEnc fa).length + 1 + (fillEnc fb).length + (a ++ 46 :: c).length + 1 + w.enc.length = P5
+  have hd5 : src.drop P5 = fillEnc fc ++ (125 :: rest) := by
+    exact drop_of_eq_pre (a := 123 :: fillEnc lead ++ (a ++ 46 :: b) ++ 61 :: v.enc ++ fillEnc fa ++ 44 :: fillEnc fb ++
+      (a ++ 46 :: c) ++ 61 :: w.enc) (by rw [h]; simp) (by rw [← hP5, ← hP2]; simp; omega)
+  have hsk3 := skipCawF_fill hfc (notFill_125 rest) hd5
+  have hd6 : src.drop (P5 + (fillEnc fc).length) = [125] ++ rest := by simpa using drop_add_of_drop hd5
+  have hclose := sl_of_drop hd6
+  simp only [List.length_singleton] at hclose
+  have hdc : dget [(b, v.val)] c = none := by simp [dget_cons, dget_nil, hcb]
+  cases hvd : v.val.isDictOrList
+  · simp only [Bool.false_eq_true, ite_false, pure, Except.pure]
+    rw [inline_entry (g := g) (bareOk_kpart ha) (hps c hc) (by simp; omega) hw hrest2 (by omega) (by omega) hd4,
+      keyEnc_bare2, keyVal_bare2, hP5]
+    simp only [inlineBody, hfl Flags.init (Or.inl rfl), Bool.false_eq_true, ite_false,
+      show ([a, c] : Key).dropLast = [a] from rfl, show ([a, c] : Key).getLastD [] = c from rfl, withNest,
+      dget_cons, ite_true, Option.isSome_some, hdc, Option.isSome_none, overwriteErr, bind,
+      Except.bind, need_skipCaw (show 4 ≤ r - 1 by omega), hsk3, hclose, show ([125] == [125]) = true from rfl,
+      pure, Except.pure]
+    simp [dset, dget_cons, hcb, hbc]
+  · simp only [ite_true, Flags.set, List.isEmpty_cons, Bool.false_eq_true, ite_false, Flags.init]
+    rw [inline_entry (g := g) (bareOk_kpart ha) (hps c hc) (by simp; omega) hw hrest2 (by omega) (by omega) hd4,
+      keyEnc_bare2, keyVal_bare2, hP5]
+    simp only [inlineBody, hfl _ (Or.inr rfl), Bool.false_eq_true, ite_false,
+      show ([a, c] : Key).dropLast = [a] from rfl, show ([a, c] : Key).getLastD [] = c from rfl, withNest,
+      dget_cons, ite_true, Option.isSome_some, hdc, Option.isSome_none, overwriteErr, bind,
+      Except.bind, need_skipCaw (show 4 ≤ r - 1 by omega), hsk3, hclose, show ([125] == [125]) = true from rfl,
+      pure, Except.pure]
+    simp [dset, dget_cons, hcb, hbc]
 
 end PyLean.TextLibs.Toml

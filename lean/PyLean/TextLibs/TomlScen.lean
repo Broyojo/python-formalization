@@ -1063,6 +1063,132 @@ theorem finalizeNotRecursive_proven : FinalizeNotRecursive := by
     rw [e] at this; exact getElem?_of_drop_nil this
   rw [mainLoop_hdr_end (hR := hR9) hg3 (finalize_nil _ rfl) hr3 hend]
 
+/-! ## `key_value_rule` under a value and under a header, _parser.py:420-446 -/
+
+/-- Keys, TOML 1.1 ("Defining a key multiple times is invalid"; a value cannot be extended by a
+dotted key) and Inline Table ("Keys and sub-tables cannot be added outside the braces"), for all
+bare keys `t`, `a`, `b`, booleans `X`, `Y` and at least eighteen frames left:
+`loads('a=X\na.b=Y')` raises "Cannot overwrite a value" after `Y` (`get_or_create_nest` finds no
+table behind `a`: the `except KeyError` of `key_value_rule`); `loads('[t]\na={}\na.b=Y')` raises
+"Cannot mutate immutable namespace ('t', 'a')" after `Y`: the `FROZEN` flag is set and checked on
+the absolute key, header included. -/
+def KvRuleMore : Prop :=
+  ∀ (pf : ParseFloat) (maxK maxD : Nat) (tz : TzCache) (fr : Nat) (t a b : Str) (x y : Bool),
+    bareOk t → bareOk a → bareOk b → 2 ≤ maxK → 18 ≤ fr →
+    loads pf maxK maxD tz fr (.str (a ++ 61 :: boolText x ++ 10 :: a ++ 46 :: b ++ 61 :: boolText y)) =
+      .error (tdeS "Cannot overwrite a value" (a ++ 61 :: boolText x ++ 10 :: a ++ 46 :: b ++ 61 :: boolText y)
+        (2 * a.length + b.length + 4 + (boolText x).length + (boolText y).length)) ∧
+    loads pf maxK maxD tz fr (.str (hdr t ++ 10 :: a ++ 61 :: emptyTbl.enc ++ 10 :: a ++ 46 :: b ++ 61 :: boolText y)) =
+      .error (tde (S "Cannot mutate immutable namespace " ++ keyRepr [t, a])
+        (hdr t ++ 10 :: a ++ 61 :: emptyTbl.enc ++ 10 :: a ++ 46 :: b ++ 61 :: boolText y)
+        (t.length + 2 * a.length + b.length + 9 + (boolText y).length))
+
+theorem kvRuleMore_proven : KvRuleMore := by
+  intro pf maxK maxD tz fr t a b x y ht ha hb hk hfr
+  have hmax0 : ([] : List KPart).length + 1 ≤ (mkCfg pf maxK maxD tz).maxKeyParts := by simp [mkCfg]; omega
+  have hmax1 : 1 ≤ (mkCfg pf maxK maxD tz).maxKeyParts := by simp [mkCfg]; omega
+  have hmax2 : [KPart.bare b].length + 1 ≤ (mkCfg pf maxK maxD tz).maxKeyParts := by simp [mkCfg]; omega
+  have hR9 : 9 ≤ fr - 1 := by omega
+  have hpb : ∀ p ∈ [KPart.bare b], p.ok := by intro p hp; simp at hp; subst hp; exact bareOk_kpart hb
+  have hnt := bare_no13 ht
+  have hna := bare_no13 ha
+  have hnb := bare_no13 hb
+  have hnx := boolText_no13' x
+  have hny := boolText_no13' y
+  constructor
+  · generalize hsrc : a ++ 61 :: boolText x ++ 10 :: a ++ 46 :: b ++ 61 :: boolText y = src
+    have h13 : 13 ∉ src := by rw [← hsrc]; simp; simp_all
+    rw [loads_eq pf maxK maxD tz fr src h13 (by omega)]
+    obtain ⟨f, hf⟩ : ∃ f, src.length + 1 = f + 1 + 1 := ⟨src.length - 1, by rw [← hsrc]; simp <;> omega⟩
+    rw [hf]
+    have hr1 := first_bool (cfg := mkCfg pf maxK maxD tz) (src := src) (R := fr - 1) (x := x) ha
+      (rest := 10 :: a ++ 46 :: b ++ 61 :: boolText y) (by intro c hc; simp at hc; subst hc; decide) hmax1
+      (by omega) (by rw [← hsrc]; try simp)
+    obtain ⟨c0, hg0, hi0, hw0, h100⟩ := kv_line_pos (src := src) (pos := 0) (a := a) (tail := 61 :: boolText x ++
+      10 :: a ++ 46 :: b ++ 61 :: boolText y) (by rw [← hsrc]; simp) ha
+    rw [mainLoop_kv_hdr hg0 hi0 hw0 h100 hr1 (by omega)]
+    have hd1 : src.drop (a.length + 1 + (boolText x).length) =
+        10 :: (keyEnc (.bare a) [.bare b] ++ 61 :: (SV.bool y).enc ++ []) := by
+      rw [keyEnc_bare2, boolText_enc]
+      exact drop_eq_of (a := a ++ 61 :: boolText x) (by rw [← hsrc]; simp) _ (by simp <;> omega)
+    simp only [getElem?_of_drop hd1, reduceCtorEq, ite_false, ite_true]
+    have hd2 := drop_succ_of_drop hd1
+    have hr2 := kvr_at (cfg := mkCfg pf maxK maxD tz) (R := fr - 1) (header := [])
+      (out := { data := [(a, .bool x)], flags := Flags.init })
+      (bareOk_kpart ha) hpb hmax2 (v := SV.bool y) trivial (by simp) (by simp [SV.depth]; omega) hd2
+    rw [keyEnc_bare2, keyVal_bare2] at hr2
+    generalize hP : a.length + 1 + (boolText x).length + 1 + (a ++ 46 :: b).length + 1 + (SV.bool y).enc.length = P
+      at hr2
+    have hbody : kvBody src P { data := [(a, .bool x)], flags := Flags.init } [] [a, b] (SV.bool y).val =
+        .error (tdeS "Cannot overwrite a value" src P) := by
+      have hrange : List.range 1 = [0] := rfl
+      simp [kvBody, hrange, contKeysLoop, Flags.init, Flags.is_, isAux, dget_nil, Flags.addPending, withNest,
+        dget_cons, overwriteErr, noNest, bind, Except.bind]
+    rw [hbody] at hr2
+    obtain ⟨c1, hg1, hi1, hw1, h101⟩ := kv_line_pos (a := a) (tail := 46 :: b ++ 61 :: (SV.bool y).enc ++ [])
+      (by rw [hd2, keyEnc_bare2]; simp) ha
+    refine (mainLoop_kv_err hg1 hi1 hw1 h101 hr2 (by omega)).trans ?_
+    rw [← hP]; congr 2; simp [boolText_enc]; omega
+  · generalize hsrc : hdr t ++ 10 :: a ++ 61 :: emptyTbl.enc ++ 10 :: a ++ 46 :: b ++ 61 :: boolText y = src
+    have h13 : 13 ∉ src := by rw [← hsrc]; simp [hdr, emptyTbl_enc]; simp_all
+    rw [loads_eq pf maxK maxD tz fr src h13 (by omega)]
+    obtain ⟨f, hf⟩ : ∃ f, src.length + 1 = f + 1 + 1 + 1 := ⟨src.length - 2, by rw [← hsrc]; simp [hdr] <;> omega⟩
+    rw [hf]
+    have hr1 := first_dict (cfg := mkCfg pf maxK maxD tz) (src := src) (p0 := .bare t) (ps := [])
+      (rest := 10 :: a ++ 61 :: emptyTbl.enc ++ 10 :: a ++ 46 :: b ++ 61 :: boolText y)
+      (bareOk_kpart ht) (by simp) hmax0 (by rw [keyEnc_bare, ← hsrc]; simp)
+    rw [keyEnc_bare, keyVal_bare] at hr1
+    have hg0 : src[0]? = some 91 := by rw [← hsrc]; rfl
+    have hnl1 : src[t.length + 2]? = some 10 :=
+      getElem_of_eq (a := hdr t) (b := a ++ 61 :: emptyTbl.enc ++ 10 :: a ++ 46 :: b ++ 61 :: boolText y)
+        (by rw [← hsrc]; simp) _ (by simp [hdr])
+    rw [mainLoop_hdr_ok (hR := hR9) hg0 (finalize_nil _ rfl) hr1 hnl1]
+    -- `a={}` under `[t]`
+    have hd2 : src.drop (t.length + 2 + 1) = keyEnc (.bare a) [] ++ 61 :: emptyTbl.enc ++
+        (10 :: a ++ 46 :: b ++ 61 :: boolText y) := by
+      rw [keyEnc_bare]; exact drop_eq_of (a := hdr t ++ [10]) (by rw [← hsrc]; simp) _ (by simp [hdr] <;> omega)
+    have hr2 := kvr_at (cfg := mkCfg pf maxK maxD tz) (R := fr - 1) (header := [t])
+      (out := { data := nestDict [t] [], flags := { tree := fsetAux EXPLICIT_NEST false [t] [], pending := [] } })
+      (bareOk_kpart ha) (by simp) hmax0 (v := emptyTbl) (by simp [emptyTbl, SV.ok, TItems.ok])
+      (by intro c hc; simp at hc; subst hc; decide) (by simp [emptyTbl, SV.depth, TItems.depth]; omega) hd2
+    rw [keyEnc_bare, keyVal_bare] at hr2
+    generalize hP2 : t.length + 2 + 1 + a.length + 1 + emptyTbl.enc.length = P2 at hr2
+    have hb2 : kvBody src P2 (Out.mk (nestDict [t] []) (Flags.mk (fsetAux EXPLICIT_NEST false [t] []) []))
+        [t] [a] emptyTbl.val =
+        .ok (P2, Out.mk [(t, .tbl [(a, .tbl [])])]
+          (Flags.mk (fsetAux FROZEN true [t, a] (fsetAux EXPLICIT_NEST false [t] [])) [])) := by
+      simp [kvBody, contKeysLoop, Flags.is_, isAux, fsetAux, dset, dget_cons, dget_nil, FNode.empty, FNode.flags,
+        FNode.rflags, addFlag, FROZEN, EXPLICIT_NEST, withNest, nestDict, overwriteErr, emptyTbl, SV.val,
+        TItems.vals, TVal.isDictOrList, Flags.set, bind, Except.bind, pure, Except.pure]
+    rw [hb2] at hr2
+    obtain ⟨c1, hg1, hi1, hw1, h101⟩ := kv_line_pos (a := a) (tail := 61 :: emptyTbl.enc ++
+      (10 :: a ++ 46 :: b ++ 61 :: boolText y)) (by rw [hd2, keyEnc_bare]; simp) ha
+    rw [mainLoop_kv_hdr hg1 hi1 hw1 h101 hr2 (by omega)]
+    have hdP2 : src.drop P2 = 10 :: (keyEnc (.bare a) [.bare b] ++ 61 :: (SV.bool y).enc ++ []) := by
+      rw [← hP2, keyEnc_bare2, boolText_enc]
+      exact drop_eq_of (a := hdr t ++ 10 :: a ++ 61 :: emptyTbl.enc) (by rw [← hsrc]; simp) _
+        (by simp [hdr, emptyTbl_enc] <;> omega)
+    simp only [getElem?_of_drop hdP2, reduceCtorEq, ite_false, ite_true]
+    -- `a.b=Y` under `[t]`
+    have hd3 := drop_succ_of_drop hdP2
+    have hr3 := kvr_at (cfg := mkCfg pf maxK maxD tz) (R := fr - 1) (header := [t])
+      (out := Out.mk [(t, .tbl [(a, .tbl [])])]
+        (Flags.mk (fsetAux FROZEN true [t, a] (fsetAux EXPLICIT_NEST false [t] [])) []))
+      (bareOk_kpart ha) hpb hmax2 (v := SV.bool y) trivial (by simp) (by simp [SV.depth]; omega) hd3
+    rw [keyEnc_bare2, keyVal_bare2] at hr3
+    generalize hP3 : P2 + 1 + (a ++ 46 :: b).length + 1 + (SV.bool y).enc.length = P3 at hr3
+    have hb3 : kvBody src P3 (Out.mk [(t, .tbl [(a, .tbl [])])]
+        (Flags.mk (fsetAux FROZEN true [t, a] (fsetAux EXPLICIT_NEST false [t] [])) [])) [t] [a, b] (SV.bool y).val =
+        .error (tde (S "Cannot mutate immutable namespace " ++ keyRepr [t, a]) src P3) := by
+      have hrange : List.range 1 = [0] := rfl
+      simp [kvBody, hrange, contKeysLoop, Flags.is_, isAux, fsetAux, dset, dget_cons, dget_nil, FNode.empty,
+        FNode.flags, FNode.rflags, FNode.nested, addFlag, FROZEN, EXPLICIT_NEST, Flags.addPending, bind, Except.bind]
+    rw [hb3] at hr3
+    obtain ⟨c2, hg2, hi2, hw2, h102⟩ := kv_line_pos (a := a) (tail := 46 :: b ++ 61 :: (SV.bool y).enc ++ [])
+      (by rw [hd3, keyEnc_bare2]; simp) ha
+    refine (mainLoop_kv_err hg2 hi2 hw2 h102 hr3 (by omega)).trans ?_
+    rw [← hP3, ← hP2]; congr 2; simp [emptyTbl_enc, boolText_enc]; omega
+
 /-! ## `TOMLDecodeError.pos` past the end of the document -/
 
 /-- `loads('a = "\\')` (a backslash as the last character of a basic string) raises

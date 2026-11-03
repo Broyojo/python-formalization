@@ -374,4 +374,188 @@ theorem topLevel_proven : TopLevel := by
     rw [mainLoop_kv_trailing hc0 hki hcws0 hc100 hrule (by omega) hsk hq hc35 hc10, ← hP]
     simp
 
+/-! ## Comments after statements, and `[` at the end, _parser.py:181-212 -/
+
+theorem mainLoop_kv_tail {cfg : Cfg} {src : Str} {R f pos p q e c : Nat} {out out' : Out} {header : Key}
+    (hc : src[pos]? = some c) (hkey : keyInitial c = true) (hws : tomlWs c = false) (h10 : c ≠ 10)
+    (hrule : keyValueRule cfg src (R - 1) pos out header = .ok (p, out')) (hR : 3 ≤ R)
+    (hsk : skipChars src p tomlWs = q) (hcm : skipComment src q = .ok e) (hend : src[e]? = none) :
+    mainLoop cfg src R (f + 1) pos out header = .ok out'.data := by
+  have hs0 : skipChars src pos tomlWs = pos := skipChars_at hc hws
+  have hb : (c == 10) = false := by simp [h10]
+  simp only [mainLoop, hs0, hc, hb, Bool.false_eq_true, ite_false, hkey, ite_true, need_ok (show 1 ≤ R by omega),
+    hrule, bind, Except.bind, pure, Except.pure, hsk, need_skipComment hR, hcm, hend]
+
+theorem mainLoop_hdr_tail {cfg : Cfg} {src : Str} {R f pos p q e : Nat} {out o : Out} {header key : Key} {fl : Flags}
+    (h0 : src[pos]? = some 91) (hfin : out.flags.finalizePending = .ok fl)
+    (hrule : (if src[pos + 1]? == some 91 then createListRule cfg src pos { out with flags := fl }
+      else createDictRule cfg src pos { out with flags := fl }) = .ok (p, key, o))
+    (hsk : skipChars src p tomlWs = q) (hcm : skipComment src q = .ok e) (hend : src[e]? = none) (hR : 9 ≤ R) :
+    mainLoop cfg src R (f + 1) pos out header = .ok o.data := by
+  have hs0 : skipChars src pos tomlWs = pos := skipChars_at h0 (by decide)
+  simp only [mainLoop, hs0, h0, show ((91 : Nat) == 10) = false from rfl, Bool.false_eq_true, ite_false,
+    show keyInitial 91 = false from rfl, show ((91 : Nat) == 91) = true from rfl, ite_true, hfin, bind,
+    Except.bind, need_createRule hR, need_skipComment (show 3 ≤ R by omega)]
+  by_cases hc : (src[pos + 1]? == some 91) = true
+  · rw [if_pos hc] at hrule ⊢; rw [hrule]; simp only [pure, Except.pure, hsk, hcm, hend]
+  · rw [if_neg hc] at hrule ⊢; rw [hrule]; simp only [pure, Except.pure, hsk, hcm, hend]
+
+/-- Comments and headers at the top level, TOML 1.1 ("A hash symbol marks the rest of the line as
+a comment ... Comments may be placed after a key/value pair"; a header is `[` and a key), after
+any run `L` of blank and comment lines and with at least ten frames left (`3 * depth + 14` per
+value): (1) one `key = value` line, spaces or tabs, then a comment running to the end of the
+document gives the one-entry dict; (2) a header `[K]` followed by spaces or tabs and such a comment
+gives `{K: {}}`; (3) a `[` that is the last character (after spaces or tabs) raises "Invalid
+initial character for a key part" one past it (the `IndexError` of `src[pos + 1]` makes the
+second character `None`, and `create_dict_rule` finds no key). -/
+def TopLevelComments : Prop :=
+  ∀ (pf : ParseFloat) (maxK maxD : Nat) (tz : TzCache) (fr : Nat) (ls : List TopLine), (∀ l ∈ ls, l.ok) → 10 ≤ fr →
+    (∀ (l : Line) (w t : Str), l.ok → allWs w → (∀ x ∈ t, illegalBasic x = false) → 3 * l.v.depth + 14 ≤ fr →
+      loads pf maxK maxD tz fr (.str (topEnc ls ++ l.enc ++ w ++ 35 :: t)) = .ok [(l.k.val, l.v.val)]) ∧
+    (∀ (p0 : KPart) (ps : List KPart) (w t : Str), p0.ok → (∀ p ∈ ps, p.ok) → ps.length + 1 ≤ maxK → allWs w →
+      (∀ x ∈ t, illegalBasic x = false) →
+      loads pf maxK maxD tz fr (.str (topEnc ls ++ hdr (keyEnc p0 ps) ++ w ++ 35 :: t)) =
+        .ok (nestDict (keyVal p0 ps) [])) ∧
+    (∀ w : Str, allWs w →
+      loads pf maxK maxD tz fr (.str (topEnc ls ++ w ++ [91])) =
+        .error (tdeS "Invalid initial character for a key part" (topEnc ls ++ w ++ [91])
+          ((topEnc ls).length + w.length + 1)))
+
+theorem topLevelComments_proven : TopLevelComments := by
+  intro pf maxK maxD tz fr ls hls hfr
+  have htop13 := topEnc_no13 ls hls
+  have hill13 : ∀ t : Str, (∀ x ∈ t, illegalBasic x = false) → 13 ∉ t := fun t ht m => absurd (ht 13 m) (by decide)
+  refine ⟨?_, ?_, ?_⟩
+  · intro l w t hl hw ht hdep
+    obtain ⟨hk, hw1, hw2, hv⟩ := hl
+    have hl13 := line_no13 l ⟨hk, hw1, hw2, hv⟩
+    have h13 : 13 ∉ topEnc ls ++ l.enc ++ w ++ 35 :: t := by
+      simp only [List.mem_append, List.mem_cons, not_or]
+      exact ⟨⟨⟨htop13, hl13⟩, allWs_no13 hw⟩, by decide, hill13 t ht⟩
+    generalize hsrc : topEnc ls ++ l.enc ++ w ++ 35 :: t = src at h13
+    rw [loads_eq pf maxK maxD tz fr src h13 (by omega)]
+    have hlen : ls.length ≤ src.length := by
+      have : ls.length ≤ (topEnc ls).length := by
+        clear hls htop13 hsrc
+        induction ls with
+        | nil => simp [topEnc]
+        | cons l' r ih => simp [topEnc, TopLine.enc] at ih ⊢; omega
+      rw [← hsrc]; simp; omega
+    obtain ⟨f, hf⟩ : ∃ f, src.length + 1 = (f + 1) + ls.length := ⟨src.length - ls.length, by omega⟩
+    rw [hf, mainLoop_top (by omega) ls 0 (f + 1) Out.init [] (l.enc ++ w ++ 35 :: t) hls
+      (by rw [← hsrc, List.drop_zero]; simp [List.append_assoc])]
+    generalize hP : 0 + (topEnc ls).length = P
+    have hd : src.drop P = l.enc ++ (w ++ 35 :: t) := by rw [← hP, ← hsrc]; simp
+    have hvpos : src.drop (P + l.k.enc.length + l.w1.length + 1 + l.w2.length) = l.v.enc ++ (w ++ 35 :: t) := by
+      have := drop_add_of_drop (a := l.k.enc ++ l.w1 ++ 61 :: l.w2) (by simpa [Line.enc] using hd)
+      have e : P + (l.k.enc ++ l.w1 ++ 61 :: l.w2).length = P + l.k.enc.length + l.w1.length + 1 + l.w2.length := by
+        simp; omega
+      rw [e] at this; exact this
+    have hrest34 : ∀ x, (w ++ 35 :: t).head? = some x → x ≠ 34 := by
+      intro x hx
+      cases w with
+      | nil => simp at hx; omega
+      | cons y ys => simp at hx; subst hx; have := hw y (by simp); revert this; simp [tomlWs]; omega
+    have hvlen : l.v.enc.length ≤ src.length := by
+      have := congrArg List.length hd; simp [Line.enc] at this; omega
+    have hneed := SV.need_le l.v
+    have hvp := SV.parse (mkCfg pf maxK maxD tz) src l.v (fr - 1 - 1 - 1 - 1) _ (vFuel src - 1) _ hv hrest34 hvpos
+      (by unfold vFuel; omega) (by omega)
+    have hkv := pkv (r := fr - 1 - 1 - 1) (by omega) hk hw1 hw2 (fun x hx => ((SV.head_props l.v _).2 x hx).2.2.2)
+      (by simpa [Line.enc] using hd) hvp
+    rw [show vFuel src - 1 + 1 = vFuel src by unfold vFuel; omega] at hkv
+    have hpend : P + l.k.enc.length + l.w1.length + 1 + l.w2.length + l.v.enc.length = P + l.enc.length := by
+      simp [Line.enc]; omega
+    rw [hpend] at hkv
+    have hrule := kvr_one (R := fr - 1 - 1) (out := Out.init) (by omega) hkv rfl
+    obtain ⟨c0, t0, hke, hki, hcws0, hc100⟩ := keyInitial_head l.k hk
+    have hc0 : src[P]? = some c0 := getElem?_of_drop (r := t0 ++ l.w1 ++ 61 :: l.w2 ++ l.v.enc ++ (w ++ 35 :: t))
+      (by rw [hd]; simp [Line.enc, hke])
+    have hd2 : src.drop (P + l.enc.length) = w ++ 35 :: t := drop_add_of_drop hd
+    have hsk : skipChars src (P + l.enc.length) tomlWs = P + l.enc.length + w.length :=
+      skipChars_of_drop hd2 hw (by intro x hx; simp at hx; subst hx; decide)
+    have hd3 : src.drop (P + l.enc.length + w.length) = 35 :: t ++ [] := by
+      simpa using drop_add_of_drop hd2
+    have hcm := commentRules_proven.1 src _ t [] ht (Or.inl rfl) hd3
+    have hend : src[P + l.enc.length + w.length + 1 + t.length]? = none := by
+      have := drop_add_of_drop (src := src) (a := 35 :: t) (r := []) hd3
+      rw [show P + l.enc.length + w.length + (35 :: t).length = P + l.enc.length + w.length + 1 + t.length by
+        simp; omega] at this
+      exact getElem?_of_drop_nil this
+    rw [mainLoop_kv_tail hc0 hki hcws0 hc100 hrule (by omega) hsk hcm hend]
+    simp [kvOut, Out.init]
+  · intro p0 ps w t h0 hps hmax hw ht
+    have hK13 := keyEnc_no13 h0 hps
+    have h13 : 13 ∉ topEnc ls ++ hdr (keyEnc p0 ps) ++ w ++ 35 :: t := by
+      have h1 := allWs_no13 hw
+      have h2 := hill13 t ht
+      simp [hdr]; simp_all
+    generalize hsrc : topEnc ls ++ hdr (keyEnc p0 ps) ++ w ++ 35 :: t = src at h13
+    rw [loads_eq pf maxK maxD tz fr src h13 (by omega)]
+    have hlen : ls.length ≤ src.length := by
+      have : ls.length ≤ (topEnc ls).length := by
+        clear hls htop13 hsrc
+        induction ls with
+        | nil => simp [topEnc]
+        | cons l' r ih => simp [topEnc, TopLine.enc] at ih ⊢; omega
+      rw [← hsrc]; simp; omega
+    obtain ⟨f, hf⟩ : ∃ f, src.length + 1 = (f + 1) + ls.length := ⟨src.length - ls.length, by omega⟩
+    rw [hf, mainLoop_top (by omega) ls 0 (f + 1) Out.init [] (hdr (keyEnc p0 ps) ++ w ++ 35 :: t) hls
+      (by rw [← hsrc, List.drop_zero]; simp [List.append_assoc])]
+    generalize hP : 0 + (topEnc ls).length = P
+    have hd : src.drop P = hdr (keyEnc p0 ps) ++ (w ++ 35 :: t) := by rw [← hP, ← hsrc]; simp
+    have hr := dict_at (cfg := mkCfg pf maxK maxD tz) (out := { Out.init with flags := Flags.init }) h0 hps
+      (by simp [mkCfg]; exact hmax) hd
+    have hne := keyVal_ne p0 ps
+    simp only [Out.init, Flags.init, flags_is _ _ hne, isAux_nil, Bool.or_false, Bool.false_eq_true, ite_false,
+      getOrCreateNest, withNest_empty, overwriteErr, Except.map, pure, Except.pure] at hr
+    have hg0 : src[P]? = some 91 := getElem?_of_drop (r := keyEnc p0 ps ++ [93] ++ (w ++ 35 :: t))
+      (by rw [hd]; simp [hdr])
+    have hd2 : src.drop (P + 1 + (keyEnc p0 ps).length + 1) = w ++ 35 :: t := by
+      have := drop_add_of_drop hd
+      have e : P + (hdr (keyEnc p0 ps)).length = P + 1 + (keyEnc p0 ps).length + 1 := by simp [hdr]; omega
+      rw [e] at this; exact this
+    have hsk : skipChars src (P + 1 + (keyEnc p0 ps).length + 1) tomlWs = P + 1 + (keyEnc p0 ps).length + 1 + w.length :=
+      skipChars_of_drop hd2 hw (by intro x hx; simp at hx; subst hx; decide)
+    have hd3 : src.drop (P + 1 + (keyEnc p0 ps).length + 1 + w.length) = 35 :: t ++ [] := by
+      simpa using drop_add_of_drop hd2
+    have hcm := commentRules_proven.1 src _ t [] ht (Or.inl rfl) hd3
+    have hend : src[P + 1 + (keyEnc p0 ps).length + 1 + w.length + 1 + t.length]? = none := by
+      have := drop_add_of_drop (src := src) (a := 35 :: t) (r := []) hd3
+      rw [show P + 1 + (keyEnc p0 ps).length + 1 + w.length + (35 :: t).length =
+        P + 1 + (keyEnc p0 ps).length + 1 + w.length + 1 + t.length by simp; omega] at this
+      exact getElem?_of_drop_nil this
+    rw [mainLoop_hdr_tail (out := Out.init) hg0 (finalize_nil _ rfl) hr hsk hcm hend (by omega)]
+  · intro w hw
+    have h13 : 13 ∉ topEnc ls ++ w ++ [91] := by
+      simp only [List.mem_append, List.mem_cons, not_or]
+      exact ⟨⟨htop13, allWs_no13 hw⟩, by decide, by simp⟩
+    generalize hsrc : topEnc ls ++ w ++ [91] = src at h13
+    rw [loads_eq pf maxK maxD tz fr src h13 (by omega)]
+    have hlen : ls.length ≤ src.length := by
+      have : ls.length ≤ (topEnc ls).length := by
+        clear hls htop13 hsrc
+        induction ls with
+        | nil => simp [topEnc]
+        | cons l' r ih => simp [topEnc, TopLine.enc] at ih ⊢; omega
+      rw [← hsrc]; simp; omega
+    obtain ⟨f, hf⟩ : ∃ f, src.length + 1 = (f + 1) + ls.length := ⟨src.length - ls.length, by omega⟩
+    rw [hf, mainLoop_top (by omega) ls 0 (f + 1) Out.init [] (w ++ [91]) hls
+      (by rw [← hsrc, List.drop_zero]; simp [List.append_assoc])]
+    generalize hP : 0 + (topEnc ls).length = P
+    have hd : src.drop P = w ++ [91] := by rw [← hP, ← hsrc]; simp
+    have hs : skipChars src P tomlWs = P + w.length := skipChars_of_drop hd hw (by intro x hx; simp at hx; subst hx; decide)
+    have hd1 : src.drop (P + w.length) = [91] := drop_add_of_drop hd
+    have hg := getElem?_of_drop (r := []) hd1
+    have hd2 : src.drop (P + w.length + 1) = [] := drop_succ_of_drop hd1
+    have hg2 := getElem?_of_drop_nil hd2
+    have hs2 : skipChars src (P + w.length + 1) tomlWs = P + w.length + 1 :=
+      skipChars_stop (fun x hx => by rw [hd2] at hx; cases hx)
+    have hkp := keyErrors_proven.1 src (P + w.length + 1) (by intro c hc; rw [hg2] at hc; cases hc)
+    simp only [mainLoop, hs, hg, show ((91 : Nat) == 10) = false from rfl, Bool.false_eq_true, ite_false,
+      show keyInitial 91 = false from rfl, show ((91 : Nat) == 91) = true from rfl, ite_true, hg2,
+      finalize_nil Out.init.flags rfl, bind, Except.bind, need_createRule (show 9 ≤ fr - 1 by omega),
+      show ((none : Option Nat) == some 91) = false from rfl, createDictRule, hs2, parseKey, hkp]
+    rw [← hP, ← hsrc]; congr 2; omega
+
 end PyLean.TextLibs.Toml
