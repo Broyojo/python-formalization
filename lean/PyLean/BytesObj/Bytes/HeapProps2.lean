@@ -1701,4 +1701,25 @@ theorem baInitESpec_proven : BaInitESpec := by
       simp [E.bind_app, encNoArg, Arg.indexCheck, Obj.index?, Arg.bufferCheck, Obj.buffer?, resizeE, hr, baInitFast,
         List.length_map, hf, put_ba]
 
+/-! ## The documented buffer flags -/
+
+/-- `inspect.BufferFlags.READ` and `inspect.BufferFlags.WRITE` (Lib/inspect.py:3366-3367), which
+Doc/library/inspect.rst:1877-1901 lists among "the flags that can be passed to the `__buffer__`
+method". -/
+def inspectReadWrite : List Int := [0x100, 0x200]
+
+/-- A buffer request on a bytearray with a flag the documentation offers for `__buffer__` does not fail
+with `SystemError`, the exception of an internal error. Refuted: `PyBuffer_FillInfo`, which
+`bytearray_getbuffer_lock_held` calls (:81), answers `PyBUF_READ` and `PyBUF_WRITE` with
+`PyErr_BadInternalCall` (Objects/abstract.c:784-786), so `bytearray().__buffer__(inspect.BufferFlags.READ)`
+raises `SystemError: Objects/abstract.c:785: bad argument to internal function`, where
+`memoryview(b'').__buffer__` of the same flag succeeds. -/
+def BufferFlagsNoSystemError : Prop :=
+  ∀ (b : BA) (flags : Int) (e : PyExc), flags ∈ inspectReadWrite →
+    baGetBufferC b false flags = .error e → e.className ≠ "SystemError"
+
+theorem bufferFlagsNoSystemError_refuted : ¬ BufferFlagsNoSystemError := by
+  intro hp
+  exact hp {} 0x100 _ (by simp [inspectReadWrite]) ((baBufferExport_proven {} 0x100).2.1 (Or.inl rfl)) rfl
+
 end PyLean.BytesObj.Bytes

@@ -705,6 +705,12 @@ def entries : List Entry := [
     source := "docstring, bytearrayobject.c:2954-2966; bytearrayobject.c:982-1128", status := .proven
     prop := ``BaInitESpec, thm := some ``baInitESpec_proven
     notes := "The iterator loop (:1142-1172) is in bytesobj-bytearray-init-iterator; the str branch in bytesobj-bytearray-init-steal." },
+  { id := "bytesobj-bytearray-buffer-flags", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_getbuffer_lock_held", "bytearray_getbuffer"]
+    statement := "No flag of inspect.BufferFlags makes a bytearray buffer request fail with SystemError. Refuted: PyBuffer_FillInfo answers PyBUF_READ and PyBUF_WRITE with PyErr_BadInternalCall, so bytearray().__buffer__(inspect.BufferFlags.READ) raises SystemError, where memoryview accepts the flag."
+    source := "Doc/library/inspect.rst:1877-1901 (flags that can be passed to __buffer__); invariant: no internal error from a documented call", status := .refuted
+    prop := ``BufferFlagsNoSystemError, thm := some ``bufferFlagsNoSystemError_refuted
+    bug := some "bytesobj-bytearray-buffer-flags-systemerror" },
   { id := "bytesobj-bytes-class-tables", pyFile := "Objects/bytes_methods.c"
     pyFns := ["_Py_bytes_isspace", "_Py_bytes_isalpha", "_Py_bytes_isalnum", "_Py_bytes_isdigit"]
     statement := "isspace, isalpha, isdigit and isalnum are 'non-empty and every byte in the class', for the exact byte ranges of pyctype.c."
