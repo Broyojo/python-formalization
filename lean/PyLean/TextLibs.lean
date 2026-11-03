@@ -37,6 +37,8 @@ import PyLean.TextLibs.TomlDoc
 import PyLean.TextLibs.TomlMulti
 import PyLean.TextLibs.TomlPending
 import PyLean.TextLibs.TomlScen
+import PyLean.TextLibs.TomlLoads
+import PyLean.TextLibs.TomlInline
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1817,10 +1819,10 @@ def entries : List Entry := [
 ,
   { id := "textlibs-toml-multiline-basic", pyFile := "Lib/tomllib/_parser.py"
     pyFns := ["parse_multiline_str", "parse_basic_str_escape_multiline", "parse_basic_str", "parse_basic_str_escape"]
-    statement := "For every list of pieces of a multi-line basic string (characters written raw, newlines included, or with any escape basic strings allow; line-ending backslashes, which drop the newline and the whitespace after them), optionally preceded by a newline right after the opening triple quote (trimmed) and followed by up to two quotes before the closing triple quote (kept), parse_value, with at least six frames left below it, returns the text and the position after the closing quotes."
+    statement := "For every list of pieces of a multi-line basic string (characters written raw, newlines included, or with any escape basic strings allow; line-ending backslashes, which drop the newline and the whitespace after them; one or two raw quotes followed by another piece), optionally preceded by a newline right after the opening triple quote (trimmed) and followed by up to two quotes before the closing triple quote (kept), parse_value, with at least six frames left below it, returns the text and the position after the closing quotes."
     source := "docs ('parsing TOML 1.1.0'); TOML 1.1 spec, multi-line basic strings ('A newline immediately following the opening delimiter will be trimmed', line ending backslash, 1 or 2 quotes next to the delimiters)", status := .proven
     prop := ``Toml.MultilineBasicSpec, thm := some ``Toml.multilineBasicSpec_proven
-    notes := "Raw quotes inside the text are only allowed as the trailing one or two; the literal branch of parse_multiline_str (triple apostrophes) is not covered by this entry." }
+    notes := "The literal branch of parse_multiline_str (triple apostrophes) is textlibs-toml-multiline-literal." }
 ,
   { id := "textlibs-toml-dotted-then-header", pyFile := "Lib/tomllib/_parser.py"
     pyFns := ["Flags.add_pending", "Flags.finalize_pending", "key_value_rule"]
@@ -1914,6 +1916,38 @@ def entries : List Entry := [
     prop := ``Toml.DecodeErrorPosInDoc, thm := some ``Toml.decodeErrorPosInDoc_refuted
     bug := some "textlibs-toml-escape-eof-pos"
     notes := "'a = \"\\' (length 6) raises at pos 7. Duplicate of python/cpython#158566 and hukkin/tomli#312, both open." }
+,
+  { id := "textlibs-toml-loads-input", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["loads"]
+    statement := "For every text without CR and every choice of which newlines are written as CRLF, loads gives exactly what it gives on the LF text (same dict or same error at the same position); a CR not followed by a newline is kept, so loads('\\r' + t) raises 'Invalid statement' at 0 (at least four frames left); an argument whose replace raises AttributeError or TypeError raises TypeError('Expected str object, not '<qualname>'') (at least one frame left)."
+    source := "TOML 1.1 spec ('Newline means LF (0x0A) or CRLF (0x0D 0x0A)'); comment at _parser.py:154-155; docs of loads", status := .proven
+    prop := ``Toml.LoadsInput, thm := some ``Toml.loadsInput_proven },
+  { id := "textlibs-toml-comments", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["skip_comment", "skip_until"]
+    statement := "skip_comment at '#' followed by characters allowed in comments returns the position of the newline that ends them, or the end of the document when none does (skip_until with error_on_eof=False); a control character other than tab before the newline or the end raises TOMLDecodeError 'Found invalid character' there; at anything but '#' it returns its argument."
+    source := "TOML 1.1 spec, Comment ('Control characters other than tab ... are not permitted in comments')", status := .proven
+    prop := ``Toml.CommentRules, thm := some ``Toml.commentRules_proven },
+  { id := "textlibs-toml-top-level", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["loads", "skip_comment", "key_value_rule"]
+    statement := "For every run L of blank and comment lines, with at least four frames left and 3 * depth + 14 per value: loads(L + D) for a DocRoundTrip document D gives D's dict (comment-only documents give {}); L, spaces or tabs, then a character that starts no statement raises 'Invalid statement' there; L, one key = value line, spaces or tabs, then a character other than a newline, '#', CR or '\"' raises 'Expected newline or end of document after a statement' there."
+    source := "TOML 1.1 spec ('A hash symbol marks the rest of the line as a comment'; 'There must be a newline (or EOF) after a key/value pair')", status := .proven
+    prop := ``Toml.TopLevel, thm := some ``Toml.topLevel_proven },
+  { id := "textlibs-toml-unclosed-array", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["parse_array", "parse_value", "skip_comments_and_array_ws"]
+    statement := "'[', filler, a value of ArrayTableSpec, filler, then anything but ']', ',' or '\"' (the end of the document included) raises TOMLDecodeError 'Unclosed array' there, with 3 * depth + 13 frames left below parse_value."
+    source := "TOML 1.1 spec, Array", status := .proven
+    prop := ``Toml.UnclosedArray, thm := some ``Toml.unclosedArray_proven },
+  { id := "textlibs-toml-inline-table-rules", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["parse_inline_table", "parse_key_value_pair", "Flags.is_", "Flags.set", "NestedDict.get_or_create_nest"]
+    statement := "With fillers around each ',' and entries K=v: for one-part keys k, k' with the same value and v not a table or array, {k=v, k'=w} raises 'Duplicate inline table key 'k'' after w; for a bare x, {k=v, k.x=w} raises 'Cannot overwrite a value' after w when v is not a table or array and 'Cannot mutate immutable namespace (k, x)' when it is; {k=v followed by anything but '}' or ',' raises 'Unclosed inline table' there."
+    source := "TOML 1.1 spec, Inline Table ('fully self-contained'; keys may be dotted; a key may not be defined twice)", status := .proven
+    prop := ``Toml.InlineTableRules, thm := some ``Toml.inlineTableRules_proven
+    notes := "access_lists=False is not observable here: every list in an inline table is a value, which is frozen before a dotted key can reach it." },
+  { id := "textlibs-toml-multiline-literal", pyFile := "Lib/tomllib/_parser.py"
+    pyFns := ["parse_multiline_str", "parse_value", "skip_until"]
+    statement := "With at least three frames left: for every text without ''' and without control characters other than tab and newline, an optional newline after the opening ''' (trimmed) and one or two ''' before the closing ''' (kept), parse_value returns the text and the position after the quotes; without a closing ''' it raises 'Expected \"'''\"' at the end of the document; a control character other than tab or newline before the closing quotes raises 'Found invalid character' there."
+    source := "TOML 1.1 spec, String (multi-line literal strings; 1 or 2 single quotes next to the delimiters)", status := .proven
+    prop := ``Toml.MultilineLiteralSpec, thm := some ``Toml.multilineLiteralSpec_proven }
 ]
 
 end PyLean.TextLibs

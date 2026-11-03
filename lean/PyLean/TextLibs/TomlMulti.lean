@@ -6,19 +6,23 @@ Multi-line strings: `parse_multiline_str` and `parse_basic_str_escape_multiline`
 
 namespace PyLean.TextLibs.Toml
 
-/-- A piece of a multi-line basic string: a character (raw newlines allowed) or a line-ending
-backslash `\`, spaces or tabs, a newline, then whitespace and newlines, which give nothing. -/
+/-- A piece of a multi-line basic string: a character (raw newlines allowed), a line-ending
+backslash `\`, spaces or tabs, a newline, then whitespace and newlines, which give nothing, or one
+or two raw `"` that do not close the string (`quotes n`). -/
 inductive MPiece where
   | p (x : Piece)
   | cont (ws1 ws2 : Str)
+  | quotes (n : Nat)
 
 def MPiece.enc : MPiece → Str
   | .p x => x.enc
   | .cont ws1 ws2 => 92 :: ws1 ++ 10 :: ws2
+  | .quotes n => List.replicate n 34
 
 def MPiece.vals : MPiece → Str
   | .p x => [x.val]
   | .cont _ _ => []
+  | .quotes n => List.replicate n 34
 
 /-- TOML 1.1 multi-line basic strings: raw characters other than `"`, `\` and control characters
 other than tab and newline; the escapes of basic strings; line-ending backslashes. -/
@@ -26,6 +30,7 @@ def MPiece.ok : MPiece → Prop
   | .p (.raw c) => c ≠ 34 ∧ c ≠ 92 ∧ illegalMl c = false
   | .p x => x.ok
   | .cont ws1 ws2 => allWs ws1 ∧ ∀ c ∈ ws2, tomlWsNl c = true
+  | .quotes n => n = 1 ∨ n = 2
 
 /-- Whether the piece starts with whitespace or a newline (a line-ending backslash would eat it). -/
 def MPiece.wsHead : MPiece → Bool
@@ -36,28 +41,50 @@ def MPiece.isCont : MPiece → Bool
   | .cont _ _ => true
   | _ => false
 
+def MPiece.isQuotes : MPiece → Bool
+  | .quotes _ => true
+  | _ => false
+
+/-- What may follow what: no whitespace after a line-ending backslash (it would eat it); after
+raw quotes another piece that is not a quote, so that no three quotes meet. -/
 def mOk : List MPiece → Prop
   | [] => True
-  | [m] => m.ok
-  | m :: m' :: ms => m.ok ∧ (m.isCont = true → m'.wsHead = false) ∧ mOk (m' :: ms)
+  | [m] => m.ok ∧ m.isQuotes = false
+  | m :: m' :: ms => m.ok ∧ (m.isCont = true → m'.wsHead = false) ∧ (m.isQuotes = true → m'.isQuotes = false) ∧
+      mOk (m' :: ms)
 
 def encM (ms : List MPiece) : Str := ms.flatMap MPiece.enc
 def valsM (ms : List MPiece) : Str := ms.flatMap MPiece.vals
 
 theorem mOk_head {m : MPiece} {ms : List MPiece} (h : mOk (m :: ms)) : m.ok := by
   cases ms with
-  | nil => exact h
+  | nil => exact h.1
   | cons _ _ => exact h.1
 
 theorem mOk_tail {m : MPiece} {ms : List MPiece} (h : mOk (m :: ms)) : mOk ms := by
   cases ms with
   | nil => trivial
-  | cons _ _ => exact h.2.2
+  | cons _ _ => exact h.2.2.2
 
-theorem mpiece_enc_ne (m : MPiece) : m.enc ≠ [] := by
+theorem mpiece_enc_ne (m : MPiece) (hm : m.ok) : m.enc ≠ [] := by
   cases m with
   | p x => exact piece_enc_ne_nil x
   | cont _ _ => simp [MPiece.enc]
+  | quotes n => rcases hm with rfl | rfl <;> simp [MPiece.enc]
+
+/-- A piece other than raw quotes starts with something other than `"`. -/
+theorem mpiece_head_ne34 (m : MPiece) (hm : m.ok) (hq : m.isQuotes = false) :
+    ∃ d t, m.enc = d :: t ∧ d ≠ 34 := by
+  cases m with
+  | p x =>
+    cases x with
+    | raw c => exact ⟨c, [], rfl, hm.1⟩
+    | short c => exact ⟨92, _, rfl, by decide⟩
+    | x c up => exact ⟨92, _, rfl, by decide⟩
+    | u c up => exact ⟨92, _, rfl, by decide⟩
+    | U c up => exact ⟨92, _, rfl, by decide⟩
+  | cont _ _ => exact ⟨92, _, rfl, by decide⟩
+  | quotes n => simp [MPiece.isQuotes] at hq
 
 /-- What follows a piece: the next piece, or the closing quotes. After a line-ending backslash it
 is not whitespace or a newline. -/
@@ -80,6 +107,8 @@ theorem next_after_cont {ms : List MPiece} (q rest : Str) (hq : q = [] ∨ q = [
       | u c' up => simp [encM, MPiece.enc, Piece.enc] at hc; subst hc; decide
       | U c' up => simp [encM, MPiece.enc, Piece.enc] at hc; subst hc; decide
     | cont _ _ => simp [encM, MPiece.enc] at hc; subst hc; decide
+    | quotes n =>
+      rcases hm with rfl | rfl <;> simp [encM, MPiece.enc] at hc <;> subst hc <;> decide
 
 theorem startsAt_quotes {src : Str} {pos : Nat} {q rest : Str} (hq : q = [] ∨ q = [34] ∨ q = [34, 34])
     (h : src.drop pos = q ++ [34, 34, 34] ++ rest) : startsAt src pos [34, 34, 34] = true := by
@@ -104,7 +133,7 @@ theorem mlLoop (src q rest : Str) (hq : q = [] ∨ q = [34] ∨ q = [34, 34]) :
     have hm := mOk_head hok
     have hms := mOk_tail hok
     have hlen : (encM (m :: ms)).length = m.enc.length + (encM ms).length := by simp [encM]
-    have hpos := List.length_pos_iff.mpr (mpiece_enc_ne m)
+    have hpos := List.length_pos_iff.mpr (mpiece_enc_ne m hm)
     have h' : src.drop pos = m.enc ++ (encM ms ++ q ++ [34, 34, 34] ++ rest) := by simpa [encM] using h
     have hd := drop_add_of_drop h'
     cases m with
@@ -182,10 +211,51 @@ theorem mlLoop (src q rest : Str) (hq : q = [] ∨ q = [34] ∨ q = [34, 34]) :
         ite_false, ite_true, parseBasicStrEscapeMl, hesc, bind, Except.bind]
       rw [ih]
       simp [hlen, sl_self, MPiece.vals, valsM]; omega
+    | quotes n =>
+      obtain ⟨m', ms', rfl⟩ : ∃ m' ms', ms = m' :: ms' := by
+        cases ms with
+        | nil => exact absurd hok.2 (by simp [MPiece.isQuotes])
+        | cons a b => exact ⟨a, b, rfl⟩
+      have hq' : m'.isQuotes = false := hok.2.2.1 rfl
+      have hm' := mOk_head hms
+      obtain ⟨d, t', hd', hd34⟩ := mpiece_head_ne34 m' hm' hq'
+      have hrest : src.drop pos = List.replicate n 34 ++ (d :: (t' ++ encM ms' ++ q ++ [34, 34, 34] ++ rest)) := by
+        rw [h']
+        have e1 : (MPiece.quotes n).enc = List.replicate n 34 := rfl
+        have e2 : encM (m' :: ms') = m'.enc ++ encM ms' := by simp [encM]
+        rw [e1, e2, hd']; simp
+      rcases hm with rfl | rfl
+      · have h1 : src.drop pos = 34 :: d :: (t' ++ encM ms' ++ q ++ [34, 34, 34] ++ rest) := by simpa using hrest
+        have hg := getElem?_of_drop h1
+        have hst : startsAt src pos [34, 34, 34] = false := startsAt3_a h1 hd34
+        have ih := mlLoop src q rest hq (m' :: ms') hms f (pos + 1) start res
+          (by rw [drop_succ_of_drop h1]; simp [encM, hd'])
+          (by omega) (by rw [hlen] at hf; simp only [MPiece.enc, List.length_replicate] at hf; omega)
+        have hsn := sl_snoc hs h1
+        simp only [basicStrLoop, hg, show ((34 : Nat) == 34) = true from rfl, ite_true, Bool.not_true,
+          Bool.false_eq_true, ite_false, hst, ih, hsn]
+        simp [encM, MPiece.enc, MPiece.vals, valsM]; omega
+      · obtain ⟨f', rfl⟩ : ∃ f', f = f' + 1 := ⟨f - 1, by
+          rw [hlen] at hf; simp only [MPiece.enc, List.length_replicate] at hf; omega⟩
+        have h1 : src.drop pos = 34 :: 34 :: d :: (t' ++ encM ms' ++ q ++ [34, 34, 34] ++ rest) := by simpa using hrest
+        have hg := getElem?_of_drop h1
+        have hst : startsAt src pos [34, 34, 34] = false := startsAt3_b h1 hd34
+        have h2 := drop_succ_of_drop h1
+        have hg2 := getElem?_of_drop h2
+        have hst2 : startsAt src (pos + 1) [34, 34, 34] = false := startsAt3_a h2 hd34
+        have ih := mlLoop src q rest hq (m' :: ms') hms f' (pos + 1 + 1) start res
+          (by rw [drop_succ_of_drop h2]; simp [encM, hd'])
+          (by omega) (by rw [hlen] at hf; simp only [MPiece.enc, List.length_replicate] at hf; omega)
+        have hsn := sl_snoc hs h1
+        have hsn2 := sl_snoc (show start ≤ pos + 1 by omega) h2
+        simp only [basicStrLoop, hg, hg2, show ((34 : Nat) == 34) = true from rfl, ite_true, Bool.not_true,
+          Bool.false_eq_true, ite_false, hst, hst2, ih, hsn2, hsn]
+        simp [encM, MPiece.enc, MPiece.vals, valsM]; omega
 
 /-- Multi-line basic strings, TOML 1.1 "String": for every list of pieces (characters written raw,
 newlines included, or with any escape basic strings allow; line-ending backslashes, which trim the
-newline and the whitespace after them), optionally preceded by a newline right after the opening
+newline and the whitespace after them; one or two raw `"` followed by another piece, which "can
+be added anywhere inside a multi-line basic string"), optionally preceded by a newline right after the opening
 `"""` (trimmed), and followed by up to two `"` before the closing `"""` (kept), `parse_value`
 returns the text and the position after the closing quotes, with at least six frames left below it
 (the recursion limit). -/
