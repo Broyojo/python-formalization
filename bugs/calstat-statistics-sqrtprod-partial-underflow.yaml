@@ -53,9 +53,21 @@ cause: |
   computes `x*y - h*h` with `sumprod`, whose products underflow as well, so `d` is 0 or one subnormal
   step and `h` is returned nearly unchanged.
 possible_fix: |
-  Rescale whenever the product is below the normal range: replace `if not h:` by
-  `if h < 2.0 ** -511 and x and y:` (sqrt of the smallest normal), keeping the same 2**537 scale,
-  which is still exact for these inputs.
+  Rescale whenever the correction term would leave the normal range, not only when the product
+  underflows to 0: replace `if not h:` by `if h < 2.0 ** -485:` (sqrt(sys.float_info.min /
+  sys.float_info.epsilon)), keeping the inner `if x and y:` and the same 2**537 scale.
+  The weaker bound 2**-511 (sqrt of the smallest normal) fixes the subnormal-product case but still
+  misrounds when x*y is normal and x*y - h*h is subnormal. Measured on 3.15.2 (2026-11-03), counting
+  results that differ from the correctly rounded sqrt(x*y) (exact product, 80-digit Decimal sqrt):
+    h < 2**-511 (10455 cases):            current 9357 wrong, 2**-511 0, 2**-485 0
+    2**-511 <= h < 2**-485 (31211 cases): current 170 wrong,  2**-511 170, 2**-485 0
+    h >= 2**-485 (18334 cases):           all 0
+  With the 2**-485 patch, test_statistics passes on 3.15.2 (400 run, 5 skipped) and the reproducer's
+  correlation returns 1.0. Diff (against 3.15.2 Lib/statistics.py):
+    -    if not h:
+    +    if h < 2.0 ** -485:  # sqrt(sys.float_info.min / sys.float_info.epsilon)
+             if x and y:
+  An upstream PR should add a test for a subnormal (not zero) product.
 duplicates:
   issues:
     - {number: 158752, state: closed, relation: "different symptom: the sums of squares themselves underflow to 0 and correlation raises 'at least one of the inputs is constant'; closed as part of a bulk close, not on the merits", reason: "different bug"}
