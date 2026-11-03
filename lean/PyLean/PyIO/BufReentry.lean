@@ -54,6 +54,49 @@ theorem bufferedCNoCrash_refuted : ¬BufferedCNoCrash := by
   intro h
   exact absurd (h 0 detachingRaw 8 [.read (some 1)]) (by decide +kernel)
 
+/-- The raw stream's `readinto`, called by `read(1)` with the lock held (callback 4,
+after the `readable()` and `tell()` of `__init__` and the `closed` of `CHECK_CLOSED`),
+calls `__init__(raw, 8)` on the reader: `_buffered_init` frees the buffer and the lock
+the read holds (bufferedio.c:846-860), and the read's `LEAVE_BUFFERED` then unlocks a
+lock nobody holds, which aborts the process. -/
+def reinitRaw : Raw := { plainRaw [120] with hooks := [(4, .reinit 8)] }
+
+theorem bufferedCNoCrash_refuted_reinit : ¬BufferedCNoCrash := by
+  intro h
+  exact absurd (h 0 reinitRaw 8 [.read (some 1)]) (by decide +kernel)
+
+/-- The same `__init__` from the `closed` property read by `CHECK_CLOSED`, before the
+lock is taken, is harmless: the read goes on with the new buffer. -/
+theorem reinit_unlocked_ok :
+    (runC 0 { plainRaw [120] with hooks := [(3, .reinit 8)] } 8 [.read (some 1)]).results =
+      [.ok (.bytes [120])] := by
+  decide +kernel
+
+/-- A re-entered `__init__(raw, 0)` fails, but only after storing `buffer_size = 0`
+(bufferedio.c:1605, refused at :841). In `read(10)` on a reader of size 3 (not a
+power of two, so `buffer_mask` is 0), the next `MINUS_LAST_BLOCK` divides by it:
+the process dies of SIGFPE. -/
+def size0ReadRaw : Raw := { plainRaw (List.replicate 20 120) with hooks := [(4, .reinit 0)] }
+
+theorem bufferedCNoCrash_refuted_size0 : ¬BufferedCNoCrash := by
+  intro h
+  exact absurd (h 0 size0ReadRaw 3 [.read (some 10)]) (by decide +kernel)
+
+/-- No sequence of operations on `io.BufferedReader`, `BufferedWriter` or
+`BufferedRandom` blocks the thread forever, whatever the raw stream answers and calls
+back into. Invariant: no hang (and every loop of the C code ends). -/
+def BufferedCNoHang : Prop := ∀ (kind : Nat) (raw : Raw) (size : Int) (ops : List BfOp),
+  (runC kind raw size ops).isHung = false
+
+/-- `write(10 bytes)` on a writer of size 5: its `raw.write` calls `__init__(raw, 0)`,
+which leaves `buffer_size` 0; `while (remaining >= self->buffer_size)` (:2186) then
+never ends, asking the raw stream to write `b''` again and again. -/
+def size0WriteRaw : Raw := { plainRaw [] with hooks := [(4, .reinit 0)] }
+
+theorem bufferedCNoHang_refuted : ¬BufferedCNoHang := by
+  intro h
+  exact absurd (h 1 size0WriteRaw 5 [.write [97, 98, 99, 100, 101, 102, 103, 104, 105, 106]]) (by decide +kernel)
+
 /-! ## Uninitialized memory -/
 
 /-- Every byte that `io.BufferedReader` hands back was stored by somebody: it is

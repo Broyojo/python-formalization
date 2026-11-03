@@ -48,7 +48,16 @@ reproducer: |
       def readinto(self, b):
           return len(b)
   print("fresh buffer:", io.BufferedReader(Liar(), 16).peek())
-  if c == (b"a", b"bcd", b"a") and p == (b"a", b"bcd", b"\x00"):
+  # read1(n) reads straight into a fresh PyBytesWriter of n bytes
+  read1_dirty = []
+  for n in (16, 300, 4000):
+      for _ in range(5):
+          r1 = io.BufferedReader(Liar()).read1(n)
+          if r1 != bytes(n):
+              read1_dirty.append(n)
+              break
+  print("read1 returned bytes nobody wrote for n in", read1_dirty)
+  if c == (b"a", b"bcd", b"a") and p == (b"a", b"bcd", b"\x00") and read1_dirty:
       print("REPRODUCED pyio-bufferedreader-uninitialized-read")
 expected: |
   Both twins agree: zero bytes (what _pyio returns), or an error for the miscounted read.

@@ -53,6 +53,8 @@ inductive BfOp where
   | seek (p w : Int) | tell | truncate (n : Option Int)
   | flush | close | detach | closed
   | readable | writable | seekable | isatty | fileno | name | mode | getstate
+  /-- `obj.__init__(raw, size)` again, with the same raw stream. -/
+  | reinit (size : Int)
   deriving Repr, DecidableEq, Inhabited
 
 /-- One answer of `readinto` or `write`. -/
@@ -65,8 +67,10 @@ inductive RStep where
   | bad (v : Int)
   /-- Return the `str` `'x'`. -/
   | wrong
-  /-- Raise `c(m)`, or `c(errno, m)` when `eno` is set (then `str(e)` is `[Errno eno] m`). -/
-  | raise (c m : String) (eno : Option Nat)
+  /-- Raise `c(m)`, or `c(errno, m)` when `eno` is set (then `str(e)` is `[Errno eno] m`).
+  `mro` names the classes of `type(e).__mro__`: the class carries its place in the
+  hierarchy, so a statement over every `mro` holds for every class hierarchy. -/
+  | raise (c m : String) (eno : Option Nat) (mro : List String)
   deriving Repr, DecidableEq, Inhabited
 
 /-- One answer of `readable()`, `writable()` or `seekable()`. -/
@@ -160,8 +164,8 @@ inductive RRes where
   | bad (v : Int)
   /-- The `str` `'x'`. -/
   | wrong
-  /-- An exception and its `errno` (`None` when it has none). -/
-  | exc (e : PyExc) (eno : Option Nat)
+  /-- An exception, its `errno` (`None` when it has none) and the names of its MRO. -/
+  | exc (e : PyExc) (eno : Option Nat) (mro : List String)
   deriving Repr, DecidableEq, Inhabited
 
 /-- `str(c(errno, m))` is `[Errno errno] m`; `str(c(m))` is `m`. -/
@@ -176,6 +180,7 @@ inductive IRes where
   deriving Repr, DecidableEq, Inhabited
 
 def rawClosedErr : PyExc := .valueError "raw closed"
+def valueErrorMro : List String := ["ValueError", "Exception", "BaseException", "object"]
 def closedFileErr : PyExc := .valueError "I/O operation on closed file."
 /-- `'x' < 0` in Python. -/
 def strLtErr (op : String) : PyExc := .typeError s!"'{op}' not supported between instances of 'str' and 'int'"
@@ -193,7 +198,7 @@ def note (r : Raw) (v : Py Val) : Raw := { r with log := r.log ++ [RCall.re v] }
 
 /-- `readinto(b)` with `len(b) = len`. -/
 def readinto (r : Raw) (len : Nat) : Raw × RRes :=
-  if r.closed then (r, .exc rawClosedErr none) else
+  if r.closed then (r, .exc rawClosedErr none valueErrorMro) else
   let take (r : Raw) (k : Nat) : Raw × RRes :=
     let d := (r.data.drop r.pos).take (min k len)
     ({ r with pos := r.pos + d.length }, .data d)
@@ -203,11 +208,11 @@ def readinto (r : Raw) (len : Nat) : Raw × RRes :=
   | .block :: t => ({ r with rs := t }, .none)
   | .bad v :: t => ({ r with rs := t }, .bad v)
   | .wrong :: t => ({ r with rs := t }, .wrong)
-  | .raise c m e :: t => ({ r with rs := t }, .exc (.named c (errMsg m e)) e)
+  | .raise c m e mro :: t => ({ r with rs := t }, .exc (.named c (errMsg m e)) e mro)
 
 /-- `write(b)`. -/
 def write (r : Raw) (b : List Nat) : Raw × RRes :=
-  if r.closed then (r, .exc rawClosedErr none) else
+  if r.closed then (r, .exc rawClosedErr none valueErrorMro) else
   let put (r : Raw) (k : Nat) : Raw × RRes :=
     let d := b.take k
     -- as the harness raw: a zero-length write does not pad up to a position past the end
@@ -219,7 +224,7 @@ def write (r : Raw) (b : List Nat) : Raw × RRes :=
   | .block :: t => ({ r with ws := t }, .none)
   | .bad v :: t => ({ r with ws := t }, .bad v)
   | .wrong :: t => ({ r with ws := t }, .wrong)
-  | .raise c m e :: t => ({ r with ws := t }, .exc (.named c (errMsg m e)) e)
+  | .raise c m e mro :: t => ({ r with ws := t }, .exc (.named c (errMsg m e)) e mro)
 
 def popS (r : Raw) : Raw × SStep :=
   match r.ss with

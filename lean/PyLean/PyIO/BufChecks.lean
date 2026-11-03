@@ -131,11 +131,14 @@ raw stream's `readinto`:
 2. an int answer `v` that fits `Py_ssize_t` is the count when `0 <= v <= len` and
    is refused with `OSError("raw readinto() returned invalid length ...")`
    otherwise (:1661-1666);
-3. an exception that is an `OSError` (any subclass) with `errno == EINTR` is
-   swallowed and the call is made again with the same arguments, and every other
-   exception propagates unchanged: the class name plays no part, so
-   `InterruptedError('x')` (no `errno`) propagates and `PermissionError(EINTR, 'x')`
-   is retried (:1639-1641 and `_PyIO_trap_eintr`, :878-901).
+3. an exception that is an instance of `OSError` (`OSError` is in its class's MRO)
+   with `errno == EINTR` is swallowed and the call is made again with the same
+   arguments, and every other exception propagates unchanged (:1639-1641 and
+   `_PyIO_trap_eintr`, :878-901). The class is given by its MRO, which is
+   quantified, so this holds for every class hierarchy: the builtin one (where
+   `FileExistsError`, `ConnectionResetError` and `io.UnsupportedOperation` are
+   `OSError` subclasses) and any user subclasses. `InterruptedError('x')` has no
+   `errno` and propagates.
 
 Invariant: what is copied out of the buffer was counted as read. The hypothesis
 `0 <= len` holds at every caller (`buffer_size - start`, `remaining`, `n > 0`); in
@@ -151,12 +154,13 @@ def RawReadChecks : Prop :=
       if v < 0 ∨ v > len then
         .error (osError s!"raw readinto() returned invalid length {v} (should have been between 0 and {len})")
       else .ok (v, [])) ∧
-  (∀ (len : Int) (fuel : Nat) (R : CH) (s : BufS) (c m : String) (eno : Option Nat) (t : List RStep),
+  (∀ (len : Int) (fuel : Nat) (R : CH) (s : BufS) (c m : String) (eno : Option Nat) (mro : List String)
+    (t : List RStep),
     s.detached = false → s.raw.closed = false → s.raw.hooks = [] →
-    s.raw.rs = .raise c m eno :: t →
-    (BC2.isOSErrorCls c = true ∧ eno = some 4 →
+    s.raw.rs = .raise c m eno mro :: t →
+    ("OSError" ∈ mro ∧ eno = some 4 →
       BC2.rawRead none len (fuel + 2) R s = BC2.rawRead none len (fuel + 1) R (afterReadinto s len t)) ∧
-    (¬(BC2.isOSErrorCls c = true ∧ eno = some 4) →
+    (¬("OSError" ∈ mro ∧ eno = some 4) →
       (BC2.rawRead none len (fuel + 1) R s).2 = .error (.named c (errMsg m eno))))
 
 theorem rawRead_count (ptr : Option Bool) (len : Int) (hl : 0 ≤ len) : ∀ (fuel : Nat) (R : CH)
@@ -239,9 +243,9 @@ theorem rawReadChecks_proven : RawReadChecks := by
       split
       · rfl
       · rfl
-  · intro len fuel R s c m eno t hd hc hh hr
+  · intro len fuel R s c m eno mro t hd hc hh hr
     have hres : ((s.raw.enter (.readinto len)).1.readinto len.toNat).2 =
-        .exc (.named c (errMsg m eno)) eno := by
+        .exc (.named c (errMsg m eno)) eno mro := by
       simp [Raw.readinto, Raw.enter, hc, hr]
     constructor
     · intro ⟨h1, h2⟩
@@ -251,7 +255,9 @@ theorem rawReadChecks_proven : RawReadChecks := by
       rw [BC2.bind_of_ok (BC2.onRaw_nohook _ _ R s hd hh)]
       rw [hres]
       dsimp only
-      simp only [BC2.trapEintr, PyExc.className, h1, h2, beq_self_eq_true, Bool.and_self, ite_true]
+      have ht : BC2.trapEintr eno mro = true := by
+        simp [BC2.trapEintr, h1, h2]
+      simp only [ht, ite_true]
       congr 1
       simp [afterReadinto, Raw.readinto, Raw.enter, hc, hr]
     · intro hn
@@ -261,9 +267,9 @@ theorem rawReadChecks_proven : RawReadChecks := by
       rw [BC2.bind_of_ok (BC2.onRaw_nohook _ _ R s hd hh)]
       rw [hres]
       dsimp only
-      have ht : BC2.trapEintr (.named c (errMsg m eno)) eno = false := by
-        simp only [BC2.trapEintr, PyExc.className, Bool.and_eq_false_iff]
-        by_cases h1 : BC2.isOSErrorCls c = true
+      have ht : BC2.trapEintr eno mro = false := by
+        simp only [BC2.trapEintr, Bool.and_eq_false_iff]
+        by_cases h1 : "OSError" ∈ mro
         · right; cases eno with
           | none => rfl
           | some n =>

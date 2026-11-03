@@ -44,6 +44,13 @@ structure BufS where
   size : Nat
   /-- The process died. -/
   crashed : Bool
+  /-- Which lock `self->lock` is: `_buffered_init` frees it and allocates a new one. -/
+  lockGen : Nat
+  /-- `buffer_mask`: `buffer_size - 1` when the size was a power of two at the last
+  successful `_buffered_init`, else 0 (:861-868). -/
+  mask : Nat
+  /-- With `crashed`: the process did not die but blocks forever. -/
+  blocked : Bool
   deriving Repr, DecidableEq, Inhabited
 
 /-- A byte of memory nobody wrote. -/
@@ -120,6 +127,11 @@ def leave : BM Unit := mod fun s => { s with locked := false }
 def crash {α : Type} : BM α := do
   mod fun s => { s with crashed := true }
   thr crashErr
+
+/-- The process loops forever: nothing after this runs either. -/
+def hangC {α : Type} : BM α := do
+  mod fun s => { s with crashed := true, blocked := true }
+  thr hangErr
 
 /-- The start of a callback into the raw stream: the harness raw logs the call
 and may first re-enter the buffered object (through the handler). -/
@@ -227,15 +239,12 @@ def rawSeek (t w : Int) : BM Int := do
   | .error e => thr e
   | .ok v => checkPos v
 
-/-- The `OSError` subclasses a raw stream of the harness can raise. -/
-def isOSErrorCls (c : String) : Bool :=
-  c == "OSError" || c == "InterruptedError" || c == "PermissionError" || c == "BlockingIOError"
-    || c == "FileNotFoundError" || c == "BrokenPipeError" || c == "ConnectionError" || c == "TimeoutError"
-
-/-- `_PyIO_trap_eintr`, bufferedio.c:878-901: the exception is an `OSError`
-(`PyErr_ExceptionMatches`, :881) whose `errno` is `EINTR` (4 on Linux, :887-895); the
-class name plays no part: `InterruptedError('x')` has no `errno`. -/
-def trapEintr (e : PyExc) (eno : Option Nat) : Bool := isOSErrorCls e.className && eno == some 4
+/-- `_PyIO_trap_eintr`, bufferedio.c:878-901: the exception is an instance of
+`OSError` (`PyErr_ExceptionMatches`, :881, which follows its class's MRO) whose `errno`
+is `EINTR` (4 on Linux, :887-895). The class name plays no part:
+`InterruptedError('x')` has no `errno`, and `FileExistsError(EINTR, 'x')` or a user
+subclass of `OSError` with that `errno` is retried. -/
+def trapEintr (eno : Option Nat) (mro : List String) : Bool := mro.contains "OSError" && eno == some 4
 
 /-- Where a raw callback reads or writes: `ptr` says whether the start pointer
 is `NULL` (`some true`), inside a freed buffer (`some false`), or valid (`none`). -/
@@ -253,7 +262,7 @@ def rawRead (ptr : Option Bool) (len : Int) : Nat → BM (Int × List Nat)
     if ptr = some true then thr nullView
     let res ← onRaw (.readinto len) (fun r => r.readinto len.toNat)
     match res with
-    | .exc e eno => if trapEintr e eno then rawRead ptr len fuel else thr e
+    | .exc e eno mro => if trapEintr eno mro then rawRead ptr len fuel else thr e
     | .none => pure ((-2 : Int), ([] : List Nat))
     | .data d =>
       -- storing through a pointer into freed memory
@@ -295,7 +304,7 @@ def rawWrite (ptr : Option Bool) (b : List Nat) : Nat → BM Int
     -- `raw.write` reads the view first (the harness copies it)
     if ptr = some false then crash
     match res with
-    | .exc e eno => if trapEintr e eno then rawWrite ptr b fuel else thr e
+    | .exc e eno mro => if trapEintr eno mro then rawWrite ptr b fuel else thr e
     | .none => pure (-2)
     | .count n =>
       if n > 0 then mod fun s => if s.absPos ≠ -1 then { s with absPos := s.absPos + n } else s
@@ -357,7 +366,13 @@ def flushRewind : BM Unit := do
 /-- Run `m` with the lock held: `ENTER_BUFFERED` ... `LEAVE_BUFFERED` on every path. -/
 def locked {α : Type} (m : BM α) : BM α := do
   enter
+  let s ← get
+  let g := s.lockGen
   let r ← attempt m
+  -- `LEAVE_BUFFERED` releases `self->lock`; if `__init__` replaced it meanwhile
+  -- (:853-860), nobody holds the new one: `PyMutex_Unlock` aborts the process
+  let s ← get
+  if s.lockGen ≠ g then crash
   leave
   ofPy r
 
@@ -390,8 +405,14 @@ def readFast (n : Int) : BM (Option (List Nat)) := do
     pure (some (slice s.buffer s.pos.toNat n.toNat))
   else pure none
 
-/-- `MINUS_LAST_BLOCK`, bufferedio.c:408-411 (both branches compute this). -/
-def minusLastBlock (s : BufS) (n : Int) : Int := s.size * (n / s.size)
+/-- `MINUS_LAST_BLOCK`, bufferedio.c:408-411: `size & ~buffer_mask` (for `size >= 0`,
+`size - size % (buffer_mask + 1)`), or `buffer_size * (size / buffer_size)`. -/
+def minusLastBlock (s : BufS) (n : Int) : BM Int :=
+  if s.mask ≠ 0 then pure (n - n % (s.mask + 1))
+  -- `buffer_size` is 0 after a re-entered `__init__(raw, 0)` (:1605 stores it before
+  -- `_buffered_init` refuses it, :841): the division traps (SIGFPE)
+  else if s.size = 0 then crash
+  else pure (s.size * (n / s.size))
 
 /-- The first loop of `_bufferedreader_read_generic`, bufferedio.c:1831-1850:
 `some out` is an early return. -/
@@ -400,7 +421,7 @@ def genericBlocks : Nat → Int → List Nat → BM (Int × List Nat × Option V
   | fuel + 1, remaining, out => do
     if remaining > 0 then
       let s ← get
-      let r := minusLastBlock s remaining
+      let r ← minusLastBlock s remaining
       if r = 0 then pure (remaining, out, (none : Option Val)) else
       let (n, d) ← rawRead none r (fuelOf s)
       if n = 0 ∨ n = -2 then
@@ -425,7 +446,10 @@ def genericFill : Nat → Int → List Nat → BM Val
         let out := out ++ slice s.buffer s.pos.toNat k.toNat
         let remaining := remaining - k
         if remaining = 0 then pure (.bytes out) else genericFill fuel remaining out
-    else pure (.bytes out)
+    else
+      -- `PyBytesWriter_Finish(writer)` (:1886): all `n` bytes, the unfilled ones
+      -- included (only after a re-entered `__init__` shrank `buffer_size`)
+      pure (.bytes (out ++ List.replicate remaining.toNat uninit))
 
 /-- `PyBytesWriter_Create(n)`, Objects/bytesobject.c: a `bytes` of `n` bytes, or
 the exception of `allocBytes`. -/
@@ -458,17 +482,17 @@ def readGeneric (n : Int) : BM Val := do
 /-- `_io__RawIOBase_read_impl`, Modules/_io/iobase.c:922-961, on the raw (`n >= 0`):
 the bytearray it reads into starts uninitialized. A failure comes back as a value with
 the `errno` of the exception (`none` for the `ValueError`/`TypeError` it raises itself). -/
-def rawBaseRead (n : Nat) : BM (Except (PyExc × Option Nat) (Option (List Nat))) := do
+def rawBaseRead (n : Nat) : BM (Except (PyExc × Option Nat × List String) (Option (List Nat))) := do
   let res ← onRawObj (.readinto n) (fun r => r.readinto n)
   match res with
-  | .exc e eno => pure (.error (e, eno))
+  | .exc e eno mro => pure (.error (e, eno, mro))
   | .none => pure (.ok none)
   | .data d => pure (.ok (some d))
   | .count _ => pure (.ok (some []))
-  | .wrong => pure (.error (strIndexErr, none))
+  | .wrong => pure (.error (strIndexErr, none, []))
   | .bad v =>
-    if !InSsize v then pure (.error (.valueError "cannot fit 'int' into an index-sized integer", none))
-    else if v < 0 ∨ v > n then pure (.error (.valueError s!"readinto returned {v} outside buffer size {n}", none))
+    if !InSsize v then pure (.error (.valueError "cannot fit 'int' into an index-sized integer", none, []))
+    else if v < 0 ∨ v > n then pure (.error (.valueError s!"readinto returned {v} outside buffer size {n}", none, []))
     else pure (.ok (some (List.replicate v.toNat uninit)))
 
 /-- `_io__RawIOBase_readall_impl`, Modules/_io/iobase.c:970-1020, on the raw. -/
@@ -477,7 +501,7 @@ def rawReadall : Nat → List Nat → Bool → BM Val
   | fuel + 1, acc, any => do
     let r ← rawBaseRead 131072
     match r with
-    | .error (e, eno) => if trapEintr e eno then rawReadall fuel acc any else thr e
+    | .error (e, eno, mro) => if trapEintr eno mro then rawReadall fuel acc any else thr e
     | .ok none => if !any then pure .none else pure (.bytes acc)
     | .ok (some d) => if d = [] then pure (.bytes acc) else rawReadall fuel (acc ++ d) true
 
@@ -762,6 +786,10 @@ def writeLoop (b : List Nat) : Nat → Int → Int → BM (Int × Int)
   | fuel + 1, written, remaining => do
     let s ← get
     if remaining ≥ s.size then
+      -- `buffer_size` 0 (a re-entered `__init__(raw, 0)`) with nothing left: the raw
+      -- stream is asked for `b''` forever once its scripts and hooks are spent
+      if remaining = 0 ∧ s.size = 0 ∧ s.raw.ws = [] ∧ s.raw.closed = false ∧ s.detached = false ∧
+          s.raw.hooks.all (·.1 ≤ s.raw.tick) then hangC
       let n ← rawWrite none (b.drop written.toNat) (fuelOf s)
       if n = -2 then
         if remaining > s.size then
@@ -809,6 +837,9 @@ def writeLocked (b : List Nat) : BM Val := do
         mod fun s => { s with writeEnd := s.writeEnd + len, pos := s.pos + len }
         pure (.int len)
       else
+        -- `avail` is negative when a re-entered `__init__` shrank `buffer_size`: the
+        -- `memcpy` of :2158 gets a huge `size_t` length
+        if avail < 0 then crash
         mod fun s => { s with buffer := writeAt s.buffer s.writeEnd.toNat (b.take avail.toNat) }
         mod fun s => { s with writeEnd := s.writeEnd + avail, pos := s.pos + avail }
         thr (blocking avail)
@@ -834,18 +865,22 @@ def write (b : List Nat) : BM Val := do
   checkInit
   locked (writeLocked b)
 
-/-- `_buffered_init`, bufferedio.c:837-872, as far as it is observable. Nothing
-sets `abs_pos` before the first `_buffered_raw_tell` (assignments are at :800 and
-:833 only), so if that call fails it stays at `tp_alloc`'s 0, not the -1 that
-means unknown, and `RAW_TELL` (:405-406) trusts it. The raw's `tell` runs while
-`ok` is 0, so a hook that re-enters is refused by `CHECK_INITIALIZED`. -/
-def init (kind : Nat) (raw : Raw) (size : Int) : BM BufS := do
-  -- the object `tp_alloc` made: `ok` 0 and no buffer; `readable`/`writable` here
-  -- stand for its type, which decides which methods a re-entered call finds
-  put { raw := raw, ok := false, detached := false, readable := kind ≠ 1, writable := kind ≠ 0
-        locked := false, absPos := 0, hasBuf := false, buffer := [], pos := 0, rawPos := 0,
-        readEnd := 0, writePos := 0, writeEnd := 0, size := 0, crashed := false }
-  -- kind 0: reader (:1591-1620), 1: writer (:1943-1974), 2: random (:2484-2520)
+/-- `_io_BufferedReader___init___impl` (:1591-1620), `_io_BufferedWriter___init___impl`
+(:1943-1974) and `_io_BufferedRandom___init___impl` (:2484-2520) with `_buffered_init`
+(:837-872), on the object as it is: a new one (`tp_alloc`'s zeros) or one that is
+already in use, since `__init__` is an ordinary method. The raw stream is the one
+the object already has (the harness passes it again).
+
+* `ok` and `detached` are cleared first, so a failed check leaves the object
+  uninitialized.
+* `_buffered_init` frees an existing buffer (:846-847) and lock (:853-854) and makes
+  new ones with `owner = 0` (:855-860), whatever method is running: a method that
+  holds the lock goes on with the freed buffer and unlocks the new lock (`locked`).
+* Nothing sets `abs_pos` before `_buffered_raw_tell` (:800, :833 only), so if that
+  call fails it keeps its value (0 on a new object), which `RAW_TELL` (:405-406) trusts.
+* Only the fields each constructor resets are reset: a reader keeps `pos`. -/
+def init (kind : Nat) (size : Int) : BM Unit := do
+  mod fun s => { s with ok := false, detached := false }
   if kind = 2 then
     let a ← inquiryObj .seekable Raw.canSeek
     checkInq a "File or stream is not seekable."
@@ -856,12 +891,21 @@ def init (kind : Nat) (raw : Raw) (size : Int) : BM BufS := do
     let a ← inquiryObj .writable Raw.canWrite
     checkInq a "File or stream is not writable."
   mod fun s => { s with size := size.toNat }
+  -- `_buffered_init`
   if size ≤ 0 then thr (.valueError "buffer size must be strictly positive")
+  mod fun s => { s with hasBuf := false }
   if size ≥ memLimit then thr memoryError
   mod fun s => { s with hasBuf := true, buffer := List.replicate size.toNat uninit }
+  mod fun s => { s with lockGen := s.lockGen + 1, locked := false }
+  mod fun s => { s with mask := if size.toNat &&& (size.toNat - 1) = 0 then size.toNat - 1 else 0 }
   let _ ← attempt rawTell
-  mod fun s => { s with readEnd := -1, writePos := 0, writeEnd := -1, pos := 0, ok := true }
-  get
+  if kind = 0 then mod fun s => { s with readEnd := -1 }
+  else if kind = 1 then mod fun s => { s with writePos := 0, writeEnd := -1, pos := 0 }
+  else mod fun s => { s with readEnd := -1, writePos := 0, writeEnd := -1, pos := 0 }
+  mod fun s => { s with ok := true }
+
+/-- The kind of the object's type. -/
+def kindOf (s : BufS) : Nat := if !s.readable then 1 else if !s.writable then 0 else 2
 
 end BC2
 

@@ -20,8 +20,10 @@ import builtins
 import errno
 import json
 import os
+import select
 import signal
 import sys
+import time
 import warnings
 
 import _pyio
@@ -36,8 +38,17 @@ M = sys.maxsize
 MODS = {"c": io, "py": _pyio}
 # (class, message, errno): `_PyIO_trap_eintr` retries an OSError whose errno is EINTR,
 # whatever its class; InterruptedError("x") has no errno and is not retried
+class MyOSError(OSError):
+    """A user subclass: `_PyIO_trap_eintr` follows the MRO, not a list of names."""
+
+
+CLASSES = {c.__name__: c for c in (ValueError, OSError, InterruptedError, PermissionError,
+                                   FileExistsError, ConnectionResetError, io.UnsupportedOperation, MyOSError)}
 EXC = [("ValueError", "boom", None), ("OSError", "bad", None), ("InterruptedError", "x", errno.EINTR),
-       ("InterruptedError", "x", None), ("PermissionError", "x", errno.EINTR), ("PermissionError", "x", None)]
+       ("InterruptedError", "x", None), ("PermissionError", "x", errno.EINTR), ("PermissionError", "x", None),
+       ("FileExistsError", "x", errno.EINTR), ("ConnectionResetError", "x", errno.EINTR),
+       ("UnsupportedOperation", "x", errno.EINTR), ("MyOSError", "x", errno.EINTR), ("MyOSError", "x", None)]
+CUR_RAW = [None]
 # sizes PyBytesWriter_Create refuses, on both sides of the "byte string is too large" bound
 HUGE = [M, M - 1, M - 32, M - 33, 2**62, 2**48]
 
@@ -67,7 +78,7 @@ _pyio.Lock = DLock
 
 
 def raised(r):
-    cls = getattr(builtins, r["raise"])
+    cls = CLASSES.get(r["raise"]) or getattr(builtins, r["raise"])
     if r.get("errno") is not None:
         raise cls(r["errno"], r["msg"])
     raise cls(r["msg"])
@@ -268,7 +279,7 @@ def rstep(rng, key, write):
     if r < 0.9:
         return {"wrong": 1}
     c, m, e = rng.choice(EXC)
-    return {"raise": c, "msg": m, "errno": e}
+    return {"raise": c, "msg": m, "errno": e, "mro": [k.__name__ for k in CLASSES[c].__mro__]}
 
 
 def sstep(rng):
@@ -305,6 +316,8 @@ def cstep(rng):
 
 def gen_op(rng, k, size, key, data):
     op = {"op": k}
+    if k == "reinit":
+        op["size"] = rng.choice([size, 4, 8, 0])
     if k in ("read", "readline"):
         op["n"] = rng.choice([None, -1, -2, 0, 1, 2, 3, size, size + 1, 2 * size, 3 * size + 1, 30])
         if key == "c" and rng.random() < 0.05:
@@ -332,7 +345,7 @@ def gen_op(rng, k, size, key, data):
 
 
 HOOK_OPS = ["read", "read1", "peek", "readinto", "readline", "write", "flush", "tell", "seek",
-            "truncate", "close", "close", "detach", "detach", "closed", "isatty"]
+            "truncate", "close", "close", "detach", "detach", "closed", "isatty", "reinit", "reinit"]
 
 
 def gen_case(rng):
@@ -362,7 +375,7 @@ def gen_case(rng):
     # nobody wrote, which compare by length only
     c["mask"] = key == "c" and any(s and "bad" in s and 0 < s["bad"] < 2**63 for s in c["rs"])
     names = ["seek", "seek", "tell", "tell", "flush", "closed", "readable", "writable", "seekable",
-             "isatty", "fileno", "name", "mode", "getstate", "truncate"]
+             "isatty", "fileno", "name", "mode", "getstate", "truncate", "reinit"]
     if kind != 1:
         names += ["read"] * 4 + ["read1", "read1", "peek", "peek", "readinto", "readinto", "readinto1",
                                  "readline", "readline", "next"]
@@ -381,6 +394,9 @@ def gen_case(rng):
     if rng.random() < 0.12:
         ops.append({"op": "detach"})
     ops.append({"op": "closed"})
+    # a re-entered __init__ can leave a C method reading a buffer nobody filled
+    if key == "c" and any(h[1]["op"] == "reinit" for h in c["hooks"]):
+        c["mask"] = True
     if c["mask"]:
         # where readline stops depends on the uninitialized bytes it scans for b"\n",
         # which no model can predict: those cases read instead
@@ -420,6 +436,9 @@ def apply(f, op):
         return f.name
     if k == "mode":
         return f.mode
+    if k == "reinit":
+        f.__init__(CUR_RAW[0], op["size"])
+        return None
     if k == "getstate":
         return f.__getstate__()
     return getattr(f, k)()
@@ -452,6 +471,7 @@ def run_case(c):
     key = c["fn"].split("_")[1]
     raw = RAWS[key]()
     raw.setup(c)
+    CUR_RAW[0] = raw
     cls = CLS[key, c["kind"]]
     f = cls.__new__(cls)
     # _pyio's constructors build the object as they go, so its hooks are armed (and
@@ -479,11 +499,17 @@ def run_case(c):
     return {"ok": out, "log": list(raw.calls), "data": list(raw.d), "pos": raw.p}
 
 
+# A child that has not answered by then is blocked for good: its outcome is a hang.
+HANG_SECONDS = 5
+
+
 def run_forked(c):
     r, w = os.pipe()
     pid = os.fork()
     if pid == 0:
         os.close(r)
+        # an abort prints "Fatal Python error" there
+        os.dup2(os.open(os.devnull, os.O_WRONLY), 2)
         try:
             data = json.dumps(run_case(c)).encode()
         except BaseException as e:
@@ -492,17 +518,29 @@ def run_forked(c):
             fo.write(data)
         os._exit(0)
     os.close(w)
+    chunks, deadline = [], time.monotonic() + HANG_SECONDS
     with os.fdopen(r, "rb") as fi:
-        data = fi.read()
+        while True:
+            left = deadline - time.monotonic()
+            ready = select.select([fi], [], [], max(left, 0))[0]
+            if not ready:
+                os.kill(pid, signal.SIGKILL)
+                os.waitpid(pid, 0)
+                return {"ok": None, "hang": True}
+            chunk = os.read(fi.fileno(), 1 << 16)
+            if not chunk:
+                break
+            chunks.append(chunk)
     _, status = os.waitpid(pid, 0)
     if os.WIFSIGNALED(status):
-        return {"ok": None, "crash": True} if os.WTERMSIG(status) in (signal.SIGSEGV, signal.SIGBUS) else {
+        return {"ok": None, "crash": True} if os.WTERMSIG(status) in (signal.SIGSEGV, signal.SIGBUS, signal.SIGABRT, signal.SIGFPE) else {
             "signal": os.WTERMSIG(status)}
-    return json.loads(data)
+    return json.loads(b"".join(chunks))
 
 
 def run_python(c):
-    if c["fn"] == "buf_c" and c["hooks"]:
+    # a case that calls back into the object can crash or block the process
+    if c["hooks"]:
         return run_forked(c)
     return run_case(c)
 
