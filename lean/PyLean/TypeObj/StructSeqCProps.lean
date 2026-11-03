@@ -159,36 +159,40 @@ theorem newTypeLayout_proven : NewTypeLayout := by
       by_cases hneg : bsz < 0
       · rw [if_pos hneg] at h; cases h
       · rw [if_neg hneg] at h
-        by_cases hsmall : (if bsz = 0 then 32 else bsz.toNat) < 32
-        · rw [if_pos hsmall] at h; cases h
-        · rw [if_neg hsmall] at h
-          simp only [CRes.bind_ok] at h
-          unfold initDict at h
-          by_cases hn : d.nInSeq < 0
-          · rw [if_pos hn] at h; cases h
-          · rw [if_neg hn] at h
-            cases hma : matchArgsLoop d.fields d.nInSeq.toNat 0 with
-            | ok ma =>
-              rw [hma] at h
-              simp only [CRes.bind_ok] at h
-              cases h
-              obtain ⟨hlen, hmap⟩ := matchArgsLoop_ok d.fields _ 0 ma hma
-              simp only [List.drop_zero] at hmap
-              refine ⟨rfl, ?_, by omega, ?_, rfl, hmap, ?_⟩
-              · rw [initMembersLoop_eq]
-                simp [namedFields, List.range_eq_range']
-              · rcases hlen with h0 | h0 <;> omega
-              · intro hh
-                have hle : d.nInSeq ≤ d.fields.length := by rcases hlen with h0 | h0 <;> omega
-                have : bsz = 32 + 8 * ((d.fields.length : Int) - d.nInSeq) := by
-                  rw [← hbs, toCInt_small _ (by omega) (by omega)]; omega
-                subst this
-                simp only
-                rw [if_neg (by omega)]
-                omega
-            | exc e => rw [hma] at h; cases h
-            | nullNoExc => rw [hma] at h; cases h
-            | ub x => rw [hma] at h; cases h
+        cases hsp : specialCheck (initMembersLoop d.fields 0 []) with
+        | some e => rw [hsp] at h; cases h
+        | none =>
+          rw [hsp] at h
+          by_cases hsmall : (if bsz = 0 then 32 else bsz.toNat) < 32
+          · rw [if_pos hsmall] at h; cases h
+          · rw [if_neg hsmall] at h
+            simp only [CRes.bind_ok] at h
+            unfold initDict at h
+            by_cases hn : d.nInSeq < 0
+            · rw [if_pos hn] at h; cases h
+            · rw [if_neg hn] at h
+              cases hma : matchArgsLoop d.fields d.nInSeq.toNat 0 with
+              | ok ma =>
+                rw [hma] at h
+                simp only [CRes.bind_ok] at h
+                cases h
+                obtain ⟨hlen, hmap⟩ := matchArgsLoop_ok d.fields _ 0 ma hma
+                simp only [List.drop_zero] at hmap
+                refine ⟨rfl, ?_, by omega, ?_, rfl, hmap, ?_⟩
+                · rw [initMembersLoop_eq]
+                  simp [namedFields, List.range_eq_range']
+                · rcases hlen with h0 | h0 <;> omega
+                · intro hh
+                  have hle : d.nInSeq ≤ d.fields.length := by rcases hlen with h0 | h0 <;> omega
+                  have : bsz = 32 + 8 * ((d.fields.length : Int) - d.nInSeq) := by
+                    rw [← hbs, toCInt_small _ (by omega) (by omega)]; omega
+                  subst this
+                  simp only
+                  rw [if_neg (by omega)]
+                  omega
+              | exc e => rw [hma] at h; cases h
+              | nullNoExc => rw [hma] at h; cases h
+              | ub x => rw [hma] at h; cases h
   · simp only [Bool.not_eq_true] at hm
     simp [hm] at h
 

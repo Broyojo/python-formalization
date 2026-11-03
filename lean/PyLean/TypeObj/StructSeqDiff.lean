@@ -135,16 +135,16 @@ def run (fn : String) (j : Json) : Except String Json := do
     pure <| cres builtJson r
   | "ss_inittype" =>
     let d ← parseDesc (← field j "desc")
-    let (r, _) := initType2 0 d malloc (.ok ())
+    let (r, _) := initType2 0 d malloc .allOk
     let via ← getStr j "via"
     if via == "twice" then
       -- a second InitType2 on the same PyTypeObject: its refcount is no longer 0 once
       -- PyType_Ready has made it immortal
-      let st := (initType2 0 d malloc (.ok ())).2
-      pure (cres builtJson (initType2 (if st.immortal then 1 else 0) d malloc (.ok ())).1)
+      let st := (initType2 0 d malloc .allOk).2
+      pure (cres builtJson (initType2 (if st.immortal then 1 else 0) d malloc .allOk).1)
     else if via == "InitType" then
       -- the exception InitType leaves set, which ctypes raises after the call
-      match (initType 0 d malloc (.ok ())).1 with
+      match (initType 0 d malloc .allOk).1 with
       | .pending e => pure (excJson e)
       | .done => pure (cres builtJson r)
       | .ub w => pure (Json.mkObj [("exc", "UB"), ("msg", toJson w)])

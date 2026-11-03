@@ -131,6 +131,11 @@ TPNAMES = [b"m.T", b"m.S", b"T", b"pkg.mod.Name", "m.Tü".encode(), b"m." + b"Q"
 def rand_desc(rng, valid=True):
     n = rng.choice([0, 1, 1, 2, 2, 3, 3, 4, 5, 6, 8])
     names = rng.sample(NAMES, n)
+    if n and rng.random() < 0.06:
+        # the special offset names PyType_FromMetaclass refuses for an object member (NewType
+        # raises SystemError, InitType2 builds the type), and a dunder name it does not care about
+        names[rng.randrange(n)] = rng.choice([b"__dictoffset__", b"__weaklistoffset__",
+                                              b"__vectorcalloffset__", b"__module__"])
     nseq = rng.randint(0, n)
     fields = list(names)
     # unnamed fields only among the visible ones (Objects/structseq.c:23-24)
