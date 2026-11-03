@@ -50,6 +50,7 @@ def decSV (j : Json) : Except String SV := do
     | [a, b] => return .cplx a b
     | _ => throw "bad complex"
   | "o" => return .other (← v.getBool?)
+  | "alias" => return .alias
   | t => throw s!"bad tag {t}"
 
 def encSV : SV → Json
@@ -61,7 +62,7 @@ def encSV : SV → Json
   | .cplx a b => Json.mkObj [("t", "c"), ("v", toJson [a, b])]
   | .bool b => Json.mkObj [("t", "B"), ("v", toJson b)]
   | .other t => Json.mkObj [("t", "o"), ("v", toJson t)]
-  | .obj _ => Json.null
+  | .obj _ | .alias => Json.null
 
 def decFmt (j : Json) : Except String FmtArg := do
   let f ← field j "fmt"

@@ -379,6 +379,9 @@ class StructArea:
             except Exception:
                 hint = 0
             c["k"] = min(r.choice([0, 0, 1, 2]), hint)
+        if fn == "pack_into" and c["args"] and r.random() < 0.3:
+            # the target bytearray itself as an argument: read after the memset (Modules/_struct.c:2340)
+            c["args"][r.randrange(len(c["args"]))] = {"t": "alias", "v": None}
         if fn in ("unpack_from", "pack_into"):
             n = len(c["buf"])
             c["off"] = r.choice([0, 0, 1, 2, -1, -2, n, -n, n + 1, -n - 1, n // 2, M, -M, -M - 1, M + 1,
@@ -541,7 +544,7 @@ class StructArea:
                 return it.__length_hint__()
             if fn == "pack_into":
                 b = bytearray(c["buf"])
-                struct.pack_into(f, b, c["off"], *pack_args())
+                struct.pack_into(f, b, c["off"], *[b if a["t"] == "alias" else sv_dec(a) for a in c["args"]])
                 return list(b)
             raise KeyError(fn)
 

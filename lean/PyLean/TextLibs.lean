@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.TextLibs.Diff
-import PyLean.TextLibs.StructMore
+import PyLean.TextLibs.StructPack
 import PyLean.TextLibs.BinasciiEq3
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
@@ -164,11 +164,47 @@ def entries : List Entry := [
     bug := some "textlibs-struct-void-p-index-overflow"
     notes := "Reproduces on main too. Trivial on its own." },
   { id := "textlibs-struct-pack-into-0p-outside-field", pyFile := "Modules/_struct.c"
-    pyFns := []
+    pyFns := ["Struct_pack_into_impl", "s_pack_internal", "pack_into_impl"]
     statement := "pack_into changes no byte outside the calcsize(format) bytes at offset."
-    source := "invariant", status := .open
-    prop := ``PackIntoStaysInside
-    notes := "`packP` writes the count of a p field only when the field has room. Open: the proof needs that every pack routine returns exactly e.size bytes, which is stated for the integers only." },
+    source := "invariant", status := .proven
+    prop := ``PackIntoStaysInside, thm := some ``packIntoStaysInside_proven
+    notes := "From runPack_width (every pack routine writes its entry's size, every table checked) and prepareS_laid (every code's repeats end by s_size). 3.14's 0p count byte past the field is gone in 3.15." },
+  { id := "textlibs-struct-pack-length", pyFile := "Modules/_struct.c"
+    pyFns := ["Struct_pack_impl", "s_pack_internal"]
+    statement := "pack on a struct of an accepted format returns exactly s_size bytes whenever it succeeds."
+    source := "Modules/_struct.c:2431-2458", status := .proven
+    prop := ``PackLength, thm := some ``packLength_proven },
+  { id := "textlibs-struct-pack-into-laws", pyFile := "Modules/_struct.c"
+    pyFns := ["Struct_pack_into_impl"]
+    statement := "pack_into refuses a negative offset leaving less than size bytes, one before the buffer, and a buffer too short, with the source's messages; a negative offset counts from the end; a success keeps the buffer's length, the bytes before the offset and every byte from offset + size on."
+    source := "Modules/_struct.c:2479-2537", status := .proven
+    prop := ``PackIntoLaws, thm := some ``packIntoLaws_proven
+    notes := "The impl reads the Struct as the buffer and offset conversions left it (structPackIntoA, bufStruct, offStruct)." },
+  { id := "textlibs-struct-pack-p-field", pyFile := "Modules/_struct.c"
+    pyFns := ["s_pack_internal"]
+    statement := "A p field of size n holds min(len, n-1, 255) in its first byte and the first min(len, n-1) bytes of the value, NUL padded; a zero-sized field writes nothing."
+    source := "Modules/_struct.c:2370-2400", status := .proven
+    prop := ``PackPField, thm := some ``packPField_proven
+    notes := "Checked on 3.15.2 for field sizes 0..300 and value lengths 0..300." },
+  { id := "textlibs-struct-pack-items", pyFile := "Modules/_struct.c"
+    pyFns := ["s_pack_internal"]
+    statement := "s_pack_internal clears the struct's s_size bytes and then packs every item in order, each code repeat times at offset + j * size, consuming one argument per item and reading it only when its item is packed."
+    source := "Modules/_struct.c:2331-2415", status := .proven
+    prop := ``PackItems, thm := some ``packItems_proven
+    notes := "With PairOffsets, which pins the offsets prepare_s gives the codes." },
+  { id := "textlibs-struct-pack-into-alias", pyFile := "Modules/_struct.c"
+    pyFns := ["s_pack_internal", "Struct_pack_into_impl"]
+    statement := "pack_into(fmt, ba, 0, ba) writes what pack_into(fmt, ba, 0, bytes(ba)) writes."
+    source := "invariant: an argument has the value it has at the call", status := .refuted
+    prop := ``PackIntoAliasCopy, thm := some ``packIntoAliasCopy_refuted
+    bug := some "textlibs-struct-pack-into-alias"
+    notes := "Duplicate of python/cpython#158761 (closed, not planned): the argument is read after the memset at 2340." },
+  { id := "textlibs-struct-sizeof-pairs", pyFile := "Modules/_struct.c"
+    pyFns := ["Struct___sizeof___impl"]
+    statement := "For every two-item format of every table, Struct(fmt).__sizeof__() is 96 + 32 * (number of items that are not x)."
+    source := "Modules/_struct.c:2546-2553", status := .proven
+    prop := ``SizeofPairs, thm := some ``sizeofPairs_proven
+    notes := "Checked against CPython for the same formats." },
   { id := "textlibs-struct-half-round-trip", pyFile := "Modules/_struct.c"
     pyFns := ["unpack_halffloat", "pack_halffloat"]
     statement := "For every 16-bit pattern that is not a NaN, PyFloat_Pack2 of the double PyFloat_Unpack2 returns gives back the same pattern."
