@@ -3517,6 +3517,17 @@ class RBuf:
             HAZARD[0] = True
 
 
+class RBool:
+    def __init__(self, acts, res):
+        self.acts, self.res = acts, res
+
+    def __bool__(self):
+        run_acts(self.acts)
+        if self.res[0] == "exc":
+            raise _exc(self.res[1:])
+        return self.res[1]
+
+
 class RLen(bytes):
     def __len__(self):
         run_acts(self.acts)
@@ -3708,7 +3719,12 @@ def bare_op(c, ba):
     if op == "rich":
         return getattr(ba, "__%s__" % c["cmp"])(bare_build(c["other"]))
     if op in ("center", "ljust", "rjust"):
-        return getattr(ba, op)(bare_build(c["width"]), bytes([c["fill"]]))
+        args = [bare_build(c["width"])]
+        if c.get("fill") is not None:
+            args.append(bare_build(c["fill"]))
+        return getattr(ba, op)(*args)
+    if op in ("pred", "map"):
+        return getattr(ba, c["name"])()
     if op == "zfill":
         return ba.zfill(bare_build(c["width"]))
     if op == "replace":
@@ -3719,7 +3735,14 @@ def bare_op(c, ba):
     if op == "expandtabs":
         return ba.expandtabs(*([] if c.get("tabsize") is None else [bare_build(c["tabsize"])]))
     if op == "splitlines":
-        return ba.splitlines(c["keepends"])
+        k = c.get("keepends")
+        if k is None:
+            return ba.splitlines()
+        if k[0] == "tobj":
+            return ba.splitlines(k[1])
+        if k[0] == "tcls":
+            return ba.splitlines(RBool(k[1], k[2]))
+        return ba.splitlines(ba)
     raise ValueError(op)
 
 
@@ -3859,7 +3882,7 @@ _BARE_OPS = ["find", "rfind", "index", "rindex", "count", "startswith", "endswit
              "strip", "lstrip", "rstrip", "getitem", "setsub", "sqset", "insert", "append", "remove",
              "pop", "take", "iadd", "add", "extend", "init", "translate", "split", "rsplit",
              "partition", "rpartition", "hex", "join", "rich", "center", "ljust", "rjust", "zfill",
-             "replace", "expandtabs", "splitlines"]
+             "replace", "expandtabs", "splitlines", "pred", "map"]
 
 
 def gen_bare(rng):
@@ -3970,7 +3993,21 @@ def gen_bare(rng):
         c["cmp"] = rng.choice(["eq", "ne", "lt", "le", "gt", "ge"])
     elif op in ("center", "ljust", "rjust", "zfill"):
         c["width"] = _barg(rng, ["int", "idx", "idx", "float"], vals=[0, 1, 3, 5, 8, 12, -1, 2 ** 63])
-        c["fill"] = rng.choice([32, 42, 0])
+        if op != "zfill" and rng.random() < 0.8:
+            k = rng.random()
+            if k < 0.4:
+                c["fill"] = ["obj", ["bytes", [rng.choice([32, 42, 0, 255])]]]
+            elif k < 0.5:
+                c["fill"] = ["obj", ["bytearray", [rng.choice([42, 200])]]]
+            elif k < 0.6:
+                c["fill"] = ["obj", [rng.choice(["bytes", "bytearray"]), rng.choice([[], [42, 42], [1, 2, 3]])]]
+            elif k < 0.75:
+                c["fill"] = ["me"]
+            elif k < 0.85:
+                c["fill"] = ["slen", _bacts(rng), ["ok", rng.choice([1, 2])], rng.choice([[42], [], [42, 43]])]
+            else:
+                c["fill"] = rng.choice([["obj", ["none"]], ["obj", ["int", 42]], ["obj", ["str", [42]]],
+                                        ["obj", ["memview", [42], []]]])
     elif op == "replace":
         c["old"] = _barg(rng, ["bytes", "buf", "buf", "me", "int"], bufs=[[32], [97], [], [97, 98], [120]])
         c["new"] = _barg(rng, ["bytes", "buf", "me", "int"], bufs=[[], [122], [122, 122]])
@@ -3980,7 +4017,27 @@ def gen_bare(rng):
         if rng.random() < 0.8:
             c["tabsize"] = _barg(rng, ["int", "idx", "idx", "float"], vals=[0, 1, 4, 8, -1, 2 ** 31, 2 ** 63])
     elif op == "splitlines":
-        c["keepends"] = rng.random() < 0.5
+        k = rng.random()
+        if k < 0.25:
+            pass
+        elif k < 0.5:
+            c["keepends"] = ["tobj", rng.random() < 0.5]
+        elif k < 0.85:
+            res = _bexc(rng) if rng.random() < 0.15 else ["ok", rng.random() < 0.5]
+            c["keepends"] = ["tcls", _bacts(rng), res]
+        else:
+            c["keepends"] = ["me"]
+        if rng.random() < 0.5:
+            c["s"] = [rng.choice([10, 13, 97, 32]) for _ in range(rng.randint(0, 8))]
+    elif op == "pred":
+        c["name"] = rng.choice(["isalnum", "isalpha", "isascii", "isdigit", "islower", "isspace", "istitle",
+                                "isupper"])
+        c["s"] = [rng.choice([65, 97, 48, 32, 9, 200, 90, 122, 64, 91, 96, 123, 47, 58, 13, 11, 127, 128])
+                  for _ in range(rng.randint(0, 6))]
+    elif op == "map":
+        c["name"] = rng.choice(["capitalize", "swapcase", "title", "upper", "lower"])
+        c["s"] = [rng.choice([65, 97, 48, 32, 200, 90, 122, 64, 91, 96, 123, 39])
+                  for _ in range(rng.randint(0, 6))]
     return c
 
 

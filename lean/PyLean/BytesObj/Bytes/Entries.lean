@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.BytesObj.Bytes.Specs4
-import PyLean.BytesObj.Bytes.HeapProps
+import PyLean.BytesObj.Bytes.HeapProps2
 
 /-! Registry entries for bytes (Objects/bytesobject.c, Objects/bytes_methods.c) and
 bytearray (Objects/bytearrayobject.c). -/
@@ -382,7 +382,7 @@ def entries : List Entry := [
     source := "pickling round trip", status := .proven
     prop := ``ReduceSpec, thm := some ``reduceSpec_proven },
   { id := "bytesobj-bytearray-read-wrappers", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["bytearray_replace_impl", "bytearray_splitlines_impl", "bytearray_center", "bytearray_ljust", "bytearray_rjust", "bytearray_zfill", "bytearray_expandtabs"]
+    pyFns := ["bytearray_zfill", "bytearray_expandtabs"]
     statement := "center, ljust, rjust, zfill, replace, expandtabs and splitlines raise no export: the callbacks of their arguments (__index__ of width, count and tabsize, __buffer__ of old and new) run first and may resize the bytearray, and the result is the bytes method on the contents as they left them; replace releases its buffers after the copy."
     source := "twin: the bytes methods of stringlib/transmogrify.h; clinic/bytearrayobject.c.h:858-891, stringlib/clinic/transmogrify.h.h", status := .proven
     prop := ``ReadAfterArgs, thm := some ``readAfterArgs_proven
@@ -466,12 +466,11 @@ def entries : List Entry := [
     prop := ``TranslateAfterArgs, thm := some ``translateAfterArgs_proven
     notes := "Scope: callbacks act on self only; a Python __buffer__ returns memoryview(bytes(...))." },
   { id := "bytesobj-bytearray-delegates", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["bytearray_isalnum", "bytearray_isalpha", "bytearray_isascii", "bytearray_isdigit", "bytearray_islower",
-      "bytearray_isspace", "bytearray_istitle", "bytearray_isupper", "bytearray_capitalize", "bytearray_swapcase",
-      "bytearray_title", "bytearray_upper", "bytearray_lower"]
+    pyFns := []
     statement := "For every bytearray, each is* predicate returns the bytes helper's answer on its contents, and each case map returns a new bytearray holding the helper's result (below 2^46 bytes, where the allocation cannot fail); neither changes the object."
     source := "twin: stringlib/ctype.h delegates to the _Py_bytes_* helpers of bytes_methods.c", status := .proven
-    prop := ``DelegatesSpec, thm := some ``delegatesSpec_proven },
+    prop := ``DelegatesSpec, thm := some ``delegatesSpec_proven
+    notes := "Credits no row: it holds for any helper; bytesobj-bytearray-isalnum and the twelve entries after it pin each method." },
   { id := "bytesobj-bytearray-affix", pyFile := "Objects/bytearrayobject.c"
     pyFns := ["bytearray_removeprefix_impl", "bytearray_removesuffix_impl"]
     statement := "removeprefix/removesuffix of bytearray, which lack the prefix_len > 0 test of bytes, agree with the bytes bodies for every contents and affix; with a prefix class the contents read are those __buffer__ left, and __release_buffer__ runs after."
@@ -513,6 +512,156 @@ def entries : List Entry := [
     prop := ``InitPathsAgree, thm := some ``initPathsAgree_refuted
     bug := some "bytesobj-bytearray-init-codec-steal"
     notes := "Scope: callbacks act on self only; a Python __buffer__ returns memoryview(bytes(...))." },
+  { id := "bytesobj-bytearray-isalnum", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_isalnum"]
+    statement := "For every bytearray, isalnum() is true exactly when it is non-empty and every byte is an ASCII letter or digit ([0-9A-Za-z]); the object is not changed."
+    source := "Doc/library/stdtypes.rst bytearray.isalnum; bytearrayobject.c:2098-2106", status := .proven
+    prop := ``BaIsalnumSpec, thm := some ``baIsalnumSpec_proven },
+  { id := "bytesobj-bytearray-isalpha", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_isalpha"]
+    statement := "For every bytearray, isalpha() is true exactly when it is non-empty and every byte is an ASCII letter."
+    source := "Doc/library/stdtypes.rst bytearray.isalpha; bytearrayobject.c:2108-2116", status := .proven
+    prop := ``BaIsalphaSpec, thm := some ``baIsalphaSpec_proven },
+  { id := "bytesobj-bytearray-isascii", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_isascii"]
+    statement := "For every bytearray, isascii() is true exactly when every byte is below 128, the empty object included."
+    source := "Doc/library/stdtypes.rst bytearray.isascii; bytearrayobject.c:2118-2126", status := .proven
+    prop := ``BaIsasciiSpec, thm := some ``baIsasciiSpec_proven },
+  { id := "bytesobj-bytearray-isdigit", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_isdigit"]
+    statement := "For every bytearray, isdigit() is true exactly when it is non-empty and every byte is an ASCII digit."
+    source := "Doc/library/stdtypes.rst bytearray.isdigit; bytearrayobject.c:2128-2136", status := .proven
+    prop := ``BaIsdigitSpec, thm := some ``baIsdigitSpec_proven },
+  { id := "bytesobj-bytearray-islower", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_islower"]
+    statement := "For every bytearray, islower() is true exactly when there is no ASCII capital and at least one ASCII small letter."
+    source := "Doc/library/stdtypes.rst bytearray.islower; bytearrayobject.c:2138-2146", status := .proven
+    prop := ``BaIslowerSpec, thm := some ``baIslowerSpec_proven },
+  { id := "bytesobj-bytearray-isspace", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_isspace"]
+    statement := "For every bytearray, isspace() is true exactly when it is non-empty and every byte is one of \\t\\n\\v\\f\\r and space."
+    source := "Doc/library/stdtypes.rst bytearray.isspace; bytearrayobject.c:2148-2156", status := .proven
+    prop := ``BaIsspaceSpec, thm := some ``baIsspaceSpec_proven },
+  { id := "bytesobj-bytearray-istitle", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_istitle"]
+    statement := "For every bytearray, istitle() is true exactly when there is an ASCII letter, every capital follows a byte that is not a letter and every small letter follows a letter."
+    source := "Doc/library/stdtypes.rst bytearray.istitle; bytearrayobject.c:2158-2166", status := .proven
+    prop := ``BaIstitleSpec, thm := some ``baIstitleSpec_proven },
+  { id := "bytesobj-bytearray-isupper", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_isupper"]
+    statement := "For every bytearray, isupper() is true exactly when there is no ASCII small letter and at least one ASCII capital."
+    source := "Doc/library/stdtypes.rst bytearray.isupper; bytearrayobject.c:2168-2176", status := .proven
+    prop := ``BaIsupperSpec, thm := some ``baIsupperSpec_proven },
+  { id := "bytesobj-bytearray-capitalize", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_capitalize"]
+    statement := "capitalize() gives a new bytearray whose first byte is upper-cased and the rest lower-cased (ASCII only), below 2^46 bytes; MemoryError where the copy cannot be allocated; the object is not changed."
+    source := "Doc/library/stdtypes.rst bytearray.capitalize; bytearrayobject.c:2203-2211", status := .proven
+    prop := ``BaCapitalizeSpec, thm := some ``baCapitalizeSpec_proven },
+  { id := "bytesobj-bytearray-swapcase", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_swapcase"]
+    statement := "swapcase() gives a new bytearray with ASCII small letters and capitals exchanged, every other byte kept; MemoryError where the copy cannot be allocated."
+    source := "Doc/library/stdtypes.rst bytearray.swapcase; bytearrayobject.c:2485-2493", status := .proven
+    prop := ``BaSwapcaseSpec, thm := some ``baSwapcaseSpec_proven },
+  { id := "bytesobj-bytearray-title", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_title"]
+    statement := "title() gives a new bytearray in which a small letter after a non-letter becomes a capital and a capital after a letter becomes small, every other byte kept; MemoryError where the copy cannot be allocated."
+    source := "Doc/library/stdtypes.rst bytearray.title; bytearrayobject.c:2495-2503", status := .proven
+    prop := ``BaTitleSpec, thm := some ``baTitleSpec_proven },
+  { id := "bytesobj-bytearray-upper", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_upper"]
+    statement := "upper() gives a new bytearray in which each byte 97-122 is 32 less and every other byte kept; MemoryError where the copy cannot be allocated."
+    source := "Doc/library/stdtypes.rst bytearray.upper; bytearrayobject.c:2505-2513", status := .proven
+    prop := ``BaUpperSpec, thm := some ``baUpperSpec_proven },
+  { id := "bytesobj-bytearray-lower", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_lower"]
+    statement := "lower() gives a new bytearray in which each byte 65-90 is 32 more and every other byte kept; MemoryError where the copy cannot be allocated."
+    source := "Doc/library/stdtypes.rst bytearray.lower; bytearrayobject.c:2515-2523", status := .proven
+    prop := ``BaLowerSpec, thm := some ``baLowerSpec_proven },
+  { id := "bytesobj-bytearray-just-fill", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_center", "bytearray_ljust", "bytearray_rjust"]
+    statement := "center, ljust and rjust convert width first (its __index__ may change the object), then fillchar, which must be a bytes (a subclass by its stored size) or bytearray of length 1, else TypeError with the clinic's message (self measured after width's callback); the result is the bytes method on the contents as width's callback left them."
+    source := "stringlib/clinic/transmogrify.h.h:116-139, :184-207, :252-275; Python/getargs.c:663-670", status := .proven
+    prop := ``BaJustSpec, thm := some ``baJustSpec_proven
+    notes := "Scope: callbacks act on self only." },
+  { id := "bytesobj-bytearray-replace-count", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_replace_impl"]
+    statement := "replace takes the buffer of old, then of new, then converts count (whose __index__ may change the object), reads the object only then, and releases both buffers after, also when count raises; the result is bytes.replace on the contents as the three callbacks left them."
+    source := "clinic/bytearrayobject.c.h:858-891; bytearrayobject.c:1842-1850", status := .proven
+    prop := ``BaReplaceSpec, thm := some ``baReplaceSpec_proven
+    notes := "Scope: callbacks act on self only; a Python __buffer__ returns memoryview(bytes(...))." },
+  { id := "bytesobj-bytearray-splitlines-keepends", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_splitlines_impl"]
+    statement := "splitlines runs PyObject_IsTrue(keepends) before reading the object: a __bool__ that changes the object is seen, one that raises is the result, self is true when not empty; the result is bytes.splitlines on the contents then, and with keepends the lines join back to them."
+    source := "clinic/bytearrayobject.c.h:1657-1674; bytearrayobject.c:2674-2682", status := .proven
+    prop := ``BaSplitlinesSpec, thm := some ``baSplitlinesSpec_proven
+    notes := "Scope: callbacks act on self only." },
+  { id := "bytesobj-bytearray-tailmatch", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_startswith_impl", "bytearray_endswith_impl"]
+    statement := "With arguments that run no Python code, startswith and endswith of a tuple are bytes's tuple loop on the contents (true at the first match, the first non-buffer item's TypeError unreplaced when no earlier item matched), and one non-buffer object gets the method's own TypeError message."
+    source := "twin: _Py_bytes_tailmatch, bytes_methods.c:675-706", status := .proven
+    prop := ``BaTailmatchSpec, thm := some ``baTailmatchSpec_proven },
+  { id := "bytesobj-bytearray-rich-bytes", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_richcompare"]
+    statement := "bytearray comparison with an object that runs no Python code is bytes comparison of the two byte strings (== is equality of the contents), and NotImplemented without the buffer protocol; the object is left as it was."
+    source := "twin: bytes_richcompare; bytearrayobject.c:1222-1275", status := .proven
+    prop := ``BaRichSpec, thm := some ``baRichSpec_proven },
+  { id := "bytesobj-bytearray-append", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_append_impl"]
+    statement := "append converts the item first (its exception passes out); with exports then present it raises BufferError, otherwise it appends the byte as list.append does."
+    source := "Doc/library/stdtypes.rst s.append(x); bytearrayobject.c:2189-2201", status := .proven
+    prop := ``BaAppendSpec, thm := some ``baAppendSpec_proven },
+  { id := "bytesobj-bytearray-insert", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_insert_impl"]
+    statement := "insert converts index, then item (each exception passing out); with exports then present it raises BufferError, otherwise it inserts as list.insert does."
+    source := "Doc/library/stdtypes.rst s.insert(i, x); bytearrayobject.c:2074-2096", status := .proven
+    prop := ``BaInsertSpec, thm := some ``baInsertSpec_proven },
+  { id := "bytesobj-bytearray-pop", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_pop_impl"]
+    statement := "pop raises IndexError on an empty object and outside the range (a negative index counted from the end), BufferError with exports, and otherwise returns and removes the byte; the clinic converts index first, -1 when absent."
+    source := "Doc/library/stdtypes.rst s.pop([i]); bytearrayobject.c:2359-2388", status := .proven
+    prop := ``BaPopSpec, thm := some ``baPopSpec_proven },
+  { id := "bytesobj-bytearray-from-size", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["PyByteArray_FromStringAndSize", "bytearray_reinit_from_bytes"]
+    statement := "PyByteArray_FromStringAndSize raises SystemError for a negative size and succeeds below 2^46 bytes with the bytes copied (or unwritten for NULL), no exports, ob_start == ob_bytes and ob_alloc the size."
+    source := "Doc/c-api/bytearray.rst PyByteArray_FromStringAndSize; bytearrayobject.c:55-67, :168-206", status := .proven
+    prop := ``BaFromStringAndSizeSpec, thm := some ``baFromStringAndSizeSpec_proven },
+  { id := "bytesobj-bytearray-copy", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_copy_impl"]
+    statement := "copy() of every bytearray below 2^46 bytes succeeds with a new object holding the contents and no exports, the empty object included."
+    source := "Doc/library/stdtypes.rst s.copy(); bytearrayobject.c:1382-1388", status := .proven
+    prop := ``BaCopySpec, thm := some ``baCopySpec_proven },
+  { id := "bytesobj-bytearray-clear", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_clear_impl"]
+    statement := "clear() leaves an empty object alone, raises BufferError on a non-empty one with exports, and otherwise empties it onto the empty bytes."
+    source := "Doc/library/stdtypes.rst s.clear(); bytearrayobject.c:1366-1373", status := .proven
+    prop := ``BaClearSpec, thm := some ``baClearSpec_proven },
+  { id := "bytesobj-bytearray-irepeat", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_irepeat_lock_held", "bytearray_irepeat"]
+    statement := "b *= n: n == 1 returns b untouched; n <= 0 empties it; MemoryError exactly when len(b) > PyByteArray_SIZE_MAX // n; BufferError with exports whenever the size changes; otherwise b holds n copies of its old contents."
+    source := "Doc/library/stdtypes.rst s *= n; bytearrayobject.c:471-506", status := .proven
+    prop := ``BaIRepeatSpec, thm := some ``baIRepeatSpec_proven },
+  { id := "bytesobj-bytearray-resize-strategy", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_resize_lock_held", "PyByteArray_Resize", "bytearray_reinit_from_bytes"]
+    statement := "A resize without exports keeps the first bytes and sets ob_alloc by the strategy: quick exit inside the buffer down to half, exact size below half, n + n//8 + (3 or 6) up to 1.125 times, exact beyond; 0 installs the empty bytes; an overallocation above PyByteArray_SIZE_MAX is MemoryError; bytearray(10).append(1) leaves __alloc__() at 51."
+    source := "observable through __alloc__(); bytearrayobject.c:294-342", status := .proven
+    prop := ``BaResizeStrategy, thm := some ``baResizeStrategy_proven },
+  { id := "bytesobj-bytearray-setslice-linear-ok", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_setslice_linear"]
+    statement := "For 0 <= lo <= hi <= len, a splice that keeps the size succeeds even with exports, one that changes it raises BufferError with exports, and without exports every splice below 2^45 bytes succeeds through each branch with data[:lo] + bytes + data[hi:]."
+    source := "Doc/library/stdtypes.rst s[i:j] = t; bytearrayobject.c:601-684", status := .proven
+    prop := ``BaSetsliceLinearOk, thm := some ``baSetsliceLinearOk_proven },
+  { id := "bytesobj-bytearray-subscript-slice", pyFile := "Objects/bytearrayobject.c"
+    pyFns := ["bytearray_subscript_lock_held", "bytearray_subscript"]
+    statement := "b[start:stop:step] with __index__ parts runs the step's, then the start's, then the stop's (a zero step raising before the others), and is bytes's slice of the contents as they left them."
+    source := "PySlice_Unpack, Objects/sliceobject.c:219-262; bytearrayobject.c:550-581", status := .proven
+    prop := ``BaSubscriptSlice, thm := some ``baSubscriptSlice_proven
+    notes := "Scope: callbacks act on self only." },
+  { id := "bytesobj-bytearray-ass-subscript-index", pyFile := "Objects/bytearrayobject.c"
+    pyFns := []
+    statement := "b[k] = v and del b[k] with an __index__ key run the key's callback, then the value's, and check the position against the size both left; a key that is neither an index nor a slice is the TypeError."
+    source := "GH-91153 comments, bytearrayobject.c:791-827", status := .proven
+    prop := ``BaAssSubIndex, thm := some ``baAssSubIndex_proven
+    notes := "Covers the index branch only; the slice branch of ass_subscript is in no statement yet. Scope: callbacks act on self only." },
   { id := "bytesobj-bytes-class-tables", pyFile := "Objects/bytes_methods.c"
     pyFns := ["_Py_bytes_isspace", "_Py_bytes_isalpha", "_Py_bytes_isalnum", "_Py_bytes_isdigit"]
     statement := "isspace, isalpha, isdigit and isalnum are 'non-empty and every byte in the class', for the exact byte ranges of pyctype.c."
