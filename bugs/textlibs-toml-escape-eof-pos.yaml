@@ -1,0 +1,63 @@
+id: textlibs-toml-escape-eof-pos
+title: "tomllib: TOMLDecodeError.pos is one past the end of the document for a trailing backslash in a basic string"
+priority: P5
+kind: doc-mismatch
+module: textlibs
+files: [Lib/tomllib/_parser.py]
+functions: ["parse_basic_str_escape", "parse_basic_str", "TOMLDecodeError.__init__"]
+summary: |
+  When a document ends with a backslash inside a basic string (one-line or multi-line, value or
+  key), loads raises TOMLDecodeError("Unescaped '\\' in a string") with pos = len(doc) + 1, one past
+  the end of the document, and colno one past the end of the line. 'a = "\' (length 6) gives
+  pos 7, colno 8; 'a = """\' (length 8) gives pos 9; '"\' (a key, length 2) gives pos 3. The docs
+  describe pos as "The index of doc where parsing failed". str(e) is unaffected: it says
+  "(at end of document)" for every pos >= len(doc).
+  Duplicate of python/cpython#158566 (open) and hukkin/tomli#312 (open): tomllib is vendored from
+  tomli, and the CPython thread asks for the fix to go into tomli first.
+likelihood: |
+  Low impact: only a document truncated right after a backslash in a string reaches it, and only
+  callers that use e.pos, e.colno (for example to slice doc or to underline the error) see it.
+maybe_intended: |
+  No. Every other error at the end of the document (for example 'a = "abc') reports
+  pos == len(doc), and the maintainers in python/cpython#158566 treat it as a bug.
+promised_by: |
+  Docs of tomllib.TOMLDecodeError: "pos: The index of doc where parsing failed"; "colno: The
+  column corresponding to pos".
+reproducer: |
+  import tomllib
+  seen = []
+  for doc in ['a = "\\', 'a = """\\', '"\\']:
+      try:
+          tomllib.loads(doc)
+          seen.append((doc, None))
+      except tomllib.TOMLDecodeError as e:
+          seen.append((doc, len(doc), e.pos, e.colno, str(e)))
+  print(seen)
+  if all(len(t) == 5 and t[2] == t[1] + 1 for t in seen):
+      print("REPRODUCED textlibs-toml-escape-eof-pos")
+expected: |
+  pos <= len(doc) (len(doc), as for an unterminated string, or the index of the backslash).
+observed: |
+  python3 3.15.2: [('a = "\\', 6, 7, 8, "Unescaped '\\' in a string (at end of document)"),
+  ('a = """\\', 8, 9, 10, "Unescaped '\\' in a string (at end of document)"),
+  ('"\\', 2, 3, 4, "Unescaped '\\' in a string (at end of document)")]. REPRODUCED.
+  main (vendor/cpython-main/python.exe): the same. REPRODUCED.
+cause: |
+  Lib/tomllib/_parser.py:569-570 takes escape_id = src[pos:pos + 2] (only "\\" when the backslash
+  is the last character) and advances pos by 2 before looking at it; escape_id is then neither a
+  whitespace escape (:571), a hex escape (:585-590) nor in BASIC_STR_ESCAPE_REPLACEMENTS, so :594
+  raises TOMLDecodeError(..., src, pos) with pos = len(src) + 1.
+possible_fix: |
+  Raise at the backslash (or at len(src)) when len(escape_id) < 2, before advancing pos; or clamp
+  pos to len(src) in the KeyError branch at :593-594.
+duplicates: |
+  Duplicate of python/cpython#158566 (open, "`tomllib` reports an error position beyond EOF for
+  some files ending in backslash") and hukkin/tomli#312 (open, "`TOMLDecodeError` reports an error
+  position beyond EOF for an unfinished escape").
+  Queries (read-only): gh search issues --repo python/cpython tomllib pos backslash;
+  gh search issues --repo python/cpython TOMLDecodeError pos end of document;
+  gh search issues --repo hukkin/tomli pos backslash; gh search issues --repo hukkin/tomli
+  TOMLDecodeError pos; gh search issues --repo hukkin/tomli escape end of document;
+  gh issue view 158566 --repo python/cpython; gh issue view 312 --repo hukkin/tomli.
+  bugforge results (vendor/bugforge-results/README.md): no tomllib entry.
+lean: lean/PyLean/TextLibs/TomlErrors.lean (EscapeErrors, last conjunct; DecodeErrorPosInDoc, decodeErrorPosInDoc_refuted)

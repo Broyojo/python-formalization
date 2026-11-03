@@ -1,0 +1,74 @@
+id: textlibs-toml-nesting-recursion-limit
+title: "NOT FOR FILING: tomllib parses nested arrays only as deep as the recursion limit allows"
+priority: P5
+kind: documented-limitation
+module: textlibs
+files: [Lib/tomllib/_parser.py]
+functions: ["parse_value", "parse_array", "loads"]
+summary: |
+  This records why ArrayTableSpec and DocRoundTrip carry a frame bound; it is not a defect report.
+  parse_value and parse_array recurse, two Python frames per level of array (three per inline
+  table, with parse_key_value_pair), so 'x = ' + '[' * n + ']' * n parses exactly when 2n + 5
+  frames are left when loads is called (sys.getrecursionlimit() minus the frames on the stack), and
+  raises RecursionError("maximum recursion depth exceeded") otherwise. With the default limit of
+  1000, called from a function of a script (two frames on the stack), 496 levels parse and 497 raise.
+likelihood: |
+  Not applicable.
+maybe_intended: |
+  Yes. The tomllib docs (Doc/library/tomllib.rst:196-204, "Nesting limit") say: "In tomllib, the
+  nesting level is mainly limited by Python's recursion limit. Note that code that calls tomllib
+  may contribute to the limit." Lib/test/test_tomllib/test_misc.py:99-121 parses arrays and inline
+  tables nested to just under the frames available.
+reproducer: |
+  import sys, tomllib
+
+  def run(frames, doc):
+      f, depth = sys._getframe(), 0
+      while f is not None:
+          depth += 1
+          f = f.f_back
+      old = sys.getrecursionlimit()
+      sys.setrecursionlimit(depth + frames)
+      try:
+          return tomllib.loads(doc)
+      except RecursionError:
+          return None
+      finally:
+          sys.setrecursionlimit(old)
+
+  for _ in range(8):
+      tomllib.loads("a = [1]")
+  ok = True
+  for n in range(1, 41):
+      doc = "x = " + "[" * n + "]" * n
+      for frames in range(2 * n + 1, 2 * n + 10):
+          got = run(frames, doc) is not None
+          if got != (2 * n + 5 <= frames):
+              ok = False
+              print("threshold differs", n, frames, got)
+  try:
+      tomllib.loads("x = " + "[" * 1000 + "]" * 1000)
+      deep = "parsed"
+  except RecursionError as e:
+      deep = str(e)
+  print("x = [[...]] (1000 levels):", deep)
+  if ok and deep == "maximum recursion depth exceeded":
+      print("REPRODUCED textlibs-toml-nesting-recursion-limit")
+expected: |
+  What is observed: the documented limit, at 2n + 5 frames for n nested arrays.
+observed: |
+  python3 3.15.2: no threshold differs; 1000 levels raise "maximum recursion depth exceeded".
+  REPRODUCED.
+  main (vendor/cpython-main/python.exe): the same. REPRODUCED.
+promised_by: |
+  Docs of tomllib (nesting is limited by the recursion limit).
+cause: |
+  Lib/tomllib/_parser.py:717-718 (parse_value calls parse_array) and :516 (parse_array calls
+  parse_value); each call pushes a frame, checked by _Py_EnterRecursivePy (Python/ceval_macros.h:426-429).
+possible_fix: |
+  None. Nothing to fix.
+duplicates: |
+  Not a report, so no duplicate is possible. Queries (read-only): gh search issues --repo
+  python/cpython tomllib recursion nesting; gh search issues --repo python/cpython tomllib
+  RecursionError (python/cpython#108851, a closed buildbot failure of the recursion-limit test).
+lean: lean/PyLean/TextLibs/TomlDepth.lean (NestingDepthLimit, nestingDepthLimit_proven; NestingUnbounded, nestingUnbounded_refuted)

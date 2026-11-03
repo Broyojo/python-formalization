@@ -4295,6 +4295,16 @@ for _sg in "+-":
             _TR.cached_tz("%02d" % _h, "%02d" % _m, _sg)
 
 
+def toml_result(thunk):
+    """`common.py_result`, with `e.pos` after a NUL for a `TOMLDecodeError` (see `tdeExc`)."""
+    try:
+        return {"ok": thunk()}
+    except tomllib.TOMLDecodeError as e:
+        return {"exc": "TOMLDecodeError", "msg": "%s\x00%d" % (e, e.pos)}
+    except Exception as e:
+        return {"exc": type(e).__name__, "msg": str(e)}
+
+
 def toml_call(frames, fn, *args, **kw):
     """Call `fn` with exactly `frames` frames left (`py_recursion_remaining` at the call)."""
     f, depth = sys._getframe(), 0
@@ -4713,9 +4723,9 @@ class TomlArea:
                 def go(pf):
                     return toml_call(fr, tomllib.loads, doc, parse_float=pf)
             name = c["pf"]
-            r1 = common.py_result(lambda: go(toml_pf(name)))
+            r1 = toml_result(lambda: go(toml_pf(name)))
             if name == "float":
-                r2 = common.py_result(lambda: go(TomlTag))
+                r2 = toml_result(lambda: go(TomlTag))
                 if ("ok" in r1) != ("ok" in r2):
                     return {"exc": "HarnessFloatMismatch", "msg": repr((r1, r2))}
                 if "ok" in r1:

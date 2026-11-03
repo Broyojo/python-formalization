@@ -201,10 +201,17 @@ def tdeInit (warnErr : Bool) (msg doc pos : EArg) (args : List EArg) : Py TdeIni
       let args := if msg != .dflt then msg :: args else args
       .ok (.legacy args)
 
+/-- A raised `TOMLDecodeError`, as `.named "TOMLDecodeError" m`: `m` is `str(e)`, a NUL (which
+`str(e)` never holds: the parser's messages are fixed text or a `repr`), then `e.pos` in decimal.
+`e.msg` and `e.doc` are the arguments, and `e.lineno` and `e.colno` follow from `doc` and `pos`
+(`TdeCoords`). -/
+def tdeExc (errmsg : Str) (pos : Nat) : PyExc :=
+  .named "TOMLDecodeError" (toS errmsg ++ "\x00" ++ toString pos)
+
 /-- `raise TOMLDecodeError(msg, src, pos)` from inside the parser. -/
 def tde (msg : Str) (src : Str) (pos : Nat) : PyExc :=
   match tdeFull msg src pos with
-  | .ok r => .named "TOMLDecodeError" (toS r.errmsg)
+  | .ok r => tdeExc r.errmsg pos
   | .error e => e
 
 def tdeS (msg : String) (src : Str) (pos : Nat) : PyExc := tde (S msg) src pos
