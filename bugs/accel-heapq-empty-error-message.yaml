@@ -8,12 +8,14 @@ functions: ["heappop", "heapreplace", "heappop_max", "heapreplace_max"]
 summary: |
   On an empty list the C functions raise IndexError('index out of range'); the pure-Python twins
   raise IndexError('pop from empty list') (heappop, heappop_max: from list.pop()) and
-  IndexError('list index out of range') (heapreplace, heapreplace_max: from heap[0]). Apart from
-  the message the twins agree completely: Lean proves, for every element type and comparison,
-  the same returned item, the same final list and the same exception class for all ten heap
-  primitives (accel-heap-twins-agree, accel-heapify-twins-agree, the latter including the
-  cache-friendly heapify order used above 2500 items), and the difftest finds no other
-  difference.
+  IndexError('list index out of range') (heapreplace, heapreplace_max: from heap[0]). For
+  comparisons that do not touch the list (they may raise and keep state), this message is the
+  only difference in outcome: Lean proves the same comparisons, the same returned item, the
+  same final list and otherwise the same exception for all ten heap primitives
+  (accel-heap-twins-agree; heapify up to 2500 items, and at every length with an honest
+  comparison in accel-heapify-twins-agree). The other twin differences, under raising or
+  re-entrant comparisons, are accel-heapq-py-twin-fallible-compare and
+  accel-heapq-heapify-order-raising.
 likelihood: |
   Any pop from an empty heap, but only code that inspects str(exc) can tell. test_heapq checks
   only the class.
@@ -56,5 +58,5 @@ duplicates:
   queries: ["heapq in:title", "heappop", "heapreplace", "heappop empty list message", "heapq index out of range",
             "heapq IndexError message", "heapreplace empty", "pop from empty list heapq", "heapq error message"]
 lean:
-  property: PyLean.Accel.HeapTwinsAgreeExact
-  theorem: PyLean.Accel.heapTwinsAgreeExact_refuted
+  property: PyLean.Accel.Heapq.HeapTwinsAgreeExact
+  theorem: PyLean.Accel.Heapq.heapTwinsAgreeExact_refuted

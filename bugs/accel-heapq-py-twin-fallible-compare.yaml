@@ -1,0 +1,118 @@
+id: accel-heapq-py-twin-fallible-compare
+title: "heapq: the pure-Python heap functions lose an item when a comparison raises, and have no list-changed-size guard, unlike _heapq"
+priority: P4
+kind: twin-divergence
+module: accel
+files: [Lib/heapq.py, Modules/_heapqmodule.c]
+functions: ["_siftup", "_siftdown", "_siftup_max", "_siftdown_max", "heappush", "heappop", "heapreplace", "heappushpop", "heapify"]
+summary: |
+  The C sift loops swap items, so when a comparison raises midway the list still holds every
+  item (heappop/heapreplace drop only the item being returned). Lib/heapq.py moves items into a
+  hole and keeps `newitem` in a local that it writes back only at the end (Lib/heapq.py:222-233,
+  :277-292), so when a comparison raises after the first move the list is left with one item
+  duplicated and `newitem` gone. For heappop on list(range(7)) with a comparison that raises on
+  its second call (a TypeError from incomparable tie-breakers, say) C leaves [1, 6, 2, 3, 4, 5],
+  Python [1, 1, 2, 3, 4, 5]: 6 is lost and 1 appears twice. heappush, heapreplace, heappushpop
+  and heapify lose items the same way.
+
+  The Python twin also has none of the C re-checks after a comparison
+  (Modules/_heapqmodule.c:53-57, :103-107, :435-439, :485-489): if `__lt__` changes the list's
+  length, C raises RuntimeError('list changed size during iteration'), while Python carries on,
+  returning normally or raising IndexError from a later `heap[i]`. heappush([1, 2, 3], 0) with a
+  comparison that appends 99 raises RuntimeError in C and returns None in Python.
+
+  Lean proves that the twins otherwise agree for every comparison that does not touch the list:
+  the same comparisons in the same order, the same result and list on success, the same
+  exception (accel-heap-twins-agree). It also proves that C never reads or writes out of bounds
+  under any comparison (accel-heapq-c-robust). The two refutations are
+  accel-heap-twins-same-list-on-raise and accel-heap-twins-agree-reentrant.
+likelihood: |
+  CPython always uses _heapq, so only code that runs the pure-Python module sees it:
+  implementations or builds without the accelerator, and tests that import heapq with _heapq
+  blocked. The raising case is realistic: heaps of (priority, payload) tuples raise TypeError
+  when priorities tie and the payloads cannot be ordered, and after the exception the Python
+  heap has silently lost an entry. The mutation case needs an `__lt__` that changes the heap.
+maybe_intended: |
+  Probably tolerated. In python/cpython#100968 (closed, not planned) a maintainer said heapq
+  cannot be made transactional when a comparison fails partway, and that refers to the heap
+  invariant; nothing promises the multiset survives a failed call. Still, C keeps every item and
+  the Python twin does not, and "C raises RuntimeError, Python goes on" is a twin difference.
+reproducer: |
+  from test.support.import_helper import import_fresh_module
+  ch = import_fresh_module('heapq', fresh=['_heapq'])
+  ph = import_fresh_module('heapq', blocked=['_heapq'])
+
+  class Item:
+      calls = 0
+      hook = None
+      def __init__(self, v): self.v = v
+      def __lt__(self, other):
+          Item.calls += 1
+          if Item.hook: Item.hook(Item.calls)
+          return self.v < other.v
+      def __repr__(self): return str(self.v)
+
+  def run(mod, fn, heap, *args, hook):
+      Item.calls, Item.hook = 0, hook
+      try:
+          out = repr(getattr(mod, fn)(heap, *args))
+      except Exception as e:
+          out = f'{type(e).__name__}({str(e)!r})'
+      Item.hook = None
+      return out, heap
+
+  # 1. a comparison that raises: C keeps every item, Python duplicates one and loses one
+  def raise_second(k):
+      if k == 2:
+          raise TypeError('incomparable')
+  res = {}
+  for name, mod in (('C', ch), ('Python', ph)):
+      heap = [Item(v) for v in range(7)]
+      res[name] = run(mod, 'heappop', heap, hook=raise_second)
+      print(f'{name:6s} heappop(list(range(7))), 2nd comparison raises: {res[name][0]}, list left {res[name][1]}')
+  c_vals = sorted(x.v for x in res['C'][1])
+  p_vals = sorted(x.v for x in res['Python'][1])
+  lost = c_vals == [1, 2, 3, 4, 5, 6] and p_vals == [1, 1, 2, 3, 4, 5]
+
+  # 2. a comparison that mutates the heap: C raises RuntimeError, Python carries on
+  res2 = {}
+  for name, mod in (('C', ch), ('Python', ph)):
+      heap = [Item(1), Item(2), Item(3)]
+      hook = (lambda h: (lambda k: h.append(Item(99)) if k == 1 else None))(heap)
+      res2[name] = run(mod, 'heappush', heap, Item(0), hook=hook)
+      print(f'{name:6s} heappush([1, 2, 3], 0), 1st comparison appends 99: {res2[name][0]}, list left {res2[name][1]}')
+  guard = res2['C'][0].startswith('RuntimeError') and res2['Python'][0] == 'None'
+
+  if lost and guard:
+      print('REPRODUCED accel-heapq-py-twin-fallible-compare')
+expected: |
+  The pure-Python functions leave the same list as C when a comparison raises (every item still
+  present), and raise RuntimeError('list changed size during iteration') when a comparison
+  changes the list's length, as C does.
+observed: |
+  python3 3.15.2: heappop raising on the 2nd comparison leaves C [1, 6, 2, 3, 4, 5], Python
+  [1, 1, 2, 3, 4, 5]; heappush with an appending comparison: C RuntimeError('list changed size
+  during iteration'), Python None (list [0, 1, 3, 2, 99]). REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): identical. REPRODUCED.
+promised_by: |
+  `_heapq` is a "Drop in replacement for heapq.py" (Modules/_heapqmodule.c:1). No documentation
+  promises what a heap holds after a failed call.
+cause: |
+  Lib/heapq.py:222-233 (_siftdown) and :274-292 (_siftup), and the _max twins :294-328, keep
+  `newitem` in a local and fill the hole only after the loop, so an exception from the
+  comparison at :228, :283, :302 or :319 leaves the hole holding a copy of the item moved
+  last. Nothing re-checks len(heap) after the comparisons. The C loops swap
+  (Modules/_heapqmodule.c:60-64, :110-113, :442-446, :492-495) and re-check the size (:53-57,
+  :103-107, :435-439, :485-489).
+possible_fix: |
+  In _siftup/_siftdown, catch BaseException around the loop, write `newitem` into the hole and
+  re-raise (keeps every item). A size check after each comparison would match C's
+  RuntimeError; that costs a len() per comparison, which is why it may not be wanted.
+duplicates:
+  issues: []
+  related: ["python/cpython#100968 (closed, not planned): a failed comparison in heappush leaves the heap invariant broken; about the invariant in both twins, not the item loss specific to the Python twin", "python/cpython#68287, #68288, #68289 (bpo-24099/24100/24101, closed 2015): use-after-free in the C siftdown/siftup, which added the C size checks"]
+  queries: ["heapq comparison raises", "heapq siftup exception", "heapq changed size", "heapq mutate", "heapq __lt__", "heapq crash", "heapq pure python", "heappop exception", "heapq inconsistent", "heapq duplicate item", "heapq lost item", "heapq RuntimeError", "heapq reentrant", "heapq comparison fails heap state", "heappop TypeError heap", "heapq exception item lost", "heapq _siftup", "heapq python version C version difference", "heapq invariant exception", "heapq RuntimeError list changed size", "heapq list modified during comparison", "heapq siftdown size check", "heappush __lt__ raises", "heapq transactional", "bugforge README: heapq entries (nsmallest, merge only)"]
+lean:
+  property: PyLean.Accel.Heapq.HeapTwinsSameListOnRaise
+  theorem: PyLean.Accel.Heapq.heapTwinsSameListOnRaise_refuted
+  also: [PyLean.Accel.Heapq.HeapTwinsAgreeReentrant, PyLean.Accel.Heapq.heapTwinsAgreeReentrant_refuted]

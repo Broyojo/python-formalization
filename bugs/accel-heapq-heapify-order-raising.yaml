@@ -1,0 +1,75 @@
+id: accel-heapq-heapify-order-raising
+title: "heapq: above 2500 items C heapify compares in a different order, so a raising comparison gives a different exception than Python (and than 2500 items)"
+priority: P5
+kind: twin-divergence
+module: accel
+files: [Modules/_heapqmodule.c, Lib/heapq.py]
+functions: ["cache_friendly_heapify", "heapify_internal", "heapify"]
+summary: |
+  For lists longer than 2500 items the C heapify uses cache_friendly_heapify
+  (Modules/_heapqmodule.c:332-363), which sifts the internal nodes in a different
+  children-first order from Lib/heapq.py's `for i in reversed(range(n//2))`. With a comparison
+  that always succeeds the result is the same list (Lean: accel-heapify-twins-agree, for every
+  element type, comparison and length). The source comment says "both ways do the exact same
+  number of comparisons and produce exactly the same heap" (:326-329). That is true of the final
+  heap, but the comparisons run in a different order, so a comparison that raises, or keeps
+  state, can tell the two apart. On list(range(2501)) with a comparison that raises at once, C
+  first compares items 2045 and 2046, Python items 2499 and 2500. The two raise different
+  exceptions (for a TypeError from incomparable items, a different message) and leave
+  different lists. Up to 2500 items C and Python make exactly the same comparisons in the same
+  order (Lean: accel-heap-twins-agree); the refutation is accel-heapify-twins-agree-fallible.
+likelihood: |
+  Needs a heapify of more than 2500 items in which some comparison raises (mixed incomparable
+  items), and code that looks at which exception it got or at the partly heapified list.
+  Cosmetic.
+maybe_intended: |
+  Almost certainly. The order was changed deliberately for cache efficiency (bpo-24155,
+  python/cpython#68343), and nothing promises which comparison fails first.
+reproducer: |
+  from test.support.import_helper import import_fresh_module
+  ch = import_fresh_module('heapq', fresh=['_heapq'])
+  ph = import_fresh_module('heapq', blocked=['_heapq'])
+
+  class Item:
+      def __init__(self, v): self.v = v
+      def __lt__(self, other):
+          raise TypeError(f'cannot compare {self.v} with {other.v}')
+
+  def first_failure(mod, n):
+      try:
+          mod.heapify([Item(i) for i in range(n)])
+      except TypeError as e:
+          return str(e)
+
+  rows = [(n, first_failure(ch, n), first_failure(ph, n)) for n in (2500, 2501)]
+  for n, c, p in rows:
+      print(f'heapify of {n} items: C {c!r} | Python {p!r}')
+  (_, c0, p0), (_, c1, p1) = rows
+  if c0 == p0 and c1 != p1:
+      print('REPRODUCED accel-heapq-heapify-order-raising')
+expected: |
+  The same first failing comparison, hence the same exception, in C and Python at every length
+  (as at 2500 items).
+observed: |
+  python3 3.15.2: 2500 items: both 'cannot compare 1249 with 2499'; 2501 items: C 'cannot
+  compare 2045 with 2046', Python 'cannot compare 2499 with 2500'. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): identical. REPRODUCED.
+promised_by: |
+  Modules/_heapqmodule.c:326-329 ("Both ways ... do the exact same number of comparisons and
+  produce exactly the same heap"); _heapq is a drop-in replacement for heapq.py (:1).
+cause: |
+  Modules/_heapqmodule.c:375-376 switches to cache_friendly_heapify above 2500 items; its loops
+  (:341-361) visit the nodes `leftmost - 1` down to `m >> 1`, then `m - 1` down to `leftmost`,
+  and after sifting an odd node (a left child, whose sibling is done) go on to sift its parent
+  (:346-348, :357-359), instead of sifting `n//2 - 1` down to 0 (Lib/heapq.py:179-180,
+  Modules/_heapqmodule.c:385-388).
+possible_fix: |
+  None needed; if anything, reword the comment at :326-329 to say the final heap is the same
+  but the comparison order differs.
+duplicates:
+  issues: []
+  related: ["python/cpython#68343 (bpo-24155): the change that introduced cache_friendly_heapify"]
+  queries: ["heapq heapify cache", "heapify 2500", "heapify cache friendly", "heapify order comparisons", "heapq heapify exception different", "heapq python version C version difference", "bugforge README: heapq entries (nsmallest, merge only)"]
+lean:
+  property: PyLean.Accel.Heapq.HeapifyTwinsAgreeFallible
+  theorem: PyLean.Accel.Heapq.heapifyTwinsAgreeFallible_refuted
