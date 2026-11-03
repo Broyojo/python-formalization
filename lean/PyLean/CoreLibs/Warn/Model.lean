@@ -103,6 +103,7 @@ inductive ModArg where
   | none
   | some (s : String)
   | obj
+  deriving DecidableEq
 
 /-- The `lineno` argument: an int, or an object that `int()` turns into `pyInt` and C's `int`
 converter refuses with `cErr`. -/
@@ -115,6 +116,7 @@ inductive RegArg where
   | none
   | dict (r : Reg)
   | obj
+  deriving DecidableEq
 
 structure Call where
   text : String

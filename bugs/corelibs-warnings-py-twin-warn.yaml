@@ -1,0 +1,103 @@
+id: corelibs-warnings-py-twin-warn
+title: "_py_warnings.warn and the Python defaults differ from C: stacklevel <= 0, skip_file_prefixes, huge stacklevel, non-str __name__, the '__main__' default filter"
+priority: P4
+kind: twin-divergence
+module: corelibs
+files: [Lib/_py_warnings.py, Python/_warnings.c]
+functions: ["warn", "warnings_warn_impl", "setup_context", "_setup_defaults", "init_filters",
+            "_filters_mutated_lock_held"]
+summary: |
+  The pure-Python `warn` (used when `_warnings` is unavailable, and by the test suite) against the
+  C one, from a model of both (Warn/WarnCall.lean) and differential cases:
+  1. `stacklevel` 0 or negative: C attributes the warning to the caller (the C function has no
+     frame, :1046-1050); Python calls `sys._getframe(stacklevel)` (:490), which for 0 or less is
+     `warn`'s own frame, so the warning is reported at `_py_warnings.py:505`, module
+     `_py_warnings`, and lands in `_py_warnings`'s own `__warningregistry__`.
+  2. `skip_file_prefixes` holding a tuple of strs: C raises "Found non-str 'tuple' in
+     skip_file_prefixes." up front (:1027-1041); Python passes it to `str.startswith`, which
+     accepts a tuple. A non-str element raises in C always, in Python only if the walk reaches a
+     frame that is not internal, with a different message.
+  3. `stacklevel` outside C `Py_ssize_t` (2**63): C's argument conversion raises OverflowError;
+     Python walks off the stack and reports `<sys>:0`. `stacklevel` below -2**31 (or above 2**31
+     - 1 when the caller is internal): Python's `sys._getframe` raises OverflowError, C reports
+     the caller.
+  4. A module whose `__name__` is not a str and not None: C uses "<string>" (:1098-1104);
+     Python passes the object itself as `module`, and a filter with a module regex then raises
+     TypeError in `re.match`. `__name__` None: C drops the warning (warn_explicit :812-813),
+     Python applies the filters.
+  5. Category errors name the class differently: C formats `%N`/`%T` (module-qualified, e.g.
+     "not class 'collections.OrderedDict'"), Python `__name__` ("not class 'OrderedDict'"); and C
+     converts and checks `stacklevel` and the type of `skip_file_prefixes` before the category,
+     Python after.
+  6. Without `_warnings`, `_setup_defaults` (:920-928) installs `re.compile('__main__')` where C's
+     `init_filters` (:101-132) has the plain str '__main__', which `check_matched` compares for
+     equality (:186-195): a DeprecationWarning from a module named `__main__x` (or, via
+     warn_explicit without a module, from a file `__main__.py`) is shown by the Python defaults
+     and ignored by C's.
+  7. `_filters_mutated_lock_held()` called without the lock: C raises RuntimeError("warnings lock
+     is not held", :1369-1372), the Python one bumps the version.
+  8. `del warnings.filters`: C keeps searching the list it read last (`get_warnings_filters`
+     keeps `st->filters`, :346-353); Python's `_GlobalContext._filters` returns a fresh `[]`
+     (:76-80), so `filterwarnings` then changes nothing C sees.
+likelihood: |
+  Low: the Python twin runs only without `_warnings` (and in tests). Items 1 and 2 are the
+  likeliest to be hit by code tested against both.
+maybe_intended: |
+  Partly: the C version's "Stack level comparisons to Python code is off by one" comment
+  (:1044-1045) shows the twins are meant to agree on stacklevel.
+reproducer: |
+  import sys
+  from test.support import import_helper
+  py = import_helper.import_fresh_module('_py_warnings')
+  py._set_module(py)
+  c = import_helper.import_fresh_module('warnings', fresh=['_warnings', '_py_warnings'])
+  c._set_module(c)
+  sys.modules['warnings'] = c
+  got = {}
+  for name, mod in (('c', c), ('py', py)):
+      mod.filters[:] = []
+      mod.simplefilter('always')
+      seen = []
+      mod._showwarnmsg = lambda m, seen=seen: seen.append((m.filename.rsplit('/', 1)[-1], m.module))
+      mod.warn('x', stacklevel=0)
+      try:
+          mod.warn('x', skip_file_prefixes=(('/nonexistent',),))
+          seen.append('ok')
+      except TypeError as e:
+          seen.append('TypeError')
+      got[name] = seen
+  print(got)
+  if got['c'][0][1] == '__main__' and got['py'][0][1] == '_py_warnings' and \
+          got['c'][1] == 'TypeError' and got['py'][1] != 'TypeError':
+      print('REPRODUCED corelibs-warnings-py-twin-warn')
+expected: |
+  Both twins attribute `stacklevel=0` to the same frame and treat the same `skip_file_prefixes`
+  alike.
+observed: |
+  python3 3.15.2: {'c': [('<string>', '__main__'), 'TypeError'], 'py': [('_py_warnings.py',
+  '_py_warnings'), ('<string>', '__main__'), 'ok']} (shape). REPRODUCED.
+  main (cpython-main/python.exe, 3.16.0a1+dev): same. REPRODUCED.
+promised_by: |
+  The twins are documented as one API (Lib/warnings.py imports the C functions over the Python
+  ones); Doc/library/warnings.rst: skip_file_prefixes is "a tuple of strings".
+cause: |
+  Lib/_py_warnings.py:487-490 (`sys._getframe(stacklevel)` for stacklevel <= 1), :445-446
+  (`str.startswith` with any prefix object), :506-509 (any `__name__`), :924 (a regex for
+  '__main__'), :117-118 (no lock check); Python/_warnings.c:1027-1041, :1046-1056, :1098-1104,
+  :117 (`create_filter` with a plain str), :1369-1372.
+possible_fix: |
+  In `_py_warnings.warn`, clamp `stacklevel` to 1 for `sys._getframe`, check that every prefix is
+  a str, and use "<string>" for a non-str `__name__`; in `_setup_defaults`, use
+  `module=r'__main__\z'` (as `_setoption` does for -W) or the plain str.
+duplicates:
+  issues: []
+  queries: ["stacklevel zero", "skip_file_prefixes", "warnings stacklevel 0 _py_warnings",
+            "_py_warnings warn stacklevel", "skip_file_prefixes tuple", "_setup_defaults __main__",
+            "_py_warnings twin warn"]
+  note: |
+    gh-126209 (skip_file_prefixes with __file__) and gh-125818 (None as skip_file_prefixes) are
+    different. Related to corelibs-warnings-py-twin (warn_explicit differences, same twin).
+    Bugforge README: no warnings entry.
+lean:
+  property: PyLean.CoreLibs.Warn.WarnCallTwins
+  theorem: PyLean.CoreLibs.Warn.warnCallTwins_refuted
