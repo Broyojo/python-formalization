@@ -137,7 +137,9 @@ theorem dictPop_v (key : K) (l : List (K × Inst K)) :
   cases l.find? (fun e => decide (v e.1 = v key)) <;> rfl
 
 theorem wvdPop_v (key : K) (l : List (K × Inst K)) : wvdPop o l key = .ok (remv v l (v key)) := by
-  simp only [wvdPop, dictPop_v o v hv hE hH]
+  cases l with
+  | nil => rfl
+  | cons a l => simp only [wvdPop, dictPop_v o v hv hE hH]
 
 theorem dictSet_none (key : K) (i : Inst K) (l : List (K × Inst K)) (hn : v key ∉ vals v l) :
     dictSet o l key i = .ok (l ++ [(key, i)]) := by

@@ -22,6 +22,9 @@ summary: |
   `clear_cache(only_keys=[that key])` raises `TypeError` in both, but C has already ejected
   the strong node (eject runs before the weak-cache `pop` that hashes), so the zone is no
   longer kept alive in C while Python's strong cache still holds it.
+  And on empty caches, `clear_cache(only_keys=[that key])` succeeds in C (the weak cache's
+  `dict.pop` returns at once on an empty dict without hashing, Objects/dictobject.c:3295-3300)
+  and raises `TypeError` in Python (`OrderedDict.pop` always hashes).
 likelihood: |
   Very low: keys are documented as strings, and it needs a str subclass with a raising
   `__eq__`. No crash; the C behaviour is arguably reasonable on its own.
@@ -83,15 +86,25 @@ reproducer: |
       res.append(r() is not None)
       out2.append(res)
       M.ZoneInfo.clear_cache()
-  print('C', out[0], out2[0], 'Py', out[1], out2[1])
+  out3 = []
+  for M in (Cz, Pz):
+      M.ZoneInfo.clear_cache()
+      try:
+          M.ZoneInfo.clear_cache(only_keys=[NoHash('x')])
+          out3.append('cleared')
+      except TypeError:
+          out3.append('TypeError')
+  print('C', out[0], out2[0], out3[0], 'Py', out[1], out2[1], out3[1])
   if (out[0] == [('RuntimeError', 'eq')] * 2 and out[1] == [('ok', None), ('ok', 'b')]
-          and out2[0] == [True, 'TypeError', False] and out2[1] == ['TypeError', 'TypeError', True]):
+          and out2[0] == [True, 'TypeError', False] and out2[1] == ['TypeError', 'TypeError', True]
+          and out3 == ['cleared', 'TypeError']):
       print('REPRODUCED datetime-zoneinfo-cache-eq-raises')
 expected: |
   The twins agree: both return the zone and clear the key, or both raise.
 observed: |
   python3 3.15.2: C [RuntimeError, RuntimeError], Py [ok None, ok 'b']; unhashable key: C
-  [cached zone, TypeError, node ejected], Py [TypeError, TypeError, still cached]. REPRODUCED.
+  [cached zone, TypeError, node ejected], Py [TypeError, TypeError, still cached]; empty
+  caches: C cleared, Py TypeError. REPRODUCED.
 promised_by: |
   C/Python twins.
 cause: |
@@ -116,4 +129,5 @@ duplicates:
 lean:
   property: PyLean.Datetime.Zone.CacheErrTwins
   theorem: PyLean.Datetime.Zone.cacheErrTwins_refuted
-  also: ["PyLean.Datetime.Zone.cacheErrTwins_refuted_unhashable (the __hash__ = None key)"]
+  also: ["PyLean.Datetime.Zone.cacheErrTwins_refuted_unhashable (the __hash__ = None key)",
+         "PyLean.Datetime.Zone.cacheErrTwins_refuted_empty (empty caches, dict.pop fast path)"]

@@ -751,6 +751,18 @@ def entries : List Entry := [
     prop := ``Zone.WeakCacheTypeTwins, thm := some ``Zone.weakCacheTypeTwins_refuted
     bug := some "datetime-zoneinfo-get-weak-cache-fallback"
     notes := "Sub._weak_cache = {'a': 1}; Sub('a'): C's PyObject_TypeCheck (:352-358) raises RuntimeError, Python returns 1." },
+  { id := "datetime-zoneinfo-clear-keys-stop", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C zoneinfo_ZoneInfo_clear_cache_impl", "C eject_from_strong_cache", "C find_in_strong_cache", "ZoneInfo.clear_cache"]
+    statement := "On the base class, while the weak cache holds a zone for a key not equal to k, clear_cache(only_keys=[k, *rest]) with a k whose __hash__ raises (and whose __eq__ does not) raises that exception in both twins and processes no later key: Python changes nothing, C has at most ejected the strong node equal to k, so every other entry stays cached, whatever rest and the iterator are."
+    source := "C/Python twins", status := .proven
+    prop := ``Zone.ClearKeysStop, thm := some ``Zone.clearKeysStop_proven
+    notes := "Pins the weak-pop break at :552-553 of clear_cache_impl (datetime-zoneinfo-clear-keys-breaks pins each break alone) and the Python loop's propagation: a loop that went on to the next key would change the state for some rest. The other key's zone keeps C's weak cache non-empty after the eject; on an empty weak cache dict.pop never hashes and C carries on (cacheErrTwins_refuted_empty, datetime-zoneinfo-cache-eq-raises). Measured on 3.15.2: only_keys=[NoHash('b'), 'a', 'b'] raises TypeError in both and leaves 'a' cached; C has dropped 'b''s node." },
+  { id := "datetime-zoneinfo-clear-keys-breaks", pyFile := "Modules/_zoneinfo.c"
+    pyFns := ["C zoneinfo_ZoneInfo_clear_cache_impl", "ZoneInfo.clear_cache"]
+    statement := "In clear_cache(only_keys=[k, *rest]) on the base class, each failure on k stops the loop with that exception and the state at that point, whatever rest is: C's failed eject leaves both caches as they were, C's failed weak pop keeps the eject done; Python's failed weak pop changes nothing, its failed strong pop keeps the weak pop done."
+    source := "CPython source (loop exits at Modules/_zoneinfo.c:542-544, :552-553; exception propagation in _zoneinfo.py:97-99)", status := .proven
+    prop := ``Zone.ClearKeysBreaks, thm := some ``Zone.clearKeysBreaks_proven
+    notes := "A loop that went on to the next key after either failure would depend on rest; the twin-level consequence is datetime-zoneinfo-clear-keys-stop." },
   { id := "datetime-zoneinfo-cache-err-twins", pyFile := "Modules/_zoneinfo.c"
     pyFns := ["C zoneinfo_ZoneInfo_impl", "C zone_from_strong_cache", "C find_in_strong_cache", "C eject_from_strong_cache", "C zoneinfo_ZoneInfo_clear_cache_impl", "ZoneInfo.__new__", "ZoneInfo.clear_cache"]
     statement := "On the base class, ZoneInfo(key) and clear_cache give the same outcomes in both twins for every run, whatever the keys' __hash__ and __eq__ do."

@@ -176,3 +176,17 @@ theorem cacheErrTwins_refuted_unhashable : ¬ CacheErrTwins := by
   decide
 
 end PyLean.Datetime.Zone
+
+namespace PyLean.Datetime.Zone
+
+/-- A third counterexample to `CacheErrTwins`: `clear_cache(only_keys=[k])` on empty caches
+with an unhashable key `k`: C ejects nothing and calls the weak cache's `dict.pop`, which
+returns at once on an empty dict without hashing, so the call succeeds; Python's
+`OrderedDict.pop` on the strong cache hashes the key and raises `TypeError`. -/
+theorem cacheErrTwins_refuted_empty : ¬ CacheErrTwins := by
+  intro h
+  have := h Nat unhashableKeys [.clearKeys [1] none] rfl
+  revert this
+  decide
+
+end PyLean.Datetime.Zone

@@ -19,7 +19,10 @@ among several stored keys with the same hash the comparison order can differ); t
 holds only instances of the class it belongs to, so the `PyObject_TypeCheck` at
 Modules/_zoneinfo.c:352-358 always passes; `zoneinfo_new_instance`/`_new_instance` succeed or
 fail by `loads key` and run no key methods; key finalizers and re-entrant `__eq__` are
-`clearStrongC`/`findInStrongC` in `ZoneCache.lean`.
+`clearStrongC`/`findInStrongC` in `ZoneCache.lean`; an instance is collected only at a `drop`
+step, so an instance whose last reference goes inside an operation (a C eject freeing the
+only node that held it) keeps its weak entry until the next `drop` (in CPython the
+`KeyedRef` callback removes it at once).
 
 An instance is named by the key object it was built for and a serial number (`next`, counting
 the instances built), so two instances built for the same key object stay distinct; a cache
@@ -112,11 +115,17 @@ def wvdSetdefault (weak : List (K × Inst K)) (key : K) (inst : Inst K) :
     | .error x => .error x
     | .ok weak' => .ok (inst, weak')
 
-/-- `pop(key, None)`, :211-222: `self.data.pop(key)`, `KeyError` giving `None`. -/
+/-- `pop(key, None)`, :211-222: `self.data.pop(key)`, `KeyError` giving `None`. A plain
+dict's `pop` returns at once when the dict is empty, without hashing the key
+(Objects/dictobject.c:3295-3300, `pop_lock_held`); `OrderedDict.pop` always hashes
+(Objects/odictobject.c:1135). -/
 def wvdPop (weak : List (K × Inst K)) (key : K) : Py (List (K × Inst K)) :=
-  match dictPop o weak key with
-  | .error x => .error x
-  | .ok (_, weak') => .ok weak'
+  match weak with
+  | [] => .ok []
+  | _ :: _ =>
+    match dictPop o weak key with
+    | .error x => .error x
+    | .ok (_, weak') => .ok weak'
 
 /-! ### One class, as one twin sees it -/
 

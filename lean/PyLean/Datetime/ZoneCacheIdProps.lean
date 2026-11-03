@@ -116,7 +116,12 @@ theorem dictPop_id (key : K) (l : List K) :
 
 theorem wvdPop_id (key : K) (l : List K) :
     wvdPop o (l.map (pr ι)) key = .ok ((l.erase key).map (pr ι)) := by
-  simp only [wvdPop, dictPop_id o hE hH]
+  cases l with
+  | nil => rfl
+  | cons a l =>
+    have := dictPop_id o hE hH ι key (a :: l)
+    simp only [List.map_cons] at this
+    simp only [List.map_cons, wvdPop, this]
 
 theorem dictSet_id (key : K) (l : List K) (hk : key ∉ l) :
     dictSet o (l.map (pr ι)) key (key, ι key) = .ok ((l ++ [key]).map (pr ι)) := by
