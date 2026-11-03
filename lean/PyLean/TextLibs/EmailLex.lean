@@ -247,6 +247,26 @@ def getAtext (value : Str) : EPy (Tok × Str) :=
   if m.isEmpty then throw (.hpe (S "expected atext but found '" ++ value ++ S "'"))
   else pure (validateXtext (VT m "atext"), value.drop m.length)
 
+/-- The `elif value[:2] == '=?'` branch of `get_bare_quoted_string`, :1261-1269: the token, the
+rest, the quoted string (with the defect when an encoded word parsed) and `valid_ew`. -/
+def bqsEw (cfg : Cfg) (value : Str) (b : Tok) : EPy (Tok × Str × Tok × Bool) :=
+  match getEncodedWord cfg value "vtext" with
+  | .ok (tok, v') =>
+    pure (tok, v', b.addDefect (invalidHeader (S "encoded word inside quoted string")), true)
+  | .error e =>
+    if e.isHpe then
+      match getQcontent value with
+      | .ok (tok, v') => pure (tok, v', b, false)
+      | .error e' => throw e'
+    else throw e
+
+/-- Collapsing the whitespace between two encoded words, :1270-1276. -/
+def bqsCollapse (b1 : Tok) (valid : Bool) : Tok :=
+  let ks := b1.kids
+  if valid && decide (ks.length > 1) && (ks.getLast?.getD default).ty == "fws"
+      && (ks.getD (ks.length - 2) default).ty == "encoded-word"
+  then b1.setKids (ks.dropLast ++ [ewws (ks.getLast?.getD default)]) else b1
+
 /-- The `while` loop of `get_bare_quoted_string`, :1258-1279. -/
 def bqsLoop (cfg : Cfg) : Nat → Str → Tok → EPy (Tok × Str)
   | 0, _, _ => throw .fuel
@@ -255,27 +275,15 @@ def bqsLoop (cfg : Cfg) : Nat → Str → Tok → EPy (Tok × Str)
     | [] => pure (b, [])
     | c :: _ =>
       if c == 34 then pure (b, value)
-      else if isWsp c then
-        let (tok, v') := getFws value
-        bqsLoop cfg n v' (b.push tok)
-      else if value.take 2 == S "=?" then do
-        let (tok, v', b1, valid) ← (match getEncodedWord cfg value "vtext" with
-          | .ok (tok, v') =>
-            pure (tok, v', b.addDefect (invalidHeader (S "encoded word inside quoted string")), true)
-          | .error e =>
-            if e.isHpe then do
-              let (tok, v') ← getQcontent value
-              pure (tok, v', b, false)
-            else throw e : EPy (Tok × Str × Tok × Bool))
-        let ks := b1.kids
-        let b2 :=
-          if valid && decide (ks.length > 1) && (ks.getLast?.getD default).ty == "fws"
-              && (ks.getD (ks.length - 2) default).ty == "encoded-word"
-          then b1.setKids (ks.dropLast ++ [ewws (ks.getLast?.getD default)]) else b1
-        bqsLoop cfg n v' (b2.push tok)
-      else do
-        let (tok, v') ← getQcontent value
-        bqsLoop cfg n v' (b.push tok)
+      else if isWsp c then bqsLoop cfg n (getFws value).2 (b.push (getFws value).1)
+      else if value.take 2 == S "=?" then
+        match bqsEw cfg value b with
+        | .ok (tok, v', b1, valid) => bqsLoop cfg n v' ((bqsCollapse b1 valid).push tok)
+        | .error e => throw e
+      else
+        match getQcontent value with
+        | .ok (tok, v') => bqsLoop cfg n v' (b.push tok)
+        | .error e => throw e
 
 /-- `get_bare_quoted_string`, :1244-1284. -/
 def getBareQuotedString (cfg : Cfg) (n : Nat) (value : Str) : EPy (Tok × Str) := do
@@ -309,15 +317,15 @@ def commentLoop : Nat → Str → Tok → EPy (Tok × Str)
     | [] => pure (c, [])
     | ch :: _ =>
       if ch == 41 then pure (c, value)
-      else if isWsp ch then
-        let (t, v) := getFws value
-        commentLoop n v (c.push t)
-      else if ch == 40 then do
-        let (t, v) ← getComment n value
-        commentLoop n v (c.push t)
-      else do
-        let (t, v) ← getQpCtext value
-        commentLoop n v (c.push t)
+      else if isWsp ch then commentLoop n (getFws value).2 (c.push (getFws value).1)
+      else if ch == 40 then
+        match getComment n value with
+        | .ok (t, v) => commentLoop n v (c.push t)
+        | .error e => throw e
+      else
+        match getQpCtext value with
+        | .ok (t, v) => commentLoop n v (c.push t)
+        | .error e => throw e
 end
 
 /-- The `while` loop of `get_cfws`, :1316-1321. -/

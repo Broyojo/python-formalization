@@ -36,7 +36,7 @@ import PyLean.TextLibs.TomlArr
 import PyLean.TextLibs.TomlDoc
 import PyLean.TextLibs.TomlMulti
 import PyLean.TextLibs.TomlPending
-import PyLean.TextLibs.EmailUnstruct
+import PyLean.TextLibs.EmailQuote
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -1888,6 +1888,24 @@ def entries : List Entry := [
     prop := ``PyLean.TextLibs.Email.QuotedStringCanonical, thm := some ``PyLean.TextLibs.Email.quotedStringCanonical_refuted
     bug := some "textlibs-email-quoted-string-reparse"
     notes := "'\"\\\\=?utf-8?q?a?=\"' has value '=?utf-8?q?a?=' (the quoted pair hides the encoded word); str() drops the backslash and the reparse decodes it to 'a' (quotedString_reparse), with _ew.decode answering as CPython's does on that word." }
+,
+  { id := "textlibs-email-quoting-round-trip", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["make_quoted_pairs", "make_parenthesis_pairs", "quote_string", "get_bare_quoted_string",
+      "get_qcontent", "_get_ptext_to_endchars", "get_comment", "get_qp_ctext", "get_fws",
+      "BareQuotedString.__str__", "BareQuotedString.value", "Comment.__str__", "Comment.quote",
+      "Comment.content"]
+    statement := "For every text s and rest r: get_bare_quoted_string(quote_string(s) + r) returns r and a bare quoted string whose value is s and whose str() is quote_string(s), when _ew.decode rejects every encoded word; get_comment('(' + make_parenthesis_pairs(s) + ')' + r) returns r and a comment whose content is s and whose str() is '(' + make_parenthesis_pairs(s) + ')'. Fuel above len(s) + 1 suffices."
+    source := "docstrings of make_quoted_pairs and make_parenthesis_pairs (:100-108), _get_ptext_to_endchars (:1037-1043: quoted pairs are unquoted), get_bare_quoted_string (:1244-1250: whitespace preserved); module docstring :51-52 (Comment.content)", status := .proven
+    prop := ``PyLean.TextLibs.Email.QuotingRoundTrip, thm := some ``PyLean.TextLibs.Email.quotingRoundTrip_proven
+    notes := "s is any text, whitespace included (runs of spaces become fws tokens, the rest qcontent/ctext runs). With an encoded word that decodes, the quoted-string half fails: textlibs-email-quoted-string-reparse." }
+,
+  { id := "textlibs-email-ptext-had-qp", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["_get_ptext_to_endchars", "get_dtext"]
+    statement := "Whenever _get_ptext_to_endchars returns fewer characters than it consumed (it dropped the backslash of a quoted pair), its had_qp flag is True."
+    source := "docstring :1037-1043 ('a flag that is True iff there were any quoted printables decoded')", status := .refuted
+    prop := ``PyLean.TextLibs.Email.PtextQpFlag, thm := some ``PyLean.TextLibs.Email.ptextQpFlag_refuted
+    bug := some "textlibs-email-ptext-had-qp"
+    notes := "'a\\b' gives ('ab', '', False) (ptext_qp_unset); get_dtext therefore adds no ObsoleteHeaderDefect for '[a\\b]' while '[a\\\\b]' gets one (dtext_no_defect)." }
 ]
 
 end PyLean.TextLibs
