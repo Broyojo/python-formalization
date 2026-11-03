@@ -1173,6 +1173,8 @@ bytesobj-bytearray-resize-left-mirror	proven	Objects/bytearrayobject.c	bytearray
 bytesobj-bytearray-dealloc	proven	Objects/bytearrayobject.c	bytearray_dealloc
 bytesobj-bytearray-tp-new	proven	Objects/bytearrayobject.c	bytearray_new
 bytesobj-bytearray-size-null	refuted	Objects/bytearrayobject.c	
+bytesobj-bytearray-ass-copy-fails	proven	Objects/bytearrayobject.c	bytearray_ass_subscript_lock_held,bytearray_ass_subscript
+bytesobj-bytearray-init-loop-errors	proven	Objects/bytearrayobject.c	bytearray___init___impl
 bytesobj-bytes-class-tables	proven	Objects/bytes_methods.c	_Py_bytes_isspace,_Py_bytes_isalpha,_Py_bytes_isalnum,_Py_bytes_isdigit
 bytesobj-bytes-case-laws	proven	Objects/bytes_methods.c	_Py_bytes_lower,_Py_bytes_upper,_Py_bytes_title,_Py_bytes_swapcase,_Py_bytes_islower,_Py_bytes_isupper
 bytesobj-bytes-maketrans-hit	proven	Objects/bytes_methods.c	_Py_bytes_maketrans
