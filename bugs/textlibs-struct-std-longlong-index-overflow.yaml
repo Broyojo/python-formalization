@@ -1,0 +1,54 @@
+id: textlibs-struct-std-longlong-index-overflow
+title: "struct: '>q'/'>Q' let an OverflowError from __index__ escape where '<q'/'<Q' raise struct.error"
+priority: P5
+kind: internal-inconsistency
+module: textlibs
+files: [Modules/_struct.c]
+functions: ["bp_longlong", "bp_ulonglong", "lp_longlong", "lp_ulonglong", "np_longlong", "np_ulonglong"]
+summary: |
+  For an object whose `__index__` raises OverflowError, `struct.pack('<q', obj)` raises
+  struct.error "'q' format requires ... <= number <= ...", while `struct.pack('>q', obj)` raises
+  the OverflowError itself. On a little-endian build `init_endian_tables` puts `np_longlong` into
+  the '<' table; `np_longlong` turns any OverflowError from its conversion into struct.error
+  (Modules/_struct.c:708-715). `bp_longlong` calls `get_pylong` and then `_PyLong_AsByteArray` with
+  exceptions off, so a failure of `__index__` comes out unchanged (1056-1058). Every other integer
+  code in every table, including '>i' and '>l', goes through `get_long`/`get_ulong` and gives
+  struct.error. Same for 'Q'.
+likelihood: |
+  Very low: it needs an `__index__` that itself raises OverflowError. For ints the two agree.
+maybe_intended: |
+  Possibly: passing the exception of `__index__` through unchanged is a defensible choice, and the
+  '<' behaviour is an artefact of the table swap. But the result depends on byte order, which the
+  docs say only changes the bytes.
+reproducer: |
+  import struct
+  class I:
+      def __index__(self):
+          raise OverflowError('boom')
+  out = []
+  for fmt in ('<q', '>q', '<Q', '>Q'):
+      try:
+          struct.pack(fmt, I())
+      except Exception as e:
+          out.append(type(e).__name__)
+  print(out)
+  if out == ['error', 'OverflowError', 'error', 'OverflowError']:
+      print('REPRODUCED textlibs-struct-std-longlong-index-overflow')
+expected: |
+  The same exception for '<q' and '>q', as for every other integer code.
+observed: |
+  python3 3.15.2: ['error', 'OverflowError', 'error', 'OverflowError']. REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): same. REPRODUCED.
+promised_by: |
+  docs: the byte-order character only selects the byte order and the size and alignment.
+cause: |
+  Modules/_struct.c:708-715 and 726-733 (np_longlong/np_ulonglong rewrite OverflowError) against
+  1056-1058 and 1081-1083 (bp_longlong/bp_ulonglong return get_pylong's failure as it is), and the
+  swap at 1519-1557 that makes '<' use the native routines on little-endian builds.
+possible_fix: |
+  In bp_/lp_ longlong routines, turn an OverflowError from get_pylong into the same struct.error.
+duplicates: |
+  No report found. Not in the bugforge list.
+  Queries: gh search issues --repo python/cpython struct longlong __index__ OverflowError;
+  gh search issues --repo python/cpython struct big-endian q OverflowError index
+lean: lean/PyLean/TextLibs/StructStd.lean (StdLonglongTwins, stdLonglongTwins_refuted; StdIntPack)

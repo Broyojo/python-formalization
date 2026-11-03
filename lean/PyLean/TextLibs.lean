@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.TextLibs.Diff
-import PyLean.TextLibs.StructFloat
+import PyLean.TextLibs.StructPrep
 import PyLean.TextLibs.BinasciiEq3
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
@@ -102,9 +102,24 @@ def entries : List Entry := [
     prop := ``IntCodesRoundTrip, thm := some ``intCodesRoundTrip_proven
     notes := "Goes through the runPack/runUnpack dispatch, including the C sign extension. P reads back unsigned, so it is stated on 0..2**64-1; its negative range does not round trip, by design of nu_void_p." },
   { id := "textlibs-struct-endian-tables", pyFile := "Modules/_struct.c", pyFns := ["init_endian_tables"]
-    statement := "init_endian_tables keeps every format, size and alignment of the little-endian table; it gives F, D, Zf, Zd, f and d the native pack routines, keeps bp_bool for ? (skipped on purpose), and keeps lp_int and lp_uint for l and L, whose 4-byte size differs from the native 8."
+    statement := "init_endian_tables gives every entry of the little-endian table the pack and unpack routines of the native entry with the same format when the sizes match, except ?: so b, B, c, h, H, i, I, q, Q, e, f, d, F, D, Zf and Zd become native, ? keeps bp_bool/bu_bool, and the 4-byte l and L keep lp_*/lu_*."
     source := "Modules/_struct.c:1519-1557", status := .proven
-    prop := ``EndianTableSwap, thm := some ``endianTableSwap_proven },
+    prop := ``EndianTableSwap, thm := some ``endianTableSwap_proven
+    notes := "Stated as a rule over every entry (swapRule), plus the swapped pairs spelled out. Skipping q is observable: see textlibs-struct-std-longlong-twins." },
+  { id := "textlibs-struct-std-int-range", pyFile := "Modules/_struct.c"
+    pyFns := ["bp_int", "bp_uint", "bp_longlong", "bp_ulonglong", "lp_int", "lp_uint", "lp_longlong", "lp_ulonglong",
+      "_range_error", "get_pylong", "get_long", "get_ulong"]
+    statement := "In every standard table, the bp_*/lp_* integer routines write the two's-complement bytes of every int inside their range in the table's order and raise struct.error('<c> format requires lo <= number <= hi') outside it; an OverflowError from __index__ is that error for bp_int, bp_uint, lp_int and lp_uint and passes through unchanged for the long long routines; any other exception from __index__ passes through."
+    source := "Modules/_struct.c:998-1099, 1324-1425", status := .proven
+    prop := ``StdIntPack, thm := some ``stdIntPack_proven
+    notes := "Includes the little-endian table before init_endian_tables, whose lp_* routines only proofs reach. Checked on 3.15.2 for >h >H >i >I >l >L <l <L =l =L >q >Q !q at every range boundary +-2." },
+  { id := "textlibs-struct-std-longlong-twins", pyFile := "Modules/_struct.c"
+    pyFns := ["np_longlong", "bp_longlong"]
+    statement := "'<q' and '>q' pack every value to mirrored bytes or raise the same exception."
+    source := "docs: the byte-order character only changes byte order, size and alignment", status := .refuted
+    prop := ``StdLonglongTwins, thm := some ``stdLonglongTwins_refuted
+    bug := some "textlibs-struct-std-longlong-index-overflow"
+    notes := "An __index__ raising OverflowError: '<q' (np_longlong after the swap) gives struct.error, '>q' (bp_longlong) the OverflowError. Same for Q. Reproduces on main." },
   { id := "textlibs-struct-align", pyFile := "Modules/_struct.c", pyFns := ["align"]
     statement := "For every size <= PY_SSIZE_T_MAX and non-zero alignment, align returns the next multiple of the alignment, or fails only when that multiple would pass PY_SSIZE_T_MAX."
     source := "comment at Modules/_struct.c:1616", status := .proven
@@ -194,6 +209,28 @@ def entries : List Entry := [
     statement := "For every format prepare_s accepts, its two passes agree: s_size is the first pass's size, s_len is the sum of the codes' repeats, and there is one code per counted item."
     source := "invariant: pack reads s_len arguments by walking the codes (Modules/_struct.c:2342-2347)", status := .proven
     prop := ``PrepareSAgree, thm := some ``prepareSAgree_proven },
+  { id := "textlibs-struct-prepare-refusals", pyFile := "Modules/_struct.c"
+    pyFns := ["prepare_s", "getentry"]
+    statement := "prepare_s refuses a non-ASCII format with ValueError and an embedded NUL, a trailing repeat count, a character no entry starts, and every count, offset or size past PY_SSIZE_T_MAX with struct.error and the source's message, from any state of the first pass."
+    source := "Modules/_struct.c:1655-1730", status := .proven
+    prop := ``PrepareRefusals, thm := some ``prepareRefusals_proven
+    notes := "The MemoryError at 1734-1737 needs more than 2**58 codes and is not stated." },
+  { id := "textlibs-struct-one-item-size", pyFile := "Modules/_struct.c"
+    pyFns := ["prepare_s", "whichtable", "getentry", "format_equal", "align"]
+    statement := "For every byte-order prefix (or none), every code of the table it selects and every one-digit count d, calcsize(prefix + str(d) + code) == d * size(code)."
+    source := "docs: the size table of the format characters", status := .proven
+    prop := ``OneItemSize, thm := some ``oneItemSize_proven
+    notes := "Every table, every entry, x, s and p included; checked against CPython for the same formats." },
+  { id := "textlibs-struct-prefix-tables", pyFile := "Modules/_struct.c"
+    pyFns := ["whichtable", "prepare_s"]
+    statement := "Every code of a format prefixed by < or = comes from the little-endian table, by > or ! from the big-endian table, and by @ from the native one; a format with no prefix character gives the same codes, size and length as with @."
+    source := "Modules/_struct.c:1558-1582", status := .proven
+    prop := ``PrefixTables, thm := some ``prefixTables_proven },
+  { id := "textlibs-struct-set-format", pyFile := "Modules/_struct.c"
+    pyFns := ["set_format"]
+    statement := "set_format raises TypeError naming the type for anything but str and bytes, refuses bytes with a non-ASCII byte with prepare_s's ValueError (surrogateescape), and gives ASCII bytes the struct of the equal str."
+    source := "Modules/_struct.c:1805-1830", status := .proven
+    prop := ``SetFormatLaw, thm := some ``setFormatLaw_proven },
   { id := "textlibs-struct-char-code", pyFile := "Modules/_struct.c", pyFns := ["nu_char", "np_char"]
     statement := "c round-trips every byte and rejects every value that is not a length-1 bytes object."
     source := "docs: the c format character", status := .proven
@@ -238,6 +275,12 @@ def entries : List Entry := [
     statement := "Struct(f) is set_format once; __init__ with an equal format does nothing; with another it warns and changes the format; a subclass with __init__ gets a warning for a bad format in __new__."
     source := "Modules/_struct.c:1868-2002", status := .proven
     prop := ``LifeLaw, thm := some ``lifeLaw_proven },
+  { id := "textlibs-struct-life-branches", pyFile := "Modules/_struct.c"
+    pyFns := ["s_new", "Struct_impl", "same_format", "Struct___init___impl", "s_init"]
+    statement := "A subclass __new__ calling Struct.__new__ gets TypeError for a missing or extra argument; format= is accepted as a keyword; with a custom __init__ a missing or extra argument is a DeprecationWarning; __init__ with the struct's own format (str or bytes) is silent, with another it warns (Different format..., then Re-initialization...) and installs it; s.__init__(fmt) on an initialised struct re-initialises."
+    source := "Modules/_struct.c:1843-2004", status := .proven
+    prop := ``LifeBranches, thm := some ``lifeBranches_proven
+    notes := "Each branch checked on 3.15.2 with Struct subclasses." },
   { id := "textlibs-struct-native-complex-snan", pyFile := "Modules/_struct.c", pyFns := ["nu_float_complex"]
     statement := "unpack('F', b) and unpack('>F', swapped b) agree on every 8-byte buffer."
     source := "invariant: byte order is the only difference", status := .refuted

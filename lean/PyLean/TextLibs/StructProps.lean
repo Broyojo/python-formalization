@@ -65,23 +65,6 @@ def PackIntoStaysInside : Prop :=
 
 /-! ### Proven: tables and layout -/
 
-/-- `init_endian_tables` swaps exactly the entries whose native size matches, except `?`, and changes no
-format, size or alignment. -/
-def EndianTableSwap : Prop :=
-  lilendianTable.map (fun e => (e.format, e.size, e.alignment))
-      = lilendianTable0.map (fun e => (e.format, e.size, e.alignment)) ∧
-  (lilendianTable.filter (fun e => e.format = ['F'] ∨ e.format = ['D'] ∨ e.format = ['Z', 'f'] ∨
-      e.format = ['Z', 'd'])).map (·.pack)
-      = [.npFloatComplex, .npDoubleComplex, .npFloatComplex, .npDoubleComplex] ∧
-  (lilendianTable.filter (fun e => e.format = ['f'] ∨ e.format = ['d'] ∨ e.format = ['?'])).map (·.pack)
-      = [.bpBool, .npFloat, .npDouble] ∧
-  (lilendianTable.filter (fun e => e.format = ['l'] ∨ e.format = ['L'])).map (·.pack)
-      = [.lpInt, .lpUint]
-
-theorem endianTableSwap_proven : EndianTableSwap := by
-  unfold EndianTableSwap
-  decide
-
 /-- `align` returns the next multiple of the alignment, or `none` only when that would
 pass `PY_SSIZE_T_MAX`. -/
 def AlignNextMultiple : Prop :=

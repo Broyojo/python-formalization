@@ -599,20 +599,23 @@ def packDCStd (v : SV) (le : Bool) : Py (List Nat) :=
   | none => .error notComplex
   | some (a, b) => .ok (ordered le 8 a ++ ordered le 8 b)
 
-/-- `bp_longlong`/`lp_longlong`, `_PyLong_AsByteArray` with `with_exceptions = 0`. -/
+/-- `bp_longlong`/`lp_longlong`, `Modules/_struct.c:1052-1075, 1378-1401`: `_PyLong_AsByteArray` with
+`with_exceptions = 0`, so a failure of `get_pylong`, an `OverflowError` from `__index__` included, comes
+out as it is. -/
 def packLonglongStd (f : FormatDef) (v : SV) (le : Bool) : Py (List Nat) := do
   let n ← getPylong v
   if n < longMin ∨ n > longMax then
     throw (structErr s!"'{f.name}' format requires {longMin} <= number <= {longMax}")
   return (if le then lpLoop 8 n else bpLoop 8 n)
 
+/-- `bp_ulonglong`/`lp_ulonglong`, `Modules/_struct.c:1077-1099, 1403-1425`. -/
 def packUlonglongStd (f : FormatDef) (v : SV) (le : Bool) : Py (List Nat) := do
   let n ← getPylong v
   if n < 0 ∨ n > ulongMax then
     throw (structErr s!"'{f.name}' format requires 0 <= number <= {ulongMax}")
   return (if le then lpLoop 8 n else bpLoop 8 n)
 
-/-- `bp_int`/`lp_int`, `Modules/_struct.c:998-1024, 1319-1345`. -/
+/-- `bp_int`/`lp_int`, `Modules/_struct.c:998-1024, 1324-1350`. -/
 def packIntStd (f : FormatDef) (v : SV) (le : Bool) : Py (List Nat) := do
   let x ← orRange f false (getLong v)
   let i := f.size
@@ -621,7 +624,7 @@ def packIntStd (f : FormatDef) (v : SV) (le : Bool) : Py (List Nat) := do
     else if i = 4 ∧ (x < -2147483648 ∨ x > 2147483647) then throw (rangeError f false)
   return (if le then lpLoop i x else bpLoop i x)
 
-/-- `bp_uint`/`lp_uint`, `Modules/_struct.c:1026-1050, 1347-1371`. -/
+/-- `bp_uint`/`lp_uint`, `Modules/_struct.c:1026-1050, 1352-1376`. -/
 def packUintStd (f : FormatDef) (v : SV) (le : Bool) : Py (List Nat) := do
   let x ← orRange f true (getUlong v)
   let i := f.size
