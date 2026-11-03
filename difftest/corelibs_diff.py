@@ -9761,6 +9761,34 @@ import builtins as warn_builtins  # noqa: E402
 import re as warn_re  # noqa: E402
 from test.support import import_helper as warn_ih  # noqa: E402
 
+# The process's own warnings machinery, as the other areas left it, before this area touches it.
+# The warn cases rebind `sys.modules['warnings']` to `warn_c` (whose `_showwarnmsg` they leave a
+# no-op) and empty the interpreter's filters list in place; C `warn` looks up `filters`,
+# `defaultaction`, `onceregistry` and `_showwarnmsg` on `sys.modules['warnings']`. Left that way,
+# every later case of another area that records a warning with the stock `catch_warnings(record=True)`
+# records nothing. `warn_restore_std` puts this back after the warmup and after each warn case.
+warn_STD_MODS = {k: sys.modules.get(k) for k in ("warnings", "_warnings", "_py_warnings")}
+warn_STD_FILTERS_OBJ = warn_STD_MODS["warnings"].filters
+warn_STD_FILTERS = list(warn_STD_FILTERS_OBJ)
+
+
+def warn_restore_std():
+    """Give the other areas the process warnings state they had before this area ran.
+
+    Their Lean models assume a warning reaches the stock `warnings` module: each such case
+    records with `catch_warnings(record=True)` under `simplefilter("always")` (or `"error"`), so
+    the default filters, the once registry and any `__warningregistry__` do not decide the outcome.
+    """
+    for k, v in warn_STD_MODS.items():
+        if v is None:
+            sys.modules.pop(k, None)
+        else:
+            sys.modules[k] = v
+    std = warn_STD_MODS["warnings"]
+    std.filters = warn_STD_FILTERS_OBJ
+    warn_STD_FILTERS_OBJ[:] = warn_STD_FILTERS
+
+
 warn_py = warn_ih.import_fresh_module('_py_warnings')
 warn_py._set_module(warn_py)
 warn_c = warn_ih.import_fresh_module("warnings", fresh=["_warnings", "_py_warnings"])
@@ -10249,6 +10277,7 @@ def warn_warmup():
 
 
 warn_warmup()
+warn_restore_std()
 
 # --- filters-list API, the lock, -W options (Warn/Filters.lean, Warn/Option.lean) ---
 import io as warn_io  # noqa: E402
@@ -10586,6 +10615,13 @@ def warn_gen(rng):
 
 
 def warn_run(case):
+    try:
+        return warn_run1(case)
+    finally:
+        warn_restore_std()
+
+
+def warn_run1(case):
     fn = case["fn"]
     if fn in ("warn.c", "warn.py"):
         return warn_run_we(case)
