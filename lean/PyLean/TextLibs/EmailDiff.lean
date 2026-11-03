@@ -1,5 +1,6 @@
 import PyLean.DiffCore
 import PyLean.TextLibs.EmailHeaders
+import PyLean.TextLibs.EmailFrames
 
 /-! `email.*` difftest cases; see `EmailArea` in `difftest/textlibs_diff.py`.
 
@@ -151,5 +152,16 @@ def run (fn : String) (j : Json) : Except String Json := do
     return outJ (fun (r : Str × Str × Bool) => Json.mkObj [("p", Json.arr #[strJ r.1, strJ r.2.1,
       toJson r.2.2])]) (getPtextToEndchars v (endc.contains ·))
   | _ => throw s!"unknown fn {fn}"
+
+/-- `emailfr.get_comment` cases: `get_comment(v)` with `r` frames left, then `str()` and
+`content` of the comment with `r` frames left. -/
+def runFrames (j : Json) : Except String Json := do
+  let v ← natsJ (← field j "v")
+  let r ← getNat j "r"
+  let n := 8 * v.length + 64
+  return Json.mkObj [("ok", match getCommentR r n v with
+    | .ok (c, rest) => Json.mkObj [("t", tokJ c), ("rest", strJ rest),
+        ("s", valJ (commentStrR r c)), ("c", valJ (commentContentR r c))]
+    | .error e => errJ e)]
 
 end PyLean.TextLibs.Email

@@ -40,7 +40,7 @@ import PyLean.TextLibs.EmailQuote
 import PyLean.TextLibs.TomlScen
 import PyLean.TextLibs.TomlLoads
 import PyLean.TextLibs.TomlInline
-import PyLean.TextLibs.EmailEw
+import PyLean.TextLibs.EmailEw2
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -2089,10 +2089,18 @@ def entries : List Entry := [
   { id := "textlibs-email-comment-spec", pyFile := "Lib/email/_header_value_parser.py"
     pyFns := ["get_comment", "get_qp_ctext", "Comment.__str__", "Comment.quote", "Comment.content",
       "make_parenthesis_pairs", "_get_ptext_to_endchars", "get_fws"]
-    statement := "For every canonical comment body b (text escaped with make_parenthesis_pairs, with nested comments in canonical form) and rest r, get_comment('(' + b + ')' + r) returns r and a comment whose str() is '(' + b + ')', whose content is b with its top-level text unescaped, and whose elements are WhiteSpaceTerminals or nested comments; a comment the value ends inside gets 'end of header inside comment' and its ')' in str(); a non-empty value not starting with '(' raises HeaderParseError(\"expected '(' but found '<value>'\")."
-    source := "get_comment docstring :1287-1291 (ccontent = ctext / quoted-pair / comment; nested comments handled here); get_qp_ctext docstring :1197-1206 (a WhiteSpaceTerminal); Comment.content (module docstring :51-52); :1292-1294, :1305-1308", status := .proven
+    statement := "With r frames left (py_recursion_remaining), for every canonical comment body b (text escaped with make_parenthesis_pairs, with nested comments in canonical form, depth levels of nesting) and rest, when 2 * depth + 6 <= r: get_comment('(' + b + ')' + rest) returns rest and a comment whose str() is '(' + b + ')', whose content is b with its top-level text unescaped, and whose elements are WhiteSpaceTerminals or nested comments, and str() and content called with r frames return; a comment the value ends inside gets 'end of header inside comment' and its ')' in str() (with 6 frames); a non-empty value not starting with '(' raises HeaderParseError(\"expected '(' but found '<value>'\") (with 1 frame)."
+    source := "get_comment docstring :1287-1291 (ccontent = ctext / quoted-pair / comment; nested comments handled here); get_qp_ctext docstring :1197-1206 (a WhiteSpaceTerminal); Comment.content (module docstring :51-52); :1292-1294, :1305-1308; Python/ceval_macros.h:426-429 (one frame per Python call)", status := .proven
     prop := ``PyLean.TextLibs.Email.CommentSpec, thm := some ``PyLean.TextLibs.Email.commentSpec_proven
-    notes := "Bodies are CB: text, or text, a nested comment and another body. Nested comments go through get_comment's recursion (:1300-1301) and Comment.quote's comment branch (:297-298); text runs through get_qp_ctext, which must stop at an unescaped '(' as well as ')'." }
+    notes := "The recursion limit is modelled for these functions (EmailFrames.lean: commentN, commentStrN, contentN, the deepest chain of Python calls, checked exactly against CPython by the emailfr difftest). get_comment needs one frame per level, str() and content two; the bound 2 * depth + 6 is sufficient, and the unbounded reading is refuted (textlibs-email-nested-comment-recursion)." }
+,
+  { id := "textlibs-email-nested-comment-recursion", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["get_comment", "Comment.__str__", "Comment.quote"]
+    statement := "Given the frames any comment without nesting needs (six), get_comment returns for every nesting depth of a canonical comment, and so does str() of the comment it returns."
+    source := "Doc/library/email.parser.rst:62-68 (non-compliant input is reported through defects); Lib/email/headerregistry.py:169-174", status := .refuted
+    prop := ``PyLean.TextLibs.Email.CommentNestingUnbounded, thm := some ``PyLean.TextLibs.Email.commentNestingUnbounded_refuted
+    bug := some "textlibs-email-nested-comment-recursion"
+    notes := "'(' * 7 + ')' * 7 with 8 frames: get_comment parses (it needs 8), str() raises RecursionError (it needs 13); with 7 frames get_comment raises (comment_depth7). At the default limit this is depth about 500 for str() and 1000 for get_comment, as the bug record measures." }
 ,
   { id := "textlibs-email-unstructured-encoded-words", pyFile := "Lib/email/_header_value_parser.py"
     pyFns := ["get_unstructured", "get_encoded_word", "EWWhiteSpaceTerminal.__str__", "TokenList.__str__"]
@@ -2100,6 +2108,20 @@ def entries : List Entry := [
     source := "RFC 2047 section 6.2 ('linear-white-space that separates a pair of adjacent encoded-words is ignored'); :1168-1180", status := .proven
     prop := ``PyLean.TextLibs.Email.UnstructuredEncodedWords, thm := some ``PyLean.TextLibs.Email.unstructuredEncodedWords_proven
     notes := "_ew.decode is any function that accepts these words; the decoded texts are arbitrary. Pins get_encoded_word's split at the closing ?= and the rest it returns, the EncodedWord token, and the EWWhiteSpaceTerminal replacement of :1175-1178." }
+,
+  { id := "textlibs-email-encoded-word-spec", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["get_encoded_word"]
+    statement := "For every word =?cs?e?txt?= (no ? in cs or txt, e not ? or =, txt starting with an =XX escape or not with =) followed by any rest y, get_encoded_word hands _ew.decode exactly the word (re-splitting when the first ?= is the ? before an =XX escape) and returns y; when the word decodes, the EncodedWord's str() is the decoded text and its defects are 'whitespace inside encoded word' (when the token holds two words), decode's defects, and 'missing trailing whitespace after encoded-word' (when y does not start with a space or tab); when decode raises ValueError/KeyError it raises _InvalidEwError(\"encoded word format invalid: '<value>'\"); another exception propagates."
+    source := "RFC 2047 section 2 (encoded-word syntax); :1080-1127 (the =XX re-split :1093-1099 and its comment, the defects :1100-1102, :1112, :1124-1126)", status := .proven
+    prop := ``PyLean.TextLibs.Email.EncodedWordSpec, thm := some ``PyLean.TextLibs.Email.encodedWordSpec_proven
+    notes := "Every Q-encoded word whose text starts with an escape takes the re-split, e.g. '=?utf-8?q?=C3=A9?='." }
+,
+  { id := "textlibs-email-unstructured-word-then-ew", pyFile := "Lib/email/_header_value_parser.py"
+    pyFns := ["get_unstructured"]
+    statement := "For every word p (no space or tab, no =?) followed by an encoded word =?cs?e?txt?= that _ew.decode decodes (e in qQbB; no ?, space, tab or newline in cs and txt), get_unstructured gives str() = p + decoded text and, with no whitespace between them, elements ValueTerminal, EncodedWord and the defect 'missing whitespace before encoded word'; with whitespace sep between them, str() = p + sep + decoded text, elements ValueTerminal, WhiteSpaceTerminal, EncodedWord and no defect."
+    source := ":1168-1180 (missing whitespace defect and have_ws; the EWWhiteSpaceTerminal only after an encoded word), :1182-1189 (split at =? inside a word)", status := .proven
+    prop := ``PyLean.TextLibs.Email.UnstructuredWordThenEw, thm := some ``PyLean.TextLibs.Email.unstructuredWordThenEw_proven
+    notes := "With UnstructuredEncodedWords this pins both branches of the unstructured[-2] == 'encoded-word' test." }
 ]
 
 end PyLean.TextLibs

@@ -21,9 +21,9 @@ Lib/email/_header_value_parser.py	257	264	QuotedString.quoted_value	quoted_value
 Lib/email/_header_value_parser.py	267	270	QuotedString.stripped_value	stripped_value(self)	todo		
 Lib/email/_header_value_parser.py	277	278	BareQuotedString.__str__	__str__(self)	modelled	textlibs-email-quoted-string-reparse,textlibs-email-quoting-round-trip	
 Lib/email/_header_value_parser.py	281	282	BareQuotedString.value	value(self)	modelled	textlibs-email-quoting-round-trip	
-Lib/email/_header_value_parser.py	289	294	Comment.__str__	__str__(self)	todo		review: CommentSpec, which now credits it, claims str(c) == '(' + b.render + ')' for comment bodies of every nesting depth, but Tok.str/commentStrs recurse with no recursion limit while CPython's Comment.__str__ -> quote -> str(nested) raises RecursionError by depth 600 (500 still works) ('('*600 + ')'*600 parses, str() raises on 3.15.2), so a proven statement is false; QuotingRoundTrip alone still holds, and bounding the nesting depth (or modelling frames as the tomllib model does) would restore the row.
-Lib/email/_header_value_parser.py	296	301	Comment.quote	quote(self, value)	todo		review: The `token_type == 'comment'` branch (:297-298) is never reached by any theorem: make_parenthesis_pairs escapes every '(' so the round-trip comments contain no nested comment, and a quote that escaped nested comments like ctext would satisfy QuotingRoundTrip.
-Lib/email/_header_value_parser.py	304	305	Comment.content	content(self)	todo		review: CommentSpec claims content == b.content (nested comments as written) for every nesting depth, but ''.join(str(x) for x in self) recurses through Comment.__str__ and raises RecursionError by depth 600 (500 still works) on 3.15.2 while commentContent/strs return; QuotingRoundTrip's flat case still holds.
+Lib/email/_header_value_parser.py	289	294	Comment.__str__	__str__(self)	modelled	textlibs-email-quoting-round-trip,textlibs-email-comment-spec,textlibs-email-nested-comment-recursion	
+Lib/email/_header_value_parser.py	296	301	Comment.quote	quote(self, value)	modelled	textlibs-email-quoting-round-trip,textlibs-email-comment-spec,textlibs-email-nested-comment-recursion	
+Lib/email/_header_value_parser.py	304	305	Comment.content	content(self)	modelled	textlibs-email-quoting-round-trip,textlibs-email-comment-spec	
 Lib/email/_header_value_parser.py	308	309	Comment.comments	comments(self)	todo		
 Lib/email/_header_value_parser.py	316	317	AddressList.addresses	addresses(self)	todo		
 Lib/email/_header_value_parser.py	320	322	AddressList.mailboxes	mailboxes(self)	todo		
@@ -60,7 +60,7 @@ Lib/email/_header_value_parser.py	550	553	AddrSpec.domain	domain(self)	todo
 Lib/email/_header_value_parser.py	556	559	AddrSpec.value	value(self)	todo		
 Lib/email/_header_value_parser.py	562	570	AddrSpec.addr_spec	addr_spec(self)	todo		
 Lib/email/_header_value_parser.py	585	601	DisplayName.display_name	display_name(self)	modelled	textlibs-email-display-name-only-cfws	
-Lib/email/_header_value_parser.py	604	624	DisplayName.value	value(self)	modelled	textlibs-email-display-name-value-only-cfws	review: dnTotal is noRaise(display_name) && noRaise(value) and display_name already fails on '(c)', so displayNameTotal_refuted holds for any DisplayName.value (fun _ => '' included); displayName_comment shows value raising (true on 3.15.2) but is not the entry's theorem.
+Lib/email/_header_value_parser.py	604	624	DisplayName.value	value(self)	modelled	textlibs-email-display-name-value-only-cfws	
 Lib/email/_header_value_parser.py	633	637	LocalPart.value	value(self)	todo		
 Lib/email/_header_value_parser.py	640	660	LocalPart.local_part	local_part(self)	todo		
 Lib/email/_header_value_parser.py	669	670	DomainLiteral.domain	domain(self)	todo		
@@ -92,13 +92,13 @@ Lib/email/_header_value_parser.py	977	978	EWWhiteSpaceTerminal.__str__	__str__(s
 Lib/email/_header_value_parser.py	1026	1034	_validate_xtext	_validate_xtext(xtext)	todo		
 Lib/email/_header_value_parser.py	1036	1066	_get_ptext_to_endchars	_get_ptext_to_endchars(value, endchars)	modelled	textlibs-email-msgid-no-fold-literal-space,textlibs-email-quoting-round-trip,textlibs-email-ptext-had-qp,textlibs-email-comment-spec	
 Lib/email/_header_value_parser.py	1068	1078	get_fws	get_fws(value)	modelled	textlibs-email-unstructured,textlibs-email-quoting-round-trip,textlibs-email-comment-spec	
-Lib/email/_header_value_parser.py	1080	1127	get_encoded_word	get_encoded_word(value, terminal_type='vtext')	todo		review: getEncodedWord/ewHexFix/ewBuild follow :1084-1127, but UnstructuredEncodedWords only reaches the plain success path: GoodTok forbids '?=' in the token and every word is followed by whitespace or the end, so the =XX re-split of :1093-1099 (taken by every Q word whose text starts with an escape, '=?utf-8?q?=C3=A9?=' gives 'é' on 3.15.2) is never run, and the EncodedWord's own defects (whitespace inside, decode's defects, missing trailing whitespace) are never inspected; a get_encoded_word without the re-split or without any defect satisfies every entry.
-Lib/email/_header_value_parser.py	1129	1194	get_unstructured	get_unstructured(value)	todo		review: The str/value half assumes _ew.decode rejects every encoded word, and no other entry covers a word that decodes, so the RFC 2047 branch (:1168-1180: the decoded EncodedWord, the 'missing whitespace before encoded word' defect, the EWWhiteSpaceTerminal between two encoded words) is pinned only to terminate; a get_unstructured that never decodes, or drops the decoded token, satisfies UnstructuredSpec.
-Lib/email/_header_value_parser.py	1196	1211	get_qp_ctext	get_qp_ctext(value)	modelled	textlibs-email-comment-spec,textlibs-email-quoting-round-trip	review: Only the ')' of its endchars '()' (:1208) is pinned: the round trip never has a bare '(' (every one is escaped), so a get_qp_ctext that ran through '(' and broke nested comments satisfies QuotingRoundTrip, and the WhiteSpaceTerminal class its docstring promises (:1204-1205) is not pinned either.
+Lib/email/_header_value_parser.py	1080	1127	get_encoded_word	get_encoded_word(value, terminal_type='vtext')	modelled	textlibs-email-unstructured-encoded-words,textlibs-email-encoded-word-spec	
+Lib/email/_header_value_parser.py	1129	1194	get_unstructured	get_unstructured(value)	modelled	textlibs-email-unstructured,textlibs-email-unstructured-encoded-words,textlibs-email-unstructured-word-then-ew	
+Lib/email/_header_value_parser.py	1196	1211	get_qp_ctext	get_qp_ctext(value)	modelled	textlibs-email-quoting-round-trip,textlibs-email-comment-spec	
 Lib/email/_header_value_parser.py	1213	1226	get_qcontent	get_qcontent(value)	modelled	textlibs-email-quoting-round-trip	
 Lib/email/_header_value_parser.py	1228	1242	get_atext	get_atext(value)	todo		
 Lib/email/_header_value_parser.py	1244	1284	get_bare_quoted_string	get_bare_quoted_string(value)	modelled	textlibs-email-quoted-string-reparse,textlibs-email-quoting-round-trip	
-Lib/email/_header_value_parser.py	1286	1309	get_comment	get_comment(value)	todo		review: The nested-comment branch (:1300-1301, the 'comment' alternative of ccontent its docstring promises to handle) is never reached by any theorem, because make_parenthesis_pairs escapes every '('; a get_comment without nesting satisfies QuotingRoundTrip, and the end-of-header defect (:1305-1308) and the HeaderParseError are unpinned too.
+Lib/email/_header_value_parser.py	1286	1309	get_comment	get_comment(value)	modelled	textlibs-email-quoting-round-trip,textlibs-email-comment-spec,textlibs-email-nested-comment-recursion	
 Lib/email/_header_value_parser.py	1311	1322	get_cfws	get_cfws(value)	todo		
 Lib/email/_header_value_parser.py	1324	1340	get_quoted_string	get_quoted_string(value)	modelled	textlibs-email-quoted-string-reparse	
 Lib/email/_header_value_parser.py	1342	1367	get_atom	get_atom(value)	todo		
@@ -108,7 +108,7 @@ Lib/email/_header_value_parser.py	1413	1445	get_word	get_word(value)	todo
 Lib/email/_header_value_parser.py	1447	1493	get_phrase	get_phrase(value)	todo		
 Lib/email/_header_value_parser.py	1495	1527	get_local_part	get_local_part(value)	todo		changed-in-3.15:
 Lib/email/_header_value_parser.py	1529	1579	get_obs_local_part	get_obs_local_part(value)	todo		
-Lib/email/_header_value_parser.py	1581	1599	get_dtext	get_dtext(value)	modelled	textlibs-email-dtext-qp-defect	review: Neither registered theorem unfolds its body: messageIdNoRaise_refuted stops in its first statement (the _get_ptext_to_endchars call raises) and ptextQpFlag_refuted never calls it; the had_qp defect, ValueTerminal and _validate_xtext (:1594-1598) appear only in the side example dtext_no_defect, which the entry does not name.
+Lib/email/_header_value_parser.py	1581	1599	get_dtext	get_dtext(value)	modelled	textlibs-email-dtext-qp-defect	
 Lib/email/_header_value_parser.py	1601	1607	_check_for_early_dl_end	_check_for_early_dl_end(value, domain_literal)	todo		
 Lib/email/_header_value_parser.py	1609	1646	get_domain_literal	get_domain_literal(value)	todo		
 Lib/email/_header_value_parser.py	1648	1684	get_domain	get_domain(value)	todo		
@@ -127,7 +127,7 @@ Lib/email/_header_value_parser.py	2034	2084	get_address_list	get_address_list(va
 Lib/email/_header_value_parser.py	2087	2107	get_no_fold_literal	get_no_fold_literal(value)	modelled	textlibs-email-msgid-no-fold-literal-space	
 Lib/email/_header_value_parser.py	2109	2175	get_msg_id	get_msg_id(value)	modelled	textlibs-email-msgid-no-fold-literal-space	
 Lib/email/_header_value_parser.py	2178	2196	parse_message_id	parse_message_id(value)	modelled	textlibs-email-msgid-no-fold-literal-space	
-Lib/email/_header_value_parser.py	2198	2222	parse_message_ids	parse_message_ids(value)	modelled	textlibs-email-msgids-no-fold-literal-space	review: messageIdNoRaise_refuted uses only the parse_message_id conjunct (.1), so it holds for any parse_message_ids; messageIds_unbound shows the same UnboundLocalError (true on 3.15.2) but is not the entry's theorem.
+Lib/email/_header_value_parser.py	2198	2222	parse_message_ids	parse_message_ids(value)	modelled	textlibs-email-msgids-no-fold-literal-space	
 Lib/email/_header_value_parser.py	2232	2298	parse_mime_version	parse_mime_version(value)	modelled	textlibs-email-mime-version-nondecimal-digit	
 Lib/email/_header_value_parser.py	2300	2316	get_invalid_parameter	get_invalid_parameter(value)	todo		
 Lib/email/_header_value_parser.py	2318	2335	get_ttext	get_ttext(value)	todo		
@@ -142,7 +142,7 @@ Lib/email/_header_value_parser.py	2494	2633	get_parameter	get_parameter(value)	m
 Lib/email/_header_value_parser.py	2635	2685	parse_mime_parameters	parse_mime_parameters(value)	modelled	textlibs-email-param-extended-marker-at-end	
 Lib/email/_header_value_parser.py	2687	2701	_find_mime_parameters	_find_mime_parameters(tokenlist, value)	todo		
 Lib/email/_header_value_parser.py	2703	2757	parse_content_type_header	parse_content_type_header(value)	modelled	textlibs-email-param-extended-marker-at-end	
-Lib/email/_header_value_parser.py	2759	2787	parse_content_disposition_header	parse_content_disposition_header(value)	modelled	textlibs-email-disposition-extended-marker-at-end	review: contentHeadersNoRaise_refuted uses only the parse_content_type_header conjunct (.1), so it holds for any parse_content_disposition_header; contentDisposition_star shows the IndexError (true on 3.15.2) but is not the entry's theorem.
+Lib/email/_header_value_parser.py	2759	2787	parse_content_disposition_header	parse_content_disposition_header(value)	modelled	textlibs-email-disposition-extended-marker-at-end	
 Lib/email/_header_value_parser.py	2789	2818	parse_content_transfer_encoding_header	parse_content_transfer_encoding_header(value)	todo		
 Lib/email/_header_value_parser.py	2836	2844	_steal_trailing_WSP_if_exists	_steal_trailing_WSP_if_exists(lines)	todo		
 Lib/email/_header_value_parser.py	2847	2856	_refold_parse_tree	_refold_parse_tree(parse_tree, *, policy)	todo		changed-in-3.15:
