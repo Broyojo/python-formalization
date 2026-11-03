@@ -679,6 +679,9 @@ listsort-perm-on-error	proven	Objects/listobject.c	binarysort,count_run,gallop_l
 listsort-fail-exits	proven	Objects/listobject.c	gallop_left,gallop_right,merge_at,merge_lo,merge_hi,binarysort,count_run
 listsort-fails	proven	Objects/listobject.c	list_sort_impl,PyList_Sort,count_run
 listsort-count-run-maximal	proven	Objects/listobject.c	count_run
+listsort-count-run-input	proven	Objects/listobject.c	count_run
+listsort-fail-steps	proven	Objects/listobject.c	binarysort,gallop_left,gallop_right,merge_lo,merge_hi,merge_at,count_run,list_sort_impl,PyList_Sort
+listsort-fail-steps-2	proven	Objects/listobject.c	merge_hi,merge_at,count_run
 binary64-round-nearest-even	proven	Objects/floatobject.c	
 binary64-bits-value-roundtrip	proven	Objects/floatobject.c	
 binary64-fma-correct	proven	Objects/floatobject.c	
@@ -2144,6 +2147,9 @@ textlibs-struct-le-complex-float-overflow	refuted	Modules/_struct.c	np_float_com
 textlibs-struct-bytes-format-nonascii-error	proven	Modules/_struct.c	cache_struct_converter,set_format,pack_impl
 textlibs-struct-void-p-index-overflow	refuted	Modules/_struct.c	np_void_p,s_pack_internal
 textlibs-struct-pack-into-0p-outside-field	proven	Modules/_struct.c	Struct_pack_into_impl,s_pack_internal,pack_into_impl
+textlibs-struct-sp-count	proven	Modules/_struct.c	prepare_s
+textlibs-struct-pack-values	proven	Modules/_struct.c	Struct_pack_impl
+textlibs-struct-pack-into-matches-pack	proven	Modules/_struct.c	Struct_pack_into_impl,s_pack_internal
 textlibs-struct-pack-length	proven	Modules/_struct.c	Struct_pack_impl,s_pack_internal
 textlibs-struct-pack-into-laws	proven	Modules/_struct.c	Struct_pack_into_impl
 textlibs-struct-pack-p-field	proven	Modules/_struct.c	s_pack_internal

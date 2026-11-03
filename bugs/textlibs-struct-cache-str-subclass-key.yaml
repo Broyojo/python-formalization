@@ -12,6 +12,9 @@ summary: |
   `__eq__` is asked first, matches it. So after `struct.calcsize(CI('B'))`,
   `struct.unpack('b', b'\xff')` returns `(255,)` instead of `(-1,)`, and keeps doing so for every
   module-level call with `'b'` until `struct._clearcache()` or until 100 other formats evict it.
+  A second face of the same lookup: a hashable object that is not a str at all, but hashes and
+  compares equal to a cached str key, gets that key's Struct, so `struct.calcsize(K())` returns 1
+  after `struct.calcsize('b')`, where `Struct(K())` raises TypeError.
 likelihood: |
   Very low: it needs a str subclass with a custom `__eq__` and `__hash__` passed as a format. Once it
   happens, it silently changes results for unrelated code in the same process.
@@ -31,13 +34,30 @@ reproducer: |
   struct._clearcache()
   s = struct.unpack('b', b'\xff')
   print(r, s)
-  if r == (255,) and s == (-1,):
+  class K:
+      def __hash__(self):
+          return hash('b')
+      def __eq__(self, o):
+          return o == 'b'
+  struct._clearcache()
+  try:
+      struct.calcsize(K())
+      k1 = 'accepted'
+  except TypeError:
+      k1 = 'TypeError'
+  struct.calcsize('b')
+  try:
+      k2 = struct.calcsize(K())
+  except TypeError:
+      k2 = 'TypeError'
+  print(k1, k2)
+  if r == (255,) and s == (-1,) and k1 == 'TypeError' and k2 == 1:
       print('REPRODUCED textlibs-struct-cache-str-subclass-key')
 expected: |
   `struct.unpack('b', b'\xff') == (-1,)` whatever was passed to the module functions before.
 observed: |
-  python3 3.15.2: (255,) (-1,). REPRODUCED.
-  main 3.16.0a1+dev (ef1fce0): (255,) (-1,). REPRODUCED.
+  python3 3.15.2: (255,) (-1,); TypeError 1. REPRODUCED.
+  main 3.16.0a1+dev (ef1fce0): (255,) (-1,); TypeError 1. REPRODUCED.
 promised_by: |
   docs: the module-level functions are equivalent to Struct(format).method(...); the cache is an
   undocumented optimisation.

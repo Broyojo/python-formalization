@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.TextLibs.Diff
-import PyLean.TextLibs.StructPack
+import PyLean.TextLibs.StructPack2
 import PyLean.TextLibs.BinasciiEq3
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
@@ -169,6 +169,24 @@ def entries : List Entry := [
     source := "invariant", status := .proven
     prop := ``PackIntoStaysInside, thm := some ``packIntoStaysInside_proven
     notes := "From runPack_width (every pack routine writes its entry's size, every table checked) and prepareS_laid (every code's repeats end by s_size). 3.14's 0p count byte past the field is gone in 3.15." },
+  { id := "textlibs-struct-sp-count", pyFile := "Modules/_struct.c"
+    pyFns := ["prepare_s"]
+    statement := "For every prefix, s and p, and every count that fits in Py_ssize_t, Struct(prefix + count + code) has one code at offset 0 whose size is the whole count, repeated once, and s_size is the count."
+    source := "Modules/_struct.c:1683-1690, 1761-1766", status := .proven
+    prop := ``SPCount, thm := some ``spCount_proven
+    notes := "Symbolic in the digit string. Checked on 3.15.2 for counts up to 65536." },
+  { id := "textlibs-struct-pack-values", pyFile := "Modules/_struct.c"
+    pyFns := ["Struct_pack_impl"]
+    statement := "With the right number of arguments, Struct.pack is s_pack_internal over s_size zero bytes, and returns that buffer."
+    source := "Modules/_struct.c:2446-2458", status := .proven
+    prop := ``PackValues, thm := some ``packValues_proven
+    notes := "With PackItems this pins the bytes pack returns." },
+  { id := "textlibs-struct-pack-into-matches-pack", pyFile := "Modules/_struct.c"
+    pyFns := ["Struct_pack_into_impl", "s_pack_internal"]
+    statement := "For arguments that are not the target buffer, a successful pack_into(fmt, buf, o, *v) leaves at buf[o:o+size] exactly what pack(fmt, *v) returns."
+    source := "invariant: pack_into is pack written into a buffer", status := .proven
+    prop := ``PackIntoMatchesPack, thm := some ``packIntoMatchesPack_proven
+    notes := "A simulation: both runs clear the field first and agree on it at every step. Checked on 3.15.2 on 5000 random formats and offsets." },
   { id := "textlibs-struct-pack-length", pyFile := "Modules/_struct.c"
     pyFns := ["Struct_pack_impl", "s_pack_internal"]
     statement := "pack on a struct of an accepted format returns exactly s_size bytes whenever it succeeds."
