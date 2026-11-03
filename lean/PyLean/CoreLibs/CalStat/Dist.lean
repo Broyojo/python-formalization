@@ -637,4 +637,26 @@ def ND.getstate (X : ND) : Flt × Flt := (X.mu, X.sigma)
 /-- `NormalDist.__setstate__`, statistics.py:1448-1449. -/
 def ND.setstate (_X : ND) (s : Flt × Flt) : ND := ⟨s.1, s.2⟩
 
+/-- The two slots of an instance as Python holds them: `__init__` stores floats, but `__setstate__`
+stores whatever the state holds, unconverted. -/
+structure NDSlots where
+  mu : Val
+  sigma : Val
+  deriving DecidableEq, Inhabited, Repr
+
+def ND.slots (X : ND) : NDSlots := ⟨.flt X.mu, .flt X.sigma⟩
+
+/-- `NormalDist.__getstate__`, statistics.py:1445-1446: the tuple `(self._mu, self._sigma)`. -/
+def NDSlots.getstate (X : NDSlots) : List Val := [X.mu, X.sigma]
+
+/-- `NormalDist.__setstate__`, statistics.py:1448-1449: `self._mu, self._sigma = state` for a tuple
+`state`: exactly two items are stored as they are, any other length raises the unpacking
+`ValueError`. (Scope: `state` is a tuple or list, a sized sequence; an iterator or a non-iterable is not
+modelled.) -/
+def NDSlots.setstate (state : List Val) : Py NDSlots :=
+  match state with
+  | [a, b] => .ok ⟨a, b⟩
+  | l => .error (.valueError (if l.length < 2 then s!"not enough values to unpack (expected 2, got {l.length})"
+      else s!"too many values to unpack (expected 2, got {l.length})"))
+
 end PyLean.CoreLibs.CalStat

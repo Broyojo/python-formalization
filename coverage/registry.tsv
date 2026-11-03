@@ -3085,6 +3085,8 @@ calstat-statistics-pdf-one-sigma	proven	statistics.py	NormalDist.pdf
 calstat-statistics-harmonic-weighted	proven	statistics.py	harmonic_mean
 calstat-statistics-fail-neg-gen	proven	statistics.py	_fail_neg
 calstat-statistics-multimode-order	proven	statistics.py	multimode
+calstat-statistics-harmonic-refusals	proven	statistics.py	harmonic_mean
+calstat-statistics-state-round-trip	proven	statistics.py	NormalDist.__getstate__,NormalDist.__setstate__
 rand-genrand-in-bounds	proven	Modules/_randommodule.c	genrand_uint32
 rand-genrand-twist-recurrence	proven	Modules/_randommodule.c	genrand_uint32
 rand-random-exact-rational	proven	Modules/_randommodule.c	_random_Random_random_impl

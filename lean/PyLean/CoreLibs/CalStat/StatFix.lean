@@ -769,4 +769,80 @@ theorem multimodeOrder_proven : MultimodeOrder := by
     refine ⟨hk ▸ hsub _, ?_⟩
     exact hinv.distinct.sublist (hsub _)
 
+/-! ## `harmonic_mean` refusals -/
+
+theorem weights_neg (ws : List Rat) (h : ∃ a ∈ ws, a < 0) (st : SumSt) :
+    (fracs ws).foldlM (fun st x => do
+        if ← vltPy x.v (.int 0) then throw (statErr hmErrmsg)
+        sumStep st x) st = .error (statErr hmErrmsg) := by
+  induction ws generalizing st with
+  | nil => obtain ⟨a, ha, -⟩ := h; simp at ha
+  | cons a as ih =>
+    rw [fracs, List.map_cons, List.foldlM_cons]
+    by_cases ha : a < 0
+    · simp [Val.toN, vltPy_frac, ha, throw, throwThe, MonadExcept.throw, MonadExceptOf.throw, bind, Except.bind]
+    · obtain ⟨b, hb, hb0⟩ := h
+      have hb' : b ∈ as := by
+        rcases List.mem_cons.mp hb with rfl | h
+        · exact absurd hb0 ha
+        · exact h
+      have e : (do
+          if ← vltPy (Val.frac a).toN.v (.int 0) then throw (statErr hmErrmsg)
+          sumStep st (Val.frac a).toN : Py SumSt) = sumStep st (Val.frac a).toN := by
+        simp [Val.toN, vltPy_frac, ha]
+      rw [e]
+      obtain ⟨st', hs⟩ := sumStep_exact_ok st (Val.frac a).toN trivial
+      rw [bind_ok hs]
+      exact ih ⟨b, hb', hb0⟩ st'
+
+/-- `harmonic_mean`'s refusals, statistics.py:297-314: a single value that is not a number
+(`isinstance(x, (numbers.Real, Decimal))` fails: a str, `None`, or another object) raises
+`TypeError('unsupported type')`; with weights of the right length, a negative weight is refused by
+`_fail_neg(weights, errmsg)` with `StatisticsError('harmonic mean does not support negative values')`,
+before the data is read. -/
+def HarmonicRefusals : Prop :=
+  (∀ (c : Cls) (v : Val), (v = .none ∨ (∃ s, v = .str s) ∨ (∃ t, v = .other t)) →
+    harmonicMean [⟨c, v⟩] none = .error (.typeError "unsupported type")) ∧
+  (∀ (data : List PyN) (ws : List Rat), data ≠ [] → ws.length = data.length → (∃ a ∈ ws, a < 0) →
+    harmonicMean data (some (fracs ws)) =
+      .error (.named "StatisticsError" "harmonic mean does not support negative values"))
+
+theorem harmonicRefusals_proven : HarmonicRefusals := by
+  refine ⟨?_, ?_⟩
+  · intro c v hv
+    rcases hv with rfl | ⟨s, rfl⟩ | ⟨t, rfl⟩ <;> rfl
+  · intro data ws hne hl hneg
+    rw [harmonicMean_some _ _ hne]
+    have hlen : ((fracs ws).length != data.length) = false := by simp [fracs, hl]
+    simp only [hmGeneral, hlen, Bool.false_eq_true, ite_false, weights_neg ws hneg {}]
+    rfl
+
+/-! ## The pickling state -/
+
+/-- `__getstate__` and `__setstate__`, statistics.py:1445-1449, the pair `pickle` and `copy` use: the
+state is the tuple of the two slots, and setting it back restores the slots exactly (so `copy.copy(X)`
+and a pickle round trip give an equal instance), for any slot contents, including the floats
+`__init__` stores; a state of two items is stored unconverted (`(1, -2)` keeps an int and a negative
+`sigma`); a state of any other length raises the unpacking `ValueError` and stores nothing. -/
+def StateRoundTrip : Prop :=
+  (∀ X : NDSlots, NDSlots.setstate X.getstate = .ok X) ∧
+  (∀ X : ND, NDSlots.setstate X.slots.getstate = .ok X.slots) ∧
+  (∀ a b : Val, NDSlots.setstate [a, b] = .ok ⟨a, b⟩) ∧
+  (∀ l : List Val, l.length < 2 → NDSlots.setstate l =
+    .error (.valueError s!"not enough values to unpack (expected 2, got {l.length})")) ∧
+  (∀ l : List Val, 2 < l.length → NDSlots.setstate l =
+    .error (.valueError s!"too many values to unpack (expected 2, got {l.length})"))
+
+theorem stateRoundTrip_proven : StateRoundTrip := by
+  refine ⟨fun _ => rfl, fun _ => rfl, fun _ _ => rfl, ?_, ?_⟩
+  · intro l h
+    match l, h with
+    | [], _ => rfl
+    | [a], _ => rfl
+  · intro l h
+    match l, h with
+    | a :: b :: c :: rest, _ =>
+      have : ¬ ((a :: b :: c :: rest).length < 2) := by simp
+      simp only [NDSlots.setstate, this, ite_false]
+
 end PyLean.CoreLibs.CalStat

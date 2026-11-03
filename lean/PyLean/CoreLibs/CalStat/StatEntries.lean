@@ -275,7 +275,13 @@ def statisticsEntries : List Entry := [
     "Lib/statistics.py:1644-1649" ``FailNegGen ``failNegGen_proven,
   st "multimode-order" ["multimode"]
     "multimode's result is a sublist of the data's first occurrences, in order, with no two items equal (== an equivalence)."
-    "Lib/statistics.py:498-516 (docstring: in the order they were first encountered)" ``MultimodeOrder ``multimodeOrder_proven
+    "Lib/statistics.py:498-516 (docstring: in the order they were first encountered)" ``MultimodeOrder ``multimodeOrder_proven,
+  st "harmonic-refusals" ["harmonic_mean"]
+    "A single non-number raises TypeError('unsupported type'); a negative weight raises StatisticsError('harmonic mean does not support negative values') from _fail_neg(weights)."
+    "Lib/statistics.py:297-314" ``HarmonicRefusals ``harmonicRefusals_proven,
+  st "state-round-trip" ["NormalDist.__getstate__", "NormalDist.__setstate__"]
+    "__getstate__ is the tuple of the two slots and __setstate__ of it restores them exactly; a 2-item state is stored unconverted; any other length raises the unpacking ValueError."
+    "Lib/statistics.py:1445-1449" ``StateRoundTrip ``stateRoundTrip_proven
 ]
 
 end PyLean.CoreLibs.CalStat

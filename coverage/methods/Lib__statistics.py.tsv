@@ -2,7 +2,7 @@ file	line	endline	name	signature	status	entry	note
 Lib/statistics.py	159	179	mean	mean(data)	modelled	calstat-statistics-decimal-paths,calstat-statistics-mean-floats,calstat-statistics-mean-fractions,calstat-statistics-mean-int-subclass,calstat-statistics-mean-ints,calstat-statistics-special-data	
 Lib/statistics.py	182	222	fmean	fmean(data, weights=None)	modelled	calstat-statistics-fmean-floats,calstat-statistics-fmean-ints,calstat-statistics-fmean-weighted-ints,calstat-statistics-fmean-weights-arg	
 Lib/statistics.py	225	262	geometric_mean	geometric_mean(data)	modelled	calstat-statistics-geometric-scan	
-Lib/statistics.py	265	325	harmonic_mean	harmonic_mean(data, weights=None)	todo		review: HarmonicWeighted now pins weighted Fraction data (sum(w) / sum(w/x), the docstring's 56.0 example, the length check, all-zero weights refused) and the unweighted theorems stand, but its own docstring claims 'a negative weight refused' and no conjunct has one: the _fail_neg(weights) refusal at :314 is unpinned (a harmonic_mean that accepted negative weights passes), as is the single-value TypeError('unsupported type') at :303-304.
+Lib/statistics.py	265	325	harmonic_mean	harmonic_mean(data, weights=None)	modelled	calstat-statistics-harmonic-early-out,calstat-statistics-harmonic-exact,calstat-statistics-harmonic-refusals,calstat-statistics-harmonic-weighted	
 Lib/statistics.py	328	349	median	median(data)	modelled	calstat-statistics-median-empty,calstat-statistics-median-order	
 Lib/statistics.py	352	374	median_low	median_low(data)	modelled	calstat-statistics-median-empty,calstat-statistics-median-order	
 Lib/statistics.py	377	393	median_high	median_high(data)	modelled	calstat-statistics-median-empty,calstat-statistics-median-order	
@@ -56,8 +56,8 @@ Lib/statistics.py	1426	1428	NormalDist.__rsub__	__rsub__(x1, x2)	modelled	calsta
 Lib/statistics.py	1432	1436	NormalDist.__eq__	__eq__(x1, x2)	modelled	calstat-statistics-normaldist-eq	
 Lib/statistics.py	1438	1440	NormalDist.__hash__	__hash__(self)	modelled	calstat-statistics-normaldist-eq,calstat-statistics-normaldist-eq-hash,calstat-statistics-normaldist-hash-value	
 Lib/statistics.py	1442	1443	NormalDist.__repr__	__repr__(self)	todo		mirror now takes type(self).__name__ (difftested with subclasses); the only property is the format string itself, so a repr round-trip (eval(repr(X)) == X) is needed, which needs fltRepr to round-trip, unproven
-Lib/statistics.py	1445	1446	NormalDist.__getstate__	__getstate__(self)	todo		review: The trivial: rule is for a body that returns one field; this one returns the pair (self._mu, self._sigma), and it has a behaviour worth stating, the pickle and copy round trip with __setstate__ (now todo), so it should be modelled with that row rather than excluded.
-Lib/statistics.py	1448	1449	NormalDist.__setstate__	__setstate__(self, state)	todo		mirror takes Flt x Flt; CPython unpacks any 2-item state unconverted (setstate((1, -2)) keeps an int and a negative sigma) and raises ValueError for other lengths; needs a Val-state model
+Lib/statistics.py	1445	1446	NormalDist.__getstate__	__getstate__(self)	modelled	calstat-statistics-state-round-trip	
+Lib/statistics.py	1448	1449	NormalDist.__setstate__	__setstate__(self, state)	modelled	calstat-statistics-state-round-trip	
 Lib/statistics.py	1454	1509	_sum	_sum(data)	modelled	calstat-statistics-special-data,calstat-statistics-sum-exact	
 Lib/statistics.py	1512	1556	_ss	_ss(data, c=None)	modelled	calstat-statistics-special-data,calstat-statistics-variance-fractions,calstat-statistics-variance-with-mean	
 Lib/statistics.py	1559	1563	_isfinite	_isfinite(x)	modelled	calstat-statistics-exact-ratio-spec	
