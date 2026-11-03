@@ -177,6 +177,10 @@ def mkWorld (funcs : List (List (Str × RRet × List Op) × RRet × List Op)) (c
         match infos[i - 100]? with
         | some spec =>
           if spec.kind != "ci" then .ok none
+          else if name == "encode" then .ok (some (coderVal (spec.items.getD 0 0)))
+          else if name == "decode" then .ok (some (coderVal (spec.items.getD 1 0)))
+          else if name == "streamreader" then .ok (some (coderVal (spec.items.getD 2 0)))
+          else if name == "streamwriter" then .ok (some (coderVal (spec.items.getD 3 0)))
           else if name == "incrementalencoder" then .ok (some (match spec.ie with | some c => coderVal c | none => .none))
           else if name == "incrementaldecoder" then .ok (some (match spec.id with | some c => coderVal c | none => .none))
           else if name == "_is_text_encoding" then
@@ -265,6 +269,17 @@ def runStep (W : World) (st : Reg) (j : Json) : Except String (Reg × Json) := d
     | "IncrementalDecoder" => return wrap (pyCodecIncDecoder W st name err)
     | "StreamReader" => return wrap (pyCodecStreamReader W st name stream err)
     | _ => return wrap (pyCodecStreamWriter W st name stream err)
+  | "pyget" =>
+    let name ← getSeq j "name"
+    let eargs := ((← optSeq j "errors").map Val.str).toList
+    let stream : Val := .bytes (lit "stream")
+    match ← getStr j "which" with
+    | "encoder" => return wrap (libGetAttr W st name "encode")
+    | "decoder" => return wrap (libGetAttr W st name "decode")
+    | "incenc" => return wrap (libCall W (libGetIncremental W st name "incrementalencoder") eargs)
+    | "incdec" => return wrap (libCall W (libGetIncremental W st name "incrementaldecoder") eargs)
+    | "reader" => return wrap (libCall W (libGetAttr W st name "streamreader") (stream :: eargs))
+    | _ => return wrap (libCall W (libGetAttr W st name "streamwriter") (stream :: eargs))
   | "regerr" =>
     let h : Val := match j.getObjVal? "h" with
       | .ok (.num n) => .obj (300 + n.mantissa.toNat) "function"

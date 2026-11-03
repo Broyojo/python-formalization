@@ -3,20 +3,20 @@ Python/codecs.c	32	52	PyCodec_Register	int PyCodec_Register(PyObject *search_fun
 Python/codecs.c	55	82	PyCodec_Unregister	PyCodec_Unregister(PyObject *search_function)	modelled	unicodeobj-codecs-register-doc	
 Python/codecs.c	88	115	normalizestring	normalizestring(const char *string)	modelled	unicodeobj-codecs-lookup-doc	
 Python/codecs.c	133	218	_PyCodec_Lookup	PyObject *_PyCodec_Lookup(const char *encoding)	modelled	unicodeobj-codecs-lookup-doc,unicodeobj-codecs-lookup-raises	
-Python/codecs.c	222	235	PyCodec_KnownEncoding	int PyCodec_KnownEncoding(const char *encoding)	todo		
+Python/codecs.c	222	235	PyCodec_KnownEncoding	int PyCodec_KnownEncoding(const char *encoding)	modelled	unicodeobj-codecs-capi-matches-lib	
 Python/codecs.c	238	258	args_tuple	PyObject *args_tuple(PyObject *object, const char *errors)	modelled	unicodeobj-codecs-encode-decode-paths	
 Python/codecs.c	263	274	codec_getitem	PyObject *codec_getitem(const char *encoding, int index)	modelled	unicodeobj-codecs-encode-decode-paths	
-Python/codecs.c	278	293	codec_makeincrementalcodec	PyObject *codec_makeincrementalcodec(PyObject *codec_info, const char *errors, const char *attrname)	todo		
-Python/codecs.c	296	308	codec_getincrementalcodec	PyObject *codec_getincrementalcodec(const char *encoding, const char *errors, const char *attrname)	todo		
-Python/codecs.c	313	331	codec_getstreamcodec	PyObject *codec_getstreamcodec(const char *encoding, PyObject *stream, const char *errors, const int index)	todo		
+Python/codecs.c	278	293	codec_makeincrementalcodec	PyObject *codec_makeincrementalcodec(PyObject *codec_info, const char *errors, const char *attrname)	modelled	unicodeobj-codecs-capi-matches-lib	
+Python/codecs.c	296	308	codec_getincrementalcodec	PyObject *codec_getincrementalcodec(const char *encoding, const char *errors, const char *attrname)	modelled	unicodeobj-codecs-capi-matches-lib	
+Python/codecs.c	313	331	codec_getstreamcodec	PyObject *codec_getstreamcodec(const char *encoding, PyObject *stream, const char *errors, const int index)	modelled	unicodeobj-codecs-capi-matches-lib	
 Python/codecs.c	336	341	_PyCodecInfo_GetIncrementalDecoder	PyObject *_PyCodecInfo_GetIncrementalDecoder(PyObject *codec_info, const char *errors)	todo		
 Python/codecs.c	343	348	_PyCodecInfo_GetIncrementalEncoder	PyObject *_PyCodecInfo_GetIncrementalEncoder(PyObject *codec_info, const char *errors)	todo		
 Python/codecs.c	357	360	PyCodec_Encoder	PyObject *PyCodec_Encoder(const char *encoding)	modelled	unicodeobj-codecs-encode-decode-paths	
 Python/codecs.c	362	365	PyCodec_Decoder	PyObject *PyCodec_Decoder(const char *encoding)	modelled	unicodeobj-codecs-encode-decode-paths	
-Python/codecs.c	367	371	PyCodec_IncrementalEncoder	PyObject *PyCodec_IncrementalEncoder(const char *encoding, const char *errors)	todo		
-Python/codecs.c	373	377	PyCodec_IncrementalDecoder	PyObject *PyCodec_IncrementalDecoder(const char *encoding, const char *errors)	todo		
-Python/codecs.c	379	384	PyCodec_StreamReader	PyObject *PyCodec_StreamReader(const char *encoding, PyObject *stream, const char *errors)	todo		
-Python/codecs.c	386	391	PyCodec_StreamWriter	PyObject *PyCodec_StreamWriter(const char *encoding, PyObject *stream, const char *errors)	todo		
+Python/codecs.c	367	371	PyCodec_IncrementalEncoder	PyObject *PyCodec_IncrementalEncoder(const char *encoding, const char *errors)	modelled	unicodeobj-codecs-capi-matches-lib	
+Python/codecs.c	373	377	PyCodec_IncrementalDecoder	PyObject *PyCodec_IncrementalDecoder(const char *encoding, const char *errors)	modelled	unicodeobj-codecs-capi-matches-lib	
+Python/codecs.c	379	384	PyCodec_StreamReader	PyObject *PyCodec_StreamReader(const char *encoding, PyObject *stream, const char *errors)	modelled	unicodeobj-codecs-capi-matches-lib	
+Python/codecs.c	386	391	PyCodec_StreamWriter	PyObject *PyCodec_StreamWriter(const char *encoding, PyObject *stream, const char *errors)	modelled	unicodeobj-codecs-capi-matches-lib	
 Python/codecs.c	399	436	_PyCodec_EncodeInternal	_PyCodec_EncodeInternal(PyObject *object, PyObject *encoder, const char *encoding, const char *errors)	modelled	unicodeobj-codecs-encode-decode-paths	
 Python/codecs.c	444	480	_PyCodec_DecodeInternal	_PyCodec_DecodeInternal(PyObject *object, PyObject *decoder, const char *encoding, const char *errors)	modelled	unicodeobj-codecs-encode-decode-paths	
 Python/codecs.c	483	494	PyCodec_Encode	PyObject *PyCodec_Encode(PyObject *object, const char *encoding, const char *errors)	modelled	unicodeobj-codecs-encode-decode-paths	

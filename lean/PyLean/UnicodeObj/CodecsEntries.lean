@@ -129,6 +129,16 @@ def codecsEntries : List Entry := [
     statement := "register_error refuses a non-callable and otherwise makes lookup_error(name) return the handler, builtin names included; lookup_error of an unknown name raises LookupError naming it (cut to 400 bytes) and NULL means strict; _unregister_error refuses the eight builtin names and otherwise answers whether a custom handler was registered, which lookup_error then no longer finds."
     source := "codecs.rst, register_error and lookup_error; _codecs._unregister_error docstring"
     status := .proven, prop := ``ErrorRegistryDoc, thm := some ``errorRegistryDoc_proven },
+  { id := "unicodeobj-codecs-capi-matches-lib", pyFile := "Lib/codecs.py"
+    pyFns := ["getencoder", "getdecoder", "getincrementalencoder", "getincrementaldecoder", "getreader",
+      "getwriter", "PyCodec_KnownEncoding", "codec_getitem", "PyCodec_Encoder", "PyCodec_Decoder",
+      "codec_makeincrementalcodec", "codec_getincrementalcodec", "PyCodec_IncrementalEncoder",
+      "PyCodec_IncrementalDecoder", "codec_getstreamcodec", "PyCodec_StreamReader", "PyCodec_StreamWriter",
+      "_codecs_lookup_impl"]
+    statement := "For every registry, search functions and name: PyCodec_KnownEncoding is whether codecs.lookup succeeds and never raises; on codec objects whose attributes are their items (as CodecInfo.__new__ makes them) PyCodec_Encoder/Decoder equal codecs.getencoder/getdecoder and PyCodec_StreamReader/Writer(name, stream, errors) equal codecs.getreader/getwriter(name)(stream[, errors]); PyCodec_IncrementalEncoder/Decoder(name, errors) equal codecs.getincrementalencoder/decoder(name)([errors]) except when the attribute is None, where Python raises LookupError(name) and C calls None."
+    source := "invariant: the C API and its Lib/codecs.py twins; codecs.rst getencoder..getwriter"
+    status := .proven, prop := ``CApiMatchesLib, thm := some ``cApiMatchesLib_proven
+    notes := "The twins read different things: C the tuple items, Python the attributes. They part ways on a plain 4-tuple from a search function (no attributes) or on a CodecInfo whose attributes were reassigned; the statement takes ItemsMatchAttrs as the CodecInfo invariant. The None case is a design difference, recorded in the statement rather than filed." },
   { id := "unicodeobj-codecs-escape-round-trip", pyFile := "Modules/_codecsmodule.c"
     pyFns := ["_codecs_escape_encode_impl", "_codecs_escape_decode_impl", "codec_tuple"]
     statement := "For every bytes object, codecs.escape_encode either raises OverflowError (only past PY_SSIZE_T_MAX/4 bytes) or returns escapes, with the input's length, that codecs.escape_decode decodes back to the input, with their own length."

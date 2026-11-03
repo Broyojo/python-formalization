@@ -154,3 +154,38 @@ def bytesDecodeRegistry (W : World) (st : Reg) (view : Val) (enc : List Nat) (er
     | _ => (st', .error ⟨.typeError s!"'{toLeanString (trunc400 ((utf8Decode enc .strict).toOption.getD []))}' decoder returned '{v.tpName}' instead of 'str'; use codecs.decode() to decode to arbitrary types", []⟩)
 
 end PyLean.UnicodeObj.Codecs
+
+/-! ## The Python twins in Lib/codecs.py -/
+
+namespace PyLean.UnicodeObj.Codecs
+
+open PyLean PyLean.UnicodeObj
+
+/-- Attribute access `v.name` in Python code. -/
+def pyAttr (W : World) (v : Val) (name : String) : Py Val :=
+  match W.getattr v name with
+  | .error e => .error e
+  | .ok none => .error (attrErr v name)
+  | .ok (some a) => .ok a
+
+/-- `lookup(encoding).<attr>`: getencoder, getdecoder, getreader, getwriter,
+Lib/codecs.py:975-1041. -/
+def libGetAttr (W : World) (st : Reg) (encoding : Str) (attr : String) : Reg × Py Val :=
+  match codecsLookup W st encoding with
+  | (st', .error e) => (st', .error e)
+  | (st', .ok info) => (st', pyAttr W info attr)
+
+/-- `getincrementalencoder` and `getincrementaldecoder`, Lib/codecs.py:995-1021: a `None`
+attribute is `LookupError(encoding)`. -/
+def libGetIncremental (W : World) (st : Reg) (encoding : Str) (attr : String) : Reg × Py Val :=
+  match libGetAttr W st encoding attr with
+  | (st', .ok .none) => (st', .error (lookupErr (toLeanString encoding)))
+  | r => r
+
+/-- Calling what a getter returned, in Python. -/
+def libCall (W : World) (r : Reg × Py Val) (args : List Val) : Reg × Py Val :=
+  match r with
+  | (st', .error e) => (st', .error e)
+  | (st', .ok f) => callVal W st' f args
+
+end PyLean.UnicodeObj.Codecs

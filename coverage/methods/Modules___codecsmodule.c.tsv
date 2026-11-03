@@ -1,7 +1,7 @@
 file	line	endline	name	signature	status	entry	note
 Modules/_codecsmodule.c	65	72	_codecs_register	_codecs_register(PyObject *module, PyObject *search_function) /*[clinic end generated code: output=d1bf21e99db7d6d3 input=2321d8c8c0420dfc]*/	modelled	unicodeobj-codecs-register-doc	
 Modules/_codecsmodule.c	85	93	_codecs_unregister	_codecs_unregister(PyObject *module, PyObject *search_function) /*[clinic end generated code: output=1f0edee9cf246399 input=dd7c004c652d345e]*/	modelled	unicodeobj-codecs-register-doc	
-Modules/_codecsmodule.c	105	109	_codecs_lookup_impl	_codecs_lookup_impl(PyObject *module, const char *encoding) /*[clinic end generated code: output=9f0afa572080c36d input=02227d5429491ab3]*/	todo		
+Modules/_codecsmodule.c	105	109	_codecs_lookup_impl	_codecs_lookup_impl(PyObject *module, const char *encoding) /*[clinic end generated code: output=9f0afa572080c36d input=02227d5429491ab3]*/	modelled	unicodeobj-codecs-capi-matches-lib	
 Modules/_codecsmodule.c	127	136	_codecs_encode_impl	_codecs_encode_impl(PyObject *module, PyObject *obj, const char *encoding, const char *errors) /*[clinic end generated code: output=385148eb9a067c86 input=e5271d443e391d7f]*/	todo		
 Modules/_codecsmodule.c	154	163	_codecs_decode_impl	_codecs_decode_impl(PyObject *module, PyObject *obj, const char *encoding, const char *errors) /*[clinic end generated code: output=679882417dc3a0bd input=3e6254628f9ca538]*/	todo		
 Modules/_codecsmodule.c	168	174	codec_tuple	PyObject *codec_tuple(PyObject *decoded, Py_ssize_t len)	modelled	unicodeobj-codecs-escape-round-trip	

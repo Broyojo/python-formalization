@@ -340,3 +340,75 @@ theorem registerDoc_proven : RegisterDoc := by
   · right; exact ⟨pre, g, post, h1, h2, h3, by simp [codecsUnregister, unregister, h4]⟩
 
 end PyLean.UnicodeObj.Codecs
+
+namespace PyLean.UnicodeObj.Codecs
+
+open PyLean PyLean.UnicodeObj
+
+/-! ## The C API getters against Lib/codecs.py -/
+
+/-- What `CodecInfo.__new__` sets up (Lib/codecs.py:94-107): the attributes `encode`, `decode`,
+`streamreader` and `streamwriter` are the four items of the tuple. -/
+def ItemsMatchAttrs (W : World) (info : Val) : Prop :=
+  W.getattr info "encode" = .ok (some (tupleItem info 0)) ∧
+  W.getattr info "decode" = .ok (some (tupleItem info 1)) ∧
+  W.getattr info "streamreader" = .ok (some (tupleItem info 2)) ∧
+  W.getattr info "streamwriter" = .ok (some (tupleItem info 3))
+
+/-- **The C API getters and their twins in Lib/codecs.py agree.** For every registry, search
+functions and name (that the `str` argument converter accepts): `PyCodec_KnownEncoding` is
+whether `codecs.lookup` succeeds, and never raises; whenever the codec object's attributes are
+its items, as `CodecInfo.__new__` makes them, `PyCodec_Encoder`/`Decoder` give what
+`codecs.getencoder`/`getdecoder` give, and `PyCodec_StreamReader`/`StreamWriter(name, stream,
+errors)` what `codecs.getreader`/`getwriter(name)(stream[, errors])` give;
+`PyCodec_IncrementalEncoder`/`Decoder(name, errors)` give what
+`codecs.getincrementalencoder`/`getincrementaldecoder(name)([errors])` give, except when that
+attribute is `None`, where Python raises `LookupError(name)` and C tries to call `None`. -/
+def CApiMatchesLib : Prop :=
+  ∀ (W : World) (st : Reg) (name : Str) (enc : List Nat) (errors : Option Str) (stream : Val),
+    strArg name = .ok enc →
+    knownEncoding W st enc = ((codecsLookup W st name).1, (codecsLookup W st name).2.isOk) ∧
+    (∀ st1 info, codecsLookup W st name = (st1, .ok info) → ItemsMatchAttrs W info →
+      pyCodecEncoder W st enc = libGetAttr W st name "encode" ∧
+      pyCodecDecoder W st enc = libGetAttr W st name "decode" ∧
+      pyCodecStreamReader W st enc stream errors =
+        libCall W (libGetAttr W st name "streamreader") (stream :: (errors.map Val.str).toList) ∧
+      pyCodecStreamWriter W st enc stream errors =
+        libCall W (libGetAttr W st name "streamwriter") (stream :: (errors.map Val.str).toList)) ∧
+    (∀ attr, attr = "incrementalencoder" ∨ attr = "incrementaldecoder" →
+      ∀ st1 info, codecsLookup W st name = (st1, .ok info) →
+      (W.getattr info attr = .ok (some .none) →
+        libCall W (libGetIncremental W st name attr) ((errors.map Val.str).toList) =
+          (st1, .error (lookupErr (toLeanString name)))) ∧
+      (W.getattr info attr ≠ .ok (some .none) →
+        getIncremental W st enc errors attr =
+          libCall W (libGetIncremental W st name attr) ((errors.map Val.str).toList))) ∧
+    (∀ st1 e, codecsLookup W st name = (st1, .error e) →
+      pyCodecEncoder W st enc = (st1, .error e) ∧ libGetAttr W st name "encode" = (st1, .error e))
+
+theorem cApiMatchesLib_proven : CApiMatchesLib := by
+  intro W st name enc errors stream harg
+  have hl : codecsLookup W st name = pyCodecLookup W st enc := by simp [codecsLookup, harg]
+  refine ⟨?_, fun st1 info h hm => ?_, fun attr _ st1 info h => ⟨fun hn => ?_, fun hn => ?_⟩,
+    fun st1 e h => ?_⟩
+  · rw [hl]; unfold knownEncoding
+    rcases pyCodecLookup W st enc with ⟨s, r⟩
+    cases r <;> rfl
+  · rw [hl] at h
+    obtain ⟨h0, h1, h2, h3⟩ := hm
+    simp only [pyCodecEncoder, pyCodecDecoder, pyCodecStreamReader, pyCodecStreamWriter, codecGetitem,
+      getStream, libGetAttr, libCall, hl, h, pyAttr, h0, h1, h2, h3]
+    refine ⟨by first | trivial | rfl, by first | trivial | rfl, ?_, ?_⟩ <;> cases errors <;>
+      first | trivial | rfl
+  · rw [hl] at h
+    simp only [libCall, libGetIncremental, libGetAttr, hl, h, pyAttr, hn]
+  · rw [hl] at h
+    simp only [getIncremental, makeIncremental, libCall, libGetIncremental, libGetAttr, hl, h, pyAttr]
+    rcases hg : W.getattr info attr with e | _ | a
+    · rfl
+    · rfl
+    · cases a <;> (try exact absurd hg hn) <;> cases errors <;> rfl
+  · rw [hl] at h
+    simp [pyCodecEncoder, codecGetitem, libGetAttr, hl, h]
+
+end PyLean.UnicodeObj.Codecs

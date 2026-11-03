@@ -3025,6 +3025,10 @@ def gen_codecs_registry(rng):
                           "errors": rng.choice([None, cps_of("strict")])})
         elif r < 0.73:
             steps.append({"t": "known", "name": name})
+        elif r < 0.79:
+            steps.append({"t": "pyget", "which": rng.choice(["encoder", "decoder", "incenc", "incdec", "reader",
+                                                             "writer"]),
+                          "name": name, "errors": rng.choice([None, cps_of("strict")])})
         elif r < 0.85:
             steps.append({"t": "capi", "which": rng.choice(["Encoder", "Decoder", "IncrementalEncoder",
                                                             "IncrementalDecoder", "StreamReader", "StreamWriter"]),
@@ -3199,6 +3203,19 @@ def run_codecs_registry(c):
                     else:
                         fn.argtypes = [ctypes.c_char_p, ctypes.py_object, ctypes.c_char_p]
                         r = fn(name, b"stream", err)
+                elif t == "pyget":
+                    w, name = st["which"], s_of(st["name"])
+                    eargs = [] if st["errors"] is None else [s_of(st["errors"])]
+                    if w == "encoder":
+                        r = codecs.getencoder(name)
+                    elif w == "decoder":
+                        r = codecs.getdecoder(name)
+                    elif w in ("incenc", "incdec"):
+                        f = (codecs.getincrementalencoder if w == "incenc" else codecs.getincrementaldecoder)(name)
+                        r = f(*eargs)
+                    else:
+                        f = (codecs.getreader if w == "reader" else codecs.getwriter)(name)
+                        r = f(b"stream", *eargs)
                 elif t == "regerr":
                     r = codecs.register_error(st["name"], 5 if st["h"] == "bad" else handlers[st["h"]])
                 elif t == "lookuperr":
