@@ -50,14 +50,14 @@ Lib/plistlib.py	512	520	_BinaryPlistParser._get_size	_get_size(self, tokenL)	tod
 Lib/plistlib.py	522	532	_BinaryPlistParser._read	_read(self, size)	todo	textlibs-plist-read	
 Lib/plistlib.py	534	542	_BinaryPlistParser._read_ints	_read_ints(self, n, size)	todo	textlibs-plist-read-ints	
 Lib/plistlib.py	544	545	_BinaryPlistParser._read_refs	_read_refs(self, n)	modelled	textlibs-plist-binary-round-trip,textlibs-plist-loads-binary-invalid-only	
-Lib/plistlib.py	547	644	_BinaryPlistParser._read_object	_read_object(self, ref)	todo	textlibs-plist-read-token	
+Lib/plistlib.py	547	644	_BinaryPlistParser._read_object	_read_object(self, ref)	todo	textlibs-plist-date-whole-seconds,textlibs-plist-read-token	
 Lib/plistlib.py	646	657	_count_to_size	_count_to_size(count)	modelled	textlibs-plist-count-to-size	
 Lib/plistlib.py	662	666	_BinaryPlistWriter.__init__	__init__(self, fp, sort_keys, skipkeys, aware_datetime=False)	todo		
 Lib/plistlib.py	668	711	_BinaryPlistWriter.write	write(self, value)	todo	textlibs-plist-write-errors,textlibs-plist-write-succeeds	
 Lib/plistlib.py	713	750	_BinaryPlistWriter._flatten	_flatten(self, value)	todo	textlibs-plist-write-succeeds	
 Lib/plistlib.py	752	756	_BinaryPlistWriter._getrefnum	_getrefnum(self, value)	modelled	textlibs-plist-binary-float-bits,textlibs-plist-binary-round-trip,textlibs-plist-write-succeeds	
 Lib/plistlib.py	758	772	_BinaryPlistWriter._write_size	_write_size(self, token, size)	todo	textlibs-plist-write-succeeds	
-Lib/plistlib.py	774	869	_BinaryPlistWriter._write_object	_write_object(self, value)	todo	textlibs-plist-write-errors,textlibs-plist-write-succeeds	
+Lib/plistlib.py	774	869	_BinaryPlistWriter._write_object	_write_object(self, value)	todo	textlibs-plist-date-whole-seconds,textlibs-plist-write-errors,textlibs-plist-write-succeeds	
 Lib/plistlib.py	872	873	_is_fmt_binary	_is_fmt_binary(header)	todo		
 Lib/plistlib.py	894	913	load	load(fp, *, fmt=None, dict_type=dict, aware_datetime=False)	todo	textlibs-plist-load-dispatch	
 Lib/plistlib.py	916	926	loads	loads(value, *, fmt=None, dict_type=dict, aware_datetime=False)	todo	textlibs-plist-load-dispatch,textlibs-plist-loads-str	

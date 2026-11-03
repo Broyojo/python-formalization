@@ -42,7 +42,7 @@ import PyLean.TextLibs.TomlLoads
 import PyLean.TextLibs.TomlInline
 import PyLean.TextLibs.EmailEw2
 import PyLean.TextLibs.ReEngineFast
-import PyLean.TextLibs.PlistWriteErr
+import PyLean.TextLibs.PlistDate
 
 /-!
 Text and binary formats, CPython 3.15.2. `Modules/_struct.c` is modelled in
@@ -2232,6 +2232,13 @@ def entries : List Entry := [
     statement := "dumps(w, fmt=FMT_BINARY) raises OverflowError(str(w)) for every int outside -2**63..2**64-1, ValueError('UIDs must be positive') for a UID with negative data and OverflowError('UID(d)') for data >= 2**64, TypeError(str(w)) for an unsupported object, UnicodeEncodeError for every str with a lone surrogate, TypeError(\"can't subtract offset-naive and offset-aware datetimes\") for an aware datetime without aware_datetime, and OverflowError('date value out of range') when an aware datetime's UTC time leaves the datetime range; dumps(value, fmt=f) raises ValueError('Unsupported format: %r') for fmt None or any other non-format object."
     source := "Doc/library/plistlib.rst (TypeError for unsupported types, OverflowError for unrepresentable ints); Lib/plistlib.py:788-791, :803, :810-815, :826, :832-843, :869, :934-935", status := .proven
     prop := ``Plist.WriteErrors, thm := some ``Plist.writeErrors_proven }
+,
+  { id := "textlibs-plist-date-whole-seconds", pyFile := "Lib/plistlib.py"
+    pyFns := ["_BinaryPlistWriter._write_object", "_BinaryPlistParser._read_object"]
+    statement := "Every whole-second datetime in datetime.min..datetime.max survives the binary format: the float _write_object writes for it, read back by _read_object as datetime(2001, 1, 1) + timedelta(seconds=f), is the same instant: the naive wall time with aware_datetime=False, and the UTC time with aware_datetime=True for an aware datetime with a whole-second fixed offset whose UTC time is in range."
+    source := "Doc/library/plistlib.rst (datetime.datetime is supported; aware_datetime converts to UTC); Lib/plistlib.py:587-595, :808-815", status := .proven
+    prop := ``Plist.DateWholeSeconds, thm := some ``Plist.dateWholeSeconds_proven
+    notes := "Uses the exact model of timedelta(seconds=float) (accum, leftover rounding, microseconds_to_delta_ex) and the binary64 model. Datetimes with microseconds are not all kept: textlibs-plist-binary-datetime refutes the general round trip at datetime.max (InvalidFileException), and far from 2001 microseconds are lost. ReadTokenSpec ties token 0x33 to this computation." }
 ]
 
 end PyLean.TextLibs
