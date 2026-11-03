@@ -49,8 +49,8 @@ present. -/
 def addSpec (it : FItem) (ap : Bool) (xs : List Elem) : List Elem :=
   if ap then (if xs.any (eqB it) then xs else xs ++ [.item it]) else .item it :: xs.eraseP (eqB it)
 
-theorem addFilter_list (it : FItem) (ap : Bool) (xs : List Elem) (v : Int) (h : EqTotal it xs) :
-    addFilter it ap ⟨.list xs, v⟩ = .ok ⟨.list (addSpec it ap xs), v + 1⟩ := by
+theorem addFilter_list (H : Hier) (it : FItem) (ap : Bool) (xs : List Elem) (v : Int) (h : EqTotal it xs) :
+    addFilter H it ap ⟨.list xs, v⟩ = .ok ⟨.list (addSpec it ap xs), v + 1⟩ := by
   cases ap
   · cases hany : xs.any (eqB it)
     · have hx : xs.eraseP (eqB it) = xs := by
@@ -63,7 +63,7 @@ theorem addFilter_list (it : FItem) (ap : Bool) (xs : List Elem) (v : Int) (h : 
   · cases hany : xs.any (eqB it) <;>
       simp [addFilter, pyContains_spec it xs h, hany, addSpec, bind, Except.bind, pure, Except.pure]
 
-theorem addFilter_ver (it : FItem) (ap : Bool) (s s' : FState) (h : addFilter it ap s = .ok s') :
+theorem addFilter_ver (H : Hier) (it : FItem) (ap : Bool) (s s' : FState) (h : addFilter H it ap s = .ok s') :
     s'.ver = s.ver + 1 := by
   unfold addFilter at h
   cases hc : s.cont with
@@ -78,7 +78,7 @@ theorem addFilter_ver (it : FItem) (ap : Bool) (s s' : FState) (h : addFilter it
           Except.ok.injEq] at h
         rw [← h]
       | error e =>
-        by_cases hv : isA e "ValueError" = true
+        by_cases hv : isA H e "ValueError" = true
         · simp only [hc, hr, hv, if_true, bind, Except.bind, pure, Except.pure, Bool.not_false,
             Except.ok.injEq] at h
           rw [← h]
@@ -193,7 +193,7 @@ theorem filterwarningsSpec_proven : FilterwarningsSpec := by
     intro s ms mds l ha hm hmd hl hv
     subst ha hm hmd hl
     simp [filterwarnings, fwPrep_of_valid E s ms mds cat l hv, bind, Except.bind,
-      addFilter_list _ ap xs v (htot _)]
+      addFilter_list _ _ ap xs v (htot _)]
   refine ⟨⟨?_, ?_⟩, hgood⟩
   · rintro ⟨s', hs'⟩
     unfold filterwarnings at hs'
@@ -211,12 +211,12 @@ theorem filterwarningsSpec_proven : FilterwarningsSpec := by
 meaning of the function parameters is as for filterwarnings()". So `simplefilter(a, c, l, ap)`
 does what `filterwarnings(a, '', c, '', l, ap)` does, for every argument and state. -/
 def SimpleIsFilter : Prop :=
-  ∀ (E : FEnv) a cat ln ap s, simplefilter a cat ln ap s = filterwarnings E a (.str "") cat (.str "") ln ap s
+  ∀ (E : FEnv) a cat ln ap s, simplefilter E.hier a cat ln ap s = filterwarnings E a (.str "") cat (.str "") ln ap s
 
 /-- With a category that is a Warning subclass (the documented argument), they agree. -/
 def SimpleIsFilterWarnCat : Prop :=
   ∀ (E : FEnv) a cat ln ap s, E.isType cat = true → E.isWarn cat = true →
-    simplefilter a cat ln ap s = filterwarnings E a (.str "") cat (.str "") ln ap s
+    simplefilter E.hier a cat ln ap s = filterwarnings E a (.str "") cat (.str "") ln ap s
 
 theorem simpleIsFilterWarnCat_proven : SimpleIsFilterWarnCat := by
   intro E a cat ln ap s ht hw
@@ -235,7 +235,7 @@ theorem simpleIsFilterWarnCat_proven : SimpleIsFilterWarnCat := by
 None, 0)`, which `filterwarnings` refuses (python/cpython#125893), and every later warning that
 reaches it fails in `issubclass` (C `PyObject_IsSubclass`, _warnings.c:512). -/
 theorem simpleIsFilter_refuted : ¬ SimpleIsFilter := fun h =>
-  refute (h ⟨fun _ _ => .ok (), fun _ => false, fun _ => false⟩ (.str "ignore") 12 (.int 0) false
+  refute (h ⟨fun _ _ => .ok (), fun _ => false, fun _ => false, builtinHier⟩ (.str "ignore") 12 (.int 0) false
     ⟨.list [], 1⟩)
     (x := .ok ⟨.list [.item ⟨"ignore", none, 12, none, 0⟩], 2⟩)
     (y := .error (.typeError "category must be a Warning subclass")) (by rfl) (by rfl)
@@ -257,15 +257,17 @@ theorem resetSpec_proven : ResetSpec :=
 /-- `try: filters.remove(item) except ValueError: pass` (:326-329) also catches a `ValueError` (or
 any subclass, such as `UnicodeError`) that an element's `__eq__` raises: the remove stops there,
 the new item goes in front anyway, and the elements (the raising one included) stay; any other
-exception propagates and changes nothing. Stated for a list whose first element raises. -/
+exception propagates and changes nothing. Stated for a list whose first element raises, for every
+class hierarchy (so for `io.UnsupportedOperation`, both an `OSError` and a `ValueError`, and for
+user subclasses). -/
 def AddFilterValueError : Prop :=
-  ∀ it id e xs v,
-    (isA e "ValueError" = true → addFilter it false ⟨.list (.other id (.error e) :: xs), v⟩ =
+  ∀ (H : Hier) it id e xs v,
+    (isA H e "ValueError" = true → addFilter H it false ⟨.list (.other id (.error e) :: xs), v⟩ =
       .ok ⟨.list (.item it :: .other id (.error e) :: xs), v + 1⟩) ∧
-    (isA e "ValueError" = false → addFilter it false ⟨.list (.other id (.error e) :: xs), v⟩ = .error e)
+    (isA H e "ValueError" = false → addFilter H it false ⟨.list (.other id (.error e) :: xs), v⟩ = .error e)
 
 theorem addFilterValueError_proven : AddFilterValueError := by
-  intro it id e xs v
+  intro H it id e xs v
   constructor
   · intro h; simp [addFilter, pyRemove, elemEq, bind, Except.bind, pure, Except.pure, h]
   · intro h; simp [addFilter, pyRemove, elemEq, bind, Except.bind, pure, Except.pure, h]
@@ -279,7 +281,7 @@ container, `_filters_mutated` from a thread that can take the lock, and C
 `_filters_mutated_lock_held` whenever it succeeds. -/
 def VersionBumps : Prop :=
   (∀ E a m cat md ln ap s s', filterwarnings E a m cat md ln ap s = .ok s' → s'.ver = s.ver + 1) ∧
-  (∀ a cat ln ap s s', simplefilter a cat ln ap s = .ok s' → s'.ver = s.ver + 1) ∧
+  (∀ H a cat ln ap s s', simplefilter H a cat ln ap s = .ok s' → s'.ver = s.ver + 1) ∧
   (∀ s s', resetwarnings s = .ok s' → s'.ver = s.ver + 1) ∧
   (∀ t l v, (l.owner = none → l.level = 0) → (l.owner = none ∨ l.owner = some t) →
     cFiltersMutated t l v = some (.ok (l, v + 1))) ∧
@@ -291,12 +293,12 @@ theorem versionBumps_proven : VersionBumps := by
     unfold filterwarnings at h
     cases hp : fwPrep E a m cat md ln with
     | error e => simp [hp, bind, Except.bind] at h
-    | ok it => simp only [hp, bind, Except.bind] at h; exact addFilter_ver _ _ _ _ h
-  · intro a cat ln ap s s' h
+    | ok it => simp only [hp, bind, Except.bind] at h; exact addFilter_ver _ _ _ _ _ h
+  · intro H a cat ln ap s s' h
     unfold simplefilter at h
     cases hp : sfPrep a cat ln with
     | error e => simp [hp, bind, Except.bind] at h
-    | ok it => simp only [hp, bind, Except.bind] at h; exact addFilter_ver _ _ _ _ h
+    | ok it => simp only [hp, bind, Except.bind] at h; exact addFilter_ver _ _ _ _ _ h
   · intro s s' h
     unfold resetwarnings at h
     split at h <;> simp at h <;> rw [← h]
@@ -443,10 +445,11 @@ theorem defaultsTwinNarrow_proven : DefaultsTwinNarrow := by
     bind, Except.bind, pure, Except.pure, Bool.false_and, Bool.not_false, Except.map, callPat]
   cases b0 <;> cases b1 <;> cases b2 <;> cases b3 <;> cases hmm : (m == "__main__") <;> simp [hmm]
 
-def defFE : FEnv := ⟨fun _ _ => .ok (), fun _ => true, fun _ => true⟩
+def defFE : FEnv := ⟨fun _ _ => .ok (), fun _ => true, fun _ => true, builtinHier⟩
 def defR : Rx → String → Py Bool := fun _ s => .ok (s.toList.take 8 == "__main__".toList)
 def defK : DefaultCats := ⟨3, 6, 7, 8⟩
-def defE : Env := ⟨fun a b => .ok (decide (a = b)), fun _ _ => false, fun _ _ => .ok false, .call (.ok ()) (.ok ())⟩
+def defE : Env := ⟨fun a b => .ok (decide (a = b)), fun _ _ => false, fun _ _ => .ok false, .call (.ok ()) (.ok ()),
+  builtinHier⟩
 def defCall : Call := ⟨"x", 3, "a.py", .int 1, .some "__main__x", .ok (), .none, .ok ()⟩
 
 theorem defEnv : DefaultsEnv defFE defR defK :=

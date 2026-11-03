@@ -101,7 +101,7 @@ def pyIntOfStr (s : List Char) : Option Int :=
 
 def optErr (m : String) : PyExc := .named "_OptionError" m
 
-def isImportErr (e : PyExc) : Bool := isA e "ImportError"
+def isImportErr (H : Hier) (e : PyExc) : Bool := isA H e "ImportError"
 
 /-- An attribute `getattr` finds: a class (its object id) or something else. -/
 inductive Found where
@@ -137,7 +137,7 @@ def gcModule (E : OEnv) (category : List Char) : Py (Nat × List Char) :=
     match E.imp module klass with
     | .ok m => .ok (m, klass)
     | .error e =>
-      if isImportErr e then .error (optErr s!"invalid module name: {pyReprStr (str' module)}")
+      if isImportErr E.fenv.hier e then .error (optErr s!"invalid module name: {pyReprStr (str' module)}")
       else .error e
 
 /-- `getattr(m, klass)`, :432-435, an `AttributeError` becoming `_OptionError`. -/
@@ -145,7 +145,7 @@ def gcAttr (E : OEnv) (category : List Char) (m : Nat) (klass : List Char) : Py 
   match E.getattr m klass with
   | .ok o => .ok o
   | .error e =>
-    if isA e "AttributeError" then
+    if isA E.fenv.hier e "AttributeError" then
       .error (optErr s!"unknown warning category: {pyReprStr (str' category)}")
     else .error e
 
