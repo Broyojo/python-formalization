@@ -20,8 +20,10 @@ Scope:
 * The filters list may hold other objects; `elem == item` for one of them is a callback that can
   raise (`list.remove` and `in` compare every element in order).
 * `_wm._get_filters()` is a list, a tuple (someone assigned `warnings.filters = (...)`), or, when
-  `warnings.filters` was deleted, the fresh `[]` that `_GlobalContext._filters` returns
-  (:76-80), whose changes are lost.
+  `warnings.filters` was deleted, what `_GlobalContext._filters` makes of the lookup (:75-80): the
+  plain `AttributeError` of a module with no `__getattr__` (`Cont.deleted`) or what a module
+  `__getattr__` raises (`Cont.raises`); `except AttributeError` (through the class relation)
+  gives the fresh `[]`, whose changes are lost, and any other exception propagates.
 * `re.compile` is a callback that can raise. `action not in {...}` hashes the action: a str is
   looked up, another hashable object is not in the set (its `repr` is in the message), an
   unhashable one raises `TypeError`.
@@ -56,11 +58,19 @@ inductive Elem where
   | item (f : FItem)
   | other (id : Nat) (eqRes : Py Bool)
 
-/-- What `_wm._get_filters()` returns. -/
+/-- What `_wm._get_filters()` finds. -/
 inductive Cont where
   | list (xs : List Elem)
   | tuple (xs : List Elem)
   | deleted
+  | raises (e : PyExc)
+
+def noFilters : PyExc := .named "AttributeError" "module 'warnings' has no attribute 'filters'"
+
+/-- `_GlobalContext._filters` for a deleted `warnings.filters`, :75-80: `try: return _wm.filters
+except AttributeError: return []`, the lookup raising `e`. -/
+def deletedOk (H : Hier) (e : PyExc) : Py Unit :=
+  if isA H e "AttributeError" then .ok () else .error e
 
 /-- The filters container and the filters version (`_filters_version` in Python, the C
 `filters_version` in C). -/
@@ -154,8 +164,10 @@ def noAttr (tp attr : String) : PyExc := .named "AttributeError" s!"'{tp}' objec
 `_filters_mutated_lock_held` therefore cannot either), remove a duplicate and insert at the front,
 or append unless present; then the version moves on. -/
 def addFilter (H : Hier) (it : FItem) (append : Bool) (s : FState) : Py FState := do
+  -- `filters = _wm._get_filters()`, :322
   let c ← match s.cont with
-    | .deleted => pure Cont.deleted
+    | .deleted => do deletedOk H noFilters; pure Cont.deleted
+    | .raises e => do deletedOk H e; pure (Cont.raises e)
     | .list xs =>
       if !append then do
         -- `try: filters.remove(item) except ValueError: pass`: a `ValueError` from an element's
@@ -233,10 +245,11 @@ def simplefilter (H : Hier) (action : ActA) (category : Nat) (lineno : IntA) (ap
   addFilter H it append s
 
 /-- `resetwarnings`, :337-341: `del _wm._get_filters()[:]`. -/
-def resetwarnings (s : FState) : Py FState :=
+def resetwarnings (H : Hier) (s : FState) : Py FState :=
   match s.cont with
   | .list _ => .ok ⟨.list [], s.ver + 1⟩
-  | .deleted => .ok ⟨.deleted, s.ver + 1⟩
+  | .deleted => (deletedOk H noFilters).map (fun () => ⟨.deleted, s.ver + 1⟩)
+  | .raises e => (deletedOk H e).map (fun () => ⟨.raises e, s.ver + 1⟩)
   | .tuple _ => .error (.typeError "'tuple' object does not support item deletion")
 
 /-! ## The version and the lock -/

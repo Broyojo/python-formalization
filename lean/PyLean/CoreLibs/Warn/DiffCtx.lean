@@ -53,6 +53,12 @@ def sysW (v : String) : Option Nat :=
   | "swap" => some 1
   | _ => some 0
 
+/-- A written text: `"dflt"`, or `["s", text]`. -/
+def jTxt : Txt → Json
+  | .dflt => jStr "dflt"
+  | .str s => Json.arr #["s", jStr s]
+  | .obj tp => Json.arr #["obj", jStr tp]
+
 def ctxOp (use : Bool) (op : Json) (R : CtxRun) : Except String (CtxRun × Json) := do
   let k ← jStrAt op 0
   match k with
@@ -92,7 +98,7 @@ def ctxOp (use : Bool) (op : Json) (R : CtxRun) : Except String (CtxRun × Json)
       | some (.logged l) =>
         let (seen, n) := seqId R.seen l
         return ({ R with seen := seen }, Json.arr #["ok", Json.arr #["log", toJson n]])
-      | some .written => return (R, Json.arr #["ok", Json.arr #["written"]])
+      | some (.written t) => return (R, Json.arr #["ok", Json.arr #["written", jTxt t]])
       | some (.hook i) => return (R, Json.arr #["ok", Json.arr #["hook", toJson i]])
       | _ => return (R, Json.arr #["ok", Json.arr #["lost"]])
   | "sf" =>
@@ -111,24 +117,33 @@ def ctxOp (use : Bool) (op : Json) (R : CtxRun) : Except String (CtxRun × Json)
 def runCtx (j : Json) : Except String Json := do
   let use ← (← j.getObjVal? "use").getBool?
   let init ← (← jArr (← j.getObjVal? "filters")).mapM pElem
-  let stderr : Option (Py Unit) := match ← (← j.getObjVal? "stderr").getStr? with
+  -- an `io.StringIO`, which refuses a text that is not a str, or a file whose `write` raises
+  let stderr : Option (Txt → Py Unit) := match ← (← j.getObjVal? "stderr").getStr? with
     | "none" => none
-    | "oserr" => some (.error (.named "OSError" "write failed"))
-    | "keyerr" => some (.error (.keyError "'write failed'"))
-    | "brokenpipe" => some (.error (.named "BrokenPipeError" "write failed"))
-    | "unsupported" => some (.error (.named "UnsupportedOperation" "write failed"))
-    | "myoserr" => some (.error (.named "MyOSError" "write failed"))
-    | "yerr" => some (.error (.named "Y" "y"))
-    | _ => some (.ok ())
+    | "oserr" => some fun _ => .error (.named "OSError" "write failed")
+    | "keyerr" => some fun _ => .error (.keyError "'write failed'")
+    | "brokenpipe" => some fun _ => .error (.named "BrokenPipeError" "write failed")
+    | "unsupported" => some fun _ => .error (.named "UnsupportedOperation" "write failed")
+    | "myoserr" => some fun _ => .error (.named "MyOSError" "write failed")
+    | "yerr" => some fun _ => .error (.named "Y" "y")
+    | _ => some fun t => match t with
+      | .obj tp => .error (.typeError s!"string argument expected, got '{tp}'")
+      | _ => .ok ()
   let sw := pFnShow (← (← j.getObjVal? "show").getStr?)
   let im := pFnImpl (← (← j.getObjVal? "impl").getStr?)
   let fmt : Option Fn := match j.getObjVal? "fmt" with
     | .ok (.str "raise") => some (.userRaises 3 (.valueError "fmt failed"))
     | .ok (.str "deleted") => none
+    | .ok (.str "ret") => some (.ret 4 (.str "FMT\n"))
+    | .ok (.str "none") => some (.user 4)
+    | .ok (.str "show") => some .showOrig
+    | .ok (.str "impl") => some .implOrig
+    | .ok (.str "log") => some (.logAppend 999)
     | _ => some .fmtOrig
   -- the module `__getattr__`: `getattr` maps `showwarning` / `formatwarning` to what it raises
   let ga : String → Option PyExc := fun a => caseGetattr j a
-  let st : MState := MState.mk (fun i => if i = 0 then init else []) (fun _ => []) 1 (some 0) sw im
+  let fls : Option Ref := if optBool j "fdel" then none else some 0
+  let st : MState := MState.mk (fun i => if i = 0 then init else []) (fun _ => []) 1 fls sw im
     fmt 0 .unset (fun _ => ⟨0, none⟩) stderr [] (fun _ => false) dHier (some 0) ⟨dModRepr, ga⟩
   let mut R : CtxRun := ⟨st, #[], #[]⟩
   let mut outs : Array Json := #[]
@@ -151,7 +166,10 @@ def runCtx (j : Json) : Except String Json := do
     | .userRaises _ _ => (R.seen, jStr "userraise")
     | _ => (R.seen, jStr "user")
   let logs := seen.toList.map fun l => Json.arr ((st.logs l).map (fun m => jStr (toString m))).toArray
-  let final := Json.arr #[Json.arr ((getFilters use st).map jElem).toArray, jBool (st.filters == some 0),
+  let fin : Json := match pyGetFilters use st with
+    | .ok fs => Json.arr (fs.map jElem).toArray
+    | .error e => jRes (α := Unit) (.error e)
+  let final := Json.arr #[fin, jBool (st.filters == some 0),
     swk, impk, jInt st.ver, Json.arr logs.toArray]
   return Json.mkObj [("ok", Json.arr #[Json.arr outs, final])]
 

@@ -10186,9 +10186,8 @@ def warn_elem_enc(e):
 
 
 def warn_cont_enc(mod):
-    try:
-        f = mod.filters
-    except AttributeError:
+    f = mod.__dict__.get("filters", warn_SENT)
+    if f is warn_SENT:
         return ["deleted"]
     return ["list" if isinstance(f, list) else "tuple", [warn_elem_enc(e) for e in f]]
 
@@ -10260,7 +10259,7 @@ def warn_gen_filt(rng):
     elif k < .9:
         init = ["tuple", [warn_gen_elem(rng) for _ in range(rng.choice([0, 1, 2]))]]
     else:
-        init = ["deleted"]
+        init = ["deleted"] + ([rng.choice(["key", "ae"])] if rng.random() < .4 else [])
     ops = []
     for _ in range(rng.choice([1, 2, 3, 4])):
         r = rng.random()
@@ -10301,8 +10300,9 @@ def warn_str_mk(s):
 
 def warn_set_cont(mod, init):
     if init[0] == "deleted":
-        if hasattr(mod, "filters"):
-            del mod.filters
+        mod.__dict__.pop("filters", None)
+        if len(init) > 1:
+            warn_install_getattr(mod, {"filters": init[1]})
     else:
         xs = [warn_elem_mk(e) for e in init[1]]
         mod.filters = xs if init[0] == "list" else tuple(xs)
@@ -10365,6 +10365,7 @@ def warn_run_filt(case):
         warn_in_helper(warn_c._release_lock)
     for _ in range(depth):
         warn_c._release_lock()
+    mod.__dict__.pop("__getattr__", None)
     cont = warn_cont_enc(mod)
     dv = warn_ver(mod) - v0
     mod.filters = []
@@ -10645,8 +10646,10 @@ def warn_gen_ctx(rng):
             "impl": rng.choice(["orig", "orig", "orig", "user", "noncallable", "userraise"]),
             "stderr": rng.choice(["ok", "ok", "ok", "none", "oserr", "keyerr", "brokenpipe", "unsupported",
                                   "myoserr", "yerr"]),
-            "fmt": "raise" if rng.random() < .1 else "deleted" if rng.random() < .1 else "orig", "ops": ops,
-            **({"getattr": {a: rng.choice(["key", "ae"]) for a in ["showwarning", "formatwarning"]
+            "fmt": rng.choice(["raise", "deleted", "ret", "ret", "none", "show", "impl", "log"])
+            if rng.random() < .3 else "orig", "ops": ops,
+            **({"fdel": True} if rng.random() < .1 else {}),
+            **({"getattr": {a: rng.choice(["key", "ae"]) for a in ["showwarning", "formatwarning", "filters"]
                             if rng.random() < .5}} if rng.random() < .2 else {})}
 
 
@@ -10667,6 +10670,8 @@ def warn_run_ctx1(case):
     hooks = {"user": lambda *a: shown.append(["hook", 1]), "noncallable": 5, "userraise": raising_hook}
     init = [warn_elem_mk(e) for e in case["filters"]]
     mod.filters = init
+    if case.get("fdel"):
+        del mod.filters
     if case["show"] == "deleted":
         del mod.showwarning
     elif case["show"] != "orig":
@@ -10689,6 +10694,9 @@ def warn_run_ctx1(case):
         mod.formatwarning = raising_fmt
     elif case.get("fmt") == "deleted":
         del mod.formatwarning
+    elif case.get("fmt") in ("ret", "none", "show", "impl", "log"):
+        mod.formatwarning = {"ret": lambda *a: "FMT\n", "none": lambda *a: None, "show": mod._showwarning_orig,
+                             "impl": orig_impl, "log": [].append}[case["fmt"]]
     if "getattr" in case:
         warn_install_getattr(mod, case["getattr"])
     v0 = warn_cver()
@@ -10728,7 +10736,8 @@ def warn_run_ctx1(case):
                     elif len(shown) > n0:
                         res = shown[-1]
                     elif err.tell() > e0:
-                        res = ["written"]
+                        text = err.getvalue()[e0:]
+                        res = ["written", "dflt" if text == warn_PYG["_formatwarnmsg_impl"](m) else ["s", text]]
                     else:
                         cand = None
                         impl = getattr(mod, "_showwarnmsg_impl", None)
@@ -10771,7 +10780,11 @@ def warn_run_ctx1(case):
         impk = ("orig" if imp is orig_impl else "noncallable" if isinstance(imp, int) else
                 "userraise" if imp is raising_hook else
                 ["log", logid(imp.__self__)] if isinstance(getattr(imp, "__self__", None), list) else "user")
-        final = [[warn_elem_enc(e) for e in mod._get_filters()], mod.filters is init, swk, impk,
+        try:
+            fin = [warn_elem_enc(e) for e in mod._get_filters()]
+        except warn_EXC as e:
+            fin = ["exc", type(e).__name__, str(e)]
+        final = [fin, mod.__dict__.get("filters") is init, swk, impk,
                  warn_cver() - v0, [[str(getattr(x, "message", x)) for x in lg] for lg in logs]]
     finally:
         sys.stderr = old_stderr

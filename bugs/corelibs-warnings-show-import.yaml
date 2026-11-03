@@ -15,7 +15,8 @@ summary: |
   wrapper that raises RuntimeError for 'warnings' (an import hook that refuses a module, a
   sandbox), `_warnings.warn_explicit(...)` raises the RuntimeError while
   `_py_warnings.warn_explicit(...)` shows the warning. The same wrapper makes every C
-  `warnings.warn` raise, though `warnings` is already imported.
+  `warnings.warn` of a warning that gets shown raise (an ignored one never reaches
+  `call_show_warning`), though `warnings` is already imported.
 likelihood: |
   Low: it needs an `__import__` replacement that raises something other than ImportError for
   'warnings'.

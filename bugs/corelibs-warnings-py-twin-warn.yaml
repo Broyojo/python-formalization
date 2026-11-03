@@ -43,7 +43,9 @@ summary: |
   8. `warnings.filters` (or a context's `_filters`) a tuple: C raises ValueError
      "_warnings.filters must be a list" (:356-360, :332-337); Python iterates the tuple.
   9. `warnings._showwarnmsg` deleted: C falls back to `show_warning` and prints (:750-755);
-     Python raises AttributeError. Not callable: different TypeErrors. `WarningMessage` deleted:
+     Python raises AttributeError. Not callable: C "warnings._showwarnmsg() must be set to a
+     callable" (`PyCallable_Check`, :757-761), Python "'int' object is not callable"
+     (warnTwinsModuleState_refuted_noncallable). `WarningMessage` deleted:
      C RuntimeError "unable to get warnings.WarningMessage", Python AttributeError.
   10. `warnings.onceregistry` not a dict, with the `once` action: C TypeError (:416-422), Python
      AttributeError from `.get`. Deleted: C uses the dict it read last, Python AttributeError.

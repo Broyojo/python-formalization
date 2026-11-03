@@ -676,6 +676,15 @@ theorem warnTwinsModuleState_refuted_dfltGetattr : ¬ WarnTwinsModuleState := fu
     (Or.inl rfl)).1
     (x := .ok true) (y := .error aeErr) (by rfl) (by rfl) (by simp)
 
+/-- `warnings._showwarnmsg` set to an object that is not callable: C's `PyCallable_Check` raises its
+own `TypeError` (:757-761) before `WarningMessage` is looked up; Python builds the `WarningMessage`
+and fails calling it, with another message (measured on 3.15.2). -/
+theorem warnTwinsModuleState_refuted_noncallable : ¬ WarnTwinsModuleState := fun h =>
+  refute (h (Eshow (.noncallable "int")) (K0 "always") 1 (call0 1 (.some "a")) .none (by decide)
+    (fun _ _ => ⟨_, rfl⟩) (lineOk0 _ _ (by decide) (by decide)) modOk0 (msgOk0 _ _) (Or.inl rfl)).1
+    (x := .error (.typeError "warnings._showwarnmsg() must be set to a callable"))
+    (y := .error (.typeError "'int' object is not callable")) (by rfl) (by rfl) (by simp)
+
 /-- The same for a deleted `onceregistry` (C uses the dict it read last). -/
 theorem warnTwinsModuleState_refuted_onceGetattr : ¬ WarnTwinsModuleState := fun h =>
   refute (h E0 ⟨false, false, .val (.str "once"), .raises aeErr []⟩ 1 (call0 1 (.some "a")) .none
