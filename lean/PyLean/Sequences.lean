@@ -206,7 +206,7 @@ def entries : List Entry := [
     prop := ``ArrayFromFile, thm := some ``arrayFromFile_proven },
   { id := "sequences-array-frombytes-buffer", pyFile := "Modules/arraymodule.c"
     pyFns := ["frombytes", "array_array_frombytes_impl"]
-    statement := "a.frombytes(arg) for every argument whose __buffer__ and __release_buffer__ may raise and change the array: a raising __buffer__ propagates with nothing released; otherwise the buffer is released last on every path (after the copy, on the array as frombytes leaves it) and the release does not change the outcome: item size not 1 is TypeError, a length not a multiple of the item size ValueError, otherwise the view's items are appended."
+    statement := "a.frombytes(arg) for every argument whose __buffer__ and __release_buffer__ may raise and change the array: a raising __buffer__ propagates with nothing released; otherwise every exit releases the buffer last (after the copy, on the array as frombytes leaves it) and the release does not change the outcome: item size not 1 is TypeError, a length not a multiple of the item size ValueError, an item count past the Py_ssize_t limits MemoryError, a non-empty view while the array is exported BufferError (nothing copied), an empty view success even while exported, otherwise the view's items are appended."
     source := "Doc/library/array.rst frombytes; Objects/typeobject.c:11516-11590 (release errors are unraisable)", status := .proven
     prop := ``ArrayFromBytesCall, thm := some ``arrayFromBytesCall_proven },
   { id := "sequences-array-tofile", pyFile := "Modules/arraymodule.c"

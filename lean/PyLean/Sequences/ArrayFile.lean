@@ -241,7 +241,13 @@ theorem arrayFromFileBytes_proven : ArrayFromFileBytes := by
   array as `frombytes` leaves it, and the release cannot change the outcome: a view whose item
   size is not 1 raises `TypeError`, a length that is not a multiple of the item size
   `ValueError`, each with the array as `__buffer__` left it; otherwise the view's items are
-  appended (no buffer exported, the result fits).
+  appended (no buffer exported, the result fits);
+* an empty view succeeds and appends nothing, also while the array is exported;
+* a non-empty view while the array is exported (by a `memoryview`, or by `__buffer__` itself)
+  raises `BufferError` from `array_resize` (:1938-1941) and copies nothing;
+* a view whose item count `n` passes `PY_SSIZE_T_MAX - len(a)` or makes `len(a) + n` pass
+  `PY_SSIZE_T_MAX / itemsize` raises `MemoryError` (:1932-1936) before any resize;
+and each of these exits releases the buffer on the array as it stands (`b.release a1`).
 With `plainBuf bs` (a `bytes` object) this is `ArrayBytesRoundTrip`'s `frombytes`. -/
 def ArrayFromBytesCall : Prop :=
   (∀ a (b : BufArg) e a1, b.getbuf a = (.error e, a1) → arrFromBytesCall a b = (.error e, a1)) ∧
@@ -252,11 +258,21 @@ def ArrayFromBytesCall : Prop :=
   (∀ a (b : BufArg) bs a1, b.getbuf a = (.ok (bs, 1), a1) → a1.exports = 0 →
     (bs.length : Int) % a1.tc.itemsize = 0 → a1.Fits (a1.items.length + (bs.length : Int) / a1.tc.itemsize) →
     ∃ a2, arrFromBytesCall a b = (.ok (), b.release a2) ∧ a2.items = a1.items ++ decodedItems a1.tc bs ∧
-      a2.tc = a1.tc)
+      a2.tc = a1.tc) ∧
+  (∀ a (b : BufArg) a1, b.getbuf a = (.ok ([], 1), a1) → arrFromBytesCall a b = (.ok (), b.release a1)) ∧
+  (∀ a (b : BufArg) bs a1, b.getbuf a = (.ok (bs, 1), a1) → a1.exports > 0 → bs ≠ [] →
+    (bs.length : Int) % a1.tc.itemsize = 0 → a1.Fits (a1.items.length + (bs.length : Int) / a1.tc.itemsize) →
+    arrFromBytesCall a b = (.error bufferErr, b.release a1)) ∧
+  (∀ a (b : BufArg) bs a1, b.getbuf a = (.ok (bs, 1), a1) → (bs.length : Int) % a1.tc.itemsize = 0 →
+    (bs.length : Int) / a1.tc.itemsize > 0 →
+    ((bs.length : Int) / a1.tc.itemsize > ssizeMax - a1.items.length ∨
+      (a1.items.length : Int) + (bs.length : Int) / a1.tc.itemsize > ssizeMax / a1.tc.itemsize) →
+    arrFromBytesCall a b = (.error memoryError, b.release a1))
 
 theorem arrayFromBytesCall_proven : ArrayFromBytesCall := by
   refine ⟨fun a b e a1 hg => ?_, fun a b bs isz a1 hi hg => ?_, fun a b bs a1 hg hm => ?_,
-    fun a b bs a1 hg hx hm hf => ?_⟩
+    fun a b bs a1 hg hx hm hf => ?_, fun a b a1 hg => ?_, fun a b bs a1 hg hx hne hm hf => ?_,
+    fun a b bs a1 hg hm hpos hbig => ?_⟩
   · simp only [arrFromBytesCall, hg]
   · have : arrFromBytes a1 bs isz = .error (.typeError "a bytes-like object is required") := by
       unfold arrFromBytes
@@ -270,6 +286,27 @@ theorem arrayFromBytesCall_proven : ArrayFromBytesCall := by
     simp only [arrFromBytesCall, hg, this]
   · obtain ⟨a2, h1, h2, h3, _⟩ := arrFromBytes_ok a1 bs hx hm hf
     exact ⟨a2, by simp only [arrFromBytesCall, hg, h1], h2, h3⟩
+  · have : arrFromBytes a1 [] 1 = .ok a1 := by simp [arrFromBytes, bind, Except.bind, pure, Except.pure]
+    simp only [arrFromBytesCall, hg, this]
+  · have hk : (bs.length : Int) / a1.tc.itemsize > 0 := by
+      have hl : bs.length ≠ 0 := fun h => hne (List.eq_nil_of_length_eq_zero h)
+      rcases itemsize_cases a1.tc with h | h | h | h | h <;> rw [h] at hm ⊢ <;> omega
+    have : arrFromBytes a1 bs 1 = .error bufferErr := by
+      unfold arrFromBytes
+      simp only [bind, Except.bind, pure, Except.pure, throwE, show ¬ ((1 : Int) ≠ 1) by decide, ite_false]
+      rw [iteF (show ¬ ((bs.length : Int) % a1.tc.itemsize ≠ 0) by rw [hm]; decide), iteT hk]
+      have hsm : ¬ ((bs.length : Int) / a1.tc.itemsize > ssizeMax - a1.items.length ∨
+          (a1.items.length : Int) + (bs.length : Int) / a1.tc.itemsize > ssizeMax / a1.tc.itemsize) := by
+        unfold Arr.Fits at hf
+        have : ssizeMax / a1.tc.itemsize ≤ ssizeMax := Int.ediv_le_self _ (by unfold ssizeMax; omega)
+        omega
+      rw [iteF hsm, arrResize_exported a1 _ hx (by omega)]
+    simp only [arrFromBytesCall, hg, this]
+  · have : arrFromBytes a1 bs 1 = .error memoryError := by
+      unfold arrFromBytes
+      simp only [bind, Except.bind, pure, Except.pure, throwE, show ¬ ((1 : Int) ≠ 1) by decide, ite_false]
+      rw [iteF (show ¬ ((bs.length : Int) % a1.tc.itemsize ≠ 0) by rw [hm]; decide), iteT hpos, iteT hbig]
+    simp only [arrFromBytesCall, hg, this]
 
 /-- `fromfile` when `read` returns an instance of a `bytes` subclass of length `size` with the
 buffer methods `buf`: the items come from the buffer and the `EOFError` test from `size`, which
@@ -298,7 +335,7 @@ def ArrayFromFileSub : Prop :=
       a3.items = a2.items ++ decodedItems a2.tc bs)
 
 theorem arrayFromFileSub_proven : ArrayFromFileSub := by
-  obtain ⟨c1, c2, c3, c4⟩ := arrayFromBytesCall_proven
+  obtain ⟨c1, c2, c3, c4, _⟩ := arrayFromBytesCall_proven
   refine ⟨fun a read n size buf e a1 a2 hn hr hg => ?_, fun a read n size buf bs isz a1 a2 hn hi hr hg => ?_,
     fun a read n size buf bs a1 a2 hn hr hg hm => ?_, fun a read n size buf bs a1 a2 hn hr hg hx hm hf => ?_⟩
   · simp only [arrFromFileC]; rw [iteF (by omega), hr]
