@@ -112,7 +112,10 @@ keywords among `name`, `path` and `name_from` (at most three, the parse's own bo
 the positional arguments, each of the three members is its keyword or NULL (`Py_XSETREF` with
 NULL, `:1827-1829`), and `msg` is the argument when there is exactly one and NULL otherwise
 (`:1831-1834`), on a first or a later call. An unexpected keyword is the `TypeError` of the
-parse, raised after `BaseException_init` has already replaced `args` (`:1813`). An `__init__`
+parse, `ImportError() got an unexpected keyword argument 'k'` followed by
+`. Did you mean 'n'?` when `_Py_CalculateSuggestions` finds a close parameter name
+(`Python/getargs.c:1979-1995`, `unexpectedKwMsg`), raised after `BaseException_init` has already
+replaced `args` (`:1813`). An `__init__`
 that ignored its keywords, or kept an old `msg`, fails. `MemNodup` is the type invariant that each
 member name is stored once. -/
 def ImportErrorInitKw : Prop :=
@@ -127,7 +130,7 @@ def ImportErrorInitKw : Prop :=
   (∀ (a : Addr) (args : List Val) (kw : Kw) (k : Name) (x : Val) (w : World),
     kw.length ≤ 3 → kw.find? (fun p => !importKw.contains p.1) = some (k, x) →
     importErrorInit (.obj a) args kw w =
-      .err (.exc B.TypeError s!"ImportError() got an unexpected keyword argument '{k}'" none)
+      .err (.exc B.TypeError (unexpectedKwMsg "ImportError" importKw k) none)
         (excUpdW w a fun d => { d with args := args }))
 
 theorem importErrorInitKw_proven : ImportErrorInitKw := by
@@ -175,6 +178,74 @@ theorem importErrorInitKw_proven : ImportErrorInitKw := by
     have hgt : ¬ 3 < kw.length := by omega
     simp only [importKw] at hf hany
     simp only [importErrorInit, baseExceptionInit, argNoKeywords, argKeywordOnly,
+      argUnexpectedKeyword, M.bind_app, getW_app, excUpdate_app, List.isEmpty_nil, Bool.not_true,
+      Bool.false_eq_true, if_false, List.length_cons, List.length_nil, gt_iff_lt, hgt, hany,
+      if_true, hf, M.pure_app, typeErr, raiseC]
+    try rfl
+
+/-- **The suggestion is `_Py_CalculateSuggestions`'s.** The keyword names of `ImportError`,
+`NameError` and `AttributeError` against the keywords tried on CPython 3.15.2, with the messages
+it printed: a close name is suggested (`nam`, `Name`, `nme`, `named` give `name`; `pat`, `path_`
+give `path`; `name_fro`, `nameFrom` give `name_from`; `ob`, `obj_` give `obj`), a far one is not
+(`zzq`, `x`, `naem`, `é`, `o`, `zz`, and `obj` for `NameError`). -/
+def KwSuggestionsMatch : Prop :=
+  unexpectedKwMsg "ImportError" importKw "nam" =
+    "ImportError() got an unexpected keyword argument 'nam'. Did you mean 'name'?" ∧
+  calcSuggestion importKw "Name" = some "name" ∧
+  calcSuggestion importKw "nme" = some "name" ∧
+  calcSuggestion importKw "named" = some "name" ∧
+  calcSuggestion importKw "pat" = some "path" ∧
+  calcSuggestion importKw "path_" = some "path" ∧
+  calcSuggestion importKw "name_fro" = some "name_from" ∧
+  calcSuggestion importKw "nameFrom" = some "name_from" ∧
+  calcSuggestion importKw "zzq" = none ∧
+  calcSuggestion importKw "x" = none ∧
+  calcSuggestion importKw "naem" = none ∧
+  calcSuggestion importKw "é" = none ∧
+  unexpectedKwMsg "ImportError" importKw "zzq" = "ImportError() got an unexpected keyword argument 'zzq'" ∧
+  calcSuggestion ["name"] "obj" = none ∧
+  calcSuggestion ["name"] "zz" = none ∧
+  calcSuggestion ["name", "obj"] "ob" = some "obj" ∧
+  calcSuggestion ["name", "obj"] "obj_" = some "obj" ∧
+  calcSuggestion ["name", "obj"] "nme" = some "name" ∧
+  calcSuggestion ["name", "obj"] "o" = none
+
+theorem kwSuggestionsMatch_proven : KwSuggestionsMatch := by
+  unfold KwSuggestionsMatch
+  decide +kernel
+
+/-- **`NameError` and `AttributeError` refuse an unknown keyword with the same message**, after
+`BaseException_init` has replaced `args` (`Objects/exceptions.c:2580-2605`, `:2663-2690`). -/
+def NameAttrInitUnexpected : Prop :=
+  (∀ (a : Addr) (args : List Val) (kw : Kw) (k : Name) (x : Val) (w : World),
+    kw.length ≤ 1 → kw.find? (fun p => !["name"].contains p.1) = some (k, x) →
+    nameErrorInit (.obj a) args kw w =
+      .err (.exc B.TypeError (unexpectedKwMsg "NameError" ["name"] k) none)
+        (excUpdW w a fun d => { d with args := args })) ∧
+  (∀ (a : Addr) (args : List Val) (kw : Kw) (k : Name) (x : Val) (w : World),
+    kw.length ≤ 2 → kw.find? (fun p => !["name", "obj"].contains p.1) = some (k, x) →
+    attributeErrorInit (.obj a) args kw w =
+      .err (.exc B.TypeError (unexpectedKwMsg "AttributeError" ["name", "obj"] k) none)
+        (excUpdW w a fun d => { d with args := args }))
+
+theorem nameAttrInitUnexpected_proven : NameAttrInitUnexpected := by
+  refine ⟨?_, ?_⟩
+  · intro a args kw k x w hl hf
+    have h2 := List.find?_some hf
+    have hany : kw.any (fun p => !["name"].contains p.1) = true :=
+      List.any_eq_true.mpr ⟨(k, x), List.mem_of_find?_eq_some hf, h2⟩
+    have hgt : ¬ 1 < kw.length := by omega
+    simp only [nameErrorInit, baseExceptionInit, argNoKeywords, argKeywordOnly,
+      argUnexpectedKeyword, M.bind_app, getW_app, excUpdate_app, List.isEmpty_nil, Bool.not_true,
+      Bool.false_eq_true, if_false, List.length_cons, List.length_nil, gt_iff_lt, hgt, hany,
+      if_true, hf, M.pure_app, typeErr, raiseC]
+    try rfl
+  · intro a args kw k x w hl hf
+    have h2 := List.find?_some hf
+    have hany : kw.any (fun p => !["name", "obj"].contains p.1) = true :=
+      List.any_eq_true.mpr ⟨(k, x), List.mem_of_find?_eq_some hf, h2⟩
+    have hgt : ¬ 2 < kw.length := by omega
+    simp only [attributeErrorInit, baseExceptionInit, argNoKeywords, argKeywordOnly,
       argUnexpectedKeyword, M.bind_app, getW_app, excUpdate_app, List.isEmpty_nil, Bool.not_true,
       Bool.false_eq_true, if_false, List.length_cons, List.length_nil, gt_iff_lt, hgt, hany,
       if_true, hf, M.pure_app, typeErr, raiseC]
@@ -443,5 +514,72 @@ theorem osErrorWrittenSetBranches_proven : OsErrorWrittenSetBranches := by
     · simp [osErrorWrittenGet, excUpdW_data hx, attrErr, raiseC]
   · intro rt self n w h
     simp [osErrorWrittenSet, excAsSsizeValueError, excNumberIndex, intOf, h, valueErr, raiseC]
+
+/-- **`oserror_init` with two arguments, and with a `None` filename** (`:2136`, `:2165-2172`):
+`OSError(errno, strerror)` stores both and keeps `args` whole; with 3 to 5 arguments and a `None`
+third one, the filename block is skipped (no `filename`, no `filename2`, no cut), and `errno` and
+`strerror` are stored. -/
+def OsErrorInitTwoOrNone : Prop :=
+  (∀ (rt : Rt) (a : Addr) (d : ExcData) (e s : Val) (w : World), IsExc w a d →
+    ∃ w', oserrorInit rt (.obj a) [e, s] (oserrorParseArgs [e, s]) w = .ok () w' ∧
+      memGet (excDataOf w' (.obj a)) "errno" = some e ∧
+      memGet (excDataOf w' (.obj a)) "strerror" = some s ∧
+      memGet (excDataOf w' (.obj a)) "filename" = memGet d "filename" ∧
+      excArgs w' (.obj a) = [e, s]) ∧
+  (∀ (rt : Rt) (a : Addr) (d : ExcData) (e s : Val) (rest : List Val) (w : World), IsExc w a d →
+    rest.length ≤ 2 →
+    ∃ w', oserrorInit rt (.obj a) (e :: s :: .none :: rest)
+        (oserrorParseArgs (e :: s :: .none :: rest)) w = .ok () w' ∧
+      memGet (excDataOf w' (.obj a)) "errno" = some e ∧
+      memGet (excDataOf w' (.obj a)) "strerror" = some s ∧
+      memGet (excDataOf w' (.obj a)) "filename" = memGet d "filename" ∧
+      memGet (excDataOf w' (.obj a)) "filename2" = memGet d "filename2" ∧
+      excArgs w' (.obj a) = e :: s :: .none :: rest)
+
+theorem osErrorInitTwoOrNone_proven : OsErrorInitTwoOrNone := by
+  refine ⟨?_, ?_⟩
+  · intro rt a d e s w hx
+    have hp : oserrorParseArgs [e, s] = { myerrno := some e, strerror := some s } := by
+      simp [oserrorParseArgs]
+    have h4 := isExc_memSet hx "errno" (some e)
+    have h5 := isExc_memSet h4 "strerror" (some s)
+    have h6 := h5.update (fun d => { d with args := [e, s] })
+    refine ex_of_isExc h6 ?_ ?_
+    · simp only [oserrorInit, hp, M.bind_app, getW_app]
+      simp [excUpdate_app]
+      try rfl
+    · intro h6
+      simp only [excArgs]
+      rw [h6.data]
+      simp only [memGet_withArgs]
+      refine ⟨?_, ?_, ?_, ?_⟩
+      · rw [memGet_memSet_ne _ "strerror" "errno" _ (by decide), memGet_memSet_same]
+      · rw [memGet_memSet_same]
+      · rw [memGet_memSet_ne _ "strerror" "filename" _ (by decide),
+          memGet_memSet_ne _ "errno" "filename" _ (by decide)]
+      · first | rfl | trivial
+  · intro rt a d e s rest w hx hr
+    have hp : oserrorParseArgs (e :: s :: .none :: rest) =
+        { myerrno := some e, strerror := some s, filename := some .none, filename2 := rest[1]? } := by
+      simp [oserrorParseArgs]; omega
+    have h4 := isExc_memSet hx "errno" (some e)
+    have h5 := isExc_memSet h4 "strerror" (some s)
+    have h6 := h5.update (fun d => { d with args := e :: s :: .none :: rest })
+    refine ex_of_isExc h6 ?_ ?_
+    · simp only [oserrorInit, hp, M.bind_app, getW_app]
+      simp [Val.is, excUpdate_app]
+      try rfl
+    · intro h6
+      simp only [excArgs]
+      rw [h6.data]
+      simp only [memGet_withArgs]
+      refine ⟨?_, ?_, ?_, ?_, ?_⟩
+      · rw [memGet_memSet_ne _ "strerror" "errno" _ (by decide), memGet_memSet_same]
+      · rw [memGet_memSet_same]
+      · rw [memGet_memSet_ne _ "strerror" "filename" _ (by decide),
+          memGet_memSet_ne _ "errno" "filename" _ (by decide)]
+      · rw [memGet_memSet_ne _ "strerror" "filename2" _ (by decide),
+          memGet_memSet_ne _ "errno" "filename2" _ (by decide)]
+      · first | rfl | trivial
 
 end PyLean.TypeObj

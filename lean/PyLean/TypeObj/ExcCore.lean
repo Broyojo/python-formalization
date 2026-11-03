@@ -294,11 +294,110 @@ def argN (rt : Rt) (v : Val) : M Int := do
   let i ← excNumberIndex rt v
   excAsSsizeLong i
 
-/-- `error_unexpected_keyword_arg`, `Python/getargs.c:1576`, without the "Did you mean"
-suggestion of `_Py_CalculateSuggestions` (`Python/suggestions.c`). -/
+/-! ### `_Py_CalculateSuggestions`, `Python/suggestions.c:8-180` -/
+
+/-- The UTF-8 bytes of a character (`PyUnicode_AsUTF8AndSize`). A Lean `Char` is never a
+surrogate, so the encoding cannot fail. -/
+def utf8OfChar (c : Char) : List Nat :=
+  let n := c.toNat
+  if n < 0x80 then [n]
+  else if n < 0x800 then [0xC0 + n / 64, 0x80 + n % 64]
+  else if n < 0x10000 then [0xE0 + n / 4096, 0x80 + n / 64 % 64, 0x80 + n % 64]
+  else [0xF0 + n / 262144, 0x80 + n / 4096 % 64, 0x80 + n / 64 % 64, 0x80 + n % 64]
+
+def utf8Of (s : String) : List Nat := s.toList.flatMap utf8OfChar
+
+/-- `MOVE_COST`, `Python/suggestions.c:11`. -/
+def moveCost : Nat := 2
+
+/-- `substitution_cost`, `Python/suggestions.c:16-35`, on bytes. `LEAST_FIVE_BITS` of a signed
+`char` keeps the low five bits, as `% 32` does on the unsigned byte, and a byte above 127 is never
+in `'A'..'Z'`. -/
+def subCost (a b : Nat) : Nat :=
+  if a % 32 != b % 32 then moveCost
+  else if a == b then 0
+  else
+    let lo := fun x => if 65 ≤ x ∧ x ≤ 90 then x + 32 else x
+    if lo a == lo b then 1 else moveCost
+
+/-- `while (a_size && b_size && a[0] == b[0])`, `Python/suggestions.c:49-52`. -/
+def trimCommon : List Nat → List Nat → List Nat × List Nat
+  | x :: xs, y :: ys => if x == y then trimCommon xs ys else (x :: xs, y :: ys)
+  | a, b => (a, b)
+
+/-- One row of `levenshtein_distance`'s inner loop, `Python/suggestions.c:84-111`: the new
+buffer, the last `result` and the row's `minimum`. -/
+def levRow (code : Nat) : List Nat → List Nat → Nat → Nat → Nat → List Nat × Nat × Nat
+  | x :: xs, d :: ds, distance, result, minimum =>
+    let substitute := distance + subCost code x
+    let insertDelete := min result d + moveCost
+    let result := min insertDelete substitute
+    let (buf, r, m) := levRow code xs ds d result (min minimum result)
+    (result :: buf, r, m)
+  | _, _, _, result, minimum => ([], result, minimum)
+
+/-- The outer loop, `Python/suggestions.c:82-118`, with its early bail (`:112-115`). -/
+def levRows (a : List Nat) (maxCost : Nat) : List Nat → Nat → List Nat → Nat → Nat
+  | [], _, _, result => result
+  | code :: bs, bIndex, buf, _ =>
+    let (buf', r, m) := levRow code a buf (bIndex * moveCost) (bIndex * moveCost) (2 ^ 64)
+    if m > maxCost then maxCost + 1 else levRows a maxCost bs (bIndex + 1) buf' r
+
+/-- `levenshtein_distance`, `Python/suggestions.c:38-120`. The pointer-identity test (`:44`)
+never fires here: equal names are skipped by the caller first. -/
+def levDist (a b : List Nat) (maxCost : Nat) : Nat :=
+  let (a, b) := trimCommon a b
+  let (ra, rb) := trimCommon a.reverse b.reverse
+  let (a, b) := (ra.reverse, rb.reverse)
+  if a.isEmpty || b.isEmpty then (a.length + b.length) * moveCost
+  else if a.length > 40 || b.length > 40 then maxCost + 1
+  else
+    let (a, b) := if b.length < a.length then (b, a) else (a, b)
+    if (b.length - a.length) * moveCost > maxCost then maxCost + 1
+    else levRows a maxCost b 0 ((List.range a.length).map fun i => (i + 1) * moveCost) 0
+
+/-- The candidate loop of `_Py_CalculateSuggestions`, `Python/suggestions.c:150-172`, with the
+best suggestion so far and its distance. A negative `max_distance` becomes a huge `size_t` in the
+call, so the distance is computed in full and the candidate is skipped by `:165`. -/
+def suggestLoop (name : String) : List String → Option String → Nat → Option String
+  | [], sug, _ => sug
+  | item :: rest, sug, sd =>
+    if item == name then suggestLoop name rest sug sd
+    else
+      let nb := utf8Of name
+      let ib := utf8Of item
+      let base : Int := ((nb.length + ib.length + 3) * moveCost / 6 : Nat)
+      let maxD : Int := match sug with
+        | none => base
+        | some _ => min base ((sd : Int) - 1)
+      if maxD < 0 then suggestLoop name rest sug sd
+      else
+        let cur := levDist nb ib maxD.toNat
+        if (cur : Int) > maxD then suggestLoop name rest sug sd
+        else
+          match sug with
+          | none => suggestLoop name rest (some item) cur
+          | some _ =>
+            if cur < sd then suggestLoop name rest (some item) cur else suggestLoop name rest sug sd
+
+/-- `_Py_CalculateSuggestions(dir, name)`, `Python/suggestions.c:122-180`. -/
+def calcSuggestion (dir : List String) (name : String) : Option String :=
+  if dir.length ≥ 750 then none else suggestLoop name dir none 0
+
+/-- The message of an unexpected keyword, `Python/getargs.c:1979-1995` (and `:1605-1625`):
+`"%.200s() got an unexpected keyword argument '%S'"`, followed by `". Did you mean '%S'?"` when
+`_Py_CalculateSuggestions` finds a parameter name close to it. -/
+def unexpectedKwMsg (fname : String) (names : List Name) (k : Name) : String :=
+  let head := s!"{String.ofList (truncUtf8 200 fname.toList)}() got an unexpected keyword argument '{k}'"
+  match calcSuggestion names k with
+  | some s => head ++ s!". Did you mean '{s}'?"
+  | none => head
+
+/-- The "make sure there are no extraneous keyword arguments" loop of `vgetargskeywords_impl`,
+`Python/getargs.c:1939-1999`: the first keyword, in dict order, that names no parameter. -/
 def argUnexpectedKeyword (fname : String) (names : List Name) (kw : Kw) : M Unit :=
   match kw.find? (fun p => !names.contains p.1) with
-  | some (k, _) => typeErr s!"{fname}() got an unexpected keyword argument '{k}'"
+  | some (k, _) => typeErr (unexpectedKwMsg fname names k)
   | none => typeErr s!"invalid keyword argument for {fname}()"
 
 /-- `PyArg_ParseTupleAndKeywords(empty_tuple, kwds, "|$OO...:fname", names, ...)`:

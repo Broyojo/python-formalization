@@ -446,4 +446,125 @@ theorem prepReraiseStarHandOff_proven : PrepReraiseStarHandOff := by
   · intro rt orig excs tb xs w ho hl hall ht
     simp [pyUnstableExcPrepReraiseStar, ho, hl, firstNonExc_none w 0 xs hall, ht]
 
+/-! ## Review fixes: the nested flag, the class for nested items, the tuple repr, one class -/
+
+/-- **`PyObject_IsInstance(exc, PyExc_Exception)`**, `Objects/abstract.c:2603` through
+`object_isinstance`: an instance whose type derives from `Exception` is one without running any
+code; one whose type does not, and whose `__class__` is its own type (no override), is not. -/
+def EgIsInstanceException : Prop :=
+  (∀ (rt : Rt) (x : Val) (w : World), isSubtype w (typeOf w x) B.Exception = true →
+    excIsInstanceOf rt x B.Exception w = .ok true w) ∧
+  (∀ (rt : Rt) (x : Val) (w w1 : World), isSubtype w (typeOf w x) B.Exception = false →
+    rt.getOptionalAttr x "__class__" w = .ok (some (.obj (typeOf w x))) w1 →
+    typeOf w1 x = typeOf w x →
+    excIsInstanceOf rt x B.Exception w = .ok false w1)
+
+theorem egIsInstanceException_proven : EgIsInstanceException := by
+  refine ⟨?_, ?_⟩
+  · intro rt x w h
+    simp [excIsInstanceOf, h]
+  · intro rt x w w1 h hc ht
+    simp only [excIsInstanceOf, M.bind_app, getW_app, h, Bool.false_eq_true, if_false, hc]
+    cases ha : asType w1 (.obj (typeOf w x)) with
+    | none => rfl
+    | some ia =>
+      have : ia = typeOf w x := by
+        simp only [asType] at ha
+        split at ha <;> simp_all
+      subst this
+      simp [ht]
+
+/-- **The nested flag is "some item is not an `Exception`"** (`:933-953`). When each
+`isinstance(x, Exception)` answers `b x` without changing the world, `egCheckItems` returns
+`nested || any (not b)` over the items (which must all be exception instances). With
+`EgIsInstanceException`, `KeyboardInterrupt()` makes the flag true and `ValueError()` keeps it
+false; a version that always computed `false` fails. -/
+def EgNestedFlag : Prop :=
+  ∀ (rt : Rt) (b : Val → Bool) (xs : List Val) (i : Nat) (nested : Bool) (w : World),
+    (∀ x ∈ xs, excInstanceCheck w x = true) →
+    (∀ x ∈ xs, excIsInstanceOf rt x B.Exception w = .ok (b x) w) →
+    egCheckItems rt i nested xs w = .ok (nested || xs.any (fun x => !b x)) w
+
+theorem egNestedFlag_proven : EgNestedFlag := by
+  intro rt b xs
+  induction xs with
+  | nil => intro i nested w _ _; simp [egCheckItems]
+  | cons x xs ih =>
+    intro i nested w h1 h2
+    have hx1 := h1 x (by simp)
+    have hx2 := h2 x (by simp)
+    simp only [egCheckItems, M.bind_app, getW_app, hx1, Bool.not_true, Bool.false_eq_true,
+      if_false, if_true, ite_true, M.pure_app, hx2]
+    rw [ih (i + 1) (nested || !b x) w (fun y hy => h1 y (by simp [hy]))
+      (fun y hy => h2 y (by simp [hy]))]
+    simp [Bool.or_assoc]
+
+/-- **The class when an item is not an `Exception`** (`:955-985`): `ExceptionGroup` refuses with
+`Cannot nest BaseExceptions in an ExceptionGroup`, `BaseExceptionGroup` stays, a subclass that is
+an `Exception` refuses with its name cut by `%.200s`, and any other subclass stays. So
+`BaseExceptionGroup("m", [KeyboardInterrupt()])` is a `BaseExceptionGroup`, and
+`ExceptionGroup("m", [KeyboardInterrupt()])` is refused. -/
+def EgChooseNested : Prop :=
+  (∀ (w : World), egChooseClass B.ExceptionGroup true w =
+    .err (.exc B.TypeError "Cannot nest BaseExceptions in an ExceptionGroup" none) w) ∧
+  (∀ (w : World), egChooseClass B.BaseExceptionGroup true w = .ok B.BaseExceptionGroup w) ∧
+  (∀ (t : Addr) (w : World), t ≠ B.ExceptionGroup → t ≠ B.BaseExceptionGroup →
+    isSubtype w t B.Exception = true →
+    egChooseClass t true w = .err (.exc B.TypeError
+      s!"Cannot nest BaseExceptions in '{String.ofList (truncUtf8 200 (tpName w t).toList)}'" none) w) ∧
+  (∀ (t : Addr) (w : World), t ≠ B.ExceptionGroup → t ≠ B.BaseExceptionGroup →
+    isSubtype w t B.Exception = false → egChooseClass t true w = .ok t w)
+
+theorem egChooseNested_proven : EgChooseNested := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro w
+    simp [egChooseClass, typeErr, raiseC]
+  · intro w
+    simp [egChooseClass, B.BaseExceptionGroup, B.ExceptionGroup]
+  · intro t w h1 h2 h3
+    have h1' : (t == B.ExceptionGroup) = false := by simpa using h1
+    have h2' : (t == B.BaseExceptionGroup) = false := by simpa using h2
+    simp [egChooseClass, h1', h2', h3, typeErr, raiseC]
+  · intro t w h1 h2 h3
+    have h1' : (t == B.ExceptionGroup) = false := by simpa using h1
+    have h2' : (t == B.BaseExceptionGroup) = false := by simpa using h2
+    simp [egChooseClass, h1', h2', h3]
+
+/-- **`repr(eg)` shows the tuple when `args[1]` is not a list** (`:1108-1110`): with no saved
+string and two args whose second is not a list, the exceptions are shown as `repr(eg.exceptions)`,
+a tuple: `ExceptionGroup('m', (ValueError(),))`. -/
+def EgReprTupleForm : Prop :=
+  ∀ (rt : Rt) (self a0 a1 : Val) (r m : String) (w w1 w2 : World),
+    (excDataOf w self).egExcsStr = none → (excDataOf w self).args = [a0, a1] →
+    listOf w a1 = none →
+    rt.repr (.tuple (excDataOf w self).egExceptions) w = .ok r w1 →
+    rt.repr ((excDataOf w self).egMessage.getD .none) w1 = .ok m w2 →
+    baseExceptionGroupRepr rt self w = .ok (.str s!"{pyTypeName w1 (typeOf w1 self)}({m}, {r})") w2
+
+theorem egReprTupleForm_proven : EgReprTupleForm := by
+  intro rt self a0 a1 r m w w1 w2 h1 h2 h3 h4 h5
+  have hl : egArgsShowList w (excDataOf w self) = false := by
+    simp [egArgsShowList, h2, h3]
+  simp only [baseExceptionGroupRepr, M.bind_app, getW_app, h1, hl, Bool.false_eq_true, if_false,
+    h4, h5]
+  rfl
+
+/-- **Matching by one class is the subclass test** through `exceptiongroup_split_check_match`
+itself (`:1284-1288`), as in `eg.split(ValueError)`: for an exception instance and an exception
+class, the answer is `issubclass(type(exc), cls)`, and no code runs. The hypotheses are the type
+invariants that a class's cell is a type object and an instance's class is a class. -/
+def SplitCheckMatchClass : Prop :=
+  ∀ (rt : Rt) (e : Val) (c tc : Addr) (td : TypeData) (w : World),
+    w.get c = .ty tc td → excInstanceCheck w e = true →
+    typeCheck w (.obj (typeOf w e)) = true → typeCheck w (.obj c) = true →
+    isSubtype w c B.BaseException = true →
+    splitCheckMatch rt e .byType (.obj c) w = .ok (isSubtype w (typeOf w e) c) w
+
+theorem splitCheckMatchClass_proven : SplitCheckMatchClass := by
+  intro rt e c tc td w hc h1 h2 h3 h4
+  have ht : tupleOf w (.obj c) = none := by simp [tupleOf, payloadOf, hc]
+  simp only [splitCheckMatch, M.bind_app, getW_app, givenExceptionMatches, ht]
+  rw [matchByTypeIsSubclass_proven w e c h1 h2 h3 h4]
+  rfl
+
 end PyLean.TypeObj

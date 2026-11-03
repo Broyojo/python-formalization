@@ -8,11 +8,9 @@ chaining, notes, __reduce__, ExceptionGroup construction errors, split/subgroup 
 tuple and callable matchers over nested groups, derive overrides, and the C API through
 _testcapi (Lean binds the same names to its model of those functions).
 
-Probes stay away from two things the model leaves out on purpose:
+Probes stay away from one thing the model leaves out on purpose:
  * __suppress_context__ = True on an exact MemoryError: the freelist would leak it into the
    next scenario (bug typeobj-exc-memoryerror-freelist-state).
- * the keyword "Did you mean" suggestion of getargs.c: the bad keyword is never close to a
-   good one.
 """
 
 import re
@@ -325,8 +323,10 @@ class X(T.G):
                 "NameError": ["name"], "UnboundLocalError": ["name"], "AttributeError": ["name", "obj"]}[c]
         v = self.fresh("e")
         kw = [[k, self.anyval()] for k in keys if r.random() < 0.5]
-        if r.random() < 0.15:
-            kw.append(["zzq", lit(1)])
+        if r.random() < 0.25:
+            # Far names get no suggestion; close ones get "Did you mean" (Python/suggestions.c).
+            kw.append([r.choice(["zzq", "x", "nam", "Name", "nme", "pat", "path_", "name_fro",
+                                 "ob", "obj_", "naem", "named"]), lit(1)])
         args = r.choice([[], [lit("m")], [lit(1)], [lit("a"), lit("b")]])
         self.assign(v, call(name(c), *args, kw=kw))
         self.probe_exc(v, keys + ["msg"])

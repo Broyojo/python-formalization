@@ -32,7 +32,7 @@ def egChooseClass (t : Addr) (nested : Bool) : M Addr := do
     pure (if nested then t else B.ExceptionGroup)
   else if nested then
     if isSubtype w t B.Exception then
-      typeErr s!"Cannot nest BaseExceptions in '{trunc 200 (tpName w t)}'"
+      typeErr s!"Cannot nest BaseExceptions in '{String.ofList (truncUtf8 200 (tpName w t).toList)}'"
     else pure t
   else pure t
 
