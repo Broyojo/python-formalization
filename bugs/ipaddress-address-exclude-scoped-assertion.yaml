@@ -1,0 +1,74 @@
+id: ipaddress-address-exclude-scoped-assertion
+title: "ipaddress: IPv6Network.address_exclude raises AssertionError for a contained network with a scope id"
+priority: P3
+kind: crash-on-valid-input
+module: ipaddress
+files: [Lib/ipaddress.py]
+functions: ["_BaseNetwork.address_exclude", "_BaseNetwork.subnets", "_BaseNetwork._is_subnet_of"]
+status: duplicate
+duplicate_of: python/cpython#158727 (closed as not planned in a bulk-filing cleanup, not on merits)
+summary: |
+  NOT A NEW FINDING: this is python/cpython#158727. For a scoped IPv6 network `other` that
+  other.subnet_of(self) accepts, list(self.address_exclude(other)) raises
+  AssertionError('Error performing exclusion: ...'). address_exclude re-creates `other` from
+  str(other.network_address), keeping the scope id (:837-838), but splits `self` with
+  self.subnets() (:840, :844, :847), which builds every half from an int (:967-972), so with no
+  scope id. Network == compares the network addresses, scope id included (:720-726, :2009-2015),
+  so no half is ever == other, and once a half has other's network address,
+  other.subnet_of(half) is False too (`half.network_address <= other.network_address` is
+  `< or ==`, both False), and the loop falls into the AssertionError at :850-852. Found here
+  independently, by modelling the scope id in Net.
+  Examples: IPv6Network('fe80::%a/126') minus IPv6Network('fe80::%a/128') (the upstream report),
+  and IPv6Network('fe80::%1/10') minus IPv6Network('fe80::%1/64'). The same `other` without a scope
+  id works, and so does a scoped `self` with an unscoped `other` at a later address.
+  A scope-aware __lt__ (gh-151769, PR gh-151772, unscoped before scoped) would not fix it, by the
+  same reading of the loop: the halves still never equal `other`, other.subnet_of(half) would then
+  hold at the equal address, and the loop would split down to a /128 and fail to unpack the one
+  subnet a /128 yields (ValueError instead of AssertionError). Not run against the PR.
+likelihood: |
+  Low: excluding a link-local network that carries a zone from another.
+maybe_intended: |
+  No. The docstring promises ValueError only when other is not contained, and the
+  AssertionError's own comment says "If we got here, there's a bug somewhere" (:849).
+reproducer: |
+  import ipaddress as I
+  res = []
+  for s, o in [('fe80::%a/126', 'fe80::%a/128'), ('fe80::%1/10', 'fe80::%1/64')]:
+      s, o = I.IPv6Network(s), I.IPv6Network(o)
+      assert o.subnet_of(s)
+      try:
+          list(s.address_exclude(o))
+          res.append('ok')
+      except AssertionError as e:
+          res.append('AssertionError')
+  plain = list(I.IPv6Network('fe80::/126').address_exclude(I.IPv6Network('fe80::/128')))
+  print(res, [str(n) for n in plain])
+  if res == ['AssertionError', 'AssertionError'] and len(plain) == 2:
+      print('REPRODUCED ipaddress-address-exclude-scoped-assertion')
+expected: |
+  The networks covering self minus other, as for the unscoped pair (fe80::2/127, fe80::1/128).
+observed: |
+  python3 3.15.2: ['AssertionError', 'AssertionError'] ['fe80::2/127', 'fe80::1/128']. REPRODUCED.
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev ef1fce0): identical. REPRODUCED.
+promised_by: |
+  address_exclude docstring, Lib/ipaddress.py:813-822: "Returns: An iterator of the IPv(4|6)Network
+  objects which is self minus other. Raises: ... ValueError: If other is not completely contained
+  by self."
+cause: |
+  Lib/ipaddress.py:837-838 keeps the scope id, :840/:844/:847 subnets() drops it, and the
+  comparisons at :841, :842, :845, :853, :855 then never match.
+possible_fix: |
+  Compare and split integers (network_address._ip, prefixlen) in the loop, or rebuild `other`
+  from int(other.network_address) and decide what scope the results carry.
+duplicates:
+  issues:
+    - {number: 158727, state: closed, relation: same, reason: "closed in a bulk-filing cleanup (see gh-158748 comment), not on merits"}
+    - {number: 151769, state: open, relation: "related ordering defect; its fix does not cover this"}
+  queries: ["gh search issues --repo python/cpython address_exclude scope (none)",
+            "gh search issues --repo python/cpython address_exclude AssertionError (none)",
+            "gh search issues --repo python/cpython IPv6Network scope (151769, 158727)",
+            "gh issue view 158727", "gh issue view 158748 (the bulk-closing comment)"]
+  bugforge: "README line 128: ipaddress-20261003-235502-c3, the same finding (cpython#158727)"
+lean:
+  property: PyLean.Ipaddress.AddressExcludeTotal
+  theorem: PyLean.Ipaddress.addressExcludeTotal_refuted

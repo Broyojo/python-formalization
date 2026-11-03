@@ -1,0 +1,85 @@
+id: ipaddress-scoped-address-ordering
+title: "ipaddress: IPv6Address ordering ignores the scope id while == compares it, so subnet_of and summarize_address_range misjudge scoped addresses"
+priority: P3
+kind: wrong-result
+module: ipaddress
+files: [Lib/ipaddress.py, Lib/functools.py]
+functions: ["_BaseNetwork._is_subnet_of", "_BaseNetwork.subnet_of", "summarize_address_range"]
+status: duplicate
+duplicate_of: python/cpython#151769 (open), fix in PR gh-151772 (open, awaiting review)
+summary: |
+  IPv6Address.__eq__ compares _scope_id (Lib/ipaddress.py:2009-2015) but IPv6Address keeps the
+  inherited _BaseAddress.__lt__, which compares _ip only (:576-584). functools.total_ordering
+  (:555) derives <= as `a < b or a == b` and > as `not a < b and a != b`
+  (Lib/functools.py:89-101). For two addresses with the same _ip and different scope ids, `a <= b`
+  and `b <= a` are both False and `a > b` and `b > a` are both True. NOT A NEW FINDING: that is
+  python/cpython#151769. Found here independently, by modelling the comparisons; what this record
+  adds is the two library functions that inherit the inconsistency:
+  - _BaseNetwork._is_subnet_of tests `b.network_address <= a.network_address` (:1033), so
+    IPv6Network('fe80::%1/64').subnet_of(IPv6Network('fe80::/10')) is False, while
+    IPv6Network('fe80:0:0:1::%1/64') is a subnet of the same network; and for any scoped network
+    n whose network address is its supernet's, n.subnet_of(n.supernet()) is False.
+  - summarize_address_range tests `first > last` (:229), so
+    summarize_address_range(IPv6Address('::1%a'), IPv6Address('::1')) raises
+    ValueError('last IP address must be greater than first'), and so does the reverse order; the
+    loop itself reads only _ip (:240-241), and both addresses unscoped give [IPv6Network('::1/128')].
+  The address_exclude AssertionError on scoped networks (gh-158727) is a related but separate
+  defect: it is not fixed by a scope-aware __lt__ (see ipaddress-address-exclude-scoped-assertion).
+likelihood: |
+  Low: scoped IPv6 addresses are link-local and usually not compared across scopes. The subnet_of
+  case needs a scoped network compared with an unscoped one at the same network address, which
+  is what a link-local network inside fe80::/10 is.
+maybe_intended: |
+  Whether fe80::%1 and fe80:: should compare equal is a design question; that <= and > disagree
+  with each other is not. The upstream issue and PR take it as a bug.
+reproducer: |
+  import ipaddress as I
+  a, b = I.IPv6Address('::1%a'), I.IPv6Address('::1')
+  gt_both = (a > b) and (b > a)
+  sub = I.IPv6Network('fe80::%1/64').subnet_of(I.IPv6Network('fe80::/10'))
+  sub_far = I.IPv6Network('fe80:0:0:1::%1/64').subnet_of(I.IPv6Network('fe80::/10'))
+  try:
+      I.summarize_address_range(a, b).__next__()
+      summ = 'ok'
+  except ValueError as e:
+      summ = 'ValueError: %s' % e
+  print(gt_both, sub, sub_far, summ)
+  if gt_both and sub is False and sub_far is True and summ.startswith('ValueError'):
+      print('REPRODUCED ipaddress-scoped-address-ordering')
+expected: |
+  A consistent order: fe80::/64 with scope 1 inside fe80::/10 either way, and
+  summarize_address_range of two addresses with the same _ip giving [::1/128] (or a consistent
+  refusal of mixed scopes).
+observed: |
+  python3 3.15.2: True False True ValueError: last IP address must be greater than first.
+  REPRODUCED.
+  main (vendor/cpython-main/python.exe, 3.16.0a1+dev ef1fce0): identical. REPRODUCED.
+promised_by: |
+  subnet_of docstring, Lib/ipaddress.py:1040, "Return True if this network is a subnet of other";
+  summarize_address_range docstring, :214-221, "ValueError: If the last object is not greater than
+  the first" (here last is greater than first, and first is greater than last).
+cause: |
+  Lib/ipaddress.py:2009-2015 (scope-aware __eq__) with the inherited :576-584 (scope-blind __lt__)
+  under total_ordering (:555); used at :1033 and :229.
+possible_fix: |
+  PR gh-151772: a scope-aware IPv6Address.__lt__ that breaks ties on the scope id. That also makes
+  subnet_of and summarize_address_range consistent.
+duplicates:
+  issues:
+    - {number: 151769, state: open, relation: "same root cause (ordering vs __eq__); this record adds subnet_of and summarize_address_range", pr: 151772}
+    - {number: 158727, state: closed, relation: "address_exclude on scoped networks; separate defect, record ipaddress-address-exclude-scoped-assertion"}
+  queries: ["gh search issues --repo python/cpython ipaddress scope comparison (151769 among 5)",
+            "gh search issues --repo python/cpython IPv6Address scope ordering (151769 only)",
+            "gh search issues --repo python/cpython subnet_of scope (none)",
+            "gh search issues --repo python/cpython summarize_address_range scope (none)",
+            "gh search issues --repo python/cpython ipaddress scope_id (155836, 151769, 158723, 88178, 110196)",
+            "gh search issues --repo python/cpython IPv6Network scope (151769, 158727)",
+            "gh issue view 151769", "gh pr view 151772", "gh issue view 158727"]
+  note: |
+    Queries run as separate unquoted terms, on 2026-11-02. 151769 describes sorted()/min()/max()
+    and trichotomy; neither it nor its PR mentions subnet_of or summarize_address_range.
+  bugforge: "README lines 67, 127-131 list scope-id findings (158723-158728); none is the ordering or subnet_of/summarize"
+lean:
+  property: PyLean.Ipaddress.SubnetOfScopeBlind
+  theorem: PyLean.Ipaddress.subnetOfScopeBlind_refuted
+  also: [PyLean.Ipaddress.SummarizeScopeBlind, PyLean.Ipaddress.summarizeScopeBlind_refuted]

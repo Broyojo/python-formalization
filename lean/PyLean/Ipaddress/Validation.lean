@@ -23,9 +23,9 @@ def SubnetsRejectsInvalidArgs : Prop :=
 itself; the same call on any shorter prefix raises `ValueError`. -/
 theorem subnetsRejectsInvalidArgs_refuted : ¬SubnetsRejectsInvalidArgs := by
   intro h
-  have hr := h ⟨32, 3221225985, 32⟩ 1 (some 24) (Or.inl rfl) (by decide)
+  have hr := h ⟨32, 3221225985, 32, none⟩ 1 (some 24) (Or.inl rfl) (by decide)
     (Or.inl ⟨24, rfl, Or.inl (by decide)⟩)
-  have hv : subnets ⟨32, 3221225985, 32⟩ 1 (some 24) = .ok [⟨32, 3221225985, 32⟩] := by decide
+  have hv : subnets ⟨32, 3221225985, 32, none⟩ 1 (some 24) = .ok [⟨32, 3221225985, 32, none⟩] := by decide
   obtain ⟨e, he, -⟩ := hr
   rw [hv] at he
   cases he
@@ -44,8 +44,8 @@ def SupernetRejectsInvalidArgs : Prop :=
 `.supernet(new_prefix=8)` return the network itself. -/
 theorem supernetRejectsInvalidArgs_refuted : ¬SupernetRejectsInvalidArgs := by
   intro h
-  have hr := h ⟨32, 0, 0⟩ 5 none (Or.inl rfl) (by decide) (Or.inr ⟨rfl, by decide⟩)
-  have hv : supernet ⟨32, 0, 0⟩ 5 none = .ok ⟨32, 0, 0⟩ := by decide
+  have hr := h ⟨32, 0, 0, none⟩ 5 none (Or.inl rfl) (by decide) (Or.inr ⟨rfl, by decide⟩)
+  have hv : supernet ⟨32, 0, 0, none⟩ 5 none = .ok ⟨32, 0, 0, none⟩ := by decide
   obtain ⟨e, he, -⟩ := hr
   rw [hv] at he
   cases he

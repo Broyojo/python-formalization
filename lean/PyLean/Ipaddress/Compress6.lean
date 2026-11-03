@@ -26,11 +26,12 @@ def hextetVals (n : Nat) : List Nat := (List.range 8).map fun i => n / 65536 ^ (
 def ZeroRun (vs : List Nat) (s L : Nat) : Prop :=
   s + L ≤ vs.length ∧ ∀ i, s ≤ i → i < s + L → vs[i]? = some 0
 
-/-- `_BaseV6._string_from_ip_int(ip_int)`, `Lib/ipaddress.py:1835-1859`, for every argument. Above
-`_ALL_ONES` it raises `ValueError('IPv6 address is too large')` (:1852-1853, the docstring's
-"Raises"); with the default `ip_int=None` it reads `cls._ip` (:1849-1850), the slot descriptor,
-and `int()` of that raises `TypeError`. For every `ip_int < 2**128`, with `vs` its eight hextet
-values:
+/-- `cls._string_from_ip_int(ip_int)`, `Lib/ipaddress.py:1835-1859`, for every class that inherits
+it and every argument. Above `_ALL_ONES` it raises `ValueError('IPv6 address is too large')`
+(:1852-1853, the docstring's "Raises"); with the default `ip_int=None` it reads `cls._ip`
+(:1849-1850): for `IPv6Address` and `IPv6Interface` the slot descriptor (:1919), and `int()` of
+that raises `TypeError`; `IPv6Network` has no `_ip`, so the lookup raises `AttributeError`. For
+every class and every `ip_int < 2**128`, with `vs` its eight hextet values:
 
 * if no two adjacent hextets are zero, the result is `':'.join('%x' % v for v in vs)`, so a single
   zero hextet is never compressed (RFC 5952 4.2.2);
@@ -41,15 +42,20 @@ values:
 The hypotheses on `s` and `L` describe the run; they are not assumptions about the input, and
 such a run exists whenever two adjacent hextets are zero. -/
 def CompressRFC5952 : Prop :=
-  stringFromIpInt6Py none = .error (.typeError
+  stringFromIpInt6Py .address none = .error (.typeError
     "int() argument must be a string, a bytes-like object or a real number, not 'member_descriptor'") ∧
-  (∀ n : Nat, 2 ^ 128 ≤ n → stringFromIpInt6Py (some n) = .error (.valueError "IPv6 address is too large")) ∧
+  stringFromIpInt6Py .interface none = .error (.typeError
+    "int() argument must be a string, a bytes-like object or a real number, not 'member_descriptor'") ∧
+  stringFromIpInt6Py .network none =
+    .error (.named "AttributeError" "type object 'IPv6Network' has no attribute '_ip'") ∧
+  ∀ cls : V6Cls,
+  (∀ n : Nat, 2 ^ 128 ≤ n → stringFromIpInt6Py cls (some n) = .error (.valueError "IPv6 address is too large")) ∧
   ∀ n : Nat, n < 2 ^ 128 →
     ((∀ s, ¬ ZeroRun (hextetVals n) s 2) →
-      stringFromIpInt6Py (some n) = .ok (joinOn1 ':' ((hextetVals n).map hexStr))) ∧
+      stringFromIpInt6Py cls (some n) = .ok (joinOn1 ':' ((hextetVals n).map hexStr))) ∧
     (∀ s L, 2 ≤ L → ZeroRun (hextetVals n) s L →
       (∀ s' L', ZeroRun (hextetVals n) s' L' → L' < L ∨ (L' = L ∧ s ≤ s')) →
-      stringFromIpInt6Py (some n) = .ok (joinOn1 ':' (((hextetVals n).take s).map hexStr) ++ [':', ':'] ++
+      stringFromIpInt6Py cls (some n) = .ok (joinOn1 ':' (((hextetVals n).take s).map hexStr) ++ [':', ':'] ++
         joinOn1 ':' (((hextetVals n).drop (s + L)).map hexStr)))
 
 /-! ## (1) The loop sees only the mask -/
@@ -257,11 +263,11 @@ theorem compressRFC5952_core : ∀ n : Nat, n < 2 ^ 128 →
     exact absurd h2 (by decide)
 
 theorem compressRFC5952_proven : CompressRFC5952 := by
-  refine ⟨rfl, fun n hn => ?_, fun n hn => ?_⟩
+  refine ⟨rfl, rfl, rfl, fun cls => ⟨fun n hn => ?_, fun n hn => ?_⟩⟩
   · have : n > allOnes 128 := by unfold allOnes; omega
     simp [stringFromIpInt6Py, this]
   · have hle : ¬ n > allOnes 128 := by unfold allOnes; omega
-    have hpy : stringFromIpInt6Py (some n) = .ok (stringFromIpInt6 n) := by
+    have hpy : stringFromIpInt6Py cls (some n) = .ok (stringFromIpInt6 n) := by
       simp [stringFromIpInt6Py, hle]
     obtain ⟨c1, c2⟩ := compressRFC5952_core n hn
     rw [hpy]

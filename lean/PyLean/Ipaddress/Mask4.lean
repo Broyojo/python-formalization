@@ -2,10 +2,10 @@ import PyLean.Ipaddress.Parse4Props
 import PyLean.Ipaddress.Summarize
 
 /-!
-Masks: `_BaseV4._make_netmask` (Lib/ipaddress.py:1153-1178) and `_BaseV6._make_netmask`
-(:1628-1647) with `_netmask_cache`, `_prefix_from_prefix_string` (:467-490),
-`_prefix_from_ip_string` (:492-524), `_prefix_from_ip_int` (:437-460) and
-`_report_invalid_netmask` (:462-465), CPython 3.15.2.
+Masks: `_BaseV4._make_netmask` (Lib/ipaddress.py:1153-1177) and `_BaseV6._make_netmask`
+(:1628-1646) with `_netmask_cache`, `_prefix_from_prefix_string` (:466-489),
+`_prefix_from_ip_string` (:491-523), `_prefix_from_ip_int` (:436-459) and
+`_report_invalid_netmask` (:461-464), CPython 3.15.2, for str, bytes and other arguments.
 -/
 
 namespace PyLean.Ipaddress
@@ -28,8 +28,9 @@ exception model does not record. -/
 def reportInvalidNetmask {α : Type} (reprArg : Option String) : Py α :=
   .error (.named "NetmaskValueError" ((reprArg.map (· ++ " is not a valid netmask")).getD "~is not a valid netmask"))
 
-/-- `_prefix_from_prefix_string`, ipaddress.py:467-490, for `max_prefixlen` `maxp`: ASCII digits
-only (:479-480), `int()` (:481-484, which fails past the digit limit), then the range (:485-486). -/
+/-- `_prefix_from_prefix_string`, ipaddress.py:467-490, for `max_prefixlen` `maxp` and a str:
+`isascii() and isdigit()` (:481-482), `int()` (:483-486, which fails past the digit limit), then
+the range (:487-488). -/
 def prefixFromPrefixString (maxp : Nat) (s : List Char) : Py Nat :=
   if !(s.all isDigitC && !s.isEmpty) then reportInvalidNetmask (reprPlain s)
   else if s.length > intMaxStrDigits then reportInvalidNetmask (reprPlain s)
@@ -37,15 +38,26 @@ def prefixFromPrefixString (maxp : Nat) (s : List Char) : Py Nat :=
     let p := digitsVal s
     if p ≤ maxp then .ok p else reportInvalidNetmask (reprPlain s)
 
-/-- `ip_int.to_bytes(k, 'big')` for `ip_int < 256**k`. -/
+/-- The `k` big-endian bytes of `n mod 256**k`; `ip_int.to_bytes(k, 'big')` for `ip_int < 256**k`. -/
 def toBytesBE (k n : Nat) : List Nat := (List.range k).map fun i => n / 256 ^ (k - 1 - i) % 256
 
-/-- `_prefix_from_ip_int`, ipaddress.py:437-460, for `max_prefixlen` `bits`. -/
+/-- `n.to_bytes(k, 'big')` for an int `n >= 0` (`int_to_bytes_impl`, Objects/longobject.c, through
+`_PyLong_AsByteArray`): `OverflowError('int too big to convert')` when `n` needs more than `k`
+bytes, else the bytes. -/
+def toBytesPy (k n : Nat) : Py (List Nat) :=
+  if 256 ^ k ≤ n then .error (.overflowError "int too big to convert") else .ok (toBytesBE k n)
+
+/-- `_prefix_from_ip_int`, ipaddress.py:437-460, for `max_prefixlen` `bits`: the trailing zeros
+(:449-450), the prefix length (:451), the leading ones (:452-453); for a mismatch (:454) the
+`to_bytes` (:455-456), which raises first for an int of more than `max_prefixlen` bits, then the
+`ValueError` (:457-458). -/
 def prefixFromIpInt (bits n : Nat) : Py Nat :=
   let tz := countRighthandZeroBits n bits
   let p := bits - tz
   if n >>> tz ≠ 2 ^ p - 1 then
-    .error (.valueError s!"Netmask pattern {bytesRepr (toBytesBE (bits / 8) n)} mixes zeroes & ones")
+    match toBytesPy (bits / 8) n with
+    | .error e => .error e
+    | .ok details => .error (.valueError s!"Netmask pattern {bytesRepr details} mixes zeroes & ones")
   else .ok p
 
 /-- `_prefix_from_ip_string`, ipaddress.py:492-524 (IPv4 only calls it): parse the dotted quad
@@ -81,28 +93,78 @@ def makeNetmaskInt (bits : Nat) (p : Int) : Py Nat :=
 def makeNetmaskStr (bits : Nat) (s : List Char) : Py Nat :=
   if bits = 32 then makeNetmask4 s else prefixFromPrefixString bits s
 
+/-! ## A bytes mask
+
+`_make_netmask` checks only `isinstance(arg, int)` (:1163, :1638), so a bytes object reaches the
+str functions, and bytes has `isascii`, `isdigit`, `int()` and `split` too. -/
+
+/-- `bytes.isdigit()` on one byte: an ASCII digit. -/
+def isDigitB (x : Nat) : Bool := 48 ≤ x && x ≤ 57
+
+/-- `bytes.isascii()` on one byte. -/
+def isAsciiB (x : Nat) : Bool := x < 128
+
+/-- `int(b)` of a bytes object of ASCII digits. -/
+def bytesDigitsVal (b : List Nat) : Nat := b.foldl (fun v x => v * 10 + (x - 48)) 0
+
+/-- `_prefix_from_prefix_string(b)`, ipaddress.py:467-490, for a bytes `b`: `b.isascii() and
+b.isdigit()` (:481-482; `bytes.isdigit()` is false for `b''`), `int(b)` (:483-486, under the same
+digit limit as a str), the range (:487-488); the report shows `repr(b)` (:462-465). -/
+def prefixFromPrefixBytes (maxp : Nat) (b : List Nat) : Py Nat :=
+  if !(b.all isAsciiB && (!b.isEmpty && b.all isDigitB)) then reportInvalidNetmask (some (bytesRepr b))
+  else if b.length > intMaxStrDigits then reportInvalidNetmask (some (bytesRepr b))
+  else
+    let p := bytesDigitsVal b
+    if p ≤ maxp then .ok p else reportInvalidNetmask (some (bytesRepr b))
+
+/-- `_prefix_from_ip_string(b)` for a bytes `b`, ipaddress.py:492-524 (IPv4 only calls it):
+`_BaseV4._ip_int_from_string(b)` raises `AddressValueError('Address cannot be empty')` for `b''`
+(:1193-1194), which becomes the report (:505-508); for any other bytes `ip_str.split('.')` (:1196)
+raises `TypeError`, which nothing catches. -/
+def prefixFromIpBytes4 (b : List Nat) : Py Nat :=
+  if b.isEmpty then reportInvalidNetmask (some (bytesRepr b))
+  else .error (.typeError "a bytes-like object is required, not 'str'")
+
+/-- The non-int branch of `_make_netmask` for a bytes `b`: IPv4 tries a prefix length, then on
+`NetmaskValueError` a dotted quad (:1168-1174); IPv6 only a prefix length (:1643). -/
+def makeNetmaskBytes (bits : Nat) (b : List Nat) : Py Nat :=
+  if bits = 32 then
+    match prefixFromPrefixBytes 32 b with
+    | .ok p => .ok p
+    | .error (.named "NetmaskValueError" _) => prefixFromIpBytes4 b
+    | .error e => .error e
+  else prefixFromPrefixBytes bits b
+
 /-! ## The cache -/
 
-/-- A mask argument: an int, a str, or another number equal to the int `v` (a float such as
-`8.0`, `Decimal(8)`), which `in` and dict lookup treat as `v`. -/
+/-- A mask argument: an int, a str, a bytes object, another number equal to the int `v` (a float
+such as `8.0`, `Decimal(8)`), which `in` and dict lookup treat as `v`, another hashable object of
+type `tyName` equal to no int, str or bytes and without `isascii` (`8.5`, `None`, a tuple), or an
+unhashable object of type `tyName` (a list, a `bytearray`). -/
 inductive MaskArg where
   | int (v : Int)
   | str (s : List Char)
+  | bytes (b : List Nat)
   | numEq (v : Int) (tyName : String)
+  | other (tyName : String)
+  | unhashable (tyName : String)
 
 /-- `_netmask_cache` as the prefix lengths it holds, keyed by the int value they were stored under.
-A str key can only be hit by the same string, whose result it repeats, so it is left out. -/
+A str or bytes key can only be hit by an equal str or bytes, whose result it repeats, so it is left
+out. -/
 abbrev NetmaskCache := List (Int × Nat)
 
-/-- `_make_netmask(arg)` with the class's `_netmask_cache`, ipaddress.py:1153-1178 (IPv4,
-`bits = 32`) and :1628-1647 (IPv6, `bits = 128`): the cache is consulted first
-(`arg not in cls._netmask_cache`, :1162 and :1637), and only a miss checks the type (:1163); a
-non-int, non-str argument reaches `_prefix_from_prefix_string`, whose `isascii()` call raises
-`AttributeError`. Returns the prefix length and the cache afterwards; the netmask is
-`_ip_int_from_prefix` of it. -/
+/-- `_make_netmask(arg)` with the class's `_netmask_cache`, ipaddress.py:1153-1177 (IPv4,
+`bits = 32`) and :1628-1646 (IPv6, `bits = 128`): the cache is consulted first
+(`arg not in cls._netmask_cache`, :1162 and :1637), which hashes `arg` (an unhashable one raises
+`TypeError` there), and only a miss checks the type (:1163, :1638); a non-int argument goes to the
+str functions: a bytes object works through them, and any other object raises `AttributeError` at
+`isascii()` (:481). Returns the prefix length and the cache afterwards; the netmask is
+`_ip_int_from_prefix` of it (:1175, :1644). -/
 def makeNetmaskCached (bits : Nat) (cache : NetmaskCache) (a : MaskArg) : Py Nat × NetmaskCache :=
   match a with
   | .str s => (makeNetmaskStr bits s, cache)
+  | .bytes b => (makeNetmaskBytes bits b, cache)
   | .int v =>
     match cache.lookup v with
     | some p => (.ok p, cache)
@@ -113,6 +175,9 @@ def makeNetmaskCached (bits : Nat) (cache : NetmaskCache) (a : MaskArg) : Py Nat
     match cache.lookup v with
     | some p => (.ok p, cache)
     | none => (.error (.named "AttributeError" s!"'{ty}' object has no attribute 'isascii'"), cache)
+  | .other ty => (.error (.named "AttributeError" s!"'{ty}' object has no attribute 'isascii'"), cache)
+  | .unhashable ty =>
+    (.error (.typeError s!"cannot use '{ty}' as a dict key (unhashable type: '{ty}')"), cache)
 
 /-- A cache that only `_make_netmask` filled: each int key holds what the int branch computes. -/
 def CacheOk (bits : Nat) (c : NetmaskCache) : Prop :=
@@ -164,7 +229,7 @@ theorem prefixFromIpInt_ok (bits n p : Nat) (h : prefixFromIpInt bits n = .ok p)
     p ≤ bits ∧ n = ipIntFromPrefix bits p := by
   simp only [prefixFromIpInt] at h
   split at h
-  · cases h
+  · split at h <;> cases h
   · rename_i hn
     simp only [Except.ok.injEq] at h
     obtain ⟨hr, hd⟩ := crzb_spec n bits
@@ -182,19 +247,28 @@ def maskPrefix? (bits n : Nat) : Option Nat :=
   (List.range (bits + 1)).find? fun p => ipIntFromPrefix bits p == n
 
 /-- `_prefix_from_ip_int`, ipaddress.py:437-460, docstring "Raises: ValueError: If the input
-intermingles zeroes & ones": for every `bits`-bit int it returns the prefix length whose netmask
-is that int, and for every other int (a pattern such as `0xff00ff00`, or a hostmask) it raises
-`ValueError('Netmask pattern %r mixes zeroes & ones')` with the int's big-endian bytes. -/
+intermingles zeroes & ones", for `max_prefixlen` 32 and 128 and every int `>= 0`: for every netmask
+it returns the prefix length whose netmask is that int; every other int below `2**max_prefixlen` (a
+pattern such as `0xff00ff00`, or a hostmask) raises `ValueError('Netmask pattern %r mixes zeroes &
+ones')` with the int's big-endian bytes; an int of more bits is never a netmask, and
+`to_bytes` (:456) raises `OverflowError('int too big to convert')` for it before the `ValueError`. -/
 def PrefixFromIpIntSpec : Prop :=
-  ∀ bits n : Nat,
+  ∀ bits : Nat, bits = 32 ∨ bits = 128 → ∀ n : Nat,
     prefixFromIpInt bits n = match maskPrefix? bits n with
       | some p => .ok p
-      | none => .error (.valueError s!"Netmask pattern {bytesRepr (toBytesBE (bits / 8) n)} mixes zeroes & ones")
+      | none =>
+        if n < 2 ^ bits then
+          .error (.valueError s!"Netmask pattern {bytesRepr (toBytesBE (bits / 8) n)} mixes zeroes & ones")
+        else .error (.overflowError "int too big to convert")
 
-theorem prefixFromIpIntSpec_proven' (bits n : Nat) :
+theorem prefixFromIpIntSpec_proven' (bits n : Nat) (hb : bits = 32 ∨ bits = 128) :
     prefixFromIpInt bits n = match maskPrefix? bits n with
       | some p => .ok p
-      | none => .error (.valueError s!"Netmask pattern {bytesRepr (toBytesBE (bits / 8) n)} mixes zeroes & ones") := by
+      | none =>
+        if n < 2 ^ bits then
+          .error (.valueError s!"Netmask pattern {bytesRepr (toBytesBE (bits / 8) n)} mixes zeroes & ones")
+        else .error (.overflowError "int too big to convert") := by
+  have h256 : 256 ^ (bits / 8) = 2 ^ bits := by rcases hb with rfl | rfl <;> decide
   cases hm : maskPrefix? bits n with
   | some p =>
     unfold maskPrefix? at hm
@@ -212,12 +286,31 @@ theorem prefixFromIpIntSpec_proven' (bits n : Nat) :
       obtain ⟨hp, he⟩ := prefixFromIpInt_ok bits n p hr
       exact absurd (by simp [he]) (hm p (List.mem_range.mpr (by omega)))
     | error e =>
+      show Except.error e = (if n < 2 ^ bits then _ else _)
       simp only [prefixFromIpInt] at hr
       split at hr
-      · exact hr.symm
+      · rw [← hr]
+        unfold toBytesPy
+        rw [h256]
+        by_cases hlt : n < 2 ^ bits
+        · have h2 : ¬ 2 ^ bits ≤ n := by omega
+          simp only [h2, hlt, ↓reduceIte]
+        · have h2 : 2 ^ bits ≤ n := by omega
+          simp only [h2, hlt, ↓reduceIte]
       · cases hr
 
-theorem prefixFromIpIntSpec_proven : PrefixFromIpIntSpec := prefixFromIpIntSpec_proven'
+theorem prefixFromIpIntSpec_proven : PrefixFromIpIntSpec :=
+  fun bits hb n => prefixFromIpIntSpec_proven' bits n hb
+
+/-- Below `2**max_prefixlen`, `_prefix_from_ip_int` never reaches the `OverflowError`. -/
+theorem prefixFromIpInt_lt (bits n : Nat) (hb : bits = 32 ∨ bits = 128) (hn : n < 2 ^ bits) :
+    prefixFromIpInt bits n = match maskPrefix? bits n with
+      | some p => .ok p
+      | none => .error (.valueError s!"Netmask pattern {bytesRepr (toBytesBE (bits / 8) n)} mixes zeroes & ones") := by
+  rw [prefixFromIpIntSpec_proven' bits n hb]
+  cases maskPrefix? bits n with
+  | some p => rfl
+  | none => simp only [hn, ↓reduceIte]
 
 /-! ## Strings -/
 
@@ -335,7 +428,10 @@ def PrefixFromIpStringSpec : Prop :=
 theorem prefixFromIpStringSpec_proven : PrefixFromIpStringSpec := by
   intro s
   rcases ipIntFromString4_class s with ⟨n, hn⟩ | ⟨m, hm⟩
-  · simp only [prefixFromIpString, hn, prefixFromIpIntSpec_proven']
+  · have hlt := ipIntFromString4_lt s n hn
+    have hlt2 : n ^^^ allOnes 32 < 2 ^ 32 := Nat.xor_lt_two_pow hlt (by unfold allOnes; decide)
+    simp only [prefixFromIpString, hn, prefixFromIpInt_lt 32 n (Or.inl rfl) hlt,
+      prefixFromIpInt_lt 32 _ (Or.inl rfl) hlt2]
     cases maskPrefix? 32 n with
     | some p => rfl
     | none =>
@@ -344,11 +440,45 @@ theorem prefixFromIpStringSpec_proven : PrefixFromIpStringSpec := by
       | none => rfl
   · simp only [prefixFromIpString, hm]; rfl
 
+theorem prefixFromPrefixBytes_eq (maxp : Nat) (b : List Nat) :
+    prefixFromPrefixBytes maxp b =
+      if b ≠ [] ∧ b.all isDigitB = true ∧ b.length ≤ intMaxStrDigits ∧ bytesDigitsVal b ≤ maxp
+      then .ok (bytesDigitsVal b)
+      else .error (.named "NetmaskValueError" (bytesRepr b ++ " is not a valid netmask")) := by
+  unfold prefixFromPrefixBytes reportInvalidNetmask
+  by_cases hd : b.all isDigitB = true
+  · have ha : b.all isAsciiB = true := by
+      rw [List.all_eq_true] at hd ⊢
+      intro x hx
+      have := hd x hx
+      simp only [isDigitB, Bool.and_eq_true, decide_eq_true_eq] at this
+      simp only [isAsciiB, decide_eq_true_eq]
+      omega
+    by_cases he : b = []
+    · subst he; simp
+    · have hne : b.isEmpty = false := by cases b <;> simp_all
+      by_cases hl : b.length > intMaxStrDigits
+      · have hl' : ¬ b.length ≤ intMaxStrDigits := by omega
+        simp [ha, hd, hne, hl, hl']
+      · have hl' : b.length ≤ intMaxStrDigits := by omega
+        by_cases hv : bytesDigitsVal b ≤ maxp
+        · simp [ha, hd, hne, hl, hl', hv, he]
+        · simp [ha, hd, hne, hl, hl', hv]
+  · have hd' : b.all isDigitB = false := by simpa using hd
+    simp [hd']
+
 /-- `_make_netmask` for every argument, both families, with any cache `_make_netmask` itself
-filled (`CacheOk`): an int is its own prefix length in `[0, max_prefixlen]` and otherwise raises
-`NetmaskValueError('<n> is not a valid netmask')` (:1163-1167, :1638-1641); a str is, for IPv6, the
+filled (`CacheOk`). An int is its own prefix length in `[0, max_prefixlen]` and otherwise raises
+`NetmaskValueError('<n> is not a valid netmask')` (:1163-1167, :1638-1641). A str is, for IPv6, the
 prefix length `_prefix_from_prefix_string` reads (:1643), and for IPv4 that or, failing it, the
-dotted-quad reading (:1168-1175). The netmask is `_ip_int_from_prefix` of the prefix (:1176). -/
+dotted-quad reading (:1168-1174). A bytes object of at most 4300 ASCII digits whose value is at
+most `max_prefixlen` is read as that value (`IPv4Network(('10.0.0.0', b'8'))` is `/8`); any other
+bytes raises `NetmaskValueError` with its repr, except that IPv4 then tries the dotted-quad reading,
+whose `split('.')` leaks `TypeError` for every non-empty bytes (`b'255.0.0.0'`). A number equal to
+an int is the cached prefix length if that int is cached and otherwise raises `AttributeError` at
+`isascii()` (`NetmaskCacheTransparent`, refuted), another object without `isascii` raises
+`AttributeError`, and an unhashable one raises `TypeError` at the cache lookup (:1162, :1637).
+The netmask is `_ip_int_from_prefix` of the prefix (:1175, :1644). -/
 def MaskInt : Prop :=
   ∀ bits : Nat, bits = 32 ∨ bits = 128 → ∀ c : NetmaskCache, CacheOk bits c →
     (∀ p : Int, (makeNetmaskCached bits c (.int p)).1 =
@@ -359,11 +489,23 @@ def MaskInt : Prop :=
         match prefixFromPrefixString 32 s with
         | .ok p => .ok p
         | .error _ => prefixFromIpString s
-      else prefixFromPrefixString bits s)
+      else prefixFromPrefixString bits s) ∧
+    (∀ b : List Nat, (makeNetmaskCached bits c (.bytes b)).1 =
+      if b ≠ [] ∧ b.all isDigitB = true ∧ b.length ≤ intMaxStrDigits ∧ bytesDigitsVal b ≤ bits
+      then .ok (bytesDigitsVal b)
+      else if bits = 32 ∧ b ≠ [] then .error (.typeError "a bytes-like object is required, not 'str'")
+      else .error (.named "NetmaskValueError" (bytesRepr b ++ " is not a valid netmask"))) ∧
+    (∀ (v : Int) (ty : String), (makeNetmaskCached bits c (.numEq v ty)).1 =
+      if (c.lookup v).isSome then .ok v.toNat
+      else .error (.named "AttributeError" s!"'{ty}' object has no attribute 'isascii'")) ∧
+    (∀ ty : String, (makeNetmaskCached bits c (.other ty)).1 =
+      .error (.named "AttributeError" s!"'{ty}' object has no attribute 'isascii'")) ∧
+    (∀ ty : String, (makeNetmaskCached bits c (.unhashable ty)).1 =
+      .error (.typeError s!"cannot use '{ty}' as a dict key (unhashable type: '{ty}')"))
 
 theorem maskInt_proven : MaskInt := by
-  intro bits _ c hc
-  refine ⟨fun p => ?_, fun s => ?_⟩
+  intro bits hbits c hc
+  refine ⟨fun p => ?_, fun s => ?_, fun b => ?_, fun v ty => ?_, fun ty => rfl, fun ty => rfl⟩
   · have hint : makeNetmaskInt bits p = if 0 ≤ p ∧ p ≤ bits then .ok p.toNat
         else .error (.named "NetmaskValueError" s!"{p} is not a valid netmask") := by
       unfold makeNetmaskInt reportInvalidNetmask; split <;> rfl
@@ -383,6 +525,46 @@ theorem maskInt_proven : MaskInt := by
       · rw [if_pos hc]
       · simp only [hc, ↓reduceIte]; rfl
     · rfl
+  · -- bytes
+    simp only [makeNetmaskCached, makeNetmaskBytes]
+    by_cases h32 : bits = 32
+    · subst h32
+      simp only [eq_self_iff_true, true_and, ↓reduceIte, prefixFromPrefixBytes_eq]
+      by_cases hk : b ≠ [] ∧ b.all isDigitB = true ∧ b.length ≤ intMaxStrDigits ∧ bytesDigitsVal b ≤ 32
+      · simp only [if_pos hk]
+      · simp only [if_neg hk]
+        show prefixFromIpBytes4 b = _
+        unfold prefixFromIpBytes4 reportInvalidNetmask
+        by_cases he : b = []
+        · subst he; simp
+        · have hne : b.isEmpty = false := by cases b <;> simp_all
+          simp [he, hne]
+    · have h32' : ¬ (bits = 32 ∧ b ≠ []) := fun h => h32 h.1
+      simp only [h32, false_and, ↓reduceIte, h32', prefixFromPrefixBytes_eq]
+  · -- a number equal to an int
+    simp only [makeNetmaskCached]
+    cases hl : c.lookup v with
+    | none => simp
+    | some p =>
+      have h := hc v p hl
+      unfold makeNetmaskInt reportInvalidNetmask at h
+      split at h
+      · cases h; simp
+      · cases h
+
+/-- IPv6's cache, as `NetmaskCacheTransparent` is IPv4's: the result of `_BaseV6._make_netmask(arg)`
+does not depend on what earlier calls stored. Refuted: `64.0` raises `AttributeError` with an empty
+cache and gives 64 once the int 64 is cached (:1637), as for IPv4 (bug
+ipaddress-netmask-cache-history). -/
+def NetmaskCacheTransparent6 : Prop :=
+  ∀ (c1 c2 : NetmaskCache) (a : MaskArg), CacheOk 128 c1 → CacheOk 128 c2 →
+    (makeNetmaskCached 128 c1 a).1 = (makeNetmaskCached 128 c2 a).1
+
+theorem netmaskCacheTransparent6_refuted : ¬NetmaskCacheTransparent6 := by
+  intro h
+  have := h [] [(64, 64)] (.numEq 64 "float") (by intro k p hk; simp at hk) (by
+    intro k p hk; simp [List.lookup] at hk; split at hk <;> simp_all [makeNetmaskInt])
+  simp [makeNetmaskCached, List.lookup] at this
 
 def okNat (r : Py Nat) (p : Nat) : Bool := match r with | .ok v => v == p | .error _ => false
 

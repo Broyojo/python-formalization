@@ -232,12 +232,8 @@ theorem hexGood_parts (h : List Char) (v : Nat) (g : HexGood h v) :
   obtain ⟨_, a, e, l, _⟩ := g
   exact ⟨not_mem_of_hex h a '.' (by decide), ⟨a, l⟩, e⟩
 
-/-- `_ip_int_from_string`, ipaddress.py:1648-1760, on the spellings RFC 4291 2.2 allows: eight
-hextets, each any spelling `_parse_hextet` reads (either case, leading zeros), are the address
-whose groups they are, and so is `_compress_hextets` of them joined (a run of `'0'` replaced by
-`::`); and six hextets followed by a dotted quad `IPv4Address` accepts (:1684-1690) put the quad's
-32 bits in the low two groups. `combine vs 0 []` is the base-65536 number with digits `vs`. -/
-def V6ParseSpellings : Prop :=
+/-- The uncompressed spellings and `_compress_hextets`' own (see `V6ParseSpellings`). -/
+def V6ParseSpellingsBase : Prop :=
   (∀ (h0 h1 h2 h3 h4 h5 h6 h7 : List Char) (v0 v1 v2 v3 v4 v5 v6 v7 : Nat),
     parseHextet h0 = .ok v0 → parseHextet h1 = .ok v1 → parseHextet h2 = .ok v2 →
     parseHextet h3 = .ok v3 → parseHextet h4 = .ok v4 → parseHextet h5 = .ok v5 →
@@ -253,7 +249,7 @@ def V6ParseSpellings : Prop :=
     ipIntFromString6 (joinOn1 ':' [h0, h1, h2, h3, h4, h5, q]) =
       .ok (combine [v0, v1, v2, v3, v4, v5, w / 65536, w % 65536] 0 []))
 
-theorem v6ParseSpellings_proven : V6ParseSpellings := by
+theorem v6ParseSpellingsBase_proven : V6ParseSpellingsBase := by
   refine ⟨fun h0 h1 h2 h3 h4 h5 h6 h7 v0 v1 v2 v3 v4 v5 v6 v7 p0 p1 p2 p3 p4 p5 p6 p7 => ?_,
     fun h0 h1 h2 h3 h4 h5 q v0 v1 v2 v3 v4 v5 w p0 p1 p2 p3 p4 p5 hq => ?_⟩
   · have G0 := parseHextet_good _ _ p0
@@ -321,5 +317,307 @@ theorem v6ParseSpellings_proven : V6ParseSpellings := by
     simp [hs, he, hl, qd, hv4, ipv6Suffix, ipv6Layout, ipv6Hextets, skipScan, p0, p1, p2, p3, p4, p5, pa, pb, d0, d1, d2, d3, d4, d5,
       e0, e1, e2, e3, e4, e5, hne1, hne2, parseHextets, head!_cons', Except.map]
     simp only [pure, Except.pure, Except.ok.injEq, hw1]
+
+/-! ## `::` for any run, and before a dotted quad -/
+
+set_option linter.unusedSimpArgs false in
+set_option maxHeartbeats 4000000 in
+/-- `_ip_int_from_string` of eight hextet spellings with the groups `[b, b + bl)` (`bl ≥ 1`, all
+zero) replaced by `::`, written as `compress_shape` writes a run (an extra `''` at either end): the
+36 shapes, one by one. -/
+theorem run_parse (h0 h1 h2 h3 h4 h5 h6 h7 : List Char) (v0 v1 v2 v3 v4 v5 v6 v7 : Nat)
+    (G0 : HexGood h0 v0) (G1 : HexGood h1 v1) (G2 : HexGood h2 v2) (G3 : HexGood h3 v3)
+    (G4 : HexGood h4 v4) (G5 : HexGood h5 v5) (G6 : HexGood h6 v6) (G7 : HexGood h7 v7)
+    (b bl : Nat) (hbl : 1 ≤ bl) (hb : b + bl ≤ 8)
+    (hrun : ∀ i, b ≤ i → i < b + bl → [v0, v1, v2, v3, v4, v5, v6, v7][i]? = some 0) :
+    ipIntFromString6 (joinOn1 ':' ((if b = 0 then [[]] else []) ++
+      [h0, h1, h2, h3, h4, h5, h6, h7].take b ++ [[]] ++
+      (if b + bl = 8 then [[]] else [h0, h1, h2, h3, h4, h5, h6, h7].drop (b + bl)))) =
+      .ok (combine [v0, v1, v2, v3, v4, v5, v6, v7] 0 []) := by
+  obtain ⟨p0, a0, e0, l0, -⟩ := G0
+  obtain ⟨p1, a1, e1, l1, -⟩ := G1
+  obtain ⟨p2, a2, e2, l2, -⟩ := G2
+  obtain ⟨p3, a3, e3, l3, -⟩ := G3
+  obtain ⟨p4, a4, e4, l4, -⟩ := G4
+  obtain ⟨p5, a5, e5, l5, -⟩ := G5
+  obtain ⟨p6, a6, e6, l6, -⟩ := G6
+  obtain ⟨p7, a7, e7, l7, -⟩ := G7
+  have d0 := not_mem_of_hex h0 a0 '.' (by decide)
+  have d1 := not_mem_of_hex h1 a1 '.' (by decide)
+  have d2 := not_mem_of_hex h2 a2 '.' (by decide)
+  have d3 := not_mem_of_hex h3 a3 '.' (by decide)
+  have d4 := not_mem_of_hex h4 a4 '.' (by decide)
+  have d5 := not_mem_of_hex h5 a5 '.' (by decide)
+  have d6 := not_mem_of_hex h6 a6 '.' (by decide)
+  have d7 := not_mem_of_hex h7 a7 '.' (by decide)
+  have k0 : h0.all isHexC = true ∧ h0.length ≤ 4 := ⟨a0, l0⟩
+  have k1 : h1.all isHexC = true ∧ h1.length ≤ 4 := ⟨a1, l1⟩
+  have k2 : h2.all isHexC = true ∧ h2.length ≤ 4 := ⟨a2, l2⟩
+  have k3 : h3.all isHexC = true ∧ h3.length ≤ 4 := ⟨a3, l3⟩
+  have k4 : h4.all isHexC = true ∧ h4.length ≤ 4 := ⟨a4, l4⟩
+  have k5 : h5.all isHexC = true ∧ h5.length ≤ 4 := ⟨a5, l5⟩
+  have k6 : h6.all isHexC = true ∧ h6.length ≤ 4 := ⟨a6, l6⟩
+  have k7 : h7.all isHexC = true ∧ h7.length ≤ 4 := ⟨a7, l7⟩
+  have knil : ([] : List Char).all isHexC = true ∧ ([] : List Char).length ≤ 4 := ⟨rfl, by decide⟩
+  have y0 : b ≤ 0 → 0 < b + bl → v0 = 0 := fun x y => by simpa using hrun 0 x y
+  have y1 : b ≤ 1 → 1 < b + bl → v1 = 0 := fun x y => by simpa using hrun 1 x y
+  have y2 : b ≤ 2 → 2 < b + bl → v2 = 0 := fun x y => by simpa using hrun 2 x y
+  have y3 : b ≤ 3 → 3 < b + bl → v3 = 0 := fun x y => by simpa using hrun 3 x y
+  have y4 : b ≤ 4 → 4 < b + bl → v4 = 0 := fun x y => by simpa using hrun 4 x y
+  have y5 : b ≤ 5 → 5 < b + bl → v5 = 0 := fun x y => by simpa using hrun 5 x y
+  have y6 : b ≤ 6 → 6 < b + bl → v6 = 0 := fun x y => by simpa using hrun 6 x y
+  have y7 : b ≤ 7 → 7 < b + bl → v7 = 0 := fun x y => by simpa using hrun 7 x y
+  clear hrun
+  obtain rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl :
+      b = 0 ∨ b = 1 ∨ b = 2 ∨ b = 3 ∨ b = 4 ∨ b = 5 ∨ b = 6 ∨ b = 7 := by omega
+  all_goals
+    obtain rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl :
+        bl = 1 ∨ bl = 2 ∨ bl = 3 ∨ bl = 4 ∨ bl = 5 ∨ bl = 6 ∨ bl = 7 ∨ bl = 8 := by omega
+  all_goals try (exfalso; omega)
+  all_goals
+    simp (failIfUnchanged := false) only [Nat.reduceLeDiff, Nat.reduceLT, Nat.reduceAdd, Nat.le_refl,
+      Nat.zero_le, false_implies, true_implies, Nat.not_succ_le_zero, Nat.lt_irrefl] at y0 y1 y2 y3 y4 y5 y6 y7
+    subst_vars
+  all_goals
+    simp only [Nat.reduceAdd, Nat.reduceEqDiff, ↓reduceIte, List.take_succ_cons, List.take_zero,
+      List.drop_succ_cons, List.drop_zero, List.length_cons, List.length_nil, List.cons_append,
+      List.nil_append, List.append_nil]
+    refine parse_join _ ?_ (by simp) (by simp) _ ?_
+    · repeat' (first | exact allHexGood_nil | refine allHexGood_cons _ _ ?_ ?_ | assumption)
+    intro s hs he hl
+    unfold ipIntFromString6
+    simp [hs, he, hl, ipv6Suffix, ipv6Layout, ipv6Hextets, skipScan, p0, p1, p2, p3, p4, p5, p6, p7, d0, d1, d2, d3, d4, d5, d6, d7,
+      e0, e1, e2, e3, e4, e5, e6, e7, parseHextets, head!_cons', Except.map]
+    simp only [pure, Except.pure, Except.ok.injEq]
+    rw [combine_zeros]
+    rfl
+
+theorem noColon_nil : ∀ p ∈ ([] : List (List Char)), ':' ∉ p := by simp
+
+theorem noColon_cons (p : List Char) (l : List (List Char)) (h : ':' ∉ p) (t : ∀ q ∈ l, ':' ∉ q) :
+    ∀ q ∈ p :: l, ':' ∉ q := by
+  intro q hq
+  simp only [List.mem_cons] at hq
+  rcases hq with rfl | hq
+  · exact h
+  · exact t q hq
+
+/-- `parse_join` for parts holding no `:`, such as a dotted quad. -/
+theorem parse_join4 (P : List (List Char)) (hC : ∀ p ∈ P, ':' ∉ p) (h2 : 2 ≤ P.length)
+    (h9 : P.length ≤ 10) (hlen : (joinOn1 ':' P).length ≤ 45) (r : Py Nat)
+    (H : ∀ s, splitMax ':' 9 s = P → s.isEmpty = false → ¬ s.length > 45 → ipIntFromString6 s = r) :
+    ipIntFromString6 (joinOn1 ':' P) = r := by
+  have hne : P ≠ [] := by intro e; subst e; simp at h2
+  refine H _ (splitMax_join ':' P 9 hne (by omega) hC) ?_ (by omega)
+  match P, h2 with
+  | p :: q :: qs, _ => simp [joinOn1]
+
+set_option linter.unusedSimpArgs false in
+set_option maxHeartbeats 4000000 in
+/-- `_ip_int_from_string` of six hextet spellings with the groups `[b, b + bl)` (`bl ≥ 1`, all
+zero) replaced by `::`, then a dotted quad that `IPv4Address` reads (:1684-1690): the 21 shapes,
+one by one. -/
+theorem run_parse4 (h0 h1 h2 h3 h4 h5 q : List Char) (v0 v1 v2 v3 v4 v5 w : Nat)
+    (G0 : HexGood h0 v0) (G1 : HexGood h1 v1) (G2 : HexGood h2 v2) (G3 : HexGood h3 v3)
+    (G4 : HexGood h4 v4) (G5 : HexGood h5 v5) (hq : ipv4Init (.str q) = .ok w)
+    (b bl : Nat) (hbl : 1 ≤ bl) (hb : b + bl ≤ 6)
+    (hrun : ∀ i, b ≤ i → i < b + bl → [v0, v1, v2, v3, v4, v5][i]? = some 0) :
+    ipIntFromString6 (joinOn1 ':' ((if b = 0 then [[]] else []) ++ [h0, h1, h2, h3, h4, h5].take b ++
+      [[]] ++ [h0, h1, h2, h3, h4, h5].drop (b + bl) ++ [q])) =
+      .ok (combine [v0, v1, v2, v3, v4, v5, w / 65536, w % 65536] 0 []) := by
+  obtain ⟨hw, hqs⟩ := v4Canonical_proven q w hq
+  subst hqs
+  obtain ⟨qa, ql, qd⟩ := ipv4Str_facts w
+  have hc : ':' ∉ ipv4Str w := quad_not _ qa ':' (by decide)
+  obtain ⟨p0, a0, e0, l0, -⟩ := G0
+  obtain ⟨p1, a1, e1, l1, -⟩ := G1
+  obtain ⟨p2, a2, e2, l2, -⟩ := G2
+  obtain ⟨p3, a3, e3, l3, -⟩ := G3
+  obtain ⟨p4, a4, e4, l4, -⟩ := G4
+  obtain ⟨p5, a5, e5, l5, -⟩ := G5
+  have d0 := not_mem_of_hex h0 a0 '.' (by decide)
+  have d1 := not_mem_of_hex h1 a1 '.' (by decide)
+  have d2 := not_mem_of_hex h2 a2 '.' (by decide)
+  have d3 := not_mem_of_hex h3 a3 '.' (by decide)
+  have d4 := not_mem_of_hex h4 a4 '.' (by decide)
+  have d5 := not_mem_of_hex h5 a5 '.' (by decide)
+  have c0 := not_mem_of_hex h0 a0 ':' (by decide)
+  have c1 := not_mem_of_hex h1 a1 ':' (by decide)
+  have c2 := not_mem_of_hex h2 a2 ':' (by decide)
+  have c3 := not_mem_of_hex h3 a3 ':' (by decide)
+  have c4 := not_mem_of_hex h4 a4 ':' (by decide)
+  have c5 := not_mem_of_hex h5 a5 ':' (by decide)
+  have cnil : ':' ∉ ([] : List Char) := by simp
+  obtain ⟨pa, -, ea, -, -⟩ := hexStr_facts (w / 65536 % 65536) (Nat.mod_lt _ (by decide))
+  obtain ⟨pb, -, eb, -, -⟩ := hexStr_facts (w % 65536) (Nat.mod_lt _ (by decide))
+  have hw1 : w / 65536 % 65536 = w / 65536 := Nat.mod_eq_of_lt (by omega)
+  have hv4 := v4RoundTrip_proven w hw
+  have y0 : b ≤ 0 → 0 < b + bl → v0 = 0 := fun x y => by simpa using hrun 0 x y
+  have y1 : b ≤ 1 → 1 < b + bl → v1 = 0 := fun x y => by simpa using hrun 1 x y
+  have y2 : b ≤ 2 → 2 < b + bl → v2 = 0 := fun x y => by simpa using hrun 2 x y
+  have y3 : b ≤ 3 → 3 < b + bl → v3 = 0 := fun x y => by simpa using hrun 3 x y
+  have y4 : b ≤ 4 → 4 < b + bl → v4 = 0 := fun x y => by simpa using hrun 4 x y
+  have y5 : b ≤ 5 → 5 < b + bl → v5 = 0 := fun x y => by simpa using hrun 5 x y
+  clear hrun
+  obtain rfl | rfl | rfl | rfl | rfl | rfl : b = 0 ∨ b = 1 ∨ b = 2 ∨ b = 3 ∨ b = 4 ∨ b = 5 := by omega
+  all_goals
+    obtain rfl | rfl | rfl | rfl | rfl | rfl : bl = 1 ∨ bl = 2 ∨ bl = 3 ∨ bl = 4 ∨ bl = 5 ∨ bl = 6 := by
+      omega
+  all_goals try (exfalso; omega)
+  all_goals
+    simp (failIfUnchanged := false) only [Nat.reduceLeDiff, Nat.reduceLT, Nat.reduceAdd, Nat.le_refl,
+      Nat.zero_le, false_implies, true_implies, Nat.not_succ_le_zero, Nat.lt_irrefl] at y0 y1 y2 y3 y4 y5
+    subst_vars
+  all_goals
+    simp only [Nat.reduceAdd, Nat.reduceEqDiff, ↓reduceIte, List.take_succ_cons, List.take_zero,
+      List.drop_succ_cons, List.drop_zero, List.drop_nil, List.cons_append, List.nil_append,
+      List.append_nil]
+    refine parse_join4 _ ?_ (by simp) (by simp) (by simp [joinOn1]; omega) _ ?_
+    · repeat' (first | exact noColon_nil | refine noColon_cons _ _ ?_ ?_ | assumption)
+    intro s hs he hl
+    unfold ipIntFromString6
+    simp [hs, he, hl, qd, hv4, ipv6Suffix, ipv6Layout, ipv6Hextets, skipScan, p0, p1, p2, p3, p4, p5,
+      pa, pb, d0, d1, d2, d3, d4, d5, e0, e1, e2, e3, e4, e5, ea, eb, parseHextets, head!_cons',
+      Except.map]
+    simp only [pure, Except.pure, Except.ok.injEq, hw1]
+    rw [combine_zeros]
+    rfl
+
+/-- `_ip_int_from_string`, ipaddress.py:1648-1760, on every spelling RFC 4291 2.2 allows (the forms
+the ipaddress docs accept). (1) Eight hextets, each any spelling `_parse_hextet` reads (either
+case, leading zeros), are the address whose groups they are, and so is `_compress_hextets` of
+them joined. (2) Any run of one or more groups, all zero, may be replaced by `::`, wherever it is
+and however long: `'1:2:3:4:5:6::8'` (one group), `'1::2:0:0:0:3'` (not the longest run),
+`'::2:3:4:5:6:7:8'`, `'1:2:3:4:5:6:7::'`, `'::'`; the result has the written groups in place and
+zeros in the run (:1712-1728, :1747-1758). (3) Six groups, written out or with a run replaced by
+`::`, followed by a dotted quad `IPv4Address` accepts (:1684-1690) put the quad's 32 bits in the
+low two groups, whatever the high 96 bits (`'::13.1.68.3'`, RFC 4291 2.2's own example, and
+`'::ffff:129.144.52.38'` alike). With `V6ParseRefusals`, which says exactly when and how every
+other string is refused, the parser is pinned on every string. `combine vs 0 []` is the
+base-65536 number with digits `vs`. -/
+def V6ParseSpellings : Prop :=
+  V6ParseSpellingsBase ∧
+  (∀ (h0 h1 h2 h3 h4 h5 h6 h7 : List Char) (v0 v1 v2 v3 v4 v5 v6 v7 : Nat),
+    parseHextet h0 = .ok v0 → parseHextet h1 = .ok v1 → parseHextet h2 = .ok v2 →
+    parseHextet h3 = .ok v3 → parseHextet h4 = .ok v4 → parseHextet h5 = .ok v5 →
+    parseHextet h6 = .ok v6 → parseHextet h7 = .ok v7 →
+    ∀ b bl : Nat, 1 ≤ bl → b + bl ≤ 8 →
+      (∀ i, b ≤ i → i < b + bl → [v0, v1, v2, v3, v4, v5, v6, v7][i]? = some 0) →
+      ipIntFromString6 (joinOn1 ':' ((if b = 0 then [[]] else []) ++
+        [h0, h1, h2, h3, h4, h5, h6, h7].take b ++ [[]] ++
+        (if b + bl = 8 then [[]] else [h0, h1, h2, h3, h4, h5, h6, h7].drop (b + bl)))) =
+        .ok (combine [v0, v1, v2, v3, v4, v5, v6, v7] 0 [])) ∧
+  (∀ (h0 h1 h2 h3 h4 h5 q : List Char) (v0 v1 v2 v3 v4 v5 w : Nat),
+    parseHextet h0 = .ok v0 → parseHextet h1 = .ok v1 → parseHextet h2 = .ok v2 →
+    parseHextet h3 = .ok v3 → parseHextet h4 = .ok v4 → parseHextet h5 = .ok v5 →
+    ipv4Init (.str q) = .ok w →
+    ∀ b bl : Nat, 1 ≤ bl → b + bl ≤ 6 →
+      (∀ i, b ≤ i → i < b + bl → [v0, v1, v2, v3, v4, v5][i]? = some 0) →
+      ipIntFromString6 (joinOn1 ':' ((if b = 0 then [[]] else []) ++ [h0, h1, h2, h3, h4, h5].take b ++
+        [[]] ++ [h0, h1, h2, h3, h4, h5].drop (b + bl) ++ [q])) =
+        .ok (combine [v0, v1, v2, v3, v4, v5, w / 65536, w % 65536] 0 []))
+
+theorem v6ParseSpellings_proven : V6ParseSpellings :=
+  ⟨v6ParseSpellingsBase_proven,
+   fun h0 h1 h2 h3 h4 h5 h6 h7 v0 v1 v2 v3 v4 v5 v6 v7 p0 p1 p2 p3 p4 p5 p6 p7 b bl hbl hb hrun =>
+    run_parse h0 h1 h2 h3 h4 h5 h6 h7 v0 v1 v2 v3 v4 v5 v6 v7 (parseHextet_good _ _ p0)
+      (parseHextet_good _ _ p1) (parseHextet_good _ _ p2) (parseHextet_good _ _ p3)
+      (parseHextet_good _ _ p4) (parseHextet_good _ _ p5) (parseHextet_good _ _ p6)
+      (parseHextet_good _ _ p7) b bl hbl hb hrun,
+   fun h0 h1 h2 h3 h4 h5 q v0 v1 v2 v3 v4 v5 w p0 p1 p2 p3 p4 p5 hq b bl hbl hb hrun =>
+    run_parse4 h0 h1 h2 h3 h4 h5 q v0 v1 v2 v3 v4 v5 w (parseHextet_good _ _ p0)
+      (parseHextet_good _ _ p1) (parseHextet_good _ _ p2) (parseHextet_good _ _ p3)
+      (parseHextet_good _ _ p4) (parseHextet_good _ _ p5) hq b bl hbl hb hrun⟩
+
+/-! ## `IPv6Address.__init__` on a str -/
+
+theorem span_loop_eq (p : Char → Bool) : ∀ (s acc : List Char),
+    (List.span.loop p s acc).1 ++ (List.span.loop p s acc).2 = acc.reverse ++ s := by
+  intro s
+  induction s with
+  | nil => intro acc; simp [List.span.loop]
+  | cons c s ih =>
+    intro acc
+    simp only [List.span.loop]
+    cases hc : p c
+    · rfl
+    · show (List.span.loop p s (c :: acc)).1 ++ (List.span.loop p s (c :: acc)).2 = acc.reverse ++ c :: s
+      rw [ih]
+      simp
+
+/-- `str.partition('%')` with a separator: the string is the head, one character, and the tail. -/
+theorem partition_true (s a b : List Char) (h : partitionPct s = (a, true, b)) :
+    ∃ c, s = a ++ c :: b := by
+  unfold partitionPct List.span at h
+  have he := span_loop_eq (fun x => decide (x ≠ '%')) s []
+  revert h he
+  generalize List.span.loop (fun x => decide (x ≠ '%')) s [] = r
+  intro h he
+  obtain ⟨t, d⟩ := r
+  cases d with
+  | nil =>
+    have h' : (t, false, ([] : List Char)) = (a, true, b) := h
+    simp at h'
+  | cons c b' =>
+    have h' : (t, true, b') = (a, true, b) := h
+    simp only [Prod.mk.injEq] at h'
+    obtain ⟨rfl, -, rfl⟩ := h'
+    exact ⟨c, by simpa using he.symm⟩
+
+/-- `IPv6Address.__init__` for a str, ipaddress.py:1952-1959: a string holding `/` is refused first
+(:1955-1956), with `AddressValueError("Unexpected '/' in %r")`, before the scope id is split off
+(:1957), so `'::1%a/b'` is refused rather than stored with the scope id `'a/b'`. So the scope id an
+address stores is `None` or a non-empty string without `%` or `/`, which is what lets `str()` of an
+address, a `/` and a prefix length be read back as a network (`address_exclude`, :837-838). -/
+def V6InitStr : Prop :=
+  (∀ s : List Char, '/' ∈ s → ipv6Init (.str s) = .error (avMsg "Unexpected '/' in " s)) ∧
+  (∀ (s : List Char) (ip : Nat) (sc : Option (List Char)), ipv6Init (.str s) = .ok (ip, sc) →
+    sc = none ∨ ∃ t, sc = some t ∧ t ≠ [] ∧ '%' ∉ t ∧ '/' ∉ t)
+
+theorem v6InitStr_proven : V6InitStr := by
+  have slash : ∀ s : List Char, '/' ∈ s → ipv6Init (.str s) = .error (avMsg "Unexpected '/' in " s) := by
+    intro s h
+    simp only [ipv6Init, ipv6InitStr, h, ↓reduceIte] <;> rfl
+  refine ⟨slash, fun s ip sc h => ?_⟩
+  by_cases hsl : '/' ∈ s
+  · rw [slash s hsl] at h; cases h
+  · cases hsp : splitScopeId s with
+    | error e =>
+      simp [ipv6Init, ipv6InitStr, hsl, hsp, bind, Except.bind] at h
+    | ok r =>
+      obtain ⟨addr, scope⟩ := r
+      have hsc : scope = sc := by
+        cases hip : ipIntFromString6 addr with
+        | error e => simp [ipv6Init, ipv6InitStr, hsl, hsp, hip, bind, Except.bind] at h
+        | ok v =>
+          simp [ipv6Init, ipv6InitStr, hsl, hsp, hip, bind, Except.bind, pure, Except.pure] at h
+          exact h.2
+      subst hsc
+      unfold splitScopeId at hsp
+      rcases hpp : partitionPct s with ⟨a, sep, x⟩
+      rw [hpp] at hsp
+      cases sep with
+      | false =>
+        left
+        simp at hsp
+        obtain ⟨-, h2⟩ := hsp
+        first | exact h2.symm | exact h2
+      | true =>
+        by_cases hx : x.isEmpty = true ∨ '%' ∈ x
+        · have hx' : x = [] ∨ '%' ∈ x := by
+            rcases hx with h | h
+            · left; cases x <;> simp_all
+            · right; exact h
+          simp [hx'] at hsp
+        · simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte, hx, Except.ok.injEq,
+            Prod.mk.injEq] at hsp
+          obtain ⟨-, rfl⟩ := hsp
+          right
+          refine ⟨x, rfl, ?_, ?_, ?_⟩
+          · intro e; subst e; exact hx (Or.inl rfl)
+          · intro e; exact hx (Or.inr e)
+          · intro e
+            obtain ⟨c, hs⟩ := partition_true s a x hpp
+            exact hsl (by rw [hs]; simp [e])
 
 end PyLean.Ipaddress
