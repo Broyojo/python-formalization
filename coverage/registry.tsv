@@ -1102,7 +1102,7 @@ bytesobj-bytearray-concat	proven	Objects/bytearrayobject.c	bytearray_irepeat,byt
 bytesobj-bytearray-init	proven	Objects/bytearrayobject.c	bytearray_new,PyByteArray_FromObject,_PyByteArray_FromBufferObject
 bytesobj-bytearray-iter	proven	Objects/bytearrayobject.c	bytearray_iter,bytearrayiter_next,bytearrayiter_length_hint,bytearrayiter_setstate
 bytesobj-bytearray-reduce	proven	Objects/bytearrayobject.c	
-bytesobj-bytearray-read-wrappers	proven	Objects/bytearrayobject.c	bytearray_replace_impl,bytearray_splitlines_impl,bytearray_center,bytearray_ljust,bytearray_rjust,bytearray_zfill,bytearray_expandtabs
+bytesobj-bytearray-read-wrappers	proven	Objects/bytearrayobject.c	bytearray_zfill,bytearray_expandtabs
 bytesobj-bytearray-copy-twin	proven	Objects/bytearrayobject.c	_bytearray_with_buffer,bytearray_contains,bytearray_startswith_impl,bytearray_endswith_impl,bytearray_split_impl,bytearray_rsplit_impl,bytearray_hex_impl,bytearray_richcompare
 bytesobj-bytearray-remove	proven	Objects/bytearrayobject.c	bytearray_remove_impl
 bytesobj-bytearray-search-live	proven	Objects/bytearrayobject.c	_bytearray_with_buffer,bytearray_find_impl,bytearray_rfind_impl,bytearray_index_impl,bytearray_rindex_impl,bytearray_count_impl,bytearray_startswith_impl,bytearray_endswith_impl,bytearray_contains
@@ -1115,7 +1115,7 @@ bytesobj-bytearray-rich-live	proven	Objects/bytearrayobject.c	bytearray_richcomp
 bytesobj-bytearray-item-after-index	proven	Objects/bytearrayobject.c	_getbytevalue,bytearray_subscript_lock_held,bytearray_subscript,bytearray_ass_subscript_lock_held,bytearray_ass_subscript,bytearray_setitem_lock_held,bytearray_setitem,bytearray_append_impl,bytearray_remove_impl,bytearray_insert_impl,bytearray_take_bytes_impl
 bytesobj-bytearray-partition-after-sep	proven	Objects/bytearrayobject.c	bytearray_partition_impl,bytearray_rpartition_impl,_PyByteArray_FromBufferObject
 bytesobj-bytearray-translate-after-args	proven	Objects/bytearrayobject.c	bytearray_translate_impl
-bytesobj-bytearray-delegates	proven	Objects/bytearrayobject.c	bytearray_isalnum,bytearray_isalpha,bytearray_isascii,bytearray_isdigit,bytearray_islower,bytearray_isspace,bytearray_istitle,bytearray_isupper,bytearray_capitalize,bytearray_swapcase,bytearray_title,bytearray_upper,bytearray_lower
+bytesobj-bytearray-delegates	proven	Objects/bytearrayobject.c	
 bytesobj-bytearray-affix	proven	Objects/bytearrayobject.c	bytearray_removeprefix_impl,bytearray_removesuffix_impl
 bytesobj-bytearray-maketrans	proven	Objects/bytearrayobject.c	bytearray_maketrans_impl
 bytesobj-bytearray-getitem-raw	proven	Objects/bytearrayobject.c	bytearray_getitem_lock_held,bytearray_getitem
@@ -1123,6 +1123,45 @@ bytesobj-bytearray-repeat	proven	Objects/bytearrayobject.c	bytearray_repeat_lock
 bytesobj-bytearray-iadd-self	refuted	Objects/bytearrayobject.c	bytearray_iconcat_lock_held,bytearray_iconcat,bytearray_setslice
 bytesobj-bytearray-iadd-extend-obj	open	Objects/bytearrayobject.c	
 bytesobj-bytearray-init-steal	refuted	Objects/bytearrayobject.c	bytearray___init___impl
+bytesobj-bytearray-isalnum	proven	Objects/bytearrayobject.c	bytearray_isalnum
+bytesobj-bytearray-isalpha	proven	Objects/bytearrayobject.c	bytearray_isalpha
+bytesobj-bytearray-isascii	proven	Objects/bytearrayobject.c	bytearray_isascii
+bytesobj-bytearray-isdigit	proven	Objects/bytearrayobject.c	bytearray_isdigit
+bytesobj-bytearray-islower	proven	Objects/bytearrayobject.c	bytearray_islower
+bytesobj-bytearray-isspace	proven	Objects/bytearrayobject.c	bytearray_isspace
+bytesobj-bytearray-istitle	proven	Objects/bytearrayobject.c	bytearray_istitle
+bytesobj-bytearray-isupper	proven	Objects/bytearrayobject.c	bytearray_isupper
+bytesobj-bytearray-capitalize	proven	Objects/bytearrayobject.c	bytearray_capitalize
+bytesobj-bytearray-swapcase	proven	Objects/bytearrayobject.c	bytearray_swapcase
+bytesobj-bytearray-title	proven	Objects/bytearrayobject.c	bytearray_title
+bytesobj-bytearray-upper	proven	Objects/bytearrayobject.c	bytearray_upper
+bytesobj-bytearray-lower	proven	Objects/bytearrayobject.c	bytearray_lower
+bytesobj-bytearray-just-fill	proven	Objects/bytearrayobject.c	bytearray_center,bytearray_ljust,bytearray_rjust
+bytesobj-bytearray-replace-count	proven	Objects/bytearrayobject.c	bytearray_replace_impl
+bytesobj-bytearray-splitlines-keepends	proven	Objects/bytearrayobject.c	bytearray_splitlines_impl
+bytesobj-bytearray-tailmatch	proven	Objects/bytearrayobject.c	bytearray_startswith_impl,bytearray_endswith_impl
+bytesobj-bytearray-rich-bytes	proven	Objects/bytearrayobject.c	bytearray_richcompare
+bytesobj-bytearray-append	proven	Objects/bytearrayobject.c	bytearray_append_impl
+bytesobj-bytearray-insert	proven	Objects/bytearrayobject.c	bytearray_insert_impl
+bytesobj-bytearray-pop	proven	Objects/bytearrayobject.c	bytearray_pop_impl
+bytesobj-bytearray-from-size	proven	Objects/bytearrayobject.c	PyByteArray_FromStringAndSize,bytearray_reinit_from_bytes
+bytesobj-bytearray-copy	proven	Objects/bytearrayobject.c	bytearray_copy_impl
+bytesobj-bytearray-clear	proven	Objects/bytearrayobject.c	bytearray_clear_impl
+bytesobj-bytearray-irepeat	proven	Objects/bytearrayobject.c	bytearray_irepeat_lock_held,bytearray_irepeat
+bytesobj-bytearray-resize-strategy	proven	Objects/bytearrayobject.c	bytearray_resize_lock_held,PyByteArray_Resize,bytearray_reinit_from_bytes
+bytesobj-bytearray-setslice-linear-ok	proven	Objects/bytearrayobject.c	bytearray_setslice_linear
+bytesobj-bytearray-subscript-slice	proven	Objects/bytearrayobject.c	bytearray_subscript_lock_held,bytearray_subscript
+bytesobj-bytearray-ass-subscript-index	proven	Objects/bytearrayobject.c	bytearray_ass_subscript_lock_held,bytearray_ass_subscript
+bytesobj-bytearray-buffer-export	proven	Objects/bytearrayobject.c	bytearray_getbuffer_lock_held,bytearray_getbuffer,bytearray_releasebuffer
+bytesobj-bytearray-alloc-report	proven	Objects/bytearrayobject.c	bytearray_alloc,bytearray_sizeof_impl
+bytesobj-bytearray-resize-method	proven	Objects/bytearrayobject.c	bytearray_resize_impl
+bytesobj-bytearray-reverse-loop	proven	Objects/bytearrayobject.c	bytearray_reverse_impl
+bytesobj-bytearray-iter-full	proven	Objects/bytearrayobject.c	bytearray_iter,bytearrayiter_next,bytearrayiter_length_hint,bytearrayiter_setstate
+bytesobj-bytearray-ass-subscript-slice	proven	Objects/bytearrayobject.c	bytearray_ass_subscript_lock_held,bytearray_ass_subscript
+bytesobj-bytearray-setslice-values	proven	Objects/bytearrayobject.c	bytearray_setslice
+bytesobj-bytearray-init-paths	proven	Objects/bytearrayobject.c	bytearray___init___impl
+bytesobj-bytearray-buffer-flags	refuted	Objects/bytearrayobject.c	bytearray_getbuffer_lock_held,bytearray_getbuffer
+bytesobj-bytearray-hex-sep	proven	Objects/bytearrayobject.c	bytearray_hex_impl
 bytesobj-bytes-class-tables	proven	Objects/bytes_methods.c	_Py_bytes_isspace,_Py_bytes_isalpha,_Py_bytes_isalnum,_Py_bytes_isdigit
 bytesobj-bytes-case-laws	proven	Objects/bytes_methods.c	_Py_bytes_lower,_Py_bytes_upper,_Py_bytes_title,_Py_bytes_swapcase,_Py_bytes_islower,_Py_bytes_isupper
 bytesobj-bytes-maketrans-hit	proven	Objects/bytes_methods.c	_Py_bytes_maketrans

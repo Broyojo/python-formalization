@@ -1,5 +1,5 @@
 import PyLean.BytesObj.Bytes.Diff
-import PyLean.BytesObj.Bytes.Heap
+import PyLean.BytesObj.Bytes.Heap2
 
 /-!
 Differential-testing handler for the heap model (`fn` = `bare.<op>`, family `bare` of
@@ -82,6 +82,15 @@ def decKey (j : Json) : Except String Key := do
   | "one" => return .one (← decArg (arr.getD 1 .null))
   | "slice" => return .slice (← opt 1) (← opt 2) (← opt 3)
   | t => throw s!"key {t}"
+
+/-- The `keepends` of `splitlines`: `["tobj", b]`, `["tcls", acts, res]`, `["me"]`. -/
+def decTArg (j : Json) : Except String TArg := do
+  let arr ← j.getArr?
+  match ← (arr.getD 0 .null).getStr? with
+  | "tobj" => return .obj (← (arr.getD 1 .null).getBool?)
+  | "tcls" => return .cls (← decActs (arr.getD 1 .null)) (← decRes (·.getBool?) (arr.getD 2 .null))
+  | "me" => return .me
+  | t => throw s!"targ {t}"
 
 def heapStJ (h : H) : Json :=
   Json.arr #[toJson h.ba.data, toJson (baAllocMethod h.ba), toJson h.ba.offset, toJson h.ba.exports,
@@ -174,13 +183,39 @@ def runBare (op : String) (j : Json) : Except String Json := do
       | some b => toJson b
       | none => "NotImplemented"
     return ans enc (baRichE cRead (← argK j "other") (← cmpOf (← getStr j "cmp")))
-  | "center" | "ljust" | "rjust" | "zfill" =>
-    let k := if op = "center" then PadKind.center else if op = "ljust" then .ljust
-      else if op = "rjust" then .rjust else .zfill
-    return ans toJson (baPadE k (← argK j "width") (← getNat j "fill"))
+  | "center" | "ljust" | "rjust" =>
+    let k := if op = "center" then PadKind.center else if op = "ljust" then .ljust else .rjust
+    return ans toJson (baJustE k (← argK j "width") (← optArg j "fill"))
+  | "zfill" => return ans toJson (baPadE .zfill (← argK j "width") 0)
+  | "resize" => return ans unitJ (baResizeMethodE (← argK j "n"))
+  | "pred" =>
+    let x ← match ← getStr j "name" with
+      | "isalnum" => pure baIsalnumE
+      | "isalpha" => pure baIsalphaE
+      | "isascii" => pure baIsasciiE
+      | "isdigit" => pure baIsdigitE
+      | "islower" => pure baIslowerE
+      | "isspace" => pure baIsspaceE
+      | "istitle" => pure baIstitleE
+      | "isupper" => pure baIsupperE
+      | n => throw s!"pred {n}"
+    return ans toJson x
+  | "map" =>
+    let x ← match ← getStr j "name" with
+      | "capitalize" => pure baCapitalizeE
+      | "swapcase" => pure baSwapcaseE
+      | "title" => pure baTitleE
+      | "upper" => pure baUpperE
+      | "lower" => pure baLowerE
+      | n => throw s!"map {n}"
+    return ans toJson x
   | "replace" => return ans toJson (baReplaceE (← argK j "old") (← argK j "new") (← optArg j "count"))
   | "expandtabs" => return ans toJson (baExpandtabsE (← optArg j "tabsize"))
-  | "splitlines" => return ans seqsJ (baSplitlinesE (← getBool j "keepends"))
+  | "splitlines" =>
+    let k ← match j.getObjVal? "keepends" with
+      | .ok .null | .error _ => pure none
+      | .ok v => some <$> decTArg v
+    return ans seqsJ (baSplitlinesTE k)
   | other => throw s!"unknown bare op {other}"
 
 def heapHandler : Handler := fun fn j =>

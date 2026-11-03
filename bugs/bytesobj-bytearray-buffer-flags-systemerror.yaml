@@ -1,0 +1,69 @@
+id: bytesobj-bytearray-buffer-flags-systemerror
+title: "bytearray().__buffer__(inspect.BufferFlags.READ) raises SystemError (bad argument to internal function)"
+priority: P3
+kind: wrong-exception
+module: bytesobj
+files: [Objects/bytearrayobject.c, Objects/abstract.c]
+functions: ["bytearray_getbuffer_lock_held", "bytearray_getbuffer", "PyBuffer_FillInfo"]
+summary: |
+  inspect.BufferFlags is documented as "the flags that can be passed to the __buffer__ method" and has the
+  members READ (0x100) and WRITE (0x200). bytearray_getbuffer_lock_held (Objects/bytearrayobject.c:69-86)
+  passes the request flags to PyBuffer_FillInfo (:81), which treats flags == PyBUF_READ or PyBUF_WRITE as a
+  misuse by C code and calls PyErr_BadInternalCall (Objects/abstract.c:784-786). Python code calling
+  bytearray(b"ab").__buffer__(inspect.BufferFlags.READ) therefore gets
+  SystemError: Objects/abstract.c:785: bad argument to internal function. bytes.__buffer__ fails the same
+  way (bytes_buffer_getbuffer also goes through PyBuffer_FillInfo); memoryview(b"ab").__buffer__ of the same
+  flags succeeds. A SystemError is the exception of an interpreter-internal error and should not be
+  reachable from a documented call.
+  Lean: BufferFlagsNoSystemError (no flag of inspect.BufferFlags makes a bytearray buffer request fail with
+  SystemError) is refuted at flags = 0x100 (bufferFlagsNoSystemError_refuted), through baGetBufferC, the
+  model of bytearray_getbuffer_lock_held with PyBuffer_FillInfo.
+likelihood: |
+  Low: READ and WRITE are flags for PyMemoryView_FromMemory, not request types, and few programs pass them
+  to __buffer__. Impact is an exception type only (SystemError instead of, say, BufferError or ValueError).
+maybe_intended: |
+  Partly: the BadInternalCall in PyBuffer_FillInfo is a deliberate guard against C callers passing
+  PyBUF_READ/PyBUF_WRITE as request flags. What is not intended is that the guard's SystemError is reachable
+  from Python through a documented enum member, and that memoryview, bytes and bytearray disagree.
+reproducer: |
+  import inspect
+  got = {}
+  for name, obj in [("bytearray", bytearray(b"ab")), ("bytes", b"ab"), ("memoryview", memoryview(b"ab"))]:
+      for flag in (inspect.BufferFlags.READ, inspect.BufferFlags.WRITE):
+          try:
+              obj.__buffer__(flag)
+              got[(name, flag.name)] = "ok"
+          except Exception as e:
+              got[(name, flag.name)] = "%s: %s" % (type(e).__name__, e)
+  for k, v in got.items():
+      print(k, v)
+  r = got[("bytearray", "READ")]
+  if r.startswith("SystemError") and "bad argument to internal function" in r:
+      print("REPRODUCED bytesobj-bytearray-buffer-flags-systemerror")
+expected: |
+  Either a successful export (as memoryview gives) or an ordinary exception such as BufferError or
+  ValueError naming the unsupported flag; not SystemError.
+observed: |
+  python3 3.15.2: bytearray and bytes, READ and WRITE: SystemError: Objects/abstract.c:785: bad argument to
+  internal function; memoryview: ok. REPRODUCED.
+  main (python.exe 3.16.0a1+dev ef1fce0): the same, at Objects/abstract.c:786. REPRODUCED.
+promised_by: |
+  Doc/library/inspect.rst:1877-1901: BufferFlags "represents the flags that can be passed to the
+  __buffer__ method of objects implementing the buffer protocol", with READ and WRITE among them. Invariant:
+  SystemError signals an internal error and is not raised for a documented call from Python.
+cause: |
+  Objects/abstract.c:783-786: `if (flags == PyBUF_READ || flags == PyBUF_WRITE) { PyErr_BadInternalCall(); }`
+  in PyBuffer_FillInfo, reached from Python through the __buffer__ wrapper (wrap_buffer, Objects/typeobject.c:10446)
+  and bytearray_getbuffer_lock_held, Objects/bytearrayobject.c:80-83.
+possible_fix: |
+  Validate the flags in the __buffer__ slot wrapper (Objects/typeobject.c) and raise ValueError or
+  BufferError for PyBUF_READ/PyBUF_WRITE, or have PyBuffer_FillInfo raise BufferError instead of
+  BadInternalCall; alternatively document READ and WRITE as not valid for __buffer__.
+duplicates:
+  issues: []
+  queries: ["__buffer__ SystemError", "PyBUF_READ PyBuffer_FillInfo", "BufferFlags READ bad argument internal function",
+    "__buffer__ flags", "PyBuffer_FillInfo SystemError", "bad argument to internal function buffer"]
+  bugforge: "no entry (vendor/bugforge-results/README.md has no PyBUF_READ, BufferFlags or 'bad argument to internal function' finding)"
+lean:
+  property: PyLean.BytesObj.Bytes.BufferFlagsNoSystemError
+  theorem: PyLean.BytesObj.Bytes.bufferFlagsNoSystemError_refuted
