@@ -37,7 +37,9 @@ def Math1Rules : Prop :=
       (r.isFinite = true → errno = .edom → call = .error (.valueError "math domain error")) ∧
       (r.isFinite = true → errno = .erange → call = erangeOutcome r) ∧
       (errno = .zero → (r.isNaN = true → x.isNaN = true) → (r.isInf = true → x.isFinite = false) →
-        call = .ok r))
+        call = .ok r) ∧
+      -- any other `errno`: `PyErr_SetFromErrno(PyExc_ValueError)`, :750-753
+      (∀ n, r.isFinite = true → errno = .other n → call = .error (.valueError s!"~[Errno {n}]")))
 
 /-- `math_1a(arg, func, err_msg)` for every C function `func` that sets `errno` itself:
 `errno` alone decides. -/
@@ -50,7 +52,8 @@ def Math1aRules : Prop :=
       let errno := (func x).2
       (errno = .zero → call = .ok r) ∧
       (errno = .edom → call = .error (math_1_domainErr x errMsg)) ∧
-      (errno = .erange → call = erangeOutcome r))
+      (errno = .erange → call = erangeOutcome r) ∧
+      (∀ n, errno = .other n → call = .error (.valueError s!"~[Errno {n}]")))
 
 /-- `math_2(args, func, name)` for every two-argument C function `func`. -/
 def Math2Rules : Prop :=
@@ -72,7 +75,9 @@ def Math2Rules : Prop :=
         (r.isInf = true → (x.isFinite && y.isFinite) = false → call = .ok r) ∧
         (r.isFinite = true → errno = .edom → call = .error (.valueError "math domain error")) ∧
         (r.isFinite = true → errno = .erange → call = erangeOutcome r) ∧
-        (r.isFinite = true → errno = .zero → call = .ok r)))
+        (r.isFinite = true → errno = .zero → call = .ok r) ∧
+        (∀ n, r.isFinite = true → errno = .other n →
+          call = .error (.valueError s!"~[Errno {n}]"))))
 
 theorem is_error_erange (r : F64) : (match is_error r .erange true with
     | .ok => Except.ok r | .raise e => .error e | .silent => .error (.valueError "math domain error"))
@@ -100,7 +105,7 @@ theorem math1Rules_proven : Math1Rules := by
     generalize (func x).1 = r
     generalize (func x).2 = errno
     refine ⟨fun v hv => ?_, fun hn hx' => ?_, fun hi hf => ?_, fun hf he => ?_, fun hf he => ?_,
-      fun he hn hi => ?_⟩
+      fun he hn hi => ?_, fun n hf he => ?_⟩
     · constructor
       · intro hvn
         cases hxn : x.isNaN
@@ -156,6 +161,9 @@ theorem math1Rules_proven : Math1Rules := by
         · simp
         · simp [hrn, hri, not_finite_of_inf hri, hi hri]
       · simp [hrn, hn hrn, not_inf_of_nan hrn]
+    · simp only [isNaN_false_of_finite hf, isInf_false_of_finite hf, hf, he, Bool.false_and,
+        Bool.false_eq_true, ↓reduceIte, Bool.true_and]
+      rfl
 
 theorem math1aRules_proven : Math1aRules := by
   intro func errMsg o
@@ -174,7 +182,7 @@ theorem math1aRules_proven : Math1aRules := by
       simp only [math_1a, hx, bind, Except.bind]; rfl
     rw [base]
     generalize (func x).1 = r
-    refine ⟨fun he => ?_, fun he => ?_, fun he => ?_⟩
+    refine ⟨fun he => ?_, fun he => ?_, fun he => ?_, fun n he => ?_⟩
     · rw [he]; rfl
     · rw [he]
       cases errMsg <;> rfl
@@ -182,6 +190,7 @@ theorem math1aRules_proven : Math1aRules := by
       simp only [bne_iff_ne, ne_eq, reduceCtorEq, not_false_eq_true, ↓reduceIte, is_error,
         erangeOutcome]
       by_cases h : (F64.abs r).lt c1p5 = true <;> simp [h]
+    · rw [he]; rfl
 
 theorem math2Rules_proven : Math2Rules := by
   intro func name args
@@ -223,7 +232,7 @@ theorem math2Rules_proven : Math2Rules := by
           = .error (.overflowError "math range error") := by
         intro s; cases s <;> decide +kernel
       refine ⟨fun v hv => ?_, fun hn hxy => ?_, fun hi hxy => ?_, fun hn hxy => ?_,
-        fun hi hxy => ?_, fun hf he => ?_, fun hf he => ?_, fun hf he => ?_⟩
+        fun hi hxy => ?_, fun hf he => ?_, fun hf he => ?_, fun hf he => ?_, fun n hf he => ?_⟩
       · rcases classify r with h | h | h
         · simp only [isNaN_false_of_finite h, isInf_false_of_finite h, Bool.false_eq_true,
             ↓reduceIte] at hv
@@ -265,5 +274,7 @@ theorem math2Rules_proven : Math2Rules := by
           ↓reduceIte, bne_iff_ne, ne_eq, reduceCtorEq, not_false_eq_true]
         exact is_error_erange r
       · simp [isNaN_false_of_finite hf, isInf_false_of_finite hf, he]
+      · simp only [isNaN_false_of_finite hf, isInf_false_of_finite hf, he, Bool.false_eq_true,
+          ↓reduceIte, bne_iff_ne, ne_eq, reduceCtorEq, not_false_eq_true, is_error]
 
 end PyLean.MathInt

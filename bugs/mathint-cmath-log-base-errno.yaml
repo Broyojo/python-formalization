@@ -1,0 +1,62 @@
+id: mathint-cmath-log-base-errno
+title: "cmath.log(0, base) returns (-inf+nanj) instead of raising ValueError: the second c_log() call clears errno"
+priority: P3
+kind: missing-error-check
+module: mathint
+files: [Modules/cmathmodule.c]
+functions: ["cmath_log_impl", "c_log"]
+summary: |
+  cmath.log(0) raises ValueError('math domain error'), but cmath.log(0, 2) (or any finite
+  nonzero base, e.g. cmath.log(0j, 10)) silently returns (-inf+nanj). cmath_log_impl sets
+  errno = 0, computes x = c_log(x), which sets errno = EDOM for a zero argument
+  (cmathmodule.c:615-622), then computes y = c_log(base), and c_log ends every non-special path
+  with errno = 0 (:636). The EDOM of the first call is gone when the check `if (errno != 0)`
+  runs at :971, so the quotient (-inf+0j)/(log(2)+0j) = (-inf+nanj) is returned. The real
+  analogue math.log(0, 2) raises ValueError('expected a positive input'), and cmath.log(0)
+  raises. The same masking hides any EDOM of c_log(x) whenever the base is a finite nonzero
+  number; a base of 0 still raises because its own c_log sets EDOM last.
+likelihood: |
+  Moderate. log(0, base) is a natural edge case (e.g. a loop over magnitudes that reaches 0);
+  the NaN imaginary part then propagates silently instead of the documented domain error.
+maybe_intended: |
+  Unlikely. The one-argument path raises for the same x, the comment at :971 checks errno for
+  exactly this purpose, and the result (-inf+nanj) is not log(0)/log(base) in any sense (the
+  imaginary part comes from inf*0 in the division).
+reproducer: |
+  import cmath
+  try:
+      cmath.log(0)
+      one = 'no error'
+  except ValueError as e:
+      one = 'ValueError: ' + str(e)
+  try:
+      two = repr(cmath.log(0, 2))
+  except ValueError as e:
+      two = 'ValueError: ' + str(e)
+  print('log(0):', one, ' log(0, 2):', two)
+  if one.startswith('ValueError') and not two.startswith('ValueError'):
+      print('REPRODUCED mathint-cmath-log-base-errno')
+expected: |
+  cmath.log(0, 2) raises ValueError('math domain error'), like cmath.log(0) and math.log(0, 2).
+observed: |
+  python3 3.15.2: log(0): ValueError: math domain error  log(0, 2): (-inf+nanj). REPRODUCED.
+  main (python.exe 3.16.0a1+dev): identical. REPRODUCED.
+promised_by: |
+  Doc/library/cmath.rst, log ("Returns the logarithm of x to the given base"; the module
+  raises ValueError for domain errors such as log(0)); cmath.log(0) itself raises.
+cause: |
+  Modules/cmathmodule.c:961-972: errno = 0; x = c_log(x) (EDOM for x == 0 at :621); y =
+  c_log(y) resets errno to 0 at :636 (and SPECIAL_VALUE at :142-147 also sets errno = 0); the
+  check at :971 sees only the second call's errno (or EDOM from _Py_c_quot on a zero divisor).
+possible_fix: |
+  Save errno after the first c_log and combine: e.g. `int err = errno; ... y = c_log(y); if
+  (errno) err = errno; x = _Py_c_quot(x, y); if (errno) err = errno; if (err) {errno = err;
+  return math_error();}`; or check errno right after c_log(x).
+duplicates:
+  issues: []
+  queries: ["cmath log base errno", "cmath.log zero base", "cmath log errno",
+            "cmath log(0, 2)", "cmath log base domain error"]
+  notes: "No matching issue. Related but different: python/cpython#156145 (open feature request to stop relying on platform errno) and #153144 (atan2 errno). Not in vendor/bugforge-results."
+lean:
+  property: PyLean.MathInt.CmathLogBaseDomain
+  theorem: PyLean.MathInt.cmathLogBaseDomain_refuted
