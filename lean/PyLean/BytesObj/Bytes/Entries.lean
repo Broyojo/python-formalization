@@ -276,7 +276,7 @@ def entries : List Entry := [
     source := "Doc/library/stdtypes.rst, bytearray.take_bytes; bytearrayobject.c:1614-1688", status := .proven
     prop := ``TakeBytesSpec, thm := some ``takeBytesSpec_proven },
   { id := "bytesobj-bytearray-resize-wf", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["bytearray_resize_lock_held", "bytearray_reinit_from_bytes", "PyByteArray_Resize", "bytearray_resize_impl", "PyByteArray_Size", "PyByteArray_AsString",
+    pyFns := ["bytearray_resize_lock_held", "bytearray_reinit_from_bytes", "PyByteArray_Resize", "bytearray_resize_impl", "PyByteArray_AsString",
       "bytearray_length", "bytearray_alloc", "bytearray_sizeof_impl"]
     statement := "For every object with a valid layout and every request, a successful resize gives the requested size and a valid layout (data and terminator inside ob_alloc), keeps the common bytes and the export count."
     source := "invariant: bytearray_resize_lock_held; __alloc__ and __sizeof__ expose ob_alloc, which the difftest compares", status := .proven
@@ -764,7 +764,7 @@ def entries : List Entry := [
     source := "bytearrayobject.c:959-971", status := .proven
     prop := ``BaTpNewSpec, thm := some ``baTpNewSpec_proven },
   { id := "bytesobj-bytearray-size-null", pyFile := "Objects/bytearrayobject.c"
-    pyFns := ["PyByteArray_Size"]
+    pyFns := []
     statement := "PyByteArray_Size(NULL) gives an error, as the documentation's 'after checking for a NULL pointer' says. Refuted: the body only asserts, and a release build dereferences NULL."
     source := "Doc/c-api/bytearray.rst:76-78", status := .refuted
     prop := ``SizeChecksNull, thm := some ``sizeChecksNull_refuted

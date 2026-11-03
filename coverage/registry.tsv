@@ -1083,7 +1083,7 @@ bytesobj-bytes-mul-specialized	refuted	Objects/bytesobject.c	bytes_repeat
 bytesobj-bytes-mul-specialized-range	proven	Objects/bytesobject.c	bytes_repeat
 bytesobj-bytes-iteritem	proven	Objects/bytesobject.c	bytes_iteritem
 bytesobj-bytearray-take-bytes	proven	Objects/bytearrayobject.c	bytearray_take_bytes_impl
-bytesobj-bytearray-resize-wf	proven	Objects/bytearrayobject.c	bytearray_resize_lock_held,bytearray_reinit_from_bytes,PyByteArray_Resize,bytearray_resize_impl,PyByteArray_Size,PyByteArray_AsString,bytearray_length,bytearray_alloc,bytearray_sizeof_impl
+bytesobj-bytearray-resize-wf	proven	Objects/bytearrayobject.c	bytearray_resize_lock_held,bytearray_reinit_from_bytes,PyByteArray_Resize,bytearray_resize_impl,PyByteArray_AsString,bytearray_length,bytearray_alloc,bytearray_sizeof_impl
 bytesobj-bytearray-export-rule	proven	Objects/bytearrayobject.c	_canresize,bytearray_resize_lock_held
 bytesobj-bytearray-init-initialised	proven	Objects/bytearrayobject.c	
 bytesobj-bytearray-extend-initialised	proven	Objects/bytearrayobject.c	
@@ -1172,7 +1172,7 @@ bytesobj-bytearray-resize-storage	proven	Objects/bytearrayobject.c	bytearray_res
 bytesobj-bytearray-resize-left-mirror	proven	Objects/bytearrayobject.c	bytearray_resize_storage,bytearray_resize_lock_held
 bytesobj-bytearray-dealloc	proven	Objects/bytearrayobject.c	bytearray_dealloc
 bytesobj-bytearray-tp-new	proven	Objects/bytearrayobject.c	bytearray_new
-bytesobj-bytearray-size-null	refuted	Objects/bytearrayobject.c	PyByteArray_Size
+bytesobj-bytearray-size-null	refuted	Objects/bytearrayobject.c	
 bytesobj-bytes-class-tables	proven	Objects/bytes_methods.c	_Py_bytes_isspace,_Py_bytes_isalpha,_Py_bytes_isalnum,_Py_bytes_isdigit
 bytesobj-bytes-case-laws	proven	Objects/bytes_methods.c	_Py_bytes_lower,_Py_bytes_upper,_Py_bytes_title,_Py_bytes_swapcase,_Py_bytes_islower,_Py_bytes_isupper
 bytesobj-bytes-maketrans-hit	proven	Objects/bytes_methods.c	_Py_bytes_maketrans

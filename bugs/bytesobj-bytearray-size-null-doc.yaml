@@ -17,6 +17,11 @@ summary: |
 likelihood: |
   Very low: only C callers passing NULL, which is a caller bug anyway. A documentation fix is enough.
 maybe_intended: |
+  The crash itself is known and accepted upstream: Lib/test/test_capi/test_bytearray.py:91-93 and
+  :103-105 (3.15) list `# CRASHES size(NULL)`, `size(b'abc')` and `asstring(NULL, 0)`. Only the docs'
+  "after checking for a NULL pointer" wording is stale; the fix is a doc change. File only as a small
+  doc point inside the combined bytearray report.
+
   Likely: the C-API generally does not check for NULL arguments, and the asserts document the
   precondition. The text "after checking for a NULL pointer" promises more than the code does.
 reproducer: |
