@@ -3588,6 +3588,9 @@ def functools_sdm(case):
 import abc as operator_abc  # noqa: E402
 import collections as operator_collections  # noqa: E402
 import copy as operator_copy  # noqa: E402
+import copyreg as operator_copyreg  # noqa: E402
+
+operator_registered = []        # classes put in copyreg.dispatch_table by one case, taken out after it
 import types as operator_types  # noqa: E402
 import _operator as operator_C  # noqa: E402
 from test.support import import_helper as operator_ih  # noqa: E402
@@ -3832,7 +3835,10 @@ def operator_state_graph(rng):
               "args": [rng.choice(ok) for _ in range(rng.randrange(0, 2))] if kind == "inst" else [],
               "state": None, "listiter": None, "dictiter": None,
               "setstate": rng.choice(["no", "no", "ok", "raise"]) if kind == "inst" else "no",
-              "listfail": rng.random() < .3, "dictfail": rng.random() < .3}
+              "listfail": rng.random() < .3, "dictfail": rng.random() < .3,
+              "via": rng.choice(["ex", "ex", "plain"]), "table": rng.random() < .2}
+    if rng.random() < .15:                     # no reduce value at all, or a false reductor
+        hooked.update({"rv": "absent", "via": rng.choice(["ex", "falsy", "falsyex"]), "table": False})
     cells.append(hooked)                                                                       # cell 3
     r = rng.random()
     hooked["state"] = 0 if r < .2 else rng.choice(ok) if r < .3 else operator_state(rng, cells, ok)
@@ -3882,6 +3888,10 @@ def operator_graph(rng):
                 c.update(operator_spec(rng, n))
             else:
                 c.update({"rv": rv})
+            # where the reduce value comes from: __reduce_ex__, __reduce__ behind __reduce_ex__ = None, a
+            # copyreg.dispatch_table entry, or (with none) a false reductor
+            c["via"] = rng.choice(["ex", "ex", "plain"] if rv != "absent" else ["ex", "falsy", "falsyex"])
+            c["table"] = rv != "absent" and rng.random() < .15
             cells.append(c)
     for i, c in enumerate(cells):
         if c["k"] == "method":
@@ -4032,9 +4042,29 @@ def operator_hooked(spec, objs):
              it([(objs[a], objs[b]) for a, b in spec["dictiter"]], "dict") if spec["dictiter"] is not None else None,
              None]
         return tuple(t[:spec["size"]])
-    body["__reduce_ex__"] = reduce_ex if rv != "absent" else None
-    body["__reduce__"] = None
-    return type("Hooked", (), body)()
+    # how it reduces, Lib/copy.py:84-96 and :139-152: a copyreg.dispatch_table entry, which must win over the
+    # `__reduce_ex__` that then raises; `__reduce_ex__ = None` and the value from `__reduce__`; or a false reductor
+    via = spec.get("via", "ex")
+    table = spec.get("table", False) and rv != "absent"
+    if rv == "absent":
+        body["__reduce_ex__"] = 0 if via == "falsyex" else None
+        body["__reduce__"] = 0 if via == "falsy" else None
+    elif table:
+        def shadowed(s, proto):
+            raise ValueError("shadowed")
+        body["__reduce_ex__"] = shadowed
+        body["__reduce__"] = None
+    elif via == "plain":
+        body["__reduce_ex__"] = None
+        body["__reduce__"] = lambda s: reduce_ex(s, None)
+    else:
+        body["__reduce_ex__"] = reduce_ex
+        body["__reduce__"] = None
+    cls = type("Hooked", (), body)
+    if table:
+        operator_copyreg.dispatch_table[cls] = lambda o: reduce_ex(o, None)
+        operator_registered.append(cls)
+    return cls()
 
 
 def operator_build_graph(cells):
@@ -4645,8 +4675,17 @@ def operator_deep(case):
 
     def go():
         y = operator_copy.copy(x) if case["shallow"] else operator_copy.deepcopy(x, memo)
-        return [operator_render(y, []), y is x]
-    r = py_result(go)
+        seen = []
+        out = operator_render(y, seen)
+        keep = memo.get(id(memo)) if not case["shallow"] else None
+        # memo[id(memo)], the list _keep_alive fills (Lib/copy.py:226-240), rendered after the copy
+        return [out, y is x, None if keep is None else [operator_render(k, seen) for k in keep]]
+    try:
+        r = py_result(go)
+    finally:
+        for c in operator_registered:
+            del operator_copyreg.dispatch_table[c]
+        operator_registered.clear()
     if "exc" in r:
         if r["exc"] == "TypeError" and "_reconstruct" in r["msg"]:
             r["msg"] = "~_reconstruct()"

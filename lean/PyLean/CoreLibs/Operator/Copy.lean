@@ -36,6 +36,22 @@ inductive RvSpec where
       (setstate : Option (Option PyExc))
   deriving Repr, DecidableEq
 
+/-- A class attribute that `copy` and `deepcopy` read as a reductor, `__reduce_ex__` or `__reduce__`: absent or set to
+`None`, set to a false object that is not callable (`0`), or a function giving a reduce value. -/
+inductive RedAttr where
+  | none
+  | falsy
+  | fn (r : RvSpec)
+  deriving Repr, DecidableEq
+
+/-- How an object reduces, Lib/copy.py:84-96 and :139-152: `table` is `copyreg.dispatch_table[type(x)](x)` when its class
+is registered; `ex` and `plain` are its `__reduce_ex__` and `__reduce__`. -/
+structure Reductor where
+  table : Option RvSpec
+  ex : RedAttr
+  plain : RedAttr
+  deriving Repr, DecidableEq
+
 /-- A key of an instance's `__dict__`. Every `str` key is a `name` (setattr's names and a `str` object that
 `__dict__.update` stores alike); any other key object is `obj`, its cell, and compares with `pyEq`, so two keys merge
 exactly when the dict would merge them. -/
@@ -46,7 +62,7 @@ inductive AttrKey where
 
 /-- An object on the heap. `hooked` is an instance of a class with its own protocol: `copier` is `__copy__`,
 `deepcopier` is `__deepcopy__`, each raising if the inner value is set, and returning a fresh atom otherwise;
-`reduce` is what `__reduce_ex__` gives, `none` for an object that has neither it nor `__reduce__`. `inst` is a plain
+`reduce` says how it reduces (`Reductor`). `inst` is a plain
 instance, which `object.__reduce_ex__` copies through `copyreg.__newobj__`. The atom `0` is `None`; other atoms are
 `int`s. An `inst`'s attributes are its `__dict__` in insertion order. A `method`'s function has the `__name__`
 `methName func`; the class of the model's instances defines function `0` and nothing else defines any. -/
@@ -65,13 +81,24 @@ inductive Cell where
   | cls (id : Nat)
   /-- A class with another metaclass: `issubclass(cls, type)`, reached at Lib/copy.py:132 after the `memo` lookup. -/
   | metaCls (id : Nat)
-  | hooked (copier deepcopier : Option (Option PyExc)) (reduce : Option RvSpec)
+  | hooked (copier deepcopier : Option (Option PyExc)) (reduce : Reductor)
   deriving Repr, DecidableEq, Inhabited
 
-/-- The state of a run. `memo` maps an id to its copy. -/
+/-- What `_keep_alive` puts in its list: an object, or the `__dict__` of an instance (the state of its reduce value,
+`x.__dict__` itself, which `deepcopy` copies and keeps). -/
+inductive KeepItem where
+  | obj (i : Nat)
+  | dictOf (i : Nat)
+  deriving Repr, DecidableEq
+
+/-- The state of a run. `memo` maps an id to its copy. `keep` is `memo[id(memo)]`, the list `_keep_alive` fills,
+Lib/copy.py:226-240: `none` while `memo` has no entry for itself. Scope: that list is reachable only through `memo`,
+so it is held here rather than as a cell, and the memo itself is not an object of the graph (`deepcopy(memo, memo)`,
+which returns that list, is not modelled). -/
 structure Heap where
   cells : List Cell
   memo : List (Nat × Nat)
+  keep : Option (List KeepItem)
   deriving Repr, DecidableEq
 
 def Heap.get (h : Heap) (i : Nat) : Cell := h.cells.getD i (.atom 0)
@@ -83,6 +110,13 @@ def Heap.set (h : Heap) (i : Nat) (c : Cell) : Heap :=
   { h with cells := h.cells.set i c }
 
 def Heap.remember (h : Heap) (x y : Nat) : Heap := { h with memo := (x, y) :: h.memo }
+
+/-- `_keep_alive(x, memo)`, Lib/copy.py:236-240: append to `memo[id(memo)]`, or create it as `[x]` on `KeyError`. -/
+def Heap.keepAlive (h : Heap) (k : KeepItem) : Heap := { h with keep := some (h.keep.getD [] ++ [k]) }
+
+/-- The end of `deepcopy`, Lib/copy.py:158-162: unless the copy is `x` itself, `memo[d] = y` and `_keep_alive(x, memo)`. -/
+def finish (h : Heap) (x y : Nat) : Py (Heap × Nat) :=
+  if y = x then .ok (h, y) else .ok ((h.remember x y).keepAlive (.obj x), y)
 
 /-- Attribute names of `args` and of dict keys, as the model stores them in an instance. -/
 def attrName (k : Nat) : String := "k" ++ toString k
@@ -473,6 +507,21 @@ def getMethodAttr (h : Heap) (f s : Nat) : Py (Heap × Nat) :=
       else .error (.named "AttributeError" "~object has no attribute")
   | _ => .error (.named "AttributeError" "~object has no attribute")
 
+/-- The reduce value, Lib/copy.py:84-96 for `copy` and :139-152 for `deepcopy`: the class's `copyreg.dispatch_table`
+entry first, then `__reduce_ex__(4)` if it is not `None` (a false non-callable is called, and fails), then
+`__reduce__()` if it is true, and otherwise `copy.Error`. A reductor that raises is the `raises` value. -/
+def reduceValue (r : Reductor) (deep : Bool) : Py RvSpec :=
+  match r.table with
+  | some rv => .ok rv
+  | none =>
+    match r.ex with
+    | .fn rv => .ok rv
+    | .falsy => .error (.typeError "'int' object is not callable")
+    | .none =>
+      match r.plain with
+      | .fn rv => .ok rv
+      | _ => .error (uncopyable deep)
+
 /-- `copy(x)`, Lib/copy.py:62-100. `tuple` is atomic here and only here. A bound method has no `__copy__`, so it goes
 through `method.__reduce__`, Objects/classobject.c:90-116, which gives `(getattr, (self, name))` (no name here is
 private, so no mangling, :99-111), and `_reconstruct` makes `getattr(self, name)`. -/
@@ -488,9 +537,9 @@ def copyShallow (h : Heap) (x : Nat) : Py (Heap × Nat) :=
     | some (some e) => .error e
     | some none => let (h1, y) := h.alloc (.atom 1); .ok (h1, y)
     | none =>
-      match reduce with
-      | none => .error (uncopyable false)
-      | some r => reconShallow h r x
+      match reduceValue reduce false with
+      | .error e => .error e
+      | .ok r => reconShallow h r x
 
 mutual
   /-- `deepcopy(x, memo)`, Lib/copy.py:110-162, with the dispatch table of `_deepcopy_list`, :171-177,
@@ -510,24 +559,24 @@ mutual
             let h2 := h1.remember x y
             match deepList fuel h2 items with
             | .error e => .error e
-            | .ok (h3, ys) => .ok (h3.set y (.list ys), y)
+            | .ok (h3, ys) => finish (h3.set y (.list ys)) x y
           | .tuple items =>
             match deepList fuel h items with
             | .error e => .error e
             | .ok (h1, ys) =>
               match h1.memo.lookup x with
-              | some y => .ok (h1, y)
+              | some y => finish h1 x y
               | none =>
-                if ys == items then .ok (h1, x)
+                if ys == items then finish h1 x x
                 else
                   let (h2, y) := h1.alloc (.tuple ys)
-                  .ok (h2.remember x y, y)
+                  finish h2 x y
           | .dict items =>
             let (h1, y) := h.alloc (.dict [])
             let h2 := h1.remember x y
             match deepPairs fuel h2 [] items with
             | .error e => .error e
-            | .ok (h3, ys) => .ok (h3.set y (.dict ys), y)
+            | .ok (h3, ys) => finish (h3.set y (.dict ys)) x y
           | .fdict items =>
             -- `_deepcopy_frozendict`, Lib/copy.py:205-218: nothing is in `memo` during the copies, and a recursive
             -- structure may have put a copy there, which wins; the result is always a new object
@@ -535,36 +584,38 @@ mutual
             | .error e => .error e
             | .ok (h1, ys) =>
               match h1.memo.lookup x with
-              | some y => .ok (h1, y)
+              | some y => finish h1 x y
               | none =>
                 let (h2, y) := h1.alloc (.fdict ys)
-                .ok (h2.remember x y, y)
+                finish h2 x y
           | .method f s =>
             match deepcopy fuel h s with
             | .error e => .error e
             | .ok (h1, s') =>
               let (h2, y) := h1.alloc (.method f s')
-              .ok (h2.remember x y, y)
+              finish h2 x y
           | .cls _ | .metaCls _ => .ok (h, x)
           | .inst attrs =>
-            -- `copyreg.__newobj__`, with the attributes as the state
+            -- `object.__reduce_ex__(4)`: `copyreg.__newobj__`, `(cls,)` (a class, atomic) and `x.__dict__` as the
+            -- state, `None` when it is empty; `_reconstruct` records `y`, copies the state dict (whose own
+            -- `deepcopy` keeps it alive) and updates `y.__dict__` with it
             let (h1, y) := h.alloc (.inst [])
             let h2 := h1.remember x y
             match deepAttrs fuel h2 y attrs with
             | .error e => .error e
-            | .ok h3 => .ok (h3, y)
+            | .ok h3 => finish (if attrs = [] then h3 else h3.keepAlive (.dictOf x)) x y
           | .hooked _ deepcopier reduce =>
             match deepcopier with
             | some (some e) => .error e
             | some none =>
               let (h1, y) := h.alloc (.atom 1)
-              .ok (h1.remember x y, y)
+              finish h1 x y
             | none =>
-              match reduce with
-              | none => .error (uncopyable true)
-              | some .str => .ok (h, x)
-              | some (.raises e) => .error e
-              | some (.tuple size fail kind args state listiter dictiter setstate) =>
+              match reduceValue reduce true with
+              | .error e => .error e
+              | .ok .str => .ok (h, x)
+              | .ok (.raises e) => .error e
+              | .ok (.tuple size fail kind args state listiter dictiter setstate) =>
                 match reconArity size with
                 | some e => .error e
                 | none =>
@@ -590,7 +641,7 @@ mutual
                             | .ok h7 =>
                               match dictiter.bind (·.fail) with
                               | some e => .error e
-                              | none => .ok (h7, y)
+                              | none => finish h7 x y
           | .atom _ | .str _ => .ok (h, x)
 
   /-- `for a in x: append(deepcopy(a, memo))`. -/
@@ -623,7 +674,8 @@ mutual
           | .error e => .error e
           | .ok acc' => deepPairs fuel h2 acc' rest
 
-  /-- The state of a plain instance, copied and stored attribute by attribute. -/
+  /-- The state of a plain instance, `x.__dict__`, copied as `_deepcopy_dict` copies it (value, then key, then the
+  store) and stored into `y.__dict__` item by item, which gives the same dict as `update` with the whole copy. -/
   def deepAttrs : Nat → Heap → Nat → List (AttrKey × Nat) → Py Heap
     | 0, _, _, _ => .error .modelFuel
     | _ + 1, h, _, [] => .ok h
@@ -634,9 +686,13 @@ mutual
         match deepKey fuel h1 k with
         | .error e => .error e
         | .ok (h2, k') =>
-          match setAttrOf h2 y k' v' with
-          | .error e => .error e
-          | .ok h3 => deepAttrs fuel h3 y rest
+          -- the store into the copy of the state dict, Lib/copy.py:201, hashes the key's copy
+          match (match k' with | .obj c => storeKey h2 c | .name _ => none) with
+          | some e => .error e
+          | none =>
+            match setAttrOf h2 y k' v' with
+            | .error e => .error e
+            | .ok h3 => deepAttrs fuel h3 y rest
 
   /-- The copy of a `__dict__` key, value first as in `_deepcopy_dict`, Lib/copy.py:201: a `str` is atomic, any
   other key is deep-copied. -/

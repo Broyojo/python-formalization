@@ -42,10 +42,34 @@ theorem set_memo (h : Heap) (y : Nat) (c : Cell) : (h.set y c).memo = h.memo := 
 theorem set_len (h : Heap) (y : Nat) (c : Cell) : (h.set y c).cells.length = h.cells.length := by
   simp [Heap.set]
 
+theorem finish_ne (h : Heap) (x y : Nat) (hne : y ≠ x) :
+    finish h x y = .ok ((h.remember x y).keepAlive (.obj x), y) := by
+  simp [finish, hne]
+
+theorem get_keepAlive (h : Heap) (k : KeepItem) (i : Nat) : (h.keepAlive k).get i = h.get i := rfl
+theorem get_remember (h : Heap) (x y i : Nat) : (h.remember x y).get i = h.get i := rfl
+theorem len_keepAlive (h : Heap) (k : KeepItem) : (h.keepAlive k).cells.length = h.cells.length := rfl
+theorem len_remember (h : Heap) (x y : Nat) : (h.remember x y).cells.length = h.cells.length := rfl
+theorem memo_keepAlive (h : Heap) (k : KeepItem) : (h.keepAlive k).memo = h.memo := rfl
+theorem lookup_remember_self (h : Heap) (x y : Nat) : (h.remember x y).memo.lookup x = some y := by
+  simp [Heap.remember, List.lookup]
+theorem lookup_remember_other (h : Heap) (x y a : Nat) (hne : a ≠ x) :
+    (h.remember x y).memo.lookup a = h.memo.lookup a := by
+  have : (a == x) = false := by simpa using hne
+  simp [Heap.remember, List.lookup, this]
+
+theorem get_lt (h : Heap) (x : Nat) (c : Cell) (hc : h.get x = c) (hne : ∀ m, c ≠ .atom m) : x < h.cells.length := by
+  by_cases hn : x < h.cells.length
+  · exact hn
+  · exfalso
+    have : h.get x = .atom 0 := by
+      simp [Heap.get, List.getD, List.getElem?_eq_none (by omega : h.cells.length ≤ x)]
+    exact hne 0 (hc ▸ this)
+
 theorem deepcopy_list (fuel : Nat) (h : Heap) (x : Nat) (items : List Nat) (hc : h.get x = .list items)
     (hm : h.memo.lookup x = none) (h3 : Heap) (ys : List Nat)
     (hd : deepList fuel (h.fresh (.list []) x) items = .ok (h3, ys)) :
-    deepcopy (fuel + 1) h x = .ok (h3.set h.cells.length (.list ys), h.cells.length) := by
+    deepcopy (fuel + 1) h x = finish (h3.set h.cells.length (.list ys)) x h.cells.length := by
   rw [deepcopy]
   simp only [hc, hm]
   simp only [Heap.fresh] at hd
@@ -55,7 +79,7 @@ theorem deepcopy_list (fuel : Nat) (h : Heap) (x : Nat) (items : List Nat) (hc :
 theorem deepcopy_dict (fuel : Nat) (h : Heap) (x : Nat) (items : List (Nat × Nat)) (hc : h.get x = .dict items)
     (hm : h.memo.lookup x = none) (h3 : Heap) (ys : List (Nat × Nat))
     (hd : deepPairs fuel (h.fresh (.dict []) x) [] items = .ok (h3, ys)) :
-    deepcopy (fuel + 1) h x = .ok (h3.set h.cells.length (.dict ys), h.cells.length) := by
+    deepcopy (fuel + 1) h x = finish (h3.set h.cells.length (.dict ys)) x h.cells.length := by
   rw [deepcopy]
   simp only [hc, hm]
   simp only [Heap.fresh] at hd
@@ -65,7 +89,7 @@ theorem deepcopy_dict (fuel : Nat) (h : Heap) (x : Nat) (items : List (Nat × Na
 theorem deepcopy_tuple_new (fuel : Nat) (h h1 : Heap) (x : Nat) (items ys : List Nat)
     (hc : h.get x = .tuple items) (hm : h.memo.lookup x = none)
     (hd : deepList fuel h items = .ok (h1, ys)) (hm1 : h1.memo.lookup x = none) (hne : (ys == items) = false) :
-    deepcopy (fuel + 1) h x = .ok (h1.fresh (.tuple ys) x, h1.cells.length) := by
+    deepcopy (fuel + 1) h x = finish (h1.alloc (.tuple ys)).1 x h1.cells.length := by
   rw [deepcopy]
   simp only [hc, hm, hd, hm1, hne]
   rfl
@@ -73,7 +97,7 @@ theorem deepcopy_tuple_new (fuel : Nat) (h h1 : Heap) (x : Nat) (items ys : List
 theorem deepcopy_tuple_memo (fuel : Nat) (h h1 : Heap) (x y : Nat) (items ys : List Nat)
     (hc : h.get x = .tuple items) (hm : h.memo.lookup x = none)
     (hd : deepList fuel h items = .ok (h1, ys)) (hm1 : h1.memo.lookup x = some y) :
-    deepcopy (fuel + 1) h x = .ok (h1, y) := by
+    deepcopy (fuel + 1) h x = finish h1 x y := by
   rw [deepcopy]
   simp only [hc, hm, hd, hm1]
 
@@ -86,8 +110,8 @@ def DeepcopyFrozendict : Prop :=
   ∀ (fuel : Nat) (h h1 : Heap) (x y : Nat) (items ys : List (Nat × Nat)) (e : PyExc),
     h.get x = .fdict items → h.memo.lookup x = none →
     (deepPairs fuel h [] items = .ok (h1, ys) → h1.memo.lookup x = none →
-      deepcopy (fuel + 1) h x = .ok (h1.fresh (.fdict ys) x, h1.cells.length)) ∧
-    (deepPairs fuel h [] items = .ok (h1, ys) → h1.memo.lookup x = some y → deepcopy (fuel + 1) h x = .ok (h1, y)) ∧
+      deepcopy (fuel + 1) h x = finish (h1.alloc (.fdict ys)).1 x h1.cells.length) ∧
+    (deepPairs fuel h [] items = .ok (h1, ys) → h1.memo.lookup x = some y → deepcopy (fuel + 1) h x = finish h1 x y) ∧
     (deepPairs fuel h [] items = .error e → deepcopy (fuel + 1) h x = .error e)
 
 theorem deepcopyFrozendict_proven : DeepcopyFrozendict := by
@@ -188,10 +212,12 @@ theorem deepcopyListExact_proven : DeepcopyListExact := by
     obtain ⟨⟨n, hn⟩, hlt⟩ := ha i hi
     exact ⟨n, by rw [fresh_get_old _ _ _ _ hlt]; exact hn⟩
   have hd := deepList_atoms _ fuel items ha2 hl
-  refine ⟨_, deepcopy_list (fuel + 1) h x items hc hm _ _ hd, ?_, ?_, by omega⟩
-  · apply get_set_same
+  have hne : h.cells.length ≠ x := by omega
+  refine ⟨_, (deepcopy_list (fuel + 1) h x items hc hm _ _ hd).trans (finish_ne _ _ _ hne), ?_, ?_, hne⟩
+  · rw [get_keepAlive, get_remember]
+    apply get_set_same
     rw [fresh_len]; omega
-  · rw [set_memo, fresh_lookup_self]
+  · rw [memo_keepAlive, lookup_remember_self]
 
 /-- `_deepcopy_dict` on a dict of atoms: a new dict, recorded in `memo`, with the same items. The keys are pairwise
 unequal, the invariant of a `dict` (on atoms, distinct values); a heap list with two equal keys is no Python dict. -/
@@ -222,10 +248,14 @@ theorem deepcopyDictExact_proven : DeepcopyDictExact := by
     exact hp.imp_of_mem (fun ha' hb' r => by rw [hk _ ha', hk _ hb']; exact r)
   have hd := deepPairs_atoms _ fuel [] items hk2 hv2 hp2 hl
   simp only [List.nil_append] at hd
-  refine ⟨_, deepcopy_dict (fuel + 1) h x items hc hm _ _ hd, ?_, ?_⟩
-  · apply get_set_same
+  have hne : h.cells.length ≠ x := by
+    have := get_lt h x _ hc (by intro m hm; cases hm)
+    omega
+  refine ⟨_, (deepcopy_dict (fuel + 1) h x items hc hm _ _ hd).trans (finish_ne _ _ _ hne), ?_, ?_⟩
+  · rw [get_keepAlive, get_remember]
+    apply get_set_same
     rw [fresh_len]; omega
-  · rw [set_memo, fresh_lookup_self]
+  · rw [memo_keepAlive, lookup_remember_self]
 
 /-- `_deepcopy_dict` stores with `y[k] = v`, Lib/copy.py:201, so it does not keep the length: two source keys whose
 copies are equal make one item. Here `memo` sends the first key to an atom equal to the second key (:125-126 answer the
@@ -272,7 +302,11 @@ theorem deepcopyDictMerge_proven : DeepcopyDictMerge := by
   have hd : deepPairs (fuel + 3) (h.fresh (.dict []) x) [] [(k1, v1), (k2, v2)] =
       .ok (h.fresh (.dict []) x, [(a, v2)]) := by
     simp only [deepPairs, e1, e2, s1, e3, e4, s2]
-  refine ⟨_, deepcopy_dict (fuel + 3) h x _ hc hm _ _ hd, ?_⟩
+  have hne : h.cells.length ≠ x := by
+    have := get_lt h x _ hc (by intro m hm; cases hm)
+    omega
+  refine ⟨_, (deepcopy_dict (fuel + 3) h x _ hc hm _ _ hd).trans (finish_ne _ _ _ hne), ?_⟩
+  rw [get_keepAlive, get_remember]
   apply get_set_same
   rw [fresh_len]; omega
 
@@ -316,13 +350,14 @@ theorem deepcopyAliasing_proven : DeepcopyAliasing := by
   have hlen : h2.cells.length = h.cells.length + 1 := by rw [← hh2, fresh_len]
   have hg : h2.get a = .list [] := by rw [← hh2, fresh_get_old _ _ _ _ hax]; exact ha
   have hl : h2.memo.lookup a = none := by rw [← hh2, fresh_lookup_other _ _ _ _ hne]; exact hma
-  generalize hh3 : (h2.fresh (.list []) a).set h2.cells.length (.list []) = h3
+  generalize hh3 : (((h2.fresh (.list []) a).set h2.cells.length (.list [])).remember a h2.cells.length).keepAlive
+    (.obj a) = h3
   have c1 : deepcopy (fuel + 3) h2 a = .ok (h3, h2.cells.length) := by
     rw [← hh3]
-    exact deepcopy_list _ h2 a [] hg hl _ _ (deepList_nil _ _)
-  have hl3 : h3.memo.lookup a = some h2.cells.length := by rw [← hh3, set_memo, fresh_lookup_self]
+    exact (deepcopy_list _ h2 a [] hg hl _ _ (deepList_nil _ _)).trans (finish_ne _ _ _ (by omega))
+  have hl3 : h3.memo.lookup a = some h2.cells.length := by rw [← hh3, memo_keepAlive, lookup_remember_self]
   have hg3 : h3.get a = .list [] := by
-    rw [← hh3, get_set_other _ _ _ _ (by omega), fresh_get_old _ _ _ _ (by omega)]
+    rw [← hh3, get_keepAlive, get_remember, get_set_other _ _ _ _ (by omega), fresh_get_old _ _ _ _ (by omega)]
     exact hg
   have c2 : deepcopy (fuel + 2) h3 a = .ok (h3, h2.cells.length) :=
     deepcopy_memo _ _ _ _ hl3 (by intro m hm; rw [hg3] at hm; cases hm) (by intro m hm; rw [hg3] at hm; cases hm) (by intro m hm; rw [hg3] at hm; cases hm)
@@ -331,13 +366,14 @@ theorem deepcopyAliasing_proven : DeepcopyAliasing := by
   have d2 : deepList (fuel + 4) h2 [a, a] = .ok (h3, [h2.cells.length, h2.cells.length]) :=
     deepList_cons _ _ _ _ _ _ _ _ c1 d1
   rw [← hh2] at d2
-  have hlen3 : h3.cells.length = h.cells.length + 2 := by rw [← hh3, set_len, fresh_len]; omega
-  refine ⟨_, deepcopy_list _ h x _ hc hm _ _ d2, ?_, ?_, hax⟩
-  · rw [hh2, hlen]
+  have hlen3 : h3.cells.length = h.cells.length + 2 := by
+    rw [← hh3, len_keepAlive, len_remember, set_len, fresh_len]; omega
+  refine ⟨_, (deepcopy_list _ h x _ hc hm _ _ d2).trans (finish_ne _ _ _ (by omega)), ?_, ?_, hax⟩
+  · rw [get_keepAlive, get_remember, hh2, hlen]
     apply get_set_same
     omega
-  · rw [get_set_other _ _ _ _ (by omega), ← hh3]
-    rw [hlen, get_set_same]
+  · rw [get_keepAlive, get_remember, get_set_other _ _ _ _ (by omega), ← hh3]
+    rw [get_keepAlive, get_remember, hlen, get_set_same]
     rw [fresh_len]; omega
 
 /-- `_deepcopy_tuple`, the two paths past the atoms of `DeepcopyTupleIdentity`. A tuple holding something mutable
@@ -362,26 +398,35 @@ theorem deepcopyTupleExact_proven : DeepcopyTupleExact := by
     have hax := get_of_list h a _ ha
     have hn : x ≠ a := by
       intro he; rw [← he, hc] at ha; cases ha
-    have c1 : deepcopy (fuel + 2) h a = .ok ((h.fresh (.list []) a).set h.cells.length (.list []), h.cells.length) :=
-      deepcopy_list _ h a [] ha hma _ _ (deepList_nil _ _)
+    have hxl := get_lt h x _ hc (by intro m hm; cases hm)
+    have c1 : deepcopy (fuel + 2) h a = .ok ((((h.fresh (.list []) a).set h.cells.length (.list [])).remember a
+        h.cells.length).keepAlive (.obj a), h.cells.length) :=
+      (deepcopy_list _ h a [] ha hma _ _ (deepList_nil _ _)).trans (finish_ne _ _ _ (by omega))
     have d1 := deepList_cons _ _ _ _ _ _ _ _ c1 (deepList_nil (fuel + 1) _)
-    generalize hh : (h.fresh (.list []) a).set h.cells.length (.list []) = h1 at d1
+    generalize hh : (((h.fresh (.list []) a).set h.cells.length (.list [])).remember a h.cells.length).keepAlive
+      (.obj a) = h1 at d1
     have hm1 : h1.memo.lookup x = none := by
-      rw [← hh, set_memo, fresh_lookup_other _ _ _ _ hn]
+      rw [← hh, memo_keepAlive, lookup_remember_other _ _ _ _ hn, set_memo, fresh_lookup_other _ _ _ _ hn]
       exact hmx
-    have hl1 : h1.cells.length = h.cells.length + 1 := by rw [← hh, set_len, fresh_len]
+    have hl1 : h1.cells.length = h.cells.length + 1 := by
+      rw [← hh, len_keepAlive, len_remember, set_len, fresh_len]
     have hne : ([h.cells.length] == [a]) = false := by
       have : h.cells.length ≠ a := by omega
       simp [this]
-    have ct := deepcopy_tuple_new (fuel + 3) h h1 x [a] [h.cells.length] hc hmx d1 hm1 hne
-    rw [hl1] at ct
-    refine ⟨_, ct, ?_, ?_, ?_⟩
-    · have := fresh_get_new h1 (.tuple [h.cells.length]) x
+    have ct := (deepcopy_tuple_new (fuel + 3) h h1 x [a] [h.cells.length] hc hmx d1 hm1 hne).trans
+      (finish_ne _ _ _ (by omega))
+    have ct' : deepcopy (fuel + 4) h x = .ok ((h1.fresh (.tuple [h.cells.length]) x).keepAlive (.obj x),
+        h1.cells.length) := ct
+    rw [hl1] at ct'
+    refine ⟨_, ct', ?_, ?_, ?_⟩
+    · rw [get_keepAlive]
+      have := fresh_get_new h1 (.tuple [h.cells.length]) x
       rwa [hl1] at this
-    · rw [fresh_get_old _ _ _ _ (by omega), ← hh]
+    · rw [get_keepAlive, fresh_get_old _ _ _ _ (by omega), ← hh, get_keepAlive, get_remember]
       apply get_set_same
       rw [fresh_len]; omega
-    · have := fresh_lookup_self h1 (.tuple [h.cells.length]) x
+    · rw [memo_keepAlive]
+      have := fresh_lookup_self h1 (.tuple [h.cells.length]) x
       rwa [hl1] at this
   · intro hx hc ha
     have hax := get_of_list h a _ ha
@@ -399,35 +444,43 @@ theorem deepcopyTupleExact_proven : DeepcopyTupleExact := by
     have hne : ([h.cells.length] == [a]) = false := by
       have : h.cells.length ≠ a := by omega
       simp [this]
-    have ct := deepcopy_tuple_new (fuel + 2) h2 h2 x [a] [h.cells.length] hg2x hl2x d0 hl2x hne
+    have ct0 := (deepcopy_tuple_new (fuel + 2) h2 h2 x [a] [h.cells.length] hg2x hl2x d0 hl2x hne).trans
+      (finish_ne _ _ _ (by omega))
+    have ct : deepcopy (fuel + 3) h2 x = .ok ((h2.fresh (.tuple [h.cells.length]) x).keepAlive (.obj x),
+        h2.cells.length) := ct0
     have d1 := deepList_cons _ _ _ _ _ _ _ _ ct (deepList_nil (fuel + 2) _)
     rw [hlen, ← hh2] at d1
-    have cl := deepcopy_list (fuel + 4) h a [x] ha hma _ _ (by rw [hh2] at d1 ⊢; exact d1)
+    have cl := (deepcopy_list (fuel + 4) h a [x] ha hma _ _ (by rw [hh2] at d1 ⊢; exact d1)).trans
+      (finish_ne _ _ _ (by omega))
     have d2 := deepList_cons _ _ _ _ _ _ _ _ cl (deepList_nil (fuel + 4) _)
-    generalize hh4 : (h2.fresh (.tuple [h.cells.length]) x).set h.cells.length (.list [h.cells.length + 1]) = h4 at d2
+    generalize hh4 : ((((h2.fresh (.tuple [h.cells.length]) x).keepAlive (.obj x)).set h.cells.length
+      (.list [h.cells.length + 1])).remember a h.cells.length).keepAlive (.obj a) = h4 at d2
     have hl4 : h4.memo.lookup x = some (h.cells.length + 1) := by
-      rw [← hh4, set_memo, fresh_lookup_self, hlen]
-    refine ⟨_, deepcopy_tuple_memo (fuel + 6) h h4 x _ [a] _ hc hmx d2 hl4, ?_, ?_⟩
-    · rw [← hh4, get_set_other _ _ _ _ (by omega)]
+      rw [← hh4, memo_keepAlive, lookup_remember_other _ _ _ _ hn, set_memo, memo_keepAlive, fresh_lookup_self, hlen]
+    refine ⟨_, (deepcopy_tuple_memo (fuel + 6) h h4 x _ [a] _ hc hmx d2 hl4).trans (finish_ne _ _ _ (by omega)),
+      ?_, ?_⟩
+    · rw [get_keepAlive, get_remember, ← hh4, get_keepAlive, get_remember, get_set_other _ _ _ _ (by omega),
+        get_keepAlive]
       have := fresh_get_new h2 (.tuple [h.cells.length]) x
       rwa [hlen] at this
-    · rw [← hh4]
+    · rw [get_keepAlive, get_remember, ← hh4, get_keepAlive, get_remember]
       apply get_set_same
-      rw [fresh_len]; omega
+      rw [len_keepAlive, fresh_len]; omega
 
 theorem deepcopy_hooked (fuel : Nat) (h h1 h5 h6 h7 : Heap) (x n : Nat) (c : Option (Option PyExc))
     (k : BuildKind) (args a' : List Nat) (s : Option Nat) (li : Option (ItemsIter Nat))
-    (di : Option (ItemsIter (Nat × Nat))) (ss : Option (Option PyExc))
-    (hc : h.get x = .hooked c none (some (.tuple n none k args s li di ss))) (hm : h.memo.lookup x = none)
+    (di : Option (ItemsIter (Nat × Nat))) (ss : Option (Option PyExc)) (r : Reductor)
+    (hc : h.get x = .hooked c none r) (hr : reduceValue r true = .ok (.tuple n none k args s li di ss))
+    (hm : h.memo.lookup x = none)
     (hn1 : ¬ n < 2) (hn2 : ¬ n > 5) (e1 : deepList fuel h args = .ok (h1, a'))
     (e2 : deepState fuel (h1.fresh (freshOf k a') x) h1.cells.length s ss = .ok h5)
     (e4 : deepAppend fuel h5 h1.cells.length ((li.map (·.items)).getD []) = .ok h6)
     (f4 : li.bind (·.fail) = none)
     (e5 : deepSetItems fuel h6 h1.cells.length ((di.map (·.items)).getD []) = .ok h7)
     (f5 : di.bind (·.fail) = none) :
-    deepcopy (fuel + 1) h x = .ok (h7, h1.cells.length) := by
+    deepcopy (fuel + 1) h x = finish h7 x h1.cells.length := by
   rw [deepcopy]
-  simp only [hc, hm]
+  simp only [hc, hm, hr]
   simp only [Heap.fresh] at e2
   simp [Heap.alloc] at e2
   simp [reconArity, hn1, hn2, e1, Heap.alloc, e2, e4, f4, e5, f5]
@@ -438,18 +491,19 @@ constructor, and a failing constructor comes after the copies. -/
 def ReconstructDeepSteps : Prop :=
   ∀ (fuel : Nat) (h h1 : Heap) (x n : Nat) (c : Option (Option PyExc)) (fail : Option PyExc) (k : BuildKind)
     (args a' : List Nat) (s : Option Nat) (li : Option (ItemsIter Nat)) (di : Option (ItemsIter (Nat × Nat)))
-    (ss : Option (Option PyExc)) (e : PyExc),
-    h.get x = .hooked c none (some (.tuple n fail k args s li di ss)) → h.memo.lookup x = none →
+    (ss : Option (Option PyExc)) (e : PyExc) (r : Reductor),
+    h.get x = .hooked c none r → reduceValue r true = .ok (.tuple n fail k args s li di ss) →
+    h.memo.lookup x = none →
     ((n < 2 ∨ n > 5) → (deepcopy (fuel + 1) h x).raises "TypeError") ∧
     (2 ≤ n → n ≤ 5 → deepList fuel h args = .error e → deepcopy (fuel + 1) h x = .error e) ∧
     (2 ≤ n → n ≤ 5 → deepList fuel h args = .ok (h1, a') → fail = some e → deepcopy (fuel + 1) h x = .error e)
 
 theorem reconstructDeepSteps_proven : ReconstructDeepSteps := by
-  intro fuel h h1 x n c fail k args a' s li di ss e hc hm
+  intro fuel h h1 x n c fail k args a' s li di ss e r hc hr hm
   refine ⟨?_, ?_, ?_⟩
   · intro hn
     rw [deepcopy]
-    simp only [hc, hm]
+    simp only [hc, hm, hr]
     rcases hn with hn | hn
     · exact ⟨_, by simp [reconArity, hn]; rfl, rfl⟩
     · have h2 : ¬ n < 2 := by omega
@@ -458,27 +512,28 @@ theorem reconstructDeepSteps_proven : ReconstructDeepSteps := by
     have h5 : ¬ n < 2 := by omega
     have h6 : ¬ n > 5 := by omega
     rw [deepcopy]
-    simp only [hc, hm]
+    simp only [hc, hm, hr]
     simp [reconArity, h5, h6, h4]
   · intro h2 h3 h4 h7
     have h5 : ¬ n < 2 := by omega
     have h6 : ¬ n > 5 := by omega
     rw [deepcopy]
-    simp only [hc, hm]
+    simp only [hc, hm, hr]
     simp [reconArity, h5, h6, h4, h7]
 
 /-- `memo[id(x)] = y` comes before the state is copied, Lib/copy.py:248-253: an object whose state refers back to it
 gets a copy whose state refers to the copy. With the two lines swapped the state copy would recurse for ever. -/
 def ReconstructMemoFirst : Prop :=
-  ∀ (fuel : Nat) (h : Heap) (x st n : Nat) (c : Option (Option PyExc)), 2 ≤ n → n ≤ 5 → x < h.cells.length →
-    h.get x = .hooked c none (some (.tuple n none .inst [] (some st) none none (some none))) →
+  ∀ (fuel : Nat) (h : Heap) (x st n : Nat) (c : Option (Option PyExc)) (r : Reductor), 2 ≤ n → n ≤ 5 →
+    x < h.cells.length → h.get x = .hooked c none r →
+    reduceValue r true = .ok (.tuple n none .inst [] (some st) none none (some none)) →
     h.get st = .list [x] → h.memo.lookup x = none → h.memo.lookup st = none →
     ∃ h', deepcopy (fuel + 6) h x = .ok (h', h.cells.length) ∧
       h'.get h.cells.length = .inst [(.name "__state__", h.cells.length + 1)] ∧
       h'.get (h.cells.length + 1) = .list [h.cells.length]
 
 theorem reconstructMemoFirst_proven : ReconstructMemoFirst := by
-  intro fuel h x st n c hn1 hn2 hx hc hs hmx hms
+  intro fuel h x st n c r hn1 hn2 hx hc hr hs hmx hms
   have hst := get_of_list h st _ hs
   have hne : st ≠ x := by
     intro he; rw [he, hc] at hs; cases hs
@@ -490,20 +545,23 @@ theorem reconstructMemoFirst_proven : ReconstructMemoFirst := by
   generalize hh3 : h2.fresh (.list []) st = h3
   have hl3x : h3.memo.lookup x = some h.cells.length := by
     rw [← hh3, fresh_lookup_other _ _ _ _ hne.symm, ← hh2, fresh_lookup_self]
-  have hg3x : h3.get x = .hooked c none (some (.tuple n none .inst [] (some st) none none (some none))) := by
+  have hg3x : h3.get x = .hooked c none r := by
     rw [← hh3, fresh_get_old _ _ _ _ (by omega), ← hh2, fresh_get_old _ _ _ _ hx]
     exact hc
   have c0 : deepcopy (fuel + 2) h3 x = .ok (h3, h.cells.length) :=
     deepcopy_memo _ _ _ _ hl3x (by intro m hm; rw [hg3x] at hm; cases hm) (by intro m hm; rw [hg3x] at hm; cases hm) (by intro m hm; rw [hg3x] at hm; cases hm)
   have d0 := deepList_cons _ _ _ _ _ _ _ _ c0 (deepList_nil (fuel + 1) _)
-  have cl := deepcopy_list (fuel + 3) h2 st [x] hg2 hl2 _ _ (by rw [hh3]; exact d0)
-  generalize hh4 : h3.set h2.cells.length (.list [h.cells.length]) = h4 at cl
+  have cl := (deepcopy_list (fuel + 3) h2 st [x] hg2 hl2 _ _ (by rw [hh3]; exact d0)).trans
+    (finish_ne _ _ _ (by omega))
+  generalize hh4 : ((h3.set h2.cells.length (.list [h.cells.length])).remember st h2.cells.length).keepAlive
+    (.obj st) = h4 at cl
   have hlen3 : h3.cells.length = h.cells.length + 2 := by rw [← hh3, fresh_len, hlen]
-  have hlen4 : h4.cells.length = h.cells.length + 2 := by rw [← hh4, set_len, hlen3]
+  have hlen4 : h4.cells.length = h.cells.length + 2 := by rw [← hh4, len_keepAlive, len_remember, set_len, hlen3]
   have hg4y : h4.get h.cells.length = .inst [] := by
-    rw [← hh4, get_set_other _ _ _ _ (by omega), ← hh3, fresh_get_old _ _ _ _ (by omega), ← hh2, fresh_get_new]
+    rw [← hh4, get_keepAlive, get_remember, get_set_other _ _ _ _ (by omega), ← hh3, fresh_get_old _ _ _ _ (by omega),
+      ← hh2, fresh_get_new]
   have hg4s : h4.get (h.cells.length + 1) = .list [h.cells.length] := by
-    rw [← hh4, hlen.symm]
+    rw [← hh4, get_keepAlive, get_remember, hlen.symm]
     apply get_set_same
     omega
   rw [hlen] at cl
@@ -514,13 +572,13 @@ theorem reconstructMemoFirst_proven : ReconstructMemoFirst := by
     simp [deepState, hsn, cl, stateApply, setstateOf, setAttrOf, hg4y, storeItem]
   have ea : deepAppend (fuel + 5) h5 h.cells.length [] = .ok h5 := by simp [deepAppend]
   have es : deepSetItems (fuel + 5) h5 h.cells.length [] = .ok h5 := by simp [deepSetItems]
-  have hd := deepcopy_hooked (fuel + 5) h h h5 h5 h5 x n c .inst [] [] (some st) none none (some none) hc hmx
-    (by omega) (by omega) (deepList_nil _ _) eo ea rfl es rfl
+  have hd := (deepcopy_hooked (fuel + 5) h h h5 h5 h5 x n c .inst [] [] (some st) none none (some none) r hc hr hmx
+    (by omega) (by omega) (deepList_nil _ _) eo ea rfl es rfl).trans (finish_ne _ _ _ (by omega))
   refine ⟨_, hd, ?_, ?_⟩
-  · rw [← hh5]
+  · rw [get_keepAlive, get_remember, ← hh5]
     apply get_set_same
     omega
-  · rw [← hh5, get_set_other _ _ _ _ (by omega)]
+  · rw [get_keepAlive, get_remember, ← hh5, get_set_other _ _ _ _ (by omega)]
     exact hg4s
 
 theorem fold_appendTo (y : Nat) : ∀ (l : List Nat) (h : Heap) (old : List Nat), h.get y = .list old →
@@ -715,15 +773,16 @@ theorem reconRestItems_proven : ReconRestItems := by
 called, even one that would raise, Lib/copy.py:252; the copy is the object the constructor made, in `memo`. With a
 state that is not `None`, the copy of the state goes to `__setstate__` whatever it is, and its exception comes out. -/
 def DeepcopyStateNone : Prop :=
-  ∀ (fuel : Nat) (h h1 : Heap) (x st s' n : Nat) (c : Option (Option PyExc)) (e : PyExc),
-    2 ≤ n → n ≤ 5 → h.get x = .hooked c none (some (.tuple n none .inst [] (some st) none none (some (some e)))) →
+  ∀ (fuel : Nat) (h h1 : Heap) (x st s' n : Nat) (c : Option (Option PyExc)) (e : PyExc) (r : Reductor),
+    2 ≤ n → n ≤ 5 → h.get x = .hooked c none r →
+    reduceValue r true = .ok (.tuple n none .inst [] (some st) none none (some (some e))) →
     h.memo.lookup x = none → st < h.cells.length →
-    (noneCell h st = true → deepcopy (fuel + 2) h x = .ok (h.fresh (.inst []) x, h.cells.length)) ∧
+    (noneCell h st = true → deepcopy (fuel + 2) h x = finish (h.fresh (.inst []) x) x h.cells.length) ∧
     (noneCell h st = false → deepcopy fuel (h.fresh (.inst []) x) st = .ok (h1, s') →
       deepcopy (fuel + 2) h x = .error e)
 
 theorem deepcopyStateNone_proven : DeepcopyStateNone := by
-  intro fuel h h1 x st s' n c e hn1 hn2 hc hm hst
+  intro fuel h h1 x st s' n c e r hn1 hn2 hc hr hm hst
   have hsame : noneCell (h.fresh (.inst []) x) st = noneCell h st := by
     simp [noneCell, fresh_get_old _ _ _ _ hst]
   refine ⟨?_, ?_⟩
@@ -737,7 +796,7 @@ theorem deepcopyStateNone_proven : DeepcopyStateNone := by
       simp [deepAppend]
     have e5 : deepSetItems (fuel + 1) (h.fresh (.inst []) x) h.cells.length [] = .ok (h.fresh (.inst []) x) := by
       simp [deepSetItems]
-    exact deepcopy_hooked (fuel + 1) h h _ _ _ x n c .inst [] [] (some st) none none (some (some e)) hc hm
+    exact deepcopy_hooked (fuel + 1) h h _ _ _ x n c .inst [] [] (some st) none none (some (some e)) r hc hr hm
       (by omega) (by omega) (deepList_nil _ _) e2 e4 rfl e5 rfl
   · intro hnone hd
     have h3 : ¬ n < 2 := by omega
@@ -748,45 +807,45 @@ theorem deepcopyStateNone_proven : DeepcopyStateNone := by
       rw [this, hnone]
     simp only [Heap.fresh] at hd
     rw [deepcopy]
-    simp only [hc, hm]
+    simp only [hc, hm, hr]
     simp [reconArity, h3, h4, deepList, freshOf, deepState, Heap.alloc] at hd hsame' ⊢
     simp [hsame', hd, stateApply, setstateOf]
 
 /-- `listiter` and `dictiter` are iterators, and one that raises after its items makes the deep copy raise too, after
 the items are in, Lib/copy.py:270-272 and :278-281; `listiter` is read first, so when both raise its error wins. -/
 def DeepcopyIterFails : Prop :=
-  ∀ (fuel : Nat) (h : Heap) (x n : Nat) (c : Option (Option PyExc)) (e : PyExc),
-    2 ≤ n → n ≤ 5 → h.memo.lookup x = none →
-    (h.get x = .hooked c none (some (.tuple n none .list [] none (some ⟨[], some e⟩) none none)) →
+  ∀ (fuel : Nat) (h : Heap) (x n : Nat) (c : Option (Option PyExc)) (e : PyExc) (r : Reductor),
+    2 ≤ n → n ≤ 5 → h.memo.lookup x = none → h.get x = .hooked c none r →
+    (reduceValue r true = .ok (.tuple n none .list [] none (some ⟨[], some e⟩) none none) →
       deepcopy (fuel + 2) h x = .error e) ∧
-    (h.get x = .hooked c none (some (.tuple n none .dict [] none none (some ⟨[], some e⟩) none)) →
+    (reduceValue r true = .ok (.tuple n none .dict [] none none (some ⟨[], some e⟩) none) →
       deepcopy (fuel + 2) h x = .error e) ∧
-    (∀ e2, h.get x = .hooked c none (some (.tuple n none .list [] none (some ⟨[], some e⟩) (some ⟨[], some e2⟩) none)) →
+    (∀ e2, reduceValue r true = .ok (.tuple n none .list [] none (some ⟨[], some e⟩) (some ⟨[], some e2⟩) none) →
       deepcopy (fuel + 2) h x = .error e)
 
 theorem deepcopyIterFails_proven : DeepcopyIterFails := by
-  intro fuel h x n c e hn1 hn2 hm
+  intro fuel h x n c e r hn1 hn2 hm hc
   have h3 : ¬ n < 2 := by omega
   have h4 : ¬ n > 5 := by omega
   refine ⟨?_, ?_, ?_⟩
-  · intro hc
+  · intro hr
     rw [deepcopy]
-    simp [hc, hm, reconArity, h3, h4, deepList, deepState, deepAppend]
-  · intro hc
+    simp [hc, hm, hr, reconArity, h3, h4, deepList, deepState, deepAppend]
+  · intro hr
     rw [deepcopy]
-    simp [hc, hm, reconArity, h3, h4, deepList, deepState, deepAppend, deepSetItems]
-  · intro e2 hc
+    simp [hc, hm, hr, reconArity, h3, h4, deepList, deepState, deepAppend, deepSetItems]
+  · intro e2 hr
     rw [deepcopy]
-    simp [hc, hm, reconArity, h3, h4, deepList, deepState, deepAppend]
+    simp [hc, hm, hr, reconArity, h3, h4, deepList, deepState, deepAppend]
 
 /-- The heap of `a = A(); a.m = a.f0`: the instance holds its own bound method as the attribute `m`. -/
-def methodAliasHeap : Heap := ⟨[.inst [(.name "m", 1)], .method 0 0], []⟩
+def methodAliasHeap : Heap := ⟨[.inst [(.name "m", 1)], .method 0 0], [], none⟩
 
 /-- `deepcopy(a.m)` in the model: the instance is copied to cell 2, whose `m` is the method copied through it (cell 3),
-and then `_deepcopy_method` makes a second method (cell 4), the result. -/
+and then `_deepcopy_method` makes a second method (cell 4), the result; `_keep_alive` holds the method twice. -/
 def methodAliasCopy : Heap :=
   ⟨[.inst [(.name "m", 1)], .method 0 0, .inst [(.name "m", 3)], .method 0 2, .method 0 2],
-    [(1, 4), (1, 3), (0, 2)]⟩
+    [(1, 4), (0, 2), (1, 3), (0, 2)], some [.obj 1, .dictOf 0, .obj 0, .obj 1]⟩
 
 /-- `deepcopy` keeps shared structure: the memo is there so that an object reached twice is copied once ("keeping a
 `memo` dictionary of objects already copied during the current copying pass", Doc/library/copy.rst:64). So a bound
@@ -804,7 +863,7 @@ theorem deepcopyMethodAliasing_refuted : ¬DeepcopyMethodAliasing := by
   intro H
   have hd : deepcopy 10 methodAliasHeap 1 = .ok (methodAliasCopy, 4) := by
     simp [deepcopy, deepAttrs, methodAliasHeap, methodAliasCopy, Heap.get, Heap.alloc, Heap.remember, Heap.set,
-      setAttrOf, List.lookup, deepKey, storeItem]
+      setAttrOf, List.lookup, deepKey, storeItem, finish, Heap.keepAlive, storeKey]
   obtain ⟨s', attrs', h1, h2, h3⟩ := H 10 methodAliasHeap methodAliasCopy 1 0 0 4 [(.name "m", 1)] "m" rfl rfl rfl rfl hd
   have e1 : methodAliasCopy.get 4 = .method 0 2 := rfl
   rw [e1] at h1
@@ -816,33 +875,85 @@ theorem deepcopyMethodAliasing_refuted : ¬DeepcopyMethodAliasing := by
 
 /-- The paths of `deepcopy` past the dispatch table, Lib/copy.py:128-162, for an object not in `memo`. A class with
 another metaclass is its own copy (`issubclass(cls, type)`, :132-133) and is not memoized (:159). A succeeding
-`__deepcopy__` gives a new object, recorded in `memo` (:135-137, :159-160). A reduce string means `x` itself, with no
-memo entry (:153-154); a raising reductor propagates; with no reductor at all, `copy.Error` (:151-152). A memo entry
-answers before any of them (:125-126). An atom (`int` or `None`), a `str` and a class whose type is `type` are returned
-as they are before `memo` is read at all (:118-119 before :125), whatever `memo` holds for them. -/
+`__deepcopy__` gives a new object, recorded in `memo` and kept alive (:135-137, :159-161). The reduce value comes from
+the class's `copyreg.dispatch_table` entry first (:139-141), whatever `__reduce_ex__` is; then from `__reduce_ex__` if
+it is not `None`, so a false one is called and fails (:143-145); then from a true `__reduce__` (:147-149); with none,
+`copy.Error` (:151-152). A reduce string means `x` itself, with no memo entry (:153-154); a raising reductor propagates.
+A memo entry answers before any of them (:125-126). An atom (`int` or `None`), a `str` and a class whose type is
+`type` are returned as they are before `memo` is read at all (:118-119 before :125), whatever `memo` holds. -/
 def DeepcopyPaths : Prop :=
-  ∀ (fuel : Nat) (h : Heap) (x y m : Nat) (c : Option (Option PyExc)) (r : Option RvSpec) (e : PyExc) (n : Int)
-    (t : String),
+  ∀ (fuel : Nat) (h : Heap) (x y m : Nat) (c : Option (Option PyExc)) (r : Reductor) (e : PyExc) (n : Int)
+    (t : String) (rv : RvSpec) (ex pl : RedAttr),
     (h.get x = .atom n → deepcopy (fuel + 1) h x = .ok (h, x)) ∧
     (h.get x = .str t → deepcopy (fuel + 1) h x = .ok (h, x)) ∧
     (h.get x = .cls m → deepcopy (fuel + 1) h x = .ok (h, x)) ∧
     (h.get x = .metaCls m → h.memo.lookup x = none → deepcopy (fuel + 1) h x = .ok (h, x)) ∧
     (h.get x = .metaCls m → h.memo.lookup x = some y → deepcopy (fuel + 1) h x = .ok (h, y)) ∧
     (h.get x = .hooked c (some none) r → h.memo.lookup x = none →
-      deepcopy (fuel + 1) h x = .ok ((h.alloc (.atom 1)).1.remember x h.cells.length, h.cells.length)) ∧
-    (h.get x = .hooked c none (some .str) → h.memo.lookup x = none → deepcopy (fuel + 1) h x = .ok (h, x)) ∧
-    (h.get x = .hooked c none (some (.raises e)) → h.memo.lookup x = none → deepcopy (fuel + 1) h x = .error e) ∧
-    (h.get x = .hooked c none none → h.memo.lookup x = none → deepcopy (fuel + 1) h x = .error (uncopyable true))
+      deepcopy (fuel + 1) h x = finish (h.alloc (.atom 1)).1 x h.cells.length) ∧
+    (h.get x = .hooked c none ⟨some .str, ex, pl⟩ → h.memo.lookup x = none → deepcopy (fuel + 1) h x = .ok (h, x)) ∧
+    (h.get x = .hooked c none ⟨some (.raises e), ex, pl⟩ → h.memo.lookup x = none →
+      deepcopy (fuel + 1) h x = .error e) ∧
+    (h.get x = .hooked c none ⟨none, .fn .str, pl⟩ → h.memo.lookup x = none → deepcopy (fuel + 1) h x = .ok (h, x)) ∧
+    (h.get x = .hooked c none ⟨none, .fn (.raises e), pl⟩ → h.memo.lookup x = none →
+      deepcopy (fuel + 1) h x = .error e) ∧
+    (h.get x = .hooked c none ⟨none, .falsy, pl⟩ → h.memo.lookup x = none →
+      deepcopy (fuel + 1) h x = .error (.typeError "'int' object is not callable")) ∧
+    (h.get x = .hooked c none ⟨none, .none, .fn .str⟩ → h.memo.lookup x = none →
+      deepcopy (fuel + 1) h x = .ok (h, x)) ∧
+    (h.get x = .hooked c none ⟨none, .none, .falsy⟩ → h.memo.lookup x = none →
+      deepcopy (fuel + 1) h x = .error (uncopyable true)) ∧
+    (h.get x = .hooked c none ⟨none, .none, .none⟩ → h.memo.lookup x = none →
+      deepcopy (fuel + 1) h x = .error (uncopyable true))
 
 theorem deepcopyPaths_proven : DeepcopyPaths := by
-  intro fuel h x y m c r e n t
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  intro fuel h x y m c r e n t rv ex pl
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro hc; rw [deepcopy]; simp [hc]
   · intro hc; rw [deepcopy]; simp [hc]
   · intro hc; rw [deepcopy]; simp [hc]
   · intro hc hm; rw [deepcopy]; simp [hc, hm]
   · intro hc hm; rw [deepcopy]; simp [hc, hm]
   · intro hc hm; rw [deepcopy]; simp [hc, hm, Heap.alloc]
-  · intro hc hm; rw [deepcopy]; simp [hc, hm]
-  · intro hc hm; rw [deepcopy]; simp [hc, hm]
-  · intro hc hm; rw [deepcopy]; simp [hc, hm]
+  all_goals (intro hc hm; rw [deepcopy]; simp [hc, hm, reduceValue])
+
+/-- `_keep_alive`, Lib/copy.py:226-240, and the end of `deepcopy`, :158-162. A copy that is `x` itself is neither
+recorded nor kept; any other copy is recorded in `memo` and `x` appended to `memo[id(memo)]`, which is created as `[x]`
+the first time. So the list holds the source objects in the order their copies finish: for `[[]]`, the inner list
+before the outer one. -/
+def DeepcopyKeepAlive : Prop :=
+  ∀ (fuel : Nat) (h : Heap) (x a y : Nat) (k : KeepItem) (l : List KeepItem),
+    finish h x x = .ok (h, x) ∧
+    (y ≠ x → finish h x y = .ok ((h.remember x y).keepAlive (.obj x), y)) ∧
+    (h.keep = none → (h.keepAlive k).keep = some [k]) ∧
+    (h.keep = some l → (h.keepAlive k).keep = some (l ++ [k])) ∧
+    (h.get x = .list [a] → h.get a = .list [] → h.memo.lookup x = none → h.memo.lookup a = none → h.keep = none →
+      ∃ h', deepcopy (fuel + 4) h x = .ok (h', h.cells.length) ∧ h'.keep = some [.obj a, .obj x])
+
+theorem deepcopyKeepAlive_proven : DeepcopyKeepAlive := by
+  intro fuel h x a y k l
+  refine ⟨by simp [finish], finish_ne h x y, fun hk => by simp [Heap.keepAlive, hk],
+    fun hk => by simp [Heap.keepAlive, hk], ?_⟩
+  intro hc ha hm hma hk
+  have hax := get_of_list h a _ ha
+  have hxx := get_of_list h x _ hc
+  have hne : a ≠ x := by
+    intro he; rw [he, hc] at ha; simp at ha
+  generalize hh2 : h.fresh (.list []) x = h2
+  have hlen : h2.cells.length = h.cells.length + 1 := by rw [← hh2, fresh_len]
+  have hg : h2.get a = .list [] := by rw [← hh2, fresh_get_old _ _ _ _ hax]; exact ha
+  have hl : h2.memo.lookup a = none := by rw [← hh2, fresh_lookup_other _ _ _ _ hne]; exact hma
+  have hk2 : h2.keep = none := by rw [← hh2]; exact hk
+  generalize hh3 : (((h2.fresh (.list []) a).set h2.cells.length (.list [])).remember a h2.cells.length).keepAlive
+    (.obj a) = h3
+  have c1 : deepcopy (fuel + 2) h2 a = .ok (h3, h2.cells.length) := by
+    rw [← hh3]
+    exact (deepcopy_list _ h2 a [] hg hl _ _ (deepList_nil _ _)).trans (finish_ne _ _ _ (by omega))
+  have hk3 : h3.keep = some [.obj a] := by
+    rw [← hh3]
+    simp [Heap.keepAlive, Heap.remember, Heap.set, Heap.fresh, Heap.alloc, hk2]
+  have d1 : deepList (fuel + 3) h2 [a] = .ok (h3, [h2.cells.length]) :=
+    deepList_cons _ _ _ _ _ _ _ _ c1 (deepList_nil _ _)
+  rw [← hh2] at d1
+  refine ⟨_, (deepcopy_list _ h x _ hc hm _ _ d1).trans (finish_ne _ _ _ (by omega)), ?_⟩
+  simp [Heap.keepAlive, Heap.remember, Heap.set, hk3]

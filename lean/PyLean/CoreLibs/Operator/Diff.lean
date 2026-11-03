@@ -346,9 +346,22 @@ def getCells (j : Json) : Except String (List Cell) := do
         | "ok" => pure (some none)
         | "raise" => pure (some (some (valueErr (k ++ tag))))
         | _ => pure none
-      let reduce ← match ← getStr c "rv" with
+      let rv ← match ← getStr c "rv" with
         | "absent" => pure none
         | _ => some <$> getRv c
+      let via : String := match c.getObjVal? "via" with
+        | .ok (.str v) => v
+        | _ => "ex"
+      let table : Bool := match c.getObjVal? "table" with
+        | .ok (.bool true) => true
+        | _ => false
+      -- the Python side's class: `__reduce_ex__`, `__reduce__` and a `copyreg.dispatch_table` entry
+      let reduce : Reductor := match rv with
+        | none => ⟨none, if via == "falsyex" then .falsy else .none, if via == "falsy" then .falsy else .none⟩
+        | some r =>
+          if table then ⟨some r, .fn (.raises (valueErr "shadowed")), .none⟩
+          else if via == "plain" then ⟨none, .none, .fn r⟩
+          else ⟨none, .fn r, .none⟩
       pure (.hooked (← mk "copier") (← mk "deepcopier") reduce)
 
 /-- The result graph, by depth-first search with back references, as the Python side renders it. -/
@@ -394,6 +407,26 @@ partial def render (h : Heap) (seen : List Nat) (x : Nat) : List Nat × Json :=
         let (s, js) := many [self]
         (s, toJson [toJson "method", toJson (methName f), toJson js])
       | _ => (seen, toJson [toJson "other"])
+
+/-- The `_keep_alive` list after `render` of the copy, with its `seen` list: an object as `render` gives it, an
+instance's `__dict__` as the dict it is (a new entry of `seen`, at a number no cell has). -/
+partial def renderKeep (h : Heap) (seen : List Nat) : List KeepItem → List Json
+  | [] => []
+  | .obj i :: rest =>
+    let (s, j) := render h seen i
+    j :: renderKeep h s rest
+  | .dictOf i :: rest =>
+    let attrs := match h.get i with
+      | .inst a => a
+      | _ => []
+    let s0 := seen ++ [1000000 + i]
+    let (s, js) := attrs.foldl (fun (acc : List Nat × List Json) p =>
+      let (s1, kj) := match p.1 with
+        | .name n => (acc.1, toJson [toJson "str", toJson n])
+        | .obj k => render h acc.1 k
+      let (s2, vj) := render h s1 p.2
+      (s2, acc.2 ++ [kj, vj])) (s0, [])
+    toJson [toJson "dict", toJson js] :: renderKeep h s rest
 
 def getHooks (j : Json) : Except String (List (Nat × Nat × String)) := do
   (← getArr j "hooks").mapM fun p => do
@@ -599,13 +632,20 @@ def run (fn : String) (j : Json) : Except String Json := do
     let memo ← (← getArr j "memo").mapM fun p => do
       pure (← (← p.getArrVal? 0).getNat?, ← (← p.getArrVal? 1).getNat?)
     -- a later entry of the Python `memo` overwrites an earlier one, and `lookup` reads the front of the list
-    let h : Heap := ⟨cells, memo.reverse⟩
+    let h : Heap := ⟨cells, memo.reverse, none⟩
     let x ← getNat j "root"
     let fuel := 12 * cells.length + 16
+    -- the copy, whether it is `x`, and `memo[id(memo)]`, the `_keep_alive` list, rendered after the copy
+    let out (p : Heap × Nat) : Json :=
+      let (seen, yj) := render p.1 [] p.2
+      let keepJ : Json := match p.1.keep with
+        | none => Json.null
+        | some ks => toJson (renderKeep p.1 seen ks)
+      toJson [yj, toJson (p.2 == x), keepJ]
     if ← getBool j "shallow" then
-      pure (encPy (fun (p : Heap × Nat) => toJson [(render p.1 [] p.2).2, toJson (p.2 == x)]) (copyShallow h x))
+      pure (encPy out (copyShallow h x))
     else
-      pure (encPy (fun (p : Heap × Nat) => toJson [(render p.1 [] p.2).2, toJson (p.2 == x)]) (deepcopy fuel h x))
+      pure (encPy out (deepcopy fuel h x))
   | "replace" =>
     let k ← getStr j "has"
     let changes ← (← getArr j "changes").mapM fun p => do
