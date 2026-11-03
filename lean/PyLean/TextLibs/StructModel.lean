@@ -393,34 +393,40 @@ def longMin : Int := -(2 ^ 63)
 def longMax : Int := 2 ^ 63 - 1
 def ulongMax : Int := 2 ^ 64 - 1
 
-/-- `get_long`, `Modules/_struct.c:139-155` (with `PyLong_AsLong`). -/
+/-- `get_long`, `Modules/_struct.c:139-155`, with `PyLong_AsLong` (`Objects/longobject.c:673-684`). -/
 def getLong (v : SV) : Py Int := do
   asC longMin longMax "Python int too large to convert to C long" (← getPylong v)
 
-/-- `get_ulong`, `Modules/_struct.c:160-176` (with `PyLong_AsUnsignedLong`). -/
+/-- `get_ulong`, `Modules/_struct.c:160-176`, with `PyLong_AsUnsignedLong`
+(`Objects/longobject.c:757-804`: the negative test at 784-788, the overflow at 799-803). -/
 def getUlong (v : SV) : Py Int := do
   let n ← getPylong v
-  if n < 0 then throw (.overflowError "can't convert negative int to unsigned")
+  if n < 0 then throw (.overflowError "can't convert negative value to unsigned int")
   asC 0 ulongMax "Python int too large to convert to C unsigned long" n
 
-/-- `get_longlong`, `Modules/_struct.c:180-196`. -/
+/-- `get_longlong`, `Modules/_struct.c:180-196`, with `PyLong_AsLongLong`
+(`Objects/longobject.c:1583-1622`): a non-compact int goes through `_PyLong_AsByteArray`, whose
+overflow is "int too big to convert" (`Objects/longobject.c:1248-1251`). -/
 def getLonglong (v : SV) : Py Int := do
-  asC longMin longMax "Python int too large to convert to C long long" (← getPylong v)
+  asC longMin longMax "int too big to convert" (← getPylong v)
 
-/-- `get_ulonglong`, `Modules/_struct.c:200-216`. -/
+/-- `get_ulonglong`, `Modules/_struct.c:200-216`, with `PyLong_AsUnsignedLongLong`
+(`Objects/longobject.c:1628-1669`): every int that is not a non-negative compact one goes through
+`_PyLong_AsByteArray`, which refuses a negative int (`Objects/longobject.c:1127-1134`) and overflows
+with "int too big to convert" (1248-1251). -/
 def getUlonglong (v : SV) : Py Int := do
   let n ← getPylong v
   if n < 0 then throw (.overflowError "can't convert negative int to unsigned")
-  asC 0 ulongMax "Python int too large to convert" n
+  asC 0 ulongMax "int too big to convert" n
 
-/-- `get_ssize_t`, `Modules/_struct.c:220-236`. -/
+/-- `get_ssize_t`, `Modules/_struct.c:220-236`, with `PyLong_AsSsize_t` (`Objects/longobject.c:708-751`). -/
 def getSsizeT (v : SV) : Py Int := do
   asC longMin longMax "Python int too large to convert to C ssize_t" (← getPylong v)
 
-/-- `get_size_t`, `Modules/_struct.c:240-256`. -/
+/-- `get_size_t`, `Modules/_struct.c:240-256`, with `PyLong_AsSize_t` (`Objects/longobject.c:810-845`). -/
 def getSizeT (v : SV) : Py Int := do
   let n ← getPylong v
-  if n < 0 then throw (.overflowError "can't convert negative int to size_t")
+  if n < 0 then throw (.overflowError "can't convert negative value to size_t")
   asC 0 ulongMax "Python int too large to convert to C size_t" n
 
 /-- `if (get_*(...) < 0) { if (PyErr_ExceptionMatches(PyExc_OverflowError))
@@ -623,6 +629,14 @@ def packUintStd (f : FormatDef) (v : SV) (le : Bool) : Py (List Nat) := do
     if x ≥ (2 ^ (i * 8) : Int) then throw (rangeError f true)
   return (if le then lpLoop i x else bpLoop i x)
 
+/-- The message `np_longlong` raises in place of an `OverflowError`, `Modules/_struct.c:710-714`. -/
+def llRangeErr (f : FormatDef) : PyExc :=
+  structErr s!"'{f.name}' format requires {longMin} <= number <= {longMax}"
+
+/-- The message `np_ulonglong` raises in place of an `OverflowError`, `Modules/_struct.c:728-731`. -/
+def ullRangeErr (f : FormatDef) : PyExc :=
+  structErr s!"'{f.name}' format requires 0 <= number <= {ulongMax}"
+
 /-- Dispatch `e->pack(state, res, v, e)`. -/
 def runPack (f : FormatDef) (v : SV) : Py (List Nat) :=
   match f.pack with
@@ -643,14 +657,12 @@ def runPack (f : FormatDef) (v : SV) : Py (List Nat) :=
   | .npSizeT => do return twos 8 (← orRange f true (getSizeT v))
   | .npLonglong =>
     match getLonglong v with
-    | .error (.overflowError _) =>
-      .error (structErr s!"'{f.name}' format requires {longMin} <= number <= {longMax}")
+    | .error (.overflowError _) => .error (llRangeErr f)
     | .error e => .error e
     | .ok x => .ok (twos 8 x)
   | .npUlonglong =>
     match getUlonglong v with
-    | .error (.overflowError _) =>
-      .error (structErr s!"'{f.name}' format requires 0 <= number <= {ulongMax}")
+    | .error (.overflowError _) => .error (ullRangeErr f)
     | .error e => .error e
     | .ok x => .ok (twos 8 x)
   | .npBool => do return [if (← isTrue v) then 1 else 0]

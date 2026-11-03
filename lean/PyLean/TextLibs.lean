@@ -1,6 +1,6 @@
 import PyLean.Registry
 import PyLean.TextLibs.Diff
-import PyLean.TextLibs.StructFail
+import PyLean.TextLibs.StructFloat
 import PyLean.TextLibs.BinasciiEq3
 import PyLean.TextLibs.CsvRoundTrip
 import PyLean.TextLibs.ReParseProps
@@ -102,8 +102,8 @@ def entries : List Entry := [
     prop := ``IntCodesRoundTrip, thm := some ``intCodesRoundTrip_proven
     notes := "Goes through the runPack/runUnpack dispatch, including the C sign extension. P reads back unsigned, so it is stated on 0..2**64-1; its negative range does not round trip, by design of nu_void_p." },
   { id := "textlibs-struct-endian-tables", pyFile := "Modules/_struct.c", pyFns := ["init_endian_tables"]
-    statement := "init_endian_tables keeps every format, size and alignment, swaps in the native routines for F and D, and keeps the standard routines for f, d, ? and the 4-byte l, L."
-    source := "comments at Modules/_struct.c:1528-1546", status := .proven
+    statement := "init_endian_tables keeps every format, size and alignment of the little-endian table; it gives F, D, Zf, Zd, f and d the native pack routines, keeps bp_bool for ? (skipped on purpose), and keeps lp_int and lp_uint for l and L, whose 4-byte size differs from the native 8."
+    source := "Modules/_struct.c:1519-1557", status := .proven
     prop := ``EndianTableSwap, thm := some ``endianTableSwap_proven },
   { id := "textlibs-struct-align", pyFile := "Modules/_struct.c", pyFns := ["align"]
     statement := "For every size <= PY_SSIZE_T_MAX and non-zero alignment, align returns the next multiple of the alignment, or fails only when that multiple would pass PY_SSIZE_T_MAX."
@@ -155,17 +155,40 @@ def entries : List Entry := [
     prop := ``PackIntoStaysInside
     notes := "`packP` writes the count of a p field only when the field has room. Open: the proof needs that every pack routine returns exactly e.size bytes, which is stated for the integers only." },
   { id := "textlibs-struct-half-round-trip", pyFile := "Modules/_struct.c"
-    pyFns := ["unpack_halffloat", "pack_halffloat", "nu_halffloat", "np_halffloat"]
-    statement := "For every non-NaN 16-bit pattern, packing the unpacked half float gives back the same two bytes."
-    source := "invariant", status := .open
-    prop := ``HalfRoundTrip
-    notes := "CPython agrees on all 65536 patterns (scratch sweep). decide +kernel passes the first 1024 patterns but hits a deterministic timeout on 65536; this needs a symbolic proof, not a smaller range." },
+    pyFns := ["unpack_halffloat", "pack_halffloat"]
+    statement := "For every 16-bit pattern that is not a NaN, PyFloat_Pack2 of the double PyFloat_Unpack2 returns gives back the same pattern."
+    source := "invariant: a half float is exactly a double", status := .proven
+    prop := ``HalfRoundTrip, thm := some ``halfRoundTrip_proven
+    notes := "Symbolic over the fields: normal, subnormal (by top bit), zero and infinity. CPython agrees on all 65536 patterns." },
   { id := "textlibs-struct-float-round-trip", pyFile := "Modules/_struct.c"
-    pyFns := ["unpack_float", "lu_float", "lp_float"]
-    statement := "For every non-NaN 32-bit pattern, packing the unpacked float gives back the same four bytes."
-    source := "invariant", status := .open
-    prop := ``FloatRoundTrip
-    notes := "Needs a symbolic proof over encodeRounded, especially for subnormal floats." },
+    pyFns := ["unpack_float"]
+    statement := "For every 32-bit pattern that is not a NaN, PyFloat_Pack4 of the double PyFloat_Unpack4 returns gives back the same pattern."
+    source := "invariant: a single is exactly a double", status := .proven
+    prop := ``FloatRoundTrip, thm := some ``floatRoundTrip_proven
+    notes := "Symbolic over the fields, subnormal singles by top bit. CPython agrees on 320k sampled patterns, every exponent and the fraction edges included." },
+  { id := "textlibs-struct-half-unpack", pyFile := "Modules/_struct.c"
+    pyFns := ["unpack_halffloat", "nu_halffloat", "bu_halffloat", "lu_halffloat"]
+    statement := "unpack_halffloat returns, for every 16-bit pattern, the double with the half's sign, exponent and fraction: normal halves rebias by 1008 and shift the fraction 42 bits, subnormals become normal doubles, zeros and infinities stay, and a NaN keeps its whole payload; every e entry reads its bytes in its table's order."
+    source := "Objects/floatobject.c:2090-2143", status := .proven
+    prop := ``HalfUnpackExact, thm := some ``halfUnpackExact_proven
+    notes := "Checked against CPython on all 65536 patterns in all three byte orders." },
+  { id := "textlibs-struct-half-overflow", pyFile := "Modules/_struct.c"
+    pyFns := ["pack_halffloat", "np_halffloat", "bp_halffloat", "lp_halffloat"]
+    statement := "pack_halffloat raises OverflowError('float too large to pack with e format') exactly for finite doubles with 0x40EFFE0000000000 <= |x| < 0x7FF0000000000000 (|x| >= 65520), and no other error on a float, in every table."
+    source := "Objects/floatobject.c:1940-1942, 1964-1974", status := .proven
+    prop := ``HalfPackOverflow, thm := some ``halfPackOverflow_proven
+    notes := "struct.pack('e', 70000.0) is OverflowError while struct.pack('e', 70000) is struct.error('int too large to convert'): s_pack_internal rewrites the OverflowError only for an exact int (Modules/_struct.c:2402-2406). Not recorded as a bug." },
+  { id := "textlibs-struct-float-unpack", pyFile := "Modules/_struct.c"
+    pyFns := ["unpack_float", "bu_float", "lu_float"]
+    statement := "unpack_float returns, for every 32-bit pattern, the double with the single's sign, exponent and fraction: normal singles rebias by 896 and shift the fraction 29 bits, subnormals become normal doubles, zeros and infinities stay, and a NaN keeps its whole payload, a signalling NaN staying signalling."
+    source := "Objects/floatobject.c:2146-2201", status := .proven
+    prop := ``FloatUnpackExact, thm := some ``floatUnpackExact_proven
+    notes := "lu_float is replaced by nu_float at start-up on this build, so only bu_float reaches unpack_float from Python; nu_float quiets signalling NaNs (textlibs-struct-native-float-snan)." },
+  { id := "textlibs-struct-double-bytes", pyFile := "Modules/_struct.c"
+    pyFns := ["unpack_double", "nu_double", "np_double", "bu_double", "bp_double"]
+    statement := "For every d entry and every 8-byte buffer, unpack returns the float whose bit pattern is the buffer read in the table's byte order, and packing that float writes the same buffer."
+    source := "Objects/floatobject.c:2069-2087, 2204-2223", status := .proven
+    prop := ``DoubleBytes, thm := some ``doubleBytes_proven },
   { id := "textlibs-struct-prepare-two-passes", pyFile := "Modules/_struct.c"
     pyFns := ["prepare_s", "whichtable", "getentry"]
     statement := "For every format prepare_s accepts, its two passes agree: s_size is the first pass's size, s_len is the sum of the codes' repeats, and there is one code per counted item."
@@ -176,9 +199,9 @@ def entries : List Entry := [
     source := "docs: the c format character", status := .proven
     prop := ``CharCode, thm := some ``charCode_proven },
   { id := "textlibs-struct-bool-code", pyFile := "Modules/_struct.c", pyFns := ["np_bool", "bp_bool", "nu_bool", "bu_bool"]
-    statement := "? stores the truth value of any object in one byte and reads it back, in native and standard mode."
-    source := "docs: format characters, note on ?", status := .proven
-    prop := ``BoolCode, thm := some ``boolCode_proven },
+    statement := "For every object whose truth value does not raise, ? packs to exactly the one byte 0x01 or 0x00, in every table, and that byte unpacks to the truth value."
+    source := "Modules/_struct.c:741-751", status := .proven
+    prop := ``BoolPacksByte, thm := some ``boolPacksByte_proven },
   { id := "textlibs-struct-scalar-byte-order", pyFile := "Modules/_struct.c"
     pyFns := ["unpack_halffloat", "pack_halffloat", "unpack_float", "unpack_double", "nu_halffloat", "np_halffloat",
       "bu_halffloat", "lu_halffloat", "bp_halffloat", "lp_halffloat", "bu_float", "lu_float", "bp_float", "lp_float",
@@ -248,8 +271,22 @@ def entries : List Entry := [
     prop := ``IndexRaises, thm := some ``indexRaises_proven },
   { id := "textlibs-struct-index-overflow", pyFile := "Modules/_struct.c", pyFns := ["np_int"]
     statement := "An OverflowError from __index__ becomes the format's range error."
-    source := "Modules/_struct.c:576-579", status := .proven
+    source := "Modules/_struct.c:613-617", status := .proven
     prop := ``IndexOverflow, thm := some ``indexOverflow_proven },
+  { id := "textlibs-struct-get-conversions", pyFile := "Modules/_struct.c"
+    pyFns := ["get_pylong", "get_long", "get_ulong", "get_longlong", "get_ulonglong", "get_ssize_t", "get_size_t"]
+    statement := "For every int from get_pylong, each get_* helper returns it inside its C type's range and raises the OverflowError of the PyLong_As* function it calls, with its message, outside it; a failure of get_pylong comes out unchanged."
+    source := "Modules/_struct.c:139-256, Objects/longobject.c:673-845, 1109-1253, 1583-1669", status := .proven
+    prop := ``GetConversions, thm := some ``getConversions_proven
+    notes := "struct replaces these OverflowErrors with its own messages, so they are not visible through struct; the messages were checked against _testlimitedcapi.pylong_as* on 3.15.2." },
+  { id := "textlibs-struct-native-int-range", pyFile := "Modules/_struct.c"
+    pyFns := ["np_byte", "np_ubyte", "np_short", "np_ushort", "np_int", "np_uint", "np_long", "np_ulong",
+      "np_ssize_t", "np_size_t", "np_longlong", "np_ulonglong", "_range_error", "get_pylong", "get_long",
+      "get_ulong", "get_longlong", "get_ulonglong", "get_ssize_t", "get_size_t"]
+    statement := "In every table that uses them, the twelve native integer pack routines write the two's-complement bytes of every int inside their range and raise struct.error('<code> format requires lo <= number <= hi') for every int outside it, an OverflowError from __index__ included; other exceptions from __index__ come out unchanged."
+    source := "Modules/_struct.c:524-737", status := .proven
+    prop := ``NativeIntPack, thm := some ``nativeIntPack_proven
+    notes := "np_int's INT_MIN/INT_MAX check (619-622) and np_uint's UINT_MAX check (640-643) are the ones LP64 reaches. Checked on 3.15.2 for every code and prefix that reaches these routines, at every range boundary +-2." },
   { id := "textlibs-struct-bool-raises", pyFile := "Modules/_struct.c", pyFns := ["np_bool", "bp_bool"]
     statement := "A raising __bool__ raises out of ?, in both format tables."
     source := "Modules/_struct.c:745-747", status := .proven
