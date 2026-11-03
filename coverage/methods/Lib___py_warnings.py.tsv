@@ -15,7 +15,7 @@ Lib/_py_warnings.py	127	130	formatwarning	formatwarning(message, category, filen
 Lib/_py_warnings.py	133	150	_showwarnmsg_impl	_showwarnmsg_impl(msg)	modelled	warn-show-dispatch,warn-nested-record,warn-record-captures	
 Lib/_py_warnings.py	153	210	_formatwarnmsg_impl	_formatwarnmsg_impl(msg)	todo		
 Lib/_py_warnings.py	217	233	_showwarnmsg	_showwarnmsg(msg)	todo		review: showwarnmsg (Context.lean:179-186) mirrors the dispatch of :223-233 and ShowDispatch pins it, but the function's own 'try: sw = _wm.showwarning except AttributeError' (:219-222) is not routed through the class relation: showwarning is Option Fn, so a lookup that raises something else (measured on 3.15.2: a deleted showwarning with a module-level warnings.__getattr__ raising KeyError propagates) or an exception whose MRO lacks AttributeError cannot be expressed, and the model shows the warning instead.
-Lib/_py_warnings.py	240	251	_formatwarnmsg	_formatwarnmsg(msg)	todo		
+Lib/_py_warnings.py	240	251	_formatwarnmsg	_formatwarnmsg(msg)	modelled	warn-show-dispatch	
 Lib/_py_warnings.py	254	291	filterwarnings	filterwarnings(action, message='', category=Warning, module='', lineno=0, append=False)	modelled	warn-filterwarnings-spec,warn-simplefilter-warncat,warn-version-bumps	
 Lib/_py_warnings.py	294	310	simplefilter	simplefilter(action, category=Warning, lineno=0, append=False)	modelled	warn-simplefilter-warncat,warn-simplefilter-any-cat,warn-version-bumps	
 Lib/_py_warnings.py	313	317	_filters_mutated	_filters_mutated()	modelled	warn-version-bumps	
