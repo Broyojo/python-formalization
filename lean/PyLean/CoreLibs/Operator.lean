@@ -9,6 +9,7 @@ import PyLean.CoreLibs.Operator.CopyStrength
 import PyLean.CoreLibs.Operator.AbcStrength
 import PyLean.CoreLibs.Operator.McShare
 import PyLean.CoreLibs.Operator.AttrObjProps
+import PyLean.CoreLibs.Operator.IgReduce
 
 /-! Registry for the `Operator` area of CoreLibs: Lib/operator.py, Modules/_operator.c, Lib/copy.py, Lib/abc.py,
 CPython 3.15.2. -/
@@ -725,6 +726,14 @@ def entries : List Entry := [
     status := .proven
     prop := ``McShare.McReprMutations
     thm := some ``McShare.mcReprMutations_proven },
+  { id := "corelibs-operator-itemgetter-reduce"
+    pyFile := file
+    pyFns := ["itemgetter_reduce", "itemgetter.__reduce__", "itemgetter_new"]
+    statement := "itemgetter.__reduce__ round-trips: type(ig)(*args) rebuilds the same nitems, item and index, and the arguments are the constructor's own in both twins; one item gives (item,), more give the stored tuple."
+    source := "pickle protocol; Modules/_operator.c:1191-1198"
+    status := .proven
+    prop := ``ItemgetterReduce
+    thm := some ``itemgetterReduce_proven },
   { id := "corelibs-operator-mc-vectorcall-fresh"
     pyFile := file
     pyFns := ["methodcaller_vectorcall", "_methodcaller_initialize_vectorcall"]
