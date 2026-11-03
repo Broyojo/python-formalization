@@ -1,41 +1,41 @@
 file	line	endline	name	signature	status	entry	note
 Lib/zoneinfo/_zoneinfo.py	26	27	_load_timedelta	_load_timedelta(seconds)	todo		
-Lib/zoneinfo/_zoneinfo.py	36	38	ZoneInfo.__init_subclass__	__init_subclass__(cls)	modelled	datetime-zoneinfo-cache-twins-subclass	
+Lib/zoneinfo/_zoneinfo.py	36	38	ZoneInfo.__init_subclass__	__init_subclass__(cls)	todo		review: initSubclassPy is the opaque `wvd.map` that initSubclassC also is, so CacheTwinsSubclass holds whatever this body does, and its signature (cls only) is not modelled: `class S(ZoneInfo, foo=1)` raises TypeError here and is silently accepted by C (measured on 3.15.2), unrecorded.
 Lib/zoneinfo/_zoneinfo.py	40	56	ZoneInfo.__new__	__new__(cls, key)	todo		review: newPy mirrors :41-54 on keys, but only for the base class and for keys whose __hash__/__eq__ cannot raise or re-enter (a failing get/setdefault/pop is not an outcome), and the subclass case, where this method keeps 8 per subclass and C none (measured on 3.15.2), is scoped out without a refutation.
 Lib/zoneinfo/_zoneinfo.py	59	63	ZoneInfo.no_cache	no_cache(cls, key)	todo		
 Lib/zoneinfo/_zoneinfo.py	66	79	ZoneInfo._new_instance	_new_instance(cls, key)	todo		
 Lib/zoneinfo/_zoneinfo.py	82	92	ZoneInfo.from_file	from_file(cls, file_obj, /, key=None)	todo		
 Lib/zoneinfo/_zoneinfo.py	95	103	ZoneInfo.clear_cache	clear_cache(cls, *, only_keys=None)	todo		review: clearPy is a fold that cannot fail, so an only_keys iterator or key hash that raises midway (a partial clear, then the exception) is not modelled, and subclasses are out of scope; CacheTwins covers only well-behaved base-class runs.
 Lib/zoneinfo/_zoneinfo.py	106	107	ZoneInfo.key	key(self)	excluded		trivial: property returning self._key, no branch
-Lib/zoneinfo/_zoneinfo.py	109	110	ZoneInfo.utcoffset	utcoffset(self, dt)	todo		review: LookupMethodsTwins covers only None and exact datetimes; for a datetime subclass Python reads fold and toordinal() through attributes while C reads the struct and narrows to int, and the measured divergence (+7h here, 0 in C) is on record nowhere.
-Lib/zoneinfo/_zoneinfo.py	112	113	ZoneInfo.dst	dst(self, dt)	todo		review: Same as utcoffset: the one-line body is mirrored, but the twin property excludes datetime subclasses, where the twins differ (measured), without a refutation.
-Lib/zoneinfo/_zoneinfo.py	115	116	ZoneInfo.tzname	tzname(self, dt)	todo		review: Same as utcoffset: the twin property excludes datetime subclasses, where the twins differ (measured), without a refutation.
+Lib/zoneinfo/_zoneinfo.py	109	110	ZoneInfo.utcoffset	utcoffset(self, dt)	modelled	datetime-zoneinfo-lookup-methods	review: LookupMethodsTwins covers only None and exact datetimes; for a datetime subclass Python reads fold and toordinal() through attributes while C reads the struct and narrows to int, and the measured divergence (+7h here, 0 in C) is on record nowhere.
+Lib/zoneinfo/_zoneinfo.py	112	113	ZoneInfo.dst	dst(self, dt)	modelled	datetime-zoneinfo-lookup-methods	review: Same as utcoffset: the one-line body is mirrored, but the twin property excludes datetime subclasses, where the twins differ (measured), without a refutation.
+Lib/zoneinfo/_zoneinfo.py	115	116	ZoneInfo.tzname	tzname(self, dt)	modelled	datetime-zoneinfo-lookup-methods	review: Same as utcoffset: the twin property excludes datetime subclasses, where the twins differ (measured), without a refutation.
 Lib/zoneinfo/_zoneinfo.py	118	160	ZoneInfo.fromutc	fromutc(self, dt)	todo		review: The refutation (duplicate of gh-159707) covers the after-last-transition branch, but the proven narrowing drops every zone with a transition, so the before-first and bisect branches (:129-131, :141-155) are stated by no theorem, and that region holds an unrecorded divergence (two transitions and a static footer unlike the last type: Python adds ttinfos[-1] = +1h, C the footer's 0, while Python's own utcoffset says 0; measured).
-Lib/zoneinfo/_zoneinfo.py	162	187	ZoneInfo._find_trans	_find_trans(self, dt)	todo		review: LookupTwins quantifies over exact datetimes only; dt.fold and dt.year are attribute reads here (:171, :179) while C reads the struct, a subclass overriding fold makes the twins differ (measured), and that is not recorded.
-Lib/zoneinfo/_zoneinfo.py	189	195	ZoneInfo._get_local_timestamp	_get_local_timestamp(self, dt)	todo		review: Its only property is LookupTwins over exact datetimes; for a datetime subclass whose toordinal() exceeds int this exact sum and C's narrowed one differ (measured), and that case is on record nowhere.
+Lib/zoneinfo/_zoneinfo.py	162	187	ZoneInfo._find_trans	_find_trans(self, dt)	modelled	datetime-zoneinfo-lookup-twins,datetime-zoneinfo-lookup-twins-instances	review: LookupTwins quantifies over exact datetimes only; dt.fold and dt.year are attribute reads here (:171, :179) while C reads the struct, a subclass overriding fold makes the twins differ (measured), and that is not recorded.
+Lib/zoneinfo/_zoneinfo.py	189	195	ZoneInfo._get_local_timestamp	_get_local_timestamp(self, dt)	modelled	datetime-zoneinfo-fromutc-twins-instances,datetime-zoneinfo-fromutc-twins-sorted,datetime-zoneinfo-lookup-twins,datetime-zoneinfo-lookup-twins-instances	review: Its only property is LookupTwins over exact datetimes; for a datetime subclass whose toordinal() exceeds int this exact sum and C's narrowed one differ (measured), and that case is on record nowhere.
 Lib/zoneinfo/_zoneinfo.py	197	201	ZoneInfo.__str__	__str__(self)	todo		
 Lib/zoneinfo/_zoneinfo.py	203	207	ZoneInfo.__repr__	__repr__(self)	todo		
 Lib/zoneinfo/_zoneinfo.py	209	210	ZoneInfo.__reduce__	__reduce__(self)	todo		
 Lib/zoneinfo/_zoneinfo.py	212	217	ZoneInfo._file_reduce	_file_reduce(self)	todo		
 Lib/zoneinfo/_zoneinfo.py	220	224	ZoneInfo._unpickle	_unpickle(cls, key, from_cache, /)	todo		
 Lib/zoneinfo/_zoneinfo.py	226	227	ZoneInfo._find_tzfile	_find_tzfile(self, key)	todo		
-Lib/zoneinfo/_zoneinfo.py	229	300	ZoneInfo._load_file	_load_file(self, fobj)	todo		
+Lib/zoneinfo/_zoneinfo.py	229	300	ZoneInfo._load_file	_load_file(self, fobj)	modelled	datetime-zoneinfo-load-twins	
 Lib/zoneinfo/_zoneinfo.py	303	363	ZoneInfo._utcoff_to_dstoff	_utcoff_to_dstoff(trans_idx, utcoffsets, isdsts)	modelled	datetime-zoneinfo-dstoff-twins,datetime-zoneinfo-dstoff-twins-flags,datetime-zoneinfo-dstoff-twins-narrow	
 Lib/zoneinfo/_zoneinfo.py	366	397	ZoneInfo._ts_to_local	_ts_to_local(trans_idx, trans_list_utc, utcoffsets)	modelled	datetime-zoneinfo-ts-to-local-narrow,datetime-zoneinfo-ts-to-local-twins	
-Lib/zoneinfo/_zoneinfo.py	403	406	_ttinfo.__init__	__init__(self, utcoff, dstoff, tzname)	todo		
+Lib/zoneinfo/_zoneinfo.py	403	406	_ttinfo.__init__	__init__(self, utcoff, dstoff, tzname)	modelled	datetime-zoneinfo-load-twins	
 Lib/zoneinfo/_zoneinfo.py	408	413	_ttinfo.__eq__	__eq__(self, other)	todo		
 Lib/zoneinfo/_zoneinfo.py	415	419	_ttinfo.__repr__	__repr__(self)	todo		
-Lib/zoneinfo/_zoneinfo.py	436	458	_TZStr.__init__	__init__(self, std_abbr, std_offset, dst_abbr, dst_offset, start=None, end=None)	todo		
+Lib/zoneinfo/_zoneinfo.py	436	458	_TZStr.__init__	__init__(self, std_abbr, std_offset, dst_abbr, dst_offset, start=None, end=None)	modelled	datetime-zoneinfo-tzstr-twins-nonul	
 Lib/zoneinfo/_zoneinfo.py	460	463	_TZStr.transitions	transitions(self, year)	modelled	datetime-zoneinfo-lookup-twins	
 Lib/zoneinfo/_zoneinfo.py	465	487	_TZStr._get_trans_info	_get_trans_info(self, ts, year, fold)	modelled	datetime-zoneinfo-lookup-twins	
 Lib/zoneinfo/_zoneinfo.py	489	511	_TZStr._get_trans_info_fromutc	_get_trans_info_fromutc(self, ts, year)	modelled	datetime-zoneinfo-fromutc-twins,datetime-zoneinfo-fromutc-twins-notrans	
 Lib/zoneinfo/_zoneinfo.py	514	517	_post_epoch_days_before_year	_post_epoch_days_before_year(year)	modelled	datetime-zoneinfo-calendar-rule-meaning,datetime-zoneinfo-julian-rule-meaning,datetime-zoneinfo-rule-date-twins	
-Lib/zoneinfo/_zoneinfo.py	523	532	_DayOffset.__init__	__init__(self, d, julian, hour=2, minute=0, second=0)	todo		
+Lib/zoneinfo/_zoneinfo.py	523	532	_DayOffset.__init__	__init__(self, d, julian, hour=2, minute=0, second=0)	modelled	datetime-zoneinfo-tzstr-twins-nonul	
 Lib/zoneinfo/_zoneinfo.py	534	544	_DayOffset.year_to_epoch	year_to_epoch(self, year)	modelled	datetime-zoneinfo-julian-rule-meaning,datetime-zoneinfo-rule-date-twins,datetime-zoneinfo-zero-based-rule	
-Lib/zoneinfo/_zoneinfo.py	566	581	_CalendarOffset.__init__	__init__(self, m, w, d, hour=2, minute=0, second=0)	todo		
+Lib/zoneinfo/_zoneinfo.py	566	581	_CalendarOffset.__init__	__init__(self, m, w, d, hour=2, minute=0, second=0)	modelled	datetime-zoneinfo-tzstr-twins-nonul	
 Lib/zoneinfo/_zoneinfo.py	584	590	_CalendarOffset._ymd2ord	_ymd2ord(cls, year, month, day)	modelled	datetime-zoneinfo-calendar-rule-meaning,datetime-zoneinfo-rule-date-twins	
 Lib/zoneinfo/_zoneinfo.py	593	624	_CalendarOffset.year_to_epoch	year_to_epoch(self, year)	modelled	datetime-zoneinfo-calendar-rule-meaning,datetime-zoneinfo-rule-date-twins	
-Lib/zoneinfo/_zoneinfo.py	627	703	_parse_tz_str	_parse_tz_str(tz_str)	todo		review: Its only settled entry is the NUL refutation, which needs only that this function refuse 'EST50j' (any parser that refuses it would do); agreement with C on NUL-free footers is tzstr-twins-nonul, open.
-Lib/zoneinfo/_zoneinfo.py	706	731	_parse_dst_start_end	_parse_dst_start_end(dststr)	todo		
-Lib/zoneinfo/_zoneinfo.py	734	753	_parse_transition_time	_parse_transition_time(time_str)	todo		
-Lib/zoneinfo/_zoneinfo.py	756	779	_parse_tz_delta	_parse_tz_delta(tz_delta)	todo		
+Lib/zoneinfo/_zoneinfo.py	627	703	_parse_tz_str	_parse_tz_str(tz_str)	modelled	datetime-zoneinfo-tzstr-twins,datetime-zoneinfo-tzstr-twins-nonul	review: Its only settled entry is the NUL refutation, which needs only that this function refuse 'EST50j' (any parser that refuses it would do); agreement with C on NUL-free footers is tzstr-twins-nonul, open.
+Lib/zoneinfo/_zoneinfo.py	706	731	_parse_dst_start_end	_parse_dst_start_end(dststr)	modelled	datetime-zoneinfo-tzstr-twins-nonul	
+Lib/zoneinfo/_zoneinfo.py	734	753	_parse_transition_time	_parse_transition_time(time_str)	modelled	datetime-zoneinfo-tzstr-twins-nonul	
+Lib/zoneinfo/_zoneinfo.py	756	779	_parse_tz_delta	_parse_tz_delta(tz_delta)	modelled	datetime-zoneinfo-tzstr-twins-nonul	
