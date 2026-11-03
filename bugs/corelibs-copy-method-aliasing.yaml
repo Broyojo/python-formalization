@@ -1,0 +1,82 @@
+id: corelibs-copy-method-aliasing
+title: "copy.deepcopy of a bound method whose __self__ refers back to it makes two copies of the method"
+priority: P4
+kind: wrong-result
+module: corelibs
+files: [Lib/copy.py]
+functions: ["_deepcopy_method", "deepcopy"]
+summary: |
+  _deepcopy_method (Lib/copy.py:220-221) returns type(x)(x.__func__, deepcopy(x.__self__, memo))
+  without looking in memo again after copying __self__. When __self__ reaches the method again (an
+  instance that stores its own bound method, a callback registry, an object graph holding both the
+  method and its instance), copying __self__ copies the method once through that reference and records
+  it in memo; _deepcopy_method then builds a second method object and deepcopy (:159-160) overwrites
+  the memo entry with it. The result is two distinct copies of one source object: for a.m = a.f,
+  deepcopy(a.m).__self__.m is not the copy, and deepcopy([a.m, a]) gives r[0] is not r[1].m, while the
+  source has a.m.__self__.m is a.m. The order matters: deepcopy([a, a.m]) keeps the identity, because
+  the instance is copied first. _deepcopy_tuple (:181-187) has the same shape of problem and solves it by
+  reading memo[id(x)] after copying its items; _deepcopy_frozendict (:213-216) does the same.
+likelihood: |
+  Low to moderate. Objects that keep bound methods of themselves (callbacks, event handlers, strategy
+  attributes) and are deep-copied hit it without an error: the copy just has a second, detached method
+  object, so identity checks, handler de-registration by identity, or sets of callbacks behave
+  differently in the copy than in the original. It is silent.
+maybe_intended: |
+  Probably not intended: the comment at :182-183 explains that the tuple copy re-reads memo exactly to
+  handle recursive structures, and nothing in the method copier or its history (python/cpython#45856,
+  where copying instance methods was added) discusses the case. A maintainer may still call it a corner case, since bound methods
+  are usually created on attribute access and rarely stored.
+reproducer: |
+  import copy
+  class A:
+      def f(self):
+          pass
+  a = A()
+  a.m = a.f
+  c = copy.deepcopy(a.m)
+  r = copy.deepcopy([a.m, a])
+  b = A()
+  b.t = (b,)
+  ct = copy.deepcopy(b.t)
+  outcome = {'orig': a.m.__self__.m is a.m, 'copy': c.__self__.m is c, 'list': r[0] is r[1].m,
+             'tuple': ct[0].t is ct}
+  print(outcome)
+  if outcome == {'orig': True, 'copy': False, 'list': False, 'tuple': True}:
+      print('REPRODUCED corelibs-copy-method-aliasing')
+expected: |
+  {'orig': True, 'copy': True, 'list': True, 'tuple': True}: one copy of the method, shared by every
+  reference to it, as for the tuple.
+observed: |
+  python3 3.15.2: {'orig': True, 'copy': False, 'list': False, 'tuple': True}. REPRODUCED.
+  main (python.exe 3.16.0a1+dev): same, REPRODUCED.
+promised_by: |
+  Doc/library/copy.rst:62-65: "The deepcopy() function avoids these problems by: keeping a ``memo``
+  dictionary of objects already copied during the current copying pass". An object reached twice is
+  copied once; here one is copied twice.
+cause: |
+  Lib/copy.py:220-221: the method object is built after deepcopy(x.__self__, memo) returns, with no
+  check of memo[id(x)], which that inner copy may have filled; deepcopy then stores the second object at
+  :159-160.
+possible_fix: |
+  Re-read memo as _deepcopy_tuple does:
+      def _deepcopy_method(x, memo):
+          self = deepcopy(x.__self__, memo)
+          try:
+              return memo[id(x)]
+          except KeyError:
+              pass
+          return type(x)(x.__func__, self)
+  Checked by monkeypatching copy._deepcopy_dispatch[types.MethodType] on 3.15.2: both identities hold,
+  and a plain deepcopy(p.f) still copies __self__.
+duplicates:
+  issues:
+    - {number: 45856, state: closed, relation: "added _deepcopy_method ('deepcopy doesn't copy instance methods'); no discussion of memo or aliasing", reason: "not a duplicate"}
+    - {number: 132272, state: open, relation: "copy.copy ignores methods of the object which are not part of the class; about copy, not deepcopy aliasing", reason: "not a duplicate"}
+  queries: ["deepcopy bound method memo", "deepcopy method __self__ identity", "_deepcopy_method memo",
+            "deepcopy method aliasing", "deepcopy bound method copied twice", "deepcopy instancemethod self reference",
+            "deepcopy method", "deepcopy bound", "_deepcopy_method", "deepcopy MethodType", "deepcopy memo method",
+            "deepcopy shared reference method", "deepcopy self-referencing method", "deepcopy recursive method",
+            "bugforge README: no match for deepcopy, copy.py or _deepcopy"]
+lean:
+  property: PyLean.CoreLibs.Operator.DeepcopyMethodAliasing
+  theorem: PyLean.CoreLibs.Operator.deepcopyMethodAliasing_refuted

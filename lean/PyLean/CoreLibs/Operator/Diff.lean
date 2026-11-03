@@ -293,15 +293,20 @@ def getRv (j : Json) : Except String RvSpec := do
     let state ← match (← field j "state") with
       | .null => pure none
       | v => some <$> v.getNat?
+    let tag ← getStr j "tag"
+    let failOf (k : String) : Except String (Option PyExc) := do
+      match j.getObjVal? k with
+      | .ok (.bool true) => pure (some (valueErr ((if k == "listfail" then "listiter" else "dictiter") ++ tag)))
+      | _ => pure none
     let li ← match (← field j "listiter") with
       | .null => pure none
-      | v => some <$> ((← v.getArr?).toList.mapM (·.getNat?))
+      | v => pure (some ⟨← (← v.getArr?).toList.mapM (·.getNat?), ← failOf "listfail"⟩)
     let di ← match (← field j "dictiter") with
       | .null => pure none
       | v => do
         let ps ← (← v.getArr?).toList.mapM fun p => do
           pure (← (← p.getArrVal? 0).getNat?, ← (← p.getArrVal? 1).getNat?)
-        pure (some ps)
+        pure (some ⟨ps, ← failOf "dictfail"⟩)
     let ss : Option (Option PyExc) ← match ← getStr j "setstate" with
       | "ok" => pure (some none)
       | "raise" => pure (some (some (valueErr "setstate")))
@@ -312,6 +317,7 @@ def getCells (j : Json) : Except String (List Cell) := do
   (← getArr j "cells").mapM fun c => do
     match ← getStr c "k" with
     | "atom" => pure (.atom (← getInt c "n"))
+    | "str" => pure (.str (← getStr c "s"))
     | "list" => pure (.list ((← getIntList c "items").map Int.toNat))
     | "tuple" => pure (.tuple ((← getIntList c "items").map Int.toNat))
     | "dict" =>
@@ -345,6 +351,7 @@ def getCells (j : Json) : Except String (List Cell) := do
 partial def render (h : Heap) (seen : List Nat) (x : Nat) : List Nat × Json :=
   match h.get x with
   | .atom n => (seen, toJson [toJson "atom", toJson n])
+  | .str t => (seen, toJson [toJson "str", toJson t])
   | .cls _ => (seen, toJson [toJson "cls"])
   | .metaCls _ => (seen, toJson [toJson "meta"])
   | .hooked _ _ _ => (seen, toJson [toJson "hooked"])
@@ -592,11 +599,18 @@ def run (fn : String) (j : Json) : Except String Json := do
       pure (encPy (fun (p : Heap × Nat) => toJson [(render p.1 [] p.2).2, toJson (p.2 == x)]) (deepcopy fuel h x))
   | "replace" =>
     let k ← getStr j "has"
-    let r : Option (Py Int) := match k with
-      | "ok" => some (.ok 4)
-      | "raise" => some (.error (valueErr "replace"))
-      | _ => none
-    pure (encPy toJson (replaceOp r "X"))
+    let changes ← (← getArr j "changes").mapM fun p => do
+      pure (← (← p.getArrVal? 0).getStr?, ← (← p.getArrVal? 1).getInt?)
+    -- `__replace__(s, **k)` answers from both of its arguments, so the call is observed, not assumed
+    let f : Int → List (String × Int) → Py Int := fun o ch =>
+      if k == "raise" then .error (valueErr "replace")
+      else .ok (o * 1000 + 10 * ch.length + (ch.map (·.2)).sum)
+    let attr : Option (Option (Int → List (String × Int) → Py Int)) := match k with
+      | "none" => none
+      | "null" => some none
+      | _ => some (some f)
+    let obj ← getInt j "obj"
+    pure (encPy toJson (replaceOp (fun _ => ⟨"X", attr⟩) obj changes))
   | "call_op" =>
     let args ← getIntList j "args"
     let bad ← getBool j "bad"
