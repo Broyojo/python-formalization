@@ -13,6 +13,6 @@ Lib/heapq.py	221	233	_siftdown	_siftdown(heap, startpos, pos)	modelled	accel-hea
 Lib/heapq.py	274	292	_siftup	_siftup(heap, pos)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree,accel-heap-twins-same-list-on-raise,accel-heapify-makes-heap,accel-heapify-twins-agree-fallible	
 Lib/heapq.py	294	307	_siftdown_max	_siftdown_max(heap, startpos, pos)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree,accel-heapify-makes-heap	
 Lib/heapq.py	309	328	_siftup_max	_siftup_max(heap, pos)	modelled	accel-heap-ops-invariant,accel-heap-twins-agree,accel-heapify-makes-heap	
-Lib/heapq.py	330	408	merge	merge(*iterables, key=None, reverse=False)	modelled	accel-merge-sorted	
-Lib/heapq.py	477	535	nsmallest	nsmallest(n, iterable, key=None)	modelled	accel-nsmallest-any-len,accel-nsmallest-sorted-prefix	
-Lib/heapq.py	537	593	nlargest	nlargest(n, iterable, key=None)	modelled	accel-nlargest-any-len,accel-nlargest-sorted-prefix	
+Lib/heapq.py	330	408	merge	merge(*iterables, key=None, reverse=False)	todo		review: The model is over int lists with a pure Int -> Int key: iterators cannot raise or be lazy (the generator, `next()` and `yield from next.__self__` are a list tail), key and `<` cannot raise, and elements are not an abstract type with an order assumption; mergeLoop still cites @3.14.7:394-404.
+Lib/heapq.py	477	535	nsmallest	nsmallest(n, iterable, key=None)	todo		review: Elements are Int compared with Int `<`, the key is a pure Int -> Int and the iterable is a List Int, so the raising key, raising `__lt__`, raising iterator and non-int element paths cannot be stated; only len() is modelled as fallible.
+Lib/heapq.py	537	593	nlargest	nlargest(n, iterable, key=None)	todo		review: As nsmallest: int elements, a pure int key and a list iterable, so no failure path of key, `__lt__` or the iterator is modelled, and the property holds only over ints.
