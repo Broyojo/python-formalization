@@ -1221,4 +1221,53 @@ def baSplitlinesE (keepends : Bool) : E (List Seq) := do
   let s ← curSeq
   return bytesSplitlines s keepends
 
+/-! ## The `stringlib` wrappers, removeprefix/removesuffix, maketrans -/
+
+/-- `bytearray_isalnum` and the other predicates, :2098-2176: `stringlib_isalnum(self, NULL)`, which is
+`_Py_bytes_isalnum(STRINGLIB_STR(self), STRINGLIB_LEN(self))` (stringlib/ctype.h). -/
+def baPredE (p : Seq → Bool) : E Bool := do
+  let s ← curSeq
+  return p s
+
+/-- `bytearray_lower` and the other maps, :2203-2523: `stringlib_lower(self)` makes
+`PyByteArray_FromStringAndSize(NULL, len)` and fills it with `_Py_bytes_lower` (stringlib/ctype.h). -/
+def baMapE (f : Seq → Seq) : E Seq := do
+  let s ← curSeq
+  let _ ← E.lift (baFromStringAndSize none s.length)
+  return f s
+
+/-- The body of `bytearray_removeprefix_impl`, :1525-1542: no `prefix_len > 0` test. -/
+def baRemoveprefix (s p : Seq) : Seq :=
+  if s.length ≥ p.length ∧ p.isPrefixOf s then s.drop p.length else s
+
+/-- The body of `bytearray_removesuffix_impl`, :1558-1576. -/
+def baRemovesuffix (s p : Seq) : Seq :=
+  if s.length ≥ p.length ∧ p.isPrefixOf (s.drop (s.length - p.length)) then s.take (s.length - p.length) else s
+
+/-- `bytearray.removeprefix(prefix)` (`suffix = false`) and `removesuffix`: the clinic takes the
+`Py_buffer` first and releases it after the body. -/
+def baAffixE (suffix : Bool) (a : Arg) : E Seq := do
+  let b ← getBufE a
+  let s ← curSeq
+  let p ← b.read
+  let r := if suffix then baRemovesuffix s p else baRemoveprefix s p
+  b.rel
+  return r
+
+/-- `bytearray.maketrans(frm, to)`, :1817-1822: both clinic buffers, `_Py_bytes_maketrans`, then
+both releases. -/
+def baMaketransE (frm to : Arg) : E Seq := do
+  let bf ← getBufE frm
+  let bt ← match ← E.attempt (getBufE to) with
+    | .error e =>
+      bf.rel
+      throw e
+    | .ok b => pure b
+  let f ← bf.read
+  let t ← bt.read
+  let r := bytesMaketrans f t
+  bf.rel
+  bt.rel
+  E.lift r
+
 end PyLean.BytesObj.Bytes

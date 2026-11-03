@@ -1914,3 +1914,177 @@ theorem copyTwinBytes_proven : CopyTwinBytes := fun h hi =>
 
 end PyLean.BytesObj.Bytes
 
+
+namespace PyLean.BytesObj.Bytes
+
+open PyLean PyLean.StrSearch
+
+/-! ## Group 1: the bytearray bodies of the delegating methods -/
+
+theorem fromSize_small (b : BA) (h : b.data.length < 2 ^ 46) : ∃ r, baFromStringAndSize none b.seq.length = .ok r := by
+  have : b.seq.length = b.data.length := by simp [BA.seq]
+  exact baFromStringAndSize_ok _ (by omega) (by rw [this]; exact_mod_cast h)
+
+/-- The predicates of `bytearray` (`isalnum` ... `isupper`, `isascii`, `istitle`) return the bytes
+helper's answer on the contents, and the maps (`lower`, `upper`, `swapcase`, `capitalize`,
+`title`) a new bytearray holding the helper's result; neither changes the object. For every heap
+below 2^46 bytes. -/
+def DelegatesSpec : Prop :=
+  ∀ (h : H),
+    (∀ p ∈ [bytesIsAlnum, bytesIsAlpha, bytesIsAscii, bytesIsDigit, bytesIsLower, bytesIsSpace, bytesIsTitle,
+      bytesIsUpper], baPredE p h = (.ok (p h.ba.seq), h)) ∧
+    (h.ba.data.length < 2 ^ 46 → ∀ f ∈ [bytesCapitalize, bytesSwapcase, bytesTitle, bytesUpper, bytesLower],
+      baMapE f h = (.ok (f h.ba.seq), h))
+
+theorem delegatesSpec_proven : DelegatesSpec := by
+  intro h
+  refine ⟨fun p _ => rfl, fun hs f _ => ?_⟩
+  obtain ⟨r, hr⟩ := fromSize_small h.ba hs
+  simp [baMapE, E.bind_app, curSeq, hr]
+
+/-- `removeprefix`/`removesuffix` of `bytearray` lack the `prefix_len > 0` test of the `bytes` bodies
+and agree with them anyway (an empty affix takes both to the copy); with a prefix class the result is
+taken from the contents as `__buffer__` left them, and `__release_buffer__` runs after. -/
+def AffixSpec : Prop :=
+  (∀ s p : Seq, baRemoveprefix s p = bytesRemoveprefix s p ∧ baRemovesuffix s p = bytesRemovesuffix s p) ∧
+  (∀ (h : H) (acts rel : List Act) (p : Seq) (suffix : Bool),
+    baAffixE suffix (.buf acts (.ok p) rel) h =
+      (.ok ((if suffix then baRemovesuffix else baRemoveprefix) (runActs h acts).ba.seq p),
+        runActs (runActs h acts) rel)) ∧
+  (∀ (h : H) (o : Obj) (p : Seq) (suffix : Bool), o.buffer? = some p →
+    baAffixE suffix (.obj o) h = (.ok ((if suffix then bytesRemovesuffix else bytesRemoveprefix) h.ba.seq p), h))
+
+theorem affix_twin (s p : Seq) : baRemoveprefix s p = bytesRemoveprefix s p ∧ baRemovesuffix s p = bytesRemovesuffix s p := by
+  constructor
+  · unfold baRemoveprefix bytesRemoveprefix
+    by_cases hp : p.length = 0
+    · have : p = [] := List.eq_nil_of_length_eq_zero hp
+      subst this; simp
+    · have : p.length > 0 := by omega
+      simp [this]
+  · unfold baRemovesuffix bytesRemovesuffix
+    by_cases hp : p.length = 0
+    · have : p = [] := List.eq_nil_of_length_eq_zero hp
+      subst this; simp
+    · have : p.length > 0 := by omega
+      simp [this]
+
+theorem affixSpec_proven : AffixSpec := by
+  refine ⟨affix_twin, ?_, ?_⟩
+  · intro h acts rel p suffix
+    cases suffix <;> simp [baAffixE, E.bind_app, getBuf_buf, curSeq, Buf.read, runCb_app]
+  · intro h o p suffix hb
+    cases suffix <;> simp [baAffixE, E.bind_app, getBuf_obj o p hb, curSeq, Buf.read, noRel, (affix_twin _ _).1,
+      (affix_twin _ _).2]
+
+/-- `bytearray.maketrans` is `_Py_bytes_maketrans` of the two buffers as their `__buffer__` gave them. -/
+def BaMaketransSpec : Prop :=
+  ∀ (h : H) (a1 r1 a2 r2 : List Act) (f t : Seq),
+    baMaketransE (.buf a1 (.ok f) r1) (.buf a2 (.ok t) r2) h =
+      (bytesMaketrans f t, runActs (runActs (runActs (runActs h a1) a2) r1) r2)
+
+theorem baMaketransSpec_proven : BaMaketransSpec := by
+  intro h a1 r1 a2 r2 f t
+  simp [baMaketransE, E.bind_app, E.attempt_app, getBuf_buf, Buf.read, runCb_app]
+
+/-- `bytearray_getitem_lock_held` (`sq_item`), :508-518, and `bytearray_getitem`: for an object whose
+bytes are all written, the byte at an index of `range(len)` and `IndexError` outside, as list
+indexing gives. -/
+def GetItemRawSpec : Prop :=
+  ∀ (b : BA) (i : Int), (∀ x ∈ b.data, 0 ≤ x) →
+    baGetItemRaw b i =
+      (if 0 ≤ i then match b.seq[i.toNat]? with
+        | some c => .ok (c : Int)
+        | none => .error (.indexError "bytearray index out of range")
+      else .error (.indexError "bytearray index out of range"))
+
+theorem getItemRawSpec_proven : GetItemRawSpec := by
+  intro b i hd
+  unfold baGetItemRaw
+  by_cases h0 : 0 ≤ i
+  · by_cases hl : i < b.size
+    · have hl' : i.toNat < b.data.length := by simp [BA.size] at hl; omega
+      have hx := hd _ (List.getElem_mem hl')
+      have hs : b.seq[i.toNat]? = some (b.data[i.toNat]).toNat := by
+        simp [BA.seq, hl']
+      rw [hs]
+      have hng : ¬ (i < 0 ∨ i ≥ b.size) := by omega
+      simp only [hng, ↓reduceIte, h0]
+      simp [List.getD, hl']
+      omega
+    · have hs : b.seq[i.toNat]? = none := by
+        simp [BA.seq]; simp [BA.size] at hl; omega
+      rw [hs]
+      have hg : i < 0 ∨ i ≥ b.size := by omega
+      simp [hg, h0]
+  · have hg : i < 0 ∨ i ≥ b.size := by omega
+    simp [hg, h0]
+
+end PyLean.BytesObj.Bytes
+
+namespace PyLean.BytesObj.Bytes
+
+open PyLean PyLean.StrSearch
+
+/-- `bytearray_repeat_lock_held` (`b * n`), :439-469: a count `n ≤ 0` gives an empty bytearray,
+`MemoryError` exactly when `len(b) > PyByteArray_SIZE_MAX // n`, and otherwise a new bytearray (no
+exports) of `n` copies, whenever it fits in memory. -/
+def BaRepeatSpec : Prop :=
+  ∀ (b : BA) (n : Int),
+    (n ≤ 0 → baRepeat b n = .ok {}) ∧
+    (0 < n → b.size > Int.tdiv baSizeMax n → baRepeat b n = .error memoryError) ∧
+    (0 < n → b.size * n < 2 ^ 46 →
+      ∃ r, baRepeat b n = .ok r ∧ r.data = seqData (List.replicate n.toNat b.seq).flatten ∧ r.exports = 0)
+
+theorem baRepeatSpec_proven : BaRepeatSpec := by
+  intro b n
+  have hs0 : 0 ≤ b.size := by simp [BA.size]
+  refine ⟨?_, ?_, ?_⟩
+  · intro hn
+    unfold baRepeat
+    have hc : (if n < 0 then 0 else n) = 0 := by split <;> omega
+    simp only [hc, bind, Except.bind, pure, Except.pure]
+    simp [Int.mul_zero, baFromStringAndSize, bytesSizeCheck]
+  · intro hn hb
+    unfold baRepeat
+    have hc : (if n < 0 then 0 else n) = n := by split <;> omega
+    simp [hc, hn, hb, bind, Except.bind, throw, throwThe, MonadExceptOf.throw]
+  · intro hn hsz
+    have hc : (if n < 0 then 0 else n) = n := by split <;> omega
+    have hmax : baSizeMax = 2 ^ 63 - 1 - 33 := rfl
+    have hd : ¬ b.size > Int.tdiv baSizeMax n := by
+      rw [Int.tdiv_eq_ediv_of_nonneg (by rw [hmax]; omega)]
+      intro hgt
+      have h1 : (baSizeMax / n + 1) * n ≤ b.size * n := Int.mul_le_mul_of_nonneg_right (by omega) (by omega)
+      have h2 : baSizeMax < (baSizeMax / n + 1) * n := Int.lt_ediv_add_one_mul_self _ hn
+      rw [hmax] at h2 h1; omega
+    have hpos : 0 ≤ b.size * n := Int.mul_nonneg hs0 (by omega)
+    obtain ⟨r0, hr0⟩ := baFromStringAndSize_ok (b.size * n) hpos hsz
+    by_cases hz : b.size * n = 0
+    · have hsz0 : b.size = 0 := by
+        rcases Int.mul_eq_zero.mp hz with h | h
+        · exact h
+        · omega
+      have hd0 : b.data = [] := by simpa [BA.size] using hsz0
+      refine ⟨{}, ?_, ?_, rfl⟩
+      · unfold baRepeat
+        simp only [hc, bind, Except.bind, pure, Except.pure, hn, hd, and_false, ↓reduceIte, hz]
+        simp [baFromStringAndSize, bytesSizeCheck]
+      · simp [BA.seq, hd0, seqData]
+    · refine ⟨{ r0 with data := seqData (bytesRepeatFill (b.size * n).toNat b.seq) }, ?_, ?_, ?_⟩
+      · unfold baRepeat
+        simp [hc, bind, Except.bind, pure, Except.pure, hn, hd, hr0, hz]
+      · show seqData _ = seqData _
+        have hne : b.seq ≠ [] := by
+          intro e
+          have : b.data = [] := by simpa [BA.seq] using e
+          apply hz; simp [BA.size, this]
+        have hl : (b.size * n).toNat = n.toNat * b.seq.length := by
+          have : b.seq.length = b.data.length := by simp [BA.seq]
+          rw [this]; simp only [BA.size]
+          rw [Int.toNat_mul (by omega) (by omega)]
+          simp [Nat.mul_comm]
+        rw [hl, repeatFill_proven b.seq n.toNat hne (by omega)]
+      · exact (allocFailureSilent_proven.1 none _ r0 hr0).1
+
+end PyLean.BytesObj.Bytes

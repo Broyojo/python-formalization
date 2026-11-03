@@ -1111,6 +1111,11 @@ bytesobj-bytearray-rich-live	proven	Objects/bytearrayobject.c	bytearray_richcomp
 bytesobj-bytearray-item-after-index	proven	Objects/bytearrayobject.c	_getbytevalue,bytearray_subscript_lock_held,bytearray_subscript,bytearray_ass_subscript_lock_held,bytearray_ass_subscript,bytearray_setitem_lock_held,bytearray_setitem,bytearray_append_impl,bytearray_remove_impl,bytearray_insert_impl,bytearray_take_bytes_impl
 bytesobj-bytearray-partition-after-sep	proven	Objects/bytearrayobject.c	bytearray_partition_impl,bytearray_rpartition_impl,_PyByteArray_FromBufferObject
 bytesobj-bytearray-translate-after-args	proven	Objects/bytearrayobject.c	bytearray_translate_impl
+bytesobj-bytearray-delegates	proven	Objects/bytearrayobject.c	bytearray_isalnum,bytearray_isalpha,bytearray_isascii,bytearray_isdigit,bytearray_islower,bytearray_isspace,bytearray_istitle,bytearray_isupper,bytearray_capitalize,bytearray_swapcase,bytearray_title,bytearray_upper,bytearray_lower
+bytesobj-bytearray-affix	proven	Objects/bytearrayobject.c	bytearray_removeprefix_impl,bytearray_removesuffix_impl
+bytesobj-bytearray-maketrans	proven	Objects/bytearrayobject.c	bytearray_maketrans_impl
+bytesobj-bytearray-getitem-raw	proven	Objects/bytearrayobject.c	bytearray_getitem_lock_held,bytearray_getitem
+bytesobj-bytearray-repeat	proven	Objects/bytearrayobject.c	bytearray_repeat_lock_held,bytearray_repeat
 bytesobj-bytearray-iadd-self	refuted	Objects/bytearrayobject.c	bytearray_iconcat_lock_held,bytearray_iconcat,bytearray_setslice
 bytesobj-bytearray-iadd-extend-obj	open	Objects/bytearrayobject.c	
 bytesobj-bytearray-init-steal	refuted	Objects/bytearrayobject.c	bytearray___init___impl
@@ -1125,7 +1130,7 @@ bytesobj-bytes-rich-lex	proven	Objects/bytesobject.c	bytes_richcompare
 bytesobj-bytes-subscript-spec	proven	Objects/bytesobject.c	bytes_item,bytes_subscript
 bytesobj-bytes-hex-groups	proven	Objects/bytesobject.c	bytes_hex_impl
 bytesobj-bytes-fromhex-spec	proven	Objects/bytesobject.c	_PyBytes_FromHex,bytes_fromhex_impl
-bytesobj-bytes-repr-spec	proven	Objects/bytesobject.c	PyBytes_Repr,_Py_bytes_repr
+bytesobj-bytes-repr-spec	proven	Objects/bytesobject.c	PyBytes_Repr,_Py_bytes_repr,bytearray_repr,bytearray_repr_lock_held
 bytesobj-bytes-strip-spec	proven	Objects/bytesobject.c	do_xstrip,do_strip,do_argstrip
 bytesobj-bytes-translate-spec	proven	Objects/bytesobject.c	bytes_translate_impl
 bytesobj-bytes-concat-value	proven	Objects/bytesobject.c	_PyBytes_Concat,PyBytes_Concat
